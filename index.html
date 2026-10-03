@@ -23,7 +23,8 @@ html,body{margin:0;height:100%;overflow:hidden;background:#1b2a5a;font-family:sy
 <script src="src/visual-config.js"></script>
 <script src="src/materials-config.js"></script>
 <script src="src/water-config.js"></script>
-<script>\nwindow.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){p.innerHTML="<h1>No s’ha pogut iniciar el joc</h1><p>Comprova que l’acceleració gràfica estigui activada i que el navegador admeti WebGL.</p>"}});
+<script>
+window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){p.innerHTML="<h1>No s’ha pogut iniciar el joc</h1><p>Comprova que l’acceleració gràfica estigui activada i que el navegador admeti WebGL.</p>"}});
 const S=4800,H=S/2,SEG=400,vivid=c=>{const k=new THREE.Color(c),h={};k.getHSL(h);return k.setHSL(h.h,Math.min(1,h.s*1.5),h.l)};
 const materialProfile=(name='organic')=>window.HUNTER_MATERIALS[name]||window.HUNTER_MATERIALS.organic;
 const M=(c,profile='organic')=>new THREE.MeshStandardMaterial({color:vivid(c),flatShading:true,...materialProfile(profile)});
