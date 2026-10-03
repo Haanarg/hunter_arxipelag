@@ -25,6 +25,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#1b2a5a;font-family:sy
 <script src="src/water-config.js"></script>
 <script src="src/rendering.js"></script>
 <script src="src/water.js"></script>
+<script src="src/terrain.js"></script>
 <script>
 window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){p.innerHTML="<h1>No s’ha pogut iniciar el joc</h1><p>Comprova que l’acceleració gràfica estigui activada i que el navegador admeti WebGL.</p>"}});
 const S=4800,H=S/2,SEG=400,vivid=c=>{const k=new THREE.Color(c),h={};k.getHSL(h);return k.setHSL(h.h,Math.min(1,h.s*1.5),h.l)};
@@ -67,13 +68,7 @@ const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segment
 const wg=water.geometry,waterMat=water.material,waterUniforms=water.uniforms;
 const updateSeabed=water.updateSeabed;
 const waves=water.update;
-// terreny
-const cc=[[-75,0x061745],[-12,0x087fa2],[-1.5,0xf4cb64],[.5,0xffda83],[3.5,0xefbb51],[5,0x59ec16],[22,0x16b52f],[30,0x807d9d],[40,0xf4f4fb]];
-function colH(h){let i=0;while(i<cc.length-2&&h>cc[i+1][0])i++;const a=cc[i],b=cc[i+1];return new THREE.Color(a[1]).lerp(new THREE.Color(b[1]),Math.min(1,Math.max(0,(h-a[0])/(b[0]-a[0]))))}
-function border(){const g=new THREE.Group(),m=new THREE.MeshBasicMaterial({color:0xffffff,fog:false}),
-w=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.12,side:THREE.DoubleSide,fog:false,depthWrite:false});
-[[0,-H,0],[0,H,0],[-H,0,1],[H,0,1]].forEach(([x,z,r])=>{const b=new THREE.Mesh(new THREE.BoxGeometry(S,1.2,2.5),m),p=new THREE.Mesh(new THREE.PlaneGeometry(S,60),w);
-b.position.set(x,1.5,z);p.position.set(x,30,z);if(r)b.rotation.y=p.rotation.y=Math.PI/2;g.add(b,p)});return g}
+// terreny visual a src/terrain.js
 let stairs=[];
 let Wl=[],Dr=[],items=[],inv={},msg='',msgT=0,HQ=null,ib=null;
 const IT={med:{n:'Farmaciola',c:0xf2f3de,s:[1.2,.8,.8]},mapa:{n:'Mapa',c:0xffe27a,s:[1.4,.15,1]},arma:{n:'Arma',c:0x555b66,s:[1.6,.35,.35]},expl:{n:'Explosius',c:0xe02020,s:[.9,.9,.9]},disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6]}};
@@ -289,10 +284,8 @@ let swimming=false;let V=[],cv=null;const P={x:0,z:0,y:0,hd:0};
 // construir món
 function build(){if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}world=new THREE.Group();scene.add(world);B=[];stairs=[];swimming=false;rider.visible=false;rider.userData.motion=0;pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};waypoint=null;E=[];Pj=[];DB.length=0;WA.length=0;TG.clear();bombs=[];fx=[];logb=[];hp=100;ammo=24;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
 do{seed=Math.floor(Math.random()*1e9);genIslands();pa=land(A,2000);pb=land(Bi,2000)}while(!pa||!pb);
-const g=new THREE.PlaneGeometry(S,S,SEG,SEG);g.rotateX(-Math.PI/2);const p=g.attributes.position,col=new Float32Array(p.count*3);
-for(let i=0;i<p.count;i++){const h=hAt(p.getX(i),p.getZ(i));p.setY(i,h);const c=colH(h);col.set([c.r,c.g,c.b],i*3)}
-g.setAttribute('color',new THREE.BufferAttribute(col,3));g.computeVertexNormals();
-world.add(new THREE.Mesh(g,MAT.terrain()),border());
+const terrain=window.HUNTER_TERRAIN.create(THREE,{size:S,segments:SEG,heightAt:hAt,material:MAT.terrain()});
+world.add(terrain.mesh,window.HUNTER_TERRAIN.createBorder(THREE,{size:S,halfSize:H}));
 [[-22,0],[22,-8],[0,24]].forEach(([dx,dz])=>mkB(pa.x+dx,pa.z+dz,15,15,7,0xe9dfc8,0x2c5fc0));flag(pa.x,pa.z-6,0x2c7bff);
 mkB(pb.x,pb.z,30,30,13,0x6b5a55,0x8c1f1f);mkB(pb.x+30,pb.z+6,12,12,6,0x8a7a70,0x8c1f1f);mkB(pb.x-28,pb.z-4,12,12,6,0x8a7a70,0x8c1f1f);flag(pb.x,pb.z+16,0xe02828);
 const cols=[0xd8b48a,0xc9a27a,0xb8c4c9,0xd9c9a0];
