@@ -6,8 +6,8 @@ Mantenir l'estètica low-poly i la jugabilitat de *Hunter: Arxipèlag*, modernit
 ## Estat de la base
 - Three.js r128 continua incrustat dins `index.html`.
 - `index.html` encara conté bona part de la simulació, generació procedural, IA, combat, àudio i UI.
-- La modernització es desenvolupa a la branca `visual-modernization`; `main` encara no és la versió nova.
-- No hi ha desplegament configurat. El workflow experimental de GitHub Pages s'ha eliminat i no s'ha de reintroduir fins que es decideixi explícitament.
+- La modernització ja s'ha fusionat a `main`, que és ara la branca oficial i la base de treball.
+- No hi ha cap workflow de GitHub Pages i no s'ha de reintroduir. El desplegament previst és mitjançant Cloudflare Pages, amb `main` com a branca de producció i `hunter.paradoxa.cat` com a domini.
 - Regla principal: cada extracció ha de conservar els contractes que utilitza el gameplay.
 
 ## Implementat
@@ -127,7 +127,7 @@ Només després d'estabilitzar les fases anteriors:
 - Límit de l'auditoria: no substitueix una execució real en WebGL/Android; encara poden existir errors només reproduïbles en runtime o dependents de GPU/navegador.
 
 ## Validació pendent
-No s'ha fet encara una validació completa en navegador WebGL/dispositiu Android real. Abans de fusionar a `main` cal comprovar com a mínim:
+No s'ha fet encara una validació completa en navegador WebGL/dispositiu Android real. La fusió a `main` ja s'ha fet. La validació següent s'ha de fer directament sobre `main` i ha de comprovar com a mínim:
 - consola sense errors;
 - inici/reinici de partida;
 - moviment a peu i natació;
@@ -144,7 +144,7 @@ No reescriure simulació i renderer simultàniament. Quan un sistema s'extreu, c
 
 ## Represa i correccions de runtime — 2026-10-03
 
-Base revisada: `a40b1ceb8731d44aaf26a77f7dcbc93857e4ca65`, branca `visual-modernization`.
+Base revisada inicialment: `a40b1ceb8731d44aaf26a77f7dcbc93857e4ca65`, aleshores a la branca `visual-modernization`. Aquesta feina ja s'ha fusionat posteriorment a `main`.
 
 - Reproduït un bloqueig real d’arrencada en executar els scripts en l’ordre de l’HTML: `ReferenceError: soldier is not defined`. La comprovació de sintaxi no detectava aquest error.
 - Restaurada la construcció de soldats i general dins `src/characters.js`, amb els colors vermells, les extremitats articulades i els contractes `userData.arms`/`legs` que consumeix la IA. `mkEn()` fa servir aquesta interfície explícita.
@@ -154,6 +154,6 @@ Base revisada: `a40b1ceb8731d44aaf26a77f7dcbc93857e4ca65`, branca `visual-modern
 - Prova superada amb 98 edificis i 186 vehicles en el mapa aleatori d’aquesta execució.
 - Límit: DOM, àudio i renderer GPU simulats. Aquest test no valida shaders, aspecte visual, so real, rendiment GPU ni ergonomia Android.
 - README adaptat al fork modular: cal conservar `src/` al costat de `index.html`.
-- No s’ha fusionat a `main`, ni desplegat a Sites o GitHub Pages, ni afegit cap workflow de publicació.
+- La feina ja s'ha fusionat a `main`. No s'ha afegit cap workflow de GitHub Pages. El desplegament previst és Cloudflare Pages a `hunter.paradoxa.cat`.
 
-Pròxim pas: validació visual en navegador amb WebGL; després, continuar l’extracció de fauna i entitats i la centralització de paletes de la fase C.
+Pròxim pas: validació visual de `main` en navegador amb WebGL; després, continuar l’extracció de fauna i entitats i la centralització de paletes de la fase C.
