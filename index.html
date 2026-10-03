@@ -338,7 +338,7 @@ function stepV(v,f,tr,ud,dt){const c=VT[v.t],a=c.m=='a',radius=vehicleRadius(v.t
 const speedSteer=a?1:Math.max(-1,Math.min(1,v.v/10));v.hd+=tr*dt*c.tu*speedSteer;
 const nx=v.x-Math.sin(v.hd)*v.v*dt,nz=v.z-Math.cos(v.hd)*v.v*dt,h=hAt(nx,nz),g=Math.max(0,h);let ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;
 if(c.m=='w')ok=ok&&h<-1.2;if(c.m=='l')ok=ok&&h>-1.2;if(ok&&((c.m=='l'&&v.t!='tanc')||c.m=='wl')&&treeHit(nx,nz,radius*.6))ok=false;if(ok&&a&&v.alt-g<8&&treeHit(nx,nz,radius))ok=false;
-if(!a||v.alt-g<16){for(const b of B)if(!b.hangar&&Math.abs(nx-b.x)<b.hw+radius&&Math.abs(nz-b.z)<b.hd+radius)ok=false;if(ok)for(const w of Wl)if(!w.open&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){ok=false;break}}
+if(!a||v.alt-g<16){for(const w of Wl)if(!w.open&&w.playerBlock!==false&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){ok=false;break}}
 if(ok){v.x=nx;v.z=nz;if(v.t=='tanc')crush(nx,nz,3.2*VS.tanc)}else v.v*=Math.exp(-14*dt);
 if(a){const g2=Math.max(0,hAt(v.x,v.z));v.alt=Math.max(g2+.8,Math.min(150,v.alt+ud*28*dt))}}
 function place(v,t,dt,tr){const c=VT[v.t],o=v.o,g=hAt(v.x,v.z);let y,pi=0,ro=Math.sin(t*2+v.x)*.02;
