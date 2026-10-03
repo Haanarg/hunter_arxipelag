@@ -4,7 +4,7 @@ Joc 3D per al navegador inspirat en Hunter (Amiga), amb arxipèlags generats a c
 
 ## Jugar
 
-Obre `index.html` en un navegador amb WebGL. Aquesta branca (`visual-modernization`) inclou Three.js r128 a l’HTML i mòduls locals a `src/`. Conserva tota la carpeta: `index.html` ja no és autònom.
+Obre `index.html` en un navegador amb WebGL. La branca principal (`main`) inclou Three.js r128 a l’HTML i mòduls locals a `src/`. Conserva tota la carpeta: `index.html` ja no és autònom.
 
 També pots servir aquesta carpeta amb `python3 -m http.server 8000` i obrir http://localhost:8000.
 
@@ -28,7 +28,7 @@ La versió actual separa renderitzat, aigua, terreny, vehicles, controls, vegeta
 
 Executa `node tests/smoke.cjs` per comprovar arrencada i regressions bàsiques sense GPU. La renderització visual encara requereix comprovació en un navegador amb WebGL.
 
-El seguiment i les tasques pendents són a [docs/VISUAL_MODERNIZATION.md](docs/VISUAL_MODERNIZATION.md). No hi ha desplegament configurat; no s’ha d’activar GitHub Pages sense una decisió explícita.
+El seguiment i les tasques pendents són a [docs/VISUAL_MODERNIZATION.md](docs/VISUAL_MODERNIZATION.md). `main` és la base oficial de desenvolupament. No hi ha desplegament configurat al repositori; no s’ha d’activar GitHub Pages. El desplegament previst és mitjançant Cloudflare Pages a `hunter.paradoxa.cat`.
 
 ## Dependència
 
