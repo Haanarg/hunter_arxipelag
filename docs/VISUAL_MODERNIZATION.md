@@ -292,3 +292,14 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - El perímetre bloqueja jugador i vehicles mitjançant la mateixa infraestructura `Wl` que les parets.
 - Es deixa una entrada ampla al costat sud del recinte perquè el HQ continuï sent accessible.
 - La zona interior del HQ queda exclosa de vegetació per preservar la lectura del perímetre.
+
+
+## Llavor de generació del mapa — 2026-10-04
+- La pantalla d'inici incorpora un camp de llavor.
+- Per defecte, l'opció **Llavor aleatòria** està activada.
+- Si es desactiva, es pot escriure una llavor numèrica o de text.
+- Les llavors de text es converteixen de manera determinista a un valor de 32 bits.
+- En començar la partida, el món es regenera amb la llavor seleccionada.
+- La llavor activa es mostra al HUD perquè es pugui reutilitzar.
+- Illes, assentaments, vehicles i vegetació estructural/visual utilitzen la mateixa font pseudoaleatòria sembrada.
+- Si una llavor concreta no produeix un mapa vàlid en el primer intent, s'aplica una derivació determinista i el HUD mostra la llavor final realment usada.
