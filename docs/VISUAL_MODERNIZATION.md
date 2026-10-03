@@ -98,10 +98,12 @@ Mantenir l'estètica low-poly i la jugabilitat de *Hunter: Arxipèlag*, modernit
 5. Preparar una interfície comuna d'animació sense reescriure la IA.
 
 ### Fase D — UI i entrada
-1. Separar HUD, minimapa i menús del bucle de simulació.
-2. Calibrar joystick: radi, zona morta, sensibilitat i ergonomia mòbil.
-3. Revisar disposició dels botons d'acció en pantalles petites i safe areas.
-4. Afegir opcions de sensibilitat només si les proves mostren que fan falta.
+1. ✅ HUD separat a `src/ui.js`.
+2. ✅ Minimapa i carta de navegació separats a `src/minimap.js`.
+3. ✅ Menús de pausa, mapa i reinici separats del bucle principal.
+4. Calibrar joystick: radi, zona morta, sensibilitat i ergonomia mòbil.
+5. Revisar disposició dels botons d'acció en pantalles petites i safe areas.
+6. Afegir opcions de sensibilitat només si les proves mostren que fan falta.
 
 ### Fase E — Actualització de Three.js
 Només després d'estabilitzar les fases anteriors:
@@ -161,4 +163,4 @@ Validació visual inicial de `main`: el joc arrenca i és jugable en navegador. 
 
 Passada visual posterior: paleta centralitzada, contrast reforçat de jugador/soldats/general i fauna modular amb models low-poly més recognoscibles.
 
-Pròxim pas: completar la interfície comuna d’animació de la fase C i començar la fase D separant HUD, minimapa i menús del bucle de simulació.
+Pròxim pas: completar la interfície comuna d’animació de la fase C i continuar la fase D amb calibratge del joystick i revisió dels controls tàctils.
