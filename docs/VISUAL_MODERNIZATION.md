@@ -92,9 +92,10 @@ Mantenir l'estètica low-poly i la jugabilitat de *Hunter: Arxipèlag*, modernit
 
 ### Fase C — Personatge i entitats
 1. ✅ Separats model i animació del jugador.
-2. Models de soldats i general traslladats a `HUNTER_CHARACTERS.createSoldier`; pendent separar fauna i resta d’entitats.
-3. Centralitzar paletes jugador/enemic perquè verd i vermell siguin inequívocs.
-4. Preparar una interfície comuna d'animació sense reescriure la IA.
+2. ✅ Models de soldats i general traslladats a `HUNTER_CHARACTERS.createSoldier`.
+3. ✅ Fauna visual separada a `src/fauna.js`; moviment, spawning i dany continuen al nucli.
+4. ✅ Paletes de jugador/enemics/fauna centralitzades a `src/palette.js`, amb verd i vermell més inequívocs i més contrast de silueta.
+5. Preparar una interfície comuna d'animació sense reescriure la IA.
 
 ### Fase D — UI i entrada
 1. Separar HUD, minimapa i menús del bucle de simulació.
@@ -156,4 +157,8 @@ Base revisada inicialment: `a40b1ceb8731d44aaf26a77f7dcbc93857e4ca65`, aleshores
 - README adaptat al fork modular: cal conservar `src/` al costat de `index.html`.
 - La feina ja s'ha fusionat a `main`. No s'ha afegit cap workflow de GitHub Pages. El desplegament previst és Cloudflare Pages a `hunter.paradoxa.cat`.
 
-Pròxim pas: validació visual de `main` en navegador amb WebGL; després, continuar l’extracció de fauna i entitats i la centralització de paletes de la fase C.
+Validació visual inicial de `main`: el joc arrenca i és jugable en navegador. Les millores prèvies eren sobretot estructurals i per això el salt visual percebut era modest.
+
+Passada visual posterior: paleta centralitzada, contrast reforçat de jugador/soldats/general i fauna modular amb models low-poly més recognoscibles.
+
+Pròxim pas: completar la interfície comuna d’animació de la fase C i començar la fase D separant HUD, minimapa i menús del bucle de simulació.
