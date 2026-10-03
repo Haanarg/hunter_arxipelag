@@ -23,6 +23,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#1b2a5a;font-family:sy
 <script src="src/visual-config.js"></script>
 <script src="src/materials-config.js"></script>
 <script src="src/water-config.js"></script>
+<script src="src/rendering.js"></script>
 <script>
 window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){p.innerHTML="<h1>No s’ha pogut iniciar el joc</h1><p>Comprova que l’acceleració gràfica estigui activada i que el navegador admeti WebGL.</p>"}});
 const S=4800,H=S/2,SEG=400,vivid=c=>{const k=new THREE.Color(c),h={};k.getHSL(h);return k.setHSL(h.h,Math.min(1,h.s*1.5),h.l)};
@@ -57,26 +58,10 @@ if(h>3&&h<14&&slope(x,z,h)<2.5&&(!fl||fr(x,z)<2.2)&&!B.some(b=>Math.abs(b.x-x)<b
 const coarse=matchMedia('(pointer:coarse)').matches;
 const qualityName=coarse?'mobile':'desktop';
 const visualQuality=window.HUNTER_VISUAL_CONFIG[qualityName];
-const ren=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:false});
-ren.setPixelRatio(Math.min(devicePixelRatio,visualQuality.pixelRatio));
-ren.outputEncoding=THREE.sRGBEncoding;
-ren.toneMapping=THREE.ACESFilmicToneMapping;
-ren.toneMappingExposure=visualQuality.exposure;
-ren.physicallyCorrectLights=true;
-ren.shadowMap.enabled=visualQuality.shadows;
-ren.shadowMap.type=THREE.PCFSoftShadowMap;
+const rendering=window.HUNTER_RENDERING.create(THREE,visualQuality);
+const ren=rendering.renderer,scene=rendering.scene,cam=rendering.camera,sunDir=rendering.sunDir,sun=rendering.sun,sky=rendering.sky,sunM=rendering.sunMesh;
 document.body.prepend(ren.domElement);
-const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(60,1,.3,12000);
-const rs=()=>{ren.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()};addEventListener('resize',rs);rs();
-scene.fog=new THREE.FogExp2(0xdca59d,visualQuality.fog);
-scene.add(new THREE.HemisphereLight(0xb9dcff,0x31562d,.72));
-const sunDir=new THREE.Vector3(.3,.24,-1).normalize(),sun=new THREE.DirectionalLight(0xffd1a3,2.15);
-sun.position.copy(sunDir).multiplyScalar(500);scene.add(sun);scene.add(sun.target);sun.castShadow=true;sun.shadow.mapSize.set(visualQuality.shadowSize,visualQuality.shadowSize);Object.assign(sun.shadow.camera,{left:-85,right:85,top:85,bottom:-85,near:1,far:850});sun.shadow.camera.updateProjectionMatrix();sun.shadow.bias=-.0008;sun.shadow.normalBias=.08;
-const sg=new THREE.SphereGeometry(8000,visualQuality.skySegments[0],visualQuality.skySegments[1]),sc=[],sp=sg.attributes.position;
-for(let i=0;i<sp.count;i++){const t=Math.max(0,sp.getY(i)/8000),c=new THREE.Color(0xff962f).lerp(new THREE.Color(0x633dc6),Math.pow(t,.45));sc.push(c.r,c.g,c.b)}
-sg.setAttribute('color',new THREE.Float32BufferAttribute(sc,3));
-const sky=new THREE.Mesh(sg,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false}));scene.add(sky);
-const sunM=new THREE.Mesh(new THREE.SphereGeometry(110,16,12),new THREE.MeshBasicMaterial({color:0xfff2c0,fog:false}));scene.add(sunM);
+const rs=rendering.resize;addEventListener('resize',rs);rs();
 const waterCfg=window.HUNTER_WATER;
 const waterUniforms={time:{value:0},light:{value:sunDir},shallow:{value:new THREE.Vector3(...waterCfg.shallow)},deep:{value:new THREE.Vector3(...waterCfg.deep)},horizon:{value:new THREE.Vector3(...waterCfg.horizon)},sunGlint:{value:new THREE.Vector3(...waterCfg.sunGlint)},foamColor:{value:new THREE.Vector3(...waterCfg.foam)},fresnelStrength:{value:waterCfg.fresnelStrength},absorptionDepth:{value:waterCfg.absorptionDepth},waterFog:{value:waterCfg.fogDensity}};
 const waterMat=new THREE.ShaderMaterial({uniforms:waterUniforms,extensions:{derivatives:true},vertexShader:`uniform float time;attribute float seabed;varying vec3 worldP;varying float bed;void main(){vec3 p=position;bed=seabed;float amp=clamp((-seabed+.6)/9.,.12,1.);p.y=(sin(p.x*.03+time*1.2)*.9+cos(p.z*.04+time*.9)*.9+sin((p.x+p.z)*.07+time*2.)*.4)*amp;worldP=p;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}`,fragmentShader:`uniform vec3 light,shallow,deep,horizon,sunGlint,foamColor;uniform float time,fresnelStrength,absorptionDepth,waterFog;varying vec3 worldP;varying float bed;void main(){if(bed>worldP.y+.12)discard;vec3 n=normalize(cross(dFdx(worldP),dFdy(worldP)));if(n.y<0.)n=-n;vec3 v=normalize(cameraPosition-worldP);float nv=max(dot(n,v),0.);float nd=max(dot(n,light),0.);float fres=pow(1.-nv,3.)*fresnelStrength;float spec=pow(max(dot(reflect(-light,n),v),0.),88.);float depth=max(0.,worldP.y-bed);float absorb=1.-exp(-depth/max(absorptionDepth,.01));vec3 c=mix(shallow,deep,clamp(absorb,0.,1.));c*=.78+nd*.48;c=mix(c,horizon,fres);c+=sunGlint*spec*(.65+fres);float zone=(1.-smoothstep(1.8,4.6,depth))*smoothstep(-.1,.22,depth);float crest=pow(clamp(1.-n.y,0.,1.),1.6);float breaker=pow(.5+.5*sin(depth*5.-time*3.8+sin(worldP.x*.16+worldP.z*.12)*.6),7.);float foam=zone*breaker*.82+crest*zone*.55+(1.-smoothstep(.05,.35,depth))*.36;c=mix(c,foamColor,clamp(foam,0.,.92));float dist=distance(cameraPosition,worldP);float fog=1.-exp(-dist*waterFog);c=mix(c,horizon,fog*.72);gl_FragColor=vec4(c,1.);}`});
