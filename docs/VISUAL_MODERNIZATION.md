@@ -116,6 +116,16 @@ Només després d'estabilitzar les fases anteriors:
 - GLTF només per als assets on aporti una millora clara.
 - Optimització de draw calls, culling i resolució dinàmica segons proves.
 
+## Auditoria d'estabilitat — 2026-10-03
+- Verificada la sintaxi de tots els mòduls `src/*.js` i dels blocs inline de `index.html`: sense `SyntaxError` estàtics.
+- Verificat l'ordre de càrrega dels mòduls visuals, controls, vehicles, rider i vegetació.
+- Eliminades referències residuals conegudes de refactoritzacions anteriors: `colH`, `palmCrown`, `dum`, `inst`, `classifyVehicleMaterial` i l'antic constructor inline `mkV`.
+- Corregit un error de cicle de vida a vegetació: el mòdul capturava `world` abans que `build()` el creés; ara el món actiu es passa quan es construeixen les instàncies.
+- Afegida una comprovació d'integritat d'arrencada que informa explícitament si falta algun mòdul `HUNTER_*`.
+- El joystick es reinicia quan es reconstrueix el món per evitar entrada analògica residual després d'un reinici.
+- Confirmat que no hi ha workflow de GitHub Pages a les diferències actuals.
+- Límit de l'auditoria: no substitueix una execució real en WebGL/Android; encara poden existir errors només reproduïbles en runtime o dependents de GPU/navegador.
+
 ## Validació pendent
 No s'ha fet encara una validació completa en navegador WebGL/dispositiu Android real. Abans de fusionar a `main` cal comprovar com a mínim:
 - consola sense errors;
