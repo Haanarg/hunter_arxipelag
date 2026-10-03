@@ -242,7 +242,7 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - Orientar portes, rampes i vehicles cap a l'espai central o cap a la sortida funcional.
 - Reservar espai lliure de vegetació i obstacles entre edificis.
 
-### Fase G3 — Camins i superfícies
+### Fase G3 — Camins i superfícies — IMPLEMENTACIÓ INICIAL COMPLETADA
 - Terra compactada o asfalt als garatges i avançades.
 - Camins curts entre edificis.
 - Moll/plataforma als ports.
@@ -264,3 +264,15 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - Els compounds tenen una rotació lleugerament variable per evitar patrons massa repetitius.
 - G3 continua pendent: camins/superfícies més integrats amb el terreny i molls funcionals.
 - G4 continua pendent: IA contextual i patrulles segons tipus d'assentament.
+
+
+### Implementació inicial G3 — 2026-10-04
+- Afegits camins segmentats que segueixen l'altura local del terreny en trams curts.
+- Afegides zones de compound excloses de vegetació perquè patis, accessos i molls quedin transitables.
+- Avançades: camí interior entre accés, pati i edificis.
+- Garatges: vial d'accés ample cap a l'hangar i connexió amb el taller auxiliar.
+- Polvorins: accés intern més estret i clar.
+- Ports: connexió pavimentada entre magatzems i línia de costa.
+- Afegits molls físics de fusta amb pilons metàl·lics que s'estenen fins a aigua prou fonda.
+- Els vehicles aquàtics de port apareixen al costat del moll en lloc de damunt seu.
+- G4 continua pendent: patrulles i comportaments contextuals segons tipus d'assentament.
