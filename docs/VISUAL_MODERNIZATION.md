@@ -101,9 +101,9 @@ Mantenir l'estètica low-poly i la jugabilitat de *Hunter: Arxipèlag*, modernit
 1. ✅ HUD separat a `src/ui.js`.
 2. ✅ Minimapa i carta de navegació separats a `src/minimap.js`.
 3. ✅ Menús de pausa, mapa i reinici separats del bucle principal.
-4. Calibrar joystick: radi, zona morta, sensibilitat i ergonomia mòbil.
-5. Revisar disposició dels botons d'acció en pantalles petites i safe areas.
-6. Afegir opcions de sensibilitat només si les proves mostren que fan falta.
+4. ✅ Joystick recalibrat: zona morta més petita, resposta progressiva i recorregut ampliat.
+5. ✅ Controls tàctils ampliats i reposicionats respectant safe areas laterals i inferiors.
+6. Afegir opcions de sensibilitat només si les proves en Android mostren que fan falta.
 
 ### Fase E — Actualització de Three.js
 Només després d'estabilitzar les fases anteriors:
@@ -113,6 +113,10 @@ Només després d'estabilitzar les fases anteriors:
 4. Fer la migració en una fase dedicada, sense canviar simultàniament gameplay.
 
 ### Fase F — Millores visuals avançades
+- ✅ Primera passada de món: paleta de terreny ampliada amb més separació entre fondària, platja, vegetació, roca i cotes altes.
+- ✅ Vegetació amb més volum low-poly, palmeres més orgàniques i variació controlada.
+- ✅ Edificis amb cornises, marcs i ampits per donar més relleu sense canviar col·lisions.
+- ✅ Atmosfera reforçada: gradient de cel de tres tons, llum de farciment, sol més llegible i halo solar.
 - Ombres/LOD adaptatius.
 - Aigua millorada segons pressupost de GPU.
 - Color grading i AA/postprocessat moderat.
@@ -164,3 +168,14 @@ Validació visual inicial de `main`: el joc arrenca i és jugable en navegador. 
 Passada visual posterior: paleta centralitzada, contrast reforçat de jugador/soldats/general i fauna modular amb models low-poly més recognoscibles.
 
 Pròxim pas: completar la interfície comuna d’animació de la fase C i continuar la fase D amb calibratge del joystick i revisió dels controls tàctils.
+
+
+## Passada tàctil i visual — 2026-10-03
+- Joystick augmentat a 148 px, pom de 64 px, zona morta reduïda i resposta analògica progressiva.
+- Botons d'acció augmentats a 58 px i reposicionats amb safe areas.
+- Qualitat adaptativa lleugerament incrementada: més resolució efectiva en mòbil/escriptori i ombres de 2048 px en escriptori.
+- Terreny amb una paleta més rica i contrastada, especialment entre aigües fondes, aigües costaneres, sorra i vegetació.
+- Palmeres, arbustos i roques amb geometria i variació visual millorades.
+- Edificis amb cornises, marcs i ampits nous; les col·lisions no s'han modificat.
+- Cel i il·luminació revisats amb gradient de tres tons, fill light i halo solar.
+- La validació completa de rendiment i ergonomia continua pendent en Android real.
