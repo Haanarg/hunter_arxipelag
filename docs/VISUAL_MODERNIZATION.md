@@ -230,25 +230,25 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 
 
 ## Full de ruta — assentaments funcionals
-### Fase G1 — Identitat visual de compounds — EN CURS
+### Fase G1 — Identitat visual de compounds — COMPLETADA
 - Avançada enemiga: sacs/barreres, torre, il·luminació o senyalització vermella i punts defensius.
 - Garatge: hangar, taller auxiliar, bidons, caixes i vehicles aparcats amb una lectura clara de zona mecànica.
 - Port: molls, amarradors, magatzem i equipament naval/portuari.
 - Polvorí: caixes de munició, tanques/perímetre, senyalització i separació de seguretat.
 
-### Fase G2 — Composició espacial coherent — EN CURS
+### Fase G2 — Composició espacial coherent — COMPLETADA
 - Evitar offsets rígids repetitius.
 - Crear pati o espai central als compounds.
 - Orientar portes, rampes i vehicles cap a l'espai central o cap a la sortida funcional.
 - Reservar espai lliure de vegetació i obstacles entre edificis.
 
-### Fase G3 — Camins i superfícies — IMPLEMENTACIÓ INICIAL COMPLETADA
+### Fase G3 — Camins i superfícies — COMPLETADA
 - Terra compactada o asfalt als garatges i avançades.
 - Camins curts entre edificis.
 - Moll/plataforma als ports.
 - Transicions de superfície coherents amb el terreny.
 
-### Fase G4 — IA contextual — IMPLEMENTACIÓ INICIAL COMPLETADA
+### Fase G4 — IA contextual — COMPLETADA
 - Patrulles dins de l'avançada.
 - Soldats utilitzant punts defensius, torres i edificis com a referència.
 - Reaccions diferenciades segons el tipus de compound.
@@ -262,8 +262,6 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - Polvorí: barreres, caixes de munició, senyalització i guarda.
 - Port: bol·lards, equipament bàsic, magatzems i vehicle aquàtic vinculat al port.
 - Els compounds tenen una rotació lleugerament variable per evitar patrons massa repetitius.
-- G3 continua pendent: camins/superfícies més integrats amb el terreny i molls funcionals.
-- G4 continua pendent: IA contextual i patrulles segons tipus d'assentament.
 
 
 ### Implementació inicial G3 — 2026-10-04
@@ -275,7 +273,6 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - Ports: connexió pavimentada entre magatzems i línia de costa.
 - Afegits molls físics de fusta amb pilons metàl·lics que s'estenen fins a aigua prou fonda.
 - Els vehicles aquàtics de port apareixen al costat del moll en lloc de damunt seu.
-- G4 continua pendent: patrulles i comportaments contextuals segons tipus d'assentament.
 
 
 ### Implementació inicial G4 — 2026-10-04
@@ -303,3 +300,11 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - La llavor activa es mostra al HUD perquè es pugui reutilitzar.
 - Illes, assentaments, vehicles i vegetació estructural/visual utilitzen la mateixa font pseudoaleatòria sembrada.
 - Si una llavor concreta no produeix un mapa vàlid en el primer intent, s'aplica una derivació determinista i el HUD mostra la llavor final realment usada.
+
+
+### Tancament G1–G4 — 2026-10-04
+- G1 completada: identitat visual diferenciada per avançades, garatges, polvorins i ports amb props específics (sacs, dipòsits, llums, malla, munició i equipament portuari).
+- G2 completada: portes dels edificis de compound orientades cap al pati o centre funcional sempre que no hi ha una orientació explícita; es manté variació espacial per evitar patrons rígids.
+- G3 completada: camins amb voral/transició, accessos segmentats adaptats al terreny i molls enriquits amb baranes i amarradors.
+- G4 completada: patrulles contextuals més punts defensius; els soldats en alerta poden ocupar posicions preparades amb línia de tir abans de perseguir directament el jugador.
+- HQ: patrulles interiors i punts defensius associats al perímetre de filferrada i a l'accés principal.
