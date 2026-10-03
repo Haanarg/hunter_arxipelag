@@ -31,6 +31,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#1b2a5a;font-family:sy
 <script src="src/terrain.js"></script>
 <script src="src/vehicles.js"></script>
 <script src="src/joystick.js"></script>
+<script src="src/rider.js"></script>
 <script>
 window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){p.innerHTML="<h1>No s’ha pogut iniciar el joc</h1><p>Comprova que l’acceleració gràfica estigui activada i que el navegador admeti WebGL.</p>"}});
 const S=4800,H=S/2,SEG=400,vivid=c=>{const k=new THREE.Color(c),h={};k.getHSL(h);return k.setHSL(h.h,Math.min(1,h.s*1.5),h.l)};
@@ -252,16 +253,11 @@ pl.rotation.x+=(0-pl.rotation.x)*k;u.ll.rotation.z*=1-k;u.lr.rotation.z*=1-k;con
 const VS=window.HUNTER_VEHICLES.scales;
 const vehicleRadius=t=>window.HUNTER_VEHICLES.radii[t]*VS[t];
 const mkV=window.HUNTER_VEHICLES.createFactory(THREE,{box:bx,material:M,shadows:visualQuality.shadows});
-// Rider proportions remain the same as the protagonist; joint targets follow seat, bars and pedals.
-function makeRider(){const g=new THREE.Group(),torso=new THREE.Group();g.add(torso);const cloth=M(0x49e52c),pants=M(0x32c52a),skin=M(0xf0c9a0),dark=M(0x242727);bx(torso,1.13,1.1,.63,0x49e52c,0,.58,0);bx(torso,.74,.88,.3,0x6a5632,0,.65,.43);bx(torso,.63,.63,.63,0xf0c9a0,0,1.45,-.12);bx(torso,.73,.33,.73,0x22b72c,0,1.78,-.12);bx(torso,.55,.14,.07,0x151515,0,1.5,-.45);const limbs=[];for(let i=0;i<8;i++){const m=new THREE.Mesh(new THREE.CylinderGeometry(i<4?.17:.2,i<4?.17:.2,1,6),i<4?cloth:pants);g.add(m);limbs.push(m)}const boots=[-1,1].map(()=>bx(g,.4,.22,.65,0x222222,0,0,0));g.userData={torso,limbs,boots};g.visible=false;g.traverse(o=>{if(o.isMesh)o.castShadow=true});scene.add(g);return g}
-const rider=makeRider();
-function limbBetween(m,a,b){const delta=b.clone().sub(a);m.position.copy(a).add(b).multiplyScalar(.5);m.scale.y=delta.length();m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize())}
-function poseRider(v,dt){rider.visible=!!v&&(v.t==='bici'||v.t==='moto');if(!rider.visible)return;const u=rider.userData,sc=VS[v.t],seat=1.65*sc,moving=Math.min(1,Math.abs(v.v)/1.8);u.motion=(u.motion||0)+(moving-(u.motion||0))*(1-Math.exp(-12*dt));const motion=u.motion,phase=v.pedalPhase||0;rider.position.copy(v.o.position);rider.quaternion.copy(v.o.quaternion);u.torso.position.set(0,seat,.4*sc);u.torso.rotation.x=.15*motion;const vec=(x,y,z)=>new THREE.Vector3(x,y,z);
-for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.28,seat,.4*sc),shoulder=vec(side*.64,seat+1.04,.4*sc-.15*motion),hand=vec(side*.5*sc,1.96*sc,-sc),elbow=shoulder.clone().lerp(hand,.52);elbow.x+=side*.1;elbow.y-=.2;limbBetween(u.limbs[i*2],shoulder,elbow);limbBetween(u.limbs[i*2+1],elbow,hand);
-const foot=vec(side*.55,0,.45*sc),worldFoot=foot.clone().applyQuaternion(rider.quaternion).add(rider.position);worldFoot.y=hAt(worldFoot.x,worldFoot.z)+.12;const groundFoot=worldFoot.sub(rider.position).applyQuaternion(rider.quaternion.clone().invert());let pedal=v.t==='bici'?vec(side*.4*sc,(.75-side*Math.sin(phase)*.28)*sc,side*Math.cos(phase)*.28*sc):vec(side*.5*sc,.72*sc,.1*sc);foot.copy(groundFoot).lerp(pedal,motion);const knee=hip.clone().lerp(foot,.5);knee.z-=.5*motion;knee.x+=side*.12*(1-motion);limbBetween(u.limbs[4+i*2],hip,knee);limbBetween(u.limbs[5+i*2],knee,foot);u.boots[i].position.copy(foot);u.boots[i].rotation.x=0}}
+const riderSystem=window.HUNTER_RIDER.create(THREE,{scene,box:bx,material:M,scales:VS,heightAt:hAt,shadows:visualQuality.shadows});
+const rider=riderSystem.object,poseRider=riderSystem.update;
 let swimming=false;let V=[],cv=null;const P={x:0,z:0,y:0,hd:0};
 // construir món
-function build(){if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}world=new THREE.Group();scene.add(world);B=[];stairs=[];swimming=false;rider.visible=false;rider.userData.motion=0;pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};waypoint=null;E=[];Pj=[];DB.length=0;WA.length=0;TG.clear();bombs=[];fx=[];logb=[];hp=100;ammo=24;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
+function build(){if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}world=new THREE.Group();scene.add(world);B=[];stairs=[];swimming=false;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};waypoint=null;E=[];Pj=[];DB.length=0;WA.length=0;TG.clear();bombs=[];fx=[];logb=[];hp=100;ammo=24;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
 do{seed=Math.floor(Math.random()*1e9);genIslands();pa=land(A,2000);pb=land(Bi,2000)}while(!pa||!pb);
 const terrain=window.HUNTER_TERRAIN.create(THREE,{size:S,segments:SEG,heightAt:hAt,material:MAT.terrain()});
 world.add(terrain.mesh,window.HUNTER_TERRAIN.createBorder(THREE,{size:S,halfSize:H}));
