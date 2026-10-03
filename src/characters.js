@@ -5,22 +5,22 @@ window.HUNTER_CHARACTERS=Object.freeze({
     const g=new THREE.Group(),cloth=general?P.general:P.primary,vest=general?P.secondary:P.vest;g.userData.legs=[];g.userData.arms=[];
     for(const x of[-.34,.34]){
       const p=new THREE.Group();p.position.set(x,1.45,0);g.add(p);
-      box(p,.5,1.2,.55,cloth,0,-.6,0);box(p,.58,.24,.62,P.dark,0,-1.05,-.02);box(p,.58,.35,.85,P.dark,0,-1.28,-.13);g.userData.legs.push(p)
+      box(p,.38,1.2,.46,cloth,0,-.6,0);box(p,.46,.24,.52,P.dark,0,-1.05,-.02);box(p,.48,.35,.72,P.dark,0,-1.28,-.11);g.userData.legs.push(p)
     }
-    box(g,1.18,1.25,.68,cloth,0,2.02,0);box(g,1.3,.92,.84,vest,0,2.08,0);
-    box(g,.28,1.02,.12,P.dark,-.42,2.08,.47);box(g,.28,1.02,.12,P.dark,.42,2.08,.47);
-    box(g,.88,.24,.92,P.dark,0,1.62,0);box(g,.86,1,.38,P.secondary,0,2.12,.53);
+    box(g,.98,1.25,.6,cloth,0,2.02,0);box(g,1.08,.92,.72,vest,0,2.08,0);
+    box(g,.22,1.02,.1,P.dark,-.35,2.08,.41);box(g,.22,1.02,.1,P.dark,.35,2.08,.41);
+    box(g,.76,.22,.78,P.dark,0,1.62,0);box(g,.74,1,.34,P.secondary,0,2.12,.46);
     for(const x of[-.4,0,.4])box(g,.28,.4,.19,general?P.gold:P.primary,x,1.98,-.5);
-    box(g,.72,.7,.7,P.skin,0,2.99,0);box(g,.68,.13,.08,P.dark,0,3.07,-.39);
+    box(g,.62,.72,.62,P.skin,0,2.99,0);box(g,.58,.12,.07,P.dark,0,3.07,-.34);
     if(general){
       round(g,.52,.22,P.secondary,0,3.43,0);box(g,.85,.08,.65,P.dark,0,3.34,-.18);box(g,.18,.18,.04,P.gold,0,3.44,-.5);
       for(const x of[-.65,.65]){box(g,.3,.12,.52,P.gold,x,2.6,0);box(g,.12,.5,.12,P.gold,x,2.36,.28)}
     }else{
-      const h=new THREE.Mesh(new THREE.SphereGeometry(.51,8,4,0,Math.PI*2,0,Math.PI/2),material(cloth));h.position.y=3.2;h.scale.z=1.12;g.add(h);
-      round(g,.54,.12,P.dark,0,3.18,0)
+      const h=new THREE.Mesh(new THREE.SphereGeometry(.46,8,5,0,Math.PI*2,0,Math.PI/2),material(cloth));h.position.y=3.2;h.scale.set(1,.98,1.08);g.add(h);
+      round(g,.49,.11,P.dark,0,3.18,0)
     }
-    for(const x of[-.78,.78]){
-      const p=new THREE.Group();p.position.set(x,2.55,0);g.add(p);box(p,.36,.95,.4,cloth,0,-.46,0);box(p,.46,.2,.5,P.dark,0,-.16,0);box(p,.32,.3,.33,P.skin,0,-1.02,0);g.userData.arms.push(p)
+    for(const x of[-.62,.62]){
+      const p=new THREE.Group();p.position.set(x,2.55,0);g.add(p);box(p,.28,.95,.34,cloth,0,-.46,0);box(p,.36,.18,.42,P.dark,0,-.16,0);box(p,.25,.3,.27,P.skin,0,-1.02,0);g.userData.arms.push(p)
     }
     const gun=new THREE.Group();gun.position.set(0,-1,-.05);gun.rotation.x=-Math.PI/2;g.userData.arms[1].add(gun);
     box(gun,.16,.2,1.5,P.metal,0,0,-.25);box(gun,.18,.36,.25,P.dark,0,-.24,0);box(gun,.18,.2,.45,0x66513c,0,0,.55);
@@ -28,14 +28,14 @@ window.HUNTER_CHARACTERS=Object.freeze({
   },
   createPlayer(THREE,{box,palette=window.HUNTER_PALETTE}){
     const P=palette.player,player=new THREE.Group(),mats=[],J=(w,h,d,c,x,y,z,g,swap)=>{const m=box(g,w,h,d,c,x,y,z);if(swap)mats.push([m.material,c,swap]);return m},u=player.userData;u.ph=0;u.firePose=0;
-    const leg=x=>{const g=new THREE.Group();g.position.set(x,1.9,0);player.add(g);J(.6,1.9,.7,P.primary,0,-.95,0,g,window.HUNTER_PALETTE.enemy.primary);box(g,.7,.24,.72,P.dark,0,-1.15,0);box(g,.7,.4,.95,0x171a18,0,-1.75,-.12);return g};
-    u.ll=leg(-.4);u.lr=leg(.4);
-    J(1.7,1.7,.95,P.secondary,0,2.8,0,player,window.HUNTER_PALETTE.enemy.general);box(player,1.82,.3,1.05,P.dark,0,1.98,0);
-    box(player,1.2,1.38,.54,P.webbing,0,2.9,.72);box(player,.28,1.28,.12,P.dark,-.42,2.9,.5);box(player,.28,1.28,.12,P.dark,.42,2.9,.5);
-    box(player,.5,.5,.12,P.dark,-.45,3.2,-.52);
-    const arm=x=>{const g=new THREE.Group();g.position.set(x,3.5,0);player.add(g);J(.5,1.5,.55,P.secondary,0,-.7,0,g,window.HUNTER_PALETTE.enemy.general);box(g,.48,.2,.62,P.dark,0,-.22,0);box(g,.45,.45,.5,P.skin,0,-1.55,0);return g};u.al=arm(-1.1);u.ar=arm(1.1);
-    box(player,.95,.95,.95,P.skin,0,4.1,0);box(player,.85,.22,.1,P.dark,0,4.15,-.5);
-    J(1.12,.5,1.12,P.primary,0,4.6,0,player,window.HUNTER_PALETTE.enemy.secondary);box(player,1.18,.1,.9,P.dark,0,4.43,-.08);
+    const leg=x=>{const g=new THREE.Group();g.position.set(x,1.9,0);player.add(g);J(.46,1.9,.56,P.primary,0,-.95,0,g,window.HUNTER_PALETTE.enemy.primary);box(g,.54,.22,.58,P.dark,0,-1.15,0);box(g,.56,.4,.76,0x171a18,0,-1.75,-.1);return g};
+    u.ll=leg(-.31);u.lr=leg(.31);
+    J(1.32,1.7,.78,P.secondary,0,2.8,0,player,window.HUNTER_PALETTE.enemy.general);box(player,1.42,.28,.86,P.dark,0,1.98,0);
+    box(player,.96,1.38,.46,P.webbing,0,2.9,.59);box(player,.22,1.28,.1,P.dark,-.34,2.9,.43);box(player,.22,1.28,.1,P.dark,.34,2.9,.43);
+    box(player,.4,.46,.1,P.dark,-.36,3.2,-.44);
+    const arm=x=>{const g=new THREE.Group();g.position.set(x,3.5,0);player.add(g);J(.36,1.5,.42,P.secondary,0,-.7,0,g,window.HUNTER_PALETTE.enemy.general);box(g,.36,.18,.46,P.dark,0,-.22,0);box(g,.32,.45,.36,P.skin,0,-1.55,0);return g};u.al=arm(-.78);u.ar=arm(.78);
+    box(player,.78,.95,.78,P.skin,0,4.1,0);box(player,.7,.2,.08,P.dark,0,4.15,-.41);
+    J(.94,.5,.94,P.primary,0,4.6,0,player,window.HUNTER_PALETTE.enemy.secondary);box(player,1,.1,.78,P.dark,0,4.43,-.06);
     const gun=new THREE.Group();gun.position.set(0,-1.5,-.1);gun.rotation.x=-Math.PI/2;u.ar.add(gun);
     box(gun,.2,.25,1.8,P.metal,0,0,-.2);box(gun,.2,.5,.25,P.dark,0,-.3,.1);box(gun,.22,.3,.6,0x6b4a2a,0,0,.9);u.gun=gun;u.mats=mats;player.scale.setScalar(2/3);
     return player;
