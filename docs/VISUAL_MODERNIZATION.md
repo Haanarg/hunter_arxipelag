@@ -196,3 +196,8 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - Tanc: més volum, faldons laterals, torreta i canó reforçats, detalls frontals afegits.
 - Helicòpter: fuselatge/cabina més definida, detalls laterals, rotor principal reforçat i llums frontals.
 - Es mantenen sense canvis els valors de `scales`, `radii` i els contractes `wheels`, `rotor`, `tailRotor`, `fan` i `crank`.
+
+## Llanxa i hovercraft — 2026-10-03
+- Llanxa: coberta i bordes més definits, detall interior, llums i acabats de popa millorats.
+- Hovercraft: faldó i carrosseria més marcats, cabina reforçada, conducte i ventilador de quatre pales, suports i llums frontals.
+- Es mantenen intactes `scales`, `radii` i el contracte `userData.fan` de l'hovercraft.
