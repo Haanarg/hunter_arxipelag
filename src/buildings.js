@@ -7,8 +7,10 @@ window.HUNTER_BUILDINGS=Object.freeze({
       const mesh=new THREE.Mesh(new THREE.BoxGeometry(sx,height,sz),mat);
       mesh.position.set(lx,y,lz);group.add(mesh);return mesh
     };
-    const addDoor=(group,{lx,lz,sx,sz,height,wallMaterial,doorMaterial,doorHeight=3.6})=>{
-      const h=Math.min(doorHeight,Math.max(2.8,height-.8));
+
+    // Porta visual: més estreta i alta, amb llinda real a sobre.
+    const addDoor=(group,{lx,lz,sx,sz,height,wallMaterial,doorMaterial,doorHeight=4.4})=>{
+      const h=Math.min(doorHeight,Math.max(3.8,height-.65));
       const door=addWall(group,{lx,lz,sx,sz,height:h,material:doorMaterial,y:h/2});
       const lintelHeight=Math.max(0,height-h);
       const lintel=lintelHeight>.05?addWall(group,{
@@ -16,6 +18,90 @@ window.HUNTER_BUILDINGS=Object.freeze({
       }):null;
       return {door,lintel,doorHeight:h}
     };
+
+    // Façana amb obertures de finestra reals. La paret es construeix al voltant
+    // dels buits; el vidre queda lleugerament endins de la cara exterior.
+    const addWindowedWall=(group,{lx,lz,sx,sz,height,material:mat})=>{
+      const alongX=sx>=sz,L=alongX?sx:sz,T=alongX?sz:sx;
+      const count=L>=14?2:1;
+      const winW=Math.min(2.7,L/(count*2.65));
+      const winH=Math.min(2.15,Math.max(1.75,height*.31));
+      const bottom=Math.min(2.35,Math.max(1.75,height*.32));
+      const top=bottom+winH;
+      const centers=count===2?[-L*.255,L*.255]:[0];
+      const parts=[];
+
+      const piece=(center,len,y,h)=>{
+        if(len<=.05||h<=.05)return null;
+        const x=alongX?lx+center:lx,z=alongX?lz:lz+center;
+        const m=addWall(group,{
+          lx:x,lz:z,
+          sx:alongX?len:T,sz:alongX?T:len,
+          height:h,material:mat,y
+        });
+        parts.push(m);return m
+      };
+
+      // Ampit inferior i llinda superior continus.
+      piece(0,L,bottom/2,bottom);
+      if(height>top)piece(0,L,top+(height-top)/2,height-top);
+
+      // Pilars entre les obertures.
+      const intervals=[];
+      let cursor=-L/2;
+      for(const c of centers){
+        const a=c-winW/2,b=c+winW/2;
+        intervals.push([cursor,a]);cursor=b
+      }
+      intervals.push([cursor,L/2]);
+      for(const [a,b] of intervals)if(b-a>.05)piece((a+b)/2,b-a,bottom+winH/2,winH);
+
+      // Vidres i marcs: hi ha buit de paret real darrere.
+      const glassMat=material(0x3e7185,'glass'),trimMat=material(0xd0bf9c,'masonry');
+      const frame=.13,depth=Math.max(.09,T*.18);
+      const faceOffset=T*.08;
+      for(const c of centers){
+        const wx=alongX?lx+c:lx,wz=alongX?lz:lz+c;
+        const glass=new THREE.Mesh(
+          new THREE.BoxGeometry(alongX?winW-.18:depth,winH-.18,alongX?depth:winW-.18),
+          glassMat
+        );
+        glass.position.set(
+          alongX?wx:lx-faceOffset,
+          bottom+winH/2,
+          alongX?lz-faceOffset:wz
+        );
+        group.add(glass);
+
+        const addFrame=(center,span,horizontal,offset)=>{
+          const m=new THREE.Mesh(
+            new THREE.BoxGeometry(
+              alongX?(horizontal?span:frame):(horizontal?frame:depth*1.5),
+              horizontal?frame:winH+frame*2,
+              alongX?(horizontal?depth*1.5:depth*1.5):(horizontal?span:frame)
+            ),
+            trimMat
+          );
+          if(alongX)m.position.set(lx+center,bottom+winH/2+(horizontal?offset:0),lz-faceOffset*1.4);
+          else m.position.set(lx-faceOffset*1.4,bottom+winH/2+(horizontal?offset:0),lz+center);
+          group.add(m)
+        };
+        addFrame(c,winW+frame*2,true,winH/2+frame/2);
+        addFrame(c,winW+frame*2,true,-winH/2-frame/2);
+
+        for(const side of[-1,1]){
+          const m=new THREE.Mesh(
+            new THREE.BoxGeometry(alongX?frame:depth*1.5,winH+frame*2,alongX?depth*1.5:frame),
+            trimMat
+          );
+          if(alongX)m.position.set(lx+c+side*(winW/2+frame/2),bottom+winH/2,lz-faceOffset*1.4);
+          else m.position.set(lx-faceOffset*1.4,bottom+winH/2,lz+c+side*(winW/2+frame/2));
+          group.add(m)
+        }
+      }
+      return parts
+    };
+
     const createShell=({width,depth,height,wallColor,roofColor})=>{
       const group=new THREE.Group(),walls=wallMaterial(wallColor),doors=doorMaterial();
       const floor=new THREE.Mesh(new THREE.BoxGeometry(width+.35,12.3,depth+.35),material(0x756b5d,'masonry'));
@@ -34,18 +120,7 @@ window.HUNTER_BUILDINGS=Object.freeze({
       group.add(rimN,rimS,rimE,rimW);
       return {group,walls,doors,roof};
     };
-    const addWindows=(group,{width,depth,height})=>{
-      const trim=0xd0bf9c,glass=0x3e7185,shade=0x26343d;
-      for(const side of[-1,1])for(const wx of[-width*.28,width*.28]){
-        box(group,3.05,.28,.28,trim,wx,height*.62+1.1,side*(depth/2+.08),'masonry');
-        box(group,2.72,1.9,.13,glass,wx,height*.62,side*(depth/2+.1),'glass');
-        box(group,2.92,.16,.22,shade,wx,height*.62-.98,side*(depth/2+.12),'masonry')
-      }
-      for(const side of[-1,1])for(const wz of[-depth*.27,depth*.27]){
-        box(group,.13,1.9,2.62,glass,side*(width/2+.1),height*.62,wz,'glass');
-        box(group,.22,.16,2.82,shade,side*(width/2+.12),height*.62-.98,wz,'masonry')
-      }
-    };
+
     const addStep=(group,{alongAxis,riseWidth,height,base,x,y,z,color})=>{
       const mesh=box(group,alongAxis?riseWidth:4.2,height-base,alongAxis?4.2:riseWidth,color,x,(height+base)/2,z,'masonry');
       mesh.userData.stair=true;return mesh
@@ -60,6 +135,6 @@ window.HUNTER_BUILDINGS=Object.freeze({
       pole.position.set(0,7,0);cloth.position.set(2.65,12,0);
       group.position.set(x,y,z);group.add(pole,cloth);return group
     };
-    return {createShell,addWall,addDoor,addWindows,addStep,createFlag};
+    return {createShell,addWall,addDoor,addWindowedWall,addStep,createFlag};
   }
 });
