@@ -46,7 +46,12 @@ function land(i,n=600,fl){for(let k=0;k<n;k++){const a=R()*6.283,d=R()*i.r*.75,x
 if(h>3&&h<14&&slope(x,z,h)<2.5&&(!fl||fr(x,z)<2.2)&&!B.some(b=>Math.abs(b.x-x)<b.hw+24&&Math.abs(b.z-z)<b.hd+24)&&!treeHit(x,z,3)&&Math.abs(x)<H-150&&Math.abs(z)<H-150)return{x,z,h}}return null}
 // escena
 const coarse=matchMedia('(pointer:coarse)').matches;
-const visualQuality={pixelRatio:coarse?1.25:1.75,shadows:!coarse,shadowSize:coarse?768:1536,exposure:1.0};
+const qualityName=coarse?'mobile':'desktop';
+const QUALITY={
+ mobile:{pixelRatio:1.2,shadows:false,shadowSize:768,exposure:1.02,fog:.00019,skySegments:[24,14],waterSegments:220},
+ desktop:{pixelRatio:1.75,shadows:true,shadowSize:1536,exposure:1.0,fog:.000155,skySegments:[40,24],waterSegments:360}
+};
+const visualQuality=QUALITY[qualityName];
 const ren=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:false});
 ren.setPixelRatio(Math.min(devicePixelRatio,visualQuality.pixelRatio));
 ren.outputEncoding=THREE.sRGBEncoding;
@@ -58,18 +63,18 @@ ren.shadowMap.type=THREE.PCFSoftShadowMap;
 document.body.prepend(ren.domElement);
 const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(60,1,.3,12000);
 const rs=()=>{ren.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()};addEventListener('resize',rs);rs();
-scene.fog=new THREE.FogExp2(0xe0a5a0,.00017);
-scene.add(new THREE.HemisphereLight(0xa3d9ff,0x437538,.85));
-const sunDir=new THREE.Vector3(.3,.24,-1).normalize(),sun=new THREE.DirectionalLight(0xffcb96,2.0);
+scene.fog=new THREE.FogExp2(0xdca59d,visualQuality.fog);
+scene.add(new THREE.HemisphereLight(0xb9dcff,0x31562d,.72));
+const sunDir=new THREE.Vector3(.3,.24,-1).normalize(),sun=new THREE.DirectionalLight(0xffd1a3,2.15);
 sun.position.copy(sunDir).multiplyScalar(500);scene.add(sun);scene.add(sun.target);sun.castShadow=true;sun.shadow.mapSize.set(visualQuality.shadowSize,visualQuality.shadowSize);Object.assign(sun.shadow.camera,{left:-85,right:85,top:85,bottom:-85,near:1,far:850});sun.shadow.camera.updateProjectionMatrix();sun.shadow.bias=-.0008;sun.shadow.normalBias=.08;
-const sg=new THREE.SphereGeometry(8000,32,20),sc=[],sp=sg.attributes.position;
+const sg=new THREE.SphereGeometry(8000,visualQuality.skySegments[0],visualQuality.skySegments[1]),sc=[],sp=sg.attributes.position;
 for(let i=0;i<sp.count;i++){const t=Math.max(0,sp.getY(i)/8000),c=new THREE.Color(0xff962f).lerp(new THREE.Color(0x633dc6),Math.pow(t,.45));sc.push(c.r,c.g,c.b)}
 sg.setAttribute('color',new THREE.Float32BufferAttribute(sc,3));
 const sky=new THREE.Mesh(sg,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false}));scene.add(sky);
 const sunM=new THREE.Mesh(new THREE.SphereGeometry(110,16,12),new THREE.MeshBasicMaterial({color:0xfff2c0,fog:false}));scene.add(sunM);
 const waterUniforms={time:{value:0},light:{value:sunDir}};
 const waterMat=new THREE.ShaderMaterial({uniforms:waterUniforms,extensions:{derivatives:true},vertexShader:`uniform float time;attribute float seabed;varying vec3 worldP;varying float bed;void main(){vec3 p=position;bed=seabed;float amp=clamp((-seabed+.6)/9.,.12,1.);p.y=(sin(p.x*.03+time*1.2)*.9+cos(p.z*.04+time*.9)*.9+sin((p.x+p.z)*.07+time*2.)*.4)*amp;worldP=p;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}`,fragmentShader:`uniform vec3 light;uniform float time;varying vec3 worldP;varying float bed;void main(){if(bed>worldP.y+.12)discard;vec3 n=normalize(cross(dFdx(worldP),dFdy(worldP)));if(n.y<0.)n=-n;vec3 v=normalize(cameraPosition-worldP);float nd=max(dot(n,light),0.);float f=pow(1.-max(dot(n,v),0.),3.);float spec=pow(max(dot(reflect(-light,n),v),0.),95.);float depth=max(0.,worldP.y-bed);vec3 c=mix(vec3(.015,.64,.58),vec3(.008,.055,.30),smoothstep(1.,22.,depth));c*=.8+nd*.45;c=mix(c,vec3(.22,.50,.83),f*.45);c+=vec3(1.,.62,.18)*spec;float zone=(1.-smoothstep(1.8,4.,depth))*smoothstep(-.1,.2,depth);float breaker=pow(.5+.5*sin(depth*5.-time*3.8+sin(worldP.x*.16+worldP.z*.12)*.6),7.);float foam=zone*breaker*.9+(1.-smoothstep(.05,.35,depth))*.4;c=mix(c,vec3(.94,1.,.91),clamp(foam,0.,1.));float fog=1.-exp(-distance(cameraPosition,worldP)*.00012);c=mix(c,vec3(.65,.42,.48),fog);gl_FragColor=vec4(c,1.);}`});
-const wg=new THREE.PlaneGeometry(S+2200,S+2200,320,320).rotateX(-Math.PI/2);wg.setAttribute('seabed',new THREE.Float32BufferAttribute(new Float32Array(wg.attributes.position.count),1));scene.add(new THREE.Mesh(wg,waterMat));
+const wg=new THREE.PlaneGeometry(S+2200,S+2200,visualQuality.waterSegments,visualQuality.waterSegments).rotateX(-Math.PI/2);wg.setAttribute('seabed',new THREE.Float32BufferAttribute(new Float32Array(wg.attributes.position.count),1));scene.add(new THREE.Mesh(wg,waterMat));
 const deep=new THREE.Mesh(new THREE.PlaneGeometry(30000,30000).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x062679}));deep.position.y=-90;scene.add(deep);
 function updateSeabed(){const p=wg.attributes.position,b=wg.attributes.seabed;for(let i=0;i<p.count;i++)b.setX(i,hAt(p.getX(i),p.getZ(i)));b.needsUpdate=true}
 const waves=t=>waterUniforms.time.value=t;
