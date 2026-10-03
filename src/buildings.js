@@ -103,7 +103,7 @@ window.HUNTER_BUILDINGS=Object.freeze({
     };
 
     const createShell=({width,depth,height,wallColor,roofColor})=>{
-      const group=new THREE.Group(),walls=wallMaterial(wallColor),doors=doorMaterial();
+      const group=new THREE.Group(),roofGroup=new THREE.Group(),walls=wallMaterial(wallColor),doors=doorMaterial();group.add(roofGroup);
       const floor=new THREE.Mesh(new THREE.BoxGeometry(width+.35,12.3,depth+.35),material(0x756b5d,'masonry'));
       const roof=new THREE.Mesh(new THREE.BoxGeometry(width+1.35,1.15,depth+1.35),material(roofColor,'masonry'));
       floor.position.y=-5.85;roof.position.y=height+.62;group.add(floor,roof);
@@ -137,7 +137,7 @@ window.HUNTER_BUILDINGS=Object.freeze({
         const slab=new THREE.Mesh(new THREE.BoxGeometry(chord,.24,depth+1.15),roofMat);
         slab.position.set(x,y,0);
         slab.rotation.z=a-Math.PI/2;
-        group.add(slab);
+        roofGroup.add(slab);
       }
 
       // Costats baixos sota l'arrencada de la volta.
@@ -151,10 +151,10 @@ window.HUNTER_BUILDINGS=Object.freeze({
         for(let i=0;i<segments;i++){
           const a=(i+.5)*da,x=Math.cos(a)*radius,y=spring+Math.sin(a)*radius,chord=2*radius*Math.sin(da/2);
           const rib=new THREE.Mesh(new THREE.BoxGeometry(chord,.1,.12),frameMat);
-          rib.position.set(x,y,z);rib.rotation.z=a-Math.PI/2;group.add(rib);
+          rib.position.set(x,y,z);rib.rotation.z=a-Math.PI/2;roofGroup.add(rib);
         }
       }
-      return {group,walls,doors,roof:group,sideWalls:[left,right],spring,archTop:spring+radius};
+      roofGroup.userData.color=roofColor;return {group,walls,doors,roof:roofGroup,sideWalls:[left,right],spring,archTop:spring+radius};
     };
 
     const addRamp=(group,{alongAxis,length,width,top,bottom,x,z,color,direction=1})=>{
