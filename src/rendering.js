@@ -11,39 +11,35 @@ window.HUNTER_RENDERING = Object.freeze({
     renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 
     const scene=new THREE.Scene();
-    const camera=new THREE.PerspectiveCamera(60,1,.3,12000);
-    scene.fog=new THREE.FogExp2(0xdca59d,visualQuality.fog);
+    const camera=new THREE.PerspectiveCamera(58,1,.3,12000);
+    scene.fog=new THREE.FogExp2(0xc99f91,visualQuality.fog);
 
-    const hemi=new THREE.HemisphereLight(0xb9dcff,0x31562d,.72);
-    scene.add(hemi);
+    const hemi=new THREE.HemisphereLight(0xc6e7ff,0x27451e,.82);scene.add(hemi);
+    const fill=new THREE.DirectionalLight(0x7eb2ff,.32);fill.position.set(-250,180,220);scene.add(fill);
 
     const sunDir=new THREE.Vector3(.3,.24,-1).normalize();
-    const sun=new THREE.DirectionalLight(0xffd1a3,2.15);
+    const sun=new THREE.DirectionalLight(0xffcf9a,2.35);
     sun.position.copy(sunDir).multiplyScalar(500);
     sun.castShadow=visualQuality.shadows;
     sun.shadow.mapSize.set(visualQuality.shadowSize,visualQuality.shadowSize);
-    Object.assign(sun.shadow.camera,{left:-85,right:85,top:85,bottom:-85,near:1,far:850});
+    Object.assign(sun.shadow.camera,{left:-95,right:95,top:95,bottom:-95,near:1,far:900});
     sun.shadow.camera.updateProjectionMatrix();
-    sun.shadow.bias=-.0008;
-    sun.shadow.normalBias=.08;
-    scene.add(sun);
-    scene.add(sun.target);
+    sun.shadow.bias=-.0007;sun.shadow.normalBias=.07;scene.add(sun);scene.add(sun.target);
 
     const skyGeometry=new THREE.SphereGeometry(8000,visualQuality.skySegments[0],visualQuality.skySegments[1]);
     const colors=[],positions=skyGeometry.attributes.position;
+    const horizon=new THREE.Color(0xffa646),mid=new THREE.Color(0xc76bb6),zenith=new THREE.Color(0x5147b8);
     for(let i=0;i<positions.count;i++){
-      const t=Math.max(0,positions.getY(i)/8000);
-      const color=new THREE.Color(0xff962f).lerp(new THREE.Color(0x633dc6),Math.pow(t,.45));
+      const t=Math.max(0,positions.getY(i)/8000),color=t<.35?horizon.clone().lerp(mid,t/.35):mid.clone().lerp(zenith,(t-.35)/.65);
       colors.push(color.r,color.g,color.b);
     }
     skyGeometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
-    const sky=new THREE.Mesh(skyGeometry,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false}));
-    scene.add(sky);
+    const sky=new THREE.Mesh(skyGeometry,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false}));scene.add(sky);
 
-    const sunMesh=new THREE.Mesh(new THREE.SphereGeometry(110,16,12),new THREE.MeshBasicMaterial({color:0xfff2c0,fog:false}));
-    scene.add(sunMesh);
+    const sunMesh=new THREE.Mesh(new THREE.SphereGeometry(120,20,14),new THREE.MeshBasicMaterial({color:0xfff0b0,fog:false}));scene.add(sunMesh);
+    const glow=new THREE.Mesh(new THREE.SphereGeometry(175,18,12),new THREE.MeshBasicMaterial({color:0xffbd65,transparent:true,opacity:.12,depthWrite:false,fog:false}));scene.add(glow);
 
     const resize=()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix()};
-    return {renderer,scene,camera,sunDir,sun,sky,sunMesh,resize};
+    return {renderer,scene,camera,sunDir,sun,sky,sunMesh,glow,resize};
   }
 });
