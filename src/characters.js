@@ -1,5 +1,14 @@
 // Model i animació visual del jugador. No conté moviment, inventari ni combat.
 window.HUNTER_CHARACTERS=Object.freeze({
+  createSoldier(THREE,{box,material,general=false}){
+    const round=(g,r,h,c,x,y,z)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,12),material(c));m.position.set(x,y,z);g.add(m);return m};
+const g=new THREE.Group(),cloth=general?0xff303c:0xe82432,vest=0xac1426;g.userData.legs=[];g.userData.arms=[];
+for(const x of[-.34,.34]){const p=new THREE.Group();p.position.set(x,1.45,0);g.add(p);box(p,.5,1.2,.55,cloth,0,-.6,0);box(p,.55,.35,.85,0x242727,0,-1.28,-.13);g.userData.legs.push(p)}
+box(g,1.18,1.25,.68,cloth,0,2.02,0);box(g,1.25,.9,.82,vest,0,2.08,0);box(g,.86,1,.38,0xb92232,0,2.12,.53);for(const x of[-.4,0,.4])box(g,.28,.4,.19,0xf35043,x,1.98,-.5);box(g,.72,.7,.7,0xc89a74,0,2.99,0);box(g,.68,.13,.08,0x30373b,0,3.07,-.39);
+if(general){round(g,.52,.22,0xc51c2d,0,3.43,0);box(g,.85,.08,.65,0x343230,0,3.34,-.18);box(g,.18,.18,.04,0xe6c666,0,3.44,-.5);for(const x of[-.65,.65])box(g,.25,.1,.48,0xc9ab60,x,2.6,0)}else{const h=new THREE.Mesh(new THREE.SphereGeometry(.51,8,4,0,Math.PI*2,0,Math.PI/2),material(cloth));h.position.y=3.2;h.scale.z=1.12;g.add(h);round(g,.52,.15,cloth,0,3.2,0)}
+for(const x of[-.78,.78]){const p=new THREE.Group();p.position.set(x,2.55,0);g.add(p);box(p,.36,.95,.4,cloth,0,-.46,0);box(p,.32,.3,.33,0xc89a74,0,-1.02,0);g.userData.arms.push(p)}
+const gun=new THREE.Group();gun.position.set(0,-1,-.05);gun.rotation.x=-Math.PI/2;g.userData.arms[1].add(gun);box(gun,.16,.2,1.5,0x292e30,0,0,-.25);box(gun,.18,.36,.25,0x24282b,0,-.24,0);box(gun,.18,.2,.45,0x66513c,0,0,.55);return g
+  },
   createPlayer(THREE,{box}){
     const player=new THREE.Group(),mats=[],J=(w,h,d,c,x,y,z,g,swap)=>{const m=box(g,w,h,d,c,x,y,z);if(swap)mats.push([m.material,c,swap]);return m},u=player.userData;u.ph=0;u.firePose=0;
     const leg=x=>{const g=new THREE.Group();g.position.set(x,1.9,0);player.add(g);J(.6,1.9,.7,0x32c52a,0,-.95,0,g,0xe82932);box(g,.7,.4,.95,0x1c1c1c,0,-1.75,-.12);return g};

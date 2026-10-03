@@ -92,7 +92,7 @@ Mantenir l'estètica low-poly i la jugabilitat de *Hunter: Arxipèlag*, modernit
 
 ### Fase C — Personatge i entitats
 1. ✅ Separats model i animació del jugador.
-2. Separar models visuals d'enemics i fauna de la seva IA.
+2. Models de soldats i general traslladats a `HUNTER_CHARACTERS.createSoldier`; pendent separar fauna i resta d’entitats.
 3. Centralitzar paletes jugador/enemic perquè verd i vermell siguin inequívocs.
 4. Preparar una interfície comuna d'animació sense reescriure la IA.
 
@@ -141,3 +141,19 @@ No s'ha fet encara una validació completa en navegador WebGL/dispositiu Android
 
 ## Regla de compatibilitat
 No reescriure simulació i renderer simultàniament. Quan un sistema s'extreu, conservar temporalment una interfície compatible amb el codi existent i eliminar-la només després de validar la nova ruta.
+
+## Represa i correccions de runtime — 2026-10-03
+
+Base revisada: `a40b1ceb8731d44aaf26a77f7dcbc93857e4ca65`, branca `visual-modernization`.
+
+- Reproduït un bloqueig real d’arrencada en executar els scripts en l’ordre de l’HTML: `ReferenceError: soldier is not defined`. La comprovació de sintaxi no detectava aquest error.
+- Restaurada la construcció de soldats i general dins `src/characters.js`, amb els colors vermells, les extremitats articulades i els contractes `userData.arms`/`legs` que consumeix la IA. `mkEn()` fa servir aquesta interfície explícita.
+- Corregides les coordenades de les escales: el mòdul rebia altures del món dins un grup que ja estava elevat. Ara rep altures locals i cada graó visible coincideix amb la superfície transitable.
+- Les portes baixes amb llinda es conserven. Comprovada l’entrada des de les quatre orientacions.
+- Afegit `tests/smoke.cjs`, executable amb `node tests/smoke.cjs`, sense dependències addicionals: carrega el Three.js inclòs i tots els scripts de l’HTML en ordre, construeix el món i comprova enemics, escales, portes, els set vehicles, minimapa, reinici, joystick i vegetació.
+- Prova superada amb 98 edificis i 186 vehicles en el mapa aleatori d’aquesta execució.
+- Límit: DOM, àudio i renderer GPU simulats. Aquest test no valida shaders, aspecte visual, so real, rendiment GPU ni ergonomia Android.
+- README adaptat al fork modular: cal conservar `src/` al costat de `index.html`.
+- No s’ha fusionat a `main`, ni desplegat a Sites o GitHub Pages, ni afegit cap workflow de publicació.
+
+Pròxim pas: validació visual en navegador amb WebGL; després, continuar l’extracció de fauna i entitats i la centralització de paletes de la fase C.
