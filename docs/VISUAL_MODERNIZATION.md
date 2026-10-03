@@ -179,3 +179,12 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - Edificis amb cornises, marcs i ampits nous; les col·lisions no s'han modificat.
 - Cel i il·luminació revisats amb gradient de tres tons, fill light i halo solar.
 - La validació completa de rendiment i ergonomia continua pendent en Android real.
+
+
+## Obertures arquitectòniques — 2026-10-03
+- Portes exteriors redimensionades: menys amples i més altes respecte al personatge.
+- Les tres façanes sense porta ja no són murs continus amb vidres superposats.
+- Les finestres es construeixen com obertures reals: ampit inferior, llinda superior i pilars laterals/intermedis.
+- El vidre queda lleugerament endins del buit i conserva marcs low-poly.
+- Les col·lisions generals de façana es mantenen per no alterar IA ni navegació; visualment, però, el mur ja té el forat real.
+- La destrucció de façanes amaga també vidres i marcs associats.
