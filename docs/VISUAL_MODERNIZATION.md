@@ -230,13 +230,13 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 
 
 ## Full de ruta — assentaments funcionals
-### Fase G1 — Identitat visual de compounds
+### Fase G1 — Identitat visual de compounds — EN CURS
 - Avançada enemiga: sacs/barreres, torre, il·luminació o senyalització vermella i punts defensius.
 - Garatge: hangar, taller auxiliar, bidons, caixes i vehicles aparcats amb una lectura clara de zona mecànica.
 - Port: molls, amarradors, magatzem i equipament naval/portuari.
 - Polvorí: caixes de munició, tanques/perímetre, senyalització i separació de seguretat.
 
-### Fase G2 — Composició espacial coherent
+### Fase G2 — Composició espacial coherent — EN CURS
 - Evitar offsets rígids repetitius.
 - Crear pati o espai central als compounds.
 - Orientar portes, rampes i vehicles cap a l'espai central o cap a la sortida funcional.
@@ -252,3 +252,15 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - Patrulles dins de l'avançada.
 - Soldats utilitzant punts defensius, torres i edificis com a referència.
 - Reaccions diferenciades segons el tipus de compound.
+
+
+### Implementació inicial G1/G2 — 2026-10-04
+- Afegits props funcionals reutilitzables: caixes, bidons, barreres, caixes de munició, bol·lards i senyalització.
+- Afegides plataformes/superfícies locals per donar lectura d'espai central als compounds.
+- Avançada: barreres defensives, senyalització, caixes, bidons, torre i soldats disposats al voltant d'un pati.
+- Garatge: hangar gran, taller auxiliar, zona de bidons/caixes i vehicles aparcats.
+- Polvorí: barreres, caixes de munició, senyalització i guarda.
+- Port: bol·lards, equipament bàsic, magatzems i vehicle aquàtic vinculat al port.
+- Els compounds tenen una rotació lleugerament variable per evitar patrons massa repetitius.
+- G3 continua pendent: camins/superfícies més integrats amb el terreny i molls funcionals.
+- G4 continua pendent: IA contextual i patrulles segons tipus d'assentament.
