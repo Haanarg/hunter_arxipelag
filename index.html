@@ -281,12 +281,40 @@ world.add(terrain.mesh,window.HUNTER_TERRAIN.createBorder(THREE,{size:S,halfSize
 [[-22,0],[22,-8],[0,24]].forEach(([dx,dz])=>mkB(pa.x+dx,pa.z+dz,15,15,7,0xe9dfc8,0x2c5fc0));flag(pa.x,pa.z-6,0x2c7bff);
 mkB(pb.x,pb.z,30,30,13,0x6b5a55,0x8c1f1f);mkB(pb.x+30,pb.z+6,12,12,6,0x8a7a70,0x8c1f1f);mkB(pb.x-28,pb.z-4,12,12,6,0x8a7a70,0x8c1f1f);flag(pb.x,pb.z+16,0xe02828);
 const cols=[0xd8b48a,0xc9a27a,0xb8c4c9,0xd9c9a0],compoundVehicles=[];
+const compoundProp=(kind,x,z,rot=0)=>{
+  const y=Math.max(.05,hAt(x,z)),g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;
+  if(kind==='crate'){bx(g,1.2,.9,1,0x7b5a35,0,.45,0,'paint');bx(g,1.26,.1,1.06,0x3f3021,0,.2,0,'metal');bx(g,.1,.95,1.08,0x3f3021,0,.48,0,'metal')}
+  else if(kind==='barrel'){round(g,.42,.9,0x53616a,0,.45,0,'y','metal');round(g,.44,.08,0x2e3438,0,.12,0,'y','metal');round(g,.44,.08,0x2e3438,0,.78,0,'y','metal')}
+  else if(kind==='barrier'){bx(g,2.4,.72,.5,0x9a8c72,0,.36,0,'masonry');for(const x0 of[-.9,.9])bx(g,.28,.28,.8,0x5d5548,x0,.14,0,'masonry')}
+  else if(kind==='ammo'){bx(g,1.5,.75,1.1,0x5f6846,0,.38,0,'paint');bx(g,1.55,.12,1.15,0x30352c,0,.78,0,'metal');bx(g,.12,.8,1.18,0x30352c,0,.38,0,'metal')}
+  else if(kind==='bollard'){round(g,.18,.85,0x4b5154,0,.42,0,'y','metal');round(g,.28,.1,0x2f3437,0,.08,0,'y','metal')}
+  else if(kind==='sign'){bx(g,.18,1.8,.18,0x454b4f,0,.9,0,'metal');bx(g,1.4,.75,.12,0xb32626,0,1.55,0,'paint')}
+  world.add(g);return g
+};
+const compoundPad=(x,z,w,d,c=0x77736c)=>{const y=hAt(x,z)+.03,o=new THREE.Mesh(new THREE.BoxGeometry(w,.08,d),M(c,'masonry'));o.position.set(x,y,z);world.add(o);return o};
 const compound=(type,q)=>{
-  const x=q.x,z=q.z,put=(dx,dz,w,d,h,c,r,opt)=>mkB(x+dx,z+dz,w,d,h,c,r,opt||{});
-  if(type==='avancada'){put(-9,0,12,12,6,0x8a7a70,0x6d2929,{kind:'outpost'});put(8,5,10,10,5.5,0x9b8a78,0x6d2929,{kind:'outpost'});put(7,-8,9,9,5,0x7e756c,0x5f2525,{kind:'outpost'});mkEn('torre',x-15,z-12);for(let n=0;n<2;n++)mkEn('soldat',x+rr(-8,8),z+rr(-8,8));compoundVehicles.push({t:'moto',x:x+13,z:z+10,hd:0})}
-  else if(type==='garatge'){const h=put(0,0,30,42,18,0xb6b0a2,0xd8cfb7,{hangar:true,kind:'hangar',doorSide:1,doorWidth:18,doorHeight:9,openDoor:true});put(23,7,11,10,5.8,0xb7a98e,0x6e4435,{kind:'garage'});compoundVehicles.push({t:R()<.55?'cotxe':'moto',x:h.x,z:h.z-7,hd:0});if(R()<.45)compoundVehicles.push({t:'bici',x:h.x+4.5,z:h.z-5.5,hd:0})}
-  else if(type==='polvori'){const a=put(-5,0,13,11,6,0x918b78,0x664338,{kind:'ammo'}),b=put(8,2,9,9,5.2,0x847a69,0x574035,{kind:'ammo'});addIt('expl',a);addIt('expl',b);if(R()<.55)addIt('arma',a);mkEn('soldat',x+3,z-7)}
-  else if(type==='port'){put(-7,5,17,11,6.5,0xa89a82,0x675044,{kind:'port'});put(8,5,10,9,5,0xb8aa91,0x675044,{kind:'port'});let best=null;for(let a=0;a<24&&!best;a++){const ang=a*Math.PI/12;for(let d=10;d<Math.max(80,q.r||160);d+=8){const wx=x+Math.cos(ang)*d,wz=z+Math.sin(ang)*d;if(hAt(wx,wz)<-3&&hAt(wx+Math.cos(ang)*10,wz+Math.sin(ang)*10)<-3){best={x:wx,z:wz,hd:Math.atan2(-Math.cos(ang),-Math.sin(ang))};break}}}if(best)compoundVehicles.push({t:R()<.78?'llanxa':'hover',...best})}
+  const x=q.x,z=q.z,ang=rr(-.22,.22),cs=Math.cos(ang),sn=Math.sin(ang),tr=(dx,dz)=>[x+dx*cs-dz*sn,z+dx*sn+dz*cs],put=(dx,dz,w,d,h,c,r,opt)=>{const [px,pz]=tr(dx,dz);return mkB(px,pz,w,d,h,c,r,opt||{})},prop=(kind,dx,dz,rot=0)=>{const [px,pz]=tr(dx,dz);return compoundProp(kind,px,pz,ang+rot)};
+  if(type==='avancada'){
+    compoundPad(x,z,31,28,0x6c675c);
+    put(-10,2,12,12,6,0x8a7a70,0x6d2929,{kind:'outpost'});put(9,7,10,10,5.5,0x9b8a78,0x6d2929,{kind:'outpost'});put(7,-9,9,9,5,0x7e756c,0x5f2525,{kind:'outpost'});
+    const [tx,tz]=tr(-15,-11);mkEn('torre',tx,tz);for(let n=0;n<2;n++){const [sx,sz]=tr(rr(-7,7),rr(-5,5));mkEn('soldat',sx,sz)}
+    for(const p of[[-13,11],[-6,13],[4,13],[12,9],[14,1],[13,-8]])prop('barrier',p[0],p[1],p[0]<0?0:Math.PI/2);
+    prop('sign',-1,11);prop('crate',2,-2);prop('crate',4,-2);prop('barrel',-3,-1);compoundVehicles.push({t:'moto',...(()=>{const [vx,vz]=tr(11,9);return{x:vx,z:vz}})(),hd:ang})
+  } else if(type==='garatge'){
+    compoundPad(x,z,45,54,0x686868);
+    const h=put(-4,3,30,42,18,0xb6b0a2,0xd8cfb7,{hangar:true,kind:'hangar',doorSide:1,doorWidth:18,doorHeight:9,openDoor:true});put(20,6,11,10,5.8,0xb7a98e,0x6e4435,{kind:'garage'});
+    for(const p of[[15,-2],[17,-2],[19,-2]])prop('barrel',p[0],p[1]);for(const p of[[15,1],[18,2]])prop('crate',p[0],p[1]);prop('sign',19,10,Math.PI/2);
+    compoundVehicles.push({t:R()<.55?'cotxe':'moto',x:h.x,z:h.z-7,hd:ang});if(R()<.45)compoundVehicles.push({t:'bici',x:h.x+4.5,z:h.z-5.5,hd:ang})
+  } else if(type==='polvori'){
+    compoundPad(x,z,30,26,0x706a5c);
+    const a=put(-7,1,13,11,6,0x918b78,0x664338,{kind:'ammo'}),b=put(8,3,9,9,5.2,0x847a69,0x574035,{kind:'ammo'});addIt('expl',a);addIt('expl',b);if(R()<.55)addIt('arma',a);
+    for(const p of[[-12,-8],[-6,-10],[0,-10],[6,-10],[12,-7]])prop('barrier',p[0],p[1]);for(const p of[[-1,0],[2,0],[5,0]])prop('ammo',p[0],p[1]);prop('sign',0,-8);const [sx,sz]=tr(3,-7);mkEn('soldat',sx,sz)
+  } else if(type==='port'){
+    compoundPad(x,z,34,22,0x77746d);
+    put(-8,6,17,11,6.5,0xa89a82,0x675044,{kind:'port'});put(9,6,10,9,5,0xb8aa91,0x675044,{kind:'port'});
+    for(const p of[[-12,-2],[-6,-2],[0,-2],[6,-2],[12,-2]])prop('bollard',p[0],p[1]);prop('crate',7,0);prop('barrel',10,0);
+    let best=null;for(let a=0;a<24&&!best;a++){const aa=a*Math.PI/12;for(let d=10;d<Math.max(80,q.r||160);d+=8){const wx=x+Math.cos(aa)*d,wz=z+Math.sin(aa)*d;if(hAt(wx,wz)<-3&&hAt(wx+Math.cos(aa)*10,wz+Math.sin(aa)*10)<-3){best={x:wx,z:wz,hd:Math.atan2(-Math.cos(aa),-Math.sin(aa))};break}}}if(best)compoundVehicles.push({t:R()<.78?'llanxa':'hover',...best})
+  }
 };
 islands.forEach(i=>{if(i===A||i===Bi)return;const q=land(i,500,1);if(!q)return;q.r=i.r;const roll=R(),type=roll<.28?'avancada':roll<.56?'garatge':roll<.78?'polvori':'port';compound(type,q);if(i.r>380&&R()<.45){const q2=land(i,500,1);if(q2){q2.r=i.r;compound(R()<.6?'garatge':'avancada',q2)}}});
 updateSeabed();vegetate(pa);spawnFauna();HQ={x:pb.x,z:pb.z};const rb=B.slice(6);
