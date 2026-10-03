@@ -91,7 +91,7 @@ Mantenir l'estètica low-poly i la jugabilitat de *Hunter: Arxipèlag*, modernit
 4. Afegir variació visual low-poly sense augmentar gaire el cost de draw calls.
 
 ### Fase C — Personatge i entitats
-1. Separar model i animació del jugador.
+1. ✅ Separats model i animació del jugador.
 2. Separar models visuals d'enemics i fauna de la seva IA.
 3. Centralitzar paletes jugador/enemic perquè verd i vermell siguin inequívocs.
 4. Preparar una interfície comuna d'animació sense reescriure la IA.
