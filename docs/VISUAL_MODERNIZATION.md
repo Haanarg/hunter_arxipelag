@@ -201,3 +201,14 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - Llanxa: coberta i bordes més definits, detall interior, llums i acabats de popa millorats.
 - Hovercraft: faldó i carrosseria més marcats, cabina reforçada, conducte i ventilador de quatre pales, suports i llums frontals.
 - Es mantenen intactes `scales`, `radii` i el contracte `userData.fan` de l'hovercraft.
+
+## Torres i assentaments funcionals — 2026-10-04
+- Torres de vigilància redissenyades amb quatre pilars, plataforma, baranes, cabina i sostre; s'elimina la silueta tipus "xampinyó".
+- Les torres ja no roten visualment per seguir el jugador.
+- Cadència de tir de les torres duplicada: cooldown de 1,4 s a 0,7 s.
+- El punt de detecció i de tir de les torres s'ha elevat fins a la plataforma superior.
+- Les cases aleatòries aïllades s'han substituït en gran part per compounds funcionals: avançada enemiga, garatge, port i polvorí.
+- Els garatges poden generar hangars amb portes amples permanentment obertes i vehicles estacionats a dins.
+- Els hangars fan servir col·lisió per parets/obertures en lloc del volum AABB complet per permetre que els vehicles en surtin per la porta.
+- Els ports concentren la generació de vehicles aquàtics i s'ha eliminat l'antic bucle que generava fins a quatre vehicles aquàtics per illa.
+- Es manté una llanxa de servei prop de la base i els vehicles aquàtics addicionals queden principalment vinculats als ports.
