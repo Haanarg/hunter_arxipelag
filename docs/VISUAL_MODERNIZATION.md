@@ -248,7 +248,7 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - Moll/plataforma als ports.
 - Transicions de superfície coherents amb el terreny.
 
-### Fase G4 — IA contextual
+### Fase G4 — IA contextual — IMPLEMENTACIÓ INICIAL COMPLETADA
 - Patrulles dins de l'avançada.
 - Soldats utilitzant punts defensius, torres i edificis com a referència.
 - Reaccions diferenciades segons el tipus de compound.
@@ -276,3 +276,19 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - Afegits molls físics de fusta amb pilons metàl·lics que s'estenen fins a aigua prou fonda.
 - Els vehicles aquàtics de port apareixen al costat del moll en lloc de damunt seu.
 - G4 continua pendent: patrulles i comportaments contextuals segons tipus d'assentament.
+
+
+### Implementació inicial G4 — 2026-10-04
+- Els soldats poden tenir rutes de patrulla explícites i les segueixen quan no estan en alerta.
+- Avançades: patrulles de perímetre/pati.
+- Polvorins: guàrdies amb recorreguts més curts i defensius.
+- Garatges i ports: poden generar un guarda local amb patrulla contextual.
+- HQ enemic: diversos soldats patrullen un circuit interior del perímetre.
+- La lògica d'alerta/combat continua tenint prioritat sobre la patrulla.
+
+### Fortificació del HQ — 2026-10-04
+- Afegit perímetre de filferrada funcional al voltant del complex del HQ.
+- La filferrada té pals metàl·lics, tres línies horitzontals i fil superior en ziga-zaga.
+- El perímetre bloqueja jugador i vehicles mitjançant la mateixa infraestructura `Wl` que les parets.
+- Es deixa una entrada ampla al costat sud del recinte perquè el HQ continuï sent accessible.
+- La zona interior del HQ queda exclosa de vegetació per preservar la lectura del perímetre.
