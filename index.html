@@ -198,7 +198,7 @@ const TG=new Map();
 function treeHit(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L)if(Math.hypot(x-t.x,z-t.z)<t.r+r)return true}return false}
 function treePush(){const r0=.5,cx=Math.floor(P.x/16),cz=Math.floor(P.z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L){const dx=P.x-t.x,dz=P.z-t.z,d=Math.hypot(dx,dz),m=t.r+r0;if(d<m&&d>.001){P.x=t.x+dx/d*m;P.z=t.z+dz/d*m}}}}
 const PL=[],FA=[],ZM=new THREE.Matrix4().makeScale(0,0,0);let PM={};
-const vegetationVisual=window.HUNTER_VEGETATION.create(THREE,{materialProfile,random:rn});
+const vegetationVisual=window.HUNTER_VEGETATION.create(THREE,{materialProfile,random:rr});
 const PG={t:vegetationVisual.geometry.trunk,c:vegetationVisual.geometry.crown,c2:vegetationVisual.geometry.crown2};
 let compoundClear=[];
 function treeAt(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L)if(Math.hypot(x-t.x,z-t.z)<t.r+r)return t}return null}
