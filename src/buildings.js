@@ -71,7 +71,7 @@ window.HUNTER_BUILDINGS=Object.freeze({
           bottom+winH/2,
           alongX?lz-faceOffset:wz
         );
-        group.add(glass);
+        group.add(glass);parts.push(glass);
 
         const addFrame=(center,span,horizontal,offset)=>{
           const m=new THREE.Mesh(
@@ -84,7 +84,7 @@ window.HUNTER_BUILDINGS=Object.freeze({
           );
           if(alongX)m.position.set(lx+center,bottom+winH/2+(horizontal?offset:0),lz-faceOffset*1.4);
           else m.position.set(lx-faceOffset*1.4,bottom+winH/2+(horizontal?offset:0),lz+center);
-          group.add(m)
+          group.add(m);parts.push(m)
         };
         addFrame(c,winW+frame*2,true,winH/2+frame/2);
         addFrame(c,winW+frame*2,true,-winH/2-frame/2);
@@ -96,7 +96,7 @@ window.HUNTER_BUILDINGS=Object.freeze({
           );
           if(alongX)m.position.set(lx+c+side*(winW/2+frame/2),bottom+winH/2,lz-faceOffset*1.4);
           else m.position.set(lx-faceOffset*1.4,bottom+winH/2,lz+c+side*(winW/2+frame/2));
-          group.add(m)
+          group.add(m);parts.push(m)
         }
       }
       return parts
