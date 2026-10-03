@@ -30,6 +30,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#1b2a5a;font-family:sy
 <script src="src/water.js"></script>
 <script src="src/terrain.js"></script>
 <script src="src/vehicles.js"></script>
+<script src="src/vehicle-dynamics.js"></script>
 <script src="src/joystick.js"></script>
 <script src="src/rider.js"></script>
 <script>
@@ -250,6 +251,7 @@ const gn=new THREE.Group();gn.position.set(0,-1.5,-.1);gn.rotation.x=-Math.PI/2;
 function animPl(f,dt){const u=pl.userData,k=1-Math.exp(-14*dt);u.firePose=Math.max(0,(u.firePose||0)-dt);u.ph+=dt*(swimming?(f?4:2.2):10*Math.abs(f));const ph=u.ph;
 if(swimming&&!cv){const sweep=(1-Math.cos(ph))*.5;u.gun.visible=false;pl.rotation.x+=(-.12-pl.rotation.x)*k;u.ar.rotation.x+=(1.53-u.ar.rotation.x)*k;u.al.rotation.x+=(1.53-u.al.rotation.x)*k;u.ar.rotation.z+=((.12+sweep*1.1)-u.ar.rotation.z)*k;u.al.rotation.z+=((-.12-sweep*1.1)-u.al.rotation.z)*k;u.ll.rotation.x+=(.3+Math.sin(ph+.8)*.2-u.ll.rotation.x)*k;u.lr.rotation.x+=(.3+Math.sin(ph+.8)*.2-u.lr.rotation.x)*k;u.ll.rotation.z=-sweep*.25;u.lr.rotation.z=sweep*.25;return}
 pl.rotation.x+=(0-pl.rotation.x)*k;u.ll.rotation.z*=1-k;u.lr.rotation.z*=1-k;const s=f?Math.sin(ph)*.7:0,aiming=u.firePose>0&&!cv;u.ll.rotation.x=s;u.lr.rotation.x=-s;u.gun.visible=ammo>0||aiming;u.ar.rotation.x+=((aiming?1.48:-s*.35)-u.ar.rotation.x)*k;u.al.rotation.x+=((aiming?1.3:s*.35)-u.al.rotation.x)*k;u.ar.rotation.z*=1-k;u.al.rotation.z+=((aiming?-.3:0)-u.al.rotation.z)*k;pl.position.y+=Math.abs(Math.sin(ph))*.12*Math.abs(f)}
+const VT=window.HUNTER_VEHICLE_DYNAMICS.types;
 const VS=window.HUNTER_VEHICLES.scales;
 const vehicleRadius=t=>window.HUNTER_VEHICLES.radii[t]*VS[t];
 const mkV=window.HUNTER_VEHICLES.createFactory(THREE,{box:bx,material:M,shadows:visualQuality.shadows});
@@ -301,7 +303,7 @@ let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0;
 const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joystick')),clearKeys=()=>{Object.keys(K).forEach(k=>K[k]=0);joystick.reset();document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))};
 const act=c=>{if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(!started||paused||over)return;if(c==='KeyE')toggle();if(c==='KeyG')plant();if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
 const nearV=()=>{let b=null,bd=Infinity;V.forEach(v=>{const d=Math.hypot(v.x-P.x,v.z-P.z);if(d<vehicleRadius(v.t)+5&&d<bd){bd=d;b=v}});return b};
-function toggle(){if(cv){if(cv.t==='heli'&&cv.alt-Math.max(0,hAt(cv.x,cv.z))>4){msg='Aterra abans de baixar: J o BAIXA.';msgT=3;return}let spot=null;for(let i=0;i<16;i++){const a=cv.hd+i*Math.PI/8,x=cv.x+Math.cos(a)*(vehicleRadius(cv.t)+2.2),z=cv.z+Math.sin(a)*(vehicleRadius(cv.t)+2.2);if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||Wl.some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;spot={x,z};if(hAt(x,z)>0)break}if(!spot){msg='No hi ha espai per baixar aquí.';msgT=3;return}P.x=spot.x;P.z=spot.z;P.hd=cv.hd;cv.v=0;cv=null}else{const v=nearV();if(v){cv=v;swimming=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb W / ▲';msgT=3}}}
+function toggle(){if(cv){if(cv.t==='heli'&&cv.alt-Math.max(0,hAt(cv.x,cv.z))>4){msg='Aterra abans de baixar: J o BAIXA.';msgT=3;return}let spot=null;for(let i=0;i<16;i++){const a=cv.hd+i*Math.PI/8,x=cv.x+Math.cos(a)*(vehicleRadius(cv.t)+2.2),z=cv.z+Math.sin(a)*(vehicleRadius(cv.t)+2.2);if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||Wl.some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;spot={x,z};if(hAt(x,z)>0)break}if(!spot){msg='No hi ha espai per baixar aquí.';msgT=3;return}P.x=spot.x;P.z=spot.z;P.hd=cv.hd;cv.v=0;cv=null}else{const v=nearV();if(v){cv=v;swimming=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
 addEventListener('keydown',e=>{if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(e.repeat)return;act(e.code);if(started&&!paused&&!over)K[e.code]=1});addEventListener('keyup',e=>K[e.code]=0);
 for(const b of document.querySelectorAll('[data-k]')){const c=b.dataset.k;b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);act(c);if(started&&!paused&&!over){K[c]=1;b.classList.add('held')}});for(const v of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(v,()=>{K[c]=0;b.classList.remove('held')})}
 addEventListener('blur',()=>{clearKeys();if(started&&!paused&&!over)panel('pause')});document.addEventListener('visibilitychange',()=>{if(document.hidden&&started&&!over)panel('pause')});
@@ -315,8 +317,8 @@ else{body.innerHTML='<div class="controls"><b>WASD / fletxes</b><span>Avança, f
 function drawFullMap(){mini();const c=document.getElementById('fullmap').getContext('2d');c.drawImage(mc,0,0,510,510);c.strokeStyle='#fff';c.lineWidth=2;c.strokeRect(1,1,508,508);c.fillStyle='#fff';c.font='13px system-ui';c.fillText('N',250,19);c.fillText('4,8 × 4,8 km',14,494);if(waypoint){const x=(waypoint.x+H)/S*510,z=(waypoint.z+H)/S*510;c.strokeStyle='#ffdb8f';c.beginPath();c.arc(x,z,8,0,7);c.stroke()}}
 document.getElementById('resumeButton').onclick=resume;mc.onclick=()=>started&&panel('map');
 const hud=document.getElementById('hud');
-function stepV(v,f,tr,ud,dt){const c=VT[v.t],a=c.m=='a',radius=vehicleRadius(v.t);v.v+=f*c.a*dt;v.v*=1-c.dr*dt;
-v.hd+=tr*dt*c.tu*(a?1:Math.max(-1,Math.min(1,v.v/10)));
+function stepV(v,f,tr,ud,dt){const c=VT[v.t],a=c.m=='a',radius=vehicleRadius(v.t),input=window.HUNTER_VEHICLE_DYNAMICS.inputs(v,f,tr,dt);f=input.forward;tr=input.turn;v.v+=f*c.a*dt;v.v*=Math.max(0,1-c.dr*c.coast*dt);
+const speedSteer=a?1:Math.max(-1,Math.min(1,v.v/10));v.hd+=tr*dt*c.tu*speedSteer;
 const nx=v.x-Math.sin(v.hd)*v.v*dt,nz=v.z-Math.cos(v.hd)*v.v*dt,h=hAt(nx,nz),g=Math.max(0,h);let ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;
 if(c.m=='w')ok=ok&&h<-1.2;if(c.m=='l')ok=ok&&h>-1.2;if(ok&&((c.m=='l'&&v.t!='tanc')||c.m=='wl')&&treeHit(nx,nz,radius*.6))ok=false;if(ok&&a&&v.alt-g<8&&treeHit(nx,nz,radius))ok=false;
 if(!a||v.alt-g<16)for(const b of B)if(Math.abs(nx-b.x)<b.hw+radius&&Math.abs(nz-b.z)<b.hd+radius)ok=false;
@@ -341,13 +343,13 @@ Dr.forEach(d=>{const o=!cv&&Math.hypot(P.x-d.cx,P.z-d.cz)<(d.open?6:4.5);d.open=
 items.forEach(it=>{it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25});
 if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k];if(Math.hypot(P.x-it.x,P.z-it.z)<2.2&&Math.abs(P.y-it.y)<3){if(it.t=='arma')ammo+=40;if(it.t=='med')hp=Math.min(100,hp+40);inv[it.t]=(inv[it.t]||0)+1;world.remove(it.o);items.splice(k,1);msg='Has trobat: '+IT[it.t].n;msgT=3;snd('pick')}}
 msgT-=dt;pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv;animPl(cv?0:f,dt);
-V.forEach(v=>place(v,t,dt,v===cv?tr:0));poseRider(cv,dt);
+V.forEach(v=>place(v,t,dt,v===cv?(v.steerInput||0):0));poseRider(cv,dt);
 const T=cv||P,c=cv?VT[cv.t]:ib?{cd:6,ch:11}:{cd:10,ch:5},ty=cv?cv.o.position.y:P.y,w=new THREE.Vector3(T.x+Math.sin(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1),0,T.z+Math.cos(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1));
 w.y=Math.max(ty+c.ch*zoom*(cv?Math.sqrt(VS[cv.t]):1),hAt(w.x,w.z)+3,2.5);cam.position.lerp(w,1-Math.pow(.001,dt));
 cam.lookAt(T.x-Math.sin(T.hd)*8,ty+2,T.z-Math.cos(T.hd)*8);
 fcd-=dt;if(K.KeyF)fire();updEn(dt);updPj(dt);updFx(dt);updExtra(dt,t);
 const nv=cv?null:nearV();
-uiTick+=dt;if(uiTick>.12){uiTick=0;mini();hud.innerHTML=`HUNTER · ARXIPÈLAG<br>Vida: ${Math.round(hp)} · Munició: ${ammo} · Baixes: ${kills}<br>${cv?VT[cv.t].n:ib?'Dins d’un edifici':swimming?'Nedant':'A peu'} ${disg?' · Disfressat':''}<br>WASD / fletxes · E vehicle · F dispara · G explosiu<br>C disfressa · L coordenades · U/J alçada<br>M mapa · Esc pausa · Roda: zoom<br>Objectes: ${Object.keys(inv).map(k=>IT[k].n+' ×'+inv[k]).join(', ')||'—'}<br>X: ${P.x|0} · Z: ${P.z|0}${nv&&!cv?'<br>E: puja a '+VT[nv.t].n:''}${msgT>0?'<br>'+msg:''}${waypoint?'<br>Destinació: '+Math.round(Math.hypot(waypoint.x-P.x,waypoint.z-P.z))+' m':''}`;}}
+uiTick+=dt;if(uiTick>.12){uiTick=0;mini();hud.innerHTML=`HUNTER · ARXIPÈLAG<br>Vida: ${Math.round(hp)} · Munició: ${ammo} · Baixes: ${kills}<br>${cv?VT[cv.t].n:ib?'Dins d’un edifici':swimming?'Nedant':'A peu'} ${disg?' · Disfressat':''}<br>Joystick / WASD · E vehicle · F dispara · G explosiu<br>C disfressa · L coordenades · U/J alçada<br>M mapa · Esc pausa · Roda: zoom<br>Objectes: ${Object.keys(inv).map(k=>IT[k].n+' ×'+inv[k]).join(', ')||'—'}<br>X: ${P.x|0} · Z: ${P.z|0}${nv&&!cv?'<br>E: puja a '+VT[nv.t].n:''}${msgT>0?'<br>'+msg:''}${waypoint?'<br>Destinació: '+Math.round(Math.hypot(waypoint.x-P.x,waypoint.z-P.z))+' m':''}`;}}
 
 
 build();mini();let last=performance.now();
