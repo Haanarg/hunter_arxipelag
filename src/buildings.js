@@ -121,6 +121,54 @@ window.HUNTER_BUILDINGS=Object.freeze({
       return {group,walls,doors,roof};
     };
 
+    // Hangar de gran llum amb coberta arquejada low-poly.
+    // L'eix llarg és Z i la volta creua l'amplada X.
+    const createHangarShell=({width,depth,height,wallColor,roofColor})=>{
+      const group=new THREE.Group(),walls=wallMaterial(wallColor),doors=doorMaterial();
+      const floor=new THREE.Mesh(new THREE.BoxGeometry(width+.5,.35,depth+.5),material(0x6f6d67,'masonry'));
+      floor.position.y=.02;group.add(floor);
+
+      const spring=Math.max(3.1,height*.3),radius=Math.max(width*.5,2),segments=10,da=Math.PI/segments;
+      const roofMat=material(roofColor,'metal');
+      for(let i=0;i<segments;i++){
+        const a0=i*da,a1=(i+1)*da,a=(a0+a1)/2;
+        const x=Math.cos(a)*radius,y=spring+Math.sin(a)*radius;
+        const chord=2*radius*Math.sin(da/2);
+        const slab=new THREE.Mesh(new THREE.BoxGeometry(chord,.24,depth+1.15),roofMat);
+        slab.position.set(x,y,0);
+        slab.rotation.z=a-Math.PI/2;
+        group.add(slab);
+      }
+
+      // Costats baixos sota l'arrencada de la volta.
+      const sideT=.34;
+      const left=addWall(group,{lx:-width/2+sideT/2,lz:0,sx:sideT,sz:depth,height:spring,material:walls});
+      const right=addWall(group,{lx:width/2-sideT/2,lz:0,sx:sideT,sz:depth,height:spring,material:walls});
+
+      // Nervis exteriors per donar una lectura més propera a un hangar real.
+      const frameMat=material(0x5c6366,'metal');
+      for(const z of[-depth/2+.7,0,depth/2-.7]){
+        for(let i=0;i<segments;i++){
+          const a=(i+.5)*da,x=Math.cos(a)*radius,y=spring+Math.sin(a)*radius,chord=2*radius*Math.sin(da/2);
+          const rib=new THREE.Mesh(new THREE.BoxGeometry(chord,.1,.12),frameMat);
+          rib.position.set(x,y,z);rib.rotation.z=a-Math.PI/2;group.add(rib);
+        }
+      }
+      return {group,walls,doors,roof:group,sideWalls:[left,right],spring,archTop:spring+radius};
+    };
+
+    const addRamp=(group,{alongAxis,length,width,top,bottom,x,z,color,direction=1})=>{
+      const rise=top-bottom,mid=(top+bottom)/2,angle=Math.atan2(rise,length);
+      const mesh=new THREE.Mesh(
+        new THREE.BoxGeometry(alongAxis?length:width,.28,alongAxis?width:length),
+        material(color,'masonry')
+      );
+      mesh.position.set(x,mid,z);
+      if(alongAxis)mesh.rotation.z=-direction*angle;
+      else mesh.rotation.x=direction*angle;
+      mesh.userData.ramp=true;group.add(mesh);return mesh
+    };
+
     const addStep=(group,{alongAxis,riseWidth,height,base,x,y,z,color})=>{
       const mesh=box(group,alongAxis?riseWidth:4.2,height-base,alongAxis?4.2:riseWidth,color,x,(height+base)/2,z,'masonry');
       mesh.userData.stair=true;return mesh
@@ -135,6 +183,6 @@ window.HUNTER_BUILDINGS=Object.freeze({
       pole.position.set(0,7,0);cloth.position.set(2.65,12,0);
       group.position.set(x,y,z);group.add(pole,cloth);return group
     };
-    return {createShell,addWall,addDoor,addWindowedWall,addStep,createFlag};
+    return {createShell,createHangarShell,addWall,addDoor,addWindowedWall,addRamp,addStep,createFlag};
   }
 });
