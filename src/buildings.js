@@ -103,7 +103,7 @@ window.HUNTER_BUILDINGS=Object.freeze({
     };
 
     const createShell=({width,depth,height,wallColor,roofColor})=>{
-      const group=new THREE.Group(),roofGroup=new THREE.Group(),walls=wallMaterial(wallColor),doors=doorMaterial();group.add(roofGroup);
+      const group=new THREE.Group(),walls=wallMaterial(wallColor),doors=doorMaterial();
       const floor=new THREE.Mesh(new THREE.BoxGeometry(width+.35,12.3,depth+.35),material(0x756b5d,'masonry'));
       const roof=new THREE.Mesh(new THREE.BoxGeometry(width+1.35,1.15,depth+1.35),material(roofColor,'masonry'));
       floor.position.y=-5.85;roof.position.y=height+.62;group.add(floor,roof);
@@ -124,7 +124,7 @@ window.HUNTER_BUILDINGS=Object.freeze({
     // Hangar de gran llum amb coberta arquejada low-poly.
     // L'eix llarg és Z i la volta creua l'amplada X.
     const createHangarShell=({width,depth,height,wallColor,roofColor})=>{
-      const group=new THREE.Group(),walls=wallMaterial(wallColor),doors=doorMaterial();
+      const group=new THREE.Group(),roofGroup=new THREE.Group(),walls=wallMaterial(wallColor),doors=doorMaterial();group.add(roofGroup);
       const floor=new THREE.Mesh(new THREE.BoxGeometry(width+.5,.35,depth+.5),material(0x6f6d67,'masonry'));
       floor.position.y=.02;group.add(floor);
 
