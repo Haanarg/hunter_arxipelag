@@ -85,8 +85,8 @@ Mantenir l'estètica low-poly i la jugabilitat de *Hunter: Arxipèlag*, modernit
 4. Corregir regressions abans de continuar extraient sistemes grans.
 
 ### Fase B — Món visual
-1. Extreure construcció visual d'edificis, finestres, portes, escales i banderes.
-2. Mantenir col·lisions, vida/destrucció i navegació al nucli.
+1. ✅ Extreta la construcció visual d'edificis, finestres, portes, escales i banderes.
+2. ✅ Col·lisions, vida/destrucció i navegació es mantenen al nucli.
 3. Revisar transparència del vidre i materials arquitectònics.
 4. Afegir variació visual low-poly sense augmentar gaire el cost de draw calls.
 
