@@ -6,5 +6,5 @@ window.HUNTER_MATERIALS = Object.freeze({
   paint: Object.freeze({roughness:.62,metalness:.08}),
   metal: Object.freeze({roughness:.46,metalness:.55}),
   rubber: Object.freeze({roughness:.94,metalness:0}),
-  glass: Object.freeze({roughness:.24,metalness:.08})
+  glass: Object.freeze({roughness:.18,metalness:.04,transparent:true,opacity:.72,depthWrite:false})
 });
