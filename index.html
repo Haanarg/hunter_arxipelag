@@ -209,7 +209,7 @@ if(!L||slope(px,pz,h)>4)continue;
 if(stairs.some(s=>stairContains(s,px,pz,2))||Math.hypot(px-pa.x,pz-pa.z)<14||B.some(b=>Math.abs(px-b.x)<b.w/2+5&&Math.abs(pz-b.z)<b.d/2+5))continue;
 const s=rn(.9,1.4),yaw=rn(0,6.28);L.push([px,h-.3,pz,s,yaw]);
 if(L==pm){const e={x:px,z:pz,y:h-.3,s,yaw,r:.6,p:true,alive:true,hp:40,i:pm.length-1};put(e);PL.push(e)}else if(L==rk)put({x:px,z:pz,r:1.4})}
-const inst=(geo,arr,c0,fn)=>{if(!arr.length)return;const m=new THREE.InstancedMesh(geo,new THREE.MeshStandardMaterial({color:0xffffff,flatShading:true,side:THREE.DoubleSide}),arr.length);
+const inst=(geo,arr,c0,fn)=>{if(!arr.length)return;const m=new THREE.InstancedMesh(geo,new THREE.MeshStandardMaterial({color:0xffffff,flatShading:true,side:THREE.DoubleSide,...materialProfile('organic')}),arr.length);
 arr.forEach(([x,y,z,s,r],i)=>{dum.position.set(x,y,z);dum.rotation.set(0,r,0);if(fn)fn(dum,s);else dum.scale.setScalar(s);dum.updateMatrix();m.setMatrixAt(i,dum.matrix);
 m.setColorAt(i,new THREE.Color(c0).offsetHSL(rn(-.03,.03),rn(-.1,.1),rn(-.06,.06)))});world.add(m);return m};
 PM={t:inst(PG.t,pm,0x8a6a3a),c:inst(PG.c,pm,0x4fa03a),c2:inst(PG.c2,pm,0x6fbf3a)};
@@ -218,7 +218,7 @@ inst(new THREE.DodecahedronGeometry(1.2,0).translate(0,.5,0),rk,0x8b8494,(d,s)=>
 function fr(x,z){let a=1e9,b=-1e9;for(const[i,j]of[[0,0],[9,9],[-9,9],[9,-9],[-9,-9],[9,0],[-9,0],[0,9],[0,-9]]){const h=hAt(x+i,z+j);a=Math.min(a,h);b=Math.max(b,h)}return b-a}
 function dmgW(w,d){w.hp-=d;if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0)Wl.splice(i,1);i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);snd('boom',.3)}}
 function mkB(x,z,w,d,h,col,roof){const fy=Math.max(hAt(x,z),hAt(x-w/2,z-d/2),hAt(x+w/2,z-d/2),hAt(x-w/2,z+d/2),hAt(x+w/2,z+d/2)),g=new THREE.Group(),
-wm=new THREE.MeshStandardMaterial({color:col,flatShading:true,transparent:true}),dm=new THREE.MeshStandardMaterial({color:0x6b4a2a,flatShading:true,transparent:true}),t=.8,dw=4,ds=Math.floor(R()*4);
+wm=new THREE.MeshStandardMaterial({color:col,flatShading:true,transparent:true,...materialProfile('masonry')}),dm=new THREE.MeshStandardMaterial({color:0x6b4a2a,flatShading:true,transparent:true,...materialProfile('paint')}),t=.8,dw=4,ds=Math.floor(R()*4);
 const seg=(lx,lz,sx,sz,dr)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(sx,h,sz),dr?dm:wm);m.position.set(lx,h/2,lz);g.add(m);
 const o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+h,hp:dr?35:90,m,door:!!dr,open:false,cx:x+lx,cz:z+lz};Wl.push(o);if(dr)Dr.push(o)};
 [[0,d/2-t/2,w,t,0],[0,-d/2+t/2,w,t,0],[w/2-t/2,0,t,d-2*t,1],[-w/2+t/2,0,t,d-2*t,1]].forEach(([cx,cz,sx,sz,ax],k)=>{
@@ -227,9 +227,9 @@ for(const s of[-1,1]){if(ax)seg(cx,cz+s*off,sx,sl);else seg(cx+s*off,cz,sl,sz)}
 if(ax)seg(cx,cz,sx,dw,1);else seg(cx,cz,dw,sz,1)});
 if(w*d>=140&&R()<.5){const al=w>=d,L=al?d:w,gp=rr(-L/4,L/4),px=(R()<.5?-1:1)*rr((al?w:d)*.12,(al?w:d)*.2),a0=-L/2+t,a1=L/2-t;
 const ps=(a,b)=>{if(b-a<.5)return;const c=(a+b)/2,l=b-a;if(al)seg(px,c,t,l);else seg(c,px,l,t)};ps(a0,gp-1.6);ps(gp+1.6,a1)}
-const f=new THREE.Mesh(new THREE.BoxGeometry(w+.3,12.3,d+.3),M(0x7a6f60)),r=new THREE.Mesh(new THREE.BoxGeometry(w+1.2,1.2,d+1.2),M(roof));
+const f=new THREE.Mesh(new THREE.BoxGeometry(w+.3,12.3,d+.3),M(0x7a6f60,'masonry')),r=new THREE.Mesh(new THREE.BoxGeometry(w+1.2,1.2,d+1.2),M(roof,'masonry'));
 f.position.y=-5.85;r.position.y=h+.62;g.add(f,r);g.position.set(x,fy,z);world.add(g);
-const trim=0xc1b18f,glass=0x486e7a;for(const side of[-1,1])for(const wx of[-w*.28,w*.28]){bx(g,2.8,.22,.22,trim,wx,h*.62+1.1,side*(d/2+.08));bx(g,2.6,1.8,.12,glass,wx,h*.62,side*(d/2+.1))}for(const side of[-1,1])for(const wz of[-d*.27,d*.27])bx(g,.12,1.8,2.5,glass,side*(w/2+.1),h*.62,wz);
+const trim=0xc1b18f,glass=0x486e7a;for(const side of[-1,1])for(const wx of[-w*.28,w*.28]){bx(g,2.8,.22,.22,trim,wx,h*.62+1.1,side*(d/2+.08));bx(g,2.6,1.8,.12,glass,wx,h*.62,side*(d/2+.1),'glass')}for(const side of[-1,1])for(const wz of[-d*.27,d*.27])bx(g,.12,1.8,2.5,glass,side*(w/2+.1),h*.62,wz,'glass');
 
 const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:r,rhp:120};B.push(b);addStairs(b,ds);return b}
 // Door-aligned treads share the exact same geometry and walking height.
@@ -250,7 +250,7 @@ function flag(x,z,c){const y=hAt(x,z),p=new THREE.Mesh(new THREE.CylinderGeometr
 p.position.set(x,y+7,z);f.position.set(x+2.6,y+12,z);world.add(p,f)}
 // jugador i vehicles
 const pl=new THREE.Group();scene.add(pl);
-const bx=(g,w,h,d,c,x,y,z)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c));m.position.set(x,y,z);g.add(m);return m};
+const bx=(g,w,h,d,c,x,y,z,profile='organic')=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c,profile));m.position.set(x,y,z);g.add(m);return m};
 (function(){const mats=[],J=(w,h,d,c,x,y,z,g,sw)=>{const m=bx(g,w,h,d,c,x,y,z);if(sw)mats.push([m.material,c,sw]);return m},u=pl.userData;u.ph=0;
 const mk=(x)=>{const g=new THREE.Group();g.position.set(x,1.9,0);pl.add(g);J(.6,1.9,.7,0x32c52a,0,-.95,0,g,0xe82932);bx(g,.7,.4,.95,0x1c1c1c,0,-1.75,-.12);return g};
 u.ll=mk(-.4);u.lr=mk(.4);
