@@ -87,7 +87,7 @@ Mantenir l'estètica low-poly i la jugabilitat de *Hunter: Arxipèlag*, modernit
 ### Fase B — Món visual
 1. ✅ Extreta la construcció visual d'edificis, finestres, portes, escales i banderes.
 2. ✅ Col·lisions, vida/destrucció i navegació es mantenen al nucli.
-3. Revisar transparència del vidre i materials arquitectònics.
+3. ✅ Revisada la transparència del vidre: perfil `glass` amb transparència real, menor roughness i `depthWrite:false`.
 4. Afegir variació visual low-poly sense augmentar gaire el cost de draw calls.
 
 ### Fase C — Personatge i entitats
