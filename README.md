@@ -4,7 +4,7 @@ Joc 3D per al navegador inspirat en Hunter (Amiga), amb arxipèlags generats a c
 
 ## Jugar
 
-Obre `index.html` en un navegador amb WebGL. La branca principal (`main`) inclou Three.js r128 a l’HTML i mòduls locals a `src/`. Conserva tota la carpeta: `index.html` ja no és autònom.
+Obre `index.html` en un navegador amb WebGL. La branca principal (`main`) inclou Three.js r128 a l’HTML i mòduls locals a `src/`. Els colors de jugador/enemics i fauna estan centralitzats i els models de personatge tenen una lectura visual més marcada, mantenint l’estètica low-poly. Conserva tota la carpeta: `index.html` ja no és autònom.
 
 També pots servir aquesta carpeta amb `python3 -m http.server 8000` i obrir http://localhost:8000.
 
@@ -24,7 +24,7 @@ Mapa de 4,8 × 4,8 km, set tipus de vehicles, edificis explorables amb escales, 
 
 ## Desenvolupament
 
-La versió actual separa renderitzat, aigua, terreny, vehicles, controls, vegetació, edificis i personatges en mòduls locals. L’HTML encara inclou Three.js i el nucli de simulació. Conserva l’avís de llicència de Three.js quan el distribueixis.
+La versió actual separa renderitzat, aigua, terreny, vehicles, controls, vegetació, edificis, personatges, paleta visual i fauna en mòduls locals. L’HTML encara inclou Three.js i el nucli de simulació. Conserva l’avís de llicència de Three.js quan el distribueixis.
 
 Executa `node tests/smoke.cjs` per comprovar arrencada i regressions bàsiques sense GPU. La renderització visual encara requereix comprovació en un navegador amb WebGL.
 
