@@ -227,3 +227,28 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - Els hangars ja no generen escales d'accés. Si hi ha desnivell, creen una rampa contínua alineada amb la porta.
 - `groundAt()` reconeix les rampes i interpola l'altura de manera contínua.
 - La coberta arquejada és un grup separat perquè es pugui ocultar o destruir sense fer desaparèixer tot l'edifici.
+
+
+## Full de ruta — assentaments funcionals
+### Fase G1 — Identitat visual de compounds
+- Avançada enemiga: sacs/barreres, torre, il·luminació o senyalització vermella i punts defensius.
+- Garatge: hangar, taller auxiliar, bidons, caixes i vehicles aparcats amb una lectura clara de zona mecànica.
+- Port: molls, amarradors, magatzem i equipament naval/portuari.
+- Polvorí: caixes de munició, tanques/perímetre, senyalització i separació de seguretat.
+
+### Fase G2 — Composició espacial coherent
+- Evitar offsets rígids repetitius.
+- Crear pati o espai central als compounds.
+- Orientar portes, rampes i vehicles cap a l'espai central o cap a la sortida funcional.
+- Reservar espai lliure de vegetació i obstacles entre edificis.
+
+### Fase G3 — Camins i superfícies
+- Terra compactada o asfalt als garatges i avançades.
+- Camins curts entre edificis.
+- Moll/plataforma als ports.
+- Transicions de superfície coherents amb el terreny.
+
+### Fase G4 — IA contextual
+- Patrulles dins de l'avançada.
+- Soldats utilitzant punts defensius, torres i edificis com a referència.
+- Reaccions diferenciades segons el tipus de compound.
