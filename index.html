@@ -184,7 +184,7 @@ function wallBreak(w){const h=w.y1-w.y0-1,parts=w.parts&&w.parts.length?w.parts:
 if(w.parts&&w.parts.length){parts.forEach(m=>m.visible=false)}else if(w.m.visible)WA.push({m:w.m,h,t:.5});else world.remove(w.m);
 for(let i=0;i<(w.door?6:10);i++)debris(rn(w.x0,w.x1),w.y0+1+h*rn(.2,.9),rn(w.z0,w.z1),col,1,.9,7);
 for(let i=0;i<3;i++)puff(cx,w.y0+1+h*rn(.1,.6),cz,0xc9b48a,3.5)}
-function roofBreak(b){if(b.rb)return;b.rb=1;b.rhp=0;b.roof.visible=false;const col=b.roof.material.color.getHex(),y=b.fy+b.h+.6;
+function roofBreak(b){if(b.rb)return;b.rb=1;b.rhp=0;b.roof.visible=false;const col=b.roof.material?b.roof.material.color.getHex():(b.roof.userData.color||0x777777),y=b.fy+b.h+.6;
 for(let i=0;i<20;i++)debris(b.x+rn(-b.w/2,b.w/2),y,b.z+rn(-b.d/2,b.d/2),col,1,1.3,9);
 for(let i=0;i<8;i++)puff(b.x+rn(-b.w/2,b.w/2),y,b.z+rn(-b.d/2,b.d/2),0xc9b48a,4.5);snd('boom',.4)}
 function updDeb(dt){for(let i=DB.length-1;i>=0;i--){const d=DB[i],m=d.m;d.vy-=28*dt;m.position.x+=d.vx*dt;m.position.y+=d.vy*dt;m.position.z+=d.vz*dt;m.rotation.x+=d.rx*dt;
@@ -221,18 +221,35 @@ const vegetationMeshes=vegetationVisual.build({world,palms:pm,bushes:bu,rocks:rk
 PM={t:vegetationMeshes.palms.trunk,c:vegetationMeshes.palms.crown,c2:vegetationMeshes.palms.crown2}}
 function fr(x,z){let a=1e9,b=-1e9;for(const[i,j]of[[0,0],[9,9],[-9,9],[9,-9],[-9,-9],[9,0],[-9,0],[0,9],[0,-9]]){const h=hAt(x+i,z+j);a=Math.min(a,h);b=Math.max(b,h)}return b-a}
 function dmgW(w,d){w.hp-=d;if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0)Wl.splice(i,1);i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);snd('boom',.3)}}
-function mkB(x,z,w,d,h,col,roof,opt={}){const fy=Math.max(hAt(x,z),hAt(x-w/2,z-d/2),hAt(x+w/2,z-d/2),hAt(x-w/2,z+d/2),hAt(x+w/2,z+d/2)),visual=buildingVisual.createShell({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide;
+function mkB(x,z,w,d,h,col,roof,opt={}){const fy=Math.max(hAt(x,z),hAt(x-w/2,z-d/2),hAt(x+w/2,z-d/2),hAt(x-w/2,z+d/2),hAt(x+w/2,z+d/2)),visual=(opt.hangar?buildingVisual.createHangarShell:buildingVisual.createShell)({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide;
 const seg=(lx,lz,sx,sz,dr,windows=false)=>{if(!dr){const parts=windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:h,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:h,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+h,hp:90,m,parts:windows?parts:null,door:false,open:false,cx:x+lx,cz:z+lz};Wl.push(o);return}
 const parts=buildingVisual.addDoor(g,{lx,lz,sx,sz,height:h,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:35,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,cx:x+lx,cz:z+lz};Wl.push(door);Dr.push(door);
 if(parts.lintel)Wl.push({x0:door.x0,x1:door.x1,z0:door.z0,z1:door.z1,y0:fy+parts.doorHeight,y1:fy+h,hp:70,m:parts.lintel,door:false,open:false,playerBlock:false,cx:x+lx,cz:z+lz})};
-[[0,d/2-t/2,w,t,0],[0,-d/2+t/2,w,t,0],[w/2-t/2,0,t,d-2*t,1],[-w/2+t/2,0,t,d-2*t,1]].forEach(([cx,cz,sx,sz,ax],k)=>{if(k!=ds){seg(cx,cz,sx,sz,0,true);return}const L=ax?sz:sx,sl=(L-dw)/2,off=dw/2+sl/2;for(const s of[-1,1]){if(ax)seg(cx,cz+s*off,sx,sl);else seg(cx+s*off,cz,sl,sz)}if(ax)seg(cx,cz,sx,dw,1);else seg(cx,cz,dw,sz,1)});
-if(w*d>=140&&R()<.5){const al=w>=d,L=al?d:w,gp=rr(-L/4,L/4),px=(R()<.5?-1:1)*rr((al?w:d)*.12,(al?w:d)*.2),a0=-L/2+t,a1=L/2-t,ps=(a,b)=>{if(b-a<.5)return;const cc=(a+b)/2,l=b-a;if(al)seg(px,cc,t,l);else seg(cc,px,l,t)};ps(a0,gp-1.6);ps(gp+1.6,a1)}
+if(opt.hangar){
+  const sh=visual.spring||Math.max(3.1,h*.3),push=(lx,lz,sx,sz)=>{
+    const m=buildingVisual.addWall(g,{lx,lz,sx,sz,height:sh,material:wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+sh,hp:110,m,door:false,open:false,cx:x+lx,cz:z+lz};Wl.push(o);return o
+  };
+  // Laterals longitudinals baixos.
+  push(w/2-t/2,0,t,d);push(-w/2+t/2,0,t,d);
+  // Darrere tancat.
+  const backZ=ds===0?-d/2+t/2:d/2-t/2;push(0,backZ,w,t);
+  // Boca ampla oberta al costat de la porta (hangars actuals: costat Z).
+  const frontZ=ds===0?d/2-t/2:-d/2+t/2,sl=Math.max(.5,(w-dw)/2),off=dw/2+sl/2;
+  push(-off,frontZ,sl,t);push(off,frontZ,sl,t);
+}else{
+  [[0,d/2-t/2,w,t,0],[0,-d/2+t/2,w,t,0],[w/2-t/2,0,t,d-2*t,1],[-w/2+t/2,0,t,d-2*t,1]].forEach(([cx,cz,sx,sz,ax],k)=>{if(k!=ds){seg(cx,cz,sx,sz,0,true);return}const L=ax?sz:sx,sl=(L-dw)/2,off=dw/2+sl/2;for(const q of[-1,1]){if(ax)seg(cx,cz+q*off,sx,sl);else seg(cx+q*off,cz,sl,sz)}if(ax)seg(cx,cz,sx,dw,1);else seg(cx,cz,dw,sz,1)});
+  if(w*d>=140&&R()<.5){const al=w>=d,L=al?d:w,gp=rr(-L/4,L/4),px=(R()<.5?-1:1)*rr((al?w:d)*.12,(al?w:d)*.2),a0=-L/2+t,a1=L/2-t,ps=(a,b)=>{if(b-a<.5)return;const cc=(a+b)/2,l=b-a;if(al)seg(px,cc,t,l);else seg(cc,px,l,t)};ps(a0,gp-1.6);ps(gp+1.6,a1)}
+}
 g.position.set(x,fy,z);world.add(g);
-const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,rhp:120,hangar:!!opt.hangar,doorSide:ds,doorWidth:dw,kind:opt.kind||'house'};B.push(b);addStairs(b,ds);return b}
+const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,rhp:120,hangar:!!opt.hangar,doorSide:ds,doorWidth:dw,kind:opt.kind||'house'};B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
 // Door-aligned treads share the exact same geometry and walking height.
 function stairLocal(s,x,z){const dx=x-s.x,dz=z-s.z;return{along:dx*s.nx+dz*s.nz,side:dx*s.nz-dz*s.nx}}
 function stairContains(s,x,z,margin=0){const q=stairLocal(s,x,z);return q.along>=-margin&&q.along<=s.length+margin&&Math.abs(q.side)<=s.width/2+margin}
-function groundAt(x,z){let y=hAt(x,z);for(const s of stairs){if(stairContains(s,x,z)){const q=stairLocal(s,x,z),i=Math.min(s.steps-1,Math.max(0,Math.floor(q.along/s.tread)));y=Math.max(y,s.top-i*s.rise)}}return y}
+function groundAt(x,z){let y=hAt(x,z);for(const s of stairs){if(stairContains(s,x,z)){const q=stairLocal(s,x,z);if(s.ramp){const t=Math.max(0,Math.min(1,q.along/s.length));y=Math.max(y,s.top+(s.bottom-s.top)*t)}else{const i=Math.min(s.steps-1,Math.max(0,Math.floor(q.along/s.tread)));y=Math.max(y,s.top-i*s.rise)}}}return y}
+function addRampAccess(b,side){const [nx,nz]=[[0,1],[0,-1],[1,0],[-1,0]][side],edge=(nx?b.w:b.d)/2+.2,x=b.x+nx*edge,z=b.z+nz*edge,top=b.fy+.3;
+let length=8,bottom=hAt(x+nx*length,z+nz*length);for(let L=8;L<=18;L+=2){const yy=hAt(x+nx*L,z+nz*L);if(Math.abs(top-yy)<Math.abs(top-bottom)){length=L;bottom=yy}if(Math.abs(top-yy)<.35){length=L;bottom=yy;break}}
+if(Math.abs(top-bottom)<.1)return;const width=Math.max(6,Math.min(b.doorWidth-.6,14)),r={x,z,nx,nz,top,bottom,length,width,ramp:true};stairs.push(r);b.stair=r;
+buildingVisual.addRamp(b.o,{alongAxis:!!nx,length,width,top:top-b.fy,bottom:bottom-b.fy,x:x-b.x+nx*length/2,z:z-b.z+nz*length/2,color:0x8f918e,direction:nx||nz})}
 function addStairs(b,side){const [nx,nz]=[[0,1],[0,-1],[1,0],[-1,0]][side],edge=(nx?b.w:b.d)/2+.15,x=b.x+nx*edge,z=b.z+nz*edge,top=b.fy+.3;
 if(top-hAt(x,z)<.12)return;
 const tread=.75;let steps=1;for(;steps<80;steps++){const end=steps*tread;if(top-hAt(x+nx*end,z+nz*end)<=steps*.32)break}
@@ -267,7 +284,7 @@ const cols=[0xd8b48a,0xc9a27a,0xb8c4c9,0xd9c9a0],compoundVehicles=[];
 const compound=(type,q)=>{
   const x=q.x,z=q.z,put=(dx,dz,w,d,h,c,r,opt)=>mkB(x+dx,z+dz,w,d,h,c,r,opt||{});
   if(type==='avancada'){put(-9,0,12,12,6,0x8a7a70,0x6d2929,{kind:'outpost'});put(8,5,10,10,5.5,0x9b8a78,0x6d2929,{kind:'outpost'});put(7,-8,9,9,5,0x7e756c,0x5f2525,{kind:'outpost'});mkEn('torre',x-15,z-12);for(let n=0;n<2;n++)mkEn('soldat',x+rr(-8,8),z+rr(-8,8));compoundVehicles.push({t:'moto',x:x+13,z:z+10,hd:0})}
-  else if(type==='garatge'){const h=put(0,0,24,16,7.5,0x9da2a0,0x4f565b,{hangar:true,kind:'hangar',doorSide:1,doorWidth:11,doorHeight:5.4,openDoor:true});put(16,4,10,10,5.5,0xb7a98e,0x6e4435,{kind:'garage'});compoundVehicles.push({t:R()<.55?'cotxe':'moto',x:h.x,z:h.z-2.3,hd:0});if(R()<.45)compoundVehicles.push({t:'bici',x:h.x+3,z:h.z-1,hd:0})}
+  else if(type==='garatge'){const h=put(0,0,30,42,18,0xb6b0a2,0xd8cfb7,{hangar:true,kind:'hangar',doorSide:1,doorWidth:18,doorHeight:9,openDoor:true});put(23,7,11,10,5.8,0xb7a98e,0x6e4435,{kind:'garage'});compoundVehicles.push({t:R()<.55?'cotxe':'moto',x:h.x,z:h.z-7,hd:0});if(R()<.45)compoundVehicles.push({t:'bici',x:h.x+4.5,z:h.z-5.5,hd:0})}
   else if(type==='polvori'){const a=put(-5,0,13,11,6,0x918b78,0x664338,{kind:'ammo'}),b=put(8,2,9,9,5.2,0x847a69,0x574035,{kind:'ammo'});addIt('expl',a);addIt('expl',b);if(R()<.55)addIt('arma',a);mkEn('soldat',x+3,z-7)}
   else if(type==='port'){put(-7,5,17,11,6.5,0xa89a82,0x675044,{kind:'port'});put(8,5,10,9,5,0xb8aa91,0x675044,{kind:'port'});let best=null;for(let a=0;a<24&&!best;a++){const ang=a*Math.PI/12;for(let d=10;d<Math.max(80,q.r||160);d+=8){const wx=x+Math.cos(ang)*d,wz=z+Math.sin(ang)*d;if(hAt(wx,wz)<-3&&hAt(wx+Math.cos(ang)*10,wz+Math.sin(ang)*10)<-3){best={x:wx,z:wz,hd:Math.atan2(-Math.cos(ang),-Math.sin(ang))};break}}}if(best)compoundVehicles.push({t:R()<.78?'llanxa':'hover',...best})}
 };
