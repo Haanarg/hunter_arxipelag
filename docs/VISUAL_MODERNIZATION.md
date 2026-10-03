@@ -218,3 +218,12 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - La conducció col·lisiona ara amb les parets reals `Wl` més el radi del vehicle, respectant portes i obertures.
 - Jugador i enemics mantenen l'alçada i els punts d'animació, però tenen tors, braços, cames i cap més estrets i proporcionats.
 - Es conserven els contractes d'animació `legs`, `arms`, `ll/lr`, `al/ar` i l'escala general del jugador.
+
+## Hangars arquejats i rampes — 2026-10-04
+- Els hangars de garatge passen a una nau de gran llum amb coberta arquejada low-poly, inspirada en hangars semicilíndrics.
+- Mida del hangar principal ampliada a 30 × 42 m i alçada visual aproximada de 18 m.
+- Porta principal ampliada a 18 m i boca frontal oberta perquè els vehicles hi entrin i surtin amb marge.
+- Les parets laterals queden baixes sota l'arrencada de la volta; la coberta incorpora nervis metàl·lics.
+- Els hangars ja no generen escales d'accés. Si hi ha desnivell, creen una rampa contínua alineada amb la porta.
+- `groundAt()` reconeix les rampes i interpola l'altura de manera contínua.
+- La coberta arquejada és un grup separat perquè es pugui ocultar o destruir sense fer desaparèixer tot l'edifici.
