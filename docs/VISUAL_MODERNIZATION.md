@@ -212,3 +212,9 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - Els hangars fan servir col·lisió per parets/obertures en lloc del volum AABB complet per permetre que els vehicles en surtin per la porta.
 - Els ports concentren la generació de vehicles aquàtics i s'ha eliminat l'antic bucle que generava fins a quatre vehicles aquàtics per illa.
 - Es manté una llanxa de servei prop de la base i els vehicles aquàtics addicionals queden principalment vinculats als ports.
+
+## Col·lisions d'edificis i proporcions humanes — 2026-10-04
+- Els vehicles deixen d'utilitzar la caixa AABB global dels edificis, que sobresortia massa i provocava enganxaments.
+- La conducció col·lisiona ara amb les parets reals `Wl` més el radi del vehicle, respectant portes i obertures.
+- Jugador i enemics mantenen l'alçada i els punts d'animació, però tenen tors, braços, cames i cap més estrets i proporcionats.
+- Es conserven els contractes d'animació `legs`, `arms`, `ll/lr`, `al/ar` i l'escala general del jugador.
