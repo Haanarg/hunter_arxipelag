@@ -35,9 +35,10 @@ html,body{margin:0;height:100%;overflow:hidden;background:#1b2a5a;font-family:sy
 <script src="src/rider.js"></script>
 <script src="src/vegetation.js"></script>
 <script src="src/buildings.js"></script>
+<script src="src/characters.js"></script>
 <script>
 window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){p.innerHTML="<h1>No s’ha pogut iniciar el joc</h1><p>Comprova que l’acceleració gràfica estigui activada i que el navegador admeti WebGL.</p>"}});
-const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS'];
+const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS'];
 const missingModules=requiredModules.filter(name=>!window[name]);if(missingModules.length)throw new Error('Mòduls Hunter absents: '+missingModules.join(', '));
 const S=4800,H=S/2,SEG=400,vivid=c=>{const k=new THREE.Color(c),h={};k.getHSL(h);return k.setHSL(h.h,Math.min(1,h.s*1.5),h.l)};
 const materialProfile=(name='organic')=>window.HUNTER_MATERIALS[name]||window.HUNTER_MATERIALS.organic;
@@ -231,19 +232,10 @@ function addIt(t,b){const c=IT[t];let x,z;for(let k=0;k<25;k++){x=b.x+rr(-(b.w/2
 const y=b.fy+1.3,o=new THREE.Mesh(new THREE.BoxGeometry(...c.s),new THREE.MeshBasicMaterial({color:c.c}));o.position.set(x,y,z);world.add(o);items.push({t,x,z,y,o})}
 function flag(x,z,c){world.add(buildingVisual.createFlag({x,y:hAt(x,z),z,color:c}))}
 // jugador i vehicles
-const pl=new THREE.Group();scene.add(pl);
 const bx=(g,w,h,d,c,x,y,z,profile='organic')=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c,profile));m.position.set(x,y,z);g.add(m);return m};
 const buildingVisual=window.HUNTER_BUILDINGS.create(THREE,{material:M,materialProfile,box:bx});
-(function(){const mats=[],J=(w,h,d,c,x,y,z,g,sw)=>{const m=bx(g,w,h,d,c,x,y,z);if(sw)mats.push([m.material,c,sw]);return m},u=pl.userData;u.ph=0;
-const mk=(x)=>{const g=new THREE.Group();g.position.set(x,1.9,0);pl.add(g);J(.6,1.9,.7,0x32c52a,0,-.95,0,g,0xe82932);bx(g,.7,.4,.95,0x1c1c1c,0,-1.75,-.12);return g};
-u.ll=mk(-.4);u.lr=mk(.4);
-J(1.7,1.7,.95,0x49e52c,0,2.8,0,pl,0xf02c38);bx(pl,1.8,.28,1.05,0x2a2a2a,0,1.98,0);bx(pl,1.1,1.3,.5,0x6a5632,0,2.9,.72);bx(pl,.5,.5,.12,0x2a2a2a,-.45,3.2,-.52);
-const ar=x=>{const g=new THREE.Group();g.position.set(x,3.5,0);pl.add(g);J(.5,1.5,.55,0x49e52c,0,-.7,0,g,0xf02c38);bx(g,.45,.45,.5,0xf0c9a0,0,-1.55,0);return g};u.al=ar(-1.1);u.ar=ar(1.1);
-bx(pl,.95,.95,.95,0xf0c9a0,0,4.1,0);bx(pl,.85,.22,.1,0x151515,0,4.15,-.5);J(1.1,.5,1.1,0x22b72c,0,4.6,0,pl,0xd91b2e);
-const gn=new THREE.Group();gn.position.set(0,-1.5,-.1);gn.rotation.x=-Math.PI/2;u.ar.add(gn);bx(gn,.2,.25,1.8,0x222222,0,0,-.2);bx(gn,.2,.5,.25,0x333333,0,-.3,.1);bx(gn,.22,.3,.6,0x6b4a2a,0,0,.9);u.gun=gn;u.mats=mats;pl.scale.setScalar(2/3)})();
-function animPl(f,dt){const u=pl.userData,k=1-Math.exp(-14*dt);u.firePose=Math.max(0,(u.firePose||0)-dt);u.ph+=dt*(swimming?(f?4:2.2):10*Math.abs(f));const ph=u.ph;
-if(swimming&&!cv){const sweep=(1-Math.cos(ph))*.5;u.gun.visible=false;pl.rotation.x+=(-.12-pl.rotation.x)*k;u.ar.rotation.x+=(1.53-u.ar.rotation.x)*k;u.al.rotation.x+=(1.53-u.al.rotation.x)*k;u.ar.rotation.z+=((.12+sweep*1.1)-u.ar.rotation.z)*k;u.al.rotation.z+=((-.12-sweep*1.1)-u.al.rotation.z)*k;u.ll.rotation.x+=(.3+Math.sin(ph+.8)*.2-u.ll.rotation.x)*k;u.lr.rotation.x+=(.3+Math.sin(ph+.8)*.2-u.lr.rotation.x)*k;u.ll.rotation.z=-sweep*.25;u.lr.rotation.z=sweep*.25;return}
-pl.rotation.x+=(0-pl.rotation.x)*k;u.ll.rotation.z*=1-k;u.lr.rotation.z*=1-k;const s=f?Math.sin(ph)*.7:0,aiming=u.firePose>0&&!cv;u.ll.rotation.x=s;u.lr.rotation.x=-s;u.gun.visible=ammo>0||aiming;u.ar.rotation.x+=((aiming?1.48:-s*.35)-u.ar.rotation.x)*k;u.al.rotation.x+=((aiming?1.3:s*.35)-u.al.rotation.x)*k;u.ar.rotation.z*=1-k;u.al.rotation.z+=((aiming?-.3:0)-u.al.rotation.z)*k;pl.position.y+=Math.abs(Math.sin(ph))*.12*Math.abs(f)}
+const pl=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});scene.add(pl);
+const animPl=(f,dt)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{forward:f,dt,swimming,inVehicle:!!cv,ammo});
 const VT=window.HUNTER_VEHICLE_DYNAMICS.types;
 const VS=window.HUNTER_VEHICLES.scales;
 const vehicleRadius=t=>window.HUNTER_VEHICLES.radii[t]*VS[t];
