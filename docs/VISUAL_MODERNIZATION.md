@@ -308,3 +308,16 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - G3 completada: camins amb voral/transició, accessos segmentats adaptats al terreny i molls enriquits amb baranes i amarradors.
 - G4 completada: patrulles contextuals més punts defensius; els soldats en alerta poden ocupar posicions preparades amb línia de tir abans de perseguir directament el jugador.
 - HQ: patrulles interiors i punts defensius associats al perímetre de filferrada i a l'accés principal.
+
+
+## Anivellament de terreny i separació de compounds — 2026-10-04
+- Afegit un sistema de zones de terreny normalitzat (`terrainLevels`) integrat directament a `hAt()`.
+- Bases, HQ i compounds defineixen una petjada plana abans de crear el mesh del terreny.
+- La transició entre zona plana i relleu natural es fa amb una franja de blend suau per evitar talussos verticals.
+- Els edificis s'ancoren a la cota normalitzada del centre en lloc d'agafar el màxim de les cantonades.
+- Els paviments dels compounds queden encaixats pràcticament a ras del terreny i deixen de surar.
+- Els camins continuen seguint la cota local, ara sobre un terreny ja normalitzat a les zones de construcció.
+- La base del jugador i el HQ també tenen plataformes de terreny planificat més àmplies.
+- Els edificis interns dels compounds s'han separat significativament: avançades, garatges, polvorins i ports ocupen una petjada més gran.
+- Els centres dels compounds intenten mantenir almenys 150 m de separació.
+- Un segon compound a una mateixa illa només es genera en illes grans, amb menor probabilitat i una separació mínima aproximada de 190 m respecte del primer.
