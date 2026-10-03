@@ -3,7 +3,7 @@ window.HUNTER_UI=Object.freeze({
   create({hud,panel,title,body,resumeButton,minimap,getState,actions}){
     function renderHUD(){
       const s=getState(),items=Object.keys(s.inventory).map(k=>s.itemTypes[k].n+' ×'+s.inventory[k]).join(', ')||'—';
-      hud.innerHTML=`HUNTER · ARXIPÈLAG<br>Vida: ${Math.round(s.hp)} · Munició: ${s.ammo} · Baixes: ${s.kills}<br>${s.vehicle?s.vehicleTypes[s.vehicle.t].n:s.inside?'Dins d’un edifici':s.swimming?'Nedant':'A peu'} ${s.disguised?' · Disfressat':''}<br>Joystick / WASD · E vehicle · F dispara · G explosiu<br>C disfressa · L coordenades · U/J alçada<br>M mapa · Esc pausa · Roda: zoom<br>Objectes: ${items}<br>X: ${s.player.x|0} · Z: ${s.player.z|0}${s.nearVehicle&&!s.vehicle?'<br>E: puja a '+s.vehicleTypes[s.nearVehicle.t].n:''}${s.messageTime>0?'<br>'+s.message:''}${s.waypoint?'<br>Destinació: '+Math.round(Math.hypot(s.waypoint.x-s.player.x,s.waypoint.z-s.player.z))+' m':''}`;
+      hud.innerHTML=`HUNTER · ARXIPÈLAG<br>Vida: ${Math.round(s.hp)} · Munició: ${s.ammo} · Baixes: ${s.kills}<br>${s.vehicle?s.vehicleTypes[s.vehicle.t].n:s.inside?'Dins d’un edifici':s.swimming?'Nedant':'A peu'} ${s.disguised?' · Disfressat':''}<br>Joystick / WASD · E vehicle · F dispara · G explosiu<br>C disfressa · L coordenades · U/J alçada<br>M mapa · Esc pausa · Roda: zoom<br>Objectes: ${items}<br>Llavor: ${s.seed>>>0}<br>X: ${s.player.x|0} · Z: ${s.player.z|0}${s.nearVehicle&&!s.vehicle?'<br>E: puja a '+s.vehicleTypes[s.nearVehicle.t].n:''}${s.messageTime>0?'<br>'+s.message:''}${s.waypoint?'<br>Destinació: '+Math.round(Math.hypot(s.waypoint.x-s.player.x,s.waypoint.z-s.player.z))+' m':''}`;
     }
     function hide(){panel.style.display='none'}
     function show(mode){
