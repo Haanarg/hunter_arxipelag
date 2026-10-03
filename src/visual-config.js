@@ -2,21 +2,21 @@
 // Aquest fitxer no conté estat de joc: es pot evolucionar sense tocar simulació ni controls.
 window.HUNTER_VISUAL_CONFIG = Object.freeze({
   mobile: Object.freeze({
-    pixelRatio: 1.3,
+    pixelRatio: 1.2,
     shadows: false,
     shadowSize: 768,
-    exposure: 1.08,
-    fog: 0.00018,
-    skySegments: Object.freeze([28, 16]),
-    waterSegments: 240
+    exposure: 1.02,
+    fog: 0.00019,
+    skySegments: Object.freeze([24, 14]),
+    waterSegments: 220
   }),
   desktop: Object.freeze({
-    pixelRatio: 1.85,
+    pixelRatio: 1.75,
     shadows: true,
-    shadowSize: 2048,
-    exposure: 1.06,
-    fog: 0.000145,
-    skySegments: Object.freeze([48, 28]),
-    waterSegments: 400
+    shadowSize: 1536,
+    exposure: 1.0,
+    fog: 0.000155,
+    skySegments: Object.freeze([40, 24]),
+    waterSegments: 360
   })
 });
