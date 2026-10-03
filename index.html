@@ -33,6 +33,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#1b2a5a;font-family:sy
 <script src="src/vehicle-dynamics.js"></script>
 <script src="src/joystick.js"></script>
 <script src="src/rider.js"></script>
+<script src="src/vegetation.js"></script>
 <script>
 window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){p.innerHTML="<h1>No s’ha pogut iniciar el joc</h1><p>Comprova que l’acceleració gràfica estigui activada i que el navegador admeti WebGL.</p>"}});
 const S=4800,H=S/2,SEG=400,vivid=c=>{const k=new THREE.Color(c),h={};k.getHSL(h);return k.setHSL(h.h,Math.min(1,h.s*1.5),h.l)};
@@ -175,12 +176,12 @@ d.life-=dt;const k=Math.max(0,Math.min(1,d.life/.4));m.scale.set(d.s0.x*k,d.s0.y
 for(let i=WA.length-1;i>=0;i--){const a=WA[i];a.t-=dt;const s=Math.max(0,a.t/.5);a.m.scale.y=s;a.m.position.y=a.h/2*s;if(a.t<=0){world.remove(a.m);WA.splice(i,1)}}
 updFA(dt)}
 // vegetació
-const TG=new Map(),dum=new THREE.Object3D();
+const TG=new Map();
 function treeHit(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L)if(Math.hypot(x-t.x,z-t.z)<t.r+r)return true}return false}
 function treePush(){const r0=.5,cx=Math.floor(P.x/16),cz=Math.floor(P.z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L){const dx=P.x-t.x,dz=P.z-t.z,d=Math.hypot(dx,dz),m=t.r+r0;if(d<m&&d>.001){P.x=t.x+dx/d*m;P.z=t.z+dz/d*m}}}}
 const PL=[],FA=[],ZM=new THREE.Matrix4().makeScale(0,0,0);let PM={};
-function palmCrown(radius,rise){const pos=[];for(let j=0;j<7;j++){const a=j*Math.PI*2/7;for(let k=0;k<4;k++){const t=k/4,u=(k+1)/4;const point=(v,side)=>{const len=radius*v,w=Math.sin(v*Math.PI)*.62*side;return[Math.cos(a)*len-Math.sin(a)*w,6.35+rise+Math.sin(v*Math.PI)*.9-v*v*1.6,Math.sin(a)*len+Math.cos(a)*w]};const p0=point(t,-1),p1=point(t,1),p2=point(u,-1),p3=point(u,1);pos.push(...p0,...p1,...p2,...p1,...p3,...p2)}}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.computeVertexNormals();return g}
-const PG={t:new THREE.CylinderGeometry(.25,.35,6,5).translate(0,3,0),c:palmCrown(4.3,0),c2:palmCrown(2.7,.6)};
+const vegetationVisual=window.HUNTER_VEGETATION.create(THREE,{world,materialProfile,random:rn});
+const PG={t:vegetationVisual.geometry.trunk,c:vegetationVisual.geometry.crown,c2:vegetationVisual.geometry.crown2};
 function treeAt(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L)if(Math.hypot(x-t.x,z-t.z)<t.r+r)return t}return null}
 function crush(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)L.slice().forEach(t=>{if(t.p&&Math.hypot(x-t.x,z-t.z)<t.r+r)killPalm(t)})}}
 function dmgP(t,d){if(!t.alive)return;t.hp-=d;if(t.hp<=0)killPalm(t)}
@@ -199,12 +200,8 @@ if(!L||slope(px,pz,h)>4)continue;
 if(stairs.some(s=>stairContains(s,px,pz,2))||Math.hypot(px-pa.x,pz-pa.z)<14||B.some(b=>Math.abs(px-b.x)<b.w/2+5&&Math.abs(pz-b.z)<b.d/2+5))continue;
 const s=rn(.9,1.4),yaw=rn(0,6.28);L.push([px,h-.3,pz,s,yaw]);
 if(L==pm){const e={x:px,z:pz,y:h-.3,s,yaw,r:.6,p:true,alive:true,hp:40,i:pm.length-1};put(e);PL.push(e)}else if(L==rk)put({x:px,z:pz,r:1.4})}
-const inst=(geo,arr,c0,fn)=>{if(!arr.length)return;const m=new THREE.InstancedMesh(geo,new THREE.MeshStandardMaterial({color:0xffffff,flatShading:true,side:THREE.DoubleSide,...materialProfile('organic')}),arr.length);
-arr.forEach(([x,y,z,s,r],i)=>{dum.position.set(x,y,z);dum.rotation.set(0,r,0);if(fn)fn(dum,s);else dum.scale.setScalar(s);dum.updateMatrix();m.setMatrixAt(i,dum.matrix);
-m.setColorAt(i,new THREE.Color(c0).offsetHSL(rn(-.03,.03),rn(-.1,.1),rn(-.06,.06)))});world.add(m);return m};
-PM={t:inst(PG.t,pm,0x8a6a3a),c:inst(PG.c,pm,0x4fa03a),c2:inst(PG.c2,pm,0x6fbf3a)};
-inst(new THREE.IcosahedronGeometry(1.1,0).translate(0,.6,0),bu,0x2f7a3a,(d,s)=>d.scale.set(s,s*.75,s));
-inst(new THREE.DodecahedronGeometry(1.2,0).translate(0,.5,0),rk,0x8b8494,(d,s)=>d.scale.set(s*1.2,s*.8,s))}
+const vegetationMeshes=vegetationVisual.build({palms:pm,bushes:bu,rocks:rk});
+PM={t:vegetationMeshes.palms.trunk,c:vegetationMeshes.palms.crown,c2:vegetationMeshes.palms.crown2}}
 function fr(x,z){let a=1e9,b=-1e9;for(const[i,j]of[[0,0],[9,9],[-9,9],[9,-9],[-9,-9],[9,0],[-9,0],[0,9],[0,-9]]){const h=hAt(x+i,z+j);a=Math.min(a,h);b=Math.max(b,h)}return b-a}
 function dmgW(w,d){w.hp-=d;if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0)Wl.splice(i,1);i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);snd('boom',.3)}}
 function mkB(x,z,w,d,h,col,roof){const fy=Math.max(hAt(x,z),hAt(x-w/2,z-d/2),hAt(x+w/2,z-d/2),hAt(x-w/2,z+d/2),hAt(x+w/2,z+d/2)),g=new THREE.Group(),
