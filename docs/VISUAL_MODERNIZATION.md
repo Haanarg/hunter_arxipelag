@@ -188,3 +188,11 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - El vidre queda lleugerament endins del buit i conserva marcs low-poly.
 - Les col·lisions generals de façana es mantenen per no alterar IA ni navegació; visualment, però, el mur ja té el forat real.
 - La destrucció de façanes amaga també vidres i marcs associats.
+
+## Passada visual de vehicles — 2026-10-03
+- Cotxe: carrosseria més definida, sostre, acabats frontals i detalls de llums/para-xocs reforçats.
+- Moto: dipòsit, seient, llums posteriors i estructura mecànica més clara.
+- Bicicleta: seient i acabats més llegibles mantenint pedalier i contracte d'animació.
+- Tanc: més volum, faldons laterals, torreta i canó reforçats, detalls frontals afegits.
+- Helicòpter: fuselatge/cabina més definida, detalls laterals, rotor principal reforçat i llums frontals.
+- Es mantenen sense canvis els valors de `scales`, `radii` i els contractes `wheels`, `rotor`, `tailRotor`, `fan` i `crank`.
