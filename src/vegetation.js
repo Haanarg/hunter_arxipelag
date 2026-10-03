@@ -10,15 +10,15 @@ window.HUNTER_VEGETATION=Object.freeze({
       bush:new THREE.IcosahedronGeometry(1.15,1).translate(0,.62,0),
       rock:new THREE.DodecahedronGeometry(1.25,0).translate(0,.5,0)
     };
-    const inst=(geo,arr,color,scale,opts={})=>{if(!arr.length)return null;const m=new THREE.InstancedMesh(geo,new THREE.MeshStandardMaterial({color:0xffffff,flatShading:true,side:opts.doubleSide?THREE.DoubleSide:THREE.FrontSide,...materialProfile(opts.profile||'organic')}),arr.length);arr.forEach(([x,y,z,s,r],i)=>{dum.position.set(x,y,z);dum.rotation.set(opts.tilt?random(-.04,.04):0,r,opts.tilt?random(-.04,.04):0);if(scale)scale(dum,s);else dum.scale.setScalar(s);dum.updateMatrix();m.setMatrixAt(i,dum.matrix);m.setColorAt(i,new THREE.Color(color).offsetHSL(random(-.025,.025),random(-.08,.08),random(-.055,.055)))});world.add(m);return m};
+    const inst=(world,geo,arr,color,scale,opts={})=>{if(!arr.length)return null;const m=new THREE.InstancedMesh(geo,new THREE.MeshStandardMaterial({color:0xffffff,flatShading:true,side:opts.doubleSide?THREE.DoubleSide:THREE.FrontSide,...materialProfile(opts.profile||'organic')}),arr.length);arr.forEach(([x,y,z,s,r],i)=>{dum.position.set(x,y,z);dum.rotation.set(opts.tilt?random(-.04,.04):0,r,opts.tilt?random(-.04,.04):0);if(scale)scale(dum,s);else dum.scale.setScalar(s);dum.updateMatrix();m.setMatrixAt(i,dum.matrix);m.setColorAt(i,new THREE.Color(color).offsetHSL(random(-.025,.025),random(-.08,.08),random(-.055,.055)))});world.add(m);return m};
     const build=({world,palms,bushes,rocks})=>({
       palms:{
-        trunk:inst(geometry.trunk,palms,0x8e6337,null,{profile:'organic',tilt:true}),
-        crown:inst(geometry.crown,palms,0x2d9f36,null,{doubleSide:true}),
-        crown2:inst(geometry.crown2,palms,0x65c83f,null,{doubleSide:true})
+        trunk:inst(world,geometry.trunk,palms,0x8e6337,null,{profile:'organic',tilt:true}),
+        crown:inst(world,geometry.crown,palms,0x2d9f36,null,{doubleSide:true}),
+        crown2:inst(world,geometry.crown2,palms,0x65c83f,null,{doubleSide:true})
       },
-      bushes:inst(geometry.bush,bushes,0x2f8e42,(d,s)=>d.scale.set(s*1.15,s*.72,s),{profile:'organic'}),
-      rocks:inst(geometry.rock,rocks,0x777985,(d,s)=>d.scale.set(s*1.25,s*.75,s),{profile:'masonry',tilt:true})
+      bushes:inst(world,geometry.bush,bushes,0x2f8e42,(d,s)=>d.scale.set(s*1.15,s*.72,s),{profile:'organic'}),
+      rocks:inst(world,geometry.rock,rocks,0x777985,(d,s)=>d.scale.set(s*1.25,s*.75,s),{profile:'masonry',tilt:true})
     });
     return {geometry,build};
   }
