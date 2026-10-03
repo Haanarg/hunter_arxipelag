@@ -293,7 +293,7 @@ P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0
 // minimapa
 const mc=document.getElementById('mm'),mx=mc.getContext('2d');let mm;
 function mkMini(){mm=document.createElement('canvas');mm.width=mm.height=170;const c=mm.getContext('2d'),im=c.createImageData(170,170);
-for(let j=0;j<170;j++)for(let i=0;i<170;i++){const h=hAt((i/170-.5)*S,(j/170-.5)*S),k=colH(h);im.data.set([k.r*255,k.g*255,k.b*255,255],(j*170+i)*4)}c.putImageData(im,0,0)}
+for(let j=0;j<170;j++)for(let i=0;i<170;i++){const h=hAt((i/170-.5)*S,(j/170-.5)*S),k=window.HUNTER_TERRAIN.colorAt(THREE,h);im.data.set([k.r*255,k.g*255,k.b*255,255],(j*170+i)*4)}c.putImageData(im,0,0)}
 const px=v=>(v+H)/S*170;
 function mini(){if(!mm)mkMini();mx.drawImage(mm,0,0);mx.fillStyle='#2c7bff';mx.fillRect(px(P.base.x)-3,px(P.base.z)-3,6,6);if(inv.mapa){mx.fillStyle='#ff3030';mx.fillRect(px(HQ.x)-3,px(HQ.z)-3,6,6)}
 const q=cv||P;mx.fillStyle='#ffd23a';V.forEach(v=>{if(v!==cv&&Math.hypot(v.x-q.x,v.z-q.z)<450){mx.beginPath();mx.arc(px(v.x),px(v.z),2.5,0,7);mx.fill()}});
