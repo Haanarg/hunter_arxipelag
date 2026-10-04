@@ -581,3 +581,15 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - En quedar sense pilot, l'helicòpter entra en barrena: gira progressivament, conserva part de la velocitat, perd alçada i es desestabilitza visualment.
 - Els rotors continuen girant durant la barrena però perden velocitat gradualment.
 - Quan l'helicòpter toca terra o la superfície de l'aigua, es destrueix mitjançant el sistema d'explosió i peces ja implementat.
+
+
+## Reforç defensiu de l'HQ enemic — 2026-10-04
+- Els dos cotxes de patrulla exterior continuen sent vehicles enemics amb IA i ruta perimetral.
+- Les dues tanquetes del HQ deixen de ser vehicles neutrals conduïbles: ara són entitats enemigues armades amb IA, moviment i tir, amb patrulles interiors en sentits oposats.
+- El tanc del recinte es manté com a vehicle independent.
+- Les quatre torres de vigilància s'han recol·locat als quatre cantons reals del perímetre, just per dins de la filferrada.
+- La filferrada del HQ és aproximadament el doble d'alta, amb pals de gairebé 5 m, cinc línies horitzontals i reforços diagonals.
+- La porta principal del búnquer és més estreta i baixa, i queda bloquejada: ja no s'obre automàticament quan el jugador s'hi acosta.
+- La porta continua formant part del sistema destructible de murs, de manera que es pot forçar per combat/explosius.
+- L'interior del búnquer té ara una distribució fixa amb passadís central, diverses cambres laterals i una cambra posterior.
+- El general apareix aleatòriament en una de diverses posicions interiors, de manera que no queda sempre al mateix punt.
