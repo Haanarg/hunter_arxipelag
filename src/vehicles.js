@@ -1,7 +1,7 @@
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 window.HUNTER_VEHICLES=Object.freeze({
-  scales:Object.freeze({llanxa:1.3,llanxa_coets:1.35,barca_rems:.98,windsurf:1.05,hover:1.3,cotxe:1.3,moto:1.2,bici:1.2,camio:1.45,tanqueta:1.45,tanc:1.8,heli:1.75,heli_combat:1.82}),
-  radii:Object.freeze({llanxa:5.5,llanxa_coets:5.8,barca_rems:3.25,windsurf:2.3,hover:4.8,cotxe:3.6,moto:2.2,bici:1.9,camio:4.8,tanqueta:4.5,tanc:5.6,heli:8,heli_combat:8.4}),
+  scales:Object.freeze({llanxa:1.3,llanxa_coets:1.35,moto_aquatica:1.08,barca_rems:.98,windsurf:1.05,hover:1.3,cotxe:1.3,moto:1.2,bici:1.2,camio:1.45,tanqueta:1.45,tanc:1.8,heli:1.75,heli_combat:1.82}),
+  radii:Object.freeze({llanxa:5.5,llanxa_coets:5.8,moto_aquatica:2.1,barca_rems:3.25,windsurf:2.3,hover:4.8,cotxe:3.6,moto:2.2,bici:1.9,camio:4.8,tanqueta:4.5,tanc:5.6,heli:8,heli_combat:8.4}),
   createFactory(THREE,{box,material,shadows}){
     const VS=this.scales;
     const rod=(g,a,b,r,c,profile='metal')=>{const v=new THREE.Vector3(...a),w=new THREE.Vector3(...b),delta=w.clone().sub(v),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),8),material(c,profile));m.position.copy(v.add(w).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());g.add(m);return m};
@@ -27,6 +27,13 @@ window.HUNTER_VEHICLES=Object.freeze({
       if(t==='tanc'){for(const x of[-2.1,2.1]){box(g,1.05,1.25,6.5,rubber,x,.78,0,'rubber');for(const z of[-2.5,-1.25,0,1.25,2.5])wheel(g,x+Math.sign(x)*.52,.76,z,.55,.16);for(let z=-3;z<=3;z+=.45)box(g,1.15,.1,.2,0x53564d,x,1.44,z,'metal')}box(g,3.75,1.15,5.9,0x667348,0,1.5,0,'paint');const front=box(g,3.65,.72,1.55,0x727c50,0,1.95,-2.05,'paint');front.rotation.x=-.28;for(const x of[-1.45,1.45])box(g,.22,.52,4.9,0x56623f,x,1.88,.15,'paint');round(g,1.62,.82,0x78845b,0,2.54,.1,'y','paint');box(g,2.2,.26,1.65,0x6d7950,0,2.92,.1,'paint');round(g,.62,.2,metal,.45,3.08,.4);rod(g,[0,2.62,-1],[0,2.62,-5.35],.2,metal);box(g,.66,.4,.68,metal,0,2.62,-5.08,'metal');for(const x of[-1.2,1.2])box(g,.64,.45,1.2,0x596343,x,2.24,2,'paint');for(const x of[-1.35,1.35])box(g,.42,.22,.42,0x2f332e,x,2.15,-2.45,'metal');rod(g,[-1,2.7,1],[-1,5.2,1],.025,metal)}
       if(t==='llanxa'||t==='llanxa_coets'){g.add(new THREE.Mesh(hull,material(t==='llanxa'?0xe7e1d5:0xc9cfbd,'paint')));box(g,3.25,.18,5.55,t==='llanxa'?0xb9885f:0x66705c,0,1.32,.75,'paint');box(g,2.45,.65,1.15,t==='llanxa'?0xe2d2b7:0x707b65,0,1.75,-1.25,'paint');box(g,2.25,.58,.12,glass,0,2.02,-1.82,'glass');box(g,.82,1.28,.72,metal,0,1.18,4.65,'metal');round(g,.2,.42,rubber,0,.15,4.95,'z','rubber');box(g,1.55,.15,.7,0x5a4638,0,1.62,2.75,'paint');
         if(t==='llanxa_coets'){for(const x of[-1.05,1.05]){box(g,.36,.3,1.55,0x59664a,x,1.98,.35,'paint');rod(g,[x,2.1,.95],[x,2.1,-.9],.11,0x30383a,'metal')}box(g,.78,.22,.62,0x46513f,0,1.9,-.35,'paint')}
+      }
+      if(t==='moto_aquatica'){
+        const bodyCol=0xc94e3f,dark=0x33383b;
+        const nose=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(bodyCol,'paint'));nose.scale.set(.72,.42,1.55);nose.position.set(0,.62,-.95);g.add(nose);
+        box(g,1.38,.38,2.55,bodyCol,0,.54,.55,'paint');box(g,.72,.22,1.05,dark,0,.88,.6,'rubber');box(g,.82,.16,.56,0x222629,0,1.02,.2,'rubber');
+        rod(g,[-.42,1.16,-.35],[.42,1.16,-.35],.055,metal);rod(g,[0,.94,-.2],[0,1.16,-.35],.05,metal);
+        for(const x of[-.52,.52])box(g,.16,.13,.7,0xe9e7df,x,.36,.45,'paint');
       }
       if(t==='barca_rems'){const wood=0x9b7048,darkWood=0x6d4b32,inside=0xd7b27d;
         const boatShape=new THREE.Shape();boatShape.moveTo(-1.05,-2.45);boatShape.lineTo(1.05,-2.45);boatShape.quadraticCurveTo(1.5,-1.2,1.42,.55);boatShape.quadraticCurveTo(1.28,2.15,0,2.72);boatShape.quadraticCurveTo(-1.28,2.15,-1.42,.55);boatShape.quadraticCurveTo(-1.5,-1.2,-1.05,-2.45);
