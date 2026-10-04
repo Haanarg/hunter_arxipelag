@@ -530,12 +530,14 @@ let standalonePiers=0,targetPiers=(3+Math.floor(R()*3))*MAP_SCALE;for(const i of
 const terrain=window.HUNTER_TERRAIN.create(THREE,{size:S,segments:SEG,heightAt:hAt,material:MAT.terrain()});world.add(terrain.mesh,window.HUNTER_TERRAIN.createBorder(THREE,{size:S,halfSize:H}));
 updateSeabed();vegetate(pa);spawnFauna();HQ={x:pb.x,z:pb.z};const rb=B.slice(6);
 const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2);
-mkEn('general',hq.x,hq.z-3,hq.fy+.3);
+const generalSpots=hq.generalSpots?.length?hq.generalSpots:[{x:hq.x,z:hq.z-3}],generalSpot=generalSpots[Math.floor(R()*generalSpots.length)];mkEn('general',generalSpot.x,generalSpot.z,hq.fy+.3);
 const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1),x=cx+Math.cos(a)*d,z=cz+Math.sin(a)*d;if(gl(x,z))return mkEn(t,x,z)}return null};
 const hqRoute=[[pb.x-40,pb.z-35],[pb.x+40,pb.z-35],[pb.x+40,pb.z+34],[pb.x-40,pb.z+34]],hqDef=[[pb.x-31,pb.z+34],[pb.x+31,pb.z+34],[pb.x-35,pb.z-25],[pb.x+35,pb.z-25]];for(let k=0;k<5;k++){const u=sp2('soldat',pb.x,pb.z,18,40);if(u&&k<3)setDefense(setPatrol(u,hqRoute.map((p,i)=>hqRoute[(i+k)%hqRoute.length]),k===2),hqDef)}
 const carRoute1=[[pb.x-82,pb.z-61],[pb.x+82,pb.z-61],[pb.x+82,pb.z+61],[pb.x-82,pb.z+61]],carRoute2=carRoute1.slice().reverse();
 setPatrol(mkEn('jeep',pb.x-78,pb.z-61),carRoute1,true);setPatrol(mkEn('jeep',pb.x+78,pb.z+61),carRoute2,true);
-[[24,24],[-24,24],[24,-24],[-24,-24]].forEach(([a,b])=>{if(gl(pb.x+a,pb.z+b))mkEn('torre',pb.x+a,pb.z+b)});
+const armorRoute1=[[pb.x-30,pb.z+30],[pb.x+30,pb.z+30],[pb.x+34,pb.z-22],[pb.x-34,pb.z-22]],armorRoute2=armorRoute1.slice().reverse();
+setPatrol(mkEn('tanqueta',pb.x-24,pb.z+26),armorRoute1,true);setPatrol(mkEn('tanqueta',pb.x+24,pb.z+26),armorRoute2,true);
+[[-50,-44],[50,-44],[-50,44],[50,44]].forEach(([a,b])=>mkEn('torre',pb.x+a,pb.z+b));
 islands.forEach(i=>{if(i===A||i===Bi||R()<.5)return;const q=land(i,60);if(!q)return;for(let k=0;k<1+(R()<.4);k++)sp2('soldat',q.x,q.z,0,10);if(R()<.25)sp2('torre',q.x,q.z,5,12)});
 rb.forEach(b=>{const n=R()<.25?0:R()<.6?1:2,pool=['arma','arma','med','med','expl','disf','mapa','bazooka'];for(let k=0;k<n;k++)addIt(pool[Math.floor(R()*pool.length)],b)});
 addIt('arma',B[0]);addIt('expl',B[1]);addIt('med',B[2]);
@@ -545,9 +547,7 @@ rb.slice().sort(()=>R()-.5).slice(0,1+MAP_SCALE).forEach(b=>addIt('mapa_tanc',b)
 P.x=pa.x;P.z=pa.z+8;P.hd=0;P.base={x:pa.x,z:pa.z};V=[];cv=null;mm=null;
 const add=(t,x,z,a,meta={})=>{const o=mkV(t),c=VT[t],v={t,x,z,hd:a||0,v:0,alt:Math.max(0,hAt(x,z))+.8,o,armor:c.armor??0,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};if(t==='heli_combat')v.rockets=6;if(t==='llanxa_coets')v.rockets=5;world.add(o);V.push(v);return v};
 [
-  {t:'tanc',x:pb.x,z:pb.z+30,hd:Math.PI},
-  {t:'tanqueta',x:pb.x-22,z:pb.z+20,hd:Math.PI},
-  {t:'tanqueta',x:pb.x+22,z:pb.z+20,hd:Math.PI}
+  {t:'tanc',x:pb.x,z:pb.z+30,hd:Math.PI}
 ].forEach(v=>add(v.t,v.x,v.z,v.hd,{military:true,hq:true,guaranteed:true}));
 const addProtectedMilitary=()=>{};
 const near=(r,t)=>{for(let k=0;k<80;k++){const x=pa.x+rr(-r,r),z=pa.z+rr(-r,r),h=hAt(x,z);if(h>1.5&&slope(x,z,h)<2.5&&!B.some(b=>Math.abs(x-b.x)<b.hw+vehicleRadius(t)&&Math.abs(z-b.z)<b.hd+vehicleRadius(t))&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(t)+vehicleRadius(v.t)+2))return[x,z]}return[pa.x+30,pa.z+30]};
