@@ -447,3 +447,17 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Revisar balanç de blindatge, vida, dany al pilot, força d'expulsió i dany d'explosió.
 - Comprovar visualment la progressió del fum i que no queden vehicles destruïts amb col·lisions o marcadors fantasma.
 - Verificar que els mapes de tanc/helicòpter i el HUD reaccionen correctament quan un vehicle cartografiat es mou o és destruït.
+
+
+## Bazooka d’un sol ús — 2026-10-04
+- Afegit el **bazooka** com a nou objecte recollible i gestionable des de l’inventari.
+- Creat un model low-poly propi per a l’objecte al món: tub, boca, culata, empunyadura i mira.
+- Afegida una icona SVG específica coherent amb la resta de pictogrames de l’inventari.
+- El bazooka es pot equipar/desequipar des de l’inventari i el HUD indica quan està equipat.
+- El model del jugador mostra físicament el bazooka sobre l’espatlla/mans quan està equipat; pistola i ganivet queden ocults mentre es porta.
+- El tret consumeix una unitat de bazooka: cada exemplar és **d’un sol dispar**.
+- El projectil té velocitat moderada i una explosió de gran potència (radi 18 i dany base 135), capaç d’afectar enemics, vehicles, murs, edificis i altres elements destructibles.
+- L’explosió del bazooka també pot fer mal al jugador si dispara massa a prop.
+- S’ha incorporat el bazooka al pool procedural d’objectes que poden aparèixer dins d’edificis.
+- Els polvorins tenen, a més, una probabilitat específica de contenir un bazooka.
+- No es pot equipar mentre es neda o es condueix; si ja estava equipat en entrar en un vehicle queda ocult fins que el jugador torna a anar a peu.
