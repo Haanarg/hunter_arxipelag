@@ -635,7 +635,7 @@ const moving=speed>3,side=rn(-1,1)<0?-1:1,rrad=vehicleRadius(leaving.t)+2.2;let 
 for(let i=0;i<16;i++){const a=leaving.hd+side*Math.PI/2+i*Math.PI/8,x=leaving.x+Math.cos(a)*rrad,z=leaving.z+Math.sin(a)*rrad;if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||Wl.some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;spot={x,z};if(hAt(x,z)>0||VT[leaving.t].m==='w')break}
 if(!spot){msg='No hi ha espai per baixar aquí.';msgT=3;return}
 P.x=spot.x;P.z=spot.z;P.hd=leaving.hd;leaving.driveInput=0;leaving.steerInput=0;
-if(moving){const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),sx=Math.cos(leaving.hd)*side,sz=-Math.sin(leaving.hd)*side,carry=Math.min(28,speed*.72);playerEject={kind:'roll',vx:fx*carry+sx*3.2,vz:fz*carry+sz*3.2,t:1.05,dur:1.05,height:.62};hurtP(Math.min(16,2+speed*.28));msg='Has saltat del vehicle en marxa!';msgT=2.5}
+if(moving){const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),sx=Math.cos(leaving.hd)*side,sz=-Math.sin(leaving.hd)*side,carry=Math.min(28,speed*.72);playerEject={kind:'vault',vx:fx*carry+sx*2.2,vz:fz*carry+sz*2.2,t:1.42,dur:1.42,height:.88,heading:leaving.hd,camSide:side,camReturn:0};hurtP(Math.min(16,2+speed*.28));msg='Has saltat del vehicle en marxa!';msgT=2.5}
 cv=null}else{const v=nearV();if(v){cv=v;swimming=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
 addEventListener('keydown',e=>{if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(e.repeat)return;act(e.code);if(started&&!paused&&!over)K[e.code]=1});addEventListener('keyup',e=>K[e.code]=0);
 let fireHoldTimer=null;
@@ -770,7 +770,7 @@ else if(c.m==='w'){y=wy(v.x,v.z,t)*.8+.2;const speed=Math.min(1,Math.abs(v.v)/(c
 else if(c.m==='wl'){y=Math.max(g,wy(v.x,v.z,t)*.6)+.6;ro=-(v.yawRate||0)*.08}
 else{y=groundAt(v.x,v.z)+.05;const s2=Math.sin(v.hd),k=Math.cos(v.hd);pi=Math.atan((groundAt(v.x-s2*3,v.z-k*3)-groundAt(v.x+s2*3,v.z+k*3))/6);ro=-(v.sideV||0)*.018}
 if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.rotation.set(pi,v.hd,ro);
-v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=v.pedalPhase;if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),row=Math.sin(v.pedalPhase)*.48*power,dip=.28+.18*(.5+.5*Math.cos(v.pedalPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*row;r.rotation.z=-side*dip;r.rotation.x=.04*Math.sin(v.pedalPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})}
+v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),row=Math.sin(v.pedalPhase)*.48*power,dip=.28+.18*(.5+.5*Math.cos(v.pedalPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*row;r.rotation.z=-side*dip;r.rotation.x=.04*Math.sin(v.pedalPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})}
 function update(dt,t){if(!started||paused||over){if(eng)eng.g.gain.value=0;return}elapsed+=dt;const jf=-joystick.state.y,jtr=-joystick.state.x,f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),
 ud=(K.KeyU||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),lim=H-2;
 if(cv){const driven=cv,alive=stepV(driven,f,tr,ud,dt);if(alive&&cv===driven){P.x=driven.x;P.z=driven.z;P.hd=driven.hd}}
@@ -787,19 +787,30 @@ if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k];if(Math.hypot(P.x-it
 msgT-=dt;pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv;animPl(cv?0:f,dt);
 if(!cv&&playerFall){pl.position.y=playerFall.y;pl.rotation.x=(playerFall.spin||1)*playerFall.t*7.5;pl.rotation.z=Math.sin(playerFall.t*8)*.45}
 else if(!cv&&playerEject&&playerEject.t>0){
-  const dur=playerEject.dur||.8,p=Math.max(0,Math.min(1,1-playerEject.t/dur));
-  if(playerEject.kind==='roll'){
-    const smooth=p*p*(3-2*p),tuck=Math.sin(Math.PI*Math.min(1,p/0.82)),recover=Math.max(0,(p-.72)/.28),u=pl.userData;
-    // Voltereta endavant: entrada baixa, cos recollit, suport sobre espatlles/esquena i extensió final.
-    pl.position.y+=.18+Math.sin(Math.PI*p)*(playerEject.height||.62)+tuck*.18;
-    pl.rotation.x=-Math.PI*2*smooth;
-    pl.rotation.z=Math.sin(Math.PI*p)*.08;
-    const knee=1.65*tuck*(1-recover*.8),hip=.62*tuck*(1-recover*.65),elbow=1.15*tuck*(1-recover*.7);
-    if(u.lkl)u.lkl.rotation.x=knee;if(u.lkr)u.lkr.rotation.x=knee;
-    if(u.ll)u.ll.rotation.x=-hip;if(u.lr)u.lr.rotation.x=-hip;
-    if(u.ael)u.ael.rotation.x=elbow;if(u.aer)u.aer.rotation.x=elbow;
-    if(u.al){u.al.rotation.x=.82*tuck;u.al.rotation.z=-.42*tuck}
-    if(u.ar){u.ar.rotation.x=.82*tuck;u.ar.rotation.z=.42*tuck}
+  const dur=playerEject.dur||1.42,p=Math.max(0,Math.min(1,1-playerEject.t/dur)),u=pl.userData;
+  if(playerEject.kind==='vault'){
+    // Seqüència: salt de perfil -> rotació a l'aire -> mans -> peus -> incorporació.
+    const jump=Math.min(1,p/.28),hand=Math.max(0,Math.min(1,(p-.28)/.22)),fold=Math.max(0,Math.min(1,(p-.5)/.2)),stand=Math.max(0,Math.min(1,(p-.7)/.3));
+    const ease=x=>x*x*(3-2*x);
+    const airborne=ease(jump),touch=ease(hand),curl=ease(fold),rise=ease(stand);
+    pl.rotation.y=playerEject.heading||P.hd;
+    // Volta endavant controlada: gairebé una volta completa, acabant drets.
+    const rotAir=(Math.PI*1.18)*airborne,rotHands=(Math.PI*.58)*touch,rotFeet=(Math.PI*.24)*curl;
+    pl.rotation.x=-(rotAir+rotHands+rotFeet)*(1-rise);
+    pl.rotation.z=0;
+    // Arc més alt al salt; després baixa ràpidament cap al contacte de mans.
+    const arc=Math.sin(Math.PI*Math.min(1,p/.55));
+    pl.position.y+=Math.max(0,arc)*(playerEject.height||.88)+(1-rise)*.08;
+    // Braços estirats durant el salt; flexionen en rebre el pes i tornen a repòs.
+    const armReach=(1-touch)*1.38+touch*.72;
+    if(u.al){u.al.rotation.x=armReach*(1-rise);u.al.rotation.z=-.12*(1-rise)}
+    if(u.ar){u.ar.rotation.x=armReach*(1-rise);u.ar.rotation.z=.12*(1-rise)}
+    if(u.ael)u.ael.rotation.x=(.05*(1-touch)+1.02*touch)*(1-rise);
+    if(u.aer)u.aer.rotation.x=(.05*(1-touch)+1.02*touch)*(1-rise);
+    // Cames estirades a l'aire, recollides després de les mans i extensió final.
+    const hipBend=(.18*airborne+.95*curl)*(1-rise),kneeBend=(.08*airborne+1.5*curl)*(1-rise);
+    if(u.ll)u.ll.rotation.x=-hipBend;if(u.lr)u.lr.rotation.x=-hipBend;
+    if(u.lkl)u.lkl.rotation.x=kneeBend;if(u.lkr)u.lkr.rotation.x=kneeBend;
   }else{
     pl.position.y+=Math.sin(Math.PI*p)*(playerEject.height||1);
     pl.rotation.x=(playerEject.spin||1)*Math.PI*2*p;
@@ -808,8 +819,23 @@ else if(!cv&&playerEject&&playerEject.t>0){
 }
 V.forEach(v=>place(v,t,dt,v===cv?(v.steerInput||0):0));poseRider(cv,dt);
 const T=cv||P,c=cv?VT[cv.t]:ib?{cd:6,ch:11}:{cd:10,ch:5},ty=cv?cv.o.position.y:P.y,w=new THREE.Vector3(T.x+Math.sin(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1),0,T.z+Math.cos(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1));
-w.y=Math.max(ty+c.ch*zoom*(cv?Math.sqrt(VS[cv.t]):1),hAt(w.x,w.z)+3,2.5);cam.position.lerp(w,1-Math.pow(.001,dt));
-cam.lookAt(T.x-Math.sin(T.hd)*8,ty+2,T.z-Math.cos(T.hd)*8);
+w.y=Math.max(ty+c.ch*zoom*(cv?Math.sqrt(VS[cv.t]):1),hAt(w.x,w.z)+3,2.5);
+if(!cv&&playerEject?.kind==='vault'){
+  if(playerEject.t>0){
+    const hd=playerEject.heading||P.hd,side=playerEject.camSide||1,sideX=Math.cos(hd)*side,sideZ=-Math.sin(hd)*side;
+    const profile=new THREE.Vector3(P.x+sideX*11,P.y+4.2,P.z+sideZ*11);
+    cam.position.lerp(profile,1-Math.pow(.0002,dt));
+    cam.lookAt(P.x,P.y+1.25,P.z);
+  }else{
+    playerEject.camReturn=(playerEject.camReturn||0)+dt;
+    cam.position.lerp(w,1-Math.pow(.00002,dt));
+    cam.lookAt(T.x-Math.sin(T.hd)*8,ty+2,T.z-Math.cos(T.hd)*8);
+    if(playerEject.camReturn>.48)playerEject=null;
+  }
+}else{
+  cam.position.lerp(w,1-Math.pow(.001,dt));
+  cam.lookAt(T.x-Math.sin(T.hd)*8,ty+2,T.z-Math.cos(T.hd)*8);
+}
 fcd-=dt;if(K.KeyF)fire();updEn(dt);updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);
 const nv=cv?null:nearV();
 uiTick+=dt;if(uiTick>.12){uiTick=0;mini();ui.renderHUD();}}
