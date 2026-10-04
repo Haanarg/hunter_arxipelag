@@ -654,3 +654,12 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Els vehicles enemics amb IA comproven també les caixes abans d'avançar i eviten travessar o solapar altres vehicles.
 - Els helicòpters utilitzen la seva caixa només quan l'altura és compatible amb l'altre vehicle, evitant col·lisions falses quan sobrevolen vehicles terrestres.
 - El radi antic es manté com a fallback per a sistemes secundaris i tipus sense caixa específica.
+
+
+## Voltereta més natural en baixar d'un vehicle — 2026-10-04
+- La sortida voluntària d'un vehicle en marxa deixa d'utilitzar una rotació rígida del cos sencer.
+- La nova animació fa una voltereta endavant amb entrada baixa, genolls flexionats, colzes recollits i braços protegint el cap.
+- Durant el gir, el cos es manté compacte i s'eleva menys, per simular millor el contacte successiu amb espatlles i esquena.
+- Al final de la voltereta, braços i cames s'estenen progressivament per recuperar la postura dreta.
+- L'impuls lateral en saltar d'un vehicle s'ha reduït lleugerament perquè la trajectòria sigui menys artificial.
+- L'expulsió causada per una explosió manté una animació separada i més caòtica, adequada a un impacte violent.
