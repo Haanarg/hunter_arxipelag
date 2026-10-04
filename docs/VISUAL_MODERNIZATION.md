@@ -499,3 +499,16 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - `stepV()` retorna ara si el vehicle continua viu després de processar l’impacte.
 - El bucle principal conserva una referència local al vehicle conduït i només sincronitza la posició del jugador si aquell vehicle continua existint.
 - Els impactes amb soldats, palmeres i roques tallen immediatament la resta de lògica si el vehicle queda destruït.
+
+
+## Generador de vehicles, heliports i hangars — 2026-10-04
+- Eliminats els helicòpters de la base enemiga: la reserva militar fixa de l’HQ ja no en col·loca cap.
+- Els heliports es generen ara amb reserva reforçada fora de la base enemiga; en mapes petits se’n busca més d’un i en mapes grans encara més.
+- Afegit un fallback de generació d’heliports que pot reutilitzar altres illes adequades si les candidates especials inicials no són suficients.
+- Els helicòpters normals, helicòpters de combat i tanquetes es garanteixen en posicions distribuïdes pel mapa, lluny de l’HQ enemic.
+- Els ports poden generar llanxa, llanxa llançacoets, barca de rems, windsurf o hovercraft.
+- Reforçada la cerca de punts d’aigua per garantir que els vehicles aquàtics nous tinguin una posició vàlida encara que el primer port o costa no serveixi.
+- Els hangars ja no poden generar motos ni bicicletes a dins; ara poden contenir tanc, cotxe, camió o tanqueta.
+- L’hangar de tanc s’ha ampliat: 34 m d’amplada, boca de 26 m i porta més alta.
+- La rampa d’accés pot arribar ara fins a 24 m d’amplada, suficient per al radi de col·lisió del tanc.
+- El tanc apareix una mica més a prop de l’eix de sortida i orientat directament cap a la boca de l’hangar.
