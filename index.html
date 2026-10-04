@@ -112,6 +112,7 @@ disf:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M22 12 L30 17 L34 17 
 mapa:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#ead69b" stroke="#7c693c" stroke-width="3"/><path d="M25 9 V50 M39 14 V55" stroke="#a18b56" stroke-width="2"/><rect x="30" y="28" width="15" height="11" fill="#7c4f3a"/><path d="M29 28 L37.5 21 L46 28" fill="#a33b32"/></svg>',
 mapa_heli:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#d9edf5" stroke="#557986" stroke-width="3"/><path d="M17 33 H49 M32 20 V46" stroke="#557986" stroke-width="2"/><ellipse cx="32" cy="33" rx="11" ry="5" fill="#587766"/><path d="M43 33 H54 M21 33 H10" stroke="#35453c" stroke-width="3"/></svg>',
 mapa_tanc:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#e5d6a8" stroke="#786b46" stroke-width="3"/><rect x="18" y="31" width="28" height="11" rx="4" fill="#68754b"/><rect x="25" y="25" width="15" height="8" rx="3" fill="#78845b"/><path d="M40 29 H55" stroke="#40473a" stroke-width="3"/></svg>',
+bazooka:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 35 L51 18" stroke="#536148" stroke-width="11" stroke-linecap="round"/><path d="M8 38 L17 34" stroke="#252b27" stroke-width="13" stroke-linecap="round"/><path d="M48 20 L56 17" stroke="#252b27" stroke-width="14" stroke-linecap="round"/><path d="M29 30 L25 42" stroke="#2c302d" stroke-width="5" stroke-linecap="round"/><path d="M35 26 L39 18" stroke="#737b74" stroke-width="3"/><circle cx="51" cy="18" r="4" fill="#b76b2d"/></svg>',
 arma:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 19 H54 V50 H10 Z" fill="#75583a" stroke="#3e3024" stroke-width="3"/><path d="M14 24 H50" stroke="#b58a56" stroke-width="3"/><g fill="#d4aa42" stroke="#70591e" stroke-width="1"><circle cx="20" cy="34" r="4"/><circle cx="31" cy="34" r="4"/><circle cx="42" cy="34" r="4"/><circle cx="25" cy="44" r="4"/><circle cx="36" cy="44" r="4"/></g></svg>'
 };
 const IT={
@@ -119,12 +120,13 @@ med:{n:'Farmaciola',c:0xf2f3de,s:[1.2,.8,.8],icon:ICON.med,desc:'Recupera 40 pun
 mapa:{n:'Mapa de l’HQ',c:0xffe27a,s:[1.6,.08,1.2],icon:ICON.mapa,desc:'Obre la carta de navegació i revela l’HQ enemic.',usable:true},
 mapa_heli:{n:'Mapa d’helicòpter',c:0x9fd7ff,s:[1.6,.08,1.2],icon:ICON.mapa_heli,desc:'Marca a la carta la posició d’un helicòpter militar conegut.',usable:true},
 mapa_tanc:{n:'Mapa de tanc',c:0xc6b06a,s:[1.6,.08,1.2],icon:ICON.mapa_tanc,desc:'Marca a la carta tots els tancs coneguts del mapa.',usable:true},
+bazooka:{n:'Bazooka',c:0x58664a,s:[2.1,.45,.45],icon:ICON.bazooka,desc:'Llançacoets d’un sol ús. Equipa’l i dispara una càrrega d’alt poder destructiu.',usable:true},
 arma:{n:'Munició',c:0x555b66,s:[1.6,.35,.35],icon:ICON.arma,desc:'Caixa de munició per a l’arma personal.',usable:false},
 expl:{n:'Explosius',c:0xe02020,s:[.9,.9,.9],icon:ICON.expl,desc:'Manat de TNT amb metxa. Planta una càrrega amb retard de 3 segons.',usable:true},
 disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa enemiga vermella. Activa o desactiva la disfressa.',usable:true}
 };
 // combat i enemics
-let E=[],Pj=[],bombs=[],fx=[],hp=100,ammo=0,disg=false,over=0,fcd=0,kills=0,intelMarks=[],playerEject=null;
+let E=[],Pj=[],bombs=[],fx=[],hp=100,ammo=0,disg=false,bazookaEquipped=false,over=0,fcd=0,kills=0,intelMarks=[],playerEject=null;
 const endEl=document.getElementById('end'),gB=new THREE.BoxGeometry(.35,.35,.35),sphG=new THREE.SphereGeometry(1,10,8),
 mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial({color:0xff7a1a}),mE=new THREE.MeshBasicMaterial({color:0xff4040});
 const EC={soldat:{hp:30,sp:7,rng:32,rate:1.1,dmg:7,spl:0,r:2},jeep:{hp:70,sp:22,rng:22,rate:.5,dmg:5,spl:0,r:3.9},tanc:{hp:140,sp:8,rng:50,rate:2.5,dmg:22,spl:7,r:6.8},
@@ -170,6 +172,7 @@ else if(c=='heli'){fcd=.6;shoot(cv.x+fx_*3.2*VS.heli,cv.o.position.y+.5*VS.heli,
 else if(c=='heli_combat'){fcd=.12;shoot(cv.x+fx_*4.1*VS.heli_combat,cv.o.position.y+.15,cv.z+fz*4.1*VS.heli_combat,fx_,0,fz,145,9,0,'p',mB,.85)}
 else if(c=='tanqueta'){fcd=.16;shoot(cv.x+fx_*4.2*VS.tanqueta,cv.o.position.y+1.7,cv.z+fz*4.2*VS.tanqueta,fx_,0,fz,135,10,0,'p',mB,.9)}
 else if(c=='llanxa_coets'){secondaryWeapon();return}
+else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0)delete inv.bazooka;bazookaEquipped=false;fcd=1.05;pl.userData.firePose=.42;shoot(P.x+fx_*1.35,P.y+1.9,P.z+fz*1.35,fx_,.01,fz,72,135,18,'pb',mS,3);msg='Bazooka disparat!';msgT=2;setDis(false)}
 else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;let ax=fx_,ay=0,az=fz,best=75;for(const e of E){const dx=e.x-P.x,dz=e.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>1&&(dx*fx_+dz*fz)/d>.97&&sight(P.x,P.z,e.x,e.z,P.y+1.5)){best=d;const dy=e.o.position.y+1.5-(P.y+1.5),l=Math.hypot(dx,dy,dz);ax=dx/l;ay=dy/l;az=dz/l}}shoot(P.x+fx_*.7,P.y+1.5,P.z+fz*.7,ax,ay,az,130,12,0,'p',mB,1)}
 else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}
 function updPj(dt){const steps=Math.max(1,Math.ceil(dt/.008));for(let k=0;k<steps;k++)updPjTick(dt/steps)}
@@ -177,7 +180,7 @@ function updPjTick(dt){for(let i=Pj.length-1;i>=0;i--){const p=Pj[i];p.x+=p.vx*d
 let hit=p.life<=0||p.y<Math.max(hAt(p.x,p.z),0)+.2;
 if(!hit){const w=Wl.find(w=>!w.open&&p.y<w.y1&&p.y>w.y0&&p.x>w.x0&&p.x<w.x1&&p.z>w.z0&&p.z<w.z1);if(w){hit=true;if(!p.spl)dmgW(w,p.dmg*(p.own=='e'?.5:1))}else{const b=B.find(b=>b.rhp>0&&Math.abs(p.x-b.x)<b.w/2+.6&&Math.abs(p.z-b.z)<b.d/2+.6&&p.y<b.fy+b.h+1.4&&p.y>b.fy+b.h-.4);if(b){hit=true;if(!p.spl)b.rhp-=p.dmg*(p.own=='e'?.5:1);if(b.rhp<=0)roofBreak(b)}}}
 if(!hit){const t0=treeAt(p.x,p.z,.5);if(t0&&p.y<Math.max(hAt(p.x,p.z),0)+(t0.p?6.5:1.5)){hit=true;if(t0.p&&!p.spl)dmgP(t0,p.dmg*(p.own=='e'?.5:1))}}
-if(!hit&&p.own=='p')for(const u of E)if(Math.hypot(u.x-p.x,u.o.position.y+1.5-p.y,u.z-p.z)<u.r+.6){hit=true;if(!p.spl)hurtE(u,p.dmg);break}
+if(!hit&&(p.own=='p'||p.own=='pb'))for(const u of E)if(Math.hypot(u.x-p.x,u.o.position.y+1.5-p.y,u.z-p.z)<u.r+.6){hit=true;if(!p.spl)hurtE(u,p.dmg);break}
 if(!hit){for(const v of V){if(p.own==='p'&&v===cv)continue;const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),rr=vehicleRadius(v.t)*.62;if(Math.hypot(v.x-p.x,vy+1-p.y,v.z-p.z)<rr){hit=true;if(!p.spl)damageVehicle(v,p.dmg,1);break}}}
 if(!hit&&p.own=='e'&&!cv){const q=P;if(Math.hypot(q.x-p.x,q.y+1.5-p.y,q.z-p.z)<1.2){hit=true;if(!p.spl)hurtP(p.dmg)}}
 if(hit){if(p.spl)boom(p.x,p.y,p.z,p.spl,p.dmg,p.own);world.remove(p.o);Pj.splice(i,1)}}}
@@ -332,6 +335,7 @@ function createItemVisual(t){const g=new THREE.Group(),metal=0x454b4e,dark=0x3d3
   else if(t==='expl'){for(const x of[-.34,0,.34]){const m=new THREE.Mesh(new THREE.CylinderGeometry(.14,.14,1.05,10),M(0xc8322d,'paint'));m.position.set(x,.52,0);g.add(m)}bx(g,1.05,.13,.55,0x5b4a2d,0,.52,0,'paint');for(let i=0;i<4;i++){const m=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.32,6),M(0xc39a4a,'metal'));m.position.set(.25+i*.08,.98+.12*i,0);m.rotation.z=-.55;g.add(m)}}
   else if(t==='med'){bx(g,1.35,.7,1,0xf4f4f0,0,.35,0,'paint');bx(g,1.05,.08,.28,0xd5aa76,0,.74,0,'paint');bx(g,.28,.08,.95,0xd5aa76,0,.75,0,'paint');for(const x of[-.18,.18])for(const z of[-.18,.18]){const d=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.03,6),M(0x9b734b,'paint'));d.position.set(x,.81,z);g.add(d)}}
   else if(t==='arma'){bx(g,1.45,.55,1.05,0x745539,0,.28,0,'paint');bx(g,1.5,.1,1.1,dark,0,.04,0,'metal');for(const x of[-.48,-.16,.16,.48])for(const z of[-.27,.27]){const bullet=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.48,8),M(0xc9a23f,'metal'));bullet.position.set(x,.72,z);g.add(bullet);const tip=new THREE.Mesh(new THREE.ConeGeometry(.08,.16,8),M(0xb7772b,'metal'));tip.position.set(x,1.04,z);g.add(tip)}}
+  else if(t==='bazooka'){const tube=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,2.65,10),M(0x58664a,'paint'));tube.rotation.z=Math.PI/2;tube.position.set(0,.62,0);g.add(tube);const rear=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.18,10),M(0x252b27,'metal'));rear.rotation.z=Math.PI/2;rear.position.set(-1.37,.62,0);g.add(rear);const muzzle=new THREE.Mesh(new THREE.CylinderGeometry(.29,.22,.24,10),M(0x252b27,'metal'));muzzle.rotation.z=Math.PI/2;muzzle.position.set(1.42,.62,0);g.add(muzzle);bx(g,.16,.4,.22,0x252b27,-.35,.35,0,'metal');bx(g,.12,.2,.3,0x737b74,.35,.83,0,'metal')}
   else if(t==='disf'){bx(g,.78,1.3,.16,0xb53232,0,.8,0,'paint');const l=bx(g,.7,.38,.16,0xb53232,-.62,1.18,0,'paint'),r=bx(g,.7,.38,.16,0xb53232,.62,1.18,0,'paint');l.rotation.z=-.55;r.rotation.z=.55;bx(g,.16,.18,.18,0xf1c7a1,0,1.44,0,'organic');bx(g,.08,1.05,.19,0x6f1f1f,0,.75,-.02,'paint')}
   else bx(g,...IT[t].s,IT[t].c,0,.4,0,'paint');
   return g}
@@ -342,7 +346,7 @@ function flag(x,z,c){world.add(buildingVisual.createFlag({x,y:hAt(x,z),z,color:c
 const bx=(g,w,h,d,c,x,y,z,profile='organic')=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c,profile));m.position.set(x,y,z);g.add(m);return m};
 const buildingVisual=window.HUNTER_BUILDINGS.create(THREE,{material:M,materialProfile,box:bx});
 const pl=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});scene.add(pl);
-const animPl=(f,dt)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{forward:f,dt,swimming,inVehicle:!!cv,ammo});
+const animPl=(f,dt)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{forward:f,dt,swimming,inVehicle:!!cv,ammo,bazookaEquipped});
 const VT=window.HUNTER_VEHICLE_DYNAMICS.types;
 const VS=window.HUNTER_VEHICLES.scales;
 const vehicleRadius=t=>window.HUNTER_VEHICLES.radii[t]*VS[t];
@@ -374,7 +378,7 @@ const barbedHQ=(cx,cz,hw=50,hd=46,gap=13)=>{
   compoundClear.push({x:cx,z:cz,r:Math.hypot(hw,hd)*1.02});
 };
 // construir món
-function build(){joystick.reset();compoundClear=[];terrainLevels=[];if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}world=new THREE.Group();scene.add(world);B=[];stairs=[];swimming=false;intelMarks=[];playerEject=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};waypoint=null;E=[];Pj=[];DB.length=0;WA.length=0;TG.clear();bombs=[];fx=[];logb=[];hp=100;ammo=24;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
+function build(){joystick.reset();compoundClear=[];terrainLevels=[];if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}world=new THREE.Group();scene.add(world);B=[];stairs=[];swimming=false;intelMarks=[];playerEject=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;pl.userData.bazooka.visible=false;waypoint=null;E=[];Pj=[];DB.length=0;WA.length=0;TG.clear();bombs=[];fx=[];logb=[];hp=100;ammo=24;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
 {const base=requestedSeed==null?Math.floor(Math.random()*0xffffffff)>>>0:requestedSeed>>>0;let tries=0;do{seed=(base+Math.imul(tries++,0x9e3779b1))>>>0;genIslands();pa=land(A,2000);pb=land(Bi,2000)}while((!pa||!pb)&&tries<8);if(!pa||!pb)throw new Error('No s’ha pogut generar un mapa vàlid amb aquesta llavor')}
 addLevelArea(pa.x,pa.z,82,72,pa.h,0,18);[[-27,0],[27,-12],[0,31]].forEach(([dx,dz])=>mkB(pa.x+dx,pa.z+dz,15,15,7,0xe9dfc8,0x2c5fc0));flag(pa.x,pa.z-7,0x2c7bff);
 addLevelArea(pb.x,pb.z,118,106,pb.h,0,22);mkB(pb.x,pb.z,30,30,13,0x6b5a55,0x8c1f1f);mkB(pb.x+38,pb.z+10,12,12,6,0x8a7a70,0x8c1f1f);mkB(pb.x-38,pb.z-8,12,12,6,0x8a7a70,0x8c1f1f);flag(pb.x,pb.z+19,0xe02828);barbedHQ(pb.x,pb.z,58,52,17);
@@ -445,7 +449,7 @@ const compound=(type,q)=>{
     compoundVehicles.push({t:'heli',x,z,hd:ang,heliport:true,military:true});
   } else if(type==='polvori'){
     level(56,48,17);compoundPad(x,z,48,40,0x706a5c);{const [a1,b1]=tr(0,-20),[a2,b2]=tr(0,12);compoundPath(a1,b1,a2,b2,4,0x746d5f)}
-    const a=put(-15,3,13,11,6,0x918b78,0x664338,{kind:'ammo'}),b=put(15,6,9,9,5.2,0x847a69,0x574035,{kind:'ammo'});addIt('expl',a);addIt('expl',b);if(R()<.55)addIt('arma',a);
+    const a=put(-15,3,13,11,6,0x918b78,0x664338,{kind:'ammo'}),b=put(15,6,9,9,5.2,0x847a69,0x574035,{kind:'ammo'});addIt('expl',a);addIt('expl',b);if(R()<.55)addIt('arma',a);if(R()<.35)addIt('bazooka',R()<.5?a:b);
     for(const p of[[-21,-15],[-11,-18],[0,-18],[11,-18],[21,-14]])prop('barrier',p[0],p[1]);for(const p of[[-3,1],[1,1],[5,1]])prop('ammo',p[0],p[1]);for(const p of[[-22,8],[22,8],[-22,-6],[22,-6]])prop('net',p[0],p[1],Math.PI/2);prop('lamp',0,15);prop('sign',0,-15);const ammoRoute=[tr(-18,-12),tr(18,-12),tr(18,13),tr(-18,13)],ammoDef=[tr(-17,-9),tr(17,-9),tr(15,11)];const [sx,sz]=ammoRoute[0];setDefense(setPatrol(mkEn('soldat',sx,sz),ammoRoute,true),ammoDef)
   } else if(type==='port'){
     const portBest=q.portBest||findPortWater(q);if(!portBest)return false;
@@ -477,7 +481,7 @@ const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1)
 const hqRoute=[[pb.x-40,pb.z-35],[pb.x+40,pb.z-35],[pb.x+40,pb.z+34],[pb.x-40,pb.z+34]],hqDef=[[pb.x-31,pb.z+34],[pb.x+31,pb.z+34],[pb.x-35,pb.z-25],[pb.x+35,pb.z-25]];for(let k=0;k<5;k++){const u=sp2('soldat',pb.x,pb.z,18,40);if(u&&k<3)setDefense(setPatrol(u,hqRoute.map((p,i)=>hqRoute[(i+k)%hqRoute.length]),k===2),hqDef)}for(let k=0;k<2;k++)sp2('jeep',pb.x,pb.z,20,45);sp2('tanc',pb.x,pb.z,25,45);
 [[24,24],[-24,24],[24,-24],[-24,-24]].forEach(([a,b])=>{if(gl(pb.x+a,pb.z+b))mkEn('torre',pb.x+a,pb.z+b)});
 islands.forEach(i=>{if(i===A||i===Bi||R()<.5)return;const q=land(i,60);if(!q)return;for(let k=0;k<1+(R()<.4);k++)sp2('soldat',q.x,q.z,0,10);if(R()<.25)sp2('torre',q.x,q.z,5,12)});
-rb.forEach(b=>{const n=R()<.25?0:R()<.6?1:2;for(let k=0;k<n;k++)addIt(['arma','med','expl','disf','mapa'][Math.floor(R()*5)],b)});
+rb.forEach(b=>{const n=R()<.25?0:R()<.6?1:2,pool=['arma','arma','med','med','expl','disf','mapa','bazooka'];for(let k=0;k<n;k++)addIt(pool[Math.floor(R()*pool.length)],b)});
 addIt('arma',B[0]);addIt('expl',B[1]);addIt('med',B[2]);
 rb.slice().sort(()=>R()-.5).slice(0,2).forEach(b=>addIt('mapa',b));
 rb.slice().sort(()=>R()-.5).slice(0,1+MAP_SCALE).forEach(b=>addIt('mapa_heli',b));
@@ -536,13 +540,14 @@ function useInvItem(id){
   if(!inv[id])return false;
   if(id==='med'){if(hp>=100){msg='Ja tens la vida al màxim.';msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(100,hp+40);msg='Has usat una farmaciola.';msgT=2;snd('pick');return true}
   if(id==='expl'){if(cv||swimming){msg='No pots col·locar explosius des d’aquí.';msgT=2;return false}resume();plant();return true}
+  if(id==='bazooka'){if(cv||swimming){msg='Has d’anar a peu per equipar el bazooka.';msgT=2;return false}bazookaEquipped=!bazookaEquipped;resume();msg=bazookaEquipped?'Bazooka equipat: un sol tret.':'Bazooka desequipat.';msgT=2;return true}
   if(id==='disf'){setDis(!disg);msg=disg?'Disfressa activada.':'Disfressa desactivada.';msgT=2;return true}
   if(id==='mapa'){panel('map');return true}
   if(id==='mapa_tanc'){const tanks=[...V.filter(v=>v.t==='tanc').map(v=>({x:v.x,z:v.z})),...E.filter(u=>u.t==='tanc').map(u=>({x:u.x,z:u.z}))];if(!tanks.length){msg='No hi ha tancs actius al mapa.';msgT=2;return false}intelMarks=intelMarks.filter(m=>m.kind!=='tanc');tanks.forEach((v,i)=>intelMarks.push({kind:'tanc',ref:v,label:'Tanc '+(i+1)}));msg='S’han marcat '+tanks.length+' tancs.';msgT=2;panel('map');return true}if(id==='mapa_heli'){const v=V.find(v=>v.t==='heli'&&!v.heliport)||V.find(v=>v.t==='heli');if(!v){msg='No hi ha helicòpters actius al mapa.';msgT=2;return false}intelMarks=intelMarks.filter(m=>m.kind!=='heli');intelMarks.push({kind:'heli',ref:v,label:'Helicòpter'});msg='Localització marcada: helicòpter.';msgT=2;panel('map');return true}
   return false
 }
 function dropInvItem(id){
-  if(!inv[id]||id==='arma')return false;inv[id]--;if(inv[id]<=0)delete inv[id];if(id==='disf'&&disg)setDis(false);
+  if(!inv[id]||id==='arma')return false;inv[id]--;if(inv[id]<=0)delete inv[id];if(id==='disf'&&disg)setDis(false);if(id==='bazooka'&&bazookaEquipped)bazookaEquipped=false;
   msg='Has deixat: '+IT[id].n;msgT=2;return true
 }
 const ui=window.HUNTER_UI.create({
@@ -553,7 +558,7 @@ const ui=window.HUNTER_UI.create({
   resumeButton:document.getElementById('resumeButton'),
   minimap,
   getState:()=>({
-    hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,disguised:disg,
+    hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,disguised:disg,bazookaEquipped,
     inventory:inv,itemTypes:IT,player:P,nearVehicle:cv?null:nearV(),messageTime:msgT,message:msg,
     waypoint,worldSize:S,seed,mapScale:MAP_SCALE
   }),
