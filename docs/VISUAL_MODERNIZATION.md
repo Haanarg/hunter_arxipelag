@@ -642,3 +642,15 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - El polvorí té ara un perímetre complet de filferrada destructible, amb una obertura d'accés frontal.
 - La zona útil del polvorí s'ha ampliat lleugerament per donar espai al nou perímetre.
 - Tots els antics cartells vermells dels compounds s'han substituït visualment per un màstil alt amb bandera vermella.
+
+
+## Caixes d'impacte dels vehicles — 2026-10-04
+- Cada tipus de vehicle té ara una caixa d'impacte pròpia amb amplada i longitud específiques.
+- Les caixes són rectangles orientats (OBB): roten amb l'angle real del vehicle i substitueixen el radi circular aproximat en les col·lisions principals.
+- El jugador ja no pot travessar els vehicles; si entra dins la caixa, és expulsat cap al costat més proper.
+- Un vehicle en moviment pot fer mal al jugador si l'impacta, amb dany proporcional a la velocitat.
+- Els vehicles conduïbles col·lisionen entre ells i amb els vehicles enemics terrestres (cotxes de patrulla, tanquetes i tancs).
+- Les col·lisions vehicle-vehicle redueixen la velocitat, poden provocar dany estructural a velocitats altes i generen efecte visual d'impacte.
+- Els vehicles enemics amb IA comproven també les caixes abans d'avançar i eviten travessar o solapar altres vehicles.
+- Els helicòpters utilitzen la seva caixa només quan l'altura és compatible amb l'altre vehicle, evitant col·lisions falses quan sobrevolen vehicles terrestres.
+- El radi antic es manté com a fallback per a sistemes secundaris i tipus sense caixa específica.
