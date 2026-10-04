@@ -3,7 +3,11 @@ window.HUNTER_RIDER=Object.freeze({
   create(THREE,{scene,box,material,scales,heightAt,shadows}){
     const g=new THREE.Group(),torso=new THREE.Group();g.add(torso);
     const cloth=material(0x49e52c),pants=material(0x32c52a);
-    box(torso,1.13,1.1,.63,0x49e52c,0,.58,0);box(torso,.74,.88,.3,0x6a5632,0,.65,.43);box(torso,.63,.63,.63,0xf0c9a0,0,1.45,-.12);box(torso,.73,.33,.73,0x22b72c,0,1.78,-.12);box(torso,.55,.14,.07,0x151515,0,1.5,-.45);
+    box(torso,1.13,1.1,.63,0x49e52c,0,.58,0);box(torso,.74,.88,.3,0x6a5632,0,.65,.43);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.44,12,8),material(0xf0c9a0));head.scale.set(.82,1,.8);head.position.set(0,1.45,-.12);torso.add(head);
+    box(torso,.32,.15,.06,0x11161a,-.18,1.5,-.47);box(torso,.32,.15,.06,0x11161a,.18,1.5,-.47);box(torso,.1,.05,.06,0x151515,0,1.5,-.47);
+    const capCrown=new THREE.Mesh(new THREE.SphereGeometry(.47,12,6,0,Math.PI*2,0,Math.PI/2),material(0x22b72c));capCrown.scale.set(.95,.5,.98);capCrown.position.set(0,1.78,-.12);torso.add(capCrown);
+    const visor=box(torso,.68,.08,.46,0x22b72c,0,1.76,-.46);visor.rotation.x=-.08;
     const limbs=[];for(let i=0;i<8;i++){const m=new THREE.Mesh(new THREE.CylinderGeometry(i<4?.17:.2,i<4?.17:.2,1,6),i<4?cloth:pants);g.add(m);limbs.push(m)}
     const boots=[-1,1].map(()=>box(g,.4,.22,.65,0x222222,0,0,0));
     g.userData={torso,limbs,boots,motion:0};g.visible=false;g.traverse(o=>{if(o.isMesh)o.castShadow=shadows});scene.add(g);
@@ -11,7 +15,7 @@ window.HUNTER_RIDER=Object.freeze({
     const vec=(x,y,z)=>new THREE.Vector3(x,y,z);
     const update=(v,dt)=>{
       const open=!!v&&['bici','moto','moto_aquatica','llanxa','llanxa_coets','barca_rems','windsurf'].includes(v.t);g.visible=open;if(!open)return;
-      const u=g.userData,sc=scales[v.t],moving=Math.min(1,Math.abs(v.v)/1.8);u.motion+=(moving-u.motion)*(1-Math.exp(-12*dt));const motion=u.motion,phase=v.t==='bici'?-(v.pedalPhase||0):(v.pedalPhase||0);
+      const u=g.userData,sc=scales[v.t],moving=Math.min(1,Math.abs(v.v)/1.8);u.motion+=(moving-u.motion)*(1-Math.exp(-12*dt));const motion=u.motion,phase=(v.t==='bici'||v.t==='barca_rems')?-(v.pedalPhase||0):(v.pedalPhase||0);
       g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);torso.rotation.set(0,0,0);
 
       if(v.t==='bici'||v.t==='moto'){
@@ -37,9 +41,21 @@ window.HUNTER_RIDER=Object.freeze({
       }
 
       if(v.t==='windsurf'){
-        const base=.48*sc,lean=Math.max(-.18,Math.min(.18,v.v/30));torso.position.set(-.22*sc,base,.25*sc);torso.rotation.z=-.12+lean;torso.rotation.x=-.08;
-        for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.28-.22*sc,base,.25*sc),shoulder=vec(side*.58-.22*sc,base+1.02,.2*sc),hand=vec((i?-.08:.18)*sc,base+1.18,(i?-.15:.35)*sc),elbow=shoulder.clone().lerp(hand,.5);limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
-          const foot=vec((side*.45-.22)*sc,.28*sc,(i?.75:-.65)*sc),knee=hip.clone().lerp(foot,.52);knee.y+=.2;limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot)}
+        // Dempeus de costat sobre la taula, mans al travesser de la vela.
+        const base=.32*sc,lean=Math.max(-.14,Math.min(.14,v.v/34));
+        torso.position.set(-.18*sc,base,.08*sc);torso.rotation.set(-.03,Math.PI/2,-.08+lean);
+        const hips=[vec(-.2*sc,base,.35*sc),vec(.2*sc,base,-.35*sc)];
+        const shoulders=[vec(-.18*sc,base+1.05,.25*sc),vec(.18*sc,base+1.05,-.25*sc)];
+        const hands=[vec(.45*sc,2.22*sc,.25*sc),vec(.95*sc,1.92*sc,.25*sc)];
+        for(let i=0;i<2;i++){
+          const hip=hips[i],shoulder=shoulders[i],hand=hands[i],elbow=shoulder.clone().lerp(hand,.52);
+          elbow.y-=.08;elbow.z+=(i?-.08:.08);
+          limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
+          const foot=vec((i?-.35:.35)*sc,.22*sc,(i?.82:-.72)*sc),knee=hip.clone().lerp(foot,.5);
+          knee.y+=.18;knee.x+=(i?-.08:.08);
+          limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);
+          boots[i].position.copy(foot);boots[i].rotation.set(0,Math.PI/2,0);
+        }
         return;
       }
 
