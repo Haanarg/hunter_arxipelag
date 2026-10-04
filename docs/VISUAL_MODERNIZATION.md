@@ -491,3 +491,11 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Les roques provoquen dany estructural, espurnes, una petita desviació i un bump visual.
 - Els impactes contra roca redueixen moderadament la velocitat però permeten continuar avançant, sense bloqueig total.
 - Afegits cooldowns curts als impactes per evitar aplicar dany cada frame mentre el vehicle encara se solapa amb l’objectiu.
+
+
+## Correcció de destrucció durant col·lisions — 2026-10-04
+- Corregit un bloqueig del joc quan un vehicle arribava a 0 de vida arran d’un atropellament o impacte amb palmera/roca.
+- La causa era que `explodeVehicle()` eliminava el vehicle conduït i posava `cv=null`, però el mateix frame encara intentava llegir `cv.x`, `cv.z` i `cv.hd`.
+- `stepV()` retorna ara si el vehicle continua viu després de processar l’impacte.
+- El bucle principal conserva una referència local al vehicle conduït i només sincronitza la posició del jugador si aquell vehicle continua existint.
+- Els impactes amb soldats, palmeres i roques tallen immediatament la resta de lògica si el vehicle queda destruït.
