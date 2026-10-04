@@ -28,7 +28,7 @@ window.HUNTER_UI=Object.freeze({
           const d=st.itemTypes[selected],usable=!!d.usable;
           detail.innerHTML='<div class="inv-icon">'+d.icon+'</div><h3>'+d.n+'</h3><p>'+d.desc+'</p><div class="inv-actions">'+(usable?'<button id="invUse">Usa</button>':'')+(selected!=='arma'?'<button id="invDrop">Deixa</button>':'')+'</div>';
           const use=document.getElementById('invUse'),drop=document.getElementById('invDrop');
-          if(use)use.onclick=()=>{const changed=actions.useItem(selected);if(panel.style.display!=='none'&&changed!==undefined)renderInventory()};
+          if(use)use.onclick=()=>{const id=selected,changed=actions.useItem(id);if(changed&&id!=='expl'&&id!=='mapa')renderInventory()};
           if(drop)drop.onclick=()=>{actions.dropItem(selected);renderInventory()}
         };
         renderInventory();
