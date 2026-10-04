@@ -709,3 +709,12 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - `tests/smoke.cjs` comprova ara que els vehicles terrestres tenen perfil d'adherència, els aquàtics perfil de deriva/govern a baixa velocitat i els helicòpters perfil de sustentació i actitud.
 - El smoke existent continua fent un pas de física sobre cadascun dels 14 vehicles conduïbles i comprova que la posició visual segueixi sent finita.
 - Queda pendent calibrar la sensació final en navegador real i Android, especialment els valors de deriva aquàtica, gir del tanc/camió i resposta vertical dels helicòpters.
+
+
+## Erugues del tanc més arrodonides — 2026-10-04
+- Redissenyada únicament la geometria visual de les erugues del tanc; la hitbox, l'escala, la física i la conducció es mantenen intactes.
+- Eliminada la silueta rectangular tipus "caixa" de cada eruga.
+- Cada costat utilitza ara un nucli de goma amb forma de càpsula: tram central i extrems circulars al voltant de les rodes davantera i posterior.
+- Les baules metàl·liques recorren tant els trams rectes superior/inferior com els arcs frontal i posterior.
+- Les rodes de rodament internes continuen visibles i mantenen el contracte d'animació de rodes existent.
+- El resultat busca una lectura més pròxima a una eruga real, prenent com a referència visual el contorn arrodonit aportat per l'usuari.
