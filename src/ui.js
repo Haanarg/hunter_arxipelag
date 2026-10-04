@@ -10,7 +10,7 @@ window.HUNTER_UI=Object.freeze({
       panel.style.display='flex';
       title.textContent=mode==='map'?'Carta de navegació':mode==='inventory'?'Inventari':mode==='restart'?'Nova operació?':'Operació en pausa';panel.querySelector('.card').classList.toggle('inventory-card',mode==='inventory');
       if(mode==='inventory'){
-        const state=getState(),keys=['med','expl','disf','mapa','arma'],present=keys.filter(k=>state.inventory[k]>0);
+        const state=getState(),keys=['med','expl','disf','mapa','mapa_heli','mapa_tanc','arma'],present=keys.filter(k=>state.inventory[k]>0);
         let selected=present[0]||null;
         const renderInventory=()=>{
           const st=getState(),items=keys.filter(k=>st.inventory[k]>0),def=selected&&st.itemTypes[selected];
@@ -33,7 +33,7 @@ window.HUNTER_UI=Object.freeze({
         };
         renderInventory();
       }else if(mode==='map'){
-        body.innerHTML='<canvas id="fullmap" width="510" height="510" aria-label="Mapa: toca per marcar una destinació"></canvas><p>Toca per marcar una destinació. Blau: base · Groc: vehicles · Vermell: enemics i HQ descobert.</p><button id="clearMark">Esborra destinació</button>';
+        body.innerHTML='<canvas id="fullmap" width="510" height="510" aria-label="Mapa: toca per marcar una destinació"></canvas><p>Toca per marcar una destinació. Blau: base · Groc: vehicles propers · Vermell: enemics i HQ descobert · Cian: helicòpter cartografiat · Taronja: tanc cartografiat.</p><button id="clearMark">Esborra destinació</button>';
         const map=document.getElementById('fullmap');minimap.drawFull(map,getState().waypoint);
         map.onclick=e=>{const r=e.currentTarget.getBoundingClientRect(),s=getState();actions.setWaypoint({x:((e.clientX-r.left)/r.width-.5)*s.worldSize,z:((e.clientY-r.top)/r.height-.5)*s.worldSize});minimap.drawFull(map,getState().waypoint)};
         document.getElementById('clearMark').onclick=()=>{actions.setWaypoint(null);minimap.drawFull(map,null)}
