@@ -745,3 +745,19 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Quan l'animació acaba, la càmera torna progressivament a la posició habitual darrere de l'espatlla.
 - Es manté separada l'animació d'expulsió violenta per explosió, que continua sent més caòtica.
 - Afegides comprovacions al smoke test per evitar regressions cap al sentit de pedaleig anterior o cap a l'antiga animació de sortida.
+
+
+## Vehicles aquàtics varats a les costes — 2026-10-04
+- Afegida una passada de generació costanera independent dels ports.
+- Cada illa té un 75% de probabilitat d'intentar generar un vehicle aquàtic varat a la riba.
+- Els vehicles es col·loquen en aigua molt poc fonda, just després de la transició terra-aigua, perquè visualment semblin encallats/varats però continuïn sent utilitzables.
+- Distribució de probabilitat del pool costaner:
+  - 40% barca de rems;
+  - 32% windsurf;
+  - 16% moto aquàtica;
+  - 12% llanxa.
+- L'hovercraft queda fora del pool de vehicles varats i continua apareixent principalment per ports/garanties.
+- Els ports ja no poden generar llanxes llançacohets aleatòriament.
+- La llanxa llançacohets passa a ser estrictament única: al final de la generació es garanteix exactament una unitat per mapa.
+- Els vehicles varats queden marcats internament amb `beached:true` i `coastal:true` per facilitar futures regles o ajustos.
+- Afegides comprovacions al smoke test per validar el pool costaner, el 75% configurat i l'existència d'una sola llanxa llançacohets.
