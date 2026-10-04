@@ -461,3 +461,11 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - S’ha incorporat el bazooka al pool procedural d’objectes que poden aparèixer dins d’edificis.
 - Els polvorins tenen, a més, una probabilitat específica de contenir un bazooka.
 - No es pot equipar mentre es neda o es condueix; si ja estava equipat en entrar en un vehicle queda ocult fins que el jugador torna a anar a peu.
+
+
+## Simplificació de l’inventari — 2026-10-04
+- Eliminats els textos “Motxilla”, “Objectes trobats” i el recompte total d’objectes.
+- Eliminats els botons “Usa” i “Deixa”; els objectes ja no es deixen caure des de l’inventari.
+- En prémer directament un objecte utilitzable, s’executa la seva acció: consumir, equipar/desequipar, plantar explosius o obrir el mapa segons el tipus.
+- L’inventari redueix la graella mínima de 20 a 15 espais, eliminant la fila inferior innecessària en escriptori.
+- El botó inferior “Continua” s’ha substituït per una creu de tancament a la cantonada superior dreta del panell, mantenint la mateixa funció de reprendre la partida.
