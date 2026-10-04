@@ -14,22 +14,18 @@ window.HUNTER_UI=Object.freeze({
         let selected=present[0]||null;
         const renderInventory=()=>{
           const st=getState(),items=keys.filter(k=>st.inventory[k]>0),def=selected&&st.itemTypes[selected];
-          body.innerHTML='<div class="inv-wrap"><section><div class="inv-head"><div><strong>Motxilla</strong><div style="opacity:.7;font-size:13px">Objectes trobats</div></div><div>'+items.reduce((n,k)=>n+(st.inventory[k]||0),0)+' objectes</div></div><div class="inv-grid" id="invGrid"></div></section><aside class="inv-detail" id="invDetail"></aside></div>';
+          body.innerHTML='<div class="inv-wrap"><section><div class="inv-grid" id="invGrid"></div></section><aside class="inv-detail" id="invDetail"></aside></div>';
           const grid=document.getElementById('invGrid'),detail=document.getElementById('invDetail');
-          const slots=Math.max(20,Math.ceil(Math.max(1,items.length)/5)*5);
+          const slots=Math.max(15,Math.ceil(Math.max(1,items.length)/5)*5);
           for(let i=0;i<slots;i++){
             const id=items[i],el=document.createElement('button');el.className='inv-slot'+(id===selected?' selected':'');
-            if(id){const d=st.itemTypes[id];el.innerHTML='<span>'+d.icon+'</span><span class="inv-count">×'+st.inventory[id]+'</span>';el.title=d.n;el.onclick=()=>{selected=id;renderInventory()}}
+            if(id){const d=st.itemTypes[id];el.innerHTML='<span>'+d.icon+'</span><span class="inv-count">×'+st.inventory[id]+'</span>';el.title=d.n;el.onclick=()=>{selected=id;if(d.usable){const changed=actions.useItem(id);if(changed&&id!=='expl'&&id!=='mapa'&&id!=='mapa_heli'&&id!=='mapa_tanc')renderInventory()}else renderInventory()}}
             else{el.disabled=true;el.setAttribute('aria-hidden','true')}
             grid.appendChild(el)
           }
           if(!selected||!st.inventory[selected])selected=items[0]||null;
           if(!selected){detail.innerHTML='<div class="inv-icon">🎒</div><h3>Inventari buit</h3><p>Explora edificis i assentaments per trobar equipament.</p>';return}
-          const d=st.itemTypes[selected],usable=!!d.usable;
-          const useLabel=selected==='bazooka'?(st.bazookaEquipped?'Desequipa':'Equipa'):'Usa';detail.innerHTML='<div class="inv-icon">'+d.icon+'</div><h3>'+d.n+'</h3><p>'+d.desc+'</p><div class="inv-actions">'+(usable?'<button id="invUse">'+useLabel+'</button>':'')+(selected!=='arma'?'<button id="invDrop">Deixa</button>':'')+'</div>';
-          const use=document.getElementById('invUse'),drop=document.getElementById('invDrop');
-          if(use)use.onclick=()=>{const id=selected,changed=actions.useItem(id);if(changed&&id!=='expl'&&id!=='mapa'&&id!=='mapa_heli'&&id!=='mapa_tanc')renderInventory()};
-          if(drop)drop.onclick=()=>{actions.dropItem(selected);renderInventory()}
+          const d=st.itemTypes[selected];detail.innerHTML='<div class="inv-icon">'+d.icon+'</div><h3>'+d.n+'</h3><p>'+d.desc+'</p>';
         };
         renderInventory();
       }else if(mode==='map'){
