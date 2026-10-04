@@ -678,3 +678,34 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Auditoria manual del flux `stepV() -> handleVehicleImpacts() -> damageVehicle() -> explodeVehicle()`: es conserva el retorn immediat quan una col·lisió destrueix el vehicle, evitant continuar accedint a un vehicle eliminat dins del mateix frame.
 - Es manté pendent la validació visual/ergonòmica en navegador WebGL i Android real, especialment la nova voltereta, la resposta de col·lisions a diferents velocitats i la pulsació llarga de les armes especials.
 - El smoke ampliat queda preparat per executar-se amb `node tests/smoke.cjs`; en aquesta sessió de manteniment no hi ha un runner Node connectat directament al repositori privat, així que no es declara com a execució superada fins que es llanci en un entorn amb checkout del repo.
+
+
+## Dinàmica diferenciada de vehicles — 2026-10-04
+- La física deixa d'utilitzar pràcticament el mateix model cinemàtic per a totes les famílies de vehicles.
+- Tots els vehicles incorporen límits de velocitat endavant/enrere i una resposta de gir amb inèrcia pròpia (`yawResponse`).
+
+### Vehicles terrestres
+- Cotxe, moto, bicicleta, camió, tanqueta i tanc tenen ara perfils diferenciats d'adherència (`landGrip`), massa i pèrdua d'autoritat de gir a velocitat elevada.
+- Els vehicles pesants responen més lentament als canvis de direcció; els lleugers reaccionen més ràpid.
+- S'ha afegit una petita component de lliscament lateral dependent de l'adherència, sense convertir la conducció en un model de derrapatge arcade exagerat.
+- En col·lisions vehicle-vehicle, la pèrdua de velocitat i el dany tenen en compte la relació aproximada de massa entre els vehicles.
+
+### Vehicles aquàtics
+- Llanxa, moto aquàtica, barca de rems, windsurf i llanxa llançacoets tenen ara deriva lateral específica (`waterDrift`).
+- La capacitat de gir depèn de la velocitat: a molt baixa velocitat el timó/govern té menys autoritat, amb excepcions parcials per als vehicles més àgils.
+- La moto aquàtica té resposta ràpida i més deriva; el windsurf és especialment sensible lateralment; la llanxa llançacoets és més estable i pesada.
+- La barca de rems conserva velocitat i resposta baixes, amb una deriva moderada coherent amb un buc lleuger.
+- L'hovercraft manté el mode híbrid terra/aigua però incorpora lliscament lateral superior als vehicles terrestres.
+- La representació visual afegeix inclinació i balanceig suau en funció de gir, velocitat i onatge.
+
+### Helicòpters
+- Helicòpter bàsic i helicòpter de combat incorporen inèrcia de guiñada: el canvi de rumb ja no és instantani.
+- L'ascens i descens utilitzen ara velocitat vertical suavitzada (`verticalV`) i resposta de sustentació (`liftResponse`).
+- Quan es deixa anar el control vertical, la velocitat d'ascens/descens es dissipa gradualment en lloc de desaparèixer de cop.
+- La inclinació visual longitudinal depèn de la velocitat i el banc lateral depèn de la taxa real de gir.
+- L'helicòpter de combat és lleugerament més pesant i menys reactiu que el model bàsic, compensat per més blindatge i vida.
+
+### Validació
+- `tests/smoke.cjs` comprova ara que els vehicles terrestres tenen perfil d'adherència, els aquàtics perfil de deriva/govern a baixa velocitat i els helicòpters perfil de sustentació i actitud.
+- El smoke existent continua fent un pas de física sobre cadascun dels 14 vehicles conduïbles i comprova que la posició visual segueixi sent finita.
+- Queda pendent calibrar la sensació final en navegador real i Android, especialment els valors de deriva aquàtica, gir del tanc/camió i resposta vertical dels helicòpters.
