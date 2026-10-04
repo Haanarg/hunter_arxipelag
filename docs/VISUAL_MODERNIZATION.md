@@ -338,3 +338,14 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - El HQ enemic genera un tanc i un helicòpter estacionats dins la zona protegida sempre que hi hagi espai lliure.
 - Les avançades enemigues poden generar tancs i helicòpters amb probabilitat moderada, vinculats visualment a la presència militar.
 - Els vehicles militars previstos pels compounds validen espai contra edificis, vegetació i altres vehicles abans d'aparèixer.
+
+
+## Selector de mida del mapa — 2026-10-04
+- Afegit selector al menú inicial: Petit (4,8 × 4,8 km) i Gran (9,6 × 9,6 km).
+- Petit és el valor per defecte i conserva la mida històrica del joc.
+- Gran duplica l'amplada i l'alçada del món, és a dir, quadruplica la superfície total.
+- Les illes conserven aproximadament la mateixa escala física; en mode Gran augmenta el nombre d'illes i illes grans per mantenir una densitat semblant.
+- La mida seleccionada entra en l'espai de generació de la llavor: mateixa llavor textual + mateixa mida + mateixa versió reprodueixen el mateix món.
+- Ports garantits i molls independents escalen moderadament amb la mida del mapa.
+- El sistema d'aigua cobreix la mida màxima de 9,6 km i el terreny/bordes utilitzen la mida activa.
+- El minimapa i la carta de navegació actualitzen escala, coordenades i etiqueta de mida dinàmicament.
