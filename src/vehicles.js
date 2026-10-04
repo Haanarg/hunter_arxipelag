@@ -2,6 +2,11 @@
 window.HUNTER_VEHICLES=Object.freeze({
   scales:Object.freeze({llanxa:1.3,llanxa_coets:1.35,moto_aquatica:1.08,barca_rems:.98,windsurf:1.05,hover:1.3,cotxe:1.3,moto:1.2,bici:1.2,camio:1.45,tanqueta:1.45,tanc:1.8,heli:1.75,heli_combat:1.82}),
   radii:Object.freeze({llanxa:5.5,llanxa_coets:5.8,moto_aquatica:2.1,barca_rems:3.25,windsurf:2.3,hover:4.8,cotxe:3.6,moto:2.2,bici:1.9,camio:4.8,tanqueta:4.5,tanc:5.6,heli:8,heli_combat:8.4}),
+  hitboxes:Object.freeze({
+    llanxa:[4.4,10.6],llanxa_coets:[4.5,10.8],moto_aquatica:[1.7,3.8],barca_rems:[2.7,6.1],windsurf:[1.9,4.3],hover:[4.2,7.4],
+    cotxe:[3.2,5.9],moto:[1.35,2.8],bici:[1.15,2.4],camio:[3.6,7.8],tanqueta:[3.15,5.1],tanc:[4.2,7.1],
+    heli:[3.4,11.2],heli_combat:[2.8,11.8]
+  }),
   createFactory(THREE,{box,material,shadows}){
     const VS=this.scales;
     const rod=(g,a,b,r,c,profile='metal')=>{const v=new THREE.Vector3(...a),w=new THREE.Vector3(...b),delta=w.clone().sub(v),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),8),material(c,profile));m.position.copy(v.add(w).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());g.add(m);return m};
