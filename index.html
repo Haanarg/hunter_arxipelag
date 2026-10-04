@@ -129,7 +129,7 @@ let E=[],Pj=[],bombs=[],fx=[],DEAD=[],hp=100,ammo=0,disg=false,bazookaEquipped=f
 const endEl=document.getElementById('end'),gB=new THREE.BoxGeometry(.35,.35,.35),sphG=new THREE.SphereGeometry(1,10,8),
 mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial({color:0xff7a1a}),mE=new THREE.MeshBasicMaterial({color:0xff4040});
 const EC={soldat:{hp:30,sp:7,rng:32,rate:1.1,dmg:7,spl:0,r:2},jeep:{hp:70,sp:22,rng:22,rate:.5,dmg:5,spl:0,r:3.9},tanqueta:{hp:115,sp:13,rng:42,rate:.72,dmg:9,spl:0,r:4.5},tanc:{hp:140,sp:8,rng:50,rate:2.5,dmg:22,spl:7,r:6.8},
-torre:{hp:90,sp:0,rng:75,rate:.7,dmg:8,spl:0,r:3},general:{hp:45,sp:0,rng:30,rate:.9,dmg:9,spl:0,r:2}};
+torre:{hp:90,sp:0,rng:112.5,rate:.7,dmg:8,spl:0,r:3},general:{hp:45,sp:0,rng:30,rate:.9,dmg:9,spl:0,r:2}};
 function setDis(v){disg=v;pl.userData.mats.forEach(([m,a,b])=>m.color.copy(vivid(v?b:a)))}
 function fin(m){over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+' · Obre Ⅱ / Esc per tornar a jugar';endEl.style.display='flex'}
 function hurtP(d){if(over)return;d*=DIF;hp-=d;snd('hurt',.5);if(hp<=0){hp=0;fin('HAS MORT')}}
@@ -199,7 +199,7 @@ for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.life-=dt;f.o.scale.setScalar(1+(
 function mvE(u,s){const nx=u.x-Math.sin(u.hd)*s,nz=u.z-Math.cos(u.hd)*s;
 if(hAt(nx,nz)>-.8&&!treeHit(nx,nz,1.2)&&Math.abs(nx)<H-5&&Math.abs(nz)<H-5&&!Wl.some(w=>!w.open&&nx>w.x0-1.5&&nx<w.x1+1.5&&nz>w.z0-1.5&&nz<w.z1+1.5)){u.x=nx;u.z=nz}else u.wt=0}
 function updEn(dt){E.forEach(u=>{u.alert=Math.max(0,u.alert-dt);u.cd-=dt;const q=cv||P,py=cv?cv.o.position.y:P.y,dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz);
-const det=disg&&!cv?10:u.alert>0?150:u.t=='general'?30:60;
+const det=disg&&!cv?20:u.alert>0?300:u.t=='general'?60:120;
 const eyeY=u.o.position.y+(u.t=='torre'?9.4:2.2);if(!over&&d<det&&sight(u.x,u.z,q.x,q.z,eyeY)){u.hd=Math.atan2(-dx,-dz);if(u.sp>0&&d>u.rng*.55){const dp=chooseDefense(u,q);if(dp&&Math.hypot(dp.x-u.x,dp.z-u.z)>1.8){u.hd=Math.atan2(u.x-dp.x,u.z-dp.z);mvE(u,u.sp*.75*dt)}else if(d>u.rng*.72)mvE(u,u.sp*dt)}
 if(d<u.rng&&u.cd<=0){u.cd=u.rate;const y0=eyeY,ex=q.x-u.x+rr(-1.5,1.5),ey=py+1.5-y0,ez=q.z-u.z+rr(-1.5,1.5),l=Math.hypot(ex,ey,ez);
 shoot(u.x,y0,u.z,ex/l,ey/l,ez/l,u.spl?60:70,u.dmg,u.spl,'e',mE,u.spl?2:1)}}
