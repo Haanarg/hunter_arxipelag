@@ -618,3 +618,17 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - S'han creat tres variants reals de capçada: 6, 8 i 10 fulles principals, equivalents aproximadament a -25%, normal i +25% respecte de la variant central.
 - La segona corona de fulles també varia en densitat (5, 7 o 9 fulles) per reforçar la diferència visual.
 - La destrucció individual de palmeres continua funcionant amb les noves variants instanciades.
+
+
+## Visió enemiga i articulacions del personatge — 2026-10-04
+- El radi general de detecció dels enemics s'ha duplicat: detecció normal 60→120, alerta 150→300 i general 30→60.
+- La detecció amb disfressa també s'ha duplicat de 10 a 20 per mantenir la mateixa proporció.
+- L'abast de foc de les torres de vigilància augmenta un 50%, de 75 a 112,5.
+- El personatge principal deixa de tenir braços i cames rígids d'una sola peça.
+- Cada braç té ara espatlla, colze i avantbraç articulats; l'arma i el ganivet queden ancorats a l'avantbraç dret.
+- Cada cama té maluc, genoll i cama inferior articulats.
+- L'animació de caminar coordina oposadament braços i cames, flexiona els genolls durant la passa i afegeix una lleugera oscil·lació corporal.
+- Els colzes mantenen una flexió natural en repòs i canvien d'angle durant el moviment.
+- Apuntar, atacar amb ganivet i portar el bazooka utilitzen postures específiques de colzes i espatlles.
+- La natació utilitza ara flexió alterna de colzes i genolls, en lloc de fer girar extremitats rígides.
+- S'ha afegit una respiració subtil en repòs per reduir l'aspecte robòtic quan el personatge està aturat.
