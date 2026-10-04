@@ -2,6 +2,7 @@
 window.HUNTER_VEHICLE_DYNAMICS=Object.freeze({
   types:Object.freeze({
     llanxa:Object.freeze({n:'Llanxa',m:'w',a:30,dr:.8,tu:1.4,cd:30,ch:12,response:2.6,steerResponse:2.8,coast:.88,armor:1,life:4}),
+    moto_aquatica:Object.freeze({n:'Moto aquàtica',m:'w',a:46,dr:.68,tu:2.35,cd:20,ch:7,response:5.8,steerResponse:6.4,coast:.94,armor:0,life:2}),
     hover:Object.freeze({n:'Hovercraft',m:'wl',a:28,dr:.7,tu:1.7,cd:28,ch:11,response:2.9,steerResponse:3.2,coast:.9,armor:2,life:5}),
     cotxe:Object.freeze({n:'Cotxe',m:'l',a:36,dr:.9,tu:1.9,cd:22,ch:8,response:5.2,steerResponse:6.2,coast:1,armor:2,life:4}),
     moto:Object.freeze({n:'Moto',m:'l',a:42,dr:.9,tu:2.5,cd:18,ch:7,response:6.4,steerResponse:7.2,coast:1,armor:0,life:2}),
