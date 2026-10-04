@@ -393,3 +393,36 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - Avançades i garatges poden generar plataformes d'aterratge opcionals; aquestes plataformes anivellen també la seva petjada per evitar terres flotants.
 - Redissenyats els objectes físics: mapes prims amb pictograma del contingut, TNT amb metxa, farmaciola blanca amb tirita, caixa de munició amb bales visibles i camisa enemiga vermella en vertical.
 - Les icones de l'inventari s'han substituït per pictogrames SVG coherents amb els nous models.
+
+
+## Nous vehicles armats i sistema de dany — 2026-10-04
+- Afegits cinc vehicles conduïbles: barca de rems, helicòpter de combat, taula de windsurf, tanqueta blindada i llanxa llançacoets.
+- Els cinc tipus nous formen part de la generació per llavor i el generador intenta garantir-ne almenys un exemplar per mapa.
+- Helicòpter de combat: metralladora frontal com a arma principal i 6 míssils limitats. En mòbil, una pulsació llarga de Dispar llança el míssil; amb teclat també es pot usar G.
+- Llanxa llançacoets: 5 coets limitats, disparats amb el botó Dispar.
+- Tanqueta: metralladora frontal/superior ràpida i blindatge elevat.
+- Barca de rems i windsurf no generen so de motor.
+
+### Blindatge i vida dels vehicles
+| Vehicle | Blindatge | Vida (impactes estructurals) |
+| --- | ---: | ---: |
+| Bicicleta | 0 | 1 |
+| Moto | 0 | 2 |
+| Windsurf | 0 | 1 |
+| Barca de rems | 0 | 2 |
+| Llanxa | 1 | 4 |
+| Cotxe | 2 | 4 |
+| Hovercraft | 2 | 5 |
+| Llanxa llançacoets | 3 | 7 |
+| Camió militar | 4 | 6 |
+| Helicòpter | 4 | 8 |
+| Helicòpter de combat | 6 | 12 |
+| Tanqueta blindada | 7 | 10 |
+| Tanc | 10 | 18 |
+
+- El blindatge usa escala 0–10 i redueix el dany que arriba al pilot; amb blindatge 10 els impactes normals no fan mal al conductor.
+- Cada impacte resta com a mínim una unitat de vida estructural; explosions fortes poden restar-ne diverses.
+- Els vehicles danyats emeten fum, amb freqüència i densitat creixents segons el percentatge de dany rebut.
+- Quan la vida arriba a zero, el vehicle explota i s'elimina del món.
+- Si el jugador conduïa el vehicle destruït, és expulsat en una direcció aleatòria durant un breu impuls i rep dany per l'explosió.
+- El HUD mostra blindatge, vida actual/màxima i munició especial quan correspon.
