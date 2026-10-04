@@ -605,3 +605,16 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Els molls ja no generen una carretera artificial fins a la costa o el compound.
 - Cada tram de moll registra ara una superfície caminable pròpia; `groundAt()` la tracta com a terra elevada.
 - El jugador pot caminar sobre els molls i deixa de travessar-los o caure visualment a través de la plataforma.
+
+
+## Mapes de vehicles i variants de palmeres — 2026-10-04
+- El mapa d'helicòpters marca ara tots els helicòpters actius del mapa, tant els bàsics com els de combat.
+- El mapa de tancs manté tots els tancs actius marcats i ara conserva referències als vehicles reals en lloc de còpies fixes de coordenades.
+- Les marques dels mapes segueixen així la posició actual dels vehicles si aquests es mouen.
+- La densitat general de palmeres s'ha augmentat aproximadament al doble mantenint la resta de vegetació en proporcions similars.
+- Les palmeres poden aparèixer ara a zones més altes de les illes, fins aproximadament a cota 42, sempre que el pendent sigui acceptable.
+- L'alçada/escala de cada palmera varia aproximadament un ±25% respecte de la mida base.
+- La tonalitat de cada palmera varia entre aproximadament un 25% més fosca i un 25% més clara.
+- S'han creat tres variants reals de capçada: 6, 8 i 10 fulles principals, equivalents aproximadament a -25%, normal i +25% respecte de la variant central.
+- La segona corona de fulles també varia en densitat (5, 7 o 9 fulles) per reforçar la diferència visual.
+- La destrucció individual de palmeres continua funcionant amb les noves variants instanciades.
