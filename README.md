@@ -23,7 +23,7 @@ La interfície principal es manté minimalista: joystick, Dispar i Acció. Farma
 
 ## Contingut
 
-Mapa seleccionable de 4,8 × 4,8 km o 9,6 × 9,6 km amb llavor configurable, set tipus de vehicles, compounds funcionals (avançades, garatges amb hangars, ports i polvorins), edificis explorables, camins i molls, patrulles i defensa contextual, HQ fortificat, objectes, destrucció, platges amb escuma, fons marí profund i natació de braça.
+Mapa seleccionable de 4,8 × 4,8 km o 9,6 × 9,6 km amb llavor configurable, vuit tipus de vehicles, camió militar, compounds funcionals (avançades, garatges amb hangars, ports i polvorins), edificis explorables, camins i molls, patrulles i defensa contextual, HQ fortificat, objectes, destrucció, platges amb escuma, fons marí profund i natació de braça.
 
 ## Desenvolupament
 
