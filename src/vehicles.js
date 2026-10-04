@@ -31,28 +31,23 @@ window.HUNTER_VEHICLES=Object.freeze({
       if(t==='tanqueta'){for(const x of[-1.42,1.42])for(const z of[-1.55,0,1.55])wheel(g,x,.68,z,.58,.34);box(g,2.75,.42,4.6,0x596343,0,.88,0,'paint');box(g,2.55,1.02,3.8,0x667348,0,1.42,.05,'paint');const nose=box(g,2.48,.72,1.15,0x727c50,0,1.62,-1.65,'paint');nose.rotation.x=-.18;box(g,2.08,.58,1.7,0x727c50,0,2.02,-.15,'paint');round(g,.68,.32,0x586543,0,2.4,-.15,'y','paint');rod(g,[0,2.48,-.65],[0,2.48,-3.05],.1,metal);box(g,.3,.24,.5,metal,0,2.48,-2.92,'metal');for(const x of[-1.05,1.05])box(g,.32,.18,.18,0xffe0a0,x,1.48,-2.24,'paint')}
       if(t==='tanc'){
         const trackSide=x=>{
-          const side=Math.sign(x),outer=x+side*.02,trackMetal=0x53564d;
-          // Nucli de goma tipus càpsula: tram central + rodes extremes arrodonides.
-          box(g,1.05,1.16,5.25,rubber,outer,.78,0,'rubber');
-          round(g,.66,1.04,rubber,outer,.78,-2.62,'x','rubber');
-          round(g,.66,1.04,rubber,outer,.78,2.62,'x','rubber');
-          // Rodes de rodament internes, visibles sota les baules.
-          for(const z of[-2.35,-1.18,0,1.18,2.35])wheel(g,x+side*.52,.76,z,.55,.16);
-          // Baules rectes superior i inferior.
-          for(let z=-2.25;z<=2.25;z+=.45){
-            box(g,1.17,.11,.28,trackMetal,outer,1.44,z,'metal');
-            box(g,1.17,.11,.28,trackMetal,outer,.12,z,'metal');
+          const side=Math.sign(x),outer=x+side*.02,trackMetal=0x53564d,cy=.78,r=.66,front=-2.62,rear=2.62,straight=rear-front,perimeter=2*straight+2*Math.PI*r;
+          // Nucli de goma tipus càpsula i rodes internes.
+          box(g,1.05,1.16,5.25,rubber,outer,cy,0,'rubber');
+          round(g,r,1.04,rubber,outer,cy,front,'x','rubber');
+          round(g,r,1.04,rubber,outer,cy,rear,'x','rubber');
+          for(const z of[-2.35,-1.18,0,1.18,2.35]){
+            const w=wheel(g,x+side*.52,.76,z,.55,.16);
+            w.userData.trackSide=side;
           }
-          // Baules que envolten les rodes davantera i posterior.
-          for(let i=0;i<=6;i++){
-            const phi=i*Math.PI/6,cy=.78,r=.66;
-            const yf=cy+r*Math.cos(phi),zf=-2.62-r*Math.sin(phi);
-            const yr=cy+r*Math.cos(phi),zr=2.62+r*Math.sin(phi);
-            const front=box(g,1.17,.11,.28,trackMetal,outer,yf,zf,'metal');
-            front.rotation.x=Math.PI-phi;
-            const rear=box(g,1.17,.11,.28,trackMetal,outer,yr,zr,'metal');
-            rear.rotation.x=phi;
+          // Les baules són peces independents: place() les farà circular al voltant de l'eruga.
+          const links=[],count=Math.round(perimeter/.38);
+          for(let i=0;i<count;i++){
+            const link=box(g,1.17,.11,.28,trackMetal,outer,cy,0,'metal');
+            link.userData.trackOffset=i*perimeter/count;
+            links.push(link);
           }
+          (g.userData.tracks||(g.userData.tracks=[])).push({side,links,phase:0,cy,r,front,rear,straight,perimeter,x:outer});
         };
         [-2.1,2.1].forEach(trackSide);
         box(g,3.75,1.15,5.9,0x667348,0,1.5,0,'paint');const front=box(g,3.65,.72,1.55,0x727c50,0,1.95,-2.05,'paint');front.rotation.x=-.28;for(const x of[-1.45,1.45])box(g,.22,.52,4.9,0x56623f,x,1.88,.15,'paint');round(g,1.62,.82,0x78845b,0,2.54,.1,'y','paint');box(g,2.2,.26,1.65,0x6d7950,0,2.92,.1,'paint');round(g,.62,.2,metal,.45,3.08,.4);rod(g,[0,2.62,-1],[0,2.62,-5.35],.2,metal);box(g,.66,.4,.68,metal,0,2.62,-5.08,'metal');for(const x of[-1.2,1.2])box(g,.64,.45,1.2,0x596343,x,2.24,2,'paint');for(const x of[-1.35,1.35])box(g,.42,.22,.42,0x2f332e,x,2.15,-2.45,'metal');rod(g,[-1,2.7,1],[-1,5.2,1],.025,metal)}
