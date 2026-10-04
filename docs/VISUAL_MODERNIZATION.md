@@ -593,3 +593,15 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - La porta continua formant part del sistema destructible de murs, de manera que es pot forçar per combat/explosius.
 - L'interior del búnquer té ara una distribució fixa amb passadís central, diverses cambres laterals i una cambra posterior.
 - El general apareix aleatòriament en una de diverses posicions interiors, de manera que no queda sempre al mateix punt.
+
+
+## Fum de dany, rampa de tanc i molls caminables — 2026-10-04
+- Les partícules de fum dels vehicles danyats són ara més petites i de gris més fosc.
+- El fum de dany té velocitat vertical pròpia i puja progressivament mentre s'esvaeix, en lloc de quedar-se fix al punt d'emissió.
+- La física dels vehicles terrestres utilitza ara `groundAt()` per reconèixer rampes i altres superfícies elevades, en lloc de dependre només de l'altura bruta del terreny.
+- L'hangar principal s'ha ampliat a 40 m d'amplada, amb una boca de 32 m i una porta d'11 m d'alçada.
+- La rampa de l'hangar pot ser més llarga i arribar fins a 30 m d'amplada, facilitant la sortida del tanc.
+- El vehicle dins l'hangar apareix una mica més alineat amb l'eix de sortida.
+- Els molls ja no generen una carretera artificial fins a la costa o el compound.
+- Cada tram de moll registra ara una superfície caminable pròpia; `groundAt()` la tracta com a terra elevada.
+- El jugador pot caminar sobre els molls i deixa de travessar-los o caure visualment a través de la plataforma.
