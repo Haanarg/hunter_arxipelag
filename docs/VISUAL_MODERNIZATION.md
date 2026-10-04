@@ -361,3 +361,13 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - La disfressa es pot activar/desactivar des de l'inventari i el mapa obre directament la carta de navegació.
 - El HUD textual s'ha simplificat a vida, munició, baixes, estat, missatges contextuals, llavor i coordenades.
 - El menú de pausa inclou accés directe a l'inventari.
+
+
+## Combat cos a cos i mapes militars — 2026-10-04
+- Quan el jugador va a peu i té 0 munició, el botó Dispar passa automàticament a atac cos a cos.
+- Afegit un ganivet visual al model del jugador que només és visible durant l'animació del cop.
+- L'atac amb ganivet té abast curt (aprox. 2,6 m), una cadència més lenta i 6 punts de dany, per sota dels 12 punts de la pistola.
+- Afegits dos nous tipus d'objecte: mapa d'helicòpter i mapa de tanc.
+- Aquests mapes apareixen en alguns edificis addicionals i es mostren dins l'inventari en graella.
+- En usar-los, marquen una posició coneguda d'un helicòpter o d'un tanc militar a la carta de navegació sense revelar l'HQ.
+- Els marcadors d'intel·ligència es mostren sempre a la carta, encara que el vehicle sigui lluny: cian per helicòpter i taronja per tanc.
