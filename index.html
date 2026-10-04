@@ -302,11 +302,18 @@ if(opt.hangar){
   const frontZ=ds===0?d/2-t/2:-d/2+t/2,sl=Math.max(.5,(w-dw)/2),off=dw/2+sl/2;
   push(-off,frontZ,sl,t);push(off,frontZ,sl,t);
 }else{
-  [[0,d/2-t/2,w,t,0],[0,-d/2+t/2,w,t,0],[w/2-t/2,0,t,d-2*t,1],[-w/2+t/2,0,t,d-2*t,1]].forEach(([cx,cz,sx,sz,ax],k)=>{if(k!=ds){seg(cx,cz,sx,sz,0,true);return}const L=ax?sz:sx,sl=(L-dw)/2,off=dw/2+sl/2;for(const q of[-1,1]){if(ax)seg(cx,cz+q*off,sx,sl);else seg(cx+q*off,cz,sl,sz)}if(ax)seg(cx,cz,sx,dw,1);else seg(cx,cz,dw,sz,1)});
+  [[0,d/2-t/2,w,t,0],[0,-d/2+t/2,w,t,0],[w/2-t/2,0,t,d-2*t,1],[-w/2+t/2,0,t,d-2*t,1]].forEach(([cx,cz,sx,sz,ax],k)=>{if(k!=ds){seg(cx,cz,sx,sz,0,!opt.bunker);return}const L=ax?sz:sx,sl=(L-dw)/2,off=dw/2+sl/2;for(const q of[-1,1]){if(ax)seg(cx,cz+q*off,sx,sl);else seg(cx+q*off,cz,sl,sz)}if(ax)seg(cx,cz,sx,dw,1);else seg(cx,cz,dw,sz,1)});
   if(w*d>=140&&R()<.5){const al=w>=d,L=al?d:w,gp=rr(-L/4,L/4),px=(R()<.5?-1:1)*rr((al?w:d)*.12,(al?w:d)*.2),a0=-L/2+t,a1=L/2-t,ps=(a,b)=>{if(b-a<.5)return;const cc=(a+b)/2,l=b-a;if(al)seg(px,cc,t,l);else seg(cc,px,l,t)};ps(a0,gp-1.6);ps(gp+1.6,a1)}
 }
 g.position.set(x,fy,z);world.add(g);
 const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,rhp:120,hangar:!!opt.hangar,doorSide:ds,doorWidth:dw,kind:opt.kind||'house'};B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
+function mkEnemyBunker(x,z){
+  const b=mkB(x,z,34,28,9,0xd9ded2,0xbfc6bb,{kind:'enemy_bunker',bunker:true,doorSide:0,doorWidth:6.5,doorHeight:6.2,openDoor:true}),g=b.o,concrete=0xd2d8cb,dark=0x777f76;
+  const left=bx(g,6.2,8.7,28.6,concrete,-16.1,4.05,0,'masonry'),right=bx(g,6.2,8.7,28.6,concrete,16.1,4.05,0,'masonry');left.rotation.z=-.18;right.rotation.z=.18;
+  const brow=bx(g,11,.9,2.2,dark,0,7.55,13.45,'masonry');brow.rotation.x=-.08;
+  bx(g,8.5,.45,1.2,0x8c4b33,0,6.35,13.7,'paint');
+  return b
+}
 // Door-aligned treads share the exact same geometry and walking height.
 function stairLocal(s,x,z){const dx=x-s.x,dz=z-s.z;return{along:dx*s.nx+dz*s.nz,side:dx*s.nz-dz*s.nx}}
 function stairContains(s,x,z,margin=0){const q=stairLocal(s,x,z);return q.along>=-margin&&q.along<=s.length+margin&&Math.abs(q.side)<=s.width/2+margin}
@@ -361,14 +368,18 @@ const chooseDefense=(u,q)=>{
   return best
 };
 const wireRod=(a,b,r=.045,c=0x3d4143)=>{const v=new THREE.Vector3(...a),w=new THREE.Vector3(...b),d=w.clone().sub(v),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),6),M(c,'metal'));m.position.copy(v.add(w).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());world.add(m);return m};
+const barbedSection=(x1,z1,x2,z2)=>{
+  const y1=Math.max(hAt(x1,z1),0),y2=Math.max(hAt(x2,z2),0),parts=[],dx=x2-x1,dz=z2-z1,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L,px=-uz,pz=ux;
+  for(const [x,z,y] of [[x1,z1,y1],[x2,z2,y2]]){const p=new THREE.Mesh(new THREE.CylinderGeometry(.11,.14,2.45,6),M(0x4a4f52,'metal'));p.position.set(x,y+1.22,z);world.add(p);parts.push(p)}
+  for(const h of[.45,1.05,1.65])parts.push(wireRod([x1,y1+h,z1],[x2,y2+h,z2],.026,0x30363a));
+  parts.push(wireRod([x1,y1+.48,z1],[x2,y2+1.68,z2],.024,0x353b3e));
+  parts.push(wireRod([x1,y1+1.68,z1],[x2,y2+.48,z2],.024,0x353b3e));
+  for(let i=0;i<3;i++){const a=(i+.15)/3,b=(i+.85)/3,xa=x1+dx*a,za=z1+dz*a,xb=x1+dx*b,zb=z1+dz*b,ya=Math.max(hAt(xa,za),0)+2.02,yb=Math.max(hAt(xb,zb),0)+2.02,side=i%2?-.2:.2;parts.push(wireRod([xa+px*side,ya,za+pz*side],[xb-px*side,yb,zb-pz*side],.023,0x292f32))}
+  const pad=.24,w={x0:Math.min(x1,x2)-pad,x1:Math.max(x1,x2)+pad,z0:Math.min(z1,z2)-pad,z1:Math.max(z1,z2)+pad,y0:Math.min(y1,y2),y1:Math.max(y1,y2)+2.5,hp:24,m:parts[0],parts,door:false,open:false,barbed:true,rammable:true,cx:(x1+x2)/2,cz:(z1+z2)/2};Wl.push(w);return w
+};
 const barbedSegment=(x1,z1,x2,z2)=>{
-  const y1=Math.max(hAt(x1,z1),0),y2=Math.max(hAt(x2,z2),0),parts=[],L=Math.hypot(x2-x1,z2-z1),n=Math.max(1,Math.ceil(L/4));
-  for(let i=0;i<=n;i++){const t=i/n,x=x1+(x2-x1)*t,z=z1+(z2-z1)*t,y=Math.max(hAt(x,z),0);const p=new THREE.Mesh(new THREE.CylinderGeometry(.09,.12,2.25,6),M(0x4a4f52,'metal'));p.position.set(x,y+1.12,z);world.add(p);parts.push(p)}
-  for(const h of[.45,1.05,1.65])parts.push(wireRod([x1,y1+h,z1],[x2,y2+h,z2],.035,0x3c4144));
-  // Fil superior en ziga-zaga per donar lectura de filferrada.
-  for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n,m=(a+b)/2,xa=x1+(x2-x1)*a,za=z1+(z2-z1)*a,xb=x1+(x2-x1)*b,zb=z1+(z2-z1)*b,xm=x1+(x2-x1)*m,zm=z1+(z2-z1)*m,ym=Math.max(hAt(xm,zm),0)+2.05;
-    parts.push(wireRod([xa,Math.max(hAt(xa,za),0)+1.78,za],[xm,ym,zm],.03,0x34383a));parts.push(wireRod([xm,ym,zm],[xb,Math.max(hAt(xb,zb),0)+1.78,zb],.03,0x34383a))}
-  const pad=.18,m=parts[0],w={x0:Math.min(x1,x2)-pad,x1:Math.max(x1,x2)+pad,z0:Math.min(z1,z2)-pad,z1:Math.max(z1,z2)+pad,y0:Math.min(y1,y2),y1:Math.max(y1,y2)+2.2,hp:45,m,parts,door:false,open:false,cx:(x1+x2)/2,cz:(z1+z2)/2};Wl.push(w);return w
+  const L=Math.hypot(x2-x1,z2-z1),n=Math.max(1,Math.ceil(L/6));
+  for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n;barbedSection(x1+(x2-x1)*a,z1+(z2-z1)*a,x1+(x2-x1)*b,z1+(z2-z1)*b)}
 };
 const barbedHQ=(cx,cz,hw=50,hd=46,gap=13)=>{
   const n=cz-hd,s=cz+hd,w=cx-hw,e=cx+hw;
@@ -380,8 +391,8 @@ const barbedHQ=(cx,cz,hw=50,hd=46,gap=13)=>{
 function build(){joystick.reset();compoundClear=[];terrainLevels=[];if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}world=new THREE.Group();scene.add(world);B=[];stairs=[];swimming=false;intelMarks=[];playerEject=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;pl.userData.bazooka.visible=false;waypoint=null;E=[];Pj=[];DB.length=0;WA.length=0;TG.clear();bombs=[];fx=[];logb=[];hp=100;ammo=24;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
 {const base=requestedSeed==null?Math.floor(Math.random()*0xffffffff)>>>0:requestedSeed>>>0;let tries=0;do{seed=(base+Math.imul(tries++,0x9e3779b1))>>>0;genIslands();pa=land(A,2000);pb=land(Bi,2000)}while((!pa||!pb)&&tries<8);if(!pa||!pb)throw new Error('No s’ha pogut generar un mapa vàlid amb aquesta llavor')}
 addLevelArea(pa.x,pa.z,82,72,pa.h,0,18);[[-27,0],[27,-12],[0,31]].forEach(([dx,dz])=>mkB(pa.x+dx,pa.z+dz,15,15,7,0xe9dfc8,0x2c5fc0));flag(pa.x,pa.z-7,0x2c7bff);
-addLevelArea(pb.x,pb.z,118,106,pb.h,0,22);mkB(pb.x,pb.z,30,30,13,0x6b5a55,0x8c1f1f);mkB(pb.x+38,pb.z+10,12,12,6,0x8a7a70,0x8c1f1f);mkB(pb.x-38,pb.z-8,12,12,6,0x8a7a70,0x8c1f1f);flag(pb.x,pb.z+19,0xe02828);barbedHQ(pb.x,pb.z,58,52,17);
-const cols=[0xd8b48a,0xc9a27a,0xb8c4c9,0xd9c9a0],compoundVehicles=[];let tankHangarAssigned=false;
+addLevelArea(pb.x,pb.z,118,106,pb.h,0,22);mkEnemyBunker(pb.x,pb.z);mkB(pb.x+38,pb.z+10,12,12,6,0x8a7a70,0x8c1f1f);mkB(pb.x-38,pb.z-8,12,12,6,0x8a7a70,0x8c1f1f);flag(pb.x+9,pb.z-2,0xe02828);barbedHQ(pb.x,pb.z,58,52,17);
+const cols=[0xd8b48a,0xc9a27a,0xb8c4c9,0xd9c9a0],compoundVehicles=[],heliportSites=[];let tankHangarAssigned=false;
 const compoundProp=(kind,x,z,rot=0)=>{
   const y=Math.max(.05,hAt(x,z)),g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;
   if(kind==='crate'){bx(g,1.2,.9,1,0x7b5a35,0,.45,0,'paint');bx(g,1.26,.1,1.06,0x3f3021,0,.2,0,'metal');bx(g,.1,.95,1.08,0x3f3021,0,.48,0,'metal')}
@@ -445,8 +456,7 @@ const compound=(type,q)=>{
     prop('lamp',-20,17);prop('lamp',20,17);prop('sign',0,22);
     const route=[tr(-18,-18),tr(18,-18),tr(18,18),tr(-18,18)],def=[tr(-18,-12),tr(18,-12),tr(0,18)];
     for(let n=0;n<3;n++){const [sx,sz]=route[n];setDefense(setPatrol(mkEn('soldat',sx,sz),route.map((p,i)=>route[(i+n)%route.length]),true),def)}
-    compoundVehicles.push({t:'heli',x,z,hd:ang,heliport:true,military:true});
-    if(R()<.55){const [hx,hz]=tr(13,10);compoundVehicles.push({t:'heli_combat',x:hx,z:hz,hd:ang,heliport:true,military:true})}
+    const hi=heliportSites.length;heliportSites.push({x,z,hd:ang});compoundVehicles.push({t:hi===1?'heli_combat':'heli',x,z,hd:ang,heliport:true,military:true,guaranteed:true})
   } else if(type==='polvori'){
     level(56,48,17);compoundPad(x,z,48,40,0x706a5c);{const [a1,b1]=tr(0,-20),[a2,b2]=tr(0,12);compoundPath(a1,b1,a2,b2,4,0x746d5f)}
     const a=put(-15,3,13,11,6,0x918b78,0x664338,{kind:'ammo'}),b=put(15,6,9,9,5.2,0x847a69,0x574035,{kind:'ammo'});addIt('expl',a);addIt('expl',b);if(R()<.55)addIt('arma',a);if(R()<.35)addIt('bazooka',R()<.5?a:b);
