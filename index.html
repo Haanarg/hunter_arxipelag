@@ -148,7 +148,9 @@ function hurtE(u,d){u.hp-=d;u.alert=12;if(u.hp<=0)killEnemy(u)}
 function explodeVehicle(v){
   if(!v||v.destroyed)return;v.destroyed=true;const wasPilot=cv===v,yy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
   if(wasPilot){cv=null;P.x=v.x;P.z=v.z;const a=rn(0,Math.PI*2),sp=rn(14,24);playerEject={kind:'blast',vx:Math.cos(a)*sp,vz:Math.sin(a)*sp,t:.8,dur:.8,spin:rn(-1,1)<0?-1:1,height:1.25};hurtP(rn(18,30));msg='El vehicle ha explotat!';msgT=3}
-  const i=V.indexOf(v);if(i>=0)V.splice(i,1);if(v.o){vehicleDebris(v,yy);world.remove(v.o)}
+  const i=V.indexOf(v);if(i>=0)V.splice(i,1);
+  intelMarks=intelMarks.filter(m=>m.ref!==v);
+  if(v.o){vehicleDebris(v,yy);world.remove(v.o)}
   boom(v.x,yy+1,v.z,10,45,'p');
 }
 function damageVehicle(v,dmg,impacts=1){
