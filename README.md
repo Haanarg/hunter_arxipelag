@@ -23,7 +23,7 @@ La interfície principal es manté minimalista: joystick, Dispar i Acció. Farma
 
 ## Contingut
 
-Mapa seleccionable de 4,8 × 4,8 km o 9,6 × 9,6 km amb llavor configurable, vuit tipus de vehicles, camió militar, compounds funcionals, heliports protegits (avançades, garatges amb hangars, ports i polvorins), edificis explorables, camins i molls, patrulles i defensa contextual, HQ fortificat, objectes, destrucció, platges amb escuma, fons marí profund i natació de braça.
+Mapa seleccionable de 4,8 × 4,8 km o 9,6 × 9,6 km amb llavor configurable, tretze tipus de vehicles, camió militar, compounds funcionals, heliports protegits (avançades, garatges amb hangars, ports i polvorins), edificis explorables, camins i molls, patrulles i defensa contextual, HQ fortificat, objectes, destrucció, platges amb escuma, fons marí profund i natació de braça.
 
 ## Desenvolupament
 
@@ -36,3 +36,6 @@ El seguiment i les tasques pendents són a [docs/VISUAL_MODERNIZATION.md](docs/V
 ## Dependència
 
 Three.js r128, distribuït sota llicència MIT. L’avís original està inclòs a `index.html`. Aquest projecte no té encara una llicència pròpia de distribució.
+
+
+Els vehicles disposen de blindatge i vida estructural. La versió actual inclou també barca de rems, windsurf, tanqueta blindada, helicòpter de combat amb míssils limitats i llanxa llançacoets.
