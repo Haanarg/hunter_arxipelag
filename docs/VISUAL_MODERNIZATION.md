@@ -512,3 +512,19 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - L’hangar de tanc s’ha ampliat: 34 m d’amplada, boca de 26 m i porta més alta.
 - La rampa d’accés pot arribar ara fins a 24 m d’amplada, suficient per al radi de col·lisió del tanc.
 - El tanc apareix una mica més a prop de l’eix de sortida i orientat directament cap a la boca de l’hangar.
+
+
+## HQ enemic, filferrada i vehicles militars — 2026-10-04
+- L’edifici central de l’HQ enemic s’ha convertit en un búnquer blanquinós, sense finestres laterals, amb laterals inclinats i una entrada frontal més contundent, prenent com a referència visual el búnquer de l’original.
+- La bandera vermella enemiga queda associada visualment al búnquer central.
+- La composició fixa de vehicles dins del recinte és ara: 1 tanc i 2 tanquetes armades.
+- Eliminats els antics spawns de jeeps/tancs enemics dins del recinte que podien alterar aquesta composició.
+- Afegits 2 cotxes enemics patrullant per l’exterior de la filferrada en sentits oposats.
+- La filferrada del HQ s’ha refet visualment amb pals metàl·lics, tres fils horitzontals, diagonals creuades i fil superior irregular.
+- El perímetre està dividit en seccions curtes independents; cada secció té vida pròpia i pot ser destruïda individualment.
+- Els explosius continuen danyant la filferrada mitjançant el sistema general de murs.
+- Els vehicles terrestres poden embestir la filferrada: la secció rep dany, el vehicle també, es generen espurnes/bump i, si la secció cau, s’obre un pas.
+- Els helicòpters ja no depenen només de la cerca probabilística: els heliports registren explícitament la seva posició i forcen un helicòpter associat.
+- El segon heliport prioritza un helicòpter de combat; hi ha un fallback dur que garanteix helicòpters normals i de combat en terreny vàlid lluny de l’HQ si la generació habitual falla.
+- Les tanquetes tenen garantia addicional de generació distribuïda i, a més, n’hi ha dues garantides al HQ.
+- Els reforços militars addicionals (tancs, camions, helicòpters, heli de combat i tanquetes) ja no es creen al voltant de la base enemiga, sinó distribuïts pel mapa.
