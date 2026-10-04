@@ -128,7 +128,7 @@ disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa 
 let E=[],Pj=[],bombs=[],fx=[],DEAD=[],hp=100,ammo=0,disg=false,bazookaEquipped=false,over=0,fcd=0,kills=0,intelMarks=[],playerEject=null,playerFall=null;
 const endEl=document.getElementById('end'),gB=new THREE.BoxGeometry(.35,.35,.35),sphG=new THREE.SphereGeometry(1,10,8),
 mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial({color:0xff7a1a}),mE=new THREE.MeshBasicMaterial({color:0xff4040});
-const EC={soldat:{hp:30,sp:7,rng:32,rate:1.1,dmg:7,spl:0,r:2},jeep:{hp:70,sp:22,rng:22,rate:.5,dmg:5,spl:0,r:3.9},tanc:{hp:140,sp:8,rng:50,rate:2.5,dmg:22,spl:7,r:6.8},
+const EC={soldat:{hp:30,sp:7,rng:32,rate:1.1,dmg:7,spl:0,r:2},jeep:{hp:70,sp:22,rng:22,rate:.5,dmg:5,spl:0,r:3.9},tanqueta:{hp:115,sp:13,rng:42,rate:.72,dmg:9,spl:0,r:4.5},tanc:{hp:140,sp:8,rng:50,rate:2.5,dmg:22,spl:7,r:6.8},
 torre:{hp:90,sp:0,rng:75,rate:.7,dmg:8,spl:0,r:3},general:{hp:45,sp:0,rng:30,rate:.9,dmg:9,spl:0,r:2}};
 function setDis(v){disg=v;pl.userData.mats.forEach(([m,a,b])=>m.color.copy(vivid(v?b:a)))}
 function fin(m){over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+' · Obre Ⅱ / Esc per tornar a jugar';endEl.style.display='flex'}
@@ -209,6 +209,7 @@ function updDead(dt){for(let i=DEAD.length-1;i>=0;i--){const u=DEAD[i];u.deadT+=
 function mkEn(t,x,z,gy){const c=EC[t];let g;
 if(t=='soldat'||t=='general'){g=window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M,general:t==='general'})}
 else if(t=='jeep'){g=mkV('cotxe');bx(g,.2,2,.2,0xff2020,0,3.4,0)}
+else if(t=='tanqueta'){g=mkV('tanqueta');bx(g,.18,1.7,.18,0xff2020,0,3.2,.4)}
 else if(t=='tanc'){g=mkV('tanc');bx(g,.2,2,.2,0xff2020,0,4,0)}
 else if(t=='torre'){g=new THREE.Group();const leg=0x4b5157,deck=0x626b70,cabin=0x7c2f2f,roof=0x343a3e;
 for(const x of[-1.45,1.45])for(const z of[-1.45,1.45])bx(g,.38,7.8,.38,leg,x,3.9,z,'metal');
@@ -317,7 +318,7 @@ function fr(x,z){let a=1e9,b=-1e9;for(const[i,j]of[[0,0],[9,9],[-9,9],[9,-9],[-9
 function dmgW(w,d){w.hp-=d;if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0)Wl.splice(i,1);i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);snd('boom',.3)}}
 function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=(opt.hangar?buildingVisual.createHangarShell:buildingVisual.createShell)({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide;
 const seg=(lx,lz,sx,sz,dr,windows=false)=>{if(!dr){const parts=windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:h,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:h,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+h,hp:90,m,parts:windows?parts:null,door:false,open:false,cx:x+lx,cz:z+lz};Wl.push(o);return}
-const parts=buildingVisual.addDoor(g,{lx,lz,sx,sz,height:h,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:35,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,cx:x+lx,cz:z+lz};Wl.push(door);Dr.push(door);
+const parts=buildingVisual.addDoor(g,{lx,lz,sx,sz,height:h,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:35,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz};Wl.push(door);Dr.push(door);
 if(parts.lintel)Wl.push({x0:door.x0,x1:door.x1,z0:door.z0,z1:door.z1,y0:fy+parts.doorHeight,y1:fy+h,hp:70,m:parts.lintel,door:false,open:false,playerBlock:false,cx:x+lx,cz:z+lz})};
 if(opt.hangar){
   const sh=visual.spring||Math.max(3.1,h*.3),push=(lx,lz,sx,sz)=>{
@@ -332,15 +333,24 @@ if(opt.hangar){
   push(-off,frontZ,sl,t);push(off,frontZ,sl,t);
 }else{
   [[0,d/2-t/2,w,t,0],[0,-d/2+t/2,w,t,0],[w/2-t/2,0,t,d-2*t,1],[-w/2+t/2,0,t,d-2*t,1]].forEach(([cx,cz,sx,sz,ax],k)=>{if(k!=ds){seg(cx,cz,sx,sz,0,!opt.bunker);return}const L=ax?sz:sx,sl=(L-dw)/2,off=dw/2+sl/2;for(const q of[-1,1]){if(ax)seg(cx,cz+q*off,sx,sl);else seg(cx+q*off,cz,sl,sz)}if(ax)seg(cx,cz,sx,dw,1);else seg(cx,cz,dw,sz,1)});
-  if(w*d>=140&&R()<.5){const al=w>=d,L=al?d:w,gp=rr(-L/4,L/4),px=(R()<.5?-1:1)*rr((al?w:d)*.12,(al?w:d)*.2),a0=-L/2+t,a1=L/2-t,ps=(a,b)=>{if(b-a<.5)return;const cc=(a+b)/2,l=b-a;if(al)seg(px,cc,t,l);else seg(cc,px,l,t)};ps(a0,gp-1.6);ps(gp+1.6,a1)}
+  if(!opt.bunker&&w*d>=140&&R()<.5){const al=w>=d,L=al?d:w,gp=rr(-L/4,L/4),px=(R()<.5?-1:1)*rr((al?w:d)*.12,(al?w:d)*.2),a0=-L/2+t,a1=L/2-t,ps=(a,b)=>{if(b-a<.5)return;const cc=(a+b)/2,l=b-a;if(al)seg(px,cc,t,l);else seg(cc,px,l,t)};ps(a0,gp-1.6);ps(gp+1.6,a1)}
 }
 g.position.set(x,fy,z);world.add(g);
 const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,rhp:120,hangar:!!opt.hangar,doorSide:ds,doorWidth:dw,kind:opt.kind||'house'};B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
 function mkEnemyBunker(x,z){
-  const b=mkB(x,z,34,28,9,0xd9ded2,0xbfc6bb,{kind:'enemy_bunker',bunker:true,doorSide:0,doorWidth:6.5,doorHeight:6.2,openDoor:true}),g=b.o,concrete=0xd2d8cb,dark=0x777f76;
+  const b=mkB(x,z,34,28,9,0xd9ded2,0xbfc6bb,{kind:'enemy_bunker',bunker:true,doorSide:0,doorWidth:3.4,doorHeight:4.2,openDoor:false,lockedDoor:true}),g=b.o,concrete=0xd2d8cb,dark=0x777f76,t=.55;
   const left=bx(g,6.2,8.7,28.6,concrete,-16.1,4.05,0,'masonry'),right=bx(g,6.2,8.7,28.6,concrete,16.1,4.05,0,'masonry');left.rotation.z=-.18;right.rotation.z=.18;
-  const brow=bx(g,11,.9,2.2,dark,0,7.55,13.45,'masonry');brow.rotation.x=-.08;
-  bx(g,8.5,.45,1.2,0x8c4b33,0,6.35,13.7,'paint');
+  const brow=bx(g,7.2,.9,2.2,dark,0,6.15,13.45,'masonry');brow.rotation.x=-.08;
+  bx(g,5.4,.45,1.2,0x8c4b33,0,5.25,13.7,'paint');
+  const wall=(lx,lz,sx,sz)=>{const m=buildingVisual.addWall(g,{lx,lz,sx,sz,height:8.2,material:b.wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:b.fy-1,y1:b.fy+8.2,hp:90,m,door:false,open:false,cx:x+lx,cz:z+lz};Wl.push(o);return o};
+  // Passadís central amb quatre cambres laterals i una cambra posterior.
+  wall(-8.2,1.2,t,18.8);wall(8.2,1.2,t,18.8);
+  wall(-12.1,4.2,7.3,t);wall(-12.1,-5.0,7.3,t);wall(12.1,4.2,7.3,t);wall(12.1,-5.0,7.3,t);
+  wall(-4.9,-7.6,6.2,t);wall(4.9,-7.6,6.2,t);
+  b.generalSpots=[
+    {x:x-12,z:z+8},{x:x+12,z:z+8},{x:x-12,z:z-1},{x:x+12,z:z-1},
+    {x:x-12,z:z-9},{x:x+12,z:z-9},{x:x,z:z-10.5}
+  ];
   return b
 }
 // Door-aligned treads share the exact same geometry and walking height.
@@ -398,13 +408,12 @@ const chooseDefense=(u,q)=>{
 };
 const wireRod=(a,b,r=.045,c=0x3d4143)=>{const v=new THREE.Vector3(...a),w=new THREE.Vector3(...b),d=w.clone().sub(v),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),6),M(c,'metal'));m.position.copy(v.add(w).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());world.add(m);return m};
 const barbedSection=(x1,z1,x2,z2)=>{
-  const y1=Math.max(hAt(x1,z1),0),y2=Math.max(hAt(x2,z2),0),parts=[],dx=x2-x1,dz=z2-z1,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L,px=-uz,pz=ux;
-  for(const [x,z,y] of [[x1,z1,y1],[x2,z2,y2]]){const p=new THREE.Mesh(new THREE.CylinderGeometry(.11,.14,2.45,6),M(0x4a4f52,'metal'));p.position.set(x,y+1.22,z);world.add(p);parts.push(p)}
-  for(const h of[.45,1.05,1.65])parts.push(wireRod([x1,y1+h,z1],[x2,y2+h,z2],.026,0x30363a));
-  parts.push(wireRod([x1,y1+.48,z1],[x2,y2+1.68,z2],.024,0x353b3e));
-  parts.push(wireRod([x1,y1+1.68,z1],[x2,y2+.48,z2],.024,0x353b3e));
-  for(let i=0;i<3;i++){const a=(i+.15)/3,b=(i+.85)/3,xa=x1+dx*a,za=z1+dz*a,xb=x1+dx*b,zb=z1+dz*b,ya=Math.max(hAt(xa,za),0)+2.02,yb=Math.max(hAt(xb,zb),0)+2.02,side=i%2?-.2:.2;parts.push(wireRod([xa+px*side,ya,za+pz*side],[xb-px*side,yb,zb-pz*side],.023,0x292f32))}
-  const pad=.24,w={x0:Math.min(x1,x2)-pad,x1:Math.max(x1,x2)+pad,z0:Math.min(z1,z2)-pad,z1:Math.max(z1,z2)+pad,y0:Math.min(y1,y2),y1:Math.max(y1,y2)+2.5,hp:24,m:parts[0],parts,door:false,open:false,barbed:true,rammable:true,cx:(x1+x2)/2,cz:(z1+z2)/2};Wl.push(w);return w
+  const y1=Math.max(hAt(x1,z1),0),y2=Math.max(hAt(x2,z2),0),parts=[],dx=x2-x1,dz=z2-z1,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L,px=-uz,pz=ux,Hw=4.9;
+  for(const [x,z,y] of [[x1,z1,y1],[x2,z2,y2]]){const p=new THREE.Mesh(new THREE.CylinderGeometry(.12,.16,Hw,6),M(0x4a4f52,'metal'));p.position.set(x,y+Hw/2,z);world.add(p);parts.push(p)}
+  for(const h of[.55,1.55,2.55,3.55,4.35])parts.push(wireRod([x1,y1+h,z1],[x2,y2+h,z2],.028,0x30363a));
+  for(const [a,b] of[[.6,2.5],[2.5,4.35],[4.35,2.5],[2.5,.6]])parts.push(wireRod([x1,y1+a,z1],[x2,y2+b,z2],.024,0x353b3e));
+  for(let i=0;i<4;i++){const a=(i+.12)/4,b=(i+.88)/4,xa=x1+dx*a,za=z1+dz*a,xb=x1+dx*b,zb=z1+dz*b,ya=Math.max(hAt(xa,za),0)+4.72,yb=Math.max(hAt(xb,zb),0)+4.72,side=i%2?-.22:.22;parts.push(wireRod([xa+px*side,ya,za+pz*side],[xb-px*side,yb,zb-pz*side],.024,0x292f32))}
+  const pad=.24,w={x0:Math.min(x1,x2)-pad,x1:Math.max(x1,x2)+pad,z0:Math.min(z1,z2)-pad,z1:Math.max(z1,z2)+pad,y0:Math.min(y1,y2),y1:Math.max(y1,y2)+5,hp:32,m:parts[0],parts,door:false,open:false,barbed:true,rammable:true,cx:(x1+x2)/2,cz:(z1+z2)/2};Wl.push(w);return w
 };
 const barbedSegment=(x1,z1,x2,z2)=>{
   const L=Math.hypot(x2-x1,z2-z1),n=Math.max(1,Math.ceil(L/6));
@@ -684,7 +693,7 @@ V.slice().forEach(v=>{if(v===cv)return;if(v.crashing){v.crashT=(v.crashT||0)+dt;
 ib=cv?null:B.find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2)||null;
 const floor=ib?ib.fy+.3:groundAt(P.x,P.z),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;if(!playerFall)P.y=ib?floor:Math.max(floor,surface-2.1);
 B.forEach(b=>{const i=b===ib;b.o.visible=i||Math.hypot(b.x-P.x,b.z-P.z)<1800;b.roof.visible=!i&&b.rhp>0;b.wm.opacity=b.dm.opacity=i?.18:1});
-Dr.forEach(d=>{const o=d.alwaysOpen||(!cv&&Math.hypot(P.x-d.cx,P.z-d.cz)<(d.open?6:4.5));d.open=o;d.m.visible=!o});
+Dr.forEach(d=>{const o=d.alwaysOpen||(!d.locked&&!cv&&Math.hypot(P.x-d.cx,P.z-d.cz)<(d.open?6:4.5));d.open=o;d.m.visible=!o});
 items.forEach(it=>{it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25});
 if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k];if(Math.hypot(P.x-it.x,P.z-it.z)<2.2&&Math.abs(P.y-it.y)<3){if(it.t=='arma')ammo+=40;inv[it.t]=(inv[it.t]||0)+1;world.remove(it.o);items.splice(k,1);msg='Has trobat: '+IT[it.t].n;msgT=3;snd('pick')}}
 msgT-=dt;pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv;animPl(cv?0:f,dt);
