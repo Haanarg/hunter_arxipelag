@@ -339,6 +339,9 @@ const compoundPier=(x1,z1,x2,z2,width=4.2)=>{
   }
   for(const side of[-1,1]){const b=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,.9,8),M(0x3e4447,'metal'));b.position.set(x2+px*side*(width*.35),1.12,z2+pz*side*(width*.35));world.add(b)}
 };
+const findPortWater=q=>{for(let a=0;a<32;a++){const aa=a*Math.PI/16;for(let d=28;d<Math.max(100,q.r||180);d+=8){const wx=q.x+Math.cos(aa)*d,wz=q.z+Math.sin(aa)*d;if(rawHAt(wx,wz)<-3&&rawHAt(wx+Math.cos(aa)*12,wz+Math.sin(aa)*12)<-3)return{x:wx,z:wz,hd:Math.atan2(-Math.cos(aa),-Math.sin(aa)),aa}}}return null};
+const findPortSite=(island,tries=18)=>{for(let n=0;n<tries;n++){const q=land(island,700,1);if(!q)continue;q.r=island.r;const portBest=findPortWater(q);if(portBest)return{...q,portBest}}return null};
+const makeStandalonePier=q=>{const best=q.portBest||findPortWater(q);if(!best)return false;const dx=best.x-q.x,dz=best.z-q.z,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L;let shore=null;for(let d=3;d<L;d+=2.5){const sx=q.x+ux*d,sz=q.z+uz*d;if(rawHAt(sx,sz)<.35){shore={x:sx-ux*1.8,z:sz-uz*1.8};break}}if(!shore)return false;const pierLen=Math.min(34,Math.max(14,L-5)),end={x:shore.x+ux*pierLen,z:shore.z+uz*pierLen};compoundPier(shore.x,shore.z,end.x,end.z,3.6);compoundPath(q.x,q.z,shore.x,shore.z,3.4,0x786f60);for(const side of[-1,1]){const px=-uz,pz=ux;compoundProp('bollard',end.x+px*side*1.1,end.z+pz*side*1.1,0)}compoundClear.push({x:q.x,z:q.z,r:18});return true};
 const compound=(type,q)=>{
   const x=q.x,z=q.z,ang=rr(-.22,.22),cs=Math.cos(ang),sn=Math.sin(ang),tr=(dx,dz)=>[x+dx*cs-dz*sn,z+dx*sn+dz*cs],level=(w,d,blend=16)=>addLevelArea(x,z,w,d,q.h!=null?q.h:rawHAt(x,z),ang,blend),doorToward=(dx,dz)=>{const tx=-dx,tz=-dz;return Math.abs(tx)>Math.abs(tz)?(tx>0?2:3):(tz>0?0:1)},put=(dx,dz,w,d,h,c,r,opt)=>{const [px,pz]=tr(dx,dz),o={...(opt||{})};if(o.doorSide==null&&!o.hangar)o.doorSide=doorToward(dx,dz);return mkB(px,pz,w,d,h,c,r,o)},prop=(kind,dx,dz,rot=0)=>{const [px,pz]=tr(dx,dz);return compoundProp(kind,px,pz,ang+rot)};
   if(type==='avancada'){
@@ -358,15 +361,23 @@ const compound=(type,q)=>{
     const a=put(-15,3,13,11,6,0x918b78,0x664338,{kind:'ammo'}),b=put(15,6,9,9,5.2,0x847a69,0x574035,{kind:'ammo'});addIt('expl',a);addIt('expl',b);if(R()<.55)addIt('arma',a);
     for(const p of[[-21,-15],[-11,-18],[0,-18],[11,-18],[21,-14]])prop('barrier',p[0],p[1]);for(const p of[[-3,1],[1,1],[5,1]])prop('ammo',p[0],p[1]);for(const p of[[-22,8],[22,8],[-22,-6],[22,-6]])prop('net',p[0],p[1],Math.PI/2);prop('lamp',0,15);prop('sign',0,-15);const ammoRoute=[tr(-18,-12),tr(18,-12),tr(18,13),tr(-18,13)],ammoDef=[tr(-17,-9),tr(17,-9),tr(15,11)];const [sx,sz]=ammoRoute[0];setDefense(setPatrol(mkEn('soldat',sx,sz),ammoRoute,true),ammoDef)
   } else if(type==='port'){
+    const portBest=q.portBest||findPortWater(q);if(!portBest)return false;
     level(58,42,18);compoundPad(x,z,50,34,0x77746d);{const [a1,b1]=tr(0,16),[a2,b2]=tr(0,-10);compoundPath(a1,b1,a2,b2,5.4,0x686764)}
     put(-17,10,17,11,6.5,0xa89a82,0x675044,{kind:'port'});put(18,10,10,9,5,0xb8aa91,0x675044,{kind:'port'});
     for(const p of[[-20,-5],[-10,-5],[0,-5],[10,-5],[20,-5]])prop('bollard',p[0],p[1]);prop('crate',12,1);prop('crate',15,1);prop('barrel',18,2);prop('lamp',-20,2);if(R()<.7){const pr=[tr(-20,0),tr(20,0),tr(18,14),tr(-18,14)],pd=[tr(-18,1),tr(18,1)];setDefense(setPatrol(mkEn('soldat',pr[0][0],pr[0][1]),pr,true),pd)}
-    let best=null;for(let a=0;a<24&&!best;a++){const aa=a*Math.PI/12;for(let d=10;d<Math.max(80,q.r||160);d+=8){const wx=x+Math.cos(aa)*d,wz=z+Math.sin(aa)*d;if(hAt(wx,wz)<-3&&hAt(wx+Math.cos(aa)*10,wz+Math.sin(aa)*10)<-3){best={x:wx,z:wz,hd:Math.atan2(-Math.cos(aa),-Math.sin(aa)),aa};break}}}
+    const best=portBest;
     if(best){const dx=best.x-x,dz=best.z-z,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L;let shore={x:x,z:z};for(let d=4;d<L;d+=3){const sx=x+ux*d,sz=z+uz*d;if(hAt(sx,sz)<.35){shore={x:sx-ux*2,z:sz-uz*2};break}}const end={x:best.x-ux*3,z:best.z-uz*3};compoundPier(shore.x,shore.z,end.x,end.z,4.4);compoundPath(x,z,shore.x,shore.z,4.8,0x6d6b65);const px=-uz,pz=ux;compoundVehicles.push({t:R()<.78?'llanxa':'hover',x:best.x+px*4.8,z:best.z+pz*4.8,hd:best.hd})}
   }
+  return true
 };
-const compoundCenters=[];const farCompound=q=>compoundCenters.every(c=>Math.hypot(q.x-c.x,q.z-c.z)>150);
-islands.forEach(i=>{if(i===A||i===Bi)return;let q=null;for(let n=0;n<8&&!q;n++){const c=land(i,650,1);if(c&&farCompound(c))q=c}if(!q)return;q.r=i.r;compoundCenters.push({x:q.x,z:q.z});const roll=R(),type=roll<.28?'avancada':roll<.56?'garatge':roll<.78?'polvori':'port';compound(type,q);if(i.r>520&&R()<.28){let q2=null;for(let n=0;n<10&&!q2;n++){const c=land(i,700,1);if(c&&Math.hypot(c.x-q.x,c.z-q.z)>190&&farCompound(c))q2=c}if(q2){q2.r=i.r;compoundCenters.push({x:q2.x,z:q2.z});compound(R()<.6?'garatge':'avancada',q2)}}});
+const compoundCenters=[],usedPortIslands=new Set();const farCompound=(q,min=150)=>compoundCenters.every(c=>Math.hypot(q.x-c.x,q.z-c.z)>min);
+const candidateIslands=islands.filter(i=>i!==A&&i!==Bi).slice().sort(()=>R()-.5);
+let guaranteedPorts=0;for(const i of candidateIslands){if(guaranteedPorts>=2)break;const q=findPortSite(i,22);if(!q||!farCompound(q,180))continue;if(compound('port',q)){compoundCenters.push({x:q.x,z:q.z});usedPortIslands.add(i);guaranteedPorts++}}
+if(!guaranteedPorts){for(const i of candidateIslands){const q=findPortSite(i,32);if(q&&compound('port',q)){compoundCenters.push({x:q.x,z:q.z});usedPortIslands.add(i);guaranteedPorts=1;break}}}
+islands.forEach(i=>{if(i===A||i===Bi||usedPortIslands.has(i))return;let q=null;for(let n=0;n<8&&!q;n++){const c=land(i,650,1);if(c&&farCompound(c))q=c}if(!q)return;q.r=i.r;const roll=R();let type=roll<.3?'avancada':roll<.6?'garatge':roll<.84?'polvori':'port';
+if(type==='port'){const pq=findPortSite(i,14);if(pq&&farCompound(pq)){q=pq}else type=R()<.5?'avancada':'polvori'}
+if(compound(type,q))compoundCenters.push({x:q.x,z:q.z});if(i.r>520&&R()<.22){let q2=null;for(let n=0;n<10&&!q2;n++){const c=land(i,700,1);if(c&&Math.hypot(c.x-q.x,c.z-q.z)>190&&farCompound(c))q2=c}if(q2){q2.r=i.r;if(compound(R()<.6?'garatge':'avancada',q2))compoundCenters.push({x:q2.x,z:q2.z})}}});
+let standalonePiers=0,targetPiers=3+Math.floor(R()*3);for(const i of candidateIslands){if(standalonePiers>=targetPiers)break;if(usedPortIslands.has(i))continue;const q=findPortSite(i,12);if(!q||!farCompound(q,110)||compoundClear.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<80))continue;if(makeStandalonePier(q))standalonePiers++}
 const terrain=window.HUNTER_TERRAIN.create(THREE,{size:S,segments:SEG,heightAt:hAt,material:MAT.terrain()});world.add(terrain.mesh,window.HUNTER_TERRAIN.createBorder(THREE,{size:S,halfSize:H}));
 updateSeabed();vegetate(pa);spawnFauna();HQ={x:pb.x,z:pb.z};const rb=B.slice(6);
 const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2);
