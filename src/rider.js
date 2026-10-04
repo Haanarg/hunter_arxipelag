@@ -1,4 +1,4 @@
-// Pilot visual per bicicleta i moto. La física del vehicle continua al nucli.
+// Pilot visual per vehicles oberts. La física del vehicle continua al nucli.
 window.HUNTER_RIDER=Object.freeze({
   create(THREE,{scene,box,material,scales,heightAt,shadows}){
     const g=new THREE.Group(),torso=new THREE.Group();g.add(torso);
@@ -8,9 +8,37 @@ window.HUNTER_RIDER=Object.freeze({
     const boots=[-1,1].map(()=>box(g,.4,.22,.65,0x222222,0,0,0));
     g.userData={torso,limbs,boots,motion:0};g.visible=false;g.traverse(o=>{if(o.isMesh)o.castShadow=shadows});scene.add(g);
     const limbBetween=(m,a,b)=>{const delta=b.clone().sub(a);m.position.copy(a).add(b).multiplyScalar(.5);m.scale.y=delta.length();m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize())};
-    const update=(v,dt)=>{g.visible=!!v&&(v.t==='bici'||v.t==='moto');if(!g.visible)return;const u=g.userData,sc=scales[v.t],seat=1.65*sc,moving=Math.min(1,Math.abs(v.v)/1.8);u.motion+=(moving-u.motion)*(1-Math.exp(-12*dt));const motion=u.motion,phase=v.pedalPhase||0;g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);u.torso.position.set(0,seat,.4*sc);u.torso.rotation.x=.15*motion;const vec=(x,y,z)=>new THREE.Vector3(x,y,z);
-      for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.28,seat,.4*sc),shoulder=vec(side*.64,seat+1.04,.4*sc-.15*motion),hand=vec(side*.5*sc,1.96*sc,-sc),elbow=shoulder.clone().lerp(hand,.52);elbow.x+=side*.1;elbow.y-=.2;limbBetween(u.limbs[i*2],shoulder,elbow);limbBetween(u.limbs[i*2+1],elbow,hand);
-        const foot=vec(side*.55,0,.45*sc),worldFoot=foot.clone().applyQuaternion(g.quaternion).add(g.position);worldFoot.y=heightAt(worldFoot.x,worldFoot.z)+.12;const groundFoot=worldFoot.sub(g.position).applyQuaternion(g.quaternion.clone().invert());const pedal=v.t==='bici'?vec(side*.4*sc,(.75-side*Math.sin(phase)*.28)*sc,side*Math.cos(phase)*.28*sc):vec(side*.5*sc,.72*sc,.1*sc);foot.copy(groundFoot).lerp(pedal,motion);const knee=hip.clone().lerp(foot,.5);knee.z-=.5*motion;knee.x+=side*.12*(1-motion);limbBetween(u.limbs[4+i*2],hip,knee);limbBetween(u.limbs[5+i*2],knee,foot);u.boots[i].position.copy(foot);u.boots[i].rotation.x=0}
+    const vec=(x,y,z)=>new THREE.Vector3(x,y,z);
+    const update=(v,dt)=>{
+      const open=!!v&&['bici','moto','llanxa','llanxa_coets','barca_rems','windsurf'].includes(v.t);g.visible=open;if(!open)return;
+      const u=g.userData,sc=scales[v.t],moving=Math.min(1,Math.abs(v.v)/1.8);u.motion+=(moving-u.motion)*(1-Math.exp(-12*dt));const motion=u.motion,phase=v.pedalPhase||0;
+      g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);torso.rotation.set(0,0,0);
+
+      if(v.t==='bici'||v.t==='moto'){
+        const seat=1.65*sc;torso.position.set(0,seat,.4*sc);torso.rotation.x=.15*motion;
+        for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.28,seat,.4*sc),shoulder=vec(side*.64,seat+1.04,.4*sc-.15*motion),hand=vec(side*.5*sc,1.96*sc,-sc),elbow=shoulder.clone().lerp(hand,.52);elbow.x+=side*.1;elbow.y-=.2;limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
+          const foot=vec(side*.55,0,.45*sc),worldFoot=foot.clone().applyQuaternion(g.quaternion).add(g.position);worldFoot.y=heightAt(worldFoot.x,worldFoot.z)+.12;const groundFoot=worldFoot.sub(g.position).applyQuaternion(g.quaternion.clone().invert());const pedal=v.t==='bici'?vec(side*.4*sc,(.75-side*Math.sin(phase)*.28)*sc,side*Math.cos(phase)*.28*sc):vec(side*.5*sc,.72*sc,.1*sc);foot.copy(groundFoot).lerp(pedal,motion);const knee=hip.clone().lerp(foot,.5);knee.z-=.5*motion;knee.x+=side*.12*(1-motion);limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot);boots[i].rotation.x=0}
+        return;
+      }
+
+      if(v.t==='barca_rems'){
+        const seat=1.03*sc,swing=Math.sin(phase)*.62,pull=(1-Math.cos(phase))*.5;
+        torso.position.set(0,seat,.05*sc);torso.rotation.y=Math.PI;torso.rotation.x=-.08+.18*pull*motion;
+        for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.27,seat,.05*sc),shoulder=vec(side*.55,seat+1.02,.12*sc),hand=vec(side*(.72+.18*Math.cos(phase))*sc,seat+.58,(.55+.5*pull)*sc),elbow=shoulder.clone().lerp(hand,.52);elbow.x+=side*.14;limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
+          const foot=vec(side*.35,.66*sc,-.78*sc),knee=hip.clone().lerp(foot,.48);knee.y+=.2;limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot);boots[i].rotation.x=.1}
+        return;
+      }
+
+      if(v.t==='windsurf'){
+        const base=.48*sc,lean=Math.max(-.18,Math.min(.18,v.v/30));torso.position.set(-.22*sc,base,.25*sc);torso.rotation.z=-.12+lean;torso.rotation.x=-.08;
+        for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.28-.22*sc,base,.25*sc),shoulder=vec(side*.58-.22*sc,base+1.02,.2*sc),hand=vec((i?-.08:.18)*sc,base+1.18,(i?-.15:.35)*sc),elbow=shoulder.clone().lerp(hand,.5);limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
+          const foot=vec((side*.45-.22)*sc,.28*sc,(i?.75:-.65)*sc),knee=hip.clone().lerp(foot,.52);knee.y+=.2;limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot)}
+        return;
+      }
+
+      const seat=1.45*sc;torso.position.set(0,seat,.55*sc);torso.rotation.x=.04;
+      for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.28,seat,.55*sc),shoulder=vec(side*.58,seat+1.02,.45*sc),hand=vec(side*.48*sc,seat+.7,-.7*sc),elbow=shoulder.clone().lerp(hand,.52);limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
+        const foot=vec(side*.42*sc,.92*sc,-.35*sc),knee=hip.clone().lerp(foot,.5);knee.y+=.18;limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot)}
     };
     const reset=()=>{g.visible=false;g.userData.motion=0};
     return {object:g,update,reset};
