@@ -2,10 +2,10 @@
 window.HUNTER_VEGETATION=Object.freeze({
   create(THREE,{materialProfile,random}){
     const dum=new THREE.Object3D();
-    const palmCrown=(radius,rise,segments=7)=>{
+    const palmCrown=(radius,rise,segments=8,phase=0)=>{
       const pos=[];
       for(let j=0;j<segments;j++){
-        const a=j*Math.PI*2/segments;
+        const a=phase+j*Math.PI*2/segments;
         for(let k=0;k<4;k++){
           const t=k/4,u=(k+1)/4;
           const point=(v,side)=>{
@@ -28,9 +28,20 @@ window.HUNTER_VEGETATION=Object.freeze({
     const geometry={
       trunk:new THREE.CylinderGeometry(.22,.42,6.2,6).translate(0,3.1,0),
       crown:palmCrown(4.7,0,8),
-      crown2:palmCrown(3.1,.65,7),
+      crown2:palmCrown(3.1,.65,7,.18),
+      palmVariants:[
+        {crown:palmCrown(4.7,0,6),crown2:palmCrown(3.1,.65,5,.18)},
+        {crown:palmCrown(4.7,0,8),crown2:palmCrown(3.1,.65,7,.18)},
+        {crown:palmCrown(4.7,0,10),crown2:palmCrown(3.1,.65,9,.18)}
+      ],
       bush:new THREE.IcosahedronGeometry(1.15,1).translate(0,.62,0),
       rock:new THREE.DodecahedronGeometry(1.25,0).translate(0,.5,0)
+    };
+    const colorFor=(base,row)=>{
+      const c=new THREE.Color(base),tone=Math.max(-.25,Math.min(.25,row?.[6]||0));
+      c.multiplyScalar(1+tone);
+      c.offsetHSL(random(-.018,.018),random(-.045,.045),random(-.025,.025));
+      return c
     };
     const inst=(world,geo,arr,color,scale,opts={})=>{
       if(!arr.length)return null;
@@ -43,7 +54,8 @@ window.HUNTER_VEGETATION=Object.freeze({
         }),
         arr.length
       );
-      arr.forEach(([x,y,z,s,r],i)=>{
+      arr.forEach((row,i)=>{
+        const [x,y,z,s,r]=row;
         dum.position.set(x,y,z);
         dum.rotation.set(
           opts.tilt?random(-.04,.04):0,
@@ -52,22 +64,28 @@ window.HUNTER_VEGETATION=Object.freeze({
         );
         if(scale)scale(dum,s);else dum.scale.setScalar(s);
         dum.updateMatrix();m.setMatrixAt(i,dum.matrix);
-        m.setColorAt(i,new THREE.Color(color).offsetHSL(
-          random(-.025,.025),random(-.08,.08),random(-.055,.055)
-        ))
+        m.setColorAt(i,colorFor(color,row))
       });
       world.add(m);
       return m
     };
-    const build=({world,palms,bushes,rocks})=>({
-      palms:{
-        trunk:inst(world,geometry.trunk,palms,0x8e6337,null,{profile:'organic',tilt:true}),
-        crown:inst(world,geometry.crown,palms,0x2d9f36,null,{doubleSide:true}),
-        crown2:inst(world,geometry.crown2,palms,0x65c83f,null,{doubleSide:true})
-      },
-      bushes:inst(world,geometry.bush,bushes,0x2f8e42,(d,s)=>d.scale.set(s*1.15,s*.72,s),{profile:'organic'}),
-      rocks:inst(world,geometry.rock,rocks,0x777985,(d,s)=>d.scale.set(s*1.25,s*.75,s),{profile:'masonry',tilt:true})
-    });
+    const build=({world,palms,bushes,rocks})=>{
+      const trunk=inst(world,geometry.trunk,palms,0x8e6337,null,{profile:'organic',tilt:true});
+      const groups=[[],[],[]],variantMap=new Array(palms.length);
+      palms.forEach((row,originalIndex)=>{
+        const vi=Math.max(0,Math.min(2,(row[5]??0)+1)),index=groups[vi].length;
+        groups[vi].push(row);variantMap[originalIndex]={variant:vi,index}
+      });
+      const variants=groups.map((arr,vi)=>({
+        crown:inst(world,geometry.palmVariants[vi].crown,arr,0x2d9f36,null,{doubleSide:true}),
+        crown2:inst(world,geometry.palmVariants[vi].crown2,arr,0x65c83f,null,{doubleSide:true})
+      }));
+      return {
+        palms:{trunk,crown:variants[1].crown,crown2:variants[1].crown2,variants,variantMap},
+        bushes:inst(world,geometry.bush,bushes,0x2f8e42,(d,s)=>d.scale.set(s*1.15,s*.72,s),{profile:'organic'}),
+        rocks:inst(world,geometry.rock,rocks,0x777985,(d,s)=>d.scale.set(s*1.25,s*.75,s),{profile:'masonry',tilt:true})
+      }
+    };
     return {geometry,build};
   }
 });
