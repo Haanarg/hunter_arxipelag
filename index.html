@@ -304,7 +304,7 @@ function itemMapTexture(kind){const c=document.createElement('canvas');c.width=1
 function createItemVisual(t){const g=new THREE.Group(),metal=0x454b4e,dark=0x3d3025;
   if(t==='mapa'||t==='mapa_heli'||t==='mapa_tanc'){const kind=t==='mapa_heli'?'heli':t==='mapa_tanc'?'tanc':'hq',paper=new THREE.Mesh(new THREE.BoxGeometry(1.65,.07,1.25),M(t==='mapa_heli'?0xdceff4:t==='mapa_tanc'?0xeadfb9:0xead59b,'paint'));g.add(paper);const top=new THREE.Mesh(new THREE.PlaneGeometry(1.52,1.12),new THREE.MeshBasicMaterial({map:itemMapTexture(kind),transparent:false}));top.rotation.x=-Math.PI/2;top.position.y=.041;g.add(top)}
   else if(t==='expl'){for(const x of[-.34,0,.34]){const m=new THREE.Mesh(new THREE.CylinderGeometry(.14,.14,1.05,10),M(0xc8322d,'paint'));m.position.set(x,.52,0);g.add(m)}bx(g,1.05,.13,.55,0x5b4a2d,0,.52,0,'paint');for(let i=0;i<4;i++){const m=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.32,6),M(0xc39a4a,'metal'));m.position.set(.25+i*.08,.98+.12*i,0);m.rotation.z=-.55;g.add(m)}}
-  else if(t==='med'){bx(g,1.35,.7,1,0xf4f4f0,0,.35,0,'paint');bx(g,1.05,.08,.28,0xd5aa76,0,.74,0,'paint');const p=bx(g,.28,.08,.95,0xd5aa76,0,.75,0,'paint');p.rotation.y=Math.PI/2;for(const x of[-.18,.18])for(const z of[-.18,.18]){const d=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.03,6),M(0x9b734b,'paint'));d.position.set(x,.81,z);g.add(d)}}
+  else if(t==='med'){bx(g,1.35,.7,1,0xf4f4f0,0,.35,0,'paint');bx(g,1.05,.08,.28,0xd5aa76,0,.74,0,'paint');bx(g,.28,.08,.95,0xd5aa76,0,.75,0,'paint');for(const x of[-.18,.18])for(const z of[-.18,.18]){const d=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.03,6),M(0x9b734b,'paint'));d.position.set(x,.81,z);g.add(d)}}
   else if(t==='arma'){bx(g,1.45,.55,1.05,0x745539,0,.28,0,'paint');bx(g,1.5,.1,1.1,dark,0,.04,0,'metal');for(const x of[-.48,-.16,.16,.48])for(const z of[-.27,.27]){const bullet=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.48,8),M(0xc9a23f,'metal'));bullet.position.set(x,.72,z);g.add(bullet);const tip=new THREE.Mesh(new THREE.ConeGeometry(.08,.16,8),M(0xb7772b,'metal'));tip.position.set(x,1.04,z);g.add(tip)}}
   else if(t==='disf'){bx(g,.78,1.3,.16,0xb53232,0,.8,0,'paint');const l=bx(g,.7,.38,.16,0xb53232,-.62,1.18,0,'paint'),r=bx(g,.7,.38,.16,0xb53232,.62,1.18,0,'paint');l.rotation.z=-.55;r.rotation.z=.55;bx(g,.16,.18,.18,0xf1c7a1,0,1.44,0,'organic');bx(g,.08,1.05,.19,0x6f1f1f,0,.75,-.02,'paint')}
   else bx(g,...IT[t].s,IT[t].c,0,.4,0,'paint');
@@ -404,12 +404,12 @@ const compound=(type,q)=>{
     const outDef=[tr(-18,13),tr(17,12),tr(17,-12)];E.slice(-2).forEach(u=>setDefense(u,outDef));compoundVehicles.push({t:'moto',...(()=>{const [vx,vz]=tr(21,15);return{x:vx,z:vz}})(),hd:ang});
     if(R()<.45){const [vx,vz]=tr(-2,-13);compoundVehicles.push({t:'tanc',x:vx,z:vz,hd:ang,military:true})}
     if(R()<.28){const [hx,hz]=tr(0,20);compoundVehicles.push({t:'heli',x:hx,z:hz,hd:ang,military:true})}
-    if(R()<.42){const [cx,cz]=tr(-15,-4);compoundVehicles.push({t:'camio',x:cx,z:cz,hd:ang,military:true})}if(R()<.22){const [lx,lz]=tr(0,-21);landingPad(lx,lz,22,ang)}
+    if(R()<.42){const [cx,cz]=tr(-15,-4);compoundVehicles.push({t:'camio',x:cx,z:cz,hd:ang,military:true})}if(R()<.22){const [lx,lz]=tr(0,-21),ly=hAt(lx,lz);addLevelArea(lx,lz,28,28,ly,ang,10);landingPad(lx,lz,22,ang)}
   } else if(type==='garatge'){
     level(78,74,20);compoundPad(x,z,68,64,0x686868);{const [a1,b1]=tr(-10,-36),[a2,b2]=tr(-10,8);compoundPath(a1,b1,a2,b2,8,0x5e5f5d);const [c1,d1]=tr(9,7),[c2,d2]=tr(30,11);compoundPath(c1,d1,c2,d2,4.6,0x656563)}
     const h=put(-10,5,30,42,18,0xb6b0a2,0xd8cfb7,{hangar:true,kind:'hangar',doorSide:1,doorWidth:18,doorHeight:9,openDoor:true});put(30,11,11,10,5.8,0xb7a98e,0x6e4435,{kind:'garage'});
     for(const p of[[24,-3],[27,-3],[30,-3]])prop('barrel',p[0],p[1]);for(const p of[[24,2],[29,3]])prop('crate',p[0],p[1]);prop('fuel',24,8,Math.PI/2);prop('fuel',29,8,Math.PI/2);prop('lamp',8,-20);prop('sign',31,17,Math.PI/2);if(R()<.65){const gr=[tr(17,-17),tr(31,0),tr(22,20),tr(2,20)],gd=[tr(15,-15),tr(29,5)];setDefense(setPatrol(mkEn('soldat',gr[0][0],gr[0][1]),gr,true),gd)}
-    {const hangarType=tankHangarAssigned?['cotxe','moto','camio'][Math.floor(R()*3)]:'tanc';if(hangarType==='tanc')tankHangarAssigned=true;compoundVehicles.push({t:hangarType,x:h.x,z:h.z-7,hd:0,insideHangar:true,hangar:h})}if(R()<.45)compoundVehicles.push({t:'bici',x:h.x+4.5,z:h.z-5.5,hd:0,insideHangar:true,hangar:h});if(R()<.32){const [lx,lz]=tr(19,-20);landingPad(lx,lz,24,ang)}
+    {const hangarType=tankHangarAssigned?['cotxe','moto','camio'][Math.floor(R()*3)]:'tanc';if(hangarType==='tanc')tankHangarAssigned=true;compoundVehicles.push({t:hangarType,x:h.x,z:h.z-7,hd:0,insideHangar:true,hangar:h})}if(R()<.45)compoundVehicles.push({t:'bici',x:h.x+4.5,z:h.z-5.5,hd:0,insideHangar:true,hangar:h});if(R()<.32){const [lx,lz]=tr(19,-20),ly=hAt(lx,lz);addLevelArea(lx,lz,30,30,ly,ang,10);landingPad(lx,lz,24,ang)}
   } else if(type==='heliport'){
     level(64,64,20);landingPad(x,z,36,ang);
     for(const p of[[-20,-20],[0,-23],[20,-20],[-23,0],[23,0]])prop('sandbag',p[0],p[1],p[0]===0?0:Math.PI/2);
@@ -434,8 +434,9 @@ const compound=(type,q)=>{
 const compoundCenters=[],usedPortIslands=new Set();const farCompound=(q,min=150)=>compoundCenters.every(c=>Math.hypot(q.x-c.x,q.z-c.z)>min);
 const candidateIslands=islands.filter(i=>i!==A&&i!==Bi).slice().sort(()=>R()-.5),usedSpecialIslands=new Set();
 const reserveCompound=(type,min=180)=>{for(const i of candidateIslands){if(usedSpecialIslands.has(i))continue;for(let n=0;n<14;n++){const q=land(i,750,1);if(q&&farCompound(q,min)){q.r=i.r;if(compound(type,q)){compoundCenters.push({x:q.x,z:q.z});usedSpecialIslands.add(i);return q}}}}return null};
-reserveCompound('garatge',190);
-reserveCompound('heliport',210);
+const forceReserve=(type,min)=>{let q=reserveCompound(type,min)||reserveCompound(type,110);if(q)return q;for(const i of candidateIslands){const c=land(i,1600,1);if(c){c.r=i.r;if(compound(type,c)){compoundCenters.push({x:c.x,z:c.z});usedSpecialIslands.add(i);return c}}}const c=land(Bi,1800,1);if(c){c.r=Bi.r;if(compound(type,c)){compoundCenters.push({x:c.x,z:c.z});return c}}return null};
+forceReserve('garatge',190);
+forceReserve('heliport',210);
 let guaranteedPorts=0;for(const i of candidateIslands){if(guaranteedPorts>=2*MAP_SCALE)break;if(usedSpecialIslands.has(i))continue;const q=findPortSite(i,22);if(!q||!farCompound(q,180))continue;if(compound('port',q)){compoundCenters.push({x:q.x,z:q.z});usedPortIslands.add(i);guaranteedPorts++}}
 if(!guaranteedPorts){for(const i of candidateIslands){if(usedSpecialIslands.has(i))continue;const q=findPortSite(i,32);if(q&&compound('port',q)){compoundCenters.push({x:q.x,z:q.z});usedPortIslands.add(i);guaranteedPorts=1;break}}}
 islands.forEach(i=>{if(i===A||i===Bi||usedPortIslands.has(i)||usedSpecialIslands.has(i))return;let q=null;for(let n=0;n<8&&!q;n++){const c=land(i,650,1);if(c&&farCompound(c))q=c}if(!q)return;q.r=i.r;const roll=R();let type=roll<.3?'avancada':roll<.6?'garatge':roll<.84?'polvori':'port';
@@ -475,10 +476,12 @@ compoundVehicles.forEach(v=>{if(v.t==='llanxa'||v.t==='hover'){if(hAt(v.x,v.z)<-
   const r=vehicleRadius(v.t),buildingClear=v.insideHangar?true:!B.some(b=>Math.abs(v.x-b.x)<b.hw+r&&Math.abs(v.z-b.z)<b.hd+r),clear=!treeHit(v.x,v.z,r*.7)&&buildingClear&&!V.some(o=>Math.hypot(v.x-o.x,v.z-o.z)<r+vehicleRadius(o.t)+3);
   if(clear||v.insideHangar)add(v.t,v.x,v.z,v.hd,v)
 });
-const protectedVehicleSpot=t=>{const r=vehicleRadius(t);for(let k=0;k<80;k++){const a=rr(0,Math.PI*2),d=rr(30,58),x=pb.x+Math.cos(a)*d,z=pb.z+Math.sin(a)*d,h=hAt(x,z);if(h>1.2&&slope(x,z,h)<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3))return{x,z,hd:a+Math.PI}}return null};
+const protectedVehicleSpot=t=>{const r=vehicleRadius(t);for(let k=0;k<240;k++){const a=rr(0,Math.PI*2),d=rr(30,58),x=pb.x+Math.cos(a)*d,z=pb.z+Math.sin(a)*d,h=hAt(x,z);if(h>1.2&&slope(x,z,h)<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3))return{x,z,hd:a+Math.PI}}return null};
 const waterVehicleSpot=t=>{const r=vehicleRadius(t);for(const i of islands){const q=findPortSite(i,8);if(!q||!q.portBest)continue;const a=q.portBest.aa,px=-Math.sin(a),pz=Math.cos(a),x=q.portBest.x+px*(r+3),z=q.portBest.z+pz*(r+3);if(hAt(x,z)<-2&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3))return{x,z,hd:q.portBest.hd}}return null};
 const ensureVehicleType=t=>{if(t==='heli'?V.some(v=>v.t==='heli'&&!v.heliport):V.some(v=>v.t===t))return;let q=null;if(t==='llanxa'||t==='hover')q=waterVehicleSpot(t);else if(t==='tanc'||t==='heli'||t==='camio')q=protectedVehicleSpot(t);else{const p=near(120,t);q={x:p[0],z:p[1],hd:rr(0,Math.PI*2)}}if(q)add(t,q.x,q.z,q.hd)};
 ['llanxa','hover','cotxe','moto','bici','camio','tanc','heli'].forEach(ensureVehicleType);
+const ensureVehicleCount=(t,min)=>{let guard=0;while(V.filter(v=>v.t===t).length<min&&guard++<8){const q=(t==='tanc'||t==='heli'||t==='camio')?protectedVehicleSpot(t):null;if(!q)break;add(t,q.x,q.z,q.hd,{military:true,guaranteed:true})}};
+ensureVehicleCount('tanc',2);
 islands.forEach(i=>{if(i!==A&&R()<.65){const t=['cotxe','moto','bici'][Math.floor(R()*3)];for(let tries=0;tries<12;tries++){const q=land(i,80);if(q&&clearVehicle(t,q.x,q.z)){add(t,q.x,q.z,rr(0,6.28));break}}}});
 
 P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0,0,0));world.traverse(o=>{if(o.isMesh){o.castShadow=!o.isInstancedMesh;o.receiveShadow=true}});pl.traverse(o=>{if(o.isMesh)o.castShadow=true});cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);}
@@ -508,7 +511,7 @@ function useInvItem(id){
   if(id==='expl'){if(cv||swimming){msg='No pots col·locar explosius des d’aquí.';msgT=2;return false}resume();plant();return true}
   if(id==='disf'){setDis(!disg);msg=disg?'Disfressa activada.':'Disfressa desactivada.';msgT=2;return true}
   if(id==='mapa'){panel('map');return true}
-  if(id==='mapa_tanc'){const tanks=V.filter(v=>v.t==='tanc');if(!tanks.length){msg='No hi ha tancs actius al mapa.';msgT=2;return false}intelMarks=intelMarks.filter(m=>m.kind!=='tanc');tanks.forEach((v,i)=>intelMarks.push({kind:'tanc',x:v.x,z:v.z,label:'Tanc '+(i+1)}));msg='S’han marcat '+tanks.length+' tancs.';msgT=2;panel('map');return true}if(id==='mapa_heli'){const v=V.find(v=>v.t==='heli'&&!v.heliport)||V.find(v=>v.t==='heli');if(!v){msg='No hi ha helicòpters actius al mapa.';msgT=2;return false}intelMarks=intelMarks.filter(m=>m.kind!=='heli');intelMarks.push({kind:'heli',x:v.x,z:v.z,label:'Helicòpter'});msg='Localització marcada: helicòpter.';msgT=2;panel('map');return true}
+  if(id==='mapa_tanc'){const tanks=[...V.filter(v=>v.t==='tanc').map(v=>({x:v.x,z:v.z})),...E.filter(u=>u.t==='tanc').map(u=>({x:u.x,z:u.z}))];if(!tanks.length){msg='No hi ha tancs actius al mapa.';msgT=2;return false}intelMarks=intelMarks.filter(m=>m.kind!=='tanc');tanks.forEach((v,i)=>intelMarks.push({kind:'tanc',x:v.x,z:v.z,label:'Tanc '+(i+1)}));msg='S’han marcat '+tanks.length+' tancs.';msgT=2;panel('map');return true}if(id==='mapa_heli'){const v=V.find(v=>v.t==='heli'&&!v.heliport)||V.find(v=>v.t==='heli');if(!v){msg='No hi ha helicòpters actius al mapa.';msgT=2;return false}intelMarks=intelMarks.filter(m=>m.kind!=='heli');intelMarks.push({kind:'heli',x:v.x,z:v.z,label:'Helicòpter'});msg='Localització marcada: helicòpter.';msgT=2;panel('map');return true}
   return false
 }
 function dropInvItem(id){
