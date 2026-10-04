@@ -371,3 +371,14 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - Aquests mapes apareixen en alguns edificis addicionals i es mostren dins l'inventari en graella.
 - En usar-los, marquen una posició coneguda d'un helicòpter o d'un tanc militar a la carta de navegació sense revelar l'HQ.
 - Els marcadors d'intel·ligència es mostren sempre a la carta, encara que el vehicle sigui lluny: cian per helicòpter i taronja per tanc.
+
+
+## Garantia de vehicles i camió militar — 2026-10-04
+- Afegit el camió militar com a nou vehicle conduïble.
+- El camió és més lent i menys àgil que el cotxe, amb acceleració 24 davant de 36 del cotxe.
+- El camió té model propi de caixa militar coberta, sis rodes i pintura verda.
+- Els garatges amb hangar sempre reserven com a mínim un vehicle interior; el validador ja no descarta aquest vehicle per col·lisió amb el propi hangar.
+- Els hangars poden contenir cotxe, moto o camió militar, i ocasionalment una bicicleta addicional.
+- HQ i avançades poden generar camions militars com a part de la seva dotació protegida.
+- Al final de la generació de cada mapa es comprova que existeixi almenys una unitat de cada vehicle conduïble: llanxa, hovercraft, cotxe, moto, bicicleta, camió militar, tanc i helicòpter.
+- Si en falta algun, el generador crea una ubicació de reserva coherent: costa per vehicles aquàtics, zona protegida per tanc/helicòpter/camió i terreny proper a la base per vehicles civils.
