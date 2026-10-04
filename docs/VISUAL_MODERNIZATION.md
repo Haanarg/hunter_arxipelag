@@ -321,3 +321,12 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - Els edificis interns dels compounds s'han separat significativament: avançades, garatges, polvorins i ports ocupen una petjada més gran.
 - Els centres dels compounds intenten mantenir almenys 150 m de separació.
 - Un segon compound a una mateixa illa només es genera en illes grans, amb menor probabilitat i una separació mínima aproximada de 190 m respecte del primer.
+
+
+## Ports garantits i molls independents — 2026-10-04
+- La generació intenta reservar primer fins a dos ports funcionals en illes amb costa i aigua fonda adequades.
+- Si no es poden col·locar dos ports, es fa un segon intent més permissiu per garantir-ne almenys un sempre que el terreny ho permeti.
+- Els ports aleatoris només es creen quan la ubicació té accés real a aigua fonda; en cas contrari es reconverteixen en un altre tipus de compound.
+- Els molls dels ports reutilitzen la zona costanera validada i mantenen els vehicles aquàtics al costat del moll.
+- Afegits entre 3 i 5 molls de fusta independents per mapa, sense edificis associats.
+- Els molls independents busquen costa vàlida, eviten les illes que ja tenen un port garantit i mantenen distància respecte dels compounds.
