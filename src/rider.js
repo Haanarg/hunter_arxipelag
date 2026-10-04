@@ -22,9 +22,9 @@ window.HUNTER_RIDER=Object.freeze({
       }
 
       if(v.t==='barca_rems'){
-        const seat=1.03*sc,swing=Math.sin(phase)*.62,pull=(1-Math.cos(phase))*.5;
+        const seat=1.03*sc,pull=(1-Math.cos(phase))*.5,sweep=Math.sin(phase)*.18*motion;
         torso.position.set(0,seat,.05*sc);torso.rotation.y=Math.PI;torso.rotation.x=-.08+.18*pull*motion;
-        for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.27,seat,.05*sc),shoulder=vec(side*.55,seat+1.02,.12*sc),hand=vec(side*(.72+.18*Math.cos(phase))*sc,seat+.58,(.55+.5*pull)*sc),elbow=shoulder.clone().lerp(hand,.52);elbow.x+=side*.14;limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
+        for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.27,seat,.05*sc),shoulder=vec(side*.55,seat+1.02,.12*sc),hand=vec(side*(.82+.08*Math.cos(phase))*sc,seat+.48*sc,(.04+sweep*side)*sc),elbow=shoulder.clone().lerp(hand,.52);elbow.x+=side*.12;limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
           const foot=vec(side*.35,.66*sc,-.78*sc),knee=hip.clone().lerp(foot,.48);knee.y+=.2;limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot);boots[i].rotation.x=.1}
         return;
       }
