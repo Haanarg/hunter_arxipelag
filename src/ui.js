@@ -3,7 +3,7 @@ window.HUNTER_UI=Object.freeze({
   create({hud,panel,title,body,resumeButton,minimap,getState,actions}){
     function renderHUD(){
       const s=getState(),state=s.vehicle?s.vehicleTypes[s.vehicle.t].n:s.inside?'Interior':s.swimming?'Nedant':'A peu',veh=s.vehicle,vehInfo=veh?'<br>🛡️ '+(veh.armor??0)+'/10 · Vida '+Math.max(0,veh.life??0)+'/'+(veh.maxLife??0)+(veh.rockets!=null?' · 🚀 '+veh.rockets:''):'',weaponInfo=s.bazookaEquipped&&!veh?' · 🚀 Bazooka equipada':'';
-      hud.innerHTML=`<b>HUNTER · ARXIPÈLAG</b><br>❤️ ${Math.round(s.hp)} · 🔫 ${s.ammo} · ☠ ${s.kills}<br>${state}${s.disguised?' · 🎭 Disfressat':''}${weaponInfo}${vehInfo}${s.nearVehicle&&!s.vehicle?'<br>Acció: puja a '+s.vehicleTypes[s.nearVehicle.t].n:''}${s.messageTime>0?'<br>'+s.message:''}${s.waypoint?'<br>Destinació: '+Math.round(Math.hypot(s.waypoint.x-s.player.x,s.waypoint.z-s.player.z))+' m':''}<br><span style="opacity:.72">Llavor ${s.seed>>>0} · X ${s.player.x|0} · Z ${s.player.z|0}</span>`;
+      hud.innerHTML=`<b>HUNTER · ARXIPÈLAG</b><br>❤️ ${Math.round(s.hp)} · 🎯 ${s.ammo} · ☠ ${s.kills}<br>${state}${s.disguised?' · 🎭 Disfressat':''}${weaponInfo}${vehInfo}${s.nearVehicle&&!s.vehicle?'<br>Acció: puja a '+s.vehicleTypes[s.nearVehicle.t].n:''}${s.messageTime>0?'<br>'+s.message:''}${s.waypoint?'<br>Destinació: '+Math.round(Math.hypot(s.waypoint.x-s.player.x,s.waypoint.z-s.player.z))+' m':''}<br><span style="opacity:.72">Llavor ${s.seed>>>0} · X ${s.player.x|0} · Z ${s.player.z|0}</span>`;
     }
     function hide(){panel.style.display='none'}
     function show(mode){
