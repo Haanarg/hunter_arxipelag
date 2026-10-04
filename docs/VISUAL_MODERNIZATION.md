@@ -330,3 +330,11 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - Els molls dels ports reutilitzen la zona costanera validada i mantenen els vehicles aquàtics al costat del moll.
 - Afegits entre 3 i 5 molls de fusta independents per mapa, sense edificis associats.
 - Els molls independents busquen costa vàlida, eviten les illes que ja tenen un port garantit i mantenen distància respecte dels compounds.
+
+
+## Vehicles militars en zones protegides — 2026-10-04
+- Els tancs i helicòpters deixen de formar part de la generació aleatòria general de vehicles.
+- La base del jugador i les illes obertes mantenen principalment cotxes, motos i bicicletes.
+- El HQ enemic genera un tanc i un helicòpter estacionats dins la zona protegida sempre que hi hagi espai lliure.
+- Les avançades enemigues poden generar tancs i helicòpters amb probabilitat moderada, vinculats visualment a la presència militar.
+- Els vehicles militars previstos pels compounds validen espai contra edificis, vegetació i altres vehicles abans d'aparèixer.
