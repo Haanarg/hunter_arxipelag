@@ -23,7 +23,15 @@ for(const [nx,nz] of [[0,1],[0,-1],[1,0],[-1,0]]){
 run(`{const st=stairs.find(s=>s.nx===${nx}&&s.nz===${nz});if(!st)throw Error('Missing stair direction');P.x=st.x+st.nx*(st.length+.2);P.z=st.z+st.nz*(st.length+.2);P.hd=Math.atan2(st.nx,st.nz);K.KeyW=1;for(let i=0;i<Math.ceil((st.length+2)/(.016*12));i++)update(.016,4);K.KeyW=0;}`);
 ok('!!ib','walk through doorway below lintel');}
 run('E=savedEnemies;');
-for(const type of ['cotxe','moto','bici','tanc','heli','llanxa','hover']){run(`cv=null;P.x=V.find(v=>v.t==='${type}').x;P.z=V.find(v=>v.t==='${type}').z;toggle()`);ok(`cv&&cv.t==='${type}'`,'enter '+type);run('stepV(cv,1,.2,1,.04);place(cv,3,.04,.2)');ok('Number.isFinite(cv.o.position.y)','vehicle '+type);run('cv.alt=Math.max(0,hAt(cv.x,cv.z))+.8;toggle()');ok('!cv','exit '+type)}
+const vehicleTypes=['llanxa','moto_aquatica','hover','cotxe','moto','bici','barca_rems','windsurf','camio','tanqueta','llanxa_coets','tanc','heli','heli_combat'];
+for(const type of vehicleTypes){ok(`V.some(v=>v.t==='${type}')`,'generated '+type);run(`cv=null;{const q=V.find(v=>v.t==='${type}');P.x=q.x;P.z=q.z;P.y=q.o.position.y;}`);run('toggle()');ok(`cv&&cv.t==='${type}'`,'enter '+type);run('stepV(cv,1,.2,1,.04);place(cv,3,.04,.2)');ok('Number.isFinite(cv.o.position.y)','vehicle '+type);run("if(VT[cv.t].m==='a')cv.alt=Math.max(0,hAt(cv.x,cv.z))+.8;toggle()");ok('!cv','exit '+type)}
+ok('vehicleTypes.every(t=>VHB[t]&&VHB[t].length===2&&VHB[t][0]>0&&VHB[t][1]>0)','all driveable vehicles have hitboxes');
+run('{const q=V.find(v=>v.t===\'cotxe\');const a=vehicleBox(q,q.x,q.z,q.hd),b=vehicleBox(q,q.x,q.z,q.hd),c=vehicleBox(q,q.x+100,q.z+100,q.hd);globalThis.__obbNear=obbOverlap(a,b);globalThis.__obbFar=obbOverlap(a,c)}');
+ok('__obbNear&&!__obbFar','OBB overlap separates near and far vehicles');
+run('{const q=V.find(v=>v.t===\'tanc\');intelMarks.push({kind:\'tanc\',ref:q,label:\'test\'});globalThis.__destroyed=q;explodeVehicle(q)}');
+ok('__destroyed.destroyed&&!V.includes(__destroyed)&&!intelMarks.some(m=>m.ref===__destroyed)','vehicle destruction clears active vehicle and intel marker');
+ok('pl.userData.ael&&pl.userData.aer&&pl.userData.lkl&&pl.userData.lkr','player elbows and knees exist');
+ok("html.includes(\"mirror=R()<.5?-1:1\")&&html.includes(\"ang=rr(0,Math.PI*2)\")",'compounds support full rotation and mirroring');
 run("panel('map');resume();joystick.state.x=1;joystick.state.y=-1;build();update(.016,20)");ok('joystick.state.x===0&&joystick.state.y===0&&hp===100','restart resets joystick and world');
 ok('PM.t.parent===world','vegetation attached to rebuilt world');
-console.log(JSON.stringify({passed:true,buildings:run('B.length'),vehicles:run('V.length'),checks:['startup','enemy models','stair geometry','4 door orientations','7 vehicles','minimap','restart','joystick','vegetation'],seconds:(Date.now()-start)/1000}));
+console.log(JSON.stringify({passed:true,buildings:run('B.length'),vehicles:run('V.length'),checks:['startup','enemy models','stair geometry','4 door orientations','14 vehicles','vehicle hitboxes','OBB overlap','vehicle destruction cleanup','player joints','compound rotation/mirror','minimap','restart','joystick','vegetation'],seconds:(Date.now()-start)/1000}));
