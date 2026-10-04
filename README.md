@@ -20,7 +20,7 @@ També pots servir aquesta carpeta amb `python3 -m http.server 8000` i obrir htt
 
 ## Contingut
 
-Mapa de 4,8 × 4,8 km amb llavor configurable, set tipus de vehicles, compounds funcionals (avançades, garatges amb hangars, ports i polvorins), edificis explorables, camins i molls, patrulles i defensa contextual, HQ fortificat, objectes, destrucció, platges amb escuma, fons marí profund i natació de braça.
+Mapa seleccionable de 4,8 × 4,8 km o 9,6 × 9,6 km amb llavor configurable, set tipus de vehicles, compounds funcionals (avançades, garatges amb hangars, ports i polvorins), edificis explorables, camins i molls, patrulles i defensa contextual, HQ fortificat, objectes, destrucció, platges amb escuma, fons marí profund i natació de braça.
 
 ## Desenvolupament
 
