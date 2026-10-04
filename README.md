@@ -10,6 +10,9 @@ També pots servir aquesta carpeta amb `python3 -m http.server 8000` i obrir htt
 
 ## Controls
 
+La interfície principal es manté minimalista: joystick, Dispar i Acció. Farmacioles, explosius, disfressa i mapa es gestionen des d'un inventari en graella.
+
+
 - WASD o fletxes: moviment i gir.
 - E: entrar o sortir d’un vehicle.
 - F: disparar; G: col·locar explosius.
