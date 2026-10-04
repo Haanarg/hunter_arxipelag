@@ -455,7 +455,7 @@ function panel(mode){paused=true;clearKeys();if(eng)eng.g.gain.value=0;if(AC)AC.
 function useInvItem(id){
   if(!inv[id])return false;
   if(id==='med'){if(hp>=100){msg='Ja tens la vida al màxim.';msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(100,hp+40);msg='Has usat una farmaciola.';msgT=2;snd('pick');return true}
-  if(id==='expl'){resume();plant();return true}
+  if(id==='expl'){if(cv||swimming){msg='No pots col·locar explosius des d’aquí.';msgT=2;return false}resume();plant();return true}
   if(id==='disf'){setDis(!disg);msg=disg?'Disfressa activada.':'Disfressa desactivada.';msgT=2;return true}
   if(id==='mapa'){panel('map');return true}
   return false
