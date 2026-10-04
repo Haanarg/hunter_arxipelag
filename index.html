@@ -117,8 +117,8 @@ arma:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 19 H54 V50 H10 Z"
 const IT={
 med:{n:'Farmaciola',c:0xf2f3de,s:[1.2,.8,.8],icon:ICON.med,desc:'Recupera 40 punts de vida.',usable:true},
 mapa:{n:'Mapa de l’HQ',c:0xffe27a,s:[1.6,.08,1.2],icon:ICON.mapa,desc:'Obre la carta de navegació i revela l’HQ enemic.',usable:true},
-mapa_heli:{n:'Mapa d’helicòpter',c:0x9fd7ff,s:[1.6,.08,1.2],icon:ICON.mapa_heli,desc:'Marca a la carta la posició d’un helicòpter militar conegut.',usable:true},
-mapa_tanc:{n:'Mapa de tanc',c:0xc6b06a,s:[1.6,.08,1.2],icon:ICON.mapa_tanc,desc:'Marca a la carta tots els tancs coneguts del mapa.',usable:true},
+mapa_heli:{n:'Mapa d’helicòpters',c:0x9fd7ff,s:[1.6,.08,1.2],icon:ICON.mapa_heli,desc:'Marca a la carta la posició de tots els helicòpters actius del mapa.',usable:true},
+mapa_tanc:{n:'Mapa de tancs',c:0xc6b06a,s:[1.6,.08,1.2],icon:ICON.mapa_tanc,desc:'Marca a la carta la posició de tots els tancs actius del mapa.',usable:true},
 bazooka:{n:'Bazooka',c:0x58664a,s:[2.1,.45,.45],icon:ICON.bazooka,desc:'Llançacoets d’un sol ús. Equipa’l i dispara una càrrega d’alt poder destructiu.',usable:true},
 arma:{n:'Munició',c:0x555b66,s:[1.6,.35,.35],icon:ICON.arma,desc:'Caixa de munició per a l’arma personal.',usable:false},
 expl:{n:'Explosius',c:0xe02020,s:[.9,.9,.9],icon:ICON.expl,desc:'Manat de TNT amb metxa. Planta una càrrega amb retard de 3 segons.',usable:true},
@@ -305,15 +305,16 @@ function updFA(dt){for(let i=FA.length-1;i>=0;i--){const a=FA[i];a.t+=dt;const k
 if(k>=1){const c=Math.cos(a.yaw),s=Math.sin(a.yaw),lx=a.x+c*6.4*a.s,lz=a.z-s*6.4*a.s,ly=Math.max(hAt(lx,lz),0)+.6;
 debris(lx,ly,lz,0x4fa03a,8,1,5);debris(a.x+c*3*a.s,ly,a.z-s*3*a.s,0x8a6a3a,4,.7,3);puff(lx,ly,lz,0xc9b48a,3);world.remove(a.y);FA.splice(i,1)}}}
 function vegetate(pa){TG.clear();PL.length=0;FA.length=0;const pm=[],bu=[],rk=[],put=e=>{e.k=Math.floor(e.x/16)+','+Math.floor(e.z/16);let a=TG.get(e.k);if(!a)TG.set(e.k,a=[]);a.push(e)};
-for(let x=-H+40;x<H-40;x+=14)for(let z=-H+40;z<H-40;z+=14){const px=x+rr(-4,4),pz=z+rr(-4,4),h=hAt(px,pz);if(h<1.3||h>28)continue;
+for(let x=-H+40;x<H-40;x+=11)for(let z=-H+40;z<H-40;z+=11){const px=x+rr(-3.5,3.5),pz=z+rr(-3.5,3.5),h=hAt(px,pz);if(h<1.3||h>42)continue;
 const dn=fbm(px/80+7,pz/80+3),q=R();let L=null;
-if(h<4)L=q<.06?pm:null;else if(dn>.55&&h<22)L=q<.1?pm:null;else if(dn>.4)L=q<.2?bu:null;else if(h>8&&q<.04)L=rk;else if(q<.012)L=pm;
-if(!L||slope(px,pz,h)>4)continue;
+if(h<4)L=q<.095?pm:null;else if(dn>.48&&h<34)L=q<.16?pm:null;else if(h<42&&q<.045)L=pm;else if(dn>.4)L=q<.2?bu:null;else if(h>8&&q<.04)L=rk;else if(q<.018)L=pm;
+if(!L||slope(px,pz,h)>4.5)continue;
 if(stairs.some(s=>stairContains(s,px,pz,2))||Math.hypot(px-pa.x,pz-pa.z)<14||B.some(b=>Math.abs(px-b.x)<b.w/2+5&&Math.abs(pz-b.z)<b.d/2+5)||compoundClear.some(c=>Math.hypot(px-c.x,pz-c.z)<c.r))continue;
-const s=rr(.9,1.4),yaw=rr(0,6.28);L.push([px,h-.3,pz,s,yaw]);
-if(L==pm){const e={x:px,z:pz,y:h-.3,s,yaw,r:.6,p:true,alive:true,hp:40,i:pm.length-1};put(e);PL.push(e)}else if(L==rk)put({x:px,z:pz,r:1.4,rock:true})}
+const s=rr(.75,1.75),yaw=rr(0,6.28);
+if(L==pm){const leafVar=R()<.33?-1:R()<.66?0:1,tone=rr(-.25,.25),idx=pm.length;pm.push([px,h-.3,pz,s,yaw,leafVar,tone]);const e={x:px,z:pz,y:h-.3,s,yaw,r:.6*Math.max(.75,s),p:true,alive:true,hp:40,i:idx,leafVar,tone};put(e);PL.push(e)}
+else{L.push([px,h-.3,pz,s,yaw]);if(L==rk)put({x:px,z:pz,r:1.4,rock:true})}}
 const vegetationMeshes=vegetationVisual.build({world,palms:pm,bushes:bu,rocks:rk});
-PM={t:vegetationMeshes.palms.trunk,c:vegetationMeshes.palms.crown,c2:vegetationMeshes.palms.crown2}}
+PM={t:vegetationMeshes.palms.trunk,c:vegetationMeshes.palms.crown,c2:vegetationMeshes.palms.crown2,variants:vegetationMeshes.palms.variants}}
 function fr(x,z){let a=1e9,b=-1e9;for(const[i,j]of[[0,0],[9,9],[-9,9],[9,-9],[-9,-9],[9,0],[-9,0],[0,9],[0,-9]]){const h=hAt(x+i,z+j);a=Math.min(a,h);b=Math.max(b,h)}return b-a}
 function dmgW(w,d){w.hp-=d;if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0)Wl.splice(i,1);i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);snd('boom',.3)}}
 function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=(opt.hangar?buildingVisual.createHangarShell:buildingVisual.createShell)({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide;
@@ -626,7 +627,8 @@ function useInvItem(id){
   if(id==='bazooka'){if(cv||swimming){msg='Has d’anar a peu per equipar el bazooka.';msgT=2;return false}bazookaEquipped=!bazookaEquipped;resume();msg=bazookaEquipped?'Bazooka equipat: un sol tret.':'Bazooka desequipat.';msgT=2;return true}
   if(id==='disf'){setDis(!disg);msg=disg?'Disfressa activada.':'Disfressa desactivada.';msgT=2;return true}
   if(id==='mapa'){panel('map');return true}
-  if(id==='mapa_tanc'){const tanks=[...V.filter(v=>v.t==='tanc').map(v=>({x:v.x,z:v.z})),...E.filter(u=>u.t==='tanc').map(u=>({x:u.x,z:u.z}))];if(!tanks.length){msg='No hi ha tancs actius al mapa.';msgT=2;return false}intelMarks=intelMarks.filter(m=>m.kind!=='tanc');tanks.forEach((v,i)=>intelMarks.push({kind:'tanc',ref:v,label:'Tanc '+(i+1)}));msg='S’han marcat '+tanks.length+' tancs.';msgT=2;panel('map');return true}if(id==='mapa_heli'){const v=V.find(v=>v.t==='heli'&&!v.heliport)||V.find(v=>v.t==='heli');if(!v){msg='No hi ha helicòpters actius al mapa.';msgT=2;return false}intelMarks=intelMarks.filter(m=>m.kind!=='heli');intelMarks.push({kind:'heli',ref:v,label:'Helicòpter'});msg='Localització marcada: helicòpter.';msgT=2;panel('map');return true}
+  if(id==='mapa_tanc'){const tanks=[...V.filter(v=>v.t==='tanc'),...E.filter(u=>u.t==='tanc')];if(!tanks.length){msg='No hi ha tancs actius al mapa.';msgT=2;return false}intelMarks=intelMarks.filter(m=>m.kind!=='tanc');tanks.forEach((v,i)=>intelMarks.push({kind:'tanc',ref:v,label:'Tanc '+(i+1)}));msg='S’han marcat '+tanks.length+' tancs.';msgT=2;panel('map');return true}
+  if(id==='mapa_heli'){const helis=V.filter(v=>v.t==='heli'||v.t==='heli_combat');if(!helis.length){msg='No hi ha helicòpters actius al mapa.';msgT=2;return false}intelMarks=intelMarks.filter(m=>m.kind!=='heli');helis.forEach((v,i)=>intelMarks.push({kind:'heli',ref:v,label:(v.t==='heli_combat'?'Helicòpter de combat ':'Helicòpter ')+(i+1)}));msg='S’han marcat '+helis.length+' helicòpters.';msgT=2;panel('map');return true}
   return false
 }
 function dropInvItem(id){
