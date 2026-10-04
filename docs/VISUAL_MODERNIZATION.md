@@ -469,3 +469,15 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - En prémer directament un objecte utilitzable, s’executa la seva acció: consumir, equipar/desequipar, plantar explosius o obrir el mapa segons el tipus.
 - L’inventari redueix la graella mínima de 20 a 15 espais, eliminant la fila inferior innecessària en escriptori.
 - El botó inferior “Continua” s’ha substituït per una creu de tancament a la cantonada superior dreta del panell, mantenint la mateixa funció de reprendre la partida.
+
+
+## Vehicles aquàtics oberts i barca de rems — 2026-10-04
+- Simplificada la llanxa llançacoets: eliminats tubs, bastidors i detalls sobrants; queda una silueta més neta amb dos llançadors principals.
+- La barca de rems és ara més petita i compacta.
+- Redissenyada la barca amb proa arrodonida/ovalada i una forma de buc més pròxima a una barca real.
+- Els rems tenen mànec i pala diferenciats visualment.
+- El jugador es mostra físicament quan ocupa barca de rems, llanxa, llanxa llançacoets o windsurf.
+- La barca de rems es pilota assegut i d’esquena a la direcció d’avanç, com en una barca real.
+- Afegida animació de remar sincronitzada amb la velocitat del vehicle: braços, tronc i rems comparteixen la mateixa fase.
+- El windsurf mostra el jugador dret amb postura específica subjectant la botavara.
+- Les llanxes mostren el jugador assegut en posició de pilotatge.
