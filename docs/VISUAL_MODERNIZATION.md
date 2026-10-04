@@ -761,3 +761,19 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - La llanxa llançacohets passa a ser estrictament única: al final de la generació es garanteix exactament una unitat per mapa.
 - Els vehicles varats queden marcats internament amb `beached:true` i `coastal:true` per facilitar futures regles o ajustos.
 - Afegides comprovacions al smoke test per validar el pool costaner, el 75% configurat i l'existència d'una sola llanxa llançacohets.
+
+
+## Personatge, windsurf i barca de rems — 2026-10-04
+- El personatge principal té ara un cap més arrodonit construït amb geometria esfèrica, substituint la silueta cúbica anterior.
+- Afegides gorra amb visera i ulleres de sol al model principal.
+- El mateix llenguatge visual s'ha aplicat al rider dels vehicles oberts, de manera que també apareix correctament a la barca de rems.
+- Recol·locat el rider del windsurf: ara va dret sobre la taula, de costat respecte a l'eix longitudinal, amb els peus separats i els braços subjectant el travesser/boom de la vela.
+- Refeta la barca de rems perquè deixi de semblar un bloc sòlid:
+  - fons baix;
+  - costats oberts;
+  - regales/baranes visibles;
+  - bancs transversals per seure;
+  - suports de rem sobre la regala.
+- Els rems queden ara més alts i pivoten des de suports situats sobre les baranes.
+- Invertit el cicle visual de remada perquè avançar i retrocedir deixin d'estar intercanviats.
+- Afegides comprovacions al smoke test per cobrir el nou cap/gorra/ulleres, la postura del windsurf, la geometria oberta de la barca i la inversió de la remada.
