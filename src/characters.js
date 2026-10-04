@@ -57,8 +57,16 @@ window.HUNTER_CHARACTERS=Object.freeze({
     };
     const AL=arm(-.78),AR=arm(.78);u.al=AL.shoulder;u.ar=AR.shoulder;u.ael=AL.elbow;u.aer=AR.elbow;
 
-    box(player,.78,.95,.78,P.skin,0,4.1,0);box(player,.7,.2,.08,P.dark,0,4.15,-.41);
-    J(.94,.5,.94,P.primary,0,4.6,0,player,window.HUNTER_PALETTE.enemy.secondary);box(player,1,.1,.78,P.dark,0,4.43,-.06);
+    // Cap més orgànic, gorra amb visera i ulleres de sol.
+    const headMat=new THREE.MeshStandardMaterial({color:P.skin,roughness:.72}),head=new THREE.Mesh(new THREE.SphereGeometry(.5,12,8),headMat);
+    head.scale.set(.8,1,.78);head.position.set(0,4.12,0);player.add(head);
+    const glasses=new THREE.Group();glasses.position.set(0,4.18,-.39);player.add(glasses);
+    box(glasses,.34,.16,.06,0x11161a,-.2,0,0);box(glasses,.34,.16,.06,0x11161a,.2,0,0);box(glasses,.12,.06,.06,P.dark,0,0,0);
+    const cap=new THREE.Group();cap.position.set(0,4.55,0);player.add(cap);
+    const capCrown=new THREE.Mesh(new THREE.SphereGeometry(.5,12,6,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:P.primary,roughness:.8}));
+    capCrown.scale.set(.95,.5,.98);cap.add(capCrown);
+    const visor=box(cap,.72,.08,.48,P.primary,0,-.02,-.38);visor.rotation.x=-.08;
+    mats.push([capCrown.material,P.primary,window.HUNTER_PALETTE.enemy.secondary],[visor.material,P.primary,window.HUNTER_PALETTE.enemy.secondary]);
 
     const gun=new THREE.Group();gun.position.set(0,-.72,-.1);gun.rotation.x=-Math.PI/2;u.aer.add(gun);
     box(gun,.2,.25,1.8,P.metal,0,0,-.2);box(gun,.2,.5,.25,P.dark,0,-.3,.1);box(gun,.22,.3,.6,0x6b4a2a,0,0,.9);u.gun=gun;
