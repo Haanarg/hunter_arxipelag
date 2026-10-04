@@ -549,3 +549,13 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Els rems de la barca són ara peces rígides alineades: mànec, canya i pala comparteixen exactament el mateix eix.
 - Durant la palada, els rems basculen cap avall perquè la pala entri visualment dins l’aigua.
 - La postura de les mans del remer s’ha ajustat per seguir millor el punt interior dels rems durant el cicle.
+
+
+## Moto aquàtica — 2026-10-04
+- Afegit un nou vehicle aquàtic: moto aquàtica.
+- Té acceleració i resposta clarament superiors a les llanxes, amb gir més ràpid i millor resposta de control.
+- Té menys resistència: armadura 0 i vida 2, per sota de la llanxa bàsica.
+- Afegit model visual compacte amb casc estret, seient i manillar.
+- El jugador es mostra sobre la moto aquàtica amb postura inclinada endavant, mans al manillar i peus recolzats als laterals.
+- La moto aquàtica forma part de la distribució de vehicles dels ports.
+- També s’inclou en el sistema de garantia de tipus de vehicle aquàtic perquè pugui aparèixer encara que la selecció aleatòria dels ports no la triï.
