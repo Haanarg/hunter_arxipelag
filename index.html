@@ -511,16 +511,9 @@ const add=(t,x,z,a,meta={})=>{const o=mkV(t),c=VT[t],v={t,x,z,hd:a||0,v:0,alt:Ma
   {t:'tanqueta',x:pb.x-22,z:pb.z+20,hd:Math.PI},
   {t:'tanqueta',x:pb.x+22,z:pb.z+20,hd:Math.PI}
 ].forEach(v=>add(v.t,v.x,v.z,v.hd,{military:true,hq:true,guaranteed:true}));
-const addProtectedMilitary=()=>{
-  const spots=[
-    {t:'tanc',x:pb.x-24,z:pb.z+30,hd:Math.PI},
-    {t:'camio',x:pb.x,z:pb.z+35,hd:Math.PI}
-  ];
-  for(const v of spots)if(!B.some(b=>Math.abs(v.x-b.x)<b.hw+vehicleRadius(v.t)&&Math.abs(v.z-b.z)<b.hd+vehicleRadius(v.t)))add(v.t,v.x,v.z,v.hd)
-};
+const addProtectedMilitary=()=>{};
 const near=(r,t)=>{for(let k=0;k<80;k++){const x=pa.x+rr(-r,r),z=pa.z+rr(-r,r),h=hAt(x,z);if(h>1.5&&slope(x,z,h)<2.5&&!B.some(b=>Math.abs(x-b.x)<b.hw+vehicleRadius(t)&&Math.abs(z-b.z)<b.hd+vehicleRadius(t))&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(t)+vehicleRadius(v.t)+2))return[x,z]}return[pa.x+30,pa.z+30]};
 ['cotxe','moto','bici'].forEach(t=>{const q=near(90,t);add(t,q[0],q[1],rr(0,6.28))});
-addProtectedMilitary();
 const shores=[];for(let a=0;a<360;a+=12)for(let d=10;d<700;d+=10){const x=pa.x+Math.cos(a*.01745)*d,z=pa.z+Math.sin(a*.01745)*d;if(Math.abs(x)>H-60||Math.abs(z)>H-60)break;if(hAt(x,z)<-2){shores.push({d,x,z});break}}
 shores.sort((a,b)=>a.d-b.d);if(shores[0])add('llanxa',shores[0].x,shores[0].z,rr(0,6.28));
 const clearVehicle=(t,x,z)=>Math.abs(x)<H-vehicleRadius(t)-5&&Math.abs(z)<H-vehicleRadius(t)-5&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(x-v.x,z-v.z)<vehicleRadius(t)+vehicleRadius(v.t)+5);
@@ -538,12 +531,13 @@ if(heliportSites.length){
 }
 const protectedVehicleSpot=t=>{const r=vehicleRadius(t),ok=(x,z)=>hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3);for(let k=0;k<240;k++){const a=rr(0,Math.PI*2),d=rr(30,58),x=pb.x+Math.cos(a)*d,z=pb.z+Math.sin(a)*d;if(ok(x,z))return{x,z,hd:a+Math.PI}}return null};
 const distributedMilitarySpot=t=>{const r=vehicleRadius(t),pool=islands.filter(i=>i!==Bi).slice().sort(()=>R()-.5),ok=(x,z)=>Math.hypot(x-pb.x,z-pb.z)>220&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3);for(const i of pool)for(let k=0;k<50;k++){const q=land(i,900,1);if(q&&ok(q.x,q.z))return{x:q.x,z:q.z,hd:rr(0,Math.PI*2)}}return null};
+const hardLandVehicleSpot=t=>{const r=vehicleRadius(t),ok=(x,z)=>Math.abs(x)<H-r-8&&Math.abs(z)<H-r-8&&Math.hypot(x-pb.x,z-pb.z)>220&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<4&&!treeHit(x,z,r*.65)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+4);for(let k=0;k<1600;k++){const x=rr(-H+r+10,H-r-10),z=rr(-H+r+10,H-r-10);if(ok(x,z))return{x,z,hd:rr(0,Math.PI*2)}}for(let k=0;k<72;k++){const a=k*Math.PI/36,d=110+(k%4)*20,x=pa.x+Math.cos(a)*d,z=pa.z+Math.sin(a)*d;if(ok(x,z))return{x,z,hd:a+Math.PI}}return null};
 const waterVehicleSpot=t=>{const r=vehicleRadius(t),pool=islands.slice().sort(()=>R()-.5);for(const i of pool){for(let tries=0;tries<3;tries++){const q=findPortSite(i,18);if(!q||!q.portBest)continue;const a=q.portBest.aa,px=-Math.sin(a),pz=Math.cos(a);for(const side of[-1,1]){const x=q.portBest.x+px*side*(r+4),z=q.portBest.z+pz*side*(r+4);if(hAt(x,z)<-2&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3))return{x,z,hd:q.portBest.hd}}}}return null};
-const ensureVehicleType=t=>{if(t==='heli'?V.some(v=>v.t==='heli'&&!v.heliport):V.some(v=>v.t===t))return;let q=null,c=VT[t];if(c.m==='w'||c.m==='wl')q=waterVehicleSpot(t);else if(t==='heli'||t==='heli_combat'||t==='tanqueta')q=distributedMilitarySpot(t);else if(['tanc','camio'].includes(t))q=protectedVehicleSpot(t);else{const p=near(120,t);q={x:p[0],z:p[1],hd:rr(0,Math.PI*2)}}if(q)add(t,q.x,q.z,q.hd)};
+const ensureVehicleType=t=>{if(t==='heli'?V.some(v=>v.t==='heli'&&!v.heliport):V.some(v=>v.t===t))return;let q=null,c=VT[t];if(c.m==='w'||c.m==='wl')q=waterVehicleSpot(t);else if(['heli','heli_combat','tanqueta','tanc','camio'].includes(t))q=distributedMilitarySpot(t)||hardLandVehicleSpot(t);else{const p=near(120,t);q={x:p[0],z:p[1],hd:rr(0,Math.PI*2)}}if(q)add(t,q.x,q.z,q.hd)};
 ['llanxa','llanxa_coets','barca_rems','windsurf','hover','cotxe','moto','bici','camio','tanqueta','tanc','heli','heli_combat'].forEach(ensureVehicleType);
-const ensureVehicleCount=(t,min)=>{let guard=0;while(V.filter(v=>v.t===t).length<min&&guard++<8){const q=(t==='tanc'||t==='camio')?protectedVehicleSpot(t):null;if(!q)break;add(t,q.x,q.z,q.hd,{military:true,guaranteed:true})}};
+const ensureVehicleCount=(t,min)=>{let guard=0;while(V.filter(v=>v.t===t).length<min&&guard++<12){const q=distributedMilitarySpot(t)||hardLandVehicleSpot(t);if(!q)break;add(t,q.x,q.z,q.hd,{military:true,guaranteed:true})}};
 ensureVehicleCount('tanc',2);
-const ensureDistributedCount=(t,min)=>{let guard=0;while(V.filter(v=>v.t===t).length<min&&guard++<12){const q=distributedMilitarySpot(t);if(!q)break;add(t,q.x,q.z,q.hd,{military:true,guaranteed:true})}};
+const ensureDistributedCount=(t,min)=>{let guard=0;while(V.filter(v=>v.t===t).length<min&&guard++<16){const q=distributedMilitarySpot(t)||hardLandVehicleSpot(t);if(!q)break;add(t,q.x,q.z,q.hd,{military:true,guaranteed:true})}};
 ensureDistributedCount('heli',2*MAP_SCALE);
 ensureDistributedCount('heli_combat',MAP_SCALE);
 ensureDistributedCount('tanqueta',1+MAP_SCALE);
