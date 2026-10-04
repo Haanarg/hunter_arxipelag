@@ -9,10 +9,22 @@ html,body{margin:0;height:100%;overflow:hidden;background:#1b2a5a;font-family:sy
 #joystick{position:fixed;left:calc(18px + env(safe-area-inset-left,0px));bottom:calc(22px + env(safe-area-inset-bottom,0px));width:148px;height:148px;border-radius:50%;background:#0006;border:2px solid #ffffff66;box-shadow:inset 0 0 0 2px #0004,0 6px 18px #0005;touch-action:none}
 #joystick:after{content:'';position:absolute;inset:24%;border-radius:50%;border:1px solid #ffffff22}
 .joy-knob{position:absolute;left:50%;top:50%;width:64px;height:64px;border-radius:50%;background:#ffffff42;border:2px solid #ffffffcc;box-shadow:0 4px 12px #0008;transform:translate(-50%,-50%);pointer-events:none}
-#ini button{font:700 18px system-ui;padding:12px 20px;border-radius:10px;border:2px solid #fff;background:#0004;color:#fff}#seedBox{display:flex;flex-direction:column;gap:8px;align-items:center;background:#0002;padding:10px 14px;border-radius:10px}#seedBox label{display:flex;gap:8px;align-items:center}#seedInput{font:600 16px system-ui;width:min(300px,72vw);padding:9px 11px;border-radius:8px;border:1px solid #ffffffaa;background:#13243bcc;color:#fff;text-align:center}#seedInput:disabled{opacity:.55}#mapSizeBox{display:flex;gap:8px;align-items:center;justify-content:center;background:#0002;padding:10px 14px;border-radius:10px}#mapSizeBox label{display:flex;gap:5px;align-items:center}</style><style>button{cursor:pointer}#gamepanel{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#0009;color:white;z-index:20;padding:20px}#gamepanel .card{background:#24364b;padding:24px;border-radius:10px;max-width:600px;max-height:85vh;overflow:auto}#gamepanel button{padding:10px;margin:4px;color:white;background:#0004;border:1px solid white;border-radius:6px}#gamepanel canvas{width:100%;max-width:440px;height:auto}.controls{display:grid;grid-template-columns:110px 1fr;gap:8px}.p b{cursor:pointer}#joystick{cursor:grab}.p b.held{background:#fff6}</style></head><body>
+#ini button{font:700 18px system-ui;padding:12px 20px;border-radius:10px;border:2px solid #fff;background:#0004;color:#fff}#seedBox{display:flex;flex-direction:column;gap:8px;align-items:center;background:#0002;padding:10px 14px;border-radius:10px}#seedBox label{display:flex;gap:8px;align-items:center}#seedInput{font:600 16px system-ui;width:min(300px,72vw);padding:9px 11px;border-radius:8px;border:1px solid #ffffffaa;background:#13243bcc;color:#fff;text-align:center}#seedInput:disabled{opacity:.55}#mapSizeBox{display:flex;gap:8px;align-items:center;justify-content:center;background:#0002;padding:10px 14px;border-radius:10px}#mapSizeBox label{display:flex;gap:5px;align-items:center}</style><style>button{cursor:pointer}#gamepanel{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#0009;color:white;z-index:20;padding:20px}#gamepanel .card{background:#24364b;padding:24px;border-radius:10px;max-width:600px;max-height:85vh;overflow:auto}#gamepanel button{padding:10px;margin:4px;color:white;background:#0004;border:1px solid white;border-radius:6px}#gamepanel canvas{width:100%;max-width:440px;height:auto}.controls{display:grid;grid-template-columns:110px 1fr;gap:8px}.p b{cursor:pointer}#joystick{cursor:grab}.p b.held{background:#fff6}
+#gamepanel .card.inventory-card{width:min(940px,92vw);max-width:940px;background:#1f2930;padding:18px}
+.inv-wrap{display:grid;grid-template-columns:minmax(280px,1.25fr) minmax(220px,.75fr);gap:18px}
+.inv-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:12px}
+.inv-grid{display:grid;grid-template-columns:repeat(5,minmax(54px,1fr));gap:9px}
+.inv-slot{aspect-ratio:1;border:1px solid #7f8c92;background:#10171bcc;border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative;font-size:30px;cursor:pointer}
+.inv-slot.selected{outline:2px solid #f0c86a;background:#28343a}
+.inv-count{position:absolute;right:5px;bottom:3px;font:700 13px system-ui;background:#0009;border-radius:5px;padding:1px 5px}
+.inv-detail{background:#12191ddd;border:1px solid #58656a;border-radius:10px;padding:18px;min-height:310px;display:flex;flex-direction:column}
+.inv-icon{font-size:74px;line-height:1;text-align:center;margin:8px 0 20px}
+.inv-detail h3{font-size:22px;margin:0 0 8px}.inv-detail p{line-height:1.45;opacity:.9}
+.inv-actions{margin-top:auto;display:flex;gap:8px;justify-content:flex-end}
+@media(max-width:700px){#gamepanel .card.inventory-card{width:min(96vw,620px);padding:12px}.inv-wrap{grid-template-columns:1fr}.inv-grid{grid-template-columns:repeat(4,minmax(48px,1fr))}.inv-detail{min-height:180px}.inv-icon{font-size:52px;margin:4px 0 10px}}</style></head><body>
 <div id="hud"></div><canvas id="mm" width="170" height="170"></canvas>
 <div id="joystick" role="application" aria-label="Joystick de moviment"><div class="joy-knob"></div></div>
-<div class="p" style="right:calc(14px + env(safe-area-inset-right,0px));grid-template-columns:repeat(2,58px)"><b data-k="KeyF">🔫</b><b data-k="KeyG">💣</b><b data-k="KeyC">🎭</b><b data-k="KeyL">📖</b><b data-k="KeyU">⤒</b><b data-k="KeyJ">⤓</b><b data-k="KeyE">E</b><b data-k="KeyP" role="button" aria-label="Pausa i menú">Ⅱ</b></div>
+<div class="p" style="right:calc(14px + env(safe-area-inset-right,0px));grid-template-columns:repeat(1,64px)"><b data-k="KeyF" aria-label="Dispar">🔫</b><b data-k="KeyE" aria-label="Acció">E</b></div>
 <div id="end" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;text-align:center;padding:24px;color:#fff;font:700 26px system-ui;text-shadow:0 2px 8px #000;pointer-events:none;background:#0005"></div>
 <div id="ini" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;color:#fff;font-family:system-ui;background:linear-gradient(#6a4fa8dd,#ff9a4add)"><h1 style="margin:0;font-size:34px">HUNTER · ARXIPÈLAG</h1><p style="max-width:420px;margin:0;line-height:1.5">Elimina el general enemic amagat a l'HQ de la seva base. Busca mapes, armes, explosius i vehicles pels edificis i illots.</p><div id="seedBox"><label><input id="seedRandom" type="checkbox" checked> Llavor aleatòria</label><input id="seedInput" type="text" inputmode="text" maxlength="40" placeholder="Escriu una llavor" disabled><small style="opacity:.8">Pots usar números o text.</small></div><div id="mapSizeBox"><b>Mida:</b><label><input type="radio" name="mapSize" value="1" checked> Petit · 4,8 km</label><label><input type="radio" name="mapSize" value="2"> Gran · 9,6 km</label></div><div style="display:flex;gap:10px"><button data-d=".6">Fàcil</button><button data-d="1">Normal</button><button data-d="1.5">Difícil</button></div><p style="margin:0;opacity:.85">Tria dificultat per començar</p></div>
 <div id="gamepanel" role="dialog" aria-modal="true" aria-labelledby="panelTitle"><div class="card"><h2 id="panelTitle"></h2><div id="panelBody"></div><button id="resumeButton" class="primary">Continua</button></div></div>
@@ -93,7 +105,13 @@ const waves=water.update;
 // terreny visual a src/terrain.js
 let stairs=[];
 let Wl=[],Dr=[],items=[],inv={},msg='',msgT=0,HQ=null,ib=null;
-const IT={med:{n:'Farmaciola',c:0xf2f3de,s:[1.2,.8,.8]},mapa:{n:'Mapa',c:0xffe27a,s:[1.4,.15,1]},arma:{n:'Arma',c:0x555b66,s:[1.6,.35,.35]},expl:{n:'Explosius',c:0xe02020,s:[.9,.9,.9]},disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6]}};
+const IT={
+med:{n:'Farmaciola',c:0xf2f3de,s:[1.2,.8,.8],icon:'🩹',desc:'Recupera 40 punts de vida.',usable:true},
+mapa:{n:'Mapa',c:0xffe27a,s:[1.4,.15,1],icon:'🗺️',desc:'Obre la carta de navegació i revela l’HQ quan l’has trobat.',usable:true},
+arma:{n:'Munició',c:0x555b66,s:[1.6,.35,.35],icon:'🔫',desc:'Munició per a l’arma personal.',usable:false},
+expl:{n:'Explosius',c:0xe02020,s:[.9,.9,.9],icon:'💣',desc:'Planta una càrrega amb retard de 3 segons.',usable:true},
+disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:'🎭',desc:'Activa o desactiva la disfressa per reduir la detecció.',usable:true}
+};
 // combat i enemics
 let E=[],Pj=[],bombs=[],fx=[],hp=100,ammo=0,disg=false,over=0,fcd=0,kills=0;
 const endEl=document.getElementById('end'),gB=new THREE.BoxGeometry(.35,.35,.35),sphG=new THREE.SphereGeometry(1,10,8),
@@ -424,7 +442,7 @@ const mini=()=>minimap.draw();
 // control
 let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0;
 const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joystick')),clearKeys=()=>{Object.keys(K).forEach(k=>K[k]=0);joystick.reset();document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))};
-const act=c=>{if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(!started||paused||over)return;if(c==='KeyE')toggle();if(c==='KeyG')plant();if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
+const act=c=>{if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(!started||paused||over)return;if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory')}if(c==='KeyG')plant();if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
 const nearV=()=>{let b=null,bd=Infinity;V.forEach(v=>{const d=Math.hypot(v.x-P.x,v.z-P.z);if(d<vehicleRadius(v.t)+5&&d<bd){bd=d;b=v}});return b};
 function toggle(){if(cv){if(cv.t==='heli'&&cv.alt-Math.max(0,hAt(cv.x,cv.z))>4){msg='Aterra abans de baixar: J o BAIXA.';msgT=3;return}let spot=null;for(let i=0;i<16;i++){const a=cv.hd+i*Math.PI/8,x=cv.x+Math.cos(a)*(vehicleRadius(cv.t)+2.2),z=cv.z+Math.sin(a)*(vehicleRadius(cv.t)+2.2);if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||Wl.some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;spot={x,z};if(hAt(x,z)>0)break}if(!spot){msg='No hi ha espai per baixar aquí.';msgT=3;return}P.x=spot.x;P.z=spot.z;P.hd=cv.hd;cv.v=0;cv=null}else{const v=nearV();if(v){cv=v;swimming=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
 addEventListener('keydown',e=>{if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(e.repeat)return;act(e.code);if(started&&!paused&&!over)K[e.code]=1});addEventListener('keyup',e=>K[e.code]=0);
@@ -434,6 +452,18 @@ ren.domElement.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.7,
 let drag=null;ren.domElement.addEventListener('pointerdown',e=>{if(!started||paused||over)return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};ren.domElement.setPointerCapture(e.pointerId)});ren.domElement.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId||paused)return;const dx=e.clientX-drag.x;const q=cv||P;q.hd-=dx*.006;drag.x=e.clientX});ren.domElement.addEventListener('pointerup',()=>drag=null);ren.domElement.addEventListener('pointercancel',()=>drag=null);
 function resume(){paused=false;clearKeys();ui.hide();if(AC&&!muted)AC.resume()}
 function panel(mode){paused=true;clearKeys();if(eng)eng.g.gain.value=0;if(AC)AC.suspend();ui.show(mode)}
+function useInvItem(id){
+  if(!inv[id])return false;
+  if(id==='med'){if(hp>=100){msg='Ja tens la vida al màxim.';msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(100,hp+40);msg='Has usat una farmaciola.';msgT=2;snd('pick');return true}
+  if(id==='expl'){resume();plant();return true}
+  if(id==='disf'){setDis(!disg);msg=disg?'Disfressa activada.':'Disfressa desactivada.';msgT=2;return true}
+  if(id==='mapa'){panel('map');return true}
+  return false
+}
+function dropInvItem(id){
+  if(!inv[id]||id==='arma')return false;inv[id]--;if(inv[id]<=0)delete inv[id];if(id==='disf'&&disg)setDis(false);
+  msg='Has deixat: '+IT[id].n;msgT=2;return true
+}
 const ui=window.HUNTER_UI.create({
   hud:document.getElementById('hud'),
   panel:document.getElementById('gamepanel'),
@@ -450,6 +480,8 @@ const ui=window.HUNTER_UI.create({
     resume,
     open:mode=>panel(mode),
     setWaypoint:v=>waypoint=v,
+    useItem:id=>useInvItem(id),
+    dropItem:id=>dropInvItem(id),
     restart:d=>{DIF=d;elapsed=0;build();minimap.reset();mini();resume()},
     zoom:d=>zoom=Math.max(.7,Math.min(1.9,zoom+d))
   }
@@ -479,7 +511,7 @@ const floor=ib?ib.fy+.3:groundAt(P.x,P.z),surface=wy(P.x,P.z,t);swimming=!cv&&!i
 B.forEach(b=>{const i=b===ib;b.o.visible=i||Math.hypot(b.x-P.x,b.z-P.z)<1800;b.roof.visible=!i&&b.rhp>0;b.wm.opacity=b.dm.opacity=i?.18:1});
 Dr.forEach(d=>{const o=d.alwaysOpen||(!cv&&Math.hypot(P.x-d.cx,P.z-d.cz)<(d.open?6:4.5));d.open=o;d.m.visible=!o});
 items.forEach(it=>{it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25});
-if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k];if(Math.hypot(P.x-it.x,P.z-it.z)<2.2&&Math.abs(P.y-it.y)<3){if(it.t=='arma')ammo+=40;if(it.t=='med')hp=Math.min(100,hp+40);inv[it.t]=(inv[it.t]||0)+1;world.remove(it.o);items.splice(k,1);msg='Has trobat: '+IT[it.t].n;msgT=3;snd('pick')}}
+if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k];if(Math.hypot(P.x-it.x,P.z-it.z)<2.2&&Math.abs(P.y-it.y)<3){if(it.t=='arma')ammo+=40;inv[it.t]=(inv[it.t]||0)+1;world.remove(it.o);items.splice(k,1);msg='Has trobat: '+IT[it.t].n;msgT=3;snd('pick')}}
 msgT-=dt;pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv;animPl(cv?0:f,dt);
 V.forEach(v=>place(v,t,dt,v===cv?(v.steerInput||0):0));poseRider(cv,dt);
 const T=cv||P,c=cv?VT[cv.t]:ib?{cd:6,ch:11}:{cd:10,ch:5},ty=cv?cv.o.position.y:P.y,w=new THREE.Vector3(T.x+Math.sin(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1),0,T.z+Math.cos(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1));
