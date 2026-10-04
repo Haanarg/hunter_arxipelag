@@ -124,7 +124,7 @@ expl:{n:'Explosius',c:0xe02020,s:[.9,.9,.9],icon:ICON.expl,desc:'Manat de TNT am
 disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa enemiga vermella. Activa o desactiva la disfressa.',usable:true}
 };
 // combat i enemics
-let E=[],Pj=[],bombs=[],fx=[],hp=100,ammo=0,disg=false,over=0,fcd=0,kills=0,intelMarks=[];
+let E=[],Pj=[],bombs=[],fx=[],hp=100,ammo=0,disg=false,over=0,fcd=0,kills=0,intelMarks=[],playerEject=null;
 const endEl=document.getElementById('end'),gB=new THREE.BoxGeometry(.35,.35,.35),sphG=new THREE.SphereGeometry(1,10,8),
 mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial({color:0xff7a1a}),mE=new THREE.MeshBasicMaterial({color:0xff4040});
 const EC={soldat:{hp:30,sp:7,rng:32,rate:1.1,dmg:7,spl:0,r:2},jeep:{hp:70,sp:22,rng:22,rate:.5,dmg:5,spl:0,r:3.9},tanc:{hp:140,sp:8,rng:50,rate:2.5,dmg:22,spl:7,r:6.8},
@@ -133,20 +133,43 @@ function setDis(v){disg=v;pl.userData.mats.forEach(([m,a,b])=>m.color.copy(vivid
 function fin(m){over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+' · Obre Ⅱ / Esc per tornar a jugar';endEl.style.display='flex'}
 function hurtP(d){if(over)return;d*=DIF;hp-=d;snd('hurt',.5);if(hp<=0){hp=0;fin('HAS MORT')}}
 function hurtE(u,d){u.hp-=d;u.alert=12;if(u.hp<=0&&E.includes(u)){world.remove(u.o);E.splice(E.indexOf(u),1);kills++;if(u.t=='general')fin('MISSIÓ COMPLERTA: el general ha caigut!')}}
+function explodeVehicle(v){
+  if(!v||v.destroyed)return;v.destroyed=true;const wasPilot=cv===v,yy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
+  if(wasPilot){cv=null;P.x=v.x;P.z=v.z;const a=rn(0,Math.PI*2),sp=rn(14,24);playerEject={vx:Math.cos(a)*sp,vz:Math.sin(a)*sp,t:.8};hurtP(rn(18,30));msg='El vehicle ha explotat!';msgT=3}
+  const i=V.indexOf(v);if(i>=0)V.splice(i,1);if(v.o){world.remove(v.o)}
+  boom(v.x,yy+1,v.z,10,45,'p');
+}
+function damageVehicle(v,dmg,impacts=1){
+  if(!v||v.destroyed)return;const c=VT[v.t],armor=Math.max(0,Math.min(10,v.armor??c.armor??0));
+  v.life=Math.max(0,(v.life??c.life??1)-Math.max(1,impacts));v.smokeT=0;
+  if(cv===v&&armor<10)hurtP(dmg*(1-armor/10)*.55);
+  if(v.life<=0)explodeVehicle(v)
+}
+
 function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc){snd(spl?'cannon':'shot',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/140)*(own=='e'?.6:1));const o=new THREE.Mesh(gB,mat);o.scale.setScalar(sc);o.position.set(x,y,z);world.add(o);Pj.push({x,y,z,vx:dx*sp,vy:dy*sp,vz:dz*sp,dmg,spl,own,life:2.2,o})}
 function boom(x,y,z,r,dmg,own){snd('boom',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/200));const o=new THREE.Mesh(sphG,new THREE.MeshBasicMaterial({color:0xffa030,transparent:true}));o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6});
 if(own!='e')E.slice().forEach(u=>{const d=Math.hypot(u.x-x,u.o.position.y+1.5-y,u.z-z);if(d<r)hurtE(u,dmg*(1-d/r*.5))});
 Wl.slice().forEach(w=>{const dd=Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z);if(dd<r&&y<w.y1+3)dmgW(w,dmg*1.5*(1-dd/(2*r)))});
 B.forEach(b=>{const dd=Math.hypot(b.x-x,b.z-z),rr2=r+b.w/2;if(dd<rr2&&b.rhp>0){b.rhp-=dmg*1.2*(1-dd/rr2*.6);if(b.rhp<=0)roofBreak(b)}});
 PL.forEach(t=>{if(!t.alive)return;const dd=Math.hypot(t.x-x,t.z-z);if(dd<r)dmgP(t,dmg*1.5*(1-dd/(2*r)))});
-const q=cv?cv.o.position:P,d=Math.hypot(q.x-x,q.y-y,q.z-z);if(d<r&&own!='p')hurtP(dmg*.6*(1-d/r))}
+V.slice().forEach(v=>{const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),dd=Math.hypot(v.x-x,vy-y,v.z-z);if(dd<r&&own!='p'){const power=Math.max(1,Math.ceil((1-dd/r)*3));damageVehicle(v,dmg*.5*(1-dd/r),power)}});
+const q=cv?cv.o.position:P,d=Math.hypot(q.x-x,q.y-y,q.z-z);if(d<r&&own!='p'&&!cv)hurtP(dmg*.6*(1-d/r))}
 function plant(){if(over||cv||swimming||!inv.expl)return;if(--inv.expl<=0)delete inv.expl;setDis(false);const o=new THREE.Mesh(new THREE.BoxGeometry(.9,.5,.9),new THREE.MeshBasicMaterial({color:0xff2020}));
 o.position.set(P.x,P.y+.3,P.z);world.add(o);bombs.push({x:P.x,y:P.y+.3,z:P.z,t:3,o});msg='Bomba col·locada: 3 s!';msgT=2}
 function sight(x,z,tx,tz,y){const d=Math.hypot(tx-x,tz-z),n=Math.max(1,Math.ceil(d/1.5));for(let k=1;k<n;k++){const xx=x+(tx-x)*k/n,zz=z+(tz-z)*k/n;if(Wl.some(w=>!w.open&&y>w.y0&&y<w.y1&&xx>w.x0&&xx<w.x1&&zz>w.z0&&zz<w.z1))return false}return true}
 function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=.34;const fx_=-Math.sin(P.hd),fz=-Math.cos(P.hd);let hit=null,best=2.6;for(const u of E){const dx=u.x-P.x,dz=u.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx_+dz*fz)/d>.35&&sight(P.x,P.z,u.x,u.z,P.y+1.2)){best=d;hit=u}}if(hit)hurtE(hit,6);snd('hurt',hit?.45:.18);setDis(false);return true}
+function secondaryWeapon(){
+  if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
+  if(cv.t==='heli_combat'){if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;shoot(cv.x+fx_*5,cv.o.position.y+1,cv.z+fz*5,fx_,0,fz,72,60,10,'p',mS,2.4);msg='Míssils: '+cv.rockets;msgT=1;return true}
+  if(cv.t==='llanxa_coets'){if((cv.rockets||0)<=0){msg='Sense coets.';msgT=2;return false}cv.rockets--;fcd=.9;shoot(cv.x+fx_*6,cv.o.position.y+1.2,cv.z+fz*6,fx_,.015,fz,68,70,11,'p',mS,2.6);msg='Coets: '+cv.rockets;msgT=1;return true}
+  return false
+}
 function fire(){if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
 if(c=='tanc'){fcd=.9;shoot(cv.x+fx_*5.5*VS.tanc,cv.o.position.y+2.57*VS.tanc,cv.z+fz*5.5*VS.tanc,fx_,.02,fz,85,45,8,'p',mS,2.2)}
 else if(c=='heli'){fcd=.6;shoot(cv.x+fx_*3.2*VS.heli,cv.o.position.y+.5*VS.heli,cv.z+fz*3.2*VS.heli,fx_*.95,-.3,fz*.95,85,45,8,'p',mS,2)}
+else if(c=='heli_combat'){fcd=.12;shoot(cv.x+fx_*4.1*VS.heli_combat,cv.o.position.y+.15,cv.z+fz*4.1*VS.heli_combat,fx_,0,fz,145,9,0,'p',mB,.85)}
+else if(c=='tanqueta'){fcd=.16;shoot(cv.x+fx_*4.2*VS.tanqueta,cv.o.position.y+1.7,cv.z+fz*4.2*VS.tanqueta,fx_,0,fz,135,10,0,'p',mB,.9)}
+else if(c=='llanxa_coets'){fcd=.18;shoot(cv.x+fx_*3.5*VS.llanxa_coets,cv.o.position.y+1.2,cv.z+fz*3.5*VS.llanxa_coets,fx_,0,fz,130,8,0,'p',mB,.8)}
 else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;let ax=fx_,ay=0,az=fz,best=75;for(const e of E){const dx=e.x-P.x,dz=e.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>1&&(dx*fx_+dz*fz)/d>.97&&sight(P.x,P.z,e.x,e.z,P.y+1.5)){best=d;const dy=e.o.position.y+1.5-(P.y+1.5),l=Math.hypot(dx,dy,dz);ax=dx/l;ay=dy/l;az=dz/l}}shoot(P.x+fx_*.7,P.y+1.5,P.z+fz*.7,ax,ay,az,130,12,0,'p',mB,1)}
 else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}
 function updPj(dt){const steps=Math.max(1,Math.ceil(dt/.008));for(let k=0;k<steps;k++)updPjTick(dt/steps)}
@@ -155,7 +178,8 @@ let hit=p.life<=0||p.y<Math.max(hAt(p.x,p.z),0)+.2;
 if(!hit){const w=Wl.find(w=>!w.open&&p.y<w.y1&&p.y>w.y0&&p.x>w.x0&&p.x<w.x1&&p.z>w.z0&&p.z<w.z1);if(w){hit=true;if(!p.spl)dmgW(w,p.dmg*(p.own=='e'?.5:1))}else{const b=B.find(b=>b.rhp>0&&Math.abs(p.x-b.x)<b.w/2+.6&&Math.abs(p.z-b.z)<b.d/2+.6&&p.y<b.fy+b.h+1.4&&p.y>b.fy+b.h-.4);if(b){hit=true;if(!p.spl)b.rhp-=p.dmg*(p.own=='e'?.5:1);if(b.rhp<=0)roofBreak(b)}}}
 if(!hit){const t0=treeAt(p.x,p.z,.5);if(t0&&p.y<Math.max(hAt(p.x,p.z),0)+(t0.p?6.5:1.5)){hit=true;if(t0.p&&!p.spl)dmgP(t0,p.dmg*(p.own=='e'?.5:1))}}
 if(!hit&&p.own=='p')for(const u of E)if(Math.hypot(u.x-p.x,u.o.position.y+1.5-p.y,u.z-p.z)<u.r+.6){hit=true;if(!p.spl)hurtE(u,p.dmg);break}
-if(!hit&&p.own=='e'){const q=cv?cv.o.position:P;if(Math.hypot(q.x-p.x,q.y+1.5-p.y,q.z-p.z)<(cv?3.2*VS[cv.t]:1.2)){hit=true;if(!p.spl)hurtP(p.dmg*(cv?(cv.t=='tanc'?.25:.5):1))}}
+if(!hit){for(const v of V){if(p.own==='p'&&v===cv)continue;const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),rr=vehicleRadius(v.t)*.62;if(Math.hypot(v.x-p.x,vy+1-p.y,v.z-p.z)<rr){hit=true;if(!p.spl)damageVehicle(v,p.dmg,1);break}}}
+if(!hit&&p.own=='e'&&!cv){const q=P;if(Math.hypot(q.x-p.x,q.y+1.5-p.y,q.z-p.z)<1.2){hit=true;if(!p.spl)hurtP(p.dmg)}}
 if(hit){if(p.spl)boom(p.x,p.y,p.z,p.spl,p.dmg,p.own);world.remove(p.o);Pj.splice(i,1)}}}
 function updFx(dt){for(let i=bombs.length-1;i>=0;i--){const b=bombs[i];b.t-=dt;if(b.t<=0){boom(b.x,b.y,b.z,16,100,'b');world.remove(b.o);bombs.splice(i,1)}}
 for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.life-=dt;f.o.scale.setScalar(1+(.6-f.life)*f.s);f.o.material.opacity=Math.max(0,f.life/.6);if(f.life<=0){world.remove(f.o);fx.splice(i,1)}}}
@@ -205,6 +229,7 @@ fa.forEach(f=>{f.a+=f.sp*dt;f.x=f.cx+Math.cos(f.a)*f.r;f.z=f.cz+Math.sin(f.a)*f.
 if(f.k=='g'){f.o.position.set(f.x,f.y+Math.sin(t+f.cx)*2,f.z);f.wl.rotation.z=Math.sin(t*8+f.cx)*.5;f.wr.rotation.z=-f.wl.rotation.z}
 else{f.o.position.set(f.x,wy(f.x,f.z,t)*.8+.8,f.z);if(Math.random()<.1)puff(f.x,f.o.position.y-.6,f.z,0xffffff,1.2);
 if(!cv&&!over&&Math.hypot(P.x-f.x,P.z-f.z)<6&&hAt(P.x,P.z)<-1.2){hurtP(dt*10);msg='Un tauró et mossega!';msgT=1}}});
+V.forEach(v=>{if(v.destroyed)return;const frac=1-(v.life/(v.maxLife||1));if(frac>.08){v.smokeT=(v.smokeT||0)-dt;if(v.smokeT<=0){const y=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));puff(v.x+rn(-.6,.6),y+1.8,v.z+rn(-.6,.6),frac>.65?0x303030:0x676767,1+frac*2.4);v.smokeT=Math.max(.12,1.05-frac*.9)}}});
 if(cv){const c=VT[cv.t],sp=Math.abs(cv.v),s=Math.sin(cv.hd),co=Math.cos(cv.hd),L=c.m=='l'?2.5:5,gy=Math.max(0,hAt(cv.x,cv.z));
 if(sp>6&&(c.m=='w'||c.m=='wl')){const sd=Math.random()<.5?-1:1;puff(cv.x+s*L+co*sd*1.6,cv.o.position.y+.2,cv.z+co*L-s*sd*1.6,0xffffff,1.6)}
 else if(sp>12&&c.m=='l')puff(cv.x+s*L,gy+.3,cv.z+co*L,0xc9b48a,1.4);
@@ -349,7 +374,7 @@ const barbedHQ=(cx,cz,hw=50,hd=46,gap=13)=>{
   compoundClear.push({x:cx,z:cz,r:Math.hypot(hw,hd)*1.02});
 };
 // construir món
-function build(){joystick.reset();compoundClear=[];terrainLevels=[];if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}world=new THREE.Group();scene.add(world);B=[];stairs=[];swimming=false;intelMarks=[];riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};waypoint=null;E=[];Pj=[];DB.length=0;WA.length=0;TG.clear();bombs=[];fx=[];logb=[];hp=100;ammo=24;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
+function build(){joystick.reset();compoundClear=[];terrainLevels=[];if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}world=new THREE.Group();scene.add(world);B=[];stairs=[];swimming=false;intelMarks=[];playerEject=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};waypoint=null;E=[];Pj=[];DB.length=0;WA.length=0;TG.clear();bombs=[];fx=[];logb=[];hp=100;ammo=24;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
 {const base=requestedSeed==null?Math.floor(Math.random()*0xffffffff)>>>0:requestedSeed>>>0;let tries=0;do{seed=(base+Math.imul(tries++,0x9e3779b1))>>>0;genIslands();pa=land(A,2000);pb=land(Bi,2000)}while((!pa||!pb)&&tries<8);if(!pa||!pb)throw new Error('No s’ha pogut generar un mapa vàlid amb aquesta llavor')}
 addLevelArea(pa.x,pa.z,82,72,pa.h,0,18);[[-27,0],[27,-12],[0,31]].forEach(([dx,dz])=>mkB(pa.x+dx,pa.z+dz,15,15,7,0xe9dfc8,0x2c5fc0));flag(pa.x,pa.z-7,0x2c7bff);
 addLevelArea(pb.x,pb.z,118,106,pb.h,0,22);mkB(pb.x,pb.z,30,30,13,0x6b5a55,0x8c1f1f);mkB(pb.x+38,pb.z+10,12,12,6,0x8a7a70,0x8c1f1f);mkB(pb.x-38,pb.z-8,12,12,6,0x8a7a70,0x8c1f1f);flag(pb.x,pb.z+19,0xe02828);barbedHQ(pb.x,pb.z,58,52,17);
@@ -458,7 +483,7 @@ rb.slice().sort(()=>R()-.5).slice(0,2).forEach(b=>addIt('mapa',b));
 rb.slice().sort(()=>R()-.5).slice(0,1+MAP_SCALE).forEach(b=>addIt('mapa_heli',b));
 rb.slice().sort(()=>R()-.5).slice(0,1+MAP_SCALE).forEach(b=>addIt('mapa_tanc',b));
 P.x=pa.x;P.z=pa.z+8;P.hd=0;P.base={x:pa.x,z:pa.z};V=[];cv=null;mm=null;
-const add=(t,x,z,a,meta={})=>{const o=mkV(t);world.add(o);V.push({t,x,z,hd:a||0,v:0,alt:Math.max(0,hAt(x,z))+.8,o,...meta})};
+const add=(t,x,z,a,meta={})=>{const o=mkV(t),c=VT[t],v={t,x,z,hd:a||0,v:0,alt:Math.max(0,hAt(x,z))+.8,o,armor:c.armor??0,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};if(t==='heli_combat')v.rockets=6;if(t==='llanxa_coets')v.rockets=5;world.add(o);V.push(v);return v};
 const addProtectedMilitary=()=>{
   const spots=[
     {t:'tanc',x:pb.x-24,z:pb.z+30,hd:Math.PI},
@@ -479,8 +504,8 @@ compoundVehicles.forEach(v=>{if(v.t==='llanxa'||v.t==='hover'){if(hAt(v.x,v.z)<-
 });
 const protectedVehicleSpot=t=>{const r=vehicleRadius(t),ok=(x,z)=>hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3);for(let k=0;k<240;k++){const a=rr(0,Math.PI*2),d=rr(30,58),x=pb.x+Math.cos(a)*d,z=pb.z+Math.sin(a)*d;if(ok(x,z))return{x,z,hd:a+Math.PI}}for(const d of[42,50,60,70])for(let k=0;k<24;k++){const a=k*Math.PI/12,x=pb.x+Math.cos(a)*d,z=pb.z+Math.sin(a)*d;if(ok(x,z))return{x,z,hd:a+Math.PI}}return null};
 const waterVehicleSpot=t=>{const r=vehicleRadius(t);for(const i of islands){const q=findPortSite(i,8);if(!q||!q.portBest)continue;const a=q.portBest.aa,px=-Math.sin(a),pz=Math.cos(a),x=q.portBest.x+px*(r+3),z=q.portBest.z+pz*(r+3);if(hAt(x,z)<-2&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3))return{x,z,hd:q.portBest.hd}}return null};
-const ensureVehicleType=t=>{if(t==='heli'?V.some(v=>v.t==='heli'&&!v.heliport):V.some(v=>v.t===t))return;let q=null;if(t==='llanxa'||t==='hover')q=waterVehicleSpot(t);else if(t==='tanc'||t==='heli'||t==='camio')q=protectedVehicleSpot(t);else{const p=near(120,t);q={x:p[0],z:p[1],hd:rr(0,Math.PI*2)}}if(q)add(t,q.x,q.z,q.hd)};
-['llanxa','hover','cotxe','moto','bici','camio','tanc','heli'].forEach(ensureVehicleType);
+const ensureVehicleType=t=>{if(t==='heli'?V.some(v=>v.t==='heli'&&!v.heliport):V.some(v=>v.t===t))return;let q=null,c=VT[t];if(c.m==='w'||c.m==='wl')q=waterVehicleSpot(t);else if(['tanc','tanqueta','heli','heli_combat','camio'].includes(t))q=protectedVehicleSpot(t);else{const p=near(120,t);q={x:p[0],z:p[1],hd:rr(0,Math.PI*2)}}if(q)add(t,q.x,q.z,q.hd)};
+['llanxa','llanxa_coets','barca_rems','windsurf','hover','cotxe','moto','bici','camio','tanqueta','tanc','heli','heli_combat'].forEach(ensureVehicleType);
 const ensureVehicleCount=(t,min)=>{let guard=0;while(V.filter(v=>v.t===t).length<min&&guard++<8){const q=(t==='tanc'||t==='heli'||t==='camio')?protectedVehicleSpot(t):null;if(!q)break;add(t,q.x,q.z,q.hd,{military:true,guaranteed:true})}};
 ensureVehicleCount('tanc',2);
 islands.forEach(i=>{if(i!==A&&R()<.65){const t=['cotxe','moto','bici'][Math.floor(R()*3)];for(let tries=0;tries<12;tries++){const q=land(i,80);if(q&&clearVehicle(t,q.x,q.z)){add(t,q.x,q.z,rr(0,6.28));break}}}});
@@ -496,9 +521,9 @@ const mini=()=>minimap.draw();
 // control
 let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0;
 const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joystick')),clearKeys=()=>{Object.keys(K).forEach(k=>K[k]=0);joystick.reset();document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))};
-const act=c=>{if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(!started||paused||over)return;if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory')}if(c==='KeyG')plant();if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
+const act=c=>{if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(!started||paused||over)return;if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory')}if(c==='KeyG'){if(!secondaryWeapon())plant();}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
 const nearV=()=>{let b=null,bd=Infinity;V.forEach(v=>{const d=Math.hypot(v.x-P.x,v.z-P.z);if(d<vehicleRadius(v.t)+5&&d<bd){bd=d;b=v}});return b};
-function toggle(){if(cv){if(cv.t==='heli'&&cv.alt-Math.max(0,hAt(cv.x,cv.z))>4){msg='Aterra abans de baixar: J o BAIXA.';msgT=3;return}let spot=null;for(let i=0;i<16;i++){const a=cv.hd+i*Math.PI/8,x=cv.x+Math.cos(a)*(vehicleRadius(cv.t)+2.2),z=cv.z+Math.sin(a)*(vehicleRadius(cv.t)+2.2);if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||Wl.some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;spot={x,z};if(hAt(x,z)>0)break}if(!spot){msg='No hi ha espai per baixar aquí.';msgT=3;return}P.x=spot.x;P.z=spot.z;P.hd=cv.hd;cv.v=0;cv=null}else{const v=nearV();if(v){cv=v;swimming=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
+function toggle(){if(cv){if(VT[cv.t].m==='a'&&cv.alt-Math.max(0,hAt(cv.x,cv.z))>4){msg='Aterra abans de baixar: J o BAIXA.';msgT=3;return}let spot=null;for(let i=0;i<16;i++){const a=cv.hd+i*Math.PI/8,x=cv.x+Math.cos(a)*(vehicleRadius(cv.t)+2.2),z=cv.z+Math.sin(a)*(vehicleRadius(cv.t)+2.2);if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||Wl.some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;spot={x,z};if(hAt(x,z)>0)break}if(!spot){msg='No hi ha espai per baixar aquí.';msgT=3;return}P.x=spot.x;P.z=spot.z;P.hd=cv.hd;cv.v=0;cv=null}else{const v=nearV();if(v){cv=v;swimming=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
 addEventListener('keydown',e=>{if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(e.repeat)return;act(e.code);if(started&&!paused&&!over)K[e.code]=1});addEventListener('keyup',e=>K[e.code]=0);
 for(const b of document.querySelectorAll('[data-k]')){const c=b.dataset.k;b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);act(c);if(started&&!paused&&!over){K[c]=1;b.classList.add('held')}});for(const v of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(v,()=>{K[c]=0;b.classList.remove('held')})}
 addEventListener('blur',()=>{clearKeys();if(started&&!paused&&!over)panel('pause')});document.addEventListener('visibilitychange',()=>{if(document.hidden&&started&&!over)panel('pause')});
@@ -547,7 +572,7 @@ const speedSteer=a?1:Math.max(-1,Math.min(1,v.v/10));v.hd+=tr*dt*c.tu*speedSteer
 const nx=v.x-Math.sin(v.hd)*v.v*dt,nz=v.z-Math.cos(v.hd)*v.v*dt,h=hAt(nx,nz),g=Math.max(0,h);let ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;
 if(c.m=='w')ok=ok&&h<-1.2;if(c.m=='l')ok=ok&&h>-1.2;if(ok&&((c.m=='l'&&v.t!='tanc')||c.m=='wl')&&treeHit(nx,nz,radius*.6))ok=false;if(ok&&a&&v.alt-g<8&&treeHit(nx,nz,radius))ok=false;
 if(!a||v.alt-g<16){for(const w of Wl)if(!w.open&&w.playerBlock!==false&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){ok=false;break}}
-if(ok){v.x=nx;v.z=nz;if(v.t=='tanc')crush(nx,nz,3.2*VS.tanc)}else v.v*=Math.exp(-14*dt);
+if(ok){v.x=nx;v.z=nz;if(v.t=='tanc'||v.t=='tanqueta')crush(nx,nz,(v.t=='tanc'?3.2:2.4)*VS[v.t])}else v.v*=Math.exp(-14*dt);
 if(a){const g2=Math.max(0,hAt(v.x,v.z));v.alt=Math.max(g2+.8,Math.min(150,v.alt+ud*28*dt))}}
 function place(v,t,dt,tr){const c=VT[v.t],o=v.o,g=hAt(v.x,v.z);let y,pi=0,ro=Math.sin(t*2+v.x)*.02;
 if(c.m=='a'){y=v.alt;pi=-v.v*.008;ro=-tr*.25*Math.min(1,Math.abs(v.v)/20)}
@@ -559,7 +584,7 @@ v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.r
 function update(dt,t){if(!started||paused||over){if(eng)eng.g.gain.value=0;return}elapsed+=dt;const jf=-joystick.state.y,jtr=-joystick.state.x,f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),
 ud=(K.KeyU||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),lim=H-2;
 if(cv){stepV(cv,f,tr,ud,dt);P.x=cv.x;P.z=cv.z;P.hd=cv.hd}
-else{P.hd+=tr*dt*2.2;const s=(swimming?5:12)*f*dt;P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*s));P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*s));
+else{P.hd+=tr*dt*2.2;if(playerEject&&playerEject.t>0){P.x=Math.max(-lim,Math.min(lim,P.x+playerEject.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerEject.vz*dt));playerEject.vx*=Math.exp(-2.4*dt);playerEject.vz*=Math.exp(-2.4*dt);playerEject.t-=dt}else{const s=(swimming?5:12)*f*dt;P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*s));P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*s))}
 wallPush();treePush()}
 ib=cv?null:B.find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2)||null;
 const floor=ib?ib.fy+.3:groundAt(P.x,P.z),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&floor<surface-2.1;P.y=ib?floor:Math.max(floor,surface-2.1);
