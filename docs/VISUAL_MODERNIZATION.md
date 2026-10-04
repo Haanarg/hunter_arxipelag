@@ -718,3 +718,14 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Les baules metàl·liques recorren tant els trams rectes superior/inferior com els arcs frontal i posterior.
 - Les rodes de rodament internes continuen visibles i mantenen el contracte d'animació de rodes existent.
 - El resultat busca una lectura més pròxima a una eruga real, prenent com a referència visual el contorn arrodonit aportat per l'usuari.
+
+
+## Animació diferencial de les erugues del tanc — 2026-10-04
+- Les baules de cada eruga ja no són estàtiques: circulen contínuament al voltant del contorn arrodonit de l'eruga.
+- En avançar, la part superior de les erugues es desplaça visualment cap enrere respecte al tanc.
+- En retrocedir, el sentit de l'animació s'inverteix.
+- Cada costat té una fase independent.
+- En gir pivotant, una eruga circula cap endavant i l'altra cap enrere segons el sentit del gir.
+- En girs mentre el tanc avança, la velocitat visual de cada eruga es diferencia segons la taxa de gir, de manera coherent amb una transmissió diferencial.
+- Les rodes de rodament del tanc també reben velocitat específica per costat i giren de manera coherent amb l'eruga corresponent.
+- `tests/smoke.cjs` comprova ara que existeixin dues erugues animades, que avancin/reculin amb el sentit correcte i que contrarotin durant un gir pivotant.
