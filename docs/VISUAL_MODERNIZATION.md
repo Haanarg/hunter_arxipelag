@@ -349,3 +349,15 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - Ports garantits i molls independents escalen moderadament amb la mida del mapa.
 - El sistema d'aigua cobreix la mida màxima de 9,6 km i el terreny/bordes utilitzen la mida activa.
 - El minimapa i la carta de navegació actualitzen escala, coordenades i etiqueta de mida dinàmicament.
+
+
+## HUD simplificat i inventari — 2026-10-04
+- La pantalla principal deixa només dos botons tàctils: Dispar i Acció.
+- El botó Acció entra/surt de vehicles quan n'hi ha un de contextual i, en cas contrari, obre l'inventari.
+- Afegida tecla I per obrir l'inventari amb teclat.
+- Farmacioles, explosius, disfressa i mapa es gestionen des d'un inventari en graella amb panell de detall i accions Usa/Deixa.
+- Les farmacioles ja no es consumeixen automàticament en recollir-les; queden guardades fins que el jugador les usa.
+- Els explosius es planten des de l'inventari i es valida que el jugador no sigui dins d'un vehicle ni nedant.
+- La disfressa es pot activar/desactivar des de l'inventari i el mapa obre directament la carta de navegació.
+- El HUD textual s'ha simplificat a vida, munició, baixes, estat, missatges contextuals, llavor i coordenades.
+- El menú de pausa inclou accés directe a l'inventari.
