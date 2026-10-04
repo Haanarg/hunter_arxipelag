@@ -559,3 +559,14 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - El jugador es mostra sobre la moto aquàtica amb postura inclinada endavant, mans al manillar i peus recolzats als laterals.
 - La moto aquàtica forma part de la distribució de vehicles dels ports.
 - També s’inclou en el sistema de garantia de tipus de vehicle aquàtic perquè pugui aparèixer encara que la selecció aleatòria dels ports no la triï.
+
+
+## HUD, inèrcia i baixada en marxa — 2026-10-04
+- La icona de pistola del HUD i del control de dispar s’ha substituït per un punt de mira (🎯).
+- El botó d’acció ja no mostra la lletra E: ara mostra una mà (✋), mantenint KeyE com a control de teclat.
+- Els vehicles conserven la seva velocitat quan el jugador en baixa; ja no es força `v=0`.
+- Els vehicles sense conductor amb velocitat residual continuen simulant la física i avancen fins perdre inèrcia segons el drag propi de cada tipus.
+- Es pot baixar d’un vehicle en marxa; els helicòpters mantenen la restricció d’haver d’estar pràcticament aterrats.
+- Si la velocitat és superior a un llindar mínim, el jugador hereta part de la velocitat del vehicle, rep una mica de dany proporcional a la velocitat i fa una voltereta visual.
+- La baixada en marxa afegeix un petit impuls lateral per separar el jugador de la trajectòria immediata del vehicle.
+- Les explosions de vehicles reutilitzen ara la mateixa animació de voltereta per al conductor expulsat.
