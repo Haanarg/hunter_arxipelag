@@ -695,23 +695,57 @@ function handleVehicleImpacts(v,dt){
   if(t.p&&t.alive){killPalm(t);damageVehicle(v,Math.min(18,5+speed*.55),speed>18?2:1);if(v.destroyed)return;v.v*=.9;v.bump=.18;v.envCd=.28;msg='Has tombat una palmera.';msgT=1;return}
   if(t.rock){damageVehicle(v,Math.min(14,4+speed*.45),1);vehicleImpactFx(t.x,Math.max(0,hAt(t.x,t.z))+.8,t.z);if(v.destroyed)return;v.v*=.8;v.bump=.22;v.hd+=rn(-.045,.045);v.envCd=.32;msg='Impacte amb roca!';msgT=1}
 }
-function stepV(v,f,tr,ud,dt){const c=VT[v.t],a=c.m=='a',radius=vehicleRadius(v.t),input=window.HUNTER_VEHICLE_DYNAMICS.inputs(v,f,tr,dt);f=input.forward;tr=input.turn;v.v+=f*c.a*dt;v.v*=Math.max(0,1-c.dr*c.coast*dt);
-const speedSteer=a?1:Math.max(-1,Math.min(1,v.v/10));v.hd+=tr*dt*c.tu*speedSteer;
-const nx=v.x-Math.sin(v.hd)*v.v*dt,nz=v.z-Math.cos(v.hd)*v.v*dt,raw=hAt(nx,nz),h=c.m==='l'?groundAt(nx,nz):raw,g=Math.max(0,h);let ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;
-if(c.m=='w')ok=ok&&raw<-1.2;if(c.m=='l')ok=ok&&h>-1.2;if(ok&&a&&v.alt-g<8&&treeHit(nx,nz,radius))ok=false;
+function stepV(v,f,tr,ud,dt){
+const c=VT[v.t],a=c.m==='a',water=c.m==='w'||c.m==='wl',land=c.m==='l',radius=vehicleRadius(v.t),input=window.HUNTER_VEHICLE_DYNAMICS.inputs(v,f,tr,dt);f=input.forward;tr=input.turn;
+v.v+=f*c.a*dt;
+const dragBase=c.dr*(water?1.08:land?.86:1),coastBoost=Math.abs(f)<.03?(water?1.18:land?1.04:.82):1;
+v.v*=Math.max(0,1-dragBase*coastBoost*dt);
+v.v=Math.max(-(c.maxR||12),Math.min(c.maxF||40,v.v));
+
+let steerScale=1;
+if(land){const speed=Math.abs(v.v),fade=c.steerFade??.4;steerScale=(.35+.65*Math.min(1,speed/9))*(1-fade*Math.min(1,speed/(c.maxF||35))*.55)}
+else if(water){const speed=Math.abs(v.v),min=c.waterSteerMin??.2;steerScale=min+(1-min)*Math.min(1,speed/10)}
+const targetYaw=tr*c.tu*steerScale*(a?1:(v.v<0?-1:1));
+v.yawRate=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.yawRate||0,targetYaw,c.yawResponse||4,dt);
+v.hd+=v.yawRate*dt;
+
+let sideV=0;
+if(water){
+  const drift=(c.waterDrift||0)*v.v*v.yawRate;
+  v.sideV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.sideV||0,drift,2.2,dt);
+  sideV=v.sideV;
+}else if(land){
+  const grip=c.landGrip??.9,slip=(1-grip)*v.v*v.yawRate*.42;
+  v.sideV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.sideV||0,slip,5+grip*5,dt);
+  sideV=v.sideV;
+}else v.sideV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.sideV||0,0,4,dt);
+
+const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),sx=Math.cos(v.hd),sz=-Math.sin(v.hd);
+const nx=v.x+(fx*v.v+sx*sideV)*dt,nz=v.z+(fz*v.v+sz*sideV)*dt,raw=hAt(nx,nz),h=land?groundAt(nx,nz):raw,g=Math.max(0,h);let ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;
+if(c.m==='w')ok=ok&&raw<-1.2;if(c.m==='l')ok=ok&&h>-1.2;if(ok&&a&&v.alt-g<8&&treeHit(nx,nz,radius))ok=false;
 if(!a||v.alt-g<16){for(const w of Wl)if(!w.open&&w.playerBlock!==false&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){
-  if(w.rammable&&c.m==='l'&&Math.abs(v.v)>3.5&&v.envCd<=0){const speed=Math.abs(v.v);dmgW(w,Math.max(8,speed*2.1));damageVehicle(v,Math.min(12,2+speed*.35),1);vehicleImpactFx(w.cx,Math.max(0,hAt(w.cx,w.cz))+1.1,w.cz);if(v.destroyed)return false;v.v*=.72;v.bump=.14;v.envCd=.22;if(!Wl.includes(w)){msg='Has obert pas a la filferrada.';msgT=1;continue}}
+  if(w.rammable&&land&&Math.abs(v.v)>3.5&&v.envCd<=0){const speed=Math.abs(v.v);dmgW(w,Math.max(8,speed*2.1));damageVehicle(v,Math.min(12,2+speed*.35),1);vehicleImpactFx(w.cx,Math.max(0,hAt(w.cx,w.cz))+1.1,w.cz);if(v.destroyed)return false;v.v*=.72;v.bump=.14;v.envCd=.22;if(!Wl.includes(w)){msg='Has obert pas a la filferrada.';msgT=1;continue}}
   ok=false;break
 }}
-if(ok){const test=vehicleBox(v,nx,nz,v.hd),hit=vehicleObstacles(v).find(o=>vehicleHeightCompatible(v,o)&&obbOverlap(test,vehicleBox(o)));if(hit){const rel=Math.abs(v.v-(hit.v||0));v.v*=rel>5?.28:.45;if('v'in hit)hit.v*=.55;if(rel>6){damageVehicle(v,Math.min(18,rel*.7),1);if(V.includes(hit))damageVehicle(hit,Math.min(18,rel*.55),1);vehicleImpactFx((v.x+hit.x)/2,Math.max(vehicleY(v),vehicleY(hit))+.5,(v.z+hit.z)/2)}v.bump=.14;v.envCd=.18;ok=false}}
-if(ok){v.x=nx;v.z=nz;handleVehicleImpacts(v,dt);if(v.destroyed)return false;if(v.t=='tanc'||v.t=='tanqueta')crush(nx,nz,(v.t=='tanc'?3.2:2.4)*VS[v.t])}else v.v*=Math.exp(-14*dt);
-if(a){const g2=Math.max(0,hAt(v.x,v.z));v.alt=Math.max(g2+.8,Math.min(150,v.alt+ud*28*dt))}return !v.destroyed}
+if(ok){const test=vehicleBox(v,nx,nz,v.hd),hit=vehicleObstacles(v).find(o=>vehicleHeightCompatible(v,o)&&obbOverlap(test,vehicleBox(o)));if(hit){const rel=Math.abs(v.v-(hit.v||0));const ownMass=c.mass||1,otherMass=VT[vehicleHitType(hit.t)]?.mass||1,ratio=Math.max(.35,Math.min(2.5,otherMass/ownMass));v.v*=rel>5?Math.max(.16,.42/ratio):Math.max(.3,.62/ratio);if('v'in hit)hit.v*=Math.max(.3,.72/Math.max(.5,ownMass/otherMass));if(rel>6){damageVehicle(v,Math.min(18,rel*.7*ratio),1);if(V.includes(hit))damageVehicle(hit,Math.min(18,rel*.55/ratio),1);vehicleImpactFx((v.x+hit.x)/2,Math.max(vehicleY(v),vehicleY(hit))+.5,(v.z+hit.z)/2)}v.bump=.14;v.envCd=.18;ok=false}}
+if(ok){v.x=nx;v.z=nz;handleVehicleImpacts(v,dt);if(v.destroyed)return false;if(v.t==='tanc'||v.t==='tanqueta')crush(nx,nz,(v.t==='tanc'?3.2:2.4)*VS[v.t])}else{v.v*=Math.exp(-12*dt);v.sideV*=Math.exp(-10*dt)}
+if(a){
+  const g2=Math.max(0,hAt(v.x,v.z)),targetVz=ud*(c.climb||24);
+  v.verticalV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.verticalV||0,targetVz,c.liftResponse||2.5,dt);
+  if(Math.abs(ud)<.01)v.verticalV*=Math.exp(-1.5*dt);
+  v.alt=Math.max(g2+.8,Math.min(150,v.alt+v.verticalV*dt));
+}
+return !v.destroyed}
 function place(v,t,dt,tr){const c=VT[v.t],o=v.o,g=hAt(v.x,v.z);let y,pi=0,ro=Math.sin(t*2+v.x)*.02;
-if(c.m=='a'){y=v.alt;pi=-v.v*.008;ro=-tr*.25*Math.min(1,Math.abs(v.v)/20);if(v.crashing){pi+=Math.sin(v.crashT*3)*.35;ro+=(v.crashSpin||1)*(.45+Math.min(.65,v.crashT*.12))}}
-else if(c.m=='w')y=wy(v.x,v.z,t)*.8+.2;
-else if(c.m=='wl')y=Math.max(g,wy(v.x,v.z,t)*.6)+.6;
-else{y=groundAt(v.x,v.z)+.05;const s=Math.sin(v.hd),k=Math.cos(v.hd);pi=Math.atan((groundAt(v.x-s*3,v.z-k*3)-groundAt(v.x+s*3,v.z+k*3))/6);ro=0}
-if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.rotation.set(pi,v.hd,ro+(c.m=='w'?-tr*.12:0));
+if(c.m==='a'){
+  y=v.alt;const speedN=Math.max(-1,Math.min(1,v.v/(c.maxF||35))),yawN=Math.max(-1,Math.min(1,(v.yawRate||0)/(c.tu||1)));
+  pi=-speedN*(c.pitch||.2);ro=-yawN*(c.bank||.32);
+  if(v.crashing){pi+=Math.sin(v.crashT*3)*.35;ro+=(v.crashSpin||1)*(.45+Math.min(.65,v.crashT*.12))}
+}
+else if(c.m==='w'){y=wy(v.x,v.z,t)*.8+.2;const speed=Math.min(1,Math.abs(v.v)/(c.maxF||30)),wave=Math.sin(t*2.4+v.x*.03+v.z*.025);pi=wave*.035*speed;ro=-(v.yawRate||0)*.11+wave*.025}
+else if(c.m==='wl'){y=Math.max(g,wy(v.x,v.z,t)*.6)+.6;ro=-(v.yawRate||0)*.08}
+else{y=groundAt(v.x,v.z)+.05;const s2=Math.sin(v.hd),k=Math.cos(v.hd);pi=Math.atan((groundAt(v.x-s2*3,v.z-k*3)-groundAt(v.x+s2*3,v.z+k*3))/6);ro=-(v.sideV||0)*.018}
+if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.rotation.set(pi,v.hd,ro);
 v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=v.pedalPhase;if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),row=Math.sin(v.pedalPhase)*.48*power,dip=.28+.18*(.5+.5*Math.cos(v.pedalPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*row;r.rotation.z=-side*dip;r.rotation.x=.04*Math.sin(v.pedalPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);(o.userData.wheels||[]).forEach(w=>w.rotation.x-=v.v*dt/(w.userData.radius||.6))}
 function update(dt,t){if(!started||paused||over){if(eng)eng.g.gain.value=0;return}elapsed+=dt;const jf=-joystick.state.y,jtr=-joystick.state.x,f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),
 ud=(K.KeyU||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),lim=H-2;
