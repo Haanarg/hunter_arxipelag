@@ -41,8 +41,13 @@ run('{const q=V.find(v=>v.t===\'tanc\');intelMarks.push({kind:\'tanc\',ref:q,lab
 ok('__destroyed.destroyed&&!V.includes(__destroyed)&&!intelMarks.some(m=>m.ref===__destroyed)','vehicle destruction clears active vehicle and intel marker');
 ok('pl.userData.ael&&pl.userData.aer&&pl.userData.lkl&&pl.userData.lkr','player elbows and knees exist');
 ok("fs.readFileSync('src/rider.js','utf8').includes(\"v.t==='bici'?-(v.pedalPhase||0)\")",'bicycle rider pedal phase is inverted');
+const riderSrc=fs.readFileSync('src/rider.js','utf8'),charSrc=fs.readFileSync('src/characters.js','utf8'),vehSrc=fs.readFileSync('src/vehicles.js','utf8');
+ok("charSrc.includes('SphereGeometry(.5,12,8)')&&charSrc.includes('glasses')&&charSrc.includes('capCrown')",'player has rounded head, cap and sunglasses');
+ok("riderSrc.includes('SphereGeometry(.44,12,8)')&&riderSrc.includes('capCrown')&&riderSrc.includes("v.t==='windsurf'")&&riderSrc.includes('Math.PI/2')",'open-vehicle rider has updated headgear and side-on windsurf stance');
+ok("vehSrc.includes('Barca oberta')&&vehSrc.includes('Suports dels rems sobre la regala')",'rowboat is open with gunwales, seats and raised oar supports');
+ok("html.includes(\"rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0)\")",'rowboat oar cycle is inverted');
 ok("html.includes(\"playerEject={kind:'vault'\")&&html.includes(\"playerEject?.kind==='vault'\")&&html.includes('profile=new THREE.Vector3')",'moving exit uses profile vault animation and camera');
 ok("html.includes(\"mirror=R()<.5?-1:1\")&&html.includes(\"ang=rr(0,Math.PI*2)\")",'compounds support full rotation and mirroring');
 run("panel('map');resume();joystick.state.x=1;joystick.state.y=-1;build();update(.016,20)");ok('joystick.state.x===0&&joystick.state.y===0&&hp===100','restart resets joystick and world');
 ok('PM.t.parent===world','vegetation attached to rebuilt world');
-console.log(JSON.stringify({passed:true,buildings:run('B.length'),vehicles:run('V.length'),checks:['startup','enemy models','stair geometry','4 door orientations','14 vehicles','vehicle hitboxes','land/water/air dynamics profiles','coastal water vehicles','tank track animation','OBB overlap','vehicle destruction cleanup','player joints','bicycle pedal direction','moving-exit vault camera','compound rotation/mirror','minimap','restart','joystick','vegetation'],seconds:(Date.now()-start)/1000}));
+console.log(JSON.stringify({passed:true,buildings:run('B.length'),vehicles:run('V.length'),checks:['startup','enemy models','stair geometry','4 door orientations','14 vehicles','vehicle hitboxes','land/water/air dynamics profiles','coastal water vehicles','tank track animation','OBB overlap','vehicle destruction cleanup','player joints','bicycle pedal direction','player headgear','windsurf stance','rowboat geometry/oars','moving-exit vault camera','compound rotation/mirror','minimap','restart','joystick','vegetation'],seconds:(Date.now()-start)/1000}));
