@@ -6,9 +6,14 @@ window.HUNTER_VEHICLE_DYNAMICS=Object.freeze({
     cotxe:Object.freeze({n:'Cotxe',m:'l',a:36,dr:.9,tu:1.9,cd:22,ch:8,response:5.2,steerResponse:6.2,coast:1}),
     moto:Object.freeze({n:'Moto',m:'l',a:42,dr:.9,tu:2.5,cd:18,ch:7,response:6.4,steerResponse:7.2,coast:1}),
     bici:Object.freeze({n:'Bicicleta',m:'l',a:14,dr:.8,tu:2.6,cd:14,ch:6,response:7.2,steerResponse:8,coast:1}),
+    barca_rems:Object.freeze({n:'Barca de rems',m:'w',a:8,dr:.95,tu:1.6,cd:8,ch:4,response:3.4,steerResponse:4,coast:.72}),
+    windsurf:Object.freeze({n:'Windsurf',m:'w',a:18,dr:.75,tu:2.1,cd:16,ch:5,response:4.5,steerResponse:5.5,coast:.9}),
     camio:Object.freeze({n:'Camió militar',m:'l',a:24,dr:.92,tu:1.35,cd:27,ch:9,response:3.1,steerResponse:3.4,coast:.96}),
+    tanqueta:Object.freeze({n:'Tanqueta blindada',m:'l',a:20,dr:.92,tu:1.45,cd:25,ch:10,response:2.8,steerResponse:3.1,coast:.98}),
+    llanxa_coets:Object.freeze({n:'Llanxa llançacoets',m:'w',a:27,dr:.82,tu:1.35,cd:31,ch:12,response:2.5,steerResponse:2.7,coast:.9}),
     tanc:Object.freeze({n:'Tanc',m:'l',a:16,dr:.9,tu:1.1,cd:26,ch:10,response:2.2,steerResponse:2.4,coast:1}),
-    heli:Object.freeze({n:'Helicòpter',m:'a',a:30,dr:.5,tu:1.6,cd:34,ch:12,response:2.8,steerResponse:3.2,coast:.94})
+    heli:Object.freeze({n:'Helicòpter',m:'a',a:30,dr:.5,tu:1.6,cd:34,ch:12,response:2.8,steerResponse:3.2,coast:.94}),
+    heli_combat:Object.freeze({n:'Helicòpter de combat',m:'a',a:28,dr:.52,tu:1.5,cd:36,ch:13,response:2.6,steerResponse:3,coast:.94})
   }),
   smooth(current,target,response,dt){return current+(target-current)*(1-Math.exp(-response*dt))},
   inputs(v,forward,turn,dt){
