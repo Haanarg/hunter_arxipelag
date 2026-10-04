@@ -27,7 +27,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     return g
   },
   createPlayer(THREE,{box,palette=window.HUNTER_PALETTE}){
-    const P=palette.player,player=new THREE.Group(),mats=[],J=(w,h,d,c,x,y,z,g,swap)=>{const m=box(g,w,h,d,c,x,y,z);if(swap)mats.push([m.material,c,swap]);return m},u=player.userData;u.ph=0;u.firePose=0;
+    const P=palette.player,player=new THREE.Group(),mats=[],J=(w,h,d,c,x,y,z,g,swap)=>{const m=box(g,w,h,d,c,x,y,z);if(swap)mats.push([m.material,c,swap]);return m},u=player.userData;u.ph=0;u.firePose=0;u.meleePose=0;
     const leg=x=>{const g=new THREE.Group();g.position.set(x,1.9,0);player.add(g);J(.46,1.9,.56,P.primary,0,-.95,0,g,window.HUNTER_PALETTE.enemy.primary);box(g,.54,.22,.58,P.dark,0,-1.15,0);box(g,.56,.4,.76,0x171a18,0,-1.75,-.1);return g};
     u.ll=leg(-.31);u.lr=leg(.31);
     J(1.32,1.7,.78,P.secondary,0,2.8,0,player,window.HUNTER_PALETTE.enemy.general);box(player,1.42,.28,.86,P.dark,0,1.98,0);
@@ -37,12 +37,14 @@ window.HUNTER_CHARACTERS=Object.freeze({
     box(player,.78,.95,.78,P.skin,0,4.1,0);box(player,.7,.2,.08,P.dark,0,4.15,-.41);
     J(.94,.5,.94,P.primary,0,4.6,0,player,window.HUNTER_PALETTE.enemy.secondary);box(player,1,.1,.78,P.dark,0,4.43,-.06);
     const gun=new THREE.Group();gun.position.set(0,-1.5,-.1);gun.rotation.x=-Math.PI/2;u.ar.add(gun);
-    box(gun,.2,.25,1.8,P.metal,0,0,-.2);box(gun,.2,.5,.25,P.dark,0,-.3,.1);box(gun,.22,.3,.6,0x6b4a2a,0,0,.9);u.gun=gun;u.mats=mats;player.scale.setScalar(2/3);
+    box(gun,.2,.25,1.8,P.metal,0,0,-.2);box(gun,.2,.5,.25,P.dark,0,-.3,.1);box(gun,.22,.3,.6,0x6b4a2a,0,0,.9);u.gun=gun;
+    const knife=new THREE.Group();knife.position.set(0,-1.5,-.08);knife.rotation.x=-Math.PI/2;u.ar.add(knife);box(knife,.09,.08,.75,0xc7ced0,0,0,-.28);box(knife,.18,.16,.28,0x4b3626,0,0,.25);knife.visible=false;u.knife=knife;
+    u.mats=mats;player.scale.setScalar(2/3);
     return player;
   },
   animatePlayer(player,{forward,dt,swimming,inVehicle,ammo}){
-    const u=player.userData,k=1-Math.exp(-14*dt);u.firePose=Math.max(0,(u.firePose||0)-dt);u.ph+=dt*(swimming?(forward?4:2.2):10*Math.abs(forward));const ph=u.ph;
-    if(swimming&&!inVehicle){const sweep=(1-Math.cos(ph))*.5;u.gun.visible=false;player.rotation.x+=(-.12-player.rotation.x)*k;u.ar.rotation.x+=(1.53-u.ar.rotation.x)*k;u.al.rotation.x+=(1.53-u.al.rotation.x)*k;u.ar.rotation.z+=((.12+sweep*1.1)-u.ar.rotation.z)*k;u.al.rotation.z+=((-.12-sweep*1.1)-u.al.rotation.z)*k;u.ll.rotation.x+=(.3+Math.sin(ph+.8)*.2-u.ll.rotation.x)*k;u.lr.rotation.x+=(.3+Math.sin(ph+.8)*.2-u.lr.rotation.x)*k;u.ll.rotation.z=-sweep*.25;u.lr.rotation.z=sweep*.25;return}
-    player.rotation.x+=(0-player.rotation.x)*k;u.ll.rotation.z*=1-k;u.lr.rotation.z*=1-k;const s=forward?Math.sin(ph)*.7:0,aiming=u.firePose>0&&!inVehicle;u.ll.rotation.x=s;u.lr.rotation.x=-s;u.gun.visible=ammo>0||aiming;u.ar.rotation.x+=((aiming?1.48:-s*.35)-u.ar.rotation.x)*k;u.al.rotation.x+=((aiming?1.3:s*.35)-u.al.rotation.x)*k;u.ar.rotation.z*=1-k;u.al.rotation.z+=((aiming?-.3:0)-u.al.rotation.z)*k;player.position.y+=Math.abs(Math.sin(ph))*.12*Math.abs(forward)
+    const u=player.userData,k=1-Math.exp(-14*dt);u.firePose=Math.max(0,(u.firePose||0)-dt);u.meleePose=Math.max(0,(u.meleePose||0)-dt);u.ph+=dt*(swimming?(forward?4:2.2):10*Math.abs(forward));const ph=u.ph;
+    if(swimming&&!inVehicle){const sweep=(1-Math.cos(ph))*.5;u.gun.visible=false;u.knife.visible=false;player.rotation.x+=(-.12-player.rotation.x)*k;u.ar.rotation.x+=(1.53-u.ar.rotation.x)*k;u.al.rotation.x+=(1.53-u.al.rotation.x)*k;u.ar.rotation.z+=((.12+sweep*1.1)-u.ar.rotation.z)*k;u.al.rotation.z+=((-.12-sweep*1.1)-u.al.rotation.z)*k;u.ll.rotation.x+=(.3+Math.sin(ph+.8)*.2-u.ll.rotation.x)*k;u.lr.rotation.x+=(.3+Math.sin(ph+.8)*.2-u.lr.rotation.x)*k;u.ll.rotation.z=-sweep*.25;u.lr.rotation.z=sweep*.25;return}
+    player.rotation.x+=(0-player.rotation.x)*k;u.ll.rotation.z*=1-k;u.lr.rotation.z*=1-k;const s=forward?Math.sin(ph)*.7:0,aiming=u.firePose>0&&!inVehicle,melee=u.meleePose>0&&!inVehicle;u.ll.rotation.x=s;u.lr.rotation.x=-s;u.gun.visible=!melee&&(ammo>0||aiming);u.knife.visible=melee;u.ar.rotation.x+=((melee?1.05:aiming?1.48:-s*.35)-u.ar.rotation.x)*k;u.al.rotation.x+=((aiming?1.3:s*.35)-u.al.rotation.x)*k;u.ar.rotation.z+=((melee?-.9:0)-u.ar.rotation.z)*k;u.al.rotation.z+=((aiming?-.3:0)-u.al.rotation.z)*k;player.position.y+=Math.abs(Math.sin(ph))*.12*Math.abs(forward)
   }
 });
