@@ -481,3 +481,13 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Afegida animació de remar sincronitzada amb la velocitat del vehicle: braços, tronc i rems comparteixen la mateixa fase.
 - El windsurf mostra el jugador dret amb postura específica subjectant la botavara.
 - Les llanxes mostren el jugador assegut en posició de pilotatge.
+
+
+## Col·lisions dinàmiques de vehicles — 2026-10-04
+- Corregida la roda de recanvi del cotxe: queda exclosa del conjunt de rodes animades i ja no gira mentre el vehicle avança.
+- Afegits atropellaments de soldats amb vehicles terrestres: el dany al soldat escala amb la velocitat de l’impacte i el vehicle rep també un impacte estructural.
+- Els atropellaments redueixen lleugerament la velocitat però no aturen en sec el vehicle.
+- Les palmeres deixen de funcionar com a murs per als vehicles: en xocar-hi, cauen amb l’animació existent i el vehicle rep dany proporcional a la velocitat.
+- Les roques provoquen dany estructural, espurnes, una petita desviació i un bump visual.
+- Els impactes contra roca redueixen moderadament la velocitat però permeten continuar avançant, sense bloqueig total.
+- Afegits cooldowns curts als impactes per evitar aplicar dany cada frame mentre el vehicle encara se solapa amb l’objectiu.
