@@ -2,13 +2,13 @@
 window.HUNTER_MINIMAP=Object.freeze({
   create({THREE,canvas,worldSize,halfSize,heightAt,colorAt,getState}){
     const ctx=canvas.getContext('2d'),size=canvas.width||170;
-    let background=null;
-    const px=v=>(v+halfSize)/worldSize*size;
+    let background=null,ws=worldSize,hs=halfSize;
+    const px=v=>(v+hs)/ws*size;
     function buildBackground(){
       background=document.createElement('canvas');background.width=background.height=size;
       const c=background.getContext('2d'),im=c.createImageData(size,size);
       for(let j=0;j<size;j++)for(let i=0;i<size;i++){
-        const h=heightAt((i/size-.5)*worldSize,(j/size-.5)*worldSize),k=colorAt(THREE,h);
+        const h=heightAt((i/size-.5)*ws,(j/size-.5)*ws),k=colorAt(THREE,h);
         im.data.set([k.r*255,k.g*255,k.b*255,255],(j*size+i)*4)
       }
       c.putImageData(im,0,0)
@@ -28,9 +28,9 @@ window.HUNTER_MINIMAP=Object.freeze({
     function drawFull(target,waypoint){
       draw();const c=target.getContext('2d');c.drawImage(canvas,0,0,target.width,target.height);
       c.strokeStyle='#fff';c.lineWidth=2;c.strokeRect(1,1,target.width-2,target.height-2);
-      c.fillStyle='#fff';c.font='13px system-ui';c.fillText('N',target.width/2-5,19);c.fillText('4,8 × 4,8 km',14,target.height-16);
-      if(waypoint){const x=(waypoint.x+halfSize)/worldSize*target.width,z=(waypoint.z+halfSize)/worldSize*target.height;c.strokeStyle='#ffdb8f';c.beginPath();c.arc(x,z,8,0,7);c.stroke()}
+      c.fillStyle='#fff';c.font='13px system-ui';c.fillText('N',target.width/2-5,19);c.fillText((ws/1000).toFixed(1).replace('.',',')+' × '+(ws/1000).toFixed(1).replace('.',',')+' km',14,target.height-16);
+      if(waypoint){const x=(waypoint.x+hs)/ws*target.width,z=(waypoint.z+hs)/ws*target.height;c.strokeStyle='#ffdb8f';c.beginPath();c.arc(x,z,8,0,7);c.stroke()}
     }
-    return Object.freeze({draw,drawFull,reset:()=>{background=null}})
+    return Object.freeze({draw,drawFull,reset:()=>{background=null},setWorldSize:(world,half)=>{ws=world;hs=half;background=null}})
   }
 });
