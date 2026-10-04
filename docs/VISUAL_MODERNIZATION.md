@@ -528,3 +528,12 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - El segon heliport prioritza un helicòpter de combat; hi ha un fallback dur que garanteix helicòpters normals i de combat en terreny vàlid lluny de l’HQ si la generació habitual falla.
 - Les tanquetes tenen garantia addicional de generació distribuïda i, a més, n’hi ha dues garantides al HQ.
 - Els reforços militars addicionals (tancs, camions, helicòpters, heli de combat i tanquetes) ja no es creen al voltant de la base enemiga, sinó distribuïts pel mapa.
+
+
+## Explosió i desmuntatge dels vehicles — 2026-10-04
+- Quan un vehicle arriba a 0 de vida, el seu model ja no desapareix de cop.
+- Abans d’eliminar el vehicle original, es clonen diverses peces reals del model i es converteixen en fragments físics independents.
+- Les peces surten disparades radialment, amb velocitat vertical, rotació als tres eixos, gravetat i rebot contra el terreny.
+- Els vehicles pesants (tanc, tanqueta i camió) generen més fragments que els vehicles lleugers; els helicòpters també generen un nombre elevat de peces.
+- S’afegeixen fragments metàl·lics addicionals, fum i l’explosió central existent per donar més lectura visual a la destrucció.
+- Les peces romanen visibles durant uns segons abans de desaparèixer progressivament.
