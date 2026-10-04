@@ -62,14 +62,37 @@ window.HUNTER_VEHICLES=Object.freeze({
         for(const x of[-.52,.52])box(g,.16,.13,.7,0xe9e7df,x,.36,.45,'paint');
       }
       if(t==='barca_rems'){const wood=0x9b7048,darkWood=0x6d4b32,inside=0xd7b27d;
-        const boatShape=new THREE.Shape();boatShape.moveTo(-1.05,-2.45);boatShape.lineTo(1.05,-2.45);boatShape.quadraticCurveTo(1.5,-1.2,1.42,.55);boatShape.quadraticCurveTo(1.28,2.15,0,2.72);boatShape.quadraticCurveTo(-1.28,2.15,-1.42,.55);boatShape.quadraticCurveTo(-1.5,-1.2,-1.05,-2.45);
-        const boatHull=new THREE.ExtrudeGeometry(boatShape,{depth:.72,bevelEnabled:false});boatHull.rotateX(-Math.PI/2);const shell=new THREE.Mesh(boatHull,material(wood,'organic'));shell.position.y=.22;g.add(shell);
-        const innerShape=new THREE.Shape();innerShape.moveTo(-.78,-2.05);innerShape.lineTo(.78,-2.05);innerShape.quadraticCurveTo(1.05,-.9,1,.45);innerShape.quadraticCurveTo(.9,1.65,0,2.08);innerShape.quadraticCurveTo(-.9,1.65,-1,.45);innerShape.quadraticCurveTo(-1.05,-.9,-.78,-2.05);
-        const innerGeom=new THREE.ExtrudeGeometry(innerShape,{depth:.12,bevelEnabled:false});innerGeom.rotateX(-Math.PI/2);const inner=new THREE.Mesh(innerGeom,material(inside,'organic'));inner.position.y=.7;g.add(inner);
-        for(const z of[-1.18,0,1.15])box(g,1.92,.14,.34,darkWood,0,.9,z,'organic');
-        const oars=new THREE.Group();oars.position.set(0,.9,-.05);g.add(oars);g.userData.oars=[];
-        for(const side of[-1,1]){const og=new THREE.Group();og.position.x=side*.88;oars.add(og);const len=3.05,shaft=box(og,2.2,.08,.08,darkWood,side*1.1,0,0,'organic');const blade=box(og,.85,.11,.34,darkWood,side*2.62,0,0,'organic');g.userData.oars.push(og)}
-        box(g,2.05,.2,.2,darkWood,0,.76,-2.35,'organic');box(g,1.45,.18,.18,darkWood,0,.8,2.35,'organic')
+        // Barca oberta: fons baix, costats/baranes i bancs, sense bloc massís.
+        const floorShape=new THREE.Shape();floorShape.moveTo(-.72,-2.15);floorShape.lineTo(.72,-2.15);floorShape.quadraticCurveTo(.98,-.8,.92,.5);floorShape.quadraticCurveTo(.82,1.65,0,2.15);floorShape.quadraticCurveTo(-.82,1.65,-.92,.5);floorShape.quadraticCurveTo(-.98,-.8,-.72,-2.15);
+        const floorGeom=new THREE.ExtrudeGeometry(floorShape,{depth:.16,bevelEnabled:false});floorGeom.rotateX(-Math.PI/2);const floor=new THREE.Mesh(floorGeom,material(inside,'organic'));floor.position.y=.18;g.add(floor);
+        // Quilla i laterals baixos.
+        box(g,.34,.28,4.45,wood,0,.28,-.02,'organic');
+        for(const side of[-1,1]){
+          rod(g,[side*.78,.3,-2.1],[side*1.02,.66,-1.1],.11,wood,'organic');
+          rod(g,[side*1.02,.66,-1.1],[side*1.08,.74,.45],.11,wood,'organic');
+          rod(g,[side*1.08,.74,.45],[side*.82,.66,1.7],.11,wood,'organic');
+          rod(g,[side*.82,.66,1.7],[0,.58,2.28],.11,wood,'organic');
+          // Regala/barana superior contínua.
+          rod(g,[side*.82,.82,-2.02],[side*1.15,1.02,-.85],.08,darkWood,'organic');
+          rod(g,[side*1.15,1.02,-.85],[side*1.18,1.04,.65],.08,darkWood,'organic');
+          rod(g,[side*1.18,1.04,.65],[side*.82,.88,1.8],.08,darkWood,'organic');
+        }
+        // Bancs de seient transversals.
+        for(const z of[-.95,.15,1.12])box(g,2.05,.14,.34,darkWood,0,.88,z,'organic');
+        // Suports dels rems sobre la regala.
+        for(const side of[-1,1]){
+          rod(g,[side*1.08,1.0,-.22],[side*1.34,1.16,-.22],.055,metal,'metal');
+          round(g,.08,.18,metal,side*1.34,1.16,-.22,'y','metal');
+        }
+        const oars=new THREE.Group();oars.position.set(0,1.16,-.22);g.add(oars);g.userData.oars=[];
+        for(const side of[-1,1]){
+          const og=new THREE.Group();og.position.x=side*1.34;oars.add(og);
+          // El mànec entra a la barca i la pala queda fora; el pivot coincideix amb la regala.
+          box(og,2.45,.075,.075,darkWood,side*1.18,0,0,'organic');
+          box(og,.88,.1,.34,darkWood,side*2.76,0,0,'organic');
+          g.userData.oars.push(og)
+        }
+        box(g,1.65,.16,.2,darkWood,0,.74,-2.18,'organic');box(g,1.28,.14,.18,darkWood,0,.72,2.18,'organic')
       }
       if(t==='windsurf'){box(g,.72,.18,4.8,0xf2e2b9,0,.18,0,'paint');rod(g,[0,.28,.25],[0,4.7,.25],.08,metal);const sail=new THREE.Mesh(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,4.55,.25),new THREE.Vector3(0,.8,.25),new THREE.Vector3(2.15,1.2,.25)]),new THREE.MeshBasicMaterial({color:0xe86d4b,side:THREE.DoubleSide}));const geom=new THREE.BufferGeometry();geom.setAttribute('position',new THREE.Float32BufferAttribute([0,4.55,.25,0,.8,.25,2.15,1.2,.25],3));geom.setIndex([0,1,2]);geom.computeVertexNormals();const sm=new THREE.Mesh(geom,material(0xe86d4b,'paint'));g.add(sm);rod(g,[0,2.4,.25],[1.65,1.7,.25],.05,metal)}
       if(t==='hover'){box(g,5,.85,8,rubber,0,.55,0,'rubber');for(const x of[-2.35,2.35])for(let z=-3.5;z<4;z+=.65)box(g,.2,.7,.48,0x394145,x,.5,z,'rubber');box(g,4.45,.85,6.7,0xcf9e4f,0,1.38,-.2,'paint');box(g,2.75,1.12,2.9,glass,0,2.2,-.92,'glass');box(g,2.98,.22,3.2,0xcda75f,0,2.82,-.92,'paint');for(const x of[-2.05,2.05])box(g,.18,.3,6.7,0xa97835,x,1.25,-.2,'paint');for(const x of[-1.1,1.1])box(g,.42,.22,.16,0xffe09a,x,1.45,-3.55,'paint');const duct=new THREE.Mesh(new THREE.TorusGeometry(1.55,.2,8,20),material(metal,'metal'));duct.position.set(0,2.9,3);g.add(duct);const fan=new THREE.Group();fan.position.copy(duct.position);for(let i=0;i<4;i++){const blade=box(fan,.2,2.8,.12,rubber,0,0,0,'rubber');blade.rotation.z=i*Math.PI/4}g.add(fan);g.userData.fan=fan;round(g,.28,.3,0x7b8588,0,2.9,3,'z','metal');for(const x of[-1.7,1.7]){box(g,.15,2.05,1,0xbe8c43,x,2.68,3.5,'paint');rod(g,[x,1.7,2.65],[x,3.65,3.2],.07,metal)}box(g,1.4,.18,.8,0x5b4939,0,1.88,1.45,'paint')}
