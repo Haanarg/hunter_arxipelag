@@ -11,7 +11,7 @@ window.HUNTER_RIDER=Object.freeze({
     const vec=(x,y,z)=>new THREE.Vector3(x,y,z);
     const update=(v,dt)=>{
       const open=!!v&&['bici','moto','moto_aquatica','llanxa','llanxa_coets','barca_rems','windsurf'].includes(v.t);g.visible=open;if(!open)return;
-      const u=g.userData,sc=scales[v.t],moving=Math.min(1,Math.abs(v.v)/1.8);u.motion+=(moving-u.motion)*(1-Math.exp(-12*dt));const motion=u.motion,phase=v.pedalPhase||0;
+      const u=g.userData,sc=scales[v.t],moving=Math.min(1,Math.abs(v.v)/1.8);u.motion+=(moving-u.motion)*(1-Math.exp(-12*dt));const motion=u.motion,phase=v.t==='bici'?-(v.pedalPhase||0):(v.pedalPhase||0);
       g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);torso.rotation.set(0,0,0);
 
       if(v.t==='bici'||v.t==='moto'){
