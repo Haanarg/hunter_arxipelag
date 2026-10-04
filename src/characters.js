@@ -39,12 +39,19 @@ window.HUNTER_CHARACTERS=Object.freeze({
     const gun=new THREE.Group();gun.position.set(0,-1.5,-.1);gun.rotation.x=-Math.PI/2;u.ar.add(gun);
     box(gun,.2,.25,1.8,P.metal,0,0,-.2);box(gun,.2,.5,.25,P.dark,0,-.3,.1);box(gun,.22,.3,.6,0x6b4a2a,0,0,.9);u.gun=gun;
     const knife=new THREE.Group();knife.position.set(0,-1.5,-.08);knife.rotation.x=-Math.PI/2;u.ar.add(knife);box(knife,.09,.08,.75,0xc7ced0,0,0,-.28);box(knife,.18,.16,.28,0x4b3626,0,0,.25);knife.visible=false;u.knife=knife;
+    const bazooka=new THREE.Group();bazooka.position.set(.62,3.48,-.5);player.add(bazooka);
+    const bazMat=new THREE.MeshStandardMaterial({color:0x58664a,roughness:.78,metalness:.08}),bazDark=new THREE.MeshStandardMaterial({color:0x252b27,roughness:.68,metalness:.25}),bazMetal=new THREE.MeshStandardMaterial({color:0x707873,roughness:.5,metalness:.42});
+    const tube=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,2.9,10),bazMat);tube.rotation.x=Math.PI/2;tube.position.z=-.12;bazooka.add(tube);
+    const rear=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.16,10),bazDark);rear.rotation.x=Math.PI/2;rear.position.z=1.34;bazooka.add(rear);
+    const muzzle=new THREE.Mesh(new THREE.CylinderGeometry(.3,.24,.24,10),bazDark);muzzle.rotation.x=Math.PI/2;muzzle.position.z=-1.52;bazooka.add(muzzle);
+    box(bazooka,.18,.35,.38,0x252b27,0,-.3,.25);box(bazooka,.12,.18,.42,0x707873,-.12,.26,-.48);box(bazooka,.16,.12,.5,0x707873,.18,.22,.28);
+    bazooka.rotation.x=-.08;bazooka.visible=false;u.bazooka=bazooka;
     u.mats=mats;player.scale.setScalar(2/3);
     return player;
   },
-  animatePlayer(player,{forward,dt,swimming,inVehicle,ammo}){
+  animatePlayer(player,{forward,dt,swimming,inVehicle,ammo,bazookaEquipped=false}){
     const u=player.userData,k=1-Math.exp(-14*dt);u.firePose=Math.max(0,(u.firePose||0)-dt);u.meleePose=Math.max(0,(u.meleePose||0)-dt);u.ph+=dt*(swimming?(forward?4:2.2):10*Math.abs(forward));const ph=u.ph;
-    if(swimming&&!inVehicle){const sweep=(1-Math.cos(ph))*.5;u.gun.visible=false;u.knife.visible=false;player.rotation.x+=(-.12-player.rotation.x)*k;u.ar.rotation.x+=(1.53-u.ar.rotation.x)*k;u.al.rotation.x+=(1.53-u.al.rotation.x)*k;u.ar.rotation.z+=((.12+sweep*1.1)-u.ar.rotation.z)*k;u.al.rotation.z+=((-.12-sweep*1.1)-u.al.rotation.z)*k;u.ll.rotation.x+=(.3+Math.sin(ph+.8)*.2-u.ll.rotation.x)*k;u.lr.rotation.x+=(.3+Math.sin(ph+.8)*.2-u.lr.rotation.x)*k;u.ll.rotation.z=-sweep*.25;u.lr.rotation.z=sweep*.25;return}
-    player.rotation.x+=(0-player.rotation.x)*k;u.ll.rotation.z*=1-k;u.lr.rotation.z*=1-k;const s=forward?Math.sin(ph)*.7:0,aiming=u.firePose>0&&!inVehicle,melee=u.meleePose>0&&!inVehicle;u.ll.rotation.x=s;u.lr.rotation.x=-s;u.gun.visible=!melee&&(ammo>0||aiming);u.knife.visible=melee;u.ar.rotation.x+=((melee?1.05:aiming?1.48:-s*.35)-u.ar.rotation.x)*k;u.al.rotation.x+=((aiming?1.3:s*.35)-u.al.rotation.x)*k;u.ar.rotation.z+=((melee?-.9:0)-u.ar.rotation.z)*k;u.al.rotation.z+=((aiming?-.3:0)-u.al.rotation.z)*k;player.position.y+=Math.abs(Math.sin(ph))*.12*Math.abs(forward)
+    if(swimming&&!inVehicle){const sweep=(1-Math.cos(ph))*.5;u.gun.visible=false;u.knife.visible=false;u.bazooka.visible=false;player.rotation.x+=(-.12-player.rotation.x)*k;u.ar.rotation.x+=(1.53-u.ar.rotation.x)*k;u.al.rotation.x+=(1.53-u.al.rotation.x)*k;u.ar.rotation.z+=((.12+sweep*1.1)-u.ar.rotation.z)*k;u.al.rotation.z+=((-.12-sweep*1.1)-u.al.rotation.z)*k;u.ll.rotation.x+=(.3+Math.sin(ph+.8)*.2-u.ll.rotation.x)*k;u.lr.rotation.x+=(.3+Math.sin(ph+.8)*.2-u.lr.rotation.x)*k;u.ll.rotation.z=-sweep*.25;u.lr.rotation.z=sweep*.25;return}
+    player.rotation.x+=(0-player.rotation.x)*k;u.ll.rotation.z*=1-k;u.lr.rotation.z*=1-k;const s=forward?Math.sin(ph)*.7:0,aiming=u.firePose>0&&!inVehicle,melee=u.meleePose>0&&!inVehicle,bazooka=!!bazookaEquipped&&!inVehicle;u.ll.rotation.x=s;u.lr.rotation.x=-s;u.bazooka.visible=bazooka;u.gun.visible=!bazooka&&!melee&&(ammo>0||aiming);u.knife.visible=!bazooka&&melee;u.ar.rotation.x+=((bazooka?1.34:melee?1.05:aiming?1.48:-s*.35)-u.ar.rotation.x)*k;u.al.rotation.x+=((bazooka?1.18:aiming?1.3:s*.35)-u.al.rotation.x)*k;u.ar.rotation.z+=((bazooka?-.22:melee?-.9:0)-u.ar.rotation.z)*k;u.al.rotation.z+=((bazooka?.28:aiming?-.3:0)-u.al.rotation.z)*k;player.position.y+=Math.abs(Math.sin(ph))*.12*Math.abs(forward)
   }
 });
