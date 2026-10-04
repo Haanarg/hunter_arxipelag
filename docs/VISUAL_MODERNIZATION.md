@@ -537,3 +537,15 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Els vehicles pesants (tanc, tanqueta i camió) generen més fragments que els vehicles lleugers; els helicòpters també generen un nombre elevat de peces.
 - S’afegeixen fragments metàl·lics addicionals, fum i l’explosió central existent per donar més lectura visual a la destrucció.
 - Les peces romanen visibles durant uns segons abans de desaparèixer progressivament.
+
+
+## Animacions de baixes i redisseny de vehicles — 2026-10-04
+- Els soldats enemics ja no desapareixen en morir: surten de la lògica activa, fan una animació de caiguda lateral amb braços i cames relaxats i queden estesos a terra durant uns segons.
+- Les torres enemigues es desmunten en peces quan són destruïdes; cada element surt projectat amb rotació, gravetat, rebot, fum i explosió.
+- La tanqueta deixa d’utilitzar erugues: ara té 6 rodes de vehicle, tres a cada costat, amb una carrosseria de blindat lleuger.
+- Simplificat el model de la llanxa bàsica eliminant baranes i detalls sobrants; manté una silueta clara de llanxa oberta.
+- L’helicòpter bàsic s’ha redissenyat amb silueta inspirada en un UH-1 Huey: cabina ampla, fuselatge simple, patins i cua llarga.
+- L’helicòpter de combat s’ha redissenyat amb silueta inspirada en un AH-64 Apache: fuselatge més estret, cabina en tàndem, ales curtes amb armament i canó frontal.
+- Els rems de la barca són ara peces rígides alineades: mànec, canya i pala comparteixen exactament el mateix eix.
+- Durant la palada, els rems basculen cap avall perquè la pala entri visualment dins l’aigua.
+- La postura de les mans del remer s’ha ajustat per seguir millor el punt interior dels rems durant el cicle.
