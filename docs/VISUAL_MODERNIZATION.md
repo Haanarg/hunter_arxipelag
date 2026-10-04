@@ -663,3 +663,18 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Al final de la voltereta, braços i cames s'estenen progressivament per recuperar la postura dreta.
 - L'impuls lateral en saltar d'un vehicle s'ha reduït lleugerament perquè la trajectòria sigui menys artificial.
 - L'expulsió causada per una explosió manté una animació separada i més caòtica, adequada a un impacte violent.
+
+
+## Estabilització de col·lisions i destrucció — 2026-10-04
+- Ampliat `tests/smoke.cjs` dels 7 vehicles històrics als 14 tipus conduïbles actuals: llanxa, moto aquàtica, hovercraft, cotxe, moto, bicicleta, barca de rems, windsurf, camió, tanqueta, llanxa llançacoets, tanc, helicòpter i helicòpter de combat.
+- El smoke test comprova ara que tots els tipus conduïbles es generen, es poden ocupar i abandonar i conserven una posició visual finita després d'un pas de física.
+- Afegides comprovacions de cobertura de caixes d'impacte per a tots els vehicles conduïbles.
+- Afegida una prova bàsica de solapament OBB: dues caixes coincidents han de col·lidir i dues caixes molt separades no.
+- Afegida una prova de destrucció que comprova que un vehicle destruït surt de `V` i deixa d'estar referenciat pels marcadors d'intel·ligència.
+- Afegida una comprovació dels nous colzes i genolls del model del jugador.
+- Afegida una comprovació estàtica que els compounds conserven rotació completa de 0–360° i mirall aleatori.
+- Corregida una regressió potencial dels mapes militars: `explodeVehicle()` elimina ara qualsevol `intelMark` que apunti al vehicle destruït.
+- `src/minimap.js` incorpora una segona defensa i ignora referències destruïdes o coordenades no finites, evitant marcadors fantasma encara que una referència residual arribés al renderitzat.
+- Auditoria manual del flux `stepV() -> handleVehicleImpacts() -> damageVehicle() -> explodeVehicle()`: es conserva el retorn immediat quan una col·lisió destrueix el vehicle, evitant continuar accedint a un vehicle eliminat dins del mateix frame.
+- Es manté pendent la validació visual/ergonòmica en navegador WebGL i Android real, especialment la nova voltereta, la resposta de col·lisions a diferents velocitats i la pulsació llarga de les armes especials.
+- El smoke ampliat queda preparat per executar-se amb `node tests/smoke.cjs`; en aquesta sessió de manteniment no hi ha un runner Node connectat directament al repositori privat, així que no es declara com a execució superada fins que es llanci en un entorn amb checkout del repo.
