@@ -9,12 +9,12 @@ html,body{margin:0;height:100%;overflow:hidden;background:#1b2a5a;font-family:sy
 #joystick{position:fixed;left:calc(18px + env(safe-area-inset-left,0px));bottom:calc(22px + env(safe-area-inset-bottom,0px));width:148px;height:148px;border-radius:50%;background:#0006;border:2px solid #ffffff66;box-shadow:inset 0 0 0 2px #0004,0 6px 18px #0005;touch-action:none}
 #joystick:after{content:'';position:absolute;inset:24%;border-radius:50%;border:1px solid #ffffff22}
 .joy-knob{position:absolute;left:50%;top:50%;width:64px;height:64px;border-radius:50%;background:#ffffff42;border:2px solid #ffffffcc;box-shadow:0 4px 12px #0008;transform:translate(-50%,-50%);pointer-events:none}
-#ini button{font:700 18px system-ui;padding:12px 20px;border-radius:10px;border:2px solid #fff;background:#0004;color:#fff}#seedBox{display:flex;flex-direction:column;gap:8px;align-items:center;background:#0002;padding:10px 14px;border-radius:10px}#seedBox label{display:flex;gap:8px;align-items:center}#seedInput{font:600 16px system-ui;width:min(300px,72vw);padding:9px 11px;border-radius:8px;border:1px solid #ffffffaa;background:#13243bcc;color:#fff;text-align:center}#seedInput:disabled{opacity:.55}</style><style>button{cursor:pointer}#gamepanel{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#0009;color:white;z-index:20;padding:20px}#gamepanel .card{background:#24364b;padding:24px;border-radius:10px;max-width:600px;max-height:85vh;overflow:auto}#gamepanel button{padding:10px;margin:4px;color:white;background:#0004;border:1px solid white;border-radius:6px}#gamepanel canvas{width:100%;max-width:440px;height:auto}.controls{display:grid;grid-template-columns:110px 1fr;gap:8px}.p b{cursor:pointer}#joystick{cursor:grab}.p b.held{background:#fff6}</style></head><body>
+#ini button{font:700 18px system-ui;padding:12px 20px;border-radius:10px;border:2px solid #fff;background:#0004;color:#fff}#seedBox{display:flex;flex-direction:column;gap:8px;align-items:center;background:#0002;padding:10px 14px;border-radius:10px}#seedBox label{display:flex;gap:8px;align-items:center}#seedInput{font:600 16px system-ui;width:min(300px,72vw);padding:9px 11px;border-radius:8px;border:1px solid #ffffffaa;background:#13243bcc;color:#fff;text-align:center}#seedInput:disabled{opacity:.55}#mapSizeBox{display:flex;gap:8px;align-items:center;justify-content:center;background:#0002;padding:10px 14px;border-radius:10px}#mapSizeBox label{display:flex;gap:5px;align-items:center}</style><style>button{cursor:pointer}#gamepanel{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#0009;color:white;z-index:20;padding:20px}#gamepanel .card{background:#24364b;padding:24px;border-radius:10px;max-width:600px;max-height:85vh;overflow:auto}#gamepanel button{padding:10px;margin:4px;color:white;background:#0004;border:1px solid white;border-radius:6px}#gamepanel canvas{width:100%;max-width:440px;height:auto}.controls{display:grid;grid-template-columns:110px 1fr;gap:8px}.p b{cursor:pointer}#joystick{cursor:grab}.p b.held{background:#fff6}</style></head><body>
 <div id="hud"></div><canvas id="mm" width="170" height="170"></canvas>
 <div id="joystick" role="application" aria-label="Joystick de moviment"><div class="joy-knob"></div></div>
 <div class="p" style="right:calc(14px + env(safe-area-inset-right,0px));grid-template-columns:repeat(2,58px)"><b data-k="KeyF">🔫</b><b data-k="KeyG">💣</b><b data-k="KeyC">🎭</b><b data-k="KeyL">📖</b><b data-k="KeyU">⤒</b><b data-k="KeyJ">⤓</b><b data-k="KeyE">E</b><b data-k="KeyP" role="button" aria-label="Pausa i menú">Ⅱ</b></div>
 <div id="end" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;text-align:center;padding:24px;color:#fff;font:700 26px system-ui;text-shadow:0 2px 8px #000;pointer-events:none;background:#0005"></div>
-<div id="ini" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;color:#fff;font-family:system-ui;background:linear-gradient(#6a4fa8dd,#ff9a4add)"><h1 style="margin:0;font-size:34px">HUNTER · ARXIPÈLAG</h1><p style="max-width:420px;margin:0;line-height:1.5">Elimina el general enemic amagat a l'HQ de la seva base. Busca mapes, armes, explosius i vehicles pels edificis i illots.</p><div id="seedBox"><label><input id="seedRandom" type="checkbox" checked> Llavor aleatòria</label><input id="seedInput" type="text" inputmode="text" maxlength="40" placeholder="Escriu una llavor" disabled><small style="opacity:.8">Pots usar números o text.</small></div><div style="display:flex;gap:10px"><button data-d=".6">Fàcil</button><button data-d="1">Normal</button><button data-d="1.5">Difícil</button></div><p style="margin:0;opacity:.85">Tria dificultat per començar</p></div>
+<div id="ini" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;color:#fff;font-family:system-ui;background:linear-gradient(#6a4fa8dd,#ff9a4add)"><h1 style="margin:0;font-size:34px">HUNTER · ARXIPÈLAG</h1><p style="max-width:420px;margin:0;line-height:1.5">Elimina el general enemic amagat a l'HQ de la seva base. Busca mapes, armes, explosius i vehicles pels edificis i illots.</p><div id="seedBox"><label><input id="seedRandom" type="checkbox" checked> Llavor aleatòria</label><input id="seedInput" type="text" inputmode="text" maxlength="40" placeholder="Escriu una llavor" disabled><small style="opacity:.8">Pots usar números o text.</small></div><div id="mapSizeBox"><b>Mida:</b><label><input type="radio" name="mapSize" value="1" checked> Petit · 4,8 km</label><label><input type="radio" name="mapSize" value="2"> Gran · 9,6 km</label></div><div style="display:flex;gap:10px"><button data-d=".6">Fàcil</button><button data-d="1">Normal</button><button data-d="1.5">Difícil</button></div><p style="margin:0;opacity:.85">Tria dificultat per començar</p></div>
 <div id="gamepanel" role="dialog" aria-modal="true" aria-labelledby="panelTitle"><div class="card"><h2 id="panelTitle"></h2><div id="panelBody"></div><button id="resumeButton" class="primary">Continua</button></div></div>
 <script>/**
  * @license
@@ -44,7 +44,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#1b2a5a;font-family:sy
 window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){const esc=v=>String(v||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])),m=(e&&e.message)?e.message:"Error desconegut",where=e&&e.filename?(e.filename.split("/").pop()+":"+e.lineno+":"+e.colno):"",stack=e&&e.error&&e.error.stack?e.error.stack:"";p.innerHTML="<h1>No s’ha pogut iniciar el joc</h1><p style=\"max-width:560px\">Error d’arrencada: <b>"+esc(m)+"</b></p>"+(where?"<p><b>"+esc(where)+"</b></p>":"")+(stack?"<pre style=\"max-width:90vw;white-space:pre-wrap;text-align:left;font-size:11px;opacity:.8\">"+esc(stack)+"</pre>":"")+"<p style=\"opacity:.8\">Envia una captura d’aquest missatge si persisteix.</p>"}});
 const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI'];
 const missingModules=requiredModules.filter(name=>!window[name]);if(missingModules.length)throw new Error('Mòduls Hunter absents: '+missingModules.join(', '));
-const S=4800,H=S/2,SEG=400,vivid=c=>{const k=new THREE.Color(c),h={};k.getHSL(h);return k.setHSL(h.h,Math.min(1,h.s*1.5),h.l)};
+let MAP_SCALE=1,S=4800,H=S/2;const SEG=400,vivid=c=>{const k=new THREE.Color(c),h={};k.getHSL(h);return k.setHSL(h.h,Math.min(1,h.s*1.5),h.l)};
 const materialProfile=(name='organic')=>window.HUNTER_MATERIALS[name]||window.HUNTER_MATERIALS.organic;
 const M=(c,profile='organic')=>new THREE.MeshStandardMaterial({color:vivid(c),flatShading:true,...materialProfile(profile)});
 const MAT={
@@ -70,10 +70,11 @@ function hAt(x,z){let h=rawHAt(x,z);for(const m of terrainLevels){const dx=x-m.x
 const waveAmp=bed=>Math.max(.12,Math.min(1,(-bed+.6)/9));
 const wy=(x,z,t)=>(Math.sin(x*.03+t*1.2)*.9+Math.cos(z*.04+t*.9)*.9+Math.sin((x+z)*.07+t*2)*.4)*waveAmp(hAt(x,z));
 const rr=(a,b)=>a+R()*(b-a);
-function genIslands(){R=mul(seed);const q=R()<.5?-1:1,q2=R()<.5?-1:1;
-A={x:-q*rr(500,800),z:-q2*rr(500,800),r:rr(260,340)};Bi={x:q*rr(500,800),z:q2*rr(500,800),r:rr(260,340)};
-islands=[A,Bi];for(let i=0;i<22;i++)islands.push({x:rr(-1000,1000),z:rr(-1000,1000),r:rr(90,260)});
-for(let i=0;i<2;i++)islands.push({x:rr(-500,500),z:rr(-500,500),r:rr(400,520)});islands.forEach(i=>{i.x*=2;i.z*=2;i.r*=2})}
+function genIslands(){R=mul(seed);const q=R()<.5?-1:1,q2=R()<.5?-1:1,extent=MAP_SCALE===1?1000:2200,baseMin=MAP_SCALE===1?500:1200,baseMax=MAP_SCALE===1?800:1800;
+A={x:-q*rr(baseMin,baseMax)*2,z:-q2*rr(baseMin,baseMax)*2,r:rr(520,680)};Bi={x:q*rr(baseMin,baseMax)*2,z:q2*rr(baseMin,baseMax)*2,r:rr(520,680)};
+islands=[A,Bi];const regular=22*MAP_SCALE*MAP_SCALE,large=2*MAP_SCALE*MAP_SCALE;
+for(let i=0;i<regular;i++)islands.push({x:rr(-extent,extent)*2,z:rr(-extent,extent)*2,r:rr(180,520)});
+for(let i=0;i<large;i++)islands.push({x:rr(-extent*.55,extent*.55)*2,z:rr(-extent*.55,extent*.55)*2,r:rr(800,1040)})}
 const slope=(x,z,h)=>Math.abs(hAt(x+5,z)-h)+Math.abs(hAt(x,z+5)-h);
 function land(i,n=600,fl){for(let k=0;k<n;k++){const a=R()*6.283,d=R()*i.r*.75,x=i.x+Math.cos(a)*d,z=i.z+Math.sin(a)*d,h=hAt(x,z);
 if(h>3&&h<14&&slope(x,z,h)<2.5&&(!fl||fr(x,z)<2.2)&&!B.some(b=>Math.abs(b.x-x)<b.hw+24&&Math.abs(b.z-z)<b.hd+24)&&!treeHit(x,z,3)&&Math.abs(x)<H-150&&Math.abs(z)<H-150)return{x,z,h}}return null}
@@ -85,7 +86,7 @@ const rendering=window.HUNTER_RENDERING.create(THREE,visualQuality);
 const ren=rendering.renderer,scene=rendering.scene,cam=rendering.camera,sunDir=rendering.sunDir,sun=rendering.sun,sky=rendering.sky,sunM=rendering.sunMesh;
 document.body.prepend(ren.domElement);
 const rs=rendering.resize;addEventListener('resize',rs);rs();
-const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segments:visualQuality.waterSegments,heightAt:hAt,config:window.HUNTER_WATER});
+const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:9600,segments:visualQuality.waterSegments,heightAt:hAt,config:window.HUNTER_WATER});
 const wg=water.geometry,waterMat=water.material,waterUniforms=water.uniforms;
 const updateSeabed=water.updateSeabed;
 const waves=water.update;
@@ -179,7 +180,7 @@ else if(sp>12&&c.m=='l')puff(cv.x+s*L,gy+.3,cv.z+co*L,0xc9b48a,1.4);
 else if(c.m=='a'&&cv.alt-gy<12)puff(cv.x+rn(-6,6),gy+.3,cv.z+rn(-6,6),hAt(cv.x,cv.z)>0?0xc9b48a:0xffffff,2.2)}
 PT.forEach(p=>{if(p.life>0){p.life-=dt;p.m.scale.setScalar(p.s*(1+(1-p.life/p.max)*1.5));p.m.material.opacity=Math.max(0,p.life/p.max)*.8;if(p.life<=0)p.m.visible=false}});
 if(seaAudio){const coastal=Math.max(.25,1-Math.max(0,hAt(P.x,P.z))/22);seaAudio.gain.gain.setTargetAtTime(over?0:.035+coastal*.05,AC.currentTime,.5)}if(eng){const c=cv?VT[cv.t]:null;eng.g.gain.value=c&&cv.t!=='bici'&&!over?.02+Math.min(1,Math.abs(cv.v)/40)*.03:0;eng.o.frequency.value=c?(c.m=='a'?60:35)+Math.abs(cv.v)*(c.m=='a'?1:2.5):40}}
-const seedRandomEl=document.getElementById('seedRandom'),seedInputEl=document.getElementById('seedInput');seedRandomEl.onchange=()=>{seedInputEl.disabled=seedRandomEl.checked;if(!seedRandomEl.checked)seedInputEl.focus()};document.querySelectorAll('#ini button[data-d]').forEach(b=>b.onclick=()=>{DIF=+b.dataset.d;requestedSeed=seedRandomEl.checked?null:seedFromText(seedInputEl.value||'hunter');build();minimap.reset();mini();started=1;document.getElementById('ini').style.display='none';initAudio()});
+const seedRandomEl=document.getElementById('seedRandom'),seedInputEl=document.getElementById('seedInput');seedRandomEl.onchange=()=>{seedInputEl.disabled=seedRandomEl.checked;if(!seedRandomEl.checked)seedInputEl.focus()};document.querySelectorAll('#ini button[data-d]').forEach(b=>b.onclick=()=>{DIF=+b.dataset.d;MAP_SCALE=+(document.querySelector('input[name="mapSize"]:checked')?.value||1);S=4800*MAP_SCALE;H=S/2;const rawSeed=seedRandomEl.checked?null:seedFromText(seedInputEl.value||'hunter');requestedSeed=rawSeed==null?null:(rawSeed^Math.imul(MAP_SCALE,0x45d9f3b))>>>0;build();minimap.setWorldSize(S,H);minimap.reset();mini();started=1;document.getElementById('ini').style.display='none';initAudio()});
 // animacions de destrucció
 const DB=[],WA=[],dgeo=new THREE.BoxGeometry(1,1,1),dmc={},dmat=c=>dmc[c]||(dmc[c]=M(c));
 function debris(x,y,z,col,n,sz,sp){for(let i=0;i<n;i++){const m=new THREE.Mesh(dgeo,dmat(col)),s=rn(.4,1)*sz;m.scale.set(s,s*rn(.5,1.2),s);m.position.set(x+rn(-1,1),y,z+rn(-1,1));m.rotation.set(rn(0,3),rn(0,3),0);world.add(m);
@@ -374,12 +375,12 @@ const compound=(type,q)=>{
 };
 const compoundCenters=[],usedPortIslands=new Set();const farCompound=(q,min=150)=>compoundCenters.every(c=>Math.hypot(q.x-c.x,q.z-c.z)>min);
 const candidateIslands=islands.filter(i=>i!==A&&i!==Bi).slice().sort(()=>R()-.5);
-let guaranteedPorts=0;for(const i of candidateIslands){if(guaranteedPorts>=2)break;const q=findPortSite(i,22);if(!q||!farCompound(q,180))continue;if(compound('port',q)){compoundCenters.push({x:q.x,z:q.z});usedPortIslands.add(i);guaranteedPorts++}}
+let guaranteedPorts=0;for(const i of candidateIslands){if(guaranteedPorts>=2*MAP_SCALE)break;const q=findPortSite(i,22);if(!q||!farCompound(q,180))continue;if(compound('port',q)){compoundCenters.push({x:q.x,z:q.z});usedPortIslands.add(i);guaranteedPorts++}}
 if(!guaranteedPorts){for(const i of candidateIslands){const q=findPortSite(i,32);if(q&&compound('port',q)){compoundCenters.push({x:q.x,z:q.z});usedPortIslands.add(i);guaranteedPorts=1;break}}}
 islands.forEach(i=>{if(i===A||i===Bi||usedPortIslands.has(i))return;let q=null;for(let n=0;n<8&&!q;n++){const c=land(i,650,1);if(c&&farCompound(c))q=c}if(!q)return;q.r=i.r;const roll=R();let type=roll<.3?'avancada':roll<.6?'garatge':roll<.84?'polvori':'port';
 if(type==='port'){const pq=findPortSite(i,14);if(pq&&farCompound(pq)){q=pq}else type=R()<.5?'avancada':'polvori'}
 if(compound(type,q))compoundCenters.push({x:q.x,z:q.z});if(i.r>520&&R()<.22){let q2=null;for(let n=0;n<10&&!q2;n++){const c=land(i,700,1);if(c&&Math.hypot(c.x-q.x,c.z-q.z)>190&&farCompound(c))q2=c}if(q2){q2.r=i.r;if(compound(R()<.6?'garatge':'avancada',q2))compoundCenters.push({x:q2.x,z:q2.z})}}});
-let standalonePiers=0,targetPiers=3+Math.floor(R()*3);for(const i of candidateIslands){if(standalonePiers>=targetPiers)break;if(usedPortIslands.has(i))continue;const q=findPortSite(i,12);if(!q||!farCompound(q,110)||compoundClear.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<80))continue;if(makeStandalonePier(q))standalonePiers++}
+let standalonePiers=0,targetPiers=(3+Math.floor(R()*3))*MAP_SCALE;for(const i of candidateIslands){if(standalonePiers>=targetPiers)break;if(usedPortIslands.has(i))continue;const q=findPortSite(i,12);if(!q||!farCompound(q,110)||compoundClear.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<80))continue;if(makeStandalonePier(q))standalonePiers++}
 const terrain=window.HUNTER_TERRAIN.create(THREE,{size:S,segments:SEG,heightAt:hAt,material:MAT.terrain()});world.add(terrain.mesh,window.HUNTER_TERRAIN.createBorder(THREE,{size:S,halfSize:H}));
 updateSeabed();vegetate(pa);spawnFauna();HQ={x:pb.x,z:pb.z};const rb=B.slice(6);
 const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2);
@@ -443,7 +444,7 @@ const ui=window.HUNTER_UI.create({
   getState:()=>({
     hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,disguised:disg,
     inventory:inv,itemTypes:IT,player:P,nearVehicle:cv?null:nearV(),messageTime:msgT,message:msg,
-    waypoint,worldSize:S,seed
+    waypoint,worldSize:S,seed,mapScale:MAP_SCALE
   }),
   actions:{
     resume,
