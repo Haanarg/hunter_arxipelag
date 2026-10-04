@@ -26,6 +26,9 @@ run('E=savedEnemies;');
 const vehicleTypes=['llanxa','moto_aquatica','hover','cotxe','moto','bici','barca_rems','windsurf','camio','tanqueta','llanxa_coets','tanc','heli','heli_combat'];
 for(const type of vehicleTypes){ok(`V.some(v=>v.t==='${type}')`,'generated '+type);run(`cv=null;{const q=V.find(v=>v.t==='${type}');P.x=q.x;P.z=q.z;P.y=q.o.position.y;}`);run('toggle()');ok(`cv&&cv.t==='${type}'`,'enter '+type);run('stepV(cv,1,.2,1,.04);place(cv,3,.04,.2)');ok('Number.isFinite(cv.o.position.y)','vehicle '+type);run("if(VT[cv.t].m==='a')cv.alt=Math.max(0,hAt(cv.x,cv.z))+.8;toggle()");ok('!cv','exit '+type)}
 ok('vehicleTypes.every(t=>VHB[t]&&VHB[t].length===2&&VHB[t][0]>0&&VHB[t][1]>0)','all driveable vehicles have hitboxes');
+ok("['cotxe','moto','bici','camio','tanqueta','tanc'].every(t=>VT[t].landGrip>0&&VT[t].maxF>VT[t].maxR)",'land vehicles have traction and speed profiles');
+ok("['llanxa','moto_aquatica','barca_rems','windsurf','llanxa_coets'].every(t=>VT[t].waterDrift>=0&&VT[t].waterSteerMin>0)",'water vehicles have drift and low-speed steering profiles');
+ok("['heli','heli_combat'].every(t=>VT[t].climb>0&&VT[t].liftResponse>0&&VT[t].bank>0&&VT[t].pitch>0)",'helicopters have lift and attitude profiles');
 run('{const q=V.find(v=>v.t===\'cotxe\');const a=vehicleBox(q,q.x,q.z,q.hd),b=vehicleBox(q,q.x,q.z,q.hd),c=vehicleBox(q,q.x+100,q.z+100,q.hd);globalThis.__obbNear=obbOverlap(a,b);globalThis.__obbFar=obbOverlap(a,c)}');
 ok('__obbNear&&!__obbFar','OBB overlap separates near and far vehicles');
 run('{const q=V.find(v=>v.t===\'tanc\');intelMarks.push({kind:\'tanc\',ref:q,label:\'test\'});globalThis.__destroyed=q;explodeVehicle(q)}');
@@ -34,4 +37,4 @@ ok('pl.userData.ael&&pl.userData.aer&&pl.userData.lkl&&pl.userData.lkr','player 
 ok("html.includes(\"mirror=R()<.5?-1:1\")&&html.includes(\"ang=rr(0,Math.PI*2)\")",'compounds support full rotation and mirroring');
 run("panel('map');resume();joystick.state.x=1;joystick.state.y=-1;build();update(.016,20)");ok('joystick.state.x===0&&joystick.state.y===0&&hp===100','restart resets joystick and world');
 ok('PM.t.parent===world','vegetation attached to rebuilt world');
-console.log(JSON.stringify({passed:true,buildings:run('B.length'),vehicles:run('V.length'),checks:['startup','enemy models','stair geometry','4 door orientations','14 vehicles','vehicle hitboxes','OBB overlap','vehicle destruction cleanup','player joints','compound rotation/mirror','minimap','restart','joystick','vegetation'],seconds:(Date.now()-start)/1000}));
+console.log(JSON.stringify({passed:true,buildings:run('B.length'),vehicles:run('V.length'),checks:['startup','enemy models','stair geometry','4 door orientations','14 vehicles','vehicle hitboxes','land/water/air dynamics profiles','OBB overlap','vehicle destruction cleanup','player joints','compound rotation/mirror','minimap','restart','joystick','vegetation'],seconds:(Date.now()-start)/1000}));
