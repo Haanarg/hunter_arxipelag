@@ -350,7 +350,9 @@ const compound=(type,q)=>{
     const [tx,tz]=tr(-24,-18);mkEn('torre',tx,tz);const route=[tr(-18,16),tr(18,16),tr(20,-14),tr(-16,-17)];for(let n=0;n<2;n++){const [sx,sz]=route[n*2];setPatrol(mkEn('soldat',sx,sz),route.map((p,i)=>route[(i+n*2)%route.length]))}
     for(const p of[[-23,18],[-12,21],[5,21],[20,15],[24,2],[21,-15]])prop('barrier',p[0],p[1],p[0]<0?0:Math.PI/2);
     for(const p of[[-18,13],[17,12],[17,-12]])prop('sandbag',p[0],p[1]);prop('lamp',-2,17);prop('sign',-1,11);prop('crate',2,-2);prop('crate',4,-2);prop('barrel',-3,-1);
-    const outDef=[tr(-18,13),tr(17,12),tr(17,-12)];E.slice(-2).forEach(u=>setDefense(u,outDef));compoundVehicles.push({t:'moto',...(()=>{const [vx,vz]=tr(21,15);return{x:vx,z:vz}})(),hd:ang})
+    const outDef=[tr(-18,13),tr(17,12),tr(17,-12)];E.slice(-2).forEach(u=>setDefense(u,outDef));compoundVehicles.push({t:'moto',...(()=>{const [vx,vz]=tr(21,15);return{x:vx,z:vz}})(),hd:ang});
+    if(R()<.45){const [vx,vz]=tr(-2,-13);compoundVehicles.push({t:'tanc',x:vx,z:vz,hd:ang,military:true})}
+    if(R()<.28){const [hx,hz]=tr(0,20);compoundVehicles.push({t:'heli',x:hx,z:hz,hd:ang,military:true})}
   } else if(type==='garatge'){
     level(78,74,20);compoundPad(x,z,68,64,0x686868);{const [a1,b1]=tr(-10,-36),[a2,b2]=tr(-10,8);compoundPath(a1,b1,a2,b2,8,0x5e5f5d);const [c1,d1]=tr(9,7),[c2,d2]=tr(30,11);compoundPath(c1,d1,c2,d2,4.6,0x656563)}
     const h=put(-10,5,30,42,18,0xb6b0a2,0xd8cfb7,{hangar:true,kind:'hangar',doorSide:1,doorWidth:18,doorHeight:9,openDoor:true});put(30,11,11,10,5.8,0xb7a98e,0x6e4435,{kind:'garage'});
@@ -391,13 +393,24 @@ addIt('arma',B[0]);addIt('expl',B[1]);addIt('med',B[2]);
 rb.slice().sort(()=>R()-.5).slice(0,2).forEach(b=>addIt('mapa',b));
 P.x=pa.x;P.z=pa.z+8;P.hd=0;P.base={x:pa.x,z:pa.z};V=[];cv=null;mm=null;
 const add=(t,x,z,a)=>{const o=mkV(t);world.add(o);V.push({t,x,z,hd:a||0,v:0,alt:Math.max(0,hAt(x,z))+.8,o})};
+const addProtectedMilitary=()=>{
+  const spots=[
+    {t:'tanc',x:pb.x-24,z:pb.z+30,hd:Math.PI},
+    {t:'heli',x:pb.x+25,z:pb.z+30,hd:Math.PI}
+  ];
+  for(const v of spots)if(!B.some(b=>Math.abs(v.x-b.x)<b.hw+vehicleRadius(v.t)&&Math.abs(v.z-b.z)<b.hd+vehicleRadius(v.t)))add(v.t,v.x,v.z,v.hd)
+};
 const near=(r,t)=>{for(let k=0;k<80;k++){const x=pa.x+rr(-r,r),z=pa.z+rr(-r,r),h=hAt(x,z);if(h>1.5&&slope(x,z,h)<2.5&&!B.some(b=>Math.abs(x-b.x)<b.hw+vehicleRadius(t)&&Math.abs(z-b.z)<b.hd+vehicleRadius(t))&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(t)+vehicleRadius(v.t)+2))return[x,z]}return[pa.x+30,pa.z+30]};
-['cotxe','moto','bici','tanc','heli'].forEach(t=>{const q=near(90,t);add(t,q[0],q[1],rr(0,6.28))});
+['cotxe','moto','bici'].forEach(t=>{const q=near(90,t);add(t,q[0],q[1],rr(0,6.28))});
+addProtectedMilitary();
 const shores=[];for(let a=0;a<360;a+=12)for(let d=10;d<700;d+=10){const x=pa.x+Math.cos(a*.01745)*d,z=pa.z+Math.sin(a*.01745)*d;if(Math.abs(x)>H-60||Math.abs(z)>H-60)break;if(hAt(x,z)<-2){shores.push({d,x,z});break}}
 shores.sort((a,b)=>a.d-b.d);if(shores[0])add('llanxa',shores[0].x,shores[0].z,rr(0,6.28));
 const clearVehicle=(t,x,z)=>Math.abs(x)<H-vehicleRadius(t)-5&&Math.abs(z)<H-vehicleRadius(t)-5&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(x-v.x,z-v.z)<vehicleRadius(t)+vehicleRadius(v.t)+5);
-compoundVehicles.forEach(v=>{if((v.t==='llanxa'||v.t==='hover')?hAt(v.x,v.z)<-2:true)add(v.t,v.x,v.z,v.hd)});
-islands.forEach(i=>{if(i!==A&&R()<.65){const t=['cotxe','moto','bici','tanc'][Math.floor(R()*4)];for(let tries=0;tries<12;tries++){const q=land(i,80);if(q&&clearVehicle(t,q.x,q.z)){add(t,q.x,q.z,rr(0,6.28));break}}}});
+compoundVehicles.forEach(v=>{if(v.t==='llanxa'||v.t==='hover'){if(hAt(v.x,v.z)<-2)add(v.t,v.x,v.z,v.hd);return}
+  const r=vehicleRadius(v.t),clear=!treeHit(v.x,v.z,r*.7)&&!B.some(b=>Math.abs(v.x-b.x)<b.hw+r&&Math.abs(v.z-b.z)<b.hd+r)&&!V.some(o=>Math.hypot(v.x-o.x,v.z-o.z)<r+vehicleRadius(o.t)+3);
+  if(clear)add(v.t,v.x,v.z,v.hd)
+});
+islands.forEach(i=>{if(i!==A&&R()<.65){const t=['cotxe','moto','bici'][Math.floor(R()*3)];for(let tries=0;tries<12;tries++){const q=land(i,80);if(q&&clearVehicle(t,q.x,q.z)){add(t,q.x,q.z,rr(0,6.28));break}}}});
 
 P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0,0,0));world.traverse(o=>{if(o.isMesh){o.castShadow=!o.isInstancedMesh;o.receiveShadow=true}});pl.traverse(o=>{if(o.isMesh)o.castShadow=true});cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);}
 // minimapa
