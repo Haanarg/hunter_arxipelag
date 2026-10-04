@@ -570,3 +570,14 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Si la velocitat és superior a un llindar mínim, el jugador hereta part de la velocitat del vehicle, rep una mica de dany proporcional a la velocitat i fa una voltereta visual.
 - La baixada en marxa afegeix un petit impuls lateral per separar el jugador de la trajectòria immediata del vehicle.
 - Les explosions de vehicles reutilitzen ara la mateixa animació de voltereta per al conductor expulsat.
+
+
+## Salt des d'helicòpter i barrena — 2026-10-04
+- El jugador pot abandonar un helicòpter encara que estigui en vol; ja no és obligatori aterrar abans de baixar.
+- En saltar, el jugador conserva part de la velocitat horitzontal de l'helicòpter i entra en caiguda lliure amb gravetat.
+- Durant la caiguda el model del jugador gira i fa una animació de voltereta.
+- El dany d'impacte es calcula segons l'alçada de la caiguda i la velocitat vertical en tocar superfície.
+- Les caigudes a l'aigua redueixen el dany respecte a les caigudes sobre terra.
+- En quedar sense pilot, l'helicòpter entra en barrena: gira progressivament, conserva part de la velocitat, perd alçada i es desestabilitza visualment.
+- Els rotors continuen girant durant la barrena però perden velocitat gradualment.
+- Quan l'helicòpter toca terra o la superfície de l'aigua, es destrueix mitjançant el sistema d'explosió i peces ja implementat.
