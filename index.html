@@ -125,7 +125,7 @@ expl:{n:'Explosius',c:0xe02020,s:[.9,.9,.9],icon:ICON.expl,desc:'Manat de TNT am
 disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa enemiga vermella. Activa o desactiva la disfressa.',usable:true}
 };
 // combat i enemics
-let E=[],Pj=[],bombs=[],fx=[],DEAD=[],hp=100,ammo=0,disg=false,bazookaEquipped=false,over=0,fcd=0,kills=0,intelMarks=[],playerEject=null;
+let E=[],Pj=[],bombs=[],fx=[],DEAD=[],hp=100,ammo=0,disg=false,bazookaEquipped=false,over=0,fcd=0,kills=0,intelMarks=[],playerEject=null,playerFall=null;
 const endEl=document.getElementById('end'),gB=new THREE.BoxGeometry(.35,.35,.35),sphG=new THREE.SphereGeometry(1,10,8),
 mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial({color:0xff7a1a}),mE=new THREE.MeshBasicMaterial({color:0xff4040});
 const EC={soldat:{hp:30,sp:7,rng:32,rate:1.1,dmg:7,spl:0,r:2},jeep:{hp:70,sp:22,rng:22,rate:.5,dmg:5,spl:0,r:3.9},tanc:{hp:140,sp:8,rng:50,rate:2.5,dmg:22,spl:7,r:6.8},
@@ -417,7 +417,7 @@ const barbedHQ=(cx,cz,hw=50,hd=46,gap=13)=>{
   compoundClear.push({x:cx,z:cz,r:Math.hypot(hw,hd)*1.02});
 };
 // construir món
-function build(){joystick.reset();compoundClear=[];terrainLevels=[];if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}world=new THREE.Group();scene.add(world);B=[];stairs=[];swimming=false;intelMarks=[];playerEject=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;pl.userData.bazooka.visible=false;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];fx=[];logb=[];hp=100;ammo=24;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
+function build(){joystick.reset();compoundClear=[];terrainLevels=[];if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}world=new THREE.Group();scene.add(world);B=[];stairs=[];swimming=false;intelMarks=[];playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;pl.userData.bazooka.visible=false;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];fx=[];logb=[];hp=100;ammo=24;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
 {const base=requestedSeed==null?Math.floor(Math.random()*0xffffffff)>>>0:requestedSeed>>>0;let tries=0;do{seed=(base+Math.imul(tries++,0x9e3779b1))>>>0;genIslands();pa=land(A,2000);pb=land(Bi,2000)}while((!pa||!pb)&&tries<8);if(!pa||!pb)throw new Error('No s’ha pogut generar un mapa vàlid amb aquesta llavor')}
 addLevelArea(pa.x,pa.z,82,72,pa.h,0,18);[[-27,0],[27,-12],[0,31]].forEach(([dx,dz])=>mkB(pa.x+dx,pa.z+dz,15,15,7,0xe9dfc8,0x2c5fc0));flag(pa.x,pa.z-7,0x2c7bff);
 addLevelArea(pb.x,pb.z,118,106,pb.h,0,22);mkEnemyBunker(pb.x,pb.z);mkB(pb.x+38,pb.z+10,12,12,6,0x8a7a70,0x8c1f1f);mkB(pb.x-38,pb.z-8,12,12,6,0x8a7a70,0x8c1f1f);flag(pb.x+9,pb.z-2,0xe02828);barbedHQ(pb.x,pb.z,58,52,17);
@@ -585,8 +585,16 @@ let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0;
 const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joystick')),clearKeys=()=>{Object.keys(K).forEach(k=>K[k]=0);joystick.reset();document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))};
 const act=c=>{if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(!started||paused||over)return;if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory')}if(c==='KeyG'){if(!secondaryWeapon())plant();}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
 const nearV=()=>{let b=null,bd=Infinity;V.forEach(v=>{const d=Math.hypot(v.x-P.x,v.z-P.z);if(d<vehicleRadius(v.t)+5&&d<bd){bd=d;b=v}});return b};
-function toggle(){if(cv){if(VT[cv.t].m==='a'&&cv.alt-Math.max(0,hAt(cv.x,cv.z))>4){msg='Aterra abans de baixar: J o BAIXA.';msgT=3;return}
-const leaving=cv,speed=Math.abs(leaving.v),moving=speed>3,side=rn(-1,1)<0?-1:1,rrad=vehicleRadius(leaving.t)+2.2;let spot=null;
+function toggle(){if(cv){
+const leaving=cv,speed=Math.abs(leaving.v),isAir=VT[leaving.t].m==='a',ground=Math.max(0,hAt(leaving.x,leaving.z)),height=Math.max(0,leaving.alt-ground);
+if(isAir&&height>4){
+  const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),side=rn(-1,1)<0?-1:1;
+  P.x=leaving.x+Math.cos(leaving.hd)*side*1.8;P.z=leaving.z-Math.sin(leaving.hd)*side*1.8;P.hd=leaving.hd;P.y=leaving.alt;
+  playerFall={y:leaving.alt,vy:0,vx:fx*leaving.v*.82+Math.cos(leaving.hd)*side*2.5,vz:fz*leaving.v*.82-Math.sin(leaving.hd)*side*2.5,startHeight:height,t:0,spin:side};
+  leaving.crashing=true;leaving.crashT=0;leaving.crashSpin=rn(-1,1)<0?-1:1;leaving.driveInput=0;leaving.steerInput=0;
+  cv=null;swimming=false;msg='Has saltat! L’helicòpter està fora de control!';msgT=3;return
+}
+const moving=speed>3,side=rn(-1,1)<0?-1:1,rrad=vehicleRadius(leaving.t)+2.2;let spot=null;
 for(let i=0;i<16;i++){const a=leaving.hd+side*Math.PI/2+i*Math.PI/8,x=leaving.x+Math.cos(a)*rrad,z=leaving.z+Math.sin(a)*rrad;if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||Wl.some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;spot={x,z};if(hAt(x,z)>0||VT[leaving.t].m==='w')break}
 if(!spot){msg='No hi ha espai per baixar aquí.';msgT=3;return}
 P.x=spot.x;P.z=spot.z;P.hd=leaving.hd;leaving.driveInput=0;leaving.steerInput=0;
@@ -660,26 +668,28 @@ if(!a||v.alt-g<16){for(const w of Wl)if(!w.open&&w.playerBlock!==false&&nx>w.x0-
 if(ok){v.x=nx;v.z=nz;handleVehicleImpacts(v,dt);if(v.destroyed)return false;if(v.t=='tanc'||v.t=='tanqueta')crush(nx,nz,(v.t=='tanc'?3.2:2.4)*VS[v.t])}else v.v*=Math.exp(-14*dt);
 if(a){const g2=Math.max(0,hAt(v.x,v.z));v.alt=Math.max(g2+.8,Math.min(150,v.alt+ud*28*dt))}return !v.destroyed}
 function place(v,t,dt,tr){const c=VT[v.t],o=v.o,g=hAt(v.x,v.z);let y,pi=0,ro=Math.sin(t*2+v.x)*.02;
-if(c.m=='a'){y=v.alt;pi=-v.v*.008;ro=-tr*.25*Math.min(1,Math.abs(v.v)/20)}
+if(c.m=='a'){y=v.alt;pi=-v.v*.008;ro=-tr*.25*Math.min(1,Math.abs(v.v)/20);if(v.crashing){pi+=Math.sin(v.crashT*3)*.35;ro+=(v.crashSpin||1)*(.45+Math.min(.65,v.crashT*.12))}}
 else if(c.m=='w')y=wy(v.x,v.z,t)*.8+.2;
 else if(c.m=='wl')y=Math.max(g,wy(v.x,v.z,t)*.6)+.6;
 else{y=g+.05;const s=Math.sin(v.hd),k=Math.cos(v.hd);pi=Math.atan((hAt(v.x-s*3,v.z-k*3)-hAt(v.x+s*3,v.z+k*3))/6);ro=0}
 if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.rotation.set(pi,v.hd,ro+(c.m=='w'?-tr*.12:0));
-v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=v.pedalPhase;if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),row=Math.sin(v.pedalPhase)*.48*power,dip=.28+.18*(.5+.5*Math.cos(v.pedalPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*row;r.rotation.z=-side*dip;r.rotation.x=.04*Math.sin(v.pedalPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:0);(o.userData.wheels||[]).forEach(w=>w.rotation.x-=v.v*dt/(w.userData.radius||.6))}
+v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=v.pedalPhase;if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),row=Math.sin(v.pedalPhase)*.48*power,dip=.28+.18*(.5+.5*Math.cos(v.pedalPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*row;r.rotation.z=-side*dip;r.rotation.x=.04*Math.sin(v.pedalPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);(o.userData.wheels||[]).forEach(w=>w.rotation.x-=v.v*dt/(w.userData.radius||.6))}
 function update(dt,t){if(!started||paused||over){if(eng)eng.g.gain.value=0;return}elapsed+=dt;const jf=-joystick.state.y,jtr=-joystick.state.x,f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),
 ud=(K.KeyU||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),lim=H-2;
 if(cv){const driven=cv,alive=stepV(driven,f,tr,ud,dt);if(alive&&cv===driven){P.x=driven.x;P.z=driven.z;P.hd=driven.hd}}
-else{P.hd+=tr*dt*2.2;if(playerEject&&playerEject.t>0){P.x=Math.max(-lim,Math.min(lim,P.x+playerEject.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerEject.vz*dt));playerEject.vx*=Math.exp(-2.4*dt);playerEject.vz*=Math.exp(-2.4*dt);playerEject.t-=dt}else{const s=(swimming?5:12)*f*dt;P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*s));P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*s))}
-wallPush();treePush()}
-V.slice().forEach(v=>{if(v!==cv&&Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
+else{P.hd+=tr*dt*2.2;if(playerFall){playerFall.t+=dt;playerFall.vy-=24*dt;playerFall.vx*=Math.exp(-.18*dt);playerFall.vz*=Math.exp(-.18*dt);P.x=Math.max(-lim,Math.min(lim,P.x+playerFall.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerFall.vz*dt));playerFall.y+=playerFall.vy*dt;const water=wy(P.x,P.z,t),landing=Math.max(hAt(P.x,P.z),water-1.4);P.y=playerFall.y;if(playerFall.y<=landing){P.y=landing;const fallH=playerFall.startHeight,impact=Math.max(0,-playerFall.vy),waterLanding=water>hAt(P.x,P.z)+1.5,dmg=Math.min(100,Math.max(0,(fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8)));playerFall=null;if(dmg>0)hurtP(dmg);msg=waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5}}
+else if(playerEject&&playerEject.t>0){P.x=Math.max(-lim,Math.min(lim,P.x+playerEject.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerEject.vz*dt));playerEject.vx*=Math.exp(-2.4*dt);playerEject.vz*=Math.exp(-2.4*dt);playerEject.t-=dt}else{const ss=(swimming?5:12)*f*dt;P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*ss));P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*ss))}
+if(!playerFall){wallPush();treePush()}}
+V.slice().forEach(v=>{if(v===cv)return;if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
 ib=cv?null:B.find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2)||null;
-const floor=ib?ib.fy+.3:groundAt(P.x,P.z),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&floor<surface-2.1;P.y=ib?floor:Math.max(floor,surface-2.1);
+const floor=ib?ib.fy+.3:groundAt(P.x,P.z),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;if(!playerFall)P.y=ib?floor:Math.max(floor,surface-2.1);
 B.forEach(b=>{const i=b===ib;b.o.visible=i||Math.hypot(b.x-P.x,b.z-P.z)<1800;b.roof.visible=!i&&b.rhp>0;b.wm.opacity=b.dm.opacity=i?.18:1});
 Dr.forEach(d=>{const o=d.alwaysOpen||(!cv&&Math.hypot(P.x-d.cx,P.z-d.cz)<(d.open?6:4.5));d.open=o;d.m.visible=!o});
 items.forEach(it=>{it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25});
 if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k];if(Math.hypot(P.x-it.x,P.z-it.z)<2.2&&Math.abs(P.y-it.y)<3){if(it.t=='arma')ammo+=40;inv[it.t]=(inv[it.t]||0)+1;world.remove(it.o);items.splice(k,1);msg='Has trobat: '+IT[it.t].n;msgT=3;snd('pick')}}
 msgT-=dt;pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv;animPl(cv?0:f,dt);
-if(!cv&&playerEject&&playerEject.t>0){const dur=playerEject.dur||.8,p=1-Math.max(0,playerEject.t)/dur;pl.position.y+=Math.sin(Math.PI*p)*(playerEject.height||1);pl.rotation.x=(playerEject.spin||1)*Math.PI*2*p;pl.rotation.z=Math.sin(Math.PI*p)*(playerEject.spin||1)*.35}
+if(!cv&&playerFall){pl.position.y=playerFall.y;pl.rotation.x=(playerFall.spin||1)*playerFall.t*7.5;pl.rotation.z=Math.sin(playerFall.t*8)*.45}
+else if(!cv&&playerEject&&playerEject.t>0){const dur=playerEject.dur||.8,p=1-Math.max(0,playerEject.t)/dur;pl.position.y+=Math.sin(Math.PI*p)*(playerEject.height||1);pl.rotation.x=(playerEject.spin||1)*Math.PI*2*p;pl.rotation.z=Math.sin(Math.PI*p)*(playerEject.spin||1)*.35}
 V.forEach(v=>place(v,t,dt,v===cv?(v.steerInput||0):0));poseRider(cv,dt);
 const T=cv||P,c=cv?VT[cv.t]:ib?{cd:6,ch:11}:{cd:10,ch:5},ty=cv?cv.o.position.y:P.y,w=new THREE.Vector3(T.x+Math.sin(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1),0,T.z+Math.cos(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1));
 w.y=Math.max(ty+c.ch*zoom*(cv?Math.sqrt(VS[cv.t]):1),hAt(w.x,w.z)+3,2.5);cam.position.lerp(w,1-Math.pow(.001,dt));
