@@ -426,3 +426,24 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - Quan la vida arriba a zero, el vehicle explota i s'elimina del món.
 - Si el jugador conduïa el vehicle destruït, és expulsat en una direcció aleatòria durant un breu impuls i rep dany per l'explosió.
 - El HUD mostra blindatge, vida actual/màxima i munició especial quan correspon.
+## Darrer estat verificat — 2026-10-04
+Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posteriors de HUD, controls i documentació (`43837f7`).
+
+- Nous vehicles implementats i conduïbles: barca de rems, helicòpter de combat, windsurf, tanqueta blindada i llanxa llançacoets.
+- Física específica afegida per als nous tipus de vehicle i integració amb la generació determinista per llavor.
+- Sistema estructural de vehicles actiu: blindatge 0–10, vida pròpia per vehicle, fum proporcional al dany i explosió en arribar a 0.
+- El blindatge redueix el dany transferit al conductor; el tanc, amb blindatge 10, protegeix completament el pilot dels impactes normals.
+- En destruir-se un vehicle ocupat, el jugador és expulsat amb un impuls en direcció aleatòria i rep dany de l'explosió.
+- Helicòpter de combat: metralladora frontal i 6 míssils limitats; míssil amb G en teclat i pulsació llarga de Dispar en tàctil.
+- Llanxa llançacoets: 5 coets limitats; tanqueta: metralladora ràpida.
+- HUD ampliat amb blindatge, vida actual/màxima i munició especial.
+- Controls tàctils ampliats per donar accés a les armes especials.
+- Barca de rems diferenciada visualment i, igual que el windsurf, sense so de motor.
+- La documentació i el menú de controls ja descriuen les armes especials.
+
+### Validació que continua pendent
+- Provar en navegador real que tots els nous vehicles apareixen correctament amb diferents llavors i mides de mapa.
+- Validar en Android els controls tàctils de míssils/coets i la pulsació llarga.
+- Revisar balanç de blindatge, vida, dany al pilot, força d'expulsió i dany d'explosió.
+- Comprovar visualment la progressió del fum i que no queden vehicles destruïts amb col·lisions o marcadors fantasma.
+- Verificar que els mapes de tanc/helicòpter i el HUD reaccionen correctament quan un vehicle cartografiat es mou o és destruït.
