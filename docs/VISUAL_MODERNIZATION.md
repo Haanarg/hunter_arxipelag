@@ -632,3 +632,13 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Apuntar, atacar amb ganivet i portar el bazooka utilitzen postures específiques de colzes i espatlles.
 - La natació utilitza ara flexió alterna de colzes i genolls, en lloc de fer girar extremitats rígides.
 - S'ha afegit una respiració subtil en repòs per reduir l'aspecte robòtic quan el personatge està aturat.
+
+
+## Orientació, mirall i senyalització dels compounds — 2026-10-04
+- Els compounds deixen d'estar limitats a una orientació gairebé fixa: l'angle general es genera ara entre 0 i 360 graus.
+- Cada compound té, a més, un 50% de probabilitat d'aparèixer reflectit horitzontalment.
+- El mirall s'aplica a posicions d'edificis, rutes, defenses, decoració i vehicles; així, per exemple, la caseta auxiliar del garatge pot aparèixer a qualsevol dels dos costats de l'hangar.
+- Les orientacions de vehicles, props i heliports segueixen la rotació i el mirall del compound.
+- El polvorí té ara un perímetre complet de filferrada destructible, amb una obertura d'accés frontal.
+- La zona útil del polvorí s'ha ampliat lleugerament per donar espai al nou perímetre.
+- Tots els antics cartells vermells dels compounds s'han substituït visualment per un màstil alt amb bandera vermella.
