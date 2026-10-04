@@ -21,7 +21,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#1b2a5a;font-family:sy
 .inv-icon{font-size:74px;line-height:1;text-align:center;margin:8px 0 20px}
 .inv-detail h3{font-size:22px;margin:0 0 8px}.inv-detail p{line-height:1.45;opacity:.9}
 .inv-actions{margin-top:auto;display:flex;gap:8px;justify-content:flex-end}
-@media(max-width:700px){#gamepanel .card.inventory-card{width:min(96vw,620px);padding:12px}.inv-wrap{grid-template-columns:1fr}.inv-grid{grid-template-columns:repeat(4,minmax(48px,1fr))}.inv-detail{min-height:180px}.inv-icon{font-size:52px;margin:4px 0 10px}}</style></head><body>
+.inv-slot svg{width:42px;height:42px;display:block}.inv-icon svg{width:86px;height:86px;display:block;margin:auto}@media(max-width:700px){#gamepanel .card.inventory-card{width:min(96vw,620px);padding:12px}.inv-wrap{grid-template-columns:1fr}.inv-grid{grid-template-columns:repeat(4,minmax(48px,1fr))}.inv-detail{min-height:180px}.inv-icon{font-size:52px;margin:4px 0 10px}}</style></head><body>
 <div id="hud"></div><canvas id="mm" width="170" height="170"></canvas>
 <div id="joystick" role="application" aria-label="Joystick de moviment"><div class="joy-knob"></div></div>
 <div class="p" style="right:calc(14px + env(safe-area-inset-right,0px));grid-template-columns:repeat(1,64px)"><b data-k="KeyF" aria-label="Dispar">🔫</b><b data-k="KeyE" aria-label="Acció">E</b></div>
@@ -105,15 +105,23 @@ const waves=water.update;
 // terreny visual a src/terrain.js
 let stairs=[];
 let Wl=[],Dr=[],items=[],inv={},msg='',msgT=0,HQ=null,ib=null;
-const IT={
-med:{n:'Farmaciola',c:0xf2f3de,s:[1.2,.8,.8],icon:'🩹',desc:'Recupera 40 punts de vida.',usable:true},
-mapa:{n:'Mapa de l’HQ',c:0xffe27a,s:[1.4,.15,1],icon:'🗺️',desc:'Obre la carta de navegació i revela l’HQ enemic.',usable:true},
-mapa_heli:{n:'Mapa d’helicòpter',c:0x9fd7ff,s:[1.4,.15,1],icon:'🚁',desc:'Marca a la carta la posició d’un helicòpter militar conegut.',usable:true},
-mapa_tanc:{n:'Mapa de tanc',c:0xc6b06a,s:[1.4,.15,1],icon:'🛡️',desc:'Marca a la carta la posició d’un tanc militar conegut.',usable:true},
-arma:{n:'Munició',c:0x555b66,s:[1.6,.35,.35],icon:'🔫',desc:'Munició per a l’arma personal.',usable:false},
-expl:{n:'Explosius',c:0xe02020,s:[.9,.9,.9],icon:'💣',desc:'Planta una càrrega amb retard de 3 segons.',usable:true},
-disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:'🎭',desc:'Activa o desactiva la disfressa per reduir la detecció.',usable:true}
+const ICON={
+med:'<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="16" width="46" height="34" rx="5" fill="#fff" stroke="#657078" stroke-width="3"/><rect x="18" y="28" width="28" height="9" rx="4.5" fill="#d7ae7c" transform="rotate(-28 32 32.5)"/><circle cx="27" cy="35" r="1.8" fill="#9a6f45"/><circle cx="37" cy="30" r="1.8" fill="#9a6f45"/></svg>',
+expl:'<svg viewBox="0 0 64 64" aria-hidden="true"><g stroke="#6c1717" stroke-width="2"><rect x="12" y="20" width="11" height="31" rx="5" fill="#d63b32"/><rect x="26" y="18" width="11" height="33" rx="5" fill="#d63b32"/><rect x="40" y="21" width="11" height="30" rx="5" fill="#d63b32"/></g><path d="M32 18 C34 9 46 13 48 5" fill="none" stroke="#c49a4d" stroke-width="3"/><circle cx="49" cy="5" r="3" fill="#ffcf4a"/></svg>',
+disf:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M22 12 L30 17 L34 17 L42 12 L54 22 L47 30 L43 27 L43 55 L21 55 L21 27 L17 30 L10 22 Z" fill="#b83232" stroke="#661d1d" stroke-width="3"/><path d="M28 16 Q32 23 36 16" fill="none" stroke="#f0c7a2" stroke-width="3"/></svg>',
+mapa:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#ead69b" stroke="#7c693c" stroke-width="3"/><path d="M25 9 V50 M39 14 V55" stroke="#a18b56" stroke-width="2"/><rect x="30" y="28" width="15" height="11" fill="#7c4f3a"/><path d="M29 28 L37.5 21 L46 28" fill="#a33b32"/></svg>',
+mapa_heli:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#d9edf5" stroke="#557986" stroke-width="3"/><path d="M17 33 H49 M32 20 V46" stroke="#557986" stroke-width="2"/><ellipse cx="32" cy="33" rx="11" ry="5" fill="#587766"/><path d="M43 33 H54 M21 33 H10" stroke="#35453c" stroke-width="3"/></svg>',
+mapa_tanc:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#e5d6a8" stroke="#786b46" stroke-width="3"/><rect x="18" y="31" width="28" height="11" rx="4" fill="#68754b"/><rect x="25" y="25" width="15" height="8" rx="3" fill="#78845b"/><path d="M40 29 H55" stroke="#40473a" stroke-width="3"/></svg>',
+arma:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 19 H54 V50 H10 Z" fill="#75583a" stroke="#3e3024" stroke-width="3"/><path d="M14 24 H50" stroke="#b58a56" stroke-width="3"/><g fill="#d4aa42" stroke="#70591e" stroke-width="1"><circle cx="20" cy="34" r="4"/><circle cx="31" cy="34" r="4"/><circle cx="42" cy="34" r="4"/><circle cx="25" cy="44" r="4"/><circle cx="36" cy="44" r="4"/></g></svg>'
 };
+const IT={
+med:{n:'Farmaciola',c:0xf2f3de,s:[1.2,.8,.8],icon:ICON.med,desc:'Recupera 40 punts de vida.',usable:true},
+mapa:{n:'Mapa de l’HQ',c:0xffe27a,s:[1.6,.08,1.2],icon:ICON.mapa,desc:'Obre la carta de navegació i revela l’HQ enemic.',usable:true},
+mapa_heli:{n:'Mapa d’helicòpter',c:0x9fd7ff,s:[1.6,.08,1.2],icon:ICON.mapa_heli,desc:'Marca a la carta la posició d’un helicòpter militar conegut.',usable:true},
+mapa_tanc:{n:'Mapa de tanc',c:0xc6b06a,s:[1.6,.08,1.2],icon:ICON.mapa_tanc,desc:'Marca a la carta tots els tancs coneguts del mapa.',usable:true},
+arma:{n:'Munició',c:0x555b66,s:[1.6,.35,.35],icon:ICON.arma,desc:'Caixa de munició per a l’arma personal.',usable:false},
+expl:{n:'Explosius',c:0xe02020,s:[.9,.9,.9],icon:ICON.expl,desc:'Manat de TNT amb metxa. Planta una càrrega amb retard de 3 segons.',usable:true},
+disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa enemiga vermella. Activa o desactiva la disfressa.',usable:true}
 // combat i enemics
 let E=[],Pj=[],bombs=[],fx=[],hp=100,ammo=0,disg=false,over=0,fcd=0,kills=0,intelMarks=[];
 const endEl=document.getElementById('end'),gB=new THREE.BoxGeometry(.35,.35,.35),sphG=new THREE.SphereGeometry(1,10,8),
@@ -287,8 +295,22 @@ for(let i=0;i<steps;i++){const a=(i+.5)*tread,xx=x+nx*a,zz=z+nz*a,y=top-i*rise,b
 }
 function wallPush(){const r=.6;for(const w of Wl){if(w.playerBlock===false)continue;if(!w.open&&P.x>w.x0-r&&P.x<w.x1+r&&P.z>w.z0-r&&P.z<w.z1+r){const a=[P.x-(w.x0-r),w.x1+r-P.x,P.z-(w.z0-r),w.z1+r-P.z],i=a.indexOf(Math.min(...a));
 if(i==0)P.x=w.x0-r;else if(i==1)P.x=w.x1+r;else if(i==2)P.z=w.z0-r;else P.z=w.z1+r}}}
+function itemMapTexture(kind){const c=document.createElement('canvas');c.width=192;c.height=144;const q=c.getContext('2d');q.fillStyle=kind==='heli'?'#dceff4':kind==='tanc'?'#eadfb9':'#ead59b';q.fillRect(0,0,c.width,c.height);q.strokeStyle='#8f7b52';q.lineWidth=5;q.strokeRect(5,5,c.width-10,c.height-10);q.strokeStyle='#baa36b';q.lineWidth=2;for(let x=30;x<190;x+=32){q.beginPath();q.moveTo(x,7);q.lineTo(x,137);q.stroke()}for(let y=26;y<140;y+=28){q.beginPath();q.moveTo(7,y);q.lineTo(185,y);q.stroke()}
+  q.save();q.translate(96,72);q.strokeStyle='#313a36';q.fillStyle='#596d55';q.lineWidth=6;
+  if(kind==='heli'){q.beginPath();q.ellipse(0,5,32,13,0,0,Math.PI*2);q.fill();q.beginPath();q.moveTo(-55,-13);q.lineTo(55,-13);q.stroke();q.beginPath();q.moveTo(0,-31);q.lineTo(0,22);q.stroke();q.fillRect(28,1,35,7)}
+  else if(kind==='tanc'){q.fillRect(-34,-8,58,24);q.fillRect(-18,-21,29,15);q.beginPath();q.moveTo(10,-14);q.lineTo(48,-14);q.stroke();q.strokeRect(-38,17,67,9)}
+  else{q.fillStyle='#7a4e3d';q.fillRect(-28,-4,56,31);q.fillStyle='#a94338';q.beginPath();q.moveTo(-34,-4);q.lineTo(0,-33);q.lineTo(34,-4);q.closePath();q.fill();q.fillStyle='#ead59b';q.fillRect(-6,12,12,15)}
+  q.restore();const tex=new THREE.CanvasTexture(c);tex.needsUpdate=true;return tex}
+function createItemVisual(t){const g=new THREE.Group(),metal=0x454b4e,dark=0x3d3025;
+  if(t==='mapa'||t==='mapa_heli'||t==='mapa_tanc'){const kind=t==='mapa_heli'?'heli':t==='mapa_tanc'?'tanc':'hq',paper=new THREE.Mesh(new THREE.BoxGeometry(1.65,.07,1.25),M(t==='mapa_heli'?0xdceff4:t==='mapa_tanc'?0xeadfb9:0xead59b,'paint'));g.add(paper);const top=new THREE.Mesh(new THREE.PlaneGeometry(1.52,1.12),new THREE.MeshBasicMaterial({map:itemMapTexture(kind),transparent:false}));top.rotation.x=-Math.PI/2;top.position.y=.041;g.add(top)}
+  else if(t==='expl'){for(const x of[-.34,0,.34]){const m=new THREE.Mesh(new THREE.CylinderGeometry(.14,.14,1.05,10),M(0xc8322d,'paint'));m.position.set(x,.52,0);g.add(m)}bx(g,1.05,.13,.55,0x5b4a2d,0,.52,0,'paint');for(let i=0;i<4;i++){const m=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.32,6),M(0xc39a4a,'metal'));m.position.set(.25+i*.08,.98+.12*i,0);m.rotation.z=-.55;g.add(m)}}
+  else if(t==='med'){bx(g,1.35,.7,1,0xf4f4f0,0,.35,0,'paint');bx(g,1.05,.08,.28,0xd5aa76,0,.74,0,'paint');const p=bx(g,.28,.08,.95,0xd5aa76,0,.75,0,'paint');p.rotation.y=Math.PI/2;for(const x of[-.18,.18])for(const z of[-.18,.18]){const d=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.03,6),M(0x9b734b,'paint'));d.position.set(x,.81,z);g.add(d)}}
+  else if(t==='arma'){bx(g,1.45,.55,1.05,0x745539,0,.28,0,'paint');bx(g,1.5,.1,1.1,dark,0,.04,0,'metal');for(const x of[-.48,-.16,.16,.48])for(const z of[-.27,.27]){const bullet=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.48,8),M(0xc9a23f,'metal'));bullet.position.set(x,.72,z);g.add(bullet);const tip=new THREE.Mesh(new THREE.ConeGeometry(.08,.16,8),M(0xb7772b,'metal'));tip.position.set(x,1.04,z);g.add(tip)}}
+  else if(t==='disf'){bx(g,.78,1.3,.16,0xb53232,0,.8,0,'paint');const l=bx(g,.7,.38,.16,0xb53232,-.62,1.18,0,'paint'),r=bx(g,.7,.38,.16,0xb53232,.62,1.18,0,'paint');l.rotation.z=-.55;r.rotation.z=.55;bx(g,.16,.18,.18,0xf1c7a1,0,1.44,0,'organic');bx(g,.08,1.05,.19,0x6f1f1f,0,.75,-.02,'paint')}
+  else bx(g,...IT[t].s,IT[t].c,0,.4,0,'paint');
+  return g}
 function addIt(t,b){const c=IT[t];if(!c){console.warn('Tipus d’objecte desconegut:',t);return null}let x,z;for(let k=0;k<25;k++){x=b.x+rr(-(b.w/2-2),b.w/2-2);z=b.z+rr(-(b.d/2-2),b.d/2-2);if(!Wl.some(w=>x>w.x0-1.2&&x<w.x1+1.2&&z>w.z0-1.2&&z<w.z1+1.2))break}
-const y=b.fy+1.3,o=new THREE.Mesh(new THREE.BoxGeometry(...c.s),new THREE.MeshBasicMaterial({color:c.c}));o.position.set(x,y,z);world.add(o);items.push({t,x,z,y,o})}
+const y=b.fy+1.3,o=createItemVisual(t);o.position.set(x,y,z);world.add(o);items.push({t,x,z,y,o})}
 function flag(x,z,c){world.add(buildingVisual.createFlag({x,y:hAt(x,z),z,color:c}))}
 // jugador i vehicles
 const bx=(g,w,h,d,c,x,y,z,profile='organic')=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c,profile));m.position.set(x,y,z);g.add(m);return m};
