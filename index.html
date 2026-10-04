@@ -736,6 +736,30 @@ if(a){
   v.alt=Math.max(g2+.8,Math.min(150,v.alt+v.verticalV*dt));
 }
 return !v.destroyed}
+function animateTankTracks(v,dt){
+  const tracks=v.o?.userData?.tracks;if(!tracks?.length)return;
+  const scale=VS[v.t]||1,yaw=v.yawRate||0,halfTrack=2.1;
+  for(const track of tracks){
+    // Fase positiva = la part superior de l'eruga corre cap enrere (+Z local).
+    // En gir pivotant, yaw reparteix velocitats oposades a esquerra/dreta.
+    const beltSpeed=v.v/scale+track.side*yaw*halfTrack;
+    track.phase=(track.phase+beltSpeed*dt)%track.perimeter;if(track.phase<0)track.phase+=track.perimeter;
+    for(const link of track.links){
+      let q=(link.userData.trackOffset+track.phase)%track.perimeter;
+      let y,z,rx=0;
+      if(q<track.straight){
+        y=track.cy+track.r;z=track.front+q;rx=0;
+      }else if((q-=track.straight)<Math.PI*track.r){
+        const a=q/track.r;y=track.cy+track.r*Math.cos(a);z=track.rear+track.r*Math.sin(a);rx=a;
+      }else if((q-=Math.PI*track.r)<track.straight){
+        y=track.cy-track.r;z=track.rear-q;rx=Math.PI;
+      }else{
+        q-=track.straight;const a=q/track.r;y=track.cy-track.r*Math.cos(a);z=track.front-track.r*Math.sin(a);rx=Math.PI+a;
+      }
+      link.position.set(track.x,y,z);link.rotation.set(rx,0,0);
+    }
+  }
+}
 function place(v,t,dt,tr){const c=VT[v.t],o=v.o,g=hAt(v.x,v.z);let y,pi=0,ro=Math.sin(t*2+v.x)*.02;
 if(c.m==='a'){
   y=v.alt;const speedN=Math.max(-1,Math.min(1,v.v/(c.maxF||35))),yawN=Math.max(-1,Math.min(1,(v.yawRate||0)/(c.tu||1)));
@@ -746,7 +770,7 @@ else if(c.m==='w'){y=wy(v.x,v.z,t)*.8+.2;const speed=Math.min(1,Math.abs(v.v)/(c
 else if(c.m==='wl'){y=Math.max(g,wy(v.x,v.z,t)*.6)+.6;ro=-(v.yawRate||0)*.08}
 else{y=groundAt(v.x,v.z)+.05;const s2=Math.sin(v.hd),k=Math.cos(v.hd);pi=Math.atan((groundAt(v.x-s2*3,v.z-k*3)-groundAt(v.x+s2*3,v.z+k*3))/6);ro=-(v.sideV||0)*.018}
 if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.rotation.set(pi,v.hd,ro);
-v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=v.pedalPhase;if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),row=Math.sin(v.pedalPhase)*.48*power,dip=.28+.18*(.5+.5*Math.cos(v.pedalPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*row;r.rotation.z=-side*dip;r.rotation.x=.04*Math.sin(v.pedalPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);(o.userData.wheels||[]).forEach(w=>w.rotation.x-=v.v*dt/(w.userData.radius||.6))}
+v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=v.pedalPhase;if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),row=Math.sin(v.pedalPhase)*.48*power,dip=.28+.18*(.5+.5*Math.cos(v.pedalPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*row;r.rotation.z=-side*dip;r.rotation.x=.04*Math.sin(v.pedalPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})}
 function update(dt,t){if(!started||paused||over){if(eng)eng.g.gain.value=0;return}elapsed+=dt;const jf=-joystick.state.y,jtr=-joystick.state.x,f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),
 ud=(K.KeyU||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),lim=H-2;
 if(cv){const driven=cv,alive=stepV(driven,f,tr,ud,dt);if(alive&&cv===driven){P.x=driven.x;P.z=driven.z;P.hd=driven.hd}}
