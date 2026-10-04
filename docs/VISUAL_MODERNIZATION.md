@@ -382,3 +382,14 @@ Pròxim pas: completar la interfície comuna d’animació de la fase C i contin
 - HQ i avançades poden generar camions militars com a part de la seva dotació protegida.
 - Al final de la generació de cada mapa es comprova que existeixi almenys una unitat de cada vehicle conduïble: llanxa, hovercraft, cotxe, moto, bicicleta, camió militar, tanc i helicòpter.
 - Si en falta algun, el generador crea una ubicació de reserva coherent: costa per vehicles aquàtics, zona protegida per tanc/helicòpter/camió i terreny proper a la base per vehicles civils.
+
+
+## Heliports, tancs múltiples i nous objectes — 2026-10-04
+- Cada mapa reserva almenys un garatge/hangar abans de la resta de compounds; el primer hangar conté obligatòriament un tanc.
+- Cada mapa garanteix almenys dos tancs conduïbles, a més dels tancs enemics que es puguin generar.
+- El mapa de tanc mostra tots els tancs conduïbles i enemics, amb marcadors que segueixen la seva posició si es mouen.
+- Afegit el compound `heliport`: plataforma anivellada amb H blanca, il·luminació, sacs terrers, tres soldats en patrulla/defensa i un helicòpter propi.
+- Es força almenys un heliport per mapa. L'helicòpter de l'heliport queda etiquetat com a especial i no satisfà la garantia d'helicòpter general, de manera que és un helicòpter addicional.
+- Avançades i garatges poden generar plataformes d'aterratge opcionals; aquestes plataformes anivellen també la seva petjada per evitar terres flotants.
+- Redissenyats els objectes físics: mapes prims amb pictograma del contingut, TNT amb metxa, farmaciola blanca amb tirita, caixa de munició amb bales visibles i camisa enemiga vermella en vertical.
+- Les icones de l'inventari s'han substituït per pictogrames SVG coherents amb els nous models.
