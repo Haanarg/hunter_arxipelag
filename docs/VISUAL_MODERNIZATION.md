@@ -729,3 +729,19 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - En girs mentre el tanc avança, la velocitat visual de cada eruga es diferencia segons la taxa de gir, de manera coherent amb una transmissió diferencial.
 - Les rodes de rodament del tanc també reben velocitat específica per costat i giren de manera coherent amb l'eruga corresponent.
 - `tests/smoke.cjs` comprova ara que existeixin dues erugues animades, que avancin/reculin amb el sentit correcte i que contrarotin durant un gir pivotant.
+
+
+## Pedaleig i nova sortida acrobàtica — 2026-10-04
+- Invertida la fase visual del pedaleig de la bicicleta perquè, en avançar, cames i pedalier girin en el sentit correcte.
+- El canvi afecta només la bicicleta; la fase de la barca de rems i la resta d'animacions que reutilitzen `pedalPhase` es mantenen intactes.
+- Substituïda l'antiga voltereta rígida en baixar d'un vehicle en marxa per una seqüència acrobàtica nova:
+  - salt inicial vist de perfil;
+  - braços estirats mentre el cos gira a l'aire;
+  - contacte amb el terra amb les mans;
+  - flexió de colzes, malucs i genolls per absorbir el moviment;
+  - entrada dels peus a terra;
+  - extensió progressiva fins recuperar la postura dreta.
+- Durant la seqüència, la càmera es desplaça al costat del personatge per mostrar el moviment de perfil.
+- Quan l'animació acaba, la càmera torna progressivament a la posició habitual darrere de l'espatlla.
+- Es manté separada l'animació d'expulsió violenta per explosió, que continua sent més caòtica.
+- Afegides comprovacions al smoke test per evitar regressions cap al sentit de pedaleig anterior o cap a l'antiga animació de sortida.
