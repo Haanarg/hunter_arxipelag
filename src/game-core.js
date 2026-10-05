@@ -149,10 +149,16 @@ fa.push({k:'g',o,wl,wr,cx:rn(-H+200,H-200),cz:rn(-H+200,H-200),r:rn(40,120),a:rn
 for(let k=0;k<10;k++){let cx,cz,n=0;do{cx=rn(-H+150,H-150);cz=rn(-H+150,H-150)}while(hAt(cx,cz)>-6&&++n<60);if(hAt(cx,cz)>-6)continue;
 const o=window.HUNTER_FAUNA.createShark(THREE,{material:M});world.add(o);fa.push({k:'s',o,cx,cz,r:rn(12,28),a:rn(0,6.28),sp:rn(.25,.45),x:cx,z:cz})}}
 function updExtra(dt,t){updDeb(dt);
-fa.forEach(f=>{f.a+=f.sp*dt;f.x=f.cx+Math.cos(f.a)*f.r;f.z=f.cz+Math.sin(f.a)*f.r;f.o.rotation.y=Math.PI-f.a;
-if(f.k=='g'){f.o.position.set(f.x,f.y+Math.sin(t+f.cx)*2,f.z);f.wl.rotation.z=Math.sin(t*8+f.cx)*.5;f.wr.rotation.z=-f.wl.rotation.z}
-else{f.o.position.set(f.x,wy(f.x,f.z,t)*.8+.8,f.z);if(Math.random()<.1)puff(f.x,f.o.position.y-.6,f.z,0xffffff,1.2);
-if(!cv&&!over&&Math.hypot(P.x-f.x,P.z-f.z)<6&&hAt(P.x,P.z)<-1.2){hurtP(dt*10);msg='Un tauró et mossega!';msgT=1}}});
+fa.forEach(f=>{
+  const px=f.x||f.cx,pz=f.z||f.cz,dx=px-P.x,dz=pz-P.z,d2=dx*dx+dz*dz,
+        interval=d2<FAUNA_NEAR2?0:d2<FAUNA_MID2?.12:.4;
+  f.lodAcc=(f.lodAcc||0)+dt;
+  if(interval>0&&f.lodAcc<interval)return;
+  const step=f.lodAcc;f.lodAcc=0;f.a+=f.sp*step;f.x=f.cx+Math.cos(f.a)*f.r;f.z=f.cz+Math.sin(f.a)*f.r;f.o.rotation.y=Math.PI-f.a;
+  if(f.k=='g'){f.o.position.set(f.x,f.y+Math.sin(t+f.cx)*2,f.z);f.wl.rotation.z=Math.sin(t*8+f.cx)*.5;f.wr.rotation.z=-f.wl.rotation.z}
+  else{f.o.position.set(f.x,wy(f.x,f.z,t)*.8+.8,f.z);if(d2<FAUNA_NEAR2&&Math.random()<.1)puff(f.x,f.o.position.y-.6,f.z,0xffffff,1.2);
+  const hx=P.x-f.x,hz=P.z-f.z;if(!cv&&!over&&hx*hx+hz*hz<36&&hAt(P.x,P.z)<-1.2){hurtP(step*10);msg='Un tauró et mossega!';msgT=1}}
+});
 V.forEach(v=>{
   if(v.destroyed)return;
   v.playerHitCd=Math.max(0,(v.playerHitCd||0)-dt);
@@ -445,10 +451,11 @@ const minimap=window.HUNTER_MINIMAP.create({
 });
 const mini=()=>minimap.draw();
 // control
-let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0;
+let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0,worldVisualTick=0;
+const LOD_NEAR2=500*500,LOD_MID2=1200*1200,ITEM_ANIM2=500*500,FAUNA_NEAR2=650*650,FAUNA_MID2=1400*1400;
 const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joystick')),clearKeys=()=>{Object.keys(K).forEach(k=>K[k]=0);joystick.reset();document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))};
 const act=c=>{if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(!started||paused||over)return;if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory')}if(c==='KeyR'&&cv?.t==='heli_combat'){secondaryWeapon();return}if(c==='KeyG'){if(!secondaryWeapon())plant();}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
-const nearV=()=>{let b=null,bd=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){const d=Math.hypot(v.x-P.x,v.z-P.z);if((circleVehicleOverlap(P.x,P.z,5,v)||d<vehicleRadius(v.t)+5)&&d<bd){bd=d;b=v}}return b};
+const nearV=()=>{let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
 function toggle(){if(cv){
 const leaving=cv,speed=Math.abs(leaving.v),isAir=VT[leaving.t].m==='a',ground=Math.max(0,hAt(leaving.x,leaving.z)),height=Math.max(0,leaving.alt-ground);
 if(isAir&&height>4){
@@ -606,10 +613,14 @@ if(!playerFall){wallPush();treePush();vehiclePushPlayer()}}
 V.slice().forEach(v=>{if(v===cv)return;if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
 ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2)||null;
 const floor=ib?ib.fy+.3:groundAt(P.x,P.z),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;if(!playerFall)P.y=ib?floor:Math.max(floor,surface-2.1);
-B.forEach(b=>{const i=b===ib;b.o.visible=i||Math.hypot(b.x-P.x,b.z-P.z)<1800;b.roof.visible=!i&&b.rhp>0;b.wm.opacity=b.dm.opacity=i?.18:1});
-Dr.forEach(d=>{const o=d.alwaysOpen||(!d.locked&&!cv&&Math.hypot(P.x-d.cx,P.z-d.cz)<(d.open?6:4.5));d.open=o;d.m.visible=!o});
-items.forEach(it=>{it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25});
-if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k];if(Math.hypot(P.x-it.x,P.z-it.z)<2.2&&Math.abs(P.y-it.y)<3){if(it.t=='arma')ammo+=40;inv[it.t]=(inv[it.t]||0)+1;world.remove(it.o);items.splice(k,1);msg='Has trobat: '+IT[it.t].n;msgT=3;snd('pick')}}
+worldVisualTick-=dt;
+if(worldVisualTick<=0){
+  worldVisualTick=.2;
+  B.forEach(b=>{const i=b===ib,dx=b.x-P.x,dz=b.z-P.z;b.o.visible=i||dx*dx+dz*dz<3240000;b.roof.visible=!i&&b.rhp>0;b.wm.opacity=b.dm.opacity=i?.18:1})
+}
+Dr.forEach(d=>{const dx=P.x-d.cx,dz=P.z-d.cz,r=d.open?6:4.5,o=d.alwaysOpen||(!d.locked&&!cv&&dx*dx+dz*dz<r*r);d.open=o;d.m.visible=!o});
+items.forEach(it=>{const dx=it.x-P.x,dz=it.z-P.z;if(dx*dx+dz*dz<ITEM_ANIM2){it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25}});
+if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-it.z;if(dx*dx+dz*dz<4.84&&Math.abs(P.y-it.y)<3){if(it.t=='arma')ammo+=40;inv[it.t]=(inv[it.t]||0)+1;world.remove(it.o);items.splice(k,1);msg='Has trobat: '+IT[it.t].n;msgT=3;snd('pick')}}
 msgT-=dt;pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv;animPl(cv?0:f,dt);
 if(!cv&&playerFall){pl.position.y=playerFall.y;pl.rotation.x=(playerFall.spin||1)*playerFall.t*7.5;pl.rotation.z=Math.sin(playerFall.t*8)*.45}
 else if(!cv&&playerEject&&playerEject.t>=0){
@@ -629,7 +640,12 @@ else if(!cv&&playerEject&&playerEject.t>=0){
     if(u.lkl)u.lkl.rotation.x=-.5*compact;if(u.lkr)u.lkr.rotation.x=-.5*compact;
   }
 }
-V.forEach(v=>place(v,t,dt,v===cv?(v.steerInput||0):0));poseRider(cv,dt);
+V.forEach(v=>{
+  if(v===cv){place(v,t,dt,v.steerInput||0);return}
+  const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,interval=d2<LOD_NEAR2?0:d2<LOD_MID2?.1:.45;
+  if(interval===0){place(v,t,dt,0);v.visualLodAcc=0}
+  else{v.visualLodAcc=(v.visualLodAcc||0)+dt;if(v.visualLodAcc>=interval){const step=v.visualLodAcc;v.visualLodAcc=0;place(v,t,step,0)}}
+});poseRider(cv,dt);
 const T=cv||P,c=cv?VT[cv.t]:ib?{cd:6,ch:11}:{cd:10,ch:5},ty=cv?cv.o.position.y:P.y,w=new THREE.Vector3(T.x+Math.sin(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1),0,T.z+Math.cos(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1));
 w.y=Math.max(ty+c.ch*zoom*(cv?Math.sqrt(VS[cv.t]):1),hAt(w.x,w.z)+3,2.5);
 cam.position.lerp(w,1-Math.pow(.001,dt));
