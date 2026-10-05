@@ -911,3 +911,12 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Si encara no existeix cap captura real en aquell navegador, la portada usa només un degradat neutre: no es mostra cap imatge inventada.
 - No es genera cap món extra per obtenir la captura; s'aprofita el mateix món que el jugador acaba de demanar amb el botó de dificultat.
 - Actualitzat el smoke test per impedir el retorn de l'asset inventat i comprovar la captura real diferida.
+
+
+## Cabell opció 4 — 2026-10-05
+- Substituït el cabell esfèric del jugador per una closca cilíndrica curta.
+- El cilindre arriba de banda a banda del cap sense sobresortir per sobre de la gorra.
+- La part posterior baixa lleugerament més per reproduir l'aspecte de l'opció 4.
+- S'ha mantingut la gorra verda sense canviar-ne el color.
+- El mateix estil s'ha replicat al rider dels vehicles oberts.
+- Actualitzat el smoke test per comprovar geometria cilíndrica i color de gorra.
