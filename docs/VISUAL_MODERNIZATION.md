@@ -889,3 +889,14 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - El volum del clatell i la nuca es manté, amb una transició més contínua cap a la part superior.
 - Replicat el mateix ajust al rider dels vehicles oberts.
 - Actualitzat el smoke test per cobrir l'amplada del hairTop i la presència dels nous sideFill.
+
+
+## Helicòpters més estrets i cabell integrat — 2026-10-05
+- Estrenyit el fuselatge de l'helicòpter bàsic perquè tingui pràcticament la mateixa amplada visual que la cabina.
+- Estrenyit també el fuselatge de l'helicòpter de combat fins a aproximar-lo a l'amplada de la cabina.
+- Afegits pilons metàl·lics entre el fuselatge i els pods/míssils laterals de l'helicòpter de combat.
+- Afegits muntants inclinats entre el fuselatge i els patins perquè deixin de semblar flotants.
+- El cabell del jugador s'ha reduït i desplaçat cap amunt i cap a dins del volum del cap.
+- Reduïts també els farciments laterals perquè cobreixin sense formar una esfera externa.
+- Replicat el mateix ajust de cabell al rider dels vehicles oberts.
+- Actualitzat el smoke test per cobrir amplada dels helicòpters, suports del model de combat i nova posició del cabell.
