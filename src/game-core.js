@@ -384,13 +384,15 @@ const circleVehicleOverlap=(x,z,r,v)=>{const b=vehicleBox(v),dx=x-b.x,dz=z-b.z,s
 const vehicleY=v=>v.alt!=null&&VT[vehicleHitType(v.t)]?.m==='a'?v.alt:(v.o?.position?.y??Math.max(0,hAt(v.x,v.z)));
 const vehicleHeightCompatible=(a,b)=>Math.abs(vehicleY(a)-vehicleY(b))<Math.max(2.2,Math.min(vehicleRadius(vehicleHitType(a.t)),vehicleRadius(vehicleHitType(b.t)))*.55);
 const VEHICLE_CELL=64,vehicleGrid=new Map(),playerVehicleGrid=new Map(),vehicleCellKey=(cx,cz)=>cx+','+cz;
+let vehicleGridVSource=null,vehicleGridESource=null;
 const addVehicleToGrid=(grid,v)=>{const key=vehicleCellKey(Math.floor(v.x/VEHICLE_CELL),Math.floor(v.z/VEHICLE_CELL)),bucket=grid.get(key);if(bucket)bucket.push(v);else grid.set(key,[v])};
 function rebuildVehicleGrid(){
-  vehicleGrid.clear();playerVehicleGrid.clear();
+  vehicleGrid.clear();playerVehicleGrid.clear();vehicleGridVSource=V;vehicleGridESource=E;
   for(const v of V)if(!v.destroyed){addVehicleToGrid(vehicleGrid,v);addVehicleToGrid(playerVehicleGrid,v)}
   for(const u of E)if(!u.destroyed&&(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'))addVehicleToGrid(vehicleGrid,u)
 }
 function vehicleCandidatesAt(x,z,r=24,playersOnly=false){
+  if(vehicleGridVSource!==V||vehicleGridESource!==E)rebuildVehicleGrid();
   const grid=playersOnly?playerVehicleGrid:vehicleGrid,out=[],
         minX=Math.floor((x-r)/VEHICLE_CELL),maxX=Math.floor((x+r)/VEHICLE_CELL),
         minZ=Math.floor((z-r)/VEHICLE_CELL),maxZ=Math.floor((z+r)/VEHICLE_CELL);
