@@ -57,7 +57,8 @@ ok("html.includes('smokeTopOffset')&&html.includes('new THREE.Box3().setFromObje
 ok("html.includes("localStorage.getItem('hunterStartScreenshot')")&&html.includes('captureRealStartScreenshot()')&&html.includes('pl.visible=false')&&!html.includes('assets/start-island.svg')&&!html.includes('build();mini();let last=performance.now()')",'start screen uses a cached real game capture and defers world generation until difficulty click');
 ok("vehSrc.includes('box(g,2.68,1.55,4.4')&&vehSrc.includes('fus.scale.set(.94,.92,3.2)')",'helicopter fuselages are narrowed to cabin width');
 ok("vehSrc.includes("rod(g,[side*.82,2.05,-.55],[x,1.75,-.55]")&&vehSrc.includes("rod(g,[side*.72,1.45,-1.15],[x,.5,-1.15]")",'combat helicopter has missile pylons and skid struts');
-ok("charSrc.includes('hairTop.position.set(0,4.4,.01)')&&charSrc.includes('sideFill.scale.set(.32,.66,.44)')&&riderSrc.includes('hairTop.position.set(0,1.69,.01)')",'player and rider hair sit higher and further inside head volume');
+ok("charSrc.includes('new THREE.CylinderGeometry(.37,.39,.38')&&charSrc.includes('hairShell.position.set(0,4.19,.03)')&&riderSrc.includes('new THREE.CylinderGeometry(.31,.33,.31')",'player and rider use cylindrical option-4 hair');
+ok("charSrc.includes('new THREE.MeshStandardMaterial({color:P.primary')&&riderSrc.includes('material(0x22b72c)')",'player and rider caps remain green');
 ok("html.includes(\"rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0)\")",'rowboat oar cycle is inverted');
 ok("html.includes(\"playerEject={kind:'flip'\")&&html.includes('dur:.5')&&!html.includes(\"playerEject?.kind==='vault'\")",'moving exit uses a single short flip without special vault camera');
 ok("charSrc.includes('kneeL=-(')&&charSrc.includes('kneeR=-(')",'walking knees bend in corrected direction');
