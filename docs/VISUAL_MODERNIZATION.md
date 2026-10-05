@@ -826,3 +826,11 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Afegit un volum específic de nuca i laterals arrodonits, mantenint el cabell curt i compatible amb la gorra.
 - Replicat el mateix tractament al rider dels vehicles oberts perquè el personatge mantingui el mateix aspecte a bicicleta, moto, barca de rems i windsurf.
 - Actualitzat el smoke test per comprovar la presència dels nous volums de cabell al jugador i al rider.
+
+
+## Controls tàctils d'altitud per helicòpter — 2026-10-05
+- Afegits dos botons contextuals tàctils al bloc de controls de la dreta: Pujar (KeyU) i Baixar (KeyJ).
+- Els botons només es mostren quan el vehicle actual pertany a la família aèria, de manera que apareixen tant a l'helicòpter bàsic com a l'helicòpter de combat.
+- Es mantenen al mateix grup visual que Dispar i Acció, tal com demana el HUD contextual.
+- Els controls de teclat U/J i Space/Shift continuen funcionant sense canvis.
+- Afegida una comprovació al smoke test per detectar regressions en la presència i activació contextual dels botons.
