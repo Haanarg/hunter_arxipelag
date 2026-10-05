@@ -72,6 +72,20 @@ function segmentSphereT(x0,y0,z0,x1,y1,z1,cx,cy,cz,r){
   const b=2*(mx*dx+my*dy+mz*dz),disc=b*b-4*a*c;if(disc<0)return null;
   const t=(-b-Math.sqrt(disc))/(2*a);return t>=0&&t<=1?t:null
 }
+function hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b){
+  const segs=b.roof?.userData?.hitSegments;if(!segs?.length)return null;
+  let best=null;
+  for(const s of segs){
+    const rz=s.a-Math.PI/2,c=Math.cos(rz),sn=Math.sin(rz),
+          ax=x0-b.x-s.x,ay=y0-b.fy-s.y,az=z0-b.z,
+          bx=x1-b.x-s.x,by=y1-b.fy-s.y,bz=z1-b.z,
+          lx0=ax*c+ay*sn,ly0=-ax*sn+ay*c,
+          lx1=bx*c+by*sn,ly1=-bx*sn+by*c,
+          t=segmentAabbT(lx0,ly0,az,lx1,ly1,bz,-s.chord/2,s.chord/2,-.16,.16,-s.depth/2,s.depth/2);
+    if(t!=null&&(best==null||t<best))best=t
+  }
+  return best
+}
 function updPj(dt){
   for(let i=Pj.length-1;i>=0;i--){
     const p=Pj[i],x0=p.x,y0=p.y,z0=p.z,x1=x0+p.vx*dt,y1=y0+p.vy*dt,z1=z0+p.vz*dt,
@@ -89,7 +103,10 @@ function updPj(dt){
     }
     for(const b of buildingCandidates(mx,mz,reach+1)){
       if(b.rhp<=0)continue;
-      consider(segmentAabbT(x0,y0,z0,x1,y1,z1,b.x-b.w/2-.6,b.x+b.w/2+.6,b.fy+b.h-.4,b.fy+b.h+1.4,b.z-b.d/2-.6,b.z+b.d/2+.6),'building',b)
+      const bt=b.hangar
+        ?hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b)
+        :segmentAabbT(x0,y0,z0,x1,y1,z1,b.x-b.w/2-.6,b.x+b.w/2+.6,b.fy+b.h-.4,b.fy+b.h+1.4,b.z-b.d/2-.6,b.z+b.d/2+.6);
+      consider(bt,'building',b)
     }
 
     // Personatges i vehicles: intersecció contínua amb volum esfèric aproximat.
