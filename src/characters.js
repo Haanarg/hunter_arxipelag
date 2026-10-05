@@ -104,7 +104,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
 
     player.rotation.x+=(0-player.rotation.x)*k;
     const walk=Math.sin(ph)*move*dir,walk2=Math.cos(ph)*move;
-    const hip=.62*walk,kneeL=.08+Math.max(0,-Math.sin(ph)*dir)*.92*move,kneeR=.08+Math.max(0,Math.sin(ph)*dir)*.92*move;
+    const hip=.62*walk,kneeL=-(.08+Math.max(0,-Math.sin(ph)*dir)*.92*move),kneeR=-(.08+Math.max(0,Math.sin(ph)*dir)*.92*move);
     tx(u.ll,hip);tx(u.lr,-hip);tx(u.lkl,kneeL);tx(u.lkr,kneeR);
     tz(u.ll,-.025*walk2);tz(u.lr,.025*walk2);
     player.rotation.z+=(-.035*walk-player.rotation.z)*k;
