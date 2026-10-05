@@ -669,7 +669,7 @@ const moving=speed>3,side=rn(-1,1)<0?-1:1,rrad=vehicleRadius(leaving.t)+2.2;let 
 for(let i=0;i<16;i++){const a=leaving.hd+side*Math.PI/2+i*Math.PI/8,x=leaving.x+Math.cos(a)*rrad,z=leaving.z+Math.sin(a)*rrad;if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||Wl.some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;spot={x,z};if(hAt(x,z)>0||VT[leaving.t].m==='w')break}
 if(!spot){msg='No hi ha espai per baixar aquí.';msgT=3;return}
 P.x=spot.x;P.z=spot.z;P.hd=leaving.hd;leaving.driveInput=0;leaving.steerInput=0;
-if(moving){const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),sx=Math.cos(leaving.hd)*side,sz=-Math.sin(leaving.hd)*side,carry=Math.min(28,speed*.72);playerEject={kind:'flip',vx:fx*carry+sx*1.4,vz:fz*carry+sz*1.4,t:.62,dur:.62,height:.72,spin:1};hurtP(Math.min(16,2+speed*.28));msg='Has saltat del vehicle en marxa!';msgT=2.5}
+if(moving){const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),sx=Math.cos(leaving.hd)*side,sz=-Math.sin(leaving.hd)*side,carry=Math.min(28,speed*.72);playerEject={kind:'flip',vx:fx*carry+sx*1.4,vz:fz*carry+sz*1.4,t:.5,dur:.5,height:.68};hurtP(Math.min(16,2+speed*.28));msg='Has saltat del vehicle en marxa!';msgT=2.5}
 cv=null}else{const v=nearV();if(v){cv=v;swimming=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
 addEventListener('keydown',e=>{if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(e.repeat)return;act(e.code);if(started&&!paused&&!over)K[e.code]=1});addEventListener('keyup',e=>K[e.code]=0);
 let fireHoldTimer=null;
@@ -821,20 +821,20 @@ if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k];if(Math.hypot(P.x-it
 msgT-=dt;pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv;animPl(cv?0:f,dt);
 if(!cv&&playerFall){pl.position.y=playerFall.y;pl.rotation.x=(playerFall.spin||1)*playerFall.t*7.5;pl.rotation.z=Math.sin(playerFall.t*8)*.45}
 else if(!cv&&playerEject&&playerEject.t>0){
-  const dur=playerEject.dur||.62,p=Math.max(0,Math.min(1,1-playerEject.t/dur)),u=pl.userData;
+  const dur=playerEject.dur||.5,p=Math.max(0,Math.min(1,1-playerEject.t/dur)),u=pl.userData;
   if(playerEject.kind==='flip'){
-    pl.position.y+=Math.sin(Math.PI*p)*(playerEject.height||.72);
-    pl.rotation.x=-(playerEject.spin||1)*Math.PI*2*p;
-    pl.rotation.z=0;
-    // Postura compacta: prou lectura de voltereta sense una coreografia llarga.
-    if(u.al)u.al.rotation.x=.72;if(u.ar)u.ar.rotation.x=.72;
-    if(u.ael)u.ael.rotation.x=.58;if(u.aer)u.aer.rotation.x=.58;
-    if(u.ll)u.ll.rotation.x=-.32;if(u.lr)u.lr.rotation.x=-.32;
-    if(u.lkl)u.lkl.rotation.x=-.58;if(u.lkr)u.lkr.rotation.x=-.58;
-  }else{
-    pl.position.y+=Math.sin(Math.PI*p)*(playerEject.height||1);
-    pl.rotation.x=(playerEject.spin||1)*Math.PI*2*p;
-    pl.rotation.z=Math.sin(Math.PI*p)*(playerEject.spin||1)*.35
+    // Una sola voltereta: angle monotònic 0 -> 2π i pivot fix a la cintura.
+    const turn=Math.PI*2*p,waistLocal=2.05,waistScaled=waistLocal*pl.scale.y;
+    pl.rotation.x=-turn;pl.rotation.z=0;
+    const waistOffset=new THREE.Vector3(0,waistScaled,0).applyQuaternion(pl.quaternion);
+    pl.position.x-=waistOffset.x;
+    pl.position.y+=waistScaled-waistOffset.y+Math.sin(Math.PI*p)*(playerEject.height||.68);
+    pl.position.z-=waistOffset.z;
+    // Cos compacte però sense subanimacions ni fases addicionals.
+    if(u.al)u.al.rotation.x=.58;if(u.ar)u.ar.rotation.x=.58;
+    if(u.ael)u.ael.rotation.x=.5;if(u.aer)u.aer.rotation.x=.5;
+    if(u.ll)u.ll.rotation.x=-.28;if(u.lr)u.lr.rotation.x=-.28;
+    if(u.lkl)u.lkl.rotation.x=-.5;if(u.lkr)u.lkr.rotation.x=-.5;
   }
 }
 V.forEach(v=>place(v,t,dt,v===cv?(v.steerInput||0):0));poseRider(cv,dt);
