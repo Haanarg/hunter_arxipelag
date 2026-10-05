@@ -105,7 +105,16 @@ window.HUNTER_VEHICLES=Object.freeze({
           g.userData.oars.push(pivot)
         }
       }
-      if(t==='windsurf'){box(g,.72,.18,4.8,0xf2e2b9,0,.18,0,'paint');rod(g,[0,.28,.25],[0,4.7,.25],.08,metal);const sail=new THREE.Mesh(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,4.55,.25),new THREE.Vector3(0,.8,.25),new THREE.Vector3(2.15,1.2,.25)]),new THREE.MeshBasicMaterial({color:0xe86d4b,side:THREE.DoubleSide}));const geom=new THREE.BufferGeometry();geom.setAttribute('position',new THREE.Float32BufferAttribute([0,4.55,.25,0,.8,.25,2.15,1.2,.25],3));geom.setIndex([0,1,2]);geom.computeVertexNormals();const sm=new THREE.Mesh(geom,material(0xe86d4b,'paint'));g.add(sm);rod(g,[0,2.4,.25],[1.65,1.7,.25],.05,metal)}
+      if(t==='windsurf'){
+        box(g,.78,.18,5.15,0xf2e2b9,0,.18,0,'paint');
+        rod(g,[0,.28,.25],[0,5.05,.25],.08,metal);
+        const geom=new THREE.BufferGeometry();
+        geom.setAttribute('position',new THREE.Float32BufferAttribute([0,4.9,.25,0,.88,.25,2.32,1.24,.25],3));
+        geom.setIndex([0,1,2]);geom.computeVertexNormals();
+        const sm=new THREE.Mesh(geom,material(0xe86d4b,'paint'));g.add(sm);
+        // Travesser a l'alçada natural de les mans del rider dempeus.
+        rod(g,[0,2.62,.25],[1.82,1.86,.25],.055,metal)
+      }
       if(t==='hover'){box(g,5,.85,8,rubber,0,.55,0,'rubber');for(const x of[-2.35,2.35])for(let z=-3.5;z<4;z+=.65)box(g,.2,.7,.48,0x394145,x,.5,z,'rubber');box(g,4.45,.85,6.7,0xcf9e4f,0,1.38,-.2,'paint');box(g,2.75,1.12,2.9,glass,0,2.2,-.92,'glass');box(g,2.98,.22,3.2,0xcda75f,0,2.82,-.92,'paint');for(const x of[-2.05,2.05])box(g,.18,.3,6.7,0xa97835,x,1.25,-.2,'paint');for(const x of[-1.1,1.1])box(g,.42,.22,.16,0xffe09a,x,1.45,-3.55,'paint');const duct=new THREE.Mesh(new THREE.TorusGeometry(1.55,.2,8,20),material(metal,'metal'));duct.position.set(0,2.9,3);g.add(duct);const fan=new THREE.Group();fan.position.copy(duct.position);for(let i=0;i<4;i++){const blade=box(fan,.2,2.8,.12,rubber,0,0,0,'rubber');blade.rotation.z=i*Math.PI/4}g.add(fan);g.userData.fan=fan;round(g,.28,.3,0x7b8588,0,2.9,3,'z','metal');for(const x of[-1.7,1.7]){box(g,.15,2.05,1,0xbe8c43,x,2.68,3.5,'paint');rod(g,[x,1.7,2.65],[x,3.65,3.2],.07,metal)}box(g,1.4,.18,.8,0x5b4939,0,1.88,1.45,'paint')}
       if(t==='heli'||t==='heli_combat'){
         const combat=t==='heli_combat',bodyCol=combat?0x59634f:0x647768;
