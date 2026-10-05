@@ -90,6 +90,29 @@ function wallCandidates(x,z,r=0){
   }
   return out
 }
+const BUILDING_CELL=96,buildingGrid=new Map();let buildingGridSource=null,buildingGridCount=-1,buildingQueryStamp=0;
+const buildingCellKey=(cx,cz)=>cx+','+cz;
+function rebuildBuildingGrid(){
+  buildingGrid.clear();buildingGridSource=B;buildingGridCount=B.length;
+  for(const b of B){
+    const minX=Math.floor((b.x-b.w/2)/BUILDING_CELL),maxX=Math.floor((b.x+b.w/2)/BUILDING_CELL),
+          minZ=Math.floor((b.z-b.d/2)/BUILDING_CELL),maxZ=Math.floor((b.z+b.d/2)/BUILDING_CELL);
+    for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){
+      const key=buildingCellKey(cx,cz),bucket=buildingGrid.get(key);
+      if(bucket)bucket.push(b);else buildingGrid.set(key,[b])
+    }
+  }
+}
+function buildingCandidates(x,z,r=0){
+  if(buildingGridSource!==B||buildingGridCount!==B.length)rebuildBuildingGrid();
+  const out=[],stamp=++buildingQueryStamp,minX=Math.floor((x-r)/BUILDING_CELL),maxX=Math.floor((x+r)/BUILDING_CELL),
+        minZ=Math.floor((z-r)/BUILDING_CELL),maxZ=Math.floor((z+r)/BUILDING_CELL);
+  for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){
+    const bucket=buildingGrid.get(buildingCellKey(cx,cz));if(!bucket)continue;
+    for(const b of bucket)if(b._buildingQueryStamp!==stamp){b._buildingQueryStamp=stamp;out.push(b)}
+  }
+  return out
+}
 const ICON={
 med:'<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="16" width="46" height="34" rx="5" fill="#fff" stroke="#657078" stroke-width="3"/><rect x="18" y="28" width="28" height="9" rx="4.5" fill="#d7ae7c" transform="rotate(-28 32 32.5)"/><circle cx="27" cy="35" r="1.8" fill="#9a6f45"/><circle cx="37" cy="30" r="1.8" fill="#9a6f45"/></svg>',
 expl:'<svg viewBox="0 0 64 64" aria-hidden="true"><g stroke="#6c1717" stroke-width="2"><rect x="12" y="20" width="11" height="31" rx="5" fill="#d63b32"/><rect x="26" y="18" width="11" height="33" rx="5" fill="#d63b32"/><rect x="40" y="21" width="11" height="30" rx="5" fill="#d63b32"/></g><path d="M32 18 C34 9 46 13 48 5" fill="none" stroke="#c49a4d" stroke-width="3"/><circle cx="49" cy="5" r="3" fill="#ffcf4a"/></svg>',
@@ -573,7 +596,7 @@ else{P.hd+=tr*dt*2.2;if(playerFall){playerFall.t+=dt;playerFall.vy-=24*dt;player
 else if(playerEject&&playerEject.t>0){P.x=Math.max(-lim,Math.min(lim,P.x+playerEject.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerEject.vz*dt));playerEject.vx*=Math.exp(-2.4*dt);playerEject.vz*=Math.exp(-2.4*dt);playerEject.t=Math.max(0,playerEject.t-dt)}else{const ss=(swimming?5:12)*f*dt;P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*ss));P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*ss))}
 if(!playerFall){wallPush();treePush();vehiclePushPlayer()}}
 V.slice().forEach(v=>{if(v===cv)return;if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
-ib=cv?null:B.find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2)||null;
+ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2)||null;
 const floor=ib?ib.fy+.3:groundAt(P.x,P.z),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;if(!playerFall)P.y=ib?floor:Math.max(floor,surface-2.1);
 B.forEach(b=>{const i=b===ib;b.o.visible=i||Math.hypot(b.x-P.x,b.z-P.z)<1800;b.roof.visible=!i&&b.rhp>0;b.wm.opacity=b.dm.opacity=i?.18:1});
 Dr.forEach(d=>{const o=d.alwaysOpen||(!d.locked&&!cv&&Math.hypot(P.x-d.cx,P.z-d.cz)<(d.open?6:4.5));d.open=o;d.m.visible=!o});
