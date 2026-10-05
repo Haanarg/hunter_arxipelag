@@ -521,11 +521,11 @@ function handleVehicleImpacts(v,dt){
   const c=VT[v.t],speed=Math.abs(v.v),radius=vehicleRadius(v.t);v.ramCd=Math.max(0,(v.ramCd||0)-dt);v.envCd=Math.max(0,(v.envCd||0)-dt);v.bump=Math.max(0,(v.bump||0)-dt);
   if(speed<2.5||c.m==='a'||c.m==='w')return;
   if(v.ramCd<=0){
-    for(const u of E){if(u.t!=='soldat')continue;const d=Math.hypot(v.x-u.x,v.z-u.z);if(d<radius*.68+u.r*.45){const dmg=Math.min(48,6+speed*2.4);hurtE(u,dmg);damageVehicle(v,dmg*.22,1);if(v.destroyed)return;u.alert=12;v.ramCd=.35;v.v*=.86;msg='Atropellament!';msgT=1;break}}
+    for(const u of E){if(u.t!=='soldat')continue;const d=Math.hypot(v.x-u.x,v.z-u.z);if(d<radius*.68+u.r*.45){const dmg=Math.min(48,6+speed*2.4);hurtE(u,dmg);u.alert=12;v.ramCd=.35;v.v*=.86;msg='Atropellament!';msgT=1;break}}
   }
   if(v.envCd>0)return;
   const t=treeAt(v.x,v.z,radius*.48);if(!t)return;
-  if(t.p&&t.alive){killPalm(t);damageVehicle(v,Math.min(18,5+speed*.55),speed>18?2:1);if(v.destroyed)return;v.v*=.9;v.bump=.18;v.envCd=.28;msg='Has tombat una palmera.';msgT=1;return}
+  if(t.p&&t.alive){killPalm(t);damageVehicle(v,Math.min(18,5+speed*.55),1);if(v.destroyed)return;v.v*=.9;v.bump=.18;v.envCd=.28;msg='Has tombat una palmera.';msgT=1;return}
   if(t.rock){damageVehicle(v,Math.min(14,4+speed*.45),1);vehicleImpactFx(t.x,Math.max(0,hAt(t.x,t.z))+.8,t.z);if(v.destroyed)return;v.v*=.8;v.bump=.22;v.hd+=rn(-.045,.045);v.envCd=.32;msg='Impacte amb roca!';msgT=1}
 }
 function stepV(v,f,tr,ud,dt){
