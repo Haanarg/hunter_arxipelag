@@ -1096,13 +1096,15 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 
 Prioritat proposada: **1 → 2 → 3 → 4 → 5**. L'objectiu és millorar el rendiment sense alterar mecàniques ni aspecte visual, especialment pensant en Android i en mapes grans.
 
-### 1. Accelerar `hAt()` / `rawHAt()` amb un índex espacial d'illes
+### 1. ✅ FET — Accelerar `hAt()` / `rawHAt()` amb un índex espacial d'illes
 - Situació actual: `rawHAt(x,z)` recorre totes les illes del mapa a cada consulta d'altura i després calcula soroll `fbm`.
 - Problema: `hAt()` és una dependència central i es crida constantment des de física, IA, projectils, vegetació, vehicles, càmera, fauna i col·lisions.
 - Proposta: construir una graella espacial de les illes i consultar només les illes candidates de les cel·les pròximes al punt.
 - Objectiu: evitar recorreguts globals per cada consulta d'altura.
 - Impacte esperat: **molt alt**.
 - Risc: **baix-mitjà**, sempre que el resultat de `rawHAt()` es mantingui matemàticament equivalent.
+- **Implementat el 2026-10-05:** graella espacial de 512 m; cada illa s'indexa fins a 2× el seu radi d'influència útil i `rawHAt()` només recorre les illes candidates de la cel·la consultada.
+- Afegit un smoke test d'equivalència que compara el resultat indexat amb un escaneig complet d'illes en diversos punts del mapa.
 
 ### 2. Índex espacial general per vehicles, enemics i obstacles
 - Situació actual: diverses comprovacions recorren arrays complets de `V`, `E`, `B` i `Wl`; `vehicleObstacles(v)` crea arrays temporals amb spreads, filtres i cerques.
