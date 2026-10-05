@@ -55,7 +55,7 @@ ok("html.includes('data-k=\"KeyU\"')&&html.includes('data-k=\"KeyJ\"')&&html.inc
 ok("html.includes(\"rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0)\")",'rowboat oar cycle is inverted');
 ok("html.includes(\"playerEject={kind:'flip'\")&&html.includes('dur:.5')&&!html.includes(\"playerEject?.kind==='vault'\")",'moving exit uses a single short flip without special vault camera');
 ok("charSrc.includes('kneeL=-(')&&charSrc.includes('kneeR=-(')",'walking knees bend in corrected direction');
-ok("html.includes('const turn=Math.PI*2*p,waistLocal=2.05')&&html.includes('applyQuaternion(pl.quaternion)')&&html.includes('pl.rotation.x=-turn')",'short flip rotates exactly once around waist');
+ok("html.includes('const turn=p>=1?0:-Math.PI*2*p,waistLocal=2.05')&&html.includes('Math.max(0,playerEject.t-dt)')&&html.includes('playerEject.t>=0')",'flip completes exactly one turn and renders an upright final frame');
 ok("html.includes(\"mirror=R()<.5?-1:1\")&&html.includes(\"ang=rr(0,Math.PI*2)\")",'compounds support full rotation and mirroring');
 run("panel('map');resume();joystick.state.x=1;joystick.state.y=-1;build();update(.016,20)");ok('joystick.state.x===0&&joystick.state.y===0&&hp===100','restart resets joystick and world');
 ok('PM.t.parent===world','vegetation attached to rebuilt world');
