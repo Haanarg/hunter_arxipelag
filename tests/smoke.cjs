@@ -44,7 +44,8 @@ ok("fs.readFileSync('src/rider.js','utf8').includes(\"v.t==='bici'?-(v.pedalPhas
 const riderSrc=fs.readFileSync('src/rider.js','utf8'),charSrc=fs.readFileSync('src/characters.js','utf8'),vehSrc=fs.readFileSync('src/vehicles.js','utf8');
 ok("charSrc.includes('SphereGeometry(.5,12,8,0,Math.PI*2,.28,Math.PI-.62)')&&charSrc.includes('CylinderGeometry(.24,.27,.34,10)')&&charSrc.includes('hairTop')",'player has clipped head, neck and short hair');
 ok("charSrc.includes('glasses')&&charSrc.includes('capCrown')",'player keeps cap and sunglasses');
-ok("riderSrc.includes('SphereGeometry(.44,12,8)')&&riderSrc.includes('capCrown')&&riderSrc.includes("v.t==='windsurf'")&&riderSrc.includes('Math.PI/2')",'open-vehicle rider has updated headgear and side-on windsurf stance');
+ok("riderSrc.includes('SphereGeometry(.44,12,8,0,Math.PI*2,.28,Math.PI-.62)')&&riderSrc.includes('capCrown')&&riderSrc.includes("v.t==='windsurf'")&&riderSrc.includes('Math.PI/2')",'open-vehicle rider has updated headgear and side-on windsurf stance');
+ok("charSrc.includes('hairBack')&&charSrc.includes('nape')&&riderSrc.includes('hairBack')&&riderSrc.includes('nape')",'player and rider have longer organic rear hair');
 ok("vehSrc.includes('Barca oberta')&&vehSrc.includes('Suports dels rems sobre la regala')",'rowboat is open with gunwales, seats and raised oar supports');
 ok("window.HUNTER_VEHICLES.scales.camio===1.8125&&window.HUNTER_VEHICLES.scales.tanqueta===1.8125&&window.HUNTER_VEHICLES.scales.tanc===2.25",'truck tankette and tank are scaled up 25 percent');
 ok("html.includes('barbedHQ(pb.x,pb.z,72.5,65,18,26)')&&html.includes('[[-69,-61],[69,-61],[-69,61],[69,61]]')",'HQ perimeter and corner towers are expanded');
