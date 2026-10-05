@@ -54,6 +54,7 @@ ok("html.includes('barbedHQ(pb.x,pb.z,72.5,65,18,26)')&&html.includes('[[-69,-61
 ok("html.includes('gx=Math.max(w+gap,Math.min(e-gap,cx+gateOffset))')&&html.includes('gateOffset=0')",'HQ gate supports lateral offset from bunker door');
 ok("html.includes('data-k=\"KeyU\"')&&html.includes('data-k=\"KeyJ\"')&&html.includes("classList.toggle('heli-active',!!cv&&VT[cv.t]?.m==='a')")",'helicopters expose contextual touch ascend and descend controls');
 ok("html.includes('smokeTopOffset')&&html.includes('new THREE.Box3().setFromObject(v.o)')&&html.includes('count=frac>.65?3:2')&&html.includes('0x0d0f10')",'damaged vehicle smoke is denser darker smaller and emitted from vehicle top');
+ok("html.includes("url('assets/start-island.svg')")&&!html.includes('build();mini();let last=performance.now()')&&html.includes("document.querySelectorAll('#ini button[data-d]').forEach(b=>b.onclick=()=>")",'start screen uses static image and defers world generation until difficulty click');
 ok("vehSrc.includes('box(g,2.68,1.55,4.4')&&vehSrc.includes('fus.scale.set(.94,.92,3.2)')",'helicopter fuselages are narrowed to cabin width');
 ok("vehSrc.includes("rod(g,[side*.82,2.05,-.55],[x,1.75,-.55]")&&vehSrc.includes("rod(g,[side*.72,1.45,-1.15],[x,.5,-1.15]")",'combat helicopter has missile pylons and skid struts');
 ok("charSrc.includes('hairTop.position.set(0,4.4,.01)')&&charSrc.includes('sideFill.scale.set(.32,.66,.44)')&&riderSrc.includes('hairTop.position.set(0,1.69,.01)')",'player and rider hair sit higher and further inside head volume');
