@@ -2,7 +2,7 @@
 const HUNTER_TERRAIN_PALETTE=Object.freeze([
   [-75,0x04143c],[-18,0x075d8a],[-6,0x0d91b0],[-1.5,0xeac45e],
   [.5,0xffd975],[3.5,0xe9b54a],[5,0x66ef1f],[14,0x34c83b],
-  [22,0x149f34],[30,0x6f6c79],[40,0xececf2]
+  [22,0x149f34],[30,0x138d31],[40,0x0f7b2b]
 ]);
 window.HUNTER_TERRAIN=Object.freeze({
   palette:HUNTER_TERRAIN_PALETTE,
