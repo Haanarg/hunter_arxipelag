@@ -171,6 +171,8 @@ Vehicles conduïbles actuals:
 - Inèrcia, grip, deriva, massa i resposta de gir específics per família.
 - Col·lisions OBB entre vehicles.
 - Impactes amb jugador, soldats, roques, palmeres i filferrada.
+- Tombar una palmera resta sempre exactament 1 impacte estructural al vehicle.
+- Atropellar un soldat no resta impactes estructurals al vehicle; es mantenen el dany al soldat i la pèrdua de velocitat.
 - Blindatge, vida estructural, fum de dany, destrucció i debris.
 - Els vehicles conserven inèrcia després que el jugador en baixi.
 
