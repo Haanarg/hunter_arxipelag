@@ -1001,3 +1001,11 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - La rotació aleatòria que ja tenia cada palmera fa que la direcció de l'arc variï entre exemplars.
 - Es manté el tronc cònic, més gruixut a la base i més prim a la part superior.
 - El smoke test comprova també que la geometria resultant té una desviació lateral efectiva.
+
+
+## Cotes altes verdes i més densitat de palmeres — 2026-10-05
+- Eliminada la transició de verd a gris/blanc a les cotes altes; el terreny continua en una gamma de verds fins a 40 m.
+- Es manté exactament la probabilitat original de palmeres a les cotes baixes: 12% per sota de 4 m.
+- També es conserva el comportament original de les cotes mitjanes favorables: 20% quan el soroll de vegetació supera el llindar existent.
+- A partir de 28 m la probabilitat passa a 22% i augmenta progressivament amb l'altitud fins a 34% a les cotes més altes.
+- Això fa que les zones elevades siguin clarament més denses en palmeres que les baixes, sense empobrir la vegetació de costa i plana.
