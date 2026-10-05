@@ -1025,3 +1025,15 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - El botó de tret normal 🎯 queda separat del de míssils.
 - Eliminada la pulsació llarga sobre 🎯 que abans disparava míssils accidentalment.
 - G es manté com a accés de teclat a l'arma secundària per compatibilitat.
+
+
+## Controls i maniobrabilitat de l'helicòpter de combat — 2026-10-05
+- El botó 🚀 queda a l'esquerra del botó de tret normal 🎯 i no ocupa cap fila de la columna principal.
+- Els botons ⬆️/⬇️ mantenen exactament la mateixa posició que a l'helicòpter normal.
+- L'helicòpter de combat passa a ser més ràpid i maniobrable que l'helicòpter normal: més acceleració, velocitat màxima, gir, resposta de direcció, resposta de guinyada i velocitat d'ascens.
+- Manté l'armadura i la vida superiors.
+
+## Barca de rems: base simplificada — 2026-10-05
+- Eliminat el buc detallat anterior, inclosos costats, bancs i peces de proa/popa.
+- Substituït per una única peça marró, ovalada i apuntada als dos extrems.
+- Es conserven els dos rems, pivots i pales per continuar treballant el model a partir d'aquesta base.
