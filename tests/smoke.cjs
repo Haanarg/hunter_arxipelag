@@ -74,6 +74,9 @@ ok("String(handleVehicleImpacts).includes('killPalm(t);damageVehicle(v,Math.min(
 ok("String(stepV).includes('breakSpeed=barbed?8:14')&&String(stepV).includes("tank=v.t==='tanc'")&&String(stepV).includes('if(tank||speed>breakSpeed)')",'tank breaks walls and barbed wire without a speed threshold');
 ok("String(collisionDamageVehicle).includes("v?.t==='tanc'")",'tank ignores structural damage from collisions');
 ok("String(mkB).includes('rammable:true')",'ordinary building walls are marked as rammable');
+ok("String(mkB).includes('rhp:opt.hangar?90:120')",'hangar roof shares wall-equivalent structural life');
+ok("buildingSrc.includes('roofGroup.userData.hitSegments')&&buildingSrc.includes('roofGroup.userData.hangarRoof=true')",'hangar roof exposes segmented collision geometry as one destructible piece');
+ok("String(roofBreak).includes('HR.push')&&String(updDeb).includes('for(let i=HR.length-1')",'hangar roof destruction uses a collapse animation instead of instant hide');
 ok('worldVisualThrottled','buildings and remote vehicle visuals use reduced update rates');
 ok('faunaLodEnabled','fauna uses distance-based reduced update rates');
 const types=['llanxa','moto_aquatica','hover','cotxe','moto','bici','barca_rems','windsurf','camio','tanqueta','llanxa_coets','tanc','heli','heli_combat'];
