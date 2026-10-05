@@ -849,3 +849,15 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
   - un rem independent a cada costat, amb mànec cap a l'interior i pala ampla cap a fora.
 - Ajustada la remada perquè els dos rems pivotin des de les regales de forma coherent amb la nova geometria.
 - Actualitzat el smoke test perquè comprovi la nova voltereta curta i la nova estructura de la barca.
+
+
+## Gir únic a la cintura i ajust del cabell/gorra — 2026-10-05
+- Simplificada encara més la sortida d'un vehicle en moviment: ara hi ha una sola rotació contínua exacta de 360°.
+- La durada de la voltereta s'ha reduït a aproximadament 0,5 s.
+- El pivot visual es compensa a l'altura de la cintura (waistLocal=2.05), evitant que el personatge sembli girar des dels peus.
+- Eliminades subfases i qualsevol segon gest de rotació corporal durant la maniobra.
+- Eliminats els volums de cabell laterals que baixaven sobre les orelles.
+- Mantingut el volum del darrere i la nuca perquè el cabell continuï sent una mica més llarg per darrere.
+- Rebaixada i ajustada la gorra: corona lleugerament més estreta i baixa, amb visera reposicionada.
+- El mateix retoc s'ha replicat al rider dels vehicles oberts.
+- Actualitzades les comprovacions del smoke test per cobrir el gir únic, el pivot a cintura, l'absència de sideHair i el nou ajust de gorra.
