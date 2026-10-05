@@ -10,13 +10,28 @@ const MAT={
  painted:c=>M(c,'paint'),metal:c=>M(c,'metal'),rubber:c=>M(c,'rubber'),glass:c=>M(c,'glass'),masonry:c=>M(c,'masonry')
 };
 let seed,R,islands,A,Bi,world,B=[],requestedSeed=null;
+const ISLAND_CELL=512,islandGrid=new Map(),islandCellKey=(cx,cz)=>cx+','+cz;
+function rebuildIslandGrid(){
+  islandGrid.clear();
+  if(!islands)return;
+  for(const island of islands){
+    // rawHAt parteix de m=-1: una illa només pot millorar aquest valor si d < 2*r.
+    const reach=island.r*2,minX=Math.floor((island.x-reach)/ISLAND_CELL),maxX=Math.floor((island.x+reach)/ISLAND_CELL),
+          minZ=Math.floor((island.z-reach)/ISLAND_CELL),maxZ=Math.floor((island.z+reach)/ISLAND_CELL);
+    for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){
+      const key=islandCellKey(cx,cz),bucket=islandGrid.get(key);
+      if(bucket)bucket.push(island);else islandGrid.set(key,[island])
+    }
+  }
+}
+const islandCandidates=(x,z)=>islandGrid.get(islandCellKey(Math.floor(x/ISLAND_CELL),Math.floor(z/ISLAND_CELL)))||(islands||[]);
 const seedFromText=v=>{v=String(v??'').trim();if(/^-?\d+$/.test(v))return Number(v)>>>0;let h=2166136261>>>0;for(let i=0;i<v.length;i++){h^=v.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0};
 const mul=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
 const hash=(x,y)=>{const h=Math.sin(x*127.1+y*311.7+seed*.001)*43758.5453;return h-Math.floor(h)};
 function vn(x,y){const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);
 return hash(ix,iy)*(1-u)*(1-v)+hash(ix+1,iy)*u*(1-v)+hash(ix,iy+1)*(1-u)*v+hash(ix+1,iy+1)*u*v}
 const fbm=(x,y)=>vn(x,y)*.5+vn(x*2,y*2)*.25+vn(x*4,y*4)*.125+vn(x*8,y*8)*.0625;
-function rawHAt(x,z){let m=-1;for(const i of islands)m=Math.max(m,1-Math.hypot(x-i.x,z-i.z)/i.r);
+function rawHAt(x,z){let m=-1;for(const i of islandCandidates(x,z))m=Math.max(m,1-Math.hypot(x-i.x,z-i.z)/i.r);
 let h=(m-.25+.6*(fbm(x/520,z/520)-.47))*45;const e=Math.max(Math.abs(x),Math.abs(z));
 if(e>H-120)h=Math.min(h,-4-(e-(H-120))*.05);
 if(h>=-1.5)return h;
@@ -32,7 +47,8 @@ function genIslands(){R=mul(seed);const q=R()<.5?-1:1,q2=R()<.5?-1:1,extent=MAP_
 A={x:-q*rr(baseMin,baseMax)*2,z:-q2*rr(baseMin,baseMax)*2,r:rr(520,680)};Bi={x:q*rr(baseMin,baseMax)*2,z:q2*rr(baseMin,baseMax)*2,r:rr(520,680)};
 islands=[A,Bi];const regular=22*MAP_SCALE*MAP_SCALE,large=2*MAP_SCALE*MAP_SCALE;
 for(let i=0;i<regular;i++)islands.push({x:rr(-extent,extent)*2,z:rr(-extent,extent)*2,r:rr(180,520)});
-for(let i=0;i<large;i++)islands.push({x:rr(-extent*.55,extent*.55)*2,z:rr(-extent*.55,extent*.55)*2,r:rr(800,1040)})}
+for(let i=0;i<large;i++)islands.push({x:rr(-extent*.55,extent*.55)*2,z:rr(-extent*.55,extent*.55)*2,r:rr(800,1040)});
+rebuildIslandGrid()}
 const slope=(x,z,h)=>Math.abs(hAt(x+5,z)-h)+Math.abs(hAt(x,z+5)-h);
 function land(i,n=600,fl){for(let k=0;k<n;k++){const a=R()*6.283,d=R()*i.r*.75,x=i.x+Math.cos(a)*d,z=i.z+Math.sin(a)*d,h=hAt(x,z);
 if(h>3&&h<14&&slope(x,z,h)<2.5&&(!fl||fr(x,z)<2.2)&&!B.some(b=>Math.abs(b.x-x)<b.hw+24&&Math.abs(b.z-z)<b.hd+24)&&!treeHit(x,z,3)&&Math.abs(x)<H-150&&Math.abs(z)<H-150)return{x,z,h}}return null}
