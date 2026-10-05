@@ -53,6 +53,16 @@ run(`{
   sight=origSight;E=savedE;cv=savedCv;over=savedOver;disg=savedDisg;P.x=savedPX;P.z=savedPZ;
 }`);
 ok('enemySenseCached','enemy perception runs at 10 Hz and reuses cached sight between ticks');
+run(`{
+  const ta=segmentAabbT(0,1,0,10,1,0,4,6,0,2,-1,1);
+  const ts=segmentSphereT(0,1,0,10,1,0,5,1,0,1);
+  globalThis.projectileSegmentMath=Math.abs(ta-.4)<1e-9&&Math.abs(ts-.4)<1e-9;
+  globalThis.projectileUsesBroadPhase=String(updPj).includes('wallCandidates(mx,mz,reach+1)')&&String(updPj).includes('buildingCandidates(mx,mz,reach+1)')&&String(updPj).includes('enemyCandidatesAt(mx,mz,reach+4)')&&String(updPj).includes('vehicleCandidatesAt(mx,mz,reach+12,true)');
+  globalThis.projectileNoGlobalMicrostep=!String(updPj).includes("Math.ceil(dt/.008)")&&!String(updPj).includes('updPjTick');
+}`);
+ok('projectileSegmentMath','projectile segment intersection helpers detect continuous hits');
+ok('projectileUsesBroadPhase','projectiles use spatial broad-phase for collision candidates');
+ok('projectileNoGlobalMicrostep','projectiles no longer use the global 0.008 second microstep loop');
 const types=['llanxa','moto_aquatica','hover','cotxe','moto','bici','barca_rems','windsurf','camio','tanqueta','llanxa_coets','tanc','heli','heli_combat'];
 // Keep combat out of movement fixtures while retaining the actual generated enemies.
 run('const savedEnemies=E;E=[];');
