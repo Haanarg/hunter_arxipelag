@@ -946,3 +946,12 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Desplaçat el conjunt una mica més cap enrere perquè quedi clarament per fora de l'esfera del cap.
 - Mantingut el límit superior sota la gorra per evitar que sobresurti per dalt.
 - Ajustada també la peça posterior perquè segueixi la nova envolupant.
+
+
+## Clatell tancat i radi reduït del cabell — 2026-10-05
+- Tancada la part posterior del cilindre del cabell amb una peça cilíndrica completa al clatell.
+- Això elimina el buit visible entre els dos extrems laterals del cabell.
+- Un cop tancat el clatell, s'ha pogut reduir lleugerament el radi del cilindre principal perquè quedi més ajustat al cap.
+- Jugador: radi màxim reduït de 0,42 a 0,405 i posició posterior ajustada.
+- Rider: radi màxim reduït de 0,385 a 0,37 amb el mateix criteri.
+- Mantingut el límit superior sota la gorra verda.
