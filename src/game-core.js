@@ -227,7 +227,7 @@ document.querySelectorAll('#ini button[data-d]').forEach(b=>b.onclick=()=>{
   started=1;iniEl.style.display='none';initAudio()
 });
 // animacions de destrucció
-const DB=[],WA=[],dgeo=new THREE.BoxGeometry(1,1,1),dmc={},dmat=c=>dmc[c]||(dmc[c]=M(c));
+const DB=[],WA=[],HR=[],dgeo=new THREE.BoxGeometry(1,1,1),dmc={},dmat=c=>dmc[c]||(dmc[c]=M(c));
 function debris(x,y,z,col,n,sz,sp){for(let i=0;i<n;i++){const m=new THREE.Mesh(dgeo,dmat(col)),s=rn(.4,1)*sz;m.scale.set(s,s*rn(.5,1.2),s);m.position.set(x+rn(-1,1),y,z+rn(-1,1));m.rotation.set(rn(0,3),rn(0,3),0);world.add(m);
 DB.push({m,s0:m.scale.clone(),vx:rn(-sp,sp),vy:rn(sp*.4,sp*1.3),vz:rn(-sp,sp),rx:rn(-6,6),life:rn(1.2,2)})}
 while(DB.length>160)world.remove(DB.shift().m)}
@@ -252,13 +252,22 @@ function wallBreak(w){const h=w.y1-w.y0-1,parts=w.parts&&w.parts.length?w.parts:
 if(w.parts&&w.parts.length){parts.forEach(m=>m.visible=false)}else if(w.m.visible)WA.push({m:w.m,h,t:.5});else world.remove(w.m);
 for(let i=0;i<(w.door?6:10);i++)debris(rn(w.x0,w.x1),w.y0+1+h*rn(.2,.9),rn(w.z0,w.z1),col,1,.9,7);
 for(let i=0;i<3;i++)puff(cx,w.y0+1+h*rn(.1,.6),cz,0xc9b48a,3.5)}
-function roofBreak(b){if(b.rb)return;b.rb=1;b.rhp=0;b.roof.visible=false;const col=b.roof.material?b.roof.material.color.getHex():(b.roof.userData.color||0x777777),y=b.fy+b.h+.6;
-for(let i=0;i<20;i++)debris(b.x+rn(-b.w/2,b.w/2),y,b.z+rn(-b.d/2,b.d/2),col,1,1.3,9);
-for(let i=0;i<8;i++)puff(b.x+rn(-b.w/2,b.w/2),y,b.z+rn(-b.d/2,b.d/2),0xc9b48a,4.5);snd('boom',.4)}
+function roofBreak(b){if(b.rb)return;b.rb=1;b.rhp=0;const col=b.roof.material?b.roof.material.color.getHex():(b.roof.userData.color||0x777777),y=b.fy+b.h+.6;
+if(b.hangar&&b.roof?.userData?.hangarRoof){
+  HR.push({m:b.roof,t:0,dur:1.05,baseY:b.roof.position.y,baseRx:b.roof.rotation.x,baseRz:b.roof.rotation.z,dir:rn(-1,1)<0?-1:1,x:b.x,z:b.z,w:b.w,d:b.d,col});
+  for(let i=0;i<12;i++)puff(b.x+rn(-b.w/2,b.w/2),b.fy+rn(1,b.w*.45),b.z+rn(-b.d/2,b.d/2),0x8b8580,3.8);
+  for(let i=0;i<10;i++)debris(b.x+rn(-b.w/2,b.w/2),b.fy+rn(1,b.w*.45),b.z+rn(-b.d/2,b.d/2),col,1,.75,6);
+}else{
+  b.roof.visible=false;
+  for(let i=0;i<20;i++)debris(b.x+rn(-b.w/2,b.w/2),y,b.z+rn(-b.d/2,b.d/2),col,1,1.3,9);
+  for(let i=0;i<8;i++)puff(b.x+rn(-b.w/2,b.w/2),y,b.z+rn(-b.d/2,b.d/2),0xc9b48a,4.5)
+}
+snd('boom',.4)}
 function updDeb(dt){for(let i=DB.length-1;i>=0;i--){const d=DB[i],m=d.m;d.vy-=28*dt;m.position.x+=d.vx*dt;m.position.y+=d.vy*dt;m.position.z+=d.vz*dt;m.rotation.x+=d.rx*dt;m.rotation.y+=(d.ry||0)*dt;m.rotation.z+=(d.rz||0)*dt;
 const g=Math.max(0,hAt(m.position.x,m.position.z))+.2;if(m.position.y<g){m.position.y=g;d.vy*=-.3;d.vx*=.6;d.vz*=.6;d.rx*=.82;if(d.ry)d.ry*=.82;if(d.rz)d.rz*=.82}
 d.life-=dt;const fade=d.vehiclePart?.55:.4,k=Math.max(0,Math.min(1,d.life/fade));m.scale.set(d.s0.x*k,d.s0.y*k,d.s0.z*k);if(d.life<=0){world.remove(m);DB.splice(i,1)}}
 for(let i=WA.length-1;i>=0;i--){const a=WA[i];a.t-=dt;const s=Math.max(0,a.t/.5);a.m.scale.y=s;a.m.position.y=a.h/2*s;if(a.t<=0){world.remove(a.m);WA.splice(i,1)}}
+for(let i=HR.length-1;i>=0;i--){const a=HR[i],m=a.m;a.t+=dt;const p=Math.min(1,a.t/a.dur),e=p*p*(3-2*p);m.rotation.z=a.baseRz+a.dir*e*.62;m.rotation.x=a.baseRx+Math.sin(p*Math.PI)*.08;m.position.y=a.baseY-e*8.5;if(p>.35&&Math.random()<.35)puff(a.x+rn(-a.w/2,a.w/2),Math.max(.4,m.parent.position.y+m.position.y+rn(0,3)),a.z+rn(-a.d/2,a.d/2),0x7c7772,2.4);if(p>=1){m.visible=false;if(m.parent)m.parent.remove(m);HR.splice(i,1)}}
 updFA(dt)}
 // vegetació
 const TG=new Map();
