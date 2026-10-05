@@ -1,11 +1,47 @@
 # Pla de modernització visual
 
+## Estat vigent dels punts 5 i 6 — 2026-10-05
+
+Base de represa: `main` a `57a04751335469b1fce5b11ab26e30fedb3631fe`. Els registres datats de sota són historial; no substitueixen aquest estat.
+
+| Bloc | Implementat | Validació / pendent |
+| --- | --- | --- |
+| 5 · Onatge | Model únic CPU/GLSL, interpolació sobre triangles reals, rellotge de partida, suport de les embarcacions | Proves numèriques superades; calibratge visual WebGL/Android pendent |
+| 5 · Renderitzat | Malla ajustada a la mida activa amb el pressupost de vèrtexs existent, bounds d’onatge, aigua integrada amb tone mapping i sortida sRGB | Comprovats perfils 240/400 i mides 4,8/9,6 km; compilació GPU, aspecte, FPS i ergonomia no verificats |
+| 6 · Separació | Motor local a `vendor/`; generació, combat, IA i àudio extrets; HTML sense lògica inline | Smoke executat; globals compatibles conservats |
+| 6 · Actualització del motor | Dependència fixada, carregador explícit i proves adaptades | **Pendent**: ESM, nova revisió de Three.js, API de color/llums i validació dedicada |
+
+### Canvis d’aquesta entrega
+- `src/waves.js` és l’únic lloc que defineix freqüències, amplituds i atenuació costanera. El shader es genera a partir d’aquests mateixos valors.
+- La física mostreja els mateixos triangles desplaçats que es renderitzen. Això evita la diferència entre una ona contínua ideal i la superfície facetada, sobretot al perfil mòbil.
+- Llanxes i altres vehicles de mode aquàtic segueixen l’amplitud completa de la superfície, conservant l’offset del buc; l’hovercraft també usa aquesta altura quan flota.
+- La pausa i el final de partida congelen l’onatge; el reinici torna el seu rellotge a zero. No hi ha un salt de fase pel temps passat al menú de pausa.
+- La malla d’aigua es redimensiona amb el mapa seleccionat, sense augmentar els 240/400 segments dels perfils actuals. En canviar de mida es disposa la geometria anterior.
+- La caixa i l’esfera de culling inclouen el desplaçament màxim de les ones.
+- El fragment shader incorpora els chunks de tone mapping i codificació sRGB de r128, coherents amb el renderer. Els colors i l’exposició encara necessiten inspecció visual real.
+- `vendor/three-r128.min.js` conserva exactament el codi del motor anterior, amb avís MIT i hash a `vendor/README.md`.
+- `src/world-generation.js`, `src/combat.js`, `src/enemy-ai.js` i `src/audio.js` conserven les funcions i els contractes previs. `src/game-core.js` conserva temporalment les variables compartides i el bucle. Són scripts clàssics locals, **no** una conversió ESM completa.
+- Afegides comprovacions d’arrencada per detectar sistemes extrets absents.
+- `tests/smoke.cjs` anterior tenia errors de sintaxi per cometes imbricades i encara donava per fet que hi havia un món generat abans de prémer la dificultat. S’ha reparat el banc de proves perquè carregui els scripts reals en ordre i comenci des del botó del menú.
+- Les comprovacions antigues de fragments literals de codi s’han substituït per comprovacions de comportament: vehicles, col·lisions, destrucció, erugues, pausa i reinici. No es dona per validat l’aspecte dels models amb cerques de text.
+
+### Validació d’aquesta entrega
+- `node tests/water.cjs`: superat. 600 mostres independents de triangles, 100 mostres de la fórmula prèvia, quatre combinacions de mida/perfil, bounds, chunks de shader presents i alliberament de geometria.
+- `node tests/smoke.cjs`: superat. Arrencada diferida, botó real de dificultat, els 14 vehicles, articulacions, erugues, OBB, neteja de destrucció, flotació, pausa/represa, reinici i vegetació.
+- Comparació abans/després amb llavor `12345`, mapa petit: coincideixen illes, anivellaments, edificis, murs, enemics, defenses, objectes i posicions/tipus de 58 vehicles. Només s’exclou l’orientació dels vehicles varats: el codi anterior ja hi feia servir `rn()` (atzar no sembrat). Aquesta incidència de reproducció queda registrada i no s’ha alterat en aquesta entrega.
+- El renderer, el DOM i l’àudio estan simulats en aquestes proves. **No s’ha executat una comprovació GPU ni una partida completa en Android.**
+
+### Continuació del punt 6
+1. Revisió WebGL del color i les transparències amb aquesta base separada.
+2. Extreure l’estat compartit amb dependències explícites, sistema a sistema.
+3. Migrar Three.js a una revisió moderna local/ESM en una entrega dedicada, adaptant color, llums i shaders, tal com estableix la fase E. Aquesta entrega no afirma haver actualitzat Three.js.
+
 ## Objectiu
 Mantenir l'estètica low-poly i la jugabilitat de *Hunter: Arxipèlag*, modernitzant progressivament el renderitzat i separant presentació, entrada i simulació per reduir regressions i facilitar l'evolució del joc.
 
 ## Estat de la base
-- Three.js r128 continua incrustat dins `index.html`.
-- `index.html` encara conté bona part de la simulació, generació procedural, IA, combat, àudio i UI.
+- Three.js r128 es carrega localment des de `vendor/three-r128.min.js`; se’n conserva la llicència i la revisió fixada.
+- `index.html` conté la interfície i l’ordre de càrrega. `src/game-core.js` conserva l’estat compartit i la simulació principal; generació, combat, IA i àudio tenen arxius propis.
 - La modernització ja s'ha fusionat a `main`, que és ara la branca oficial i la base de treball.
 - No hi ha cap workflow de GitHub Pages i no s'ha de reintroduir. El desplegament previst és mitjançant Cloudflare Pages, amb `main` com a branca de producció i `hunter.paradoxa.cat` com a domini.
 - Regla principal: cada extracció ha de conservar els contractes que utilitza el gameplay.
@@ -28,7 +64,7 @@ Mantenir l'estètica low-poly i la jugabilitat de *Hunter: Arxipèlag*, modernit
 - Paràmetres visuals a `src/water-config.js`.
 - Renderitzat separat a `src/water.js`.
 - Absorció segons profunditat, Fresnel, reflex especular del sol, escuma i boira marítima.
-- La funció de simulació d'ones `wy()` continua al nucli i s'ha de mantenir sincronitzada amb el vertex shader.
+- `src/waves.js` genera la fórmula GLSL i les mostres CPU des d’un mateix model. `wy()` interpola els triangles de la malla que es dibuixa.
 
 ### Terreny
 - Construcció visual, paleta i frontera del mapa a `src/terrain.js`.
@@ -67,12 +103,12 @@ Mantenir l'estètica low-poly i la jugabilitat de *Hunter: Arxipèlag*, modernit
 - Aquestes incidències reforcen la política de fer extraccions petites i comprovar referències residuals després de cada canvi.
 
 ## Deute tècnic conegut
-- Three.js r128 continua incrustat al gran `index.html`.
-- `index.html` encara és massa monolític.
+- Three.js r128 ja és extern, però la migració a ESM i a una revisió moderna continua pendent.
+- `src/game-core.js` encara concentra estat, controls, efectes i simulació. Els arxius extrets mantenen globals compatibles; encara no són mòduls ESM independents.
 - `physicallyCorrectLights=true` necessita calibratge visual en navegador real.
 - `outputEncoding` haurà de migrar a l'API moderna de color quan s'actualitzi Three.js.
 - El vidre i altres transparències necessiten una revisió conjunta de materials i ordenació de transparència.
-- El vertex shader de l'aigua i `wy()` estan duplicats conceptualment i poden desincronitzar-se si es modifiquen per separat.
+- El model d’onatge ja és únic; cal calibrar visualment el color de l’aigua i el detall de la malla en WebGL/Android.
 - Falta una passada sistemàtica de validació de consola/runtime després de la modularització.
 - No s'ha calibrat encara el joystick ni els perfils de conducció en Android real.
 
@@ -107,7 +143,7 @@ Mantenir l'estètica low-poly i la jugabilitat de *Hunter: Arxipèlag*, modernit
 
 ### Fase E — Actualització de Three.js
 Només després d'estabilitzar les fases anteriors:
-1. Treure Three.js r128 incrustat de l'HTML.
+1. ✅ Three.js r128 extret de l’HTML a `vendor/`, amb llicència i hash.
 2. Passar a una versió moderna local i modular.
 3. Adaptar color management, llums, ombres i shaders a les APIs actuals.
 4. Fer la migració en una fase dedicada, sense canviar simultàniament gameplay.
@@ -955,3 +991,4 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Jugador: radi màxim reduït de 0,42 a 0,405 i posició posterior ajustada.
 - Rider: radi màxim reduït de 0,385 a 0,37 amb el mateix criteri.
 - Mantingut el límit superior sota la gorra verda.
+

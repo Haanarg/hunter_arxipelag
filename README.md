@@ -4,7 +4,7 @@ Joc 3D per al navegador inspirat en Hunter (Amiga), amb arxipèlags generats a c
 
 ## Jugar
 
-Obre `index.html` en un navegador amb WebGL. La branca principal (`main`) inclou Three.js r128 a l’HTML i mòduls locals a `src/`. Els colors de jugador/enemics i fauna estan centralitzats i els models de personatge tenen una lectura visual més marcada, mantenint l’estètica low-poly. Conserva tota la carpeta: `index.html` ja no és autònom.
+Obre `index.html` en un navegador amb WebGL. La branca principal (`main`) carrega Three.js r128 des de `vendor/` i els sistemes locals de `src/`. Els colors de jugador/enemics i fauna estan centralitzats i els models de personatge tenen una lectura visual més marcada, mantenint l’estètica low-poly. Conserva tota la carpeta: `index.html` ja no és autònom.
 
 També pots servir aquesta carpeta amb `python3 -m http.server 8000` i obrir http://localhost:8000.
 
@@ -23,19 +23,20 @@ La interfície principal es manté minimalista: joystick, Dispar i Acció. Farma
 
 ## Contingut
 
-Mapa seleccionable de 4,8 × 4,8 km o 9,6 × 9,6 km amb llavor configurable, tretze tipus de vehicles, camió militar, compounds funcionals, heliports protegits (avançades, garatges amb hangars, ports i polvorins), edificis explorables, camins i molls, patrulles i defensa contextual, HQ fortificat, objectes, destrucció, platges amb escuma, fons marí profund i natació de braça.
+Mapa seleccionable de 4,8 × 4,8 km o 9,6 × 9,6 km amb llavor configurable, catorze tipus de vehicles, camió militar, compounds funcionals, heliports protegits (avançades, garatges amb hangars, ports i polvorins), edificis explorables, camins i molls, patrulles i defensa contextual, HQ fortificat, objectes, destrucció, platges amb escuma, fons marí profund i natació de braça.
 
 ## Desenvolupament
 
-La versió actual separa renderitzat, aigua, terreny, vehicles, controls, vegetació, edificis, personatges, paleta visual i fauna en mòduls locals. L’HTML encara inclou Three.js i el nucli de simulació. Conserva l’avís de llicència de Three.js quan el distribueixis.
+La versió actual separa renderitzat, aigua, terreny, vehicles, controls, vegetació, edificis, personatges, paleta visual i fauna en mòduls locals. L’HTML és ara la portada i el carregador. El nucli és a `src/game-core.js`; generació, combat, IA i àudio tenen arxius propis. Conserva l’avís de llicència de Three.js quan el distribueixis.
 
-Executa `node tests/smoke.cjs` per comprovar arrencada i regressions bàsiques sense GPU. La renderització visual encara requereix comprovació en un navegador amb WebGL.
+Executa `node tests/smoke.cjs` per comprovar arrencada, els 14 vehicles i regressions bàsiques sense GPU, i `node tests/water.cjs` per verificar la coherència de l’onatge i els perfils de malla. La renderització visual encara requereix comprovació en un navegador amb WebGL.
 
 El seguiment i les tasques pendents són a [docs/VISUAL_MODERNIZATION.md](docs/VISUAL_MODERNIZATION.md). `main` és la base oficial de desenvolupament. No hi ha desplegament configurat al repositori; no s’ha d’activar GitHub Pages. El desplegament previst és mitjançant Cloudflare Pages a `hunter.paradoxa.cat`.
 
 ## Dependència
 
-Three.js r128, distribuït sota llicència MIT. L’avís original està inclòs a `index.html`. Aquest projecte no té encara una llicència pròpia de distribució.
+Three.js r128, distribuït sota llicència MIT. L’avís original es conserva a `vendor/three-r128.min.js`. Aquest projecte no té encara una llicència pròpia de distribució.
 
 
 Els vehicles disposen de blindatge i vida estructural. La versió actual inclou també barca de rems, windsurf, tanqueta blindada, helicòpter de combat amb míssils limitats i llanxa llançacoets.
+
