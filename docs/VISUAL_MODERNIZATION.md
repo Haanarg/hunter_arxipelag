@@ -1037,3 +1037,12 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Eliminat el buc detallat anterior, inclosos costats, bancs i peces de proa/popa.
 - Substituït per una única peça marró, ovalada i apuntada als dos extrems.
 - Es conserven els dos rems, pivots i pales per continuar treballant el model a partir d'aquesta base.
+
+
+## Hangars oberts i props redistribuïts — 2026-10-05
+- Eliminades les parets laterals independents dels hangars.
+- La volta del sostre ara arrenca gairebé des de terra, de manera que els laterals del propi sostre toquen el terreny.
+- Mantingut el tancament posterior i els muntants de la boca frontal.
+- Eliminades també les col·lisions laterals perquè coincideixin amb la nova geometria oberta.
+- Reubicats barrils, caixes, dipòsits i màstil/bandera del recinte de garatge perquè no envaeixin la casa annexa.
+- Els dos dipòsits de combustible que abans quedaven a tocar o dins l'annex s'han mogut a una franja lliure del recinte.
