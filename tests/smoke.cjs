@@ -6,6 +6,14 @@ assert.equal(run('THREE.REVISION'),'186');
 const start=Date.now();ok('!started&&B.length===0','title screen defers world generation');
 game.start();game.frame();
 ok('started&&B.length>=6&&E.some(e=>e.t==="general")','menu starts a complete world');
+run(`{
+  const slowRaw=(x,z)=>{let m=-1;for(const i of islands)m=Math.max(m,1-Math.hypot(x-i.x,z-i.z)/i.r);let h=(m-.25+.6*(fbm(x/520,z/520)-.47))*45;const e=Math.max(Math.abs(x),Math.abs(z));if(e>H-120)h=Math.min(h,-4-(e-(H-120))*.05);if(h>=-1.5)return h;const depth=-h-1.5;return -1.5-Math.min(72,depth*depth*2.8+depth*.8)};
+  const pts=[[0,0],[A.x,A.z],[Bi.x,Bi.z],[A.x+A.r*.73,A.z-A.r*.41],[H*.62,-H*.47],[-H+130,H-170]];
+  globalThis.islandIndexEquivalent=pts.every(([x,z])=>Math.abs(rawHAt(x,z)-slowRaw(x,z))<1e-9);
+  globalThis.islandIndexUsesBuckets=islandGrid.size>0&&pts.some(([x,z])=>islandCandidates(x,z).length<islands.length);
+}`);
+ok('islandIndexEquivalent','indexed rawHAt matches full island scan');
+ok('islandIndexUsesBuckets','island spatial index reduces candidate scans');
 const types=['llanxa','moto_aquatica','hover','cotxe','moto','bici','barca_rems','windsurf','camio','tanqueta','llanxa_coets','tanc','heli','heli_combat'];
 // Keep combat out of movement fixtures while retaining the actual generated enemies.
 run('const savedEnemies=E;E=[];');
