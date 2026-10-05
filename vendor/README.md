@@ -1,10 +1,20 @@
 # Three.js local
 
-- Revisió fixada: **r128** (`THREE.REVISION === '128'`).
-- Fitxer: `three-r128.min.js`.
-- Procedència: extret sense modificar el codi del bloc Three.js d’`index.html`, commit `57a04751335469b1fce5b11ab26e30fedb3631fe`.
-- Es conserven l’avís de copyright i la identificació de llicència MIT originals.
-- SHA-256 del fitxer: `9274bbcec8d96168626c732b5d31c775aa8cfb7eaa0599bec0c175908a2c1ce2`.
-- No hi ha dependència de CDN ni descàrregues durant l’arrencada.
+- Paquet fixat: **three@0.186.1**, revisió `186`, llicència MIT.
+- Entrada oficial: https://registry.npmjs.org/three/-/three-0.186.1.tgz
+- Integritat npm: `sha512-blFeqb49wRCSGUGj7gtpfnSGHy2lwDk94RhUmS1c/hTby70kvChbWpkJ4Pm1390LqzzvTmzgXKHPEafJwCb8jA==`.
+- Distribució: `three-r186.module.mjs`; ESM únic generat des de `build/three.module.js` i `build/three.core.js`, sense modificar el motor.
+- SHA-256: `ed11a90814a27be663f430328985511ad86e03fd56a610d2347eea6f3139e705`.
+- Llicència completa a `THREE-LICENSE.txt`; avisos originals conservats al bundle.
+- Cap CDN durant l’arrencada. El joc requereix HTTP i WebGL 2.
 
-L’extracció no actualitza el motor. La migració a ESM i a una versió posterior s’ha de fer en una entrega dedicada, amb proves WebGL de color, il·luminació, shaders i compatibilitat Android.
+## Reproducció del bundle
+
+Descarrega el paquet amb `npm pack three@0.186.1`, verifica’n la integritat indicada i extreu-lo. Amb esbuild **0.25.12**:
+
+```sh
+esbuild package/build/three.module.js --bundle --format=esm --minify --target=es2020 --legal-comments=inline --outfile=vendor/three-r186.module.mjs
+cp package/LICENSE vendor/THREE-LICENSE.txt
+```
+
+No cal npm ni compilació per servir el joc. El carregador és `src/bootstrap.mjs`; els sistemes clàssics mantenen temporalment el pont `window.THREE`. L’antiga r128 es conserva a l’historial Git.

@@ -2,7 +2,7 @@ window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&
 const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_WAVES','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI'];
 const missingModules=requiredModules.filter(name=>!window[name]);if(missingModules.length)throw new Error('Mòduls Hunter absents: '+missingModules.join(', '));
 const missingSystems=Object.entries({generation:typeof build,combat:typeof fire,enemies:typeof updEn,audio:typeof initAudio}).filter(([,type])=>type!=='function').map(([name])=>name);if(missingSystems.length)throw new Error('Sistemes Hunter absents: '+missingSystems.join(', '));
-let MAP_SCALE=1,S=4800,H=S/2;const SEG=400,vivid=c=>{const k=new THREE.Color(c),h={};k.getHSL(h);return k.setHSL(h.h,Math.min(1,h.s*1.5),h.l)};
+let MAP_SCALE=1,S=4800,H=S/2;const SEG=400,vivid=c=>{const k=new THREE.Color(c),h={};k.getHSL(h,THREE.SRGBColorSpace);return k.setHSL(h.h,Math.min(1,h.s*1.5),h.l,THREE.SRGBColorSpace)};
 const materialProfile=(name='organic')=>window.HUNTER_MATERIALS[name]||window.HUNTER_MATERIALS.organic;
 const M=(c,profile='organic')=>new THREE.MeshStandardMaterial({color:vivid(c),flatShading:true,...materialProfile(profile)});
 const MAT={
@@ -292,7 +292,7 @@ function itemMapTexture(kind){const c=document.createElement('canvas');c.width=1
   if(kind==='heli'){q.beginPath();q.ellipse(0,5,32,13,0,0,Math.PI*2);q.fill();q.beginPath();q.moveTo(-55,-13);q.lineTo(55,-13);q.stroke();q.beginPath();q.moveTo(0,-31);q.lineTo(0,22);q.stroke();q.fillRect(28,1,35,7)}
   else if(kind==='tanc'){q.fillRect(-34,-8,58,24);q.fillRect(-18,-21,29,15);q.beginPath();q.moveTo(10,-14);q.lineTo(48,-14);q.stroke();q.strokeRect(-38,17,67,9)}
   else{q.fillStyle='#7a4e3d';q.fillRect(-28,-4,56,31);q.fillStyle='#a94338';q.beginPath();q.moveTo(-34,-4);q.lineTo(0,-33);q.lineTo(34,-4);q.closePath();q.fill();q.fillStyle='#ead59b';q.fillRect(-6,12,12,15)}
-  q.restore();const tex=new THREE.CanvasTexture(c);tex.needsUpdate=true;return tex}
+  q.restore();const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.needsUpdate=true;return tex}
 function createItemVisual(t){const g=new THREE.Group(),metal=0x454b4e,dark=0x3d3025;
   if(t==='mapa'||t==='mapa_heli'||t==='mapa_tanc'){const kind=t==='mapa_heli'?'heli':t==='mapa_tanc'?'tanc':'hq',paper=new THREE.Mesh(new THREE.BoxGeometry(1.65,.07,1.25),M(t==='mapa_heli'?0xdceff4:t==='mapa_tanc'?0xeadfb9:0xead59b,'paint'));g.add(paper);const top=new THREE.Mesh(new THREE.PlaneGeometry(1.52,1.12),new THREE.MeshBasicMaterial({map:itemMapTexture(kind),transparent:false}));top.rotation.x=-Math.PI/2;top.position.y=.041;g.add(top)}
   else if(t==='expl'){for(const x of[-.34,0,.34]){const m=new THREE.Mesh(new THREE.CylinderGeometry(.14,.14,1.05,10),M(0xc8322d,'paint'));m.position.set(x,.52,0);g.add(m)}bx(g,1.05,.13,.55,0x5b4a2d,0,.52,0,'paint');for(let i=0;i<4;i++){const m=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.32,6),M(0xc39a4a,'metal'));m.position.set(.25+i*.08,.98+.12*i,0);m.rotation.z=-.55;g.add(m)}}
@@ -559,3 +559,4 @@ uiTick+=dt;if(uiTick>.12){uiTick=0;const contextButtons=document.getElementById(
 let last=performance.now();
 (function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;const t=elapsed+(started&&!paused&&!over?dt:0);update(dt,t);waves(t);
 sun.target.position.set(P.x,0,P.z);sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);ren.render(scene,cam);requestAnimationFrame(loop)})(last);
+

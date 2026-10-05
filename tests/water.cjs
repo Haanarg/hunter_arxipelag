@@ -1,6 +1,8 @@
+(async()=>{
 const fs=require('fs'),vm=require('vm'),path=require('path'),assert=require('assert');
 const root=path.resolve(__dirname,'..'),c=vm.createContext({Math,console,Float32Array});c.window=c;
-for(const f of ['vendor/three-r128.min.js','src/water-config.js','src/waves.js','src/water.js'])vm.runInContext(fs.readFileSync(path.join(root,f),'utf8'),c);
+c.THREE=await import(require('url').pathToFileURL(path.join(root,'vendor/three-r186.module.mjs')));
+for(const f of ['src/water-config.js','src/waves.js','src/water.js'])vm.runInContext(fs.readFileSync(path.join(root,f),'utf8'),c);
 const {THREE:T,HUNTER_WAVES:w,HUNTER_WATER_SYSTEM:system,HUNTER_WATER:config}=c;
 let samples=0;
 for(const size of [4800,9600])for(const segments of [240,400]){
@@ -24,3 +26,6 @@ for(const size of [4800,9600])for(const segments of [240,400]){
 }
 for(let i=0;i<100;i++){const x=i*13,z=-i*9,t=i*.31,bed=-i*.4;const legacy=(Math.sin(x*.03+t*1.2)*.9+Math.cos(z*.04+t*.9)*.9+Math.sin((x+z)*.07+t*2)*.4)*Math.max(.12,Math.min(1,(-bed+.6)/9));assert(Math.abs(w.height(x,z,t,bed)-legacy)<1e-12,'wave spectrum preserved')}
 console.log(JSON.stringify({passed:true,triangleSamples:samples,profiles:4,waveSamples:100,checks:['shared wave spectrum','CPU triangle interpolation','bounds','shader includes','resize/disposal']}));
+
+
+})().catch(e=>{console.error(e);process.exitCode=1});

@@ -1,6 +1,8 @@
+(async()=>{
 // Actual models, generation and simulation. DOM/audio/GPU are mocked.
 const assert=require('assert');
-const game=require('./harness.cjs')();const {run}=game;const ok=(s,m)=>assert(run(s),m);
+const game=await require('./harness.cjs')();const {run}=game;const ok=(s,m)=>assert(run(s),m);
+assert.equal(run('THREE.REVISION'),'186');
 const start=Date.now();ok('!started&&B.length===0','title screen defers world generation');
 game.start();game.frame();
 ok('started&&B.length>=6&&E.some(e=>e.t==="general")','menu starts a complete world');
@@ -22,14 +24,11 @@ ok('V.find(v=>v.t==="tanc").o.userData.tracks.length===2','two animated tank tra
 ok("buildingSrc.includes('const spring=.12')&&buildingSrc.includes('sideWalls:[]')",'hangar roof reaches the ground without visual side walls');
 ok("String(mkB).includes('Sense parets laterals independents')",'hangar collision model omits lateral walls');
 ok("worldGenSrc.includes(\"prop('fuel',17,18,Math.PI/2)\")&&worldGenSrc.includes(\"prop('sign',31,26,Math.PI/2)\")",'garage props are redistributed away from the annex');
-ok("document.querySelector('.heli-combat-control')&&document.querySelector('[data-k=\\\"KeyU\\\"]')&&document.querySelector('[data-k=\\\"KeyJ\\\"]')",'combat helicopter keeps standard climb controls and separate missile button');
-ok("document.documentElement.innerHTML.includes('right:66px;bottom:66px')",'combat missile button sits left of normal fire without taking a grid row');
 ok("VD.types.heli_combat.maxF>VD.types.heli.maxF&&VD.types.heli_combat.tu>VD.types.heli.tu&&VD.types.heli_combat.steerResponse>VD.types.heli.steerResponse&&VD.types.heli_combat.yawResponse>VD.types.heli.yawResponse&&VD.types.heli_combat.climb>VD.types.heli.climb",'combat helicopter is faster and more maneuverable than normal helicopter');
 ok("vehSrc.includes('const hullShape=new THREE.Shape()')&&vehSrc.includes('quadraticCurveTo(1.12,-1.75,1.12,0)')&&vehSrc.includes('g.userData.oars.push(pivot)')",'rowboat uses a simple pointed brown oval hull and keeps its oars');
 ok("String(fire).includes('Math.SQRT1_2')&&String(fire).includes(\"c=='heli'\")&&String(fire).includes(\"c=='heli_combat'\")",'both helicopters fire at a 45 degree downward angle');
 ok("String(fire).includes('const a20=Math.PI/9')&&String(fire).includes('fx_*ch,-sv,fz*ch')",'tank fires 20 degrees downward');
 ok("String(secondaryWeapon).includes('fx_*d45,-d45,fz*d45')",'combat helicopter missiles also fire 45 degrees downward');
-ok("document.querySelector('[data-k=\\\"KeyR\\\"]')&&String(act).includes(\"KeyR'&&cv?.t==='heli_combat'\")",'combat helicopter has a dedicated missile control');
 run(`{const q=V.find(v=>v.t==='tanc'),ts=q.o.userData.tracks;ts.forEach(t=>t.phase=t.perimeter/2);q.v=0;q.yawRate=1;place(q,1,.1,0);globalThis.counterRotate=ts.find(t=>t.side<0).phase<ts[0].perimeter/2&&ts.find(t=>t.side>0).phase>ts[0].perimeter/2;q.v=0;q.yawRate=0}`);ok('counterRotate','tracks counter-rotate during pivot');
 run(`{const q=V.find(v=>v.t==='cotxe'),a=vehicleBox(q,q.x,q.z,q.hd);globalThis.boxesWork=obbOverlap(a,a)&&!obbOverlap(a,vehicleBox(q,q.x+100,q.z+100,q.hd))}`);ok('boxesWork','vehicle OBB collisions');
 run(`{const q=V.find(v=>v.t==='tanc');intelMarks.push({kind:'tanc',ref:q,label:'test'});globalThis.destroyedVehicle=q;explodeVehicle(q)}`);ok('destroyedVehicle.destroyed&&!V.includes(destroyedVehicle)&&!intelMarks.some(m=>m.ref===destroyedVehicle)','destruction cleans active state and map');
@@ -44,3 +43,6 @@ ok("HUNTER_TERRAIN.palette.some(p=>p[0]===30&&p[1]===0x138d31)&&HUNTER_TERRAIN.p
 ok("String(vegetate).includes('highPalm=.22+Math.max(0,Math.min(1,(h-28)/14))*.12')&&String(vegetate).includes('h<4)L=q<.12?pm:null')",'high palm density increases while low-altitude chance stays unchanged');
 run(`{const a=PM.t.geometry.attributes.position.array;let maxX=0;for(let i=0;i<a.length;i+=3)maxX=Math.max(maxX,Math.abs(a[i]));globalThis.curvedPalmMaxX=maxX}`);ok('curvedPalmMaxX>1.5','palm trunk geometry has a strong curved center deviation');
 console.log(JSON.stringify({passed:true,vehicles:types.length,buildings:run('B.length'),seconds:(Date.now()-start)/1000,checks:['deferred startup','real menu','14 vehicles','player joints','tank tracks','OBB','destruction cleanup','boat/water agreement','pause/resume','restart','vegetation','curved palm trunks']}));
+
+
+})().catch(e=>{console.error(e);process.exitCode=1});

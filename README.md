@@ -4,9 +4,9 @@ Joc 3D per al navegador inspirat en Hunter (Amiga), amb arxipèlags generats a c
 
 ## Jugar
 
-Obre `index.html` en un navegador amb WebGL. La branca principal (`main`) carrega Three.js r128 des de `vendor/` i els sistemes locals de `src/`. Els colors de jugador/enemics i fauna estan centralitzats i els models de personatge tenen una lectura visual més marcada, mantenint l’estètica low-poly. Conserva tota la carpeta: `index.html` ja no és autònom.
+Serveix el projecte per HTTP i obre’l en un navegador amb WebGL 2. La branca principal (`main`) carrega Three.js 0.186.1 (ESM) des de `vendor/` i els sistemes locals de `src/`. Els colors de jugador/enemics i fauna estan centralitzats i els models de personatge tenen una lectura visual més marcada, mantenint l’estètica low-poly. Conserva tota la carpeta: `index.html` ja no és autònom.
 
-També pots servir aquesta carpeta amb `python3 -m http.server 8000` i obrir http://localhost:8000.
+Pots servir aquesta carpeta amb `python3 -m http.server 8000` i obrir http://localhost:8000.
 
 ## Controls
 
@@ -29,14 +29,15 @@ Mapa seleccionable de 4,8 × 4,8 km o 9,6 × 9,6 km amb llavor configurable, cat
 
 La versió actual separa renderitzat, aigua, terreny, vehicles, controls, vegetació, edificis, personatges, paleta visual i fauna en mòduls locals. L’HTML és ara la portada i el carregador. El nucli és a `src/game-core.js`; generació, combat, IA i àudio tenen arxius propis. Conserva l’avís de llicència de Three.js quan el distribueixis.
 
-Executa `node tests/smoke.cjs` per comprovar arrencada, els 14 vehicles i regressions bàsiques sense GPU, i `node tests/water.cjs` per verificar la coherència de l’onatge i els perfils de malla. La renderització visual encara requereix comprovació en un navegador amb WebGL.
+Executa `node tests/smoke.cjs` per comprovar arrencada, els 14 vehicles i regressions bàsiques sense GPU, i `node tests/water.cjs` per verificar la coherència de l’onatge i els perfils de malla. La migració també s’ha comprovat amb Chromium i WebGL 2 (SwiftShader), en perfils d’escriptori i mòbil. Rendiment i ergonomia en Android físic pendents. Per repetir la prova real, instal·la Playwright i Chromium i executa `node tests/browser.cjs`. Pots indicar un navegador existent amb `BROWSER_EXECUTABLE_PATH` i un paquet Playwright extern amb `PLAYWRIGHT_MODULE`. Les captures es guarden al directori temporal.
 
 El seguiment i les tasques pendents són a [docs/VISUAL_MODERNIZATION.md](docs/VISUAL_MODERNIZATION.md). `main` és la base oficial de desenvolupament. No hi ha desplegament configurat al repositori; no s’ha d’activar GitHub Pages. El desplegament previst és mitjançant Cloudflare Pages a `hunter.paradoxa.cat`.
 
 ## Dependència
 
-Three.js r128, distribuït sota llicència MIT. L’avís original es conserva a `vendor/three-r128.min.js`. Aquest projecte no té encara una llicència pròpia de distribució.
+Three.js 0.186.1, distribuït sota llicència MIT. La llicència completa és a `vendor/THREE-LICENSE.txt`; procedència i reproducció a `vendor/README.md`. Aquest projecte no té encara una llicència pròpia de distribució.
 
 
 Els vehicles disposen de blindatge i vida estructural. La versió actual inclou també barca de rems, windsurf, tanqueta blindada, helicòpter de combat amb míssils limitats i llanxa llançacoets.
+
 

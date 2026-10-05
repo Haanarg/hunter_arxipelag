@@ -1,6 +1,44 @@
 # Pla de modernització visual
 
-## Estat vigent dels punts 5 i 6 — 2026-10-05
+## Estat vigent — migració del motor completada, 2026-10-05 (vespre)
+
+Base: `main` a `31565fbc6f499a58550ecf592db76359ef311655`. Aquesta secció substitueix l’estat dels registres històrics inferiors.
+
+| Bloc | Estat actual | Pendent |
+| --- | --- | --- |
+| 5 · Onatge | Model compartit CPU/GLSL i flotació conservats; shader compilat amb el motor nou; costa inspeccionada en escriptori i perfil mòbil | Refinar l’escuma, que encara segueix visiblement els triangles; calibratge en dispositius reals |
+| 6 · Motor | **Three.js 0.186.1 ESM implementat i validat**, local i fixat, sense CDN | Mesurar FPS i memòria en Android físic |
+| 6 · Arquitectura | Arrencada ESM seqüencial, manifest compartit amb les proves; sistemes de joc separats | Eliminar gradualment els globals del nucli; no s’afirma conversió ESM de tota la simulació |
+
+### Canvis implementats
+- Substituït r128 per `vendor/three-r186.module.mjs`, compilat des del paquet oficial amb esbuild 0.25.12. Versió, integritat, hash, llicència i instruccions de reproducció a `vendor/README.md`.
+- `src/bootstrap.mjs` importa el motor i carrega els sistemes en l’ordre de `src/runtime-scripts.mjs`. Conserva temporalment `window.THREE` i els globals entre scripts. Gestiona errors de càrrega i d’execució durant l’arrencada.
+- Requisits actualitzats: servidor HTTP i WebGL 2. No s’ha introduït WebGPU ni un pas de compilació obligatori per desplegar.
+- API actual de color: `outputColorSpace`, gestió de color activada, saturació de la paleta calculada explícitament en sRGB, CanvasTexture marcada sRGB i conversió lineal→sRGB del minimapa. Es conserven paleta, llums i exposicions.
+- Ombres amb `PCFShadowMap`, sense la propietat obsoleta `physicallyCorrectLights`. Bounds explícits de la vegetació instanciada.
+- Aigua amb `colorspace_fragment`; retirada l’extensió de derivades, ja disponible a WebGL 2. No s’han canviat amplituds ni contractes de flotació.
+- Harness asíncron amb el motor ESM real i renderer simulat. Reparades les variables inexistents de les comprovacions literals afegides recentment. Les comprovacions DOM dels botons passen a la prova de navegador real.
+- Afegit `tests/browser.cjs`: servidor local, arrencada des del menú, perfils desktop/mobile, compilació de shaders, 14 tipus de vehicles, sRGB, botons d’helicòpter, pausa/represa i captures de base/costa.
+- Text de míssils del menú de pausa corregit: tecla R o botó 🚀.
+- Conservats els canvis recents de models, hangars, barca de rems, palmeres, windsurf, helicòpters i angles de tir. No s’ha redissenyat la interfície.
+
+### Validació executada
+- `node tests/water.cjs`: 600 mostres de triangles, 100 mostres de fórmula, quatre combinacions de mides 4,8/9,6 km i segments 240/400; bounds, chunks, resize i disposal.
+- `node tests/smoke.cjs`: món real amb DOM/GPU/àudio simulats; entrada, física i sortida dels 14 vehicles, articulacions, erugues, col·lisions, destrucció, flotació, pausa, reinici i vegetació.
+- Chromium 153 amb WebGL 2 via ANGLE/SwiftShader: mapa petit, entrada de llavor `12345`, 54 vehicles / 14 tipus / 45 edificis. Perfils desktop 1360×900 i mobile tàctil 844×390; 15 i 14 programes de shader respectivament després de mirar la costa. Sense errors de consola ni avisos de Three.js.
+- Captures de la base i la costa inspeccionades en ambdós perfils; verd del terreny, transparències, onatge, escuma, ombres desktop i minimapa visibles.
+- Aquesta prova usa **GPU per programari**, no mesura rendiment de maquinari real ni valida una partida completa. Mapa gran comprovat numèricament, no recorregut al navegador. L’àudio real i l’ergonomia Android continuen pendents.
+
+### Següents passos
+1. Partida de 20–30 minuts en Android físic i PC, amb FPS/memòria i controls d’helicòpter/vehicles.
+2. Refinar l’escuma i la il·luminació en base a aquestes proves, mantenint el pressupost mòbil.
+3. Migrar els globals per subsistemes, començant per l’estat del món i les dependències de generació.
+
+Referències de migració: https://github.com/mrdoob/three.js/wiki/Migration-Guide i https://threejs.org/manual/pages/color-management.html.
+
+---
+
+## Historial: estat anterior dels punts 5 i 6 — 2026-10-05
 
 Base de represa: `main` a `57a04751335469b1fce5b11ab26e30fedb3631fe`. Els registres datats de sota són historial; no substitueixen aquest estat.
 
@@ -1051,3 +1089,4 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 ## Angle de tir del tanc — 2026-10-05
 - El projectil principal del tanc surt ara 20° cap avall respecte de l'horitzontal.
 - El vector es manté normalitzat amb cos(20°) a l'horitzontal i -sin(20°) a l'eix vertical.
+

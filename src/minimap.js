@@ -8,7 +8,7 @@ window.HUNTER_MINIMAP=Object.freeze({
       background=document.createElement('canvas');background.width=background.height=size;
       const c=background.getContext('2d'),im=c.createImageData(size,size);
       for(let j=0;j<size;j++)for(let i=0;i<size;i++){
-        const h=heightAt((i/size-.5)*ws,(j/size-.5)*ws),k=colorAt(THREE,h);
+        const h=heightAt((i/size-.5)*ws,(j/size-.5)*ws),k=colorAt(THREE,h).clone().convertLinearToSRGB();
         im.data.set([k.r*255,k.g*255,k.b*255,255],(j*size+i)*4)
       }
       c.putImageData(im,0,0)
@@ -35,3 +35,4 @@ window.HUNTER_MINIMAP=Object.freeze({
     return Object.freeze({draw,drawFull,reset:()=>{background=null},setWorldSize:(world,half)=>{ws=world;hs=half;background=null}})
   }
 });
+

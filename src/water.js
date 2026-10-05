@@ -14,13 +14,13 @@ window.HUNTER_WATER_SYSTEM=Object.freeze({
       waterFog:{value:config.fogDensity}
     };
     const material=new THREE.ShaderMaterial({
-      uniforms,extensions:{derivatives:true},
+      uniforms,
       vertexShader:`uniform float time;attribute float seabed;varying vec3 worldP;varying float bed;
 ${model.glsl}
 void main(){vec3 p=position;bed=seabed;p.y=hunterWaveHeight(p.xz,time,seabed);worldP=p;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}`,
       fragmentShader:`uniform vec3 light,shallow,deep,horizon,sunGlint,foamColor;uniform float time,fresnelStrength,absorptionDepth,waterFog;varying vec3 worldP;varying float bed;void main(){if(bed>worldP.y+.12)discard;vec3 n=normalize(cross(dFdx(worldP),dFdy(worldP)));if(n.y<0.)n=-n;vec3 v=normalize(cameraPosition-worldP);float nv=max(dot(n,v),0.);float nd=max(dot(n,light),0.);float fres=pow(1.-nv,3.)*fresnelStrength;float spec=pow(max(dot(reflect(-light,n),v),0.),88.);float depth=max(0.,worldP.y-bed);float absorb=1.-exp(-depth/max(absorptionDepth,.01));vec3 c=mix(shallow,deep,clamp(absorb,0.,1.));c*=.78+nd*.48;c=mix(c,horizon,fres);c+=sunGlint*spec*(.65+fres);float zone=(1.-smoothstep(1.8,4.6,depth))*smoothstep(-.1,.22,depth);float crest=pow(clamp(1.-n.y,0.,1.),1.6);float breaker=pow(.5+.5*sin(depth*5.-time*3.8+sin(worldP.x*.16+worldP.z*.12)*.6),7.);float foam=zone*breaker*.82+crest*zone*.55+(1.-smoothstep(.05,.35,depth))*.36;c=mix(c,foamColor,clamp(foam,0.,.92));float dist=distance(cameraPosition,worldP);float fog=1.-exp(-dist*waterFog);c=mix(c,horizon,fog*.72);gl_FragColor=vec4(c,1.);
 #include <tonemapping_fragment>
-#include <encodings_fragment>
+#include <colorspace_fragment>
 }`
     });
     let worldSize=size,span=size+2200;
@@ -58,3 +58,4 @@ void main(){vec3 p=position;bed=seabed;p.y=hunterWaveHeight(p.xz,time,seabed);wo
     return {mesh,deep,material,get geometry(){return geometry},uniforms,updateSeabed,setWorldSize,surfaceHeight,update,dispose};
   }
 });
+

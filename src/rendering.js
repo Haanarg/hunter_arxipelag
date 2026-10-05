@@ -3,12 +3,11 @@ window.HUNTER_RENDERING = Object.freeze({
   create(THREE, visualQuality) {
     const renderer = new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:false});
     renderer.setPixelRatio(Math.min(devicePixelRatio,visualQuality.pixelRatio));
-    renderer.outputEncoding=THREE.sRGBEncoding;
+    renderer.outputColorSpace=THREE.SRGBColorSpace;
     renderer.toneMapping=THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure=visualQuality.exposure;
-    renderer.physicallyCorrectLights=true;
     renderer.shadowMap.enabled=visualQuality.shadows;
-    renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type=THREE.PCFShadowMap;
 
     const scene=new THREE.Scene();
     const camera=new THREE.PerspectiveCamera(58,1,.3,12000);
@@ -76,3 +75,4 @@ window.HUNTER_RENDERING = Object.freeze({
     return {renderer,scene,camera,sunDir,sun,sky,sunMesh,glow,resize};
   }
 });
+

@@ -96,6 +96,7 @@ window.HUNTER_VEGETATION=Object.freeze({
         dum.updateMatrix();m.setMatrixAt(i,dum.matrix);
         m.setColorAt(i,colorFor(color,row))
       });
+      m.computeBoundingSphere();
       world.add(m);
       return m
     };

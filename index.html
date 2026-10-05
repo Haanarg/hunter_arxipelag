@@ -27,27 +27,5 @@ html,body{margin:0;height:100%;overflow:hidden;background:#1b2a5a;font-family:sy
 <div id="end" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;text-align:center;padding:24px;color:#fff;font:700 26px system-ui;text-shadow:0 2px 8px #000;pointer-events:none;background:#0005"></div>
 <div id="ini" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;color:#fff;font-family:system-ui;background:linear-gradient(#596a8f,#e99368)"><h1 style="margin:0;font-size:34px">HUNTER · ARXIPÈLAG</h1><p style="max-width:420px;margin:0;line-height:1.5">Elimina el general enemic amagat a l'HQ de la seva base. Busca mapes, armes, explosius i vehicles pels edificis i illots.</p><div id="seedBox"><label><input id="seedRandom" type="checkbox" checked> Llavor aleatòria</label><input id="seedInput" type="text" inputmode="text" maxlength="40" placeholder="Escriu una llavor" disabled><small style="opacity:.8">Pots usar números o text.</small></div><div id="mapSizeBox"><b>Mida:</b><label><input type="radio" name="mapSize" value="1" checked> Petit · 4,8 km</label><label><input type="radio" name="mapSize" value="2"> Gran · 9,6 km</label></div><div style="display:flex;gap:10px"><button data-d=".6">Fàcil</button><button data-d="1">Normal</button><button data-d="1.5">Difícil</button></div><p style="margin:0;opacity:.85">Tria dificultat per començar</p></div>
 <div id="gamepanel" role="dialog" aria-modal="true" aria-labelledby="panelTitle"><div class="card"><button id="resumeButton" class="panel-close" aria-label="Tanca">×</button><h2 id="panelTitle"></h2><div id="panelBody"></div></div></div>
-<script src="vendor/three-r128.min.js"></script>
-<script src="src/visual-config.js"></script>
-<script src="src/materials-config.js"></script>
-<script src="src/palette.js"></script>
-<script src="src/water-config.js"></script>
-<script src="src/rendering.js"></script>
-<script src="src/waves.js"></script>
-<script src="src/water.js"></script>
-<script src="src/terrain.js"></script>
-<script src="src/vehicles.js"></script>
-<script src="src/vehicle-dynamics.js"></script>
-<script src="src/joystick.js"></script>
-<script src="src/rider.js"></script>
-<script src="src/vegetation.js"></script>
-<script src="src/buildings.js"></script>
-<script src="src/characters.js"></script>
-<script src="src/fauna.js"></script>
-<script src="src/minimap.js"></script>
-<script src="src/ui.js"></script>
-<script src="src/combat.js"></script>
-<script src="src/enemy-ai.js"></script>
-<script src="src/audio.js"></script>
-<script src="src/world-generation.js"></script>
-<script src="src/game-core.js"></script></body></html>
+<script type="module" src="src/bootstrap.mjs"></script></body></html>
+
