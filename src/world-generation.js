@@ -59,7 +59,11 @@ const compound=(type,q)=>{
   } else if(type==='garatge'){
     level(78,74,20);compoundPad(x,z,68,64,0x686868);{const [a1,b1]=tr(-10,-36),[a2,b2]=tr(-10,8);compoundPath(a1,b1,a2,b2,8,0x5e5f5d);const [c1,d1]=tr(9,7),[c2,d2]=tr(30,11);compoundPath(c1,d1,c2,d2,4.6,0x656563)}
     const h=put(-10,5,40,44,18,0xb6b0a2,0xd8cfb7,{hangar:true,kind:'hangar',doorSide:1,doorWidth:32,doorHeight:11,openDoor:true});put(30,11,11,10,5.8,0xb7a98e,0x6e4435,{kind:'garage'});
-    for(const p of[[24,-3],[27,-3],[30,-3]])prop('barrel',p[0],p[1]);for(const p of[[24,2],[29,3]])prop('crate',p[0],p[1]);prop('fuel',24,8,Math.PI/2);prop('fuel',29,8,Math.PI/2);prop('lamp',8,-20);prop('sign',31,17,Math.PI/2);if(R()<.65){const gr=[tr(17,-17),tr(31,0),tr(22,20),tr(2,20)],gd=[tr(15,-15),tr(29,5)];setDefense(setPatrol(mkEn('soldat',gr[0][0],gr[0][1]),gr,true),gd)}
+    // Props repartits per zones lliures, lluny de la casa annexa i de la boca de l'hangar.
+    for(const p of[[18,-24],[23,-24],[28,-24]])prop('barrel',p[0],p[1]);
+    for(const p of[[30,-14],[30,-9]])prop('crate',p[0],p[1]);
+    prop('fuel',17,18,Math.PI/2);prop('fuel',18,25,Math.PI/2);
+    prop('lamp',8,-20);prop('sign',31,26,Math.PI/2);if(R()<.65){const gr=[tr(17,-17),tr(31,0),tr(22,20),tr(2,20)],gd=[tr(15,-15),tr(29,5)];setDefense(setPatrol(mkEn('soldat',gr[0][0],gr[0][1]),gr,true),gd)}
     {const hangarType=tankHangarAssigned?['cotxe','camio','tanqueta'][Math.floor(R()*3)]:'tanc';if(hangarType==='tanc')tankHangarAssigned=true;compoundVehicles.push({t:hangarType,x:h.x,z:h.z-4,hd:0,insideHangar:true,hangar:h})}if(R()<.32){const [lx,lz]=tr(19,-20),ly=hAt(lx,lz);addLevelArea(lx,lz,30,30,ly,ang,10);landingPad(lx,lz,24,heading())}
   } else if(type==='heliport'){
     level(64,64,20);landingPad(x,z,36,heading());
