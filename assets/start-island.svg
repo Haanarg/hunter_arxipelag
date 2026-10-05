@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t d">
+<title id="t">Arxipèlag tropical al capvespre</title>
+<desc id="d">Il·lustració estàtica d'un arxipèlag vist des de l'aire, usada com a fons de la pantalla inicial.</desc>
+<defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#514a8b"/>
+    <stop offset=".48" stop-color="#d87573"/>
+    <stop offset="1" stop-color="#f6b36a"/>
+  </linearGradient>
+  <linearGradient id="sea" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#214f73"/>
+    <stop offset=".55" stop-color="#286b82"/>
+    <stop offset="1" stop-color="#143d63"/>
+  </linearGradient>
+  <radialGradient id="sand">
+    <stop offset=".62" stop-color="#d8c88f"/>
+    <stop offset="1" stop-color="#a99361"/>
+  </radialGradient>
+  <radialGradient id="land">
+    <stop offset="0" stop-color="#477a49"/>
+    <stop offset=".7" stop-color="#315f3b"/>
+    <stop offset="1" stop-color="#244b34"/>
+  </radialGradient>
+  <filter id="soft"><feGaussianBlur stdDeviation="18"/></filter>
+</defs>
+<rect width="1600" height="900" fill="url(#sky)"/>
+<circle cx="1265" cy="220" r="94" fill="#ffd58a" opacity=".88"/>
+<ellipse cx="1265" cy="250" rx="150" ry="36" fill="#ffd995" opacity=".18" filter="url(#soft)"/>
+<path d="M0 360 C260 330 410 390 650 350 S1060 315 1600 365 V900 H0Z" fill="url(#sea)"/>
+<g opacity=".16" fill="none" stroke="#c5f1ef" stroke-width="4">
+  <path d="M0 505 C220 470 410 540 650 500 S1120 470 1600 520"/>
+  <path d="M0 620 C280 580 470 650 760 610 S1280 585 1600 625"/>
+  <path d="M120 745 C350 715 530 770 800 735 S1250 710 1510 750"/>
+</g>
+<g transform="translate(790 615) rotate(-7)">
+  <ellipse rx="350" ry="132" fill="#143850" opacity=".45" transform="translate(18 24)"/>
+  <path d="M-330 8 C-285-103-150-132-25-112 C89-144 236-107 329-14 C273 76 157 119 17 113 C-115 139-274 99-330 8Z" fill="url(#sand)"/>
+  <path d="M-295 0 C-250-76-145-99-38-82 C56-111 191-80 285-14 C224 55 136 80 25 76 C-91 101-227 70-295 0Z" fill="url(#land)"/>
+  <g fill="#1d402d" opacity=".9">
+    <circle cx="-177" cy="-33" r="25"/><circle cx="-120" cy="-57" r="31"/><circle cx="-58" cy="-30" r="28"/>
+    <circle cx="15" cy="-55" r="34"/><circle cx="78" cy="-22" r="29"/><circle cx="145" cy="-43" r="33"/><circle cx="204" cy="-12" r="24"/>
+    <circle cx="-211" cy="23" r="28"/><circle cx="-142" cy="24" r="35"/><circle cx="-68" cy="29" r="31"/>
+    <circle cx="3" cy="17" r="38"/><circle cx="78" cy="31" r="34"/><circle cx="153" cy="25" r="30"/>
+  </g>
+  <g fill="#7c836f">
+    <rect x="-62" y="-8" width="42" height="28" rx="3"/>
+    <rect x="-9" y="6" width="55" height="31" rx="3"/>
+    <rect x="62" y="-12" width="34" height="24" rx="3"/>
+  </g>
+  <path d="M-4 70 L28 70 L38 165 L-16 165Z" fill="#9b8660"/>
+</g>
+<g transform="translate(310 530) rotate(13)">
+  <ellipse rx="145" ry="62" fill="#143850" opacity=".38" transform="translate(8 13)"/>
+  <ellipse rx="140" ry="58" fill="url(#sand)"/>
+  <ellipse rx="112" ry="42" fill="url(#land)"/>
+</g>
+<g transform="translate(1285 560) rotate(-18)">
+  <ellipse rx="116" ry="50" fill="#143850" opacity=".38" transform="translate(8 12)"/>
+  <ellipse rx="112" ry="47" fill="url(#sand)"/>
+  <ellipse rx="88" ry="34" fill="url(#land)"/>
+</g>
+<g transform="translate(1140 755) rotate(9)">
+  <ellipse rx="86" ry="36" fill="#143850" opacity=".35" transform="translate(6 9)"/>
+  <ellipse rx="82" ry="34" fill="url(#sand)"/>
+  <ellipse rx="62" ry="24" fill="url(#land)"/>
+</g>
+<rect width="1600" height="900" fill="#10151c" opacity=".12"/>
+</svg>
