@@ -7,19 +7,15 @@ window.HUNTER_RIDER=Object.freeze({
     const neck=new THREE.Mesh(new THREE.CylinderGeometry(.2,.22,.28,10),material(0xf0c9a0));neck.position.set(0,1.05,-.08);torso.add(neck);
     const head=new THREE.Mesh(new THREE.SphereGeometry(.44,12,8,0,Math.PI*2,.28,Math.PI-.62),material(0xf0c9a0));head.scale.set(.82,1,.8);head.position.set(0,1.42,-.12);torso.add(head);
     const hairMat=material(0x3a2b22);
-    const hairBack=new THREE.Mesh(new THREE.SphereGeometry(.3,10,6,0,Math.PI*2,.18,Math.PI*.78),hairMat);
-    hairBack.scale.set(.96,.98,.76);hairBack.position.set(0,1.49,.23);torso.add(hairBack);
-    for(const x of[-.27,.27]){
-      const sideHair=new THREE.Mesh(new THREE.SphereGeometry(.145,10,6,0,Math.PI*2,.15,Math.PI*.72),hairMat);
-      sideHair.scale.set(.72,1.02,.7);sideHair.position.set(x,1.55,.04);torso.add(sideHair);
-    }
-    const nape=new THREE.Mesh(new THREE.SphereGeometry(.21,10,6,0,Math.PI*2,.2,Math.PI*.7),hairMat);
-    nape.scale.set(.9,1.04,.68);nape.position.set(0,1.35,.2);torso.add(nape);
-    const hairTop=new THREE.Mesh(new THREE.SphereGeometry(.34,10,5,0,Math.PI*2,0,.72),hairMat);
-    hairTop.scale.set(.9,.3,.86);hairTop.position.set(0,1.66,.01);torso.add(hairTop);
+    const hairBack=new THREE.Mesh(new THREE.SphereGeometry(.29,10,6,0,Math.PI*2,.18,Math.PI*.75),hairMat);
+    hairBack.scale.set(.92,.96,.76);hairBack.position.set(0,1.48,.24);torso.add(hairBack);
+    const nape=new THREE.Mesh(new THREE.SphereGeometry(.2,10,6,0,Math.PI*2,.2,Math.PI*.68),hairMat);
+    nape.scale.set(.86,1.02,.67);nape.position.set(0,1.34,.21);torso.add(nape);
+    const hairTop=new THREE.Mesh(new THREE.SphereGeometry(.32,10,5,0,Math.PI*2,0,.65),hairMat);
+    hairTop.scale.set(.86,.27,.83);hairTop.position.set(0,1.63,.03);torso.add(hairTop);
     box(torso,.32,.15,.06,0x11161a,-.18,1.48,-.45);box(torso,.32,.15,.06,0x11161a,.18,1.48,-.45);box(torso,.1,.05,.06,0x151515,0,1.48,-.45);
-    const capCrown=new THREE.Mesh(new THREE.SphereGeometry(.47,12,6,0,Math.PI*2,0,Math.PI/2),material(0x22b72c));capCrown.scale.set(.93,.46,.96);capCrown.position.set(0,1.67,-.12);torso.add(capCrown);
-    const visor=box(torso,.68,.08,.46,0x22b72c,0,1.65,-.46);visor.rotation.x=-.08;
+    const capCrown=new THREE.Mesh(new THREE.SphereGeometry(.47,12,6,0,Math.PI*2,0,Math.PI/2),material(0x22b72c));capCrown.scale.set(.9,.42,.93);capCrown.position.set(0,1.63,-.13);torso.add(capCrown);
+    const visor=box(torso,.66,.075,.44,0x22b72c,0,1.615,-.47);visor.rotation.x=-.1;
     const limbs=[];for(let i=0;i<8;i++){const m=new THREE.Mesh(new THREE.CylinderGeometry(i<4?.17:.2,i<4?.17:.2,1,6),i<4?cloth:pants);g.add(m);limbs.push(m)}
     const boots=[-1,1].map(()=>box(g,.4,.22,.65,0x222222,0,0,0));
     g.userData={torso,limbs,boots,motion:0};g.visible=false;g.traverse(o=>{if(o.isMesh)o.castShadow=shadows});scene.add(g);
