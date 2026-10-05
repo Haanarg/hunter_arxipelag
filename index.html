@@ -446,17 +446,17 @@ const barbedSegment=(x1,z1,x2,z2)=>{
   const L=Math.hypot(x2-x1,z2-z1),n=Math.max(1,Math.ceil(L/6));
   for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n;barbedSection(x1+(x2-x1)*a,z1+(z2-z1)*a,x1+(x2-x1)*b,z1+(z2-z1)*b)}
 };
-const barbedHQ=(cx,cz,hw=50,hd=46,gap=13)=>{
-  const n=cz-hd,s=cz+hd,w=cx-hw,e=cx+hw;
+const barbedHQ=(cx,cz,hw=50,hd=46,gap=13,gateOffset=0)=>{
+  const n=cz-hd,s=cz+hd,w=cx-hw,e=cx+hw,gx=Math.max(w+gap,Math.min(e-gap,cx+gateOffset));
   barbedSegment(w,n,e,n);barbedSegment(w,n,w,s);barbedSegment(e,n,e,s);
-  barbedSegment(w,s,cx-gap/2,s);barbedSegment(cx+gap/2,s,e,s);
+  barbedSegment(w,s,gx-gap/2,s);barbedSegment(gx+gap/2,s,e,s);
   compoundClear.push({x:cx,z:cz,r:Math.hypot(hw,hd)*1.02});
 };
 // construir món
 function build(){joystick.reset();compoundClear=[];terrainLevels=[];if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}world=new THREE.Group();scene.add(world);B=[];stairs=[];piers=[];swimming=false;intelMarks=[];playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;pl.userData.bazooka.visible=false;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];fx=[];logb=[];hp=100;ammo=24;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
 {const base=requestedSeed==null?Math.floor(Math.random()*0xffffffff)>>>0:requestedSeed>>>0;let tries=0;do{seed=(base+Math.imul(tries++,0x9e3779b1))>>>0;genIslands();pa=land(A,2000);pb=land(Bi,2000)}while((!pa||!pb)&&tries<8);if(!pa||!pb)throw new Error('No s’ha pogut generar un mapa vàlid amb aquesta llavor')}
 addLevelArea(pa.x,pa.z,82,72,pa.h,0,18);[[-27,0],[27,-12],[0,31]].forEach(([dx,dz])=>mkB(pa.x+dx,pa.z+dz,15,15,7,0xe9dfc8,0x2c5fc0));flag(pa.x,pa.z-7,0x2c7bff);
-addLevelArea(pb.x,pb.z,118,106,pb.h,0,22);mkEnemyBunker(pb.x,pb.z);mkB(pb.x+38,pb.z+10,12,12,6,0x8a7a70,0x8c1f1f);mkB(pb.x-38,pb.z-8,12,12,6,0x8a7a70,0x8c1f1f);flag(pb.x+9,pb.z-2,0xe02828);barbedHQ(pb.x,pb.z,58,52,17);
+addLevelArea(pb.x,pb.z,148,133,pb.h,0,28);mkEnemyBunker(pb.x,pb.z);mkB(pb.x+49,pb.z+16,12,12,6,0x8a7a70,0x8c1f1f);mkB(pb.x-50,pb.z-15,12,12,6,0x8a7a70,0x8c1f1f);flag(pb.x+15,pb.z-6,0xe02828);barbedHQ(pb.x,pb.z,72.5,65,18,26);
 const cols=[0xd8b48a,0xc9a27a,0xb8c4c9,0xd9c9a0],compoundVehicles=[],heliportSites=[];let tankHangarAssigned=false;
 const compoundProp=(kind,x,z,rot=0)=>{
   const y=Math.max(.05,hAt(x,z)),g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;
@@ -560,12 +560,12 @@ updateSeabed();vegetate(pa);spawnFauna();HQ={x:pb.x,z:pb.z};const rb=B.slice(6);
 const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2);
 const generalSpots=hq.generalSpots?.length?hq.generalSpots:[{x:hq.x,z:hq.z-3}],generalSpot=generalSpots[Math.floor(R()*generalSpots.length)];mkEn('general',generalSpot.x,generalSpot.z,hq.fy+.3);
 const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1),x=cx+Math.cos(a)*d,z=cz+Math.sin(a)*d;if(gl(x,z))return mkEn(t,x,z)}return null};
-const hqRoute=[[pb.x-40,pb.z-35],[pb.x+40,pb.z-35],[pb.x+40,pb.z+34],[pb.x-40,pb.z+34]],hqDef=[[pb.x-31,pb.z+34],[pb.x+31,pb.z+34],[pb.x-35,pb.z-25],[pb.x+35,pb.z-25]];for(let k=0;k<5;k++){const u=sp2('soldat',pb.x,pb.z,18,40);if(u&&k<3)setDefense(setPatrol(u,hqRoute.map((p,i)=>hqRoute[(i+k)%hqRoute.length]),k===2),hqDef)}
-const carRoute1=[[pb.x-82,pb.z-61],[pb.x+82,pb.z-61],[pb.x+82,pb.z+61],[pb.x-82,pb.z+61]],carRoute2=carRoute1.slice().reverse();
-setPatrol(mkEn('jeep',pb.x-78,pb.z-61),carRoute1,true);setPatrol(mkEn('jeep',pb.x+78,pb.z+61),carRoute2,true);
-const armorRoute1=[[pb.x-30,pb.z+30],[pb.x+30,pb.z+30],[pb.x+34,pb.z-22],[pb.x-34,pb.z-22]],armorRoute2=armorRoute1.slice().reverse();
-setPatrol(mkEn('tanqueta',pb.x-24,pb.z+26),armorRoute1,true);setPatrol(mkEn('tanqueta',pb.x+24,pb.z+26),armorRoute2,true);
-[[-50,-44],[50,-44],[-50,44],[50,44]].forEach(([a,b])=>mkEn('torre',pb.x+a,pb.z+b));
+const hqRoute=[[pb.x-52,pb.z-44],[pb.x+52,pb.z-44],[pb.x+52,pb.z+43],[pb.x-52,pb.z+43]],hqDef=[[pb.x-42,pb.z+43],[pb.x+42,pb.z+43],[pb.x-47,pb.z-34],[pb.x+47,pb.z-34]];for(let k=0;k<5;k++){const u=sp2('soldat',pb.x,pb.z,24,54);if(u&&k<3)setDefense(setPatrol(u,hqRoute.map((p,i)=>hqRoute[(i+k)%hqRoute.length]),k===2),hqDef)}
+const carRoute1=[[pb.x-96,pb.z-76],[pb.x+96,pb.z-76],[pb.x+96,pb.z+76],[pb.x-96,pb.z+76]],carRoute2=carRoute1.slice().reverse();
+setPatrol(mkEn('jeep',pb.x-92,pb.z-76),carRoute1,true);setPatrol(mkEn('jeep',pb.x+92,pb.z+76),carRoute2,true);
+const armorRoute1=[[pb.x-42,pb.z+40],[pb.x+42,pb.z+40],[pb.x+46,pb.z-31],[pb.x-46,pb.z-31]],armorRoute2=armorRoute1.slice().reverse();
+setPatrol(mkEn('tanqueta',pb.x-34,pb.z+36),armorRoute1,true);setPatrol(mkEn('tanqueta',pb.x+34,pb.z+36),armorRoute2,true);
+[[-69,-61],[69,-61],[-69,61],[69,61]].forEach(([a,b])=>mkEn('torre',pb.x+a,pb.z+b));
 islands.forEach(i=>{if(i===A||i===Bi||R()<.5)return;const q=land(i,60);if(!q)return;for(let k=0;k<1+(R()<.4);k++)sp2('soldat',q.x,q.z,0,10);if(R()<.25)sp2('torre',q.x,q.z,5,12)});
 rb.forEach(b=>{const n=R()<.25?0:R()<.6?1:2,pool=['arma','arma','med','med','expl','disf','mapa','bazooka'];for(let k=0;k<n;k++)addIt(pool[Math.floor(R()*pool.length)],b)});
 addIt('arma',B[0]);addIt('expl',B[1]);addIt('med',B[2]);
@@ -575,7 +575,7 @@ rb.slice().sort(()=>R()-.5).slice(0,1+MAP_SCALE).forEach(b=>addIt('mapa_tanc',b)
 P.x=pa.x;P.z=pa.z+8;P.hd=0;P.base={x:pa.x,z:pa.z};V=[];cv=null;mm=null;
 const add=(t,x,z,a,meta={})=>{const o=mkV(t),c=VT[t],v={t,x,z,hd:a||0,v:0,alt:Math.max(0,hAt(x,z))+.8,o,armor:c.armor??0,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};if(t==='heli_combat')v.rockets=6;if(t==='llanxa_coets')v.rockets=5;world.add(o);V.push(v);return v};
 [
-  {t:'tanc',x:pb.x,z:pb.z+30,hd:Math.PI}
+  {t:'tanc',x:pb.x-18,z:pb.z+42,hd:Math.PI}
 ].forEach(v=>add(v.t,v.x,v.z,v.hd,{military:true,hq:true,guaranteed:true}));
 const addProtectedMilitary=()=>{};
 const near=(r,t)=>{for(let k=0;k<80;k++){const x=pa.x+rr(-r,r),z=pa.z+rr(-r,r),h=hAt(x,z);if(h>1.5&&slope(x,z,h)<2.5&&!B.some(b=>Math.abs(x-b.x)<b.hw+vehicleRadius(t)&&Math.abs(z-b.z)<b.hd+vehicleRadius(t))&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(t)+vehicleRadius(v.t)+2))return[x,z]}return[pa.x+30,pa.z+30]};
