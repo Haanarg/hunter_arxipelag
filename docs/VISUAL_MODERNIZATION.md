@@ -920,3 +920,12 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - S'ha mantingut la gorra verda sense canviar-ne el color.
 - El mateix estil s'ha replicat al rider dels vehicles oberts.
 - Actualitzat el smoke test per comprovar geometria cilíndrica i color de gorra.
+
+
+## Ajust de límits del cabell cilíndric — 2026-10-05
+- Revisats els límits geomètrics del cap i del cabell en X/Z.
+- Jugador: el cap arriba aproximadament a X ±0,40 i Z ±0,39; el cilindre inferior del cabell passa ara a radi 0,405 i es desplaça cap enrere fins a Z +0,09.
+- Rider: el cap arriba aproximadament a X ±0,361 i Z ±0,352; el cabell passa a radi 0,37 i es desplaça cap enrere fins a Z +0,07.
+- La peça posterior també s'ha eixamplat i mogut lleugerament enrere per evitar que aparegui pell per sota del cabell.
+- El límit superior del cabell del jugador es manté a Y 4,38, just per sota de la gorra, de manera que no sobresurt per dalt.
+- Actualitzat el smoke test per comprovar radis i desplaçament posterior.
