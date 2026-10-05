@@ -3,13 +3,54 @@ function mvE(u,s){const nx=u.x-Math.sin(u.hd)*s,nz=u.z-Math.cos(u.hd)*s,isVeh=['
 let clear=hAt(nx,nz)>-.8&&!treeHit(nx,nz,isVeh?vehicleRadius(vehicleHitType(u.t))*.4:1.2)&&Math.abs(nx)<H-5&&Math.abs(nz)<H-5&&!wallCandidates(nx,nz,1.5).some(w=>!w.open&&nx>w.x0-1.5&&nx<w.x1+1.5&&nz>w.z0-1.5&&nz<w.z1+1.5);
 if(clear&&isVeh){const test=vehicleBox(u,nx,nz,u.hd);clear=!vehicleObstacles(u).some(o=>vehicleHeightCompatible(u,o)&&obbOverlap(test,vehicleBox(o)))}
 if(clear){u.x=nx;u.z=nz}else u.wt=0}
-function updEn(dt){E.forEach(u=>{u.alert=Math.max(0,u.alert-dt);u.cd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);const q=cv||P,py=cv?cv.o.position.y:P.y,dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz);
-const det=disg&&!cv?20:u.alert>0?300:u.t=='general'?60:120;
-const eyeY=u.o.position.y+(u.t=='torre'?9.4:2.2);if(!over&&d<det&&sight(u.x,u.z,q.x,q.z,eyeY)){u.hd=Math.atan2(-dx,-dz);if(u.sp>0&&d>u.rng*.55){const dp=chooseDefense(u,q);if(dp&&Math.hypot(dp.x-u.x,dp.z-u.z)>1.8){u.hd=Math.atan2(u.x-dp.x,u.z-dp.z);mvE(u,u.sp*.75*dt)}else if(d>u.rng*.72)mvE(u,u.sp*dt)}
-if(d<u.rng&&u.cd<=0){u.cd=u.rate;const y0=eyeY,ex=q.x-u.x+rr(-1.5,1.5),ey=py+1.5-y0,ez=q.z-u.z+rr(-1.5,1.5),l=Math.hypot(ex,ey,ez);
-shoot(u.x,y0,u.z,ex/l,ey/l,ez/l,u.spl?60:70,u.dmg,u.spl,'e',mE,u.spl?2:1)}}
-else if(u.sp>0){if(u.wt<=0||Math.hypot(u.tx-u.x,u.tz-u.z)<2){if(u.patrol&&u.patrol.length){u.pi=((u.pi==null?-1:u.pi)+1)%u.patrol.length;u.tx=u.patrol[u.pi].x;u.tz=u.patrol[u.pi].z;u.wt=u.guard?2.5:8}else{const roam=u.guard?8:25;u.tx=u.home.x+rr(-roam,roam);u.tz=u.home.z+rr(-roam,roam);u.wt=u.guard?3:6}}u.wt-=dt;u.hd=Math.atan2(u.x-u.tx,u.z-u.tz);mvE(u,u.sp*(u.guard?.35:.5)*dt)}
-u.o.position.set(u.x,(u.gy!=null?u.gy:hAt(u.x,u.z))+(u.t=='jeep'||u.t=='tanc'?.05:0),u.z);if(u.t!='torre')u.o.rotation.y=u.hd;if(u.o.userData.legs){const a=u.o.userData;u.phase=(u.phase||0)+dt*u.sp;const moving=u.sp>0&&(d>u.rng*.7||d>=det),swing=moving?Math.sin(u.phase)*.45:0;a.legs[0].rotation.x=swing;a.legs[1].rotation.x=-swing;const aim=!over&&d<det&&sight(u.x,u.z,q.x,q.z,eyeY);a.arms.forEach((arm,i)=>arm.rotation.x+=((aim?1.45:(i?swing:-swing)*.5)-arm.rotation.x)*(1-Math.exp(-12*dt)))}})}
+const ENEMY_SENSE_DT=.1;
+function updEn(dt){E.forEach(u=>{
+  u.alert=Math.max(0,u.alert-dt);u.cd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);
+  const q=cv||P,py=cv?cv.o.position.y:P.y,dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz),
+        det=disg&&!cv?20:u.alert>0?300:u.t=='general'?60:120,
+        eyeY=u.o.position.y+(u.t=='torre'?9.4:2.2);
+
+  // Percepció desacoblada del moviment: ~10 Hz i desfasada entre enemics.
+  u.senseT=(u.senseT??0)-dt;
+  if(u.senseT<=0){
+    u.senseT+=ENEMY_SENSE_DT;
+    u.canSee=!over&&d<det&&sight(u.x,u.z,q.x,q.z,eyeY);
+    u.defenseTarget=u.canSee&&u.sp>0&&d>u.rng*.55?chooseDefense(u,q):null;
+  }
+
+  if(u.canSee){
+    u.hd=Math.atan2(-dx,-dz);
+    if(u.sp>0&&d>u.rng*.55){
+      const dp=u.defenseTarget;
+      if(dp&&Math.hypot(dp.x-u.x,dp.z-u.z)>1.8){
+        u.hd=Math.atan2(u.x-dp.x,u.z-dp.z);mvE(u,u.sp*.75*dt)
+      }else if(d>u.rng*.72)mvE(u,u.sp*dt)
+    }
+    if(d<u.rng&&u.cd<=0){
+      u.cd=u.rate;const y0=eyeY,ex=q.x-u.x+rr(-1.5,1.5),ey=py+1.5-y0,ez=q.z-u.z+rr(-1.5,1.5),l=Math.hypot(ex,ey,ez);
+      shoot(u.x,y0,u.z,ex/l,ey/l,ez/l,u.spl?60:70,u.dmg,u.spl,'e',mE,u.spl?2:1)
+    }
+  }else if(u.sp>0){
+    if(u.wt<=0||Math.hypot(u.tx-u.x,u.tz-u.z)<2){
+      if(u.patrol&&u.patrol.length){
+        u.pi=((u.pi==null?-1:u.pi)+1)%u.patrol.length;u.tx=u.patrol[u.pi].x;u.tz=u.patrol[u.pi].z;u.wt=u.guard?2.5:8
+      }else{
+        const roam=u.guard?8:25;u.tx=u.home.x+rr(-roam,roam);u.tz=u.home.z+rr(-roam,roam);u.wt=u.guard?3:6
+      }
+    }
+    u.wt-=dt;u.hd=Math.atan2(u.x-u.tx,u.z-u.tz);mvE(u,u.sp*(u.guard?.35:.5)*dt)
+  }
+
+  u.o.position.set(u.x,(u.gy!=null?u.gy:hAt(u.x,u.z))+(u.t=='jeep'||u.t=='tanc'?.05:0),u.z);
+  if(u.t!='torre')u.o.rotation.y=u.hd;
+  if(u.o.userData.legs){
+    const a=u.o.userData;u.phase=(u.phase||0)+dt*u.sp;
+    const moving=u.sp>0&&(d>u.rng*.7||!u.canSee),swing=moving?Math.sin(u.phase)*.45:0;
+    a.legs[0].rotation.x=swing;a.legs[1].rotation.x=-swing;
+    const aim=!!u.canSee;
+    a.arms.forEach((arm,i)=>arm.rotation.x+=((aim?1.45:(i?swing:-swing)*.5)-arm.rotation.x)*(1-Math.exp(-12*dt)))
+  }
+})}
 function updDead(dt){for(let i=DEAD.length-1;i>=0;i--){const u=DEAD[i];u.deadT+=dt;const k=Math.min(1,u.deadT/.55),e=1-Math.pow(1-k,3),base=u.gy!=null?u.gy:hAt(u.x,u.z);u.o.position.set(u.x,base+.05+(1-e)*.12,u.z);u.o.rotation.y=u.hd;u.o.rotation.z=u.deadSide*e*Math.PI*.48;if(u.o.userData.arms)u.o.userData.arms.forEach((a,j)=>{a.rotation.x=(-.35+j*.7)*e;a.rotation.z=(j?-.25:.25)*e});if(u.o.userData.legs)u.o.userData.legs.forEach((l,j)=>l.rotation.x=(j?-.18:.18)*e);if(u.deadT>18){world.remove(u.o);DEAD.splice(i,1)}}}
 function mkEn(t,x,z,gy){const c=EC[t];let g;
 if(t=='soldat'||t=='general'){g=window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M,general:t==='general'})}
@@ -27,4 +68,4 @@ bx(g,3.35,.28,3.35,roof,0,10.25,0,'metal');
 bx(g,.32,.32,2.1,roof,0,9.25,-2.25,'metal');
 bx(g,.42,.8,.42,0xe4d36f,0,10.78,0,'paint')}
 else{g=new THREE.Group();bx(g,1,1,.6,0x222222,0,.5,0);bx(g,1.3,1.6,.7,0xd4af37,0,1.8,0);bx(g,.8,.8,.8,0xf0c9a0,0,3,0);bx(g,.9,.5,.9,0xaa0000,0,3.6,0);g.scale.setScalar(1.2)}
-world.add(g);const u={t,x,z,gy,hd:rr(0,6.28),o:g,home:{x,z},cd:rr(0,1),alert:0,wt:0,tx:x,tz:z,...c};E.push(u);return u}
+world.add(g);const sensePhase=(E.length%10)*.01,u={t,x,z,gy,hd:rr(0,6.28),o:g,home:{x,z},cd:rr(0,1),alert:0,wt:0,tx:x,tz:z,senseT:sensePhase,canSee:false,defenseTarget:null,...c};E.push(u);return u}
