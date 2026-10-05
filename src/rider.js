@@ -52,7 +52,8 @@ window.HUNTER_RIDER=Object.freeze({
         // Postura real de windsurf: dempeus, cames gairebé rectes, tors de costat i mans al travesser.
         const lean=Math.max(-.08,Math.min(.08,v.v/42)),bodyX=-.62*sc,hipY=1.36*sc,footY=.29*sc;
         torso.position.set(bodyX,hipY,.08*sc);
-        torso.rotation.set(0,Math.PI/2,-.035+lean);
+        // Tors i cap miren cap a la vela; braços i cames mantenen la seva postura actual.
+        torso.rotation.set(0,-Math.PI/2,-.035+lean);
         const hips=[vec(bodyX,hipY,.25*sc),vec(bodyX,hipY,-.25*sc)];
         const shoulders=[vec(bodyX,hipY+1.03,.22*sc),vec(bodyX,hipY+1.03,-.22*sc)];
         const hands=[vec(.52*sc,2.39*sc,.25*sc),vec(1.2*sc,2.08*sc,.25*sc)];
