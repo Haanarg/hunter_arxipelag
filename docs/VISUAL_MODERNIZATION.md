@@ -1009,3 +1009,9 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - També es conserva el comportament original de les cotes mitjanes favorables: 20% quan el soroll de vegetació supera el llindar existent.
 - A partir de 28 m la probabilitat passa a 22% i augmenta progressivament amb l'altitud fins a 34% a les cotes més altes.
 - Això fa que les zones elevades siguin clarament més denses en palmeres que les baixes, sense empobrir la vegetació de costa i plana.
+
+
+## Orientació del rider al windsurf — 2026-10-05
+- Girat el tors del rider 180° respecte de l'orientació anterior perquè miri cap a la vela.
+- El cap gira amb el tors perquè és fill directe d'aquest grup.
+- Braços i cames es mantenen sense canvis, conservant les mans al travesser i la postura dempeus.
