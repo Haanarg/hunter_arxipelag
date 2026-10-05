@@ -1106,12 +1106,18 @@ Prioritat proposada: **1 → 2 → 3 → 4 → 5**. L'objectiu és millorar el r
 - **Implementat el 2026-10-05:** graella espacial de 512 m; cada illa s'indexa fins a 2× el seu radi d'influència útil i `rawHAt()` només recorre les illes candidates de la cel·la consultada.
 - Afegit un smoke test d'equivalència que compara el resultat indexat amb un escaneig complet d'illes en diversos punts del mapa.
 
-### 2. Índex espacial general per vehicles, enemics i obstacles
+### 2. ✅ FET — Índex espacial general per vehicles, enemics i obstacles
 - Situació actual: diverses comprovacions recorren arrays complets de `V`, `E`, `B` i `Wl`; `vehicleObstacles(v)` crea arrays temporals amb spreads, filtres i cerques.
 - Proposta: reutilitzar el patró de graella espacial que ja existeix per als arbres (`TG`) i aplicar-lo a vehicles, enemics i obstacles estàtics.
 - Objectiu: limitar col·lisions i consultes de proximitat a les cel·les veïnes.
 - Impacte esperat: **alt**.
 - Risc: **mitjà**, perquè cal mantenir l'índex sincronitzat quan objectes es mouen, apareixen o es destrueixen.
+- **Implementat el 2026-10-05:** graella dinàmica de 64 m per a vehicles del jugador i vehicles enemics col·lidibles, reconstruïda un cop per frame i refrescada si canvien les referències de `V` o `E`.
+- `vehicleObstacles()` ja no construeix `[...V, ...E.filter(...)]` a cada consulta; només examina les cel·les veïnes.
+- Afegida una graella lazy de 64 m per a `Wl`, indexant cada col·lidor a totes les cel·les que cobreix i reconstruint-la només si canvia l'array o el nombre de parets.
+- Les col·lisions de vehicles, `wallPush()`, la sortida de vehicles, el moviment enemic, `sight()` i els impactes de projectils usen consultes locals de parets.
+- Afegida una graella lazy de 96 m per a edificis (`B`), usada per detectar l'edifici actual del jugador i per impactes de projectils sobre teulades.
+- Afegits smoke tests d'equivalència per comprovar que els candidats locals de vehicles, parets i edificis coincideixen amb els escaneigs globals equivalents.
 
 ### 3. Separar la IA de percepció de la IA de moviment
 - Situació actual: `updEn()` actualitza tots els enemics cada frame i pot executar més d'una comprovació `sight()` per enemic.
