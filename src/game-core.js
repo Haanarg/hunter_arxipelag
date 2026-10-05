@@ -383,21 +383,27 @@ const obbOverlap=(a,b)=>{const A=obbAxes(a),B=obbAxes(b),dx=b.x-a.x,dz=b.z-a.z,a
 const circleVehicleOverlap=(x,z,r,v)=>{const b=vehicleBox(v),dx=x-b.x,dz=z-b.z,s=Math.sin(b.hd),c=Math.cos(b.hd),lx=dx*c-dz*s,lz=dx*s+dz*c,cx=Math.max(-b.w/2,Math.min(b.w/2,lx)),cz=Math.max(-b.d/2,Math.min(b.d/2,lz)),ex=lx-cx,ez=lz-cz;return ex*ex+ez*ez<r*r};
 const vehicleY=v=>v.alt!=null&&VT[vehicleHitType(v.t)]?.m==='a'?v.alt:(v.o?.position?.y??Math.max(0,hAt(v.x,v.z)));
 const vehicleHeightCompatible=(a,b)=>Math.abs(vehicleY(a)-vehicleY(b))<Math.max(2.2,Math.min(vehicleRadius(vehicleHitType(a.t)),vehicleRadius(vehicleHitType(b.t)))*.55);
-const VEHICLE_CELL=64,vehicleGrid=new Map(),playerVehicleGrid=new Map(),vehicleCellKey=(cx,cz)=>cx+','+cz;
+const VEHICLE_CELL=64,vehicleGrid=new Map(),playerVehicleGrid=new Map(),enemyGrid=new Map(),vehicleCellKey=(cx,cz)=>cx+','+cz;
 let vehicleGridVSource=null,vehicleGridESource=null;
 const addVehicleToGrid=(grid,v)=>{const key=vehicleCellKey(Math.floor(v.x/VEHICLE_CELL),Math.floor(v.z/VEHICLE_CELL)),bucket=grid.get(key);if(bucket)bucket.push(v);else grid.set(key,[v])};
 function rebuildVehicleGrid(){
-  vehicleGrid.clear();playerVehicleGrid.clear();vehicleGridVSource=V;vehicleGridESource=E;
+  vehicleGrid.clear();playerVehicleGrid.clear();enemyGrid.clear();vehicleGridVSource=V;vehicleGridESource=E;
   for(const v of V)if(!v.destroyed){addVehicleToGrid(vehicleGrid,v);addVehicleToGrid(playerVehicleGrid,v)}
-  for(const u of E)if(!u.destroyed&&(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'))addVehicleToGrid(vehicleGrid,u)
+  for(const u of E)if(!u.destroyed){addVehicleToGrid(enemyGrid,u);if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc')addVehicleToGrid(vehicleGrid,u)}
 }
-function vehicleCandidatesAt(x,z,r=24,playersOnly=false){
-  if(vehicleGridVSource!==V||vehicleGridESource!==E)rebuildVehicleGrid();
-  const grid=playersOnly?playerVehicleGrid:vehicleGrid,out=[],
-        minX=Math.floor((x-r)/VEHICLE_CELL),maxX=Math.floor((x+r)/VEHICLE_CELL),
+function gridCandidatesAt(grid,x,z,r=24){
+  const out=[],minX=Math.floor((x-r)/VEHICLE_CELL),maxX=Math.floor((x+r)/VEHICLE_CELL),
         minZ=Math.floor((z-r)/VEHICLE_CELL),maxZ=Math.floor((z+r)/VEHICLE_CELL);
   for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){const b=grid.get(vehicleCellKey(cx,cz));if(b)for(const v of b)out.push(v)}
   return out
+}
+function vehicleCandidatesAt(x,z,r=24,playersOnly=false){
+  if(vehicleGridVSource!==V||vehicleGridESource!==E)rebuildVehicleGrid();
+  return gridCandidatesAt(playersOnly?playerVehicleGrid:vehicleGrid,x,z,r)
+}
+function enemyCandidatesAt(x,z,r=24){
+  if(vehicleGridVSource!==V||vehicleGridESource!==E)rebuildVehicleGrid();
+  return gridCandidatesAt(enemyGrid,x,z,r)
 }
 const vehicleObstacles=v=>vehicleCandidatesAt(v.x,v.z,32,false).filter(o=>o!==v&&!o.destroyed);
 const mkV=window.HUNTER_VEHICLES.createFactory(THREE,{box:bx,material:M,shadows:visualQuality.shadows});
