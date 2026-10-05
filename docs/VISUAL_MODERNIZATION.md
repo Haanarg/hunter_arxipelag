@@ -992,3 +992,12 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Rider: radi màxim reduït de 0,385 a 0,37 amb el mateix criteri.
 - Mantingut el límit superior sota la gorra verda.
 
+
+
+## Troncs de palmera corbats — 2026-10-05
+- Substituït el cilindre recte del tronc per una geometria segmentada amb arc suau.
+- El tronc conserva l'arrel i la copa sobre l'eix original per mantenir ben encaixada la corona de fulles.
+- La desviació lateral màxima es produeix al centre del tronc i és del 25% de la seva alçada.
+- La rotació aleatòria que ja tenia cada palmera fa que la direcció de l'arc variï entre exemplars.
+- Es manté el tronc cònic, més gruixut a la base i més prim a la part superior.
+- El smoke test comprova també que la geometria resultant té una desviació lateral efectiva.
