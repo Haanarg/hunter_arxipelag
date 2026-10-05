@@ -248,7 +248,36 @@ fa.forEach(f=>{f.a+=f.sp*dt;f.x=f.cx+Math.cos(f.a)*f.r;f.z=f.cz+Math.sin(f.a)*f.
 if(f.k=='g'){f.o.position.set(f.x,f.y+Math.sin(t+f.cx)*2,f.z);f.wl.rotation.z=Math.sin(t*8+f.cx)*.5;f.wr.rotation.z=-f.wl.rotation.z}
 else{f.o.position.set(f.x,wy(f.x,f.z,t)*.8+.8,f.z);if(Math.random()<.1)puff(f.x,f.o.position.y-.6,f.z,0xffffff,1.2);
 if(!cv&&!over&&Math.hypot(P.x-f.x,P.z-f.z)<6&&hAt(P.x,P.z)<-1.2){hurtP(dt*10);msg='Un tauró et mossega!';msgT=1}}});
-V.forEach(v=>{if(v.destroyed)return;v.playerHitCd=Math.max(0,(v.playerHitCd||0)-dt);const frac=1-(v.life/(v.maxLife||1));if(frac>.08){v.smokeT=(v.smokeT||0)-dt;if(v.smokeT<=0){const y=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));puff(v.x+rn(-.45,.45),y+1.55,v.z+rn(-.45,.45),frac>.65?0x1c2022:0x34393c,.42+frac*.72,1.35+frac*1.6);v.smokeT=Math.max(.14,1.08-frac*.88)}}});
+V.forEach(v=>{
+  if(v.destroyed)return;
+  v.playerHitCd=Math.max(0,(v.playerHitCd||0)-dt);
+  const frac=1-(v.life/(v.maxLife||1));
+  if(frac>.08){
+    v.smokeT=(v.smokeT||0)-dt;
+    if(v.smokeT<=0){
+      const baseY=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
+      if(v.smokeTopOffset==null&&v.o){
+        v.o.updateMatrixWorld(true);
+        const bb=new THREE.Box3().setFromObject(v.o);
+        v.smokeTopOffset=Math.max(.7,bb.max.y-baseY);
+      }
+      const topY=baseY+(v.smokeTopOffset||1.8),count=frac>.65?3:2,
+            col=frac>.65?0x0d0f10:0x1d2022,
+            spread=Math.min(.8,vehicleRadius(v.t)*.09);
+      for(let i=0;i<count;i++){
+        puff(
+          v.x+rn(-spread,spread),
+          topY+rn(-.04,.12),
+          v.z+rn(-spread,spread),
+          col,
+          .16+frac*.3,
+          1.45+frac*1.85
+        )
+      }
+      v.smokeT=Math.max(.08,.55-frac*.42)
+    }
+  }
+});
 if(cv){const c=VT[cv.t],sp=Math.abs(cv.v),s=Math.sin(cv.hd),co=Math.cos(cv.hd),L=c.m=='l'?2.5:5,gy=Math.max(0,hAt(cv.x,cv.z));
 if(sp>6&&(c.m=='w'||c.m=='wl')){const sd=Math.random()<.5?-1:1;puff(cv.x+s*L+co*sd*1.6,cv.o.position.y+.2,cv.z+co*L-s*sd*1.6,0xffffff,1.6)}
 else if(sp>12&&c.m=='l')puff(cv.x+s*L,gy+.3,cv.z+co*L,0xc9b48a,1.4);
