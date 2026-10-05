@@ -517,6 +517,7 @@ const ui=window.HUNTER_UI.create({
 });
 mc.onclick=()=>started&&panel('map');
 function vehicleImpactFx(x,y,z){debris(x,y,z,0xffc14d,5,.16,5);puff(x,y,z,0x8a8478,.8)}
+function collisionDamageVehicle(v,dmg,impacts=1){if(v?.t==='tanc')return;damageVehicle(v,dmg,impacts)}
 function handleVehicleImpacts(v,dt){
   const c=VT[v.t],speed=Math.abs(v.v),radius=vehicleRadius(v.t);v.ramCd=Math.max(0,(v.ramCd||0)-dt);v.envCd=Math.max(0,(v.envCd||0)-dt);v.bump=Math.max(0,(v.bump||0)-dt);
   if(speed<2.5||c.m==='a'||c.m==='w')return;
@@ -525,8 +526,8 @@ function handleVehicleImpacts(v,dt){
   }
   if(v.envCd>0)return;
   const t=treeAt(v.x,v.z,radius*.48);if(!t)return;
-  if(t.p&&t.alive){killPalm(t);damageVehicle(v,Math.min(18,5+speed*.55),1);if(v.destroyed)return;v.v*=.9;v.bump=.18;v.envCd=.28;msg='Has tombat una palmera.';msgT=1;return}
-  if(t.rock){damageVehicle(v,Math.min(14,4+speed*.45),1);vehicleImpactFx(t.x,Math.max(0,hAt(t.x,t.z))+.8,t.z);if(v.destroyed)return;v.v*=.8;v.bump=.22;v.hd+=rn(-.045,.045);v.envCd=.32;msg='Impacte amb roca!';msgT=1}
+  if(t.p&&t.alive){killPalm(t);collisionDamageVehicle(v,Math.min(18,5+speed*.55),1);if(v.destroyed)return;v.v*=.9;v.bump=.18;v.envCd=.28;msg='Has tombat una palmera.';msgT=1;return}
+  if(t.rock){collisionDamageVehicle(v,Math.min(14,4+speed*.45),1);vehicleImpactFx(t.x,Math.max(0,hAt(t.x,t.z))+.8,t.z);if(v.destroyed)return;v.v*=.8;v.bump=.22;v.hd+=rn(-.045,.045);v.envCd=.32;msg='Impacte amb roca!';msgT=1}
 }
 function stepV(v,f,tr,ud,dt){
 const c=VT[v.t],a=c.m==='a',water=c.m==='w'||c.m==='wl',land=c.m==='l',radius=vehicleRadius(v.t),input=window.HUNTER_VEHICLE_DYNAMICS.inputs(v,f,tr,dt);f=input.forward;tr=input.turn;
@@ -557,10 +558,10 @@ const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),sx=Math.cos(v.hd),sz=-Math.sin(v.hd)
 const nx=v.x+(fx*v.v+sx*sideV)*dt,nz=v.z+(fz*v.v+sz*sideV)*dt,raw=hAt(nx,nz),h=land?groundAt(nx,nz):raw,g=Math.max(0,h);let ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;
 if(c.m==='w')ok=ok&&raw<-1.2;if(c.m==='l')ok=ok&&h>-1.2;if(ok&&a&&v.alt-g<8&&treeHit(nx,nz,radius))ok=false;
 if(!a||v.alt-g<16){for(const w of wallCandidates(nx,nz,radius))if(!w.open&&w.playerBlock!==false&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){
-  if(w.rammable&&land&&v.envCd<=0){const speed=Math.abs(v.v),barbed=!!w.barbed,breakSpeed=barbed?8:14;if(speed>breakSpeed){dmgW(w,w.hp);damageVehicle(v,0,barbed?2:3);vehicleImpactFx(w.cx,Math.max(0,hAt(w.cx,w.cz))+1.1,w.cz);if(v.destroyed)return false;v.v*=barbed?.72:.55;v.bump=barbed?.14:.2;v.envCd=.28;if(!Wl.includes(w)){msg=barbed?'Has trencat la filferrada!':'Has travessat una paret!';msgT=1;continue}}}
+  if(w.rammable&&land&&v.envCd<=0){const speed=Math.abs(v.v),barbed=!!w.barbed,breakSpeed=barbed?8:14,tank=v.t==='tanc';if(tank||speed>breakSpeed){dmgW(w,w.hp);collisionDamageVehicle(v,0,barbed?2:3);vehicleImpactFx(w.cx,Math.max(0,hAt(w.cx,w.cz))+1.1,w.cz);if(v.destroyed)return false;v.v*=tank?.9:(barbed?.72:.55);v.bump=barbed?.14:.2;v.envCd=.28;if(!Wl.includes(w)){msg=barbed?'Has trencat la filferrada!':'Has travessat una paret!';msgT=1;continue}}}
   ok=false;break
 }}
-if(ok){const test=vehicleBox(v,nx,nz,v.hd),hit=vehicleObstacles(v).find(o=>vehicleHeightCompatible(v,o)&&obbOverlap(test,vehicleBox(o)));if(hit){const rel=Math.abs(v.v-(hit.v||0));const ownMass=c.mass||1,otherMass=VT[vehicleHitType(hit.t)]?.mass||1,ratio=Math.max(.35,Math.min(2.5,otherMass/ownMass));v.v*=rel>5?Math.max(.16,.42/ratio):Math.max(.3,.62/ratio);if('v'in hit)hit.v*=Math.max(.3,.72/Math.max(.5,ownMass/otherMass));if(rel>6){damageVehicle(v,Math.min(18,rel*.7*ratio),1);if(V.includes(hit))damageVehicle(hit,Math.min(18,rel*.55/ratio),1);vehicleImpactFx((v.x+hit.x)/2,Math.max(vehicleY(v),vehicleY(hit))+.5,(v.z+hit.z)/2)}v.bump=.14;v.envCd=.18;ok=false}}
+if(ok){const test=vehicleBox(v,nx,nz,v.hd),hit=vehicleObstacles(v).find(o=>vehicleHeightCompatible(v,o)&&obbOverlap(test,vehicleBox(o)));if(hit){const rel=Math.abs(v.v-(hit.v||0));const ownMass=c.mass||1,otherMass=VT[vehicleHitType(hit.t)]?.mass||1,ratio=Math.max(.35,Math.min(2.5,otherMass/ownMass));v.v*=rel>5?Math.max(.16,.42/ratio):Math.max(.3,.62/ratio);if('v'in hit)hit.v*=Math.max(.3,.72/Math.max(.5,ownMass/otherMass));if(rel>6){collisionDamageVehicle(v,Math.min(18,rel*.7*ratio),1);if(V.includes(hit))collisionDamageVehicle(hit,Math.min(18,rel*.55/ratio),1);vehicleImpactFx((v.x+hit.x)/2,Math.max(vehicleY(v),vehicleY(hit))+.5,(v.z+hit.z)/2)}v.bump=.14;v.envCd=.18;ok=false}}
 if(ok){v.x=nx;v.z=nz;handleVehicleImpacts(v,dt);if(v.destroyed)return false;if(v.t==='tanc'||v.t==='tanqueta')crush(nx,nz,(v.t==='tanc'?3.2:2.4)*VS[v.t])}else{v.v*=Math.exp(-12*dt);v.sideV*=Math.exp(-10*dt)}
 if(a){
   const g2=Math.max(0,hAt(v.x,v.z)),targetVz=ud*(c.climb||24);
