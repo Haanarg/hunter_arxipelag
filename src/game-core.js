@@ -67,6 +67,29 @@ const waves=water.update;
 // terreny visual a src/terrain.js
 let stairs=[],piers=[];
 let Wl=[],Dr=[],items=[],inv={},msg='',msgT=0,HQ=null,ib=null;
+const WALL_CELL=64,wallGrid=new Map();let wallGridSource=null,wallGridCount=-1,wallQueryStamp=0;
+const wallCellKey=(cx,cz)=>cx+','+cz;
+function rebuildWallGrid(){
+  wallGrid.clear();wallGridSource=Wl;wallGridCount=Wl.length;
+  for(const w of Wl){
+    const minX=Math.floor(w.x0/WALL_CELL),maxX=Math.floor(w.x1/WALL_CELL),
+          minZ=Math.floor(w.z0/WALL_CELL),maxZ=Math.floor(w.z1/WALL_CELL);
+    for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){
+      const key=wallCellKey(cx,cz),bucket=wallGrid.get(key);
+      if(bucket)bucket.push(w);else wallGrid.set(key,[w])
+    }
+  }
+}
+function wallCandidates(x,z,r=0){
+  if(wallGridSource!==Wl||wallGridCount!==Wl.length)rebuildWallGrid();
+  const out=[],stamp=++wallQueryStamp,minX=Math.floor((x-r)/WALL_CELL),maxX=Math.floor((x+r)/WALL_CELL),
+        minZ=Math.floor((z-r)/WALL_CELL),maxZ=Math.floor((z+r)/WALL_CELL);
+  for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){
+    const bucket=wallGrid.get(wallCellKey(cx,cz));if(!bucket)continue;
+    for(const w of bucket)if(w._wallQueryStamp!==stamp){w._wallQueryStamp=stamp;out.push(w)}
+  }
+  return out
+}
 const ICON={
 med:'<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="16" width="46" height="34" rx="5" fill="#fff" stroke="#657078" stroke-width="3"/><rect x="18" y="28" width="28" height="9" rx="4.5" fill="#d7ae7c" transform="rotate(-28 32 32.5)"/><circle cx="27" cy="35" r="1.8" fill="#9a6f45"/><circle cx="37" cy="30" r="1.8" fill="#9a6f45"/></svg>',
 expl:'<svg viewBox="0 0 64 64" aria-hidden="true"><g stroke="#6c1717" stroke-width="2"><rect x="12" y="20" width="11" height="31" rx="5" fill="#d63b32"/><rect x="26" y="18" width="11" height="33" rx="5" fill="#d63b32"/><rect x="40" y="21" width="11" height="30" rx="5" fill="#d63b32"/></g><path d="M32 18 C34 9 46 13 48 5" fill="none" stroke="#c49a4d" stroke-width="3"/><circle cx="49" cy="5" r="3" fill="#ffcf4a"/></svg>',
@@ -301,7 +324,7 @@ const tread=.75;let steps=1;for(;steps<80;steps++){const end=steps*tread;if(top-
 const length=steps*tread,bottom=hAt(x+nx*length,z+nz*length),rise=Math.max(0,(top-bottom)/steps),s={x,z,nx,nz,top,steps,tread,length,rise,width:4.2};stairs.push(s);b.stair=s;
 for(let i=0;i<steps;i++){const a=(i+.5)*tread,xx=x+nx*a,zz=z+nz*a,y=top-i*rise,base=Math.min(y-.16,hAt(xx,zz)-.15);buildingVisual.addStep(b.o,{alongAxis:!!nx,riseWidth:tread,height:y-b.fy,base:base-b.fy,x:xx-b.x,z:zz-b.z,color:i%2?0xa69982:0xb5a68e})}
 }
-function wallPush(){const r=.6;for(const w of Wl){if(w.playerBlock===false)continue;if(!w.open&&P.x>w.x0-r&&P.x<w.x1+r&&P.z>w.z0-r&&P.z<w.z1+r){const a=[P.x-(w.x0-r),w.x1+r-P.x,P.z-(w.z0-r),w.z1+r-P.z],i=a.indexOf(Math.min(...a));
+function wallPush(){const r=.6;for(const w of wallCandidates(P.x,P.z,r)){if(w.playerBlock===false)continue;if(!w.open&&P.x>w.x0-r&&P.x<w.x1+r&&P.z>w.z0-r&&P.z<w.z1+r){const a=[P.x-(w.x0-r),w.x1+r-P.x,P.z-(w.z0-r),w.z1+r-P.z],i=a.indexOf(Math.min(...a));
 if(i==0)P.x=w.x0-r;else if(i==1)P.x=w.x1+r;else if(i==2)P.z=w.z0-r;else P.z=w.z1+r}}}
 function itemMapTexture(kind){const c=document.createElement('canvas');c.width=192;c.height=144;const q=c.getContext('2d');q.fillStyle=kind==='heli'?'#dceff4':kind==='tanc'?'#eadfb9':'#ead59b';q.fillRect(0,0,c.width,c.height);q.strokeStyle='#8f7b52';q.lineWidth=5;q.strokeRect(5,5,c.width-10,c.height-10);q.strokeStyle='#baa36b';q.lineWidth=2;for(let x=30;x<190;x+=32){q.beginPath();q.moveTo(x,7);q.lineTo(x,137);q.stroke()}for(let y=26;y<140;y+=28){q.beginPath();q.moveTo(7,y);q.lineTo(185,y);q.stroke()}
   q.save();q.translate(96,72);q.strokeStyle='#313a36';q.fillStyle='#596d55';q.lineWidth=6;
@@ -337,7 +360,21 @@ const obbOverlap=(a,b)=>{const A=obbAxes(a),B=obbAxes(b),dx=b.x-a.x,dz=b.z-a.z,a
 const circleVehicleOverlap=(x,z,r,v)=>{const b=vehicleBox(v),dx=x-b.x,dz=z-b.z,s=Math.sin(b.hd),c=Math.cos(b.hd),lx=dx*c-dz*s,lz=dx*s+dz*c,cx=Math.max(-b.w/2,Math.min(b.w/2,lx)),cz=Math.max(-b.d/2,Math.min(b.d/2,lz)),ex=lx-cx,ez=lz-cz;return ex*ex+ez*ez<r*r};
 const vehicleY=v=>v.alt!=null&&VT[vehicleHitType(v.t)]?.m==='a'?v.alt:(v.o?.position?.y??Math.max(0,hAt(v.x,v.z)));
 const vehicleHeightCompatible=(a,b)=>Math.abs(vehicleY(a)-vehicleY(b))<Math.max(2.2,Math.min(vehicleRadius(vehicleHitType(a.t)),vehicleRadius(vehicleHitType(b.t)))*.55);
-const vehicleObstacles=v=>[...V,...E.filter(u=>['jeep','tanqueta','tanc'].includes(u.t))].filter(o=>o!==v&&!o.destroyed);
+const VEHICLE_CELL=64,vehicleGrid=new Map(),playerVehicleGrid=new Map(),vehicleCellKey=(cx,cz)=>cx+','+cz;
+const addVehicleToGrid=(grid,v)=>{const key=vehicleCellKey(Math.floor(v.x/VEHICLE_CELL),Math.floor(v.z/VEHICLE_CELL)),bucket=grid.get(key);if(bucket)bucket.push(v);else grid.set(key,[v])};
+function rebuildVehicleGrid(){
+  vehicleGrid.clear();playerVehicleGrid.clear();
+  for(const v of V)if(!v.destroyed){addVehicleToGrid(vehicleGrid,v);addVehicleToGrid(playerVehicleGrid,v)}
+  for(const u of E)if(!u.destroyed&&(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'))addVehicleToGrid(vehicleGrid,u)
+}
+function vehicleCandidatesAt(x,z,r=24,playersOnly=false){
+  const grid=playersOnly?playerVehicleGrid:vehicleGrid,out=[],
+        minX=Math.floor((x-r)/VEHICLE_CELL),maxX=Math.floor((x+r)/VEHICLE_CELL),
+        minZ=Math.floor((z-r)/VEHICLE_CELL),maxZ=Math.floor((z+r)/VEHICLE_CELL);
+  for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){const b=grid.get(vehicleCellKey(cx,cz));if(b)for(const v of b)out.push(v)}
+  return out
+}
+const vehicleObstacles=v=>vehicleCandidatesAt(v.x,v.z,32,false).filter(o=>o!==v&&!o.destroyed);
 const mkV=window.HUNTER_VEHICLES.createFactory(THREE,{box:bx,material:M,shadows:visualQuality.shadows});
 const riderSystem=window.HUNTER_RIDER.create(THREE,{scene,box:bx,material:M,scales:VS,heightAt:hAt,shadows:visualQuality.shadows});
 const rider=riderSystem.object,poseRider=riderSystem.update;
@@ -380,7 +417,7 @@ const mini=()=>minimap.draw();
 let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0;
 const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joystick')),clearKeys=()=>{Object.keys(K).forEach(k=>K[k]=0);joystick.reset();document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))};
 const act=c=>{if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(!started||paused||over)return;if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory')}if(c==='KeyR'&&cv?.t==='heli_combat'){secondaryWeapon();return}if(c==='KeyG'){if(!secondaryWeapon())plant();}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
-const nearV=()=>{let b=null,bd=Infinity;V.forEach(v=>{const d=Math.hypot(v.x-P.x,v.z-P.z);if((circleVehicleOverlap(P.x,P.z,5,v)||d<vehicleRadius(v.t)+5)&&d<bd){bd=d;b=v}});return b};
+const nearV=()=>{let b=null,bd=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){const d=Math.hypot(v.x-P.x,v.z-P.z);if((circleVehicleOverlap(P.x,P.z,5,v)||d<vehicleRadius(v.t)+5)&&d<bd){bd=d;b=v}}return b};
 function toggle(){if(cv){
 const leaving=cv,speed=Math.abs(leaving.v),isAir=VT[leaving.t].m==='a',ground=Math.max(0,hAt(leaving.x,leaving.z)),height=Math.max(0,leaving.alt-ground);
 if(isAir&&height>4){
@@ -391,7 +428,7 @@ if(isAir&&height>4){
   cv=null;swimming=false;msg='Has saltat! L’helicòpter està fora de control!';msgT=3;return
 }
 const moving=speed>3,side=rn(-1,1)<0?-1:1,rrad=vehicleRadius(leaving.t)+2.2;let spot=null;
-for(let i=0;i<16;i++){const a=leaving.hd+side*Math.PI/2+i*Math.PI/8,x=leaving.x+Math.cos(a)*rrad,z=leaving.z+Math.sin(a)*rrad;if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||Wl.some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;spot={x,z};if(hAt(x,z)>0||VT[leaving.t].m==='w')break}
+for(let i=0;i<16;i++){const a=leaving.hd+side*Math.PI/2+i*Math.PI/8,x=leaving.x+Math.cos(a)*rrad,z=leaving.z+Math.sin(a)*rrad;if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||wallCandidates(x,z,1).some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;spot={x,z};if(hAt(x,z)>0||VT[leaving.t].m==='w')break}
 if(!spot){msg='No hi ha espai per baixar aquí.';msgT=3;return}
 P.x=spot.x;P.z=spot.z;P.hd=leaving.hd;leaving.driveInput=0;leaving.steerInput=0;
 if(moving){const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),sx=Math.cos(leaving.hd)*side,sz=-Math.sin(leaving.hd)*side,carry=Math.min(28,speed*.72);playerEject={kind:'flip',vx:fx*carry+sx*1.4,vz:fz*carry+sz*1.4,t:.5,dur:.5,height:.68};hurtP(Math.min(16,2+speed*.28));msg='Has saltat del vehicle en marxa!';msgT=2.5}
@@ -481,7 +518,7 @@ if(water){
 const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),sx=Math.cos(v.hd),sz=-Math.sin(v.hd);
 const nx=v.x+(fx*v.v+sx*sideV)*dt,nz=v.z+(fz*v.v+sz*sideV)*dt,raw=hAt(nx,nz),h=land?groundAt(nx,nz):raw,g=Math.max(0,h);let ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;
 if(c.m==='w')ok=ok&&raw<-1.2;if(c.m==='l')ok=ok&&h>-1.2;if(ok&&a&&v.alt-g<8&&treeHit(nx,nz,radius))ok=false;
-if(!a||v.alt-g<16){for(const w of Wl)if(!w.open&&w.playerBlock!==false&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){
+if(!a||v.alt-g<16){for(const w of wallCandidates(nx,nz,radius))if(!w.open&&w.playerBlock!==false&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){
   if(w.rammable&&land&&Math.abs(v.v)>3.5&&v.envCd<=0){const speed=Math.abs(v.v);dmgW(w,Math.max(8,speed*2.1));damageVehicle(v,Math.min(12,2+speed*.35),1);vehicleImpactFx(w.cx,Math.max(0,hAt(w.cx,w.cz))+1.1,w.cz);if(v.destroyed)return false;v.v*=.72;v.bump=.14;v.envCd=.22;if(!Wl.includes(w)){msg='Has obert pas a la filferrada.';msgT=1;continue}}
   ok=false;break
 }}
@@ -529,7 +566,7 @@ else if(c.m==='wl'){y=Math.max(g,wy(v.x,v.z,t))+.6;ro=-(v.yawRate||0)*.08}
 else{y=groundAt(v.x,v.z)+.05;const s2=Math.sin(v.hd),k=Math.cos(v.hd);pi=Math.atan((groundAt(v.x-s2*3,v.z-k*3)-groundAt(v.x+s2*3,v.z+k*3))/6);ro=-(v.sideV||0)*.018}
 if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.rotation.set(pi,v.hd,ro);
 v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0):(v.pedalPhase||0),sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*sweep;r.rotation.z=-side*(.12+dip);r.rotation.x=.06*Math.sin(rowPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})}
-function update(dt,t){if(!started||paused||over){if(eng)eng.g.gain.value=0;return}elapsed+=dt;const jf=-joystick.state.y,jtr=-joystick.state.x,f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),
+function update(dt,t){if(!started||paused||over){if(eng)eng.g.gain.value=0;return}rebuildVehicleGrid();elapsed+=dt;const jf=-joystick.state.y,jtr=-joystick.state.x,f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),
 ud=(K.KeyU||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),lim=H-2;
 if(cv){const driven=cv,alive=stepV(driven,f,tr,ud,dt);if(alive&&cv===driven){P.x=driven.x;P.z=driven.z;P.hd=driven.hd}}
 else{P.hd+=tr*dt*2.2;if(playerFall){playerFall.t+=dt;playerFall.vy-=24*dt;playerFall.vx*=Math.exp(-.18*dt);playerFall.vz*=Math.exp(-.18*dt);P.x=Math.max(-lim,Math.min(lim,P.x+playerFall.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerFall.vz*dt));playerFall.y+=playerFall.vy*dt;const water=wy(P.x,P.z,t),landing=Math.max(hAt(P.x,P.z),water-1.4);P.y=playerFall.y;if(playerFall.y<=landing){P.y=landing;const fallH=playerFall.startHeight,impact=Math.max(0,-playerFall.vy),waterLanding=water>hAt(P.x,P.z)+1.5,dmg=Math.min(100,Math.max(0,(fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8)));playerFall=null;if(dmg>0)hurtP(dmg);msg=waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5}}
