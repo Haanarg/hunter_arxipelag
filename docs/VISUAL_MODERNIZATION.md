@@ -1119,7 +1119,7 @@ Prioritat proposada: **1 → 2 → 3 → 4 → 5**. L'objectiu és millorar el r
 - Afegida una graella lazy de 96 m per a edificis (`B`), usada per detectar l'edifici actual del jugador i per impactes de projectils sobre teulades.
 - Afegits smoke tests d'equivalència per comprovar que els candidats locals de vehicles, parets i edificis coincideixen amb els escaneigs globals equivalents.
 
-### 3. Separar la IA de percepció de la IA de moviment
+### 3. ✅ FET — Separar la IA de percepció de la IA de moviment
 - Situació actual: `updEn()` actualitza tots els enemics cada frame i pot executar més d'una comprovació `sight()` per enemic.
 - Proposta:
   - mantenir moviment i animació fluids cada frame;
@@ -1129,6 +1129,11 @@ Prioritat proposada: **1 → 2 → 3 → 4 → 5**. L'objectiu és millorar el r
 - Objectiu: reduir comprovacions de visibilitat i recorreguts de parets sense afectar perceptiblement el comportament.
 - Impacte esperat: **alt**, especialment a HQ i compounds amb molts enemics.
 - Risc: **baix-mitjà**.
+- **Implementat el 2026-10-05:** percepció enemiga desacoblada a `ENEMY_SENSE_DT = 0.1` (10 Hz), mantenint moviment, rotació, dispars i animació a freqüència de frame.
+- Els enemics s'inicialitzen amb fases de 0–90 ms segons la seva posició a `E`, repartint les comprovacions entre frames sense consumir RNG ni alterar la generació procedural.
+- `sight()` es calcula una sola vegada per tick de percepció i el resultat queda cachejat a `u.canSee`; l'animació dels braços reutilitza aquest valor.
+- `chooseDefense()` també queda dins del tick de percepció i el resultat es cacheja a `u.defenseTarget`.
+- Afegit un smoke test dinàmic que comprova una crida de percepció inicial i cap nova crida de `sight()` al frame immediat següent.
 
 ### 4. Broad-phase i trajectes segmentats per als projectils
 - Situació actual: `updPj()` subdivideix cada frame en passos de fins a 0,008 s i cada projectil pot comprovar parets, edificis, arbres, enemics i vehicles a cada subpas.
