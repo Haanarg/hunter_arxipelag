@@ -320,7 +320,7 @@ if(opt.hangar){
   if(!opt.bunker&&w*d>=140&&R()<.5){const al=w>=d,L=al?d:w,gp=rr(-L/4,L/4),px=(R()<.5?-1:1)*rr((al?w:d)*.12,(al?w:d)*.2),a0=-L/2+t,a1=L/2-t,ps=(a,b)=>{if(b-a<.5)return;const cc=(a+b)/2,l=b-a;if(al)seg(px,cc,t,l);else seg(cc,px,l,t)};ps(a0,gp-1.6);ps(gp+1.6,a1)}
 }
 g.position.set(x,fy,z);world.add(g);
-const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,rhp:120,hangar:!!opt.hangar,doorSide:ds,doorWidth:dw,kind:opt.kind||'house'};B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
+const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,rhp:opt.hangar?90:120,hangar:!!opt.hangar,doorSide:ds,doorWidth:dw,kind:opt.kind||'house'};B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
 function mkEnemyBunker(x,z){
   const b=mkB(x,z,34,28,9,0xd9ded2,0xbfc6bb,{kind:'enemy_bunker',bunker:true,doorSide:0,doorWidth:3.4,doorHeight:4.2,openDoor:false,lockedDoor:true}),g=b.o,concrete=0xd2d8cb,dark=0x777f76,t=.55;
   const left=bx(g,6.2,8.7,28.6,concrete,-16.1,4.05,0,'masonry'),right=bx(g,6.2,8.7,28.6,concrete,16.1,4.05,0,'masonry');left.rotation.z=-.18;right.rotation.z=.18;
