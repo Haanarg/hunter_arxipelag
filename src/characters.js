@@ -67,11 +67,12 @@ window.HUNTER_CHARACTERS=Object.freeze({
     const hairMat=new THREE.MeshStandardMaterial({color:0x3a2b22,roughness:.92});
     // Opció 4: el cap ocupa aprox. X ±.40 / Z ±.39. El cabell l'embolcalla per fora
     // als laterals i al darrere, però el límit superior (4.38) queda sota la gorra.
-    const hairShell=new THREE.Mesh(new THREE.CylinderGeometry(.405,.42,.38,12,1,true,Math.PI*1.18,Math.PI*1.64),hairMat);
-    hairShell.position.set(0,4.19,.13);hairShell.rotation.y=Math.PI;player.add(hairShell);
-    const hairBack=new THREE.Mesh(new THREE.CylinderGeometry(.4,.42,.24,12,1,true,Math.PI*.12,Math.PI*1.76),hairMat);
-    hairBack.scale.set(1,.92,.98);hairBack.position.set(0,4.045,.17);player.add(hairBack);
-    const nape=box(player,.5,.16,.14,0x3a2b22,0,3.93,.29);
+    const hairShell=new THREE.Mesh(new THREE.CylinderGeometry(.395,.405,.38,12,1,true,Math.PI*1.18,Math.PI*1.64),hairMat);
+    hairShell.position.set(0,4.19,.11);hairShell.rotation.y=Math.PI;player.add(hairShell);
+    // Clatell tancat: arc posterior continu que uneix els dos extrems del cilindre principal.
+    const hairBack=new THREE.Mesh(new THREE.CylinderGeometry(.39,.405,.25,12,1,true,0,Math.PI*2),hairMat);
+    hairBack.scale.set(.98,.92,.84);hairBack.position.set(0,4.045,.2);player.add(hairBack);
+    const nape=box(player,.46,.15,.12,0x3a2b22,0,3.93,.3);
     nape.material.roughness=.92;
     const glasses=new THREE.Group();glasses.position.set(0,4.16,-.37);player.add(glasses);
     box(glasses,.34,.16,.06,0x11161a,-.2,0,0);box(glasses,.34,.16,.06,0x11161a,.2,0,0);box(glasses,.12,.06,.06,P.dark,0,0,0);
