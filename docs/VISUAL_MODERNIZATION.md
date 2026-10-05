@@ -1046,3 +1046,8 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Eliminades també les col·lisions laterals perquè coincideixin amb la nova geometria oberta.
 - Reubicats barrils, caixes, dipòsits i màstil/bandera del recinte de garatge perquè no envaeixin la casa annexa.
 - Els dos dipòsits de combustible que abans quedaven a tocar o dins l'annex s'han mogut a una franja lliure del recinte.
+
+
+## Angle de tir del tanc — 2026-10-05
+- El projectil principal del tanc surt ara 20° cap avall respecte de l'horitzontal.
+- El vector es manté normalitzat amb cos(20°) a l'horitzontal i -sin(20°) a l'eix vertical.
