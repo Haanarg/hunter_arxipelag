@@ -128,7 +128,8 @@ window.HUNTER_BUILDINGS=Object.freeze({
       const floor=new THREE.Mesh(new THREE.BoxGeometry(width+.5,.35,depth+.5),material(0x6f6d67,'masonry'));
       floor.position.y=.02;group.add(floor);
 
-      const spring=Math.max(3.1,height*.3),radius=Math.max(width*.5,2),segments=10,da=Math.PI/segments;
+      // La volta arrenca pràcticament des de terra: el sostre forma també els laterals.
+      const spring=.12,radius=Math.max(width*.5,2),segments=10,da=Math.PI/segments;
       const roofMat=material(roofColor,'metal');
       for(let i=0;i<segments;i++){
         const a0=i*da,a1=(i+1)*da,a=(a0+a1)/2;
@@ -140,11 +141,6 @@ window.HUNTER_BUILDINGS=Object.freeze({
         roofGroup.add(slab);
       }
 
-      // Costats baixos sota l'arrencada de la volta.
-      const sideT=.34;
-      const left=addWall(group,{lx:-width/2+sideT/2,lz:0,sx:sideT,sz:depth,height:spring,material:walls});
-      const right=addWall(group,{lx:width/2-sideT/2,lz:0,sx:sideT,sz:depth,height:spring,material:walls});
-
       // Nervis exteriors per donar una lectura més propera a un hangar real.
       const frameMat=material(0x5c6366,'metal');
       for(const z of[-depth/2+.7,0,depth/2-.7]){
@@ -154,7 +150,7 @@ window.HUNTER_BUILDINGS=Object.freeze({
           rib.position.set(x,y,z);rib.rotation.z=a-Math.PI/2;roofGroup.add(rib);
         }
       }
-      roofGroup.userData.color=roofColor;return {group,walls,doors,roof:roofGroup,sideWalls:[left,right],spring,archTop:spring+radius};
+      roofGroup.userData.color=roofColor;return {group,walls,doors,roof:roofGroup,sideWalls:[],spring,archTop:spring+radius};
     };
 
     const addRamp=(group,{alongAxis,length,width,top,bottom,x,z,color,direction=1})=>{
