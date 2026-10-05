@@ -818,3 +818,11 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - El canvi segueix el mateix criteri aplicat al camió i al tanc.
 - Radi, hitbox efectiva i separació de spawn creixen automàticament perquè depenen de l'escala del vehicle.
 - Actualitzat el smoke test per validar conjuntament les escales de camió, tanqueta i tanc.
+
+
+## Cabell més llarg i orgànic — 2026-10-05
+- Allargat lleugerament el cabell del clatell del personatge principal.
+- Substituïdes les peces més rígides del darrere i laterals per volums esfèrics de baixa resolució per donar una silueta més orgànica.
+- Afegit un volum específic de nuca i laterals arrodonits, mantenint el cabell curt i compatible amb la gorra.
+- Replicat el mateix tractament al rider dels vehicles oberts perquè el personatge mantingui el mateix aspecte a bicicleta, moto, barca de rems i windsurf.
+- Actualitzat el smoke test per comprovar la presència dels nous volums de cabell al jugador i al rider.
