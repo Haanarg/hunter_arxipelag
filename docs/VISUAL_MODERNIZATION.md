@@ -786,3 +786,12 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Durant el salt es compensa la translació del grup principal perquè el punt de gir efectiu quedi a l'altura de la cintura/maluc.
 - La càmera de perfil i la recuperació posterior a l'espatlla es mantenen sense canvis.
 - Afegides comprovacions al smoke test per evitar regressions en el sentit de flexió i en el pivot de cintura.
+
+
+## Coll, cabell curt i ajust de gorra — 2026-10-05
+- Afegit un coll visible al personatge principal.
+- Afegit cabell curt al darrere, laterals i part superior.
+- El cap deixa de ser una esfera completa: la geometria queda retallada a la zona superior perquè la gorra s'hi ajusti més i no sembli simplement col·locada a sobre.
+- Rebaixada lleugerament la gorra i ajustada la seva corona per seguir millor el contorn del cap.
+- El mateix tractament s'ha replicat al rider dels vehicles oberts, inclosa la barca de rems i el windsurf.
+- Afegida comprovació al smoke test per detectar regressions en coll, cabell i geometria del cap.
