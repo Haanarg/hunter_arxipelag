@@ -71,7 +71,8 @@ run(`{
 ok('lodThresholdsOk','logical LOD thresholds are configured');
 ok("String(handleVehicleImpacts).includes('hurtE(u,dmg);u.alert=12')&&!String(handleVehicleImpacts).includes('hurtE(u,dmg);damageVehicle(v')",'running over soldiers does not damage vehicle structure');
 ok("String(handleVehicleImpacts).includes('killPalm(t);damageVehicle(v,Math.min(18,5+speed*.55),1)')&&!String(handleVehicleImpacts).includes('speed>18?2:1')",'palm collisions always cost exactly one structural impact');
-ok("String(stepV).includes('breakSpeed=barbed?8:14')&&String(stepV).includes('damageVehicle(v,0,barbed?2:3)')",'fast vehicle impacts break barbed wire or walls with fixed structural cost');
+ok("String(stepV).includes('breakSpeed=barbed?8:14')&&String(stepV).includes("tank=v.t==='tanc'")&&String(stepV).includes('if(tank||speed>breakSpeed)')",'tank breaks walls and barbed wire without a speed threshold');
+ok("String(collisionDamageVehicle).includes("v?.t==='tanc'")",'tank ignores structural damage from collisions');
 ok("String(mkB).includes('rammable:true')",'ordinary building walls are marked as rammable');
 ok('worldVisualThrottled','buildings and remote vehicle visuals use reduced update rates');
 ok('faunaLodEnabled','fauna uses distance-based reduced update rates');
