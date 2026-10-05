@@ -861,3 +861,11 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Rebaixada i ajustada la gorra: corona lleugerament més estreta i baixa, amb visera reposicionada.
 - El mateix retoc s'ha replicat al rider dels vehicles oberts.
 - Actualitzades les comprovacions del smoke test per cobrir el gir únic, el pivot a cintura, l'absència de sideHair i el nou ajust de gorra.
+
+
+## Aterratge dret de la voltereta — 2026-10-05
+- La sortida en marxa continua fent una sola volta completa de 360°.
+- El temps de l'animació ara es limita exactament a zero en lloc de saltar d'un valor positiu a un valor negatiu.
+- Es renderitza explícitament el frame final amb rotació 0°, de manera que el personatge arriba dempeus sense necessitat de corregir la postura després de l'animació.
+- La compensació de pivot a la cintura es manté durant tota la volta i desapareix naturalment al frame final.
+- La postura compacta de braços i cames es relaxa progressivament abans de tocar terra.
