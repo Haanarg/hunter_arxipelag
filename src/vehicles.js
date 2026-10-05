@@ -61,44 +61,25 @@ window.HUNTER_VEHICLES=Object.freeze({
         rod(g,[-.42,1.16,-.35],[.42,1.16,-.35],.055,metal);rod(g,[0,.94,-.2],[0,1.16,-.35],.05,metal);
         for(const x of[-.52,.52])box(g,.16,.13,.7,0xe9e7df,x,.36,.45,'paint');
       }
-      if(t==='barca_rems'){const wood=0x8a6847,darkWood=0x5d402b,inside=0xb08a63;
-        // Barca oberta tipus skiff inspirada en la referència: proa/pop estretes, costats continus i bancs interiors.
-        const keel=new THREE.Shape();
-        keel.moveTo(0,-2.5);keel.quadraticCurveTo(.72,-2.3,1.02,-1.15);keel.quadraticCurveTo(1.14,.25,.78,1.95);keel.quadraticCurveTo(.48,2.45,0,2.66);
-        keel.quadraticCurveTo(-.48,2.45,-.78,1.95);keel.quadraticCurveTo(-1.14,.25,-1.02,-1.15);keel.quadraticCurveTo(-.72,-2.3,0,-2.5);
-        const floorGeom=new THREE.ExtrudeGeometry(keel,{depth:.14,bevelEnabled:false});floorGeom.rotateX(-Math.PI/2);
-        const floor=new THREE.Mesh(floorGeom,material(inside,'organic'));floor.position.y=.18;g.add(floor);
+      if(t==='barca_rems'){
+        const wood=0x8a6847,darkWood=0x5d402b;
+        // Base provisional: buc únic, ovalat i apuntat, per reconstruir la barca a partir d'aquí.
+        const hullShape=new THREE.Shape();
+        hullShape.moveTo(0,-2.7);
+        hullShape.quadraticCurveTo(1.12,-1.75,1.12,0);
+        hullShape.quadraticCurveTo(1.12,1.75,0,2.7);
+        hullShape.quadraticCurveTo(-1.12,1.75,-1.12,0);
+        hullShape.quadraticCurveTo(-1.12,-1.75,0,-2.7);
+        const hullGeom=new THREE.ExtrudeGeometry(hullShape,{depth:.42,bevelEnabled:false});
+        hullGeom.rotateX(-Math.PI/2);
+        const simpleHull=new THREE.Mesh(hullGeom,material(wood,'organic'));
+        simpleHull.position.y=.2;g.add(simpleHull);
 
-        // Costats del buc, inclinats lleugerament cap enfora.
-        for(const side of[-1,1]){
-          const ribs=[
-            [side*.45,.24,-2.22],[side*.78,.5,-1.55],[side*.98,.72,-.55],
-            [side*1.04,.77,.55],[side*.86,.66,1.55],[side*.4,.42,2.26]
-          ];
-          for(let i=0;i<ribs.length-1;i++)rod(g,ribs[i],ribs[i+1],.13,wood,'organic');
-          const rail=[
-            [side*.52,.72,-2.16],[side*.9,.95,-1.42],[side*1.1,1.02,-.42],
-            [side*1.12,1.02,.62],[side*.92,.92,1.55],[side*.46,.68,2.2]
-          ];
-          for(let i=0;i<rail.length-1;i++)rod(g,rail[i],rail[i+1],.085,darkWood,'organic');
-        }
-
-        // Proa i popa tancades només a la part alta, deixant l'interior clarament buit.
-        box(g,1.18,.38,.18,wood,0,.66,-2.2,'organic');
-        box(g,1.02,.34,.18,wood,0,.62,2.2,'organic');
-
-        // Bancs transversals com a la referència.
-        for(const z of[-1.12,.08,1.18]){
-          box(g,1.72,.13,.42,darkWood,0,.8,z,'organic');
-          for(const x of[-.7,.7])box(g,.09,.42,.09,darkWood,x,.57,z,'organic');
-        }
-
-        // Escàlems sobre cada regala i un rem independent a cada banda.
+        // Es conserven els rems i els seus pivots.
         const oars=new THREE.Group();g.add(oars);g.userData.oars=[];
         for(const side of[-1,1]){
           const pivot=new THREE.Group();pivot.position.set(side*1.08,1.02,-.12);oars.add(pivot);
           round(g,.075,.18,metal,side*1.08,1.08,-.12,'y','metal');
-          // Mànec entra dins la barca; pala ampla cap a fora.
           box(pivot,1.55,.065,.065,darkWood,-side*.72,0,0,'organic');
           box(pivot,1.95,.065,.065,darkWood,side*.94,0,0,'organic');
           const blade=box(pivot,.62,.085,.32,darkWood,side*1.98,0,0,'organic');blade.rotation.z=.08*side;
