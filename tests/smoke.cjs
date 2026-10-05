@@ -14,6 +14,34 @@ run(`{
 }`);
 ok('islandIndexEquivalent','indexed rawHAt matches full island scan');
 ok('islandIndexUsesBuckets','island spatial index reduces candidate scans');
+run(`{
+  rebuildVehicleGrid();
+  const allVehicles=[...V,...E.filter(u=>u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc')].filter(o=>!o.destroyed);
+  const vehicleOk=allVehicles.every(v=>{
+    const brute=allVehicles.filter(o=>o!==v&&!o.destroyed&&Math.abs(o.x-v.x)<=32&&Math.abs(o.z-v.z)<=32);
+    const indexed=vehicleCandidatesAt(v.x,v.z,32,false).filter(o=>o!==v&&!o.destroyed);
+    return brute.every(o=>indexed.includes(o));
+  });
+  const pts=[[P.x,P.z],[B[0].x,B[0].z],[HQ.x,HQ.z]];
+  const wallsOk=pts.every(([x,z])=>{
+    const brute=Wl.filter(w=>x>w.x0-4&&x<w.x1+4&&z>w.z0-4&&z<w.z1+4);
+    const indexed=wallCandidates(x,z,4).filter(w=>x>w.x0-4&&x<w.x1+4&&z>w.z0-4&&z<w.z1+4);
+    return brute.length===indexed.length&&brute.every(w=>indexed.includes(w));
+  });
+  const buildingsOk=pts.every(([x,z])=>{
+    const brute=B.filter(b=>Math.abs(x-b.x)<b.w/2+2&&Math.abs(z-b.z)<b.d/2+2);
+    const indexed=buildingCandidates(x,z,2).filter(b=>Math.abs(x-b.x)<b.w/2+2&&Math.abs(z-b.z)<b.d/2+2);
+    return brute.length===indexed.length&&brute.every(b=>indexed.includes(b));
+  });
+  globalThis.spatialVehicleEquivalent=vehicleOk;
+  globalThis.spatialWallEquivalent=wallsOk;
+  globalThis.spatialBuildingEquivalent=buildingsOk;
+  globalThis.spatialIndexesPopulated=vehicleGrid.size>0&&wallGrid.size>0&&buildingGrid.size>0;
+}`);
+ok('spatialVehicleEquivalent','vehicle spatial grid preserves nearby collision candidates');
+ok('spatialWallEquivalent','wall spatial grid preserves local collider candidates');
+ok('spatialBuildingEquivalent','building spatial grid preserves local building candidates');
+ok('spatialIndexesPopulated','spatial grids are populated during gameplay');
 const types=['llanxa','moto_aquatica','hover','cotxe','moto','bici','barca_rems','windsurf','camio','tanqueta','llanxa_coets','tanc','heli','heli_combat'];
 // Keep combat out of movement fixtures while retaining the actual generated enemies.
 run('const savedEnemies=E;E=[];');
