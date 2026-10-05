@@ -6,7 +6,17 @@ window.HUNTER_RIDER=Object.freeze({
     box(torso,1.13,1.1,.63,0x49e52c,0,.58,0);box(torso,.74,.88,.3,0x6a5632,0,.65,.43);
     const neck=new THREE.Mesh(new THREE.CylinderGeometry(.2,.22,.28,10),material(0xf0c9a0));neck.position.set(0,1.05,-.08);torso.add(neck);
     const head=new THREE.Mesh(new THREE.SphereGeometry(.44,12,8,0,Math.PI*2,.28,Math.PI-.62),material(0xf0c9a0));head.scale.set(.82,1,.8);head.position.set(0,1.42,-.12);torso.add(head);
-    box(torso,.62,.14,.16,0x3a2b22,0,1.64,.22);for(const x of[-.3,.3])box(torso,.1,.24,.36,0x3a2b22,x,1.58,.02);
+    const hairMat=material(0x3a2b22);
+    const hairBack=new THREE.Mesh(new THREE.SphereGeometry(.3,10,6,0,Math.PI*2,.18,Math.PI*.78),hairMat);
+    hairBack.scale.set(.96,.98,.76);hairBack.position.set(0,1.49,.23);torso.add(hairBack);
+    for(const x of[-.27,.27]){
+      const sideHair=new THREE.Mesh(new THREE.SphereGeometry(.145,10,6,0,Math.PI*2,.15,Math.PI*.72),hairMat);
+      sideHair.scale.set(.72,1.02,.7);sideHair.position.set(x,1.55,.04);torso.add(sideHair);
+    }
+    const nape=new THREE.Mesh(new THREE.SphereGeometry(.21,10,6,0,Math.PI*2,.2,Math.PI*.7),hairMat);
+    nape.scale.set(.9,1.04,.68);nape.position.set(0,1.35,.2);torso.add(nape);
+    const hairTop=new THREE.Mesh(new THREE.SphereGeometry(.34,10,5,0,Math.PI*2,0,.72),hairMat);
+    hairTop.scale.set(.9,.3,.86);hairTop.position.set(0,1.66,.01);torso.add(hairTop);
     box(torso,.32,.15,.06,0x11161a,-.18,1.48,-.45);box(torso,.32,.15,.06,0x11161a,.18,1.48,-.45);box(torso,.1,.05,.06,0x151515,0,1.48,-.45);
     const capCrown=new THREE.Mesh(new THREE.SphereGeometry(.47,12,6,0,Math.PI*2,0,Math.PI/2),material(0x22b72c));capCrown.scale.set(.93,.46,.96);capCrown.position.set(0,1.67,-.12);torso.add(capCrown);
     const visor=box(torso,.68,.08,.46,0x22b72c,0,1.65,-.46);visor.rotation.x=-.08;
