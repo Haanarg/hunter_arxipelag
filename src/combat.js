@@ -31,11 +31,11 @@ function damageVehicle(v,dmg,impacts=1){
 
 function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc){snd(spl?'cannon':'shot',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/140)*(own=='e'?.6:1));const o=new THREE.Mesh(gB,mat);o.scale.setScalar(sc);o.position.set(x,y,z);world.add(o);Pj.push({x,y,z,vx:dx*sp,vy:dy*sp,vz:dz*sp,dmg,spl,own,life:2.2,o})}
 function boom(x,y,z,r,dmg,own){snd('boom',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/200));const o=new THREE.Mesh(sphG,new THREE.MeshBasicMaterial({color:0xffa030,transparent:true}));o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6});
-if(own!='e')E.slice().forEach(u=>{const d=Math.hypot(u.x-x,u.o.position.y+1.5-y,u.z-z);if(d<r)hurtE(u,dmg*(1-d/r*.5))});
-Wl.slice().forEach(w=>{const dd=Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z);if(dd<r&&y<w.y1+3)dmgW(w,dmg*1.5*(1-dd/(2*r)))});
-B.forEach(b=>{const dd=Math.hypot(b.x-x,b.z-z),rr2=r+b.w/2;if(dd<rr2&&b.rhp>0){b.rhp-=dmg*1.2*(1-dd/rr2*.6);if(b.rhp<=0)roofBreak(b)}});
+if(own!='e')for(const u of enemyCandidatesAt(x,z,r+4)){const d=Math.hypot(u.x-x,u.o.position.y+1.5-y,u.z-z);if(d<r)hurtE(u,dmg*(1-d/r*.5))}
+for(const w of wallCandidates(x,z,r)){const dd=Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z);if(dd<r&&y<w.y1+3)dmgW(w,dmg*1.5*(1-dd/(2*r)))}
+for(const b of buildingCandidates(x,z,r)){const dd=Math.hypot(b.x-x,b.z-z),rr2=r+b.w/2;if(dd<rr2&&b.rhp>0){b.rhp-=dmg*1.2*(1-dd/rr2*.6);if(b.rhp<=0)roofBreak(b)}}
 PL.forEach(t=>{if(!t.alive)return;const dd=Math.hypot(t.x-x,t.z-z);if(dd<r)dmgP(t,dmg*1.5*(1-dd/(2*r)))});
-V.slice().forEach(v=>{const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),dd=Math.hypot(v.x-x,vy-y,v.z-z);if(dd<r&&own!='p'){const power=Math.max(1,Math.ceil((1-dd/r)*3));damageVehicle(v,dmg*.5*(1-dd/r),power)}});
+for(const v of vehicleCandidatesAt(x,z,r+12,true)){const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),dd=Math.hypot(v.x-x,vy-y,v.z-z);if(dd<r&&own!='p'){const power=Math.max(1,Math.ceil((1-dd/r)*3));damageVehicle(v,dmg*.5*(1-dd/r),power)}}
 const q=cv?cv.o.position:P,d=Math.hypot(q.x-x,q.y-y,q.z-z);if(d<r&&own!='p'&&!cv)hurtP(dmg*.6*(1-d/r))}
 function plant(){if(over||cv||swimming||!inv.expl)return;if(--inv.expl<=0)delete inv.expl;setDis(false);const o=new THREE.Mesh(new THREE.BoxGeometry(.9,.5,.9),new THREE.MeshBasicMaterial({color:0xff2020}));
 o.position.set(P.x,P.y+.3,P.z);world.add(o);bombs.push({x:P.x,y:P.y+.3,z:P.z,t:3,o});msg='Bomba col·locada: 3 s!';msgT=2}
@@ -56,14 +56,80 @@ else if(c=='llanxa_coets'){secondaryWeapon();return}
 else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0)delete inv.bazooka;bazookaEquipped=false;fcd=1.05;pl.userData.firePose=.42;shoot(P.x+fx_*1.35,P.y+1.9,P.z+fz*1.35,fx_,.01,fz,72,135,18,'pb',mS,3);msg='Bazooka disparat!';msgT=2;setDis(false)}
 else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;let ax=fx_,ay=0,az=fz,best=75;for(const e of E){const dx=e.x-P.x,dz=e.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>1&&(dx*fx_+dz*fz)/d>.97&&sight(P.x,P.z,e.x,e.z,P.y+1.5)){best=d;const dy=e.o.position.y+1.5-(P.y+1.5),l=Math.hypot(dx,dy,dz);ax=dx/l;ay=dy/l;az=dz/l}}shoot(P.x+fx_*.7,P.y+1.5,P.z+fz*.7,ax,ay,az,130,12,0,'p',mB,1)}
 else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}
-function updPj(dt){const steps=Math.max(1,Math.ceil(dt/.008));for(let k=0;k<steps;k++)updPjTick(dt/steps)}
-function updPjTick(dt){for(let i=Pj.length-1;i>=0;i--){const p=Pj[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;p.life-=dt;p.o.position.set(p.x,p.y,p.z);
-let hit=p.life<=0||p.y<Math.max(hAt(p.x,p.z),0)+.2;
-if(!hit){const w=wallCandidates(p.x,p.z).find(w=>!w.open&&p.y<w.y1&&p.y>w.y0&&p.x>w.x0&&p.x<w.x1&&p.z>w.z0&&p.z<w.z1);if(w){hit=true;if(!p.spl)dmgW(w,p.dmg*(p.own=='e'?.5:1))}else{const b=buildingCandidates(p.x,p.z,.6).find(b=>b.rhp>0&&Math.abs(p.x-b.x)<b.w/2+.6&&Math.abs(p.z-b.z)<b.d/2+.6&&p.y<b.fy+b.h+1.4&&p.y>b.fy+b.h-.4);if(b){hit=true;if(!p.spl)b.rhp-=p.dmg*(p.own=='e'?.5:1);if(b.rhp<=0)roofBreak(b)}}}
-if(!hit){const t0=treeAt(p.x,p.z,.5);if(t0&&p.y<Math.max(hAt(p.x,p.z),0)+(t0.p?6.5:1.5)){hit=true;if(t0.p&&!p.spl)dmgP(t0,p.dmg*(p.own=='e'?.5:1))}}
-if(!hit&&(p.own=='p'||p.own=='pb'))for(const u of E)if(Math.hypot(u.x-p.x,u.o.position.y+1.5-p.y,u.z-p.z)<u.r+.6){hit=true;if(!p.spl)hurtE(u,p.dmg);break}
-if(!hit){for(const v of V){if(p.own==='p'&&v===cv)continue;const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),rr=vehicleRadius(v.t)*.62;if(Math.hypot(v.x-p.x,vy+1-p.y,v.z-p.z)<rr){hit=true;if(!p.spl)damageVehicle(v,p.dmg,1);break}}}
-if(!hit&&p.own=='e'&&!cv){const q=P;if(Math.hypot(q.x-p.x,q.y+1.5-p.y,q.z-p.z)<1.2){hit=true;if(!p.spl)hurtP(p.dmg)}}
-if(hit){if(p.spl)boom(p.x,p.y,p.z,p.spl,p.dmg,p.own);world.remove(p.o);Pj.splice(i,1)}}}
+function segmentAabbT(x0,y0,z0,x1,y1,z1,minX,maxX,minY,maxY,minZ,maxZ){
+  let lo=0,hi=1;
+  const clip=(p,d,mn,mx)=>{
+    if(Math.abs(d)<1e-9)return p>=mn&&p<=mx;
+    let a=(mn-p)/d,b=(mx-p)/d;if(a>b){const q=a;a=b;b=q}
+    lo=Math.max(lo,a);hi=Math.min(hi,b);return lo<=hi
+  };
+  return clip(x0,x1-x0,minX,maxX)&&clip(y0,y1-y0,minY,maxY)&&clip(z0,z1-z0,minZ,maxZ)&&hi>=0&&lo<=1?Math.max(0,lo):null
+}
+function segmentSphereT(x0,y0,z0,x1,y1,z1,cx,cy,cz,r){
+  const dx=x1-x0,dy=y1-y0,dz=z1-z0,mx=x0-cx,my=y0-cy,mz=z0-cz,
+        a=dx*dx+dy*dy+dz*dz,c=mx*mx+my*my+mz*mz-r*r;
+  if(c<=0)return 0;if(a<1e-12)return null;
+  const b=2*(mx*dx+my*dy+mz*dz),disc=b*b-4*a*c;if(disc<0)return null;
+  const t=(-b-Math.sqrt(disc))/(2*a);return t>=0&&t<=1?t:null
+}
+function updPj(dt){
+  for(let i=Pj.length-1;i>=0;i--){
+    const p=Pj[i],x0=p.x,y0=p.y,z0=p.z,x1=x0+p.vx*dt,y1=y0+p.vy*dt,z1=z0+p.vz*dt,
+          sx=x1-x0,sy=y1-y0,sz=z1-z0,horiz=Math.hypot(sx,sz),
+          mx=(x0+x1)/2,mz=(z0+z1)/2,reach=horiz/2;
+    p.life-=dt;
+    let bestT=p.life<=0?1:Infinity,kind=p.life<=0?'expire':null,target=null;
+
+    const consider=(t,k,o)=>{if(t!=null&&t>=0&&t<=1&&t<bestT){bestT=t;kind=k;target=o}};
+
+    // Parets i teulades: intersecció contínua de segment amb AABB.
+    for(const w of wallCandidates(mx,mz,reach+1)){
+      if(w.open)continue;
+      consider(segmentAabbT(x0,y0,z0,x1,y1,z1,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1),'wall',w)
+    }
+    for(const b of buildingCandidates(mx,mz,reach+1)){
+      if(b.rhp<=0)continue;
+      consider(segmentAabbT(x0,y0,z0,x1,y1,z1,b.x-b.w/2-.6,b.x+b.w/2+.6,b.fy+b.h-.4,b.fy+b.h+1.4,b.z-b.d/2-.6,b.z+b.d/2+.6),'building',b)
+    }
+
+    // Personatges i vehicles: intersecció contínua amb volum esfèric aproximat.
+    if(p.own==='p'||p.own==='pb'){
+      for(const u of enemyCandidatesAt(mx,mz,reach+4)){
+        consider(segmentSphereT(x0,y0,z0,x1,y1,z1,u.x,u.o.position.y+1.5,u.z,(u.r||1)+.6),'enemy',u)
+      }
+    }
+    for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){
+      if(p.own==='p'&&v===cv)continue;
+      const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),rr=vehicleRadius(v.t)*.62;
+      consider(segmentSphereT(x0,y0,z0,x1,y1,z1,v.x,vy+1,v.z,rr),'vehicle',v)
+    }
+    if(p.own==='e'&&!cv)consider(segmentSphereT(x0,y0,z0,x1,y1,z1,P.x,P.y+1.5,P.z,1.2),'player',P);
+
+    // Terreny i arbres continuen mostrejats a una densitat equivalent a l'antic substep.
+    const sampleN=Math.max(1,Math.ceil(Math.hypot(sx,sy,sz)/1.15));
+    for(let k=1;k<=sampleN;k++){
+      const t=k/sampleN;if(t>=bestT)break;
+      const x=x0+sx*t,y=y0+sy*t,z=z0+sz*t,ground=Math.max(hAt(x,z),0)+.2;
+      if(y<ground){consider(t,'terrain',null);break}
+      const tree=treeAt(x,z,.5);
+      if(tree&&y<Math.max(hAt(x,z),0)+(tree.p?6.5:1.5)){consider(t,'tree',tree);break}
+    }
+
+    const hit=bestT!==Infinity;
+    const t=hit?bestT:1;p.x=x0+sx*t;p.y=y0+sy*t;p.z=z0+sz*t;p.o.position.set(p.x,p.y,p.z);
+    if(!hit)continue;
+
+    if(!p.spl){
+      if(kind==='wall')dmgW(target,p.dmg*(p.own==='e'?.5:1));
+      else if(kind==='building'){target.rhp-=p.dmg*(p.own==='e'?.5:1);if(target.rhp<=0)roofBreak(target)}
+      else if(kind==='tree'&&target?.p)dmgP(target,p.dmg*(p.own==='e'?.5:1));
+      else if(kind==='enemy')hurtE(target,p.dmg);
+      else if(kind==='vehicle')damageVehicle(target,p.dmg,1);
+      else if(kind==='player')hurtP(p.dmg)
+    }
+    if(p.spl)boom(p.x,p.y,p.z,p.spl,p.dmg,p.own);
+    world.remove(p.o);Pj.splice(i,1)
+  }
+}
 function updFx(dt){for(let i=bombs.length-1;i>=0;i--){const b=bombs[i];b.t-=dt;if(b.t<=0){boom(b.x,b.y,b.z,16,100,'b');world.remove(b.o);bombs.splice(i,1)}}
 for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.life-=dt;f.o.scale.setScalar(1+(.6-f.life)*f.s);f.o.material.opacity=Math.max(0,f.life/.6);if(f.life<=0){world.remove(f.o);fx.splice(i,1)}}}
