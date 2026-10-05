@@ -25,7 +25,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#1b2a5a;font-family:sy
 <div id="joystick" role="application" aria-label="Joystick de moviment"><div class="joy-knob"></div></div>
 <div id="contextButtons" class="p" style="right:calc(14px + env(safe-area-inset-right,0px));grid-template-columns:repeat(1,64px)"><b class="heli-control" data-k="KeyU" aria-label="Pujar helicòpter" title="Pujar">⬆️</b><b class="heli-control" data-k="KeyJ" aria-label="Baixar helicòpter" title="Baixar">⬇️</b><b data-k="KeyF" aria-label="Dispar">🎯</b><b data-k="KeyE" aria-label="Acció">✋</b></div>
 <div id="end" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;text-align:center;padding:24px;color:#fff;font:700 26px system-ui;text-shadow:0 2px 8px #000;pointer-events:none;background:#0005"></div>
-<div id="ini" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;color:#fff;font-family:system-ui;background:linear-gradient(#15253688,#15253688),url('assets/start-screen.webp') center/cover no-repeat"><h1 style="margin:0;font-size:34px">HUNTER · ARXIPÈLAG</h1><p style="max-width:420px;margin:0;line-height:1.5">Elimina el general enemic amagat a l'HQ de la seva base. Busca mapes, armes, explosius i vehicles pels edificis i illots.</p><div id="seedBox"><label><input id="seedRandom" type="checkbox" checked> Llavor aleatòria</label><input id="seedInput" type="text" inputmode="text" maxlength="40" placeholder="Escriu una llavor" disabled><small style="opacity:.8">Pots usar números o text.</small></div><div id="mapSizeBox"><b>Mida:</b><label><input type="radio" name="mapSize" value="1" checked> Petit · 4,8 km</label><label><input type="radio" name="mapSize" value="2"> Gran · 9,6 km</label></div><div style="display:flex;gap:10px"><button data-d=".6">Fàcil</button><button data-d="1">Normal</button><button data-d="1.5">Difícil</button></div><p style="margin:0;opacity:.85">Tria dificultat per començar</p></div>
+<div id="ini" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;color:#fff;font-family:system-ui;background:linear-gradient(#596a8f,#e99368)"><h1 style="margin:0;font-size:34px">HUNTER · ARXIPÈLAG</h1><p style="max-width:420px;margin:0;line-height:1.5">Elimina el general enemic amagat a l'HQ de la seva base. Busca mapes, armes, explosius i vehicles pels edificis i illots.</p><div id="seedBox"><label><input id="seedRandom" type="checkbox" checked> Llavor aleatòria</label><input id="seedInput" type="text" inputmode="text" maxlength="40" placeholder="Escriu una llavor" disabled><small style="opacity:.8">Pots usar números o text.</small></div><div id="mapSizeBox"><b>Mida:</b><label><input type="radio" name="mapSize" value="1" checked> Petit · 4,8 km</label><label><input type="radio" name="mapSize" value="2"> Gran · 9,6 km</label></div><div style="display:flex;gap:10px"><button data-d=".6">Fàcil</button><button data-d="1">Normal</button><button data-d="1.5">Difícil</button></div><p style="margin:0;opacity:.85">Tria dificultat per començar</p></div>
 <div id="gamepanel" role="dialog" aria-modal="true" aria-labelledby="panelTitle"><div class="card"><button id="resumeButton" class="panel-close" aria-label="Tanca">×</button><h2 id="panelTitle"></h2><div id="panelBody"></div></div></div>
 <script>/**
  * @license
@@ -284,28 +284,37 @@ else if(sp>12&&c.m=='l')puff(cv.x+s*L,gy+.3,cv.z+co*L,0xc9b48a,1.4);
 else if(c.m=='a'&&cv.alt-gy<12)puff(cv.x+rn(-6,6),gy+.3,cv.z+rn(-6,6),hAt(cv.x,cv.z)>0?0xc9b48a:0xffffff,2.2)}
 PT.forEach(p=>{if(p.life>0){p.life-=dt;if(p.rise)p.m.position.y+=p.rise*dt;p.m.scale.setScalar(p.s*(1+(1-p.life/p.max)*1.15));p.m.material.opacity=Math.max(0,p.life/p.max)*.8;if(p.life<=0){p.m.visible=false;p.rise=0}}});
 if(seaAudio){const coastal=Math.max(.25,1-Math.max(0,hAt(P.x,P.z))/22);seaAudio.gain.gain.setTargetAtTime(over?0:.035+coastal*.05,AC.currentTime,.5)}if(eng){const c=cv?VT[cv.t]:null;eng.g.gain.value=c&&cv.t!=='bici'&&!over?.02+Math.min(1,Math.abs(cv.v)/40)*.03:0;eng.o.frequency.value=c?(c.m=='a'?60:35)+Math.abs(cv.v)*(c.m=='a'?1:2.5):40}}
-const seedRandomEl=document.getElementById('seedRandom'),seedInputEl=document.getElementById('seedInput');seedRandomEl.onchange=()=>{seedInputEl.disabled=seedRandomEl.checked;if(!seedRandomEl.checked)seedInputEl.focus()};document.querySelectorAll('#ini button[data-d]').forEach(b=>b.onclick=()=>{DIF=+b.dataset.d;MAP_SCALE=+(document.querySelector('input[name="mapSize"]:checked')?.value||1);S=4800*MAP_SCALE;H=S/2;const rawSeed=seedRandomEl.checked?null:seedFromText(seedInputEl.value||'hunter');requestedSeed=rawSeed==null?null:(rawSeed^Math.imul(MAP_SCALE,0x45d9f3b))>>>0;build();minimap.setWorldSize(S,H);minimap.reset();mini();started=1;document.getElementById('ini').style.display='none';initAudio()});
-
-const captureStart=new URLSearchParams(location.search).get('captureStart')==='1';
-if(captureStart){
-  DIF=1;MAP_SCALE=1;S=4800;H=S/2;
-  const captureSeed=seedFromText('hunter-start-screen');
-  requestedSeed=(captureSeed^Math.imul(MAP_SCALE,0x45d9f3b))>>>0;
-  build();minimap.setWorldSize(S,H);minimap.reset();
-  pl.visible=false;
-  document.getElementById('ini').style.display='none';
-  document.getElementById('hud').style.display='none';
-  document.getElementById('mm').style.display='none';
-  document.getElementById('joystick').style.display='none';
-  document.getElementById('contextButtons').style.display='none';
-  const ground=groundAt(P.x,P.z),hd=P.hd,dist=26;
-  cam.position.set(P.x+Math.sin(hd)*dist,ground+13,P.z+Math.cos(hd)*dist);
-  cam.lookAt(P.x-Math.sin(hd)*10,ground+2.2,P.z-Math.cos(hd)*10);
-  sun.target.position.set(P.x,0,P.z);sun.position.copy(sun.target.position).addScaledVector(sunDir,500);
-  sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,3500);
-  ren.render(scene,cam);
-  document.documentElement.dataset.captureReady='1';
-}
+const seedRandomEl=document.getElementById('seedRandom'),seedInputEl=document.getElementById('seedInput'),iniEl=document.getElementById('ini');
+const applyStartScreenshot=()=>{
+  try{
+    const shot=localStorage.getItem('hunterStartScreenshot');
+    if(shot)iniEl.style.background="linear-gradient(#15253677,#15253677),url('"+shot+"') center/cover no-repeat";
+  }catch(_){}
+};
+const captureRealStartScreenshot=()=>{
+  try{
+    const wasVisible=pl.visible,ground=groundAt(P.x,P.z),hd=P.hd,dist=26;
+    pl.visible=false;
+    cam.position.set(P.x+Math.sin(hd)*dist,ground+13,P.z+Math.cos(hd)*dist);
+    cam.lookAt(P.x-Math.sin(hd)*10,ground+2.2,P.z-Math.cos(hd)*10);
+    sun.target.position.set(P.x,0,P.z);sun.position.copy(sun.target.position).addScaledVector(sunDir,500);
+    sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,3500);
+    ren.render(scene,cam);
+    const shot=ren.domElement.toDataURL('image/webp',.86);
+    if(shot&&shot.length>1000)localStorage.setItem('hunterStartScreenshot',shot);
+    pl.visible=wasVisible;
+  }catch(_){pl.visible=true}
+};
+applyStartScreenshot();
+seedRandomEl.onchange=()=>{seedInputEl.disabled=seedRandomEl.checked;if(!seedRandomEl.checked)seedInputEl.focus()};
+document.querySelectorAll('#ini button[data-d]').forEach(b=>b.onclick=()=>{
+  DIF=+b.dataset.d;MAP_SCALE=+(document.querySelector('input[name="mapSize"]:checked')?.value||1);S=4800*MAP_SCALE;H=S/2;
+  const rawSeed=seedRandomEl.checked?null:seedFromText(seedInputEl.value||'hunter');
+  requestedSeed=rawSeed==null?null:(rawSeed^Math.imul(MAP_SCALE,0x45d9f3b))>>>0;
+  build();minimap.setWorldSize(S,H);minimap.reset();mini();
+  captureRealStartScreenshot();
+  started=1;iniEl.style.display='none';initAudio()
+});
 // animacions de destrucció
 const DB=[],WA=[],dgeo=new THREE.BoxGeometry(1,1,1),dmc={},dmat=c=>dmc[c]||(dmc[c]=M(c));
 function debris(x,y,z,col,n,sz,sp){for(let i=0;i<n;i++){const m=new THREE.Mesh(dgeo,dmat(col)),s=rn(.4,1)*sz;m.scale.set(s,s*rn(.5,1.2),s);m.position.set(x+rn(-1,1),y,z+rn(-1,1));m.rotation.set(rn(0,3),rn(0,3),0);world.add(m);
