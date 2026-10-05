@@ -63,6 +63,14 @@ run(`{
 ok('projectileSegmentMath','projectile segment intersection helpers detect continuous hits');
 ok('projectileUsesBroadPhase','projectiles use spatial broad-phase for collision candidates');
 ok('projectileNoGlobalMicrostep','projectiles no longer use the global 0.008 second microstep loop');
+run(`{
+  globalThis.lodThresholdsOk=LOD_NEAR2===250000&&LOD_MID2===1440000&&ITEM_ANIM2===250000&&FAUNA_NEAR2===422500&&FAUNA_MID2===1960000;
+  globalThis.worldVisualThrottled=String(update).includes('worldVisualTick=.2')&&String(update).includes('visualLodAcc')&&String(update).includes("d2<LOD_MID2 ? .1 : .45");
+  globalThis.faunaLodEnabled=String(updExtra).includes('f.lodAcc')&&String(updExtra).includes("d2<FAUNA_MID2 ? .12 : .4");
+}`);
+ok('lodThresholdsOk','logical LOD thresholds are configured');
+ok('worldVisualThrottled','buildings and remote vehicle visuals use reduced update rates');
+ok('faunaLodEnabled','fauna uses distance-based reduced update rates');
 const types=['llanxa','moto_aquatica','hover','cotxe','moto','bici','barca_rems','windsurf','camio','tanqueta','llanxa_coets','tanc','heli','heli_combat'];
 // Keep combat out of movement fixtures while retaining the actual generated enemies.
 run('const savedEnemies=E;E=[];');
