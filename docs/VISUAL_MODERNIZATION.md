@@ -880,3 +880,12 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - El fum surt així de la part alta real del vehicle, inclosos els models grans com camió, tanqueta i tanc.
 - La dispersió lateral es manté reduïda i proporcional a la mida del vehicle per conservar una columna de fum llegible.
 - Actualitzat el smoke test per detectar regressions en densitat, color i punt d'emissió.
+
+
+## Cabell continu de banda a banda — 2026-10-05
+- Ampliada lleugerament la capa superior de cabell perquè cobreixi millor tot l'ample del cap.
+- Afegits dos petits volums laterals de farciment, molt estrets i enganxats al crani, per eliminar els buits visibles als costats.
+- Aquests volums no sobresurten com les antigues peces laterals sobre les orelles.
+- El volum del clatell i la nuca es manté, amb una transició més contínua cap a la part superior.
+- Replicat el mateix ajust al rider dels vehicles oberts.
+- Actualitzat el smoke test per cobrir l'amplada del hairTop i la presència dels nous sideFill.
