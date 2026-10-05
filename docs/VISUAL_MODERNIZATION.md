@@ -1015,3 +1015,13 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Girat el tors del rider 180° respecte de l'orientació anterior perquè miri cap a la vela.
 - El cap gira amb el tors perquè és fill directe d'aquest grup.
 - Braços i cames es mantenen sense canvis, conservant les mans al travesser i la postura dempeus.
+
+
+## Armament dels helicòpters — 2026-10-05
+- Els tirs de l'helicòpter normal i de l'helicòpter de combat surten ara amb un angle de 45° cap avall.
+- El vector de tir usa components horitzontal i vertical iguals (Math.SQRT1_2) per garantir exactament els 45°.
+- Els míssils de l'helicòpter de combat també segueixen el mateix angle descendent.
+- Afegit un botó tàctil exclusiu 🚀 que només apareix quan el jugador pilota l'helicòpter de combat.
+- El botó de tret normal 🎯 queda separat del de míssils.
+- Eliminada la pulsació llarga sobre 🎯 que abans disparava míssils accidentalment.
+- G es manté com a accés de teclat a l'arma secundària per compatibilitat.
