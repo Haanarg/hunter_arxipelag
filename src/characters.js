@@ -67,11 +67,15 @@ window.HUNTER_CHARACTERS=Object.freeze({
     const hairMat=new THREE.MeshStandardMaterial({color:0x3a2b22,roughness:.92});
     // Cabell més orgànic: volum suau al clatell i laterals, una mica més llarg per darrere.
     const hairBack=new THREE.Mesh(new THREE.SphereGeometry(.35,12,7,0,Math.PI*2,.18,Math.PI*.75),hairMat);
-    hairBack.scale.set(.94,.94,.78);hairBack.position.set(0,4.13,.32);player.add(hairBack);
+    hairBack.scale.set(.96,.94,.8);hairBack.position.set(0,4.13,.32);player.add(hairBack);
     const nape=new THREE.Mesh(new THREE.SphereGeometry(.25,10,6,0,Math.PI*2,.2,Math.PI*.68),hairMat);
-    nape.scale.set(.86,1.02,.68);nape.position.set(0,3.98,.29);player.add(nape);
-    const hairTop=new THREE.Mesh(new THREE.SphereGeometry(.43,12,6,0,Math.PI*2,0,.68),hairMat);
-    hairTop.scale.set(.86,.28,.84);hairTop.position.set(0,4.33,.04);player.add(hairTop);
+    nape.scale.set(.88,1.02,.7);nape.position.set(0,3.98,.29);player.add(nape);
+    const hairTop=new THREE.Mesh(new THREE.SphereGeometry(.44,12,6,0,Math.PI*2,0,.7),hairMat);
+    hairTop.scale.set(.98,.28,.84);hairTop.position.set(0,4.33,.04);player.add(hairTop);
+    for(const x of[-.29,.29]){
+      const sideFill=new THREE.Mesh(new THREE.SphereGeometry(.14,10,6,0,Math.PI*2,.16,Math.PI*.56),hairMat);
+      sideFill.scale.set(.46,.92,.58);sideFill.position.set(x,4.18,.08);player.add(sideFill);
+    }
     const glasses=new THREE.Group();glasses.position.set(0,4.16,-.37);player.add(glasses);
     box(glasses,.34,.16,.06,0x11161a,-.2,0,0);box(glasses,.34,.16,.06,0x11161a,.2,0,0);box(glasses,.12,.06,.06,P.dark,0,0,0);
     const cap=new THREE.Group();cap.position.set(0,4.39,-.01);player.add(cap);
