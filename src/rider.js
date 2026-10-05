@@ -7,11 +7,12 @@ window.HUNTER_RIDER=Object.freeze({
     const neck=new THREE.Mesh(new THREE.CylinderGeometry(.2,.22,.28,10),material(0xf0c9a0));neck.position.set(0,1.05,-.08);torso.add(neck);
     const head=new THREE.Mesh(new THREE.SphereGeometry(.44,12,8,0,Math.PI*2,.28,Math.PI-.62),material(0xf0c9a0));head.scale.set(.82,1,.8);head.position.set(0,1.42,-.12);torso.add(head);
     const hairMat=material(0x3a2b22);
-    const hairShell=new THREE.Mesh(new THREE.CylinderGeometry(.31,.33,.31,12,1,true,Math.PI*1.18,Math.PI*1.64),hairMat);
-    hairShell.position.set(0,1.52,.01);hairShell.rotation.y=Math.PI;torso.add(hairShell);
-    const hairBack=new THREE.Mesh(new THREE.CylinderGeometry(.29,.31,.18,12,1,true,0,Math.PI*2),hairMat);
-    hairBack.scale.set(1,.92,.84);hairBack.position.set(0,1.41,.14);torso.add(hairBack);
-    box(torso,.38,.13,.11,0x3a2b22,0,1.31,.21);
+    // Cap del rider: X ±.361 / Z ±.352. El cabell queda lleugerament per fora i cap enrere.
+    const hairShell=new THREE.Mesh(new THREE.CylinderGeometry(.36,.37,.31,12,1,true,Math.PI*1.18,Math.PI*1.64),hairMat);
+    hairShell.position.set(0,1.52,.07);hairShell.rotation.y=Math.PI;torso.add(hairShell);
+    const hairBack=new THREE.Mesh(new THREE.CylinderGeometry(.35,.37,.2,12,1,true,Math.PI*.12,Math.PI*1.76),hairMat);
+    hairBack.scale.set(1,.92,.96);hairBack.position.set(0,1.395,.11);torso.add(hairBack);
+    box(torso,.42,.13,.12,0x3a2b22,0,1.3,.23);
     box(torso,.32,.15,.06,0x11161a,-.18,1.48,-.45);box(torso,.32,.15,.06,0x11161a,.18,1.48,-.45);box(torso,.1,.05,.06,0x151515,0,1.48,-.45);
     const capCrown=new THREE.Mesh(new THREE.SphereGeometry(.47,12,6,0,Math.PI*2,0,Math.PI/2),material(0x22b72c));capCrown.scale.set(.9,.42,.93);capCrown.position.set(0,1.63,-.13);torso.add(capCrown);
     const visor=box(torso,.66,.075,.44,0x22b72c,0,1.615,-.47);visor.rotation.x=-.1;
