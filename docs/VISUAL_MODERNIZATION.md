@@ -1152,7 +1152,7 @@ Prioritat proposada: **1 → 2 → 3 → 4 → 5**. L'objectiu és millorar el r
 - `boom()` també usa els índexs espacials per evitar escaneigs globals de parets, edificis, enemics i vehicles en cada explosió.
 - Afegits smoke tests per a la matemàtica segment–AABB/segment–esfera, ús del broad-phase i absència del bucle global de 0,008 s.
 
-### 5. LOD lògic / actualització reduïda per objectes llunyans
+### 5. ✅ FET — LOD lògic / actualització reduïda per objectes llunyans
 - Situació actual: molts sistemes s'actualitzen cada frame encara que estiguin lluny del jugador: edificis, portes, ítems, fauna, vehicles, fum i animacions.
 - Proposta:
   - objectes propers: actualització completa;
@@ -1163,6 +1163,14 @@ Prioritat proposada: **1 → 2 → 3 → 4 → 5**. L'objectiu és millorar el r
 - Objectiu: reduir cost de CPU i garbage collection en escenes grans.
 - Impacte esperat: **mitjà-alt**, especialment en Android.
 - Risc: **baix-mitjà**.
+- **Implementat el 2026-10-05:** LOD lògic visual amb llindars de 500 m i 1.200 m per a vehicles no pilotats.
+- Vehicles propers: actualització visual cada frame; distància mitjana: cada 0,1 s; llunyans: cada 0,45 s. La simulació física no es desactiva.
+- Visibilitat/materials dels edificis s'actualitzen cada 0,2 s en lloc de cada frame.
+- Els ítems només animen flotació/rotació dins de 500 m; la detecció de recollida continua activa.
+- Fauna: actualització completa a menys de 650 m, cada 0,12 s fins a 1.400 m i cada 0,4 s més enllà, acumulant el temps perquè la velocitat mitjana no canviï.
+- Substituïdes diverses comparacions de proximitat per distància al quadrat, incloent portes, recollida d'ítems, cerca de vehicles propers i minimapa.
+- Mantinguda la simulació crítica d'IA, projectils i col·lisions sense congelació per distància per evitar canvis de gameplay.
+- Afegits smoke tests per als llindars i les freqüències del LOD.
 
 ### Criteri d'implementació
 - Aplicar les optimitzacions una per una.
