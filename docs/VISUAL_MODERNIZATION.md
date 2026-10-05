@@ -1135,7 +1135,7 @@ Prioritat proposada: **1 → 2 → 3 → 4 → 5**. L'objectiu és millorar el r
 - `chooseDefense()` també queda dins del tick de percepció i el resultat es cacheja a `u.defenseTarget`.
 - Afegit un smoke test dinàmic que comprova una crida de percepció inicial i cap nova crida de `sight()` al frame immediat següent.
 
-### 4. Broad-phase i trajectes segmentats per als projectils
+### 4. ✅ FET — Broad-phase i trajectes segmentats per als projectils
 - Situació actual: `updPj()` subdivideix cada frame en passos de fins a 0,008 s i cada projectil pot comprovar parets, edificis, arbres, enemics i vehicles a cada subpas.
 - Proposta:
   - fer una consulta espacial dels possibles impactes al voltant del trajecte;
@@ -1144,6 +1144,13 @@ Prioritat proposada: **1 → 2 → 3 → 4 → 5**. L'objectiu és millorar el r
 - Objectiu: evitar que armes de cadència alta, com la de l'helicòpter de combat, multipliquin excessivament el cost de col·lisions.
 - Impacte esperat: **molt alt durant combats intensos**.
 - Risc: **mitjà-alt**, perquè s'ha de garantir que projectils ràpids no travessin objectes.
+- **Implementat el 2026-10-05:** eliminat el bucle global de micro-substeps de 0,008 s per projectil.
+- Cada projectil calcula ara el segment complet entre la posició anterior i la nova del frame i busca l'impacte més proper.
+- Parets i teulades usen intersecció segment–AABB; enemics, vehicles i jugador usen intersecció segment–esfera.
+- El broad-phase reutilitza `wallCandidates()`, `buildingCandidates()`, `vehicleCandidatesAt()` i un nou `enemyCandidatesAt()`.
+- Terreny i arbres mantenen mostreig al llarg del segment amb una separació màxima aproximada d'1,15 m, equivalent a la densitat espacial de l'antic substep a les velocitats màximes actuals.
+- `boom()` també usa els índexs espacials per evitar escaneigs globals de parets, edificis, enemics i vehicles en cada explosió.
+- Afegits smoke tests per a la matemàtica segment–AABB/segment–esfera, ús del broad-phase i absència del bucle global de 0,008 s.
 
 ### 5. LOD lògic / actualització reduïda per objectes llunyans
 - Situació actual: molts sistemes s'actualitzen cada frame encara que estiguin lluny del jugador: edificis, portes, ítems, fauna, vehicles, fum i animacions.
