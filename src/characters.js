@@ -66,15 +66,15 @@ window.HUNTER_CHARACTERS=Object.freeze({
     head.scale.set(.8,1,.78);head.position.set(0,4.08,0);player.add(head);
     const hairMat=new THREE.MeshStandardMaterial({color:0x3a2b22,roughness:.92});
     // Cabell més orgànic: volum suau al clatell i laterals, una mica més llarg per darrere.
-    const hairBack=new THREE.Mesh(new THREE.SphereGeometry(.35,12,7,0,Math.PI*2,.18,Math.PI*.75),hairMat);
-    hairBack.scale.set(.96,.94,.8);hairBack.position.set(0,4.13,.32);player.add(hairBack);
-    const nape=new THREE.Mesh(new THREE.SphereGeometry(.25,10,6,0,Math.PI*2,.2,Math.PI*.68),hairMat);
-    nape.scale.set(.88,1.02,.7);nape.position.set(0,3.98,.29);player.add(nape);
-    const hairTop=new THREE.Mesh(new THREE.SphereGeometry(.44,12,6,0,Math.PI*2,0,.7),hairMat);
-    hairTop.scale.set(.98,.28,.84);hairTop.position.set(0,4.33,.04);player.add(hairTop);
-    for(const x of[-.29,.29]){
-      const sideFill=new THREE.Mesh(new THREE.SphereGeometry(.14,10,6,0,Math.PI*2,.16,Math.PI*.56),hairMat);
-      sideFill.scale.set(.46,.92,.58);sideFill.position.set(x,4.18,.08);player.add(sideFill);
+    const hairBack=new THREE.Mesh(new THREE.SphereGeometry(.31,12,7,0,Math.PI*2,.18,Math.PI*.72),hairMat);
+    hairBack.scale.set(.9,.86,.72);hairBack.position.set(0,4.2,.24);player.add(hairBack);
+    const nape=new THREE.Mesh(new THREE.SphereGeometry(.22,10,6,0,Math.PI*2,.2,Math.PI*.64),hairMat);
+    nape.scale.set(.82,.94,.62);nape.position.set(0,4.04,.22);player.add(nape);
+    const hairTop=new THREE.Mesh(new THREE.SphereGeometry(.39,12,6,0,Math.PI*2,0,.6),hairMat);
+    hairTop.scale.set(.9,.2,.76);hairTop.position.set(0,4.4,.01);player.add(hairTop);
+    for(const x of[-.27,.27]){
+      const sideFill=new THREE.Mesh(new THREE.SphereGeometry(.1,10,6,0,Math.PI*2,.16,Math.PI*.48),hairMat);
+      sideFill.scale.set(.32,.66,.44);sideFill.position.set(x,4.24,.04);player.add(sideFill);
     }
     const glasses=new THREE.Group();glasses.position.set(0,4.16,-.37);player.add(glasses);
     box(glasses,.34,.16,.06,0x11161a,-.2,0,0);box(glasses,.34,.16,.06,0x11161a,.2,0,0);box(glasses,.12,.06,.06,P.dark,0,0,0);
