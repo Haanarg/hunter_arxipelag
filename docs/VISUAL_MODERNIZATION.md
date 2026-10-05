@@ -834,3 +834,18 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Es mantenen al mateix grup visual que Dispar i Acció, tal com demana el HUD contextual.
 - Els controls de teclat U/J i Space/Shift continuen funcionant sense canvis.
 - Afegida una comprovació al smoke test per detectar regressions en la presència i activació contextual dels botons.
+
+
+## Voltereta ràpida i nova barca de rems — 2026-10-05
+- Simplificada la sortida d'un vehicle en moviment: l'animació `vault` llarga s'ha substituït per una única voltereta ràpida d'aproximadament 0,62 s.
+- Eliminada la càmera lateral específica de la maniobra; la càmera habitual continua seguint el personatge durant la voltereta.
+- La postura de braços i cames durant el gir és compacta i simple, sense seqüència de mans-peus-incorporació.
+- Refeta la geometria de la barca de rems prenent com a referència la imatge aportada:
+  - buc obert tipus skiff;
+  - proa i popa més estretes;
+  - costats continus i regales marcades;
+  - tres bancs transversals;
+  - un escàlem a cada banda;
+  - un rem independent a cada costat, amb mànec cap a l'interior i pala ampla cap a fora.
+- Ajustada la remada perquè els dos rems pivotin des de les regales de forma coherent amb la nova geometria.
+- Actualitzat el smoke test perquè comprovi la nova voltereta curta i la nova estructura de la barca.
