@@ -809,7 +809,7 @@ function update(dt,t){if(!started||paused||over){if(eng)eng.g.gain.value=0;retur
 ud=(K.KeyU||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),lim=H-2;
 if(cv){const driven=cv,alive=stepV(driven,f,tr,ud,dt);if(alive&&cv===driven){P.x=driven.x;P.z=driven.z;P.hd=driven.hd}}
 else{P.hd+=tr*dt*2.2;if(playerFall){playerFall.t+=dt;playerFall.vy-=24*dt;playerFall.vx*=Math.exp(-.18*dt);playerFall.vz*=Math.exp(-.18*dt);P.x=Math.max(-lim,Math.min(lim,P.x+playerFall.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerFall.vz*dt));playerFall.y+=playerFall.vy*dt;const water=wy(P.x,P.z,t),landing=Math.max(hAt(P.x,P.z),water-1.4);P.y=playerFall.y;if(playerFall.y<=landing){P.y=landing;const fallH=playerFall.startHeight,impact=Math.max(0,-playerFall.vy),waterLanding=water>hAt(P.x,P.z)+1.5,dmg=Math.min(100,Math.max(0,(fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8)));playerFall=null;if(dmg>0)hurtP(dmg);msg=waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5}}
-else if(playerEject&&playerEject.t>0){P.x=Math.max(-lim,Math.min(lim,P.x+playerEject.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerEject.vz*dt));playerEject.vx*=Math.exp(-2.4*dt);playerEject.vz*=Math.exp(-2.4*dt);playerEject.t-=dt}else{const ss=(swimming?5:12)*f*dt;P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*ss));P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*ss))}
+else if(playerEject&&playerEject.t>0){P.x=Math.max(-lim,Math.min(lim,P.x+playerEject.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerEject.vz*dt));playerEject.vx*=Math.exp(-2.4*dt);playerEject.vz*=Math.exp(-2.4*dt);playerEject.t=Math.max(0,playerEject.t-dt)}else{const ss=(swimming?5:12)*f*dt;P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*ss));P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*ss))}
 if(!playerFall){wallPush();treePush();vehiclePushPlayer()}}
 V.slice().forEach(v=>{if(v===cv)return;if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
 ib=cv?null:B.find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2)||null;
@@ -820,21 +820,21 @@ items.forEach(it=>{it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.
 if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k];if(Math.hypot(P.x-it.x,P.z-it.z)<2.2&&Math.abs(P.y-it.y)<3){if(it.t=='arma')ammo+=40;inv[it.t]=(inv[it.t]||0)+1;world.remove(it.o);items.splice(k,1);msg='Has trobat: '+IT[it.t].n;msgT=3;snd('pick')}}
 msgT-=dt;pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv;animPl(cv?0:f,dt);
 if(!cv&&playerFall){pl.position.y=playerFall.y;pl.rotation.x=(playerFall.spin||1)*playerFall.t*7.5;pl.rotation.z=Math.sin(playerFall.t*8)*.45}
-else if(!cv&&playerEject&&playerEject.t>0){
+else if(!cv&&playerEject&&playerEject.t>=0){
   const dur=playerEject.dur||.5,p=Math.max(0,Math.min(1,1-playerEject.t/dur)),u=pl.userData;
   if(playerEject.kind==='flip'){
-    // Una sola voltereta: angle monotònic 0 -> 2π i pivot fix a la cintura.
-    const turn=Math.PI*2*p,waistLocal=2.05,waistScaled=waistLocal*pl.scale.y;
-    pl.rotation.x=-turn;pl.rotation.z=0;
+    // Una sola volta completa. L'últim frame és exactament dret, sense correcció posterior.
+    const turn=p>=1?0:-Math.PI*2*p,waistLocal=2.05,waistScaled=waistLocal*pl.scale.y;
+    pl.rotation.x=turn;pl.rotation.z=0;
     const waistOffset=new THREE.Vector3(0,waistScaled,0).applyQuaternion(pl.quaternion);
     pl.position.x-=waistOffset.x;
     pl.position.y+=waistScaled-waistOffset.y+Math.sin(Math.PI*p)*(playerEject.height||.68);
     pl.position.z-=waistOffset.z;
-    // Cos compacte però sense subanimacions ni fases addicionals.
-    if(u.al)u.al.rotation.x=.58;if(u.ar)u.ar.rotation.x=.58;
-    if(u.ael)u.ael.rotation.x=.5;if(u.aer)u.aer.rotation.x=.5;
-    if(u.ll)u.ll.rotation.x=-.28;if(u.lr)u.lr.rotation.x=-.28;
-    if(u.lkl)u.lkl.rotation.x=-.5;if(u.lkr)u.lkr.rotation.x=-.5;
+    const compact=1-Math.pow(p,8);
+    if(u.al)u.al.rotation.x=.58*compact;if(u.ar)u.ar.rotation.x=.58*compact;
+    if(u.ael)u.ael.rotation.x=.5*compact;if(u.aer)u.aer.rotation.x=.5*compact;
+    if(u.ll)u.ll.rotation.x=-.28*compact;if(u.lr)u.lr.rotation.x=-.28*compact;
+    if(u.lkl)u.lkl.rotation.x=-.5*compact;if(u.lkr)u.lkr.rotation.x=-.5*compact;
   }
 }
 V.forEach(v=>place(v,t,dt,v===cv?(v.steerInput||0):0));poseRider(cv,dt);
