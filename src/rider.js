@@ -49,18 +49,21 @@ window.HUNTER_RIDER=Object.freeze({
       }
 
       if(v.t==='windsurf'){
-        // Dempeus de costat sobre la taula, mans al travesser de la vela.
-        const base=.32*sc,lean=Math.max(-.14,Math.min(.14,v.v/34));
-        torso.position.set(-.18*sc,base,.08*sc);torso.rotation.set(-.03,Math.PI/2,-.08+lean);
-        const hips=[vec(-.2*sc,base,.35*sc),vec(.2*sc,base,-.35*sc)];
-        const shoulders=[vec(-.18*sc,base+1.05,.25*sc),vec(.18*sc,base+1.05,-.25*sc)];
-        const hands=[vec(.45*sc,2.22*sc,.25*sc),vec(.95*sc,1.92*sc,.25*sc)];
+        // Postura real de windsurf: dempeus, cames gairebé rectes, tors de costat i mans al travesser.
+        const lean=Math.max(-.08,Math.min(.08,v.v/42)),bodyX=-.62*sc,hipY=1.36*sc,footY=.29*sc;
+        torso.position.set(bodyX,hipY,.08*sc);
+        torso.rotation.set(0,Math.PI/2,-.035+lean);
+        const hips=[vec(bodyX,hipY,.25*sc),vec(bodyX,hipY,-.25*sc)];
+        const shoulders=[vec(bodyX,hipY+1.03,.22*sc),vec(bodyX,hipY+1.03,-.22*sc)];
+        const hands=[vec(.52*sc,2.39*sc,.25*sc),vec(1.2*sc,2.08*sc,.25*sc)];
+        const feet=[vec(bodyX,footY,-.72*sc),vec(bodyX,footY,.72*sc)];
         for(let i=0;i<2;i++){
-          const hip=hips[i],shoulder=shoulders[i],hand=hands[i],elbow=shoulder.clone().lerp(hand,.52);
-          elbow.y-=.08;elbow.z+=(i?-.08:.08);
+          const hip=hips[i],shoulder=shoulders[i],hand=hands[i],foot=feet[i];
+          const elbow=shoulder.clone().lerp(hand,.55);
+          elbow.y-=.1;elbow.z+=(i?-.06:.06);
           limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
-          const foot=vec((i?-.35:.35)*sc,.22*sc,(i?.82:-.72)*sc),knee=hip.clone().lerp(foot,.5);
-          knee.y+=.18;knee.x+=(i?-.08:.08);
+          // Genoll sobre la línia cama-maluc-peu: només una flexió mínima visual.
+          const knee=hip.clone().lerp(foot,.5);knee.x+=.015*sc;
           limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);
           boots[i].position.copy(foot);boots[i].rotation.set(0,Math.PI/2,0);
         }
