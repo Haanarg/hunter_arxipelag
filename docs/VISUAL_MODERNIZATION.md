@@ -929,3 +929,13 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - La peça posterior també s'ha eixamplat i mogut lleugerament enrere per evitar que aparegui pell per sota del cabell.
 - El límit superior del cabell del jugador es manté a Y 4,38, just per sota de la gorra, de manera que no sobresurt per dalt.
 - Actualitzat el smoke test per comprovar radis i desplaçament posterior.
+
+
+## Postura correcta al windsurf — 2026-10-05
+- Reposicionat el rider del windsurf perquè estigui realment dempeus sobre la taula.
+- Els malucs passen a una alçada coherent amb unes cames gairebé rectes; els genolls només tenen una flexió mínima visual.
+- El tors queda girat 90° de costat respecte de la taula.
+- Les dues mans se situen sobre el travesser de la vela, amb colzes lleugerament flexionats.
+- La vela s'ha fet una mica més alta i ampla, i el travesser s'ha elevat i allargat perquè la proporció amb el personatge sigui natural.
+- La taula també s'ha allargat lleugerament per donar una base coherent a la postura dempeus.
+- Actualitzat el smoke test per cobrir postura, cames rectes i alineació mans/travesser.
