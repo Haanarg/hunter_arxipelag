@@ -25,8 +25,38 @@ window.HUNTER_VEGETATION=Object.freeze({
       g.computeVertexNormals();
       return g
     };
+    const curvedPalmTrunk=(height=6.2,baseRadius=.42,topRadius=.22,radial=6,vertical=8,bend=.25)=>{
+      const pos=[],idx=[];
+      for(let iy=0;iy<=vertical;iy++){
+        const t=iy/vertical,y=height*t,r=baseRadius+(topRadius-baseRadius)*t,
+              // Arc suau: arrel i copa tornen a l'eix; desviació màxima al centre.
+              cx=Math.sin(Math.PI*t)*height*bend;
+        for(let j=0;j<radial;j++){
+          const a=j*Math.PI*2/radial;
+          pos.push(cx+Math.cos(a)*r,y,Math.sin(a)*r)
+        }
+      }
+      for(let iy=0;iy<vertical;iy++)for(let j=0;j<radial;j++){
+        const a=iy*radial+j,b=iy*radial+(j+1)%radial,
+              c=(iy+1)*radial+j,d=(iy+1)*radial+(j+1)%radial;
+        idx.push(a,c,b,b,c,d)
+      }
+      // Tapes inferior i superior.
+      const bottom=pos.length/3;pos.push(0,0,0);
+      const top=pos.length/3;pos.push(0,height,0);
+      for(let j=0;j<radial;j++){
+        const n=(j+1)%radial;
+        idx.push(bottom,n,j);
+        const a=vertical*radial+j,b=vertical*radial+n;
+        idx.push(top,a,b)
+      }
+      const g=new THREE.BufferGeometry();
+      g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+      g.setIndex(idx);g.computeVertexNormals();
+      return g
+    };
     const geometry={
-      trunk:new THREE.CylinderGeometry(.22,.42,6.2,6).translate(0,3.1,0),
+      trunk:curvedPalmTrunk(6.2,.42,.22,6,8,.25),
       crown:palmCrown(4.7,0,8),
       crown2:palmCrown(3.1,.65,7,.18),
       palmVariants:[
