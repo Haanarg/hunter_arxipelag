@@ -47,6 +47,7 @@ ok("charSrc.includes('glasses')&&charSrc.includes('capCrown')",'player keeps cap
 ok("riderSrc.includes('SphereGeometry(.44,12,8,0,Math.PI*2,.28,Math.PI-.62)')&&riderSrc.includes('capCrown')&&riderSrc.includes("v.t==='windsurf'")&&riderSrc.includes('Math.PI/2')",'open-vehicle rider has updated headgear and side-on windsurf stance');
 ok("charSrc.includes('hairBack')&&charSrc.includes('nape')&&riderSrc.includes('hairBack')&&riderSrc.includes('nape')",'player and rider have longer organic rear hair');
 ok("!charSrc.includes('sideHair')&&!riderSrc.includes('sideHair')&&charSrc.includes('cap.position.set(0,4.39,-.01)')&&riderSrc.includes('capCrown.position.set(0,1.63,-.13)')",'hair clears ears and cap fit is tightened');
+ok("charSrc.includes('sideFill')&&charSrc.includes('hairTop.scale.set(.98,.28,.84)')&&riderSrc.includes('sideFill')&&riderSrc.includes('hairTop.scale.set(.98,.27,.84)')",'hair spans head width without protruding side locks');
 ok("vehSrc.includes('Barca oberta tipus skiff')&&vehSrc.includes('Escàlems sobre cada regala')&&vehSrc.includes('g.userData.oars.push(pivot)')",'rowboat is skiff-like with benches and one oar per side');
 ok("window.HUNTER_VEHICLES.scales.camio===1.8125&&window.HUNTER_VEHICLES.scales.tanqueta===1.8125&&window.HUNTER_VEHICLES.scales.tanc===2.25",'truck tankette and tank are scaled up 25 percent');
 ok("html.includes('barbedHQ(pb.x,pb.z,72.5,65,18,26)')&&html.includes('[[-69,-61],[69,-61],[-69,61],[69,61]]')",'HQ perimeter and corner towers are expanded');
