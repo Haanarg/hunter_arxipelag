@@ -24,6 +24,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     }
     const gun=new THREE.Group();gun.position.set(0,-1,-.05);gun.rotation.x=-Math.PI/2;g.userData.arms[1].add(gun);
     box(gun,.16,.2,1.5,P.metal,0,0,-.25);box(gun,.18,.36,.25,P.dark,0,-.24,0);box(gun,.18,.2,.45,0x66513c,0,0,.55);
+    if(!general)g.scale.setScalar(.9);
     return g
   },
   createPlayer(THREE,{box,palette=window.HUNTER_PALETTE}){
