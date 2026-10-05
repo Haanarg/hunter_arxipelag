@@ -303,12 +303,12 @@ PM={t:vegetationMeshes.palms.trunk,c:vegetationMeshes.palms.crown,c2:vegetationM
 function fr(x,z){let a=1e9,b=-1e9;for(const[i,j]of[[0,0],[9,9],[-9,9],[9,-9],[-9,-9],[9,0],[-9,0],[0,9],[0,-9]]){const h=hAt(x+i,z+j);a=Math.min(a,h);b=Math.max(b,h)}return b-a}
 function dmgW(w,d){w.hp-=d;if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0)Wl.splice(i,1);i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);snd('boom',.3)}}
 function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=(opt.hangar?buildingVisual.createHangarShell:buildingVisual.createShell)({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide;
-const seg=(lx,lz,sx,sz,dr,windows=false)=>{if(!dr){const parts=windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:h,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:h,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+h,hp:90,m,parts:windows?parts:null,door:false,open:false,cx:x+lx,cz:z+lz};Wl.push(o);return}
+const seg=(lx,lz,sx,sz,dr,windows=false)=>{if(!dr){const parts=windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:h,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:h,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+h,hp:90,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz};Wl.push(o);return}
 const parts=buildingVisual.addDoor(g,{lx,lz,sx,sz,height:h,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:35,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz};Wl.push(door);Dr.push(door);
 if(parts.lintel)Wl.push({x0:door.x0,x1:door.x1,z0:door.z0,z1:door.z1,y0:fy+parts.doorHeight,y1:fy+h,hp:70,m:parts.lintel,door:false,open:false,playerBlock:false,cx:x+lx,cz:z+lz})};
 if(opt.hangar){
   const sh=Math.max(3.1,h*.3),push=(lx,lz,sx,sz)=>{
-    const m=buildingVisual.addWall(g,{lx,lz,sx,sz,height:sh,material:wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+sh,hp:110,m,door:false,open:false,cx:x+lx,cz:z+lz};Wl.push(o);return o
+    const m=buildingVisual.addWall(g,{lx,lz,sx,sz,height:sh,material:wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+sh,hp:110,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz};Wl.push(o);return o
   };
   // Sense parets laterals independents: la volta visual baixa fins al terra.
   // Es conserven només el darrere i els muntants de la boca frontal.
@@ -326,7 +326,7 @@ function mkEnemyBunker(x,z){
   const left=bx(g,6.2,8.7,28.6,concrete,-16.1,4.05,0,'masonry'),right=bx(g,6.2,8.7,28.6,concrete,16.1,4.05,0,'masonry');left.rotation.z=-.18;right.rotation.z=.18;
   const brow=bx(g,7.2,.9,2.2,dark,0,6.15,13.45,'masonry');brow.rotation.x=-.08;
   bx(g,5.4,.45,1.2,0x8c4b33,0,5.25,13.7,'paint');
-  const wall=(lx,lz,sx,sz)=>{const m=buildingVisual.addWall(g,{lx,lz,sx,sz,height:8.2,material:b.wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:b.fy-1,y1:b.fy+8.2,hp:90,m,door:false,open:false,cx:x+lx,cz:z+lz};Wl.push(o);return o};
+  const wall=(lx,lz,sx,sz)=>{const m=buildingVisual.addWall(g,{lx,lz,sx,sz,height:8.2,material:b.wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:b.fy-1,y1:b.fy+8.2,hp:90,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz};Wl.push(o);return o};
   // Passadís central amb quatre cambres laterals i una cambra posterior.
   wall(-8.2,1.2,t,18.8);wall(8.2,1.2,t,18.8);
   wall(-12.1,4.2,7.3,t);wall(-12.1,-5.0,7.3,t);wall(12.1,4.2,7.3,t);wall(12.1,-5.0,7.3,t);
@@ -557,7 +557,7 @@ const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),sx=Math.cos(v.hd),sz=-Math.sin(v.hd)
 const nx=v.x+(fx*v.v+sx*sideV)*dt,nz=v.z+(fz*v.v+sz*sideV)*dt,raw=hAt(nx,nz),h=land?groundAt(nx,nz):raw,g=Math.max(0,h);let ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;
 if(c.m==='w')ok=ok&&raw<-1.2;if(c.m==='l')ok=ok&&h>-1.2;if(ok&&a&&v.alt-g<8&&treeHit(nx,nz,radius))ok=false;
 if(!a||v.alt-g<16){for(const w of wallCandidates(nx,nz,radius))if(!w.open&&w.playerBlock!==false&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){
-  if(w.rammable&&land&&Math.abs(v.v)>3.5&&v.envCd<=0){const speed=Math.abs(v.v);dmgW(w,Math.max(8,speed*2.1));damageVehicle(v,Math.min(12,2+speed*.35),1);vehicleImpactFx(w.cx,Math.max(0,hAt(w.cx,w.cz))+1.1,w.cz);if(v.destroyed)return false;v.v*=.72;v.bump=.14;v.envCd=.22;if(!Wl.includes(w)){msg='Has obert pas a la filferrada.';msgT=1;continue}}
+  if(w.rammable&&land&&v.envCd<=0){const speed=Math.abs(v.v),barbed=!!w.barbed,breakSpeed=barbed?8:14;if(speed>breakSpeed){dmgW(w,w.hp);damageVehicle(v,0,barbed?2:3);vehicleImpactFx(w.cx,Math.max(0,hAt(w.cx,w.cz))+1.1,w.cz);if(v.destroyed)return false;v.v*=barbed?.72:.55;v.bump=barbed?.14:.2;v.envCd=.28;if(!Wl.includes(w)){msg=barbed?'Has trencat la filferrada!':'Has travessat una paret!';msgT=1;continue}}}
   ok=false;break
 }}
 if(ok){const test=vehicleBox(v,nx,nz,v.hd),hit=vehicleObstacles(v).find(o=>vehicleHeightCompatible(v,o)&&obbOverlap(test,vehicleBox(o)));if(hit){const rel=Math.abs(v.v-(hit.v||0));const ownMass=c.mass||1,otherMass=VT[vehicleHitType(hit.t)]?.mass||1,ratio=Math.max(.35,Math.min(2.5,otherMass/ownMass));v.v*=rel>5?Math.max(.16,.42/ratio):Math.max(.3,.62/ratio);if('v'in hit)hit.v*=Math.max(.3,.72/Math.max(.5,ownMass/otherMass));if(rel>6){damageVehicle(v,Math.min(18,rel*.7*ratio),1);if(V.includes(hit))damageVehicle(hit,Math.min(18,rel*.55/ratio),1);vehicleImpactFx((v.x+hit.x)/2,Math.max(vehicleY(v),vehicleY(hit))+.5,(v.z+hit.z)/2)}v.bump=.14;v.envCd=.18;ok=false}}
