@@ -1090,3 +1090,62 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - El projectil principal del tanc surt ara 20° cap avall respecte de l'horitzontal.
 - El vector es manté normalitzat amb cos(20°) a l'horitzontal i -sin(20°) a l'eix vertical.
 
+
+
+## Roadmap d'optimització — 2026-10-05
+
+Prioritat proposada: **1 → 2 → 3 → 4 → 5**. L'objectiu és millorar el rendiment sense alterar mecàniques ni aspecte visual, especialment pensant en Android i en mapes grans.
+
+### 1. Accelerar `hAt()` / `rawHAt()` amb un índex espacial d'illes
+- Situació actual: `rawHAt(x,z)` recorre totes les illes del mapa a cada consulta d'altura i després calcula soroll `fbm`.
+- Problema: `hAt()` és una dependència central i es crida constantment des de física, IA, projectils, vegetació, vehicles, càmera, fauna i col·lisions.
+- Proposta: construir una graella espacial de les illes i consultar només les illes candidates de les cel·les pròximes al punt.
+- Objectiu: evitar recorreguts globals per cada consulta d'altura.
+- Impacte esperat: **molt alt**.
+- Risc: **baix-mitjà**, sempre que el resultat de `rawHAt()` es mantingui matemàticament equivalent.
+
+### 2. Índex espacial general per vehicles, enemics i obstacles
+- Situació actual: diverses comprovacions recorren arrays complets de `V`, `E`, `B` i `Wl`; `vehicleObstacles(v)` crea arrays temporals amb spreads, filtres i cerques.
+- Proposta: reutilitzar el patró de graella espacial que ja existeix per als arbres (`TG`) i aplicar-lo a vehicles, enemics i obstacles estàtics.
+- Objectiu: limitar col·lisions i consultes de proximitat a les cel·les veïnes.
+- Impacte esperat: **alt**.
+- Risc: **mitjà**, perquè cal mantenir l'índex sincronitzat quan objectes es mouen, apareixen o es destrueixen.
+
+### 3. Separar la IA de percepció de la IA de moviment
+- Situació actual: `updEn()` actualitza tots els enemics cada frame i pot executar més d'una comprovació `sight()` per enemic.
+- Proposta:
+  - mantenir moviment i animació fluids cada frame;
+  - executar detecció, selecció d'objectiu i línia de visió a una freqüència inferior (aprox. 8–12 Hz);
+  - repartir els enemics entre frames;
+  - reutilitzar el resultat de `sight()` dins de la mateixa actualització.
+- Objectiu: reduir comprovacions de visibilitat i recorreguts de parets sense afectar perceptiblement el comportament.
+- Impacte esperat: **alt**, especialment a HQ i compounds amb molts enemics.
+- Risc: **baix-mitjà**.
+
+### 4. Broad-phase i trajectes segmentats per als projectils
+- Situació actual: `updPj()` subdivideix cada frame en passos de fins a 0,008 s i cada projectil pot comprovar parets, edificis, arbres, enemics i vehicles a cada subpas.
+- Proposta:
+  - fer una consulta espacial dels possibles impactes al voltant del trajecte;
+  - substituir part dels micro-passos per una intersecció de segment entre la posició anterior i la nova;
+  - conservar substepping només on sigui necessari.
+- Objectiu: evitar que armes de cadència alta, com la de l'helicòpter de combat, multipliquin excessivament el cost de col·lisions.
+- Impacte esperat: **molt alt durant combats intensos**.
+- Risc: **mitjà-alt**, perquè s'ha de garantir que projectils ràpids no travessin objectes.
+
+### 5. LOD lògic / actualització reduïda per objectes llunyans
+- Situació actual: molts sistemes s'actualitzen cada frame encara que estiguin lluny del jugador: edificis, portes, ítems, fauna, vehicles, fum i animacions.
+- Proposta:
+  - objectes propers: actualització completa;
+  - objectes a distància mitjana: actualització a baixa freqüència;
+  - objectes llunyans: congelats o actualitzats només quan sigui necessari;
+  - reduir assignacions temporals en hot paths;
+  - usar distància al quadrat (`dx*dx + dz*dz`) en lloc de `Math.hypot()` quan no cal l'arrel quadrada.
+- Objectiu: reduir cost de CPU i garbage collection en escenes grans.
+- Impacte esperat: **mitjà-alt**, especialment en Android.
+- Risc: **baix-mitjà**.
+
+### Criteri d'implementació
+- Aplicar les optimitzacions una per una.
+- Afegir tests de regressió abans de cada canvi estructural.
+- Prioritzar equivalència funcional: mateixa generació, mateixes col·lisions, mateixa IA observable i mateix aspecte visual.
+- Mesurar, quan sigui possible, temps de frame i cost dels hot paths abans/després per evitar optimitzacions sense guany real.
