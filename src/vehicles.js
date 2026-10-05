@@ -110,16 +110,27 @@ window.HUNTER_VEHICLES=Object.freeze({
       if(t==='heli'||t==='heli_combat'){
         const combat=t==='heli_combat',bodyCol=combat?0x59634f:0x647768;
         if(!combat){
-          box(g,2.9,1.55,4.4,bodyCol,0,2.05,-.25,'paint');const nose=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(glass,'glass'));nose.scale.set(1.35,.95,1.25);nose.position.set(0,2.15,-2.25);g.add(nose);
-          for(const x of[-1.48,1.48])box(g,.12,1.05,1.55,0x3f4d45,x,2.05,-.2,'paint');rod(g,[0,2.55,1.65],[0,2.8,7.1],.22,bodyCol,'paint');box(g,.12,1.45,1.1,bodyCol,0,3.35,6.85,'paint');box(g,2.7,.12,.7,bodyCol,0,2.85,5.95,'paint');
+          box(g,2.68,1.55,4.4,bodyCol,0,2.05,-.25,'paint');const nose=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(glass,'glass'));nose.scale.set(1.35,.95,1.25);nose.position.set(0,2.15,-2.25);g.add(nose);
+          for(const x of[-1.34,1.34])box(g,.12,1.05,1.55,0x3f4d45,x,2.05,-.2,'paint');rod(g,[0,2.55,1.65],[0,2.8,7.1],.22,bodyCol,'paint');box(g,.12,1.45,1.1,bodyCol,0,3.35,6.85,'paint');box(g,2.7,.12,.7,bodyCol,0,2.85,5.95,'paint');
           for(const x of[-1.55,1.55]){rod(g,[x,.5,-2],[x,.5,2.1],.09,metal);for(const z of[-1.1,1.2])rod(g,[x,.5,z],[x*.65,1.2,z],.08,metal)}
         }else{
-          const fus=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(bodyCol,'paint'));fus.scale.set(1.15,.92,3.2);fus.position.set(0,2.05,.25);g.add(fus);
+          const fus=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(bodyCol,'paint'));fus.scale.set(.94,.92,3.2);fus.position.set(0,2.05,.25);g.add(fus);
           const cockpit=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(glass,'glass'));cockpit.scale.set(.92,.72,1.5);cockpit.position.set(0,2.28,-2.35);g.add(cockpit);
-          box(g,1.15,.58,1.35,0x4c5749,0,2.65,-.55,'paint');rod(g,[0,2.55,2.3],[0,2.85,7.25],.16,bodyCol,'paint');box(g,.1,1.35,.9,bodyCol,0,3.35,7.05,'paint');
-          for(const x of[-2.15,2.15]){box(g,.22,.16,3.25,0x4c5749,x,1.75,.2,'paint');for(const z of[-.85,.1,.95])round(g,.11,.62,0x303638,x,1.63,z,'z','metal')}
+          box(g,1.02,.58,1.35,0x4c5749,0,2.65,-.55,'paint');rod(g,[0,2.55,2.3],[0,2.85,7.25],.16,bodyCol,'paint');box(g,.1,1.35,.9,bodyCol,0,3.35,7.05,'paint');
+          for(const x of[-2.15,2.15]){
+            const side=Math.sign(x);
+            rod(g,[side*.82,2.05,-.55],[x,1.75,-.55],.09,metal);
+            rod(g,[side*.82,2.05,.75],[x,1.75,.75],.09,metal);
+            box(g,.22,.16,3.25,0x4c5749,x,1.75,.2,'paint');
+            for(const z of[-.85,.1,.95])round(g,.11,.62,0x303638,x,1.63,z,'z','metal')
+          }
           rod(g,[0,1.72,-2.95],[0,1.72,-4.15],.11,metal);box(g,.28,.24,.5,0x252b2d,0,1.72,-4.05,'metal');
-          for(const x of[-1.3,1.3])rod(g,[x,.5,-1.7],[x,.5,1.6],.08,metal);
+          for(const x of[-1.3,1.3]){
+            const side=Math.sign(x);
+            rod(g,[x,.5,-1.7],[x,.5,1.6],.08,metal);
+            rod(g,[side*.72,1.45,-1.15],[x,.5,-1.15],.08,metal);
+            rod(g,[side*.72,1.45,1.05],[x,.5,1.05],.08,metal);
+          }
         }
         rod(g,[0,3.02,0],[0,3.82,0],.14,metal);round(g,.3,.2,metal,0,3.82,0,'y','metal');const rotor=new THREE.Group();rotor.position.set(0,3.82,0);for(const a of[0,Math.PI/2]){const blade=box(rotor,combat?13.5:14.5,.1,.36,rubber,0,0,0,'rubber');blade.rotation.y=a}g.add(rotor);g.userData.rotor=rotor;
         const tail=new THREE.Group();tail.position.set(.38,3.45,7);box(tail,.1,1.9,.16,rubber,0,0,0,'rubber');box(tail,.1,.16,1.9,rubber,0,0,0,'rubber');g.add(tail);g.userData.tailRotor=tail;
