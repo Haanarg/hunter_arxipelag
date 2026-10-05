@@ -7,15 +7,15 @@ window.HUNTER_RIDER=Object.freeze({
     const neck=new THREE.Mesh(new THREE.CylinderGeometry(.2,.22,.28,10),material(0xf0c9a0));neck.position.set(0,1.05,-.08);torso.add(neck);
     const head=new THREE.Mesh(new THREE.SphereGeometry(.44,12,8,0,Math.PI*2,.28,Math.PI-.62),material(0xf0c9a0));head.scale.set(.82,1,.8);head.position.set(0,1.42,-.12);torso.add(head);
     const hairMat=material(0x3a2b22);
-    const hairBack=new THREE.Mesh(new THREE.SphereGeometry(.29,10,6,0,Math.PI*2,.18,Math.PI*.75),hairMat);
-    hairBack.scale.set(.94,.96,.78);hairBack.position.set(0,1.48,.24);torso.add(hairBack);
-    const nape=new THREE.Mesh(new THREE.SphereGeometry(.2,10,6,0,Math.PI*2,.2,Math.PI*.68),hairMat);
-    nape.scale.set(.88,1.02,.68);nape.position.set(0,1.34,.21);torso.add(nape);
-    const hairTop=new THREE.Mesh(new THREE.SphereGeometry(.33,10,5,0,Math.PI*2,0,.67),hairMat);
-    hairTop.scale.set(.98,.27,.84);hairTop.position.set(0,1.63,.03);torso.add(hairTop);
-    for(const x of[-.22,.22]){
-      const sideFill=new THREE.Mesh(new THREE.SphereGeometry(.11,10,6,0,Math.PI*2,.16,Math.PI*.56),hairMat);
-      sideFill.scale.set(.44,.9,.56);sideFill.position.set(x,1.5,.07);torso.add(sideFill);
+    const hairBack=new THREE.Mesh(new THREE.SphereGeometry(.26,10,6,0,Math.PI*2,.18,Math.PI*.72),hairMat);
+    hairBack.scale.set(.86,.86,.7);hairBack.position.set(0,1.54,.18);torso.add(hairBack);
+    const nape=new THREE.Mesh(new THREE.SphereGeometry(.17,10,6,0,Math.PI*2,.2,Math.PI*.64),hairMat);
+    nape.scale.set(.8,.92,.6);nape.position.set(0,1.39,.16);torso.add(nape);
+    const hairTop=new THREE.Mesh(new THREE.SphereGeometry(.29,10,5,0,Math.PI*2,0,.58),hairMat);
+    hairTop.scale.set(.88,.19,.74);hairTop.position.set(0,1.69,.01);torso.add(hairTop);
+    for(const x of[-.19,.19]){
+      const sideFill=new THREE.Mesh(new THREE.SphereGeometry(.085,10,6,0,Math.PI*2,.16,Math.PI*.48),hairMat);
+      sideFill.scale.set(.3,.64,.42);sideFill.position.set(x,1.55,.04);torso.add(sideFill);
     }
     box(torso,.32,.15,.06,0x11161a,-.18,1.48,-.45);box(torso,.32,.15,.06,0x11161a,.18,1.48,-.45);box(torso,.1,.05,.06,0x151515,0,1.48,-.45);
     const capCrown=new THREE.Mesh(new THREE.SphereGeometry(.47,12,6,0,Math.PI*2,0,Math.PI/2),material(0x22b72c));capCrown.scale.set(.9,.42,.93);capCrown.position.set(0,1.63,-.13);torso.add(capCrown);
