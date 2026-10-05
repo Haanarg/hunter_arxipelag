@@ -48,7 +48,7 @@ function secondaryWeapon(){
   return false
 }
 function fire(){if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
-if(c=='tanc'){fcd=.9;shoot(cv.x+fx_*5.5*VS.tanc,cv.o.position.y+2.57*VS.tanc,cv.z+fz*5.5*VS.tanc,fx_,.02,fz,85,45,8,'p',mS,2.2)}
+if(c=='tanc'){const a20=Math.PI/9,ch=Math.cos(a20),sv=Math.sin(a20);fcd=.9;shoot(cv.x+fx_*5.5*VS.tanc,cv.o.position.y+2.57*VS.tanc,cv.z+fz*5.5*VS.tanc,fx_*ch,-sv,fz*ch,85,45,8,'p',mS,2.2)}
 else if(c=='heli'){const d45=Math.SQRT1_2;fcd=.6;shoot(cv.x+fx_*3.2*VS.heli,cv.o.position.y+.5*VS.heli,cv.z+fz*3.2*VS.heli,fx_*d45,-d45,fz*d45,85,45,8,'p',mS,2)}
 else if(c=='heli_combat'){const d45=Math.SQRT1_2;fcd=.12;shoot(cv.x+fx_*4.1*VS.heli_combat,cv.o.position.y+.15,cv.z+fz*4.1*VS.heli_combat,fx_*d45,-d45,fz*d45,145,9,0,'p',mB,.85)}
 else if(c=='tanqueta'){fcd=.16;shoot(cv.x+fx_*4.2*VS.tanqueta,cv.o.position.y+1.7,cv.z+fz*4.2*VS.tanqueta,fx_,0,fz,135,10,0,'p',mB,.9)}
