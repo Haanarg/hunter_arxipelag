@@ -122,6 +122,9 @@ Característiques:
 - La volta baixa pràcticament fins al terra i forma els laterals.
 - Es mantenen el tancament posterior i els muntants de la boca frontal.
 - Les col·lisions laterals antigues també s'han eliminat.
+- El sostre arquejat és una única peça destructible amb 90 punts de vida, equivalent a una paret normal.
+- Els impactes es detecten contra els segments reals de la volta, però tots comparteixen la mateixa vida.
+- En destruir-se, la coberta sencera s'inclina, cau i genera pols/debris abans de desaparèixer.
 - Barrils, caixes, dipòsits i bandera del recinte es reparteixen fora de la casa annexa i de la boca de l'hangar.
 
 ### HQ
