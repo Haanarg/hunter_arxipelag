@@ -151,7 +151,7 @@ const o=window.HUNTER_FAUNA.createShark(THREE,{material:M});world.add(o);fa.push
 function updExtra(dt,t){updDeb(dt);
 fa.forEach(f=>{
   const px=f.x||f.cx,pz=f.z||f.cz,dx=px-P.x,dz=pz-P.z,d2=dx*dx+dz*dz,
-        interval=d2<FAUNA_NEAR2?0:d2<FAUNA_MID2?.12:.4;
+        interval=d2<FAUNA_NEAR2?0:(d2<FAUNA_MID2 ? .12 : .4);
   f.lodAcc=(f.lodAcc||0)+dt;
   if(interval>0&&f.lodAcc<interval)return;
   const step=f.lodAcc;f.lodAcc=0;f.a+=f.sp*step;f.x=f.cx+Math.cos(f.a)*f.r;f.z=f.cz+Math.sin(f.a)*f.r;f.o.rotation.y=Math.PI-f.a;
@@ -642,7 +642,7 @@ else if(!cv&&playerEject&&playerEject.t>=0){
 }
 V.forEach(v=>{
   if(v===cv){place(v,t,dt,v.steerInput||0);return}
-  const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,interval=d2<LOD_NEAR2?0:d2<LOD_MID2?.1:.45;
+  const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,interval=d2<LOD_NEAR2?0:(d2<LOD_MID2 ? .1 : .45);
   if(interval===0){place(v,t,dt,0);v.visualLodAcc=0}
   else{v.visualLodAcc=(v.visualLodAcc||0)+dt;if(v.visualLodAcc>=interval){const step=v.visualLodAcc;v.visualLodAcc=0;place(v,t,step,0)}}
 });poseRider(cv,dt);
