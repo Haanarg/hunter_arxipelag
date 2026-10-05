@@ -173,6 +173,10 @@ Vehicles conduïbles actuals:
 - Impactes amb jugador, soldats, roques, palmeres i filferrada.
 - Tombar una palmera resta sempre exactament 1 impacte estructural al vehicle.
 - Atropellar un soldat no resta impactes estructurals al vehicle; es mantenen el dany al soldat i la pèrdua de velocitat.
+- Una envestida prou ràpida pot trencar filferrada i parets normals:
+  - filferrada: llindar de velocitat 8 i cost fix de 2 impactes estructurals;
+  - paret: llindar de velocitat 14 i cost fix de 3 impactes estructurals.
+- Un cop superat el llindar, la secció es destrueix en l'impacte; les portes no es consideren parets envestibles per aquesta regla.
 - Blindatge, vida estructural, fum de dany, destrucció i debris.
 - Els vehicles conserven inèrcia després que el jugador en baixi.
 
