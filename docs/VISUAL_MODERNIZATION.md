@@ -143,6 +143,8 @@ Característiques:
 
 ## Personatge i animació
 
+- Els soldats enemics normals tenen escala visual 0.9 respecte del model anterior; el general manté escala 1.
+- El canvi és només visual: no modifica radi de combat, detecció ni estadístiques de la IA.
 - Model articulat amb espatlles, colzes, malucs i genolls.
 - Animació de caminar amb flexió anatòmica dels genolls.
 - Natació amb articulacions.
