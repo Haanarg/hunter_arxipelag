@@ -19,8 +19,8 @@ window.HUNTER_MINIMAP=Object.freeze({
       ctx.drawImage(background,0,0);
       ctx.fillStyle='#2c7bff';ctx.fillRect(px(s.base.x)-3,px(s.base.z)-3,6,6);
       if(s.mapKnown){ctx.fillStyle='#ff3030';ctx.fillRect(px(s.hq.x)-3,px(s.hq.z)-3,6,6)}
-      ctx.fillStyle='#ffd23a';s.vehicles.forEach(v=>{if(v!==s.currentVehicle&&Math.hypot(v.x-q.x,v.z-q.z)<450){ctx.beginPath();ctx.arc(px(v.x),px(v.z),2.5,0,7);ctx.fill()}});
-      ctx.fillStyle='#ff3030';s.enemies.forEach(u=>{if(Math.hypot(u.x-q.x,u.z-q.z)<160){ctx.beginPath();ctx.arc(px(u.x),px(u.z),2,0,7);ctx.fill()}});
+      ctx.fillStyle='#ffd23a';s.vehicles.forEach(v=>{const dx=v.x-q.x,dz=v.z-q.z;if(v!==s.currentVehicle&&dx*dx+dz*dz<202500){ctx.beginPath();ctx.arc(px(v.x),px(v.z),2.5,0,7);ctx.fill()}});
+      ctx.fillStyle='#ff3030';s.enemies.forEach(u=>{const dx=u.x-q.x,dz=u.z-q.z;if(dx*dx+dz*dz<25600){ctx.beginPath();ctx.arc(px(u.x),px(u.z),2,0,7);ctx.fill()}});
       ctx.fillStyle='#c070ff';s.log.forEach(m=>ctx.fillRect(px(m.x)-2,px(m.z)-2,4,4));
       (s.intel||[]).forEach(m=>{if(m.ref?.destroyed)return;const x=m.ref?m.ref.x:m.x,z=m.ref?m.ref.z:m.z;if(!Number.isFinite(x)||!Number.isFinite(z))return;ctx.save();ctx.fillStyle=m.kind==='heli'?'#6ed6ff':'#ff9f43';ctx.strokeStyle='#111';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(px(x),px(z),5,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#111';ctx.font='bold 9px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(m.kind==='heli'?'H':'T',px(x),px(z)+.5);ctx.restore()});
       ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px(q.x),px(q.z),4,0,7);ctx.fill();
