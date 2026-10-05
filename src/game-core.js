@@ -31,13 +31,29 @@ const hash=(x,y)=>{const h=Math.sin(x*127.1+y*311.7+seed*.001)*43758.5453;return
 function vn(x,y){const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);
 return hash(ix,iy)*(1-u)*(1-v)+hash(ix+1,iy)*u*(1-v)+hash(ix,iy+1)*(1-u)*v+hash(ix+1,iy+1)*u*v}
 const fbm=(x,y)=>vn(x,y)*.5+vn(x*2,y*2)*.25+vn(x*4,y*4)*.125+vn(x*8,y*8)*.0625;
-function rawHAt(x,z){let m=-1;for(const i of islandCandidates(x,z))m=Math.max(m,1-Math.hypot(x-i.x,z-i.z)/i.r);
-let h=(m-.25+.6*(fbm(x/520,z/520)-.47))*45;const e=Math.max(Math.abs(x),Math.abs(z));
+const clamp01=v=>Math.max(0,Math.min(1,v)),smooth01=t=>t*t*(3-2*t);
+function islandReliefAt(x,z,list){
+  let m=-1,dom=null;
+  for(const i of list){const q=1-Math.hypot(x-i.x,z-i.z)/i.r;if(q>m){m=q;dom=i}}
+  let h=(m-.25+.6*(fbm(x/520,z/520)-.47))*45;
+  if(dom&&h>0){
+    // La costa es manté gairebé intacta; el relleu addicional entra progressivament cap a l'interior.
+    const interior=smooth01(clamp01((m-.30)/.48));
+    if(interior>0){
+      const mid=(fbm(x/155+13,z/155-9)-.46875)*12*interior;
+      const pd=Math.hypot(x-dom.peakX,z-dom.peakZ)/(dom.r*.72),
+            peak=smooth01(clamp01(1-pd)),
+            sizeGain=Math.max(.72,Math.min(1.22,dom.r/620));
+      h=h*(1+.24*interior)+mid+peak*9*sizeGain*interior
+    }
+  }
+  return h
+}
+function rawHAt(x,z){let h=islandReliefAt(x,z,islandCandidates(x,z));const e=Math.max(Math.abs(x),Math.abs(z));
 if(e>H-120)h=Math.min(h,-4-(e-(H-120))*.05);
 if(h>=-1.5)return h;
 const depth=-h-1.5;return -1.5-Math.min(72,depth*depth*2.8+depth*.8)}
 let terrainLevels=[];
-const smooth01=t=>t*t*(3-2*t);
 const addLevelArea=(x,z,w,d,y,rot=0,blend=12)=>{terrainLevels.push({x,z,hw:w/2,hd:d/2,y,rot,c:Math.cos(rot),s:Math.sin(rot),blend})};
 function hAt(x,z){let h=rawHAt(x,z);for(const m of terrainLevels){const dx=x-m.x,dz=z-m.z,lx=dx*m.c+dz*m.s,lz=-dx*m.s+dz*m.c,ox=Math.max(0,Math.abs(lx)-m.hw),oz=Math.max(0,Math.abs(lz)-m.hd),out=Math.hypot(ox,oz);if(out<m.blend){const k=out<=0?1:1-smooth01(out/m.blend);h=h+(m.y-h)*k}}return h}
 const waveAmp=window.HUNTER_WAVES.amplitude;
@@ -48,6 +64,8 @@ A={x:-q*rr(baseMin,baseMax)*2,z:-q2*rr(baseMin,baseMax)*2,r:rr(520,680)};Bi={x:q
 islands=[A,Bi];const regular=22*MAP_SCALE*MAP_SCALE,large=2*MAP_SCALE*MAP_SCALE;
 for(let i=0;i<regular;i++)islands.push({x:rr(-extent,extent)*2,z:rr(-extent,extent)*2,r:rr(180,520)});
 for(let i=0;i<large;i++)islands.push({x:rr(-extent*.55,extent*.55)*2,z:rr(-extent*.55,extent*.55)*2,r:rr(800,1040)});
+// Cim principal desplaçat de manera determinista, sense consumir R() ni alterar la resta de la generació.
+for(let n=0;n<islands.length;n++){const i=islands[n],ox=(hash(i.x*.013+n*1.37,i.z*.011-7.1)-.5)*.42*i.r,oz=(hash(i.z*.017-n*.91,i.x*.009+11.3)-.5)*.42*i.r;i.peakX=i.x+ox;i.peakZ=i.z+oz}
 rebuildIslandGrid()}
 const slope=(x,z,h)=>Math.abs(hAt(x+5,z)-h)+Math.abs(hAt(x,z+5)-h);
 function land(i,n=600,fl){for(let k=0;k<n;k++){const a=R()*6.283,d=R()*i.r*.75,x=i.x+Math.cos(a)*d,z=i.z+Math.sin(a)*d,h=hAt(x,z);
