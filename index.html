@@ -844,7 +844,13 @@ else if(!cv&&playerEject&&playerEject.t>0){
     // Cames estirades a l'aire, recollides després de les mans i extensió final.
     const hipBend=(.18*airborne+.95*curl)*(1-rise),kneeBend=(.08*airborne+1.5*curl)*(1-rise);
     if(u.ll)u.ll.rotation.x=-hipBend;if(u.lr)u.lr.rotation.x=-hipBend;
-    if(u.lkl)u.lkl.rotation.x=kneeBend;if(u.lkr)u.lkr.rotation.x=kneeBend;
+    if(u.lkl)u.lkl.rotation.x=-kneeBend;if(u.lkr)u.lkr.rotation.x=-kneeBend;
+    // El model té l'origen als peus. Compensem la translació perquè la cintura sigui el pivot real del salt.
+    const waistLocal=2.05,waistScaled=waistLocal*pl.scale.y,baseY=pl.position.y;
+    const waistOffset=new THREE.Vector3(0,waistScaled,0).applyQuaternion(pl.quaternion);
+    pl.position.x+=-waistOffset.x;
+    pl.position.y=baseY+waistScaled-waistOffset.y;
+    pl.position.z+=-waistOffset.z;
   }else{
     pl.position.y+=Math.sin(Math.PI*p)*(playerEject.height||1);
     pl.rotation.x=(playerEject.spin||1)*Math.PI*2*p;
