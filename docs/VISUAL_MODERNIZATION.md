@@ -811,3 +811,10 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - L'entrada del filferro ja no queda alineada amb la porta frontal del búnquer: s'ha desplaçat 26 unitats lateralment.
 - El tanc fix del HQ també s'ha mogut fora de l'eix central per reforçar la desalineació visual i funcional de l'accés.
 - Afegides comprovacions al smoke test per cobrir les noves escales, el perímetre ampliat, les torres de cantonada i l'entrada desplaçada.
+
+
+## Escala de la tanqueta — 2026-10-05
+- Augmentada la tanqueta blindada un 25%: escala 1.45 → 1.8125.
+- El canvi segueix el mateix criteri aplicat al camió i al tanc.
+- Radi, hitbox efectiva i separació de spawn creixen automàticament perquè depenen de l'escala del vehicle.
+- Actualitzat el smoke test per validar conjuntament les escales de camió, tanqueta i tanc.
