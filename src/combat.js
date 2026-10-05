@@ -39,7 +39,7 @@ V.slice().forEach(v=>{const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),dd=Mat
 const q=cv?cv.o.position:P,d=Math.hypot(q.x-x,q.y-y,q.z-z);if(d<r&&own!='p'&&!cv)hurtP(dmg*.6*(1-d/r))}
 function plant(){if(over||cv||swimming||!inv.expl)return;if(--inv.expl<=0)delete inv.expl;setDis(false);const o=new THREE.Mesh(new THREE.BoxGeometry(.9,.5,.9),new THREE.MeshBasicMaterial({color:0xff2020}));
 o.position.set(P.x,P.y+.3,P.z);world.add(o);bombs.push({x:P.x,y:P.y+.3,z:P.z,t:3,o});msg='Bomba col·locada: 3 s!';msgT=2}
-function sight(x,z,tx,tz,y){const d=Math.hypot(tx-x,tz-z),n=Math.max(1,Math.ceil(d/1.5));for(let k=1;k<n;k++){const xx=x+(tx-x)*k/n,zz=z+(tz-z)*k/n;if(Wl.some(w=>!w.open&&y>w.y0&&y<w.y1&&xx>w.x0&&xx<w.x1&&zz>w.z0&&zz<w.z1))return false}return true}
+function sight(x,z,tx,tz,y){const d=Math.hypot(tx-x,tz-z),n=Math.max(1,Math.ceil(d/1.5));for(let k=1;k<n;k++){const xx=x+(tx-x)*k/n,zz=z+(tz-z)*k/n;if(wallCandidates(xx,zz).some(w=>!w.open&&y>w.y0&&y<w.y1&&xx>w.x0&&xx<w.x1&&zz>w.z0&&zz<w.z1))return false}return true}
 function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=.34;const fx_=-Math.sin(P.hd),fz=-Math.cos(P.hd);let hit=null,best=2.6;for(const u of E){const dx=u.x-P.x,dz=u.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx_+dz*fz)/d>.35&&sight(P.x,P.z,u.x,u.z,P.y+1.2)){best=d;hit=u}}if(hit)hurtE(hit,6);snd('hurt',hit?.45:.18);setDis(false);return true}
 function secondaryWeapon(){
   if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd),d45=Math.SQRT1_2;
@@ -59,7 +59,7 @@ else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}
 function updPj(dt){const steps=Math.max(1,Math.ceil(dt/.008));for(let k=0;k<steps;k++)updPjTick(dt/steps)}
 function updPjTick(dt){for(let i=Pj.length-1;i>=0;i--){const p=Pj[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;p.life-=dt;p.o.position.set(p.x,p.y,p.z);
 let hit=p.life<=0||p.y<Math.max(hAt(p.x,p.z),0)+.2;
-if(!hit){const w=Wl.find(w=>!w.open&&p.y<w.y1&&p.y>w.y0&&p.x>w.x0&&p.x<w.x1&&p.z>w.z0&&p.z<w.z1);if(w){hit=true;if(!p.spl)dmgW(w,p.dmg*(p.own=='e'?.5:1))}else{const b=B.find(b=>b.rhp>0&&Math.abs(p.x-b.x)<b.w/2+.6&&Math.abs(p.z-b.z)<b.d/2+.6&&p.y<b.fy+b.h+1.4&&p.y>b.fy+b.h-.4);if(b){hit=true;if(!p.spl)b.rhp-=p.dmg*(p.own=='e'?.5:1);if(b.rhp<=0)roofBreak(b)}}}
+if(!hit){const w=wallCandidates(p.x,p.z).find(w=>!w.open&&p.y<w.y1&&p.y>w.y0&&p.x>w.x0&&p.x<w.x1&&p.z>w.z0&&p.z<w.z1);if(w){hit=true;if(!p.spl)dmgW(w,p.dmg*(p.own=='e'?.5:1))}else{const b=B.find(b=>b.rhp>0&&Math.abs(p.x-b.x)<b.w/2+.6&&Math.abs(p.z-b.z)<b.d/2+.6&&p.y<b.fy+b.h+1.4&&p.y>b.fy+b.h-.4);if(b){hit=true;if(!p.spl)b.rhp-=p.dmg*(p.own=='e'?.5:1);if(b.rhp<=0)roofBreak(b)}}}
 if(!hit){const t0=treeAt(p.x,p.z,.5);if(t0&&p.y<Math.max(hAt(p.x,p.z),0)+(t0.p?6.5:1.5)){hit=true;if(t0.p&&!p.spl)dmgP(t0,p.dmg*(p.own=='e'?.5:1))}}
 if(!hit&&(p.own=='p'||p.own=='pb'))for(const u of E)if(Math.hypot(u.x-p.x,u.o.position.y+1.5-p.y,u.z-p.z)<u.r+.6){hit=true;if(!p.spl)hurtE(u,p.dmg);break}
 if(!hit){for(const v of V){if(p.own==='p'&&v===cv)continue;const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),rr=vehicleRadius(v.t)*.62;if(Math.hypot(v.x-p.x,vy+1-p.y,v.z-p.z)<rr){hit=true;if(!p.spl)damageVehicle(v,p.dmg,1);break}}}
