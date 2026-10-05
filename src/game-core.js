@@ -239,14 +239,12 @@ const seg=(lx,lz,sx,sz,dr,windows=false)=>{if(!dr){const parts=windows?buildingV
 const parts=buildingVisual.addDoor(g,{lx,lz,sx,sz,height:h,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:35,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz};Wl.push(door);Dr.push(door);
 if(parts.lintel)Wl.push({x0:door.x0,x1:door.x1,z0:door.z0,z1:door.z1,y0:fy+parts.doorHeight,y1:fy+h,hp:70,m:parts.lintel,door:false,open:false,playerBlock:false,cx:x+lx,cz:z+lz})};
 if(opt.hangar){
-  const sh=visual.spring||Math.max(3.1,h*.3),push=(lx,lz,sx,sz)=>{
+  const sh=Math.max(3.1,h*.3),push=(lx,lz,sx,sz)=>{
     const m=buildingVisual.addWall(g,{lx,lz,sx,sz,height:sh,material:wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+sh,hp:110,m,door:false,open:false,cx:x+lx,cz:z+lz};Wl.push(o);return o
   };
-  // Laterals longitudinals baixos.
-  push(w/2-t/2,0,t,d);push(-w/2+t/2,0,t,d);
-  // Darrere tancat.
+  // Sense parets laterals independents: la volta visual baixa fins al terra.
+  // Es conserven només el darrere i els muntants de la boca frontal.
   const backZ=ds===0?-d/2+t/2:d/2-t/2;push(0,backZ,w,t);
-  // Boca ampla oberta al costat de la porta (hangars actuals: costat Z).
   const frontZ=ds===0?d/2-t/2:-d/2+t/2,sl=Math.max(.5,(w-dw)/2),off=dw/2+sl/2;
   push(-off,frontZ,sl,t);push(off,frontZ,sl,t);
 }else{
