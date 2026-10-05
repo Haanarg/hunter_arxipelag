@@ -900,3 +900,12 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Reduïts també els farciments laterals perquè cobreixin sense formar una esfera externa.
 - Replicat el mateix ajust de cabell al rider dels vehicles oberts.
 - Actualitzat el smoke test per cobrir amplada dels helicòpters, suports del model de combat i nova posició del cabell.
+
+
+## Pantalla inicial estàtica i generació diferida — 2026-10-05
+- Eliminada la crida inicial `build(); mini();` que generava un arxipèlag complet només per quedar ocult sota la pantalla de títol.
+- Afegit l'asset estàtic `assets/start-island.svg` com a fons lleuger de la pantalla inicial.
+- La generació procedural real del mapa queda exclusivament dins del clic dels botons Fàcil / Normal / Difícil.
+- Això evita CPU, memòria i creació de geometries innecessàries abans que el jugador decideixi començar.
+- El mapa continua respectant mida, dificultat i llavor seleccionades en el moment de prémer el botó.
+- Afegida una comprovació al smoke test per impedir que es reintrodueixi una crida de `build()` abans de començar.
