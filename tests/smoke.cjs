@@ -7,6 +7,13 @@ const start=Date.now();ok('!started&&B.length===0','title screen defers world ge
 game.start();game.frame();
 ok('started&&B.length>=6&&E.some(e=>e.t==="general")','menu starts a complete world');
 run(`{
+  const soldier=E.find(e=>e.t==='soldat'),general=E.find(e=>e.t==='general');
+  globalThis.enemySoldierScale=soldier&&Math.abs(soldier.o.scale.x-.9)<1e-9&&Math.abs(soldier.o.scale.y-.9)<1e-9&&Math.abs(soldier.o.scale.z-.9)<1e-9;
+  globalThis.enemyGeneralScale=general&&Math.abs(general.o.scale.x-1)<1e-9&&Math.abs(general.o.scale.y-1)<1e-9&&Math.abs(general.o.scale.z-1)<1e-9;
+}`);
+ok('enemySoldierScale','enemy soldier visual model is reduced by 10 percent');
+ok('enemyGeneralScale','enemy general keeps original visual scale');
+run(`{
   const slowRaw=(x,z)=>{let h=islandReliefAt(x,z,islands);const e=Math.max(Math.abs(x),Math.abs(z));if(e>H-120)h=Math.min(h,-4-(e-(H-120))*.05);if(h>=-1.5)return h;const depth=-h-1.5;return -1.5-Math.min(72,depth*depth*2.8+depth*.8)};
   const pts=[[0,0],[A.x,A.z],[Bi.x,Bi.z],[A.x+A.r*.73,A.z-A.r*.41],[H*.62,-H*.47],[-H+130,H-170]];
   globalThis.islandIndexEquivalent=pts.every(([x,z])=>Math.abs(rawHAt(x,z)-slowRaw(x,z))<1e-9);
