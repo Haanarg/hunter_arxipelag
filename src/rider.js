@@ -4,10 +4,12 @@ window.HUNTER_RIDER=Object.freeze({
     const g=new THREE.Group(),torso=new THREE.Group();g.add(torso);
     const cloth=material(0x49e52c),pants=material(0x32c52a);
     box(torso,1.13,1.1,.63,0x49e52c,0,.58,0);box(torso,.74,.88,.3,0x6a5632,0,.65,.43);
-    const head=new THREE.Mesh(new THREE.SphereGeometry(.44,12,8),material(0xf0c9a0));head.scale.set(.82,1,.8);head.position.set(0,1.45,-.12);torso.add(head);
-    box(torso,.32,.15,.06,0x11161a,-.18,1.5,-.47);box(torso,.32,.15,.06,0x11161a,.18,1.5,-.47);box(torso,.1,.05,.06,0x151515,0,1.5,-.47);
-    const capCrown=new THREE.Mesh(new THREE.SphereGeometry(.47,12,6,0,Math.PI*2,0,Math.PI/2),material(0x22b72c));capCrown.scale.set(.95,.5,.98);capCrown.position.set(0,1.78,-.12);torso.add(capCrown);
-    const visor=box(torso,.68,.08,.46,0x22b72c,0,1.76,-.46);visor.rotation.x=-.08;
+    const neck=new THREE.Mesh(new THREE.CylinderGeometry(.2,.22,.28,10),material(0xf0c9a0));neck.position.set(0,1.05,-.08);torso.add(neck);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.44,12,8,0,Math.PI*2,.28,Math.PI-.62),material(0xf0c9a0));head.scale.set(.82,1,.8);head.position.set(0,1.42,-.12);torso.add(head);
+    box(torso,.62,.14,.16,0x3a2b22,0,1.64,.22);for(const x of[-.3,.3])box(torso,.1,.24,.36,0x3a2b22,x,1.58,.02);
+    box(torso,.32,.15,.06,0x11161a,-.18,1.48,-.45);box(torso,.32,.15,.06,0x11161a,.18,1.48,-.45);box(torso,.1,.05,.06,0x151515,0,1.48,-.45);
+    const capCrown=new THREE.Mesh(new THREE.SphereGeometry(.47,12,6,0,Math.PI*2,0,Math.PI/2),material(0x22b72c));capCrown.scale.set(.93,.46,.96);capCrown.position.set(0,1.67,-.12);torso.add(capCrown);
+    const visor=box(torso,.68,.08,.46,0x22b72c,0,1.65,-.46);visor.rotation.x=-.08;
     const limbs=[];for(let i=0;i<8;i++){const m=new THREE.Mesh(new THREE.CylinderGeometry(i<4?.17:.2,i<4?.17:.2,1,6),i<4?cloth:pants);g.add(m);limbs.push(m)}
     const boots=[-1,1].map(()=>box(g,.4,.22,.65,0x222222,0,0,0));
     g.userData={torso,limbs,boots,motion:0};g.visible=false;g.traverse(o=>{if(o.isMesh)o.castShadow=shadows});scene.add(g);
