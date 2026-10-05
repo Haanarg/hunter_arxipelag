@@ -65,17 +65,13 @@ window.HUNTER_CHARACTERS=Object.freeze({
       head=new THREE.Mesh(headGeom,headMat);
     head.scale.set(.8,1,.78);head.position.set(0,4.08,0);player.add(head);
     const hairMat=new THREE.MeshStandardMaterial({color:0x3a2b22,roughness:.92});
-    // Cabell més orgànic: volum suau al clatell i laterals, una mica més llarg per darrere.
-    const hairBack=new THREE.Mesh(new THREE.SphereGeometry(.31,12,7,0,Math.PI*2,.18,Math.PI*.72),hairMat);
-    hairBack.scale.set(.9,.86,.72);hairBack.position.set(0,4.2,.24);player.add(hairBack);
-    const nape=new THREE.Mesh(new THREE.SphereGeometry(.22,10,6,0,Math.PI*2,.2,Math.PI*.64),hairMat);
-    nape.scale.set(.82,.94,.62);nape.position.set(0,4.04,.22);player.add(nape);
-    const hairTop=new THREE.Mesh(new THREE.SphereGeometry(.39,12,6,0,Math.PI*2,0,.6),hairMat);
-    hairTop.scale.set(.9,.2,.76);hairTop.position.set(0,4.4,.01);player.add(hairTop);
-    for(const x of[-.27,.27]){
-      const sideFill=new THREE.Mesh(new THREE.SphereGeometry(.1,10,6,0,Math.PI*2,.16,Math.PI*.48),hairMat);
-      sideFill.scale.set(.32,.66,.44);sideFill.position.set(x,4.24,.04);player.add(sideFill);
-    }
+    // Opció 4: closca cilíndrica curta sota la gorra, ampla i sense sobresortir per dalt.
+    const hairShell=new THREE.Mesh(new THREE.CylinderGeometry(.37,.39,.38,12,1,true,Math.PI*1.18,Math.PI*1.64),hairMat);
+    hairShell.position.set(0,4.19,.03);hairShell.rotation.y=Math.PI;player.add(hairShell);
+    const hairBack=new THREE.Mesh(new THREE.CylinderGeometry(.35,.37,.22,12,1,true,0,Math.PI*2),hairMat);
+    hairBack.scale.set(1,.92,.84);hairBack.position.set(0,4.06,.16);player.add(hairBack);
+    const nape=box(player,.46,.16,.13,0x3a2b22,0,3.94,.27);
+    nape.material.roughness=.92;
     const glasses=new THREE.Group();glasses.position.set(0,4.16,-.37);player.add(glasses);
     box(glasses,.34,.16,.06,0x11161a,-.2,0,0);box(glasses,.34,.16,.06,0x11161a,.2,0,0);box(glasses,.12,.06,.06,P.dark,0,0,0);
     const cap=new THREE.Group();cap.position.set(0,4.39,-.01);player.add(cap);
