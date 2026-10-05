@@ -150,7 +150,13 @@ window.HUNTER_BUILDINGS=Object.freeze({
           rib.position.set(x,y,z);rib.rotation.z=a-Math.PI/2;roofGroup.add(rib);
         }
       }
-      roofGroup.userData.color=roofColor;return {group,walls,doors,roof:roofGroup,sideWalls:[],spring,archTop:spring+radius};
+      roofGroup.userData.color=roofColor;
+      roofGroup.userData.hangarRoof=true;
+      roofGroup.userData.hitSegments=Array.from({length:segments},(_,i)=>{
+        const a=(i+.5)*da,chord=2*radius*Math.sin(da/2);
+        return {x:Math.cos(a)*radius,y:spring+Math.sin(a)*radius,a,chord,depth:depth+1.15}
+      });
+      return {group,walls,doors,roof:roofGroup,sideWalls:[],spring,archTop:spring+radius};
     };
 
     const addRamp=(group,{alongAxis,length,width,top,bottom,x,z,color,direction=1})=>{
