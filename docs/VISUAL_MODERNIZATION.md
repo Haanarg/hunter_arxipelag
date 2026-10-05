@@ -777,3 +777,12 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Els rems queden ara més alts i pivoten des de suports situats sobre les baranes.
 - Invertit el cicle visual de remada perquè avançar i retrocedir deixin d'estar intercanviats.
 - Afegides comprovacions al smoke test per cobrir el nou cap/gorra/ulleres, la postura del windsurf, la geometria oberta de la barca i la inversió de la remada.
+
+
+## Correcció de genolls i pivot del salt — 2026-10-05
+- Invertida la flexió dels genolls del personatge principal durant la marxa perquè articulin en el sentit anatòmic correcte.
+- Corregida també la flexió dels genolls durant la sortida acrobàtica d'un vehicle en moviment.
+- La rotació de la maniobra ja no pivota visualment des dels peus.
+- Durant el salt es compensa la translació del grup principal perquè el punt de gir efectiu quedi a l'altura de la cintura/maluc.
+- La càmera de perfil i la recuperació posterior a l'espatlla es mantenen sense canvis.
+- Afegides comprovacions al smoke test per evitar regressions en el sentit de flexió i en el pivot de cintura.
