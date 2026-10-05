@@ -61,38 +61,49 @@ window.HUNTER_VEHICLES=Object.freeze({
         rod(g,[-.42,1.16,-.35],[.42,1.16,-.35],.055,metal);rod(g,[0,.94,-.2],[0,1.16,-.35],.05,metal);
         for(const x of[-.52,.52])box(g,.16,.13,.7,0xe9e7df,x,.36,.45,'paint');
       }
-      if(t==='barca_rems'){const wood=0x9b7048,darkWood=0x6d4b32,inside=0xd7b27d;
-        // Barca oberta: fons baix, costats/baranes i bancs, sense bloc massís.
-        const floorShape=new THREE.Shape();floorShape.moveTo(-.72,-2.15);floorShape.lineTo(.72,-2.15);floorShape.quadraticCurveTo(.98,-.8,.92,.5);floorShape.quadraticCurveTo(.82,1.65,0,2.15);floorShape.quadraticCurveTo(-.82,1.65,-.92,.5);floorShape.quadraticCurveTo(-.98,-.8,-.72,-2.15);
-        const floorGeom=new THREE.ExtrudeGeometry(floorShape,{depth:.16,bevelEnabled:false});floorGeom.rotateX(-Math.PI/2);const floor=new THREE.Mesh(floorGeom,material(inside,'organic'));floor.position.y=.18;g.add(floor);
-        // Quilla i laterals baixos.
-        box(g,.34,.28,4.45,wood,0,.28,-.02,'organic');
+      if(t==='barca_rems'){const wood=0x8a6847,darkWood=0x5d402b,inside=0xb08a63;
+        // Barca oberta tipus skiff inspirada en la referència: proa/pop estretes, costats continus i bancs interiors.
+        const keel=new THREE.Shape();
+        keel.moveTo(0,-2.5);keel.quadraticCurveTo(.72,-2.3,1.02,-1.15);keel.quadraticCurveTo(1.14,.25,.78,1.95);keel.quadraticCurveTo(.48,2.45,0,2.66);
+        keel.quadraticCurveTo(-.48,2.45,-.78,1.95);keel.quadraticCurveTo(-1.14,.25,-1.02,-1.15);keel.quadraticCurveTo(-.72,-2.3,0,-2.5);
+        const floorGeom=new THREE.ExtrudeGeometry(keel,{depth:.14,bevelEnabled:false});floorGeom.rotateX(-Math.PI/2);
+        const floor=new THREE.Mesh(floorGeom,material(inside,'organic'));floor.position.y=.18;g.add(floor);
+
+        // Costats del buc, inclinats lleugerament cap enfora.
         for(const side of[-1,1]){
-          rod(g,[side*.78,.3,-2.1],[side*1.02,.66,-1.1],.11,wood,'organic');
-          rod(g,[side*1.02,.66,-1.1],[side*1.08,.74,.45],.11,wood,'organic');
-          rod(g,[side*1.08,.74,.45],[side*.82,.66,1.7],.11,wood,'organic');
-          rod(g,[side*.82,.66,1.7],[0,.58,2.28],.11,wood,'organic');
-          // Regala/barana superior contínua.
-          rod(g,[side*.82,.82,-2.02],[side*1.15,1.02,-.85],.08,darkWood,'organic');
-          rod(g,[side*1.15,1.02,-.85],[side*1.18,1.04,.65],.08,darkWood,'organic');
-          rod(g,[side*1.18,1.04,.65],[side*.82,.88,1.8],.08,darkWood,'organic');
+          const ribs=[
+            [side*.45,.24,-2.22],[side*.78,.5,-1.55],[side*.98,.72,-.55],
+            [side*1.04,.77,.55],[side*.86,.66,1.55],[side*.4,.42,2.26]
+          ];
+          for(let i=0;i<ribs.length-1;i++)rod(g,ribs[i],ribs[i+1],.13,wood,'organic');
+          const rail=[
+            [side*.52,.72,-2.16],[side*.9,.95,-1.42],[side*1.1,1.02,-.42],
+            [side*1.12,1.02,.62],[side*.92,.92,1.55],[side*.46,.68,2.2]
+          ];
+          for(let i=0;i<rail.length-1;i++)rod(g,rail[i],rail[i+1],.085,darkWood,'organic');
         }
-        // Bancs de seient transversals.
-        for(const z of[-.95,.15,1.12])box(g,2.05,.14,.34,darkWood,0,.88,z,'organic');
-        // Suports dels rems sobre la regala.
+
+        // Proa i popa tancades només a la part alta, deixant l'interior clarament buit.
+        box(g,1.18,.38,.18,wood,0,.66,-2.2,'organic');
+        box(g,1.02,.34,.18,wood,0,.62,2.2,'organic');
+
+        // Bancs transversals com a la referència.
+        for(const z of[-1.12,.08,1.18]){
+          box(g,1.72,.13,.42,darkWood,0,.8,z,'organic');
+          for(const x of[-.7,.7])box(g,.09,.42,.09,darkWood,x,.57,z,'organic');
+        }
+
+        // Escàlems sobre cada regala i un rem independent a cada banda.
+        const oars=new THREE.Group();g.add(oars);g.userData.oars=[];
         for(const side of[-1,1]){
-          rod(g,[side*1.08,1.0,-.22],[side*1.34,1.16,-.22],.055,metal,'metal');
-          round(g,.08,.18,metal,side*1.34,1.16,-.22,'y','metal');
+          const pivot=new THREE.Group();pivot.position.set(side*1.08,1.02,-.12);oars.add(pivot);
+          round(g,.075,.18,metal,side*1.08,1.08,-.12,'y','metal');
+          // Mànec entra dins la barca; pala ampla cap a fora.
+          box(pivot,1.55,.065,.065,darkWood,-side*.72,0,0,'organic');
+          box(pivot,1.95,.065,.065,darkWood,side*.94,0,0,'organic');
+          const blade=box(pivot,.62,.085,.32,darkWood,side*1.98,0,0,'organic');blade.rotation.z=.08*side;
+          g.userData.oars.push(pivot)
         }
-        const oars=new THREE.Group();oars.position.set(0,1.16,-.22);g.add(oars);g.userData.oars=[];
-        for(const side of[-1,1]){
-          const og=new THREE.Group();og.position.x=side*1.34;oars.add(og);
-          // El mànec entra a la barca i la pala queda fora; el pivot coincideix amb la regala.
-          box(og,2.45,.075,.075,darkWood,side*1.18,0,0,'organic');
-          box(og,.88,.1,.34,darkWood,side*2.76,0,0,'organic');
-          g.userData.oars.push(og)
-        }
-        box(g,1.65,.16,.2,darkWood,0,.74,-2.18,'organic');box(g,1.28,.14,.18,darkWood,0,.72,2.18,'organic')
       }
       if(t==='windsurf'){box(g,.72,.18,4.8,0xf2e2b9,0,.18,0,'paint');rod(g,[0,.28,.25],[0,4.7,.25],.08,metal);const sail=new THREE.Mesh(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,4.55,.25),new THREE.Vector3(0,.8,.25),new THREE.Vector3(2.15,1.2,.25)]),new THREE.MeshBasicMaterial({color:0xe86d4b,side:THREE.DoubleSide}));const geom=new THREE.BufferGeometry();geom.setAttribute('position',new THREE.Float32BufferAttribute([0,4.55,.25,0,.8,.25,2.15,1.2,.25],3));geom.setIndex([0,1,2]);geom.computeVertexNormals();const sm=new THREE.Mesh(geom,material(0xe86d4b,'paint'));g.add(sm);rod(g,[0,2.4,.25],[1.65,1.7,.25],.05,metal)}
       if(t==='hover'){box(g,5,.85,8,rubber,0,.55,0,'rubber');for(const x of[-2.35,2.35])for(let z=-3.5;z<4;z+=.65)box(g,.2,.7,.48,0x394145,x,.5,z,'rubber');box(g,4.45,.85,6.7,0xcf9e4f,0,1.38,-.2,'paint');box(g,2.75,1.12,2.9,glass,0,2.2,-.92,'glass');box(g,2.98,.22,3.2,0xcda75f,0,2.82,-.92,'paint');for(const x of[-2.05,2.05])box(g,.18,.3,6.7,0xa97835,x,1.25,-.2,'paint');for(const x of[-1.1,1.1])box(g,.42,.22,.16,0xffe09a,x,1.45,-3.55,'paint');const duct=new THREE.Mesh(new THREE.TorusGeometry(1.55,.2,8,20),material(metal,'metal'));duct.position.set(0,2.9,3);g.add(duct);const fan=new THREE.Group();fan.position.copy(duct.position);for(let i=0;i<4;i++){const blade=box(fan,.2,2.8,.12,rubber,0,0,0,'rubber');blade.rotation.z=i*Math.PI/4}g.add(fan);g.userData.fan=fan;round(g,.28,.3,0x7b8588,0,2.9,3,'z','metal');for(const x of[-1.7,1.7]){box(g,.15,2.05,1,0xbe8c43,x,2.68,3.5,'paint');rod(g,[x,1.7,2.65],[x,3.65,3.2],.07,metal)}box(g,1.4,.18,.8,0x5b4939,0,1.88,1.45,'paint')}
