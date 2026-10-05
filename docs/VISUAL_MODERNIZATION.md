@@ -795,3 +795,19 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - Rebaixada lleugerament la gorra i ajustada la seva corona per seguir millor el contorn del cap.
 - El mateix tractament s'ha replicat al rider dels vehicles oberts, inclosa la barca de rems i el windsurf.
 - Afegida comprovació al smoke test per detectar regressions en coll, cabell i geometria del cap.
+
+
+## Escala de camió/tanc i ampliació del HQ — 2026-10-05
+- Augmentada l'escala visual i física efectiva del camió militar i del tanc un 25%:
+  - camió: 1.45 → 1.8125;
+  - tanc: 1.8 → 2.25.
+- Com que radii i hitboxes es multipliquen per l'escala del vehicle, el volum de col·lisió i la separació de spawn també s'ajusten automàticament.
+- El HQ enemic ocupa ara una àrea aproximadament un 25% més gran.
+- El perímetre de filferro passa de 58×52 semieixos a 72.5×65.
+- Els edificis auxiliars s'han separat més del búnquer central.
+- Les patrulles interiors, posicions defensives i rutes de tanquetes s'han expandit per aprofitar el nou espai.
+- Les patrulles exteriors de cotxes també recorren un rectangle més ampli.
+- Les quatre torres s'han reposicionat gairebé a les cantonades del filferro (±69, ±61), deixant només un marge petit respecte del perímetre.
+- L'entrada del filferro ja no queda alineada amb la porta frontal del búnquer: s'ha desplaçat 26 unitats lateralment.
+- El tanc fix del HQ també s'ha mogut fora de l'eix central per reforçar la desalineació visual i funcional de l'accés.
+- Afegides comprovacions al smoke test per cobrir les noves escales, el perímetre ampliat, les torres de cantonada i l'entrada desplaçada.
