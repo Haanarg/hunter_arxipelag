@@ -71,6 +71,8 @@ run(`{
 ok('lodThresholdsOk','logical LOD thresholds are configured');
 ok("String(handleVehicleImpacts).includes('hurtE(u,dmg);u.alert=12')&&!String(handleVehicleImpacts).includes('hurtE(u,dmg);damageVehicle(v')",'running over soldiers does not damage vehicle structure');
 ok("String(handleVehicleImpacts).includes('killPalm(t);damageVehicle(v,Math.min(18,5+speed*.55),1)')&&!String(handleVehicleImpacts).includes('speed>18?2:1')",'palm collisions always cost exactly one structural impact');
+ok("String(stepV).includes('breakSpeed=barbed?8:14')&&String(stepV).includes('damageVehicle(v,0,barbed?2:3)')",'fast vehicle impacts break barbed wire or walls with fixed structural cost');
+ok("String(mkB).includes('rammable:true')",'ordinary building walls are marked as rammable');
 ok('worldVisualThrottled','buildings and remote vehicle visuals use reduced update rates');
 ok('faunaLodEnabled','fauna uses distance-based reduced update rates');
 const types=['llanxa','moto_aquatica','hover','cotxe','moto','bici','barca_rems','windsurf','camio','tanqueta','llanxa_coets','tanc','heli','heli_combat'];
