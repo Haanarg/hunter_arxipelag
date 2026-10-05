@@ -73,6 +73,10 @@ La prioritat és evitar regressions de gameplay mentre es modernitza el projecte
 - Mides disponibles: 4,8 × 4,8 km i 9,6 × 9,6 km.
 - Generació determinista per llavor.
 - Zones de construcció anivellades amb transició suau cap al relleu natural.
+- L'interior de les illes té aproximadament un 24% més de contrast vertical, aplicat progressivament lluny de costa.
+- Afegida una capa de soroll de freqüència mitjana per crear turons i valls més marcats sense embrutar excessivament la conducció.
+- Cada illa té un cim principal desplaçat determinísticament respecte del centre, fins aproximadament un 20% del radi per eix.
+- La franja costanera queda deliberadament poc afectada perquè platges, ports i accessos mantinguin pendents suaus.
 - La paleta continua verda a les cotes altes; ja no passa a gris/blanc.
 - Minimapa i terreny comparteixen la mateixa paleta.
 
