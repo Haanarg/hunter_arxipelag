@@ -1,6 +1,6 @@
 // Compatibility extraction: shared state remains in game-core.js.
 function mvE(u,s){const nx=u.x-Math.sin(u.hd)*s,nz=u.z-Math.cos(u.hd)*s,isVeh=['jeep','tanqueta','tanc'].includes(u.t);
-let clear=hAt(nx,nz)>-.8&&!treeHit(nx,nz,isVeh?vehicleRadius(vehicleHitType(u.t))*.4:1.2)&&Math.abs(nx)<H-5&&Math.abs(nz)<H-5&&!Wl.some(w=>!w.open&&nx>w.x0-1.5&&nx<w.x1+1.5&&nz>w.z0-1.5&&nz<w.z1+1.5);
+let clear=hAt(nx,nz)>-.8&&!treeHit(nx,nz,isVeh?vehicleRadius(vehicleHitType(u.t))*.4:1.2)&&Math.abs(nx)<H-5&&Math.abs(nz)<H-5&&!wallCandidates(nx,nz,1.5).some(w=>!w.open&&nx>w.x0-1.5&&nx<w.x1+1.5&&nz>w.z0-1.5&&nz<w.z1+1.5);
 if(clear&&isVeh){const test=vehicleBox(u,nx,nz,u.hd);clear=!vehicleObstacles(u).some(o=>vehicleHeightCompatible(u,o)&&obbOverlap(test,vehicleBox(o)))}
 if(clear){u.x=nx;u.z=nz}else u.wt=0}
 function updEn(dt){E.forEach(u=>{u.alert=Math.max(0,u.alert-dt);u.cd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);const q=cv||P,py=cv?cv.o.position.y:P.y,dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz);
