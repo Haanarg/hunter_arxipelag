@@ -939,3 +939,10 @@ Sincronitzat amb `main` fins al commit de codi `66df938` i els commits posterior
 - La vela s'ha fet una mica més alta i ampla, i el travesser s'ha elevat i allargat perquè la proporció amb el personatge sigui natural.
 - La taula també s'ha allargat lleugerament per donar una base coherent a la postura dempeus.
 - Actualitzat el smoke test per cobrir postura, cames rectes i alineació mans/travesser.
+
+
+## Cabell cilíndric una mica més exterior — 2026-10-05
+- Incrementat lleugerament el radi del cilindre del cabell del jugador i del rider.
+- Desplaçat el conjunt una mica més cap enrere perquè quedi clarament per fora de l'esfera del cap.
+- Mantingut el límit superior sota la gorra per evitar que sobresurti per dalt.
+- Ajustada també la peça posterior perquè segueixi la nova envolupant.
