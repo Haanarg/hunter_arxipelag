@@ -57,15 +57,24 @@ window.HUNTER_CHARACTERS=Object.freeze({
     };
     const AL=arm(-.78),AR=arm(.78);u.al=AL.shoulder;u.ar=AR.shoulder;u.ael=AL.elbow;u.aer=AR.elbow;
 
-    // Cap més orgànic, gorra amb visera i ulleres de sol.
-    const headMat=new THREE.MeshStandardMaterial({color:P.skin,roughness:.72}),head=new THREE.Mesh(new THREE.SphereGeometry(.5,12,8),headMat);
-    head.scale.set(.8,1,.78);head.position.set(0,4.12,0);player.add(head);
-    const glasses=new THREE.Group();glasses.position.set(0,4.18,-.39);player.add(glasses);
+    // Coll, cap superior retallat, cabell curt, gorra amb visera i ulleres de sol.
+    const neck=new THREE.Mesh(new THREE.CylinderGeometry(.24,.27,.34,10),new THREE.MeshStandardMaterial({color:P.skin,roughness:.74}));
+    neck.position.set(0,3.72,0);player.add(neck);
+    const headMat=new THREE.MeshStandardMaterial({color:P.skin,roughness:.72}),
+      headGeom=new THREE.SphereGeometry(.5,12,8,0,Math.PI*2,.28,Math.PI-.62),
+      head=new THREE.Mesh(headGeom,headMat);
+    head.scale.set(.8,1,.78);head.position.set(0,4.08,0);player.add(head);
+    const hairMat=new THREE.MeshStandardMaterial({color:0x3a2b22,roughness:.9});
+    box(player,.7,.16,.18,0x3a2b22,0,4.34,.29);
+    for(const x of[-.34,.34])box(player,.12,.28,.42,0x3a2b22,x,4.26,.1);
+    const hairTop=new THREE.Mesh(new THREE.SphereGeometry(.45,12,5,0,Math.PI*2,0,.72),hairMat);
+    hairTop.scale.set(.88,.32,.86);hairTop.position.set(0,4.37,.02);player.add(hairTop);
+    const glasses=new THREE.Group();glasses.position.set(0,4.16,-.37);player.add(glasses);
     box(glasses,.34,.16,.06,0x11161a,-.2,0,0);box(glasses,.34,.16,.06,0x11161a,.2,0,0);box(glasses,.12,.06,.06,P.dark,0,0,0);
-    const cap=new THREE.Group();cap.position.set(0,4.55,0);player.add(cap);
+    const cap=new THREE.Group();cap.position.set(0,4.43,0);player.add(cap);
     const capCrown=new THREE.Mesh(new THREE.SphereGeometry(.5,12,6,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:P.primary,roughness:.8}));
-    capCrown.scale.set(.95,.5,.98);cap.add(capCrown);
-    const visor=box(cap,.72,.08,.48,P.primary,0,-.02,-.38);visor.rotation.x=-.08;
+    capCrown.scale.set(.93,.46,.96);cap.add(capCrown);
+    const visor=box(cap,.72,.08,.48,P.primary,0,-.01,-.38);visor.rotation.x=-.08;
     mats.push([capCrown.material,P.primary,window.HUNTER_PALETTE.enemy.secondary],[visor.material,P.primary,window.HUNTER_PALETTE.enemy.secondary]);
 
     const gun=new THREE.Group();gun.position.set(0,-.72,-.1);gun.rotation.x=-Math.PI/2;u.aer.add(gun);
