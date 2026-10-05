@@ -42,6 +42,17 @@ ok('spatialVehicleEquivalent','vehicle spatial grid preserves nearby collision c
 ok('spatialWallEquivalent','wall spatial grid preserves local collider candidates');
 ok('spatialBuildingEquivalent','building spatial grid preserves local building candidates');
 ok('spatialIndexesPopulated','spatial grids are populated during gameplay');
+run(`{
+  const savedE=E,savedCv=cv,savedOver=over,savedDisg=disg,savedPX=P.x,savedPZ=P.z,origSight=sight;
+  const u=savedE.find(e=>e.t==='soldat'||e.t==='general');
+  let calls=0;
+  E=[u];cv=null;over=0;disg=false;P.x=u.x+5;P.z=u.z;u.senseT=0;u.cd=999;
+  sight=(...args)=>{calls++;return true};
+  updEn(.016);const first=calls;updEn(.016);const second=calls-first;
+  globalThis.enemySenseCached=first===1&&second===0&&Math.abs(ENEMY_SENSE_DT-.1)<1e-9&&u.canSee===true;
+  sight=origSight;E=savedE;cv=savedCv;over=savedOver;disg=savedDisg;P.x=savedPX;P.z=savedPZ;
+}`);
+ok('enemySenseCached','enemy perception runs at 10 Hz and reuses cached sight between ticks');
 const types=['llanxa','moto_aquatica','hover','cotxe','moto','bici','barca_rems','windsurf','camio','tanqueta','llanxa_coets','tanc','heli','heli_combat'];
 // Keep combat out of movement fixtures while retaining the actual generated enemies.
 run('const savedEnemies=E;E=[];');
