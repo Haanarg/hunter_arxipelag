@@ -176,7 +176,9 @@ Vehicles conduïbles actuals:
 - Una envestida prou ràpida pot trencar filferrada i parets normals:
   - filferrada: llindar de velocitat 8 i cost fix de 2 impactes estructurals;
   - paret: llindar de velocitat 14 i cost fix de 3 impactes estructurals.
-- Un cop superat el llindar, la secció es destrueix en l'impacte; les portes no es consideren parets envestibles per aquesta regla.
+- Excepció del tanc: no rep mai dany estructural per col·lisions físiques i trenca parets/filferrada sempre que les toca, sense llindar mínim de velocitat.
+- Aquesta immunitat és només per col·lisions; armes i explosions continuen podent danyar el tanc.
+- Les portes no es consideren parets envestibles per aquesta regla.
 - Blindatge, vida estructural, fum de dany, destrucció i debris.
 - Els vehicles conserven inèrcia després que el jugador en baixi.
 
