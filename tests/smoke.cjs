@@ -182,6 +182,16 @@ run(`{
 }`);
 ok('ferryCarryOk','ferry cargo follows translation and rotation');
 run(`{
+  const f=V.find(v=>v.t==='ferry'),q=V.find(v=>v.t==='cotxe'),hb=vehicleBox(q),sc=VS.ferry||1,
+        outer=FERRY_DECK.halfL*sc+FERRY_DECK.ramp*sc;
+  q.hd=f.hd;
+  const approach=ferryWorld(f,0,outer+hb.d*.5-.12);
+  const side=ferryWorld(f,FERRY_DECK.halfW*sc+hb.w*.5+.3,0);
+  globalThis.ferryRampFootprintAccess=ferryForVehicle(q,approach.x,approach.z,true)===f;
+  globalThis.ferrySideStillSolid=ferryForVehicle(q,side.x,side.z,true)!==f;
+}`);
+ok('ferryRampFootprintAccess&&ferrySideStillSolid','land vehicles can enter via ferry ramps while side hull remains solid');
+run(`{
   const f=V.find(v=>v.t==='ferry'),h=V.find(v=>v.t==='heli_combat');
   h.x=f.x;h.z=f.z;h.hd=f.hd;h.alt=f.o.position.y+12;attachToFerry(h,f);
   f.o.position.y=5;f.o.rotation.x=.031;f.o.rotation.z=-.024;syncFerryCargo();place(h,4,.016,0);
