@@ -14,6 +14,16 @@ run(`{
 ok('enemySoldierScale','enemy soldier visual model is reduced by 10 percent');
 ok('enemyGeneralScale','enemy general keeps original visual scale');
 run(`{
+  const gulls=fa.filter(f=>f.k==='g'),sharks=fa.filter(f=>f.k==='s');
+  globalThis.faunaCountsTripled=gulls.length===48&&sharks.length===30;
+  const shark=window.HUNTER_FAUNA.createShark(THREE,{material:M});
+  globalThis.sharkFinOnly=shark.userData.finOnly===true&&shark.children.length===1;
+  globalThis.gullAvoidance=String(updExtra).includes('terrainY=Math.max(0,hAt(f.x,f.z))+10')&&String(updExtra).includes('b.fy+b.h+8')&&String(updExtra).includes('if(f.flyY<obstacleY)f.flyY=obstacleY');
+}`);
+ok('faunaCountsTripled','gull and shark counts are increased by 200 percent');
+ok('sharkFinOnly','shark visual is only a dorsal fin');
+ok('gullAvoidance','gulls stay above mountains and building roofs');
+run(`{
   const slowRaw=(x,z)=>{let h=islandReliefAt(x,z,islands);const e=Math.max(Math.abs(x),Math.abs(z));if(e>H-120)h=Math.min(h,-4-(e-(H-120))*.05);if(h>=-1.5)return h;const depth=-h-1.5;return -1.5-Math.min(72,depth*depth*2.8+depth*.8)};
   const pts=[[0,0],[A.x,A.z],[Bi.x,Bi.z],[A.x+A.r*.73,A.z-A.r*.41],[H*.62,-H*.47],[-H+130,H-170]];
   globalThis.islandIndexEquivalent=pts.every(([x,z])=>Math.abs(rawHAt(x,z)-slowRaw(x,z))<1e-9);
