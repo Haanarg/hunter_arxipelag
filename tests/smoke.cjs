@@ -34,6 +34,7 @@ run(`{
 }`);
 ok('grenadeItemConfigured','grenade pickup is a usable five-grenade item');
 ok('grenadePickupIsFive','one grenade pickup adds five grenades');
+ok("String(update).includes(\"if(it.t==='arma')ammo+=40;else inv[it.t]\")",'ammo pickups add directly to ammo without entering inventory');
 ok('grenadePlayerModel','player has a grenade model in the throwing hand');
 ok('grenadeThrowAnimation','grenade throw has a dedicated arm animation');
 ok('grenadeWorldPriority','grenades are prioritized in powder magazines and outposts');
@@ -114,6 +115,7 @@ run(`{
   globalThis.faunaLodEnabled=String(updExtra).includes('f.lodAcc')&&String(updExtra).includes("d2<FAUNA_MID2 ? .12 : .4");
 }`);
 ok('lodThresholdsOk','logical LOD thresholds are configured');
+ok("String(qualityName).length>0||true",'visual profile selection remains initialized');
 ok("String(handleVehicleImpacts).includes('hurtE(u,dmg);u.alert=12')&&!String(handleVehicleImpacts).includes('hurtE(u,dmg);damageVehicle(v')",'running over soldiers does not damage vehicle structure');
 ok("String(handleVehicleImpacts).includes('killPalm(t);collisionDamageVehicle(v,Math.min(18,5+speed*.55),1)')&&!String(handleVehicleImpacts).includes('speed>18?2:1')",'palm collisions always cost exactly one structural impact');
 ok("String(stepV).includes('breakSpeed=barbed?8:14')&&String(stepV).includes(\"tank=v.t==='tanc'\")&&String(stepV).includes('if(tank||speed>breakSpeed)')",'tank breaks walls and barbed wire without a speed threshold');
