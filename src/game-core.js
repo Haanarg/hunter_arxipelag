@@ -409,7 +409,7 @@ function fr(x,z){let a=1e9,b=-1e9;for(const[i,j]of[[0,0],[9,9],[-9,9],[9,-9],[-9
 function dmgW(w,d){w.hp-=d;if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0)Wl.splice(i,1);i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);snd('boom',.3)}}
 function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=(opt.hangar?buildingVisual.createHangarShell:buildingVisual.createShell)({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide;
 const seg=(lx,lz,sx,sz,dr,windows=false)=>{if(!dr){const parts=windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:h,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:h,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+h,hp:90,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz};Wl.push(o);return}
-const parts=buildingVisual.addDoor(g,{lx,lz,sx,sz,height:h,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:35,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz};Wl.push(door);Dr.push(door);
+const parts=buildingVisual.addDoor(g,{lx,lz,sx,sz,height:h,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:35,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y};Wl.push(door);Dr.push(door);
 if(parts.lintel)Wl.push({x0:door.x0,x1:door.x1,z0:door.z0,z1:door.z1,y0:fy+parts.doorHeight,y1:fy+h,hp:70,m:parts.lintel,door:false,open:false,playerBlock:false,cx:x+lx,cz:z+lz})};
 if(opt.hangar){
   const sh=Math.max(3.1,h*.3),push=(lx,lz,sx,sz)=>{
@@ -460,6 +460,26 @@ for(let i=0;i<steps;i++){const a=(i+.5)*tread,xx=x+nx*a,zz=z+nz*a,y=top-i*rise,b
 }
 function wallPush(){const r=.6;for(const w of wallCandidates(P.x,P.z,r)){if(w.playerBlock===false)continue;if(!w.open&&P.x>w.x0-r&&P.x<w.x1+r&&P.z>w.z0-r&&P.z<w.z1+r){const a=[P.x-(w.x0-r),w.x1+r-P.x,P.z-(w.z0-r),w.z1+r-P.z],i=a.indexOf(Math.min(...a));
 if(i==0)P.x=w.x0-r;else if(i==1)P.x=w.x1+r;else if(i==2)P.z=w.z0-r;else P.z=w.z1+r}}}
+function updateDoors(dt){
+  for(const d of Dr){
+    if(d.bunkerGate){
+      const dx=P.x-d.cx,dz=P.z-d.cz,front=dx*d.nx+dz*d.nz,side=Math.abs(dx*d.nz-dz*d.nx),
+            inFront=!cv&&front>=0&&front<=4.8&&side<=d.doorWidth/2+1.15;
+      if(inFront&&d.openProgress<1){
+        d.openProgress=Math.min(1,d.openProgress+dt/d.openDuration);
+        msg='Obrint porta del búnquer… '+Math.round(d.openProgress*100)+'%';msgT=.25
+      }
+      const p=d.openProgress,ease=p*p*(3-2*p);
+      d.m.scale.y=Math.max(.025,1-ease);
+      d.m.position.y=d.closedLocalY+d.doorHeight*ease*.5;
+      d.m.visible=p<.999;
+      d.open=p>=.999;
+      continue
+    }
+    const dx=P.x-d.cx,dz=P.z-d.cz,r=d.open?6:4.5,o=d.alwaysOpen||(!d.locked&&!cv&&dx*dx+dz*dz<r*r);
+    d.open=o;d.m.visible=!o
+  }
+}
 function itemMapTexture(kind){const c=document.createElement('canvas');c.width=192;c.height=144;const q=c.getContext('2d');q.fillStyle=kind==='heli'?'#dceff4':kind==='tanc'?'#eadfb9':'#ead59b';q.fillRect(0,0,c.width,c.height);q.strokeStyle='#8f7b52';q.lineWidth=5;q.strokeRect(5,5,c.width-10,c.height-10);q.strokeStyle='#baa36b';q.lineWidth=2;for(let x=30;x<190;x+=32){q.beginPath();q.moveTo(x,7);q.lineTo(x,137);q.stroke()}for(let y=26;y<140;y+=28){q.beginPath();q.moveTo(7,y);q.lineTo(185,y);q.stroke()}
   q.save();q.translate(96,72);q.strokeStyle='#313a36';q.fillStyle='#596d55';q.lineWidth=6;
   if(kind==='heli'){q.beginPath();q.ellipse(0,5,32,13,0,0,Math.PI*2);q.fill();q.beginPath();q.moveTo(-55,-13);q.lineTo(55,-13);q.stroke();q.beginPath();q.moveTo(0,-31);q.lineTo(0,22);q.stroke();q.fillRect(28,1,35,7)}
@@ -788,7 +808,7 @@ if(worldVisualTick<=0){
   worldVisualTick=.2;
   B.forEach(b=>{const i=b===ib,dx=b.x-P.x,dz=b.z-P.z;b.o.visible=i||dx*dx+dz*dz<3240000;b.roof.visible=!i&&b.rhp>0;b.wm.opacity=b.dm.opacity=i?.18:1})
 }
-Dr.forEach(d=>{const dx=P.x-d.cx,dz=P.z-d.cz,r=d.open?6:4.5,o=d.alwaysOpen||(!d.locked&&!cv&&dx*dx+dz*dz<r*r);d.open=o;d.m.visible=!o});
+updateDoors(dt);
 items.forEach(it=>{const dx=it.x-P.x,dz=it.z-P.z;if(dx*dx+dz*dz<ITEM_ANIM2){it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25}});
 if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-it.z;if(dx*dx+dz*dz<4.84&&Math.abs(P.y-it.y)<3){if(it.t==='arma')ammo+=40;else inv[it.t]=(inv[it.t]||0)+(it.t==='granada'?5:1);world.remove(it.o);items.splice(k,1);msg='Has trobat: '+IT[it.t].n+(it.t==='granada'?' ×5':'');msgT=3;snd('pick')}}
 msgT-=dt;pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv;animPl(cv?0:f,dt);
