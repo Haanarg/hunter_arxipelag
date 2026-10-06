@@ -238,6 +238,7 @@ Vehicles conduïbles actuals:
 - Model amb gran coberta oberta, cabina lateral i rampes frontal i posterior.
 - La coberta funciona com una superfície mòbil transitable:
   - cotxes, motos, bicicletes, camions, tanquetes i tancs poden entrar i sortir per les rampes;
+  - la detecció de la rampa usa la petjada completa del vehicle, no només el seu centre; el frontal pot començar a pujar abans de topar amb la hitbox del buc, mentre els laterals continuen sent sòlids;
   - els helicòpters poden aterrar-hi i quedar transportats;
   - quan estan aterrat sobre la coberta, els helicòpters segueixen també el moviment vertical, el capcineig i el balanceig del ferry sobre les ones;
   - els vehicles transportats conserven la seva posició i orientació relatives quan el ferry avança o gira;
