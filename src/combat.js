@@ -47,12 +47,31 @@ function secondaryWeapon(){
   if(cv.t==='llanxa_coets'){if((cv.rockets||0)<=0){msg='Sense coets.';msgT=2;return false}cv.rockets--;fcd=.9;shoot(cv.x+fx_*6,cv.o.position.y+1.2,cv.z+fz*6,fx_,.015,fz,68,70,11,'p',mS,2.6);msg='Coets: '+cv.rockets;msgT=1;return true}
   return false
 }
+function throwGrenade(){
+  if(over||cv||swimming||fcd>0||!grenadeEquipped||!inv.granada)return false;
+  inv.granada--;if(inv.granada<=0){delete inv.granada;grenadeEquipped=false}
+  fcd=.7;setDis(false);
+  pl.userData.grenadeThrow=.55;pl.userData.grenadeReleased=false;
+  pl.userData.grenadePending={t:.23,hd:P.hd};
+  msg='Granades: '+(inv.granada||0);msgT=1.5;
+  return true
+}
+function launchGrenade(hd){
+  const fx_=-Math.sin(hd),fz=-Math.cos(hd),
+        o=new THREE.Group(),
+        body=new THREE.Mesh(new THREE.SphereGeometry(.18,8,6),new THREE.MeshStandardMaterial({color:0x46513f,roughness:.82,metalness:.08}));
+  body.scale.set(.88,1.08,.88);o.add(body);
+  const cap=new THREE.Mesh(new THREE.BoxGeometry(.08,.13,.08),new THREE.MeshStandardMaterial({color:0x252b27,roughness:.7,metalness:.25}));cap.position.y=.18;o.add(cap);
+  const x=P.x+fx_*.85,y=P.y+2.05,z=P.z+fz*.85;o.position.set(x,y,z);world.add(o);
+  grenades.push({x,y,z,vx:fx_*18,vy:12,vz:fz*18,t:2.4,o})
+}
 function fire(){if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
 if(c=='tanc'){const a20=Math.PI/9,ch=Math.cos(a20),sv=Math.sin(a20);fcd=.9;shoot(cv.x+fx_*5.5*VS.tanc,cv.o.position.y+2.57*VS.tanc,cv.z+fz*5.5*VS.tanc,fx_*ch,-sv,fz*ch,85,45,8,'p',mS,2.2)}
 else if(c=='heli'){const d45=Math.SQRT1_2;fcd=.6;shoot(cv.x+fx_*3.2*VS.heli,cv.o.position.y+.5*VS.heli,cv.z+fz*3.2*VS.heli,fx_*d45,-d45,fz*d45,85,45,8,'p',mS,2)}
 else if(c=='heli_combat'){const d45=Math.SQRT1_2;fcd=.12;shoot(cv.x+fx_*4.1*VS.heli_combat,cv.o.position.y+.15,cv.z+fz*4.1*VS.heli_combat,fx_*d45,-d45,fz*d45,145,9,0,'p',mB,.85)}
 else if(c=='tanqueta'){fcd=.16;shoot(cv.x+fx_*4.2*VS.tanqueta,cv.o.position.y+1.7,cv.z+fz*4.2*VS.tanqueta,fx_,0,fz,135,10,0,'p',mB,.9)}
 else if(c=='llanxa_coets'){secondaryWeapon();return}
+else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}
 else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0)delete inv.bazooka;bazookaEquipped=false;fcd=1.05;pl.userData.firePose=.42;shoot(P.x+fx_*1.35,P.y+1.9,P.z+fz*1.35,fx_,.01,fz,72,135,18,'pb',mS,3);msg='Bazooka disparat!';msgT=2;setDis(false)}
 else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;let ax=fx_,ay=0,az=fz,best=75;for(const e of E){const dx=e.x-P.x,dz=e.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>1&&(dx*fx_+dz*fz)/d>.97&&sight(P.x,P.z,e.x,e.z,P.y+1.5)){best=d;const dy=e.o.position.y+1.5-(P.y+1.5),l=Math.hypot(dx,dy,dz);ax=dx/l;ay=dy/l;az=dz/l}}shoot(P.x+fx_*.7,P.y+1.5,P.z+fz*.7,ax,ay,az,130,12,0,'p',mB,1)}
 else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}
@@ -148,5 +167,11 @@ function updPj(dt){
     world.remove(p.o);Pj.splice(i,1)
   }
 }
-function updFx(dt){for(let i=bombs.length-1;i>=0;i--){const b=bombs[i];b.t-=dt;if(b.t<=0){boom(b.x,b.y,b.z,16,100,'b');world.remove(b.o);bombs.splice(i,1)}}
+function updFx(dt){
+const pending=pl.userData.grenadePending;if(pending){pending.t-=dt;if(pending.t<=0){launchGrenade(pending.hd);pl.userData.grenadeReleased=true;pl.userData.grenadePending=null}}
+for(let i=grenades.length-1;i>=0;i--){const g=grenades[i];g.t-=dt;g.vy-=24*dt;g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt;g.o.position.set(g.x,g.y,g.z);g.o.rotation.x+=dt*8;g.o.rotation.z+=dt*5;
+  const surface=Math.max(hAt(g.x,g.z),wy(g.x,g.z,elapsed))+.16;
+  if(g.t<=0||g.y<=surface){g.y=Math.max(g.y,surface);boom(g.x,g.y,g.z,16,100,'p');world.remove(g.o);grenades.splice(i,1)}
+}
+for(let i=bombs.length-1;i>=0;i--){const b=bombs[i];b.t-=dt;if(b.t<=0){boom(b.x,b.y,b.z,48,300,'b');world.remove(b.o);bombs.splice(i,1)}}
 for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.life-=dt;f.o.scale.setScalar(1+(.6-f.life)*f.s);f.o.material.opacity=Math.max(0,f.life/.6);if(f.life<=0){world.remove(f.o);fx.splice(i,1)}}}
