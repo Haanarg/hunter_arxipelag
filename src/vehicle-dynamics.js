@@ -5,6 +5,7 @@ window.HUNTER_VEHICLE_DYNAMICS=Object.freeze({
     llanxa:Object.freeze({n:'Llanxa',m:'w',a:30,dr:.8,tu:1.4,cd:30,ch:12,response:2.6,steerResponse:2.8,yawResponse:2.4,maxF:30,maxR:9,waterDrift:.14,waterSteerMin:.22,armor:1,life:4}),
     moto_aquatica:Object.freeze({n:'Moto aquàtica',m:'w',a:46,dr:.68,tu:2.35,cd:20,ch:7,response:5.8,steerResponse:6.4,yawResponse:5.6,maxF:39,maxR:10,waterDrift:.24,waterSteerMin:.38,armor:0,life:2}),
     hover:Object.freeze({n:'Hovercraft',m:'wl',a:28,dr:.7,tu:1.7,cd:28,ch:11,response:2.9,steerResponse:3.2,yawResponse:2.8,maxF:31,maxR:10,waterDrift:.34,waterSteerMin:.5,landGrip:.48,armor:2,life:5}),
+    ferry:Object.freeze({n:'Ferry',m:'w',a:8,dr:.9,tu:.58,cd:48,ch:22,response:1.35,steerResponse:1.6,yawResponse:1.25,maxF:10,maxR:4,waterDrift:.035,waterSteerMin:.12,mass:10,armor:5,life:8}),
     cotxe:Object.freeze({n:'Cotxe',m:'l',a:36,dr:.9,tu:1.9,cd:22,ch:8,response:5.2,steerResponse:6.2,yawResponse:6.5,maxF:38,maxR:14,landGrip:.9,steerFade:.42,mass:1,armor:2,life:4}),
     moto:Object.freeze({n:'Moto',m:'l',a:42,dr:.9,tu:2.5,cd:18,ch:7,response:6.4,steerResponse:7.2,yawResponse:8,maxF:43,maxR:12,landGrip:.84,steerFade:.28,mass:.55,armor:0,life:2}),
     bici:Object.freeze({n:'Bicicleta',m:'l',a:14,dr:.8,tu:2.6,cd:14,ch:6,response:7.2,steerResponse:8,yawResponse:9,maxF:17,maxR:6,landGrip:.94,steerFade:.18,mass:.2,armor:0,life:1}),
