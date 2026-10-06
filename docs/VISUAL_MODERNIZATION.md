@@ -5,7 +5,7 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.2**.
+Versió actual: **0.2.1**.
 
 La versió del joc es defineix en un únic punt: `src/version.mjs`, mitjançant la constant `GAME_VERSION`. La pantalla inicial llegeix aquesta constant i mostra la versió en un cantó, de manera que la UI i el codi comparteixen la mateixa font de veritat.
 
@@ -19,7 +19,7 @@ La versió del joc es defineix en un únic punt: `src/version.mjs`, mitjançant 
 - Cada vegada que es publiqui un canvi a `main` que vulguem identificar com una revisió o una nova fita, s'ha d'actualitzar `GAME_VERSION`.
 - Aquest document s'ha de mantenir coherent amb la versió publicada.
 
-La versió **0.1** correspon a l'estat del joc en el moment d'introduir aquest sistema de versionat. La versió **0.2** introdueix el ferry i, sobretot, el primer sistema de transport de vehicles sobre una plataforma mòbil.
+La versió **0.1** correspon a l'estat del joc en el moment d'introduir aquest sistema de versionat. La versió **0.2** introdueix el ferry i, sobretot, el primer sistema de transport de vehicles sobre una plataforma mòbil. La revisió **0.2.1** evita que la llanxa inicial comparteixi posició amb un ferry: si hi ha solapament, la llanxa es desplaça 100 m paral·lelament a la costa, mantenint-se a l'aigua.
 
 ---
 
