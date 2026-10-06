@@ -139,11 +139,11 @@ const ferrySpots=[];for(const s of shores){
   if(ferrySpots.some(q=>Math.hypot(q.x-s.x,q.z-s.z)<220))continue;
   const ux=Math.cos(s.a),uz=Math.sin(s.a),x=s.x+ux*14,z=s.z+uz*14;
   if(Math.abs(x)>H-28||Math.abs(z)>H-28||hAt(x,z)>-1.25)continue;
-  ferrySpots.push({x,z,hd:Math.atan2(x-pa.x,z-pa.z)});if(ferrySpots.length===2)break
+  ferrySpots.push({x,z,hd:Math.atan2(pa.x-x,pa.z-z)});if(ferrySpots.length===2)break
 }
 for(let i=ferrySpots.length;i<2&&shores.length;i++){
   const s=shores[Math.floor(i*shores.length/2)%shores.length],ux=Math.cos(s.a),uz=Math.sin(s.a);
-  ferrySpots.push({x:s.x+ux*14,z:s.z+uz*14,hd:Math.atan2(s.x+ux*14-pa.x,s.z+uz*14-pa.z)})
+  ferrySpots.push({x:s.x+ux*14,z:s.z+uz*14,hd:Math.atan2(pa.x-(s.x+ux*14),pa.z-(s.z+uz*14))})
 }
 ferrySpots.slice(0,2).forEach(q=>add('ferry',q.x,q.z,q.hd,{coastal:true,guaranteed:true}));
 // La llanxa inicial comparteix sovint el millor punt de costa amb un ferry.
