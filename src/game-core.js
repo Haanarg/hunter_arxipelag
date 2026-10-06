@@ -524,7 +524,7 @@ function useInvItem(id){
   if(id==='med'){if(hp>=100){msg='Ja tens la vida al màxim.';msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(100,hp+40);msg='Has usat una farmaciola.';msgT=2;snd('pick');return true}
   if(id==='expl'){if(cv||swimming){msg='No pots col·locar explosius des d’aquí.';msgT=2;return false}resume();plant();return true}
   if(id==='bazooka'){if(cv||swimming){msg='Has d’anar a peu per equipar el bazooka.';msgT=2;return false}bazookaEquipped=!bazookaEquipped;if(bazookaEquipped)grenadeEquipped=false;resume();msg=bazookaEquipped?'Bazooka equipat: un sol tret.':'Bazooka desequipat.';msgT=2;return true}
-  if(id==='granada'){if(cv||swimming){msg='Has d’anar a peu per equipar les granades.';msgT=2;return false}grenadeEquipped=!grenadeEquipped;if(grenadeEquipped)bazookaEquipped=false;grenadeEquipped=false;resume();msg=grenadeEquipped?'Granades equipades: '+inv.granada+'.':'Granades desequipades.';msgT=2;return true}
+  if(id==='granada'){if(cv||swimming){msg='Has d’anar a peu per equipar les granades.';msgT=2;return false}grenadeEquipped=!grenadeEquipped;if(grenadeEquipped)bazookaEquipped=false;resume();msg=grenadeEquipped?'Granades equipades: '+inv.granada+'.':'Granades desequipades.';msgT=2;return true}
   if(id==='disf'){setDis(!disg);msg=disg?'Disfressa activada.':'Disfressa desactivada.';msgT=2;return true}
   if(id==='mapa'){panel('map');return true}
   if(id==='mapa_tanc'){const tanks=[...V.filter(v=>v.t==='tanc'),...E.filter(u=>u.t==='tanc')];if(!tanks.length){msg='No hi ha tancs actius al mapa.';msgT=2;return false}intelMarks=intelMarks.filter(m=>m.kind!=='tanc');tanks.forEach((v,i)=>intelMarks.push({kind:'tanc',ref:v,label:'Tanc '+(i+1)}));msg='S’han marcat '+tanks.length+' tancs.';msgT=2;panel('map');return true}
@@ -532,7 +532,7 @@ function useInvItem(id){
   return false
 }
 function dropInvItem(id){
-  if(!inv[id]||id==='arma')return false;inv[id]--;if(inv[id]<=0)delete inv[id];if(id==='disf'&&disg)setDis(false);if(id==='bazooka'&&bazookaEquipped)bazookaEquipped=false;grenadeEquipped=false;if(id==='granada'&&grenadeEquipped&&!inv.granada)grenadeEquipped=false;
+  if(!inv[id]||id==='arma')return false;inv[id]--;if(inv[id]<=0)delete inv[id];if(id==='disf'&&disg)setDis(false);if(id==='bazooka'&&bazookaEquipped)bazookaEquipped=false;if(id==='granada'&&grenadeEquipped&&!inv.granada)grenadeEquipped=false;
   msg='Has deixat: '+IT[id].n;msgT=2;return true
 }
 const ui=window.HUNTER_UI.create({
