@@ -49,6 +49,20 @@ La prioritat és evitar regressions de gameplay mentre es modernitza el projecte
 
 ---
 
+## Fauna
+
+- Quantitat augmentada un 200% respecte de l'estat anterior:
+  - gavines: 16 → 48;
+  - taurons: 10 → 30.
+- El tauró queda simplificat visualment a una única aleta dorsal low-poly.
+- L'aleta segueix directament la superfície de l'aigua i genera escuma a prop del jugador.
+- Les gavines mantenen la seva òrbita però calculen una altura mínima de seguretat:
+  - 10 m per damunt del terreny;
+  - 8 m per damunt de qualsevol teulada dins la seva trajectòria.
+- L'altura es suavitza quan poden fer-ho, però mai se'ls permet quedar dins del relleu o d'un edifici.
+
+---
+
 ## Renderitzat i món visual
 
 ### Renderer
