@@ -186,7 +186,7 @@ ok("String(mkB).includes('Sense parets laterals independents')",'hangar collisio
 ok("worldGenSrc.includes(\"prop('fuel',17,18,Math.PI/2)\")&&worldGenSrc.includes(\"prop('sign',31,26,Math.PI/2)\")",'garage props are redistributed away from the annex');
 ok("VD.types.heli_combat.maxF>VD.types.heli.maxF&&VD.types.heli_combat.tu>VD.types.heli.tu&&VD.types.heli_combat.steerResponse>VD.types.heli.steerResponse&&VD.types.heli_combat.yawResponse>VD.types.heli.yawResponse&&VD.types.heli_combat.climb>VD.types.heli.climb",'combat helicopter is faster and more maneuverable than normal helicopter');
 ok("String(fire).includes('Math.SQRT1_2')&&String(fire).includes(\"c=='heli'\")&&String(fire).includes(\"c=='heli_combat'\")",'both helicopters fire at a 45 degree downward angle');
-ok("String(fire).includes('const a10=Math.PI/18')&&String(fire).includes('fx_*ch,-sv,fz*ch')",'tank fires 10 degrees downward');
+ok("String(fire).includes('const a5=Math.PI/36')&&String(fire).includes('fx_*ch,-sv,fz*ch')",'tank fires 5 degrees downward');
 ok("vehicleSrc.includes("rod(g,[0,2.48,-.65],[0,2.48,-3.05],.1,metal)")&&!vehicleSrc.includes('mgDrop')",'tankette gun barrel stays level while bullets keep their downward trajectory');
 ok("String(secondaryWeapon).includes('fx_*d45,-d45,fz*d45')",'combat helicopter missiles also fire 45 degrees downward');
 run(`{const q=V.find(v=>v.t==='tanc'),ts=q.o.userData.tracks;ts.forEach(t=>t.phase=t.perimeter/2);q.v=0;q.yawRate=1;place(q,1,.1,0);globalThis.counterRotate=ts.find(t=>t.side<0).phase<ts[0].perimeter/2&&ts.find(t=>t.side>0).phase>ts[0].perimeter/2;q.v=0;q.yawRate=0}`);ok('counterRotate','tracks counter-rotate during pivot');
