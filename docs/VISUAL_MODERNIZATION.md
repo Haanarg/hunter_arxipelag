@@ -239,6 +239,7 @@ Vehicles conduïbles actuals:
 - La coberta funciona com una superfície mòbil transitable:
   - cotxes, motos, bicicletes, camions, tanquetes i tancs poden entrar i sortir per les rampes;
   - els helicòpters poden aterrar-hi i quedar transportats;
+  - quan estan aterrat sobre la coberta, els helicòpters segueixen també el moviment vertical, el capcineig i el balanceig del ferry sobre les ones;
   - els vehicles transportats conserven la seva posició i orientació relatives quan el ferry avança o gira;
   - els helicòpters es desacoblen de la coberta quan tornen a enlairar-se.
 - El buc continua tenint col·lisió pròpia, però la zona útil de rampes/coberta no bloqueja els vehicles que hi accedeixen.
