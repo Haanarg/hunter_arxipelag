@@ -457,6 +457,41 @@ const mkV=window.HUNTER_VEHICLES.createFactory(THREE,{box:bx,material:M,shadows:
 const riderSystem=window.HUNTER_RIDER.create(THREE,{scene,box:bx,material:M,scales:VS,heightAt:hAt,shadows:visualQuality.shadows});
 const rider=riderSystem.object,poseRider=riderSystem.update;
 let swimming=false;let V=[],cv=null;const P={x:0,z:0,y:0,hd:0};
+const FERRY_DECK=window.HUNTER_VEHICLES.decks?.ferry;
+const wrapAngle=a=>Math.atan2(Math.sin(a),Math.cos(a));
+const ferryLocal=(f,x,z)=>{const dx=x-f.x,dz=z-f.z,s=Math.sin(f.hd),co=Math.cos(f.hd);return{x:dx*co-dz*s,z:dx*s+dz*co}};
+const ferryWorld=(f,lx,lz)=>{const s=Math.sin(f.hd),co=Math.cos(f.hd);return{x:f.x+lx*co+lz*s,z:f.z-lx*s+lz*co}};
+const ferryLocalSurfaceY=(f,lz)=>{
+  const sc=VS.ferry||1,d=FERRY_DECK;if(!d)return f.o.position.y;
+  const az=Math.abs(lz),deck=d.y*sc,edge=d.halfL*sc,ramp=d.ramp*sc;
+  if(az<=edge)return f.o.position.y+deck;
+  const q=Math.max(0,Math.min(1,(az-edge)/Math.max(.01,ramp)));
+  return f.o.position.y+(deck+(d.rampY*sc-deck)*q)
+};
+function ferryForVehicle(v,x=v.x,z=v.z,includeRamp=true){
+  if(!FERRY_DECK||v.t==='ferry')return null;
+  const hb=vehicleBox(v,x,z,v.hd),halfW=Math.min(FERRY_DECK.halfW*(VS.ferry||1)-.35,Math.max(.45,hb.w*.46));
+  for(const f of V){
+    if(f===v||f.destroyed||f.t!=='ferry')continue;
+    const q=ferryLocal(f,x,z),fw=FERRY_DECK.halfW*(VS.ferry||1),fl=FERRY_DECK.halfL*(VS.ferry||1),r=includeRamp?FERRY_DECK.ramp*(VS.ferry||1):0;
+    if(Math.abs(q.x)<=Math.max(.6,fw-halfW)&&Math.abs(q.z)<=fl+r)return f
+  }
+  return null
+}
+function attachToFerry(v,f){
+  if(!f||f.destroyed){v.carrier=null;return}
+  const q=ferryLocal(f,v.x,v.z);v.carrier=f;v.carrierLX=q.x;v.carrierLZ=q.z;v.carrierHD=wrapAngle(v.hd-f.hd)
+}
+function detachFromFerry(v){v.carrier=null;delete v.carrierLX;delete v.carrierLZ;delete v.carrierHD}
+function syncFerryCargo(){
+  if(!FERRY_DECK)return;
+  for(const v of V){
+    const f=v.carrier;if(!f)continue;
+    if(f.destroyed||v.destroyed){detachFromFerry(v);continue}
+    const p=ferryWorld(f,v.carrierLX||0,v.carrierLZ||0);v.x=p.x;v.z=p.z;v.hd=wrapAngle(f.hd+(v.carrierHD||0));
+    if(VT[v.t]?.m==='a')v.alt=Math.max(v.alt||0,ferryLocalSurfaceY(f,v.carrierLZ||0)+.8)
+  }
+}
 const setPatrol=(u,pts,guard=false)=>{if(!u)return u;u.patrol=pts.map(([x,z])=>({x,z}));u.pi=-1;u.guard=guard;u.wt=0;return u};
 const setDefense=(u,pts)=>{if(!u)return u;u.defense=pts.map(([x,z])=>({x,z}));u.defenseTarget=null;return u};
 const chooseDefense=(u,q)=>{
@@ -573,6 +608,7 @@ function handleVehicleImpacts(v,dt){
 }
 function stepV(v,f,tr,ud,dt){
 const c=VT[v.t],a=c.m==='a',water=c.m==='w'||c.m==='wl',land=c.m==='l',radius=vehicleRadius(v.t),input=window.HUNTER_VEHICLE_DYNAMICS.inputs(v,f,tr,dt);f=input.forward;tr=input.turn;
+if(a&&v.carrier&&ud>.12){detachFromFerry(v);v.verticalV=Math.max(v.verticalV||0,3)}
 v.v+=f*c.a*dt;
 const dragBase=c.dr*(water?1.08:land?.86:1),coastBoost=Math.abs(f)<.03?(water?1.18:land?1.04:.82):1;
 v.v*=Math.max(0,1-dragBase*coastBoost*dt);
@@ -597,20 +633,34 @@ if(water){
 }else v.sideV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.sideV||0,0,4,dt);
 
 const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),sx=Math.cos(v.hd),sz=-Math.sin(v.hd);
-const nx=v.x+(fx*v.v+sx*sideV)*dt,nz=v.z+(fz*v.v+sz*sideV)*dt,raw=hAt(nx,nz),h=land?groundAt(nx,nz):raw,g=Math.max(0,h);let ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;
-if(c.m==='w')ok=ok&&raw<-1.2;if(c.m==='l')ok=ok&&h>-1.2;if(ok&&a&&v.alt-g<8&&treeHit(nx,nz,radius))ok=false;
-if(!a||v.alt-g<16){for(const w of wallCandidates(nx,nz,radius))if(!w.open&&w.playerBlock!==false&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){
+const nx=v.x+(fx*v.v+sx*sideV)*dt,nz=v.z+(fz*v.v+sz*sideV)*dt,raw=hAt(nx,nz),h=land?groundAt(nx,nz):raw,g=Math.max(0,h),
+      deckCarrier=(land||a)?ferryForVehicle(v,nx,nz,true):null;let ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;
+if(c.m==='w')ok=ok&&raw<-1.2;if(c.m==='l')ok=ok&&(!!deckCarrier||h>-1.2);if(ok&&a&&!deckCarrier&&v.alt-g<8&&treeHit(nx,nz,radius))ok=false;
+if((!a||v.alt-g<16)&&!deckCarrier){for(const w of wallCandidates(nx,nz,radius))if(!w.open&&w.playerBlock!==false&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){
   if(w.rammable&&land&&v.envCd<=0){const speed=Math.abs(v.v),barbed=!!w.barbed,breakSpeed=barbed?8:14,tank=v.t==='tanc';if(tank||speed>breakSpeed){dmgW(w,w.hp);collisionDamageVehicle(v,0,barbed?2:3);vehicleImpactFx(w.cx,Math.max(0,hAt(w.cx,w.cz))+1.1,w.cz);if(v.destroyed)return false;v.v*=tank?.9:(barbed?.72:.55);v.bump=barbed?.14:.2;v.envCd=.28;if(!Wl.includes(w)){msg=barbed?'Has trencat la filferrada!':'Has travessat una paret!';msgT=1;continue}}}
   ok=false;break
 }}
-if(ok){const test=vehicleBox(v,nx,nz,v.hd),hit=vehicleObstacles(v).find(o=>vehicleHeightCompatible(v,o)&&obbOverlap(test,vehicleBox(o)));if(hit){const rel=Math.abs(v.v-(hit.v||0));const ownMass=c.mass||1,otherMass=VT[vehicleHitType(hit.t)]?.mass||1,ratio=Math.max(.35,Math.min(2.5,otherMass/ownMass));v.v*=rel>5?Math.max(.16,.42/ratio):Math.max(.3,.62/ratio);if('v'in hit)hit.v*=Math.max(.3,.72/Math.max(.5,ownMass/otherMass));if(rel>6){collisionDamageVehicle(v,Math.min(18,rel*.7*ratio),1);if(V.includes(hit))collisionDamageVehicle(hit,Math.min(18,rel*.55/ratio),1);vehicleImpactFx((v.x+hit.x)/2,Math.max(vehicleY(v),vehicleY(hit))+.5,(v.z+hit.z)/2)}v.bump=.14;v.envCd=.18;ok=false}}
-if(ok){v.x=nx;v.z=nz;handleVehicleImpacts(v,dt);if(v.destroyed)return false;if(v.t==='tanc'||v.t==='tanqueta')crush(nx,nz,(v.t==='tanc'?3.2:2.4)*VS[v.t])}else{v.v*=Math.exp(-12*dt);v.sideV*=Math.exp(-10*dt)}
+if(ok){const test=vehicleBox(v,nx,nz,v.hd),hit=vehicleObstacles(v).find(o=>o!==deckCarrier&&o!==v.carrier&&o.carrier!==v&&vehicleHeightCompatible(v,o)&&obbOverlap(test,vehicleBox(o)));if(hit){const rel=Math.abs(v.v-(hit.v||0));const ownMass=c.mass||1,otherMass=VT[vehicleHitType(hit.t)]?.mass||1,ratio=Math.max(.35,Math.min(2.5,otherMass/ownMass));v.v*=rel>5?Math.max(.16,.42/ratio):Math.max(.3,.62/ratio);if('v'in hit)hit.v*=Math.max(.3,.72/Math.max(.5,ownMass/otherMass));if(rel>6){collisionDamageVehicle(v,Math.min(18,rel*.7*ratio),1);if(V.includes(hit))collisionDamageVehicle(hit,Math.min(18,rel*.55/ratio),1);vehicleImpactFx((v.x+hit.x)/2,Math.max(vehicleY(v),vehicleY(hit))+.5,(v.z+hit.z)/2)}v.bump=.14;v.envCd=.18;ok=false}}
+if(ok){
+  v.x=nx;v.z=nz;
+  if(land){
+    const f2=ferryForVehicle(v,v.x,v.z,true);if(f2)attachToFerry(v,f2);else if(v.carrier)detachFromFerry(v)
+  }
+  handleVehicleImpacts(v,dt);if(v.destroyed)return false;if(v.t==='tanc'||v.t==='tanqueta')crush(nx,nz,(v.t==='tanc'?3.2:2.4)*VS[v.t])
+}else{v.v*=Math.exp(-12*dt);v.sideV*=Math.exp(-10*dt)}
 if(a){
   const g2=Math.max(0,hAt(v.x,v.z)),targetVz=ud*(c.climb||24);
   v.verticalV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.verticalV||0,targetVz,c.liftResponse||2.5,dt);
   if(Math.abs(ud)<.01)v.verticalV*=Math.exp(-1.5*dt);
   v.alt=Math.max(g2+.8,Math.min(150,v.alt+v.verticalV*dt));
+  const f2=ferryForVehicle(v,v.x,v.z,false);
+  if(f2){
+    const q=ferryLocal(f2,v.x,v.z),deckY=ferryLocalSurfaceY(f2,q.z);
+    if(v.alt<=deckY+1.35&&ud<=.05){v.alt=deckY+.8;v.verticalV=0;attachToFerry(v,f2)}
+    else if(v.carrier===f2&&v.alt>deckY+2.2)detachFromFerry(v)
+  }else if(v.carrier)detachFromFerry(v)
 }
+if(v.carrier)attachToFerry(v,v.carrier);
 return !v.destroyed}
 function animateTankTracks(v,dt){
   const tracks=v.o?.userData?.tracks;if(!tracks?.length)return;
@@ -644,6 +694,7 @@ if(c.m==='a'){
 }
 else if(c.m==='w'){y=wy(v.x,v.z,t)+.2;const speed=Math.min(1,Math.abs(v.v)/(c.maxF||30)),wave=Math.sin(t*2.4+v.x*.03+v.z*.025);pi=wave*.035*speed;ro=-(v.yawRate||0)*.11+wave*.025}
 else if(c.m==='wl'){y=Math.max(g,wy(v.x,v.z,t))+.6;ro=-(v.yawRate||0)*.08}
+else if(v.carrier){const q=ferryLocal(v.carrier,v.x,v.z);y=ferryLocalSurfaceY(v.carrier,q.z)+.05;pi=0;ro=0}
 else{y=groundAt(v.x,v.z)+.05;const s2=Math.sin(v.hd),k=Math.cos(v.hd);pi=Math.atan((groundAt(v.x-s2*3,v.z-k*3)-groundAt(v.x+s2*3,v.z+k*3))/6);ro=-(v.sideV||0)*.018}
 if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.rotation.set(pi,v.hd,ro);
 v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0):(v.pedalPhase||0),sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*sweep;r.rotation.z=-side*(.12+dip);r.rotation.x=.06*Math.sin(rowPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})}
@@ -653,7 +704,8 @@ if(cv){const driven=cv,alive=stepV(driven,f,tr,ud,dt);if(alive&&cv===driven){P.x
 else{P.hd+=tr*dt*2.2;if(playerFall){playerFall.t+=dt;playerFall.vy-=24*dt;playerFall.vx*=Math.exp(-.18*dt);playerFall.vz*=Math.exp(-.18*dt);P.x=Math.max(-lim,Math.min(lim,P.x+playerFall.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerFall.vz*dt));playerFall.y+=playerFall.vy*dt;const water=wy(P.x,P.z,t),landing=Math.max(hAt(P.x,P.z),water-1.4);P.y=playerFall.y;if(playerFall.y<=landing){P.y=landing;const fallH=playerFall.startHeight,impact=Math.max(0,-playerFall.vy),waterLanding=water>hAt(P.x,P.z)+1.5,dmg=Math.min(100,Math.max(0,(fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8)));playerFall=null;if(dmg>0)hurtP(dmg);msg=waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5}}
 else if(playerEject&&playerEject.t>0){P.x=Math.max(-lim,Math.min(lim,P.x+playerEject.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerEject.vz*dt));playerEject.vx*=Math.exp(-2.4*dt);playerEject.vz*=Math.exp(-2.4*dt);playerEject.t=Math.max(0,playerEject.t-dt)}else{const ss=(swimming?5:12)*f*dt;P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*ss));P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*ss))}
 if(!playerFall){wallPush();treePush();vehiclePushPlayer()}}
-V.slice().forEach(v=>{if(v===cv)return;if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
+V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;return}if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
+syncFerryCargo();
 ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2)||null;
 const floor=ib?ib.fy+.3:groundAt(P.x,P.z),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;if(!playerFall)P.y=ib?floor:Math.max(floor,surface-2.1);
 worldVisualTick-=dt;
