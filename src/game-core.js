@@ -330,7 +330,7 @@ while(DB.length>160)world.remove(DB.shift().m)}
 function vehicleDebris(v,baseY){
   if(!v?.o)return;
   v.o.updateMatrixWorld(true);
-  const meshes=[];v.o.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&o.geometry)meshes.push(o)});
+  const meshes=[];v.o.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&o.geometry&&!o.userData.waterMask)meshes.push(o)});
   const heavy=['tanc','tanqueta','camio'].includes(v.t),air=v.t==='heli'||v.t==='heli_combat',maxPieces=heavy?24:air?20:16;
   const chosen=meshes.length<=maxPieces?meshes:meshes.filter((_,i)=>i%Math.ceil(meshes.length/maxPieces)===0).slice(0,maxPieces);
   const center=new THREE.Vector3(v.x,baseY+1,v.z),p=new THREE.Vector3(),q=new THREE.Quaternion(),sc=new THREE.Vector3();
@@ -767,7 +767,7 @@ else if(c.m==='a'){
   pi=-speedN*(c.pitch||.2);ro=-yawN*(c.bank||.32);
   if(v.crashing){pi+=Math.sin(v.crashT*3)*.35;ro+=(v.crashSpin||1)*(.45+Math.min(.65,v.crashT*.12))}
 }
-else if(c.m==='w'){y=wy(v.x,v.z,t)+.2;const speed=Math.min(1,Math.abs(v.v)/(c.maxF||30)),wave=Math.sin(t*2.4+v.x*.03+v.z*.025);pi=wave*.035*speed;ro=-(v.yawRate||0)*.11+wave*.025}
+else if(c.m==='w'){y=wy(v.x,v.z,t)+(v.t==='barca_rems'?-.1:.2);const speed=Math.min(1,Math.abs(v.v)/(c.maxF||30)),wave=Math.sin(t*2.4+v.x*.03+v.z*.025);pi=wave*.035*speed;ro=-(v.yawRate||0)*.11+wave*.025}
 else if(c.m==='wl'){y=Math.max(g,wy(v.x,v.z,t))+.6;ro=-(v.yawRate||0)*.08}
 else if(v.carrier){const q=ferryLocal(v.carrier,v.x,v.z);y=ferryLocalSurfaceY(v.carrier,q.z)+.05;pi=0;ro=0}
 else{y=groundAt(v.x,v.z)+.05;const s2=Math.sin(v.hd),k=Math.cos(v.hd);pi=Math.atan((groundAt(v.x-s2*3,v.z-k*3)-groundAt(v.x+s2*3,v.z+k*3))/6);ro=-(v.sideV||0)*.018}
@@ -829,4 +829,5 @@ uiTick+=dt;if(uiTick>.12){uiTick=0;const contextButtons=document.getElementById(
 let last=performance.now();
 (function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;const t=elapsed+(started&&!paused&&!over?dt:0);update(dt,t);waves(t);
 sun.target.position.set(P.x,0,P.z);sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);ren.render(scene,cam);requestAnimationFrame(loop)})(last);
+
 

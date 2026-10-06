@@ -1,7 +1,7 @@
 // Inicialització visual separada del joc i de la simulació.
 window.HUNTER_RENDERING = Object.freeze({
   create(THREE, visualQuality) {
-    const renderer = new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:false});
+    const renderer = new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:false,stencil:true});
     renderer.setPixelRatio(Math.min(devicePixelRatio,visualQuality.pixelRatio));
     renderer.outputColorSpace=THREE.SRGBColorSpace;
     renderer.toneMapping=THREE.ACESFilmicToneMapping;

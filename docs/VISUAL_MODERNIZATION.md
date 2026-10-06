@@ -5,7 +5,9 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.4**.
+Versió actual: **0.3.5**.
+
+Revisió 0.3.5: barca de rems amb flotació 30 cm més baixa i màscara d’aigua interior. Integrada sobre 0.3.4, conservant ferris, transport de vehicles, granades i selector de qualitat. La prova smoke inclou l’offset, les ombres i l’exclusió de la màscara dels fragments; s’ha reparat també una cometa imbricada i el nom de variable d’una comprovació de la tanqueta.
 
 La versió del joc es defineix en un únic punt: `src/version.mjs`, mitjançant la constant `GAME_VERSION`. La pantalla inicial llegeix aquesta constant i mostra la versió en un cantó, de manera que la UI i el codi comparteixen la mateixa font de veritat.
 
@@ -299,7 +301,10 @@ Redissenyada el 2026-10-06 segons la referència de fusta aportada:
 - jugador assegut al banc de proa, d’esquena a la proa i mirant cap a popa/càmera habitual;
 - peus dirigits cap a popa; braços calculats a partir dels punts d’agafada reals dels rems, també amb balanceig i gir del vehicle;
 - peces fixes fusionades per material: 1.932 triangles i 15 crides de dibuix per barca buida en la previsualització aïllada, sense ombres;
-- escala, caixa de col·lisió, controls i física conservats.
+- escala, caixa de col·lisió, controls i resposta de conducció conservats;
+- ajust del 2026-10-06: flotació 30 cm més baixa (offset de +0,20 a −0,10 m respecte de la superfície local);
+- màscara stencil de 14 triangles a l’obertura, solidària amb el buc: sòlids primer, màscara invisible després i mar al final. No escriu color ni profunditat, no projecta ombres i no genera fragments en destruir-se;
+- renderer amb stencil activat; només el material del mar consulta la màscara. Una crida de dibuix addicional per barca visible, sense textures ni un segon renderitzat de l’escena.
 
 Validació: model buit i ocupat inspeccionat des de proa i popa; entrada i moviment dins del joc en Chromium/WebGL 2 amb perfil mòbil, sense errors de consola. Smoke complet superat sobre la base amb les optimitzacions i orografia noves; afegides 24 postures que comproven el contacte mà-rem, orientació i peus. Reparades dues cometes imbricades de les proves de tanc i una comprovació literal de palmeres que encara usava el nom antic de la funció de dany. Aquesta revisió del model encara no s’ha provat en un Android físic.
 
@@ -419,6 +424,10 @@ Les cinc millores prioritzades el 2026-10-05 estan implementades.
 - resize;
 - disposal.
 
+### Màscara de la barca
+`tests/rowboat-water.cjs` comprova al navegador WebGL l’interior amb aigua oculta, amb màscara i sense màscara, en tres fases d’onatge i orientacions. L’interior emmascarat coincideix amb el terra sec; l’aigua exterior coincideix amb la versió sense màscara. Comprova també l’offset de flotació. Execució igual que `tests/browser.cjs` (Playwright, `PLAYWRIGHT_MODULE` i `BROWSER_EXECUTABLE_PATH` opcionals).
+Validat en Chromium amb SwiftShader i perfil mòbil. Les lectures de píxels de la prova poden produir un avís de sincronització GPU; no formen part del bucle del joc. Pendent provar aquest ajust en Android físic.
+
 ### Navegador
 `tests/browser.cjs` cobreix:
 - arrencada real;
@@ -450,4 +459,5 @@ L’usuari confirma el 2026-10-05 que la versió modernitzada funciona en Androi
 
 ### Regla de compatibilitat
 No reescriure simultàniament simulació i renderer d'un mateix sistema. Quan es modularitzi una part del nucli, conservar temporalment els contractes que utilitza el gameplay fins que la nova ruta estigui validada.
+
 

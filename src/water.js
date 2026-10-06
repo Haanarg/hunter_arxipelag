@@ -15,6 +15,9 @@ window.HUNTER_WATER_SYSTEM=Object.freeze({
     };
     const material=new THREE.ShaderMaterial({
       uniforms,
+      // Només el mar consulta la màscara; la resta del món conserva el depth test habitual.
+      stencilWrite:true,stencilRef:0,stencilFunc:THREE.EqualStencilFunc,
+      stencilFail:THREE.KeepStencilOp,stencilZFail:THREE.KeepStencilOp,stencilZPass:THREE.KeepStencilOp,
       vertexShader:`uniform float time;attribute float seabed;varying vec3 worldP;varying float bed;
 ${model.glsl}
 void main(){vec3 p=position;bed=seabed;p.y=hunterWaveHeight(p.xz,time,seabed);worldP=p;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}`,
@@ -32,7 +35,7 @@ void main(){vec3 p=position;bed=seabed;p.y=hunterWaveHeight(p.xz,time,seabed);wo
       return g;
     };
     let geometry=makeGeometry();
-    const mesh=new THREE.Mesh(geometry,material);mesh.name='hunter-water';scene.add(mesh);
+    const mesh=new THREE.Mesh(geometry,material);mesh.name='hunter-water';mesh.renderOrder=2;scene.add(mesh);
     const deep=new THREE.Mesh(new THREE.PlaneGeometry(30000,30000).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x062679}));
     deep.position.y=-90;scene.add(deep);
     const updateSeabed=()=>{const p=geometry.attributes.position,b=geometry.attributes.seabed;for(let i=0;i<p.count;i++)b.setX(i,heightAt(p.getX(i),p.getZ(i)));b.needsUpdate=true};

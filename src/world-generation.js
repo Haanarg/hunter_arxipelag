@@ -247,4 +247,5 @@ ensureDistributedCount('heli_combat',MAP_SCALE);
 ensureDistributedCount('tanqueta',1+MAP_SCALE);
 islands.forEach(i=>{if(i!==A&&R()<.65){const t=['cotxe','moto','bici'][Math.floor(R()*3)];for(let tries=0;tries<12;tries++){const q=land(i,80);if(q&&clearVehicle(t,q.x,q.z)){add(t,q.x,q.z,rr(0,6.28));break}}}});
 
-P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0,0,0));world.traverse(o=>{if(o.isMesh){o.castShadow=!o.isInstancedMesh;o.receiveShadow=true}});pl.traverse(o=>{if(o.isMesh)o.castShadow=true});cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);}
+P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0,0,0));world.traverse(o=>{if(o.isMesh&&!o.userData.waterMask){o.castShadow=!o.isInstancedMesh;o.receiveShadow=true}});pl.traverse(o=>{if(o.isMesh)o.castShadow=true});cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);}
+

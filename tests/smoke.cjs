@@ -156,6 +156,14 @@ run(`{
 }`);
 ok('rowGripError<1e-6&&rowFacesStern&&rowFeetForward','rower faces stern with feet forward and both hands locked to oars through 24 poses');
 
+run(`{const q=V.find(v=>v.t==='barca_rems'),m=q.o.getObjectByName('rowboat-water-mask');place(q,4,0,0);
+  globalThis.rowDraft=Math.abs(q.o.position.y-wy(q.x,q.z,4)+.1)<1e-9;
+  globalThis.rowMaskSafe=m&&m.userData.waterMask&&!m.castShadow&&!m.material.colorWrite&&!m.material.depthWrite;
+  vehicleDebris(q,q.o.position.y);globalThis.noMaskDebris=DB.every(d=>d.m.material!==m.material);
+}`);
+ok('rowDraft&&rowMaskSafe&&noMaskDebris','rowboat sits 30 cm lower; invisible water mask casts no shadow and never becomes debris');
+
+
 run('E=savedEnemies;playerFall=null;playerEject=null;');
 ok('V.filter(v=>v.t==="llanxa_coets").length===1','unique rocket boat');
 ok('V.filter(v=>v.t==="ferry").length===2','two guaranteed ferries');
@@ -210,7 +218,7 @@ ok("worldGenSrc.includes(\"prop('fuel',17,18,Math.PI/2)\")&&worldGenSrc.includes
 ok("VD.types.heli_combat.maxF>VD.types.heli.maxF&&VD.types.heli_combat.tu>VD.types.heli.tu&&VD.types.heli_combat.steerResponse>VD.types.heli.steerResponse&&VD.types.heli_combat.yawResponse>VD.types.heli.yawResponse&&VD.types.heli_combat.climb>VD.types.heli.climb",'combat helicopter is faster and more maneuverable than normal helicopter');
 ok("String(fire).includes('const a30=Math.PI/6')&&String(fire).includes(\"c=='heli'\")&&String(fire).includes(\"c=='heli_combat'\")&&String(fire).includes('fx_*ch,-sv,fz*ch')",'both helicopters fire at a 30 degree downward angle');
 ok("String(fire).includes('const a5=Math.PI/36')&&String(fire).includes('fx_*ch,-sv,fz*ch')",'tank fires 5 degrees downward');
-ok("vehicleSrc.includes("rod(g,[0,2.48,-.65],[0,2.48,-3.05],.1,metal)")&&!vehicleSrc.includes('mgDrop')",'tankette gun barrel stays level while bullets keep their downward trajectory');
+ok("vehSrc.includes('rod(g,[0,2.48,-.65],[0,2.48,-3.05],.1,metal)')&&!vehSrc.includes('mgDrop')",'tankette gun barrel stays level while bullets keep their downward trajectory');
 ok("String(secondaryWeapon).includes('fx_*d45,-d45,fz*d45')",'combat helicopter missiles also fire 45 degrees downward');
 run(`{const q=V.find(v=>v.t==='tanc'),ts=q.o.userData.tracks;ts.forEach(t=>t.phase=t.perimeter/2);q.v=0;q.yawRate=1;place(q,1,.1,0);globalThis.counterRotate=ts.find(t=>t.side<0).phase<ts[0].perimeter/2&&ts.find(t=>t.side>0).phase>ts[0].perimeter/2;q.v=0;q.yawRate=0}`);ok('counterRotate','tracks counter-rotate during pivot');
 run(`{const q=V.find(v=>v.t==='cotxe'),a=vehicleBox(q,q.x,q.z,q.hd);globalThis.boxesWork=obbOverlap(a,a)&&!obbOverlap(a,vehicleBox(q,q.x+100,q.z+100,q.hd))}`);ok('boxesWork','vehicle OBB collisions');
@@ -229,4 +237,5 @@ console.log(JSON.stringify({passed:true,vehicles:types.length,buildings:run('B.l
 
 
 })().catch(e=>{console.error(e);process.exitCode=1});
+
 

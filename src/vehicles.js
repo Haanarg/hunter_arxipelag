@@ -134,6 +134,18 @@ window.HUNTER_VEHICLES=Object.freeze({
           const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(batch.positions,3));geo.setAttribute('normal',new THREE.Float32BufferAttribute(batch.normals,3));
           g.add(new THREE.Mesh(geo,batch.mat));
         }
+        // Tapa invisible de l'obertura: marca stencil després dels sòlids i abans del mar.
+        // Forma part del vehicle i segueix automàticament totes les seves transformacions.
+        const maskPositions=[];
+        for(let j=0;j<stations.length-1;j++){
+          const a=point(stations[j],3,-1,true),b=point(stations[j],3,1,true),c=point(stations[j+1],3,1,true),d=point(stations[j+1],3,-1,true);
+          maskPositions.push(...a,...b,...c,...a,...c,...d);
+        }
+        const maskGeometry=new THREE.BufferGeometry();maskGeometry.setAttribute('position',new THREE.Float32BufferAttribute(maskPositions,3));
+        const maskMaterial=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false,depthTest:true,side:THREE.DoubleSide,
+          stencilWrite:true,stencilRef:1,stencilFunc:THREE.AlwaysStencilFunc,
+          stencilFail:THREE.KeepStencilOp,stencilZFail:THREE.KeepStencilOp,stencilZPass:THREE.ReplaceStencilOp});
+        const mask=new THREE.Mesh(maskGeometry,maskMaterial);mask.name='rowboat-water-mask';mask.userData.waterMask=true;mask.renderOrder=1;g.add(mask);
       }
       if(t==='windsurf'){
         box(g,.78,.18,5.15,0xf2e2b9,0,.18,0,'paint');
@@ -192,8 +204,9 @@ window.HUNTER_VEHICLES=Object.freeze({
         const tail=new THREE.Group();tail.position.set(.38,3.45,7);box(tail,.1,1.9,.16,rubber,0,0,0,'rubber');box(tail,.1,.16,1.9,rubber,0,0,0,'rubber');g.add(tail);g.userData.tailRotor=tail;
       }
       if(t==='bici'){const crank=new THREE.Group();crank.position.set(0,.75,0);for(const side of[-1,1]){rod(crank,[side*.3,0,0],[side*.3,0,side*.28],.045,metal);box(crank,.26,.08,.18,rubber,side*.4,0,side*.28,'rubber')}g.add(crank);g.userData.crank=crank}
-      g.traverse(o=>{if(o.isMesh){o.castShadow=shadows;o.receiveShadow=shadows}});
+      g.traverse(o=>{if(o.isMesh&&!o.userData.waterMask){o.castShadow=shadows;o.receiveShadow=shadows}});
       g.scale.setScalar(VS[t]);return g;
     };
   }
 });
+
