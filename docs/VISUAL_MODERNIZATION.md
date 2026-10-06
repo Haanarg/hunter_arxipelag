@@ -5,7 +5,9 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.7**.
+Versió actual: **0.3.8**.
+
+Revisió 0.3.8: el botó de cerca de llavors surt del bloc de la llavor i passa al cantó inferior esquerre de la pantalla inicial, mantenint intacta la pantalla de cerca i el seu comportament.
 
 Revisió 0.3.7: porta principal del búnquer de l'HQ amb obertura progressiva de 10 segons acumulats. Només avança quan el jugador és a peu davant de la porta; si se'n va, conserva el progrés i el reprèn en tornar. Visualment es recull cap amunt de manera contínua i deixa de col·lisionar quan és completament oberta.
 
