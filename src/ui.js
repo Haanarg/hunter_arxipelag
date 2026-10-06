@@ -19,7 +19,7 @@ window.HUNTER_UI=Object.freeze({
           const slots=Math.max(15,Math.ceil(Math.max(1,items.length)/5)*5);
           for(let i=0;i<slots;i++){
             const id=items[i],el=document.createElement('button');el.className='inv-slot'+(id===selected?' selected':'');
-            if(id){const d=st.itemTypes[id];el.innerHTML='<span>'+d.icon+'</span><span class="inv-count">×'+st.inventory[id]+'</span>';el.title=d.n;el.onclick=()=>{selected=id;if(d.usable){const changed=actions.useItem(id);if(changed&&id!=='expl'&&id!=='mapa'&&id!=='mapa_heli'&&id!=='mapa_tanc')renderInventory()}else renderInventory()}}
+            if(id){const d=st.itemTypes[id];el.innerHTML='<span>'+d.icon+'</span><span class="inv-count">×'+st.inventory[id]+'</span>';el.title=d.n;el.onclick=()=>{selected=id;if(d.usable){const changed=actions.useItem(id);if(changed&&id!=='expl'&&id!=='granada'&&id!=='bazooka'&&id!=='mapa'&&id!=='mapa_heli'&&id!=='mapa_tanc')renderInventory()}else renderInventory()}}
             else{el.disabled=true;el.setAttribute('aria-hidden','true')}
             grid.appendChild(el)
           }
