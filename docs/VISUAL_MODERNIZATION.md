@@ -250,7 +250,15 @@ Validació: model buit i ocupat inspeccionat des de proa i popa; entrada i movim
 
 ## Combat i destrucció
 
-- Pistola, ganivet, bazooka, canons, metralladores, coets i míssils.
+- Pistola, ganivet, bazooka, granades, explosius plantats, canons, metralladores, coets i míssils.
+- Cada objecte de granades recollit afegeix 5 granades a l'inventari.
+- Les granades s'equipen des de l'inventari i es llencen amb Dispar; bazooka i granades són equipaments exclusius entre si.
+- El jugador sosté una granada a la mà dreta amb el braç lleugerament enrere i separat; en llançar, el braç va cap endavant i amunt i la granada s'allibera aproximadament als 0,23 s.
+- La granada segueix una trajectòria parabòlica amb gravetat i explota en tocar la superfície o en acabar el fusible.
+- Potència de granada: radi 16 i dany base 100, equivalent a l'explosiu plantat anterior.
+- Els explosius plantats s'han reforçat a 3×: radi 48 i dany base 300.
+- Les granades apareixen al pool general, amb prioritat especial als polvorins (garantides, amb possibilitat d'una segona caixa) i a les avançades (80% de probabilitat).
+- Bazooka d'un sol ús.
 - Bazooka d'un sol ús.
 - Filferrada, vehicles, torres i diversos elements del món són destructibles.
 - Vehicles destruïts generen fragments del model.
