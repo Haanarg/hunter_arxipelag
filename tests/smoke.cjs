@@ -181,6 +181,17 @@ run(`{
   detachFromFerry(q);
 }`);
 ok('ferryCarryOk','ferry cargo follows translation and rotation');
+run(`{
+  const f=V.find(v=>v.t==='ferry'),h=V.find(v=>v.t==='heli_combat');
+  h.x=f.x;h.z=f.z;h.hd=f.hd;h.alt=f.o.position.y+12;attachToFerry(h,f);
+  f.o.position.y=5;f.o.rotation.x=.031;f.o.rotation.z=-.024;syncFerryCargo();place(h,4,.016,0);
+  const y1=h.alt,expected1=ferryLocalSurfaceY(f,h.carrierLZ||0)+.8;
+  f.o.position.y=3.6;syncFerryCargo();place(h,4.1,.016,0);
+  const y2=h.alt,expected2=ferryLocalSurfaceY(f,h.carrierLZ||0)+.8;
+  globalThis.ferryHeliWaveFollow=Math.abs(y1-expected1)<1e-6&&Math.abs(y2-expected2)<1e-6&&y2<y1&&Math.abs(h.o.rotation.x-f.o.rotation.x)<1e-6&&Math.abs(h.o.rotation.z-f.o.rotation.z)<1e-6;
+  detachFromFerry(h);
+}`);
+ok('ferryHeliWaveFollow','landed combat helicopter follows ferry deck vertically and inherits wave pitch/roll');
 ok('pl.userData.ael&&pl.userData.aer&&pl.userData.lkl&&pl.userData.lkr','articulated player preserved');
 ok('V.find(v=>v.t==="tanc").o.userData.tracks.length===2','two animated tank tracks');
 ok("buildingSrc.includes('const spring=.12')&&buildingSrc.includes('sideWalls:[]')",'hangar roof reaches the ground without visual side walls');
