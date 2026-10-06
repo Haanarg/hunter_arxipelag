@@ -86,6 +86,9 @@ window.HUNTER_CHARACTERS=Object.freeze({
     const gun=new THREE.Group();gun.position.set(0,-.72,-.1);gun.rotation.x=-Math.PI/2;u.aer.add(gun);
     box(gun,.2,.25,1.8,P.metal,0,0,-.2);box(gun,.2,.5,.25,P.dark,0,-.3,.1);box(gun,.22,.3,.6,0x6b4a2a,0,0,.9);u.gun=gun;
     const knife=new THREE.Group();knife.position.set(0,-.72,-.08);knife.rotation.x=-Math.PI/2;u.aer.add(knife);box(knife,.09,.08,.75,0xc7ced0,0,0,-.28);box(knife,.18,.16,.28,0x4b3626,0,0,.25);knife.visible=false;u.knife=knife;
+    const grenade=new THREE.Group();grenade.position.set(0,-.82,-.08);u.aer.add(grenade);
+    const grenadeBody=new THREE.Mesh(new THREE.SphereGeometry(.18,8,6),new THREE.MeshStandardMaterial({color:0x46513f,roughness:.82,metalness:.08}));grenadeBody.scale.set(.88,1.08,.88);grenade.add(grenadeBody);
+    box(grenade,.08,.13,.08,0x252b27,0,.18,0);box(grenade,.05,.04,.18,0x747b73,.07,.24,0,'metal');grenade.visible=false;u.grenade=grenade;
 
     const bazooka=new THREE.Group();bazooka.position.set(.62,3.48,-.5);player.add(bazooka);
     const bazMat=new THREE.MeshStandardMaterial({color:0x58664a,roughness:.78,metalness:.08}),bazDark=new THREE.MeshStandardMaterial({color:0x252b27,roughness:.68,metalness:.25}),bazMetal=new THREE.MeshStandardMaterial({color:0x707873,roughness:.5,metalness:.42});
@@ -97,9 +100,9 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.mats=mats;player.scale.setScalar(2/3);
     return player;
   },
-  animatePlayer(player,{forward,dt,swimming,inVehicle,ammo,bazookaEquipped=false}){
+  animatePlayer(player,{forward,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),move=Math.min(1,Math.abs(forward)),dir=forward<0?-1:1;
-    u.firePose=Math.max(0,(u.firePose||0)-dt);u.meleePose=Math.max(0,(u.meleePose||0)-dt);u.breath=(u.breath||0)+dt*1.7;
+    u.firePose=Math.max(0,(u.firePose||0)-dt);u.meleePose=Math.max(0,(u.meleePose||0)-dt);u.grenadeThrow=Math.max(0,(u.grenadeThrow||0)-dt);u.breath=(u.breath||0)+dt*1.7;
     u.ph+=dt*(swimming?(move?4.2:2.1):8.4*move);const ph=u.ph,breath=Math.sin(u.breath);
 
     const tx=(joint,target,rate=limbK)=>joint.rotation.x+=(target-joint.rotation.x)*rate;
@@ -107,7 +110,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
 
     if(swimming&&!inVehicle){
       const stroke=Math.sin(ph),recover=(1-Math.cos(ph))*.5;
-      u.gun.visible=false;u.knife.visible=false;u.bazooka.visible=false;
+      u.gun.visible=false;u.knife.visible=false;u.bazooka.visible=false;u.grenade.visible=false;
       player.rotation.x+=(-.1-player.rotation.x)*k;player.rotation.z+=(stroke*.035-player.rotation.z)*k;
       tx(u.al,1.15+.18*stroke);tx(u.ar,1.15-.18*stroke);
       tz(u.al,-.42-.38*stroke);tz(u.ar,.42+.38*stroke);
@@ -124,10 +127,23 @@ window.HUNTER_CHARACTERS=Object.freeze({
     tz(u.ll,-.025*walk2);tz(u.lr,.025*walk2);
     player.rotation.z+=(-.035*walk-player.rotation.z)*k;
 
-    const aiming=u.firePose>0&&!inVehicle,melee=u.meleePose>0&&!inVehicle,bazooka=!!bazookaEquipped&&!inVehicle;
-    u.bazooka.visible=bazooka;u.gun.visible=!bazooka&&!melee&&(ammo>0||aiming);u.knife.visible=!bazooka&&melee;
+    const aiming=u.firePose>0&&!inVehicle,melee=u.meleePose>0&&!inVehicle,bazooka=!!bazookaEquipped&&!inVehicle,
+          grenade=!!grenadeEquipped&&!inVehicle,throwing=u.grenadeThrow>0&&!inVehicle;
+    u.bazooka.visible=bazooka;u.grenade.visible=grenade&&!u.grenadeReleased;u.gun.visible=!bazooka&&!grenade&&!melee&&(ammo>0||aiming);u.knife.visible=!bazooka&&!grenade&&melee;
 
-    if(bazooka){
+    if(grenade||throwing){
+      const p=throwing?1-Math.max(0,Math.min(1,u.grenadeThrow/.55)):0;
+      if(throwing&&p<.42){
+        // Càrrega: braç dret enrere i separat del cos.
+        const q=p/.42;tx(u.ar,-.35-.65*q);tz(u.ar,-.38-.42*q);tx(u.aer,.55);
+      }else if(throwing){
+        // Llançament: arc ràpid cap endavant i amunt.
+        const q=Math.min(1,(p-.42)/.58);tx(u.ar,-1+2.42*q);tz(u.ar,-.8+.62*q);tx(u.aer,.55-.28*q);
+      }else{
+        tx(u.ar,-.72);tz(u.ar,-.62);tx(u.aer,.58)
+      }
+      tx(u.al,-.08);tz(u.al,.05);tx(u.ael,.18);
+    }else if(bazooka){
       tx(u.ar,1.2);tz(u.ar,-.18);tx(u.aer,.72);
       tx(u.al,1.02);tz(u.al,.3);tx(u.ael,.88);
     }else if(melee){
