@@ -276,7 +276,7 @@ Vehicles conduïbles actuals:
 - Model militar de sis rodes.
 
 ### Helicòpters
-- L'helicòpter normal i el de combat disparen a 45° cap avall.
+- L'helicòpter normal i el de combat disparen a **30° cap avall**.
 - Els míssils de l'helicòpter de combat també surten a 45° cap avall.
 - L'helicòpter de combat és més ràpid i maniobrable que el normal.
 - Controls tàctils d'altitud compartits: ⬆️ / ⬇️.
