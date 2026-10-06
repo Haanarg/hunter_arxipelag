@@ -14,12 +14,16 @@ window.HUNTER_FAUNA = Object.freeze({
   },
   createShark(THREE,{material,palette=window.HUNTER_PALETTE}){
     const p=palette.fauna,g=new THREE.Group();
-    const body=new THREE.Mesh(new THREE.ConeGeometry(.7,2.8,5),material(p.shark));
-    body.rotation.x=Math.PI/2;g.add(body);
-    const fin=new THREE.Mesh(new THREE.ConeGeometry(.34,.9,3),material(p.shark));
-    fin.position.set(0,.52,.15);fin.rotation.z=Math.PI;g.add(fin);
-    const tail=new THREE.Mesh(new THREE.ConeGeometry(.48,.9,3),material(p.shark));
-    tail.position.z=1.55;tail.rotation.x=Math.PI/2;tail.scale.x=.45;g.add(tail);
+    // Només l'aleta dorsal és visible: un prisma triangular baix que emergeix de les ones.
+    const geom=new THREE.BufferGeometry();
+    const v=new Float32Array([
+      -.09,0,-.72,  .09,0,-.72,  -.09,0,.72,  .09,0,.72,
+      -.09,1.12,.08, .09,1.12,.08
+    ]);
+    const idx=[0,2,4, 1,5,3, 0,4,5, 0,5,1, 2,3,5, 2,5,4, 0,1,3, 0,3,2];
+    geom.setAttribute('position',new THREE.BufferAttribute(v,3));geom.setIndex(idx);geom.computeVertexNormals();
+    const fin=new THREE.Mesh(geom,material(p.shark));fin.castShadow=true;fin.receiveShadow=true;g.add(fin);
+    g.userData.finOnly=true;
     return g;
   }
 });
