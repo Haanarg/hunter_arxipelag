@@ -23,7 +23,7 @@ const http=require('http'),fs=require('fs'),path=require('path'),assert=require(
  await page.screenshot({path:path.join(require('os').tmpdir(),'hunter-coast-')+(mobile?'mobile':'desktop')+'.png'});
  await page.evaluate(()=>{const before=elapsed;update(.1,elapsed+.1);if(elapsed!==before)throw Error('pause clock');resume();update(.1,elapsed+.1);if(elapsed<=before)throw Error('resume clock');panel('pause')});
  const result=await page.evaluate(()=>({vehicles:V.length,types:new Set(V.map(v=>v.t)).size,buildings:B.length,programs:ren.info.programs.length,shaders:ren.info.programs.every(p=>!p.diagnostics||p.diagnostics.runnable),profile:qualityName,srgb:ren.outputColorSpace===THREE.SRGBColorSpace,missile:!!document.querySelector('[data-k="KeyR"]'),climb:!!document.querySelector('[data-k="KeyU"]')&&!!document.querySelector('[data-k="KeyJ"]')}));
- console.log(JSON.stringify({mobile,result,errors,warnings}));assert.equal(errors.length,0,'console errors');assert(result.shaders,'compiled shaders');assert.equal(result.types,14);assert(result.srgb&&result.missile&&result.climb);assert.equal(result.profile,mobile?'mobile':'desktop');
+ console.log(JSON.stringify({mobile,result,errors,warnings}));assert.equal(errors.length,0,'console errors');assert(result.shaders,'compiled shaders');assert.equal(result.types,15);assert(result.srgb&&result.missile&&result.climb);assert.equal(result.profile,mobile?'mobile':'desktop');
  await context.close();
  }
  }finally{if(browser)await browser.close();server.close()}
