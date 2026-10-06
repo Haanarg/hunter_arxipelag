@@ -159,10 +159,16 @@ ok('V.filter(v=>v.t==="llanxa_coets").length===1','unique rocket boat');
 ok('V.filter(v=>v.t==="ferry").length===2','two guaranteed ferries');
 ok('VT.ferry.life===8&&VT.ferry.maxF<VT.llanxa.maxF','ferry is slow and survives eight structural hits');
 run(`{
-  const f=V.find(v=>v.t==='ferry'),dx=f.x-P.base.x,dz=f.z-P.base.z,fx=-Math.sin(f.hd),fz=-Math.cos(f.hd);
-  globalThis.ferryFacesSea=fx*dx+fz*dz>0;
+  const ferries=V.filter(v=>v.t==='ferry');
+  globalThis.ferryFacesSea=ferries.every(f=>{
+    const dx=f.x-f.ferryIslandX,dz=f.z-f.ferryIslandZ,fx=-Math.sin(f.hd),fz=-Math.cos(f.hd);
+    return fx*dx+fz*dz>0
+  });
+  globalThis.ferriesOnDistinctIslands=new Set(ferries.map(f=>f.ferryIslandIndex)).size===ferries.length;
+  globalThis.ferryBeyondStartIsland=ferries.some(f=>f.ferryIslandIndex!==0);
 }`);
-ok('ferryFacesSea','ferry bow faces away from the player base toward open water');
+ok('ferryFacesSea','each ferry bow faces away from its own island toward open water');
+ok('ferriesOnDistinctIslands&&ferryBeyondStartIsland','ferries are distributed across distinct islands, not only the start island');
 run(`{
   const f=V.find(v=>v.t==='ferry'),q=V.find(v=>v.t==='cotxe');
   q.x=f.x;q.z=f.z;q.hd=f.hd;attachToFerry(q,f);
