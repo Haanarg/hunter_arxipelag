@@ -1,4 +1,9 @@
 import {runtimeScripts} from './runtime-scripts.mjs';
+import {GAME_VERSION} from './version.mjs';
+
+const versionBadge=document.getElementById('versionBadge');
+if(versionBadge)versionBadge.textContent='v'+GAME_VERSION;
+window.HUNTER_VERSION=GAME_VERSION;
 
 // Pont temporal: motor ESM i sistemes clàssics carregats seqüencialment.
 try {
