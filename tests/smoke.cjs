@@ -24,6 +24,30 @@ ok('faunaCountsTripled','gull and shark counts are increased by 200 percent');
 ok('sharkFinOnly','shark visual is only a dorsal fin');
 ok('gullAvoidance','gulls stay above mountains and building roofs');
 run(`{
+  globalThis.grenadeItemConfigured=!!IT.granada&&IT.granada.usable===true&&String(IT.granada.desc).includes('5 granades');
+  globalThis.grenadePickupIsFive=String(update).includes("it.t==='granada'?5:1");
+  globalThis.grenadePlayerModel=!!pl.userData.grenade;
+  globalThis.grenadeThrowAnimation=String(window.HUNTER_CHARACTERS.animatePlayer).includes('grenadeThrow')&&String(window.HUNTER_CHARACTERS.animatePlayer).includes('Llançament');
+  globalThis.grenadeWorldPriority=worldGenSrc.includes("addIt('granada',R()<.5?a:b)")&&worldGenSrc.includes("if(R()<.8)addIt('granada'");
+  globalThis.grenadeBallistics=String(throwGrenade).includes('grenadePending')&&String(launchGrenade).includes('vy:12')&&String(updFx).includes('g.vy-=24*dt');
+  globalThis.explosiveBalance=String(updFx).includes("boom(g.x,g.y,g.z,16,100,'b')")&&String(updFx).includes("boom(b.x,b.y,b.z,48,300,'b')");
+}`);
+ok('grenadeItemConfigured','grenade pickup is a usable five-grenade item');
+ok('grenadePickupIsFive','one grenade pickup adds five grenades');
+ok('grenadePlayerModel','player has a grenade model in the throwing hand');
+ok('grenadeThrowAnimation','grenade throw has a dedicated arm animation');
+ok('grenadeWorldPriority','grenades are prioritized in powder magazines and outposts');
+ok('grenadeBallistics','grenades use delayed release, forward velocity and gravity');
+ok('explosiveBalance','grenades keep old TNT force while planted explosives are tripled');
+run(`{
+  const savedInv={...inv},savedEq=grenadeEquipped,savedFcd=fcd;
+  inv.granada=1;grenadeEquipped=true;fcd=0;pl.userData.grenadePending=null;
+  const okThrow=throwGrenade();updFx(.24);
+  globalThis.grenadeDynamicLaunch=okThrow&&grenades.length===1&&grenades[0].vy<12&&grenades[0].vx!==0;
+  for(const g of grenades)world.remove(g.o);grenades=[];inv=savedInv;grenadeEquipped=savedEq;fcd=savedFcd;pl.userData.grenadePending=null;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;
+}`);
+ok('grenadeDynamicLaunch','grenade releases into a live parabolic projectile');
+run(`{
   const slowRaw=(x,z)=>{let h=islandReliefAt(x,z,islands);const e=Math.max(Math.abs(x),Math.abs(z));if(e>H-120)h=Math.min(h,-4-(e-(H-120))*.05);if(h>=-1.5)return h;const depth=-h-1.5;return -1.5-Math.min(72,depth*depth*2.8+depth*.8)};
   const pts=[[0,0],[A.x,A.z],[Bi.x,Bi.z],[A.x+A.r*.73,A.z-A.r*.41],[H*.62,-H*.47],[-H+130,H-170]];
   globalThis.islandIndexEquivalent=pts.every(([x,z])=>Math.abs(rawHAt(x,z)-slowRaw(x,z))<1e-9);
