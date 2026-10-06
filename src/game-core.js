@@ -554,7 +554,7 @@ function syncFerryCargo(){
     const f=v.carrier;if(!f)continue;
     if(f.destroyed||v.destroyed){detachFromFerry(v);continue}
     const p=ferryWorld(f,v.carrierLX||0,v.carrierLZ||0);v.x=p.x;v.z=p.z;v.hd=wrapAngle(f.hd+(v.carrierHD||0));
-    if(VT[v.t]?.m==='a')v.alt=Math.max(v.alt||0,ferryLocalSurfaceY(f,v.carrierLZ||0)+.8)
+    if(VT[v.t]?.m==='a')v.alt=ferryLocalSurfaceY(f,v.carrierLZ||0)+.8
   }
 }
 const setPatrol=(u,pts,guard=false)=>{if(!u)return u;u.patrol=pts.map(([x,z])=>({x,z}));u.pi=-1;u.guard=guard;u.wt=0;return u};
@@ -752,7 +752,12 @@ function animateTankTracks(v,dt){
   }
 }
 function place(v,t,dt,tr){const c=VT[v.t],o=v.o,g=hAt(v.x,v.z);let y,pi=0,ro=Math.sin(t*2+v.x)*.02;
-if(c.m==='a'){
+if(c.m==='a'&&v.carrier&&!v.crashing){
+  const q=ferryLocal(v.carrier,v.x,v.z);
+  y=ferryLocalSurfaceY(v.carrier,q.z)+.8;v.alt=y;
+  pi=v.carrier.o.rotation.x;ro=v.carrier.o.rotation.z;
+}
+else if(c.m==='a'){
   y=v.alt;const speedN=Math.max(-1,Math.min(1,v.v/(c.maxF||35))),yawN=Math.max(-1,Math.min(1,(v.yawRate||0)/(c.tu||1)));
   pi=-speedN*(c.pitch||.2);ro=-yawN*(c.bank||.32);
   if(v.crashing){pi+=Math.sin(v.crashT*3)*.35;ro+=(v.crashSpin||1)*(.45+Math.min(.65,v.crashT*.12))}
