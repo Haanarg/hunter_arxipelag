@@ -5,7 +5,9 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.6**.
+Versió actual: **0.3.7**.
+
+Revisió 0.3.7: porta principal del búnquer de l'HQ amb obertura progressiva de 10 segons acumulats. Només avança quan el jugador és a peu davant de la porta; si se'n va, conserva el progrés i el reprèn en tornar. Visualment es recull cap amunt de manera contínua i deixa de col·lisionar quan és completament oberta.
 
 Revisió 0.3.6: mínim de quatre motos aquàtiques per mapa. Comprovació final contra les caixes de tots els vehicles, inclosos els enemics, amb marge de separació. En cas de conflicte es busca una posició seguint la costa en trams de 100 m; es prova l’altra direcció o un altre punt costaner si no hi ha espai vàlid. Es mantenen dins del límit i sobre l’aigua. La generació no accepta silenciosament un mapa amb menys de quatre motos aquàtiques.
 
@@ -187,6 +189,9 @@ Característiques:
 
 ### HQ
 - Búnquer central fortificat.
+- La porta principal necessita **10 segons acumulats** amb el jugador a peu situat davant seu per obrir-se del tot.
+- Si el jugador marxa, l'obertura queda congelada al percentatge assolit i continua des del mateix punt quan torna.
+- La porta es recull visualment cap amunt amb una animació contínua i només deixa lliure la col·lisió quan arriba al 100%.
 - Perímetre ampliat de filferrada destructible.
 - Entrada desalineada respecte de la porta del búnquer.
 - Torres als cantons del perímetre.
