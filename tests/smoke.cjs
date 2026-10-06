@@ -89,6 +89,22 @@ ok('spatialWallEquivalent','wall spatial grid preserves local collider candidate
 ok('spatialBuildingEquivalent','building spatial grid preserves local building candidates');
 ok('spatialIndexesPopulated','spatial grids are populated during gameplay');
 run(`{
+  const d=Dr.find(x=>x.bunkerGate),savedCv=cv,savedPX=P.x,savedPZ=P.z;
+  globalThis.bunkerGateConfigured=!!d&&d.openDuration===10&&d.openProgress===0&&d.locked;
+  if(d){
+    const oldProgress=d.openProgress,oldOpen=d.open,oldVisible=d.m.visible,oldScale=d.m.scale.y,oldY=d.m.position.y;
+    cv=null;P.x=d.cx+d.nx*2;P.z=d.cz+d.nz*2;
+    updateDoors(4);const p1=d.openProgress,y1=d.m.position.y,scale1=d.m.scale.y;
+    P.x=d.cx-d.nx*8;P.z=d.cz-d.nz*8;updateDoors(3);
+    const paused=Math.abs(d.openProgress-p1)<1e-9;
+    P.x=d.cx+d.nx*2;P.z=d.cz+d.nz*2;updateDoors(6);
+    globalThis.bunkerGateProgressive=Math.abs(p1-.4)<1e-9&&paused&&d.openProgress===1&&d.open&&y1>d.closedLocalY&&scale1<1&&!d.m.visible;
+    d.openProgress=oldProgress;d.open=oldOpen;d.m.visible=oldVisible;d.m.scale.y=oldScale;d.m.position.y=oldY;
+  }
+  cv=savedCv;P.x=savedPX;P.z=savedPZ;
+}`);
+ok('bunkerGateConfigured&&bunkerGateProgressive','HQ bunker door opens progressively over ten cumulative seconds and pauses when player leaves');
+run(`{
   const savedE=E,savedCv=cv,savedOver=over,savedDisg=disg,savedPX=P.x,savedPZ=P.z,origSight=sight;
   const u=savedE.find(e=>e.t==='soldat'||e.t==='general');
   let calls=0;
