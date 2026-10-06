@@ -226,7 +226,72 @@ else if(sp>12&&c.m=='l')puff(cv.x+s*L,gy+.3,cv.z+co*L,0xc9b48a,1.4);
 else if(c.m=='a'&&cv.alt-gy<12)puff(cv.x+rn(-6,6),gy+.3,cv.z+rn(-6,6),hAt(cv.x,cv.z)>0?0xc9b48a:0xffffff,2.2)}
 PT.forEach(p=>{if(p.life>0){p.life-=dt;if(p.rise)p.m.position.y+=p.rise*dt;p.m.scale.setScalar(p.s*(1+(1-p.life/p.max)*1.15));p.m.material.opacity=Math.max(0,p.life/p.max)*.8;if(p.life<=0){p.m.visible=false;p.rise=0}}});
 if(seaAudio){const coastal=Math.max(.25,1-Math.max(0,hAt(P.x,P.z))/22);seaAudio.gain.gain.setTargetAtTime(over?0:.035+coastal*.05,AC.currentTime,.5)}if(eng){const c=cv?VT[cv.t]:null;eng.g.gain.value=c&&cv.t!=='bici'&&!over?.02+Math.min(1,Math.abs(cv.v)/40)*.03:0;eng.o.frequency.value=c?(c.m=='a'?60:35)+Math.abs(cv.v)*(c.m=='a'?1:2.5):40}}
-const seedRandomEl=document.getElementById('seedRandom'),seedInputEl=document.getElementById('seedInput'),iniEl=document.getElementById('ini');
+const seedRandomEl=document.getElementById('seedRandom'),seedInputEl=document.getElementById('seedInput'),iniEl=document.getElementById('ini'),
+startMenuEl=document.getElementById('startMenu'),seedSearchScreenEl=document.getElementById('seedSearchScreen'),
+seedSearchOpenEl=document.getElementById('seedSearchOpen'),seedSearchBackEl=document.getElementById('seedSearchBack'),
+seedSearchRunEl=document.getElementById('seedSearchRun'),seedSearchCancelEl=document.getElementById('seedSearchCancel'),
+seedSearchStartEl=document.getElementById('seedSearchStart'),seedSearchCountEl=document.getElementById('seedSearchCount'),
+seedSearchDistanceEl=document.getElementById('seedSearchDistance'),seedSearchMapSizeEl=document.getElementById('seedSearchMapSize'),
+seedSearchStatusEl=document.getElementById('seedSearchStatus'),seedSearchResultsEl=document.getElementById('seedSearchResults');
+let seedSearchToken=0;
+const currentMapScale=()=>+(document.querySelector('input[name="mapSize"]:checked')?.value||1);
+const showSeedSearch=()=>{
+  const sc=currentMapScale();seedSearchMapSizeEl.value=sc===2?'Gran · 9,6 km':'Petit · 4,8 km';
+  startMenuEl.style.display='none';seedSearchScreenEl.style.display='block';seedSearchScreenEl.setAttribute('aria-hidden','false')
+};
+const hideSeedSearch=()=>{seedSearchToken++;seedSearchCancelEl.disabled=true;seedSearchRunEl.disabled=false;seedSearchScreenEl.style.display='none';seedSearchScreenEl.setAttribute('aria-hidden','true');startMenuEl.style.display='flex'};
+const renderSeedSearchResults=(rows,target)=>{
+  seedSearchResultsEl.innerHTML='';
+  rows.slice(0,8).forEach((r,i)=>{
+    const el=document.createElement('div');el.className='seed-result';
+    const main=document.createElement('div');main.innerHTML='<b>#'+(i+1)+' · llavor '+r.seed+'</b><br><small>Ferry més proper: '+Math.round(r.distance)+' m'+(r.distance<=target?' · dins l’objectiu':'')+'</small>';
+    const d=document.createElement('b');d.textContent=Math.round(r.distance)+' m';
+    const use=document.createElement('button');use.type='button';use.textContent='Usa aquesta llavor';use.onclick=()=>{
+      seedRandomEl.checked=false;seedInputEl.disabled=false;seedInputEl.value=String(r.seed);hideSeedSearch();seedInputEl.focus()
+    };
+    el.append(main,d,use);seedSearchResultsEl.append(el)
+  })
+};
+async function runSeedSearch(){
+  const token=++seedSearchToken,start=Math.max(0,Math.min(4294967295,Number(seedSearchStartEl.value)||0))>>>0,
+        count=Math.max(1,Math.min(100,Number(seedSearchCountEl.value)||30)),
+        target=Math.max(50,Math.min(3000,Number(seedSearchDistanceEl.value)||300)),
+        scale=currentMapScale(),rows=[];
+  seedSearchCountEl.value=count;seedSearchDistanceEl.value=target;seedSearchMapSizeEl.value=scale===2?'Gran · 9,6 km':'Petit · 4,8 km';
+  seedSearchRunEl.disabled=true;seedSearchCancelEl.disabled=false;seedSearchResultsEl.innerHTML='';
+  const oldScale=MAP_SCALE,oldS=S,oldH=H,oldRequested=requestedSeed;
+  MAP_SCALE=scale;S=4800*MAP_SCALE;H=S/2;minimap.setWorldSize(S,H);
+  try{
+    for(let i=0;i<count;i++){
+      if(token!==seedSearchToken)break;
+      const raw=(start+i)>>>0;requestedSeed=(raw^Math.imul(MAP_SCALE,0x45d9f3b))>>>0;
+      seedSearchStatusEl.textContent='Provant '+(i+1)+' / '+count+' · llavor '+raw+'…';
+      try{
+        build();
+        const ferries=V.filter(v=>v.t==='ferry');
+        if(ferries.length&&P.base){
+          const distance=Math.min(...ferries.map(v=>Math.hypot(v.x-P.base.x,v.z-P.base.z)));
+          rows.push({seed:raw,distance});rows.sort((a,b)=>a.distance-b.distance);if(rows.length>12)rows.length=12;
+          renderSeedSearchResults(rows,target)
+        }
+      }catch(err){console.warn('Llavor descartada durant la cerca',raw,err)}
+      await new Promise(resolve=>requestAnimationFrame(()=>resolve()))
+    }
+    if(token===seedSearchToken){
+      const best=rows[0];
+      seedSearchStatusEl.textContent=best
+        ?'Cerca acabada. Millor resultat: llavor '+best.seed+' · '+Math.round(best.distance)+' m del ferry més proper.'
+        :'No s’ha trobat cap llavor vàlida en aquest interval.';
+    }
+  }finally{
+    if(token===seedSearchToken){seedSearchRunEl.disabled=false;seedSearchCancelEl.disabled=true}
+    else{MAP_SCALE=oldScale;S=oldS;H=oldH;requestedSeed=oldRequested;minimap.setWorldSize(S,H)}
+  }
+}
+if(seedSearchOpenEl)seedSearchOpenEl.onclick=showSeedSearch;
+if(seedSearchBackEl)seedSearchBackEl.onclick=hideSeedSearch;
+if(seedSearchRunEl)seedSearchRunEl.onclick=runSeedSearch;
+if(seedSearchCancelEl)seedSearchCancelEl.onclick=()=>{seedSearchToken++;seedSearchStatusEl.textContent='Cerca cancel·lada.';seedSearchRunEl.disabled=false;seedSearchCancelEl.disabled=true};
 const applyStartScreenshot=()=>{
   try{
     const shot=localStorage.getItem('hunterStartScreenshot');
