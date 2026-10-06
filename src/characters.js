@@ -129,7 +129,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
 
     const aiming=u.firePose>0&&!inVehicle,melee=u.meleePose>0&&!inVehicle,bazooka=!!bazookaEquipped&&!inVehicle,
           grenade=!!grenadeEquipped&&!inVehicle,throwing=u.grenadeThrow>0&&!inVehicle;
-    u.bazooka.visible=bazooka;u.grenade.visible=grenade&&!u.grenadeReleased;u.gun.visible=!bazooka&&!grenade&&!melee&&(ammo>0||aiming);u.knife.visible=!bazooka&&!grenade&&melee;
+    u.bazooka.visible=bazooka;u.grenade.visible=(grenade||throwing)&&!u.grenadeReleased;u.gun.visible=!bazooka&&!grenade&&!melee&&(ammo>0||aiming);u.knife.visible=!bazooka&&!grenade&&melee;
 
     if(grenade||throwing){
       const p=throwing?1-Math.max(0,Math.min(1,u.grenadeThrow/.55)):0;
