@@ -131,8 +131,20 @@ const add=(t,x,z,a,meta={})=>{const o=mkV(t),c=VT[t],v={t,x,z,hd:a||0,v:0,alt:Ma
 const addProtectedMilitary=()=>{};
 const near=(r,t)=>{for(let k=0;k<80;k++){const x=pa.x+rr(-r,r),z=pa.z+rr(-r,r),h=hAt(x,z);if(h>1.5&&slope(x,z,h)<2.5&&!B.some(b=>Math.abs(x-b.x)<b.hw+vehicleRadius(t)&&Math.abs(z-b.z)<b.hd+vehicleRadius(t))&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(t)+vehicleRadius(v.t)+2))return[x,z]}return[pa.x+30,pa.z+30]};
 ['cotxe','moto','bici'].forEach(t=>{const q=near(90,t);add(t,q[0],q[1],rr(0,6.28))});
-const shores=[];for(let a=0;a<360;a+=12)for(let d=10;d<700;d+=10){const x=pa.x+Math.cos(a*.01745)*d,z=pa.z+Math.sin(a*.01745)*d;if(Math.abs(x)>H-60||Math.abs(z)>H-60)break;if(hAt(x,z)<-2){shores.push({d,x,z});break}}
+const shores=[];for(let a=0;a<360;a+=12)for(let d=10;d<700;d+=10){const x=pa.x+Math.cos(a*.01745)*d,z=pa.z+Math.sin(a*.01745)*d;if(Math.abs(x)>H-60||Math.abs(z)>H-60)break;if(hAt(x,z)<-2){shores.push({d,x,z,a:a*.01745});break}}
 shores.sort((a,b)=>a.d-b.d);if(shores[0])add('llanxa',shores[0].x,shores[0].z,rr(0,6.28));
+// Dos ferris garantits per mapa, varats prou a prop de platja perquè les rampes puguin connectar terra i coberta.
+const ferrySpots=[];for(const s of shores){
+  if(ferrySpots.some(q=>Math.hypot(q.x-s.x,q.z-s.z)<220))continue;
+  const ux=Math.cos(s.a),uz=Math.sin(s.a),x=s.x+ux*14,z=s.z+uz*14;
+  if(Math.abs(x)>H-28||Math.abs(z)>H-28||hAt(x,z)>-1.25)continue;
+  ferrySpots.push({x,z,hd:Math.atan2(x-pa.x,z-pa.z)});if(ferrySpots.length===2)break
+}
+for(let i=ferrySpots.length;i<2&&shores.length;i++){
+  const s=shores[Math.floor(i*shores.length/2)%shores.length],ux=Math.cos(s.a),uz=Math.sin(s.a);
+  ferrySpots.push({x:s.x+ux*14,z:s.z+uz*14,hd:Math.atan2(s.x+ux*14-pa.x,s.z+uz*14-pa.z)})
+}
+ferrySpots.slice(0,2).forEach(q=>add('ferry',q.x,q.z,q.hd,{coastal:true,guaranteed:true}));
 const clearVehicle=(t,x,z)=>Math.abs(x)<H-vehicleRadius(t)-5&&Math.abs(z)<H-vehicleRadius(t)-5&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(x-v.x,z-v.z)<vehicleRadius(t)+vehicleRadius(v.t)+5);
 compoundVehicles.forEach(v=>{if(VT[v.t]?.m==='w'||VT[v.t]?.m==='wl'){if(hAt(v.x,v.z)<-2)add(v.t,v.x,v.z,v.hd,v);return}
   const r=vehicleRadius(v.t),buildingClear=v.insideHangar?true:!B.some(b=>Math.abs(v.x-b.x)<b.hw+r&&Math.abs(v.z-b.z)<b.hd+r),clear=!treeHit(v.x,v.z,r*.7)&&buildingClear&&!V.some(o=>Math.hypot(v.x-o.x,v.z-o.z)<r+vehicleRadius(o.t)+3);
