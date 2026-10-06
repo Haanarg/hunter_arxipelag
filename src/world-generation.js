@@ -1,3 +1,64 @@
+// Validació final contra TOTS els vehicles: també els afegits després dels molls.
+function jetSkiSpotClear(q,ignore=null){
+  const box=vehicleBox({t:'moto_aquatica',...q});box.w+=2;box.d+=2;
+  const r=Math.hypot(box.w,box.d)/2;
+  if(Math.abs(q.x)>H-r-5||Math.abs(q.z)>H-r-5||hAt(q.x,q.z)>-1.2)return false;
+  if(B.some(b=>Math.abs(q.x-b.x)<b.hw+r&&Math.abs(q.z-b.z)<b.hd+r))return false;
+  return !V.some(v=>v!==ignore&&obbOverlap(box,vehicleBox(v)))&&!E.some(v=>['jeep','tanqueta','tanc'].includes(v.t)&&obbOverlap(box,vehicleBox(v)));
+}
+// Recorre la corba de profunditat en passos curts: 100 m de costa, no una recta mar endins.
+function shiftJetSkiAlongCoast(origin,ignore){
+  const depth=Math.max(-3,Math.min(-1.8,hAt(origin.x,origin.z)));
+  for(const side of[1,-1]){
+    let x=origin.x,z=origin.z,walked=0;
+    for(let step=0;step<80;step++){
+      const gx=hAt(x+2,z)-hAt(x-2,z),gz=hAt(x,z+2)-hAt(x,z-2),len=Math.hypot(gx,gz);
+      if(len<1e-5)break;
+      x+=side*(-gz/len)*5;z+=side*(gx/len)*5;walked+=5;
+      for(let j=0;j<8;j++){
+        const error=hAt(x,z)-depth;if(Math.abs(error)<.12)break;
+        const dx=(hAt(x+1,z)-hAt(x-1,z))/2,dz=(hAt(x,z+1)-hAt(x,z-1))/2,den=dx*dx+dz*dz;
+        if(den<1e-6)break;
+        const k=Math.max(-3,Math.min(3,error/Math.sqrt(den)))/Math.sqrt(den);x-=dx*k;z-=dz*k;
+      }
+      const q={x,z,hd:origin.hd};
+      if(walked%100===0&&Math.abs(hAt(x,z)-depth)<.3&&jetSkiSpotClear(q,ignore))return {...q,coastShift:walked};
+    }
+  }
+  return null;
+}
+function findJetSkiCoastSpot(ignore=null){
+  for(const island of islands){
+    for(let n=0;n<64;n++){
+      const a=n*Math.PI/32,ux=Math.cos(a),uz=Math.sin(a);let landD=null;
+      for(let d=0;d<island.r*1.6;d+=10){
+        const h=hAt(island.x+ux*d,island.z+uz*d);
+        if(h>0){landD=d;continue}
+        if(landD===null||h> -2.5)continue;
+        let lo=landD,hi=d;
+        for(let k=0;k<15;k++){const mid=(lo+hi)/2;if(hAt(island.x+ux*mid,island.z+uz*mid)>-2.5)lo=mid;else hi=mid}
+        const q={x:island.x+ux*hi,z:island.z+uz*hi,hd:Math.atan2(ux,uz)};
+        if(jetSkiSpotClear(q,ignore))return q;
+        break;
+      }
+    }
+  }
+  return null;
+}
+function ensureJetSkis(add){
+  for(const v of V.filter(v=>v.t==='moto_aquatica')){
+    if(jetSkiSpotClear(v,v))continue;
+    const q=shiftJetSkiAlongCoast(v,v)||findJetSkiCoastSpot(v);
+    if(!q)throw new Error('No s’ha trobat una costa lliure per a la moto aquàtica');
+    Object.assign(v,q,{coastal:true});
+  }
+  while(V.filter(v=>v.t==='moto_aquatica').length<4){
+    const q=findJetSkiCoastSpot();
+    if(!q)throw new Error('No s’han pogut situar quatre motos aquàtiques sense solapaments');
+    add('moto_aquatica',q.x,q.z,q.hd,{coastal:true,guaranteed:true});
+  }
+}
+
 // Compatibility extraction: shared state remains in game-core.js.
 function build(){elapsed=0;water.update(0);joystick.reset();compoundClear=[];terrainLevels=[];if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}world=new THREE.Group();scene.add(world);B=[];stairs=[];piers=[];swimming=false;intelMarks=[];playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;grenadeEquipped=false;pl.userData.bazooka.visible=false;pl.userData.grenade.visible=false;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;pl.userData.grenadePending=null;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];grenades=[];fx=[];logb=[];hp=100;ammo=24;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
 {const base=requestedSeed==null?Math.floor(Math.random()*0xffffffff)>>>0:requestedSeed>>>0;let tries=0;do{seed=(base+Math.imul(tries++,0x9e3779b1))>>>0;genIslands();pa=land(A,2000);pb=land(Bi,2000)}while((!pa||!pb)&&tries<8);if(!pa||!pb)throw new Error('No s’ha pogut generar un mapa vàlid amb aquesta llavor')}
@@ -247,5 +308,6 @@ ensureDistributedCount('heli_combat',MAP_SCALE);
 ensureDistributedCount('tanqueta',1+MAP_SCALE);
 islands.forEach(i=>{if(i!==A&&R()<.65){const t=['cotxe','moto','bici'][Math.floor(R()*3)];for(let tries=0;tries<12;tries++){const q=land(i,80);if(q&&clearVehicle(t,q.x,q.z)){add(t,q.x,q.z,rr(0,6.28));break}}}});
 
+ensureJetSkis(add);
 P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0,0,0));world.traverse(o=>{if(o.isMesh&&!o.userData.waterMask){o.castShadow=!o.isInstancedMesh;o.receiveShadow=true}});pl.traverse(o=>{if(o.isMesh)o.castShadow=true});cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);}
 

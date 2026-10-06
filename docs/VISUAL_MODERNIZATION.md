@@ -5,7 +5,9 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.5**.
+Versió actual: **0.3.6**.
+
+Revisió 0.3.6: mínim de quatre motos aquàtiques per mapa. Comprovació final contra les caixes de tots els vehicles, inclosos els enemics, amb marge de separació. En cas de conflicte es busca una posició seguint la costa en trams de 100 m; es prova l’altra direcció o un altre punt costaner si no hi ha espai vàlid. Es mantenen dins del límit i sobre l’aigua. La generació no accepta silenciosament un mapa amb menys de quatre motos aquàtiques.
 
 Revisió 0.3.5: barca de rems amb flotació 30 cm més baixa i màscara d’aigua interior. Integrada sobre 0.3.4, conservant ferris, transport de vehicles, granades i selector de qualitat. La prova smoke inclou l’offset, les ombres i l’exclusió de la màscara dels fragments; s’ha reparat també una cometa imbricada i el nom de variable d’una comprovació de la tanqueta.
 
@@ -413,6 +415,9 @@ Les cinc millores prioritzades el 2026-10-05 estan implementades.
 - percepció enemiga cachejada;
 - col·lisions segmentades de projectils;
 - LOD lògic.
+
+### Generació de motos aquàtiques
+`tests/jet-skis.cjs`: costa recta controlada amb els helpers OBB reals; desplaçament de 100 m, destinació ocupada, mínim de quatre, separació de ferris/llanxes/vehicles enemics, límits de les dues mides i passada final repetible. `tests/smoke.cjs` comprova també recompte i absència de solapaments en un món complet.
 
 ### Aigua
 `tests/water.cjs` comprova:

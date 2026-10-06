@@ -126,6 +126,8 @@ ok("buildingSrc.includes('roofGroup.userData.hitSegments')&&buildingSrc.includes
 ok("String(roofBreak).includes('HR.push')&&String(updDeb).includes('for(let i=HR.length-1')",'hangar roof destruction uses a collapse animation instead of instant hide');
 ok('worldVisualThrottled','buildings and remote vehicle visuals use reduced update rates');
 ok('faunaLodEnabled','fauna uses distance-based reduced update rates');
+ok("V.filter(v=>v.t==='moto_aquatica').length>=4",'at least four jet skis');
+ok("V.filter(v=>v.t==='moto_aquatica').every(v=>jetSkiSpotClear(v,v))",'all jet skis clear every vehicle and remain on water within bounds');
 const types=['llanxa','moto_aquatica','hover','ferry','cotxe','moto','bici','barca_rems','windsurf','camio','tanqueta','llanxa_coets','tanc','heli','heli_combat'];
 // Keep combat out of movement fixtures while retaining the actual generated enemies.
 run('const savedEnemies=E;E=[];');
