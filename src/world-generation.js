@@ -134,18 +134,41 @@ const near=(r,t)=>{for(let k=0;k<80;k++){const x=pa.x+rr(-r,r),z=pa.z+rr(-r,r),h
 const shores=[];for(let a=0;a<360;a+=12)for(let d=10;d<700;d+=10){const x=pa.x+Math.cos(a*.01745)*d,z=pa.z+Math.sin(a*.01745)*d;if(Math.abs(x)>H-60||Math.abs(z)>H-60)break;if(hAt(x,z)<-2){shores.push({d,x,z,a:a*.01745});break}}
 shores.sort((a,b)=>a.d-b.d);
 const launchSpot=shores[0]?{x:shores[0].x,z:shores[0].z,a:shores[0].a}:null;
-// Dos ferris garantits per mapa, varats prou a prop de platja perquè les rampes puguin connectar terra i coberta.
-const ferrySpots=[];for(const s of shores){
-  if(ferrySpots.some(q=>Math.hypot(q.x-s.x,q.z-s.z)<220))continue;
-  const ux=Math.cos(s.a),uz=Math.sin(s.a),x=s.x+ux*14,z=s.z+uz*14;
-  if(Math.abs(x)>H-28||Math.abs(z)>H-28||hAt(x,z)>-1.25)continue;
-  ferrySpots.push({x,z,hd:Math.atan2(pa.x-x,pa.z-z)});if(ferrySpots.length===2)break
+// Ferris globals: busquem una costa vàlida a qualsevol illa i en triem dues de ben separades.
+const ferrySpotForIsland=(island,islandIndex)=>{
+  const start=R()*Math.PI*2;
+  for(let n=0;n<36;n++){
+    const a=start+n*Math.PI*2/36,ux=Math.cos(a),uz=Math.sin(a);
+    let touchedLand=false;
+    for(let d=Math.max(24,island.r*.22);d<island.r*1.5;d+=8){
+      const sx=island.x+ux*d,sz=island.z+uz*d,h=hAt(sx,sz);
+      if(h>.2){touchedLand=true;continue}
+      if(!touchedLand)continue;
+      if(h<-1.7){
+        const x=sx+ux*14,z=sz+uz*14;
+        if(Math.abs(x)>H-28||Math.abs(z)>H-28||hAt(x,z)>-1.25)break;
+        return{x,z,hd:Math.atan2(island.x-x,island.z-z),islandIndex,islandX:island.x,islandZ:island.z}
+      }
+      if(h<-5)break
+    }
+  }
+  return null
+};
+const ferryCandidates=[];
+for(let islandIndex=0;islandIndex<islands.length;islandIndex++){
+  const q=ferrySpotForIsland(islands[islandIndex],islandIndex);
+  if(q)ferryCandidates.push(q)
 }
-for(let i=ferrySpots.length;i<2&&shores.length;i++){
-  const s=shores[Math.floor(i*shores.length/2)%shores.length],ux=Math.cos(s.a),uz=Math.sin(s.a);
-  ferrySpots.push({x:s.x+ux*14,z:s.z+uz*14,hd:Math.atan2(pa.x-(s.x+ux*14),pa.z-(s.z+uz*14))})
+const ferrySpots=[];
+if(ferryCandidates.length){
+  const first=ferryCandidates[Math.floor(R()*ferryCandidates.length)];ferrySpots.push(first);
+  const second=ferryCandidates.filter(q=>q.islandIndex!==first.islandIndex).sort((a,b)=>Math.hypot(b.x-first.x,b.z-first.z)-Math.hypot(a.x-first.x,a.z-first.z))[0];
+  if(second)ferrySpots.push(second)
 }
-ferrySpots.slice(0,2).forEach(q=>add('ferry',q.x,q.z,q.hd,{coastal:true,guaranteed:true}));
+for(let i=0;i<ferryCandidates.length&&ferrySpots.length<2;i++){
+  const q=ferryCandidates[i];if(!ferrySpots.some(f=>f.islandIndex===q.islandIndex))ferrySpots.push(q)
+}
+ferrySpots.slice(0,2).forEach(q=>add('ferry',q.x,q.z,q.hd,{coastal:true,guaranteed:true,ferryIslandIndex:q.islandIndex,ferryIslandX:q.islandX,ferryIslandZ:q.islandZ}));
 // La llanxa inicial comparteix sovint el millor punt de costa amb un ferry.
 // Si hi ha solapament, la desplacem 100 m seguint la costa (tangent local), no mar endins.
 if(launchSpot){
