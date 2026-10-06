@@ -1,8 +1,31 @@
 // Compatibility extraction: shared state remains in game-core.js.
-function mvE(u,s){const nx=u.x-Math.sin(u.hd)*s,nz=u.z-Math.cos(u.hd)*s,isVeh=['jeep','tanqueta','tanc'].includes(u.t);
-let clear=hAt(nx,nz)>-.8&&!treeHit(nx,nz,isVeh?vehicleRadius(vehicleHitType(u.t))*.4:1.2)&&Math.abs(nx)<H-5&&Math.abs(nz)<H-5&&!wallCandidates(nx,nz,1.5).some(w=>!w.open&&nx>w.x0-1.5&&nx<w.x1+1.5&&nz>w.z0-1.5&&nz<w.z1+1.5);
-if(clear&&isVeh){const test=vehicleBox(u,nx,nz,u.hd);clear=!vehicleObstacles(u).some(o=>vehicleHeightCompatible(u,o)&&obbOverlap(test,vehicleBox(o)))}
-if(clear){u.x=nx;u.z=nz}else u.wt=0}
+function enemyMoveClear(u,nx,nz,hd,isVeh){
+  const r=isVeh?Math.max(1.5,vehicleRadius(vehicleHitType(u.t))*.55):1.5;
+  let clear=hAt(nx,nz)>-.8&&!treeHit(nx,nz,isVeh?vehicleRadius(vehicleHitType(u.t))*.4:1.2)&&Math.abs(nx)<H-5&&Math.abs(nz)<H-5&&!wallCandidates(nx,nz,r).some(w=>!w.open&&nx>w.x0-r&&nx<w.x1+r&&nz>w.z0-r&&nz<w.z1+r);
+  if(clear&&isVeh){const test=vehicleBox(u,nx,nz,hd);clear=!vehicleObstacles(u).some(o=>vehicleHeightCompatible(u,o)&&obbOverlap(test,vehicleBox(o)))}
+  return clear
+}
+function mvE(u,s){
+  const isVeh=['jeep','tanqueta','tanc'].includes(u.t),tryStep=hd=>{
+    const nx=u.x-Math.sin(hd)*s,nz=u.z-Math.cos(hd)*s;
+    if(!enemyMoveClear(u,nx,nz,hd,isVeh))return false;
+    u.hd=hd;u.x=nx;u.z=nz;return true
+  };
+  const desired=u.hd;
+  if(tryStep(desired)){if(isVeh)u.blockedT=Math.max(0,(u.blockedT||0)-.08);return}
+  if(isVeh){
+    u.blockedT=(u.blockedT||0)+.08;
+    const side=u.avoidSide||1,angles=[Math.PI/7,Math.PI/4,Math.PI/3,Math.PI/2];
+    for(const a of angles){
+      if(tryStep(desired+side*a)){u.avoidSide=side;return}
+      if(tryStep(desired-side*a)){u.avoidSide=-side;return}
+    }
+    // Si queda realment encaixat, canvia el costat preferit i força un nou objectiu de patrulla.
+    if(u.blockedT>.8){u.avoidSide=-(u.avoidSide||1);u.blockedT=0;u.wt=0}
+    return
+  }
+  u.wt=0
+}
 const ENEMY_SENSE_DT=.1;
 function updEn(dt){E.forEach(u=>{
   u.alert=Math.max(0,u.alert-dt);u.cd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);
