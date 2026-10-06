@@ -1,12 +1,13 @@
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 window.HUNTER_VEHICLES=Object.freeze({
-  scales:Object.freeze({llanxa:1.3,llanxa_coets:1.35,moto_aquatica:1.08,barca_rems:.98,windsurf:1.05,hover:1.3,cotxe:1.3,moto:1.2,bici:1.2,camio:1.8125,tanqueta:1.8125,tanc:2.25,heli:1.75,heli_combat:1.82}),
-  radii:Object.freeze({llanxa:5.5,llanxa_coets:5.8,moto_aquatica:2.1,barca_rems:3.25,windsurf:2.3,hover:4.8,cotxe:3.6,moto:2.2,bici:1.9,camio:4.8,tanqueta:4.5,tanc:5.6,heli:8,heli_combat:8.4}),
+  scales:Object.freeze({llanxa:1.3,llanxa_coets:1.35,moto_aquatica:1.08,barca_rems:.98,windsurf:1.05,hover:1.3,ferry:1,cotxe:1.3,moto:1.2,bici:1.2,camio:1.8125,tanqueta:1.8125,tanc:2.25,heli:1.75,heli_combat:1.82}),
+  radii:Object.freeze({llanxa:5.5,llanxa_coets:5.8,moto_aquatica:2.1,barca_rems:3.25,windsurf:2.3,hover:4.8,ferry:19,cotxe:3.6,moto:2.2,bici:1.9,camio:4.8,tanqueta:4.5,tanc:5.6,heli:8,heli_combat:8.4}),
   hitboxes:Object.freeze({
-    llanxa:[4.4,10.6],llanxa_coets:[4.5,10.8],moto_aquatica:[1.7,3.8],barca_rems:[2.7,6.1],windsurf:[1.9,4.3],hover:[4.2,7.4],
+    llanxa:[4.4,10.6],llanxa_coets:[4.5,10.8],moto_aquatica:[1.7,3.8],barca_rems:[2.7,6.1],windsurf:[1.9,4.3],hover:[4.2,7.4],ferry:[16,36],
     cotxe:[3.2,5.9],moto:[1.35,2.8],bici:[1.15,2.4],camio:[3.6,7.8],tanqueta:[3.15,5.1],tanc:[4.2,7.1],
     heli:[3.4,11.2],heli_combat:[2.8,11.8]
   }),
+  decks:Object.freeze({ferry:Object.freeze({halfW:6.7,halfL:12.8,ramp:5.8,y:2.2,rampY:.45})}),
   createFactory(THREE,{box,material,shadows}){
     const VS=this.scales;
     const rod=(g,a,b,r,c,profile='metal')=>{const v=new THREE.Vector3(...a),w=new THREE.Vector3(...b),delta=w.clone().sub(v),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),8),material(c,profile));m.position.copy(v.add(w).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());g.add(m);return m};
@@ -143,6 +144,23 @@ window.HUNTER_VEHICLES=Object.freeze({
         const sm=new THREE.Mesh(geom,material(0xe86d4b,'paint'));g.add(sm);
         // Travesser a l'alçada natural de les mans del rider dempeus.
         rod(g,[0,2.62,.25],[1.82,1.86,.25],.055,metal)
+      }
+      if(t==='ferry'){
+        const hullCol=0x4e6570,deckCol=0x8f9692,edge=0xd7d2bd,cabin=0xe7e3d5;
+        box(g,16,2.25,27.5,hullCol,0,.7,0,'paint');
+        box(g,15.2,.3,25.8,deckCol,0,2.12,0,'metal');
+        for(const x of[-7.55,7.55])box(g,.28,1.05,25.6,edge,x,2.58,0,'metal');
+        const frontRamp=box(g,13.6,.3,6.2,deckCol,0,1.35,-15.6,'metal');frontRamp.rotation.x=-.22;
+        const rearRamp=box(g,13.6,.3,6.2,deckCol,0,1.35,15.6,'metal');rearRamp.rotation.x=.22;
+        for(const x of[-6.55,6.55]){rod(g,[x,2.3,-12.8],[x,.65,-18.4],.12,edge);rod(g,[x,2.3,12.8],[x,.65,18.4],.12,edge)}
+        box(g,3.35,3.7,7.6,cabin,5.35,4.05,1.8,'paint');
+        box(g,3.05,1.05,7.1,glass,5.35,4.62,1.8,'glass');
+        box(g,3.65,.28,8.05,hullCol,5.35,6.02,1.8,'metal');
+        for(const z of[-1.05,1.15,3.35])box(g,.16,1.05,.18,hullCol,3.72,4.62,z,'metal');
+        rod(g,[5.35,6.15,3.8],[5.35,9.4,3.8],.11,metal);box(g,1.25,.18,.18,0x30383a,5.35,9.42,3.8,'metal');
+        for(const x of[-6.8,6.8])for(const z of[-10,-5,0,5,10])round(g,.18,.28,0x252d31,x,1.45,z,'z','rubber');
+        for(const z of[-11.7,11.7])for(const x of[-4.5,0,4.5])box(g,2.2,.08,.28,0xf1e9c5,x,2.32,z,'paint');
+        g.userData.ferryDeck=true;
       }
       if(t==='hover'){box(g,5,.85,8,rubber,0,.55,0,'rubber');for(const x of[-2.35,2.35])for(let z=-3.5;z<4;z+=.65)box(g,.2,.7,.48,0x394145,x,.5,z,'rubber');box(g,4.45,.85,6.7,0xcf9e4f,0,1.38,-.2,'paint');box(g,2.75,1.12,2.9,glass,0,2.2,-.92,'glass');box(g,2.98,.22,3.2,0xcda75f,0,2.82,-.92,'paint');for(const x of[-2.05,2.05])box(g,.18,.3,6.7,0xa97835,x,1.25,-.2,'paint');for(const x of[-1.1,1.1])box(g,.42,.22,.16,0xffe09a,x,1.45,-3.55,'paint');const duct=new THREE.Mesh(new THREE.TorusGeometry(1.55,.2,8,20),material(metal,'metal'));duct.position.set(0,2.9,3);g.add(duct);const fan=new THREE.Group();fan.position.copy(duct.position);for(let i=0;i<4;i++){const blade=box(fan,.2,2.8,.12,rubber,0,0,0,'rubber');blade.rotation.z=i*Math.PI/4}g.add(fan);g.userData.fan=fan;round(g,.28,.3,0x7b8588,0,2.9,3,'z','metal');for(const x of[-1.7,1.7]){box(g,.15,2.05,1,0xbe8c43,x,2.68,3.5,'paint');rod(g,[x,1.7,2.65],[x,3.65,3.2],.07,metal)}box(g,1.4,.18,.8,0x5b4939,0,1.88,1.45,'paint')}
       if(t==='heli'||t==='heli_combat'){
