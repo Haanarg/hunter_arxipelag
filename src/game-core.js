@@ -162,9 +162,10 @@ let started=0,DIF=1,AC=null,eng=null,seaAudio=null,logb=[],fa=[],pi_=0;const las
 const PT=[];for(let i=0;i<100;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,depthWrite:false}));m.visible=false;scene.add(m);PT.push({m,life:0,max:1,s:1})}
 function puff(x,y,z,c,s,rise=0){const p=PT[pi_++%100];p.life=p.max=1.1;p.s=s;p.rise=rise;p.m.material.color.setHex(c);p.m.position.set(x+rn(-.6,.6),y,z+rn(-.6,.6));p.m.visible=true}
 function mark(){const q=cv||P;logb.push({n:'P'+(logb.length+1),x:q.x,z:q.z});msg='Coordenades guardades: '+(q.x|0)+', '+(q.z|0);msgT=2}
-function spawnFauna(){fa=[];for(let k=0;k<16;k++){const bird=window.HUNTER_FAUNA.createGull(THREE,{box:bx,material:M}),o=bird.o,wl=bird.wl,wr=bird.wr;world.add(o);
-fa.push({k:'g',o,wl,wr,cx:rn(-H+200,H-200),cz:rn(-H+200,H-200),r:rn(40,120),a:rn(0,6.28),sp:rn(.15,.3),y:rn(25,55),x:0,z:0})}
-for(let k=0;k<10;k++){let cx,cz,n=0;do{cx=rn(-H+150,H-150);cz=rn(-H+150,H-150)}while(hAt(cx,cz)>-6&&++n<60);if(hAt(cx,cz)>-6)continue;
+function spawnFauna(){fa=[];for(let k=0;k<48;k++){const bird=window.HUNTER_FAUNA.createGull(THREE,{box:bx,material:M}),o=bird.o,wl=bird.wl,wr=bird.wr;world.add(o);
+const cx=rn(-H+200,H-200),cz=rn(-H+200,H-200),baseY=rn(25,55);
+fa.push({k:'g',o,wl,wr,cx,cz,r:rn(40,120),a:rn(0,6.28),sp:rn(.15,.3),y:baseY,flyY:Math.max(baseY,hAt(cx,cz)+10),x:cx,z:cz})}
+for(let k=0;k<30;k++){let cx,cz,n=0;do{cx=rn(-H+150,H-150);cz=rn(-H+150,H-150)}while(hAt(cx,cz)>-6&&++n<60);if(hAt(cx,cz)>-6)continue;
 const o=window.HUNTER_FAUNA.createShark(THREE,{material:M});world.add(o);fa.push({k:'s',o,cx,cz,r:rn(12,28),a:rn(0,6.28),sp:rn(.25,.45),x:cx,z:cz})}}
 function updExtra(dt,t){updDeb(dt);
 fa.forEach(f=>{
@@ -173,8 +174,18 @@ fa.forEach(f=>{
   f.lodAcc=(f.lodAcc||0)+dt;
   if(interval>0&&f.lodAcc<interval)return;
   const step=f.lodAcc;f.lodAcc=0;f.a+=f.sp*step;f.x=f.cx+Math.cos(f.a)*f.r;f.z=f.cz+Math.sin(f.a)*f.r;f.o.rotation.y=Math.PI-f.a;
-  if(f.k=='g'){f.o.position.set(f.x,f.y+Math.sin(t+f.cx)*2,f.z);f.wl.rotation.z=Math.sin(t*8+f.cx)*.5;f.wr.rotation.z=-f.wl.rotation.z}
-  else{f.o.position.set(f.x,wy(f.x,f.z,t)*.8+.8,f.z);if(d2<FAUNA_NEAR2&&Math.random()<.1)puff(f.x,f.o.position.y-.6,f.z,0xffffff,1.2);
+  if(f.k=='g'){
+    const terrainY=Math.max(0,hAt(f.x,f.z))+10;
+    let obstacleY=terrainY;
+    for(const b of buildingCandidates(f.x,f.z,5))if(Math.abs(f.x-b.x)<b.w/2+5&&Math.abs(f.z-b.z)<b.d/2+5)obstacleY=Math.max(obstacleY,b.fy+b.h+8);
+    const cruiseY=f.y+Math.sin(t+f.cx)*2,targetY=Math.max(cruiseY,obstacleY),
+          climbK=1-Math.exp(-3.8*step);
+    f.flyY=(f.flyY??targetY)+(targetY-(f.flyY??targetY))*climbK;
+    // Si el relleu puja de cop, mai permetre que el model quedi dins de la muntanya/edifici.
+    if(f.flyY<obstacleY)f.flyY=obstacleY;
+    f.o.position.set(f.x,f.flyY,f.z);f.wl.rotation.z=Math.sin(t*8+f.cx)*.5;f.wr.rotation.z=-f.wl.rotation.z
+  }
+  else{f.o.position.set(f.x,wy(f.x,f.z,t)-.18,f.z);if(d2<FAUNA_NEAR2&&Math.random()<.1)puff(f.x,wy(f.x,f.z,t)+.02,f.z,0xffffff,1.2);
   const hx=P.x-f.x,hz=P.z-f.z;if(!cv&&!over&&hx*hx+hz*hz<36&&hAt(P.x,P.z)<-1.2){hurtP(step*10);msg='Un tauró et mossega!';msgT=1}}
 });
 V.forEach(v=>{
