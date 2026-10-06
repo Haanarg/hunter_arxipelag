@@ -22,9 +22,15 @@ const http=require('http'),fs=require('fs'),path=require('path'),assert=require(
  await page.evaluate(()=>{const q=V.find(v=>v.t==='llanxa');cam.position.set(q.x+45,q.o.position.y+24,q.z+65);cam.lookAt(q.x,q.o.position.y,q.z);ren.render(scene,cam)});
  await page.screenshot({path:path.join(require('os').tmpdir(),'hunter-coast-')+(mobile?'mobile':'desktop')+'.png'});
  await page.evaluate(()=>{const before=elapsed;update(.1,elapsed+.1);if(elapsed!==before)throw Error('pause clock');resume();update(.1,elapsed+.1);if(elapsed<=before)throw Error('resume clock');panel('pause')});
- const result=await page.evaluate(()=>({vehicles:V.length,types:new Set(V.map(v=>v.t)).size,buildings:B.length,programs:ren.info.programs.length,shaders:ren.info.programs.every(p=>!p.diagnostics||p.diagnostics.runnable),profile:qualityName,srgb:ren.outputColorSpace===THREE.SRGBColorSpace,missile:!!document.querySelector('[data-k="KeyR"]'),climb:!!document.querySelector('[data-k="KeyU"]')&&!!document.querySelector('[data-k="KeyJ"]'),seedSearch:!!document.getElementById('seedSearchOpen')&&!!document.getElementById('seedSearchScreen')&&typeof runSeedSearch==='function'}));
- console.log(JSON.stringify({mobile,result,errors,warnings}));assert.equal(errors.length,0,'console errors');assert(result.shaders,'compiled shaders');assert.equal(result.types,15);assert(result.srgb&&result.missile&&result.climb&&result.seedSearch);assert.equal(result.profile,mobile?'mobile':'desktop');
+ const result=await page.evaluate(()=>({vehicles:V.length,types:new Set(V.map(v=>v.t)).size,buildings:B.length,programs:ren.info.programs.length,shaders:ren.info.programs.every(p=>!p.diagnostics||p.diagnostics.runnable),profile:qualityName,srgb:ren.outputColorSpace===THREE.SRGBColorSpace,missile:!!document.querySelector('[data-k="KeyR"]'),climb:!!document.querySelector('[data-k="KeyU"]')&&!!document.querySelector('[data-k="KeyJ"]'),seedSearch:!!document.getElementById('seedSearchOpen')&&!!document.getElementById('seedSearchScreen')&&typeof runSeedSearch==='function',lowGraphics:!!document.getElementById('lowGraphics')}));
+ console.log(JSON.stringify({mobile,result,errors,warnings}));assert.equal(errors.length,0,'console errors');assert(result.shaders,'compiled shaders');assert.equal(result.types,15);assert(result.srgb&&result.missile&&result.climb&&result.seedSearch&&result.lowGraphics);assert.equal(result.profile,mobile?'mobile':'desktop');
  await context.close();
  }
+ const lowContext=await browser.newContext({viewport:{width:1360,height:900},isMobile:false,hasTouch:false,deviceScaleFactor:1});
+ const lowPage=await lowContext.newPage();await lowPage.goto('http://127.0.0.1:'+server.address().port+'/?low=1');
+ await lowPage.waitForFunction(()=>typeof qualityName!=='undefined',null,{timeout:60000});
+ const lowResult=await lowPage.evaluate(()=>({profile:qualityName,checked:document.getElementById('lowGraphics')?.checked,shadows:ren.shadowMap.enabled,waterSegments:visualQuality.waterSegments}));
+ assert.equal(lowResult.profile,'mobile');assert(lowResult.checked);assert.equal(lowResult.shadows,false);assert.equal(lowResult.waterSegments,240);
+ await lowContext.close();
  }finally{if(browser)await browser.close();server.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
