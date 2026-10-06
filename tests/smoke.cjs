@@ -159,6 +159,11 @@ ok('V.filter(v=>v.t==="llanxa_coets").length===1','unique rocket boat');
 ok('V.filter(v=>v.t==="ferry").length===2','two guaranteed ferries');
 ok('VT.ferry.life===8&&VT.ferry.maxF<VT.llanxa.maxF','ferry is slow and survives eight structural hits');
 run(`{
+  const f=V.find(v=>v.t==='ferry'),dx=f.x-P.base.x,dz=f.z-P.base.z,fx=-Math.sin(f.hd),fz=-Math.cos(f.hd);
+  globalThis.ferryFacesSea=fx*dx+fz*dz>0;
+}`);
+ok('ferryFacesSea','ferry bow faces away from the player base toward open water');
+run(`{
   const f=V.find(v=>v.t==='ferry'),q=V.find(v=>v.t==='cotxe');
   q.x=f.x;q.z=f.z;q.hd=f.hd;attachToFerry(q,f);
   const lx=q.carrierLX,lz=q.carrierLZ,rel=q.carrierHD;
