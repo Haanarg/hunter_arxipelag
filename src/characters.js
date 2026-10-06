@@ -102,7 +102,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
   },
   animatePlayer(player,{forward,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),move=Math.min(1,Math.abs(forward)),dir=forward<0?-1:1;
-    u.firePose=Math.max(0,(u.firePose||0)-dt);u.meleePose=Math.max(0,(u.meleePose||0)-dt);u.grenadeThrow=Math.max(0,(u.grenadeThrow||0)-dt);u.breath=(u.breath||0)+dt*1.7;
+    u.firePose=Math.max(0,(u.firePose||0)-dt);u.meleePose=Math.max(0,(u.meleePose||0)-dt);u.grenadeThrow=Math.max(0,(u.grenadeThrow||0)-dt);if(grenadeEquipped&&u.grenadeThrow<=0)u.grenadeReleased=false;u.breath=(u.breath||0)+dt*1.7;
     u.ph+=dt*(swimming?(move?4.2:2.1):8.4*move);const ph=u.ph,breath=Math.sin(u.breath);
 
     const tx=(joint,target,rate=limbK)=>joint.rotation.x+=(target-joint.rotation.x)*rate;
