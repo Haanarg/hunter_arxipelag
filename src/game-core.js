@@ -150,7 +150,7 @@ mapa_tanc:{n:'Mapa de tancs',c:0xc6b06a,s:[1.6,.08,1.2],icon:ICON.mapa_tanc,desc
 bazooka:{n:'Bazooka',c:0x58664a,s:[2.1,.45,.45],icon:ICON.bazooka,desc:'Llançacoets d’un sol ús. Equipa’l i dispara una càrrega d’alt poder destructiu.',usable:true},
 granada:{n:'Granades',c:0x4a5842,s:[.65,.65,.65],icon:ICON.granada,desc:'Paquet de 5 granades. Equipa-les i llença-les amb Dispar.',usable:true},
 arma:{n:'Munició',c:0x555b66,s:[1.6,.35,.35],icon:ICON.arma,desc:'Caixa de munició per a l’arma personal.',usable:false},
-expl:{n:'Explosius',c:0xe02020,s:[.9,.9,.9],icon:ICON.expl,desc:'Manat de TNT amb metxa. Planta una càrrega amb retard de 3 segons.',usable:true},
+expl:{n:'Explosius',c:0xe02020,s:[.9,.9,.9],icon:ICON.expl,desc:'Manat de TNT amb metxa. Planta una càrrega pesada amb retard de 3 segons i força destructiva triple.',usable:true},
 disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa enemiga vermella. Activa o desactiva la disfressa.',usable:true}
 };
 // combat i enemics
