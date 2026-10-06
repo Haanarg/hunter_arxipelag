@@ -124,7 +124,7 @@ ok("buildingSrc.includes('roofGroup.userData.hitSegments')&&buildingSrc.includes
 ok("String(roofBreak).includes('HR.push')&&String(updDeb).includes('for(let i=HR.length-1')",'hangar roof destruction uses a collapse animation instead of instant hide');
 ok('worldVisualThrottled','buildings and remote vehicle visuals use reduced update rates');
 ok('faunaLodEnabled','fauna uses distance-based reduced update rates');
-const types=['llanxa','moto_aquatica','hover','cotxe','moto','bici','barca_rems','windsurf','camio','tanqueta','llanxa_coets','tanc','heli','heli_combat'];
+const types=['llanxa','moto_aquatica','hover','ferry','cotxe','moto','bici','barca_rems','windsurf','camio','tanqueta','llanxa_coets','tanc','heli','heli_combat'];
 // Keep combat out of movement fixtures while retaining the actual generated enemies.
 run('const savedEnemies=E;E=[];');
 for(const t of types){
@@ -156,6 +156,18 @@ ok('rowGripError<1e-6&&rowFacesStern&&rowFeetForward','rower faces stern with fe
 
 run('E=savedEnemies;playerFall=null;playerEject=null;');
 ok('V.filter(v=>v.t==="llanxa_coets").length===1','unique rocket boat');
+ok('V.filter(v=>v.t==="ferry").length===2','two guaranteed ferries');
+ok('VT.ferry.life===8&&VT.ferry.maxF<VT.llanxa.maxF','ferry is slow and survives eight structural hits');
+run(`{
+  const f=V.find(v=>v.t==='ferry'),q=V.find(v=>v.t==='cotxe');
+  q.x=f.x;q.z=f.z;q.hd=f.hd;attachToFerry(q,f);
+  const lx=q.carrierLX,lz=q.carrierLZ,rel=q.carrierHD;
+  f.x+=23;f.z-=17;f.hd+=.61;syncFerryCargo();
+  const p=ferryWorld(f,lx,lz);
+  globalThis.ferryCarryOk=q.carrier===f&&Math.hypot(q.x-p.x,q.z-p.z)<1e-6&&Math.abs(wrapAngle(q.hd-(f.hd+rel)))<1e-6;
+  detachFromFerry(q);
+}`);
+ok('ferryCarryOk','ferry cargo follows translation and rotation');
 ok('pl.userData.ael&&pl.userData.aer&&pl.userData.lkl&&pl.userData.lkr','articulated player preserved');
 ok('V.find(v=>v.t==="tanc").o.userData.tracks.length===2','two animated tank tracks');
 ok("buildingSrc.includes('const spring=.12')&&buildingSrc.includes('sideWalls:[]')",'hangar roof reaches the ground without visual side walls');
@@ -178,7 +190,7 @@ ok("riderSrc.includes('torso.rotation.set(0,-Math.PI/2,-.035+lean)')",'windsurf 
 ok("HUNTER_TERRAIN.palette.some(p=>p[0]===30&&p[1]===0x138d31)&&HUNTER_TERRAIN.palette.some(p=>p[0]===40&&p[1]===0x0f7b2b)",'high terrain remains green');
 ok("String(vegetate).includes('highPalm=.22+Math.max(0,Math.min(1,(h-28)/14))*.12')&&String(vegetate).includes('h<4)L=q<.12?pm:null')",'high palm density increases while low-altitude chance stays unchanged');
 run(`{const a=PM.t.geometry.attributes.position.array;let maxX=0;for(let i=0;i<a.length;i+=3)maxX=Math.max(maxX,Math.abs(a[i]));globalThis.curvedPalmMaxX=maxX}`);ok('curvedPalmMaxX>1.5','palm trunk geometry has a strong curved center deviation');
-console.log(JSON.stringify({passed:true,vehicles:types.length,buildings:run('B.length'),seconds:(Date.now()-start)/1000,checks:['deferred startup','real menu','14 vehicles','player joints','tank tracks','OBB','destruction cleanup','boat/water agreement','pause/resume','restart','vegetation','curved palm trunks']}));
+console.log(JSON.stringify({passed:true,vehicles:types.length,buildings:run('B.length'),seconds:(Date.now()-start)/1000,checks:['deferred startup','real menu','15 vehicles','player joints','tank tracks','OBB','destruction cleanup','boat/water agreement','pause/resume','restart','vegetation','curved palm trunks']}));
 
 
 })().catch(e=>{console.error(e);process.exitCode=1});
