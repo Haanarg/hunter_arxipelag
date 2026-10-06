@@ -5,7 +5,7 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3**.
+Versió actual: **0.3.1**.
 
 La versió del joc es defineix en un únic punt: `src/version.mjs`, mitjançant la constant `GAME_VERSION`. La pantalla inicial llegeix aquesta constant i mostra la versió en un cantó, de manera que la UI i el codi comparteixen la mateixa font de veritat.
 
@@ -19,7 +19,7 @@ La versió del joc es defineix en un únic punt: `src/version.mjs`, mitjançant 
 - Cada vegada que es publiqui un canvi a `main` que vulguem identificar com una revisió o una nova fita, s'ha d'actualitzar `GAME_VERSION`.
 - Aquest document s'ha de mantenir coherent amb la versió publicada.
 
-La versió **0.1** correspon a l'estat del joc en el moment d'introduir aquest sistema de versionat. La versió **0.2** introdueix el ferry i, sobretot, el primer sistema de transport de vehicles sobre una plataforma mòbil. La revisió **0.2.1** evita que la llanxa inicial comparteixi posició amb un ferry: si hi ha solapament, la llanxa es desplaça 100 m paral·lelament a la costa, mantenint-se a l'aigua. La revisió **0.2.2** corregeix l'orientació inicial del ferry perquè la proa apunti cap al mar i el jugador quedi encarat mar endins quan en pren el control. La revisió **0.2.3** distribueix els dos ferris entre costes d'illes diferents de tot el mapa, en lloc de concentrar-los a l'illa inicial. La versió **0.3** incorpora una pantalla integrada de cerca de llavors que prova mapes amb el generador real i ordena els resultats per distància entre la base inicial i el ferry més proper.
+La versió **0.1** correspon a l'estat del joc en el moment d'introduir aquest sistema de versionat. La versió **0.2** introdueix el ferry i, sobretot, el primer sistema de transport de vehicles sobre una plataforma mòbil. La revisió **0.2.1** evita que la llanxa inicial comparteixi posició amb un ferry: si hi ha solapament, la llanxa es desplaça 100 m paral·lelament a la costa, mantenint-se a l'aigua. La revisió **0.2.2** corregeix l'orientació inicial del ferry perquè la proa apunti cap al mar i el jugador quedi encarat mar endins quan en pren el control. La revisió **0.2.3** distribueix els dos ferris entre costes d'illes diferents de tot el mapa, en lloc de concentrar-los a l'illa inicial. La versió **0.3** incorpora una pantalla integrada de cerca de llavors que prova mapes amb el generador real i ordena els resultats per distància entre la base inicial i el ferry més proper. La revisió **0.3.1** augmenta moderadament la velocitat dels dos vehicles aquàtics principals: la llanxa passa a 35 de velocitat punta i el ferry a 15; el ferry conserva una acceleració baixa per mantenir la sensació de massa.
 
 ---
 
@@ -225,8 +225,13 @@ Vehicles conduïbles actuals:
 - helicòpter;
 - helicòpter de combat.
 
+### Llanxa
+- Velocitat punta actual: **35**; acceleració: **35**.
+- Manté la mateixa maniobrabilitat, deriva i velocitat de marxa enrere.
+
 ### Ferry
 - Nou vehicle aquàtic gran i lent.
+- Velocitat punta actual: **15**; acceleració: **10**. Continua sent clarament més lent i pesant que la llanxa.
 - Resistència estructural: **8 impactes**.
 - Apareixen **2 ferris garantits per mapa**, situats a prop de platges.
 - Model amb gran coberta oberta, cabina lateral i rampes frontal i posterior.
