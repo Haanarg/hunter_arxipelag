@@ -48,7 +48,8 @@ const compound=(type,q)=>{
   const x=q.x,z=q.z,ang=rr(0,Math.PI*2),mirror=R()<.5?-1:1,cs=Math.cos(ang),sn=Math.sin(ang),local=(dx,dz)=>[dx*mirror,dz],tr=(dx,dz)=>{const [mx,mz]=local(dx,dz);return[x+mx*cs-mz*sn,z+mx*sn+mz*cs]},level=(w,d,blend=16)=>addLevelArea(x,z,w,d,q.h!=null?q.h:rawHAt(x,z),ang,blend),doorToward=(dx,dz)=>{const [mx,mz]=local(dx,dz),tx=-mx,tz=-mz;return Math.abs(tx)>Math.abs(tz)?(tx>0?2:3):(tz>0?0:1)},put=(dx,dz,w,d,h,c,r,opt)=>{const [px,pz]=tr(dx,dz),o={...(opt||{})};if(o.doorSide==null&&!o.hangar)o.doorSide=doorToward(dx,dz);return mkB(px,pz,w,d,h,c,r,o)},prop=(kind,dx,dz,rot=0)=>{const [px,pz]=tr(dx,dz);return compoundProp(kind,px,pz,ang+rot*mirror)},heading=(rot=0)=>ang+rot*mirror;
   if(type==='avancada'){
     level(58,50,18);compoundPad(x,z,50,42,0x6c675c);{const [a1,b1]=tr(-22,17),[a2,b2]=tr(18,-16);compoundPath(a1,b1,a2,b2,4.8,0x786f60)}
-    put(-18,4,12,12,6,0x8a7a70,0x6d2929,{kind:'outpost'});put(17,11,10,10,5.5,0x9b8a78,0x6d2929,{kind:'outpost'});put(13,-16,9,9,5,0x7e756c,0x5f2525,{kind:'outpost'});
+    const oa=put(-18,4,12,12,6,0x8a7a70,0x6d2929,{kind:'outpost'}),ob=put(17,11,10,10,5.5,0x9b8a78,0x6d2929,{kind:'outpost'}),oc=put(13,-16,9,9,5,0x7e756c,0x5f2525,{kind:'outpost'});
+    if(R()<.8)addIt('granada',R()<.55?oa:(R()<.5?ob:oc));
     const [tx,tz]=tr(-24,-18);mkEn('torre',tx,tz);const route=[tr(-18,16),tr(18,16),tr(20,-14),tr(-16,-17)];for(let n=0;n<2;n++){const [sx,sz]=route[n*2];setPatrol(mkEn('soldat',sx,sz),route.map((p,i)=>route[(i+n*2)%route.length]))}
     for(const p of[[-23,18],[-12,21],[5,21],[20,15],[24,2],[21,-15]])prop('barrier',p[0],p[1],p[0]<0?0:Math.PI/2);
     for(const p of[[-18,13],[17,12],[17,-12]])prop('sandbag',p[0],p[1]);prop('lamp',-2,17);prop('sign',-1,11);prop('crate',2,-2);prop('crate',4,-2);prop('barrel',-3,-1);
@@ -75,7 +76,7 @@ const compound=(type,q)=>{
   } else if(type==='polvori'){
     level(64,56,17);compoundPad(x,z,52,44,0x706a5c);{const [a1,b1]=tr(0,-20),[a2,b2]=tr(0,12);compoundPath(a1,b1,a2,b2,4,0x746d5f)}
     {const p1=tr(-27,-23),p2=tr(27,-23),p3=tr(27,23),p4=tr(-27,23),g1=tr(-6,-23),g2=tr(6,-23);barbedSegment(p1[0],p1[1],g1[0],g1[1]);barbedSegment(g2[0],g2[1],p2[0],p2[1]);barbedSegment(p2[0],p2[1],p3[0],p3[1]);barbedSegment(p3[0],p3[1],p4[0],p4[1]);barbedSegment(p4[0],p4[1],p1[0],p1[1])}
-    const a=put(-15,3,13,11,6,0x918b78,0x664338,{kind:'ammo'}),b=put(15,6,9,9,5.2,0x847a69,0x574035,{kind:'ammo'});addIt('expl',a);addIt('expl',b);if(R()<.55)addIt('arma',a);if(R()<.35)addIt('bazooka',R()<.5?a:b);
+    const a=put(-15,3,13,11,6,0x918b78,0x664338,{kind:'ammo'}),b=put(15,6,9,9,5.2,0x847a69,0x574035,{kind:'ammo'});addIt('expl',a);addIt('expl',b);addIt('granada',R()<.5?a:b);if(R()<.45)addIt('granada',R()<.5?a:b);if(R()<.55)addIt('arma',a);if(R()<.35)addIt('bazooka',R()<.5?a:b);
     for(const p of[[-21,-15],[-11,-18],[0,-18],[11,-18],[21,-14]])prop('barrier',p[0],p[1]);for(const p of[[-3,1],[1,1],[5,1]])prop('ammo',p[0],p[1]);for(const p of[[-22,8],[22,8],[-22,-6],[22,-6]])prop('net',p[0],p[1],Math.PI/2);prop('lamp',0,15);prop('sign',0,-15);const ammoRoute=[tr(-18,-12),tr(18,-12),tr(18,13),tr(-18,13)],ammoDef=[tr(-17,-9),tr(17,-9),tr(15,11)];const [sx,sz]=ammoRoute[0];setDefense(setPatrol(mkEn('soldat',sx,sz),ammoRoute,true),ammoDef)
   } else if(type==='port'){
     const portBest=q.portBest||findPortWater(q);if(!portBest)return false;
@@ -117,7 +118,7 @@ const armorRoute1=[[pb.x-42,pb.z+40],[pb.x+42,pb.z+40],[pb.x+46,pb.z-31],[pb.x-4
 setPatrol(mkEn('tanqueta',pb.x-34,pb.z+36),armorRoute1,true);setPatrol(mkEn('tanqueta',pb.x+34,pb.z+36),armorRoute2,true);
 [[-69,-61],[69,-61],[-69,61],[69,61]].forEach(([a,b])=>mkEn('torre',pb.x+a,pb.z+b));
 islands.forEach(i=>{if(i===A||i===Bi||R()<.5)return;const q=land(i,60);if(!q)return;for(let k=0;k<1+(R()<.4);k++)sp2('soldat',q.x,q.z,0,10);if(R()<.25)sp2('torre',q.x,q.z,5,12)});
-rb.forEach(b=>{const n=R()<.25?0:R()<.6?1:2,pool=['arma','arma','med','med','expl','disf','mapa','bazooka'];for(let k=0;k<n;k++)addIt(pool[Math.floor(R()*pool.length)],b)});
+rb.forEach(b=>{const n=R()<.25?0:R()<.6?1:2,pool=['arma','arma','med','med','expl','granada','granada','disf','mapa','bazooka'];for(let k=0;k<n;k++)addIt(pool[Math.floor(R()*pool.length)],b)});
 addIt('arma',B[0]);addIt('expl',B[1]);addIt('med',B[2]);
 rb.slice().sort(()=>R()-.5).slice(0,2).forEach(b=>addIt('mapa',b));
 rb.slice().sort(()=>R()-.5).slice(0,1+MAP_SCALE).forEach(b=>addIt('mapa_heli',b));
