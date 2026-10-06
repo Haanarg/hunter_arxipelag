@@ -81,9 +81,9 @@ run(`{
 }`);
 ok('lodThresholdsOk','logical LOD thresholds are configured');
 ok("String(handleVehicleImpacts).includes('hurtE(u,dmg);u.alert=12')&&!String(handleVehicleImpacts).includes('hurtE(u,dmg);damageVehicle(v')",'running over soldiers does not damage vehicle structure');
-ok("String(handleVehicleImpacts).includes('killPalm(t);damageVehicle(v,Math.min(18,5+speed*.55),1)')&&!String(handleVehicleImpacts).includes('speed>18?2:1')",'palm collisions always cost exactly one structural impact');
-ok("String(stepV).includes('breakSpeed=barbed?8:14')&&String(stepV).includes("tank=v.t==='tanc'")&&String(stepV).includes('if(tank||speed>breakSpeed)')",'tank breaks walls and barbed wire without a speed threshold');
-ok("String(collisionDamageVehicle).includes("v?.t==='tanc'")",'tank ignores structural damage from collisions');
+ok("String(handleVehicleImpacts).includes('killPalm(t);collisionDamageVehicle(v,Math.min(18,5+speed*.55),1)')&&!String(handleVehicleImpacts).includes('speed>18?2:1')",'palm collisions always cost exactly one structural impact');
+ok("String(stepV).includes('breakSpeed=barbed?8:14')&&String(stepV).includes(\"tank=v.t==='tanc'\")&&String(stepV).includes('if(tank||speed>breakSpeed)')",'tank breaks walls and barbed wire without a speed threshold');
+ok("String(collisionDamageVehicle).includes(\"v?.t==='tanc'\")",'tank ignores structural damage from collisions');
 ok("String(mkB).includes('rammable:true')",'ordinary building walls are marked as rammable');
 ok("String(mkB).includes('rhp:opt.hangar?90:120')",'hangar roof shares wall-equivalent structural life');
 ok("buildingSrc.includes('roofGroup.userData.hitSegments')&&buildingSrc.includes('roofGroup.userData.hangarRoof=true')",'hangar roof exposes segmented collision geometry as one destructible piece');
@@ -101,6 +101,25 @@ for(const t of types){
   ok('cv&&Number.isFinite(cv.o.position.y)','physics '+t);
   run("if(VT[cv.t].m==='a')cv.alt=Math.max(0,hAt(cv.x,cv.z))+.8;toggle()");ok('!cv','exit '+t);
 }
+// Hands must remain attached to actual oar grips through pitching, turning and a full stroke.
+run(`{
+  const q=V.find(v=>v.t==='barca_rems');let maxError=0;
+  for(let j=0;j<24;j++){
+    q.pedalPhase=j*Math.PI/12;q.v=j===23?0:4;q.hd=.73;
+    place(q,j*.1,0,0);poseRider(q,.1);rider.updateWorldMatrix(true,true);
+    for(let i=0;i<2;i++){
+      const hand=rider.userData.limbs[i*2+1].localToWorld(new THREE.Vector3(0,.5,0));
+      const oar=q.o.userData.oars[i],grip=oar.localToWorld(oar.userData.grip.clone());
+      maxError=Math.max(maxError,hand.distanceTo(grip));
+    }
+  }
+  globalThis.rowGripError=maxError;
+  globalThis.rowFacesStern=new THREE.Vector3(0,0,-1).applyQuaternion(rider.userData.torso.quaternion).z>.98;
+  globalThis.rowFeetForward=rider.userData.boots.every(b=>b.position.z>rider.userData.torso.position.z);
+  q.v=0;poseRider(null,0);
+}`);
+ok('rowGripError<1e-6&&rowFacesStern&&rowFeetForward','rower faces stern with feet forward and both hands locked to oars through 24 poses');
+
 run('E=savedEnemies;playerFall=null;playerEject=null;');
 ok('V.filter(v=>v.t==="llanxa_coets").length===1','unique rocket boat');
 ok('pl.userData.ael&&pl.userData.aer&&pl.userData.lkl&&pl.userData.lkr','articulated player preserved');
@@ -109,7 +128,6 @@ ok("buildingSrc.includes('const spring=.12')&&buildingSrc.includes('sideWalls:[]
 ok("String(mkB).includes('Sense parets laterals independents')",'hangar collision model omits lateral walls');
 ok("worldGenSrc.includes(\"prop('fuel',17,18,Math.PI/2)\")&&worldGenSrc.includes(\"prop('sign',31,26,Math.PI/2)\")",'garage props are redistributed away from the annex');
 ok("VD.types.heli_combat.maxF>VD.types.heli.maxF&&VD.types.heli_combat.tu>VD.types.heli.tu&&VD.types.heli_combat.steerResponse>VD.types.heli.steerResponse&&VD.types.heli_combat.yawResponse>VD.types.heli.yawResponse&&VD.types.heli_combat.climb>VD.types.heli.climb",'combat helicopter is faster and more maneuverable than normal helicopter');
-ok("vehSrc.includes('const hullShape=new THREE.Shape()')&&vehSrc.includes('quadraticCurveTo(1.12,-1.75,1.12,0)')&&vehSrc.includes('g.userData.oars.push(pivot)')",'rowboat uses a simple pointed brown oval hull and keeps its oars');
 ok("String(fire).includes('Math.SQRT1_2')&&String(fire).includes(\"c=='heli'\")&&String(fire).includes(\"c=='heli_combat'\")",'both helicopters fire at a 45 degree downward angle');
 ok("String(fire).includes('const a20=Math.PI/9')&&String(fire).includes('fx_*ch,-sv,fz*ch')",'tank fires 20 degrees downward');
 ok("String(secondaryWeapon).includes('fx_*d45,-d45,fz*d45')",'combat helicopter missiles also fire 45 degrees downward');
@@ -130,3 +148,4 @@ console.log(JSON.stringify({passed:true,vehicles:types.length,buildings:run('B.l
 
 
 })().catch(e=>{console.error(e);process.exitCode=1});
+

@@ -62,28 +62,76 @@ window.HUNTER_VEHICLES=Object.freeze({
         for(const x of[-.52,.52])box(g,.16,.13,.7,0xe9e7df,x,.36,.45,'paint');
       }
       if(t==='barca_rems'){
-        const wood=0x8a6847,darkWood=0x5d402b;
-        // Base provisional: buc únic, ovalat i apuntat, per reconstruir la barca a partir d'aquí.
-        const hullShape=new THREE.Shape();
-        hullShape.moveTo(0,-2.7);
-        hullShape.quadraticCurveTo(1.12,-1.75,1.12,0);
-        hullShape.quadraticCurveTo(1.12,1.75,0,2.7);
-        hullShape.quadraticCurveTo(-1.12,1.75,-1.12,0);
-        hullShape.quadraticCurveTo(-1.12,-1.75,0,-2.7);
-        const hullGeom=new THREE.ExtrudeGeometry(hullShape,{depth:.42,bevelEnabled:false});
-        hullGeom.rotateX(-Math.PI/2);
-        const simpleHull=new THREE.Mesh(hullGeom,material(wood,'organic'));
-        simpleHull.position.y=.2;g.add(simpleHull);
-
-        // Es conserven els rems i els seus pivots.
+        // Proa = -Z; popa ampla = +Z. Buc buit de fusta, sense tapa sobre la banyera.
+        const wood=0x987046,darkWood=0x51351f,trim=0xbd905a;
+        const stations=[[-2.9,.025],[-2.55,.48],[-1.95,.88],[-1.1,1.17],[-.15,1.29],[.85,1.28],[1.8,1.17],[2.6,1.02]];
+        const sheer=z=>.98+.15*Math.pow(Math.abs(z)/2.9,2);
+        const meshFromQuads=(quads,color)=>{
+          const positions=[];for(const [a,b,c,d] of quads)positions.push(...a,...b,...c,...a,...c,...d);
+          const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.computeVertexNormals();
+          const mat=material(color,'organic');mat.side=THREE.DoubleSide;
+          const m=new THREE.Mesh(geo,mat);g.add(m);return m;
+        };
+        const levels=[[-.35,.48],[.06,.7],[.52,.9],[1,1]];
+        const point=(s,k,side,inner=false)=>{const [z,w]=s,[h,f]=levels[k];return [side*Math.max(.008,w*f-(inner?.085:0)),k===3?sheer(z):h,z]};
+        for(let k=0;k<3;k++){
+          const quads=[];
+          for(const side of[-1,1])for(let j=0;j<stations.length-1;j++)quads.push([point(stations[j],k,side),point(stations[j+1],k,side),point(stations[j+1],k+1,side),point(stations[j],k+1,side)]);
+          meshFromQuads(quads,[0x745032,0x89613b,wood][k]);
+        }
+        const inside=[],rim=[];
+        for(const side of[-1,1])for(let j=0;j<stations.length-1;j++){
+          const a=stations[j],b=stations[j+1];
+          inside.push([point(a,1,side,true),point(a,3,side,true),point(b,3,side,true),point(b,1,side,true)]);
+          rim.push([point(a,3,side),point(b,3,side),point(b,3,side,true),point(a,3,side,true)]);
+          // Borda contínua i juntes discretes entre taulons.
+          rod(g,point(a,3,side),point(b,3,side),.045,trim,'organic');
+          for(const k of[1,2])rod(g,point(a,k,side),point(b,k,side),.014,darkWood,'organic');
+        }
+        meshFromQuads(inside,0xa17c50);meshFromQuads(rim,trim);
+        // Mirall de popa pla, inclinat cap endins al fons; proa tancada i estreta.
+        for(const index of[0,stations.length-1]){
+          const s=stations[index];meshFromQuads([[point(s,0,-1),point(s,0,1),point(s,3,1),point(s,3,-1)]],wood);
+          rod(g,point(s,3,-1),point(s,3,1),.05,trim,'organic');
+        }
+        const floor=[];
+        for(let j=0;j<stations.length-1;j++){
+          const a=stations[j],b=stations[j+1];
+          floor.push([[-a[1]*.69,.075,a[0]],[a[1]*.69,.075,a[0]],[b[1]*.69,.075,b[0]],[-b[1]*.69,.075,b[0]]]);
+        }
+        meshFromQuads(floor,0x805f3d);
+        for(const x of[-.48,-.24,0,.24,.48])box(g,.018,.012,3.8,darkWood,x,.085,.35,'organic');
+        for(const z of[-1.12,1.55]){
+          const seatWidth=z<0?1.85:2.08;
+          box(g,seatWidth,.13,.57,trim,0,.78,z,'organic');
+          for(const x of[-.75,.75])box(g,.09,.63,.12,darkWood,x,.4,z,'organic');
+          box(g,seatWidth-.04,.013,.018,darkWood,0,.852,z,'organic');
+        }
+        // Petit reforç triangular de proa, sense tapar l’interior.
+        meshFromQuads([[[0,1.1,-2.86],[-.48,1.075,-2.5],[.48,1.075,-2.5],[0,1.1,-2.86]]],trim);
         const oars=new THREE.Group();g.add(oars);g.userData.oars=[];
+        g.userData.rowingSeat={y:.855,z:-1.12};
         for(const side of[-1,1]){
-          const pivot=new THREE.Group();pivot.position.set(side*1.08,1.02,-.12);oars.add(pivot);
-          round(g,.075,.18,metal,side*1.08,1.08,-.12,'y','metal');
-          box(pivot,1.55,.065,.065,darkWood,-side*.72,0,0,'organic');
-          box(pivot,1.95,.065,.065,darkWood,side*.94,0,0,'organic');
-          const blade=box(pivot,.62,.085,.32,darkWood,side*1.98,0,0,'organic');blade.rotation.z=.08*side;
-          g.userData.oars.push(pivot)
+          const pivot=new THREE.Group();pivot.position.set(side*1.27,1.08,-.18);oars.add(pivot);
+          round(g,.075,.18,metal,side*1.27,1.07,-.18,'y','metal');
+          rod(pivot,[-side*.87,0,0],[side*1.85,0,0],.042,trim,'organic');
+          box(pivot,.28,.085,.085,darkWood,-side*.77,0,0,'organic');
+          const blade=box(pivot,.68,.085,.3,0xb48953,side*2.02,0,0,'organic');blade.rotation.z=.08*side;
+          pivot.userData.grip=new THREE.Vector3(-side*.77,0,0);
+          g.userData.oars.push(pivot);
+        }
+        // Fusiona només les peces fixes per material; els dos rems conserven els seus pivots.
+        const batches=new Map();
+        for(const m of [...g.children])if(m.isMesh){
+          m.updateMatrix();const geo=m.geometry.clone().applyMatrix4(m.matrix),flat=geo.index?geo.toNonIndexed():geo;
+          const mat=m.material,key=[mat.color.getHex(),mat.roughness,mat.metalness,mat.side].join(':');
+          if(!batches.has(key))batches.set(key,{mat,positions:[],normals:[]});
+          const batch=batches.get(key);batch.positions.push(...flat.attributes.position.array);batch.normals.push(...flat.attributes.normal.array);
+          g.remove(m);m.geometry.dispose();if(mat!==batch.mat)mat.dispose();flat.dispose();if(flat!==geo)geo.dispose();
+        }
+        for(const batch of batches.values()){
+          const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(batch.positions,3));geo.setAttribute('normal',new THREE.Float32BufferAttribute(batch.normals,3));
+          g.add(new THREE.Mesh(geo,batch.mat));
         }
       }
       if(t==='windsurf'){

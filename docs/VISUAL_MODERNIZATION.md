@@ -222,11 +222,15 @@ Vehicles conduïbles actuals:
 - Braços i cames mantenen la postura específica de navegació.
 
 ### Barca de rems
-Estat actual deliberadament simplificat per continuar-ne el redisseny:
-- eliminat el buc detallat anterior;
-- cos únic marró, ovalat i apuntat;
-- rems i pivots conservats;
-- animació de rem sincronitzada amb el moviment.
+Redissenyada el 2026-10-06 segons la referència de fusta aportada:
+- buc obert amb proa apuntada, popa ampla, borda, juntes de taulons i dos bancs;
+- un rem articulat a cada costat, conservant el cicle de remada del joc;
+- jugador assegut al banc de proa, d’esquena a la proa i mirant cap a popa/càmera habitual;
+- peus dirigits cap a popa; braços calculats a partir dels punts d’agafada reals dels rems, també amb balanceig i gir del vehicle;
+- peces fixes fusionades per material: 1.932 triangles i 15 crides de dibuix per barca buida en la previsualització aïllada, sense ombres;
+- escala, caixa de col·lisió, controls i física conservats.
+
+Validació: model buit i ocupat inspeccionat des de proa i popa; entrada i moviment dins del joc en Chromium/WebGL 2 amb perfil mòbil, sense errors de consola. Smoke complet superat sobre la base amb les optimitzacions i orografia noves; afegides 24 postures que comproven el contacte mà-rem, orientació i peus. Reparades dues cometes imbricades de les proves de tanc i una comprovació literal de palmeres que encara usava el nom antic de la funció de dany. Aquesta revisió del model encara no s’ha provat en un Android físic.
 
 ---
 
@@ -312,6 +316,7 @@ Les cinc millores prioritzades el 2026-10-05 estan implementades.
 - generació del món;
 - vehicles;
 - articulacions;
+- postura de rem i contacte mà-rem durant 24 fases;
 - erugues;
 - OBB;
 - destrucció;
@@ -347,6 +352,8 @@ Les cinc millores prioritzades el 2026-10-05 estan implementades.
 
 ---
 
+L’usuari confirma el 2026-10-05 que la versió modernitzada funciona en Android; això no substitueix una mesura prolongada de rendiment.
+
 ## Pendents reals
 
 ### Prioritat alta
@@ -363,3 +370,4 @@ Les cinc millores prioritzades el 2026-10-05 estan implementades.
 
 ### Regla de compatibilitat
 No reescriure simultàniament simulació i renderer d'un mateix sistema. Quan es modularitzi una part del nucli, conservar temporalment els contractes que utilitza el gameplay fins que la nova ruta estigui validada.
+
