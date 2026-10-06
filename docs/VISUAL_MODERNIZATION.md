@@ -3,6 +3,26 @@
 Document consolidat de l'estat actual del projecte.  
 S'han eliminat plans de treball completats, registres històrics substituïts i descripcions de versions intermèdies que ja no representen el joc actual.
 
+## Sistema de versions
+
+Versió actual: **0.1**.
+
+La versió del joc es defineix en un únic punt: `src/version.mjs`, mitjançant la constant `GAME_VERSION`. La pantalla inicial llegeix aquesta constant i mostra la versió en un cantó, de manera que la UI i el codi comparteixen la mateixa font de veritat.
+
+### Criteri de numeració
+
+- **Versió base o salt major de desenvolupament:** `0.1`, `0.2`, `0.3`...
+  - S'utilitza quan hi ha un conjunt important de canvis: sistemes nous, canvis substancials de gameplay, reestructuracions rellevants o fites clares del projecte.
+- **Revisió menor:** `0.1.1`, `0.1.2`, `0.1.3`...
+  - S'utilitza per correccions, ajustos petits, poliment, equilibratge o millores puntuals que no justifiquen un salt a `0.2`.
+- Després d'un salt major, el comptador de revisions torna a zero implícitament: per exemple, de `0.1.4` a `0.2`, i després `0.2.1`.
+- Cada vegada que es publiqui un canvi a `main` que vulguem identificar com una revisió o una nova fita, s'ha d'actualitzar `GAME_VERSION`.
+- Aquest document s'ha de mantenir coherent amb la versió publicada.
+
+La versió **0.1** correspon a l'estat actual del joc en el moment d'introduir aquest sistema de versionat.
+
+---
+
 ## Objectiu
 
 Mantenir l'estètica low-poly i la jugabilitat de *Hunter: Arxipèlag* mentre es milloren progressivament:
