@@ -132,7 +132,8 @@ const addProtectedMilitary=()=>{};
 const near=(r,t)=>{for(let k=0;k<80;k++){const x=pa.x+rr(-r,r),z=pa.z+rr(-r,r),h=hAt(x,z);if(h>1.5&&slope(x,z,h)<2.5&&!B.some(b=>Math.abs(x-b.x)<b.hw+vehicleRadius(t)&&Math.abs(z-b.z)<b.hd+vehicleRadius(t))&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(t)+vehicleRadius(v.t)+2))return[x,z]}return[pa.x+30,pa.z+30]};
 ['cotxe','moto','bici'].forEach(t=>{const q=near(90,t);add(t,q[0],q[1],rr(0,6.28))});
 const shores=[];for(let a=0;a<360;a+=12)for(let d=10;d<700;d+=10){const x=pa.x+Math.cos(a*.01745)*d,z=pa.z+Math.sin(a*.01745)*d;if(Math.abs(x)>H-60||Math.abs(z)>H-60)break;if(hAt(x,z)<-2){shores.push({d,x,z,a:a*.01745});break}}
-shores.sort((a,b)=>a.d-b.d);if(shores[0])add('llanxa',shores[0].x,shores[0].z,rr(0,6.28));
+shores.sort((a,b)=>a.d-b.d);
+const launchSpot=shores[0]?{x:shores[0].x,z:shores[0].z,a:shores[0].a}:null;
 // Dos ferris garantits per mapa, varats prou a prop de platja perquè les rampes puguin connectar terra i coberta.
 const ferrySpots=[];for(const s of shores){
   if(ferrySpots.some(q=>Math.hypot(q.x-s.x,q.z-s.z)<220))continue;
@@ -145,6 +146,23 @@ for(let i=ferrySpots.length;i<2&&shores.length;i++){
   ferrySpots.push({x:s.x+ux*14,z:s.z+uz*14,hd:Math.atan2(s.x+ux*14-pa.x,s.z+uz*14-pa.z)})
 }
 ferrySpots.slice(0,2).forEach(q=>add('ferry',q.x,q.z,q.hd,{coastal:true,guaranteed:true}));
+// La llanxa inicial comparteix sovint el millor punt de costa amb un ferry.
+// Si hi ha solapament, la desplacem 100 m seguint la costa (tangent local), no mar endins.
+if(launchSpot){
+  let lx=launchSpot.x,lz=launchSpot.z;
+  const overlapsFerry=()=>ferrySpots.some(f=>Math.hypot(lx-f.x,lz-f.z)<vehicleRadius('ferry')+vehicleRadius('llanxa')+6);
+  if(overlapsFerry()){
+    const tx=-Math.sin(launchSpot.a),tz=Math.cos(launchSpot.a);
+    const candidates=[
+      {x:launchSpot.x+tx*100,z:launchSpot.z+tz*100},
+      {x:launchSpot.x-tx*100,z:launchSpot.z-tz*100}
+    ];
+    const valid=q=>Math.abs(q.x)<H-vehicleRadius('llanxa')-5&&Math.abs(q.z)<H-vehicleRadius('llanxa')-5&&hAt(q.x,q.z)<-1.2;
+    const best=candidates.find(valid)||candidates[0];
+    lx=best.x;lz=best.z;
+  }
+  add('llanxa',lx,lz,rr(0,6.28));
+}
 const clearVehicle=(t,x,z)=>Math.abs(x)<H-vehicleRadius(t)-5&&Math.abs(z)<H-vehicleRadius(t)-5&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(x-v.x,z-v.z)<vehicleRadius(t)+vehicleRadius(v.t)+5);
 compoundVehicles.forEach(v=>{if(VT[v.t]?.m==='w'||VT[v.t]?.m==='wl'){if(hAt(v.x,v.z)<-2)add(v.t,v.x,v.z,v.hd,v);return}
   const r=vehicleRadius(v.t),buildingClear=v.insideHangar?true:!B.some(b=>Math.abs(v.x-b.x)<b.hw+r&&Math.abs(v.z-b.z)<b.hd+r),clear=!treeHit(v.x,v.z,r*.7)&&buildingClear&&!V.some(o=>Math.hypot(v.x-o.x,v.z-o.z)<r+vehicleRadius(o.t)+3);
