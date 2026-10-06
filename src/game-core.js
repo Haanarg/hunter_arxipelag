@@ -535,11 +535,16 @@ const ferryLocalSurfaceY=(f,lz)=>{
 };
 function ferryForVehicle(v,x=v.x,z=v.z,includeRamp=true){
   if(!FERRY_DECK||v.t==='ferry')return null;
-  const hb=vehicleBox(v,x,z,v.hd),halfW=Math.min(FERRY_DECK.halfW*(VS.ferry||1)-.35,Math.max(.45,hb.w*.46));
+  const hb=vehicleBox(v,x,z,v.hd),sc=VS.ferry||1;
   for(const f of V){
     if(f===v||f.destroyed||f.t!=='ferry')continue;
-    const q=ferryLocal(f,x,z),fw=FERRY_DECK.halfW*(VS.ferry||1),fl=FERRY_DECK.halfL*(VS.ferry||1),r=includeRamp?FERRY_DECK.ramp*(VS.ferry||1):0;
-    if(Math.abs(q.x)<=Math.max(.6,fw-halfW)&&Math.abs(q.z)<=fl+r)return f
+    const q=ferryLocal(f,x,z),fw=FERRY_DECK.halfW*sc,fl=FERRY_DECK.halfL*sc,r=includeRamp?FERRY_DECK.ramp*sc:0,
+          rel=wrapAngle(v.hd-f.hd),ca=Math.abs(Math.cos(rel)),sa=Math.abs(Math.sin(rel)),
+          ex=ca*hb.w*.5+sa*hb.d*.5,ez=sa*hb.w*.5+ca*hb.d*.5;
+    // La zona transitable es detecta amb tota la petjada del vehicle. Això permet
+    // que el frontal entri a la rampa abans que la hitbox rectangular del buc el bloquegi,
+    // però manté els costats del ferry sòlids.
+    if(Math.abs(q.x)+ex<=fw-.18&&Math.abs(q.z)-ez<=fl+r)return f
   }
   return null
 }
