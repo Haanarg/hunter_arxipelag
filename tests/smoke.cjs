@@ -43,7 +43,7 @@ run(`{
   const savedInv={...inv},savedEq=grenadeEquipped,savedFcd=fcd;
   inv.granada=1;grenadeEquipped=true;fcd=0;pl.userData.grenadePending=null;
   const okThrow=throwGrenade();updFx(.24);
-  globalThis.grenadeDynamicLaunch=okThrow&&grenades.length===1&&grenades[0].vy<12&&grenades[0].vx!==0;
+  globalThis.grenadeDynamicLaunch=okThrow&&grenades.length===1&&grenades[0].vy<12&&Math.hypot(grenades[0].vx,grenades[0].vz)>10;
   for(const g of grenades)world.remove(g.o);grenades=[];inv=savedInv;grenadeEquipped=savedEq;fcd=savedFcd;pl.userData.grenadePending=null;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;
 }`);
 ok('grenadeDynamicLaunch','grenade releases into a live parabolic projectile');
