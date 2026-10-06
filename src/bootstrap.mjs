@@ -5,6 +5,21 @@ const versionBadge=document.getElementById('versionBadge');
 if(versionBadge)versionBadge.textContent='v'+GAME_VERSION;
 window.HUNTER_VERSION=GAME_VERSION;
 
+const lowGraphics=document.getElementById('lowGraphics');
+const coarsePointer=matchMedia('(pointer:coarse)').matches;
+const lowParam=new URLSearchParams(location.search).get('low')==='1';
+window.HUNTER_FORCE_LOW_QUALITY=lowParam;
+if(lowGraphics){
+  lowGraphics.checked=coarsePointer||lowParam;
+  lowGraphics.disabled=coarsePointer;
+  lowGraphics.title=coarsePointer?'El perfil reduït ja s’utilitza automàticament en aquest dispositiu.':'Força el mateix perfil gràfic reduït que Android.';
+  lowGraphics.addEventListener('change',()=>{
+    const url=new URL(location.href);
+    if(lowGraphics.checked)url.searchParams.set('low','1');else url.searchParams.delete('low');
+    location.replace(url.toString());
+  });
+}
+
 // Pont temporal: motor ESM i sistemes clàssics carregats seqüencialment.
 try {
   const THREE = await import('../vendor/three-r186.module.mjs');
