@@ -5,7 +5,7 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.1**.
+Versió actual: **0.2**.
 
 La versió del joc es defineix en un únic punt: `src/version.mjs`, mitjançant la constant `GAME_VERSION`. La pantalla inicial llegeix aquesta constant i mostra la versió en un cantó, de manera que la UI i el codi comparteixen la mateixa font de veritat.
 
@@ -19,7 +19,7 @@ La versió del joc es defineix en un únic punt: `src/version.mjs`, mitjançant 
 - Cada vegada que es publiqui un canvi a `main` que vulguem identificar com una revisió o una nova fita, s'ha d'actualitzar `GAME_VERSION`.
 - Aquest document s'ha de mantenir coherent amb la versió publicada.
 
-La versió **0.1** correspon a l'estat actual del joc en el moment d'introduir aquest sistema de versionat.
+La versió **0.1** correspon a l'estat del joc en el moment d'introduir aquest sistema de versionat. La versió **0.2** introdueix el ferry i, sobretot, el primer sistema de transport de vehicles sobre una plataforma mòbil.
 
 ---
 
@@ -197,6 +197,7 @@ Vehicles conduïbles actuals:
 - llanxa;
 - moto aquàtica;
 - hovercraft;
+- ferry;
 - barca de rems;
 - windsurf;
 - llanxa llançacoets;
@@ -208,6 +209,18 @@ Vehicles conduïbles actuals:
 - tanc;
 - helicòpter;
 - helicòpter de combat.
+
+### Ferry
+- Nou vehicle aquàtic gran i lent.
+- Resistència estructural: **8 impactes**.
+- Apareixen **2 ferris garantits per mapa**, situats a prop de platges.
+- Model amb gran coberta oberta, cabina lateral i rampes frontal i posterior.
+- La coberta funciona com una superfície mòbil transitable:
+  - cotxes, motos, bicicletes, camions, tanquetes i tancs poden entrar i sortir per les rampes;
+  - els helicòpters poden aterrar-hi i quedar transportats;
+  - els vehicles transportats conserven la seva posició i orientació relatives quan el ferry avança o gira;
+  - els helicòpters es desacoblen de la coberta quan tornen a enlairar-se.
+- El buc continua tenint col·lisió pròpia, però la zona útil de rampes/coberta no bloqueja els vehicles que hi accedeixen.
 
 ### Física
 - Perfils diferenciats terra/aigua/aire.
