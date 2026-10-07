@@ -20,7 +20,7 @@ canvas{display:block;width:100%;height:100%}
 <div id="ui"><h1>Llanxa militar · 4 propostes Three.js</h1><div id="cards"></div></div>
 <script type="module">
 import * as THREE from './vendor/three-r186.module.mjs';
-import {createBoatConcept} from './src/boat-concepts.mjs';
+import {createBoatConcept} from './src/boat-concepts.mjs?v=20261007-c';
 
 const labels=[
   ['1 · Stealth A · Equilibrada','La més propera a la foto: proa afilada, casc facetat i cabina oberta central.'],
@@ -47,11 +47,12 @@ labels.forEach((meta,i)=>{
   const model=createBoatConcept(THREE,i);
   model.rotation.y=.42;
   model.position.y=.02;
+  model.scale.setScalar(.68);
   scene.add(model);models.push(model);
 
-  const cam=new THREE.PerspectiveCamera(34,1,.1,160);
-  cam.position.set(14.8,8.4,-19.6);
-  cam.lookAt(0,1.0,0);
+  const cam=new THREE.PerspectiveCamera(38,1,.1,220);
+  cam.position.set(20.5,11.8,-27.5);
+  cam.lookAt(0,.75,0);
   cams.push(cam);
 
   const card=document.createElement('div');card.className='card';
