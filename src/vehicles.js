@@ -81,7 +81,9 @@ window.HUNTER_VEHICLES=Object.freeze({
           const a=j*N+k,b=a+N,c=b+1,d=a+1;idx.push(a,b,c,a,c,d)
         }
         const base=(rings.length-1)*N;
-        for(let k=1;k<N-1;k++)idx.push(base,base+k,base+k+1);
+        // Mirall de popa: ordre invertit perquè les normals mirin cap a +Z
+        // i la cara sigui visible des de darrere amb FrontSide.
+        for(let k=1;k<N-1;k++)idx.push(base,base+k+1,base+k);
         const geo=new THREE.BufferGeometry();
         geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
         geo.setIndex(idx);geo.computeVertexNormals();
