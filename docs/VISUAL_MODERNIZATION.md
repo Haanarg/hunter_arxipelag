@@ -5,7 +5,12 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.21**.
+Versió actual: **0.3.27**.
+
+Revisió 0.3.27 (2026-10-07): general substituït pel model aprovat, Estat major amb gavardina grana llarga, bigoti del primer model i muscleres clàssiques gruixudes (opció 1 de la segona comparativa). Gorra de plat, ulleres d'aviador, deu medalles, passadors i cordó daurat. Reutilitza la base articulada actual del jugador; muscleres unides als braços i faldons de gavardina units a les cuixes. Manté l'alçada anterior, l'arma, la IA i el paper d'objectiu de missió. `src/general-model.js` concentra la geometria; aprofita les animacions articulades dels enemics. Integrat sobre 0.3.26, conservant els darrers ajustos de braços, vehicles i desbloqueig d'enemics.
+
+Validació 0.3.27: proves de geometria, mida, animacions, color independent, generació del general a l'HQ i victòria en eliminar-lo; smoke general i arrencada WebGL amb perfils d'escriptori/mòbil. Android físic pendent per a aquesta revisió.
+
 
 Revisió 0.3.21 (2026-10-07): soldats normals substituïts per l'opció 3 aprovada, comando vermell amb boina, corretja diagonal i ràdio. Reutilitza `HUNTER_PLAYER_MODEL` i conserva l'alçada del soldat anterior, inclosa la reducció del 10%. Colzes i genolls articulats en caminar, apuntar i morir; genolls flexionats en el sentit anatòmic. Fusell unit a l'avantbraç. El general conserva el seu model distintiu. No es modifica la IA, la vida, les col·lisions ni les regles de combat. Integrat sobre 0.3.20, preservant els canvis de vehicles d'altres xats.
 
@@ -510,6 +515,7 @@ L’usuari confirma el 2026-10-05 que la versió modernitzada funciona en Androi
 
 ### Regla de compatibilitat
 No reescriure simultàniament simulació i renderer d'un mateix sistema. Quan es modularitzi una part del nucli, conservar temporalment els contractes que utilitza el gameplay fins que la nova ruta estigui validada.
+
 
 
 

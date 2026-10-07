@@ -38,32 +38,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
   },
 
   createSoldier(THREE,{box,material,general=false,palette=window.HUNTER_PALETTE}){
-    if(!general)return this.createCommando(THREE,{palette});
-    const P=palette.enemy,round=(g,r,h,c,x,y,z)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,12),material(c));m.position.set(x,y,z);g.add(m);return m};
-    const g=new THREE.Group(),cloth=general?P.general:P.primary,vest=general?P.secondary:P.vest;g.userData.legs=[];g.userData.arms=[];
-    for(const x of[-.34,.34]){
-      const p=new THREE.Group();p.position.set(x,1.45,0);g.add(p);
-      box(p,.38,1.2,.46,cloth,0,-.6,0);box(p,.46,.24,.52,P.dark,0,-1.05,-.02);box(p,.48,.35,.72,P.dark,0,-1.28,-.11);g.userData.legs.push(p)
-    }
-    box(g,.98,1.25,.6,cloth,0,2.02,0);box(g,1.08,.92,.72,vest,0,2.08,0);
-    box(g,.22,1.02,.1,P.dark,-.35,2.08,.41);box(g,.22,1.02,.1,P.dark,.35,2.08,.41);
-    box(g,.76,.22,.78,P.dark,0,1.62,0);box(g,.74,1,.34,P.secondary,0,2.12,.46);
-    for(const x of[-.4,0,.4])box(g,.28,.4,.19,general?P.gold:P.primary,x,1.98,-.5);
-    box(g,.62,.72,.62,P.skin,0,2.99,0);box(g,.58,.12,.07,P.dark,0,3.07,-.34);
-    if(general){
-      round(g,.52,.22,P.secondary,0,3.43,0);box(g,.85,.08,.65,P.dark,0,3.34,-.18);box(g,.18,.18,.04,P.gold,0,3.44,-.5);
-      for(const x of[-.65,.65]){box(g,.3,.12,.52,P.gold,x,2.6,0);box(g,.12,.5,.12,P.gold,x,2.36,.28)}
-    }else{
-      const h=new THREE.Mesh(new THREE.SphereGeometry(.46,8,5,0,Math.PI*2,0,Math.PI/2),material(cloth));h.position.y=3.2;h.scale.set(1,.98,1.08);g.add(h);
-      round(g,.49,.11,P.dark,0,3.18,0)
-    }
-    for(const x of[-.62,.62]){
-      const p=new THREE.Group();p.position.set(x,2.55,0);g.add(p);box(p,.28,.95,.34,cloth,0,-.46,0);box(p,.36,.18,.42,P.dark,0,-.16,0);box(p,.25,.3,.27,P.skin,0,-1.02,0);g.userData.arms.push(p)
-    }
-    const gun=new THREE.Group();gun.position.set(0,-1,-.05);gun.rotation.x=-Math.PI/2;g.userData.arms[1].add(gun);
-    box(gun,.16,.2,1.5,P.metal,0,0,-.25);box(gun,.18,.36,.25,P.dark,0,-.24,0);box(gun,.18,.2,.45,0x66513c,0,0,.55);
-    if(!general)g.scale.setScalar(.9);
-    return g
+    return general?window.HUNTER_GENERAL_MODEL.create(THREE,{palette}):this.createCommando(THREE,{palette});
   },
   animateSoldier(model,{phase=0,moving=false,aim=false,dt=0,death=0}){
     const a=model.userData;if(!a.knees)return;
@@ -164,5 +139,6 @@ window.HUNTER_CHARACTERS=Object.freeze({
     else player.position.y+=breath*.012;
   }
 });
+
 
 
