@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hunter · Propostes helicòpter Huey</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#7ca0ad;font-family:system-ui;color:#fff}
+#ui{position:fixed;inset:0;pointer-events:none}
+h1{position:absolute;top:14px;left:50%;transform:translateX(-50%);margin:0;font-size:22px;text-shadow:0 2px 5px #0009}
+#cards{position:absolute;inset:56px 14px 14px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:10px}
+.card{position:relative;border:1px solid #ffffff70;border-radius:10px;box-shadow:inset 0 0 0 1px #0005;background:#0001}
+.label{position:absolute;left:10px;bottom:9px;background:#10202ecc;padding:7px 10px;border-radius:7px;font-weight:700;text-shadow:0 1px 2px #000}
+.label small{display:block;font-weight:500;opacity:.82;margin-top:2px}
+canvas{display:block;width:100%;height:100%}
+@media(max-width:700px){h1{font-size:17px}.label{font-size:12px}.label small{display:none}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui"><h1>Helicòpter normal · 4 propostes Three.js</h1><div id="cards"></div></div>
+<script type="module">
+import * as THREE from './vendor/three-r186.module.mjs';
+import {concepts} from './src/heli-concepts.mjs';
+
+const canvas=document.getElementById('c'),renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.8));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.shadowMap.enabled=true;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x83aeb8);
+scene.add(new THREE.HemisphereLight(0xd8efff,0x35523a,1.45));
+const sun=new THREE.DirectionalLight(0xffe2b7,2.4);sun.position.set(-10,18,-12);sun.castShadow=true;scene.add(sun);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(120,120),new THREE.MeshStandardMaterial({color:0xb9aa73,roughness:1}));
+ground.rotation.x=-Math.PI/2;ground.position.y=.02;ground.receiveShadow=true;scene.add(ground);
+
+const cams=[],models=[],cards=document.getElementById('cards');
+for(let i=0;i<4;i++){
+  const c=new THREE.PerspectiveCamera(40,1,.1,100);c.position.set(10,7,-13);c.lookAt(0,2.1,.8);cams.push(c);
+  const m=concepts[i].create();m.position.set(0,.1,0);scene.add(m);models.push(m);
+  const card=document.createElement('div');card.className='card';
+  const label=document.createElement('div');label.className='label';label.innerHTML=concepts[i].name+'<small>'+concepts[i].desc+'</small>';card.append(label);cards.append(card);
+}
+function resize(){
+  const w=innerWidth,h=innerHeight,dpr=renderer.getPixelRatio();
+  renderer.setSize(w,h,false);
+}
+addEventListener('resize',resize);resize();
+function loop(ms){
+  const t=ms*.001;
+  models.forEach((m,i)=>{m.rotation.y=Math.sin(t*.38+i*.7)*.32-0.48;(m.userData.rotor||{}).rotation&&(m.userData.rotor.rotation.y=t*2.8);(m.userData.tailRotor||{}).rotation&&(m.userData.tailRotor.rotation.x=t*3.6)});
+  const rects=[...cards.children].map(x=>x.getBoundingClientRect()),H=innerHeight;
+  renderer.setScissorTest(true);
+  rects.forEach((r,i)=>{
+    renderer.setViewport(r.left,H-r.bottom,r.width,r.height);renderer.setScissor(r.left,H-r.bottom,r.width,r.height);
+    cams[i].aspect=r.width/r.height;cams[i].updateProjectionMatrix();
+    models.forEach((m,j)=>m.visible=i===j);renderer.render(scene,cams[i]);
+  });
+  models.forEach(m=>m.visible=true);renderer.setScissorTest(false);requestAnimationFrame(loop)
+}
+requestAnimationFrame(loop);
+</script>
+</body></html>
