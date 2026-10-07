@@ -5,7 +5,7 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.14**.
+Versió actual: **0.3.15**.
 
 Revisió 0.3.9 (2026-10-07): protagonista tàctic aprovat després de les comparatives 3D. Espatlles estretes, genolls i colzes articulats, cabell curt sota una gorra ajustada, visera arrodonida allargada i botes amb turmell, empenya i sola. `src/player-model.js` és la font comuna de geometria del protagonista i dels conductors visibles de bicicleta, moto, moto aquàtica, llanxa, llanxa llançacoets, barca de rems i windsurf. El rig a peu conserva els noms i les armes; el de conducció reutilitza les mateixes peces amb els punts de contacte existents. Es mantenen pedaleig, peus a terra en aturar-se, mans als rems i orientació del windsurf. La disfressa afecta també el conductor i la gorra. Corregit el sentit de flexió dels genolls durant la braça. Els vehicles de cabina que no mostraven conductor continuen igual.
 
@@ -18,6 +18,8 @@ Revisió 0.3.7: porta principal del búnquer de l'HQ amb obertura progressiva de
 Revisió 0.3.6: mínim de quatre motos aquàtiques per mapa. Comprovació final contra les caixes de tots els vehicles, inclosos els enemics, amb marge de separació. En cas de conflicte es busca una posició seguint la costa en trams de 100 m; es prova l’altra direcció o un altre punt costaner si no hi ha espai vàlid. Es mantenen dins del límit i sobre l’aigua. La generació no accepta silenciosament un mapa amb menys de quatre motos aquàtiques.
 
 Revisió 0.3.5: barca de rems amb flotació 30 cm més baixa i màscara d’aigua interior. Integrada sobre 0.3.4, conservant ferris, transport de vehicles, granades i selector de qualitat. La prova smoke inclou l’offset, les ombres i l’exclusió de la màscara dels fragments; s’ha reparat també una cometa imbricada i el nom de variable d’una comprovació de la tanqueta.
+
+Revisió 0.3.15: la variant **3B-4 amb carenats laterals** passa del laboratori al joc com a model visual de l'helicòpter normal. Manté física, hitbox, controls i comportament, però adopta fuselatge estret arrodonit, cabina frontal tipus Huey, grans obertures laterals, bancs interiors, cua afinada, patins i carenats laterals. El rotor principal s'ajusta a la nova silueta i es conserven els dos rotors animats.
 
 Revisió 0.3.14: iteració específica sobre el model 3B. El comparador mostra quatre variants del detall lateral de la cabina: dos models amb cilindres complets (gran i petit), un model sense aquests volums i una alternativa amb petits carenats arrodonits.
 
@@ -237,7 +239,7 @@ Característiques:
 ### Laboratori de models d'helicòpter
 - S'ha afegit `heli-concepts.html`, un comparador visual renderitzat amb el mateix Three.js del projecte.
 - Inclou quatre propostes reals per al futur helicòpter normal, totes construïdes amb geometria low-poly reutilitzable: **Huey clàssic**, **Huey curt**, **Huey transport** i **Huey low-poly**.
-- Els models viuen a `src/heli-concepts.mjs` i encara no substitueixen `heli` a `src/vehicles.js`; serveixen per triar i iterar abans de la integració definitiva.
+- Els models del laboratori viuen a `src/heli-concepts.mjs`. La variant 3B-4 seleccionada ja s'ha integrat com a `heli` a `src/vehicles.js`; el comparador es conserva per a iteracions visuals.
 
 
 
