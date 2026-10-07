@@ -1,13 +1,22 @@
 export function createBoatConcept(THREE,variant=0){
   const g=new THREE.Group();
+
+  // Totes quatre variants parteixen del model 1 (Stealth A).
+  // Diferències: tractament de la proa i lleus ajustos del radar compacte heretat del model 3.
   const cfg=[
-    {name:'Stealth A · Equilibrada',len:8.9,beam:2.75,bow:.20,deckY:1.16,cockZ:.95,cockL:2.5,screenZ:-.65,mastZ:2.45,mastH:2.15,free:.98},
-    {name:'Stealth B · Proa llarga',len:9.8,beam:2.7,bow:.12,deckY:1.10,cockZ:1.15,cockL:2.35,screenZ:-.55,mastZ:2.75,mastH:2.05,free:.90},
-    {name:'Stealth C · Compacta',len:8.15,beam:2.9,bow:.24,deckY:1.22,cockZ:.70,cockL:2.30,screenZ:-.72,mastZ:2.15,mastH:2.00,free:1.04},
-    {name:'Stealth D · Patrullera pesada',len:9.15,beam:3.0,bow:.18,deckY:1.28,cockZ:.82,cockL:2.65,screenZ:-.68,mastZ:2.45,mastH:2.35,free:1.10}
+    {name:'Stealth A1 · Radar compacte',len:8.9,beam:2.75,bow:.20,deckY:1.16,cockZ:.95,cockL:2.5,screenZ:-.65,free:.98,bowPad:.20,radarZ:2.18,radarH:1.95,radarScale:1.00},
+    {name:'Stealth A2 · Proa neta',len:8.9,beam:2.75,bow:.20,deckY:1.16,cockZ:.95,cockL:2.5,screenZ:-.65,free:.98,bowPad:.10,radarZ:2.12,radarH:1.95,radarScale:.95},
+    {name:'Stealth A3 · Proa rasa',len:8.9,beam:2.75,bow:.20,deckY:1.16,cockZ:.95,cockL:2.5,screenZ:-.65,free:.98,bowPad:0,radarZ:2.15,radarH:2.00,radarScale:1.00},
+    {name:'Stealth A4 · Radar avançat',len:8.9,beam:2.75,bow:.20,deckY:1.16,cockZ:.95,cockL:2.5,screenZ:-.65,free:.98,bowPad:.05,radarZ:2.05,radarH:2.08,radarScale:1.08}
   ][variant];
+
   const mat=(c,metal=.03)=>new THREE.MeshStandardMaterial({color:c,roughness:.76,metalness:metal,flatShading:true});
-  const hullMat=mat(0x667176,.08),darkMat=mat(0x2f383d,.1),deckMat=mat(0x717c81,.06),glassMat=new THREE.MeshStandardMaterial({color:0x26343c,roughness:.25,metalness:.05,transparent:true,opacity:.82,flatShading:true}),trimMat=mat(0x424b50,.12);
+  const hullMat=mat(0x667176,.08),
+        darkMat=mat(0x2f383d,.1),
+        deckMat=mat(0x717c81,.06),
+        glassMat=new THREE.MeshStandardMaterial({color:0x26343c,roughness:.25,metalness:.05,transparent:true,opacity:.82,flatShading:true}),
+        trimMat=mat(0x424b50,.12);
+
   const mesh=(geo,m)=>{const o=new THREE.Mesh(geo,m);o.castShadow=o.receiveShadow=true;g.add(o);return o};
   const box=(w,h,d,c,x,y,z,rotX=0)=>{const o=mesh(new THREE.BoxGeometry(w,h,d),c);o.position.set(x,y,z);o.rotation.x=rotX;return o};
   const rod=(a,b,r,c)=>{const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),d=B.clone().sub(A),L=d.length(),o=mesh(new THREE.CylinderGeometry(r,r,L,7),c);o.position.copy(A).add(B).multiplyScalar(.5);o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return o};
@@ -21,8 +30,8 @@ export function createBoatConcept(THREE,variant=0){
     {z:half*.55,w:B,y:.34},
     {z:half,w:B*.88,y:.44}
   ];
+
   const verts=[],idx=[];
-  // 4 longitudinal rings: keel, lower chine, upper chine, sheer/deck edge
   const rings=stations.map(s=>[
     [0,-.18,s.z],
     [-s.w*.50,.10,s.z],
@@ -35,20 +44,25 @@ export function createBoatConcept(THREE,variant=0){
   for(const ring of rings)for(const p of ring)verts.push(...p);
   const N=7;
   for(let j=0;j<rings.length-1;j++)for(let k=0;k<N-1;k++){const a=j*N+k,b=a+N,c=b+1,d=a+1;idx.push(a,b,c,a,c,d)}
-  // transom
   const base=(rings.length-1)*N;for(let k=1;k<N-1;k++)idx.push(base,base+k,base+k+1);
-  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex(idx);geo.computeVertexNormals();mesh(geo,hullMat);
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  geo.setIndex(idx);geo.computeVertexNormals();
+  mesh(geo,hullMat);
 
-  // dark lower hull strip
+  // Franja fosca del casc inferior.
   box(B*.93,.25,L*.72,darkMat,0,.06,.35);
 
-  // faceted foredeck: long wedge-like slabs
+  // Coberta de proa integrada al casc. La plataforma superior deixa de sobresortir:
+  // cada variant només conserva un detall molt més petit o l'elimina completament.
   const foreLen=(cfg.screenZ+half)-.18;
-  const fore=box(B*.88,.16,foreLen,deckMat,0,cfg.deckY,-half+foreLen/2+.02,-.055);
-  fore.geometry.translate(0,0,0);
-  box(B*.60,.10,foreLen*.88,trimMat,0,cfg.deckY+.11,-half+foreLen*.47);
+  box(B*.88,.16,foreLen,deckMat,0,cfg.deckY,-half+foreLen/2+.02,-.055);
+  if(cfg.bowPad>0){
+    const padLen=Math.max(.28,foreLen*cfg.bowPad);
+    box(B*.48,.06,padLen,trimMat,0,cfg.deckY+.075,-half+padLen*.72);
+  }
 
-  // cockpit side walls and aft coaming
+  // Cabina oberta central.
   const cockFront=cfg.screenZ+.18,cockRear=cfg.cockZ+cfg.cockL*.72,cockLen=cockRear-cockFront;
   for(const side of[-1,1]){
     const sideWall=box(.18,.78,cockLen,hullMat,side*(B*.43),1.38,(cockFront+cockRear)/2);
@@ -56,7 +70,7 @@ export function createBoatConcept(THREE,variant=0){
   }
   box(B*.86,.74,.18,hullMat,0,1.38,cockRear);
 
-  // sloped windscreen, 3 panels
+  // Parabrisa frontal inclinat, tres panells.
   for(const x of[-.72,0,.72]){
     const w=x===0?B*.34:B*.25;
     const scr=box(w,.64,.10,glassMat,x*(B*.43),1.74,cfg.screenZ,-.48);
@@ -64,36 +78,36 @@ export function createBoatConcept(THREE,variant=0){
   }
   box(B*.88,.14,.16,trimMat,0,1.45,cfg.screenZ+.12,-.48);
 
-  // aft deck
+  // Coberta posterior.
   const aftStart=cockRear+.14,aftLen=half-aftStart-.10;
   if(aftLen>.4)box(B*.84,.15,aftLen,deckMat,0,cfg.deckY+.02,aftStart+aftLen/2);
 
-  // bench silhouettes
-  for(const z of[cfg.cockZ-.15,cfg.cockZ+.65]){
-    box(B*.56,.14,.48,mat(0x3a4245,.02),0,1.08,z);
-  }
+  // Bancs.
+  for(const z of[cfg.cockZ-.15,cfg.cockZ+.65])box(B*.56,.14,.48,mat(0x3a4245,.02),0,1.08,z);
 
-  // mast inspired by reference photo
-  const mz=cfg.mastZ,mh=cfg.mastH;
-  rod([0,1.15,mz],[0,1.15+mh,mz],.10,trimMat);
-  box(.46,.36,.34,trimMat,0,2.12,mz-.04,-.15);
-  const neck=box(.28,.52,.28,trimMat,0,2.55,mz);neck.rotation.z=.10;
-  const dome=mesh(new THREE.SphereGeometry(.34,12,6,0,Math.PI*2,0,Math.PI/2),mat(0xc5c9c6,.06));
-  dome.scale.y=.45;dome.position.set(0,1.15+mh+.02,mz);
-  box(.62,.10,.62,trimMat,0,1.15+mh-.02,mz);
+  // Radar del model 3: més compacte, amb bloc sensor baix i radom curt.
+  const mz=cfg.radarZ,mh=cfg.radarH,rs=cfg.radarScale;
+  rod([0,1.15,mz],[0,1.15+mh,mz],.085*rs,trimMat);
+  box(.34*rs,.30*rs,.38*rs,trimMat,0,2.02,mz-.03,-.12);
+  box(.28*rs,.42*rs,.30*rs,trimMat,0,2.36,mz);
+  const dome=mesh(new THREE.SphereGeometry(.29*rs,12,6,0,Math.PI*2,0,Math.PI/2),mat(0xc5c9c6,.06));
+  dome.scale.y=.40;dome.position.set(0,1.15+mh+.01,mz);
+  box(.54*rs,.08,.54*rs,trimMat,0,1.15+mh-.03,mz);
 
-  // bow deck hatches/low details
-  for(const z of[-half*.58,-half*.35])box(.75,.035,.48,trimMat,0,cfg.deckY+.15,z);
+  // Detalls baixos a coberta, sense volum que sobresurti de la proa.
+  for(const z of[-half*.58,-half*.35])box(.68,.03,.42,trimMat,0,cfg.deckY+.13,z);
   for(const x of[-B*.31,B*.31])rod([x,cfg.free+.10,-half*.22],[x,cfg.free+.10,-half*.50],.025,trimMat);
 
-  // variant-specific differentiation
-  if(variant===1){
-    box(B*.72,.12,1.1,deckMat,0,cfg.deckY+.06,-half*.64,-.08);
+  // Petites diferències entre iteracions, sempre mantenint la base del model 1.
+  if(variant===0){
+    box(.42,.12,.62,trimMat,0,1.18,cockRear-.14);
+  }else if(variant===1){
+    box(.34,.10,.52,trimMat,0,1.17,cockRear-.12);
   }else if(variant===2){
-    box(B*.30,.45,.46,trimMat,0,1.60,cockRear-.20);
+    box(.28,.08,.44,trimMat,0,1.16,cockRear-.10);
   }else if(variant===3){
-    for(const side of[-1,1])box(.28,.28,1.55,trimMat,side*(B*.46),1.46,cfg.cockZ+.38);
-    box(B*.42,.18,.52,trimMat,0,1.20,cockRear-.16);
+    for(const side of[-1,1])box(.20,.18,.92,trimMat,side*(B*.41),1.34,cfg.cockZ+.38);
+    box(.38,.12,.56,trimMat,0,1.18,cockRear-.12);
   }
 
   g.userData.name=cfg.name;
