@@ -73,7 +73,7 @@ function hueyTransportVariant(opts={}){
   const {
     width=2.82,noseGlassW=1.34,noseGlassH=.92,noseGlassD=1.08,
     belly=.28,roofW=2.52,doorZ0=-.76,doorZ1=1.76,
-    windshieldSlope=.72,cheek=.0,tailEnd=7.55,engineW=1.38
+    windshieldSlope=.72,cheek=.0,sideDetail='cheek',tailEnd=7.55,engineW=1.38
   }=opts;
   const g=new THREE.Group(),sideX=width/2+.01;
   roundedPrism(g,width,1.74,4.18,.31,C.body,0,2.08,.3);
@@ -84,7 +84,20 @@ function hueyTransportVariant(opts={}){
   const wx=width*.23;
   for(const x of[-wx,wx])rod(g,[x,1.53,-3.08],[x*windshieldSlope,2.82,-2.48],.045,C.body);
   rod(g,[0,1.48,-3.11],[0,2.84,-2.5],.05,C.dark);
-  if(cheek>0)for(const s of[-1,1])sphere(g,cheek,.5,.68,C.body,s*(width*.43),1.82,-2.44);
+  if(sideDetail==='cheek'&&cheek>0)for(const s of[-1,1])sphere(g,cheek,.5,.68,C.body,s*(width*.43),1.82,-2.44);
+  else if(sideDetail==='cylinderLarge'||sideDetail==='cylinderSmall'){
+    const rr=sideDetail==='cylinderLarge'?.34:.27,len=sideDetail==='cylinderLarge'?.34:.28;
+    for(const s of[-1,1]){
+      const m=new THREE.Mesh(new THREE.CylinderGeometry(rr,rr,len,12),mat(C.body,.66,.12));
+      m.rotation.z=Math.PI/2;m.position.set(s*(width/2+len*.38),1.84,-2.38);g.add(m);
+    }
+  }else if(sideDetail==='fairing'){
+    for(const s of[-1,1]){
+      const pod=roundedPrism(g,.28,.58,.82,.12,C.body,s*(width*.49),1.86,-2.37);
+      pod.rotation.z=s*.08;
+      box(g,.08,.32,.46,C.dark,s*(width*.505),1.88,-2.38);
+    }
+  }
 
   roundedPrism(g,roofW,.32,2.12,.13,C.body,0,2.91,.04);
 
@@ -105,34 +118,34 @@ function hueyTransportVariant(opts={}){
   return finish(g)
 }
 
-export function hueyTransportA(){
-  return hueyTransportVariant({
-    width:2.82,noseGlassW:1.33,noseGlassH:.94,noseGlassD:1.06,
-    belly:.27,roofW:2.48,windshieldSlope:.78,engineW:1.34
-  })
-}
-export function hueyTransportB(){
+export function huey3BCylinderLarge(){
   return hueyTransportVariant({
     width:2.7,noseGlassW:1.28,noseGlassH:.9,noseGlassD:1.02,
-    belly:.24,roofW:2.38,windshieldSlope:.68,cheek:.12,engineW:1.3,tailEnd:7.48
+    belly:.24,roofW:2.38,windshieldSlope:.68,sideDetail:'cylinderLarge',engineW:1.3,tailEnd:7.48
   })
 }
-export function hueyTransportC(){
+export function huey3BCylinderSmall(){
   return hueyTransportVariant({
-    width:2.76,noseGlassW:1.3,noseGlassH:.96,noseGlassD:1.0,
-    belly:.26,roofW:2.42,windshieldSlope:.82,cheek:.16,engineW:1.32
+    width:2.7,noseGlassW:1.28,noseGlassH:.9,noseGlassD:1.02,
+    belly:.24,roofW:2.38,windshieldSlope:.68,sideDetail:'cylinderSmall',engineW:1.3,tailEnd:7.48
   })
 }
-export function hueyTransportD(){
+export function huey3BNoDiscs(){
   return hueyTransportVariant({
-    width:2.64,noseGlassW:1.24,noseGlassH:.88,noseGlassD:.98,
-    belly:.22,roofW:2.3,windshieldSlope:.72,cheek:.2,engineW:1.26,tailEnd:7.42
+    width:2.7,noseGlassW:1.28,noseGlassH:.9,noseGlassD:1.02,
+    belly:.24,roofW:2.38,windshieldSlope:.68,sideDetail:'none',engineW:1.3,tailEnd:7.48
+  })
+}
+export function huey3BFairing(){
+  return hueyTransportVariant({
+    width:2.7,noseGlassW:1.28,noseGlassH:.9,noseGlassD:1.02,
+    belly:.24,roofW:2.38,windshieldSlope:.68,sideDetail:'fairing',engineW:1.3,tailEnd:7.48
   })
 }
 
 export const concepts=[
-  {name:'1 · Huey 3A · Fidel',create:hueyTransportA,desc:'Cos més estret, parabrisa gran i frontal, mantenint les portes del model 3.'},
-  {name:'2 · Huey 3B · Esvelt',create:hueyTransportB,desc:'Cos clarament més estret, morro més net i cabina més compacta.'},
-  {name:'3 · Huey 3C · Utilitari',create:hueyTransportC,desc:'Equilibri entre fidelitat al Huey original, volum de transport i estil low-poly.'},
-  {name:'4 · Huey 3D · Retro',create:hueyTransportD,desc:'La variant més estreta i geomètrica, amb cabina frontal molt marcada.'}
+  {name:'1 · 3B · Cilindre gran',create:huey3BCylinderLarge,desc:'Els dos discs passen a ser cilindres complets, més visibles i robusts.'},
+  {name:'2 · 3B · Cilindre petit',create:huey3BCylinderSmall,desc:'Mateixa idea, però amb cilindres complets més compactes i integrats.'},
+  {name:'3 · 3B · Net',create:huey3BNoDiscs,desc:'Sense discs ni volums laterals: cabina més neta i fidel al cos del Huey.'},
+  {name:'4 · 3B · Carenat',create:huey3BFairing,desc:'Substitueix els discs per petits carenats rectangulars arrodonits amb entrada fosca.'}
 ];
