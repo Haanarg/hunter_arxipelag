@@ -69,91 +69,98 @@ function finish(g){
   return g
 }
 
-function combatBase(opts={}){
+function combatCompactVariant(opts={}){
   const {
-    width=1.95,bodyLen=5.6,cockpitLen=2.15,cockpitH=.68,
-    canopy='tandem',wing=2.2,pods='rockets',noseGun=true,
-    tailEnd=7.35,bodyY=2.08,bodyCol=0x59634f
+    width=1.72,bodyLen=5.05,cockpit='compact',cockpitH=.62,
+    wing=1.62,tailEnd=7.0,skidWidth=1.18,skidZ0=-1.72,skidZ1=1.42,
+    bodyCol=0x59634f
   }=opts;
   const g=new THREE.Group();
 
-  // Fuselatge estret de combat.
-  sphere(g,width*.5,.88,bodyLen*.5,bodyCol,0,bodyY,.2);
-  roundedPrism(g,width*.82,.5,2.0,.16,0x4f5949,0,2.7,-.15);
+  // Base directa del model 2: fuselatge compacte i estret.
+  sphere(g,width*.5,.86,bodyLen*.5,bodyCol,0,2.08,.2);
+  roundedPrism(g,width*.8,.48,1.9,.15,0x4f5949,0,2.68,-.12);
 
-  // Cabina en tàndem tipus Cobra.
-  if(canopy==='tandem'){
-    sphere(g,width*.47,cockpitH,cockpitLen*.55,C.glass,0,2.25,-2.42);
-    sphere(g,width*.41,cockpitH*.9,cockpitLen*.48,C.glass,0,2.55,-1.25);
-    box(g,width*.72,.14,.16,bodyCol,0,2.42,-1.72);
-  }else if(canopy==='faceted'){
-    roundedPrism(g,width*.84,1.12,2.0,.12,C.glass,0,2.3,-2.0);
-    box(g,width*.9,.18,.16,bodyCol,0,2.48,-1.9);
-  }else{
+  // Cabina: variants entre compacta, tàndem i angular tipus Apache.
+  if(cockpit==='compact'){
     sphere(g,width*.45,.64,1.35,C.glass,0,2.28,-2.25);
     box(g,width*.72,.62,1.1,bodyCol,0,2.48,-1.0);
+  }else if(cockpit==='tandem'){
+    sphere(g,width*.46,cockpitH,1.08,C.glass,0,2.18,-2.45);
+    sphere(g,width*.39,cockpitH*.9,.92,C.glass,0,2.5,-1.45);
+    box(g,width*.7,.14,.16,bodyCol,0,2.4,-1.92);
+  }else if(cockpit==='apache'){
+    // Cabina angular amb dos volums facetats, inspirada en la lectura visual de l'Apache.
+    const front=roundedPrism(g,width*.82,.92,1.25,.08,C.glass,0,2.18,-2.5);
+    front.rotation.x=-.08;
+    const rear=roundedPrism(g,width*.74,.86,1.05,.07,C.glass,0,2.48,-1.42);
+    rear.rotation.x=.05;
+    box(g,width*.86,.16,.18,bodyCol,0,2.38,-1.95);
+    box(g,width*.72,.2,.65,bodyCol,0,2.76,-1.1);
+  }else if(cockpit==='apacheLow'){
+    // Versió encara més low-poly: grans plans i morro més dur.
+    roundedPrism(g,width*.8,.86,1.16,.04,C.glass,0,2.14,-2.5);
+    roundedPrism(g,width*.7,.78,.92,.04,C.glass,0,2.47,-1.46);
+    box(g,width*.88,.22,.35,bodyCol,0,1.83,-2.95);
+    box(g,width*.76,.24,.72,bodyCol,0,2.78,-1.0);
   }
 
-  // Aletes laterals i armament.
+  // Aletes més curtes que el model 2 original + barquilles grans del model 3.
   for(const s of[-1,1]){
-    rod(g,[s*.62,2.0,-.15],[s*wing,1.78,.15],.09,C.metal);
-    box(g,.2,.14,2.8,0x4c5749,s*wing,1.77,.25);
-    if(pods==='rockets'){
-      for(const z of[-.65,.15,.95]) {
-        const p=new THREE.Mesh(new THREE.CylinderGeometry(.13,.13,.72,8),mat(0x303638,.58,.28));
-        p.rotation.x=Math.PI/2;p.position.set(s*wing,1.66,z);g.add(p);
-      }
-    } else if(pods==='large'){
-      const p=new THREE.Mesh(new THREE.CylinderGeometry(.26,.26,1.9,10),mat(0x39423a,.64,.2));
-      p.rotation.x=Math.PI/2;p.position.set(s*wing,1.68,.2);g.add(p);
-      box(g,.34,.18,.45,0x303638,s*wing,1.68,-.86);
-    } else if(pods==='missile'){
-      for(const z of[-.5,.45])rod(g,[s*wing,1.7,z-.45],[s*wing,1.7,z+.45],.11,0x303638);
-    }
+    rod(g,[s*.58,2.0,-.08],[s*wing,1.8,.08],.085,C.metal);
+    box(g,.18,.13,1.9,0x4c5749,s*wing,1.79,.18);
+
+    const pod=new THREE.Mesh(new THREE.CylinderGeometry(.26,.26,1.9,10),mat(0x39423a,.64,.2));
+    pod.rotation.x=Math.PI/2;pod.position.set(s*wing,1.68,.18);g.add(pod);
+    box(g,.34,.18,.45,0x303638,s*wing,1.68,-.86);
   }
 
-  // Canó de morro.
-  if(noseGun){
-    rod(g,[0,1.72,-2.85],[0,1.72,-4.0],.11,C.metal);
-    box(g,.3,.26,.52,C.dark,0,1.72,-3.92);
+  // Canó de morro, conservat del model 2.
+  rod(g,[0,1.72,-2.85],[0,1.72,-4.0],.11,C.metal);
+  box(g,.3,.26,.52,C.dark,0,1.72,-3.92);
+
+  // Patins connectats clarament al fuselatge.
+  for(const x of[-skidWidth,skidWidth]){
+    rod(g,[x,.48,skidZ0],[x,.48,skidZ1],.075,C.metal);
+    const s=Math.sign(x);
+    rod(g,[s*.55,1.85,-1.0],[x,.48,-1.0],.075,C.metal);
+    rod(g,[s*.62,1.88,.15],[x,.48,.15],.075,C.metal);
+    rod(g,[s*.58,1.82,.95],[x,.48,.95],.075,C.metal);
   }
 
-  // Cua i patins.
   tailBoom(g,2.0,tailEnd,2.55,2.95,.35);
-  skids(g,1.25,-1.8,1.55);
   rotorSet(g,13.6,tailEnd-.12);
-
   return finish(g);
 }
 
-export function combatCobra(){
-  return combatBase({
-    width:1.82,bodyLen:5.5,cockpitLen:2.2,cockpitH:.66,
-    canopy:'tandem',wing:2.05,pods:'rockets',tailEnd:7.3
+export function compactA(){
+  return combatCompactVariant({
+    width:1.72,bodyLen:5.05,cockpit:'compact',
+    wing:1.58,tailEnd:7.0,skidWidth:1.18
   })
 }
-export function combatCompact(){
-  return combatBase({
-    width:1.72,bodyLen:5.05,cockpitLen:1.9,cockpitH:.62,
-    canopy:'compact',wing:1.9,pods:'missile',tailEnd:7.0
+export function compactB(){
+  return combatCompactVariant({
+    width:1.7,bodyLen:5.0,cockpit:'tandem',cockpitH:.6,
+    wing:1.56,tailEnd:6.98,skidWidth:1.16
   })
 }
-export function combatGunship(){
-  return combatBase({
-    width:2.02,bodyLen:5.8,cockpitLen:2.25,cockpitH:.7,
-    canopy:'tandem',wing:2.35,pods:'large',tailEnd:7.45
+export function compactC(){
+  return combatCompactVariant({
+    width:1.74,bodyLen:5.08,cockpit:'apache',
+    wing:1.6,tailEnd:7.02,skidWidth:1.18
   })
 }
-export function combatModern(){
-  return combatBase({
-    width:1.9,bodyLen:5.4,cockpitLen:2.0,cockpitH:.68,
-    canopy:'faceted',wing:2.15,pods:'missile',tailEnd:7.2
+export function compactD(){
+  return combatCompactVariant({
+    width:1.76,bodyLen:5.1,cockpit:'apacheLow',
+    wing:1.62,tailEnd:7.04,skidWidth:1.2
   })
 }
 
 export const concepts=[
-  {name:'1 · Cobra clàssic',create:combatCobra,desc:'Fuselatge molt estret, cabina tàndem i silueta inspirada en l’AH-1 Cobra.'},
-  {name:'2 · Combat compacte',create:combatCompact,desc:'Més curt i àgil visualment, amb morro simple i armament lleuger.'},
-  {name:'3 · Gunship',create:combatGunship,desc:'Cos una mica més robust, aletes amples i pods grans de coets.'},
-  {name:'4 · Combat modern',create:combatModern,desc:'Cabina facetada low-poly i silueta més moderna, mantenint el llenguatge visual del joc.'}
+  {name:'1 · Compacte A',create:compactA,desc:'Model 2 refinat: patins connectats, aletes més curtes i barquilles grans del Gunship.'},
+  {name:'2 · Compacte B · Tàndem',create:compactB,desc:'Mateixa base, però amb cabina tàndem més marcada i fuselatge lleugerament més fi.'},
+  {name:'3 · Compacte C · Apache',create:compactC,desc:'Cabina angular inspirada en l’Apache, mantenint la base compacta i les barquilles grans.'},
+  {name:'4 · Compacte D · Apache low-poly',create:compactD,desc:'Versió més geomètrica i agressiva, amb grans plans angulars i lectura més moderna.'}
 ];
