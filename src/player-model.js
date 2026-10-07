@@ -62,12 +62,12 @@ window.HUNTER_PLAYER_MODEL=Object.freeze({
  for(const x of[-.3,.3])box(g,.1,1.1,.09,colors.dark,x,2.33,.35);
  // Braços amb espatlla i colze; postura neutra comuna.
  for(const side of[-1,1]){
-  const shoulder=new T.Group();shoulder.position.set(side*(p.chest/2+.13),2.84,0);shoulder.rotation.z=side*.065;g.add(shoulder);
+  const shoulder=new T.Group();shoulder.position.set(side*.57,2.90,0);shoulder.rotation.z=side*.12;g.add(shoulder);
   oval(shoulder,p.arm*.65,.22,p.arm*.65,colors.lime,0,-.11,0,8);
-  segment(shoulder,p.arm*.57,p.arm*.49,.54,1,colors.green,0,-.32,0);
-  const elbow=new T.Group();elbow.position.y=-.6;elbow.rotation.x=-.08;shoulder.add(elbow);
-  segment(elbow,p.arm*.49,p.arm*.38,.5,1,colors.green,0,-.24,0);
-  oval(elbow,.13,.16,.135,colors.dark,0,-.59,-.025,8);
+  segment(shoulder,p.arm*.57,p.arm*.49,.567,1,colors.green,0,-.336,0);
+  const elbow=new T.Group();elbow.position.y=-.63;elbow.rotation.x=-.08;elbow.rotation.z=side*.04;shoulder.add(elbow);
+  segment(elbow,p.arm*.49,p.arm*.38,.525,1,colors.green,0,-.252,0);
+  oval(elbow,.13,.16,.135,colors.dark,0,-.62,-.025,8);
   oval(elbow,p.arm*.45,.115,p.arm*.46,colors.green,0,0,0,8);
   oval(elbow,.12,.14,.05,colors.olive,0,.01,.12,8);
   u[side<0?'al':'ar']=shoulder;u[side<0?'ael':'aer']=elbow;
