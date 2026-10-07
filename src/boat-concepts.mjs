@@ -44,7 +44,7 @@ export function createBoatConcept(THREE,variant=0){
   for(const ring of rings)for(const p of ring)verts.push(...p);
   const N=7;
   for(let j=0;j<rings.length-1;j++)for(let k=0;k<N-1;k++){const a=j*N+k,b=a+N,c=b+1,d=a+1;idx.push(a,b,c,a,c,d)}
-  const base=(rings.length-1)*N;for(let k=1;k<N-1;k++)idx.push(base,base+k,base+k+1);
+  const base=(rings.length-1)*N;for(let k=1;k<N-1;k++)idx.push(base,base+k+1,base+k);
   const geo=new THREE.BufferGeometry();
   geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
   geo.setIndex(idx);geo.computeVertexNormals();
