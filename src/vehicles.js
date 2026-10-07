@@ -205,25 +205,44 @@ window.HUNTER_VEHICLES=Object.freeze({
           roundedPrism(g,1.3,.62,1.8,.17,0x505b49,0,3.12,.82,'paint');
           rod(g,[.494,3.15,1.34],[.845,3.2,1.78],.11,0x343b35,'metal');
         }else{
-          const fus=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(bodyCol,'paint'));fus.scale.set(.94,.92,3.2);fus.position.set(0,2.05,.25);g.add(fus);
-          const cockpit=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(glass,'glass'));cockpit.scale.set(.92,.72,1.5);cockpit.position.set(0,2.28,-2.35);g.add(cockpit);
-          box(g,1.02,.58,1.35,0x4c5749,0,2.65,-.55,'paint');rod(g,[0,2.55,2.3],[0,2.85,7.25],.16,bodyCol,'paint');box(g,.1,1.35,.9,bodyCol,0,3.35,7.05,'paint');
-          for(const x of[-2.15,2.15]){
+          // Combat Compacte B3 · Apache: cabines igualades, fuselatge compacte i unió diagonal.
+          const fus=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(bodyCol,'paint'));fus.scale.set(.86,.86,2.51);fus.position.set(0,2.08,.2);g.add(fus);
+          roundedPrism(g,1.38,.48,1.9,.15,0x4f5949,0,2.68,-.12,'paint');
+
+          // Dues cabines de mida equivalent, més angulars, inspirades en l'Apache.
+          const front=roundedPrism(g,1.31,.78,.98,.025,glass,0,2.13,-2.45,'glass');front.rotation.x=-.11;
+          const rear=roundedPrism(g,1.31,.78,.98,.025,glass,0,2.46,-1.34,'glass');rear.rotation.x=.06;
+          box(g,1.45,.2,.3,bodyCol,0,1.84,-2.93,'paint');
+          const bridge=box(g,1.38,.56,.76,bodyCol,0,2.5,-1.87,'paint');bridge.rotation.x=-.5;
+          box(g,1.31,.26,.62,bodyCol,0,2.83,-.68,'paint');
+
+          // Aletes curtes i barquilles grans.
+          for(const x of[-1.57,1.57]){
             const side=Math.sign(x);
-            rod(g,[side*.82,2.05,-.55],[x,1.75,-.55],.09,metal);
-            rod(g,[side*.82,2.05,.75],[x,1.75,.75],.09,metal);
-            box(g,.22,.16,3.25,0x4c5749,x,1.75,.2,'paint');
-            for(const z of[-.85,.1,.95])round(g,.11,.62,0x303638,x,1.63,z,'z','metal')
+            rod(g,[side*.58,2.0,-.08],[x,1.8,.08],.085,metal);
+            box(g,.18,.13,1.9,0x4c5749,x,1.79,.18,'paint');
+            round(g,.26,1.9,0x39423a,x,1.68,.18,'z','metal');
+            box(g,.34,.18,.45,0x303638,x,1.68,-.86,'metal');
           }
-          rod(g,[0,1.72,-2.95],[0,1.72,-4.15],.11,metal);box(g,.28,.24,.5,0x252b2d,0,1.72,-4.05,'metal');
-          for(const x of[-1.3,1.3]){
+
+          // Canó de morro.
+          rod(g,[0,1.72,-2.85],[0,1.72,-4.0],.11,metal);box(g,.3,.26,.52,0x343b35,0,1.72,-3.92,'metal');
+
+          // Patins connectats directament al fuselatge.
+          for(const x of[-1.17,1.17]){
             const side=Math.sign(x);
-            rod(g,[x,.5,-1.7],[x,.5,1.6],.08,metal);
-            rod(g,[side*.72,1.45,-1.15],[x,.5,-1.15],.08,metal);
-            rod(g,[side*.72,1.45,1.05],[x,.5,1.05],.08,metal);
+            rod(g,[x,.48,-1.72],[x,.48,1.42],.075,metal);
+            rod(g,[side*.55,1.85,-1.0],[x,.48,-1.0],.075,metal);
+            rod(g,[side*.62,1.88,.15],[x,.48,.15],.075,metal);
+            rod(g,[side*.58,1.82,.95],[x,.48,.95],.075,metal);
           }
+
+          // Boom de cua afinat i estabilitzador del B3.
+          {const startZ=2.0,endZ=6.99,y0=2.55,y1=2.95,L=Math.hypot(endZ-startZ,y1-y0),boom=new THREE.Mesh(new THREE.CylinderGeometry(.147,.35,L,6),material(bodyCol,'paint'));boom.position.set(0,(y0+y1)/2,(startZ+endZ)/2);boom.rotation.x=Math.PI/2-Math.atan2(y1-y0,endZ-startZ);g.add(boom)}
+          box(g,.12,1.35,.88,bodyCol,0,3.34,6.87,'paint');
+          box(g,2.25,.1,.58,bodyCol,0,2.9,5.94,'paint');
         }
-        rod(g,[0,3.02,0],[0,3.82,0],.14,metal);round(g,.3,.2,metal,0,3.82,0,'y','metal');const rotor=new THREE.Group();rotor.position.set(0,3.82,0);for(const a of[0,Math.PI/2]){const blade=box(rotor,combat?13.5:14.8,.1,.36,rubber,0,0,0,'rubber');blade.rotation.y=a}g.add(rotor);g.userData.rotor=rotor;
+        rod(g,[0,3.02,0],[0,3.82,0],.14,metal);round(g,.3,.2,metal,0,3.82,0,'y','metal');const rotor=new THREE.Group();rotor.position.set(0,3.82,0);for(const a of(combat?[0,Math.PI/3,Math.PI*2/3]:[0,Math.PI/2])){const blade=box(rotor,combat?13.5:14.8,.1,.36,rubber,0,0,0,'rubber');blade.rotation.y=a}g.add(rotor);g.userData.rotor=rotor;
         const tail=new THREE.Group();tail.position.set(.38,3.45,combat?7:7.38);box(tail,.1,1.9,.16,rubber,0,0,0,'rubber');box(tail,.1,.16,1.9,rubber,0,0,0,'rubber');g.add(tail);g.userData.tailRotor=tail;
       }
       if(t==='bici'){const crank=new THREE.Group();crank.position.set(0,.75,0);for(const side of[-1,1]){rod(crank,[side*.3,0,0],[side*.3,0,side*.28],.045,metal);box(crank,.26,.08,.18,rubber,side*.4,0,side*.28,'rubber')}g.add(crank);g.userData.crank=crank}
