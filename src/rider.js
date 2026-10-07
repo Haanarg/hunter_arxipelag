@@ -7,7 +7,7 @@ window.HUNTER_RIDER=Object.freeze({
     for(let i=0;i<2;i++){
       const shoulder=i?rig.ar:rig.al,elbow=i?rig.aer:rig.ael;
       const hip=i?rig.lr:rig.ll,knee=i?rig.lkr:rig.lkl;
-      for(const [part,len,slot]of[[shoulder,.6,i*2],[elbow,.59,i*2+1],[hip,.75,4+i*2],[knee,.82,5+i*2]]){
+      for(const [part,len,slot]of[[shoulder,.63,i*2],[elbow,.62,i*2+1],[hip,.75,4+i*2],[knee,.82,5+i*2]]){
         g.add(part);part.userData.restLength=len;part.rotation.set(0,0,0);limbs[slot]=part;
       }
       g.add(boots[i]);
@@ -23,7 +23,7 @@ window.HUNTER_RIDER=Object.freeze({
       if(length>1e-6)m.quaternion.setFromUnitVectors(down,delta.multiplyScalar(1/length));
     };
     const vec=(x,y,z)=>new THREE.Vector3(x,y,z);
-    const shoulderAt=side=>vec(side*.65,1.11,0).applyQuaternion(torso.quaternion).add(torso.position);
+    const shoulderAt=side=>vec(side*.57,1.17,0).applyQuaternion(torso.quaternion).add(torso.position);
     const update=(v,dt)=>{
       const open=!!v&&['bici','moto','moto_aquatica','llanxa','llanxa_coets','barca_rems','windsurf'].includes(v.t);g.visible=open;if(!open)return;
       const u=g.userData,sc=scales[v.t],moving=Math.min(1,Math.abs(v.v)/1.8);u.motion+=(moving-u.motion)*(1-Math.exp(-12*dt));const motion=u.motion,phase=(v.t==='bici'||v.t==='barca_rems')?-(v.pedalPhase||0):(v.pedalPhase||0);
