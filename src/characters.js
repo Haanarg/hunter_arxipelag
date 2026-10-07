@@ -28,60 +28,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
     return g
   },
   createPlayer(THREE,{box,palette=window.HUNTER_PALETTE}){
-    const P=palette.player,player=new THREE.Group(),mats=[],J=(w,h,d,c,x,y,z,g,swap)=>{const m=box(g,w,h,d,c,x,y,z);if(swap)mats.push([m.material,c,swap]);return m},u=player.userData;
+    const P=palette.player,player=window.HUNTER_PLAYER_MODEL.create(THREE,{unitScale:1.2,palette}),u=player.userData;
     u.ph=0;u.breath=0;u.firePose=0;u.meleePose=0;
-
-    const leg=x=>{
-      const hip=new THREE.Group();hip.position.set(x,1.9,0);player.add(hip);
-      J(.46,.92,.56,P.primary,0,-.44,0,hip,window.HUNTER_PALETTE.enemy.primary);
-      box(hip,.5,.16,.58,P.dark,0,-.86,0);
-      const knee=new THREE.Group();knee.position.set(0,-.88,0);hip.add(knee);
-      J(.43,.86,.52,P.primary,0,-.4,0,knee,window.HUNTER_PALETTE.enemy.primary);
-      box(knee,.48,.18,.54,P.dark,0,-.02,0);
-      box(knee,.56,.36,.76,0x171a18,0,-.88,-.1);
-      return {hip,knee}
-    };
-    const L=leg(-.31),R=leg(.31);u.ll=L.hip;u.lr=R.hip;u.lkl=L.knee;u.lkr=R.knee;
-
-    J(1.32,1.7,.78,P.secondary,0,2.8,0,player,window.HUNTER_PALETTE.enemy.general);box(player,1.42,.28,.86,P.dark,0,1.98,0);
-    box(player,.96,1.38,.46,P.webbing,0,2.9,.59);box(player,.22,1.28,.1,P.dark,-.34,2.9,.43);box(player,.22,1.28,.1,P.dark,.34,2.9,.43);
-    box(player,.4,.46,.1,P.dark,-.36,3.2,-.44);
-
-    const arm=x=>{
-      const shoulder=new THREE.Group();shoulder.position.set(x,3.5,0);player.add(shoulder);
-      J(.36,.76,.42,P.secondary,0,-.36,0,shoulder,window.HUNTER_PALETTE.enemy.general);
-      box(shoulder,.38,.16,.45,P.dark,0,-.73,0);
-      const elbow=new THREE.Group();elbow.position.set(0,-.72,0);shoulder.add(elbow);
-      J(.33,.74,.36,P.secondary,0,-.34,0,elbow,window.HUNTER_PALETTE.enemy.general);
-      box(elbow,.31,.18,.34,P.skin,0,-.73,0);
-      return {shoulder,elbow}
-    };
-    const AL=arm(-.78),AR=arm(.78);u.al=AL.shoulder;u.ar=AR.shoulder;u.ael=AL.elbow;u.aer=AR.elbow;
-
-    // Coll, cap superior retallat, cabell curt, gorra amb visera i ulleres de sol.
-    const neck=new THREE.Mesh(new THREE.CylinderGeometry(.24,.27,.34,10),new THREE.MeshStandardMaterial({color:P.skin,roughness:.74}));
-    neck.position.set(0,3.72,0);player.add(neck);
-    const headMat=new THREE.MeshStandardMaterial({color:P.skin,roughness:.72}),
-      headGeom=new THREE.SphereGeometry(.5,12,8,0,Math.PI*2,.28,Math.PI-.62),
-      head=new THREE.Mesh(headGeom,headMat);
-    head.scale.set(.8,1,.78);head.position.set(0,4.08,0);player.add(head);
-    const hairMat=new THREE.MeshStandardMaterial({color:0x3a2b22,roughness:.92});
-    // Opció 4: el cap ocupa aprox. X ±.40 / Z ±.39. El cabell l'embolcalla per fora
-    // als laterals i al darrere, però el límit superior (4.38) queda sota la gorra.
-    const hairShell=new THREE.Mesh(new THREE.CylinderGeometry(.395,.405,.38,12,1,true,Math.PI*1.18,Math.PI*1.64),hairMat);
-    hairShell.position.set(0,4.19,.11);hairShell.rotation.y=Math.PI;player.add(hairShell);
-    // Clatell tancat: arc posterior continu que uneix els dos extrems del cilindre principal.
-    const hairBack=new THREE.Mesh(new THREE.CylinderGeometry(.39,.405,.25,12,1,true,0,Math.PI*2),hairMat);
-    hairBack.scale.set(.98,.92,.84);hairBack.position.set(0,4.045,.2);player.add(hairBack);
-    const nape=box(player,.46,.15,.12,0x3a2b22,0,3.93,.3);
-    nape.material.roughness=.92;
-    const glasses=new THREE.Group();glasses.position.set(0,4.16,-.37);player.add(glasses);
-    box(glasses,.34,.16,.06,0x11161a,-.2,0,0);box(glasses,.34,.16,.06,0x11161a,.2,0,0);box(glasses,.12,.06,.06,P.dark,0,0,0);
-    const cap=new THREE.Group();cap.position.set(0,4.39,-.01);player.add(cap);
-    const capCrown=new THREE.Mesh(new THREE.SphereGeometry(.5,12,6,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:P.primary,roughness:.8}));
-    capCrown.scale.set(.9,.42,.93);cap.add(capCrown);
-    const visor=box(cap,.7,.075,.46,P.primary,0,-.005,-.39);visor.rotation.x=-.1;
-    mats.push([capCrown.material,P.primary,window.HUNTER_PALETTE.enemy.secondary],[visor.material,P.primary,window.HUNTER_PALETTE.enemy.secondary]);
 
     const gun=new THREE.Group();gun.position.set(0,-.72,-.1);gun.rotation.x=-Math.PI/2;u.aer.add(gun);
     box(gun,.2,.25,1.8,P.metal,0,0,-.2);box(gun,.2,.5,.25,P.dark,0,-.3,.1);box(gun,.22,.3,.6,0x6b4a2a,0,0,.9);u.gun=gun;
@@ -97,7 +45,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     const muzzle=new THREE.Mesh(new THREE.CylinderGeometry(.3,.24,.24,10),bazDark);muzzle.rotation.x=Math.PI/2;muzzle.position.z=-1.52;bazooka.add(muzzle);
     box(bazooka,.18,.35,.38,0x252b27,0,-.3,.25);box(bazooka,.12,.18,.42,0x707873,-.12,.26,-.48);box(bazooka,.16,.12,.5,0x707873,.18,.22,.28);
     bazooka.rotation.x=-.08;bazooka.visible=false;u.bazooka=bazooka;
-    u.mats=mats;player.scale.setScalar(2/3);
+    player.scale.setScalar(2/3);
     return player;
   },
   animatePlayer(player,{forward,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false}){
@@ -115,7 +63,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
       tx(u.al,1.15+.18*stroke);tx(u.ar,1.15-.18*stroke);
       tz(u.al,-.42-.38*stroke);tz(u.ar,.42+.38*stroke);
       tx(u.ael,.72+.45*recover);tx(u.aer,.72+.45*(1-recover));
-      const kick=.22*Math.sin(ph*2);tx(u.ll,.18+kick);tx(u.lr,.18-kick);tx(u.lkl,.48-.18*kick);tx(u.lkr,.48+.18*kick);
+      const kick=.22*Math.sin(ph*2);tx(u.ll,.18+kick);tx(u.lr,.18-kick);tx(u.lkl,-(.48-.18*kick));tx(u.lkr,-(.48+.18*kick));
       player.position.y+=Math.sin(ph*2)*.035;
       return
     }
@@ -164,3 +112,4 @@ window.HUNTER_CHARACTERS=Object.freeze({
     else player.position.y+=breath*.012;
   }
 });
+

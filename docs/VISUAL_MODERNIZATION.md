@@ -5,7 +5,11 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.8**.
+Versió actual: **0.3.9**.
+
+Revisió 0.3.9 (2026-10-07): protagonista tàctic aprovat després de les comparatives 3D. Espatlles estretes, genolls i colzes articulats, cabell curt sota una gorra ajustada, visera arrodonida allargada i botes amb turmell, empenya i sola. `src/player-model.js` és la font comuna de geometria del protagonista i dels conductors visibles de bicicleta, moto, moto aquàtica, llanxa, llanxa llançacoets, barca de rems i windsurf. El rig a peu conserva els noms i les armes; el de conducció reutilitza les mateixes peces amb els punts de contacte existents. Es mantenen pedaleig, peus a terra en aturar-se, mans als rems i orientació del windsurf. La disfressa afecta també el conductor i la gorra. Corregit el sentit de flexió dels genolls durant la braça. Els vehicles de cabina que no mostraven conductor continuen igual.
+
+Validació 0.3.9: smoke general; prova específica de model, sis estats d'animació/equipament, disfressa sincronitzada, 168 postures de conductors i sortida de vehicle; comprovació WebGL de protagonista i set conductors; arrencada i shaders en perfils desktop/mobile i qualitat reduïda. Android físic pendent per a aquesta revisió. Les captures de validació són temporals; el codi del model aprovat és al repositori.
 
 Revisió 0.3.8: el botó de cerca de llavors surt del bloc de la llavor i passa al cantó inferior esquerre de la pantalla inicial, mantenint intacta la pantalla de cerca i el seu comportament.
 
@@ -404,6 +408,9 @@ Les cinc millores prioritzades el 2026-10-05 estan implementades.
 
 ## Validació automatitzada
 
+### Model del protagonista i conductors
+`node tests/player-model.cjs` comprova model compartit, 2.636 triangles del cos, genolls en caminar/nedar, equipament, disfressa i postures dels set conductors. `tests/player-model-browser.cjs` genera captures WebGL del model i cada vehicle obert; usa les mateixes variables `PLAYWRIGHT_MODULE` i `BROWSER_EXECUTABLE_PATH` que la prova de navegador.
+
 ### Smoke
 `tests/smoke.cjs` cobreix, entre altres:
 - arrencada diferida;
@@ -471,5 +478,6 @@ L’usuari confirma el 2026-10-05 que la versió modernitzada funciona en Androi
 
 ### Regla de compatibilitat
 No reescriure simultàniament simulació i renderer d'un mateix sistema. Quan es modularitzi una part del nucli, conservar temporalment els contractes que utilitza el gameplay fins que la nova ruta estigui validada.
+
 
 

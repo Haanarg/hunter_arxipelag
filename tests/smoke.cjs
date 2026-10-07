@@ -162,7 +162,7 @@ run(`{
     q.pedalPhase=j*Math.PI/12;q.v=j===23?0:4;q.hd=.73;
     place(q,j*.1,0,0);poseRider(q,.1);rider.updateWorldMatrix(true,true);
     for(let i=0;i<2;i++){
-      const hand=rider.userData.limbs[i*2+1].localToWorld(new THREE.Vector3(0,.5,0));
+      const hand=rider.userData.limbs[i*2+1].localToWorld(new THREE.Vector3(0,-rider.userData.limbs[i*2+1].userData.restLength,0));
       const oar=q.o.userData.oars[i],grip=oar.localToWorld(oar.userData.grip.clone());
       maxError=Math.max(maxError,hand.distanceTo(grip));
     }
@@ -255,5 +255,6 @@ console.log(JSON.stringify({passed:true,vehicles:types.length,buildings:run('B.l
 
 
 })().catch(e=>{console.error(e);process.exitCode=1});
+
 
 
