@@ -103,10 +103,10 @@ window.HUNTER_BUILDINGS=Object.freeze({
     };
 
     const createShell=({width,depth,height,wallColor,roofColor})=>{
-      const group=new THREE.Group(),walls=wallMaterial(wallColor),doors=doorMaterial();
+      const group=new THREE.Group(),roofGroup=new THREE.Group(),walls=wallMaterial(wallColor),doors=doorMaterial();
       const floor=new THREE.Mesh(new THREE.BoxGeometry(width+.35,12.3,depth+.35),material(0x756b5d,'masonry'));
       const roof=new THREE.Mesh(new THREE.BoxGeometry(width+1.35,1.15,depth+1.35),material(roofColor,'masonry'));
-      floor.position.y=-5.85;roof.position.y=height+.62;group.add(floor,roof);
+      floor.position.y=-5.85;roof.position.y=height+.62;group.add(floor,roofGroup);roofGroup.add(roof);
 
       const rimMat=material(0x3f4650,'masonry'),rimH=.34;
       const rimN=new THREE.Mesh(new THREE.BoxGeometry(width+1.5,rimH,.36),rimMat);
@@ -117,8 +117,9 @@ window.HUNTER_BUILDINGS=Object.freeze({
       rimS.position.set(0,height+1.24,depth/2+.48);
       rimE.position.set(width/2+.48,height+1.24,0);
       rimW.position.set(-width/2-.48,height+1.24,0);
-      group.add(rimN,rimS,rimE,rimW);
-      return {group,walls,doors,roof};
+      roofGroup.add(rimN,rimS,rimE,rimW);
+      roofGroup.userData.color=roofColor;
+      return {group,walls,doors,roof:roofGroup};
     };
 
     // Hangar de gran llum amb coberta arquejada low-poly.
