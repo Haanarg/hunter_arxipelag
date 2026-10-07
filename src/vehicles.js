@@ -238,11 +238,11 @@ window.HUNTER_VEHICLES=Object.freeze({
           }
 
           // Boom de cua afinat i estabilitzador del B3.
-          {const startZ=2.0,endZ=6.99,y0=2.55,y1=2.95,L=Math.hypot(endZ-startZ,y1-y0),boom=new THREE.Mesh(new THREE.CylinderGeometry(.147,.35,L,6),material(bodyCol,'paint'));boom.position.set(0,(y0+y1)/2,(startZ+endZ)/2);boom.rotation.x=Math.PI/2-Math.atan2(y1-y0,endZ-startZ);g.add(boom)}
+          {const startZ=.95,endZ=6.99,y0=2.42,y1=2.95,L=Math.hypot(endZ-startZ,y1-y0),boom=new THREE.Mesh(new THREE.CylinderGeometry(.147,.35,L,6),material(bodyCol,'paint'));boom.position.set(0,(y0+y1)/2,(startZ+endZ)/2);boom.rotation.x=Math.PI/2-Math.atan2(y1-y0,endZ-startZ);g.add(boom)}
           box(g,.12,1.35,.88,bodyCol,0,3.34,6.87,'paint');
           box(g,2.25,.1,.58,bodyCol,0,2.9,5.94,'paint');
         }
-        rod(g,[0,3.02,0],[0,3.82,0],.14,metal);round(g,.3,.2,metal,0,3.82,0,'y','metal');const rotor=new THREE.Group();rotor.position.set(0,3.82,0);for(const a of(combat?[0,Math.PI/3,Math.PI*2/3]:[0,Math.PI/2])){const blade=box(rotor,combat?13.5:14.8,.1,.36,rubber,0,0,0,'rubber');blade.rotation.y=a}g.add(rotor);g.userData.rotor=rotor;
+        const rotorY=combat?3.12:3.82,mastBaseY=combat?2.94:3.02;rod(g,[0,mastBaseY,0],[0,rotorY,0],.14,metal);round(g,.3,.2,metal,0,rotorY,0,'y','metal');const rotor=new THREE.Group();rotor.position.set(0,rotorY,0);for(const a of(combat?[0,Math.PI/3,Math.PI*2/3]:[0,Math.PI/2])){const blade=box(rotor,combat?13.5:14.8,.1,.36,rubber,0,0,0,'rubber');blade.rotation.y=a}g.add(rotor);g.userData.rotor=rotor;
         const tail=new THREE.Group();tail.position.set(.38,3.45,combat?7:7.38);box(tail,.1,1.9,.16,rubber,0,0,0,'rubber');box(tail,.1,.16,1.9,rubber,0,0,0,'rubber');g.add(tail);g.userData.tailRotor=tail;
       }
       if(t==='bici'){const crank=new THREE.Group();crank.position.set(0,.75,0);for(const side of[-1,1]){rod(crank,[side*.3,0,0],[side*.3,0,side*.28],.045,metal);box(crank,.26,.08,.18,rubber,side*.4,0,side*.28,'rubber')}g.add(crank);g.userData.crank=crank}
