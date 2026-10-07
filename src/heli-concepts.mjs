@@ -69,83 +69,91 @@ function finish(g){
   return g
 }
 
-function hueyTransportVariant(opts={}){
+function combatBase(opts={}){
   const {
-    width=2.82,noseGlassW=1.34,noseGlassH=.92,noseGlassD=1.08,
-    belly=.28,roofW=2.52,doorZ0=-.76,doorZ1=1.76,
-    windshieldSlope=.72,cheek=.0,sideDetail='cheek',tailEnd=7.55,engineW=1.38
+    width=1.95,bodyLen=5.6,cockpitLen=2.15,cockpitH=.68,
+    canopy='tandem',wing=2.2,pods='rockets',noseGun=true,
+    tailEnd=7.35,bodyY=2.08,bodyCol=0x59634f
   }=opts;
-  const g=new THREE.Group(),sideX=width/2+.01;
-  roundedPrism(g,width,1.74,4.18,.31,C.body,0,2.08,.3);
-  sphere(g,width*.46,belly,1.92,C.body,0,1.39,.34);
+  const g=new THREE.Group();
 
-  // Cabina frontal més propera al Huey original: vidres grans, frontals i poc bulbosos.
-  sphere(g,noseGlassW,noseGlassH,noseGlassD,C.glass,0,2.17,-2.35);
-  const wx=width*.23;
-  for(const x of[-wx,wx])rod(g,[x,1.53,-3.08],[x*windshieldSlope,2.82,-2.48],.045,C.body);
-  rod(g,[0,1.48,-3.11],[0,2.84,-2.5],.05,C.dark);
-  if(sideDetail==='cheek'&&cheek>0)for(const s of[-1,1])sphere(g,cheek,.5,.68,C.body,s*(width*.43),1.82,-2.44);
-  else if(sideDetail==='cylinderLarge'||sideDetail==='cylinderSmall'){
-    const rr=sideDetail==='cylinderLarge'?.34:.27,len=sideDetail==='cylinderLarge'?.34:.28;
-    for(const s of[-1,1]){
-      const m=new THREE.Mesh(new THREE.CylinderGeometry(rr,rr,len,12),mat(C.body,.66,.12));
-      m.rotation.z=Math.PI/2;m.position.set(s*(width/2+len*.38),1.84,-2.38);g.add(m);
-    }
-  }else if(sideDetail==='fairing'){
-    for(const s of[-1,1]){
-      const pod=roundedPrism(g,.28,.58,.82,.12,C.body,s*(width*.49),1.86,-2.37);
-      pod.rotation.z=s*.08;
-      box(g,.08,.32,.46,C.dark,s*(width*.505),1.88,-2.38);
+  // Fuselatge estret de combat.
+  sphere(g,width*.5,.88,bodyLen*.5,bodyCol,0,bodyY,.2);
+  roundedPrism(g,width*.82,.5,2.0,.16,0x4f5949,0,2.7,-.15);
+
+  // Cabina en tàndem tipus Cobra.
+  if(canopy==='tandem'){
+    sphere(g,width*.47,cockpitH,cockpitLen*.55,C.glass,0,2.25,-2.42);
+    sphere(g,width*.41,cockpitH*.9,cockpitLen*.48,C.glass,0,2.55,-1.25);
+    box(g,width*.72,.14,.16,bodyCol,0,2.42,-1.72);
+  }else if(canopy==='faceted'){
+    roundedPrism(g,width*.84,1.12,2.0,.12,C.glass,0,2.3,-2.0);
+    box(g,width*.9,.18,.16,bodyCol,0,2.48,-1.9);
+  }else{
+    sphere(g,width*.45,.64,1.35,C.glass,0,2.28,-2.25);
+    box(g,width*.72,.62,1.1,bodyCol,0,2.48,-1.0);
+  }
+
+  // Aletes laterals i armament.
+  for(const s of[-1,1]){
+    rod(g,[s*.62,2.0,-.15],[s*wing,1.78,.15],.09,C.metal);
+    box(g,.2,.14,2.8,0x4c5749,s*wing,1.77,.25);
+    if(pods==='rockets'){
+      for(const z of[-.65,.15,.95]) {
+        const p=new THREE.Mesh(new THREE.CylinderGeometry(.13,.13,.72,8),mat(0x303638,.58,.28));
+        p.rotation.x=Math.PI/2;p.position.set(s*wing,1.66,z);g.add(p);
+      }
+    } else if(pods==='large'){
+      const p=new THREE.Mesh(new THREE.CylinderGeometry(.26,.26,1.9,10),mat(0x39423a,.64,.2));
+      p.rotation.x=Math.PI/2;p.position.set(s*wing,1.68,.2);g.add(p);
+      box(g,.34,.18,.45,0x303638,s*wing,1.68,-.86);
+    } else if(pods==='missile'){
+      for(const z of[-.5,.45])rod(g,[s*wing,1.7,z-.45],[s*wing,1.7,z+.45],.11,0x303638);
     }
   }
 
-  roundedPrism(g,roofW,.32,2.12,.13,C.body,0,2.91,.04);
-
-  // Portes laterals grans, com al model 3 original.
-  for(const side of[-1,1]){
-    box(g,.1,1.18,.36,C.body,side*sideX,2.0,doorZ0);
-    box(g,.1,1.18,.36,C.body,side*sideX,2.0,doorZ1);
-    box(g,.1,.14,2.05,C.dark,side*(sideX+.01),1.43,.5);
-    rod(g,[side*sideX,2.58,-.58],[side*sideX,2.58,1.58],.052,C.body);
+  // Canó de morro.
+  if(noseGun){
+    rod(g,[0,1.72,-2.85],[0,1.72,-4.0],.11,C.metal);
+    box(g,.3,.26,.52,C.dark,0,1.72,-3.92);
   }
 
-  for(const x of[-.82,.82]){box(g,.4,.46,2.1,C.seat,x,1.55,.55);box(g,.4,.46,2.1,C.seat,-x,1.55,.55)}
-  tailBoom(g,2.0,tailEnd,2.58,2.98,.42);
-  skids(g,width*.54,-2.12,2.3);
-  rotorSet(g,14.8,tailEnd-.1);
-  roundedPrism(g,engineW,.62,1.8,.17,0x505b49,0,3.12,.82);
-  rod(g,[engineW*.38,3.15,1.34],[engineW*.65,3.2,1.78],.11,C.dark);
-  return finish(g)
+  // Cua i patins.
+  tailBoom(g,2.0,tailEnd,2.55,2.95,.35);
+  skids(g,1.25,-1.8,1.55);
+  rotorSet(g,13.6,tailEnd-.12);
+
+  return finish(g);
 }
 
-export function huey3BCylinderLarge(){
-  return hueyTransportVariant({
-    width:2.7,noseGlassW:1.28,noseGlassH:.9,noseGlassD:1.02,
-    belly:.24,roofW:2.38,windshieldSlope:.68,sideDetail:'cylinderLarge',engineW:1.3,tailEnd:7.48
+export function combatCobra(){
+  return combatBase({
+    width:1.82,bodyLen:5.5,cockpitLen:2.2,cockpitH:.66,
+    canopy:'tandem',wing:2.05,pods:'rockets',tailEnd:7.3
   })
 }
-export function huey3BCylinderSmall(){
-  return hueyTransportVariant({
-    width:2.7,noseGlassW:1.28,noseGlassH:.9,noseGlassD:1.02,
-    belly:.24,roofW:2.38,windshieldSlope:.68,sideDetail:'cylinderSmall',engineW:1.3,tailEnd:7.48
+export function combatCompact(){
+  return combatBase({
+    width:1.72,bodyLen:5.05,cockpitLen:1.9,cockpitH:.62,
+    canopy:'compact',wing:1.9,pods:'missile',tailEnd:7.0
   })
 }
-export function huey3BNoDiscs(){
-  return hueyTransportVariant({
-    width:2.7,noseGlassW:1.28,noseGlassH:.9,noseGlassD:1.02,
-    belly:.24,roofW:2.38,windshieldSlope:.68,sideDetail:'none',engineW:1.3,tailEnd:7.48
+export function combatGunship(){
+  return combatBase({
+    width:2.02,bodyLen:5.8,cockpitLen:2.25,cockpitH:.7,
+    canopy:'tandem',wing:2.35,pods:'large',tailEnd:7.45
   })
 }
-export function huey3BFairing(){
-  return hueyTransportVariant({
-    width:2.7,noseGlassW:1.28,noseGlassH:.9,noseGlassD:1.02,
-    belly:.24,roofW:2.38,windshieldSlope:.68,sideDetail:'fairing',engineW:1.3,tailEnd:7.48
+export function combatModern(){
+  return combatBase({
+    width:1.9,bodyLen:5.4,cockpitLen:2.0,cockpitH:.68,
+    canopy:'faceted',wing:2.15,pods:'missile',tailEnd:7.2
   })
 }
 
 export const concepts=[
-  {name:'1 · 3B · Cilindre gran',create:huey3BCylinderLarge,desc:'Els dos discs passen a ser cilindres complets, més visibles i robusts.'},
-  {name:'2 · 3B · Cilindre petit',create:huey3BCylinderSmall,desc:'Mateixa idea, però amb cilindres complets més compactes i integrats.'},
-  {name:'3 · 3B · Net',create:huey3BNoDiscs,desc:'Sense discs ni volums laterals: cabina més neta i fidel al cos del Huey.'},
-  {name:'4 · 3B · Carenat',create:huey3BFairing,desc:'Substitueix els discs per petits carenats rectangulars arrodonits amb entrada fosca.'}
+  {name:'1 · Cobra clàssic',create:combatCobra,desc:'Fuselatge molt estret, cabina tàndem i silueta inspirada en l’AH-1 Cobra.'},
+  {name:'2 · Combat compacte',create:combatCompact,desc:'Més curt i àgil visualment, amb morro simple i armament lleuger.'},
+  {name:'3 · Gunship',create:combatGunship,desc:'Cos una mica més robust, aletes amples i pods grans de coets.'},
+  {name:'4 · Combat modern',create:combatModern,desc:'Cabina facetada low-poly i silueta més moderna, mantenint el llenguatge visual del joc.'}
 ];
