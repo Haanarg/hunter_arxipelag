@@ -174,7 +174,7 @@ const compound=(type,q)=>{
   registerCompound(type,q);
   return true
 };
-const usedPortIslands=new Set();const farCompound=(q,min=150,type='garatge')=>compoundSiteClear(type,q,min);
+const usedPortIslands=new Set();
 const candidateIslands=islands.filter(i=>i!==A&&i!==Bi).slice().sort(()=>R()-.5),usedSpecialIslands=new Set();
 const reserveCompound=(type,min=180)=>{for(const i of candidateIslands){if(usedSpecialIslands.has(i))continue;for(let n=0;n<18;n++){const q=land(i,850,1);if(q&&compoundSiteClear(type,q,min)){q.r=i.r;if(compound(type,q)){usedSpecialIslands.add(i);return q}}}}return null};
 const forceReserve=(type,min)=>{
