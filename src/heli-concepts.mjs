@@ -69,97 +69,70 @@ function finish(g){
   return g
 }
 
-export function hueyClassic(){
-  const g=new THREE.Group();
-  // Cabin: tall, square-sided Huey silhouette.
-  box(g,2.9,1.55,3.55,C.body,0,2.05,.15);
-  sphere(g,1.42,.92,1.05,C.glass,0,2.18,-2.08);
-  // Windshield dividers and roof frame.
-  rod(g,[0,1.55,-2.92],[0,2.72,-2.62],.045,C.dark);
-  for(const x of[-1.15,1.15])rod(g,[x,1.55,-2.55],[x*.9,2.72,-2.25],.05,C.body);
-  box(g,2.65,.28,2.0,C.body,0,2.86,-.2);
-  // Open sliding doors.
+function hueyTransportVariant(opts={}){
+  const {
+    width=2.82,noseGlassW=1.34,noseGlassH=.92,noseGlassD=1.08,
+    belly=.28,roofW=2.52,doorZ0=-.76,doorZ1=1.76,
+    windshieldSlope=.72,cheek=.0,tailEnd=7.55,engineW=1.38
+  }=opts;
+  const g=new THREE.Group(),sideX=width/2+.01;
+  roundedPrism(g,width,1.74,4.18,.31,C.body,0,2.08,.3);
+  sphere(g,width*.46,belly,1.92,C.body,0,1.39,.34);
+
+  // Cabina frontal més propera al Huey original: vidres grans, frontals i poc bulbosos.
+  sphere(g,noseGlassW,noseGlassH,noseGlassD,C.glass,0,2.17,-2.35);
+  const wx=width*.23;
+  for(const x of[-wx,wx])rod(g,[x,1.53,-3.08],[x*windshieldSlope,2.82,-2.48],.045,C.body);
+  rod(g,[0,1.48,-3.11],[0,2.84,-2.5],.05,C.dark);
+  if(cheek>0)for(const s of[-1,1])sphere(g,cheek,.5,.68,C.body,s*(width*.43),1.82,-2.44);
+
+  roundedPrism(g,roofW,.32,2.12,.13,C.body,0,2.91,.04);
+
+  // Portes laterals grans, com al model 3 original.
   for(const side of[-1,1]){
-    box(g,.1,1.18,.4,C.body,side*1.46,2.0,-.55);
-    box(g,.1,1.18,.4,C.body,side*1.46,2.0,1.35);
-    rod(g,[side*1.48,1.42,-.35],[side*1.48,2.58,-.35],.045,C.dark);
-    rod(g,[side*1.48,1.42,1.15],[side*1.48,2.58,1.15],.045,C.dark);
+    box(g,.1,1.18,.36,C.body,side*sideX,2.0,doorZ0);
+    box(g,.1,1.18,.36,C.body,side*sideX,2.0,doorZ1);
+    box(g,.1,.14,2.05,C.dark,side*(sideX+.01),1.43,.5);
+    rod(g,[side*sideX,2.58,-.58],[side*sideX,2.58,1.58],.052,C.body);
   }
-  seats(g,[-.35,.75]);tailBoom(g,1.8,7.35,2.58,2.98,.42);skids(g,1.58,-2.0,2.0);rotorSet(g,14.6,7.25);
-  // Roof engine doghouse.
-  box(g,1.25,.52,1.65,0x525e4b,0,3.08,.72);box(g,.9,.18,.55,C.dark,0,3.39,.85);
-  return finish(g);
+
+  for(const x of[-.82,.82]){box(g,.4,.46,2.1,C.seat,x,1.55,.55);box(g,.4,.46,2.1,C.seat,-x,1.55,.55)}
+  tailBoom(g,2.0,tailEnd,2.58,2.98,.42);
+  skids(g,width*.54,-2.12,2.3);
+  rotorSet(g,14.8,tailEnd-.1);
+  roundedPrism(g,engineW,.62,1.8,.17,0x505b49,0,3.12,.82);
+  rod(g,[engineW*.38,3.15,1.34],[engineW*.65,3.2,1.78],.11,C.dark);
+  return finish(g)
 }
 
-export function hueyShort(){
-  const g=new THREE.Group();
-  box(g,2.75,1.5,3.15,C.body,0,2.02,.25);
-  sphere(g,1.36,.98,1.28,C.glass,0,2.12,-1.95);
-  // More rounded early-Huey nose and compact rear cabin.
-  sphere(g,1.25,.68,.72,C.body,0,1.7,-2.55);
-  for(const x of[-1.18,1.18])box(g,.1,1.0,1.0,0x4b5a50,x,2.05,.25);
-  box(g,2.5,.25,1.65,C.body,0,2.83,.2);
-  for(const side of[-1,1]){
-    box(g,.12,1.18,.88,C.glass,side*1.38,2.08,-.58);
-    box(g,.12,1.18,.72,C.dark,side*1.4,2.0,.92);
-  }
-  seats(g,[.35]);tailBoom(g,1.55,6.95,2.52,2.92,.4);skids(g,1.5,-1.9,1.85);rotorSet(g,14.0,6.86);
-  box(g,1.35,.58,1.35,0x515b49,0,3.06,.68);rod(g,[-.55,3.28,.18],[.55,3.28,.18],.07,C.metal);
-  return finish(g);
+export function hueyTransportA(){
+  return hueyTransportVariant({
+    width:2.82,noseGlassW:1.33,noseGlassH:.94,noseGlassD:1.06,
+    belly:.27,roofW:2.48,windshieldSlope:.78,engineW:1.34
+  })
 }
-
-export function hueyTransport(){
-  const g=new THREE.Group();
-  // Cabina tipus Huey: volum ample i gairebé rectangular, però amb espatlles i
-  // cantonades suaus en lloc d'una caixa perfecta.
-  roundedPrism(g,3.12,1.78,4.22,.34,C.body,0,2.08,.3);
-  // Panxa lleugerament corba per evitar el perfil completament cúbic.
-  sphere(g,1.45,.34,1.95,C.body,0,1.38,.34);
-  // Morro vidrat ample i arrodonit, integrat amb la nova secció de cabina.
-  sphere(g,1.49,.95,1.14,C.glass,0,2.18,-2.38);
-  for(const x of[-.72,.72])rod(g,[x,1.55,-3.08],[x*.72,2.82,-2.48],.045,C.body);
-  rod(g,[0,1.48,-3.12],[0,2.85,-2.5],.05,C.dark);
-  // Sostre baix i ample, també suavitzat, com el llom superior d'un UH-1.
-  roundedPrism(g,2.76,.34,2.18,.14,C.body,0,2.92,.05);
-  // Large open cargo doors and bench seats.
-  for(const side of[-1,1]){
-    box(g,.11,1.2,.38,C.body,side*1.57,2.0,-.76);
-    box(g,.11,1.2,.38,C.body,side*1.57,2.0,1.76);
-    box(g,.11,.14,2.08,C.dark,side*1.58,1.43,.5);
-    // Marc superior arrodonit visualment amb una barra contínua.
-    rod(g,[side*1.57,2.58,-.58],[side*1.57,2.58,1.58],.055,C.body);
-  }
-  for(const x of[-.92,.92]){box(g,.42,.48,2.15,C.seat,x,1.55,.55);box(g,.42,.48,2.15,C.seat,-x,1.55,.55)}
-  tailBoom(g,2.05,7.65,2.6,3.0,.45);skids(g,1.68,-2.15,2.35);rotorSet(g,15.0,7.55);
-  // Bigger engine enclosure and exhaust.
-  roundedPrism(g,1.48,.64,1.84,.18,0x505b49,0,3.13,.82);
-  rod(g,[.58,3.15,1.35],[.98,3.2,1.8],.12,C.dark);
-  return finish(g);
+export function hueyTransportB(){
+  return hueyTransportVariant({
+    width:2.7,noseGlassW:1.28,noseGlassH:.9,noseGlassD:1.02,
+    belly:.24,roofW:2.38,windshieldSlope:.68,cheek:.12,engineW:1.3,tailEnd:7.48
+  })
 }
-
-export function hueyBlocky(){
-  const g=new THREE.Group();
-  // Deliberately more game-like: strong planes, fewer rounded pieces.
-  box(g,2.9,1.5,3.75,C.body,0,2.02,.15);
-  box(g,2.55,1.18,1.25,C.glass,0,2.15,-2.28);
-  box(g,2.25,.42,.55,C.body,0,1.55,-2.9);
-  for(const side of[-1,1]){
-    const cheek=box(g,.32,1.15,1.35,C.body,side*1.32,2.03,-1.55);cheek.rotation.z=-side*.08;
-    box(g,.12,1.12,1.15,C.glass,side*1.46,2.1,.15);
-    box(g,.12,1.12,.82,C.dark,side*1.46,2.0,1.35);
-  }
-  box(g,2.7,.34,2.15,C.body,0,2.92,.15);
-  box(g,1.5,.62,1.65,0x505a47,0,3.15,.75);
-  tailBoom(g,1.95,7.3,2.58,2.95,.4);skids(g,1.62,-2.05,2.05);rotorSet(g,14.5,7.2);
-  // Strong Huey tail fin / stabilizer silhouette.
-  box(g,.15,1.7,.9,C.body,0,3.35,7.18);
-  box(g,2.55,.12,.66,C.body,0,2.88,6.15);
-  return finish(g);
+export function hueyTransportC(){
+  return hueyTransportVariant({
+    width:2.76,noseGlassW:1.3,noseGlassH:.96,noseGlassD:1.0,
+    belly:.26,roofW:2.42,windshieldSlope:.82,cheek:.16,engineW:1.32
+  })
+}
+export function hueyTransportD(){
+  return hueyTransportVariant({
+    width:2.64,noseGlassW:1.24,noseGlassH:.88,noseGlassD:.98,
+    belly:.22,roofW:2.3,windshieldSlope:.72,cheek:.2,engineW:1.26,tailEnd:7.42
+  })
 }
 
 export const concepts=[
-  {name:'1 · Huey clàssic',create:hueyClassic,desc:'Cabina alta, morro vidrat i portes laterals obertes.'},
-  {name:'2 · Huey curt',create:hueyShort,desc:'Més compacte i arrodonit, inspirat en els primers Huey.'},
-  {name:'3 · Huey transport',create:hueyTransport,desc:'Cos tipus Huey amb cantonades arrodonides, panxa corba i grans portes obertes.'},
-  {name:'4 · Huey low-poly',create:hueyBlocky,desc:'Silueta Huey simplificada per encaixar amb els vehicles actuals.'}
+  {name:'1 · Huey 3A · Fidel',create:hueyTransportA,desc:'Cos més estret, parabrisa gran i frontal, mantenint les portes del model 3.'},
+  {name:'2 · Huey 3B · Esvelt',create:hueyTransportB,desc:'Cos clarament més estret, morro més net i cabina més compacta.'},
+  {name:'3 · Huey 3C · Utilitari',create:hueyTransportC,desc:'Equilibri entre fidelitat al Huey original, volum de transport i estil low-poly.'},
+  {name:'4 · Huey 3D · Retro',create:hueyTransportD,desc:'La variant més estreta i geomètrica, amb cabina frontal molt marcada.'}
 ];
