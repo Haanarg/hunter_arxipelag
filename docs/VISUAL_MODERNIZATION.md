@@ -5,7 +5,12 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.18**.
+Versió actual: **0.3.21**.
+
+Revisió 0.3.21 (2026-10-07): soldats normals substituïts per l'opció 3 aprovada, comando vermell amb boina, corretja diagonal i ràdio. Reutilitza `HUNTER_PLAYER_MODEL` i conserva l'alçada del soldat anterior, inclosa la reducció del 10%. Colzes i genolls articulats en caminar, apuntar i morir; genolls flexionats en el sentit anatòmic. Fusell unit a l'avantbraç. El general conserva el seu model distintiu. No es modifica la IA, la vida, les col·lisions ni les regles de combat. Integrat sobre 0.3.20, preservant els canvis de vehicles d'altres xats.
+
+Validació: `tests/enemy-model.cjs` comprova alçada, color, 96 postures, sentit dels genolls, direcció del fusell, mort i aïllament respecte del jugador. `tests/enemy-model-browser.cjs` renderitza el model real amb WebGL. Smoke general i comprovació de navegador en perfils desktop/mobile. Prova en Android físic pendent per a aquesta revisió.
+
 
 Revisió 0.3.9 (2026-10-07): protagonista tàctic aprovat després de les comparatives 3D. Espatlles estretes, genolls i colzes articulats, cabell curt sota una gorra ajustada, visera arrodonida allargada i botes amb turmell, empenya i sola. `src/player-model.js` és la font comuna de geometria del protagonista i dels conductors visibles de bicicleta, moto, moto aquàtica, llanxa, llanxa llançacoets, barca de rems i windsurf. El rig a peu conserva els noms i les armes; el de conducció reutilitza les mateixes peces amb els punts de contacte existents. Es mantenen pedaleig, peus a terra en aturar-se, mans als rems i orientació del windsurf. La disfressa afecta també el conductor i la gorra. Corregit el sentit de flexió dels genolls durant la braça. Els vehicles de cabina que no mostraven conductor continuen igual.
 
@@ -505,6 +510,7 @@ L’usuari confirma el 2026-10-05 que la versió modernitzada funciona en Androi
 
 ### Regla de compatibilitat
 No reescriure simultàniament simulació i renderer d'un mateix sistema. Quan es modularitzi una part del nucli, conservar temporalment els contractes que utilitza el gameplay fins que la nova ruta estigui validada.
+
 
 
 
