@@ -86,6 +86,22 @@ window.HUNTER_RIDER=Object.freeze({
         return;
       }
 
+      if(v.t==='llanxa'){
+        // Conserva exactament el rider/postura de l'antic model de llanxa.
+        const seat=1.45*sc;torso.position.set(0,seat,.55*sc);torso.rotation.x=.04;
+        for(let i=0;i<2;i++){
+          const side=i?1:-1,
+                hip=vec(side*.28,seat,.55*sc),
+                shoulder=shoulderAt(side),
+                hand=vec(side*.48*sc,seat+.7,-.7*sc),
+                elbow=shoulder.clone().lerp(hand,.52);
+          limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
+          const foot=vec(side*.42*sc,.92*sc,-.35*sc),knee=hip.clone().lerp(foot,.5);knee.y+=.18;
+          limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot)
+        }
+        return;
+      }
+
       const seat=1.45*sc;torso.position.set(0,seat,.55*sc);torso.rotation.x=.04;
       for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.28,seat,.55*sc),shoulder=shoulderAt(side),hand=vec(side*.48*sc,seat+.7,-.7*sc),elbow=shoulder.clone().lerp(hand,.52);limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
         const foot=vec(side*.42*sc,.92*sc,-.35*sc),knee=hip.clone().lerp(foot,.5);knee.y+=.18;limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot)}
