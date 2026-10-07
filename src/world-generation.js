@@ -105,7 +105,31 @@ const compoundPier=(x1,z1,x2,z2,width=4.2)=>{
 const findPortWater=q=>{for(let a=0;a<32;a++){const aa=a*Math.PI/16;for(let d=28;d<Math.max(100,q.r||180);d+=8){const wx=q.x+Math.cos(aa)*d,wz=q.z+Math.sin(aa)*d;if(rawHAt(wx,wz)<-3&&rawHAt(wx+Math.cos(aa)*12,wz+Math.sin(aa)*12)<-3)return{x:wx,z:wz,hd:Math.atan2(-Math.cos(aa),-Math.sin(aa)),aa}}}return null};
 const findPortSite=(island,tries=18)=>{for(let n=0;n<tries;n++){const q=land(island,700,1);if(!q)continue;q.r=island.r;const portBest=findPortWater(q);if(portBest)return{...q,portBest}}return null};
 const makeStandalonePier=q=>{const best=q.portBest||findPortWater(q);if(!best)return false;const dx=best.x-q.x,dz=best.z-q.z,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L;let shore=null;for(let d=3;d<L;d+=2.5){const sx=q.x+ux*d,sz=q.z+uz*d;if(rawHAt(sx,sz)<.35){shore={x:sx-ux*1.8,z:sz-uz*1.8};break}}if(!shore)return false;const pierLen=Math.min(34,Math.max(14,L-5)),end={x:shore.x+ux*pierLen,z:shore.z+uz*pierLen};compoundPier(shore.x,shore.z,end.x,end.z,3.6);for(const side of[-1,1]){const px=-uz,pz=ux;compoundProp('bollard',end.x+px*side*1.1,end.z+pz*side*1.1,0)}compoundClear.push({x:q.x,z:q.z,r:18});return true};
+const COMPOUND_RADII=Object.freeze({
+  avancada:42,
+  garatge:58,
+  heliport:48,
+  polvori:48,
+  port:46
+});
+const COMPOUND_GAP=34;
+// Reserva explícita de la base i de l'HQ: encara que dues illes generades se solapin
+// físicament, cap compound podrà entrar dins aquests perímetres.
+const compoundCenters=[
+  {x:pa.x,z:pa.z,r:65,type:'base'},
+  {x:pb.x,z:pb.z,r:105,type:'hq'}
+];
+const compoundRadius=type=>COMPOUND_RADII[type]||58;
+const compoundSiteClear=(type,q,minCenter=0)=>{
+  const r=compoundRadius(type);
+  return compoundCenters.every(c=>{
+    const d=Math.hypot(q.x-c.x,q.z-c.z);
+    return d>Math.max(minCenter,r+c.r+COMPOUND_GAP)
+  })
+};
+const registerCompound=(type,q)=>compoundCenters.push({x:q.x,z:q.z,r:compoundRadius(type),type});
 const compound=(type,q)=>{
+  if(!compoundSiteClear(type,q,0))return false;
   const x=q.x,z=q.z,ang=rr(0,Math.PI*2),mirror=R()<.5?-1:1,cs=Math.cos(ang),sn=Math.sin(ang),local=(dx,dz)=>[dx*mirror,dz],tr=(dx,dz)=>{const [mx,mz]=local(dx,dz);return[x+mx*cs-mz*sn,z+mx*sn+mz*cs]},level=(w,d,blend=16)=>addLevelArea(x,z,w,d,q.h!=null?q.h:rawHAt(x,z),ang,blend),doorToward=(dx,dz)=>{const [mx,mz]=local(dx,dz),tx=-mx,tz=-mz;return Math.abs(tx)>Math.abs(tz)?(tx>0?2:3):(tz>0?0:1)},put=(dx,dz,w,d,h,c,r,opt)=>{const [px,pz]=tr(dx,dz),o={...(opt||{})};if(o.doorSide==null&&!o.hangar)o.doorSide=doorToward(dx,dz);return mkB(px,pz,w,d,h,c,r,o)},prop=(kind,dx,dz,rot=0)=>{const [px,pz]=tr(dx,dz);return compoundProp(kind,px,pz,ang+rot*mirror)},heading=(rot=0)=>ang+rot*mirror;
   if(type==='avancada'){
     level(58,50,18);compoundPad(x,z,50,42,0x6c675c);{const [a1,b1]=tr(-22,17),[a2,b2]=tr(18,-16);compoundPath(a1,b1,a2,b2,4.8,0x786f60)}
@@ -147,26 +171,40 @@ const compound=(type,q)=>{
     const best=portBest;
     if(best){const dx=best.x-x,dz=best.z-z,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L;let shore={x:x,z:z};for(let d=4;d<L;d+=3){const sx=x+ux*d,sz=z+uz*d;if(hAt(sx,sz)<.35){shore={x:sx-ux*2,z:sz-uz*2};break}}const end={x:best.x-ux*3,z:best.z-uz*3};compoundPier(shore.x,shore.z,end.x,end.z,4.4);const px=-uz,pz=ux;{const roll=R(),boatType=roll<.23?'llanxa':roll<.43?'moto_aquatica':roll<.68?'barca_rems':roll<.9?'windsurf':'hover';compoundVehicles.push({t:boatType,x:best.x+px*4.8,z:best.z+pz*4.8,hd:best.hd})}}
   }
+  registerCompound(type,q);
   return true
 };
-const compoundCenters=[],usedPortIslands=new Set();const farCompound=(q,min=150)=>compoundCenters.every(c=>Math.hypot(q.x-c.x,q.z-c.z)>min);
+const usedPortIslands=new Set();const farCompound=(q,min=150,type='garatge')=>compoundSiteClear(type,q,min);
 const candidateIslands=islands.filter(i=>i!==A&&i!==Bi).slice().sort(()=>R()-.5),usedSpecialIslands=new Set();
-const reserveCompound=(type,min=180)=>{for(const i of candidateIslands){if(usedSpecialIslands.has(i))continue;for(let n=0;n<14;n++){const q=land(i,750,1);if(q&&farCompound(q,min)){q.r=i.r;if(compound(type,q)){compoundCenters.push({x:q.x,z:q.z});usedSpecialIslands.add(i);return q}}}}return null};
-const forceReserve=(type,min)=>{let q=reserveCompound(type,min)||reserveCompound(type,110);if(q)return q;for(const i of candidateIslands){const c=land(i,1600,1);if(c){c.r=i.r;if(compound(type,c)){compoundCenters.push({x:c.x,z:c.z});usedSpecialIslands.add(i);return c}}}const fallback=candidateIslands.find(i=>!usedSpecialIslands.has(i))||candidateIslands[0];if(fallback){const c={x:fallback.x,z:fallback.z,h:rawHAt(fallback.x,fallback.z),r:fallback.r};if(compound(type,c)){compoundCenters.push({x:c.x,z:c.z});usedSpecialIslands.add(fallback);return c}}return null};
+const reserveCompound=(type,min=180)=>{for(const i of candidateIslands){if(usedSpecialIslands.has(i))continue;for(let n=0;n<18;n++){const q=land(i,850,1);if(q&&compoundSiteClear(type,q,min)){q.r=i.r;if(compound(type,q)){usedSpecialIslands.add(i);return q}}}}return null};
+const forceReserve=(type,min)=>{
+  let q=reserveCompound(type,min)||reserveCompound(type,110);if(q)return q;
+  // Fallback exhaustiu, però mai saltant-se la zona de seguretat.
+  for(const i of candidateIslands){
+    if(usedSpecialIslands.has(i))continue;
+    for(let n=0;n<48;n++){
+      const c=land(i,1800,1);if(!c||!compoundSiteClear(type,c,95))continue;
+      c.r=i.r;if(compound(type,c)){usedSpecialIslands.add(i);return c}
+    }
+  }
+  return null
+};
 forceReserve('garatge',190);
 const reserveHeliportFallback=()=>{
   const all=islands.filter(i=>i!==Bi).slice().sort(()=>R()-.5);
-  for(const i of all)for(let n=0;n<28;n++){const q=land(i,1200,1);if(!q)continue;if(Math.hypot(q.x-pb.x,q.z-pb.z)<260||Math.hypot(q.x-pa.x,q.z-pa.z)<120)continue;if(!farCompound(q,120))continue;q.r=i.r;if(compound('heliport',q)){compoundCenters.push({x:q.x,z:q.z});return q}}
+  for(const i of all)for(let n=0;n<28;n++){const q=land(i,1200,1);if(!q)continue;if(Math.hypot(q.x-pb.x,q.z-pb.z)<260||Math.hypot(q.x-pa.x,q.z-pa.z)<120)continue;if(!compoundSiteClear('heliport',q,120))continue;q.r=i.r;if(compound('heliport',q))return q}
   return null
 };
 const heliportTarget=1+MAP_SCALE;
 let heliportsMade=0;for(let n=0;n<heliportTarget;n++){const q=forceReserve('heliport',n?160:210)||reserveHeliportFallback();if(q)heliportsMade++}
-let guaranteedPorts=0;for(const i of candidateIslands){if(guaranteedPorts>=2*MAP_SCALE)break;if(usedSpecialIslands.has(i))continue;const q=findPortSite(i,22);if(!q||!farCompound(q,180))continue;if(compound('port',q)){compoundCenters.push({x:q.x,z:q.z});usedPortIslands.add(i);guaranteedPorts++}}
-if(!guaranteedPorts){for(const i of candidateIslands){if(usedSpecialIslands.has(i))continue;const q=findPortSite(i,32);if(q&&compound('port',q)){compoundCenters.push({x:q.x,z:q.z});usedPortIslands.add(i);guaranteedPorts=1;break}}}
-islands.forEach(i=>{if(i===A||i===Bi||usedPortIslands.has(i)||usedSpecialIslands.has(i))return;let q=null;for(let n=0;n<8&&!q;n++){const c=land(i,650,1);if(c&&farCompound(c))q=c}if(!q)return;q.r=i.r;const roll=R();let type=roll<.3?'avancada':roll<.6?'garatge':roll<.84?'polvori':'port';
-if(type==='port'){const pq=findPortSite(i,14);if(pq&&farCompound(pq)){q=pq}else type=R()<.5?'avancada':'polvori'}
-if(compound(type,q))compoundCenters.push({x:q.x,z:q.z});if(i.r>520&&R()<.22){let q2=null;for(let n=0;n<10&&!q2;n++){const c=land(i,700,1);if(c&&Math.hypot(c.x-q.x,c.z-q.z)>190&&farCompound(c))q2=c}if(q2){q2.r=i.r;if(compound(R()<.6?'garatge':'avancada',q2))compoundCenters.push({x:q2.x,z:q2.z})}}});
-let standalonePiers=0,targetPiers=(3+Math.floor(R()*3))*MAP_SCALE;for(const i of candidateIslands){if(standalonePiers>=targetPiers)break;if(usedPortIslands.has(i))continue;const q=findPortSite(i,12);if(!q||!farCompound(q,110)||compoundClear.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<80))continue;if(makeStandalonePier(q))standalonePiers++}
+let guaranteedPorts=0;for(const i of candidateIslands){if(guaranteedPorts>=2*MAP_SCALE)break;if(usedSpecialIslands.has(i))continue;const q=findPortSite(i,22);if(!q||!compoundSiteClear('port',q,180))continue;if(compound('port',q)){usedPortIslands.add(i);guaranteedPorts++}}
+if(!guaranteedPorts){for(const i of candidateIslands){if(usedSpecialIslands.has(i))continue;const q=findPortSite(i,32);if(q&&compoundSiteClear('port',q,110)&&compound('port',q)){usedPortIslands.add(i);guaranteedPorts=1;break}}}
+islands.forEach(i=>{if(i===A||i===Bi||usedPortIslands.has(i)||usedSpecialIslands.has(i))return;const roll=R();let type=roll<.3?'avancada':roll<.6?'garatge':roll<.84?'polvori':'port',q=null;
+for(let n=0;n<10&&!q;n++){const c=land(i,700,1);if(c&&compoundSiteClear(type,c,150))q=c}if(!q)return;q.r=i.r;
+if(type==='port'){const pq=findPortSite(i,14);if(pq&&compoundSiteClear('port',pq,150)){q=pq}else type=R()<.5?'avancada':'polvori'}
+compound(type,q);
+if(i.r>520&&R()<.22){const type2=R()<.6?'garatge':'avancada';let q2=null;for(let n=0;n<14&&!q2;n++){const c=land(i,800,1);if(c&&Math.hypot(c.x-q.x,c.z-q.z)>190&&compoundSiteClear(type2,c,150))q2=c}if(q2){q2.r=i.r;compound(type2,q2)}}});
+let standalonePiers=0,targetPiers=(3+Math.floor(R()*3))*MAP_SCALE;for(const i of candidateIslands){if(standalonePiers>=targetPiers)break;if(usedPortIslands.has(i))continue;const q=findPortSite(i,12);if(!q||!compoundSiteClear('port',q,110)||compoundClear.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<80))continue;if(makeStandalonePier(q))standalonePiers++}
 const terrain=window.HUNTER_TERRAIN.create(THREE,{size:S,segments:SEG,heightAt:hAt,material:MAT.terrain()});world.add(terrain.mesh,window.HUNTER_TERRAIN.createBorder(THREE,{size:S,halfSize:H}));
 updateSeabed();vegetate(pa);spawnFauna();HQ={x:pb.x,z:pb.z};const rb=B.slice(6);
 const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2);
