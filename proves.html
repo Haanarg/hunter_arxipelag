@@ -2,9 +2,9 @@
 <html lang="ca">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hunter · Proves de model</title>
+<title>Hunter · Proves de llanxa</title>
 <style>
-html,body{margin:0;height:100%;overflow:hidden;background:#779aa7;font-family:system-ui;color:#fff}
+html,body{margin:0;height:100%;overflow:hidden;background:#6f8f9d;font-family:system-ui;color:#fff}
 #ui{position:fixed;inset:0;pointer-events:none}
 h1{position:absolute;top:12px;left:50%;transform:translateX(-50%);margin:0;font-size:21px;text-shadow:0 2px 5px #0009;white-space:nowrap}
 #cards{position:absolute;inset:52px 12px 12px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:10px}
@@ -14,78 +14,68 @@ h1{position:absolute;top:12px;left:50%;transform:translateX(-50%);margin:0;font-
 canvas{display:block;width:100%;height:100%}
 @media(max-width:700px){h1{font-size:16px}.label{font-size:12px}.label small{display:none}}
 </style>
-<script src="./src/player-model.js"></script>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ui"><h1>Personatge bàsic · espatlles opció 2 · 4 ajustos de braços</h1><div id="cards"></div></div>
+<div id="ui"><h1>Llanxa militar · 4 propostes Three.js</h1><div id="cards"></div></div>
 <script type="module">
 import * as THREE from './vendor/three-r186.module.mjs';
+import {createBoatConcept} from './src/boat-concepts.mjs';
 
-const palette={enemy:{primary:0x8a3f35,general:0xb54b3d,vest:0x56352e,secondary:0x70443a}};
-const proposals=[
- {name:'1 · Natural suau',desc:'Espatlles una mica més altes, braços +3% i obertura lateral discreta.',shoulderY:2.88,armScale:1.03,upperZ:.09,elbowZ:.025},
- {name:'2 · Natural equilibrat',desc:'Braços +5%, espatlla lleugerament elevada i colze més separat del tors.',shoulderY:2.90,armScale:1.05,upperZ:.12,elbowZ:.04},
- {name:'3 · Obert',desc:'Braços +5% i una obertura lateral més visible per donar més aire entre braç i cos.',shoulderY:2.90,armScale:1.05,upperZ:.15,elbowZ:.055},
- {name:'4 · Alt i llarg',desc:'Espatlla més alta, braços +7% i obertura moderada: silueta una mica més atlètica.',shoulderY:2.93,armScale:1.07,upperZ:.125,elbowZ:.045}
+const labels=[
+  ['1 · Stealth A · Equilibrada','La més propera a la foto: proa afilada, casc facetat i cabina oberta central.'],
+  ['2 · Stealth B · Proa llarga','Més baixa i agressiva, amb coberta davantera més llarga i perfil ràpid.'],
+  ['3 · Stealth C · Compacta','Més curta i robusta, pensada per tenir molt bona lectura a escala de joc.'],
+  ['4 · Stealth D · Patrullera pesada','Més ampla i protegida, amb costats alts i una presència més militar.']
 ];
 
 const canvas=document.getElementById('c');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.8));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.shadowMap.enabled=true;
-const scene=new THREE.Scene();scene.background=new THREE.Color(0x83aeb8);
-scene.add(new THREE.HemisphereLight(0xd8efff,0x35523a,1.45));
-const sun=new THREE.DirectionalLight(0xffe2b7,2.2);sun.position.set(-8,16,-10);sun.castShadow=true;scene.add(sun);
-const ground=new THREE.Mesh(new THREE.PlaneGeometry(80,80),new THREE.MeshStandardMaterial({color:0xb9aa73,roughness:1}));
-ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.8));
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.shadowMap.enabled=true;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x7da0aa);
+scene.add(new THREE.HemisphereLight(0xe4f4ff,0x263b42,1.55));
+const sun=new THREE.DirectionalLight(0xffe2bd,2.2);sun.position.set(-10,15,-9);sun.castShadow=true;scene.add(sun);
+
+// Pla d'aigua visual simple per donar context.
+const water=new THREE.Mesh(new THREE.PlaneGeometry(90,90),new THREE.MeshStandardMaterial({color:0x406d7d,roughness:.3,metalness:.05}));
+water.rotation.x=-Math.PI/2;water.position.y=-.22;water.receiveShadow=true;scene.add(water);
 
 const cards=document.getElementById('cards'),cams=[],models=[];
-proposals.forEach((p,i)=>{
-  const model=window.HUNTER_PLAYER_MODEL.create(THREE,{palette});
-  model.position.y=.03;
-  model.rotation.y=-.28;
-  const u=model.userData;
-
-  // Base aprovada: opció 2 d'amplada d'espatlles.
-  u.al.position.x=-.57;
-  u.ar.position.x=.57;
-
-  // Espatlles una mica més altes.
-  u.al.position.y=p.shoulderY;
-  u.ar.position.y=p.shoulderY;
-
-  // Allarguem lleugerament tot el conjunt del braç.
-  u.al.scale.y=p.armScale;
-  u.ar.scale.y=p.armScale;
-
-  // Obertura lateral de l'húmer perquè el colze no quedi enganxat al tors.
-  u.al.rotation.set(0,0,-p.upperZ);
-  u.ar.rotation.set(0,0,p.upperZ);
-
-  // Colze lleugerament orientat cap enfora, mantenint una postura natural.
-  u.ael.rotation.set(-.08,0,-p.elbowZ);
-  u.aer.rotation.set(-.08,0,p.elbowZ);
-
+labels.forEach((meta,i)=>{
+  const model=createBoatConcept(THREE,i);
+  model.rotation.y=.42;
+  model.position.y=.02;
   scene.add(model);models.push(model);
 
-  const cam=new THREE.PerspectiveCamera(34,1,.1,100);
-  cam.position.set(5.4,4.35,-7.8);cam.lookAt(0,1.98,0);cams.push(cam);
+  const cam=new THREE.PerspectiveCamera(32,1,.1,120);
+  cam.position.set(10.4,6.3,-13.7);
+  cam.lookAt(0,1.15,0);
+  cams.push(cam);
 
   const card=document.createElement('div');card.className='card';
   const label=document.createElement('div');label.className='label';
-  label.innerHTML=p.name+'<small>'+p.desc+'</small>';card.append(label);cards.append(card);
+  label.innerHTML=meta[0]+'<small>'+meta[1]+'</small>';
+  card.append(label);cards.append(card);
 });
+
 function resize(){renderer.setSize(innerWidth,innerHeight,false)}
 addEventListener('resize',resize);resize();
+
 function loop(){
   const rects=[...cards.children].map(x=>x.getBoundingClientRect()),H=innerHeight;
   renderer.setScissorTest(true);
   rects.forEach((r,i)=>{
-    renderer.setViewport(r.left,H-r.bottom,r.width,r.height);renderer.setScissor(r.left,H-r.bottom,r.width,r.height);
+    renderer.setViewport(r.left,H-r.bottom,r.width,r.height);
+    renderer.setScissor(r.left,H-r.bottom,r.width,r.height);
     cams[i].aspect=r.width/r.height;cams[i].updateProjectionMatrix();
-    models.forEach((m,j)=>m.visible=i===j);renderer.render(scene,cams[i]);
+    models.forEach((m,j)=>m.visible=i===j);
+    renderer.render(scene,cams[i]);
   });
-  models.forEach(m=>m.visible=true);renderer.setScissorTest(false);requestAnimationFrame(loop)
+  models.forEach(m=>m.visible=true);
+  renderer.setScissorTest(false);
+  requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 </script>
