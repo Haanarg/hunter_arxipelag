@@ -133,15 +133,15 @@ window.HUNTER_CHARACTERS=Object.freeze({
     if(grenade||throwing){
       const p=throwing?1-Math.max(0,Math.min(1,u.grenadeThrow/.55)):0;
       if(throwing&&p<.42){
-        // Càrrega: braç dret enrere i separat del cos.
-        const q=p/.42;tx(u.ar,-.35-.65*q);tz(u.ar,-.38-.42*q);tx(u.aer,.55);
+        // Càrrega lateral natural (opció 2): el braç surt cap al costat, no cap enrere.
+        const q=p/.42;tx(u.ar,-.08-.08*q);tz(u.ar,1.18+.06*q);tx(u.aer,.72);tz(u.aer,.12);
       }else if(throwing){
-        // Llançament: arc ràpid cap endavant i amunt.
-        const q=Math.min(1,(p-.42)/.58);tx(u.ar,-1+2.42*q);tz(u.ar,-.8+.62*q);tx(u.aer,.55-.28*q);
+        // Llançament: des de la posició lateral cap endavant i amunt.
+        const q=Math.min(1,(p-.42)/.58);tx(u.ar,-.16+1.58*q);tz(u.ar,1.24-1.42*q);tx(u.aer,.72-.45*q);tz(u.aer,.12-.08*q);
       }else{
-        tx(u.ar,-.72);tz(u.ar,-.62);tx(u.aer,.58)
+        tx(u.ar,-.08);tz(u.ar,1.18);tx(u.aer,.72);tz(u.aer,.12)
       }
-      tx(u.al,-.08);tz(u.al,.05);tx(u.ael,.18);
+      tx(u.al,-.08);tz(u.al,-.12);tx(u.ael,.18);tz(u.ael,-.04);
     }else if(bazooka){
       tx(u.ar,1.2);tz(u.ar,-.18);tx(u.aer,.72);
       tx(u.al,1.02);tz(u.al,.3);tx(u.ael,.88);
@@ -154,6 +154,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     }else{
       const armSwing=.46*walk;
       tx(u.al,-armSwing+.018*breath);tx(u.ar,armSwing-.018*breath);
+      tz(u.al,-.12);tz(u.ar,.12);tz(u.ael,-.04);tz(u.aer,.04);
       tz(u.al,-.025);tz(u.ar,.025);
       const bendL=.16+Math.max(0,Math.cos(ph))*.2*move,bendR=.16+Math.max(0,-Math.cos(ph))*.2*move;
       tx(u.ael,bendL);tx(u.aer,bendR);
