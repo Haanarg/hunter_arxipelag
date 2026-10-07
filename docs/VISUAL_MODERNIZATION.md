@@ -5,7 +5,7 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.10**.
+Versió actual: **0.3.11**.
 
 Revisió 0.3.9 (2026-10-07): protagonista tàctic aprovat després de les comparatives 3D. Espatlles estretes, genolls i colzes articulats, cabell curt sota una gorra ajustada, visera arrodonida allargada i botes amb turmell, empenya i sola. `src/player-model.js` és la font comuna de geometria del protagonista i dels conductors visibles de bicicleta, moto, moto aquàtica, llanxa, llanxa llançacoets, barca de rems i windsurf. El rig a peu conserva els noms i les armes; el de conducció reutilitza les mateixes peces amb els punts de contacte existents. Es mantenen pedaleig, peus a terra en aturar-se, mans als rems i orientació del windsurf. La disfressa afecta també el conductor i la gorra. Corregit el sentit de flexió dels genolls durant la braça. Els vehicles de cabina que no mostraven conductor continuen igual.
 
@@ -18,6 +18,8 @@ Revisió 0.3.7: porta principal del búnquer de l'HQ amb obertura progressiva de
 Revisió 0.3.6: mínim de quatre motos aquàtiques per mapa. Comprovació final contra les caixes de tots els vehicles, inclosos els enemics, amb marge de separació. En cas de conflicte es busca una posició seguint la costa en trams de 100 m; es prova l’altra direcció o un altre punt costaner si no hi ha espai vàlid. Es mantenen dins del límit i sobre l’aigua. La generació no accepta silenciosament un mapa amb menys de quatre motos aquàtiques.
 
 Revisió 0.3.5: barca de rems amb flotació 30 cm més baixa i màscara d’aigua interior. Integrada sobre 0.3.4, conservant ferris, transport de vehicles, granades i selector de qualitat. La prova smoke inclou l’offset, les ombres i l’exclusió de la màscara dels fragments; s’ha reparat també una cometa imbricada i el nom de variable d’una comprovació de la tanqueta.
+
+Revisió 0.3.11: correcció del laboratori Huey: el mòdul de conceptes ara importa Three.js des de la ruta correcta (`../vendor/three-r186.module.mjs`) i la pàgina mostra un error visible si falla la càrrega.
 
 Revisió 0.3.10: laboratori Three.js amb quatre propostes de model Huey per a l'helicòpter normal, comparables dins del mateix motor abans de substituir el model jugable.
 
