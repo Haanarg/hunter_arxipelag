@@ -2,7 +2,7 @@
 <html lang="ca">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hunter · Proves d'animació</title>
+<title>Hunter · Proves de model</title>
 <style>
 html,body{margin:0;height:100%;overflow:hidden;background:#779aa7;font-family:system-ui;color:#fff}
 #ui{position:fixed;inset:0;pointer-events:none}
@@ -18,16 +18,16 @@ canvas{display:block;width:100%;height:100%}
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ui"><h1>Granada · 4 propostes de braç lateral</h1><div id="cards"></div></div>
+<div id="ui"><h1>Personatge bàsic · 4 amplades d’espatlles</h1><div id="cards"></div></div>
 <script type="module">
 import * as THREE from './vendor/three-r186.module.mjs';
 
 const palette={enemy:{primary:0x8a3f35,general:0xb54b3d,vest:0x56352e,secondary:0x70443a}};
 const proposals=[
- {name:'1 · Lateral baix',desc:'Braç clarament cap al costat, espatlla baixa i colze moderadament flexionat.',rx:-.10,rz:1.02,ex:.58,ez:.08},
- {name:'2 · Lateral natural',desc:'Obertura lateral mitjana, colze una mica més alt: gest equilibrat i fàcil de llegir.',rx:-.08,rz:1.18,ex:.72,ez:.12},
- {name:'3 · Lateral alt',desc:'Braç més elevat i separat del cos, amb preparació més atlètica abans del llançament.',rx:-.05,rz:1.34,ex:.82,ez:.18},
- {name:'4 · Lateral compacte',desc:'Espatlla lateral però colze més tancat; manté la granada més a prop del cos.',rx:-.04,rz:.94,ex:1.02,ez:.06}
+ {name:'1 · Ajust suau',desc:'Espatlles una mica més a dins. Manté gairebé la silueta actual.',x:.60},
+ {name:'2 · Ajust natural',desc:'Espatlles clarament enganxades al tors, sense comprimir excessivament els braços.',x:.57},
+ {name:'3 · Ajust compacte',desc:'Silueta més estreta; espatlles molt properes al cos.',x:.54},
+ {name:'4 · Ajust anatòmic',desc:'Pivot pràcticament al límit del tors; és la versió més estreta de les quatre.',x:.52}
 ];
 
 const canvas=document.getElementById('c');
@@ -40,27 +40,26 @@ const ground=new THREE.Mesh(new THREE.PlaneGeometry(80,80),new THREE.MeshStandar
 ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
 
 const cards=document.getElementById('cards'),cams=[],models=[];
-function addGrenade(model){
-  const e=model.userData.aer;
-  const g=new THREE.Group();g.position.set(.02,-.79,-.04);e.add(g);
-  const body=new THREE.Mesh(new THREE.SphereGeometry(.18,8,6),new THREE.MeshStandardMaterial({color:0x46513f,roughness:.82,metalness:.08,flatShading:true}));
-  body.scale.set(.88,1.08,.88);g.add(body);
-  const cap=new THREE.Mesh(new THREE.BoxGeometry(.08,.13,.08),new THREE.MeshStandardMaterial({color:0x252b27,roughness:.75,flatShading:true}));
-  cap.position.y=.18;g.add(cap);
-}
 proposals.forEach((p,i)=>{
   const model=window.HUNTER_PLAYER_MODEL.create(THREE,{palette});
   model.position.y=.03;
-  model.rotation.y=-.45;
+  model.rotation.y=-.28;
   const u=model.userData;
-  u.ar.rotation.x=p.rx;u.ar.rotation.z=p.rz;
-  u.aer.rotation.x=p.ex;u.aer.rotation.z=p.ez;
-  u.al.rotation.x=-.08;u.al.rotation.z=.05;u.ael.rotation.x=.18;
-  addGrenade(model);
+
+  // Només canvi visual de prova: apropem els pivots de les espatlles al tors.
+  u.al.position.x=-p.x;
+  u.ar.position.x=p.x;
+
+  // Postura bàsica neutra per comparar bé la silueta.
+  u.al.rotation.set(0,-0.00,-.045);
+  u.ar.rotation.set(0, 0.00, .045);
+  u.ael.rotation.set(-.08,0,0);
+  u.aer.rotation.set(-.08,0,0);
+
   scene.add(model);models.push(model);
 
-  const cam=new THREE.PerspectiveCamera(36,1,.1,100);
-  cam.position.set(5.8,4.6,-7.8);cam.lookAt(.2,2.05,0);cams.push(cam);
+  const cam=new THREE.PerspectiveCamera(34,1,.1,100);
+  cam.position.set(5.4,4.35,-7.8);cam.lookAt(0,1.95,0);cams.push(cam);
 
   const card=document.createElement('div');card.className='card';
   const label=document.createElement('div');label.className='label';
