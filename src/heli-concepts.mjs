@@ -1,4 +1,4 @@
-import * as THREE from './vendor/three-r186.module.mjs';
+import * as THREE from '../vendor/three-r186.module.mjs';
 
 const mat=(color,rough=.72,metal=.08)=>new THREE.MeshStandardMaterial({color,flatShading:true,roughness:rough,metalness:metal});
 const C={body:0x66745c,dark:0x343b35,glass:0x416a79,metal:0x485155,seat:0x2d302c,accent:0xc5a15b};
