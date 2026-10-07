@@ -18,16 +18,16 @@ canvas{display:block;width:100%;height:100%}
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ui"><h1>Personatge bàsic · 4 amplades d’espatlles</h1><div id="cards"></div></div>
+<div id="ui"><h1>Personatge bàsic · espatlles opció 2 · 4 ajustos de braços</h1><div id="cards"></div></div>
 <script type="module">
 import * as THREE from './vendor/three-r186.module.mjs';
 
 const palette={enemy:{primary:0x8a3f35,general:0xb54b3d,vest:0x56352e,secondary:0x70443a}};
 const proposals=[
- {name:'1 · Ajust suau',desc:'Espatlles una mica més a dins. Manté gairebé la silueta actual.',x:.60},
- {name:'2 · Ajust natural',desc:'Espatlles clarament enganxades al tors, sense comprimir excessivament els braços.',x:.57},
- {name:'3 · Ajust compacte',desc:'Silueta més estreta; espatlles molt properes al cos.',x:.54},
- {name:'4 · Ajust anatòmic',desc:'Pivot pràcticament al límit del tors; és la versió més estreta de les quatre.',x:.52}
+ {name:'1 · Natural suau',desc:'Espatlles una mica més altes, braços +3% i obertura lateral discreta.',shoulderY:2.88,armScale:1.03,upperZ:.09,elbowZ:.025},
+ {name:'2 · Natural equilibrat',desc:'Braços +5%, espatlla lleugerament elevada i colze més separat del tors.',shoulderY:2.90,armScale:1.05,upperZ:.12,elbowZ:.04},
+ {name:'3 · Obert',desc:'Braços +5% i una obertura lateral més visible per donar més aire entre braç i cos.',shoulderY:2.90,armScale:1.05,upperZ:.15,elbowZ:.055},
+ {name:'4 · Alt i llarg',desc:'Espatlla més alta, braços +7% i obertura moderada: silueta una mica més atlètica.',shoulderY:2.93,armScale:1.07,upperZ:.125,elbowZ:.045}
 ];
 
 const canvas=document.getElementById('c');
@@ -46,20 +46,30 @@ proposals.forEach((p,i)=>{
   model.rotation.y=-.28;
   const u=model.userData;
 
-  // Només canvi visual de prova: apropem els pivots de les espatlles al tors.
-  u.al.position.x=-p.x;
-  u.ar.position.x=p.x;
+  // Base aprovada: opció 2 d'amplada d'espatlles.
+  u.al.position.x=-.57;
+  u.ar.position.x=.57;
 
-  // Postura bàsica neutra per comparar bé la silueta.
-  u.al.rotation.set(0,-0.00,-.045);
-  u.ar.rotation.set(0, 0.00, .045);
-  u.ael.rotation.set(-.08,0,0);
-  u.aer.rotation.set(-.08,0,0);
+  // Espatlles una mica més altes.
+  u.al.position.y=p.shoulderY;
+  u.ar.position.y=p.shoulderY;
+
+  // Allarguem lleugerament tot el conjunt del braç.
+  u.al.scale.y=p.armScale;
+  u.ar.scale.y=p.armScale;
+
+  // Obertura lateral de l'húmer perquè el colze no quedi enganxat al tors.
+  u.al.rotation.set(0,0,-p.upperZ);
+  u.ar.rotation.set(0,0,p.upperZ);
+
+  // Colze lleugerament orientat cap enfora, mantenint una postura natural.
+  u.ael.rotation.set(-.08,0,-p.elbowZ);
+  u.aer.rotation.set(-.08,0,p.elbowZ);
 
   scene.add(model);models.push(model);
 
   const cam=new THREE.PerspectiveCamera(34,1,.1,100);
-  cam.position.set(5.4,4.35,-7.8);cam.lookAt(0,1.95,0);cams.push(cam);
+  cam.position.set(5.4,4.35,-7.8);cam.lookAt(0,1.98,0);cams.push(cam);
 
   const card=document.createElement('div');card.className='card';
   const label=document.createElement('div');label.className='label';
