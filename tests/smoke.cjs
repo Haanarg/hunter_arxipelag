@@ -234,6 +234,8 @@ ok("buildingSrc.includes('const spring=.12')&&buildingSrc.includes('sideWalls:[]
 ok("String(mkB).includes('Sense parets laterals independents')",'hangar collision model omits lateral walls');
 ok("worldGenSrc.includes(\"prop('fuel',17,18,Math.PI/2)\")&&worldGenSrc.includes(\"prop('sign',31,26,Math.PI/2)\")",'garage props are redistributed away from the annex');
 ok("VD.types.heli_combat.maxF>VD.types.heli.maxF&&VD.types.heli_combat.tu>VD.types.heli.tu&&VD.types.heli_combat.steerResponse>VD.types.heli.steerResponse&&VD.types.heli_combat.yawResponse>VD.types.heli.yawResponse&&VD.types.heli_combat.climb>VD.types.heli.climb",'combat helicopter is faster and more maneuverable than normal helicopter');
+ok("vehSrc.includes('Huey 3B-4')&&vehSrc.includes('roundedPrism(g,2.7,1.74,4.18')&&vehSrc.includes('Variant 4: petit carenat arrodonit')",'normal helicopter uses the selected Huey 3B variant 4 visual model');
+ok("V.find(v=>v.t==='heli').o.userData.rotor&&V.find(v=>v.t==='heli').o.userData.tailRotor",'new Huey model preserves both animated rotors');
 ok("String(fire).includes('const a30=Math.PI/6')&&String(fire).includes(\"c=='heli'\")&&String(fire).includes(\"c=='heli_combat'\")&&String(fire).includes('fx_*ch,-sv,fz*ch')",'both helicopters fire at a 30 degree downward angle');
 ok("String(fire).includes('const a5=Math.PI/36')&&String(fire).includes('fx_*ch,-sv,fz*ch')",'tank fires 5 degrees downward');
 ok("vehSrc.includes('rod(g,[0,2.48,-.65],[0,2.48,-3.05],.1,metal)')&&!vehSrc.includes('mgDrop')",'tankette gun barrel stays level while bullets keep their downward trajectory');
