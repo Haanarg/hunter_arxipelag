@@ -35,7 +35,7 @@ function rotorSet(g,span=14.4,tailZ=7.15){
   const hub=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.18,8),mat(C.metal,.5,.5));
   hub.position.set(0,3.82,0);g.add(hub);
   const rotor=new THREE.Group();rotor.position.set(0,3.82,0);
-  for(const a of[0,Math.PI/2]){
+  for(const a of[0,Math.PI/3,Math.PI*2/3]){
     const b=box(rotor,span,.08,.34,C.dark,0,0,0,.25);b.rotation.y=a;
   }
   g.add(rotor);
@@ -81,28 +81,40 @@ function combatCompactVariant(opts={}){
   sphere(g,width*.5,.86,bodyLen*.5,bodyCol,0,2.08,.2);
   roundedPrism(g,width*.8,.48,1.9,.15,0x4f5949,0,2.68,-.12);
 
-  // Cabina: variants entre compacta, tàndem i angular tipus Apache.
-  if(cockpit==='compact'){
-    sphere(g,width*.45,.64,1.35,C.glass,0,2.28,-2.25);
-    box(g,width*.72,.62,1.1,bodyCol,0,2.48,-1.0);
-  }else if(cockpit==='tandem'){
-    sphere(g,width*.46,cockpitH,1.08,C.glass,0,2.18,-2.45);
-    sphere(g,width*.39,cockpitH*.9,.92,C.glass,0,2.5,-1.45);
-    box(g,width*.7,.14,.16,bodyCol,0,2.4,-1.92);
-  }else if(cockpit==='apache'){
-    // Cabina angular amb dos volums facetats, inspirada en la lectura visual de l'Apache.
-    const front=roundedPrism(g,width*.82,.92,1.25,.08,C.glass,0,2.18,-2.5);
-    front.rotation.x=-.08;
-    const rear=roundedPrism(g,width*.74,.86,1.05,.07,C.glass,0,2.48,-1.42);
-    rear.rotation.x=.05;
-    box(g,width*.86,.16,.18,bodyCol,0,2.38,-1.95);
-    box(g,width*.72,.2,.65,bodyCol,0,2.76,-1.1);
-  }else if(cockpit==='apacheLow'){
-    // Versió encara més low-poly: grans plans i morro més dur.
-    roundedPrism(g,width*.8,.86,1.16,.04,C.glass,0,2.14,-2.5);
-    roundedPrism(g,width*.7,.78,.92,.04,C.glass,0,2.47,-1.46);
-    box(g,width*.88,.22,.35,bodyCol,0,1.83,-2.95);
-    box(g,width*.76,.24,.72,bodyCol,0,2.78,-1.0);
+  // Quatre iteracions directes sobre Compacte B:
+  // dues cabines de mida equivalent + peça diagonal que amaga la junta.
+  if(cockpit==='equalSoft'){
+    sphere(g,width*.43,.57,.94,C.glass,0,2.22,-2.38);
+    sphere(g,width*.43,.57,.94,C.glass,0,2.48,-1.34);
+    const bridge=box(g,width*.72,.48,.72,bodyCol,0,2.47,-1.86);
+    bridge.rotation.x=-.34;
+    box(g,width*.7,.18,.48,bodyCol,0,2.82,-.78);
+  }else if(cockpit==='equalAngular'){
+    const front=roundedPrism(g,width*.78,.82,1.02,.05,C.glass,0,2.18,-2.42);
+    front.rotation.x=-.07;
+    const rear=roundedPrism(g,width*.78,.82,1.02,.05,C.glass,0,2.48,-1.33);
+    rear.rotation.x=.04;
+    const bridge=box(g,width*.78,.5,.7,bodyCol,0,2.5,-1.86);
+    bridge.rotation.x=-.43;
+    box(g,width*.72,.22,.58,bodyCol,0,2.84,-.72);
+  }else if(cockpit==='equalApache'){
+    const front=roundedPrism(g,width*.76,.78,.98,.025,C.glass,0,2.13,-2.45);
+    front.rotation.x=-.11;
+    const rear=roundedPrism(g,width*.76,.78,.98,.025,C.glass,0,2.46,-1.34);
+    rear.rotation.x=.06;
+    box(g,width*.84,.2,.3,bodyCol,0,1.84,-2.93);
+    const bridge=box(g,width*.8,.56,.76,bodyCol,0,2.5,-1.87);
+    bridge.rotation.x=-.5;
+    box(g,width*.76,.26,.62,bodyCol,0,2.83,-.68);
+  }else if(cockpit==='equalArmored'){
+    const front=roundedPrism(g,width*.8,.74,1.0,.03,C.glass,0,2.12,-2.44);
+    front.rotation.x=-.1;
+    const rear=roundedPrism(g,width*.8,.74,1.0,.03,C.glass,0,2.42,-1.32);
+    rear.rotation.x=.03;
+    const bridge=box(g,width*.86,.62,.78,bodyCol,0,2.48,-1.86);
+    bridge.rotation.x=-.55;
+    box(g,width*.9,.28,.42,bodyCol,0,1.88,-2.92);
+    box(g,width*.82,.3,.7,bodyCol,0,2.82,-.64);
   }
 
   // Aletes més curtes que el model 2 original + barquilles grans del model 3.
@@ -135,32 +147,32 @@ function combatCompactVariant(opts={}){
 
 export function compactA(){
   return combatCompactVariant({
-    width:1.72,bodyLen:5.05,cockpit:'compact',
-    wing:1.58,tailEnd:7.0,skidWidth:1.18
+    width:1.70,bodyLen:5.0,cockpit:'equalSoft',
+    wing:1.56,tailEnd:6.98,skidWidth:1.16
   })
 }
 export function compactB(){
   return combatCompactVariant({
-    width:1.7,bodyLen:5.0,cockpit:'tandem',cockpitH:.6,
+    width:1.70,bodyLen:5.0,cockpit:'equalAngular',
     wing:1.56,tailEnd:6.98,skidWidth:1.16
   })
 }
 export function compactC(){
   return combatCompactVariant({
-    width:1.74,bodyLen:5.08,cockpit:'apache',
-    wing:1.6,tailEnd:7.02,skidWidth:1.18
+    width:1.72,bodyLen:5.02,cockpit:'equalApache',
+    wing:1.57,tailEnd:6.99,skidWidth:1.17
   })
 }
 export function compactD(){
   return combatCompactVariant({
-    width:1.76,bodyLen:5.1,cockpit:'apacheLow',
-    wing:1.62,tailEnd:7.04,skidWidth:1.2
+    width:1.74,bodyLen:5.04,cockpit:'equalArmored',
+    wing:1.58,tailEnd:7.0,skidWidth:1.18
   })
 }
 
 export const concepts=[
-  {name:'1 · Compacte A',create:compactA,desc:'Model 2 refinat: patins connectats, aletes més curtes i barquilles grans del Gunship.'},
-  {name:'2 · Compacte B · Tàndem',create:compactB,desc:'Mateixa base, però amb cabina tàndem més marcada i fuselatge lleugerament més fi.'},
-  {name:'3 · Compacte C · Apache',create:compactC,desc:'Cabina angular inspirada en l’Apache, mantenint la base compacta i les barquilles grans.'},
-  {name:'4 · Compacte D · Apache low-poly',create:compactD,desc:'Versió més geomètrica i agressiva, amb grans plans angulars i lectura més moderna.'}
+  {name:'1 · Compacte B1 · Suau',create:compactA,desc:'Dues cabines iguals, unió diagonal integrada i rotor principal de 6 aspes.'},
+  {name:'2 · Compacte B2 · Angular',create:compactB,desc:'Cabines iguals més facetades i bloc diagonal més visible, mantenint la base del Compacte B.'},
+  {name:'3 · Compacte B3 · Apache',create:compactC,desc:'Variant més agressiva: morro i cabines angulars tipus Apache, però amb volums igualats.'},
+  {name:'4 · Compacte B4 · Blindat',create:compactD,desc:'La versió més robusta, amb unió diagonal ampla i cabina compacta de lectura blindada.'}
 ];
