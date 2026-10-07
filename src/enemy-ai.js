@@ -6,22 +6,44 @@ function enemyMoveClear(u,nx,nz,hd,isVeh){
   return clear
 }
 function mvE(u,s){
-  const isVeh=['jeep','tanqueta','tanc'].includes(u.t),tryStep=hd=>{
+  const isVeh=['jeep','tanqueta','tanc'].includes(u.t),isInf=!isVeh&&(u.t==='soldat'||u.t==='general'),tryStep=hd=>{
     const nx=u.x-Math.sin(hd)*s,nz=u.z-Math.cos(hd)*s;
     if(!enemyMoveClear(u,nx,nz,hd,isVeh))return false;
     u.hd=hd;u.x=nx;u.z=nz;return true
   };
   const desired=u.hd;
-  if(tryStep(desired)){if(isVeh)u.blockedT=Math.max(0,(u.blockedT||0)-.08);return}
-  if(isVeh){
+  if(tryStep(desired)){
+    if(isVeh||isInf)u.blockedT=Math.max(0,(u.blockedT||0)-.08);
+    return
+  }
+
+  if(isVeh||isInf){
     u.blockedT=(u.blockedT||0)+.08;
-    const side=u.avoidSide||1,angles=[Math.PI/7,Math.PI/4,Math.PI/3,Math.PI/2];
+    const side=u.avoidSide||1,
+          angles=isVeh?[Math.PI/7,Math.PI/4,Math.PI/3,Math.PI/2]:[Math.PI/9,Math.PI/6,Math.PI/4,Math.PI/3,Math.PI/2];
     for(const a of angles){
       if(tryStep(desired+side*a)){u.avoidSide=side;return}
       if(tryStep(desired-side*a)){u.avoidSide=-side;return}
     }
-    // Si queda realment encaixat, canvia el costat preferit i força un nou objectiu de patrulla.
-    if(u.blockedT>.8){u.avoidSide=-(u.avoidSide||1);u.blockedT=0;u.wt=0}
+
+    if(isInf&&u.blockedT>.55){
+      // Desencallament curt: cerca un punt lliure al voltant sense saltar lluny ni travessar parets.
+      const base=desired+(u.avoidSide||1)*Math.PI/2;
+      for(const dist of[.7,1.1,1.6,2.2]){
+        for(let i=0;i<8;i++){
+          const a=base+i*Math.PI/4,
+                nx=u.x+Math.cos(a)*dist,nz=u.z+Math.sin(a)*dist,
+                hd=Math.atan2(u.x-nx,u.z-nz);
+          if(enemyMoveClear(u,nx,nz,hd,false)){
+            u.x=nx;u.z=nz;u.hd=desired;u.blockedT=0;u.avoidSide=-(u.avoidSide||1);
+            return
+          }
+        }
+      }
+    }
+
+    // Si continua bloquejat, canvia el costat preferit i força un objectiu nou.
+    if(u.blockedT>(isVeh?.8:.75)){u.avoidSide=-(u.avoidSide||1);u.blockedT=0;u.wt=0}
     return
   }
   u.wt=0
