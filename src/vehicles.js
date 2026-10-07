@@ -183,8 +183,6 @@ window.HUNTER_VEHICLES=Object.freeze({
           roundedPrism(g,2.7,1.74,4.18,.31,bodyCol,0,2.08,.3,'paint');
           const belly=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(bodyCol,'paint'));belly.scale.set(1.24,.24,1.92);belly.position.set(0,1.39,.34);g.add(belly);
           const nose=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(glass,'glass'));nose.scale.set(1.28,.9,1.02);nose.position.set(0,2.17,-2.35);g.add(nose);
-          for(const x of[-.621,.621])rod(g,[x,1.53,-3.08],[x*.68,2.82,-2.48],.045,bodyCol,'paint');
-          rod(g,[0,1.48,-3.11],[0,2.84,-2.5],.05,0x343b35,'metal');
           roundedPrism(g,2.38,.32,2.12,.13,bodyCol,0,2.91,.04,'paint');
           // Grans obertures laterals de transport.
           const sideX=1.36;
