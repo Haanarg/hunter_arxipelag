@@ -68,10 +68,11 @@ window.HUNTER_RIDER=Object.freeze({
         torso.position.set(bodyX,hipY,.08*sc);
         // Tors i cap miren cap a la vela; braços i cames mantenen la seva postura actual.
         torso.rotation.set(0,-Math.PI/2,-.035+lean);
-        const hips=[vec(bodyX,hipY,.25*sc),vec(bodyX,hipY,-.25*sc)];
+        // La part inferior del cos gira 180° respecte del tors: cintura, cames i peus miren al costat correcte de la taula.
+        const hips=[vec(bodyX,hipY,-.25*sc),vec(bodyX,hipY,.25*sc)];
         const shoulders=[shoulderAt(1),shoulderAt(-1)];
         const hands=[vec(.52*sc,2.39*sc,.25*sc),vec(1.2*sc,2.08*sc,.25*sc)];
-        const feet=[vec(bodyX,footY,-.72*sc),vec(bodyX,footY,.72*sc)];
+        const feet=[vec(bodyX,footY,.72*sc),vec(bodyX,footY,-.72*sc)];
         for(let i=0;i<2;i++){
           const hip=hips[i],shoulder=shoulders[i],hand=hands[i],foot=feet[i];
           const elbow=shoulder.clone().lerp(hand,.55);
@@ -80,7 +81,7 @@ window.HUNTER_RIDER=Object.freeze({
           // Genoll sobre la línia cama-maluc-peu: només una flexió mínima visual.
           const knee=hip.clone().lerp(foot,.5);knee.x+=.015*sc;
           limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);
-          boots[i].position.copy(foot);boots[i].rotation.set(0,Math.PI/2,0);
+          boots[i].position.copy(foot);boots[i].rotation.set(0,-Math.PI/2,0);
         }
         return;
       }
