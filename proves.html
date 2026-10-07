@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hunter · Proves d'animació</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#779aa7;font-family:system-ui;color:#fff}
+#ui{position:fixed;inset:0;pointer-events:none}
+h1{position:absolute;top:12px;left:50%;transform:translateX(-50%);margin:0;font-size:21px;text-shadow:0 2px 5px #0009;white-space:nowrap}
+#cards{position:absolute;inset:52px 12px 12px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:10px}
+.card{position:relative;border:1px solid #ffffff70;border-radius:10px;box-shadow:inset 0 0 0 1px #0005;background:#0001}
+.label{position:absolute;left:10px;bottom:9px;background:#10202ed9;padding:7px 10px;border-radius:7px;font-weight:700;text-shadow:0 1px 2px #000;max-width:88%}
+.label small{display:block;font-weight:500;opacity:.84;margin-top:2px}
+canvas{display:block;width:100%;height:100%}
+@media(max-width:700px){h1{font-size:16px}.label{font-size:12px}.label small{display:none}}
+</style>
+<script src="./src/player-model.js"></script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui"><h1>Granada · 4 propostes de braç lateral</h1><div id="cards"></div></div>
+<script type="module">
+import * as THREE from './vendor/three-r186.module.mjs';
+
+const palette={enemy:{primary:0x8a3f35,general:0xb54b3d,vest:0x56352e,secondary:0x70443a}};
+const proposals=[
+ {name:'1 · Lateral baix',desc:'Braç clarament cap al costat, espatlla baixa i colze moderadament flexionat.',rx:-.10,rz:1.02,ex:.58,ez:.08},
+ {name:'2 · Lateral natural',desc:'Obertura lateral mitjana, colze una mica més alt: gest equilibrat i fàcil de llegir.',rx:-.08,rz:1.18,ex:.72,ez:.12},
+ {name:'3 · Lateral alt',desc:'Braç més elevat i separat del cos, amb preparació més atlètica abans del llançament.',rx:-.05,rz:1.34,ex:.82,ez:.18},
+ {name:'4 · Lateral compacte',desc:'Espatlla lateral però colze més tancat; manté la granada més a prop del cos.',rx:-.04,rz:.94,ex:1.02,ez:.06}
+];
+
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.8));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.shadowMap.enabled=true;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x83aeb8);
+scene.add(new THREE.HemisphereLight(0xd8efff,0x35523a,1.45));
+const sun=new THREE.DirectionalLight(0xffe2b7,2.2);sun.position.set(-8,16,-10);sun.castShadow=true;scene.add(sun);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(80,80),new THREE.MeshStandardMaterial({color:0xb9aa73,roughness:1}));
+ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+
+const cards=document.getElementById('cards'),cams=[],models=[];
+function addGrenade(model){
+  const e=model.userData.aer;
+  const g=new THREE.Group();g.position.set(.02,-.79,-.04);e.add(g);
+  const body=new THREE.Mesh(new THREE.SphereGeometry(.18,8,6),new THREE.MeshStandardMaterial({color:0x46513f,roughness:.82,metalness:.08,flatShading:true}));
+  body.scale.set(.88,1.08,.88);g.add(body);
+  const cap=new THREE.Mesh(new THREE.BoxGeometry(.08,.13,.08),new THREE.MeshStandardMaterial({color:0x252b27,roughness:.75,flatShading:true}));
+  cap.position.y=.18;g.add(cap);
+}
+proposals.forEach((p,i)=>{
+  const model=window.HUNTER_PLAYER_MODEL.create(THREE,{palette});
+  model.position.y=.03;
+  model.rotation.y=-.45;
+  const u=model.userData;
+  u.ar.rotation.x=p.rx;u.ar.rotation.z=p.rz;
+  u.aer.rotation.x=p.ex;u.aer.rotation.z=p.ez;
+  u.al.rotation.x=-.08;u.al.rotation.z=.05;u.ael.rotation.x=.18;
+  addGrenade(model);
+  scene.add(model);models.push(model);
+
+  const cam=new THREE.PerspectiveCamera(36,1,.1,100);
+  cam.position.set(5.8,4.6,-7.8);cam.lookAt(.2,2.05,0);cams.push(cam);
+
+  const card=document.createElement('div');card.className='card';
+  const label=document.createElement('div');label.className='label';
+  label.innerHTML=p.name+'<small>'+p.desc+'</small>';card.append(label);cards.append(card);
+});
+function resize(){renderer.setSize(innerWidth,innerHeight,false)}
+addEventListener('resize',resize);resize();
+function loop(){
+  const rects=[...cards.children].map(x=>x.getBoundingClientRect()),H=innerHeight;
+  renderer.setScissorTest(true);
+  rects.forEach((r,i)=>{
+    renderer.setViewport(r.left,H-r.bottom,r.width,r.height);renderer.setScissor(r.left,H-r.bottom,r.width,r.height);
+    cams[i].aspect=r.width/r.height;cams[i].updateProjectionMatrix();
+    models.forEach((m,j)=>m.visible=i===j);renderer.render(scene,cams[i]);
+  });
+  models.forEach(m=>m.visible=true);renderer.setScissorTest(false);requestAnimationFrame(loop)
+}
+requestAnimationFrame(loop);
+</script>
+</body></html>
