@@ -4,10 +4,10 @@ export function createBoatConcept(THREE,variant=0){
   // Totes quatre variants parteixen del model 1 (Stealth A).
   // Diferències: tractament de la proa i lleus ajustos del radar compacte heretat del model 3.
   const cfg=[
-    {name:'Stealth A1 · Radar compacte',len:8.9,beam:2.75,bow:.20,deckY:1.16,cockZ:.95,cockL:2.5,screenZ:-.65,free:.98,bowPad:.20,radarZ:2.18,radarH:1.95,radarScale:1.00},
-    {name:'Stealth A2 · Proa neta',len:8.9,beam:2.75,bow:.20,deckY:1.16,cockZ:.95,cockL:2.5,screenZ:-.65,free:.98,bowPad:.10,radarZ:2.12,radarH:1.95,radarScale:.95},
-    {name:'Stealth A3 · Proa rasa',len:8.9,beam:2.75,bow:.20,deckY:1.16,cockZ:.95,cockL:2.5,screenZ:-.65,free:.98,bowPad:0,radarZ:2.15,radarH:2.00,radarScale:1.00},
-    {name:'Stealth A4 · Radar avançat',len:8.9,beam:2.75,bow:.20,deckY:1.16,cockZ:.95,cockL:2.5,screenZ:-.65,free:.98,bowPad:.05,radarZ:2.05,radarH:2.08,radarScale:1.08}
+    {name:'Stealth A1 · Radar compacte',len:8.9,beam:2.75,bow:.20,deckY:1.16,cockZ:.95,cockL:2.5,screenZ:-.65,free:.98,radarZ:2.18,radarH:1.95,radarScale:1.00},
+    {name:'Stealth A2 · Proa neta',len:8.9,beam:2.75,bow:.20,deckY:1.16,cockZ:.95,cockL:2.5,screenZ:-.65,free:.98,radarZ:2.12,radarH:1.95,radarScale:.95},
+    {name:'Stealth A3 · Proa rasa',len:8.9,beam:2.75,bow:.20,deckY:1.16,cockZ:.95,cockL:2.5,screenZ:-.65,free:.98,radarZ:2.15,radarH:2.00,radarScale:1.00},
+    {name:'Stealth A4 · Radar avançat',len:8.9,beam:2.75,bow:.20,deckY:1.16,cockZ:.95,cockL:2.5,screenZ:-.65,free:.98,radarZ:2.05,radarH:2.08,radarScale:1.08}
   ][variant];
 
   const mat=(c,metal=.03)=>new THREE.MeshStandardMaterial({color:c,roughness:.76,metalness:metal,flatShading:true});
@@ -53,14 +53,9 @@ export function createBoatConcept(THREE,variant=0){
   // Franja fosca del casc inferior.
   box(B*.93,.25,L*.72,darkMat,0,.06,.35);
 
-  // Coberta de proa integrada al casc. La plataforma superior deixa de sobresortir:
-  // cada variant només conserva un detall molt més petit o l'elimina completament.
+  // Coberta de proa integrada al casc, completament neta: sense peça grisa elevada.
   const foreLen=(cfg.screenZ+half)-.18;
   box(B*.88,.16,foreLen,deckMat,0,cfg.deckY,-half+foreLen/2+.02,-.055);
-  if(cfg.bowPad>0){
-    const padLen=Math.max(.28,foreLen*cfg.bowPad);
-    box(B*.48,.06,padLen,trimMat,0,cfg.deckY+.075,-half+padLen*.72);
-  }
 
   // Cabina oberta central.
   const cockFront=cfg.screenZ+.18,cockRear=cfg.cockZ+cfg.cockL*.72,cockLen=cockRear-cockFront;
@@ -94,8 +89,7 @@ export function createBoatConcept(THREE,variant=0){
   dome.scale.y=.40;dome.position.set(0,1.15+mh+.01,mz);
   box(.54*rs,.08,.54*rs,trimMat,0,1.15+mh-.03,mz);
 
-  // Detalls baixos a coberta, sense volum que sobresurti de la proa.
-  for(const z of[-half*.58,-half*.35])box(.68,.03,.42,trimMat,0,cfg.deckY+.13,z);
+  // Proa neta: només es conserven les baranes fines laterals.
   for(const x of[-B*.31,B*.31])rod([x,cfg.free+.10,-half*.22],[x,cfg.free+.10,-half*.50],.025,trimMat);
 
   // Petites diferències entre iteracions, sempre mantenint la base del model 1.
