@@ -12,6 +12,7 @@ window.HUNTER_VEHICLES=Object.freeze({
     const VS=this.scales;
     const rod=(g,a,b,r,c,profile='metal')=>{const v=new THREE.Vector3(...a),w=new THREE.Vector3(...b),delta=w.clone().sub(v),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),8),material(c,profile));m.position.copy(v.add(w).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());g.add(m);return m};
     const round=(g,r,h,c,x,y,z,axis='y',profile='metal')=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,12),material(c,profile));m.position.set(x,y,z);if(axis==='x')m.rotation.z=Math.PI/2;if(axis==='z')m.rotation.x=Math.PI/2;g.add(m);return m};
+    const roundedPrism=(g,w,h,d,r,c,x,y,z,profile='paint')=>{const hw=w/2,hh=h/2,rr=Math.min(r,hw-.02,hh-.02),s=new THREE.Shape();s.moveTo(-hw+rr,-hh);s.lineTo(hw-rr,-hh);s.quadraticCurveTo(hw,-hh,hw,-hh+rr);s.lineTo(hw,hh-rr);s.quadraticCurveTo(hw,hh,hw-rr,hh);s.lineTo(-hw+rr,hh);s.quadraticCurveTo(-hw,hh,-hw,hh-rr);s.lineTo(-hw,-hh+rr);s.quadraticCurveTo(-hw,-hh,-hw+rr,-hh);s.closePath();const geo=new THREE.ExtrudeGeometry(s,{depth:d,bevelEnabled:false,curveSegments:2});geo.translate(0,0,-d/2);const m=new THREE.Mesh(geo,material(c,profile));m.position.set(x,y,z);g.add(m);return m};
     const wheel=(g,x,y,z,r,width,spokes=false)=>{const p=new THREE.Group();p.position.set(x,y,z);g.add(p);const tire=new THREE.Mesh(new THREE.TorusGeometry(r*.8,r*.2,6,12),material(0x20252a,'rubber'));tire.rotation.y=Math.PI/2;tire.scale.z=width/(r*.4);p.add(tire);round(p,r*.45,width*.8,0x8b9699,0,0,0,'x','metal');if(spokes)for(let a=0;a<Math.PI;a+=Math.PI/3)rod(p,[0,Math.sin(a)*r*.75,Math.cos(a)*r*.75],[0,-Math.sin(a)*r*.75,-Math.cos(a)*r*.75],.035,0xb6bdc1,'metal');p.userData.radius=r;(g.userData.wheels||(g.userData.wheels=[])).push(p);return p};
     const shape=new THREE.Shape();[[-2,-5],[2,-5],[2.2,1],[0,5.5],[-2.2,1]].forEach(([x,y],i)=>i?shape.lineTo(x,y):shape.moveTo(x,y));
     const hull=new THREE.ExtrudeGeometry(shape,{depth:1.4,bevelEnabled:false});hull.rotateX(-Math.PI/2);
@@ -178,9 +179,33 @@ window.HUNTER_VEHICLES=Object.freeze({
       if(t==='heli'||t==='heli_combat'){
         const combat=t==='heli_combat',bodyCol=combat?0x59634f:0x647768;
         if(!combat){
-          box(g,2.68,1.55,4.4,bodyCol,0,2.05,-.25,'paint');const nose=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(glass,'glass'));nose.scale.set(1.35,.95,1.25);nose.position.set(0,2.15,-2.25);g.add(nose);
-          for(const x of[-1.34,1.34])box(g,.12,1.05,1.55,0x3f4d45,x,2.05,-.2,'paint');rod(g,[0,2.55,1.65],[0,2.8,7.1],.22,bodyCol,'paint');box(g,.12,1.45,1.1,bodyCol,0,3.35,6.85,'paint');box(g,2.7,.12,.7,bodyCol,0,2.85,5.95,'paint');
-          for(const x of[-1.55,1.55]){rod(g,[x,.5,-2],[x,.5,2.1],.09,metal);for(const z of[-1.1,1.2])rod(g,[x,.5,z],[x*.65,1.2,z],.08,metal)}
+          // Huey 3B-4: fuselatge estret amb cantonades arrodonides i cabina frontal tipus UH-1.
+          roundedPrism(g,2.7,1.74,4.18,.31,bodyCol,0,2.08,.3,'paint');
+          const belly=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(bodyCol,'paint'));belly.scale.set(1.24,.24,1.92);belly.position.set(0,1.39,.34);g.add(belly);
+          const nose=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(glass,'glass'));nose.scale.set(1.28,.9,1.02);nose.position.set(0,2.17,-2.35);g.add(nose);
+          for(const x of[-.621,.621])rod(g,[x,1.53,-3.08],[x*.68,2.82,-2.48],.045,bodyCol,'paint');
+          rod(g,[0,1.48,-3.11],[0,2.84,-2.5],.05,0x343b35,'metal');
+          roundedPrism(g,2.38,.32,2.12,.13,bodyCol,0,2.91,.04,'paint');
+          // Grans obertures laterals de transport.
+          const sideX=1.36;
+          for(const side of[-1,1]){
+            box(g,.1,1.18,.36,bodyCol,side*sideX,2.0,-.76,'paint');
+            box(g,.1,1.18,.36,bodyCol,side*sideX,2.0,1.76,'paint');
+            box(g,.1,.14,2.05,0x343b35,side*(sideX+.01),1.43,.5,'metal');
+            rod(g,[side*sideX,2.58,-.58],[side*sideX,2.58,1.58],.052,bodyCol,'paint');
+            // Variant 4: petit carenat arrodonit en lloc dels antics discs laterals.
+            const pod=roundedPrism(g,.28,.58,.82,.12,bodyCol,side*1.323,1.86,-2.37,'paint');pod.rotation.z=side*.08;
+            box(g,.08,.32,.46,0x343b35,side*1.364,1.88,-2.38,'metal');
+          }
+          // Bancs interiors visibles a través de les portes.
+          for(const x of[-.82,.82]){box(g,.4,.46,2.1,0x2d302c,x,1.55,.55,'paint');box(g,.4,.46,2.1,0x2d302c,-x,1.55,.55,'paint')}
+          // Boom de cua afinat i estabilitzador.
+          {const startZ=2,endZ=7.48,y0=2.58,y1=2.98,L=Math.hypot(endZ-startZ,y1-y0),boom=new THREE.Mesh(new THREE.CylinderGeometry(.176,.42,L,6),material(bodyCol,'paint'));boom.position.set(0,(y0+y1)/2,(startZ+endZ)/2);boom.rotation.x=Math.PI/2-Math.atan2(y1-y0,endZ-startZ);g.add(boom)}
+          box(g,.12,1.35,.88,bodyCol,0,3.34,7.36,'paint');box(g,2.25,.1,.58,bodyCol,0,2.9,6.43,'paint');
+          // Patins del model 3B.
+          for(const x of[-1.458,1.458]){rod(g,[x,.48,-2.12],[x,.48,2.3],.075,metal);rod(g,[x*.45,1.15,-1.05],[x,.48,-1.05],.07,metal);rod(g,[x*.45,1.15,1.0],[x,.48,1.0],.07,metal)}
+          roundedPrism(g,1.3,.62,1.8,.17,0x505b49,0,3.12,.82,'paint');
+          rod(g,[.494,3.15,1.34],[.845,3.2,1.78],.11,0x343b35,'metal');
         }else{
           const fus=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(bodyCol,'paint'));fus.scale.set(.94,.92,3.2);fus.position.set(0,2.05,.25);g.add(fus);
           const cockpit=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(glass,'glass'));cockpit.scale.set(.92,.72,1.5);cockpit.position.set(0,2.28,-2.35);g.add(cockpit);
@@ -200,8 +225,8 @@ window.HUNTER_VEHICLES=Object.freeze({
             rod(g,[side*.72,1.45,1.05],[x,.5,1.05],.08,metal);
           }
         }
-        rod(g,[0,3.02,0],[0,3.82,0],.14,metal);round(g,.3,.2,metal,0,3.82,0,'y','metal');const rotor=new THREE.Group();rotor.position.set(0,3.82,0);for(const a of[0,Math.PI/2]){const blade=box(rotor,combat?13.5:14.5,.1,.36,rubber,0,0,0,'rubber');blade.rotation.y=a}g.add(rotor);g.userData.rotor=rotor;
-        const tail=new THREE.Group();tail.position.set(.38,3.45,7);box(tail,.1,1.9,.16,rubber,0,0,0,'rubber');box(tail,.1,.16,1.9,rubber,0,0,0,'rubber');g.add(tail);g.userData.tailRotor=tail;
+        rod(g,[0,3.02,0],[0,3.82,0],.14,metal);round(g,.3,.2,metal,0,3.82,0,'y','metal');const rotor=new THREE.Group();rotor.position.set(0,3.82,0);for(const a of[0,Math.PI/2]){const blade=box(rotor,combat?13.5:14.8,.1,.36,rubber,0,0,0,'rubber');blade.rotation.y=a}g.add(rotor);g.userData.rotor=rotor;
+        const tail=new THREE.Group();tail.position.set(.38,3.45,combat?7:7.38);box(tail,.1,1.9,.16,rubber,0,0,0,'rubber');box(tail,.1,.16,1.9,rubber,0,0,0,'rubber');g.add(tail);g.userData.tailRotor=tail;
       }
       if(t==='bici'){const crank=new THREE.Group();crank.position.set(0,.75,0);for(const side of[-1,1]){rod(crank,[side*.3,0,0],[side*.3,0,side*.28],.045,metal);box(crank,.26,.08,.18,rubber,side*.4,0,side*.28,'rubber')}g.add(crank);g.userData.crank=crank}
       g.traverse(o=>{if(o.isMesh&&!o.userData.waterMask){o.castShadow=shadows;o.receiveShadow=shadows}});
