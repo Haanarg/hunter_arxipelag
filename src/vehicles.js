@@ -53,8 +53,88 @@ window.HUNTER_VEHICLES=Object.freeze({
         };
         [-2.1,2.1].forEach(trackSide);
         box(g,3.75,1.15,5.9,0x667348,0,1.5,0,'paint');const front=box(g,3.65,.72,1.55,0x727c50,0,1.95,-2.05,'paint');front.rotation.x=-.28;for(const x of[-1.45,1.45])box(g,.22,.52,4.9,0x56623f,x,1.88,.15,'paint');round(g,1.62,.82,0x78845b,0,2.54,.1,'y','paint');box(g,2.2,.26,1.65,0x6d7950,0,2.92,.1,'paint');round(g,.62,.2,metal,.45,3.08,.4);rod(g,[0,2.62,-1],[0,2.62,-5.35],.2,metal);box(g,.66,.4,.68,metal,0,2.62,-5.08,'metal');for(const x of[-1.2,1.2])box(g,.64,.45,1.2,0x596343,x,2.24,2,'paint');for(const x of[-1.35,1.35])box(g,.42,.22,.42,0x2f332e,x,2.15,-2.45,'metal');rod(g,[-1,2.7,1],[-1,5.2,1],.025,metal)}
-      if(t==='llanxa'||t==='llanxa_coets'){g.add(new THREE.Mesh(hull,material(t==='llanxa'?0xe7e1d5:0xc9cfbd,'paint')));box(g,3.25,.18,5.55,t==='llanxa'?0xb9885f:0x66705c,0,1.32,.75,'paint');box(g,2.45,.65,1.15,t==='llanxa'?0xe2d2b7:0x707b65,0,1.75,-1.25,'paint');box(g,2.25,.58,.12,glass,0,2.02,-1.82,'glass');box(g,.82,1.28,.72,metal,0,1.18,4.65,'metal');round(g,.2,.42,rubber,0,.15,4.95,'z','rubber');box(g,1.55,.15,.7,0x5a4638,0,1.62,2.75,'paint');
-        if(t==='llanxa_coets'){for(const x of[-1.05,1.05]){box(g,.36,.3,1.55,0x59664a,x,1.98,.35,'paint');rod(g,[x,2.1,.95],[x,2.1,-.9],.11,0x30383a,'metal')}box(g,.78,.22,.62,0x46513f,0,1.9,-.35,'paint')}
+      if(t==='llanxa'){
+        // Stealth A1: model seleccionat a proves.html. Proa neta, casc facetat,
+        // cabina oberta i radar compacte. Proa = -Z.
+        const L=8.9,B=2.75,half=L/2,free=.98,screenZ=-.65,cockZ=.95,cockL=2.5;
+        const hullCol=0x667176,darkHull=0x2f383d,deckCol=0x717c81,trim=0x424b50,glassCol=0x26343c;
+        const stations=[
+          {z:-half,w:.20,y:.56},
+          {z:-half*.78,w:B*.38,y:.46},
+          {z:-half*.43,w:B*.78,y:.38},
+          {z:.05,w:B*.98,y:.32},
+          {z:half*.55,w:B,y:.34},
+          {z:half,w:B*.88,y:.44}
+        ];
+        const verts=[],idx=[],rings=stations.map(s=>[
+          [0,-.18,s.z],
+          [-s.w*.50,.10,s.z],
+          [-s.w*.66,s.y+.20,s.z],
+          [-s.w*.50,free,s.z],
+          [ s.w*.50,free,s.z],
+          [ s.w*.66,s.y+.20,s.z],
+          [ s.w*.50,.10,s.z]
+        ]);
+        for(const ring of rings)for(const p of ring)verts.push(...p);
+        const N=7;
+        for(let j=0;j<rings.length-1;j++)for(let k=0;k<N-1;k++){
+          const a=j*N+k,b=a+N,c=b+1,d=a+1;idx.push(a,b,c,a,c,d)
+        }
+        const base=(rings.length-1)*N;
+        for(let k=1;k<N-1;k++)idx.push(base,base+k,base+k+1);
+        const geo=new THREE.BufferGeometry();
+        geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+        geo.setIndex(idx);geo.computeVertexNormals();
+        g.add(new THREE.Mesh(geo,material(hullCol,'paint')));
+
+        // Franja inferior fosca. La proa no porta cap plataforma superior.
+        box(g,B*.93,.25,L*.72,darkHull,0,.06,.35,'metal');
+
+        // Cabina oberta central.
+        const cockFront=screenZ+.18,cockRear=cockZ+cockL*.72,cockLen=cockRear-cockFront;
+        for(const side of[-1,1]){
+          const wall=box(g,.18,.78,cockLen,hullCol,side*(B*.43),1.38,(cockFront+cockRear)/2,'paint');
+          wall.rotation.z=side*.06;
+        }
+        box(g,B*.86,.74,.18,hullCol,0,1.38,cockRear,'paint');
+
+        // Parabrisa frontal inclinat en tres panells.
+        for(const x of[-.72,0,.72]){
+          const w=x===0?B*.34:B*.25,
+                scr=box(g,w,.64,.10,glassCol,x*(B*.43),1.74,screenZ,'glass');
+          scr.rotation.x=-.48;scr.rotation.z=x===0?0:(x<0?-.10:.10);
+        }
+        {const trimBar=box(g,B*.88,.14,.16,trim,0,1.45,screenZ+.12,'metal');trimBar.rotation.x=-.48}
+
+        // Coberta posterior i bancs.
+        const aftStart=cockRear+.14,aftLen=half-aftStart-.10;
+        if(aftLen>.4)box(g,B*.84,.15,aftLen,deckCol,0,1.18,aftStart+aftLen/2,'paint');
+        for(const z of[cockZ-.15,cockZ+.65])box(g,B*.56,.14,.48,0x3a4245,0,1.08,z,'paint');
+
+        // Radar compacte del model 3, tal com es va seleccionar a la iteració A1.
+        const mz=2.18,mh=1.95;
+        rod(g,[0,1.15,mz],[0,1.15+mh,mz],.085,trim,'metal');
+        {const sensor=box(g,.34,.30,.38,trim,0,2.02,mz-.03,'metal');sensor.rotation.x=-.12}
+        box(g,.28,.42,.30,trim,0,2.36,mz,'metal');
+        const dome=new THREE.Mesh(new THREE.SphereGeometry(.29,12,6,0,Math.PI*2,0,Math.PI/2),material(0xc5c9c6,'metal'));
+        dome.scale.y=.40;dome.position.set(0,1.15+mh+.01,mz);g.add(dome);
+        box(g,.54,.08,.54,trim,0,1.15+mh-.03,mz,'metal');
+
+        // Baranes fines de proa i petit detall posterior de l'A1.
+        for(const x of[-B*.31,B*.31])rod(g,[x,free+.10,-half*.22],[x,free+.10,-half*.50],.025,trim,'metal');
+        box(g,.42,.12,.62,trim,0,1.18,cockRear-.14,'metal');
+      }
+      if(t==='llanxa_coets'){
+        // Manté el model anterior de la llanxa llançacoets.
+        g.add(new THREE.Mesh(hull,material(0xc9cfbd,'paint')));
+        box(g,3.25,.18,5.55,0x66705c,0,1.32,.75,'paint');
+        box(g,2.45,.65,1.15,0x707b65,0,1.75,-1.25,'paint');
+        box(g,2.25,.58,.12,glass,0,2.02,-1.82,'glass');
+        box(g,.82,1.28,.72,metal,0,1.18,4.65,'metal');
+        round(g,.2,.42,rubber,0,.15,4.95,'z','rubber');
+        box(g,1.55,.15,.7,0x5a4638,0,1.62,2.75,'paint');
+        for(const x of[-1.05,1.05]){box(g,.36,.3,1.55,0x59664a,x,1.98,.35,'paint');rod(g,[x,2.1,.95],[x,2.1,-.9],.11,0x30383a,'metal')}
+        box(g,.78,.22,.62,0x46513f,0,1.9,-.35,'paint');
       }
       if(t==='moto_aquatica'){
         const bodyCol=0xc94e3f,dark=0x33383b;
