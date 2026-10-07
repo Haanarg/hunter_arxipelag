@@ -53,9 +53,8 @@ export function createBoatConcept(THREE,variant=0){
   // Franja fosca del casc inferior.
   box(B*.93,.25,L*.72,darkMat,0,.06,.35);
 
-  // Coberta de proa integrada al casc, completament neta: sense peça grisa elevada.
-  const foreLen=(cfg.screenZ+half)-.18;
-  box(B*.88,.16,foreLen,deckMat,0,cfg.deckY,-half+foreLen/2+.02,-.055);
+  // Proa completament neta: sense cap plataforma o llosa grisa damunt del casc.
+  // La forma frontal queda definida només pel casc facetat.
 
   // Cabina oberta central.
   const cockFront=cfg.screenZ+.18,cockRear=cfg.cockZ+cfg.cockL*.72,cockLen=cockRear-cockFront;
