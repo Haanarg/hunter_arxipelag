@@ -23,6 +23,9 @@ function create(size,lowQuality=false){
 }
 const terrain=create(4800);
 assert.equal(terrain.stats.totalTiles,36);
+assert.deepEqual(Array.from(terrain.stats.lodLevels),[6,12,28,56],
+  'four-level terrain LOD retains close-up detail and halves far-away subdivisions');
+assert(terrain.stats.viewPriority,'visible terrain is prioritized by camera');
 assert(terrain.stats.initialTiles>=4&&terrain.stats.initialTiles<=16);
 assert(terrain.stats.generatedTiles===terrain.stats.initialTiles);
 assert(terrain.stats.processedVertices<160000,'startup should avoid global high-resolution terrain');
@@ -46,6 +49,14 @@ assert.equal(terrain.mesh.children.length,36,'LOD replacement must not duplicate
 assert(terrain.mesh.children.every(m=>m.geometry.index.isBufferAttribute&&
   m.geometry.index.array.byteLength>0),'all streamed tiles have valid GPU indices');
 assert.equal(terrain.stats.visibleTiles,36,'visible tile counter excludes upgrades');
+assert(terrain.stats.farTiles>0,'horizon tiles use the coarsest LOD');
+const far=terrain.mesh.children.filter(m=>m.geometry.attributes.position.count<(12+1)*(12+1));
+assert(far.length>0,'far horizon tiles have genuinely fewer vertices');
+const camera=new THREE.PerspectiveCamera(65,1,.3,12000);
+camera.position.set(400,250,700);
+camera.lookAt(0,0,0);
+terrain.update(0,0,3,camera);
+assert.equal(terrain.stats.viewPriority,true,'camera-prioritized update is active');
 // After moving to a new island, distant sectors must upgrade their LOD.
 for(let frame=0;frame<500&&terrain.stats.upgradedTiles===0;frame++)
   terrain.update(1550,1100,3);
@@ -58,6 +69,8 @@ terrain.dispose();
 assert(disposed,'terrain geometry disposed on restart');
 assert.equal(terrain.mesh.children.length,0,'terrain group emptied');
 const large=create(9600,true);
+assert.deepEqual(Array.from(large.stats.lodLevels),[6,10,20,40],
+  'mobile keeps a fourth lightweight horizon LOD');
 assert.equal(large.stats.totalTiles,144,'large map is tiled');
 assert(large.stats.initialTiles>=4&&large.stats.initialTiles<=16,'large map only generates start sectors');
 assert(large.mesh.children.every(m=>m.geometry.index.isBufferAttribute&&
