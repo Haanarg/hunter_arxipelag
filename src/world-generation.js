@@ -355,7 +355,7 @@ islands.forEach(i=>{if(i!==A&&R()<.65){const t=['cotxe','moto','bici'][Math.floo
 
 ensureJetSkis(add);
 P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0,0,0));prepareEnemyNavigation();world.traverse(o=>{if(o.isMesh&&!o.userData.waterMask){o.castShadow=!o.isInstancedMesh&&!o.userData.terrainTile;o.receiveShadow=true}});pl.traverse(o=>{if(o.isMesh)o.castShadow=true});cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);
-window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,initialTerrainMs,seabedMs,vegetationMs,seabedSamples:water.seabedStats.lastSamples,terrainTiles:terrain.stats};
+window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,initialTerrainMs,seabedMs,vegetationMs,seabedSamples:water.seabedStats.lastSamples,terrainTiles:terrain.stats,palms:PM.stats};
 if(window.HUNTER_PERF_DEBUG)console.info('Hunter · generació',window.HUNTER_BUILD_STATS);
 }
 
