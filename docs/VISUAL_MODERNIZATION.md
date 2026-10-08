@@ -5,9 +5,18 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.44**.
+Versió actual: **0.3.45**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.45 — cercador de llavors per categories (2026-10-08)
+
+- Ampliat el cercador de llavors amb dos selectors: **categoria** (vehicles, objectes, compounds) i **tipus concret**, més «Qualsevol» per categoria.
+- Els desplegables de vehicles i objectes es deriven dels catàlegs `VT` (15 vehicles conduïbles) i `IT` (9 objectes), sense duplicitats manuals; els set emplavaments són base inicial, HQ, avançada, garatge, heliport, polvorí i port.
+- Els compounds es registren amb les coordenades reals `compoundCenters` del generador de cada llavor; els resultats es classifiquen per distància en línia recta a la base, amb quantitat d'elements, coordenades, indicació de distància objectiu i botó «Usa aquesta llavor».
+- La cerca manté les regles deterministes de generació de vehicles, objectes i compounds, però evita generar la malla visual del terreny, recalcular el fons marí i crear fauna innecessària mentre s'analitzen candidats.
+- Millorada la cancel·lació i la neteja de l'estat: es restableixen mida de mapa, llavor provisional i mode de generació; no es pot començar una partida fins que s'ha acabat de netejar la cerca anterior.
+- Afegits `tests/seed-search.cjs`, `tests/seed-search-integration.cjs` i comprovacions al smoke; el simulador DOM de proves incorpora controls de selecció i resultats.
 
 ### Revisió 0.3.44 — renderitzat de palmeres per sectors (2026-10-08)
 
