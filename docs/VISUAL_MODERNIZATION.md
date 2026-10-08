@@ -5,9 +5,17 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.49**.
+Versió actual: **0.3.50**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.50 — quatre propostes de cap reduït del jugador (2026-10-08)
+
+- La pàgina `proves.html` mostra quatre alternatives del **model actual del jugador amb el cap reduït aproximadament un terç**: A proporcional (67% uniforme), B estret (62/70/66%), C compacte ample (71/63/68%) i D tàctic baix (65/65/62%). La gorra, la visera, les ulleres, el cabell, les orelles i el nas s'escalen amb el cap.
+- Les figures es generen en Three.js des del mateix `HUNTER_PLAYER_MODEL.create` que fa servir el joc, amb variants no destructives a `src/player-head-concepts.mjs`; **no s'ha modificat el model de la partida** fins que se'n triï una.
+- La preview permet comparar cos sencer i primer pla, veure les quatre figures de front, a tres quarts o de perfil i girar-les individualment arrossegant.
+- La pàgina anterior de quatre conceptes d'explosius es preserva a `explosius-proves.html` i enllaça amb les altres previsualitzacions.
+- Nova regressió `node tests/player-head-concepts.cjs` per validar la proporció real del cap, l'articulació, els accessoris i els enllaços a les proves.
 
 ### Revisió 0.3.49 — minimapa ocult fins que comença la partida (2026-10-08)
 
