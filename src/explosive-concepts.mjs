@@ -1,3 +1,5 @@
+import './explosive-visuals.js?v=20261008-live-01';
+
 // Propostes visuals per als explosius del Hunter: Arxipèlag.
 // Només models de prova: sense temporització, detonació ni mecàniques de joc.
 export const explosiveConcepts=[
@@ -8,6 +10,8 @@ export const explosiveConcepts=[
 ];
 
 export function createExplosiveConcept(T,index=0,armed=false){
+  // Proposta 1: exactament el mateix model compartit que fa servir el joc.
+  if(index===0)return window.HUNTER_EXPLOSIVE_VISUALS.create(T,armed);
   const root=new T.Group();
   const materials={};
   function mat(color,metalness=.03,roughness=.78){
