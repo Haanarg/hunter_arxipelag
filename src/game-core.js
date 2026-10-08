@@ -79,6 +79,13 @@ const rendering=window.HUNTER_RENDERING.create(THREE,visualQuality);
 const ren=rendering.renderer,scene=rendering.scene,cam=rendering.camera,sunDir=rendering.sunDir,sun=rendering.sun,sky=rendering.sky,sunM=rendering.sunMesh;
 document.body.prepend(ren.domElement);
 const rs=rendering.resize;addEventListener('resize',rs);rs();
+const maxRenderRatio=Math.min(devicePixelRatio||1,visualQuality.pixelRatio);
+const adaptivePerformance=window.HUNTER_PERFORMANCE.create({
+  renderer:ren,maxPixelRatio:maxRenderRatio,
+  minPixelRatio:visualQuality.minPixelRatio,
+  element:document.getElementById('perfStats'),compact:qualityName==='mobile'
+});
+window.HUNTER_PERFORMANCE_STATS=adaptivePerformance.stats;
 const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:9600,segments:visualQuality.waterSegments,heightAt:hAt,config:window.HUNTER_WATER});
 const waterMat=water.material,waterUniforms=water.uniforms;
 const updateSeabed=()=>water.setWorldSize(S);
@@ -917,7 +924,10 @@ uiTick+=dt;if(uiTick>.12){uiTick=0;const contextButtons=document.getElementById(
 
 
 let last=performance.now();
-(function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;const t=elapsed+(started&&!paused&&!over?dt:0);update(dt,t);if(started&&!paused&&!over&&terrainStream)terrainStream.update(P.x,P.z,visualQuality.shadows?2:1.2);waves(t);
-sun.target.position.set(P.x,0,P.z);sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);ren.render(scene,cam);requestAnimationFrame(loop)})(last);
+(function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(started&&!paused&&!over?dt:0);update(dt,t);if(started&&!paused&&!over&&terrainStream)terrainStream.update(P.x,P.z,visualQuality.shadows?2:1.2,cam);waves(t);
+sun.target.position.set(P.x,0,P.z);sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();ren.render(scene,cam);
+adaptivePerformance.sample({dt:rawDt,renderCpuMs:performance.now()-renderStarted,
+  active:!!started&&!paused&&!over,now});
+requestAnimationFrame(loop)})(last);
 
 
