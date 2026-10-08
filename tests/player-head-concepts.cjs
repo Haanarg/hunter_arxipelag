@@ -45,6 +45,24 @@ for(let i=0;i<playerHeadConcepts.length;i++){
   results.push({name:design.name,width:+width.toFixed(3),height:+height.toFixed(3),
     neckHeight:design.neckScale[1],headY:design.headY});
 }
+// La D escollida ha de ser exactament la que fabrica el joc, sense desviacions.
+const approved=global.HUNTER_PLAYER_MODEL.create(THREE,{headVariant:'compactD'});
+const dPreview=createPlayerHeadConcept(THREE,3);
+const dCfg=playerHeadConcepts[3],source=global.HUNTER_PLAYER_MODEL.headStyles.compactD;
+assert.deepEqual(dCfg.headScale,[...source.headScale],'preview D uses gameplay head dimensions');
+assert.deepEqual(dCfg.neckScale,[...source.neckScale],'preview D uses gameplay neck dimensions');
+for(const [label,a,b]of [
+  ['head scale',approved.userData.head.scale,dPreview.userData.head.scale],
+  ['head position',approved.userData.head.position,dPreview.userData.head.position],
+  ['neck scale',approved.userData.neck.scale,dPreview.userData.headConcept.neck.scale],
+  ['cap position',approved.userData.cap.position,dPreview.userData.cap.position],
+  ['visor scale',approved.userData.visor.scale,dPreview.userData.visor.scale]
+])assert(a.distanceTo(b)<1e-9,label+' must match preview D');
+assert.equal(approved.userData.headVariant,'compactD');
+const untouched=global.HUNTER_PLAYER_MODEL.create(THREE);
+assert.equal(untouched.userData.headVariant,'original','enemy/default models keep original head');
+assert.equal(untouched.userData.head.scale.x,1);
+assert.equal(untouched.userData.neck.scale.y,1);
 const html=fs.readFileSync(path.join(root,'proves.html'),'utf8');
 const explosives=fs.readFileSync(path.join(root,'explosius-proves.html'),'utf8');
 assert(html.includes('src/player-head-concepts.mjs?v=20261008-head-02'),
