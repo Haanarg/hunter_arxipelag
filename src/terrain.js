@@ -83,7 +83,7 @@ window.HUNTER_TERRAIN=Object.freeze({
       }
       geometry.setAttribute('position',new THREE.BufferAttribute(pos,3));
       geometry.setAttribute('color',new THREE.BufferAttribute(col,3));
-      geometry.setIndex(indices.slice(0,at));
+      geometry.setIndex(new THREE.BufferAttribute(indices.slice(0,at),1));
       geometry.computeVertexNormals();
     }
     function begin(tile,level){
