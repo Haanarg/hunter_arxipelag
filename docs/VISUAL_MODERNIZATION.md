@@ -5,9 +5,18 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.51**.
+Versió actual: **0.3.52**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.52 — proposta D aplicada al jugador i als riders (2026-10-08)
+
+- Incorporada al model jugable la **proposta D · 75% tàctic baix**: dimensions locals del cap [0,74, 0,74, 0,71], coll [0,75, 0,66, 0,75], centre del cap a Y=3,26 (abans 3,38), gorra rebaixada 0,03 i visera de fondària 0,94, lleugerament inclinada.
+- Les proporcions són un estil explícit `headVariant:'compactD'` de `HUNTER_PLAYER_MODEL.create`: s'activa a `src/characters.js` per al jugador a peu i a `src/rider.js` per als conductors de tots els vehicles oberts (bicicleta, moto, moto aquàtica, llanxa, llanxa llançacoets, barca de rems i windsurf).
+- El coll i el cap es modifiquen abans de l'escalat `unitScale`, de manera que les diferents dimensions dels models comparteixen l'estil; no es mouen malucs, seients, articulacions ni punts de subjecció.
+- El soldat enemic i el general segueixen utilitzant el model base de cap original; no es toquen la IA, la física, la vida ni les postures de combat.
+- `src/player-head-concepts.mjs` utilitza ara la mateixa definició de la proposta D que el model jugable. A `proves.html` es marca la D com «AL JOC».
+- Proves de regressió ampliades a `tests/smoke.cjs` per al jugador, els set riders i els enemics, i `tests/player-head-concepts.cjs` per garantir que la D publicada coincideix exactament amb el joc.
 
 ### Revisió 0.3.51 — quatre nous caps al 75% i coll escurçat (2026-10-08)
 
