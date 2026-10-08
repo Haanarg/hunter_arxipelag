@@ -1,55 +1,6 @@
-// Compatibility extraction: shared state remains in game-core.js.
-function enemyMoveClear(u,nx,nz,hd,isVeh){
-  const r=isVeh?Math.max(1.5,vehicleRadius(vehicleHitType(u.t))*.55):1.5;
-  let clear=hAt(nx,nz)>-.8&&!treeHit(nx,nz,isVeh?vehicleRadius(vehicleHitType(u.t))*.4:1.2)&&Math.abs(nx)<H-5&&Math.abs(nz)<H-5&&!wallCandidates(nx,nz,r).some(w=>!w.open&&nx>w.x0-r&&nx<w.x1+r&&nz>w.z0-r&&nz<w.z1+r);
-  if(clear&&isVeh){const test=vehicleBox(u,nx,nz,hd);clear=!vehicleObstacles(u).some(o=>vehicleHeightCompatible(u,o)&&obbOverlap(test,vehicleBox(o)))}
-  return clear
-}
-function mvE(u,s){
-  const isVeh=['jeep','tanqueta','tanc'].includes(u.t),isInf=!isVeh&&(u.t==='soldat'||u.t==='general'),tryStep=hd=>{
-    const nx=u.x-Math.sin(hd)*s,nz=u.z-Math.cos(hd)*s;
-    if(!enemyMoveClear(u,nx,nz,hd,isVeh))return false;
-    u.hd=hd;u.x=nx;u.z=nz;return true
-  };
-  const desired=u.hd;
-  if(tryStep(desired)){
-    if(isVeh||isInf)u.blockedT=Math.max(0,(u.blockedT||0)-.08);
-    return
-  }
-
-  if(isVeh||isInf){
-    u.blockedT=(u.blockedT||0)+.08;
-    const side=u.avoidSide||1,
-          angles=isVeh?[Math.PI/7,Math.PI/4,Math.PI/3,Math.PI/2]:[Math.PI/9,Math.PI/6,Math.PI/4,Math.PI/3,Math.PI/2];
-    for(const a of angles){
-      if(tryStep(desired+side*a)){u.avoidSide=side;return}
-      if(tryStep(desired-side*a)){u.avoidSide=-side;return}
-    }
-
-    if(isInf&&u.blockedT>.55){
-      // Desencallament curt: cerca un punt lliure al voltant sense saltar lluny ni travessar parets.
-      const base=desired+(u.avoidSide||1)*Math.PI/2;
-      for(const dist of[.7,1.1,1.6,2.2]){
-        for(let i=0;i<8;i++){
-          const a=base+i*Math.PI/4,
-                nx=u.x+Math.cos(a)*dist,nz=u.z+Math.sin(a)*dist,
-                hd=Math.atan2(u.x-nx,u.z-nz);
-          if(enemyMoveClear(u,nx,nz,hd,false)){
-            u.x=nx;u.z=nz;u.hd=desired;u.blockedT=0;u.avoidSide=-(u.avoidSide||1);
-            return
-          }
-        }
-      }
-    }
-
-    // Si continua bloquejat, canvia el costat preferit i força un objectiu nou.
-    if(u.blockedT>(isVeh?.8:.75)){u.avoidSide=-(u.avoidSide||1);u.blockedT=0;u.wt=0}
-    return
-  }
-  u.wt=0
-}
 const ENEMY_SENSE_DT=.1;
-function updEn(dt){E.forEach(u=>{
+function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.forEach(u=>{
+  const oldX=u.x,oldZ=u.z;
   u.alert=Math.max(0,u.alert-dt);u.cd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);
   const q=cv||P,py=cv?cv.o.position.y:P.y,dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz),
         det=disg&&!cv?20:u.alert>0?300:u.t=='general'?60:120,
@@ -68,8 +19,8 @@ function updEn(dt){E.forEach(u=>{
     if(u.sp>0&&d>u.rng*.55){
       const dp=u.defenseTarget;
       if(dp&&Math.hypot(dp.x-u.x,dp.z-u.z)>1.8){
-        u.hd=Math.atan2(u.x-dp.x,u.z-dp.z);mvE(u,u.sp*.75*dt)
-      }else if(d>u.rng*.72)mvE(u,u.sp*dt)
+        u.hd=Math.atan2(u.x-dp.x,u.z-dp.z);mvE(u,u.sp*.75*dt,dp.x,dp.z)
+      }else if(d>u.rng*.72)mvE(u,u.sp*dt,q.x,q.z)
     }
     if(d<u.rng&&u.cd<=0){
       u.cd=u.rate;const y0=eyeY,ex=q.x-u.x+rr(-1.5,1.5),ey=py+1.5-y0,ez=q.z-u.z+rr(-1.5,1.5),l=Math.hypot(ex,ey,ez);
@@ -87,10 +38,11 @@ function updEn(dt){E.forEach(u=>{
   }
 
   u.o.position.set(u.x,(u.gy!=null?u.gy:hAt(u.x,u.z))+(u.t=='jeep'||u.t=='tanc'?.05:0),u.z);
+  if(enemyIsVehicle(u)){u.hd=u.navHd??u.hd}
   if(u.t!='torre')u.o.rotation.y=u.hd;
   if(u.o.userData.legs){
     const a=u.o.userData;u.phase=(u.phase||0)+dt*u.sp;
-    const moving=u.sp>0&&(d>u.rng*.7||!u.canSee),swing=moving?Math.sin(u.phase)*.45:0;
+    const moving=Math.hypot(u.x-oldX,u.z-oldZ)>.001,swing=moving?Math.sin(u.phase)*.45:0;
     if(a.knees)window.HUNTER_CHARACTERS.animateSoldier(u.o,{phase:u.phase,moving,aim:!!u.canSee,dt});
     else{
     a.legs[0].rotation.x=swing;a.legs[1].rotation.x=-swing;
@@ -117,4 +69,5 @@ bx(g,.32,.32,2.1,roof,0,9.25,-2.25,'metal');
 bx(g,.42,.8,.42,0xe4d36f,0,10.78,0,'paint')}
 else{g=new THREE.Group();bx(g,1,1,.6,0x222222,0,.5,0);bx(g,1.3,1.6,.7,0xd4af37,0,1.8,0);bx(g,.8,.8,.8,0xf0c9a0,0,3,0);bx(g,.9,.5,.9,0xaa0000,0,3.6,0);g.scale.setScalar(1.2)}
 world.add(g);const sensePhase=(E.length%10)*.01,u={t,x,z,gy,hd:rr(0,6.28),o:g,home:{x,z},cd:rr(0,1),alert:0,wt:0,tx:x,tz:z,senseT:sensePhase,canSee:false,defenseTarget:null,...c};E.push(u);return u}
+
 

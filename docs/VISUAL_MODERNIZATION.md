@@ -5,7 +5,32 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.27**.
+Versió actual: **0.3.33**.
+
+### Revisió 0.3.33 — navegació i separació enemiga (2026-10-08)
+
+Implementat sobre `main` 74ee66e (0.3.32), conservant els canvis recents de models, cases i compounds:
+
+- `src/enemy-navigation.js`: cerca local A* per rodejar obstacles, compartida per soldats, jeeps, tanquetes i tancs. Camins amb marge segons la mida; el moviment final dels vehicles comprova la caixa orientada completa.
+- Comprovació del recorregut i del gir amb passos de 45 cm com a màxim a la vora de la petjada. Eliminat el salt de desencallament que només comprovava la destinació.
+- Separació física soldat–soldat, soldat–vehicle i vehicle–vehicle, inclosos vehicles aparcats i torres. Esquiva local, espera i marxa enrere curta quan no hi ha pas segur. Els moviments no empenyen altres unitats dins de parets.
+- Actualització immediata de les cel·les espacials quan un enemic es mou. La IA refresca l'índex després del moviment dels vehicles del jugador.
+- Comprovació final de les posicions inicials, després de situar els vehicles: cerca determinista d'una posició lliure pròxima si un enemic apareix solapat. El general es manté dins del seu búnquer.
+- Els vehicles limiten el gir i frenen per encarar-se; ja no roten instantàniament per apuntar travessant una paret. Els soldats animen la marxa només quan es desplacen.
+- Cerca incremental: màxim global de 160 nodes expandits per fotograma i dues cerques ateses; màxim de 1.600 nodes per cerca. Resultats i trajectes directes reutilitzats. La comprovació física de cada moviment continua activa.
+
+Validat:
+
+- `node tests/enemy-navigation.cjs`: quatre tipus d'enemic rodejant un edifici; sortida d'un recinte en U; dotze soldats convergint sense superposar-se; vehicles en sentits contraris; vehicle contra soldat aturat; pas estret; paret fina; gir d'un tanc; obertura d'un obstacle; separació inicial; canvi de cel·la espacial.
+- `node tests/enemy-navigation-world.cjs`: mapa de llavor 12345, 59 enemics sense posicions inicials bloquejades i nou segons de simulació de la IA sense moviments que acabin en obstacles o altres unitats.
+- `node tests/smoke.cjs`: regressió general amb els 15 vehicles, generació, destrucció i reinici.
+
+Pendent / límits:
+
+- Revisió visual i jugable en Android real. L'intent de `tests/browser.cjs` d'aquesta entrega ha fallat abans de carregar el joc: Chromium acaba amb SIGSEGV. No es dona per validat el navegador en aquesta revisió.
+- La cerca és local i limitada; davant d'una destinació inaccessible s'espera o es busca una altra ruta, sense travessar obstacles. No és una garantia de trobar qualsevol ruta possible en qualsevol llavor. Els passos estrets per a vehicles s'accepten si la petjada orientada i el gir hi caben.
+- Els temps del banc de proves amb DOM/GPU simulats no són una mesura d'FPS ni de rendiment en Android.
+
 
 Revisió 0.3.27 (2026-10-07): general substituït pel model aprovat, Estat major amb gavardina grana llarga, bigoti del primer model i muscleres clàssiques gruixudes (opció 1 de la segona comparativa). Gorra de plat, ulleres d'aviador, deu medalles, passadors i cordó daurat. Reutilitza la base articulada actual del jugador; muscleres unides als braços i faldons de gavardina units a les cuixes. Manté l'alçada anterior, l'arma, la IA i el paper d'objectiu de missió. `src/general-model.js` concentra la geometria; aprofita les animacions articulades dels enemics. Integrat sobre 0.3.26, conservant els darrers ajustos de braços, vehicles i desbloqueig d'enemics.
 
@@ -111,7 +136,8 @@ La prioritat és evitar regressions de gameplay mentre es modernitza el projecte
 - `src/game-core.js`: estat compartit, bucle principal i integració.
 - `src/world-generation.js`: generació procedural i compounds.
 - `src/combat.js`: projectils, explosions i armes.
-- `src/enemy-ai.js`: IA enemiga.
+- `src/enemy-ai.js`: percepció, combat i animació enemiga.
+- `src/enemy-navigation.js`: rutes, esquiva i separació física enemiga.
 - `src/terrain.js`: malla i paleta del terreny.
 - `src/waves.js`, `src/water.js`, `src/water-config.js`: onatge i renderitzat d'aigua.
 - `src/vegetation.js`: geometria i instancing de vegetació.
@@ -515,6 +541,7 @@ L’usuari confirma el 2026-10-05 que la versió modernitzada funciona en Androi
 
 ### Regla de compatibilitat
 No reescriure simultàniament simulació i renderer d'un mateix sistema. Quan es modularitzi una part del nucli, conservar temporalment els contractes que utilitza el gameplay fins que la nova ruta estigui validada.
+
 
 
 
