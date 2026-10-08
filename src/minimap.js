@@ -1,38 +1,108 @@
 // Minimap i carta de navegació. Només presentació; no modifica simulació.
+// El terreny es pinta en una textura 2D independent del renderer WebGL.
 window.HUNTER_MINIMAP=Object.freeze({
   create({THREE,canvas,worldSize,halfSize,heightAt,colorAt,getState}){
-    const ctx=canvas.getContext('2d'),size=canvas.width||170;
+    const ctx=canvas.getContext('2d');
+    if(!ctx)throw new Error('No es pot crear el context 2D del minimapa');
+    const width=canvas.width||170,height=canvas.height||170;
+    const sampleSize=Math.min(128,Math.max(64,width));
     let background=null,ws=worldSize,hs=halfSize;
-    const px=v=>(v+hs)/ws*size;
+    const stats={draws:0,backgroundBuilds:0,lastLandPixels:0,lastBuildMs:0};
+    const px=v=>(v+hs)/ws*width,pz=v=>(v+hs)/ws*height;
     function buildBackground(){
-      background=document.createElement('canvas');background.width=background.height=size;
-      const c=background.getContext('2d'),im=c.createImageData(size,size);
-      for(let j=0;j<size;j++)for(let i=0;i<size;i++){
-        const h=heightAt((i/size-.5)*ws,(j/size-.5)*ws),k=colorAt(THREE,h).clone().convertLinearToSRGB();
-        im.data.set([k.r*255,k.g*255,k.b*255,255],(j*size+i)*4)
+      const start=performance.now();
+      const bg=document.createElement('canvas');
+      bg.width=bg.height=sampleSize;
+      const c=bg.getContext('2d');
+      if(!c)throw new Error('No es pot crear el fons del minimapa');
+      const im=c.createImageData(sampleSize,sampleSize),data=im.data;
+      let land=0;
+      for(let j=0;j<sampleSize;j++)for(let i=0;i<sampleSize;i++){
+        const x=((i+.5)/sampleSize-.5)*ws,z=((j+.5)/sampleSize-.5)*ws,
+              h=heightAt(x,z),k=colorAt(THREE,h).convertLinearToSRGB(),
+              p=(j*sampleSize+i)*4;
+        data[p]=Math.round(k.r*255);
+        data[p+1]=Math.round(k.g*255);
+        data[p+2]=Math.round(k.b*255);
+        data[p+3]=255;
+        if(h>0)land++;
       }
-      c.putImageData(im,0,0)
+      c.putImageData(im,0,0);
+      background=bg;
+      stats.lastLandPixels=land;
+      stats.backgroundBuilds++;
+      stats.lastBuildMs=performance.now()-start;
     }
     function draw(){
+      const s=getState();
+      if(!s||!s.base||!s.current)return;
       if(!background)buildBackground();
-      const s=getState(),q=s.current;
-      ctx.drawImage(background,0,0);
-      ctx.fillStyle='#2c7bff';ctx.fillRect(px(s.base.x)-3,px(s.base.z)-3,6,6);
-      if(s.mapKnown){ctx.fillStyle='#ff3030';ctx.fillRect(px(s.hq.x)-3,px(s.hq.z)-3,6,6)}
-      ctx.fillStyle='#ffd23a';s.vehicles.forEach(v=>{const dx=v.x-q.x,dz=v.z-q.z;if(v!==s.currentVehicle&&dx*dx+dz*dz<202500){ctx.beginPath();ctx.arc(px(v.x),px(v.z),2.5,0,7);ctx.fill()}});
-      ctx.fillStyle='#ff3030';s.enemies.forEach(u=>{const dx=u.x-q.x,dz=u.z-q.z;if(dx*dx+dz*dz<25600){ctx.beginPath();ctx.arc(px(u.x),px(u.z),2,0,7);ctx.fill()}});
-      ctx.fillStyle='#c070ff';s.log.forEach(m=>ctx.fillRect(px(m.x)-2,px(m.z)-2,4,4));
-      (s.intel||[]).forEach(m=>{if(m.ref?.destroyed)return;const x=m.ref?m.ref.x:m.x,z=m.ref?m.ref.z:m.z;if(!Number.isFinite(x)||!Number.isFinite(z))return;ctx.save();ctx.fillStyle=m.kind==='heli'?'#6ed6ff':'#ff9f43';ctx.strokeStyle='#111';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(px(x),px(z),5,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#111';ctx.font='bold 9px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(m.kind==='heli'?'H':'T',px(x),px(z)+.5);ctx.restore()});
-      ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px(q.x),px(q.z),4,0,7);ctx.fill();
-      ctx.strokeStyle='#fff';ctx.beginPath();ctx.moveTo(px(q.x),px(q.z));ctx.lineTo(px(q.x)-Math.sin(q.hd)*12,px(q.z)-Math.cos(q.hd)*12);ctx.stroke()
+      ctx.clearRect(0,0,width,height);
+      ctx.imageSmoothingEnabled=true;
+      ctx.drawImage(background,0,0,width,height);
+      const q=s.current;
+      ctx.fillStyle='#2c7bff';
+      ctx.fillRect(px(s.base.x)-3,pz(s.base.z)-3,6,6);
+      if(s.mapKnown&&s.hq){
+        ctx.fillStyle='#ff3030';
+        ctx.fillRect(px(s.hq.x)-3,pz(s.hq.z)-3,6,6);
+      }
+      ctx.fillStyle='#ffd23a';
+      for(const v of s.vehicles||[]){
+        const dx=v.x-q.x,dz=v.z-q.z;
+        if(v!==s.currentVehicle&&dx*dx+dz*dz<202500){
+          ctx.beginPath();ctx.arc(px(v.x),pz(v.z),2.5,0,Math.PI*2);ctx.fill();
+        }
+      }
+      ctx.fillStyle='#ff3030';
+      for(const u of s.enemies||[]){
+        const dx=u.x-q.x,dz=u.z-q.z;
+        if(dx*dx+dz*dz<25600){
+          ctx.beginPath();ctx.arc(px(u.x),pz(u.z),2,0,Math.PI*2);ctx.fill();
+        }
+      }
+      ctx.fillStyle='#c070ff';
+      for(const m of s.log||[])ctx.fillRect(px(m.x)-2,pz(m.z)-2,4,4);
+      for(const m of s.intel||[]){
+        if(m.ref?.destroyed)continue;
+        const x=m.ref?m.ref.x:m.x,z=m.ref?m.ref.z:m.z;
+        if(!Number.isFinite(x)||!Number.isFinite(z))continue;
+        ctx.save();
+        ctx.fillStyle=m.kind==='heli'?'#6ed6ff':'#ff9f43';
+        ctx.strokeStyle='#111';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.arc(px(x),pz(z),5,0,Math.PI*2);
+        ctx.fill();ctx.stroke();
+        ctx.fillStyle='#111';ctx.font='bold 9px system-ui';
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(m.kind==='heli'?'H':'T',px(x),pz(z)+.5);
+        ctx.restore();
+      }
+      ctx.fillStyle='#fff';ctx.beginPath();
+      ctx.arc(px(q.x),pz(q.z),4,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.beginPath();
+      ctx.moveTo(px(q.x),pz(q.z));
+      ctx.lineTo(px(q.x)-Math.sin(q.hd||0)*12,pz(q.z)-Math.cos(q.hd||0)*12);
+      ctx.stroke();
+      stats.draws++;
     }
     function drawFull(target,waypoint){
-      draw();const c=target.getContext('2d');c.drawImage(canvas,0,0,target.width,target.height);
+      draw();
+      const c=target.getContext('2d');
+      if(!c)return;
+      c.drawImage(canvas,0,0,target.width,target.height);
       c.strokeStyle='#fff';c.lineWidth=2;c.strokeRect(1,1,target.width-2,target.height-2);
-      c.fillStyle='#fff';c.font='13px system-ui';c.fillText('N',target.width/2-5,19);c.fillText((ws/1000).toFixed(1).replace('.',',')+' × '+(ws/1000).toFixed(1).replace('.',',')+' km',14,target.height-16);
-      if(waypoint){const x=(waypoint.x+hs)/ws*target.width,z=(waypoint.z+hs)/ws*target.height;c.strokeStyle='#ffdb8f';c.beginPath();c.arc(x,z,8,0,7);c.stroke()}
+      c.fillStyle='#fff';c.font='13px system-ui';
+      c.fillText('N',target.width/2-5,19);
+      c.fillText((ws/1000).toFixed(1).replace('.',',')+' × '+(ws/1000).toFixed(1).replace('.',',')+' km',14,target.height-16);
+      if(waypoint){
+        const x=(waypoint.x+hs)/ws*target.width,z=(waypoint.z+hs)/ws*target.height;
+        c.strokeStyle='#ffdb8f';c.beginPath();c.arc(x,z,8,0,Math.PI*2);c.stroke();
+      }
     }
-    return Object.freeze({draw,drawFull,reset:()=>{background=null},setWorldSize:(world,half)=>{ws=world;hs=half;background=null}})
+    function reset(){background=null}
+    function setWorldSize(world,half){
+      if(world!==ws||half!==hs){ws=world;hs=half;reset()}
+    }
+    return Object.freeze({draw,drawFull,reset,setWorldSize,stats})
   }
 });
-
