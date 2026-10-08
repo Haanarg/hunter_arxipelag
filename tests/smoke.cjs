@@ -381,7 +381,9 @@ ok('ferryHeliWaveFollow','landed combat helicopter follows ferry deck vertically
 ok('pl.userData.ael&&pl.userData.aer&&pl.userData.lkl&&pl.userData.lkr','articulated player preserved');
 ok('V.find(v=>v.t==="tanc").o.userData.tracks.length===2','two animated tank tracks');
 ok("buildingSrc.includes('const spring=.12')&&buildingSrc.includes('sideWalls:[]')",'hangar roof reaches the ground without visual side walls');
-ok("String(mkB).includes('Sense parets laterals independents')",'hangar collision model omits lateral walls');
+ok("String(mkB).includes('Sense parets laterals ni paret rectangular posterior')",'hangar generator omits the old rectangular rear wall and lateral walls');
+ok("!String(mkB).includes('push(0,backZ,w,t)')",'the obsolete rear rectangular mesh is not created');
+ok("String(buildApprovedCompound).includes('hangarRear:true')",'arched rear wall has the only back collision and damage record');
 ok("window.HUNTER_COMPOUND_LAYOUTS.find(l=>l.id==='hangar').props.filter(p=>p[0]==='fuel').every(p=>p[2]<-30)",'garage fuel tanks stay behind the workshop');
 ok("VD.types.heli_combat.maxF>VD.types.heli.maxF&&VD.types.heli_combat.tu>VD.types.heli.tu&&VD.types.heli_combat.steerResponse>VD.types.heli.steerResponse&&VD.types.heli_combat.yawResponse>VD.types.heli.yawResponse&&VD.types.heli_combat.climb>VD.types.heli.climb",'combat helicopter is faster and more maneuverable than normal helicopter');
 ok("vehSrc.includes('Huey 3B-4')&&vehSrc.includes('roundedPrism(g,2.7,1.74,4.18')&&vehSrc.includes('Variant 4: petit carenat arrodonit')",'normal helicopter uses the selected Huey 3B variant 4 visual model');
