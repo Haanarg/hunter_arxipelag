@@ -34,7 +34,7 @@ run(`{
 }`);
 ok('grenadeItemConfigured','grenade pickup is a usable five-grenade item');
 ok('grenadePickupIsFive','one grenade pickup adds five grenades');
-ok("String(update).includes(\"if(it.t==='arma')ammo+=40;else inv[it.t]\")",'ammo pickups add directly to ammo without entering inventory');
+ok("String(update).includes(\"if(it.t==='arma')ammo+=12;else inv[it.t]\")",'ammo pickups add 12 rounds directly to ammo without entering inventory');
 ok('grenadePlayerModel','player has a grenade model in the throwing hand');
 ok('grenadeThrowAnimation','grenade throw has a dedicated arm animation');
 ok('grenadeWorldPriority','grenades are prioritized in powder magazines and outposts');
