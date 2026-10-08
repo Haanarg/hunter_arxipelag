@@ -256,6 +256,7 @@ ok('faunaLodEnabled','fauna uses distance-based reduced update rates');
 ok("V.filter(v=>v.t==='moto_aquatica').length>=4",'at least four jet skis');
 ok("V.filter(v=>v.t==='moto_aquatica').every(v=>jetSkiSpotClear(v,v))",'all jet skis clear every vehicle and remain on water within bounds');
 const types=['llanxa','moto_aquatica','hover','ferry','cotxe','moto','bici','barca_rems','windsurf','camio','tanqueta','llanxa_coets','tanc','heli','heli_combat'];
+const exposedRiderTypes=new Set(['llanxa','moto_aquatica','moto','bici','barca_rems','windsurf','llanxa_coets']);
 // Keep combat out of movement fixtures while retaining the actual generated enemies.
 run('const savedEnemies=E;E=[];');
 for(const t of types){
@@ -263,6 +264,11 @@ for(const t of types){
   run(`cv=null;playerFall=null;playerEject=null;{const q=V.find(v=>v.t===${JSON.stringify(t)});P.x=q.x;P.z=q.z;P.y=q.o.position.y;toggle()}`);
   ok(`cv&&cv.t===${JSON.stringify(t)}`,'enter '+t);
   run('stepV(cv,1,.2,1,.04);place(cv,3,.04,.2)');
+  if(exposedRiderTypes.has(t)){
+    run('poseRider(cv,.04)');
+    ok("rider.visible&&rider.userData.headVariant==='compactD'&&rider.userData.head.scale.x===.74&&rider.userData.neck.scale.y===.66",
+      'selected D head and neck visible on rider for '+t);
+  }
   ok('cv&&Number.isFinite(cv.o.position.y)','physics '+t);
   run("if(VT[cv.t].m==='a')cv.alt=Math.max(0,hAt(cv.x,cv.z))+.8;toggle()");ok('!cv','exit '+t);
 }
