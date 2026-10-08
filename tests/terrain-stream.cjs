@@ -23,6 +23,9 @@ assert(tiles.every(m=>m.userData.terrainTile),'tile meshes marked for shadow avo
 for(const m of tiles){
   const g=m.geometry,p=g.attributes.position,c=g.attributes.color;
   assert(p.count>0&&p.count===c.count);
+  assert(g.index.isBufferAttribute&&g.index.array instanceof Uint16Array,
+    'GPU triangle indices must be BufferAttribute rather than a raw TypedArray');
+  assert(g.index.array.byteLength>0,'GPU index buffer has uploadable bytes');
   assert(g.index.count>0&&g.index.count%3===0);
   const i=0;
   assert(Math.abs(p.getY(i)-h(m.position.x+p.getX(i),m.position.z+p.getZ(i)))<1e-5,'tile preserves simulation height');
@@ -31,11 +34,15 @@ for(let frame=0;frame<2400&&terrain.stats.generatedTiles<36;frame++)
   terrain.update(0,0,3);
 assert.equal(terrain.stats.generatedTiles,36,'all distant tiles are generated progressively');
 assert.equal(terrain.mesh.children.length,36,'LOD replacement must not duplicate draw calls');
+assert(terrain.mesh.children.every(m=>m.geometry.index.isBufferAttribute&&
+  m.geometry.index.array.byteLength>0),'all streamed tiles have valid GPU indices');
 assert.equal(terrain.stats.visibleTiles,36,'visible tile counter excludes upgrades');
 // After moving to a new island, distant sectors must upgrade their LOD.
 for(let frame=0;frame<500&&terrain.stats.upgradedTiles===0;frame++)
   terrain.update(1550,1100,3);
 assert(terrain.stats.upgradedTiles>0,'approaching new sectors upgrades their LOD');
+assert(terrain.mesh.children.every(m=>m.geometry.index.isBufferAttribute&&
+  m.geometry.index.array.byteLength>0),'LOD replacements preserve valid GPU indices');
 const nearGeom=terrain.mesh.children[0].geometry;
 let disposed=false;nearGeom.addEventListener('dispose',()=>disposed=true);
 terrain.dispose();
@@ -44,6 +51,8 @@ assert.equal(terrain.mesh.children.length,0,'terrain group emptied');
 const large=create(9600,true);
 assert.equal(large.stats.totalTiles,144,'large map is tiled');
 assert(large.stats.initialTiles>=4&&large.stats.initialTiles<=16,'large map only generates start sectors');
+assert(large.mesh.children.every(m=>m.geometry.index.isBufferAttribute&&
+  m.geometry.index.array.byteLength>0),'low-quality large map has valid index buffers');
 large.dispose();
 console.log(JSON.stringify({passed:true,initialTiles:tiles.length,tiles:36,
   initialVertexBudget:true,progressiveUpgrade:true,disposal:true,largeMap:true,evaluations}));
