@@ -209,7 +209,7 @@ run(`{
       if(!o.isMesh||!o.geometry?.index)return;
       const p=o.geometry.getAttribute('position'),ix=o.geometry.index;
       // Sis seccions de 7 vèrtexs més dos vèrtexs de la vora del cockpit.
-      if(!p||p.count!==44||ix.count!==228)return;
+      if(!p||p.count!==42||ix.count!==210)return;
       let front=0,foredeck=0;
       for(let i=0;i<ix.count;i+=3){
         const ids=[ix.getX(i),ix.getX(i+1),ix.getX(i+2)],
