@@ -2,7 +2,9 @@
 window.HUNTER_RIDER=Object.freeze({
   create(THREE,{scene,box,material,scales,heightAt,shadows}){
     const g=new THREE.Group(),torso=new THREE.Group();g.add(torso);
-    const model=window.HUNTER_PLAYER_MODEL.create(THREE),rig=model.userData;
+    // El rider és el mateix protagonista: fa servir el cap D i el coll curt,
+    // sense canviar cap seient, escala del vehicle ni pivot de les extremitats.
+    const model=window.HUNTER_PLAYER_MODEL.create(THREE,{headVariant:'compactD'}),rig=model.userData;
     const limbs=[],boots=rig.boots;
     for(let i=0;i<2;i++){
       const shoulder=i?rig.ar:rig.al,elbow=i?rig.aer:rig.ael;
