@@ -3,22 +3,22 @@
 window.HUNTER_VISUAL_CONFIG = Object.freeze({
   mobile: Object.freeze({
     pixelRatio: 1.3,
-    minPixelRatio: .85,
+    minPixelRatio: .72,
     shadows: false,
     shadowSize: 768,
     exposure: 1.08,
     fog: 0.00018,
     skySegments: Object.freeze([28, 16]),
-    waterSegments: 240
+    waterSegments: 200
   }),
   desktop: Object.freeze({
     pixelRatio: 1.85,
-    minPixelRatio: 1.0,
+    minPixelRatio: .75,
     shadows: true,
     shadowSize: 2048,
     exposure: 1.06,
     fog: 0.000145,
     skySegments: Object.freeze([48, 28]),
-    waterSegments: 400
+    waterSegments: 320
   })
 });
