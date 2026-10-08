@@ -5,9 +5,18 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.43**.
+Versió actual: **0.3.44**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.44 — renderitzat de palmeres per sectors (2026-10-08)
+
+- Les palmeres mantenen els models actuals però ja no comparteixen grans `InstancedMesh` que inclouen tot el mapa: es construeixen grups geogràfics d'aproximadament **420 metres** perquè Three.js pugui descartar sectors sencers fora de càmera.
+- S'ha afegit LOD visual per distància: prop del jugador es mantenen tronc i dues copes; a distància mitjana es representa tronc més la copa principal; els sectors llunyans s'oculten. Rang màxim aproximat: 1.900 m en qualitat alta i 1.250 m en qualitat reduïda.
+- Visibilitat actualitzada a baixa freqüència (cada 0,16 s, i només quan el jugador s'ha desplaçat prou). Es conserven les palmeres generades, les col·lisions, la distribució de les llavors i la possibilitat de tombar-les.
+- Les matrius d'instància i materials es gestionen per sector, amb materials reutilitzats i sense ombres de les palmeres instanciades. La destrucció actualitza correctament tronc i totes dues copes de la palmera corresponent.
+- Mètrica de depuració: `window.HUNTER_VEGETATION_STATS` (nombre total de palmeres, sectors i sectors visibles) i `window.HUNTER_BUILD_STATS.palms`.
+- Afegides `tests/vegetation-lod.cjs` i comprovacions de regressió a la prova smoke, amb exercicis de LOD, visibilitat, destrucció i consum de generador aleatori.
 
 ### Revisió 0.3.43 — correcció de paleta del minimapa (2026-10-08)
 
