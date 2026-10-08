@@ -86,25 +86,8 @@ window.HUNTER_VEHICLES=Object.freeze({
         // Tanquem la cara frontal de la proa (-Z), amb normals cap enfora.
         for(let k=1;k<N-1;k++)idx.push(0,k,k+1);
 
-        // Coberta de proa integrada a la malla del casc. Només es cobreix
-        // la zona anterior al parabrisa; la cabina continua oberta.
-        const foreEnd=screenZ+.18,foreSections=[];
-        for(let i=0;i<stations.length;i++){
-          if(stations[i].z<=foreEnd)foreSections.push([i*N+3,i*N+4]);
-        }
-        const nextStation=stations.findIndex(s=>s.z>foreEnd);
-        if(nextStation>0){
-          const a=stations[nextStation-1],b=stations[nextStation],
-                t=(foreEnd-a.z)/(b.z-a.z),
-                halfWidth=(a.w+(b.w-a.w)*t)*.5,
-                p=verts.length/3;
-          verts.push(-halfWidth,free,foreEnd,halfWidth,free,foreEnd);
-          foreSections.push([p,p+1]);
-        }
-        for(let i=0;i<foreSections.length-1;i++){
-          const [a,b]=foreSections[i],[c,d]=foreSections[i+1];
-          idx.push(a,c,d,a,d,b); // normals cap a +Y
-        }
+        // La coberta ja forma part dels quads superiors del casc (k===3).
+        // No hi afegim cap segona superfície per evitar el z-fighting.
         const geo=new THREE.BufferGeometry();
         geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
         geo.setIndex(idx);geo.computeVertexNormals();
@@ -180,25 +163,8 @@ window.HUNTER_VEHICLES=Object.freeze({
         // Tanquem la cara frontal de la proa (-Z), amb normals cap enfora.
         for(let k=1;k<N-1;k++)idx.push(0,k,k+1);
 
-        // Coberta de proa integrada a la malla del casc. Només es cobreix
-        // la zona anterior al parabrisa; la cabina continua oberta.
-        const foreEnd=screenZ+.18,foreSections=[];
-        for(let i=0;i<stations.length;i++){
-          if(stations[i].z<=foreEnd)foreSections.push([i*N+3,i*N+4]);
-        }
-        const nextStation=stations.findIndex(s=>s.z>foreEnd);
-        if(nextStation>0){
-          const a=stations[nextStation-1],b=stations[nextStation],
-                t=(foreEnd-a.z)/(b.z-a.z),
-                halfWidth=(a.w+(b.w-a.w)*t)*.5,
-                p=verts.length/3;
-          verts.push(-halfWidth,free,foreEnd,halfWidth,free,foreEnd);
-          foreSections.push([p,p+1]);
-        }
-        for(let i=0;i<foreSections.length-1;i++){
-          const [a,b]=foreSections[i],[c,d]=foreSections[i+1];
-          idx.push(a,c,d,a,d,b); // normals cap a +Y
-        }
+        // La coberta ja forma part dels quads superiors del casc (k===3).
+        // No hi afegim cap segona superfície per evitar el z-fighting.
         const geo=new THREE.BufferGeometry();
         geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
         geo.setIndex(idx);geo.computeVertexNormals();
