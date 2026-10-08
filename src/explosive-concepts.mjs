@@ -1,4 +1,4 @@
-import './explosive-visuals.js?v=20261008-live-01';
+import './explosive-visuals.js?v=20261008-live-02';
 
 // Propostes visuals per als explosius del Hunter: Arxipèlag.
 // Només models de prova: sense temporització, detonació ni mecàniques de joc.
