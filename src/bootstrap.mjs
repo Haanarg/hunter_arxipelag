@@ -1,4 +1,6 @@
 import {runtimeScripts} from './runtime-scripts.mjs';
+import {compoundLayouts} from './compound-layouts.mjs';
+window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
 import {GAME_VERSION} from './version.mjs';
 
 const versionBadge=document.getElementById('versionBadge');

@@ -5,9 +5,31 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.47**.
+Versió actual: **0.3.48**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.48 — tres compounds integrats (2026-10-08)
+
+Integrat sobre `main` 3c4a9e6 (0.3.47), conservant la càrrega progressiva del terreny, els LOD de palmeres, el minimapa, el cercador ampliat i els explosius reduïts i orientats cap al jugador:
+
+- Hangar, avançada i port de la preview incorporats al generador jugable. `compound-layouts.mjs` és la font comuna de dimensions, edificis, aparcaments, patrulles i objectes; `compound-generation.js` adapta aquests layouts als sistemes reals de col·lisions, portes, destrucció, vehicles i IA.
+- Avançada: caserna, guàrdia, torre, moto i quatre soldats. Perímetre de filferrada destruïble amb les dues obertures de la preview; corredors principal i lateral lliures. La filferrada també substitueix les barreres al visor.
+- Hangar: tanc a dins, cotxe a fora, taller, zona de servei i tres soldats. Boca de 30 m i corredor de 18 m. Darrere tancat amb geometria completa, col·lisions a la base de la volta i patrulla desplaçada 2 m per conservar marge físic.
+- Port: magatzem, oficina, torre, cinc soldats, passeig transitable i dos molls de 6 m. Tres embarcacions orientades cap al mar; només el primer port incorpora la llanxa llançacoets, els altres tenen una segona llanxa normal. Costa seleccionada comprovant terra als edificis i profunditat sota tota la petjada i els corredors de sortida de les embarcacions ampliades.
+- Reserves ampliades per evitar solapaments i vegetació als accessos. Generació inicial d'un hangar i una avançada quan hi ha lloc vàlid. Les distribucions terrestres varien entre quatre orientacions i mirall; els ports s'orienten segons una costa apta entre les quatre direccions. Els girs de 90° mantenen exactes les caixes de col·lisió actuals: geometria, parets, portes i escales es transformen conjuntament.
+- Soldats i cadàvers utilitzen la superfície transitable dels molls i escales. La navegació dels vehicles terrestres continua utilitzant el terreny.
+- La generació canvia respecte de les versions anteriors: una mateixa llavor no conserva la distribució antiga de recintes.
+
+Validat:
+
+- `tests/compound-generation.cjs`, llavor 12345/mida 1: 5 hangars, 7 avançades i 1 port; llavor 72819/mida 2: 17 hangars, 20 avançades i 2 ports. En ambdues: edificis i vehicles previstos, separació, portes i escales orientades, dues obertures a la filferrada, sortides dels tancs, patrulles lliures i superfície dels molls. Comprovades les quatre orientacions i els dos miralls terrestres; llanxa llançacoets única.
+- `tests/enemy-navigation.cjs` i `tests/enemy-navigation-world.cjs`: regressió de navegació i 95 enemics sense solapament inicial; 9 segons de simulació, 82 enemics desplaçats i cap moviment acabat en espai bloquejat.
+- `tests/smoke.cjs`: arrencada, 15 tipus de vehicle, armes, col·lisions, destrucció i reinici. La comprovació de vegetació del smoke s’ha adaptat al nou grup `PM.trunk` dels LOD.
+- Integració amb la base 0.3.47: proves de minimapa, càrrega progressiva de terreny, LOD/destrucció de palmeres i cerca real de llavors superades; índex de compounds del cercador conservat.
+- `tests/compound-preview.cjs`, `tests/compound-preview-browser.cjs` i `tests/compound-game-browser.cjs`: geometria i càrrega WebGL 2 amb SwiftShader, escriptori i perfil mòbil; sense errors JavaScript ni shaders. Captures de preview i dels tres recintes integrats revisades. Recuperat el Chromium de proves després d’una fallada inicial d’arrencada.
+
+Pendent / límits: partida i rendiment en Android físic; les proves de generació cobreixen les dues llavors indicades, no totes les costes possibles. Si una costa no permet les tres places amb profunditat suficient, es descarta aquell emplaçament. Les altres dues distribucions per tipus i la resta de compounds del catàleg continuen pendents. Bidons, caixes i dipòsits mantenen el comportament decoratiu actual.
 
 ### Revisió 0.3.47 — mida i orientació dels explosius (2026-10-08)
 
@@ -322,13 +344,13 @@ La prioritat és evitar regressions de gameplay mentre es modernitza el projecte
 
 ## Redisseny de compounds — catàleg i generació (2026-10-08)
 
-Estat: **proposta de disseny registrada; tres primers recintes disponibles en preview Three.js**. Les quantitats són objectius d'equilibratge, no una descripció de la generació actual. Els vehicles són aparcats i utilitzables excepte les patrulles indicades. No tots els objectes opcionals apareixen a cada instància.
+Estat: **hangar, avançada i port integrats a la 0.3.48; resta del catàleg pendent**. La taula conserva els objectius generals de disseny; els detalls implementats dels tres primers recintes es descriuen a la revisió 0.3.48. Els vehicles són aparcats i utilitzables excepte les patrulles indicades. No tots els objectes opcionals apareixen a cada instància.
 
 | Tipus | Edificis i elements obligatoris | Vehicles | Enemics i objectes |
 |---|---|---|---|
 | Base inicial | Caserna petita, magatzem, infermeria, pati, bandera blava, sortida ampla i camí a la costa. | 1 cotxe, 1 bicicleta; barca o llanxa al punt costaner associat. | Sense enemics. Munició i 1 farmaciola. |
 | HQ enemic | Búnquer amb habitacions i porta progressiva actual; 2 edificis auxiliars, pati de maniobres, filferrada, 4 torres i bandera vermella. | 1 tanc aparcat, 2 tanquetes de patrulla interior i 2 jeeps de patrulla exterior. Sense helicòpters. | General i 6–8 soldats entre entrada, pati i interior. Munició, farmaciola i disfressa. |
-| Avançada | Caserna, caseta de guàrdia, torre, sacs, barreres, caixes, llum i bandera. Perímetre parcial amb dos accessos. | 1 moto o jeep. | 3–4 soldats. Munició; granades o farmaciola opcionals. |
+| Avançada | Caserna, caseta de guàrdia, torre, sacs, barreres, caixes, llum i bandera. Filferrada amb dos accessos. | 1 moto o jeep. | 3–4 soldats. Munició; granades o farmaciola opcionals. |
 | Garatge/hangar | Hangar gran, taller annex, aparcament exterior, dipòsits, bidons i caixes. Espai de sortida i gir davant de la boca. | 1 tanc, tanqueta o camió a dins; 1 cotxe o moto fora. | 2–3 soldats. Munició i farmaciola opcional. |
 | Heliport | Plataforma marcada, control, magatzem, combustible, llums i defenses fora de l'àrea dels rotors. | 1 helicòpter normal; variant fortificada amb helicòpter de combat. | 3–5 soldats; torre només a la variant fortificada. Munició i farmaciola. |
 | Polvorí | 2 magatzems separats, guàrdia, filferrada, càrrega, caixes de munició i barreres. | 1 camió amb sortida practicable. | 3–4 soldats. Munició, granades i explosius garantits; bazooka opcional. |
@@ -354,7 +376,7 @@ Estat: **proposta de disseny registrada; tres primers recintes disponibles en pr
 Preview a `compounds-preview.html`, enllaçat també des de `proves.html`. Models reals de Three.js local, edificis amb obertures i interiors, vehicles i comandos reutilitzats del joc a la mateixa escala.
 
 - **Hangar:** reserva 100 × 110 m; hangar 36 × 38 m, taller lateral, tanc interior i cotxe aparcat. Boca de 30 m, recorregut reservat de 18 m i pati de maniobra de 30 × 24 m. Combustible i caixes a la zona de servei. Tres soldats.
-- **Avançada:** reserva 90 × 90 m; caserna, guàrdia i torre, pati central, entrada principal de 12 m i accés lateral de 6 m. Moto i quatre soldats. Barreres baixes amb obertures i patrulla al voltant dels edificis.
+- **Avançada:** reserva 90 × 90 m; caserna, guàrdia i torre, pati central, entrada principal de 12 m i accés lateral de 6 m. Moto i quatre soldats. Filferrada amb dues obertures (actualitzada a 0.3.48) i patrulla al voltant dels edificis.
 - **Port militar:** reserva 110 × 120 m incloent aigua; magatzem, oficina, torre, àrea de càrrega de 18 × 12 m, accés de 14 m, passeig i dos molls de 6 m. Tres places navals separades, llanxa, moto aquàtica i llanxa llançacoets de la variant especial; cinc soldats.
 
 El visor permet seleccionar recinte, orbitar arrossegant, zoom amb pinça/roda/botons, vista en planta, interiors sense sostres, etiquetes, rotació automàtica i guies de circulació/maniobra/patrulla. Només es renderitza el recinte seleccionat i es reutilitza la imatge mentre no canvia la càmera. Les franges de colors són guies de disseny, no superfícies del joc.
@@ -365,11 +387,11 @@ Fitxers nous:
 - `src/compound-preview.mjs`: controls i renderitzat del visor.
 
 Validació de la preview:
-- `node tests/compound-preview.cjs`: geometria amb coordenades finites, recompte de vehicles, separació vehicle/edifici i recorreguts de patrulla amb marge d'1 m respecte dels edificis. Aproximadament 15.000 / 14.800 / 19.200 triangles per recinte.
+- `node tests/compound-preview.cjs`: geometria amb coordenades finites, recompte de vehicles, separació vehicle/edifici i recorreguts de patrulla amb marge d'1 m respecte dels edificis. Aproximadament 15.000 / 31.000 / 21.500 triangles per recinte amb els models i la filferrada actuals.
 - `node tests/compound-preview-browser.cjs`: les tres escenes carreguen sense errors JavaScript/consola en Chromium/WebGL 2 amb SwiftShader, perfils d'escriptori i mòbil. Selecció, planta, interiors, circulació, etiquetes i zoom comprovats; captures inspeccionades i enquadrament adaptat a pantalles estretes.
-- Això valida el visor i els models de proposta; la simulació de navegació i la integració procedural d'aquests layouts encara són pendents. Rendiment i gestos en Android físic pendents.
+- El visor i la integració procedural estan validats amb les proves de 0.3.48; rendiment i gestos en Android físic pendents.
 
-**Integració pendent:** aprovació/revisió visual dels primers layouts; incorporar-los al generador procedural i al terreny real; validar sortida de vehicles, portes, col·lisions, rutes de la IA, costa i destrucció amb els sistemes del joc; després crear les altres dues distribucions de cada tipus. Aquesta entrega és un preview de disseny i no substitueix els compounds de la partida.
+**Integració completada a 0.3.48:** aquests tres layouts substitueixen els recintes anteriors de les partides. Continuen pendents les altres dues distribucions de cada tipus i els nous tipus del catàleg.
 
 
 ---
