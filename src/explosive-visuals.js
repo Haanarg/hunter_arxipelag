@@ -118,7 +118,11 @@
 
   function update(group,remaining){
     const d=group?.userData?.explosiveDisplay;
-    if(!d||!d.active)return;
+    if(!d)return;
+    if(!d.active){
+      if(d.lastOn!==true){d.draw(0,true);d.lastOn=true;}
+      return;
+    }
     const t=Math.max(0,Math.min(3,remaining));
     const seconds=Math.ceil(t);
     const blinkOn=Math.floor((3-t)*BLINK_HZ*2)%2===0;
