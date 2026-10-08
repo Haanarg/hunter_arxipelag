@@ -374,8 +374,8 @@ function treeAt(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-
 function crush(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)L.slice().forEach(t=>{if(t.p&&Math.hypot(x-t.x,z-t.z)<t.r+r)killPalm(t)})}}
 function dmgP(t,d){if(!t.alive)return;t.hp-=d;if(t.hp<=0)killPalm(t)}
 function killPalm(t){if(!t.alive)return;t.alive=false;const a=TG.get(t.k);if(a){const i=a.indexOf(t);if(i>=0)a.splice(i,1)}
-if(PM.t){PM.t.setMatrixAt(t.i,ZM);PM.t.instanceMatrix.needsUpdate=true}
-const vm=PM.variantMap?.[t.i];if(vm){const vg=PM.variants?.[vm.variant];[vg?.crown,vg?.crown2].forEach(m=>{if(m){m.setMatrixAt(vm.index,ZM);m.instanceMatrix.needsUpdate=true}})}
+// La geometria es gestiona ara en instàncies de cada sector.
+if(PM.remove)PM.remove(t.i,ZM);
 const y=new THREE.Group(),g=new THREE.Group();y.position.set(t.x,t.y,t.z);y.rotation.y=t.yaw;y.scale.setScalar(t.s);y.add(g);
 [[PG.t,0x8a6a3a],[PG.c,0x4fa03a],[PG.c2,0x6fbf3a]].forEach(([ge,c])=>g.add(new THREE.Mesh(ge,dmat(c))));world.add(y);FA.push({y,g,t:0,s:t.s,x:t.x,z:t.z,yaw:t.yaw})}
 function updFA(dt){for(let i=FA.length-1;i>=0;i--){const a=FA[i];a.t+=dt;const k=Math.min(1,a.t/.9);a.g.rotation.z=-k*k*1.5;
@@ -390,8 +390,11 @@ if(stairs.some(s=>stairContains(s,px,pz,2))||Math.hypot(px-pa.x,pz-pa.z)<14||B.s
 const s=1.15*rr(.75,1.25),yaw=rr(0,6.28);
 if(L==pm){const leafVar=R()<.33?-1:R()<.66?0:1,tone=rr(-.25,.25),idx=pm.length;pm.push([px,h-.3,pz,s,yaw,leafVar,tone]);const e={x:px,z:pz,y:h-.3,s,yaw,r:.6*Math.max(.75,s),p:true,alive:true,hp:40,i:idx,leafVar,tone};put(e);PL.push(e)}
 else{L.push([px,h-.3,pz,s,yaw]);if(L==rk)put({x:px,z:pz,r:1.4,rock:true})}}
-const vegetationMeshes=vegetationVisual.build({world,palms:pm,bushes:bu,rocks:rk});
-PM={t:vegetationMeshes.palms.trunk,c:vegetationMeshes.palms.crown,c2:vegetationMeshes.palms.crown2,variants:vegetationMeshes.palms.variants,variantMap:vegetationMeshes.palms.variantMap}}
+const vegetationMeshes=vegetationVisual.build({
+  world,palms:pm,bushes:bu,rocks:rk,playerX:pa.x,playerZ:pa.z,
+  lowQuality:!visualQuality.shadows
+});
+PM=vegetationMeshes.palms}
 function fr(x,z){let a=1e9,b=-1e9;for(const[i,j]of[[0,0],[9,9],[-9,9],[9,-9],[-9,-9],[9,0],[-9,0],[0,9],[0,-9]]){const h=hAt(x+i,z+j);a=Math.min(a,h);b=Math.max(b,h)}return b-a}
 function checkRoofSupport(b,w){
   if(!b||b.rb||b.hangar||b.kind==='enemy_bunker'||!w||!w.supportWeight)return;
@@ -612,7 +615,7 @@ const minimap=window.HUNTER_MINIMAP.create({
 });
 const mini=()=>minimap.draw();
 // control
-let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0,worldVisualTick=0;
+let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0,worldVisualTick=0,palmVisualTick=0;
 const LOD_NEAR2=500*500,LOD_MID2=1200*1200,ITEM_ANIM2=500*500,FAUNA_NEAR2=650*650,FAUNA_MID2=1400*1400;
 const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joystick')),clearKeys=()=>{Object.keys(K).forEach(k=>K[k]=0);joystick.reset();document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))};
 const act=c=>{if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(!started||paused||over)return;if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory')}if(c==='KeyR'&&cv?.t==='heli_combat'){secondaryWeapon();return}if(c==='KeyG'){if(!secondaryWeapon())plant();}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
@@ -798,6 +801,9 @@ V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;return}if(v
 syncFerryCargo();
 ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2)||null;
 const floor=ib?ib.fy+.3:groundAt(P.x,P.z),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;if(!playerFall)P.y=ib?floor:Math.max(floor,surface-2.1);
+// Actualització del LOD de les palmeres a baixa freqüència (i també en vehicle).
+palmVisualTick-=dt;
+if(palmVisualTick<=0){palmVisualTick=.16;if(PM.update)PM.update(P.x,P.z)}
 worldVisualTick-=dt;
 if(worldVisualTick<=0){
   worldVisualTick=.2;
