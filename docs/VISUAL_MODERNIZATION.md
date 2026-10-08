@@ -9,6 +9,12 @@ Versió actual: **0.3.39**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
 
+### Revisió 0.3.39 — proes tancades (2026-10-08)
+
+- Tancades les cares frontals de les proes de les llanxes normal i llançacoets amb cinc triangles orientats cap enfora.
+- Conservada la coberta superior original del casc, sense afegir superfícies duplicades, i actualitzats els models Three.js de prova.
+- Afegida una prova smoke de la geometria de les dues proes.
+
 ### Revisió 0.3.38 — explosiu plàstic RGB (2026-10-08)
 
 - Incorporada la proposta 1 del bloc d'explosiu plàstic al joc: cos verd oliva, nou display digital i nou cables superiors vermells, verds i blaus en arcs paral·lels.
