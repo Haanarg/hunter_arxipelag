@@ -5,7 +5,7 @@ c.THREE=await import(require('url').pathToFileURL(path.join(root,'vendor/three-r
 for(const f of ['src/water-config.js','src/waves.js','src/water.js'])vm.runInContext(fs.readFileSync(path.join(root,f),'utf8'),c);
 const {THREE:T,HUNTER_WAVES:w,HUNTER_WATER_SYSTEM:system,HUNTER_WATER:config}=c;
 let samples=0;
-for(const size of [4800,9600])for(const segments of [240,400]){
+for(const size of [4800,9600])for(const segments of [200,320]){
  const scene=new T.Scene(),bed=(x,z)=>-12+8*Math.sin(x*.004)*Math.cos(z*.006);
  const water=system.create(T,{scene,sunDir:new T.Vector3(0,1,0),size,segments,heightAt:bed,config});water.updateSeabed();
  const g=water.geometry,p=g.attributes.position,b=g.attributes.seabed;
@@ -20,6 +20,16 @@ for(const size of [4800,9600])for(const segments of [240,400]){
   assert(Math.abs(water.surfaceHeight(q.x,q.z,time)-expected)<1e-8,'CPU matches displaced triangles');samples++;
  }
  assert(water.geometry.boundingBox.max.y>=w.maxDisplacement,'wave bounds prevent premature culling');
+ assert(water.material.vertexShader.includes('float accurate=hunterWaveHeight'),
+   'nearby waves still use the original physical wave function');
+ assert(water.material.vertexShader.includes('dist>=3200.'),
+   'far vertices avoid detailed wave spectrum');
+ assert(water.material.fragmentShader.includes('if(dist>=3200.)'),
+   'far ocean pixels avoid foam and expensive reflection computations');
+ assert(water.material.fragmentShader.includes('smoothstep(2200.,3200.,dist)'),
+   'far appearance transitions continuously');
+ assert.equal(g.attributes.position.count,(segments+1)**2,
+   'profile uses configured ocean tessellation');
  for(const match of water.material.fragmentShader.matchAll(/#include <([^>]+)>/g))assert(T.ShaderChunk[match[1]],'shader chunk '+match[1]);
  let disposed=false;g.addEventListener('dispose',()=>disposed=true);water.setWorldSize(size===4800?9600:4800);assert(disposed,'old geometry released on resize');
  water.update(4);assert.equal(water.uniforms.time.value,4);water.dispose();assert.equal(scene.children.length,0);
@@ -28,7 +38,7 @@ for(const size of [4800,9600])for(const segments of [240,400]){
 {
  const scene=new T.Scene();
  const water=system.create(T,{scene,sunDir:new T.Vector3(0,1,0),size:4800,
-   segments:400,heightAt:()=>-50,config});
+   segments:320,heightAt:()=>-50,config});
  water.updateSeabed();
  const samples=water.seabedStats;
  assert(samples.lastSamples<samples.totalVertices/4,'deep seabed sampling reduced');
@@ -37,7 +47,7 @@ for(const size of [4800,9600])for(const segments of [240,400]){
  water.dispose();
 }
 for(let i=0;i<100;i++){const x=i*13,z=-i*9,t=i*.31,bed=-i*.4;const legacy=(Math.sin(x*.03+t*1.2)*.9+Math.cos(z*.04+t*.9)*.9+Math.sin((x+z)*.07+t*2)*.4)*Math.max(.12,Math.min(1,(-bed+.6)/9));assert(Math.abs(w.height(x,z,t,bed)-legacy)<1e-12,'wave spectrum preserved')}
-console.log(JSON.stringify({passed:true,triangleSamples:samples,profiles:4,waveSamples:100,checks:['shared wave spectrum','CPU triangle interpolation','bounds','shader includes','resize/disposal']}));
+console.log(JSON.stringify({passed:true,triangleSamples:samples,profiles:4,waveSamples:100,checks:['shared wave spectrum','CPU triangle interpolation','distance ocean LOD','bounds','shader includes','resize/disposal']}));
 
 
 })().catch(e=>{console.error(e);process.exitCode=1});
