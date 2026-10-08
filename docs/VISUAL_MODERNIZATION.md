@@ -5,9 +5,17 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.50**.
+Versió actual: **0.3.51**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.51 — quatre nous caps al 75% i coll escurçat (2026-10-08)
+
+- S'han substituït les quatre propostes anteriors de `proves.html` per models amb el cap al voltant del **75%**: A proporcional (75/75/75%), B estret (72/78/74%), C compacte ample (79/72/76%) i D tàctic baix (74/74/71%).
+- A cada alternativa també es redueix el coll tant en amplada com en altura (altura del coll 66–72% de l'original) i s'abaixa el pivot del cap de 3,38 a entre 3,31 i 3,26 per integrar-lo millor al cos.
+- El coll es modifica només a la còpia de previsualització de `src/player-head-concepts.mjs`. El model real del jugador i els enemics, el rig, les animacions i el gameplay **no es modifiquen**.
+- La preview manté les quatre figures Three.js, les vistes de cos sencer / primer pla, la rotació i les vistes frontal i de perfil; `head-02` força la recàrrega de les variants actualitzades.
+- S'ha revisat la prova `tests/player-head-concepts.cjs` perquè validi els nous percentatges, la reducció de coll, el pivot rebaixat i les versions del model amb `unitScale` diferent.
 
 ### Revisió 0.3.50 — quatre propostes de cap reduït del jugador (2026-10-08)
 
