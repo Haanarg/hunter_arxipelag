@@ -5,9 +5,18 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.53**.
+Versió actual: **0.3.54**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.54 — rendiment adaptable, LOD de terreny i aigua distant (2026-10-08)
+
+- **Fase 1 — mètriques i resolució dinàmica:** `src/performance.js` mesura els FPS mitjans, durada de fotograma, temps de crida del renderer a CPU, draw calls i triangles reals retornats per `renderer.info`. `window.HUNTER_PERFORMANCE_STATS` exposa aquestes mètriques; apareixen en un petit indicador durant la partida, ocult a la portada i al cercador.
+- La resolució interna baixa 0,12 per ajust quan els FPS mantinguts estan per sota de 46 en ordinador o 42 en mòbil; torna a pujar 0,08 si passen de 57/54. Canvis espaiats 2,5 s, amb histèresi i limites respectats: mínim 0,75 i 0,72 respectivament, sempre limitats pel DPR de l'aparell. No canvia la resolució CSS, els controls ni la simulació.
+- **Fase 2 — quatre nivells de terreny:** `src/terrain.js` adopta [6,12,28,56] subdivisions per sector (qualitat alta) i [6,10,20,40] (mòbil). LOD 3 dins 500 m, LOD 2 dins 1.250 m, LOD 1 dins 1.700 m i LOD 0 a més distància. La mateixa funció `heightAt` manté la geometria, i els faldons entre malles amaguen possibles fissures. La generació progressiva prioritza sectors a la piràmide visual de la càmera, sense deixar de completar la resta.
+- **Mar distant:** a més de reduir la graella de 400² a 320² subdivisions en ordinador i de 240² a 200² en mòbil, el shader barreja gradualment les ones completes amb ondulació simple entre 2.200 i 3.200 m de la càmera; més lluny omet escuma i reflexos intensius. Prop del jugador conserva l'espectre d'ones i l'aproximació de física/visualització sobre els mateixos triangles.
+- Proves afegides: `tests/performance.cjs` per validar histèresi i canvis de resolució, `tests/terrain-stream.cjs` ampliat per als 4 LOD i el frustum de la càmera, `tests/water.cjs` per al mar distant i `tests/smoke.cjs` per a l'arrencada integrada.
+- Verificat amb Three.js real: 36 sectors en mapa petit (12 als 6 subdivisions), índexs GPU vàlids; mar 200/320 amb malles i altures finites. Verificada la caiguda i recuperació de resolució amb seqüències de FPS sintètiques. La compilació WebGL, les mètriques de GPU i el rendiment d'Android real **no s'han mesurat encara**.
 
 ### Revisió 0.3.53 — retirat el mur rectangular posterior dels hangars (2026-10-08)
 
