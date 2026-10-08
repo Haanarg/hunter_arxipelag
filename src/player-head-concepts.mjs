@@ -1,48 +1,74 @@
-// Propostes de reducció del cap del jugador (només per a la web de proves).
-// Conservem exactament el rig, el vestit, les articulacions i les animacions.
+// Quatre propostes de cap i coll reduïts: només per a proves.html.
+// El model jugable, el rig del cos, les articulacions i les animacions no es toquen.
 import './palette.js';
 import './player-model.js';
 
 export const playerHeadConcepts=Object.freeze([
   Object.freeze({
-    name:'A · Proporcional',
-    description:'Reducció uniforme d’un 33%. Conserva el cap i la gorra originals, sense alterar-ne la forma.',
-    scale:[.67,.67,.67],headY:3.35,visorDepth:1,visorTilt:0,capY:0
+    name:'A · 75% proporcional',
+    description:'Cap al 75% uniforme, coll més curt i posició natural lleugerament més baixa.',
+    headScale:[.75,.75,.75],neckScale:[.78,.72,.78],headY:3.31,
+    visorDepth:1,visorTilt:0,capY:-.01
   }),
   Object.freeze({
-    name:'B · Estret',
-    description:'Cara més estreta i un punt més alta. Visera una mica més curta per equilibrar el perfil.',
-    scale:[.62,.70,.66],headY:3.32,visorDepth:.88,visorTilt:.025,capY:0
+    name:'B · 75% estret',
+    description:'Cara més estreta i una mica més alta; coll prim i visera escurçada.',
+    headScale:[.72,.78,.74],neckScale:[.72,.70,.72],headY:3.29,
+    visorDepth:.92,visorTilt:.02,capY:-.015
   }),
   Object.freeze({
-    name:'C · Compacte ample',
-    description:'Cap lleugerament més ample i menys alt, amb la visera clàssica una mica més marcada.',
-    scale:[.71,.63,.68],headY:3.32,visorDepth:1.06,visorTilt:0,capY:-.022
+    name:'C · 75% compacte ample',
+    description:'Cap lleugerament ample i menys alt, coll curt i visera més marcada.',
+    headScale:[.79,.72,.76],neckScale:[.82,.68,.82],headY:3.28,
+    visorDepth:1.05,visorTilt:0,capY:-.02
   }),
   Object.freeze({
-    name:'D · Tàctic baix',
-    description:'Silueta més recollida, clatell estret, gorra baixa i visera més curta.',
-    scale:[.65,.65,.62],headY:3.29,visorDepth:.91,visorTilt:.07,capY:-.040
+    name:'D · 75% tàctic baix',
+    description:'Silueta compacta, coll recollit, cap més baix i gorra enfonsada.',
+    headScale:[.74,.74,.71],neckScale:[.75,.66,.75],headY:3.26,
+    visorDepth:.94,visorTilt:.05,capY:-.03
   })
 ]);
+
+// El model original crea el coll com un cilindre de pell a y=3.02.
+// El detectem dins d'aquesta còpia, sense modificar la fàbrica original.
+function findNeck(model,unitScale){
+  const neckY=3.02*unitScale;
+  return model.children.find(o=>
+    o.isMesh&&o.geometry?.type==='CylinderGeometry'&&
+    Math.abs(o.position.x)<1e-6&&Math.abs(o.position.z)<1e-6&&
+    Math.abs(o.position.y-neckY)<.06*unitScale&&
+    Math.abs(o.geometry.parameters?.height-.28*unitScale)<1e-5
+  )||null;
+}
 
 export function createPlayerHeadConcept(THREE,index,opts={}){
   const config=playerHeadConcepts[index];
   if(!config)throw new RangeError('Proposta de cap inexistent: '+index);
   const model=window.HUNTER_PLAYER_MODEL.create(THREE,opts);
-  const u=model.userData,head=u.head;
-  // Head pivots at the original skull center: glasses, ears, nose, cap and hair
-  // are scaled together so no feature is left outside of the new head.
-  head.scale.set(...config.scale);
-  head.position.y=config.headY;
+  const u=model.userData,head=u.head,unitScale=opts.unitScale??1;
+  const neck=findNeck(model,unitScale);
+  if(!neck)throw new Error('No s’ha trobat el coll del model original del jugador');
+
+  // Cabell, gorra, ulleres, visera, nas i orelles segueixen l'escala del cap.
+  head.scale.set(...config.headScale);
+  head.position.y=config.headY*unitScale;
+
+  // Es conserva el cilindre original, però més estret i curt.
+  neck.scale.x*=config.neckScale[0];
+  neck.scale.y*=config.neckScale[1];
+  neck.scale.z*=config.neckScale[2];
+
   if(u.visor){
     u.visor.scale.z=config.visorDepth;
     u.visor.rotation.x=config.visorTilt;
   }
-  if(u.cap)u.cap.position.y+=config.capY;
-  model.userData.headConcept={
-    index, name:config.name, scale:[...config.scale],headY:config.headY,
-    visorDepth:config.visorDepth, visorTilt:config.visorTilt
+  if(u.cap)u.cap.position.y+=config.capY*unitScale;
+
+  u.headConcept={
+    index,name:config.name,
+    headScale:[...config.headScale],neckScale:[...config.neckScale],
+    headY:config.headY,neck,visorDepth:config.visorDepth,visorTilt:config.visorTilt
   };
   return model;
 }
