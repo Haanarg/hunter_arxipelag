@@ -1,43 +1,57 @@
 (async()=>{
-// Verificació del model real en les quatre variants, sense alterar el model del joc.
-const assert=require('assert');
-const fs=require('fs'),path=require('path');
+// Quatre caps al voltant del 75%, amb colls escurçats i pivots abaixats.
+const assert=require('assert'),fs=require('fs'),path=require('path');
 const {pathToFileURL}=require('url');
 const root=path.resolve(__dirname,'..');
 global.window=global;
 const THREE=await import(pathToFileURL(path.join(root,'vendor/three-r186.module.mjs')));
-const {playerHeadConcepts,createPlayerHeadConcept}=await import(pathToFileURL(path.join(root,'src/player-head-concepts.mjs')));
+const {playerHeadConcepts,createPlayerHeadConcept}=await import(
+  pathToFileURL(path.join(root,'src/player-head-concepts.mjs'))
+);
 const original=global.HUNTER_PLAYER_MODEL.create(THREE);
 original.updateMatrixWorld(true);
-const originalBox=new THREE.Box3().setFromObject(original.userData.head);
-const originalSize=originalBox.getSize(new THREE.Vector3());
-assert.equal(playerHeadConcepts.length,4,'exactly four head proposals');
+const originalSize=new THREE.Box3().setFromObject(original.userData.head)
+  .getSize(new THREE.Vector3());
+assert.equal(playerHeadConcepts.length,4,'exactly four proposals');
 
 const results=[];
-playerHeadConcepts.forEach((design,i)=>{
- const model=createPlayerHeadConcept(THREE,i);
- model.updateMatrixWorld(true);
- const head=model.userData.head;
- const size=new THREE.Box3().setFromObject(head).getSize(new THREE.Vector3());
- const xRatio=size.x/originalSize.x,yRatio=size.y/originalSize.y;
- assert(Math.abs(head.scale.x-design.scale[0])<1e-9);
- assert(Math.abs(head.scale.y-design.scale[1])<1e-9);
- assert(Math.abs(head.scale.z-design.scale[2])<1e-9);
- assert(xRatio>=.60&&xRatio<=.72,'head width approximately two-thirds');
- assert(yRatio>=.60&&yRatio<=.72,'head height approximately two-thirds');
- assert.equal(head.children.length,original.userData.head.children.length,'cap, glasses, hair, nose and ears preserved');
- assert.equal(model.userData.cap.parent,head,'cap belongs to smaller head');
- assert.equal(model.userData.visor.parent,head,'visor belongs to smaller head');
- assert.equal(model.userData.ll.position.y,original.userData.ll.position.y,'legs remain unchanged');
- assert.equal(model.userData.ar.position.y,original.userData.ar.position.y,'arms remain unchanged');
- assert.equal(model.userData.profile,original.userData.profile,'player rig profile unchanged');
- results.push({name:design.name,xRatio:+xRatio.toFixed(3),yRatio:+yRatio.toFixed(3)});
-});
+for(let i=0;i<playerHeadConcepts.length;i++){
+  const design=playerHeadConcepts[i];
+  const model=createPlayerHeadConcept(THREE,i);
+  model.updateMatrixWorld(true);
+  const u=model.userData,head=u.head,neck=u.headConcept.neck;
+  const dims=new THREE.Box3().setFromObject(head).getSize(new THREE.Vector3());
+  const width=dims.x/originalSize.x,height=dims.y/originalSize.y;
+
+  assert.deepEqual(head.scale.toArray(),design.headScale,'head has the selected proportions');
+  assert(width>=.71&&width<=.80,'head width is around 75%');
+  assert(height>=.69&&height<=.80,'head height is around 75%');
+  assert(head.position.y<original.userData.head.position.y,'head is lowered');
+  assert.deepEqual(neck.scale.toArray(),design.neckScale,'neck width and height are reduced');
+  assert(neck.scale.y<1&&neck.scale.x<1&&neck.scale.z<1,'neck is shorter and thinner');
+  assert(neck.geometry.type==='CylinderGeometry','neck remains the original anatomical model');
+  assert.equal(head.children.length,original.userData.head.children.length,'all head features preserved');
+  assert.equal(u.cap.parent,head,'hat remains attached');
+  assert.equal(u.visor.parent,head,'visor remains attached');
+  assert.equal(u.ll.position.y,original.userData.ll.position.y,'legs unchanged');
+  assert.equal(u.ar.position.y,original.userData.ar.position.y,'arms unchanged');
+  assert.equal(u.profile,original.userData.profile,'original player rig preserved');
+
+  // The player model can be resized in vehicles without losing the collar.
+  const small=createPlayerHeadConcept(THREE,i,{unitScale:.8});
+  assert(small.userData.headConcept.neck,'scaled player model still has a neck');
+  assert(Math.abs(small.userData.head.position.y-design.headY*.8)<1e-9);
+
+  results.push({name:design.name,width:+width.toFixed(3),height:+height.toFixed(3),
+    neckHeight:design.neckScale[1],headY:design.headY});
+}
 const html=fs.readFileSync(path.join(root,'proves.html'),'utf8');
-const old=fs.readFileSync(path.join(root,'explosius-proves.html'),'utf8');
-assert(html.includes('src/player-head-concepts.mjs')&&html.includes('createPlayerHeadConcept(THREE,i)'),'Three.js preview uses the real head proposals');
-assert(html.includes('id="bodyView"')&&html.includes('id="headView"'),'full-body and closeup comparison present');
-assert(html.includes('id="front"')&&html.includes('id="profile"'),'front and profile comparisons present');
-assert(old.includes('src/explosive-concepts.mjs'),'previous explosives preview kept');
-console.log(JSON.stringify({passed:true,proposals:results,gameModelUntouched:true,explosivesPreviewPreserved:true}));
+const explosives=fs.readFileSync(path.join(root,'explosius-proves.html'),'utf8');
+assert(html.includes('src/player-head-concepts.mjs?v=20261008-head-02'),
+  'browser loads the refreshed module');
+assert(html.includes('entry.headScale[0]'),'UI reads new head dimensions');
+assert(html.includes('id="bodyView"')&&html.includes('id="headView"'),'full-body and close-up toggles');
+assert(html.includes('id="front"')&&html.includes('id="profile"'),'front and profile comparisons');
+assert(explosives.includes('src/explosive-concepts.mjs'),'older explosives previews preserved');
+console.log(JSON.stringify({passed:true,variants:results,gameModelUntouched:true}));
 })().catch(e=>{console.error(e);process.exitCode=1});
