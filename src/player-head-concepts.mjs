@@ -38,7 +38,7 @@ function findNeck(model,unitScale){
     o.isMesh&&o.geometry?.type==='CylinderGeometry'&&
     Math.abs(o.position.x)<1e-6&&Math.abs(o.position.z)<1e-6&&
     Math.abs(o.position.y-neckY)<.06*unitScale&&
-    Math.abs(o.geometry.parameters?.height-.28*unitScale)<1e-5
+    Math.abs(o.geometry.parameters?.height-.28)<1e-5
   )||null;
 }
 
