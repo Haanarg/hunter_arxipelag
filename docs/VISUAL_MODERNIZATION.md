@@ -5,9 +5,16 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.39**.
+Versió actual: **0.3.40**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.40 — cascs tancats sense prisma inferior (2026-10-08)
+
+- Eliminat el prisma rectangular negre inferior de la llanxa normal i de la llanxa llançacoets.
+- Tancada la quilla amb les mateixes anelles i vèrtexs del casc facetat: la darrera secció de cada anella s'uneix amb el vèrtex central inferior.
+- Proa, popa, laterals i superfície inferior formen una única malla tancada; la silueta dels models aprovats, el radar i els tubs de coets es mantenen.
+- Aplicada la mateixa correcció als prototips Three.js i actualitzada la prova de regressió per detectar arestes obertes i la caixa antiga.
 
 ### Revisió 0.3.39 — proes tancades (2026-10-08)
 
