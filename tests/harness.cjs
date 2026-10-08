@@ -6,7 +6,17 @@ module.exports=async function createGame(root=path.resolve(__dirname,'..')){
   function el(id){
     if(!els.has(id)){
       const node={
-        style:{},dataset:{},classList:{add:noop,remove:noop,toggle:noop},
+        style:{},dataset:{},classList:{
+          names:new Set(),
+          add(...names){for(const name of names)this.names.add(name)},
+          remove(...names){for(const name of names)this.names.delete(name)},
+          contains(name){return this.names.has(name)},
+          toggle(name,force){
+            const enable=force===undefined?!this.names.has(name):!!force;
+            if(enable)this.names.add(name);else this.names.delete(name);
+            return enable
+          }
+        },
         innerHTML:'',textContent:'',hidden:false,disabled:false,width:170,height:170,
         options:[],selectedIndex:0,children:[],_value:'',
         addEventListener:noop,setPointerCapture:noop,focus:noop,setAttribute:noop,
