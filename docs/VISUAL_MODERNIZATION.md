@@ -5,9 +5,16 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.48**.
+Versió actual: **0.3.49**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.49 — minimapa ocult fins que comença la partida (2026-10-08)
+
+- El minimapa queda ocult amb una regla CSS mentre `body` no porta la classe `game-started`; això evita que el `z-index` del minimapa el mostri per damunt de la pantalla inicial i del cercador de llavors.
+- Després de generar correctament la partida i d'ocultar la portada, `src/game-core.js` activa `game-started` i mostra el minimapa.
+- S'han afegit regressions a `tests/smoke.cjs` (estat del menú i de la partida) i a `tests/browser.cjs` (CSS real a portada, cercador de llavors i joc, tant a PC com en perfil mòbil).
+- No es modifica el dibuix ni el rendiment del minimapa durant el joc.
 
 ### Revisió 0.3.48 — tres compounds integrats (2026-10-08)
 
