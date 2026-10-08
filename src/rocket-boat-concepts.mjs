@@ -4,10 +4,10 @@ export function createRocketBoatConcept(THREE,variant=0){
   // Mateixa base geomètrica que la llanxa normal actual del joc.
   // Només substituïm el radar posterior per un llançacoets multitub.
   const cfg=[
-    {name:'SeaBaby A · 12 tubs',cols:6,rows:2,tubeR:.095,rackLen:2.95,rackW:1.48,rackH:.58,elev:.68,baseZ:2.18,baseY:1.30,frame:'truss'},
-    {name:'SeaBaby B · 16 tubs',cols:8,rows:2,tubeR:.088,rackLen:3.25,rackW:1.70,rackH:.58,elev:.76,baseZ:2.12,baseY:1.30,frame:'long'},
-    {name:'SeaBaby C · 12 tubs compacta',cols:4,rows:3,tubeR:.10,rackLen:2.55,rackW:1.42,rackH:.76,elev:.62,baseZ:2.35,baseY:1.30,frame:'compact'},
-    {name:'SeaBaby D · 18 tubs pesada',cols:6,rows:3,tubeR:.09,rackLen:3.10,rackW:1.62,rackH:.76,elev:.82,baseZ:2.05,baseY:1.30,frame:'heavy'}
+    {name:'SeaBaby C1 · Reculat',cols:4,rows:3,tubeR:.112,rackLen:2.52,elev:.58,baseZ:2.62,baseY:1.30,packBack:.34,frame:'open'},
+    {name:'SeaBaby C2 · Reculat baix',cols:4,rows:3,tubeR:.112,rackLen:2.46,elev:.50,baseZ:2.72,baseY:1.30,packBack:.42,frame:'low'},
+    {name:'SeaBaby C3 · Reculat elevat',cols:4,rows:3,tubeR:.108,rackLen:2.56,elev:.70,baseZ:2.58,baseY:1.30,packBack:.30,frame:'high'},
+    {name:'SeaBaby C4 · Reculat llarg',cols:4,rows:3,tubeR:.104,rackLen:2.82,elev:.62,baseZ:2.66,baseY:1.30,packBack:.38,frame:'long'}
   ][variant]||null;
   if(!cfg)throw new Error('Variant de llanxa llançacoets no vàlida');
 
@@ -86,51 +86,60 @@ export function createRocketBoatConcept(THREE,variant=0){
   const cradle=box(.92,.24,.72,trimMat,0,.22,0,pedestal);
   const pivotY=.55;
 
-  // Bastidor inclinable: apunta cap a proa (-Z) i amunt.
-  const rack=new THREE.Group();rack.position.set(0,pivotY,-.04);rack.rotation.x=cfg.elev;pedestal.add(rack);
-  box(cfg.rackW+.18,cfg.rackH+.16,cfg.rackLen+.16,trimMat,0,0,-cfg.rackLen*.38,rack);
-  box(cfg.rackW,cfg.rackH,cfg.rackLen,tubeMat,0,0,-cfg.rackLen*.38,rack);
+  // Feix inclinable desplaçat cap a popa (+Z), basat en l'antic model 3.
+  // El paquet no té cap bloc massís: són 12 cilindres 3×4 pràcticament enganxats.
+  const rack=new THREE.Group();rack.position.set(0,pivotY,cfg.packBack);rack.rotation.x=cfg.elev;pedestal.add(rack);
+  const pitch=cfg.tubeR*2.04,packW=pitch*(cfg.cols-1)+cfg.tubeR*2,packH=pitch*(cfg.rows-1)+cfg.tubeR*2,
+        tubeCenterZ=-cfg.rackLen*.38;
 
-  // Tubs reals visibles al frontal i a la part posterior del paquet.
-  const usableW=cfg.rackW*.78,usableH=cfg.rackH*.72;
   for(let row=0;row<cfg.rows;row++)for(let col=0;col<cfg.cols;col++){
-    const x=cfg.cols===1?0:-usableW/2+usableW*col/(cfg.cols-1),
-          y=cfg.rows===1?0:-usableH/2+usableH*row/(cfg.rows-1),
-          z=-cfg.rackLen*.38;
-    const tube=mesh(new THREE.CylinderGeometry(cfg.tubeR,cfg.tubeR,cfg.rackLen*.94,10),tubeMat,rack);
+    const x=(col-(cfg.cols-1)/2)*pitch,
+          y=(row-(cfg.rows-1)/2)*pitch,
+          z=tubeCenterZ;
+    const tube=mesh(new THREE.CylinderGeometry(cfg.tubeR,cfg.tubeR,cfg.rackLen,12),tubeMat,rack);
     tube.rotation.x=Math.PI/2;tube.position.set(x,y,z);
-    const lip=mesh(new THREE.CylinderGeometry(cfg.tubeR*1.16,cfg.tubeR*1.16,.075,10),tubeLipMat,rack);
-    lip.rotation.x=Math.PI/2;lip.position.set(x,y,z-cfg.rackLen*.49);
-    const rear=mesh(new THREE.CylinderGeometry(cfg.tubeR*1.08,cfg.tubeR*1.08,.055,10),trimMat,rack);
-    rear.rotation.x=Math.PI/2;rear.position.set(x,y,z+cfg.rackLen*.49);
+
+    // Anells mínims: marquen les boques però no converteixen el feix en una caixa.
+    const lip=mesh(new THREE.CylinderGeometry(cfg.tubeR*1.08,cfg.tubeR*1.08,.065,12),tubeLipMat,rack);
+    lip.rotation.x=Math.PI/2;lip.position.set(x,y,z-cfg.rackLen*.50);
+    const rear=mesh(new THREE.CylinderGeometry(cfg.tubeR*1.04,cfg.tubeR*1.04,.045,12),trimMat,rack);
+    rear.rotation.x=Math.PI/2;rear.position.set(x,y,z+cfg.rackLen*.50);
   }
 
-  // Travessers laterals i estructura triangulada inspirada en la referència.
+  // Dos travessers molt fins mantenen units els 12 tubs sense tapar-ne la lectura.
+  for(const z of[tubeCenterZ-cfg.rackLen*.22,tubeCenterZ+cfg.rackLen*.22]){
+    box(packW+.10,.055,.075,trimMat,0,-packH*.53,z,rack);
+    box(packW+.10,.055,.075,trimMat,0, packH*.53,z,rack);
+  }
+  for(const side of[-1,1])box(.055,packH+.10,.075,trimMat,side*packW*.53,0,tubeCenterZ+.02,rack);
+
+  // Estructura triangular de suport a la coberta.
   for(const side of[-1,1]){
-    const sx=side*(cfg.rackW*.58);
-    box(.065,cfg.rackH+.32,cfg.rackLen+.12,trimMat,sx,0,-cfg.rackLen*.38,rack);
-    rod([side*.52,.28,.20],[side*.72,1.17,-.28],.045,trimMat,pedestal);
-    rod([side*.72,1.17,-.28],[side*.72,.32,-.82],.045,trimMat,pedestal);
-    rod([side*.72,.32,-.82],[side*.52,.28,.20],.045,trimMat,pedestal);
+    rod([side*.50,.28,.24],[side*.67,1.03,-.16],.043,trimMat,pedestal);
+    rod([side*.67,1.03,-.16],[side*.67,.30,-.72],.043,trimMat,pedestal);
+    rod([side*.67,.30,-.72],[side*.50,.28,.24],.043,trimMat,pedestal);
   }
-  rod([-.55,.28,.05],[.55,.28,.05],.05,trimMat,pedestal);
+  rod([-.52,.28,.08],[.52,.28,.08],.046,trimMat,pedestal);
 
-  if(cfg.frame==='long'){
-    // Variant B: suport posterior més llarg i reforçat.
+  if(cfg.frame==='low'){
+    // Paquet més baix i més enrere, amb base molt discreta.
+    box(1.02,.16,.68,deckMat,0,.27,.10,pedestal);
+    for(const side of[-1,1])rod([side*.46,.28,.20],[side*.60,.78,-.42],.038,trimMat,pedestal);
+  }else if(cfg.frame==='high'){
+    // Paquet més elevat, amb braços verticals una mica més llargs.
     for(const side of[-1,1]){
-      rod([side*.58,.28,.34],[side*.78,1.30,-.42],.05,trimMat,pedestal);
-      rod([side*.58,.28,.34],[side*.74,.34,-1.02],.05,trimMat,pedestal);
+      rod([side*.50,.30,.26],[side*.70,1.22,-.25],.047,trimMat,pedestal);
+      rod([side*.70,1.22,-.25],[side*.66,.34,-.80],.043,trimMat,pedestal);
     }
-  }else if(cfg.frame==='compact'){
-    // Variant C: carenat compacte sobre la base.
-    box(1.22,.26,.92,deckMat,0,.32,.06,pedestal);
-  }else if(cfg.frame==='heavy'){
-    // Variant D: doble bastidor i caixa de mecanisme més robusta.
-    box(1.34,.34,.84,trimMat,0,.30,.08,pedestal);
-    for(const side of[-1,1])rod([side*.60,.36,.24],[side*.82,1.34,-.38],.06,trimMat,pedestal);
+  }else if(cfg.frame==='long'){
+    // Tubs lleugerament més llargs, bastidor posterior reforçat.
+    for(const side of[-1,1]){
+      rod([side*.52,.30,.32],[side*.72,1.08,-.25],.047,trimMat,pedestal);
+      rod([side*.52,.30,.32],[side*.70,.32,-.92],.047,trimMat,pedestal);
+    }
   }else{
-    // Variant A: entramat lleuger similar al de la fotografia.
-    for(const side of[-1,1])rod([side*.54,.30,.28],[side*.70,.95,-.70],.04,trimMat,pedestal);
+    // Variant base: suport obert i lleuger, el més proper al model 3 original.
+    for(const side of[-1,1])rod([side*.48,.28,.24],[side*.62,.90,-.56],.038,trimMat,pedestal);
   }
 
   // Sensor baix separat: conserva lectura militar sense recuperar el radar gran.
