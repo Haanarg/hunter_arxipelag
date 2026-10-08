@@ -12,7 +12,6 @@ export function createBoatConcept(THREE,variant=0){
 
   const mat=(c,metal=.03)=>new THREE.MeshStandardMaterial({color:c,roughness:.76,metalness:metal,flatShading:true});
   const hullMat=mat(0x667176,.08),
-        darkMat=mat(0x2f383d,.1),
         deckMat=mat(0x717c81,.06),
         glassMat=new THREE.MeshStandardMaterial({color:0x26343c,roughness:.25,metalness:.05,transparent:true,opacity:.82,flatShading:true}),
         trimMat=mat(0x424b50,.12);
@@ -43,7 +42,11 @@ export function createBoatConcept(THREE,variant=0){
   ]);
   for(const ring of rings)for(const p of ring)verts.push(...p);
   const N=7;
-  for(let j=0;j<rings.length-1;j++)for(let k=0;k<N-1;k++){const a=j*N+k,b=a+N,c=b+1,d=a+1;idx.push(a,b,c,a,c,d)}
+  // Últim tram (vèrtex 6 -> 0): tanquem la quilla amb el mateix casc facetat.
+  for(let j=0;j<rings.length-1;j++)for(let k=0;k<N;k++){
+    const next=(k+1)%N,a=j*N+k,b=a+N,c=(j+1)*N+next,d=j*N+next;
+    idx.push(a,b,c,a,c,d);
+  }
   const base=(rings.length-1)*N;for(let k=1;k<N-1;k++)idx.push(base,base+k+1,base+k);
 
   // Tanquem el pla frontal de la proa, amb normals cap a -Z.
@@ -55,8 +58,6 @@ export function createBoatConcept(THREE,variant=0){
   geo.setIndex(idx);geo.computeVertexNormals();
   mesh(geo,hullMat);
 
-  // Franja fosca del casc inferior.
-  box(B*.93,.25,L*.72,darkMat,0,.06,.35);
 
   // Proa completament neta: sense cap plataforma o llosa grisa damunt del casc.
   // La forma frontal queda definida només pel casc facetat.
