@@ -3,7 +3,9 @@
 <style>
 html,body{margin:0;height:100%;overflow:hidden;background:#1b2a5a;font-family:system-ui,sans-serif;touch-action:none;user-select:none;-webkit-user-select:none}
 #hud{position:fixed;left:12px;top:calc(12px + env(safe-area-inset-top,0px));color:#fff;font-size:12px;line-height:1.5;text-shadow:0 1px 3px #000a;pointer-events:none}
-#perfStats{position:fixed;left:12px;top:calc(118px + env(safe-area-inset-top,0px));z-index:5;padding:4px 7px;border-radius:5px;background:#0b1727a8;color:#e1f2e3;font:10px/1.35 ui-monospace,monospace;white-space:pre-line;text-shadow:0 1px 2px #000;pointer-events:none}\nbody:not(.game-started) #perfStats{display:none}\n#mm{position:fixed;right:12px;top:calc(12px + env(safe-area-inset-top,0px));z-index:4;width:130px;height:130px;border:2px solid #fffa;border-radius:6px;background:#17344e;box-shadow:0 2px 10px #0006;pointer-events:none}
+#perfStats{position:fixed;left:12px;top:calc(118px + env(safe-area-inset-top,0px));z-index:5;padding:4px 7px;border-radius:5px;background:#0b1727a8;color:#e1f2e3;font:10px/1.35 ui-monospace,monospace;white-space:pre-line;text-shadow:0 1px 2px #000;pointer-events:none}
+body:not(.game-started) #perfStats{display:none}
+#mm{position:fixed;right:12px;top:calc(12px + env(safe-area-inset-top,0px));z-index:4;width:130px;height:130px;border:2px solid #fffa;border-radius:6px;background:#17344e;box-shadow:0 2px 10px #0006;pointer-events:none}
 /* El minimapa només es fa visible en entrar a una partida real. */
 body:not(.game-started) #mm{display:none}
 .p{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:grid;gap:8px}
