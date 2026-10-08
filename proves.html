@@ -21,7 +21,7 @@ canvas{display:block;width:100%;height:100%}
 <div id="ui"><h1>Llanxa llançacoets · 4 propostes Three.js</h1><div id="cards"></div></div>
 <script type="module">
 import * as THREE from './vendor/three-r186.module.mjs';
-import {createRocketBoatConcept} from './src/rocket-boat-concepts.mjs?v=20261008-a';
+import {createRocketBoatConcept} from './src/rocket-boat-concepts.mjs?v=20261008-b';
 
 const labels=[
   ['1 · SeaBaby A · 12 tubs','La més propera a la referència: paquet 2×6, bastidor lleuger i elevació mitjana.'],
@@ -48,12 +48,12 @@ labels.forEach((meta,i)=>{
   const model=createRocketBoatConcept(THREE,i);
   model.rotation.y=.42;
   model.position.y=.02;
-  model.scale.setScalar(.62);
+  model.scale.setScalar(.84);
   scene.add(model);models.push(model);
 
-  const cam=new THREE.PerspectiveCamera(39,1,.1,240);
-  cam.position.set(22.5,13.2,-30.5);
-  cam.lookAt(0,1.05,0);
+  const cam=new THREE.PerspectiveCamera(37,1,.1,220);
+  cam.position.set(17.2,9.8,-23.2);
+  cam.lookAt(0,1.15,0);
   cams.push(cam);
 
   const card=document.createElement('div');card.className='card';
