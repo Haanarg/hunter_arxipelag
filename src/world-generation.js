@@ -60,7 +60,7 @@ function ensureJetSkis(add){
 }
 
 // Compatibility extraction: shared state remains in game-core.js.
-function build(){elapsed=0;water.update(0);joystick.reset();compoundClear=[];terrainLevels=[];if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}world=new THREE.Group();scene.add(world);B=[];stairs=[];piers=[];swimming=false;intelMarks=[];playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;grenadeEquipped=false;pl.userData.bazooka.visible=false;pl.userData.grenade.visible=false;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;pl.userData.grenadePending=null;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];grenades=[];fx=[];logb=[];hp=100;ammo=12;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
+function build(){const buildStarted=performance.now();if(terrainStream)terrainStream.dispose();terrainStream=null;elapsed=0;water.update(0);joystick.reset();compoundClear=[];terrainLevels=[];if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}world=new THREE.Group();scene.add(world);B=[];stairs=[];piers=[];swimming=false;intelMarks=[];playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;grenadeEquipped=false;pl.userData.bazooka.visible=false;pl.userData.grenade.visible=false;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;pl.userData.grenadePending=null;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];grenades=[];fx=[];logb=[];hp=100;ammo=12;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
 {const base=requestedSeed==null?Math.floor(Math.random()*0xffffffff)>>>0:requestedSeed>>>0;let tries=0;do{seed=(base+Math.imul(tries++,0x9e3779b1))>>>0;genIslands();pa=land(A,2000);pb=land(Bi,2000)}while((!pa||!pb)&&tries<8);if(!pa||!pb)throw new Error('No s’ha pogut generar un mapa vàlid amb aquesta llavor')}
 addLevelArea(pa.x,pa.z,82,72,pa.h,0,18);[[-27,0],[27,-12],[0,31]].forEach(([dx,dz])=>mkB(pa.x+dx,pa.z+dz,15,15,7,0xe9dfc8,0x2c5fc0));flag(pa.x,pa.z-7,0x2c7bff);
 addLevelArea(pb.x,pb.z,148,133,pb.h,0,28);mkEnemyBunker(pb.x,pb.z);mkB(pb.x+49,pb.z+16,12,12,6,0x8a7a70,0x8c1f1f);mkB(pb.x-50,pb.z-15,12,12,6,0x8a7a70,0x8c1f1f);flag(pb.x+15,pb.z-6,0xe02828);barbedHQ(pb.x,pb.z,72.5,65,18,26);
@@ -205,8 +205,12 @@ if(type==='port'){const pq=findPortSite(i,14);if(pq&&compoundSiteClear('port',pq
 compound(type,q);
 if(i.r>520&&R()<.22){const type2=R()<.6?'garatge':'avancada';let q2=null;for(let n=0;n<14&&!q2;n++){const c=land(i,800,1);if(c&&Math.hypot(c.x-q.x,c.z-q.z)>190&&compoundSiteClear(type2,c,150))q2=c}if(q2){q2.r=i.r;compound(type2,q2)}}});
 let standalonePiers=0,targetPiers=(3+Math.floor(R()*3))*MAP_SCALE;for(const i of candidateIslands){if(standalonePiers>=targetPiers)break;if(usedPortIslands.has(i))continue;const q=findPortSite(i,12);if(!q||!compoundSiteClear('port',q,110)||compoundClear.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<80))continue;if(makeStandalonePier(q))standalonePiers++}
-const terrain=window.HUNTER_TERRAIN.create(THREE,{size:S,segments:SEG,heightAt:hAt,material:MAT.terrain()});world.add(terrain.mesh,window.HUNTER_TERRAIN.createBorder(THREE,{size:S,halfSize:H}));
-updateSeabed();vegetate(pa);spawnFauna();HQ={x:pb.x,z:pb.z};const rb=B.slice(6);
+const terrainStarted=performance.now();
+const terrain=window.HUNTER_TERRAIN.create(THREE,{size:S,segments:SEG,heightAt:hAt,material:MAT.terrain(),startX:pa.x,startZ:pa.z,lowQuality:!visualQuality.shadows});
+terrainStream=terrain;world.add(terrain.mesh,window.HUNTER_TERRAIN.createBorder(THREE,{size:S,halfSize:H}));
+const initialTerrainMs=performance.now()-terrainStarted,vegetationStarted=performance.now();
+updateSeabed();vegetate(pa);spawnFauna();
+const vegetationMs=performance.now()-vegetationStarted;HQ={x:pb.x,z:pb.z};const rb=B.slice(6);
 const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2);
 const generalSpots=hq.generalSpots?.length?hq.generalSpots:[{x:hq.x,z:hq.z-3}],generalSpot=generalSpots[Math.floor(R()*generalSpots.length)];mkEn('general',generalSpot.x,generalSpot.z,hq.fy+.3);
 const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1),x=cx+Math.cos(a)*d,z=cz+Math.sin(a)*d;if(gl(x,z))return mkEn(t,x,z)}return null};
@@ -347,6 +351,9 @@ ensureDistributedCount('tanqueta',1+MAP_SCALE);
 islands.forEach(i=>{if(i!==A&&R()<.65){const t=['cotxe','moto','bici'][Math.floor(R()*3)];for(let tries=0;tries<12;tries++){const q=land(i,80);if(q&&clearVehicle(t,q.x,q.z)){add(t,q.x,q.z,rr(0,6.28));break}}}});
 
 ensureJetSkis(add);
-P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0,0,0));prepareEnemyNavigation();world.traverse(o=>{if(o.isMesh&&!o.userData.waterMask){o.castShadow=!o.isInstancedMesh;o.receiveShadow=true}});pl.traverse(o=>{if(o.isMesh)o.castShadow=true});cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);}
+P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0,0,0));prepareEnemyNavigation();world.traverse(o=>{if(o.isMesh&&!o.userData.waterMask){o.castShadow=!o.isInstancedMesh&&!o.userData.terrainTile;o.receiveShadow=true}});pl.traverse(o=>{if(o.isMesh)o.castShadow=true});cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);
+window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,initialTerrainMs,vegetationMs,terrainTiles:terrain.stats};
+if(window.HUNTER_PERF_DEBUG)console.info('Hunter · generació',window.HUNTER_BUILD_STATS);
+}
 
 
