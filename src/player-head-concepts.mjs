@@ -2,6 +2,8 @@
 // El model jugable, el rig del cos, les articulacions i les animacions no es toquen.
 import './palette.js';
 import './player-model.js';
+// La proposta D i el joc comparteixen una única definició de proporcions.
+const selectedD=window.HUNTER_PLAYER_MODEL.headStyles.compactD;
 
 export const playerHeadConcepts=Object.freeze([
   Object.freeze({
@@ -25,8 +27,8 @@ export const playerHeadConcepts=Object.freeze([
   Object.freeze({
     name:'D · 75% tàctic baix',
     description:'Silueta compacta, coll recollit, cap més baix i gorra enfonsada.',
-    headScale:[.74,.74,.71],neckScale:[.75,.66,.75],headY:3.26,
-    visorDepth:.94,visorTilt:.05,capY:-.03
+    headScale:[...selectedD.headScale],neckScale:[...selectedD.neckScale],headY:selectedD.headY,
+    visorDepth:selectedD.visorDepth,visorTilt:selectedD.visorTilt,capY:selectedD.capY
   })
 ]);
 
