@@ -5,9 +5,17 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.41**.
+Versió actual: **0.3.42**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.42 — correcció d'arrencada WebGL (2026-10-08)
+
+- Corregit l'error de Three.js `Cannot read properties of undefined (reading 'byteLength')` després de prémer un botó de dificultat.
+- Les malles dels sectors del terreny proporcionen ara els índexs de triangles com a `THREE.BufferAttribute`, no com a `Uint16Array` directament.
+- El carregador dels sistemes del joc afegeix la versió als URL per evitar reutilitzar el fitxer de terreny antic de la memòria cau.
+- Afegides comprovacions dels buffers d'índex a les proves dels sectors inicials, els generats progressivament i els actualitzats per LOD.
+- Es mantenen totes les optimitzacions de la versió 0.3.41.
 
 ### Revisió 0.3.41 — optimització d'arrencada i sectors de terreny (2026-10-08)
 
