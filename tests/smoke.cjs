@@ -4,8 +4,10 @@ const assert=require('assert');
 const game=await require('./harness.cjs')();const {run}=game;const ok=(s,m)=>assert(run(s),m);
 assert.equal(run('THREE.REVISION'),'186');
 const start=Date.now();ok('!started&&B.length===0','title screen defers world generation');
+ok("!document.body.classList.contains('game-started')",'minimap must stay hidden on the start screen');
 game.start();game.frame();
 ok('started&&B.length>=6&&E.some(e=>e.t==="general")','menu starts a complete world');
+ok("document.body.classList.contains('game-started')",'minimap becomes visible only after the game starts');
 run(`{
   const stats=window.HUNTER_BUILD_STATS;
   globalThis.terrainStreamStartsLocally=!!terrainStream&&
