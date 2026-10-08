@@ -251,6 +251,7 @@ const fillSeedSearchTypes=(preferred)=>{
 };
 fillSeedSearchTypes('ferry'); // Conserva el cercador de ferris com a selecció inicial.
 seedSearchCategoryEl.onchange=()=>{fillSeedSearchTypes();seedSearchResultsEl.replaceChildren();seedSearchStatusEl.textContent='Tria el tipus i prem Buscar.'};
+seedSearchTypeEl.onchange=()=>{seedSearchResultsEl.replaceChildren();seedSearchStatusEl.textContent='Prem Buscar per analitzar aquest tipus.'};
 const showSeedSearch=()=>{
   const sc=currentMapScale();seedSearchMapSizeEl.value=sc===2?'Gran · 9,6 km':'Petit · 4,8 km';
   startMenuEl.style.display='none';seedSearchScreenEl.style.display='block';seedSearchScreenEl.setAttribute('aria-hidden','false')
