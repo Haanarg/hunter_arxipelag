@@ -131,6 +131,9 @@ window.HUNTER_VEGETATION=Object.freeze({
         // Les posicions i rotacions continuen en coordenades mundials:
         // els límits de l'InstancedMesh es calculen només per aquest sector.
         const rows=ch.rows;
+        rows.forEach((p,trunkIndex)=>{
+          variantMap[p.i]={chunk:ch,trunkIndex,variant:p.vi,index:-1};
+        });
         ch.trunk=inst(root,geometry.trunk,rows.map(p=>p.row),0x8e6337,null,{profile:'organic',tilt:true});
         ch.primary=[];ch.secondary=[];
         for(let v=0;v<3;v++){
@@ -139,9 +142,7 @@ window.HUNTER_VEGETATION=Object.freeze({
           const primary=inst(root,geometry.palmVariants[v].crown,crowns,0x2d9f36,null,{doubleSide:true});
           const secondary=inst(root,geometry.palmVariants[v].crown2,crowns,0x65c83f,null,{doubleSide:true});
           ch.primary.push(primary);ch.secondary.push(secondary);
-          selected.forEach((p,i)=>{
-            if(!variantMap[p.i])variantMap[p.i]={chunk:ch,trunkIndex:rows.indexOf(p),variant:v,index:i};
-          });
+          selected.forEach((p,i)=>{variantMap[p.i].index=i});
         }
         // Bounding spheres separades per sector, no una esfera de tota l'illa.
         ch.meshes=[ch.trunk,...ch.primary,...ch.secondary].filter(Boolean);
