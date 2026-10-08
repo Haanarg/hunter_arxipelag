@@ -374,7 +374,7 @@ document.querySelectorAll('#ini button[data-d]').forEach(b=>b.onclick=()=>{
   requestedSeed=rawSeed==null?null:(rawSeed^Math.imul(MAP_SCALE,0x45d9f3b))>>>0;
   build();minimap.setWorldSize(S,H);minimap.reset();mini();
   // Sense captura WebGL síncrona/toDataURL: evitar bloqueig després de generar el món.
-  started=1;iniEl.style.display='none';initAudio()
+  started=1;iniEl.style.display='none';document.body.classList.add('game-started');initAudio()
 });
 // animacions de destrucció
 const DB=[],WA=[],HR=[],dgeo=new THREE.BoxGeometry(1,1,1),dmc={},dmat=c=>dmc[c]||(dmc[c]=M(c));
