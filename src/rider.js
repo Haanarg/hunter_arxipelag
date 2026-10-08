@@ -26,7 +26,7 @@ window.HUNTER_RIDER=Object.freeze({
     const shoulderAt=side=>vec(side*.57,1.17,0).applyQuaternion(torso.quaternion).add(torso.position);
     const update=(v,dt)=>{
       const open=!!v&&['bici','moto','moto_aquatica','llanxa','llanxa_coets','barca_rems','windsurf'].includes(v.t);g.visible=open;if(!open)return;
-      const u=g.userData,sc=v.t==='llanxa'?1.3:scales[v.t],moving=Math.min(1,Math.abs(v.v)/1.8);u.motion+=(moving-u.motion)*(1-Math.exp(-12*dt));const motion=u.motion,phase=(v.t==='bici'||v.t==='barca_rems')?-(v.pedalPhase||0):(v.pedalPhase||0);
+      const u=g.userData,sc=v.t==='llanxa'?1.3:v.t==='llanxa_coets'?1.35:scales[v.t],moving=Math.min(1,Math.abs(v.v)/1.8);u.motion+=(moving-u.motion)*(1-Math.exp(-12*dt));const motion=u.motion,phase=(v.t==='bici'||v.t==='barca_rems')?-(v.pedalPhase||0):(v.pedalPhase||0);
       g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);torso.rotation.set(0,0,0);boots.forEach(b=>b.rotation.set(0,0,0));
 
       if(v.t==='bici'||v.t==='moto'){
@@ -86,11 +86,11 @@ window.HUNTER_RIDER=Object.freeze({
         return;
       }
 
-      if(v.t==='llanxa'){
-        // La llanxa és ara un 50% més gran, però el rider conserva exactament
-        // l'escala corporal anterior (1.3). Només traslladem la postura perquè
-        // continuï assegut al mateix lloc relatiu dins la cabina ampliada.
-        const boatSc=scales.llanxa||1.95,riderSc=1.3,
+      if(v.t==='llanxa'||v.t==='llanxa_coets'){
+        // Les dues llanxes comparteixen ara la mateixa escala gran del casc,
+        // però cada rider conserva la mida que tenia abans del redisseny.
+        const riderSc=v.t==='llanxa'?1.3:1.35,
+              boatSc=scales[v.t]||1.95,
               offY=1.45*(boatSc-riderSc),offZ=.55*(boatSc-riderSc),
               seat=1.45*riderSc+offY,seatZ=.55*riderSc+offZ;
         torso.position.set(0,seat,seatZ);torso.rotation.x=.04;
