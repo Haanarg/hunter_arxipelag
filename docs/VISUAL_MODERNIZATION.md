@@ -5,9 +5,22 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.34**.
+Versió actual: **0.3.36**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.36 — llanxa llançacoets C4 (2026-10-08)
+
+- La `llanxa_coets` adopta el mateix casc facetat de la llanxa normal actual, amb popa tancada i proa neta.
+- Eliminat el radar posterior de l'antic model.
+- Implementat el model C4 seleccionat: llançador endarrerit amb **12 tubs cilíndrics 3×4**, sense bloc massís, tubs més llargs i bastidor posterior reforçat.
+- La llanxa llançacoets passa a la mateixa escala gran de la llanxa normal; radi i hitbox s'actualitzen al nou volum.
+- El rider conserva la seva mida anterior (escala corporal 1.35) i només es reposiciona dins la cabina ampliada. Es mantenen els cinc coets i la mecànica existent.
+
+### Revisió 0.3.35 — llanxa normal ampliada (2026-10-08)
+
+- La llanxa normal augmenta un 50% de mida, amb radi i hitbox coherents.
+- El rider manté la mida anterior i es reposiciona dins la cabina ampliada.
 
 ### Revisió 0.3.33 — navegació i separació enemiga (2026-10-08)
 
