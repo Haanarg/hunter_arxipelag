@@ -16,7 +16,7 @@ window.HUNTER_RIDER=Object.freeze({
     }
     // The torso origin is the seat/hip, as expected by the existing vehicle poses.
     for(const part of [...model.children]){part.position.y-=rig.hipHeight;torso.add(part)}
-    g.userData={torso,limbs,boots,mats:rig.mats,profile:rig.profile,motion:0};
+    g.userData={torso,limbs,boots,head:rig.head,neck:rig.neck,headVariant:rig.headVariant,mats:rig.mats,profile:rig.profile,motion:0};
     g.visible=false;g.traverse(o=>{if(o.isMesh)o.castShadow=shadows});scene.add(g);
     const down=new THREE.Vector3(0,-1,0),delta=new THREE.Vector3();
     const limbBetween=(m,a,b)=>{
