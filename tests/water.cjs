@@ -24,6 +24,18 @@ for(const size of [4800,9600])for(const segments of [240,400]){
  let disposed=false;g.addEventListener('dispose',()=>disposed=true);water.setWorldSize(size===4800?9600:4800);assert(disposed,'old geometry released on resize');
  water.update(4);assert.equal(water.uniforms.time.value,4);water.dispose();assert.equal(scene.children.length,0);
 }
+// Deep ocean bathymetry is interpolated with far fewer height evaluations.
+{
+ const scene=new T.Scene();
+ const water=system.create(T,{scene,sunDir:new T.Vector3(0,1,0),size:4800,
+   segments:400,heightAt:()=>-50,config});
+ water.updateSeabed();
+ const samples=water.seabedStats;
+ assert(samples.lastSamples<samples.totalVertices/4,'deep seabed sampling reduced');
+ const data=water.geometry.attributes.seabed.array;
+ assert(data.every(v=>Math.abs(v+50)<1e-6),'constant deep water preserved exactly');
+ water.dispose();
+}
 for(let i=0;i<100;i++){const x=i*13,z=-i*9,t=i*.31,bed=-i*.4;const legacy=(Math.sin(x*.03+t*1.2)*.9+Math.cos(z*.04+t*.9)*.9+Math.sin((x+z)*.07+t*2)*.4)*Math.max(.12,Math.min(1,(-bed+.6)/9));assert(Math.abs(w.height(x,z,t,bed)-legacy)<1e-12,'wave spectrum preserved')}
 console.log(JSON.stringify({passed:true,triangleSamples:samples,profiles:4,waveSamples:100,checks:['shared wave spectrum','CPU triangle interpolation','bounds','shader includes','resize/disposal']}));
 
