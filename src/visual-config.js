@@ -3,6 +3,7 @@
 window.HUNTER_VISUAL_CONFIG = Object.freeze({
   mobile: Object.freeze({
     pixelRatio: 1.3,
+    minPixelRatio: .85,
     shadows: false,
     shadowSize: 768,
     exposure: 1.08,
@@ -12,6 +13,7 @@ window.HUNTER_VISUAL_CONFIG = Object.freeze({
   }),
   desktop: Object.freeze({
     pixelRatio: 1.85,
+    minPixelRatio: 1.0,
     shadows: true,
     shadowSize: 2048,
     exposure: 1.06,
