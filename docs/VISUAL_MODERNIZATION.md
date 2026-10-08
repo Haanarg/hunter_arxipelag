@@ -5,9 +5,16 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.42**.
+Versió actual: **0.3.43**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.43 — correcció de paleta del minimapa (2026-10-08)
+
+- Corregit l'error d'arrencada `this.bandAt is not a function` en prémer la dificultat.
+- `HUNTER_TERRAIN.colorAt(THREE,h)` és ara segura com a callback deslligat perquè no depèn de `this`; el minimapa pot emprar-la amb normalitat.
+- Afegida una prova de regressió per als colors del terreny a diferents altures, invocant `colorAt` sense vincle d'objecte.
+- Es conserven els sectors progressius del terreny i la correcció de buffers de la versió anterior.
 
 ### Revisió 0.3.42 — correcció d'arrencada WebGL (2026-10-08)
 
