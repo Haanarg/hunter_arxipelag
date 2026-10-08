@@ -1,9 +1,9 @@
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 window.HUNTER_VEHICLES=Object.freeze({
-  scales:Object.freeze({llanxa:1.95,llanxa_coets:1.35,moto_aquatica:1.08,barca_rems:.98,windsurf:1.05,hover:1.3,ferry:1,cotxe:1.3,moto:1.2,bici:1.2,camio:1.8125,tanqueta:1.8125,tanc:2.25,heli:1.75,heli_combat:1.82}),
-  radii:Object.freeze({llanxa:8.25,llanxa_coets:5.8,moto_aquatica:2.1,barca_rems:3.25,windsurf:2.3,hover:4.8,ferry:19,cotxe:3.6,moto:2.2,bici:1.9,camio:4.8,tanqueta:4.5,tanc:5.6,heli:8,heli_combat:8.4}),
+  scales:Object.freeze({llanxa:1.95,llanxa_coets:1.95,moto_aquatica:1.08,barca_rems:.98,windsurf:1.05,hover:1.3,ferry:1,cotxe:1.3,moto:1.2,bici:1.2,camio:1.8125,tanqueta:1.8125,tanc:2.25,heli:1.75,heli_combat:1.82}),
+  radii:Object.freeze({llanxa:8.25,llanxa_coets:8.6,moto_aquatica:2.1,barca_rems:3.25,windsurf:2.3,hover:4.8,ferry:19,cotxe:3.6,moto:2.2,bici:1.9,camio:4.8,tanqueta:4.5,tanc:5.6,heli:8,heli_combat:8.4}),
   hitboxes:Object.freeze({
-    llanxa:[6.6,15.9],llanxa_coets:[4.5,10.8],moto_aquatica:[1.7,3.8],barca_rems:[2.7,6.1],windsurf:[1.9,4.3],hover:[4.2,7.4],ferry:[16,36],
+    llanxa:[6.6,15.9],llanxa_coets:[6.8,16.1],moto_aquatica:[1.7,3.8],barca_rems:[2.7,6.1],windsurf:[1.9,4.3],hover:[4.2,7.4],ferry:[16,36],
     cotxe:[3.2,5.9],moto:[1.35,2.8],bici:[1.15,2.4],camio:[3.6,7.8],tanqueta:[3.15,5.1],tanc:[4.2,7.1],
     heli:[3.4,11.2],heli_combat:[2.8,11.8]
   }),
@@ -127,16 +127,105 @@ window.HUNTER_VEHICLES=Object.freeze({
         box(g,.42,.12,.62,trim,0,1.18,cockRear-.14,'metal');
       }
       if(t==='llanxa_coets'){
-        // Manté el model anterior de la llanxa llançacoets.
-        g.add(new THREE.Mesh(hull,material(0xc9cfbd,'paint')));
-        box(g,3.25,.18,5.55,0x66705c,0,1.32,.75,'paint');
-        box(g,2.45,.65,1.15,0x707b65,0,1.75,-1.25,'paint');
-        box(g,2.25,.58,.12,glass,0,2.02,-1.82,'glass');
-        box(g,.82,1.28,.72,metal,0,1.18,4.65,'metal');
-        round(g,.2,.42,rubber,0,.15,4.95,'z','rubber');
-        box(g,1.55,.15,.7,0x5a4638,0,1.62,2.75,'paint');
-        for(const x of[-1.05,1.05]){box(g,.36,.3,1.55,0x59664a,x,1.98,.35,'paint');rod(g,[x,2.1,.95],[x,2.1,-.9],.11,0x30383a,'metal')}
-        box(g,.78,.22,.62,0x46513f,0,1.9,-.35,'paint');
+        // SeaBaby C4 · Reculat llarg: mateix casc de la llanxa normal actual,
+        // sense radar posterior i amb 12 tubs exposats en disposició 3×4.
+        const L=8.9,B=2.75,half=L/2,free=.98,screenZ=-.65,cockZ=.95,cockL=2.5;
+        const hullCol=0x667176,darkHull=0x2f383d,deckCol=0x717c81,trim=0x424b50,glassCol=0x26343c,
+              tubeCol=0x20262a,tubeLipCol=0x725447;
+        const stations=[
+          {z:-half,w:.20,y:.56},
+          {z:-half*.78,w:B*.38,y:.46},
+          {z:-half*.43,w:B*.78,y:.38},
+          {z:.05,w:B*.98,y:.32},
+          {z:half*.55,w:B,y:.34},
+          {z:half,w:B*.88,y:.44}
+        ];
+        const verts=[],idx=[],rings=stations.map(s=>[
+          [0,-.18,s.z],
+          [-s.w*.50,.10,s.z],
+          [-s.w*.66,s.y+.20,s.z],
+          [-s.w*.50,free,s.z],
+          [ s.w*.50,free,s.z],
+          [ s.w*.66,s.y+.20,s.z],
+          [ s.w*.50,.10,s.z]
+        ]);
+        for(const ring of rings)for(const p of ring)verts.push(...p);
+        const N=7;
+        for(let j=0;j<rings.length-1;j++)for(let k=0;k<N-1;k++){
+          const a=j*N+k,b=a+N,c=b+1,d=a+1;idx.push(a,b,c,a,c,d)
+        }
+        const transom=(rings.length-1)*N;
+        for(let k=1;k<N-1;k++)idx.push(transom,transom+k+1,transom+k);
+        const geo=new THREE.BufferGeometry();
+        geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+        geo.setIndex(idx);geo.computeVertexNormals();
+        g.add(new THREE.Mesh(geo,material(hullCol,'paint')));
+
+        box(g,B*.93,.25,L*.72,darkHull,0,.06,.35,'metal');
+
+        // Cabina oberta i parabrisa de la llanxa normal.
+        const cockFront=screenZ+.18,cockRear=cockZ+cockL*.72,cockLen=cockRear-cockFront;
+        for(const side of[-1,1]){
+          const wall=box(g,.18,.78,cockLen,hullCol,side*(B*.43),1.38,(cockFront+cockRear)/2,'paint');
+          wall.rotation.z=side*.06;
+        }
+        box(g,B*.86,.74,.18,hullCol,0,1.38,cockRear,'paint');
+        for(const x of[-.72,0,.72]){
+          const w=x===0?B*.34:B*.25,
+                scr=box(g,w,.64,.10,glassCol,x*(B*.43),1.74,screenZ,'glass');
+          scr.rotation.x=-.48;scr.rotation.z=x===0?0:(x<0?-.10:.10);
+        }
+        {const trimBar=box(g,B*.88,.14,.16,trim,0,1.45,screenZ+.12,'metal');trimBar.rotation.x=-.48}
+
+        const aftStart=cockRear+.14,aftLen=half-aftStart-.10;
+        if(aftLen>.4)box(g,B*.84,.15,aftLen,deckCol,0,1.18,aftStart+aftLen/2,'paint');
+        for(const z of[cockZ-.15,cockZ+.65])box(g,B*.56,.14,.48,0x3a4245,0,1.08,z,'paint');
+        for(const x of[-B*.31,B*.31])rod(g,[x,free+.10,-half*.22],[x,free+.10,-half*.50],.025,trim,'metal');
+
+        // Base giratòria baixa.
+        const pedestal=new THREE.Group();pedestal.position.set(0,1.30,2.66);g.add(pedestal);
+        const baseDisc=new THREE.Mesh(new THREE.CylinderGeometry(.62,.72,.18,12),material(trim,'metal'));
+        baseDisc.position.y=.02;pedestal.add(baseDisc);
+        box(pedestal,.92,.24,.72,trim,0,.22,0,'metal');
+
+        // C4: feix recul·lat i llarg. Sense bloc massís: 12 cilindres 3×4.
+        const rack=new THREE.Group();rack.position.set(0,.55,.38);rack.rotation.x=.62;pedestal.add(rack);
+        const tubeR=.104,rackLen=2.82,pitch=tubeR*2.04,cols=4,rows=3,
+              packW=pitch*(cols-1)+tubeR*2,packH=pitch*(rows-1)+tubeR*2,
+              tubeCenterZ=-rackLen*.38;
+
+        for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
+          const x=(col-(cols-1)/2)*pitch,
+                y=(row-(rows-1)/2)*pitch,
+                z=tubeCenterZ;
+          const tube=new THREE.Mesh(new THREE.CylinderGeometry(tubeR,tubeR,rackLen,12),material(tubeCol,'metal'));
+          tube.rotation.x=Math.PI/2;tube.position.set(x,y,z);rack.add(tube);
+          const lip=new THREE.Mesh(new THREE.CylinderGeometry(tubeR*1.08,tubeR*1.08,.065,12),material(tubeLipCol,'metal'));
+          lip.rotation.x=Math.PI/2;lip.position.set(x,y,z-rackLen*.50);rack.add(lip);
+          const rear=new THREE.Mesh(new THREE.CylinderGeometry(tubeR*1.04,tubeR*1.04,.045,12),material(trim,'metal'));
+          rear.rotation.x=Math.PI/2;rear.position.set(x,y,z+rackLen*.50);rack.add(rear);
+        }
+
+        // Travessers fins: mantenen el paquet unit sense convertir-lo en una caixa.
+        for(const z of[tubeCenterZ-rackLen*.22,tubeCenterZ+rackLen*.22]){
+          box(rack,packW+.10,.055,.075,trim,0,-packH*.53,z,'metal');
+          box(rack,packW+.10,.055,.075,trim,0, packH*.53,z,'metal');
+        }
+        for(const side of[-1,1])box(rack,.055,packH+.10,.075,trim,side*packW*.53,0,tubeCenterZ+.02,'metal');
+
+        // Bastidor posterior reforçat del model 4.
+        for(const side of[-1,1]){
+          rod(pedestal,[side*.50,.28,.24],[side*.67,1.03,-.16],.043,trim,'metal');
+          rod(pedestal,[side*.67,1.03,-.16],[side*.67,.30,-.72],.043,trim,'metal');
+          rod(pedestal,[side*.67,.30,-.72],[side*.50,.28,.24],.043,trim,'metal');
+          rod(pedestal,[side*.52,.30,.32],[side*.72,1.08,-.25],.047,trim,'metal');
+          rod(pedestal,[side*.52,.30,.32],[side*.70,.32,-.92],.047,trim,'metal');
+        }
+        rod(pedestal,[-.52,.28,.08],[.52,.28,.08],.046,trim,'metal');
+
+        // Sensor baix separat, sense recuperar el radar posterior.
+        const sensor=box(g,.30,.38,.30,trim,-.82,1.42,3.40,'metal');sensor.rotation.z=.04;
+        box(g,.22,.12,.22,tubeCol,-.82,1.67,3.40,'metal');
       }
       if(t==='moto_aquatica'){
         const bodyCol=0xc94e3f,dark=0x33383b;
