@@ -5,9 +5,15 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.36**.
+Versió actual: **0.3.37**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.37 — munició inicial reduïda (2026-10-08)
+
+- El jugador comença cada partida amb **12 bales** en lloc de 24.
+- Cada paquet de munició (`arma`) afegeix **12 bales** en lloc de 40.
+- Actualitzada la prova smoke perquè verifiqui el nou valor de recàrrega.
 
 ### Revisió 0.3.36 — llanxa llançacoets C4 (2026-10-08)
 
