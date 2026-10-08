@@ -26,6 +26,11 @@
   assert(result.children[0].children[1].textContent.includes('HQ enemic'),'HQ label rendered');
   assert(run('seedSearchMode===false&&MAP_SCALE===1&&S===4800'),'search restores world settings');
   result.children[2].onclick();
+  assert(!search.disabled,'seed search can be reopened after returning to menu');
+  el('seedSearchOpen').onclick();
+  assert.equal(el('seedSearchScreen').style.display,'block','finder reopens');
+  el('seedSearchBack').onclick();
+  assert(!search.disabled,'search button still enabled after leaving finder');
   assert.equal(el('seedInput').value,'1','selected seed is transferred to start menu');
   assert(!el('seedRandom').checked,'random seed disabled when applying a result');
   game.start('1',1);
