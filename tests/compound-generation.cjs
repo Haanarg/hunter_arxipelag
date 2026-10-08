@@ -24,6 +24,20 @@ const assert=require('assert');
     for(const p of[[0,-40],[42,0],[-42,0]]){const [x,z]=tr(...p);check(Wl.some(w=>w.barbed&&x>=w.x0&&x<=w.x1&&z>=w.z0&&z<=w.z1),'missing perimeter fence')}
   }
   if(c.id==='hangar'){
+    // Només l'arc posterior: sense l'antic prisma baix ni col·lisió duplicada.
+    const b=c.buildings.find(b=>b.hangar),rearWalls=Wl.filter(w=>w.owner===b&&w.hangarRear);
+    check(rearWalls.length===1,'hangar must have one rear semicircular wall');
+    if(rearWalls.length===1){
+      const w=rearWalls[0];
+      check(w.m.geometry.type==='ExtrudeGeometry','hangar rear must be an arch, not a rectangular box');
+      check(w.parts.length===1&&w.parts[0]===w.m,'arched wall is the only rear destructible part');
+      check(w.rammable&&w.hp>0,'arched wall retains collision and damage');
+    }
+    const rearBox=b.o.children.filter(m=>m.isMesh&&m.geometry.type==='BoxGeometry'&&
+      Math.abs(m.position.z+layout.buildings[0].d/2)<1.5&&
+      m.geometry.parameters.width>=layout.buildings[0].w*.8&&
+      m.geometry.parameters.depth<2);
+    check(rearBox.length===0,'obsolete rectangular rear mesh still present');
     const v=c.vehicles[0],route=layout.routes[0].points.map(p=>tr(...p));
     for(let i=1;i<route.length;i++){
       const a=route[i-1],b=route[i],hd=Math.atan2(a[0]-b[0],a[1]-b[1]);
