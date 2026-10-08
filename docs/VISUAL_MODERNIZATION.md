@@ -5,9 +5,16 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.46**.
+Versió actual: **0.3.47**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.47 — mida i orientació dels explosius (2026-10-08)
+
+- El bloc d'explosiu plàstic RGB queda reduït a **dos terços de la mida anterior** tant a la recollida (escala 2/3) com una vegada col·locat (escala 0,82 × 2/3). Els factors són compartits per `src/explosive-visuals.js`.
+- La càrrega es col·loca 1,35 metres davant del jugador, adaptada a l'altura del terreny; la cara del display digital s'orienta 180° respecte del sentit del jugador perquè quedi de cara a ell.
+- Es mantenen els tres segons del compte enrere, el parpelleig vermell a 5 Hz i la força destructiva de la càrrega.
+- Actualitzada `proves.html` per respectar les proporcions reals de la proposta 1 i ampliada la prova smoke per comprovar les escales i l'orientació des de quatre direccions.
 
 ### Revisió 0.3.46 — correcció i verificació del minimapa (2026-10-08)
 
