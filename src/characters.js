@@ -54,7 +54,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     a.elbows.forEach((j,i)=>blend(j,aim?(i?.61:.55):.16+Math.max(0,Math.cos(phase)*(i?-1:1))*.18*(moving?1:0)));
   },
   createPlayer(THREE,{box,palette=window.HUNTER_PALETTE}){
-    const P=palette.player,player=window.HUNTER_PLAYER_MODEL.create(THREE,{unitScale:1.2,palette}),u=player.userData;
+    const P=palette.player,player=window.HUNTER_PLAYER_MODEL.create(THREE,{unitScale:1.2,palette,headVariant:'compactD'}),u=player.userData;
     u.ph=0;u.breath=0;u.firePose=0;u.meleePose=0;
 
     const gun=new THREE.Group();gun.position.set(0,-.72,-.1);gun.rotation.x=-Math.PI/2;u.aer.add(gun);
