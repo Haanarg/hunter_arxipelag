@@ -5,6 +5,15 @@ const root=path.resolve(__dirname,'..'),THREE=await import(require('url').pathTo
 const ctx=vm.createContext({console,Math,Float32Array,Uint16Array,performance});ctx.window=ctx;
 vm.runInContext(fs.readFileSync(path.join(root,'src/terrain.js'),'utf8'),ctx,{filename:'src/terrain.js'});
 const sys=ctx.HUNTER_TERRAIN;
+// La funció es passa com a callback sense this al minimapa.
+// Ha de funcionar així en totes les altures, també als límits de la paleta.
+const detachedColorAt=sys.colorAt;
+for(const height of [-90,-18,-1.5,5,14,30,40,90]){
+  const expected=sys.colorAt(THREE,height);
+  const actual=detachedColorAt(THREE,height);
+  assert(actual.isColor&&actual.equals(expected),
+    'unbound colorAt must work in the minimap at height '+height);
+}
 const h=(x,z)=>Math.sin(x*.008)*12+Math.cos(z*.005)*8-3;
 let evaluations=0;
 const measured=(x,z)=>{evaluations++;return h(x,z)};
