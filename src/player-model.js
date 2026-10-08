@@ -1,7 +1,14 @@
-// Model tàctic aprovat: cos únic per al jugador i els conductors.
+// Model tàctic aprovat: base compartida pel jugador, els conductors i els enemics.
 // Eix frontal -Z; la flexió anatòmica dels genolls és negativa en X.
+// La proposta D només s'aplica quan es demana explícitament: no canvia soldats ni general.
+const HUNTER_COMPACT_HEAD_D=Object.freeze({
+  headScale:Object.freeze([.74,.74,.71]),
+  neckScale:Object.freeze([.75,.66,.75]),
+  headY:3.26,visorDepth:.94,visorTilt:.05,capY:-.03
+});
 window.HUNTER_PLAYER_MODEL=Object.freeze({
- create(T,{unitScale=1,palette=window.HUNTER_PALETTE}={}){
+ headStyles:Object.freeze({compactD:HUNTER_COMPACT_HEAD_D}),
+ create(T,{unitScale=1,palette=window.HUNTER_PALETTE,headVariant=null}={}){
  
  const p={chest:1.04,waist:.76,head:.44,arm:.27,leg:.35,pack:.66};
  const g=new T.Group(),u=g.userData;u.boots=[];
@@ -72,7 +79,7 @@ window.HUNTER_PLAYER_MODEL=Object.freeze({
   oval(elbow,.12,.14,.05,colors.olive,0,.01,.12,8);
   u[side<0?'al':'ar']=shoulder;u[side<0?'ael':'aer']=elbow;
  }
- segment(g,.16,.18,.28,1,colors.skin,0,3.02,0);
+ const neck=segment(g,.16,.18,.28,1,colors.skin,0,3.02,0);
  const head=new T.Group();head.position.set(0,3.38,0);g.add(head);u.head=head;
  oval(head,p.head*.78,p.head,p.head*.77,colors.skin,0,0,0,12);
  // Petit nas, orelles, clatell: silhouettes lisibles sense textures.
@@ -109,6 +116,19 @@ window.HUNTER_PLAYER_MODEL=Object.freeze({
  for(const side of[-1,1]){box(head,p.head*.61,.14,.06,colors.black,side*p.head*.37,.065,-p.head*.73);box(head,.04,.045,.28,colors.black,side*p.head*.72,.09,-p.head*.45)}
  box(head,.09,.045,.06,colors.black,0,.08,-p.head*.8);
  {box(head,.085,.2,.1,colors.black,.4,-.03,.02);box(head,.04,.04,.22,colors.black,.35,-.16,-.1)}
+ // La variant D modifica només les proporcions locals del coll i del cap.
+ // El rig del cos i les posicions d'espatlles, mans, genolls i malucs es mantenen.
+ if(headVariant==='compactD'){
+  const style=HUNTER_COMPACT_HEAD_D;
+  head.scale.set(...style.headScale);
+  head.position.y=style.headY;
+  neck.scale.set(...style.neckScale);
+  bill.scale.z=style.visorDepth;
+  bill.rotation.x=style.visorTilt;
+  cap.position.y+=style.capY;
+ }else if(headVariant!=null){
+  throw new RangeError('Variant de cap desconeguda: '+headVariant);
+ }
  // Bake the requested unit size into geometry and pivots, keeping animation rotations intact.
  g.traverse(o=>{if(o!==g)o.position.multiplyScalar(unitScale);if(o.isMesh)o.geometry.scale(unitScale,unitScale,unitScale)});
  u.mats=[];
@@ -117,6 +137,7 @@ window.HUNTER_PLAYER_MODEL=Object.freeze({
   [0x607b38,palette.enemy.secondary],[0x708854,palette.enemy.secondary]]);
  for(const [color,m]of mats)if(swaps.has(color))u.mats.push([m,color,swaps.get(color)]);
  u.mats.push([bill.material,colors.green,palette.enemy.primary]);
+ u.headVariant=headVariant||'original';u.neck=neck;
  u.profile='tactic-approved-long-visor';u.forwardAxis='-Z';u.kneeFlexionSign=-1;
  u.hipHeight=1.73*unitScale;
  return g;
