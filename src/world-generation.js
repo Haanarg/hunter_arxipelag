@@ -214,7 +214,7 @@ const initialTerrainMs=performance.now()-terrainStarted;
 const seabedStarted=performance.now();
 if(!seedSearchMode)updateSeabed();
 const seabedMs=performance.now()-seabedStarted,vegetationStarted=performance.now();
-vegetate(pa);if(!seedSearchMode)spawnFauna();
+vegetate(pa);if(seedSearchMode)fa=[];else spawnFauna();
 const vegetationMs=performance.now()-vegetationStarted;HQ={x:pb.x,z:pb.z};const rb=B.slice(6);
 const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2);
 const generalSpots=hq.generalSpots?.length?hq.generalSpots:[{x:hq.x,z:hq.z-3}],generalSpot=generalSpots[Math.floor(R()*generalSpots.length)];mkEn('general',generalSpot.x,generalSpot.z,hq.fy+.3);
