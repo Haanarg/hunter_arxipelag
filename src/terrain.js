@@ -116,9 +116,12 @@ window.HUNTER_TERRAIN=Object.freeze({
         root.remove(tile.mesh);
         tile.geometry.dispose();
         stats.upgradedTiles++;
-      }else stats.generatedTiles++;
+      }else{
+        stats.generatedTiles++;
+        stats.visibleTiles++;
+      }
       tile.mesh=mesh;tile.geometry=geometry;tile.level=level;
-      root.add(mesh);stats.visibleTiles++;
+      root.add(mesh);
     }
     function generateNow(tile,level){
       const task=begin(tile,level);
