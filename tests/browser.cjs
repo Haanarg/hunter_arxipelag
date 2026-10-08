@@ -13,9 +13,17 @@ const http=require('http'),fs=require('fs'),path=require('path'),assert=require(
  const page=await context.newPage();const errors=[],warnings=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());if(m.type()==='warning')warnings.push(m.text())});
  await page.goto('http://127.0.0.1:'+server.address().port);
  await page.waitForFunction(()=>typeof started!=='undefined',null,{timeout:60000});
+ assert.equal(await page.locator('#mm').evaluate(el=>getComputedStyle(el).display),'none',
+   'minimap must be hidden on the initial screen');
+ await page.locator('#seedSearchOpen').click();
+ assert.equal(await page.locator('#mm').evaluate(el=>getComputedStyle(el).display),'none',
+   'minimap must stay hidden during seed search');
+ await page.locator('#seedSearchBack').click();
  console.log('loaded',mobile,await page.evaluate(()=>({revision:THREE.REVISION,gl:ren.getContext().getParameter(ren.getContext().VERSION)})));
  await page.locator('#seedRandom').uncheck();await page.locator('#seedInput').fill('12345');await page.locator('button[data-d="1"]').click();
  await page.waitForFunction(()=>started&&B.length>0,null,{timeout:120000});
+ assert.notEqual(await page.locator('#mm').evaluate(el=>getComputedStyle(el).display),'none',
+   'minimap must show after gameplay begins');
  await page.evaluate(()=>{panel('pause');ren.render(scene,cam)});
  await page.evaluate(()=>ui.hide());
  await page.screenshot({path:path.join(require('os').tmpdir(),'hunter-')+(mobile?'mobile':'desktop')+'.png'});
