@@ -1,10 +1,10 @@
 // Propostes visuals per als explosius del Hunter: Arxipèlag.
 // Només models de prova: sense temporització, detonació ni mecàniques de joc.
 export const explosiveConcepts=[
-  {name:'Bloc compacte',desc:'Una càrrega compacta de to verd oliva, visor frontal i fixacions laterals.'},
-  {name:'Doble càrrega',desc:'Dos blocs baixos units per corretges amb un rellotge digital al centre.'},
-  {name:'Càrrega blindada',desc:'Cos robust amb proteccions a les cantonades i visor digital gran.'},
-  {name:'Càrrega adhesiva',desc:'Bloc pla amb cantonades arrodonides, adhesius inferiors i pantalla ampla.'}
+  {name:'RGB paral·lels',desc:'9 cables (3 vermells, 3 verds i 3 blaus), ordenats en arcs baixos i nets.'},
+  {name:'RGB encreuats',desc:'9 cables gruixuts entrecreuats, amb diferents alçades i connectors visibles.'},
+  {name:'RGB trenats',desc:'12 cables en quatre feixos tricolors, amb recorreguts ondulats sobre el bloc.'},
+  {name:'RGB llaços alts',desc:'12 cables vermells, verds i blaus en llaços elevats, molt visibles de costat.'}
 ];
 
 export function createExplosiveConcept(T,index=0,armed=false){
@@ -93,74 +93,81 @@ export function createExplosiveConcept(T,index=0,armed=false){
     }
   }
   function bolt(x,y,z){ball(.055,mat(0xa0a7a2,.56,.4),x,y,z);}
-  function topCable(d){
-    const c=new T.CatmullRomCurve3([
-      new T.Vector3(-.65,.50,-.05),
-      new T.Vector3(-.42,.60,-.31),
-      new T.Vector3(.10,.61,-.29),
-      new T.Vector3(.58,.49,.02)
-    ]);
-    mesh(new T.TubeGeometry(c,20,.029,6,false),d||cable);
+  // Els quatre conceptes parteixen de l'antic model 1:
+  // un sol bloc compacte amb carcassa verda, visor frontal i fixacions laterals.
+  bevelBox(2.24,.82,1.44,.22,green,0,0,0);
+  bevelBox(2.16,.70,1.37,.18,lightGreen,0,.03,.04);
+  for(const x of[-.87,.87]){
+    strap(x,.06,-.731,.16,.73,.075,darkGreen);
+    bolt(x,-.25,-.80);
   }
+  for(const z of[-.41,.47])strap(0,.44,z,2.17,.064,.12,darkGreen);
+  timer({width:1.12,y:.09,z:-.80});
+  bevelBox(.48,.17,.30,.06,darkGreen,.71,.50,.18);
+
+  const wireMats=[
+    mat(0xe34033,.04,.40), // vermell
+    mat(0x28cc64,.04,.40), // verd
+    mat(0x267ee6,.04,.40)  // blau
+  ];
+  const endCap=mat(0x171d1b,.19,.55);
+
+  function wire(points,colorIndex,radius=.046){
+    const curve=new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p)));
+    mesh(new T.TubeGeometry(curve,32,radius,8,false),wireMats[colorIndex]);
+    const a=points[0],b=points[points.length-1];
+    for(const p of[a,b]){
+      ball(.065,endCap,p[0],p[1]-.016,p[2]);
+      ball(.034,wireMats[colorIndex],p[0],p[1]+.035,p[2]);
+    }
+  }
+
+  // Tots els recorreguts són purament decoratius. No representen
+  // esquemes funcionals d'un artefacte real.
   if(index===0){
-    // Un sol bloc compacte, fàcil de distingir quan és un pickup.
-    bevelBox(2.24,.82,1.44,.22,green,0,0,0);
-    bevelBox(2.16,.70,1.37,.18,lightGreen,0,.03,.04);
-    for(const x of[-.87,.87]){
-      strap(x,.06,-.731,.16,.73,.075,darkGreen);
-      bolt(x,-.25,-.80);
+    // RGB paral·lels: tres repeticions de cada color al llarg de nou canals.
+    for(let i=0;i<9;i++){
+      const x=-.79+i*.195,c=i%3,h=.66+(i%3)*.045;
+      wire([[x,.54,.41],[x-.025,h,.23],[x+.025,h+.06,-.05],
+            [x,.59,-.27],[x,.54,-.35]],c,.044);
     }
-    for(const z of[-.41,.47])strap(0,.44,z,2.17,.064,.12,darkGreen);
-    timer({width:1.12,y:.09,z:-.80});
-    topCable();
-    bevelBox(.48,.17,.30,.06,darkGreen,.71,.50,.18);
+    for(const z of[.38,-.31])box(1.82,.055,.065,metal,0,.54,z);
   }else if(index===1){
-    // Dues peces diferenciades, sense cartutxos cilíndrics.
-    for(const x of[-.60,.60]){
-      bevelBox(1.16,.70,1.39,.18,x<0?sand:green,x,-.06,0);
-      strap(x,-.03,-.733,.11,.65,.052,edge);
+    // RGB creuats: diferents destinacions i alçades per llegir bé els encreuaments.
+    for(let i=0;i<9;i++){
+      const x0=-.77+i*.19,x1=-x0*.74,c=i%3;
+      const lift=.72+(i%3)*.08;
+      wire([[x0,.54,.44],[x0*.75,.63,.28],[x0*.22+x1*.78,lift,.06],
+            [x1*.92,lift+.035,-.12],[x1,.54,-.34]],c,.048);
     }
-    for(const x of[-.86,.86]){
-      strap(x,.34,0,.23,.12,1.44,metal);
-      box(.24,.05,1.43,amber,x,.43,0);
-    }
-    bevelBox(1.24,.45,.20,.09,screenRim,0,.13,-.84);
-    timer({width:1.05,y:.13,z:-.97,scale:.91});
-    ball(.06,armed?mat(0xe94331):mat(0x63896b),.73,.25,-.84);
+    for(const x of[-.88,.88])box(.12,.13,.82,metal,x,.54,.05);
   }else if(index===2){
-    // Variant més reforçada, ben llegible en dimensions reduïdes.
-    bevelBox(2.32,.88,1.43,.17,darkGreen);
-    bevelBox(2.16,.73,1.32,.16,grey,0,.025,0);
-    for(const x of[-1.12,1.12]){
-      box(.22,.99,1.54,metal,x,0,0);
-      for(const z of[-.59,.59])bolt(x,.40,z);
-    }
-    for(const z of[-.67,.67])box(2.21,.16,.18,metal,0,.43,z);
-    timer({width:1.37,y:.13,z:-.84,scale:1.07});
-    for(const x of[-.80,.80]){
-      box(.12,.31,.041,amber,x,-.22,-.77);
-      ball(.036,mat(0x252d26),x,-.31,-.81);
-    }
-    const handle=rod([-.32,.44,.48],[.32,.44,.48],.045,metal);
-  }else{
-    // Forma ampla i plana per a una càrrega adhesiva; visera digital gran.
-    bevelBox(2.52,.57,1.53,.22,black,0,-.06,0);
-    bevelBox(2.41,.49,1.42,.20,lightGreen,0,0,.02);
-    for(const x of[-.87,.87]){
-      box(.32,.20,1.36,darkGreen,x,.26,.02);
-      for(const z of[-.45,.45])ball(.045,amber,x,.39,z);
-    }
-    timer({width:1.52,y:.055,z:-.83,scale:1.0});
-    for(const x of[-.8,0,.8]){
-      for(const z of[-.48,.48]){
-        const pad=bevelBox(.45,.085,.38,.075,edge,x,-.40,z);
+    // RGB trenats: quatre feixos que porten els tres colors en paral·lel.
+    for(let pack=0;pack<4;pack++){
+      const cx=-.69+pack*.46;
+      for(let c=0;c<3;c++){
+        const d=(c-1)*.082;
+        wire([[cx+d,.54,.43],[cx+d+.06,.66,.26],
+              [cx+d-.08,.79,-.02],[cx+d+.08,.68,-.19],
+              [cx+d,.54,-.36]],c,.046);
       }
+      // Brides discretes sobre cada feix.
+      box(.30,.055,.085,metal,cx,.78,-.02);
     }
-    for(const x of[-.42,.42])strap(x,.30,.37,.17,.045,.60,amber);
+  }else{
+    // RGB llaços alts: quatre jocs complets de cables R/G/B,
+    // elevats i oberts perquè destaquin també al joc a distància.
+    for(let i=0;i<12;i++){
+      const x=-.825+i*.15,c=i%3,peak=.89+(i%4)*.043;
+      wire([[x,.54,.42],[x-.052,.71,.33],[x,peak,.09],
+            [x+.058,peak+.018,-.10],[x,.67,-.26],
+            [x,.54,-.34]],c,.048);
+    }
+    for(const x of[-.94,.94])rod([x,.50,.43],[x,.55,-.36],.035,metal);
   }
   // Les dues versions comparteixen la mateixa geometria; l'estat només modifica el visor.
   root.userData.variant=index;
   root.userData.armed=armed;
-  root.userData.bounds={width:index===3?2.55:2.50,height:index===3?.70:1.12,depth:1.65};
+  root.userData.bounds={width:2.50,height:index===3?1.58:1.35,depth:1.65};
   return root;
 }
