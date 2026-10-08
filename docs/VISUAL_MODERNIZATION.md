@@ -5,9 +5,19 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.45**.
+Versió actual: **0.3.46**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.46 — correcció i verificació del minimapa (2026-10-08)
+
+- Reforçat el dibuix del minimapa després de l'optimització del terreny i el cercador de llavors: fons 2D propi, imatge de terra i mar en memòria cau, i repintat dels marcadors del jugador, la base, els vehicles i els enemics.
+- Mostreig a 128 px de resolució interna (mostrada al canvas de 170 px), que redueix les avaluacions d'altura de 28.900 a 16.384 sense rebaixar la mida del minimapa en pantalla.
+- Fons reconstruït després de canviar de mida de món o regenerar la llavor; el dibuix només comença quan existeixen la base i la posició actual.
+- El canvas del minimapa té `z-index:4` per evitar quedar tapat per la capa WebGL als navegadors Android.
+- Diagnòstic: `window.HUNTER_MINIMAP_STATS` informa del nombre de dibuixos, regeneracions de fons, píxels de terra i durada de construcció.
+- Prova `tests/minimap.cjs` sobre pintura 2D, moviment del jugador, canvi de mida, nova llavor i mapa complet; smoke ampliat per comprovar que es pinta terra després de començar la partida.
+- La correcció visual a dispositiu físic encara s'ha de confirmar.
 
 ### Revisió 0.3.45 — cercador de llavors per categories (2026-10-08)
 
