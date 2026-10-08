@@ -5,9 +5,16 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.37**.
+Versió actual: **0.3.38**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.38 — explosiu plàstic RGB (2026-10-08)
+
+- Incorporada la proposta 1 del bloc d'explosiu plàstic al joc: cos verd oliva, nou display digital i nou cables superiors vermells, verds i blaus en arcs paral·lels.
+- El mateix model s'utilitza per als objectes recollibles i les càrregues col·locades; també s'actualitzen la icona i la descripció de l'inventari.
+- Quan la càrrega està activa, el display mostra el compte enrere i parpelleja ràpidament en **vermell** (5 vegades per segon); als objectes recollibles resta verd i fix.
+- El retard de 3 segons i la força destructiva dels explosius es mantenen sense canvis.
 
 ### Revisió 0.3.37 — munició inicial reduïda (2026-10-08)
 
