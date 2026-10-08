@@ -1,5 +1,5 @@
-// Quatre propostes de cap i coll reduïts: només per a proves.html.
-// El model jugable, el rig del cos, les articulacions i les animacions no es toquen.
+// Quatre variants del cap per a proves.html. La D comparteix definició amb el joc;
+// les A, B i C continuen sent alternatives de previsualització.
 import './palette.js';
 import './player-model.js';
 // La proposta D i el joc comparteixen una única definició de proporcions.
