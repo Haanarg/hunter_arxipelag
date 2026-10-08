@@ -32,7 +32,10 @@ for(let frame=0;frame<2400&&terrain.stats.generatedTiles<36;frame++)
 assert.equal(terrain.stats.generatedTiles,36,'all distant tiles are generated progressively');
 assert.equal(terrain.mesh.children.length,36,'LOD replacement must not duplicate draw calls');
 assert.equal(terrain.stats.visibleTiles,36,'visible tile counter excludes upgrades');
-assert(terrain.stats.upgradedTiles>0,'near tiles receive higher detail');
+// After moving to a new island, distant sectors must upgrade their LOD.
+for(let frame=0;frame<500&&terrain.stats.upgradedTiles===0;frame++)
+  terrain.update(1550,1100,3);
+assert(terrain.stats.upgradedTiles>0,'approaching new sectors upgrades their LOD');
 const nearGeom=terrain.mesh.children[0].geometry;
 let disposed=false;nearGeom.addEventListener('dispose',()=>disposed=true);
 terrain.dispose();
