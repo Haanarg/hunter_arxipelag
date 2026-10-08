@@ -4,6 +4,8 @@
 (function(){
   'use strict';
   const BLINK_HZ=5; // cinc parpelleigs complets per segon (100 ms encès / 100 ms apagat).
+  // Factor 2/3 respecte de cadascuna de les mides de la versió anterior.
+  const PICKUP_SCALE=2/3, PLANTED_SCALE=.82*PICKUP_SCALE;
 
   function create(T,active=false){
     const root=new T.Group(),cache=new Map();
@@ -111,6 +113,7 @@
     }
     for(const z of[.38,-.31])box(1.82,.055,.065,metal,0,.54,z);
 
+    root.scale.setScalar(active?PLANTED_SCALE:PICKUP_SCALE);
     root.userData.explosiveDisplay={active,draw,lastSecond:-1,lastOn:null,face};
     update(root,active?3:0);
     return root;
@@ -133,5 +136,5 @@
     }
   }
 
-  window.HUNTER_EXPLOSIVE_VISUALS={create,update,BLINK_HZ};
+  window.HUNTER_EXPLOSIVE_VISUALS={create,update,BLINK_HZ,PICKUP_SCALE,PLANTED_SCALE};
 })();
