@@ -39,9 +39,14 @@ for(const v of vehicleCandidatesAt(x,z,r+12,true)){const vy=v.o?.position?.y??Ma
 const q=cv?cv.o.position:P,d=Math.hypot(q.x-x,q.y-y,q.z-z);if(d<r&&own!='p'&&!cv)hurtP(dmg*.6*(1-d/r))}
 function plant(){if(over||cv||swimming||!inv.expl)return;if(--inv.expl<=0)delete inv.expl;setDis(false);
 const o=window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true);
-o.scale.setScalar(.82);o.rotation.y=P.hd;
-o.position.set(P.x,P.y+.40,P.z);world.add(o);
-bombs.push({x:P.x,y:P.y+.40,z:P.z,t:3,o});msg='Bomba col·locada: 3 s!';msgT=2}
+// El display és a la cara local -Z. Amb el gir oposat al del jugador
+// queda de cara a qui acaba de plantar la càrrega.
+o.rotation.y=P.hd+Math.PI;
+// La posem davant dels peus, no sota el personatge, perquè el visor es vegi.
+const forward=1.35,x=P.x-Math.sin(P.hd)*forward,z=P.z-Math.cos(P.hd)*forward,
+      y=Math.max(0,hAt(x,z))+.24;
+o.position.set(x,y,z);world.add(o);
+bombs.push({x,y,z,t:3,o});msg='Bomba col·locada: 3 s!';msgT=2}
 function sight(x,z,tx,tz,y){const d=Math.hypot(tx-x,tz-z),n=Math.max(1,Math.ceil(d/1.5));for(let k=1;k<n;k++){const xx=x+(tx-x)*k/n,zz=z+(tz-z)*k/n;if(wallCandidates(xx,zz).some(w=>!w.open&&y>w.y0&&y<w.y1&&xx>w.x0&&xx<w.x1&&zz>w.z0&&zz<w.z1))return false}return true}
 function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=.34;const fx_=-Math.sin(P.hd),fz=-Math.cos(P.hd);let hit=null,best=2.6;for(const u of E){const dx=u.x-P.x,dz=u.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx_+dz*fz)/d>.35&&sight(P.x,P.z,u.x,u.z,P.y+1.2)){best=d;hit=u}}if(hit)hurtE(hit,6);snd('hurt',hit?.45:.18);setDis(false);return true}
 function secondaryWeapon(){
