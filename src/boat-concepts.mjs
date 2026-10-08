@@ -45,6 +45,30 @@ export function createBoatConcept(THREE,variant=0){
   const N=7;
   for(let j=0;j<rings.length-1;j++)for(let k=0;k<N-1;k++){const a=j*N+k,b=a+N,c=b+1,d=a+1;idx.push(a,b,c,a,c,d)}
   const base=(rings.length-1)*N;for(let k=1;k<N-1;k++)idx.push(base,base+k+1,base+k);
+
+  // Tanquem el pla frontal de la proa, amb normals cap a -Z.
+  for(let k=1;k<N-1;k++)idx.push(0,k,k+1);
+
+  // Coberta plana contínua des de la proa fins a l'inici de la cabina.
+  // Evita el buit superior sense recuperar les plataformes antigues.
+  const foreEnd=cfg.screenZ+.18,freeboard=cfg.free;
+  const foreSections=[];
+  for(let i=0;i<stations.length;i++){
+    if(stations[i].z<=foreEnd)foreSections.push([i*N+3,i*N+4]);
+  }
+  const nextStation=stations.findIndex(s=>s.z>foreEnd);
+  if(nextStation>0){
+    const a=stations[nextStation-1],b=stations[nextStation],
+          t=(foreEnd-a.z)/(b.z-a.z),
+          halfWidth=(a.w+(b.w-a.w)*t)*.5,
+          p=verts.length/3;
+    verts.push(-halfWidth,freeboard,foreEnd,halfWidth,freeboard,foreEnd);
+    foreSections.push([p,p+1]);
+  }
+  for(let i=0;i<foreSections.length-1;i++){
+    const [a,b]=foreSections[i],[c,d]=foreSections[i+1];
+    idx.push(a,c,d,a,d,b);
+  }
   const geo=new THREE.BufferGeometry();
   geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
   geo.setIndex(idx);geo.computeVertexNormals();
