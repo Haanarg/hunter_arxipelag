@@ -481,9 +481,9 @@ if(opt.hangar){
   const sh=Math.max(3.1,h*.3),push=(lx,lz,sx,sz)=>{
     const m=buildingVisual.addWall(g,{lx,lz,sx,sz,height:sh,material:wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+sh,hp:110,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz};Wl.push(o);return o
   };
-  // Sense parets laterals independents: la volta visual baixa fins al terra.
-  // Es conserven només el darrere i els muntants de la boca frontal.
-  const backZ=ds===0?-d/2+t/2:d/2-t/2;push(0,backZ,w,t);
+  // Sense parets laterals ni paret rectangular posterior:
+  // el compound afegeix una sola paret semicircular al fons amb col·lisió pròpia.
+  // Aquí només calen els dos muntants de la boca frontal.
   const frontZ=ds===0?d/2-t/2:-d/2+t/2,sl=Math.max(.5,(w-dw)/2),off=dw/2+sl/2;
   push(-off,frontZ,sl,t);push(off,frontZ,sl,t);
 }else{
