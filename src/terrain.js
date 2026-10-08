@@ -5,20 +5,23 @@ const HUNTER_TERRAIN_PALETTE=Object.freeze([
   [.5,0xffd975],[3.5,0xe9b54a],[5,0x66ef1f],[14,0x34c83b],
   [22,0x149f34],[30,0x138d31],[40,0x0f7b2b]
 ]);
+function hunterTerrainBandAt(h){
+  const p=HUNTER_TERRAIN_PALETTE;
+  let i=0;
+  while(i<p.length-2&&h>p[i+1][0])i++;
+  return i;
+}
 window.HUNTER_TERRAIN=Object.freeze({
   palette:HUNTER_TERRAIN_PALETTE,
   colorAt(THREE,h){
-    // API conservada per als altres sistemes.
-    const p=HUNTER_TERRAIN_PALETTE,i=this.bandAt(h);
+    // Aquesta funció també es passa deslligada al minimapa.
+    // No ha de dependre del valor de "this".
+    const p=HUNTER_TERRAIN_PALETTE,i=hunterTerrainBandAt(h);
     if(i>=p.length-1)return new THREE.Color(p[p.length-1][1]);
     const a=p[i],b=p[i+1],t=Math.max(0,Math.min(1,(h-a[0])/(b[0]-a[0])));
     return new THREE.Color(a[1]).lerp(new THREE.Color(b[1]),t);
   },
-  bandAt(h){
-    let i=0,p=HUNTER_TERRAIN_PALETTE;
-    while(i<p.length-2&&h>p[i+1][0])i++;
-    return i;
-  },
+  bandAt(h){return hunterTerrainBandAt(h)},
   create(THREE,{size,segments,heightAt,material,startX=0,startZ=0,lowQuality=false}){
     const root=new THREE.Group();
     root.name='hunter-terrain-stream';
