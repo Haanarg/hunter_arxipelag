@@ -681,6 +681,7 @@ const minimap=window.HUNTER_MINIMAP.create({
   THREE,canvas:mc,worldSize:S,halfSize:H,heightAt:hAt,colorAt:window.HUNTER_TERRAIN.colorAt,
   getState:()=>({base:P.base,hq:HQ,mapKnown:!!inv.mapa,current:cv||P,currentVehicle:cv,vehicles:V,enemies:E,log:logb,intel:intelMarks})
 });
+window.HUNTER_MINIMAP_STATS=minimap.stats;
 const mini=()=>minimap.draw();
 // control
 let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0,worldVisualTick=0,palmVisualTick=0;
