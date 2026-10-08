@@ -55,26 +55,7 @@ export function createRocketBoatConcept(THREE,variant=0){
   // Tanquem el pla frontal de la proa, amb normals cap a -Z.
   for(let k=1;k<N-1;k++)idx.push(0,k,k+1);
 
-  // Coberta plana contínua des de la proa fins a l'inici de la cabina.
-  // Evita el buit superior sense recuperar les plataformes antigues.
-  const foreEnd=screenZ+.18,freeboard=free;
-  const foreSections=[];
-  for(let i=0;i<stations.length;i++){
-    if(stations[i].z<=foreEnd)foreSections.push([i*N+3,i*N+4]);
-  }
-  const nextStation=stations.findIndex(s=>s.z>foreEnd);
-  if(nextStation>0){
-    const a=stations[nextStation-1],b=stations[nextStation],
-          t=(foreEnd-a.z)/(b.z-a.z),
-          halfWidth=(a.w+(b.w-a.w)*t)*.5,
-          p=verts.length/3;
-    verts.push(-halfWidth,freeboard,foreEnd,halfWidth,freeboard,foreEnd);
-    foreSections.push([p,p+1]);
-  }
-  for(let i=0;i<foreSections.length-1;i++){
-    const [a,b]=foreSections[i],[c,d]=foreSections[i+1];
-    idx.push(a,c,d,a,d,b);
-  }
+  // La cara superior dels quads del casc ja fa de coberta, sense duplicats.
   const hullGeo=new THREE.BufferGeometry();
   hullGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
   hullGeo.setIndex(idx);hullGeo.computeVertexNormals();
