@@ -26,6 +26,7 @@
   assert.strictEqual(model.stats.totalPalms,entries.length);
   assert.strictEqual(model.variantMap.length,entries.length);
   assert(model.stats.visiblePalms<entries.length,'distant palm sectors culled');
+  const initialVisible=model.stats.visiblePalms;
   const chunks=model.variants;
   assert(chunks.length>=3,'multiple geographic sectors were formed');
   assert(chunks.every(ch=>ch.meshes.every(m=>m.isInstancedMesh&&m.frustumCulled)));
@@ -60,6 +61,6 @@
   assert.equal(rngCalls,2*(11*entries.length+3+5),
     'palm generation consumes a deterministic number of random values');
   console.log(JSON.stringify({passed:true,sectorCount:chunks.length,
-    totalPalms:entries.length,initialVisiblePalms:model.stats.visiblePalms,
+    totalPalms:entries.length,initialVisiblePalms:initialVisible,
     instancedObjects:all,checks:['culling','crown LOD','destroy','re-enable','mobile','random usage']}));
 })().catch(e=>{console.error(e);process.exitCode=1});
