@@ -33,7 +33,7 @@
   assert(nearest?.secondary.some(m=>m&&m.visible),'near crowns keep full detail');
   const distant=chunks.find(ch=>ch.cx>=4);
   assert(distant&&!distant.trunk.visible,'far trunk is not rendered');
-  model.update(800,100,true);
+  model.update(1200,100,true);
   const medium=chunks.find(ch=>ch.cx===0&&ch.cz===0);
   assert(medium.trunk.visible&&medium.secondary.every(m=>!m||!m.visible),
     'medium range draws trunk and primary crown only');
