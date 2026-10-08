@@ -7,6 +7,16 @@ const start=Date.now();ok('!started&&B.length===0','title screen defers world ge
 game.start();game.frame();
 ok('started&&B.length>=6&&E.some(e=>e.t==="general")','menu starts a complete world');
 run(`{
+  const stats=window.HUNTER_BUILD_STATS;
+  globalThis.terrainStreamStartsLocally=!!terrainStream&&
+    stats.terrainTiles.initialTiles<stats.terrainTiles.totalTiles&&
+    stats.terrainTiles.initialTiles>=1&&
+    stats.terrainTiles.processedVertices<160000;
+  globalThis.noBlockingStartCapture=!String(document.querySelectorAll('#ini button[data-d]')[0].onclick).includes('captureRealStartScreenshot');
+}`);
+ok('terrainStreamStartsLocally','terrain starts with a few local sectors instead of the entire 160k-vertex map');
+ok('noBlockingStartCapture','starting game no longer forces a blocking WebGL capture');
+run(`{
   const soldier=E.find(e=>e.t==='soldat'),general=E.find(e=>e.t==='general');
   globalThis.enemySoldierScale=soldier&&Math.abs(soldier.o.scale.x-.9)<1e-9&&Math.abs(soldier.o.scale.y-.9)<1e-9&&Math.abs(soldier.o.scale.z-.9)<1e-9;
   globalThis.enemyGeneralScale=general&&Math.abs(general.o.scale.x-1)<1e-9&&Math.abs(general.o.scale.y-1)<1e-9&&Math.abs(general.o.scale.z-1)<1e-9;
