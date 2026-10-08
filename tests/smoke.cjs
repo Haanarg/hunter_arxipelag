@@ -93,6 +93,40 @@ run(`{
 }`);
 ok('explosiveSharedModel','RGB plastic explosive is shared by the pickup and active charge');
 ok('explosiveFastBlink','active timer flashes red rapidly while counting down');
+
+run(`{
+  const visuals=window.HUNTER_EXPLOSIVE_VISUALS;
+  const pickup=createItemVisual('expl'),armed=visuals.create(THREE,true);
+  const eq=(a,b)=>Math.abs(a-b)<1e-8;
+  globalThis.explosiveTwoThirds=
+    eq(visuals.PICKUP_SCALE,2/3)&&eq(visuals.PLANTED_SCALE,.82*2/3)&&
+    eq(pickup.scale.x,2/3)&&eq(pickup.scale.y,2/3)&&
+    eq(armed.scale.x,.82*2/3)&&eq(armed.scale.y,.82*2/3);
+  const savedInv={...inv},oldHeading=P.hd,oldMessage=msg,oldMsgT=msgT,
+        oldOver=over,oldSwimming=swimming,oldCv=cv,oldDisg=disg;
+  over=0;swimming=false;cv=null;
+  let facing=true,distancing=true,bombScale=true,elapsed=true;
+  for(const angle of[0,Math.PI/2,Math.PI,-Math.PI/3]){
+    P.hd=angle;inv.expl=1;
+    const previous=bombs.length;
+    plant();
+    const b=bombs[bombs.length-1];
+    if(bombs.length!==previous+1||!b){facing=false;break}
+    const dx=P.x-b.x,dz=P.z-b.z,length=Math.hypot(dx,dz),
+          frontX=-Math.sin(b.o.rotation.y),frontZ=-Math.cos(b.o.rotation.y);
+    facing=facing&&length>0&&Math.abs((dx*frontX+dz*frontZ)/length-1)<1e-8;
+    distancing=distancing&&eq(length,1.35)&&eq(b.x,b.o.position.x)&&eq(b.z,b.o.position.z);
+    bombScale=bombScale&&eq(b.o.scale.x,.82*2/3);
+    elapsed=elapsed&&b.t===3;
+    bombs.pop();world.remove(b.o);
+  }
+  globalThis.explosiveFacesPlayer=facing&&distancing&&bombScale&&elapsed;
+  inv=savedInv;P.hd=oldHeading;msg=oldMessage;msgT=oldMsgT;
+  over=oldOver;swimming=oldSwimming;cv=oldCv;setDis(oldDisg);
+}`);
+ok('explosiveTwoThirds','pickup and planted charge are two thirds of their previous sizes');
+ok('explosiveFacesPlayer','the planted timer faces the player from a short distance at all headings');
+
 run(`{
   const savedInv={...inv},savedEq=grenadeEquipped,savedFcd=fcd;
   inv.granada=1;grenadeEquipped=true;fcd=0;pl.userData.grenadePending=null;
