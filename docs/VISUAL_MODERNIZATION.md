@@ -5,9 +5,20 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.40**.
+Versió actual: **0.3.41**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.41 — optimització d'arrencada i sectors de terreny (2026-10-08)
+
+- Eliminada la captura síncrona WebGL / `toDataURL()` de l'inici de partida; si existeix una imatge anterior desada al navegador es pot continuar mostrant a la portada.
+- El terreny visual ja no es genera en una sola malla de 400×400 subdivisions: es divideix en sectors de prop de 800 m amb tres nivells de detall (12/28/56 subdivisions en qualitat alta, 10/20/40 en baixa).
+- A l'arrencada es generen només els sectors immediats del jugador; la resta i les millores de detall es preparen al llarg de fotogrames amb pressupost d'uns 2 ms (1,2 ms en mode reduït).
+- Afegits faldons a les vores dels sectors per reduir escletxes entre diferents nivells de detall. La simulació, col·lisions, llavors i altures reals continuen amb `hAt()`, independents de la resolució visual.
+- Càlcul de color de terreny sense instanciar colors nous per a cada vèrtex; interpolació directa de paleta RGB.
+- Càlcul del fons marí accelerat amb mostres disperses en aigües profundes i valors exactes al litoral; es manté la relació CPU/GPU de les ones.
+- Eina interna de mesura: `window.HUNTER_BUILD_STATS` amb temps inicials totals, terreny, fons marí i vegetació, i estat dels sectors; es pot activar el registre a consola amb `window.HUNTER_PERF_DEBUG = true` abans de generar el món.
+- Proves noves: `node tests/terrain-stream.cjs`; ampliades `tests/smoke.cjs` i `tests/water.cjs`.
 
 ### Revisió 0.3.40 — cascs tancats sense prisma inferior (2026-10-08)
 
