@@ -235,7 +235,7 @@ seedSearchStartEl=document.getElementById('seedSearchStart'),seedSearchCountEl=d
 seedSearchDistanceEl=document.getElementById('seedSearchDistance'),seedSearchMapSizeEl=document.getElementById('seedSearchMapSize'),
 seedSearchStatusEl=document.getElementById('seedSearchStatus'),seedSearchResultsEl=document.getElementById('seedSearchResults'),
 seedSearchCategoryEl=document.getElementById('seedSearchCategory'),seedSearchTypeEl=document.getElementById('seedSearchType');
-let seedSearchToken=0;
+let seedSearchToken=0,seedSearchRunning=false;
 const seedSearch=window.HUNTER_SEED_SEARCH;
 const currentMapScale=()=>+(document.querySelector('input[name="mapSize"]:checked')?.value||1);
 const fillSeedSearchTypes=(preferred)=>{
@@ -256,7 +256,7 @@ const showSeedSearch=()=>{
   startMenuEl.style.display='none';seedSearchScreenEl.style.display='block';seedSearchScreenEl.setAttribute('aria-hidden','false')
 };
 const hideSeedSearch=()=>{
-  seedSearchToken++;seedSearchCancelEl.disabled=true;seedSearchRunEl.disabled=false;
+  seedSearchToken++;seedSearchCancelEl.disabled=true;seedSearchRunEl.disabled=seedSearchRunning;
   seedSearchScreenEl.style.display='none';seedSearchScreenEl.setAttribute('aria-hidden','true');
   startMenuEl.style.display='flex'
 };
@@ -281,7 +281,8 @@ const renderSeedSearchResults=(rows,target,label)=>{
   }
 };
 async function runSeedSearch(){
-  if(seedSearchRunEl.disabled)return;
+  if(seedSearchRunning||seedSearchRunEl.disabled)return;
+  seedSearchRunning=true;
   const token=++seedSearchToken,
         start=Math.max(0,Math.min(4294967295,Math.trunc(Number(seedSearchStartEl.value)||0)))>>>0,
         count=Math.max(1,Math.min(100,Math.trunc(Number(seedSearchCountEl.value)||30))),
@@ -335,13 +336,9 @@ async function runSeedSearch(){
     // Mai deixem la mida del mapa ni la llavor provisional de la cerca actives.
     MAP_SCALE=oldScale;S=oldS;H=oldH;requestedSeed=oldRequested;seedSearchMode=oldMode;
     minimap.setWorldSize(S,H);
-    if(token===seedSearchToken){
-      seedSearchRunEl.disabled=false;seedSearchCancelEl.disabled=true;
-      seedSearchCategoryEl.disabled=false;seedSearchTypeEl.disabled=false
-    }else{
-      seedSearchRunEl.disabled=false;seedSearchCancelEl.disabled=true;
-      seedSearchCategoryEl.disabled=false;seedSearchTypeEl.disabled=false
-    }
+    seedSearchRunning=false;
+    seedSearchRunEl.disabled=false;seedSearchCancelEl.disabled=true;
+    seedSearchCategoryEl.disabled=false;seedSearchTypeEl.disabled=false;
   }
 }
 if(seedSearchOpenEl)seedSearchOpenEl.onclick=showSeedSearch;
@@ -349,7 +346,7 @@ if(seedSearchBackEl)seedSearchBackEl.onclick=hideSeedSearch;
 if(seedSearchRunEl)seedSearchRunEl.onclick=runSeedSearch;
 if(seedSearchCancelEl)seedSearchCancelEl.onclick=()=>{
   seedSearchToken++;seedSearchStatusEl.textContent='Cerca cancel·lada.';
-  seedSearchRunEl.disabled=false;seedSearchCancelEl.disabled=true
+  seedSearchRunEl.disabled=true;seedSearchCancelEl.disabled=true
 };
 const applyStartScreenshot=()=>{
   try{
