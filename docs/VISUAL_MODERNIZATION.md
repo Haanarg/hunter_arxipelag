@@ -5,9 +5,17 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.52**.
+Versió actual: **0.3.53**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.53 — retirat el mur rectangular posterior dels hangars (2026-10-08)
+
+- A la generació de l'hangar s'ha eliminat la paret rectangular baixa situada al fons, que duplicava la paret semicircular de tancament posterior.
+- Es manté **únicament la paret posterior semicircular** (malla ExtrudeGeometry) amb el seu propi registre de col·lisió, 110 punts de resistència i possibilitat de destrucció. El registre apunta a la mateixa malla, no a la paret rectangular anterior.
+- Es conserven els dos muntants de la boca frontal, la coberta de volta fins a terra i els seus nervis, els accessos i els vehicles de l'hangar.
+- Afegides comprovacions a `tests/compound-generation.cjs` per garantir que cada hangar generat té una sola paret posterior, que no queden caixes rectangulars al darrere i que la paret semicircular conserva col·lisió i resistència; `tests/smoke.cjs` també actualitzat.
+- Validada amb Three.js real la geometria i el registre de col·lisió en els quatre girs de 90°; comprovada també la destrucció amb les funcions de combat reals. Queda pendent comprovar el navegador i dispositius físics.
 
 ### Revisió 0.3.52 — proposta D aplicada al jugador i als riders (2026-10-08)
 
@@ -47,7 +55,7 @@ Integrat sobre `main` 3c4a9e6 (0.3.47), conservant la càrrega progressiva del t
 
 - Hangar, avançada i port de la preview incorporats al generador jugable. `compound-layouts.mjs` és la font comuna de dimensions, edificis, aparcaments, patrulles i objectes; `compound-generation.js` adapta aquests layouts als sistemes reals de col·lisions, portes, destrucció, vehicles i IA.
 - Avançada: caserna, guàrdia, torre, moto i quatre soldats. Perímetre de filferrada destruïble amb les dues obertures de la preview; corredors principal i lateral lliures. La filferrada també substitueix les barreres al visor.
-- Hangar: tanc a dins, cotxe a fora, taller, zona de servei i tres soldats. Boca de 30 m i corredor de 18 m. Darrere tancat amb geometria completa, col·lisions a la base de la volta i patrulla desplaçada 2 m per conservar marge físic.
+- Hangar: tanc a dins, cotxe a fora, taller, zona de servei i tres soldats. Boca de 30 m i corredor de 18 m. Fons tancat només per la paret semicircular (sense mur rectangular superposat), col·lisions a la base de la volta i patrulla desplaçada 2 m per conservar marge físic.
 - Port: magatzem, oficina, torre, cinc soldats, passeig transitable i dos molls de 6 m. Tres embarcacions orientades cap al mar; només el primer port incorpora la llanxa llançacoets, els altres tenen una segona llanxa normal. Costa seleccionada comprovant terra als edificis i profunditat sota tota la petjada i els corredors de sortida de les embarcacions ampliades.
 - Reserves ampliades per evitar solapaments i vegetació als accessos. Generació inicial d'un hangar i una avançada quan hi ha lloc vàlid. Les distribucions terrestres varien entre quatre orientacions i mirall; els ports s'orienten segons una costa apta entre les quatre direccions. Els girs de 90° mantenen exactes les caixes de col·lisió actuals: geometria, parets, portes i escales es transformen conjuntament.
 - Soldats i cadàvers utilitzen la superfície transitable dels molls i escales. La navegació dels vehicles terrestres continua utilitzant el terreny.
