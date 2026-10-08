@@ -39,6 +39,14 @@ run(`{
   globalThis.noBlockingStartCapture=!String(document.querySelectorAll('#ini button[data-d]')[0].onclick).includes('captureRealStartScreenshot');
 }`);
 ok('terrainStreamStartsLocally','terrain starts with a few local sectors instead of the entire 160k-vertex map');
+ok("terrainStream.stats.lodLevels.length===4&&terrainStream.stats.lodLevels[0]===6",
+  'horizon terrain has a fourth lighter LOD');
+ok("!!window.HUNTER_PERFORMANCE_STATS&&window.HUNTER_PERFORMANCE_STATS.active",
+  'runtime performance monitor is activated during gameplay');
+ok("window.HUNTER_PERFORMANCE_STATS.pixelRatio<=window.HUNTER_PERFORMANCE_STATS.maxPixelRatio",
+  'adaptive resolution remains within device quality limits');
+ok("visualQuality.waterSegments===(qualityName==='mobile'?200:320)",
+  'sea geometry uses the optimized desktop/mobile tessellation profiles');
 ok('noBlockingStartCapture','starting game no longer forces a blocking WebGL capture');
 ok('minimap.stats.draws>=1&&minimap.stats.backgroundBuilds===1&&minimap.stats.lastLandPixels>0',
   'minimap draws land and sea after game start');
