@@ -37,8 +37,11 @@ for(const b of buildingCandidates(x,z,r)){const dd=Math.hypot(b.x-x,b.z-z),rr2=r
 PL.forEach(t=>{if(!t.alive)return;const dd=Math.hypot(t.x-x,t.z-z);if(dd<r)dmgP(t,dmg*1.5*(1-dd/(2*r)))});
 for(const v of vehicleCandidatesAt(x,z,r+12,true)){const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),dd=Math.hypot(v.x-x,vy-y,v.z-z);if(dd<r&&own!='p'){const power=Math.max(1,Math.ceil((1-dd/r)*3));damageVehicle(v,dmg*.5*(1-dd/r),power)}}
 const q=cv?cv.o.position:P,d=Math.hypot(q.x-x,q.y-y,q.z-z);if(d<r&&own!='p'&&!cv)hurtP(dmg*.6*(1-d/r))}
-function plant(){if(over||cv||swimming||!inv.expl)return;if(--inv.expl<=0)delete inv.expl;setDis(false);const o=new THREE.Mesh(new THREE.BoxGeometry(.9,.5,.9),new THREE.MeshBasicMaterial({color:0xff2020}));
-o.position.set(P.x,P.y+.3,P.z);world.add(o);bombs.push({x:P.x,y:P.y+.3,z:P.z,t:3,o});msg='Bomba col·locada: 3 s!';msgT=2}
+function plant(){if(over||cv||swimming||!inv.expl)return;if(--inv.expl<=0)delete inv.expl;setDis(false);
+const o=window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true);
+o.scale.setScalar(.82);o.rotation.y=P.hd;
+o.position.set(P.x,P.y+.40,P.z);world.add(o);
+bombs.push({x:P.x,y:P.y+.40,z:P.z,t:3,o});msg='Bomba col·locada: 3 s!';msgT=2}
 function sight(x,z,tx,tz,y){const d=Math.hypot(tx-x,tz-z),n=Math.max(1,Math.ceil(d/1.5));for(let k=1;k<n;k++){const xx=x+(tx-x)*k/n,zz=z+(tz-z)*k/n;if(wallCandidates(xx,zz).some(w=>!w.open&&y>w.y0&&y<w.y1&&xx>w.x0&&xx<w.x1&&zz>w.z0&&zz<w.z1))return false}return true}
 function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=.34;const fx_=-Math.sin(P.hd),fz=-Math.cos(P.hd);let hit=null,best=2.6;for(const u of E){const dx=u.x-P.x,dz=u.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx_+dz*fz)/d>.35&&sight(P.x,P.z,u.x,u.z,P.y+1.2)){best=d;hit=u}}if(hit)hurtE(hit,6);snd('hurt',hit?.45:.18);setDis(false);return true}
 function secondaryWeapon(){
@@ -176,6 +179,8 @@ for(let i=grenades.length-1;i>=0;i--){const g=grenades[i],x0=g.x,y0=g.y,z0=g.z;g
   const surface=Math.max(hAt(g.x,g.z),wy(g.x,g.z,elapsed))+.16;
   if(hitT!=null||g.t<=0||g.y<=surface){g.y=Math.max(g.y,surface);boom(g.x,g.y,g.z,16,100,'b');world.remove(g.o);grenades.splice(i,1)}
 }
-for(let i=bombs.length-1;i>=0;i--){const b=bombs[i];b.t-=dt;if(b.t<=0){boom(b.x,b.y,b.z,48,300,'b');world.remove(b.o);bombs.splice(i,1)}}
+for(let i=bombs.length-1;i>=0;i--){const b=bombs[i];b.t-=dt;
+  if(b.t>0)window.HUNTER_EXPLOSIVE_VISUALS.update(b.o,b.t);
+  if(b.t<=0){boom(b.x,b.y,b.z,48,300,'b');world.remove(b.o);bombs.splice(i,1)}}
 for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.life-=dt;f.o.scale.setScalar(1+(.6-f.life)*f.s);f.o.material.opacity=Math.max(0,f.life/.6);if(f.life<=0){world.remove(f.o);fx.splice(i,1)}}}
 
