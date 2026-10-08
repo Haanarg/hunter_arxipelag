@@ -7,6 +7,28 @@ const start=Date.now();ok('!started&&B.length===0','title screen defers world ge
 ok("!document.body.classList.contains('game-started')",'minimap must stay hidden on the start screen');
 game.start();game.frame();
 ok('started&&B.length>=6&&E.some(e=>e.t==="general")','menu starts a complete world');
+
+run(`{
+  const d=window.HUNTER_PLAYER_MODEL.headStyles.compactD,
+        pu=pl.userData,ru=rider.userData,
+        general=E.find(e=>e.t==='general'),
+        soldat=E.find(e=>e.t==='soldat'),
+        near=(a,b)=>Math.abs(a-b)<1e-8;
+  globalThis.selectedDPlayerAndRider=
+    pu.headVariant==='compactD'&&ru.headVariant==='compactD'&&
+    near(pu.head.scale.x,d.headScale[0])&&near(ru.head.scale.x,d.headScale[0])&&
+    near(pu.head.scale.y,d.headScale[1])&&near(ru.head.scale.y,d.headScale[1])&&
+    near(pu.neck.scale.y,d.neckScale[1])&&near(ru.neck.scale.y,d.neckScale[1])&&
+    near(pu.head.position.y,1.2*d.headY)&&
+    ru.head.parent===ru.torso;
+  globalThis.enemyHeadModelsUnaffected=
+    !!general&&!!soldat&&
+    general.o.userData.headVariant!=='compactD'&&
+    soldat.o.userData.headVariant!=='compactD';
+}`);
+ok('selectedDPlayerAndRider','player and open-vehicle riders share the selected D compact head and short neck');
+ok('enemyHeadModelsUnaffected','general and enemy soldier do not inherit the player head redesign');
+
 ok("document.body.classList.contains('game-started')",'minimap becomes visible only after the game starts');
 run(`{
   const stats=window.HUNTER_BUILD_STATS;
