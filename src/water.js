@@ -38,7 +38,44 @@ void main(){vec3 p=position;bed=seabed;p.y=hunterWaveHeight(p.xz,time,seabed);wo
     const mesh=new THREE.Mesh(geometry,material);mesh.name='hunter-water';mesh.renderOrder=2;scene.add(mesh);
     const deep=new THREE.Mesh(new THREE.PlaneGeometry(30000,30000).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x062679}));
     deep.position.y=-90;scene.add(deep);
-    const updateSeabed=()=>{const p=geometry.attributes.position,b=geometry.attributes.seabed;for(let i=0;i<p.count;i++)b.setX(i,heightAt(p.getX(i),p.getZ(i)));b.needsUpdate=true};
+    // Bathymetry: most deep-ocean samples do not need a full heightAt().
+    // Interpolate a sparse grid, then recompute shore/near-land vertices
+    // exactly so the coast, waterline and player wave physics remain aligned.
+    const seabedStats={lastSamples:0,totalVertices:0};
+    const updateSeabed=()=>{
+      const p=geometry.attributes.position,b=geometry.attributes.seabed,
+            width=segments+1,stride=segments>=300?3:2,
+            stops=[];
+      for(let i=0;i<segments;i+=stride)stops.push(i);
+      stops.push(segments);
+      const n=stops.length,coarse=new Float32Array(n*n);
+      let samples=0;
+      for(let rz=0;rz<n;rz++)for(let rx=0;rx<n;rx++){
+        const id=stops[rz]*width+stops[rx];
+        coarse[rz*n+rx]=heightAt(p.getX(id),p.getZ(id));samples++;
+      }
+      const arr=b.array;
+      for(let rz=0;rz<n-1;rz++)for(let rx=0;rx<n-1;rx++){
+        const za=stops[rz],zb=stops[rz+1],xa=stops[rx],xb=stops[rx+1],
+              a=coarse[rz*n+rx],bb=coarse[rz*n+rx+1],
+              c=coarse[(rz+1)*n+rx],d=coarse[(rz+1)*n+rx+1],
+              exactCoast=Math.min(a,bb,c,d)<14&&Math.max(a,bb,c,d)>-14;
+        for(let iz=za;iz<(rz===n-2?zb+1:zb);iz++){
+          const tz=(iz-za)/(zb-za),row=iz*width;
+          for(let ix=xa;ix<(rx===n-2?xb+1:xb);ix++){
+            const tx=(ix-xa)/(xb-xa),
+                  h=(a*(1-tx)+bb*tx)*(1-tz)+(c*(1-tx)+d*tx)*tz,
+                  index=row+ix;
+            // Full precision at shore, even for shallow underwater breaks.
+            if(exactCoast||(h>-14&&h<14)){
+              arr[index]=heightAt(p.getX(index),p.getZ(index));samples++;
+            }else arr[index]=h;
+          }
+        }
+      }
+      seabedStats.lastSamples=samples;seabedStats.totalVertices=p.count;
+      b.needsUpdate=true;
+    };
     const setWorldSize=value=>{
       if(value!==worldSize){worldSize=value;span=value+2200;const old=geometry;geometry=makeGeometry();mesh.geometry=geometry;old.dispose()}
       updateSeabed();
@@ -58,7 +95,7 @@ void main(){vec3 p=position;bed=seabed;p.y=hunterWaveHeight(p.xz,time,seabed);wo
     };
     const update=t=>{uniforms.time.value=t};
     const dispose=()=>{scene.remove(mesh,deep);geometry.dispose();material.dispose();deep.geometry.dispose();deep.material.dispose()};
-    return {mesh,deep,material,get geometry(){return geometry},uniforms,updateSeabed,setWorldSize,surfaceHeight,update,dispose};
+    return {mesh,deep,material,get geometry(){return geometry},uniforms,updateSeabed,setWorldSize,surfaceHeight,update,dispose,seabedStats};
   }
 });
 
