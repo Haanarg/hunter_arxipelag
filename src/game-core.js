@@ -239,7 +239,7 @@ let seedSearchToken=0,seedSearchRunning=false,seedSearchPromise=null;
 const seedSearch=window.HUNTER_SEED_SEARCH;
 const currentMapScale=()=>+(document.querySelector('input[name="mapSize"]:checked')?.value||1);
 const fillSeedSearchTypes=(preferred)=>{
-  const options=seedSearch.typeOptions(seedSearchCategoryEl.value,VT,IT);
+  const options=seedSearch.typeOptions(seedSearchCategoryEl.value,window.HUNTER_VEHICLE_DYNAMICS.types,IT);
   const wanted=preferred||'*';
   seedSearchTypeEl.replaceChildren();
   for(const entry of options){
