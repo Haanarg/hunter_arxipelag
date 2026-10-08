@@ -208,8 +208,11 @@ let standalonePiers=0,targetPiers=(3+Math.floor(R()*3))*MAP_SCALE;for(const i of
 const terrainStarted=performance.now();
 const terrain=window.HUNTER_TERRAIN.create(THREE,{size:S,segments:SEG,heightAt:hAt,material:MAT.terrain(),startX:pa.x,startZ:pa.z,lowQuality:!visualQuality.shadows});
 terrainStream=terrain;world.add(terrain.mesh,window.HUNTER_TERRAIN.createBorder(THREE,{size:S,halfSize:H}));
-const initialTerrainMs=performance.now()-terrainStarted,vegetationStarted=performance.now();
-updateSeabed();vegetate(pa);spawnFauna();
+const initialTerrainMs=performance.now()-terrainStarted;
+const seabedStarted=performance.now();
+updateSeabed();
+const seabedMs=performance.now()-seabedStarted,vegetationStarted=performance.now();
+vegetate(pa);spawnFauna();
 const vegetationMs=performance.now()-vegetationStarted;HQ={x:pb.x,z:pb.z};const rb=B.slice(6);
 const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2);
 const generalSpots=hq.generalSpots?.length?hq.generalSpots:[{x:hq.x,z:hq.z-3}],generalSpot=generalSpots[Math.floor(R()*generalSpots.length)];mkEn('general',generalSpot.x,generalSpot.z,hq.fy+.3);
@@ -352,7 +355,7 @@ islands.forEach(i=>{if(i!==A&&R()<.65){const t=['cotxe','moto','bici'][Math.floo
 
 ensureJetSkis(add);
 P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0,0,0));prepareEnemyNavigation();world.traverse(o=>{if(o.isMesh&&!o.userData.waterMask){o.castShadow=!o.isInstancedMesh&&!o.userData.terrainTile;o.receiveShadow=true}});pl.traverse(o=>{if(o.isMesh)o.castShadow=true});cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);
-window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,initialTerrainMs,vegetationMs,terrainTiles:terrain.stats};
+window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,initialTerrainMs,seabedMs,vegetationMs,seabedSamples:water.seabedStats.lastSamples,terrainTiles:terrain.stats};
 if(window.HUNTER_PERF_DEBUG)console.info('Hunter · generació',window.HUNTER_BUILD_STATS);
 }
 
