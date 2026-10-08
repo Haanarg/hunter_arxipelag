@@ -17,6 +17,29 @@ run(`{
 ok('terrainStreamStartsLocally','terrain starts with a few local sectors instead of the entire 160k-vertex map');
 ok('noBlockingStartCapture','starting game no longer forces a blocking WebGL capture');
 run(`{
+  const search=window.HUNTER_SEED_SEARCH,
+        vs=search.typeOptions('vehicle',VT,IT),
+        it=search.typeOptions('item',VT,IT),
+        co=search.typeOptions('compound',VT,IT);
+  globalThis.seedCategoriesComplete=vs.length===Object.keys(VT).length+1&&
+    it.length===Object.keys(IT).length+1&&co.length===8&&
+    vs.some(o=>o.value==='ferry')&&it.some(o=>o.value==='mapa_tanc')&&
+    co.some(o=>o.value==='polvori');
+  globalThis.seedCompoundsIndexed=seedCompounds.some(s=>s.type==='base')&&
+    seedCompounds.some(s=>s.type==='hq')&&
+    seedCompounds.every(s=>Number.isFinite(s.x)&&Number.isFinite(s.z));
+  const baseSearch=search.findNearest({
+    category:'compound',type:'base',base:P.base,
+    vehicles:V,items,compounds:seedCompounds
+  });
+  globalThis.seedNearestValid=baseSearch?.distance===0&&
+    search.findNearest({category:'vehicle',type:'ferry',base:P.base,
+      vehicles:V,items,compounds:seedCompounds})?.count===2;
+}`);
+ok('seedCategoriesComplete','seed search covers every vehicle, item and compound catalog');
+ok('seedCompoundsIndexed','seed search has actual base, HQ and compound positions');
+ok('seedNearestValid','seed search measures real distances from player base');
+run(`{
   const soldier=E.find(e=>e.t==='soldat'),general=E.find(e=>e.t==='general');
   globalThis.enemySoldierScale=soldier&&Math.abs(soldier.o.scale.x-.9)<1e-9&&Math.abs(soldier.o.scale.y-.9)<1e-9&&Math.abs(soldier.o.scale.z-.9)<1e-9;
   globalThis.enemyGeneralScale=general&&Math.abs(general.o.scale.x-1)<1e-9&&Math.abs(general.o.scale.y-1)<1e-9&&Math.abs(general.o.scale.z-1)<1e-9;
