@@ -200,6 +200,30 @@ ok('rowDraft&&rowMaskSafe&&noMaskDebris','rowboat sits 30 cm lower; invisible wa
 
 run('E=savedEnemies;playerFall=null;playerEject=null;');
 ok('V.filter(v=>v.t==="llanxa_coets").length===1','unique rocket boat');
+run(`{
+  const hasClosedBow=(type)=>{
+    const v=V.find(q=>q.t===type);
+    if(!v)return false;
+    let sealed=false;
+    v.o.traverse(o=>{
+      if(!o.isMesh||!o.geometry?.index)return;
+      const p=o.geometry.getAttribute('position'),ix=o.geometry.index;
+      // Sis seccions de 7 vèrtexs més dos vèrtexs de la vora del cockpit.
+      if(!p||p.count!==44||ix.count!==228)return;
+      let front=0,foredeck=0;
+      for(let i=0;i<ix.count;i+=3){
+        const ids=[ix.getX(i),ix.getX(i+1),ix.getX(i+2)],
+              zs=ids.map(k=>p.getZ(k)),ys=ids.map(k=>p.getY(k));
+        if(zs.every(z=>Math.abs(z+4.45)<1e-4))front++;
+        if(ys.every(y=>Math.abs(y-.98)<1e-4)&&zs.some(z=>z<-1.9))foredeck++;
+      }
+      if(front===5&&foredeck===6)sealed=true;
+    });
+    return sealed;
+  };
+  globalThis.bothLaunchBowsSealed=hasClosedBow('llanxa')&&hasClosedBow('llanxa_coets');
+}`);
+ok('bothLaunchBowsSealed','normal and rocket boat have closed bow faces and solid foredecks');
 ok('V.filter(v=>v.t==="ferry").length===2','two guaranteed ferries');
 ok('VT.ferry.life===8&&VT.ferry.maxF<VT.llanxa.maxF','ferry is slow and survives eight structural hits');
 run(`{
