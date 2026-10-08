@@ -268,7 +268,9 @@ const hideSeedSearch=()=>{
   if(seedSearchRunning&&seedSearchPromise)seedSearchPromise.then(close,close);
   else close();
 };
-const renderSeedSearchResults=(rows,target,label)=>{
+const renderSeedSearchResults=(rows,target,label,category,type)=>{
+  const labelMap=new Map(seedSearch.typeOptions(category,window.HUNTER_VEHICLE_DYNAMICS.types,IT)
+    .map(q=>[q.value,q.label]));
   seedSearchResultsEl.replaceChildren();
   for(const [i,r] of rows.slice(0,8).entries()){
     const el=document.createElement('div');
@@ -276,7 +278,9 @@ const renderSeedSearchResults=(rows,target,label)=>{
     const main=document.createElement('div'),head=document.createElement('b'),details=document.createElement('small');
     head.textContent='#'+(i+1)+' · llavor '+r.seed;
     const dx=Math.round(r.x),dz=Math.round(r.z);
-    details.textContent=label+' · '+r.count+' al mapa · més proper a '+Math.round(r.distance)+' m'+
+    details.textContent=label+' · '+r.count+' al mapa'+
+      (type==='*'?' · més proper: '+(labelMap.get(r.type)||r.type):'')+
+      ' · a '+Math.round(r.distance)+' m'+
       (r.distance<=target?' · dins l’objectiu':'')+' · X: '+dx+', Z: '+dz;
     main.append(head,details);
     const dist=document.createElement('b');dist.textContent=Math.round(r.distance)+' m';
@@ -324,7 +328,7 @@ async function runSeedSearch(){
           rows.push({seed:raw,...nearest});
           rows.sort(seedSearch.compare);
           if(rows.length>12)rows.length=12;
-          renderSeedSearchResults(rows,target,label);
+          renderSeedSearchResults(rows,target,label,category,type);
         }
       }catch(err){console.warn('Llavor descartada durant la cerca',raw,err)}
       tested++;
