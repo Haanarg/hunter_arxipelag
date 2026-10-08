@@ -16,6 +16,10 @@ run(`{
 }`);
 ok('terrainStreamStartsLocally','terrain starts with a few local sectors instead of the entire 160k-vertex map');
 ok('noBlockingStartCapture','starting game no longer forces a blocking WebGL capture');
+ok('minimap.stats.draws>=1&&minimap.stats.backgroundBuilds===1&&minimap.stats.lastLandPixels>0',
+  'minimap draws land and sea after game start');
+ok('window.HUNTER_MINIMAP_STATS===minimap.stats',
+  'minimap rendering statistics are exposed');
 run(`{
   const search=window.HUNTER_SEED_SEARCH,
         vs=search.typeOptions('vehicle',VT,IT),
