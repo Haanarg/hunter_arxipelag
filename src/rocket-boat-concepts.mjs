@@ -12,7 +12,7 @@ export function createRocketBoatConcept(THREE,variant=0){
   if(!cfg)throw new Error('Variant de llanxa llançacoets no vàlida');
 
   const mat=(c,metal=.03,rough=.76)=>new THREE.MeshStandardMaterial({color:c,roughness:rough,metalness:metal,flatShading:true});
-  const hullMat=mat(0x667176,.08),darkMat=mat(0x2f383d,.10),deckMat=mat(0x717c81,.06),
+  const hullMat=mat(0x667176,.08),deckMat=mat(0x717c81,.06),
         glassMat=new THREE.MeshStandardMaterial({color:0x26343c,roughness:.25,metalness:.05,transparent:true,opacity:.82,flatShading:true}),
         trimMat=mat(0x424b50,.12),tubeMat=mat(0x20262a,.15,.63),tubeLipMat=mat(0x725447,.10,.68),seatMat=mat(0x3a4245,.02);
 
@@ -46,8 +46,10 @@ export function createRocketBoatConcept(THREE,variant=0){
   ]);
   for(const ring of rings)for(const p of ring)verts.push(...p);
   const N=7;
-  for(let j=0;j<rings.length-1;j++)for(let k=0;k<N-1;k++){
-    const a=j*N+k,b=a+N,c=b+1,d=a+1;idx.push(a,b,c,a,c,d)
+  // Tanca també el sota-casc: l'última cara uneix estribord amb la quilla.
+  for(let j=0;j<rings.length-1;j++)for(let k=0;k<N;k++){
+    const next=(k+1)%N,a=j*N+k,b=a+N,c=(j+1)*N+next,d=j*N+next;
+    idx.push(a,b,c,a,c,d);
   }
   const transom=(rings.length-1)*N;
   for(let k=1;k<N-1;k++)idx.push(transom,transom+k+1,transom+k);
@@ -61,8 +63,6 @@ export function createRocketBoatConcept(THREE,variant=0){
   hullGeo.setIndex(idx);hullGeo.computeVertexNormals();
   mesh(hullGeo,hullMat);
 
-  // Franja inferior fosca, sense plataforma sobre la proa.
-  box(B*.93,.25,L*.72,darkMat,0,.06,.35);
 
   // Cabina oberta central.
   const cockFront=screenZ+.18,cockRear=cockZ+cockL*.72,cockLen=cockRear-cockFront;
