@@ -57,7 +57,7 @@ window.HUNTER_VEHICLES=Object.freeze({
         // Stealth A1: model seleccionat a proves.html. Proa neta, casc facetat,
         // cabina oberta i radar compacte. Proa = -Z.
         const L=8.9,B=2.75,half=L/2,free=.98,screenZ=-.65,cockZ=.95,cockL=2.5;
-        const hullCol=0x667176,darkHull=0x2f383d,deckCol=0x717c81,trim=0x424b50,glassCol=0x26343c;
+        const hullCol=0x667176,deckCol=0x717c81,trim=0x424b50,glassCol=0x26343c;
         const stations=[
           {z:-half,w:.20,y:.56},
           {z:-half*.78,w:B*.38,y:.46},
@@ -77,8 +77,11 @@ window.HUNTER_VEHICLES=Object.freeze({
         ]);
         for(const ring of rings)for(const p of ring)verts.push(...p);
         const N=7;
-        for(let j=0;j<rings.length-1;j++)for(let k=0;k<N-1;k++){
-          const a=j*N+k,b=a+N,c=b+1,d=a+1;idx.push(a,b,c,a,c,d)
+        // Tanquem tot el buc, inclosa la cara inferior entre l'última
+        // aresta d'estribord (6) i la quilla (0). Ja no cal cap caixa negra.
+        for(let j=0;j<rings.length-1;j++)for(let k=0;k<N;k++){
+          const next=(k+1)%N,a=j*N+k,b=a+N,c=(j+1)*N+next,d=j*N+next;
+          idx.push(a,b,c,a,c,d)
         }
         const base=(rings.length-1)*N;
         // Mirall de popa: normal cap a +Z.
@@ -93,8 +96,6 @@ window.HUNTER_VEHICLES=Object.freeze({
         geo.setIndex(idx);geo.computeVertexNormals();
         g.add(new THREE.Mesh(geo,material(hullCol,'paint')));
 
-        // Franja inferior fosca. La proa no porta cap plataforma superior.
-        box(g,B*.93,.25,L*.72,darkHull,0,.06,.35,'metal');
 
         // Cabina oberta central.
         const cockFront=screenZ+.18,cockRear=cockZ+cockL*.72,cockLen=cockRear-cockFront;
@@ -134,7 +135,7 @@ window.HUNTER_VEHICLES=Object.freeze({
         // SeaBaby C4 · Reculat llarg: mateix casc de la llanxa normal actual,
         // sense radar posterior i amb 12 tubs exposats en disposició 3×4.
         const L=8.9,B=2.75,half=L/2,free=.98,screenZ=-.65,cockZ=.95,cockL=2.5;
-        const hullCol=0x667176,darkHull=0x2f383d,deckCol=0x717c81,trim=0x424b50,glassCol=0x26343c,
+        const hullCol=0x667176,deckCol=0x717c81,trim=0x424b50,glassCol=0x26343c,
               tubeCol=0x20262a,tubeLipCol=0x725447;
         const stations=[
           {z:-half,w:.20,y:.56},
@@ -155,8 +156,11 @@ window.HUNTER_VEHICLES=Object.freeze({
         ]);
         for(const ring of rings)for(const p of ring)verts.push(...p);
         const N=7;
-        for(let j=0;j<rings.length-1;j++)for(let k=0;k<N-1;k++){
-          const a=j*N+k,b=a+N,c=b+1,d=a+1;idx.push(a,b,c,a,c,d)
+        // Tanquem tot el buc, inclosa la cara inferior entre l'última
+        // aresta d'estribord (6) i la quilla (0). Ja no cal cap caixa negra.
+        for(let j=0;j<rings.length-1;j++)for(let k=0;k<N;k++){
+          const next=(k+1)%N,a=j*N+k,b=a+N,c=(j+1)*N+next,d=j*N+next;
+          idx.push(a,b,c,a,c,d)
         }
         const transom=(rings.length-1)*N;
         for(let k=1;k<N-1;k++)idx.push(transom,transom+k+1,transom+k);
@@ -170,7 +174,6 @@ window.HUNTER_VEHICLES=Object.freeze({
         geo.setIndex(idx);geo.computeVertexNormals();
         g.add(new THREE.Mesh(geo,material(hullCol,'paint')));
 
-        box(g,B*.93,.25,L*.72,darkHull,0,.06,.35,'metal');
 
         // Cabina oberta i parabrisa de la llanxa normal.
         const cockFront=screenZ+.18,cockRear=cockZ+cockL*.72,cockLen=cockRear-cockFront;
