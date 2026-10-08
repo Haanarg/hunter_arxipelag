@@ -208,22 +208,31 @@ run(`{
     v.o.traverse(o=>{
       if(!o.isMesh||!o.geometry?.index)return;
       const p=o.geometry.getAttribute('position'),ix=o.geometry.index;
-      // Sis seccions de 7 vèrtexs més dos vèrtexs de la vora del cockpit.
-      if(!p||p.count!==42||ix.count!==210)return;
+      // Sis seccions de 7 vèrtexs; 80 triangles tanquen quilla, proa i popa.
+      if(!p||p.count!==42||ix.count!==240)return;
       let front=0,foredeck=0;
+      const edges=new Map();
       for(let i=0;i<ix.count;i+=3){
         const ids=[ix.getX(i),ix.getX(i+1),ix.getX(i+2)],
               zs=ids.map(k=>p.getZ(k)),ys=ids.map(k=>p.getY(k));
         if(zs.every(z=>Math.abs(z+4.45)<1e-4))front++;
         if(ys.every(y=>Math.abs(y-.98)<1e-4)&&zs.some(z=>z<-1.9))foredeck++;
+        for(let k=0;k<3;k++){
+          const a=ids[k],b=ids[(k+1)%3],key=Math.min(a,b)+','+Math.max(a,b);
+          edges.set(key,(edges.get(key)||0)+1);
+        }
       }
-      if(front===5&&foredeck===6)sealed=true;
+      const watertight=edges.size===120&&[...edges.values()].every(n=>n===2);
+      if(front===5&&foredeck===6&&watertight)sealed=true;
     });
-    return sealed;
+    const oldUnderhullBox=v.o.children.some(o=>o.isMesh&&o.geometry?.type==='BoxGeometry'&&
+      Math.abs((o.geometry.parameters?.depth||0)-8.9*.72)<1e-6&&
+      Math.abs((o.geometry.parameters?.width||0)-2.75*.93)<1e-6);
+    return sealed&&!oldUnderhullBox;
   };
   globalThis.bothLaunchBowsSealed=hasClosedBow('llanxa')&&hasClosedBow('llanxa_coets');
 }`);
-ok('bothLaunchBowsSealed','normal and rocket boat have closed bow faces and solid foredecks');
+ok('bothLaunchBowsSealed','normal and rocket boat hulls are watertight without an underhull black box');
 ok('V.filter(v=>v.t==="ferry").length===2','two guaranteed ferries');
 ok('VT.ferry.life===8&&VT.ferry.maxF<VT.llanxa.maxF','ferry is slow and survives eight structural hits');
 run(`{
