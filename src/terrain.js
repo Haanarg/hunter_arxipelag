@@ -26,13 +26,17 @@ window.HUNTER_TERRAIN=Object.freeze({
     const root=new THREE.Group();
     root.name='hunter-terrain-stream';
     const tileSize=800,side=Math.ceil(size/tileSize),cellSize=size/side,half=size/2;
-    const levels=lowQuality?[10,20,40]:[12,28,56];
+    // El quart nivell és per a l'horitzó. Els sectors propers mantenen
+    // exactament la resolució anterior, sense canviar la física del terreny.
+    const levels=lowQuality?[6,10,20,40]:[6,12,28,56];
     const palette=HUNTER_TERRAIN_PALETTE.map(([h,c])=>{
       const rgb=new THREE.Color(c);return {h,r:rgb.r,g:rgb.g,b:rgb.b};
     });
     const tiles=[];
-    let disposed=false,job=null,lastPlayerX=startX,lastPlayerZ=startZ;
-    const stats={initialTiles:0,visibleTiles:0,generatedTiles:0,upgradedTiles:0,processedVertices:0,totalTiles:side*side};
+    const frustum=new THREE.Frustum(),projection=new THREE.Matrix4();
+    let disposed=false,job=null,lastPlayerX=startX,lastPlayerZ=startZ,view=null;
+    const stats={initialTiles:0,visibleTiles:0,generatedTiles:0,upgradedTiles:0,processedVertices:0,totalTiles:side*side,
+      lodLevels:[...levels],farTiles:0,viewPriority:true};
     // The material is shared by all tiles. A single shader compilation is needed.
     function colorAtHeight(h,out,k){
       let i=0;
@@ -44,8 +48,12 @@ window.HUNTER_TERRAIN=Object.freeze({
       out[k+2]=a.b+(b.b-a.b)*t;
     }
     for(let z=0;z<side;z++)for(let x=0;x<side;x++){
-      tiles.push({x,z,cx:-half+(x+.5)*cellSize,cz:-half+(z+.5)*cellSize,
-        geometry:null,mesh:null,level:-1});
+      const cx=-half+(x+.5)*cellSize,cz=-half+(z+.5)*cellSize;
+      tiles.push({x,z,cx,cz,
+        bounds:new THREE.Box3(
+          new THREE.Vector3(cx-cellSize/2,-180,cz-cellSize/2),
+          new THREE.Vector3(cx+cellSize/2,1200,cz+cellSize/2)
+        ),geometry:null,mesh:null,level:-1});
     }
     function distance2(tile,x,z){
       const dx=Math.max(0,Math.abs(tile.cx-x)-cellSize/2),
@@ -54,7 +62,7 @@ window.HUNTER_TERRAIN=Object.freeze({
     }
     function targetLevel(tile,x,z){
       const d=distance2(tile,x,z);
-      return d<500*500?2:d<1600*1600?1:0;
+      return d<500*500?3:d<1600*1600?2:d<3000*3000?1:0;
     }
     function appendSkirts(geometry,n){
       // Faldons al límit entre sectors de diferent LOD: amaguen petites
@@ -123,7 +131,9 @@ window.HUNTER_TERRAIN=Object.freeze({
         stats.generatedTiles++;
         stats.visibleTiles++;
       }
+      if(tile.level===0)stats.farTiles--;
       tile.mesh=mesh;tile.geometry=geometry;tile.level=level;
+      if(level===0)stats.farTiles++;
       root.add(mesh);
     }
     function generateNow(tile,level){
@@ -135,7 +145,7 @@ window.HUNTER_TERRAIN=Object.freeze({
     // vuit caselles veïnes. Això evita malles buides sota el jugador.
     for(const tile of tiles){
       if(Math.abs(tile.cx-startX)<cellSize*1.5&&Math.abs(tile.cz-startZ)<cellSize*1.5){
-        const level=distance2(tile,startX,startZ)<1?2:0;
+        const level=distance2(tile,startX,startZ)<1?3:targetLevel(tile,startX,startZ);
         generateNow(tile,level);stats.initialTiles++;
       }
     }
@@ -147,16 +157,25 @@ window.HUNTER_TERRAIN=Object.freeze({
         const d=distance2(tile,x,z);
         // Primer els sectors absents que es troben a prop; després els
         // ascensos de LOD i la resta del mapa, de prop a lluny.
-        const priority=(tile.level<0?11000000:0)+
-          (wanted===2?8000000:wanted===1?4000000:0)-
+        // Els sectors dins la piràmide visual reben prioritat quan es
+        // descobreix territori des d'un turó o un helicòpter.
+        const inView=view&&frustum.intersectsBox(tile.bounds);
+        const priority=(inView?28000000:0)+(tile.level<0?11000000:0)+
+          (wanted===3?8000000:wanted===2?4000000:wanted===1?2000000:0)-
           d+(tile.level>wanted?-2500000:0);
         if(priority>best){chosen=tile;best=priority;desired=wanted}
       }
       return chosen?begin(chosen,desired):null;
     }
-    function update(x,z,budgetMs=2){
+    function update(x,z,budgetMs=2,camera=null){
       if(disposed)return;
       lastPlayerX=x;lastPlayerZ=z;
+      view=camera;
+      if(view){
+        view.updateMatrixWorld();
+        projection.multiplyMatrices(view.projectionMatrix,view.matrixWorldInverse);
+        frustum.setFromProjectionMatrix(projection);
+      }
       const start=performance.now(),budget=Math.max(.5,Math.min(4,budgetMs));
       let loops=0;
       while(performance.now()-start<budget&&loops++<60){
