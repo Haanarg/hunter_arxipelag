@@ -41,6 +41,22 @@ ok('grenadeWorldPriority','grenades are prioritized in powder magazines and outp
 ok('grenadeBallistics','grenades use delayed release, forward velocity and gravity');
 ok('explosiveBalance','grenades keep old TNT force while planted explosives are tripled');
 run(`{
+  const pick=createItemVisual('expl'),active=window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true);
+  const p=pick.userData.explosiveDisplay,a=active.userData.explosiveDisplay;
+  globalThis.explosiveSharedModel=!!p&&!p.active&&p.lastOn===true&&
+    !!a&&a.active&&window.HUNTER_EXPLOSIVE_VISUALS.BLINK_HZ===5;
+  window.HUNTER_EXPLOSIVE_VISUALS.update(active,3);
+  const on=a.lastOn;
+  window.HUNTER_EXPLOSIVE_VISUALS.update(active,2.88);
+  const off=a.lastOn;
+  window.HUNTER_EXPLOSIVE_VISUALS.update(active,2.78);
+  const backOn=a.lastOn;
+  window.HUNTER_EXPLOSIVE_VISUALS.update(active,1.75);
+  globalThis.explosiveFastBlink=on===true&&off===false&&backOn===true&&a.lastSecond===2;
+}`);
+ok('explosiveSharedModel','RGB plastic explosive is shared by the pickup and active charge');
+ok('explosiveFastBlink','active timer flashes red rapidly while counting down');
+run(`{
   const savedInv={...inv},savedEq=grenadeEquipped,savedFcd=fcd;
   inv.granada=1;grenadeEquipped=true;fcd=0;pl.userData.grenadePending=null;
   const okThrow=throwGrenade();updFx(.24);
