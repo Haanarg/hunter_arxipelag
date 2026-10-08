@@ -235,7 +235,7 @@ seedSearchStartEl=document.getElementById('seedSearchStart'),seedSearchCountEl=d
 seedSearchDistanceEl=document.getElementById('seedSearchDistance'),seedSearchMapSizeEl=document.getElementById('seedSearchMapSize'),
 seedSearchStatusEl=document.getElementById('seedSearchStatus'),seedSearchResultsEl=document.getElementById('seedSearchResults'),
 seedSearchCategoryEl=document.getElementById('seedSearchCategory'),seedSearchTypeEl=document.getElementById('seedSearchType');
-let seedSearchToken=0,seedSearchRunning=false;
+let seedSearchToken=0,seedSearchRunning=false,seedSearchPromise=null;
 const seedSearch=window.HUNTER_SEED_SEARCH;
 const currentMapScale=()=>+(document.querySelector('input[name="mapSize"]:checked')?.value||1);
 const fillSeedSearchTypes=(preferred)=>{
@@ -256,9 +256,15 @@ const showSeedSearch=()=>{
   startMenuEl.style.display='none';seedSearchScreenEl.style.display='block';seedSearchScreenEl.setAttribute('aria-hidden','false')
 };
 const hideSeedSearch=()=>{
-  seedSearchToken++;seedSearchCancelEl.disabled=true;seedSearchRunEl.disabled=seedSearchRunning;
-  seedSearchScreenEl.style.display='none';seedSearchScreenEl.setAttribute('aria-hidden','true');
-  startMenuEl.style.display='flex'
+  seedSearchToken++;seedSearchCancelEl.disabled=true;seedSearchRunEl.disabled=true;
+  const close=()=>{
+    seedSearchScreenEl.style.display='none';seedSearchScreenEl.setAttribute('aria-hidden','true');
+    startMenuEl.style.display='flex';
+  };
+  // En seleccionar una llavor durant una cerca, esperem la neteja del
+  // generador abans de tornar a mostrar els botons d'inici de partida.
+  if(seedSearchRunning&&seedSearchPromise)seedSearchPromise.then(close,close);
+  else close();
 };
 const renderSeedSearchResults=(rows,target,label)=>{
   seedSearchResultsEl.replaceChildren();
@@ -343,7 +349,7 @@ async function runSeedSearch(){
 }
 if(seedSearchOpenEl)seedSearchOpenEl.onclick=showSeedSearch;
 if(seedSearchBackEl)seedSearchBackEl.onclick=hideSeedSearch;
-if(seedSearchRunEl)seedSearchRunEl.onclick=runSeedSearch;
+if(seedSearchRunEl)seedSearchRunEl.onclick=()=>{seedSearchPromise=runSeedSearch();return seedSearchPromise};
 if(seedSearchCancelEl)seedSearchCancelEl.onclick=()=>{
   seedSearchToken++;seedSearchStatusEl.textContent='Cerca cancel·lada.';
   seedSearchRunEl.disabled=true;seedSearchCancelEl.disabled=true
