@@ -73,17 +73,21 @@ window.HUNTER_VEGETATION=Object.freeze({
       c.offsetHSL(random(-.018,.018),random(-.045,.045),random(-.025,.025));
       return c
     };
-    const inst=(world,geo,arr,color,scale,opts={})=>{
+    // Reutilitzem materials entre sectors perquè cada grup no generi
+    // programes i materials nous innecessàriament.
+    const cache=new Map();
+    const mat=(color,opts={})=>{
+      const key=color+':'+(opts.doubleSide?1:0)+':'+(opts.profile||'organic');
+      if(!cache.has(key))cache.set(key,new THREE.MeshStandardMaterial({
+        color:0xffffff,flatShading:true,
+        side:opts.doubleSide?THREE.DoubleSide:THREE.FrontSide,
+        ...materialProfile(opts.profile||'organic')
+      }));
+      return cache.get(key);
+    };
+    const inst=(parent,geo,arr,color,scale,opts={})=>{
       if(!arr.length)return null;
-      const m=new THREE.InstancedMesh(
-        geo,
-        new THREE.MeshStandardMaterial({
-          color:0xffffff,flatShading:true,
-          side:opts.doubleSide?THREE.DoubleSide:THREE.FrontSide,
-          ...materialProfile(opts.profile||'organic')
-        }),
-        arr.length
-      );
+      const m=new THREE.InstancedMesh(geo,mat(color,opts),arr.length);
       arr.forEach((row,i)=>{
         const [x,y,z,s,r]=row;
         dum.position.set(x,y,z);
@@ -93,29 +97,96 @@ window.HUNTER_VEGETATION=Object.freeze({
           opts.tilt?random(-.04,.04):0
         );
         if(scale)scale(dum,s);else dum.scale.setScalar(s);
-        dum.updateMatrix();m.setMatrixAt(i,dum.matrix);
-        m.setColorAt(i,colorFor(color,row))
+        dum.updateMatrix();
+        m.setMatrixAt(i,dum.matrix);
+        m.setColorAt(i,colorFor(color,row));
       });
       m.computeBoundingSphere();
-      world.add(m);
-      return m
+      m.castShadow=false;
+      m.receiveShadow=true;
+      m.frustumCulled=true;
+      parent.add(m);
+      return m;
     };
-    const build=({world,palms,bushes,rocks})=>{
-      const trunk=inst(world,geometry.trunk,palms,0x8e6337,null,{profile:'organic',tilt:true});
-      const groups=[[],[],[]],variantMap=new Array(palms.length);
-      palms.forEach((row,originalIndex)=>{
-        const vi=Math.max(0,Math.min(2,(row[5]??0)+1)),index=groups[vi].length;
-        groups[vi].push(row);variantMap[originalIndex]={variant:vi,index}
+    const CHUNK=420;
+    const build=({world,palms,bushes,rocks,playerX=0,playerZ=0,lowQuality=false})=>{
+      const root=new THREE.Group();
+      root.name='hunter-palm-sectors';
+      world.add(root);
+      const chunks=new Map();
+      const variantMap=new Array(palms.length);
+      palms.forEach((row,i)=>{
+        const cx=Math.floor(row[0]/CHUNK),cz=Math.floor(row[2]/CHUNK),
+              key=cx+','+cz;
+        let ch=chunks.get(key);
+        if(!ch){
+          ch={cx,cz,x:(cx+.5)*CHUNK,z:(cz+.5)*CHUNK,rows:[],mesh:null,primary:[],secondary:[]};
+          chunks.set(key,ch);
+        }
+        const vi=Math.max(0,Math.min(2,(row[5]??0)+1));
+        ch.rows.push({row,i,vi});
       });
-      const variants=groups.map((arr,vi)=>({
-        crown:inst(world,geometry.palmVariants[vi].crown,arr,0x2d9f36,null,{doubleSide:true}),
-        crown2:inst(world,geometry.palmVariants[vi].crown2,arr,0x65c83f,null,{doubleSide:true})
-      }));
+      const sections=[];
+      for(const ch of chunks.values()){
+        // Les posicions i rotacions continuen en coordenades mundials:
+        // els límits de l'InstancedMesh es calculen només per aquest sector.
+        const rows=ch.rows;
+        ch.trunk=inst(root,geometry.trunk,rows.map(p=>p.row),0x8e6337,null,{profile:'organic',tilt:true});
+        ch.primary=[];ch.secondary=[];
+        for(let v=0;v<3;v++){
+          const selected=rows.filter(p=>p.vi===v);
+          const crowns=selected.map(p=>p.row);
+          const primary=inst(root,geometry.palmVariants[v].crown,crowns,0x2d9f36,null,{doubleSide:true});
+          const secondary=inst(root,geometry.palmVariants[v].crown2,crowns,0x65c83f,null,{doubleSide:true});
+          ch.primary.push(primary);ch.secondary.push(secondary);
+          selected.forEach((p,i)=>{
+            if(!variantMap[p.i])variantMap[p.i]={chunk:ch,trunkIndex:rows.indexOf(p),variant:v,index:i};
+          });
+        }
+        // Bounding spheres separades per sector, no una esfera de tota l'illa.
+        ch.meshes=[ch.trunk,...ch.primary,...ch.secondary].filter(Boolean);
+        ch.rows=null;
+        sections.push(ch);
+      }
+      const near2=(lowQuality?460:650)**2,
+            far2=(lowQuality?1250:1900)**2;
+      const stats={sectors:sections.length,totalPalms:palms.length,visibleSectors:0,visiblePalms:0,detailSectors:0};
+      let lastX=Infinity,lastZ=Infinity;
+      function update(x,z,force=false){
+        if(!force&&Math.abs(x-lastX)<45&&Math.abs(z-lastZ)<45)return;
+        lastX=x;lastZ=z;
+        let visible=0,count=0,detailed=0;
+        for(const ch of sections){
+          // Distància fins a la vora del sector: no es retallen palmeres
+          // quan el jugador hi entra des d'una cantonada.
+          const dx=Math.max(0,Math.abs(ch.x-x)-CHUNK/2),
+                dz=Math.max(0,Math.abs(ch.z-z)-CHUNK/2),d2=dx*dx+dz*dz,
+                show=d2<far2,detail=d2<near2;
+          if(show){visible++;count+=ch.count;if(detail)detailed++}
+          for(const m of [ch.trunk,...ch.primary])if(m)m.visible=show;
+          for(const m of ch.secondary)if(m)m.visible=show&&detail;
+        }
+        stats.visibleSectors=visible;
+        stats.visiblePalms=count;
+        stats.detailSectors=detailed;
+      }
+      for(const ch of sections)ch.count=ch.primary.reduce((sum,m)=>sum+(m?.count||0),0);
+      function remove(index,zeroMatrix){
+        const ref=variantMap[index];
+        if(!ref)return;
+        const ch=ref.chunk;
+        const meshes=[[ch.trunk,ref.trunkIndex],[ch.primary[ref.variant],ref.index],[ch.secondary[ref.variant],ref.index]];
+        for(const [m,i] of meshes)if(m){
+          m.setMatrixAt(i,zeroMatrix);
+          m.instanceMatrix.needsUpdate=true;
+        }
+      }
+      update(playerX,playerZ,true);
       return {
-        palms:{trunk,crown:variants[1].crown,crown2:variants[1].crown2,variants,variantMap},
+        palms:{trunk:root,variants:sections,variantMap,update,remove,stats},
         bushes:inst(world,geometry.bush,bushes,0x2f8e42,(d,s)=>d.scale.set(s*1.15,s*.72,s),{profile:'organic'}),
         rocks:inst(world,geometry.rock,rocks,0x777985,(d,s)=>d.scale.set(s*1.25,s*.75,s),{profile:'masonry',tilt:true})
-      }
+      };
     };
     return {geometry,build};
   }
