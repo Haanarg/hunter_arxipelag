@@ -259,6 +259,7 @@ const showSeedSearch=()=>{
 const hideSeedSearch=()=>{
   seedSearchToken++;seedSearchCancelEl.disabled=true;seedSearchRunEl.disabled=true;
   const close=()=>{
+    seedSearchRunEl.disabled=false;seedSearchCancelEl.disabled=true;
     seedSearchScreenEl.style.display='none';seedSearchScreenEl.setAttribute('aria-hidden','true');
     startMenuEl.style.display='flex';
   };
