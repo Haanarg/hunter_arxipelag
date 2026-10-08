@@ -62,7 +62,7 @@ window.HUNTER_TERRAIN=Object.freeze({
     }
     function targetLevel(tile,x,z){
       const d=distance2(tile,x,z);
-      return d<500*500?3:d<1600*1600?2:d<3000*3000?1:0;
+      return d<500*500?3:d<1250*1250?2:d<1700*1700?1:0;
     }
     function appendSkirts(geometry,n){
       // Faldons al límit entre sectors de diferent LOD: amaguen petites
