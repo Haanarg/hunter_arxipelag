@@ -3,162 +3,183 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hunter · Explosius RGB · quatre variants</title>
+<title>Hunter · Quatre propostes de cap reduït del jugador</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%;background:#16242a;font:14px system-ui,-apple-system,sans-serif;color:#e9f1ed}
+html,body{margin:0;min-height:100%;background:#15242a;color:#ecf1ee;font:14px system-ui,-apple-system,sans-serif}
 #canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none}
-#ui{position:relative;z-index:1;pointer-events:none;padding:8px 12px 12px;min-height:100vh}
-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;pointer-events:auto;margin:0 0 7px}
-h1{font-size:18px;letter-spacing:.01em;margin:0;line-height:1.3}
-.controls{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.controls button,.controls a{border:1px solid #668579;background:#293b40;color:#e6f4eb;padding:7px 11px;border-radius:7px;font:600 12px system-ui;text-decoration:none;cursor:pointer}
-.controls button.active{background:#b8d6a5;color:#17241e;border-color:#b8d6a5}
-.controls button:focus-visible,.controls a:focus-visible{outline:2px solid #e5fdc8;outline-offset:2px}
-#cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(210px,1fr));gap:10px;height:calc(100vh - 83px)}
-.card{position:relative;border-radius:12px;border:1px solid #69858b6b;box-shadow:inset 0 0 0 1px #18262760;min-width:0;overflow:hidden;pointer-events:auto;cursor:grab;touch-action:pan-y}
+#ui{position:relative;z-index:1;min-height:100vh;padding:12px 14px 18px;pointer-events:none}
+header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;pointer-events:auto;margin-bottom:9px}
+header h1{font-size:19px;margin:0 0 4px;line-height:1.3}
+header p{font-size:12px;color:#c5d2ce;margin:0}
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.controls button,.controls a{border:1px solid #718d83;background:#243b3b;color:#edf6ed;border-radius:7px;padding:8px 11px;font:600 12px system-ui;cursor:pointer;text-decoration:none}
+.controls button.active{background:#b6dca7;color:#17271e;border-color:#b6dca7}
+.controls button:focus-visible,.controls a:focus-visible{outline:2px solid #e4ffd4;outline-offset:2px}
+.separator{height:24px;border-left:1px solid #53706a;margin:0 3px}
+#cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(230px,1fr));gap:10px;height:calc(100vh - 122px)}
+.card{position:relative;min-width:0;overflow:hidden;border:1px solid #68877c8c;border-radius:12px;background:#ffffff08;box-shadow:inset 0 0 0 1px #15272a40;pointer-events:auto;touch-action:pan-y;cursor:grab}
 .card.dragging{cursor:grabbing}
-.tag{position:absolute;left:10px;top:10px;padding:5px 9px;border-radius:5px;background:#112128c9;font-weight:700;color:#d8f3d9;font-size:12px}
-.info{position:absolute;bottom:8px;left:10px;right:10px;display:inline-block;max-width:95%;padding:7px 10px;border-radius:7px;background:#112128e8;line-height:1.35}
-.info b{display:block;font-size:13px}
-.info small{display:block;color:#bfd0c7;font-size:11px;margin-top:3px}
-.hint{font-size:11px;margin:4px 0 0;color:#b0c8bd;text-align:right}
-@media(max-width:720px){
-  #ui{padding:9px}
-  h1{font-size:16px}
-  header{align-items:flex-start}
-  #cards{grid-template-columns:1fr;grid-template-rows:repeat(4,280px);height:auto;margin-top:10px}
-  .controls button,.controls a{padding:6px 8px}
-  .hint{display:none}
+.tag{position:absolute;left:10px;top:10px;background:#112728dc;border:1px solid #71958555;color:#daefdb;font-weight:700;font-size:12px;padding:5px 8px;border-radius:6px}
+.scale{position:absolute;right:10px;top:10px;background:#112728df;color:#d9efbd;font:700 11px system-ui;padding:5px 8px;border:1px solid #90ba9555;border-radius:6px}
+.info{position:absolute;bottom:8px;left:9px;right:9px;padding:9px 11px;border-radius:8px;background:#102529ee;line-height:1.35}
+.info b{font-size:14px;display:block}
+.info small{font-size:11px;color:#bed0c9;display:block;margin-top:3px}
+.hint{margin:8px 0 0;text-align:right;color:#adc4b6;font-size:11px}
+@media(max-width:780px){
+ #ui{padding:10px}
+ header h1{font-size:17px}
+ #cards{grid-template-columns:1fr;grid-template-rows:repeat(4,330px);height:auto}
+ .controls button,.controls a{padding:7px 9px}
+ .separator{display:none}
+ .hint{text-align:left}
 }
-@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 </style>
 </head>
 <body>
-<canvas id="canvas"></canvas>
+<canvas id="canvas" aria-hidden="true"></canvas>
 <div id="ui">
-  <header>
-    <h1>Explosius RGB · 4 variants del model 1</h1>
-    <div class="controls" aria-label="Estat del model">
-      <button type="button" id="pickup" class="active" aria-pressed="true">Al món</button>
-      <button type="button" id="placed" aria-pressed="false">Col·locat</button>
-      <a href="compounds-preview.html">Compounds 3D ↗</a>
-    </div>
-  </header>
-  <div id="cards"></div>
-  <p class="hint">Arrossega un model per girar-lo. Alterna entre l'objecte recollible i la càrrega col·locada.</p>
+<header>
+ <div>
+  <h1>Cap del jugador · 4 propostes</h1>
+  <p>Reducció aproximada d’un terç respecte del model actual. Cap canvi aplicat al joc.</p>
+ </div>
+ <div class="controls" aria-label="Controls de comparació">
+  <button id="bodyView" type="button" class="active" aria-pressed="true">Cos sencer</button>
+  <button id="headView" type="button" aria-pressed="false">Primer pla del cap</button>
+  <span class="separator"></span>
+  <button id="front" type="button">Front</button>
+  <button id="quarter" type="button" class="active">3/4</button>
+  <button id="profile" type="button">Perfil</button>
+  <span class="separator"></span>
+  <a href="explosius-proves.html">Explosius ↗</a>
+  <a href="compounds-preview.html">Compounds ↗</a>
+ </div>
+</header>
+<div id="cards"></div>
+<p class="hint">Arrossega cada figura horitzontalment per girar-la. Usa «Primer pla del cap» per comparar gorra, cabells i ulleres.</p>
 </div>
 <script type="module">
 import * as THREE from './vendor/three-r186.module.mjs';
-import {createExplosiveConcept,explosiveConcepts} from './src/explosive-concepts.mjs?v=20261008-rgb-04';
+import {createPlayerHeadConcept,playerHeadConcepts} from './src/player-head-concepts.mjs?v=20261008-head-01';
 
 const canvas=document.getElementById('canvas');
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.75));
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.shadowMap.enabled=true;
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-renderer.setClearColor(0x233942,1);
+renderer.setClearColor(0x21343c,1);
+renderer.shadowMap.enabled=false;
+
 const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x243b43);
-scene.add(new THREE.HemisphereLight(0xe2f2e7,0x42585a,2.0));
-const sun=new THREE.DirectionalLight(0xffe5c5,2.5);
-sun.position.set(-7,12,-9);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
-sun.shadow.camera.left=-12;sun.shadow.camera.right=12;sun.shadow.camera.top=12;sun.shadow.camera.bottom=-12;
-scene.add(sun);
-const fill=new THREE.DirectionalLight(0x94c5e8,.8);
-fill.position.set(6,6,5);scene.add(fill);
-const floor=new THREE.Mesh(new THREE.PlaneGeometry(100,100),new THREE.MeshStandardMaterial({color:0x3b555a,roughness:1}));
-floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;floor.position.y=-.17;scene.add(floor);
-const plinth=new THREE.Mesh(new THREE.CylinderGeometry(2.18,2.32,.18,36),new THREE.MeshStandardMaterial({color:0x526264,metalness:.12,roughness:.9}));
-plinth.position.y=-.08;plinth.receiveShadow=true;scene.add(plinth);
-const plinthTop=new THREE.Mesh(new THREE.CylinderGeometry(2.10,2.10,.012,36),new THREE.MeshStandardMaterial({color:0x69766e,roughness:.92}));
-plinthTop.position.y=.018;plinthTop.receiveShadow=true;scene.add(plinthTop);
+scene.background=new THREE.Color(0x21343c);
+scene.add(new THREE.HemisphereLight(0xe3f2e6,0x4e6455,2.0));
+const key=new THREE.DirectionalLight(0xffefd9,3.2);
+key.position.set(-4,8,-7);scene.add(key);
+const fill=new THREE.DirectionalLight(0x96c8e8,1.0);
+fill.position.set(4,5,6);scene.add(fill);
 
-const cardsEl=document.getElementById('cards'),models=[],cams=[],cards=[];
-let mode='pickup';
-let yaw=.2,dragged=false,dragX=0,dragStart=0;
-const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-explosiveConcepts.forEach((item,i)=>{
-  const card=document.createElement('div');card.className='card';
-  const tag=document.createElement('div');tag.className='tag';tag.textContent='PROPOSTA '+(i+1);
-  const info=document.createElement('div');info.className='info';
-  const title=document.createElement('b');title.textContent=item.name;
-  const description=document.createElement('small');description.textContent=item.desc;
-  info.append(title,description);card.append(tag,info);cardsEl.append(card);
-  cards.push(card);
+const stand=new THREE.Group();
+const baseMat=new THREE.MeshStandardMaterial({color:0x607875,roughness:.86,metalness:.12});
+const pedestal=new THREE.Mesh(new THREE.CylinderGeometry(.92,1.06,.16,32),baseMat);
+pedestal.position.y=-.13;stand.add(pedestal);scene.add(stand);
 
-  const pair=[createExplosiveConcept(THREE,i,false),createExplosiveConcept(THREE,i,true)];
-  for(const model of pair){model.scale.multiplyScalar(1.58);scene.add(model)}
-  models.push(pair);
-  const cam=new THREE.OrthographicCamera(-3,3,2,-2,.1,90);
-  cam.position.set(3.4,3.7,-6.1);cam.lookAt(0,1.05,0);
-  cams.push(cam);
-
-  card.addEventListener('pointerdown',e=>{
-    dragged=true;dragX=e.clientX;dragStart=yaw;
-    card.classList.add('dragging');card.setPointerCapture(e.pointerId);
-  });
-  card.addEventListener('pointermove',e=>{
-    if(dragged&&card.hasPointerCapture(e.pointerId)){yaw=dragStart+(e.clientX-dragX)*.009}
-  });
-  const finish=()=>{dragged=false;card.classList.remove('dragging')};
-  card.addEventListener('pointerup',finish);
-  card.addEventListener('pointercancel',finish);
-  card.addEventListener('lostpointercapture',finish);
+const cards=[],models=[],cameras=[],yaws=[];
+const cardsEl=document.getElementById('cards');
+let closeUp=false,frameQueued=false,viewW=0,viewH=0;
+playerHeadConcepts.forEach((entry,i)=>{
+ const card=document.createElement('div');
+ card.className='card';
+ const tag=document.createElement('div');tag.className='tag';tag.textContent='PROPOSTA '+(i+1);
+ const scale=document.createElement('div');scale.className='scale';
+ scale.textContent='Cap: '+Math.round(entry.scale[0]*100)+'–'+Math.round(entry.scale[1]*100)+'%';
+ const info=document.createElement('div');info.className='info';
+ const title=document.createElement('b');title.textContent=entry.name;
+ const desc=document.createElement('small');desc.textContent=entry.description;
+ info.append(title,desc);card.append(tag,scale,info);
+ cardsEl.appendChild(card);cards.push(card);
+ const model=createPlayerHeadConcept(THREE,i);
+ model.visible=false;scene.add(model);models.push(model);
+ const camera=new THREE.OrthographicCamera(-3,3,3,-3,.1,60);
+ cameras.push(camera);yaws.push(.42);
+ let pointer=null;
+ card.addEventListener('pointerdown',event=>{
+   pointer={id:event.pointerId,x:event.clientX,start:yaws[i]};
+   card.classList.add('dragging');card.setPointerCapture(event.pointerId);
+ });
+ card.addEventListener('pointermove',event=>{
+   if(!pointer||event.pointerId!==pointer.id)return;
+   yaws[i]=pointer.start+(event.clientX-pointer.x)*.009;
+   schedule();
+ });
+ const done=()=>{
+   pointer=null;card.classList.remove('dragging');
+ };
+ for(const type of ['pointerup','pointercancel','lostpointercapture'])card.addEventListener(type,done);
 });
-const pickupBtn=document.getElementById('pickup'),placedBtn=document.getElementById('placed');
-function selectMode(next){
-  mode=next;
-  pickupBtn.classList.toggle('active',next==='pickup');
-  placedBtn.classList.toggle('active',next==='placed');
-  pickupBtn.setAttribute('aria-pressed',String(next==='pickup'));
-  placedBtn.setAttribute('aria-pressed',String(next==='placed'));
+const bodyButton=document.getElementById('bodyView'),headButton=document.getElementById('headView');
+function setCloseUp(value){
+ closeUp=value;
+ bodyButton.classList.toggle('active',!value);headButton.classList.toggle('active',value);
+ bodyButton.setAttribute('aria-pressed',String(!value));headButton.setAttribute('aria-pressed',String(value));
+ schedule();
 }
-pickupBtn.addEventListener('click',()=>selectMode('pickup'));
-placedBtn.addEventListener('click',()=>selectMode('placed'));
-
-let sizeW=0,sizeH=0;
+bodyButton.addEventListener('click',()=>setCloseUp(false));
+headButton.addEventListener('click',()=>setCloseUp(true));
+const presets={front:0,quarter:.42,profile:Math.PI/2};
+for(const [id,yaw]of Object.entries(presets)){
+ document.getElementById(id).addEventListener('click',()=>{
+   for(let i=0;i<yaws.length;i++)yaws[i]=yaw;
+   for(const key of Object.keys(presets))document.getElementById(key).classList.toggle('active',key===id);
+   schedule();
+ });
+}
 function resize(){
-  sizeW=window.innerWidth;sizeH=window.innerHeight;
-  renderer.setSize(sizeW,sizeH,false);
+ const w=window.innerWidth,h=window.innerHeight;
+ if(w!==viewW||h!==viewH){
+   viewW=w;viewH=h;renderer.setSize(w,h,false);
+ }
+ schedule();
 }
-window.addEventListener('resize',resize);resize();
-
-function render(t){
-  // Rotació pausada i subtil en mode «Al món»: la pantalla continua llegible.
-  const drift=reducedMotion||dragged?0:Math.sin(t*.00045)*.15;
-  const inWorld=mode==='pickup';
-  models.forEach((pair,i)=>{
-    pair[0].visible=false;pair[1].visible=false;
-    const m=pair[inWorld?0:1];
-    m.visible=true;
-    m.rotation.y=yaw+drift;
-    m.position.y=inWorld?.83+(reducedMotion?0:Math.sin(t*.002+i*.7)*.06):.67;
-    if(i===0&&!inWorld)window.HUNTER_EXPLOSIVE_VISUALS.update(m,3-((t*.001)%3));
-  });
-  renderer.setScissorTest(true);
-  const H=sizeH;
-  cards.forEach((card,i)=>{
-    const r=card.getBoundingClientRect();
-    if(r.bottom<=0||r.top>=H)return;
-    const x=Math.max(0,Math.floor(r.left)),top=Math.max(0,Math.floor(r.top)),
-          right=Math.min(sizeW,Math.ceil(r.right)),bottom=Math.min(H,Math.ceil(r.bottom));
-    if(right<=x||bottom<=top)return;
-    const w=right-x,h=bottom-top,a=w/h;
-    renderer.setViewport(x,H-bottom,w,h);
-    renderer.setScissor(x,H-bottom,w,h);
-    const cam=cams[i],vertical=Math.max(3.40,5.1/a);
-    cam.left=-vertical*a/2;cam.right=vertical*a/2;
-    cam.top=vertical/2;cam.bottom=-vertical/2;cam.updateProjectionMatrix();
-    models.forEach((pair,j)=>{pair[0].visible=j===i&&inWorld;pair[1].visible=j===i&&!inWorld});
-    renderer.render(scene,cam);
-  });
-  renderer.setScissorTest(false);
-  requestAnimationFrame(render);
+function schedule(){
+ if(frameQueued)return;
+ frameQueued=true;requestAnimationFrame(render);
 }
-requestAnimationFrame(render);
+function render(){
+ frameQueued=false;
+ renderer.setScissorTest(false);
+ renderer.setViewport(0,0,viewW,viewH);
+ renderer.clear(true,true,true);
+ renderer.setScissorTest(true);
+ for(let i=0;i<cards.length;i++){
+   const rect=cards[i].getBoundingClientRect();
+   if(rect.bottom<=0||rect.top>=viewH||rect.right<=0||rect.left>=viewW)continue;
+   const left=Math.max(0,Math.floor(rect.left)),right=Math.min(viewW,Math.ceil(rect.right));
+   const top=Math.max(0,Math.floor(rect.top)),bottom=Math.min(viewH,Math.ceil(rect.bottom));
+   const w=right-left,h=bottom-top;
+   if(w<=0||h<=0)continue;
+   const camera=cameras[i],ratio=w/h,vertical=closeUp?1.65:4.75;
+   camera.left=-vertical*ratio/2;camera.right=vertical*ratio/2;
+   camera.top=vertical/2;camera.bottom=-vertical/2;
+   const lookAtY=closeUp?3.32:1.92;
+   camera.position.set(0,lookAtY+(closeUp?.35:.45),-8);
+   camera.lookAt(0,lookAtY,0);
+   camera.updateProjectionMatrix();
+   renderer.setViewport(left,viewH-bottom,w,h);
+   renderer.setScissor(left,viewH-bottom,w,h);
+   models.forEach((model,j)=>{
+     model.visible=j===i;
+     if(j===i)model.rotation.y=yaws[j];
+   });
+   stand.visible=!closeUp;
+   renderer.render(scene,camera);
+ }
+ models.forEach(m=>m.visible=false);
+ renderer.setScissorTest(false);
+}
+window.addEventListener('resize',resize);
+window.addEventListener('scroll',schedule,{passive:true});
+resize();
 </script>
 </body>
 </html>
