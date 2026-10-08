@@ -12,10 +12,11 @@ h1{position:absolute;top:12px;left:50%;transform:translateX(-50%);margin:0;font-
 .label{position:absolute;left:10px;bottom:9px;background:#10202ed9;padding:7px 10px;border-radius:7px;font-weight:700;text-shadow:0 1px 2px #000;max-width:88%}
 .label small{display:block;font-weight:500;opacity:.84;margin-top:2px}
 canvas{display:block;width:100%;height:100%}
-@media(max-width:700px){h1{font-size:16px}.label{font-size:12px}.label small{display:none}}
+@media(max-width:700px){h1{font-size:13px;left:12px;transform:none;max-width:calc(100% - 155px);white-space:normal}.label{font-size:12px}.label small{display:none}}
 </style>
 </head>
 <body>
+<a href="compounds-preview.html" style="position:fixed;right:12px;top:10px;z-index:10;background:#16352e;color:#d4f6df;padding:8px 12px;border-radius:8px;font:600 12px system-ui;text-decoration:none">Compounds 3D ↗</a>
 <canvas id="c"></canvas>
 <div id="ui"><h1>Llanxa militar · 4 propostes Three.js</h1><div id="cards"></div></div>
 <script type="module">

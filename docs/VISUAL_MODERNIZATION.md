@@ -5,7 +5,9 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.33**.
+Versió actual: **0.3.34**.
+
+Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
 
 ### Revisió 0.3.33 — navegació i separació enemiga (2026-10-08)
 
@@ -215,6 +217,60 @@ La prioritat és evitar regressions de gameplay mentre es modernitza el projecte
 - Cotes mitjanes favorables: 20%.
 - A partir de 28 m: 22%, augmentant progressivament fins aproximadament 34% a les cotes més altes.
 - Les zones altes són, per tant, més denses en palmeres que les baixes.
+
+---
+
+## Redisseny de compounds — catàleg i generació (2026-10-08)
+
+Estat: **proposta de disseny registrada; tres primers recintes disponibles en preview Three.js**. Les quantitats són objectius d'equilibratge, no una descripció de la generació actual. Els vehicles són aparcats i utilitzables excepte les patrulles indicades. No tots els objectes opcionals apareixen a cada instància.
+
+| Tipus | Edificis i elements obligatoris | Vehicles | Enemics i objectes |
+|---|---|---|---|
+| Base inicial | Caserna petita, magatzem, infermeria, pati, bandera blava, sortida ampla i camí a la costa. | 1 cotxe, 1 bicicleta; barca o llanxa al punt costaner associat. | Sense enemics. Munició i 1 farmaciola. |
+| HQ enemic | Búnquer amb habitacions i porta progressiva actual; 2 edificis auxiliars, pati de maniobres, filferrada, 4 torres i bandera vermella. | 1 tanc aparcat, 2 tanquetes de patrulla interior i 2 jeeps de patrulla exterior. Sense helicòpters. | General i 6–8 soldats entre entrada, pati i interior. Munició, farmaciola i disfressa. |
+| Avançada | Caserna, caseta de guàrdia, torre, sacs, barreres, caixes, llum i bandera. Perímetre parcial amb dos accessos. | 1 moto o jeep. | 3–4 soldats. Munició; granades o farmaciola opcionals. |
+| Garatge/hangar | Hangar gran, taller annex, aparcament exterior, dipòsits, bidons i caixes. Espai de sortida i gir davant de la boca. | 1 tanc, tanqueta o camió a dins; 1 cotxe o moto fora. | 2–3 soldats. Munició i farmaciola opcional. |
+| Heliport | Plataforma marcada, control, magatzem, combustible, llums i defenses fora de l'àrea dels rotors. | 1 helicòpter normal; variant fortificada amb helicòpter de combat. | 3–5 soldats; torre només a la variant fortificada. Munició i farmaciola. |
+| Polvorí | 2 magatzems separats, guàrdia, filferrada, càrrega, caixes de munició i barreres. | 1 camió amb sortida practicable. | 3–4 soldats. Munició, granades i explosius garantits; bazooka opcional. |
+| Port militar | Magatzem, oficina, pati de càrrega, 2 molls transitables, pilones, caixes, bidons, torre i bandera. Accés terrestre ample. | 2–3 embarcacions entre llanxa, moto aquàtica i hovercraft. La llanxa llançacoets única s'assigna a un port. | 4–6 soldats. Munició, granades i mapa opcional. |
+| Embarcador civil — nou com a recinte | Caseta o cobert, moll petit, caixes i pilones, sense fortificació. | 1–2 entre barca de rems, windsurf i moto aquàtica. | Normalment buit; ocasionalment 1–2 soldats. Farmaciola opcional. |
+| Terminal de ferri — nou | Platja accessible, esplanada, caseta, marques d'embarcament i maniobra. Una rampa del ferri accessible des de terra. | 1 ferri; cotxe o camió opcional a terra. | 0–3 soldats. Munició o farmaciola opcionals. |
+| Comunicacions — nou | Ràdio, antena alta, generador, caseta, filferrada i sacs. Preferentment elevació accessible. | 1 jeep o moto. | 3–4 soldats. Mapa del HQ o de vehicles garantit; disfressa opcional. |
+| Control de carretera — nou | Caseta, barrera, sacs i refugi lateral. Només sobre camins que connectin llocs reals. | 1 jeep fora del pas. | 2–3 soldats. Munició; granades ocasionals. |
+| Petit assentament — nou | 3–5 cases, plaça/pati, cobert, tanques baixes i camins fins a les portes. Variant costanera amb embarcador. | 1–2 entre bicicleta, moto i cotxe. | 0–3 soldats. Farmaciola, disfressa o mapa distribuïts pels interiors. |
+
+### Regles comunes acordades com a proposta
+
+1. Reservar tot el recinte abans de construir: edificis, molls, rampes, accessos, aparcaments i maniobra. Calcular les separacions des dels límits reservats.
+2. Generar primer camins i superfícies transitables, després edificis i finalment vehicles, enemics i decoració. Cap caixa, palmera o bidó dins d'un pas reservat.
+3. Preparar tres distribucions per tipus, amb variacions, gir i mirall. Ports i terminals orientats segons la costa; controls segons el camí.
+4. Encarar les portes als accessos. Cada vehicle ha de poder sortir de l'aparcament i del compound amb la seva mida i radi de gir.
+5. Validar les patrulles sobre el recinte acabat, amb punts de guàrdia separats i trajectes que evitin edificis, vehicles i filferrada.
+6. Objectes segons funció: armes al polvorí, informació a comunicacions, transport a garatges i ports. Bidons i generadors decoratius fins que se'ls assigni una mecànica.
+7. Una base, un HQ i dues terminals amb els dos ferris actuals. Garantir accés a munició, transport naval i helicòpters; completar segons superfície útil i distàncies.
+
+### Primera entrega de disseny — 0.3.34
+
+Preview a `compounds-preview.html`, enllaçat també des de `proves.html`. Models reals de Three.js local, edificis amb obertures i interiors, vehicles i comandos reutilitzats del joc a la mateixa escala.
+
+- **Hangar:** reserva 100 × 110 m; hangar 36 × 38 m, taller lateral, tanc interior i cotxe aparcat. Boca de 30 m, recorregut reservat de 18 m i pati de maniobra de 30 × 24 m. Combustible i caixes a la zona de servei. Tres soldats.
+- **Avançada:** reserva 90 × 90 m; caserna, guàrdia i torre, pati central, entrada principal de 12 m i accés lateral de 6 m. Moto i quatre soldats. Barreres baixes amb obertures i patrulla al voltant dels edificis.
+- **Port militar:** reserva 110 × 120 m incloent aigua; magatzem, oficina, torre, àrea de càrrega de 18 × 12 m, accés de 14 m, passeig i dos molls de 6 m. Tres places navals separades, llanxa, moto aquàtica i llanxa llançacoets de la variant especial; cinc soldats.
+
+El visor permet seleccionar recinte, orbitar arrossegant, zoom amb pinça/roda/botons, vista en planta, interiors sense sostres, etiquetes, rotació automàtica i guies de circulació/maniobra/patrulla. Només es renderitza el recinte seleccionat i es reutilitza la imatge mentre no canvia la càmera. Les franges de colors són guies de disseny, no superfícies del joc.
+
+Fitxers nous:
+- `src/compound-layouts.mjs`: especificacions en metres, edificis, vehicles, objectes, rutes i reserves.
+- `src/compound-concepts.mjs`: construcció dels tres models.
+- `src/compound-preview.mjs`: controls i renderitzat del visor.
+
+Validació de la preview:
+- `node tests/compound-preview.cjs`: geometria amb coordenades finites, recompte de vehicles, separació vehicle/edifici i recorreguts de patrulla amb marge d'1 m respecte dels edificis. Aproximadament 15.000 / 14.800 / 19.200 triangles per recinte.
+- `node tests/compound-preview-browser.cjs`: les tres escenes carreguen sense errors JavaScript/consola en Chromium/WebGL 2 amb SwiftShader, perfils d'escriptori i mòbil. Selecció, planta, interiors, circulació, etiquetes i zoom comprovats; captures inspeccionades i enquadrament adaptat a pantalles estretes.
+- Això valida el visor i els models de proposta; la simulació de navegació i la integració procedural d'aquests layouts encara són pendents. Rendiment i gestos en Android físic pendents.
+
+**Integració pendent:** aprovació/revisió visual dels primers layouts; incorporar-los al generador procedural i al terreny real; validar sortida de vehicles, portes, col·lisions, rutes de la IA, costa i destrucció amb els sistemes del joc; després crear les altres dues distribucions de cada tipus. Aquesta entrega és un preview de disseny i no substitueix els compounds de la partida.
+
 
 ---
 
