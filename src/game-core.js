@@ -1,4 +1,5 @@
 window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){const esc=v=>String(v||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])),m=(e&&e.message)?e.message:"Error desconegut",where=e&&e.filename?(e.filename.split("/").pop()+":"+e.lineno+":"+e.colno):"",stack=e&&e.error&&e.error.stack?e.error.stack:"";p.innerHTML="<h1>No s’ha pogut iniciar el joc</h1><p style=\"max-width:560px\">Error d’arrencada: <b>"+esc(m)+"</b></p>"+(where?"<p><b>"+esc(where)+"</b></p>":"")+(stack?"<pre style=\"max-width:90vw;white-space:pre-wrap;text-align:left;font-size:11px;opacity:.8\">"+esc(stack)+"</pre>":"")+"<p style=\"opacity:.8\">Envia una captura d’aquest missatge si persisteix.</p>"}});
+let terrainStream=null;
 const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_WAVES','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI'];
 const missingModules=requiredModules.filter(name=>!window[name]);if(missingModules.length)throw new Error('Mòduls Hunter absents: '+missingModules.join(', '));
 const missingSystems=Object.entries({generation:typeof build,combat:typeof fire,enemies:typeof updEn,audio:typeof initAudio}).filter(([,type])=>type!=='function').map(([name])=>name);if(missingSystems.length)throw new Error('Sistemes Hunter absents: '+missingSystems.join(', '));
@@ -298,20 +299,6 @@ const applyStartScreenshot=()=>{
     if(shot)iniEl.style.background="linear-gradient(#15253677,#15253677),url('"+shot+"') center/cover no-repeat";
   }catch(_){}
 };
-const captureRealStartScreenshot=()=>{
-  try{
-    const wasVisible=pl.visible,ground=groundAt(P.x,P.z),hd=P.hd,dist=26;
-    pl.visible=false;
-    cam.position.set(P.x+Math.sin(hd)*dist,ground+13,P.z+Math.cos(hd)*dist);
-    cam.lookAt(P.x-Math.sin(hd)*10,ground+2.2,P.z-Math.cos(hd)*10);
-    sun.target.position.set(P.x,0,P.z);sun.position.copy(sun.target.position).addScaledVector(sunDir,500);
-    sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,3500);
-    ren.render(scene,cam);
-    const shot=ren.domElement.toDataURL('image/webp',.86);
-    if(shot&&shot.length>1000)localStorage.setItem('hunterStartScreenshot',shot);
-    pl.visible=wasVisible;
-  }catch(_){pl.visible=true}
-};
 applyStartScreenshot();
 seedRandomEl.onchange=()=>{seedInputEl.disabled=seedRandomEl.checked;if(!seedRandomEl.checked)seedInputEl.focus()};
 document.querySelectorAll('#ini button[data-d]').forEach(b=>b.onclick=()=>{
@@ -319,7 +306,7 @@ document.querySelectorAll('#ini button[data-d]').forEach(b=>b.onclick=()=>{
   const rawSeed=seedRandomEl.checked?null:seedFromText(seedInputEl.value||'hunter');
   requestedSeed=rawSeed==null?null:(rawSeed^Math.imul(MAP_SCALE,0x45d9f3b))>>>0;
   build();minimap.setWorldSize(S,H);minimap.reset();mini();
-  captureRealStartScreenshot();
+  // Sense captura WebGL síncrona/toDataURL: evitar bloqueig després de generar el món.
   started=1;iniEl.style.display='none';initAudio()
 });
 // animacions de destrucció
@@ -855,7 +842,7 @@ uiTick+=dt;if(uiTick>.12){uiTick=0;const contextButtons=document.getElementById(
 
 
 let last=performance.now();
-(function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;const t=elapsed+(started&&!paused&&!over?dt:0);update(dt,t);waves(t);
+(function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;const t=elapsed+(started&&!paused&&!over?dt:0);update(dt,t);if(started&&!paused&&!over&&terrainStream)terrainStream.update(P.x,P.z,visualQuality.shadows?2:1.2);waves(t);
 sun.target.position.set(P.x,0,P.z);sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);ren.render(scene,cam);requestAnimationFrame(loop)})(last);
 
 
