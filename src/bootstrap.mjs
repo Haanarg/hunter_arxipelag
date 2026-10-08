@@ -28,7 +28,11 @@ try {
   for (const path of runtimeScripts) {
     await new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = new URL('../' + path, import.meta.url).href;
+      // Codi dels sistemes sincronitzat amb la versió del joc,
+      // evitant que la memòria cau conservi geometries obsoletes.
+      const scriptUrl = new URL('../' + path, import.meta.url);
+      scriptUrl.searchParams.set('v', GAME_VERSION);
+      script.src = scriptUrl.href;
       const cleanup = () => window.removeEventListener('error', onError);
       const onError = event => {
         if (event.filename === script.src) {
