@@ -51,9 +51,9 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       }
       if(element&&now-lastDisplay>=350){
         element.textContent='FPS '+Math.round(stats.fps||0)+
-          ' · '+(stats.frameMs||0).toFixed(1)+' ms'+
-          '\nDibuixos '+stats.drawCalls+' · '+Math.round(stats.triangles/1000)+'k triangles'+
-          ' · Resolució ×'+ratio.toFixed(2);
+          ' · fotograma '+(stats.frameMs||0).toFixed(1)+' ms'+
+          '\nCPU render '+stats.renderCpuMs.toFixed(1)+' ms · '+stats.drawCalls+' dibuixos'+
+          '\n'+Math.round(stats.triangles/1000)+'k triangles · Resolució ×'+ratio.toFixed(2);
         lastDisplay=now;
       }
       return stats;
