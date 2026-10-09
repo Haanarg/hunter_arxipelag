@@ -5,9 +5,16 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.57**.
+Versió actual: **0.3.58**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.58 — soldats enemics i general al 80% (2026-10-09)
+
+- Models 3D dels **soldats enemics** ajustats de l'escala anterior `0,9` a `0,8` respecte de la geometria normalitzada; altura resultant de **2,928** unitats (abans 3,294).
+- Model 3D del **general** ajustat d'escala `1,0` a `0,8`; altura resultant de **2,84** unitats (abans 3,55).
+- L'escalat es fa a l'arrel de cada model després d'haver-ne alineat els peus a la cota zero. Els pivots, les articulacions, les armes, les animacions, les rutes dels enemics, les hitboxes, la vida i els danys no es modifiquen.
+- Tests actualitzats: `tests/enemy-model.cjs`, `tests/general-model.cjs` i `tests/smoke.cjs`. Comprovats els dos models amb Three.js real: escala uniforme 0,8, altura i contacte amb el terra, braços, genolls i arma conservats. Prova visual de navegador/Android pendent.
 
 ### Revisió 0.3.57 — tres nivells visuals de palmera amb geometria instanciada (2026-10-09)
 
@@ -521,7 +528,7 @@ Característiques:
 
 ## Personatge i animació
 
-- Els soldats enemics normals tenen escala visual 0.9 respecte del model anterior; el general manté escala 1.
+- Els soldats enemics normals i el general utilitzen escala visual 0,8 respecte de les seves geometries de referència (revisió 0.3.58); la IA i la física continuen intactes.
 - El canvi és només visual: no modifica radi de combat, detecció ni estadístiques de la IA.
 - Model articulat amb espatlles, colzes, malucs i genolls.
 - Animació de caminar amb flexió anatòmica dels genolls.
