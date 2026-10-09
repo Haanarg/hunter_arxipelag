@@ -10,7 +10,8 @@ window.HUNTER_RENDERING = Object.freeze({
     renderer.shadowMap.type=THREE.PCFShadowMap;
 
     const scene=new THREE.Scene();
-    const camera=new THREE.PerspectiveCamera(58,1,.3,12000);
+    const viewDistance=visualQuality.viewDistance||12000;
+    const camera=new THREE.PerspectiveCamera(58,1,.3,viewDistance);
     scene.fog=new THREE.FogExp2(0xc99f91,visualQuality.fog);
 
     const hemi=new THREE.HemisphereLight(0xc6e7ff,0x27451e,.82);
@@ -32,15 +33,17 @@ window.HUNTER_RENDERING = Object.freeze({
     scene.add(sun);
     scene.add(sun.target);
 
+    // La cúpula ha de quedar dins del pla llunyà en el perfil mínim.
+    const skyRadius=Math.min(8000,viewDistance*.78);
     const skyGeometry=new THREE.SphereGeometry(
-      8000,visualQuality.skySegments[0],visualQuality.skySegments[1]
+      skyRadius,visualQuality.skySegments[0],visualQuality.skySegments[1]
     );
     const colors=[],positions=skyGeometry.attributes.position;
     const horizon=new THREE.Color(0xffa646);
     const mid=new THREE.Color(0xc76bb6);
     const zenith=new THREE.Color(0x5147b8);
     for(let i=0;i<positions.count;i++){
-      const t=Math.max(0,positions.getY(i)/8000);
+      const t=Math.max(0,positions.getY(i)/skyRadius);
       const color=t<.35
         ?horizon.clone().lerp(mid,t/.35)
         :mid.clone().lerp(zenith,(t-.35)/.65);
@@ -72,7 +75,7 @@ window.HUNTER_RENDERING = Object.freeze({
       camera.aspect=innerWidth/innerHeight;
       camera.updateProjectionMatrix()
     };
-    return {renderer,scene,camera,sunDir,sun,sky,sunMesh,glow,resize};
+    return {renderer,scene,camera,sunDir,sun,sky,sunMesh,glow,resize,viewDistance};
   }
 });
 
