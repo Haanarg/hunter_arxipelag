@@ -185,19 +185,35 @@ window.HUNTER_TERRAIN=Object.freeze({
     // Alçada real dels triangles visibles (no la funció contínua de física).
     // Una malla LOD interpola els seus vèrtexs: pot quedar per sobre de heightAt.
     function visibleHeightAt(x,z){
-      if(disposed)return null;
+      if(disposed||x<-half||x>half||z<-half||z>half)return null;
+      // Només examinem les caselles que poden contenir el punt.
+      // A les costures el sector de l'altre costat també pot ser visible.
       const tx=Math.floor((x+half)/cellSize),tz=Math.floor((z+half)/cellSize);
-      if(tx<0||tz<0||tx>=side||tz>=side)return null;
-      const tile=tiles[tz*side+tx];
-      if(!tile?.geometry||tile.level<0)return null;
-      const n=levels[tile.level],step=cellSize/n;
-      const u=Math.max(0,Math.min(n-1e-8,(x-(tile.cx-cellSize/2))/step));
-      const v=Math.max(0,Math.min(n-1e-8,((tile.cz+cellSize/2)-z)/step));
-      const i=Math.floor(u),j=Math.floor(v),fu=u-i,fv=v-j,row=n+1;
-      const p=tile.geometry.attributes.position;
-      const a=j*row+i,b=(j+1)*row+i,c=b+1,d=a+1;
-      if(fu+fv<=1)return p.getY(a)+(p.getY(d)-p.getY(a))*fu+(p.getY(b)-p.getY(a))*fv;
-      return p.getY(c)+(p.getY(b)-p.getY(c))*(1-fu)+(p.getY(d)-p.getY(c))*(1-fv);
+      let best=null;
+      for(let iz=Math.max(0,tz-1);iz<=Math.min(side-1,tz+1);iz++){
+        for(let ix=Math.max(0,tx-1);ix<=Math.min(side-1,tx+1);ix++){
+          const tile=tiles[iz*side+ix];
+          if(!tile?.geometry||tile.level<0)continue;
+          const left=tile.cx-cellSize/2,top=tile.cz+cellSize/2;
+          const uWorld=x-left,vWorld=top-z;
+          // Una tolerància petita inclou les dues vores, sense projectar
+          // l'altura de sectors distants sobre el jugador.
+          if(uWorld<-.0001||uWorld>cellSize+.0001||
+             vWorld<-.0001||vWorld>cellSize+.0001)continue;
+          const n=levels[tile.level],step=cellSize/n,row=n+1;
+          const u=Math.max(0,Math.min(n-1e-8,uWorld/step));
+          const v=Math.max(0,Math.min(n-1e-8,vWorld/step));
+          const i=Math.floor(u),j=Math.floor(v),fu=u-i,fv=v-j;
+          const p=tile.geometry.attributes.position;
+          const a=j*row+i,b=(j+1)*row+i,c=b+1,d=a+1;
+          // Mateixa diagonal que els índexs de THREE.PlaneGeometry.
+          const h=fu+fv<=1
+            ?p.getY(a)+(p.getY(d)-p.getY(a))*fu+(p.getY(b)-p.getY(a))*fv
+            :p.getY(c)+(p.getY(b)-p.getY(c))*(1-fu)+(p.getY(d)-p.getY(c))*(1-fv);
+          if(best===null||h>best)best=h;
+        }
+      }
+      return best;
     }
     function dispose(){
       disposed=true;
