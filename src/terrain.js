@@ -182,13 +182,30 @@ window.HUNTER_TERRAIN=Object.freeze({
         }
       }
     }
+    // Alçada real dels triangles visibles (no la funció contínua de física).
+    // Una malla LOD interpola els seus vèrtexs: pot quedar per sobre de heightAt.
+    function visibleHeightAt(x,z){
+      if(disposed)return null;
+      const tx=Math.floor((x+half)/cellSize),tz=Math.floor((z+half)/cellSize);
+      if(tx<0||tz<0||tx>=side||tz>=side)return null;
+      const tile=tiles[tz*side+tx];
+      if(!tile?.geometry||tile.level<0)return null;
+      const n=levels[tile.level],step=cellSize/n;
+      const u=Math.max(0,Math.min(n-1e-8,(x-(tile.cx-cellSize/2))/step));
+      const v=Math.max(0,Math.min(n-1e-8,((tile.cz+cellSize/2)-z)/step));
+      const i=Math.floor(u),j=Math.floor(v),fu=u-i,fv=v-j,row=n+1;
+      const p=tile.geometry.attributes.position;
+      const a=j*row+i,b=(j+1)*row+i,c=b+1,d=a+1;
+      if(fu+fv<=1)return p.getY(a)+(p.getY(d)-p.getY(a))*fu+(p.getY(b)-p.getY(a))*fv;
+      return p.getY(c)+(p.getY(b)-p.getY(c))*(1-fu)+(p.getY(d)-p.getY(c))*(1-fv);
+    }
     function dispose(){
       disposed=true;
       if(job){job.geometry.dispose();job=null}
       for(const tile of tiles)if(tile.geometry){tile.geometry.dispose();tile.geometry=null}
       root.clear();material.dispose();
     }
-    return {mesh:root,update,dispose,stats,tileSize:cellSize,get pending(){return !!job}};
+    return {mesh:root,update,dispose,visibleHeightAt,stats,tileSize:cellSize,get pending(){return !!job}};
   },
   createBorder(THREE,{size,halfSize}){
     const group=new THREE.Group();
