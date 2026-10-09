@@ -1,44 +1,34 @@
-// Resolució dinàmica amb histèresi, mètriques de dibuix i pausa.
+// Rendiment observat, sense cap reassignació de buffers WebGL mentre es juga.
 const assert=require('assert'),fs=require('fs'),vm=require('vm'),path=require('path');
 const root=path.resolve(__dirname,'..');
-const context=vm.createContext({Math,console});context.window=context;
-vm.runInContext(fs.readFileSync(path.join(root,'src/performance.js'),'utf8'),context);
-const changes=[];
+const ctx=vm.createContext({Math,console});ctx.window=ctx;
+vm.runInContext(fs.readFileSync(path.join(root,'src/performance.js'),'utf8'),ctx);
+let reallocations=0;
 const renderer={info:{render:{calls:137,triangles:82000}},
-  setPixelRatio:ratio=>changes.push(ratio)};
-const output={textContent:''};
-const monitor=context.HUNTER_PERFORMANCE.create({
-  renderer,maxPixelRatio:1.85,minPixelRatio:.75,element:output
-});
+  setPixelRatio:()=>reallocations++};
+const display={textContent:''};
+const perf=ctx.HUNTER_PERFORMANCE.create({renderer,maxPixelRatio:1.2,minPixelRatio:1,element:display});
+assert.equal(perf.stats.mode,'fixed');
 let now=0;
-function frames(fps,seconds){
-  const dt=1/fps;
-  for(let i=0;i<Math.floor(fps*seconds);i++){
-    now+=dt;
-    monitor.sample({dt,now:now*1000,renderCpuMs:5,active:true});
-  }
-}
-frames(28,12);
-const reduced=monitor.stats.pixelRatio;
-assert(reduced<1.85,'pixel ratio falls when FPS is low');
-assert(monitor.stats.fps>=27&&monitor.stats.fps<=29);
-assert.equal(monitor.stats.drawCalls,137);
-assert.equal(monitor.stats.triangles,82000);
-assert(output.textContent.includes('FPS')&&output.textContent.includes('triangles'),
-  'HUD shows frame and geometry metrics');
-frames(80,8);
-assert(monitor.stats.pixelRatio>reduced,'pixel ratio recovers on fast frames');
-assert(monitor.stats.pixelRatio<=1.85,'pixel ratio does not exceed quality ceiling');
-const count=changes.length;
-monitor.sample({dt:3,now:(now+3)*1000,active:true});
-assert.equal(changes.length,count,'background tab stall must not reduce resolution');
-monitor.sample({dt:.016,now:(now+3.016)*1000,active:false});
-assert.equal(monitor.stats.active,false);
-const lowRenderer={info:{render:{calls:1,triangles:1}},setPixelRatio:()=>{}};
-const low=context.HUNTER_PERFORMANCE.create({renderer:lowRenderer,
-  maxPixelRatio:1,minPixelRatio:.72,compact:true});
-for(let i=0;i<180;i++)low.sample({dt:1/28,now:i*1000/28,active:true});
-assert(low.stats.pixelRatio<1,'DPR-1 devices can reduce render resolution');
-console.log(JSON.stringify({passed:true,slowRatio:reduced,
-  recovered:monitor.stats.pixelRatio,steps:changes.length,
-  lowDprRatio:low.stats.pixelRatio}));
+for(let i=0;i<300;i++){now+=1000/23;perf.sample({dt:1/23,now,renderCpuMs:6,active:true});}
+assert(perf.stats.fps>22&&perf.stats.fps<24,'FPS sampling works while slow');
+assert.equal(perf.stats.pixelRatio,1,'runtime ratio fixed at chosen quality');
+assert.equal(reallocations,0,'no WebGL buffer reallocations at low FPS');
+for(let i=0;i<540;i++){now+=1000/90;perf.sample({dt:1/90,now,renderCpuMs:3,active:true});}
+assert(perf.stats.fps>75,'FPS estimate recovers when rendering improves');
+assert.equal(reallocations,0,'no reallocations during fast recovery');
+assert.equal(perf.stats.drawCalls,137);
+assert.equal(perf.stats.triangles,82000);
+assert(display.textContent.includes('Resolució fixa'),'display documents static internal resolution');
+assert(display.textContent.includes('CPU render'),'CPU time shown separately from frame time');
+perf.sample({dt:3,now:now+3000,active:true});
+assert.equal(reallocations,0,'background stall does not resize');
+perf.sample({dt:.016,now:now+3016,active:false});
+assert(!perf.stats.active,'pauses deactivate the sample accumulator');
+const mobile=ctx.HUNTER_PERFORMANCE.create({
+ renderer,maxPixelRatio:.9,minPixelRatio:1,compact:true});
+assert.equal(mobile.stats.pixelRatio,.9,'DPR below 1 remains supported without upscaling');
+assert.equal(reallocations,0);
+console.log(JSON.stringify({passed:true,ratio:perf.stats.pixelRatio,
+  finalFPS:Math.round(perf.stats.fps),rendererResizes:reallocations,
+  calls:perf.stats.drawCalls,triangles:perf.stats.triangles}));
