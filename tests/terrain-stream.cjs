@@ -25,7 +25,7 @@ const terrain=create(4800);
 assert.equal(terrain.stats.totalTiles,36);
 assert.deepEqual(Array.from(terrain.stats.lodLevels),[6,12,28,56],
   'four-level terrain LOD retains close-up detail and halves far-away subdivisions');
-assert(terrain.stats.viewPriority,'visible terrain is prioritized by camera');
+assert.equal(terrain.stats.viewPriority,false,'terrain no longer rescans the camera frustum every frame');
 assert(terrain.stats.initialTiles>=4&&terrain.stats.initialTiles<=16);
 assert(terrain.stats.generatedTiles===terrain.stats.initialTiles);
 assert(terrain.stats.processedVertices<160000,'startup should avoid global high-resolution terrain');
@@ -55,12 +55,16 @@ assert(far.length>0,'far horizon tiles have genuinely fewer vertices');
 const camera=new THREE.PerspectiveCamera(65,1,.3,12000);
 camera.position.set(400,250,700);
 camera.lookAt(0,0,0);
-terrain.update(0,0,3,camera);
-assert.equal(terrain.stats.viewPriority,true,'camera-prioritized update is active');
+for(let i=0;i<50;i++)terrain.update(0,0,3,camera);
+assert(terrain.stats.settledSkips>0,'stationary world skips redundant full-tile scans');
+const scansBefore=terrain.stats.scans;
+for(let i=0;i<20;i++)terrain.update(0,0,3,camera);
+assert.equal(terrain.stats.scans,scansBefore,'no repeat scans once terrain is settled');
 // After moving to a new island, distant sectors must upgrade their LOD.
 for(let frame=0;frame<500&&terrain.stats.upgradedTiles===0;frame++)
   terrain.update(1550,1100,3);
 assert(terrain.stats.upgradedTiles>0,'approaching new sectors upgrades their LOD');
+assert(terrain.stats.scans>scansBefore,'moving to another island resumes LOD scans');
 assert(terrain.mesh.children.every(m=>m.geometry.index.isBufferAttribute&&
   m.geometry.index.array.byteLength>0),'LOD replacements preserve valid GPU indices');
 const nearGeom=terrain.mesh.children[0].geometry;
