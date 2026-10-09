@@ -30,15 +30,43 @@ const http=require('http'),fs=require('fs'),path=require('path'),assert=require(
  await page.evaluate(()=>{const q=V.find(v=>v.t==='llanxa');cam.position.set(q.x+45,q.o.position.y+24,q.z+65);cam.lookAt(q.x,q.o.position.y,q.z);ren.render(scene,cam)});
  await page.screenshot({path:path.join(require('os').tmpdir(),'hunter-coast-')+(mobile?'mobile':'desktop')+'.png'});
  await page.evaluate(()=>{const before=elapsed;update(.1,elapsed+.1);if(elapsed!==before)throw Error('pause clock');resume();update(.1,elapsed+.1);if(elapsed<=before)throw Error('resume clock');panel('pause')});
- const result=await page.evaluate(()=>({vehicles:V.length,types:new Set(V.map(v=>v.t)).size,buildings:B.length,programs:ren.info.programs.length,shaders:ren.info.programs.every(p=>!p.diagnostics||p.diagnostics.runnable),profile:qualityName,srgb:ren.outputColorSpace===THREE.SRGBColorSpace,missile:!!document.querySelector('[data-k="KeyR"]'),climb:!!document.querySelector('[data-k="KeyU"]')&&!!document.querySelector('[data-k="KeyJ"]'),seedSearch:!!document.getElementById('seedSearchOpen')&&!!document.getElementById('seedSearchScreen')&&typeof runSeedSearch==='function',lowGraphics:!!document.getElementById('lowGraphics')}));
- console.log(JSON.stringify({mobile,result,errors,warnings}));assert.equal(errors.length,0,'console errors');assert(result.shaders,'compiled shaders');assert.equal(result.types,15);assert(result.srgb&&result.missile&&result.climb&&result.seedSearch&&result.lowGraphics);assert.equal(result.profile,mobile?'mobile':'desktop');
+ const result=await page.evaluate(()=>({vehicles:V.length,types:new Set(V.map(v=>v.t)).size,buildings:B.length,programs:ren.info.programs.length,shaders:ren.info.programs.every(p=>!p.diagnostics||p.diagnostics.runnable),profile:qualityName,srgb:ren.outputColorSpace===THREE.SRGBColorSpace,missile:!!document.querySelector('[data-k="KeyR"]'),climb:!!document.querySelector('[data-k="KeyU"]')&&!!document.querySelector('[data-k="KeyJ"]'),seedSearch:!!document.getElementById('seedSearchOpen')&&!!document.getElementById('seedSearchScreen')&&typeof runSeedSearch==='function',graphicsQuality:document.getElementById('graphicsQuality')?.value}));
+ console.log(JSON.stringify({mobile,result,errors,warnings}));assert.equal(errors.length,0,'console errors');assert(result.shaders,'compiled shaders');assert.equal(result.types,15);assert(result.srgb&&result.missile&&result.climb&&result.seedSearch);assert.equal(result.graphicsQuality,mobile?'mobile':'desktop');assert.equal(result.profile,mobile?'mobile':'desktop');
  await context.close();
  }
  const lowContext=await browser.newContext({viewport:{width:1360,height:900},isMobile:false,hasTouch:false,deviceScaleFactor:1});
  const lowPage=await lowContext.newPage();await lowPage.goto('http://127.0.0.1:'+server.address().port+'/?low=1');
  await lowPage.waitForFunction(()=>typeof qualityName!=='undefined',null,{timeout:60000});
- const lowResult=await lowPage.evaluate(()=>({profile:qualityName,checked:document.getElementById('lowGraphics')?.checked,shadows:ren.shadowMap.enabled,waterSegments:visualQuality.waterSegments}));
- assert.equal(lowResult.profile,'mobile');assert(lowResult.checked);assert.equal(lowResult.shadows,false);assert.equal(lowResult.waterSegments,240);
+ const lowResult=await lowPage.evaluate(()=>({profile:qualityName,selected:document.getElementById('graphicsQuality')?.value,shadows:ren.shadowMap.enabled,waterSegments:visualQuality.waterSegments}));
+ assert.equal(lowResult.profile,'mobile');assert.equal(lowResult.selected,'mobile');assert.equal(lowResult.shadows,false);assert.equal(lowResult.waterSegments,200);
  await lowContext.close();
+
+ // Mínims: menys malla, sense reflexos i amb boira/pla llunyà coherents.
+ const ultraContext=await browser.newContext({viewport:{width:844,height:390},isMobile:true,hasTouch:true,deviceScaleFactor:1});
+ const ultraPage=await ultraContext.newPage();const ultraErrors=[];
+ ultraPage.on('pageerror',e=>ultraErrors.push(e.message));
+ await ultraPage.goto('http://127.0.0.1:'+server.address().port+'/?quality=ultra');
+ await ultraPage.waitForFunction(()=>typeof qualityName!=='undefined',null,{timeout:60000});
+ const ultra=await ultraPage.evaluate(()=>({
+   profile:qualityName,selected:document.getElementById('graphicsQuality')?.value,
+   far:cam.far,skyRadius:sky.geometry.parameters.radius,
+   shadows:ren.shadowMap.enabled,waterSegments:visualQuality.waterSegments,
+   waterGeometrySegments:water.geometry.parameters?.widthSegments,
+   reflection:water.material.fragmentShader.includes('reflect(-light,n)'),
+   derivatives:water.material.fragmentShader.includes('dFdx('),
+   fog:scene.fog.density,ratio:visualQuality.pixelRatio
+ }));
+ assert.equal(ultra.profile,'ultra');assert.equal(ultra.selected,'ultra');
+ assert.equal(ultra.far,1500);assert(ultra.skyRadius<ultra.far);
+ assert.equal(ultra.waterSegments,120);assert.equal(ultra.shadows,false);
+ assert(!ultra.reflection&&!ultra.derivatives,'no water reflections in ultra profile');
+ assert(ultra.fog>.001&&ultra.ratio<1,'dense fog and reduced resolution');
+ assert.deepEqual(ultraErrors,[]);
+ console.log(JSON.stringify({ultra,ultraErrors}));
+ await ultraPage.locator('#graphicsQuality').selectOption('mobile');
+ await ultraPage.waitForURL(/quality=mobile/,{timeout:60000});
+ await ultraPage.waitForFunction(()=>typeof qualityName!=='undefined',null,{timeout:60000});
+ assert.equal(await ultraPage.evaluate(()=>qualityName),'mobile','switching quality reloads with mobile profile');
+ await ultraContext.close();
  }finally{if(browser)await browser.close();server.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
