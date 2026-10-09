@@ -500,9 +500,9 @@ ok("vehSrc.includes('rod(g,[0,2.48,-.65],[0,2.48,-3.05],.1,metal)')&&!vehSrc.inc
   'tankette barrel remains straight and its default projectile trajectory is now level');
 ok("String(secondaryWeapon).includes('fx_*d45,-d45,fz*d45')",'combat helicopter missiles also fire 45 degrees downward');
 run(`{
-  const savedEnemies=E,savedSight=sight;
+  const savedEnemies=E,savedAimClear=weaponAimClear;
   try{
-    sight=()=>true;
+    weaponAimClear=()=>true;
     E=[];
     const level=autoAimArmoredShot(0,5,0,0,-1,110);
     E=[{x:5,z:-50,hp:20,o:{position:{y:0}}}];
@@ -513,9 +513,48 @@ run(`{
       guided[0]>0&&guided[1]<0&&guided[2]<0&&
       Math.abs(Math.hypot(...guided)-1)<1e-9&&
       outside[0]===0&&outside[1]===0&&outside[2]===-1;
-  }finally{E=savedEnemies;sight=savedSight}
+  }finally{E=savedEnemies;weaponAimClear=savedAimClear}
 }`);
 ok('armoredLevelAndAssisted','armored vehicles stay level with no target and only track targets inside the aim cone');
+run(`{
+  const savedEnemies=E,savedClear=weaponAimClear;
+  try{
+    weaponAimClear=()=>true;
+    E=[
+      {t:'torre',x:0,z:-18,hp:90,o:{position:{y:0}}},
+      {t:'tanqueta',x:0,z:-24,hp:115,o:{position:{y:0}}},
+      {t:'soldat',x:5,z:-55,hp:30,o:{position:{y:0}}}
+    ];
+    const soldier=autoAimWeaponShot(0,2,0,0,0,-1,110,.94);
+    E.shift(); // Vehicle i soldat romanen: ara triem vehicle si eliminem soldat.
+    E.pop();
+    const vehicle=autoAimWeaponShot(0,2,0,0,0,-1,110,.94);
+    E.shift();
+    E=[{t:'torre',x:0,z:-18,hp:90,o:{position:{y:0}}}];
+    const tower=autoAimWeaponShot(0,2,0,0,0,-1,110,.94);
+    weaponAimClear=()=>false;
+    const blocked=autoAimWeaponShot(0,2,0,0,0,-1,110,.94);
+    globalThis.targetPriorityShared=
+      weaponTargetPriority({t:'soldat'})===0&&
+      weaponTargetPriority({t:'general'})===0&&
+      weaponTargetPriority({t:'jeep'})===1&&
+      weaponTargetPriority({t:'torre'})===2&&
+      soldier[0]>.01&&vehicle[0]===0&&
+      tower[1]>0&&blocked[0]===0&&blocked[1]===0&&blocked[2]===-1;
+    const a=Math.PI/6;
+    E=[{t:'soldat',x:3,z:-56,hp:30,o:{position:{y:0}}}];
+    weaponAimClear=()=>true;
+    const level=[0,-Math.sin(a),-Math.cos(a)],
+          heli=autoAimWeaponShot(0,35,0,...level,125,.91),
+          noTarget=autoAimWeaponShot(0,35,0,...level,1,.91);
+    globalThis.helicopterAssistanceAndFallback=heli[0]>0&&
+      Math.abs(heli[1]-level[1])>.01&&
+      noTarget.every((v,i)=>Math.abs(v-level[i])<1e-10);
+  }finally{E=savedEnemies;weaponAimClear=savedClear}
+}`);
+ok('targetPriorityShared','assist prioritizes soldiers before enemy vehicles and towers, but not behind solid walls');
+ok('helicopterAssistanceAndFallback','helicopter adjusts to threats yet preserves original 30 degree downward fire without targets');
+
 
 run(`{const q=V.find(v=>v.t==='tanc'),ts=q.o.userData.tracks;ts.forEach(t=>t.phase=t.perimeter/2);q.v=0;q.yawRate=1;place(q,1,.1,0);globalThis.counterRotate=ts.find(t=>t.side<0).phase<ts[0].perimeter/2&&ts.find(t=>t.side>0).phase>ts[0].perimeter/2;q.v=0;q.yawRate=0}`);ok('counterRotate','tracks counter-rotate during pivot');
 run(`{const q=V.find(v=>v.t==='cotxe'),a=vehicleBox(q,q.x,q.z,q.hd);globalThis.boxesWork=obbOverlap(a,a)&&!obbOverlap(a,vehicleBox(q,q.x+100,q.z+100,q.hd))}`);ok('boxesWork','vehicle OBB collisions');
