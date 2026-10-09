@@ -1,4 +1,85 @@
 const ENEMY_SENSE_DT=.1;
+const SOLDIER_MEMORY=9,SOLDIER_RETREAT=9,SOLDIER_IDEAL=17;
+
+// El contacte visual i la possibilitat de disparar no són el mateix.
+// Les parets i els vehicles aparcats obliguen el soldat a canviar d'angle.
+function soldierClearShot(u,x,z,y,target,targetY){
+  const tx=target.x,tz=target.z,ty=targetY+1.5,
+        reach=Math.hypot(tx-x,tz-z)/2+3,mx=(x+tx)/2,mz=(z+tz)/2;
+  for(const w of wallCandidates(mx,mz,reach)){
+    if(w.open)continue;
+    const t=segmentAabbT(x,y,z,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);
+    if(t!=null&&t<.97)return false;
+  }
+  for(const b of buildingCandidates(mx,mz,reach)){
+    if(b.rhp<=0)continue;
+    const t=b.hangar
+      ?hangarRoofSegmentT(x,y,z,tx,ty,tz,b)
+      :segmentAabbT(x,y,z,tx,ty,tz,b.x-b.w/2-.6,b.x+b.w/2+.6,
+        b.fy+b.h-.4,b.fy+b.h+1.4,b.z-b.d/2-.6,b.z+b.d/2+.6);
+    if(t!=null&&t<.97)return false;
+  }
+  for(const v of vehicleCandidatesAt(mx,mz,reach+18)){
+    if(v===cv||v.destroyed)continue; // no ens bloqueja el vehicle objectiu
+    const radius=vehicleRadius(v.t)*.55,vy=vehicleY(v)+Math.min(1.7,radius*.6);
+    const t=segmentSphereT(x,y,z,tx,ty,tz,v.x,vy,v.z,radius);
+    if(t!=null&&t<.97)return false;
+  }
+  return true;
+}
+function soldierFlankPosition(u,target,targetY){
+  const dx=target.x-u.x,dz=target.z-u.z,d=Math.max(1,Math.hypot(dx,dz)),
+        fx=dx/d,fz=dz/d,sideX=-fz,sideZ=fx,
+        prefer=u.avoidSide||1,eye=u.o.position.y+2.2;
+  let best=null,bestScore=Infinity;
+  for(const side of [prefer,-prefer])for(const lateral of [7,13,22]){
+    for(const forward of [4,11]){
+      const x=u.x+side*sideX*lateral+fx*forward,z=u.z+side*sideZ*lateral+fz*forward;
+      if(!enemySolidAt(u,x,z,u.hd,true))continue;
+      if(!soldierClearShot(u,x,z,eye,target,targetY))continue;
+      const score=lateral+forward*.5+(side===prefer?0:4);
+      if(score<bestScore){bestScore=score;best={x,z}}
+    }
+  }
+  // Si encara no hi ha una línia de tir clara, avancem lateralment fins a
+  // passar la vora de l'obstacle; mvE/A* decideix com rodejar-lo.
+  return best||{
+    x:u.x+sideX*prefer*13+fx*9,
+    z:u.z+sideZ*prefer*13+fz*9
+  };
+}
+function soldierEngage(u,target,targetY,dt,d,visible){
+  const eyeY=u.o.position.y+2.2,clear=visible&&u.canShoot;
+  let goal=null,speed=u.sp;
+  if(!clear){
+    if(!u.tacticGoal||(u.tacticT||0)<=0||
+       Math.hypot(target.x-(u.tacticTargetX??target.x),target.z-(u.tacticTargetZ??target.z))>7||
+       Math.hypot(u.tacticGoal.x-u.x,u.tacticGoal.z-u.z)<2){
+      u.tacticGoal=soldierFlankPosition(u,target,targetY);
+      u.tacticTargetX=target.x;u.tacticTargetZ=target.z;u.tacticT=.85;
+    }
+    goal=u.tacticGoal;speed=u.sp*.95;
+  }else{
+    u.tacticGoal=null;u.tacticT=0;
+    const fx=(target.x-u.x)/Math.max(d,.001),fz=(target.z-u.z)/Math.max(d,.001);
+    if(d<SOLDIER_RETREAT){
+      // Retirada mirant sempre el jugador, amb marge per evitar cantonades.
+      goal={x:u.x-fx*12,z:u.z-fz*12};speed=u.sp*.87;
+    }else if(d>SOLDIER_IDEAL){
+      goal=target;speed=u.sp;
+    }else if(d>13){
+      goal=target;speed=u.sp*.5;
+    }else{
+      // Moviment lateral curt en lloc de quedar congelat a distància fixa.
+      const side=u.avoidSide||1;
+      goal={x:u.x-fz*side*6,z:u.z+fx*side*6};speed=u.sp*.55;
+    }
+  }
+  if(goal)mvE(u,speed*dt,goal.x,goal.z);
+  const toward=target;
+  u.hd=Math.atan2(u.x-toward.x,u.z-toward.z); // la cara sempre al jugador
+}
+
 function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.forEach(u=>{
   const oldX=u.x,oldZ=u.z;
   u.alert=Math.max(0,u.alert-dt);u.cd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);
@@ -10,11 +91,37 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
   u.senseT=(u.senseT??0)-dt;
   if(u.senseT<=0){
     u.senseT+=ENEMY_SENSE_DT;
-    u.canSee=!over&&d<det&&sight(u.x,u.z,q.x,q.z,eyeY);
-    u.defenseTarget=u.canSee&&u.sp>0&&d>u.rng*.55?chooseDefense(u,q):null;
+    const seen=!over&&d<det&&sight(u.x,u.z,q.x,q.z,eyeY);
+    if(u.t==='soldat'){
+      const acquired=seen&&!u.canSee;
+      u.canSee=seen;
+      u.canShoot=seen&&soldierClearShot(u,u.x,u.z,eyeY,q,py);
+      if(seen){
+        u.lastSeenX=q.x;u.lastSeenZ=q.z;u.lastSeenY=py;
+        u.pursuitT=SOLDIER_MEMORY;
+        if(acquired)u.cd=Math.min(u.cd,.18);
+      }
+      u.defenseTarget=null;
+    }else{
+      u.canSee=seen;
+      u.defenseTarget=seen&&u.sp>0&&d>u.rng*.55?chooseDefense(u,q):null;
+    }
   }
 
-  if(u.canSee){
+  if(u.t==='soldat'&&(u.canSee||u.pursuitT>0)){
+    u.pursuitT=Math.max(0,(u.pursuitT||0)-dt);
+    u.tacticT=Math.max(0,(u.tacticT||0)-dt);
+    const target=u.canSee?q:{x:u.lastSeenX,z:u.lastSeenZ},
+          targetY=u.canSee?py:(u.lastSeenY??py),
+          td=Math.hypot(target.x-u.x,target.z-u.z);
+    soldierEngage(u,target,targetY,dt,td,!!u.canSee);
+    if(u.canSee&&u.canShoot&&d<u.rng&&u.cd<=0){
+      u.cd=u.rate;
+      const ex=q.x-u.x+rr(-1.5,1.5),ey=py+1.5-eyeY,
+            ez=q.z-u.z+rr(-1.5,1.5),length=Math.hypot(ex,ey,ez);
+      shoot(u.x,eyeY,u.z,ex/length,ey/length,ez/length,70,u.dmg,0,'e',mE,1);
+    }
+  }else if(u.canSee){
     u.hd=Math.atan2(-dx,-dz);
     if(u.sp>0&&d>u.rng*.55){
       const dp=u.defenseTarget;
