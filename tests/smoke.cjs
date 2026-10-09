@@ -414,6 +414,15 @@ run('resume()');game.frame(16);assert(run('water.uniforms.time.value')>before,'r
 run("panel('map');resume();joystick.state.x=1;joystick.state.y=-1;build()");
 ok('joystick.state.x===0&&joystick.state.y===0&&hp===100&&elapsed===0&&water.uniforms.time.value===0','restart resets input, health and clock');ok('PM.trunk.parent===world','vegetation follows current world');
 ok('PM.update&&PM.remove&&PM.stats.sectors>0','palm sectors support LOD and destruction');
+ok("PM.variants.every(ch=>ch.midTrunk&&ch.midCrown&&ch.farTrunk&&ch.farCrown)",
+  'every populated palm sector has middle and distant instanced models');
+ok("PM.stats.mediumSectors>=0&&PM.stats.farSectors>=0&&PM.stats.nearDistance===500&&PM.stats.farDistance===1900",
+  'palm distance LOD statistics and thresholds are exposed');
+ok("vegetationVisual.geometry.farCrown.attributes.position.count===18&&vegetationVisual.geometry.midCrown.attributes.position.count===72",
+  'distant palm crowns use 6 and 24 simple triangles');
+ok("PM.variants.every(ch=>ch.farTrunk.userData.palmSimplified&&!ch.farCrown.receiveShadow)",
+  'distant palm models disable costly shadow receiving');
+
 ok("riderSrc.includes('torso.rotation.set(0,-Math.PI/2,-.035+lean)')",'windsurf torso and inherited head face the sail');
 ok("HUNTER_TERRAIN.palette.some(p=>p[0]===30&&p[1]===0x138d31)&&HUNTER_TERRAIN.palette.some(p=>p[0]===40&&p[1]===0x0f7b2b)",'high terrain remains green');
 ok("String(vegetate).includes('highPalm=.22+Math.max(0,Math.min(1,(h-28)/14))*.12')&&String(vegetate).includes('h<4)L=q<.12?pm:null')",'high palm density increases while low-altitude chance stays unchanged');
