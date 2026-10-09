@@ -6,10 +6,21 @@ function destroyTower(u){
   if(!u?.o)return;u.o.updateMatrixWorld(true);const p=new THREE.Vector3(),q=new THREE.Quaternion(),sc=new THREE.Vector3(),center=new THREE.Vector3(u.x,u.o.position.y+4,u.z);
   u.o.traverse(src=>{if(!src.isMesh||src.isInstancedMesh||!src.geometry)return;src.matrixWorld.decompose(p,q,sc);const piece=new THREE.Mesh(src.geometry,src.material);piece.position.copy(p);piece.quaternion.copy(q);piece.scale.copy(sc);piece.castShadow=true;world.add(piece);const dx=p.x-center.x,dz=p.z-center.z,dd=Math.max(.3,Math.hypot(dx,dz)),sp=rn(6,15);DB.push({m:piece,s0:piece.scale.clone(),vx:dx/dd*sp+rn(-4,4),vy:rn(7,20),vz:dz/dd*sp+rn(-4,4),rx:rn(-7,7),ry:rn(-7,7),rz:rn(-7,7),life:rn(2.5,4.5),vehiclePart:true})});debris(u.x,u.o.position.y+5,u.z,0x4b5157,12,.45,12);for(let i=0;i<5;i++)puff(u.x+rn(-2,2),u.o.position.y+rn(2,8),u.z+rn(-2,2),0x55534f,rn(1.3,2.6));boom(u.x,u.o.position.y+4,u.z,7,28,'p')
 }
+function explodeEnemyVehicle(u){
+  // Mateixa explosió visual que els vehicles pilotables: fragments de la
+  // geometria original, núvol de fum i ona de foc. No reapareix el model.
+  if(u.destroyed)return;
+  u.destroyed=true;
+  const y=u.o?.position?.y??(u.gy??Math.max(0,hAt(u.x,u.z)));
+  if(u.o){vehicleDebris(u,y);world.remove(u.o)}
+  const heavy=u.t==='tanc'||u.t==='tanqueta';
+  boom(u.x,y+(heavy?1.8:1.2),u.z,heavy?12:9,heavy?48:32,'e');
+}
 function killEnemy(u){
   const i=E.indexOf(u);if(i<0)return;E.splice(i,1);kills++;
   if(u.t==='soldat'||u.t==='general'){u.deadT=0;u.deadSide=rn(-1,1)<0?-1:1;u.o.userData.legs?.forEach(l=>l.rotation.x=0);u.o.userData.arms?.forEach(a=>a.rotation.x=0);DEAD.push(u)}
   else if(u.t==='torre'){destroyTower(u);world.remove(u.o)}
+  else if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc')explodeEnemyVehicle(u);
   else world.remove(u.o);
   if(u.t==='general')fin('MISSIÓ COMPLERTA: el general ha caigut!')
 }
@@ -73,11 +84,27 @@ function launchGrenade(hd){
   const x=P.x+fx_*.85,y=P.y+2.05,z=P.z+fz*.85;o.position.set(x,y,z);world.add(o);
   grenades.push({x,y,z,vx:fx_*18,vy:12,vz:fz*18,t:2.4,o})
 }
+// Com la pistola: triem l'enemic més proper dins d'un con estret, sense
+// apuntar a través de murs. Sense objectiu el tret surt exactament a 0°.
+function autoAimArmoredShot(x,y,z,fx,fz,range){
+  let best=range,dirX=fx,dirY=0,dirZ=fz;
+  for(const e of E){
+    if(e.destroyed||e.hp<=0)continue;
+    const dx=e.x-x,dz=e.z-z,d=Math.hypot(dx,dz);
+    if(d<=1||d>=best||(dx*fx+dz*fz)/d<=.97)continue;
+    const ty=(e.o?.position?.y??(e.gy??0))+1.5,dy=ty-y;
+    if(Math.abs(Math.atan2(dy,d))>Math.PI/9)continue;
+    if(!sight(x,z,e.x,e.z,y))continue;
+    const len=Math.hypot(dx,dy,dz);
+    best=d;dirX=dx/len;dirY=dy/len;dirZ=dz/len;
+  }
+  return [dirX,dirY,dirZ];
+}
 function fire(){if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
-if(c=='tanc'){const a5=Math.PI/36,ch=Math.cos(a5),sv=Math.sin(a5),muzzleZ=5.35*VS.tanc,muzzleY=2.62*VS.tanc;fcd=.9;shoot(cv.x+fx_*muzzleZ,cv.o.position.y+muzzleY,cv.z+fz*muzzleZ,fx_*ch,-sv,fz*ch,85,45,8,'p',mS,2.2)}
+if(c=='tanc'){const muzzleZ=5.35*VS.tanc,muzzleY=2.62*VS.tanc,x=cv.x+fx_*muzzleZ,y=cv.o.position.y+muzzleY,z=cv.z+fz*muzzleZ;const [ax,ay,az]=autoAimArmoredShot(x,y,z,fx_,fz,110);fcd=.9;shoot(x,y,z,ax,ay,az,85,45,8,'p',mS,2.2)}
 else if(c=='heli'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30);fcd=.6;shoot(cv.x+fx_*3.2*VS.heli,cv.o.position.y+.5*VS.heli,cv.z+fz*3.2*VS.heli,fx_*ch,-sv,fz*ch,85,45,8,'p',mS,2)}
 else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30);fcd=.12;shoot(cv.x+fx_*4.1*VS.heli_combat,cv.o.position.y+.15,cv.z+fz*4.1*VS.heli_combat,fx_*ch,-sv,fz*ch,145,9,0,'p',mB,.85)}
-else if(c=='tanqueta'){const a5=Math.PI/36,ch=Math.cos(a5),sv=Math.sin(a5),muzzleZ=3.05*VS.tanqueta,muzzleY=2.48*VS.tanqueta;fcd=.16;shoot(cv.x+fx_*muzzleZ,cv.o.position.y+muzzleY,cv.z+fz*muzzleZ,fx_*ch,-sv,fz*ch,135,10,0,'p',mB,.9)}
+else if(c=='tanqueta'){const muzzleZ=3.05*VS.tanqueta,muzzleY=2.48*VS.tanqueta,x=cv.x+fx_*muzzleZ,y=cv.o.position.y+muzzleY,z=cv.z+fz*muzzleZ;const [ax,ay,az]=autoAimArmoredShot(x,y,z,fx_,fz,85);fcd=.16;shoot(x,y,z,ax,ay,az,135,10,0,'p',mB,.9)}
 else if(c=='llanxa_coets'){secondaryWeapon();return}
 else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}
 else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0)delete inv.bazooka;bazookaEquipped=false;fcd=1.05;pl.userData.firePose=.42;shoot(P.x+fx_*1.35,P.y+1.9,P.z+fz*1.35,fx_,.01,fz,72,135,18,'pb',mS,3);msg='Bazooka disparat!';msgT=2;setDis(false)}
