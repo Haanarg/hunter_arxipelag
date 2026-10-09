@@ -27,13 +27,13 @@ window.HUNTER_CHARACTERS=Object.freeze({
  box(gun,.10,.24,.15,P.dark,0,-.17,-.12);box(gun,.13,.16,.29,0x66513c,0,0,.36);
  u.gun=gun;u.legs=[u.ll,u.lr];u.arms=[u.al,u.ar];u.knees=[u.lkl,u.lkr];u.elbows=[u.ael,u.aer];
  u.profile='enemy-commando-approved';
- // Preserve the former soldier's world height (including its 10% reduction).
+ // Escala visual 80% del model de referència; no canvia la hitbox ni la IA.
  g.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(g);
  const height=bounds.max.y-bounds.min.y;
  for(const child of g.children)child.position.y-=bounds.min.y;
  const fit=3.66/height;
  g.traverse(o=>{if(o!==g)o.position.multiplyScalar(fit);if(o.isMesh)o.geometry.scale(fit,fit,fit)});
- g.scale.setScalar(.9);
+ g.scale.setScalar(.8);
  return g;
   },
 
