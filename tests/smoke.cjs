@@ -50,8 +50,12 @@ ok("window.HUNTER_PERFORMANCE_STATS.pixelRatio===Math.min(devicePixelRatio||1,vi
   'FPS overlay reports the actual resolution chosen at startup');
 ok("terrainStream.stats.viewPriority===false",
   'terrain updates avoid redundant camera frustum intersections');
-ok("visualQuality.waterSegments===(qualityName==='mobile'?200:320)",
-  'sea geometry uses the optimized desktop/mobile tessellation profiles');
+ok("visualQuality.waterSegments===(qualityName==='mobile'?200:qualityName==='ultra'?120:320)",
+  'sea geometry uses the selected desktop/mobile/ultra quality profile');
+ok("!!window.HUNTER_VISUAL_CONFIG.ultra&&window.HUNTER_VISUAL_CONFIG.ultra.viewDistance===1500&&window.HUNTER_VISUAL_CONFIG.ultra.waterReflections===false",
+  'ultra quality exists with shorter draw distance and no water reflections');
+ok("qualityName!=='ultra'||(cam.far===1500&&!ren.shadowMap.enabled&&water.material.fragmentShader.includes('fogHorizon')&&!water.material.fragmentShader.includes('reflect(-light,n)'))",
+  'ultra graphics uses 1500m far plane, no shadows and a non-reflective sea');
 ok('noBlockingStartCapture','starting game no longer forces a blocking WebGL capture');
 ok('minimap.stats.draws>=1&&minimap.stats.backgroundBuilds===1&&minimap.stats.lastLandPixels>0',
   'minimap draws land and sea after game start');
