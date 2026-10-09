@@ -5,9 +5,21 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.56**.
+Versió actual: **0.3.57**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.57 — tres nivells visuals de palmera amb geometria instanciada (2026-10-09)
+
+- **LOD 0 fins a 500 m:** palmera completa, amb tronc corbat, copa principal, fulles secundàries i les variants del model actual.
+- **LOD 1 de 500 a 1.100 m:** tronc corbat simplificat (4 cares radials i 3 trams) i sis fulles grans planes. Només dos `InstancedMesh` per sector, sense fulles secundàries.
+- **LOD 2 d'1.100 a 1.900 m:** tronc molt simple (3 cares, 2 trams) i tres plans de fulles creuats (6 triangles). Només dos `InstancedMesh` per sector.
+- Més lluny les palmeres es continuen ocultant. En perfil mòbil els llindars es mantenen més curts per protegir-ne el rendiment (460, 870, 1.250 m).
+- Les distàncies es calculen fins a la vora del sector; una histèresi de 65 m evita canvis repetitius quan es travessa un llindar. El mateix sector només mostra **un dels tres models alhora**, reutilitzant posicions, rotacions i colors originals.
+- La construcció de geometries simplificades no consumeix números aleatoris nous ni modifica la generació d'illes, objectes o vehicles. Col·lisions i arbres abatuts continuen fent servir el model original; la destrucció posa la matriu de la mateixa palmera a zero en els tres LOD.
+- Els models de mitjana i llarga distància no projecten ni reben ombres. Els comptadors `window.HUNTER_VEGETATION_STATS` exposen sectors pròxims/intermedis/llunyans i canvis de LOD.
+- Geometria mesurada amb Three.js real, en una palmera representativa: **196 triangles original, 56 intermedi (−71%) i 24 llunyà (−88%)**. Verificades nou transicions de LOD amb histèresi i set matrius anul·lades en destruir la palmera. Comparació amb la versió anterior de 250 palmeres: 750 matrius/colors originals idèntics i exactament el mateix consum de números pseudoaleatoris.
+- Proves: `tests/vegetation-lod.cjs` ampliat amb geometria, histèresi, destrucció i determinisme, i `tests/smoke.cjs` comprova les malles simplificades. Les proves específiques amb Three.js han passat; pendent benchmark d'FPS i comprovació visual en navegador i Android real.
 
 ### Revisió 0.3.56 — correcció de fotogrames foscos i regressió del rendiment (2026-10-09)
 
