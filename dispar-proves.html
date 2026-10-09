@@ -44,8 +44,8 @@ input[type=checkbox]{accent-color:#bde4a8;width:16px;height:16px}
 <canvas id="scene" aria-label="Vista interactiva en tres dimensions de l'animació de dispar"></canvas>
 <div id="ui">
  <div>
-  <h1>Dispar amb pistola · prova d’animació</h1>
-  <div class="sub">Model real del jugador (cap D), rig original de braços i colzes. Només previsualització: el codi del joc i els enemics no s’han modificat.</div>
+  <h1>Pistola estil Colt 1911 · prova de dispar</h1>
+  <div class="sub">Model real del jugador (cap D), pistola curta d’estil 1911 i postura a dues mans. El joc i els enemics continuen sense canvis.</div>
  </div>
  <nav aria-label="Comparació i vistes">
   <button id="old" type="button">Postura actual</button>
@@ -53,6 +53,7 @@ input[type=checkbox]{accent-color:#bde4a8;width:16px;height:16px}
   <button id="front" type="button">Front</button>
   <button id="threequarters" class="selected" type="button">3/4</button>
   <button id="side" type="button">Perfil</button>
+  <button id="detail" type="button" aria-pressed="false">Primer pla de l’arma</button>
   <a href="proves.html">Tornar a proves ↗</a>
  </nav>
 </div>
@@ -102,8 +103,54 @@ scene.add(player);
 const joints=player.userData;
 const gun=joints.gun;
 
-// En mode prova, l'arma es pot moure amb les dues mans en lloc de quedar
-// rígida al canell dret. És el mateix model creat per characters.js.
+// Només en el preview: el fusell provisional es reemplaça per una pistola 1911.
+for(const child of [...gun.children]){gun.remove(child);child.traverse(obj=>{if(obj.isMesh)obj.geometry?.dispose()})}
+const metal=new THREE.MeshStandardMaterial({color:0x41494c,metalness:.58,roughness:.43,flatShading:true});
+const highlight=new THREE.MeshStandardMaterial({color:0x7c8481,metalness:.65,roughness:.38,flatShading:true});
+const black=new THREE.MeshStandardMaterial({color:0x202729,metalness:.3,roughness:.65,flatShading:true});
+const dark=new THREE.MeshStandardMaterial({color:0x0c1418,roughness:.82,flatShading:true});
+const wood=new THREE.MeshStandardMaterial({color:0x6a442e,roughness:.87,flatShading:true});
+const part=(parent,w,h,d,material,x=0,y=0,z=0)=>{
+ const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
+ mesh.position.set(x,y,z);parent.add(mesh);return mesh;
+};
+// Perfil inspirat en la Colt M1911: canó i corredera curts, empunyadura,
+// guardamunt, gallet, martell, alça i punt de mira. Sense culata.
+const slide=new THREE.Group();gun.add(slide);
+part(slide,.238,.165,.78,metal,0,.19,-.36);
+part(slide,.247,.026,.73,black,0,.10,-.37);
+part(slide,.204,.023,.72,highlight,0,.28,-.36);
+part(slide,.047,.055,.24,dark,.125,.224,-.24);
+part(slide,.047,.019,.15,highlight,.153,.245,-.24);
+for(const side of [-1,1])for(let i=0;i<5;i++)part(slide,.008,.106,.013,black,side*.126,.19,.006-i*.033);
+part(slide,.074,.055,.060,black,0,.315,-.693);
+for(const side of [-1,1])part(slide,.045,.06,.065,black,side*.076,.313,-.005);
+const muzzle=new THREE.Mesh(new THREE.CylinderGeometry(.074,.074,.09,12),highlight);
+muzzle.rotation.x=Math.PI/2;muzzle.position.set(0,.183,-.771);slide.add(muzzle);
+const bore=new THREE.Mesh(new THREE.CylinderGeometry(.047,.047,.006,12),dark);
+bore.rotation.x=Math.PI/2;bore.position.set(0,.183,-.821);slide.add(bore);
+part(gun,.213,.12,.48,metal,0,.069,-.22);
+part(gun,.168,.065,.37,black,0,-.022,-.30);
+const grip=new THREE.Group();grip.position.set(0,-.12,.055);grip.rotation.x=-.20;gun.add(grip);
+part(grip,.208,.36,.185,black,0,-.08,0);
+for(const side of [-1,1]){
+ part(grip,.018,.265,.145,wood,side*.111,-.075,.002);
+ for(const y of [-.175,.025]){
+  const screw=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.018,8),highlight);
+  screw.rotation.z=Math.PI/2;screw.position.set(side*.129,y,.014);grip.add(screw);
+ }
+}
+part(grip,.230,.034,.215,metal,0,-.274,.013);
+part(gun,.237,.055,.112,metal,0,.037,.095);
+const loop=new THREE.CatmullRomCurve3([
+ new THREE.Vector3(0,.016,-.055),new THREE.Vector3(0,-.02,-.38),
+ new THREE.Vector3(0,-.135,-.40),new THREE.Vector3(0,-.19,-.30),
+ new THREE.Vector3(0,-.18,-.09),new THREE.Vector3(0,-.06,-.055)
+],true);
+gun.add(new THREE.Mesh(new THREE.TubeGeometry(loop,28,.018,6,true),black));
+part(gun,.034,.115,.028,black,0,-.07,-.185).rotation.x=-.23;
+part(gun,.092,.060,.078,black,0,.286,.063).rotation.x=-.3;
+part(gun,.045,.033,.072,highlight,.123,.055,.007);
 const muzzleFlash=new THREE.Group();
 const flashMaterial=new THREE.MeshBasicMaterial({color:0xffd76d,depthWrite:false});
 const flashCore=new THREE.Mesh(new THREE.ConeGeometry(.13,.41,6),flashMaterial);
@@ -111,14 +158,15 @@ flashCore.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vecto
 flashCore.position.z=-.18;muzzleFlash.add(flashCore);
 const flashGlow=new THREE.Mesh(new THREE.SphereGeometry(.11,8,6),new THREE.MeshBasicMaterial({color:0xfff4bb,depthWrite:false}));
 muzzleFlash.add(flashGlow);
-muzzleFlash.position.set(0,0,-1.12);
+muzzleFlash.position.set(0,.183,-.838);
 muzzleFlash.visible=false;gun.add(muzzleFlash);
 
 const camera=new THREE.PerspectiveCamera(35,1,.1,100);
-let yaw=.48,zoom=7.5,pitch=.26;
+let yaw=.48,zoom=7.5,pitch=.26,detailView=false;
 function updateCamera(){
- const focus=new THREE.Vector3(0,1.51,-.32);
- camera.position.set(focus.x+zoom*Math.sin(yaw)*Math.cos(pitch),focus.y+zoom*Math.sin(pitch),focus.z-zoom*Math.cos(yaw)*Math.cos(pitch));
+ const focus=detailView?new THREE.Vector3(0,1.99,-.43):new THREE.Vector3(0,1.51,-.32);
+ const distance=detailView?zoom*.43:zoom;
+ camera.position.set(focus.x+distance*Math.sin(yaw)*Math.cos(pitch),focus.y+distance*Math.sin(pitch),focus.z-distance*Math.cos(yaw)*Math.cos(pitch));
  camera.lookAt(focus);
 }
 const down=new THREE.Vector3(0,-1,0);
@@ -154,14 +202,14 @@ function setMode(next){
  $('modeTitle').textContent=mode==='new'?'Proposta · empunyadura a dues mans':'Postura actual · comparació';
  $('desc').textContent=mode==='new'
   ?'Els dos braços s’estenen cap endavant, amb els colzes flexionats. La mà esquerra subjecta la dreta sota la pistola. Cada tret mou les mans i l’arma lleument enrere i aixeca una mica el canó.'
-  :'Reproducció dels angles actuals de l’animació del jugador: els braços apunten endavant però les mans no comparteixen l’empunyadura i no hi ha retrocés.';
+  :'Angles actuals dels braços, amb la nova pistola curta per comparar la subjecció. Aquesta postura no incorpora retrocés.';
  $('recoil').disabled=mode==='old';
  if(mode==='old'){
   joints.aer.add(gun);gun.position.set(0,-.72,-.1);gun.rotation.set(-Math.PI/2,0,0);gun.scale.setScalar(1);
   joints.al.rotation.set(1.05,0,-.28);joints.ar.rotation.set(1.18,0,-.08);
   joints.ael.rotation.set(.82,0,0);joints.aer.rotation.set(.7,0,0);
  }else{
-  player.add(gun);gun.scale.setScalar(.55);
+  player.add(gun);gun.scale.setScalar(.95);
  }
 }
 function fire(){
@@ -187,7 +235,9 @@ function update(now){
   aimArm(joints.al,joints.ael,leftWrist,-1);
   gun.position.set(.045,3.10+moveUp,-1.13+moveBack);
   gun.rotation.set(.045+kick*.095,0,0);
+  slide.position.z=kick*.065; // la corredera acompanya el retrocés
  }else{
+  slide.position.z=0;
   for(const pose of oldPose){pose.joint.rotation.x=pose.x;pose.joint.rotation.y=0;pose.joint.rotation.z=pose.z;}
  }
  muzzleFlash.visible=now-lastShot<65&&now-lastShot>=0;
@@ -199,6 +249,11 @@ $('new').addEventListener('click',()=>setMode('new'));
 $('shoot').addEventListener('click',()=>{fire();lastAuto=performance.now()});
 $('automatic').addEventListener('change',e=>{auto=e.target.checked;lastAuto=performance.now()});
 $('recoil').addEventListener('input',e=>{recoil=Number(e.target.value)});
+$('detail').addEventListener('click',()=>{
+ detailView=!detailView;
+ $('detail').classList.toggle('selected',detailView);
+ $('detail').setAttribute('aria-pressed',String(detailView));
+});
 const viewButtons={front:0,threequarters:.48,side:Math.PI/2};
 for(const [name,angle] of Object.entries(viewButtons)){
  $(name).addEventListener('click',()=>{
