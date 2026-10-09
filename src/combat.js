@@ -95,16 +95,15 @@ function weaponTargetPriority(enemy){
 // La filferrada no amaga l'enemic al selector, però SÍ atura la bala
 // si el projectil hi impacta; parets i cobertes sòlides bloquegen l'assistència.
 function weaponAimClear(x,y,z,tx,ty,tz){
-  const dx=tx-x,dy=ty-y,dz=tz-z,d=Math.hypot(dx,dz),steps=Math.max(1,Math.ceil(d/2));
-  for(let i=1;i<steps;i++){
-    const t=i/steps,cx=x+dx*t,cy=y+dy*t,cz=z+dz*t;
-    if(wallCandidates(cx,cz,1).some(w=>!w.open&&!w.barbed&&
-       cx>=w.x0&&cx<=w.x1&&cy>=w.y0&&cy<=w.y1&&cz>=w.z0&&cz<=w.z1))return false;
+  // Una sola consulta als índexs espacials per candidat. Evitem centenars
+  // de mostres petites a cada tret de metralladora de l'helicòpter.
+  const mx=(x+tx)/2,mz=(z+tz)/2,reach=Math.hypot(tx-x,tz-z)/2+3;
+  for(const w of wallCandidates(mx,mz,reach)){
+    if(w.open||w.barbed)continue;
+    const t=segmentAabbT(x,y,z,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);
+    if(t!=null&&t<.98)return false;
   }
-  // Els sostres massissos són obstacles reals; no volem ajudar a
-  // apuntar a través de construccions.
-  const mx=(x+tx)/2,mz=(z+tz)/2;
-  for(const b of buildingCandidates(mx,mz,d/2+4)){
+  for(const b of buildingCandidates(mx,mz,reach)){
     if(b.rhp<=0)continue;
     const t=b.hangar
       ?hangarRoofSegmentT(x,y,z,tx,ty,tz,b)
