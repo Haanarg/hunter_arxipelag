@@ -194,8 +194,10 @@ window.HUNTER_TERRAIN=Object.freeze({
         for(let ix=Math.max(0,tx-1);ix<=Math.min(side-1,tx+1);ix++){
           const tile=tiles[iz*side+ix];
           if(!tile?.geometry||tile.level<0)continue;
-          const left=tile.cx-cellSize/2,top=tile.cz+cellSize/2;
-          const uWorld=x-left,vWorld=top-z;
+          const left=tile.cx-cellSize/2,front=tile.cz-cellSize/2;
+          // PlaneGeometry.rotateX(-PI/2): row 0 ends at MINIMUM world Z.
+          // Previously Z was reversed, sampling the opposite hillside.
+          const uWorld=x-left,vWorld=z-front;
           // Una tolerància petita inclou les dues vores, sense projectar
           // l'altura de sectors distants sobre el jugador.
           if(uWorld<-.0001||uWorld>cellSize+.0001||
