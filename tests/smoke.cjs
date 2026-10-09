@@ -554,6 +554,8 @@ run(`{
 }`);
 ok('targetPriorityShared','assist prioritizes soldiers before enemy vehicles and towers, but not behind solid walls');
 ok('helicopterAssistanceAndFallback','helicopter adjusts to threats yet preserves original 30 degree downward fire without targets');
+ok("String(fire).split('autoAimWeaponShot').length>=5",'helicopter gunfire, pistol and bazooka use priority assistance');
+ok("String(secondaryWeapon).includes('autoAimWeaponShot')",'helicopter missiles and rocket boat use priority assistance');
 
 
 run(`{const q=V.find(v=>v.t==='tanc'),ts=q.o.userData.tracks;ts.forEach(t=>t.phase=t.perimeter/2);q.v=0;q.yawRate=1;place(q,1,.1,0);globalThis.counterRotate=ts.find(t=>t.side<0).phase<ts[0].perimeter/2&&ts.find(t=>t.side>0).phase>ts[0].perimeter/2;q.v=0;q.yawRate=0}`);ok('counterRotate','tracks counter-rotate during pivot');
