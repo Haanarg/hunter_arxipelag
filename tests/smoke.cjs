@@ -505,9 +505,9 @@ run(`{
     weaponAimClear=()=>true;
     E=[];
     const level=autoAimArmoredShot(0,5,0,0,-1,110);
-    E=[{x:5,z:-50,hp:20,o:{position:{y:0}}}];
+    E=[{t:'soldat',x:5,z:-50,hp:20,o:{position:{y:0}}}];
     const guided=autoAimArmoredShot(0,5,0,0,-1,110);
-    E=[{x:55,z:-35,hp:20,o:{position:{y:0}}}];
+    E=[{t:'soldat',x:55,z:-35,hp:20,o:{position:{y:0}}}];
     const outside=autoAimArmoredShot(0,5,0,0,-1,110);
     globalThis.armoredLevelAndAssisted=level[0]===0&&level[1]===0&&level[2]===-1&&
       guided[0]>0&&guided[1]<0&&guided[2]<0&&
