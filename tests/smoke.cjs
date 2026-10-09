@@ -326,11 +326,11 @@ run(`{
           cd:0,rate:.5,alert:0,senseT:0,hd:0,home:{x:0,z:0},
           o:{position:new THREE.Vector3(),rotation:new THREE.Euler(),userData:{}}};
   try{
-    E=[u];cv=null;P.x=0;P.y=0;P.z=-26;over=0;disg=false;
+    E=[u];cv=null;P.x=0;P.y=0;P.z=-70;over=0;disg=false;
     sight=()=>true;soldierClearShot=()=>true;
     mvE=(...args)=>{moves.push(args)};shoot=(...args)=>shots.push(args);
     updEn(.11);
-    const approach=moves.length===1&&moves[0][3]===-26&&shots.length===1&&u.canShoot;
+    const approach=moves.length===1&&moves[0][3]===-70&&shots.length===1&&u.canShoot;
     moves.length=0;P.z=-5;u.senseT=0;updEn(.11);
     const retreat=moves.length===1&&moves[0][3]>0&&Math.abs(u.hd)<.001;
     moves.length=0;shots.length=0;P.z=-18;u.senseT=0;
@@ -345,7 +345,7 @@ run(`{
     mvE=oldMove;shoot=oldShoot;rebuildVehicleGrid();
   }
 }`);
-ok('soldierCombatStates','soldiers chase and shoot on sight, backpedal while facing, flank blockers and pursue last known position');
+ok('soldierCombatStates&&SOLDIER_FIRE_RANGE>=120','soldiers shoot on sight beyond old 32m range, chase, backpedal, flank and pursue last seen');
 run(`{
   const oldWalls=wallCandidates,oldBuildings=buildingCandidates,oldVehicles=vehicleCandidatesAt,
         oldCv=cv,soldier={t:'soldat'},target={x:0,z:-25},
