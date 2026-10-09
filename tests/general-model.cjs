@@ -4,7 +4,8 @@ const assert=require('node:assert/strict');
  const result=run(`(()=>{
  const general=HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M,general:true}),a=general.userData;
  if(a.profile!=='general-approved-thick-epaulettes'||!a.knees||!a.elbows)throw Error('general rig');
- const bounds=new THREE.Box3().setFromObject(general);if(Math.abs(bounds.max.y-bounds.min.y-3.55)>.0001||Math.abs(bounds.min.y)>.0001)throw Error('general height/ground');
+ const bounds=new THREE.Box3().setFromObject(general);if(Math.abs(bounds.max.y-bounds.min.y-2.84)>.0001||Math.abs(bounds.min.y)>.0001)throw Error('general height/ground');
+ assert.equal(general.scale.x,.8,'general scale set to 80 percent');
  const playerColor=pl.userData.cap.material.color.getHex();a.mats[0][0].color.setHex(0);if(pl.userData.cap.material.color.getHex()!==playerColor)throw Error('shared player material');
  for(let i=0;i<96;i++){
   HUNTER_CHARACTERS.animateSoldier(general,{phase:i*Math.PI/12,moving:true,aim:i>48,dt:1/30});
