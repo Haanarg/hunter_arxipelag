@@ -168,7 +168,8 @@ window.HUNTER_VEGETATION=Object.freeze({
         if(source.instanceColor){source.getColorAt(i,color);mesh.setColorAt(i,color)}
       }
       mesh.computeBoundingSphere();
-      mesh.castShadow=false;mesh.receiveShadow=shadows;
+      mesh.castShadow=false;mesh.receiveShadow=false;
+      mesh.userData.palmSimplified=true;
       mesh.frustumCulled=true;
       parent.add(mesh);return mesh;
     };
@@ -182,7 +183,8 @@ window.HUNTER_VEGETATION=Object.freeze({
         source.getColorAt(ref.index,color);mesh.setColorAt(i,color);
       }
       mesh.computeBoundingSphere();
-      mesh.castShadow=false;mesh.receiveShadow=false;mesh.frustumCulled=true;
+      mesh.castShadow=false;mesh.receiveShadow=false;
+      mesh.userData.palmSimplified=true;mesh.frustumCulled=true;
       parent.add(mesh);return mesh;
     };
     const CHUNK=420;
