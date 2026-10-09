@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Húnter: Arxipèlag · Prova del dispar a dues mans</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,sans-serif}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#132329;color:#ecf6ee}
+#scene{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#scene:active{cursor:grabbing}
+#ui{position:fixed;z-index:2;left:0;right:0;top:0;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:14px;padding:18px 22px;pointer-events:none;background:linear-gradient(#0e2028ee,#0e202800)}
+#ui>*{pointer-events:auto}
+h1{font-size:21px;margin:0 0 5px}
+.sub{font-size:12px;max-width:490px;line-height:1.45;color:#bcd1c8}
+nav{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+button,nav a{border:1px solid #688c81;background:#213b3b;color:#eef6ed;border-radius:8px;padding:10px 13px;font-size:13px;font-weight:650;text-decoration:none;cursor:pointer}
+button:hover,nav a:hover{background:#38544c}
+button.selected{background:#bddfa9;color:#152920;border-color:#bddfa9}
+button:focus-visible,nav a:focus-visible,input:focus-visible{outline:2px solid #c9f5c0;outline-offset:3px}
+#panel{position:fixed;z-index:2;left:22px;bottom:22px;width:min(390px,calc(100% - 44px));padding:16px;background:#10272cde;border:1px solid #789b877a;border-radius:14px;box-shadow:0 12px 40px #0004;backdrop-filter:blur(8px)}
+#panel h2{margin:0 0 8px;font-size:16px}
+#desc{font-size:12px;line-height:1.45;color:#d1e3da;min-height:37px}
+#panel .actions{display:flex;flex-wrap:wrap;gap:8px;margin:11px 0}
+#shoot{background:#d4e5aa;color:#1d3223;border-color:#d4e5aa;flex:1;min-width:122px;font-size:15px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:11px;font-size:12px}
+.row label{display:flex;gap:8px;align-items:center}
+input[type=range]{width:55%;accent-color:#bde4a8}
+input[type=checkbox]{accent-color:#bde4a8;width:16px;height:16px}
+#status{color:#b6d8b4;font-size:11px;margin-top:12px}
+#hint{position:fixed;z-index:1;right:22px;bottom:24px;text-align:right;font-size:11px;line-height:1.5;color:#ccdbd6;text-shadow:0 1px 4px #061316}
+@media(max-width:740px){
+ #ui{padding:12px;background:linear-gradient(#0e2028f5,#0e2028b0 80%,transparent)}
+ h1{font-size:17px}
+ .sub{max-width:320px}
+ nav button,nav a{padding:7px 9px;font-size:11px}
+ #panel{bottom:12px;left:12px;width:calc(100% - 24px);padding:12px}
+ #hint{right:14px;bottom:228px}
+}
+</style>
+</head>
+<body>
+<canvas id="scene" aria-label="Vista interactiva en tres dimensions de l'animació de dispar"></canvas>
+<div id="ui">
+ <div>
+  <h1>Dispar amb pistola · prova d’animació</h1>
+  <div class="sub">Model real del jugador (cap D), rig original de braços i colzes. Només previsualització: el codi del joc i els enemics no s’han modificat.</div>
+ </div>
+ <nav aria-label="Comparació i vistes">
+  <button id="old" type="button">Postura actual</button>
+  <button id="new" class="selected" type="button">Proposta · dues mans</button>
+  <button id="front" type="button">Front</button>
+  <button id="threequarters" class="selected" type="button">3/4</button>
+  <button id="side" type="button">Perfil</button>
+  <a href="proves.html">Tornar a proves ↗</a>
+ </nav>
+</div>
+<div id="panel">
+ <h2 id="modeTitle">Proposta · empunyadura a dues mans</h2>
+ <div id="desc">Els dos braços s’estenen cap endavant, amb els colzes flexionats. La mà esquerra subjecta la dreta sota la pistola. Cada tret mou les mans i l’arma lleument enrere i aixeca una mica el canó.</div>
+ <div class="actions">
+  <button id="shoot" type="button">Dispara · espai</button>
+ </div>
+ <div class="row"><label for="automatic"><input id="automatic" type="checkbox" checked> Dispar de demostració</label><span>Un tret cada 1,4 s</span></div>
+ <div class="row"><label for="recoil">Intensitat del retrocés</label><input id="recoil" type="range" min="0" max="2" step="0.1" value="1"></div>
+ <div id="status">Animació en prova · cap canvi al joc</div>
+</div>
+<div id="hint">Arrossega per girar · roda per acostar/allunyar<br>Tecla espai per disparar · 1 actual · 2 proposta</div>
+<script type="module">
+import * as THREE from './vendor/three-r186.module.mjs';
+import './src/palette.js';
+import './src/player-model.js';
+import './src/characters.js';
+
+const canvas=document.querySelector('#scene');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.75));
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.shadowMap.enabled=false;
+renderer.setClearColor(0x14252c);
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x14252c);
+scene.fog=new THREE.Fog(0x14252c,12,26);
+scene.add(new THREE.HemisphereLight(0xddeee5,0x3e5147,2.3));
+const key=new THREE.DirectionalLight(0xffefd6,3.0);key.position.set(-3,8,-5);scene.add(key);
+const fill=new THREE.DirectionalLight(0x92bedb,1.3);fill.position.set(4,4,5);scene.add(fill);
+
+const ground=new THREE.Mesh(new THREE.CircleGeometry(30,64),new THREE.MeshStandardMaterial({color:0x243e41,roughness:1}));
+ground.rotation.x=-Math.PI/2;ground.position.y=-.17;scene.add(ground);
+const pedestal=new THREE.Mesh(new THREE.CylinderGeometry(1.34,1.45,.18,48),new THREE.MeshStandardMaterial({color:0x5d7770,roughness:.78,metalness:.10}));
+pedestal.position.y=-.09;scene.add(pedestal);
+const ring=new THREE.Mesh(new THREE.TorusGeometry(1.37,.017,6,80),new THREE.MeshBasicMaterial({color:0x8cb7a8}));
+ring.rotation.x=Math.PI/2;ring.position.y=.012;scene.add(ring);
+
+function box(parent,w,h,d,color,x=0,y=0,z=0){
+ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,flatShading:true,roughness:.8}));
+ m.position.set(x,y,z);m.castShadow=false;parent.add(m);return m;
+}
+const player=window.HUNTER_CHARACTERS.createPlayer(THREE,{box,palette:window.HUNTER_PALETTE});
+scene.add(player);
+const joints=player.userData;
+const gun=joints.gun;
+
+// En mode prova, l'arma es pot moure amb les dues mans en lloc de quedar
+// rígida al canell dret. És el mateix model creat per characters.js.
+const muzzleFlash=new THREE.Group();
+const flashMaterial=new THREE.MeshBasicMaterial({color:0xffd76d,depthWrite:false});
+const flashCore=new THREE.Mesh(new THREE.ConeGeometry(.13,.41,6),flashMaterial);
+flashCore.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(0,0,-1));
+flashCore.position.z=-.18;muzzleFlash.add(flashCore);
+const flashGlow=new THREE.Mesh(new THREE.SphereGeometry(.11,8,6),new THREE.MeshBasicMaterial({color:0xfff4bb,depthWrite:false}));
+muzzleFlash.add(flashGlow);
+muzzleFlash.position.set(0,0,-1.12);
+muzzleFlash.visible=false;gun.add(muzzleFlash);
+
+const camera=new THREE.PerspectiveCamera(35,1,.1,100);
+let yaw=.48,zoom=7.5,pitch=.26;
+function updateCamera(){
+ const focus=new THREE.Vector3(0,1.51,-.32);
+ camera.position.set(focus.x+zoom*Math.sin(yaw)*Math.cos(pitch),focus.y+zoom*Math.sin(pitch),focus.z-zoom*Math.cos(yaw)*Math.cos(pitch));
+ camera.lookAt(focus);
+}
+const down=new THREE.Vector3(0,-1,0);
+const forearm=new THREE.Vector3(0,-.62*1.2,-.025*1.2).normalize();
+const temp=new THREE.Vector3();
+function aimArm(shoulder,elbow,wrist,side){
+ const start=shoulder.position.clone();
+ const goal=wrist.clone().sub(start);
+ const upper=Math.abs(elbow.position.y);
+ const lower=Math.hypot(.62*1.2,.025*1.2);
+ const dist=Math.min(upper+lower-.001,Math.max(.001,goal.length()));
+ const axis=goal.clone().normalize();
+ const along=(upper*upper+dist*dist-lower*lower)/(2*dist);
+ const radius=Math.sqrt(Math.max(0,upper*upper-along*along));
+ const pole=new THREE.Vector3(side*.2,-1,.18);
+ pole.addScaledVector(axis,-pole.dot(axis)).normalize();
+ const elbowPosition=start.clone().addScaledVector(axis,along).addScaledVector(pole,radius);
+ shoulder.quaternion.setFromUnitVectors(down,elbowPosition.clone().sub(start).normalize());
+ const forearmDirection=wrist.clone().sub(elbowPosition).normalize();
+ forearmDirection.applyQuaternion(shoulder.quaternion.clone().invert());
+ elbow.quaternion.setFromUnitVectors(forearm,forearmDirection);
+}
+const oldPose=[
+ {joint:joints.al,x:1.05,z:-.28},{joint:joints.ar,x:1.18,z:-.08},
+ {joint:joints.ael,x:.82,z:0},{joint:joints.aer,x:.70,z:0}
+];
+let mode='new',lastShot=-100000,lastAuto=-100000,recoil=1,auto=true;
+const $=id=>document.getElementById(id);
+function setMode(next){
+ mode=next;lastShot=-100000;
+ $('old').classList.toggle('selected',mode==='old');
+ $('new').classList.toggle('selected',mode==='new');
+ $('modeTitle').textContent=mode==='new'?'Proposta · empunyadura a dues mans':'Postura actual · comparació';
+ $('desc').textContent=mode==='new'
+  ?'Els dos braços s’estenen cap endavant, amb els colzes flexionats. La mà esquerra subjecta la dreta sota la pistola. Cada tret mou les mans i l’arma lleument enrere i aixeca una mica el canó.'
+  :'Reproducció dels angles actuals de l’animació del jugador: els braços apunten endavant però les mans no comparteixen l’empunyadura i no hi ha retrocés.';
+ $('recoil').disabled=mode==='old';
+ if(mode==='old'){
+  joints.aer.add(gun);gun.position.set(0,-.72,-.1);gun.rotation.set(-Math.PI/2,0,0);gun.scale.setScalar(1);
+  joints.al.rotation.set(1.05,0,-.28);joints.ar.rotation.set(1.18,0,-.08);
+  joints.ael.rotation.set(.82,0,0);joints.aer.rotation.set(.7,0,0);
+ }else{
+  player.add(gun);gun.scale.setScalar(.55);
+ }
+}
+function fire(){
+ lastShot=performance.now();
+}
+function recoilValue(now){
+ const age=(now-lastShot)*.001;
+ if(age<0||age>.65)return 0;
+ if(age<.065){const v=age/.065;return 1-(1-v)*(1-v)*(1-v);}
+ return Math.exp(-(age-.065)*13);
+}
+function update(now){
+ const kick=mode==='new'?recoilValue(now)*recoil:0;
+ joints.ll.rotation.x=0;joints.lr.rotation.x=0;
+ joints.lkl.rotation.x=-.06;joints.lkr.rotation.x=-.06;
+ if(mode==='new'){
+  // Coordenades del rig original (unitScale 1.2), abans de l'escala global 2/3.
+  // Les dues mans segueixen EXACTAMENT el mateix retrocés de l'empunyadura.
+  const moveBack=kick*.10,moveUp=kick*.03;
+  const rightWrist=new THREE.Vector3(.12,2.95+moveUp,-1.07+moveBack);
+  const leftWrist=new THREE.Vector3(-.075,2.96+moveUp,-1.115+moveBack);
+  aimArm(joints.ar,joints.aer,rightWrist,1);
+  aimArm(joints.al,joints.ael,leftWrist,-1);
+  gun.position.set(.045,3.10+moveUp,-1.13+moveBack);
+  gun.rotation.set(.045+kick*.095,0,0);
+ }else{
+  for(const pose of oldPose){pose.joint.rotation.x=pose.x;pose.joint.rotation.y=0;pose.joint.rotation.z=pose.z;}
+ }
+ muzzleFlash.visible=now-lastShot<65&&now-lastShot>=0;
+ joints.head.rotation.x=-.025;
+ player.position.y=Math.sin(now*.0017)*.006;
+}
+$('old').addEventListener('click',()=>setMode('old'));
+$('new').addEventListener('click',()=>setMode('new'));
+$('shoot').addEventListener('click',()=>{fire();lastAuto=performance.now()});
+$('automatic').addEventListener('change',e=>{auto=e.target.checked;lastAuto=performance.now()});
+$('recoil').addEventListener('input',e=>{recoil=Number(e.target.value)});
+const viewButtons={front:0,threequarters:.48,side:Math.PI/2};
+for(const [name,angle] of Object.entries(viewButtons)){
+ $(name).addEventListener('click',()=>{
+  yaw=angle;
+  for(const id of Object.keys(viewButtons))$(id).classList.toggle('selected',id===name);
+ });
+}
+let drag=null;
+canvas.addEventListener('pointerdown',e=>{drag={id:e.pointerId,x:e.clientX,y:e.clientY,yaw,pitch};canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener('pointermove',e=>{
+ if(!drag||e.pointerId!==drag.id)return;
+ yaw=drag.yaw+(e.clientX-drag.x)*.008;
+ pitch=THREE.MathUtils.clamp(drag.pitch+(drag.y-e.clientY)*.004,-.22,.65);
+ for(const id of Object.keys(viewButtons))$(id).classList.remove('selected');
+});
+for(const event of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(event,()=>{drag=null});
+canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=THREE.MathUtils.clamp(zoom+e.deltaY*.008,4.3,11)},{passive:false});
+window.addEventListener('keydown',e=>{
+ if(e.target instanceof HTMLInputElement)return;
+ if(e.code==='Space'){e.preventDefault();if(!e.repeat){fire();lastAuto=performance.now();}}
+ if(e.key==='1')setMode('old');
+ if(e.key==='2')setMode('new');
+});
+function resize(){
+ const width=innerWidth,height=innerHeight;
+ renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
+}
+window.addEventListener('resize',resize);
+resize();setMode('new');
+function animate(now){
+ requestAnimationFrame(animate);
+ if(auto&&now-lastAuto>=1400){fire();lastAuto=now;}
+ update(now);updateCamera();renderer.render(scene,camera);
+}
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
