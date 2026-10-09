@@ -59,9 +59,10 @@ window.HUNTER_GENERAL_MODEL=Object.freeze({create(T,{palette=window.HUNTER_PALET
  box(gun,.16,.2,1.5,palette.enemy.metal,0,0,-.25);box(gun,.18,.36,.25,dark,0,-.24,0);box(gun,.18,.2,.45,0x66513c,0,0,.55);
  u.gun=gun;u.legs=[u.ll,u.lr];u.arms=[u.al,u.ar];u.knees=[u.lkl,u.lkr];u.elbows=[u.ael,u.aer];
  u.profile='general-approved-thick-epaulettes';
- // Match the previous general's world height; keep scale=1 for the existing game contract.
+ // Escala visual del general al 80%; el pivot dels peus continua ancorat a terra.
  g.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(g),fit=3.55/(bounds.max.y-bounds.min.y);
  for(const child of g.children)child.position.y-=bounds.min.y;
  g.traverse(o=>{if(o!==g)o.position.multiplyScalar(fit);if(o.isMesh)o.geometry.scale(fit,fit,fit)});
+ g.scale.setScalar(.8);
  return g;
 }});
