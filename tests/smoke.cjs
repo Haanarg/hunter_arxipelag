@@ -347,6 +347,27 @@ run(`{
 }`);
 ok('soldierCombatStates&&SOLDIER_FIRE_RANGE>=120','soldiers shoot on sight beyond old 32m range, chase, backpedal, flank and pursue last seen');
 run(`{
+  const previousDifficulty=DIF,
+        enemy={t:'soldat',x:0,z:0,spl:0},target={x:0,z:-50},
+        extreme=(_min,max)=>max;
+  try{
+    DIF=1.5;const hardSpread=enemyAimSpread(),hard=enemyShotDirection(enemy,target,0,1.5,extreme);
+    DIF=1;const normalSpread=enemyAimSpread(),normal=enemyShotDirection(enemy,target,0,1.5,extreme);
+    DIF=.6;const easySpread=enemyAimSpread(),easy=enemyShotDirection(enemy,target,0,1.5,extreme);
+    const tank={...enemy,spl:7},explosive=enemyShotDirection(tank,target,0,1.5,extreme);
+    globalThis.enemyAccuracyDifficultyScaled=
+      Math.abs(hardSpread-1)<1e-12&&Math.abs(normalSpread-2.2)<1e-12&&Math.abs(easySpread-4.4)<1e-12&&
+      hard[1]===0&&hard[0]>0&&
+      normal[0]>hard[0]&&easy[0]>normal[0]&&
+      normal[1]>0&&easy[1]>normal[1]&&explosive[0]>easy[0]&&
+      [hard,normal,easy,explosive].every(dir=>Math.abs(Math.hypot(...dir)-1)<1e-10);
+    globalThis.enemyAccuracyAppliedToAll=String(updEn).split('enemyShotDirection(u,q,py,').length===3;
+  }finally{DIF=previousDifficulty}
+}`);
+ok('enemyAccuracyDifficultyScaled','Hard preserves old enemy accuracy; Normal and Easy progressively miss more often');
+ok('enemyAccuracyAppliedToAll','soldiers, general, towers and enemy vehicles share scaled aim');
+
+run(`{
   const oldWalls=wallCandidates,oldBuildings=buildingCandidates,oldVehicles=vehicleCandidatesAt,
         oldCv=cv,soldier={t:'soldat'},target={x:0,z:-25},
         wall={open:false,x0:-2,x1:2,z0:-11,z1:-10,y0:0,y1:4},
