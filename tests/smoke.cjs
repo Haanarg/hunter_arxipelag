@@ -132,7 +132,7 @@ ok('sharkFinOnly','shark visual is only a dorsal fin');
 ok('gullAvoidance','gulls stay above mountains and building roofs');
 run(`{
   globalThis.grenadeItemConfigured=!!IT.granada&&IT.granada.usable===true&&String(IT.granada.desc).includes('5 granades');
-  globalThis.grenadePickupIsFive=String(update).includes("it.t==='granada'?5:1");
+  globalThis.grenadePickupIsFive=String(update).includes("it.t==='granada'?5:it.t==='bazooka'?3:1");
   globalThis.grenadePlayerModel=!!pl.userData.grenade;
   globalThis.grenadeThrowAnimation=String(window.HUNTER_CHARACTERS.animatePlayer).includes('grenadeThrow')&&String(window.HUNTER_CHARACTERS.animatePlayer).includes('Llançament');
   globalThis.grenadeWorldPriority=worldGenSrc.includes("addIt('granada',R()<.5?a:b)")&&window.HUNTER_COMPOUND_LAYOUTS.some(l=>l.id==='outpost'&&l.loot.some(i=>i.kind==='granades'));
@@ -141,6 +141,8 @@ run(`{
 }`);
 ok('grenadeItemConfigured','grenade pickup is a usable five-grenade item');
 ok('grenadePickupIsFive','one grenade pickup adds five grenades');
+ok("IT.bazooka.desc.includes('3 coets')",'bazooka item specifies three rocket shots per pickup');
+ok("String(update).includes(\"it.t==='bazooka'?3:1\")",'bazooka pickup grants three shots');
 ok("String(update).includes(\"if(it.t==='arma')ammo+=16;else inv[it.t]\")",
   'ammo pickups add 16 rounds directly without entering inventory');
 run(`{
@@ -160,6 +162,33 @@ run(`{
   }
 }`);
 ok('ammoPickupAddsSixteen','an actual ammo pickup increases ammo by exactly 16');
+run(`{
+  const oldItems=items,oldBaz=inv.bazooka||0,oldCv=cv,
+        oldSwimming=swimming,oldFcd=fcd,oldOver=over,
+        oldBazEquipped=bazookaEquipped,oldGrenadeEquipped=grenadeEquipped,
+        mesh=new THREE.Group(),
+        pickup={t:'bazooka',x:P.x,y:P.y,z:P.z,o:mesh};
+  try{
+    cv=null;swimming=false;over=0;fcd=0;grenadeEquipped=false;
+    world.add(mesh);items=[pickup];
+    update(.016,elapsed+.016);
+    const collected=inv.bazooka===oldBaz+3&&!items.includes(pickup);
+    bazookaEquipped=true;
+    const before=Pj.length;
+    for(let n=0;n<3;n++){fcd=0;fire()}
+    const threeShots=Pj.length===before+3&&inv.bazooka===oldBaz&&
+      (oldBaz>0||!bazookaEquipped);
+    globalThis.bazookaPickupAndShots=collected&&threeShots;
+    for(const p of Pj.splice(before))world.remove(p.o);
+  }finally{
+    if(oldBaz>0)inv.bazooka=oldBaz;else delete inv.bazooka;
+    items=oldItems;cv=oldCv;swimming=oldSwimming;fcd=oldFcd;over=oldOver;
+    bazookaEquipped=oldBazEquipped;grenadeEquipped=oldGrenadeEquipped;
+    world.remove(mesh);
+  }
+}`);
+ok('bazookaPickupAndShots','picking up a bazooka grants exactly three shootable rockets');
+
 ok('grenadePlayerModel','player has a grenade model in the throwing hand');
 ok('grenadeThrowAnimation','grenade throw has a dedicated arm animation');
 ok('grenadeWorldPriority','grenades are prioritized in powder magazines and outposts');
