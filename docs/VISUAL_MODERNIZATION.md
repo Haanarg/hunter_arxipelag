@@ -5,9 +5,18 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.55**.
+Versió actual: **0.3.56**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.56 — correcció de fotogrames foscos i regressió del rendiment (2026-10-09)
+
+- Eliminada la resolució dinàmica experimental de la 0.3.54, que redimensionava el framebuffer WebGL cada 2,5 segons i podia provocar un fotograma fosc i pauses de GPU. El sistema `src/performance.js` conserva el diagnòstic de FPS, temps CPU, dibuixos i triangles, però **no fa mai `setPixelRatio()` durant la partida**.
+- Resolució inicial fixa i moderada: factor màxim 1,0 en perfil mòbil i 1,2 en escriptori (respectant el DPR real). Els controls i la física no es modifiquen. El monitor mostra «Resolució fixa».
+- Recuperat el shader estable de l'aigua, sense els condicionals per distància als vèrtexs i fragments. Es mantenen les malles de mar més lleugeres (200 subdivisions mòbil; 320 escriptori) i les altures de les ones calculades amb la mateixa funció que la física.
+- Els quatre LOD del terreny continuen actius. La selecció no comprova el frustum de cada sector a cada frame i deixa de recórrer-los quan tots són correctes; torna a actualitzar-los després de desplaçar-se aproximadament 90 metres. Això redueix el treball innecessari de CPU en panoràmiques estàtiques.
+- Proves revisades: `tests/performance.cjs` exigeix zero reassignacions WebGL a FPS baixos i alts; `tests/terrain-stream.cjs` valida l'aturada dels escanejos i la reactivació en moure's; `tests/water.cjs` valida el shader restaurat; `tests/smoke.cjs` comprova la configuració fixa.
+- Comprovació funcional amb Three.js real: 36 sectors generats, 12 amb LOD llunyà en mapa petit, zero escanejos repetits en repòs, actualització en canviar d'illa, malla de l'aigua i altures finites; simulacions de 23 i 90 FPS sense redimensionar buffers. **Pendent benchmark real de FPS i verificació visual a Android/navegador.**
 
 ### Revisió 0.3.55 — dissenys de compounds, fase 2 (2026-10-09)
 
