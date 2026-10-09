@@ -155,7 +155,7 @@ med:{n:'Farmaciola',c:0xf2f3de,s:[1.2,.8,.8],icon:ICON.med,desc:'Recupera 40 pun
 mapa:{n:'Mapa de l’HQ',c:0xffe27a,s:[1.6,.08,1.2],icon:ICON.mapa,desc:'Obre la carta de navegació i revela l’HQ enemic.',usable:true},
 mapa_heli:{n:'Mapa d’helicòpters',c:0x9fd7ff,s:[1.6,.08,1.2],icon:ICON.mapa_heli,desc:'Marca a la carta la posició de tots els helicòpters actius del mapa.',usable:true},
 mapa_tanc:{n:'Mapa de tancs',c:0xc6b06a,s:[1.6,.08,1.2],icon:ICON.mapa_tanc,desc:'Marca a la carta la posició de tots els tancs actius del mapa.',usable:true},
-bazooka:{n:'Bazooka',c:0x58664a,s:[2.1,.45,.45],icon:ICON.bazooka,desc:'Llançacoets d’un sol ús. Equipa’l i dispara una càrrega d’alt poder destructiu.',usable:true},
+bazooka:{n:'Bazooka',c:0x58664a,s:[2.1,.45,.45],icon:ICON.bazooka,desc:'Llançacoets amb 3 coets per recollida. Equipa’l i dispara càrregues d’alt poder destructiu fins que s’esgotin.',usable:true},
 granada:{n:'Granades',c:0x4a5842,s:[.65,.65,.65],icon:ICON.granada,desc:'Paquet de 5 granades. Equipa-les i llença-les amb Dispar.',usable:true},
 arma:{n:'Munició',c:0x555b66,s:[1.6,.35,.35],icon:ICON.arma,desc:'Caixa de munició per a l’arma personal.',usable:false},
 expl:{n:'Explosius',c:0x617451,s:[.9,.9,.9],icon:ICON.expl,desc:'Bloc d’explosiu plàstic amb cables RGB i temporitzador digital. La càrrega col·locada parpelleja en vermell durant 3 segons i té força destructiva triple.',usable:true},
@@ -726,7 +726,7 @@ function useInvItem(id){
   if(!inv[id])return false;
   if(id==='med'){if(hp>=100){msg='Ja tens la vida al màxim.';msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(100,hp+40);msg='Has usat una farmaciola.';msgT=2;snd('pick');return true}
   if(id==='expl'){if(cv||swimming){msg='No pots col·locar explosius des d’aquí.';msgT=2;return false}resume();plant();return true}
-  if(id==='bazooka'){if(cv||swimming){msg='Has d’anar a peu per equipar el bazooka.';msgT=2;return false}bazookaEquipped=!bazookaEquipped;if(bazookaEquipped)grenadeEquipped=false;resume();msg=bazookaEquipped?'Bazooka equipat: un sol tret.':'Bazooka desequipat.';msgT=2;return true}
+  if(id==='bazooka'){if(cv||swimming){msg='Has d’anar a peu per equipar el bazooka.';msgT=2;return false}bazookaEquipped=!bazookaEquipped;if(bazookaEquipped)grenadeEquipped=false;resume();msg=bazookaEquipped?'Bazooka equipat: '+inv.bazooka+' coets disponibles.':'Bazooka desequipat.';msgT=2;return true}
   if(id==='granada'){if(cv||swimming){msg='Has d’anar a peu per equipar les granades.';msgT=2;return false}grenadeEquipped=!grenadeEquipped;if(grenadeEquipped)bazookaEquipped=false;resume();msg=grenadeEquipped?'Granades equipades: '+inv.granada+'.':'Granades desequipades.';msgT=2;return true}
   if(id==='disf'){setDis(!disg);msg=disg?'Disfressa activada.':'Disfressa desactivada.';msgT=2;return true}
   if(id==='mapa'){panel('map');return true}
@@ -904,7 +904,7 @@ if(worldVisualTick<=0){
 }
 updateDoors(dt);
 items.forEach(it=>{const dx=it.x-P.x,dz=it.z-P.z;if(dx*dx+dz*dz<ITEM_ANIM2){it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25}});
-if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-it.z;if(dx*dx+dz*dz<4.84&&Math.abs(P.y-it.y)<3){if(it.t==='arma')ammo+=16;else inv[it.t]=(inv[it.t]||0)+(it.t==='granada'?5:1);world.remove(it.o);items.splice(k,1);msg='Has trobat: '+IT[it.t].n+(it.t==='granada'?' ×5':'');msgT=3;snd('pick')}}
+if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-it.z;if(dx*dx+dz*dz<4.84&&Math.abs(P.y-it.y)<3){if(it.t==='arma')ammo+=16;else inv[it.t]=(inv[it.t]||0)+(it.t==='granada'?5:it.t==='bazooka'?3:1);world.remove(it.o);items.splice(k,1);msg='Has trobat: '+IT[it.t].n+(it.t==='granada'?' ×5':it.t==='bazooka'?' ×3':'');msgT=3;snd('pick')}}
 msgT-=dt;pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv;animPl(cv?0:f,dt);
 if(!cv&&playerFall){pl.position.y=playerFall.y;pl.rotation.x=(playerFall.spin||1)*playerFall.t*7.5;pl.rotation.z=Math.sin(playerFall.t*8)*.45}
 else if(!cv&&playerEject&&playerEject.t>=0){
