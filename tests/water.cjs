@@ -20,14 +20,12 @@ for(const size of [4800,9600])for(const segments of [200,320]){
   assert(Math.abs(water.surfaceHeight(q.x,q.z,time)-expected)<1e-8,'CPU matches displaced triangles');samples++;
  }
  assert(water.geometry.boundingBox.max.y>=w.maxDisplacement,'wave bounds prevent premature culling');
- assert(water.material.vertexShader.includes('float accurate=hunterWaveHeight'),
-   'nearby waves still use the original physical wave function');
- assert(water.material.vertexShader.includes('dist>=3200.'),
-   'far vertices avoid detailed wave spectrum');
- assert(water.material.fragmentShader.includes('if(dist>=3200.)'),
-   'far ocean pixels avoid foam and expensive reflection computations');
- assert(water.material.fragmentShader.includes('smoothstep(2200.,3200.,dist)'),
-   'far appearance transitions continuously');
+ assert(water.material.vertexShader.includes('p.y=hunterWaveHeight(p.xz,time,seabed)'),
+   'original wave shader preserved without an extra distance branch');
+ assert(!water.material.vertexShader.includes('dist>=3200.'),
+   'remove experimental horizon distance branches from vertex shader');
+ assert(!water.material.fragmentShader.includes('if(dist>=3200.)'),
+   'remove expensive per-fragment horizon branching');
  assert.equal(g.attributes.position.count,(segments+1)**2,
    'profile uses configured ocean tessellation');
  for(const match of water.material.fragmentShader.matchAll(/#include <([^>]+)>/g))assert(T.ShaderChunk[match[1]],'shader chunk '+match[1]);
@@ -47,7 +45,7 @@ for(const size of [4800,9600])for(const segments of [200,320]){
  water.dispose();
 }
 for(let i=0;i<100;i++){const x=i*13,z=-i*9,t=i*.31,bed=-i*.4;const legacy=(Math.sin(x*.03+t*1.2)*.9+Math.cos(z*.04+t*.9)*.9+Math.sin((x+z)*.07+t*2)*.4)*Math.max(.12,Math.min(1,(-bed+.6)/9));assert(Math.abs(w.height(x,z,t,bed)-legacy)<1e-12,'wave spectrum preserved')}
-console.log(JSON.stringify({passed:true,triangleSamples:samples,profiles:4,waveSamples:100,checks:['shared wave spectrum','CPU triangle interpolation','distance ocean LOD','bounds','shader includes','resize/disposal']}));
+console.log(JSON.stringify({passed:true,triangleSamples:samples,profiles:4,waveSamples:100,checks:['shared wave spectrum','CPU triangle interpolation','restored stable shader','bounds','shader includes','resize/disposal']}));
 
 
 })().catch(e=>{console.error(e);process.exitCode=1});
