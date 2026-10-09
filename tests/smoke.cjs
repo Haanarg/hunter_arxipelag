@@ -320,6 +320,57 @@ run(`{
 }`);
 ok('enemySenseCached','enemy perception runs at 10 Hz and reuses cached sight between ticks');
 run(`{
+  const saved={enemies:E,vehicle:cv,x:P.x,y:P.y,z:P.z,over,disg},
+        oldSight=sight,oldClear=soldierClearShot,oldMove=mvE,oldShoot=shoot,
+        moves=[],shots=[],u={t:'soldat',x:0,z:0,gy:0,sp:7,rng:32,
+          cd:0,rate:.5,alert:0,senseT:0,hd:0,home:{x:0,z:0},
+          o:{position:new THREE.Vector3(),rotation:new THREE.Euler(),userData:{}}};
+  try{
+    E=[u];cv=null;P.x=0;P.y=0;P.z=-26;over=0;disg=false;
+    sight=()=>true;soldierClearShot=()=>true;
+    mvE=(...args)=>{moves.push(args)};shoot=(...args)=>shots.push(args);
+    updEn(.11);
+    const approach=moves.length===1&&moves[0][3]===-26&&shots.length===1&&u.canShoot;
+    moves.length=0;P.z=-5;u.senseT=0;updEn(.11);
+    const retreat=moves.length===1&&moves[0][3]>0&&Math.abs(u.hd)<.001;
+    moves.length=0;shots.length=0;P.z=-18;u.senseT=0;
+    soldierClearShot=()=>false;u.cd=0;updEn(.11);
+    const flank=moves.length===1&&Math.abs(moves[0][2])>3&&shots.length===0;
+    moves.length=0;u.senseT=0;sight=()=>false;updEn(.11);
+    const memory=moves.length===1&&u.pursuitT>0&&u.lastSeenZ===-18;
+    globalThis.soldierCombatStates=approach&&retreat&&flank&&memory;
+  }finally{
+    E=saved.enemies;cv=saved.vehicle;P.x=saved.x;P.y=saved.y;P.z=saved.z;
+    over=saved.over;disg=saved.disg;sight=oldSight;soldierClearShot=oldClear;
+    mvE=oldMove;shoot=oldShoot;rebuildVehicleGrid();
+  }
+}`);
+ok('soldierCombatStates','soldiers chase and shoot on sight, backpedal while facing, flank blockers and pursue last known position');
+run(`{
+  const oldWalls=wallCandidates,oldBuildings=buildingCandidates,oldVehicles=vehicleCandidatesAt,
+        oldCv=cv,soldier={t:'soldat'},target={x:0,z:-25},
+        wall={open:false,x0:-2,x1:2,z0:-11,z1:-10,y0:0,y1:4},
+        parked={t:'cotxe',x:0,z:-11,o:{position:{y:0}},destroyed:false};
+  try{
+    cv=null;wallCandidates=()=>[];buildingCandidates=()=>[];vehicleCandidatesAt=()=>[];
+    const clear=soldierClearShot(soldier,0,0,2.2,target,0);
+    wallCandidates=()=>[wall];
+    const blockedByWall=!soldierClearShot(soldier,0,0,2.2,target,0);
+    wallCandidates=()=>[];vehicleCandidatesAt=()=>[parked];
+    const blockedByNeutral=!soldierClearShot(soldier,0,0,2.2,target,0);
+    globalThis.soldierBlockedShotChecks=clear&&blockedByWall&&blockedByNeutral;
+    globalThis.soldierNeutralRoutes=String(enemySolidAt).includes('if(route&&!veh)')&&
+      String(mvE).includes('false,!veh')&&
+      String(enemyFindPath).includes('enemySolidAt(u,mx,mz,hd,true)');
+  }finally{
+    wallCandidates=oldWalls;buildingCandidates=oldBuildings;
+    vehicleCandidatesAt=oldVehicles;cv=oldCv;
+  }
+}`);
+ok('soldierBlockedShotChecks','soldier fire is blocked by walls and parked neutral vehicles');
+ok('soldierNeutralRoutes','soldier direct paths and A-star consider neutral vehicles as obstacles');
+
+run(`{
   const ta=segmentAabbT(0,1,0,10,1,0,4,6,0,2,-1,1);
   const ts=segmentSphereT(0,1,0,10,1,0,5,1,0,1);
   globalThis.projectileSegmentMath=Math.abs(ta-.4)<1e-9&&Math.abs(ts-.4)<1e-9;
