@@ -522,7 +522,7 @@ function groundAt(x,z){
   // No enfonsar el model sota els triangles que dibuixa el LOD actual.
   // Preservem l'altura física si és més alta (evita enfonsaments i salts negatius).
   const physical=hAt(x,z),visible=terrainStream?.visibleHeightAt(x,z);
-  let y=visible===null||visible===undefined?physical:Math.max(physical,visible);for(const s of stairs){if(stairContains(s,x,z)){const q=stairLocal(s,x,z);if(s.ramp){const t=Math.max(0,Math.min(1,q.along/s.length));y=Math.max(y,s.top+(s.bottom-s.top)*t)}else{const i=Math.min(s.steps-1,Math.max(0,Math.floor(q.along/s.tread)));y=Math.max(y,s.top-i*s.rise)}}}
+  let y=visible===null||visible===undefined?physical:visible;for(const s of stairs){if(stairContains(s,x,z)){const q=stairLocal(s,x,z);if(s.ramp){const t=Math.max(0,Math.min(1,q.along/s.length));y=Math.max(y,s.top+(s.bottom-s.top)*t)}else{const i=Math.min(s.steps-1,Math.max(0,Math.floor(q.along/s.tread)));y=Math.max(y,s.top-i*s.rise)}}}
 for(const p of piers){const dx=x-p.x,dz=z-p.z,along=dx*p.ux+dz*p.uz,side=dx*p.px+dz*p.pz;if(Math.abs(along)<=p.length/2+.35&&Math.abs(side)<=p.width/2+.2)y=Math.max(y,p.y)}
 return y}
 function addRampAccess(b,side){const [nx,nz]=[[0,1],[0,-1],[1,0],[-1,0]][side],edge=(nx?b.w:b.d)/2+.2,x=b.x+nx*edge,z=b.z+nz*edge,top=b.fy+.3;
@@ -870,20 +870,10 @@ else if(c.m==='wl'){y=Math.max(g,wy(v.x,v.z,t))+.6;ro=-(v.yawRate||0)*.08}
 else if(v.carrier){const q=ferryLocal(v.carrier,v.x,v.z);y=ferryLocalSurfaceY(v.carrier,q.z)+.05;pi=0;ro=0}
 else{
   const s2=Math.sin(v.hd),k=Math.cos(v.hd);
-  const base=groundAt(v.x,v.z);
-  const footprint=(VS[v.t]||1);
-  const longitudinal=(v.t==='tanc'||v.t==='tanqueta'||v.t==='camio'?2.3:1.45)*footprint;
-  const lateral=(v.t==='tanc'||v.t==='tanqueta'?1.65:.85)*footprint;
-  // Suports a les quatre rodes/erugues: comparats amb la base matemàtica
-  // del mateix punt, només corregim l'excés de la malla visible.
-  let lift=0;
-  for(const forward of [-1,1])for(const side of [-1,1]){
-    const px=v.x-s2*longitudinal*forward+k*lateral*side;
-    const pz=v.z-k*longitudinal*forward-s2*lateral*side;
-    const visual=terrainStream?.visibleHeightAt(px,pz);
-    if(visual!==null&&visual!==undefined)lift=Math.max(lift,visual-hAt(px,pz)+Math.max(0,hAt(px,pz)-base)*.25);
-  }
-  y=base+Math.max(0,lift)+.05;
+  // Suport al centre del vehicle: ni el màxim físic ni les rodes
+  // del darrere han de fixar una alçada antiga en una baixada.
+  // La inclinació continua seguint la diferència de les mostres frontal/darrere.
+  y=groundAt(v.x,v.z)+.05;
   pi=Math.atan((groundAt(v.x-s2*3,v.z-k*3)-groundAt(v.x+s2*3,v.z+k*3))/6);ro=-(v.sideV||0)*.018}
 if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.rotation.set(pi,v.hd,ro);
 v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0):(v.pedalPhase||0),sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*sweep;r.rotation.z=-side*(.12+dip);r.rotation.x=.06*Math.sin(rowPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})}
@@ -897,17 +887,10 @@ V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;return}if(v
 syncFerryCargo();
 ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2)||null;
 const floor=ib?ib.fy+.3:groundAt(P.x,P.z),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;if(!playerFall){
-  // El contacte no és un punt infinitesimal: cobrim l'àrea dels peus.
-  // Les mostres eviten que una cantonada alta del triangle visual talli
-  // les cames a la transició entre sectors.
-  let feetFloor=floor;
-  if(!ib&&!swimming){
-    for(const dx of [-.32,.32])for(const dz of [-.32,.32]){
-      const h=terrainStream?.visibleHeightAt(P.x+dx,P.z+dz);
-      if(h!==null&&h!==undefined)feetFloor=Math.max(feetFloor,h);
-    }
-  }
-  P.y=ib?floor:Math.max(feetFloor+.06,surface-2.1);
+  // El suport segueix el triangle visible JUST sota el centre del jugador.
+  // Mostrejar el màxim de quatre punts manté el personatge en l'aire
+  // en baixar una pendent, perquè els punts del darrere són més alts.
+  P.y=ib?floor:Math.max(floor+.06,surface-2.1);
 }
 // Actualització del LOD de les palmeres a baixa freqüència (i també en vehicle).
 palmVisualTick-=dt;
