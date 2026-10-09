@@ -62,8 +62,8 @@ function sight(x,z,tx,tz,y){const d=Math.hypot(tx-x,tz-z),n=Math.max(1,Math.ceil
 function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=.34;const fx_=-Math.sin(P.hd),fz=-Math.cos(P.hd);let hit=null,best=2.6;for(const u of E){const dx=u.x-P.x,dz=u.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx_+dz*fz)/d>.35&&sight(P.x,P.z,u.x,u.z,P.y+1.2)){best=d;hit=u}}if(hit)hurtE(hit,6);snd('hurt',hit?.45:.18);setDis(false);return true}
 function secondaryWeapon(){
   if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd),d45=Math.SQRT1_2;
-  if(cv.t==='heli_combat'){if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;shoot(cv.x+fx_*5,cv.o.position.y+1,cv.z+fz*5,fx_*d45,-d45,fz*d45,72,60,10,'p',mS,2.4);msg='Míssils: '+cv.rockets;msgT=1;return true}
-  if(cv.t==='llanxa_coets'){if((cv.rockets||0)<=0){msg='Sense coets.';msgT=2;return false}cv.rockets--;fcd=.9;shoot(cv.x+fx_*6,cv.o.position.y+1.2,cv.z+fz*6,fx_,.015,fz,68,70,11,'p',mS,2.6);msg='Coets: '+cv.rockets;msgT=1;return true}
+  if(cv.t==='heli_combat'){if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const x=cv.x+fx_*5,y=cv.o.position.y+1,z=cv.z+fz*5,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*d45,-d45,fz*d45,120,.91);shoot(x,y,z,ax,ay,az,72,60,10,'p',mS,2.4);msg='Míssils: '+cv.rockets;msgT=1;return true}
+  if(cv.t==='llanxa_coets'){if((cv.rockets||0)<=0){msg='Sense coets.';msgT=2;return false}cv.rockets--;fcd=.9;const x=cv.x+fx_*6,y=cv.o.position.y+1.2,z=cv.z+fz*6,base=Math.hypot(1,.015),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.015/base,fz/base,105,.94);shoot(x,y,z,ax,ay,az,68,70,11,'p',mS,2.6);msg='Coets: '+cv.rockets;msgT=1;return true}
   return false
 }
 function throwGrenade(){
@@ -84,31 +84,67 @@ function launchGrenade(hd){
   const x=P.x+fx_*.85,y=P.y+2.05,z=P.z+fz*.85;o.position.set(x,y,z);world.add(o);
   grenades.push({x,y,z,vx:fx_*18,vy:12,vz:fz*18,t:2.4,o})
 }
-// Com la pistola: triem l'enemic més proper dins d'un con estret, sense
-// apuntar a través de murs. Sense objectiu el tret surt exactament a 0°.
-function autoAimArmoredShot(x,y,z,fx,fz,range){
-  let best=range,dirX=fx,dirY=0,dirZ=fz;
+// Prioritat compartida: 0 soldats/general, 1 vehicles enemics, 2 torres.
+// Elements de l'escenari i vehicles abandonats no competeixen per l'autoapuntat.
+function weaponTargetPriority(enemy){
+  if(enemy.t==='soldat'||enemy.t==='general')return 0;
+  if(enemy.t==='jeep'||enemy.t==='tanqueta'||enemy.t==='tanc')return 1;
+  if(enemy.t==='torre')return 2;
+  return 3;
+}
+// La filferrada no amaga l'enemic al selector, però SÍ atura la bala
+// si el projectil hi impacta; parets i cobertes sòlides bloquegen l'assistència.
+function weaponAimClear(x,y,z,tx,ty,tz){
+  const dx=tx-x,dy=ty-y,dz=tz-z,d=Math.hypot(dx,dz),steps=Math.max(1,Math.ceil(d/2));
+  for(let i=1;i<steps;i++){
+    const t=i/steps,cx=x+dx*t,cy=y+dy*t,cz=z+dz*t;
+    if(wallCandidates(cx,cz,1).some(w=>!w.open&&!w.barbed&&
+       cx>=w.x0&&cx<=w.x1&&cy>=w.y0&&cy<=w.y1&&cz>=w.z0&&cz<=w.z1))return false;
+  }
+  // Els sostres massissos són obstacles reals; no volem ajudar a
+  // apuntar a través de construccions.
+  const mx=(x+tx)/2,mz=(z+tz)/2;
+  for(const b of buildingCandidates(mx,mz,d/2+4)){
+    if(b.rhp<=0)continue;
+    const t=b.hangar
+      ?hangarRoofSegmentT(x,y,z,tx,ty,tz,b)
+      :segmentAabbT(x,y,z,tx,ty,tz,
+        b.x-b.w/2-.6,b.x+b.w/2+.6,b.fy+b.h-.4,b.fy+b.h+1.4,
+        b.z-b.d/2-.6,b.z+b.d/2+.6);
+    if(t!=null&&t<.98)return false;
+  }
+  return true;
+}
+function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97){
+  let bestPriority=Infinity,bestDist=range,chosen=null;
   for(const e of E){
     if(e.destroyed||e.hp<=0)continue;
-    const dx=e.x-x,dz=e.z-z,d=Math.hypot(dx,dz);
-    if(d<=1||d>=best||(dx*fx+dz*fz)/d<=.97)continue;
-    const ty=(e.o?.position?.y??(e.gy??0))+1.5,dy=ty-y;
-    if(Math.abs(Math.atan2(dy,d))>Math.PI/9)continue;
-    if(!sight(x,z,e.x,e.z,y))continue;
-    const len=Math.hypot(dx,dy,dz);
-    best=d;dirX=dx/len;dirY=dy/len;dirZ=dz/len;
+    const priority=weaponTargetPriority(e);
+    if(priority>=3||priority>bestPriority)continue;
+    const dx=e.x-x,dz=e.z-z,dist=Math.hypot(dx,dz);
+    if(dist<=1||dist>range||(priority===bestPriority&&dist>=bestDist))continue;
+    const baseY=e.o?.position?.y??(e.gy??0),
+          ty=baseY+(e.t==='torre'?4.5:e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:1.5),
+          dy=ty-y,len=Math.hypot(dx,dy,dz);
+    if(len<=.001||(dx*fx+dy*fy+dz*fz)/len<cone)continue;
+    if(!weaponAimClear(x,y,z,e.x,ty,e.z))continue;
+    bestPriority=priority;bestDist=dist;chosen=[dx/len,dy/len,dz/len];
   }
-  return [dirX,dirY,dirZ];
+  return chosen||[fx,fy,fz];
+}
+// Conservem el punt de sortida horitzontal del tanc i la tanqueta (0 graus).
+function autoAimArmoredShot(x,y,z,fx,fz,range){
+  return autoAimWeaponShot(x,y,z,fx,0,fz,range,.97);
 }
 function fire(){if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
 if(c=='tanc'){const muzzleZ=5.35*VS.tanc,muzzleY=2.62*VS.tanc,x=cv.x+fx_*muzzleZ,y=cv.o.position.y+muzzleY,z=cv.z+fz*muzzleZ;const [ax,ay,az]=autoAimArmoredShot(x,y,z,fx_,fz,110);fcd=.9;shoot(x,y,z,ax,ay,az,85,45,8,'p',mS,2.2)}
-else if(c=='heli'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30);fcd=.6;shoot(cv.x+fx_*3.2*VS.heli,cv.o.position.y+.5*VS.heli,cv.z+fz*3.2*VS.heli,fx_*ch,-sv,fz*ch,85,45,8,'p',mS,2)}
-else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30);fcd=.12;shoot(cv.x+fx_*4.1*VS.heli_combat,cv.o.position.y+.15,cv.z+fz*4.1*VS.heli_combat,fx_*ch,-sv,fz*ch,145,9,0,'p',mB,.85)}
+else if(c=='heli'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*3.2*VS.heli,y=cv.o.position.y+.5*VS.heli,z=cv.z+fz*3.2*VS.heli;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,125,.91);fcd=.6;shoot(x,y,z,ax,ay,az,85,45,8,'p',mS,2)}
+else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*4.1*VS.heli_combat,y=cv.o.position.y+.15,z=cv.z+fz*4.1*VS.heli_combat;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,130,.91);fcd=.12;shoot(x,y,z,ax,ay,az,145,9,0,'p',mB,.85)}
 else if(c=='tanqueta'){const muzzleZ=3.05*VS.tanqueta,muzzleY=2.48*VS.tanqueta,x=cv.x+fx_*muzzleZ,y=cv.o.position.y+muzzleY,z=cv.z+fz*muzzleZ;const [ax,ay,az]=autoAimArmoredShot(x,y,z,fx_,fz,85);fcd=.16;shoot(x,y,z,ax,ay,az,135,10,0,'p',mB,.9)}
 else if(c=='llanxa_coets'){secondaryWeapon();return}
 else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}
-else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0)delete inv.bazooka;bazookaEquipped=false;fcd=1.05;pl.userData.firePose=.42;shoot(P.x+fx_*1.35,P.y+1.9,P.z+fz*1.35,fx_,.01,fz,72,135,18,'pb',mS,3);msg='Bazooka disparat!';msgT=2;setDis(false)}
-else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;let ax=fx_,ay=0,az=fz,best=75;for(const e of E){const dx=e.x-P.x,dz=e.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>1&&(dx*fx_+dz*fz)/d>.97&&sight(P.x,P.z,e.x,e.z,P.y+1.5)){best=d;const dy=e.o.position.y+1.5-(P.y+1.5),l=Math.hypot(dx,dy,dz);ax=dx/l;ay=dy/l;az=dz/l}}shoot(P.x+fx_*.7,P.y+1.5,P.z+fz*.7,ax,ay,az,130,12,0,'p',mB,1)}
+else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9,z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,105,.94);shoot(x,y,z,ax,ay,az,72,135,18,'pb',mS,3);msg='Bazooka: '+(inv.bazooka||0)+' coets restants.';msgT=2;setDis(false)}
+else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5,z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,75,.97);shoot(x,y,z,ax,ay,az,130,12,0,'p',mB,1)}
 else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}
 function segmentAabbT(x0,y0,z0,x1,y1,z1,minX,maxX,minY,maxY,minZ,maxZ){
   let lo=0,hi=1;
@@ -166,7 +202,7 @@ function updPj(dt){
     // Personatges i vehicles: intersecció contínua amb volum esfèric aproximat.
     if(p.own==='p'||p.own==='pb'){
       for(const u of enemyCandidatesAt(mx,mz,reach+4)){
-        consider(segmentSphereT(x0,y0,z0,x1,y1,z1,u.x,u.o.position.y+1.5,u.z,(u.r||1)+.6),'enemy',u)
+        consider(segmentSphereT(x0,y0,z0,x1,y1,z1,u.x,u.o.position.y+(u.t==='torre'?4.5:1.5),u.z,(u.r||1)+.6),'enemy',u)
       }
     }
     for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){
