@@ -159,7 +159,7 @@ window.HUNTER_VEGETATION=Object.freeze({
     };
     // Reutilitzem exactament les transformacions i colors de les instàncies
     // completes. Cap crida nova a random(): llavors i spawns idèntics.
-    const cloneInstances=(parent,geo,source,{crown=false,shadows=false}={})=>{
+    const cloneInstances=(parent,geo,source)=>{
       if(!source)return null;
       const mesh=new THREE.InstancedMesh(geo,source.material,source.count),
             matrix=new THREE.Matrix4(),color=new THREE.Color();
