@@ -12,7 +12,7 @@ assert.equal(perf.stats.mode,'fixed');
 let now=0;
 for(let i=0;i<300;i++){now+=1000/23;perf.sample({dt:1/23,now,renderCpuMs:6,active:true});}
 assert(perf.stats.fps>22&&perf.stats.fps<24,'FPS sampling works while slow');
-assert.equal(perf.stats.pixelRatio,1,'runtime ratio fixed at chosen quality');
+assert.equal(perf.stats.pixelRatio,1.2,'runtime ratio matches actual renderer quality');
 assert.equal(reallocations,0,'no WebGL buffer reallocations at low FPS');
 for(let i=0;i<540;i++){now+=1000/90;perf.sample({dt:1/90,now,renderCpuMs:3,active:true});}
 assert(perf.stats.fps>75,'FPS estimate recovers when rendering improves');
