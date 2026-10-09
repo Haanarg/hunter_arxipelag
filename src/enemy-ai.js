@@ -30,13 +30,13 @@ function soldierClearShot(u,x,z,y,target,targetY){
 function soldierFlankPosition(u,target,targetY){
   const dx=target.x-u.x,dz=target.z-u.z,d=Math.max(1,Math.hypot(dx,dz)),
         fx=dx/d,fz=dz/d,sideX=-fz,sideZ=fx,
-        prefer=u.avoidSide||1,eye=u.o.position.y+2.2;
+        prefer=u.avoidSide||1;
   let best=null,bestScore=Infinity;
   for(const side of [prefer,-prefer])for(const lateral of [7,13,22]){
     for(const forward of [4,11]){
       const x=u.x+side*sideX*lateral+fx*forward,z=u.z+side*sideZ*lateral+fz*forward;
       if(!enemySolidAt(u,x,z,u.hd,true))continue;
-      if(!soldierClearShot(u,x,z,eye,target,targetY))continue;
+      if(!soldierClearShot(u,x,z,enemyGroundAt(u,x,z)+2.2,target,targetY))continue;
       const score=lateral+forward*.5+(side===prefer?0:4);
       if(score<bestScore){bestScore=score;best={x,z}}
     }
