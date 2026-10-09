@@ -48,7 +48,8 @@
   assert(far<full/5,'far geometry uses at least 80% fewer triangles');
 
   const visibleCount=ch=>ch.meshes.filter(m=>m.visible).length;
-  assert.equal(visibleCount(near),3,'near group has detailed trunk and two crowns');
+  assert.equal(visibleCount(near),1+near.primary.filter(Boolean).length+near.secondary.filter(Boolean).length,
+    'near group keeps all detailed variants of its crowns');
   model.update(940,0,true);
   assert.equal(near.lod,0,'stay at near LOD inside 65m margin');
   model.update(1000,0,true);
