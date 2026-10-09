@@ -32,7 +32,7 @@ window.HUNTER_VEHICLES=Object.freeze({
         (g.userData.steeringPivots||(g.userData.steeringPivots=[])).push(steering);
         parent=steering;px=0;py=0;pz=0;
       }
-      const p=new THREE.Group();p.position.set(px,py,pz);parent.add(p);const tire=new THREE.Mesh(new THREE.TorusGeometry(r*.8,r*.2,6,12),material(0x20252a,'rubber'));tire.rotation.y=Math.PI/2;tire.scale.z=width/(r*.4);p.add(tire);round(p,r*.45,width*.8,0x8b9699,0,0,0,'x','metal');if(spokes)for(let a=0;a<Math.PI;a+=Math.PI/3)rod(p,[0,Math.sin(a)*r*.75,Math.cos(a)*r*.75],[0,-Math.sin(a)*r*.75,-Math.cos(a)*r*.75],.035,0xb6bdc1,'metal');p.userData.radius=r;(g.userData.wheels||(g.userData.wheels=[])).push(p);return p};
+      const p=new THREE.Group();p.position.set(px,py,pz);parent.add(p);const tire=new THREE.Mesh(new THREE.TorusGeometry(r*.8,r*.2,6,12),material(0x20252a,'rubber'));tire.rotation.y=Math.PI/2;tire.scale.z=width/(r*.4);p.add(tire);round(p,r*.45,width*.8,0x8b9699,0,0,0,'x','metal');if(spokes)for(let a=0;a<Math.PI;a+=Math.PI/3)rod(p,[0,Math.sin(a)*r*.75,Math.cos(a)*r*.75],[0,-Math.sin(a)*r*.75,-Math.cos(a)*r*.75],.035,0xb6bdc1,'metal');p.userData.radius=r;const owner=g.userData.wheelOwner||g;(owner.userData.wheels||(owner.userData.wheels=[])).push(p);return p};
     const shape=new THREE.Shape();[[-2,-5],[2,-5],[2.2,1],[0,5.5],[-2.2,1]].forEach(([x,y],i)=>i?shape.lineTo(x,y):shape.moveTo(x,y));
     const hull=new THREE.ExtrudeGeometry(shape,{depth:1.4,bevelEnabled:false});hull.rotateX(-Math.PI/2);
     return function createVehicle(t){
@@ -52,7 +52,7 @@ window.HUNTER_VEHICLES=Object.freeze({
         const moto=t==='moto',r=moto?.65:.62,L=moto?1.5:1.22,col=moto?0xbc743d:0x3f9b9d;
         // La forquilla i el manillar pivoten junts amb la roda de davant.
         // Centre de gir al coll de direcció (1.65, -0.95).
-        const steering=new THREE.Group();steering.position.set(0,1.65,-.95);g.add(steering);
+        const steering=new THREE.Group();steering.position.set(0,1.65,-.95);steering.userData.wheelOwner=g;g.add(steering);
         (g.userData.steeringPivots||(g.userData.steeringPivots=[])).push(steering);
         wheel(steering,0,r-1.65,-L+.95,r,moto?.35:.15,true);
         wheel(g,0,r,L,r,moto?.35:.15,true);
