@@ -8,29 +8,81 @@ window.HUNTER_VEHICLES=Object.freeze({
     heli:[3.4,11.2],heli_combat:[2.8,11.8]
   }),
   decks:Object.freeze({ferry:Object.freeze({halfW:6.7,halfL:12.8,ramp:5.8,y:2.2,rampY:.45})}),
+  steeringMax:Object.freeze({bici:.60,moto:.52,cotxe:.44,camio:.36,tanqueta:.34}),
+  // Els pivots giren en Y, per separat de les rodes que roden en X.
+  animateSteering(model,type,turn,dt){
+    const pivots=model?.userData?.steeringPivots;
+    if(!pivots?.length)return;
+    const max=this.steeringMax[type]||0,target=Math.max(-1,Math.min(1,turn||0))*max,
+          a=1-Math.exp(-11*Math.max(0,dt));
+    for(const pivot of pivots){
+      pivot.rotation.y+=(target-pivot.rotation.y)*a;
+      if(Math.abs(pivot.rotation.y)<.0001&&Math.abs(target)<.0001)pivot.rotation.y=0;
+    }
+  },
   createFactory(THREE,{box,material,shadows}){
     const VS=this.scales;
     const rod=(g,a,b,r,c,profile='metal')=>{const v=new THREE.Vector3(...a),w=new THREE.Vector3(...b),delta=w.clone().sub(v),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),8),material(c,profile));m.position.copy(v.add(w).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());g.add(m);return m};
     const round=(g,r,h,c,x,y,z,axis='y',profile='metal')=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,12),material(c,profile));m.position.set(x,y,z);if(axis==='x')m.rotation.z=Math.PI/2;if(axis==='z')m.rotation.x=Math.PI/2;g.add(m);return m};
     const roundedPrism=(g,w,h,d,r,c,x,y,z,profile='paint')=>{const hw=w/2,hh=h/2,rr=Math.min(r,hw-.02,hh-.02),s=new THREE.Shape();s.moveTo(-hw+rr,-hh);s.lineTo(hw-rr,-hh);s.quadraticCurveTo(hw,-hh,hw,-hh+rr);s.lineTo(hw,hh-rr);s.quadraticCurveTo(hw,hh,hw-rr,hh);s.lineTo(-hw+rr,hh);s.quadraticCurveTo(-hw,hh,-hw,hh-rr);s.lineTo(-hw,-hh+rr);s.quadraticCurveTo(-hw,-hh,-hw+rr,-hh);s.closePath();const geo=new THREE.ExtrudeGeometry(s,{depth:d,bevelEnabled:false,curveSegments:2});geo.translate(0,0,-d/2);const m=new THREE.Mesh(geo,material(c,profile));m.position.set(x,y,z);g.add(m);return m};
-    const wheel=(g,x,y,z,r,width,spokes=false)=>{const p=new THREE.Group();p.position.set(x,y,z);g.add(p);const tire=new THREE.Mesh(new THREE.TorusGeometry(r*.8,r*.2,6,12),material(0x20252a,'rubber'));tire.rotation.y=Math.PI/2;tire.scale.z=width/(r*.4);p.add(tire);round(p,r*.45,width*.8,0x8b9699,0,0,0,'x','metal');if(spokes)for(let a=0;a<Math.PI;a+=Math.PI/3)rod(p,[0,Math.sin(a)*r*.75,Math.cos(a)*r*.75],[0,-Math.sin(a)*r*.75,-Math.cos(a)*r*.75],.035,0xb6bdc1,'metal');p.userData.radius=r;(g.userData.wheels||(g.userData.wheels=[])).push(p);return p};
+    const wheel=(g,x,y,z,r,width,spokes=false,steer=false)=>{
+      let parent=g,px=x,py=y,pz=z;
+      if(steer){
+        const steering=new THREE.Group();steering.position.set(x,y,z);g.add(steering);
+        (g.userData.steeringPivots||(g.userData.steeringPivots=[])).push(steering);
+        parent=steering;px=0;py=0;pz=0;
+      }
+      const p=new THREE.Group();p.position.set(px,py,pz);parent.add(p);const tire=new THREE.Mesh(new THREE.TorusGeometry(r*.8,r*.2,6,12),material(0x20252a,'rubber'));tire.rotation.y=Math.PI/2;tire.scale.z=width/(r*.4);p.add(tire);round(p,r*.45,width*.8,0x8b9699,0,0,0,'x','metal');if(spokes)for(let a=0;a<Math.PI;a+=Math.PI/3)rod(p,[0,Math.sin(a)*r*.75,Math.cos(a)*r*.75],[0,-Math.sin(a)*r*.75,-Math.cos(a)*r*.75],.035,0xb6bdc1,'metal');p.userData.radius=r;(g.userData.wheels||(g.userData.wheels=[])).push(p);return p};
     const shape=new THREE.Shape();[[-2,-5],[2,-5],[2.2,1],[0,5.5],[-2.2,1]].forEach(([x,y],i)=>i?shape.lineTo(x,y):shape.moveTo(x,y));
     const hull=new THREE.ExtrudeGeometry(shape,{depth:1.4,bevelEnabled:false});hull.rotateX(-Math.PI/2);
     return function createVehicle(t){
       const g=new THREE.Group();g.rotation.order='YXZ';const metal=0x3e4849,glass=0x76acba,rubber=0x252d31;
-      if(t==='cotxe'){const col=0xa35b38,trim=0x302f2d;box(g,3,1,5.6,col,0,1.15,0,'paint');box(g,2.92,.42,2.1,col,0,1.82,-1.72,'paint');box(g,2.62,.82,2.72,glass,0,2.04,.48,'glass');box(g,2.88,.18,2.95,col,0,2.52,.48,'paint');box(g,2.45,.1,1.1,0x7d432f,0,2.65,.5,'paint');for(const x of[-1.34,1.34]){box(g,.13,.28,2.9,col,x,1.7,.5,'paint');box(g,.15,.82,.14,col,x,2.04,-.82,'paint');box(g,.15,.82,.14,col,x,2.04,1.82,'paint');box(g,.18,.82,.15,col,x,2.04,.5,'paint');for(const z of[-1.85,1.85])wheel(g,x*1.16,.72,z,.72,.45);box(g,.35,.18,.4,metal,x*1.17,2.08,-.85,'metal')}for(const z of[-2.95,2.95])box(g,3.25,.3,.3,metal,0,.94,z,'metal');box(g,1.6,.45,.08,rubber,0,1.4,-2.84,'rubber');box(g,2.5,.14,.12,trim,0,1.12,-2.88,'rubber');for(const x of[-1.08,1.08]){box(g,.5,.34,.1,0xffedb2,x,1.43,-2.85,'paint');box(g,.38,.24,.1,0x9c2825,x,1.38,2.84,'paint')}for(const x of[-.72,.72])box(g,.5,.1,.16,0xd8d7c9,x,1.03,-2.9,'metal');const spare=wheel(g,0,1.5,3,.65,.45);spare.rotation.y=Math.PI/2;(g.userData.wheels||[]).pop()}
+      if(t==='cotxe'){const col=0xa35b38,trim=0x302f2d;box(g,3,1,5.6,col,0,1.15,0,'paint');box(g,2.92,.42,2.1,col,0,1.82,-1.72,'paint');box(g,2.62,.82,2.72,glass,0,2.04,.48,'glass');box(g,2.88,.18,2.95,col,0,2.52,.48,'paint');box(g,2.45,.1,1.1,0x7d432f,0,2.65,.5,'paint');for(const x of[-1.34,1.34]){box(g,.13,.28,2.9,col,x,1.7,.5,'paint');box(g,.15,.82,.14,col,x,2.04,-.82,'paint');box(g,.15,.82,.14,col,x,2.04,1.82,'paint');box(g,.18,.82,.15,col,x,2.04,.5,'paint');for(const z of[-1.85,1.85])wheel(g,x*1.16,.72,z,.72,.45,false,z<0);box(g,.35,.18,.4,metal,x*1.17,2.08,-.85,'metal')}for(const z of[-2.95,2.95])box(g,3.25,.3,.3,metal,0,.94,z,'metal');box(g,1.6,.45,.08,rubber,0,1.4,-2.84,'rubber');box(g,2.5,.14,.12,trim,0,1.12,-2.88,'rubber');for(const x of[-1.08,1.08]){box(g,.5,.34,.1,0xffedb2,x,1.43,-2.85,'paint');box(g,.38,.24,.1,0x9c2825,x,1.38,2.84,'paint')}for(const x of[-.72,.72])box(g,.5,.1,.16,0xd8d7c9,x,1.03,-2.9,'metal');const spare=wheel(g,0,1.5,3,.65,.45);spare.rotation.y=Math.PI/2;(g.userData.wheels||[]).pop()}
       if(t==='camio'){const col=0x596a48,dark=0x30372e,canvas=0x69765a;
         box(g,3.35,1.05,6.9,col,0,1.35,.35,'paint');box(g,3.2,.28,2.25,dark,0,.88,2.55,'metal');
         box(g,3.05,1.7,2.35,col,0,2.25,-2.25,'paint');box(g,2.7,.78,.12,glass,0,2.45,-3.45,'glass');
         for(const x of[-1.38,1.38]){box(g,.16,.8,.12,col,x,2.35,-3.45,'paint');box(g,.18,.85,2.15,col,x,2.22,-2.25,'paint')}
         box(g,3.08,1.45,3.5,canvas,0,2.3,.95,'paint');for(const x of[-1.45,1.45])for(const z of[1.2,2.55])rod(g,[x,1.2,z],[x,3.05,z],.08,dark);
-        for(const x of[-1.52,1.52])for(const z of[-2.3,1.2,2.7])wheel(g,x,.84,z,.72,.46);
+        for(const x of[-1.52,1.52])for(const z of[-2.3,1.2,2.7])wheel(g,x,.84,z,.72,.46,false,z<0);
         for(const z of[-3.55,3.75])box(g,3.55,.28,.28,dark,0,1.02,z,'metal');
         for(const x of[-1.05,1.05]){box(g,.48,.34,.12,0xffe3a2,x,1.55,-3.48,'paint');box(g,.4,.26,.12,0x9e2924,x,1.35,3.55,'paint')}
         box(g,.18,.22,.55,0xd7d3b7,0,1.2,-3.55,'metal');rod(g,[1.1,3.0,-1.4],[1.1,4.25,-1.4],.035,dark);
       }
-      if(t==='bici'||t==='moto'){const moto=t==='moto',r=moto?.65:.62,L=moto?1.5:1.22,col=moto?0xbc743d:0x3f9b9d;wheel(g,0,r,-L,r,moto?.35:.15,true);wheel(g,0,r,L,r,moto?.35:.15,true);for(const x of[-.15,.15]){rod(g,[x,r,L],[x,1.45,.3],.07,col,'paint');rod(g,[x,r,L],[x,.72,0],.07,col,'paint');rod(g,[x,.72,0],[x,1.45,.3],.07,col,'paint');rod(g,[x,1.45,.3],[x,1.6,-.9],.07,col,'paint');rod(g,[x,.72,0],[x,1.6,-.9],.07,col,'paint');rod(g,[x,r,-L],[x,1.95,-.95],.06,metal)}box(g,.55,.16,.75,rubber,0,1.55,.4,'rubber');rod(g,[-.55,1.98,-1],[.55,1.98,-1],.07,metal);round(g,.18,.65,metal,0,.75,0,'x');if(moto){box(g,.72,.52,1.05,col,0,1.3,-.28,'paint');box(g,.56,.64,.66,metal,0,.87,0,'metal');box(g,.5,.18,.82,0x2e3133,0,1.6,.52,'rubber');round(g,.2,.18,0xffe4ad,0,1.68,-1.3,'z','paint');box(g,.12,.22,.12,0xc52f24,-.36,1.18,1.35,'paint');box(g,.12,.22,.12,0xc52f24,.36,1.18,1.35,'paint');rod(g,[.4,.6,.2],[.4,.6,1.3],.12,metal);rod(g,[-.4,.6,.2],[-.4,.6,1.3],.12,metal)}else{for(const x of[-.4,.4])box(g,.22,.1,.35,rubber,x,.73,0,'rubber');box(g,.5,.1,.65,0x252a2c,0,1.58,.42,'rubber');round(g,.09,.5,0xcfd5d6,0,1.9,-1,'x','metal')}}
-      if(t==='tanqueta'){for(const x of[-1.42,1.42])for(const z of[-1.55,0,1.55])wheel(g,x,.68,z,.58,.34);box(g,2.75,.42,4.6,0x596343,0,.88,0,'paint');box(g,2.55,1.02,3.8,0x667348,0,1.42,.05,'paint');const nose=box(g,2.48,.72,1.15,0x727c50,0,1.62,-1.65,'paint');nose.rotation.x=-.18;box(g,2.08,.58,1.7,0x727c50,0,2.02,-.15,'paint');round(g,.68,.32,0x586543,0,2.4,-.15,'y','paint');rod(g,[0,2.48,-.65],[0,2.48,-3.05],.1,metal);box(g,.3,.24,.5,metal,0,2.48,-2.92,'metal');for(const x of[-1.05,1.05])box(g,.32,.18,.18,0xffe0a0,x,1.48,-2.24,'paint')}
+      if(t==='bici'||t==='moto'){
+        const moto=t==='moto',r=moto?.65:.62,L=moto?1.5:1.22,col=moto?0xbc743d:0x3f9b9d;
+        // La forquilla i el manillar pivoten junts amb la roda de davant.
+        // Centre de gir al coll de direcció (1.65, -0.95).
+        const steering=new THREE.Group();steering.position.set(0,1.65,-.95);g.add(steering);
+        (g.userData.steeringPivots||(g.userData.steeringPivots=[])).push(steering);
+        wheel(steering,0,r-1.65,-L+.95,r,moto?.35:.15,true);
+        wheel(g,0,r,L,r,moto?.35:.15,true);
+        for(const x of[-.15,.15]){
+          rod(g,[x,r,L],[x,1.45,.3],.07,col,'paint');
+          rod(g,[x,r,L],[x,.72,0],.07,col,'paint');
+          rod(g,[x,.72,0],[x,1.45,.3],.07,col,'paint');
+          rod(g,[x,1.45,.3],[x,1.6,-.9],.07,col,'paint');
+          rod(g,[x,.72,0],[x,1.6,-.9],.07,col,'paint');
+          rod(steering,[x,r-1.65,-L+.95],[x,1.95-1.65,0],.06,metal);
+        }
+        box(g,.55,.16,.75,rubber,0,1.55,.4,'rubber');
+        rod(steering,[-.55,1.98-1.65,-.05],[.55,1.98-1.65,-.05],.07,metal);
+        round(g,.18,.65,metal,0,.75,0,'x');
+        if(moto){
+          box(g,.72,.52,1.05,col,0,1.3,-.28,'paint');
+          box(g,.56,.64,.66,metal,0,.87,0,'metal');
+          box(g,.5,.18,.82,0x2e3133,0,1.6,.52,'rubber');
+          round(steering,.2,.18,0xffe4ad,0,.03,-.35,'z','paint');
+          box(g,.12,.22,.12,0xc52f24,-.36,1.18,1.35,'paint');
+          box(g,.12,.22,.12,0xc52f24,.36,1.18,1.35,'paint');
+          rod(g,[.4,.6,.2],[.4,.6,1.3],.12,metal);
+          rod(g,[-.4,.6,.2],[-.4,.6,1.3],.12,metal);
+        }else{
+          for(const x of[-.4,.4])box(g,.22,.1,.35,rubber,x,.73,0,'rubber');
+          box(g,.5,.1,.65,0x252a2c,0,1.58,.42,'rubber');
+          round(steering,.09,.5,0xcfd5d6,0,.25,-.05,'x','metal');
+        }
+      }
+      if(t==='tanqueta'){for(const x of[-1.42,1.42])for(const z of[-1.55,0,1.55])wheel(g,x,.68,z,.58,.34,false,z<0);box(g,2.75,.42,4.6,0x596343,0,.88,0,'paint');box(g,2.55,1.02,3.8,0x667348,0,1.42,.05,'paint');const nose=box(g,2.48,.72,1.15,0x727c50,0,1.62,-1.65,'paint');nose.rotation.x=-.18;box(g,2.08,.58,1.7,0x727c50,0,2.02,-.15,'paint');round(g,.68,.32,0x586543,0,2.4,-.15,'y','paint');rod(g,[0,2.48,-.65],[0,2.48,-3.05],.1,metal);box(g,.3,.24,.5,metal,0,2.48,-2.92,'metal');for(const x of[-1.05,1.05])box(g,.32,.18,.18,0xffe0a0,x,1.48,-2.24,'paint')}
       if(t==='tanc'){
         const trackSide=x=>{
           const side=Math.sign(x),outer=x+side*.02,trackMetal=0x53564d,cy=.78,r=.66,front=-2.62,rear=2.62,straight=rear-front,perimeter=2*straight+2*Math.PI*r;
