@@ -81,11 +81,11 @@ ok('seedCompoundsIndexed','seed search has actual base, HQ and compound position
 ok('seedNearestValid','seed search measures real distances from player base');
 run(`{
   const soldier=E.find(e=>e.t==='soldat'),general=E.find(e=>e.t==='general');
-  globalThis.enemySoldierScale=soldier&&Math.abs(soldier.o.scale.x-.9)<1e-9&&Math.abs(soldier.o.scale.y-.9)<1e-9&&Math.abs(soldier.o.scale.z-.9)<1e-9;
-  globalThis.enemyGeneralScale=general&&Math.abs(general.o.scale.x-1)<1e-9&&Math.abs(general.o.scale.y-1)<1e-9&&Math.abs(general.o.scale.z-1)<1e-9;
+  globalThis.enemySoldierScale=soldier&&Math.abs(soldier.o.scale.x-.8)<1e-9&&Math.abs(soldier.o.scale.y-.8)<1e-9&&Math.abs(soldier.o.scale.z-.8)<1e-9;
+  globalThis.enemyGeneralScale=general&&Math.abs(general.o.scale.x-.8)<1e-9&&Math.abs(general.o.scale.y-.8)<1e-9&&Math.abs(general.o.scale.z-.8)<1e-9;
 }`);
-ok('enemySoldierScale','enemy soldier visual model is reduced by 10 percent');
-ok('enemyGeneralScale','enemy general keeps original visual scale');
+ok('enemySoldierScale','enemy soldier uses 80 percent render scale');
+ok('enemyGeneralScale','general uses the same 80 percent visual scale as the soldier');
 run(`{
   const gulls=fa.filter(f=>f.k==='g'),sharks=fa.filter(f=>f.k==='s');
   globalThis.faunaCountsTripled=gulls.length===48&&sharks.length===30;
