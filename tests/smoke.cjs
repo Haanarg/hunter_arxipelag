@@ -7,6 +7,7 @@ const start=Date.now();ok('!started&&B.length===0','title screen defers world ge
 ok("!document.body.classList.contains('game-started')",'minimap must stay hidden on the start screen');
 game.start();game.frame();
 ok('started&&B.length>=6&&E.some(e=>e.t==="general")','menu starts a complete world');
+ok('ammo===16','new mission starts with 16 bullets');
 
 run(`{
   const d=window.HUNTER_PLAYER_MODEL.headStyles.compactD,
@@ -107,7 +108,25 @@ run(`{
 }`);
 ok('grenadeItemConfigured','grenade pickup is a usable five-grenade item');
 ok('grenadePickupIsFive','one grenade pickup adds five grenades');
-ok("String(update).includes(\"if(it.t==='arma')ammo+=12;else inv[it.t]\")",'ammo pickups add 12 rounds directly to ammo without entering inventory');
+ok("String(update).includes(\"if(it.t==='arma')ammo+=16;else inv[it.t]\")",
+  'ammo pickups add 16 rounds directly without entering inventory');
+run(`{
+  // Recollida real dins l'update; aïllem els objectes per evitar duplicats de mapa.
+  const savedItems=items,pickupMesh=new THREE.Group(),
+        pickup={t:'arma',x:P.x,y:P.y,z:P.z,o:pickupMesh},
+        before=ammo;
+  world.add(pickupMesh);
+  items=[pickup];
+  try{
+    update(.016,elapsed+.016);
+    globalThis.ammoPickupAddsSixteen=
+      ammo===before+16&&!items.includes(pickup)&&!Object.hasOwn(inv,'arma');
+  }finally{
+    items=savedItems;
+    world.remove(pickupMesh);
+  }
+}`);
+ok('ammoPickupAddsSixteen','an actual ammo pickup increases ammo by exactly 16');
 ok('grenadePlayerModel','player has a grenade model in the throwing hand');
 ok('grenadeThrowAnimation','grenade throw has a dedicated arm animation');
 ok('grenadeWorldPriority','grenades are prioritized in powder magazines and outposts');
@@ -412,7 +431,8 @@ run(`{const q=V.find(v=>v.t==='llanxa');place(q,7,0,0);globalThis.boatSurface=q.
 const before=run('water.uniforms.time.value');run("panel('pause')");game.frame(10000);assert.equal(run('water.uniforms.time.value'),before,'pause freezes water clock');
 run('resume()');game.frame(16);assert(run('water.uniforms.time.value')>before,'resume advances water clock');
 run("panel('map');resume();joystick.state.x=1;joystick.state.y=-1;build()");
-ok('joystick.state.x===0&&joystick.state.y===0&&hp===100&&elapsed===0&&water.uniforms.time.value===0','restart resets input, health and clock');ok('PM.trunk.parent===world','vegetation follows current world');
+ok('joystick.state.x===0&&joystick.state.y===0&&hp===100&&elapsed===0&&water.uniforms.time.value===0','restart resets input, health and clock');
+ok('ammo===16','restarting a mission resets ammo to 16 bullets');ok('PM.trunk.parent===world','vegetation follows current world');
 ok('PM.update&&PM.remove&&PM.stats.sectors>0','palm sectors support LOD and destruction');
 ok("PM.variants.every(ch=>ch.midTrunk&&ch.midCrown&&ch.farTrunk&&ch.farCrown)",
   'every populated palm sector has middle and distant instanced models');
