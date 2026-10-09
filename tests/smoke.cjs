@@ -465,12 +465,46 @@ ok("VD.types.heli_combat.maxF>VD.types.heli.maxF&&VD.types.heli_combat.tu>VD.typ
 ok("vehSrc.includes('Huey 3B-4')&&vehSrc.includes('roundedPrism(g,2.7,1.74,4.18')&&vehSrc.includes('Variant 4: petit carenat arrodonit')",'normal helicopter uses the selected Huey 3B variant 4 visual model');
 ok("V.find(v=>v.t==='heli').o.userData.rotor&&V.find(v=>v.t==='heli').o.userData.tailRotor",'new Huey model preserves both animated rotors');
 ok("String(fire).includes('const a30=Math.PI/6')&&String(fire).includes(\"c=='heli'\")&&String(fire).includes(\"c=='heli_combat'\")&&String(fire).includes('fx_*ch,-sv,fz*ch')",'both helicopters fire at a 30 degree downward angle');
-ok("String(fire).includes('const a5=Math.PI/36')&&String(fire).includes('fx_*ch,-sv,fz*ch')",'tank fires 5 degrees downward');
-ok("vehSrc.includes('rod(g,[0,2.48,-.65],[0,2.48,-3.05],.1,metal)')&&!vehSrc.includes('mgDrop')",'tankette gun barrel stays level while bullets keep their downward trajectory');
+ok("String(fire).includes(\"c=='tanc'\")&&String(fire).includes(\"c=='tanqueta'\")&&String(fire).includes('autoAimArmoredShot')&&!String(fire).includes('const a5=Math.PI/36')",
+  'tank and tankette fire horizontally by default, applying only narrow target assistance');
+ok("vehSrc.includes('rod(g,[0,2.48,-.65],[0,2.48,-3.05],.1,metal)')&&!vehSrc.includes('mgDrop')",
+  'tankette barrel remains straight and its default projectile trajectory is now level');
 ok("String(secondaryWeapon).includes('fx_*d45,-d45,fz*d45')",'combat helicopter missiles also fire 45 degrees downward');
+run(`{
+  const savedEnemies=E,savedSight=sight;
+  try{
+    sight=()=>true;
+    E=[];
+    const level=autoAimArmoredShot(0,5,0,0,-1,110);
+    E=[{x:5,z:-50,hp:20,o:{position:{y:0}}}];
+    const guided=autoAimArmoredShot(0,5,0,0,-1,110);
+    E=[{x:55,z:-35,hp:20,o:{position:{y:0}}}];
+    const outside=autoAimArmoredShot(0,5,0,0,-1,110);
+    globalThis.armoredLevelAndAssisted=level[0]===0&&level[1]===0&&level[2]===-1&&
+      guided[0]>0&&guided[1]<0&&guided[2]<0&&
+      Math.abs(Math.hypot(...guided)-1)<1e-9&&
+      outside[0]===0&&outside[1]===0&&outside[2]===-1;
+  }finally{E=savedEnemies;sight=savedSight}
+}`);
+ok('armoredLevelAndAssisted','armored vehicles stay level with no target and only track targets inside the aim cone');
+
 run(`{const q=V.find(v=>v.t==='tanc'),ts=q.o.userData.tracks;ts.forEach(t=>t.phase=t.perimeter/2);q.v=0;q.yawRate=1;place(q,1,.1,0);globalThis.counterRotate=ts.find(t=>t.side<0).phase<ts[0].perimeter/2&&ts.find(t=>t.side>0).phase>ts[0].perimeter/2;q.v=0;q.yawRate=0}`);ok('counterRotate','tracks counter-rotate during pivot');
 run(`{const q=V.find(v=>v.t==='cotxe'),a=vehicleBox(q,q.x,q.z,q.hd);globalThis.boxesWork=obbOverlap(a,a)&&!obbOverlap(a,vehicleBox(q,q.x+100,q.z+100,q.hd))}`);ok('boxesWork','vehicle OBB collisions');
 run(`{const q=V.find(v=>v.t==='tanc');intelMarks.push({kind:'tanc',ref:q,label:'test'});globalThis.destroyedVehicle=q;explodeVehicle(q)}`);ok('destroyedVehicle.destroyed&&!V.includes(destroyedVehicle)&&!intelMarks.some(m=>m.ref===destroyedVehicle)','destruction cleans active state and map');
+run(`{
+  globalThis.enemyVehicleExplosionsPass=['jeep','tanqueta','tanc'].every((type,index)=>{
+    const x=P.x+200+index*40,z=P.z+200;
+    const enemy=mkEn(type,x,z,0),original=enemy.o;
+    original.position.set(x,0,z);
+    const previousFx=fx.length,previousShards=DB.length;
+    hurtE(enemy,enemy.hp+1);
+    return !E.includes(enemy)&&enemy.destroyed===true&&original.parent!==world&&
+      fx.length>previousFx&&DB.length>previousShards&&
+      DB.slice(previousShards).some(part=>part.vehiclePart&&part.m.parent===world);
+  });
+}`);
+ok('enemyVehicleExplosionsPass','jeep, tankette and enemy tank explode into debris, smoke and fire on destruction');
+
 // Rendered surface and boat support share the full displacement, retaining hull offset.
 run(`{const q=V.find(v=>v.t==='llanxa');place(q,7,0,0);globalThis.boatSurface=q.o.position.y-wy(q.x,q.z,7)}`);assert(Math.abs(run('boatSurface')-.2)<1e-9);
 const before=run('water.uniforms.time.value');run("panel('pause')");game.frame(10000);assert.equal(run('water.uniforms.time.value'),before,'pause freezes water clock');
