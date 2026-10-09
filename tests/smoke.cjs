@@ -336,6 +336,18 @@ for(const t of types){
   ok('cv&&Number.isFinite(cv.o.position.y)','physics '+t);
   run("if(VT[cv.t].m==='a')cv.alt=Math.max(0,hAt(cv.x,cv.z))+.8;toggle()");ok('!cv','exit '+t);
 }
+run(`{
+  const spec={bici:[1,2],moto:[1,2],cotxe:[2,4],camio:[2,6],tanqueta:[2,6]};
+  globalThis.steeringTestsPassed=Object.entries(spec).every(([t,expected])=>{
+    const v=V.find(v=>v.t===t),a=v.o.userData,p=a.steeringPivots||[],w=a.wheels||[];
+    if(p.length!==expected[0]||w.length!==expected[1])return false;
+    v.v=5;place(v,3,.2,1);const left=p.every(x=>x.rotation.y>.05);
+    place(v,3,.2,-1);const right=p.every(x=>x.rotation.y<-.05);
+    place(v,3,.8,0);const centered=p.every(x=>Math.abs(x.rotation.y)<.005);
+    v.v=0;v.steerInput=0;return left&&right&&centered;
+  });
+}`);
+ok('steeringTestsPassed','all five vehicles steer front wheels in both directions');
 // Hands must remain attached to actual oar grips through pitching, turning and a full stroke.
 run(`{
   const q=V.find(v=>v.t==='barca_rems');let maxError=0;
