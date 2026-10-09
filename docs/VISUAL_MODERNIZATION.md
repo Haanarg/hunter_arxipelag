@@ -5,9 +5,17 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.59**.
+Versió actual: **0.3.60**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.60 — perfil gràfic «Mínims» per sota de mòbil (2026-10-09)
+
+- A la portada s'ha substituït la casella «Gràfics reduïts» per un **selector de tres opcions**: `Alts` (ordinador), `Reduïts · mòbil` i `Mínims · sense reflexos`. En dispositius tàctils continua seleccionat el perfil de mòbil per defecte, però també es pot optar per «Mínims». El canvi recarrega el joc per crear el renderer una sola vegada; no hi ha reajustaments de resolució durant la partida.
+- Selecció `?quality=desktop|mobile|ultra` amb compatibilitat amb l'antic paràmetre `?low=1`. El perfil escollit queda reflectit al selector i a `window.HUNTER_GRAPHICS_QUALITY`.
+- Perfil **ultra**: resolució interna fixa fins a **×0,8**; cap ombra dinàmica; cúpula del cel reduïda a 20×12 segments; aigua amb 120×120 subdivisions (200×200 en mòbil); boira més densa, `camera.far=1500` metres i menys edificis llunyans a la vista. La cúpula del cel i el sol es mouen dins del nou pla llunyà perquè el cel no desaparegui.
+- El mar mínim utilitza **un shader de fragments propi**, sense càlcul de reflex especular, Fresnel ni derivades de normals per píxel. Manté els colors, la transició terra/aigua, una petita escuma costanera i les ones geomètriques que sincronitzen amb la física de les embarcacions. El color del mar llunyà es fon amb la boira abans dels 1.500 metres per suavitzar el límit de dibuix. Els shaders normals d'ordinador i mòbil **no es modifiquen**.
+- Tests: `tests/graphics-quality.cjs` verifica els tres perfils, la càmera i la cúpula, les dues variants de shader, la coherència de la superfície d'aigua i el selector/URL; `tests/smoke.cjs` i `tests/browser.cjs` amplien els controls de perfils. Comprovat amb malles Three.js reals: pla llunyà 1500 m, cúpula a 1170 m, 14.641 vèrtexs d'aigua, cap reflex al fragment mínim, ones finites, i configuració del selector inclosa la compatibilitat `?low=1`. Pendent mesura de FPS i compilació en navegador físic.
 
 ### Revisió 0.3.59 — munició inicial i caixes de 16 bales (2026-10-09)
 
