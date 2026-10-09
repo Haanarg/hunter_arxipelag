@@ -14,6 +14,15 @@ function enemySolidAt(u,x,z,hd,route=false){
     if(w.open||w.playerBlock===false||w.y1<y+.15||w.y0>y+(veh?4:3.4))continue;
     if(box?obbOverlap(box,enemyWallBox(w)):x>w.x0-r&&x<w.x1+r&&z>w.z0-r&&z<w.z1+r)return false;
   }
+  // Els vehicles neutrals aparcats són obstacles també per a l'A*.
+  // Abans només s'evitaven en la col·lisió final: la ruta els travessava.
+  // La comprovació cara es fa només per calcular rutes d'infanteria.
+  if(route&&!veh){
+    for(const v of vehicleCandidatesAt(x,z,r+22)){
+      if(v===u||v.destroyed||Math.abs(vehicleY(v)-y)>5)continue;
+      if(circleVehicleOverlap(x,z,r+.25,v))return false;
+    }
+  }
   return true;
 }
 function enemyBodiesClear(u,x,z,hd){
@@ -73,7 +82,9 @@ function enemyFindPath(u,tx,tz){
       if(!valid.has(k))valid.set(k,enemySolidAt(u,x,z,hd,true));
       if(!valid.get(k))continue;
       const r=enemyRouteRadius(u),mx=(n.x+x)/2,mz=(n.z+z)/2,y=u.gy??enemyGroundAt(u,mx,mz);
-      if(treeHit(mx,mz,r)||enemyGroundAt(u,mx,mz)<-.8||wallCandidates(mx,mz,r+step).some(w=>!w.open&&w.playerBlock!==false&&w.y1>=y+.15&&w.y0<=y+4&&segmentAabbT(n.x,0,n.z,x,0,z,w.x0-r,w.x1+r,-1,1,w.z0-r,w.z1+r)!=null))continue;
+      if(treeHit(mx,mz,r)||enemyGroundAt(u,mx,mz)<-.8||
+         (!enemyIsVehicle(u)&&!enemySolidAt(u,mx,mz,hd,true))||
+         wallCandidates(mx,mz,r+step).some(w=>!w.open&&w.playerBlock!==false&&w.y1>=y+.15&&w.y0<=y+4&&segmentAabbT(n.x,0,n.z,x,0,z,w.x0-r,w.x1+r,-1,1,w.z0-r,w.z1+r)!=null))continue;
       const h=heur(x,z),next={ix,iz,x,z,g,h,f:g+h,parent:n};nodes.set(k,next);push(next);
     }
   }
@@ -90,7 +101,7 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
   if(goalChanged){u.navPath=[];u.navSearch=null;u.navGoal={x:tx,z:tz};u.navRetry=0}
   let target={x:tx,z:tz},hd=Math.atan2(u.x-tx,u.z-tz);
   u.navDirectT=(u.navDirectT||0)-dt;
-  if(goalChanged||u.navDirectT<=0){u.navDirect=enemySweep(u,u.x,u.z,tx,tz,oldHd,hd,false);u.navDirectT=.45}
+  if(goalChanged||u.navDirectT<=0){u.navDirect=enemySweep(u,u.x,u.z,tx,tz,oldHd,hd,false,!veh);u.navDirectT=.45}
   const direct=u.navDirect;
   if(!direct){
     if(!u.navPath?.length&&u.navRetry<=0&&enemyPathBudget>0){enemyPathBudget--;const path=enemyFindPath(u,tx,tz);if(path!==null){u.navPath=path;u.navRetry=1.2}}
