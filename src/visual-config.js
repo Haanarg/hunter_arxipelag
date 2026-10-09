@@ -1,6 +1,21 @@
 // Configuració visual centralitzada.
 // Aquest fitxer no conté estat de joc: es pot evolucionar sense tocar simulació ni controls.
 window.HUNTER_VISUAL_CONFIG = Object.freeze({
+  // Perfil per a equips molt limitats: cap ombra, mar sense reflexos i
+  // dibuix a curta distància. L'horitzó es dissimula amb boira densa.
+  ultra: Object.freeze({
+    pixelRatio: 0.8,
+    minPixelRatio: 0.8,
+    shadows: false,
+    shadowSize: 512,
+    exposure: 1.08,
+    fog: 0.0013,
+    viewDistance: 1500,
+    sunDistance: 900,
+    waterReflections: false,
+    skySegments: Object.freeze([20, 12]),
+    waterSegments: 120
+  }),
   mobile: Object.freeze({
     pixelRatio: 1.0,
     minPixelRatio: 1.0,
