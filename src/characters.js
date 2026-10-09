@@ -1,4 +1,75 @@
 // Model i animació visual del jugador. No conté moviment, inventari ni combat.
+// Pistola del protagonista i IK de les dues mans. Els models enemics NO usen això.
+function createPlayerPistol(T,gun){
+  const material=(color,metalness=.1,roughness=.8)=>new T.MeshStandardMaterial({color,metalness,roughness,flatShading:true});
+  const steel=material(0x41494c,.58,.43),edge=material(0x7c8481,.65,.38),
+        black=material(0x202729,.3,.65),dark=material(0x0c1418,.1,.82),wood=material(0x6a442e,.02,.87);
+  const part=(parent,w,h,d,mat,x=0,y=0,z=0)=>{
+    const m=new T.Mesh(new T.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);parent.add(m);return m;
+  };
+  // Canó/corredera curts i empunyadura sense culata: inspiració Colt M1911.
+  const slide=new T.Group();gun.add(slide);
+  part(slide,.238,.165,.78,steel,0,.19,-.36);
+  part(slide,.247,.026,.73,black,0,.10,-.37);
+  part(slide,.204,.023,.72,edge,0,.28,-.36);
+  part(slide,.047,.055,.24,dark,.125,.224,-.24);
+  part(slide,.047,.019,.15,edge,.153,.245,-.24);
+  for(const side of[-1,1])for(let i=0;i<5;i++)
+    part(slide,.008,.106,.013,black,side*.126,.19,.006-i*.033);
+  part(slide,.074,.055,.060,black,0,.315,-.693);
+  for(const side of[-1,1])part(slide,.045,.06,.065,black,side*.076,.313,-.005);
+  const muzzle=new T.Mesh(new T.CylinderGeometry(.074,.074,.09,12),edge);
+  muzzle.rotation.x=Math.PI/2;muzzle.position.set(0,.183,-.771);slide.add(muzzle);
+  const bore=new T.Mesh(new T.CylinderGeometry(.047,.047,.006,12),dark);
+  bore.rotation.x=Math.PI/2;bore.position.set(0,.183,-.821);slide.add(bore);
+  part(gun,.213,.12,.48,steel,0,.069,-.22);
+  part(gun,.168,.065,.37,black,0,-.022,-.30);
+  const grip=new T.Group();grip.position.set(0,-.12,.055);grip.rotation.x=-.20;gun.add(grip);
+  part(grip,.208,.36,.185,black,0,-.08,0);
+  for(const side of[-1,1]){
+    part(grip,.018,.265,.145,wood,side*.111,-.075,.002);
+    for(const y of[-.175,.025]){
+      const screw=new T.Mesh(new T.CylinderGeometry(.018,.018,.018,8),edge);
+      screw.rotation.z=Math.PI/2;screw.position.set(side*.129,y,.014);grip.add(screw);
+    }
+  }
+  part(grip,.230,.034,.215,steel,0,-.274,.013);
+  part(gun,.237,.055,.112,steel,0,.037,.095);
+  const loop=new T.CatmullRomCurve3([
+    new T.Vector3(0,.016,-.055),new T.Vector3(0,-.02,-.38),
+    new T.Vector3(0,-.135,-.40),new T.Vector3(0,-.19,-.30),
+    new T.Vector3(0,-.18,-.09),new T.Vector3(0,-.06,-.055)
+  ],true);
+  gun.add(new T.Mesh(new T.TubeGeometry(loop,28,.018,6,true),black));
+  part(gun,.034,.115,.028,black,0,-.07,-.185).rotation.x=-.23;
+  part(gun,.092,.060,.078,black,0,.286,.063).rotation.x=-.3;
+  part(gun,.045,.033,.072,edge,.123,.055,.007);
+
+  const flash=new T.Group(),flashMat=new T.MeshBasicMaterial({color:0xffd76d,depthWrite:false});
+  const cone=new T.Mesh(new T.ConeGeometry(.13,.41,6),flashMat);
+  cone.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),new T.Vector3(0,0,-1));
+  cone.position.z=-.18;flash.add(cone);
+  flash.add(new T.Mesh(new T.SphereGeometry(.11,8,6),new T.MeshBasicMaterial({color:0xfff4bb,depthWrite:false})));
+  flash.position.set(0,.183,-.838);flash.visible=false;gun.add(flash);
+  return {slide,flash};
+}
+// Solució geomètrica dels colzes. Barreja amb la postura base per evitar salts.
+function aimPlayerPistolArm(shoulder,elbow,wrist,side,rig,blend){
+  const start=shoulder.position,goal=rig.v1.copy(wrist).sub(start);
+  const upper=Math.abs(elbow.position.y),lower=rig.forearmLength;
+  const dist=Math.min(upper+lower-.001,Math.max(.001,goal.length()));
+  const axis=goal.normalize(),along=(upper*upper+dist*dist-lower*lower)/(2*dist);
+  const radius=Math.sqrt(Math.max(0,upper*upper-along*along));
+  const pole=rig.v2.set(side*.2,-1,.18);
+  pole.addScaledVector(axis,-pole.dot(axis)).normalize();
+  const elbowP=rig.v3.copy(start).addScaledVector(axis,along).addScaledVector(pole,radius);
+  const shoulderDir=rig.v4.copy(elbowP).sub(start).normalize();
+  rig.q1.setFromUnitVectors(rig.down,shoulderDir);
+  const forearmDir=rig.v4.copy(wrist).sub(elbowP).normalize().applyQuaternion(rig.q3.copy(rig.q1).invert());
+  rig.q2.setFromUnitVectors(rig.forearm,forearmDir);
+  shoulder.quaternion.slerp(rig.q1,blend);
+  elbow.quaternion.slerp(rig.q2,blend);
+}
 window.HUNTER_CHARACTERS=Object.freeze({
   createCommando(T,{palette=window.HUNTER_PALETTE}={}){
  const g=window.HUNTER_PLAYER_MODEL.create(T,{palette}),u=g.userData,h=u.head,P=palette.enemy;
@@ -56,9 +127,23 @@ window.HUNTER_CHARACTERS=Object.freeze({
   createPlayer(THREE,{box,palette=window.HUNTER_PALETTE}){
     const P=palette.player,player=window.HUNTER_PLAYER_MODEL.create(THREE,{unitScale:1.2,palette,headVariant:'compactD'}),u=player.userData;
     u.ph=0;u.breath=0;u.firePose=0;u.meleePose=0;
+    u.pistolAimTime=0;u.pistolShotAge=10;u.pistolBlend=0;
 
-    const gun=new THREE.Group();gun.position.set(0,-.72,-.1);gun.rotation.x=-Math.PI/2;u.aer.add(gun);
-    box(gun,.2,.25,1.8,P.metal,0,0,-.2);box(gun,.2,.5,.25,P.dark,0,-.3,.1);box(gun,.22,.3,.6,0x6b4a2a,0,0,.9);u.gun=gun;
+    // La pistola és filla del jugador; en repòs segueix un pivot del canell
+    // dret i, en disparar, passa amb interpolació a la subjecció a dues mans.
+    const gun=new THREE.Group();gun.scale.setScalar(.95);player.add(gun);u.gun=gun;
+    const gunMount=new THREE.Group();gunMount.position.set(0,-.72,-.1);
+    gunMount.rotation.x=-Math.PI/2;u.aer.add(gunMount);u.pistolIdleMount=gunMount;
+    const pistol=createPlayerPistol(THREE,gun);
+    u.pistolSlide=pistol.slide;u.pistolFlash=pistol.flash;
+    const V=()=>new THREE.Vector3(),Q=()=>new THREE.Quaternion();
+    u.pistolRig={
+      down:new THREE.Vector3(0,-1,0),forearm:new THREE.Vector3(0,-.62*1.2,-.025*1.2).normalize(),
+      forearmLength:Math.hypot(.62*1.2,.025*1.2),
+      axisX:new THREE.Vector3(1,0,0),
+      v1:V(),v2:V(),v3:V(),v4:V(),right:V(),left:V(),idle:V(),aim:V(),
+      q1:Q(),q2:Q(),q3:Q(),idleQ:Q(),aimQ:Q()
+    };
     const knife=new THREE.Group();knife.position.set(0,-.72,-.08);knife.rotation.x=-Math.PI/2;u.aer.add(knife);box(knife,.09,.08,.75,0xc7ced0,0,0,-.28);box(knife,.18,.16,.28,0x4b3626,0,0,.25);knife.visible=false;u.knife=knife;
     const grenade=new THREE.Group();grenade.position.set(0,-.82,-.08);u.aer.add(grenade);
     const grenadeBody=new THREE.Mesh(new THREE.SphereGeometry(.18,8,6),new THREE.MeshStandardMaterial({color:0x46513f,roughness:.82,metalness:.08}));grenadeBody.scale.set(.88,1.08,.88);grenade.add(grenadeBody);
@@ -76,7 +161,9 @@ window.HUNTER_CHARACTERS=Object.freeze({
   },
   animatePlayer(player,{forward,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),move=Math.min(1,Math.abs(forward)),dir=forward<0?-1:1;
-    u.firePose=Math.max(0,(u.firePose||0)-dt);u.meleePose=Math.max(0,(u.meleePose||0)-dt);u.grenadeThrow=Math.max(0,(u.grenadeThrow||0)-dt);if(grenadeEquipped&&u.grenadeThrow<=0)u.grenadeReleased=false;u.breath=(u.breath||0)+dt*1.7;
+    u.firePose=Math.max(0,(u.firePose||0)-dt);u.meleePose=Math.max(0,(u.meleePose||0)-dt);u.grenadeThrow=Math.max(0,(u.grenadeThrow||0)-dt);
+    u.pistolAimTime=Math.max(0,(u.pistolAimTime||0)-dt);u.pistolShotAge=Math.min(10,(u.pistolShotAge||10)+dt);
+    if(grenadeEquipped&&u.grenadeThrow<=0)u.grenadeReleased=false;u.breath=(u.breath||0)+dt*1.7;
     u.ph+=dt*(swimming?(move?4.2:2.1):8.4*move);const ph=u.ph,breath=Math.sin(u.breath);
 
     const tx=(joint,target,rate=limbK)=>joint.rotation.x+=(target-joint.rotation.x)*rate;
@@ -123,7 +210,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
     }else if(melee){
       tx(u.ar,.88);tz(u.ar,-.82);tx(u.aer,1.05);
       tx(u.al,-.08);tz(u.al,.08);tx(u.ael,.22);
-    }else if(aiming){
+    }else if(aiming&&!u.pistolAimTime){
+      // La pose antiga queda reservada al dispar d'altres armes.
       tx(u.ar,1.18);tz(u.ar,-.08);tx(u.aer,.7);
       tx(u.al,1.05);tz(u.al,-.28);tx(u.ael,.82);
     }else{
@@ -135,6 +223,35 @@ window.HUNTER_CHARACTERS=Object.freeze({
       tx(u.ael,bendL);tx(u.aer,bendR);
     }
 
+    // L'animació es llança només amb un tret real de pistola (combat.js).
+    // Retrocés mitjà: aprox. 10 cm de reculament local i 5.4 graus de pujada.
+    const pistolAllowed=!inVehicle&&!grenade&&!throwing&&!bazooka&&!melee;
+    const targetBlend=pistolAllowed&&u.pistolAimTime>0?1:0;
+    u.pistolBlend+=(targetBlend-u.pistolBlend)*(1-Math.exp(-18*dt));
+    const blend=pistolAllowed?u.pistolBlend:0,rig=u.pistolRig;
+    const age=u.pistolShotAge;
+    const kick=targetBlend&&(age<.55)?(age<.065?
+      1-Math.pow(Math.max(0,1-age/.065),3):Math.exp(-(age-.065)*13)):0;
+    const back=kick*.10,up=kick*.03;
+    // La pose normal continua marcant l'animació de caminar i dels altres objectes.
+    // El rig de pistola hi superposa una presa a dues mans només durant el tir.
+    u.ar.rotation.y=0;u.al.rotation.y=0;u.aer.rotation.y=0;u.ael.rotation.y=0;
+    if(blend>.001){
+      rig.right.set(.12,2.95+up,-1.07+back);
+      rig.left.set(-.075,2.96+up,-1.115+back);
+      aimPlayerPistolArm(u.ar,u.aer,rig.right,1,rig,blend);
+      aimPlayerPistolArm(u.al,u.ael,rig.left,-1,rig,blend);
+    }
+    // Retorn de l'arma a la mà dreta sense un salt visual en deixar de disparar.
+    rig.idle.copy(u.pistolIdleMount.position).applyQuaternion(u.aer.quaternion)
+      .add(u.aer.position).applyQuaternion(u.ar.quaternion).add(u.ar.position);
+    rig.idleQ.copy(u.ar.quaternion).multiply(u.aer.quaternion).multiply(u.pistolIdleMount.quaternion);
+    rig.aim.set(.045,3.10+up,-1.13+back);
+    rig.aimQ.setFromAxisAngle(rig.axisX,.045+kick*.095);
+    u.gun.position.copy(rig.idle).lerp(rig.aim,blend);
+    u.gun.quaternion.copy(rig.idleQ).slerp(rig.aimQ,blend);
+    u.pistolSlide.position.z=kick*.065;
+    u.pistolFlash.visible=targetBlend>0&&u.pistolShotAge<.055;
     if(move>.02)player.position.y+=Math.abs(Math.sin(ph))*0.085*move;
     else player.position.y+=breath*.012;
   }
