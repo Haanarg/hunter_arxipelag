@@ -896,7 +896,19 @@ if(!playerFall){wallPush();treePush();vehiclePushPlayer()}}
 V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;return}if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
 syncFerryCargo();
 ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2)||null;
-const floor=ib?ib.fy+.3:groundAt(P.x,P.z),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;if(!playerFall)P.y=ib?floor:Math.max(floor,surface-2.1);
+const floor=ib?ib.fy+.3:groundAt(P.x,P.z),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;if(!playerFall){
+  // El contacte no és un punt infinitesimal: cobrim l'àrea dels peus.
+  // Les mostres eviten que una cantonada alta del triangle visual talli
+  // les cames a la transició entre sectors.
+  let feetFloor=floor;
+  if(!ib&&!swimming){
+    for(const dx of [-.32,.32])for(const dz of [-.32,.32]){
+      const h=terrainStream?.visibleHeightAt(P.x+dx,P.z+dz);
+      if(h!==null&&h!==undefined)feetFloor=Math.max(feetFloor,h);
+    }
+  }
+  P.y=ib?floor:Math.max(feetFloor+.06,surface-2.1);
+}
 // Actualització del LOD de les palmeres a baixa freqüència (i també en vehicle).
 palmVisualTick-=dt;
 if(palmVisualTick<=0){palmVisualTick=.16;if(PM.update)PM.update(P.x,P.z)}
