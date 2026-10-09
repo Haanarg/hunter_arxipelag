@@ -55,8 +55,57 @@ window.HUNTER_VEGETATION=Object.freeze({
       g.setIndex(idx);g.computeVertexNormals();
       return g
     };
+    // Caps simplificats sense transparències, billboards ni actualitzacions
+    // per fotograma. Els grups distant són InstancedMesh per sector.
+    const reducedCrown=(fronds,radius=4.65)=>{
+      const pos=[];
+      for(let j=0;j<fronds;j++){
+        const a=j*Math.PI*2/fronds;
+        const point=(v,side)=>{
+          const len=radius*v,width=Math.sin(v*Math.PI)*.62*side;
+          const y=6.35+Math.sin(v*Math.PI)*.7-v*v*1.65;
+          return [Math.cos(a)*len-Math.sin(a)*width,y,
+                  Math.sin(a)*len+Math.cos(a)*width];
+        };
+        for(let k=0;k<2;k++){
+          const v0=k/2,v1=(k+1)/2,
+                a0=point(v0,-1),a1=point(v0,1),
+                b0=point(v1,-1),b1=point(v1,1);
+          pos.push(...a0,...a1,...b0,...a1,...b1,...b0);
+        }
+      }
+      const geo=new THREE.BufferGeometry();
+      geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+      geo.computeVertexNormals();
+      return geo;
+    };
+    const crossedCrown=()=>{
+      // Tres bandes planes creuades: 6 triangles en total i silueta verda
+      // recognoscible de qualsevol angle, sense orientar-les a la càmera.
+      const pos=[],r=4.25;
+      for(let i=0;i<3;i++){
+        const a=i*Math.PI/3,dx=Math.cos(a),dz=Math.sin(a),
+              wx=-dz*.72,wz=dx*.72;
+        const left=[-dx*r+wx,4.95,-dz*r+wz],
+              right=[dx*r+wx,4.95,dz*r+wz],
+              left2=[-dx*r-wx,4.95,-dz*r-wz],
+              right2=[dx*r-wx,4.95,dz*r-wz],
+              middle=[0,6.6,0];
+        pos.push(...left,...middle,...left2,...right2,...middle,...right);
+      }
+      const geo=new THREE.BufferGeometry();
+      geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+      geo.computeVertexNormals();
+      return geo;
+    };
     const geometry={
       trunk:curvedPalmTrunk(6.2,.42,.22,6,8,.25),
+      // LOD 1: 4 cares, 3 seccions i 6 fulles planes.
+      midTrunk:curvedPalmTrunk(6.2,.42,.22,4,3,.25),
+      midCrown:reducedCrown(6),
+      // LOD 2: 3 cares, 2 seccions i 3 plans de copa creuats.
+      farTrunk:curvedPalmTrunk(6.2,.42,.22,3,2,.25),
+      farCrown:crossedCrown(),
       crown:palmCrown(4.7,0,8),
       crown2:palmCrown(3.1,.65,7,.18),
       palmVariants:[
@@ -108,6 +157,34 @@ window.HUNTER_VEGETATION=Object.freeze({
       parent.add(m);
       return m;
     };
+    // Reutilitzem exactament les transformacions i colors de les instàncies
+    // completes. Cap crida nova a random(): llavors i spawns idèntics.
+    const cloneInstances=(parent,geo,source,{crown=false,shadows=false}={})=>{
+      if(!source)return null;
+      const mesh=new THREE.InstancedMesh(geo,source.material,source.count),
+            matrix=new THREE.Matrix4(),color=new THREE.Color();
+      for(let i=0;i<source.count;i++){
+        source.getMatrixAt(i,matrix);mesh.setMatrixAt(i,matrix);
+        if(source.instanceColor){source.getColorAt(i,color);mesh.setColorAt(i,color)}
+      }
+      mesh.computeBoundingSphere();
+      mesh.castShadow=false;mesh.receiveShadow=shadows;
+      mesh.frustumCulled=true;
+      parent.add(mesh);return mesh;
+    };
+    const cloneCrowns=(parent,geo,rows,ch,refs)=>{
+      if(!rows.length)return null;
+      const mesh=new THREE.InstancedMesh(geo,mat(0x2d9f36,{doubleSide:true}),rows.length),
+            matrix=new THREE.Matrix4(),color=new THREE.Color();
+      for(let i=0;i<rows.length;i++){
+        const ref=refs[rows[i].i],source=ch.primary[ref.variant];
+        source.getMatrixAt(ref.index,matrix);mesh.setMatrixAt(i,matrix);
+        source.getColorAt(ref.index,color);mesh.setColorAt(i,color);
+      }
+      mesh.computeBoundingSphere();
+      mesh.castShadow=false;mesh.receiveShadow=false;mesh.frustumCulled=true;
+      parent.add(mesh);return mesh;
+    };
     const CHUNK=420;
     const build=({world,palms,bushes,rocks,playerX=0,playerZ=0,lowQuality=false})=>{
       const root=new THREE.Group();
@@ -144,8 +221,15 @@ window.HUNTER_VEGETATION=Object.freeze({
           ch.primary.push(primary);ch.secondary.push(secondary);
           selected.forEach((p,i)=>{variantMap[p.i].index=i});
         }
+        // LOD 1 i 2 comparteixen posicions i colors del model detallat,
+        // però es dibuixen amb només dos InstancedMesh per sector.
+        ch.midTrunk=cloneInstances(root,geometry.midTrunk,ch.trunk);
+        ch.midCrown=cloneCrowns(root,geometry.midCrown,rows,ch,variantMap);
+        ch.farTrunk=cloneInstances(root,geometry.farTrunk,ch.trunk);
+        ch.farCrown=cloneCrowns(root,geometry.farCrown,rows,ch,variantMap);
         // Bounding spheres separades per sector, no una esfera de tota l'illa.
-        ch.meshes=[ch.trunk,...ch.primary,...ch.secondary].filter(Boolean);
+        ch.meshes=[ch.trunk,...ch.primary,...ch.secondary,
+          ch.midTrunk,ch.midCrown,ch.farTrunk,ch.farCrown].filter(Boolean);
         ch.rows=null;
         sections.push(ch);
       }
