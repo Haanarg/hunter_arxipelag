@@ -5,9 +5,20 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.54**.
+Versió actual: **0.3.55**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.55 — dissenys de compounds, fase 2 (2026-10-09)
+
+Preview a `compounds-preview.html?fase=2`: heliport, polvorí i centre de comunicacions. La primera fase continua accessible al mateix visor. Nous dissenys separats del generador jugable a `src/compound-phase2-layouts.mjs`; no substitueixen encara els recintes de les partides.
+
+- **Heliport (120 × 110 m):** plataforma de 40 m amb marca H, llums baixes i reserva de rotors de 22 m de radi. Control de vol i magatzem laterals, combustible separat, filferrada, helicòpter normal i quatre soldats. Munició i farmaciola. La variant fortificada amb helicòpter de combat i torre queda com a ampliació posterior.
+- **Polvorí (110 × 110 m):** dos magatzems de parets massisses, guàrdia, filferrada, pati de càrrega i camió encarat a una sortida de 16 m. Quatre soldats. **Bazooka garantit en cada polvorí**, juntament amb munició, granades i explosius; s’elimina l’opcionalitat del catàleg de disseny. El visor mostra el bazooka sobre una taula al magatzem d’armament pesant i el model actual d’explosiu plàstic. La garantia s’aplicarà al generador quan s’integri aquesta fase.
+- **Comunicacions (100 × 110 m), nou:** sala de ràdio, edifici de servei, torre d’antena de 28 m amb parabòlica, generador, filferrada, jeep i quatre soldats. Mapa de HQ o vehicles garantit; disfressa opcional, mostrada a la proposta. Es planteja sobre una elevació amb accés transitable; el visor mostra la planta anivellada. Generador decoratiu.
+- Vista en planta, interiors sense sostre, recorreguts de circulació, zones de maniobra, patrulles i reserva dels rotors. Les dades de vehicles i personatges reutilitzen els models actuals de `main` 3c0d2cc; es conserven els canvis recents del jugador, riders, hangars i rendiment.
+
+Validació: `tests/compound-preview.cjs` comprova geometria, vehicles, patrulles sense creuar edificis, reserva dels rotors i presència del bazooka. `PREVIEW_PHASE=2 node tests/compound-preview-browser.cjs` comprova els tres dissenys en WebGL 2/SwiftShader amb perfils d’escriptori i mòbil, navegació, planta, interiors, zoom i etiquetes. Captures revisades. Aquesta validació correspon al visor; la integració procedural, les col·lisions jugables i Android físic es comprovaran després de la revisió dels dissenys.
 
 ### Revisió 0.3.54 — rendiment adaptable, LOD de terreny i aigua distant (2026-10-08)
 
@@ -402,7 +413,7 @@ Estat: **hangar, avançada i port integrats a la 0.3.48; resta del catàleg pend
 | Avançada | Caserna, caseta de guàrdia, torre, sacs, barreres, caixes, llum i bandera. Filferrada amb dos accessos. | 1 moto o jeep. | 3–4 soldats. Munició; granades o farmaciola opcionals. |
 | Garatge/hangar | Hangar gran, taller annex, aparcament exterior, dipòsits, bidons i caixes. Espai de sortida i gir davant de la boca. | 1 tanc, tanqueta o camió a dins; 1 cotxe o moto fora. | 2–3 soldats. Munició i farmaciola opcional. |
 | Heliport | Plataforma marcada, control, magatzem, combustible, llums i defenses fora de l'àrea dels rotors. | 1 helicòpter normal; variant fortificada amb helicòpter de combat. | 3–5 soldats; torre només a la variant fortificada. Munició i farmaciola. |
-| Polvorí | 2 magatzems separats, guàrdia, filferrada, càrrega, caixes de munició i barreres. | 1 camió amb sortida practicable. | 3–4 soldats. Munició, granades i explosius garantits; bazooka opcional. |
+| Polvorí | 2 magatzems separats, guàrdia, filferrada, càrrega, caixes de munició i barreres. | 1 camió amb sortida practicable. | 3–4 soldats. Munició, granades, explosius i bazooka garantits (decisió de disseny; integració pendent). |
 | Port militar | Magatzem, oficina, pati de càrrega, 2 molls transitables, pilones, caixes, bidons, torre i bandera. Accés terrestre ample. | 2–3 embarcacions entre llanxa, moto aquàtica i hovercraft. La llanxa llançacoets única s'assigna a un port. | 4–6 soldats. Munició, granades i mapa opcional. |
 | Embarcador civil — nou com a recinte | Caseta o cobert, moll petit, caixes i pilones, sense fortificació. | 1–2 entre barca de rems, windsurf i moto aquàtica. | Normalment buit; ocasionalment 1–2 soldats. Farmaciola opcional. |
 | Terminal de ferri — nou | Platja accessible, esplanada, caseta, marques d'embarcament i maniobra. Una rampa del ferri accessible des de terra. | 1 ferri; cotxe o camió opcional a terra. | 0–3 soldats. Munició o farmaciola opcionals. |

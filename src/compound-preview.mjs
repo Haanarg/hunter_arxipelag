@@ -1,5 +1,11 @@
 import * as T from '../vendor/three-r186.module.mjs';
-import {compoundLayouts} from './compound-layouts.mjs';
+import {compoundLayouts as integratedLayouts} from './compound-layouts.mjs';
+import {phase2Layouts} from './compound-phase2-layouts.mjs';
+const phase2=new URLSearchParams(location.search).get('fase')==='2';
+const compoundLayouts=phase2?phase2Layouts:integratedLayouts;
+document.querySelector('.badge').textContent=phase2?'Fase 2 · propostes':'Fase 1 · integrats al joc';
+document.getElementById('phase1').setAttribute('aria-current',phase2?'false':'page');
+document.getElementById('phase2').setAttribute('aria-current',phase2?'page':'false');
 import {createCompoundConcept} from './compound-concepts.mjs';
 const canvas=document.getElementById('scene'),container=canvas.parentElement;
 const renderer=new T.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;

@@ -5,7 +5,8 @@ const fs=require('fs'),path=require('path'),assert=require('assert');
  const T=await import('../vendor/three-r186.module.mjs');
  const {compoundLayouts}=await import('../src/compound-layouts.mjs');
  const {createCompoundConcept}=await import('../src/compound-concepts.mjs');
- for(const layout of compoundLayouts){
+ const {phase2Layouts}=await import('../src/compound-phase2-layouts.mjs');
+ for(const layout of [...compoundLayouts,...phase2Layouts]){
   const model=createCompoundConcept(layout);let meshes=0,triangles=0;
   model.root.traverse(o=>{if(!o.isMesh)return;meshes++;const p=o.geometry.attributes.position;assert([...p.array].every(Number.isFinite));triangles+=(o.geometry.index?o.geometry.index.count:p.count)/3});
   assert(meshes>100);assert.equal(model.root.children.filter(o=>o.userData.previewVehicle).length,layout.vehicles.length);
@@ -14,6 +15,8 @@ const fs=require('fs'),path=require('path'),assert=require('assert');
   }
   // Patrol segments must not cross any building footprint, with 1 m body clearance.
   for(let i=1;i<layout.patrol.length;i++){const a=layout.patrol[i-1],b=layout.patrol[i],n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])*2);for(let k=0;k<=n;k++){const x=a[0]+(b[0]-a[0])*k/n,z=a[1]+(b[1]-a[1])*k/n;for(const building of layout.buildings)assert(Math.abs(x-building.x)>=building.w/2+1||Math.abs(z-building.z)>=building.d/2+1,layout.id+' patrol intersects '+building.id)}}
+  if(layout.id==='ammo-proposal')assert(model.root.children.some(o=>o.userData.previewLoot==='bazooka'),'guaranteed bazooka is present');
+  if(layout.helipad){const p=layout.helipad;for(const b of layout.buildings){const dx=Math.max(0,Math.abs(b.x-p.x)-b.w/2),dz=Math.max(0,Math.abs(b.z-p.z)-b.d/2);assert(Math.hypot(dx,dz)>p.clearRadius,'rotor clearance')}}
   assert(model.roofs.length>=layout.buildings.length);assert(!model.overlays.visible);
   console.log(layout.id,meshes,'meshes',Math.round(triangles),'triangles');
  }

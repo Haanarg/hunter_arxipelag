@@ -24,6 +24,22 @@ export function createCompoundConcept(layout){
    }
    for(let z=17;z<63;z+=9)for(let x=-45;x<49;x+=19)box(root,6,.025,.16,0x7bcbd0,x+(z%3),-.15,z);
  }
+ if(layout.helipad){
+   const p=layout.helipad;box(root,p.size,.24,p.size,0x66706e,p.x,.22,p.z);
+   const ring=new T.Mesh(new T.RingGeometry(p.size*.39,p.size*.405,48),mat(0xf3e5b1));ring.rotation.x=-Math.PI/2;ring.position.set(p.x,.355,p.z);root.add(ring);
+   for(const side of[-1,1])box(root,1.6,.025,12,0xf3e5b1,p.x+side*4,.36,p.z);box(root,8,.025,1.6,0xf3e5b1,p.x,.36,p.z);
+   for(const dx of[-19,19])for(const dz of[-19,19]){cylinder(root,.35,.2,0x273c3f,p.x+dx,.48,p.z+dz);cylinder(root,.24,.1,0xecc668,p.x+dx,.62,p.z+dz)}
+   const reserve=new T.Mesh(new T.RingGeometry(p.clearRadius-.3,p.clearRadius,64),new T.MeshBasicMaterial({color:0xffc85c,side:T.DoubleSide,transparent:true,opacity:.7,depthWrite:false}));reserve.rotation.x=-Math.PI/2;reserve.position.set(p.x,.86,p.z);overlays.add(reserve);tag('Rotors · radi lliure 22 m',p.x,1,p.z-24);
+ }
+ if(layout.antenna){
+   const a=layout.antenna,g=new T.Group();g.position.set(a.x,.2,a.z);root.add(g);g.userData.previewAntenna=true;
+   box(g,8,.55,8,0x92948b,0,.25,0);
+   for(let y=0;y<a.height;y+=4){const color=y%8?0xd8d8c4:0xa7463b,lower=2.7-y*.065,upper=2.7-(y+4)*.065;
+     for(const dx of[-1,1])for(const dz of[-1,1])rod(g,[dx*lower,y,dz*lower],[dx*upper,y+4,dz*upper],.13,color);
+     for(const side of[-1,1]){rod(g,[-lower,y,side*lower],[upper,y+4,side*upper],.07,color);rod(g,[lower,y,side*lower],[-upper,y+4,side*upper],.07,color);rod(g,[side*lower,y,-lower],[side*upper,y+4,upper],.07,color);rod(g,[side*lower,y,lower],[side*upper,y+4,-upper],.07,color)}
+   }
+   const dish=new T.Mesh(new T.SphereGeometry(2.2,16,8,0,Math.PI*2,0,Math.PI*.4),new T.MeshStandardMaterial({color:0xe4e5d8,roughness:.65,side:T.DoubleSide}));dish.rotation.x=Math.PI*.65;dish.position.set(0,18,3);g.add(dish);rod(g,[0,17,0],[0,18,3],.15,0x616b68);rod(g,[0,28,0],[0,31,0],.09,0xddddca);cylinder(g,.22,.4,0xec6545,0,31,0);tag('Antena · 28 m',a.x,32,a.z);
+ }
  for(const b of layout.buildings){
    const shell=b.hangar?building.createHangarShell({width:b.w,depth:b.d,height:b.h,wallColor:0xbab99d,roofColor:0xb7c1b4}):building.createShell({width:b.w,depth:b.d,height:b.h,wallColor:0xc9b98d,roofColor:0x79584e});
    const g=shell.group;g.position.set(b.x,.24,b.z);root.add(g);roofs.push(shell.roof);
@@ -38,8 +54,8 @@ export function createCompoundConcept(layout){
      for(let z=-10;z<0;z+=3)box(g,1.3,.8,1.6,0x9a7546,-b.w/2+3,1.6,z);
      tag('Hangar · boca 30 m',b.x,b.h+1,b.z);
    }else{
-     building.addWindowedWall(g,{lx:0,lz:-b.d/2,sx:b.w,sz:.45,height:b.h,material:shell.walls});
-     for(const x of[-b.w/2,b.w/2])building.addWindowedWall(g,{lx:x,lz:0,sx:.45,sz:b.d,height:b.h,material:shell.walls});
+     const solid=layout.id==='ammo-proposal'&&b.id!=='guard';
+     if(solid){wall(0,-b.d/2,b.w,.6);for(const x of[-b.w/2,b.w/2])wall(x,0,.6,b.d)}else{building.addWindowedWall(g,{lx:0,lz:-b.d/2,sx:b.w,sz:.45,height:b.h,material:shell.walls});for(const x of[-b.w/2,b.w/2])building.addWindowedWall(g,{lx:x,lz:0,sx:.45,sz:b.d,height:b.h,material:shell.walls})}
      const door=4;wall(-(b.w+door)/4,b.d/2,(b.w-door)/2,.45);wall((b.w+door)/4,b.d/2,(b.w-door)/2,.45);
      building.addWall(g,{lx:0,lz:b.d/2,sx:door,sz:.45,height:b.h-4.4,material:shell.walls,y:4.4+(b.h-4.4)/2});
      box(g,5,.15,3,0xafa88c,0,.1,b.d/2+1.5);
@@ -53,6 +69,7 @@ export function createCompoundConcept(layout){
    if(kind==='crate'){box(root,2.8,2.2,2.6,0x89603b,x,1.25,z);for(const side of[-1,1])box(root,.12,2.25,2.65,0x403e31,x+side*.9,1.27,z);return}
    if(kind==='barrel'){cylinder(root,.75,1.8,0x5f7370,x,1.15,z);for(const h of[.5,1.75])cylinder(root,.79,.15,0x394749,x,h,z);return}
    if(kind==='fuel'){const c=cylinder(root,1.3,5,0x697977,x,2,z);c.rotation.z=Math.PI/2;box(root,6,.5,3,0x4b5757,x,.45,z);return}
+   if(kind==='generator'){box(root,7,.4,4.5,0x6d7369,x,.35,z);box(root,5,2.5,3,0x57694f,x,1.8,z);for(let k=-2;k<=2;k++)box(root,.12,1.6,.06,0x29383a,x+k*.55,1.9,z+1.53);cylinder(root,.17,3,0x41484b,x+1.5,3.2,z-.7);box(root,1,.7,.08,0x303b3e,x-1.5,2,z+1.55);return}
    if(kind==='lamp'){cylinder(root,.12,8,0x3f5052,x,4,z);box(root,2,.3,.8,0xebd48a,x,8,z);return}
    if(kind==='sandbag')for(let row=0;row<2;row++)for(let i=0;i<5-row;i++)box(root,1.3,.65,.95,0xaaa17a,x+(i-(4-row)/2)*1.45,.65+row*.6,z);
  }
@@ -69,7 +86,19 @@ export function createCompoundConcept(layout){
  for(const [i,[x,z]] of layout.soldiers.entries()){
   const model=window.HUNTER_CHARACTERS.createCommando(T);model.position.set(x,isPort&&z>12?.68:.25,z);model.rotation.y=i*1.7;root.add(model);
  }
- for(const item of layout.loot){const colors={'munició':0xc4ad57,'farmaciola':0xf5ede2,'granades':0x66894e,'mapa':0xd9d2ac};box(root,1.5,.8,1.15,colors[item.kind],item.x,.9,item.z);if(item.kind==='farmaciola'){box(root,.9,.05,.22,0xd43a3a,item.x,1.33,item.z);box(root,.22,.05,.9,0xd43a3a,item.x,1.34,item.z)}}
+ for(const item of layout.loot){
+  const group=new T.Group();group.position.set(item.x,.35,item.z);group.userData.previewLoot=item.kind;root.add(group);
+  if(item.kind==='bazooka'){
+    box(group,4,.2,1.6,0x786748,0,.45,0);for(const side of[-1,1])box(group,.2,.7,1.3,0x424e46,side*1.4,.1,0);
+    const tube=cylinder(group,.22,2.65,0x58664a,0,1,0);tube.rotation.z=Math.PI/2;
+    for(const side of[-1,1]){const cap=cylinder(group,.29,.2,0x252b27,side*1.42,1,0);cap.rotation.z=Math.PI/2}box(group,.16,.4,.22,0x252b27,-.35,.72,0);box(group,.12,.2,.3,0x737b74,.35,1.25,0);
+    tag('Bazooka garantit',item.x,2,item.z);continue;
+  }
+  if(item.kind==='explosius'&&window.HUNTER_EXPLOSIVE_VISUALS){const explosive=window.HUNTER_EXPLOSIVE_VISUALS.create(T,false);explosive.scale.setScalar(window.HUNTER_EXPLOSIVE_VISUALS.PICKUP_SCALE);group.add(explosive);continue}
+  const colors={'munició':0xc4ad57,'farmaciola':0xf5ede2,'granades':0x66894e,'mapa':0xd9d2ac,'disfressa':0x993838,'explosius':0x58664a};box(group,1.5,.8,1.15,colors[item.kind],0,.55,0);
+  if(item.kind==='farmaciola'){box(group,.9,.05,.22,0xd43a3a,0,.98,0);box(group,.22,.05,.9,0xd43a3a,0,.99,0)}
+ }
+
  // Boundaries deliberately leave wide entrance openings.
  if(layout.fence){
   for(const [a,b] of layout.fence){const length=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.ceil(length/6);
