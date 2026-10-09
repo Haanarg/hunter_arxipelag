@@ -3,7 +3,7 @@
 // en alguns navegadors mòbils. La qualitat es decideix a l'arrencada.
 window.HUNTER_PERFORMANCE=Object.freeze({
   create({renderer,maxPixelRatio,minPixelRatio,element=null,compact=false}){
-    const ratio=Math.min(maxPixelRatio,Math.max(.65,minPixelRatio));
+    const ratio=Math.max(.65,maxPixelRatio);
     let frames=0,frameAccum=0,lastDisplay=0,lastFps=0;
     const stats={
       fps:0,frameMs:0,renderCpuMs:0,drawCalls:0,triangles:0,
