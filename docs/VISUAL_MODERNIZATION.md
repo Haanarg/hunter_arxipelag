@@ -5,9 +5,15 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.58**.
+Versió actual: **0.3.59**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.3.59 — munició inicial i caixes de 16 bales (2026-10-09)
+
+- El jugador comença una partida amb **16 bales** i recupera les mateixes **16 bales** quan es reinicia el món.
+- Cada recollida de munició (`arma`) suma **16 bales directament** al comptador, sense passar per l'inventari.
+- `tests/smoke.cjs` valida els valors inicials, el pas de recollida real del bucle de joc i el reinici. No es modifiquen la cadència, el dany, els models ni la distribució de les caixes.
 
 ### Revisió 0.3.58 — soldats enemics i general al 80% (2026-10-09)
 
@@ -677,7 +683,7 @@ Validació: model buit i ocupat inspeccionat des de proa i popa; entrada i movim
 - WASD/fletxes continuen disponibles.
 - HUD simplificat.
 - Inventari en graella.
-- Les caixes de munició sumen directament **40** al comptador de munició i no creen cap entrada a l'inventari.
+- Les caixes de munició sumen directament **16 bales** al comptador de munició i no creen cap entrada a l'inventari.
 - Switch **Gràfics reduïts** a la portada; en Android el perfil reduït continua activant-se automàticament.
 - Botons contextuals per vehicles i helicòpters.
 - Minimapa i carta de navegació modulars.
