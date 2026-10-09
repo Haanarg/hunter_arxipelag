@@ -1,5 +1,23 @@
 const ENEMY_SENSE_DT=.1;
 const SOLDIER_MEMORY=9,SOLDIER_RETREAT=9,SOLDIER_IDEAL=17,SOLDIER_FIRE_RANGE=125;
+// Punteria per dificultat. DIF=1.5 conserva exactament la dispersió antiga.
+// Normal (1) falla més i Fàcil (.6) encara més, sense alterar el dany ni la IA.
+function enemyAimSpread(){
+  const difficulty=Math.max(.6,Math.min(1.5,DIF));
+  return difficulty>=1 ? 1+(1.5-difficulty)*2.4 : 2.2+(1-difficulty)*5.5;
+}
+function enemyShotDirection(u,target,targetY,eyeY,roll=rn){
+  const spread=enemyAimSpread();
+  // Els canons explosius han de poder errar també fora del radi d'explosió.
+  const explosiveBoost=u.spl?1+Math.min(1,u.spl/8)*(spread-1)*.5:1;
+  const horizontal=1.5*spread*explosiveBoost,
+        vertical=.85*(spread-1),
+        dx=target.x-u.x+roll(-horizontal,horizontal),
+        dy=targetY+1.5-eyeY+(vertical>0?roll(-vertical,vertical):0),
+        dz=target.z-u.z+roll(-horizontal,horizontal),
+        length=Math.hypot(dx,dy,dz);
+  return [dx/length,dy/length,dz/length];
+}
 
 // El contacte visual i la possibilitat de disparar no són el mateix.
 // Les parets i els vehicles aparcats obliguen el soldat a canviar d'angle.
@@ -117,9 +135,8 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
     soldierEngage(u,target,targetY,dt,td,!!u.canSee);
     if(u.canSee&&u.canShoot&&d<=SOLDIER_FIRE_RANGE&&u.cd<=0){
       u.cd=u.rate;
-      const ex=q.x-u.x+rr(-1.5,1.5),ey=py+1.5-eyeY,
-            ez=q.z-u.z+rr(-1.5,1.5),length=Math.hypot(ex,ey,ez);
-      shoot(u.x,eyeY,u.z,ex/length,ey/length,ez/length,70,u.dmg,0,'e',mE,1);
+      const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
+      shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,'e',mE,1);
     }
   }else if(u.canSee){
     u.hd=Math.atan2(-dx,-dz);
@@ -130,8 +147,8 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
       }else if(d>u.rng*.72)mvE(u,u.sp*dt,q.x,q.z)
     }
     if(d<u.rng&&u.cd<=0){
-      u.cd=u.rate;const y0=eyeY,ex=q.x-u.x+rr(-1.5,1.5),ey=py+1.5-y0,ez=q.z-u.z+rr(-1.5,1.5),l=Math.hypot(ex,ey,ez);
-      shoot(u.x,y0,u.z,ex/l,ey/l,ez/l,u.spl?60:70,u.dmg,u.spl,'e',mE,u.spl?2:1)
+      u.cd=u.rate;const y0=eyeY,[ax,ay,az]=enemyShotDirection(u,q,py,y0);
+      shoot(u.x,y0,u.z,ax,ay,az,u.spl?60:70,u.dmg,u.spl,'e',mE,u.spl?2:1)
     }
   }else if(u.sp>0){
     if(u.wt<=0||Math.hypot(u.tx-u.x,u.tz-u.z)<2){
