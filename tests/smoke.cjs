@@ -43,8 +43,12 @@ ok("terrainStream.stats.lodLevels.length===4&&terrainStream.stats.lodLevels[0]==
   'horizon terrain has a fourth lighter LOD');
 ok("!!window.HUNTER_PERFORMANCE_STATS&&window.HUNTER_PERFORMANCE_STATS.active",
   'runtime performance monitor is activated during gameplay');
-ok("window.HUNTER_PERFORMANCE_STATS.pixelRatio<=window.HUNTER_PERFORMANCE_STATS.maxPixelRatio",
-  'adaptive resolution remains within device quality limits');
+ok("window.HUNTER_PERFORMANCE_STATS.mode==='fixed'&&window.HUNTER_PERFORMANCE_STATS.changes===0",
+  'render ratio stays fixed instead of periodically reallocating the WebGL framebuffer');
+ok("window.HUNTER_PERFORMANCE_STATS.pixelRatio===Math.min(devicePixelRatio||1,visualQuality.pixelRatio)",
+  'FPS overlay reports the actual resolution chosen at startup');
+ok("terrainStream.stats.viewPriority===false",
+  'terrain updates avoid redundant camera frustum intersections');
 ok("visualQuality.waterSegments===(qualityName==='mobile'?200:320)",
   'sea geometry uses the optimized desktop/mobile tessellation profiles');
 ok('noBlockingStartCapture','starting game no longer forces a blocking WebGL capture');
