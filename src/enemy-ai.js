@@ -39,7 +39,21 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
 
   u.o.position.set(u.x,(u.gy!=null?u.gy:enemyGroundAt(u,u.x,u.z))+(u.t=='jeep'||u.t=='tanc'?.05:0),u.z);
   if(enemyIsVehicle(u)){u.hd=u.navHd??u.hd}
+  // Enemics que comparteixen model de cotxe/tanqueta: el tren davanter
+  // segueix la direcció real del moviment, sense canviar la seva IA.
+  const lastVisualHeading=u.o.rotation.y;
   if(u.t!='torre')u.o.rotation.y=u.hd;
+  if((u.t==='jeep'||u.t==='tanqueta')&&u.o.userData.steeringPivots){
+    const dxMoved=u.x-oldX,dzMoved=u.z-oldZ,
+          distance=Math.hypot(dxMoved,dzMoved),
+          delta=Math.atan2(Math.sin(u.hd-lastVisualHeading),Math.cos(u.hd-lastVisualHeading)),
+          visualTurn=distance>.003&&dt>0?Math.max(-1,Math.min(1,delta/(1.6*dt))):0;
+    window.HUNTER_VEHICLES.animateSteering(u.o,u.t==='jeep'?'cotxe':u.t,visualTurn,dt);
+    if(distance>.003){
+      const signedDistance=dxMoved*(-Math.sin(u.hd))+dzMoved*(-Math.cos(u.hd));
+      for(const wheel of u.o.userData.wheels||[])wheel.rotation.x-=signedDistance/(wheel.userData.radius||.65);
+    }
+  }
   if(u.o.userData.legs){
     const a=u.o.userData;u.phase=(u.phase||0)+dt*u.sp;
     const moving=Math.hypot(u.x-oldX,u.z-oldZ)>.001,swing=moving?Math.sin(u.phase)*.45:0;
