@@ -30,6 +30,35 @@ run(`{
 ok('selectedDPlayerAndRider','player and open-vehicle riders share the selected D compact head and short neck');
 ok('enemyHeadModelsUnaffected','general and enemy soldier do not inherit the player head redesign');
 
+run(`{
+  const u=pl.userData;
+  const pistolGeometry=u.gun&&u.gun.children.some(child=>child===u.pistolSlide);
+  const enemy=E.find(e=>e.t==='soldat');
+  globalThis.pistolOnlyForPlayer=!!pistolGeometry&&u.gun.parent===pl&&
+    !!u.pistolIdleMount&&u.pistolIdleMount.parent===u.aer&&
+    !!enemy?.o?.userData?.gun&&!enemy.o.userData.pistolSlide;
+  globalThis.pistolShortWithoutStock=!!u.pistolSlide&&
+    u.pistolSlide.children.some(c=>c.geometry?.type==='BoxGeometry'&&
+      Math.abs(c.geometry.parameters.depth-.78)<.001)&&
+    !u.gun.children.some(c=>c.geometry?.parameters?.depth>1);
+  const oldFirePose=u.firePose,oldAim=u.pistolAimTime,oldAge=u.pistolShotAge,
+        oldBlend=u.pistolBlend;
+  u.pistolAimTime=.32;u.pistolShotAge=0;
+  window.HUNTER_CHARACTERS.animatePlayer(pl,{
+    forward:0,dt:.016,swimming:false,inVehicle:false,ammo:16,
+    bazookaEquipped:false,grenadeEquipped:false
+  });
+  globalThis.pistolMediumRecoil=u.pistolBlend>0&&u.pistolBlend<1&&
+    u.pistolSlide.position.z>.01&&u.pistolSlide.position.z<.07&&
+    u.pistolFlash.visible&&u.pistolShotAge>.015&&u.pistolShotAge<.017;
+  u.firePose=oldFirePose;u.pistolAimTime=oldAim;u.pistolShotAge=oldAge;
+  u.pistolBlend=oldBlend;u.pistolFlash.visible=false;u.pistolSlide.position.z=0;
+}`);
+ok('pistolOnlyForPlayer','only the player gets the two-handed pistol rig');
+ok('pistolShortWithoutStock','the 1911-like pistol has a short slide and no long stock');
+ok('pistolMediumRecoil','one actual pistol firing pulse produces medium slide recoil and muzzle flash');
+
+
 ok("document.body.classList.contains('game-started')",'minimap becomes visible only after the game starts');
 run(`{
   const stats=window.HUNTER_BUILD_STATS;
