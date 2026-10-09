@@ -1,5 +1,5 @@
 const ENEMY_SENSE_DT=.1;
-const SOLDIER_MEMORY=9,SOLDIER_RETREAT=9,SOLDIER_IDEAL=17;
+const SOLDIER_MEMORY=9,SOLDIER_RETREAT=9,SOLDIER_IDEAL=17,SOLDIER_FIRE_RANGE=125;
 
 // El contacte visual i la possibilitat de disparar no són el mateix.
 // Les parets i els vehicles aparcats obliguen el soldat a canviar d'angle.
@@ -99,7 +99,7 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
       if(seen){
         u.lastSeenX=q.x;u.lastSeenZ=q.z;u.lastSeenY=py;
         u.pursuitT=SOLDIER_MEMORY;
-        if(acquired)u.cd=Math.min(u.cd,.18);
+        if(acquired)u.cd=0; // primer tret sense retard en detectar el jugador
       }
       u.defenseTarget=null;
     }else{
@@ -115,7 +115,7 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
           targetY=u.canSee?py:(u.lastSeenY??py),
           td=Math.hypot(target.x-u.x,target.z-u.z);
     soldierEngage(u,target,targetY,dt,td,!!u.canSee);
-    if(u.canSee&&u.canShoot&&d<u.rng&&u.cd<=0){
+    if(u.canSee&&u.canShoot&&d<=SOLDIER_FIRE_RANGE&&u.cd<=0){
       u.cd=u.rate;
       const ex=q.x-u.x+rr(-1.5,1.5),ey=py+1.5-eyeY,
             ez=q.z-u.z+rr(-1.5,1.5),length=Math.hypot(ex,ey,ez);
