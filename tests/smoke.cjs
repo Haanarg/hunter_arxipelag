@@ -141,6 +141,52 @@ run(`{
 ok('seedCategoriesComplete','seed search covers every vehicle, item and compound catalog');
 ok('seedCompoundsIndexed','seed search has actual base, HQ and compound positions');
 ok('seedNearestValid','seed search measures real distances from player base');
+
+run(`{
+  const north=E.find(u=>u.t==='tanqueta'&&u.hqPatrolZone==='north'),
+        south=E.find(u=>u.t==='tanqueta'&&u.hqPatrolZone==='south'),
+        northPts=north?.patrol||[],southPts=south?.patrol||[],
+        minGap=Math.min(...northPts.flatMap(a=>southPts.map(b=>Math.hypot(a.x-b.x,a.z-b.z))));
+  globalThis.hqTankRemoved=!V.some(v=>v.t==='tanc'&&(v.hq||
+    Math.hypot(v.x-HQ.x,v.z-HQ.z)<110))&&V.filter(v=>v.t==='tanc').length>=2;
+  globalThis.tankettePatrolsSeparated=!!north&&!!south&&
+    northPts.length===4&&southPts.length===4&&minGap>50&&
+    northPts.every(p=>p.z<HQ.z-20)&&southPts.every(p=>p.z>HQ.z+20)&&
+    northPts.every(p=>enemySolidAt(north,p.x,p.z,north.hd,true))&&
+    southPts.every(p=>enemySolidAt(south,p.x,p.z,south.hd,true));
+}`);
+ok('hqTankRemoved','no pilotable tank in enemy HQ; other tanks remain available across the islands');
+ok('tankettePatrolsSeparated','both HQ tankettes patrol distinct, traversable north/south corridors more than 50m apart');
+run(`{
+  const saved={items,marks:intelMarks.slice(),hq:hqMapKnown,
+    knownInventory:{mapa:inv.mapa,mapa_heli:inv.mapa_heli,mapa_tanc:inv.mapa_tanc},
+    message:msg,messageT:msgT},
+    kinds=['mapa','mapa_heli','mapa_tanc'],out=[];
+  try{
+    for(const type of kinds){
+      const mesh=new THREE.Group(),before=minimap.stats.draws;
+      mesh.position.set(P.x,P.y,P.z);world.add(mesh);
+      items=[{t:type,x:P.x,z:P.z,y:P.y,o:mesh}];
+      update(.016,elapsed+.016);
+      const expected=type==='mapa'?hqMapKnown:type==='mapa_heli'
+        ?intelMarks.filter(m=>m.kind==='heli').length===V.filter(v=>!v.destroyed&&(v.t==='heli'||v.t==='heli_combat')).length
+        :intelMarks.filter(m=>m.kind==='tanc').length===[
+          ...V.filter(v=>v.t==='tanc'&&!v.destroyed),
+          ...E.filter(u=>u.t==='tanc'&&!u.destroyed)].length;
+      out.push(items.length===0&&!inv[type]&&expected&&minimap.stats.draws>before&&!paused);
+      world.remove(mesh);
+    }
+    globalThis.mapsAutoApplyWithoutInventory=out.every(Boolean);
+  }finally{
+    items=saved.items;intelMarks=saved.marks;hqMapKnown=saved.hq;
+    for(const [name,value]of Object.entries(saved.knownInventory)){
+      if(value==null)delete inv[name];else inv[name]=value;
+    }
+    msg=saved.message;msgT=saved.messageT;mini();
+  }
+}`);
+ok('mapsAutoApplyWithoutInventory','HQ, helicopter and tank maps update immediately on pickup without opening menus or entering inventory');
+
 run(`{
   const soldier=E.find(e=>e.t==='soldat'),general=E.find(e=>e.t==='general');
   globalThis.enemySoldierScale=soldier&&Math.abs(soldier.o.scale.x-.8)<1e-9&&Math.abs(soldier.o.scale.y-.8)<1e-9&&Math.abs(soldier.o.scale.z-.8)<1e-9;
