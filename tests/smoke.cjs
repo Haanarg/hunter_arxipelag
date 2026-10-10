@@ -504,6 +504,53 @@ run(`{const q=V.find(v=>v.t==='barca_rems'),m=q.o.getObjectByName('rowboat-water
 ok('rowDraft&&rowMaskSafe&&noMaskDebris','rowboat sits 30 cm lower; invisible water mask casts no shadow and never becomes debris');
 
 
+run(`{
+  const saved={cv,fall:playerFall,eject:playerEject,hp,over,swimming,
+    x:P.x,y:P.y,z:P.z,hd:P.hd,message:msg,messageT:msgT},
+    x=P.x,z=P.z,ground=Math.max(0,hAt(x,z));
+  let exploding=null,dbBefore=DB.length,fxBefore=fx.length;
+  try{
+    over=0;hp=100;playerFall=null;playerEject=null;
+    cv={t:'cotxe',x,z,hd:.2,v:28};
+    toggle();
+    const safeMovingExit=cv===null&&hp===100&&playerEject?.kind==='flip'&&
+      !playerFall;
+    playerFall=null;playerEject=null;
+    const manual={t:'heli',x,z,hd:.6,v:24,alt:ground+38};
+    cv=manual;toggle();
+    const manualFall=!cv&&!!playerFall&&playerFall.startHeight===38&&
+      playerFall.y===manual.alt&&P.y===manual.alt&&manual.crashing===true&&
+      playerEject===null&&hp===100;
+    // Una explosió a mig vol ha d'activar exactament la mateixa física.
+    playerFall=null;playerEject=null;
+    exploding={t:'heli_combat',x,z,hd:.3,v:18,alt:ground+34,
+      o:mkV('heli_combat'),life:1,maxLife:1};
+    exploding.o.position.set(x,exploding.alt,z);world.add(exploding.o);V.push(exploding);
+    cv=exploding;explodeVehicle(exploding);
+    const destroyedFall=exploding.destroyed&&!V.includes(exploding)&&
+      !cv&&!!playerFall&&playerFall.y===exploding.alt&&
+      P.y===exploding.alt&&playerFall.startHeight===34&&
+      playerFall.vx!==0&&playerEject===null&&hp===100;
+    const initialY=playerFall?.y;
+    update(.05,elapsed+.05);
+    const fallsInWorld=playerFall?.y<initialY&&
+      Math.abs(P.y-playerFall.y)<1e-7&&pl.visible;
+    globalThis.vehicleExitNoDamageAndHeliFreefall=safeMovingExit&&manualFall&&
+      destroyedFall&&fallsInWorld;
+    globalThis.heliLandingKeepsDamage=String(update).includes('fallH-4')&&
+      String(update).includes('if(dmg>0)hurtP(dmg)');
+  }finally{
+    if(exploding){const i=V.indexOf(exploding);if(i>=0)V.splice(i,1);world.remove(exploding.o)}
+    for(const part of DB.splice(dbBefore))world.remove(part.m);
+    for(const effect of fx.splice(fxBefore))world.remove(effect.o);
+    cv=saved.cv;playerFall=saved.fall;playerEject=saved.eject;
+    hp=saved.hp;over=saved.over;swimming=saved.swimming;
+    P.x=saved.x;P.y=saved.y;P.z=saved.z;P.hd=saved.hd;
+    msg=saved.message;msgT=saved.messageT;
+  }
+}`);
+ok('vehicleExitNoDamageAndHeliFreefall','moving ground exits are harmless; jumping or being shot down in a helicopter starts a real airborne fall');
+ok('heliLandingKeepsDamage','helicopter falls still calculate and apply landing damage');
 run('E=savedEnemies;playerFall=null;playerEject=null;');
 ok('V.filter(v=>v.t==="llanxa_coets").length===1','unique rocket boat');
 run(`{
