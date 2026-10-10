@@ -153,9 +153,9 @@ arma:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 19 H54 V50 H10 Z"
 };
 const IT={
 med:{n:'Farmaciola',c:0xf2f3de,s:[1.2,.8,.8],icon:ICON.med,desc:'Recupera 40 punts de vida.',usable:true},
-mapa:{n:'Mapa de l’HQ',c:0xffe27a,s:[1.6,.08,1.2],icon:ICON.mapa,desc:'Obre la carta de navegació i revela l’HQ enemic.',usable:true},
-mapa_heli:{n:'Mapa d’helicòpters',c:0x9fd7ff,s:[1.6,.08,1.2],icon:ICON.mapa_heli,desc:'Marca a la carta la posició de tots els helicòpters actius del mapa.',usable:true},
-mapa_tanc:{n:'Mapa de tancs',c:0xc6b06a,s:[1.6,.08,1.2],icon:ICON.mapa_tanc,desc:'Marca a la carta la posició de tots els tancs actius del mapa.',usable:true},
+mapa:{n:'Mapa de l’HQ',c:0xffe27a,s:[1.6,.08,1.2],icon:ICON.mapa,desc:'En recollir-lo, revela immediatament la posició de l’HQ enemic.',usable:false},
+mapa_heli:{n:'Mapa d’helicòpters',c:0x9fd7ff,s:[1.6,.08,1.2],icon:ICON.mapa_heli,desc:'En recollir-lo, marca immediatament tots els helicòpters actius al mapa.',usable:false},
+mapa_tanc:{n:'Mapa de tancs',c:0xc6b06a,s:[1.6,.08,1.2],icon:ICON.mapa_tanc,desc:'En recollir-lo, marca immediatament tots els tancs actius al mapa.',usable:false},
 bazooka:{n:'Bazooka',c:0x58664a,s:[2.1,.45,.45],icon:ICON.bazooka,desc:'Llançacoets amb 3 coets per recollida. Equipa’l i dispara càrregues d’alt poder destructiu fins que s’esgotin.',usable:true},
 franctirador:{n:'Rifle de franctirador',c:0x647366,s:[2.7,.5,.42],icon:ICON.franctirador,desc:'Rifle de llarg abast. 6 cartutxos per recollida; elimina soldats d’un tret. Equipa’l i prem Mira / Q per activar l’òptica x8.',usable:true},
 granada:{n:'Granades',c:0x4a5842,s:[.65,.65,.65],icon:ICON.granada,desc:'Paquet de 5 granades. Prem breument Dispar per llançar a prop o mantén-lo premut per augmentar-ne l’abast fins al màxim. Una trajectòria vermella indica on cauran.',usable:true},
@@ -164,7 +164,7 @@ expl:{n:'Explosius',c:0x617451,s:[.9,.9,.9],icon:ICON.expl,desc:'Bloc d’explos
 disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa enemiga vermella. Activa o desactiva la disfressa.',usable:true}
 };
 // combat i enemics
-let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=100,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,sniperEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,over=0,fcd=0,kills=0,intelMarks=[],playerEject=null,playerFall=null;
+let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=100,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,sniperEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null;
 const endEl=document.getElementById('end'),gB=new THREE.BoxGeometry(.35,.35,.35),sphG=new THREE.SphereGeometry(1,10,8),
 mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial({color:0xff7a1a}),mE=new THREE.MeshBasicMaterial({color:0xff4040});
 const EC={soldat:{hp:30,sp:7,rng:32,rate:1.1,dmg:7,spl:0,r:2},jeep:{hp:70,sp:22,rng:22,rate:.5,dmg:5,spl:0,r:3.9},tanqueta:{hp:115,sp:13,rng:42,rate:.72,dmg:9,spl:0,r:4.5},tanc:{hp:140,sp:8,rng:50,rate:2.5,dmg:22,spl:7,r:6.8},
@@ -698,7 +698,7 @@ const barbedHQ=(cx,cz,hw=50,hd=46,gap=13,gateOffset=0)=>{
 const mc=document.getElementById('mm');
 const minimap=window.HUNTER_MINIMAP.create({
   THREE,canvas:mc,worldSize:S,halfSize:H,heightAt:hAt,colorAt:window.HUNTER_TERRAIN.colorAt,
-  getState:()=>({base:P.base,hq:HQ,mapKnown:!!inv.mapa,current:cv||P,currentVehicle:cv,vehicles:V,enemies:E,log:logb,intel:intelMarks})
+  getState:()=>({base:P.base,hq:HQ,mapKnown:hqMapKnown||!!inv.mapa,current:cv||P,currentVehicle:cv,vehicles:V,enemies:E,log:logb,intel:intelMarks})
 });
 window.HUNTER_MINIMAP_STATS=minimap.stats;
 const mini=()=>minimap.draw();
@@ -784,6 +784,26 @@ function grantAllWeapons(){
 }
 function resume(){paused=false;clearKeys();ui.hide();if(AC&&!muted)AC.resume()}
 function panel(mode){setSniperScope(false);paused=true;clearKeys();if(eng)eng.g.gain.value=0;if(AC)AC.suspend();ui.show(mode)}
+// Les cartes revelen informació de forma immediata: no són objectes
+// d'inventari que s'hagin d'equipar ni obrir manualment.
+function revealMapPickup(kind){
+  if(kind==='mapa'){
+    hqMapKnown=true;
+    return 'HQ enemic descobert al mapa!';
+  }
+  const isHeli=kind==='mapa_heli',isTank=kind==='mapa_tanc';
+  if(!isHeli&&!isTank)return null;
+  const markKind=isHeli?'heli':'tanc',
+        targets=(isHeli?V.filter(v=>v.t==='heli'||v.t==='heli_combat'):
+          [...V.filter(v=>v.t==='tanc'),...E.filter(e=>e.t==='tanc')])
+          .filter(v=>!v.destroyed);
+  intelMarks=intelMarks.filter(m=>m.kind!==markKind);
+  targets.forEach((v,i)=>intelMarks.push({
+    kind:markKind,ref:v,
+    label:(isHeli?(v.t==='heli_combat'?'Helicòpter de combat ':'Helicòpter '):'Tanc ')+(i+1)
+  }));
+  return 'Mapa actualitzat: '+targets.length+' '+(isHeli?'helicòpters':'tancs')+' localitzats.';
+}
 function useInvItem(id){
   if(!inv[id])return false;
   if(id==='med'){if(hp>=100){msg='Ja tens la vida al màxim.';msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(100,hp+40);msg='Has usat una farmaciola.';msgT=2;snd('pick');return true}
@@ -799,9 +819,10 @@ function useInvItem(id){
     msg=sniperEquipped?'Rifle equipat · '+sniperAmmo+' cartutxos · Mira amb Q.':'Rifle desequipat.';msgT=2;return true
   }
   if(id==='disf'){setDis(!disg);msg=disg?'Disfressa activada.':'Disfressa desactivada.';msgT=2;return true}
-  if(id==='mapa'){panel('map');return true}
-  if(id==='mapa_tanc'){const tanks=[...V.filter(v=>v.t==='tanc'),...E.filter(u=>u.t==='tanc')];if(!tanks.length){msg='No hi ha tancs actius al mapa.';msgT=2;return false}intelMarks=intelMarks.filter(m=>m.kind!=='tanc');tanks.forEach((v,i)=>intelMarks.push({kind:'tanc',ref:v,label:'Tanc '+(i+1)}));msg='S’han marcat '+tanks.length+' tancs.';msgT=2;panel('map');return true}
-  if(id==='mapa_heli'){const helis=V.filter(v=>v.t==='heli'||v.t==='heli_combat');if(!helis.length){msg='No hi ha helicòpters actius al mapa.';msgT=2;return false}intelMarks=intelMarks.filter(m=>m.kind!=='heli');helis.forEach((v,i)=>intelMarks.push({kind:'heli',ref:v,label:(v.t==='heli_combat'?'Helicòpter de combat ':'Helicòpter ')+(i+1)}));msg='S’han marcat '+helis.length+' helicòpters.';msgT=2;panel('map');return true}
+  if(id==='mapa'||id==='mapa_heli'||id==='mapa_tanc'){
+    // Compatibilitat amb una carta que encara pugui existir en un inventari antic.
+    msg=revealMapPickup(id);msgT=3;delete inv[id];mini();return true;
+  }
   return false
 }
 function dropInvItem(id){
@@ -998,7 +1019,17 @@ if(worldVisualTick<=0){
 }
 updateDoors(dt);
 items.forEach(it=>{const dx=it.x-P.x,dz=it.z-P.z;if(dx*dx+dz*dz<ITEM_ANIM2){it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25}});
-if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-it.z;if(dx*dx+dz*dz<4.84&&Math.abs(P.y-it.y)<3){if(it.t==='arma')ammo+=16;else if(it.t==='franctirador'){inv.franctirador=1;sniperAmmo+=6}else inv[it.t]=(inv[it.t]||0)+(it.t==='granada'?5:it.t==='bazooka'?3:1);world.remove(it.o);items.splice(k,1);msg='Has trobat: '+IT[it.t].n+(it.t==='granada'?' ×5':it.t==='bazooka'?' ×3':it.t==='franctirador'?' +6 cartutxos':'');msgT=3;snd('pick')}}
+if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-it.z;if(dx*dx+dz*dz<4.84&&Math.abs(P.y-it.y)<3){let mapMessage=null;
+  if(it.t==='arma')ammo+=16;
+  else if(it.t==='mapa'||it.t==='mapa_heli'||it.t==='mapa_tanc'){
+    mapMessage=revealMapPickup(it.t);
+    mini(); // la informació apareix de seguida, sense entrar a cap menú
+  }
+  else if(it.t==='franctirador'){inv.franctirador=1;sniperAmmo+=6}
+  else inv[it.t]=(inv[it.t]||0)+(it.t==='granada'?5:it.t==='bazooka'?3:1);
+  world.remove(it.o);items.splice(k,1);
+  msg=mapMessage||'Has trobat: '+IT[it.t].n+(it.t==='granada'?' ×5':it.t==='bazooka'?' ×3':it.t==='franctirador'?' +6 cartutxos':'');
+  msgT=3;snd('pick')}}
 msgT-=dt;pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;animPl(cv?0:f,dt);
 if(!cv&&playerFall){pl.position.y=playerFall.y;pl.rotation.x=(playerFall.spin||1)*playerFall.t*7.5;pl.rotation.z=Math.sin(playerFall.t*8)*.45}
 else if(!cv&&playerEject&&playerEject.t>=0){
