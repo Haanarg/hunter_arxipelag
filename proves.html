@@ -20,6 +20,12 @@ header p{font-size:12px;color:#c5d2ce;margin:0}
 .separator{height:24px;border-left:1px solid #53706a;margin:0 3px}
 #cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(230px,1fr));gap:10px;height:calc(100vh - 122px)}
 #cards.compare-two{grid-template-rows:minmax(320px,1fr)}
+#cards.attack-grid{grid-template-rows:repeat(2,minmax(270px,1fr));height:calc(100vh - 188px)}
+#attackPlayback{display:none;align-items:center;gap:8px;flex-wrap:wrap}
+#attackPlayback.visible{display:flex}
+#attackPlayback label{font:600 12px system-ui;color:#e1eddf}
+#attackSeek{width:clamp(120px,18vw,210px);accent-color:#b6dca7;vertical-align:middle;touch-action:auto}
+#attackPhase{font:600 11px ui-monospace,monospace;color:#b6dca7;min-width:74px}
 #cards.show-all-knife{grid-template-rows:repeat(3,minmax(260px,1fr));height:auto;min-height:calc(100vh - 122px)}
 .card{position:relative;min-width:0;overflow:hidden;border:1px solid #68877c8c;border-radius:12px;background:#ffffff08;box-shadow:inset 0 0 0 1px #15272a40;pointer-events:auto;touch-action:pan-y;cursor:grab}
 .card.dragging{cursor:grabbing}
@@ -34,6 +40,8 @@ header p{font-size:12px;color:#c5d2ce;margin:0}
  header h1{font-size:17px}
  #cards{grid-template-columns:1fr;grid-template-rows:repeat(4,330px);height:auto}
  #cards.compare-two{grid-template-rows:repeat(2,390px)}
+ #cards.attack-grid{height:auto;grid-template-rows:repeat(4,350px)}
+ #attackPlayback{flex-basis:100%}
  #cards.show-all-knife{grid-template-rows:repeat(5,330px);min-height:0}
  .controls button,.controls a{padding:7px 9px}
  .separator{display:none}
@@ -56,9 +64,16 @@ header p{font-size:12px;color:#c5d2ce;margin:0}
   <button id="front" type="button">Darrere</button>
   <button id="quarter" type="button" class="active">3/4 darrere</button>
   <button id="profile" type="button">Perfil</button>
+  <span id="attackPlayback" aria-label="Reproducció sincronitzada">
+    <button id="attackPlay" type="button" aria-pressed="true">⏸ Pausa</button>
+    <button id="attackReplay" type="button">↺ Repetir</button>
+    <label for="attackSeek">Fotograma <input id="attackSeek" type="range" min="0" max="100" value="0" step="1"></label>
+    <span id="attackPhase">Guàrdia</span>
+  </span>
   <span class="separator"></span>
   <a id="knifeMode" href="proves.html?mode=ganivet" style="border-color:#b6dca7;color:#dff9c8">Ganivet · 4A / 4B</a>
   <a id="knifeAllMode" href="proves.html?mode=ganivet-totes">Totes les postures ↗</a>
+  <a id="knifeAttackMode" href="proves.html?mode=ganivet-atac">Estocada · 4 animacions ↗</a>
   <a id="headMode" href="proves.html?mode=cap">Caps · 4 propostes</a>
   <span class="separator"></span>
   <a href="dispar-proves.html" style="border-color:#b6dca7;color:#dff9c8">Dispar · dues mans ↗</a>
@@ -77,10 +92,13 @@ header p{font-size:12px;color:#c5d2ce;margin:0}
 import * as THREE from './vendor/three-r186.module.mjs';
 import {createPlayerHeadConcept,playerHeadConcepts} from './src/player-head-concepts.mjs?v=20261008-head-02';
 import {createKnifePoseConcept,knifePoseConcepts} from './src/knife-pose-concepts.mjs?v=20261010-knife-04';
+import {knifeAttackConcepts,knifeAttackDuration,createKnifeAttackConcept,applyKnifeAttackConcept} from './src/knife-attack-concepts.mjs?v=20261010-attack-01';
 
 const selectedMode=new URLSearchParams(location.search).get('mode');
-const knifeMode=selectedMode!=='cap',knifeCompare=knifeMode&&selectedMode!=='ganivet-totes';
-const concepts=knifeMode?(knifeCompare?knifePoseConcepts.slice(3):knifePoseConcepts):playerHeadConcepts;
+const attackMode=selectedMode==='ganivet-atac',knifeMode=selectedMode!=='cap',
+      knifeCompare=knifeMode&&!attackMode&&selectedMode!=='ganivet-totes';
+const concepts=attackMode?knifeAttackConcepts:
+  knifeMode?(knifeCompare?knifePoseConcepts.slice(3):knifePoseConcepts):playerHeadConcepts;
 if(!knifeMode){
   document.getElementById('comparisonTitle').textContent='Cap del jugador · 4 propostes';
   document.getElementById('comparisonIntro').textContent='Comparació del cap més petit i el coll curt. La proposta D ja és al joc.';
@@ -92,6 +110,15 @@ if(!knifeMode){
   document.getElementById('knifeMode').style.borderColor='';
   document.getElementById('headMode').style.color='#dff9c8';
   document.getElementById('headMode').style.borderColor='#b6dca7';
+}else if(attackMode){
+  document.getElementById('comparisonTitle').textContent='Estocada amb ganivet 4B · 4 animacions';
+  document.getElementById('comparisonIntro').textContent='Gira el canell 90° cap a dins mentre ataca: quatre variants sincronitzades, amb la mateixa postura 4B de partida.';
+  document.getElementById('comparisonHint').textContent='Les quatre animacions van sincronitzades. Pots pausar, repetir o moure el fotograma per comparar-les; arrossega cada figura per veure el canell de perfil.';
+  document.getElementById('knifeMode').style.borderColor='';
+  document.getElementById('knifeMode').style.color='';
+  document.getElementById('knifeAttackMode').style.borderColor='#b6dca7';
+  document.getElementById('knifeAttackMode').style.color='#dff9c8';
+  document.getElementById('attackPlayback').classList.add('visible');
 }else if(!knifeCompare){
   document.getElementById('comparisonTitle').textContent='Ganivet del jugador · 5 propostes';
   document.getElementById('comparisonIntro').textContent='Totes les postures, inclosa la nova 4B amb la fulla orientada cap al davant.';
@@ -100,7 +127,8 @@ if(!knifeMode){
   document.getElementById('knifeAllMode').style.color='#dff9c8';
   document.getElementById('knifeAllMode').style.borderColor='#b6dca7';
 }
-if(knifeCompare)document.getElementById('cards').classList.add('compare-two');
+if(attackMode)document.getElementById('cards').classList.add('attack-grid');
+else if(knifeCompare)document.getElementById('cards').classList.add('compare-two');
 else if(knifeMode)document.getElementById('cards').classList.add('show-all-knife');
 
 const canvas=document.getElementById('canvas');
@@ -131,18 +159,28 @@ pedestal.position.y=-.13;stand.add(pedestal);scene.add(stand);
 const cards=[],models=[],cameras=[],yaws=[];
 const cardsEl=document.getElementById('cards');
 let closeUp=false,frameQueued=false,viewW=0,viewH=0;
+let attackPlaying=true,attackClock=0,attackLastFrame=0,attackLastDraw=0;
+const attackLoopSeconds=knifeAttackDuration+.42;
+const attackSeek=document.getElementById('attackSeek'),
+      attackPlay=document.getElementById('attackPlay'),
+      attackPhase=document.getElementById('attackPhase');
 concepts.forEach((entry,i)=>{
  const card=document.createElement('div');
  card.className='card';
- const tag=document.createElement('div');tag.className='tag';tag.textContent=knifeCompare?(i===0?'4A · ORIGINAL':'4B · FULLA ENDAVANT'):'PROPOSTA '+(i+1);
+ const tag=document.createElement('div');tag.className='tag';
+ tag.textContent=attackMode?'ANIMACIÓ '+(i+1):
+   knifeCompare?(i===0?'4A · ORIGINAL':'4B · FULLA ENDAVANT'):'PROPOSTA '+(i+1);
  const scale=document.createElement('div');scale.className='scale';
- scale.textContent=knifeMode?entry.tag+((knifeCompare?i===1:i===4)?' · AL JOC':''):'Cap: '+Math.round(entry.headScale[0]*100)+'–'+Math.round(entry.headScale[1]*100)+'%'+(i===3?' · AL JOC':'');
+ scale.textContent=attackMode?entry.tag+' · GIR 90°':
+   knifeMode?entry.tag+((knifeCompare?i===1:i===4)?' · AL JOC':''):
+   'Cap: '+Math.round(entry.headScale[0]*100)+'–'+Math.round(entry.headScale[1]*100)+'%'+(i===3?' · AL JOC':'');
  const info=document.createElement('div');info.className='info';
  const title=document.createElement('b');title.textContent=entry.name;
  const desc=document.createElement('small');desc.textContent=entry.description;
  info.append(title,desc);card.append(tag,scale,info);
  cardsEl.appendChild(card);cards.push(card);
- const model=knifeMode?createKnifePoseConcept(THREE,knifeCompare?i+3:i):createPlayerHeadConcept(THREE,i);
+ const model=attackMode?createKnifeAttackConcept(THREE,i):
+   knifeMode?createKnifePoseConcept(THREE,knifeCompare?i+3:i):createPlayerHeadConcept(THREE,i);
  model.visible=false;scene.add(model);models.push(model);
  const camera=new THREE.OrthographicCamera(-3,3,3,-3,.1,60);
  cameras.push(camera);yaws.push(knifeMode?-.42:.42);
@@ -170,13 +208,49 @@ function setCloseUp(value){
 }
 bodyButton.addEventListener('click',()=>setCloseUp(false));
 headButton.addEventListener('click',()=>setCloseUp(true));
-const presets={front:knifeMode?0:0,quarter:knifeMode?-.42:.42,profile:Math.PI/2};
+const presets={front:0,quarter:knifeMode?-.42:.42,profile:Math.PI/2};
 for(const [id,yaw]of Object.entries(presets)){
  document.getElementById(id).addEventListener('click',()=>{
    for(let i=0;i<yaws.length;i++)yaws[i]=yaw;
    for(const key of Object.keys(presets))document.getElementById(key).classList.toggle('active',key===id);
    schedule();
  });
+}
+function setAttackFrame(progress){
+  if(!attackMode)return;
+  const p=Math.max(0,Math.min(1,progress));
+  models.forEach((model,i)=>applyKnifeAttackConcept(model,i,p));
+  attackSeek.value=String(Math.round(p*100));
+  attackPhase.textContent=p<.22?'Preparació':p<.42?'Gir de canell':
+    p<.67?'Estocada':p<.96?'Retorn':'Guàrdia';
+  schedule();
+}
+if(attackMode){
+  const syncPlayback=()=>{
+    attackPlay.textContent=attackPlaying?'⏸ Pausa':'▶ Reproduir';
+    attackPlay.setAttribute('aria-pressed',String(attackPlaying));
+  };
+  attackPlay.addEventListener('click',()=>{
+    attackPlaying=!attackPlaying;syncPlayback();
+  });
+  document.getElementById('attackReplay').addEventListener('click',()=>{
+    attackClock=0;attackPlaying=true;syncPlayback();setAttackFrame(0);
+  });
+  attackSeek.addEventListener('input',()=>{
+    attackPlaying=false;syncPlayback();
+    attackClock=Number(attackSeek.value)/100*knifeAttackDuration;
+    setAttackFrame(Number(attackSeek.value)/100);
+  });
+  requestAnimationFrame(function animate(now){
+    if(!attackLastFrame)attackLastFrame=now;
+    const dt=Math.min(.06,Math.max(0,(now-attackLastFrame)/1000));
+    attackLastFrame=now;
+    if(attackPlaying)attackClock=(attackClock+dt)%attackLoopSeconds;
+    if(now-attackLastDraw>=32){
+      attackLastDraw=now;setAttackFrame(Math.min(1,attackClock/knifeAttackDuration));
+    }
+    requestAnimationFrame(animate);
+  });
 }
 function resize(){
  const w=window.innerWidth,h=window.innerHeight;
