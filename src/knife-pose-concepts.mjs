@@ -5,25 +5,25 @@ export const knifePoseConcepts=Object.freeze([
     name:'A · Lateral natural',tag:'Discret',
     description:'Colze flexionat cap endavant. Mà baixa al maluc i fulla lleument orientada enrere.',
     shoulder:{x:-.08,y:0,z:.34},elbow:{x:.35,y:0,z:-.06},
-    blade:{x:-.58,y:0,z:.30}
+    blade:{x:-.95,y:0,z:.30}
   }),
   Object.freeze({
     name:'B · Braç obert',tag:'Obert',
     description:'Colze cap endavant i espatlla una mica oberta. Ganivet cap avall i enfora, subjectat amb el puny.',
     shoulder:{x:-.13,y:0,z:.48},elbow:{x:.55,y:0,z:-.10},
-    blade:{x:-.90,y:0,z:.20}
+    blade:{x:-1.30,y:0,z:.20}
   }),
   Object.freeze({
     name:'C · Cintura diagonal',tag:'Diagonal',
     description:'Avantbraç plegat de manera anatòmica, mà a la cintura i fulla en diagonal cap enrere.',
-    shoulder:{x:.12,y:0,z:.60},elbow:{x:.82,y:0,z:-.06},
-    blade:{x:-1.16,y:0,z:.44}
+    shoulder:{x:-.25,y:0,z:.60},elbow:{x:.76,y:0,z:-.06},
+    blade:{x:-1.55,y:0,z:.44}
   }),
   Object.freeze({
     name:'D · Guàrdia curta',tag:'Combat',
     description:'Mà més alta i colze ben flexionat cap endavant. Fulla diagonal, visible de tres quarts del darrere.',
-    shoulder:{x:.24,y:0,z:.55},elbow:{x:1.05,y:0,z:-.08},
-    blade:{x:-1.75,y:0,z:.50}
+    shoulder:{x:-.10,y:0,z:.55},elbow:{x:.92,y:0,z:-.08},
+    blade:{x:-2.00,y:0,z:.50}
   })
 ]);
 
