@@ -708,6 +708,23 @@ const LOD_NEAR2=500*500,LOD_MID2=1200*1200,ITEM_ANIM2=500*500,FAUNA_NEAR2=650*65
 const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joystick')),clearKeys=()=>{cancelGrenadeCharge();Object.keys(K).forEach(k=>K[k]=0);joystick.reset();document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))};
 const act=c=>{if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(!started||paused||over)return;if(c==='KeyQ'){toggleSniperScope();return}if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory')}if(c==='KeyR'&&cv?.t==='heli_combat'){secondaryWeapon();return}if(c==='KeyG'){if(!secondaryWeapon())plant();}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
 const nearV=()=>{let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
+function updateActionButton(nearby){
+  const button=document.getElementById('mainActionButton');
+  if(!button)return;
+  // El mateix vehicle que retornaria nearV() a la tecla E.
+  // En conduir, la icona continua identificant el vehicle del qual baixarem.
+  const vehicle=cv||nearby||null,type=vehicle?.t||'backpack',
+        name=vehicle?VT[type]?.n||type:null,
+        title=cv?'Baixar de '+name:nearby?'Pujar a '+name:'Obrir inventari';
+  if(button.dataset.vehicle!==type){
+    button.dataset.vehicle=type;
+    button.innerHTML=vehicle?window.HUNTER_ACTION_ICONS.vehicle(type):window.HUNTER_ACTION_ICONS.backpack;
+  }
+  if(button.title!==title){
+    button.title=title;
+    button.setAttribute('aria-label',title);
+  }
+}
 // Compartida per al salt voluntari i per a la destrucció de l'helicòpter.
 // La caiguda conserva l'altura i la inèrcia; el dany es calcula en aterrar.
 function ejectFromHelicopter(v){
@@ -1082,6 +1099,7 @@ if(fireButton){
     fireButton.title=grenade?'Mantén premut per arribar més lluny':'Dispar';
   }
 }
+updateActionButton(nv);
 mini();ui.renderHUD();}}
 
 
