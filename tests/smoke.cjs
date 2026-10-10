@@ -219,7 +219,7 @@ ok('bazookaPickupAndShots','picking up a bazooka grants exactly three shootable 
 run(`{
   const saved={inventory:{...inv},ammo,sniperAmmo,sniperEquipped,bazookaEquipped,
     grenadeEquipped,scopeActive,scopePitch,cv,swimming,over,fcd,snd:shoot,
-    cameraFov:cam.fov,paused},shots=[];
+    cameraFov:cam.fov,paused,aim:autoAimWeaponShot},shots=[];
   try{
     grantAllWeapons();
     const cheats=ammo>=128&&inv.bazooka>=12&&inv.granada>=20&&
@@ -236,6 +236,7 @@ run(`{
       document.getElementById('sniperAimButton')?.getAttribute('aria-pressed')==='true'&&
       document.getElementById('sniperScope')!=null;
     const prior=sniperAmmo,originalShoot=shoot;
+    autoAimWeaponShot=(x,y,z,fx,fy,fz)=>[fx,fy,fz];
     shoot=(...args)=>{shots.push(args)};
     fire();shoot=originalShoot;
     const fireOk=shots.length===1&&sniperAmmo===prior-1&&
@@ -253,7 +254,7 @@ run(`{
     globalThis.sniperPauseCheats=String(window.HUNTER_UI.create).includes('chetosMenu')&&
       String(window.HUNTER_UI.create).includes('actions.chetos');
   }finally{
-    shoot=saved.snd;Object.keys(inv).forEach(k=>delete inv[k]);Object.assign(inv,saved.inventory);
+    shoot=saved.snd;autoAimWeaponShot=saved.aim;Object.keys(inv).forEach(k=>delete inv[k]);Object.assign(inv,saved.inventory);
     ammo=saved.ammo;sniperAmmo=saved.sniperAmmo;
     sniperEquipped=saved.sniperEquipped;bazookaEquipped=saved.bazookaEquipped;
     grenadeEquipped=saved.grenadeEquipped;cv=saved.cv;
