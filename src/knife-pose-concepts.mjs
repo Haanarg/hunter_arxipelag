@@ -28,52 +28,14 @@ export const knifePoseConcepts=Object.freeze([
   Object.freeze({
     name:'4B · Guàrdia curta · fulla endavant',tag:'Fulla endavant',
     description:'Exactament el mateix braç i la mateixa empunyadura que la 4A. Només gira el ganivet perquè la punta miri clarament cap al davant.',
-    shoulder:{x:-.10,y:0,z:.55},elbow:{x:.92,y:0,z:-.08},
-    blade:{x:.25,y:0,z:.50}
+    shoulder:window.HUNTER_CHARACTERS.knifePose4B.shoulder,
+    elbow:window.HUNTER_CHARACTERS.knifePose4B.elbow,
+    blade:window.HUNTER_CHARACTERS.knifePose4B.blade
   })
 ]);
 
-// Reconstrueix només el ganivet del preview: el model original col·locava
-// el mànec per damunt del puny i deixava la fulla penjant sota la mà.
-function fitPreviewKnife(THREE,u,box){
-  const knife=u.knife;
-  knife.clear();
-  // El centre de la mà és el petit oval del rig a (0,-.62,-.025),
-  // escalat x1.2 en createPlayer. Pivot del ganivet = centre del puny.
-  const palm={x:0,y:-.62*1.2,z:-.025*1.2};
-  knife.position.set(palm.x,palm.y,palm.z);
-  const grip=box(knife,.16,.42,.155,0x59402d,0,0,0);
-  const bands=[-.105,.095];
-  for(const y of bands)box(knife,.166,.026,.163,0x9f9e90,0,y,0);
-  const pommel=box(knife,.205,.065,.185,0x353e40,0,.233,0);
-  const guard=box(knife,.39,.07,.18,0x404c4e,0,-.248,0);
-  // La fulla neix SOTA la guarda (no sota el puny) i surt de la mà
-  // seguint l'eix del mànec. Perfil afilat amb punta real, no rectangle.
-  const profile=new THREE.Shape();
-  profile.moveTo(-.102,-.284);
-  profile.lineTo(.105,-.284);
-  profile.lineTo(.117,-.63);
-  profile.lineTo(.044,-.97);
-  profile.lineTo(-.045,-1.055);
-  profile.lineTo(-.115,-.69);
-  profile.closePath();
-  const bladeGeo=new THREE.ExtrudeGeometry(profile,{
-    depth:.065,bevelEnabled:true,bevelThickness:.012,bevelSize:.008,
-    bevelSegments:1,steps:1
-  });
-  bladeGeo.translate(0,0,-.0325);
-  const blade=new THREE.Mesh(bladeGeo,new THREE.MeshStandardMaterial({
-    color:0xbac6ca,metalness:.65,roughness:.34,flatShading:true
-  }));
-  blade.castShadow=true;knife.add(blade);
-  // Nervi central metàl·lic visible al fer girar el visor.
-  box(knife,.026,.48,.012,0xe5eded,0,-.52,-.052);
-  knife.userData.previewGrip=grip;
-  knife.userData.previewBlade=blade;
-  knife.userData.previewPalm=palm;
-  knife.userData.previewTip=new THREE.Vector3(-.045,-1.055,0);
-  knife.visible=true;
-}
+// El ganivet de les proves és el mateix objecte que crea src/characters.js.
+// Model, empunyadura i fulla es comparteixen amb el joc sense duplicar peces.
 
 export function createKnifePoseConcept(THREE,index=0){
   const spec=knifePoseConcepts[index];
@@ -96,7 +58,8 @@ export function createKnifePoseConcept(THREE,index=0){
   // en direcció al pit (front -Z), mai cap a l'esquena.
   u.ar.rotation.set(spec.shoulder.x,spec.shoulder.y,spec.shoulder.z);
   u.aer.rotation.set(spec.elbow.x,spec.elbow.y,spec.elbow.z);
-  fitPreviewKnife(THREE,u,box);
+  // createPlayer ja proporciona el mànec centrat al puny i la fulla
+  // compartida amb el model de joc; només adaptem la postura del comparador.
   u.knife.rotation.set(spec.blade.x,spec.blade.y,spec.blade.z);
   u.al.rotation.set(-.04,0,-.12);
   u.ael.rotation.set(.17,0,-.04);
