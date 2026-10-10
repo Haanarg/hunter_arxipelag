@@ -1,5 +1,5 @@
-// Previsualitzacions exclusives: quatre iteracions de l'atac de la postura 4B.
-// No afecten el moviment ni el dany real del joc fins que se'n triï una.
+// Quatre animacions comparatives. La proposta 3B (+90°) ja està al joc;
+// la resta continuen disponibles com a proves visuals sense alterar el combat.
 export const knifeAttackConcepts=Object.freeze([
   Object.freeze({
     name:'A · Gir abans de l’estocada',tag:'Precís',
@@ -36,7 +36,7 @@ export const knifeAttackThreeCompare=Object.freeze([
   }),
   Object.freeze({
     name:'3B · Estocada lateral invertida',tag:'Canell cap a fora · +90°',
-    description:'Mateix braç, colze, temps i estocada de la 3A; únicament el canell gira 90° en el sentit contrari.',
+    description:'Proposta implementada al joc: mateixa estocada lateral, canell girat +90° i lleuger moviment de compensació del braç esquerre.',
     variantIndex:2,reverseWrist:true
   })
 ]);
