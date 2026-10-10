@@ -518,7 +518,7 @@ run(`{
     playerFall=null;playerEject=null;
     const manual={t:'heli',x,z,hd:.6,v:24,alt:ground+38};
     cv=manual;toggle();
-    const manualFall=!cv&&!!playerFall&&playerFall.startHeight===38&&
+    const manualFall=!cv&&!!playerFall&&Math.abs(playerFall.startHeight-38)<1e-6&&
       playerFall.y===manual.alt&&P.y===manual.alt&&manual.crashing===true&&
       playerEject===null&&hp===100;
     // Una explosió a mig vol ha d'activar exactament la mateixa física.
@@ -529,7 +529,7 @@ run(`{
     cv=exploding;damageVehicle(exploding,80,1);
     const destroyedFall=exploding.destroyed&&!V.includes(exploding)&&
       !cv&&!!playerFall&&playerFall.y===exploding.alt&&
-      P.y===exploding.alt&&playerFall.startHeight===34&&
+      P.y===exploding.alt&&Math.abs(playerFall.startHeight-34)<1e-6&&
       playerFall.vx!==0&&playerEject===null&&hp===100;
     const initialY=playerFall?.y;
     update(.05,elapsed+.05);
