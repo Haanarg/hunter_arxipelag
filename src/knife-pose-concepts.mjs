@@ -61,6 +61,7 @@ export function createKnifePoseConcept(THREE,index=0){
   // createPlayer ja proporciona el mànec centrat al puny i la fulla
   // compartida amb el model de joc; només adaptem la postura del comparador.
   u.knife.rotation.set(spec.blade.x,spec.blade.y,spec.blade.z);
+  u.knife.visible=true;
   u.al.rotation.set(-.04,0,-.12);
   u.ael.rotation.set(.17,0,-.04);
   model.userData.knifePoseConcept=spec.name;
