@@ -10,6 +10,51 @@ ok('started&&B.length>=6&&E.some(e=>e.t==="general")','menu starts a complete wo
 ok('ammo===16','new mission starts with 16 bullets');
 
 run(`{
+  const saved={ammo,cv,grenadeEquipped,bazookaEquipped,sniperEquipped,
+    over,swimming,uiTick,grenades:inv.granada,melee:pl.userData.meleePose};
+  const fireButton=document.getElementById('mainFireButton');
+  try{
+    cv=null;over=0;swimming=false;grenadeEquipped=false;
+    bazookaEquipped=false;sniperEquipped=false;
+    pl.userData.meleePose=0;ammo=0;uiTick=.13;
+    update(.016,elapsed+.016);
+    const knifeActive=fireButton.dataset.weapon==='ganivet'&&
+      fireButton.innerHTML===ICON.ganivet&&pl.userData.knife.visible;
+    ammo=16;uiTick=.13;update(.016,elapsed+.016);
+    const pistolRestored=fireButton.dataset.weapon==='normal'&&
+      fireButton.innerHTML==='🎯'&&!pl.userData.knife.visible;
+    ammo=0;grenadeEquipped=true;inv.granada=1;uiTick=.13;
+    update(.016,elapsed+.016);
+    const grenadeWins=fireButton.dataset.weapon==='granada'&&
+      fireButton.innerHTML===ICON.granada;
+    globalThis.knifeIconWhenOutOfAmmo=knifeActive&&pistolRestored&&grenadeWins;
+  }finally{
+    ammo=saved.ammo;cv=saved.cv;grenadeEquipped=saved.grenadeEquipped;
+    bazookaEquipped=saved.bazookaEquipped;sniperEquipped=saved.sniperEquipped;
+    over=saved.over;swimming=saved.swimming;uiTick=saved.uiTick;
+    pl.userData.meleePose=saved.melee;
+    if(saved.grenades==null)delete inv.granada;else inv.granada=saved.grenades;
+  }
+}`);
+ok('knifeIconWhenOutOfAmmo','firing switches to the knife icon at zero ammo, then returns to shooting and respects grenade priority');
+
+const knifePreviewSource=require('fs').readFileSync(require('path').join(__dirname,'../src/knife-pose-concepts.mjs'),'utf8')
+  .replace('export const knifePoseConcepts','const knifePoseConcepts')
+  .replace('export function createKnifePoseConcept','function createKnifePoseConcept');
+run(knifePreviewSource+`
+{
+  globalThis.knifePreviewProposals=knifePoseConcepts.length===4&&knifePoseConcepts.every((entry,i)=>{
+    const player=createKnifePoseConcept(THREE,i),knife=player.userData.knife;
+    player.updateMatrixWorld(true);
+    const tip=knife.children[0].localToWorld(new THREE.Vector3(0,0,-.65));
+    return knife.visible&&!player.userData.gun.visible&&tip.x>.7&&tip.z>.15;
+  });
+}
+`);
+ok('knifePreviewProposals','all four real-player knife prototypes are visible from behind and keep the pistol hidden');
+
+
+run(`{
   const icons=window.HUNTER_ACTION_ICONS,
         types=Object.keys(VT),
         images=types.map(t=>icons.vehicle(t)),
