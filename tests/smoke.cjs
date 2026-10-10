@@ -10,6 +10,44 @@ ok('started&&B.length>=6&&E.some(e=>e.t==="general")','menu starts a complete wo
 ok('ammo===16','new mission starts with 16 bullets');
 
 run(`{
+  const icons=window.HUNTER_ACTION_ICONS,
+        types=Object.keys(VT),
+        images=types.map(t=>icons.vehicle(t)),
+        btn=document.getElementById('mainActionButton'),
+        saved={cv,x:P.x,z:P.z},
+        passenger=V.find(v=>v.t==='cotxe');
+  let backpack=false,near=false,onboard=false,away=false;
+  try{
+    cv=null;updateActionButton(null);
+    backpack=btn.dataset.vehicle==='backpack'&&
+      btn.innerHTML===icons.backpack&&btn.title==='Obrir inventari';
+    P.x=passenger.x;P.z=passenger.z;
+    const chosen=nearV();
+    updateActionButton(chosen);
+    near=chosen===passenger&&btn.dataset.vehicle===passenger.t&&
+      btn.innerHTML===icons.vehicle(passenger.t)&&btn.title==='Pujar a '+VT[passenger.t].n;
+    cv=passenger;updateActionButton(null);
+    onboard=btn.dataset.vehicle===passenger.t&&
+      btn.title==='Baixar de '+VT[passenger.t].n;
+    cv=null;P.x=H-10;P.z=H-10;
+    const candidate=nearV();
+    updateActionButton(candidate);
+    away=!candidate&&btn.dataset.vehicle==='backpack'&&
+      btn.innerHTML===icons.backpack&&btn.title==='Obrir inventari';
+  }finally{
+    cv=saved.cv;P.x=saved.x;P.z=saved.z;
+    updateActionButton(cv?null:nearV());
+  }
+  globalThis.actionVehicleIconsCoverAll=types.length===15&&
+    icons.types.length===types.length&&images.every(i=>i.startsWith('<svg '))&&
+    new Set(images).size===types.length&&icons.backpack.startsWith('<svg ');
+  globalThis.actionButtonMatchesBoarding=backpack&&near&&onboard&&away;
+}`);
+ok('actionVehicleIconsCoverAll','the action button has an individual image for each of the fifteen vehicle types and a backpack');
+ok('actionButtonMatchesBoarding','the action button changes from backpack to the actual boarding target and back, including when inside a vehicle');
+
+
+run(`{
   const d=window.HUNTER_PLAYER_MODEL.headStyles.compactD,
         pu=pl.userData,ru=rider.userData,
         general=E.find(e=>e.t==='general'),
