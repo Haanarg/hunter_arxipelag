@@ -526,7 +526,7 @@ run(`{
     exploding={t:'heli_combat',x,z,hd:.3,v:18,alt:ground+34,
       o:mkV('heli_combat'),life:1,maxLife:1};
     exploding.o.position.set(x,exploding.alt,z);world.add(exploding.o);V.push(exploding);
-    cv=exploding;explodeVehicle(exploding);
+    cv=exploding;damageVehicle(exploding,80,1);
     const destroyedFall=exploding.destroyed&&!V.includes(exploding)&&
       !cv&&!!playerFall&&playerFall.y===exploding.alt&&
       P.y===exploding.alt&&playerFall.startHeight===34&&
@@ -551,6 +551,8 @@ run(`{
 }`);
 ok('vehicleExitNoDamageAndHeliFreefall','moving ground exits are harmless; jumping or being shot down in a helicopter starts a real airborne fall');
 ok('heliLandingKeepsDamage','helicopter falls still calculate and apply landing damage');
+ok("String(vehiclePushPlayer).includes(\"playerEject?.kind==='flip'\")",'the brief exit flip suppresses vehicle impact damage');
+ok("String(damageVehicle).includes('fallingFromDestroyedHeli')",'a fatal helicopter hit does not kill the pilot before the fall');
 run('E=savedEnemies;playerFall=null;playerEject=null;');
 ok('V.filter(v=>v.t==="llanxa_coets").length===1','unique rocket boat');
 run(`{
