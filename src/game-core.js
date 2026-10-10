@@ -437,7 +437,7 @@ function vehiclePushPlayer(){
     const b=vehicleBox(v),dx=P.x-b.x,dz=P.z-b.z,s=Math.sin(b.hd),c=Math.cos(b.hd),lx=dx*c-dz*s,lz=dx*s+dz*c,ex=b.w/2+.66-Math.abs(lx),ez=b.d/2+.66-Math.abs(lz);
     if(ex<ez){const sign=lx<0?-1:1,wx=sign*c,wz=-sign*s;P.x=b.x+(sign*(b.w/2+.66))*c+lz*s;P.z=b.z-(sign*(b.w/2+.66))*s+lz*c}
     else{const sign=lz<0?-1:1;P.x=b.x+lx*c+sign*(b.d/2+.66)*s;P.z=b.z-lx*s+sign*(b.d/2+.66)*c}
-    const sp=Math.abs(v.v||0);if(sp>5&&(!v.playerHitCd||v.playerHitCd<=0)){hurtP(Math.min(22,2+sp*.55));v.playerHitCd=.45;msg='Impacte amb un vehicle!';msgT=1.5}
+    const sp=Math.abs(v.v||0);if(sp>5&&!(playerEject?.kind==='flip'&&playerEject.t>0)&&(!v.playerHitCd||v.playerHitCd<=0)){hurtP(Math.min(22,2+sp*.55));v.playerHitCd=.45;msg='Impacte amb un vehicle!';msgT=1.5}
   }
 }
 const PL=[],FA=[],ZM=new THREE.Matrix4().makeScale(0,0,0);let PM={};
