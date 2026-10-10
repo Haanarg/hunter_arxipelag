@@ -90,12 +90,12 @@ header p{font-size:12px;color:#c5d2ce;margin:0}
 </div>
 <script src="src/palette.js"></script>
 <script src="src/player-model.js"></script>
-<script src="src/characters.js?v=20261010-knife4b-01"></script>
+<script src="src/characters.js?v=20261011-knife3b-01"></script>
 <script type="module">
 import * as THREE from './vendor/three-r186.module.mjs';
 import {createPlayerHeadConcept,playerHeadConcepts} from './src/player-head-concepts.mjs?v=20261008-head-02';
 import {createKnifePoseConcept,knifePoseConcepts} from './src/knife-pose-concepts.mjs?v=20261010-knife-04';
-import {knifeAttackConcepts,knifeAttackThreeCompare,knifeAttackDuration,createKnifeAttackConcept,applyKnifeAttackConcept} from './src/knife-attack-concepts.mjs?v=20261011-attack-02';
+import {knifeAttackConcepts,knifeAttackThreeCompare,knifeAttackDuration,createKnifeAttackConcept,applyKnifeAttackConcept} from './src/knife-attack-concepts.mjs?v=20261011-attack-03';
 
 const selectedMode=new URLSearchParams(location.search).get('mode');
 const attackCompareMode=selectedMode==='ganivet-atac-3',
@@ -118,10 +118,10 @@ if(!knifeMode){
   document.getElementById('headMode').style.borderColor='#b6dca7';
 }else if(attackMode){
   document.getElementById('comparisonTitle').textContent=attackCompareMode?
-    'Animació 3 · Gir de canell original o invertit':
+    'Animació 3 · Gir original o 3B (al joc)':
     'Estocada amb ganivet 4B · 4 animacions';
   document.getElementById('comparisonIntro').textContent=attackCompareMode?
-    'Dues estocades laterals idèntiques: 3A amb gir de −90° cap a dins i 3B amb gir de +90° cap a fora. Només canvia el canell.':
+    'Compara el gir original de −90° amb el 3B del joc de +90°, que també inclou un petit moviment del braç esquerre. La trajectòria dreta és la mateixa.':
     'Gira el canell 90° cap a dins mentre ataca: quatre variants sincronitzades, amb la mateixa postura 4B de partida.';
   document.getElementById('comparisonHint').textContent=attackCompareMode?
     'Compara els dos moviments sincronitzats. Fes pausa al moment de l’impacte o gira els models per veure bé la direcció de la fulla.':
@@ -182,7 +182,7 @@ concepts.forEach((entry,i)=>{
  const card=document.createElement('div');
  card.className='card';
  const tag=document.createElement('div');tag.className='tag';
- tag.textContent=attackCompareMode?(i===0?'3A · ORIGINAL':'3B · GIR INVERS'):
+ tag.textContent=attackCompareMode?(i===0?'3A · ORIGINAL':'3B · AL JOC'):
    attackMode?'ANIMACIÓ '+(i+1):
    knifeCompare?(i===0?'4A · ORIGINAL':'4B · FULLA ENDAVANT'):'PROPOSTA '+(i+1);
  const scale=document.createElement('div');scale.className='scale';
