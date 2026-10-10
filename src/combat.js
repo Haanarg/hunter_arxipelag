@@ -89,23 +89,118 @@ function secondaryWeapon(){
   if(cv.t==='llanxa_coets'){if((cv.rockets||0)<=0){msg='Sense coets.';msgT=2;return false}cv.rockets--;fcd=.9;const x=cv.x+fx_*6,y=cv.o.position.y+1.2,z=cv.z+fz*6,base=Math.hypot(1,.015),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.015/base,fz/base,105,.94);shoot(x,y,z,ax,ay,az,68,70,11,'p',mS,2.6);msg='Coets: '+cv.rockets;msgT=1;return true}
   return false
 }
-function throwGrenade(){
+// Un toc deixa caure la granada a prop; 1,4 s de pressió assoleixen
+// l'abast màxim. La mateixa velocitat serveix per a la mira i el projectil.
+const GRENADE_CHARGE_SECONDS=1.4,GRENADE_MIN_SPEED=3.5,GRENADE_MAX_SPEED=33;
+let grenadeCharge=null,grenadeAimVisual=null;
+function grenadeLaunchParams(power=0,origin=P,hd=P.hd){
+  const ratio=Math.max(0,Math.min(1,power)),speed=GRENADE_MIN_SPEED+(GRENADE_MAX_SPEED-GRENADE_MIN_SPEED)*ratio,
+        fx=-Math.sin(hd),fz=-Math.cos(hd);
+  return {x:origin.x+fx*.85,y:origin.y+2.05,z:origin.z+fz*.85,
+          vx:fx*speed,vy:12,vz:fz*speed,t:2.4};
+}
+function grenadeImpactTrajectory(power=0,origin=P,hd=P.hd){
+  const g=grenadeLaunchParams(power,origin,hd),points=[{x:g.x,y:g.y,z:g.z}],dt=1/40;
+  for(let i=0;i<96;i++){
+    const x0=g.x,y0=g.y,z0=g.z,x1=x0+g.vx*dt,y1=y0+(g.vy-24*dt)*dt,z1=z0+g.vz*dt,
+          mx=(x0+x1)/2,mz=(z0+z1)/2,reach=Math.hypot(x1-x0,z1-z0)/2+.5;
+    let hitT=null;
+    for(const w of wallCandidates(mx,mz,reach)){
+      if(w.open)continue;
+      const q=segmentAabbT(x0,y0,z0,x1,y1,z1,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);
+      if(q!=null&&(hitT==null||q<hitT))hitT=q;
+    }
+    for(const b of buildingCandidates(mx,mz,reach)){
+      if(b.rhp<=0)continue;
+      const q=b.hangar?hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b):
+        segmentAabbT(x0,y0,z0,x1,y1,z1,b.x-b.w/2,b.x+b.w/2,b.fy+b.h-.35,b.fy+b.h+.8,b.z-b.d/2,b.z+b.d/2);
+      if(q!=null&&(hitT==null||q<hitT))hitT=q;
+    }
+    const fraction=hitT==null?1:hitT;
+    g.x=x0+(x1-x0)*fraction;g.y=y0+(y1-y0)*fraction;g.z=z0+(z1-z0)*fraction;
+    g.vy-=24*dt;g.t-=dt;
+    const surface=Math.max(hAt(g.x,g.z),wy(g.x,g.z,elapsed))+.16;
+    if(hitT!=null||g.t<=0||g.y<=surface){
+      g.y=Math.max(g.y,surface);points.push({x:g.x,y:g.y,z:g.z});break;
+    }
+    points.push({x:g.x,y:g.y,z:g.z});
+  }
+  const end=points[points.length-1];
+  return {points,landing:{x:end.x,z:end.z,y:Math.max(hAt(end.x,end.z),wy(end.x,end.z,elapsed))+.21}};
+}
+function beginGrenadeCharge(){
+  if(grenadeCharge||over||paused||cv||swimming||playerFall||fcd>0||!grenadeEquipped||!inv.granada)return false;
+  grenadeCharge={elapsed:0};
+  return true;
+}
+function cancelGrenadeCharge(){
+  grenadeCharge=null;
+  if(grenadeAimVisual){
+    const a=grenadeAimVisual;world.remove(a.line,a.circle,a.fill);
+    a.line.geometry.dispose();a.line.material.dispose();
+    a.circle.geometry.dispose();a.circle.material.dispose();
+    a.fill.geometry.dispose();a.fill.material.dispose();
+    grenadeAimVisual=null;
+  }
+}
+function releaseGrenadeCharge(){
+  if(!grenadeCharge)return false;
+  const power=Math.min(1,grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS);
+  cancelGrenadeCharge();
+  return throwGrenade(power);
+}
+function updateGrenadeCharge(dt){
+  if(!grenadeCharge)return;
+  if(!grenadeEquipped||!inv.granada||cv||swimming||playerFall||paused||over){cancelGrenadeCharge();return}
+  grenadeCharge.elapsed=Math.min(GRENADE_CHARGE_SECONDS,grenadeCharge.elapsed+dt);
+  // Actualitzar només a 25 Hz per mantenir baix el cost de les interseccions.
+  grenadeCharge.visualTimer=(grenadeCharge.visualTimer??0)-dt;
+  if(grenadeCharge.visualTimer>0)return;
+  grenadeCharge.visualTimer=.04;
+  const aim=grenadeImpactTrajectory(grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS);
+  if(!grenadeAimVisual){
+    const geometry=new THREE.BufferGeometry(),
+          positions=new THREE.BufferAttribute(new Float32Array(97*3),3);
+    positions.setUsage(THREE.DynamicDrawUsage);geometry.setAttribute('position',positions);
+    const line=new THREE.Line(geometry,new THREE.LineBasicMaterial({
+      color:0xff5252,transparent:true,opacity:.72,depthWrite:false,depthTest:false
+    }));
+    line.frustumCulled=false;line.renderOrder=1001;
+    const circle=new THREE.Mesh(new THREE.RingGeometry(.72,1.03,40).rotateX(-Math.PI/2),
+      new THREE.MeshBasicMaterial({color:0xff4242,side:THREE.DoubleSide,transparent:true,opacity:.8,depthWrite:false,depthTest:false}));
+    const fill=new THREE.Mesh(new THREE.CircleGeometry(.72,40).rotateX(-Math.PI/2),
+      new THREE.MeshBasicMaterial({color:0xff4242,side:THREE.DoubleSide,transparent:true,opacity:.18,depthWrite:false,depthTest:false}));
+    circle.renderOrder=1002;fill.renderOrder=1001;
+    world.add(line,circle,fill);grenadeAimVisual={line,circle,fill};
+  }
+  const a=grenadeAimVisual,attr=a.line.geometry.attributes.position;
+  for(let i=0;i<aim.points.length;i++){
+    const p=aim.points[i];attr.setXYZ(i,p.x,p.y+.06,p.z);
+  }
+  a.line.geometry.setDrawRange(0,aim.points.length);attr.needsUpdate=true;
+  a.circle.position.set(aim.landing.x,aim.landing.y+.035,aim.landing.z);
+  a.fill.position.set(aim.landing.x,aim.landing.y+.02,aim.landing.z);
+}
+function throwGrenade(power=0){
   if(over||cv||swimming||fcd>0||!grenadeEquipped||!inv.granada)return false;
+  // Fixem el llançament quan s'allibera el botó perquè la predicció i
+  // el punt de caiguda no canviïn durant l'animació de llançament.
+  const flight=grenadeLaunchParams(power);
   inv.granada--;if(inv.granada<=0){delete inv.granada;grenadeEquipped=false}
   fcd=.7;setDis(false);
   pl.userData.grenadeThrow=.55;pl.userData.grenadeReleased=false;
-  pl.userData.grenadePending={t:.23,hd:P.hd};
+  pl.userData.grenadePending={t:.23,flight};
   msg='Granades: '+(inv.granada||0);msgT=1.5;
-  return true
+  return true;
 }
-function launchGrenade(hd){
-  const fx_=-Math.sin(hd),fz=-Math.cos(hd),
+function launchGrenade(pending){
+  const flight=pending.flight||grenadeLaunchParams(),{x,y,z,vx,vy,vz,t}=flight,
         o=new THREE.Group(),
         body=new THREE.Mesh(new THREE.SphereGeometry(.18,8,6),new THREE.MeshStandardMaterial({color:0x46513f,roughness:.82,metalness:.08}));
   body.scale.set(.88,1.08,.88);o.add(body);
   const cap=new THREE.Mesh(new THREE.BoxGeometry(.08,.13,.08),new THREE.MeshStandardMaterial({color:0x252b27,roughness:.7,metalness:.25}));cap.position.y=.18;o.add(cap);
-  const x=P.x+fx_*.85,y=P.y+2.05,z=P.z+fz*.85;o.position.set(x,y,z);world.add(o);
-  grenades.push({x,y,z,vx:fx_*18,vy:12,vz:fz*18,t:2.4,o})
+  o.position.set(x,y,z);world.add(o);
+  grenades.push({x,y,z,vx,vy,vz,t,o});
 }
 // Prioritat compartida: 0 soldats/general, 1 vehicles enemics, 2 torres.
 // Elements de l'escenari i vehicles abandonats no competeixen per l'autoapuntat.
@@ -271,7 +366,7 @@ function updPj(dt){
   }
 }
 function updFx(dt){
-const pending=pl.userData.grenadePending;if(pending){pending.t-=dt;if(pending.t<=0){launchGrenade(pending.hd);pl.userData.grenadeReleased=true;pl.userData.grenadePending=null}}
+const pending=pl.userData.grenadePending;if(pending){pending.t-=dt;if(pending.t<=0){launchGrenade(pending);pl.userData.grenadeReleased=true;pl.userData.grenadePending=null}}
 for(let i=grenades.length-1;i>=0;i--){const g=grenades[i],x0=g.x,y0=g.y,z0=g.z;g.t-=dt;g.vy-=24*dt;const x1=x0+g.vx*dt,y1=y0+g.vy*dt,z1=z0+g.vz*dt,mx=(x0+x1)/2,mz=(z0+z1)/2,reach=Math.hypot(x1-x0,z1-z0)/2+.5;let hitT=null;
   for(const w of wallCandidates(mx,mz,reach))if(!w.open){const q=segmentAabbT(x0,y0,z0,x1,y1,z1,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);if(q!=null&&(hitT==null||q<hitT))hitT=q}
   for(const b of buildingCandidates(mx,mz,reach)){const q=b.hangar?hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b):segmentAabbT(x0,y0,z0,x1,y1,z1,b.x-b.w/2,b.x+b.w/2,b.fy+b.h-.35,b.fy+b.h+.8,b.z-b.d/2,b.z+b.d/2);if(q!=null&&(hitT==null||q<hitT))hitT=q}
