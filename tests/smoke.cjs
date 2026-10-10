@@ -77,6 +77,62 @@ run(knifePreviewSource+`
 ok('knifePreviewProposals','five knife previews preserve anatomically correct elbows and centered grips');
 ok('knifeForwardSameGrip','4A and 4B share exactly the same arm and hand placement, changing only blade direction');
 
+run(`{
+  const characters=window.HUNTER_CHARACTERS,
+        model=characters.createPlayer(THREE,{box:bx}),u=model.userData,
+        ready={forward:0,dt:1/60,swimming:false,inVehicle:false,ammo:0,
+          bazookaEquipped:false,grenadeEquipped:false,sniperEquipped:false};
+  const tick=(count,opts=ready)=>{
+    for(let i=0;i<count;i++){
+      model.position.set(0,0,0);
+      characters.animatePlayer(model,opts);
+    }
+    model.position.set(0,0,0);model.updateMatrixWorld(true);
+  };
+  const tip=()=>u.knife.localToWorld(u.knife.userData.previewTip.clone()),
+        hand=()=>u.knife.getWorldPosition(new THREE.Vector3());
+  tick(60);
+  const original=createKnifePoseConcept(THREE,4);
+  original.updateMatrixWorld(true);
+  const o=original.userData,
+        restingTip=tip(),restingHand=hand(),
+        previewTip=o.knife.localToWorld(o.knife.userData.previewTip.clone()),
+        previewHand=o.knife.getWorldPosition(new THREE.Vector3()),
+        grip=u.knife.userData.previewGrip?.getWorldPosition(new THREE.Vector3()),
+        palm=u.aer.localToWorld(new THREE.Vector3(0,-.62*1.2,-.025*1.2));
+  globalThis.knife4BEquippedMatchesPreview=
+    u.knife.visible&&!u.gun.visible&&u.knife.userData.previewBlade?.geometry?.type==='ExtrudeGeometry'&&
+    !!grip&&grip.distanceTo(palm)<1e-6&&
+    restingHand.distanceTo(previewHand)<.001&&restingTip.distanceTo(previewTip)<.001&&
+    Math.abs(u.ar.rotation.x-o.ar.rotation.x)<.001&&
+    Math.abs(u.aer.rotation.x-o.aer.rotation.x)<.001;
+  tick(20,{...ready,forward:1});
+  const walking=u.knife.visible&&u.aer.rotation.x>.3&&
+    tip().z-hand().z<-.35;
+  tick(30);
+  const before=tip().z,gripInHand=()=>u.knife.getWorldPosition(new THREE.Vector3()).distanceTo(
+    u.aer.localToWorld(new THREE.Vector3(0,-.62*1.2,-.025*1.2)))<1e-6;
+  u.meleePose=u.knifeAttackDuration;
+  tick(12);
+  const during=u.knife.visible&&u.aer.rotation.x>.2&&
+    tip().z<before-.1&&gripInHand();
+  tick(55);
+  const recovered=tip().z-hand().z<-.35&&
+    Math.abs(u.ar.rotation.x-characters.knifePose4B.shoulder.x)<.002&&
+    Math.abs(u.aer.rotation.x-characters.knifePose4B.elbow.x)<.002;
+  tick(20,{...ready,ammo:16});
+  const pistolRestored=u.gun.visible&&!u.knife.visible;
+  tick(20,{...ready,inVehicle:true});
+  const vehicleHidesKnife=!u.knife.visible;
+  tick(20,{...ready,grenadeEquipped:true});
+  const grenadeHidesKnife=!u.knife.visible;
+  globalThis.knife4BAnimation=walking&&during&&recovered&&pistolRestored&&
+    vehicleHidesKnife&&grenadeHidesKnife;
+}`);
+ok('knife4BEquippedMatchesPreview','in-game knife and anatomical guard pose exactly match the approved 4B preview');
+ok('knife4BAnimation','knife 4B animates while running and lunging, recovers to guard, and hides for firearms, grenades and vehicles');
+
+
 
 run(`{
   const icons=window.HUNTER_ACTION_ICONS,
