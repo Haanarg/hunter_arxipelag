@@ -60,7 +60,40 @@ const PLAYER_KNIFE_4B=Object.freeze({
   elbow:Object.freeze({x:.92,y:0,z:-.08}),
   blade:Object.freeze({x:.25,y:0,z:.50})
 });
-const PLAYER_KNIFE_ATTACK_SECONDS=.38;
+// Escollida l'estocada lateral 3B: gir de canell +90° durant l'impacte.
+// Compartim aquests valors amb la pàgina de proves.
+const PLAYER_KNIFE_ATTACK_3B=Object.freeze({
+  turn:Object.freeze([.14,.44,.64,.90]),
+  thrust:Object.freeze([.32,.57,.83]),
+  windup:.30,reach:1.12,open:-.45,extend:.58,knifeX:-.07,knifeZ:-.25
+});
+const PLAYER_KNIFE_ATTACK_SECONDS=.48;
+const knifeEase=t=>{const n=Math.max(0,Math.min(1,t));return n*n*(3-2*n)};
+const knifePulse=(p,a,m,b)=>p<=a||p>=b?0:
+  p<m?knifeEase((p-a)/(m-a)):1-knifeEase((p-m)/(b-m));
+const knifeHeldTurn=(p,a,m,r,b)=>p<=a||p>=b?0:
+  p<m?knifeEase((p-a)/(m-a)):p<=r?1:1-knifeEase((p-r)/(b-r));
+function knifeAttack3BTargets(progress){
+  const p=Math.max(0,Math.min(1,progress)),
+        c=PLAYER_KNIFE_ATTACK_3B,b=PLAYER_KNIFE_4B,
+        preparation=knifePulse(p,.025,.17,.37),
+        thrust=knifePulse(p,...c.thrust),
+        wrist=knifeHeldTurn(p,...c.turn);
+  return {
+    shoulderX:b.shoulder.x-c.windup*preparation+c.reach*thrust,
+    shoulderZ:b.shoulder.z+c.windup*.65*preparation+c.open*thrust,
+    elbowX:b.elbow.x+.18*preparation-c.extend*thrust,
+    elbowZ:b.elbow.z,
+    bladeX:b.blade.x+c.knifeX*thrust,
+    bladeY:Math.PI/2*wrist,
+    bladeZ:b.blade.z+c.knifeZ*thrust,
+    // Contrapès petit del braç esquerre, sense interferir amb l'arma.
+    leftShoulderX:-.075*preparation+.17*thrust,
+    leftShoulderZ:-.07*thrust,
+    leftElbowX:.13*thrust+.03*preparation,
+    preparation,thrust,wrist
+  };
+}
 function makePlayerKnife(T,knife,box){
   // Compartit pel model en joc i els previews. Mà i mànec tenen el
   // mateix centre: ja no queda una fulla penjada sota el canell.
@@ -110,6 +143,8 @@ function aimPlayerPistolArm(shoulder,elbow,wrist,side,rig,blend){
 }
 window.HUNTER_CHARACTERS=Object.freeze({
   knifePose4B:PLAYER_KNIFE_4B,
+  knifeAttack3B:PLAYER_KNIFE_ATTACK_3B,
+  knifeAttack3BTargets,
   createCommando(T,{palette=window.HUNTER_PALETTE}={}){
  const g=window.HUNTER_PLAYER_MODEL.create(T,{palette}),u=g.userData,h=u.head,P=palette.enemy;
  for(const [m,,enemy]of u.mats)m.color.setHex(enemy);
@@ -268,21 +303,23 @@ window.HUNTER_CHARACTERS=Object.freeze({
       tx(u.ar,1.12);tz(u.ar,-.25);tx(u.aer,.72);
       tx(u.al,1.06);tz(u.al,.3);tx(u.ael,.7);
     }else if(u.knife.visible){
-      // Repòs i cursa: el braç dret conserva la postura 4B. Durant l'atac
-      // s'enretira lleument la mà i es fa una estocada endavant; el colze
-      // sempre es flexiona en X positiva i després torna a la 4B.
-      const pose=PLAYER_KNIFE_4B,p=melee?
-        Math.max(0,Math.min(1,1-u.meleePose/u.knifeAttackDuration)):0,
-        windup=melee?Math.max(0,1-Math.abs((p-.15)/.15)):0,
-        thrust=melee?Math.max(0,1-Math.abs((p-.56)/.38)):0,
-        armRate=1-Math.exp(-(melee?34:16)*dt);
-      tx(u.ar,pose.shoulder.x+.035*walk-.14*windup+1.27*thrust,armRate);
-      tz(u.ar,pose.shoulder.z+.025*walk+.12*windup-.28*thrust,armRate);
-      tx(u.aer,pose.elbow.x+.18*windup-.63*thrust,armRate);
-      tz(u.aer,pose.elbow.z,armRate);
-      u.knife.rotation.x+=(pose.blade.x-.29*thrust-u.knife.rotation.x)*armRate;
-      u.knife.rotation.z+=(pose.blade.z-.16*thrust-u.knife.rotation.z)*armRate;
-      tx(u.al,-.40*walk+.018*breath);tz(u.al,-.12);tx(u.ael,.16+.1*move);
+      // Postura 4B en repòs i moviment. En atacar, trajectòria 3B:
+      // preparació lateral, estocada, canell +90° i retorn a guàrdia.
+      const p=melee?Math.max(0,Math.min(1,1-u.meleePose/u.knifeAttackDuration)):0,
+            target=knifeAttack3BTargets(p),
+            armRate=1-Math.exp(-(melee?38:16)*dt);
+      tx(u.ar,target.shoulderX+.035*walk,armRate);
+      tz(u.ar,target.shoulderZ+.025*walk,armRate);
+      tx(u.aer,target.elbowX,armRate);
+      tz(u.aer,target.elbowZ,armRate);
+      u.knife.rotation.x+=(target.bladeX-u.knife.rotation.x)*armRate;
+      u.knife.rotation.y+=(target.bladeY-u.knife.rotation.y)*armRate;
+      u.knife.rotation.z+=(target.bladeZ-u.knife.rotation.z)*armRate;
+      // L'esquerra acompanya la punyalada amb un contrapès moderat.
+      tx(u.al,-.40*walk+.018*breath+target.leftShoulderX,armRate);
+      tz(u.al,-.12+target.leftShoulderZ,armRate);
+      tx(u.ael,.16+.1*move+target.leftElbowX,armRate);
+      tz(u.ael,-.04,armRate);
     }else if(aiming&&!u.pistolAimTime){
       // La pose antiga queda reservada al dispar d'altres armes.
       tx(u.ar,1.18);tz(u.ar,-.08);tx(u.aer,.7);
