@@ -1,4 +1,4 @@
-// Quatre proves del ganivet utilitzant el mateix rig del jugador real.
+// Cinc proves del ganivet: quatre postures originals i variant 4B cap endavant.
 // Són només propostes: no alteren la postura de combat del joc.
 export const knifePoseConcepts=Object.freeze([
   Object.freeze({
@@ -20,10 +20,16 @@ export const knifePoseConcepts=Object.freeze([
     blade:{x:-1.55,y:0,z:.44}
   }),
   Object.freeze({
-    name:'D · Guàrdia curta',tag:'Combat',
-    description:'Mà més alta i colze ben flexionat cap endavant. Fulla diagonal, visible de tres quarts del darrere.',
+    name:'4A · Guàrdia curta · original',tag:'Fulla enrere',
+    description:'Proposta 4 original: colze flexionat cap endavant, empunyadura dins el puny i fulla orientada cap enrere.',
     shoulder:{x:-.10,y:0,z:.55},elbow:{x:.92,y:0,z:-.08},
     blade:{x:-2.00,y:0,z:.50}
+  }),
+  Object.freeze({
+    name:'4B · Guàrdia curta · fulla endavant',tag:'Fulla endavant',
+    description:'Exactament el mateix braç i la mateixa empunyadura que la 4A. Només gira el ganivet perquè la punta miri clarament cap al davant.',
+    shoulder:{x:-.10,y:0,z:.55},elbow:{x:.92,y:0,z:-.08},
+    blade:{x:.25,y:0,z:.50}
   })
 ]);
 
