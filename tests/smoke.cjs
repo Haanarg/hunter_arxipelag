@@ -44,14 +44,20 @@ const knifePreviewSource=require('fs').readFileSync(require('path').join(__dirna
 run(knifePreviewSource+`
 {
   globalThis.knifePreviewProposals=knifePoseConcepts.length===4&&knifePoseConcepts.every((entry,i)=>{
-    const player=createKnifePoseConcept(THREE,i),knife=player.userData.knife;
+    const player=createKnifePoseConcept(THREE,i),u=player.userData,knife=u.knife;
     player.updateMatrixWorld(true);
-    const tip=knife.children[0].localToWorld(new THREE.Vector3(0,0,-.65));
-    return knife.visible&&!player.userData.gun.visible&&tip.x>.7&&tip.z>.15;
+    const palm=u.aer.localToWorld(new THREE.Vector3(0,-.62*1.2,-.025*1.2)),
+          grip=knife.userData.previewGrip?.getWorldPosition(new THREE.Vector3()),
+          tip=knife.localToWorld(knife.userData.previewTip.clone()),
+          forearm=new THREE.Vector3(0,-1,0).applyEuler(u.aer.rotation);
+    return knife.visible&&!u.gun.visible&&u.aer.rotation.x>.2&&
+      forearm.z<-.2&&!!grip&&grip.distanceTo(palm)<1e-6&&
+      knife.userData.previewBlade?.parent===knife&&
+      knife.userData.previewTip.y<-.9&&tip.x>.7&&tip.z>.15;
   });
 }
 `);
-ok('knifePreviewProposals','all four real-player knife prototypes are visible from behind and keep the pistol hidden');
+ok('knifePreviewProposals','all four previews bend the elbow forward and grip the handle inside the hand, with blade visible from behind');
 
 
 run(`{
