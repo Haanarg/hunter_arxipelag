@@ -182,12 +182,13 @@ function render(){
    const top=Math.max(0,Math.floor(rect.top)),bottom=Math.min(viewH,Math.ceil(rect.bottom));
    const w=right-left,h=bottom-top;
    if(w<=0||h<=0)continue;
-   const camera=cameras[i],ratio=w/h,vertical=closeUp?(knifeMode?1.85:1.65):(knifeMode?3.55:4.75);
+   const camera=cameras[i],ratio=w/h,vertical=closeUp?(knifeMode?2.45:1.65):(knifeMode?3.55:4.75);
    camera.left=-vertical*ratio/2;camera.right=vertical*ratio/2;
    camera.top=vertical/2;camera.bottom=-vertical/2;
-   const lookAtY=knifeMode?(closeUp?1.35:1.25):(closeUp?3.26:1.92);
-   camera.position.set(0,lookAtY+(closeUp?.10:.30),knifeMode?8:-8);
-   camera.lookAt(0,lookAtY,0);
+   const lookAtY=knifeMode?(closeUp?1.45:1.25):(closeUp?3.26:1.92),
+         lookAtX=knifeMode&&closeUp?.55:0;
+   camera.position.set(lookAtX,lookAtY+(closeUp?.10:.30),knifeMode?8:-8);
+   camera.lookAt(lookAtX,lookAtY,0);
    camera.updateProjectionMatrix();
    renderer.setViewport(left,viewH-bottom,w,h);
    renderer.setScissor(left,viewH-bottom,w,h);
