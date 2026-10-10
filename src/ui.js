@@ -2,7 +2,7 @@
 window.HUNTER_UI=Object.freeze({
   create({hud,panel,title,body,resumeButton,minimap,getState,actions}){
     function renderHUD(){
-      const s=getState(),state=s.vehicle?s.vehicleTypes[s.vehicle.t].n:s.inside?'Interior':s.swimming?'Nedant':'A peu',veh=s.vehicle,vehInfo=veh?'<br>🛡️ '+(veh.armor??0)+'/10 · Vida '+Math.max(0,veh.life??0)+'/'+(veh.maxLife??0)+(veh.rockets!=null?' · 🚀 '+veh.rockets:''):'',weaponInfo=s.bazookaEquipped&&!veh?' · 🚀 Bazooka '+(s.inventory.bazooka||0)+' coets':s.grenadeEquipped&&!veh?' · 💣 Granades '+(s.inventory.granada||0):'';
+      const s=getState(),state=s.vehicle?s.vehicleTypes[s.vehicle.t].n:s.inside?'Interior':s.swimming?'Nedant':'A peu',veh=s.vehicle,vehInfo=veh?'<br>🛡️ '+(veh.armor??0)+'/10 · Vida '+Math.max(0,veh.life??0)+'/'+(veh.maxLife??0)+(veh.rockets!=null?' · 🚀 '+veh.rockets:''):'',weaponInfo=s.bazookaEquipped&&!veh?' · 🚀 Bazooka '+(s.inventory.bazooka||0)+' coets':s.grenadeEquipped&&!veh?' · 💣 Granades '+(s.inventory.granada||0):s.sniperEquipped&&!veh?' · 🔭 Rifle '+s.sniperAmmo+' cartutxos'+(s.scopeActive?' · Mira x8':''):'';
       hud.innerHTML=`<b>HUNTER · ARXIPÈLAG</b><br>❤️ ${Math.round(s.hp)} · 🎯 ${s.ammo} · ☠ ${s.kills}<br>${state}${s.disguised?' · 🎭 Disfressat':''}${weaponInfo}${vehInfo}${s.nearVehicle&&!s.vehicle?'<br>Acció: puja a '+s.vehicleTypes[s.nearVehicle.t].n:''}${s.messageTime>0?'<br>'+s.message:''}${s.waypoint?'<br>Destinació: '+Math.round(Math.hypot(s.waypoint.x-s.player.x,s.waypoint.z-s.player.z))+' m':''}<br><span style="opacity:.72">Llavor ${s.seed>>>0} · X ${s.player.x|0} · Z ${s.player.z|0}</span>`;
     }
     function hide(){panel.style.display='none'}
@@ -10,7 +10,7 @@ window.HUNTER_UI=Object.freeze({
       panel.style.display='flex';
       title.textContent=mode==='map'?'Carta de navegació':mode==='inventory'?'Inventari':mode==='restart'?'Nova operació?':'Operació en pausa';panel.querySelector('.card').classList.toggle('inventory-card',mode==='inventory');
       if(mode==='inventory'){
-        const state=getState(),keys=['med','expl','granada','bazooka','disf','mapa','mapa_heli','mapa_tanc','arma'],present=keys.filter(k=>state.inventory[k]>0);
+        const state=getState(),keys=['med','expl','granada','bazooka','franctirador','disf','mapa','mapa_heli','mapa_tanc','arma'],present=keys.filter(k=>state.inventory[k]>0);
         let selected=present[0]||null;
         const renderInventory=()=>{
           const st=getState(),items=keys.filter(k=>st.inventory[k]>0),def=selected&&st.itemTypes[selected];
@@ -19,7 +19,7 @@ window.HUNTER_UI=Object.freeze({
           const slots=Math.max(15,Math.ceil(Math.max(1,items.length)/5)*5);
           for(let i=0;i<slots;i++){
             const id=items[i],el=document.createElement('button');el.className='inv-slot'+(id===selected?' selected':'');
-            if(id){const d=st.itemTypes[id];el.innerHTML='<span>'+d.icon+'</span><span class="inv-count">×'+st.inventory[id]+'</span>';el.title=d.n;el.onclick=()=>{selected=id;if(d.usable){const changed=actions.useItem(id);if(changed&&id!=='expl'&&id!=='granada'&&id!=='bazooka'&&id!=='mapa'&&id!=='mapa_heli'&&id!=='mapa_tanc')renderInventory()}else renderInventory()}}
+            if(id){const d=st.itemTypes[id];el.innerHTML='<span>'+d.icon+'</span><span class="inv-count">×'+st.inventory[id]+'</span>';el.title=d.n;el.onclick=()=>{selected=id;if(d.usable){const changed=actions.useItem(id);if(changed&&id!=='expl'&&id!=='granada'&&id!=='bazooka'&&id!=='franctirador'&&id!=='mapa'&&id!=='mapa_heli'&&id!=='mapa_tanc')renderInventory()}else renderInventory()}}
             else{el.disabled=true;el.setAttribute('aria-hidden','true')}
             grid.appendChild(el)
           }
@@ -37,8 +37,12 @@ window.HUNTER_UI=Object.freeze({
         body.innerHTML='<p>Es perdrà el progrés d’aquesta partida. Tria la dificultat del nou arxipèlag.</p><button data-diff=".6">Fàcil</button><button data-diff="1">Normal</button><button data-diff="1.5">Difícil</button>';
         body.querySelectorAll('[data-diff]').forEach(b=>b.onclick=()=>actions.restart(+b.dataset.diff))
       }else{
-        body.innerHTML='<div class="controls"><b>WASD / fletxes</b><span>Avança, frena i gira</span><b>Acció / E</b><span>Vehicle o inventari segons el context</span><b>Dispar / F</b><span>Dispara l’arma equipada; amb granades equipades en llença una</span><b>I</b><span>Obre l’inventari</span><b>M</b><span>Obre el mapa</span><b>U / J</b><span>Puja / baixa l’helicòpter</span><b>Arrossega</b><span>Gira la vista i el personatge</span><b>Roda</b><span>Acosta o allunya la càmera</span></div><p>Farmacioles, explosius, granades, bazooka, disfressa i mapes es gestionen des de l’inventari. En helicòpter de combat, prem R o el botó 🚀 per llançar un míssil; la llanxa llançacoets dispara coets amb Dispar.</p><button id="inventoryMenu">Inventari</button><button id="restartMenu">Nova partida</button><button id="zoomOut">Allunya càmera</button><button id="zoomIn">Acosta càmera</button>';
+        body.innerHTML='<div class="controls"><b>WASD / fletxes</b><span>Avança, frena i gira</span><b>Acció / E</b><span>Vehicle o inventari segons el context</span><b>Dispar / F</b><span>Dispara l’arma equipada; amb granades equipades en llença una</span><b>Q / Mira</b><span>Activa/desactiva la mira x8 del rifle de franctirador; arrossega per apuntar</span><b>I</b><span>Obre l’inventari</span><b>M</b><span>Obre el mapa</span><b>U / J</b><span>Puja / baixa l’helicòpter</span><b>Arrossega</b><span>Gira la vista i el personatge</span><b>Roda</b><span>Acosta o allunya la càmera</span></div><p>Farmacioles, explosius, granades, bazooka, rifle de franctirador, disfressa i mapes es gestionen des de l’inventari. En helicòpter de combat, prem R o el botó 🚀 per llançar un míssil; la llanxa llançacoets dispara coets amb Dispar.</p><button id="inventoryMenu">Inventari</button><button id="chetosMenu">Chetos</button><button id="restartMenu">Nova partida</button><button id="zoomOut">Allunya càmera</button><button id="zoomIn">Acosta càmera</button>';
         document.getElementById('inventoryMenu').onclick=()=>actions.open('inventory');
+        document.getElementById('chetosMenu').onclick=()=>{
+          actions.chetos();
+          document.getElementById('chetosMenu').textContent='Chetos ✓';
+        };
         document.getElementById('restartMenu').onclick=()=>actions.open('restart');
         document.getElementById('zoomOut').onclick=()=>actions.zoom(.2);
         document.getElementById('zoomIn').onclick=()=>actions.zoom(-.2)
