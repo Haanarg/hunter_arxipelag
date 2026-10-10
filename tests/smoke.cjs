@@ -29,6 +29,34 @@ run(`{
 }`);
 ok('selectedDPlayerAndRider','player and open-vehicle riders share the selected D compact head and short neck');
 ok('enemyHeadModelsUnaffected','general and enemy soldier do not inherit the player head redesign');
+run(`{
+  const saved={x:P.x,y:P.y,z:P.z},x=P.x+180,z=P.z+180,y=groundAt(x,z),
+        tower=mkEn('torre',x,z,y);
+  tower.o.position.set(x,y,z);
+  const legs=tower.towerLegColliders||[],radius=.6,hit=(leg,px,pz)=>
+    px>leg.x0-radius&&px<leg.x1+radius&&pz>leg.z0-radius&&pz<leg.z1+radius;
+  const geometryExact=legs.length===4&&legs.every(leg=>
+    Wl.includes(leg)&&leg.towerLegOwner===tower&&
+    Math.abs(leg.x1-leg.x0-.38)<1e-8&&Math.abs(leg.z1-leg.z0-.38)<1e-8&&
+    Math.abs(leg.y1-leg.y0-7.8)<1e-8&&
+    wallCandidates(leg.cx,leg.cz,.01).includes(leg));
+  P.x=x;P.y=y;P.z=z;wallPush();
+  const centerOpen=Math.abs(P.x-x)<.001&&Math.abs(P.z-z)<.001;
+  P.x=legs[0].cx;P.z=legs[0].cz;wallPush();
+  const blocksPlayer=!hit(legs[0],P.x,P.z);
+  P.x=legs[0].cx;P.z=legs[0].cz;P.y=y+9;wallPush();
+  const aboveLegOpen=Math.abs(P.x-legs[0].cx)<.001&&Math.abs(P.z-legs[0].cz)<.001;
+  const hp=tower.hp;dmgW(legs[0],10);
+  const legHitsDamageTower=tower.hp<hp&&legs.every(leg=>Wl.includes(leg));
+  hurtE(tower,tower.hp+1);
+  const cleaned=tower.destroyed&&!E.includes(tower)&&
+    legs.every(leg=>!Wl.includes(leg)&&!wallCandidates(leg.cx,leg.cz,.01).includes(leg));
+  globalThis.watchTowerLegCollision=geometryExact&&centerOpen&&blocksPlayer&&aboveLegOpen&&
+    legHitsDamageTower&&cleaned;
+  P.x=saved.x;P.y=saved.y;P.z=saved.z;
+}`);
+ok('watchTowerLegCollision','tower legs have four exact solid colliders, a free center and no invisible barriers after destruction');
+
 
 run(`{
   const u=pl.userData;
