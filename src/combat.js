@@ -159,11 +159,16 @@ function updateGrenadeCharge(dt){
   grenadeCharge.visualTimer=.04;
   const aim=grenadeImpactTrajectory(grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS);
   if(!grenadeAimVisual){
+    // Cinta de triangles d'uns 25 cm: una línia WebGL simple d'1 px
+    // és massa fina per veure-la amb claredat en mòbils.
     const geometry=new THREE.BufferGeometry(),
-          positions=new THREE.BufferAttribute(new Float32Array(97*3),3);
-    positions.setUsage(THREE.DynamicDrawUsage);geometry.setAttribute('position',positions);
-    const line=new THREE.Line(geometry,new THREE.LineBasicMaterial({
-      color:0xff5252,transparent:true,opacity:.72,depthWrite:false,depthTest:false
+          positions=new THREE.BufferAttribute(new Float32Array(97*2*3),3),indices=[];
+    for(let i=0;i<96;i++)indices.push(i*2,i*2+1,i*2+2,i*2+1,i*2+3,i*2+2);
+    positions.setUsage(THREE.DynamicDrawUsage);
+    geometry.setAttribute('position',positions);geometry.setIndex(indices);
+    const line=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({
+      color:0xff4949,side:THREE.DoubleSide,transparent:true,opacity:.48,
+      depthWrite:false,depthTest:false
     }));
     line.frustumCulled=false;line.renderOrder=1001;
     const circle=new THREE.Mesh(new THREE.RingGeometry(.72,1.03,40).rotateX(-Math.PI/2),
@@ -175,9 +180,14 @@ function updateGrenadeCharge(dt){
   }
   const a=grenadeAimVisual,attr=a.line.geometry.attributes.position;
   for(let i=0;i<aim.points.length;i++){
-    const p=aim.points[i];attr.setXYZ(i,p.x,p.y+.06,p.z);
+    const p=aim.points[i],before=aim.points[Math.max(0,i-1)],
+          after=aim.points[Math.min(aim.points.length-1,i+1)],
+          dx=after.x-before.x,dz=after.z-before.z,d=Math.max(.001,Math.hypot(dx,dz)),
+          sx=-dz/d*.125,sz=dx/d*.125;
+    attr.setXYZ(i*2,p.x-sx,p.y+.06,p.z-sz);
+    attr.setXYZ(i*2+1,p.x+sx,p.y+.06,p.z+sz);
   }
-  a.line.geometry.setDrawRange(0,aim.points.length);attr.needsUpdate=true;
+  a.line.geometry.setDrawRange(0,Math.max(0,aim.points.length-1)*6);attr.needsUpdate=true;
   a.circle.position.set(aim.landing.x,aim.landing.y+.035,aim.landing.z);
   a.fill.position.set(aim.landing.x,aim.landing.y+.02,aim.landing.z);
 }
