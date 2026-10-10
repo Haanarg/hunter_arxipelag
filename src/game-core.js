@@ -705,7 +705,7 @@ const mini=()=>minimap.draw();
 // control
 let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0,worldVisualTick=0,palmVisualTick=0;
 const LOD_NEAR2=500*500,LOD_MID2=1200*1200,ITEM_ANIM2=500*500,FAUNA_NEAR2=650*650,FAUNA_MID2=1400*1400;
-const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joystick')),clearKeys=()=>{Object.keys(K).forEach(k=>K[k]=0);joystick.reset();document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))};
+const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joystick')),clearKeys=()=>{cancelGrenadeCharge();Object.keys(K).forEach(k=>K[k]=0);joystick.reset();document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))};
 const act=c=>{if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(!started||paused||over)return;if(c==='KeyQ'){toggleSniperScope();return}if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory')}if(c==='KeyR'&&cv?.t==='heli_combat'){secondaryWeapon();return}if(c==='KeyG'){if(!secondaryWeapon())plant();}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
 const nearV=()=>{let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
 // Compartida per al salt voluntari i per a la destrucció de l'helicòpter.
@@ -736,8 +736,32 @@ if(!spot){msg='No hi ha espai per baixar aquí.';msgT=3;return}
 P.x=spot.x;P.z=spot.z;P.hd=leaving.hd;leaving.driveInput=0;leaving.steerInput=0;
 if(moving){const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),sx=Math.cos(leaving.hd)*side,sz=-Math.sin(leaving.hd)*side,carry=Math.min(28,speed*.72);playerEject={kind:'flip',vx:fx*carry+sx*1.4,vz:fz*carry+sz*1.4,t:.5,dur:.5,height:.68};msg='Has saltat del vehicle en marxa!';msgT=2.5}
 cv=null}else{const v=nearV();if(v){cv=v;swimming=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
-addEventListener('keydown',e=>{if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(e.repeat)return;act(e.code);if(started&&!paused&&!over)K[e.code]=1});addEventListener('keyup',e=>K[e.code]=0);
-for(const b of document.querySelectorAll('[data-k]')){const c=b.dataset.k;b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);act(c);if(started&&!paused&&!over){K[c]=1;b.classList.add('held')}});for(const v of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(v,()=>{K[c]=0;b.classList.remove('held')})}
+addEventListener('keydown',e=>{
+  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
+  if(e.repeat)return;
+  if(e.code==='KeyF'&&started&&!paused&&!over&&grenadeEquipped&&!cv){
+    beginGrenadeCharge();K.KeyF=0;return;
+  }
+  act(e.code);if(started&&!paused&&!over)K[e.code]=1;
+});
+addEventListener('keyup',e=>{if(e.code==='KeyF')releaseGrenadeCharge();K[e.code]=0});
+for(const b of document.querySelectorAll('[data-k]')){
+  const c=b.dataset.k;
+  b.addEventListener('pointerdown',e=>{
+    e.preventDefault();b.setPointerCapture(e.pointerId);
+    if(c==='KeyF'&&started&&!paused&&!over&&grenadeEquipped&&!cv){
+      beginGrenadeCharge();K.KeyF=0;b.classList.add('held');return;
+    }
+    act(c);
+    if(started&&!paused&&!over){K[c]=1;b.classList.add('held')}
+  });
+  b.addEventListener('pointerup',()=>{
+    if(c==='KeyF')releaseGrenadeCharge();
+    K[c]=0;b.classList.remove('held');
+  });
+  for(const v of ['pointercancel','lostpointercapture'])
+    b.addEventListener(v,()=>{if(c==='KeyF')cancelGrenadeCharge();K[c]=0;b.classList.remove('held')});
+}
 addEventListener('blur',()=>{clearKeys();if(started&&!paused&&!over)panel('pause')});document.addEventListener('visibilitychange',()=>{if(document.hidden&&started&&!over)panel('pause')});
 ren.domElement.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.7,Math.min(1.9,zoom+e.deltaY*.001))},{passive:false});
 let drag=null;ren.domElement.addEventListener('pointerdown',e=>{if(!started||paused||over)return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};ren.domElement.setPointerCapture(e.pointerId)});ren.domElement.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId||paused)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(scopeActive)scopePitch=Math.max(-.65,Math.min(.65,scopePitch-dy*.00115));drag.y=e.clientY;const q=cv||P;q.hd-=dx*(scopeActive?.00115:.006);drag.x=e.clientX});ren.domElement.addEventListener('pointerup',()=>drag=null);ren.domElement.addEventListener('pointercancel',()=>drag=null);
@@ -764,9 +788,10 @@ function useInvItem(id){
   if(!inv[id])return false;
   if(id==='med'){if(hp>=100){msg='Ja tens la vida al màxim.';msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(100,hp+40);msg='Has usat una farmaciola.';msgT=2;snd('pick');return true}
   if(id==='expl'){if(cv||swimming){msg='No pots col·locar explosius des d’aquí.';msgT=2;return false}resume();plant();return true}
-  if(id==='bazooka'){if(cv||swimming){msg='Has d’anar a peu per equipar el bazooka.';msgT=2;return false}bazookaEquipped=!bazookaEquipped;if(bazookaEquipped){grenadeEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=bazookaEquipped?'Bazooka equipat: '+inv.bazooka+' coets disponibles.':'Bazooka desequipat.';msgT=2;return true}
-  if(id==='granada'){if(cv||swimming){msg='Has d’anar a peu per equipar les granades.';msgT=2;return false}grenadeEquipped=!grenadeEquipped;if(grenadeEquipped){bazookaEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=grenadeEquipped?'Granades equipades: '+inv.granada+'.':'Granades desequipades.';msgT=2;return true}
+  if(id==='bazooka'){if(cv||swimming){msg='Has d’anar a peu per equipar el bazooka.';msgT=2;return false}cancelGrenadeCharge();bazookaEquipped=!bazookaEquipped;if(bazookaEquipped){grenadeEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=bazookaEquipped?'Bazooka equipat: '+inv.bazooka+' coets disponibles.':'Bazooka desequipat.';msgT=2;return true}
+  if(id==='granada'){if(cv||swimming){msg='Has d’anar a peu per equipar les granades.';msgT=2;return false}cancelGrenadeCharge();grenadeEquipped=!grenadeEquipped;if(grenadeEquipped){bazookaEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=grenadeEquipped?'Granades equipades: '+inv.granada+'.':'Granades desequipades.';msgT=2;return true}
   if(id==='franctirador'){
+    cancelGrenadeCharge();
     if(cv||swimming){msg='Has d’anar a peu per equipar el rifle.';msgT=2;return false}
     sniperEquipped=!sniperEquipped;
     if(sniperEquipped){bazookaEquipped=false;grenadeEquipped=false}
@@ -780,7 +805,7 @@ function useInvItem(id){
   return false
 }
 function dropInvItem(id){
-  if(!inv[id]||id==='arma')return false;inv[id]--;if(inv[id]<=0)delete inv[id];if(id==='disf'&&disg)setDis(false);if(id==='bazooka'&&bazookaEquipped&&!inv.bazooka)bazookaEquipped=false;if(id==='granada'&&grenadeEquipped&&!inv.granada)grenadeEquipped=false;if(id==='franctirador'&&!inv.franctirador){sniperEquipped=false;setSniperScope(false)}
+  if(!inv[id]||id==='arma')return false;inv[id]--;if(inv[id]<=0)delete inv[id];if(id==='disf'&&disg)setDis(false);if(id==='bazooka'&&bazookaEquipped&&!inv.bazooka)bazookaEquipped=false;if(id==='granada'&&grenadeEquipped&&!inv.granada){grenadeEquipped=false;cancelGrenadeCharge()}if(id==='franctirador'&&!inv.franctirador){sniperEquipped=false;setSniperScope(false)}
   msg='Has deixat: '+IT[id].n;msgT=2;return true
 }
 const ui=window.HUNTER_UI.create({
@@ -1014,9 +1039,19 @@ if(scopeNow){
   cam.lookAt(T.x-Math.sin(T.hd)*8,ty+2,T.z-Math.cos(T.hd)*8);
 }
 if(playerEject&&playerEject.t<=0)playerEject=null;
-fcd-=dt;if(K.KeyF)fire();updEn(dt);updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);
+fcd-=dt;updateGrenadeCharge(dt);if(K.KeyF&&!grenadeEquipped)fire();updEn(dt);updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);
 const nv=cv?null:nearV();
-uiTick+=dt;if(uiTick>.12){uiTick=0;const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',!!cv&&VT[cv.t]?.m==='a');contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}mini();ui.renderHUD();}}
+uiTick+=dt;if(uiTick>.12){uiTick=0;const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',!!cv&&VT[cv.t]?.m==='a');contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}const fireButton=document.getElementById('mainFireButton');
+if(fireButton){
+  const grenade=!!grenadeEquipped&&!cv&&(inv.granada||0)>0;
+  if(fireButton.dataset.weapon!==String(grenade)){
+    fireButton.dataset.weapon=String(grenade);
+    fireButton.innerHTML=grenade?ICON.granada:'🎯';
+    fireButton.setAttribute('aria-label',grenade?'Llançar granada':'Dispar');
+    fireButton.title=grenade?'Mantén premut per arribar més lluny':'Dispar';
+  }
+}
+mini();ui.renderHUD();}}
 
 
 let last=performance.now();
