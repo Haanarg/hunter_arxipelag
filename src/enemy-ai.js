@@ -151,7 +151,14 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
       shoot(u.x,y0,u.z,ax,ay,az,u.spl?60:70,u.dmg,u.spl,'e',mE,u.spl?2:1)
     }
   }else if(u.sp>0){
-    if(u.wt<=0||Math.hypot(u.tx-u.x,u.tz-u.z)<2){
+    const waypointDistance=Math.hypot(u.tx-u.x,u.tz-u.z),
+          hqTankette=u.t==='tanqueta'&&!!u.hqPatrolZone;
+    // Una tanqueta tarda bastant més de 2,5 s a travessar un tram
+    // de 68 m. No li avancem el waypoint abans d'arribar-hi:
+    // això la feia tallar pel búnquer i acabar encallada a les cantonades.
+    // Al cap de 32 s sense avançar, saltem al següent per desatrancar-la.
+    if((hqTankette?(u.pi<0||waypointDistance<5||u.wt< -30):
+        (u.wt<=0||waypointDistance<2))){
       if(u.patrol&&u.patrol.length){
         u.pi=((u.pi==null?-1:u.pi)+1)%u.patrol.length;u.tx=u.patrol[u.pi].x;u.tz=u.patrol[u.pi].z;u.wt=u.guard?2.5:8
       }else{
