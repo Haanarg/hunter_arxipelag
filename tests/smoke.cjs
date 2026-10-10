@@ -447,9 +447,23 @@ run(`{
     P.hd=0;
     const near=grenadeImpactTrajectory(0),far=grenadeImpactTrajectory(1);
     const nearDist=Math.hypot(near.landing.x-P.x,near.landing.z-P.z),
-          farDist=Math.hypot(far.landing.x-P.x,far.landing.z-P.z);
+          farDist=Math.hypot(far.landing.x-P.x,far.landing.z-P.z),
+          startNear=grenadeAimStartIndex(near.points),
+          startFar=grenadeAimStartIndex(far.points),
+          aboveHead=[{track:near,start:startNear},{track:far,start:startFar}].every(({track,start})=>{
+            if(start<=0)return false;
+            const p=track.points[start];
+            return p.y>=P.y+3.55&&Math.hypot(p.x-P.x,p.z-P.z)>=1.45&&
+              track.points[0].y===P.y+2.05;
+          });
     const chargeStarted=beginGrenadeCharge();
     updateGrenadeCharge(.05);
+    const ribbon=grenadeAimVisual?.line.geometry,
+          firstRibbonY=ribbon?.attributes.position.getY(0),
+          ring=grenadeAimVisual?.circle.position,
+          impact=grenadeImpactTrajectory(grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS).landing,
+          ribbonAndCircle=firstRibbonY>P.y+3.55&&ribbon.drawRange.count>0&&
+            Math.hypot(ring.x-impact.x,ring.z-impact.z)<.000001;
     const firstX=grenadeAimVisual?.circle.position.x,firstZ=grenadeAimVisual?.circle.position.z;
     P.x+=8;P.z+=4;P.hd=.5;
     updateGrenadeCharge(.5);
@@ -465,6 +479,7 @@ run(`{
     globalThis.grenadeDynamicLaunch=chargeStarted&&released&&
       shot&&shot.vy<12&&Math.abs(speed-GRENADE_MAX_SPEED)<1e-7&&
       Math.abs(Math.hypot(shot.vx,shot.vz)-GRENADE_MAX_SPEED)<1e-7;
+    globalThis.grenadeArcAboveHead=aboveHead&&ribbonAndCircle;
     globalThis.grenadeChargeAndAim=fullPower&&following&&previewRemoved&&
       nearDist<8&&farDist>nearDist+20&&
       !!document.getElementById('mainFireButton')&&
@@ -485,6 +500,7 @@ run(`{
 }`);
 ok('grenadeDynamicLaunch','a charged grenade releases into a live parabolic projectile');
 ok('grenadeChargeAndAim','tap lands nearby, long hold flies farther; red arc and ground circle follow the player');
+ok('grenadeArcAboveHead','grenade trajectory ribbon begins above the player head with a gap, while ground target remains accurate');
 run(`{
   const slowRaw=(x,z)=>{let h=islandReliefAt(x,z,islands);const e=Math.max(Math.abs(x),Math.abs(z));if(e>H-120)h=Math.min(h,-4-(e-(H-120))*.05);if(h>=-1.5)return h;const depth=-h-1.5;return -1.5-Math.min(72,depth*depth*2.8+depth*.8)};
   const pts=[[0,0],[A.x,A.z],[Bi.x,Bi.z],[A.x+A.r*.73,A.z-A.r*.41],[H*.62,-H*.47],[-H+130,H-170]];
