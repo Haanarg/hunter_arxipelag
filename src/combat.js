@@ -56,7 +56,10 @@ function explodeVehicle(v){
 function damageVehicle(v,dmg,impacts=1){
   if(!v||v.destroyed)return;const c=VT[v.t],armor=Math.max(0,Math.min(10,v.armor??c.armor??0));
   v.life=Math.max(0,(v.life??c.life??1)-Math.max(1,impacts));v.smokeT=0;
-  if(cv===v&&armor<10)hurtP(dmg*(1-armor/10)*.55);
+  // Si l'helicòpter queda destruït, reservam el dany per a la
+  // caiguda: un cop mortal aquí congelaria l'expulsió en ple aire.
+  const fallingFromDestroyedHeli=cv===v&&v.life<=0&&VT[v.t]?.m==='a';
+  if(cv===v&&armor<10&&!fallingFromDestroyedHeli)hurtP(dmg*(1-armor/10)*.55);
   if(v.life<=0)explodeVehicle(v)
 }
 
