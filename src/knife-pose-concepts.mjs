@@ -3,35 +3,35 @@
 export const knifePoseConcepts=Object.freeze([
   Object.freeze({
     name:'A · Lateral discret',
-    description:'Braç dret lleugerament separat de la cuixa i ganivet inclinat cap enrere. Canvi mínim.',
+    description:'Ganivet baix i separat de la cuixa. Fulla cap avall, ben visible de darrere amb el canvi mínim.',
     tag:'Discret',
-    shoulder:{x:-.10,y:0,z:-.27},
-    elbow:{x:.22,y:0,z:-.12},
-    grip:{x:-1.27,y:0,z:.08}, offset:{x:.05,y:-.72,z:.06}
+    shoulder:{x:-.20,y:0,z:.36},
+    elbow:{x:-.25,y:0,z:.12},
+    grip:{x:-1.57,y:0,z:.05}, offset:{x:.05,y:-.72,z:.17}
   }),
   Object.freeze({
-    name:'B · Fulla cap avall',
-    description:'Colze obert i empunyadura baixa; el perfil de la fulla queda visible al costat dret de la motxilla.',
-    tag:'Baix · extern',
-    shoulder:{x:-.22,y:-.08,z:-.36},
-    elbow:{x:.53,y:-.12,z:-.13},
-    grip:{x:-1.03,y:0,z:-.22},offset:{x:.09,y:-.70,z:.11}
+    name:'B · Empunyadura oberta',
+    description:'Colze una mica més obert i fulla lleugerament enrere, sense elevar gaire la mà.',
+    tag:'Obert',
+    shoulder:{x:-.30,y:0,z:.48},
+    elbow:{x:-.40,y:0,z:.12},
+    grip:{x:-1.57,y:0,z:-.05},offset:{x:.07,y:-.70,z:.22}
   }),
   Object.freeze({
-    name:'C · Ganivet a la cintura',
-    description:'Braç recollit i fulla diagonal a prop del maluc, visible en una vista posterior de tres quarts.',
+    name:'C · Diagonal a la cintura',
+    description:'Braç separat i ganivet en diagonal: mostra clarament la fulla des del costat posterior.',
     tag:'Diagonal',
-    shoulder:{x:-.39,y:-.10,z:-.48},
-    elbow:{x:.95,y:-.12,z:-.08},
-    grip:{x:-1.45,y:.24,z:.4},offset:{x:.06,y:-.70,z:.12}
+    shoulder:{x:-.40,y:0,z:.62},
+    elbow:{x:-.20,y:0,z:.16},
+    grip:{x:-1.30,y:0,z:-.10},offset:{x:.07,y:-.70,z:.24}
   }),
   Object.freeze({
     name:'D · Guàrdia curta',
-    description:'Avantbraç una mica més elevat i fulla cap a fora. Silueta clara sense tapar el cos.',
-    tag:'Més visible',
-    shoulder:{x:-.45,y:-.08,z:-.60},
-    elbow:{x:1.12,y:.12,z:-.18},
-    grip:{x:-1.19,y:0,z:-.36},offset:{x:.10,y:-.68,z:.16}
+    description:'Mà a l’alçada del maluc i fulla més elevada, preparada per atacar i visible des del darrere.',
+    tag:'Guàrdia',
+    shoulder:{x:-.45,y:0,z:.78},
+    elbow:{x:-.55,y:0,z:.16},
+    grip:{x:-1.50,y:0,z:.35},offset:{x:.09,y:-.68,z:.30}
   })
 ]);
 export function createKnifePoseConcept(THREE,index=0){
