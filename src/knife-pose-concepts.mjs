@@ -1,58 +1,97 @@
-// Comparador visual: usa el model real del jugador, sense modificar
-// l'animació del joc fins que es triï una de les quatre postures.
+// Quatre proves del ganivet utilitzant el mateix rig del jugador real.
+// Són només propostes: no alteren la postura de combat del joc.
 export const knifePoseConcepts=Object.freeze([
   Object.freeze({
-    name:'A · Lateral discret',
-    description:'Ganivet baix i separat de la cuixa. Fulla cap avall, ben visible de darrere amb el canvi mínim.',
-    tag:'Discret',
-    shoulder:{x:-.20,y:0,z:.36},
-    elbow:{x:-.25,y:0,z:.12},
-    grip:{x:-1.57,y:0,z:.05}, offset:{x:.05,y:-.72,z:.17}
+    name:'A · Lateral natural',tag:'Discret',
+    description:'Colze flexionat cap endavant. Mà baixa al maluc i fulla lleument orientada enrere.',
+    shoulder:{x:-.08,y:0,z:.34},elbow:{x:.35,y:0,z:-.06},
+    blade:{x:-.58,y:0,z:.30}
   }),
   Object.freeze({
-    name:'B · Empunyadura oberta',
-    description:'Colze una mica més obert i fulla lleugerament enrere, sense elevar gaire la mà.',
-    tag:'Obert',
-    shoulder:{x:-.30,y:0,z:.48},
-    elbow:{x:-.40,y:0,z:.12},
-    grip:{x:-1.57,y:0,z:-.05},offset:{x:.07,y:-.70,z:.22}
+    name:'B · Braç obert',tag:'Obert',
+    description:'Colze cap endavant i espatlla una mica oberta. Ganivet cap avall i enfora, subjectat amb el puny.',
+    shoulder:{x:-.13,y:0,z:.48},elbow:{x:.55,y:0,z:-.10},
+    blade:{x:-.90,y:0,z:.20}
   }),
   Object.freeze({
-    name:'C · Diagonal a la cintura',
-    description:'Braç separat i ganivet en diagonal: mostra clarament la fulla des del costat posterior.',
-    tag:'Diagonal',
-    shoulder:{x:-.40,y:0,z:.62},
-    elbow:{x:-.20,y:0,z:.16},
-    grip:{x:-1.30,y:0,z:-.10},offset:{x:.07,y:-.70,z:.24}
+    name:'C · Cintura diagonal',tag:'Diagonal',
+    description:'Avantbraç plegat de manera anatòmica, mà a la cintura i fulla en diagonal cap enrere.',
+    shoulder:{x:.12,y:0,z:.60},elbow:{x:.82,y:0,z:-.06},
+    blade:{x:-1.16,y:0,z:.44}
   }),
   Object.freeze({
-    name:'D · Guàrdia curta',
-    description:'Mà a l’alçada del maluc i fulla més elevada, preparada per atacar i visible des del darrere.',
-    tag:'Guàrdia',
-    shoulder:{x:-.45,y:0,z:.78},
-    elbow:{x:-.55,y:0,z:.16},
-    grip:{x:-1.50,y:0,z:.35},offset:{x:.09,y:-.68,z:.30}
+    name:'D · Guàrdia curta',tag:'Combat',
+    description:'Mà més alta i colze ben flexionat cap endavant. Fulla diagonal, visible de tres quarts del darrere.',
+    shoulder:{x:.24,y:0,z:.55},elbow:{x:1.05,y:0,z:-.08},
+    blade:{x:-1.75,y:0,z:.50}
   })
 ]);
+
+// Reconstrueix només el ganivet del preview: el model original col·locava
+// el mànec per damunt del puny i deixava la fulla penjant sota la mà.
+function fitPreviewKnife(THREE,u,box){
+  const knife=u.knife;
+  knife.clear();
+  // El centre de la mà és el petit oval del rig a (0,-.62,-.025),
+  // escalat x1.2 en createPlayer. Pivot del ganivet = centre del puny.
+  const palm={x:0,y:-.62*1.2,z:-.025*1.2};
+  knife.position.set(palm.x,palm.y,palm.z);
+  const grip=box(knife,.16,.42,.155,0x59402d,0,0,0);
+  const bands=[-.105,.095];
+  for(const y of bands)box(knife,.166,.026,.163,0x9f9e90,0,y,0);
+  const pommel=box(knife,.205,.065,.185,0x353e40,0,.233,0);
+  const guard=box(knife,.39,.07,.18,0x404c4e,0,-.248,0);
+  // La fulla neix SOTA la guarda (no sota el puny) i surt de la mà
+  // seguint l'eix del mànec. Perfil afilat amb punta real, no rectangle.
+  const profile=new THREE.Shape();
+  profile.moveTo(-.102,-.284);
+  profile.lineTo(.105,-.284);
+  profile.lineTo(.117,-.63);
+  profile.lineTo(.044,-.97);
+  profile.lineTo(-.045,-1.055);
+  profile.lineTo(-.115,-.69);
+  profile.closePath();
+  const bladeGeo=new THREE.ExtrudeGeometry(profile,{
+    depth:.065,bevelEnabled:true,bevelThickness:.012,bevelSize:.008,
+    bevelSegments:1,steps:1
+  });
+  bladeGeo.translate(0,0,-.0325);
+  const blade=new THREE.Mesh(bladeGeo,new THREE.MeshStandardMaterial({
+    color:0xbac6ca,metalness:.65,roughness:.34,flatShading:true
+  }));
+  blade.castShadow=true;knife.add(blade);
+  // Nervi central metàl·lic visible al fer girar el visor.
+  box(knife,.026,.48,.012,0xe5eded,0,-.52,-.052);
+  knife.userData.previewGrip=grip;
+  knife.userData.previewBlade=blade;
+  knife.userData.previewPalm=palm;
+  knife.userData.previewTip=new THREE.Vector3(-.045,-1.055,0);
+  knife.visible=true;
+}
+
 export function createKnifePoseConcept(THREE,index=0){
   const spec=knifePoseConcepts[index];
   if(!spec)throw new RangeError('Proposta de ganivet desconeguda: '+index);
   const mats=new Map();
   const box=(parent,w,h,d,color,x=0,y=0,z=0)=>{
     let mat=mats.get(color);
-    if(!mat){mat=new THREE.MeshStandardMaterial({color,roughness:.7,metalness:color===0xc7ced0?.48:.12,flatShading:true});mats.set(color,mat)}
+    if(!mat){
+      mat=new THREE.MeshStandardMaterial({
+        color,roughness:.7,metalness:color===0xc7ced0?.48:.12,flatShading:true
+      });
+      mats.set(color,mat);
+    }
     const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
     mesh.position.set(x,y,z);parent.add(mesh);return mesh;
   };
-  const model=window.HUNTER_CHARACTERS.createPlayer(THREE,{box}),
-        u=model.userData;
-  // El visor del joc està basat en el mateix model aprovat D.
+  const model=window.HUNTER_CHARACTERS.createPlayer(THREE,{box}),u=model.userData;
   u.gun.visible=false;u.bazooka.visible=false;u.sniper.visible=false;u.grenade.visible=false;
-  u.knife.visible=true;
+  // La flexió correcta del colze d'aquest rig és X POSITIVA,
+  // en direcció al pit (front -Z), mai cap a l'esquena.
   u.ar.rotation.set(spec.shoulder.x,spec.shoulder.y,spec.shoulder.z);
   u.aer.rotation.set(spec.elbow.x,spec.elbow.y,spec.elbow.z);
-  u.knife.rotation.set(spec.grip.x,spec.grip.y,spec.grip.z);
-  u.knife.position.set(spec.offset.x,spec.offset.y,spec.offset.z);
+  fitPreviewKnife(THREE,u,box);
+  u.knife.rotation.set(spec.blade.x,spec.blade.y,spec.blade.z);
   u.al.rotation.set(-.04,0,-.12);
   u.ael.rotation.set(.17,0,-.04);
   model.userData.knifePoseConcept=spec.name;
