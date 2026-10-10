@@ -21,6 +21,7 @@ header p{font-size:12px;color:#c5d2ce;margin:0}
 #cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(230px,1fr));gap:10px;height:calc(100vh - 122px)}
 #cards.compare-two{grid-template-rows:minmax(320px,1fr)}
 #cards.attack-grid{grid-template-rows:repeat(2,minmax(270px,1fr));height:calc(100vh - 188px)}
+#cards.attack-compare-grid{grid-template-rows:minmax(350px,1fr);height:calc(100vh - 188px)}
 #attackPlayback{display:none;align-items:center;gap:8px;flex-wrap:wrap}
 #attackPlayback.visible{display:flex}
 #attackPlayback label{font:600 12px system-ui;color:#e1eddf}
@@ -41,6 +42,7 @@ header p{font-size:12px;color:#c5d2ce;margin:0}
  #cards{grid-template-columns:1fr;grid-template-rows:repeat(4,330px);height:auto}
  #cards.compare-two{grid-template-rows:repeat(2,390px)}
  #cards.attack-grid{height:auto;grid-template-rows:repeat(4,350px)}
+ #cards.attack-compare-grid{height:auto;grid-template-rows:repeat(2,390px)}
  #attackPlayback{flex-basis:100%}
  #cards.show-all-knife{grid-template-rows:repeat(5,330px);min-height:0}
  .controls button,.controls a{padding:7px 9px}
@@ -74,6 +76,7 @@ header p{font-size:12px;color:#c5d2ce;margin:0}
   <a id="knifeMode" href="proves.html?mode=ganivet" style="border-color:#b6dca7;color:#dff9c8">Ganivet · 4A / 4B</a>
   <a id="knifeAllMode" href="proves.html?mode=ganivet-totes">Totes les postures ↗</a>
   <a id="knifeAttackMode" href="proves.html?mode=ganivet-atac">Estocada · 4 animacions ↗</a>
+  <a id="knifeAttack3Mode" href="proves.html?mode=ganivet-atac-3">Animació 3 · gir invers ↗</a>
   <a id="headMode" href="proves.html?mode=cap">Caps · 4 propostes</a>
   <span class="separator"></span>
   <a href="dispar-proves.html" style="border-color:#b6dca7;color:#dff9c8">Dispar · dues mans ↗</a>
@@ -92,12 +95,15 @@ header p{font-size:12px;color:#c5d2ce;margin:0}
 import * as THREE from './vendor/three-r186.module.mjs';
 import {createPlayerHeadConcept,playerHeadConcepts} from './src/player-head-concepts.mjs?v=20261008-head-02';
 import {createKnifePoseConcept,knifePoseConcepts} from './src/knife-pose-concepts.mjs?v=20261010-knife-04';
-import {knifeAttackConcepts,knifeAttackDuration,createKnifeAttackConcept,applyKnifeAttackConcept} from './src/knife-attack-concepts.mjs?v=20261010-attack-01';
+import {knifeAttackConcepts,knifeAttackThreeCompare,knifeAttackDuration,createKnifeAttackConcept,applyKnifeAttackConcept} from './src/knife-attack-concepts.mjs?v=20261011-attack-02';
 
 const selectedMode=new URLSearchParams(location.search).get('mode');
-const attackMode=selectedMode==='ganivet-atac',knifeMode=selectedMode!=='cap',
+const attackCompareMode=selectedMode==='ganivet-atac-3',
+      attackMode=selectedMode==='ganivet-atac'||attackCompareMode,
+      knifeMode=selectedMode!=='cap',
       knifeCompare=knifeMode&&!attackMode&&selectedMode!=='ganivet-totes';
-const concepts=attackMode?knifeAttackConcepts:
+const concepts=attackCompareMode?knifeAttackThreeCompare:
+  attackMode?knifeAttackConcepts:
   knifeMode?(knifeCompare?knifePoseConcepts.slice(3):knifePoseConcepts):playerHeadConcepts;
 if(!knifeMode){
   document.getElementById('comparisonTitle').textContent='Cap del jugador · 4 propostes';
@@ -111,13 +117,20 @@ if(!knifeMode){
   document.getElementById('headMode').style.color='#dff9c8';
   document.getElementById('headMode').style.borderColor='#b6dca7';
 }else if(attackMode){
-  document.getElementById('comparisonTitle').textContent='Estocada amb ganivet 4B · 4 animacions';
-  document.getElementById('comparisonIntro').textContent='Gira el canell 90° cap a dins mentre ataca: quatre variants sincronitzades, amb la mateixa postura 4B de partida.';
-  document.getElementById('comparisonHint').textContent='Les quatre animacions van sincronitzades. Pots pausar, repetir o moure el fotograma per comparar-les; arrossega cada figura per veure el canell de perfil.';
+  document.getElementById('comparisonTitle').textContent=attackCompareMode?
+    'Animació 3 · Gir de canell original o invertit':
+    'Estocada amb ganivet 4B · 4 animacions';
+  document.getElementById('comparisonIntro').textContent=attackCompareMode?
+    'Dues estocades laterals idèntiques: 3A amb gir de −90° cap a dins i 3B amb gir de +90° cap a fora. Només canvia el canell.':
+    'Gira el canell 90° cap a dins mentre ataca: quatre variants sincronitzades, amb la mateixa postura 4B de partida.';
+  document.getElementById('comparisonHint').textContent=attackCompareMode?
+    'Compara els dos moviments sincronitzats. Fes pausa al moment de l’impacte o gira els models per veure bé la direcció de la fulla.':
+    'Les quatre animacions van sincronitzades. Pots pausar, repetir o moure el fotograma per comparar-les; arrossega cada figura per veure el canell de perfil.';
   document.getElementById('knifeMode').style.borderColor='';
   document.getElementById('knifeMode').style.color='';
-  document.getElementById('knifeAttackMode').style.borderColor='#b6dca7';
-  document.getElementById('knifeAttackMode').style.color='#dff9c8';
+  const activeLink=document.getElementById(attackCompareMode?'knifeAttack3Mode':'knifeAttackMode');
+  activeLink.style.borderColor='#b6dca7';
+  activeLink.style.color='#dff9c8';
   document.getElementById('attackPlayback').classList.add('visible');
 }else if(!knifeCompare){
   document.getElementById('comparisonTitle').textContent='Ganivet del jugador · 5 propostes';
@@ -127,7 +140,8 @@ if(!knifeMode){
   document.getElementById('knifeAllMode').style.color='#dff9c8';
   document.getElementById('knifeAllMode').style.borderColor='#b6dca7';
 }
-if(attackMode)document.getElementById('cards').classList.add('attack-grid');
+if(attackCompareMode)document.getElementById('cards').classList.add('attack-compare-grid');
+else if(attackMode)document.getElementById('cards').classList.add('attack-grid');
 else if(knifeCompare)document.getElementById('cards').classList.add('compare-two');
 else if(knifeMode)document.getElementById('cards').classList.add('show-all-knife');
 
@@ -168,10 +182,12 @@ concepts.forEach((entry,i)=>{
  const card=document.createElement('div');
  card.className='card';
  const tag=document.createElement('div');tag.className='tag';
- tag.textContent=attackMode?'ANIMACIÓ '+(i+1):
+ tag.textContent=attackCompareMode?(i===0?'3A · ORIGINAL':'3B · GIR INVERS'):
+   attackMode?'ANIMACIÓ '+(i+1):
    knifeCompare?(i===0?'4A · ORIGINAL':'4B · FULLA ENDAVANT'):'PROPOSTA '+(i+1);
  const scale=document.createElement('div');scale.className='scale';
- scale.textContent=attackMode?entry.tag+' · GIR 90°':
+ scale.textContent=attackCompareMode?entry.tag:
+   attackMode?entry.tag+' · GIR 90°':
    knifeMode?entry.tag+((knifeCompare?i===1:i===4)?' · AL JOC':''):
    'Cap: '+Math.round(entry.headScale[0]*100)+'–'+Math.round(entry.headScale[1]*100)+'%'+(i===3?' · AL JOC':'');
  const info=document.createElement('div');info.className='info';
@@ -179,7 +195,7 @@ concepts.forEach((entry,i)=>{
  const desc=document.createElement('small');desc.textContent=entry.description;
  info.append(title,desc);card.append(tag,scale,info);
  cardsEl.appendChild(card);cards.push(card);
- const model=attackMode?createKnifeAttackConcept(THREE,i):
+ const model=attackMode?createKnifeAttackConcept(THREE,attackCompareMode?2:i,attackCompareMode&&i===1):
    knifeMode?createKnifePoseConcept(THREE,knifeCompare?i+3:i):createPlayerHeadConcept(THREE,i);
  model.visible=false;scene.add(model);models.push(model);
  const camera=new THREE.OrthographicCamera(-3,3,3,-3,.1,60);
@@ -219,7 +235,7 @@ for(const [id,yaw]of Object.entries(presets)){
 function setAttackFrame(progress){
   if(!attackMode)return;
   const p=Math.max(0,Math.min(1,progress));
-  models.forEach((model,i)=>applyKnifeAttackConcept(model,i,p));
+  models.forEach((model,i)=>applyKnifeAttackConcept(model,attackCompareMode?2:i,p,attackCompareMode&&i===1));
   attackSeek.value=String(Math.round(p*100));
   attackPhase.textContent=p<.22?'Preparació':p<.42?'Gir de canell':
     p<.67?'Estocada':p<.96?'Retorn':'Guàrdia';
