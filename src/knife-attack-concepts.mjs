@@ -16,8 +16,8 @@ export const knifeAttackConcepts=Object.freeze([
   Object.freeze({
     name:'C · Estocada lateral',tag:'Lateral',
     description:'Preparació amb el colze separat del cos; el puny gira cap a dins abans de clavar endavant.',
-    turn:[.14,.44,.64,.90],windup:.30,reach:1.12,open:-.45,extend:.58,
-    thrust:[.32,.57,.83],knifeX:-.07,knifeZ:-.25
+    // Els valors de la 3B activa són la font de veritat de la 3A també.
+    ...window.HUNTER_CHARACTERS.knifeAttack3B
   }),
   Object.freeze({
     name:'D · Estocada alta',tag:'Alt',
@@ -70,8 +70,20 @@ export function applyKnifeAttackConcept(model,index,progress,reverseWrist=false)
   const config=knifeAttackConcepts[index];
   if(!config)throw new RangeError('Animació de ganivet desconeguda: '+index);
   const u=model.userData,b=window.HUNTER_CHARACTERS.knifePose4B,
-        p=Math.max(0,Math.min(1,progress)),
-        preparation=pulse(p,.025,.17,.37),
+        p=Math.max(0,Math.min(1,progress));
+  if(index===2&&reverseWrist){
+    // 3B utilitza exactament el calculador del joc, incloent el braç esquerre.
+    const pose=window.HUNTER_CHARACTERS.knifeAttack3BTargets(p);
+    u.ar.rotation.set(pose.shoulderX,b.shoulder.y,pose.shoulderZ);
+    u.aer.rotation.set(pose.elbowX,b.elbow.y,pose.elbowZ);
+    u.knife.rotation.set(pose.bladeX,pose.bladeY,pose.bladeZ);
+    u.al.rotation.set(-.04+pose.leftShoulderX,0,-.12+pose.leftShoulderZ);
+    u.ael.rotation.set(.17+pose.leftElbowX,0,-.04);
+    u.knife.visible=true;u.gun.visible=false;
+    model.rotation.set(0,0,0);model.position.set(0,0,0);
+    return {wristDegrees:-90*pose.wrist,thrust:pose.thrust,preparation:pose.preparation};
+  }
+  const preparation=pulse(p,.025,.17,.37),
         thrust=pulse(p,...config.thrust),
         // L'eix Y LOCAL mou el canell: original −90°, iteració +90°.
         // X i Z, la mà i la trajectòria del braç queden idèntics.
