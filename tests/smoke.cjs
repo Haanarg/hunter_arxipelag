@@ -157,6 +157,30 @@ run(`{
 }`);
 ok('hqTankRemoved','no pilotable tank in enemy HQ; other tanks remain available across the islands');
 ok('tankettePatrolsSeparated','both HQ tankettes patrol distinct, traversable north/south corridors more than 50m apart');
+
+run(`{
+  const tankette=E.find(u=>u.hqPatrolZone==='north'),savedEnemies=E,savedMove=mvE,
+        saved={wt:tankette.wt,pi:tankette.pi,tx:tankette.tx,tz:tankette.tz,
+          senseT:tankette.senseT,canSee:tankette.canSee,hd:tankette.hd,
+          rot:tankette.o.rotation.y};
+  try{
+    E=[tankette];mvE=()=>{};
+    tankette.pi=0;tankette.tx=tankette.patrol[0].x;
+    tankette.tz=tankette.patrol[0].z;
+    tankette.wt=.05;tankette.senseT=100;tankette.canSee=false;
+    updEn(.25);
+    const noPrematureAdvance=tankette.pi===0&&tankette.wt<0;
+    tankette.wt=-30.5;updEn(.25);
+    const unblock=tankette.pi===1&&tankette.wt>0;
+    globalThis.tankettePatrolWaypointSafety=noPrematureAdvance&&unblock;
+  }finally{
+    mvE=savedMove;E=savedEnemies;
+    for(const [k,v]of Object.entries(saved))if(k!=='rot')tankette[k]=v;
+    tankette.o.rotation.y=saved.rot;rebuildVehicleGrid();
+  }
+}`);
+ok('tankettePatrolWaypointSafety','HQ tankettes stay on distant waypoints until arrival and can recover after a prolonged block');
+
 run(`{
   const saved={items,marks:intelMarks.slice(),hq:hqMapKnown,
     knownInventory:{mapa:inv.mapa,mapa_heli:inv.mapa_heli,mapa_tanc:inv.mapa_tanc},
