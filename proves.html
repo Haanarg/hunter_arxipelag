@@ -72,11 +72,11 @@ header p{font-size:12px;color:#c5d2ce;margin:0}
 </div>
 <script src="src/palette.js"></script>
 <script src="src/player-model.js"></script>
-<script src="src/characters.js"></script>
+<script src="src/characters.js?v=20261010-knife4b-01"></script>
 <script type="module">
 import * as THREE from './vendor/three-r186.module.mjs';
 import {createPlayerHeadConcept,playerHeadConcepts} from './src/player-head-concepts.mjs?v=20261008-head-02';
-import {createKnifePoseConcept,knifePoseConcepts} from './src/knife-pose-concepts.mjs?v=20261010-knife-03';
+import {createKnifePoseConcept,knifePoseConcepts} from './src/knife-pose-concepts.mjs?v=20261010-knife-04';
 
 const selectedMode=new URLSearchParams(location.search).get('mode');
 const knifeMode=selectedMode!=='cap',knifeCompare=knifeMode&&selectedMode!=='ganivet-totes';
@@ -136,7 +136,7 @@ concepts.forEach((entry,i)=>{
  card.className='card';
  const tag=document.createElement('div');tag.className='tag';tag.textContent=knifeCompare?(i===0?'4A · ORIGINAL':'4B · FULLA ENDAVANT'):'PROPOSTA '+(i+1);
  const scale=document.createElement('div');scale.className='scale';
- scale.textContent=knifeMode?entry.tag:'Cap: '+Math.round(entry.headScale[0]*100)+'–'+Math.round(entry.headScale[1]*100)+'%'+(i===3?' · AL JOC':'');
+ scale.textContent=knifeMode?entry.tag+((knifeCompare?i===1:i===4)?' · AL JOC':''):'Cap: '+Math.round(entry.headScale[0]*100)+'–'+Math.round(entry.headScale[1]*100)+'%'+(i===3?' · AL JOC':'');
  const info=document.createElement('div');info.className='info';
  const title=document.createElement('b');title.textContent=entry.name;
  const desc=document.createElement('small');desc.textContent=entry.description;
