@@ -102,6 +102,11 @@ const key=new THREE.DirectionalLight(0xffefd9,3.2);
 key.position.set(-4,8,-7);scene.add(key);
 const fill=new THREE.DirectionalLight(0x96c8e8,1.0);
 fill.position.set(4,5,6);scene.add(fill);
+if(knifeMode){
+  // La llum principal il·lumina la part posterior i la fulla dels models.
+  key.position.set(-4,8,7);
+  fill.position.set(4,5,-6);
+}
 
 const stand=new THREE.Group();
 const baseMat=new THREE.MeshStandardMaterial({color:0x607875,roughness:.86,metalness:.12});
