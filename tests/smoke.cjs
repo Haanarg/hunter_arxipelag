@@ -164,7 +164,7 @@ run(`{
   globalThis.grenadePlayerModel=!!pl.userData.grenade;
   globalThis.grenadeThrowAnimation=String(window.HUNTER_CHARACTERS.animatePlayer).includes('grenadeThrow')&&String(window.HUNTER_CHARACTERS.animatePlayer).includes('Llançament');
   globalThis.grenadeWorldPriority=worldGenSrc.includes("addIt('granada',R()<.5?a:b)")&&window.HUNTER_COMPOUND_LAYOUTS.some(l=>l.id==='outpost'&&l.loot.some(i=>i.kind==='granades'));
-  globalThis.grenadeBallistics=String(throwGrenade).includes('grenadePending')&&String(launchGrenade).includes('vy:12')&&String(updFx).includes('g.vy-=24*dt');
+  globalThis.grenadeBallistics=String(throwGrenade).includes('grenadePending')&&String(grenadeLaunchParams).includes('vy:12')&&String(updFx).includes('g.vy-=24*dt');
   globalThis.explosiveBalance=String(updFx).includes("boom(g.x,g.y,g.z,16,100,'b')")&&String(updFx).includes("boom(b.x,b.y,b.z,48,300,'b')");
 }`);
 ok('grenadeItemConfigured','grenade pickup is a usable five-grenade item');
@@ -327,13 +327,56 @@ ok('explosiveTwoThirds','pickup and planted charge are two thirds of their previ
 ok('explosiveFacesPlayer','the planted timer faces the player from a short distance at all headings');
 
 run(`{
-  const savedInv={...inv},savedEq=grenadeEquipped,savedFcd=fcd;
-  inv.granada=1;grenadeEquipped=true;fcd=0;pl.userData.grenadePending=null;
-  const okThrow=throwGrenade();updFx(.24);
-  globalThis.grenadeDynamicLaunch=okThrow&&grenades.length===1&&grenades[0].vy<12&&Math.hypot(grenades[0].vx,grenades[0].vz)>10;
-  for(const g of grenades)world.remove(g.o);grenades=[];inv=savedInv;grenadeEquipped=savedEq;fcd=savedFcd;pl.userData.grenadePending=null;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;
+  const saved={inventory:{...inv},eq:grenadeEquipped,fcd,cv,swimming,over,
+    paused,playerFall,x:P.x,y:P.y,z:P.z,hd:P.hd,
+    thrown:pl.userData.grenadeThrow,released:pl.userData.grenadeReleased,
+    pending:pl.userData.grenadePending},grenadesBefore=grenades.length,
+    oldWalls=wallCandidates,oldBuildings=buildingCandidates;
+  try{
+    wallCandidates=()=>[];buildingCandidates=()=>[];
+    cv=null;playerFall=null;swimming=false;over=0;paused=false;fcd=0;
+    inv.granada=1;grenadeEquipped=true;cancelGrenadeCharge();
+    P.hd=0;
+    const near=grenadeImpactTrajectory(0),far=grenadeImpactTrajectory(1);
+    const nearDist=Math.hypot(near.landing.x-P.x,near.landing.z-P.z),
+          farDist=Math.hypot(far.landing.x-P.x,far.landing.z-P.z);
+    const chargeStarted=beginGrenadeCharge();
+    updateGrenadeCharge(.05);
+    const firstX=grenadeAimVisual?.circle.position.x,firstZ=grenadeAimVisual?.circle.position.z;
+    P.x+=8;P.z+=4;P.hd=.5;
+    updateGrenadeCharge(.5);
+    const following=!!grenadeAimVisual&&Math.hypot(
+      grenadeAimVisual.circle.position.x-firstX,grenadeAimVisual.circle.position.z-firstZ)>6;
+    updateGrenadeCharge(1.5);
+    const fullPower=grenadeCharge?.elapsed===GRENADE_CHARGE_SECONDS;
+    const released=releaseGrenadeCharge(),pending=pl.userData.grenadePending,
+          previewRemoved=!grenadeAimVisual&&!grenadeCharge,
+          speed=Math.hypot(pending?.flight.vx||0,pending?.flight.vz||0);
+    updFx(.24);
+    const shot=grenades[grenadesBefore];
+    globalThis.grenadeDynamicLaunch=chargeStarted&&released&&
+      shot&&shot.vy<12&&Math.abs(speed-GRENADE_MAX_SPEED)<1e-7&&
+      Math.abs(Math.hypot(shot.vx,shot.vz)-GRENADE_MAX_SPEED)<1e-7;
+    globalThis.grenadeChargeAndAim=fullPower&&following&&previewRemoved&&
+      nearDist<8&&farDist>nearDist+20&&
+      !!document.getElementById('mainFireButton')&&
+      String(updateGrenadeCharge).includes('RingGeometry')&&
+      String(beginGrenadeCharge).includes('grenadeCharge={elapsed:0}');
+  }finally{
+    cancelGrenadeCharge();
+    for(const g of grenades.splice(grenadesBefore))world.remove(g.o);
+    wallCandidates=oldWalls;buildingCandidates=oldBuildings;
+    Object.keys(inv).forEach(k=>delete inv[k]);Object.assign(inv,saved.inventory);
+    grenadeEquipped=saved.eq;fcd=saved.fcd;cv=saved.cv;
+    swimming=saved.swimming;over=saved.over;paused=saved.paused;playerFall=saved.playerFall;
+    P.x=saved.x;P.y=saved.y;P.z=saved.z;P.hd=saved.hd;
+    pl.userData.grenadePending=saved.pending;
+    pl.userData.grenadeThrow=saved.thrown;
+    pl.userData.grenadeReleased=saved.released;
+  }
 }`);
-ok('grenadeDynamicLaunch','grenade releases into a live parabolic projectile');
+ok('grenadeDynamicLaunch','a charged grenade releases into a live parabolic projectile');
+ok('grenadeChargeAndAim','tap lands nearby, long hold flies farther; red arc and ground circle follow the player');
 run(`{
   const slowRaw=(x,z)=>{let h=islandReliefAt(x,z,islands);const e=Math.max(Math.abs(x),Math.abs(z));if(e>H-120)h=Math.min(h,-4-(e-(H-120))*.05);if(h>=-1.5)return h;const depth=-h-1.5;return -1.5-Math.min(72,depth*depth*2.8+depth*.8)};
   const pts=[[0,0],[A.x,A.z],[Bi.x,Bi.z],[A.x+A.r*.73,A.z-A.r*.41],[H*.62,-H*.47],[-H+130,H-170]];
