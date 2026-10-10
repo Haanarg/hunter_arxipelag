@@ -156,10 +156,20 @@ window.HUNTER_CHARACTERS=Object.freeze({
     const muzzle=new THREE.Mesh(new THREE.CylinderGeometry(.3,.24,.24,10),bazDark);muzzle.rotation.x=Math.PI/2;muzzle.position.z=-1.52;bazooka.add(muzzle);
     box(bazooka,.18,.35,.38,0x252b27,0,-.3,.25);box(bazooka,.12,.18,.42,0x707873,-.12,.26,-.48);box(bazooka,.16,.12,.5,0x707873,.18,.22,.28);
     bazooka.rotation.x=-.08;bazooka.visible=false;u.bazooka=bazooka;
+    // Rifle de franctirador amb culata, canó llarg i visor elevat.
+    const sniper=new THREE.Group();sniper.position.set(.23,3.1,-.58);player.add(sniper);
+    box(sniper,.23,.24,2.2,0x596b5e,0,0,-.24,'paint');
+    box(sniper,.15,.15,1.55,0x303938,0,.03,-1.95,'metal');
+    box(sniper,.3,.32,.82,0x806847,0,-.07,1.05,'paint');
+    box(sniper,.22,.4,.32,0x806847,0,-.13,1.43,'paint');
+    box(sniper,.21,.21,.73,0x273232,0,.31,-.42,'metal');
+    box(sniper,.26,.24,.13,0x273232,0,.31,-.73,'metal');
+    box(sniper,.1,.22,.15,0x353b38,0,-.22,.1,'metal');
+    sniper.visible=false;u.sniper=sniper;
     player.scale.setScalar(2/3);
     return player;
   },
-  animatePlayer(player,{forward,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false}){
+  animatePlayer(player,{forward,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,sniperEquipped=false}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),move=Math.min(1,Math.abs(forward)),dir=forward<0?-1:1;
     u.firePose=Math.max(0,(u.firePose||0)-dt);u.meleePose=Math.max(0,(u.meleePose||0)-dt);u.grenadeThrow=Math.max(0,(u.grenadeThrow||0)-dt);
     u.pistolAimTime=Math.max(0,(u.pistolAimTime||0)-dt);u.pistolShotAge=Math.min(10,(u.pistolShotAge??10)+dt);
@@ -171,7 +181,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
 
     if(swimming&&!inVehicle){
       const stroke=Math.sin(ph),recover=(1-Math.cos(ph))*.5;
-      u.gun.visible=false;u.knife.visible=false;u.bazooka.visible=false;u.grenade.visible=false;
+      u.gun.visible=false;u.knife.visible=false;u.bazooka.visible=false;u.grenade.visible=false;u.sniper.visible=false;
       player.rotation.x+=(-.1-player.rotation.x)*k;player.rotation.z+=(stroke*.035-player.rotation.z)*k;
       tx(u.al,1.15+.18*stroke);tx(u.ar,1.15-.18*stroke);
       tz(u.al,-.42-.38*stroke);tz(u.ar,.42+.38*stroke);
@@ -189,8 +199,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
     player.rotation.z+=(-.035*walk-player.rotation.z)*k;
 
     const aiming=u.firePose>0&&!inVehicle,melee=u.meleePose>0&&!inVehicle,bazooka=!!bazookaEquipped&&!inVehicle,
-          grenade=!!grenadeEquipped&&!inVehicle,throwing=u.grenadeThrow>0&&!inVehicle;
-    u.bazooka.visible=bazooka;u.grenade.visible=(grenade||throwing)&&!u.grenadeReleased;u.gun.visible=!bazooka&&!grenade&&!melee&&(ammo>0||aiming);u.knife.visible=!bazooka&&!grenade&&melee;
+          grenade=!!grenadeEquipped&&!inVehicle,sniper=!!sniperEquipped&&!inVehicle,throwing=u.grenadeThrow>0&&!inVehicle;
+    u.bazooka.visible=bazooka;u.sniper.visible=sniper;u.grenade.visible=(grenade||throwing)&&!u.grenadeReleased;u.gun.visible=!bazooka&&!sniper&&!grenade&&!melee&&(ammo>0||aiming);u.knife.visible=!bazooka&&!sniper&&!grenade&&melee;
 
     if(grenade||throwing){
       const p=throwing?1-Math.max(0,Math.min(1,u.grenadeThrow/.55)):0;
@@ -207,6 +217,9 @@ window.HUNTER_CHARACTERS=Object.freeze({
     }else if(bazooka){
       tx(u.ar,1.2);tz(u.ar,-.18);tx(u.aer,.72);
       tx(u.al,1.02);tz(u.al,.3);tx(u.ael,.88);
+    }else if(sniper){
+      tx(u.ar,1.12);tz(u.ar,-.25);tx(u.aer,.72);
+      tx(u.al,1.06);tz(u.al,.3);tx(u.ael,.7);
     }else if(melee){
       tx(u.ar,.88);tz(u.ar,-.82);tx(u.aer,1.05);
       tx(u.al,-.08);tz(u.al,.08);tx(u.ael,.22);
@@ -225,7 +238,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
 
     // L'animació es llança només amb un tret real de pistola (combat.js).
     // Retrocés mitjà: aprox. 10 cm de reculament local i 5.4 graus de pujada.
-    const pistolAllowed=!inVehicle&&!grenade&&!throwing&&!bazooka&&!melee;
+    const pistolAllowed=!inVehicle&&!grenade&&!throwing&&!bazooka&&!sniper&&!melee;
     const targetBlend=pistolAllowed&&u.pistolAimTime>0?1:0;
     u.pistolBlend+=(targetBlend-u.pistolBlend)*(1-Math.exp(-18*dt));
     const blend=pistolAllowed?u.pistolBlend:0,rig=u.pistolRig;
