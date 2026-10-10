@@ -910,10 +910,31 @@ const floor=ib?ib.fy+.3:groundAt(P.x,P.z),surface=wy(P.x,P.z,t);swimming=!cv&&!i
 // Actualització del LOD de les palmeres a baixa freqüència (i també en vehicle).
 palmVisualTick-=dt;
 if(palmVisualTick<=0){palmVisualTick=.16;if(PM.update)PM.update(P.x,P.z)}
+// Un vehicle sota un hangar també ha de deixar veure l'interior.
+// Només s'amaga la coberta quan som realment per sota seu (no en sobrevolar-la).
+function viewInsideBuilding(b){
+  if(b===ib)return true;
+  if(!b.hangar||!cv||cv.destroyed)return false;
+  const y=VT[cv.t]?.m==='a'?(cv.alt??cv.o?.position?.y):(cv.o?.position?.y??cv.alt);
+  return Math.abs(cv.x-b.x)<b.w/2&&Math.abs(cv.z-b.z)<b.d/2&&
+    y!=null&&y>=b.fy-2&&y<b.fy+b.h+2;
+}
+function updateBuildingVisibility(){
+  B.forEach(b=>{
+    const inside=viewInsideBuilding(b),dx=b.x-P.x,dz=b.z-P.z;
+    b.o.visible=inside||dx*dx+dz*dz<(qualityName==='ultra'?1350*1350:3240000);
+    b.roof.visible=!inside&&b.rhp>0;
+    // La paret posterior arquejada de l'hangar comparteix b.wm.
+    // Amb depthWrite actiu una paret translúcida encara oculta els
+    // vehicles i objectes de darrere; desactivam-lo mentre és transparent.
+    b.wm.opacity=b.dm.opacity=inside?.18:1;
+    b.wm.depthWrite=b.dm.depthWrite=!inside;
+  });
+}
 worldVisualTick-=dt;
 if(worldVisualTick<=0){
   worldVisualTick=.2;
-  B.forEach(b=>{const i=b===ib,dx=b.x-P.x,dz=b.z-P.z;b.o.visible=i||dx*dx+dz*dz<(qualityName==='ultra'?1350*1350:3240000);b.roof.visible=!i&&b.rhp>0;b.wm.opacity=b.dm.opacity=i?.18:1})
+  updateBuildingVisibility();
 }
 updateDoors(dt);
 items.forEach(it=>{const dx=it.x-P.x,dz=it.z-P.z;if(dx*dx+dz*dz<ITEM_ANIM2){it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25}});
