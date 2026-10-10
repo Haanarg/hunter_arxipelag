@@ -77,6 +77,54 @@ run(knifePreviewSource+`
 ok('knifePreviewProposals','five knife previews preserve anatomically correct elbows and centered grips');
 ok('knifeForwardSameGrip','4A and 4B share exactly the same arm and hand placement, changing only blade direction');
 
+const knifeAttackSource=require('fs').readFileSync(require('path').join(__dirname,'../src/knife-attack-concepts.mjs'),'utf8')
+  .replace(/export (const|function)/g,'$1');
+run('(function(){'+knifeAttackSource+`
+  const results=knifeAttackConcepts.map((cfg,i)=>{
+    const model=createKnifeAttackConcept(THREE,i),u=model.userData;
+    const sample=p=>{
+      const state=applyKnifeAttackConcept(model,i,p);
+      model.updateMatrixWorld(true);
+      const hand=u.knife.getWorldPosition(new THREE.Vector3()),
+            palm=u.aer.localToWorld(new THREE.Vector3(0,-.62*1.2,-.025*1.2)),
+            tip=u.knife.localToWorld(u.knife.userData.previewTip.clone()),
+            delta=tip.sub(hand);
+      return {state,grip:hand.distanceTo(palm),
+        forward:-delta.z/delta.length(),tipZ:delta.z,
+        elbow:u.aer.rotation.x,shoulder:u.ar.rotation.x,
+        wristY:u.knife.rotation.y,
+        y:hand.y,visible:u.knife.visible&&!u.gun.visible};
+    };
+    const rest=sample(0),windup=sample(.17),impact=sample(.55),
+          recovery=sample(1);
+    return {
+      ok:rest.visible&&windup.visible&&impact.visible&&recovery.visible&&
+        Math.abs(rest.wristY)<1e-9&&
+        Math.abs(impact.wristY+Math.PI/2)<1e-8&&
+        Math.abs(impact.state.wristDegrees-90)<1e-8&&
+        impact.forward>.85&&impact.tipZ<-.55&&
+        impact.elbow>.15&&windup.elbow>0&&
+        impact.grip<1e-7&&rest.grip<1e-7&&recovery.grip<1e-7&&
+        Math.abs(rest.shoulder-window.HUNTER_CHARACTERS.knifePose4B.shoulder.x)<1e-8&&
+        Math.abs(recovery.shoulder-rest.shoulder)<1e-8&&
+        Math.abs(recovery.wristY)<1e-8,
+      attackTip:[impact.forward,impact.y,impact.shoulder]
+    };
+  });
+  globalThis.knifeAttackFourVariants=results.length===4&&results.every(r=>r.ok);
+  globalThis.knifeAttackDifferentMoves=
+    new Set(results.map(r=>r.attackTip.map(n=>Math.round(n*100)).join(','))).size===4;
+})()`);
+ok('knifeAttackFourVariants','four 4B previews grip the knife, rotate the wrist inward 90 degrees at impact and recover anatomically');
+ok('knifeAttackDifferentMoves','four previews have distinct strike timing and spatial trajectories');
+const knifeAttackPreviewPage=require('fs').readFileSync(require('path').join(__dirname,'../proves.html'),'utf8');
+assert(knifeAttackPreviewPage.includes('mode=ganivet-atac')&&
+  knifeAttackPreviewPage.includes('attackPlay')&&
+  knifeAttackPreviewPage.includes('attackSeek')&&
+  knifeAttackPreviewPage.includes('applyKnifeAttackConcept(model,i,p)'),
+  'the knife animation preview page exposes four synchronized animations, pause and frame scrubbing');
+
+
 run(`{
   const characters=window.HUNTER_CHARACTERS,
         model=characters.createPlayer(THREE,{box:bx}),u=model.userData,
