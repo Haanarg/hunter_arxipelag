@@ -639,6 +639,30 @@ ok("buildingSrc.includes('const spring=.12')&&buildingSrc.includes('sideWalls:[]
 ok("String(mkB).includes('Sense parets laterals ni paret rectangular posterior')",'hangar generator omits the old rectangular rear wall and lateral walls');
 ok("!String(mkB).includes('push(0,backZ,w,t)')",'the obsolete rear rectangular mesh is not created');
 ok("String(buildApprovedCompound).includes('hangarRear:true')",'arched rear wall has the only back collision and damage record');
+run(`{
+  const b=B.find(b=>b.hangar),rear=Wl.find(w=>w.hangarRear&&w.owner===b),
+        prevCv=cv,prevIb=ib;
+  let onFoot=false,inVehicle=false,airAbove=false,outside=false;
+  try{
+    // La paret posterior arquejada ha de compartir el material esvaït.
+    ib=b;cv=null;updateBuildingVisibility();
+    onFoot=b.roof.visible===false&&b.wm.opacity===.18&&
+      b.wm.depthWrite===false&&rear?.m.material===b.wm;
+    ib=null;cv={t:'tanc',x:b.x,z:b.z,o:{position:{y:b.fy+1}}};
+    updateBuildingVisibility();
+    inVehicle=b.roof.visible===false&&b.wm.opacity===.18&&
+      b.wm.depthWrite===false&&rear?.m.material===b.wm;
+    cv={t:'heli',x:b.x,z:b.z,alt:b.fy+b.h+30};
+    updateBuildingVisibility();
+    airAbove=b.roof.visible===true&&b.wm.opacity===1&&b.wm.depthWrite===true;
+    cv={t:'tanc',x:b.x+b.w/2+20,z:b.z,o:{position:{y:b.fy+1}}};
+    updateBuildingVisibility();
+    outside=b.roof.visible===true&&b.wm.opacity===1&&b.wm.depthWrite===true;
+    globalThis.hangarInteriorVisibleInVehicle=onFoot&&inVehicle&&airAbove&&outside;
+  }finally{cv=prevCv;ib=prevIb;updateBuildingVisibility()}
+}`);
+ok('hangarInteriorVisibleInVehicle','arched rear wall fades with depthWrite off and roof stays hidden inside vehicles, not when flying above');
+
 ok("window.HUNTER_COMPOUND_LAYOUTS.find(l=>l.id==='hangar').props.filter(p=>p[0]==='fuel').every(p=>p[2]<-30)",'garage fuel tanks stay behind the workshop');
 ok("VD.types.heli_combat.maxF>VD.types.heli.maxF&&VD.types.heli_combat.tu>VD.types.heli.tu&&VD.types.heli_combat.steerResponse>VD.types.heli.steerResponse&&VD.types.heli_combat.yawResponse>VD.types.heli.yawResponse&&VD.types.heli_combat.climb>VD.types.heli.climb",'combat helicopter is faster and more maneuverable than normal helicopter');
 ok("vehSrc.includes('Huey 3B-4')&&vehSrc.includes('roundedPrism(g,2.7,1.74,4.18')&&vehSrc.includes('Variant 4: petit carenat arrodonit')",'normal helicopter uses the selected Huey 3B variant 4 visual model');
