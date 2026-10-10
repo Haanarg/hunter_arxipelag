@@ -313,7 +313,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
       tx(u.aer,target.elbowX,armRate);
       tz(u.aer,target.elbowZ,armRate);
       u.knife.rotation.x+=(target.bladeX-u.knife.rotation.x)*armRate;
-      u.knife.rotation.y+=(target.bladeY-u.knife.rotation.y)*armRate;
+      // El gir ja porta easing temporal: aplicació exacta per arribar als 90° a l'impacte.
+      u.knife.rotation.y=target.bladeY;
       u.knife.rotation.z+=(target.bladeZ-u.knife.rotation.z)*armRate;
       // L'esquerra acompanya la punyalada amb un contrapès moderat.
       tx(u.al,-.40*walk+.018*breath+target.leftShoulderX,armRate);
