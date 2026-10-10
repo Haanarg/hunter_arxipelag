@@ -205,8 +205,16 @@ const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1)
 const hqRoute=[[pb.x-52,pb.z-44],[pb.x+52,pb.z-44],[pb.x+52,pb.z+43],[pb.x-52,pb.z+43]],hqDef=[[pb.x-42,pb.z+43],[pb.x+42,pb.z+43],[pb.x-47,pb.z-34],[pb.x+47,pb.z-34]];for(let k=0;k<5;k++){const u=sp2('soldat',pb.x,pb.z,24,54);if(u&&k<3)setDefense(setPatrol(u,hqRoute.map((p,i)=>hqRoute[(i+k)%hqRoute.length]),k===2),hqDef)}
 const carRoute1=[[pb.x-96,pb.z-76],[pb.x+96,pb.z-76],[pb.x+96,pb.z+76],[pb.x-96,pb.z+76]],carRoute2=carRoute1.slice().reverse();
 setPatrol(mkEn('jeep',pb.x-92,pb.z-76),carRoute1,true);setPatrol(mkEn('jeep',pb.x+92,pb.z+76),carRoute2,true);
-const armorRoute1=[[pb.x-42,pb.z+40],[pb.x+42,pb.z+40],[pb.x+46,pb.z-31],[pb.x-46,pb.z-31]],armorRoute2=armorRoute1.slice().reverse();
-setPatrol(mkEn('tanqueta',pb.x-34,pb.z+36),armorRoute1,true);setPatrol(mkEn('tanqueta',pb.x+34,pb.z+36),armorRoute2,true);
+// Patrulles blindades en dos circuits completament independents.
+ // El nord evita el búnquer i la caserna oest; el sud evita el búnquer
+ // i la caserna est. No hi ha cap tram ni cantonada compartits.
+const armorRouteNorth=[[pb.x-34,pb.z-43],[pb.x+34,pb.z-43],
+  [pb.x+34,pb.z-29],[pb.x-34,pb.z-29]];
+const armorRouteSouth=[[pb.x+34,pb.z+43],[pb.x-34,pb.z+43],
+  [pb.x-34,pb.z+29],[pb.x+34,pb.z+29]];
+const northTankette=setPatrol(mkEn('tanqueta',armorRouteNorth[0][0],armorRouteNorth[0][1]),armorRouteNorth,true);
+const southTankette=setPatrol(mkEn('tanqueta',armorRouteSouth[0][0],armorRouteSouth[0][1]),armorRouteSouth,true);
+northTankette.hqPatrolZone='north';southTankette.hqPatrolZone='south';
 [[-69,-61],[69,-61],[-69,61],[69,61]].forEach(([a,b])=>mkEn('torre',pb.x+a,pb.z+b));
 islands.forEach(i=>{if(i===A||i===Bi||R()<.5)return;const q=land(i,60);if(!q)return;for(let k=0;k<1+(R()<.4);k++)sp2('soldat',q.x,q.z,0,10);if(R()<.25)sp2('torre',q.x,q.z,5,12)});
 rb.forEach(b=>{const n=R()<.25?0:R()<.6?1:2,pool=['arma','arma','med','med','expl','granada','granada','disf','mapa','bazooka','franctirador'];for(let k=0;k<n;k++)addIt(pool[Math.floor(R()*pool.length)],b)});
@@ -217,10 +225,9 @@ rb.slice().sort(()=>R()-.5).slice(0,1+MAP_SCALE).forEach(b=>addIt('mapa_heli',b)
 rb.slice().sort(()=>R()-.5).slice(0,1+MAP_SCALE).forEach(b=>addIt('mapa_tanc',b));
 P.x=pa.x;P.z=pa.z+8;P.hd=0;P.base={x:pa.x,z:pa.z};V=[];cv=null;mm=null;
 const add=(t,x,z,a,meta={})=>{const o=mkV(t),c=VT[t],v={t,x,z,hd:a||0,v:0,alt:Math.max(0,hAt(x,z))+.8,o,armor:c.armor??0,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};if(t==='heli_combat')v.rockets=6;if(t==='llanxa_coets')v.rockets=5;world.add(o);V.push(v);return v};
-[
-  {t:'tanc',x:pb.x-18,z:pb.z+42,hd:Math.PI}
-].forEach(v=>add(v.t,v.x,v.z,v.hd,{military:true,hq:true,guaranteed:true}));
-const addProtectedMilitary=()=>{};
+// Cap tanc neutral dins del HQ: els tancs pilotables apareixen
+// distribuïts per l'arxipèlag, lluny de la base enemiga.
+
 const near=(r,t)=>{for(let k=0;k<80;k++){const x=pa.x+rr(-r,r),z=pa.z+rr(-r,r),h=hAt(x,z);if(h>1.5&&slope(x,z,h)<2.5&&!B.some(b=>Math.abs(x-b.x)<b.hw+vehicleRadius(t)&&Math.abs(z-b.z)<b.hd+vehicleRadius(t))&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(t)+vehicleRadius(v.t)+2))return[x,z]}return[pa.x+30,pa.z+30]};
 ['cotxe','moto','bici'].forEach(t=>{const q=near(90,t);add(t,q[0],q[1],rr(0,6.28))});
 const shores=[];for(let a=0;a<360;a+=12)for(let d=10;d<700;d+=10){const x=pa.x+Math.cos(a*.01745)*d,z=pa.z+Math.sin(a*.01745)*d;if(Math.abs(x)>H-60||Math.abs(z)>H-60)break;if(hAt(x,z)<-2){shores.push({d,x,z,a:a*.01745});break}}
