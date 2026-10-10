@@ -196,7 +196,9 @@ else if(t=='jeep'){g=mkV('cotxe');bx(g,.2,2,.2,0xff2020,0,3.4,0)}
 else if(t=='tanqueta'){g=mkV('tanqueta');bx(g,.18,1.7,.18,0xff2020,0,3.2,.4)}
 else if(t=='tanc'){g=mkV('tanc');bx(g,.2,2,.2,0xff2020,0,4,0)}
 else if(t=='torre'){g=new THREE.Group();const leg=0x4b5157,deck=0x626b70,cabin=0x7c2f2f,roof=0x343a3e;
-for(const x of[-1.45,1.45])for(const z of[-1.45,1.45])bx(g,.38,7.8,.38,leg,x,3.9,z,'metal');
+g.userData.towerLegMeshes=[];
+for(const lx of[-1.45,1.45])for(const lz of[-1.45,1.45])
+  g.userData.towerLegMeshes.push(bx(g,.38,7.8,.38,leg,lx,3.9,lz,'metal'));
 bx(g,4.4,.45,4.4,deck,0,7.9,0,'metal');
 for(const x of[-2.05,2.05])bx(g,.16,1.25,4.15,leg,x,8.65,0,'metal');
 for(const z of[-2.05,2.05])bx(g,4.15,1.25,.16,leg,0,8.65,z,'metal');
@@ -206,6 +208,20 @@ bx(g,3.35,.28,3.35,roof,0,10.25,0,'metal');
 bx(g,.32,.32,2.1,roof,0,9.25,-2.25,'metal');
 bx(g,.42,.8,.42,0xe4d36f,0,10.78,0,'paint')}
 else{g=new THREE.Group();bx(g,1,1,.6,0x222222,0,.5,0);bx(g,1.3,1.6,.7,0xd4af37,0,1.8,0);bx(g,.8,.8,.8,0xf0c9a0,0,3,0);bx(g,.9,.5,.9,0xaa0000,0,3.6,0);g.scale.setScalar(1.2)}
-world.add(g);const sensePhase=(E.length%10)*.01,u={t,x,z,gy,hd:rr(0,6.28),o:g,home:{x,z},cd:rr(0,1),alert:0,wt:0,tx:x,tz:z,senseT:sensePhase,canSee:false,defenseTarget:null,...c};E.push(u);return u}
+world.add(g);const sensePhase=(E.length%10)*.01,u={t,x,z,gy,hd:rr(0,6.28),o:g,home:{x,z},cd:rr(0,1),alert:0,wt:0,tx:x,tz:z,senseT:sensePhase,canSee:false,defenseTarget:null,...c};E.push(u);
+if(t==='torre'){
+  const base=gy??enemyGroundAt(u,x,z);
+  // Cada pota té el seu propi AABB: el pas entre les quatre continua obert.
+  // Compartir Wl fa que jugador, vehicles, IA i projectils el respectin.
+  u.towerLegColliders=g.userData.towerLegMeshes.map(m=>{
+    const hw=m.geometry.parameters.width/2,hd=m.geometry.parameters.depth/2,
+          hh=m.geometry.parameters.height/2,cx=x+m.position.x,cz=z+m.position.z;
+    return {towerLegOwner:u,m,x0:cx-hw,x1:cx+hw,z0:cz-hd,z1:cz+hd,
+      y0:base+m.position.y-hh,y1:base+m.position.y+hh,
+      hp:Infinity,door:false,open:false,rammable:false,cx,cz};
+  });
+  Wl.push(...u.towerLegColliders);
+}
+return u}
 
 
