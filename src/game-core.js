@@ -743,7 +743,7 @@ ren.domElement.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.7,
 let drag=null;ren.domElement.addEventListener('pointerdown',e=>{if(!started||paused||over)return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};ren.domElement.setPointerCapture(e.pointerId)});ren.domElement.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId||paused)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(scopeActive)scopePitch=Math.max(-.65,Math.min(.65,scopePitch-dy*.00115));drag.y=e.clientY;const q=cv||P;q.hd-=dx*(scopeActive?.00115:.006);drag.x=e.clientX});ren.domElement.addEventListener('pointerup',()=>drag=null);ren.domElement.addEventListener('pointercancel',()=>drag=null);
 function setSniperScope(enabled){
   scopeActive=!!enabled&&sniperEquipped&&!!inv.franctirador&&!cv&&!swimming&&!over;
-  if(!scopeActive)scopePitch=0;
+  if(!scopeActive){scopePitch=0;if(cam.fov!==58){cam.fov=58;cam.updateProjectionMatrix()}}
   document.body.classList.toggle('sniper-scoped',scopeActive);
   const button=document.getElementById('sniperAimButton');
   if(button)button.setAttribute('aria-pressed',String(scopeActive));
