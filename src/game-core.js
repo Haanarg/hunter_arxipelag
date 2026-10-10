@@ -934,7 +934,9 @@ if(!playerFall){wallPush();treePush();vehiclePushPlayer()}}
 V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;return}if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
 syncFerryCargo();
 ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2)||null;
-const floor=ib?ib.fy+.3:groundAt(P.x,P.z),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;if(!playerFall){
+const floor=ib?ib.fy+.3:groundAt(P.x,P.z),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;
+if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);
+if(!playerFall){
   // El suport segueix el triangle visible JUST sota el centre del jugador.
   // Mostrejar el màxim de quatre punts manté el personatge en l'aire
   // en baixar una pendent, perquè els punts del darrere són més alts.
@@ -1001,7 +1003,7 @@ const scopeNow=scopeActive&&sniperEquipped&&!cv&&!playerFall&&!swimming;
 const fieldOfView=scopeNow?2*Math.atan(Math.tan(58*Math.PI/360)/8)*180/Math.PI:58;
 if(Math.abs(cam.fov-fieldOfView)>.001){cam.fov=fieldOfView;cam.updateProjectionMatrix()}
 if(scopeNow){
-  const fx=-Math.sin(P.hd),fz=-Math.cos(P.hd),vertical=Math.sin(scopePitch);
+  const fx=-Math.sin(P.hd),fz=-Math.cos(P.hd),vertical=Math.tan(scopePitch);
   cam.position.set(P.x-fx*.12,P.y+1.76,P.z-fz*.12);
   cam.lookAt(P.x+fx*160,P.y+1.76+vertical*160,P.z+fz*160);
 }else{
