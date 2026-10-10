@@ -43,7 +43,7 @@ const knifePreviewSource=require('fs').readFileSync(require('path').join(__dirna
   .replace('export function createKnifePoseConcept','function createKnifePoseConcept');
 run(knifePreviewSource+`
 {
-  globalThis.knifePreviewProposals=knifePoseConcepts.length===4&&knifePoseConcepts.every((entry,i)=>{
+  globalThis.knifePreviewProposals=knifePoseConcepts.length===5&&knifePoseConcepts.every((entry,i)=>{
     const player=createKnifePoseConcept(THREE,i),u=player.userData,knife=u.knife;
     player.updateMatrixWorld(true);
     const palm=u.aer.localToWorld(new THREE.Vector3(0,-.62*1.2,-.025*1.2)),
@@ -53,11 +53,29 @@ run(knifePreviewSource+`
     return knife.visible&&!u.gun.visible&&u.aer.rotation.x>.2&&
       forearm.z<-.2&&!!grip&&grip.distanceTo(palm)<1e-6&&
       knife.userData.previewBlade?.parent===knife&&
-      knife.userData.previewTip.y<-.9&&tip.x>.7&&tip.z>.15;
+      knife.userData.previewTip.y<-.9&&tip.x>.7&&
+      (i===4?tip.z<-.5:tip.z>.15);
   });
+  const original=createKnifePoseConcept(THREE,3),
+        forward=createKnifePoseConcept(THREE,4);
+  original.updateMatrixWorld(true);forward.updateMatrixWorld(true);
+  const a=original.userData,b=forward.userData,
+        palmA=a.knife.getWorldPosition(new THREE.Vector3()),
+        palmB=b.knife.getWorldPosition(new THREE.Vector3()),
+        tipA=a.knife.localToWorld(a.knife.userData.previewTip.clone()),
+        tipB=b.knife.localToWorld(b.knife.userData.previewTip.clone());
+  globalThis.knifeForwardSameGrip=
+    palmA.distanceTo(palmB)<1e-7&&
+    Math.abs(a.ar.rotation.x-b.ar.rotation.x)<1e-9&&
+    Math.abs(a.ar.rotation.z-b.ar.rotation.z)<1e-9&&
+    Math.abs(a.aer.rotation.x-b.aer.rotation.x)<1e-9&&
+    Math.abs(a.aer.rotation.z-b.aer.rotation.z)<1e-9&&
+    tipA.z-palmA.z>.3&&tipB.z-palmB.z<-.3&&
+    Math.abs(a.knife.rotation.x-b.knife.rotation.x)>.5;
 }
 `);
-ok('knifePreviewProposals','all four previews bend the elbow forward and grip the handle inside the hand, with blade visible from behind');
+ok('knifePreviewProposals','five knife previews preserve anatomically correct elbows and centered grips');
+ok('knifeForwardSameGrip','4A and 4B share exactly the same arm and hand placement, changing only blade direction');
 
 
 run(`{
