@@ -505,7 +505,7 @@ ok('rowDraft&&rowMaskSafe&&noMaskDebris','rowboat sits 30 cm lower; invisible wa
 
 
 run(`{
-  const saved={cv,fall:playerFall,eject:playerEject,hp,over,swimming,
+  const saved={cv,fall:playerFall,eject:playerEject,hp,over,swimming,elapsed,boom,
     x:P.x,y:P.y,z:P.z,hd:P.hd,message:msg,messageT:msgT},
     x=P.x,z=P.z,ground=Math.max(0,hAt(x,z));
   let exploding=null,dbBefore=DB.length,fxBefore=fx.length;
@@ -526,6 +526,7 @@ run(`{
     exploding={t:'heli_combat',x,z,hd:.3,v:18,alt:ground+34,
       o:mkV('heli_combat'),life:1,maxLife:1};
     exploding.o.position.set(x,exploding.alt,z);world.add(exploding.o);V.push(exploding);
+    boom=()=>{}; // no danys a les construccions de la partida de prova
     cv=exploding;damageVehicle(exploding,80,1);
     const destroyedFall=exploding.destroyed&&!V.includes(exploding)&&
       !cv&&!!playerFall&&playerFall.y===exploding.alt&&
@@ -544,7 +545,7 @@ run(`{
     for(const part of DB.splice(dbBefore))world.remove(part.m);
     for(const effect of fx.splice(fxBefore))world.remove(effect.o);
     cv=saved.cv;playerFall=saved.fall;playerEject=saved.eject;
-    hp=saved.hp;over=saved.over;swimming=saved.swimming;
+    hp=saved.hp;over=saved.over;swimming=saved.swimming;elapsed=saved.elapsed;boom=saved.boom;rebuildVehicleGrid();
     P.x=saved.x;P.y=saved.y;P.z=saved.z;P.hd=saved.hd;
     msg=saved.message;msgT=saved.messageT;
   }
