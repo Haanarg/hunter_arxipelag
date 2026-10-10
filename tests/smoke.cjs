@@ -223,6 +223,65 @@ run(`{
 ok('knife4BEquippedMatchesPreview','in-game knife and anatomical guard pose exactly match the approved 4B preview');
 ok('knife4BAnimation','knife 4B animates while running and lunging, recovers to guard, and hides for firearms, grenades and vehicles');
 
+run('(function(){'+knifeAttackSource+`
+  const chars=window.HUNTER_CHARACTERS,model=createKnifeAttackConcept(THREE,2,true),
+        u=model.userData,base=chars.knifePose4B;
+  globalThis.knife3BPreviewMatchesGame=[0,.17,.4,.55,.75,1].every(p=>{
+    const target=chars.knifeAttack3BTargets(p);
+    applyKnifeAttackConcept(model,2,p,true);
+    return Math.abs(u.ar.rotation.x-target.shoulderX)<1e-8&&
+      Math.abs(u.ar.rotation.z-target.shoulderZ)<1e-8&&
+      Math.abs(u.aer.rotation.x-target.elbowX)<1e-8&&
+      Math.abs(u.aer.rotation.z-target.elbowZ)<1e-8&&
+      Math.abs(u.knife.rotation.x-target.bladeX)<1e-8&&
+      Math.abs(u.knife.rotation.y-target.bladeY)<1e-8&&
+      Math.abs(u.knife.rotation.z-target.bladeZ)<1e-8&&
+      Math.abs(u.al.rotation.x-(-.04+target.leftShoulderX))<1e-8&&
+      Math.abs(u.al.rotation.z-(-.12+target.leftShoulderZ))<1e-8&&
+      Math.abs(u.ael.rotation.x-(.17+target.leftElbowX))<1e-8;
+  })&&Math.abs(chars.knifeAttack3BTargets(.55).bladeY-Math.PI/2)<1e-8&&
+    chars.knifeAttack3BTargets(.55).leftShoulderX>.1;
+})()`);
+ok('knife3BPreviewMatchesGame','selected 3B preview shares right wrist, elbow, shoulder and left-arm movement with the game');
+
+run(`{
+  const chars=window.HUNTER_CHARACTERS,
+        player=chars.createPlayer(THREE,{box:bx}),u=player.userData,
+        ready={forward:0,dt:1/60,swimming:false,inVehicle:false,ammo:0,
+          bazookaEquipped:false,grenadeEquipped:false,sniperEquipped:false};
+  const frame=()=>{
+    player.position.set(0,0,0);
+    chars.animatePlayer(player,ready);
+    player.position.set(0,0,0);
+    player.updateMatrixWorld(true);
+  };
+  for(let i=0;i<80;i++)frame();
+  u.meleePose=u.knifeAttackDuration;
+  let maxWrist=0,maxLeftSwing=0,maxLeftElbow=0,minRightElbow=10,gripCorrect=true;
+  for(let i=0;i<Math.ceil(u.knifeAttackDuration/ready.dt)+2;i++){
+    frame();
+    maxWrist=Math.max(maxWrist,u.knife.rotation.y);
+    maxLeftSwing=Math.max(maxLeftSwing,u.al.rotation.x-.018*Math.sin(u.breath));
+    maxLeftElbow=Math.max(maxLeftElbow,u.ael.rotation.x-.16);
+    minRightElbow=Math.min(minRightElbow,u.aer.rotation.x);
+    gripCorrect=gripCorrect&&u.knife.getWorldPosition(new THREE.Vector3())
+      .distanceTo(u.aer.localToWorld(new THREE.Vector3(0,-.744,-.03)))<1e-6;
+  }
+  for(let i=0;i<50;i++)frame();
+  const recovers=Math.abs(u.knife.rotation.y)<1e-7&&
+    Math.abs(u.ar.rotation.x-chars.knifePose4B.shoulder.x)<.002&&
+    Math.abs(u.aer.rotation.x-chars.knifePose4B.elbow.x)<.002&&
+    Math.abs(u.al.rotation.x-.018*Math.sin(u.breath))<.004;
+  globalThis.knife3BInGame=
+    Math.abs(maxWrist-Math.PI/2)<1e-7&&u.knife.visible&&
+    maxLeftSwing>.08&&maxLeftSwing<.26&&
+    maxLeftElbow>.05&&maxLeftElbow<.22&&
+    minRightElbow>.15&&gripCorrect&&recovers&&
+    u.knifeAttackDuration<=.52;
+}`);
+ok('knife3BInGame','melee now plays 3B +90-degree wrist turn, subtle left arm and complete return within cooldown');
+
+
 
 
 run(`{
