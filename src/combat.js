@@ -128,6 +128,14 @@ function grenadeImpactTrajectory(power=0,origin=P,hd=P.hd){
   const end=points[points.length-1];
   return {points,landing:{x:end.x,z:end.z,y:Math.max(hAt(end.x,end.z),wy(end.x,end.z,elapsed))+.21}};
 }
+// Només la cinta visual comença per sobre del cap, deixant espai amb
+// el jugador. No retallam la simulació: el cercle continua marcant la
+// caiguda real, fins i tot si la granada impacta abans de sortir del cos.
+function grenadeAimStartIndex(points,origin=P){
+  const minHeight=origin.y+3.55,minimumGap=1.45;
+  return points.findIndex((p,i)=>i>0&&p.y>=minHeight&&
+    Math.hypot(p.x-origin.x,p.z-origin.z)>=minimumGap);
+}
 function beginGrenadeCharge(){
   if(grenadeCharge||over||paused||cv||swimming||playerFall||fcd>0||!grenadeEquipped||!inv.granada)return false;
   grenadeCharge={elapsed:0};
@@ -178,16 +186,17 @@ function updateGrenadeCharge(dt){
     circle.renderOrder=1002;fill.renderOrder=1001;
     world.add(line,circle,fill);grenadeAimVisual={line,circle,fill};
   }
-  const a=grenadeAimVisual,attr=a.line.geometry.attributes.position;
-  for(let i=0;i<aim.points.length;i++){
-    const p=aim.points[i],before=aim.points[Math.max(0,i-1)],
-          after=aim.points[Math.min(aim.points.length-1,i+1)],
+  const a=grenadeAimVisual,attr=a.line.geometry.attributes.position,
+        start=grenadeAimStartIndex(aim.points),visiblePoints=start<0?[]:aim.points.slice(start);
+  for(let i=0;i<visiblePoints.length;i++){
+    const p=visiblePoints[i],before=visiblePoints[Math.max(0,i-1)],
+          after=visiblePoints[Math.min(visiblePoints.length-1,i+1)],
           dx=after.x-before.x,dz=after.z-before.z,d=Math.max(.001,Math.hypot(dx,dz)),
           sx=-dz/d*.125,sz=dx/d*.125;
     attr.setXYZ(i*2,p.x-sx,p.y+.06,p.z-sz);
     attr.setXYZ(i*2+1,p.x+sx,p.y+.06,p.z+sz);
   }
-  a.line.geometry.setDrawRange(0,Math.max(0,aim.points.length-1)*6);attr.needsUpdate=true;
+  a.line.geometry.setDrawRange(0,Math.max(0,visiblePoints.length-1)*6);attr.needsUpdate=true;
   a.circle.position.set(aim.landing.x,aim.landing.y+.035,aim.landing.z);
   a.fill.position.set(aim.landing.x,aim.landing.y+.02,aim.landing.z);
 }
