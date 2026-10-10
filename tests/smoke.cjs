@@ -117,11 +117,54 @@ run('(function(){'+knifeAttackSource+`
 })()`);
 ok('knifeAttackFourVariants','four 4B previews grip the knife, rotate the wrist inward 90 degrees at impact and recover anatomically');
 ok('knifeAttackDifferentMoves','four previews have distinct strike timing and spatial trajectories');
+
+run('(function(){'+knifeAttackSource+`
+  const a=createKnifeAttackConcept(THREE,2,false),
+        b=createKnifeAttackConcept(THREE,2,true),
+        ua=a.userData,ub=b.userData;
+  let sameArm=true,oppositeWrist=true,gripsCorrect=true;
+  for(const p of[0,.2,.35,.55,.7,1]){
+    const ar=applyKnifeAttackConcept(a,2,p,false),
+          br=applyKnifeAttackConcept(b,2,p,true);
+    a.updateMatrixWorld(true);b.updateMatrixWorld(true);
+    const handA=ua.knife.getWorldPosition(new THREE.Vector3()),
+          handB=ub.knife.getWorldPosition(new THREE.Vector3()),
+          palmA=ua.aer.localToWorld(new THREE.Vector3(0,-.744,-.03)),
+          palmB=ub.aer.localToWorld(new THREE.Vector3(0,-.744,-.03));
+    sameArm=sameArm&&
+      Math.abs(ua.ar.rotation.x-ub.ar.rotation.x)<1e-9&&
+      Math.abs(ua.ar.rotation.z-ub.ar.rotation.z)<1e-9&&
+      Math.abs(ua.aer.rotation.x-ub.aer.rotation.x)<1e-9&&
+      Math.abs(ua.aer.rotation.z-ub.aer.rotation.z)<1e-9&&
+      handA.distanceTo(handB)<1e-8;
+    oppositeWrist=oppositeWrist&&
+      Math.abs(ua.knife.rotation.y+ub.knife.rotation.y)<1e-9&&
+      Math.abs(ar.wristDegrees+br.wristDegrees)<1e-9;
+    gripsCorrect=gripsCorrect&&
+      handA.distanceTo(palmA)<1e-7&&handB.distanceTo(palmB)<1e-7;
+  }
+  applyKnifeAttackConcept(a,2,.55,false);
+  applyKnifeAttackConcept(b,2,.55,true);
+  a.updateMatrixWorld(true);b.updateMatrixWorld(true);
+  const pointA=ua.knife.localToWorld(ua.knife.userData.previewTip.clone()),
+        pointB=ub.knife.localToWorld(ub.knife.userData.previewTip.clone());
+  globalThis.knifeAttackThreeReverseCompare=
+    knifeAttackConcepts.length===4&&knifeAttackThreeCompare.length===2&&
+    knifeAttackThreeCompare[0].variantIndex===2&&
+    knifeAttackThreeCompare[1].variantIndex===2&&
+    sameArm&&oppositeWrist&&gripsCorrect&&
+    Math.abs(ua.knife.rotation.y+Math.PI/2)<1e-9&&
+    Math.abs(ub.knife.rotation.y-Math.PI/2)<1e-9&&
+    pointA.distanceTo(pointB)>.1;
+})()`);
+ok('knifeAttackThreeReverseCompare','animation 3B rotates wrist in the opposite 90-degree direction with identical arm, timing and grip');
+
 const knifeAttackPreviewPage=require('fs').readFileSync(require('path').join(__dirname,'../proves.html'),'utf8');
 assert(knifeAttackPreviewPage.includes('mode=ganivet-atac')&&
   knifeAttackPreviewPage.includes('attackPlay')&&
   knifeAttackPreviewPage.includes('attackSeek')&&
-  knifeAttackPreviewPage.includes('applyKnifeAttackConcept(model,i,p)'),
+  knifeAttackPreviewPage.includes('applyKnifeAttackConcept(model,attackCompareMode?2:i,p,attackCompareMode&&i===1)')&&
+  knifeAttackPreviewPage.includes('mode=ganivet-atac-3'),
   'the knife animation preview page exposes four synchronized animations, pause and frame scrubbing');
 
 
