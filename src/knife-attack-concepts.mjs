@@ -26,6 +26,20 @@ export const knifeAttackConcepts=Object.freeze([
     thrust:[.31,.57,.83],knifeX:.12,knifeZ:-.13
   })
 ]);
+// Comparació específica de la proposta 3: no canvia la trajectòria del
+// braç, només inverteix el gir local del canell (+90° en lloc de -90°).
+export const knifeAttackThreeCompare=Object.freeze([
+  Object.freeze({
+    name:'3A · Estocada lateral original',tag:'Canell cap a dins · −90°',
+    description:'Animació 3 original. Preparació lateral i gir del canell cap a dins durant l’estocada.',
+    variantIndex:2,reverseWrist:false
+  }),
+  Object.freeze({
+    name:'3B · Estocada lateral invertida',tag:'Canell cap a fora · +90°',
+    description:'Mateix braç, colze, temps i estocada de la 3A; únicament el canell gira 90° en el sentit contrari.',
+    variantIndex:2,reverseWrist:true
+  })
+]);
 export const knifeAttackDuration=1.25;
 const smooth=t=>{const n=Math.max(0,Math.min(1,t));return n*n*(3-2*n)};
 const pulse=(p,start,peak,end)=>p<=start||p>=end?0:
@@ -34,7 +48,7 @@ const heldTurn=(p,start,full,release,end)=>p<=start||p>=end?0:
   p<full?smooth((p-start)/(full-start)):
   p<=release?1:1-smooth((p-release)/(end-release));
 
-export function createKnifeAttackConcept(THREE,index=0){
+export function createKnifeAttackConcept(THREE,index=0,reverseWrist=false){
   if(!knifeAttackConcepts[index])throw new RangeError('Animació de ganivet desconeguda: '+index);
   // Exactament el jugador, el ganivet i el colze del joc (4B).
   const mats=new Map();
@@ -48,26 +62,27 @@ export function createKnifeAttackConcept(THREE,index=0){
   const u=model.userData;
   u.gun.visible=false;u.bazooka.visible=false;u.sniper.visible=false;u.grenade.visible=false;
   u.knife.visible=true;
-  applyKnifeAttackConcept(model,index,0);
+  applyKnifeAttackConcept(model,index,0,reverseWrist);
   return model;
 }
 
-export function applyKnifeAttackConcept(model,index,progress){
+export function applyKnifeAttackConcept(model,index,progress,reverseWrist=false){
   const config=knifeAttackConcepts[index];
   if(!config)throw new RangeError('Animació de ganivet desconeguda: '+index);
   const u=model.userData,b=window.HUNTER_CHARACTERS.knifePose4B,
         p=Math.max(0,Math.min(1,progress)),
         preparation=pulse(p,.025,.17,.37),
         thrust=pulse(p,...config.thrust),
-        // La rotació sobre l'eix Y LOCAL és cap a dins (−90°).
-        // L'eix X faria girar la punta lluny de l'enemic.
+        // L'eix Y LOCAL mou el canell: original −90°, iteració +90°.
+        // X i Z, la mà i la trajectòria del braç queden idèntics.
         wrist=heldTurn(p,...config.turn),
-        quarterTurn=Math.PI/2*wrist;
+        quarterTurn=Math.PI/2*wrist,
+        signedTurn=reverseWrist?quarterTurn:-quarterTurn;
   u.ar.rotation.set(b.shoulder.x-config.windup*preparation+config.reach*thrust,
     b.shoulder.y,b.shoulder.z+config.windup*.65*preparation+config.open*thrust);
   u.aer.rotation.set(b.elbow.x+.18*preparation-config.extend*thrust,
     b.elbow.y,b.elbow.z);
-  u.knife.rotation.set(b.blade.x+config.knifeX*thrust,-quarterTurn,
+  u.knife.rotation.set(b.blade.x+config.knifeX*thrust,signedTurn,
     b.blade.z+config.knifeZ*thrust);
   u.al.rotation.set(-.04,0,-.12);
   u.ael.rotation.set(.17,0,-.04);
@@ -75,5 +90,5 @@ export function applyKnifeAttackConcept(model,index,progress){
   u.gun.visible=false;
   model.rotation.set(0,0,0);
   model.position.set(0,0,0);
-  return {wristDegrees:90*wrist,thrust,preparation};
+  return {wristDegrees:(reverseWrist?-90:90)*wrist,thrust,preparation};
 }
