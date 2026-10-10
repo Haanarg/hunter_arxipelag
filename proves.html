@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hunter · Quatre propostes de cap reduït del jugador</title>
+<title>Hunter · Proves de models 3D</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -42,16 +42,19 @@ header p{font-size:12px;color:#c5d2ce;margin:0}
 <div id="ui">
 <header>
  <div>
-  <h1>Cap del jugador · 4 propostes</h1>
-  <p>Quatre comparacions del cap al 75% aproximadament, amb coll curt. La proposta D ja s’utilitza al joc i als riders.</p>
+  <h1 id="comparisonTitle">Ganivet del jugador · 4 propostes</h1>
+  <p id="comparisonIntro">Quatre postures del ganivet en el model real del jugador, comparades des del darrere.</p>
  </div>
  <div class="controls" aria-label="Controls de comparació">
   <button id="bodyView" type="button" class="active" aria-pressed="true">Cos sencer</button>
-  <button id="headView" type="button" aria-pressed="false">Primer pla del cap</button>
+  <button id="headView" type="button" aria-pressed="false">Primer pla del ganivet</button>
   <span class="separator"></span>
-  <button id="front" type="button">Front</button>
-  <button id="quarter" type="button" class="active">3/4</button>
+  <button id="front" type="button">Darrere</button>
+  <button id="quarter" type="button" class="active">3/4 darrere</button>
   <button id="profile" type="button">Perfil</button>
+  <span class="separator"></span>
+  <a id="knifeMode" href="proves.html?mode=ganivet" style="border-color:#b6dca7;color:#dff9c8">Ganivet · 4 propostes</a>
+  <a id="headMode" href="proves.html?mode=cap">Caps · 4 propostes</a>
   <span class="separator"></span>
   <a href="dispar-proves.html" style="border-color:#b6dca7;color:#dff9c8">Dispar · dues mans ↗</a>
   <a href="explosius-proves.html">Explosius ↗</a>
@@ -60,11 +63,30 @@ header p{font-size:12px;color:#c5d2ce;margin:0}
  </div>
 </header>
 <div id="cards"></div>
-<p class="hint">Arrossega cada figura horitzontalment per girar-la. Usa «Primer pla del cap» per comparar gorra, cabells i ulleres.</p>
+<p class="hint" id="comparisonHint">Arrossega cada figura per girar-la. Usa «Primer pla del ganivet» per comparar la visibilitat de la fulla des del darrere.</p>
 </div>
+<script src="src/palette.js"></script>
+<script src="src/player-model.js"></script>
+<script src="src/characters.js"></script>
 <script type="module">
 import * as THREE from './vendor/three-r186.module.mjs';
 import {createPlayerHeadConcept,playerHeadConcepts} from './src/player-head-concepts.mjs?v=20261008-head-02';
+import {createKnifePoseConcept,knifePoseConcepts} from './src/knife-pose-concepts.mjs?v=20261010-knife-01';
+
+const knifeMode=new URLSearchParams(location.search).get('mode')!=='cap';
+const concepts=knifeMode?knifePoseConcepts:playerHeadConcepts;
+if(!knifeMode){
+  document.getElementById('comparisonTitle').textContent='Cap del jugador · 4 propostes';
+  document.getElementById('comparisonIntro').textContent='Comparació del cap més petit i el coll curt. La proposta D ja és al joc.';
+  document.getElementById('headView').textContent='Primer pla del cap';
+  document.getElementById('front').textContent='Front';
+  document.getElementById('quarter').textContent='3/4';
+  document.getElementById('comparisonHint').textContent='Arrossega per girar la figura i examinar les quatre propostes de cap.';
+  document.getElementById('knifeMode').style.color='';
+  document.getElementById('knifeMode').style.borderColor='';
+  document.getElementById('headMode').style.color='#dff9c8';
+  document.getElementById('headMode').style.borderColor='#b6dca7';
+}
 
 const canvas=document.getElementById('canvas');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
@@ -89,21 +111,21 @@ pedestal.position.y=-.13;stand.add(pedestal);scene.add(stand);
 const cards=[],models=[],cameras=[],yaws=[];
 const cardsEl=document.getElementById('cards');
 let closeUp=false,frameQueued=false,viewW=0,viewH=0;
-playerHeadConcepts.forEach((entry,i)=>{
+concepts.forEach((entry,i)=>{
  const card=document.createElement('div');
  card.className='card';
  const tag=document.createElement('div');tag.className='tag';tag.textContent='PROPOSTA '+(i+1);
  const scale=document.createElement('div');scale.className='scale';
- scale.textContent='Cap: '+Math.round(entry.headScale[0]*100)+'–'+Math.round(entry.headScale[1]*100)+'%'+(i===3?' · AL JOC':'');
+ scale.textContent=knifeMode?entry.tag:'Cap: '+Math.round(entry.headScale[0]*100)+'–'+Math.round(entry.headScale[1]*100)+'%'+(i===3?' · AL JOC':'');
  const info=document.createElement('div');info.className='info';
  const title=document.createElement('b');title.textContent=entry.name;
  const desc=document.createElement('small');desc.textContent=entry.description;
  info.append(title,desc);card.append(tag,scale,info);
  cardsEl.appendChild(card);cards.push(card);
- const model=createPlayerHeadConcept(THREE,i);
+ const model=knifeMode?createKnifePoseConcept(THREE,i):createPlayerHeadConcept(THREE,i);
  model.visible=false;scene.add(model);models.push(model);
  const camera=new THREE.OrthographicCamera(-3,3,3,-3,.1,60);
- cameras.push(camera);yaws.push(.42);
+ cameras.push(camera);yaws.push(knifeMode?-.42:.42);
  let pointer=null;
  card.addEventListener('pointerdown',event=>{
    pointer={id:event.pointerId,x:event.clientX,start:yaws[i]};
@@ -128,7 +150,7 @@ function setCloseUp(value){
 }
 bodyButton.addEventListener('click',()=>setCloseUp(false));
 headButton.addEventListener('click',()=>setCloseUp(true));
-const presets={front:0,quarter:.42,profile:Math.PI/2};
+const presets={front:knifeMode?0:0,quarter:knifeMode?-.42:.42,profile:Math.PI/2};
 for(const [id,yaw]of Object.entries(presets)){
  document.getElementById(id).addEventListener('click',()=>{
    for(let i=0;i<yaws.length;i++)yaws[i]=yaw;
@@ -160,11 +182,11 @@ function render(){
    const top=Math.max(0,Math.floor(rect.top)),bottom=Math.min(viewH,Math.ceil(rect.bottom));
    const w=right-left,h=bottom-top;
    if(w<=0||h<=0)continue;
-   const camera=cameras[i],ratio=w/h,vertical=closeUp?1.65:4.75;
+   const camera=cameras[i],ratio=w/h,vertical=closeUp?(knifeMode?1.85:1.65):(knifeMode?3.55:4.75);
    camera.left=-vertical*ratio/2;camera.right=vertical*ratio/2;
    camera.top=vertical/2;camera.bottom=-vertical/2;
-   const lookAtY=closeUp?3.26:1.92;
-   camera.position.set(0,lookAtY+(closeUp?.35:.45),-8);
+   const lookAtY=knifeMode?(closeUp?1.35:1.25):(closeUp?3.26:1.92);
+   camera.position.set(0,lookAtY+(closeUp?.10:.30),knifeMode?8:-8);
    camera.lookAt(0,lookAtY,0);
    camera.updateProjectionMatrix();
    renderer.setViewport(left,viewH-bottom,w,h);
