@@ -208,13 +208,16 @@ setPatrol(mkEn('jeep',pb.x-92,pb.z-76),carRoute1,true);setPatrol(mkEn('jeep',pb.
 // Patrulles blindades en dos circuits completament independents.
  // El nord evita el búnquer i la caserna oest; el sud evita el búnquer
  // i la caserna est. No hi ha cap tram ni cantonada compartits.
-const armorRouteNorth=[[pb.x-34,pb.z-43],[pb.x+34,pb.z-43],
-  [pb.x+34,pb.z-29],[pb.x-34,pb.z-29]];
-const armorRouteSouth=[[pb.x+34,pb.z+43],[pb.x-34,pb.z+43],
-  [pb.x-34,pb.z+29],[pb.x+34,pb.z+29]];
-const northTankette=setPatrol(mkEn('tanqueta',armorRouteNorth[0][0],armorRouteNorth[0][1]),armorRouteNorth,true);
-const southTankette=setPatrol(mkEn('tanqueta',armorRouteSouth[0][0],armorRouteSouth[0][1]),armorRouteSouth,true);
+const armorRouteNorth=[[pb.x+34,pb.z-43],[pb.x+34,pb.z-29],
+  [pb.x-34,pb.z-29],[pb.x-34,pb.z-43]];
+const armorRouteSouth=[[pb.x-34,pb.z+43],[pb.x-34,pb.z+29],
+  [pb.x+34,pb.z+29],[pb.x+34,pb.z+43]];
+const northTankette=setPatrol(mkEn('tanqueta',pb.x-34,pb.z-43),armorRouteNorth,true);
+const southTankette=setPatrol(mkEn('tanqueta',pb.x+34,pb.z+43),armorRouteSouth,true);
 northTankette.hqPatrolZone='north';southTankette.hqPatrolZone='south';
+// Miren cap al primer tram, sense girs aleatoris de sortida ni punts
+// inicials coincidents que les mantinguin quietes al primer waypoint.
+northTankette.hd=-Math.PI/2;southTankette.hd=Math.PI/2;
 [[-69,-61],[69,-61],[-69,61],[69,61]].forEach(([a,b])=>mkEn('torre',pb.x+a,pb.z+b));
 islands.forEach(i=>{if(i===A||i===Bi||R()<.5)return;const q=land(i,60);if(!q)return;for(let k=0;k<1+(R()<.4);k++)sp2('soldat',q.x,q.z,0,10);if(R()<.25)sp2('torre',q.x,q.z,5,12)});
 rb.forEach(b=>{const n=R()<.25?0:R()<.6?1:2,pool=['arma','arma','med','med','expl','granada','granada','disf','mapa','bazooka','franctirador'];for(let k=0;k<n;k++)addIt(pool[Math.floor(R()*pool.length)],b)});
