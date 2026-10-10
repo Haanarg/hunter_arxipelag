@@ -974,7 +974,7 @@ if(worldVisualTick<=0){
 updateDoors(dt);
 items.forEach(it=>{const dx=it.x-P.x,dz=it.z-P.z;if(dx*dx+dz*dz<ITEM_ANIM2){it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25}});
 if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-it.z;if(dx*dx+dz*dz<4.84&&Math.abs(P.y-it.y)<3){if(it.t==='arma')ammo+=16;else if(it.t==='franctirador'){inv.franctirador=1;sniperAmmo+=6}else inv[it.t]=(inv[it.t]||0)+(it.t==='granada'?5:it.t==='bazooka'?3:1);world.remove(it.o);items.splice(k,1);msg='Has trobat: '+IT[it.t].n+(it.t==='granada'?' ×5':it.t==='bazooka'?' ×3':it.t==='franctirador'?' +6 cartutxos':'');msgT=3;snd('pick')}}
-msgT-=dt;pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv;animPl(cv?0:f,dt);
+msgT-=dt;pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;animPl(cv?0:f,dt);
 if(!cv&&playerFall){pl.position.y=playerFall.y;pl.rotation.x=(playerFall.spin||1)*playerFall.t*7.5;pl.rotation.z=Math.sin(playerFall.t*8)*.45}
 else if(!cv&&playerEject&&playerEject.t>=0){
   const dur=playerEject.dur||.5,p=Math.max(0,Math.min(1,1-playerEject.t/dur)),u=pl.userData;
