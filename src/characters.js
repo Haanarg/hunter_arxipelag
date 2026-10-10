@@ -53,6 +53,44 @@ function createPlayerPistol(T,gun){
   flash.position.set(0,.183,-.838);flash.visible=false;gun.add(flash);
   return {slide,flash};
 }
+// Postura 4B escollida: exactament la del comparador Three.js.
+// X positiu al colze = flexió cap al davant; ganivet orientat cap al front (-Z).
+const PLAYER_KNIFE_4B=Object.freeze({
+  shoulder:Object.freeze({x:-.10,y:0,z:.55}),
+  elbow:Object.freeze({x:.92,y:0,z:-.08}),
+  blade:Object.freeze({x:.25,y:0,z:.50})
+});
+const PLAYER_KNIFE_ATTACK_SECONDS=.38;
+function makePlayerKnife(T,knife,box){
+  // Compartit pel model en joc i els previews. Mà i mànec tenen el
+  // mateix centre: ja no queda una fulla penjada sota el canell.
+  const palm={x:0,y:-.62*1.2,z:-.025*1.2};
+  knife.position.set(palm.x,palm.y,palm.z);
+  const grip=box(knife,.16,.42,.155,0x59402d,0,0,0);
+  for(const y of[-.105,.095])box(knife,.166,.026,.163,0x9f9e90,0,y,0);
+  box(knife,.205,.065,.185,0x353e40,0,.233,0);
+  box(knife,.39,.07,.18,0x404c4e,0,-.248,0);
+  const profile=new T.Shape();
+  profile.moveTo(-.102,-.284);profile.lineTo(.105,-.284);
+  profile.lineTo(.117,-.63);profile.lineTo(.044,-.97);
+  profile.lineTo(-.045,-1.055);profile.lineTo(-.115,-.69);
+  profile.closePath();
+  const bladeGeo=new T.ExtrudeGeometry(profile,{
+    depth:.065,bevelEnabled:true,bevelThickness:.012,bevelSize:.008,
+    bevelSegments:1,steps:1
+  });
+  bladeGeo.translate(0,0,-.0325);
+  const blade=new T.Mesh(bladeGeo,new T.MeshStandardMaterial({
+    color:0xbac6ca,metalness:.65,roughness:.34,flatShading:true
+  }));
+  blade.castShadow=true;knife.add(blade);
+  box(knife,.026,.48,.012,0xe5eded,0,-.52,-.052);
+  // Els mateixos punts geomètrics permeten verificar posició i direcció.
+  knife.userData.previewGrip=grip;
+  knife.userData.previewBlade=blade;
+  knife.userData.previewPalm=palm;
+  knife.userData.previewTip=new T.Vector3(-.045,-1.055,0);
+}
 // Solució geomètrica dels colzes. Barreja amb la postura base per evitar salts.
 function aimPlayerPistolArm(shoulder,elbow,wrist,side,rig,blend){
   const start=shoulder.position,goal=rig.v1.copy(wrist).sub(start);
@@ -71,6 +109,7 @@ function aimPlayerPistolArm(shoulder,elbow,wrist,side,rig,blend){
   elbow.quaternion.slerp(rig.q2,blend);
 }
 window.HUNTER_CHARACTERS=Object.freeze({
+  knifePose4B:PLAYER_KNIFE_4B,
   createCommando(T,{palette=window.HUNTER_PALETTE}={}){
  const g=window.HUNTER_PLAYER_MODEL.create(T,{palette}),u=g.userData,h=u.head,P=palette.enemy;
  for(const [m,,enemy]of u.mats)m.color.setHex(enemy);
@@ -126,7 +165,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
   },
   createPlayer(THREE,{box,palette=window.HUNTER_PALETTE}){
     const P=palette.player,player=window.HUNTER_PLAYER_MODEL.create(THREE,{unitScale:1.2,palette,headVariant:'compactD'}),u=player.userData;
-    u.ph=0;u.breath=0;u.firePose=0;u.meleePose=0;
+    u.ph=0;u.breath=0;u.firePose=0;u.meleePose=0;u.knifeAttackDuration=PLAYER_KNIFE_ATTACK_SECONDS;
     u.pistolAimTime=0;u.pistolShotAge=10;u.pistolBlend=0;
 
     // La pistola és filla del jugador; en repòs segueix un pivot del canell
@@ -144,7 +183,10 @@ window.HUNTER_CHARACTERS=Object.freeze({
       v1:V(),v2:V(),v3:V(),v4:V(),right:V(),left:V(),idle:V(),aim:V(),
       q1:Q(),q2:Q(),q3:Q(),idleQ:Q(),aimQ:Q()
     };
-    const knife=new THREE.Group();knife.position.set(0,-.72,-.08);knife.rotation.x=-Math.PI/2;u.aer.add(knife);box(knife,.09,.08,.75,0xc7ced0,0,0,-.28);box(knife,.18,.16,.28,0x4b3626,0,0,.25);knife.visible=false;u.knife=knife;
+    const knife=new THREE.Group();u.aer.add(knife);
+    makePlayerKnife(THREE,knife,box);
+    knife.rotation.set(PLAYER_KNIFE_4B.blade.x,PLAYER_KNIFE_4B.blade.y,PLAYER_KNIFE_4B.blade.z);
+    knife.visible=false;u.knife=knife;
     const grenade=new THREE.Group();grenade.position.set(0,-.82,-.08);u.aer.add(grenade);
     const grenadeBody=new THREE.Mesh(new THREE.SphereGeometry(.18,8,6),new THREE.MeshStandardMaterial({color:0x46513f,roughness:.82,metalness:.08}));grenadeBody.scale.set(.88,1.08,.88);grenade.add(grenadeBody);
     box(grenade,.08,.13,.08,0x252b27,0,.18,0);box(grenade,.05,.04,.18,0x747b73,.07,.24,0,'metal');grenade.visible=false;u.grenade=grenade;
@@ -225,9 +267,22 @@ window.HUNTER_CHARACTERS=Object.freeze({
     }else if(sniper){
       tx(u.ar,1.12);tz(u.ar,-.25);tx(u.aer,.72);
       tx(u.al,1.06);tz(u.al,.3);tx(u.ael,.7);
-    }else if(melee){
-      tx(u.ar,.88);tz(u.ar,-.82);tx(u.aer,1.05);
-      tx(u.al,-.08);tz(u.al,.08);tx(u.ael,.22);
+    }else if(u.knife.visible){
+      // Repòs i cursa: el braç dret conserva la postura 4B. Durant l'atac
+      // s'enretira lleument la mà i es fa una estocada endavant; el colze
+      // sempre es flexiona en X positiva i després torna a la 4B.
+      const pose=PLAYER_KNIFE_4B,p=melee?
+        Math.max(0,Math.min(1,1-u.meleePose/u.knifeAttackDuration)):0,
+        windup=melee?Math.max(0,1-Math.abs((p-.15)/.15)):0,
+        thrust=melee?Math.max(0,1-Math.abs((p-.56)/.38)):0,
+        armRate=1-Math.exp(-(melee?34:16)*dt);
+      tx(u.ar,pose.shoulder.x+.035*walk-.14*windup+1.27*thrust,armRate);
+      tz(u.ar,pose.shoulder.z+.025*walk+.12*windup-.28*thrust,armRate);
+      tx(u.aer,pose.elbow.x+.18*windup-.63*thrust,armRate);
+      tz(u.aer,pose.elbow.z,armRate);
+      u.knife.rotation.x+=(pose.blade.x-.29*thrust-u.knife.rotation.x)*armRate;
+      u.knife.rotation.z+=(pose.blade.z-.16*thrust-u.knife.rotation.z)*armRate;
+      tx(u.al,-.40*walk+.018*breath);tz(u.al,-.12);tx(u.ael,.16+.1*move);
     }else if(aiming&&!u.pistolAimTime){
       // La pose antiga queda reservada al dispar d'altres armes.
       tx(u.ar,1.18);tz(u.ar,-.08);tx(u.aer,.7);
