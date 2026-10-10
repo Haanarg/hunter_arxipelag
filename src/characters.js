@@ -200,7 +200,10 @@ window.HUNTER_CHARACTERS=Object.freeze({
 
     const aiming=u.firePose>0&&!inVehicle,melee=u.meleePose>0&&!inVehicle,bazooka=!!bazookaEquipped&&!inVehicle,
           grenade=!!grenadeEquipped&&!inVehicle,sniper=!!sniperEquipped&&!inVehicle,throwing=u.grenadeThrow>0&&!inVehicle;
-    u.bazooka.visible=bazooka;u.sniper.visible=sniper;u.grenade.visible=(grenade||throwing)&&!u.grenadeReleased;u.gun.visible=!bazooka&&!sniper&&!grenade&&!melee&&(ammo>0||aiming);u.knife.visible=!bazooka&&!sniper&&!grenade&&melee;
+    u.bazooka.visible=bazooka;u.sniper.visible=sniper;u.grenade.visible=(grenade||throwing)&&!u.grenadeReleased;
+    u.gun.visible=!bazooka&&!sniper&&!grenade&&!melee&&(ammo>0||aiming);
+    // Sense bales, el ganivet és l'arma activa també entre cops.
+    u.knife.visible=!bazooka&&!sniper&&!grenade&&(melee||(!inVehicle&&ammo<=0));
 
     if(grenade||throwing){
       const p=throwing?1-Math.max(0,Math.min(1,u.grenadeThrow/.55)):0;
