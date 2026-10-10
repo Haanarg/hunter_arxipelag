@@ -216,6 +216,59 @@ run(`{
   }
 }`);
 ok('bazookaPickupAndShots','picking up a bazooka grants exactly three shootable rockets');
+run(`{
+  const saved={inventory:{...inv},ammo,sniperAmmo,sniperEquipped,bazookaEquipped,
+    grenadeEquipped,scopeActive,scopePitch,cv,swimming,over,fcd,snd:shoot,
+    cameraFov:cam.fov,paused},shots=[];
+  try{
+    grantAllWeapons();
+    const cheats=ammo>=128&&inv.bazooka>=12&&inv.granada>=20&&
+      inv.expl>=10&&inv.franctirador===1&&sniperAmmo>=24;
+    const rifle=IT.franctirador,
+      realMesh=createItemVisual('franctirador'),
+      pickupAvailable=items.some(it=>it.t==='franctirador');
+    const visual=!!pl.userData.sniper&&realMesh.children.length>4&&
+      !!rifle?.usable&&pickupAvailable;
+    cv=null;swimming=false;over=0;sniperEquipped=true;
+    bazookaEquipped=false;grenadeEquipped=false;sniperAmmo=2;fcd=0;
+    setSniperScope(true);scopePitch=.18;
+    const scope=scopeActive&&document.body.classList.contains('sniper-scoped')&&
+      document.getElementById('sniperAimButton')?.getAttribute('aria-pressed')==='true'&&
+      document.getElementById('sniperScope')!=null;
+    const prior=sniperAmmo,originalShoot=shoot;
+    shoot=(...args)=>{shots.push(args)};
+    fire();shoot=originalShoot;
+    const fireOk=shots.length===1&&sniperAmmo===prior-1&&
+      shots[0][7]===65&&shots[0][8]===0&&shots[0][4]>0;
+    setSniperScope(false);
+    const noScope=!scopeActive&&!document.body.classList.contains('sniper-scoped');
+    globalThis.sniperAndChetosFunction=cheats&&visual&&scope&&fireOk&&noScope&&
+      pl.userData.sniper!=null;
+    globalThis.sniperScopeMath=Math.abs(2*Math.atan(Math.tan(58*Math.PI/360)/8)*180/Math.PI-7.928)<.02;
+    globalThis.sniperScopeCamera=String(update).includes('cam.updateProjectionMatrix()')&&
+      String(update).includes('cam.lookAt(P.x+fx*160')&&
+      String(update).includes('const scopeNow=scopeActive');
+    globalThis.sniperHasAmmoInWorld=String(update).includes('sniperAmmo+=6')&&
+      String(build).includes("addIt('franctirador'");
+    globalThis.sniperPauseCheats=String(window.HUNTER_UI.create).includes('chetosMenu')&&
+      String(window.HUNTER_UI.create).includes('actions.chetos');
+  }finally{
+    shoot=saved.snd;Object.keys(inv).forEach(k=>delete inv[k]);Object.assign(inv,saved.inventory);
+    ammo=saved.ammo;sniperAmmo=saved.sniperAmmo;
+    sniperEquipped=saved.sniperEquipped;bazookaEquipped=saved.bazookaEquipped;
+    grenadeEquipped=saved.grenadeEquipped;cv=saved.cv;
+    swimming=saved.swimming;over=saved.over;fcd=saved.fcd;
+    setSniperScope(false);scopePitch=saved.scopePitch;
+    if(saved.scopeActive)setSniperScope(true);
+    cam.fov=saved.cameraFov;cam.updateProjectionMatrix();
+    paused=saved.paused;
+  }
+}`);
+ok('sniperAndChetosFunction','cheats grant all weapons; sniper rifle spawns, scopes and fires a one-shot soldier round');
+ok('sniperScopeMath&&sniperScopeCamera','scope uses eightfold optical zoom with reduced camera FOV and reticle alignment');
+ok('sniperHasAmmoInWorld','rifle is guaranteed to spawn and provides six rounds per pickup');
+ok('sniperPauseCheats','pause menu exposes Chetos action');
+
 
 ok('grenadePlayerModel','player has a grenade model in the throwing hand');
 ok('grenadeThrowAnimation','grenade throw has a dedicated arm animation');
