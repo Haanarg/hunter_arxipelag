@@ -20,6 +20,7 @@ header p{font-size:12px;color:#c5d2ce;margin:0}
 .separator{height:24px;border-left:1px solid #53706a;margin:0 3px}
 #cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(230px,1fr));gap:10px;height:calc(100vh - 122px)}
 #cards.compare-two{grid-template-rows:minmax(320px,1fr)}
+#cards.show-all-knife{grid-template-rows:repeat(3,minmax(260px,1fr));height:auto;min-height:calc(100vh - 122px)}
 .card{position:relative;min-width:0;overflow:hidden;border:1px solid #68877c8c;border-radius:12px;background:#ffffff08;box-shadow:inset 0 0 0 1px #15272a40;pointer-events:auto;touch-action:pan-y;cursor:grab}
 .card.dragging{cursor:grabbing}
 .tag{position:absolute;left:10px;top:10px;background:#112728dc;border:1px solid #71958555;color:#daefdb;font-weight:700;font-size:12px;padding:5px 8px;border-radius:6px}
@@ -33,6 +34,7 @@ header p{font-size:12px;color:#c5d2ce;margin:0}
  header h1{font-size:17px}
  #cards{grid-template-columns:1fr;grid-template-rows:repeat(4,330px);height:auto}
  #cards.compare-two{grid-template-rows:repeat(2,390px)}
+ #cards.show-all-knife{grid-template-rows:repeat(5,330px);min-height:0}
  .controls button,.controls a{padding:7px 9px}
  .separator{display:none}
  .hint{text-align:left}
@@ -99,6 +101,7 @@ if(!knifeMode){
   document.getElementById('knifeAllMode').style.borderColor='#b6dca7';
 }
 if(knifeCompare)document.getElementById('cards').classList.add('compare-two');
+else if(knifeMode)document.getElementById('cards').classList.add('show-all-knife');
 
 const canvas=document.getElementById('canvas');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
