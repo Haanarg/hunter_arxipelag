@@ -143,6 +143,11 @@ const compound=(type,q)=>{
     level(64,64,20);landingPad(x,z,36,heading());
     for(const p of[[-20,-20],[0,-23],[20,-20],[-23,0],[23,0]])prop('sandbag',p[0],p[1],p[0]===0?0:Math.PI/2);
     prop('lamp',-20,17);prop('lamp',20,17);prop('sign',0,22);
+    // Cada heliport té un paracaigudes accessible al costat de la plataforma.
+    // De vegades, n'hi ha un segon al costat oposat.
+    {const [ix,iz]=tr(12,19);addItemAt('paracaigudes',ix,iz);
+     if(R()<.4){const [jx,jz]=tr(-12,19);addItemAt('paracaigudes',jx,jz)}}
+
     const route=[tr(-18,-18),tr(18,-18),tr(18,18),tr(-18,18)],def=[tr(-18,-12),tr(18,-12),tr(0,18)];
     for(let n=0;n<3;n++){const [sx,sz]=route[n];setDefense(setPatrol(mkEn('soldat',sx,sz),route.map((p,i)=>route[(i+n)%route.length]),true),def)}
     const hi=heliportSites.length;heliportSites.push({x,z,hd:heading()});compoundVehicles.push({t:hi===1?'heli_combat':'heli',x,z,hd:heading(),heliport:true,military:true,guaranteed:true})
@@ -220,7 +225,7 @@ northTankette.hqPatrolZone='north';southTankette.hqPatrolZone='south';
 northTankette.hd=-Math.PI/2;southTankette.hd=Math.PI/2;
 [[-69,-61],[69,-61],[-69,61],[69,61]].forEach(([a,b])=>mkEn('torre',pb.x+a,pb.z+b));
 islands.forEach(i=>{if(i===A||i===Bi||R()<.5)return;const q=land(i,60);if(!q)return;for(let k=0;k<1+(R()<.4);k++)sp2('soldat',q.x,q.z,0,10);if(R()<.25)sp2('torre',q.x,q.z,5,12)});
-rb.forEach(b=>{const n=R()<.25?0:R()<.6?1:2,pool=['arma','arma','med','med','expl','granada','granada','disf','mapa','bazooka','franctirador'];for(let k=0;k<n;k++)addIt(pool[Math.floor(R()*pool.length)],b)});
+rb.forEach(b=>{const n=R()<.25?0:R()<.6?1:2,pool=['arma','arma','med','med','expl','granada','granada','disf','mapa','bazooka','franctirador','paracaigudes'];for(let k=0;k<n;k++)addIt(pool[Math.floor(R()*pool.length)],b)});
 addIt('arma',B[0]);addIt('expl',B[1]);addIt('med',B[2]);
 addIt('franctirador',rb[Math.floor(R()*rb.length)]||B[2]);
 rb.slice().sort(()=>R()-.5).slice(0,2).forEach(b=>addIt('mapa',b));
