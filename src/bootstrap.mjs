@@ -38,27 +38,28 @@ try {
   const THREE = await import('../vendor/three-r186.module.mjs');
   THREE.ColorManagement.enabled = true;
   window.THREE = THREE;
-  for (const path of runtimeScripts) {
-    await new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      // Codi dels sistemes sincronitzat amb la versió del joc,
-      // evitant que la memòria cau conservi geometries obsoletes.
-      const scriptUrl = new URL('../' + path, import.meta.url);
-      scriptUrl.searchParams.set('v', GAME_VERSION);
-      script.src = scriptUrl.href;
-      const cleanup = () => window.removeEventListener('error', onError);
-      const onError = event => {
-        if (event.filename === script.src) {
-          cleanup();
-          reject(event.error || new Error(event.message));
-        }
-      };
-      window.addEventListener('error', onError);
-      script.onload = () => { cleanup(); resolve(); };
-      script.onerror = () => { cleanup(); reject(new Error('No es pot carregar ' + path)); };
-      document.head.append(script);
-    });
-  }
+  // Les descàrregues comencen alhora, però async=false obliga els scripts
+  // clàssics afegits dinàmicament a EXECUTAR-SE en l'ordre de runtimeScripts.
+  // Això redueix la latència de xarxa sense trencar les dependències globals.
+  await Promise.all(runtimeScripts.map(path => new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.async = false;
+    const scriptUrl = new URL('../' + path, import.meta.url);
+    scriptUrl.searchParams.set('v', GAME_VERSION);
+    script.src = scriptUrl.href;
+    const cleanup = () => window.removeEventListener('error', onError);
+    const onError = event => {
+      if (event.filename === script.src) {
+        cleanup();
+        reject(event.error || new Error(event.message));
+      }
+    };
+    window.addEventListener('error', onError);
+    script.onload = () => { cleanup(); resolve(); };
+    script.onerror = () => { cleanup(); reject(new Error('No es pot carregar ' + path)); };
+    document.head.append(script);
+  })));
+  window.HUNTER_READY = true;
 } catch (error) {
   console.error('No s’ha pogut iniciar Húnter', error);
   const message = document.createElement('p');

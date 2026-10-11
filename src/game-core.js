@@ -375,13 +375,7 @@ if(seedSearchCancelEl)seedSearchCancelEl.onclick=()=>{
   seedSearchToken++;seedSearchStatusEl.textContent='Cerca cancel·lada.';
   seedSearchRunEl.disabled=true;seedSearchCancelEl.disabled=true
 };
-const applyStartScreenshot=()=>{
-  try{
-    const shot=localStorage.getItem('hunterStartScreenshot');
-    if(shot)iniEl.style.background="linear-gradient(#15253677,#15253677),url('"+shot+"') center/cover no-repeat";
-  }catch(_){}
-};
-applyStartScreenshot();
+// El fons del menú és un fitxer estàtic: ni llavors ni localStorage ni WebGL a la portada.
 seedRandomEl.onchange=()=>{seedInputEl.disabled=seedRandomEl.checked;if(!seedRandomEl.checked)seedInputEl.focus()};
 document.querySelectorAll('#ini button[data-d]').forEach(b=>b.onclick=()=>{
   DIF=+b.dataset.d;MAP_SCALE=+(document.querySelector('input[name="mapSize"]:checked')?.value||1);S=4800*MAP_SCALE;H=S/2;
