@@ -30,5 +30,6 @@ jobs:
           git add assets/menu-seed-67.jpg
           if ! git diff --cached --quiet; then
             git commit -m "Portada estàtica: captura Three.js de la llavor 67"
-            git push
+            git pull --rebase origin main
+            git push origin HEAD:main
           fi
