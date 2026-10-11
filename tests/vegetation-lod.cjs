@@ -112,6 +112,7 @@
   assert.equal(ultra.model.stats.nearDistance,120);
   assert.equal(ultra.model.stats.midDistance,300);
   assert.equal(ultra.model.stats.farDistance,850);
+  model.update(0,0,true);
   assert(ultra.model.stats.detailSectors<=low.model.stats.detailSectors&&
          low.model.stats.detailSectors<=model.stats.detailSectors,
     'number of high-detail sectors decreases on weaker devices');
