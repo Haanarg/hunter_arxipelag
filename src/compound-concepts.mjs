@@ -1,5 +1,7 @@
+import {createCompoundStructures} from './compound-structures.mjs';
 import * as T from '../vendor/three-r186.module.mjs';
 export function createCompoundConcept(layout){
+ const structures=createCompoundStructures();
  const root=new T.Group(),roofs=[],tags=[],overlays=new T.Group(),materials=new Map();root.add(overlays);
  const mat=(color,profile='paint')=>{const key=color+profile;if(!materials.has(key))materials.set(key,new T.MeshStandardMaterial({color,roughness:profile==='metal'?.57:.92,metalness:profile==='metal'?.25:0,flatShading:true}));return materials.get(key)};
  const box=(g,w,h,d,c,x=0,y=0,z=0,profile='paint')=>{const m=new T.Mesh(new T.BoxGeometry(w,h,d),mat(c,profile));m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;g.add(m);return m};
@@ -31,42 +33,11 @@ export function createCompoundConcept(layout){
    for(const dx of[-19,19])for(const dz of[-19,19]){cylinder(root,.35,.2,0x273c3f,p.x+dx,.48,p.z+dz);cylinder(root,.24,.1,0xecc668,p.x+dx,.62,p.z+dz)}
    const reserve=new T.Mesh(new T.RingGeometry(p.clearRadius-.3,p.clearRadius,64),new T.MeshBasicMaterial({color:0xffc85c,side:T.DoubleSide,transparent:true,opacity:.7,depthWrite:false}));reserve.rotation.x=-Math.PI/2;reserve.position.set(p.x,.86,p.z);overlays.add(reserve);tag('Rotors · radi lliure 22 m',p.x,1,p.z-24);
  }
- if(layout.antenna){
-   const a=layout.antenna,g=new T.Group();g.position.set(a.x,.2,a.z);root.add(g);g.userData.previewAntenna=true;g.scale.setScalar(a.scale||1);
-   box(g,8,.55,8,0x92948b,0,.25,0);
-   for(let y=0;y<a.height/(a.scale||1);y+=4){const color=y%8?0xd8d8c4:0xa7463b,lower=2.7-y*.065,upper=2.7-(y+4)*.065;
-     for(const dx of[-1,1])for(const dz of[-1,1])rod(g,[dx*lower,y,dz*lower],[dx*upper,y+4,dz*upper],.13,color);
-     for(const side of[-1,1]){rod(g,[-lower,y,side*lower],[upper,y+4,side*upper],.07,color);rod(g,[lower,y,side*lower],[-upper,y+4,side*upper],.07,color);rod(g,[side*lower,y,-lower],[side*upper,y+4,upper],.07,color);rod(g,[side*lower,y,lower],[side*upper,y+4,-upper],.07,color)}
-   }
-   const dish=new T.Mesh(new T.SphereGeometry(2.2,16,8,0,Math.PI*2,0,Math.PI*.4),new T.MeshStandardMaterial({color:0xe4e5d8,roughness:.65,side:T.DoubleSide}));dish.rotation.x=Math.PI*.65;dish.position.set(0,18,3);g.add(dish);rod(g,[0,17,0],[0,18,3],.15,0x616b68);rod(g,[0,28,0],[0,31,0],.09,0xddddca);cylinder(g,.22,.4,0xec6545,0,31,0);tag('Antena · '+a.height+' m',a.x,32*(a.scale||1),a.z);
- }
+ if(layout.antenna){const a=layout.antenna,g=structures.antenna(a);g.position.set(a.x,.2,a.z);root.add(g);tag('Antena · '+a.height+' m',a.x,32*(a.scale||1),a.z)}
  for(const b of layout.buildings){
    const shell=b.hangar?building.createHangarShell({width:b.w,depth:b.d,height:b.h,wallColor:0xbab99d,roofColor:0xb7c1b4}):building.createShell({width:b.w,depth:b.d,height:b.h,wallColor:0xc9b98d,roofColor:0x79584e});
    const g=shell.group;g.position.set(b.x,.24,b.z);root.add(g);roofs.push(shell.roof);
-   if(layout.satellite?.buildingId===b.id){
-     // Roof assembly: olive paraboloid, radial ribs, lattice rim and feed tripod.
-     const assembly=new T.Group();assembly.position.y=b.h+1.2;shell.roof.add(assembly);assembly.userData.previewSatellite=true;
-     box(assembly,7,.5,7,0x59634a,0,.25,0);
-     const pedestal=new T.Mesh(new T.CylinderGeometry(1.8,3,3.4,8),mat(0x606b4b));pedestal.position.y=2.2;assembly.add(pedestal);
-     for(const x of[-2.6,2.6]){rod(assembly,[x,1.2,0],[x,5.5,0],.35,0x374439);rod(assembly,[x,2,-2],[x,5.5,0],.22,0x374439)}
-     const dish=new T.Group();dish.position.y=6;dish.rotation.x=-.62;dish.rotation.y=.3;assembly.add(dish);
-     const radius=layout.satellite.radius,depth=2.7,segments=48,rings=10,vertices=[],indices=[];
-     const point=(r,t,offset=0)=>[r*Math.cos(t),r*Math.sin(t),depth*(r/radius)**2+offset];
-     for(let j=0;j<=rings;j++)for(let i=0;i<=segments;i++)vertices.push(...point(radius*j/rings,i*2*Math.PI/segments));
-     for(let j=0;j<rings;j++)for(let i=0;i<segments;i++){const k=j*(segments+1)+i;indices.push(k,k+1,k+segments+1,k+1,k+segments+2,k+segments+1)}
-     const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(vertices,3));geometry.setIndex(indices);geometry.computeVertexNormals();
-     const bowl=new T.Mesh(geometry,new T.MeshStandardMaterial({color:0x7f8c59,side:T.DoubleSide,roughness:.83}));bowl.castShadow=bowl.receiveShadow=true;dish.add(bowl);
-     for(let i=0;i<16;i++){const t=i*Math.PI/8,next=t+Math.PI/8;
-       for(let j=0;j<10;j++)rod(dish,point(radius*j/10,t,-.16),point(radius*(j+1)/10,t,-.16),.09,0x374439);
-       rod(dish,point(radius,t),point(radius,next),.12,0x354237);
-       rod(dish,point(radius,t,-.7),point(radius,next,-.7),.10,0x354237);
-       rod(dish,point(radius,t),point(radius,next,-.7),.07,0x354237);
-     }
-     for(const r of[radius*.35,radius*.65])for(let i=0;i<48;i++)rod(dish,point(r,i*Math.PI/24,.025),point(r,(i+1)*Math.PI/24,.025),.025,0x526044);
-     for(let i=0;i<3;i++){const t=i*2*Math.PI/3+Math.PI/2;rod(dish,point(radius*.92,t),[0,0,6.3],.14,0x344137)}
-     rod(dish,[0,0,5.7],[0,0,7],.48,0x506044);rod(dish,[0,0,7],[0,0,7.8],.12,0x344137);
-     tag('Parabòlica · Ø 18 m',b.x,b.h+19,b.z);
-   }
+   if(layout.satellite?.buildingId===b.id){const assembly=structures.satellite(layout.satellite.radius);assembly.position.y=b.h+1.2;shell.roof.add(assembly);tag('Parabòlica · Ø 18 m',b.x,b.h+19,b.z)}
    const wall=(x,z,w,d,h=b.h)=>building.addWall(g,{lx:x,lz:z,sx:w,sz:d,height:h,material:shell.walls});
    if(b.hangar){
      const arch=new T.Shape();arch.moveTo(-b.w/2,0);arch.lineTo(b.w/2,0);
@@ -78,7 +49,7 @@ export function createCompoundConcept(layout){
      for(let z=-10;z<0;z+=3)box(g,1.3,.8,1.6,0x9a7546,-b.w/2+3,1.6,z);
      tag('Hangar · boca 30 m',b.x,b.h+1,b.z);
    }else{
-     const solid=layout.id==='ammo-proposal'&&b.id!=='guard';
+     const solid=layout.id==='polvori'&&b.id!=='guard';
      if(solid){wall(0,-b.d/2,b.w,.6);for(const x of[-b.w/2,b.w/2])wall(x,0,.6,b.d)}else{building.addWindowedWall(g,{lx:0,lz:-b.d/2,sx:b.w,sz:.45,height:b.h,material:shell.walls});for(const x of[-b.w/2,b.w/2])building.addWindowedWall(g,{lx:x,lz:0,sx:.45,sz:b.d,height:b.h,material:shell.walls})}
      const door=4;wall(-(b.w+door)/4,b.d/2,(b.w-door)/2,.45);wall((b.w+door)/4,b.d/2,(b.w-door)/2,.45);
      building.addWall(g,{lx:0,lz:b.d/2,sx:door,sz:.45,height:b.h-4.4,material:shell.walls,y:4.4+(b.h-4.4)/2});
@@ -112,6 +83,7 @@ export function createCompoundConcept(layout){
  }
  for(const item of layout.loot){
   const group=new T.Group();group.position.set(item.x,.35,item.z);group.userData.previewLoot=item.kind;root.add(group);
+  if(item.kind==='franctirador'){const rifle=window.HUNTER_CHARACTERS.createSniperRifle?.(T);if(rifle){group.add(rifle)}else{box(group,3.4,.18,.22,0x364137,0,.8,0);box(group,1,.3,.3,0x62533b,-1,.7,0)}tag('Franctirador garantit',item.x,2,item.z);continue;}
   if(item.kind==='bazooka'){
     box(group,4,.2,1.6,0x786748,0,.45,0);for(const side of[-1,1])box(group,.2,.7,1.3,0x424e46,side*1.4,.1,0);
     const tube=cylinder(group,.22,2.65,0x58664a,0,1,0);tube.rotation.z=Math.PI/2;
@@ -126,7 +98,7 @@ export function createCompoundConcept(layout){
     box(group,1.9,.015,.04,0x69775c,0,1.09,0);
     tag({mapa:'Mapa HQ',mapa_heli:'Mapa helicòpters',mapa_tanc:'Mapa tancs'}[item.kind],item.x,2.3,item.z);tags.at(-1).interior=true;continue;
   }
-  const colors={'munició':0xc4ad57,'farmaciola':0xf5ede2,'granades':0x66894e,'mapa':0xd9d2ac,'disfressa':0x993838,'explosius':0x58664a};box(group,1.5,.8,1.15,colors[item.kind],0,.55,0);
+  const colors={'munició':0xc4ad57,'farmaciola':0xf5ede2,'granades':0x66894e,'mapa':0xd9d2ac,'disfressa':0x993838,'explosius':0x58664a,'paracaigudes':0x657f4b};box(group,1.5,.8,1.15,colors[item.kind],0,.55,0);
   if(item.kind==='farmaciola'){box(group,.9,.05,.22,0xd43a3a,0,.98,0);box(group,.22,.05,.9,0xd43a3a,0,.99,0)}
  }
 

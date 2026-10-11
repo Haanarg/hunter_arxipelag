@@ -1,3 +1,4 @@
+import {phase2Layouts} from './compound-phase2-layouts.mjs';
 // Shared approved layouts: game generation and Three.js preview, in metres.
 // Coordinates: X east, Z south; building doors face +Z unless specified otherwise.
 export const compoundLayouts=[
@@ -31,4 +32,4 @@ export const compoundLayouts=[
   loot:[{kind:'munició',x:-32,z:-25},{kind:'granades',x:-24,z:-25},{kind:'mapa',x:26,z:-26}],
   tower:{x:43,z:-43},entrances:[[0,-60]],counts:'3 embarcacions · 5 soldats · 1 torre · munició, granades i mapa',
   notes:'El magatzem obre al pati de càrrega. Els molls de 6 m deixen tres places separades i sortida directa cap al mar. La llanxa llançacoets representa la variant especial d’un únic port per mapa.'}
-];
+,...phase2Layouts];

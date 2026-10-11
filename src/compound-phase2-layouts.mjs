@@ -1,7 +1,7 @@
-// Design proposals only. Not imported by the procedural game generator.
+// Approved phase 2 layouts shared by the game generator and preview.
 const perimeter=(x,z,gap=12)=>[[[-x,-z],[x,-z]],[[x,-z],[x,z]],[[x,z],[gap,z]],[[-gap,z],[-x,z]],[[-x,z],[-x,-z]]];
 export const phase2Layouts=[
- {id:'heliport-proposal',name:'Heliport',phase:2,size:[120,110],
+ {id:'heliport',name:'Heliport',phase:2,size:[120,110],
   subtitle:'Rotors lliures · control lateral · combustible separat',
   buildings:[{id:'control',label:'Control de vol',x:34,z:-24,w:16,d:18,h:9},{id:'air-store',label:'Magatzem',x:34,z:13,w:18,d:16,h:6}],
   helipad:{x:-22,z:-6,size:40,clearRadius:22},
@@ -10,22 +10,22 @@ export const phase2Layouts=[
   patrol:[[-48,35],[-48,-34],[6,-34],[6,33],[46,33],[46,41],[-48,41],[-48,35]],
   zones:[{label:'Servei',x:33,z:-44,w:24,d:8}],
   props:[['fuel',28,-44],['fuel',40,-44],['crate',47,12],['crate',47,17],['flag',13,-39],['lamp',-48,26],['lamp',10,40],['sandbag',-15,43],['sandbag',19,43]],
-  loot:[{kind:'munició',x:30,z:13},{kind:'farmaciola',x:38,z:13}],fence:perimeter(55,50),tower:null,entrances:[[0,55]],
-  counts:'1 helicòpter · 4 soldats · munició i farmaciola',
-  notes:'Plataforma de 40 m amb una reserva circular de 22 m de radi. Edificis, combustible i patrulles queden fora dels rotors. La variant fortificada afegiria helicòpter de combat i torre; encara no està integrada.'},
- {id:'ammo-proposal',name:'Polvorí',phase:2,size:[110,110],
-  subtitle:'Dos magatzems · càrrega central · bazooka garantit',
+  loot:[{kind:'munició',x:30,z:13},{kind:'farmaciola',x:38,z:13},{kind:'paracaigudes',x:34,z:18}],fence:perimeter(55,50),tower:null,entrances:[[0,55]],
+  counts:'1 helicòpter · 4 soldats · munició, farmaciola i paracaigudes',
+  notes:'Plataforma de 40 m amb una reserva circular de 22 m de radi. Edificis, combustible i patrulles queden fora dels rotors. El segon heliport inclou l’helicòpter de combat. Paracaigudes garantit al magatzem.'},
+ {id:'polvori',name:'Polvorí',phase:2,size:[110,110],
+  subtitle:'Dos magatzems · càrrega central · bazooka i franctirador garantits',
   buildings:[{id:'ammo-store',label:'Munició i granades',x:-28,z:-18,w:24,d:28,h:7},{id:'heavy-store',label:'Explosius i bazooka',x:28,z:-18,w:24,d:28,h:7},{id:'guard',label:'Guàrdia',x:-31,z:28,w:12,d:12,h:6}],
   vehicles:[{t:'camio',x:0,z:10,hd:Math.PI}],soldiers:[[-46,7],[46,7],[13,34],[-15,-39]],
   routes:[{label:'Sortida camió · 16 m',points:[[0,10],[0,55]],width:16},{label:'Magatzem oest',points:[[-28,-2],[-28,7],[-10,7]],width:5},{label:'Magatzem est',points:[[28,-2],[28,7],[10,7]],width:5},{label:'Guàrdia',points:[[-31,36],[-31,41],[0,41]],width:4}],
   patrol:[[-46,10],[-46,-40],[46,-40],[46,18],[16,18],[16,42],[-16,42],[-16,10],[-46,10]],
   zones:[{label:'Càrrega · 24 × 18 m',x:0,z:10,w:24,d:18}],
   props:[['crate',-35,-18],['crate',-35,-24],['crate',35,-18],['crate',35,-24],['sandbag',-15,45],['sandbag',20,45],['lamp',-45,18],['lamp',45,18],['flag',-16,25]],
-  loot:[{kind:'munició',x:-29,z:-11},{kind:'granades',x:-22,z:-11},{kind:'explosius',x:22,z:-11},{kind:'bazooka',x:30,z:-11}],
+  loot:[{kind:'munició',x:-29,z:-11},{kind:'granades',x:-22,z:-11},{kind:'explosius',x:22,z:-11},{kind:'bazooka',x:30,z:-11},{kind:'franctirador',x:28,z:-20}],
   fence:perimeter(50,50),tower:null,entrances:[[0,55]],
-  counts:'1 camió · 4 soldats · munició, granades, explosius i bazooka garantits',
-  notes:'El bazooka és obligatori a cada polvorí, sense tirada de probabilitat. Armament repartit entre dos magatzems; el camió apunta cap a una sortida de 16 m. Les patrulles envolten els edificis i el pati de càrrega.'},
- {id:'comms-proposal',name:'Comunicacions',phase:2,size:[100,110],
+  counts:'1 camió · 4 soldats · munició, granades, explosius, bazooka i franctirador garantits',
+  notes:'El bazooka i el rifle de franctirador són obligatoris a cada polvorí, sense tirada de probabilitat. Armament repartit entre dos magatzems; el camió apunta cap a una sortida de 16 m. Les patrulles envolten els edificis i el pati de càrrega.'},
+ {id:'comunicacions',name:'Comunicacions',phase:2,size:[100,110],
   subtitle:'Antena de 56 m · parabòlica de satèl·lit · tots els mapes',
   buildings:[{id:'radio',label:'Sala de ràdio',x:-20,z:-12,w:24,d:22,h:8},{id:'service',label:'Servei',x:26,z:15,w:14,d:16,h:6}],
   antenna:{x:27,z:-24,height:56,scale:2},
@@ -38,5 +38,5 @@ export const phase2Layouts=[
   loot:[{kind:'mapa',x:-24,z:-7},{kind:'mapa_heli',x:-19,z:-7},{kind:'mapa_tanc',x:-14,z:-7},{kind:'disfressa',x:26,z:15}],
   fence:perimeter(45,50),tower:null,entrances:[[0,55]],
   counts:'1 jeep · 4 soldats · 3 mapes garantits · disfressa opcional',
-  notes:'Tots tres mapes garantits: HQ, helicòpters i tancs. Torre d’antena al doble d’escala i parabòlica de satèl·lit de 18 m de diàmetre sobre la sala de ràdio. Antena i generador fora dels passos. Es proposa una elevació accessible per terra; la disfressa que es mostra és opcional i el generador és decoratiu.'}
+  notes:'Tots tres mapes garantits: HQ, helicòpters i tancs. Torre d’antena al doble d’escala i parabòlica de satèl·lit de 18 m de diàmetre sobre la sala de ràdio. Antena i generador fora dels passos. El recinte ocupa una plataforma de terreny anivellada; la disfressa que es mostra és opcional i el generador és decoratiu.'}
 ];

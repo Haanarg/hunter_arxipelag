@@ -25,10 +25,10 @@ function findRedesignedPort(q){
   }
   return null;
 }
-function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssigned}){
+function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssigned,heliportSites}){
   const isPort=layout.id==='port',angle=isPort?q.angle:Math.floor(R()*4)*Math.PI/2,mirror=isPort?1:R()<.5?-1:1,tr=compoundTransform(q,angle,mirror),c=Math.round(Math.cos(angle)),s=Math.round(Math.sin(angle));
   const vector=(x,z)=>[x*c-z*s,x*s+z*c],rotatedHeading=hd=>hd*mirror-angle;
-  const record={id:layout.id,x:q.x,z:q.z,angle,mirror,r:isPort?90:Math.hypot(...layout.size)/2+20,buildings:[],vehicles:[],soldiers:[],entrances:layout.entrances.map(p=>tr(...p)),patrol:layout.patrol.map(p=>tr(...p))};
+  const record={id:layout.id,x:q.x,z:q.z,angle,mirror,r:isPort?90:Math.hypot(...layout.size)/2+20,buildings:[],vehicles:[],soldiers:[],loot:[],entrances:layout.entrances.map(p=>tr(...p)),patrol:layout.patrol.map(p=>tr(...p))};
   world.userData.compounds.push(record);
   const center=tr(0,isPort?-27:0),height=isPort?.86:q.h??rawHAt(q.x,q.z);
   addLevelArea(...center,isPort?110:layout.size[0]+8,isPort?70:layout.size[1]+8,height,angle,isPort?4:18);
@@ -38,7 +38,7 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
   for(const route of layout.routes)for(let i=1;i<route.points.length;i++)path(...tr(...route.points[i-1]),...tr(...route.points[i]),route.width);
   for(const spec of layout.buildings){
     const [x,z]=tr(spec.x,spec.z),firstWall=Wl.length;
-    const b=mkB(x,z,spec.w,spec.d,spec.h,spec.hangar?0xbab99d:0xc9b98d,spec.hangar?0xb7c1b4:0x79584e,{hangar:!!spec.hangar,kind:spec.hangar?'hangar':layout.id==='hangar'?'garage':layout.id,doorSide:0,doorWidth:spec.hangar?30:4,doorHeight:spec.hangar?11:4.4,openDoor:!!spec.hangar,noPartitions:true});
+    const b=mkB(x,z,spec.w,spec.d,spec.h,spec.hangar?0xbab99d:0xc9b98d,spec.hangar?0xb7c1b4:0x79584e,{hangar:!!spec.hangar,kind:spec.hangar?'hangar':layout.id==='hangar'?'garage':layout.id,doorSide:0,doorWidth:spec.hangar?30:4,doorHeight:spec.hangar?11:4.4,openDoor:!!spec.hangar,noPartitions:true,solidWalls:layout.id==='polvori'&&spec.id!=='guard'});
     if(spec.hangar){
       const shape=new THREE.Shape();shape.moveTo(-spec.w/2,0);shape.lineTo(spec.w/2,0);for(let i=0;i<=16;i++){const a=i*Math.PI/16;shape.lineTo(Math.cos(a)*spec.w/2,.12+Math.sin(a)*spec.w/2)}shape.closePath();
       // La paret semicircular és l'únic tancament posterior: sense l'antic
@@ -55,6 +55,7 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
       // The arched roof reaches the ground: its lower sides must be solid too.
       for(const sign of[-1,1]){const lx=x+sign*(spec.w/2-.4),side=buildingVisual.addWall(b.o,{lx:lx-x,lz:0,sx:.8,sz:spec.d,height:1,material:b.wm});Wl.push({x0:lx-.4,x1:lx+.4,z0:z-spec.d/2,z1:z+spec.d/2,y0:b.fy-1,y1:b.fy+3,hp:110,m:side,rammable:true,hangarSide:true,door:false,open:false,cx:lx,cz:z,owner:b})}
     }
+    if(layout.satellite?.buildingId===spec.id){const assembly=window.HUNTER_COMPOUND_STRUCTURES().satellite(layout.satellite.radius);assembly.position.y=spec.h+1.2;b.roof.add(assembly);}
     // Rotate both the visual shell and every associated physical record.
     b.o.rotation.y=-angle;
     const point=(wx,wz)=>{const p=vector(wx-x,wz-z);return[x+p[0],z+p[1]]};
@@ -65,6 +66,14 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
     if(b.stair){const a=b.stair;[a.x,a.z]=point(a.x,a.z);[a.nx,a.nz]=vector(a.nx,a.nz)}
     if(s){[b.w,b.d]=[b.d,b.w];[b.hw,b.hd]=[b.hd,b.hw]}
     b.doorSide=s===1?3:s===-1?2:c===-1?1:0;b.compound=record.id;b.layoutBuilding=spec.id;record.buildings.push(b);
+  }
+  if(layout.antenna){const a=layout.antenna,[x,z]=tr(a.x,a.z),g=window.HUNTER_COMPOUND_STRUCTURES().antenna(a);g.position.set(x,height+.2,z);g.rotation.y=-angle;world.add(g);record.antenna=g;
+    // The solid plinth blocks movement and is destructible with the complete tower.
+    Wl.push({x0:x-8,x1:x+8,z0:z-8,z1:z+8,y0:height,y1:height+1.3,hp:150,m:g.children[0],parts:g.children.slice(),door:false,open:false,rammable:true,cx:x,cz:z});
+  }
+  if(layout.helipad){const p=layout.helipad,[x,z]=tr(p.x,p.z),g=new THREE.Group();g.position.set(x,height+.04,z);g.rotation.y=-angle;world.add(g);
+    bx(g,p.size,.08,p.size,0x66706e,0,0,0,'masonry');const ring=new THREE.Mesh(new THREE.RingGeometry(p.size*.39,p.size*.405,48),M(0xf3e5b1,'paint'));ring.rotation.x=-Math.PI/2;ring.position.y=.05;g.add(ring);
+    for(const side of[-1,1])bx(g,1.6,.02,12,0xf3e5b1,side*4,.06,0,'paint');bx(g,8,.02,1.6,0xf3e5b1,0,.06,0,'paint');
   }
   for(const [kind,x,z] of layout.props)prop(kind==='flag'?'sign':kind,...tr(x,z),-angle);
   // The outpost perimeter has exactly the same two openings as the approved preview.
@@ -79,8 +88,9 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
     for(const x of[-24,24])pier(...tr(x,7),...tr(x,48),6);
   }
   for(const spec of layout.vehicles){
-    const t=spec.t==='llanxa_coets'&&rocketAssigned?'llanxa':spec.t,[x,z]=tr(spec.x,spec.z),v={t,x,z,hd:rotatedHeading(spec.hd),compound:record.id};
+    const t=spec.t==='llanxa_coets'&&rocketAssigned?'llanxa':layout.id==='heliport'&&heliportSites.length===1?'heli_combat':spec.t,[x,z]=tr(spec.x,spec.z),v={t,x,z,hd:rotatedHeading(spec.hd),compound:record.id};
     if(layout.id==='hangar'&&spec.t==='tanc'){v.insideHangar=true;v.hangar=record.buildings[0]}
+    if(layout.id==='heliport'){Object.assign(v,{heliport:true,military:true,guaranteed:true});heliportSites.push({x,z,hd:v.hd})}
     vehicles.push(v);record.vehicles.push(v);
   }
   if(layout.tower){const p=tr(layout.tower.x,layout.tower.z);mkEn('torre',...p)}
@@ -91,7 +101,11 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
     let nearest=0;route.forEach((p,j)=>{if(Math.hypot(p[0]-pos[0],p[1]-pos[1])<Math.hypot(route[nearest][0]-pos[0],route[nearest][1]-pos[1]))nearest=j});
     setPatrol(u,route.map((_,j)=>route[(j+nearest)%route.length]));record.soldiers.push(u);
   }
-  const lootKinds={'munició':'arma','farmaciola':'med','granades':'granada','mapa':'mapa'};
-  for(const loot of layout.loot){const nearest=layout.buildings.reduce((a,b)=>Math.hypot(loot.x-a.x,loot.z-a.z)<Math.hypot(loot.x-b.x,loot.z-b.z)?a:b);addIt(lootKinds[loot.kind],record.buildings[layout.buildings.indexOf(nearest)])}
+  const lootKinds={'munició':'arma','farmaciola':'med','granades':'granada','mapa':'mapa','mapa_heli':'mapa_heli','mapa_tanc':'mapa_tanc','explosius':'expl','bazooka':'bazooka','franctirador':'franctirador','disfressa':'disf','paracaigudes':'paracaigudes'};
+  for(const loot of layout.loot){
+    if(loot.kind==='disfressa'&&R()>=.5)continue;
+    const t=lootKinds[loot.kind];if(!IT[t])throw new Error('Unknown compound loot: '+loot.kind);
+    const [x,z]=tr(loot.x,loot.z),o=addItemAt(t,x,z),item=items[items.length-1];item.compound=record.id;record.loot.push(item);
+  }
   return record;
 }

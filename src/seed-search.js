@@ -8,6 +8,7 @@ window.HUNTER_SEED_SEARCH=Object.freeze((()=>{
     garatge:'Garatge / hangar',
     heliport:'Heliport',
     polvori:'Polvorí',
+    comunicacions:'Comunicacions',
     port:'Port'
   });
   const groups=Object.freeze({
