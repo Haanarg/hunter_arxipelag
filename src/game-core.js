@@ -439,8 +439,8 @@ for(let i=HR.length-1;i>=0;i--){const a=HR[i],m=a.m;a.t+=dt;const p=Math.min(1,a
 updFA(dt)}
 // vegetació
 const TG=new Map();
-function treeHit(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L)if(Math.hypot(x-t.x,z-t.z)<t.r+r)return true}return false}
-function treePush(){const r0=.5,cx=Math.floor(P.x/16),cz=Math.floor(P.z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L){const dx=P.x-t.x,dz=P.z-t.z,d=Math.hypot(dx,dz),m=t.r+r0;if(d<m&&d>.001){P.x=t.x+dx/d*m;P.z=t.z+dz/d*m}}}}
+function treeHit(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L)if(!(palmsDisabled&&t.p)&&Math.hypot(x-t.x,z-t.z)<t.r+r)return true}return false}
+function treePush(){const r0=.5,cx=Math.floor(P.x/16),cz=Math.floor(P.z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L){if(palmsDisabled&&t.p)continue;const dx=P.x-t.x,dz=P.z-t.z,d=Math.hypot(dx,dz),m=t.r+r0;if(d<m&&d>.001){P.x=t.x+dx/d*m;P.z=t.z+dz/d*m}}}}
 function vehiclePushPlayer(){
   if(cv||playerFall)return;
   for(const v of [...V,...E.filter(u=>['jeep','tanqueta','tanc'].includes(u.t))]){
@@ -452,11 +452,27 @@ function vehiclePushPlayer(){
   }
 }
 const PL=[],FA=[],ZM=new THREE.Matrix4().makeScale(0,0,0);let PM={};
+// L'opció només canvia el render, les col·lisions i les actualitzacions
+// durant la partida. La generació conserva els mateixos nombres aleatoris
+// i posicions per permetre una comparació justa amb la mateixa llavor.
+let palmsDisabled=false;
+function setPalmsDisabled(disabled){
+  palmsDisabled=!!disabled;
+  const checkbox=document.getElementById('disablePalms');
+  if(checkbox)checkbox.checked=palmsDisabled;
+  if(PM.trunk)PM.trunk.visible=!palmsDisabled;
+  for(const a of FA)if(a.y)a.y.visible=!palmsDisabled;
+  if(!palmsDisabled&&PM.update)PM.update(P.x,P.z,true);
+  window.HUNTER_PALMS_DISABLED=palmsDisabled;
+  return palmsDisabled;
+}
+const palmSettingCheckbox=document.getElementById('disablePalms');
+if(palmSettingCheckbox)palmSettingCheckbox.addEventListener('change',()=>setPalmsDisabled(palmSettingCheckbox.checked));
 const vegetationVisual=window.HUNTER_VEGETATION.create(THREE,{materialProfile,random:rr});
 const PG={t:vegetationVisual.geometry.trunk,c:vegetationVisual.geometry.crown,c2:vegetationVisual.geometry.crown2};
 let compoundClear=[];
-function treeAt(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L)if(Math.hypot(x-t.x,z-t.z)<t.r+r)return t}return null}
-function crush(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)L.slice().forEach(t=>{if(t.p&&Math.hypot(x-t.x,z-t.z)<t.r+r)killPalm(t)})}}
+function treeAt(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L)if(!(palmsDisabled&&t.p)&&Math.hypot(x-t.x,z-t.z)<t.r+r)return t}return null}
+function crush(x,z,r){if(palmsDisabled)return;const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)L.slice().forEach(t=>{if(t.p&&Math.hypot(x-t.x,z-t.z)<t.r+r)killPalm(t)})}}
 function dmgP(t,d){if(!t.alive)return;t.hp-=d;if(t.hp<=0)killPalm(t)}
 function killPalm(t){if(!t.alive)return;t.alive=false;const a=TG.get(t.k);if(a){const i=a.indexOf(t);if(i>=0)a.splice(i,1)}
 // La geometria es gestiona ara en instàncies de cada sector.
@@ -941,7 +957,7 @@ const ui=window.HUNTER_UI.create({
   getState:()=>({
     hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,disguised:disg,bazookaEquipped,grenadeEquipped,sniperEquipped,sniperAmmo,scopeActive,
     inventory:inv,itemTypes:IT,player:P,nearVehicle:cv?null:nearV(),messageTime:msgT,message:msg,
-    waypoint,worldSize:S,seed,mapScale:MAP_SCALE
+    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled
   }),
   actions:{
     resume,
@@ -950,6 +966,7 @@ const ui=window.HUNTER_UI.create({
     useItem:id=>useInvItem(id),
     dropItem:id=>dropInvItem(id),
     restart:d=>{DIF=d;elapsed=0;build();minimap.reset();mini();resume()},
+    setPalmsDisabled,
     zoom:d=>zoom=Math.max(.7,Math.min(1.9,zoom+d)),
     chetos:grantAllWeapons
   }
@@ -1124,7 +1141,7 @@ if(!playerFall){
 }
 // Actualització del LOD de les palmeres a baixa freqüència (i també en vehicle).
 palmVisualTick-=dt;
-if(palmVisualTick<=0){palmVisualTick=.16;if(PM.update)PM.update(P.x,P.z)}
+if(palmVisualTick<=0){palmVisualTick=.16;if(!palmsDisabled&&PM.update)PM.update(P.x,P.z)}
 // Un vehicle sota un hangar també ha de deixar veure l'interior.
 // Només s'amaga la coberta quan som realment per sota seu (no en sobrevolar-la).
 function viewInsideBuilding(b){
