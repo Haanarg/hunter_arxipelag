@@ -751,7 +751,7 @@ const clearKeys=()=>{
   document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))
 };
 const act=c=>{if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(!started||paused||over)return;if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){if(!secondaryWeapon())plant();}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
-const nearV=()=>{let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
+const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.reentryLockUntil>elapsed)continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
 function updateActionButton(nearby){
   const button=document.getElementById('mainActionButton');
   if(!button)return;
@@ -769,6 +769,22 @@ function updateActionButton(nearby){
     button.setAttribute('aria-label',title);
   }
 }
+// Cúpula del paracaigudes amb vuit cordes, visible mentre es descendeix.
+let parachuteVisual=null;
+function createParachuteVisual(){
+  const g=new THREE.Group();
+  const canopy=new THREE.Mesh(new THREE.SphereGeometry(3.45,16,7,0,Math.PI*2,0,Math.PI/2),
+    new THREE.MeshStandardMaterial({color:0xe5d7b0,side:THREE.DoubleSide,roughness:.88,flatShading:true}));
+  canopy.position.y=5.3;canopy.castShadow=true;g.add(canopy);
+  const vertices=[];
+  for(let i=0;i<8;i++){const a=i*Math.PI/4,x=Math.cos(a)*3.42,z=Math.sin(a)*3.42;
+    vertices.push(x,5.25,z,.42*Math.cos(a),.3,.42*Math.sin(a))}
+  const lines=new THREE.BufferGeometry();
+  lines.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+  g.add(new THREE.LineSegments(lines,new THREE.LineBasicMaterial({color:0xe9eee5})));
+  world.add(g);return g;
+}
+function removeParachuteVisual(){if(parachuteVisual){world.remove(parachuteVisual);parachuteVisual=null}}
 // Compartida per al salt voluntari i per a la destrucció de l'helicòpter.
 // La caiguda conserva l'altura i la inèrcia; el dany es calcula en aterrar.
 function ejectFromHelicopter(v){
@@ -782,19 +798,24 @@ function ejectFromHelicopter(v){
     vx:fx*(v.v||0)*.82+Math.cos(v.hd)*side*2.5,
     vz:fz*(v.v||0)*.82-Math.sin(v.hd)*side*2.5,
     startHeight:Math.max(0,altitude-ground),t:0,spin:side};
+  const chute=!!inv.paracaigudes;
+  playerFall.parachute=chute;
+  removeParachuteVisual();
+  if(chute)parachuteVisual=createParachuteVisual();
+  v.reentryLockUntil=elapsed+8;
   playerEject=null;v.strafeV=0;cv=null;swimming=false;
 }
-function toggle(){if(scopeActive)setSniperScope(false);if(cv){
+function toggle(){if(playerFall||playerEject)return;if(scopeActive)setSniperScope(false);if(cv){
 const leaving=cv,speed=Math.abs(leaving.v),isAir=VT[leaving.t].m==='a',ground=Math.max(0,hAt(leaving.x,leaving.z)),height=Math.max(0,leaving.alt-ground);
 if(isAir&&height>4){
   ejectFromHelicopter(leaving);
   leaving.crashing=true;leaving.crashT=0;leaving.crashSpin=rn(-1,1)<0?-1:1;leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;
-  msg='Has saltat! L’helicòpter està fora de control!';msgT=3;return
+  msg=playerFall.parachute?'Paracaigudes desplegat!':'Has saltat! L’helicòpter està fora de control!';msgT=3;return
 }
 const moving=speed>3,side=rn(-1,1)<0?-1:1,rrad=vehicleRadius(leaving.t)+2.2;let spot=null;
 for(let i=0;i<16;i++){const a=leaving.hd+side*Math.PI/2+i*Math.PI/8,x=leaving.x+Math.cos(a)*rrad,z=leaving.z+Math.sin(a)*rrad;if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||wallCandidates(x,z,1).some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;spot={x,z};if(hAt(x,z)>0||VT[leaving.t].m==='w')break}
 if(!spot){msg='No hi ha espai per baixar aquí.';msgT=3;return}
-P.x=spot.x;P.z=spot.z;P.hd=leaving.hd;leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;
+P.x=spot.x;P.z=spot.z;P.hd=leaving.hd;leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;leaving.reentryLockUntil=elapsed+2;
 if(moving){const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),sx=Math.cos(leaving.hd)*side,sz=-Math.sin(leaving.hd)*side,carry=Math.min(28,speed*.72);playerEject={kind:'flip',vx:fx*carry+sx*1.4,vz:fz*carry+sz*1.4,t:.5,dur:.5,height:.68};msg='Has saltat del vehicle en marxa!';msgT=2.5}
 cv=null}else{const v=nearV();if(v){cv=v;swimming=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
 addEventListener('keydown',e=>{
@@ -1065,7 +1086,7 @@ if(scopeActive){
   scopeYaw+=(tr-scopeStrafe*.8)*dt*.38;
   scopePitch=Math.max(-.65,Math.min(.65,scopePitch+f*dt*.30));
 }else if(cv){const driven=cv,alive=stepV(driven,f,tr,ud,dt,strafe);if(alive&&cv===driven){P.x=driven.x;P.z=driven.z;P.hd=driven.hd}}
-else{P.hd+=tr*dt*2.2;if(playerFall){playerFall.t+=dt;playerFall.vy-=24*dt;playerFall.vx*=Math.exp(-.18*dt);playerFall.vz*=Math.exp(-.18*dt);P.x=Math.max(-lim,Math.min(lim,P.x+playerFall.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerFall.vz*dt));playerFall.y+=playerFall.vy*dt;const water=wy(P.x,P.z,t),landing=Math.max(hAt(P.x,P.z),water-1.4);P.y=playerFall.y;if(playerFall.y<=landing){P.y=landing;const fallH=playerFall.startHeight,impact=Math.max(0,-playerFall.vy),waterLanding=water>hAt(P.x,P.z)+1.5,dmg=Math.min(100,Math.max(0,(fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8)));playerFall=null;if(dmg>0)hurtP(dmg);msg=waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5}}
+else{P.hd+=tr*dt*2.2;if(playerFall){playerFall.t+=dt;playerFall.vy-=playerFall.parachute?10*dt:24*dt;if(playerFall.parachute)playerFall.vy=Math.max(-4.8,playerFall.vy);playerFall.vx*=Math.exp(-(playerFall.parachute?1.6:.18)*dt);playerFall.vz*=Math.exp(-(playerFall.parachute?1.6:.18)*dt);P.x=Math.max(-lim,Math.min(lim,P.x+playerFall.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerFall.vz*dt));playerFall.y+=playerFall.vy*dt;const water=wy(P.x,P.z,t),landing=Math.max(hAt(P.x,P.z),water-1.4);P.y=playerFall.y;if(playerFall.y<=landing){P.y=landing;const fallH=playerFall.startHeight,impact=Math.max(0,-playerFall.vy),waterLanding=water>hAt(P.x,P.z)+1.5,dmg=playerFall.parachute?0:Math.min(100,Math.max(0,(fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8)));removeParachuteVisual();playerFall=null;if(dmg>0)hurtP(dmg);msg=dmg===0&&fallH>4?'Has aterrat amb seguretat.':waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5}}
 else if(playerEject&&playerEject.t>0){P.x=Math.max(-lim,Math.min(lim,P.x+playerEject.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerEject.vz*dt));playerEject.vx*=Math.exp(-2.4*dt);playerEject.vz*=Math.exp(-2.4*dt);playerEject.t=Math.max(0,playerEject.t-dt)}else{
   // Avanç i strafe simultanis sense variar el rumb. Normalitzam la
   // diagonal per mantenir la velocitat màxima d'un jugador a peu.
@@ -1128,7 +1149,7 @@ if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-i
   world.remove(it.o);items.splice(k,1);
   msg=mapMessage||'Has trobat: '+IT[it.t].n+(it.t==='granada'?' ×5':it.t==='bazooka'?' ×3':it.t==='franctirador'?' +6 cartutxos':'');
   msgT=3;snd('pick')}}
-msgT-=dt;pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;
+msgT-=dt;if(parachuteVisual)parachuteVisual.position.set(P.x,P.y,P.z);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;
 // També animam les passes quan el jugador es mou només lateralment,
 // sense modificar P.hd ni l'orientació de la càmera.
 animPl(cv||scopeActive?0:(Math.abs(f)>.02?f:Math.abs(strafe)*.7),dt);
