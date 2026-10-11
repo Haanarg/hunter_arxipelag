@@ -273,7 +273,7 @@ function autoAimArmoredShot(x,y,z,fx,fz,range){
   return autoAimWeaponShot(x,y,z,fx,0,fz,range,.97);
 }
 function fire(){if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
-if(c=='tanc'){const muzzleZ=5.35*VS.tanc,muzzleY=2.62*VS.tanc,x=cv.x+fx_*muzzleZ,y=cv.o.position.y+muzzleY,z=cv.z+fz*muzzleZ;const [ax,ay,az]=autoAimArmoredShot(x,y,z,fx_,fz,110);fcd=.9;shoot(x,y,z,ax,ay,az,85,45,8,'p',mS,2.2)}
+if(c=='tanc'){const muzzleZ=5.35*VS.tanc,muzzleY=2.62*VS.tanc,x=cv.x+fx_*muzzleZ,y=cv.o.position.y+muzzleY,z=cv.z+fz*muzzleZ;const [ax,ay,az]=autoAimArmoredShot(x,y,z,fx_,fz,220);fcd=.9;shoot(x,y,z,ax,ay,az,85,45,8,'p',mS,2.2);Pj[Pj.length-1].life=4.4}
 else if(c=='heli'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*3.2*VS.heli,y=cv.o.position.y+.5*VS.heli,z=cv.z+fz*3.2*VS.heli;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,125,.91);fcd=.6;shoot(x,y,z,ax,ay,az,85,45,8,'p',mS,2)}
 else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*4.1*VS.heli_combat,y=cv.o.position.y+.15,z=cv.z+fz*4.1*VS.heli_combat;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,130,.91);fcd=.12;shoot(x,y,z,ax,ay,az,145,9,0,'p',mB,.85)}
 else if(c=='tanqueta'){const muzzleZ=3.05*VS.tanqueta,muzzleY=2.48*VS.tanqueta,x=cv.x+fx_*muzzleZ,y=cv.o.position.y+muzzleY,z=cv.z+fz*muzzleZ;const [ax,ay,az]=autoAimArmoredShot(x,y,z,fx_,fz,85);fcd=.16;shoot(x,y,z,ax,ay,az,135,10,0,'p',mW,SMALL_ARMS_SCALE)}
@@ -283,12 +283,18 @@ else if(!cv&&sniperEquipped&&inv.franctirador){
   sniperAmmo--;fcd=1.05;pl.userData.firePose=.42;
   // Mentre apunta, el tir segueix exactament el rumb independent
   // de la càmera de la mira (el personatge conserva P.hd).
+  // La bala surt sobre el raig central REAL de la càmera, sense el
+  // desplaçament vertical del canó ni assistència que desviï el reticle.
   const sightHeading=scopeActive?scopeYaw:hd,
         sightFx=-Math.sin(sightHeading),sightFz=-Math.cos(sightHeading),
-        pitch=scopeActive?scopePitch:0,cos=Math.cos(pitch),
-        fy=Math.sin(pitch),bx=sightFx*cos,bz=sightFz*cos,
-        x=P.x+sightFx*1.05,y=P.y+1.76,z=P.z+sightFz*1.05,
-        [ax,ay,az]=autoAimWeaponShot(x,y,z,bx,fy,bz,scopeActive?550:180,scopeActive?.9996:.984);
+        eyeX=P.x-sightFx*.12,eyeY=P.y+1.76,eyeZ=P.z-sightFz*.12,
+        vertical=scopeActive?Math.tan(scopePitch)*160:0,
+        hdist=160.12,rayLength=Math.hypot(hdist,vertical),
+        vx=sightFx*hdist/rayLength,vy=vertical/rayLength,vz=sightFz*hdist/rayLength,
+        x=scopeActive?eyeX+vx*.9:P.x+sightFx*1.05,
+        y=scopeActive?eyeY+vy*.9:P.y+1.76,
+        z=scopeActive?eyeZ+vz*.9:P.z+sightFz*1.05,
+        [ax,ay,az]=scopeActive?[vx,vy,vz]:autoAimWeaponShot(x,y,z,sightFx,0,sightFz,180,.984);
   shoot(x,y,z,ax,ay,az,470,65,0,'p',mW,SMALL_ARMS_SCALE);
   msg='Rifle: '+sniperAmmo+' cartutxos.';msgT=1.5;
 }
