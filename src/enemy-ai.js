@@ -136,7 +136,7 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
     if(u.canSee&&u.canShoot&&d<=SOLDIER_FIRE_RANGE&&u.cd<=0){
       u.cd=u.rate;
       const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
-      shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,'e',mE,1);
+      shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE);
     }
   }else if(u.canSee){
     u.hd=Math.atan2(-dx,-dz);
@@ -148,7 +148,8 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
     }
     if(d<u.rng&&u.cd<=0){
       u.cd=u.rate;const y0=eyeY,[ax,ay,az]=enemyShotDirection(u,q,py,y0);
-      shoot(u.x,y0,u.z,ax,ay,az,u.spl?60:70,u.dmg,u.spl,'e',mE,u.spl?2:1)
+      const smallBullet=u.t==='tanqueta'||u.t==='general';
+      shoot(u.x,y0,u.z,ax,ay,az,u.spl?60:70,u.dmg,u.spl,'e',smallBullet?mW:mE,smallBullet?SMALL_ARMS_SCALE:(u.spl?2:1))
     }
   }else if(u.sp>0){
     const waypointDistance=Math.hypot(u.tx-u.x,u.tz-u.z),
