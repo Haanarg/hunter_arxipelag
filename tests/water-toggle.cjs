@@ -45,6 +45,7 @@ const fs=require('node:fs'),path=require('node:path');
   })()`);
   for(const [name,pass] of Object.entries(world))assert(pass,'during game '+name);
   game.run('panel("pause")');
+  game.el('performanceMenu').onclick();
   const pause=game.el('disableWaterPause');
   assert.equal(pause.checked,true,'pause controls reflect initial water setting');
   pause.onchange({target:{checked:false}});

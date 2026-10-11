@@ -7,6 +7,7 @@ const assert=require('node:assert/strict');
   const result=g.run("(()=>{\n    const candidates=shadowStats.candidates,active=shadowStats.active,excludedDetail=shadowStats.excludedDetail;\n    const reduced=candidates>0&&active>0&&active<candidates;\n    const clean=shadowCandidates.every(e=>!e.mesh.userData.noCastShadow&&!e.mesh.isInstancedMesh&&!e.mesh.userData.terrainTile);\n    setShadowsDisabled(true);\n    const disabled=shadowsDisabled&&!ren.shadowMap.enabled&&!sun.castShadow&&shadowStats.active===0&&!shadowCandidates.some(e=>e.mesh.castShadow);\n    setShadowsDisabled(false);\n    const restored=!shadowsDisabled&&ren.shadowMap.enabled&&sun.castShadow&&shadowStats.active>0;\n    return{reduced,clean,disabled,restored,candidates,active,excludedDetail};\n  })()");
   for(const key of ['reduced','clean','disabled','restored'])assert(result[key],key+': '+JSON.stringify(result));
   g.run('panel("pause")');
+  g.el('performanceMenu').onclick();
   const pause=g.el('disableShadowsPause');
   assert.equal(pause.checked,false);
   pause.onchange({target:{checked:true}});
