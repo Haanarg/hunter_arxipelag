@@ -420,6 +420,7 @@ window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,initialTerrain
 setPalmsDisabled(requestedPalmDisable);
 setWaterDisabled(!!document.getElementById('disableWater')?.checked);
 setShadowsDisabled(!!document.getElementById('disableShadows')?.checked);
+if(!seedSearchMode)prepareVisibilitySystem();
 if(window.HUNTER_PERF_DEBUG)console.info('Hunter · generació',window.HUNTER_BUILD_STATS);
 }
 

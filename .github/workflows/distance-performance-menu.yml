@@ -1,0 +1,30 @@
+name: Distància visual i menú Rendiment
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/distance-performance-menu.yml'
+      - 'index.html'
+      - 'src/menu-boot.mjs'
+      - 'src/ui.js'
+      - 'src/game-core.js'
+      - 'src/world-generation.js'
+      - 'tests/distance-performance-menu.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verificar distàncies, interruptors i categories de dibuix
+        run: node tests/distance-performance-menu.cjs
+      - name: Regressió de filferrades
+        run: node tests/fence-batching.cjs
+      - name: Regressió de malles decoratives
+        run: node tests/static-decor-batching.cjs

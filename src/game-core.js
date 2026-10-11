@@ -909,6 +909,126 @@ const mini=()=>minimap.draw();
 // control
 let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0,worldVisualTick=0,palmVisualTick=0;
 const LOD_NEAR2=500*500,LOD_MID2=1200*1200,ITEM_ANIM2=500*500,FAUNA_NEAR2=650*650,FAUNA_MID2=1400*1400;
+// Distàncies visuals per família. NO afecten danys, física, IA ni mapa.
+const VISUAL_RANGES={
+  desktop:{buildings:850,fences:560,props:690,vehicles:1150,enemies:1000,items:550,fauna:750,antennas:950},
+  mobile:{buildings:650,fences:390,props:520,vehicles:800,enemies:700,items:420,fauna:530,antennas:750},
+  ultra:{buildings:410,fences:260,props:350,vehicles:520,enemies:460,items:300,fauna:350,antennas:510}
+}[qualityName]||{buildings:850,fences:560,props:690,vehicles:1150,enemies:1000,items:550,fauna:750,antennas:950};
+const visibilityStats={buildings:0,fences:0,props:0,vehicles:0,enemies:0,items:0,fauna:0,antennas:0,terrainOccluded:0};
+window.HUNTER_VISIBILITY_STATS=visibilityStats;
+let staticVisualBatches=[];
+const renderCategories={terreny:0,edificis:0,filferrades:0,vehicles:0,enemics:0,vegetacio:0,decoracio:0,objectes:0,fauna:0,altres:0};
+window.HUNTER_DRAW_CALL_GROUPS=renderCategories;
+adaptivePerformance.stats.drawCategories=renderCategories;
+function registerDrawCategories(){
+  const tagged=new Map();
+  for(const b of B)tagged.set(b.o,'edificis');
+  for(const v of V)tagged.set(v.o,'vehicles');
+  for(const e of E)if(e.o)tagged.set(e.o,'enemics');
+  for(const f of fa)if(f.o)tagged.set(f.o,'fauna');
+  for(const item of items)tagged.set(item.o,'objectes');
+  if(PM.trunk)tagged.set(PM.trunk,'vegetacio');
+  if(terrainStream?.mesh)tagged.set(terrainStream.mesh,'terreny');
+  tagged.set(pl,'altres');
+  function track(mesh){
+    if(!mesh.isMesh)return;
+    let label='altres';
+    if(mesh.userData.terrainTile)label='terreny';
+    else if(mesh.name==='hunter-fence-section')label='filferrades';
+    else if(mesh.name==='hunter-static-decor-batch')label='decoracio';
+    else {
+      let root=mesh;
+      while(root){if(tagged.has(root)){label=tagged.get(root);break}root=root.parent}
+      if(label==='altres'&&(mesh.parent?.name==='hunter-bush-sectors'||mesh.parent?.name==='hunter-rock-sectors'))label='vegetacio';
+    }
+    // No substituïm les possibles animacions/callbacks ja existents.
+    const previous=mesh.onBeforeRender;
+    mesh.onBeforeRender=function(...args){
+      renderCategories[label]++;
+      if(previous)previous.apply(this,args);
+    };
+  }
+  world.traverse(track);
+  pl.traverse(track);
+  // Els objectes fora del món (mar, cel) compten al total del renderitzador
+  // però no necessiten etiquetes de geometria terrestre.
+}
+function terrainConcealsBuilding(b,dist){
+  // Oclusió conservadora només per a edificis força llunyans.
+  if(dist<340)return false;
+  const fromY=Math.max(P.y+3,cam.position.y),
+        toY=b.fy+b.h+5;
+  let covered=0;
+  for(const t of [.3,.52,.74]){
+    const x=P.x+(b.x-P.x)*t,z=P.z+(b.z-P.z)*t,
+          line=fromY+(toY-fromY)*t;
+    if(hAt(x,z)>line+9)covered++;
+  }
+  return covered>=2;
+}
+function updateDistanceVisibility(){
+  const max=VISUAL_RANGES;
+  for(const k of Object.keys(visibilityStats))visibilityStats[k]=0;
+  for(const b of B){
+    const dx=b.x-P.x,dz=b.z-P.z,d2=dx*dx+dz*dz,
+          inside=viewInsideBuilding(b),
+          close=inside||d2<(max.buildings+b.hw)* (max.buildings+b.hw),
+          obscured=close&&!inside&&terrainConcealsBuilding(b,Math.sqrt(d2));
+    b.o.visible=close&&!obscured;
+    b.roof.visible=!inside&&b.rhp>0;
+    b.wm.opacity=b.dm.opacity=inside?.18:1;
+    b.wm.depthWrite=b.dm.depthWrite=!inside;
+    if(!b.o.visible)visibilityStats.buildings++;
+    if(obscured)visibilityStats.terrainOccluded++;
+  }
+  for(const w of Wl){
+    if(!w.barbed||!w.m)continue;
+    const dx=w.cx-P.x,dz=w.cz-P.z;
+    w.m.visible=(w.hp>0&&dx*dx+dz*dz<max.fences*max.fences);
+    if(!w.m.visible)visibilityStats.fences++;
+  }
+  const chunkRadius=113; // diagonal mitja del sector de 160 m
+  for(const mesh of staticVisualBatches){
+    const dx=mesh.position.x-P.x,dz=mesh.position.z-P.z,
+          r=max.props+chunkRadius;
+    mesh.visible=dx*dx+dz*dz<r*r;
+    if(!mesh.visible)visibilityStats.props++;
+  }
+  for(const v of V){
+    const dx=v.x-P.x,dz=v.z-P.z;
+    v.o.visible=v===cv||dx*dx+dz*dz<max.vehicles*max.vehicles;
+    if(!v.o.visible)visibilityStats.vehicles++;
+  }
+  for(const e of E){
+    if(!e.o)continue;
+    const dx=e.x-P.x,dz=e.z-P.z;
+    e.o.visible=dx*dx+dz*dz<max.enemies*max.enemies;
+    if(!e.o.visible)visibilityStats.enemies++;
+  }
+  for(const item of items){
+    const dx=item.x-P.x,dz=item.z-P.z;
+    item.o.visible=dx*dx+dz*dz<max.items*max.items;
+    if(!item.o.visible)visibilityStats.items++;
+  }
+  for(const f of fa){
+    const dx=(f.x??f.cx)-P.x,dz=(f.z??f.cz)-P.z;
+    f.o.visible=dx*dx+dz*dz<max.fauna*max.fauna;
+    if(!f.o.visible)visibilityStats.fauna++;
+  }
+  for(const compound of world.userData.compounds||[]){
+    if(!compound.antenna)continue;
+    const dx=compound.x-P.x,dz=compound.z-P.z;
+    compound.antenna.visible=dx*dx+dz*dz<max.antennas*max.antennas;
+    if(!compound.antenna.visible)visibilityStats.antennas++;
+  }
+}
+function prepareVisibilitySystem(){
+  staticVisualBatches=world.children.filter(o=>o.name==='hunter-static-decor-batch');
+  registerDrawCategories();
+  updateDistanceVisibility();
+}
+
 const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joystick')),
       strafeButtons={left:document.getElementById('strafeLeft'),right:document.getElementById('strafeRight')},
       strafePointers={left:null,right:null},
@@ -1123,7 +1243,7 @@ const ui=window.HUNTER_UI.create({
   getState:()=>({
     hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,disguised:disg,bazookaEquipped,grenadeEquipped,sniperEquipped,sniperAmmo,scopeActive,
     inventory:inv,itemTypes:IT,player:P,nearVehicle:cv?null:nearV(),messageTime:msgT,message:msg,
-    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,shadowStats
+    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,shadowStats,performance:adaptivePerformance.stats,visibilityStats
   }),
   actions:{
     resume,
@@ -1319,22 +1439,10 @@ function viewInsideBuilding(b){
   return Math.abs(cv.x-b.x)<b.w/2&&Math.abs(cv.z-b.z)<b.d/2&&
     y!=null&&y>=b.fy-2&&y<b.fy+b.h+2;
 }
-function updateBuildingVisibility(){
-  B.forEach(b=>{
-    const inside=viewInsideBuilding(b),dx=b.x-P.x,dz=b.z-P.z;
-    b.o.visible=inside||dx*dx+dz*dz<(qualityName==='ultra'?1350*1350:3240000);
-    b.roof.visible=!inside&&b.rhp>0;
-    // La paret posterior arquejada de l'hangar comparteix b.wm.
-    // Amb depthWrite actiu una paret translúcida encara oculta els
-    // vehicles i objectes de darrere; desactivam-lo mentre és transparent.
-    b.wm.opacity=b.dm.opacity=inside?.18:1;
-    b.wm.depthWrite=b.dm.depthWrite=!inside;
-  });
-}
 worldVisualTick-=dt;
 if(worldVisualTick<=0){
   worldVisualTick=.2;
-  updateBuildingVisibility();
+  updateDistanceVisibility();
 }
 updateDoors(dt);
 items.forEach(it=>{const dx=it.x-P.x,dz=it.z-P.z;if(dx*dx+dz*dz<ITEM_ANIM2){it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25}});
@@ -1429,7 +1537,7 @@ mini();ui.renderHUD();}}
 
 let last=performance.now();
 (function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(started&&!paused&&!over?dt:0),cpuStarted=performance.now();update(dt,t);const simulationEnded=performance.now();if(started&&!paused&&!over&&terrainStream)terrainStream.update(P.x,P.z,visualQuality.shadows?2:1.2,cam);const terrainEnded=performance.now();waves(t);
-sun.target.position.set(P.x,0,P.z);sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();ren.render(scene,cam);
+sun.target.position.set(P.x,0,P.z);sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();for(const k in renderCategories)renderCategories[k]=0;ren.render(scene,cam);
 adaptivePerformance.sample({dt:rawDt,renderCpuMs:performance.now()-renderStarted,
   updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,
   active:!!started&&!paused&&!over,now});
