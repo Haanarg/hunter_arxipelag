@@ -1,4 +1,54 @@
 // Compatibility extraction: shared state remains in game-core.js.
+// FX de bales normals: un conjunt petit de malles compartides i reciclables.
+// Les explosions i les col·lisions sense projectils conserven els FX originals.
+const BULLET_IMPACT_LIMIT=112,bulletImpacts=[],bulletImpactFree=[];
+const bulletBloodGeometry=new THREE.IcosahedronGeometry(.061,0),
+      bulletSparkGeometry=new THREE.BoxGeometry(.045,.045,.17);
+const bulletImpactMaterials={
+  blood:[0x87262a,0xab3535].map(color=>new THREE.MeshBasicMaterial({color,transparent:true,opacity:.86,depthWrite:false})),
+  spark:[0xffdb83,0xffa23d].map(color=>new THREE.MeshBasicMaterial({color,transparent:true,opacity:.94,depthWrite:false}))
+};
+function spawnBulletImpact(type,x,y,z,p){
+  if(!world||(type!=='blood'&&type!=='spark'))return;
+  const blood=type==='blood',count=blood?5:7,
+        length=Math.max(.001,Math.hypot(p.vx,p.vy,p.vz)),
+        backX=-p.vx/length,backY=-p.vy/length,backZ=-p.vz/length;
+  for(let n=0;n<count&&bulletImpacts.length<BULLET_IMPACT_LIMIT;n++){
+    const mats=bulletImpactMaterials[type],
+          geometry=blood?bulletBloodGeometry:bulletSparkGeometry,
+          m=bulletImpactFree.pop()||new THREE.Mesh(geometry,mats[n%2]);
+    m.geometry=geometry;m.material=mats[n%2];
+    const size=blood?rn(.7,1.1):rn(.7,1.4),
+          life=blood?rn(.24,.38):rn(.13,.27),
+          speed=blood?rn(.5,2.1):rn(1.8,5.4);
+    m.position.set(x+backX*.09+rn(-.045,.045),y+backY*.09+rn(-.045,.045),z+backZ*.09+rn(-.045,.045));
+    m.rotation.set(rn(0,6.28),rn(0,6.28),rn(0,6.28));
+    m.scale.setScalar(size);m.visible=true;world.add(m);
+    bulletImpacts.push({m,life,maxLife:life,size,
+      vx:backX*speed+rn(-speed*.8,speed*.8),
+      vy:backY*speed+rn(blood?.15:.7,blood?1.25:3.3),
+      vz:backZ*speed+rn(-speed*.8,speed*.8),
+      gravity:blood?9:14});
+  }
+}
+function updateBulletImpacts(dt){
+  for(let i=bulletImpacts.length-1;i>=0;i--){
+    const f=bulletImpacts[i];f.life-=dt;
+    if(f.life<=0){
+      world.remove(f.m);f.m.visible=false;bulletImpactFree.push(f.m);
+      bulletImpacts.splice(i,1);continue;
+    }
+    f.vy-=f.gravity*dt;
+    f.m.position.x+=f.vx*dt;f.m.position.y+=f.vy*dt;f.m.position.z+=f.vz*dt;
+    if(f.m.geometry===bulletSparkGeometry){f.m.rotation.x+=dt*17;f.m.rotation.z+=dt*13}
+    f.m.scale.setScalar(f.size*Math.max(.05,f.life/f.maxLife));
+  }
+}
+function clearBulletImpacts(){
+  for(const f of bulletImpacts){world?.remove(f.m);f.m.visible=false;bulletImpactFree.push(f.m)}
+  bulletImpacts.length=0;
+}
+
 function setDis(v){disg=v;[...pl.userData.mats,...rider.userData.mats].forEach(([m,a,b])=>m.color.copy(vivid(v?b:a)))}
 function fin(m){setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+' · Obre Ⅱ / Esc per tornar a jugar';endEl.style.display='flex'}
 function hurtP(d){if(over)return;d*=DIF;hp-=d;snd('hurt',.5);if(hp<=0){hp=0;fin('HAS MORT')}}
@@ -384,6 +434,12 @@ function updPj(dt){
     if(!hit)continue;
 
     if(!p.spl){
+      // La mateixa detecció de col·lisions dona feedback en ambdós sentits.
+      // Soldats/general/jugador: sang discreta; altres dianes: espurnes.
+      const person=kind==='player'||(kind==='enemy'&&(target.t==='soldat'||target.t==='general')),
+            solid=kind==='wall'||kind==='building'||kind==='vehicle'||kind==='enemy';
+      if(person)spawnBulletImpact('blood',p.x,p.y,p.z,p);
+      else if(solid)spawnBulletImpact('spark',p.x,p.y,p.z,p);
       if(kind==='wall')dmgW(target,p.dmg*(p.own==='e'?.5:1));
       else if(kind==='building'){target.rhp-=p.dmg*(p.own==='e'?.5:1);if(target.rhp<=0)roofBreak(target)}
       else if(kind==='tree'&&target?.p)dmgP(target,p.dmg*(p.own==='e'?.5:1));
@@ -407,5 +463,7 @@ for(let i=grenades.length-1;i>=0;i--){const g=grenades[i],x0=g.x,y0=g.y,z0=g.z;g
 for(let i=bombs.length-1;i>=0;i--){const b=bombs[i];b.t-=dt;
   if(b.t>0)window.HUNTER_EXPLOSIVE_VISUALS.update(b.o,b.t);
   if(b.t<=0){boom(b.x,b.y,b.z,48,300,'b');world.remove(b.o);bombs.splice(i,1)}}
-for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.life-=dt;f.o.scale.setScalar(1+(.6-f.life)*f.s);f.o.material.opacity=Math.max(0,f.life/.6);if(f.life<=0){world.remove(f.o);fx.splice(i,1)}}}
+for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.life-=dt;f.o.scale.setScalar(1+(.6-f.life)*f.s);f.o.material.opacity=Math.max(0,f.life/.6);if(f.life<=0){world.remove(f.o);fx.splice(i,1)}}
+updateBulletImpacts(dt);
+}
 
