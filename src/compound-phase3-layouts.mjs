@@ -1,0 +1,28 @@
+// Phase 3 design proposals only: never imported by the game generator.
+export const phase3Layouts=[
+ {id:'base-proposal',name:'Base inicial',phase:3,friendly:true,size:[120,110],
+  subtitle:'Punt de partida · serveis separats · sortida cap a la costa',
+  buildings:[{id:'barracks',label:'Caserna',x:-30,z:-22,w:24,d:26,h:7},{id:'store',label:'Magatzem',x:30,z:-24,w:22,d:22,h:7},{id:'clinic',label:'Infermeria',x:30,z:19,w:22,d:18,h:6}],
+  vehicles:[{t:'cotxe',x:-23,z:27,hd:Math.PI},{t:'bici',x:-42,z:23,hd:Math.PI}],soldiers:[],spawn:{x:0,z:20},
+  routes:[{label:'Sortida · 16 m',points:[[0,-8],[0,55]],width:16},{label:'Caserna',points:[[-30,-7],[-30,2],[0,2]],width:4},{label:'Magatzem',points:[[30,-11],[30,2],[0,2]],width:4},{label:'Infermeria',points:[[30,30],[30,38],[0,38]],width:4},{label:'Sortida cotxe',points:[[-23,27],[-23,42],[0,42],[0,55]],width:9},{label:'Bicicleta',points:[[-42,23],[-42,42],[-23,42]],width:4}],
+  patrol:[],zones:[{label:'Pati de sortida',x:0,z:25,w:16,d:34},{label:'Aparcament',x:-31,z:26,w:30,d:16}],
+  props:[['flag',0,-28],['crate',42,-27],['crate',42,-22],['lamp',-13,42],['lamp',14,42]],
+  loot:[{kind:'munició',x:27,z:-20},{kind:'farmaciola',x:30,z:19}],tower:null,entrances:[[0,55]],
+  counts:'1 cotxe · 1 bicicleta · cap enemic · munició i farmaciola',
+  notes:'Caserna, magatzem i infermeria al voltant d’un pati obert. Sortida de 16 m i camí previst fins al punt costaner amb barca o llanxa, fora d’aquesta maqueta. Bandera blava i inici del jugador al centre. Proposta: no modifica la base actual.'},
+ {id:'hq-proposal',name:'HQ enemic',phase:3,size:[230,230],
+  subtitle:'Búnquer desalineat · quatre torres · patrulles separades',
+  buildings:[{id:'bunker',label:'Búnquer del general',x:22,z:-27,w:40,d:34,h:10,bunker:true},{id:'barracks',label:'Caserna',x:-46,z:-26,w:24,d:28,h:7},{id:'supply',label:'Serveis',x:-44,z:30,w:22,d:20,h:7}],
+  vehicles:[{t:'tanc',x:22,z:32,hd:Math.PI},{t:'tanqueta',x:-66,z:58,hd:Math.PI/2},{t:'tanqueta',x:61,z:34,hd:Math.PI},{t:'cotxe',x:-101,z:0,hd:0},{t:'cotxe',x:101,z:0,hd:Math.PI}],
+  soldiers:[[-37,70],[-13,70],[-66,-4],[-17,19],[45,6],[21,-17],[9,-36],[35,-36]],general:{x:22,z:-36},
+  routes:[{label:'Entrada · 24 m',points:[[-25,115],[-25,65],[-10,65],[-10,4],[22,4],[22,-8]],width:6},{label:'Sortida tanc · 18 m',points:[[22,32],[22,63],[-25,63],[-25,115]],width:18},{label:'Caserna',points:[[-46,-10],[-46,2],[-10,2]],width:4},{label:'Serveis',points:[[-44,42],[-44,48],[-10,48]],width:4}],
+  patrol:[[-68,8],[-68,-57],[59,-57],[59,12],[-15,12],[-15,55],[-68,55],[-68,8]],
+  vehiclePatrols:[{label:'Tanquetes · anell interior',points:[[-66,58],[-66,-65],[64,-65],[64,63],[-66,63],[-66,58]],width:10},{label:'Jeeps · anell exterior',points:[[-101,0],[-101,-101],[101,-101],[101,101],[-101,101],[-101,0]],width:10}],
+  zones:[{label:'Maniobra blindats',x:24,z:48,w:52,d:44},{label:'Entrada desalineada',x:-25,z:84,w:24,d:12}],
+  props:[['flag',-8,-49],['crate',-48,28],['crate',-40,28],['fuel',-45,-49],['lamp',-40,72],['lamp',-10,72],['sandbag',-43,72],['sandbag',-7,72]],
+  loot:[{kind:'munició',x:-44,z:34},{kind:'farmaciola',x:-43,z:-23},{kind:'disfressa',x:-50,z:-23}],
+  fence:[[[-82,-82],[82,-82]],[[82,-82],[82,82]],[[82,82],[-13,82]],[[-37,82],[-82,82]],[[-82,82],[-82,-82]]],
+  towers:[{x:-76,z:-76},{x:76,z:-76},{x:-76,z:76},{x:76,z:76}],entrances:[[-25,115]],
+  counts:'1 tanc aparcat · 2 tanquetes i 2 jeeps de patrulla · general, 8 soldats i 4 torres',
+  notes:'Entrada de filferrada desplaçada respecte del búnquer. Dues tanquetes dins i dos jeeps fora, amb anells de circulació reservats. Búnquer amb passadís i quatre cambres; es conservarà la porta d’obertura progressiva de 10 s. Sense helicòpters. Proposta: vehicles i porta estàtics al visor.'}
+];

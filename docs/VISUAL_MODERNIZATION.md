@@ -5,9 +5,20 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.3.97**.
+Versió actual: **0.4.10**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.4.10 — dissenys de fase 3: base inicial i HQ (2026-10-11)
+
+Visor a `compounds-preview.html?fase=3`, amb dues propostes Three.js. Les fases 1 i 2 continuen integrades; aquests dos dissenys **encara no canvien el generador jugable**.
+
+- **Base inicial (120 × 110 m):** caserna, magatzem i infermeria, bandera blava, punt d’inici al pati central i sortida de 16 m. Cotxe i bicicleta amb recorreguts de sortida; cap enemic, munició i farmaciola. Es preveu connectar el camí al punt costaner amb barca o llanxa; la maqueta mostra només el recinte terrestre.
+- **HQ enemic (230 × 230 m incloent l’anell exterior):** filferrada de 164 × 164 m, entrada de 24 m desplaçada respecte del búnquer de 40 × 34 m. Caserna i serveis auxiliars; quatre torres, general i vuit soldats. Tanc aparcat, dues tanquetes a l’anell interior i dos jeeps a l’exterior; sense helicòpters.
+- Búnquer amb passadís central i quatre cambres. La porta de 10 s és una condició per a la futura integració; al visor es mostra estàtica. Els recorreguts dels vehicles són guies, no IA en moviment.
+- Vista en planta, interiors i guies de circulació, maniobra i patrulles. Dades separades a `src/compound-phase3-layouts.mjs`, carregades només pel visor.
+- Validació: geometria finita, vehicles separats dels edificis, patrulles de soldats i amplada de les rutes de vehicles; visor en escriptori i mòbil amb navegació, planta, interiors i zoom.
+- Fases posteriors: embarcador civil, terminal de ferri, control de carretera i petit assentament; continuen pendents les variants de distribució de cada tipus.
 
 ### Revisió 0.3.97 — fase 2 integrada al joc (2026-10-11)
 
@@ -462,7 +473,7 @@ La prioritat és evitar regressions de gameplay mentre es modernitza el projecte
 
 ## Redisseny de compounds — catàleg i generació (2026-10-08)
 
-Estat: **hangar, avançada i port integrats a la 0.3.48; resta del catàleg pendent**. La taula conserva els objectius generals de disseny; els detalls implementats dels tres primers recintes es descriuen a la revisió 0.3.48. Els vehicles són aparcats i utilitzables excepte les patrulles indicades. No tots els objectes opcionals apareixen a cada instància.
+Estat: **hangar, avançada i port integrats a la 0.3.48; heliport, polvorí i comunicacions integrats a la 0.3.97; base inicial i HQ en disseny de fase 3; recintes civils i control de carretera pendents**. La taula conserva els objectius generals de disseny; els detalls implementats dels tres primers recintes es descriuen a la revisió 0.3.48. Els vehicles són aparcats i utilitzables excepte les patrulles indicades. No tots els objectes opcionals apareixen a cada instància.
 
 | Tipus | Edificis i elements obligatoris | Vehicles | Enemics i objectes |
 |---|---|---|---|

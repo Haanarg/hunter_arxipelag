@@ -1,11 +1,11 @@
 import * as T from '../vendor/three-r186.module.mjs';
 import {compoundLayouts as integratedLayouts} from './compound-layouts.mjs';
 import {phase2Layouts} from './compound-phase2-layouts.mjs';
-const phase2=new URLSearchParams(location.search).get('fase')==='2';
-const compoundLayouts=phase2?phase2Layouts:integratedLayouts.filter(l=>l.phase!==2);
-document.querySelector('.badge').textContent=phase2?'Fase 2 · integrats al joc':'Fase 1 · integrats al joc';
-document.getElementById('phase1').setAttribute('aria-current',phase2?'false':'page');
-document.getElementById('phase2').setAttribute('aria-current',phase2?'page':'false');
+import {phase3Layouts} from './compound-phase3-layouts.mjs';
+const requested=Number(new URLSearchParams(location.search).get('fase')),phase=[2,3].includes(requested)?requested:1;
+const compoundLayouts=phase===3?phase3Layouts:phase===2?phase2Layouts:integratedLayouts.filter(l=>l.phase!==2);
+document.querySelector('.badge').textContent='Fase '+phase+(phase===3?' · propostes':' · integrats al joc');
+for(const n of[1,2,3])document.getElementById('phase'+n).setAttribute('aria-current',phase===n?'page':'false');
 import {createCompoundConcept} from './compound-concepts.mjs';
 const canvas=document.getElementById('scene'),container=canvas.parentElement;
 const renderer=new T.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;
@@ -36,6 +36,6 @@ canvas.addEventListener('pointerdown',e=>{pointers.set(e.pointerId,{x:e.clientX,
 canvas.addEventListener('pointermove',e=>{const prev=pointers.get(e.pointerId);if(!prev)return;const dx=e.clientX-prev.x,dy=e.clientY-prev.y;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===2){const [a,b]=[...pointers.values()],d=Math.hypot(a.x-b.x,a.y-b.y);if(lastPinch>0)zoom(lastPinch/d);lastPinch=d}else{yaw-=dx*.007;pitch=Math.max(.17,Math.min(Math.PI/2-.001,pitch+dy*.006));dirty=true}});
 for(const event of['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(event,e=>{pointers.delete(e.pointerId);lastPinch=0});canvas.addEventListener('wheel',e=>{e.preventDefault();zoom(Math.exp(e.deltaY*.001))},{passive:false});
 new ResizeObserver(()=>{const w=container.clientWidth,h=container.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();fit();dirty=true}).observe(container);
-function render(){camera.position.set(Math.sin(yaw)*Math.cos(pitch)*distance,Math.sin(pitch)*distance,Math.cos(yaw)*Math.cos(pitch)*distance);camera.lookAt(target);camera.updateMatrixWorld();for(const tag of current.tags){const p=tag.position.clone().project(camera);tag.el.hidden=!!(tag.interior&&current.roofs.some(r=>r.visible))||!labels||Math.abs(p.x)>.97||Math.abs(p.y)>.95||p.z>1;tag.el.style.left=(p.x*.5+.5)*container.clientWidth+'px';tag.el.style.top=(-p.y*.5+.5)*container.clientHeight+'px'}renderer.render(scene,camera);dirty=false}
+function render(){camera.position.set(Math.sin(yaw)*Math.cos(pitch)*distance,Math.sin(pitch)*distance,Math.cos(yaw)*Math.cos(pitch)*distance);camera.lookAt(target);camera.updateMatrixWorld();const labelRects=[];for(const tag of current.tags){const p=tag.position.clone().project(camera);tag.el.hidden=!!(tag.interior&&current.roofs.some(r=>r.visible))||!labels||Math.abs(p.x)>.97||Math.abs(p.y)>.95||p.z>1;tag.el.style.left=(p.x*.5+.5)*container.clientWidth+'px';tag.el.style.top=(-p.y*.5+.5)*container.clientHeight+'px';if(!tag.el.hidden){const r=tag.el.getBoundingClientRect();if(labelRects.some(a=>r.left<a.right+4&&r.right>a.left-4&&r.top<a.bottom+4&&r.bottom>a.top-4))tag.el.hidden=true;else labelRects.push(r)}}renderer.render(scene,camera);dirty=false}
 window.compoundPreview={scene,camera,renderer,select,render,get index(){return index},layouts:compoundLayouts};
 select(0);let last=performance.now();renderer.setAnimationLoop(now=>{const dt=Math.min(.05,(now-last)/1000);last=now;if(document.hidden)return;if(auto){yaw+=dt*.2;dirty=true}if(dirty)render()});
