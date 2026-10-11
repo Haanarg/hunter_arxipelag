@@ -88,7 +88,12 @@ function soldierEnterBuilding(u,b,target,dt){
   // Primer arribam al centre exacte del portal: les portes de 2,5 m
   // tenen poc marge amb el radi conservador de l'A*. Des d'aquest punt
   // el trajecte cap a dins és perpendicular a la paret, sense enganxar-se.
-  if(u.entryPhase===0&&distance<.065)u.entryPhase=1;
+  // El pas no exigeix encertar un punt de 6,5 cm: amb A*, separació entre
+  // soldats i passos discrets es poden fer oscil·lacions a l'exterior.
+  // Un radi lligat al pas del fotograma permet superar el llindar sense
+  // canviar de fase prematurament des de les cantonades de la paret.
+  const entryTolerance=Math.max(.35,Math.min(.95,u.sp*dt*1.25));
+  if(u.entryPhase===0&&distance<=entryTolerance)u.entryPhase=1;
   const goal=u.entryPhase?interior:exterior;
   u.tacticGoal=null;u.tacticT=0;
   mvE(u,u.sp*dt,goal.x,goal.z);
