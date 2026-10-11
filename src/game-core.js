@@ -489,8 +489,9 @@ function checkRoofSupport(b,w){
 }
 function dmgW(w,d){if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}w.hp-=d;if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0)Wl.splice(i,1);i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);checkRoofSupport(w.owner,w);snd('boom',.3)}}
 function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=(opt.hangar?buildingVisual.createHangarShell:buildingVisual.createShell)({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide,structuralWalls=[];
+let entranceDoor=null;
 const seg=(lx,lz,sx,sz,dr,windows=false,supportSide=null,supportWeight=0)=>{if(!dr){const parts=windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:h,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:h,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+h,hp:90,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,supportSide,supportWeight};Wl.push(o);if(supportWeight>0)structuralWalls.push(o);return}
-const parts=buildingVisual.addDoor(g,{lx,lz,sx,sz,height:h,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:35,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y};Wl.push(door);Dr.push(door);
+const parts=buildingVisual.addDoor(g,{lx,lz,sx,sz,height:h,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:35,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y};Wl.push(door);Dr.push(door);entranceDoor=door;
 if(parts.lintel)Wl.push({x0:door.x0,x1:door.x1,z0:door.z0,z1:door.z1,y0:fy+parts.doorHeight,y1:fy+h,hp:70,m:parts.lintel,door:false,open:false,playerBlock:false,cx:x+lx,cz:z+lz})};
 if(opt.hangar){
   const sh=Math.max(3.1,h*.3),push=(lx,lz,sx,sz)=>{
@@ -506,7 +507,7 @@ if(opt.hangar){
   if(!opt.noPartitions&&!opt.bunker&&w*d>=140&&R()<.5){const al=w>=d,L=al?d:w,gp=rr(-L/4,L/4),px=(R()<.5?-1:1)*rr((al?w:d)*.12,(al?w:d)*.2),a0=-L/2+t,a1=L/2-t,ps=(a,b)=>{if(b-a<.5)return;const cc=(a+b)/2,l=b-a;if(al)seg(px,cc,t,l);else seg(cc,px,l,t)};ps(a0,gp-1.6);ps(gp+1.6,a1)}
 }
 g.position.set(x,fy,z);world.add(g);
-const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,rhp:opt.hangar?90:120,hangar:!!opt.hangar,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
+const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,rhp:opt.hangar?90:120,hangar:!!opt.hangar,door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
 function mkEnemyBunker(x,z){
   const b=mkB(x,z,34,28,9,0xd9ded2,0xbfc6bb,{kind:'enemy_bunker',bunker:true,doorSide:0,doorWidth:3.4,doorHeight:4.2,openDoor:false,lockedDoor:true}),g=b.o,concrete=0xd2d8cb,dark=0x777f76,t=.55;
   const left=bx(g,6.2,8.7,28.6,concrete,-16.1,4.05,0,'masonry'),right=bx(g,6.2,8.7,28.6,concrete,16.1,4.05,0,'masonry');left.rotation.z=-.18;right.rotation.z=.18;
@@ -561,7 +562,10 @@ function updateDoors(dt){
       d.open=p>=.999;
       continue
     }
-    const dx=P.x-d.cx,dz=P.z-d.cz,r=d.open?6:4.5,o=d.alwaysOpen||(!d.locked&&!cv&&dx*dx+dz*dz<r*r);
+    const dx=P.x-d.cx,dz=P.z-d.cz,r=d.open?6:4.5,
+      soldierNear=!d.locked&&enemyCandidatesAt(d.cx,d.cz,4.7).some(u=>
+        (u.t==='soldat'||u.t==='general')&&Math.hypot(u.x-d.cx,u.z-d.cz)<4.5),
+      o=d.alwaysOpen||(!d.locked&&((!cv&&dx*dx+dz*dz<r*r)||soldierNear));
     d.open=o;d.m.visible=!o
   }
 }
