@@ -26,6 +26,37 @@ assert(additionalAiSource.includes('function soldierEnterBuilding')&&
   String(mkB).includes('door:entranceDoor')&&String(updateDoors).includes('soldierNear'),
   'soldiers pursue through unlocked house entrances');
 
+run(`{
+  const oldMove=mvE,results=[];
+  try{
+    mvE=(u,step,tx,tz)=>{
+      const dx=tx-u.x,dz=tz-u.z,d=Math.hypot(dx,dz);
+      if(d>1e-9){const len=Math.min(step,d);u.x+=dx/d*len;u.z+=dz/d*len}
+    };
+    for(const [nx,nz] of [[0,1],[0,-1],[1,0],[-1,0]]){
+      const house={x:0,z:0,w:16,d:16,hangar:false,
+        door:{cx:nx*8,cz:nz*8,nx,nz,locked:false,bunkerGate:false}},
+        u={x:nx*14+nz*2,z:nz*14-nx*2,sp:7,entryBuilding:null,entryPhase:0},
+        target={x:0,z:0};
+      let sawEntryPhase=false,entered=false;
+      for(let i=0;i<120;i++){
+        const pursuing=soldierEnterBuilding(u,house,target,.05);
+        sawEntryPhase=sawEntryPhase||u.entryPhase===1;
+        if(!pursuing){entered=true;break}
+      }
+      results.push(sawEntryPhase&&entered&&Math.abs(u.x)<6.85&&Math.abs(u.z)<6.85);
+    }
+    globalThis.soldierPassesFourDoorDirections=results.every(Boolean);
+  }finally{mvE=oldMove}
+}`);
+ok('soldierPassesFourDoorDirections','soldiers keep the interior waypoint across narrow doorways facing any of four sides');
+const chuteCoreSource=require('fs').readFileSync(require('path').join(__dirname,'../src/game-core.js'),'utf8');
+assert(chuteCoreSource.includes('if(playerFall.parachute){')&&
+  chuteCoreSource.includes('u.ar.rotation.x=-2.35;u.al.rotation.x=-2.35;')&&
+  chuteCoreSource.includes('vertices.push(x,5.25,z,.57*Math.cos(a),2.56,.43*Math.sin(a))'),
+  'deployed parachute keeps the model upright and lines attach to its upper harness');
+
+
 
 const strafeMarkup=require('fs').readFileSync(require('path').join(__dirname,'../index.html'),'utf8');
 assert(strafeMarkup.includes('id="strafeLeft"')&&strafeMarkup.includes('id="strafeRight"')&&
