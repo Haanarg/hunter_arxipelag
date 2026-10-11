@@ -925,6 +925,49 @@ run(`{
 ok('projectileSegmentMath','projectile segment intersection helpers detect continuous hits');
 ok('projectileUsesBroadPhase','projectiles use spatial broad-phase for collision candidates');
 ok('projectileNoGlobalMicrostep','projectiles no longer use the global 0.008 second microstep loop');
+
+run(`{
+  const before=Pj.length;
+  const gunMaterial=mW,smallScale=SMALL_ARMS_SCALE;
+  const baseSize=gB.parameters.width;
+  const oldAmmo=ammo,oldCv=cv,oldSwimming=swimming,
+        oldFcd=fcd,oldOver=over,oldGrenade=grenadeEquipped,
+        oldBazooka=bazookaEquipped,oldSniper=sniperEquipped,
+        oldAim=pl.userData.pistolAimTime,oldShotAge=pl.userData.pistolShotAge,
+        oldFirePose=pl.userData.firePose;
+  try{
+    cv=null;swimming=false;over=0;fcd=0;
+    grenadeEquipped=false;bazookaEquipped=false;sniperEquipped=false;
+    ammo=16;fire();
+    const p=Pj[Pj.length-1],pistolOk=Pj.length===before+1&&
+      p.o.material===gunMaterial&&Math.abs(p.o.scale.x-smallScale)<1e-8&&
+      p.o.material.color.getHex()===0xffffff&&p.dmg===12&&p.vx*p.vx+p.vy*p.vy+p.vz*p.vz>0&&p.spl===0;
+    // La geometria del projectil és visual: mantenim físics de dany i intersecció.
+    globalThis.smallWhiteProjectileModel=pistolOk&&baseSize*smallScale<.27&&
+      smallScale<.9&&mB.color.getHex()===0xffe45a&&
+      mE.color.getHex()===0xff4040;
+  }finally{
+    for(const p of Pj.splice(before))world.remove(p.o);
+    ammo=oldAmmo;cv=oldCv;swimming=oldSwimming;
+    fcd=oldFcd;over=oldOver;grenadeEquipped=oldGrenade;
+    bazookaEquipped=oldBazooka;sniperEquipped=oldSniper;
+    pl.userData.pistolAimTime=oldAim;pl.userData.pistolShotAge=oldShotAge;
+    pl.userData.firePose=oldFirePose;
+  }
+  const f=String(fire),en=String(updEn);
+  globalThis.smallWhiteProjectileCallers=
+    f.includes("130,12,0,'p',mW,SMALL_ARMS_SCALE")&&
+    f.includes("470,65,0,'p',mW,SMALL_ARMS_SCALE")&&
+    f.includes("135,10,0,'p',mW,SMALL_ARMS_SCALE")&&
+    en.includes("70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE")&&
+    en.includes("u.t==='tanqueta'||u.t==='general'")&&
+    en.includes("smallBullet?mW:mE")&&
+    f.includes("72,135,18,'pb',mS,3")&&
+    f.includes("85,45,8,'p',mS,2.2");
+}`);
+ok('smallWhiteProjectileModel','player small-arms bullets render white and under 0.27 world units with unchanged pistol damage and speed');
+ok('smallWhiteProjectileCallers','soldiers, general, pistol, sniper and tankettes use shared small white bullets; rockets and tank shells remain unchanged');
+
 run(`{
   globalThis.lodThresholdsOk=LOD_NEAR2===250000&&LOD_MID2===1440000&&ITEM_ANIM2===250000&&FAUNA_NEAR2===422500&&FAUNA_MID2===1960000;
   globalThis.worldVisualThrottled=String(update).includes('worldVisualTick=.2')&&String(update).includes('visualLodAcc')&&String(update).includes("d2<LOD_MID2 ? .1 : .45");
