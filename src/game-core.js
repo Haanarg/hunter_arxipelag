@@ -3,7 +3,16 @@ let terrainStream=null,seedSearchMode=false,seedCompounds=[];
 const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_WAVES','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI','HUNTER_SEED_SEARCH'];
 const missingModules=requiredModules.filter(name=>!window[name]);if(missingModules.length)throw new Error('Mòduls Hunter absents: '+missingModules.join(', '));
 const missingSystems=Object.entries({generation:typeof build,combat:typeof fire,enemies:typeof updEn,audio:typeof initAudio}).filter(([,type])=>type!=='function').map(([name])=>name);if(missingSystems.length)throw new Error('Sistemes Hunter absents: '+missingSystems.join(', '));
-let MAP_SCALE=1,S=4800,H=S/2;const SEG=400,vivid=c=>{const k=new THREE.Color(c),h={};k.getHSL(h,THREE.SRGBColorSpace);return k.setHSL(h.h,Math.min(1,h.s*1.5),h.l,THREE.SRGBColorSpace)};
+// La mida escollida a la portada ja és coneguda quan s'inicialitza el motor.
+ // Crear l'aigua directament amb aquesta mida evita reservar i destruir
+ // una malla de centenars de milers de vèrtexs al primer build().
+ let MAP_SCALE=+(document.querySelector('input[name="mapSize"]:checked')?.value||1),S=4800*MAP_SCALE,H=S/2;
+ const SEG=400,vividCache=new Map(),vivid=c=>{
+   let k=vividCache.get(c);
+   if(!k){k=new THREE.Color(c);const h={};k.getHSL(h,THREE.SRGBColorSpace);
+     k.setHSL(h.h,Math.min(1,h.s*1.5),h.l,THREE.SRGBColorSpace);vividCache.set(c,k)}
+   return k
+ };
 const materialProfile=(name='organic')=>window.HUNTER_MATERIALS[name]||window.HUNTER_MATERIALS.organic;
 const M=(c,profile='organic')=>new THREE.MeshStandardMaterial({color:vivid(c),flatShading:true,...materialProfile(profile)});
 const MAT={
@@ -86,7 +95,7 @@ const adaptivePerformance=window.HUNTER_PERFORMANCE.create({
   element:document.getElementById('perfStats'),compact:qualityName!=='desktop'
 });
 window.HUNTER_PERFORMANCE_STATS=adaptivePerformance.stats;
-const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:9600,segments:visualQuality.waterSegments,heightAt:hAt,config:window.HUNTER_WATER,reflections:visualQuality.waterReflections!==false,fogColor:scene.fog.color});
+const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segments:visualQuality.waterSegments,heightAt:hAt,config:window.HUNTER_WATER,reflections:visualQuality.waterReflections!==false,fogColor:scene.fog.color});
 const waterMat=water.material,waterUniforms=water.uniforms;
 const updateSeabed=()=>water.setWorldSize(S);
 const waves=water.update;
