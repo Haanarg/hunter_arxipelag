@@ -35,7 +35,7 @@ function rebuildIslandGrid(){
   }
 }
 const islandCandidates=(x,z)=>islandGrid.get(islandCellKey(Math.floor(x/ISLAND_CELL),Math.floor(z/ISLAND_CELL)))||(islands||[]);
-const seedFromText=v=>{v=String(v??'').trim();if(/^-?\d+$/.test(v))return Number(v)>>>0;let h=2166136261>>>0;for(let i=0;i<v.length;i++){h^=v.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0};
+const seedFromText=v=>{v=String(v??'').trim();if(/^-?\d+$/.test(v))return Number(BigInt(v)&0xffffffffn);let h=2166136261>>>0;for(let i=0;i<v.length;i++){h^=v.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0};
 const mul=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
 const hash=(x,y)=>{const h=Math.sin(x*127.1+y*311.7+seed*.001)*43758.5453;return h-Math.floor(h)};
 function vn(x,y){const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);
@@ -354,7 +354,8 @@ async function runSeedSearch(){
     for(let i=0;i<count;i++){
       if(token!==seedSearchToken)break;
       const raw=(start+i)>>>0;
-      requestedSeed=(raw^Math.imul(MAP_SCALE,0x45d9f3b))>>>0;
+      // Una llavor visible sempre correspon a una llavor real, sense XOR.
+      requestedSeed=raw;
       seedSearchStatusEl.textContent='Comprovant '+(i+1)+'/'+count+' · '+label+' · llavor '+raw+'…';
       try{
         build();
@@ -363,7 +364,9 @@ async function runSeedSearch(){
         });
         if(nearest){
           found++;if(nearest.distance<=target)within++;
-          rows.push({seed:raw,...nearest});
+          // En cas de reintent intern, oferim la llavor definitiva,
+          // que coincidirà amb el HUD en iniciar la partida.
+          rows.push({seed,...nearest});
           rows.sort(seedSearch.compare);
           if(rows.length>12)rows.length=12;
           renderSeedSearchResults(rows,target,label,category,type);
@@ -403,7 +406,9 @@ seedRandomEl.onchange=()=>{seedInputEl.disabled=seedRandomEl.checked;if(!seedRan
 document.querySelectorAll('#ini button[data-d]').forEach(b=>b.onclick=()=>{
   DIF=+b.dataset.d;MAP_SCALE=+(document.querySelector('input[name="mapSize"]:checked')?.value||1);S=4800*MAP_SCALE;H=S/2;
   const rawSeed=seedRandomEl.checked?null:seedFromText(seedInputEl.value||'hunter');
-  requestedSeed=rawSeed==null?null:(rawSeed^Math.imul(MAP_SCALE,0x45d9f3b))>>>0;
+  // No alterar la llavor introduïda: la que es veu al HUD s'ha
+  // de poder reintroduir per recuperar exactament el mateix arxipèlag.
+  requestedSeed=rawSeed;
   build();minimap.setWorldSize(S,H);minimap.reset();mini();
   // Sense captura WebGL síncrona/toDataURL: evitar bloqueig després de generar el món.
   started=1;iniEl.style.display='none';document.body.classList.add('game-started');initAudio()
