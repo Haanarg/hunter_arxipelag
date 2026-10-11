@@ -606,6 +606,10 @@ const pl=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});scene.add(pl);
 const animPl=(f,dt)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{forward:f,dt,swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,sniperEquipped});
 const VT=window.HUNTER_VEHICLE_DYNAMICS.types;
 const VS=window.HUNTER_VEHICLES.scales;
+// Quan els patins reposen sobre una superfície, el punt inferior de la
+// geometria escalada ha de quedar només 10 cm per damunt del sòl/pista.
+// Durant el vol, v.alt continua representant l'origen del model.
+const helicopterLandedAltitude=(v,surfaceY)=>surfaceY-(v.o?.userData?.skidContactHeight||0)+.1;
 const vehicleRadius=t=>window.HUNTER_VEHICLES.radii[t]*VS[t];
 const VHB=window.HUNTER_VEHICLES.hitboxes;
 const vehicleHitType=t=>t==='jeep'?'cotxe':t;
@@ -679,7 +683,7 @@ function syncFerryCargo(){
     const f=v.carrier;if(!f)continue;
     if(f.destroyed||v.destroyed){detachFromFerry(v);continue}
     const p=ferryWorld(f,v.carrierLX||0,v.carrierLZ||0);v.x=p.x;v.z=p.z;v.hd=wrapAngle(f.hd+(v.carrierHD||0));
-    if(VT[v.t]?.m==='a')v.alt=ferryLocalSurfaceY(f,v.carrierLZ||0)+.8
+    if(VT[v.t]?.m==='a')v.alt=helicopterLandedAltitude(v,ferryLocalSurfaceY(f,v.carrierLZ||0))
   }
 }
 const setPatrol=(u,pts,guard=false)=>{if(!u)return u;u.patrol=pts.map(([x,z])=>({x,z}));u.pi=-1;u.guard=guard;u.wt=0;return u};
@@ -1015,12 +1019,13 @@ if(a){
   const g2=Math.max(0,hAt(v.x,v.z)),targetVz=ud*(c.climb||24);
   v.verticalV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.verticalV||0,targetVz,c.liftResponse||2.5,dt);
   if(Math.abs(ud)<.01)v.verticalV*=Math.exp(-1.5*dt);
-  v.alt=Math.max(g2+.8,Math.min(150,v.alt+v.verticalV*dt));
+  v.alt=Math.max(helicopterLandedAltitude(v,g2),Math.min(150,v.alt+v.verticalV*dt));
   const f2=ferryForVehicle(v,v.x,v.z,false);
   if(f2){
     const q=ferryLocal(f2,v.x,v.z),deckY=ferryLocalSurfaceY(f2,q.z);
-    if(v.alt<=deckY+1.35&&ud<=.05){v.alt=deckY+.8;v.verticalV=0;attachToFerry(v,f2)}
-    else if(v.carrier===f2&&v.alt>deckY+2.2)detachFromFerry(v)
+    const deckLandingY=helicopterLandedAltitude(v,deckY);
+    if(v.alt<=deckLandingY+.55&&ud<=.05){v.alt=deckLandingY;v.verticalV=0;attachToFerry(v,f2)}
+    else if(v.carrier===f2&&v.alt>deckLandingY+1.4)detachFromFerry(v)
   }else if(v.carrier)detachFromFerry(v)
 }
 if(v.carrier)attachToFerry(v,v.carrier);
@@ -1052,7 +1057,7 @@ function animateTankTracks(v,dt){
 function place(v,t,dt,tr){const c=VT[v.t],o=v.o,g=hAt(v.x,v.z);let y,pi=0,ro=Math.sin(t*2+v.x)*.02;
 if(c.m==='a'&&v.carrier&&!v.crashing){
   const q=ferryLocal(v.carrier,v.x,v.z);
-  y=ferryLocalSurfaceY(v.carrier,q.z)+.8;v.alt=y;
+  y=helicopterLandedAltitude(v,ferryLocalSurfaceY(v.carrier,q.z));v.alt=y;
   pi=v.carrier.o.rotation.x;ro=v.carrier.o.rotation.z;
 }
 else if(c.m==='a'){

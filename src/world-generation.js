@@ -215,7 +215,7 @@ rb.slice().sort(()=>R()-.5).slice(0,2).forEach(b=>addIt('mapa',b));
 rb.slice().sort(()=>R()-.5).slice(0,1+MAP_SCALE).forEach(b=>addIt('mapa_heli',b));
 rb.slice().sort(()=>R()-.5).slice(0,1+MAP_SCALE).forEach(b=>addIt('mapa_tanc',b));
 P.x=pa.x;P.z=pa.z+8;P.hd=0;P.base={x:pa.x,z:pa.z};V=[];cv=null;mm=null;
-const add=(t,x,z,a,meta={})=>{const o=mkV(t),c=VT[t],v={t,x,z,hd:a||0,v:0,alt:Math.max(0,hAt(x,z))+.8,o,armor:c.armor??0,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};if(t==='heli_combat')v.rockets=6;if(t==='llanxa_coets')v.rockets=Infinity;world.add(o);V.push(v);return v};
+const add=(t,x,z,a,meta={})=>{const o=mkV(t),c=VT[t],surface=Math.max(0,hAt(x,z)),v={t,x,z,hd:a||0,v:0,alt:c.m==='a'?helicopterLandedAltitude({o},surface):surface+.8,o,armor:c.armor??0,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};if(t==='heli_combat')v.rockets=6;if(t==='llanxa_coets')v.rockets=Infinity;world.add(o);V.push(v);return v};
 // Cap tanc neutral dins del HQ: els tancs pilotables apareixen
 // distribuïts per l'arxipèlag, lluny de la base enemiga.
 

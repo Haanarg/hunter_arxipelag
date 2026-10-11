@@ -481,6 +481,10 @@ window.HUNTER_VEHICLES=Object.freeze({
         const tail=new THREE.Group();tail.position.set(.38,3.45,combat?7:7.38);box(tail,.1,1.9,.16,rubber,0,0,0,'rubber');box(tail,.1,.16,1.9,rubber,0,0,0,'rubber');g.add(tail);g.userData.tailRotor=tail;
       }
       if(t==='bici'){const crank=new THREE.Group();crank.position.set(0,.75,0);for(const side of[-1,1]){rod(crank,[side*.3,0,0],[side*.3,0,side*.28],.045,metal);box(crank,.26,.08,.18,rubber,side*.4,0,side*.28,'rubber')}g.add(crank);g.userData.crank=crank}
+      // La coordenada Y de l'origen no és l'altura dels patins.
+      // Les dues barres inferiors estan centrades a y=.48 i tenen radi .075.
+      // Guardam el contacte inferior JA escalat per a la física d'aterratge.
+      if(t==='heli'||t==='heli_combat')g.userData.skidContactHeight=(.48-.075)*VS[t];
       g.traverse(o=>{if(o.isMesh&&!o.userData.waterMask){o.castShadow=shadows;o.receiveShadow=shadows}});
       g.scale.setScalar(VS[t]);return g;
     };

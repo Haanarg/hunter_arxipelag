@@ -8,6 +8,25 @@ ok("!document.body.classList.contains('game-started')",'minimap must stay hidden
 game.start();game.frame();
 ok('started&&B.length>=6&&E.some(e=>e.t==="general")','menu starts a complete world');
 ok('ammo===16','new mission starts with 16 bullets');
+run(`{
+  const helis=V.filter(v=>v.t==='heli'||v.t==='heli_combat');
+  globalThis.heliSkidsRestOnGround=['heli','heli_combat'].every(t=>helis.some(v=>v.t===t))&&
+    helis.every(v=>{
+      const ground=Math.max(0,hAt(v.x,v.z)),target=helicopterLandedAltitude(v,ground);
+      place(v,0,0,0);
+      const gap=v.o.position.y+v.o.userData.skidContactHeight-ground;
+      return Math.abs(v.alt-target)<1e-6&&Math.abs(gap-.1)<1e-6;
+    });
+  const h=helis.find(v=>v.t==='heli'),oldAlt=h.alt,oldVz=h.verticalV;
+  try{
+    const target=helicopterLandedAltitude(h,Math.max(0,hAt(h.x,h.z)));
+    h.alt=target-3;h.verticalV=-12;
+    stepV(h,0,0,-1,.05);
+    globalThis.heliDescendClampedToSkids=Math.abs(h.alt-target)<1e-6;
+  }finally{h.alt=oldAlt;h.verticalV=oldVz;place(h,0,0,0)}
+}`);
+ok('heliSkidsRestOnGround','both helicopter models have skids 10 cm above the terrain when parked');
+ok('heliDescendClampedToSkids','helicopter descent stops with skids on the terrain instead of hovering');
 
 const additionalWorldSource=require('fs').readFileSync(require('path').join(__dirname,'../src/world-generation.js'),'utf8');
 const additionalAiSource=require('fs').readFileSync(require('path').join(__dirname,'../src/enemy-ai.js'),'utf8');
@@ -1231,7 +1250,7 @@ for(const t of types){
       'selected D head and neck visible on rider for '+t);
   }
   ok('cv&&Number.isFinite(cv.o.position.y)','physics '+t);
-  run("if(VT[cv.t].m==='a')cv.alt=Math.max(0,hAt(cv.x,cv.z))+.8;toggle()");ok('!cv','exit '+t);
+  run("if(VT[cv.t].m==='a')cv.alt=helicopterLandedAltitude(cv,Math.max(0,hAt(cv.x,cv.z)));toggle()");ok('!cv','exit '+t);
 }
 run(`{
   const spec={bici:[1,2],moto:[1,2],cotxe:[2,4],camio:[2,6],tanqueta:[2,6]};
@@ -1426,9 +1445,9 @@ run(`{
   const f=V.find(v=>v.t==='ferry'),h=V.find(v=>v.t==='heli_combat');
   h.x=f.x;h.z=f.z;h.hd=f.hd;h.alt=f.o.position.y+12;attachToFerry(h,f);
   f.o.position.y=5;f.o.rotation.x=.031;f.o.rotation.z=-.024;syncFerryCargo();place(h,4,.016,0);
-  const y1=h.alt,expected1=ferryLocalSurfaceY(f,h.carrierLZ||0)+.8;
+  const y1=h.alt,expected1=helicopterLandedAltitude(h,ferryLocalSurfaceY(f,h.carrierLZ||0));
   f.o.position.y=3.6;syncFerryCargo();place(h,4.1,.016,0);
-  const y2=h.alt,expected2=ferryLocalSurfaceY(f,h.carrierLZ||0)+.8;
+  const y2=h.alt,expected2=helicopterLandedAltitude(h,ferryLocalSurfaceY(f,h.carrierLZ||0));
   globalThis.ferryHeliWaveFollow=Math.abs(y1-expected1)<1e-6&&Math.abs(y2-expected2)<1e-6&&y2<y1&&Math.abs(h.o.rotation.x-f.o.rotation.x)<1e-6&&Math.abs(h.o.rotation.z-f.o.rotation.z)<1e-6;
   detachFromFerry(h);
 }`);
