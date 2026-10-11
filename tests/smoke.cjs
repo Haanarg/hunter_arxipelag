@@ -44,6 +44,25 @@ run(`{
 }`);
 ok('strafeHudModes','two buttons appear only on foot, hovercraft and both helicopters and release on vehicle changes');
 
+const actionBindingString=run('String(act)');
+assert(actionBindingString.includes("if(c==='KeyR'){if(cv||nearV())toggle();else panel('inventory');return}")&&
+  actionBindingString.includes("if(c==='KeyT'){toggleSniperScope();return}")&&
+  actionBindingString.includes("if(c==='KeyG'){if(!secondaryWeapon())plant();}")&&
+  !actionBindingString.includes("if(c==='KeyE')")&&
+  !actionBindingString.includes("if(c==='KeyQ')"),
+  'action uses R, sniper scope T, helicopter missiles G; Q/E do not trigger actions');
+ok("String(update).includes('(K.KeyE?1:0)-(K.KeyQ?1:0)')&&!String(update).includes('K.KeyX')&&!String(update).includes('K.KeyZ')",
+  'Q/E keyboard strafes left/right and old Z/X shortcuts are replaced');
+const remappedKeysHtml=require('fs').readFileSync(require('path').join(__dirname,'../index.html'),'utf8');
+assert(remappedKeysHtml.includes('id="mainActionButton" data-k="KeyR"')&&
+  remappedKeysHtml.includes('id="sniperAimButton" class="sniper-control" data-k="KeyT"')&&
+  remappedKeysHtml.includes('class="heli-combat-control" data-k="KeyG"')&&
+  remappedKeysHtml.includes('Strafe esquerra · Q')&&
+  remappedKeysHtml.includes('Strafe dreta · E')&&
+  remappedKeysHtml.includes('MIRA x8 · T per sortir'),
+  'touch buttons and instructional labels use the remapped keys');
+
+
 
 run(`{
   const saved={ammo,cv,grenadeEquipped,bazookaEquipped,sniperEquipped,
@@ -981,7 +1000,8 @@ run(`{
     String(stepV).includes('totalSideV=sideV+v.strafeV')&&
     String(update).includes('stepV(driven,f,tr,ud,dt,strafe)')&&
     String(update).includes('Math.hypot(f,strafe)')&&
-    String(update).includes('K.KeyX')&&String(update).includes('K.KeyZ');
+    String(update).includes('K.KeyE')&&String(update).includes('K.KeyQ')&&
+    !String(update).includes('K.KeyX')&&!String(update).includes('K.KeyZ');
 }`);
 ok('strafeVehicles','hovercraft and helicopters accelerate sideways with no turn; other vehicles cannot strafe and on-foot diagonal is normalized');
 
