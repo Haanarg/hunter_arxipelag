@@ -753,8 +753,8 @@ run(`{
       scopePitch===0&&Math.abs(scopeYaw-P.hd)<1e-9&&
       joystick.state.x===0&&joystick.state.y===0;
     globalThis.sniperJoystickAimOnly=heldPosition&&aimMoved&&shotFollowsSight&&scopeExitClean;
-    globalThis.sniperAimDragIndependent=String(ren.domElement).length>=0&&
-      String(update).includes('scopeYaw+=(tr-scopeStrafe*.8)*dt*1.25')&&
+    globalThis.sniperAimDragIndependent=
+      String(update).includes('scopeYaw+=(tr-scopeStrafe*.8)*dt*.38')&&
       String(update).includes('if(scopeActive){')&&
       String(update).includes('animPl(cv||scopeActive?0:');
   }finally{
@@ -773,6 +773,11 @@ run(`{
 }`);
 ok('sniperJoystickAimOnly','when scoped WASD, Q/E and joystick pan view without moving character; bullets follow the reticle; exit restores movement');
 ok('sniperAimDragIndependent','zoom view has independent yaw from player and movement animation is disabled');
+const scopeControllerJs=require('fs').readFileSync(require('path').join(__dirname,'../src/game-core.js'),'utf8');
+assert(scopeControllerJs.includes('if(scopeActive)scopeYaw-=dx*.00115;else{const q=cv||P;q.hd-=dx*.006}')&&
+  scopeControllerJs.includes('if(scopeActive&&!wasActive){scopeYaw=P.hd;scopePitch=0;joystick.reset();releaseStrafeButtons()}')&&
+  scopeControllerJs.includes('const fx=-Math.sin(scopeYaw),fz=-Math.cos(scopeYaw)'),
+  'touch drag and camera follow a separate scope heading and reset controls on mode changes');
 
 
 
