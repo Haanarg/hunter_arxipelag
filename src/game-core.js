@@ -782,7 +782,7 @@ function createParachuteVisual(){
   canopy.position.y=5.3;canopy.castShadow=true;g.add(canopy);
   const vertices=[];
   for(let i=0;i<8;i++){const a=i*Math.PI/4,x=Math.cos(a)*3.42,z=Math.sin(a)*3.42;
-    vertices.push(x,5.25,z,.42*Math.cos(a),.3,.42*Math.sin(a))}
+    vertices.push(x,5.25,z,.57*Math.cos(a),2.56,.43*Math.sin(a))}
   const lines=new THREE.BufferGeometry();
   lines.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
   g.add(new THREE.LineSegments(lines,new THREE.LineBasicMaterial({color:0xe9eee5})));
@@ -1157,7 +1157,23 @@ msgT-=dt;if(parachuteVisual)parachuteVisual.position.set(P.x,P.y,P.z);pl.positio
 // També animam les passes quan el jugador es mou només lateralment,
 // sense modificar P.hd ni l'orientació de la càmera.
 animPl(cv||scopeActive?0:(Math.abs(f)>.02?f:Math.abs(strafe)*.7),dt);
-if(!cv&&playerFall){pl.position.y=playerFall.y;pl.rotation.x=(playerFall.spin||1)*playerFall.t*7.5;pl.rotation.z=Math.sin(playerFall.t*8)*.45}
+if(!cv&&playerFall){
+  pl.position.y=playerFall.y;
+  if(playerFall.parachute){
+    // Amb la cúpula oberta, postura suspesa (sense cabrioles), braços
+    // aixecats agafant els tirants i una oscil·lació molt suau.
+    pl.rotation.x=0;
+    pl.rotation.z=Math.sin(playerFall.t*1.8)*.045;
+    const u=pl.userData;
+    u.ar.rotation.x=-2.35;u.al.rotation.x=-2.35;
+    u.ar.rotation.z=-.22;u.al.rotation.z=.22;
+    u.aer.rotation.x=.22;u.ael.rotation.x=.22;
+    u.lr.rotation.x=-.09;u.ll.rotation.x=.09;
+  }else{
+    pl.rotation.x=(playerFall.spin||1)*playerFall.t*7.5;
+    pl.rotation.z=Math.sin(playerFall.t*8)*.45;
+  }
+}
 else if(!cv&&playerEject&&playerEject.t>=0){
   const dur=playerEject.dur||.5,p=Math.max(0,Math.min(1,1-playerEject.t/dur)),u=pl.userData;
   if(playerEject.kind==='flip'){
