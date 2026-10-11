@@ -85,7 +85,10 @@ function soldierEnterBuilding(u,b,target,dt){
   const exterior={x:door.cx+door.nx*2.1,z:door.cz+door.nz*2.1},
         interior={x:door.cx-door.nx*2.5,z:door.cz-door.nz*2.5},
         distance=Math.hypot(u.x-exterior.x,u.z-exterior.z);
-  if(u.entryPhase===0&&distance<1.4)u.entryPhase=1;
+  // Primer arribam al centre exacte del portal: les portes de 2,5 m
+  // tenen poc marge amb el radi conservador de l'A*. Des d'aquest punt
+  // el trajecte cap a dins és perpendicular a la paret, sense enganxar-se.
+  if(u.entryPhase===0&&distance<.065)u.entryPhase=1;
   const goal=u.entryPhase?interior:exterior;
   u.tacticGoal=null;u.tacticT=0;
   mvE(u,u.sp*dt,goal.x,goal.z);
