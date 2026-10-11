@@ -113,6 +113,83 @@ function setWaterDisabled(disabled){
 }
 const waterSettingCheckbox=document.getElementById('disableWater');
 if(waterSettingCheckbox)waterSettingCheckbox.addEventListener('change',()=>setWaterDisabled(waterSettingCheckbox.checked));
+// Ombres de proximitat. Malles classificades una vegada per mapa,
+// amb actualització ocasional i sense passejar l'arbre de l'escena.
+let shadowsDisabled=false;
+const shadowCandidates=[],shadowStats={candidates:0,active:0,excludedDetail:0,updates:0};
+let shadowLastX=Infinity,shadowLastZ=Infinity,shadowLastMs=-Infinity;
+window.HUNTER_SHADOW_STATS=shadowStats;
+function updateShadowCasters(force=false){
+  if(!visualQuality.shadows||shadowsDisabled)return;
+  const now=performance.now();
+  if(!force&&Math.abs(P.x-shadowLastX)<30&&Math.abs(P.z-shadowLastZ)<30&&now-shadowLastMs<1000)return;
+  shadowLastX=P.x;shadowLastZ=P.z;shadowLastMs=now;
+  const range2=Math.pow(visualQuality.shadowDistance||225,2),
+        dynamicPositions=new Map();
+  let count=0;
+  for(const entry of shadowCandidates){
+    let q=entry.point;
+    if(entry.owner){
+      q=dynamicPositions.get(entry.owner);
+      if(!q){q=entry.owner.getWorldPosition(new THREE.Vector3());dynamicPositions.set(entry.owner,q)}
+    }
+    const dx=q.x-P.x,dz=q.z-P.z,near=dx*dx+dz*dz<range2;
+    entry.mesh.castShadow=near;
+    if(near)count++;
+  }
+  shadowStats.active=count;shadowStats.updates++;
+}
+function setShadowsDisabled(disabled){
+  shadowsDisabled=!!disabled;
+  const checkbox=document.getElementById('disableShadows');
+  if(checkbox)checkbox.checked=shadowsDisabled;
+  const enabled=!!visualQuality.shadows&&!shadowsDisabled;
+  ren.shadowMap.enabled=enabled;
+  sun.castShadow=enabled;
+  if(enabled){
+    ren.shadowMap.needsUpdate=true;
+    updateShadowCasters(true);
+  }else{
+    for(const entry of shadowCandidates)entry.mesh.castShadow=false;
+    shadowStats.active=0;
+  }
+  window.HUNTER_SHADOWS_DISABLED=shadowsDisabled;
+  return shadowsDisabled;
+}
+const shadowSettingCheckbox=document.getElementById('disableShadows');
+if(shadowSettingCheckbox)shadowSettingCheckbox.addEventListener('change',()=>setShadowsDisabled(shadowSettingCheckbox.checked));
+function prepareShadowCasters(){
+  shadowCandidates.length=0;
+  shadowLastX=Infinity;shadowLastZ=Infinity;shadowLastMs=-Infinity;
+  shadowStats.candidates=0;shadowStats.active=0;shadowStats.excludedDetail=0;
+  if(!visualQuality.shadows||!world)return;
+  const dynamicRoots=new Set([pl,...V.map(v=>v.o),...E.map(e=>e.o),...fa.map(f=>f.o)].filter(Boolean));
+  world.updateMatrixWorld(true);
+  pl.updateMatrixWorld(true);
+  const collect=mesh=>{
+    if(!mesh.isMesh)return;
+    mesh.castShadow=false;
+    const geometry=mesh.geometry;
+    if(!geometry||mesh.isInstancedMesh||mesh.userData.waterMask||
+       mesh.userData.terrainTile||mesh.userData.noCastShadow)return;
+    if(!geometry.boundingSphere)geometry.computeBoundingSphere();
+    const radius=(geometry.boundingSphere?.radius||0)*mesh.matrixWorld.getMaxScaleOnAxis(),
+          mat=Array.isArray(mesh.material)?mesh.material[0]:mesh.material;
+    // Les peces molt petites i els vidres no fan una passada d'ombres.
+    if(radius<.85||(mat?.transparent&&mat.opacity<.9)){
+      shadowStats.excludedDetail++;mesh.receiveShadow=false;return;
+    }
+    let owner=mesh.parent;
+    while(owner&&owner!==world&&owner!==scene&&!dynamicRoots.has(owner))owner=owner.parent;
+    if(!dynamicRoots.has(owner))owner=null;
+    shadowCandidates.push({mesh,owner,point:owner?null:mesh.getWorldPosition(new THREE.Vector3())});
+  };
+  world.traverse(collect);
+  pl.traverse(collect);
+  shadowStats.candidates=shadowCandidates.length;
+  if(!shadowsDisabled)updateShadowCasters(true);
+}
+
 // terreny visual a src/terrain.js
 let stairs=[],piers=[];
 let Wl=[],Dr=[],items=[],inv={},msg='',msgT=0,HQ=null,ib=null;
@@ -1046,7 +1123,7 @@ const ui=window.HUNTER_UI.create({
   getState:()=>({
     hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,disguised:disg,bazookaEquipped,grenadeEquipped,sniperEquipped,sniperAmmo,scopeActive,
     inventory:inv,itemTypes:IT,player:P,nearVehicle:cv?null:nearV(),messageTime:msgT,message:msg,
-    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled
+    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,shadowStats
   }),
   actions:{
     resume,
@@ -1057,6 +1134,7 @@ const ui=window.HUNTER_UI.create({
     restart:d=>{DIF=d;elapsed=0;build();minimap.reset();mini();resume()},
     setPalmsDisabled,
     setWaterDisabled,
+    setShadowsDisabled,
     zoom:d=>zoom=Math.max(.7,Math.min(1.9,zoom+d)),
     chetos:grantAllWeapons
   }
@@ -1231,7 +1309,7 @@ if(!playerFall){
 }
 // Actualització del LOD de les palmeres a baixa freqüència (i també en vehicle).
 palmVisualTick-=dt;
-if(palmVisualTick<=0){palmVisualTick=.16;if(PM.update)PM.update(P.x,P.z,false,palmsDisabled)}
+if(palmVisualTick<=0){palmVisualTick=.16;if(PM.update)PM.update(P.x,P.z,false,palmsDisabled);updateShadowCasters()}
 // Un vehicle sota un hangar també ha de deixar veure l'interior.
 // Només s'amaga la coberta quan som realment per sota seu (no en sobrevolar-la).
 function viewInsideBuilding(b){

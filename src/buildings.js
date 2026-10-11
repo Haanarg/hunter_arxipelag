@@ -8,6 +8,36 @@ window.HUNTER_BUILDINGS=Object.freeze({
       mesh.position.set(lx,y,lz);group.add(mesh);return mesh
     };
 
+    // Unifica només decoració immòbil dins el mateix grup de coberta.
+    // Els murs, les portes, els graons i les peces destructibles continuen independents.
+    const batchStaticRoof=(roof,parts)=>{
+      if(!parts.length)return null;
+      const buffers=[],counts=[];let total=0;
+      for(const mesh of parts){
+        mesh.updateMatrix();
+        const geom=mesh.geometry.index?mesh.geometry.toNonIndexed():mesh.geometry.clone();
+        geom.applyMatrix4(mesh.matrix);
+        buffers.push(geom);
+        const n=geom.attributes.position.count;counts.push(n);total+=n;
+      }
+      const mergedGeometry=new THREE.BufferGeometry();
+      for(const [name,width] of [['position',3],['normal',3],['uv',2]]){
+        const data=new Float32Array(total*width);let offset=0;
+        for(let i=0;i<buffers.length;i++){
+          const attr=buffers[i].getAttribute(name);
+          if(attr)data.set(attr.array,offset);
+          offset+=counts[i]*width;
+        }
+        mergedGeometry.setAttribute(name,new THREE.BufferAttribute(data,width));
+      }
+      mergedGeometry.computeBoundingSphere();
+      const combined=new THREE.Mesh(mergedGeometry,parts[0].material);
+      combined.name='hunter-roof-static-batch';combined.userData.roofBatch=true;
+      for(const m of parts)roof.remove(m);
+      roof.add(combined);
+      for(const g of buffers)g.dispose();
+      return combined;
+    };
     // Porta visual: més estreta i alta, amb llinda real a sobre.
     const addDoor=(group,{lx,lz,sx,sz,height,wallMaterial,doorMaterial,doorHeight=4.4})=>{
       const h=Math.min(doorHeight,Math.max(3.8,height-.65));
@@ -118,6 +148,7 @@ window.HUNTER_BUILDINGS=Object.freeze({
       rimE.position.set(width/2+.48,height+1.24,0);
       rimW.position.set(-width/2-.48,height+1.24,0);
       roofGroup.add(rimN,rimS,rimE,rimW);
+      batchStaticRoof(roofGroup,[rimN,rimS,rimE,rimW]);
       roofGroup.userData.color=roofColor;
       return {group,walls,doors,roof:roofGroup};
     };
@@ -131,7 +162,7 @@ window.HUNTER_BUILDINGS=Object.freeze({
 
       // La volta arrenca pràcticament des de terra: el sostre forma també els laterals.
       const spring=.12,radius=Math.max(width*.5,2),segments=10,da=Math.PI/segments;
-      const roofMat=material(roofColor,'metal');
+      const roofMat=material(roofColor,'metal'),slabs=[];
       for(let i=0;i<segments;i++){
         const a0=i*da,a1=(i+1)*da,a=(a0+a1)/2;
         const x=Math.cos(a)*radius,y=spring+Math.sin(a)*radius;
@@ -139,18 +170,20 @@ window.HUNTER_BUILDINGS=Object.freeze({
         const slab=new THREE.Mesh(new THREE.BoxGeometry(chord,.24,depth+1.15),roofMat);
         slab.position.set(x,y,0);
         slab.rotation.z=a-Math.PI/2;
-        roofGroup.add(slab);
+        roofGroup.add(slab);slabs.push(slab);
       }
+      batchStaticRoof(roofGroup,slabs);
 
       // Nervis exteriors per donar una lectura més propera a un hangar real.
-      const frameMat=material(0x5c6366,'metal');
+      const frameMat=material(0x5c6366,'metal'),ribs=[];
       for(const z of[-depth/2+.7,0,depth/2-.7]){
         for(let i=0;i<segments;i++){
           const a=(i+.5)*da,x=Math.cos(a)*radius,y=spring+Math.sin(a)*radius,chord=2*radius*Math.sin(da/2);
           const rib=new THREE.Mesh(new THREE.BoxGeometry(chord,.1,.12),frameMat);
-          rib.position.set(x,y,z);rib.rotation.z=a-Math.PI/2;roofGroup.add(rib);
+          rib.position.set(x,y,z);rib.rotation.z=a-Math.PI/2;roofGroup.add(rib);ribs.push(rib);
         }
       }
+      batchStaticRoof(roofGroup,ribs);
       roofGroup.userData.color=roofColor;
       roofGroup.userData.hangarRoof=true;
       roofGroup.userData.hitSegments=Array.from({length:segments},(_,i)=>{
