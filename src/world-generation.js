@@ -64,7 +64,83 @@ function build(){const requestedPalmDisable=!!document.getElementById('disablePa
 {const base=requestedSeed==null?Math.floor(Math.random()*0xffffffff)>>>0:requestedSeed>>>0;let tries=0;do{seed=(base+Math.imul(tries++,0x9e3779b1))>>>0;genIslands();pa=land(A,2000);pb=land(Bi,2000)}while((!pa||!pb)&&tries<8);if(!pa||!pb)throw new Error('No s’ha pogut generar un mapa vàlid amb aquesta llavor')}
 addLevelArea(pa.x,pa.z,82,72,pa.h,0,18);[[-27,0],[27,-12],[0,31]].forEach(([dx,dz])=>mkB(pa.x+dx,pa.z+dz,15,15,7,0xe9dfc8,0x2c5fc0));flag(pa.x,pa.z-7,0x2c7bff);
 addLevelArea(pb.x,pb.z,148,133,pb.h,0,28);mkEnemyBunker(pb.x,pb.z);mkB(pb.x+49,pb.z+16,12,12,6,0x8a7a70,0x8c1f1f);mkB(pb.x-50,pb.z-15,12,12,6,0x8a7a70,0x8c1f1f);flag(pb.x+15,pb.z-6,0xe02828);barbedHQ(pb.x,pb.z,72.5,65,18,26);
-const cols=[0xd8b48a,0xc9a27a,0xb8c4c9,0xd9c9a0],compoundVehicles=[],heliportSites=[];
+const cols=[0xd8b48a,0xc9a27a,0xb8c4c9,0xd9c9a0],compoundVehicles=[],heliportSites=[],staticDecorRoots=[];
+
+// Camins, molls i decoració dels compounds: malles per sectors i material,
+// mantenint intactes les dades de física, construccions i saqueig.
+const batchStaticDecor=()=>{
+  const CHUNK=160,groups=new Map(),materialMap=new Map();
+  world.updateMatrixWorld(true);
+  let originals=0,batches=0,vertices=0;
+  for(const root of staticDecorRoots){
+    if(!root.parent)continue;
+    root.traverse(mesh=>{
+      if(!mesh.isMesh||mesh.isInstancedMesh||!mesh.geometry?.attributes.position)return;
+      const mat=mesh.material;
+      if(!mat?.color||Array.isArray(mat))return;
+      const center=mesh.getWorldPosition(new THREE.Vector3()),
+            cx=Math.floor(center.x/CHUNK),cz=Math.floor(center.z/CHUNK);
+      const signature=[mat.type,mat.roughness??0,mat.metalness??0,mat.opacity??1,
+        mat.transparent?1:0,mat.side,mat.flatShading?1:0].join(':');
+      const key=cx+','+cz+'|'+signature;
+      let group=groups.get(key);
+      if(!group){group={cx,cz,mat,meshes:[]};groups.set(key,group)}
+      group.meshes.push(mesh);originals++;
+    });
+  }
+  const transform=new THREE.Matrix4(),geometries=[];
+  for(const group of groups.values()){
+    const x=(group.cx+.5)*CHUNK,z=(group.cz+.5)*CHUNK,
+          pieces=[],sizes=[];let total=0;
+    for(const mesh of group.meshes){
+      transform.makeTranslation(-x,0,-z).multiply(mesh.matrixWorld);
+      const copy=mesh.geometry.index?mesh.geometry.toNonIndexed():mesh.geometry.clone();
+      copy.applyMatrix4(transform);
+      const n=copy.attributes.position.count,color=new Float32Array(n*3);
+      for(let k=0;k<n;k++){
+        color[k*3]=mesh.material.color.r;
+        color[k*3+1]=mesh.material.color.g;
+        color[k*3+2]=mesh.material.color.b;
+      }
+      copy.setAttribute('color',new THREE.BufferAttribute(color,3));
+      pieces.push(copy);sizes.push(n);total+=n;
+    }
+    const geom=new THREE.BufferGeometry();
+    for(const [attribute,width] of [['position',3],['normal',3],['uv',2],['color',3]]){
+      const data=new Float32Array(total*width);let offset=0;
+      for(let k=0;k<pieces.length;k++){
+        const src=pieces[k].getAttribute(attribute);
+        if(src)data.set(src.array,offset);
+        offset+=sizes[k]*width;
+      }
+      geom.setAttribute(attribute,new THREE.BufferAttribute(data,width));
+    }
+    geom.computeBoundingSphere();
+    const mat=group.mat.clone();
+    mat.color.setHex(0xffffff);mat.vertexColors=true;mat.needsUpdate=true;
+    const mesh=new THREE.Mesh(geom,mat);
+    mesh.name='hunter-static-decor-batch';
+    mesh.position.set(x,0,z);mesh.castShadow=false;
+    world.add(mesh);
+    batches++;vertices+=total;
+    for(const g of pieces)g.dispose();
+  }
+  const disposed=new Set(),materials=new Set();
+  for(const root of staticDecorRoots){
+    root.traverse(o=>{
+      if(o.geometry&&!disposed.has(o.geometry)){disposed.add(o.geometry);o.geometry.dispose()}
+      if(o.material){
+        for(const mat of Array.isArray(o.material)?o.material:[o.material])materials.add(mat);
+      }
+    });
+    root.parent?.remove(root);
+  }
+  for(const mat of materials)mat.dispose();
+  staticDecorRoots.length=0;
+  const result={originalMeshes:originals,batchedMeshes:batches,drawCallsSaved:originals-batches,vertices};
+  window.HUNTER_STATIC_BATCH_STATS=result;
+  return result;
+};
 const compoundProp=(kind,x,z,rot=0)=>{
   const y=Math.max(.05,hAt(x,z)),g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;
   if(kind==='crate'){bx(g,1.2,.9,1,0x7b5a35,0,.45,0,'paint');bx(g,1.26,.1,1.06,0x3f3021,0,.2,0,'metal');bx(g,.1,.95,1.08,0x3f3021,0,.48,0,'metal')}
@@ -78,30 +154,30 @@ const compoundProp=(kind,x,z,rot=0)=>{
   else if(kind==='lamp'){bx(g,.14,4.2,.14,0x454b4f,0,2.1,0,'metal');bx(g,.7,.22,.45,0xe7d68a,0,4.15,0,'paint')}
   else if(kind==='generator'){bx(g,7,.4,4.5,0x6d7369,0,.2,0,'metal');bx(g,5,2.5,3,0x57694f,0,1.65,0,'metal');for(let k=-2;k<=2;k++)bx(g,.12,1.6,.06,0x29383a,k*.55,1.75,1.53,'metal');bx(g,.25,3,.25,0x41484b,1.5,3.05,-.7,'metal')}
   else if(kind==='net'){for(const xx of[-1.2,1.2])bx(g,.12,2.1,.12,0x4d5356,xx,1.05,0,'metal');for(let yy=.45;yy<2;yy+=.42)bx(g,2.5,.035,.035,0x5b6062,0,yy,0,'metal');for(let xx=-1.05;xx<=1.05;xx+=.42)bx(g,.035,1.65,.035,0x5b6062,xx,1.2,0,'metal')}
-  world.add(g);return g
+  world.add(g);staticDecorRoots.push(g);return g
 };
-const compoundPad=(x,z,w,d,c=0x77736c)=>{const y=hAt(x,z)-.015,o=new THREE.Mesh(new THREE.BoxGeometry(w,.06,d),M(c,'masonry'));o.position.set(x,y,z);world.add(o);compoundClear.push({x,z,r:Math.hypot(w,d)*.55});return o};
+const compoundPad=(x,z,w,d,c=0x77736c)=>{const y=hAt(x,z)-.015,o=new THREE.Mesh(new THREE.BoxGeometry(w,.06,d),M(c,'masonry'));o.position.set(x,y,z);world.add(o);staticDecorRoots.push(o);compoundClear.push({x,z,r:Math.hypot(w,d)*.55});return o};
 const landingPad=(x,z,size=30,rot=0)=>{
   const y=hAt(x,z)+.025,g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;
   const base=new THREE.Mesh(new THREE.BoxGeometry(size,.12,size),M(0x666b6d,'masonry'));g.add(base);
   const w=Math.max(1.1,size*.07),L=size*.45;bx(g,w,.035,L,0xf2f2e9,-L*.28,.09,0,'paint');bx(g,w,.035,L,0xf2f2e9,L*.28,.09,0,'paint');bx(g,L*.62,.035,w,0xf2f2e9,0,.09,0,'paint');
-  world.add(g);compoundClear.push({x,z,r:size*.72});return g
+  world.add(g);staticDecorRoots.push(g);compoundClear.push({x,z,r:size*.72});return g
 };
 const compoundPath=(x1,z1,x2,z2,width=4,c=0x766f61)=>{
   const dx=x2-x1,dz=z2-z1,L=Math.hypot(dx,dz);if(L<1)return;
   const n=Math.max(1,Math.ceil(L/5)),ux=dx/L,uz=dz/L,yaw=Math.atan2(dx,dz);
   for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n,m=(a+b)/2,seg=L/n,mx=x1+dx*m,mz=z1+dz*m,my=hAt(mx,mz)+.035;
-    const shoulder=new THREE.Mesh(new THREE.BoxGeometry(width+1.4,.035,seg+.5),M(0x8a806c,'masonry'));shoulder.position.set(mx,my-.025,mz);shoulder.rotation.y=yaw;world.add(shoulder);const o=new THREE.Mesh(new THREE.BoxGeometry(width,.07,seg+.18),M(c,'masonry'));o.position.set(mx,my,mz);o.rotation.y=yaw;world.add(o);compoundClear.push({x:mx,z:mz,r:width*.75+1.5})}
+    const shoulder=new THREE.Mesh(new THREE.BoxGeometry(width+1.4,.035,seg+.5),M(0x8a806c,'masonry'));shoulder.position.set(mx,my-.025,mz);shoulder.rotation.y=yaw;world.add(shoulder);staticDecorRoots.push(shoulder);const o=new THREE.Mesh(new THREE.BoxGeometry(width,.07,seg+.18),M(c,'masonry'));o.position.set(mx,my,mz);o.rotation.y=yaw;world.add(o);staticDecorRoots.push(o);compoundClear.push({x:mx,z:mz,r:width*.75+1.5})}
 };
 const compoundPier=(x1,z1,x2,z2,width=4.2)=>{
   const dx=x2-x1,dz=z2-z1,L=Math.hypot(dx,dz);if(L<2)return;
   const ux=dx/L,uz=dz/L,px=-uz,pz=ux,yaw=Math.atan2(dx,dz),n=Math.max(1,Math.ceil(L/5));
   for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n,m=(a+b)/2,seg=L/n,mx=x1+dx*m,mz=z1+dz*m,y=.72;
-    const deck=new THREE.Mesh(new THREE.BoxGeometry(width,.28,seg+.12),M(0x816346,'paint'));deck.position.set(mx,y,mz);deck.rotation.y=yaw;world.add(deck);piers.push({x:mx,z:mz,ux,uz,px,pz,length:seg+.12,width,y:y+.14});
-    for(const side of[-1,1]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,2.3,8),M(0x48433e,'metal'));post.position.set(mx+px*side*(width*.44),-.25,mz+pz*side*(width*.44));world.add(post);if(i%2===0){const rail=wireRod([mx+px*side*(width*.44),1.05,mz+pz*side*(width*.44)],[mx+px*side*(width*.44)+ux*seg*.8,1.05,mz+pz*side*(width*.44)+uz*seg*.8],.035,0x4b5154)}}
+    const deck=new THREE.Mesh(new THREE.BoxGeometry(width,.28,seg+.12),M(0x816346,'paint'));deck.position.set(mx,y,mz);deck.rotation.y=yaw;world.add(deck);staticDecorRoots.push(deck);piers.push({x:mx,z:mz,ux,uz,px,pz,length:seg+.12,width,y:y+.14});
+    for(const side of[-1,1]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,2.3,8),M(0x48433e,'metal'));post.position.set(mx+px*side*(width*.44),-.25,mz+pz*side*(width*.44));world.add(post);staticDecorRoots.push(post);if(i%2===0){const rail=wireRod([mx+px*side*(width*.44),1.05,mz+pz*side*(width*.44)],[mx+px*side*(width*.44)+ux*seg*.8,1.05,mz+pz*side*(width*.44)+uz*seg*.8],.035,0x4b5154);staticDecorRoots.push(rail)}}
     compoundClear.push({x:mx,z:mz,r:width*.8+1.5})
   }
-  for(const side of[-1,1]){const b=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,.9,8),M(0x3e4447,'metal'));b.position.set(x2+px*side*(width*.35),1.12,z2+pz*side*(width*.35));world.add(b)}
+  for(const side of[-1,1]){const b=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,.9,8),M(0x3e4447,'metal'));b.position.set(x2+px*side*(width*.35),1.12,z2+pz*side*(width*.35));world.add(b);staticDecorRoots.push(b)}
 };
 const findPortWater=q=>{for(let a=0;a<32;a++){const aa=a*Math.PI/16;for(let d=28;d<Math.max(100,q.r||180);d+=8){const wx=q.x+Math.cos(aa)*d,wz=q.z+Math.sin(aa)*d;if(rawHAt(wx,wz)<-3&&rawHAt(wx+Math.cos(aa)*12,wz+Math.sin(aa)*12)<-3)return{x:wx,z:wz,hd:Math.atan2(-Math.cos(aa),-Math.sin(aa)),aa}}}return null};
 const findPortSite=(island,tries=18)=>{for(let n=0;n<tries;n++){const q=land(island,700,1);if(!q)continue;q.r=island.r;const portBest=findPortWater(q);if(portBest)return{...q,portBest}}return null};
@@ -338,9 +414,9 @@ ensureDistributedCount('tanqueta',1+MAP_SCALE);
 islands.forEach(i=>{if(i!==A&&R()<.65){const t=['cotxe','moto','bici'][Math.floor(R()*3)];for(let tries=0;tries<12;tries++){const q=land(i,80);if(q&&clearVehicle(t,q.x,q.z)){add(t,q.x,q.z,rr(0,6.28));break}}}});
 
 ensureJetSkis(add);
-P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0,0,0));prepareEnemyNavigation();if(!seedSearchMode&&visualQuality.shadows)prepareShadowCasters();else shadowCandidates.length=0;cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);
+P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0,0,0));prepareEnemyNavigation();const staticBatchStats=seedSearchMode?null:batchStaticDecor();if(!seedSearchMode&&visualQuality.shadows)prepareShadowCasters();else shadowCandidates.length=0;cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);
 seedCompounds=compoundCenters.map(c=>({type:c.type,x:c.x,z:c.z}));
-window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,initialTerrainMs,seabedMs,vegetationMs,seabedSamples:seedSearchMode?0:water.seabedStats.lastSamples,terrainTiles:terrain?.stats||null,palms:PM.stats};
+window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,initialTerrainMs,seabedMs,vegetationMs,seabedSamples:seedSearchMode?0:water.seabedStats.lastSamples,terrainTiles:terrain?.stats||null,palms:PM.stats,staticBatches:staticBatchStats};
 setPalmsDisabled(requestedPalmDisable);
 setWaterDisabled(!!document.getElementById('disableWater')?.checked);
 setShadowsDisabled(!!document.getElementById('disableShadows')?.checked);
