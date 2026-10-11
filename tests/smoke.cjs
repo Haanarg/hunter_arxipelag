@@ -9,6 +9,24 @@ game.start();game.frame();
 ok('started&&B.length>=6&&E.some(e=>e.t==="general")','menu starts a complete world');
 ok('ammo===16','new mission starts with 16 bullets');
 
+const additionalWorldSource=require('fs').readFileSync(require('path').join(__dirname,'../src/world-generation.js'),'utf8');
+const additionalAiSource=require('fs').readFileSync(require('path').join(__dirname,'../src/enemy-ai.js'),'utf8');
+ok('!!IT.paracaigudes&&!!ICON.paracaigudes','parachute is collectible inventory');
+ok("items.some(i=>i.t==='paracaigudes')", 'parachutes are generated at heliports');
+ok("String(nearV).includes('v.reentryLockUntil>elapsed')&&String(toggle).includes('if(playerFall||playerEject)return')",
+  'player cannot re-enter the helicopter immediately after a jump');
+ok("String(ejectFromHelicopter).includes('playerFall.parachute=chute')&&String(update).includes('playerFall.parachute?0:')",
+  'parachute auto-deploys and negates landing damage');
+ok("String(fire).includes('autoAimArmoredShot(x,y,z,fx_,fz,220)')&&String(fire).includes('Pj[Pj.length-1].life=4.4')",
+  'tank firing and aim range doubled');
+ok("String(fire).includes('scopeActive?[vx,vy,vz]:autoAimWeaponShot')",
+  'rifle in scope uses exact central camera direction');
+assert(additionalAiSource.includes('function soldierEnterBuilding')&&
+  additionalAiSource.includes('soldierEnterBuilding(u,ib,target,dt)')&&
+  String(mkB).includes('door:entranceDoor')&&String(updateDoors).includes('soldierNear'),
+  'soldiers pursue through unlocked house entrances');
+
+
 const strafeMarkup=require('fs').readFileSync(require('path').join(__dirname,'../index.html'),'utf8');
 assert(strafeMarkup.includes('id="strafeLeft"')&&strafeMarkup.includes('id="strafeRight"')&&
   strafeMarkup.includes('body.strafe-active .strafe-btn')&&
@@ -45,20 +63,20 @@ run(`{
 ok('strafeHudModes','two buttons appear only on foot, hovercraft and both helicopters and release on vehicle changes');
 
 const actionBindingString=run('String(act)');
-assert(actionBindingString.includes("if(c==='KeyR'){if(cv||nearV())toggle();else panel('inventory');return}")&&
+assert(actionBindingString.includes("if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory');return}")&&
   actionBindingString.includes("if(c==='KeyT'){toggleSniperScope();return}")&&
   actionBindingString.includes("if(c==='KeyG'){if(!secondaryWeapon())plant();}")&&
-  !actionBindingString.includes("if(c==='KeyE')")&&
+  !actionBindingString.includes("if(c==='KeyQ')")&&
   !actionBindingString.includes("if(c==='KeyQ')"),
-  'action uses R, sniper scope T, helicopter missiles G; Q/E do not trigger actions');
-ok("String(update).includes('(K.KeyE?1:0)-(K.KeyQ?1:0)')&&!String(update).includes('K.KeyX')&&!String(update).includes('K.KeyZ')",
-  'Q/E keyboard strafes left/right and old Z/X shortcuts are replaced');
+  'action uses E, sniper scope T, helicopter missiles G; Y/U do not trigger actions');
+ok("String(update).includes('(K.KeyU?1:0)-(K.KeyY?1:0)')&&!String(update).includes('K.KeyX')&&!String(update).includes('K.KeyZ')",
+  'Y/U keyboard strafes left/right');
 const remappedKeysHtml=require('fs').readFileSync(require('path').join(__dirname,'../index.html'),'utf8');
-assert(remappedKeysHtml.includes('id="mainActionButton" data-k="KeyR"')&&
+assert(remappedKeysHtml.includes('id="mainActionButton" data-k="KeyE"')&&
   remappedKeysHtml.includes('id="sniperAimButton" class="sniper-control" data-k="KeyT"')&&
   remappedKeysHtml.includes('class="heli-combat-control" data-k="KeyG"')&&
-  remappedKeysHtml.includes('Strafe esquerra · Q')&&
-  remappedKeysHtml.includes('Strafe dreta · E')&&
+  remappedKeysHtml.includes('Strafe esquerra · Y')&&
+  remappedKeysHtml.includes('Strafe dreta · U')&&
   remappedKeysHtml.includes('MIRA x8 · T per sortir'),
   'touch buttons and instructional labels use the remapped keys');
 
@@ -721,7 +739,7 @@ run(`{
       hd:P.hd,scopeYaw,scopePitch,scopeActive,swimming,sniperEquipped,
       rifle:inv.franctirador||0,paused,over,cv,playerFall,playerEject,
       elapsed,jsx:joystick.state.x,jsy:joystick.state.y,
-      w:K.KeyW,e:K.KeyE,q:K.KeyQ,a:K.KeyA,
+      w:K.KeyW,u:K.KeyU,y:K.KeyY,a:K.KeyA,
       fcd,ammo:sniperAmmo,autoAim:autoAimWeaponShot,shoot};
   const shots=[];
   try{
@@ -730,7 +748,7 @@ run(`{
     setSniperScope(true);
     const before={x:P.x,z:P.z,hd:P.hd};
     joystick.state.x=.65;joystick.state.y=-.5;
-    K.KeyW=1;K.KeyE=1;K.KeyQ=0;K.KeyA=0;
+    K.KeyW=1;K.KeyU=1;K.KeyY=0;K.KeyA=0;
     update(.04,elapsed+.04);
     const heldPosition=Math.hypot(P.x-before.x,P.z-before.z)<1e-7&&
       P.hd===before.hd;
@@ -738,8 +756,9 @@ run(`{
       document.body.classList.contains('sniper-scoped')&&
       !document.body.classList.contains('strafe-active');
     const yawNow=scopeYaw,pitchNow=scopePitch;
-    const scopeDirection=[-Math.sin(yawNow)*Math.cos(pitchNow),
-      Math.sin(pitchNow),-Math.cos(yawNow)*Math.cos(pitchNow)];
+    const angleY=Math.tan(pitchNow)*160,ray=Math.hypot(160.12,angleY);
+    const scopeDirection=[-Math.sin(yawNow)*160.12/ray,
+      angleY/ray,-Math.cos(yawNow)*160.12/ray];
     autoAimWeaponShot=(x,y,z,dx,dy,dz)=>[dx,dy,dz];
     shoot=(...args)=>shots.push(args);
     fire();
@@ -765,13 +784,13 @@ run(`{
     if(saved.rifle)inv.franctirador=saved.rifle;else delete inv.franctirador;
     playerFall=saved.playerFall;playerEject=saved.playerEject;
     paused=saved.paused;over=saved.over;elapsed=saved.elapsed;
-    K.KeyW=saved.w;K.KeyE=saved.e;K.KeyQ=saved.q;K.KeyA=saved.a;
+    K.KeyW=saved.w;K.KeyU=saved.u;K.KeyY=saved.y;K.KeyA=saved.a;
     setSniperScope(false);if(saved.scopeActive)setSniperScope(true);
     scopeYaw=saved.scopeYaw;scopePitch=saved.scopePitch;
     joystick.state.x=saved.jsx;joystick.state.y=saved.jsy;
   }
 }`);
-ok('sniperJoystickAimOnly','when scoped WASD, Q/E and joystick pan view without moving character; bullets follow the reticle; exit restores movement');
+ok('sniperJoystickAimOnly','when scoped WASD, Y/U and joystick pan view without moving character; bullets follow the reticle; exit restores movement');
 ok('sniperAimDragIndependent','zoom view has independent yaw from player and movement animation is disabled');
 const scopeControllerJs=require('fs').readFileSync(require('path').join(__dirname,'../src/game-core.js'),'utf8');
 assert(scopeControllerJs.includes('if(scopeActive)scopeYaw-=dx*.00115;else{const q=cv||P;q.hd-=dx*.006}')&&
@@ -1072,7 +1091,7 @@ run(`{
     String(stepV).includes('totalSideV=sideV+v.strafeV')&&
     String(update).includes('stepV(driven,f,tr,ud,dt,strafe)')&&
     String(update).includes('Math.hypot(f,strafe)')&&
-    String(update).includes('K.KeyE')&&String(update).includes('K.KeyQ')&&
+    String(update).includes('K.KeyU')&&String(update).includes('K.KeyY')&&
     !String(update).includes('K.KeyX')&&!String(update).includes('K.KeyZ');
 }`);
 ok('strafeVehicles','hovercraft and helicopters accelerate sideways with no turn; other vehicles cannot strafe and on-foot diagonal is normalized');
