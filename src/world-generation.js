@@ -342,6 +342,7 @@ P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0
 seedCompounds=compoundCenters.map(c=>({type:c.type,x:c.x,z:c.z}));
 window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,initialTerrainMs,seabedMs,vegetationMs,seabedSamples:seedSearchMode?0:water.seabedStats.lastSamples,terrainTiles:terrain?.stats||null,palms:PM.stats};
 setPalmsDisabled(requestedPalmDisable);
+setWaterDisabled(!!document.getElementById('disableWater')?.checked);
 if(window.HUNTER_PERF_DEBUG)console.info('Hunter · generació',window.HUNTER_BUILD_STATS);
 }
 

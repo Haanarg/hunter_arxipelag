@@ -1,0 +1,29 @@
+name: Interruptor sense aigua
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/water-toggle.yml'
+      - 'index.html'
+      - 'src/game-core.js'
+      - 'src/world-generation.js'
+      - 'src/ui.js'
+      - 'tests/water-toggle.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Comprovar interruptor visual i física intacta
+        run: node tests/water-toggle.cjs
+      - name: Comprovar ones i ocean
+        run: node tests/water.cjs
+      - name: Verificar que el paràmetre de palmeres continua funcionant
+        run: node tests/palms-toggle.cjs

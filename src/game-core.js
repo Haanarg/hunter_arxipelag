@@ -99,6 +99,20 @@ const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segment
 const waterMat=water.material,waterUniforms=water.uniforms;
 const updateSeabed=()=>water.setWorldSize(S);
 const waves=water.update;
+// Diagnòstic de GPU: amagam les dues malles del mar, sense alterar
+// la física d'onades ni el relleu. Això permet comparar FPS en calent.
+let waterDisabled=false;
+function setWaterDisabled(disabled){
+  waterDisabled=!!disabled;
+  const checkbox=document.getElementById('disableWater');
+  if(checkbox)checkbox.checked=waterDisabled;
+  water.mesh.visible=!waterDisabled;
+  water.deep.visible=!waterDisabled;
+  window.HUNTER_WATER_DISABLED=waterDisabled;
+  return waterDisabled;
+}
+const waterSettingCheckbox=document.getElementById('disableWater');
+if(waterSettingCheckbox)waterSettingCheckbox.addEventListener('change',()=>setWaterDisabled(waterSettingCheckbox.checked));
 // terreny visual a src/terrain.js
 let stairs=[],piers=[];
 let Wl=[],Dr=[],items=[],inv={},msg='',msgT=0,HQ=null,ib=null;
@@ -957,7 +971,7 @@ const ui=window.HUNTER_UI.create({
   getState:()=>({
     hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,disguised:disg,bazookaEquipped,grenadeEquipped,sniperEquipped,sniperAmmo,scopeActive,
     inventory:inv,itemTypes:IT,player:P,nearVehicle:cv?null:nearV(),messageTime:msgT,message:msg,
-    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled
+    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled
   }),
   actions:{
     resume,
@@ -967,6 +981,7 @@ const ui=window.HUNTER_UI.create({
     dropItem:id=>dropInvItem(id),
     restart:d=>{DIF=d;elapsed=0;build();minimap.reset();mini();resume()},
     setPalmsDisabled,
+    setWaterDisabled,
     zoom:d=>zoom=Math.max(.7,Math.min(1.9,zoom+d)),
     chetos:grantAllWeapons
   }
