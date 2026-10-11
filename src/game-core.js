@@ -1056,7 +1056,8 @@ if(scopeActive){
   // El joystick i el teclat controlen ÚNICAMENT la càmera de la mira:
   // sense traslació, gir ni animació de desplaçament del jugador.
   // Q/E (strafe habitual) també passa a moure horitzontalment la mira.
-  scopeYaw+=(tr-strafe*.8)*dt*1.25;
+  const scopeStrafe=(K.KeyE?1:0)-(K.KeyQ?1:0);
+  scopeYaw+=(tr-scopeStrafe*.8)*dt*1.25;
   scopePitch=Math.max(-.65,Math.min(.65,scopePitch+f*dt*.92));
 }else if(cv){const driven=cv,alive=stepV(driven,f,tr,ud,dt,strafe);if(alive&&cv===driven){P.x=driven.x;P.z=driven.z;P.hd=driven.hd}}
 else{P.hd+=tr*dt*2.2;if(playerFall){playerFall.t+=dt;playerFall.vy-=24*dt;playerFall.vx*=Math.exp(-.18*dt);playerFall.vz*=Math.exp(-.18*dt);P.x=Math.max(-lim,Math.min(lim,P.x+playerFall.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerFall.vz*dt));playerFall.y+=playerFall.vy*dt;const water=wy(P.x,P.z,t),landing=Math.max(hAt(P.x,P.z),water-1.4);P.y=playerFall.y;if(playerFall.y<=landing){P.y=landing;const fallH=playerFall.startHeight,impact=Math.max(0,-playerFall.vy),waterLanding=water>hAt(P.x,P.z)+1.5,dmg=Math.min(100,Math.max(0,(fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8)));playerFall=null;if(dmg>0)hurtP(dmg);msg=waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5}}
