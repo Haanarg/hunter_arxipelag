@@ -188,7 +188,7 @@ window.HUNTER_VEGETATION=Object.freeze({
       parent.add(mesh);return mesh;
     };
     const CHUNK=420;
-    const build=({world,palms,bushes,rocks,playerX=0,playerZ=0,lowQuality=false})=>{
+    const build=({world,palms,bushes,rocks,playerX=0,playerZ=0,lowQuality=false,lodProfile=null})=>{
       const root=new THREE.Group();
       root.name='hunter-palm-sectors';
       world.add(root);
@@ -235,9 +235,18 @@ window.HUNTER_VEGETATION=Object.freeze({
         ch.rows=null;
         sections.push(ch);
       }
-      const distances=lowQuality?[460,870,1250]:[500,1100,1900],
-            margin=65;
-      const stats={sectors:sections.length,totalPalms:palms.length,
+      // LOD anticipat: el detall complet només es conserva a prop.
+      // La distància es mesura fins a la vora del sector, no al centre.
+      // Conservam l'abast dels models més simples per evitar illes despullades.
+      const profile=lodProfile|| (lowQuality?'mobile':'desktop'),
+            distanceProfiles={
+              desktop:[260,650,1900],
+              mobile:[190,470,1250],
+              ultra:[120,300,850]
+            },
+            distances=distanceProfiles[profile]||distanceProfiles.desktop,
+            margin=55;
+      const stats={profile,sectors:sections.length,totalPalms:palms.length,
         visibleSectors:0,visiblePalms:0,detailSectors:0,mediumSectors:0,
         farSectors:0,hiddenSectors:0,lodSwitches:0,
         nearDistance:distances[0],midDistance:distances[1],
@@ -246,7 +255,7 @@ window.HUNTER_VEGETATION=Object.freeze({
       const tierFor=(d,previous)=>{
         if(previous==null)return d<distances[0]?0:d<distances[1]?1:d<distances[2]?2:3;
         let tier=previous;
-        // Histeresi de 65 m evita canvis de malla a cada moviment.
+        // Histeresi de 55 m evita canvis de malla a cada moviment.
         while(tier<3&&d>distances[tier]+margin)tier++;
         while(tier>0&&d<distances[tier-1]-margin)tier--;
         return tier;

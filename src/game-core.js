@@ -477,7 +477,7 @@ if(L==pm){const leafVar=R()<.33?-1:R()<.66?0:1,tone=rr(-.25,.25),idx=pm.length;p
 else{L.push([px,h-.3,pz,s,yaw]);if(L==rk)put({x:px,z:pz,r:1.4,rock:true})}}
 const vegetationMeshes=vegetationVisual.build({
   world,palms:pm,bushes:bu,rocks:rk,playerX:pa.x,playerZ:pa.z,
-  lowQuality:!visualQuality.shadows
+  lowQuality:!visualQuality.shadows,lodProfile:qualityName
 });
 PM=vegetationMeshes.palms;
 window.HUNTER_VEGETATION_STATS=PM.stats}

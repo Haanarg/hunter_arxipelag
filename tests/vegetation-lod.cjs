@@ -11,7 +11,7 @@
     [-910,8,700,.9,1.7,0,.2],[1900,10,1600,1.1,.2,1,0]
   ];
   let rngCalls=0;
-  const create=(lowQuality=false)=>{
+  const create=(lowQuality=false,lodProfile=null)=>{
     const world=new THREE.Group();
     const visual=ctx.HUNTER_VEGETATION.create(THREE,{
       materialProfile:()=>({}),
@@ -19,7 +19,7 @@
     });
     const built=visual.build({world,palms:entries,
       bushes:[[200,3,250,1,0]],rocks:[[180,3,260,1,0]],
-      playerX:0,playerZ:0,lowQuality});
+      playerX:0,playerZ:0,lowQuality,lodProfile});
     return {world,visual,model:built.palms};
   };
   const {world,visual,model}=create();
@@ -27,8 +27,9 @@
   assert.equal(model.stats.totalPalms,entries.length,'all palms represented');
   assert.equal(model.variantMap.length,entries.length,'destroy map preserved');
   assert(model.stats.visiblePalms<entries.length,'distant sectors culled');
-  assert.equal(model.stats.nearDistance,500);
-  assert.equal(model.stats.midDistance,1100);
+  assert.equal(model.stats.profile,'desktop');
+  assert.equal(model.stats.nearDistance,260);
+  assert.equal(model.stats.midDistance,650);
   assert.equal(model.stats.farDistance,1900);
   const chunks=model.variants;
   assert(chunks.length>=3,'chunks separated geographically');
@@ -50,25 +51,25 @@
   const visibleCount=ch=>ch.meshes.filter(m=>m.visible).length;
   assert.equal(visibleCount(near),1+near.primary.filter(Boolean).length+near.secondary.filter(Boolean).length,
     'near group keeps all detailed variants of its crowns');
-  model.update(940,0,true);
-  assert.equal(near.lod,0,'stay at near LOD inside 65m margin');
-  model.update(1000,0,true);
-  assert.equal(near.lod,1,'past hysteresis threshold, switch to middle');
+  model.update(730,0,true);
+  assert.equal(near.lod,0,'stay at near LOD inside 55m margin');
+  model.update(750,0,true);
+  assert.equal(near.lod,1,'closer threshold changes to medium earlier');
   assert.equal(visibleCount(near),2,'mid-distance group draws only two instanced meshes');
   assert(near.midTrunk.visible&&near.midCrown.visible&&
     !near.trunk.visible&&!near.secondary.some(m=>m&&m.visible));
   assert(!near.midCrown.receiveShadow&&!near.midTrunk.receiveShadow,
     'reduced models do not receive shadow maps');
-  model.update(960,0,true);
+  model.update(720,0,true);
   assert.equal(near.lod,1,'hysteresis prevents immediate switch back');
-  model.update(850,0,true);
+  model.update(610,0,true);
   assert.equal(near.lod,0,'full detail returns once genuinely near');
-  model.update(1800,0,true);
+  model.update(1220,0,true);
   assert.equal(near.lod,2,'far palm becomes three crossed leaf planes');
   assert.equal(visibleCount(near),2,'far palm still uses two instanced meshes');
   assert(near.farTrunk.visible&&near.farCrown.visible);
   assert(model.stats.farSectors>=1,'LOD stats count simplified far sectors');
-  model.update(2400,0,true);
+  model.update(2440,0,true);
   assert.equal(near.lod,3,'sectors are hidden beyond viewing distance');
   assert.equal(visibleCount(near),0,'no distant palm meshes remain visible');
   model.update(0,0,true);
@@ -101,11 +102,28 @@
   model.update(8000,8000,true);
   assert.equal(model.stats.visiblePalms,0,'all palms culled far from the map');
   const low=create(true);
-  assert.equal(low.model.stats.nearDistance,460,'mobile retains shorter detailed range');
-  assert.equal(low.model.stats.midDistance,870,'mobile reduced middle range');
+  assert.equal(low.model.stats.profile,'mobile');
+  assert.equal(low.model.stats.nearDistance,190,'mobile switches away from detailed palms earlier');
+  assert.equal(low.model.stats.midDistance,470,'mobile switches to crossed crowns earlier');
   assert.equal(low.model.stats.farDistance,1250,'mobile retains original far clip');
   assert(low.model.stats.visiblePalms<=entries.length,'mobile LOD initializes');
-  assert.equal(rngCalls,2*(11*entries.length+3+5),
+  const ultra=create(true,'ultra');
+  assert.equal(ultra.model.stats.profile,'ultra','lowest preset is independent of mobile');
+  assert.equal(ultra.model.stats.nearDistance,120);
+  assert.equal(ultra.model.stats.midDistance,300);
+  assert.equal(ultra.model.stats.farDistance,850);
+  assert(ultra.model.stats.detailSectors<=low.model.stats.detailSectors&&
+         low.model.stats.detailSectors<=model.stats.detailSectors,
+    'number of high-detail sectors decreases on weaker devices');
+  assert(ultra.model.stats.visiblePalms<=low.model.stats.visiblePalms,
+    'lowest preset culls its crossed-crown sectors sooner');
+  const ultraNear=ultra.model.variants.find(ch=>ch.cx===0&&ch.cz===0);
+  ultra.model.update(600,0,true);
+  assert.equal(ultraNear.lod,1,'ultra switches to simplified palms after the shorter threshold');
+  low.model.update(680,0,true);
+  const mobileNear=low.model.variants.find(ch=>ch.cx===0&&ch.cz===0);
+  assert.equal(mobileNear.lod,1,'mobile switches to simplified palms after the shorter threshold');
+  assert.equal(rngCalls,3*(11*entries.length+3+5),
     'simplified LODs must not consume additional world RNG values');
   console.log(JSON.stringify({passed:true,sectorCount:chunks.length,
     trianglesPerPalm:{full,medium,far},
