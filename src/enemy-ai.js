@@ -70,14 +70,23 @@ function soldierFlankPosition(u,target,targetY){
 // d'entrada, creuar-lo i només llavors buscar una posició de tir.
 function soldierEnterBuilding(u,b,target,dt){
   const door=b?.door;
-  if(!door||door.locked||door.bunkerGate||b.hangar)return false;
+  if(!door||door.locked||door.bunkerGate||b.hangar){
+    u.entryBuilding=null;u.entryPhase=0;return false;
+  }
   const inside=Math.abs(u.x-b.x)<b.w/2-1.15&&
                Math.abs(u.z-b.z)<b.d/2-1.15;
-  if(inside)return false;
+  if(inside){
+    u.entryBuilding=null;u.entryPhase=0;return false;
+  }
+  // Dos trams amb memòria: aproximació per fora i pas cap a dins.
+  // Sense retenir la fase, en allunyar-se 1 m del punt exterior el soldat
+  // tornava enrere i quedava oscil·lant just davant del llindar.
+  if(u.entryBuilding!==b){u.entryBuilding=b;u.entryPhase=0}
   const exterior={x:door.cx+door.nx*2.1,z:door.cz+door.nz*2.1},
         interior={x:door.cx-door.nx*2.5,z:door.cz-door.nz*2.5},
-        distance=Math.hypot(u.x-exterior.x,u.z-exterior.z),
-        goal=distance>1.15?exterior:interior;
+        distance=Math.hypot(u.x-exterior.x,u.z-exterior.z);
+  if(u.entryPhase===0&&distance<1.4)u.entryPhase=1;
+  const goal=u.entryPhase?interior:exterior;
   u.tacticGoal=null;u.tacticT=0;
   mvE(u,u.sp*dt,goal.x,goal.z);
   u.hd=Math.atan2(u.x-target.x,u.z-target.z);
