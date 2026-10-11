@@ -26,16 +26,17 @@ export const phase2Layouts=[
   counts:'1 camió · 4 soldats · munició, granades, explosius i bazooka garantits',
   notes:'El bazooka és obligatori a cada polvorí, sense tirada de probabilitat. Armament repartit entre dos magatzems; el camió apunta cap a una sortida de 16 m. Les patrulles envolten els edificis i el pati de càrrega.'},
  {id:'comms-proposal',name:'Comunicacions',phase:2,size:[100,110],
-  subtitle:'Antena de 28 m · sala de ràdio · informació garantida',
+  subtitle:'Antena de 56 m · parabòlica de satèl·lit · tots els mapes',
   buildings:[{id:'radio',label:'Sala de ràdio',x:-20,z:-12,w:24,d:22,h:8},{id:'service',label:'Servei',x:26,z:15,w:14,d:16,h:6}],
-  antenna:{x:27,z:-24,height:28},
+  antenna:{x:27,z:-24,height:56,scale:2},
+  satellite:{buildingId:'radio',radius:9},
   vehicles:[{t:'cotxe',x:23,z:36,hd:Math.PI}],soldiers:[[-38,20],[3,-34],[38,0],[-5,36]],
   routes:[{label:'Accés · 12 m',points:[[0,55],[0,12]],width:12},{label:'Ràdio',points:[[0,12],[-20,12],[-20,1]],width:4},{label:'Servei',points:[[0,29],[26,29],[26,25]],width:4},{label:'Sortida jeep',points:[[23,36],[23,44],[0,44],[0,55]],width:9}],
   patrol:[[-39,26],[-39,-35],[5,-35],[5,-2],[38,-2],[38,30],[9,30],[9,41],[-39,41],[-39,26]],
   zones:[{label:'Generador',x:27,z:-4,w:10,d:6},{label:'Aparcament',x:23,z:36,w:10,d:12}],
   props:[['generator',27,-4],['crate',-27,-15],['crate',-27,-10],['flag',-7,23],['lamp',-38,31],['lamp',8,44],['sandbag',-15,45],['sandbag',15,48]],
-  loot:[{kind:'mapa',x:-18,z:-9},{kind:'disfressa',x:26,z:15}],
+  loot:[{kind:'mapa',x:-24,z:-7},{kind:'mapa_heli',x:-19,z:-7},{kind:'mapa_tanc',x:-14,z:-7},{kind:'disfressa',x:26,z:15}],
   fence:perimeter(45,50),tower:null,entrances:[[0,55]],
-  counts:'1 jeep · 4 soldats · mapa garantit · disfressa opcional',
-  notes:'Nou punt d’informació: mapa del HQ o de vehicles garantit. Antena i generador fora dels passos. Es proposa una elevació accessible per terra; la disfressa que es mostra és opcional i el generador és decoratiu.'}
+  counts:'1 jeep · 4 soldats · 3 mapes garantits · disfressa opcional',
+  notes:'Tots tres mapes garantits: HQ, helicòpters i tancs. Torre d’antena al doble d’escala i parabòlica de satèl·lit de 18 m de diàmetre sobre la sala de ràdio. Antena i generador fora dels passos. Es proposa una elevació accessible per terra; la disfressa que es mostra és opcional i el generador és decoratiu.'}
 ];
