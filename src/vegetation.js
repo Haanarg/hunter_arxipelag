@@ -247,10 +247,42 @@ window.HUNTER_VEGETATION=Object.freeze({
             distances=distanceProfiles[profile]||distanceProfiles.desktop,
             margin=55;
       const stats={profile,sectors:sections.length,totalPalms:palms.length,
+        totalBushes:bushes.length,totalRocks:rocks.length,
+        bushSectors:0,rockSectors:0,visibleBushes:0,visibleRocks:0,
         visibleSectors:0,visiblePalms:0,detailSectors:0,mediumSectors:0,
         farSectors:0,hiddenSectors:0,lodSwitches:0,
         nearDistance:distances[0],midDistance:distances[1],
         farDistance:distances[2]};
+      // Abans els arbustos i les roques formaven DOS InstancedMesh gegants
+      // que recorrien tot l'arxipèlag. Un sector llunyà ja no força tota
+      // la vegetació baixa a passar pel pipeline de la GPU.
+      function sectorizeExtras(rows,geo,name,color,scale,opts){
+        const parent=new THREE.Group();parent.name=name;world.add(parent);
+        const groups=new Map();
+        for(const row of rows){
+          const cx=Math.floor(row[0]/CHUNK),cz=Math.floor(row[2]/CHUNK),
+                key=cx+','+cz;
+          if(!groups.has(key))groups.set(key,{x:(cx+.5)*CHUNK,z:(cz+.5)*CHUNK,rows:[]});
+          groups.get(key).rows.push(row);
+        }
+        const result=[];
+        for(const g of groups.values()){
+          const mesh=inst(parent,geo,g.rows,color,scale,opts);
+          if(mesh)result.push({mesh,x:g.x,z:g.z,count:g.rows.length});
+        }
+        return {parent,sectors:result};
+      }
+      const bushGroup=sectorizeExtras(bushes,geometry.bush,'hunter-bush-sectors',
+        0x2f8e42,(d,s)=>d.scale.set(s*1.15,s*.72,s),{profile:'organic'});
+      const rockGroup=sectorizeExtras(rocks,geometry.rock,'hunter-rock-sectors',
+        0x777985,(d,s)=>d.scale.set(s*1.25,s*.75,s),{profile:'masonry',tilt:true});
+      const extraRanges={
+        desktop:{bush:720,rock:1150},
+        mobile:{bush:470,rock:800},
+        ultra:{bush:280,rock:480}
+      }[profile]||{bush:720,rock:1150};
+      stats.bushSectors=bushGroup.sectors.length;
+      stats.rockSectors=rockGroup.sectors.length;
       let lastX=Infinity,lastZ=Infinity;
       const tierFor=(d,previous)=>{
         if(previous==null)return d<distances[0]?0:d<distances[1]?1:d<distances[2]?2:3;
@@ -260,9 +292,25 @@ window.HUNTER_VEGETATION=Object.freeze({
         while(tier>0&&d<distances[tier-1]-margin)tier--;
         return tier;
       };
-      function update(x,z,force=false){
+      function update(x,z,force=false,skipPalms=false){
         if(!force&&Math.abs(x-lastX)<45&&Math.abs(z-lastZ)<45)return;
         lastX=x;lastZ=z;
+        // Frustum culling sobre cada InstancedMesh i clip per distància.
+        const distToSector=c=>Math.hypot(
+          Math.max(0,Math.abs(c.x-x)-CHUNK/2),
+          Math.max(0,Math.abs(c.z-z)-CHUNK/2));
+        for(const [extra,maxDist,key] of [
+          [bushGroup,extraRanges.bush,'visibleBushes'],
+          [rockGroup,extraRanges.rock,'visibleRocks']
+        ]){
+          let count=0;
+          for(const sec of extra.sectors){
+            sec.mesh.visible=distToSector(sec)<maxDist;
+            if(sec.mesh.visible)count+=sec.count;
+          }
+          stats[key]=count;
+        }
+        if(skipPalms)return;
         let visible=0,count=0,detailed=0,middle=0,far=0,hidden=0;
         for(const ch of sections){
           // La distància és a la vora del sector, per evitar salts visibles
@@ -315,8 +363,8 @@ window.HUNTER_VEGETATION=Object.freeze({
       update(playerX,playerZ,true);
       return {
         palms:{trunk:root,variants:sections,variantMap,update,remove,stats},
-        bushes:inst(world,geometry.bush,bushes,0x2f8e42,(d,s)=>d.scale.set(s*1.15,s*.72,s),{profile:'organic'}),
-        rocks:inst(world,geometry.rock,rocks,0x777985,(d,s)=>d.scale.set(s*1.25,s*.75,s),{profile:'masonry',tilt:true})
+        bushes:bushGroup.parent,
+        rocks:rockGroup.parent
       };
     };
     return {geometry,build};

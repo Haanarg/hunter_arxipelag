@@ -1156,7 +1156,7 @@ if(!playerFall){
 }
 // Actualització del LOD de les palmeres a baixa freqüència (i també en vehicle).
 palmVisualTick-=dt;
-if(palmVisualTick<=0){palmVisualTick=.16;if(!palmsDisabled&&PM.update)PM.update(P.x,P.z)}
+if(palmVisualTick<=0){palmVisualTick=.16;if(PM.update)PM.update(P.x,P.z,false,palmsDisabled)}
 // Un vehicle sota un hangar també ha de deixar veure l'interior.
 // Només s'amaga la coberta quan som realment per sota seu (no en sobrevolar-la).
 function viewInsideBuilding(b){

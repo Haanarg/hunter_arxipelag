@@ -25,6 +25,15 @@
   const {world,visual,model}=create();
   assert.equal(model.trunk.parent,world,'palm root belongs to world');
   assert.equal(model.stats.totalPalms,entries.length,'all palms represented');
+  const bushes=world.getObjectByName('hunter-bush-sectors'),
+        rocks=world.getObjectByName('hunter-rock-sectors');
+  assert(bushes?.isGroup&&rocks?.isGroup,'low vegetation is grouped by spatial sector');
+  assert(bushes.children.every(m=>m.isInstancedMesh&&m.frustumCulled),
+    'bushes retain instancing with per-sector frustum culling');
+  assert(rocks.children.every(m=>m.isInstancedMesh&&m.frustumCulled),
+    'rocks retain instancing with per-sector frustum culling');
+  assert.equal(model.stats.totalBushes,1);
+  assert.equal(model.stats.totalRocks,1);
   assert.equal(model.variantMap.length,entries.length,'destroy map preserved');
   assert(model.stats.visiblePalms<entries.length,'distant sectors culled');
   assert.equal(model.stats.profile,'desktop');
@@ -101,6 +110,15 @@
     'distant sector reappears near the player');
   model.update(8000,8000,true);
   assert.equal(model.stats.visiblePalms,0,'all palms culled far from the map');
+  assert.equal(model.stats.visibleBushes,0,'distant bushes are not drawn');
+  assert.equal(model.stats.visibleRocks,0,'distant rocks are not drawn');
+  model.update(0,0,true);
+  assert.equal(model.stats.visibleBushes,1,'nearby bushes return');
+  assert.equal(model.stats.visibleRocks,1,'nearby rocks return');
+  const beforePalmVisibility=model.stats.visiblePalms;
+  model.update(0,0,true,true);
+  assert.equal(model.stats.visiblePalms,beforePalmVisibility,
+    'palms-disabled mode updates bushes without reprocessing palm LOD');
   const low=create(true);
   assert.equal(low.model.stats.profile,'mobile');
   assert.equal(low.model.stats.nearDistance,190,'mobile switches away from detailed palms earlier');
@@ -126,6 +144,18 @@
   assert.equal(mobileNear.lod,1,'mobile switches to simplified palms after the shorter threshold');
   assert.equal(rngCalls,3*(11*entries.length+3+5),
     'simplified LODs must not consume additional world RNG values');
+  const manyWorld=new THREE.Group(),extra=ctx.HUNTER_VEGETATION.create(THREE,{
+    materialProfile:()=>({}),random:(a,b)=>a+(b-a)*.4
+  }).build({world:manyWorld,palms:[],
+    bushes:[[0,5,0,1,0],[1300,5,0,1,0],[2600,5,0,1,0]],
+    rocks:[[0,5,0,1,0],[1300,5,0,1,0],[2600,5,0,1,0]],
+    playerX:0,playerZ:0});
+  assert.equal(extra.bushes.children.length,3,'bushes are split into three distant sections');
+  assert.equal(extra.rocks.children.length,3,'rocks are split into three distant sections');
+  assert.equal(extra.palms.stats.visibleBushes,1,'only the local bush sector is visible initially');
+  assert.equal(extra.palms.stats.visibleRocks,1,'only the local rock sector is visible initially');
+  extra.palms.update(1300,0,true);
+  assert.equal(extra.palms.stats.visibleBushes,1,'moving selects the next bush sector');
   console.log(JSON.stringify({passed:true,sectorCount:chunks.length,
     trianglesPerPalm:{full,medium,far},
     reduction:{medium:Math.round((1-medium/full)*100),
