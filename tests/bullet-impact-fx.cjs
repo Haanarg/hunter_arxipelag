@@ -37,7 +37,7 @@ const assert=require('node:assert/strict');
      fresh();cv=null;vehicleCandidatesAt=()=>[vehicle];fireTest('p');
      checks.otherVehicleSpark=bulletImpacts.length===7;
      fresh();vehicleCandidatesAt=()=>[];
-     wallCandidates=()=>[{open:false,x0:-1,x1:1,y0:1,y1:3,z0:-1,z1:1,hp:100}];fireTest('e');
+     wallCandidates=()=>[{open:false,x0:-1,x1:1,y0:1,y1:3,z0:-1,z1:1,hp:100}];fireTest('p');
      checks.wallSpark=bulletImpacts.length===7;
      fresh();wallCandidates=()=>[];
      buildingCandidates=()=>[{x:0,z:0,w:4,d:4,fy:0,h:2,rhp:100,hangar:false}];fireTest('p');
