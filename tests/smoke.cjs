@@ -1155,6 +1155,38 @@ ok("String(vehiclePushPlayer).includes(\"playerEject?.kind==='flip'\")",'the bri
 ok("String(damageVehicle).includes('fallingFromDestroyedHeli')",'a fatal helicopter hit does not kill the pilot before the fall');
 run('E=savedEnemies;playerFall=null;playerEject=null;');
 ok('V.filter(v=>v.t==="llanxa_coets").length===1','unique rocket boat');
+
+run(`{
+  const previous={cv,fcd,msg,msgT,shoot,autoAimWeaponShot},
+        createVehicle=(t,rockets)=>({t,rockets,x:0,z:0,hd:0,o:{position:{y:4}}}),
+        boat=createVehicle('llanxa_coets',0),
+        heli=createVehicle('heli_combat',2),shots=[];
+  try{
+    cv=boat;fcd=0;shoot=(...args)=>shots.push(args);
+    autoAimWeaponShot=(x,y,z,dx,dy,dz)=>[dx,dy,dz];
+    let allLaunched=true;
+    for(let i=0;i<8;i++){fcd=0;allLaunched=secondaryWeapon()&&allLaunched}
+    const boatWorks=allLaunched&&shots.length===8&&boat.rockets===0&&
+      msg==='Coets: ∞'&&shots.every(s=>s[6]===68&&s[7]===70&&s[8]===11);
+    cv=heli;fcd=0;
+    const h1=secondaryWeapon();fcd=0;
+    const h2=secondaryWeapon();fcd=0;
+    const h3=secondaryWeapon();
+    const heliLimited=h1&&h2&&!h3&&heli.rockets===0&&shots.length===10&&
+      msg==='Sense míssils.';
+    const generated=V.find(v=>v.t==='llanxa_coets');
+    globalThis.unlimitedRocketBoat=boatWorks&&heliLimited&&
+      generated?.rockets===Infinity;
+  }finally{
+    cv=previous.cv;fcd=previous.fcd;msg=previous.msg;msgT=previous.msgT;
+    shoot=previous.shoot;autoAimWeaponShot=previous.autoAimWeaponShot;
+  }
+}`);
+ok('unlimitedRocketBoat','rocket boat keeps shooting at zero ammunition while combat helicopter retains its limited rockets');
+const rocketHudSource=require('fs').readFileSync(require('path').join(__dirname,'../src/ui.js'),'utf8');
+assert(rocketHudSource.includes("veh.t==='llanxa_coets'?' · 🚀 ∞'"),
+  'rocket boat HUD shows infinity instead of a decreasing ammo count');
+
 run(`{
   const hasClosedBow=(type)=>{
     const v=V.find(q=>q.t===type);
