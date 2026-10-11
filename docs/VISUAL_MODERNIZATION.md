@@ -5,16 +5,22 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.4.10**.
+Versió actual: **0.4.11**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.4.11 — correcció del disseny de l’HQ (2026-10-11)
+
+- Retirat el tanc aparcat del disseny de fase 3, respectant la decisió anterior. Es mantenen les dues tanquetes i els dos jeeps de patrulla. L’antic itinerari del tanc queda com a accés de servei.
+- Búnquer amb les quatre parets exteriors inclinades cap endins: base de 40 × 34 m i retranqueig de 3,5 m per costat al capdamunt. Sostre ajustat a la part superior i entrada amb marc trapezoidal de to marró, inspirats en la referència del Hunter original.
+- Es conserven el passadís, les quatre cambres i la previsió de porta progressiva de 10 s. Canvi només al visor; integració de fase 3 pendent.
 
 ### Revisió 0.4.10 — dissenys de fase 3: base inicial i HQ (2026-10-11)
 
 Visor a `compounds-preview.html?fase=3`, amb dues propostes Three.js. Les fases 1 i 2 continuen integrades; aquests dos dissenys **encara no canvien el generador jugable**.
 
 - **Base inicial (120 × 110 m):** caserna, magatzem i infermeria, bandera blava, punt d’inici al pati central i sortida de 16 m. Cotxe i bicicleta amb recorreguts de sortida; cap enemic, munició i farmaciola. Es preveu connectar el camí al punt costaner amb barca o llanxa; la maqueta mostra només el recinte terrestre.
-- **HQ enemic (230 × 230 m incloent l’anell exterior):** filferrada de 164 × 164 m, entrada de 24 m desplaçada respecte del búnquer de 40 × 34 m. Caserna i serveis auxiliars; quatre torres, general i vuit soldats. Tanc aparcat, dues tanquetes a l’anell interior i dos jeeps a l’exterior; sense helicòpters.
+- **HQ enemic (230 × 230 m incloent l’anell exterior):** filferrada de 164 × 164 m, entrada de 24 m desplaçada respecte del búnquer de 40 × 34 m. Caserna i serveis auxiliars; quatre torres, general i vuit soldats. Sense tanc aparcat; dues tanquetes a l’anell interior i dos jeeps a l’exterior; sense helicòpters.
 - Búnquer amb passadís central i quatre cambres. La porta de 10 s és una condició per a la futura integració; al visor es mostra estàtica. Els recorreguts dels vehicles són guies, no IA en moviment.
 - Vista en planta, interiors i guies de circulació, maniobra i patrulles. Dades separades a `src/compound-phase3-layouts.mjs`, carregades només pel visor.
 - Validació: geometria finita, vehicles separats dels edificis, patrulles de soldats i amplada de les rutes de vehicles; visor en escriptori i mòbil amb navegació, planta, interiors i zoom.
@@ -478,7 +484,7 @@ Estat: **hangar, avançada i port integrats a la 0.3.48; heliport, polvorí i co
 | Tipus | Edificis i elements obligatoris | Vehicles | Enemics i objectes |
 |---|---|---|---|
 | Base inicial | Caserna petita, magatzem, infermeria, pati, bandera blava, sortida ampla i camí a la costa. | 1 cotxe, 1 bicicleta; barca o llanxa al punt costaner associat. | Sense enemics. Munició i 1 farmaciola. |
-| HQ enemic | Búnquer amb habitacions i porta progressiva actual; 2 edificis auxiliars, pati de maniobres, filferrada, 4 torres i bandera vermella. | 1 tanc aparcat, 2 tanquetes de patrulla interior i 2 jeeps de patrulla exterior. Sense helicòpters. | General i 6–8 soldats entre entrada, pati i interior. Munició, farmaciola i disfressa. |
+| HQ enemic | Búnquer amb habitacions i porta progressiva actual; 2 edificis auxiliars, pati de maniobres, filferrada, 4 torres i bandera vermella. | Sense tanc aparcat; 2 tanquetes de patrulla interior i 2 jeeps de patrulla exterior. Sense helicòpters. | General i 6–8 soldats entre entrada, pati i interior. Munició, farmaciola i disfressa. |
 | Avançada | Caserna, caseta de guàrdia, torre, sacs, barreres, caixes, llum i bandera. Filferrada amb dos accessos. | 1 moto o jeep. | 3–4 soldats. Munició; granades o farmaciola opcionals. |
 | Garatge/hangar | Hangar gran, taller annex, aparcament exterior, dipòsits, bidons i caixes. Espai de sortida i gir davant de la boca. | 1 tanc, tanqueta o camió a dins; 1 cotxe o moto fora. | 2–3 soldats. Munició i farmaciola opcional. |
 | Heliport | Plataforma marcada, control, magatzem, combustible, llums i defenses fora de l'àrea dels rotors. | 1 helicòpter normal; variant fortificada amb helicòpter de combat. | 3–5 soldats; torre només a la variant fortificada. Munició i farmaciola. |

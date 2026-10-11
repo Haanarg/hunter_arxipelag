@@ -53,6 +53,22 @@ export function createCompoundConcept(layout){
      if(solid){wall(0,-b.d/2,b.w,.6);for(const x of[-b.w/2,b.w/2])wall(x,0,.6,b.d)}else{building.addWindowedWall(g,{lx:0,lz:-b.d/2,sx:b.w,sz:.45,height:b.h,material:shell.walls});for(const x of[-b.w/2,b.w/2])building.addWindowedWall(g,{lx:x,lz:0,sx:.45,sz:b.d,height:b.h,material:shell.walls})}
      const door=4;wall(-(b.w+door)/4,b.d/2,(b.w-door)/2,.45);wall((b.w+door)/4,b.d/2,(b.w-door)/2,.45);
      building.addWall(g,{lx:0,lz:b.d/2,sx:door,sz:.45,height:b.h-4.4,material:shell.walls,y:4.4+(b.h-4.4)/2});
+     if(b.bunker){
+       // Batter all four exterior walls inward, keeping the full base footprint.
+       // Interior partitions and the vertical entrance portal are built afterwards.
+       const inset=3.5;
+       for(const mesh of g.children.filter(o=>o.isMesh)){
+         const positions=mesh.geometry.attributes.position;
+         for(let i=0;i<positions.count;i++){
+           const y=positions.getY(i)+mesh.position.y,t=Math.max(0,Math.min(1,y/b.h));
+           positions.setX(i,(positions.getX(i)+mesh.position.x)*(1-2*inset*t/b.w)-mesh.position.x);
+           positions.setZ(i,(positions.getZ(i)+mesh.position.z)*(1-2*inset*t/b.d)-mesh.position.z);
+         }
+         positions.needsUpdate=true;mesh.geometry.computeVertexNormals();mesh.geometry.computeBoundingSphere();
+       }
+       shell.roof.scale.set((b.w-2*inset)/(b.w+1.35),1,(b.d-2*inset)/(b.d+1.35));
+       g.userData.bunkerWallInset=inset;
+     }
      box(g,5,.15,3,0xafa88c,0,.1,b.d/2+1.5);
      box(g,5,1.2,1.8,0x776044,-b.w/2+4,.9,-b.d/2+3);
      if(b.id==='barracks')for(const x of[-5,5])for(const z of[-6,0]){box(g,2.5,.65,4,0x4c5b43,x,.6,z);box(g,2.2,.25,3.5,0x939978,x,1.05,z)}
@@ -61,12 +77,14 @@ export function createCompoundConcept(layout){
        for(const x of[-6,6]){box(g,2.8,.7,5,0x64796c,x,.8,-2);box(g,2.6,.25,4.8,0xe4e9d9,x,1.27,-2)}
      }
      if(b.bunker){
-       for(const x of[-b.w/2+1.5,b.w/2-1.5])box(g,3,8,b.d+1.2,0x9ba798,x,4,0);
+
        // Central corridor: 7 m wide, doors to four side rooms.
-       for(const x of[-4,4])for(const [z,d]of[[-14,6],[-4,6],[9,14]])wall(x,z,.6,d,8);
-       for(const x of[-11,11])wall(x,-7,13,.6,8);
+       for(const x of[-4,4])for(const [z,d]of[[-12.5,3],[-4,6],[7,10]])wall(x,z,.6,d,8);
+       for(const x of[-11,11])wall(x,-7,12,.6,8);
        const gate=box(g,3.8,4.35,.4,0x59635b,0,2.18,b.d/2+.2);gate.userData.previewBunkerGate=true;
-       box(g,6,.8,2,0x8c9889,0,5.1,b.d/2+.3);
+       // Projecting trapezoidal entrance surround, as in the original Hunter HQ.
+       for(const sign of[-1,1]){const shape=new T.Shape();shape.moveTo(sign*1.9,0);shape.lineTo(sign*3.5,0);shape.lineTo(sign*2.7,5.2);shape.lineTo(sign*1.9,5.2);shape.closePath();const post=new T.Mesh(new T.ExtrudeGeometry(shape,{depth:3.3,bevelEnabled:false}),mat(0x795337));post.position.z=b.d/2-2.8;g.add(post)}
+       box(g,5.4,.85,3.3,0x795337,0,4.8,b.d/2-1.15);
        for(const x of[-1.3,0,1.3])box(g,.10,3.5,.08,0x303e36,x,2.2,b.d/2+.45);
        box(g,5,1.1,2.5,0x5a5944,0,.9,-12);tag('Porta · 10 s',b.x,6,b.z+b.d/2+1);
      }
