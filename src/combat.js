@@ -281,9 +281,13 @@ else if(c=='llanxa_coets'){secondaryWeapon();return}
 else if(!cv&&sniperEquipped&&inv.franctirador){
   if(sniperAmmo<=0){msg='El rifle no té munició.';msgT=2;return}
   sniperAmmo--;fcd=1.05;pl.userData.firePose=.42;
-  const pitch=scopeActive?scopePitch:0,cos=Math.cos(pitch),
-        fy=Math.sin(pitch),bx=fx_*cos,bz=fz*cos,
-        x=P.x+fx_*1.05,y=P.y+1.76,z=P.z+fz*1.05,
+  // Mentre apunta, el tir segueix exactament el rumb independent
+  // de la càmera de la mira (el personatge conserva P.hd).
+  const sightHeading=scopeActive?scopeYaw:hd,
+        sightFx=-Math.sin(sightHeading),sightFz=-Math.cos(sightHeading),
+        pitch=scopeActive?scopePitch:0,cos=Math.cos(pitch),
+        fy=Math.sin(pitch),bx=sightFx*cos,bz=sightFz*cos,
+        x=P.x+sightFx*1.05,y=P.y+1.76,z=P.z+sightFz*1.05,
         [ax,ay,az]=autoAimWeaponShot(x,y,z,bx,fy,bz,scopeActive?550:180,scopeActive?.9996:.984);
   shoot(x,y,z,ax,ay,az,470,65,0,'p',mW,SMALL_ARMS_SCALE);
   msg='Rifle: '+sniperAmmo+' cartutxos.';msgT=1.5;
