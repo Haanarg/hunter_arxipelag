@@ -22,9 +22,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Reintroduir la llavor del HUD i reproduir el mapa
-        run: node tests/seed-replay.cjs
-      - name: Cercador de llavors i aplicació del resultat
-        run: node tests/seed-search-integration.cjs
       - name: Catàleg del cercador
         run: node tests/seed-search.cjs
+      - name: Cercador de llavors i aplicació del resultat
+        run: node tests/seed-search-integration.cjs
+      - name: Reintroduir la llavor del HUD i reproduir el mapa
+        run: node tests/seed-replay.cjs

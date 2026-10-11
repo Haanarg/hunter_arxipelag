@@ -5,7 +5,9 @@
   const search=el('seedSearchRun'),category=el('seedSearchCategory'),type=el('seedSearchType');
   assert.equal(category.value,'vehicle');
   assert.equal(type.value,'ferry','legacy ferry search stays the initial choice');
-  const scenarios=[['vehicle','heli_combat',16],['item','mapa_tanc',10],['compound','hq',8]];
+  const scenarios=[['vehicle','heli_combat',run('Object.keys(VT).length')+1],
+    ['item','mapa_tanc',run('Object.keys(IT).length')+1],
+    ['compound','hq',8]];
   for(const [cat,selected,count] of scenarios){
     category.value=cat;category.onchange();
     assert.equal(type.options.length,count,cat+' exposes complete catalog');
