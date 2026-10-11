@@ -165,7 +165,7 @@ expl:{n:'Explosius',c:0x617451,s:[.9,.9,.9],icon:ICON.expl,desc:'Bloc d’explos
 disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa enemiga vermella. Activa o desactiva la disfressa.',usable:true}
 };
 // combat i enemics
-let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=100,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,sniperEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null;
+let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=100,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,sniperEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null;
 const endEl=document.getElementById('end'),gB=new THREE.BoxGeometry(.35,.35,.35),sphG=new THREE.SphereGeometry(1,10,8),
 mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial({color:0xff7a1a}),mE=new THREE.MeshBasicMaterial({color:0xff4040}),
 // Bales de pistola, franctirador, soldats i tanqueta: petites i blanques.
@@ -713,7 +713,7 @@ const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joyst
       strafeButtons={left:document.getElementById('strafeLeft'),right:document.getElementById('strafeRight')},
       strafePointers={left:null,right:null},
       STRAFE_VEHICLES=new Set(['hover','heli','heli_combat']);
-const canStrafe=()=>cv?STRAFE_VEHICLES.has(cv.t):!swimming&&!playerFall&&!playerEject;
+const canStrafe=()=>!scopeActive&&(cv?STRAFE_VEHICLES.has(cv.t):!swimming&&!playerFall&&!playerEject);
 const setStrafeHeld=(side,held)=>{
   const button=strafeButtons[side];
   button.classList.toggle('held',held);
@@ -821,10 +821,16 @@ for(const b of document.querySelectorAll('[data-k]')){
 }
 addEventListener('blur',()=>{clearKeys();if(started&&!paused&&!over)panel('pause')});document.addEventListener('visibilitychange',()=>{if(document.hidden&&started&&!over)panel('pause')});
 ren.domElement.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.7,Math.min(1.9,zoom+e.deltaY*.001))},{passive:false});
-let drag=null;ren.domElement.addEventListener('pointerdown',e=>{if(!started||paused||over)return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};ren.domElement.setPointerCapture(e.pointerId)});ren.domElement.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId||paused)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(scopeActive)scopePitch=Math.max(-.65,Math.min(.65,scopePitch-dy*.00115));drag.y=e.clientY;const q=cv||P;q.hd-=dx*(scopeActive?.00115:.006);drag.x=e.clientX});ren.domElement.addEventListener('pointerup',()=>drag=null);ren.domElement.addEventListener('pointercancel',()=>drag=null);
+let drag=null;ren.domElement.addEventListener('pointerdown',e=>{if(!started||paused||over)return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};ren.domElement.setPointerCapture(e.pointerId)});ren.domElement.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId||paused)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(scopeActive)scopePitch=Math.max(-.65,Math.min(.65,scopePitch-dy*.00115));drag.y=e.clientY;if(scopeActive)scopeYaw-=dx*.00115;else{const q=cv||P;q.hd-=dx*.006}drag.x=e.clientX});ren.domElement.addEventListener('pointerup',()=>drag=null);ren.domElement.addEventListener('pointercancel',()=>drag=null);
 function setSniperScope(enabled){
+  const wasActive=scopeActive;
   scopeActive=!!enabled&&sniperEquipped&&!!inv.franctirador&&!cv&&!swimming&&!over;
-  if(!scopeActive){scopePitch=0;if(cam.fov!==58){cam.fov=58;cam.updateProjectionMatrix()}}
+  if(scopeActive&&!wasActive){scopeYaw=P.hd;scopePitch=0;joystick.reset();releaseStrafeButtons()}
+  if(!scopeActive){
+    scopePitch=0;scopeYaw=P.hd;
+    if(wasActive){joystick.reset();releaseStrafeButtons()}
+    if(cam.fov!==58){cam.fov=58;cam.updateProjectionMatrix()}
+  }
   document.body.classList.toggle('sniper-scoped',scopeActive);
   const button=document.getElementById('sniperAimButton');
   if(button)button.setAttribute('aria-pressed',String(scopeActive));
@@ -1046,7 +1052,13 @@ const jf=-joystick.state.y,jtr=-joystick.state.x,
       strafe=strafeEnabled?Math.max(-1,Math.min(1,
         (K.KeyE?1:0)-(K.KeyQ?1:0)+(strafePointers.right!==null?1:0)-(strafePointers.left!==null?1:0))):0,
       ud=(K.KeyU||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),lim=H-2;
-if(cv){const driven=cv,alive=stepV(driven,f,tr,ud,dt,strafe);if(alive&&cv===driven){P.x=driven.x;P.z=driven.z;P.hd=driven.hd}}
+if(scopeActive){
+  // El joystick i el teclat controlen ÚNICAMENT la càmera de la mira:
+  // sense traslació, gir ni animació de desplaçament del jugador.
+  // Q/E (strafe habitual) també passa a moure horitzontalment la mira.
+  scopeYaw+=(tr-strafe*.8)*dt*1.25;
+  scopePitch=Math.max(-.65,Math.min(.65,scopePitch+f*dt*.92));
+}else if(cv){const driven=cv,alive=stepV(driven,f,tr,ud,dt,strafe);if(alive&&cv===driven){P.x=driven.x;P.z=driven.z;P.hd=driven.hd}}
 else{P.hd+=tr*dt*2.2;if(playerFall){playerFall.t+=dt;playerFall.vy-=24*dt;playerFall.vx*=Math.exp(-.18*dt);playerFall.vz*=Math.exp(-.18*dt);P.x=Math.max(-lim,Math.min(lim,P.x+playerFall.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerFall.vz*dt));playerFall.y+=playerFall.vy*dt;const water=wy(P.x,P.z,t),landing=Math.max(hAt(P.x,P.z),water-1.4);P.y=playerFall.y;if(playerFall.y<=landing){P.y=landing;const fallH=playerFall.startHeight,impact=Math.max(0,-playerFall.vy),waterLanding=water>hAt(P.x,P.z)+1.5,dmg=Math.min(100,Math.max(0,(fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8)));playerFall=null;if(dmg>0)hurtP(dmg);msg=waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5}}
 else if(playerEject&&playerEject.t>0){P.x=Math.max(-lim,Math.min(lim,P.x+playerEject.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerEject.vz*dt));playerEject.vx*=Math.exp(-2.4*dt);playerEject.vz*=Math.exp(-2.4*dt);playerEject.t=Math.max(0,playerEject.t-dt)}else{
   // Avanç i strafe simultanis sense variar el rumb. Normalitzam la
@@ -1113,7 +1125,7 @@ if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-i
 msgT-=dt;pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;
 // També animam les passes quan el jugador es mou només lateralment,
 // sense modificar P.hd ni l'orientació de la càmera.
-animPl(cv?0:(Math.abs(f)>.02?f:Math.abs(strafe)*.7),dt);
+animPl(cv||scopeActive?0:(Math.abs(f)>.02?f:Math.abs(strafe)*.7),dt);
 if(!cv&&playerFall){pl.position.y=playerFall.y;pl.rotation.x=(playerFall.spin||1)*playerFall.t*7.5;pl.rotation.z=Math.sin(playerFall.t*8)*.45}
 else if(!cv&&playerEject&&playerEject.t>=0){
   const dur=playerEject.dur||.5,p=Math.max(0,Math.min(1,1-playerEject.t/dur)),u=pl.userData;
@@ -1142,7 +1154,7 @@ const scopeNow=scopeActive&&sniperEquipped&&!cv&&!playerFall&&!swimming;
 const fieldOfView=scopeNow?2*Math.atan(Math.tan(58*Math.PI/360)/8)*180/Math.PI:58;
 if(Math.abs(cam.fov-fieldOfView)>.001){cam.fov=fieldOfView;cam.updateProjectionMatrix()}
 if(scopeNow){
-  const fx=-Math.sin(P.hd),fz=-Math.cos(P.hd),vertical=Math.tan(scopePitch);
+  const fx=-Math.sin(scopeYaw),fz=-Math.cos(scopeYaw),vertical=Math.tan(scopePitch);
   cam.position.set(P.x-fx*.12,P.y+1.76,P.z-fz*.12);
   cam.lookAt(P.x+fx*160,P.y+1.76+vertical*160,P.z+fz*160);
 }else{
