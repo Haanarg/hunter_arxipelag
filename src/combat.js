@@ -208,6 +208,7 @@ function throwGrenade(power=0){
   inv.granada--;if(inv.granada<=0){delete inv.granada;grenadeEquipped=false}
   fcd=.7;setDis(false);
   pl.userData.grenadeThrow=.55;pl.userData.grenadeReleased=false;
+  pl.userData.grenadeThrowPower=Math.max(0,Math.min(1,power));
   pl.userData.grenadePending={t:.23,flight};
   msg='Granades: '+(inv.granada||0);msgT=1.5;
   return true;

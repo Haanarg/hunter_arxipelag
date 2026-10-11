@@ -68,6 +68,17 @@ const PLAYER_KNIFE_ATTACK_3B=Object.freeze({
   windup:.30,reach:1.12,open:-.45,extend:.58,knifeX:-.07,knifeZ:-.25
 });
 const PLAYER_KNIFE_ATTACK_SECONDS=.48;
+// La postura anterior és ara el 50 % de càrrega. En començar, el braç
+// és més recollit; a força màxima, l'espatlla s'obre i retrocedeix.
+function grenadeChargeArmPose(power=0){
+  const t=Math.max(0,Math.min(1,Number.isFinite(power)?power:0));
+  return {
+    shoulderX:.28-.72*t,
+    shoulderZ:.78+.80*t,
+    elbowX:.56+.32*t,
+    elbowZ:.08+.08*t
+  };
+}
 const knifeEase=t=>{const n=Math.max(0,Math.min(1,t));return n*n*(3-2*n)};
 const knifePulse=(p,a,m,b)=>p<=a||p>=b?0:
   p<m?knifeEase((p-a)/(m-a)):1-knifeEase((p-m)/(b-m));
@@ -142,6 +153,7 @@ function aimPlayerPistolArm(shoulder,elbow,wrist,side,rig,blend){
   elbow.quaternion.slerp(rig.q2,blend);
 }
 window.HUNTER_CHARACTERS=Object.freeze({
+  grenadeChargeArmPose,
   knifePose4B:PLAYER_KNIFE_4B,
   knifeAttack3B:PLAYER_KNIFE_ATTACK_3B,
   knifeAttack3BTargets,
@@ -246,7 +258,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     player.scale.setScalar(2/3);
     return player;
   },
-  animatePlayer(player,{forward,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,sniperEquipped=false}){
+  animatePlayer(player,{forward,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,sniperEquipped=false,grenadeChargePower=0}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),move=Math.min(1,Math.abs(forward)),dir=forward<0?-1:1;
     u.firePose=Math.max(0,(u.firePose||0)-dt);u.meleePose=Math.max(0,(u.meleePose||0)-dt);u.grenadeThrow=Math.max(0,(u.grenadeThrow||0)-dt);
     u.pistolAimTime=Math.max(0,(u.pistolAimTime||0)-dt);u.pistolShotAge=Math.min(10,(u.pistolShotAge??10)+dt);
@@ -285,15 +297,25 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.knife.visible=!bazooka&&!sniper&&!grenade&&(melee||knifeReady);
 
     if(grenade||throwing){
+      // La càrrega i el llançament comparteixen la mateixa pose inicial.
+      const chargePose=grenadeChargeArmPose(throwing?u.grenadeThrowPower:grenadeChargePower);
       const p=throwing?1-Math.max(0,Math.min(1,u.grenadeThrow/.55)):0;
       if(throwing&&p<.42){
-        // Càrrega lateral natural (opció 2): el braç surt cap al costat, no cap enrere.
-        const q=p/.42;tx(u.ar,-.08-.08*q);tz(u.ar,1.18+.06*q);tx(u.aer,.72);tz(u.aer,.12);
+        const q=p/.42;
+        tx(u.ar,chargePose.shoulderX-.08*q);
+        tz(u.ar,chargePose.shoulderZ+.06*q);
+        tx(u.aer,chargePose.elbowX);
+        tz(u.aer,chargePose.elbowZ);
       }else if(throwing){
-        // Llançament: des de la posició lateral cap endavant i amunt.
-        const q=Math.min(1,(p-.42)/.58);tx(u.ar,-.16+1.58*q);tz(u.ar,1.24-1.42*q);tx(u.aer,.72-.45*q);tz(u.aer,.12-.08*q);
+        // Impuls cap endavant i amunt des de l'angle carregat real.
+        const q=Math.min(1,(p-.42)/.58);
+        tx(u.ar,chargePose.shoulderX-.08+(1.42-(chargePose.shoulderX-.08))*q);
+        tz(u.ar,chargePose.shoulderZ+.06+(-.18-(chargePose.shoulderZ+.06))*q);
+        tx(u.aer,chargePose.elbowX+(.27-chargePose.elbowX)*q);
+        tz(u.aer,chargePose.elbowZ+(.04-chargePose.elbowZ)*q);
       }else{
-        tx(u.ar,-.08);tz(u.ar,1.18);tx(u.aer,.72);tz(u.aer,.12)
+        tx(u.ar,chargePose.shoulderX);tz(u.ar,chargePose.shoulderZ);
+        tx(u.aer,chargePose.elbowX);tz(u.aer,chargePose.elbowZ);
       }
       tx(u.al,-.08);tz(u.al,-.12);tx(u.ael,.18);tz(u.ael,-.04);
     }else if(bazooka){

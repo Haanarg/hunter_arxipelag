@@ -603,7 +603,10 @@ function flag(x,z,c){world.add(buildingVisual.createFlag({x,y:hAt(x,z),z,color:c
 const bx=(g,w,h,d,c,x,y,z,profile='organic')=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c,profile));m.position.set(x,y,z);g.add(m);return m};
 const buildingVisual=window.HUNTER_BUILDINGS.create(THREE,{material:M,materialProfile,box:bx});
 const pl=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});scene.add(pl);
-const animPl=(f,dt)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{forward:f,dt,swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,sniperEquipped});
+const animPl=(f,dt)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{
+  forward:f,dt,swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,sniperEquipped,
+  grenadeChargePower:grenadeCharge?Math.min(1,grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS):0
+});
 const VT=window.HUNTER_VEHICLE_DYNAMICS.types;
 const VS=window.HUNTER_VEHICLES.scales;
 // Quan els patins reposen sobre una superfície, el punt inferior de la
