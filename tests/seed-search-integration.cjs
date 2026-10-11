@@ -7,7 +7,7 @@
   assert.equal(type.value,'ferry','legacy ferry search stays the initial choice');
   const scenarios=[['vehicle','heli_combat',run('Object.keys(VT).length')+1],
     ['item','mapa_tanc',run('Object.keys(IT).length')+1],
-    ['compound','hq',8]];
+    ['compound','hq',run('Object.keys(seedSearch.compounds).length')+1]];
   for(const [cat,selected,count] of scenarios){
     category.value=cat;category.onchange();
     assert.equal(type.options.length,count,cat+' exposes complete catalog');
@@ -25,6 +25,7 @@
   await promise;
   assert.equal(el('seedSearchResults').children.length,1,'one HQ result');
   const result=el('seedSearchResults').children[0];
+  const expectedSeed=String(run('seed>>>0'));
   assert(result.children[0].children[1].textContent.includes('HQ enemic'),'HQ label rendered');
   assert(run('seedSearchMode===false&&MAP_SCALE===1&&S===4800'),'search restores world settings');
   result.children[2].onclick();
@@ -33,9 +34,10 @@
   assert.equal(el('seedSearchScreen').style.display,'block','finder reopens');
   el('seedSearchBack').onclick();
   assert(!search.disabled,'search button still enabled after leaving finder');
-  assert.equal(el('seedInput').value,'1','selected seed is transferred to start menu');
+  assert.equal(el('seedInput').value,expectedSeed,'effective seed is transferred to start menu');
   assert(!el('seedRandom').checked,'random seed disabled when applying a result');
-  game.start('1',1);
+  game.start(expectedSeed,1);
+  assert.equal(run('seed>>>0'),Number(expectedSeed),'replaying a finder result preserves the real seed');
   assert(run('started===1&&!!terrainStream&&V.length>0'),
     'normal game build still restores terrain and vehicles');
   console.log(JSON.stringify({passed:true,scenarios:scenarios.length,
