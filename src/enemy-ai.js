@@ -66,6 +66,23 @@ function soldierFlankPosition(u,target,targetY){
     z:u.z+sideZ*prefer*13+fz*9
   };
 }
+// Quan el jugador es refugia a dins, el soldat ha de trobar el portal
+// d'entrada, creuar-lo i només llavors buscar una posició de tir.
+function soldierEnterBuilding(u,b,target,dt){
+  const door=b?.door;
+  if(!door||door.locked||door.bunkerGate||b.hangar)return false;
+  const inside=Math.abs(u.x-b.x)<b.w/2-1.15&&
+               Math.abs(u.z-b.z)<b.d/2-1.15;
+  if(inside)return false;
+  const exterior={x:door.cx+door.nx*2.1,z:door.cz+door.nz*2.1},
+        interior={x:door.cx-door.nx*2.5,z:door.cz-door.nz*2.5},
+        distance=Math.hypot(u.x-exterior.x,u.z-exterior.z),
+        goal=distance>1.15?exterior:interior;
+  u.tacticGoal=null;u.tacticT=0;
+  mvE(u,u.sp*dt,goal.x,goal.z);
+  u.hd=Math.atan2(u.x-target.x,u.z-target.z);
+  return true;
+}
 function soldierEngage(u,target,targetY,dt,d,visible){
   const eyeY=u.o.position.y+2.2,clear=visible&&u.canShoot;
   let goal=null,speed=u.sp;
@@ -105,6 +122,9 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
         det=disg&&!cv?20:u.alert>0?300:u.t=='general'?60:120,
         eyeY=u.o.position.y+(u.t=='torre'?9.4:2.2);
 
+  // Dins una casa es pot sentir el jugador encara que una paret talli
+  // la línia visual. Això inicia la persecució, mai el tret a cegues.
+  const hidingInside=!cv&&ib&&!ib.hangar&&!ib.door?.locked&&!disg;
   // Percepció desacoblada del moviment: ~10 Hz i desfasada entre enemics.
   u.senseT=(u.senseT??0)-dt;
   if(u.senseT<=0){
@@ -114,7 +134,7 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
       const acquired=seen&&!u.canSee;
       u.canSee=seen;
       u.canShoot=seen&&soldierClearShot(u,u.x,u.z,eyeY,q,py);
-      if(seen){
+      if(seen||hidingInside&&d<65){
         u.lastSeenX=q.x;u.lastSeenZ=q.z;u.lastSeenY=py;
         u.pursuitT=SOLDIER_MEMORY;
         if(acquired)u.cd=0; // primer tret sense retard en detectar el jugador
@@ -132,8 +152,9 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
     const target=u.canSee?q:{x:u.lastSeenX,z:u.lastSeenZ},
           targetY=u.canSee?py:(u.lastSeenY??py),
           td=Math.hypot(target.x-u.x,target.z-u.z);
-    soldierEngage(u,target,targetY,dt,td,!!u.canSee);
-    if(u.canSee&&u.canShoot&&d<=SOLDIER_FIRE_RANGE&&u.cd<=0){
+    const entering=hidingInside&&soldierEnterBuilding(u,ib,target,dt);
+    if(!entering)soldierEngage(u,target,targetY,dt,td,!!u.canSee);
+    if(!entering&&u.canSee&&u.canShoot&&d<=SOLDIER_FIRE_RANGE&&u.cd<=0){
       u.cd=u.rate;
       const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
       shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE);
