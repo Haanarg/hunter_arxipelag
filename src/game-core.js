@@ -746,12 +746,12 @@ const clearKeys=()=>{
   joystick.reset();releaseStrafeButtons();
   document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))
 };
-const act=c=>{if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(!started||paused||over)return;if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyR'){if(cv||nearV())toggle();else panel('inventory');return}if(c==='KeyG'){if(!secondaryWeapon())plant();}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
+const act=c=>{if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(!started||paused||over)return;if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){if(!secondaryWeapon())plant();}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
 const nearV=()=>{let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
 function updateActionButton(nearby){
   const button=document.getElementById('mainActionButton');
   if(!button)return;
-  // El mateix vehicle que retornaria nearV() a la tecla R.
+  // El mateix vehicle que retornaria nearV() a la tecla E.
   // En conduir, la icona continua identificant el vehicle del qual baixarem.
   const vehicle=cv||nearby||null,type=vehicle?.t||'backpack',
         name=vehicle?VT[type]?.n||type:null,
@@ -1050,13 +1050,13 @@ const jf=-joystick.state.y,jtr=-joystick.state.x,
       f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),
       tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),
       strafe=strafeEnabled?Math.max(-1,Math.min(1,
-        (K.KeyE?1:0)-(K.KeyQ?1:0)+(strafePointers.right!==null?1:0)-(strafePointers.left!==null?1:0))):0,
-      ud=(K.KeyU||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),lim=H-2;
+        (K.KeyU?1:0)-(K.KeyY?1:0)+(strafePointers.right!==null?1:0)-(strafePointers.left!==null?1:0))):0,
+      ud=(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),lim=H-2;
 if(scopeActive){
   // El joystick i el teclat controlen ÚNICAMENT la càmera de la mira:
   // sense traslació, gir ni animació de desplaçament del jugador.
-  // Q/E (strafe habitual) també passa a moure horitzontalment la mira.
-  const scopeStrafe=(K.KeyE?1:0)-(K.KeyQ?1:0);
+  // Y/U (strafe habitual) també passa a moure horitzontalment la mira.
+  const scopeStrafe=(K.KeyU?1:0)-(K.KeyY?1:0);
   // Sensibilitat baixa per controlar amb precisió l'òptica x8.
   scopeYaw+=(tr-scopeStrafe*.8)*dt*.38;
   scopePitch=Math.max(-.65,Math.min(.65,scopePitch+f*dt*.30));
