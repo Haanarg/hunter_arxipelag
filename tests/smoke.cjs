@@ -708,6 +708,73 @@ ok('sniperScopeMath&&sniperScopeCamera','scope uses eightfold optical zoom with 
 ok('sniperHasAmmoInWorld','rifle is guaranteed to spawn and provides six rounds per pickup');
 ok('sniperPauseCheats','pause menu exposes Chetos action');
 
+const scopeUiMarkup=require('fs').readFileSync(require('path').join(__dirname,'../index.html'),'utf8');
+assert(scopeUiMarkup.includes('body.sniper-scoped #contextButtons{z-index:6}')&&
+  scopeUiMarkup.includes('body.sniper-scoped #joystick{z-index:6;')&&
+  scopeUiMarkup.includes('body.sniper-scoped .joy-knob:after{')&&
+  scopeUiMarkup.includes('body.sniper-scoped .strafe-btn{display:none}')&&
+  scopeUiMarkup.includes('#sniperScope{display:none;position:fixed;inset:0;z-index:3'),
+  'fire, zoom and reticle joystick overlay the dark sniper scope; ordinary strafe controls are hidden');
+
+run(`{
+  const saved={position:P.clone?P.clone():{x:P.x,y:P.y,z:P.z},
+      hd:P.hd,scopeYaw,scopePitch,scopeActive,swimming,sniperEquipped,
+      rifle:inv.franctirador||0,paused,over,cv,playerFall,playerEject,
+      elapsed,jsx:joystick.state.x,jsy:joystick.state.y,
+      w:K.KeyW,e:K.KeyE,q:K.KeyQ,a:K.KeyA,
+      fcd,ammo:sniperAmmo,autoAim:autoAimWeaponShot,shoot};
+  const shots=[];
+  try{
+    paused=false;over=0;cv=null;swimming=false;playerFall=null;playerEject=null;
+    sniperEquipped=true;inv.franctirador=1;sniperAmmo=3;fcd=0;
+    setSniperScope(true);
+    const before={x:P.x,z:P.z,hd:P.hd};
+    joystick.state.x=.65;joystick.state.y=-.5;
+    K.KeyW=1;K.KeyE=1;K.KeyQ=0;K.KeyA=0;
+    update(.04,elapsed+.04);
+    const heldPosition=Math.hypot(P.x-before.x,P.z-before.z)<1e-7&&
+      P.hd===before.hd;
+    const aimMoved=Math.abs(scopeYaw-before.hd)>.0001&&scopePitch>.0001&&
+      document.body.classList.contains('sniper-scoped')&&
+      !document.body.classList.contains('strafe-active');
+    const yawNow=scopeYaw,pitchNow=scopePitch;
+    const scopeDirection=[-Math.sin(yawNow)*Math.cos(pitchNow),
+      Math.sin(pitchNow),-Math.cos(yawNow)*Math.cos(pitchNow)];
+    autoAimWeaponShot=(x,y,z,dx,dy,dz)=>[dx,dy,dz];
+    shoot=(...args)=>shots.push(args);
+    fire();
+    const bullet=shots[0];
+    const shotFollowsSight=shots.length===1&&
+      Math.abs(bullet[3]-scopeDirection[0])<1e-8&&
+      Math.abs(bullet[4]-scopeDirection[1])<1e-8&&
+      Math.abs(bullet[5]-scopeDirection[2])<1e-8;
+    setSniperScope(false);
+    const scopeExitClean=!document.body.classList.contains('sniper-scoped')&&
+      scopePitch===0&&Math.abs(scopeYaw-P.hd)<1e-9&&
+      joystick.state.x===0&&joystick.state.y===0;
+    globalThis.sniperJoystickAimOnly=heldPosition&&aimMoved&&shotFollowsSight&&scopeExitClean;
+    globalThis.sniperAimDragIndependent=String(ren.domElement).length>=0&&
+      String(update).includes('scopeYaw+=(tr-scopeStrafe*.8)*dt*1.25')&&
+      String(update).includes('if(scopeActive){')&&
+      String(update).includes('animPl(cv||scopeActive?0:');
+  }finally{
+    shoot=saved.shoot;autoAimWeaponShot=saved.autoAim;fcd=saved.fcd;
+    sniperAmmo=saved.ammo;P.x=saved.position.x;P.y=saved.position.y;P.z=saved.position.z;
+    P.hd=saved.hd;cv=saved.cv;swimming=saved.swimming;
+    sniperEquipped=saved.sniperEquipped;
+    if(saved.rifle)inv.franctirador=saved.rifle;else delete inv.franctirador;
+    playerFall=saved.playerFall;playerEject=saved.playerEject;
+    paused=saved.paused;over=saved.over;elapsed=saved.elapsed;
+    K.KeyW=saved.w;K.KeyE=saved.e;K.KeyQ=saved.q;K.KeyA=saved.a;
+    setSniperScope(false);if(saved.scopeActive)setSniperScope(true);
+    scopeYaw=saved.scopeYaw;scopePitch=saved.scopePitch;
+    joystick.state.x=saved.jsx;joystick.state.y=saved.jsy;
+  }
+}`);
+ok('sniperJoystickAimOnly','when scoped WASD, Q/E and joystick pan view without moving character; bullets follow the reticle; exit restores movement');
+ok('sniperAimDragIndependent','zoom view has independent yaw from player and movement animation is disabled');
+
+
 
 ok('grenadePlayerModel','player has a grenade model in the throwing hand');
 ok('grenadeThrowAnimation','grenade throw has a dedicated arm animation');
