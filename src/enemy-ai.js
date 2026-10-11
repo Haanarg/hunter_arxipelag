@@ -227,7 +227,11 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
   if(u.o.userData.legs){
     const a=u.o.userData;u.phase=(u.phase||0)+dt*u.sp;
     const moving=Math.hypot(u.x-oldX,u.z-oldZ)>.001,swing=moving?Math.sin(u.phase)*.45:0;
-    if(a.knees)window.HUNTER_CHARACTERS.animateSoldier(u.o,{phase:u.phase,moving,aim:!!u.canSee,dt});
+    if(a.knees&&a.enemyLOD==='full')window.HUNTER_CHARACTERS.animateSoldier(u.o,{phase:u.phase,moving,aim:!!u.canSee,dt});
+    else if(a.knees&&a.enemyLOD==='mid'){
+      u.visualAnimT=(u.visualAnimT||0)+dt;
+      if(u.visualAnimT>=.16){a.enemyMidMesh.rotation.z=moving?Math.sin(u.phase)*.035:0;u.visualAnimT=0}
+    }
     else{
     a.legs[0].rotation.x=swing;a.legs[1].rotation.x=-swing;
     const aim=!!u.canSee;
@@ -254,6 +258,7 @@ bx(g,3.35,.28,3.35,roof,0,10.25,0,'metal');
 bx(g,.32,.32,2.1,roof,0,9.25,-2.25,'metal');
 bx(g,.42,.8,.42,0xe4d36f,0,10.78,0,'paint')}
 else{g=new THREE.Group();bx(g,1,1,.6,0x222222,0,.5,0);bx(g,1.3,1.6,.7,0xd4af37,0,1.8,0);bx(g,.8,.8,.8,0xf0c9a0,0,3,0);bx(g,.9,.5,.9,0xaa0000,0,3.6,0);g.scale.setScalar(1.2)}
+if(t!=='soldat'&&t!=='general')window.HUNTER_ENEMY_LOD.optimize(THREE,g,t);
 world.add(g);const sensePhase=(E.length%10)*.01,u={t,x,z,gy,hd:rr(0,6.28),o:g,home:{x,z},cd:rr(0,1),alert:0,wt:0,tx:x,tz:z,senseT:sensePhase,canSee:false,defenseTarget:null,...c};E.push(u);
 if(t==='torre'){
   const base=gy??enemyGroundAt(u,x,z);

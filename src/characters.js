@@ -195,7 +195,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
   },
 
   createSoldier(THREE,{box,material,general=false,palette=window.HUNTER_PALETTE}){
-    return general?window.HUNTER_GENERAL_MODEL.create(THREE,{palette}):this.createCommando(THREE,{palette});
+    const kind=general?'general':'soldat',model=general?window.HUNTER_GENERAL_MODEL.create(THREE,{palette}):this.createCommando(THREE,{palette});
+    return window.HUNTER_ENEMY_LOD.optimize(THREE,model,kind);
   },
   animateSoldier(model,{phase=0,moving=false,aim=false,dt=0,death=0}){
     const a=model.userData;if(!a.knees)return;

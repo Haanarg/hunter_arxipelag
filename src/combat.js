@@ -76,7 +76,7 @@ function explodeEnemyVehicle(u){
 }
 function killEnemy(u){
   const i=E.indexOf(u);if(i<0)return;E.splice(i,1);kills++;
-  if(u.t==='soldat'||u.t==='general'){u.deadT=0;u.deadSide=rn(-1,1)<0?-1:1;u.o.userData.legs?.forEach(l=>l.rotation.x=0);u.o.userData.arms?.forEach(a=>a.rotation.x=0);DEAD.push(u)}
+  if(u.t==='soldat'||u.t==='general'){window.HUNTER_ENEMY_LOD.setLevel(u.o,'full');u.deadT=0;u.deadSide=rn(-1,1)<0?-1:1;u.o.userData.legs?.forEach(l=>l.rotation.x=0);u.o.userData.arms?.forEach(a=>a.rotation.x=0);DEAD.push(u)}
   else if(u.t==='torre'){destroyTower(u);world.remove(u.o)}
   else if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc')explodeEnemyVehicle(u);
   else world.remove(u.o);

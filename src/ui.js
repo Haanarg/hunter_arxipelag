@@ -56,6 +56,7 @@ window.HUNTER_UI=Object.freeze({
             'FPS '+Math.round(perf.fps||0)+' · '+(perf.drawCalls||0)+' dibuixos totals'+
             '\nCrides per categoria (escena principal, sense ombres):\n'+
             rows.map(([name,count])=>name+': '+count).join('\n')+
+            '\nEnemics LOD: '+JSON.stringify(s.enemyLodStats||{})+
             '\nObjectes ocults per distància: '+JSON.stringify(s.visibilityStats||{});
         };
         document.getElementById('performanceRefresh').onclick=refresh;

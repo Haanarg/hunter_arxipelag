@@ -916,6 +916,11 @@ const VISUAL_RANGES={
   ultra:{buildings:410,fences:260,props:350,vehicles:520,enemies:460,items:300,fauna:350,antennas:510}
 }[qualityName]||{buildings:850,fences:560,props:690,vehicles:1150,enemies:1000,items:550,fauna:750,antennas:950};
 const visibilityStats={buildings:0,fences:0,props:0,vehicles:0,enemies:0,items:0,fauna:0,antennas:0,terrainOccluded:0};
+const enemyLodStats={full:0,mid:0,far:0,hidden:0,vehicleFull:0};
+const ENEMY_LOD_RANGES={
+  desktop:{full:150,mid:440},mobile:{full:110,mid:300},ultra:{full:80,mid:195}
+}[qualityName]||{full:150,mid:440};
+window.HUNTER_ENEMY_LOD_STATS=enemyLodStats;
 window.HUNTER_VISIBILITY_STATS=visibilityStats;
 let staticVisualBatches=[];
 const renderCategories={terreny:0,edificis:0,filferrades:0,vehicles:0,enemics:0,vegetacio:0,decoracio:0,objectes:0,fauna:0,altres:0};
@@ -1007,11 +1012,19 @@ function updateDistanceVisibility(){
     v.o.visible=v===cv||dx*dx+dz*dz<max.vehicles*max.vehicles;
     if(!v.o.visible)visibilityStats.vehicles++;
   }
+  for(const key in enemyLodStats)enemyLodStats[key]=0;
   for(const e of E){
     if(!e.o)continue;
-    const dx=e.x-P.x,dz=e.z-P.z;
-    e.o.visible=dx*dx+dz*dz<max.enemies*max.enemies;
-    if(!e.o.visible)visibilityStats.enemies++;
+    const dx=e.x-P.x,dz=e.z-P.z,d2=dx*dx+dz*dz,visible=d2<max.enemies*max.enemies;
+    e.o.visible=visible;
+    if(!visible){visibilityStats.enemies++;enemyLodStats.hidden++;continue}
+    const d=Math.sqrt(d2),old=e.o.userData.enemyLOD,
+      fullLimit=ENEMY_LOD_RANGES.full+(old==='full'?12:-12),
+      midLimit=ENEMY_LOD_RANGES.mid+(old==='mid'?12:-12),
+      level=d<fullLimit?'full':d<midLimit?'mid':'far';
+    window.HUNTER_ENEMY_LOD.setLevel(e.o,level);
+    enemyLodStats[level]++;
+    if(level==='full'&&e.t!=='soldat'&&e.t!=='general')enemyLodStats.vehicleFull++;
   }
   for(const item of items){
     const dx=item.x-P.x,dz=item.z-P.z;
@@ -1250,7 +1263,7 @@ const ui=window.HUNTER_UI.create({
   getState:()=>({
     hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,disguised:disg,bazookaEquipped,grenadeEquipped,sniperEquipped,sniperAmmo,scopeActive,
     inventory:inv,itemTypes:IT,player:P,nearVehicle:cv?null:nearV(),messageTime:msgT,message:msg,
-    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,shadowStats,performance:adaptivePerformance.stats,visibilityStats
+    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
   }),
   actions:{
     resume,
