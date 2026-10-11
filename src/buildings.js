@@ -49,6 +49,46 @@ window.HUNTER_BUILDINGS=Object.freeze({
       return {door,lintel,doorHeight:h}
     };
 
+
+    // Batched per material: tres dibuixos (paret, vidre, marcs) en lloc
+    // de desenes. Cada façana encara és un únic objectiu destructible.
+    const batchWindowWall=(group,parts)=>{
+      const byMat=new Map();
+      for(const mesh of parts){
+        if(!byMat.has(mesh.material))byMat.set(mesh.material,[]);
+        byMat.get(mesh.material).push(mesh);
+      }
+      const batched=[];
+      for(const [mat,meshes] of byMat){
+        const geos=[],sizes=[];let total=0;
+        for(const mesh of meshes){
+          mesh.updateMatrix();
+          const geo=mesh.geometry.index?mesh.geometry.toNonIndexed():mesh.geometry.clone();
+          geo.applyMatrix4(mesh.matrix);
+          geos.push(geo);
+          const n=geo.attributes.position.count;sizes.push(n);total+=n;
+        }
+        const merged=new THREE.BufferGeometry();
+        for(const [attr,width] of [['position',3],['normal',3],['uv',2]]){
+          const data=new Float32Array(total*width);let offset=0;
+          for(let i=0;i<geos.length;i++){
+            const a=geos[i].getAttribute(attr);
+            if(a)data.set(a.array,offset);
+            offset+=sizes[i]*width;
+          }
+          merged.setAttribute(attr,new THREE.BufferAttribute(data,width));
+        }
+        merged.computeBoundingSphere();
+        const result=new THREE.Mesh(merged,mat);
+        result.name='hunter-window-facade-batch';
+        result.userData.windowFacadeBatch=true;
+        for(const mesh of meshes){group.remove(mesh);mesh.geometry.dispose()}
+        for(const geo of geos)geo.dispose();
+        group.add(result);batched.push(result);
+      }
+      return batched;
+    };
+
     // Façana amb obertures de finestra reals. La paret es construeix al voltant
     // dels buits; el vidre queda lleugerament endins de la cara exterior.
     const addWindowedWall=(group,{lx,lz,sx,sz,height,material:mat})=>{
@@ -129,7 +169,7 @@ window.HUNTER_BUILDINGS=Object.freeze({
           group.add(m);parts.push(m)
         }
       }
-      return parts
+      return batchWindowWall(group,parts)
     };
 
     const createShell=({width,depth,height,wallColor,roofColor})=>{
