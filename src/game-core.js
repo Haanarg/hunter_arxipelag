@@ -967,12 +967,19 @@ function terrainConcealsBuilding(b,dist){
   }
   return covered>=2;
 }
+function isInsideVisibleBuilding(b){
+  if(b===ib)return true;
+  if(!b.hangar||!cv||cv.destroyed)return false;
+  const y=VT[cv.t]?.m==='a'?(cv.alt??cv.o?.position?.y):(cv.o?.position?.y??cv.alt);
+  return Math.abs(cv.x-b.x)<b.w/2&&Math.abs(cv.z-b.z)<b.d/2&&
+    y!=null&&y>=b.fy-2&&y<b.fy+b.h+2;
+}
 function updateDistanceVisibility(){
   const max=VISUAL_RANGES;
   for(const k of Object.keys(visibilityStats))visibilityStats[k]=0;
   for(const b of B){
     const dx=b.x-P.x,dz=b.z-P.z,d2=dx*dx+dz*dz,
-          inside=viewInsideBuilding(b),
+          inside=isInsideVisibleBuilding(b),
           close=inside||d2<(max.buildings+b.hw)* (max.buildings+b.hw),
           obscured=close&&!inside&&terrainConcealsBuilding(b,Math.sqrt(d2));
     b.o.visible=close&&!obscured;
