@@ -9,6 +9,42 @@ game.start();game.frame();
 ok('started&&B.length>=6&&E.some(e=>e.t==="general")','menu starts a complete world');
 ok('ammo===16','new mission starts with 16 bullets');
 
+const strafeMarkup=require('fs').readFileSync(require('path').join(__dirname,'../index.html'),'utf8');
+assert(strafeMarkup.includes('id="strafeLeft"')&&strafeMarkup.includes('id="strafeRight"')&&
+  strafeMarkup.includes('body.strafe-active .strafe-btn')&&
+  strafeMarkup.includes('body.strafe-active #joystick')&&
+  strafeMarkup.includes('aria-label="Desplaçar lateralment a la dreta"'),
+  'two small strafe controls flank the joystick only when the mode is active');
+run(`{
+  const saved={cv,swimming,playerFall,playerEject,paused,over},
+        originalLeft=strafePointers.left,originalRight=strafePointers.right;
+  let enabledFoot=false,enabledVehicles=true,hiddenVehicles=true,clearsInput=false,hiddenWhenSwimming=false;
+  try{
+    cv=null;swimming=false;playerFall=null;playerEject=null;paused=false;over=0;
+    enabledFoot=updateStrafeControls()&&document.body.classList.contains('strafe-active');
+    for(const type of ['hover','heli','heli_combat']){
+      cv={t:type};enabledVehicles=enabledVehicles&&updateStrafeControls();
+    }
+    for(const type of ['tanc','tanqueta','cotxe','moto','bici','camio','ferry','llanxa','moto_aquatica']){
+      cv={t:type};hiddenVehicles=hiddenVehicles&&!updateStrafeControls()&&
+        !document.body.classList.contains('strafe-active');
+    }
+    cv=null;strafePointers.left=33;setStrafeHeld('left',true);
+    cv={t:'cotxe'};updateStrafeControls();
+    clearsInput=strafePointers.left===null&&!strafeButtons.left.classList.contains('held');
+    cv=null;swimming=true;
+    hiddenWhenSwimming=!updateStrafeControls();
+    globalThis.strafeHudModes=enabledFoot&&enabledVehicles&&hiddenVehicles&&clearsInput&&hiddenWhenSwimming;
+  }finally{
+    cv=saved.cv;swimming=saved.swimming;playerFall=saved.playerFall;
+    playerEject=saved.playerEject;paused=saved.paused;over=saved.over;
+    strafePointers.left=originalLeft;strafePointers.right=originalRight;
+    updateStrafeControls();
+  }
+}`);
+ok('strafeHudModes','two buttons appear only on foot, hovercraft and both helicopters and release on vehicle changes');
+
+
 run(`{
   const saved={ammo,cv,grenadeEquipped,bazookaEquipped,sniperEquipped,
     over,swimming,uiTick,grenades:inv.granada,melee:pl.userData.meleePose};
@@ -925,6 +961,30 @@ run(`{
 ok('projectileSegmentMath','projectile segment intersection helpers detect continuous hits');
 ok('projectileUsesBroadPhase','projectiles use spatial broad-phase for collision candidates');
 ok('projectileNoGlobalMicrostep','projectiles no longer use the global 0.008 second microstep loop');
+
+run(`{
+  const sample=(type,direction)=>{
+    const v={t:type,x:H-180,z:H-180,hd:0,v:0,alt:95,verticalV:0,
+      driveInput:0,steerInput:0,sideV:0,strafeV:0,
+      o:{position:new THREE.Vector3(H-180,95,H-180)}};
+    stepV(v,0,0,0,.08,direction);
+    return {lateral:v.strafeV,heading:v.hd,forward:v.v,deltaX:v.x-(H-180)};
+  };
+  const allowed=['hover','heli','heli_combat'],
+        forbidden=['cotxe','moto','tanqueta','tanc','llanxa','ferry'];
+  globalThis.strafeVehicles=
+    allowed.every(t=>{
+      const right=sample(t,1),left=sample(t,-1);
+      return right.lateral>0&&left.lateral<0&&right.heading===0&&
+        left.heading===0&&right.forward===0&&left.forward===0;
+    })&&forbidden.every(t=>sample(t,1).lateral===0)&&
+    String(stepV).includes('totalSideV=sideV+v.strafeV')&&
+    String(update).includes('stepV(driven,f,tr,ud,dt,strafe)')&&
+    String(update).includes('Math.hypot(f,strafe)')&&
+    String(update).includes('K.KeyX')&&String(update).includes('K.KeyZ');
+}`);
+ok('strafeVehicles','hovercraft and helicopters accelerate sideways with no turn; other vehicles cannot strafe and on-foot diagonal is normalized');
+
 
 run(`{
   const before=Pj.length;
