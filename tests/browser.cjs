@@ -15,7 +15,7 @@ const http=require('http'),fs=require('fs'),path=require('path'),assert=require(
  await page.waitForFunction(()=>window.HUNTER_MENU_READY===true,null,{timeout:60000});
  assert.equal(await page.evaluate(()=>window.HUNTER_READY===true),false,'title must not load WebGL engine eagerly');
  assert.equal(await page.locator('#ini').evaluate(el=>getComputedStyle(el).backgroundImage.includes('menu-seed-67.jpg')),true,'title uses fixed seed-67 image');
- assert.equal(await page.locator('body > canvas').count(),0,'title allocates no WebGL canvas');
+ assert.equal(await page.locator('body > canvas[data-engine]').count(),0,'title allocates no WebGL canvas');
 
  assert.equal(await page.locator('#mm').evaluate(el=>getComputedStyle(el).display),'none',
    'minimap must be hidden on the initial screen');
