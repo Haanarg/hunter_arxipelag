@@ -1110,7 +1110,10 @@ if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-i
   world.remove(it.o);items.splice(k,1);
   msg=mapMessage||'Has trobat: '+IT[it.t].n+(it.t==='granada'?' ×5':it.t==='bazooka'?' ×3':it.t==='franctirador'?' +6 cartutxos':'');
   msgT=3;snd('pick')}}
-msgT-=dt;pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;animPl(cv?0:f,dt);
+msgT-=dt;pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;
+// També animam les passes quan el jugador es mou només lateralment,
+// sense modificar P.hd ni l'orientació de la càmera.
+animPl(cv?0:(Math.abs(f)>.02?f:Math.abs(strafe)*.7),dt);
 if(!cv&&playerFall){pl.position.y=playerFall.y;pl.rotation.x=(playerFall.spin||1)*playerFall.t*7.5;pl.rotation.z=Math.sin(playerFall.t*8)*.45}
 else if(!cv&&playerEject&&playerEject.t>=0){
   const dur=playerEject.dur||.5,p=Math.max(0,Math.min(1,1-playerEject.t/dur)),u=pl.userData;
