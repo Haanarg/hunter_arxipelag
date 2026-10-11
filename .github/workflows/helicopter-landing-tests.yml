@@ -1,0 +1,26 @@
+name: Validació d'aterratge helicòpters
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/helicopter-landing-tests.yml'
+      - 'src/vehicles.js'
+      - 'src/game-core.js'
+      - 'src/world-generation.js'
+      - 'tests/smoke.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Proves de regressió i aterrament
+        run: node tests/smoke.cjs
+      - name: Navegació enemiga
+        run: node tests/enemy-navigation.cjs
