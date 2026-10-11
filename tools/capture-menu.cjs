@@ -39,7 +39,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http');
     await page.waitForTimeout(500);
     const output=path.join(root,'assets/menu-seed-67.jpg');
     fs.mkdirSync(path.dirname(output),{recursive:true});
-    await page.locator('body > canvas').screenshot({path:output,type:'jpeg',quality:82,timeout:60000});
+    await page.locator('body > canvas[data-engine]').screenshot({path:output,type:'jpeg',quality:82,timeout:60000});
     const stat=fs.statSync(output);
     if(stat.size<12000)throw new Error('La captura és massa petita: '+stat.size);
     console.log('Captura seed 67:',output,stat.size,'bytes');
