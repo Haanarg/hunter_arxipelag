@@ -887,8 +887,15 @@ function handleVehicleImpacts(v,dt){
   if(t.p&&t.alive){killPalm(t);collisionDamageVehicle(v,Math.min(18,5+speed*.55),1);if(v.destroyed)return;v.v*=.9;v.bump=.18;v.envCd=.28;msg='Has tombat una palmera.';msgT=1;return}
   if(t.rock){collisionDamageVehicle(v,Math.min(14,4+speed*.45),1);vehicleImpactFx(t.x,Math.max(0,hAt(t.x,t.z))+.8,t.z);if(v.destroyed)return;v.v*=.8;v.bump=.22;v.hd+=rn(-.045,.045);v.envCd=.32;msg='Impacte amb roca!';msgT=1}
 }
-function stepV(v,f,tr,ud,dt){
+function stepV(v,f,tr,ud,dt,strafe=0){
 const c=VT[v.t],a=c.m==='a',water=c.m==='w'||c.m==='wl',land=c.m==='l',radius=vehicleRadius(v.t),input=window.HUNTER_VEHICLE_DYNAMICS.inputs(v,f,tr,dt);f=input.forward;tr=input.turn;
+// Strafe sense girar: només hovercraft i els dos helicòpters.
+// Conservar la deriva natural existent (sideV) i afegir-hi una velocitat
+// lateral independent amb acceleració i frenada suaus.
+const maxStrafe=v.t==='hover'?12:v.t==='heli'?17:v.t==='heli_combat'?20:0,
+      targetStrafe=maxStrafe*Math.max(-1,Math.min(1,strafe));
+v.strafeV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.strafeV||0,targetStrafe,6.5,dt);
+if(Math.abs(targetStrafe)<.01&&Math.abs(v.strafeV)<.02)v.strafeV=0;
 if(a&&v.carrier&&ud>.12){detachFromFerry(v);v.verticalV=Math.max(v.verticalV||0,3)}
 v.v+=f*c.a*dt;
 const dragBase=c.dr*(water?1.08:land?.86:1),coastBoost=Math.abs(f)<.03?(water?1.18:land?1.04:.82):1;
@@ -914,7 +921,8 @@ if(water){
 }else v.sideV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.sideV||0,0,4,dt);
 
 const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),sx=Math.cos(v.hd),sz=-Math.sin(v.hd);
-const nx=v.x+(fx*v.v+sx*sideV)*dt,nz=v.z+(fz*v.v+sz*sideV)*dt,raw=hAt(nx,nz),h=land?groundAt(nx,nz):raw,g=Math.max(0,h),
+const totalSideV=sideV+v.strafeV,
+      nx=v.x+(fx*v.v+sx*totalSideV)*dt,nz=v.z+(fz*v.v+sz*totalSideV)*dt,raw=hAt(nx,nz),h=land?groundAt(nx,nz):raw,g=Math.max(0,h),
       deckCarrier=(land||a)?ferryForVehicle(v,nx,nz,true):null;let ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;
 if(c.m==='w')ok=ok&&raw<-1.2;if(c.m==='l')ok=ok&&(!!deckCarrier||h>-1.2);if(ok&&a&&!deckCarrier&&v.alt-g<8&&treeHit(nx,nz,radius))ok=false;
 if((!a||v.alt-g<16)&&!deckCarrier){for(const w of wallCandidates(nx,nz,radius))if(!w.open&&w.playerBlock!==false&&!(w.towerLegOwner&&a&&v.alt>w.y1+2)&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){
@@ -928,7 +936,7 @@ if(ok){
     const f2=ferryForVehicle(v,v.x,v.z,true);if(f2)attachToFerry(v,f2);else if(v.carrier)detachFromFerry(v)
   }
   handleVehicleImpacts(v,dt);if(v.destroyed)return false;if(v.t==='tanc'||v.t==='tanqueta')crush(nx,nz,(v.t==='tanc'?3.2:2.4)*VS[v.t])
-}else{v.v*=Math.exp(-12*dt);v.sideV*=Math.exp(-10*dt)}
+}else{v.v*=Math.exp(-12*dt);v.sideV*=Math.exp(-10*dt);v.strafeV*=Math.exp(-12*dt)}
 if(a){
   const g2=Math.max(0,hAt(v.x,v.z)),targetVz=ud*(c.climb||24);
   v.verticalV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.verticalV||0,targetVz,c.liftResponse||2.5,dt);
@@ -975,11 +983,11 @@ if(c.m==='a'&&v.carrier&&!v.crashing){
 }
 else if(c.m==='a'){
   y=v.alt;const speedN=Math.max(-1,Math.min(1,v.v/(c.maxF||35))),yawN=Math.max(-1,Math.min(1,(v.yawRate||0)/(c.tu||1)));
-  pi=-speedN*(c.pitch||.2);ro=-yawN*(c.bank||.32);
+  pi=-speedN*(c.pitch||.2);ro=-yawN*(c.bank||.32)-(v.strafeV||0)/(v.t==='heli_combat'?20:17)*(c.bank||.32)*.5;
   if(v.crashing){pi+=Math.sin(v.crashT*3)*.35;ro+=(v.crashSpin||1)*(.45+Math.min(.65,v.crashT*.12))}
 }
 else if(c.m==='w'){y=wy(v.x,v.z,t)+(v.t==='barca_rems'?-.1:.2);const speed=Math.min(1,Math.abs(v.v)/(c.maxF||30)),wave=Math.sin(t*2.4+v.x*.03+v.z*.025);pi=wave*.035*speed;ro=-(v.yawRate||0)*.11+wave*.025}
-else if(c.m==='wl'){y=Math.max(g,wy(v.x,v.z,t))+.6;ro=-(v.yawRate||0)*.08}
+else if(c.m==='wl'){y=Math.max(g,wy(v.x,v.z,t))+.6;ro=-(v.yawRate||0)*.08-(v.strafeV||0)*.008}
 else if(v.carrier){const q=ferryLocal(v.carrier,v.x,v.z);y=ferryLocalSurfaceY(v.carrier,q.z)+.05;pi=0;ro=0}
 else{
   const s2=Math.sin(v.hd),k=Math.cos(v.hd);
