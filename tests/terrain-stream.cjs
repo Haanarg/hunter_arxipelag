@@ -17,14 +17,16 @@ for(const height of [-90,-18,-1.5,5,14,30,40,90]){
 const h=(x,z)=>Math.sin(x*.008)*12+Math.cos(z*.005)*8-3;
 let evaluations=0;
 const measured=(x,z)=>{evaluations++;return h(x,z)};
-function create(size,lowQuality=false){
+function create(size,lowQuality=false,quality=null,shadows=false){
   const material=new THREE.MeshStandardMaterial({color:0xffffff,vertexColors:true});
-  return sys.create(THREE,{size,segments:400,heightAt:measured,material,startX:0,startZ:0,lowQuality});
+  return sys.create(THREE,{size,segments:400,heightAt:measured,material,startX:0,startZ:0,lowQuality,quality,shadows});
 }
 const terrain=create(4800);
 assert.equal(terrain.stats.totalTiles,36);
-assert.deepEqual(Array.from(terrain.stats.lodLevels),[6,12,28,56],
-  'four-level terrain LOD retains close-up detail and halves far-away subdivisions');
+assert.deepEqual(Array.from(terrain.stats.lodLevels),[4,8,16,56],
+  'desktop preserves the precise close-up mesh while simplifying distant terrain');
+assert.deepEqual(Array.from(terrain.stats.lodRanges),[240,650,1250]);
+assert.equal(terrain.stats.profile,'desktop');
 assert.equal(terrain.stats.viewPriority,false,'terrain no longer rescans the camera frustum every frame');
 assert(terrain.stats.initialTiles>=4&&terrain.stats.initialTiles<=16);
 assert(terrain.stats.generatedTiles===terrain.stats.initialTiles);
@@ -50,7 +52,9 @@ assert(terrain.mesh.children.every(m=>m.geometry.index.isBufferAttribute&&
   m.geometry.index.array.byteLength>0),'all streamed tiles have valid GPU indices');
 assert.equal(terrain.stats.visibleTiles,36,'visible tile counter excludes upgrades');
 assert(terrain.stats.farTiles>0,'horizon tiles use the coarsest LOD');
-const far=terrain.mesh.children.filter(m=>m.geometry.attributes.position.count<(12+1)*(12+1));
+assert.equal(terrain.stats.lodTiles.reduce((a,b)=>a+b,0),36);
+assert(terrain.stats.terrainTriangles>0,'terrain stats include actual triangle counts');
+const far=terrain.mesh.children.filter(m=>m.geometry.attributes.position.count<(8+1)*(8+1));
 assert(far.length>0,'far horizon tiles have genuinely fewer vertices');
 const camera=new THREE.PerspectiveCamera(65,1,.3,12000);
 camera.position.set(400,250,700);
@@ -73,13 +77,32 @@ terrain.dispose();
 assert(disposed,'terrain geometry disposed on restart');
 assert.equal(terrain.mesh.children.length,0,'terrain group emptied');
 const large=create(9600,true);
-assert.deepEqual(Array.from(large.stats.lodLevels),[6,10,20,40],
-  'mobile keeps a fourth lightweight horizon LOD');
+assert.deepEqual(Array.from(large.stats.lodLevels),[3,6,12,40],
+  'mobile preserves near-detail and reduces the medium/far geometry');
+assert.deepEqual(Array.from(large.stats.lodRanges),[180,480,900]);
 assert.equal(large.stats.totalTiles,144,'large map is tiled');
 assert(large.stats.initialTiles>=4&&large.stats.initialTiles<=16,'large map only generates start sectors');
 assert(large.mesh.children.every(m=>m.geometry.index.isBufferAttribute&&
   m.geometry.index.array.byteLength>0),'low-quality large map has valid index buffers');
 large.dispose();
+// El mode mínim té encara menys geometria i menys rangs de detall.
+const ultra=create(4800,true,'ultra');
+assert.equal(ultra.stats.profile,'ultra');
+assert.deepEqual(Array.from(ultra.stats.lodLevels),[2,4,8,24]);
+assert.deepEqual(Array.from(ultra.stats.lodRanges),[100,280,580]);
+const allUltra=ultra.mesh.children.every(m=>!m.receiveShadow);
+assert(allUltra,'ultra does not spend GPU time on terrain shadows');
+ultra.dispose();
+
+// En qualitat màxima, només els sectors més propers reben ombres.
+const shadowTerrain=create(4800,false,'desktop',true);
+assert(shadowTerrain.mesh.children.some(m=>m.receiveShadow),'near terrain keeps shadows');
+assert(shadowTerrain.mesh.children.every(m=>m.receiveShadow===m.userData.terrainNearShadow),
+  'terrain distance shadow flag is respected');
+const nearVertexCount=(56+1)**2;
+assert(shadowTerrain.mesh.children.filter(m=>m.receiveShadow).every(m=>m.geometry.attributes.position.count>=nearVertexCount));
+shadowTerrain.dispose();
+
 console.log(JSON.stringify({passed:true,initialTiles:tiles.length,tiles:36,
   initialVertexBudget:true,progressiveUpgrade:true,disposal:true,largeMap:true,evaluations}));
 })().catch(e=>{console.error(e);process.exitCode=1});

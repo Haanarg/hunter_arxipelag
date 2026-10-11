@@ -22,21 +22,29 @@ window.HUNTER_TERRAIN=Object.freeze({
     return new THREE.Color(a[1]).lerp(new THREE.Color(b[1]),t);
   },
   bandAt(h){return hunterTerrainBandAt(h)},
-  create(THREE,{size,segments,heightAt,material,startX=0,startZ=0,lowQuality=false}){
+  create(THREE,{size,segments,heightAt,material,startX=0,startZ=0,lowQuality=false,quality=null,shadows=false}){
     const root=new THREE.Group();
     root.name='hunter-terrain-stream';
     const tileSize=800,side=Math.ceil(size/tileSize),cellSize=size/side,half=size/2;
-    // El quart nivell és per a l'horitzó. Els sectors propers mantenen
-    // exactament la resolució anterior, sense canviar la física del terreny.
-    const levels=lowQuality?[6,10,20,40]:[6,12,28,56];
+    // Conservam la resolució propera per mantenir el contacte amb peus i
+    // rodes, però simplificam molt abans els sectors intermedis i llunyans.
+    const profile=quality||(lowQuality?'mobile':'desktop');
+    const configs={
+      desktop:{levels:[4,8,16,56],ranges:[240,650,1250]},
+      mobile:{levels:[3,6,12,40],ranges:[180,480,900]},
+      ultra:{levels:[2,4,8,24],ranges:[100,280,580]}
+    };
+    const profileConfig=configs[profile]||configs.desktop,
+          levels=profileConfig.levels,ranges=profileConfig.ranges,margin=50;
     const palette=HUNTER_TERRAIN_PALETTE.map(([h,c])=>{
       const rgb=new THREE.Color(c);return {h,r:rgb.r,g:rgb.g,b:rgb.b};
     });
     const tiles=[];
     let disposed=false,job=null,lastPlayerX=startX,lastPlayerZ=startZ,
         settled=false,lastSettledX=Infinity,lastSettledZ=Infinity;
-    const stats={initialTiles:0,visibleTiles:0,generatedTiles:0,upgradedTiles:0,processedVertices:0,totalTiles:side*side,
-      lodLevels:[...levels],farTiles:0,viewPriority:false,settledSkips:0,scans:0};
+    const stats={profile,initialTiles:0,visibleTiles:0,generatedTiles:0,upgradedTiles:0,processedVertices:0,totalTiles:side*side,
+      lodLevels:[...levels],lodRanges:[...ranges],lodTiles:[0,0,0,0],terrainTriangles:0,terrainShadowTiles:0,
+      farTiles:0,viewPriority:false,settledSkips:0,scans:0};
     // The material is shared by all tiles. A single shader compilation is needed.
     function colorAtHeight(h,out,k){
       let i=0;
@@ -57,8 +65,17 @@ window.HUNTER_TERRAIN=Object.freeze({
       return dx*dx+dz*dz;
     }
     function targetLevel(tile,x,z){
-      const d=distance2(tile,x,z);
-      return d<500*500?3:d<1250*1250?2:d<1700*1700?1:0;
+      const distance=Math.sqrt(distance2(tile,x,z));
+      let level=tile.level<0?
+        (distance<ranges[0]?3:distance<ranges[1]?2:distance<ranges[2]?1:0):
+        tile.level;
+      // Histeresi de 50 m: una petita oscil·lació de posició no força
+      // a recrear les malles i tornar-les a pujar a la GPU.
+      if(tile.level>=0){
+        while(level<3&&distance<ranges[2-level]-margin)level++;
+        while(level>0&&distance>ranges[3-level]+margin)level--;
+      }
+      return level;
     }
     function appendSkirts(geometry,n){
       // Faldons al límit entre sectors de diferent LOD: amaguen petites
@@ -117,7 +134,10 @@ window.HUNTER_TERRAIN=Object.freeze({
       mesh.name='hunter-terrain-tile';
       mesh.position.set(tile.cx,0,tile.cz);
       mesh.userData.terrainTile=true;
-      mesh.receiveShadow=true;mesh.castShadow=false;
+      // Sols les malles immediates reben ombres: estalvi de GPU als
+      // vessants llunyans, especialment mirant terra endins.
+      mesh.userData.terrainNearShadow=shadows&&level===3;
+      mesh.receiveShadow=mesh.userData.terrainNearShadow;mesh.castShadow=false;
       mesh.frustumCulled=true;
       if(tile.mesh){
         root.remove(tile.mesh);
@@ -131,6 +151,13 @@ window.HUNTER_TERRAIN=Object.freeze({
       tile.mesh=mesh;tile.geometry=geometry;tile.level=level;
       if(level===0)stats.farTiles++;
       root.add(mesh);
+      stats.lodTiles=[0,0,0,0];
+      stats.terrainTriangles=0;stats.terrainShadowTiles=0;
+      for(const current of tiles)if(current.mesh){
+        stats.lodTiles[current.level]++;
+        stats.terrainTriangles+=current.geometry.index.count/3;
+        if(current.mesh.receiveShadow)stats.terrainShadowTiles++;
+      }
     }
     function generateNow(tile,level){
       const task=begin(tile,level);

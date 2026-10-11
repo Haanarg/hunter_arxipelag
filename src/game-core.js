@@ -16,7 +16,7 @@ const missingSystems=Object.entries({generation:typeof build,combat:typeof fire,
 const materialProfile=(name='organic')=>window.HUNTER_MATERIALS[name]||window.HUNTER_MATERIALS.organic;
 const M=(c,profile='organic')=>new THREE.MeshStandardMaterial({color:vivid(c),flatShading:true,...materialProfile(profile)});
 const MAT={
- terrain:()=>new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,...materialProfile('terrain')}),
+ terrain:()=>new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true}),
  painted:c=>M(c,'paint'),metal:c=>M(c,'metal'),rubber:c=>M(c,'rubber'),glass:c=>M(c,'glass'),masonry:c=>M(c,'masonry')
 };
 let seed,R,islands,A,Bi,world,B=[],requestedSeed=null;
@@ -1275,9 +1275,10 @@ mini();ui.renderHUD();}}
 
 
 let last=performance.now();
-(function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(started&&!paused&&!over?dt:0);update(dt,t);if(started&&!paused&&!over&&terrainStream)terrainStream.update(P.x,P.z,visualQuality.shadows?2:1.2,cam);waves(t);
+(function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(started&&!paused&&!over?dt:0),cpuStarted=performance.now();update(dt,t);const simulationEnded=performance.now();if(started&&!paused&&!over&&terrainStream)terrainStream.update(P.x,P.z,visualQuality.shadows?2:1.2,cam);const terrainEnded=performance.now();waves(t);
 sun.target.position.set(P.x,0,P.z);sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();ren.render(scene,cam);
 adaptivePerformance.sample({dt:rawDt,renderCpuMs:performance.now()-renderStarted,
+  updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,
   active:!!started&&!paused&&!over,now});
 requestAnimationFrame(loop)})(last);
 
