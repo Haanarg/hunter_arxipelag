@@ -8,7 +8,7 @@ window.HUNTER_UI=Object.freeze({
     function hide(){panel.style.display='none'}
     function show(mode){
       panel.style.display='flex';
-      title.textContent=mode==='map'?'Carta de navegació':mode==='inventory'?'Inventari':mode==='restart'?'Nova operació?':'Operació en pausa';panel.querySelector('.card').classList.toggle('inventory-card',mode==='inventory');
+      title.textContent=mode==='map'?'Carta de navegació':mode==='inventory'?'Inventari':mode==='restart'?'Nova operació?':mode==='performance'?'Rendiment':'Operació en pausa';panel.querySelector('.card').classList.toggle('inventory-card',mode==='inventory');
       if(mode==='inventory'){
         const state=getState(),keys=['med','paracaigudes','expl','granada','bazooka','franctirador','disf','arma'],present=keys.filter(k=>state.inventory[k]>0);
         let selected=present[0]||null;
@@ -33,11 +33,39 @@ window.HUNTER_UI=Object.freeze({
         const map=document.getElementById('fullmap');minimap.drawFull(map,getState().waypoint);
         map.onclick=e=>{const r=e.currentTarget.getBoundingClientRect(),s=getState();actions.setWaypoint({x:((e.clientX-r.left)/r.width-.5)*s.worldSize,z:((e.clientY-r.top)/r.height-.5)*s.worldSize});minimap.drawFull(map,getState().waypoint)};
         document.getElementById('clearMark').onclick=()=>{actions.setWaypoint(null);minimap.drawFull(map,null)}
+      }else if(mode==='performance'){
+        body.innerHTML='<p>Canvia les opcions en calent sense regenerar el mapa.</p>'+
+          '<div class="performance-options">'+
+          '<label><input id="disablePalmsPause" type="checkbox"> Sense palmeres</label>'+
+          '<label><input id="disableWaterPause" type="checkbox"> Sense aigua</label>'+
+          '<label><input id="disableShadowsPause" type="checkbox"> Sense ombres</label>'+
+          '</div><div id="performanceBreakdown" style="font:13px/1.5 monospace;white-space:pre-line;background:#0d1d30;border-radius:8px;padding:12px;margin-top:12px"></div>'+
+          '<button id="performanceRefresh">Actualitza diagnòstic</button><button id="performanceBack">← Pausa</button>';
+        for(const [id,key,callback] of [
+          ['disablePalmsPause','palmsDisabled',actions.setPalmsDisabled],
+          ['disableWaterPause','waterDisabled',actions.setWaterDisabled],
+          ['disableShadowsPause','shadowsDisabled',actions.setShadowsDisabled]
+        ]){
+          const input=document.getElementById(id);input.checked=getState()[key];
+          input.onchange=e=>callback(e.target.checked);
+        }
+        const refresh=()=>{
+          const s=getState(),perf=s.performance||{},draw=perf.drawCategories||{};
+          const rows=Object.entries(draw).sort((a,b)=>b[1]-a[1]);
+          document.getElementById('performanceBreakdown').textContent=
+            'FPS '+Math.round(perf.fps||0)+' · '+(perf.drawCalls||0)+' dibuixos totals'+
+            '\nCrides per categoria (escena principal, sense ombres):\n'+
+            rows.map(([name,count])=>name+': '+count).join('\n')+
+            '\nObjectes ocults per distància: '+JSON.stringify(s.visibilityStats||{});
+        };
+        document.getElementById('performanceRefresh').onclick=refresh;
+        document.getElementById('performanceBack').onclick=()=>actions.open('pause');
+        refresh();
       }else if(mode==='restart'){
         body.innerHTML='<p>Es perdrà el progrés d’aquesta partida. Tria la dificultat del nou arxipèlag.</p><button data-diff=".6">Fàcil</button><button data-diff="1">Normal</button><button data-diff="1.5">Difícil</button>';
         body.querySelectorAll('[data-diff]').forEach(b=>b.onclick=()=>actions.restart(+b.dataset.diff))
       }else{
-        body.innerHTML='<div class="controls"><b>WASD / fletxes</b><span>Avança, frena i gira</span><b>◀ ▶ / Y i U</b><span>Desplaçament lateral sense girar: a peu, en hovercraft i en helicòpters. Els botons apareixen a banda i banda del joystick.</span><b>Acció / E</b><span>Motxilla: inventari. Icona d’un vehicle: puja-hi o baixa’n</span><b>Dispar / F</b><span>Dispara l’arma equipada. Amb granades: mantén premut per allunyar el llançament i deixa anar per llençar-la; veuràs la trajectòria i el punt de caiguda</span><b>T / Mira</b><span>Activa/desactiva la mira x8 del rifle de franctirador; amb la mira activa, el joystick, WASD i Y/U mouen només el punt de vista, sense desplaçar el personatge</span><b>I</b><span>Obre l’inventari</span><b>M</b><span>Obre el mapa</span><b>H / J</b><span>Puja / baixa l’helicòpter</span><b>Arrossega</b><span>Gira la vista i el personatge</span><b>Roda</b><span>Acosta o allunya la càmera</span></div><p>Farmacioles, explosius, granades, bazooka, rifle de franctirador i disfressa es gestionen des de l’inventari. Els mapes de l’HQ, helicòpters i tancs s’activen automàticament quan els reculls. En helicòpter de combat, prem G o el botó 🚀 per llançar un míssil; la llanxa llançacoets dispara coets amb Dispar.</p><button id="inventoryMenu">Inventari</button><button id="chetosMenu">Chetos</button><button id="restartMenu">Nova partida</button><button id="zoomOut">Allunya càmera</button><button id="zoomIn">Acosta càmera</button><label style="display:flex;align-items:center;gap:8px;margin:12px 4px;padding:9px 10px;background:#152b34;border-radius:7px"><input id="disablePalmsPause" type="checkbox"> Sense palmeres · prova de rendiment</label><label style="display:flex;align-items:center;gap:8px;margin:9px 4px;padding:9px 10px;background:#152b34;border-radius:7px"><input id="disableWaterPause" type="checkbox"> Sense aigua · prova de rendiment</label><label style="display:flex;align-items:center;gap:8px;margin:9px 4px;padding:9px 10px;background:#152b34;border-radius:7px"><input id="disableShadowsPause" type="checkbox"> Sense ombres · prova de rendiment</label><small style="display:block;margin:0 4px;opacity:.8">Canvi immediat sense regenerar el mapa. Compara els FPS a la mateixa zona.</small>';
+        body.innerHTML='<div class="controls"><b>WASD / fletxes</b><span>Avança, frena i gira</span><b>◀ ▶ / Y i U</b><span>Desplaçament lateral sense girar: a peu, en hovercraft i en helicòpters. Els botons apareixen a banda i banda del joystick.</span><b>Acció / E</b><span>Motxilla: inventari. Icona d’un vehicle: puja-hi o baixa’n</span><b>Dispar / F</b><span>Dispara l’arma equipada. Amb granades: mantén premut per allunyar el llançament i deixa anar per llençar-la; veuràs la trajectòria i el punt de caiguda</span><b>T / Mira</b><span>Activa/desactiva la mira x8 del rifle de franctirador; amb la mira activa, el joystick, WASD i Y/U mouen només el punt de vista, sense desplaçar el personatge</span><b>I</b><span>Obre l’inventari</span><b>M</b><span>Obre el mapa</span><b>H / J</b><span>Puja / baixa l’helicòpter</span><b>Arrossega</b><span>Gira la vista i el personatge</span><b>Roda</b><span>Acosta o allunya la càmera</span></div><p>Farmacioles, explosius, granades, bazooka, rifle de franctirador i disfressa es gestionen des de l’inventari. Els mapes de l’HQ, helicòpters i tancs s’activen automàticament quan els reculls. En helicòpter de combat, prem G o el botó 🚀 per llançar un míssil; la llanxa llançacoets dispara coets amb Dispar.</p><button id="inventoryMenu">Inventari</button><button id="chetosMenu">Chetos</button><button id="restartMenu">Nova partida</button><button id="performanceMenu">⚙️ Rendiment</button><button id="zoomOut">Allunya càmera</button><button id="zoomIn">Acosta càmera</button>';
         document.getElementById('inventoryMenu').onclick=()=>actions.open('inventory');
         document.getElementById('chetosMenu').onclick=()=>{
           actions.chetos();
@@ -46,12 +74,7 @@ window.HUNTER_UI=Object.freeze({
         document.getElementById('restartMenu').onclick=()=>actions.open('restart');
         document.getElementById('zoomOut').onclick=()=>actions.zoom(.2);
         document.getElementById('zoomIn').onclick=()=>actions.zoom(-.2);
-        document.getElementById('disablePalmsPause').checked=getState().palmsDisabled;
-        document.getElementById('disablePalmsPause').onchange=e=>actions.setPalmsDisabled(e.target.checked);
-        document.getElementById('disableWaterPause').checked=getState().waterDisabled;
-        document.getElementById('disableWaterPause').onchange=e=>actions.setWaterDisabled(e.target.checked);
-        document.getElementById('disableShadowsPause').checked=getState().shadowsDisabled;
-        document.getElementById('disableShadowsPause').onchange=e=>actions.setShadowsDisabled(e.target.checked)
+        document.getElementById('performanceMenu').onclick=()=>actions.open('performance');
       }
     }
     resumeButton.onclick=actions.resume;

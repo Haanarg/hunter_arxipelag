@@ -8,6 +8,20 @@ const loadingLabel = document.getElementById('startLoading');
 const qualitySelect = document.getElementById('graphicsQuality');
 const seedRandom = document.getElementById('seedRandom');
 const seedInput = document.getElementById('seedInput');
+const performanceOpen=document.getElementById('performanceMenuOpen'),
+      performanceBack=document.getElementById('performanceMenuBack'),
+      performanceScreen=document.getElementById('performanceScreen'),
+      startMenu=document.getElementById('startMenu');
+performanceOpen.addEventListener('click',()=>{
+  startMenu.style.display='none';
+  performanceScreen.style.display='block';
+  performanceScreen.setAttribute('aria-hidden','false');
+});
+performanceBack.addEventListener('click',()=>{
+  performanceScreen.style.display='none';
+  performanceScreen.setAttribute('aria-hidden','true');
+  startMenu.style.display='flex';
+});
 const badge = document.getElementById('versionBadge');
 if(badge)badge.textContent='v'+GAME_VERSION;
 
