@@ -42,7 +42,7 @@ ok("String(fire).includes('scopeActive?[vx,vy,vz]:autoAimWeaponShot')",
   'rifle in scope uses exact central camera direction');
 assert(additionalAiSource.includes('function soldierEnterBuilding')&&
   additionalAiSource.includes('soldierEnterBuilding(u,ib,target,dt)')&&
-  String(mkB).includes('door:entranceDoor')&&String(updateDoors).includes('soldierNear'),
+  run('String(mkB)').includes('door:entranceDoor')&&run('String(updateDoors)').includes('soldierNear'),
   'soldiers pursue through unlocked house entrances');
 
 run(`{

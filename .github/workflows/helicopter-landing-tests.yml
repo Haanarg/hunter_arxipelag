@@ -7,7 +7,7 @@ on:
       - 'src/vehicles.js'
       - 'src/game-core.js'
       - 'src/world-generation.js'
-      - 'tests/smoke.cjs'
+      - 'tests/helicopter-landing.cjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -21,6 +21,6 @@ jobs:
         with:
           node-version: '22'
       - name: Proves de regressió i aterrament
-        run: node tests/smoke.cjs
+        run: node tests/helicopter-landing.cjs
       - name: Navegació enemiga
         run: node tests/enemy-navigation.cjs
