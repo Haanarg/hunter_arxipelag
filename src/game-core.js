@@ -979,13 +979,15 @@ function isInsideVisibleBuilding(b){
   return Math.abs(cv.x-b.x)<b.w/2&&Math.abs(cv.z-b.z)<b.d/2&&
     y!=null&&y>=b.fy-2&&y<b.fy+b.h+2;
 }
+function currentSniperFocus(){return scopeActive?window.HUNTER_SCOPE_FOCUS.create(P.x,P.y+1.76,P.z,scopeYaw,scopePitch):null}
 function updateDistanceVisibility(){
-  const max=VISUAL_RANGES;
+  const max=VISUAL_RANGES,focus=currentSniperFocus();
   for(const k of Object.keys(visibilityStats))visibilityStats[k]=0;
   for(const b of B){
     const dx=b.x-P.x,dz=b.z-P.z,d2=dx*dx+dz*dz,
           inside=isInsideVisibleBuilding(b),
-          close=inside||d2<(max.buildings+b.hw)* (max.buildings+b.hw),
+          close=inside||d2<(max.buildings+b.hw)* (max.buildings+b.hw)||
+            !!focus?.contains(b.x,b.fy+b.h*.5,b.z,Math.max(b.hw,b.h*.5)),
           obscured=close&&!inside&&terrainConcealsBuilding(b,Math.sqrt(d2));
     b.o.visible=close&&!obscured;
     b.roof.visible=!inside&&b.rhp>0;
@@ -997,49 +999,56 @@ function updateDistanceVisibility(){
   for(const w of Wl){
     if(!w.barbed||!w.m)continue;
     const dx=w.cx-P.x,dz=w.cz-P.z;
-    w.m.visible=(w.hp>0&&dx*dx+dz*dz<max.fences*max.fences);
+    w.m.visible=(w.hp>0&&(dx*dx+dz*dz<max.fences*max.fences||
+      !!focus?.contains(w.cx,(w.y0+w.y1)*.5,w.cz,5)));
     if(!w.m.visible)visibilityStats.fences++;
   }
   const chunkRadius=113; // diagonal mitja del sector de 160 m
   for(const mesh of staticVisualBatches){
     const dx=mesh.position.x-P.x,dz=mesh.position.z-P.z,
           r=max.props+chunkRadius;
-    mesh.visible=dx*dx+dz*dz<r*r;
+    mesh.visible=dx*dx+dz*dz<r*r||!!focus?.intersectsXZBox(mesh.position.x,mesh.position.z,80);
     if(!mesh.visible)visibilityStats.props++;
   }
   for(const v of V){
     const dx=v.x-P.x,dz=v.z-P.z;
-    v.o.visible=v===cv||dx*dx+dz*dz<max.vehicles*max.vehicles;
+    v.o.visible=v===cv||dx*dx+dz*dz<max.vehicles*max.vehicles||
+      !!focus?.contains(v.x,v.o.position.y+1.5,v.z,5);
     if(!v.o.visible)visibilityStats.vehicles++;
   }
   for(const key in enemyLodStats)enemyLodStats[key]=0;
   for(const e of E){
     if(!e.o)continue;
-    const dx=e.x-P.x,dz=e.z-P.z,d2=dx*dx+dz*dz,visible=d2<max.enemies*max.enemies;
+    const dx=e.x-P.x,dz=e.z-P.z,d2=dx*dx+dz*dz,
+          scopeDetailed=!!focus?.contains(e.x,e.o.position.y+(e.t==='torre'?8:2),e.z,e.t==='torre'?3:1.5),
+          visible=d2<max.enemies*max.enemies||scopeDetailed;
     e.o.visible=visible;
     if(!visible){visibilityStats.enemies++;enemyLodStats.hidden++;continue}
     const d=Math.sqrt(d2),old=e.o.userData.enemyLOD,
       fullLimit=ENEMY_LOD_RANGES.full+(old==='full'?12:-12),
       midLimit=ENEMY_LOD_RANGES.mid+(old==='mid'?12:-12),
-      level=d<fullLimit?'full':d<midLimit?'mid':'far';
+      level=scopeDetailed||d<fullLimit?'full':d<midLimit?'mid':'far';
     window.HUNTER_ENEMY_LOD.setLevel(e.o,level);
     enemyLodStats[level]++;
     if(level==='full'&&e.t!=='soldat'&&e.t!=='general')enemyLodStats.vehicleFull++;
   }
   for(const item of items){
     const dx=item.x-P.x,dz=item.z-P.z;
-    item.o.visible=dx*dx+dz*dz<max.items*max.items;
+    item.o.visible=dx*dx+dz*dz<max.items*max.items||
+      !!focus?.contains(item.x,item.y+1,item.z,2);
     if(!item.o.visible)visibilityStats.items++;
   }
   for(const f of fa){
     const dx=(f.x??f.cx)-P.x,dz=(f.z??f.cz)-P.z;
-    f.o.visible=dx*dx+dz*dz<max.fauna*max.fauna;
+    f.o.visible=dx*dx+dz*dz<max.fauna*max.fauna||
+      !!focus?.contains(f.x??f.cx,f.o.position.y??4,f.z??f.cz,2);
     if(!f.o.visible)visibilityStats.fauna++;
   }
   for(const compound of world.userData.compounds||[]){
     if(!compound.antenna)continue;
     const dx=compound.x-P.x,dz=compound.z-P.z;
-    compound.antenna.visible=dx*dx+dz*dz<max.antennas*max.antennas;
+    compound.antenna.visible=dx*dx+dz*dz<max.antennas*max.antennas||
+      !!focus?.contains(compound.x,compound.antenna.position.y,compound.z,10);
     if(!compound.antenna.visible)visibilityStats.antennas++;
   }
 }
@@ -1192,6 +1201,7 @@ function setSniperScope(enabled){
     if(wasActive){joystick.reset();releaseStrafeButtons()}
     if(cam.fov!==58){cam.fov=58;cam.updateProjectionMatrix()}
   }
+  if(wasActive!==scopeActive){worldVisualTick=0;palmVisualTick=0}
   document.body.classList.toggle('sniper-scoped',scopeActive);
   const button=document.getElementById('sniperAimButton');
   if(button)button.setAttribute('aria-pressed',String(scopeActive));
@@ -1449,7 +1459,11 @@ if(!playerFall){
 }
 // Actualització del LOD de les palmeres a baixa freqüència (i també en vehicle).
 palmVisualTick-=dt;
-if(palmVisualTick<=0){palmVisualTick=.16;if(PM.update)PM.update(P.x,P.z,false,palmsDisabled);updateShadowCasters()}
+if(palmVisualTick<=0){
+  palmVisualTick=scopeActive?.10:.16;
+  if(PM.update)PM.update(P.x,P.z,!!scopeActive,palmsDisabled,currentSniperFocus());
+  updateShadowCasters();
+}
 // Un vehicle sota un hangar també ha de deixar veure l'interior.
 // Només s'amaga la coberta quan som realment per sota seu (no en sobrevolar-la).
 function viewInsideBuilding(b){
@@ -1517,7 +1531,9 @@ else if(!cv&&playerEject&&playerEject.t>=0){
 }
 V.forEach(v=>{
   if(v===cv){place(v,t,dt,v.steerInput||0);return}
-  const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,interval=d2<LOD_NEAR2?0:(d2<LOD_MID2 ? .1 : .45);
+  const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,
+    scopeVisual=scopeActive&&currentSniperFocus().contains(v.x,v.o.position.y+1.5,v.z,5),
+    interval=scopeVisual||d2<LOD_NEAR2?0:(d2<LOD_MID2 ? .1 : .45);
   if(interval===0){place(v,t,dt,0);v.visualLodAcc=0}
   else{v.visualLodAcc=(v.visualLodAcc||0)+dt;if(v.visualLodAcc>=interval){const step=v.visualLodAcc;v.visualLodAcc=0;place(v,t,step,0)}}
 });poseRider(cv,dt);
@@ -1556,7 +1572,7 @@ mini();ui.renderHUD();}}
 
 
 let last=performance.now();
-(function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(started&&!paused&&!over?dt:0),cpuStarted=performance.now();update(dt,t);const simulationEnded=performance.now();if(started&&!paused&&!over&&terrainStream)terrainStream.update(P.x,P.z,visualQuality.shadows?2:1.2,cam);const terrainEnded=performance.now();waves(t);
+(function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(started&&!paused&&!over?dt:0),cpuStarted=performance.now();update(dt,t);const simulationEnded=performance.now();if(started&&!paused&&!over&&terrainStream)terrainStream.update(P.x,P.z,visualQuality.shadows?2:1.2,cam,currentSniperFocus());const terrainEnded=performance.now();waves(t);
 sun.target.position.set(P.x,0,P.z);sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();for(const k in renderCategories)renderCategories[k]=0;ren.render(scene,cam);
 adaptivePerformance.sample({dt:rawDt,renderCpuMs:performance.now()-renderStarted,
   updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,

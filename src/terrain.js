@@ -41,7 +41,7 @@ window.HUNTER_TERRAIN=Object.freeze({
     });
     const tiles=[];
     let disposed=false,job=null,lastPlayerX=startX,lastPlayerZ=startZ,
-        settled=false,lastSettledX=Infinity,lastSettledZ=Infinity;
+        settled=false,lastSettledX=Infinity,lastSettledZ=Infinity,lastFocusKey='';
     const stats={profile,initialTiles:0,visibleTiles:0,generatedTiles:0,upgradedTiles:0,processedVertices:0,totalTiles:side*side,
       lodLevels:[...levels],lodRanges:[...ranges],lodTiles:[0,0,0,0],terrainTriangles:0,terrainShadowTiles:0,
       farTiles:0,viewPriority:false,settledSkips:0,scans:0};
@@ -64,7 +64,8 @@ window.HUNTER_TERRAIN=Object.freeze({
             dz=Math.max(0,Math.abs(tile.cz-z)-cellSize/2);
       return dx*dx+dz*dz;
     }
-    function targetLevel(tile,x,z){
+    function targetLevel(tile,x,z,focus=null){
+      if(focus?.intersectsXZBox(tile.cx,tile.cz,cellSize/2))return 3;
       const distance=Math.sqrt(distance2(tile,x,z));
       let level=tile.level<0?
         (distance<ranges[0]?3:distance<ranges[1]?2:distance<ranges[2]?1:0):
@@ -172,25 +173,31 @@ window.HUNTER_TERRAIN=Object.freeze({
         generateNow(tile,level);stats.initialTiles++;
       }
     }
-    function pick(x,z){
+    function pick(x,z,focus=null){
       let chosen=null,best=-Infinity,desired=0;
       stats.scans++;
       for(const tile of tiles){
-        const wanted=targetLevel(tile,x,z);
+        const wanted=targetLevel(tile,x,z,focus);
         if(tile.level===wanted)continue;
         const d=distance2(tile,x,z);
         // Prioritat geogràfica estable, independent dels canvis de càmera.
         // Evitem comprovar la intersecció de tots els sectors a cada fotograma.
-        const priority=(tile.level<0?11000000:0)+
+        const priority=(focus?.intersectsXZBox(tile.cx,tile.cz,cellSize/2)?22000000:0)+
+          (tile.level<0?11000000:0)+
           (wanted===3?8000000:wanted===2?4000000:wanted===1?2000000:0)-
           d+(tile.level>wanted?-2500000:0);
         if(priority>best){chosen=tile;best=priority;desired=wanted}
       }
       return chosen?begin(chosen,desired):null;
     }
-    function update(x,z,budgetMs=2,camera=null){
+    function update(x,z,budgetMs=2,camera=null,focus=null){
       if(disposed)return;
       lastPlayerX=x;lastPlayerZ=z;
+      const focusKey=focus?.key||'';
+      if(focusKey!==lastFocusKey){
+        lastFocusKey=focusKey;settled=false;
+        if(job){job.geometry.dispose();job=null}
+      }
       // Quan tot el terreny està actualitzat no tornem a escanejar-lo cada
       // fotograma; reavaluem en desplaçar-nos 90 m o si hi ha un treball obert.
       if(!job&&settled&&Math.abs(x-lastSettledX)<90&&Math.abs(z-lastSettledZ)<90){
@@ -200,7 +207,7 @@ window.HUNTER_TERRAIN=Object.freeze({
       const start=performance.now(),budget=Math.max(.5,Math.min(4,budgetMs));
       let loops=0;
       while(performance.now()-start<budget&&loops++<60){
-        if(!job)job=pick(lastPlayerX,lastPlayerZ);
+        if(!job)job=pick(lastPlayerX,lastPlayerZ,focus);
         if(!job){settled=true;lastSettledX=x;lastSettledZ=z;break;}
         if(process(job,160)){
           finish(job);job=null;

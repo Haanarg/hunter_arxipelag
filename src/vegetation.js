@@ -292,7 +292,7 @@ window.HUNTER_VEGETATION=Object.freeze({
         while(tier>0&&d<distances[tier-1]-margin)tier--;
         return tier;
       };
-      function update(x,z,force=false,skipPalms=false){
+      function update(x,z,force=false,skipPalms=false,focus=null){
         if(!force&&Math.abs(x-lastX)<45&&Math.abs(z-lastZ)<45)return;
         lastX=x;lastZ=z;
         // Frustum culling sobre cada InstancedMesh i clip per distància.
@@ -305,7 +305,8 @@ window.HUNTER_VEGETATION=Object.freeze({
         ]){
           let count=0;
           for(const sec of extra.sectors){
-            sec.mesh.visible=distToSector(sec)<maxDist;
+            sec.mesh.visible=distToSector(sec)<maxDist||
+              !!focus?.intersectsXZBox(sec.x,sec.z,CHUNK/2);
             if(sec.mesh.visible)count+=sec.count;
           }
           stats[key]=count;
@@ -317,7 +318,8 @@ window.HUNTER_VEGETATION=Object.freeze({
           // quan el jugador passa a tocar d'una cantonada.
           const dx=Math.max(0,Math.abs(ch.x-x)-CHUNK/2),
                 dz=Math.max(0,Math.abs(ch.z-z)-CHUNK/2),
-                d=Math.hypot(dx,dz),tier=tierFor(d,ch.lod);
+                d=Math.hypot(dx,dz),
+                tier=focus?.intersectsXZBox(ch.x,ch.z,CHUNK/2)?0:tierFor(d,ch.lod);
           if(ch.lod!==tier){
             if(ch.lod!=null)stats.lodSwitches++;
             ch.lod=tier;

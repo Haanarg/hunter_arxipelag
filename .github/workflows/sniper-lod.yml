@@ -1,0 +1,32 @@
+name: LOD de l'òptica del franctirador
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/sniper-lod.yml'
+      - 'src/sniper-focus.js'
+      - 'src/runtime-scripts.mjs'
+      - 'src/game-core.js'
+      - 'src/terrain.js'
+      - 'src/vegetation.js'
+      - 'tests/sniper-lod.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verificar LOD de rifle a totes les distàncies
+        run: node tests/sniper-lod.cjs
+      - name: Regressió de LOD d'enemics
+        run: node tests/enemy-lod.cjs
+      - name: Regressió de terreny
+        run: node tests/terrain-stream.cjs
+      - name: Regressió de palmeres
+        run: node tests/vegetation-lod.cjs
