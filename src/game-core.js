@@ -1323,29 +1323,14 @@ function solidRoofAt(b,x,z){
     // Coberta rectangular: gruix 1.15, centre a h+.62.
     return {bottom:b.fy+b.h+.045,top:b.fy+b.h+1.195,building:b};
   }
-  const slabs=b.roof?.userData?.hitSegments;
-  if(!slabs?.length)return null;
-  let bottom=Infinity,top=-Infinity;
-  for(const s of slabs){
-    if(Math.abs(rz)>s.depth/2)continue;
-    const angle=s.a-Math.PI/2,c=Math.cos(angle),sn=Math.sin(angle),
-          halfChord=s.chord/2,thickness=.12,points=[];
-    for(const [lx,ly] of [[-halfChord,-thickness],[halfChord,-thickness],
-      [halfChord,thickness],[-halfChord,thickness]])
-      points.push({x:s.x+lx*c-ly*sn,y:s.y+lx*sn+ly*c});
-    let low=Infinity,high=-Infinity;
-    for(let i=0;i<4;i++){
-      const a=points[i],d=points[(i+1)%4];
-      if(Math.abs(a.x-d.x)<1e-9){
-        if(Math.abs(rx-a.x)<1e-6){low=Math.min(low,a.y,d.y);high=Math.max(high,a.y,d.y)}
-      }else if(rx>=Math.min(a.x,d.x)-1e-6&&rx<=Math.max(a.x,d.x)+1e-6){
-        const y=a.y+(d.y-a.y)*(rx-a.x)/(d.x-a.x);
-        low=Math.min(low,y);high=Math.max(high,y);
-      }
-    }
-    if(low!==Infinity){bottom=Math.min(bottom,low+b.fy);top=Math.max(top,high+b.fy)}
-  }
-  return top===-Infinity?null:{bottom,top,building:b};
+  // La volta visual té 10 segments amb juntes mínimes entre plaques.
+  // L'envolupant semicircular omple aquestes juntes, sense forats
+  // a la hitbox, i manté la mateixa alçada i pendent que les plaques.
+  if(Math.abs(rz)>(b.d+1.15)/2)return null;
+  const radius=b.w/2;
+  if(Math.abs(rx)>radius+.2)return null;
+  const curvedY=b.fy+.12+Math.sqrt(Math.max(0,radius*radius-Math.min(radius,Math.abs(rx))**2));
+  return {bottom:curvedY-.32,top:curvedY+.32,building:b};
 }
 function roofNearXZ(b,x,z,r=0){
   if(!b||b.rhp<=0||b.rb)return null;
