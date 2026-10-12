@@ -624,20 +624,28 @@ if(opt.hangar){
 g.position.set(x,fy,z);world.add(g);
 const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,rhp:opt.hangar?90:120,hangar:!!opt.hangar,door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
 function mkEnemyBunker(x,z){
-  const b=mkB(x,z,34,28,9,0xd9ded2,0xbfc6bb,{kind:'enemy_bunker',bunker:true,doorSide:0,doorWidth:3.4,doorHeight:4.2,openDoor:false,lockedDoor:true}),g=b.o,concrete=0xd2d8cb,dark=0x777f76,t=.55;
-  const left=bx(g,6.2,8.7,28.6,concrete,-16.1,4.05,0,'masonry'),right=bx(g,6.2,8.7,28.6,concrete,16.1,4.05,0,'masonry');left.rotation.z=-.18;right.rotation.z=.18;
-  const brow=bx(g,7.2,.9,2.2,dark,0,6.15,13.45,'masonry');brow.rotation.x=-.08;
-  bx(g,5.4,.45,1.2,0x8c4b33,0,5.25,13.7,'paint');
-  const wall=(lx,lz,sx,sz)=>{const m=buildingVisual.addWall(g,{lx,lz,sx,sz,height:8.2,material:b.wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:b.fy-1,y1:b.fy+8.2,hp:90,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz};Wl.push(o);return o};
-  // Passadís central amb quatre cambres laterals i una cambra posterior.
-  wall(-8.2,1.2,t,18.8);wall(8.2,1.2,t,18.8);
-  wall(-12.1,4.2,7.3,t);wall(-12.1,-5.0,7.3,t);wall(12.1,4.2,7.3,t);wall(12.1,-5.0,7.3,t);
-  wall(-4.9,-7.6,6.2,t);wall(4.9,-7.6,6.2,t);
-  b.generalSpots=[
-    {x:x-12,z:z+8},{x:x+12,z:z+8},{x:x-12,z:z-1},{x:x+12,z:z-1},
-    {x:x-12,z:z-9},{x:x+12,z:z-9},{x:x,z:z-10.5}
-  ];
-  return b
+  const firstWall=Wl.length,b=mkB(x,z,40,34,10,0xd9ded2,0xbfc6bb,{kind:'enemy_bunker',bunker:true,doorSide:0,doorWidth:4,doorHeight:4.4,lockedDoor:true}),g=b.o,inset=3.5;
+  // Taper every exterior face; keep the gate vertical and independently animated.
+  const meshes=new Set(Wl.slice(firstWall).filter(w=>!w.door).flatMap(w=>w.parts||[w.m]));
+  for(const mesh of meshes){
+    const p=mesh.geometry.attributes.position;
+    for(let i=0;i<p.count;i++){
+      const t=Math.max(0,Math.min(1,(p.getY(i)+mesh.position.y)/b.h));
+      p.setX(i,(p.getX(i)+mesh.position.x)*(1-2*inset*t/b.w)-mesh.position.x);
+      p.setZ(i,(p.getZ(i)+mesh.position.z)*(1-2*inset*t/b.d)-mesh.position.z);
+    }
+    p.needsUpdate=true;mesh.geometry.computeVertexNormals();mesh.geometry.computeBoundingSphere();
+  }
+  b.roof.scale.set((b.w-2*inset)/(b.w+1.35),1,(b.d-2*inset)/(b.d+1.35));g.userData.bunkerWallInset=inset;
+  // Physical footprints cover the inward lean at character height.
+  for(const w of b.structuralWalls){const lean=inset*2.2/b.h;if(w.supportSide===0)w.z0-=lean;if(w.supportSide===1)w.z1+=lean;if(w.supportSide===2)w.x0-=lean;if(w.supportSide===3)w.x1+=lean;}
+  const wall=(lx,lz,sx,sz)=>{const m=buildingVisual.addWall(g,{lx,lz,sx,sz,height:8,material:b.wm});Wl.push({x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:b.fy-1,y1:b.fy+8,hp:90,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,owner:b})};
+  for(const lx of[-4,4])for(const [lz,d]of[[-12.5,3],[-4,6],[7,10]])wall(lx,lz,.6,d);
+  for(const lx of[-11,11])wall(lx,-7,12,.6);
+  for(const sign of[-1,1]){const shape=new THREE.Shape();shape.moveTo(sign*2,0);shape.lineTo(sign*3.5,0);shape.lineTo(sign*2.7,5.2);shape.lineTo(sign*2,5.2);shape.closePath();const post=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:3.3,bevelEnabled:false}),M(0x795337,'masonry'));post.position.z=b.d/2-2.8;g.add(post)}
+  bx(g,5.4,.85,3.3,0x795337,0,4.8,b.d/2-1.15,'masonry');
+  bx(g,5,1.1,2.5,0x5a5944,0,.9,-12,'paint');
+  b.generalSpots=[{x,z:z-9}];return b;
 }
 // Door-aligned treads share the exact same geometry and walking height.
 function stairLocal(s,x,z){const dx=x-s.x,dz=z-s.z;return{along:dx*s.nx+dz*s.nz,side:dx*s.nz-dz*s.nx}}

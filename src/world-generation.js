@@ -62,8 +62,6 @@ function ensureJetSkis(add){
 // Compatibility extraction: shared state remains in game-core.js.
 function build(){window.HUNTER_ENEMY_LOD.reset();const requestedPalmDisable=!!document.getElementById('disablePalms')?.checked;palmsDisabled=false;cancelGrenadeCharge();clearBulletImpacts();removeParachuteVisual();const buildStarted=performance.now();if(terrainStream)terrainStream.dispose();terrainStream=null;seedCompounds=[];elapsed=0;water.update(0);joystick.reset();compoundClear=[];terrainLevels=[];if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}world=new THREE.Group();world.userData.compounds=[];scene.add(world);B=[];stairs=[];piers=[];swimming=false;intelMarks=[];hqMapKnown=false;playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;grenadeEquipped=false;sniperEquipped=false;sniperAmmo=0;setSniperScope(false);pl.userData.sniper.visible=false;pl.userData.bazooka.visible=false;pl.userData.grenade.visible=false;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;pl.userData.grenadePending=null;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];grenades=[];fx=[];logb=[];hp=100;ammo=16;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
 {const base=requestedSeed==null?Math.floor(Math.random()*0xffffffff)>>>0:requestedSeed>>>0;let tries=0;do{seed=(base+Math.imul(tries++,0x9e3779b1))>>>0;genIslands();pa=land(A,2000);pb=land(Bi,2000)}while((!pa||!pb)&&tries<8);if(!pa||!pb)throw new Error('No s’ha pogut generar un mapa vàlid amb aquesta llavor')}
-addLevelArea(pa.x,pa.z,82,72,pa.h,0,18);[[-27,0],[27,-12],[0,31]].forEach(([dx,dz])=>mkB(pa.x+dx,pa.z+dz,15,15,7,0xe9dfc8,0x2c5fc0));flag(pa.x,pa.z-7,0x2c7bff);
-addLevelArea(pb.x,pb.z,148,133,pb.h,0,28);mkEnemyBunker(pb.x,pb.z);mkB(pb.x+49,pb.z+16,12,12,6,0x8a7a70,0x8c1f1f);mkB(pb.x-50,pb.z-15,12,12,6,0x8a7a70,0x8c1f1f);flag(pb.x+15,pb.z-6,0xe02828);barbedHQ(pb.x,pb.z,72.5,65,18,26);
 const cols=[0xd8b48a,0xc9a27a,0xb8c4c9,0xd9c9a0],compoundVehicles=[],heliportSites=[],staticDecorRoots=[];
 
 // Camins, molls i decoració dels compounds: malles per sectors i material,
@@ -182,6 +180,9 @@ const compoundPier=(x1,z1,x2,z2,width=4.2)=>{
 const findPortWater=q=>{for(let a=0;a<32;a++){const aa=a*Math.PI/16;for(let d=28;d<Math.max(100,q.r||180);d+=8){const wx=q.x+Math.cos(aa)*d,wz=q.z+Math.sin(aa)*d;if(rawHAt(wx,wz)<-3&&rawHAt(wx+Math.cos(aa)*12,wz+Math.sin(aa)*12)<-3)return{x:wx,z:wz,hd:Math.atan2(-Math.cos(aa),-Math.sin(aa)),aa}}}return null};
 const findPortSite=(island,tries=18)=>{for(let n=0;n<tries;n++){const q=land(island,700,1);if(!q)continue;q.r=island.r;const portBest=findPortWater(q);if(portBest)return{...q,portBest}}return null};
 const makeStandalonePier=q=>{const best=q.portBest||findPortWater(q);if(!best)return false;const dx=best.x-q.x,dz=best.z-q.z,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L;let shore=null;for(let d=3;d<L;d+=2.5){const sx=q.x+ux*d,sz=q.z+uz*d;if(rawHAt(sx,sz)<.35){shore={x:sx-ux*1.8,z:sz-uz*1.8};break}}if(!shore)return false;const pierLen=Math.min(34,Math.max(14,L-5)),end={x:shore.x+ux*pierLen,z:shore.z+uz*pierLen};compoundPier(shore.x,shore.z,end.x,end.z,3.6);for(const side of[-1,1]){const px=-uz,pz=ux;compoundProp('bollard',end.x+px*side*1.1,end.z+pz*side*1.1,0)}compoundClear.push({x:q.x,z:q.z,r:18});return true};
+const phase3Options={pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites,rocketAssigned:false};
+const baseCompound=buildApprovedCompound(window.HUNTER_COMPOUND_LAYOUTS.find(l=>l.id==='base'),pa,phase3Options);
+const hqCompound=buildApprovedCompound(window.HUNTER_COMPOUND_LAYOUTS.find(l=>l.id==='hq'),pb,phase3Options);
 const COMPOUND_RADII=Object.freeze({
   avancada:84,
   garatge:95,
@@ -194,8 +195,8 @@ const COMPOUND_GAP=34;
 // Reserva explícita de la base i de l'HQ: encara que dues illes generades se solapin
 // físicament, cap compound podrà entrar dins aquests perímetres.
 const compoundCenters=[
-  {x:pa.x,z:pa.z,r:65,type:'base'},
-  {x:pb.x,z:pb.z,r:105,type:'hq'}
+  {x:pa.x,z:pa.z,r:baseCompound.r,type:'base'},
+  {x:pb.x,z:pb.z,r:hqCompound.r,type:'hq'}
 ];
 const compoundRadius=type=>COMPOUND_RADII[type]||58;
 const compoundSiteClear=(type,q,minCenter=0)=>{
@@ -244,7 +245,7 @@ const reserveHeliportFallback=()=>{
 };
 const heliportTarget=1+MAP_SCALE;
 let heliportsMade=0;for(let n=0;n<heliportTarget;n++){const q=forceReserve('heliport',n?160:210)||reserveHeliportFallback();if(q)heliportsMade++}
-let guaranteedPorts=0;for(const i of candidateIslands){if(guaranteedPorts>=2*MAP_SCALE)break;if(usedSpecialIslands.has(i))continue;for(let attempt=0;attempt<8;attempt++){const q=findPortSite(i,22);if(!q||!compoundSiteClear('port',q,180))continue;if(compound('port',q)){usedPortIslands.add(i);guaranteedPorts++;break}}}
+let guaranteedPorts=0;for(const i of candidateIslands){if(guaranteedPorts>=2*MAP_SCALE)break;if(usedSpecialIslands.has(i))continue;for(let attempt=0;attempt<40;attempt++){const q=findPortSite(i,22);if(!q||!compoundSiteClear('port',q,180))continue;if(compound('port',q)){usedPortIslands.add(i);guaranteedPorts++;break}}}
 if(!guaranteedPorts){for(const i of candidateIslands){if(usedSpecialIslands.has(i))continue;const q=findPortSite(i,32);if(q&&compoundSiteClear('port',q,110)&&compound('port',q)){usedPortIslands.add(i);guaranteedPorts=1;break}}}
 islands.forEach(i=>{if(i===A||i===Bi||usedPortIslands.has(i)||usedSpecialIslands.has(i))return;const roll=R();let type=roll<.25?'avancada':roll<.5?'garatge':roll<.72?'polvori':roll<.86?'comunicacions':'port',q=null;
 for(let n=0;n<10&&!q;n++){const c=land(i,700,1);if(c&&compoundSiteClear(type,c,150))q=c}if(!q)return;q.r=i.r;
@@ -262,27 +263,9 @@ const seabedStarted=performance.now();
 if(!seedSearchMode)updateSeabed();
 const seabedMs=performance.now()-seabedStarted,vegetationStarted=performance.now();
 vegetate(pa);if(seedSearchMode)fa=[];else spawnFauna();
-const vegetationMs=performance.now()-vegetationStarted;HQ={x:pb.x,z:pb.z};const rb=B.slice(6);
+const vegetationMs=performance.now()-vegetationStarted;HQ={x:hqCompound.buildings[0].x,z:hqCompound.buildings[0].z};const rb=B.slice(6);
 const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2);
-const generalSpots=hq.generalSpots?.length?hq.generalSpots:[{x:hq.x,z:hq.z-3}],generalSpot=generalSpots[Math.floor(R()*generalSpots.length)];mkEn('general',generalSpot.x,generalSpot.z,hq.fy+.3);
 const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1),x=cx+Math.cos(a)*d,z=cz+Math.sin(a)*d;if(gl(x,z))return mkEn(t,x,z)}return null};
-const hqRoute=[[pb.x-52,pb.z-44],[pb.x+52,pb.z-44],[pb.x+52,pb.z+43],[pb.x-52,pb.z+43]],hqDef=[[pb.x-42,pb.z+43],[pb.x+42,pb.z+43],[pb.x-47,pb.z-34],[pb.x+47,pb.z-34]];for(let k=0;k<5;k++){const u=sp2('soldat',pb.x,pb.z,24,54);if(u&&k<3)setDefense(setPatrol(u,hqRoute.map((p,i)=>hqRoute[(i+k)%hqRoute.length]),k===2),hqDef)}
-const carRoute1=[[pb.x-96,pb.z-76],[pb.x+96,pb.z-76],[pb.x+96,pb.z+76],[pb.x-96,pb.z+76]],carRoute2=carRoute1.slice().reverse();
-setPatrol(mkEn('jeep',pb.x-92,pb.z-76),carRoute1,true);setPatrol(mkEn('jeep',pb.x+92,pb.z+76),carRoute2,true);
-// Patrulles blindades en dos circuits completament independents.
- // El nord evita el búnquer i la caserna oest; el sud evita el búnquer
- // i la caserna est. No hi ha cap tram ni cantonada compartits.
-const armorRouteNorth=[[pb.x+34,pb.z-43],[pb.x+34,pb.z-29],
-  [pb.x-34,pb.z-29],[pb.x-34,pb.z-43]];
-const armorRouteSouth=[[pb.x-34,pb.z+43],[pb.x-34,pb.z+29],
-  [pb.x+34,pb.z+29],[pb.x+34,pb.z+43]];
-const northTankette=setPatrol(mkEn('tanqueta',pb.x-34,pb.z-43),armorRouteNorth,true);
-const southTankette=setPatrol(mkEn('tanqueta',pb.x+34,pb.z+43),armorRouteSouth,true);
-northTankette.hqPatrolZone='north';southTankette.hqPatrolZone='south';
-// Miren cap al primer tram, sense girs aleatoris de sortida ni punts
-// inicials coincidents que les mantinguin quietes al primer waypoint.
-northTankette.hd=-Math.PI/2;southTankette.hd=Math.PI/2;
-[[-69,-61],[69,-61],[-69,61],[69,61]].forEach(([a,b])=>mkEn('torre',pb.x+a,pb.z+b));
 islands.forEach(i=>{if(i===A||i===Bi||R()<.5)return;const q=land(i,60);if(!q)return;for(let k=0;k<1+(R()<.4);k++)sp2('soldat',q.x,q.z,0,10);if(R()<.25)sp2('torre',q.x,q.z,5,12)});
 rb.forEach(b=>{const n=R()<.25?0:R()<.6?1:2,pool=['arma','arma','med','med','expl','granada','granada','disf','mapa','bazooka','franctirador','paracaigudes'];for(let k=0;k<n;k++)addIt(pool[Math.floor(R()*pool.length)],b)});
 addIt('arma',B[0]);addIt('expl',B[1]);addIt('med',B[2]);
@@ -290,13 +273,13 @@ addIt('franctirador',rb[Math.floor(R()*rb.length)]||B[2]);
 rb.slice().sort(()=>R()-.5).slice(0,2).forEach(b=>addIt('mapa',b));
 rb.slice().sort(()=>R()-.5).slice(0,1+MAP_SCALE).forEach(b=>addIt('mapa_heli',b));
 rb.slice().sort(()=>R()-.5).slice(0,1+MAP_SCALE).forEach(b=>addIt('mapa_tanc',b));
-P.x=pa.x;P.z=pa.z+8;P.hd=0;P.base={x:pa.x,z:pa.z};V=[];cv=null;mm=null;
+P.x=pa.x;P.z=pa.z+20;P.hd=0;P.base={x:pa.x,z:pa.z};V=[];cv=null;mm=null;
 const add=(t,x,z,a,meta={})=>{const o=mkV(t),c=VT[t],surface=Math.max(0,hAt(x,z)),v={t,x,z,hd:a||0,v:0,alt:c.m==='a'?helicopterLandedAltitude({o},surface):surface+.8,o,armor:c.armor??0,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};if(t==='heli_combat')v.rockets=6;if(t==='llanxa_coets')v.rockets=Infinity;world.add(o);V.push(v);return v};
 // Cap tanc neutral dins del HQ: els tancs pilotables apareixen
 // distribuïts per l'arxipèlag, lluny de la base enemiga.
 
 const near=(r,t)=>{for(let k=0;k<80;k++){const x=pa.x+rr(-r,r),z=pa.z+rr(-r,r),h=hAt(x,z);if(h>1.5&&slope(x,z,h)<2.5&&!B.some(b=>Math.abs(x-b.x)<b.hw+vehicleRadius(t)&&Math.abs(z-b.z)<b.hd+vehicleRadius(t))&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(t)+vehicleRadius(v.t)+2))return[x,z]}return[pa.x+30,pa.z+30]};
-['cotxe','moto','bici'].forEach(t=>{const q=near(90,t);add(t,q[0],q[1],rr(0,6.28))});
+['moto'].forEach(t=>{const q=near(90,t);add(t,q[0],q[1],rr(0,6.28))});
 const shores=[];for(let a=0;a<360;a+=12)for(let d=10;d<700;d+=10){const x=pa.x+Math.cos(a*.01745)*d,z=pa.z+Math.sin(a*.01745)*d;if(Math.abs(x)>H-60||Math.abs(z)>H-60)break;if(hAt(x,z)<-2){shores.push({d,x,z,a:a*.01745});break}}
 shores.sort((a,b)=>a.d-b.d);
 const launchSpot=shores[0]?{x:shores[0].x,z:shores[0].z,a:shores[0].a}:null;

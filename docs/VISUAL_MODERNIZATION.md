@@ -5,9 +5,17 @@ S'han eliminat plans de treball completats, registres històrics substituïts i 
 
 ## Sistema de versions
 
-Versió actual: **0.4.11**.
+Versió actual: **0.4.16**.
 
 Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
+
+### Revisió 0.4.16 — fase 3 integrada al joc (2026-10-12)
+
+- Base inicial compartida amb el visor: caserna, magatzem, infermeria amb creu blanca, bandera blava, cotxe i bicicleta en places reservades; inici al pati central. Es conserva la llanxa costanera.
+- HQ de tres edificis, quatre torres, vuit soldats i general dins del búnquer. Sense tanc aparcat. Dues tanquetes en circuits interiors separats nord/sud i dos jeeps a l’anell exterior; els vehicles completen els trams abans de canviar de waypoint.
+- Búnquer de 40 × 34 × 10 m amb quatre parets inclinades 3,5 m cap endins, sostre més estret i portal trapezoidal marró. Parets destructibles, particions interiors i porta d’obertura acumulativa de 10 s.
+- Reserves de terreny ampliades per incloure els accessos i les patrulles. Cerca de ports ampliada per conservar-ne l’aparició amb la nova distribució.
+- Preservades les optimitzacions de distància, enemics i visor de franctirador de la 0.4.15. Les fases 1 i 2 mantenen les armes garantides del polvorí i els tres mapes de comunicacions.
 
 ### Revisió 0.4.11 — correcció del disseny de l’HQ (2026-10-11)
 
@@ -479,7 +487,7 @@ La prioritat és evitar regressions de gameplay mentre es modernitza el projecte
 
 ## Redisseny de compounds — catàleg i generació (2026-10-08)
 
-Estat: **hangar, avançada i port integrats a la 0.3.48; heliport, polvorí i comunicacions integrats a la 0.3.97; base inicial i HQ en disseny de fase 3; recintes civils i control de carretera pendents**. La taula conserva els objectius generals de disseny; els detalls implementats dels tres primers recintes es descriuen a la revisió 0.3.48. Els vehicles són aparcats i utilitzables excepte les patrulles indicades. No tots els objectes opcionals apareixen a cada instància.
+Estat: **hangar, avançada i port integrats a la 0.3.48; heliport, polvorí i comunicacions integrats a la 0.3.97; base inicial i HQ integrats a la 0.4.16; recintes civils i control de carretera pendents**. La taula conserva els objectius generals de disseny; els detalls implementats dels tres primers recintes es descriuen a la revisió 0.3.48. Els vehicles són aparcats i utilitzables excepte les patrulles indicades. No tots els objectes opcionals apareixen a cada instància.
 
 | Tipus | Edificis i elements obligatoris | Vehicles | Enemics i objectes |
 |---|---|---|---|

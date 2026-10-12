@@ -4,7 +4,7 @@ const assert=require('assert');
  const result=g.run(`(()=>{
  const issues=[],cs=world.userData.compounds;
  const check=(v,m)=>{if(!v)issues.push(m)};
- for(const id of ['hangar','outpost','port','heliport','polvori','comunicacions'])check(cs.some(c=>c.id===id),'missing '+id);
+ for(const id of ['base','hq','hangar','outpost','port','heliport','polvori','comunicacions'])check(cs.some(c=>c.id===id),'missing '+id);
  for(const c of cs){
   const tr=compoundTransform(c,c.angle,c.mirror),layout=HUNTER_COMPOUND_LAYOUTS.find(l=>l.id===c.id);
   check(c.buildings.length===layout.buildings.length,c.id+' buildings');
@@ -18,6 +18,17 @@ const assert=require('assert');
   const u={t:'soldat'};
   for(let i=1;i<c.patrol.length;i++){
     const a=c.patrol[i-1],b=c.patrol[i];check(enemySweep(u,...a,...b,0,0,false),c.id+' patrol '+i);
+  }
+  if(c.id==='base'){check(P.x===c.x&&P.z===c.z+20,'base spawn');check(c.vehicles.length===2,'base vehicles');}
+  if(c.id==='hq'){
+   check(!V.some(v=>v.t==='tanc'&&Math.hypot(v.x-c.x,v.z-c.z)<c.r),'no tank at HQ');
+   check(c.enemyVehicles.length===4&&c.soldiers.length===8,'HQ defenders');
+   check(E.filter(u=>u.t==='torre'&&u.compound==='hq').length===4,'HQ towers');
+   const b=c.buildings[0],d=b.door;
+   check(b.o.userData.bunkerWallInset===3.5&&b.roof.scale.x<1,'sloping bunker');
+   check(c.general.x===b.x&&c.general.z===b.z-9,'general inside bunker');
+   for(const u of c.enemyVehicles){check(enemyMoveClear(u,u.x,u.z,u.hd),'HQ vehicle spawn');for(let i=0;i<u.patrol.length;i++){const a=u.patrol[i],b=u.patrol[(i+1)%u.patrol.length],hd=Math.atan2(a.x-b.x,a.z-b.z);check(enemySweep(u,a.x,a.z,b.x,b.z,hd,hd,false),'HQ vehicle route')}}
+   const px=P.x,pz=P.z;P.x=d.cx+d.nx*2;P.z=d.cz+d.nz*2;updateDoors(4);check(Math.abs(d.openProgress-.4)<1e-8,'gate four seconds');P.x+=20;updateDoors(3);check(Math.abs(d.openProgress-.4)<1e-8,'gate preserves progress');P.x=d.cx+d.nx*2;updateDoors(6);check(d.open&&d.openProgress===1,'gate ten seconds');P.x=px;P.z=pz;
   }
   if(c.id==='polvori')for(const t of ['arma','granada','expl','bazooka','franctirador'])check(c.loot.some(i=>i.t===t),'missing guaranteed '+t);
   if(c.id==='comunicacions'){for(const t of ['mapa','mapa_heli','mapa_tanc'])check(c.loot.some(i=>i.t===t),'missing guaranteed '+t);check(c.antenna?.children.length<12,'batched antenna');const roof=c.buildings.find(b=>b.layoutBuilding==='radio').roof;check(roof.children.some(o=>o.userData.previewSatellite),'roof satellite');}

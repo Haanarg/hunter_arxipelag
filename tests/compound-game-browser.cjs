@@ -19,8 +19,8 @@ const http=require('http'),fs=require('fs'),path=require('path'),assert=require(
  await page.evaluate(()=>{panel('pause');ren.render(scene,cam)});
  await page.evaluate(()=>ui.hide());
  await page.screenshot({path:path.join(require('os').tmpdir(),'hunter-')+(mobile?'mobile':'desktop')+'.png'});
- for(const id of['heliport','polvori','comunicacions']){
-  await page.evaluate(id=>{const c=world.userData.compounds.find(c=>c.id===id);if(!c)throw Error('missing '+id);for(let i=0;i<400;i++)terrainStream.update(c.x,c.z,4);if(PM.update)PM.update(c.x,c.z);const y=hAt(c.x,c.z);cam.position.set(c.x+95,y+110,c.z+130);cam.lookAt(c.x,y,c.z);cam.far=1800;cam.updateProjectionMatrix();B.forEach(b=>{b.o.visible=true;b.roof.visible=true;b.wm.opacity=1});E.forEach(u=>u.o.visible=true);ren.render(scene,cam)},id);
+ for(const id of['base','hq']){
+  await page.evaluate(id=>{const c=world.userData.compounds.find(c=>c.id===id);if(!c)throw Error('missing '+id);for(let i=0;i<400;i++)terrainStream.update(c.x,c.z,4);if(PM.update)PM.update(c.x,c.z);P.x=c.x;P.z=c.z;P.y=hAt(P.x,P.z);updateDistanceVisibility();const y=hAt(c.x,c.z);cam.position.set(c.x+95,y+110,c.z+130);cam.lookAt(c.x,y,c.z);cam.far=1800;cam.updateProjectionMatrix();B.forEach(b=>{b.o.visible=true;b.roof.visible=true;b.wm.opacity=1});E.forEach(u=>u.o.visible=true);ren.render(scene,cam)},id);
   await page.screenshot({path:path.join(require('os').tmpdir(),'hunter-compound-'+id+'-'+(mobile?'mobile':'desktop')+'.png')});
  }
  await page.evaluate(()=>{const before=elapsed;update(.1,elapsed+.1);if(elapsed!==before)throw Error('pause clock');resume();update(.1,elapsed+.1);if(elapsed<=before)throw Error('resume clock');panel('pause')});
