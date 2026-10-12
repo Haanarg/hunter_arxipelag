@@ -51,9 +51,13 @@ window.HUNTER_TERRAIN=Object.freeze({
       while(i<palette.length-2&&h>palette[i+1].h)i++;
       const a=palette[i],b=palette[i+1],
             t=Math.max(0,Math.min(1,(h-a.h)/(b.h-a.h)));
-      out[k]=a.r+(b.r-a.r)*t;
-      out[k+1]=a.g+(b.g-a.g)*t;
-      out[k+2]=a.b+(b.b-a.b)*t;
+      // Banda de sorra humida en el perfil Alt: fa més natural la
+      // transició de l'escuma amb la costa, sense tocar la simulació.
+      const wet=profile==='desktop'&&h>-.6&&h<3
+        ?Math.max(0,1-Math.abs(h-.65)/2.35)*.12:0;
+      out[k]=(a.r+(b.r-a.r)*t)*(1-wet);
+      out[k+1]=(a.g+(b.g-a.g)*t)*(1-wet);
+      out[k+2]=(a.b+(b.b-a.b)*t)*(1-wet);
     }
     for(let z=0;z<side;z++)for(let x=0;x<side;x++){
       const cx=-half+(x+.5)*cellSize,cz=-half+(z+.5)*cellSize;
