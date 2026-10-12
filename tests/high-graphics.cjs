@@ -36,6 +36,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
  assert(report.playerCasters>=8&&report.playerMeshes>=8&&report.active>=8,JSON.stringify(report));
  assert(report.terrainReceiving>0&&report.off&&report.on,JSON.stringify(report));
  assert(report.visibleBuildings>=1100&&report.waterSegments===384);
+ const skirtUV=game.run(`terrainStream.mesh.children.filter(m=>m.userData.terrainTile)
+   .every(m=>!m.material.map||m.geometry.attributes.uv.count===m.geometry.attributes.position.count)`);
+ assert(skirtUV,'texture UVs must extend over LOD seam skirts');
  texture.dispose();
  console.log('PASS: high textures, expanded visibility, caster silhouette, near-ground shadows',JSON.stringify(report));
 })().catch(error=>{console.error(error);process.exitCode=1});

@@ -83,6 +83,7 @@ window.HUNTER_TERRAIN=Object.freeze({
       // escletxes sense canviar les altures emprades per les col·lisions.
       const original=geometry.attributes.position,
             colors=geometry.attributes.color,
+            sourceUV=geometry.attributes.uv,
             base=original.count,edges=[],row=n+1;
       for(let i=0;i<=n;i++)edges.push(i);
       for(let i=0;i<=n;i++)edges.push(i*row+n);
@@ -91,9 +92,11 @@ window.HUNTER_TERRAIN=Object.freeze({
       const skirtCount=edges.length*2,
             pos=new Float32Array((base+skirtCount)*3),
             col=new Float32Array((base+skirtCount)*3),
+            uv=material.map&&sourceUV?new Float32Array((base+skirtCount)*2):null,
             oldIx=geometry.index.array,
             indices=new Uint16Array(oldIx.length+edges.length*6);
       pos.set(original.array);col.set(colors.array);indices.set(oldIx);
+      if(uv)uv.set(sourceUV.array);
       let at=oldIx.length;
       for(let i=0;i<edges.length;i++){
         const src=edges[i],a=base+2*i,b=a+1,k=src*3;
@@ -101,6 +104,11 @@ window.HUNTER_TERRAIN=Object.freeze({
         pos.set([pos[k],pos[k+1]-18,pos[k+2]],b*3);
         col.set([col[k],col[k+1],col[k+2]],a*3);
         col.set([col[k],col[k+1],col[k+2]],b*3);
+        if(uv){
+          const j=src*2;
+          uv.set([uv[j],uv[j+1]],a*2);
+          uv.set([uv[j],uv[j+1]],b*2);
+        }
         if(i%row===row-1)continue;
         const c=a+2,d=b+2;
         indices[at++]=a;indices[at++]=b;indices[at++]=c;
@@ -108,6 +116,7 @@ window.HUNTER_TERRAIN=Object.freeze({
       }
       geometry.setAttribute('position',new THREE.BufferAttribute(pos,3));
       geometry.setAttribute('color',new THREE.BufferAttribute(col,3));
+      if(uv)geometry.setAttribute('uv',new THREE.BufferAttribute(uv,2));
       geometry.setIndex(new THREE.BufferAttribute(indices.slice(0,at),1));
       geometry.computeVertexNormals();
     }
