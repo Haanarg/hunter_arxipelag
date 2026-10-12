@@ -12,8 +12,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
  assert(Object.values(fx.groups).every(g=>g.mesh.isInstancedMesh));
  assert(Object.values(fx.groups).every(g=>g.mesh.count===0));
  for(const group of Object.values(fx.groups))
-   assert(group.material.fragmentShader.includes('fxAlpha')&&
-     group.material.vertexShader.includes('instanceMatrix'),
+   assert(group.material.vertexShader.includes('fxAlpha')&&
+     group.material.vertexShader.includes('instanceMatrix')&&
+     group.material.fragmentShader.includes('alphaFX'),
      'instanced per-particle fade and transforms');
  assert.equal(fx.footstep(0,0,0),false,'no splash on dry ground');
  assert.equal(fx.footstep(0,0,2.8),false,'swimmers do not create steps');
