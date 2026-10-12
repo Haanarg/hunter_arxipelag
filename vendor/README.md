@@ -5,7 +5,7 @@
 - Integritat npm: `sha512-blFeqb49wRCSGUGj7gtpfnSGHy2lwDk94RhUmS1c/hTby70kvChbWpkJ4Pm1390LqzzvTmzgXKHPEafJwCb8jA==`.
 - Distribució: `three-r186.module.mjs`; ESM únic generat des de `build/three.module.js` i `build/three.core.js`, sense modificar el motor.
 - SHA-256: `ed11a90814a27be663f430328985511ad86e03fd56a610d2347eea6f3139e705`.
-- Llicència completa a `THREE-LICENSE.txt`; avisos originals conservats al bundle.
+- Llicència completa a [THREE-LICENSE.txt](THREE-LICENSE.txt); avisos originals conservats al bundle.
 - Cap CDN durant l’arrencada. El joc requereix HTTP i WebGL 2.
 
 ## Reproducció del bundle

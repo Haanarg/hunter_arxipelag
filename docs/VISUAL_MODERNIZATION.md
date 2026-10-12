@@ -1,870 +1,201 @@
-# Hunter: Arxipèlag — estat visual i tècnic
-
-Document consolidat de l'estat actual del projecte.  
-S'han eliminat plans de treball completats, registres històrics substituïts i descripcions de versions intermèdies que ja no representen el joc actual.
-
-## Sistema de versions
-
-Versió actual: **0.4.16**.
-
-Revisió 0.3.34: catàleg de redisseny registrat i preview Three.js d’hangar, avançada i port; generador jugable conservat.
-
-### Revisió 0.4.16 — fase 3 integrada al joc (2026-10-12)
-
-- Base inicial compartida amb el visor: caserna, magatzem, infermeria amb creu blanca, bandera blava, cotxe i bicicleta en places reservades; inici al pati central. Es conserva la llanxa costanera.
-- HQ de tres edificis, quatre torres, vuit soldats i general dins del búnquer. Sense tanc aparcat. Dues tanquetes en circuits interiors separats nord/sud i dos jeeps a l’anell exterior; els vehicles completen els trams abans de canviar de waypoint.
-- Búnquer de 40 × 34 × 10 m amb quatre parets inclinades 3,5 m cap endins, sostre més estret i portal trapezoidal marró. Parets destructibles, particions interiors i porta d’obertura acumulativa de 10 s.
-- Reserves de terreny ampliades per incloure els accessos i les patrulles. Cerca de ports ampliada per conservar-ne l’aparició amb la nova distribució.
-- Preservades les optimitzacions de distància, enemics i visor de franctirador de la 0.4.15. Les fases 1 i 2 mantenen les armes garantides del polvorí i els tres mapes de comunicacions.
-
-### Revisió 0.4.11 — correcció del disseny de l’HQ (2026-10-11)
-
-- Retirat el tanc aparcat del disseny de fase 3, respectant la decisió anterior. Es mantenen les dues tanquetes i els dos jeeps de patrulla. L’antic itinerari del tanc queda com a accés de servei.
-- Búnquer amb les quatre parets exteriors inclinades cap endins: base de 40 × 34 m i retranqueig de 3,5 m per costat al capdamunt. Sostre ajustat a la part superior i entrada amb marc trapezoidal de to marró, inspirats en la referència del Hunter original.
-- Es conserven el passadís, les quatre cambres i la previsió de porta progressiva de 10 s. Canvi només al visor; integració de fase 3 pendent.
-
-### Revisió 0.4.10 — dissenys de fase 3: base inicial i HQ (2026-10-11)
-
-Visor a `compounds-preview.html?fase=3`, amb dues propostes Three.js. Les fases 1 i 2 continuen integrades; aquests dos dissenys **encara no canvien el generador jugable**.
-
-- **Base inicial (120 × 110 m):** caserna, magatzem i infermeria, bandera blava, punt d’inici al pati central i sortida de 16 m. Cotxe i bicicleta amb recorreguts de sortida; cap enemic, munició i farmaciola. Es preveu connectar el camí al punt costaner amb barca o llanxa; la maqueta mostra només el recinte terrestre.
-- **HQ enemic (230 × 230 m incloent l’anell exterior):** filferrada de 164 × 164 m, entrada de 24 m desplaçada respecte del búnquer de 40 × 34 m. Caserna i serveis auxiliars; quatre torres, general i vuit soldats. Sense tanc aparcat; dues tanquetes a l’anell interior i dos jeeps a l’exterior; sense helicòpters.
-- Búnquer amb passadís central i quatre cambres. La porta de 10 s és una condició per a la futura integració; al visor es mostra estàtica. Els recorreguts dels vehicles són guies, no IA en moviment.
-- Vista en planta, interiors i guies de circulació, maniobra i patrulles. Dades separades a `src/compound-phase3-layouts.mjs`, carregades només pel visor.
-- Validació: geometria finita, vehicles separats dels edificis, patrulles de soldats i amplada de les rutes de vehicles; visor en escriptori i mòbil amb navegació, planta, interiors i zoom.
-- Fases posteriors: embarcador civil, terminal de ferri, control de carretera i petit assentament; continuen pendents les variants de distribució de cada tipus.
-
-### Revisió 0.3.97 — fase 2 integrada al joc (2026-10-11)
-
-- Incorporats al generador els dissenys compartits d’**heliport, polvorí i comunicacions**. Reserves ampliades, terreny sec comprovat, plataforma anivellada, filferrada amb accés lliure, portes, col·lisions i patrulles adaptades als quatre girs i les variants reflectides. La cerca de ports prova més punts de costa abans de descartar una illa.
-- **Polvorí:** dos magatzems amb parets massisses, guàrdia, camió i quatre soldats. Munició, granades, explosius, **bazooka i rifle de franctirador sempre presents**, sense probabilitat. Les armes utilitzen els objectes i la recollida reals del joc.
-- **Heliport:** plataforma de 40 m, control i magatzem laterals, quatre soldats, munició, farmaciola i paracaigudes garantit. Es conserva l’helicòpter de combat al segon heliport.
-- **Comunicacions:** jeep, quatre soldats, generador decoratiu, torre de 56 m (punta fins a 62 m) i parabòlica de 18 m sobre l’edifici gran. Els mapes de HQ, helicòpters i tancs són obligatoris; la disfressa és opcional. Tipus afegit al cercador de llavors.
-- Antena i parabòlica comparteixen geometria amb el visor i agrupen les malles per material per reduir crides de dibuix. La base de l’antena té col·lisió i destruir-la elimina tota la torre; la parabòlica forma part del sostre i desapareix amb ell.
-- Visor de fase 2 marcat com integrat. Proves de generació, separació, accessos, patrulles, objectes garantits i destrucció; prova WebGL dels tres recintes en perfils d’escriptori i mòbil. Android físic pendent.
-
-### Revisió 0.3.96 — comunicacions ampliat (2026-10-11)
-
-- Torre d’antena amb escala uniforme ×2: estructura de 56 m, amb la punta fins a 62 m. Base i accessoris també doblats.
-- Parabòlica militar de satèl·lit de 18 m de diàmetre sobre la sala de ràdio: plat còncau verd oliva inclinat, nervis radials, vora de gelosia, trípode receptor i pedestal. S’oculta amb el sostre per inspeccionar l’interior.
-- Els tres tipus de mapes actuals (`mapa`, `mapa_heli`, `mapa_tanc`) són obligatoris en el disseny de cada centre: HQ, helicòpters i tancs. Ja no és una alternativa aleatòria entre mapes.
-- Dissenys integrats al generador a la revisió 0.3.97. Geometria validada i visor comprovat en perfils d’escriptori i mòbil.
-
-### Revisió 0.3.60 — perfil gràfic «Mínims» per sota de mòbil (2026-10-09)
-
-- A la portada s'ha substituït la casella «Gràfics reduïts» per un **selector de tres opcions**: `Alts` (ordinador), `Reduïts · mòbil` i `Mínims · sense reflexos`. En dispositius tàctils continua seleccionat el perfil de mòbil per defecte, però també es pot optar per «Mínims». El canvi recarrega el joc per crear el renderer una sola vegada; no hi ha reajustaments de resolució durant la partida.
-- Selecció `?quality=desktop|mobile|ultra` amb compatibilitat amb l'antic paràmetre `?low=1`. El perfil escollit queda reflectit al selector i a `window.HUNTER_GRAPHICS_QUALITY`.
-- Perfil **ultra**: resolució interna fixa fins a **×0,8**; cap ombra dinàmica; cúpula del cel reduïda a 20×12 segments; aigua amb 120×120 subdivisions (200×200 en mòbil); boira més densa, `camera.far=1500` metres i menys edificis llunyans a la vista. La cúpula del cel i el sol es mouen dins del nou pla llunyà perquè el cel no desaparegui.
-- El mar mínim utilitza **un shader de fragments propi**, sense càlcul de reflex especular, Fresnel ni derivades de normals per píxel. Manté els colors, la transició terra/aigua, una petita escuma costanera i les ones geomètriques que sincronitzen amb la física de les embarcacions. El color del mar llunyà es fon amb la boira abans dels 1.500 metres per suavitzar el límit de dibuix. Els shaders normals d'ordinador i mòbil **no es modifiquen**.
-- Tests: `tests/graphics-quality.cjs` verifica els tres perfils, la càmera i la cúpula, les dues variants de shader, la coherència de la superfície d'aigua i el selector/URL; `tests/smoke.cjs` i `tests/browser.cjs` amplien els controls de perfils. Comprovat amb malles Three.js reals: pla llunyà 1500 m, cúpula a 1170 m, 14.641 vèrtexs d'aigua, cap reflex al fragment mínim, ones finites, i configuració del selector inclosa la compatibilitat `?low=1`. Pendent mesura de FPS i compilació en navegador físic.
-
-### Revisió 0.3.59 — munició inicial i caixes de 16 bales (2026-10-09)
-
-- El jugador comença una partida amb **16 bales** i recupera les mateixes **16 bales** quan es reinicia el món.
-- Cada recollida de munició (`arma`) suma **16 bales directament** al comptador, sense passar per l'inventari.
-- `tests/smoke.cjs` valida els valors inicials, el pas de recollida real del bucle de joc i el reinici. No es modifiquen la cadència, el dany, els models ni la distribució de les caixes.
-
-### Revisió 0.3.58 — soldats enemics i general al 80% (2026-10-09)
-
-- Models 3D dels **soldats enemics** ajustats de l'escala anterior `0,9` a `0,8` respecte de la geometria normalitzada; altura resultant de **2,928** unitats (abans 3,294).
-- Model 3D del **general** ajustat d'escala `1,0` a `0,8`; altura resultant de **2,84** unitats (abans 3,55).
-- L'escalat es fa a l'arrel de cada model després d'haver-ne alineat els peus a la cota zero. Els pivots, les articulacions, les armes, les animacions, les rutes dels enemics, les hitboxes, la vida i els danys no es modifiquen.
-- Tests actualitzats: `tests/enemy-model.cjs`, `tests/general-model.cjs` i `tests/smoke.cjs`. Comprovats els dos models amb Three.js real: escala uniforme 0,8, altura i contacte amb el terra, braços, genolls i arma conservats. Prova visual de navegador/Android pendent.
-
-### Revisió 0.3.57 — tres nivells visuals de palmera amb geometria instanciada (2026-10-09)
-
-- **LOD 0 fins a 500 m:** palmera completa, amb tronc corbat, copa principal, fulles secundàries i les variants del model actual.
-- **LOD 1 de 500 a 1.100 m:** tronc corbat simplificat (4 cares radials i 3 trams) i sis fulles grans planes. Només dos `InstancedMesh` per sector, sense fulles secundàries.
-- **LOD 2 d'1.100 a 1.900 m:** tronc molt simple (3 cares, 2 trams) i tres plans de fulles creuats (6 triangles). Només dos `InstancedMesh` per sector.
-- Més lluny les palmeres es continuen ocultant. En perfil mòbil els llindars es mantenen més curts per protegir-ne el rendiment (460, 870, 1.250 m).
-- Les distàncies es calculen fins a la vora del sector; una histèresi de 65 m evita canvis repetitius quan es travessa un llindar. El mateix sector només mostra **un dels tres models alhora**, reutilitzant posicions, rotacions i colors originals.
-- La construcció de geometries simplificades no consumeix números aleatoris nous ni modifica la generació d'illes, objectes o vehicles. Col·lisions i arbres abatuts continuen fent servir el model original; la destrucció posa la matriu de la mateixa palmera a zero en els tres LOD.
-- Els models de mitjana i llarga distància no projecten ni reben ombres. Els comptadors `window.HUNTER_VEGETATION_STATS` exposen sectors pròxims/intermedis/llunyans i canvis de LOD.
-- Geometria mesurada amb Three.js real, en una palmera representativa: **196 triangles original, 56 intermedi (−71%) i 24 llunyà (−88%)**. Verificades nou transicions de LOD amb histèresi i set matrius anul·lades en destruir la palmera. Comparació amb la versió anterior de 250 palmeres: 750 matrius/colors originals idèntics i exactament el mateix consum de números pseudoaleatoris.
-- Proves: `tests/vegetation-lod.cjs` ampliat amb geometria, histèresi, destrucció i determinisme, i `tests/smoke.cjs` comprova les malles simplificades. Les proves específiques amb Three.js han passat; pendent benchmark d'FPS i comprovació visual en navegador i Android real.
-
-### Revisió 0.3.56 — correcció de fotogrames foscos i regressió del rendiment (2026-10-09)
-
-- Eliminada la resolució dinàmica experimental de la 0.3.54, que redimensionava el framebuffer WebGL cada 2,5 segons i podia provocar un fotograma fosc i pauses de GPU. El sistema `src/performance.js` conserva el diagnòstic de FPS, temps CPU, dibuixos i triangles, però **no fa mai `setPixelRatio()` durant la partida**.
-- Resolució inicial fixa i moderada: factor màxim 1,0 en perfil mòbil i 1,2 en escriptori (respectant el DPR real). Els controls i la física no es modifiquen. El monitor mostra «Resolució fixa».
-- Recuperat el shader estable de l'aigua, sense els condicionals per distància als vèrtexs i fragments. Es mantenen les malles de mar més lleugeres (200 subdivisions mòbil; 320 escriptori) i les altures de les ones calculades amb la mateixa funció que la física.
-- Els quatre LOD del terreny continuen actius. La selecció no comprova el frustum de cada sector a cada frame i deixa de recórrer-los quan tots són correctes; torna a actualitzar-los després de desplaçar-se aproximadament 90 metres. Això redueix el treball innecessari de CPU en panoràmiques estàtiques.
-- Proves revisades: `tests/performance.cjs` exigeix zero reassignacions WebGL a FPS baixos i alts; `tests/terrain-stream.cjs` valida l'aturada dels escanejos i la reactivació en moure's; `tests/water.cjs` valida el shader restaurat; `tests/smoke.cjs` comprova la configuració fixa.
-- Comprovació funcional amb Three.js real: 36 sectors generats, 12 amb LOD llunyà en mapa petit, zero escanejos repetits en repòs, actualització en canviar d'illa, malla de l'aigua i altures finites; simulacions de 23 i 90 FPS sense redimensionar buffers. **Pendent benchmark real de FPS i verificació visual a Android/navegador.**
-
-### Revisió 0.3.55 — dissenys de compounds, fase 2 (2026-10-09)
-
-Preview a `compounds-preview.html?fase=2`: heliport, polvorí i centre de comunicacions. La primera fase continua accessible al mateix visor. Dissenys a `src/compound-phase2-layouts.mjs`, compartits amb el generador jugable des de 0.3.97.
-
-- **Heliport (120 × 110 m):** plataforma de 40 m amb marca H, llums baixes i reserva de rotors de 22 m de radi. Control de vol i magatzem laterals, combustible separat, filferrada, helicòpter normal i quatre soldats. Munició i farmaciola. La variant fortificada amb helicòpter de combat i torre queda com a ampliació posterior.
-- **Polvorí (110 × 110 m):** dos magatzems de parets massisses, guàrdia, filferrada, pati de càrrega i camió encarat a una sortida de 16 m. Quatre soldats. **Bazooka garantit en cada polvorí**, juntament amb munició, granades i explosius; s’elimina l’opcionalitat del catàleg de disseny. El visor mostra el bazooka sobre una taula al magatzem d’armament pesant i el model actual d’explosiu plàstic. Bazooka i franctirador garantits pel generador des de 0.3.97.
-- **Comunicacions (100 × 110 m), nou:** sala de ràdio, edifici de servei, torre d’antena de 56 m i parabòlica de satèl·lit al terrat, generador, filferrada, jeep i quatre soldats. Tots tres mapes garantits (HQ, helicòpters i tancs); disfressa opcional, mostrada a la proposta. Es planteja sobre una elevació amb accés transitable; el visor mostra la planta anivellada. Generador decoratiu.
-- Vista en planta, interiors sense sostre, recorreguts de circulació, zones de maniobra, patrulles i reserva dels rotors. Les dades de vehicles i personatges reutilitzen els models actuals de `main` 3c0d2cc; es conserven els canvis recents del jugador, riders, hangars i rendiment.
-
-Validació: `tests/compound-preview.cjs` comprova geometria, vehicles, patrulles sense creuar edificis, reserva dels rotors i presència del bazooka. `PREVIEW_PHASE=2 node tests/compound-preview-browser.cjs` comprova els tres dissenys en WebGL 2/SwiftShader amb perfils d’escriptori i mòbil, navegació, planta, interiors, zoom i etiquetes. Captures revisades. Aquesta validació correspon al visor; la integració procedural, les col·lisions jugables i Android físic es comprovaran després de la revisió dels dissenys.
-
-### Revisió 0.3.54 — rendiment adaptable, LOD de terreny i aigua distant (2026-10-08)
-
-- **Fase 1 — mètriques i resolució dinàmica:** `src/performance.js` mesura els FPS mitjans, durada de fotograma, temps de crida del renderer a CPU, draw calls i triangles reals retornats per `renderer.info`. `window.HUNTER_PERFORMANCE_STATS` exposa aquestes mètriques; apareixen en un petit indicador durant la partida, ocult a la portada i al cercador.
-- La resolució interna baixa 0,12 per ajust quan els FPS mantinguts estan per sota de 46 en ordinador o 42 en mòbil; torna a pujar 0,08 si passen de 57/54. Canvis espaiats 2,5 s, amb histèresi i limites respectats: mínim 0,75 i 0,72 respectivament, sempre limitats pel DPR de l'aparell. No canvia la resolució CSS, els controls ni la simulació.
-- **Fase 2 — quatre nivells de terreny:** `src/terrain.js` adopta [6,12,28,56] subdivisions per sector (qualitat alta) i [6,10,20,40] (mòbil). LOD 3 dins 500 m, LOD 2 dins 1.250 m, LOD 1 dins 1.700 m i LOD 0 a més distància. La mateixa funció `heightAt` manté la geometria, i els faldons entre malles amaguen possibles fissures. La generació progressiva prioritza sectors a la piràmide visual de la càmera, sense deixar de completar la resta.
-- **Mar distant:** a més de reduir la graella de 400² a 320² subdivisions en ordinador i de 240² a 200² en mòbil, el shader barreja gradualment les ones completes amb ondulació simple entre 2.200 i 3.200 m de la càmera; més lluny omet escuma i reflexos intensius. Prop del jugador conserva l'espectre d'ones i l'aproximació de física/visualització sobre els mateixos triangles.
-- Proves afegides: `tests/performance.cjs` per validar histèresi i canvis de resolució, `tests/terrain-stream.cjs` ampliat per als 4 LOD i el frustum de la càmera, `tests/water.cjs` per al mar distant i `tests/smoke.cjs` per a l'arrencada integrada.
-- Verificat amb Three.js real: 36 sectors en mapa petit (12 als 6 subdivisions), índexs GPU vàlids; mar 200/320 amb malles i altures finites. Verificada la caiguda i recuperació de resolució amb seqüències de FPS sintètiques. La compilació WebGL, les mètriques de GPU i el rendiment d'Android real **no s'han mesurat encara**.
-
-### Revisió 0.3.53 — retirat el mur rectangular posterior dels hangars (2026-10-08)
-
-- A la generació de l'hangar s'ha eliminat la paret rectangular baixa situada al fons, que duplicava la paret semicircular de tancament posterior.
-- Es manté **únicament la paret posterior semicircular** (malla ExtrudeGeometry) amb el seu propi registre de col·lisió, 110 punts de resistència i possibilitat de destrucció. El registre apunta a la mateixa malla, no a la paret rectangular anterior.
-- Es conserven els dos muntants de la boca frontal, la coberta de volta fins a terra i els seus nervis, els accessos i els vehicles de l'hangar.
-- Afegides comprovacions a `tests/compound-generation.cjs` per garantir que cada hangar generat té una sola paret posterior, que no queden caixes rectangulars al darrere i que la paret semicircular conserva col·lisió i resistència; `tests/smoke.cjs` també actualitzat.
-- Validada amb Three.js real la geometria i el registre de col·lisió en els quatre girs de 90°; comprovada també la destrucció amb les funcions de combat reals. Queda pendent comprovar el navegador i dispositius físics.
-
-### Revisió 0.3.52 — proposta D aplicada al jugador i als riders (2026-10-08)
-
-- Incorporada al model jugable la **proposta D · 75% tàctic baix**: dimensions locals del cap [0,74, 0,74, 0,71], coll [0,75, 0,66, 0,75], centre del cap a Y=3,26 (abans 3,38), gorra rebaixada 0,03 i visera de fondària 0,94, lleugerament inclinada.
-- Les proporcions són un estil explícit `headVariant:'compactD'` de `HUNTER_PLAYER_MODEL.create`: s'activa a `src/characters.js` per al jugador a peu i a `src/rider.js` per als conductors de tots els vehicles oberts (bicicleta, moto, moto aquàtica, llanxa, llanxa llançacoets, barca de rems i windsurf).
-- El coll i el cap es modifiquen abans de l'escalat `unitScale`, de manera que les diferents dimensions dels models comparteixen l'estil; no es mouen malucs, seients, articulacions ni punts de subjecció.
-- El soldat enemic i el general segueixen utilitzant el model base de cap original; no es toquen la IA, la física, la vida ni les postures de combat.
-- `src/player-head-concepts.mjs` utilitza ara la mateixa definició de la proposta D que el model jugable. A `proves.html` es marca la D com «AL JOC».
-- Proves de regressió ampliades a `tests/smoke.cjs` per al jugador, els set riders i els enemics, i `tests/player-head-concepts.cjs` per garantir que la D publicada coincideix exactament amb el joc.
-
-### Revisió 0.3.51 — quatre nous caps al 75% i coll escurçat (2026-10-08)
-
-- S'han substituït les quatre propostes anteriors de `proves.html` per models amb el cap al voltant del **75%**: A proporcional (75/75/75%), B estret (72/78/74%), C compacte ample (79/72/76%) i D tàctic baix (74/74/71%).
-- A cada alternativa també es redueix el coll tant en amplada com en altura (altura del coll 66–72% de l'original) i s'abaixa el pivot del cap de 3,38 a entre 3,31 i 3,26 per integrar-lo millor al cos.
-- El coll es modifica només a la còpia de previsualització de `src/player-head-concepts.mjs`. El model real del jugador i els enemics, el rig, les animacions i el gameplay **no es modifiquen**.
-- La preview manté les quatre figures Three.js, les vistes de cos sencer / primer pla, la rotació i les vistes frontal i de perfil; `head-02` força la recàrrega de les variants actualitzades.
-- S'ha revisat la prova `tests/player-head-concepts.cjs` perquè validi els nous percentatges, la reducció de coll, el pivot rebaixat i les versions del model amb `unitScale` diferent.
-
-### Revisió 0.3.50 — quatre propostes de cap reduït del jugador (2026-10-08)
-
-- La pàgina `proves.html` mostra quatre alternatives del **model actual del jugador amb el cap reduït aproximadament un terç**: A proporcional (67% uniforme), B estret (62/70/66%), C compacte ample (71/63/68%) i D tàctic baix (65/65/62%). La gorra, la visera, les ulleres, el cabell, les orelles i el nas s'escalen amb el cap.
-- Les figures es generen en Three.js des del mateix `HUNTER_PLAYER_MODEL.create` que fa servir el joc, amb variants no destructives a `src/player-head-concepts.mjs`; **no s'ha modificat el model de la partida** fins que se'n triï una.
-- La preview permet comparar cos sencer i primer pla, veure les quatre figures de front, a tres quarts o de perfil i girar-les individualment arrossegant.
-- La pàgina anterior de quatre conceptes d'explosius es preserva a `explosius-proves.html` i enllaça amb les altres previsualitzacions.
-- Nova regressió `node tests/player-head-concepts.cjs` per validar la proporció real del cap, l'articulació, els accessoris i els enllaços a les proves.
-
-### Revisió 0.3.49 — minimapa ocult fins que comença la partida (2026-10-08)
-
-- El minimapa queda ocult amb una regla CSS mentre `body` no porta la classe `game-started`; això evita que el `z-index` del minimapa el mostri per damunt de la pantalla inicial i del cercador de llavors.
-- Després de generar correctament la partida i d'ocultar la portada, `src/game-core.js` activa `game-started` i mostra el minimapa.
-- S'han afegit regressions a `tests/smoke.cjs` (estat del menú i de la partida) i a `tests/browser.cjs` (CSS real a portada, cercador de llavors i joc, tant a PC com en perfil mòbil).
-- No es modifica el dibuix ni el rendiment del minimapa durant el joc.
-
-### Revisió 0.3.48 — tres compounds integrats (2026-10-08)
-
-Integrat sobre `main` 3c4a9e6 (0.3.47), conservant la càrrega progressiva del terreny, els LOD de palmeres, el minimapa, el cercador ampliat i els explosius reduïts i orientats cap al jugador:
-
-- Hangar, avançada i port de la preview incorporats al generador jugable. `compound-layouts.mjs` és la font comuna de dimensions, edificis, aparcaments, patrulles i objectes; `compound-generation.js` adapta aquests layouts als sistemes reals de col·lisions, portes, destrucció, vehicles i IA.
-- Avançada: caserna, guàrdia, torre, moto i quatre soldats. Perímetre de filferrada destruïble amb les dues obertures de la preview; corredors principal i lateral lliures. La filferrada també substitueix les barreres al visor.
-- Hangar: tanc a dins, cotxe a fora, taller, zona de servei i tres soldats. Boca de 30 m i corredor de 18 m. Fons tancat només per la paret semicircular (sense mur rectangular superposat), col·lisions a la base de la volta i patrulla desplaçada 2 m per conservar marge físic.
-- Port: magatzem, oficina, torre, cinc soldats, passeig transitable i dos molls de 6 m. Tres embarcacions orientades cap al mar; només el primer port incorpora la llanxa llançacoets, els altres tenen una segona llanxa normal. Costa seleccionada comprovant terra als edificis i profunditat sota tota la petjada i els corredors de sortida de les embarcacions ampliades.
-- Reserves ampliades per evitar solapaments i vegetació als accessos. Generació inicial d'un hangar i una avançada quan hi ha lloc vàlid. Les distribucions terrestres varien entre quatre orientacions i mirall; els ports s'orienten segons una costa apta entre les quatre direccions. Els girs de 90° mantenen exactes les caixes de col·lisió actuals: geometria, parets, portes i escales es transformen conjuntament.
-- Soldats i cadàvers utilitzen la superfície transitable dels molls i escales. La navegació dels vehicles terrestres continua utilitzant el terreny.
-- La generació canvia respecte de les versions anteriors: una mateixa llavor no conserva la distribució antiga de recintes.
-
-Validat:
-
-- `tests/compound-generation.cjs`, llavor 12345/mida 1: 5 hangars, 7 avançades i 1 port; llavor 72819/mida 2: 17 hangars, 20 avançades i 2 ports. En ambdues: edificis i vehicles previstos, separació, portes i escales orientades, dues obertures a la filferrada, sortides dels tancs, patrulles lliures i superfície dels molls. Comprovades les quatre orientacions i els dos miralls terrestres; llanxa llançacoets única.
-- `tests/enemy-navigation.cjs` i `tests/enemy-navigation-world.cjs`: regressió de navegació i 95 enemics sense solapament inicial; 9 segons de simulació, 82 enemics desplaçats i cap moviment acabat en espai bloquejat.
-- `tests/smoke.cjs`: arrencada, 15 tipus de vehicle, armes, col·lisions, destrucció i reinici. La comprovació de vegetació del smoke s’ha adaptat al nou grup `PM.trunk` dels LOD.
-- Integració amb la base 0.3.47: proves de minimapa, càrrega progressiva de terreny, LOD/destrucció de palmeres i cerca real de llavors superades; índex de compounds del cercador conservat.
-- `tests/compound-preview.cjs`, `tests/compound-preview-browser.cjs` i `tests/compound-game-browser.cjs`: geometria i càrrega WebGL 2 amb SwiftShader, escriptori i perfil mòbil; sense errors JavaScript ni shaders. Captures de preview i dels tres recintes integrats revisades. Recuperat el Chromium de proves després d’una fallada inicial d’arrencada.
-
-Pendent / límits: partida i rendiment en Android físic; les proves de generació cobreixen les dues llavors indicades, no totes les costes possibles. Si una costa no permet les tres places amb profunditat suficient, es descarta aquell emplaçament. Les altres dues distribucions per tipus i la resta de compounds del catàleg continuen pendents. Bidons, caixes i dipòsits mantenen el comportament decoratiu actual.
-
-### Revisió 0.3.47 — mida i orientació dels explosius (2026-10-08)
-
-- El bloc d'explosiu plàstic RGB queda reduït a **dos terços de la mida anterior** tant a la recollida (escala 2/3) com una vegada col·locat (escala 0,82 × 2/3). Els factors són compartits per `src/explosive-visuals.js`.
-- La càrrega es col·loca 1,35 metres davant del jugador, adaptada a l'altura del terreny; la cara del display digital s'orienta 180° respecte del sentit del jugador perquè quedi de cara a ell.
-- Es mantenen els tres segons del compte enrere, el parpelleig vermell a 5 Hz i la força destructiva de la càrrega.
-- Actualitzada `proves.html` per respectar les proporcions reals de la proposta 1 i ampliada la prova smoke per comprovar les escales i l'orientació des de quatre direccions.
-
-### Revisió 0.3.46 — correcció i verificació del minimapa (2026-10-08)
-
-- Reforçat el dibuix del minimapa després de l'optimització del terreny i el cercador de llavors: fons 2D propi, imatge de terra i mar en memòria cau, i repintat dels marcadors del jugador, la base, els vehicles i els enemics.
-- Mostreig a 128 px de resolució interna (mostrada al canvas de 170 px), que redueix les avaluacions d'altura de 28.900 a 16.384 sense rebaixar la mida del minimapa en pantalla.
-- Fons reconstruït després de canviar de mida de món o regenerar la llavor; el dibuix només comença quan existeixen la base i la posició actual.
-- El canvas del minimapa té `z-index:4` per evitar quedar tapat per la capa WebGL als navegadors Android.
-- Diagnòstic: `window.HUNTER_MINIMAP_STATS` informa del nombre de dibuixos, regeneracions de fons, píxels de terra i durada de construcció.
-- Prova `tests/minimap.cjs` sobre pintura 2D, moviment del jugador, canvi de mida, nova llavor i mapa complet; smoke ampliat per comprovar que es pinta terra després de començar la partida.
-- La correcció visual a dispositiu físic encara s'ha de confirmar.
-
-### Revisió 0.3.45 — cercador de llavors per categories (2026-10-08)
-
-- Ampliat el cercador de llavors amb dos selectors: **categoria** (vehicles, objectes, compounds) i **tipus concret**, més «Qualsevol» per categoria.
-- Els desplegables de vehicles i objectes es deriven dels catàlegs `VT` (15 vehicles conduïbles) i `IT` (9 objectes), sense duplicitats manuals; els vuit emplaçaments són base inicial, HQ, avançada, garatge, heliport, polvorí, port i comunicacions.
-- Els compounds es registren amb les coordenades reals `compoundCenters` del generador de cada llavor; els resultats es classifiquen per distància en línia recta a la base, amb quantitat d'elements, coordenades, indicació de distància objectiu i botó «Usa aquesta llavor».
-- La cerca manté les regles deterministes de generació de vehicles, objectes i compounds, però evita generar la malla visual del terreny, recalcular el fons marí i crear fauna innecessària mentre s'analitzen candidats.
-- Millorada la cancel·lació i la neteja de l'estat: es restableixen mida de mapa, llavor provisional i mode de generació; no es pot començar una partida fins que s'ha acabat de netejar la cerca anterior.
-- Afegits `tests/seed-search.cjs`, `tests/seed-search-integration.cjs` i comprovacions al smoke; el simulador DOM de proves incorpora controls de selecció i resultats.
-
-### Revisió 0.3.44 — renderitzat de palmeres per sectors (2026-10-08)
-
-- Les palmeres mantenen els models actuals però ja no comparteixen grans `InstancedMesh` que inclouen tot el mapa: es construeixen grups geogràfics d'aproximadament **420 metres** perquè Three.js pugui descartar sectors sencers fora de càmera.
-- S'ha afegit LOD visual per distància: prop del jugador es mantenen tronc i dues copes; a distància mitjana es representa tronc més la copa principal; els sectors llunyans s'oculten. Rang màxim aproximat: 1.900 m en qualitat alta i 1.250 m en qualitat reduïda.
-- Visibilitat actualitzada a baixa freqüència (cada 0,16 s, i només quan el jugador s'ha desplaçat prou). Es conserven les palmeres generades, les col·lisions, la distribució de les llavors i la possibilitat de tombar-les.
-- Les matrius d'instància i materials es gestionen per sector, amb materials reutilitzats i sense ombres de les palmeres instanciades. La destrucció actualitza correctament tronc i totes dues copes de la palmera corresponent.
-- Mètrica de depuració: `window.HUNTER_VEGETATION_STATS` (nombre total de palmeres, sectors i sectors visibles) i `window.HUNTER_BUILD_STATS.palms`.
-- Afegides `tests/vegetation-lod.cjs` i comprovacions de regressió a la prova smoke, amb exercicis de LOD, visibilitat, destrucció i consum de generador aleatori.
-
-### Revisió 0.3.43 — correcció de paleta del minimapa (2026-10-08)
-
-- Corregit l'error d'arrencada `this.bandAt is not a function` en prémer la dificultat.
-- `HUNTER_TERRAIN.colorAt(THREE,h)` és ara segura com a callback deslligat perquè no depèn de `this`; el minimapa pot emprar-la amb normalitat.
-- Afegida una prova de regressió per als colors del terreny a diferents altures, invocant `colorAt` sense vincle d'objecte.
-- Es conserven els sectors progressius del terreny i la correcció de buffers de la versió anterior.
-
-### Revisió 0.3.42 — correcció d'arrencada WebGL (2026-10-08)
-
-- Corregit l'error de Three.js `Cannot read properties of undefined (reading 'byteLength')` després de prémer un botó de dificultat.
-- Les malles dels sectors del terreny proporcionen ara els índexs de triangles com a `THREE.BufferAttribute`, no com a `Uint16Array` directament.
-- El carregador dels sistemes del joc afegeix la versió als URL per evitar reutilitzar el fitxer de terreny antic de la memòria cau.
-- Afegides comprovacions dels buffers d'índex a les proves dels sectors inicials, els generats progressivament i els actualitzats per LOD.
-- Es mantenen totes les optimitzacions de la versió 0.3.41.
-
-### Revisió 0.3.41 — optimització d'arrencada i sectors de terreny (2026-10-08)
-
-- Eliminada la captura síncrona WebGL / `toDataURL()` de l'inici de partida; si existeix una imatge anterior desada al navegador es pot continuar mostrant a la portada.
-- El terreny visual ja no es genera en una sola malla de 400×400 subdivisions: es divideix en sectors de prop de 800 m amb tres nivells de detall (12/28/56 subdivisions en qualitat alta, 10/20/40 en baixa).
-- A l'arrencada es generen només els sectors immediats del jugador; la resta i les millores de detall es preparen al llarg de fotogrames amb pressupost d'uns 2 ms (1,2 ms en mode reduït).
-- Afegits faldons a les vores dels sectors per reduir escletxes entre diferents nivells de detall. La simulació, col·lisions, llavors i altures reals continuen amb `hAt()`, independents de la resolució visual.
-- Càlcul de color de terreny sense instanciar colors nous per a cada vèrtex; interpolació directa de paleta RGB.
-- Càlcul del fons marí accelerat amb mostres disperses en aigües profundes i valors exactes al litoral; es manté la relació CPU/GPU de les ones.
-- Eina interna de mesura: `window.HUNTER_BUILD_STATS` amb temps inicials totals, terreny, fons marí i vegetació, i estat dels sectors; es pot activar el registre a consola amb `window.HUNTER_PERF_DEBUG = true` abans de generar el món.
-- Proves noves: `node tests/terrain-stream.cjs`; ampliades `tests/smoke.cjs` i `tests/water.cjs`.
-
-### Revisió 0.3.40 — cascs tancats sense prisma inferior (2026-10-08)
-
-- Eliminat el prisma rectangular negre inferior de la llanxa normal i de la llanxa llançacoets.
-- Tancada la quilla amb les mateixes anelles i vèrtexs del casc facetat: la darrera secció de cada anella s'uneix amb el vèrtex central inferior.
-- Proa, popa, laterals i superfície inferior formen una única malla tancada; la silueta dels models aprovats, el radar i els tubs de coets es mantenen.
-- Aplicada la mateixa correcció als prototips Three.js i actualitzada la prova de regressió per detectar arestes obertes i la caixa antiga.
-
-### Revisió 0.3.39 — proes tancades (2026-10-08)
-
-- Tancades les cares frontals de les proes de les llanxes normal i llançacoets amb cinc triangles orientats cap enfora.
-- Conservada la coberta superior original del casc, sense afegir superfícies duplicades, i actualitzats els models Three.js de prova.
-- Afegida una prova smoke de la geometria de les dues proes.
-
-### Revisió 0.3.38 — explosiu plàstic RGB (2026-10-08)
-
-- Incorporada la proposta 1 del bloc d'explosiu plàstic al joc: cos verd oliva, nou display digital i nou cables superiors vermells, verds i blaus en arcs paral·lels.
-- El mateix model s'utilitza per als objectes recollibles i les càrregues col·locades; també s'actualitzen la icona i la descripció de l'inventari.
-- Quan la càrrega està activa, el display mostra el compte enrere i parpelleja ràpidament en **vermell** (5 vegades per segon); als objectes recollibles resta verd i fix.
-- El retard de 3 segons i la força destructiva dels explosius es mantenen sense canvis.
-
-### Revisió 0.3.37 — munició inicial reduïda (2026-10-08)
-
-- El jugador comença cada partida amb **12 bales** en lloc de 24.
-- Cada paquet de munició (`arma`) afegeix **12 bales** en lloc de 40.
-- Actualitzada la prova smoke perquè verifiqui el nou valor de recàrrega.
-
-### Revisió 0.3.36 — llanxa llançacoets C4 (2026-10-08)
-
-- La `llanxa_coets` adopta el mateix casc facetat de la llanxa normal actual, amb popa tancada i proa neta.
-- Eliminat el radar posterior de l'antic model.
-- Implementat el model C4 seleccionat: llançador endarrerit amb **12 tubs cilíndrics 3×4**, sense bloc massís, tubs més llargs i bastidor posterior reforçat.
-- La llanxa llançacoets passa a la mateixa escala gran de la llanxa normal; radi i hitbox s'actualitzen al nou volum.
-- El rider conserva la seva mida anterior (escala corporal 1.35) i només es reposiciona dins la cabina ampliada. Es mantenen els cinc coets i la mecànica existent.
-
-### Revisió 0.3.35 — llanxa normal ampliada (2026-10-08)
-
-- La llanxa normal augmenta un 50% de mida, amb radi i hitbox coherents.
-- El rider manté la mida anterior i es reposiciona dins la cabina ampliada.
-
-### Revisió 0.3.33 — navegació i separació enemiga (2026-10-08)
-
-Implementat sobre `main` 74ee66e (0.3.32), conservant els canvis recents de models, cases i compounds:
-
-- `src/enemy-navigation.js`: cerca local A* per rodejar obstacles, compartida per soldats, jeeps, tanquetes i tancs. Camins amb marge segons la mida; el moviment final dels vehicles comprova la caixa orientada completa.
-- Comprovació del recorregut i del gir amb passos de 45 cm com a màxim a la vora de la petjada. Eliminat el salt de desencallament que només comprovava la destinació.
-- Separació física soldat–soldat, soldat–vehicle i vehicle–vehicle, inclosos vehicles aparcats i torres. Esquiva local, espera i marxa enrere curta quan no hi ha pas segur. Els moviments no empenyen altres unitats dins de parets.
-- Actualització immediata de les cel·les espacials quan un enemic es mou. La IA refresca l'índex després del moviment dels vehicles del jugador.
-- Comprovació final de les posicions inicials, després de situar els vehicles: cerca determinista d'una posició lliure pròxima si un enemic apareix solapat. El general es manté dins del seu búnquer.
-- Els vehicles limiten el gir i frenen per encarar-se; ja no roten instantàniament per apuntar travessant una paret. Els soldats animen la marxa només quan es desplacen.
-- Cerca incremental: màxim global de 160 nodes expandits per fotograma i dues cerques ateses; màxim de 1.600 nodes per cerca. Resultats i trajectes directes reutilitzats. La comprovació física de cada moviment continua activa.
-
-Validat:
-
-- `node tests/enemy-navigation.cjs`: quatre tipus d'enemic rodejant un edifici; sortida d'un recinte en U; dotze soldats convergint sense superposar-se; vehicles en sentits contraris; vehicle contra soldat aturat; pas estret; paret fina; gir d'un tanc; obertura d'un obstacle; separació inicial; canvi de cel·la espacial.
-- `node tests/enemy-navigation-world.cjs`: mapa de llavor 12345, 59 enemics sense posicions inicials bloquejades i nou segons de simulació de la IA sense moviments que acabin en obstacles o altres unitats.
-- `node tests/smoke.cjs`: regressió general amb els 15 vehicles, generació, destrucció i reinici.
-
-Pendent / límits:
-
-- Revisió visual i jugable en Android real. L'intent de `tests/browser.cjs` d'aquesta entrega ha fallat abans de carregar el joc: Chromium acaba amb SIGSEGV. No es dona per validat el navegador en aquesta revisió.
-- La cerca és local i limitada; davant d'una destinació inaccessible s'espera o es busca una altra ruta, sense travessar obstacles. No és una garantia de trobar qualsevol ruta possible en qualsevol llavor. Els passos estrets per a vehicles s'accepten si la petjada orientada i el gir hi caben.
-- Els temps del banc de proves amb DOM/GPU simulats no són una mesura d'FPS ni de rendiment en Android.
-
-
-Revisió 0.3.27 (2026-10-07): general substituït pel model aprovat, Estat major amb gavardina grana llarga, bigoti del primer model i muscleres clàssiques gruixudes (opció 1 de la segona comparativa). Gorra de plat, ulleres d'aviador, deu medalles, passadors i cordó daurat. Reutilitza la base articulada actual del jugador; muscleres unides als braços i faldons de gavardina units a les cuixes. Manté l'alçada anterior, l'arma, la IA i el paper d'objectiu de missió. `src/general-model.js` concentra la geometria; aprofita les animacions articulades dels enemics. Integrat sobre 0.3.26, conservant els darrers ajustos de braços, vehicles i desbloqueig d'enemics.
-
-Validació 0.3.27: proves de geometria, mida, animacions, color independent, generació del general a l'HQ i victòria en eliminar-lo; smoke general i arrencada WebGL amb perfils d'escriptori/mòbil. Android físic pendent per a aquesta revisió.
-
-
-Revisió 0.3.21 (2026-10-07): soldats normals substituïts per l'opció 3 aprovada, comando vermell amb boina, corretja diagonal i ràdio. Reutilitza `HUNTER_PLAYER_MODEL` i conserva l'alçada del soldat anterior, inclosa la reducció del 10%. Colzes i genolls articulats en caminar, apuntar i morir; genolls flexionats en el sentit anatòmic. Fusell unit a l'avantbraç. El general conserva el seu model distintiu. No es modifica la IA, la vida, les col·lisions ni les regles de combat. Integrat sobre 0.3.20, preservant els canvis de vehicles d'altres xats.
-
-Validació: `tests/enemy-model.cjs` comprova alçada, color, 96 postures, sentit dels genolls, direcció del fusell, mort i aïllament respecte del jugador. `tests/enemy-model-browser.cjs` renderitza el model real amb WebGL. Smoke general i comprovació de navegador en perfils desktop/mobile. Prova en Android físic pendent per a aquesta revisió.
-
-
-Revisió 0.3.9 (2026-10-07): protagonista tàctic aprovat després de les comparatives 3D. Espatlles estretes, genolls i colzes articulats, cabell curt sota una gorra ajustada, visera arrodonida allargada i botes amb turmell, empenya i sola. `src/player-model.js` és la font comuna de geometria del protagonista i dels conductors visibles de bicicleta, moto, moto aquàtica, llanxa, llanxa llançacoets, barca de rems i windsurf. El rig a peu conserva els noms i les armes; el de conducció reutilitza les mateixes peces amb els punts de contacte existents. Es mantenen pedaleig, peus a terra en aturar-se, mans als rems i orientació del windsurf. La disfressa afecta també el conductor i la gorra. Corregit el sentit de flexió dels genolls durant la braça. Els vehicles de cabina que no mostraven conductor continuen igual.
-
-Validació 0.3.9: smoke general; prova específica de model, sis estats d'animació/equipament, disfressa sincronitzada, 168 postures de conductors i sortida de vehicle; comprovació WebGL de protagonista i set conductors; arrencada i shaders en perfils desktop/mobile i qualitat reduïda. Android físic pendent per a aquesta revisió. Les captures de validació són temporals; el codi del model aprovat és al repositori.
-
-Revisió 0.3.8: el botó de cerca de llavors surt del bloc de la llavor i passa al cantó inferior esquerre de la pantalla inicial, mantenint intacta la pantalla de cerca i el seu comportament.
-
-Revisió 0.3.7: porta principal del búnquer de l'HQ amb obertura progressiva de 10 segons acumulats. Només avança quan el jugador és a peu davant de la porta; si se'n va, conserva el progrés i el reprèn en tornar. Visualment es recull cap amunt de manera contínua i deixa de col·lisionar quan és completament oberta.
-
-Revisió 0.3.6: mínim de quatre motos aquàtiques per mapa. Comprovació final contra les caixes de tots els vehicles, inclosos els enemics, amb marge de separació. En cas de conflicte es busca una posició seguint la costa en trams de 100 m; es prova l’altra direcció o un altre punt costaner si no hi ha espai vàlid. Es mantenen dins del límit i sobre l’aigua. La generació no accepta silenciosament un mapa amb menys de quatre motos aquàtiques.
-
-Revisió 0.3.5: barca de rems amb flotació 30 cm més baixa i màscara d’aigua interior. Integrada sobre 0.3.4, conservant ferris, transport de vehicles, granades i selector de qualitat. La prova smoke inclou l’offset, les ombres i l’exclusió de la màscara dels fragments; s’ha reparat també una cometa imbricada i el nom de variable d’una comprovació de la tanqueta.
-
-Revisió 0.3.18: el laboratori Three.js passa a mostrar quatre iteracions derivades del model 2 de l'helicòpter de combat. Totes connecten els patins al fuselatge, escurcen les aletes laterals i reutilitzen les barquilles grans del model 3. Les variants 3 i 4 exploren cabines més angulars inspirades en l'Apache. Encara no s'ha modificat `heli_combat` al joc.
-
-Revisió 0.3.17: el laboratori Three.js passa temporalment a mostrar quatre propostes per a l'helicòpter de combat: Cobra clàssic, combat compacte, gunship i combat modern. Encara no substitueixen `heli_combat`; serveixen per triar la línia visual abans d'integrar-la.
-
-Revisió 0.3.16: s'eliminen les tres barres del frontal de la cabina del nou Huey 3B-4, deixant el vidre frontal més net i obert visualment.
-
-Revisió 0.3.15: la variant **3B-4 amb carenats laterals** passa del laboratori al joc com a model visual de l'helicòpter normal. Manté física, hitbox, controls i comportament, però adopta fuselatge estret arrodonit, cabina frontal tipus Huey, grans obertures laterals, bancs interiors, cua afinada, patins i carenats laterals. El rotor principal s'ajusta a la nova silueta i es conserven els dos rotors animats.
-
-Revisió 0.3.14: iteració específica sobre el model 3B. El comparador mostra quatre variants del detall lateral de la cabina: dos models amb cilindres complets (gran i petit), un model sense aquests volums i una alternativa amb petits carenats arrodonits.
-
-Revisió 0.3.13: el comparador Huey passa a mostrar quatre variants derivades exclusivament del model 3 seleccionat. Totes fan el cos més estret i acosten la cabina frontal al Huey original, amb diferències de proporció i grau de simplificació per poder triar la següent iteració directament al navegador.
-
-Revisió 0.3.12: iteració del model 3 del laboratori Huey. El fuselatge de transport deixa de ser una caixa pura i passa a una secció rectangular amb cantonades arrodonides, panxa lleugerament corba, sostre suavitzat i morro vidrat millor integrat, mantenint portes laterals grans i proporcions de transport.
-
-Revisió 0.3.11: correcció del laboratori Huey: el mòdul de conceptes ara importa Three.js des de la ruta correcta (`../vendor/three-r186.module.mjs`) i la pàgina mostra un error visible si falla la càrrega.
-
-Revisió 0.3.10: laboratori Three.js amb quatre propostes de model Huey per a l'helicòpter normal, comparables dins del mateix motor abans de substituir el model jugable.
-
-La versió del joc es defineix en un únic punt: `src/version.mjs`, mitjançant la constant `GAME_VERSION`. La pantalla inicial llegeix aquesta constant i mostra la versió en un cantó, de manera que la UI i el codi comparteixen la mateixa font de veritat.
-
-### Criteri de numeració
-
-- **Versió base o salt major de desenvolupament:** `0.1`, `0.2`, `0.3`...
-  - S'utilitza quan hi ha un conjunt important de canvis: sistemes nous, canvis substancials de gameplay, reestructuracions rellevants o fites clares del projecte.
-- **Revisió menor:** `0.1.1`, `0.1.2`, `0.1.3`...
-  - S'utilitza per correccions, ajustos petits, poliment, equilibratge o millores puntuals que no justifiquen un salt a `0.2`.
-- Després d'un salt major, el comptador de revisions torna a zero implícitament: per exemple, de `0.1.4` a `0.2`, i després `0.2.1`.
-- Cada vegada que es publiqui un canvi a `main` que vulguem identificar com una revisió o una nova fita, s'ha d'actualitzar `GAME_VERSION`.
-- Aquest document s'ha de mantenir coherent amb la versió publicada.
-
-La versió **0.1** correspon a l'estat del joc en el moment d'introduir aquest sistema de versionat. La versió **0.2** introdueix el ferry i, sobretot, el primer sistema de transport de vehicles sobre una plataforma mòbil. La revisió **0.2.1** evita que la llanxa inicial comparteixi posició amb un ferry: si hi ha solapament, la llanxa es desplaça 100 m paral·lelament a la costa, mantenint-se a l'aigua. La revisió **0.2.2** corregeix l'orientació inicial del ferry perquè la proa apunti cap al mar i el jugador quedi encarat mar endins quan en pren el control. La revisió **0.2.3** distribueix els dos ferris entre costes d'illes diferents de tot el mapa, en lloc de concentrar-los a l'illa inicial. La versió **0.3** incorpora una pantalla integrada de cerca de llavors que prova mapes amb el generador real i ordena els resultats per distància entre la base inicial i el ferry més proper. La revisió **0.3.1** augmenta moderadament la velocitat dels dos vehicles aquàtics principals: la llanxa passa a 35 de velocitat punta i el ferry a 15; el ferry conserva una acceleració baixa per mantenir la sensació de massa. La revisió **0.3.2** separa l'orientació visual dels canons de la trajectòria dels projectils: tanqueta i tanc mantenen el canó recte, mentre la tanqueta dispara 5° cap avall i el tanc redueix la seva caiguda de 20° a 5°. La revisió **0.3.3** evita guardar la munició a l'inventari i afegeix a la portada un commutador de gràfics reduïts que força en ordinadors el mateix perfil visual que Android. La revisió **0.3.4** fa realment transitables les rampes del ferry per als vehicles terrestres: la detecció usa tota la petjada del vehicle, permetent entrar per proa o popa sense topar prematurament amb la hitbox del buc, mentre els laterals continuen sent sòlids.
-
----
-
-## Cerca de llavors
-
-- El menú inicial incorpora un botó **Cerca** al costat del camp de llavor.
-- Obre una pantalla específica sense iniciar la partida.
-- Permet definir:
-  - llavor numèrica inicial;
-  - nombre de llavors consecutives a provar, entre 1 i 100;
-  - distància objectiu al ferry;
-  - mida de mapa, heretada de la selecció del menú principal.
-- Cada candidat es genera amb el mateix `build()` i la mateixa transformació de llavor que utilitza una partida normal.
-- La distància mostrada és la distància real entre la base inicial i el ferry actiu més proper.
-- Els millors resultats s'ordenen en temps real.
-- La cerca és incremental i cancel·lable.
-- **Usa aquesta llavor** torna al menú principal, desactiva la llavor aleatòria i emplena automàticament el camp amb la llavor seleccionada.
-
-## Objectiu
-
-Mantenir l'estètica low-poly i la jugabilitat de *Hunter: Arxipèlag* mentre es milloren progressivament:
-
-- llegibilitat visual;
-- varietat del món procedural;
-- models i animacions;
-- comportament dels vehicles;
-- rendiment en navegador i Android;
-- separació entre presentació, entrada i simulació.
-
-La prioritat és evitar regressions de gameplay mentre es modernitza el projecte.
-
----
-
-## Arquitectura actual
-
-- Branca de producció: `main`.
-- Desplegament: Cloudflare Pages.
-- Domini de producció: `hunter.paradoxa.cat`.
-- No s'ha de reintroduir GitHub Pages.
-- Three.js modern local en ESM: `vendor/three-r186.module.mjs`.
-- Arrencada ESM a `src/bootstrap.mjs`.
-- Ordre compartit de sistemes a `src/runtime-scripts.mjs`.
-- `src/game-core.js` continua concentrant part de l'estat compartit i del bucle principal.
-- Sistemes extrets en fitxers específics: terreny, aigua, vegetació, edificis, vehicles, dinàmica, rider, personatges, combat, IA, minimapa, UI, àudio i generació procedural.
-- Els globals compatibles es mantenen temporalment mentre no es completi una modularització més profunda.
-
-### Fitxers principals
-
-- `src/game-core.js`: estat compartit, bucle principal i integració.
-- `src/world-generation.js`: generació procedural i compounds.
-- `src/combat.js`: projectils, explosions i armes.
-- `src/enemy-ai.js`: percepció, combat i animació enemiga.
-- `src/enemy-navigation.js`: rutes, esquiva i separació física enemiga.
-- `src/terrain.js`: malla i paleta del terreny.
-- `src/waves.js`, `src/water.js`, `src/water-config.js`: onatge i renderitzat d'aigua.
-- `src/vegetation.js`: geometria i instancing de vegetació.
-- `src/buildings.js`: construcció visual d'edificis.
-- `src/vehicles.js`: models de vehicles.
-- `src/vehicle-dynamics.js`: perfils físics i resposta de conducció.
-- `src/rider.js`: postures del jugador en vehicles oberts.
-- `src/characters.js`: jugador i soldats.
-- `src/ui.js`, `src/minimap.js`, `src/joystick.js`: interfície i entrada.
-
----
-
-## Fauna
-
-- Quantitat augmentada un 200% respecte de l'estat anterior:
-  - gavines: 16 → 48;
-  - taurons: 10 → 30.
-- El tauró queda simplificat visualment a una única aleta dorsal low-poly.
-- L'aleta segueix directament la superfície de l'aigua i genera escuma a prop del jugador.
-- Les gavines mantenen la seva òrbita però calculen una altura mínima de seguretat:
-  - 10 m per damunt del terreny;
-  - 8 m per damunt de qualsevol teulada dins la seva trajectòria.
-- L'altura es suavitza quan poden fer-ho, però mai se'ls permet quedar dins del relleu o d'un edifici.
-
----
-
-## Renderitzat i món visual
-
-### Renderer
-- Perfils diferenciats per mòbil i escriptori.
-- El commutador **Gràfics reduïts** de la portada força el perfil `mobile` també en ordinadors: pixel ratio 1.3, ombres desactivades, cel simplificat i aigua amb 240 segments.
-- WebGL 2.
-- Color management modern amb sRGB.
-- ACES Filmic.
-- Ombres adaptatives.
-- Cel, llum solar i atmosfera separats del nucli de simulació.
-- Materials centralitzats per terreny, orgànic, maçoneria, pintura, metall, goma i vidre.
-
-### Aigua
-- Model compartit CPU/GLSL.
-- Física i superfície visual utilitzen el mateix model d'ones.
-- Les embarcacions segueixen l'altura real de la superfície.
-- La mida de la malla s'adapta al mapa actiu.
-- Bounds de culling adaptats al desplaçament màxim de les ones.
-
-**Pendent real:** refinar l'escuma, que encara pot seguir massa visiblement la triangulació, i calibrar-la en GPU mòbil real.
-
-### Terreny
-- Mides disponibles: 4,8 × 4,8 km i 9,6 × 9,6 km.
-- Generació determinista per llavor.
-- Zones de construcció anivellades amb transició suau cap al relleu natural.
-- L'interior de les illes té aproximadament un 24% més de contrast vertical, aplicat progressivament lluny de costa.
-- Afegida una capa de soroll de freqüència mitjana per crear turons i valls més marcats sense embrutar excessivament la conducció.
-- Cada illa té un cim principal desplaçat determinísticament respecte del centre, fins aproximadament un 20% del radi per eix.
-- La franja costanera queda deliberadament poc afectada perquè platges, ports i accessos mantinguin pendents suaus.
-- La paleta continua verda a les cotes altes; ja no passa a gris/blanc.
-- Minimapa i terreny comparteixen la mateixa paleta.
-
----
-
-## Vegetació
-
-### Palmeres
-- Instancing amb variants de capçada.
-- Variació d'escala i tonalitat.
-- Destrucció individual.
-- Els troncs tenen ara una corba segmentada, no són sempre rectes.
-- La desviació màxima del tronc és aproximadament del 25% de l'altura al tram central.
-- L'arrel i la copa tornen a l'eix per mantenir ben encaixada la capçada.
-- La direcció aparent de la corba varia amb la rotació de cada palmera.
-
-### Distribució
-- Cotes baixes: es conserva la probabilitat històrica.
-- Per sota de 4 m: 12%.
-- Cotes mitjanes favorables: 20%.
-- A partir de 28 m: 22%, augmentant progressivament fins aproximadament 34% a les cotes més altes.
-- Les zones altes són, per tant, més denses en palmeres que les baixes.
-
----
-
-## Redisseny de compounds — catàleg i generació (2026-10-08)
-
-Estat: **hangar, avançada i port integrats a la 0.3.48; heliport, polvorí i comunicacions integrats a la 0.3.97; base inicial i HQ integrats a la 0.4.16; recintes civils i control de carretera pendents**. La taula conserva els objectius generals de disseny; els detalls implementats dels tres primers recintes es descriuen a la revisió 0.3.48. Els vehicles són aparcats i utilitzables excepte les patrulles indicades. No tots els objectes opcionals apareixen a cada instància.
-
-| Tipus | Edificis i elements obligatoris | Vehicles | Enemics i objectes |
-|---|---|---|---|
-| Base inicial | Caserna petita, magatzem, infermeria, pati, bandera blava, sortida ampla i camí a la costa. | 1 cotxe, 1 bicicleta; barca o llanxa al punt costaner associat. | Sense enemics. Munició i 1 farmaciola. |
-| HQ enemic | Búnquer amb habitacions i porta progressiva actual; 2 edificis auxiliars, pati de maniobres, filferrada, 4 torres i bandera vermella. | Sense tanc aparcat; 2 tanquetes de patrulla interior i 2 jeeps de patrulla exterior. Sense helicòpters. | General i 6–8 soldats entre entrada, pati i interior. Munició, farmaciola i disfressa. |
-| Avançada | Caserna, caseta de guàrdia, torre, sacs, barreres, caixes, llum i bandera. Filferrada amb dos accessos. | 1 moto o jeep. | 3–4 soldats. Munició; granades o farmaciola opcionals. |
-| Garatge/hangar | Hangar gran, taller annex, aparcament exterior, dipòsits, bidons i caixes. Espai de sortida i gir davant de la boca. | 1 tanc, tanqueta o camió a dins; 1 cotxe o moto fora. | 2–3 soldats. Munició i farmaciola opcional. |
-| Heliport | Plataforma marcada, control, magatzem, combustible, llums i defenses fora de l'àrea dels rotors. | 1 helicòpter normal; variant fortificada amb helicòpter de combat. | 3–5 soldats; torre només a la variant fortificada. Munició i farmaciola. |
-| Polvorí | 2 magatzems separats, guàrdia, filferrada, càrrega, caixes de munició i barreres. | 1 camió amb sortida practicable. | 3–4 soldats. Munició, granades, explosius, bazooka i franctirador garantits al joc. |
-| Port militar | Magatzem, oficina, pati de càrrega, 2 molls transitables, pilones, caixes, bidons, torre i bandera. Accés terrestre ample. | 2–3 embarcacions entre llanxa, moto aquàtica i hovercraft. La llanxa llançacoets única s'assigna a un port. | 4–6 soldats. Munició, granades i mapa opcional. |
-| Embarcador civil — nou com a recinte | Caseta o cobert, moll petit, caixes i pilones, sense fortificació. | 1–2 entre barca de rems, windsurf i moto aquàtica. | Normalment buit; ocasionalment 1–2 soldats. Farmaciola opcional. |
-| Terminal de ferri — nou | Platja accessible, esplanada, caseta, marques d'embarcament i maniobra. Una rampa del ferri accessible des de terra. | 1 ferri; cotxe o camió opcional a terra. | 0–3 soldats. Munició o farmaciola opcionals. |
-| Comunicacions — nou | Ràdio, antena alta, generador, caseta, filferrada i sacs. Preferentment elevació accessible. | 1 jeep o moto. | 3–4 soldats. Mapes de HQ, helicòpters i tancs garantits; disfressa opcional. |
-| Control de carretera — nou | Caseta, barrera, sacs i refugi lateral. Només sobre camins que connectin llocs reals. | 1 jeep fora del pas. | 2–3 soldats. Munició; granades ocasionals. |
-| Petit assentament — nou | 3–5 cases, plaça/pati, cobert, tanques baixes i camins fins a les portes. Variant costanera amb embarcador. | 1–2 entre bicicleta, moto i cotxe. | 0–3 soldats. Farmaciola, disfressa o mapa distribuïts pels interiors. |
-
-### Regles comunes acordades com a proposta
-
-1. Reservar tot el recinte abans de construir: edificis, molls, rampes, accessos, aparcaments i maniobra. Calcular les separacions des dels límits reservats.
-2. Generar primer camins i superfícies transitables, després edificis i finalment vehicles, enemics i decoració. Cap caixa, palmera o bidó dins d'un pas reservat.
-3. Preparar tres distribucions per tipus, amb variacions, gir i mirall. Ports i terminals orientats segons la costa; controls segons el camí.
-4. Encarar les portes als accessos. Cada vehicle ha de poder sortir de l'aparcament i del compound amb la seva mida i radi de gir.
-5. Validar les patrulles sobre el recinte acabat, amb punts de guàrdia separats i trajectes que evitin edificis, vehicles i filferrada.
-6. Objectes segons funció: armes al polvorí, informació a comunicacions, transport a garatges i ports. Bidons i generadors decoratius fins que se'ls assigni una mecànica.
-7. Una base, un HQ i dues terminals amb els dos ferris actuals. Garantir accés a munició, transport naval i helicòpters; completar segons superfície útil i distàncies.
-
-### Primera entrega de disseny — 0.3.34
-
-Preview a `compounds-preview.html`, enllaçat també des de `proves.html`. Models reals de Three.js local, edificis amb obertures i interiors, vehicles i comandos reutilitzats del joc a la mateixa escala.
-
-- **Hangar:** reserva 100 × 110 m; hangar 36 × 38 m, taller lateral, tanc interior i cotxe aparcat. Boca de 30 m, recorregut reservat de 18 m i pati de maniobra de 30 × 24 m. Combustible i caixes a la zona de servei. Tres soldats.
-- **Avançada:** reserva 90 × 90 m; caserna, guàrdia i torre, pati central, entrada principal de 12 m i accés lateral de 6 m. Moto i quatre soldats. Filferrada amb dues obertures (actualitzada a 0.3.48) i patrulla al voltant dels edificis.
-- **Port militar:** reserva 110 × 120 m incloent aigua; magatzem, oficina, torre, àrea de càrrega de 18 × 12 m, accés de 14 m, passeig i dos molls de 6 m. Tres places navals separades, llanxa, moto aquàtica i llanxa llançacoets de la variant especial; cinc soldats.
-
-El visor permet seleccionar recinte, orbitar arrossegant, zoom amb pinça/roda/botons, vista en planta, interiors sense sostres, etiquetes, rotació automàtica i guies de circulació/maniobra/patrulla. Només es renderitza el recinte seleccionat i es reutilitza la imatge mentre no canvia la càmera. Les franges de colors són guies de disseny, no superfícies del joc.
-
-Fitxers nous:
-- `src/compound-layouts.mjs`: especificacions en metres, edificis, vehicles, objectes, rutes i reserves.
-- `src/compound-concepts.mjs`: construcció dels tres models.
-- `src/compound-preview.mjs`: controls i renderitzat del visor.
-
-Validació de la preview:
-- `node tests/compound-preview.cjs`: geometria amb coordenades finites, recompte de vehicles, separació vehicle/edifici i recorreguts de patrulla amb marge d'1 m respecte dels edificis. Aproximadament 15.000 / 31.000 / 21.500 triangles per recinte amb els models i la filferrada actuals.
-- `node tests/compound-preview-browser.cjs`: les tres escenes carreguen sense errors JavaScript/consola en Chromium/WebGL 2 amb SwiftShader, perfils d'escriptori i mòbil. Selecció, planta, interiors, circulació, etiquetes i zoom comprovats; captures inspeccionades i enquadrament adaptat a pantalles estretes.
-- El visor i la integració procedural estan validats amb les proves de 0.3.48; rendiment i gestos en Android físic pendents.
-
-**Integració completada a 0.3.48:** aquests tres layouts substitueixen els recintes anteriors de les partides. Continuen pendents les altres dues distribucions de cada tipus i els nous tipus del catàleg.
-
-
----
-
-## Edificis, compounds i HQ
-
-### Compounds
-Tipus consolidats:
-- avançada enemiga;
-- garatge/hangar;
-- port;
-- polvorí;
-- heliport.
-
-Característiques:
-- orientació completa de 0–360°;
-- possibilitat de mirall;
-- patis i accessos transitables;
-- camins i superfícies locals;
-- vegetació exclosa de les zones funcionals;
-- patrulles i punts defensius contextuals.
-
-### Hangars
-- Gran coberta arquejada low-poly.
-- Sense parets laterals independents.
-- La volta baixa pràcticament fins al terra i forma els laterals.
-- Es mantenen el tancament posterior i els muntants de la boca frontal.
-- Les col·lisions laterals antigues també s'han eliminat.
-- El sostre arquejat és una única peça destructible amb 90 punts de vida, equivalent a una paret normal.
-- Els impactes es detecten contra els segments reals de la volta, però tots comparteixen la mateixa vida.
-- En destruir-se, la coberta sencera s'inclina, cau i genera pols/debris abans de desaparèixer.
-- Barrils, caixes, dipòsits i bandera del recinte es reparteixen fora de la casa annexa i de la boca de l'hangar.
-
-### HQ
-- Búnquer central fortificat.
-- La porta principal necessita **10 segons acumulats** amb el jugador a peu situat davant seu per obrir-se del tot.
-- Si el jugador marxa, l'obertura queda congelada al percentatge assolit i continua des del mateix punt quan torna.
-- La porta es recull visualment cap amunt amb una animació contínua i només deixa lliure la col·lisió quan arriba al 100%.
-- Perímetre ampliat de filferrada destructible.
-- Entrada desalineada respecte de la porta del búnquer.
-- Torres als cantons del perímetre.
-- Patrulles interiors i exteriors.
-- Tanquetes enemigues i defenses fixes contextuals.
-
----
-
-## Personatge i animació
-
-- Els soldats enemics normals i el general utilitzen escala visual 0,8 respecte de les seves geometries de referència (revisió 0.3.58); la IA i la física continuen intactes.
-- El canvi és només visual: no modifica radi de combat, detecció ni estadístiques de la IA.
-- Model articulat amb espatlles, colzes, malucs i genolls.
-- Animació de caminar amb flexió anatòmica dels genolls.
-- Natació amb articulacions.
-- Respiració subtil en repòs.
-- Gorra verda, ulleres, coll i cabell curt.
-- Cabell actual construït amb closca cilíndrica curta i secció posterior tancada.
-- Pistola, ganivet i bazooka amb postures específiques.
-- Sortida d'un vehicle en marxa amb una sola volta de 360° pivotada visualment a la cintura.
-- El frame final de la volta queda explícitament dret.
-
----
-
-## Vehicles
-
-### Laboratori de models d'helicòpter
-> **Recordatori:** el projecte disposa de la pàgina `heli-concepts.html` per previsualitzar i comparar models d'helicòpter fets amb Three.js abans d'integrar-los al joc. Cal reutilitzar aquesta web en futures iteracions de models.
-
-- S'ha afegit `heli-concepts.html`, un comparador visual renderitzat amb el mateix Three.js del projecte.
-- Inclou quatre propostes reals per al futur helicòpter normal, totes construïdes amb geometria low-poly reutilitzable: **Huey clàssic**, **Huey curt**, **Huey transport** i **Huey low-poly**.
-- Els models del laboratori viuen a `src/heli-concepts.mjs`. La variant 3B-4 seleccionada ja s'ha integrat com a `heli` a `src/vehicles.js`; el comparador es conserva per a iteracions visuals.
-
-
-
-Vehicles conduïbles actuals:
-- llanxa;
-- moto aquàtica;
-- hovercraft;
-- ferry;
-- barca de rems;
-- windsurf;
-- llanxa llançacoets;
-- cotxe;
-- moto;
-- bicicleta;
-- camió militar;
-- tanqueta;
-- tanc;
-- helicòpter;
-- helicòpter de combat.
-
-### Llanxa
-- Velocitat punta actual: **35**; acceleració: **35**.
-- Manté la mateixa maniobrabilitat, deriva i velocitat de marxa enrere.
-
-### Ferry
-- Nou vehicle aquàtic gran i lent.
-- Velocitat punta actual: **15**; acceleració: **10**. Continua sent clarament més lent i pesant que la llanxa.
-- Resistència estructural: **8 impactes**.
-- Apareixen **2 ferris garantits per mapa**, situats a prop de platges.
-- Model amb gran coberta oberta, cabina lateral i rampes frontal i posterior.
-- La coberta funciona com una superfície mòbil transitable:
-  - cotxes, motos, bicicletes, camions, tanquetes i tancs poden entrar i sortir per les rampes;
-  - la detecció de la rampa usa la petjada completa del vehicle, no només el seu centre; el frontal pot començar a pujar abans de topar amb la hitbox del buc, mentre els laterals continuen sent sòlids;
-  - els helicòpters poden aterrar-hi i quedar transportats;
-  - quan estan aterrat sobre la coberta, els helicòpters segueixen també el moviment vertical, el capcineig i el balanceig del ferry sobre les ones;
-  - els vehicles transportats conserven la seva posició i orientació relatives quan el ferry avança o gira;
-  - els helicòpters es desacoblen de la coberta quan tornen a enlairar-se.
-- El buc continua tenint col·lisió pròpia, però la zona útil de rampes/coberta no bloqueja els vehicles que hi accedeixen.
-
-### Física
-- Perfils diferenciats terra/aigua/aire.
-- Inèrcia, grip, deriva, massa i resposta de gir específics per família.
-- Col·lisions OBB entre vehicles.
-- Impactes amb jugador, soldats, roques, palmeres i filferrada.
-- Tombar una palmera resta sempre exactament 1 impacte estructural al vehicle.
-- Atropellar un soldat no resta impactes estructurals al vehicle; es mantenen el dany al soldat i la pèrdua de velocitat.
-- Una envestida prou ràpida pot trencar filferrada i parets normals:
-  - filferrada: llindar de velocitat 8 i cost fix de 2 impactes estructurals;
-  - paret: llindar de velocitat 14 i cost fix de 3 impactes estructurals.
-- Excepció del tanc: no rep mai dany estructural per col·lisions físiques i trenca parets/filferrada sempre que les toca, sense llindar mínim de velocitat.
-- Aquesta immunitat és només per col·lisions; armes i explosions continuen podent danyar el tanc.
-- Les portes no es consideren parets envestibles per aquesta regla.
-- Blindatge, vida estructural, fum de dany, destrucció i debris.
-- Els vehicles conserven inèrcia després que el jugador en baixi.
-
-### Tanc
-- Escala actual: 2.25.
-- Erugues arrodonides amb baules animades.
-- Animació diferencial de les erugues durant girs i pivot.
-- Canó principal visualment recte; només la trajectòria del projectil baixa **5°**.
-
-### Tanqueta
-- Sis rodes, sense erugues.
-- Canó/metralladora visualment recte; només les bales mantenen la trajectòria inclinada 5° cap avall.
-- Escala actual: 1.8125.
-- Metralladora ràpida.
-
-### Camió
-- Escala actual: 1.8125.
-- Model militar de sis rodes.
-
-### Helicòpters
-- L'helicòpter normal i el de combat disparen a **30° cap avall**.
-- Els míssils de l'helicòpter de combat també surten a 45° cap avall.
-- L'helicòpter de combat és més ràpid i maniobrable que el normal.
-- Controls tàctils d'altitud compartits: ⬆️ / ⬇️.
-- L'helicòpter de combat té un botó 🚀 separat, situat a l'esquerra del botó 🎯.
-- La pulsació llarga del botó de tret ja no llança míssils.
-- Teclat: `G` continua sent l'arma secundària compatible.
-
-### Windsurf
-- Rider dempeus amb cames pràcticament rectes.
-- Mans al travesser.
-- Tors i cap girats cap a la vela.
-- Braços i cames mantenen la postura específica de navegació.
-
-### Barca de rems
-Redissenyada el 2026-10-06 segons la referència de fusta aportada:
-- buc obert amb proa apuntada, popa ampla, borda, juntes de taulons i dos bancs;
-- un rem articulat a cada costat, conservant el cicle de remada del joc;
-- jugador assegut al banc de proa, d’esquena a la proa i mirant cap a popa/càmera habitual;
-- peus dirigits cap a popa; braços calculats a partir dels punts d’agafada reals dels rems, també amb balanceig i gir del vehicle;
-- peces fixes fusionades per material: 1.932 triangles i 15 crides de dibuix per barca buida en la previsualització aïllada, sense ombres;
-- escala, caixa de col·lisió, controls i resposta de conducció conservats;
-- ajust del 2026-10-06: flotació 30 cm més baixa (offset de +0,20 a −0,10 m respecte de la superfície local);
-- màscara stencil de 14 triangles a l’obertura, solidària amb el buc: sòlids primer, màscara invisible després i mar al final. No escriu color ni profunditat, no projecta ombres i no genera fragments en destruir-se;
-- renderer amb stencil activat; només el material del mar consulta la màscara. Una crida de dibuix addicional per barca visible, sense textures ni un segon renderitzat de l’escena.
-
-Validació: model buit i ocupat inspeccionat des de proa i popa; entrada i moviment dins del joc en Chromium/WebGL 2 amb perfil mòbil, sense errors de consola. Smoke complet superat sobre la base amb les optimitzacions i orografia noves; afegides 24 postures que comproven el contacte mà-rem, orientació i peus. Reparades dues cometes imbricades de les proves de tanc i una comprovació literal de palmeres que encara usava el nom antic de la funció de dany. Aquesta revisió del model encara no s’ha provat en un Android físic.
-
----
-
-## Combat i destrucció
-
-- Pistola, ganivet, bazooka, granades, explosius plantats, canons, metralladores, coets i míssils.
-- Cada objecte de granades recollit afegeix 5 granades a l'inventari.
-- Les granades s'equipen des de l'inventari i es llencen amb Dispar; bazooka i granades són equipaments exclusius entre si.
-- El jugador sosté una granada a la mà dreta amb el braç lleugerament enrere i separat; en llançar, el braç va cap endavant i amunt i la granada s'allibera aproximadament als 0,23 s.
-- La granada segueix una trajectòria parabòlica amb gravetat i explota en tocar la superfície, una paret o un sostre, o en acabar el fusible.
-- Potència de granada: radi 16 i dany base 100, equivalent a l'explosiu plantat anterior.
-- Els explosius plantats s'han reforçat a 3×: radi 48 i dany base 300.
-- Les granades apareixen al pool general, amb prioritat especial als polvorins (garantides, amb possibilitat d'una segona caixa) i a les avançades (80% de probabilitat).
-- Bazooka d'un sol ús.
-- Filferrada, vehicles, torres i diversos elements del món són destructibles.
-- Vehicles destruïts generen fragments del model.
-- Soldats morts conserven una animació de caiguda abans de desaparèixer.
-- Torres destruïdes es desmunten en peces.
-- Els marcadors d'intel·ligència deixen de referenciar vehicles destruïts.
-
----
-
-## UI i controls
-
-- Joystick virtual analògic en mòbil.
-- WASD/fletxes continuen disponibles.
-- HUD simplificat.
-- Inventari en graella.
-- Les caixes de munició sumen directament **16 bales** al comptador de munició i no creen cap entrada a l'inventari.
-- Switch **Gràfics reduïts** a la portada; en Android el perfil reduït continua activant-se automàticament.
-- Botons contextuals per vehicles i helicòpters.
-- Minimapa i carta de navegació modulars.
-- Selector de llavor i mida de mapa a la pantalla inicial.
-- La portada reutilitza una captura real de l'inici de partida desada localment; no genera un món extra.
-
-**Pendent real:** calibratge final de mida/sensibilitat i ergonomia en Android físic.
-
----
-
-## Optimització — roadmap completat
-
-Les cinc millores prioritzades el 2026-10-05 estan implementades.
-
-### 1. ✅ Índex espacial d'illes
-- Graella de 512 m.
-- Cada illa s'indexa fins a 2× el seu radi d'influència útil.
-- `rawHAt()` només examina candidates locals.
-- Es conserva l'equivalència matemàtica amb l'escaneig complet.
-
-### 2. ✅ Índexs espacials de vehicles, enemics, parets i edificis
-- Graella dinàmica de 64 m per vehicles.
-- Índex local d'enemics.
-- Graella lazy de 64 m per `Wl`.
-- Graella lazy de 96 m per edificis.
-- Col·lisions, moviment enemic, línia de visió i impactes utilitzen candidats locals.
-
-### 3. ✅ Percepció enemiga desacoblada
-- Percepció a 10 Hz.
-- Fases repartides entre enemics.
-- `sight()` cachejat a `u.canSee`.
-- `chooseDefense()` cachejat a `u.defenseTarget`.
-- Moviment, animació i dispars continuen a freqüència de frame.
-
-### 4. ✅ Broad-phase i trajectes segmentats dels projectils
-- Eliminat el micro-substepping global de 0,008 s.
-- Parets/teulades: segment–AABB.
-- Enemics/vehicles/jugador: segment–esfera.
-- Terreny i arbres mantenen mostreig curt al llarg del segment.
-- Explosions també utilitzen índexs espacials.
-
-### 5. ✅ LOD lògic
-- Vehicles no pilotats:
-  - < 500 m: visual cada frame;
-  - 500–1.200 m: cada 0,1 s;
-  - > 1.200 m: cada 0,45 s.
-- Edificis: visibilitat/materials cada 0,2 s.
-- Ítems: animació només dins de 500 m.
-- Fauna:
-  - < 650 m: cada frame;
-  - fins a 1.400 m: cada 0,12 s;
-  - més lluny: cada 0,4 s.
-- Diverses comprovacions de proximitat utilitzen distància al quadrat en lloc de `Math.hypot()`.
-- IA, projectils i col·lisions crítiques no es congelen per distància.
-
----
-
-## Validació automatitzada
-
-### Model del protagonista i conductors
-`node tests/player-model.cjs` comprova model compartit, 2.636 triangles del cos, genolls en caminar/nedar, equipament, disfressa i postures dels set conductors. `tests/player-model-browser.cjs` genera captures WebGL del model i cada vehicle obert; usa les mateixes variables `PLAYWRIGHT_MODULE` i `BROWSER_EXECUTABLE_PATH` que la prova de navegador.
-
-### Smoke
-`tests/smoke.cjs` cobreix, entre altres:
-- arrencada diferida;
-- generació del món;
-- vehicles;
-- articulacions;
-- postura de rem i contacte mà-rem durant 24 fases;
-- erugues;
-- OBB;
-- destrucció;
-- flotació;
-- pausa/reinici;
-- vegetació;
-- índex espacial d'illes;
-- índexs de vehicles/parets/edificis;
-- percepció enemiga cachejada;
-- col·lisions segmentades de projectils;
-- LOD lògic.
-
-### Generació de motos aquàtiques
-`tests/jet-skis.cjs`: costa recta controlada amb els helpers OBB reals; desplaçament de 100 m, destinació ocupada, mínim de quatre, separació de ferris/llanxes/vehicles enemics, límits de les dues mides i passada final repetible. `tests/smoke.cjs` comprova també recompte i absència de solapaments en un món complet.
-
-### Aigua
-`tests/water.cjs` comprova:
-- coherència CPU/GLSL;
-- triangulació;
-- mides de mapa;
-- perfils de segments;
-- bounds;
-- resize;
-- disposal.
-
-### Màscara de la barca
-`tests/rowboat-water.cjs` comprova al navegador WebGL l’interior amb aigua oculta, amb màscara i sense màscara, en tres fases d’onatge i orientacions. L’interior emmascarat coincideix amb el terra sec; l’aigua exterior coincideix amb la versió sense màscara. Comprova també l’offset de flotació. Execució igual que `tests/browser.cjs` (Playwright, `PLAYWRIGHT_MODULE` i `BROWSER_EXECUTABLE_PATH` opcionals).
-Validat en Chromium amb SwiftShader i perfil mòbil. Les lectures de píxels de la prova poden produir un avís de sincronització GPU; no formen part del bucle del joc. Pendent provar aquest ajust en Android físic.
-
-### Navegador
-`tests/browser.cjs` cobreix:
-- arrencada real;
-- perfils desktop/mobile;
-- compilació de shaders;
-- vehicles;
-- sRGB;
-- controls contextuals;
-- pausa/represa;
-- captures de base i costa.
-
----
-
-L’usuari confirma el 2026-10-05 que la versió modernitzada funciona en Android; això no substitueix una mesura prolongada de rendiment.
-
-## Pendents reals
-
-### Prioritat alta
-1. Prova prolongada de 20–30 minuts en Android físic.
-2. Mesurar FPS, frame time, memòria i temperatura en dispositiu real.
-3. Revisar ergonomia del joystick i dels controls d'helicòpter.
-4. Comprovar visualment el LOD i les noves optimitzacions en mapa gran.
-
-### Prioritat mitjana
-1. Refinar escuma i costa de l'aigua.
-2. Calibrar transparències, ombres i exposició en GPU mòbil real.
-3. Continuar reduint globals compartits de `game-core.js` amb dependències explícites.
-4. Mesurar abans/després dels hot paths per quantificar el guany de les optimitzacions ja implementades.
-
-### Regla de compatibilitat
-No reescriure simultàniament simulació i renderer d'un mateix sistema. Quan es modularitzi una part del nucli, conservar temporalment els contractes que utilitza el gameplay fins que la nova ruta estigui validada.
-
-
-
-
-
-
+# Hunter: Arxipèlag — estat del projecte i pendents
+
+Revisió documental: **12 d’octubre de 2026**. Codi contrastat: **0.4.18**, commit `e94c72b9bd1fb366528cd5d882555a267aafdf71` de `main`.
+
+Aquest document substitueix la cronologia acumulada de propostes i revisions intermèdies. Descriu el que existeix al codi i conserva els objectius encara oberts. L’historial detallat es pot recuperar amb Git. **Implementat no vol dir validat en totes les llavors ni en tots els dispositius.**
+
+## Resum de la revisió
+
+| Àmbit | Estat actual |
+|---|---|
+| Modernització Three.js i separació de sistemes | Motor local modern i sistemes extrets; encara hi ha estat global compartit |
+| Complexos, fases 1, 2 i 3 | Els vuit tipus aprovats estan integrats al generador |
+| Ampliació de complexos | Quatre tipus proposats encara sense implementar; falta varietat de distribucions |
+| Models aprovats, armes i vehicles | Integrats, inclosos rifle, paracaigudes i ferry |
+| Optimitzacions de terreny, palmeres i enemics | Implementades; no s’ha de donar el rendiment per definitivament resolt |
+| Òptica del franctirador | Detall complet en el corredor de la mira i retorn al LOD normal en sortir |
+| Proves | Proves específiques i WebGL disponibles; la prova general té una expectativa de terreny desfasada |
+| Android | Funcionament confirmat per l’usuari; falta un benchmark prolongat i reproduïble de la versió actual |
+
+## Complexos: propostes antigues i resultat actual
+
+Les fonts compartides pel joc i el visor són `src/compound-layouts.mjs`, `src/compound-phase2-layouts.mjs` i `src/compound-phase3-layouts.mjs`. La integració és a `src/compound-generation.js` i `src/world-generation.js`.
+
+| Proposta | Implementació actual | Què falta |
+|---|---|---|
+| Hangar i taller, fase 1 | Hangar arquejat, taller, tanc a dins, cotxe, tres soldats, munició i farmaciola. Boca de 30 m i ruta de sortida. Eliminat el mur rectangular posterior; es conserva el tancament semicircular. | Altres distribucions i alternatives de vehicles |
+| Avançada, fase 1 | Caserna, guàrdia, torre, moto, quatre soldats, munició i granades. Filferrada amb dues obertures. | Altres distribucions |
+| Port militar, fase 1 | Magatzem, oficina, torre, dos molls i tres places navals. Cinc soldats, munició, granades i mapa. Llanxa llançacoets única; en ports addicionals se substitueix per una llanxa. | Altres distribucions; més cobertura de costes difícils |
+| Heliport, fase 2 | Plataforma de 40 m, reserva de rotors, control, magatzem, quatre soldats i paracaigudes garantit. El segon heliport rep l’helicòpter de combat. | Variant fortificada amb torre i distribució pròpia |
+| Polvorí, fase 2 | Dos magatzems, guàrdia, camió i quatre soldats. Munició, granades, explosius, **bazooka i rifle de franctirador garantits a cada polvorí**. | Altres distribucions |
+| Comunicacions, fase 2 | Ràdio, servei, cotxe, quatre soldats, filferrada i generador decoratiu. Antena de 56 m i parabòlica de 18 m de diàmetre al terrat. **Els tres mapes garantits**; disfressa opcional. | Altres distribucions; la preferència per un emplaçament elevat no està implementada com a criteri de selecció |
+| Base inicial, fase 3 | Caserna, magatzem, infermeria, teulades i bandera blaves; cotxe i bicicleta reservats, jugador al pati. Es conserva la llanxa costanera. | El camí continu fins al punt costaner associat encara no es construeix explícitament |
+| HQ enemic, fase 3 | Búnquer de 40 × 34 × 10 m amb quatre parets inclinades cap endins, portal trapezoidal, particions i general. Dos edificis auxiliars, vuit soldats, quatre torres, filferrada amb entrada desalineada. Dues tanquetes en circuits nord/sud separats i dos jeeps a l’exterior. **Sense tanc aparcat ni helicòpter assignat a l’HQ**. | Més proves de recorregut i combat en partides completes |
+| Embarcador civil | Hi ha molls independents i vehicles costaners, però no aquest tipus de complex | Caseta/cobert, moll, servei i distribució propis |
+| Terminal de ferri | Existeixen dos ferris i la seva física de càrrega, però no terminals | Platja i rampa accessibles, esplanada, caseta, marques i espai de maniobra |
+| Control de carretera | No hi ha layout ni generació d’aquest tipus | Primer calen camins que connectin destinacions reals; després caseta, barrera, defenses i vehicle fora del pas |
+| Petit assentament | No hi ha layout ni generació d’aquest tipus | 3–5 cases, pati, cobert i accessos; possible variant costanera |
+
+Les dues tanquetes de l’HQ conserven circuits independents per evitar el bloqueig mutu. La porta del búnquer s’obre amb **10 segons acumulats** davant seu a peu; conserva el progrés quan el jugador s’allunya i allibera el pas en acabar.
+
+### Regles comunes: què ja existeix i què no
+
+- Hi ha reserves de terreny, separació entre recintes, exclusió de vegetació, portes orientades als accessos, camins locals i dades de patrulla.
+- Hi ha **una distribució principal per tipus**, no les tres distribucions previstes. Els girs i miralls no compten com a layouts nous.
+- Els recintes comuns utilitzen girs de 90° i mirall; els ports s’orienten segons la costa. Base i HQ mantenen orientació fixa. L’afirmació antiga de gir lliure 0–360° no descriu aquest generador.
+- Les comprovacions de rutes i separació són a les proves. No hi ha una validació exhaustiva de qualsevol maniobra i llavor durant cada partida.
+- La cerca descarta emplaçaments inadequats i amplia intents; les proves de llavors concretes no garanteixen que apareguin tots els recintes en qualsevol mapa.
+- Caixes, bidons i generadors continuen principalment decoratius. No s’ha acordat ni implementat una mecànica general de combustible o sabotatge.
+
+## Funcionalitats implementades
+
+### Món, exploració i interfície
+
+- Arxipèlags de dues mides, costa amb sorra, relleu, límit del mapa, onatge, fons marí i natació de braça.
+- Palmeres variades i corbades; gavines que eviten relleu i edificis; taurons representats per una aleta. La quantitat de fauna es va augmentar de 16 a 48 gavines i de 10 a 30 taurons.
+- Portada amb imatge fixa, sense generar un món de fons. La partida es genera en començar.
+- Llavor configurable i cercador incremental/cancel·lable per **vehicles, objectes i complexos**, amb resultats per proximitat a la base. Ja no es limita al ferry.
+- Inventari, minimapa, carta de navegació, coordenades i intel·ligència de HQ, helicòpters i tancs. Els mapes s’activen en recollir-los.
+- Controls tàctils i teclat, desplaçament lateral Y/U, E per vehicles, H/J per helicòpters i T per la mira. L’ajuda del joc és a `src/ui.js`; resum al [README](../README.md).
+- Menú **Rendiment** separat, accessible des de portada i pausa, amb perfils i interruptors de palmeres, aigua i ombres. Ja no cal fer aquesta agrupació.
+
+### Models i animació
+
+| Proposta aprovada | Estat i font |
+|---|---|
+| Cap D del jugador, coll curt i riders | Integrat; `src/player-model.js`, `src/rider.js`, `src/player-head-concepts.mjs` |
+| Soldat enemic i general redissenyats | Integrats; `src/characters.js` i `src/general-model.js`; escala visual 0,8 |
+| Pistola amb presa a dues mans en disparar | Integrada al rig del protagonista a `src/characters.js`; no és una tasca pendent encara que la pàgina de prova mantingui un rètol antic |
+| Ganivet, postura 4B i atac 3B | Integrats a `src/characters.js`; comparatives conservades |
+| Llanxa normal i radar | Integrats a `src/vehicles.js` |
+| Llanxa llançacoets C4, bateria de 12 tubs | Integrada a `src/vehicles.js` |
+| Huey i helicòpter de combat compacte | Integrats a `src/vehicles.js`; els comentaris actuals identifiquen Huey 3B-4 i Combat Compacte B3 |
+| Explosiu plàstic amb temporitzador i cables RGB | Integrat; `src/explosive-visuals.js`, compartit per objecte recollible i explosiu plantat |
+| Barca de rems i windsurf | Buc obert, màscara d’aigua, rems i postura del rider; postura lateral del windsurf corregida |
+
+Les antigues variants no seleccionades no són feina pendent. Els mòduls de conceptes es conserven com a material reutilitzable; no formen part per això del catàleg jugable.
+
+### Vehicles
+
+Hi ha **15 tipus conduïbles**, definits a `src/vehicle-dynamics.js`; models a `src/vehicles.js`, conductors a `src/rider.js` i integració física a `src/game-core.js`.
+
+- Ferry amb rampes i coberta mòbil per vehicles terrestres i helicòpters; dos emplaçaments costaners al mapa. La separació d’embarcacions té tractament específic i les motos aquàtiques tenen una correcció seguint la costa.
+- Mínim de quatre motos aquàtiques i una única llanxa llançacoets com a objectius explícits del generador.
+- Des de 0.4.18, els helicòpters tenen col·lisió amb cobertes planes i arquejades, suport en aterrar i bloqueig del rotor en ascendir des de sota. La col·lisió desapareix amb la coberta destruïda.
+- Helicòpter normal i de combat amb controls verticals; el de combat disposa de míssils limitats i botó propi.
+- Erugues animades, conductors articulats, pedaleig, remada i sortida de vehicles en marxa amb una sola voltereta.
+- La configuració efectiva actual és **llanxa `maxF: 35` i ferry `maxF: 15`**. Les xifres intercanviades de peticions o resums antics no s’han de presentar com el codi actual.
+- El tanc no perd vida per col·lisions i pot trencar obstacles a baixa velocitat. Tanc i tanqueta disparen des del canó; les regles de trajectòria i autoapuntat són a `src/combat.js`.
+
+### Combat, equipament i IA
+
+- Munició inicial i recollides normals de **16 bales**; no ocupa una entrada de l’inventari.
+- Granades: cinc per recollida, càrrega mantenint Dispar, trajectòria/punt de caiguda visibles i animació de llançament. Explosius plantats amb radi 48 i dany base 300, triple dels valors antics.
+- Rifle de franctirador: sis cartutxos per recollida, mira x8, tir des de la boca real del canó amb convergència cap al punt de la mira (corregit a 0.4.17) i controls que mouen el punt de vista sense caminar.
+- Paracaigudes automàtic en saltar d’un helicòpter en vol si es porta a l’inventari, descens frenat i bloqueig de reentrada durant la caiguda.
+- Soldats amb navegació, separació, recuperació de bloquejos i persecució pels accessos dels edificis ordinaris. Les portes bloquejades i el búnquer tenen tractament propi; no és una garantia de trobar qualsevol ruta possible.
+- Canons, metralladores, coets, míssils, disfressa, destrucció de vehicles i torres, filferrada i parets destructibles.
+- Caiguda de cobertes per pèrdua de suport als edificis ordinaris; hangars amb coberta arquejada destructible com a conjunt. El búnquer té una excepció al col·lapse per suport.
+
+## Optimització: implementada, amb validació pendent
+
+| Sistema | Canvi existent | Font principal |
+|---|---|---|
+| Terreny | Generació progressiva per sectors, quatre LOD segons perfil i histèresi; terreny distant més simple | `src/terrain.js` |
+| Contacte amb el terreny | Suport basat en el triangle visible i correcció del mostreig en baixar pendents | `src/game-core.js`, `groundAt()` |
+| Palmeres | Instancing per sectors, tres nivells visuals i exclusió de zones funcionals | `src/vegetation.js` |
+| Enemics | Agrupació de peces, representacions simplificades segons distància i retorn al model articulat | `src/enemy-lod.js` |
+| Òptica x8 | Màxim detall en el corredor de la mira per terreny, vegetació i enemics; restauració en sortir | `src/sniper-focus.js`, integracions als sistemes visuals |
+| Geometria estàtica | Agrupació de filferrades, finestres, sostres i decoració per reduir crides de dibuix | `src/buildings.js`, `src/world-generation.js`, `src/game-core.js` |
+| Visibilitat i ombres | Límits de distància, selecció de projectors d’ombra i ocultació d’edificis pel relleu | `src/game-core.js` |
+| Simulació | Índexs espacials, percepció enemiga a baixa freqüència, pressupostos de navegació i filtratge de projectils | `src/enemy-navigation.js`, `src/enemy-ai.js`, `src/combat.js` |
+| Qualitat i diagnòstic | Perfils escriptori, mòbil i Mínims; mètriques i interruptors al menú Rendiment | `src/visual-config.js`, `src/performance.js`, `src/ui.js` |
+
+La resolució adaptativa que provocava fotogrames foscos es va substituir per una política estable; no s’ha de recuperar com a proposta pendent. El perfil Mínims ja redueix distància i simplifica l’aigua. Les proves amb DOM simulat o SwiftShader no mesuren els FPS del telèfon de l’usuari.
+
+## Pendents reals i ordre recomanat
+
+### 1. Estabilització i proves
+
+**Incidència confirmada a CI (0.4.18):** `tests/seed-replay.cjs` supera el límit de 120.000 ms del context VM a la línia 21. Cal perfilar la generació i la prova abans de decidir si cal optimitzar-la o ajustar el límit. No s’ha observat aquí una comparació de mapes desiguals: la prova no arriba a completar-se. El catàleg i la integració del cercador sí que passen.
+
+1. Actualitzar l’expectativa antiga de `tests/smoke.cjs`: espera `lodLevels[0] === 6`, però el perfil d’escriptori actual defineix `[4, 8, 16, 56]`. Després executar la suite completa per descobrir si hi ha més comprovacions desfasades. No modificar el terreny per satisfer una expectativa obsoleta.
+2. Ampliar la cobertura de generació de complexos, accessos, ports i rutes d’IA a més llavors i a les dues mides de mapa. Les proves actuals no són una garantia universal.
+3. Comprovar en partida completa pujades i baixades de pendents, entrada als edificis, destrucció de sostres, persecució enemiga i càrrega/aterratge al ferry. Hi ha correccions implementades; queda la regressió conjunta.
+4. Fer una sessió reproduïble de 20–30 minuts en Android: mateixa llavor, qualitat i recorregut; registrar FPS, temps de fotograma, dibuixos, memòria i temperatura. Incloure mirada terra endins i zoom del rifle.
+5. Revisar ergonomia dels botons de dispar/mira, joystick, desplaçament lateral i controls d’helicòpter en dispositiu físic.
+
+### 2. Completar propostes de món encara obertes
+
+- Dissenyar embarcador civil, terminal de ferri, control de carretera i petit assentament. Encara no estan aprovats com a layouts detallats ni integrats.
+- Preparar les altres dues distribucions per tipus previstes al catàleg; preservar reserves, accessos, objectes garantits i patrulles.
+- Completar la connexió base–costa i els camins entre destinacions que necessita el control de carretera.
+- Dissenyar la variant fortificada d’heliport amb torre; disposar d’un helicòpter de combat no equival a tenir aquesta variant.
+- Valorar un criteri d’emplaçament elevat però accessible per a comunicacions.
+
+### 3. Poliment i manteniment
+
+- Refinar l’escuma costanera i calibrar aigua, transparències, llums i exposició en GPU mòbil real.
+- Continuar extraient estat global de `src/game-core.js`, amb contractes compatibles i sense reescriure alhora simulació i renderer d’un sistema.
+- Unificar els rètols dels laboratoris: `compounds-preview.html` encara té un enllaç «Fase 3 · propostes» i `dispar-proves.html` diu «cap canvi al joc», malgrat que els dos treballs estan integrats. La revisió documental no canvia aquestes pàgines.
+- Decidir una llicència pròpia abans de presentar el projecte com a distribuïble sota una llicència determinada. La MIT del motor no cobreix automàticament el joc.
+
+## Decisions superades o tancades
+
+| Text o proposta antiga | Decisió vigent |
+|---|---|
+| «Integrar les fases 1/2/3» | Completat: 0.3.48, 0.3.97 i 0.4.16 respectivament |
+| Tanc aparcat a l’HQ | Retirat expressament; no restaurar-lo |
+| Parets verticals o contraforts del vell búnquer | Substituïts pel búnquer amb quatre parets inclinades |
+| Mur rectangular posterior del hangar | Eliminat; tancament semicircular conservat |
+| Munició inicial/paquets de 12 | Substituïda per 16 |
+| Polvorí amb bazooka o rifle opcionals | Tots dos garantits |
+| Comunicacions amb un sol mapa | Els tres mapes garantits |
+| Cercador limitat a ferris | Substituït pel cercador per categories |
+| Toggles de rendiment dispersos a la portada | Agrupats en un menú propi |
+| «Optimització completada» sense matisos | Canvis implementats, mesura i estabilització contínues |
+| `heli-concepts.html` o `previews.html` com a pàgines presents | Aquests HTML no són al repositori actual; no mantenir-hi enllaços |
+| Versions descartades de models | Referència històrica, no obligacions pendents |
+
+## Arquitectura i fonts de veritat
+
+- `src/version.mjs`: versió visible del joc. Aquesta neteja només documental no incrementa la versió jugable.
+- `src/bootstrap.mjs` i `src/runtime-scripts.mjs`: arrencada i ordre de sistemes; Three.js local ESM a `vendor/three-r186.module.mjs`.
+- `src/world-generation.js`, `src/compound-generation.js`, `src/compound-*-layouts.mjs`: món i complexos. `src/compound-concepts.mjs` construeix el visor; el visor no substitueix la prova del generador.
+- `src/vehicles.js`, `src/vehicle-dynamics.js`, `src/rider.js`: models, catàleg físic i conductors.
+- `src/player-model.js`, `src/characters.js`, `src/general-model.js`: personatges i animació.
+- `src/combat.js`, `src/enemy-ai.js`, `src/enemy-navigation.js`: combat i IA.
+- `src/terrain.js`, `src/water.js`, `src/waves.js`, `src/vegetation.js`, `src/buildings.js`, `src/fauna.js`: entorn.
+- `src/ui.js`, `src/minimap.js`, `src/joystick.js`, `src/seed-search.js`: interfície i cerca.
+- `main`: branca oficial; Cloudflare Pages i `hunter.paradoxa.cat` per al joc. No reintroduir GitHub Pages.
+
+Els canvis funcionals publicats han de revisar `GAME_VERSION` i aquest document. Les llavors s’han de comprovar en la mateixa versió i mida de mapa; canviar el generador pot canviar-ne el resultat entre versions.
+
+## Validació i límits de l’auditoria
+
+Aquesta revisió contrasta fonts, layouts, controls, pàgines existents, proves i workflows. No torna a executar totes les suites ni certifica el comportament de totes les funcionalitats.
+
+- A la integració 0.4.16 van passar les proves de geometria de les vuit maquetes i de generació amb llavors **12345 i 67**, incloent porta acumulativa, armes/mapes garantits, separació i patrulles.
+- La base i l’HQ es van comprovar en Chromium/WebGL 2 amb SwiftShader, en perfils escriptori i mòbil, sense errors de consola. Això no és una prova en Android físic.
+- `tests/smoke.cjs` es va aturar a la comprovació desfasada del LOD. La resta de la suite posterior a aquest punt no queda validada per aquella execució.
+- Els workflows consultats de la 0.4.16 confirmen proves específiques de terreny, palmeres, ombres, filferrada, decoració, menú de rendiment, òptica del rifle, aigua, granades, impactes i aterratge. A la 0.4.18 també passen els workflows de LOD enemic, boca/trajectòria del rifle i col·lisió d’helicòpters amb cobertes. El workflow de llavors falla per timeout de `seed-replay.cjs`, després de superar catàleg i integració del cercador. Logs consultats el 12 d’octubre; no s’atribueix aquest timeout a una causa de rendiment concreta sense perfilar-lo.
+
+| Àmbit | Proves de referència |
+|---|---|
+| Complexos | `tests/compound-preview.cjs`, `tests/compound-generation.cjs`, `tests/compound-game-browser.cjs` |
+| Terreny i qualitat | `tests/terrain-stream.cjs`, `tests/graphics-quality.cjs`, `tests/performance.cjs` |
+| LOD i visibilitat | `tests/vegetation-lod.cjs`, `tests/enemy-lod.cjs`, `tests/sniper-lod.cjs`, `tests/distance-performance-menu.cjs` |
+| Agrupació de malles | `tests/fence-batching.cjs`, `tests/window-batching.cjs`, `tests/static-decor-batching.cjs`, `tests/shadow-optimization.cjs` |
+| Llavors | `tests/seed-search.cjs`, `tests/seed-search-integration.cjs`, `tests/seed-replay.cjs` |
+| Navegació | `tests/enemy-navigation.cjs`, `tests/enemy-navigation-world.cjs` |
+| Vehicles i aigua | `tests/helicopter-landing.cjs`, `tests/helicopter-roof.cjs`, `tests/jet-skis.cjs`, `tests/rowboat-water.cjs`, `tests/water.cjs` |
+| Personatges i combat visual | `tests/player-model.cjs`, `tests/enemy-model.cjs`, `tests/general-model.cjs`, `tests/grenade-charge-pose.cjs`, `tests/bullet-impact-fx.cjs`, `tests/sniper-muzzle.cjs` |
+| Arrencada general | `tests/smoke.cjs` (pendent d’actualitzar), `tests/browser.cjs` |
+
+## Neteja documental aplicada
+
+- Reescrit el README amb controls, 15 vehicles, vuit complexos, laboratoris reals i límits de les proves.
+- Eliminada d’aquest document la cronologia repetida de revisions intermèdies, els plans ja executats, les comprovacions antigues presentades com a actuals i les xifres contradictòries.
+- Conservades les decisions vigents i les propostes encara obertes, amb fonts per reprendre-les.
+- Conservat `vendor/README.md`: és necessari per a la procedència i reproducció del motor. El SHA-256 del bundle s’ha comprovat i coincideix.
+- No s’eliminen codi, models de comparació ni llicències. Només hi ha tres fitxers Markdown al projecte i tots tres tenen una funció vigent; la informació sobrant s’ha eliminat dins dels documents.

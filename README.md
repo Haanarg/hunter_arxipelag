@@ -1,43 +1,74 @@
-# Húnter: Arxipèlag
+# Hunter: Arxipèlag
 
-Joc 3D per al navegador inspirat en Hunter (Amiga), amb arxipèlags generats a cada partida. Comença a la teva base, busca equipament i elimina el general al quarter general enemic.
+Joc 3D per al navegador inspirat en *Hunter* (Amiga). Comença a la teva base, explora un arxipèlag procedural, aconsegueix equipament i elimina el general de l’HQ enemic.
 
-## Jugar
+[Jugar](https://hunter.paradoxa.cat/) · [Estat del projecte i pendents](docs/VISUAL_MODERNIZATION.md)
 
-Serveix el projecte per HTTP i obre’l en un navegador amb WebGL 2. La branca principal (`main`) carrega Three.js 0.186.1 (ESM) des de `vendor/` i els sistemes locals de `src/`. Els colors de jugador/enemics i fauna estan centralitzats i els models de personatge tenen una lectura visual més marcada, mantenint l’estètica low-poly. Conserva tota la carpeta: `index.html` ja no és autònom.
+## Executar en local
 
-Pots servir aquesta carpeta amb `python3 -m http.server 8000` i obrir http://localhost:8000.
+Cal un navegador amb WebGL 2 i servir **tota la carpeta** per HTTP; `index.html` no és un fitxer autònom.
+
+```sh
+python3 -m http.server 8000
+```
+
+Obre http://localhost:8000. Three.js 0.186.1 es carrega des de `vendor/`, sense CDN ni compilació necessària. La versió del joc té una única font: `src/version.mjs`.
 
 ## Controls
 
-La interfície principal es manté minimalista: joystick, Dispar i Acció. Farmacioles, explosius, disfressa i mapa es gestionen des d'un inventari en graella.
+| Control | Acció |
+|---|---|
+| WASD / fletxes | Avançar, frenar i girar |
+| Y / U | Desplaçament lateral a peu, en hovercraft i helicòpters |
+| E / Acció | Entrar o sortir del vehicle; obrir l’inventari si no n’hi ha cap a prop |
+| F / Dispar | Disparar; amb granades, mantenir per carregar i deixar anar per llançar |
+| T / Mira | Òptica x8 del rifle de franctirador |
+| H / J | Pujar / baixar l’helicòpter |
+| G | Míssil de l’helicòpter de combat; altrament, col·locar un explosiu |
+| I o R | Inventari |
+| M | Mapa |
+| C / L | Disfressa / anotar coordenades |
+| Esc o P | Pausa / reprendre |
+| Arrossegar / roda | Orientar la vista / zoom de càmera |
 
+Amb la mira activa, els controls de moviment orienten la mira i el personatge queda quiet. En mòbil hi ha joystick, desplaçament lateral i botons contextuals. Els mapes recollits s’activen automàticament. Els ajustos gràfics i interruptors de diagnòstic són al menú **Rendiment**, accessible des de la portada i la pausa.
 
-- WASD o fletxes: moviment i gir.
-- E: entrar o sortir d’un vehicle.
-- F: disparar; G: col·locar explosius.
-- C: disfressa; L: anotar coordenades; M: mapa.
-- U/J: pujar o baixar l’helicòpter.
-- Esc/P o Ⅱ: pausa. El reinici és al menú de pausa.
-- Roda del ratolí: zoom. Controls tàctils disponibles.
+## Contingut implementat
 
-## Contingut
+- Mapes de 4,8 × 4,8 km o 9,6 × 9,6 km, llavor configurable i cercador per vehicles, objectes o complexos.
+- **15 vehicles conduïbles:** cotxe, moto, bicicleta, camió, tanqueta, tanc, helicòpter, helicòpter de combat, llanxa, llanxa llançacoets, moto aquàtica, hovercraft, ferry, barca de rems i windsurf.
+- **8 tipus de complexos:** base, HQ, hangar, avançada, port, heliport, polvorí i comunicacions; les tres fases de renovació estan integrades.
+- Edificis explorables i destructibles, filferrada, molls, patrulles, persecució enemiga pels accessos dels edificis i general com a objectiu de missió.
+- Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, disfressa, farmacioles, mapes i paracaigudes.
+- Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
-Mapa seleccionable de 4,8 × 4,8 km o 9,6 × 9,6 km amb llavor configurable, catorze tipus de vehicles, camió militar, compounds funcionals, heliports protegits (avançades, garatges amb hangars, ports i polvorins), edificis explorables, camins i molls, patrulles i defensa contextual, HQ fortificat, objectes, destrucció, platges amb escuma, fons marí profund i natació de braça.
+## Desenvolupament i comprovacions
 
-## Desenvolupament
+`src/bootstrap.mjs` carrega el motor i `src/runtime-scripts.mjs` fixa l’ordre dels sistemes. `src/game-core.js` conserva l’estat compartit; generació, combat, IA, models i renderitzat tenen mòduls propis. El detall de l’arquitectura, les decisions i els pendents es manté en un únic [document d’estat](docs/VISUAL_MODERNIZATION.md).
 
-La versió actual separa renderitzat, aigua, terreny, vehicles, controls, vegetació, edificis, personatges, paleta visual i fauna en mòduls locals. L’HTML és ara la portada i el carregador. El nucli és a `src/game-core.js`; generació, combat, IA i àudio tenen arxius propis. Conserva l’avís de llicència de Three.js quan el distribueixis.
+Proves específiques, sense navegador:
 
-Executa `node tests/smoke.cjs` per comprovar arrencada, els 14 vehicles i regressions bàsiques sense GPU, i `node tests/water.cjs`, `node tests/terrain-stream.cjs` i `node tests/performance.cjs` i `node tests/graphics-quality.cjs` i `node tests/vegetation-lod.cjs`, `node tests/seed-search.cjs` i `node tests/seed-search-integration.cjs` i `node tests/minimap.cjs` i `node tests/player-head-concepts.cjs` per verificar la coherència de l’onatge i els perfils de malla. La migració també s’ha comprovat amb Chromium i WebGL 2 (SwiftShader), en perfils d’escriptori i mòbil. Rendiment i ergonomia en Android físic pendents. Per repetir la prova real, instal·la Playwright i Chromium i executa `node tests/browser.cjs`. Pots indicar un navegador existent amb `BROWSER_EXECUTABLE_PATH` i un paquet Playwright extern amb `PLAYWRIGHT_MODULE`. Les captures es guarden al directori temporal.
+```sh
+node tests/compound-preview.cjs
+node tests/compound-generation.cjs
+node tests/terrain-stream.cjs
+node tests/graphics-quality.cjs
+node tests/seed-search.cjs
+```
 
-El seguiment i les tasques pendents són a [docs/VISUAL_MODERNIZATION.md](docs/VISUAL_MODERNIZATION.md). `main` és la base oficial de desenvolupament. No hi ha desplegament configurat al repositori; no s’ha d’activar GitHub Pages. El desplegament previst és mitjançant Cloudflare Pages a `hunter.paradoxa.cat`.
+`tests/smoke.cjs` és la prova general, però **actualment s’atura en una expectativa antiga del LOD del terreny**; no s’ha de presentar com una suite completament verda. A més, la prova de reproducció de llavors acaba per timeout a CI. Vegeu l’apartat de validació del document d’estat.
 
-## Dependència
+Per a WebGL, instal·la Playwright i Chromium i executa `node tests/browser.cjs` o `node tests/compound-game-browser.cjs`. Es poden indicar `PLAYWRIGHT_MODULE` i `BROWSER_EXECUTABLE_PATH`; les captures es guarden al directori temporal. L’emulació mòbil no substitueix les mesures en Android físic.
 
-Three.js 0.186.1, distribuït sota llicència MIT. La llicència completa és a `vendor/THREE-LICENSE.txt`; procedència i reproducció a `vendor/README.md`. Aquest projecte no té encara una llicència pròpia de distribució.
+Laboratoris conservats per a iteracions visuals:
 
+- [Models, caps i ganivet](proves.html).
+- [Dispar a dues mans](dispar-proves.html).
+- [Explosius](explosius-proves.html).
+- [Complexos, fases 1–3](compounds-preview.html).
 
-Els vehicles disposen de blindatge i vida estructural. La versió actual inclou també barca de rems, windsurf, tanqueta blindada, helicòpter de combat amb míssils limitats i llanxa llançacoets.
+## Publicació i llicències
 
+`main` és la branca oficial. El domini del joc és https://hunter.paradoxa.cat/, amb desplegament a Cloudflare Pages; no s’ha de reintroduir GitHub Pages. Els workflows del repositori fan comprovacions i tasques auxiliars.
 
+Three.js es distribueix sota MIT: [llicència](vendor/THREE-LICENSE.txt) i [procedència i reproducció](vendor/README.md). El projecte no té encara una llicència pròpia de distribució.
