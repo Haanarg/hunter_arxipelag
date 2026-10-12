@@ -25,7 +25,7 @@ jobs:
         run: node tests/movement-effects.cjs
       - name: Aigua i costes
         run: node tests/water.cjs
-      - name: Barca de rems
-        run: node tests/rowboat-water.cjs
+      - name: Aigua i interruptor sense aigua
+        run: node tests/water-toggle.cjs
       - name: Perfils grafics
         run: node tests/graphics-quality.cjs
