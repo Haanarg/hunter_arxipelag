@@ -484,7 +484,10 @@ window.HUNTER_VEHICLES=Object.freeze({
       // La coordenada Y de l'origen no és l'altura dels patins.
       // Les dues barres inferiors estan centrades a y=.48 i tenen radi .075.
       // Guardam el contacte inferior JA escalat per a la física d'aterratge.
-      if(t==='heli'||t==='heli_combat')g.userData.skidContactHeight=(.48-.075)*VS[t];
+      if(t==='heli'||t==='heli_combat'){
+        g.userData.skidContactHeight=(.48-.075)*VS[t];
+        g.userData.rotorContactHeight=((t==='heli_combat'?3.22:3.82)+.05)*VS[t];
+      }
       g.traverse(o=>{if(o.isMesh&&!o.userData.waterMask){o.castShadow=shadows;o.receiveShadow=shadows}});
       g.scale.setScalar(VS[t]);return g;
     };

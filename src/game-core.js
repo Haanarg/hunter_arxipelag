@@ -1312,6 +1312,82 @@ function handleVehicleImpacts(v,dt){
   if(t.p&&t.alive){killPalm(t);collisionDamageVehicle(v,Math.min(18,5+speed*.55),1);if(v.destroyed)return;v.v*=.9;v.bump=.18;v.envCd=.28;msg='Has tombat una palmera.';msgT=1;return}
   if(t.rock){collisionDamageVehicle(v,Math.min(14,4+speed*.45),1);vehicleImpactFx(t.x,Math.max(0,hAt(t.x,t.z))+.8,t.z);if(v.destroyed)return;v.v*=.8;v.bump=.22;v.hd+=rn(-.045,.045);v.envCd=.32;msg='Impacte amb roca!';msgT=1}
 }
+// Hitboxes físics de les cobertes. Calculats a partir de la mateixa
+// geometria dels sostres, sense afegir malles al renderitzador.
+function solidRoofAt(b,x,z){
+  if(!b||b.rhp<=0||b.rb)return null;
+  const rx=x-b.x,rz=z-b.z;
+  if(!b.hangar){
+    const sx=b.roof?.scale?.x||1,sz=b.roof?.scale?.z||1;
+    if(Math.abs(rx)>(b.w+1.35)*sx/2||Math.abs(rz)>(b.d+1.35)*sz/2)return null;
+    // Coberta rectangular: gruix 1.15, centre a h+.62.
+    return {bottom:b.fy+b.h+.045,top:b.fy+b.h+1.195,building:b};
+  }
+  const slabs=b.roof?.userData?.hitSegments;
+  if(!slabs?.length)return null;
+  let bottom=Infinity,top=-Infinity;
+  for(const s of slabs){
+    if(Math.abs(rz)>s.depth/2)continue;
+    const angle=s.a-Math.PI/2,c=Math.cos(angle),sn=Math.sin(angle),
+          halfChord=s.chord/2,thickness=.12,points=[];
+    for(const [lx,ly] of [[-halfChord,-thickness],[halfChord,-thickness],
+      [halfChord,thickness],[-halfChord,thickness]])
+      points.push({x:s.x+lx*c-ly*sn,y:s.y+lx*sn+ly*c});
+    let low=Infinity,high=-Infinity;
+    for(let i=0;i<4;i++){
+      const a=points[i],d=points[(i+1)%4];
+      if(Math.abs(a.x-d.x)<1e-9){
+        if(Math.abs(rx-a.x)<1e-6){low=Math.min(low,a.y,d.y);high=Math.max(high,a.y,d.y)}
+      }else if(rx>=Math.min(a.x,d.x)-1e-6&&rx<=Math.max(a.x,d.x)+1e-6){
+        const y=a.y+(d.y-a.y)*(rx-a.x)/(d.x-a.x);
+        low=Math.min(low,y);high=Math.max(high,y);
+      }
+    }
+    if(low!==Infinity){bottom=Math.min(bottom,low+b.fy);top=Math.max(top,high+b.fy)}
+  }
+  return top===-Infinity?null:{bottom,top,building:b};
+}
+function roofNearXZ(b,x,z,r=0){
+  if(!b||b.rhp<=0||b.rb)return null;
+  const hw=b.hangar?b.w/2+.1:(b.w+1.35)*(b.roof?.scale?.x||1)/2,
+        hd=b.hangar?(b.d+1.15)/2:(b.d+1.35)*(b.roof?.scale?.z||1)/2,
+        xx=Math.max(b.x-hw,Math.min(b.x+hw,x)),
+        zz=Math.max(b.z-hd,Math.min(b.z+hd,z));
+  if((x-xx)**2+(z-zz)**2>r*r)return null;
+  const safeX=b.hangar?Math.max(b.x-hw+.23,Math.min(b.x+hw-.23,xx)):xx;
+  return solidRoofAt(b,safeX,zz);
+}
+function helicopterRoofCollision(v,x,z,alt){
+  const scale=VS[v.t]||1,skid=v.o.userData.skidContactHeight||0,
+        rotor=v.o.userData.rotorContactHeight||((v.t==='heli_combat'?3.3:3.9)*scale),
+        bodyTop=alt+(v.t==='heli_combat'?3.0:3.45)*scale,
+        bodyBottom=alt+skid,rotorY=alt+rotor,
+        bodyRadius=(v.t==='heli_combat'?1.45:1.65)*scale,
+        rotorRadius=(v.t==='heli_combat'?6.75:7.4)*scale;
+  for(const b of buildingCandidates(x,z,rotorRadius+2)){
+    const hull=roofNearXZ(b,x,z,bodyRadius);
+    if(hull&&bodyBottom<hull.top+.08&&bodyTop>hull.bottom-.08)return hull;
+    const blades=roofNearXZ(b,x,z,rotorRadius);
+    if(blades&&rotorY>=blades.bottom-.11&&rotorY<=blades.top+.11)return blades;
+  }
+  return null;
+}
+function helicopterRoofAltitude(v,x,z,fromAlt,toAlt){
+  const skid=v.o.userData.skidContactHeight||0,
+        rotor=v.o.userData.rotorContactHeight||((v.t==='heli_combat'?3.3:3.9)*(VS[v.t]||1)),
+        radius=(v.t==='heli_combat'?1.45:1.65)*(VS[v.t]||1);
+  for(const b of buildingCandidates(x,z,radius+2)){
+    const roof=roofNearXZ(b,x,z,radius);
+    if(!roof)continue;
+    // Descens des de sobre: patins sobre la coberta.
+    if(toAlt<fromAlt&&fromAlt+skid>=roof.top-.12&&toAlt+skid<roof.top+.12)
+      toAlt=Math.max(toAlt,roof.top-skid+.1);
+    // Ascens des de l'interior: el rotor no travessa la volta.
+    else if(toAlt>fromAlt&&fromAlt+rotor<=roof.bottom+.12&&toAlt+rotor>roof.bottom-.12)
+      toAlt=Math.min(toAlt,roof.bottom-rotor-.12);
+  }
+  return toAlt;
+}
 function stepV(v,f,tr,ud,dt,strafe=0){
 const c=VT[v.t],a=c.m==='a',water=c.m==='w'||c.m==='wl',land=c.m==='l',radius=vehicleRadius(v.t),input=window.HUNTER_VEHICLE_DYNAMICS.inputs(v,f,tr,dt);f=input.forward;tr=input.turn;
 // Strafe sense girar: només hovercraft i els dos helicòpters.
@@ -1349,8 +1425,19 @@ const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),sx=Math.cos(v.hd),sz=-Math.sin(v.hd)
 const totalSideV=sideV+v.strafeV,
       nx=v.x+(fx*v.v+sx*totalSideV)*dt,nz=v.z+(fz*v.v+sz*totalSideV)*dt,raw=hAt(nx,nz),h=land?groundAt(nx,nz):raw,g=Math.max(0,h),
       deckCarrier=(land||a)?ferryForVehicle(v,nx,nz,true):null;let ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;
-if(c.m==='w')ok=ok&&raw<-1.2;if(c.m==='l')ok=ok&&(!!deckCarrier||h>-1.2);if(ok&&a&&!deckCarrier&&v.alt-g<8&&treeHit(nx,nz,radius))ok=false;
-if((!a||v.alt-g<16)&&!deckCarrier){for(const w of wallCandidates(nx,nz,radius))if(!w.open&&w.playerBlock!==false&&!(w.towerLegOwner&&a&&v.alt>w.y1+2)&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){
+if(c.m==='w')ok=ok&&raw<-1.2;if(c.m==='l')ok=ok&&(!!deckCarrier||h>-1.2);
+if(ok&&a&&!deckCarrier){
+  // Contacte del fuselatge i del rotor amb la vora del sostre.
+  // Només bloquejam si entra en un volum nou: un vehicle ja sota un
+  // hangar pot sortir-ne per la porta.
+  const roofHit=helicopterRoofCollision(v,nx,nz,v.alt);
+  if(roofHit&&!helicopterRoofCollision(v,v.x,v.z,v.alt))ok=false;
+}
+if(ok&&a&&!deckCarrier&&v.alt-g<8&&treeHit(nx,nz,radius))ok=false;
+if((!a||v.alt-g<16)&&!deckCarrier){for(const w of wallCandidates(nx,nz,radius))if(!w.open&&w.playerBlock!==false&&
+  !(a&&(v.alt+(v.o.userData.skidContactHeight||0)>w.y1+.15||
+    v.alt+(v.o.userData.rotorContactHeight||7)<w.y0-.15))&&
+  !(w.towerLegOwner&&a&&v.alt>w.y1+2)&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){
   if(w.rammable&&land&&v.envCd<=0){const speed=Math.abs(v.v),barbed=!!w.barbed,breakSpeed=barbed?8:14,tank=v.t==='tanc';if(tank||speed>breakSpeed){dmgW(w,w.hp);collisionDamageVehicle(v,0,barbed?2:3);vehicleImpactFx(w.cx,Math.max(0,hAt(w.cx,w.cz))+1.1,w.cz);if(v.destroyed)return false;v.v*=tank?.9:(barbed?.72:.55);v.bump=barbed?.14:.2;v.envCd=.28;if(!Wl.includes(w)){msg=barbed?'Has trencat la filferrada!':'Has travessat una paret!';msgT=1;continue}}}
   ok=false;break
 }}
@@ -1366,7 +1453,12 @@ if(a){
   const g2=Math.max(0,hAt(v.x,v.z)),targetVz=ud*(c.climb||24);
   v.verticalV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.verticalV||0,targetVz,c.liftResponse||2.5,dt);
   if(Math.abs(ud)<.01)v.verticalV*=Math.exp(-1.5*dt);
+  const previousAlt=v.alt;
   v.alt=Math.max(helicopterLandedAltitude(v,g2),Math.min(150,v.alt+v.verticalV*dt));
+  if(!deckCarrier){
+    const corrected=helicopterRoofAltitude(v,v.x,v.z,previousAlt,v.alt);
+    if(corrected!==v.alt){v.alt=corrected;v.verticalV=0}
+  }
   const f2=ferryForVehicle(v,v.x,v.z,false);
   if(f2){
     const q=ferryLocal(f2,v.x,v.z),deckY=ferryLocalSurfaceY(f2,q.z);
