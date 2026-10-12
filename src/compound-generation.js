@@ -59,7 +59,11 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
       if(spec.id==='barracks')for(const xx of[-5,5])for(const zz of[-6,0]){bx(b.o,2.5,.65,4,0x4c5b43,xx,.6,zz,'paint');bx(b.o,2.2,.25,3.5,0x939978,xx,1.05,zz,'paint')}
       if(spec.id==='clinic'){for(const xx of[-6,6]){bx(b.o,2.8,.7,5,0x64796c,xx,.8,-2,'paint');bx(b.o,2.6,.25,4.8,0xe4e9d9,xx,1.27,-2,'paint')}bx(b.roof,4,.06,1.1,0xf3efe3,0,spec.h+1.23,0,'paint');bx(b.roof,1.1,.06,4,0xf3efe3,0,spec.h+1.24,0,'paint');}
     }
-    if(layout.satellite?.buildingId===spec.id){const assembly=window.HUNTER_COMPOUND_STRUCTURES().satellite(layout.satellite.radius);assembly.position.y=spec.h+1.2;b.roof.add(assembly);}
+    if(layout.satellite?.buildingId===spec.id){
+      const assembly=window.HUNTER_COMPOUND_STRUCTURES().satellite(layout.satellite.radius);
+      assembly.position.y=spec.h+1.2;b.roof.add(assembly);
+      window.HUNTER_AIR_OBSTACLES.registerSatellite(world,assembly,b,layout.satellite.radius);
+    }
     // Rotate both the visual shell and every associated physical record.
     b.o.rotation.y=-angle;
     const point=(wx,wz)=>{const p=vector(wx-x,wz-z);return[x+p[0],z+p[1]]};
@@ -73,7 +77,11 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
   }
   if(layout.antenna){const a=layout.antenna,[x,z]=tr(a.x,a.z),g=window.HUNTER_COMPOUND_STRUCTURES().antenna(a);g.position.set(x,height+.2,z);g.rotation.y=-angle;world.add(g);record.antenna=g;
     // The solid plinth blocks movement and is destructible with the complete tower.
-    Wl.push({x0:x-8,x1:x+8,z0:z-8,z1:z+8,y0:height,y1:height+1.3,hp:150,m:g.children[0],parts:g.children.slice(),door:false,open:false,rammable:true,cx:x,cz:z});
+    const footing={x0:x-8,x1:x+8,z0:z-8,z1:z+8,y0:height,y1:height+1.3,
+      hp:150,m:g.children[0],parts:g.children.slice(),door:false,open:false,
+      rammable:true,cx:x,cz:z};
+    Wl.push(footing);
+    window.HUNTER_AIR_OBSTACLES.registerAntenna(world,g,a,footing);
   }
   if(layout.helipad){const p=layout.helipad,[x,z]=tr(p.x,p.z),g=new THREE.Group();g.position.set(x,height+.04,z);g.rotation.y=-angle;world.add(g);
     bx(g,p.size,.08,p.size,0x66706e,0,0,0,'masonry');const ring=new THREE.Mesh(new THREE.RingGeometry(p.size*.39,p.size*.405,48),M(0xf3e5b1,'paint'));ring.rotation.x=-Math.PI/2;ring.position.y=.05;g.add(ring);

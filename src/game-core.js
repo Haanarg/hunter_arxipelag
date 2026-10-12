@@ -1373,6 +1373,21 @@ function helicopterRoofAltitude(v,x,z,fromAlt,toAlt){
   }
   return toAlt;
 }
+// Les antenes i les parabòliques són obstacles físics de l'aire:
+// el cos o el rotor poden xocar de front, lateralment o en ascens.
+function crashHelicopterStructure(v,contact){
+  const wasPiloted=cv===v;
+  v.x=contact.x;v.z=contact.z;v.alt=contact.alt;
+  place(v,elapsed,0,0);
+  vehicleImpactFx(contact.x,contact.y,contact.z);
+  damageVehicle(v,65,Math.max(1,v.life??VT[v.t].life));
+  if(wasPiloted){
+    msg=contact.kind==='antenna'?'Has xocat contra l’antena!':
+      'Has xocat contra la parabòlica!';
+    msgT=3;
+  }
+  return false;
+}
 function stepV(v,f,tr,ud,dt,strafe=0){
 const c=VT[v.t],a=c.m==='a',water=c.m==='w'||c.m==='wl',land=c.m==='l',radius=vehicleRadius(v.t),input=window.HUNTER_VEHICLE_DYNAMICS.inputs(v,f,tr,dt);f=input.forward;tr=input.turn;
 // Strafe sense girar: només hovercraft i els dos helicòpters.
@@ -1412,6 +1427,9 @@ const totalSideV=sideV+v.strafeV,
       deckCarrier=(land||a)?ferryForVehicle(v,nx,nz,true):null;let ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;
 if(c.m==='w')ok=ok&&raw<-1.2;if(c.m==='l')ok=ok&&(!!deckCarrier||h>-1.2);
 if(ok&&a&&!deckCarrier){
+  const structureHit=window.HUNTER_AIR_OBSTACLES.hit(THREE,world,v,
+    {x:v.x,z:v.z,alt:v.alt},{x:nx,z:nz,alt:v.alt},VS[v.t]||1);
+  if(structureHit)return crashHelicopterStructure(v,structureHit);
   // Contacte del fuselatge i del rotor amb la vora del sostre.
   // Només bloquejam si entra en un volum nou: un vehicle ja sota un
   // hangar pot sortir-ne per la porta.
@@ -1441,6 +1459,9 @@ if(a){
   const previousAlt=v.alt;
   v.alt=Math.max(helicopterLandedAltitude(v,g2),Math.min(150,v.alt+v.verticalV*dt));
   if(!deckCarrier){
+    const structureHit=window.HUNTER_AIR_OBSTACLES.hit(THREE,world,v,
+      {x:v.x,z:v.z,alt:previousAlt},{x:v.x,z:v.z,alt:v.alt},VS[v.t]||1);
+    if(structureHit)return crashHelicopterStructure(v,structureHit);
     const corrected=helicopterRoofAltitude(v,v.x,v.z,previousAlt,v.alt);
     if(corrected!==v.alt){v.alt=corrected;v.verticalV=0}
   }
