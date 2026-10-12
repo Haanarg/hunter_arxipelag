@@ -369,7 +369,7 @@ V.forEach(v=>{
 // Partícules persistents per distància recorreguda, no per fotograma:
  // només els vehicles propers contribueixen a la GPU.
  for(const v of V)movementFx.vehicle(v,dt,{
-   playerX:P.x,playerZ:P.z,terrainAt:hAt,
+   playerX:P.x,playerZ:P.z,playerVehicle:cv,terrainAt:hAt,
    waterAt:(x,z)=>wy(x,z,t)
  });
  movementFx.update(dt,cam);

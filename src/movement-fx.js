@@ -198,7 +198,7 @@ window.HUNTER_MOVEMENT_FX=Object.freeze({
      }
      stats.downwash++;
    }
-   function vehicle(v,dt,{playerX,playerZ,terrainAt,waterAt}){
+   function vehicle(v,dt,{playerX,playerZ,playerVehicle=null,terrainAt,waterAt}){
      if(v.destroyed||v.crashing||v.carrier)return;
      const dx=v.x-playerX,dz=v.z-playerZ,
        near=dx*dx+dz*dz<settings.range*settings.range,
@@ -210,7 +210,12 @@ window.HUNTER_MOVEMENT_FX=Object.freeze({
      if(!near)return;
      const terrain=terrainAt(v.x,v.z),water=waterAt(v.x,v.z),
        mode=window.HUNTER_VEHICLE_DYNAMICS.types[v.t]?.m;
-     if(mode==='a'){rotorDownwash(v,dt,terrain,water);return}
+     if(mode==='a'){
+       // Els helicòpters aparcats tenen el rotor aturat.
+       // Només el que està pilotat aixeca pols o aerosol.
+       if(v===playerVehicle)rotorDownwash(v,dt,terrain,water);
+       return;
+     }
      const watery=mode==='w'||(mode==='wl'&&water>terrain+.6);
      if(watery&&!waterVisible)return;
      if(speed<(watery?2.2:4)||moved<.04)return;

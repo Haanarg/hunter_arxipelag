@@ -44,10 +44,13 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
  fx.vehicle(bike,.1,vehicleOptions);bike.z=-3;fx.vehicle(bike,.1,vehicleOptions);
  assert.equal(fx.stats.emitted.smoke,before,'bicycles do not emit exhaust');
  const heli={t:'heli_combat',x:1,z:1,alt:6,hd:.7,v:0};
- fx.vehicle(heli,.2,{...vehicleOptions,terrainAt:()=>1,waterAt:()=>0});
- assert(fx.stats.downwash>0,'stationary low helicopter raises dust');
+ fx.vehicle(heli,.2,{...vehicleOptions,playerVehicle:heli,terrainAt:()=>1,waterAt:()=>0});
+ assert(fx.stats.downwash>0,'hovering piloted helicopter raises dust');
+ const parked={t:'heli',x:2,z:2,alt:3,hd:0,v:0},noEngine=fx.stats.downwash;
+ fx.vehicle(parked,.2,{...vehicleOptions,terrainAt:()=>1,waterAt:()=>0});
+ assert.equal(fx.stats.downwash,noEngine,'parked helicopter with stopped rotor emits no dust');
  const dustCount=fx.stats.emitted.air;
- heli.alt=50;fx.vehicle(heli,.2,{...vehicleOptions,terrainAt:()=>1,waterAt:()=>0});
+ heli.alt=50;fx.vehicle(heli,.2,{...vehicleOptions,playerVehicle:heli,terrainAt:()=>1,waterAt:()=>0});
  assert.equal(fx.stats.emitted.air,dustCount,'high helicopter does not raise dust');
  fx.damageSmoke(car,.8,4);
  const camera=new T.PerspectiveCamera();camera.position.set(0,10,20);
