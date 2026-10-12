@@ -30,7 +30,7 @@ window.HUNTER_TERRAIN=Object.freeze({
     // rodes, però simplificam molt abans els sectors intermedis i llunyans.
     const profile=quality||(lowQuality?'mobile':'desktop');
     const configs={
-      desktop:{levels:[4,8,16,56],ranges:[240,650,1250]},
+      desktop:{levels:[5,10,20,64],ranges:[270,790,1510]},
       mobile:{levels:[3,6,12,40],ranges:[180,480,900]},
       ultra:{levels:[2,4,8,24],ranges:[100,280,580]}
     };

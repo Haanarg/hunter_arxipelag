@@ -1,0 +1,33 @@
+name: Qualitat Alt i ombra del jugador
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/high-graphics.yml'
+      - 'src/high-graphics.js'
+      - 'src/runtime-scripts.mjs'
+      - 'src/visual-config.js'
+      - 'src/game-core.js'
+      - 'src/terrain.js'
+      - 'src/vegetation.js'
+      - 'tests/high-graphics.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  graphics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Comprovar visio, textura procedural i ombra del jugador
+        run: node tests/high-graphics.cjs
+      - name: Comprovar perfil de grafics
+        run: node tests/graphics-quality.cjs
+      - name: Comprovar limitacio de casters
+        run: node tests/shadow-optimization.cjs
+      - name: Comprovar terreny i LOD
+        run: node tests/terrain-stream.cjs

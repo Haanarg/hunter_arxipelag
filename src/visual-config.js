@@ -30,11 +30,15 @@ window.HUNTER_VISUAL_CONFIG = Object.freeze({
     pixelRatio: 1.2,
     minPixelRatio: 1.0,
     shadows: true,
-    shadowSize: 1024,
-    shadowDistance: 225,
+    shadowSize: 1280,
+    shadowDistance: 245,
+    playerShadows: true,
+    terrainDetailTexture: true,
+    coastDetail: true,
     exposure: 1.06,
-    fog: 0.000145,
-    skySegments: Object.freeze([48, 28]),
-    waterSegments: 320
+    fog: 0.00012,
+    viewDistance: 14000,
+    skySegments: Object.freeze([52, 30]),
+    waterSegments: 384
   })
 });

@@ -16,7 +16,10 @@ const missingSystems=Object.entries({generation:typeof build,combat:typeof fire,
 const materialProfile=(name='organic')=>window.HUNTER_MATERIALS[name]||window.HUNTER_MATERIALS.organic;
 const M=(c,profile='organic')=>new THREE.MeshStandardMaterial({color:vivid(c),flatShading:true,...materialProfile(profile)});
 const MAT={
- terrain:()=>new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true}),
+ terrain:()=>new THREE.MeshLambertMaterial({
+   vertexColors:true,flatShading:!highTerrainTexture,
+   ...(highTerrainTexture?{map:highTerrainTexture}:{})
+ }),
  painted:c=>M(c,'paint'),metal:c=>M(c,'metal'),rubber:c=>M(c,'rubber'),glass:c=>M(c,'glass'),masonry:c=>M(c,'masonry')
 };
 let seed,R,islands,A,Bi,world,B=[],requestedSeed=null;
@@ -84,6 +87,8 @@ if(h>3&&h<14&&slope(x,z,h)<2.5&&(!fl||fr(x,z)<2.2)&&!B.some(b=>Math.abs(b.x-x)<b
 const coarse=matchMedia('(pointer:coarse)').matches;
 const qualityName=window.HUNTER_GRAPHICS_QUALITY||((coarse||window.HUNTER_FORCE_LOW_QUALITY)?'mobile':'desktop');
 const visualQuality=window.HUNTER_VISUAL_CONFIG[qualityName];
+const highTerrainTexture=visualQuality.terrainDetailTexture
+  ?window.HUNTER_HIGH_GRAPHICS.createTerrainTexture(THREE):null;
 const rendering=window.HUNTER_RENDERING.create(THREE,visualQuality);
 const ren=rendering.renderer,scene=rendering.scene,cam=rendering.camera,sunDir=rendering.sunDir,sun=rendering.sun,sky=rendering.sky,sunM=rendering.sunMesh;
 document.body.prepend(ren.domElement);
@@ -95,7 +100,7 @@ const adaptivePerformance=window.HUNTER_PERFORMANCE.create({
   element:document.getElementById('perfStats'),compact:qualityName!=='desktop'
 });
 window.HUNTER_PERFORMANCE_STATS=adaptivePerformance.stats;
-const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segments:visualQuality.waterSegments,heightAt:hAt,config:window.HUNTER_WATER,reflections:visualQuality.waterReflections!==false,fogColor:scene.fog.color});
+const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segments:visualQuality.waterSegments,heightAt:hAt,config:window.HUNTER_WATER,reflections:visualQuality.waterReflections!==false,coastDetail:!!visualQuality.coastDetail,fogColor:scene.fog.color});
 const waterMat=water.material,waterUniforms=water.uniforms;
 const updateSeabed=()=>water.setWorldSize(S);
 const waves=water.update;
@@ -108,6 +113,7 @@ function setWaterDisabled(disabled){
   if(checkbox)checkbox.checked=waterDisabled;
   water.mesh.visible=!waterDisabled;
   water.deep.visible=!waterDisabled;
+  if(water.shore)water.shore.visible=!waterDisabled&&water.shoreStats.segments>0;
   window.HUNTER_WATER_DISABLED=waterDisabled;
   return waterDisabled;
 }
@@ -116,7 +122,7 @@ if(waterSettingCheckbox)waterSettingCheckbox.addEventListener('change',()=>setWa
 // Ombres de proximitat. Malles classificades una vegada per mapa,
 // amb actualització ocasional i sense passejar l'arbre de l'escena.
 let shadowsDisabled=false;
-const shadowCandidates=[],shadowStats={candidates:0,active:0,excludedDetail:0,updates:0};
+const shadowCandidates=[],shadowStats={candidates:0,active:0,excludedDetail:0,updates:0,playerCasters:0};
 let shadowLastX=Infinity,shadowLastZ=Infinity,shadowLastMs=-Infinity;
 window.HUNTER_SHADOW_STATS=shadowStats;
 function updateShadowCasters(force=false){
@@ -161,7 +167,7 @@ if(shadowSettingCheckbox)shadowSettingCheckbox.addEventListener('change',()=>set
 function prepareShadowCasters(){
   shadowCandidates.length=0;
   shadowLastX=Infinity;shadowLastZ=Infinity;shadowLastMs=-Infinity;
-  shadowStats.candidates=0;shadowStats.active=0;shadowStats.excludedDetail=0;
+  shadowStats.candidates=0;shadowStats.active=0;shadowStats.excludedDetail=0;shadowStats.playerCasters=0;
   if(!visualQuality.shadows||!world)return;
   const dynamicRoots=new Set([pl,...V.map(v=>v.o),...E.map(e=>e.o),...fa.map(f=>f.o)].filter(Boolean));
   world.updateMatrixWorld(true);
@@ -186,6 +192,34 @@ function prepareShadowCasters(){
   };
   world.traverse(collect);
   pl.traverse(collect);
+  // Els caps i les extremitats del jugador eren massa petits per passar
+  // el filtre general (0.85 m). Seleccionam onze malles representatives
+  // del rig, conservant les animacions sense processar detalls microscòpics.
+  if(visualQuality.playerShadows){
+    const chosen=new Set(),u=pl.userData;
+    const largest=(root,n,direct=false)=>{
+      if(!root)return;
+      const candidates=[];
+      const offer=mesh=>{
+        if(!mesh.isMesh||mesh.userData.noCastShadow||mesh.material?.transparent)return;
+        const geo=mesh.geometry;
+        if(!geo.boundingSphere)geo.computeBoundingSphere();
+        candidates.push({mesh,radius:(geo.boundingSphere?.radius||0)*mesh.matrixWorld.getMaxScaleOnAxis()});
+      };
+      if(direct)for(const child of root.children)offer(child);
+      else root.traverse(offer);
+      candidates.sort((a,b)=>b.radius-a.radius);
+      for(const c of candidates.slice(0,n))chosen.add(c.mesh);
+    };
+    largest(pl,3,true);
+    largest(u.ll,2);largest(u.lr,2);
+    largest(u.al,1);largest(u.ar,1);
+    largest(u.head,2);
+    const already=new Set(shadowCandidates.map(e=>e.mesh));
+    for(const mesh of chosen)if(!already.has(mesh))
+      shadowCandidates.push({mesh,owner:pl,point:null});
+    shadowStats.playerCasters=chosen.size;
+  }else shadowStats.playerCasters=0;
   shadowStats.candidates=shadowCandidates.length;
   if(!shadowsDisabled)updateShadowCasters(true);
 }
@@ -919,14 +953,14 @@ let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0,worldVisual
 const LOD_NEAR2=500*500,LOD_MID2=1200*1200,ITEM_ANIM2=500*500,FAUNA_NEAR2=650*650,FAUNA_MID2=1400*1400;
 // Distàncies visuals per família. NO afecten danys, física, IA ni mapa.
 const VISUAL_RANGES={
-  desktop:{buildings:850,fences:560,props:690,vehicles:1150,enemies:1000,items:550,fauna:750,antennas:950},
+  desktop:{buildings:1180,fences:740,props:920,vehicles:1510,enemies:1280,items:720,fauna:970,antennas:1250},
   mobile:{buildings:650,fences:390,props:520,vehicles:800,enemies:700,items:420,fauna:530,antennas:750},
   ultra:{buildings:410,fences:260,props:350,vehicles:520,enemies:460,items:300,fauna:350,antennas:510}
 }[qualityName]||{buildings:850,fences:560,props:690,vehicles:1150,enemies:1000,items:550,fauna:750,antennas:950};
 const visibilityStats={buildings:0,fences:0,props:0,vehicles:0,enemies:0,items:0,fauna:0,antennas:0,terrainOccluded:0};
 const enemyLodStats={full:0,mid:0,far:0,hidden:0,vehicleFull:0};
 const ENEMY_LOD_RANGES={
-  desktop:{full:150,mid:440},mobile:{full:110,mid:300},ultra:{full:80,mid:195}
+  desktop:{full:190,mid:550},mobile:{full:110,mid:300},ultra:{full:80,mid:195}
 }[qualityName]||{full:150,mid:440};
 window.HUNTER_ENEMY_LOD_STATS=enemyLodStats;
 window.HUNTER_VISIBILITY_STATS=visibilityStats;

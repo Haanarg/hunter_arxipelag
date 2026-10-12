@@ -240,7 +240,7 @@ window.HUNTER_VEGETATION=Object.freeze({
       // Conservam l'abast dels models més simples per evitar illes despullades.
       const profile=lodProfile|| (lowQuality?'mobile':'desktop'),
             distanceProfiles={
-              desktop:[260,650,1900],
+              desktop:[310,850,2350],
               mobile:[190,470,1250],
               ultra:[120,300,850]
             },
@@ -277,7 +277,7 @@ window.HUNTER_VEGETATION=Object.freeze({
       const rockGroup=sectorizeExtras(rocks,geometry.rock,'hunter-rock-sectors',
         0x777985,(d,s)=>d.scale.set(s*1.25,s*.75,s),{profile:'masonry',tilt:true});
       const extraRanges={
-        desktop:{bush:720,rock:1150},
+        desktop:{bush:910,rock:1390},
         mobile:{bush:470,rock:800},
         ultra:{bush:280,rock:480}
       }[profile]||{bush:720,rock:1150};
