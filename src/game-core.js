@@ -102,6 +102,11 @@ const adaptivePerformance=window.HUNTER_PERFORMANCE.create({
 window.HUNTER_PERFORMANCE_STATS=adaptivePerformance.stats;
 const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segments:visualQuality.waterSegments,heightAt:hAt,config:window.HUNTER_WATER,reflections:visualQuality.waterReflections!==false,coastDetail:!!visualQuality.coastDetail,fogColor:scene.fog.color});
 const waterMat=water.material,waterUniforms=water.uniforms;
+const movementFx=window.HUNTER_MOVEMENT_FX.create(THREE,{
+ scene,quality:qualityName,waveModel:window.HUNTER_WAVES,
+ waterTime:waterUniforms.time,waterBed:hAt
+});
+window.HUNTER_MOVEMENT_FX_STATS=movementFx.stats;
 const updateSeabed=()=>water.setWorldSize(S);
 const waves=water.update;
 // Diagnòstic de GPU: amagam les dues malles del mar, sense alterar
@@ -113,6 +118,7 @@ function setWaterDisabled(disabled){
   if(checkbox)checkbox.checked=waterDisabled;
   water.mesh.visible=!waterDisabled;
   water.deep.visible=!waterDisabled;
+  movementFx.setWaterVisible(!waterDisabled);
   if(water.shore)water.shore.visible=!waterDisabled&&water.shoreStats.segments>0;
   window.HUNTER_WATER_DISABLED=waterDisabled;
   return waterDisabled;
@@ -353,28 +359,21 @@ V.forEach(v=>{
         const bb=new THREE.Box3().setFromObject(v.o);
         v.smokeTopOffset=Math.max(.7,bb.max.y-baseY);
       }
-      const topY=baseY+(v.smokeTopOffset||1.8),count=frac>.65?3:2,
-            col=frac>.65?0x0d0f10:0x1d2022,
-            spread=Math.min(.8,vehicleRadius(v.t)*.09);
-      for(let i=0;i<count;i++){
-        puff(
-          v.x+rn(-spread,spread),
-          topY+rn(-.04,.12),
-          v.z+rn(-spread,spread),
-          col,
-          .16+frac*.3,
-          1.45+frac*1.85
-        )
-      }
+      // Fum billboarding agrupat en una sola malla per a tots els vehicles.
+      if(Math.hypot(v.x-P.x,v.z-P.z)<250)
+        movementFx.damageSmoke(v,frac,baseY+(v.smokeTopOffset||1.8));
       v.smokeT=Math.max(.08,.55-frac*.42)
     }
   }
 });
-if(cv){const c=VT[cv.t],sp=Math.abs(cv.v),s=Math.sin(cv.hd),co=Math.cos(cv.hd),L=c.m=='l'?2.5:5,gy=Math.max(0,hAt(cv.x,cv.z));
-if(sp>6&&(c.m=='w'||c.m=='wl')){const sd=Math.random()<.5?-1:1;puff(cv.x+s*L+co*sd*1.6,cv.o.position.y+.2,cv.z+co*L-s*sd*1.6,0xffffff,1.6)}
-else if(sp>12&&c.m=='l')puff(cv.x+s*L,gy+.3,cv.z+co*L,0xc9b48a,1.4);
-else if(c.m=='a'&&cv.alt-gy<12)puff(cv.x+rn(-6,6),gy+.3,cv.z+rn(-6,6),hAt(cv.x,cv.z)>0?0xc9b48a:0xffffff,2.2)}
-PT.forEach(p=>{if(p.life>0){p.life-=dt;if(p.rise)p.m.position.y+=p.rise*dt;p.m.scale.setScalar(p.s*(1+(1-p.life/p.max)*1.15));p.m.material.opacity=Math.max(0,p.life/p.max)*.8;if(p.life<=0){p.m.visible=false;p.rise=0}}});
+// Partícules persistents per distància recorreguda, no per fotograma:
+ // només els vehicles propers contribueixen a la GPU.
+ for(const v of V)movementFx.vehicle(v,dt,{
+   playerX:P.x,playerZ:P.z,terrainAt:hAt,
+   waterAt:(x,z)=>wy(x,z,t)
+ });
+ movementFx.update(dt,cam);
+ PT.forEach(p=>{if(p.life>0){p.life-=dt;if(p.rise)p.m.position.y+=p.rise*dt;p.m.scale.setScalar(p.s*(1+(1-p.life/p.max)*1.15));p.m.material.opacity=Math.max(0,p.life/p.max)*.8;if(p.life<=0){p.m.visible=false;p.rise=0}}});
 if(seaAudio){const coastal=Math.max(.25,1-Math.max(0,hAt(P.x,P.z))/22);seaAudio.gain.gain.setTargetAtTime(over?0:.035+coastal*.05,AC.currentTime,.5)}if(eng){const c=cv?VT[cv.t]:null;eng.g.gain.value=c&&cv.t!=='bici'&&!over?.02+Math.min(1,Math.abs(cv.v)/40)*.03:0;eng.o.frequency.value=c?(c.m=='a'?60:35)+Math.abs(cv.v)*(c.m=='a'?1:2.5):40}}
 const seedRandomEl=document.getElementById('seedRandom'),seedInputEl=document.getElementById('seedInput'),iniEl=document.getElementById('ini'),
 startMenuEl=document.getElementById('startMenu'),seedSearchScreenEl=document.getElementById('seedSearchScreen'),
@@ -1636,6 +1635,14 @@ msgT-=dt;if(parachuteVisual)parachuteVisual.position.set(P.x,P.y,P.z);pl.positio
 // També animam les passes quan el jugador es mou només lateralment,
 // sense modificar P.hd ni l'orientació de la càmera.
 animPl(cv||scopeActive?0:(Math.abs(f)>.02?f:Math.abs(strafe)*.7),dt);
+ // L'animació de caminar va a 8.4 rad/s: un esquitx a cada suport de
+ // peu (creuament de fase PI). Sense esquitxos nedant ni en vehicles.
+ movementFx.playerStep({
+   phase:pl.userData.ph,x:P.x,z:P.z,heading:P.hd,
+   moving:!scopeActive&&(Math.abs(f)>.04||Math.abs(strafe)>.04),
+   swimming,inVehicle:!!cv,falling:!!playerFall||!!playerEject||!!ib,
+   surfaceAt:(x,z)=>wy(x,z,t),groundAt
+ });
 if(!cv&&playerFall){
   pl.position.y=playerFall.y;
   if(playerFall.parachute){

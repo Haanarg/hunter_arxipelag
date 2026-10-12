@@ -1,0 +1,31 @@
+name: Esquitxos, esteles i pols
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/movement-effects.yml'
+      - 'src/movement-fx.js'
+      - 'src/runtime-scripts.mjs'
+      - 'src/game-core.js'
+      - 'src/world-generation.js'
+      - 'tests/movement-effects.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  particles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Efectes, agrupacio i regressio de la física
+        run: node tests/movement-effects.cjs
+      - name: Aigua i costes
+        run: node tests/water.cjs
+      - name: Barca de rems
+        run: node tests/rowboat-water.cjs
+      - name: Perfils grafics
+        run: node tests/graphics-quality.cjs
