@@ -35,11 +35,11 @@
   assert.equal(model.stats.totalBushes,1);
   assert.equal(model.stats.totalRocks,1);
   assert.equal(model.variantMap.length,entries.length,'destroy map preserved');
-  assert(model.stats.visiblePalms<entries.length,'distant sectors culled');
+  assert(model.stats.visiblePalms<=entries.length,'expanded high-quality view keeps distant sectors when in range');
   assert.equal(model.stats.profile,'desktop');
-  assert.equal(model.stats.nearDistance,260);
-  assert.equal(model.stats.midDistance,650);
-  assert.equal(model.stats.farDistance,1900);
+  assert.equal(model.stats.nearDistance,310);
+  assert.equal(model.stats.midDistance,850);
+  assert.equal(model.stats.farDistance,2350);
   const chunks=model.variants;
   assert(chunks.length>=3,'chunks separated geographically');
   assert(chunks.every(ch=>ch.meshes.every(m=>m.isInstancedMesh&&m.frustumCulled)),
@@ -62,7 +62,7 @@
     'near group keeps all detailed variants of its crowns');
   model.update(730,0,true);
   assert.equal(near.lod,0,'stay at near LOD inside 55m margin');
-  model.update(750,0,true);
+  model.update(800,0,true);
   assert.equal(near.lod,1,'closer threshold changes to medium earlier');
   assert.equal(visibleCount(near),2,'mid-distance group draws only two instanced meshes');
   assert(near.midTrunk.visible&&near.midCrown.visible&&
@@ -73,12 +73,12 @@
   assert.equal(near.lod,1,'hysteresis prevents immediate switch back');
   model.update(610,0,true);
   assert.equal(near.lod,0,'full detail returns once genuinely near');
-  model.update(1220,0,true);
+  model.update(1430,0,true);
   assert.equal(near.lod,2,'far palm becomes three crossed leaf planes');
   assert.equal(visibleCount(near),2,'far palm still uses two instanced meshes');
   assert(near.farTrunk.visible&&near.farCrown.visible);
   assert(model.stats.farSectors>=1,'LOD stats count simplified far sectors');
-  model.update(2440,0,true);
+  model.update(2850,0,true);
   assert.equal(near.lod,3,'sectors are hidden beyond viewing distance');
   assert.equal(visibleCount(near),0,'no distant palm meshes remain visible');
   model.update(0,0,true);

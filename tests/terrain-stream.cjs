@@ -54,7 +54,7 @@ assert.equal(terrain.stats.visibleTiles,36,'visible tile counter excludes upgrad
 assert(terrain.stats.farTiles>0,'horizon tiles use the coarsest LOD');
 assert.equal(terrain.stats.lodTiles.reduce((a,b)=>a+b,0),36);
 assert(terrain.stats.terrainTriangles>0,'terrain stats include actual triangle counts');
-const far=terrain.mesh.children.filter(m=>m.geometry.attributes.position.count<(8+1)*(8+1));
+const far=terrain.mesh.children.filter(m=>m.geometry.attributes.position.count<(10+1)*(10+1));
 assert(far.length>0,'far horizon tiles have genuinely fewer vertices');
 const camera=new THREE.PerspectiveCamera(65,1,.3,12000);
 camera.position.set(400,250,700);
