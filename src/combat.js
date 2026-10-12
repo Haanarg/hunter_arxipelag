@@ -323,6 +323,77 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97){
 function autoAimArmoredShot(x,y,z,fx,fz,range){
   return autoAimWeaponShot(x,y,z,fx,0,fz,range,.97);
 }
+// Rifle: sortida REAL des de l'extrem del canó. En mode mira el model
+// invisible s'orienta com l'òptica; P.hd i el moviment no canvien.
+function sniperMuzzleWorld(heading,pitch=0){
+  const rifle=pl.userData.sniper,muzzle=pl.userData.sniperMuzzle;
+  if(!rifle||!muzzle)throw new Error('Falta el pivot del canó del franctirador');
+  rifle.rotation.set(pitch,heading-P.hd,0,'YXZ');
+  pl.position.set(P.x,P.y,P.z);
+  pl.rotation.y=P.hd;
+  pl.updateMatrixWorld(true);
+  return muzzle.getWorldPosition(new THREE.Vector3());
+}
+// Primer obstacle sota el centre del reticle (mateixes col·lisions que les
+// bales). Apuntar a un talús no ha de generar una bala desviada cap al terra.
+function sniperReticlePoint(focus,range=1000){
+  const ox=P.x+Math.sin(scopeYaw)*.12,oy=P.y+1.76,
+        oz=P.z+Math.cos(scopeYaw)*.12,
+        tx=ox+focus.dx*range,ty=oy+focus.dy*range,tz=oz+focus.dz*range,
+        mx=(ox+tx)/2,mz=(oz+tz)/2,reach=Math.hypot(tx-ox,tz-oz)/2+8;
+  let bestT=1;
+  const consider=t=>{if(t!=null&&t>0&&t<bestT)bestT=t};
+  for(const w of wallCandidates(mx,mz,reach)){
+    if(!w.open)consider(segmentAabbT(ox,oy,oz,tx,ty,tz,
+      w.x0,w.x1,w.y0,w.y1,w.z0,w.z1));
+  }
+  for(const b of buildingCandidates(mx,mz,reach)){
+    if(b.rhp<=0)continue;
+    const hit=b.hangar?hangarRoofSegmentT(ox,oy,oz,tx,ty,tz,b):
+      segmentAabbT(ox,oy,oz,tx,ty,tz,
+        b.x-b.w/2-.6,b.x+b.w/2+.6,b.fy+b.h-.4,b.fy+b.h+1.4,
+        b.z-b.d/2-.6,b.z+b.d/2+.6);
+    consider(hit);
+  }
+  for(const e of enemyCandidatesAt(mx,mz,reach+4)){
+    if(e.hp<=0||e.destroyed)continue;
+    consider(segmentSphereT(ox,oy,oz,tx,ty,tz,
+      e.x,e.o.position.y+(e.t==='torre'?4.5:1.5),e.z,(e.r||1)+.6));
+  }
+  for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){
+    if(v.destroyed)continue;
+    const baseY=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
+    consider(segmentSphereT(ox,oy,oz,tx,ty,tz,
+      v.x,baseY+1,v.z,vehicleRadius(v.t)*.62));
+  }
+  // Mostreig del terreny de 3 m, amb refinament binari del punt d'impacte.
+  const samples=Math.ceil(range/3),surfaceDifference=t=>{
+    const x=ox+(tx-ox)*t,z=oz+(tz-oz)*t;
+    return oy+(ty-oy)*t-(Math.max(hAt(x,z),0)+.2);
+  };
+  let prev=0;
+  for(let k=1;k<=samples;k++){
+    const t=k/samples;
+    if(t>=bestT)break;
+    if(surfaceDifference(t)<0){
+      let lo=prev,hi=t;
+      for(let j=0;j<9;j++){
+        const mid=(lo+hi)*.5;
+        if(surfaceDifference(mid)<0)hi=mid;else lo=mid;
+      }
+      bestT=Math.min(bestT,hi);break;
+    }
+    prev=t;
+  }
+  return new THREE.Vector3(ox+(tx-ox)*bestT,oy+(ty-oy)*bestT,oz+(tz-oz)*bestT);
+}
+function sniperShotVector(muzzle,target,focus){
+  const d=target.clone().sub(muzzle),
+        heading=new THREE.Vector3(focus.dx,focus.dy,focus.dz);
+  // Per a obstacles que estan darrere de la boca, mai disparar enrere.
+  if(d.lengthSq()<16||d.dot(heading)<0)return heading;
+  return d.normalize();
+}
 function fire(){if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
 if(c=='tanc'){const muzzleZ=5.35*VS.tanc,muzzleY=2.62*VS.tanc,x=cv.x+fx_*muzzleZ,y=cv.o.position.y+muzzleY,z=cv.z+fz*muzzleZ;const [ax,ay,az]=autoAimArmoredShot(x,y,z,fx_,fz,220);fcd=.9;shoot(x,y,z,ax,ay,az,85,45,8,'p',mS,2.2);Pj[Pj.length-1].life=4.4}
 else if(c=='heli'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*3.2*VS.heli,y=cv.o.position.y+.5*VS.heli,z=cv.z+fz*3.2*VS.heli;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,125,.91);fcd=.6;shoot(x,y,z,ax,ay,az,85,45,8,'p',mS,2)}
@@ -332,21 +403,16 @@ else if(c=='llanxa_coets'){secondaryWeapon();return}
 else if(!cv&&sniperEquipped&&inv.franctirador){
   if(sniperAmmo<=0){msg='El rifle no té munició.';msgT=2;return}
   sniperAmmo--;fcd=1.05;pl.userData.firePose=.42;
-  // Mentre apunta, el tir segueix exactament el rumb independent
-  // de la càmera de la mira (el personatge conserva P.hd).
-  // La bala surt sobre el raig central REAL de la càmera, sense el
-  // desplaçament vertical del canó ni assistència que desviï el reticle.
-  const sightHeading=scopeActive?scopeYaw:hd,
-        sightFx=-Math.sin(sightHeading),sightFz=-Math.cos(sightHeading),
-        eyeX=P.x-sightFx*.12,eyeY=P.y+1.76,eyeZ=P.z-sightFz*.12,
-        vertical=scopeActive?Math.tan(scopePitch)*160:0,
-        hdist=160.12,rayLength=Math.hypot(hdist,vertical),
-        vx=sightFx*hdist/rayLength,vy=vertical/rayLength,vz=sightFz*hdist/rayLength,
-        x=scopeActive?eyeX+vx*.9:P.x+sightFx*1.05,
-        y=scopeActive?eyeY+vy*.9:P.y+1.76,
-        z=scopeActive?eyeZ+vz*.9:P.z+sightFz*1.05,
-        [ax,ay,az]=scopeActive?[vx,vy,vz]:autoAimWeaponShot(x,y,z,sightFx,0,sightFz,180,.984);
-  shoot(x,y,z,ax,ay,az,470,65,0,'p',mW,SMALL_ARMS_SCALE);
+  // Origen físic del projectil: punta del rifle, no tors ni ull.
+  // Amb zoom, la trajectòria convergeix al primer punt sota el reticle.
+  const heading=scopeActive?scopeYaw:hd,
+        muzzle=sniperMuzzleWorld(heading,scopeActive?scopePitch:0),
+        fx=-Math.sin(heading),fz=-Math.cos(heading),
+        focus=scopeActive?window.HUNTER_SCOPE_FOCUS.create(P.x,P.y+1.76,P.z,scopeYaw,scopePitch):null,
+        direction=focus
+          ?sniperShotVector(muzzle,sniperReticlePoint(focus),focus)
+          :new THREE.Vector3(...autoAimWeaponShot(muzzle.x,muzzle.y,muzzle.z,fx,0,fz,180,.984));
+  shoot(muzzle.x,muzzle.y,muzzle.z,direction.x,direction.y,direction.z,470,65,0,'p',mW,SMALL_ARMS_SCALE);
   msg='Rifle: '+sniperAmmo+' cartutxos.';msgT=1.5;
 }
 else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}

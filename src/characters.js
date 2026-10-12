@@ -255,7 +255,13 @@ window.HUNTER_CHARACTERS=Object.freeze({
     box(sniper,.21,.21,.73,0x273232,0,.31,-.42,'metal');
     box(sniper,.26,.24,.13,0x273232,0,.31,-.73,'metal');
     box(sniper,.1,.22,.15,0x353b38,0,-.22,.1,'metal');
-    sniper.visible=false;u.sniper=sniper;
+    // Boca real a l'extrem del canó (centre z=-1.95, longitud 1.55).
+    // El pivot hereta la rotació i l'escala del model del jugador.
+    const sniperMuzzle=new THREE.Object3D();
+    sniperMuzzle.name='hunter-sniper-muzzle';
+    sniperMuzzle.position.set(0,.03,-2.75);
+    sniper.add(sniperMuzzle);
+    sniper.visible=false;u.sniper=sniper;u.sniperMuzzle=sniperMuzzle;
     player.scale.setScalar(2/3);
     return player;
   },

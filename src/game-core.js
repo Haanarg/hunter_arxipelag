@@ -1209,6 +1209,7 @@ function setSniperScope(enabled){
     if(wasActive){joystick.reset();releaseStrafeButtons()}
     if(cam.fov!==58){cam.fov=58;cam.updateProjectionMatrix()}
   }
+  if(!scopeActive&&pl.userData.sniper)pl.userData.sniper.rotation.set(0,0,0,'YXZ');
   if(wasActive!==scopeActive){worldVisualTick=0;palmVisualTick=0}
   document.body.classList.toggle('sniper-scoped',scopeActive);
   const button=document.getElementById('sniperAimButton');

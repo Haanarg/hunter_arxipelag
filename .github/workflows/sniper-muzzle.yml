@@ -1,0 +1,28 @@
+name: Boca i trajectòria del rifle
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/sniper-muzzle.yml'
+      - 'src/characters.js'
+      - 'src/combat.js'
+      - 'src/game-core.js'
+      - 'tests/sniper-muzzle.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Comprovar origen i convergència del tret
+        run: node tests/sniper-muzzle.cjs
+      - name: Regressió de mira LOD
+        run: node tests/sniper-lod.cjs
+      - name: Regressió de trajectòria granada
+        run: node tests/grenade-charge-pose.cjs
