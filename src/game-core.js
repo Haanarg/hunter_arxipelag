@@ -1416,7 +1416,7 @@ if(ok&&a&&!deckCarrier){
   // Només bloquejam si entra en un volum nou: un vehicle ja sota un
   // hangar pot sortir-ne per la porta.
   const roofHit=helicopterRoofCollision(v,nx,nz,v.alt);
-  if(roofHit&&!helicopterRoofCollision(v,v.x,v.z,v.alt))ok=false;
+  if(roofHit)ok=false;
 }
 if(ok&&a&&!deckCarrier&&v.alt-g<8&&treeHit(nx,nz,radius))ok=false;
 if((!a||v.alt-g<16)&&!deckCarrier){for(const w of wallCandidates(nx,nz,radius))if(!w.open&&w.playerBlock!==false&&
