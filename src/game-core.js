@@ -1378,7 +1378,7 @@ const c=VT[v.t],a=c.m==='a',water=c.m==='w'||c.m==='wl',land=c.m==='l',radius=ve
 // Strafe sense girar: només hovercraft i els dos helicòpters.
 // Conservar la deriva natural existent (sideV) i afegir-hi una velocitat
 // lateral independent amb acceleració i frenada suaus.
-const maxStrafe=v.t==='hover'?12:v.t==='heli'?17:v.t==='heli_combat'?20:0,
+const maxStrafe=v.t==='hover'?12:(a?(c.strafeMax||17):0),
       targetStrafe=maxStrafe*Math.max(-1,Math.min(1,strafe));
 v.strafeV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.strafeV||0,targetStrafe,6.5,dt);
 if(Math.abs(targetStrafe)<.01&&Math.abs(v.strafeV)<.02)v.strafeV=0;
@@ -1486,7 +1486,7 @@ if(c.m==='a'&&v.carrier&&!v.crashing){
 }
 else if(c.m==='a'){
   y=v.alt;const speedN=Math.max(-1,Math.min(1,v.v/(c.maxF||35))),yawN=Math.max(-1,Math.min(1,(v.yawRate||0)/(c.tu||1)));
-  pi=-speedN*(c.pitch||.2);ro=-yawN*(c.bank||.32)-(v.strafeV||0)/(v.t==='heli_combat'?20:17)*(c.bank||.32)*.5;
+  pi=-speedN*(c.pitch||.2);ro=-yawN*(c.bank||.32)-(v.strafeV||0)/(c.strafeMax||17)*(c.bank||.32)*.5;
   if(v.crashing){pi+=Math.sin(v.crashT*3)*.35;ro+=(v.crashSpin||1)*(.45+Math.min(.65,v.crashT*.12))}
 }
 else if(c.m==='w'){y=wy(v.x,v.z,t)+(v.t==='barca_rems'?-.1:.2);const speed=Math.min(1,Math.abs(v.v)/(c.maxF||30)),wave=Math.sin(t*2.4+v.x*.03+v.z*.025);pi=wave*.035*speed;ro=-(v.yawRate||0)*.11+wave*.025}

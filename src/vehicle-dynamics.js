@@ -15,8 +15,8 @@ window.HUNTER_VEHICLE_DYNAMICS=Object.freeze({
     tanqueta:Object.freeze({n:'Tanqueta blindada',m:'l',a:20,dr:.92,tu:1.45,cd:25,ch:10,response:2.8,steerResponse:3.1,yawResponse:2.9,maxF:24,maxR:9,landGrip:.88,steerFade:.38,mass:3.2,armor:7,life:10}),
     llanxa_coets:Object.freeze({n:'Llanxa llançacoets',m:'w',a:27,dr:.82,tu:1.35,cd:31,ch:12,response:2.5,steerResponse:2.7,yawResponse:2.2,maxF:29,maxR:8,waterDrift:.11,waterSteerMin:.2,armor:3,life:7}),
     tanc:Object.freeze({n:'Tanc',m:'l',a:16,dr:.9,tu:1.1,cd:26,ch:10,response:2.2,steerResponse:2.4,yawResponse:2.4,maxF:21,maxR:8,landGrip:.96,steerFade:.3,mass:5,armor:10,life:18}),
-    heli:Object.freeze({n:'Helicòpter',m:'a',a:30,dr:.5,tu:1.6,cd:34,ch:12,response:2.8,steerResponse:3.2,yawResponse:2.3,maxF:38,maxR:15,climb:24,liftResponse:2.8,bank:.34,pitch:.22,mass:2.5,armor:4,life:8}),
-    heli_combat:Object.freeze({n:'Helicòpter de combat',m:'a',a:36,dr:.48,tu:2,cd:36,ch:13,response:4.2,steerResponse:5,yawResponse:4,maxF:45,maxR:18,climb:28,liftResponse:3.8,bank:.42,pitch:.28,mass:2.8,armor:6,life:12})
+    heli:Object.freeze({n:'Helicòpter',m:'a',a:38,dr:.5,tu:1.6,cd:34,ch:12,response:2.8,steerResponse:3.2,yawResponse:2.3,maxF:50,maxR:17,strafeMax:17,climb:24,liftResponse:2.8,bank:.34,pitch:.22,mass:2.5,armor:4,life:8}),
+    heli_combat:Object.freeze({n:'Helicòpter de combat',m:'a',a:47,dr:.48,tu:2.25,cd:36,ch:13,response:5,steerResponse:6,yawResponse:5.1,maxF:60,maxR:21,strafeMax:24,climb:30,liftResponse:4.3,bank:.45,pitch:.29,mass:2.8,armor:6,life:12})
   }),
   smooth(current,target,response,dt){return current+(target-current)*(1-Math.exp(-response*dt))},
   inputs(v,forward,turn,dt){
