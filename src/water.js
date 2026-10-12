@@ -1,6 +1,6 @@
 // Sistema visual de l'aigua, desacoblat de la simulació del joc.
 window.HUNTER_WATER_SYSTEM=Object.freeze({
-  create(THREE,{scene,sunDir,size,segments,heightAt,config,reflections=true,fogColor=0xc99f91}){
+  create(THREE,{scene,sunDir,size,segments,heightAt,config,reflections=true,coastDetail=false,fogColor=0xc99f91}){
     const model=window.HUNTER_WAVES;
     const uniforms={
       time:{value:0},light:{value:sunDir},
@@ -57,6 +57,10 @@ void main(){
     const mesh=new THREE.Mesh(geometry,material);mesh.name='hunter-water';mesh.renderOrder=2;scene.add(mesh);
     const deep=new THREE.Mesh(new THREE.PlaneGeometry(30000,30000).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x062679}));
     deep.position.y=-90;scene.add(deep);
+    // Una franja única de trencants s'ajusta al perfil real de la platja.
+    const shore=coastDetail?window.HUNTER_COAST_FOAM.create(THREE,{
+      scene,model,heightAt,time:uniforms.time,foamColor:config.foam
+    }):null;
     // Bathymetry: most deep-ocean samples do not need a full heightAt().
     // Interpolate a sparse grid, then recompute shore/near-land vertices
     // exactly so the coast, waterline and player wave physics remain aligned.
@@ -94,6 +98,7 @@ void main(){
       }
       seabedStats.lastSamples=samples;seabedStats.totalVertices=p.count;
       b.needsUpdate=true;
+      if(shore)shore.regenerate(geometry,segments);
     };
     const setWorldSize=value=>{
       if(value!==worldSize){worldSize=value;span=value+2200;const old=geometry;geometry=makeGeometry();mesh.geometry=geometry;old.dispose()}
@@ -113,8 +118,9 @@ void main(){
       return fx+fz<=1?h(a)*(1-fx-fz)+h(d)*fx+h(bb)*fz:h(c)*(fx+fz-1)+h(bb)*(1-fx)+h(d)*(1-fz);
     };
     const update=t=>{uniforms.time.value=t};
-    const dispose=()=>{scene.remove(mesh,deep);geometry.dispose();material.dispose();deep.geometry.dispose();deep.material.dispose()};
-    return {mesh,deep,material,get geometry(){return geometry},uniforms,updateSeabed,setWorldSize,surfaceHeight,update,dispose,seabedStats};
+    const dispose=()=>{if(shore)shore.dispose();scene.remove(mesh,deep);geometry.dispose();material.dispose();deep.geometry.dispose();deep.material.dispose()};
+    return {mesh,deep,shore:shore?.mesh||null,shoreStats:shore?.stats||{segments:0},
+      material,get geometry(){return geometry},uniforms,updateSeabed,setWorldSize,surfaceHeight,update,dispose,seabedStats};
   }
 });
 

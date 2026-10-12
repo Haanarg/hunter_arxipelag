@@ -23,9 +23,9 @@ function create(size,lowQuality=false,quality=null,shadows=false){
 }
 const terrain=create(4800);
 assert.equal(terrain.stats.totalTiles,36);
-assert.deepEqual(Array.from(terrain.stats.lodLevels),[4,8,16,56],
+assert.deepEqual(Array.from(terrain.stats.lodLevels),[5,10,20,64],
   'desktop preserves the precise close-up mesh while simplifying distant terrain');
-assert.deepEqual(Array.from(terrain.stats.lodRanges),[240,650,1250]);
+assert.deepEqual(Array.from(terrain.stats.lodRanges),[270,790,1510]);
 assert.equal(terrain.stats.profile,'desktop');
 assert.equal(terrain.stats.viewPriority,false,'terrain no longer rescans the camera frustum every frame');
 assert(terrain.stats.initialTiles>=4&&terrain.stats.initialTiles<=16);
@@ -99,7 +99,7 @@ const shadowTerrain=create(4800,false,'desktop',true);
 assert(shadowTerrain.mesh.children.some(m=>m.receiveShadow),'near terrain keeps shadows');
 assert(shadowTerrain.mesh.children.every(m=>m.receiveShadow===m.userData.terrainNearShadow),
   'terrain distance shadow flag is respected');
-const nearVertexCount=(56+1)**2;
+const nearVertexCount=(64+1)**2;
 assert(shadowTerrain.mesh.children.filter(m=>m.receiveShadow).every(m=>m.geometry.attributes.position.count>=nearVertexCount));
 shadowTerrain.dispose();
 

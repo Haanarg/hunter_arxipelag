@@ -1,0 +1,30 @@
+name: Aigua detallada i costes
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/coast-foam.yml'
+      - 'src/coast-foam.js'
+      - 'src/runtime-scripts.mjs'
+      - 'src/water.js'
+      - 'tests/coast-foam.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  coastline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verificar escuma, geometria i fisica de costes
+        run: node tests/coast-foam.cjs
+      - name: Verificar onades existents
+        run: node tests/water.cjs
+      - name: Verificar perfils
+        run: node tests/graphics-quality.cjs
+      - name: Verificar interruptor d'aigua
+        run: node tests/water-toggle.cjs
