@@ -1023,7 +1023,7 @@ function updateDistanceVisibility(){
           scopeDetailed=!!focus?.contains(e.x,e.o.position.y+(e.t==='torre'?8:2),e.z,e.t==='torre'?3:1.5),
           visible=d2<max.enemies*max.enemies||scopeDetailed;
     e.o.visible=visible;
-    if(!visible){visibilityStats.enemies++;enemyLodStats.hidden++;continue}
+    if(!visible){window.HUNTER_ENEMY_LOD.setLevel(e.o,'far');visibilityStats.enemies++;enemyLodStats.hidden++;continue}
     const d=Math.sqrt(d2),old=e.o.userData.enemyLOD,
       fullLimit=ENEMY_LOD_RANGES.full+(old==='full'?12:-12),
       midLimit=ENEMY_LOD_RANGES.mid+(old==='mid'?12:-12),
