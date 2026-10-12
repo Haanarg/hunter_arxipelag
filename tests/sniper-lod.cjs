@@ -55,7 +55,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
  const ctx=vm.createContext({console,Math,Float32Array});ctx.window=ctx;vm.runInContext(src,ctx);
  const T=game.context.THREE;
  const world=new T.Group(),palms=ctx.HUNTER_VEGETATION.create(T,{materialProfile:()=>({}),random:(a,b)=>a+(b-a)*.5})
-   .build({world,palms:[[800,6,100,1,0,0,0]],bushes:[],rocks:[],playerX:0,playerZ:0}).palms;
+   .build({world,palms:[[0,6,-900,1,0,0,0]],bushes:[],rocks:[],playerX:0,playerZ:0}).palms;
  const section=palms.variants[0],usual=section.lod;
  palms.update(0,0,true,false,focus);
  assert.equal(section.lod,0,'sniper upgrades distant palms');
