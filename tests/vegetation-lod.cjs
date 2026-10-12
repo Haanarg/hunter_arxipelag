@@ -153,9 +153,9 @@
   assert.equal(extra.bushes.children.length,3,'bushes are split into three distant sections');
   assert.equal(extra.rocks.children.length,3,'rocks are split into three distant sections');
   assert.equal(extra.palms.stats.visibleBushes,1,'only the local bush sector is visible initially');
-  assert.equal(extra.palms.stats.visibleRocks,1,'only the local rock sector is visible initially');
+  assert.equal(extra.palms.stats.visibleRocks,2,'extended high-quality range reveals the next rock sector');
   extra.palms.update(1300,0,true);
-  assert.equal(extra.palms.stats.visibleBushes,1,'moving selects the next bush sector');
+  assert.equal(extra.palms.stats.visibleBushes,2,'extended high-quality range overlaps two neighboring bush sectors');
   console.log(JSON.stringify({passed:true,sectorCount:chunks.length,
     trianglesPerPalm:{full,medium,far},
     reduction:{medium:Math.round((1-medium/full)*100),
