@@ -5,7 +5,7 @@ const {pathToFileURL}=require('node:url');
  const root=path.resolve(__dirname,'..');
  const T=await import(pathToFileURL(path.join(root,'vendor/three-r186.module.mjs')));
  global.window=global;
- for(const file of ['src/palette.js','src/player-model.js','src/characters.js'])
+ for(const file of ['src/palette.js','src/player-model.js','src/bolt-cutters.js','src/characters.js'])
    vm.runInThisContext(fs.readFileSync(path.join(root,file),'utf8'),{filename:file});
  const box=(g,w,h,d,c,x,y,z)=>{
    const m=new T.Mesh(new T.BoxGeometry(w,h,d),new T.MeshStandardMaterial({color:c}));

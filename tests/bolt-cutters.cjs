@@ -19,7 +19,7 @@ const assert=require('node:assert/strict');
  assert(inventory.shop&&inventory.tool&&inventory.garage&&inventory.inside&&inventory.model,
    'workshop has a real pickup '+JSON.stringify({...inventory,worldObject:undefined}));
  game.frame(16);
- const collected=game.run('({picked:inv.cisalla===1,stillInWorld:items.some(i=>i.t==="cisalla"&&i.compound==="hangar")})');
+ const collected=game.run('(()=>{const c=world.userData.compounds.find(c=>c.id==="hangar"),item=c.loot.find(i=>i.t==="cisalla");return {picked:inv.cisalla===1,stillInWorld:items.includes(item)}})()');
  assert(collected.picked&&!collected.stillInWorld,'cisalla picked up from workshop '+JSON.stringify(collected));
  const shooting=game.run(`(()=>{
   // Lloc sobre el mar sense altres obstacles, amb tram de filferrada real.
