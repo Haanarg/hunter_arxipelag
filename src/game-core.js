@@ -1257,6 +1257,7 @@ function grantAllWeapons(){
   ammo=Math.max(ammo,128);
   inv.bazooka=Math.max(inv.bazooka||0,12);
   inv.granada=Math.max(inv.granada||0,20);
+  inv.cisalla=1;
   inv.expl=Math.max(inv.expl||0,10);
   inv.franctirador=1;
   sniperAmmo=Math.max(sniperAmmo,24);
@@ -1288,13 +1289,19 @@ function useInvItem(id){
   if(!inv[id])return false;
   if(id==='med'){if(hp>=100){msg='Ja tens la vida al màxim.';msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(100,hp+40);msg='Has usat una farmaciola.';msgT=2;snd('pick');return true}
   if(id==='expl'){if(cv||swimming){msg='No pots col·locar explosius des d’aquí.';msgT=2;return false}resume();plant();return true}
-  if(id==='bazooka'){if(cv||swimming){msg='Has d’anar a peu per equipar el bazooka.';msgT=2;return false}cancelGrenadeCharge();bazookaEquipped=!bazookaEquipped;if(bazookaEquipped){grenadeEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=bazookaEquipped?'Bazooka equipat: '+inv.bazooka+' coets disponibles.':'Bazooka desequipat.';msgT=2;return true}
-  if(id==='granada'){if(cv||swimming){msg='Has d’anar a peu per equipar les granades.';msgT=2;return false}cancelGrenadeCharge();grenadeEquipped=!grenadeEquipped;if(grenadeEquipped){bazookaEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=grenadeEquipped?'Granades equipades: '+inv.granada+'.':'Granades desequipades.';msgT=2;return true}
+  if(id==='cisalla'){
+    if(cv||swimming||playerFall||playerEject){msg='La cisalla només es pot equipar a peu.';msgT=2;return false}
+    cancelGrenadeCharge();cisallaEquipped=!cisallaEquipped;
+    if(cisallaEquipped){bazookaEquipped=false;grenadeEquipped=false;sniperEquipped=false;setSniperScope(false)}
+    resume();msg=cisallaEquipped?'Cisalla equipada · Acosta’t a una tanca i prem Talla / F.':'Cisalla desada.';msgT=2;return true
+  }
+  if(id==='bazooka'){if(cv||swimming){msg='Has d’anar a peu per equipar el bazooka.';msgT=2;return false}cancelGrenadeCharge();bazookaEquipped=!bazookaEquipped;if(bazookaEquipped){grenadeEquipped=false;cisallaEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=bazookaEquipped?'Bazooka equipat: '+inv.bazooka+' coets disponibles.':'Bazooka desequipat.';msgT=2;return true}
+  if(id==='granada'){if(cv||swimming){msg='Has d’anar a peu per equipar les granades.';msgT=2;return false}cancelGrenadeCharge();grenadeEquipped=!grenadeEquipped;if(grenadeEquipped){bazookaEquipped=false;cisallaEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=grenadeEquipped?'Granades equipades: '+inv.granada+'.':'Granades desequipades.';msgT=2;return true}
   if(id==='franctirador'){
     cancelGrenadeCharge();
     if(cv||swimming){msg='Has d’anar a peu per equipar el rifle.';msgT=2;return false}
     sniperEquipped=!sniperEquipped;
-    if(sniperEquipped){bazookaEquipped=false;grenadeEquipped=false}
+    if(sniperEquipped){bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false}
     setSniperScope(false);resume();
     msg=sniperEquipped?'Rifle equipat · '+sniperAmmo+' cartutxos · Mira amb T.':'Rifle desequipat.';msgT=2;return true
   }
@@ -1306,7 +1313,7 @@ function useInvItem(id){
   return false
 }
 function dropInvItem(id){
-  if(!inv[id]||id==='arma')return false;inv[id]--;if(inv[id]<=0)delete inv[id];if(id==='disf'&&disg)setDis(false);if(id==='bazooka'&&bazookaEquipped&&!inv.bazooka)bazookaEquipped=false;if(id==='granada'&&grenadeEquipped&&!inv.granada){grenadeEquipped=false;cancelGrenadeCharge()}if(id==='franctirador'&&!inv.franctirador){sniperEquipped=false;setSniperScope(false)}
+  if(!inv[id]||id==='arma')return false;inv[id]--;if(inv[id]<=0)delete inv[id];if(id==='disf'&&disg)setDis(false);if(id==='bazooka'&&bazookaEquipped&&!inv.bazooka)bazookaEquipped=false;if(id==='cisalla'&&cisallaEquipped&&!inv.cisalla){cisallaEquipped=false;pl.userData.cisallaCut=0}if(id==='granada'&&grenadeEquipped&&!inv.granada){grenadeEquipped=false;cancelGrenadeCharge()}if(id==='franctirador'&&!inv.franctirador){sniperEquipped=false;setSniperScope(false)}
   msg='Has deixat: '+IT[id].n;msgT=2;return true
 }
 const ui=window.HUNTER_UI.create({
@@ -1317,7 +1324,7 @@ const ui=window.HUNTER_UI.create({
   resumeButton:document.getElementById('resumeButton'),
   minimap,
   getState:()=>({
-    hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,disguised:disg,bazookaEquipped,grenadeEquipped,sniperEquipped,sniperAmmo,scopeActive,
+    hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
     inventory:inv,itemTypes:IT,player:P,nearVehicle:cv?null:nearV(),messageTime:msgT,message:msg,
     waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
   }),
@@ -1706,12 +1713,13 @@ const nv=cv?null:nearV();
 uiTick+=dt;if(uiTick>.12){uiTick=0;const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',!!cv&&VT[cv.t]?.m==='a');contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}const fireButton=document.getElementById('mainFireButton');
 if(fireButton){
   const grenade=!cv&&grenadeEquipped&&(inv.granada||0)>0,
-        knife=!cv&&!grenade&&!bazookaEquipped&&!sniperEquipped&&ammo<=0,
-        weapon=grenade?'granada':knife?'ganivet':'normal';
+        cutters=!cv&&cisallaEquipped&&(inv.cisalla||0)>0,
+        knife=!cv&&!grenade&&!cutters&&!bazookaEquipped&&!sniperEquipped&&ammo<=0,
+        weapon=cutters?'cisalla':grenade?'granada':knife?'ganivet':'normal';
   if(fireButton.dataset.weapon!==weapon){
     fireButton.dataset.weapon=weapon;
-    fireButton.innerHTML=grenade?ICON.granada:knife?ICON.ganivet:'🎯';
-    const action=grenade?'Llançar granada':knife?'Atacar amb ganivet':'Dispar';
+    fireButton.innerHTML=cutters?ICON.cisalla:grenade?ICON.granada:knife?ICON.ganivet:'🎯';
+    const action=cutters?'Talla filferrada':grenade?'Llançar granada':knife?'Atacar amb ganivet':'Dispar';
     fireButton.setAttribute('aria-label',action);
     fireButton.title=grenade?'Mantén premut per arribar més lluny':action;
   }
