@@ -94,7 +94,7 @@ const assert=require('node:assert/strict');
   dmgW(w,100);const ramDestroyed=!Wl.includes(w);
   return {physical,ramDestroyed,hp};
  })()`);
- assert(physics.physical&&physics.ramDestroyed);
+ assert(physics.physical&&physics.ramDestroyed,JSON.stringify(physics));
  // Comprovam que la caiguda amb paracaigudes no ha recuperat cap arma.
  game.run(`(()=>{
   playerFall={y:Math.max(110,P.y+85),vy:-3,vx:0,vz:0,startHeight:100,t:0,

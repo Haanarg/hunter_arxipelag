@@ -419,7 +419,7 @@ function cutBarbedWire(){
  for(const piece of target.parts?.length?target.parts:[target.m]){
    piece.visible=false;piece.parent?.remove(piece);
  }
- const index=Wl.indexOf(target);if(index>=0)Wl.splice(index,1);
+ const index=Wl.indexOf(target);if(index>=0){Wl.splice(index,1);wallGridCount=-1}
  const doorIndex=Dr.indexOf(target);if(doorIndex>=0)Dr.splice(doorIndex,1);
  pl.userData.cisallaCut=.46;fcd=.52;
  msg='Filferrada tallada silenciosament.';msgT=1.4;
