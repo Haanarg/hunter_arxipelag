@@ -265,7 +265,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     player.scale.setScalar(2/3);
     return player;
   },
-  animatePlayer(player,{forward,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,sniperEquipped=false,grenadeChargePower=0}){
+  animatePlayer(player,{forward,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,sniperEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),move=Math.min(1,Math.abs(forward)),dir=forward<0?-1:1;
     u.firePose=Math.max(0,(u.firePose||0)-dt);u.meleePose=Math.max(0,(u.meleePose||0)-dt);u.grenadeThrow=Math.max(0,(u.grenadeThrow||0)-dt);
     u.pistolAimTime=Math.max(0,(u.pistolAimTime||0)-dt);u.pistolShotAge=Math.min(10,(u.pistolShotAge??10)+dt);
@@ -274,6 +274,32 @@ window.HUNTER_CHARACTERS=Object.freeze({
 
     const tx=(joint,target,rate=limbK)=>joint.rotation.x+=(target-joint.rotation.x)*rate;
     const tz=(joint,target,rate=limbK)=>joint.rotation.z+=(target-joint.rotation.z)*rate;
+
+    if(airborne||parachuting){
+      // L'estat aeri és exclusiu: l'animació normal no pot reactivar
+      // la pistola ni cap altra arma durant un descens amb paracaigudes.
+      for(const weapon of [u.gun,u.knife,u.bazooka,u.grenade,u.sniper])
+        if(weapon)weapon.visible=false;
+      if(u.pistolFlash)u.pistolFlash.visible=false;
+      u.pistolBlend=0;
+      // El rig té els braços cap a -Y: una rotació X positiva
+      // els aixeca cap al davant (-Z), on passen els tirants.
+      const shoulder=parachuting?2.35:.60;
+      const blend=parachuting?1:limbK;
+      tx(u.ar,shoulder,blend);tx(u.al,shoulder,blend);
+      tz(u.ar,parachuting?.19:-.30,blend);
+      tz(u.al,parachuting?-.19:.30,blend);
+      tx(u.aer,parachuting?.22:.18,blend);
+      tx(u.ael,parachuting?.22:.18,blend);
+      tz(u.aer,parachuting?.06:0,blend);
+      tz(u.ael,parachuting?-.06:0,blend);
+      tx(u.ll,parachuting?.10:.17,blend);
+      tx(u.lr,parachuting?-.10:-.17,blend);
+      tx(u.lkl,parachuting?-.18:-.12,blend);
+      tx(u.lkr,parachuting?-.18:-.12,blend);
+      player.rotation.x+=(0-player.rotation.x)*k;
+      return;
+    }
 
     if(swimming&&!inVehicle){
       const stroke=Math.sin(ph),recover=(1-Math.cos(ph))*.5;

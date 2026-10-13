@@ -758,7 +758,8 @@ const buildingVisual=window.HUNTER_BUILDINGS.create(THREE,{material:M,materialPr
 const pl=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});scene.add(pl);
 const animPl=(f,dt)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{
   forward:f,dt,swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,sniperEquipped,
-  grenadeChargePower:grenadeCharge?Math.min(1,grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS):0
+  grenadeChargePower:grenadeCharge?Math.min(1,grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS):0,
+  airborne:!!playerFall,parachuting:!!playerFall?.parachute
 });
 const VT=window.HUNTER_VEHICLE_DYNAMICS.types;
 const VS=window.HUNTER_VEHICLES.scales;
@@ -1650,11 +1651,8 @@ if(!cv&&playerFall){
     // aixecats agafant els tirants i una oscil·lació molt suau.
     pl.rotation.x=0;
     pl.rotation.z=Math.sin(playerFall.t*1.8)*.045;
-    const u=pl.userData;
-    u.ar.rotation.x=-2.35;u.al.rotation.x=-2.35;
-    u.ar.rotation.z=-.22;u.al.rotation.z=.22;
-    u.aer.rotation.x=.22;u.ael.rotation.x=.22;
-    u.lr.rotation.x=-.09;u.ll.rotation.x=.09;
+    // La postura de braços i la visibilitat de l'equipament ja són
+    // exclusives de l'animació aèria (sense una segona capa contradictòria).
   }else{
     pl.rotation.x=(playerFall.spin||1)*playerFall.t*7.5;
     pl.rotation.z=Math.sin(playerFall.t*8)*.45;

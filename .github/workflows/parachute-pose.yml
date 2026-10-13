@@ -1,0 +1,29 @@
+name: Postura del paracaigudes i equipament
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/parachute-pose.yml'
+      - 'src/characters.js'
+      - 'src/game-core.js'
+      - 'tests/parachute-pose.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  parachute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verificar braços, visibilitat i aterratge
+        run: node tests/parachute-pose.cjs
+      - name: Regressio model del jugador
+        run: node tests/player-model.cjs
+      - name: Regressio animacio i postura de granada
+        run: node tests/grenade-charge-pose.cjs
+      - name: Regressio d'aterratge dels helicòpters
+        run: node tests/helicopter-landing.cjs
