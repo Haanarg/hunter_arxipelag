@@ -239,6 +239,10 @@ window.HUNTER_CHARACTERS=Object.freeze({
     const grenadeBody=new THREE.Mesh(new THREE.SphereGeometry(.18,8,6),new THREE.MeshStandardMaterial({color:0x46513f,roughness:.82,metalness:.08}));grenadeBody.scale.set(.88,1.08,.88);grenade.add(grenadeBody);
     box(grenade,.08,.13,.08,0x252b27,0,.18,0);box(grenade,.05,.04,.18,0x747b73,.07,.24,0,'metal');grenade.visible=false;u.grenade=grenade;
 
+    const cisalla=window.HUNTER_BOLT_CUTTERS.create(THREE);
+    cisalla.position.set(0,-.79,-.12);cisalla.rotation.x=-Math.PI/2;
+    cisalla.scale.setScalar(.7);u.aer.add(cisalla);cisalla.visible=false;
+    u.cisalla=cisalla;u.cisallaCut=0;
     const bazooka=new THREE.Group();bazooka.position.set(.62,3.48,-.5);player.add(bazooka);
     const bazMat=new THREE.MeshStandardMaterial({color:0x58664a,roughness:.78,metalness:.08}),bazDark=new THREE.MeshStandardMaterial({color:0x252b27,roughness:.68,metalness:.25}),bazMetal=new THREE.MeshStandardMaterial({color:0x707873,roughness:.5,metalness:.42});
     const tube=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,2.9,10),bazMat);tube.rotation.x=Math.PI/2;tube.position.z=-.12;bazooka.add(tube);
@@ -265,9 +269,10 @@ window.HUNTER_CHARACTERS=Object.freeze({
     player.scale.setScalar(2/3);
     return player;
   },
-  animatePlayer(player,{forward,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,sniperEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false}){
+  animatePlayer(player,{forward,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),move=Math.min(1,Math.abs(forward)),dir=forward<0?-1:1;
     u.firePose=Math.max(0,(u.firePose||0)-dt);u.meleePose=Math.max(0,(u.meleePose||0)-dt);u.grenadeThrow=Math.max(0,(u.grenadeThrow||0)-dt);
+    u.cisallaCut=Math.max(0,(u.cisallaCut||0)-dt);
     u.pistolAimTime=Math.max(0,(u.pistolAimTime||0)-dt);u.pistolShotAge=Math.min(10,(u.pistolShotAge??10)+dt);
     if(grenadeEquipped&&u.grenadeThrow<=0)u.grenadeReleased=false;u.breath=(u.breath||0)+dt*1.7;
     u.ph+=dt*(swimming?(move?4.2:2.1):8.4*move);const ph=u.ph,breath=Math.sin(u.breath);
@@ -278,7 +283,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     if(airborne||parachuting){
       // L'estat aeri és exclusiu: l'animació normal no pot reactivar
       // la pistola ni cap altra arma durant un descens amb paracaigudes.
-      for(const weapon of [u.gun,u.knife,u.bazooka,u.grenade,u.sniper])
+      for(const weapon of [u.gun,u.knife,u.bazooka,u.grenade,u.sniper,u.cisalla])
         if(weapon)weapon.visible=false;
       if(u.pistolFlash)u.pistolFlash.visible=false;
       u.pistolBlend=0;
@@ -303,7 +308,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
 
     if(swimming&&!inVehicle){
       const stroke=Math.sin(ph),recover=(1-Math.cos(ph))*.5;
-      u.gun.visible=false;u.knife.visible=false;u.bazooka.visible=false;u.grenade.visible=false;u.sniper.visible=false;
+      u.gun.visible=false;u.knife.visible=false;u.bazooka.visible=false;u.grenade.visible=false;u.sniper.visible=false;u.cisalla.visible=false;
       player.rotation.x+=(-.1-player.rotation.x)*k;player.rotation.z+=(stroke*.035-player.rotation.z)*k;
       tx(u.al,1.15+.18*stroke);tx(u.ar,1.15-.18*stroke);
       tz(u.al,-.42-.38*stroke);tz(u.ar,.42+.38*stroke);
@@ -321,15 +326,24 @@ window.HUNTER_CHARACTERS=Object.freeze({
     player.rotation.z+=(-.035*walk-player.rotation.z)*k;
 
     const aiming=u.firePose>0&&!inVehicle,melee=u.meleePose>0&&!inVehicle,bazooka=!!bazookaEquipped&&!inVehicle,
-          grenade=!!grenadeEquipped&&!inVehicle,sniper=!!sniperEquipped&&!inVehicle,throwing=u.grenadeThrow>0&&!inVehicle;
+          grenade=!!grenadeEquipped&&!inVehicle,cisalla=!!cisallaEquipped&&!inVehicle,
+          sniper=!!sniperEquipped&&!inVehicle,throwing=u.grenadeThrow>0&&!inVehicle;
     u.bazooka.visible=bazooka;u.sniper.visible=sniper;u.grenade.visible=(grenade||throwing)&&!u.grenadeReleased;
-    u.gun.visible=!bazooka&&!sniper&&!grenade&&!melee&&(ammo>0||aiming);
+    u.cisalla.visible=cisalla;
+    window.HUNTER_BOLT_CUTTERS.pose(u.cisalla,
+      cisalla&&u.cisallaCut>0?Math.sin(Math.PI*(1-u.cisallaCut/.46)):0);
+    u.gun.visible=!bazooka&&!sniper&&!grenade&&!cisalla&&!melee&&(ammo>0||aiming);
     // Deixem acabar el retrocés de l'última bala: mai es veuen
     // pistola i ganivet superposats durant la transició.
-    const knifeReady=!inVehicle&&ammo<=0&&!aiming&&u.pistolAimTime<=0;
-    u.knife.visible=!bazooka&&!sniper&&!grenade&&(melee||knifeReady);
+    const knifeReady=!inVehicle&&!cisalla&&ammo<=0&&!aiming&&u.pistolAimTime<=0;
+    u.knife.visible=!bazooka&&!sniper&&!grenade&&!cisalla&&(melee||knifeReady);
 
-    if(grenade||throwing){
+    if(cisalla){
+      const squeeze=u.cisallaCut>0?Math.sin(Math.PI*(1-u.cisallaCut/.46)):0;
+      tx(u.ar,1.1+.16*squeeze);tz(u.ar,-.18);
+      tx(u.aer,.48-.13*squeeze);tz(u.aer,.04);
+      tx(u.al,.52+.14*squeeze);tz(u.al,-.25);tx(u.ael,.32);
+    }else if(grenade||throwing){
       // La càrrega i el llançament comparteixen la mateixa pose inicial.
       const chargePose=grenadeChargeArmPose(throwing?u.grenadeThrowPower:grenadeChargePower);
       const p=throwing?1-Math.max(0,Math.min(1,u.grenadeThrow/.55)):0;
@@ -391,7 +405,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
 
     // L'animació es llança només amb un tret real de pistola (combat.js).
     // Retrocés mitjà: aprox. 10 cm de reculament local i 5.4 graus de pujada.
-    const pistolAllowed=!inVehicle&&!grenade&&!throwing&&!bazooka&&!sniper&&!melee;
+    const pistolAllowed=!inVehicle&&!grenade&&!throwing&&!bazooka&&!sniper&&!cisalla&&!melee;
     const targetBlend=pistolAllowed&&u.pistolAimTime>0?1:0;
     u.pistolBlend+=(targetBlend-u.pistolBlend)*(1-Math.exp(-18*dt));
     const blend=pistolAllowed?u.pistolBlend:0,rig=u.pistolRig;

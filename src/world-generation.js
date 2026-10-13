@@ -267,7 +267,10 @@ const vegetationMs=performance.now()-vegetationStarted;HQ={x:hqCompound.building
 const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2);
 const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1),x=cx+Math.cos(a)*d,z=cz+Math.sin(a)*d;if(gl(x,z))return mkEn(t,x,z)}return null};
 islands.forEach(i=>{if(i===A||i===Bi||R()<.5)return;const q=land(i,60);if(!q)return;for(let k=0;k<1+(R()<.4);k++)sp2('soldat',q.x,q.z,0,10);if(R()<.25)sp2('torre',q.x,q.z,5,12)});
-rb.forEach(b=>{const n=R()<.25?0:R()<.6?1:2,pool=['arma','arma','med','med','expl','granada','granada','disf','mapa','bazooka','franctirador','paracaigudes'];for(let k=0;k<n;k++)addIt(pool[Math.floor(R()*pool.length)],b)});
+rb.forEach(b=>{const n=R()<.25?0:R()<.6?1:2,pool=['arma','arma','med','med','expl','granada','granada','disf','mapa','bazooka','franctirador','paracaigudes'];for(let k=0;k<n;k++){
+  const kind=pool[Math.floor(R()*pool.length)];
+  addIt(kind==='granada'&&b.kind==='garage'?'cisalla':kind,b)
+}});
 addIt('arma',B[0]);addIt('expl',B[1]);addIt('med',B[2]);
 addIt('franctirador',rb[Math.floor(R()*rb.length)]||B[2]);
 rb.slice().sort(()=>R()-.5).slice(0,2).forEach(b=>addIt('mapa',b));

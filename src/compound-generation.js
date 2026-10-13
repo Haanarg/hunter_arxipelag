@@ -121,7 +121,7 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
     setPatrol(u,route.map((_,j)=>route[(j+nearest)%route.length]));record.soldiers.push(u);
   }
   if(layout.general){const p=tr(layout.general.x,layout.general.z);record.general=mkEn('general',...p,record.buildings[0].fy+.3);}
-  const lootKinds={'munició':'arma','farmaciola':'med','granades':'granada','mapa':'mapa','mapa_heli':'mapa_heli','mapa_tanc':'mapa_tanc','explosius':'expl','bazooka':'bazooka','franctirador':'franctirador','disfressa':'disf','paracaigudes':'paracaigudes'};
+  const lootKinds={'munició':'arma','farmaciola':'med','granades':'granada','cisalla':'cisalla','mapa':'mapa','mapa_heli':'mapa_heli','mapa_tanc':'mapa_tanc','explosius':'expl','bazooka':'bazooka','franctirador':'franctirador','disfressa':'disf','paracaigudes':'paracaigudes'};
   for(const loot of layout.loot){
     if(loot.kind==='disfressa'&&R()>=.5)continue;
     const t=lootKinds[loot.kind];if(!IT[t])throw new Error('Unknown compound loot: '+loot.kind);

@@ -289,6 +289,7 @@ mapa_tanc:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 
 bazooka:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 35 L51 18" stroke="#536148" stroke-width="11" stroke-linecap="round"/><path d="M8 38 L17 34" stroke="#252b27" stroke-width="13" stroke-linecap="round"/><path d="M48 20 L56 17" stroke="#252b27" stroke-width="14" stroke-linecap="round"/><path d="M29 30 L25 42" stroke="#2c302d" stroke-width="5" stroke-linecap="round"/><path d="M35 26 L39 18" stroke="#737b74" stroke-width="3"/><circle cx="51" cy="18" r="4" fill="#b76b2d"/></svg>',
 franctirador:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M5 35 L53 35" stroke="#343d39" stroke-width="7"/><rect x="20" y="23" width="20" height="8" rx="2" fill="#778577" stroke="#292f2b" stroke-width="2"/><rect x="25" y="17" width="13" height="5" rx="1" fill="#243333"/><path d="M16 36 L8 48 H22 L28 36" fill="#846948" stroke="#3d3126" stroke-width="2"/><rect x="52" y="30" width="7" height="10" rx="1" fill="#242b2b"/><path d="M31 35 L28 46" stroke="#343d39" stroke-width="5"/></svg>',
 ganivet:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M13 52L34 31" stroke="#4d3528" stroke-width="9" stroke-linecap="round"/><path d="M10 55L15 50" stroke="#cba87c" stroke-width="4" stroke-linecap="round"/><path d="M27 29L36 38" stroke="#303b3c" stroke-width="5" stroke-linecap="round"/><path d="M34 31L51 9Q56 6 53 14L42 35Z" fill="#c9d2d2" stroke="#455255" stroke-width="2"/><path d="M35 30L50 13" stroke="#f3faf4" stroke-width="2"/></svg>',
+cisalla:'<svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke-linecap="round"><path d="M14 56L30 30M50 56L34 30" stroke="#b73a36" stroke-width="8"/><path d="M30 30L24 8M34 30L40 8" stroke="#a3b2b4" stroke-width="6"/><path d="M24 8L32 17 40 8" stroke="#d3dde0" stroke-width="3"/></g><circle cx="32" cy="30" r="6" fill="#414b4c" stroke="#b7c7c9" stroke-width="2"/></svg>',
 paracaigudes:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M6 27 Q32 -5 58 27 Z" fill="#e9d9aa" stroke="#6c5945" stroke-width="3"/><path d="M32 7 Q13 18 6 27 M32 7 Q51 18 58 27 M21 12L21 27 M43 12L43 27" fill="none" stroke="#bb7151" stroke-width="2"/><path d="M6 27L24 49 M58 27L40 49 M32 27V50" fill="none" stroke="#52565a" stroke-width="2"/><rect x="23" y="46" width="18" height="12" rx="2" fill="#70816a"/></svg>',
 granada:'<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="31" cy="38" rx="16" ry="18" fill="#4a5842" stroke="#263028" stroke-width="3"/><rect x="27" y="14" width="10" height="10" rx="2" fill="#303632"/><path d="M34 15 C44 8 51 14 48 23" fill="none" stroke="#727b72" stroke-width="4"/><circle cx="48" cy="24" r="5" fill="none" stroke="#727b72" stroke-width="3"/></svg>',
 arma:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 19 H54 V50 H10 Z" fill="#75583a" stroke="#3e3024" stroke-width="3"/><path d="M14 24 H50" stroke="#b58a56" stroke-width="3"/><g fill="#d4aa42" stroke="#70591e" stroke-width="1"><circle cx="20" cy="34" r="4"/><circle cx="31" cy="34" r="4"/><circle cx="42" cy="34" r="4"/><circle cx="25" cy="44" r="4"/><circle cx="36" cy="44" r="4"/></g></svg>'
@@ -301,13 +302,14 @@ mapa_tanc:{n:'Mapa de tancs',c:0xc6b06a,s:[1.6,.08,1.2],icon:ICON.mapa_tanc,desc
 bazooka:{n:'Bazooka',c:0x58664a,s:[2.1,.45,.45],icon:ICON.bazooka,desc:'Llançacoets amb 3 coets per recollida. Equipa’l i dispara càrregues d’alt poder destructiu fins que s’esgotin.',usable:true},
 franctirador:{n:'Rifle de franctirador',c:0x647366,s:[2.7,.5,.42],icon:ICON.franctirador,desc:'Rifle de llarg abast. 6 cartutxos per recollida; elimina soldats d’un tret. Equipa’l i prem Mira / T per activar l’òptica x8.',usable:true},
 paracaigudes:{n:'Paracaigudes',c:0xcfaa74,s:[1.2,.9,.9],icon:ICON.paracaigudes,desc:'Es desplega automàticament en saltar d’un helicòpter en vol. Frena la caiguda i evita els danys de l’aterratge.',usable:false},
+cisalla:{n:'Cisalla',c:0xb83f38,s:[1,1.4,.3],icon:ICON.cisalla,desc:'Talla silenciosament un tram de filferrada proper. Equipa-la i prem Talla / F mirant la tanca. No gasta munició ni alerta els enemics.',usable:true},
 granada:{n:'Granades',c:0x4a5842,s:[.65,.65,.65],icon:ICON.granada,desc:'Paquet de 5 granades. Prem breument Dispar per llançar a prop o mantén-lo premut per augmentar-ne l’abast fins al màxim. Una trajectòria vermella indica on cauran.',usable:true},
 arma:{n:'Munició',c:0x555b66,s:[1.6,.35,.35],icon:ICON.arma,desc:'Caixa de munició per a l’arma personal.',usable:false},
 expl:{n:'Explosius',c:0x617451,s:[.9,.9,.9],icon:ICON.expl,desc:'Bloc d’explosiu plàstic amb cables RGB i temporitzador digital. La càrrega col·locada parpelleja en vermell durant 3 segons i té força destructiva triple.',usable:true},
 disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa enemiga vermella. Activa o desactiva la disfressa.',usable:true}
 };
 // combat i enemics
-let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=100,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,sniperEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null;
+let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=100,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null;
 const endEl=document.getElementById('end'),gB=new THREE.BoxGeometry(.35,.35,.35),sphG=new THREE.SphereGeometry(1,10,8),
 mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial({color:0xff7a1a}),mE=new THREE.MeshBasicMaterial({color:0xff4040}),
 // Bales de pistola, franctirador, soldats i tanqueta: petites i blanques.
@@ -744,6 +746,7 @@ function createItemVisual(t){const g=new THREE.Group(),metal=0x454b4e,dark=0x3d3
     bx(g,.13,.28,.22,0x2d322d,0,.34,-.08,'metal');
   }
   else if(t==='paracaigudes'){bx(g,1.25,.9,.75,0x697f6a,0,.52,0,'paint');bx(g,1.32,.18,.79,0xd7ad70,0,.94,0,'paint');for(const z of[-.24,.24])bx(g,.1,1,.09,0xe8dbc0,-.54,.52,z,'paint')}
+  else if(t==='cisalla'){const cutter=window.HUNTER_BOLT_CUTTERS.create(THREE);cutter.rotation.z=Math.PI/2;cutter.position.y=.66;cutter.scale.setScalar(1.12);g.add(cutter)}
   else if(t==='granada'){for(const [x,z] of[[-.35,-.24],[0,-.24],[.35,-.24],[-.18,.22],[.18,.22]]){const body=new THREE.Mesh(new THREE.SphereGeometry(.17,8,6),M(0x4a5842,'metal'));body.scale.set(.88,1.08,.88);body.position.set(x,.42,z);g.add(body);bx(g,.07,.12,.07,0x252b27,x,.61,z,'metal')}}
   else if(t==='disf'){bx(g,.78,1.3,.16,0xb53232,0,.8,0,'paint');const l=bx(g,.7,.38,.16,0xb53232,-.62,1.18,0,'paint'),r=bx(g,.7,.38,.16,0xb53232,.62,1.18,0,'paint');l.rotation.z=-.55;r.rotation.z=.55;bx(g,.16,.18,.18,0xf1c7a1,0,1.44,0,'organic');bx(g,.08,1.05,.19,0x6f1f1f,0,.75,-.02,'paint')}
   else bx(g,...IT[t].s,IT[t].c,0,.4,0,'paint');
@@ -757,7 +760,7 @@ const bx=(g,w,h,d,c,x,y,z,profile='organic')=>{const m=new THREE.Mesh(new THREE.
 const buildingVisual=window.HUNTER_BUILDINGS.create(THREE,{material:M,materialProfile,box:bx});
 const pl=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});scene.add(pl);
 const animPl=(f,dt)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{
-  forward:f,dt,swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,sniperEquipped,
+  forward:f,dt,swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,
   grenadeChargePower:grenadeCharge?Math.min(1,grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS):0,
   airborne:!!playerFall,parachuting:!!playerFall?.parachute
 });
