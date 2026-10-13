@@ -1,0 +1,24 @@
+name: Dissenys dels complexos
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/compound-*.mjs'
+      - 'src/buildings.js'
+      - 'src/vehicles.js'
+      - 'tests/compound-preview.cjs'
+      - 'tests/compound-phase4.cjs'
+      - '.github/workflows/compound-designs.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  layouts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tests/compound-preview.cjs
+      - run: node tests/compound-phase4.cjs

@@ -54,9 +54,11 @@ node tests/compound-generation.cjs
 node tests/terrain-stream.cjs
 node tests/graphics-quality.cjs
 node tests/seed-search.cjs
+node tests/smoke.cjs
+node tests/seed-replay.cjs
 ```
 
-`tests/smoke.cjs` és la prova general, però **actualment s’atura en una expectativa antiga del LOD del terreny**; no s’ha de presentar com una suite completament verda. A més, la prova de reproducció de llavors acaba per timeout a CI. Vegeu l’apartat de validació del document d’estat.
+`tests/smoke.cjs` comprova conjuntament arrencada, combat, inventari, vehicles, pausa i reinici amb DOM i renderer simulats; té un workflow propi a GitHub. `tests/seed-replay.cjs` reconstrueix diversos mapes i comprova que una llavor reprodueixi el mateix món. Executa aquestes dues proves de generació seqüencialment per evitar competència pels recursos. Els resultats i els límits coneguts consten a l’apartat de validació del [document d’estat](docs/VISUAL_MODERNIZATION.md).
 
 Per a WebGL, instal·la Playwright i Chromium i executa `node tests/browser.cjs` o `node tests/compound-game-browser.cjs`. Es poden indicar `PLAYWRIGHT_MODULE` i `BROWSER_EXECUTABLE_PATH`; les captures es guarden al directori temporal. L’emulació mòbil no substitueix les mesures en Android físic.
 
@@ -65,7 +67,8 @@ Laboratoris conservats per a iteracions visuals:
 - [Models, caps i ganivet](proves.html).
 - [Dispar a dues mans](dispar-proves.html).
 - [Explosius](explosius-proves.html).
-- [Complexos, fases 1–3](compounds-preview.html).
+- [Complexos, fases 1–3 integrades](compounds-preview.html).
+- [Fase 4: recintes nous, variants i base–costa](compounds-preview.html?fase=4): 21 dissenys, encara fora del generador. [Criteris i distribucions](docs/COMPOUNDS_PHASE4.md).
 
 ## Publicació i llicències
 

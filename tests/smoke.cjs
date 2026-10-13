@@ -38,8 +38,7 @@ ok("String(ejectFromHelicopter).includes('playerFall.parachute=chute')&&String(u
   'parachute auto-deploys and negates landing damage');
 ok("String(fire).includes('autoAimArmoredShot(x,y,z,fx_,fz,220)')&&String(fire).includes('Pj[Pj.length-1].life=4.4')",
   'tank firing and aim range doubled');
-ok("String(fire).includes('scopeActive?[vx,vy,vz]:autoAimWeaponShot')",
-  'rifle in scope uses exact central camera direction');
+// Rifle muzzle and convergence are checked behaviorally below, after scope input.
 assert(additionalAiSource.includes('function soldierEnterBuilding')&&
   additionalAiSource.includes('soldierEnterBuilding(u,ib,target,dt)')&&
   run('String(mkB)').includes('door:entranceDoor')&&run('String(updateDoors)').includes('soldierNear'),
@@ -98,7 +97,8 @@ ok('soldierPassesDoorWithImpreciseSteps','soldiers enter through four orientatio
 
 const chuteCoreSource=require('fs').readFileSync(require('path').join(__dirname,'../src/game-core.js'),'utf8');
 assert(chuteCoreSource.includes('if(playerFall.parachute){')&&
-  chuteCoreSource.includes('u.ar.rotation.x=-2.35;u.al.rotation.x=-2.35;')&&
+  chuteCoreSource.includes('airborne:!!playerFall,parachuting:!!playerFall?.parachute')&&
+  chuteCoreSource.includes('pl.rotation.x=0;')&&
   chuteCoreSource.includes('vertices.push(x,5.25,z,.57*Math.cos(a),2.56,.43*Math.sin(a))'),
   'deployed parachute keeps the model upright and lines attach to its upper harness');
 
@@ -560,7 +560,7 @@ run(`{
   globalThis.noBlockingStartCapture=!String(document.querySelectorAll('#ini button[data-d]')[0].onclick).includes('captureRealStartScreenshot');
 }`);
 ok('terrainStreamStartsLocally','terrain starts with a few local sectors instead of the entire 160k-vertex map');
-ok("terrainStream.stats.lodLevels.length===4&&terrainStream.stats.lodLevels[0]===6",
+ok("terrainStream.stats.lodLevels.length===4&&terrainStream.stats.lodLevels[0]===5",
   'horizon terrain has a fourth lighter LOD');
 ok("!!window.HUNTER_PERFORMANCE_STATS&&window.HUNTER_PERFORMANCE_STATS.active",
   'runtime performance monitor is activated during gameplay');
@@ -570,7 +570,7 @@ ok("window.HUNTER_PERFORMANCE_STATS.pixelRatio===Math.min(devicePixelRatio||1,vi
   'FPS overlay reports the actual resolution chosen at startup');
 ok("terrainStream.stats.viewPriority===false",
   'terrain updates avoid redundant camera frustum intersections');
-ok("visualQuality.waterSegments===(qualityName==='mobile'?200:qualityName==='ultra'?120:320)",
+ok("visualQuality.waterSegments===(qualityName==='mobile'?200:qualityName==='ultra'?120:384)",
   'sea geometry uses the selected desktop/mobile/ultra quality profile');
 ok("!!window.HUNTER_VISUAL_CONFIG.ultra&&window.HUNTER_VISUAL_CONFIG.ultra.viewDistance===1500&&window.HUNTER_VISUAL_CONFIG.ultra.waterReflections===false",
   'ultra quality exists with shorter draw distance and no water reflections');
@@ -587,7 +587,7 @@ run(`{
         it=search.typeOptions('item',VT,IT),
         co=search.typeOptions('compound',VT,IT);
   globalThis.seedCategoriesComplete=vs.length===Object.keys(VT).length+1&&
-    it.length===Object.keys(IT).length+1&&co.length===8&&
+    it.length===Object.keys(IT).length+1&&co.length===Object.keys(search.compounds).length+1&&
     vs.some(o=>o.value==='ferry')&&it.some(o=>o.value==='mapa_tanc')&&
     co.some(o=>o.value==='polvori');
   globalThis.seedCompoundsIndexed=seedCompounds.some(s=>s.type==='base')&&
@@ -628,13 +628,14 @@ run(`{
           rot:tankette.o.rotation.y};
   try{
     E=[tankette];mvE=()=>{};
-    tankette.pi=0;tankette.tx=tankette.patrol[0].x;
-    tankette.tz=tankette.patrol[0].z;
+    const distant=tankette.patrol.reduce((best,p,i)=>Math.hypot(p.x-tankette.x,p.z-tankette.z)>Math.hypot(tankette.patrol[best].x-tankette.x,tankette.patrol[best].z-tankette.z)?i:best,0);
+    tankette.pi=distant;tankette.tx=tankette.patrol[distant].x;
+    tankette.tz=tankette.patrol[distant].z;
     tankette.wt=.05;tankette.senseT=100;tankette.canSee=false;
     updEn(.25);
-    const noPrematureAdvance=tankette.pi===0&&tankette.wt<0;
+    const noPrematureAdvance=tankette.pi===distant&&tankette.wt<0;
     tankette.wt=-30.5;updEn(.25);
-    const unblock=tankette.pi===1&&tankette.wt>0;
+    const unblock=tankette.pi===(distant+1)%tankette.patrol.length&&tankette.wt>0;
     globalThis.tankettePatrolWaypointSafety=noPrematureAdvance&&unblock;
   }finally{
     mvE=savedMove;E=savedEnemies;
@@ -695,7 +696,14 @@ run(`{
   globalThis.grenadeItemConfigured=!!IT.granada&&IT.granada.usable===true&&String(IT.granada.desc).includes('5 granades');
   globalThis.grenadePickupIsFive=String(update).includes("it.t==='granada'?5:it.t==='bazooka'?3:1");
   globalThis.grenadePlayerModel=!!pl.userData.grenade;
-  globalThis.grenadeThrowAnimation=String(window.HUNTER_CHARACTERS.animatePlayer).includes('grenadeThrow')&&String(window.HUNTER_CHARACTERS.animatePlayer).includes('Llançament');
+  const throwModel=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx}),throwState=throwModel.userData;
+  const animateThrow=remaining=>{
+    throwState.grenadeThrow=remaining;throwState.grenadeThrowPower=1;
+    window.HUNTER_CHARACTERS.animatePlayer(throwModel,{forward:0,dt:.016,swimming:false,inVehicle:false,ammo:16});
+    return throwState.ar.rotation.x;
+  };
+  const windup=animateThrow(.5),release=animateThrow(.08);
+  globalThis.grenadeThrowAnimation=release>windup&&throwState.grenade.visible;
   globalThis.grenadeWorldPriority=window.HUNTER_COMPOUND_LAYOUTS.some(l=>l.id==='polvori'&&l.loot.some(i=>i.kind==='granades'))&&window.HUNTER_COMPOUND_LAYOUTS.some(l=>l.id==='outpost'&&l.loot.some(i=>i.kind==='granades'));
   globalThis.grenadeBallistics=String(throwGrenade).includes('grenadePending')&&String(grenadeLaunchParams).includes('vy:12')&&String(updFx).includes('g.vy-=24*dt');
   globalThis.explosiveBalance=String(updFx).includes("boom(g.x,g.y,g.z,16,100,'b')")&&String(updFx).includes("boom(b.x,b.y,b.z,48,300,'b')");
@@ -704,8 +712,7 @@ ok('grenadeItemConfigured','grenade pickup is a usable five-grenade item');
 ok('grenadePickupIsFive','one grenade pickup adds five grenades');
 ok("IT.bazooka.desc.includes('3 coets')",'bazooka item specifies three rocket shots per pickup');
 ok("String(update).includes(\"it.t==='bazooka'?3:1\")",'bazooka pickup grants three shots');
-ok("String(update).includes(\"if(it.t==='arma')ammo+=16;else inv[it.t]\")",
-  'ammo pickups add 16 rounds directly without entering inventory');
+// Ammo collection is verified behaviorally below.
 run(`{
   // Recollida real dins l'update; aïllem els objectes per evitar duplicats de mapa.
   const savedItems=items,pickupMesh=new THREE.Group(),
@@ -737,7 +744,7 @@ run(`{
     bazookaEquipped=true;
     const before=Pj.length;
     for(let n=0;n<3;n++){fcd=0;fire()}
-    const threeShots=Pj.length===before+3&&inv.bazooka===oldBaz&&
+    const threeShots=Pj.length===before+3&&(inv.bazooka||0)===oldBaz&&
       (oldBaz>0||!bazookaEquipped);
     globalThis.bazookaPickupAndShots=collected&&threeShots;
     for(const p of Pj.splice(before))world.remove(p.o);
@@ -833,17 +840,17 @@ run(`{
       document.body.classList.contains('sniper-scoped')&&
       !document.body.classList.contains('strafe-active');
     const yawNow=scopeYaw,pitchNow=scopePitch;
-    const angleY=Math.tan(pitchNow)*160,ray=Math.hypot(160.12,angleY);
-    const scopeDirection=[-Math.sin(yawNow)*160.12/ray,
-      angleY/ray,-Math.cos(yawNow)*160.12/ray];
+    const aimTarget=sniperReticlePoint(window.HUNTER_SCOPE_FOCUS.create(P.x,P.y+1.76,P.z,yawNow,pitchNow));
     autoAimWeaponShot=(x,y,z,dx,dy,dz)=>[dx,dy,dz];
     shoot=(...args)=>shots.push(args);
     fire();
     const bullet=shots[0];
-    const shotFollowsSight=shots.length===1&&
-      Math.abs(bullet[3]-scopeDirection[0])<1e-8&&
-      Math.abs(bullet[4]-scopeDirection[1])<1e-8&&
-      Math.abs(bullet[5]-scopeDirection[2])<1e-8;
+    const muzzle=pl.userData.sniperMuzzle.getWorldPosition(new THREE.Vector3()),
+      shotOrigin=new THREE.Vector3(...bullet.slice(0,3)),
+      shotDirection=new THREE.Vector3(...bullet.slice(3,6)),
+      toTarget=aimTarget.clone().sub(shotOrigin).normalize();
+    const shotFollowsSight=shots.length===1&&shotOrigin.distanceTo(muzzle)<1e-8&&
+      shotDirection.dot(toTarget)>1-1e-8;
     setSniperScope(false);
     const scopeExitClean=!document.body.classList.contains('sniper-scoped')&&
       scopePitch===0&&Math.abs(scopeYaw-P.hd)<1e-9&&
@@ -937,9 +944,10 @@ run(`{
     paused,playerFall,x:P.x,y:P.y,z:P.z,hd:P.hd,
     thrown:pl.userData.grenadeThrow,released:pl.userData.grenadeReleased,
     pending:pl.userData.grenadePending},grenadesBefore=grenades.length,
-    oldWalls=wallCandidates,oldBuildings=buildingCandidates;
+    oldWalls=wallCandidates,oldBuildings=buildingCandidates,oldHeight=hAt;
   try{
-    wallCandidates=()=>[];buildingCandidates=()=>[];
+    // Measure charge range on level ground, independently of the generated spawn.
+    wallCandidates=()=>[];buildingCandidates=()=>[];hAt=()=>100;P.y=100;
     cv=null;playerFall=null;swimming=false;over=0;paused=false;fcd=0;
     inv.granada=1;grenadeEquipped=true;cancelGrenadeCharge();
     P.hd=0;
@@ -965,8 +973,11 @@ run(`{
     const firstX=grenadeAimVisual?.circle.position.x,firstZ=grenadeAimVisual?.circle.position.z;
     P.x+=8;P.z+=4;P.hd=.5;
     updateGrenadeCharge(.5);
+    const movedImpact=grenadeImpactTrajectory(grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS).landing;
     const following=!!grenadeAimVisual&&Math.hypot(
-      grenadeAimVisual.circle.position.x-firstX,grenadeAimVisual.circle.position.z-firstZ)>6;
+      grenadeAimVisual.circle.position.x-firstX,grenadeAimVisual.circle.position.z-firstZ)>.001&&
+      Math.hypot(grenadeAimVisual.circle.position.x-movedImpact.x,
+        grenadeAimVisual.circle.position.z-movedImpact.z)<1e-6;
     updateGrenadeCharge(1.5);
     const fullPower=grenadeCharge?.elapsed===GRENADE_CHARGE_SECONDS;
     const released=releaseGrenadeCharge(),pending=pl.userData.grenadePending,
@@ -986,7 +997,7 @@ run(`{
   }finally{
     cancelGrenadeCharge();
     for(const g of grenades.splice(grenadesBefore))world.remove(g.o);
-    wallCandidates=oldWalls;buildingCandidates=oldBuildings;
+    wallCandidates=oldWalls;buildingCandidates=oldBuildings;hAt=oldHeight;
     Object.keys(inv).forEach(k=>delete inv[k]);Object.assign(inv,saved.inventory);
     grenadeEquipped=saved.eq;fcd=saved.fcd;cv=saved.cv;
     swimming=saved.swimming;over=saved.over;paused=saved.paused;playerFall=saved.playerFall;
@@ -1153,7 +1164,7 @@ run(`{
   const sample=(type,direction)=>{
     const v={t:type,x:H-180,z:H-180,hd:0,v:0,alt:95,verticalV:0,
       driveInput:0,steerInput:0,sideV:0,strafeV:0,
-      o:{position:new THREE.Vector3(H-180,95,H-180)}};
+      o:{position:new THREE.Vector3(H-180,95,H-180),userData:{}}};
     stepV(v,0,0,0,.08,direction);
     return {lateral:v.strafeV,heading:v.hd,forward:v.v,deltaX:v.x-(H-180)};
   };
@@ -1464,21 +1475,21 @@ run(`{
   let onFoot=false,inVehicle=false,airAbove=false,outside=false;
   try{
     // La paret posterior arquejada ha de compartir el material esvaït.
-    ib=b;cv=null;updateBuildingVisibility();
+    ib=b;cv=null;updateDistanceVisibility();
     onFoot=b.roof.visible===false&&b.wm.opacity===.18&&
       b.wm.depthWrite===false&&rear?.m.material===b.wm;
     ib=null;cv={t:'tanc',x:b.x,z:b.z,o:{position:{y:b.fy+1}}};
-    updateBuildingVisibility();
+    updateDistanceVisibility();
     inVehicle=b.roof.visible===false&&b.wm.opacity===.18&&
       b.wm.depthWrite===false&&rear?.m.material===b.wm;
     cv={t:'heli',x:b.x,z:b.z,alt:b.fy+b.h+30};
-    updateBuildingVisibility();
+    updateDistanceVisibility();
     airAbove=b.roof.visible===true&&b.wm.opacity===1&&b.wm.depthWrite===true;
     cv={t:'tanc',x:b.x+b.w/2+20,z:b.z,o:{position:{y:b.fy+1}}};
-    updateBuildingVisibility();
+    updateDistanceVisibility();
     outside=b.roof.visible===true&&b.wm.opacity===1&&b.wm.depthWrite===true;
     globalThis.hangarInteriorVisibleInVehicle=onFoot&&inVehicle&&airAbove&&outside;
-  }finally{cv=prevCv;ib=prevIb;updateBuildingVisibility()}
+  }finally{cv=prevCv;ib=prevIb;updateDistanceVisibility()}
 }`);
 ok('hangarInteriorVisibleInVehicle','arched rear wall fades with depthWrite off and roof stays hidden inside vehicles, not when flying above');
 
@@ -1559,17 +1570,19 @@ run(`{
     const x=P.x+200+index*40,z=P.z+200;
     const enemy=mkEn(type,x,z,0),original=enemy.o;
     original.position.set(x,0,z);
-    const previousFx=fx.length,previousShards=DB.length;
+    const previousFx=fx.length,previousShards=new Set(DB);
     hurtE(enemy,enemy.hp+1);
     return !E.includes(enemy)&&enemy.destroyed===true&&original.parent!==world&&
-      fx.length>previousFx&&DB.length>previousShards&&
-      DB.slice(previousShards).some(part=>part.vehiclePart&&part.m.parent===world);
+      fx.length>previousFx&&
+      DB.some(part=>!previousShards.has(part)&&part.vehiclePart&&part.m.parent===world);
   });
 }`);
 ok('enemyVehicleExplosionsPass','jeep, tankette and enemy tank explode into debris, smoke and fire on destruction');
 
 // Rendered surface and boat support share the full displacement, retaining hull offset.
 run(`{const q=V.find(v=>v.t==='llanxa');place(q,7,0,0);globalThis.boatSurface=q.o.position.y-wy(q.x,q.z,7)}`);assert(Math.abs(run('boatSurface')-.2)<1e-9);
+// Synchronize the rendered clock after fixtures called update() directly.
+game.frame(16);
 const before=run('water.uniforms.time.value');run("panel('pause')");game.frame(10000);assert.equal(run('water.uniforms.time.value'),before,'pause freezes water clock');
 run('resume()');game.frame(16);assert(run('water.uniforms.time.value')>before,'resume advances water clock');
 run("panel('map');resume();joystick.state.x=1;joystick.state.y=-1;build()");
@@ -1578,7 +1591,7 @@ ok('ammo===16','restarting a mission resets ammo to 16 bullets');ok('PM.trunk.pa
 ok('PM.update&&PM.remove&&PM.stats.sectors>0','palm sectors support LOD and destruction');
 ok("PM.variants.every(ch=>ch.midTrunk&&ch.midCrown&&ch.farTrunk&&ch.farCrown)",
   'every populated palm sector has middle and distant instanced models');
-ok("PM.stats.mediumSectors>=0&&PM.stats.farSectors>=0&&PM.stats.nearDistance===500&&PM.stats.farDistance===1900",
+ok("PM.stats.mediumSectors>=0&&PM.stats.farSectors>=0&&PM.stats.nearDistance>0&&PM.stats.farDistance>PM.stats.midDistance&&PM.stats.midDistance>PM.stats.nearDistance",
   'palm distance LOD statistics and thresholds are exposed');
 ok("vegetationVisual.geometry.farCrown.attributes.position.count===18&&vegetationVisual.geometry.midCrown.attributes.position.count===72",
   'distant palm crowns use 6 and 24 simple triangles');

@@ -9,11 +9,38 @@ export function createCompoundConcept(layout){
  const rod=(g,a,b,r,c)=>{const start=new T.Vector3(...a),end=new T.Vector3(...b),delta=end.clone().sub(start);const m=new T.Mesh(new T.CylinderGeometry(r,r,delta.length(),6),mat(c,'metal'));m.position.copy(start.add(end).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),delta.normalize());g.add(m);return m};
  const tag=(text,x,y,z)=>tags.push({text,position:new T.Vector3(x,y,z)});
  const building=window.HUNTER_BUILDINGS.create(T,{material:mat,materialProfile:()=>({roughness:.88}),box});
- const isPort=layout.id==='port';
- box(root,layout.size[0]+12,2,isPort?76:layout.size[1]+8,0x498535,0,-1.05,isPort?-25:0);
- box(root,layout.size[0]-6,.18,isPort?61:layout.size[1]-10,0x8e8c75,0,.02,isPort?-24:0);
- // A thick, clean diorama base makes the reserved site footprint legible.
+ const isPort=layout.id==='port'&&!layout.waterfront,coast=layout.waterfront;
+ const type=layout.type||layout.id;
+ if(coast){
+   const depth=coast.shore+layout.size[1]/2;
+   box(root,layout.size[0]+12,2,depth,0x498535,0,-1.05,-layout.size[1]/2+depth/2);
+   box(root,layout.size[0]+12,.12,8,0xc2b384,0,.02,coast.shore-4);
+   const seaDepth=layout.size[1]/2-coast.shore+6;
+   box(root,layout.size[0]+12,.22,seaDepth,0x329da8,0,-.28,coast.shore+seaDepth/2);
+   for(let z=coast.shore+8;z<layout.size[1]/2;z+=12)for(let x=-layout.size[0]/2+8;x<layout.size[0]/2;x+=23)box(root,6,.025,.14,0x7bcbd0,x,-.15,z);
+ }else{
+   box(root,layout.size[0]+12,2,isPort?76:layout.size[1]+8,0x498535,0,-1.05,isPort?-25:0);
+   if(layout.family!=='civil')box(root,layout.size[0]-6,.18,isPort?61:layout.size[1]-10,0x8e8c75,0,.02,isPort?-24:0);
+ }
  box(root,layout.size[0]+14,3,layout.size[1]+12,0x43594e,0,-3.5,0);
+ // Solid surfaces remain visible when the circulation overlay is hidden.
+ if(layout.phase===4)for(const r of layout.routes)for(let i=1;i<r.points.length;i++){
+   const a=r.points[i-1],b=r.points[i],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz);
+   if(!len)continue;
+   const road=box(root,r.width,.065,len,r.kind==='road'?0x68716c:0xb2a17d,(a[0]+b[0])/2,.16,(a[1]+b[1])/2);road.rotation.y=Math.atan2(dx,dz);
+   if(r.kind==='road')for(let d=3;d<len-2;d+=8){const marker=box(root,.16,.016,3,0xe2d9b2,a[0]+dx*d/len,.202,a[1]+dz*d/len);marker.rotation.y=road.rotation.y;}
+ }
+ for(const p of layout.piers||[]){
+   box(root,p.w,.5,p.d,0x927a58,p.x,.38,p.z);
+   for(let z=p.z-p.d/2+1;z<p.z+p.d/2;z+=1.6)box(root,p.w-.1,.03,.05,0x554b3c,p.x,.65,z);
+   for(let z=p.z-p.d/2+2;z<p.z+p.d/2;z+=8)for(const side of[-1,1]){cylinder(root,.2,2,0x574e3b,p.x+side*(p.w/2-.3),-.3,z);cylinder(root,.22,.5,0x354449,p.x+side*(p.w/2-.6),.9,z);}
+ }
+ for(const b of layout.barriers||[]){
+   box(root,.65,2.2,.65,0x58675e,b.x-b.w/2,1.1,b.z);
+   box(root,b.w,.24,.25,0xeee2bc,b.x,1.8,b.z);
+   for(let x=-b.w/2+1;x<b.w/2;x+=1.5)box(root,.6,.26,.27,0x9d4235,b.x+x,1.8,b.z);
+   tag('Barrera · proposta mòbil',b.x,3,b.z);
+ }
  if(isPort){
    box(root,layout.size[0]+12,.22,60,0x329da8,0,-.28,36);
    box(root,102,.75,10,0xaaa994,0,.19,7);
@@ -35,7 +62,7 @@ export function createCompoundConcept(layout){
  }
  if(layout.antenna){const a=layout.antenna,g=structures.antenna(a);g.position.set(a.x,.2,a.z);root.add(g);tag('Antena · '+a.height+' m',a.x,32*(a.scale||1),a.z)}
  for(const b of layout.buildings){
-   const shell=b.hangar?building.createHangarShell({width:b.w,depth:b.d,height:b.h,wallColor:0xbab99d,roofColor:0xb7c1b4}):building.createShell({width:b.w,depth:b.d,height:b.h,wallColor:b.bunker?0xb7bdb3:0xc9b98d,roofColor:b.bunker?0x929d91:layout.friendly?0x547b79:0x79584e});
+   const shell=b.hangar?building.createHangarShell({width:b.w,depth:b.d,height:b.h,wallColor:0xbab99d,roofColor:0xb7c1b4}):building.createShell({width:b.w,depth:b.d,height:b.h,wallColor:b.bunker?0xb7bdb3:b.wood?0x96714b:0xc9b98d,roofColor:b.bunker?0x929d91:b.wood?0x627e78:layout.friendly?0x547b79:0x79584e});
    const g=shell.group;g.position.set(b.x,.24,b.z);root.add(g);roofs.push(shell.roof);
    if(layout.satellite?.buildingId===b.id){const assembly=structures.satellite(layout.satellite.radius);assembly.position.y=b.h+1.2;shell.roof.add(assembly);tag('Parabòlica · Ø 18 m',b.x,b.h+19,b.z)}
    const wall=(x,z,w,d,h=b.h)=>building.addWall(g,{lx:x,lz:z,sx:w,sz:d,height:h,material:shell.walls});
@@ -49,9 +76,10 @@ export function createCompoundConcept(layout){
      for(let z=-10;z<0;z+=3)box(g,1.3,.8,1.6,0x9a7546,-b.w/2+3,1.6,z);
      tag('Hangar · boca 30 m',b.x,b.h+1,b.z);
    }else{
-     const solid=b.bunker||layout.id==='polvori'&&b.id!=='guard';
-     if(solid){wall(0,-b.d/2,b.w,.6);for(const x of[-b.w/2,b.w/2])wall(x,0,.6,b.d)}else{building.addWindowedWall(g,{lx:0,lz:-b.d/2,sx:b.w,sz:.45,height:b.h,material:shell.walls});for(const x of[-b.w/2,b.w/2])building.addWindowedWall(g,{lx:x,lz:0,sx:.45,sz:b.d,height:b.h,material:shell.walls})}
-     const door=4;wall(-(b.w+door)/4,b.d/2,(b.w-door)/2,.45);wall((b.w+door)/4,b.d/2,(b.w-door)/2,.45);
+     const solid=b.bunker||type==='polvori'&&b.id!=='guard';
+     if(layout.throughBuildings?.includes(b.id)){for(const x of[-b.w/2,b.w/2])wall(x,0,.6,b.d)}
+     else if(solid){wall(0,-b.d/2,b.w,.6);for(const x of[-b.w/2,b.w/2])wall(x,0,.6,b.d)}else{building.addWindowedWall(g,{lx:0,lz:-b.d/2,sx:b.w,sz:.45,height:b.h,material:shell.walls});for(const x of[-b.w/2,b.w/2])building.addWindowedWall(g,{lx:x,lz:0,sx:.45,sz:b.d,height:b.h,material:shell.walls})}
+     const door=layout.throughBuildings?.includes(b.id)?12:4;wall(-(b.w+door)/4,b.d/2,(b.w-door)/2,.45);wall((b.w+door)/4,b.d/2,(b.w-door)/2,.45);
      building.addWall(g,{lx:0,lz:b.d/2,sx:door,sz:.45,height:b.h-4.4,material:shell.walls,y:4.4+(b.h-4.4)/2});
      if(b.bunker){
        // Batter all four exterior walls inward, keeping the full base footprint.
@@ -88,10 +116,19 @@ export function createCompoundConcept(layout){
        for(const x of[-1.3,0,1.3])box(g,.10,3.5,.08,0x303e36,x,2.2,b.d/2+.45);
        box(g,5,1.1,2.5,0x5a5944,0,.9,-12);tag('Porta · 10 s',b.x,6,b.z+b.d/2+1);
      }
+     if(b.wood){
+       for(const side of[-1,1])for(let z=-b.d/2+.8;z<b.d/2;z+=1.3)box(g,.08,b.h-.4,.08,0x654f39,side*(b.w/2+.06),b.h/2,z);
+       box(g,6,.25,3.6,0x9f835e,0,.28,b.d/2+1.8);
+       for(const x of[-2.7,2.7])cylinder(g,.10,4.5,0x67523a,x,2.5,b.d/2+3.2);
+       const porch=box(g,6.6,.18,4.2,0x627e78,0,4.8,b.d/2+1.7);roofs.push(porch);
+     }
      tag(b.label,b.x,b.h+2,b.z);
    }
  }
  function prop(kind,x,z){
+   if(kind==='bench'){box(root,4,.24,1.3,0x806447,x,.85,z);for(const dx of[-1.4,1.4])box(root,.2,.8,1,0x485249,x+dx,.4,z);box(root,4,1,.18,0x806447,x,1.45,z+.55);return}
+   if(kind==='well'){const ring=new T.Mesh(new T.CylinderGeometry(1.5,1.7,1.4,12,1,true),mat(0x858976));ring.position.set(x,.8,z);root.add(ring);cylinder(root,1.4,.08,0x284955,x,.15,z);for(const dx of[-1.8,1.8])box(root,.2,3.8,.2,0x66573e,x+dx,1.9,z);box(root,4.4,.22,3.6,0x68766b,x,3.8,z);return}
+   if(kind==='lifebuoy'){cylinder(root,.12,2.3,0x5b6050,x,1.15,z);const ring=new T.Mesh(new T.TorusGeometry(.6,.15,6,16),mat(0xe57846));ring.position.set(x,1.5,z);root.add(ring);return}
    if(kind==='flag'){root.add(building.createFlag({x,y:.2,z,color:layout.friendly?0x378adc:0xd62a35}));return}
    if(kind==='crate'){box(root,2.8,2.2,2.6,0x89603b,x,1.25,z);for(const side of[-1,1])box(root,.12,2.25,2.65,0x403e31,x+side*.9,1.27,z);return}
    if(kind==='barrel'){cylinder(root,.75,1.8,0x5f7370,x,1.15,z);for(const h of[.5,1.75])cylinder(root,.79,.15,0x394749,x,h,z);return}
@@ -108,7 +145,7 @@ export function createCompoundConcept(layout){
   for(let y=.4;y<8.5;y+=.65)rod(g,[-.6,y,2.5],[.6,y,2.5],.08,0x687375);
  }
  const makeVehicle=window.HUNTER_VEHICLES.createFactory(T,{box,material:mat,shadows:true});
- for(const v of layout.vehicles){const model=makeVehicle(v.t);model.position.set(v.x,isPort?-.05:.25,v.z);model.rotation.y=v.hd;root.add(model);model.userData.previewVehicle=v.t;
+ for(const v of layout.vehicles){const model=makeVehicle(v.t);model.position.set(v.x,isPort||coast&&v.z>coast.shore?-.05:.25,v.z);model.rotation.y=v.hd;root.add(model);model.userData.previewVehicle=v.t;
   if(v.t==='tanc')tag('Tanc',v.x,5,v.z);}
  for(const [i,[x,z]] of layout.soldiers.entries()){
   const model=window.HUNTER_CHARACTERS.createCommando(T);model.position.set(x,isPort&&z>12?.68:.25,z);model.rotation.y=i*1.7;root.add(model);
@@ -125,7 +162,7 @@ export function createCompoundConcept(layout){
     tag('Bazooka garantit',item.x,2,item.z);continue;
   }
   if(item.kind==='explosius'&&window.HUNTER_EXPLOSIVE_VISUALS){const explosive=window.HUNTER_EXPLOSIVE_VISUALS.create(T,false);explosive.scale.setScalar(window.HUNTER_EXPLOSIVE_VISUALS.PICKUP_SCALE);group.add(explosive);continue}
-  if(layout.phase===2&&['mapa','mapa_heli','mapa_tanc'].includes(item.kind)){
+  if((layout.phase===2||type==='comunicacions')&&['mapa','mapa_heli','mapa_tanc'].includes(item.kind)){
     const color={mapa:0xead59b,mapa_heli:0xafd9ef,mapa_tanc:0xc6b06a}[item.kind];
     box(group,3,1.1,2.3,0x6b654b,0,.45,0);box(group,2.6,.07,1.8,color,0,1.04,0);
     for(const x of[-.65,.65])box(group,.03,.015,1.75,0x69775c,x,1.085,0);
@@ -146,7 +183,7 @@ export function createCompoundConcept(layout){
       for(let j=0;j<4;j++){const t=(j+.5)/4,x=p[0]+(q[0]-p[0])*t,z=p[1]+(q[1]-p[1])*t;rod(root,[x-.22,4.7,z-.22],[x+.22,5.1,z+.22],.024,0x292f32)}
     }
   }
- }else if(!isPort){const hw=layout.size[0]/2-3,hd=layout.size[1]/2-5;
+ }else if(!isPort&&layout.boundary!=='open'){const hw=layout.size[0]/2-3,hd=layout.size[1]/2-5;
    for(let x=-hw;x<=hw;x+=6){if(Math.abs(x)>10)box(root,4.5,1.1,.8,0x7e806e,x,.7,hd);box(root,4.5,1.1,.8,0x7e806e,x,.7,-hd)}
    for(let z=-hd+6;z<hd;z+=6)for(const x of[-hw,hw])if(!(layout.id==='outpost'&&x<0&&Math.abs(z-20)<8))box(root,.8,1.1,4.5,0x7e806e,x,.7,z);
  }
@@ -157,6 +194,7 @@ export function createCompoundConcept(layout){
  for(const patrol of layout.vehiclePatrols||[]){for(let i=1;i<patrol.points.length;i++)strip(patrol.points[i-1],patrol.points[i],patrol.width,0xe79563);tag(patrol.label,patrol.points[0][0],2,patrol.points[0][1]);}
  const line=new T.Line(new T.BufferGeometry().setFromPoints((layout.patrol.length?layout.patrol:[[0,-5],[0,-5]]).map(([x,z])=>new T.Vector3(x,1,z))),new T.LineDashedMaterial({color:0xed6464,dashSize:1.6,gapSize:.9}));line.computeLineDistances();overlays.add(line);
  for(const [x,z] of layout.entrances){const a=new T.Mesh(new T.ConeGeometry(2,4,3),new T.MeshBasicMaterial({color:0xffcf6d}));a.rotation.x=z<0?Math.PI/2:-Math.PI/2;if(Math.abs(x)>Math.abs(z)){a.rotation.z=-Math.PI/2;a.rotation.x=0}a.position.set(x,1,z);overlays.add(a)}
+ for(const r of layout.routes)if(layout.phase===4&&!layout.buildings.some(b=>b.label===r.label)){const p=r.points[0];tag(r.label,p[0],1.2,p[1]);}
  // Site scale reference is visible from the plan view too.
  for(let x=-45;x<=-25;x+=5)box(root,.14,.07,1.2,0xeff3cf,x,.28,isPort?-51:48);
  box(root,20,.07,.15,0xeff3cf,-35,.28,isPort?-51:48);tag('20 m',-35,1,isPort?-52:49);

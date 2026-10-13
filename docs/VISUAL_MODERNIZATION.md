@@ -1,6 +1,6 @@
 # Hunter: Arxipèlag — estat del projecte i pendents
 
-Revisió documental: **12 d’octubre de 2026**. Codi contrastat: **0.4.18**, commit `e94c72b9bd1fb366528cd5d882555a267aafdf71` de `main`.
+Revisió documental: **13 d’octubre de 2026**. Base contrastada: **0.4.24**, commit `78572e7604d8b104c902165e7e64a8ed571de268` de `main`. Revisió d’estabilització i dissenys de fase 4: **0.4.25**.
 
 Aquest document substitueix la cronologia acumulada de propostes i revisions intermèdies. Descriu el que existeix al codi i conserva els objectius encara oberts. L’historial detallat es pot recuperar amb Git. **Implementat no vol dir validat en totes les llavors ni en tots els dispositius.**
 
@@ -82,6 +82,7 @@ Hi ha **15 tipus conduïbles**, definits a `src/vehicle-dynamics.js`; models a `
 - Ferry amb rampes i coberta mòbil per vehicles terrestres i helicòpters; dos emplaçaments costaners al mapa. La separació d’embarcacions té tractament específic i les motos aquàtiques tenen una correcció seguint la costa.
 - Mínim de quatre motos aquàtiques i una única llanxa llançacoets com a objectius explícits del generador.
 - Des de 0.4.18, els helicòpters tenen col·lisió amb cobertes planes i arquejades, suport en aterrar i bloqueig del rotor en ascendir des de sota. La col·lisió desapareix amb la coberta destruïda.
+- A 0.4.19 s’han augmentat les velocitats dels helicòpters i l’agilitat del de combat; a 0.4.20 s’han afegit obstacles aeris per a l’antena i la parabòlica, amb impactes dels helicòpters.
 - Helicòpter normal i de combat amb controls verticals; el de combat disposa de míssils limitats i botó propi.
 - Erugues animades, conductors articulats, pedaleig, remada i sortida de vehicles en marxa amb una sola voltereta.
 - La configuració efectiva actual és **llanxa `maxF: 35` i ferry `maxF: 15`**. Les xifres intercanviades de peticions o resums antics no s’han de presentar com el codi actual.
@@ -117,9 +118,11 @@ La resolució adaptativa que provocava fotogrames foscos es va substituir per un
 
 ### 1. Estabilització i proves
 
-**Incidència confirmada a CI (0.4.18):** `tests/seed-replay.cjs` supera el límit de 120.000 ms del context VM a la línia 21. Cal perfilar la generació i la prova abans de decidir si cal optimitzar-la o ajustar el límit. No s’ha observat aquí una comparació de mapes desiguals: la prova no arriba a completar-se. El catàleg i la integració del cercador sí que passen.
+La revisió 0.4.25 actualitza les expectatives del banc de proves al joc actual: perfils de terreny i aigua, catàleg de complexos, patrulles, inventari, trajectòria del rifle, granades, postura del paracaigudes, visibilitat, fragments d’explosions i rellotge de pausa. El DOM simulat conserva ara els atributs i la prova general disposa de workflow propi.
 
-1. Actualitzar l’expectativa antiga de `tests/smoke.cjs`: espera `lodLevels[0] === 6`, però el perfil d’escriptori actual defineix `[4, 8, 16, 56]`. Després executar la suite completa per descobrir si hi ha més comprovacions desfasades. No modificar el terreny per satisfer una expectativa obsoleta.
+El tram final de `tests/seed-replay.cjs` feia dues generacions dins una sola crida VM: compartien el mateix límit de 120.000 ms. Ara cada generació té una crida independent amb el mateix límit; es conserven les comparacions de mapes i es registren els temps. No es modifica el generador ni s’augmenta el timeout.
+
+1. Confirmar la reproducció de llavors sense competència pels recursos i a CI: la passada local simultània va superar els 120 s en una reconstrucció, després de superar les comparacions inicials. El timeout continua obert; la prova general ja passa completa.
 2. Ampliar la cobertura de generació de complexos, accessos, ports i rutes d’IA a més llavors i a les dues mides de mapa. Les proves actuals no són una garantia universal.
 3. Comprovar en partida completa pujades i baixades de pendents, entrada als edificis, destrucció de sostres, persecució enemiga i càrrega/aterratge al ferry. Hi ha correccions implementades; queda la regressió conjunta.
 4. Fer una sessió reproduïble de 20–30 minuts en Android: mateixa llavor, qualitat i recorregut; registrar FPS, temps de fotograma, dibuixos, memòria i temperatura. Incloure mirada terra endins i zoom del rifle.
@@ -127,17 +130,18 @@ La resolució adaptativa que provocava fotogrames foscos es va substituir per un
 
 ### 2. Completar propostes de món encara obertes
 
-- Dissenyar embarcador civil, terminal de ferri, control de carretera i petit assentament. Encara no estan aprovats com a layouts detallats ni integrats.
-- Preparar les altres dues distribucions per tipus previstes al catàleg; preservar reserves, accessos, objectes garantits i patrulles.
-- Completar la connexió base–costa i els camins entre destinacions que necessita el control de carretera.
-- Dissenyar la variant fortificada d’heliport amb torre; disposar d’un helicòpter de combat no equival a tenir aquesta variant.
-- Valorar un criteri d’emplaçament elevat però accessible per a comunicacions.
+La fase 4 ja té **21 dissenys al visor**: quatre recintes nous, dues variants de cadascun dels vuit tipus existents i una connexió base–costa. Es documenten a [COMPOUNDS_PHASE4.md](COMPOUNDS_PHASE4.md). El catàleg de partides continua amb els vuit tipus aprovats.
+
+- Revisar i integrar els dissenys d’embarcador civil, terminal de ferri, control de carretera i assentament de cabanes.
+- Integrar la selecció de les variants V2/V3 per llavor, preservant reserves, accessos, objectes garantits i patrulles.
+- Implementar el traçat real base–costa i els camins necessaris per als controls de carretera; la maqueta ja mostra la connexió completa.
+- Integrar la variant fortificada d’heliport amb torre, ja dissenyada.
+- Implementar el criteri d’emplaçament elevat però accessible de comunicacions; el visor encara mostra una plataforma plana.
 
 ### 3. Poliment i manteniment
 
-- Refinar l’escuma costanera i calibrar aigua, transparències, llums i exposició en GPU mòbil real.
+- Validar en GPU mòbil real les millores ja incorporades a 0.4.22–0.4.23: qualitat alta ampliada, ombra del jugador, escuma costanera, esquitxos de passes, rastres de vehicles i pols dels helicòpters. Queda el calibratge de rendiment i aparença.
 - Continuar extraient estat global de `src/game-core.js`, amb contractes compatibles i sense reescriure alhora simulació i renderer d’un sistema.
-- Unificar els rètols dels laboratoris: `compounds-preview.html` encara té un enllaç «Fase 3 · propostes» i `dispar-proves.html` diu «cap canvi al joc», malgrat que els dos treballs estan integrats. La revisió documental no canvia aquestes pàgines.
 - Decidir una llicència pròpia abans de presentar el projecte com a distribuïble sota una llicència determinada. La MIT del motor no cobreix automàticament el joc.
 
 ## Decisions superades o tancades
@@ -156,10 +160,11 @@ La resolució adaptativa que provocava fotogrames foscos es va substituir per un
 | «Optimització completada» sense matisos | Canvis implementats, mesura i estabilització contínues |
 | `heli-concepts.html` o `previews.html` com a pàgines presents | Aquests HTML no són al repositori actual; no mantenir-hi enllaços |
 | Versions descartades de models | Referència històrica, no obligacions pendents |
+| Laboratoris de fase 3 i dispar marcats com a no integrats | Rètols corregits a 0.4.25 |
 
 ## Arquitectura i fonts de veritat
 
-- `src/version.mjs`: versió visible del joc. Aquesta neteja només documental no incrementa la versió jugable.
+- `src/version.mjs`: versió visible del joc. La revisió 0.4.25 actualitza les comprovacions, els rètols i el visor de dissenys de fase 4.
 - `src/bootstrap.mjs` i `src/runtime-scripts.mjs`: arrencada i ordre de sistemes; Three.js local ESM a `vendor/three-r186.module.mjs`.
 - `src/world-generation.js`, `src/compound-generation.js`, `src/compound-*-layouts.mjs`: món i complexos. `src/compound-concepts.mjs` construeix el visor; el visor no substitueix la prova del generador.
 - `src/vehicles.js`, `src/vehicle-dynamics.js`, `src/rider.js`: models, catàleg físic i conductors.
@@ -177,7 +182,7 @@ Aquesta revisió contrasta fonts, layouts, controls, pàgines existents, proves 
 
 - A la integració 0.4.16 van passar les proves de geometria de les vuit maquetes i de generació amb llavors **12345 i 67**, incloent porta acumulativa, armes/mapes garantits, separació i patrulles.
 - La base i l’HQ es van comprovar en Chromium/WebGL 2 amb SwiftShader, en perfils escriptori i mòbil, sense errors de consola. Això no és una prova en Android físic.
-- `tests/smoke.cjs` es va aturar a la comprovació desfasada del LOD. La resta de la suite posterior a aquest punt no queda validada per aquella execució.
+- A 0.4.25 `tests/smoke.cjs` passa completa en local: 15 tipus de vehicles, 40 edificis, combat, inventari, física, pausa i reinici; 218,4 s. També passen les comprovacions específiques de paracaigudes i de càrrega de granada. El test de llavors conserva la limitació indicada als pendents.
 - Els workflows consultats de la 0.4.16 confirmen proves específiques de terreny, palmeres, ombres, filferrada, decoració, menú de rendiment, òptica del rifle, aigua, granades, impactes i aterratge. A la 0.4.18 també passen els workflows de LOD enemic, boca/trajectòria del rifle i col·lisió d’helicòpters amb cobertes. El workflow de llavors falla per timeout de `seed-replay.cjs`, després de superar catàleg i integració del cercador. Logs consultats el 12 d’octubre; no s’atribueix aquest timeout a una causa de rendiment concreta sense perfilar-lo.
 
 | Àmbit | Proves de referència |
@@ -190,7 +195,7 @@ Aquesta revisió contrasta fonts, layouts, controls, pàgines existents, proves 
 | Navegació | `tests/enemy-navigation.cjs`, `tests/enemy-navigation-world.cjs` |
 | Vehicles i aigua | `tests/helicopter-landing.cjs`, `tests/helicopter-roof.cjs`, `tests/jet-skis.cjs`, `tests/rowboat-water.cjs`, `tests/water.cjs` |
 | Personatges i combat visual | `tests/player-model.cjs`, `tests/enemy-model.cjs`, `tests/general-model.cjs`, `tests/grenade-charge-pose.cjs`, `tests/bullet-impact-fx.cjs`, `tests/sniper-muzzle.cjs` |
-| Arrencada general | `tests/smoke.cjs` (pendent d’actualitzar), `tests/browser.cjs` |
+| Arrencada general | `tests/smoke.cjs`, `tests/browser.cjs` |
 
 ## Neteja documental aplicada
 
@@ -198,4 +203,4 @@ Aquesta revisió contrasta fonts, layouts, controls, pàgines existents, proves 
 - Eliminada d’aquest document la cronologia repetida de revisions intermèdies, els plans ja executats, les comprovacions antigues presentades com a actuals i les xifres contradictòries.
 - Conservades les decisions vigents i les propostes encara obertes, amb fonts per reprendre-les.
 - Conservat `vendor/README.md`: és necessari per a la procedència i reproducció del motor. El SHA-256 del bundle s’ha comprovat i coincideix.
-- No s’eliminen codi, models de comparació ni llicències. Només hi ha tres fitxers Markdown al projecte i tots tres tenen una funció vigent; la informació sobrant s’ha eliminat dins dels documents.
+- No s’eliminen codi, models de comparació ni llicències. Els documents d’estat, disseny i procedència del motor tenen funcions diferenciades; la informació sobrant s’ha eliminat dins dels documents.
