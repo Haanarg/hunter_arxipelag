@@ -25,7 +25,7 @@ function soldierClearShot(u,x,z,y,target,targetY){
   const tx=target.x,tz=target.z,ty=targetY+1.5,
         reach=Math.hypot(tx-x,tz-z)/2+3,mx=(x+tx)/2,mz=(z+tz)/2;
   for(const w of wallCandidates(mx,mz,reach)){
-    if(w.open)continue;
+    if(w.open||w.barbed)continue;
     const t=segmentAabbT(x,y,z,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);
     if(t!=null&&t<.97)return false;
   }

@@ -280,8 +280,8 @@ function weaponTargetPriority(enemy){
   if(enemy.t==='torre')return 2;
   return 3;
 }
-// La filferrada no amaga l'enemic al selector, però SÍ atura la bala
-// si el projectil hi impacta; parets i cobertes sòlides bloquegen l'assistència.
+// Les bales lleugeres travessen la filferrada. Només els obstacles
+// sòlids bloquegen l'apuntat assistit.
 function weaponAimClear(x,y,z,tx,ty,tz){
   // Una sola consulta als índexs espacials per candidat. Evitem centenars
   // de mostres petites a cada tret de metralladora de l'helicòpter.
@@ -344,7 +344,7 @@ function sniperReticlePoint(focus,range=1000){
   let bestT=1;
   const consider=t=>{if(t!=null&&t>0&&t<bestT)bestT=t};
   for(const w of wallCandidates(mx,mz,reach)){
-    if(!w.open)consider(segmentAabbT(ox,oy,oz,tx,ty,tz,
+    if(!w.open&&!w.barbed)consider(segmentAabbT(ox,oy,oz,tx,ty,tz,
       w.x0,w.x1,w.y0,w.y1,w.z0,w.z1));
   }
   for(const b of buildingCandidates(mx,mz,reach)){
@@ -394,7 +394,38 @@ function sniperShotVector(muzzle,target,focus){
   if(d.lengthSq()<16||d.dot(heading)<0)return heading;
   return d.normalize();
 }
-function fire(){if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
+// Cisalla: treu només el tram proper i encaradís, sense cap alerta ni so.
+function cutBarbedWire(){
+ if(!cisallaEquipped||!inv.cisalla||cv||swimming||playerFall||playerEject||over||fcd>0)
+   return false;
+ const reach=2.75,fx=-Math.sin(P.hd),fz=-Math.cos(P.hd);
+ let target=null,closest=Infinity;
+ for(const w of wallCandidates(P.x,P.z,reach+1)){
+   if(!w.barbed||w.open||w.hp<=0||P.y+1.1<w.y0||P.y+1.1>w.y1)continue;
+   const x=Math.max(w.x0,Math.min(w.x1,P.x)),
+     z=Math.max(w.z0,Math.min(w.z1,P.z)),
+     nx=x-P.x,nz=z-P.z,
+     near=Math.hypot(nx,nz),
+     facing=near>.08?(nx*fx+nz*fz)/near:
+       ((w.cx-P.x)*fx+(w.cz-P.z)*fz)/Math.max(.01,Math.hypot(w.cx-P.x,w.cz-P.z));
+   if(near>reach||facing<.3)continue;
+   if(near<closest){closest=near;target=w}
+ }
+ if(!target){
+   fcd=.28;msg='Acosta’t a una filferrada i mira-la per tallar-la.';msgT=1.6;
+   return false;
+ }
+ target.hp=0;target.cut=true;
+ for(const piece of target.parts?.length?target.parts:[target.m]){
+   piece.visible=false;piece.parent?.remove(piece);
+ }
+ const index=Wl.indexOf(target);if(index>=0)Wl.splice(index,1);
+ const doorIndex=Dr.indexOf(target);if(doorIndex>=0)Dr.splice(doorIndex,1);
+ pl.userData.cisallaCut=.46;fcd=.52;
+ msg='Filferrada tallada silenciosament.';msgT=1.4;
+ return true;
+}
+function fire(){if(cisallaEquipped&&!cv)return cutBarbedWire();if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
 if(c=='tanc'){const muzzleZ=5.35*VS.tanc,muzzleY=2.62*VS.tanc,x=cv.x+fx_*muzzleZ,y=cv.o.position.y+muzzleY,z=cv.z+fz*muzzleZ;const [ax,ay,az]=autoAimArmoredShot(x,y,z,fx_,fz,220);fcd=.9;shoot(x,y,z,ax,ay,az,85,45,8,'p',mS,2.2);Pj[Pj.length-1].life=4.4}
 else if(c=='heli'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*3.2*VS.heli,y=cv.o.position.y+.5*VS.heli,z=cv.z+fz*3.2*VS.heli;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,125,.91);fcd=.6;shoot(x,y,z,ax,ay,az,85,45,8,'p',mS,2)}
 else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*4.1*VS.heli_combat,y=cv.o.position.y+.15,z=cv.z+fz*4.1*VS.heli_combat;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,130,.91);fcd=.12;shoot(x,y,z,ax,ay,az,145,9,0,'p',mB,.85)}
@@ -461,7 +492,9 @@ function updPj(dt){
 
     // Parets i teulades: intersecció contínua de segment amb AABB.
     for(const w of wallCandidates(mx,mz,reach+1)){
-      if(w.open)continue;
+      // Bales de pistola, rifle, soldats, cotxes i tanquetes: passen.
+      // Míssils, coets i canons explosius continuen colpejant el filferro.
+      if(w.open||(w.barbed&&!p.spl))continue;
       consider(segmentAabbT(x0,y0,z0,x1,y1,z1,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1),'wall',w)
     }
     for(const b of buildingCandidates(mx,mz,reach+1)){
