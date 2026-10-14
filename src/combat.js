@@ -96,15 +96,15 @@ function explodeEnemyVehicle(u){
   const heavy=u.t==='tanc'||u.t==='tanqueta';
   boom(u.x,y+(heavy?1.8:1.2),u.z,heavy?12:9,heavy?48:32,'e');
 }
-function killEnemy(u){
+function killEnemy(u,killingShot=null){
   const i=E.indexOf(u);if(i<0)return;E.splice(i,1);kills++;
   if(u.t==='soldat'||u.t==='general'){window.HUNTER_ENEMY_LOD.setLevel(u.o,'full');u.deadT=0;u.deadSide=rn(-1,1)<0?-1:1;u.o.userData.legs?.forEach(l=>l.rotation.x=0);u.o.userData.arms?.forEach(a=>a.rotation.x=0);DEAD.push(u)}
   else if(u.t==='torre'){destroyTower(u);world.remove(u.o)}
   else if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc')explodeEnemyVehicle(u);
   else world.remove(u.o);
-  if(u.t==='general')fin('MISSIÓ COMPLERTA: el general ha caigut!')
+  if(u.t==='general')startVictoryCinematic(u,killingShot)
 }
-function hurtE(u,d){u.hp-=d;u.alert=12;if(u.hp<=0)killEnemy(u)}
+function hurtE(u,d,killingShot=null){u.hp-=d;u.alert=12;if(u.hp<=0)killEnemy(u,killingShot)}
 function explodeVehicle(v){
   if(!v||v.destroyed)return;v.destroyed=true;const wasPilot=cv===v,yy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
   if(wasPilot){
@@ -162,10 +162,10 @@ function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc){
       o.quaternion.setFromUnitVectors(heavyForward,heading.normalize());
   }
   o.position.set(x,y,z);world.add(o);
-  Pj.push({x,y,z,vx:dx*speed,vy:dy*speed,vz:dz*speed,dmg:power,spl,shotClass,own,life:2.2,o})
+  Pj.push({x,y,z,sx:x,sy:y,sz:z,vx:dx*speed,vy:dy*speed,vz:dz*speed,dmg:power,spl,shotClass,own,life:2.2,o})
 }
-function boom(x,y,z,r,dmg,own){snd('boom',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/200));const o=new THREE.Mesh(sphG,new THREE.MeshBasicMaterial({color:0xffa030,transparent:true}));o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6});
-if(own!='e')for(const u of enemyCandidatesAt(x,z,r+4)){const d=Math.hypot(u.x-x,u.o.position.y+1.5-y,u.z-z);if(d<r)hurtE(u,dmg*(1-d/r*.5))}
+function boom(x,y,z,r,dmg,own,source=null){snd('boom',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/200));const o=new THREE.Mesh(sphG,new THREE.MeshBasicMaterial({color:0xffa030,transparent:true}));o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6});
+if(own!='e')for(const u of enemyCandidatesAt(x,z,r+4)){const d=Math.hypot(u.x-x,u.o.position.y+1.5-y,u.z-z);if(d<r)hurtE(u,dmg*(1-d/r*.5),source||{x,y,z,sx:cv?.x??P.x,sy:(cv?.o?.position.y??P.y)+1.7,sz:cv?.z??P.z,spl:r,own})}
 for(const w of wallCandidates(x,z,r)){const dd=Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z);if(dd<r&&y<w.y1+3)dmgW(w,dmg*1.5*(1-dd/(2*r)))}
 for(const b of buildingCandidates(x,z,r)){const dd=Math.hypot(b.x-x,b.z-z),rr2=r+b.w/2;if(dd<rr2&&b.rhp>0){b.rhp-=dmg*1.2*(1-dd/rr2*.6);if(b.rhp<=0)roofBreak(b)}}
 PL.forEach(t=>{if(!t.alive)return;const dd=Math.hypot(t.x-x,t.z-z);if(dd<r)dmgP(t,dmg*1.5*(1-dd/(2*r)))});
@@ -594,11 +594,11 @@ function updPj(dt){
       if(kind==='wall'){if(!isMilitaryWall(target))dmgW(target,p.dmg*(p.own==='e'?.5:1))}
       else if(kind==='building'){if(!isMilitaryBuilding(target)){target.rhp-=p.dmg*(p.own==='e'?.5:1);if(target.rhp<=0)roofBreak(target)}}
       else if(kind==='tree'&&target?.p)dmgP(target,p.dmg*(p.own==='e'?.5:1));
-      else if(kind==='enemy'){if(!isArmoredEnemy(target)&&target.t!=='torre')hurtE(target,p.dmg)}
+      else if(kind==='enemy'){if(!isArmoredEnemy(target)&&target.t!=='torre')hurtE(target,p.dmg,p)}
       else if(kind==='vehicle')damageVehicle(target,p.dmg,1,'light');
       else if(kind==='player')hurtP(p.dmg)
     }
-    if(p.spl)boom(p.x,p.y,p.z,p.spl,p.dmg,p.own);
+    if(p.spl)boom(p.x,p.y,p.z,p.spl,p.dmg,p.own,p);
     world.remove(p.o);Pj.splice(i,1)
   }
 }
