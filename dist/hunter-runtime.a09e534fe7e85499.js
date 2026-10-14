@@ -6417,7 +6417,7 @@ function groundAt(x,z){
   // No enfonsar el model sota els triangles que dibuixa el LOD actual.
   // Preservem l'altura física si és més alta (evita enfonsaments i salts negatius).
   const physical=hAt(x,z),visible=terrainStream?.visibleHeightAt(x,z);
-  let y=visible===null||visible===undefined?physical:visible;for(const s of stairs){if(stairContains(s,x,z)){const q=stairLocal(s,x,z);if(s.ramp){const t=Math.max(0,Math.min(1,q.along/s.length));y=Math.max(y,s.top+(s.bottom-s.top)*t)}else{const i=Math.min(s.steps-1,Math.max(0,Math.floor(q.along/s.tread)));y=Math.max(y,s.top-i*s.rise)}}}
+  let y=visible===null||visible===undefined?physical:Math.max(physical,visible);for(const s of stairs){if(stairContains(s,x,z)){const q=stairLocal(s,x,z);if(s.ramp){const t=Math.max(0,Math.min(1,q.along/s.length));y=Math.max(y,s.top+(s.bottom-s.top)*t)}else{const i=Math.min(s.steps-1,Math.max(0,Math.floor(q.along/s.tread)));y=Math.max(y,s.top-i*s.rise)}}}
 for(const p of piers){const dx=x-p.x,dz=z-p.z,along=dx*p.ux+dz*p.uz,side=dx*p.px+dz*p.pz;if(Math.abs(along)<=p.length/2+.35&&Math.abs(side)<=p.width/2+.2)y=Math.max(y,p.y)}
 return y}
 function addRampAccess(b,side){const [nx,nz]=[[0,1],[0,-1],[1,0],[-1,0]][side],edge=(nx?b.w:b.d)/2+.2,x=b.x+nx*edge,z=b.z+nz*edge,top=b.fy+.3;
