@@ -42,6 +42,12 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Reducció del temps de generació (v0.4.31)
+
+La cerca de ports garantits comprova primer cinc ancoratges interiors estables per illa i revalida l'emplaçament amb el mateix validador de costa. Això evita la combinació anterior de 40 intents per illa, cadascun amb fins a 22 cerques de terreny. Si no troba ports, disposa d'una cerca aleatòria acotada. Les posicions dels complexos poden canviar respecte de versions anteriors, però la reproducció de llavors dins la mateixa versió continua funcionant.
+
+Proves CI: `node tests/port-startup.cjs`, `node tests/build-profiler.cjs`, `node tests/seed-replay.cjs` i `node tests/smoke.cjs`. A la consola del navegador, `HUNTER_BUILD_STATS.stages.guaranteedPorts` indica els mil·lisegons invertits en aquesta cerca i `HUNTER_BUILD_STATS.portSearch` resumeix els ports col·locats.
+
 ## Arrencada optimitzada
 
 - La portada continua sent una imatge fixa i precàrrega Three.js i el paquet del motor quan el navegador està disponible, sense activar WebGL.
