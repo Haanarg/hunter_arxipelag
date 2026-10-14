@@ -1219,7 +1219,9 @@ run(`{
     f.includes("470,65,0,'p',mW,SMALL_ARMS_SCALE")&&
     f.includes("135,10,0,'p',mW,SMALL_ARMS_SCALE")&&
     en.includes("70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE")&&
-    en.includes("u.t==='tanqueta'||u.t==='general'||u.t==='torre'")&&
+    en.includes("u.t==='tanqueta'||u.t==='general'")&&
+    en.includes("u.dmg,0,'e',mW,SMALL_ARMS_SCALE")&&
+    en.includes("towerWeaponForTarget(cv)")&&
     en.includes("smallBullet?mW:mE")&&
     f.includes("72,135,18,'pb',mS,3")&&
     f.includes("85,45,8,'p',mS,2.2");
