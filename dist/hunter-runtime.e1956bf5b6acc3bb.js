@@ -6605,9 +6605,43 @@ function createItemVisual(t){const g=new THREE.Group(),metal=0x454b4e,dark=0x3d3
   else if(t==='disf'){bx(g,.78,1.3,.16,0xb53232,0,.8,0,'paint');const l=bx(g,.7,.38,.16,0xb53232,-.62,1.18,0,'paint'),r=bx(g,.7,.38,.16,0xb53232,.62,1.18,0,'paint');l.rotation.z=-.55;r.rotation.z=.55;bx(g,.16,.18,.18,0xf1c7a1,0,1.44,0,'organic');bx(g,.08,1.05,.19,0x6f1f1f,0,.75,-.02,'paint')}
   else bx(g,...IT[t].s,IT[t].c,0,.4,0,'paint');
   return g}
-function addItemAt(t,x,z){const y=hAt(x,z)+1.3,o=createItemVisual(t);o.position.set(x,y,z);world.add(o);items.push({t,x,z,y,o});return o}
-function addIt(t,b){const c=IT[t];if(!c){console.warn('Tipus d’objecte desconegut:',t);return null}let x,z;for(let k=0;k<25;k++){x=b.x+rr(-(b.w/2-2),b.w/2-2);z=b.z+rr(-(b.d/2-2),b.d/2-2);if(!Wl.some(w=>x>w.x0-1.2&&x<w.x1+1.2&&z>w.z0-1.2&&z<w.z1+1.2))break}
-const y=b.fy+1.3,o=createItemVisual(t);o.position.set(x,y,z);world.add(o);items.push({t,x,z,y,o})}
+// Restriccions de botí compartides pel generador de complexos i pels
+// objectes aleatoris. Només afecten objectes recollibles, NO vehicles ni
+// decoració: els tancs continuen dins els hangars.
+const LOOT_MAPS=new Set(['mapa','mapa_heli','mapa_tanc']);
+const LOOT_WEAPONS=new Set(['bazooka','franctirador','granada','expl']);
+function itemInsideHangar(x,z){
+  return B.some(b=>b.hangar&&Math.abs(x-b.x)<b.w/2&&Math.abs(z-b.z)<b.d/2);
+}
+function lootAllowed(t,b=null,x=null,z=null,compound=null){
+  if(b?.hangar)return false;
+  if(x!=null&&z!=null&&itemInsideHangar(x,z))return false;
+  const complex=compound||b?.compound;
+  if(complex==='polvori'&&LOOT_MAPS.has(t))return false;
+  // El taller només ofereix subministraments i eines; mai armament.
+  if(complex==='hangar'&&LOOT_WEAPONS.has(t))return false;
+  return true;
+}
+function addItemAt(t,x,z,compound=null){
+  if(!lootAllowed(t,null,x,z,compound))return null;
+  const y=hAt(x,z)+1.3,o=createItemVisual(t);
+  o.position.set(x,y,z);world.add(o);items.push({t,x,z,y,o});return o;
+}
+function addIt(t,b){
+  const c=IT[t];
+  if(!c){console.warn('Tipus d’objecte desconegut:',t);return null}
+  if(!lootAllowed(t,b))return null;
+  let x,z;
+  for(let k=0;k<25;k++){
+    x=b.x+rr(-(b.w/2-2),b.w/2-2);
+    z=b.z+rr(-(b.d/2-2),b.d/2-2);
+    if(!itemInsideHangar(x,z)&&!Wl.some(w=>x>w.x0-1.2&&x<w.x1+1.2&&z>w.z0-1.2&&z<w.z1+1.2))break;
+  }
+  if(!lootAllowed(t,b,x,z))return null;
+  const y=b.fy+1.3,o=createItemVisual(t);
+  o.position.set(x,y,z);world.add(o);items.push({t,x,z,y,o});
+  return o;
+}
 function flag(x,z,c){world.add(buildingVisual.createFlag({x,y:hAt(x,z),z,color:c}))}
 // jugador i vehicles
 const bx=(g,w,h,d,c,x,y,z,profile='organic')=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c,profile));m.position.set(x,y,z);g.add(m);return m};
