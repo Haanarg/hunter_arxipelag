@@ -1,6 +1,7 @@
 import {createCompoundStructures} from './compound-structures.mjs';
 window.HUNTER_COMPOUND_STRUCTURES=createCompoundStructures;
 import {runtimeScripts} from './runtime-scripts.mjs';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs';
 import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
 import {GAME_VERSION} from './version.mjs';
@@ -40,27 +41,32 @@ try {
   const THREE = await import('../vendor/three-r186.module.mjs');
   THREE.ColorManagement.enabled = true;
   window.THREE = THREE;
-  // Les descàrregues comencen alhora, però async=false obliga els scripts
-  // clàssics afegits dinàmicament a EXECUTAR-SE en l'ordre de runtimeScripts.
-  // Això redueix la latència de xarxa sense trencar les dependències globals.
-  await Promise.all(runtimeScripts.map(path => new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.async = false;
-    const scriptUrl = new URL('../' + path, import.meta.url);
-    scriptUrl.searchParams.set('v', GAME_VERSION);
-    script.src = scriptUrl.href;
-    const cleanup = () => window.removeEventListener('error', onError);
-    const onError = event => {
-      if (event.filename === script.src) {
-        cleanup();
-        reject(event.error || new Error(event.message));
-      }
+  // El bundle inclou els scripts clàssics en el mateix ordre i preserva
+  // les variables globals de la versió anterior. Només fem UNA petició.
+  // Si el fitxer empaquetat no s'ha desplegat, recuperem el loader antic.
+  const loadClassic=(path,versioned=false)=>new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    script.async=false;
+    const url=new URL('../'+path,import.meta.url);
+    if(versioned)url.searchParams.set('v',GAME_VERSION);
+    script.src=url.href;
+    const cleanup=()=>window.removeEventListener('error',onError);
+    const onError=event=>{
+      if(event.filename===script.src){cleanup();reject(event.error||new Error(event.message))}
     };
-    window.addEventListener('error', onError);
-    script.onload = () => { cleanup(); resolve(); };
-    script.onerror = () => { cleanup(); reject(new Error('No es pot carregar ' + path)); };
+    window.addEventListener('error',onError);
+    script.onload=()=>{cleanup();resolve()};
+    script.onerror=()=>{cleanup();reject(new Error('No es pot carregar '+path))};
     document.head.append(script);
-  })));
+  });
+  const loadLegacy=()=>Promise.all(runtimeScripts.map(path=>loadClassic(path,true)));
+  if(RUNTIME_BUNDLE_PATH){
+    try{await loadClassic(RUNTIME_BUNDLE_PATH)}
+    catch(error){
+      console.warn('Paquet runtime no disponible; recuperant scripts individuals',error);
+      await loadLegacy();
+    }
+  }else await loadLegacy();
   window.HUNTER_READY = true;
 } catch (error) {
   console.error('No s’ha pogut iniciar Húnter', error);
