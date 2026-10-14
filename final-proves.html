@@ -58,6 +58,8 @@ button:hover,a:hover{background:#3b4350}button:focus-visible,a:focus-visible,inp
 <script src="src/palette.js"></script>
 <script src="src/player-model.js"></script>
 <script src="src/general-model.js"></script>
+<script src="src/victory-pose.js"></script>
+<script src="src/rendering.js"></script>
 <script type="module">
 import * as THREE from './vendor/three-r186.module.mjs';
 
@@ -66,72 +68,34 @@ const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const smooth=x=>{x=clamp(x);return x*x*(3-2*x)};
 const mix=(a,b,t)=>a+(b-a)*t;
 const vec=(x,y,z)=>new THREE.Vector3(x,y,z);
-const camera=new THREE.PerspectiveCamera(49,1,.1,1000);
-const scene=new THREE.Scene();
+// Mateix sistema de cel i sol que utilitza el motor del joc.
 const canvas=document.getElementById('stage');
-let renderer;
+let rendering;
 try{
- renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+ rendering=window.HUNTER_RENDERING.create(THREE,{
+   pixelRatio:1.6,exposure:1.35,shadows:true,shadowSize:1024,
+   viewDistance:9000,fog:.00065,skySegments:[36,20],sunDistance:3500
+ });
+ const webglCanvas=rendering.renderer.domElement;
+ webglCanvas.id='stage';
+ canvas.replaceWith(webglCanvas);
 }catch(error){
  document.querySelector('#start p').textContent='No s’ha pogut iniciar WebGL. Obre aquesta pàgina en un navegador amb acceleració 3D.';
  document.getElementById('startPlay').disabled=true;
  throw error;
 }
-renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7));
-renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.38;
-renderer.shadowMap.enabled=true;
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-scene.fog=new THREE.FogExp2(0xd6a387,.0027);
-const hemi=new THREE.HemisphereLight(0xa5b2c9,0x7e6050,2.35);
-scene.add(hemi);
-const sunlight=new THREE.DirectionalLight(0xffb86b,3.15);
-sunlight.position.set(30,48,95);sunlight.castShadow=true;
-sunlight.shadow.mapSize.set(1024,1024);
-sunlight.shadow.camera.left=-30;sunlight.shadow.camera.right=30;
-sunlight.shadow.camera.top=30;sunlight.shadow.camera.bottom=-30;
-sunlight.shadow.camera.near=1;sunlight.shadow.camera.far=150;
-sunlight.shadow.bias=-.00018;scene.add(sunlight);
-
-const sky=new THREE.Mesh(new THREE.SphereGeometry(480,40,28),new THREE.ShaderMaterial({
- side:THREE.BackSide,depthWrite:false,fog:false,
- vertexShader:'varying vec3 vDir; void main(){vDir=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
- fragmentShader:'varying vec3 vDir;void main(){float h=normalize(vDir).y;vec3 low=vec3(.96,.42,.30);vec3 middle=vec3(.69,.38,.50);vec3 upper=vec3(.18,.24,.42);vec3 c=mix(low,middle,smoothstep(-.05,.22,h));c=mix(c,upper,smoothstep(.16,.82,h));gl_FragColor=vec4(c,1.);}'
-}));
-sky.frustumCulled=false;scene.add(sky);
+const {renderer,scene,camera,sky,sunDir,sunMesh,glow,sun:sunlight}=rendering;
+const environment=new THREE.Group();
+environment.rotation.y=Math.PI; // Mar al costat de l'horitzó solar, com al joc.
+scene.add(environment);
 
 // The same approved general model used by the actual game, not a placeholder.
 const actor=window.HUNTER_GENERAL_MODEL.create(THREE,{palette:window.HUNTER_PALETTE});
-const hipHeight=1.02;
-const fallPivot=new THREE.Group();
-actor.position.y=-hipHeight;fallPivot.position.set(0,hipHeight,0);
-fallPivot.add(actor);scene.add(fallPivot);
+scene.add(actor);
 actor.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
-const rig=actor.userData;
-const joints=[rig.al,rig.ar,rig.ll,rig.lr,rig.lkl,rig.lkr,rig.ael,rig.aer,rig.head];
-const original=joints.map(j=>({x:j.rotation.x,y:j.rotation.y,z:j.rotation.z}));
+const pose=window.HUNTER_VICTORY_POSE.capture(THREE,actor,new THREE.Vector3(-.12,0,1));
 function poseGeneral(p){
- p=clamp(p);
- // A small backward jerk at impact followed by a full dramatic fall, with arms raised.
- const jerk=Math.sin(smooth(p/.25)*Math.PI)*.16;
- const fall=smooth((p-.18)/.78);
- const arm=smooth((p-.09)/.46);
- fallPivot.rotation.x=jerk+fall*1.53;
- fallPivot.rotation.z=fall*.10;
- fallPivot.position.y=hipHeight+jerk*.10-fall*.70; // Lower the hips until the body rests on the ground.
- actor.rotation.y=.06*fall;
- rig.al.rotation.z=original[0].z+.95*arm;
- rig.ar.rotation.z=original[1].z-.93*arm;
- rig.al.rotation.x=original[0].x-.55*arm;
- rig.ar.rotation.x=original[1].x+.42*arm;
- rig.ll.rotation.x=original[2].x-.24*fall;
- rig.lr.rotation.x=original[3].x+.31*fall;
- rig.lkl.rotation.x=original[4].x-.44*fall;
- rig.lkr.rotation.x=original[5].x-.72*fall;
- rig.ael.rotation.x=original[6].x+.30*arm;
- rig.aer.rotation.x=original[7].x+.35*arm;
- rig.head.rotation.x=original[8].x-.32*smooth((p-.12)/.50);
+ window.HUNTER_VICTORY_POSE.apply(pose,p);
 }
 
 // An outpost coastline around the general, ending in open water.
@@ -146,7 +110,7 @@ for(let i=0;i<=52;i++){
 const terrainGeo=new THREE.BufferGeometry();
 terrainGeo.setAttribute('position',new THREE.Float32BufferAttribute(groundPos,3));
 terrainGeo.setIndex(groundIdx);terrainGeo.computeVertexNormals();
-const terrain=new THREE.Mesh(terrainGeo,sand);terrain.receiveShadow=true;scene.add(terrain);
+const terrain=new THREE.Mesh(terrainGeo,sand);terrain.receiveShadow=true;environment.add(terrain);
 const shorePos=[],shoreIdx=[];
 for(let i=0;i<=52;i++){
  const x=-100+i*200/52,edge=16+2.6*Math.sin(x*.13)+1.9*Math.sin(x*.36);
@@ -156,7 +120,7 @@ for(let i=0;i<=52;i++){
 const shoreGeo=new THREE.BufferGeometry();
 shoreGeo.setAttribute('position',new THREE.Float32BufferAttribute(shorePos,3));
 shoreGeo.setIndex(shoreIdx);shoreGeo.computeVertexNormals();
-const beach=new THREE.Mesh(shoreGeo,sandLight);beach.receiveShadow=true;scene.add(beach);
+const beach=new THREE.Mesh(shoreGeo,sandLight);beach.receiveShadow=true;environment.add(beach);
 
 // Animated water, including ripples and reflected sunlight.
 const sea=new THREE.Mesh(new THREE.PlaneGeometry(1050,1000,112,112),new THREE.ShaderMaterial({
@@ -165,14 +129,14 @@ const sea=new THREE.Mesh(new THREE.PlaneGeometry(1050,1000,112,112),new THREE.Sh
  vertexShader:'uniform float uTime;varying vec3 vPos;varying float vWave;void main(){vec3 p=position;float a=sin(p.x*.17+uTime*1.7+p.y*.045)*.18;float b=sin(p.y*.11-uTime*1.15+p.x*.08)*.15;p.z+=a+b;vWave=a+b;vec4 world=modelMatrix*vec4(p,1.);vPos=world.xyz;gl_Position=projectionMatrix*viewMatrix*world;}',
  fragmentShader:'uniform float uTime;varying vec3 vPos;varying float vWave;void main(){float stripe=sin(vPos.z*.36+vPos.x*.24+uTime*1.8)*sin(vPos.x*.52-vPos.z*.06-uTime*1.4);float light=pow(max(0.,1.-abs(vPos.x-8.)/(3.+abs(vPos.z)*.065)),1.7);light*=.56+.44*max(0.,stripe);float far=smoothstep(70.,450.,vPos.z);vec3 c=mix(vec3(.055,.25,.34),vec3(.40,.34,.43),far);c+=vec3(.37,.16,.08)*max(0.,vWave+.08);c=mix(c,vec3(1.,.57,.25),light*.65);gl_FragColor=vec4(c,1.);}'
 }));
-sea.rotation.x=-Math.PI/2;sea.position.set(0,-.29,170);scene.add(sea);
+sea.rotation.x=-Math.PI/2;sea.position.set(0,-.29,170);environment.add(sea);
 
 // Distant fortification: gives context without covering the final horizon.
 function box(parent,w,h,d,m,x,y,z){
  const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
  o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;
 }
-const fort=new THREE.Group();fort.position.set(12,0,4);scene.add(fort);
+const fort=new THREE.Group();fort.position.set(12,0,4);environment.add(fort);
 box(fort,6,2.2,5,concrete,0,1.1,0);
 box(fort,7,.30,5.9,stone,0,2.4,-.1);
 box(fort,1.45,1.75,.08,dark,-1,1,-2.56);
@@ -188,28 +152,23 @@ for(let i=0;i<11;i++){
 for(let i=0;i<46;i++){
  const x=-23+((i*37)%53),z=-32-((i*19)%37);
  const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.15+(i%6)*.095,0),i%3?stone:sandLight);
- rock.position.set(x,.14,z);rock.scale.y=.37;rock.receiveShadow=true;scene.add(rock);
+ rock.position.set(x,.14,z);rock.scale.y=.37;rock.receiveShadow=true;environment.add(rock);
 }
 function palm(x,z,height){
  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.14,.25,height,7),mat(0x745339));
- trunk.position.set(x,height/2,z);trunk.rotation.z=.08;trunk.castShadow=true;scene.add(trunk);
+ trunk.position.set(x,height/2,z);trunk.rotation.z=.08;trunk.castShadow=true;environment.add(trunk);
  for(let i=0;i<7;i++){
   const a=i*Math.PI*2/7;
   const leaf=new THREE.Mesh(new THREE.ConeGeometry(.44,3.5,4),mat(0x526247));
   leaf.position.set(x+Math.sin(a)*1.1,height-.14,z+Math.cos(a)*1.1);
   leaf.rotation.x=Math.cos(a)*.72;leaf.rotation.z=-Math.sin(a)*.72;
-  leaf.castShadow=true;scene.add(leaf);
+  leaf.castShadow=true;environment.add(leaf);
  }
 }
 palm(-16,-14,6.5);palm(23,-23,7.1);palm(-26,3,5.8);
 
-// Sun and haze over the water, independent of the moving camera.
-function sunDisc(radius,color,opacity){
- const material=new THREE.MeshBasicMaterial({color,transparent:opacity<1,opacity,depthWrite:false,fog:false,blending:opacity<1?THREE.AdditiveBlending:THREE.NormalBlending});
- const disc=new THREE.Mesh(new THREE.SphereGeometry(radius,32,24),material);
- disc.position.set(8,13,290);scene.add(disc);
-}
-sunDisc(34,0xfbb16c,.065);sunDisc(23,0xffd09b,.12);sunDisc(11.8,0xffdb9c,1);
+// El sol real de src/rendering.js ja existeix a l'escena.
+ // Durant els plans finals només es reorienta la càmera: no en creem cap més.
 
 // Flying gulls with independently animated wings.
 const gulls=[];
@@ -232,13 +191,27 @@ function gull(i){
 }
 for(let i=0;i<9;i++)gull(i);
 function animateGulls(t){
+ const offset=t-17.45;
+ const forward=new THREE.Vector3(sunDir.x,0,sunDir.z).normalize();
+ const right=new THREE.Vector3(-forward.z,0,forward.x);
+ const base=new THREE.Vector3(3,22,-17);
  gulls.forEach((g,i)=>{
-  const drift=t*.40+i*2.1;
-  g.position.set(-27+(i*7.7)%56+Math.sin(drift*.32+i)*7,7.3+(i%4)*3+Math.sin(drift*.9+i)*1.8,48+i*10.8);
-  g.rotation.y=Math.sin(t*.22+i)*.46;
-  const flap=Math.sin(t*3.1+i*2.4)*.30;
-  g.userData.left.rotation.z=.14+flap;
-  g.userData.right.rotation.z=-.14-flap;
+  const local=offset-i*.19,p=clamp(local/(3.75+i*.07));
+  g.visible=local>=0&&p<1;
+  if(!g.visible)return;
+  const from=base.clone().addScaledVector(forward,-10-i*.7).addScaledVector(right,-16-i*1.8);
+  from.y+=5+i%3*2;
+  const across=base.clone().addScaledVector(forward,20+i*3).addScaledVector(right,3+(i%4)*2);
+  across.y+=5+i%3*2;
+  const away=base.clone().addScaledVector(forward,190+i*21).addScaledVector(right,80+i*8);
+  away.y+=3+i%4;
+  const section=.36,f=p<section?smooth(p/section):smooth((p-section)/(1-section));
+  g.position.copy(p<section?from:across).lerp(p<section?across:away,f);
+  const tangent=(p<section?across.clone().sub(from):away.clone().sub(across)).normalize();
+  g.rotation.y=Math.atan2(-tangent.x,-tangent.z);
+  const flap=Math.sin(local*8+i*.6)*.63;
+  g.userData.left.rotation.z=flap;g.userData.right.rotation.z=-flap;
+  g.scale.setScalar((.57+(i%3)*.18)*(1-.62*smooth(p)));
  });
 }
 
@@ -340,8 +313,9 @@ function applyCamera(t){
   const up=smooth((t-10.8)/3.4);
   const rotate=smooth((t-14.15)/3.1);
   const drift=smooth((t-17.0)/5);
-  tempPos.set(mix(0,0,up)+drift*3,mix(5.5,34,up)+drift*2,mix(-2,6.5,up)-rotate*9-drift*3);
-  tempLook.set(mix(0,8,rotate),mix(.25,13,rotate),mix(2,290,rotate));
+  tempPos.set(drift*3,mix(5.5,34,up)+drift*2,mix(-2,6.5,up)-rotate*9-drift*3);
+  const realSun=tempPos.clone().addScaledVector(sunDir,1200);
+  tempLook.set(0,mix(.25,8,up),0).lerp(realSun,rotate);
   camera.position.copy(tempPos);
   camera.lookAt(tempLook);
   camera.fov=mix(46,60,rotate);
@@ -369,6 +343,10 @@ function update(t,previous,emitSound){
  }
  applyCamera(t);
  sky.position.copy(camera.position);
+ sunMesh.position.copy(camera.position).addScaledVector(sunDir,3500);
+ glow.position.copy(sunMesh.position);
+ sunlight.target.position.set(camera.position.x,0,camera.position.z);
+ sunlight.position.copy(sunlight.target.position).addScaledVector(sunDir,500);
  sea.material.uniforms.uTime.value=t;
  animateGulls(t);
  const showTitle=t>=17.15;
