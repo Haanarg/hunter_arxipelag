@@ -101,9 +101,10 @@ function intercept(button,message){
     try{
       await loadGame();
       const engineMs=performance.now()-startupStart;
-      // Una oportunitat real de pintar el missatge abans de la generació síncrona.
-      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
       if(button.dataset.d)showLoading('Generant el món…');
+      // Pintam el canvi de fase ABANS d'entrar al build() síncron.
+      // Abans el doble rAF es produïa quan encara hi deia "Carregant motor".
+      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
       const worldStart=performance.now();
       button.click(); // Deleguem al gestor original, instal·lat per game-core.js.
       if(button.dataset.d){
