@@ -1533,9 +1533,11 @@ run(`{
     E.shift(); // Vehicle i soldat romanen: ara triem vehicle si eliminem soldat.
     E.pop();
     const vehicle=autoAimWeaponShot(0,2,0,0,0,-1,110,.94);
+    const heavyVehicle=autoAimWeaponShot(0,2,0,0,0,-1,110,.94,'heavy');
     E.shift();
     E=[{t:'torre',x:0,z:-18,hp:90,o:{position:{y:0}}}];
     const tower=autoAimWeaponShot(0,2,0,0,0,-1,110,.94);
+    const heavyTower=autoAimWeaponShot(0,2,0,0,0,-1,110,.94,'heavy');
     weaponAimClear=()=>false;
     const blocked=autoAimWeaponShot(0,2,0,0,0,-1,110,.94);
     globalThis.targetPriorityShared=
@@ -1543,8 +1545,10 @@ run(`{
       weaponTargetPriority({t:'general'})===0&&
       weaponTargetPriority({t:'jeep'})===1&&
       weaponTargetPriority({t:'torre'})===2&&
-      soldier[0]>.01&&vehicle[0]===0&&
-      tower[1]>0&&blocked[0]===0&&blocked[1]===0&&blocked[2]===-1;
+      soldier[0]>.01&&vehicle[0]===0&&vehicle[1]===0&&vehicle[2]===-1&&
+      tower[0]===0&&tower[1]===0&&tower[2]===-1&&
+      heavyVehicle[1]>0&&heavyTower[1]>0&&
+      blocked[0]===0&&blocked[1]===0&&blocked[2]===-1;
     const a=Math.PI/6;
     E=[{t:'soldat',x:3,z:-56,hp:30,o:{position:{y:0}}}];
     weaponAimClear=()=>true;
@@ -1556,7 +1560,7 @@ run(`{
       noTarget.every((v,i)=>Math.abs(v-level[i])<1e-10);
   }finally{E=savedEnemies;weaponAimClear=savedClear}
 }`);
-ok('targetPriorityShared','assist prioritizes soldiers before enemy vehicles and towers, but not behind solid walls');
+ok('targetPriorityShared','light guns only track vulnerable targets; heavy weapons can track armored vehicles and towers');
 ok('helicopterAssistanceAndFallback','helicopter adjusts to threats yet preserves original 30 degree downward fire without targets');
 ok("String(fire).split('autoAimWeaponShot').length>=5",'helicopter gunfire, pistol and bazooka use priority assistance');
 ok("String(secondaryWeapon).includes('autoAimWeaponShot')",'helicopter missiles and rocket boat use priority assistance');
