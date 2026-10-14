@@ -1,6 +1,6 @@
 # Fase 4 · recintes nous, variants i connexió base–costa
 
-Dissenys de la revisió **0.4.25**, 13 d’octubre de 2026. Disponibles a [Fase 4 del visor](../compounds-preview.html?fase=4). **21 maquetes noves**, més les vuit distribucions integrades per comparar V1/V2/V3. Les dades viuen a `src/compound-phase4-layouts.mjs`; el catàleg del generador continua tenint els vuit tipus aprovats.
+Dissenys iniciats a la revisió **0.4.25**, actualitzats el 14 d’octubre de 2026. Disponibles a [Fase 4 del visor](../compounds-preview.html?fase=4). **32 maquetes de disseny**, més les vuit distribucions integrades per comparar V1/V2/V3/V4. Les dades viuen a `src/compound-phase4-layouts.mjs`; el catàleg del generador continua tenint els vuit tipus aprovats.
 
 El selector «Catàleg» obre els quatre llocs nous, les variants de cada complex o la connexió costanera. Cada maqueta permet girar, apropar, veure la planta, amagar cobertes i mostrar circulació. L’URL conserva el recinte seleccionat.
 
@@ -11,13 +11,13 @@ El selector «Catàleg» obre els quatre llocs nous, les variants de cada comple
 | Embarcador civil | 110 × 120 m, incloent aigua | Caseta de pesca, cobert de xarxes, passera de 5 m amb capçal en T, barca de rems, windsurf i bicicleta. Càrrega manual i accés discret. |
 | Terminal de ferri | 180 × 190 m, incloent aigua | Bitllets/espera, magatzem, carril de 14 m, cua lateral de 9 m i passeig separat de 5 m. Una plaça de ferri connectada a una rampa de 18 m. |
 | Control de carretera | 130 × 140 m | Carretera contínua de 10 m, guàrdia lateral, barrera, cobert d’inspecció amb dues obertures i desviació per tornar a la via. Camí alternatiu a peu de 4 m. |
-| Assentament de cabanes | 140 × 140 m | Cinc cabanes i magatzem comunal de fusta, porxos, plaça amb pou, bancs i senders de 4–5 m. Moto i bicicleta; farmaciola al magatzem. |
+| Assentaments de cabanes | 110, 140 o 180 m de costat | Tres variants: 3, 5 o 8 habitatges, més una cabana comunal. Portes orientades cap a la plaça i senders radials connectats a un camí circular. Finestres sense vidre a totes les cabanes. |
 
 Els llocs civils no afegeixen guarnicions fixes ni una simulació de població civil. La terminal ha de reservar un dels **dos ferris totals** del mapa, no incrementar-ne el nombre. La seva rampa necessita una connexió física amb la coberta mòbil en la integració; aquesta maqueta és estàtica. La barrera del control es mostra abaixada: el comportament d’obertura/destrucció és pendent.
 
-## Dues variants de cadascun dels vuit complexos
+## Tres variants de cadascun dels vuit complexos
 
-V1 conserva la distribució ja integrada, amb la revisió arquitectònica del visor encara pendent de traslladar al joc. V2 i V3 tenen distribucions pròpies, passos i reserves visibles.
+V1 conserva la distribució ja integrada, amb la revisió arquitectònica del visor encara pendent de traslladar al joc. V2 i V3 tenen distribucions pròpies, passos i reserves visibles. V4 conserva la distribució V1 i substitueix exactament un edifici per un model nou de dues plantes; la resta queden en una planta.
 
 | Complex | V2 | V3 |
 |---|---|---|
@@ -57,13 +57,31 @@ Si el terreny no admet la connexió, s’ha de cercar una altra costa o moure la
 - Cabanes del poblat, embarcador civil i caseta costanera: mateix sostre de **dos aiguavessos**, frontons tancats i cobertura marró de branques amb relleu geomètric. Els feixos s’agrupen per material per reduir crides de dibuix.
 - Decoració comprovada amb la seva petjada completa, incloent la tela de les banderes: dins la filferrada o els límits del recinte. Si un trasllat heretat deixa una peça fora, es recol·loca en espai lliure de rutes, edificis, vehicles, torres i rotors. No s’eliminen peces.
 - Un edifici de **dues plantes** per complex militar: taller de l’hangar, caserna de l’avançada, oficina del port, control de l’heliport, guàrdia del polvorí, ràdio, caserna de la base i caserna del HQ. També guàrdia del control de carretera. Finestres als dos nivells, escala interior i forat al forjat; «Veure interiors» retira també el forjat superior.
-- **Cap magatzem té finestres ni segona planta**, incloent el comunal, el de la terminal i les casetes d’emmagatzematge civils. Els hangars i el búnquer no s’eleven.
+- **Els magatzems convencionals no tenen finestres ni segona planta**. Per la revisió posterior, totes les cabanes de fusta, també les comunals i d’emmagatzematge civil, tenen obertures amb marcs però sense vidre. Els hangars i el búnquer no s’eleven.
 - Comunicacions V2/V3 especialitzades i ampliades un 50%; V2 sense cap parabòlica, V3 sense torre d’antena.
 
 Aquesta revisió s’aplica als **previews**, incloses les distribucions V1. `compound-preview-refinements.mjs` prepara còpies de les dades, sense alterar les distribucions del generador ni el joc publicat. La versió del joc no canvia per aquesta revisió del visor.
 
+### Ampliació: assentaments i V4
+
+Al selector «Assentaments · 3 mides» hi ha el poblat petit (3 habitatges + comunal), mitjà (5 + comunal) i gran (8 + comunal). Les cabanes es giren com a conjunt: parets, sostre, finestres i porxo. Els senders parteixen de les portes girades; no es reutilitzen camins que apuntin a la façana antiga. Totes les cabanes de fusta de qualsevol maqueta tenen finestres obertes sense vidre.
+
+| V4 | Edifici substituït per dues plantes |
+|---|---|
+| Hangar | Taller |
+| Avançada | Guàrdia |
+| Port militar | Oficina |
+| Heliport | Control de vol |
+| Polvorí | Guàrdia |
+| Comunicacions | Servei tècnic |
+| Base inicial | Infermeria |
+| HQ | Serveis |
+| Control de carretera | Guàrdia |
+
+La V4 utilitza una façana verd gris clar, dos pisos de 5,4 m, escala interior i terrat amb ampit. Substitueix l’edifici dins la mateixa petjada, conserva els objectes garantits i no n’afegeix un de nou al pati. La V4 del control es troba a «Llocs nous». Les V2/V3 anteriors es mantenen disponibles.
+
 ## Validació i següent fase
 
-`tests/compound-phase4.cjs` comprova les 21 maquetes: geometria finita, vehicles separats dels edificis, recorreguts fora dels interiors, reserva dels rotors, contingut garantit i exclusió del catàleg del joc. També comprova les caixes 3D reals de tota la decoració de les 29 escenes, magatzems sense finestres, cabanes amb carena, segones plantes i exclusivitat de les antenes V2/V3. El visor s’ha comprovat amb Chromium/WebGL en escriptori i emulació mòbil: 29 escenes comptant les vuit V1, planta, interiors, etiquetes i zoom. Això no certifica el rendiment en Android físic.
+`tests/compound-phase4.cjs` comprova les 32 maquetes: geometria finita, vehicles separats dels edificis, recorreguts fora dels interiors, reserva dels rotors, contingut garantit i exclusió del catàleg del joc. També comprova les caixes 3D reals de tota la decoració de les 40 escenes, magatzems convencionals sense finestres, cabanes amb carena i obertures sense vidre, segones plantes i exclusivitat de les antenes V2/V3. El visor s’ha comprovat amb Chromium/WebGL en escriptori i emulació mòbil: 40 escenes comptant les vuit V1, planta, interiors, etiquetes i zoom. Això no certifica el rendiment en Android físic.
 
 La següent fase és integrar primer el cercador de costa i la connexió amb la base; després els recintes civils i la terminal, els controls sobre camins reals i, finalment, la selecció de variants per llavor. Cal conservar límits globals de vehicles, reserves de maniobra, col·lisions i objectes garantits. Els dissenys actuals **encara no es generen durant les partides**.

@@ -11,8 +11,8 @@ export function createCompoundConcept(layout){
  const rod=(g,a,b,r,c)=>{const start=new T.Vector3(...a),end=new T.Vector3(...b),delta=end.clone().sub(start);const m=new T.Mesh(new T.CylinderGeometry(r,r,delta.length(),6),mat(c,'metal'));m.position.copy(start.add(end).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),delta.normalize());g.add(m);return m};
  const tag=(text,x,y,z)=>tags.push({text,position:new T.Vector3(x,y,z)});
  const building=window.HUNTER_BUILDINGS.create(T,{material:mat,materialProfile:()=>({roughness:.88}),box});
- const isPort=layout.id==='port'&&!layout.waterfront,coast=layout.waterfront;
  const type=layout.type||layout.id;
+ const isPort=type==='port'&&!layout.waterfront,coast=layout.waterfront;
  if(coast){
    const depth=coast.shore+layout.size[1]/2;
    box(root,layout.size[0]+12,2,depth,0x498535,0,-1.05,-layout.size[1]/2+depth/2);
@@ -65,8 +65,8 @@ export function createCompoundConcept(layout){
  if(layout.antenna){const a=layout.antenna,g=structures.antenna(a);g.position.set(a.x,.2,a.z);root.add(g);tag('Antena · '+a.height+' m',a.x,32*(a.scale||1),a.z)}
  for(const data of layout.buildings){
    const storey=data.h,b={...data,h:data.h*data.floors};
-   const shell=b.hangar?building.createHangarShell({width:b.w,depth:b.d,height:b.h,wallColor:0xbab99d,roofColor:0xb7c1b4}):building.createShell({width:b.w,depth:b.d,height:b.h,wallColor:b.bunker?0xb7bdb3:b.wood?0x96714b:0xc9b98d,roofColor:b.bunker?0x929d91:b.wood?0x627e78:layout.friendly?0x547b79:0x79584e});
-   const g=shell.group;g.userData.previewBuilding=b.id;g.userData.floors=b.floors;g.userData.warehouse=b.warehouse;g.position.set(b.x,.24,b.z);root.add(g);roofs.push(shell.roof);
+   const shell=b.hangar?building.createHangarShell({width:b.w,depth:b.d,height:b.h,wallColor:0xbab99d,roofColor:0xb7c1b4}):building.createShell({width:b.w,depth:b.d,height:b.h,wallColor:b.replacement?0xa9bdb0:b.bunker?0xb7bdb3:b.wood?0x96714b:0xc9b98d,roofColor:b.bunker?0x929d91:b.wood?0x627e78:layout.friendly?0x547b79:0x79584e});
+   const g=shell.group;g.userData.previewBuilding=b.id;g.userData.floors=b.floors;g.userData.warehouse=b.warehouse;g.position.set(b.x,.24,b.z);g.rotation.y=b.rotationY||0;root.add(g);roofs.push(shell.roof);
    if(layout.satellite?.buildingId===b.id){const assembly=structures.satellite(layout.satellite.radius);assembly.scale.setScalar(layout.satellite.scale||1);assembly.position.y=b.h+1.2;shell.roof.add(assembly);tag('Parabòlica · Ø '+2*layout.satellite.radius*(layout.satellite.scale||1)+' m',b.x,b.h+19*(layout.satellite.scale||1),b.z)}
    const wall=(x,z,w,d,h=b.h)=>building.addWall(g,{lx:x,lz:z,sx:w,sz:d,height:h,material:shell.walls});
    if(b.hangar){
@@ -79,12 +79,17 @@ export function createCompoundConcept(layout){
      for(let z=-10;z<0;z+=3)box(g,1.3,.8,1.6,0x9a7546,-b.w/2+3,1.6,z);
      tag('Hangar · boca 30 m',b.x,b.h+1,b.z);
    }else{
-     const solid=b.bunker||b.warehouse;
+     const solid=b.bunker||(b.warehouse&&!b.wood);
      if(layout.throughBuildings?.includes(b.id)){for(const x of[-b.w/2,b.w/2])wall(x,0,.6,b.d)}
      else if(solid){wall(0,-b.d/2,b.w,.6);for(const x of[-b.w/2,b.w/2])wall(x,0,.6,b.d)}else{for(let level=0;level<b.floors;level++){
        const facade=new T.Group();facade.position.y=level*storey;g.add(facade);
        building.addWindowedWall(facade,{lx:0,lz:-b.d/2,sx:b.w,sz:.45,height:storey,material:shell.walls});
        for(const x of[-b.w/2,b.w/2])building.addWindowedWall(facade,{lx:x,lz:0,sx:.45,sz:b.d,height:storey,material:shell.walls});
+       if(b.wood){
+         facade.userData.openHutWindows=true;
+         // Walls already have physical openings; remove just the glass batches, keeping timber frames.
+         for(const mesh of [...facade.children])if(mesh.material?.color?.getHex()===0x3e7185){facade.remove(mesh);mesh.geometry.dispose()}
+       }
      }}
      const door=layout.throughBuildings?.includes(b.id)?12:4;wall(-(b.w+door)/4,b.d/2,(b.w-door)/2,.45,storey);wall((b.w+door)/4,b.d/2,(b.w-door)/2,.45,storey);
      if(b.floors===2){const facade=new T.Group();facade.position.y=storey;g.add(facade);building.addWindowedWall(facade,{lx:0,lz:b.d/2,sx:b.w,sz:.45,height:storey,material:shell.walls})}
@@ -123,6 +128,11 @@ export function createCompoundConcept(layout){
        box(g,5.4,.85,3.3,0x795337,0,4.8,b.d/2-1.15);
        for(const x of[-1.3,0,1.3])box(g,.10,3.5,.08,0x303e36,x,2.2,b.d/2+.45);
        box(g,5,1.1,2.5,0x5a5944,0,.9,-12);tag('Porta · 10 s',b.x,6,b.z+b.d/2+1);
+     }
+     if(b.replacement){
+       shell.roof.userData.replacementRoof=true;
+       for(const z of[-b.d/2,b.d/2])box(shell.roof,b.w+.6,1,.35,0x647c72,0,b.h+1.7,z);
+       for(const x of[-b.w/2,b.w/2])box(shell.roof,.35,1,b.d+.6,0x647c72,x,b.h+1.7,0);
      }
      if(b.floors===2){
        // Internal stairs and a real opening in the upper slab; hide slab with roofs for ground-floor inspection.

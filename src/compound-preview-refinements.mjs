@@ -9,7 +9,7 @@ export function siteBounds(l){
 export function propFootprint(kind){return kind==='flag'?[-.3,5.3,-.3,.3]:kind==='fuel'?[-3,3,-1.5,1.5]:kind==='generator'?[-3.5,3.5,-2.25,2.25]:kind==='sandbag'?[-3.55,3.55,-.5,.5]:kind==='crate'?[-1.4,1.4,-1.33,1.33]:kind==='bench'?[-2,2,-.7,.7]:kind==='well'?[-2.2,2.2,-1.8,1.8]:kind==='lamp'?[-1,1,-.4,.4]:[-.8,.8,-.8,.8]}
 export function refinePreviewLayout(input){
  const l=JSON.parse(JSON.stringify(input)),type=l.type||l.id;
- l.buildings=l.buildings.map(b=>({...b,warehouse:warehouseIds.has(b.id),floors:b.id===upperFloor[type]&&!warehouseIds.has(b.id)?2:1}));
+ l.buildings=l.buildings.map(b=>({...b,warehouse:warehouseIds.has(b.id),floors:b.floors??(b.id===upperFloor[type]&&!warehouseIds.has(b.id)?2:1)}));
  const bounds=siteBounds(l),placed=[];
  l.props=l.props.map(([kind,ox,oz])=>{
   const [left,right,back,front]=propFootprint(kind),radius=Math.max(-left,right,-back,front),shore=l.waterfront?.shore??(type==='port'?8:Infinity);

@@ -2,12 +2,12 @@ import * as T from '../vendor/three-r186.module.mjs';
 import {compoundLayouts as integratedLayouts} from './compound-layouts.mjs';
 import {phase2Layouts} from './compound-phase2-layouts.mjs';
 import {phase3Layouts} from './compound-phase3-layouts.mjs';
-import {phase4Layouts,newWorldLayouts,compoundVariants,coastConnection} from './compound-phase4-layouts.mjs?rev=20261014b';
+import {phase4Layouts,newWorldLayouts,compoundVariants,coastConnection,settlementLayouts} from './compound-phase4-layouts.mjs?rev=20261014c';
 const params=new URLSearchParams(location.search),requested=Number(params.get('fase')),phase=[2,3,4].includes(requested)?requested:1;
 let compoundLayouts=phase===4?newWorldLayouts:phase===3?phase3Layouts:phase===2?phase2Layouts:integratedLayouts.filter(l=>!l.phase);
 document.querySelector('.badge').textContent='Fase '+phase+(phase===4?' · dissenys per revisar':' · revisió visual');
 for(const n of[1,2,3,4])document.getElementById('phase'+n).setAttribute('aria-current',phase===n?'page':'false');
-import {createCompoundConcept} from './compound-concepts.mjs?rev=20261014b';
+import {createCompoundConcept} from './compound-concepts.mjs?rev=20261014c';
 const canvas=document.getElementById('scene'),container=canvas.parentElement;
 const renderer=new T.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;
 renderer.shadowMap.enabled=!matchMedia('(pointer:coarse)').matches;renderer.shadowMap.type=T.PCFSoftShadowMap;
@@ -23,9 +23,10 @@ function tabs(){
 const family=document.getElementById('designFamily');
 if(phase===4){
  document.getElementById('designFilters').hidden=false;
- for(const [value,label] of [['new','Llocs nous'],...integratedLayouts.map(l=>[l.id,l.name+' · variants']),['coast','Connexió base–costa']]){const o=document.createElement('option');o.value=value;o.textContent=label;family.append(o)}
+ for(const [value,label] of [['new','Llocs nous'],['settlements','Assentaments · 3 mides'],...integratedLayouts.map(l=>[l.id,l.name+' · variants']),['coast','Connexió base–costa']]){const o=document.createElement('option');o.value=value;o.textContent=label;family.append(o)}
+ if(params.get('model')?.startsWith('hut-settlement'))params.set('tipus','settlements');
  family.value=[...family.options].some(o=>o.value===params.get('tipus'))?params.get('tipus'):'new';
- function chooseFamily(){compoundLayouts=family.value==='new'?newWorldLayouts:family.value==='coast'?[coastConnection]:[integratedLayouts.find(l=>l.id===family.value),...compoundVariants.filter(l=>l.type===family.value)];tabs()}
+ function chooseFamily(){compoundLayouts=family.value==='new'?newWorldLayouts.filter(l=>!l.settlement):family.value==='settlements'?settlementLayouts:family.value==='coast'?[coastConnection]:[integratedLayouts.find(l=>l.id===family.value),...compoundVariants.filter(l=>l.type===family.value)];tabs()}
  chooseFamily();family.onchange=()=>{chooseFamily();select(0)};
 }else tabs();
 function dispose(group){const geometries=new Set(),materials=new Set();group.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m)});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose())}

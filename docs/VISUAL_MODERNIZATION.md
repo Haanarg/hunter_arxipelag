@@ -131,7 +131,7 @@ Les proves **Reproducció de llavors**, **Regressió general del joc** i **Disse
 
 ### 2. Completar propostes de món encara obertes
 
-La fase 4 ja té **21 dissenys al visor**: quatre recintes nous, dues variants de cadascun dels vuit tipus existents i una connexió base–costa. Es documenten a [COMPOUNDS_PHASE4.md](COMPOUNDS_PHASE4.md). El catàleg de partides continua amb els vuit tipus aprovats.
+La fase 4 ja té **32 dissenys al visor** (40 escenes amb les V1): embarcador civil, terminal, control de carretera i la seva V4, tres mides de poblat, tres variants de cadascun dels vuit complexos existents i una connexió base–costa. Revisió del 14 d’octubre: cabanes orientades cap a la plaça amb finestres sense vidre i variants V4 que substitueixen exactament un edifici per un de dues plantes. Es documenten a [COMPOUNDS_PHASE4.md](COMPOUNDS_PHASE4.md). El catàleg de partides continua amb els vuit tipus aprovats.
 
 - Revisar i integrar els dissenys d’embarcador civil, terminal de ferri, control de carretera i assentament de cabanes.
 - Integrar la selecció de les variants V2/V3 per llavor, preservant reserves, accessos, objectes garantits i patrulles.

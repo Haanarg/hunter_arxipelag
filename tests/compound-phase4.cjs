@@ -7,9 +7,9 @@ const assert=require('node:assert/strict'),path=require('node:path');
  const T=await import('../vendor/three-r186.module.mjs');
  const {siteBounds}=await import('../src/compound-preview-refinements.mjs');
  const {createCompoundConcept}=await import('../src/compound-concepts.mjs');
- assert.equal(phase4Layouts.length,21);assert.equal(new Set(phase4Layouts.map(l=>l.id)).size,21);
+ assert.equal(phase4Layouts.length,32);assert.equal(new Set(phase4Layouts.map(l=>l.id)).size,32);
  assert.equal(compoundLayouts.length,8,'drafts must not enter the runtime catalogue');
- for(const original of compoundLayouts){const variants=compoundVariants.filter(l=>l.type===original.id);assert.equal(variants.length,2);for(const v of variants)for(const item of original.loot)assert(v.loot.some(p=>p.kind===item.kind),'preserve '+item.kind)}
+ for(const original of compoundLayouts){const variants=compoundVariants.filter(l=>l.type===original.id);assert.equal(variants.length,3);for(const v of variants)for(const item of original.loot)assert(v.loot.some(p=>p.kind===item.kind),'preserve '+item.kind)}
  const errors=[];
  for(const l of phase4Layouts){
   const model=createCompoundConcept(l);let meshes=0;
@@ -21,7 +21,7 @@ const assert=require('node:assert/strict'),path=require('node:path');
   }
   for(const r of [...l.routes,...(l.vehiclePatrols||[]),{points:l.patrol,width:2}])for(let i=1;i<r.points.length;i++){
    const a=r.points[i-1],b=r.points[i],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])));
-   for(let k=0;k<=n;k++){const x=a[0]+(b[0]-a[0])*k/n,z=a[1]+(b[1]-a[1])*k/n;for(const block of l.buildings){if(l.throughBuildings?.includes(block.id))continue;if(Math.abs(x-block.x)<block.w/2+.5&&Math.abs(z-block.z)<block.d/2+.5){errors.push(l.id+' route '+r.label+'/'+block.id);k=n+1;break}}}
+   for(let k=0;k<=n;k++){const x=a[0]+(b[0]-a[0])*k/n,z=a[1]+(b[1]-a[1])*k/n;for(const block of l.buildings){if(l.throughBuildings?.includes(block.id)||(block.hangar&&r.label?.startsWith('Sortida blindats')))continue;const angle=block.rotationY||0,lx=(x-block.x)*Math.cos(angle)-(z-block.z)*Math.sin(angle),lz=(x-block.x)*Math.sin(angle)+(z-block.z)*Math.cos(angle);if(Math.abs(lx)<block.w/2+.5&&Math.abs(lz)<block.d/2+.5){errors.push(l.id+' route '+r.label+'/'+block.id);k=n+1;break}}}
   }
   if(l.helipad){const p=l.helipad;for(const b of [...l.buildings,...(l.tower?[{...l.tower,w:6,d:6}]:[])]){const dx=Math.max(0,Math.abs(b.x-p.x)-b.w/2),dz=Math.max(0,Math.abs(b.z-p.z)-b.d/2);assert(Math.hypot(dx,dz)>p.clearRadius,l.id+' rotor reserve')}}
   if(l.type==='outpost')assert.equal(l.entrances.length,2);
@@ -40,14 +40,16 @@ const assert=require('node:assert/strict'),path=require('node:path');
   }
   for(const b of l.buildings){
    const group=model.root.children.find(o=>o.userData.previewBuilding===b.id);
-   if(b.warehouse){assert.equal(b.floors,1);group.traverse(o=>assert(!o.userData.windowFacadeBatch,l.id+'/'+b.id+' warehouse window'))}
-   if(b.wood){const roof=group.children.find(o=>o.userData.branchGable);assert(roof,l.id+' gabled branch roof');const box=new T.Box3().setFromObject(roof);assert(box.max.y>b.h+b.w*.2,'raised ridge')}
+   if(b.warehouse&&!b.wood){assert.equal(b.floors,1);group.traverse(o=>assert(!o.userData.windowFacadeBatch,l.id+'/'+b.id+' warehouse window'))}
+   if(b.wood){const roof=group.children.find(o=>o.userData.branchGable);assert(roof,l.id+' gabled branch roof');assert(group.children.some(o=>o.userData.openHutWindows),'open hut windows');group.traverse(o=>assert.notEqual(o.material?.color?.getHex(),0x3e7185,'no glass in huts'));const box=new T.Box3().setFromObject(roof);assert(box.max.y>b.h+b.w*.2,'raised ridge')}
    if(b.floors===2){assert(!b.warehouse&&!b.hangar&&!b.bunker);assert(group.children.some(o=>o.userData.previewUpperFloor),'upper floor with stairwell')}
   }
   if(l.family!=='civil')assert(l.buildings.some(b=>b.floors===2),l.id+' military upper storey');
+  if(l.variant===4){assert.equal(l.buildings.filter(b=>b.floors===2).length,1);assert.equal(l.buildings.filter(b=>b.replacement).length,1);assert(!l.buildings.find(b=>b.replacement).warehouse)}
+  if(l.settlement){assert.equal(l.buildings.length,l.hutCount+1);assert(new Set(l.buildings.map(b=>b.rotationY.toFixed(2))).size>2,'varied hut headings')}
   if(l.id==='comunicacions-v2'){assert(l.antenna.height>56);assert(!l.satellite);assert(!model.root.children.some(o=>o.userData.previewSatellite))}
   if(l.id==='comunicacions-v3'){assert(!l.antenna);assert(l.satellite.radius*l.satellite.scale>9);assert(!model.root.children.some(o=>o.userData.previewAntenna))}
  }
  assert.deepEqual([...new Set(errors)],[],'layout clearances');
- console.log('PASS: 21 designs, 16 variants, guaranteed loot, geometry and clearances; runtime unchanged');
+ console.log('PASS: 32 designs, 24 military variants, 3 settlement sizes, guaranteed loot, geometry and clearances; runtime unchanged');
 })().catch(e=>{console.error(e);process.exitCode=1});

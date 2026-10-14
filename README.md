@@ -117,7 +117,7 @@ Laboratoris conservats per a iteracions visuals:
 - [Dispar a dues mans](dispar-proves.html).
 - [Explosius](explosius-proves.html).
 - [Complexos, fases 1–3 integrades](compounds-preview.html).
-- [Fase 4: recintes nous, variants i base–costa](compounds-preview.html?fase=4): 21 dissenys, encara fora del generador. [Criteris i distribucions](docs/COMPOUNDS_PHASE4.md).
+- [Fase 4: recintes nous, variants i base–costa](compounds-preview.html?fase=4): 32 dissenys (40 escenes amb V1): tres mides de poblat i variants militars V2/V3/V4, encara fora del generador. [Criteris i distribucions](docs/COMPOUNDS_PHASE4.md).
 
 ## Publicació i llicències
 
