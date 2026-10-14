@@ -3436,7 +3436,14 @@ window.HUNTER_CHARACTERS=Object.freeze({
     bazooka.position.set(.62,3.48,-.5);bazooka.visible=false;
     player.add(bazooka);u.bazooka=bazooka;
     // Rifle de franctirador amb culata, canó llarg i visor elevat.
-    const sniper=new THREE.Group();sniper.position.set(.23,3.1,-.58);player.add(sniper);
+    // Escopeta? No: rifle llarg recolzat a la zona de l'espatlla dreta.
+    // L'extrem posterior de la culata (z=1.59 en coordenades del rifle)
+    // queda al costat del pivot de l'espatlla (x=.57,y=2.9,z=0), no al clatell.
+    // L'escala es redueix perquè el guardamà sigui accessible pels dos braços.
+    const sniper=new THREE.Group();
+    sniper.position.set(.52,3.00,-1.15);
+    sniper.scale.setScalar(.82);
+    player.add(sniper);
     box(sniper,.23,.24,2.2,0x596b5e,0,0,-.24,'paint');
     box(sniper,.15,.15,1.55,0x303938,0,.03,-1.95,'metal');
     box(sniper,.3,.32,.82,0x806847,0,-.07,1.05,'paint');
@@ -3450,7 +3457,18 @@ window.HUNTER_CHARACTERS=Object.freeze({
     sniperMuzzle.name='hunter-sniper-muzzle';
     sniperMuzzle.position.set(0,.03,-2.75);
     sniper.add(sniperMuzzle);
+    // Dos punts de presa REALS del rifle: mà dreta al gallet i esquerra
+    // a sota del receptor/guardamà. Les mans segueixen aquests punts
+    // quan el rifle es mou o s'orienta amb la mira.
+    const sniperRightGrip=new THREE.Object3D(),
+          sniperLeftGrip=new THREE.Object3D();
+    sniperRightGrip.name='hunter-sniper-trigger-grip';
+    sniperLeftGrip.name='hunter-sniper-foregrip';
+    sniperRightGrip.position.set(-.04,-.19,.28);
+    sniperLeftGrip.position.set(-.27,-.25,.19);
+    sniper.add(sniperRightGrip,sniperLeftGrip);
     sniper.visible=false;u.sniper=sniper;u.sniperMuzzle=sniperMuzzle;
+    u.sniperRightGrip=sniperRightGrip;u.sniperLeftGrip=sniperLeftGrip;
     player.scale.setScalar(2/3);
     return player;
   },
@@ -3554,8 +3572,18 @@ window.HUNTER_CHARACTERS=Object.freeze({
       tx(u.ar,1.2);tz(u.ar,-.18);tx(u.aer,.72);
       tx(u.al,1.02);tz(u.al,.3);tx(u.ael,.88);
     }else if(sniper){
-      tx(u.ar,1.12);tz(u.ar,-.25);tx(u.aer,.72);
-      tx(u.al,1.06);tz(u.al,.3);tx(u.ael,.7);
+      // La posició del rifle governa els canells, no al revés.
+      // Conservam el mateix solver IK de la pistola a dues mans:
+      // l'esquerra sosté la part davantera i la dreta prem el gallet.
+      // Els punts estan en l'espai local del rifle, també quan s'apunta.
+      player.updateMatrixWorld(true);
+      const rig=u.pistolRig,handBlend=1-Math.exp(-21*dt);
+      rig.right.copy(u.sniperRightGrip.position);
+      u.sniperRightGrip.localToWorld(rig.right);player.worldToLocal(rig.right);
+      rig.left.copy(u.sniperLeftGrip.position);
+      u.sniperLeftGrip.localToWorld(rig.left);player.worldToLocal(rig.left);
+      aimPlayerPistolArm(u.ar,u.aer,rig.right,1,rig,handBlend);
+      aimPlayerPistolArm(u.al,u.ael,rig.left,-1,rig,handBlend);
     }else if(u.knife.visible){
       // Postura 4B en repòs i moviment. En atacar, trajectòria 3B:
       // preparació lateral, estocada, canell +90° i retorn a guàrdia.
