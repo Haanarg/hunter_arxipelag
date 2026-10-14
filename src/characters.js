@@ -152,6 +152,23 @@ function aimPlayerPistolArm(shoulder,elbow,wrist,side,rig,blend){
   shoulder.quaternion.slerp(rig.q1,blend);
   elbow.quaternion.slerp(rig.q2,blend);
 }
+// La mateixa geometria i els mateixos materials per al jugador i els
+// soldats llançacoets. L'arma no depèn de les animacions de cap dels dos.
+function createSharedBazooka(T,box){
+ const bazooka=new T.Group();
+ const bazMat=new T.MeshStandardMaterial({color:0x58664a,roughness:.78,metalness:.08}),
+       bazDark=new T.MeshStandardMaterial({color:0x252b27,roughness:.68,metalness:.25});
+ const tube=new T.Mesh(new T.CylinderGeometry(.2,.24,2.9,10),bazMat);
+ tube.rotation.x=Math.PI/2;tube.position.z=-.12;bazooka.add(tube);
+ const rear=new T.Mesh(new T.CylinderGeometry(.3,.3,.16,10),bazDark);
+ rear.rotation.x=Math.PI/2;rear.position.z=1.34;bazooka.add(rear);
+ const muzzle=new T.Mesh(new T.CylinderGeometry(.3,.24,.24,10),bazDark);
+ muzzle.rotation.x=Math.PI/2;muzzle.position.z=-1.52;bazooka.add(muzzle);
+ box(bazooka,.18,.35,.38,0x252b27,0,-.3,.25);
+ box(bazooka,.12,.18,.42,0x707873,-.12,.26,-.48);
+ box(bazooka,.16,.12,.5,0x707873,.18,.22,.28);
+ bazooka.rotation.x=-.08;return bazooka;
+}
 window.HUNTER_CHARACTERS=Object.freeze({
   grenadeChargeArmPose,
   knifePose4B:PLAYER_KNIFE_4B,
@@ -194,6 +211,25 @@ window.HUNTER_CHARACTERS=Object.freeze({
  return g;
   },
 
+  equipBazooka(THREE,model,{box}){
+    if(!model?.userData||model.userData.rocketSoldier)return model;
+    const u=model.userData,root=u.enemyFullRoot||model;
+    const bazooka=createSharedBazooka(THREE,box);
+    // La mateixa peça del jugador, reposicionada a l'espatlla dreta
+    // del comando. La versió de LOD completa conserva el bazuca.
+    bazooka.position.set(.58,3.32,-.52);
+    root.add(bazooka);
+    u.gun.visible=false;u.bazooka=bazooka;u.rocketSoldier=true;
+    // Silueta llegible també quan el comando entra en LOD mitjà/llunyà.
+    const distantMat=new THREE.MeshLambertMaterial({color:0x58664a});
+    for(const lod of [u.enemyMidMesh,u.enemyFarMesh]){
+      if(!lod)continue;
+      const tube=new THREE.Mesh(new THREE.CylinderGeometry(.19,.23,2.9,6),distantMat);
+      tube.rotation.x=Math.PI/2;tube.position.set(.58,3.32,-.64);
+      lod.add(tube);
+    }
+    return model;
+  },
   createSoldier(THREE,{box,material,general=false,palette=window.HUNTER_PALETTE}){
     const kind=general?'general':'soldat',model=general?window.HUNTER_GENERAL_MODEL.create(THREE,{palette}):this.createCommando(THREE,{palette});
     return window.HUNTER_ENEMY_LOD.optimize(THREE,model,kind);
@@ -243,13 +279,9 @@ window.HUNTER_CHARACTERS=Object.freeze({
     cisalla.position.set(0,-.79,-.12);cisalla.rotation.x=-Math.PI/2;
     cisalla.scale.setScalar(.7);u.aer.add(cisalla);cisalla.visible=false;
     u.cisalla=cisalla;u.cisallaCut=0;
-    const bazooka=new THREE.Group();bazooka.position.set(.62,3.48,-.5);player.add(bazooka);
-    const bazMat=new THREE.MeshStandardMaterial({color:0x58664a,roughness:.78,metalness:.08}),bazDark=new THREE.MeshStandardMaterial({color:0x252b27,roughness:.68,metalness:.25}),bazMetal=new THREE.MeshStandardMaterial({color:0x707873,roughness:.5,metalness:.42});
-    const tube=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,2.9,10),bazMat);tube.rotation.x=Math.PI/2;tube.position.z=-.12;bazooka.add(tube);
-    const rear=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.16,10),bazDark);rear.rotation.x=Math.PI/2;rear.position.z=1.34;bazooka.add(rear);
-    const muzzle=new THREE.Mesh(new THREE.CylinderGeometry(.3,.24,.24,10),bazDark);muzzle.rotation.x=Math.PI/2;muzzle.position.z=-1.52;bazooka.add(muzzle);
-    box(bazooka,.18,.35,.38,0x252b27,0,-.3,.25);box(bazooka,.12,.18,.42,0x707873,-.12,.26,-.48);box(bazooka,.16,.12,.5,0x707873,.18,.22,.28);
-    bazooka.rotation.x=-.08;bazooka.visible=false;u.bazooka=bazooka;
+    const bazooka=createSharedBazooka(THREE,box);
+    bazooka.position.set(.62,3.48,-.5);bazooka.visible=false;
+    player.add(bazooka);u.bazooka=bazooka;
     // Rifle de franctirador amb culata, canó llarg i visor elevat.
     const sniper=new THREE.Group();sniper.position.set(.23,3.1,-.58);player.add(sniper);
     box(sniper,.23,.24,2.2,0x596b5e,0,0,-.24,'paint');
