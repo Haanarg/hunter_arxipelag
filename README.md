@@ -42,6 +42,17 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Torres: destrucció i selecció d'arma (v0.5.6)
+
+Les torres defensives **només disparen amb l'arma més ràpida que pot fer mal a l'objectiu**:
+
+- A peu i dins de vehicles no blindats (moto, cotxe, ferry, helicòpter normal), fan servir la metralladora **lleugera** cada 0,7 s.
+- Dins de blindats (tanc, tanqueta o helicòpter de combat), fan servir el canó **pesat** cada 4,2 s. No disparen trets lleugers que no poden fer mal al blindatge.
+- Els dos canons conserven els seus temporitzadors propis, però no disparen alhora contra la mateixa diana; la recàrrega del pesat no provoca un tret lleuger inútil.
+- Quan una torre explota, es desintegren només peces petites que cauen i desapareixen. No es clonen les representacions simplificades de la torre per distància (LOD), i les quatre potes deixen de tenir col·lisió immediatament.
+
+Proves: `node tests/defense-weapons.cjs` (infanteria, transports, blindats, abasts i recàrregues) i `node tests/tower-destruction.cjs` (destrucció amb LOD llunyà, fragments i col·lisions), a més de la regressió general.
+
 ## Distribució de botí als complexos (v0.5.4)
 
 - **Polvorins:** cap dels tres mapes (`mapa`, `mapa_heli`, `mapa_tanc`). Mantenen munició, granades, explosius, bazuca i rifle de franctirador.
@@ -59,7 +70,7 @@ Proves: `node tests/sniper-shoulder-pose.cjs` (culata, canells en repòs, camina
 
 ## Torre de defensa dual i soldats amb bazuca (v0.5.2)
 
-Les torres defensives tenen una metralladora **lleugera** i un canó **pesat** sobre la mateixa torreta orientable. Tenen cadències independents (0,7 s i 4,2 s respectivament) i poden disparar simultàniament quan el jugador és a l'abast; l'arma pesada abasta fins a 95 m. Els impactes pesats utilitzen el sistema balístic de la v0.5.1.
+Les torres defensives tenen una metralladora **lleugera** i un canó **pesat** sobre la mateixa torreta orientable. Tenen cadències independents (0,7 s i 4,2 s respectivament); des de la v0.5.6 escullen exclusivament l'arma més ràpida capaç de fer mal a la diana. L'arma pesada abasta fins a 95 m. Els impactes pesats utilitzen el sistema balístic de la v0.5.1.
 
 Un de cada **cinc soldats de guàrdia** dels complexos enemics rep el bazuca: el seu model reutilitza exactament la geometria i els materials del bazuca del jugador, amb una silueta simplificada per als LOD mitjà i llunyà. El seu tret és pesat, explosiu, més lent i amb 3,4 s entre trets. El comptador és determinista i no consumeix nombres aleatoris de la llavor; les tropes ordinàries conserven l'armament lleuger i el rifle de franctirador continua essent lleuger.
 
