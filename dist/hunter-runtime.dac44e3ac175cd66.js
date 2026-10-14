@@ -974,6 +974,43 @@ window.HUNTER_VEHICLES=Object.freeze({
       if(Math.abs(pivot.rotation.y)<.0001&&Math.abs(target)<.0001)pivot.rotation.y=0;
     }
   },
+  // Torreta independent del xassís; interpolació amb inèrcia i camí angular més curt.
+  aimTurret(THREE,model,worldDirection,dt){
+    const rig=model?.userData,pivot=rig?.turretPivot,pitch=rig?.turretPitch;
+    if(!pivot||!pitch||!worldDirection||worldDirection.lengthSq()<.00001)return false;
+    model.updateWorldMatrix(true,false);
+    const local=worldDirection.clone().normalize().applyQuaternion(
+      model.getWorldQuaternion(new THREE.Quaternion()).invert());
+    // Un objectiu pràcticament vertical no ha de fer girar la torre 180°.
+    const yaw=Math.hypot(local.x,local.z)<1e-4
+            ?pivot.rotation.y:Math.atan2(-local.x,-local.z),
+          elev=Math.max(-.42,Math.min(.43,Math.atan2(local.y,Math.hypot(local.x,local.z)))),
+          step=Math.min(.08,Math.max(0,Number.isFinite(dt)?dt:0));
+    const approach=(angle,target,key,maxSpeed,wrap)=>{
+      const delta=wrap?Math.atan2(Math.sin(target-angle),Math.cos(target-angle)):target-angle;
+      const desired=Math.max(-maxSpeed,Math.min(maxSpeed,delta*3.8));
+      let velocity=rig[key]||0;
+      velocity+=(desired-velocity)*(1-Math.exp(-8*step));
+      const move=velocity*step;
+      if(Math.abs(move)>=Math.abs(delta)){rig[key]=0;return angle+delta}
+      rig[key]=velocity;return angle+move;
+    };
+    pivot.rotation.y=approach(pivot.rotation.y,yaw,'turretYawSpeed',rig.turretYawRate||1.55,true);
+    pitch.rotation.x=approach(pitch.rotation.x,elev,'turretPitchSpeed',.85,false);
+    const yawError=Math.atan2(Math.sin(yaw-pivot.rotation.y),Math.cos(yaw-pivot.rotation.y));
+    return Math.abs(yawError)<.085&&Math.abs(elev-pitch.rotation.x)<.085;
+  },
+  // L'origen i l'orientació dels projectils són els del canó visible.
+  turretShot(THREE,model){
+    const muzzle=model?.userData?.turretMuzzle;
+    if(!muzzle)return null;
+    model.updateWorldMatrix(true,true);
+    return {
+      origin:muzzle.getWorldPosition(new THREE.Vector3()),
+      direction:new THREE.Vector3(0,0,-1)
+        .applyQuaternion(muzzle.getWorldQuaternion(new THREE.Quaternion())).normalize()
+    };
+  },
   createFactory(THREE,{box,material,shadows}){
     const VS=this.scales;
     const rod=(g,a,b,r,c,profile='metal')=>{const v=new THREE.Vector3(...a),w=new THREE.Vector3(...b),delta=w.clone().sub(v),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),8),material(c,profile));m.position.copy(v.add(w).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());g.add(m);return m};
@@ -1036,11 +1073,27 @@ window.HUNTER_VEHICLES=Object.freeze({
           round(steering,.09,.5,0xcfd5d6,0,.25,-.05,'x','metal');
         }
       }
-      if(t==='tanqueta'){for(const x of[-1.42,1.42])for(const z of[-1.55,0,1.55])wheel(g,x,.68,z,.58,.34,false,z<0);box(g,2.75,.42,4.6,0x596343,0,.88,0,'paint');box(g,2.55,1.02,3.8,0x667348,0,1.42,.05,'paint');const nose=box(g,2.48,.72,1.15,0x727c50,0,1.62,-1.65,'paint');nose.rotation.x=-.18;box(g,2.08,.58,1.7,0x727c50,0,2.02,-.15,'paint');round(g,.68,.32,0x586543,0,2.4,-.15,'y','paint');rod(g,[0,2.48,-.65],[0,2.48,-3.05],.1,metal);box(g,.3,.24,.5,metal,0,2.48,-2.92,'metal');for(const x of[-1.05,1.05])box(g,.32,.18,.18,0xffe0a0,x,1.48,-2.24,'paint')}
+      if(t==='tanqueta'){
+        for(const x of[-1.42,1.42])for(const z of[-1.55,0,1.55])
+          wheel(g,x,.68,z,.58,.34,false,z<0);
+        box(g,2.75,.42,4.6,0x596343,0,.88,0,'paint');
+        box(g,2.55,1.02,3.8,0x667348,0,1.42,.05,'paint');
+        const nose=box(g,2.48,.72,1.15,0x727c50,0,1.62,-1.65,'paint');
+        nose.rotation.x=-.18;
+        for(const x of[-1.05,1.05])box(g,.32,.18,.18,0xffe0a0,x,1.48,-2.24,'paint');
+        const turret=new THREE.Group();turret.position.set(0,2.22,-.15);g.add(turret);
+        box(turret,2.08,.58,1.7,0x727c50,0,-.2,0,'paint');
+        round(turret,.68,.32,0x586543,0,.18,0,'y','paint');
+        const elev=new THREE.Group();elev.position.set(0,.26,-.5);turret.add(elev);
+        rod(elev,[0,0,0],[0,0,-2.4],.1,metal);
+        box(elev,.3,.24,.5,metal,0,0,-2.27,'metal');
+        const muzzle=new THREE.Object3D();muzzle.position.set(0,0,-2.4);elev.add(muzzle);
+        g.userData.turretPivot=turret;g.userData.turretPitch=elev;
+        g.userData.turretMuzzle=muzzle;g.userData.turretYawRate=2.05;
+      }
       if(t==='tanc'){
         const trackSide=x=>{
           const side=Math.sign(x),outer=x+side*.02,trackMetal=0x53564d,cy=.78,r=.66,front=-2.62,rear=2.62,straight=rear-front,perimeter=2*straight+2*Math.PI*r;
-          // Nucli de goma tipus càpsula i rodes internes.
           box(g,1.05,1.16,5.25,rubber,outer,cy,0,'rubber');
           round(g,r,1.04,rubber,outer,cy,front,'x','rubber');
           round(g,r,1.04,rubber,outer,cy,rear,'x','rubber');
@@ -1048,7 +1101,6 @@ window.HUNTER_VEHICLES=Object.freeze({
             const w=wheel(g,x+side*.52,.76,z,.55,.16);
             w.userData.trackSide=side;
           }
-          // Les baules són peces independents: place() les farà circular al voltant de l'eruga.
           const links=[],count=Math.round(perimeter/.38);
           for(let i=0;i<count;i++){
             const link=box(g,1.17,.11,.28,trackMetal,outer,cy,0,'metal');
@@ -1058,7 +1110,23 @@ window.HUNTER_VEHICLES=Object.freeze({
           (g.userData.tracks||(g.userData.tracks=[])).push({side,links,phase:0,cy,r,front,rear,straight,perimeter,x:outer});
         };
         [-2.1,2.1].forEach(trackSide);
-        box(g,3.75,1.15,5.9,0x667348,0,1.5,0,'paint');const front=box(g,3.65,.72,1.55,0x727c50,0,1.95,-2.05,'paint');front.rotation.x=-.28;for(const x of[-1.45,1.45])box(g,.22,.52,4.9,0x56623f,x,1.88,.15,'paint');round(g,1.62,.82,0x78845b,0,2.54,.1,'y','paint');box(g,2.2,.26,1.65,0x6d7950,0,2.92,.1,'paint');round(g,.62,.2,metal,.45,3.08,.4);rod(g,[0,2.62,-1],[0,2.62,-5.35],.2,metal);box(g,.66,.4,.68,metal,0,2.62,-5.08,'metal');for(const x of[-1.2,1.2])box(g,.64,.45,1.2,0x596343,x,2.24,2,'paint');for(const x of[-1.35,1.35])box(g,.42,.22,.42,0x2f332e,x,2.15,-2.45,'metal');rod(g,[-1,2.7,1],[-1,5.2,1],.025,metal)}
+        box(g,3.75,1.15,5.9,0x667348,0,1.5,0,'paint');
+        const front=box(g,3.65,.72,1.55,0x727c50,0,1.95,-2.05,'paint');front.rotation.x=-.28;
+        for(const x of[-1.45,1.45])box(g,.22,.52,4.9,0x56623f,x,1.88,.15,'paint');
+        const turret=new THREE.Group();turret.position.set(0,2.54,.1);g.add(turret);
+        round(turret,1.62,.82,0x78845b,0,0,0,'y','paint');
+        box(turret,2.2,.26,1.65,0x6d7950,0,.38,0,'paint');
+        round(turret,.62,.2,metal,.45,.54,.3);
+        rod(turret,[-1,.16,.9],[-1,2.66,.9],.025,metal);
+        const elev=new THREE.Group();elev.position.set(0,.08,-1.1);turret.add(elev);
+        rod(elev,[0,0,0],[0,0,-4.35],.2,metal);
+        box(elev,.66,.4,.68,metal,0,0,-4.08,'metal');
+        const muzzle=new THREE.Object3D();muzzle.position.set(0,0,-4.35);elev.add(muzzle);
+        g.userData.turretPivot=turret;g.userData.turretPitch=elev;
+        g.userData.turretMuzzle=muzzle;g.userData.turretYawRate=1.40;
+        for(const x of[-1.2,1.2])box(g,.64,.45,1.2,0x596343,x,2.24,2,'paint');
+        for(const x of[-1.35,1.35])box(g,.42,.22,.42,0x2f332e,x,2.15,-2.45,'metal');
+      }
       if(t==='llanxa'){
         // Stealth A1: model seleccionat a proves.html. Proa neta, casc facetat,
         // cabina oberta i radar compacte. Proa = -Z.
@@ -4571,10 +4639,22 @@ function cutBarbedWire(){
  return true;
 }
 function fire(){if(cisallaEquipped&&!cv)return cutBarbedWire();if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
-if(c=='tanc'){const muzzleZ=5.35*VS.tanc,muzzleY=2.62*VS.tanc,x=cv.x+fx_*muzzleZ,y=cv.o.position.y+muzzleY,z=cv.z+fz*muzzleZ;const [ax,ay,az]=autoAimArmoredShot(x,y,z,fx_,fz,220);fcd=.9;shoot(x,y,z,ax,ay,az,85,45,8,'p',mS,2.2);Pj[Pj.length-1].life=4.4}
+if(c=='tanc'||c=='tanqueta'){
+  // El projectil segueix el canó real mentre la torreta gira: no
+  // s'alinea artificialment amb l'objectiu en prémer Dispar.
+  const gun=window.HUNTER_VEHICLES.turretShot(THREE,cv.o);
+  if(!gun)return;
+  const {origin:p,direction:d}=gun;
+  if(c=='tanc'){
+    fcd=.9;shoot(p.x,p.y,p.z,d.x,d.y,d.z,85,45,8,'p',mS,2.2);
+    Pj[Pj.length-1].life=4.4;
+  }else{
+    fcd=.16;shoot(p.x,p.y,p.z,d.x,d.y,d.z,135,10,0,'p',mW,SMALL_ARMS_SCALE);
+  }
+}
 else if(c=='heli'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*3.2*VS.heli,y=cv.o.position.y+.5*VS.heli,z=cv.z+fz*3.2*VS.heli;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,125,.91,'heavy');fcd=.6;shoot(x,y,z,ax,ay,az,85,45,8,'p',mS,2)}
 else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*4.1*VS.heli_combat,y=cv.o.position.y+.15,z=cv.z+fz*4.1*VS.heli_combat;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,130,.91);fcd=.12;shoot(x,y,z,ax,ay,az,145,9,0,'p',mB,.85)}
-else if(c=='tanqueta'){const muzzleZ=3.05*VS.tanqueta,muzzleY=2.48*VS.tanqueta,x=cv.x+fx_*muzzleZ,y=cv.o.position.y+muzzleY,z=cv.z+fz*muzzleZ;const [ax,ay,az]=autoAimArmoredShot(x,y,z,fx_,fz,85);fcd=.16;shoot(x,y,z,ax,ay,az,135,10,0,'p',mW,SMALL_ARMS_SCALE)}
+
 else if(c=='llanxa_coets'){secondaryWeapon();return}
 else if(!cv&&sniperEquipped&&inv.franctirador){
   if(sniperAmmo<=0){msg='El rifle no té munició.';msgT=2;return}
@@ -5084,7 +5164,7 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
         shoot(u.x+fx*2.4+Math.cos(u.hd)*.72,eyeY-.2,
           u.z+fz*2.4-Math.sin(u.hd)*.72,ax,ay,az,76,24,7,'e',mS,1.8);
       }
-    }else if(d<u.rng&&u.cd<=0){
+    }else if(u.t!=='tanc'&&u.t!=='tanqueta'&&d<u.rng&&u.cd<=0){
       u.cd=u.rate;const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
       const smallBullet=u.t==='tanqueta'||u.t==='general';
       shoot(u.x,eyeY,u.z,ax,ay,az,u.spl?60:70,u.dmg,u.spl,
@@ -5115,6 +5195,36 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
   const lastVisualHeading=u.o.rotation.y;
   if(u.t!='torre')u.o.rotation.y=u.hd;
   else if(u.o.userData.towerTurret)u.o.userData.towerTurret.rotation.y=u.hd;
+  // Blindats enemics: la torreta segueix el jugador independentment del
+  // rumb de patrulla. Cada ràfega té una dispersió estable mentre apunten,
+  // i el tret neix al canó quan aquest ha acabat d'orientar-se.
+  if((u.t==='tanc'||u.t==='tanqueta')&&u.o.userData.turretPivot){
+    let desired=new THREE.Vector3(-Math.sin(u.hd),0,-Math.cos(u.hd));
+    if(u.canSee){
+      if(!u.armoredAimSpread){
+        const spread=enemyAimSpread(),
+              boost=u.spl?1+Math.min(1,u.spl/8)*(spread-1)*.5:1,
+              horizontal=1.5*spread*boost,
+              vertical=.85*(spread-1);
+        u.armoredAimSpread={x:rn(-horizontal,horizontal),
+          y:vertical?rn(-vertical,vertical):0,z:rn(-horizontal,horizontal)};
+      }
+      const offset=u.armoredAimSpread,
+            gun=window.HUNTER_VEHICLES.turretShot(THREE,u.o);
+      if(gun)desired.set(q.x+offset.x-gun.origin.x,
+        py+1.5+offset.y-gun.origin.y,q.z+offset.z-gun.origin.z);
+    }else u.armoredAimSpread=null;
+    const aligned=window.HUNTER_VEHICLES.aimTurret(THREE,u.o,desired,dt);
+    if(u.canSee&&d<u.rng&&u.cd<=0&&aligned){
+      const gun=window.HUNTER_VEHICLES.turretShot(THREE,u.o);
+      if(gun){
+        u.cd=u.rate;u.armoredAimSpread=null;
+        const p=gun.origin,v=gun.direction,small=u.t==='tanqueta';
+        shoot(p.x,p.y,p.z,v.x,v.y,v.z,u.spl?60:70,u.dmg,u.spl,
+          'e',small?mW:mE,small?SMALL_ARMS_SCALE:(u.spl?2:1));
+      }
+    }
+  }
   if((u.t==='jeep'||u.t==='tanqueta')&&u.o.userData.steeringPivots){
     const dxMoved=u.x-oldX,dzMoved=u.z-oldZ,
           distance=Math.hypot(dxMoved,dzMoved),
@@ -8025,6 +8135,20 @@ V.forEach(v=>{
   if(interval===0){place(v,t,dt,0);v.visualLodAcc=0}
   else{v.visualLodAcc=(v.visualLodAcc||0)+dt;if(v.visualLodAcc>=interval){const step=v.visualLodAcc;v.visualLodAcc=0;place(v,t,step,0)}}
 });poseRider(cv,dt);
+// Les torretes dels blindats del jugador segueixen gradualment el vector
+// que triaria l'autoapuntat actual. El vehicle pot avançar/girar mentre
+// la torre conserva el seu propi rumb i l'elevació del canó.
+if(cv&&(cv.t==='tanc'||cv.t==='tanqueta')){
+  const gun=window.HUNTER_VEHICLES.turretShot(THREE,cv.o);
+  if(gun){
+    const hd=cv.hd,fx=-Math.sin(hd),fz=-Math.cos(hd),
+          range=cv.t==='tanc'?220:85,
+          [ax,ay,az]=autoAimArmoredShot(
+            gun.origin.x,gun.origin.y,gun.origin.z,fx,fz,range);
+    window.HUNTER_VEHICLES.aimTurret(THREE,cv.o,
+      new THREE.Vector3(ax,ay,az),dt);
+  }
+}
 const scopeNow=scopeActive&&sniperEquipped&&!cv&&!playerFall&&!swimming;
 const fieldOfView=scopeNow?2*Math.atan(Math.tan(58*Math.PI/360)/8)*180/Math.PI:58;
 if(Math.abs(cam.fov-fieldOfView)>.001){cam.fov=fieldOfView;cam.updateProjectionMatrix()}
