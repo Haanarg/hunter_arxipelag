@@ -3436,12 +3436,13 @@ window.HUNTER_CHARACTERS=Object.freeze({
     bazooka.position.set(.62,3.48,-.5);bazooka.visible=false;
     player.add(bazooka);u.bazooka=bazooka;
     // Rifle de franctirador amb culata, canó llarg i visor elevat.
-    // Escopeta? No: rifle llarg recolzat a la zona de l'espatlla dreta.
-    // L'extrem posterior de la culata (z=1.59 en coordenades del rifle)
-    // queda al costat del pivot de l'espatlla (x=.57,y=2.9,z=0), no al clatell.
-    // L'escala es redueix perquè el guardamà sigui accessible pels dos braços.
+    // La base del soldat s'ha generat a escala 1.2: l'espatlla
+    // dreta és x=.57*1.2, y=2.90*1.2. La culata ha de tocar
+    // aquesta espatlla, i no les coordenades del model sense escalar.
+    // Escalam lleugerament el rifle perquè els canells arribin al gallet
+    // i al guardamà sense forçar els colzes.
     const sniper=new THREE.Group();
-    sniper.position.set(.52,3.00,-1.15);
+    sniper.position.set(.68,3.60,-1.15);
     sniper.scale.setScalar(.82);
     player.add(sniper);
     box(sniper,.23,.24,2.2,0x596b5e,0,0,-.24,'paint');
@@ -3465,7 +3466,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     sniperRightGrip.name='hunter-sniper-trigger-grip';
     sniperLeftGrip.name='hunter-sniper-foregrip';
     sniperRightGrip.position.set(-.04,-.19,.28);
-    sniperLeftGrip.position.set(-.27,-.25,.19);
+    sniperLeftGrip.position.set(-.38,-.25,.19);
     sniper.add(sniperRightGrip,sniperLeftGrip);
     sniper.visible=false;u.sniper=sniper;u.sniperMuzzle=sniperMuzzle;
     u.sniperRightGrip=sniperRightGrip;u.sniperLeftGrip=sniperLeftGrip;
@@ -3628,7 +3629,12 @@ window.HUNTER_CHARACTERS=Object.freeze({
     const back=kick*.10,up=kick*.03;
     // La pose normal continua marcant l'animació de caminar i dels altres objectes.
     // El rig de pistola hi superposa una presa a dues mans només durant el tir.
-    u.ar.rotation.y=0;u.al.rotation.y=0;u.aer.rotation.y=0;u.ael.rotation.y=0;
+    // No sobrescriure la rotació de quaternion calculada per l'IK
+    // del rifle: tornar y=0 aquí separava les mans de les dues preses.
+    if(!sniper){
+      u.ar.rotation.y=0;u.al.rotation.y=0;
+      u.aer.rotation.y=0;u.ael.rotation.y=0;
+    }
     if(blend>.001){
       rig.right.set(.12,2.95+up,-1.07+back);
       rig.left.set(-.075,2.96+up,-1.115+back);
