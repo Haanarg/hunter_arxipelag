@@ -6,6 +6,9 @@ on:
       - 'src/combat.js'
       - 'src/compound-generation.js'
       - 'tests/projectile-classes.cjs'
+      - 'tests/weapon-classification.cjs'
+      - 'tests/bullet-impact-fx.cjs'
+      - 'tests/smoke.cjs'
       - '.github/workflows/projectile-classes.yml'
   workflow_dispatch:
 permissions:
@@ -21,7 +24,11 @@ jobs:
           node-version: '22'
       - name: Classificar projectils i protegir blindats
         run: node tests/projectile-classes.cjs
+      - name: Comprovar armes reals
+        run: node tests/weapon-classification.cjs
       - name: Validar els efectes dels impactes
         run: node tests/bullet-impact-fx.cjs
+      - name: Verificar la regressió general
+        run: node tests/smoke.cjs
       - name: Verificar les construccions militars
         run: node tests/compound-generation.cjs
