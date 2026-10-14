@@ -3579,9 +3579,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
       // Els punts estan en l'espai local del rifle, també quan s'apunta.
       player.updateMatrixWorld(true);
       const rig=u.pistolRig,handBlend=1-Math.exp(-21*dt);
-      rig.right.copy(u.sniperRightGrip.position);
+      // localToWorld espera coordenades LOCALS del grip, no el seu
+      // offset al rifle: començar per (0,0,0) evita aplicar-lo dues vegades.
+      rig.right.set(0,0,0);
       u.sniperRightGrip.localToWorld(rig.right);player.worldToLocal(rig.right);
-      rig.left.copy(u.sniperLeftGrip.position);
+      rig.left.set(0,0,0);
       u.sniperLeftGrip.localToWorld(rig.left);player.worldToLocal(rig.left);
       aimPlayerPistolArm(u.ar,u.aer,rig.right,1,rig,handBlend);
       aimPlayerPistolArm(u.al,u.ael,rig.left,-1,rig,handBlend);
