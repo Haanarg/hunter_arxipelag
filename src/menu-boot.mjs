@@ -96,14 +96,24 @@ function intercept(button,message){
     event.stopImmediatePropagation();
     if(requestPending)return;
     requestPending=true;
+    const startupStart=performance.now();
     showLoading(message);
     try{
       await loadGame();
+      const engineMs=performance.now()-startupStart;
       // Una oportunitat real de pintar el missatge abans de la generació síncrona.
       await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
       if(button.dataset.d)showLoading('Generant el món…');
+      const worldStart=performance.now();
       button.click(); // Deleguem al gestor original, instal·lat per game-core.js.
-      if(button.dataset.d)loadingLabel.style.display='none';
+      if(button.dataset.d){
+        loadingLabel.style.display='none';
+        window.HUNTER_STARTUP_TIMINGS={
+          engineMs,worldMs:performance.now()-worldStart,
+          totalMs:performance.now()-startupStart,preloaded:bootPreloadStarted
+        };
+        console.info('Hunter · arrencada',window.HUNTER_STARTUP_TIMINGS);
+      }
     }catch(error){
       console.error('No es pot carregar el motor Hunter',error);
       showLoading('Error de càrrega. Torna a prémer per reintentar-ho.');
