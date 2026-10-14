@@ -244,8 +244,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
     }
     a.legs[0].rotation.x=swing;a.legs[1].rotation.x=-swing;
     a.knees.forEach((j,i)=>blend(j,-(.06+Math.max(0,Math.sin(phase)*(i?1:-1))*.8*(moving?1:0))));
-    a.arms.forEach((j,i)=>blend(j,aim?(i?.96:1.03):(i?swing:-swing)*.5,aim?(i?-.05:.12):(i?.025:-.025)));
-    a.elbows.forEach((j,i)=>blend(j,aim?(i?.61:.55):.16+Math.max(0,Math.cos(phase)*(i?-1:1))*.18*(moving?1:0)));
+    const bazookaAim=!!a.rocketSoldier&&aim;
+    a.arms.forEach((j,i)=>blend(j,bazookaAim?(i?1.2:1.04):aim?(i?.96:1.03):(i?swing:-swing)*.5,
+      bazookaAim?(i?-.16:.23):aim?(i?-.05:.12):(i?.025:-.025)));
+    a.elbows.forEach((j,i)=>blend(j,bazookaAim?(i?.75:.83):aim?(i?.61:.55):
+      .16+Math.max(0,Math.cos(phase)*(i?-1:1))*.18*(moving?1:0)));
   },
   createPlayer(THREE,{box,palette=window.HUNTER_PALETTE}){
     const P=palette.player,player=window.HUNTER_PLAYER_MODEL.create(THREE,{unitScale:1.2,palette,headVariant:'compactD'}),u=player.userData;
