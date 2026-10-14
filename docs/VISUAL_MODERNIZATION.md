@@ -122,11 +122,12 @@ La revisió 0.4.25 actualitza les expectatives del banc de proves al joc actual:
 
 El tram final de `tests/seed-replay.cjs` feia dues generacions dins una sola crida VM: compartien el mateix límit de 120.000 ms. Ara cada generació té una crida independent amb el mateix límit; es conserven les comparacions de mapes i es registren els temps. No es modifica el generador ni s’augmenta el timeout.
 
-1. Confirmar la reproducció de llavors sense competència pels recursos i a CI: la passada local simultània va superar els 120 s en una reconstrucció, després de superar les comparacions inicials. El timeout continua obert; la prova general ja passa completa.
-2. Ampliar la cobertura de generació de complexos, accessos, ports i rutes d’IA a més llavors i a les dues mides de mapa. Les proves actuals no són una garantia universal.
-3. Comprovar en partida completa pujades i baixades de pendents, entrada als edificis, destrucció de sostres, persecució enemiga i càrrega/aterratge al ferry. Hi ha correccions implementades; queda la regressió conjunta.
-4. Fer una sessió reproduïble de 20–30 minuts en Android: mateixa llavor, qualitat i recorregut; registrar FPS, temps de fotograma, dibuixos, memòria i temperatura. Incloure mirada terra endins i zoom del rifle.
-5. Revisar ergonomia dels botons de dispar/mira, joystick, desplaçament lateral i controls d’helicòpter en dispositiu físic.
+Les proves **Reproducció de llavors**, **Regressió general del joc** i **Dissenys dels complexos** passen a CI per al commit `a5530a52edbec9d7ab662bd26aa3d9d2b2283848` (resultat comprovat el 14 d’octubre). La incidència anterior del timeout queda tancada per a aquesta revisió; les passades locals simultànies continuen sense servir com a mesura fiable de rendiment.
+
+1. Ampliar la cobertura de generació de complexos, accessos, ports i rutes d’IA a més llavors i a les dues mides de mapa. Les proves actuals no són una garantia universal.
+2. Comprovar en partida completa pujades i baixades de pendents, entrada als edificis, destrucció de sostres, persecució enemiga i càrrega/aterratge al ferry. Hi ha correccions implementades; queda la regressió conjunta.
+3. Fer una sessió reproduïble de 20–30 minuts en Android: mateixa llavor, qualitat i recorregut; registrar FPS, temps de fotograma, dibuixos, memòria i temperatura. Incloure mirada terra endins i zoom del rifle.
+4. Revisar ergonomia dels botons de dispar/mira, joystick, desplaçament lateral i controls d’helicòpter en dispositiu físic.
 
 ### 2. Completar propostes de món encara obertes
 
@@ -182,8 +183,8 @@ Aquesta revisió contrasta fonts, layouts, controls, pàgines existents, proves 
 
 - A la integració 0.4.16 van passar les proves de geometria de les vuit maquetes i de generació amb llavors **12345 i 67**, incloent porta acumulativa, armes/mapes garantits, separació i patrulles.
 - La base i l’HQ es van comprovar en Chromium/WebGL 2 amb SwiftShader, en perfils escriptori i mòbil, sense errors de consola. Això no és una prova en Android físic.
-- A 0.4.25 `tests/smoke.cjs` passa completa en local: 15 tipus de vehicles, 40 edificis, combat, inventari, física, pausa i reinici; 218,4 s. També passen les comprovacions específiques de paracaigudes i de càrrega de granada. El test de llavors conserva la limitació indicada als pendents.
-- Els workflows consultats de la 0.4.16 confirmen proves específiques de terreny, palmeres, ombres, filferrada, decoració, menú de rendiment, òptica del rifle, aigua, granades, impactes i aterratge. A la 0.4.18 també passen els workflows de LOD enemic, boca/trajectòria del rifle i col·lisió d’helicòpters amb cobertes. El workflow de llavors falla per timeout de `seed-replay.cjs`, després de superar catàleg i integració del cercador. Logs consultats el 12 d’octubre; no s’atribueix aquest timeout a una causa de rendiment concreta sense perfilar-lo.
+- A 0.4.25 `tests/smoke.cjs` passa completa en local: 15 tipus de vehicles, 40 edificis, combat, inventari, física, pausa i reinici; 218,4 s. També passen les comprovacions específiques de paracaigudes i de càrrega de granada. La reproducció de llavors també passa a CI en el mateix commit.
+- Els workflows consultats de la 0.4.16 confirmen proves específiques de terreny, palmeres, ombres, filferrada, decoració, menú de rendiment, òptica del rifle, aigua, granades, impactes i aterratge. A la 0.4.18 també passen els workflows de LOD enemic, boca/trajectòria del rifle i col·lisió d’helicòpters amb cobertes. Aquella execució del workflow de llavors va fallar per timeout de `seed-replay.cjs`; la incidència queda resolta a CI en la revisió 0.4.25.
 
 | Àmbit | Proves de referència |
 |---|---|
