@@ -292,6 +292,15 @@ const segments=[
  {name:'Pla 3 · Contrapicat',cue:'PLA 3 · ÚLTIMA REPETICIÓ',pos:vec(-2.0,.88,-7.3),end:vec(-2.8,1.65,-8.7),look:vec(0,1.75,.65)}
 ];
 const tempPos=new THREE.Vector3(),tempLook=new THREE.Vector3();
+// El mateix mètode que al joc: quaternion zenital fix i orientació
+// cap al sol existent. Cap lookAt durant l'ascens vertical.
+const overheadUp=new THREE.Vector3(-sunDir.x,0,-sunDir.z).normalize();
+const overheadOrientation=new THREE.Quaternion().setFromRotationMatrix(
+ new THREE.Matrix4().lookAt(
+  new THREE.Vector3(0,1,0),new THREE.Vector3(0,0,0),overheadUp));
+const sunsetOrientation=new THREE.Quaternion().setFromRotationMatrix(
+ new THREE.Matrix4().lookAt(
+  new THREE.Vector3(0,0,0),sunDir,new THREE.Vector3(0,1,0)));
 let elapsed=0,playing=false,last=0;
 const playBtn=document.getElementById('play'),startBtn=document.getElementById('startPlay'),
   restartBtn=document.getElementById('restart'),seek=document.getElementById('seek'),
@@ -312,12 +321,11 @@ function applyCamera(t){
  }else{
   const up=smooth((t-10.8)/3.4);
   const rotate=smooth((t-14.15)/3.1);
-  const drift=smooth((t-17.0)/5);
-  tempPos.set(drift*3,mix(5.5,34,up)+drift*2,mix(-2,6.5,up)-rotate*9-drift*3);
-  const realSun=tempPos.clone().addScaledVector(sunDir,1200);
-  tempLook.set(0,mix(.25,8,up),0).lerp(realSun,rotate);
-  camera.position.copy(tempPos);
-  camera.lookAt(tempLook);
+  // Recte, sense cap moviment en X/Z fins acabar l'ascens.
+  tempPos.set(0,mix(5.5,34,up),-2);
+  camera.position.copy(tempPos).lerp(new THREE.Vector3(3,22,-17),rotate);
+  // Només es gira durant el pla següent; el sol no es recrea.
+  camera.quaternion.copy(overheadOrientation).slerp(sunsetOrientation,rotate);
   camera.fov=mix(46,60,rotate);
   phase.textContent=t<14.15?'Pla 4 · Ascens zenital':t<17.2?'Pla 5 · La posta de sol':'Pla final · Missió complerta';
   cue.textContent=t<14.15?'PLA ZENITAL · LA CAIGUDA':t<17.2?'EPÍLEG · ARXIPÈLAG':'';
