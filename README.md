@@ -42,16 +42,16 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
-## Cinemàtica de victòria (v0.5.7)
+## Cinemàtica de victòria (v0.5.8)
 
-Quan el general rep el dany mortal es captura la procedència i la trajectòria de l'últim projectil (o el centre de l'explosió si la mort és explosiva). La partida entra en **mode cinematogràfic**, amb la simulació d'enemics i vehicles congelada:
+Quan el general rep el tret mortal, el joc captura l'origen, la trajectòria i la posició de l'impacte. **No es genera cap altra pantalla**: la simulació de combat queda congelada i la mateixa escena del mapa en curs continua renderitzant-se.
 
-1. **Tres plans consecutius** de la mateixa mort, des de tres angles diferents: es torna a representar visualment el projectil i se sent un tret amb reproducció ralentida (0,55×). El general reacciona i cau teatralment a terra amb braços i cames animats. La repetició no aplica dany addicional.
-2. **Càmera zenital** sobre el cos, que puja progressivament i gira.
-3. **Gir cap a mar obert**, escollit a partir de l'altimetria real del mapa, i pla de la posta de sol amb nou gavines animades, crits ocasionals i un gran **MISSIÓ COMPLERTA**.
-4. El pla final roman visible, amb el mar i les gavines en moviment, i mostra un botó **Nova partida**. La interfície de joc queda amagada durant la cinemàtica i es restaura en generar un mapa nou.
+1. **Tres repeticions lentes** de l'últim tret, amb les mateixes posicions del món, des de tres angles. La repetició és exclusivament visual i sonora; no torna a aplicar dany.
+2. **Caiguda amb braços alçats i colzes separats**. La postura compartida a `src/victory-pose.js` fa girar el general sobre els malucs i evita que els braços quedin ocults per la gavardina.
+3. **Ascens zenital i gir cap al sol existent** de `src/rendering.js`. La càmera passa sobre el mar localitzat al mapa real; no s'afegeix cap astre ni cúpula nous.
+4. **Nou gavines** entren des de darrere de la càmera per un costat, creuen el pla aletejant i desapareixen a l'horitzó per l'altre costat. Es mostra **MISSIÓ COMPLERTA** i el botó **Nova partida**.
 
-Durada aproximada fins al títol final: **15 segons**. Proves: `node tests/victory-cinematic.cjs`, `node tests/smoke.cjs` i `node tests/projectile-classes.cjs`.
+La seqüència completa dura aproximadament **19 segons**. La pàgina [Final · Proves](final-proves.html) utilitza el mateix cel i la mateixa postura de caiguda amb un decorat de mostra. Validació: `node tests/victory-cinematic.cjs`, `node tests/smoke.cjs`, `node tests/projectile-classes.cjs` i `node tools/build-runtime.cjs --check`.
 
 ## Torres: destrucció i selecció d'arma (v0.5.6)
 
