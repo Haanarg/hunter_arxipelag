@@ -3394,8 +3394,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
     }
     a.legs[0].rotation.x=swing;a.legs[1].rotation.x=-swing;
     a.knees.forEach((j,i)=>blend(j,-(.06+Math.max(0,Math.sin(phase)*(i?1:-1))*.8*(moving?1:0))));
-    a.arms.forEach((j,i)=>blend(j,aim?(i?.96:1.03):(i?swing:-swing)*.5,aim?(i?-.05:.12):(i?.025:-.025)));
-    a.elbows.forEach((j,i)=>blend(j,aim?(i?.61:.55):.16+Math.max(0,Math.cos(phase)*(i?-1:1))*.18*(moving?1:0)));
+    const bazookaAim=!!a.rocketSoldier&&aim;
+    a.arms.forEach((j,i)=>blend(j,bazookaAim?(i?1.2:1.04):aim?(i?.96:1.03):(i?swing:-swing)*.5,
+      bazookaAim?(i?-.16:.23):aim?(i?-.05:.12):(i?.025:-.025)));
+    a.elbows.forEach((j,i)=>blend(j,bazookaAim?(i?.75:.83):aim?(i?.61:.55):
+      .16+Math.max(0,Math.cos(phase)*(i?-1:1))*.18*(moving?1:0)));
   },
   createPlayer(THREE,{box,palette=window.HUNTER_PALETTE}){
     const P=palette.player,player=window.HUNTER_PLAYER_MODEL.create(THREE,{unitScale:1.2,palette,headVariant:'compactD'}),u=player.userData;
@@ -4933,7 +4936,7 @@ function soldierEngage(u,target,targetY,dt,d,visible){
 
 function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.forEach(u=>{
   const oldX=u.x,oldZ=u.z;
-  u.alert=Math.max(0,u.alert-dt);u.cd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);
+  u.alert=Math.max(0,u.alert-dt);u.cd-=dt;if(u.t==='torre')u.heavyCd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);
   const q=cv||P,py=cv?cv.o.position.y:P.y,dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz),
         det=disg&&!cv?20:u.alert>0?300:u.t=='general'?60:120,
         eyeY=u.o.position.y+(u.t=='torre'?9.4:2.2);
@@ -4973,7 +4976,12 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
     if(!entering&&u.canSee&&u.canShoot&&d<=SOLDIER_FIRE_RANGE&&u.cd<=0){
       u.cd=u.rate;
       const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
-      shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE);
+      if(u.rocketSoldier){
+        const fx=-Math.sin(u.hd),fz=-Math.cos(u.hd),
+              rightX=Math.cos(u.hd),rightZ=-Math.sin(u.hd);
+        shoot(u.x+fx*1.65+rightX*.44,eyeY+.65,
+          u.z+fz*1.65+rightZ*.44,ax,ay,az,76,25,8,'e',mS,1.9);
+      }else shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE);
     }
   }else if(u.canSee){
     u.hd=Math.atan2(-dx,-dz);
@@ -4985,8 +4993,19 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
     }
     if(d<u.rng&&u.cd<=0){
       u.cd=u.rate;const y0=eyeY,[ax,ay,az]=enemyShotDirection(u,q,py,y0);
-      const smallBullet=u.t==='tanqueta'||u.t==='general';
-      shoot(u.x,y0,u.z,ax,ay,az,u.spl?60:70,u.dmg,u.spl,'e',smallBullet?mW:mE,smallBullet?SMALL_ARMS_SCALE:(u.spl?2:1))
+      const smallBullet=u.t==='tanqueta'||u.t==='general'||u.t==='torre';
+      const fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
+      const lightX=u.t==='torre'?u.x+fx*2.4-Math.cos(u.hd)*.72:u.x,
+            lightZ=u.t==='torre'?u.z+fz*2.4+Math.sin(u.hd)*.72:u.z;
+      shoot(lightX,y0,lightZ,ax,ay,az,u.spl?60:70,u.dmg,u.spl,'e',smallBullet?mW:mE,smallBullet?SMALL_ARMS_SCALE:(u.spl?2:1))
+    }
+    if(u.t==='torre'&&d<(u.heavyRange||95)&&u.heavyCd<=0){
+      // Independència completa: munició, ritme i boca de foc propis.
+      u.heavyCd=u.heavyRate||4.2;
+      const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY-.2),
+            fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
+      shoot(u.x+fx*2.4+Math.cos(u.hd)*.72,eyeY-.2,
+        u.z+fz*2.4-Math.sin(u.hd)*.72,ax,ay,az,76,24,7,'e',mS,1.8)
     }
   }else if(u.sp>0){
     const waypointDistance=Math.hypot(u.tx-u.x,u.tz-u.z),
@@ -5012,6 +5031,7 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
   // segueix la direcció real del moviment, sense canviar la seva IA.
   const lastVisualHeading=u.o.rotation.y;
   if(u.t!='torre')u.o.rotation.y=u.hd;
+  else if(u.o.userData.towerTurret)u.o.userData.towerTurret.rotation.y=u.hd;
   if((u.t==='jeep'||u.t==='tanqueta')&&u.o.userData.steeringPivots){
     const dxMoved=u.x-oldX,dzMoved=u.z-oldZ,
           distance=Math.hypot(dxMoved,dzMoved),
@@ -5034,7 +5054,7 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
     else{
     a.legs[0].rotation.x=swing;a.legs[1].rotation.x=-swing;
     const aim=!!u.canSee;
-    a.arms.forEach((arm,i)=>arm.rotation.x+=((aim?1.45:(i?swing:-swing)*.5)-arm.rotation.x)*(1-Math.exp(-12*dt)))
+    a.arms.forEach((arm,i)=>arm.rotation.x+=((aim?(u.rocketSoldier?(i?1.2:1.04):1.45):(i?swing:-swing)*.5)-arm.rotation.x)*(1-Math.exp(-12*dt)))
     }
   }
 })}
@@ -5054,11 +5074,18 @@ for(const z of[-2.05,2.05])bx(g,4.15,1.25,.16,leg,0,8.65,z,'metal');
 bx(g,2.75,1.8,2.75,cabin,0,9.15,0,'paint');
 bx(g,1.9,.72,.08,0x6b9aa5,0,9.35,-1.39,'glass');
 bx(g,3.35,.28,3.35,roof,0,10.25,0,'metal');
-bx(g,.32,.32,2.1,roof,0,9.25,-2.25,'metal');
+// Dues armes orientables: lleugera a l'esquerra i pesada a la dreta.
+const turret=new THREE.Group();turret.position.y=9.25;g.add(turret);
+bx(turret,.32,.32,2.1,roof,-.72,0,-2.25,'metal');
+bx(turret,.58,.58,2.35,0x37433c,.72,-.2,-2.25,'metal');
+bx(turret,.68,.65,.22,0x666b62,.72,-.2,-3.43,'metal');
+g.userData.towerTurret=turret;
 bx(g,.42,.8,.42,0xe4d36f,0,10.78,0,'paint')}
 else{g=new THREE.Group();bx(g,1,1,.6,0x222222,0,.5,0);bx(g,1.3,1.6,.7,0xd4af37,0,1.8,0);bx(g,.8,.8,.8,0xf0c9a0,0,3,0);bx(g,.9,.5,.9,0xaa0000,0,3.6,0);g.scale.setScalar(1.2)}
 if(t!=='soldat'&&t!=='general')window.HUNTER_ENEMY_LOD.optimize(THREE,g,t);
-world.add(g);const sensePhase=(E.length%10)*.01,u={t,x,z,gy,hd:rr(0,6.28),o:g,home:{x,z},cd:rr(0,1),alert:0,wt:0,tx:x,tz:z,senseT:sensePhase,canSee:false,defenseTarget:null,...c};E.push(u);
+world.add(g);const sensePhase=(E.length%10)*.01,u={t,x,z,gy,hd:rr(0,6.28),o:g,home:{x,z},cd:rr(0,1),alert:0,wt:0,tx:x,tz:z,senseT:sensePhase,canSee:false,defenseTarget:null,...c};
+if(t==='torre'){u.heavyCd=1.6+(E.length%5)*.4;u.heavyRate=4.2;u.heavyRange=95}
+E.push(u);
 if(t==='torre'){
   const base=gy??enemyGroundAt(u,x,z);
   // Cada pota té el seu propi AABB: el pas entre les quatre continua obert.
@@ -5211,6 +5238,18 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
   const route=record.patrol.slice(0,-1);
   for(const [i,p]of layout.soldiers.entries()){
     const pos=tr(...p),u=mkEn('soldat',...pos);u.compound=layout.id;
+    // Aproximadament un de cada cinc GUÀRDIES militars porta el mateix
+    // bazuca que el jugador. El comptador viu al món reconstruït;
+    // no consumeix R() i és reproduïble amb la llavor.
+    if(!layout.friendly){
+      const guardNumber=(world.userData.compoundGuardCount||0)+1;
+      world.userData.compoundGuardCount=guardNumber;
+      if(guardNumber%5===0){
+        window.HUNTER_CHARACTERS.equipBazooka(THREE,u.o,{box:bx});
+        u.rocketSoldier=true;u.spl=8;u.dmg=25;u.rate=3.4;u.rng=85;
+        u.cd=1.3+(guardNumber%3)*.35;
+      }
+    }
     if(layout.id==='hq'&&i>=5){setPatrol(u,[[pos[0],pos[1]-1],[pos[0],pos[1]+1]],true);record.soldiers.push(u);continue;}
     // Start at the nearest patrol waypoint so the first leg does not cut a building.
     let nearest=0;route.forEach((p,j)=>{if(Math.hypot(p[0]-pos[0],p[1]-pos[1])<Math.hypot(route[nearest][0]-pos[0],route[nearest][1]-pos[1]))nearest=j});
