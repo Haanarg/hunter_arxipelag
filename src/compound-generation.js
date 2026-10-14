@@ -118,6 +118,18 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
   const route=record.patrol.slice(0,-1);
   for(const [i,p]of layout.soldiers.entries()){
     const pos=tr(...p),u=mkEn('soldat',...pos);u.compound=layout.id;
+    // Aproximadament un de cada cinc GUÀRDIES militars porta el mateix
+    // bazuca que el jugador. El comptador viu al món reconstruït;
+    // no consumeix R() i és reproduïble amb la llavor.
+    if(!layout.friendly){
+      const guardNumber=(world.userData.compoundGuardCount||0)+1;
+      world.userData.compoundGuardCount=guardNumber;
+      if(guardNumber%5===0){
+        window.HUNTER_CHARACTERS.equipBazooka(THREE,u.o,{box:bx});
+        u.rocketSoldier=true;u.spl=8;u.dmg=25;u.rate=3.4;u.rng=85;
+        u.cd=1.3+(guardNumber%3)*.35;
+      }
+    }
     if(layout.id==='hq'&&i>=5){setPatrol(u,[[pos[0],pos[1]-1],[pos[0],pos[1]+1]],true);record.soldiers.push(u);continue;}
     // Start at the nearest patrol waypoint so the first leg does not cut a building.
     let nearest=0;route.forEach((p,j)=>{if(Math.hypot(p[0]-pos[0],p[1]-pos[1])<Math.hypot(route[nearest][0]-pos[0],route[nearest][1]-pos[1]))nearest=j});
