@@ -55,7 +55,7 @@ const assert=require('node:assert/strict');
      fresh();
      for(let i=0;i<50;i++)spawnBulletImpact('spark',0,2,0,{vx:1,vy:0,vz:0});
      checks.capped=bulletImpacts.length===BULLET_IMPACT_LIMIT;
-     checks.damageStillApplied=victims>=7;
+     checks.damageStillApplied=victims>=6; // Les bales lleugeres ja no fan mal a la tanqueta enemiga.
      fresh();
      checks.cleaned=bulletImpacts.length===0&&world.children.length===0;
    }finally{
