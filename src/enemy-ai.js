@@ -132,6 +132,12 @@ function soldierEngage(u,target,targetY,dt,d,visible){
   u.hd=Math.atan2(u.x-toward.x,u.z-toward.z); // la cara sempre al jugador
 }
 
+// Les defenses trien la cadència més ràpida que pugui fer mal
+// al jugador o al vehicle que pilota. L'arma pesada només és necessària
+// contra blindats (tancs, tanquetes, helicòpter de combat, etc.).
+function towerWeaponForTarget(vehicle){
+  return vehicle&&isArmoredVehicle(vehicle)?'heavy':'light';
+}
 function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.forEach(u=>{
   const oldX=u.x,oldZ=u.z;
   u.alert=Math.max(0,u.alert-dt);u.cd-=dt;if(u.t==='torre')u.heavyCd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);
@@ -189,21 +195,28 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
         u.hd=Math.atan2(u.x-dp.x,u.z-dp.z);mvE(u,u.sp*.75*dt,dp.x,dp.z)
       }else if(d>u.rng*.72)mvE(u,u.sp*dt,q.x,q.z)
     }
-    if(d<u.rng&&u.cd<=0){
-      u.cd=u.rate;const y0=eyeY,[ax,ay,az]=enemyShotDirection(u,q,py,y0);
-      const smallBullet=u.t==='tanqueta'||u.t==='general'||u.t==='torre';
-      const fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
-      const lightX=u.t==='torre'?u.x+fx*2.4-Math.cos(u.hd)*.72:u.x,
-            lightZ=u.t==='torre'?u.z+fz*2.4+Math.sin(u.hd)*.72:u.z;
-      shoot(lightX,y0,lightZ,ax,ay,az,u.spl?60:70,u.dmg,u.spl,'e',smallBullet?mW:mE,smallBullet?SMALL_ARMS_SCALE:(u.spl?2:1))
-    }
-    if(u.t==='torre'&&d<(u.heavyRange||95)&&u.heavyCd<=0){
-      // Independència completa: munició, ritme i boca de foc propis.
-      u.heavyCd=u.heavyRate||4.2;
-      const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY-.2),
-            fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
-      shoot(u.x+fx*2.4+Math.cos(u.hd)*.72,eyeY-.2,
-        u.z+fz*2.4-Math.sin(u.hd)*.72,ax,ay,az,76,24,7,'e',mS,1.8)
+    if(u.t==='torre'){
+      const weapon=towerWeaponForTarget(cv);
+      // Mai no fem servir projectils pesats contra una persona a peu.
+      // Tampoc gastam bales lleugeres inútils contra un blindat.
+      if(weapon==='light'&&d<u.rng&&u.cd<=0){
+        u.cd=u.rate;
+        const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY),
+              fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
+        shoot(u.x+fx*2.4-Math.cos(u.hd)*.72,eyeY,
+          u.z+fz*2.4+Math.sin(u.hd)*.72,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE);
+      }else if(weapon==='heavy'&&d<u.heavyRange&&u.heavyCd<=0){
+        u.heavyCd=u.heavyRate;
+        const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY-.2),
+              fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
+        shoot(u.x+fx*2.4+Math.cos(u.hd)*.72,eyeY-.2,
+          u.z+fz*2.4-Math.sin(u.hd)*.72,ax,ay,az,76,24,7,'e',mS,1.8);
+      }
+    }else if(d<u.rng&&u.cd<=0){
+      u.cd=u.rate;const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
+      const smallBullet=u.t==='tanqueta'||u.t==='general';
+      shoot(u.x,eyeY,u.z,ax,ay,az,u.spl?60:70,u.dmg,u.spl,
+        'e',smallBullet?mW:mE,smallBullet?SMALL_ARMS_SCALE:(u.spl?2:1));
     }
   }else if(u.sp>0){
     const waypointDistance=Math.hypot(u.tx-u.x,u.tz-u.z),
