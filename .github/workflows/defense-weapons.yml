@@ -5,8 +5,10 @@ on:
     paths:
       - 'src/characters.js'
       - 'src/enemy-ai.js'
+      - 'src/combat.js'
       - 'src/compound-generation.js'
       - 'tests/defense-weapons.cjs'
+      - 'tests/tower-destruction.cjs'
       - '.github/workflows/defense-weapons.yml'
   workflow_dispatch:
 permissions:
@@ -22,6 +24,8 @@ jobs:
           node-version: '22'
       - name: Torre dual i llançacoets militars
         run: node tests/defense-weapons.cjs
+      - name: Destrucció completa de torre sense malles flotants
+        run: node tests/tower-destruction.cjs
       - name: Seguretat de tipus de projectil
         run: node tests/projectile-classes.cjs
       - name: Regressió d'armes
