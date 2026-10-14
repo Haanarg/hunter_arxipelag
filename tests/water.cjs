@@ -44,6 +44,27 @@ for(const size of [4800,9600])for(const segments of [200,320]){
  assert(data.every(v=>Math.abs(v+50)<1e-6),'constant deep water preserved exactly');
  water.dispose();
 }
+// La geometria d'alta qualitat es prepara sense bloquejar els fotogrames.
+{
+ const scene=new T.Scene(),bed=(x,z)=>-12+3*Math.sin(x*.01)*Math.cos(z*.015);
+ const progressive=system.create(T,{scene,sunDir:new T.Vector3(0,1,0),
+   size:4800,segments:384,initialSegments:160,heightAt:bed,config});
+ progressive.updateSeabed();
+ assert.equal(progressive.resolution,160,'initial ocean tessellation');
+ assert.equal(progressive.geometry.attributes.position.count,161*161);
+ assert(progressive.queueResolutionUpgrade(),'high resolution refinement queued');
+ assert.equal(progressive.stepResolutionUpgrade(1),false,'first batch is non-blocking');
+ const during=progressive.surfaceHeight(100,-50,2);
+ assert(Number.isFinite(during),'water remains valid while preparing the new mesh');
+ let steps=0;
+ while(!progressive.stepResolutionUpgrade(4)&&steps++<150){}
+ assert(steps<150,'background water upgrade completes');
+ assert.equal(progressive.resolution,384);
+ assert.equal(progressive.geometry.attributes.position.count,385*385);
+ assert(Number.isFinite(progressive.surfaceHeight(100,-50,2)));
+ progressive.dispose();
+ assert.equal(scene.children.length,0);
+}
 for(let i=0;i<100;i++){const x=i*13,z=-i*9,t=i*.31,bed=-i*.4;const legacy=(Math.sin(x*.03+t*1.2)*.9+Math.cos(z*.04+t*.9)*.9+Math.sin((x+z)*.07+t*2)*.4)*Math.max(.12,Math.min(1,(-bed+.6)/9));assert(Math.abs(w.height(x,z,t,bed)-legacy)<1e-12,'wave spectrum preserved')}
 console.log(JSON.stringify({passed:true,triangleSamples:samples,profiles:4,waveSamples:100,checks:['shared wave spectrum','CPU triangle interpolation','restored stable shader','bounds','shader includes','resize/disposal']}));
 
