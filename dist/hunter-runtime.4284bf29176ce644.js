@@ -5348,8 +5348,18 @@ function startVictoryCinematic(general,killingShot=null){
     gull.o.visible=false;gull.o.scale.setScalar(.95+(i%4)*.33);
     scene.add(gull.o);gulls.push({...gull,index:i})
   }
-  const seaCamera=base.clone().addScaledVector(seaDir,130);
-  seaCamera.y=Math.max(18,hAt(seaCamera.x,seaCamera.z)+15);
+  // Triar el primer punt de mar obert en el rumb escollit, perquè el
+  // darrer pla sigui REALMENT damunt l'aigua fins i tot si l'HQ és interior.
+  const seaCamera=base.clone();
+  let bestSea=Infinity;
+  for(const dist of [130,190,270,380,520,680,850,1050]){
+    const x=Math.max(-H+35,Math.min(H-35,base.x+seaDir.x*dist)),
+          z=Math.max(-H+35,Math.min(H-35,base.z+seaDir.z*dist)),
+          level=hAt(x,z);
+    if(level<bestSea){bestSea=level;seaCamera.x=x;seaCamera.z=z}
+    if(level<-1.5)break;
+  }
+  seaCamera.y=Math.max(20,hAt(seaCamera.x,seaCamera.z)+16);
   victoryCinematic={active:true,t:0,phase:'replay1',general,base,initialQuaternion,
     fallingAxis,shot,seaDir,seaCamera,bullet:bg,impactFlash:flash,
     gulls,overlay,caption,title,hint,originalVisibility:{},
@@ -7956,7 +7966,7 @@ mini();ui.renderHUD();}}
 let last=performance.now();
 (function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(victoryCinematic?victoryCinematic.t:started&&!paused&&!over?dt:0),cpuStarted=performance.now();
 update(dt,t);
-if(victoryCinematic?.active)updateVictoryCinematic(dt);
+if(victoryCinematic?.active||victoryCinematic?.finished)updateVictoryCinematic(dt);
 const simulationEnded=performance.now();
 if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
   terrainStream.update(victoryCinematic?.active?cam.position.x:P.x,
