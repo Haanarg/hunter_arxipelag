@@ -19,10 +19,18 @@ const assert=require('node:assert/strict');
    const right=new THREE.Vector3(-sunDir.z,0,sunDir.x).normalize();
    let visibleBirdFrames=0,birdMin=Infinity,birdMax=-Infinity,
        wingMin=Infinity,wingMax=-Infinity;
+   const overheadSamples=[];
+   let sunsetEntry=null;
    for(let i=0;i<465;i++){
      updateVictoryCinematic(.05);
      states.add(v.phase);
      if(i===10||i===57||i===103||i===150||i===230)angles.push(cam.position.toArray());
+     if(v.phase==='overhead')overheadSamples.push({
+       x:cam.position.x,z:cam.position.z,y:cam.position.y,
+       q:cam.quaternion.clone(),
+       down:cam.getWorldDirection(new THREE.Vector3()).y
+     });
+     if(v.phase==='sunset'&&!sunsetEntry)sunsetEntry=cam.quaternion.clone();
      for(const gull of v.gulls){
        if(!gull.o.visible)continue;
        visibleBirdFrames++;
@@ -40,6 +48,14 @@ const assert=require('node:assert/strict');
      visibleBirdFrames,birdMin,birdMax,wingRange:wingMax-wingMin,
      sunAlignment:cam.getWorldDirection(new THREE.Vector3()).dot(sunDir),
      raisedArms:u.o.userData.arms.map(a=>Math.abs(a.rotation.z)),
+     overheadFrames:overheadSamples.length,
+     overheadHeadingError:overheadSamples.reduce((m,p)=>Math.max(m,
+       1-Math.abs(p.q.dot(v.overheadOrientation))),0),
+     overheadPositionError:overheadSamples.reduce((m,p)=>Math.max(m,
+       Math.abs(p.x-v.base.x)+Math.abs(p.z-v.base.z)),0),
+     overheadDown:Math.min(...overheadSamples.map(p=>-p.down)),
+     overheadClimbs:overheadSamples.every((p,i)=>!i||p.y>=overheadSamples[i-1].y),
+     sunsetEntryAlignment:sunsetEntry?Math.abs(sunsetEntry.dot(v.overheadOrientation)):0,
      fallen:Math.abs(u.o.quaternion.x)+Math.abs(u.o.quaternion.z),
      deadModelPresent:u.o.parent===world,
      camMoved:cam.position.distanceTo(originalCamera),
@@ -67,6 +83,12 @@ const assert=require('node:assert/strict');
  assert(report.wingRange>.2,'gulls flap wings while crossing');
  assert.equal(report.gulls,0,'gulls have disappeared toward the horizon');
  assert(report.sunAlignment>.995,'last camera looks straight toward the actual game sun');
+ assert(report.overheadFrames>30,'enough vertical ascent frames');
+ assert(report.overheadPositionError<.001,'no horizontal orbit during ascent');
+ assert(report.overheadHeadingError<.000001,'no camera rotation while rising');
+ assert(report.overheadDown>.9999,'camera looks straight down during ascent');
+ assert(report.overheadClimbs,'zenith camera height rises monotonically');
+ assert(report.sunsetEntryAlignment>.999,'sunset turn starts from zenith without a snap');
  assert(report.raisedArms.every(a=>a>1.5),'both general arms rise clear of the coat');
  assert(report.fallen>.1,'theatrical fall');
  assert(report.deadModelPresent);
