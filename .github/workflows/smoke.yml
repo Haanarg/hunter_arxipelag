@@ -1,13 +1,5 @@
 name: Regressió general del joc
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'src/**'
-      - 'tests/smoke.cjs'
-      - 'tests/harness.cjs'
-      - 'index.html'
-      - '.github/workflows/smoke.yml'
   workflow_dispatch:
 permissions:
   contents: read

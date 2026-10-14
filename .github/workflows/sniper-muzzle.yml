@@ -1,13 +1,5 @@
 name: Boca i trajectòria del rifle
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/sniper-muzzle.yml'
-      - 'src/characters.js'
-      - 'src/combat.js'
-      - 'src/game-core.js'
-      - 'tests/sniper-muzzle.cjs'
   workflow_dispatch:
 permissions:
   contents: read

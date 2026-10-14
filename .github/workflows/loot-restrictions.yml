@@ -1,14 +1,5 @@
 name: Restriccions de botí als complexos
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'src/game-core.js'
-      - 'src/world-generation.js'
-      - 'src/compound-generation.js'
-      - 'tests/loot-restrictions.cjs'
-      - 'tests/compound-generation.cjs'
-      - '.github/workflows/loot-restrictions.yml'
   workflow_dispatch:
 permissions:
   contents: read

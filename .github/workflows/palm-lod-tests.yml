@@ -1,13 +1,5 @@
 name: Validació LOD palmeres
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/palm-lod-tests.yml'
-      - 'src/vegetation.js'
-      - 'src/visual-config.js'
-      - 'tests/vegetation-lod.cjs'
-      - 'src/game-core.js'
   workflow_dispatch:
 permissions:
   contents: read

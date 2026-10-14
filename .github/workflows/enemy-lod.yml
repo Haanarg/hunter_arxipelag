@@ -1,18 +1,5 @@
 name: Optimització LOD dels enemics
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/enemy-lod.yml'
-      - 'src/enemy-lod.js'
-      - 'src/runtime-scripts.mjs'
-      - 'src/characters.js'
-      - 'src/enemy-ai.js'
-      - 'src/game-core.js'
-      - 'src/combat.js'
-      - 'src/world-generation.js'
-      - 'src/ui.js'
-      - 'tests/enemy-lod.cjs'
   workflow_dispatch:
 permissions:
   contents: read

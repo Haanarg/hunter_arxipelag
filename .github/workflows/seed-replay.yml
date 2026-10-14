@@ -1,15 +1,5 @@
 name: Reproducció de llavors
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/seed-replay.yml'
-      - 'src/game-core.js'
-      - 'src/world-generation.js'
-      - 'src/seed-search.js'
-      - 'tests/seed-replay.cjs'
-      - 'tests/seed-search.cjs'
-      - 'tests/seed-search-integration.cjs'
   workflow_dispatch:
 permissions:
   contents: read

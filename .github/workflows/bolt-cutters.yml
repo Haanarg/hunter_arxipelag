@@ -1,20 +1,5 @@
 name: Filferrades i cisalla silenciosa
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/bolt-cutters.yml'
-      - 'src/bolt-cutters.js'
-      - 'src/runtime-scripts.mjs'
-      - 'src/combat.js'
-      - 'src/enemy-ai.js'
-      - 'src/characters.js'
-      - 'src/compound-generation.js'
-      - 'src/compound-layouts.mjs'
-      - 'src/game-core.js'
-      - 'src/world-generation.js'
-      - 'src/ui.js'
-      - 'tests/bolt-cutters.cjs'
   workflow_dispatch:
 permissions:
   contents: read

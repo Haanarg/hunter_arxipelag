@@ -1,15 +1,5 @@
 name: Munició lleugera i pesada
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'src/combat.js'
-      - 'src/compound-generation.js'
-      - 'tests/projectile-classes.cjs'
-      - 'tests/weapon-classification.cjs'
-      - 'tests/bullet-impact-fx.cjs'
-      - 'tests/smoke.cjs'
-      - '.github/workflows/projectile-classes.yml'
   workflow_dispatch:
 permissions:
   contents: read

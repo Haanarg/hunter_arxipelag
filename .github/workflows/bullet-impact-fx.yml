@@ -1,12 +1,5 @@
 name: Efectes d'impacte de bales
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/bullet-impact-fx.yml'
-      - 'tests/bullet-impact-fx.cjs'
-      - 'src/combat.js'
-      - 'src/world-generation.js'
   workflow_dispatch:
 permissions:
   contents: read

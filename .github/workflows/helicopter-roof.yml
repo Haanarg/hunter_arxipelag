@@ -1,12 +1,5 @@
 name: Col·lisió helicòpters i cobertes
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/helicopter-roof.yml'
-      - 'src/game-core.js'
-      - 'src/vehicles.js'
-      - 'tests/helicopter-roof.cjs'
   workflow_dispatch:
 permissions:
   contents: read

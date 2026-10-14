@@ -1,14 +1,5 @@
 name: Interruptor sense palmeres
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/palms-toggle.yml'
-      - 'index.html'
-      - 'src/game-core.js'
-      - 'src/world-generation.js'
-      - 'src/ui.js'
-      - 'tests/palms-toggle.cjs'
   workflow_dispatch:
 permissions:
   contents: read

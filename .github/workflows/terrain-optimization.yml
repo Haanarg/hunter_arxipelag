@@ -1,15 +1,5 @@
 name: Optimització del terreny
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/terrain-optimization.yml'
-      - 'src/terrain.js'
-      - 'src/world-generation.js'
-      - 'src/game-core.js'
-      - 'src/performance.js'
-      - 'tests/terrain-stream.cjs'
-      - 'tests/performance.cjs'
   workflow_dispatch:
 permissions:
   contents: read

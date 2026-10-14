@@ -1,16 +1,5 @@
 name: Ombres i malles agrupades
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/shadow-optimization.yml'
-      - 'src/buildings.js'
-      - 'src/game-core.js'
-      - 'src/world-generation.js'
-      - 'src/visual-config.js'
-      - 'src/ui.js'
-      - 'index.html'
-      - 'tests/shadow-optimization.cjs'
   workflow_dispatch:
 permissions:
   contents: read

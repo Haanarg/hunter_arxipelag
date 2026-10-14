@@ -1,15 +1,5 @@
 name: Defenses pesades i soldats llançacoets
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'src/characters.js'
-      - 'src/enemy-ai.js'
-      - 'src/combat.js'
-      - 'src/compound-generation.js'
-      - 'tests/defense-weapons.cjs'
-      - 'tests/tower-destruction.cjs'
-      - '.github/workflows/defense-weapons.yml'
   workflow_dispatch:
 permissions:
   contents: read

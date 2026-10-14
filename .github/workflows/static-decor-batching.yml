@@ -1,11 +1,5 @@
 name: Decoració estàtica agrupada
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/static-decor-batching.yml'
-      - 'src/world-generation.js'
-      - 'tests/static-decor-batching.cjs'
   workflow_dispatch:
 permissions:
   contents: read

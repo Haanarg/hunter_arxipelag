@@ -1,15 +1,5 @@
 name: Cinemàtica final del general
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'src/victory-cinematic.js'
-      - 'src/runtime-scripts.mjs'
-      - 'src/combat.js'
-      - 'src/world-generation.js'
-      - 'src/game-core.js'
-      - 'tests/victory-cinematic.cjs'
-      - '.github/workflows/victory-cinematic.yml'
   workflow_dispatch:
 permissions:
   contents: read

@@ -1,12 +1,5 @@
 name: Velocitat i agilitat dels helicòpters
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/helicopter-handling.yml'
-      - 'src/vehicle-dynamics.js'
-      - 'src/game-core.js'
-      - 'tests/helicopter-handling.cjs'
   workflow_dispatch:
 permissions:
   contents: read

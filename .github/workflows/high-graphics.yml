@@ -1,16 +1,5 @@
 name: Qualitat Alt i ombra del jugador
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/high-graphics.yml'
-      - 'src/high-graphics.js'
-      - 'src/runtime-scripts.mjs'
-      - 'src/visual-config.js'
-      - 'src/game-core.js'
-      - 'src/terrain.js'
-      - 'src/vegetation.js'
-      - 'tests/high-graphics.cjs'
   workflow_dispatch:
 permissions:
   contents: read

@@ -1,12 +1,5 @@
 name: Diagnòstic de patrulles a avançades
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'tests/outpost-paths.cjs'
-      - 'src/world-generation.js'
-      - 'src/game-core.js'
-      - '.github/workflows/outpost-paths.yml'
   workflow_dispatch:
 permissions:
   contents: read

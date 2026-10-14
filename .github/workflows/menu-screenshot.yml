@@ -1,10 +1,5 @@
 name: Captura de portada (llavor 67)
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/menu-screenshot.yml'
-      - 'tools/capture-menu.cjs'
   workflow_dispatch:
 permissions:
   contents: write

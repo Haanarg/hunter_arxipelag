@@ -1,13 +1,5 @@
 name: Rifle de franctirador recolzat a l'espatlla
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'src/characters.js'
-      - 'src/combat.js'
-      - 'tests/sniper-shoulder-pose.cjs'
-      - 'tests/sniper-muzzle.cjs'
-      - '.github/workflows/sniper-shoulder-pose.yml'
   workflow_dispatch:
 permissions:
   contents: read

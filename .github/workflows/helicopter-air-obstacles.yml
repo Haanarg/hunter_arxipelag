@@ -1,15 +1,5 @@
 name: Col·lisions amb antenes i parabòliques
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/helicopter-air-obstacles.yml'
-      - 'src/air-obstacles.js'
-      - 'src/runtime-scripts.mjs'
-      - 'src/compound-generation.js'
-      - 'src/world-generation.js'
-      - 'src/game-core.js'
-      - 'tests/helicopter-air-obstacles.cjs'
   workflow_dispatch:
 permissions:
   contents: read

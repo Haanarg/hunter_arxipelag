@@ -1,12 +1,5 @@
 name: Ojives pesades orientades
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'src/game-core.js'
-      - 'src/combat.js'
-      - 'tests/heavy-warhead-geometry.cjs'
-      - '.github/workflows/heavy-warhead-geometry.yml'
   workflow_dispatch:
 permissions:
   contents: read

@@ -1,12 +1,5 @@
 name: Optimització filferrades i draw calls
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/fence-batching.yml'
-      - 'src/game-core.js'
-      - 'src/world-generation.js'
-      - 'tests/fence-batching.cjs'
   workflow_dispatch:
 permissions:
   contents: read

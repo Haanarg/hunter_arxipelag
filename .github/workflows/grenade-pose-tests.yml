@@ -1,13 +1,5 @@
 name: Postura de càrrega de granada
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/grenade-pose-tests.yml'
-      - 'tests/grenade-charge-pose.cjs'
-      - 'src/characters.js'
-      - 'src/combat.js'
-      - 'src/game-core.js'
   workflow_dispatch:
 permissions:
   contents: read

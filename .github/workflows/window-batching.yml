@@ -1,11 +1,5 @@
 name: Façanes agrupades
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/window-batching.yml'
-      - 'src/buildings.js'
-      - 'tests/window-batching.cjs'
   workflow_dispatch:
 permissions:
   contents: read

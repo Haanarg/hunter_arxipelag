@@ -1,13 +1,5 @@
 name: Aigua detallada i costes
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/coast-foam.yml'
-      - 'src/coast-foam.js'
-      - 'src/runtime-scripts.mjs'
-      - 'src/water.js'
-      - 'tests/coast-foam.cjs'
   workflow_dispatch:
 permissions:
   contents: read

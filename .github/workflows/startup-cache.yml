@@ -1,13 +1,5 @@
 name: Validar cache de l'arrencada
 on:
-  push:
-    branches: [main]
-    paths:
-      - '_headers'
-      - 'tests/startup-cache.cjs'
-      - 'src/runtime-bundle.mjs'
-      - 'src/bootstrap.mjs'
-      - '.github/workflows/startup-cache.yml'
   workflow_dispatch:
 permissions:
   contents: read

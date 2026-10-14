@@ -1,13 +1,5 @@
 name: Perfilat de l'arrencada del món
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'tests/build-profiler.cjs'
-      - 'tests/terrain-level-index.cjs'
-      - 'src/game-core.js'
-      - 'src/world-generation.js'
-      - '.github/workflows/world-startup-profile.yml'
   workflow_dispatch:
 permissions:
   contents: read

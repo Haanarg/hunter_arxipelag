@@ -1,13 +1,5 @@
 name: Validació d'aterratge helicòpters
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/helicopter-landing-tests.yml'
-      - 'src/vehicles.js'
-      - 'src/game-core.js'
-      - 'src/world-generation.js'
-      - 'tests/helicopter-landing.cjs'
   workflow_dispatch:
 permissions:
   contents: read
