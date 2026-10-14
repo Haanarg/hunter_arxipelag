@@ -119,7 +119,8 @@ const adaptivePerformance=window.HUNTER_PERFORMANCE.create({
   element:document.getElementById('perfStats'),compact:qualityName!=='desktop'
 });
 window.HUNTER_PERFORMANCE_STATS=adaptivePerformance.stats;
-const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segments:visualQuality.waterSegments,heightAt:hAt,config:window.HUNTER_WATER,reflections:visualQuality.waterReflections!==false,coastDetail:!!visualQuality.coastDetail,fogColor:scene.fog.color});
+const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segments:visualQuality.waterSegments,initialSegments:Math.min(160,visualQuality.waterSegments),heightAt:hAt,config:window.HUNTER_WATER,reflections:visualQuality.waterReflections!==false,coastDetail:!!visualQuality.coastDetail,fogColor:scene.fog.color});
+let waterUpgradePending=false;
 const waterMat=water.material,waterUniforms=water.uniforms;
 const movementFx=window.HUNTER_MOVEMENT_FX.create(THREE,{
  scene,quality:qualityName,waveModel:window.HUNTER_WAVES,
@@ -1753,7 +1754,11 @@ mini();ui.renderHUD();}}
 let last=performance.now();
 (function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(started&&!paused&&!over?dt:0),cpuStarted=performance.now();update(dt,t);const simulationEnded=performance.now();if(started&&!paused&&!over&&terrainStream)terrainStream.update(P.x,P.z,visualQuality.shadows?2:1.2,cam,currentSniperFocus());const terrainEnded=performance.now();waves(t);
 sun.target.position.set(P.x,0,P.z);sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();for(const k in renderCategories)renderCategories[k]=0;ren.render(scene,cam);
-if(started&&!paused&&!over)advanceTerrainTexture();
+if(started&&!paused&&!over){
+  advanceTerrainTexture();
+  if(waterUpgradePending){water.queueResolutionUpgrade();waterUpgradePending=false}
+  water.stepResolutionUpgrade(2);
+}
 adaptivePerformance.sample({dt:rawDt,renderCpuMs:performance.now()-renderStarted,
   updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,
   active:!!started&&!paused&&!over,now});
