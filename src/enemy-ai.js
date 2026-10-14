@@ -212,7 +212,7 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
         shoot(u.x+fx*2.4+Math.cos(u.hd)*.72,eyeY-.2,
           u.z+fz*2.4-Math.sin(u.hd)*.72,ax,ay,az,76,24,7,'e',mS,1.8);
       }
-    }else if(d<u.rng&&u.cd<=0){
+    }else if(u.t!=='tanc'&&u.t!=='tanqueta'&&d<u.rng&&u.cd<=0){
       u.cd=u.rate;const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
       const smallBullet=u.t==='tanqueta'||u.t==='general';
       shoot(u.x,eyeY,u.z,ax,ay,az,u.spl?60:70,u.dmg,u.spl,
@@ -243,6 +243,36 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
   const lastVisualHeading=u.o.rotation.y;
   if(u.t!='torre')u.o.rotation.y=u.hd;
   else if(u.o.userData.towerTurret)u.o.userData.towerTurret.rotation.y=u.hd;
+  // Blindats enemics: la torreta segueix el jugador independentment del
+  // rumb de patrulla. Cada ràfega té una dispersió estable mentre apunten,
+  // i el tret neix al canó quan aquest ha acabat d'orientar-se.
+  if((u.t==='tanc'||u.t==='tanqueta')&&u.o.userData.turretPivot){
+    let desired=new THREE.Vector3(-Math.sin(u.hd),0,-Math.cos(u.hd));
+    if(u.canSee){
+      if(!u.armoredAimSpread){
+        const spread=enemyAimSpread(),
+              boost=u.spl?1+Math.min(1,u.spl/8)*(spread-1)*.5:1,
+              horizontal=1.5*spread*boost,
+              vertical=.85*(spread-1);
+        u.armoredAimSpread={x:rn(-horizontal,horizontal),
+          y:vertical?rn(-vertical,vertical):0,z:rn(-horizontal,horizontal)};
+      }
+      const offset=u.armoredAimSpread,
+            gun=window.HUNTER_VEHICLES.turretShot(THREE,u.o);
+      if(gun)desired.set(q.x+offset.x-gun.origin.x,
+        py+1.5+offset.y-gun.origin.y,q.z+offset.z-gun.origin.z);
+    }else u.armoredAimSpread=null;
+    const aligned=window.HUNTER_VEHICLES.aimTurret(THREE,u.o,desired,dt);
+    if(u.canSee&&d<u.rng&&u.cd<=0&&aligned){
+      const gun=window.HUNTER_VEHICLES.turretShot(THREE,u.o);
+      if(gun){
+        u.cd=u.rate;u.armoredAimSpread=null;
+        const p=gun.origin,v=gun.direction,small=u.t==='tanqueta';
+        shoot(p.x,p.y,p.z,v.x,v.y,v.z,u.spl?60:70,u.dmg,u.spl,
+          'e',small?mW:mE,small?SMALL_ARMS_SCALE:(u.spl?2:1));
+      }
+    }
+  }
   if((u.t==='jeep'||u.t==='tanqueta')&&u.o.userData.steeringPivots){
     const dxMoved=u.x-oldX,dzMoved=u.z-oldZ,
           distance=Math.hypot(dxMoved,dzMoved),

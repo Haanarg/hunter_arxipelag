@@ -8,6 +8,33 @@ ok("!document.body.classList.contains('game-started')",'minimap must stay hidden
 game.start();game.frame();
 ok('started&&B.length>=6&&E.some(e=>e.t==="general")','menu starts a complete world');
 ok('ammo===16','new mission starts with 16 bullets');
+
+const armoredPose=run(`(()=>{
+  const result={};
+  for(const type of ['tanc','tanqueta']){
+    const model=mkV(type),system=window.HUNTER_VEHICLES,
+          rig=model.userData,desired=new THREE.Vector3(-.82,.11,.57).normalize(),
+          first=system.turretShot(THREE,model),initial=rig.turretPivot.rotation.y;
+    if(!first||!rig.turretPitch||!rig.turretPivot)return {error:type};
+    system.aimTurret(THREE,model,desired,.016);
+    const firstTurn=Math.abs(rig.turretPivot.rotation.y-initial);
+    for(let n=0;n<210;n++)system.aimTurret(THREE,model,desired,.016);
+    const gun=system.turretShot(THREE,model);
+    const aligned=gun.direction.dot(desired)>.997,
+          actual=rig.turretMuzzle.getWorldPosition(new THREE.Vector3()),
+          fromMuzzle=gun.origin.distanceTo(actual)<1e-8,
+          hullIndependent=Math.abs(model.rotation.y)<1e-8;
+    result[type]={firstTurn,aligned,fromMuzzle,hullIndependent,
+      yaw:rig.turretPivot.rotation.y,pitch:rig.turretPitch.rotation.x};
+  }
+  return result;
+})()`);
+for(const type of ['tanc','tanqueta']){
+ const q=armoredPose[type];assert(q&&q.firstTurn>0&&q.firstTurn<.07&&q.aligned&&
+   q.fromMuzzle&&q.hullIndependent&&q.pitch>.015,
+   'smooth independent turret aims and shoots exactly from muzzle ('+type+'): '+JSON.stringify(q));
+}
+
 run(`{
   const helis=V.filter(v=>v.t==='heli'||v.t==='heli_combat');
   globalThis.heliSkidsRestOnGround=['heli','heli_combat'].every(t=>helis.some(v=>v.t===t))&&

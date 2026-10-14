@@ -1791,6 +1791,20 @@ V.forEach(v=>{
   if(interval===0){place(v,t,dt,0);v.visualLodAcc=0}
   else{v.visualLodAcc=(v.visualLodAcc||0)+dt;if(v.visualLodAcc>=interval){const step=v.visualLodAcc;v.visualLodAcc=0;place(v,t,step,0)}}
 });poseRider(cv,dt);
+// Les torretes dels blindats del jugador segueixen gradualment el vector
+// que triaria l'autoapuntat actual. El vehicle pot avançar/girar mentre
+// la torre conserva el seu propi rumb i l'elevació del canó.
+if(cv&&(cv.t==='tanc'||cv.t==='tanqueta')){
+  const gun=window.HUNTER_VEHICLES.turretShot(THREE,cv.o);
+  if(gun){
+    const hd=cv.hd,fx=-Math.sin(hd),fz=-Math.cos(hd),
+          range=cv.t==='tanc'?220:85,
+          [ax,ay,az]=autoAimArmoredShot(
+            gun.origin.x,gun.origin.y,gun.origin.z,fx,fz,range);
+    window.HUNTER_VEHICLES.aimTurret(THREE,cv.o,
+      new THREE.Vector3(ax,ay,az),dt);
+  }
+}
 const scopeNow=scopeActive&&sniperEquipped&&!cv&&!playerFall&&!swimming;
 const fieldOfView=scopeNow?2*Math.atan(Math.tan(58*Math.PI/360)/8)*180/Math.PI:58;
 if(Math.abs(cam.fov-fieldOfView)>.001){cam.fov=fieldOfView;cam.updateProjectionMatrix()}
