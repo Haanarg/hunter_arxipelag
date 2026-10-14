@@ -6177,6 +6177,18 @@ disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa 
 };
 // combat i enemics
 let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=100,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null;
+// Ojiva compartida per tots els projectils pesats. Eix longitudinal -Z:
+// culata cilíndrica a +Z i punta cònica a -Z, com els canons del joc.
+// Geometria única reutilitzada, sense crear malles noves per cada tir.
+const gHeavy=new THREE.LatheGeometry([
+  new THREE.Vector2(0,-.46),new THREE.Vector2(.19,-.46),
+  new THREE.Vector2(.24,-.42),new THREE.Vector2(.24,-.34),
+  new THREE.Vector2(.18,-.33),new THREE.Vector2(.18,.12),
+  new THREE.Vector2(.22,.15),new THREE.Vector2(.19,.23),
+  new THREE.Vector2(.12,.36),new THREE.Vector2(0,.48)
+],12);
+gHeavy.rotateX(-Math.PI/2);
+const heavyForward=new THREE.Vector3(0,0,-1);
 const endEl=document.getElementById('end'),gB=new THREE.BoxGeometry(.35,.35,.35),sphG=new THREE.SphereGeometry(1,10,8),
 mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial({color:0xff7a1a}),mE=new THREE.MeshBasicMaterial({color:0xff4040}),
 // Bales de pistola, franctirador, soldats i tanqueta: petites i blanques.
