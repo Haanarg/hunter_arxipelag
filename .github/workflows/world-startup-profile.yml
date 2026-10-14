@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - 'tests/build-profiler.cjs'
+      - 'tests/terrain-level-index.cjs'
+      - 'src/game-core.js'
       - 'src/world-generation.js'
       - '.github/workflows/world-startup-profile.yml'
   workflow_dispatch:
@@ -18,5 +20,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Verificar alçades i llavors
+        run: node tests/terrain-level-index.cjs
       - name: Mesurar generació real per fases
         run: node tests/build-profiler.cjs
