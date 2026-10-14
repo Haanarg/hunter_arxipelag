@@ -42,6 +42,12 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Franctirador recolzat a l'espatlla (v0.5.3)
+
+La culata del rifle reposa al costat de l'espatlla dreta del model real del jugador (que usa una escala de 1,2 abans de l'escalat final). El rifle és lleugerament més compacte i ja no travessa el cos ni la motxilla. La mà dreta sosté el gallet i la mà esquerra el guardamà mitjançant dos punts de presa i la IK anatòmica dels colzes. La conversió local-món s'aplica una sola vegada per evitar desplaçaments de les mans. La boca del canó continua essent l'origen físic dels trets i convergeix amb la mira de precisió.
+
+Proves: `node tests/sniper-shoulder-pose.cjs` (culata, canells en repòs, caminant i apuntant), `node tests/sniper-muzzle.cjs` (tir i òptica) i `node tests/player-model.cjs` (regressió d'animacions).
+
 ## Torre de defensa dual i soldats amb bazuca (v0.5.2)
 
 Les torres defensives tenen una metralladora **lleugera** i un canó **pesat** sobre la mateixa torreta orientable. Tenen cadències independents (0,7 s i 4,2 s respectivament) i poden disparar simultàniament quan el jugador és a l'abast; l'arma pesada abasta fins a 95 m. Els impactes pesats utilitzen el sistema balístic de la v0.5.1.
