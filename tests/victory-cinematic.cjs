@@ -32,7 +32,7 @@ const assert=require('node:assert/strict');
      killedOnce:kills-savedKills,
      finalSeaHeight:hAt(v.seaCamera.x,v.seaCamera.z)};
    clearVictoryCinematic();
-   result.restored=victoryCinematic===null&&document.getElementById('hud').style.visibility===originalVisibility;
+   result.restored=victoryCinematic===null&&(document.getElementById('hud').style.visibility||'')===(originalVisibility||'');
    result.sceneClean=!v.bullet.parent&&!v.impactFlash.parent&&v.gulls.every(g=>!g.o.parent);
    return result;
  })()`);
