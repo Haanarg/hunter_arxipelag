@@ -1829,7 +1829,7 @@ mini();ui.renderHUD();}}
 let last=performance.now();
 (function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(victoryCinematic?victoryCinematic.t:started&&!paused&&!over?dt:0),cpuStarted=performance.now();
 update(dt,t);
-if(victoryCinematic?.active)updateVictoryCinematic(dt);
+if(victoryCinematic?.active||victoryCinematic?.finished)updateVictoryCinematic(dt);
 const simulationEnded=performance.now();
 if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
   terrainStream.update(victoryCinematic?.active?cam.position.x:P.x,
