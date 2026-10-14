@@ -73,9 +73,38 @@ function rawHAt(x,z){let h=islandReliefAt(x,z,islandCandidates(x,z));const e=Mat
 if(e>H-120)h=Math.min(h,-4-(e-(H-120))*.05);
 if(h>=-1.5)return h;
 const depth=-h-1.5;return -1.5-Math.min(72,depth*depth*2.8+depth*.8)}
+// Evitem recórrer TOTES les plataformes de TOTS els compounds en cada
+// consulta d'altura. L'ordre d'inserció dels candidates és l'original:
+// solapaments, altures, llavors i col·lisions continuen idèntics.
 let terrainLevels=[];
-const addLevelArea=(x,z,w,d,y,rot=0,blend=12)=>{terrainLevels.push({x,z,hw:w/2,hd:d/2,y,rot,c:Math.cos(rot),s:Math.sin(rot),blend})};
-function hAt(x,z){let h=rawHAt(x,z);for(const m of terrainLevels){const dx=x-m.x,dz=z-m.z,lx=dx*m.c+dz*m.s,lz=-dx*m.s+dz*m.c,ox=Math.max(0,Math.abs(lx)-m.hw),oz=Math.max(0,Math.abs(lz)-m.hd),out=Math.hypot(ox,oz);if(out<m.blend){const k=out<=0?1:1-smooth01(out/m.blend);h=h+(m.y-h)*k}}return h}
+const LEVEL_CELL=256,terrainLevelGrid=new Map();
+const levelCellKey=(cx,cz)=>cx+','+cz;
+const addLevelArea=(x,z,w,d,y,rot=0,blend=12)=>{
+  const m={x,z,hw:w/2,hd:d/2,y,rot,c:Math.cos(rot),s:Math.sin(rot),blend};
+  terrainLevels.push(m);
+  // La circumferència circumscrita conté qualsevol punt amb out < blend,
+  // també en les plataformes girades.
+  const reach=Math.hypot(m.hw,m.hd)+blend,
+        minX=Math.floor((x-reach)/LEVEL_CELL),maxX=Math.floor((x+reach)/LEVEL_CELL),
+        minZ=Math.floor((z-reach)/LEVEL_CELL),maxZ=Math.floor((z+reach)/LEVEL_CELL);
+  for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){
+    const key=levelCellKey(cx,cz),bucket=terrainLevelGrid.get(key);
+    if(bucket)bucket.push(m);else terrainLevelGrid.set(key,[m]);
+  }
+};
+function hAt(x,z){
+  let h=rawHAt(x,z);
+  const candidates=terrainLevelGrid.get(levelCellKey(
+    Math.floor(x/LEVEL_CELL),Math.floor(z/LEVEL_CELL)));
+  if(!candidates)return h;
+  for(const m of candidates){
+    const dx=x-m.x,dz=z-m.z,lx=dx*m.c+dz*m.s,lz=-dx*m.s+dz*m.c,
+          ox=Math.max(0,Math.abs(lx)-m.hw),oz=Math.max(0,Math.abs(lz)-m.hd),
+          out=Math.hypot(ox,oz);
+    if(out<m.blend){const k=out<=0?1:1-smooth01(out/m.blend);h=h+(m.y-h)*k}
+  }
+  return h;
+}
 const waveAmp=window.HUNTER_WAVES.amplitude;
 const wy=(x,z,t)=>water.surfaceHeight(x,z,t);
 const rr=(a,b)=>a+R()*(b-a);
