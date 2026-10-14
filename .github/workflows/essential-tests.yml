@@ -1,0 +1,60 @@
+# Bateria curta de regressions; només s'executa per petició manual.
+# Les proves descartades no formen part del repositori.
+name: Proves essencials (manual)
+on:
+  workflow_dispatch:
+    inputs:
+      grup:
+        description: "Quin grup de regressions vols executar?"
+        type: choice
+        required: true
+        default: world
+        options:
+          - world
+          - combat
+          - ending
+          - startup
+          - all
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Executar proves seleccionades (sense duplicats)
+        env:
+          GRUP: ${{ inputs.grup }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$GRUP" in
+            world)
+              set -- terrain-level-index terrain-stream water seed-replay compound-generation
+              ;;
+            combat)
+              set -- enemy-navigation projectile-classes
+              ;;
+            ending)
+              set -- victory-cinematic
+              ;;
+            startup)
+              set -- smoke startup-cache
+              ;;
+            all)
+              set -- smoke startup-cache terrain-level-index terrain-stream water seed-replay compound-generation enemy-navigation projectile-classes victory-cinematic
+              ;;
+            *)
+              echo "Grup de proves desconegut: $GRUP" >&2
+              exit 2
+              ;;
+          esac
+          for test in "$@"; do
+            echo "::group::tests/${test}.cjs"
+            node "tests/${test}.cjs"
+            echo "::endgroup::"
+          done

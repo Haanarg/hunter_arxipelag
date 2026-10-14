@@ -186,17 +186,15 @@ Aquesta revisió contrasta fonts, layouts, controls, pàgines existents, proves 
 - A 0.4.25 `tests/smoke.cjs` passa completa en local: 15 tipus de vehicles, 40 edificis, combat, inventari, física, pausa i reinici; 218,4 s. També passen les comprovacions específiques de paracaigudes i de càrrega de granada. La reproducció de llavors també passa a CI en el mateix commit.
 - Els workflows consultats de la 0.4.16 confirmen proves específiques de terreny, palmeres, ombres, filferrada, decoració, menú de rendiment, òptica del rifle, aigua, granades, impactes i aterratge. A la 0.4.18 també passen els workflows de LOD enemic, boca/trajectòria del rifle i col·lisió d’helicòpters amb cobertes. Aquella execució del workflow de llavors va fallar per timeout de `seed-replay.cjs`; la incidència queda resolta a CI en la revisió 0.4.25.
 
-| Àmbit | Proves de referència |
+| Àmbit | Proves encara disponibles |
 |---|---|
-| Complexos | `tests/compound-preview.cjs`, `tests/compound-generation.cjs`, `tests/compound-game-browser.cjs` |
-| Terreny i qualitat | `tests/terrain-stream.cjs`, `tests/graphics-quality.cjs`, `tests/performance.cjs` |
-| LOD i visibilitat | `tests/vegetation-lod.cjs`, `tests/enemy-lod.cjs`, `tests/sniper-lod.cjs`, `tests/distance-performance-menu.cjs` |
-| Agrupació de malles | `tests/fence-batching.cjs`, `tests/window-batching.cjs`, `tests/static-decor-batching.cjs`, `tests/shadow-optimization.cjs` |
-| Llavors | `tests/seed-search.cjs`, `tests/seed-search-integration.cjs`, `tests/seed-replay.cjs` |
-| Navegació | `tests/enemy-navigation.cjs`, `tests/enemy-navigation-world.cjs` |
-| Vehicles i aigua | `tests/helicopter-landing.cjs`, `tests/helicopter-roof.cjs`, `tests/jet-skis.cjs`, `tests/rowboat-water.cjs`, `tests/water.cjs` |
-| Personatges i combat visual | `tests/player-model.cjs`, `tests/enemy-model.cjs`, `tests/general-model.cjs`, `tests/grenade-charge-pose.cjs`, `tests/bullet-impact-fx.cjs`, `tests/sniper-muzzle.cjs` |
-| Arrencada general | `tests/smoke.cjs`, `tests/browser.cjs` |
+| Arrencada i paquet | `tests/smoke.cjs`, `tests/startup-cache.cjs` |
+| Generació del món i llavors | `tests/compound-generation.cjs`, `tests/seed-replay.cjs` |
+| Terreny i mar | `tests/terrain-level-index.cjs`, `tests/terrain-stream.cjs`, `tests/water.cjs` |
+| Navegació i combat | `tests/enemy-navigation.cjs`, `tests/projectile-classes.cjs` |
+| Final de partida | `tests/victory-cinematic.cjs` |
+
+En la neteja d'octubre de 2026 s'han retirat les altres proves i els seus workflows per concentrar la validació en els errors crítics. Les referències històriques a workflows i proves de revisions anteriors descriuen resultats passats, no suites encara instal·lades. La bateria actual es llança manualment des d'Actions (`essential-tests.yml`), excepte el smoke que també s'executa en regenerar el paquet del runtime.
 
 ## Neteja documental aplicada
 
