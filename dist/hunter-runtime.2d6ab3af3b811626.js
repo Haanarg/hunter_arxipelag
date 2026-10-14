@@ -5371,10 +5371,27 @@ function victorySetFall(progress){
   if(rig?.knees)rig.knees.forEach((k,i)=>{k.rotation.x=-(i?.4:.7)*fall});
   if(rig?.elbows)rig.elbows.forEach((e,i)=>{e.rotation.x=(i?.45:.8)*fall});
 }
+function victoryAnimateGulls(v){
+  const offset=v.t-(VICTORY_REPLAY_SECONDS*3+VICTORY_OVERHEAD_SECONDS);
+  for(const gull of v.gulls){
+    const i=gull.index,span=50+i*8,side=((i%5)-2)*12,
+      lateral=new THREE.Vector3(-v.seaDir.z,0,v.seaDir.x);
+    gull.o.visible=true;
+    gull.o.position.copy(v.seaCamera)
+      .addScaledVector(v.seaDir,span+offset*.7)
+      .addScaledVector(lateral,side+Math.sin(v.t*.7+i)*5);
+    gull.o.position.y+=5+(i%4)*4+Math.sin(v.t*1.2+i)*1.7;
+    gull.o.rotation.y=Math.atan2(-v.seaDir.x,-v.seaDir.z);
+    gull.wl.rotation.z=Math.sin(v.t*5+i*1.8)*.48;
+    gull.wr.rotation.z=-gull.wl.rotation.z;
+  }
+  if(offset>1.2&&v.t-v.cryTime>1.7){victoryGullCry();v.cryTime=v.t}
+}
 function updateVictoryCinematic(dt){
   const v=victoryCinematic;
-  if(!v||!v.active)return;
+  if(!v||(!v.active&&!v.finished))return;
   v.t+=Math.max(0,Math.min(.1,dt));
+  if(v.finished){victoryAnimateGulls(v);return}
   const replayTotal=VICTORY_REPLAY_SECONDS*3,overheadEnd=replayTotal+VICTORY_OVERHEAD_SECONDS,
         end=overheadEnd+VICTORY_SUNSET_SECONDS;
   const target=v.shot.hit,dir=v.shot.direction,
@@ -5434,21 +5451,7 @@ function updateVictoryCinematic(dt){
     if(Math.abs(cam.fov-fov)>.01){cam.fov=fov;cam.updateProjectionMatrix()}
     v.title.style.opacity=String(victoryEase((v.t-overheadEnd-2.0)/1.15));
     v.title.style.transform='scale('+(1-.04*(1-victoryEase((v.t-overheadEnd-2)/1.3)))+')';
-    for(const gull of v.gulls){
-      const i=gull.index,span=50+i*8,side=((i%5)-2)*12,
-            lateral=new THREE.Vector3(-v.seaDir.z,0,v.seaDir.x);
-      gull.o.visible=true;
-      gull.o.position.copy(v.seaCamera)
-        .addScaledVector(v.seaDir,span+(v.t-overheadEnd)*.7)
-        .addScaledVector(lateral,side+Math.sin(v.t*.7+i)*5);
-      gull.o.position.y+=5+(i%4)*4+Math.sin(v.t*1.2+i)*1.7;
-      gull.o.rotation.y=Math.atan2(-v.seaDir.x,-v.seaDir.z);
-      gull.wl.rotation.z=Math.sin(v.t*5+i*1.8)*.48;
-      gull.wr.rotation.z=-gull.wl.rotation.z;
-    }
-    if(v.t-overheadEnd>1.2&&v.t-v.cryTime>1.7){
-      victoryGullCry();v.cryTime=v.t;
-    }
+    victoryAnimateGulls(v);
     if(v.t>=end){
       v.phase='finished';v.finished=true;v.active=false;
       v.title.style.opacity='1';
@@ -5676,7 +5679,7 @@ function ensureJetSkis(add){
 }
 
 // Compatibility extraction: shared state remains in game-core.js.
-function build(){window.HUNTER_ENEMY_LOD.reset();const requestedPalmDisable=!!document.getElementById('disablePalms')?.checked;palmsDisabled=false;cancelGrenadeCharge();clearBulletImpacts();removeParachuteVisual();const buildStarted=performance.now(),buildStages={},buildCounters={landAttempts:0,landCandidates:0},markBuildStage=(()=>{let last=buildStarted;return name=>{const now=performance.now();buildStages[name]=Math.round((now-last)*100)/100;last=now}})();movementFx.reset();if(terrainStream)terrainStream.dispose();terrainStream=null;seedCompounds=[];elapsed=0;water.update(0);joystick.reset();compoundClear=[];terrainLevels=[];terrainLevelGrid.clear();if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}world=new THREE.Group();world.userData.compounds=[];world.userData.airObstacles=[];scene.add(world);B=[];stairs=[];piers=[];swimming=false;intelMarks=[];hqMapKnown=false;playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false;pl.userData.cisallaCut=0;sniperEquipped=false;sniperAmmo=0;setSniperScope(false);pl.userData.sniper.visible=false;pl.userData.bazooka.visible=false;pl.userData.grenade.visible=false;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;pl.userData.grenadePending=null;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];grenades=[];fx=[];logb=[];hp=100;ammo=16;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
+function build(){clearVictoryCinematic();window.HUNTER_ENEMY_LOD.reset();const requestedPalmDisable=!!document.getElementById('disablePalms')?.checked;palmsDisabled=false;cancelGrenadeCharge();clearBulletImpacts();removeParachuteVisual();const buildStarted=performance.now(),buildStages={},buildCounters={landAttempts:0,landCandidates:0},markBuildStage=(()=>{let last=buildStarted;return name=>{const now=performance.now();buildStages[name]=Math.round((now-last)*100)/100;last=now}})();movementFx.reset();if(terrainStream)terrainStream.dispose();terrainStream=null;seedCompounds=[];elapsed=0;water.update(0);joystick.reset();compoundClear=[];terrainLevels=[];terrainLevelGrid.clear();if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}world=new THREE.Group();world.userData.compounds=[];world.userData.airObstacles=[];scene.add(world);B=[];stairs=[];piers=[];swimming=false;intelMarks=[];hqMapKnown=false;playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false;pl.userData.cisallaCut=0;sniperEquipped=false;sniperAmmo=0;setSniperScope(false);pl.userData.sniper.visible=false;pl.userData.bazooka.visible=false;pl.userData.grenade.visible=false;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;pl.userData.grenadePending=null;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];grenades=[];fx=[];logb=[];hp=100;ammo=16;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
 {const base=requestedSeed==null?Math.floor(Math.random()*0xffffffff)>>>0:requestedSeed>>>0;let tries=0;do{seed=(base+Math.imul(tries++,0x9e3779b1))>>>0;genIslands();pa=land(A,2000);pb=land(Bi,2000)}while((!pa||!pb)&&tries<8);if(!pa||!pb)throw new Error('No s’ha pogut generar un mapa vàlid amb aquesta llavor')}
 markBuildStage('islandsAndBasePositions');
 const cols=[0xd8b48a,0xc9a27a,0xb8c4c9,0xd9c9a0],compoundVehicles=[],heliportSites=[],staticDecorRoots=[];
@@ -7951,8 +7954,17 @@ mini();ui.renderHUD();}}
 
 
 let last=performance.now();
-(function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(started&&!paused&&!over?dt:0),cpuStarted=performance.now();update(dt,t);const simulationEnded=performance.now();if(started&&!paused&&!over&&terrainStream)terrainStream.update(P.x,P.z,visualQuality.shadows?2:1.2,cam,currentSniperFocus());const terrainEnded=performance.now();waves(t);
-sun.target.position.set(P.x,0,P.z);sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();for(const k in renderCategories)renderCategories[k]=0;ren.render(scene,cam);
+(function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(victoryCinematic?victoryCinematic.t:started&&!paused&&!over?dt:0),cpuStarted=performance.now();
+update(dt,t);
+if(victoryCinematic?.active)updateVictoryCinematic(dt);
+const simulationEnded=performance.now();
+if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
+  terrainStream.update(victoryCinematic?.active?cam.position.x:P.x,
+    victoryCinematic?.active?cam.position.z:P.z,visualQuality.shadows?2:1.2,cam,
+    victoryCinematic?.active?null:currentSniperFocus());const terrainEnded=performance.now();waves(t);
+sun.target.position.set(victoryCinematic?cam.position.x:P.x,0,
+  victoryCinematic?cam.position.z:P.z);
+sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();for(const k in renderCategories)renderCategories[k]=0;ren.render(scene,cam);
 if(started&&!paused&&!over){
   advanceTerrainTexture();
   if(waterUpgradePending){water.queueResolutionUpgrade();waterUpgradePending=false}
