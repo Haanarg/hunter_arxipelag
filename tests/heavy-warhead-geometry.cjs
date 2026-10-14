@@ -1,6 +1,7 @@
 const assert=require('node:assert/strict');
 (async()=>{
  const g=await require('./harness.cjs')();
+ g.start('67',1);
  const report=g.run(`(()=>{
    const shots=[],dirs=[
      [0,0,-1],[-1,0,0],[0,1,0],[0,-1,0],[.6,.25,-.75],[0,0,1]
