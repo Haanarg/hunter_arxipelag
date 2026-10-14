@@ -7,7 +7,7 @@ const assert=require('node:assert/strict');
    const guards=groups.flatMap(c=>c.soldiers);
    const specialists=guards.filter(u=>u.rocketSoldier);
    const pMeshes=[],eMeshes=[];
-   const full=u=>u.bazooka&&u.bazooka.parent===u.o.userData.enemyFullRoot;
+   const full=u=>u.o.userData.bazooka&&u.o.userData.bazooka.parent===u.o.userData.enemyFullRoot;
    const collect=(root,arr)=>root.traverse(o=>{if(o.isMesh)arr.push({
      type:o.geometry.type,params:JSON.stringify(o.geometry.parameters||{}),
      color:o.material.color?.getHex()
