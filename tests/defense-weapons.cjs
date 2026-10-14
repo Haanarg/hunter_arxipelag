@@ -35,23 +35,44 @@ const assert=require('node:assert/strict');
    assert(distribution[key],key+': '+JSON.stringify(distribution));
  const shots=g.run(`(()=>{
    const saved={E,sight,shoot,soldierClearShot,soldierEngage,soldierEnterBuilding,
-     cv,disg,over,player:{x:P.x,y:P.y,z:P.z},shots:Pj.length};
+     cv,disg,over,player:{x:P.x,y:P.y,z:P.z}};
    const emit=[],fire=(...args)=>emit.push({speed:args[6],damage:args[7],
      splash:args[8],owner:args[9],type:shotClassFromSplash(args[8])});
    const turret=E.find(u=>u.t==='torre'),rocket=E.find(u=>u.rocketSoldier);
-   let first=[],lightOnly=[],heavyOnly=[],bazooka=[];
+   const results={};
+   const at=(type,dist=35,lightReady=true,heavyReady=true)=>{
+     emit.length=0;E=[turret];
+     P.x=turret.x;P.y=turret.o.position.y;P.z=turret.z-dist;
+     cv=type?{t:type,x:P.x,y:P.y,z:P.z,o:{position:{y:P.y}},
+       armor:VT[type].armor}:null;
+     turret.cd=lightReady?-.1:2;
+     turret.heavyCd=heavyReady?-.1:2;
+     turret.senseT=-1;
+     updEn(.016);
+     return emit.slice();
+   };
    try{
-     cv=null;disg=false;over=0;
-     sight=()=>true;shoot=fire;
-     E=[turret];P.x=turret.x;P.y=turret.o.position.y;P.z=turret.z-35;
-     turret.cd=-.01;turret.heavyCd=-.01;turret.senseT=-.01;
-     updEn(.016);first=emit.splice(0);
-     turret.cd=-.01;turret.heavyCd=2;updEn(.016);lightOnly=emit.splice(0);
-     turret.cd=2;turret.heavyCd=-.01;updEn(.016);heavyOnly=emit.splice(0);
-     E=[rocket];P.x=rocket.x;P.y=rocket.o.position.y;P.z=rocket.z-20;
+     disg=false;over=0;sight=()=>true;shoot=fire;
+     results.footBothReady=at(null);
+     results.footHeavyReadyOnly=at(null,35,false,true);
+     results.footLightReadyOnly=at(null,35,true,false);
+     results.moto=at('moto');
+     results.car=at('cotxe');
+     results.ferry=at('ferry');
+     results.helicopter=at('heli');
+     results.tankBothReady=at('tanc');
+     results.tankHeavyRecharging=at('tanc',35,true,false);
+     results.tankOnlyHeavyReady=at('tanc',35,false,true);
+     results.tankette=at('tanqueta');
+     results.attackHelicopter=at('heli_combat');
+     results.tankOutOfHeavyRange=at('tanc',104);
+     results.footAtLongRange=at(null,104);
+     // El soldat especialista manté el projectil pesat independent.
+     emit.length=0;E=[rocket];cv=null;
+     P.x=rocket.x;P.y=rocket.o.position.y;P.z=rocket.z-20;
      soldierClearShot=()=>true;soldierEngage=()=>{};soldierEnterBuilding=()=>false;
-     rocket.cd=-.01;rocket.senseT=-.01;rocket.canSee=false;
-     updEn(.016);bazooka=emit.splice(0);
+     rocket.cd=-.1;rocket.senseT=-1;rocket.canSee=false;
+     updEn(.016);results.bazooka=emit.slice();
    }finally{
      E=saved.E;sight=saved.sight;shoot=saved.shoot;
      soldierClearShot=saved.soldierClearShot;soldierEngage=saved.soldierEngage;
@@ -60,18 +81,23 @@ const assert=require('node:assert/strict');
      P.x=saved.player.x;P.y=saved.player.y;P.z=saved.player.z;
      rebuildVehicleGrid();
    }
-   return {first,lightOnly,heavyOnly,bazooka};
+   return results;
  })()`);
- assert.equal(shots.first.length,2,'tower fires both guns on same frame');
- assert.equal(JSON.stringify(shots.first.map(x=>x.type).sort()),JSON.stringify(['heavy','light']));
- assert.equal(shots.lightOnly.length,1,'tower light gun has an independent cooldown');
- assert.equal(shots.lightOnly[0].type,'light');
- assert.equal(shots.heavyOnly.length,1,'tower heavy gun has an independent cooldown');
- assert.equal(shots.heavyOnly[0].type,'heavy');
- assert.equal(shots.bazooka.length,1,'specialist soldier fires only one rocket');
- assert.equal(shots.bazooka[0].type,'heavy');
- assert(shots.first.find(s=>s.type==='heavy').damage>shots.first.find(s=>s.type==='light').damage);
- assert(shots.first.every(s=>s.owner==='e'));
- console.log('PASS: independent tower guns, shared bazooka geometry and rocket guard distribution',
+ const expect=(name,type)=>{
+   const result=shots[name];
+   assert.equal(result.length,type?1:0,name+': '+JSON.stringify(shots));
+   if(type)assert.equal(result[0].type,type,name);
+ };
+ for(const name of ['footBothReady','footLightReadyOnly','moto','car','ferry',
+   'helicopter','footAtLongRange'])expect(name,'light');
+ for(const name of ['tankBothReady','tankOnlyHeavyReady','tankette',
+   'attackHelicopter'])expect(name,'heavy');
+ for(const name of ['footHeavyReadyOnly','tankHeavyRecharging',
+   'tankOutOfHeavyRange'])expect(name,null);
+ expect('bazooka','heavy');
+ assert(shots.tankBothReady[0].damage>shots.footBothReady[0].damage);
+ assert(shots.tankBothReady[0].splash>0&&shots.footBothReady[0].splash===0);
+ assert(shots.tankBothReady[0].speed>0);
+ console.log('PASS: towers choose fastest damaging gun; one gun per target and independent cooldowns',
    JSON.stringify({distribution,shots}));
 })().catch(e=>{console.error(e);process.exitCode=1});
