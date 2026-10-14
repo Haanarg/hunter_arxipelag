@@ -1,0 +1,30 @@
+name: Cinemàtica final del general
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/victory-cinematic.js'
+      - 'src/runtime-scripts.mjs'
+      - 'src/combat.js'
+      - 'src/world-generation.js'
+      - 'src/game-core.js'
+      - 'tests/victory-cinematic.cjs'
+      - '.github/workflows/victory-cinematic.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cinematic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Repetició mortal i posta de sol
+        run: node tests/victory-cinematic.cjs
+      - name: Morts i controls no afectats
+        run: node tests/smoke.cjs
+      - name: So i dany de projectils
+        run: node tests/projectile-classes.cjs
