@@ -31,7 +31,7 @@ window.HUNTER_VEHICLES=Object.freeze({
     const yaw=Math.hypot(local.x,local.z)<1e-4
             ?pivot.rotation.y:Math.atan2(-local.x,-local.z),
           elev=Math.max(-.42,Math.min(.43,Math.atan2(local.y,Math.hypot(local.x,local.z)))),
-          step=Math.min(.08,Math.max(0,dt));
+          step=Math.min(.08,Math.max(0,Number.isFinite(dt)?dt:0));
     const approach=(angle,target,key,maxSpeed,wrap)=>{
       const delta=wrap?Math.atan2(Math.sin(target-angle),Math.cos(target-angle)):target-angle;
       const desired=Math.max(-maxSpeed,Math.min(maxSpeed,delta*3.8));

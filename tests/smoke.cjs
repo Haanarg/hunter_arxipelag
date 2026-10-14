@@ -1527,10 +1527,10 @@ ok("VD.types.heli_combat.maxF>VD.types.heli.maxF&&VD.types.heli_combat.tu>VD.typ
 ok("vehSrc.includes('Huey 3B-4')&&vehSrc.includes('roundedPrism(g,2.7,1.74,4.18')&&vehSrc.includes('Variant 4: petit carenat arrodonit')",'normal helicopter uses the selected Huey 3B variant 4 visual model');
 ok("V.find(v=>v.t==='heli').o.userData.rotor&&V.find(v=>v.t==='heli').o.userData.tailRotor",'new Huey model preserves both animated rotors');
 ok("String(fire).includes('const a30=Math.PI/6')&&String(fire).includes(\"c=='heli'\")&&String(fire).includes(\"c=='heli_combat'\")&&String(fire).includes('fx_*ch,-sv,fz*ch')",'both helicopters fire at a 30 degree downward angle');
-ok("String(fire).includes(\"c=='tanc'\")&&String(fire).includes(\"c=='tanqueta'\")&&String(fire).includes('autoAimArmoredShot')&&!String(fire).includes('const a5=Math.PI/36')",
-  'tank and tankette fire horizontally by default, applying only narrow target assistance');
-ok("vehSrc.includes('rod(g,[0,2.48,-.65],[0,2.48,-3.05],.1,metal)')&&!vehSrc.includes('mgDrop')",
-  'tankette barrel remains straight and its default projectile trajectory is now level');
+ok("String(fire).includes(\"c=='tanc'||c=='tanqueta'\")&&String(update).includes('autoAimArmoredShot(')&&String(fire).includes('turretShot(THREE,cv.o)')",
+  'tank and tankette fire from the moving barrel, tracking assisted aim smoothly');
+ok("vehSrc.includes('rod(elev,[0,0,0],[0,0,-2.4],.1,metal)')&&vehSrc.includes('g.userData.turretMuzzle=muzzle')&&!vehSrc.includes('mgDrop')",
+  'tankette barrel now belongs to the articulated turret with a real muzzle');
 ok("String(secondaryWeapon).includes('fx_*d45,-d45,fz*d45')",'combat helicopter missiles also fire 45 degrees downward');
 run(`{
   const savedEnemies=E,savedAimClear=weaponAimClear;
