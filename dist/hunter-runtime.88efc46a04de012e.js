@@ -4146,16 +4146,38 @@ function setDis(v){disg=v;[...pl.userData.mats,...rider.userData.mats].forEach((
 function fin(m){setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+' · Obre Ⅱ / Esc per tornar a jugar';endEl.style.display='flex'}
 function hurtP(d){if(over)return;d*=DIF;hp-=d;snd('hurt',.5);if(hp<=0){hp=0;fin('HAS MORT')}}
 function destroyTower(u){
-  if(!u?.o)return;
-  // La torre deixa de bloquejar el pas immediatament quan esclata.
-  // Eliminam els quatre col·lidors, no les malles (que generen fragments).
+  if(!u?.o||u.destroyed)return;
   u.destroyed=true;
+  // Desfer els col·lidors de les quatre potes i invalidar l'índex espacial.
+  // Així cap projectil ni vehicle no col·lisiona amb una torre desapareguda.
   for(const leg of u.towerLegColliders||[]){
     const i=Wl.indexOf(leg);if(i>=0)Wl.splice(i,1);
   }
+  wallGridCount=-1;
   u.towerLegColliders=[];
-  u.o.updateMatrixWorld(true);const p=new THREE.Vector3(),q=new THREE.Quaternion(),sc=new THREE.Vector3(),center=new THREE.Vector3(u.x,u.o.position.y+4,u.z);
-  u.o.traverse(src=>{if(!src.isMesh||src.isInstancedMesh||!src.geometry)return;src.matrixWorld.decompose(p,q,sc);const piece=new THREE.Mesh(src.geometry,src.material);piece.position.copy(p);piece.quaternion.copy(q);piece.scale.copy(sc);piece.castShadow=true;world.add(piece);const dx=p.x-center.x,dz=p.z-center.z,dd=Math.max(.3,Math.hypot(dx,dz)),sp=rn(6,15);DB.push({m:piece,s0:piece.scale.clone(),vx:dx/dd*sp+rn(-4,4),vy:rn(7,20),vz:dz/dd*sp+rn(-4,4),rx:rn(-7,7),ry:rn(-7,7),rz:rn(-7,7),life:rn(2.5,4.5),vehiclePart:true})});debris(u.x,u.o.position.y+5,u.z,0x4b5157,12,.45,12);for(let i=0;i<5;i++)puff(u.x+rn(-2,2),u.o.position.y+rn(2,8),u.z+rn(-2,2),0x55534f,rn(1.3,2.6));boom(u.x,u.o.position.y+4,u.z,7,28,'p')
+  // Abans es clonaven TOTES les malles, incloses les dues representacions
+  // LOD (torres completes). Produïen dos esquelets gegants flotants.
+  // Generam peces petites reals, sense copiar ni el LOD ni trams sencers.
+  const base=u.o.position.y;
+  for(let k=0;k<26;k++){
+    const high=k<10,yy=base+(high?rn(7.5,10.2):rn(.8,7.6)),
+          xx=u.x+rn(-1.85,1.85),zz=u.z+rn(-1.85,1.85),
+          color=high?(k%3?0x7c2f2f:0x343a3e):0x4b5157,
+          m=new THREE.Mesh(dgeo,dmat(color)),
+          size=high?rn(.45,1.12):rn(.32,.78);
+    m.scale.set(size*rn(.6,1.3),size*rn(.45,1),size*rn(.6,1.25));
+    m.position.set(xx,yy,zz);m.rotation.set(rn(-.4,.4),rn(0,Math.PI),rn(-.4,.4));
+    m.castShadow=true;world.add(m);
+    const dx=xx-u.x,dz=zz-u.z,length=Math.max(.35,Math.hypot(dx,dz));
+    DB.push({m,s0:m.scale.clone(),
+      vx:dx/length*rn(6,13)+rn(-3,3),vy:rn(5,15),
+      vz:dz/length*rn(6,13)+rn(-3,3),
+      rx:rn(-7,7),ry:rn(-7,7),rz:rn(-7,7),
+      life:rn(1.9,3.1),vehiclePart:true});
+  }
+  for(let k=0;k<8;k++)puff(u.x+rn(-2,2),base+rn(.5,9),u.z+rn(-2,2),
+    k%2?0x55534f:0x8b8176,rn(1.5,3.5));
+  boom(u.x,base+4,u.z,7,28,'p');
 }
 function explodeEnemyVehicle(u){
   // Mateixa explosió visual que els vehicles pilotables: fragments de la
@@ -4982,6 +5004,12 @@ function soldierEngage(u,target,targetY,dt,d,visible){
   u.hd=Math.atan2(u.x-toward.x,u.z-toward.z); // la cara sempre al jugador
 }
 
+// Les defenses trien la cadència més ràpida que pugui fer mal
+// al jugador o al vehicle que pilota. L'arma pesada només és necessària
+// contra blindats (tancs, tanquetes, helicòpter de combat, etc.).
+function towerWeaponForTarget(vehicle){
+  return vehicle&&isArmoredVehicle(vehicle)?'heavy':'light';
+}
 function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.forEach(u=>{
   const oldX=u.x,oldZ=u.z;
   u.alert=Math.max(0,u.alert-dt);u.cd-=dt;if(u.t==='torre')u.heavyCd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);
@@ -5039,21 +5067,28 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
         u.hd=Math.atan2(u.x-dp.x,u.z-dp.z);mvE(u,u.sp*.75*dt,dp.x,dp.z)
       }else if(d>u.rng*.72)mvE(u,u.sp*dt,q.x,q.z)
     }
-    if(d<u.rng&&u.cd<=0){
-      u.cd=u.rate;const y0=eyeY,[ax,ay,az]=enemyShotDirection(u,q,py,y0);
-      const smallBullet=u.t==='tanqueta'||u.t==='general'||u.t==='torre';
-      const fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
-      const lightX=u.t==='torre'?u.x+fx*2.4-Math.cos(u.hd)*.72:u.x,
-            lightZ=u.t==='torre'?u.z+fz*2.4+Math.sin(u.hd)*.72:u.z;
-      shoot(lightX,y0,lightZ,ax,ay,az,u.spl?60:70,u.dmg,u.spl,'e',smallBullet?mW:mE,smallBullet?SMALL_ARMS_SCALE:(u.spl?2:1))
-    }
-    if(u.t==='torre'&&d<(u.heavyRange||95)&&u.heavyCd<=0){
-      // Independència completa: munició, ritme i boca de foc propis.
-      u.heavyCd=u.heavyRate||4.2;
-      const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY-.2),
-            fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
-      shoot(u.x+fx*2.4+Math.cos(u.hd)*.72,eyeY-.2,
-        u.z+fz*2.4-Math.sin(u.hd)*.72,ax,ay,az,76,24,7,'e',mS,1.8)
+    if(u.t==='torre'){
+      const weapon=towerWeaponForTarget(cv);
+      // Mai no fem servir projectils pesats contra una persona a peu.
+      // Tampoc gastam bales lleugeres inútils contra un blindat.
+      if(weapon==='light'&&d<u.rng&&u.cd<=0){
+        u.cd=u.rate;
+        const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY),
+              fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
+        shoot(u.x+fx*2.4-Math.cos(u.hd)*.72,eyeY,
+          u.z+fz*2.4+Math.sin(u.hd)*.72,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE);
+      }else if(weapon==='heavy'&&d<u.heavyRange&&u.heavyCd<=0){
+        u.heavyCd=u.heavyRate;
+        const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY-.2),
+              fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
+        shoot(u.x+fx*2.4+Math.cos(u.hd)*.72,eyeY-.2,
+          u.z+fz*2.4-Math.sin(u.hd)*.72,ax,ay,az,76,24,7,'e',mS,1.8);
+      }
+    }else if(d<u.rng&&u.cd<=0){
+      u.cd=u.rate;const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
+      const smallBullet=u.t==='tanqueta'||u.t==='general';
+      shoot(u.x,eyeY,u.z,ax,ay,az,u.spl?60:70,u.dmg,u.spl,
+        'e',smallBullet?mW:mE,smallBullet?SMALL_ARMS_SCALE:(u.spl?2:1));
     }
   }else if(u.sp>0){
     const waypointDistance=Math.hypot(u.tx-u.x,u.tz-u.z),
