@@ -42,6 +42,17 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Arrencada optimitzada
+
+- La portada continua sent una imatge fixa i precàrrega Three.js i el paquet del motor quan el navegador està disponible, sense activar WebGL.
+- Els 38 scripts clàssics s'agrupen en un sol fitxer `dist/hunter-runtime.<hash>.js` generat amb `node tools/build-runtime.cjs`; l'ordre original es conserva i existeix un carregador alternatiu per a errors de xarxa.
+- GitHub Actions verifica el paquet amb la regressió general i les proves gràfiques abans de regenerar-ne el manifest. El contingut del paquet determina el nom de fitxer, evitant invalidar tota la memòria cau en cada revisió.
+- Cloudflare Pages utilitza `_headers` per conservar els paquets amb hash i revalidar l'HTML i els manifests.
+- La textura detallada s'elabora progressivament després del primer fotograma i l'aigua comença amb una malla de 160 divisions (o menys, segons perfil); la malla final es prepara per blocs i substitueix l'anterior quan està completa.
+- Des de la consola es poden consultar `window.HUNTER_STARTUP_TIMINGS` (motor, món, total), `window.HUNTER_BUILD_STATS` (generació) i `water.resolution` en les proves. Aquestes xifres són de l'equip real i permeten comparar abans/després.
+
+Validació local: `node tests/startup-cache.cjs`, `node tools/build-runtime.cjs --check`, `node tests/water.cjs`, `node tests/high-graphics.cjs` i `HUNTER_TEST_BUNDLE=1 node tests/smoke.cjs`.
+
 ## Desenvolupament i comprovacions
 
 `src/bootstrap.mjs` carrega el motor i `src/runtime-scripts.mjs` fixa l’ordre dels sistemes. `src/game-core.js` conserva l’estat compartit; generació, combat, IA, models i renderitzat tenen mòduls propis. El detall de l’arquitectura, les decisions i els pendents es manté en un únic [document d’estat](docs/VISUAL_MODERNIZATION.md).
