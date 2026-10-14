@@ -42,6 +42,15 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Distribució de botí als complexos (v0.5.4)
+
+- **Polvorins:** cap dels tres mapes (`mapa`, `mapa_heli`, `mapa_tanc`). Mantenen munició, granades, explosius, bazuca i rifle de franctirador.
+- **Hangars:** no hi apareix cap objecte recollible; continuen contenint els vehicles previstos.
+- **Tallers annexos als hangars:** munició, farmacioles i eines com la cisalla, però mai bazuca, rifle, granades ni explosius. Poden contenir informació o subministraments no armats.
+- Les mateixes restriccions s'apliquen tant al botí fix del complex com a la distribució aleatòria. Els mapes garantits i el rifle garantit es reassignen entre edificis vàlids, sense perdre aquestes recollides.
+
+Proves: `node tests/loot-restrictions.cjs` (dues llavors d'arxipèlag petit i una de gran), `node tests/compound-generation.cjs` i `node tests/smoke.cjs`.
+
 ## Franctirador recolzat a l'espatlla (v0.5.3)
 
 La culata del rifle reposa al costat de l'espatlla dreta del model real del jugador (que usa una escala de 1,2 abans de l'escalat final). El rifle és lleugerament més compacte i ja no travessa el cos ni la motxilla. La mà dreta sosté el gallet i la mà esquerra el guardamà mitjançant dos punts de presa i la IK anatòmica dels colzes. La conversió local-món s'aplica una sola vegada per evitar desplaçaments de les mans. La boca del canó continua essent l'origen físic dels trets i convergeix amb la mira de precisió.
