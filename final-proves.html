@@ -119,7 +119,7 @@ function poseGeneral(p){
  const arm=smooth((p-.09)/.46);
  fallPivot.rotation.x=jerk+fall*1.53;
  fallPivot.rotation.z=fall*.10;
- fallPivot.position.y=hipHeight+jerk*.10+fall*.12;
+ fallPivot.position.y=hipHeight+jerk*.10-fall*.70; // Lower the hips until the body rests on the ground.
  actor.rotation.y=.06*fall;
  rig.al.rotation.z=original[0].z+.95*arm;
  rig.ar.rotation.z=original[1].z-.93*arm;
