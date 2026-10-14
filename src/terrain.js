@@ -96,7 +96,7 @@ window.HUNTER_TERRAIN=Object.freeze({
       const skirtCount=edges.length*2,
             pos=new Float32Array((base+skirtCount)*3),
             col=new Float32Array((base+skirtCount)*3),
-            uv=material.map&&sourceUV?new Float32Array((base+skirtCount)*2):null,
+            uv=(material.map||material.userData?.requiresDetailUV)&&sourceUV?new Float32Array((base+skirtCount)*2):null,
             oldIx=geometry.index.array,
             indices=new Uint16Array(oldIx.length+edges.length*6);
       pos.set(original.array);col.set(colors.array);indices.set(oldIx);
