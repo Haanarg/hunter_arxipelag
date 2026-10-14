@@ -21,7 +21,7 @@ Obre http://localhost:8000. Three.js 0.186.1 es carrega des de `vendor/`, sense 
 | WASD / fletxes | Avançar, frenar i girar |
 | Y / U | Desplaçament lateral a peu, en hovercraft i helicòpters |
 | E / Acció | Entrar o sortir del vehicle; obrir l’inventari si no n’hi ha cap a prop |
-| F / Dispar | Disparar; amb granades, mantenir per carregar i deixar anar per llançar |
+| F / Dispar | Disparar; amb granades, mantenir per carregar i deixar anar per llançar; amb la cisalla equipada, tallar una filferrada propera |
 | T / Mira | Òptica x8 del rifle de franctirador |
 | H / J | Pujar / baixar l’helicòpter |
 | G | Míssil de l’helicòpter de combat; altrament, col·locar un explosiu |
@@ -39,7 +39,7 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - **15 vehicles conduïbles:** cotxe, moto, bicicleta, camió, tanqueta, tanc, helicòpter, helicòpter de combat, llanxa, llanxa llançacoets, moto aquàtica, hovercraft, ferry, barca de rems i windsurf.
 - **8 tipus de complexos:** base, HQ, hangar, avançada, port, heliport, polvorí i comunicacions; les tres fases de renovació estan integrades.
 - Edificis explorables i destructibles, filferrada, molls, patrulles, persecució enemiga pels accessos dels edificis i general com a objectiu de missió.
-- Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, disfressa, farmacioles, mapes i paracaigudes.
+- Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
 ## Desenvolupament i comprovacions
