@@ -446,7 +446,7 @@ window.HUNTER_COAST_FOAM=Object.freeze({
 // BEGIN src/water.js
 // Sistema visual de l'aigua, desacoblat de la simulació del joc.
 window.HUNTER_WATER_SYSTEM=Object.freeze({
-  create(THREE,{scene,sunDir,size,segments,heightAt,config,reflections=true,coastDetail=false,fogColor=0xc99f91}){
+  create(THREE,{scene,sunDir,size,segments,heightAt,config,reflections=true,coastDetail=false,fogColor=0xc99f91,initialSegments=segments}){
     const model=window.HUNTER_WAVES;
     const uniforms={
       time:{value:0},light:{value:sunDir},
@@ -491,72 +491,112 @@ void main(){
 #include <colorspace_fragment>
 }`
     });
-    let worldSize=size,span=size+2200;
-    const makeGeometry=()=>{
-      const g=new THREE.PlaneGeometry(span,span,segments,segments).rotateX(-Math.PI/2);
+    // Un mar inicial més lleuger fa possible el primer fotograma ràpid.
+    // La malla completa es prepara per franges, sense substituir la malla
+    // visible fins que les dades de batimetria estan acabades.
+    let worldSize=size,span=size+2200,
+        resolution=Math.min(segments,Math.max(16,Math.floor(initialSegments)));
+    const makeGeometry=(n=resolution)=>{
+      const g=new THREE.PlaneGeometry(span,span,n,n).rotateX(-Math.PI/2);
       g.setAttribute('seabed',new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count),1));
       g.computeBoundingBox();g.boundingBox.min.y=-model.maxDisplacement;g.boundingBox.max.y=model.maxDisplacement;
       g.boundingSphere=new THREE.Sphere(new THREE.Vector3(),Math.hypot(span/Math.sqrt(2),model.maxDisplacement));
       return g;
     };
-    let geometry=makeGeometry();
+    let geometry=makeGeometry(),refinement=null;
     const mesh=new THREE.Mesh(geometry,material);mesh.name='hunter-water';mesh.renderOrder=2;scene.add(mesh);
     const deep=new THREE.Mesh(new THREE.PlaneGeometry(30000,30000).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x062679}));
     deep.position.y=-90;scene.add(deep);
-    // Una franja única de trencants s'ajusta al perfil real de la platja.
     const shore=coastDetail?window.HUNTER_COAST_FOAM.create(THREE,{
       scene,model,heightAt,time:uniforms.time,foamColor:config.foam
     }):null;
-    // Bathymetry: most deep-ocean samples do not need a full heightAt().
-    // Interpolate a sparse grid, then recompute shore/near-land vertices
-    // exactly so the coast, waterline and player wave physics remain aligned.
     const seabedStats={lastSamples:0,totalVertices:0};
-    const updateSeabed=()=>{
-      const p=geometry.attributes.position,b=geometry.attributes.seabed,
-            width=segments+1,stride=segments>=300?3:2,
-            stops=[];
-      for(let i=0;i<segments;i+=stride)stops.push(i);
-      stops.push(segments);
-      const n=stops.length,coarse=new Float32Array(n*n);
-      let samples=0;
-      for(let rz=0;rz<n;rz++)for(let rx=0;rx<n;rx++){
-        const id=stops[rz]*width+stops[rx];
-        coarse[rz*n+rx]=heightAt(p.getX(id),p.getZ(id));samples++;
-      }
-      const arr=b.array;
-      for(let rz=0;rz<n-1;rz++)for(let rx=0;rx<n-1;rx++){
-        const za=stops[rz],zb=stops[rz+1],xa=stops[rx],xb=stops[rx+1],
-              a=coarse[rz*n+rx],bb=coarse[rz*n+rx+1],
-              c=coarse[(rz+1)*n+rx],d=coarse[(rz+1)*n+rx+1],
-              exactCoast=Math.min(a,bb,c,d)<14&&Math.max(a,bb,c,d)>-14;
-        for(let iz=za;iz<(rz===n-2?zb+1:zb);iz++){
-          const tz=(iz-za)/(zb-za),row=iz*width;
-          for(let ix=xa;ix<(rx===n-2?xb+1:xb);ix++){
-            const tx=(ix-xa)/(xb-xa),
-                  h=(a*(1-tx)+bb*tx)*(1-tz)+(c*(1-tx)+d*tx)*tz,
-                  index=row+ix;
-            // Full precision at shore, even for shallow underwater breaks.
-            if(exactCoast||(h>-14&&h<14)){
-              arr[index]=heightAt(p.getX(index),p.getZ(index));samples++;
-            }else arr[index]=h;
+    // Exactament el mateix càlcul que el mostreig síncron anterior, però
+    // dividit en files per poder-lo repartir entre fotogrames.
+    const sampler=(g,nseg)=>{
+      const p=g.attributes.position,b=g.attributes.seabed,
+            width=nseg+1,stride=nseg>=300?3:2,stops=[];
+      for(let i=0;i<nseg;i+=stride)stops.push(i);
+      stops.push(nseg);
+      const n=stops.length,coarse=new Float32Array(n*n),arr=b.array;
+      let coarseRow=0,fillRow=0,samples=0,done=false;
+      const step=(units=4)=>{
+        for(let unit=0;unit<units&&!done;unit++){
+          if(coarseRow<n){
+            for(let rx=0;rx<n;rx++){
+              const id=stops[coarseRow]*width+stops[rx];
+              coarse[coarseRow*n+rx]=heightAt(p.getX(id),p.getZ(id));samples++;
+            }
+            coarseRow++;continue;
           }
+          if(fillRow<n-1){
+            const rz=fillRow++;
+            for(let rx=0;rx<n-1;rx++){
+              const za=stops[rz],zb=stops[rz+1],xa=stops[rx],xb=stops[rx+1],
+                    a=coarse[rz*n+rx],bb=coarse[rz*n+rx+1],
+                    c=coarse[(rz+1)*n+rx],d=coarse[(rz+1)*n+rx+1],
+                    exactCoast=Math.min(a,bb,c,d)<14&&Math.max(a,bb,c,d)>-14;
+              for(let iz=za;iz<(rz===n-2?zb+1:zb);iz++){
+                const tz=(iz-za)/(zb-za),row=iz*width;
+                for(let ix=xa;ix<(rx===n-2?xb+1:xb);ix++){
+                  const tx=(ix-xa)/(xb-xa),
+                        h=(a*(1-tx)+bb*tx)*(1-tz)+(c*(1-tx)+d*tx)*tz,
+                        index=row+ix;
+                  if(exactCoast||(h>-14&&h<14)){
+                    arr[index]=heightAt(p.getX(index),p.getZ(index));samples++;
+                  }else arr[index]=h;
+                }
+              }
+            }
+            continue;
+          }
+          b.needsUpdate=true;done=true;
         }
-      }
-      seabedStats.lastSamples=samples;seabedStats.totalVertices=p.count;
-      b.needsUpdate=true;
-      if(shore)shore.regenerate(geometry,segments);
+        return done;
+      };
+      return {step,get samples(){return samples},vertices:p.count};
+    };
+    const updateSeabed=()=>{
+      const job=sampler(geometry,resolution);
+      while(!job.step(1000)){}
+      seabedStats.lastSamples=job.samples;seabedStats.totalVertices=job.vertices;
+      if(shore)shore.regenerate(geometry,resolution);
+    };
+    const queueResolutionUpgrade=()=>{
+      if(resolution>=segments||refinement)return false;
+      const nextGeometry=makeGeometry(segments);
+      refinement={geometry:nextGeometry,task:sampler(nextGeometry,segments)};
+      return true;
+    };
+    const stepResolutionUpgrade=(budget=3)=>{
+      if(!refinement)return resolution>=segments;
+      if(!refinement.task.step(Math.max(1,Math.floor(budget))))return false;
+      const old=geometry;
+      geometry=refinement.geometry;resolution=segments;mesh.geometry=geometry;
+      seabedStats.lastSamples=refinement.task.samples;
+      seabedStats.totalVertices=refinement.task.vertices;
+      refinement=null;old.dispose();
+      if(shore)shore.regenerate(geometry,resolution);
+      return true;
+    };
+    const cancelRefinement=()=>{
+      if(refinement){refinement.geometry.dispose();refinement=null}
     };
     const setWorldSize=value=>{
-      if(value!==worldSize){worldSize=value;span=value+2200;const old=geometry;geometry=makeGeometry();mesh.geometry=geometry;old.dispose()}
+      cancelRefinement();
+      if(value!==worldSize){
+        worldSize=value;span=value+2200;
+        const old=geometry;geometry=makeGeometry();mesh.geometry=geometry;old.dispose();
+      }
       updateSeabed();
     };
     // Barycentric interpolation of the SAME vertices/triangles displaced by the shader.
     // This avoids floating above/below the rendered surface on coarse mobile meshes.
     const surfaceHeight=(x,z,time)=>{
       if(Math.abs(x)>span/2||Math.abs(z)>span/2)return model.height(x,z,time,heightAt(x,z));
-      const p=geometry.attributes.position,b=geometry.attributes.seabed,stride=segments+1;
-      const ix=Math.min(segments-1,Math.max(0,Math.floor((x/span+.5)*segments)));
-      const iz=Math.min(segments-1,Math.max(0,Math.floor((z/span+.5)*segments)));
+      const p=geometry.attributes.position,b=geometry.attributes.seabed,stride=resolution+1;
+      const ix=Math.min(resolution-1,Math.max(0,Math.floor((x/span+.5)*resolution)));
+      const iz=Math.min(resolution-1,Math.max(0,Math.floor((z/span+.5)*resolution)));
       const a=iz*stride+ix,c=a+stride+1,d=a+1,bb=a+stride;
       const fx=Math.max(0,Math.min(1,(x-p.getX(a))/(p.getX(d)-p.getX(a))));
       const fz=Math.max(0,Math.min(1,(z-p.getZ(a))/(p.getZ(bb)-p.getZ(a))));
@@ -564,9 +604,9 @@ void main(){
       return fx+fz<=1?h(a)*(1-fx-fz)+h(d)*fx+h(bb)*fz:h(c)*(fx+fz-1)+h(bb)*(1-fx)+h(d)*(1-fz);
     };
     const update=t=>{uniforms.time.value=t};
-    const dispose=()=>{if(shore)shore.dispose();scene.remove(mesh,deep);geometry.dispose();material.dispose();deep.geometry.dispose();deep.material.dispose()};
+    const dispose=()=>{cancelRefinement();if(shore)shore.dispose();scene.remove(mesh,deep);geometry.dispose();material.dispose();deep.geometry.dispose();deep.material.dispose()};
     return {mesh,deep,shore:shore?.mesh||null,shoreStats:shore?.stats||{segments:0},
-      material,get geometry(){return geometry},uniforms,updateSeabed,setWorldSize,surfaceHeight,update,dispose,seabedStats};
+      material,get geometry(){return geometry},get resolution(){return resolution},uniforms,updateSeabed,setWorldSize,queueResolutionUpgrade,stepResolutionUpgrade,surfaceHeight,update,dispose,seabedStats};
   }
 });
 
@@ -672,7 +712,7 @@ window.HUNTER_TERRAIN=Object.freeze({
       const skirtCount=edges.length*2,
             pos=new Float32Array((base+skirtCount)*3),
             col=new Float32Array((base+skirtCount)*3),
-            uv=material.map&&sourceUV?new Float32Array((base+skirtCount)*2):null,
+            uv=(material.map||material.userData?.requiresDetailUV)&&sourceUV?new Float32Array((base+skirtCount)*2):null,
             oldIx=geometry.index.array,
             indices=new Uint16Array(oldIx.length+edges.length*6);
       pos.set(original.array);col.set(colors.array);indices.set(oldIx);
@@ -5546,7 +5586,7 @@ window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,initialTerrain
 setPalmsDisabled(requestedPalmDisable);
 setWaterDisabled(!!document.getElementById('disableWater')?.checked);
 setShadowsDisabled(!!document.getElementById('disableShadows')?.checked);
-if(!seedSearchMode)prepareVisibilitySystem();
+if(!seedSearchMode){prepareVisibilitySystem();waterUpgradePending=true;}
 if(window.HUNTER_PERF_DEBUG)console.info('Hunter · generació',window.HUNTER_BUILD_STATS);
 }
 
@@ -5573,10 +5613,17 @@ const missingSystems=Object.entries({generation:typeof build,combat:typeof fire,
 const materialProfile=(name='organic')=>window.HUNTER_MATERIALS[name]||window.HUNTER_MATERIALS.organic;
 const M=(c,profile='organic')=>new THREE.MeshStandardMaterial({color:vivid(c),flatShading:true,...materialProfile(profile)});
 const MAT={
- terrain:()=>new THREE.MeshLambertMaterial({
-   vertexColors:true,flatShading:!highTerrainTexture,
-   ...(highTerrainTexture?{map:highTerrainTexture}:{})
- }),
+ terrain:()=>{
+   const mat=new THREE.MeshLambertMaterial({
+     vertexColors:true,flatShading:!highTerrainTexture,
+     ...(highTerrainTexture?{map:highTerrainTexture}:{})
+   });
+   if(terrainTextureTask&&!highTerrainTexture){
+     mat.userData.requiresDetailUV=true;
+     awaitingTerrainMaterials.push(mat);
+   }
+   return mat;
+ },
  painted:c=>M(c,'paint'),metal:c=>M(c,'metal'),rubber:c=>M(c,'rubber'),glass:c=>M(c,'glass'),masonry:c=>M(c,'masonry')
 };
 let seed,R,islands,A,Bi,world,B=[],requestedSeed=null;
@@ -5644,8 +5691,20 @@ if(h>3&&h<14&&slope(x,z,h)<2.5&&(!fl||fr(x,z)<2.2)&&!B.some(b=>Math.abs(b.x-x)<b
 const coarse=matchMedia('(pointer:coarse)').matches;
 const qualityName=window.HUNTER_GRAPHICS_QUALITY||((coarse||window.HUNTER_FORCE_LOW_QUALITY)?'mobile':'desktop');
 const visualQuality=window.HUNTER_VISUAL_CONFIG[qualityName];
-const highTerrainTexture=visualQuality.terrainDetailTexture
-  ?window.HUNTER_HIGH_GRAPHICS.createTerrainTexture(THREE):null;
+let highTerrainTexture=null;
+const terrainTextureTask=visualQuality.terrainDetailTexture
+  ?window.HUNTER_HIGH_GRAPHICS.createTerrainTextureTask(THREE):null;
+const awaitingTerrainMaterials=[];
+function advanceTerrainTexture(){
+  if(!terrainTextureTask||highTerrainTexture)return;
+  const tex=terrainTextureTask.advance(4);
+  if(!tex)return;
+  highTerrainTexture=tex;
+  for(const mat of awaitingTerrainMaterials){
+    mat.map=tex;mat.flatShading=false;mat.needsUpdate=true;
+  }
+  awaitingTerrainMaterials.length=0;
+}
 const rendering=window.HUNTER_RENDERING.create(THREE,visualQuality);
 const ren=rendering.renderer,scene=rendering.scene,cam=rendering.camera,sunDir=rendering.sunDir,sun=rendering.sun,sky=rendering.sky,sunM=rendering.sunMesh;
 document.body.prepend(ren.domElement);
@@ -5657,7 +5716,8 @@ const adaptivePerformance=window.HUNTER_PERFORMANCE.create({
   element:document.getElementById('perfStats'),compact:qualityName!=='desktop'
 });
 window.HUNTER_PERFORMANCE_STATS=adaptivePerformance.stats;
-const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segments:visualQuality.waterSegments,heightAt:hAt,config:window.HUNTER_WATER,reflections:visualQuality.waterReflections!==false,coastDetail:!!visualQuality.coastDetail,fogColor:scene.fog.color});
+const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segments:visualQuality.waterSegments,initialSegments:Math.min(160,visualQuality.waterSegments),heightAt:hAt,config:window.HUNTER_WATER,reflections:visualQuality.waterReflections!==false,coastDetail:!!visualQuality.coastDetail,fogColor:scene.fog.color});
+let waterUpgradePending=false;
 const waterMat=water.material,waterUniforms=water.uniforms;
 const movementFx=window.HUNTER_MOVEMENT_FX.create(THREE,{
  scene,quality:qualityName,waveModel:window.HUNTER_WAVES,
@@ -7291,6 +7351,11 @@ mini();ui.renderHUD();}}
 let last=performance.now();
 (function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(started&&!paused&&!over?dt:0),cpuStarted=performance.now();update(dt,t);const simulationEnded=performance.now();if(started&&!paused&&!over&&terrainStream)terrainStream.update(P.x,P.z,visualQuality.shadows?2:1.2,cam,currentSniperFocus());const terrainEnded=performance.now();waves(t);
 sun.target.position.set(P.x,0,P.z);sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();for(const k in renderCategories)renderCategories[k]=0;ren.render(scene,cam);
+if(started&&!paused&&!over){
+  advanceTerrainTexture();
+  if(waterUpgradePending){water.queueResolutionUpgrade();waterUpgradePending=false}
+  water.stepResolutionUpgrade(2);
+}
 adaptivePerformance.sample({dt:rawDt,renderCpuMs:performance.now()-renderStarted,
   updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,
   active:!!started&&!paused&&!over,now});
