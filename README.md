@@ -42,6 +42,14 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Torre de defensa dual i soldats amb bazuca (v0.5.2)
+
+Les torres defensives tenen una metralladora **lleugera** i un canó **pesat** sobre la mateixa torreta orientable. Tenen cadències independents (0,7 s i 4,2 s respectivament) i poden disparar simultàniament quan el jugador és a l'abast; l'arma pesada abasta fins a 95 m. Els impactes pesats utilitzen el sistema balístic de la v0.5.1.
+
+Un de cada **cinc soldats de guàrdia** dels complexos enemics rep el bazuca: el seu model reutilitza exactament la geometria i els materials del bazuca del jugador, amb una silueta simplificada per als LOD mitjà i llunyà. El seu tret és pesat, explosiu, més lent i amb 3,4 s entre trets. El comptador és determinista i no consumeix nombres aleatoris de la llavor; les tropes ordinàries conserven l'armament lleuger i el rifle de franctirador continua essent lleuger.
+
+Proves: `node tests/defense-weapons.cjs` verifica la distribució, la igualtat del model i els dos disparadors independents; també passen `node tests/projectile-classes.cjs`, `node tests/weapon-classification.cjs`, `node tests/compound-generation.cjs` i `node tests/enemy-navigation-world.cjs`.
+
 ## Munició lleugera i pesada (v0.5.1)
 
 Els projectils es classifiquen com a **lleugers** (pistola, rifle de franctirador, armes dels soldats, tanqueta i canó principal de l'helicòpter de combat) o **pesats** (tanc, bazuca, coets i canons explosius). El canó de l'helicòpter normal manté el projectil explosiu que ja tenia; els míssils secundaris de l'helicòpter de combat també són pesats. Les granades i les càrregues d'explosiu utilitzen el mateix model de dany pesat en àrea.
