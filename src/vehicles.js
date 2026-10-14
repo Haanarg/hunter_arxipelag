@@ -27,7 +27,9 @@ window.HUNTER_VEHICLES=Object.freeze({
     model.updateWorldMatrix(true,false);
     const local=worldDirection.clone().normalize().applyQuaternion(
       model.getWorldQuaternion(new THREE.Quaternion()).invert());
-    const yaw=Math.atan2(-local.x,-local.z),
+    // Un objectiu pràcticament vertical no ha de fer girar la torre 180°.
+    const yaw=Math.hypot(local.x,local.z)<1e-4
+            ?pivot.rotation.y:Math.atan2(-local.x,-local.z),
           elev=Math.max(-.42,Math.min(.43,Math.atan2(local.y,Math.hypot(local.x,local.z)))),
           step=Math.min(.08,Math.max(0,dt));
     const approach=(angle,target,key,maxSpeed,wrap)=>{

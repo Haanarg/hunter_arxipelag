@@ -63,8 +63,8 @@ ok("String(nearV).includes('v.reentryLockUntil>elapsed')&&String(toggle).include
   'player cannot re-enter the helicopter immediately after a jump');
 ok("String(ejectFromHelicopter).includes('playerFall.parachute=chute')&&String(update).includes('playerFall.parachute?0:')",
   'parachute auto-deploys and negates landing damage');
-ok("String(fire).includes('autoAimArmoredShot(x,y,z,fx_,fz,220)')&&String(fire).includes('Pj[Pj.length-1].life=4.4')",
-  'tank firing and aim range doubled');
+ok("String(update).includes('autoAimArmoredShot(')&&String(update).includes('range=cv.t===\\'tanc\\'?220:85')&&String(fire).includes('turretShot(THREE,cv.o)')&&String(fire).includes('Pj[Pj.length-1].life=4.4')",
+  'armored shots use the rotating barrel and preserve the tank autoaim range');
 // Rifle muzzle and convergence are checked behaviorally below, after scope input.
 assert(additionalAiSource.includes('function soldierEnterBuilding')&&
   additionalAiSource.includes('soldierEnterBuilding(u,ib,target,dt)')&&
