@@ -45,6 +45,35 @@ seedRandom.addEventListener('change',()=>{
     if(!seedRandom.checked)seedInput.focus();
   }
 });
+// Precarrega els recursos de xarxa mentre el menú continua interactiu.
+ // No executa el motor ni crea WebGL: només importa Three.js i demana els scripts.
+ // L'arrencada real continua sota el control de loadGame().
+let bootPreloadStarted=false;
+function preloadEngine(){
+  if(bootPreloadStarted||window.HUNTER_READY)return;
+  const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+  if(connection?.saveData||/^(slow-2g|2g)$/.test(connection?.effectiveType||''))return;
+  bootPreloadStarted=true;
+  import('../vendor/three-r186.module.mjs').catch(error=>{
+    console.info('Three.js es carregarà en prémer Comença',error);
+  });
+  // Els fitxers clàssics encara s'executaran EN ORDRE quan bootstrap els insereixi.
+  import('./runtime-scripts.mjs').then(({runtimeScripts})=>{
+    for(const path of runtimeScripts){
+      const url=new URL('../'+path,import.meta.url);
+      url.searchParams.set('v',GAME_VERSION);
+      const link=document.createElement('link');
+      link.rel='preload';link.as='script';link.href=url.href;
+      link.fetchPriority='low';
+      document.head.appendChild(link);
+    }
+  }).catch(error=>console.info('Precarrega opcional no disponible',error));
+}
+if(params.get('eager')!=='1'){
+  if(typeof requestIdleCallback==='function')
+    requestIdleCallback(preloadEngine,{timeout:1500});
+  else setTimeout(preloadEngine,450);
+}
 let bootPromise=null,requestPending=false;
 const showLoading=(message)=>{
   loadingLabel.textContent=message;
