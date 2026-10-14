@@ -47,7 +47,13 @@ module.exports=async function createGame(root=path.resolve(__dirname,'..')){
   c.worldGenSrc=fs.readFileSync(path.join(root,'src/world-generation.js'),'utf8');
   c.vehSrc=fs.readFileSync(path.join(root,'src/vehicles.js'),'utf8');
   c.riderSrc=fs.readFileSync(path.join(root,'src/rider.js'),'utf8');
-  for(const src of scripts)vm.runInContext(fs.readFileSync(path.join(root,src),'utf8'),c,{filename:src,timeout:60000});
+  if(process.env.HUNTER_TEST_BUNDLE==='1'){
+    const {RUNTIME_BUNDLE_PATH}=await import(require('url').pathToFileURL(path.join(root,'src/runtime-bundle.mjs')).href);
+    if(!RUNTIME_BUNDLE_PATH)throw new Error('El manifest del runtime no conté cap paquet');
+    vm.runInContext(fs.readFileSync(path.join(root,RUNTIME_BUNDLE_PATH),'utf8'),c,
+      {filename:RUNTIME_BUNDLE_PATH,timeout:60000});
+  }else for(const src of scripts)
+    vm.runInContext(fs.readFileSync(path.join(root,src),'utf8'),c,{filename:src,timeout:60000});
   c.VD=c.HUNTER_VEHICLE_DYNAMICS;
   const run=s=>vm.runInContext(s,c,{timeout:120000});
   return {run,el,start(seed='12345',scale=1){el('seedInput').value=seed;el('mapSize').value=String(scale);button.onclick()},frame(ms=16){now+=ms;nextFrame(now)},context:c};
