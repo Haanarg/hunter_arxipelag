@@ -51,7 +51,7 @@ const assert=require('node:assert/strict');
       check(lootAllowed('arma',workshop),'workshop must allow ammunition');
       check(lootAllowed('cisalla',workshop),'workshop must allow tools');
       check(lootAllowed('bazooka',polvori),'polvorí must allow bazooka');
-      return {checks,seed,scale,polvorins:polvorins.length,hangars:hangars.length,
+      return {checks,seed,scale:MAP_SCALE,polvorins:polvorins.length,hangars:hangars.length,
         mapCounts:items.reduce((acc,it)=>(LOOT_MAPS.has(it.t)&&(acc[it.t]=(acc[it.t]||0)+1),acc),{}),
         workshopAmmo:hangars.reduce((n,c)=>n+c.loot.filter(it=>it.t==='arma').length,0),
         totalPickups:items.length};
