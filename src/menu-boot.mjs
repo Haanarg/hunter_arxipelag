@@ -1,4 +1,5 @@
 import {GAME_VERSION} from './version.mjs';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs';
 
 // La portada no carrega Three.js, WebGL, el món ni una llavor de fons.
 // Una imatge estàtica renderitzada amb la llavor 67 és suficient.
@@ -57,16 +58,18 @@ function preloadEngine(){
   import('../vendor/three-r186.module.mjs').catch(error=>{
     console.info('Three.js es carregarà en prémer Comença',error);
   });
-  // Els fitxers clàssics encara s'executaran EN ORDRE quan bootstrap els insereixi.
-  import('./runtime-scripts.mjs').then(({runtimeScripts})=>{
-    for(const path of runtimeScripts){
-      const url=new URL('../'+path,import.meta.url);
-      url.searchParams.set('v',GAME_VERSION);
-      const link=document.createElement('link');
-      link.rel='preload';link.as='script';link.href=url.href;
-      link.fetchPriority='low';
-      document.head.appendChild(link);
-    }
+  const preloadScript=(path,versioned=false)=>{
+    const url=new URL('../'+path,import.meta.url);
+    if(versioned)url.searchParams.set('v',GAME_VERSION);
+    const link=document.createElement('link');
+    link.rel='preload';link.as='script';link.href=url.href;
+    link.fetchPriority='low';
+    document.head.appendChild(link);
+  };
+  if(RUNTIME_BUNDLE_PATH)preloadScript(RUNTIME_BUNDLE_PATH);
+  else import('./runtime-scripts.mjs').then(({runtimeScripts})=>{
+    // Mode compatible si encara no s'ha desplegat el bundle.
+    for(const path of runtimeScripts)preloadScript(path,true);
   }).catch(error=>console.info('Precarrega opcional no disponible',error));
 }
 if(params.get('eager')!=='1'){
