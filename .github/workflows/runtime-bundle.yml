@@ -1,0 +1,42 @@
+name: Generar i verificar el runtime agrupat
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tools/build-runtime.cjs'
+      - '!src/runtime-bundle.mjs'
+      - '!dist/**'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: hunter-runtime-build
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Agrupar fitxers en ordre
+        run: node tools/build-runtime.cjs
+      - name: Comprovar el hash i la integritat
+        run: node tools/build-runtime.cjs --check
+      - name: Executar regressió amb el paquet únic
+        run: HUNTER_TEST_BUNDLE=1 node tests/smoke.cjs
+      - name: Publicar només si han passat les proves
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/runtime-bundle.mjs dist/
+          if ! git diff --cached --quiet; then
+            git commit -m "build: actualitzar runtime agrupat i hash"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
