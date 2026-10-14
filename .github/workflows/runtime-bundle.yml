@@ -5,6 +5,9 @@ on:
     paths:
       - 'src/**'
       - 'tools/build-runtime.cjs'
+      - 'tests/harness.cjs'
+      - 'tests/high-graphics.cjs'
+      - 'tests/water.cjs'
       - '!src/runtime-bundle.mjs'
       - '!dist/**'
   workflow_dispatch:
@@ -12,7 +15,7 @@ permissions:
   contents: write
 concurrency:
   group: hunter-runtime-build
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,6 +33,11 @@ jobs:
         run: node tools/build-runtime.cjs --check
       - name: Executar regressió amb el paquet únic
         run: HUNTER_TEST_BUNDLE=1 node tests/smoke.cjs
+      - name: Verificar ocean i qualitats visuals
+        run: |
+          node tests/water.cjs
+          node tests/high-graphics.cjs
+          node tests/startup-cache.cjs
       - name: Publicar només si han passat les proves
         run: |
           git config user.name "github-actions[bot]"
