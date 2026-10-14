@@ -4220,7 +4220,19 @@ function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc){
   const shotClass=shotClassFromSplash(spl),speed=sp*(shotClass==='heavy'?HEAVY_SHOT_SPEED_FACTOR:1),
         power=dmg*(shotClass==='heavy'?HEAVY_SHOT_DAMAGE_FACTOR:1);
   snd(spl?'cannon':'shot',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/140)*(own=='e'?.6:1));
-  const o=new THREE.Mesh(gB,mat);o.scale.setScalar(sc);o.position.set(x,y,z);world.add(o);
+  // Les bales petites conserven el seu model; les pesades són ojives
+  // amb la punta orientada exactament segons el vector de velocitat.
+  // La rotació no depèn del rumb del vehicle i també funciona en tirs
+  // ascendents, descendents i diagonals.
+  const heavy=shotClass==='heavy';
+  const o=new THREE.Mesh(heavy?gHeavy:gB,mat);
+  o.scale.setScalar(sc);
+  if(heavy){
+    const heading=new THREE.Vector3(dx,dy,dz);
+    if(heading.lengthSq()>1e-12)
+      o.quaternion.setFromUnitVectors(heavyForward,heading.normalize());
+  }
+  o.position.set(x,y,z);world.add(o);
   Pj.push({x,y,z,vx:dx*speed,vy:dy*speed,vz:dz*speed,dmg:power,spl,shotClass,own,life:2.2,o})
 }
 function boom(x,y,z,r,dmg,own){snd('boom',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/200));const o=new THREE.Mesh(sphG,new THREE.MeshBasicMaterial({color:0xffa030,transparent:true}));o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6});
