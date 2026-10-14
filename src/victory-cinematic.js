@@ -1,7 +1,7 @@
 // Cinemàtica de victòria: la simulació queda aturada, però l'escena,
  // la càmera, les gavines i el mar continuen renderitzant-se.
 const VICTORY_REPLAY_SECONDS=2.35,VICTORY_OVERHEAD_SECONDS=3.25,
-      VICTORY_SUNSET_SECONDS=4.7;
+      VICTORY_SUNSET_SECONDS=8.7;
 let victoryCinematic=null;
 
 const victoryClamp=t=>Math.max(0,Math.min(1,t));
@@ -87,6 +87,7 @@ function victoryUi(show){
 function clearVictoryCinematic(){
   const v=victoryCinematic;if(!v)return;
   victoryUi(false);
+  if(v.pose)window.HUNTER_VICTORY_POSE.apply(v.pose,0);
   if(v.bullet)scene.remove(v.bullet);
   if(v.impactFlash)scene.remove(v.impactFlash);
   for(const gull of v.gulls)scene.remove(gull.o);
@@ -99,9 +100,7 @@ function startVictoryCinematic(general,killingShot=null){
   if(victoryCinematic||!general?.o)return false;
   const shot=victoryShotSnapshot(general,killingShot),
         seaDir=victoryFindSea(general),base=general.o.position.clone(),
-        initialQuaternion=general.o.quaternion.clone(),
-        axis=new THREE.Vector3(0,1,0).cross(shot.direction.clone().setY(0)).normalize(),
-        fallingAxis=axis.lengthSq()<.001?new THREE.Vector3(1,0,0):axis;
+        pose=window.HUNTER_VICTORY_POSE.capture(THREE,general.o,shot.direction);
   setSniperScope(false);
   over=1;Object.keys(K).forEach(k=>K[k]=0);
   if(eng)eng.g.gain.value=0;
@@ -157,42 +156,60 @@ function startVictoryCinematic(general,killingShot=null){
     if(level<-1.5)break;
   }
   seaCamera.y=Math.max(20,hAt(seaCamera.x,seaCamera.z)+16);
-  victoryCinematic={active:true,t:0,phase:'replay1',general,base,initialQuaternion,
-    fallingAxis,shot,seaDir,seaCamera,bullet:bg,impactFlash:flash,
+  victoryCinematic={active:true,t:0,phase:'replay1',general,base,pose,
+    shot,seaDir,seaCamera,bullet:bg,impactFlash:flash,
     gulls,overlay,caption,title,hint,originalVisibility:{},
     lastReplay:-1,cryTime:0,finished:false};
   victoryUi(true);endEl.style.display='none';
   return true;
 }
 function victorySetFall(progress){
-  const v=victoryCinematic,u=v.general,fall=victoryEase(progress);
-  u.o.quaternion.copy(v.initialQuaternion)
-    .multiply(new THREE.Quaternion().setFromAxisAngle(v.fallingAxis,1.55*fall));
-  u.o.position.copy(v.base);
-  u.o.position.y+=.12*Math.sin(Math.PI*fall);
-  const rig=u.o.userData;
-  if(rig?.arms){
-    rig.arms.forEach((a,i)=>{a.rotation.x=(i?-.72:.85)*fall;
-      a.rotation.z=(i?.85:-.9)*fall});
-  }
-  if(rig?.knees)rig.knees.forEach((k,i)=>{k.rotation.x=-(i?.4:.7)*fall});
-  if(rig?.elbows)rig.elbows.forEach((e,i)=>{e.rotation.x=(i?.45:.8)*fall});
+  // Exactament la mateixa postura que a final-proves.html:
+  // braços alçats abans del cop, colzes enfora i rotació sobre el maluc.
+  window.HUNTER_VICTORY_POSE.apply(victoryCinematic.pose,progress);
 }
 function victoryAnimateGulls(v){
-  const offset=v.t-(VICTORY_REPLAY_SECONDS*3+VICTORY_OVERHEAD_SECONDS);
+  // Entrada per darrere de la càmera, des del costat esquerre.
+  // Creuen el quadre amb aleteig visible i fugen cap a la dreta
+  // fins al mar i a l'horitzó, no orbiten al voltant de la càmera.
+  const offset=v.t-(VICTORY_REPLAY_SECONDS*3+VICTORY_OVERHEAD_SECONDS)-2.15,
+        forward=new THREE.Vector3(sunDir.x,0,sunDir.z).normalize(),
+        right=new THREE.Vector3(-forward.z,0,forward.x),
+        cameraBase=v.seaCamera;
   for(const gull of v.gulls){
-    const i=gull.index,span=50+i*8,side=((i%5)-2)*12,
-      lateral=new THREE.Vector3(-v.seaDir.z,0,v.seaDir.x);
-    gull.o.visible=true;
-    gull.o.position.copy(v.seaCamera)
-      .addScaledVector(v.seaDir,span+offset*.7)
-      .addScaledVector(lateral,side+Math.sin(v.t*.7+i)*5);
-    gull.o.position.y+=5+(i%4)*4+Math.sin(v.t*1.2+i)*1.7;
-    gull.o.rotation.y=Math.atan2(-v.seaDir.x,-v.seaDir.z);
-    gull.wl.rotation.z=Math.sin(v.t*5+i*1.8)*.48;
-    gull.wr.rotation.z=-gull.wl.rotation.z;
+    const i=gull.index,local=offset-i*.17,
+          p=victoryClamp(local/(4.25+i*.10));
+    gull.o.visible=local>=0&&p<1;
+    if(!gull.o.visible)continue;
+    const launch=cameraBase.clone()
+      .addScaledVector(forward,-9-i*.65)
+      .addScaledVector(right,-16-i*2);
+    launch.y+=4+(i%3)*2;
+    const cross=cameraBase.clone()
+      .addScaledVector(forward,25+i*3)
+      .addScaledVector(right,2+(i%4)*2);
+    cross.y+=5+(i%4)*1.6;
+    const horizon=cameraBase.clone()
+      .addScaledVector(forward,215+i*27)
+      .addScaledVector(right,85+i*9);
+    horizon.y+=3+(i%5);
+    const waypoint=.37,
+          f=p<waypoint?victoryEase(p/waypoint):victoryEase((p-waypoint)/(1-waypoint));
+    gull.o.position.copy(p<waypoint?launch:cross)
+      .lerp(p<waypoint?cross:horizon,f);
+    // La cara del model de gavina apunta a -Z.
+    const tangent=(p<waypoint
+      ?cross.clone().sub(launch)
+      :horizon.clone().sub(cross)).normalize();
+    gull.o.rotation.y=Math.atan2(-tangent.x,-tangent.z);
+    gull.o.rotation.z=Math.sin(v.t*2.3+i)*.12;
+    const flap=Math.sin(local*8.1+i*.55)*.66;
+    gull.wl.rotation.z=flap;
+    gull.wr.rotation.z=-flap;
+    const size=.95+(i%4)*.33;
+    gull.o.scale.setScalar(size*(1-.62*victoryEase(p)));
   }
-  if(offset>1.2&&v.t-v.cryTime>1.7){victoryGullCry();v.cryTime=v.t}
+  if(offset>0&&v.t-v.cryTime>2.1){victoryGullCry();v.cryTime=v.t}
 }
 function updateVictoryCinematic(dt){
   const v=victoryCinematic;
@@ -250,14 +267,16 @@ function updateVictoryCinematic(dt){
     const from=new THREE.Vector3(base.x+Math.sin(1.3)*185*.12,base.y+185,
       base.z+Math.cos(1.3)*185*.12);
     cam.position.copy(from).lerp(v.seaCamera,f);
+    // Mateix sol, cúpula i il·luminació que durant la partida.
+    // El sol de rendering.js es posiciona a cam.position+sunDir*distància.
+    // No creem cap sol nou ni canviem la direcció per mirar un mar fictici.
     const down=new THREE.Vector3(base.x,base.y+.5,base.z),
-          horizon=v.seaCamera.clone().addScaledVector(v.seaDir,340);
-    horizon.y=v.seaCamera.y+10;
-    cam.lookAt(down.lerp(horizon,f));
+          realSun=v.seaCamera.clone().addScaledVector(sunDir,1000);
+    cam.lookAt(down.lerp(realSun,f));
     const fov=54+6*f;
     if(Math.abs(cam.fov-fov)>.01){cam.fov=fov;cam.updateProjectionMatrix()}
-    v.title.style.opacity=String(victoryEase((v.t-overheadEnd-2.0)/1.15));
-    v.title.style.transform='scale('+(1-.04*(1-victoryEase((v.t-overheadEnd-2)/1.3)))+')';
+    v.title.style.opacity=String(victoryEase((v.t-overheadEnd-3.1)/1.2));
+    v.title.style.transform='scale('+(1-.04*(1-victoryEase((v.t-overheadEnd-3.1)/1.3)))+')';
     victoryAnimateGulls(v);
     if(v.t>=end){
       v.phase='finished';v.finished=true;v.active=false;
