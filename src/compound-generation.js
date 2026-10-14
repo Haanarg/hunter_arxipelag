@@ -140,7 +140,11 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
   for(const loot of layout.loot){
     if(loot.kind==='disfressa'&&R()>=.5)continue;
     const t=lootKinds[loot.kind];if(!IT[t])throw new Error('Unknown compound loot: '+loot.kind);
-    const [x,z]=tr(loot.x,loot.z),o=addItemAt(t,x,z),item=items[items.length-1];item.compound=record.id;record.loot.push(item);
+    const [x,z]=tr(loot.x,loot.z);
+    if(!lootAllowed(t,null,x,z,record.id))continue;
+    const o=addItemAt(t,x,z,record.id);
+    if(!o)continue;
+    const item=items[items.length-1];item.compound=record.id;record.loot.push(item);
   }
   return record;
 }
