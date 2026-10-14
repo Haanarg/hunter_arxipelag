@@ -5296,7 +5296,11 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
   for(const loot of layout.loot){
     if(loot.kind==='disfressa'&&R()>=.5)continue;
     const t=lootKinds[loot.kind];if(!IT[t])throw new Error('Unknown compound loot: '+loot.kind);
-    const [x,z]=tr(loot.x,loot.z),o=addItemAt(t,x,z),item=items[items.length-1];item.compound=record.id;record.loot.push(item);
+    const [x,z]=tr(loot.x,loot.z);
+    if(!lootAllowed(t,null,x,z,record.id))continue;
+    const o=addItemAt(t,x,z,record.id);
+    if(!o)continue;
+    const item=items[items.length-1];item.compound=record.id;record.loot.push(item);
   }
   return record;
 }
@@ -5649,15 +5653,24 @@ markBuildStage('vegetationAndFauna');HQ={x:hqCompound.buildings[0].x,z:hqCompoun
 const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2);
 const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1),x=cx+Math.cos(a)*d,z=cz+Math.sin(a)*d;if(gl(x,z))return mkEn(t,x,z)}return null};
 islands.forEach(i=>{if(i===A||i===Bi||R()<.5)return;const q=land(i,60);if(!q)return;for(let k=0;k<1+(R()<.4);k++)sp2('soldat',q.x,q.z,0,10);if(R()<.25)sp2('torre',q.x,q.z,5,12)});
-rb.forEach(b=>{const n=R()<.25?0:R()<.6?1:2,pool=['arma','arma','med','med','expl','granada','granada','disf','mapa','bazooka','franctirador','paracaigudes'];for(let k=0;k<n;k++){
-  const kind=pool[Math.floor(R()*pool.length)];
-  addIt(kind==='granada'&&b.kind==='garage'?'cisalla':kind,b)
-}});
+rb.forEach(b=>{
+  const n=R()<.25?0:R()<.6?1:2;
+  const pool=['arma','arma','med','med','expl','granada','granada','disf','mapa','bazooka','franctirador','paracaigudes']
+    .filter(t=>lootAllowed(t,b));
+  for(let k=0;k<n&&pool.length;k++){
+    const kind=pool[Math.floor(R()*pool.length)];
+    addIt(kind,b);
+  }
+});
 addIt('arma',B[0]);addIt('expl',B[1]);addIt('med',B[2]);
-addIt('franctirador',rb[Math.floor(R()*rb.length)]||B[2]);
-rb.slice().sort(()=>R()-.5).slice(0,2).forEach(b=>addIt('mapa',b));
-rb.slice().sort(()=>R()-.5).slice(0,1+MAP_SCALE).forEach(b=>addIt('mapa_heli',b));
-rb.slice().sort(()=>R()-.5).slice(0,1+MAP_SCALE).forEach(b=>addIt('mapa_tanc',b));
+// Les recollides garantides s'han de buscar entre edificis que realment
+// acceptin aquell tipus d'objecte: no perdre mapes per haver triat polvorins.
+const lootBuildings=t=>rb.filter(b=>lootAllowed(t,b));
+const sniperSites=lootBuildings('franctirador');
+addIt('franctirador',sniperSites[Math.floor(R()*sniperSites.length)]||B[2]);
+for(const [type,count]of[['mapa',2],['mapa_heli',1+MAP_SCALE],['mapa_tanc',1+MAP_SCALE]]){
+  lootBuildings(type).sort(()=>R()-.5).slice(0,count).forEach(b=>addIt(type,b));
+}
 markBuildStage('enemiesAndLoot');
 P.x=pa.x;P.z=pa.z+20;P.hd=0;P.base={x:pa.x,z:pa.z};V=[];cv=null;mm=null;
 const add=(t,x,z,a,meta={})=>{const o=mkV(t),c=VT[t],surface=Math.max(0,hAt(x,z)),v={t,x,z,hd:a||0,v:0,alt:c.m==='a'?helicopterLandedAltitude({o},surface):surface+.8,o,armor:c.armor??0,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};if(t==='heli_combat')v.rockets=6;if(t==='llanxa_coets')v.rockets=Infinity;world.add(o);V.push(v);return v};
