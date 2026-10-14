@@ -42,6 +42,15 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Munició lleugera i pesada (v0.5.1)
+
+Els projectils es classifiquen com a **lleugers** (pistola, rifle de franctirador, armes dels soldats, tanqueta i canó principal de l'helicòpter de combat) o **pesats** (tanc, bazuca, coets i canons explosius). El canó de l'helicòpter normal manté el projectil explosiu que ja tenia; els míssils secundaris de l'helicòpter de combat també són pesats. Les granades i les càrregues d'explosiu utilitzen el mateix model de dany pesat en àrea.
+
+- Els lleugers travessen la filferrada sense danyar-la, impacten en les construccions però no danyen les parets ni teulades militars i no poden reduir la vida de tanquetes, tancs, helicòpters blindats o torres. Sí que danyen soldats, general i vehicles no blindats.
+- Els pesats viatgen al 78% de la velocitat anterior i tenen un multiplicador de dany del 130%; detonen en impactar i poden destruir filferrades, edificis i blindats. Les granades i els explosius conserven els seus radis i temporitzadors, amb dany pesat.
+- L'autoapuntat lleuger ignora les unitats blindades i les torres; l'autoapuntat pesat les considera objectius vàlids.
+- Proves: `node tests/projectile-classes.cjs`, `node tests/weapon-classification.cjs`, `node tests/bullet-impact-fx.cjs`, `node tests/smoke.cjs` i `node tests/compound-generation.cjs`.
+
 ## Reducció del temps de generació (v0.4.31)
 
 La cerca de ports garantits comprova primer cinc ancoratges interiors estables per illa i revalida l'emplaçament amb el mateix validador de costa. Això evita la combinació anterior de 40 intents per illa, cadascun amb fins a 22 cerques de terreny. Si no troba ports, disposa d'una cerca aleatòria acotada. Les posicions dels complexos poden canviar respecte de versions anteriors, però la reproducció de llavors dins la mateixa versió continua funcionant.
