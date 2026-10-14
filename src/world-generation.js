@@ -245,7 +245,7 @@ const portSiteFeasible=q=>{
 const compound=(type,q)=>{
   const approvedId={avancada:'outpost',garatge:'hangar',port:'port',heliport:'heliport',polvori:'polvori',comunicacions:'comunicacions'}[type];
   if(approvedId){
-    if(type==='port'){if(!portSiteFeasible(q))return false;q=findRedesignedPort(q);if(!q)return false}
+    if(type==='port'&&!q.portPrepared){if(!portSiteFeasible(q))return false;q=findRedesignedPort(q);if(!q)return false}
     if(!compoundSiteClear(type,q,0))return false;
     const layout=window.HUNTER_COMPOUND_LAYOUTS.find(l=>l.id===approvedId);
     if(layout.phase===2){const r=Math.max(...layout.size)/2;for(const dx of[-r,0,r])for(const dz of[-r,0,r])if(rawHAt(q.x+dx,q.z+dz)<.1)return false;}
@@ -281,8 +281,42 @@ const reserveHeliportFallback=()=>{
 const heliportTarget=1+MAP_SCALE;
 let heliportsMade=0;for(let n=0;n<heliportTarget;n++){const q=forceReserve('heliport',n?160:210)||reserveHeliportFallback();if(q)heliportsMade++}
 markBuildStage('militaryCompounds');
-let guaranteedPorts=0;for(const i of candidateIslands){if(guaranteedPorts>=2*MAP_SCALE)break;if(usedSpecialIslands.has(i))continue;for(let attempt=0;attempt<40;attempt++){const q=findPortSite(i,22);if(!q||!compoundSiteClear('port',q,180))continue;if(compound('port',q)){usedPortIslands.add(i);guaranteedPorts++;break}}}
+let guaranteedPorts=0,fastPortCandidates=0,fastPortAccepted=0;
+// Les recerques antigues partien de punts aleatoris a terra i repetien
+// fins a 40*22 intents per illa. El traçat del port només necessita
+// una costa en la direcció dels eixos del layout: provam primer uns
+// ancoratges interiors estables, sense crides a R() ni models provisionals.
+// El validador original confirma cada ubicació i preserva l'espai d'aigua.
+for(const i of candidateIslands){
+  if(guaranteedPorts>=2*MAP_SCALE)break;
+  if(usedSpecialIslands.has(i))continue;
+  const r=i.r*.24,anchors=[
+    [i.x,i.z],[i.x+r,i.z],[i.x-r,i.z],[i.x,i.z+r],[i.x,i.z-r]
+  ];
+  for(const [x,z] of anchors){
+    fastPortCandidates++;
+    const site=findRedesignedPort({x,z,r:i.r});
+    if(!site||!compoundSiteClear('port',site,180))continue;
+    if(compound('port',{...site,portPrepared:true})){
+      usedPortIslands.add(i);guaranteedPorts++;fastPortAccepted++;break;
+    }
+  }
+}
+// Compatibilitat per a llavors geogràficament difícils: cerca restringida
+// en les illes encara lliures. Mai no recalculam les illes ja resoltes.
+for(const i of candidateIslands){
+  if(guaranteedPorts>=2*MAP_SCALE)break;
+  if(usedSpecialIslands.has(i)||usedPortIslands.has(i))continue;
+  for(let attempt=0;attempt<4;attempt++){
+    const q=findPortSite(i,6);
+    if(!q||!compoundSiteClear('port',q,180))continue;
+    if(compound('port',q)){usedPortIslands.add(i);guaranteedPorts++;break}
+  }
+}
 if(!guaranteedPorts){for(const i of candidateIslands){if(usedSpecialIslands.has(i))continue;const q=findPortSite(i,32);if(q&&compoundSiteClear('port',q,110)&&compound('port',q)){usedPortIslands.add(i);guaranteedPorts=1;break}}}
+buildCounters.guaranteedPorts=guaranteedPorts;
+buildCounters.fastPortCandidates=fastPortCandidates;
+buildCounters.fastPortAccepted=fastPortAccepted;
 markBuildStage('guaranteedPorts');
 islands.forEach(i=>{if(i===A||i===Bi||usedPortIslands.has(i)||usedSpecialIslands.has(i))return;const roll=R();let type=roll<.25?'avancada':roll<.5?'garatge':roll<.72?'polvori':roll<.86?'comunicacions':'port',q=null;
 for(let n=0;n<10&&!q;n++){const c=land(i,700,1);if(c&&compoundSiteClear(type,c,150))q=c}if(!q)return;q.r=i.r;
@@ -450,7 +484,7 @@ markBuildStage('jetSkis');
 P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0,0,0));prepareEnemyNavigation();const staticBatchStats=seedSearchMode?null:batchStaticDecor();if(!seedSearchMode&&visualQuality.shadows)prepareShadowCasters();else shadowCandidates.length=0;cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);
 markBuildStage('finalizationAndBatching');
 seedCompounds=compoundCenters.map(c=>({type:c.type,x:c.x,z:c.z}));
-window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,stages:buildStages,initialTerrainMs,seabedMs,vegetationMs,seabedSamples:seedSearchMode?0:water.seabedStats.lastSamples,terrainTiles:terrain?.stats||null,palms:PM.stats,staticBatches:staticBatchStats};
+window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,stages:buildStages,portSearch:buildCounters,initialTerrainMs,seabedMs,vegetationMs,seabedSamples:seedSearchMode?0:water.seabedStats.lastSamples,terrainTiles:terrain?.stats||null,palms:PM.stats,staticBatches:staticBatchStats};
 setPalmsDisabled(requestedPalmDisable);
 setWaterDisabled(!!document.getElementById('disableWater')?.checked);
 setShadowsDisabled(!!document.getElementById('disableShadows')?.checked);
