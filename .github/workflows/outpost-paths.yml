@@ -5,6 +5,7 @@ on:
     paths:
       - 'tests/outpost-paths.cjs'
       - 'src/world-generation.js'
+      - 'src/game-core.js'
       - '.github/workflows/outpost-paths.yml'
   workflow_dispatch:
 permissions:
