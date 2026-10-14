@@ -15,9 +15,28 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
  const texels=texture.image.data;
  assert(new Set(Array.from(texels).filter((_,i)=>i%4===0)).size>8,'detail texture varies spatially');
  assert.equal(texture.anisotropy,4);
+ const task=ctx.HUNTER_HIGH_GRAPHICS.createTerrainTextureTask(THREE,32);
+ assert.equal(task.progress,0);
+ assert.equal(task.advance(4),null,'first pass must not create the texture');
+ assert.equal(task.progress,4/32);
+ let incremental=null;
+ while(!incremental)incremental=task.advance(4);
+ assert.equal(incremental.image.width,32);
+ incremental.dispose();
  const game=await require('./harness.cjs')();
- assert(game.run('!!highTerrainTexture&&!!MAT.terrain().map'),'high-profile terrain uses procedural map');
+ assert(game.run('!highTerrainTexture&&terrainTextureTask.progress===0'),'defer the procedural texture while engine loads');
  game.start('67');
+ assert(game.run('water.resolution===160&&!highTerrainTexture'),'first playable scene uses reduced water grid and pending texture');
+ const warmup=game.run(`(()=>{
+   while(!highTerrainTexture)advanceTerrainTexture();
+   const queued=water.queueResolutionUpgrade();
+   let steps=0;
+   while(!water.stepResolutionUpgrade(6)&&steps++<150){} 
+   return {queued,steps,ready:water.resolution===visualQuality.waterSegments,
+     mapped:terrainStream.mesh.children.filter(m=>m.userData.terrainTile)
+       .every(m=>m.material.map===highTerrainTexture)};
+ })()`);
+ assert(warmup.queued&&warmup.ready&&warmup.mapped,'graphics warmup must finish without changing the terrain model '+JSON.stringify(warmup));
  const report=game.run(`(()=>{
    const player=shadowCandidates.filter(e=>e.owner===pl),active=player.filter(e=>e.mesh.castShadow),
      terrain=terrainStream.mesh.children.filter(m=>m.userData.terrainTile&&m.receiveShadow),
