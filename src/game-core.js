@@ -1827,8 +1827,17 @@ mini();ui.renderHUD();}}
 
 
 let last=performance.now();
-(function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(started&&!paused&&!over?dt:0),cpuStarted=performance.now();update(dt,t);const simulationEnded=performance.now();if(started&&!paused&&!over&&terrainStream)terrainStream.update(P.x,P.z,visualQuality.shadows?2:1.2,cam,currentSniperFocus());const terrainEnded=performance.now();waves(t);
-sun.target.position.set(P.x,0,P.z);sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();for(const k in renderCategories)renderCategories[k]=0;ren.render(scene,cam);
+(function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(victoryCinematic?victoryCinematic.t:started&&!paused&&!over?dt:0),cpuStarted=performance.now();
+update(dt,t);
+if(victoryCinematic?.active)updateVictoryCinematic(dt);
+const simulationEnded=performance.now();
+if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
+  terrainStream.update(victoryCinematic?.active?cam.position.x:P.x,
+    victoryCinematic?.active?cam.position.z:P.z,visualQuality.shadows?2:1.2,cam,
+    victoryCinematic?.active?null:currentSniperFocus());const terrainEnded=performance.now();waves(t);
+sun.target.position.set(victoryCinematic?cam.position.x:P.x,0,
+  victoryCinematic?cam.position.z:P.z);
+sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();for(const k in renderCategories)renderCategories[k]=0;ren.render(scene,cam);
 if(started&&!paused&&!over){
   advanceTerrainTexture();
   if(waterUpgradePending){water.queueResolutionUpgrade();waterUpgradePending=false}
