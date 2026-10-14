@@ -1119,7 +1119,7 @@ run(`{
       normal[0]>hard[0]&&easy[0]>normal[0]&&
       normal[1]>0&&easy[1]>normal[1]&&explosive[0]>easy[0]&&
       [hard,normal,easy,explosive].every(dir=>Math.abs(Math.hypot(...dir)-1)<1e-10);
-    globalThis.enemyAccuracyAppliedToAll=String(updEn).split('enemyShotDirection(u,q,py,').length===3;
+    globalThis.enemyAccuracyAppliedToAll=String(updEn).split('enemyShotDirection(u,q,py,').length>=4;
   }finally{DIF=previousDifficulty}
 }`);
 ok('enemyAccuracyDifficultyScaled','Hard preserves old enemy accuracy; Normal and Easy progressively miss more often');
@@ -1219,7 +1219,7 @@ run(`{
     f.includes("470,65,0,'p',mW,SMALL_ARMS_SCALE")&&
     f.includes("135,10,0,'p',mW,SMALL_ARMS_SCALE")&&
     en.includes("70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE")&&
-    en.includes("u.t==='tanqueta'||u.t==='general'")&&
+    en.includes("u.t==='tanqueta'||u.t==='general'||u.t==='torre'")&&
     en.includes("smallBullet?mW:mE")&&
     f.includes("72,135,18,'pb',mS,3")&&
     f.includes("85,45,8,'p',mS,2.2");
