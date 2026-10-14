@@ -63,7 +63,7 @@ const assert=require('node:assert/strict');
    return {first,lightOnly,heavyOnly,bazooka};
  })()`);
  assert.equal(shots.first.length,2,'tower fires both guns on same frame');
- assert.deepEqual(shots.first.map(x=>x.type).sort(),['heavy','light']);
+ assert.equal(JSON.stringify(shots.first.map(x=>x.type).sort()),JSON.stringify(['heavy','light']));
  assert.equal(shots.lightOnly.length,1,'tower light gun has an independent cooldown');
  assert.equal(shots.lightOnly[0].type,'light');
  assert.equal(shots.heavyOnly.length,1,'tower heavy gun has an independent cooldown');
