@@ -1,0 +1,22 @@
+name: Perfilat de l'arrencada del món
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tests/build-profiler.cjs'
+      - 'src/world-generation.js'
+      - '.github/workflows/world-startup-profile.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Mesurar generació real per fases
+        run: node tests/build-profiler.cjs
