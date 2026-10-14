@@ -21,7 +21,7 @@ export function createCompoundStructures(){
      for(const dx of[-1,1])for(const dz of[-1,1])rod(g,[dx*lower,y,dz*lower],[dx*upper,y+4,dz*upper],.13,color);
      for(const side of[-1,1]){rod(g,[-lower,y,side*lower],[upper,y+4,side*upper],.07,color);rod(g,[lower,y,side*lower],[-upper,y+4,side*upper],.07,color);rod(g,[side*lower,y,-lower],[side*upper,y+4,upper],.07,color);rod(g,[side*lower,y,lower],[side*upper,y+4,-upper],.07,color)}
    }
-   const dish=new T.Mesh(new T.SphereGeometry(2.2,16,8,0,Math.PI*2,0,Math.PI*.4),new T.MeshStandardMaterial({color:0xe4e5d8,roughness:.65,side:T.DoubleSide}));dish.rotation.x=Math.PI*.65;dish.position.set(0,18,3);g.add(dish);rod(g,[0,17,0],[0,18,3],.15,0x616b68);rod(g,[0,28,0],[0,31,0],.09,0xddddca);cylinder(g,.22,.4,0xec6545,0,31,0);
+   if(a.smallDish!==false){const dish=new T.Mesh(new T.SphereGeometry(2.2,16,8,0,Math.PI*2,0,Math.PI*.4),new T.MeshStandardMaterial({color:0xe4e5d8,roughness:.65,side:T.DoubleSide}));dish.rotation.x=Math.PI*.65;dish.position.set(0,18,3);g.add(dish);rod(g,[0,17,0],[0,18,3],.15,0x616b68)}rod(g,[0,28,0],[0,31,0],.09,0xddddca);cylinder(g,.22,.4,0xec6545,0,31,0);
 return batch(g);
 }
 function satellite(radius=9){

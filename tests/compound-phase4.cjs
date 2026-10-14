@@ -4,6 +4,8 @@ const assert=require('node:assert/strict'),path=require('node:path');
  for(const p of ['palette','player-model','characters','general-model','buildings','vehicles','explosive-visuals'])require(path.resolve(__dirname,'../src/'+p+'.js'));
  const {phase4Layouts,compoundVariants}=await import('../src/compound-phase4-layouts.mjs');
  const {compoundLayouts}=await import('../src/compound-layouts.mjs');
+ const T=await import('../vendor/three-r186.module.mjs');
+ const {siteBounds}=await import('../src/compound-preview-refinements.mjs');
  const {createCompoundConcept}=await import('../src/compound-concepts.mjs');
  assert.equal(phase4Layouts.length,21);assert.equal(new Set(phase4Layouts.map(l=>l.id)).size,21);
  assert.equal(compoundLayouts.length,8,'drafts must not enter the runtime catalogue');
@@ -27,6 +29,24 @@ const assert=require('node:assert/strict'),path=require('node:path');
   if(l.friendly)assert.equal(l.soldiers.length,0);
   const geometries=new Set(),materials=new Set();model.root.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m)});for(const g of geometries)g.dispose();for(const m of materials)m.dispose();
   console.log(l.id,meshes,'meshes');
+ }
+ for(const source of [...phase4Layouts,...compoundLayouts]){
+  const before=JSON.stringify(source),model=createCompoundConcept(source),l=model.layout,bounds=siteBounds(l);
+  assert.equal(JSON.stringify(source),before,'preview must not mutate runtime data');
+  for(const prop of model.root.children.filter(o=>o.userData.previewProp)){
+   const box=new T.Box3().setFromObject(prop);
+   assert(box.min.x>=bounds.minX-.01&&box.max.x<=bounds.maxX+.01&&box.min.z>=bounds.minZ-.01&&box.max.z<=bounds.maxZ+.01,l.id+' decoration outside enclosure: '+prop.userData.previewProp);
+   if(l.helipad){const p=l.helipad,dx=Math.max(box.min.x-p.x,0,p.x-box.max.x),dz=Math.max(box.min.z-p.z,0,p.z-box.max.z);assert(Math.hypot(dx,dz)>p.clearRadius,l.id+' decoration in rotor disc')}
+  }
+  for(const b of l.buildings){
+   const group=model.root.children.find(o=>o.userData.previewBuilding===b.id);
+   if(b.warehouse){assert.equal(b.floors,1);group.traverse(o=>assert(!o.userData.windowFacadeBatch,l.id+'/'+b.id+' warehouse window'))}
+   if(b.wood){const roof=group.children.find(o=>o.userData.branchGable);assert(roof,l.id+' gabled branch roof');const box=new T.Box3().setFromObject(roof);assert(box.max.y>b.h+b.w*.2,'raised ridge')}
+   if(b.floors===2){assert(!b.warehouse&&!b.hangar&&!b.bunker);assert(group.children.some(o=>o.userData.previewUpperFloor),'upper floor with stairwell')}
+  }
+  if(l.family!=='civil')assert(l.buildings.some(b=>b.floors===2),l.id+' military upper storey');
+  if(l.id==='comunicacions-v2'){assert(l.antenna.height>56);assert(!l.satellite);assert(!model.root.children.some(o=>o.userData.previewSatellite))}
+  if(l.id==='comunicacions-v3'){assert(!l.antenna);assert(l.satellite.radius*l.satellite.scale>9);assert(!model.root.children.some(o=>o.userData.previewAntenna))}
  }
  assert.deepEqual([...new Set(errors)],[],'layout clearances');
  console.log('PASS: 21 designs, 16 variants, guaranteed loot, geometry and clearances; runtime unchanged');

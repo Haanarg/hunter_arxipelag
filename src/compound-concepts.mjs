@@ -1,6 +1,8 @@
+import {refinePreviewLayout} from './compound-preview-refinements.mjs';
 import {createCompoundStructures} from './compound-structures.mjs';
 import * as T from '../vendor/three-r186.module.mjs';
 export function createCompoundConcept(layout){
+ layout=refinePreviewLayout(layout);
  const structures=createCompoundStructures();
  const root=new T.Group(),roofs=[],tags=[],overlays=new T.Group(),materials=new Map();root.add(overlays);
  const mat=(color,profile='paint')=>{const key=color+profile;if(!materials.has(key))materials.set(key,new T.MeshStandardMaterial({color,roughness:profile==='metal'?.57:.92,metalness:profile==='metal'?.25:0,flatShading:true}));return materials.get(key)};
@@ -61,10 +63,11 @@ export function createCompoundConcept(layout){
    const reserve=new T.Mesh(new T.RingGeometry(p.clearRadius-.3,p.clearRadius,64),new T.MeshBasicMaterial({color:0xffc85c,side:T.DoubleSide,transparent:true,opacity:.7,depthWrite:false}));reserve.rotation.x=-Math.PI/2;reserve.position.set(p.x,.86,p.z);overlays.add(reserve);tag('Rotors · radi lliure 22 m',p.x,1,p.z-24);
  }
  if(layout.antenna){const a=layout.antenna,g=structures.antenna(a);g.position.set(a.x,.2,a.z);root.add(g);tag('Antena · '+a.height+' m',a.x,32*(a.scale||1),a.z)}
- for(const b of layout.buildings){
+ for(const data of layout.buildings){
+   const storey=data.h,b={...data,h:data.h*data.floors};
    const shell=b.hangar?building.createHangarShell({width:b.w,depth:b.d,height:b.h,wallColor:0xbab99d,roofColor:0xb7c1b4}):building.createShell({width:b.w,depth:b.d,height:b.h,wallColor:b.bunker?0xb7bdb3:b.wood?0x96714b:0xc9b98d,roofColor:b.bunker?0x929d91:b.wood?0x627e78:layout.friendly?0x547b79:0x79584e});
-   const g=shell.group;g.position.set(b.x,.24,b.z);root.add(g);roofs.push(shell.roof);
-   if(layout.satellite?.buildingId===b.id){const assembly=structures.satellite(layout.satellite.radius);assembly.position.y=b.h+1.2;shell.roof.add(assembly);tag('Parabòlica · Ø 18 m',b.x,b.h+19,b.z)}
+   const g=shell.group;g.userData.previewBuilding=b.id;g.userData.floors=b.floors;g.userData.warehouse=b.warehouse;g.position.set(b.x,.24,b.z);root.add(g);roofs.push(shell.roof);
+   if(layout.satellite?.buildingId===b.id){const assembly=structures.satellite(layout.satellite.radius);assembly.scale.setScalar(layout.satellite.scale||1);assembly.position.y=b.h+1.2;shell.roof.add(assembly);tag('Parabòlica · Ø '+2*layout.satellite.radius*(layout.satellite.scale||1)+' m',b.x,b.h+19*(layout.satellite.scale||1),b.z)}
    const wall=(x,z,w,d,h=b.h)=>building.addWall(g,{lx:x,lz:z,sx:w,sz:d,height:h,material:shell.walls});
    if(b.hangar){
      const arch=new T.Shape();arch.moveTo(-b.w/2,0);arch.lineTo(b.w/2,0);
@@ -76,11 +79,16 @@ export function createCompoundConcept(layout){
      for(let z=-10;z<0;z+=3)box(g,1.3,.8,1.6,0x9a7546,-b.w/2+3,1.6,z);
      tag('Hangar · boca 30 m',b.x,b.h+1,b.z);
    }else{
-     const solid=b.bunker||type==='polvori'&&b.id!=='guard';
+     const solid=b.bunker||b.warehouse;
      if(layout.throughBuildings?.includes(b.id)){for(const x of[-b.w/2,b.w/2])wall(x,0,.6,b.d)}
-     else if(solid){wall(0,-b.d/2,b.w,.6);for(const x of[-b.w/2,b.w/2])wall(x,0,.6,b.d)}else{building.addWindowedWall(g,{lx:0,lz:-b.d/2,sx:b.w,sz:.45,height:b.h,material:shell.walls});for(const x of[-b.w/2,b.w/2])building.addWindowedWall(g,{lx:x,lz:0,sx:.45,sz:b.d,height:b.h,material:shell.walls})}
-     const door=layout.throughBuildings?.includes(b.id)?12:4;wall(-(b.w+door)/4,b.d/2,(b.w-door)/2,.45);wall((b.w+door)/4,b.d/2,(b.w-door)/2,.45);
-     building.addWall(g,{lx:0,lz:b.d/2,sx:door,sz:.45,height:b.h-4.4,material:shell.walls,y:4.4+(b.h-4.4)/2});
+     else if(solid){wall(0,-b.d/2,b.w,.6);for(const x of[-b.w/2,b.w/2])wall(x,0,.6,b.d)}else{for(let level=0;level<b.floors;level++){
+       const facade=new T.Group();facade.position.y=level*storey;g.add(facade);
+       building.addWindowedWall(facade,{lx:0,lz:-b.d/2,sx:b.w,sz:.45,height:storey,material:shell.walls});
+       for(const x of[-b.w/2,b.w/2])building.addWindowedWall(facade,{lx:x,lz:0,sx:.45,sz:b.d,height:storey,material:shell.walls});
+     }}
+     const door=layout.throughBuildings?.includes(b.id)?12:4;wall(-(b.w+door)/4,b.d/2,(b.w-door)/2,.45,storey);wall((b.w+door)/4,b.d/2,(b.w-door)/2,.45,storey);
+     if(b.floors===2){const facade=new T.Group();facade.position.y=storey;g.add(facade);building.addWindowedWall(facade,{lx:0,lz:b.d/2,sx:b.w,sz:.45,height:storey,material:shell.walls})}
+     building.addWall(g,{lx:0,lz:b.d/2,sx:door,sz:.45,height:storey-4.4,material:shell.walls,y:4.4+(storey-4.4)/2});
      if(b.bunker){
        // Batter all four exterior walls inward, keeping the full base footprint.
        // Interior partitions and the vertical entrance portal are built afterwards.
@@ -116,13 +124,52 @@ export function createCompoundConcept(layout){
        for(const x of[-1.3,0,1.3])box(g,.10,3.5,.08,0x303e36,x,2.2,b.d/2+.45);
        box(g,5,1.1,2.5,0x5a5944,0,.9,-12);tag('Porta · 10 s',b.x,6,b.z+b.d/2+1);
      }
+     if(b.floors===2){
+       // Internal stairs and a real opening in the upper slab; hide slab with roofs for ground-floor inspection.
+       const upper=new T.Group();upper.userData.previewUpperFloor=true;g.add(upper);roofs.push(upper);
+       const stairW=2.8,run=Math.min(b.d-3,storey*1.05),sx=b.w/2-stairW/2-.7,sz=-b.d/2+1;
+       box(upper,b.w-stairW-1,.3,b.d-.7,0x948b74,-(stairW+.3)/2,storey,0);
+       box(upper,stairW+.3,.3,b.d-run-1.35,0x948b74,sx,storey,(run+.65)/2);
+       const steps=Math.ceil(storey/.35);
+       for(let i=0;i<steps;i++)box(g,stairW,storey*(i+1)/steps,run/steps+.02,0xa6a18c,sx,storey*(i+1)/steps/2,sz+run-(i+.5)*run/steps);
+       rod(g,[sx-stairW/2,1.1,sz+run],[sx-stairW/2,storey+1.1,sz],.07,0x46534c);
+       // A landing across the back joins the stair top to the upper room.
+       box(upper,stairW+.4,.3,1,0x948b74,sx,storey,-b.d/2+.5);
+       box(upper,3,1.2,1.6,0x776044,-b.w/2+3,storey+.75,0);
+       for(const z of[-b.d/2,b.d/2])box(g,b.w+.15,.25,.15,0xa69f88,0,storey,z);
+       for(const x of[-b.w/2,b.w/2])box(g,.15,.25,b.d+.15,0xa69f88,x,storey,0);
+     }
      if(b.wood){
+       // Same gable and bundled-branch covering for every civilian timber hut.
+       for(const child of [...shell.roof.children]){shell.roof.remove(child);child.traverse(o=>o.geometry?.dispose())}
+       const rise=b.w*.24,half=b.w/2+1.1,angle=Math.atan2(rise,half),length=Math.hypot(half,rise);
+       const branches=[];
+       for(const side of[-1,1]){
+         const slab=box(shell.roof,length,.28,b.d+2.2,0x69533a,side*half/2,b.h+rise/2,0);slab.rotation.z=-side*angle;
+         // Deterministic relief: branch bundles and forked twigs, grouped into three meshes.
+         for(let j=0;j<Math.ceil((b.d+2.2)/.32);j++){
+           const z=-b.d/2-1.05+j*.32,shade=[0x887044,0x6d5637,0xa08a57][j%3],jitter=Math.sin(j*9.7)*.09;
+           const a=[side*.05,b.h+rise+.22,z],end=[side*(half+.08+jitter),b.h+.2,z+jitter];
+           const branch=rod(shell.roof,a,end,.09+(j%4)*.015,shade);branches.push(branch);
+           if(j%3===0)branches.push(rod(shell.roof,[side*half*.53,b.h+rise*.47+.22,z],[side*half*.83,b.h+rise*.17+.24,z+.26],.055,shade));
+         }
+       }
+       // Close the two triangular gable ends.
+       const eave=rise*(1-b.w/(2*half))-.14,shape=new T.Shape();shape.moveTo(-b.w/2,0);shape.lineTo(b.w/2,0);shape.lineTo(b.w/2,eave);shape.lineTo(0,rise-.14);shape.lineTo(-b.w/2,eave);shape.closePath();
+       for(const z of[-b.d/2,b.d/2]){const end=new T.Mesh(new T.ExtrudeGeometry(shape,{depth:.22,bevelEnabled:false}),shell.walls);end.position.set(0,b.h,z-.11);shell.roof.add(end)}
+       shell.roof.userData.branchGable=true;
+       // Merge the twig relief by colour to keep mobile draw calls bounded.
+       for(const material of new Set(branches.map(m=>m.material))){
+         const parts=branches.filter(m=>m.material===material),positions=[],normals=[];
+         for(const mesh of parts){mesh.updateMatrix();const geo=mesh.geometry.toNonIndexed();geo.applyMatrix4(mesh.matrix);positions.push(...geo.attributes.position.array);normals.push(...geo.attributes.normal.array);shell.roof.remove(mesh);mesh.geometry.dispose();geo.dispose()}
+         const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));geo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));const batch=new T.Mesh(geo,material);batch.castShadow=batch.receiveShadow=true;shell.roof.add(batch);
+       }
        for(const side of[-1,1])for(let z=-b.d/2+.8;z<b.d/2;z+=1.3)box(g,.08,b.h-.4,.08,0x654f39,side*(b.w/2+.06),b.h/2,z);
        box(g,6,.25,3.6,0x9f835e,0,.28,b.d/2+1.8);
        for(const x of[-2.7,2.7])cylinder(g,.10,4.5,0x67523a,x,2.5,b.d/2+3.2);
-       const porch=box(g,6.6,.18,4.2,0x627e78,0,4.8,b.d/2+1.7);roofs.push(porch);
+       const porch=box(g,6.6,.18,4.2,0x79613f,0,4.8,b.d/2+1.7);roofs.push(porch);
      }
-     tag(b.label,b.x,b.h+2,b.z);
+     tag(b.label+(b.floors===2?' · 2 plantes':''),b.x,b.h+(b.wood?b.w*.24+2:2),b.z);
    }
  }
  function prop(kind,x,z){
@@ -137,7 +184,7 @@ export function createCompoundConcept(layout){
    if(kind==='lamp'){cylinder(root,.12,8,0x3f5052,x,4,z);box(root,2,.3,.8,0xebd48a,x,8,z);return}
    if(kind==='sandbag')for(let row=0;row<2;row++)for(let i=0;i<5-row;i++)box(root,1.3,.65,.95,0xaaa17a,x+(i-(4-row)/2)*1.45,.65+row*.6,z);
  }
- layout.props.forEach(([kind,x,z])=>prop(kind,x,z));
+ layout.props.forEach(([kind,x,z])=>{const before=root.children.length;prop(kind,x,z);const group=new T.Group();group.userData.previewProp=kind;for(const child of root.children.slice(before))group.add(child);root.add(group)});
  for(const {x,z} of(layout.towers||(layout.tower?[layout.tower]:[]))){const g=new T.Group();g.position.set(x,.2,z);root.add(g);
   for(const a of[-2,2])for(const b of[-2,2]){box(g,.32,9,.32,0x495456,a,4.5,b);rod(g,[a,.3,b],[-a,8,b],.08,0x495456)}
   box(g,5,.45,5,0x5f6657,0,8.5,0);box(g,4,1.5,.3,0x8c5144,0,9.4,-2);for(const a of[-2,2])box(g,.3,1.5,4,0x8c5144,a,9.4,0);

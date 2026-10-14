@@ -2,12 +2,12 @@ import * as T from '../vendor/three-r186.module.mjs';
 import {compoundLayouts as integratedLayouts} from './compound-layouts.mjs';
 import {phase2Layouts} from './compound-phase2-layouts.mjs';
 import {phase3Layouts} from './compound-phase3-layouts.mjs';
-import {phase4Layouts,newWorldLayouts,compoundVariants,coastConnection} from './compound-phase4-layouts.mjs';
+import {phase4Layouts,newWorldLayouts,compoundVariants,coastConnection} from './compound-phase4-layouts.mjs?rev=20261014b';
 const params=new URLSearchParams(location.search),requested=Number(params.get('fase')),phase=[2,3,4].includes(requested)?requested:1;
 let compoundLayouts=phase===4?newWorldLayouts:phase===3?phase3Layouts:phase===2?phase2Layouts:integratedLayouts.filter(l=>!l.phase);
-document.querySelector('.badge').textContent='Fase '+phase+(phase===4?' · dissenys per revisar':' · integrats al joc');
+document.querySelector('.badge').textContent='Fase '+phase+(phase===4?' · dissenys per revisar':' · revisió visual');
 for(const n of[1,2,3,4])document.getElementById('phase'+n).setAttribute('aria-current',phase===n?'page':'false');
-import {createCompoundConcept} from './compound-concepts.mjs';
+import {createCompoundConcept} from './compound-concepts.mjs?rev=20261014b';
 const canvas=document.getElementById('scene'),container=canvas.parentElement;
 const renderer=new T.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;
 renderer.shadowMap.enabled=!matchMedia('(pointer:coarse)').matches;renderer.shadowMap.type=T.PCFSoftShadowMap;
@@ -18,7 +18,7 @@ const target=new T.Vector3(0,0,0),pointers=new Map();let lastPinch=0,dirty=true;
 let buttons={};
 function tabs(){
  buttons={};document.getElementById('tabs').replaceChildren();
- for(const [i,l] of compoundLayouts.entries()){const b=document.createElement('button');b.textContent=phase===4?(l.variant?'V'+l.variant+' · '+l.name.split(' · ').slice(1).join(' · '):l.status==='design'?l.name:'V1 · Actual integrada'):(i+1)+' · '+l.name;b.addEventListener('click',()=>select(i));document.getElementById('tabs').append(b);buttons[l.id]=b}
+ for(const [i,l] of compoundLayouts.entries()){const b=document.createElement('button');b.textContent=phase===4?(l.variant?'V'+l.variant+' · '+l.name.split(' · ').slice(1).join(' · '):l.status==='design'?l.name:'V1 · Distribució original'):(i+1)+' · '+l.name;b.addEventListener('click',()=>select(i));document.getElementById('tabs').append(b);buttons[l.id]=b}
 }
 const family=document.getElementById('designFamily');
 if(phase===4){
@@ -29,7 +29,7 @@ if(phase===4){
  chooseFamily();family.onchange=()=>{chooseFamily();select(0)};
 }else tabs();
 function dispose(group){const geometries=new Set(),materials=new Set();group.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m)});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose())}
-function select(i){if(current){scene.remove(current.root);dispose(current.root)}index=i;current=createCompoundConcept(compoundLayouts[i]);scene.add(current.root);document.getElementById('name').textContent=current.layout.name;document.getElementById('counts').textContent=(phase===4?(current.layout.status==='design'?'Disseny · ':'Integrada · '):'')+current.layout.counts;document.getElementById('notes').textContent=current.layout.notes;for(const [id,b]of Object.entries(buttons))b.setAttribute('aria-pressed',id===current.layout.id);document.getElementById('labels').replaceChildren();for(const tag of current.tags){const el=document.createElement('span');el.className='tag';el.textContent=tag.text;document.getElementById('labels').append(el);tag.el=el}current.overlays.visible=document.getElementById('routes').getAttribute('aria-pressed')==='true';current.roofs.forEach(r=>r.visible=document.getElementById('roof').getAttribute('aria-pressed')!=='true');yaw=.62;pitch=.8;fit();dirty=true;window.compoundPreview.current=current;if(phase===4){const url=new URL(location.href);url.searchParams.set('tipus',family.value);url.searchParams.set('model',current.layout.id);history.replaceState(null,'',url)}}
+function select(i){if(current){scene.remove(current.root);dispose(current.root)}index=i;current=createCompoundConcept(compoundLayouts[i]);scene.add(current.root);document.getElementById('name').textContent=current.layout.name;document.getElementById('counts').textContent=(phase===4?(current.layout.status==='design'?'Disseny · ':'Revisió visual V1 · '):'')+current.layout.counts;document.getElementById('notes').textContent=current.layout.notes;for(const [id,b]of Object.entries(buttons))b.setAttribute('aria-pressed',id===current.layout.id);document.getElementById('labels').replaceChildren();for(const tag of current.tags){const el=document.createElement('span');el.className='tag';el.textContent=tag.text;document.getElementById('labels').append(el);tag.el=el}current.overlays.visible=document.getElementById('routes').getAttribute('aria-pressed')==='true';current.roofs.forEach(r=>r.visible=document.getElementById('roof').getAttribute('aria-pressed')!=='true');yaw=.62;pitch=.8;fit();dirty=true;window.compoundPreview.current=current;if(phase===4){const url=new URL(location.href);url.searchParams.set('tipus',family.value);url.searchParams.set('model',current.layout.id);history.replaceState(null,'',url)}}
 function fit(){
  distance=160;if(!current)return;
  const bounds=new T.Box3().setFromObject(current.root),corners=[];

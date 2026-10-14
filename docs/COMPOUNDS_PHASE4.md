@@ -17,7 +17,7 @@ Els llocs civils no afegeixen guarnicions fixes ni una simulació de població c
 
 ## Dues variants de cadascun dels vuit complexos
 
-V1 és sempre la distribució ja integrada. V2 i V3 tenen distribucions pròpies, passos i reserves visibles.
+V1 conserva la distribució ja integrada, amb la revisió arquitectònica del visor encara pendent de traslladar al joc. V2 i V3 tenen distribucions pròpies, passos i reserves visibles.
 
 | Complex | V2 | V3 |
 |---|---|---|
@@ -26,7 +26,7 @@ V1 és sempre la distribució ja integrada. V2 i V3 tenen distribucions pròpies
 | Port militar | **Moll central:** espigó únic de 8 m amb amarradors als dos costats | **Dàrsena oberta:** dos molls laterals de 7 m i boca central lliure |
 | Heliport | **Fortificat amb torre:** helicòpter de combat, torre i servei al flanc oriental | **Servei en línia:** helicòpter normal a llevant i franja tècnica occidental |
 | Polvorí | **Pati de càrrega ample:** magatzems separats i guàrdia avançada al flanc | **Guàrdia al fons:** magatzems paral·lels i control al final del corredor |
-| Comunicacions | **Plataforma de carena:** ràdio a ponent, antena a llevant; criteri d’emplaçament elevat accessible | **Pati de ràdio:** ràdio al fons, antena occidental i servei tècnic oriental, al voltant d’un pati |
+| Comunicacions | **Plataforma de carena:** només torre d’antena de 84 m a llevant; ràdio de dues plantes a ponent | **Pati de ràdio:** només parabòlica de 27 m sobre la ràdio de dues plantes, sense torre d’antena |
 | Base inicial | **Plaça oberta:** tres serveis al fons i plaça de sortida ampla | **Serveis esglaonats:** infermeria avançada, caserna/magatzem al fons i aparcament a llevant |
 | HQ | **Búnquer oriental:** suport a ponent i pati central ample | **Doble pati:** búnquer occidental, caserna al nord i serveis avançats a llevant |
 
@@ -34,7 +34,7 @@ V1 és sempre la distribució ja integrada. V2 i V3 tenen distribucions pròpies
 
 - Avançades amb filferrada i **dues obertures**.
 - Polvorins amb **bazooka i rifle de franctirador garantits**, a més de la resta de subministraments.
-- Comunicacions amb **els tres mapes**, antena de 56 m i parabòlica de 18 m sobre la sala de ràdio. La carena es presenta en una plataforma plana: la selecció del terreny elevat encara s’ha d’implementar.
+- Comunicacions amb **els tres mapes**: V1 conserva antena de 56 m i parabòlica de 18 m; V2 només antena de 84 m i V3 només parabòlica de 27 m. La carena es presenta en una plataforma plana: la selecció del terreny elevat encara s’ha d’implementar.
 - Heliports amb un radi de 22 m lliure de construccions, i paracaigudes garantit.
 - HQ amb búnquer de parets inclinades, porta acumulativa de 10 segons, quatre torres, general, vuit soldats, dues tanquetes i dos jeeps de patrulla. **Sense tanc aparcat.** Porta i patrulles estàtiques al visor.
 - Base sense enemics, amb cotxe, bicicleta, munició i farmaciola.
@@ -52,8 +52,18 @@ La maqueta inclou la base completa i un recorregut continu fins a un embarcador.
 
 Si el terreny no admet la connexió, s’ha de cercar una altra costa o moure la parella base/embarcador. Cal validar el recorregut complet amb les col·lisions del jugador i del vehicle abans d’acceptar l’emplaçament. El control de carretera necessita la mateixa xarxa de camins, però no s’ha de col·locar obligatòriament en aquesta primera ruta de la base.
 
+## Revisió arquitectònica · 14 d’octubre de 2026
+
+- Cabanes del poblat, embarcador civil i caseta costanera: mateix sostre de **dos aiguavessos**, frontons tancats i cobertura marró de branques amb relleu geomètric. Els feixos s’agrupen per material per reduir crides de dibuix.
+- Decoració comprovada amb la seva petjada completa, incloent la tela de les banderes: dins la filferrada o els límits del recinte. Si un trasllat heretat deixa una peça fora, es recol·loca en espai lliure de rutes, edificis, vehicles, torres i rotors. No s’eliminen peces.
+- Un edifici de **dues plantes** per complex militar: taller de l’hangar, caserna de l’avançada, oficina del port, control de l’heliport, guàrdia del polvorí, ràdio, caserna de la base i caserna del HQ. També guàrdia del control de carretera. Finestres als dos nivells, escala interior i forat al forjat; «Veure interiors» retira també el forjat superior.
+- **Cap magatzem té finestres ni segona planta**, incloent el comunal, el de la terminal i les casetes d’emmagatzematge civils. Els hangars i el búnquer no s’eleven.
+- Comunicacions V2/V3 especialitzades i ampliades un 50%; V2 sense cap parabòlica, V3 sense torre d’antena.
+
+Aquesta revisió s’aplica als **previews**, incloses les distribucions V1. `compound-preview-refinements.mjs` prepara còpies de les dades, sense alterar les distribucions del generador ni el joc publicat. La versió del joc no canvia per aquesta revisió del visor.
+
 ## Validació i següent fase
 
-`tests/compound-phase4.cjs` comprova les 21 maquetes: geometria finita, vehicles separats dels edificis, recorreguts fora dels interiors, reserva dels rotors, contingut garantit i exclusió del catàleg del joc. El visor s’ha comprovat amb Chromium/WebGL en escriptori i emulació mòbil: 29 escenes comptant les vuit V1, planta, interiors, etiquetes i zoom. Això no certifica el rendiment en Android físic.
+`tests/compound-phase4.cjs` comprova les 21 maquetes: geometria finita, vehicles separats dels edificis, recorreguts fora dels interiors, reserva dels rotors, contingut garantit i exclusió del catàleg del joc. També comprova les caixes 3D reals de tota la decoració de les 29 escenes, magatzems sense finestres, cabanes amb carena, segones plantes i exclusivitat de les antenes V2/V3. El visor s’ha comprovat amb Chromium/WebGL en escriptori i emulació mòbil: 29 escenes comptant les vuit V1, planta, interiors, etiquetes i zoom. Això no certifica el rendiment en Android físic.
 
 La següent fase és integrar primer el cercador de costa i la connexió amb la base; després els recintes civils i la terminal, els controls sobre camins reals i, finalment, la selecció de variants per llavor. Cal conservar límits globals de vehicles, reserves de maniobra, col·lisions i objectes garantits. Els dissenys actuals **encara no es generen durant les partides**.
