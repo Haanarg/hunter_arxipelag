@@ -30,7 +30,16 @@ const assert=require('assert');
    for(const u of c.enemyVehicles){check(enemyMoveClear(u,u.x,u.z,u.hd),'HQ vehicle spawn');for(let i=0;i<u.patrol.length;i++){const a=u.patrol[i],b=u.patrol[(i+1)%u.patrol.length],hd=Math.atan2(a.x-b.x,a.z-b.z);check(enemySweep(u,a.x,a.z,b.x,b.z,hd,hd,false),'HQ vehicle route')}}
    const px=P.x,pz=P.z;P.x=d.cx+d.nx*2;P.z=d.cz+d.nz*2;updateDoors(4);check(Math.abs(d.openProgress-.4)<1e-8,'gate four seconds');P.x+=20;updateDoors(3);check(Math.abs(d.openProgress-.4)<1e-8,'gate preserves progress');P.x=d.cx+d.nx*2;updateDoors(6);check(d.open&&d.openProgress===1,'gate ten seconds');P.x=px;P.z=pz;
   }
-  if(c.id==='polvori')for(const t of ['arma','granada','expl','bazooka','franctirador'])check(c.loot.some(i=>i.t===t),'missing guaranteed '+t);
+  if(c.id==='polvori'){
+   for(const t of ['arma','granada','expl','bazooka','franctirador'])
+     check(c.loot.some(i=>i.t===t),'missing guaranteed '+t);
+   check(!c.loot.some(i=>LOOT_MAPS.has(i.t)),'polvorí with maps');
+  }
+  if(c.id==='hangar'){
+   check(!c.loot.some(i=>LOOT_WEAPONS.has(i.t)),'weapons inside workshop');
+   check(c.loot.some(i=>i.t==='arma'),'workshop must keep ammunition');
+   for(const i of c.loot)check(!itemInsideHangar(i.x,i.z),'loot inside hangar');
+  }
   if(c.id==='comunicacions'){for(const t of ['mapa','mapa_heli','mapa_tanc'])check(c.loot.some(i=>i.t===t),'missing guaranteed '+t);check(c.antenna?.children.length<12,'batched antenna');const roof=c.buildings.find(b=>b.layoutBuilding==='radio').roof;check(roof.children.some(o=>o.userData.previewSatellite),'roof satellite');}
   if(c.id==='comunicacions'){const w=Wl.find(w=>w.parts?.includes(c.antenna.children[0]));dmgW(w,1000);check(c.antenna.children.every(m=>!m.visible),'antenna destruction');const b=c.buildings.find(b=>b.layoutBuilding==='radio');roofBreak(b);check(!b.roof.visible,'satellite falls with roof');}
   if(c.id==='polvori'){const v=c.vehicles[0],route=layout.routes[0].points.map(p=>tr(...p));for(let i=1;i<route.length;i++){const a=route[i-1],b=route[i],hd=Math.atan2(a[0]-b[0],a[1]-b[1]);check(enemySweep(v,...a,...b,hd,hd,false),'truck exit blocked')}}
