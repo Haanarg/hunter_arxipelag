@@ -5428,7 +5428,18 @@ function startVictoryCinematic(general,killingShot=null){
     if(level<-1.5)break;
   }
   seaCamera.y=Math.max(20,hAt(seaCamera.x,seaCamera.z)+16);
+  // Dues orientacions estables: zenital sense gir i sol real del joc.
+  // La vista zenital té un "amunt" horitzontal fix, oposat al rumb del sol:
+  // així el gir posterior és només un pitch suau, sense inversions de 180°.
+  const overheadUp=new THREE.Vector3(-sunDir.x,0,-sunDir.z).normalize(),
+        overheadOrientation=new THREE.Quaternion().setFromRotationMatrix(
+          new THREE.Matrix4().lookAt(
+            new THREE.Vector3(0,1,0),new THREE.Vector3(0,0,0),overheadUp)),
+        sunsetOrientation=new THREE.Quaternion().setFromRotationMatrix(
+          new THREE.Matrix4().lookAt(
+            new THREE.Vector3(0,0,0),sunDir,new THREE.Vector3(0,1,0)));
   victoryCinematic={active:true,t:0,phase:'replay1',general,base,pose,
+    overheadOrientation,sunsetOrientation,
     shot,seaDir,seaCamera,bullet:bg,impactFlash:flash,
     gulls,overlay,caption,title,hint,originalVisibility:{},
     lastReplay:-1,cryTime:0,finished:false};
@@ -5529,22 +5540,20 @@ function updateVictoryCinematic(dt){
     v.phase='overhead';victorySetFall(1);
     const f=victoryEase((v.t-replayTotal)/VICTORY_OVERHEAD_SECONDS),
           h=10+175*f;
-    cam.position.set(base.x+Math.sin(f*1.3)*h*.12,base.y+h,
-      base.z+Math.cos(f*1.3)*h*.12);
-    cam.lookAt(base.x,base.y+.5,base.z);
+    // Ascens absolutament vertical, sense orbitar ni cridar lookAt
+    // prop del pol zenital (que provocava el gir sobtat de 180°).
+    cam.position.set(base.x,base.y+h,base.z);
+    cam.quaternion.copy(v.overheadOrientation);
     if(cam.fov!==54){cam.fov=54;cam.updateProjectionMatrix()}
   }else{
     v.phase='sunset';victorySetFall(1);
     const f=victoryEase((v.t-overheadEnd)/2.6);
-    const from=new THREE.Vector3(base.x+Math.sin(1.3)*185*.12,base.y+185,
-      base.z+Math.cos(1.3)*185*.12);
+    const from=new THREE.Vector3(base.x,base.y+185,base.z);
     cam.position.copy(from).lerp(v.seaCamera,f);
-    // Mateix sol, cúpula i il·luminació que durant la partida.
-    // El sol de rendering.js es posiciona a cam.position+sunDir*distància.
-    // No creem cap sol nou ni canviem la direcció per mirar un mar fictici.
-    const down=new THREE.Vector3(base.x,base.y+.5,base.z),
-          realSun=v.seaCamera.clone().addScaledVector(sunDir,1000);
-    cam.lookAt(down.lerp(realSun,f));
+    // El gir comença DESPRÉS de l'ascens. Interpolem quaternions,
+    // evitant la singularitat de lookAt entre el zenital i el sol real.
+    // La direcció solar prové del mateix rendering.js de la partida.
+    cam.quaternion.copy(v.overheadOrientation).slerp(v.sunsetOrientation,f);
     const fov=54+6*f;
     if(Math.abs(cam.fov-fov)>.01){cam.fov=fov;cam.updateProjectionMatrix()}
     v.title.style.opacity=String(victoryEase((v.t-overheadEnd-3.1)/1.2));
