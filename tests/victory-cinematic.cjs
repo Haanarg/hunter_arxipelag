@@ -16,16 +16,30 @@ const assert=require('node:assert/strict');
            start:v?.shot?.from.toArray(),direction:v?.shot?.direction.toArray()};
    if(!v)return{error:'victory not started',first};
    const originalCamera=cam.position.clone();
-   for(let i=0;i<322;i++){
+   const right=new THREE.Vector3(-sunDir.z,0,sunDir.x).normalize();
+   let visibleBirdFrames=0,birdMin=Infinity,birdMax=-Infinity,
+       wingMin=Infinity,wingMax=-Infinity;
+   for(let i=0;i<465;i++){
      updateVictoryCinematic(.05);
      states.add(v.phase);
      if(i===10||i===57||i===103||i===150||i===230)angles.push(cam.position.toArray());
+     for(const gull of v.gulls){
+       if(!gull.o.visible)continue;
+       visibleBirdFrames++;
+       const side=gull.o.position.clone().sub(v.seaCamera).dot(right);
+       birdMin=Math.min(birdMin,side);birdMax=Math.max(birdMax,side);
+       wingMin=Math.min(wingMin,gull.wl.rotation.z);
+       wingMax=Math.max(wingMax,gull.wl.rotation.z);
+     }
    }
    const result={first,states:[...states],angles,
      phase:v.phase,finished:v.finished,active:v.active,
      titleOpacity:v.title.style.opacity,
      hint:v.hint.style.display,
      gulls:v.gulls.filter(g=>g.o.visible).length,
+     visibleBirdFrames,birdMin,birdMax,wingRange:wingMax-wingMin,
+     sunAlignment:cam.getWorldDirection(new THREE.Vector3()).dot(sunDir),
+     raisedArms:u.o.userData.arms.map(a=>Math.abs(a.rotation.z)),
      fallen:Math.abs(u.o.quaternion.x)+Math.abs(u.o.quaternion.z),
      deadModelPresent:u.o.parent===world,
      camMoved:cam.position.distanceTo(originalCamera),
@@ -48,13 +62,18 @@ const assert=require('node:assert/strict');
    assert(report.states.includes(phase),phase+' missing '+JSON.stringify(report));
  assert.equal(report.phase,'finished');
  assert(report.finished&&!report.active,'final stable ending');
- assert.equal(report.gulls,9,'visible animated seabirds');
+ assert(report.visibleBirdFrames>20,'gulls cross the existing level');
+ assert(report.birdMin<0&&report.birdMax>0,'gulls enter from one side and exit the other');
+ assert(report.wingRange>.2,'gulls flap wings while crossing');
+ assert.equal(report.gulls,0,'gulls have disappeared toward the horizon');
+ assert(report.sunAlignment>.995,'last camera looks straight toward the actual game sun');
+ assert(report.raisedArms.every(a=>a>1.5),'both general arms rise clear of the coat');
  assert(report.fallen>.1,'theatrical fall');
  assert(report.deadModelPresent);
  assert(report.camMoved>20,'camera leaves scene');
  assert.equal(report.titleOpacity,'1');
  assert.equal(report.hint,'block');
  assert(report.restored&&report.sceneClean,'cleanup before new map');
- console.log('PASS: three-angles kill replay, slow fall, aerial, gulls and sunset',
+ console.log('PASS: three-angles kill replay, raised-arm fall, existing sun and crossing gulls',
    JSON.stringify(report));
 })().catch(e=>{console.error(e);process.exitCode=1});
