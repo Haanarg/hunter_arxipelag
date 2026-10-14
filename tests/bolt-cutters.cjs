@@ -37,16 +37,18 @@ const assert=require('node:assert/strict');
     return passed;
   };
   const friend=shootFrom('p'),enemy=shootFrom('e'),
-    soldierSight=soldierClearShot({t:'soldat',x,z:z+6},x,z+6,2.2,{x,z:z-6},1.0);
+    soldierSight=soldierClearShot({t:'soldat',x,z:z+6},x,z+6,2.2,{x,z:z-6},1.0),
+    visualSight=sight(x,z+6,x,z-6,2.2),
+    wireBlocksMelee=!sight(x,z+6,x,z-6,2.2,false);
   // Comprovam l'impacte explosius separadament; boom també esborra el tram.
   shoot(x,2.5,z+6,0,0,-1,160,45,8,'p',mS,1.5);
   const explosive=Pj[Pj.length-1];
   updPj(.065);
-  return {friend,enemy,soldierSight,
+  return {friend,enemy,soldierSight,visualSight,wireBlocksMelee,
     explosiveGone:!Pj.includes(explosive),
     wireDestroyed:!Wl.includes(wire),initial};
  })()`);
- for(const key of ['friend','enemy','soldierSight','explosiveGone','wireDestroyed'])
+ for(const key of ['friend','enemy','soldierSight','visualSight','wireBlocksMelee','explosiveGone','wireDestroyed'])
    assert(shooting[key],key+': '+JSON.stringify(shooting));
  const cutting=game.run(`(()=>{
   const x=H-160,z=H-175,
