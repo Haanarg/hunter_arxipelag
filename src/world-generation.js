@@ -209,10 +209,43 @@ const compoundSiteClear=(type,q,minCenter=0)=>{
   })
 };
 const registerCompound=(type,q)=>compoundCenters.push({x:q.x,z:q.z,r:compoundRadius(type),type});
+// Mateixa validació espacial que findRedesignedPort, però abandona
+// cada emplaçament a la primera comprovació impossible. És només un
+// filtre: la funció original encara confirma els ports acceptats.
+const portSiteFeasible=q=>{
+  for(let turn=0;turn<4;turn++){
+    const angle=turn*Math.PI/2,point=compoundTransform(q,angle);
+    for(let d=16;d<Math.max(180,(q.r||180)*1.4);d+=8){
+      const [x,z]=point(0,d);if(rawHAt(x,z)>.3)continue;
+      for(const offset of[-8,0,8]){
+        const [cx,cz]=point(0,d+offset),site={x:cx,z:cz,h:.86,angle,r:q.r},
+              tr=compoundTransform(site,angle);
+        if(Math.abs(cx)>H-100||Math.abs(cz)>H-100)continue;
+        let valid=true;
+        for(const lx of[-52,-26,0,26,52]){
+          for(const lz of[-60,-35,-10]){
+            const p=tr(lx,lz);
+            if(rawHAt(...p)<.1){valid=false;break}
+          }
+          if(!valid)break
+        }
+        if(!valid)continue;
+        coastTest:for(const [lx,lz] of[[-13,31],[15,26],[35,34]])
+          for(const dx of[-7,0,7])for(let dz=-16;dz<=52;dz+=4){
+            const p=tr(lx+dx,lz+dz);
+            if(rawHAt(...p)>-2.2){valid=false;break coastTest}
+          }
+        if(valid)return true;
+      }
+      if(rawHAt(x,z)<-15)break;
+    }
+  }
+  return false;
+};
 const compound=(type,q)=>{
   const approvedId={avancada:'outpost',garatge:'hangar',port:'port',heliport:'heliport',polvori:'polvori',comunicacions:'comunicacions'}[type];
   if(approvedId){
-    if(type==='port'){q=findRedesignedPort(q);if(!q)return false}
+    if(type==='port'){if(!portSiteFeasible(q))return false;q=findRedesignedPort(q);if(!q)return false}
     if(!compoundSiteClear(type,q,0))return false;
     const layout=window.HUNTER_COMPOUND_LAYOUTS.find(l=>l.id===approvedId);
     if(layout.phase===2){const r=Math.max(...layout.size)/2;for(const dx of[-r,0,r])for(const dz of[-r,0,r])if(rawHAt(q.x+dx,q.z+dz)<.1)return false;}
