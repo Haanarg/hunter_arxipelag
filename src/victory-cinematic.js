@@ -168,10 +168,27 @@ function victorySetFall(progress){
   if(rig?.knees)rig.knees.forEach((k,i)=>{k.rotation.x=-(i?.4:.7)*fall});
   if(rig?.elbows)rig.elbows.forEach((e,i)=>{e.rotation.x=(i?.45:.8)*fall});
 }
+function victoryAnimateGulls(v){
+  const offset=v.t-(VICTORY_REPLAY_SECONDS*3+VICTORY_OVERHEAD_SECONDS);
+  for(const gull of v.gulls){
+    const i=gull.index,span=50+i*8,side=((i%5)-2)*12,
+      lateral=new THREE.Vector3(-v.seaDir.z,0,v.seaDir.x);
+    gull.o.visible=true;
+    gull.o.position.copy(v.seaCamera)
+      .addScaledVector(v.seaDir,span+offset*.7)
+      .addScaledVector(lateral,side+Math.sin(v.t*.7+i)*5);
+    gull.o.position.y+=5+(i%4)*4+Math.sin(v.t*1.2+i)*1.7;
+    gull.o.rotation.y=Math.atan2(-v.seaDir.x,-v.seaDir.z);
+    gull.wl.rotation.z=Math.sin(v.t*5+i*1.8)*.48;
+    gull.wr.rotation.z=-gull.wl.rotation.z;
+  }
+  if(offset>1.2&&v.t-v.cryTime>1.7){victoryGullCry();v.cryTime=v.t}
+}
 function updateVictoryCinematic(dt){
   const v=victoryCinematic;
-  if(!v||!v.active)return;
+  if(!v||(!v.active&&!v.finished))return;
   v.t+=Math.max(0,Math.min(.1,dt));
+  if(v.finished){victoryAnimateGulls(v);return}
   const replayTotal=VICTORY_REPLAY_SECONDS*3,overheadEnd=replayTotal+VICTORY_OVERHEAD_SECONDS,
         end=overheadEnd+VICTORY_SUNSET_SECONDS;
   const target=v.shot.hit,dir=v.shot.direction,
@@ -231,21 +248,7 @@ function updateVictoryCinematic(dt){
     if(Math.abs(cam.fov-fov)>.01){cam.fov=fov;cam.updateProjectionMatrix()}
     v.title.style.opacity=String(victoryEase((v.t-overheadEnd-2.0)/1.15));
     v.title.style.transform='scale('+(1-.04*(1-victoryEase((v.t-overheadEnd-2)/1.3)))+')';
-    for(const gull of v.gulls){
-      const i=gull.index,span=50+i*8,side=((i%5)-2)*12,
-            lateral=new THREE.Vector3(-v.seaDir.z,0,v.seaDir.x);
-      gull.o.visible=true;
-      gull.o.position.copy(v.seaCamera)
-        .addScaledVector(v.seaDir,span+(v.t-overheadEnd)*.7)
-        .addScaledVector(lateral,side+Math.sin(v.t*.7+i)*5);
-      gull.o.position.y+=5+(i%4)*4+Math.sin(v.t*1.2+i)*1.7;
-      gull.o.rotation.y=Math.atan2(-v.seaDir.x,-v.seaDir.z);
-      gull.wl.rotation.z=Math.sin(v.t*5+i*1.8)*.48;
-      gull.wr.rotation.z=-gull.wl.rotation.z;
-    }
-    if(v.t-overheadEnd>1.2&&v.t-v.cryTime>1.7){
-      victoryGullCry();v.cryTime=v.t;
-    }
+    victoryAnimateGulls(v);
     if(v.t>=end){
       v.phase='finished';v.finished=true;v.active=false;
       v.title.style.opacity='1';
