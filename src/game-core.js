@@ -16,10 +16,17 @@ const missingSystems=Object.entries({generation:typeof build,combat:typeof fire,
 const materialProfile=(name='organic')=>window.HUNTER_MATERIALS[name]||window.HUNTER_MATERIALS.organic;
 const M=(c,profile='organic')=>new THREE.MeshStandardMaterial({color:vivid(c),flatShading:true,...materialProfile(profile)});
 const MAT={
- terrain:()=>new THREE.MeshLambertMaterial({
-   vertexColors:true,flatShading:!highTerrainTexture,
-   ...(highTerrainTexture?{map:highTerrainTexture}:{})
- }),
+ terrain:()=>{
+   const mat=new THREE.MeshLambertMaterial({
+     vertexColors:true,flatShading:!highTerrainTexture,
+     ...(highTerrainTexture?{map:highTerrainTexture}:{})
+   });
+   if(terrainTextureTask&&!highTerrainTexture){
+     mat.userData.requiresDetailUV=true;
+     awaitingTerrainMaterials.push(mat);
+   }
+   return mat;
+ },
  painted:c=>M(c,'paint'),metal:c=>M(c,'metal'),rubber:c=>M(c,'rubber'),glass:c=>M(c,'glass'),masonry:c=>M(c,'masonry')
 };
 let seed,R,islands,A,Bi,world,B=[],requestedSeed=null;
@@ -87,8 +94,20 @@ if(h>3&&h<14&&slope(x,z,h)<2.5&&(!fl||fr(x,z)<2.2)&&!B.some(b=>Math.abs(b.x-x)<b
 const coarse=matchMedia('(pointer:coarse)').matches;
 const qualityName=window.HUNTER_GRAPHICS_QUALITY||((coarse||window.HUNTER_FORCE_LOW_QUALITY)?'mobile':'desktop');
 const visualQuality=window.HUNTER_VISUAL_CONFIG[qualityName];
-const highTerrainTexture=visualQuality.terrainDetailTexture
-  ?window.HUNTER_HIGH_GRAPHICS.createTerrainTexture(THREE):null;
+let highTerrainTexture=null;
+const terrainTextureTask=visualQuality.terrainDetailTexture
+  ?window.HUNTER_HIGH_GRAPHICS.createTerrainTextureTask(THREE):null;
+const awaitingTerrainMaterials=[];
+function advanceTerrainTexture(){
+  if(!terrainTextureTask||highTerrainTexture)return;
+  const tex=terrainTextureTask.advance(4);
+  if(!tex)return;
+  highTerrainTexture=tex;
+  for(const mat of awaitingTerrainMaterials){
+    mat.map=tex;mat.flatShading=false;mat.needsUpdate=true;
+  }
+  awaitingTerrainMaterials.length=0;
+}
 const rendering=window.HUNTER_RENDERING.create(THREE,visualQuality);
 const ren=rendering.renderer,scene=rendering.scene,cam=rendering.camera,sunDir=rendering.sunDir,sun=rendering.sun,sky=rendering.sky,sunM=rendering.sunMesh;
 document.body.prepend(ren.domElement);
@@ -1734,6 +1753,7 @@ mini();ui.renderHUD();}}
 let last=performance.now();
 (function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(started&&!paused&&!over?dt:0),cpuStarted=performance.now();update(dt,t);const simulationEnded=performance.now();if(started&&!paused&&!over&&terrainStream)terrainStream.update(P.x,P.z,visualQuality.shadows?2:1.2,cam,currentSniperFocus());const terrainEnded=performance.now();waves(t);
 sun.target.position.set(P.x,0,P.z);sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();for(const k in renderCategories)renderCategories[k]=0;ren.render(scene,cam);
+if(started&&!paused&&!over)advanceTerrainTexture();
 adaptivePerformance.sample({dt:rawDt,renderCpuMs:performance.now()-renderStarted,
   updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,
   active:!!started&&!paused&&!over,now});
