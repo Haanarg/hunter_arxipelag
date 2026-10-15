@@ -65,22 +65,26 @@ window.HUNTER_RIDER=Object.freeze({
       }
 
       if(v.t==='windsurf'){
-        // Postura real de windsurf: dempeus, cames gairebé rectes, tors de costat i mans al travesser.
-        const lean=Math.max(-.08,Math.min(.08,v.v/42)),bodyX=-.62*sc,hipY=1.36*sc,footY=.29*sc;
-        torso.position.set(bodyX,hipY,.08*sc);
-        // Tors i cap miren cap a la vela; braços i cames mantenen la seva postura actual.
+        // Tors de costat i cames rectes. Les dues mans agafen el mateix
+        // costat del travesser (+Z), davant de la vela i de cara a la càmera.
+        const lean=Math.max(-.08,Math.min(.08,v.v/42)),
+              bodyX=-.44*sc,hipY=1.36*sc,footY=.29*sc;
+        torso.position.set(bodyX,hipY,.18*sc);
         torso.rotation.set(0,-Math.PI/2,-.035+lean);
-        // La part inferior del cos gira 180° respecte del tors: cintura, cames i peus miren al costat correcte de la taula.
         const hips=[vec(bodyX,hipY,-.25*sc),vec(bodyX,hipY,.25*sc)];
         const shoulders=[shoulderAt(1),shoulderAt(-1)];
-        const hands=[vec(.52*sc,2.39*sc,.25*sc),vec(1.2*sc,2.08*sc,.25*sc)];
+        // Llegim els punts reals del travesser: si en canviam la mida,
+        // les mans continuaran exactament al mateix costat visible.
+        v.o.updateWorldMatrix(true,true);
+        g.updateWorldMatrix(true,false);
+        const grips=v.o.userData.windsurfGrips;
+        const hands=grips.map(point=>g.worldToLocal(v.o.localToWorld(point.clone())));
         const feet=[vec(bodyX,footY,.72*sc),vec(bodyX,footY,-.72*sc)];
         for(let i=0;i<2;i++){
           const hip=hips[i],shoulder=shoulders[i],hand=hands[i],foot=feet[i];
-          const elbow=shoulder.clone().lerp(hand,.55);
-          elbow.y-=.1;elbow.z+=(i?-.06:.06);
+          const elbow=shoulder.clone().lerp(hand,.58);
+          elbow.y-=.1;elbow.z=Math.max(elbow.z,.52*sc);
           limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
-          // Genoll sobre la línia cama-maluc-peu: només una flexió mínima visual.
           const knee=hip.clone().lerp(foot,.5);knee.x+=.015*sc;
           limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);
           boots[i].position.copy(foot);boots[i].rotation.set(0,-Math.PI/2,0);

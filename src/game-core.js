@@ -437,7 +437,13 @@ V.forEach(v=>{
  });
  movementFx.update(dt,cam);
  PT.forEach(p=>{if(p.life>0){p.life-=dt;if(p.rise)p.m.position.y+=p.rise*dt;p.m.scale.setScalar(p.s*(1+(1-p.life/p.max)*1.15));p.m.material.opacity=Math.max(0,p.life/p.max)*.8;if(p.life<=0){p.m.visible=false;p.rise=0}}});
-if(seaAudio){const coastal=Math.max(.25,1-Math.max(0,hAt(P.x,P.z))/22);seaAudio.gain.gain.setTargetAtTime(over?0:.035+coastal*.05,AC.currentTime,.5)}if(eng){const c=cv?VT[cv.t]:null;eng.g.gain.value=c&&cv.t!=='bici'&&!over?.02+Math.min(1,Math.abs(cv.v)/40)*.03:0;eng.o.frequency.value=c?(c.m=='a'?60:35)+Math.abs(cv.v)*(c.m=='a'?1:2.5):40}}
+if(seaAudio){const coastal=Math.max(.25,1-Math.max(0,hAt(P.x,P.z))/22),
+      // El windsurf només fa un fregadís molt suau d'aigua, no motor.
+      waterVolume=cv?.t==='windsurf'?.026+Math.min(1,Math.abs(cv.v)/22)*.016:.035+coastal*.05;
+  seaAudio.gain.gain.setTargetAtTime(over?0:waterVolume,AC.currentTime,.5)}
+if(eng){const c=cv?VT[cv.t]:null;
+  eng.g.gain.value=c&&cv.t!=='bici'&&cv.t!=='windsurf'&&!over?.02+Math.min(1,Math.abs(cv.v)/40)*.03:0;
+  eng.o.frequency.value=c?(c.m=='a'?60:35)+Math.abs(cv.v)*(c.m=='a'?1:2.5):40}}
 const seedRandomEl=document.getElementById('seedRandom'),seedInputEl=document.getElementById('seedInput'),iniEl=document.getElementById('ini'),
 startMenuEl=document.getElementById('startMenu'),seedSearchScreenEl=document.getElementById('seedSearchScreen'),
 seedSearchOpenEl=document.getElementById('seedSearchOpen'),seedSearchBackEl=document.getElementById('seedSearchBack'),

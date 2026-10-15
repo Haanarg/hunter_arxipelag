@@ -453,14 +453,52 @@ window.HUNTER_VEHICLES=Object.freeze({
         const mask=new THREE.Mesh(maskGeometry,maskMaterial);mask.name='rowboat-water-mask';mask.userData.waterMask=true;mask.renderOrder=1;g.add(mask);
       }
       if(t==='windsurf'){
-        box(g,.78,.18,5.15,0xf2e2b9,0,.18,0,'paint');
-        rod(g,[0,.28,.25],[0,5.05,.25],.08,metal);
+        // Taula de surf: proa en punta (-Z), màxima amplada a mig cos
+        // i cua una mica més estreta amb el tall final completament recte.
+        const outline=new THREE.Shape();
+        outline.moveTo(0,2.72);
+        outline.quadraticCurveTo(.36,2.58,.49,2.15);
+        outline.bezierCurveTo(.69,1.42,.69,.55,.65,0);
+        outline.bezierCurveTo(.62,-1.15,.52,-2.22,.42,-2.65);
+        outline.lineTo(-.42,-2.65);
+        outline.bezierCurveTo(-.52,-2.22,-.62,-1.15,-.65,0);
+        outline.bezierCurveTo(-.69,.55,-.69,1.42,-.49,2.15);
+        outline.quadraticCurveTo(-.36,2.58,0,2.72);
+        outline.closePath();
+        const deckGeo=new THREE.ExtrudeGeometry(outline,{
+          depth:.16,steps:1,bevelEnabled:true,bevelThickness:.025,
+          bevelSize:.035,bevelSegments:1,curveSegments:10
+        });
+        deckGeo.rotateX(-Math.PI/2);
+        const deck=new THREE.Mesh(deckGeo,material(0xf2e2b9,'paint'));
+        deck.position.y=.16;g.add(deck);
+        // Superfície útil de la vela aproximadament doble: més alta,
+        // més ampla i amb la vora de sortida suaument corbada.
+        rod(g,[0,.32,.25],[0,5.97,.25],.085,metal);
+        const sailPoints=[
+          [0,5.82,.25],[0,.83,.25],[1.19,1.02,.25],
+          [2.75,1.45,.25],[2.71,2.48,.25],
+          [2.22,3.77,.25],[1.18,5.18,.25]
+        ];
         const geom=new THREE.BufferGeometry();
-        geom.setAttribute('position',new THREE.Float32BufferAttribute([0,4.9,.25,0,.88,.25,2.32,1.24,.25],3));
-        geom.setIndex([0,1,2]);geom.computeVertexNormals();
-        const sm=new THREE.Mesh(geom,material(0xe86d4b,'paint'));g.add(sm);
-        // Travesser a l'alçada natural de les mans del rider dempeus.
-        rod(g,[0,2.62,.25],[1.82,1.86,.25],.055,metal)
+        geom.setAttribute('position',new THREE.Float32BufferAttribute(sailPoints.flat(),3));
+        geom.setIndex([0,1,2,0,2,3,0,3,4,0,4,5,0,5,6]);
+        geom.computeVertexNormals();
+        const cloth=material(0xe86d4b,'paint');cloth.side=THREE.DoubleSide;
+        const sail=new THREE.Mesh(geom,cloth);g.add(sail);
+        rod(g,[0,.83,.25],[2.75,1.45,.25],.036,metal);
+        rod(g,[2.75,1.45,.25],[2.71,2.48,.25],.033,metal);
+        rod(g,[2.71,2.48,.25],[2.22,3.77,.25],.033,metal);
+        rod(g,[2.22,3.77,.25],[1.18,5.18,.25],.033,metal);
+        rod(g,[1.18,5.18,.25],[0,5.82,.25],.033,metal);
+        // Travesser per davant de la vela, visible des de la càmera (+Z).
+        // Les dues mans utilitzen aquests punts exactes de contacte.
+        const boomStart=new THREE.Vector3(0,2.85,.70),
+              boomEnd=new THREE.Vector3(2,2.10,.70);
+        rod(g,boomStart.toArray(),boomEnd.toArray(),.065,metal);
+        rod(g,[0,2.85,.25],boomStart.toArray(),.045,metal);
+        g.userData.windsurfGrips=[.35,.60].map(k=>
+          boomStart.clone().lerp(boomEnd,k));
       }
       if(t==='ferry'){
         const hullCol=0x4e6570,deckCol=0x8f9692,edge=0xd7d2bd,cabin=0xe7e3d5;
