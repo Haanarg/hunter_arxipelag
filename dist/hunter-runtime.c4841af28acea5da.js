@@ -1082,7 +1082,8 @@ window.HUNTER_VEHICLES=Object.freeze({
         nose.rotation.x=-.18;
         for(const x of[-1.05,1.05])box(g,.32,.18,.18,0xffe0a0,x,1.48,-2.24,'paint');
         const turret=new THREE.Group();turret.position.set(0,2.22,-.15);g.add(turret);
-        box(turret,2.08,.58,1.7,0x727c50,0,-.2,0,'paint');
+        // La base rectangular queda fixa al xassís; només gira la corona cilíndrica.
+        box(g,2.08,.58,1.7,0x727c50,0,2.02,-.15,'paint');
         round(turret,.68,.32,0x586543,0,.18,0,'y','paint');
         const elev=new THREE.Group();elev.position.set(0,.26,-.5);turret.add(elev);
         rod(elev,[0,0,0],[0,0,-2.4],.1,metal);
