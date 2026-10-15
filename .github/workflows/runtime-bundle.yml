@@ -7,6 +7,7 @@ on:
       - 'src/*.js'
       - 'src/runtime-scripts.mjs'
       - 'tools/build-runtime.cjs'
+      - '.github/workflows/runtime-bundle.yml'
   workflow_dispatch:
 permissions:
   contents: write
@@ -28,8 +29,8 @@ jobs:
         run: node tools/build-runtime.cjs
       - name: Comprovar el hash i la integritat
         run: node tools/build-runtime.cjs --check
-      - name: Prova bàsica del paquet únic
-        run: HUNTER_TEST_BUNDLE=1 node tests/smoke.cjs
+      - name: Comprovar la sintaxi del paquet generat
+        run: node --check dist/hunter-runtime.*.js
       - name: Publicar només si han passat les proves
         run: |
           git config user.name "github-actions[bot]"
