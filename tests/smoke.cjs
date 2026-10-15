@@ -3,6 +3,21 @@
 const assert=require('assert');
 const game=await require('./harness.cjs')();const {run}=game;const ok=(s,m)=>assert(run(s),m);
 assert.equal(run('THREE.REVISION'),'186');
+// L'ordre i els valors del menú són importants: cap canvi al cercador
+// ni a la versió flotant i gràfics Alts per defecte també al mòbil.
+const landingHtml=require('fs').readFileSync(require('path').join(__dirname,'../index.html'),'utf8');
+const menuStart=landingHtml.indexOf('<div id="startMenu"'),menuEnd=landingHtml.indexOf('<div id="performanceScreen"',menuStart);
+const landingMenu=landingHtml.slice(menuStart,menuEnd);
+assert(menuStart>=0&&menuEnd>menuStart,'main menu exists');
+const uiOrder=['difficultyButtons','seedBox','qualityBox'].map(id=>landingMenu.indexOf('id="'+id+'"'));
+assert(uiOrder.every(n=>n>=0)&&uiOrder[0]<uiOrder[1]&&uiOrder[1]<uiOrder[2],
+  'difficulty buttons then seed selection then quality');
+assert(landingMenu.includes('<option value="desktop" selected>')&&
+  landingMenu.includes('id="performanceMenuOpen"')&&
+  !landingMenu.includes('Els mínims eliminen'),'high quality selected, gear beside dropdown, no descriptive text');
+assert(landingHtml.includes('#seedSearchOpen{position:absolute')&&
+  landingHtml.includes('#versionBadge{position:absolute'),'seed search and version retain their positions');
+
 const start=Date.now();ok('!started&&B.length===0','title screen defers world generation');
 ok("!document.body.classList.contains('game-started')",'minimap must stay hidden on the start screen');
 game.start();game.frame();
@@ -23,15 +38,21 @@ const armoredPose=run(`(()=>{
     const aligned=gun.direction.dot(desired)>.997,
           actual=rig.turretMuzzle.getWorldPosition(new THREE.Vector3()),
           fromMuzzle=gun.origin.distanceTo(actual)<1e-8,
-          hullIndependent=Math.abs(model.rotation.y)<1e-8;
-    result[type]={firstTurn,aligned,fromMuzzle,hullIndependent,
+          hullIndependent=Math.abs(model.rotation.y)<1e-8,
+          // La caixa inferior de la tanqueta ha de ser filla del cos,
+          // no de la corona giratòria.
+          lowerFixed=type!=='tanqueta'||model.children.some(m=>m.isMesh&&
+            m.geometry?.parameters?.width===2.08&&
+            Math.abs(m.position.y-2.02)<1e-6&&
+            Math.abs(m.position.z+.15)<1e-6);
+    result[type]={firstTurn,aligned,fromMuzzle,hullIndependent,lowerFixed,
       yaw:rig.turretPivot.rotation.y,pitch:rig.turretPitch.rotation.x};
   }
   return result;
 })()`);
 for(const type of ['tanc','tanqueta']){
  const q=armoredPose[type];assert(q&&q.firstTurn>0&&q.firstTurn<.07&&q.aligned&&
-   q.fromMuzzle&&q.hullIndependent&&q.pitch>.015,
+   q.fromMuzzle&&q.hullIndependent&&q.lowerFixed&&q.pitch>.015,
    'smooth independent turret aims and shoots exactly from muzzle ('+type+'): '+JSON.stringify(q));
 }
 

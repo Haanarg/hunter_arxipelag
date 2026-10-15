@@ -42,6 +42,12 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Portada i tanqueta (v0.5.11)
+
+- La tanqueta deixa fixa al xassís la caixa rectangular de sota la torreta; només giren la corona cilíndrica i el canó articulat.
+- La portada ordena les dificultats (inici de partida), llavors i mida de mapa, i selector de qualitat amb l'engranatge de Rendiment al costat. La cerca i la versió conserven les posicions.
+- El perfil gràfic **Alts** és el predeterminat a tots els dispositius; una selecció explícita de qualitat continua tenint prioritat.
+
 ## Torretes mòbils de blindats (v0.5.10)
 
 Els **tancs i les tanquetes**, tant pilotables com enemics, tenen torreta independent del xassís. El bloc superior gira horitzontalment i el canó disposa de pivot per ajustar l'elevació, amb velocitat angular limitada, acceleració i frenada progressives. El tanc gira més lentament que la tanqueta.

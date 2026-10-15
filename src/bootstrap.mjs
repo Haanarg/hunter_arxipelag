@@ -10,16 +10,15 @@ const versionBadge=document.getElementById('versionBadge');
 if(versionBadge)versionBadge.textContent='v'+GAME_VERSION;
 window.HUNTER_VERSION=GAME_VERSION;
 
-// Tres perfils. En mòbil seleccionem "Reduïts" per defecte,
-// però el jugador pot escollir "Mínims" o "Alts" a la portada.
+// Tres perfils; "Alts" és el predeterminat en qualsevol dispositiu.
+// Es respecten sempre la selecció explícita i el paràmetre llegat low.
 const graphicsQuality=document.getElementById('graphicsQuality');
-const coarsePointer=matchMedia('(pointer:coarse)').matches;
 const params=new URLSearchParams(location.search);
 const requestedQuality=params.get('quality');
 const legacyLow=params.get('low')==='1';
 const validQualities=['desktop','mobile','ultra'];
 const quality=validQualities.includes(requestedQuality)?requestedQuality:
-  legacyLow?'mobile':coarsePointer?'mobile':'desktop';
+  legacyLow?'mobile':'desktop';
 window.HUNTER_GRAPHICS_QUALITY=quality;
 window.HUNTER_FORCE_LOW_QUALITY=quality!=='desktop';
 if(graphicsQuality){

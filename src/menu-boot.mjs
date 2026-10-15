@@ -29,8 +29,9 @@ if(badge)badge.textContent='v'+GAME_VERSION;
 const params = new URLSearchParams(location.search);
 const validQualities = ['desktop','mobile','ultra'];
 const requested = params.get('quality');
+// Gràfics Alts per defecte també en dispositius tàctils.
 const initialQuality=validQualities.includes(requested)?requested:
-  params.get('low')==='1'||matchMedia('(pointer:coarse)').matches?'mobile':'desktop';
+  params.get('low')==='1'?'mobile':'desktop';
 qualitySelect.value=initialQuality;
 qualitySelect.addEventListener('change',()=>{
   if(window.HUNTER_READY)return; // bootstrap.mjs és el responsable a partir d'aquí.
