@@ -59,7 +59,6 @@ window.HUNTER_MATERIALS = Object.freeze({
   glass: Object.freeze({roughness:.18,metalness:.04,transparent:true,opacity:.72,depthWrite:false})
 });
 
-
 ;
 // END src/materials-config.js
 // BEGIN src/high-graphics.js
@@ -139,7 +138,6 @@ window.HUNTER_PALETTE = Object.freeze({
   })
 });
 
-
 ;
 // END src/palette.js
 // BEGIN src/water-config.js
@@ -154,7 +152,6 @@ window.HUNTER_WATER = Object.freeze({
   absorptionDepth: 25.0,
   fogDensity: 0.000105
 });
-
 
 ;
 // END src/water-config.js
@@ -308,7 +305,6 @@ window.HUNTER_WAVES=(()=>{
   const glsl=`float hunterWaveHeight(vec2 p,float time,float seabed){return (${expression})*clamp((-seabed+${gl(shore.offset)})/${gl(shore.depth)},${gl(shore.min)},${gl(shore.max)});}`;
   return Object.freeze({components,shore,amplitude,height,glsl,maxDisplacement:components.reduce((sum,w)=>sum+w.amplitude,0)});
 })();
-
 
 ;
 // END src/waves.js
@@ -1411,14 +1407,52 @@ window.HUNTER_VEHICLES=Object.freeze({
         const mask=new THREE.Mesh(maskGeometry,maskMaterial);mask.name='rowboat-water-mask';mask.userData.waterMask=true;mask.renderOrder=1;g.add(mask);
       }
       if(t==='windsurf'){
-        box(g,.78,.18,5.15,0xf2e2b9,0,.18,0,'paint');
-        rod(g,[0,.28,.25],[0,5.05,.25],.08,metal);
+        // Taula de surf: proa en punta (-Z), màxima amplada a mig cos
+        // i cua una mica més estreta amb el tall final completament recte.
+        const outline=new THREE.Shape();
+        outline.moveTo(0,2.72);
+        outline.quadraticCurveTo(.36,2.58,.49,2.15);
+        outline.bezierCurveTo(.69,1.42,.69,.55,.65,0);
+        outline.bezierCurveTo(.62,-1.15,.52,-2.22,.42,-2.65);
+        outline.lineTo(-.42,-2.65);
+        outline.bezierCurveTo(-.52,-2.22,-.62,-1.15,-.65,0);
+        outline.bezierCurveTo(-.69,.55,-.69,1.42,-.49,2.15);
+        outline.quadraticCurveTo(-.36,2.58,0,2.72);
+        outline.closePath();
+        const deckGeo=new THREE.ExtrudeGeometry(outline,{
+          depth:.16,steps:1,bevelEnabled:true,bevelThickness:.025,
+          bevelSize:.035,bevelSegments:1,curveSegments:10
+        });
+        deckGeo.rotateX(-Math.PI/2);
+        const deck=new THREE.Mesh(deckGeo,material(0xf2e2b9,'paint'));
+        deck.position.y=.16;g.add(deck);
+        // Superfície útil de la vela aproximadament doble: més alta,
+        // més ampla i amb la vora de sortida suaument corbada.
+        rod(g,[0,.32,.25],[0,5.97,.25],.085,metal);
+        const sailPoints=[
+          [0,5.82,.25],[0,.83,.25],[1.19,1.02,.25],
+          [2.75,1.45,.25],[2.71,2.48,.25],
+          [2.22,3.77,.25],[1.18,5.18,.25]
+        ];
         const geom=new THREE.BufferGeometry();
-        geom.setAttribute('position',new THREE.Float32BufferAttribute([0,4.9,.25,0,.88,.25,2.32,1.24,.25],3));
-        geom.setIndex([0,1,2]);geom.computeVertexNormals();
-        const sm=new THREE.Mesh(geom,material(0xe86d4b,'paint'));g.add(sm);
-        // Travesser a l'alçada natural de les mans del rider dempeus.
-        rod(g,[0,2.62,.25],[1.82,1.86,.25],.055,metal)
+        geom.setAttribute('position',new THREE.Float32BufferAttribute(sailPoints.flat(),3));
+        geom.setIndex([0,1,2,0,2,3,0,3,4,0,4,5,0,5,6]);
+        geom.computeVertexNormals();
+        const cloth=material(0xe86d4b,'paint');cloth.side=THREE.DoubleSide;
+        const sail=new THREE.Mesh(geom,cloth);g.add(sail);
+        rod(g,[0,.83,.25],[2.75,1.45,.25],.036,metal);
+        rod(g,[2.75,1.45,.25],[2.71,2.48,.25],.033,metal);
+        rod(g,[2.71,2.48,.25],[2.22,3.77,.25],.033,metal);
+        rod(g,[2.22,3.77,.25],[1.18,5.18,.25],.033,metal);
+        rod(g,[1.18,5.18,.25],[0,5.82,.25],.033,metal);
+        // Travesser per davant de la vela, visible des de la càmera (+Z).
+        // Les dues mans utilitzen aquests punts exactes de contacte.
+        const boomStart=new THREE.Vector3(0,2.85,.70),
+              boomEnd=new THREE.Vector3(2,2.10,.70);
+        rod(g,boomStart.toArray(),boomEnd.toArray(),.065,metal);
+        rod(g,[0,2.85,.25],boomStart.toArray(),.045,metal);
+        g.userData.windsurfGrips=[.35,.60].map(k=>
+          boomStart.clone().lerp(boomEnd,k));
       }
       if(t==='ferry'){
         const hullCol=0x4e6570,deckCol=0x8f9692,edge=0xd7d2bd,cabin=0xe7e3d5;
@@ -2003,7 +2037,6 @@ window.HUNTER_JOYSTICK=Object.freeze({
   }
 });
 
-
 ;
 // END src/joystick.js
 // BEGIN src/action-icons.js
@@ -2298,22 +2331,26 @@ window.HUNTER_RIDER=Object.freeze({
       }
 
       if(v.t==='windsurf'){
-        // Postura real de windsurf: dempeus, cames gairebé rectes, tors de costat i mans al travesser.
-        const lean=Math.max(-.08,Math.min(.08,v.v/42)),bodyX=-.62*sc,hipY=1.36*sc,footY=.29*sc;
-        torso.position.set(bodyX,hipY,.08*sc);
-        // Tors i cap miren cap a la vela; braços i cames mantenen la seva postura actual.
+        // Tors de costat i cames rectes. Les dues mans agafen el mateix
+        // costat del travesser (+Z), davant de la vela i de cara a la càmera.
+        const lean=Math.max(-.08,Math.min(.08,v.v/42)),
+              bodyX=-.44*sc,hipY=1.36*sc,footY=.29*sc;
+        torso.position.set(bodyX,hipY,.18*sc);
         torso.rotation.set(0,-Math.PI/2,-.035+lean);
-        // La part inferior del cos gira 180° respecte del tors: cintura, cames i peus miren al costat correcte de la taula.
         const hips=[vec(bodyX,hipY,-.25*sc),vec(bodyX,hipY,.25*sc)];
         const shoulders=[shoulderAt(1),shoulderAt(-1)];
-        const hands=[vec(.52*sc,2.39*sc,.25*sc),vec(1.2*sc,2.08*sc,.25*sc)];
+        // Llegim els punts reals del travesser: si en canviam la mida,
+        // les mans continuaran exactament al mateix costat visible.
+        v.o.updateWorldMatrix(true,true);
+        g.updateWorldMatrix(true,false);
+        const grips=v.o.userData.windsurfGrips;
+        const hands=grips.map(point=>g.worldToLocal(v.o.localToWorld(point.clone())));
         const feet=[vec(bodyX,footY,.72*sc),vec(bodyX,footY,-.72*sc)];
         for(let i=0;i<2;i++){
           const hip=hips[i],shoulder=shoulders[i],hand=hands[i],foot=feet[i];
-          const elbow=shoulder.clone().lerp(hand,.55);
-          elbow.y-=.1;elbow.z+=(i?-.06:.06);
+          const elbow=shoulder.clone().lerp(hand,.58);
+          elbow.y-=.1;elbow.z=Math.max(elbow.z,.52*sc);
           limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
-          // Genoll sobre la línia cama-maluc-peu: només una flexió mínima visual.
           const knee=hip.clone().lerp(foot,.5);knee.x+=.015*sc;
           limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);
           boots[i].position.copy(foot);boots[i].rotation.set(0,-Math.PI/2,0);
@@ -3767,7 +3804,6 @@ window.HUNTER_FAUNA = Object.freeze({
     return g;
   }
 });
-
 
 ;
 // END src/fauna.js
@@ -5315,7 +5351,6 @@ const len=Math.floor(AC.sampleRate*({shot:.12,cannon:.35,boom:.7,hurt:.15}[t]||.
 for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2);
 const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=buf;f.type=t=='shot'?'highpass':'lowpass';f.frequency.value=t=='shot'?1200:t=='boom'?300:600;
 g.gain.value=.5*v;s.connect(f);f.connect(g);g.connect(AC.destination);s.start(n)}
-
 
 ;
 // END src/audio.js
@@ -6962,7 +6997,13 @@ V.forEach(v=>{
  });
  movementFx.update(dt,cam);
  PT.forEach(p=>{if(p.life>0){p.life-=dt;if(p.rise)p.m.position.y+=p.rise*dt;p.m.scale.setScalar(p.s*(1+(1-p.life/p.max)*1.15));p.m.material.opacity=Math.max(0,p.life/p.max)*.8;if(p.life<=0){p.m.visible=false;p.rise=0}}});
-if(seaAudio){const coastal=Math.max(.25,1-Math.max(0,hAt(P.x,P.z))/22);seaAudio.gain.gain.setTargetAtTime(over?0:.035+coastal*.05,AC.currentTime,.5)}if(eng){const c=cv?VT[cv.t]:null;eng.g.gain.value=c&&cv.t!=='bici'&&!over?.02+Math.min(1,Math.abs(cv.v)/40)*.03:0;eng.o.frequency.value=c?(c.m=='a'?60:35)+Math.abs(cv.v)*(c.m=='a'?1:2.5):40}}
+if(seaAudio){const coastal=Math.max(.25,1-Math.max(0,hAt(P.x,P.z))/22),
+      // El windsurf només fa un fregadís molt suau d'aigua, no motor.
+      waterVolume=cv?.t==='windsurf'?.026+Math.min(1,Math.abs(cv.v)/22)*.016:.035+coastal*.05;
+  seaAudio.gain.gain.setTargetAtTime(over?0:waterVolume,AC.currentTime,.5)}
+if(eng){const c=cv?VT[cv.t]:null;
+  eng.g.gain.value=c&&cv.t!=='bici'&&cv.t!=='windsurf'&&!over?.02+Math.min(1,Math.abs(cv.v)/40)*.03:0;
+  eng.o.frequency.value=c?(c.m=='a'?60:35)+Math.abs(cv.v)*(c.m=='a'?1:2.5):40}}
 const seedRandomEl=document.getElementById('seedRandom'),seedInputEl=document.getElementById('seedInput'),iniEl=document.getElementById('ini'),
 startMenuEl=document.getElementById('startMenu'),seedSearchScreenEl=document.getElementById('seedSearchScreen'),
 seedSearchOpenEl=document.getElementById('seedSearchOpen'),seedSearchBackEl=document.getElementById('seedSearchBack'),
