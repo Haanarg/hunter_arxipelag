@@ -42,6 +42,14 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Patrulles marines (v0.5.16)
+
+- Entre **5 i 10 llanxes militars per mapa**, generades a mar obert al voltant de l'arxipèlag, amb dos soldats visibles a bord. Són enemics que poden rebre dany i explotar.
+- Tenen metralladora (tirs curts) i llançacoets (més lent i de més abast); cadascuna gira cap al jugador. També ataquen des del mar quan el jugador és a terra i hi ha línia de tir.
+- **Disfressa enemiga:** no detecten, persegueixen ni disparen al jugador mentre està activada, fins i tot si pilota un vehicle.
+- Navegació exclusiva d'aigua: velocitat i gir angular graduals, radi de gir condicionat per la velocitat, viratges amplis, detecció de poca profunditat, límits del mapa i altres embarcacions. Si el jugador s'allunya tornen a patrullar.
+- El recompte real queda accessible a `world.userData.marinePatrols` (`target`, `spawned`) per ajustar més endavant la densitat de patrulles sense modificar la IA.
+
 ## Portada i tanqueta (v0.5.11)
 
 - La tanqueta deixa fixa al xassís la caixa rectangular de sota la torreta; només giren la corona cilíndrica i el canó articulat.
