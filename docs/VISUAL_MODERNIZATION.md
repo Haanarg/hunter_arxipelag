@@ -131,13 +131,11 @@ Les proves **Reproducció de llavors**, **Regressió general del joc** i **Disse
 
 ### 2. Completar propostes de món encara obertes
 
-La fase 4 ja té **32 dissenys al visor** (40 escenes amb les V1): embarcador civil, terminal, control de carretera i la seva V4, tres mides de poblat, tres variants de cadascun dels vuit complexos existents i una connexió base–costa. Revisió del 14 d’octubre: cabanes orientades cap a la plaça amb finestres sense vidre i variants V4 que substitueixen exactament un edifici per un de dues plantes. Es documenten a [COMPOUNDS_PHASE4.md](COMPOUNDS_PHASE4.md). El catàleg de partides continua amb els vuit tipus aprovats.
+La revisió **0.5.13** integra les fases 1, 2, 3, 4 i 6: arquitectura compartida, poblats irregulars de tres mides, embarcadors, terminals, connexió base–costa i variants V1–V4. Només V4 té un edifici de dues plantes. Estat i límits de validació a [COMPOUNDS_PHASE4.md](COMPOUNDS_PHASE4.md).
 
-- Revisar i integrar els dissenys d’embarcador civil, terminal de ferri, control de carretera i assentament de cabanes.
-- Integrar la selecció de les variants V2/V3 per llavor, preservant reserves, accessos, objectes garantits i patrulles.
-- Implementar el traçat real base–costa i els camins necessaris per als controls de carretera; la maqueta ja mostra la connexió completa.
-- Integrar la variant fortificada d’heliport amb torre, ja dissenyada.
-- Implementar el criteri d’emplaçament elevat però accessible de comunicacions; el visor encara mostra una plataforma plana.
+- **Fase 5 ajornada:** controls de carretera només al visor, fora del generador.
+- Fase 7: comprovacions funcionals i navegador d’escriptori/mòbil emulat realitzades; sessió completa en Android físic pendent.
+- El criteri de comunicacions en carena elevada continua com a proposta; les variants utilitzen una plataforma accessible.
 
 ### 3. Poliment i manteniment
 

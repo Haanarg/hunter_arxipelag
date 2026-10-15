@@ -26,19 +26,21 @@ function findRedesignedPort(q){
   return null;
 }
 function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssigned,heliportSites}){
-  const isPort=layout.id==='port',angle=layout.phase===3?0:isPort?q.angle:Math.floor(R()*4)*Math.PI/2,mirror=isPort||layout.phase===3?1:R()<.5?-1:1,tr=compoundTransform(q,angle,mirror),c=Math.round(Math.cos(angle)),s=Math.round(Math.sin(angle));
+  const isPort=layout.id==='port',coastal=isPort||!!layout.waterfront,angle=['base','hq'].includes(layout.id)?0:coastal?q.angle:Math.floor(R()*4)*Math.PI/2,mirror=1,tr=compoundTransform(q,angle,mirror),c=Math.round(Math.cos(angle)),s=Math.round(Math.sin(angle));
   const vector=(x,z)=>[x*c-z*s,x*s+z*c],rotatedHeading=hd=>hd*mirror-angle;
-  const record={id:layout.id,x:q.x,z:q.z,angle,mirror,r:isPort?90:Math.hypot(...layout.size)/2+20,buildings:[],vehicles:[],soldiers:[],loot:[],entrances:layout.entrances.map(p=>tr(...p)),patrol:layout.patrol.map(p=>tr(...p))};
+  const record={id:layout.id,layoutId:layout.layoutId||layout.id,variant:layout.variant||1,layout,x:q.x,z:q.z,angle,mirror,r:Math.hypot(...layout.size)/2+20,buildings:[],vehicles:[],soldiers:[],loot:[],entrances:layout.entrances.map(p=>tr(...p)),patrol:layout.patrol.map(p=>tr(...p))};
   world.userData.compounds.push(record);
-  const center=tr(0,isPort?-27:0),height=isPort?.86:q.h??rawHAt(q.x,q.z);
-  addLevelArea(...center,isPort?110:layout.size[0]+8,isPort?70:layout.size[1]+8,height,angle,isPort?4:18);
-  const base=pad(...center,layout.size[0]-6,isPort?62:layout.size[1]-10);base.rotation.y=-angle;
+  const shore=layout.waterfront?.shore??8,landDepth=coastal?shore+layout.size[1]/2-5:layout.size[1]+8;
+  const center=tr(0,coastal?-layout.size[1]/2+landDepth/2:0),height=coastal?.86:q.h??rawHAt(q.x,q.z);
+  addLevelArea(...center,layout.size[0]+8,landDepth,height,angle,coastal?3:18);
+  if(!layout.civilian){const base=pad(...center,layout.size[0]-6,coastal?landDepth-2:layout.size[1]-10);base.rotation.y=-angle;}
   // Keep vegetation outside the complete reservation, including gates and turning space.
   compoundClear.push({x:q.x,z:q.z,r:record.r});
   for(const route of layout.routes)for(let i=1;i<route.points.length;i++)path(...tr(...route.points[i-1]),...tr(...route.points[i]),route.width);
   for(const spec of layout.buildings){
-    const [x,z]=tr(spec.x,spec.z),firstWall=Wl.length;
-    const b=spec.bunker?mkEnemyBunker(x,z):mkB(x,z,spec.w,spec.d,spec.h,spec.hangar?0xbab99d:0xc9b98d,layout.friendly?0x2c5fc0:spec.hangar?0xb7c1b4:0x79584e,{hangar:!!spec.hangar,kind:spec.hangar?'hangar':layout.id==='hangar'?'garage':layout.id,doorSide:0,doorWidth:spec.hangar?30:4,doorHeight:spec.hangar?11:4.4,openDoor:!!spec.hangar,noPartitions:true,solidWalls:layout.id==='polvori'&&spec.id!=='guard'});
+    const [x,z]=tr(spec.x,spec.z),firstWall=Wl.length,firstStair=stairs.length,buildingAngle=angle-(spec.rotationY||0),bc=Math.round(Math.cos(buildingAngle)),bs=Math.round(Math.sin(buildingAngle)),buildingVector=(x,z)=>[x*bc-z*bs,x*bs+z*bc];
+    const b=spec.bunker?mkEnemyBunker(x,z):mkB(x,z,spec.w,spec.d,spec.h*(spec.floors||1),spec.wood?0x96714b:spec.replacement?0xa9bdb0:spec.hangar?0xbab99d:0xc9b98d,layout.friendly?0x2c5fc0:spec.hangar?0xb7c1b4:0x79584e,{floors:spec.floors,wood:spec.wood,hangar:!!spec.hangar,kind:spec.hangar?'hangar':layout.id==='hangar'?'garage':layout.id,doorSide:0,doorWidth:spec.hangar?30:4,doorHeight:spec.hangar?11:4.4,openDoor:!!spec.hangar,noPartitions:true,solidWalls:!!spec.warehouse&&!spec.wood});
+    decorateRuntimeBuilding(b,spec);b.civilian=!!layout.civilian;
     if(spec.hangar){
       const shape=new THREE.Shape();shape.moveTo(-spec.w/2,0);shape.lineTo(spec.w/2,0);for(let i=0;i<=16;i++){const a=i*Math.PI/16;shape.lineTo(Math.cos(a)*spec.w/2,.12+Math.sin(a)*spec.w/2)}shape.closePath();
       // La paret semicircular és l'únic tancament posterior: sense l'antic
@@ -61,26 +63,26 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
     }
     if(layout.satellite?.buildingId===spec.id){
       const assembly=window.HUNTER_COMPOUND_STRUCTURES().satellite(layout.satellite.radius);
-      assembly.position.y=spec.h+1.2;b.roof.add(assembly);
-      window.HUNTER_AIR_OBSTACLES.registerSatellite(world,assembly,b,layout.satellite.radius);
+      assembly.scale.setScalar(layout.satellite.scale||1);assembly.position.y=b.h+1.2;b.roof.add(assembly);
+      window.HUNTER_AIR_OBSTACLES.registerSatellite(world,assembly,b,layout.satellite.radius*(layout.satellite.scale||1));
     }
     // Rotate both the visual shell and every associated physical record.
-    b.o.rotation.y=-angle;
-    const point=(wx,wz)=>{const p=vector(wx-x,wz-z);return[x+p[0],z+p[1]]};
+    b.o.rotation.y=-buildingAngle;b.angle=buildingAngle;
+    const point=(wx,wz)=>{const p=buildingVector(wx-x,wz-z);return[x+p[0],z+p[1]]};
     for(const w of Wl.slice(firstWall)){
       // Totes les parets, portes i llindes pertanyen a aquest edifici:
       // els projectils lleugers no poden degradar-ne l'estructura.
       w.owner=b;
       const corners=[[w.x0,w.z0],[w.x0,w.z1],[w.x1,w.z0],[w.x1,w.z1]].map(p=>point(...p));
-      w.x0=Math.min(...corners.map(p=>p[0]));w.x1=Math.max(...corners.map(p=>p[0]));w.z0=Math.min(...corners.map(p=>p[1]));w.z1=Math.max(...corners.map(p=>p[1]));[w.cx,w.cz]=point(w.cx,w.cz);if(w.nx!=null)[w.nx,w.nz]=vector(w.nx,w.nz);
+      w.x0=Math.min(...corners.map(p=>p[0]));w.x1=Math.max(...corners.map(p=>p[0]));w.z0=Math.min(...corners.map(p=>p[1]));w.z1=Math.max(...corners.map(p=>p[1]));[w.cx,w.cz]=point(w.cx,w.cz);if(w.nx!=null)[w.nx,w.nz]=buildingVector(w.nx,w.nz);
     }
-    if(b.stair){const a=b.stair;[a.x,a.z]=point(a.x,a.z);[a.nx,a.nz]=vector(a.nx,a.nz)}
-    if(s){[b.w,b.d]=[b.d,b.w];[b.hw,b.hd]=[b.hd,b.hw]}
-    b.doorSide=s===1?3:s===-1?2:c===-1?1:0;b.compound=record.id;b.layoutBuilding=spec.id;record.buildings.push(b);
+    for(const a of stairs.slice(firstStair)){[a.x,a.z]=point(a.x,a.z);[a.nx,a.nz]=buildingVector(a.nx,a.nz)}
+    if(bs){[b.w,b.d]=[b.d,b.w];[b.hw,b.hd]=[b.hd,b.hw]}
+    b.doorSide=bs===1?3:bs===-1?2:bc===-1?1:0;b.compound=record.id;b.layoutBuilding=spec.id;record.buildings.push(b);
   }
   if(layout.antenna){const a=layout.antenna,[x,z]=tr(a.x,a.z),g=window.HUNTER_COMPOUND_STRUCTURES().antenna(a);g.position.set(x,height+.2,z);g.rotation.y=-angle;world.add(g);record.antenna=g;
     // The solid plinth blocks movement and is destructible with the complete tower.
-    const footing={x0:x-8,x1:x+8,z0:z-8,z1:z+8,y0:height,y1:height+1.3,
+    const footing={x0:x-4*(a.scale||1),x1:x+4*(a.scale||1),z0:z-4*(a.scale||1),z1:z+4*(a.scale||1),y0:height,y1:height+1.3,
       hp:150,m:g.children[0],parts:g.children.slice(),door:false,open:false,
       rammable:true,cx:x,cz:z};
     Wl.push(footing);
@@ -93,19 +95,20 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
   for(const [kind,x,z] of layout.props){if(kind==='flag')flag(...tr(x,z),layout.friendly?0x2c7bff:0xe02828);else prop(kind,...tr(x,z),-angle);}
   // The outpost perimeter has exactly the same two openings as the approved preview.
   if(layout.fence)for(const [a,b] of layout.fence)barbedSegment(...tr(...a),...tr(...b));
-  if(layout.id==='hangar'||layout.friendly){
+  if(!layout.boundary&&(layout.id==='hangar'||layout.id==='base')){
     const hw=layout.friendly?56:47,hd=50;
     for(let x=-hw;x<=hw;x+=6){if(Math.abs(x)>10)prop('barrier',...tr(x,hd),-angle);prop('barrier',...tr(x,-hd),-angle)}
     for(let z=-hd+6;z<hd;z+=6)for(const x of[-hw,hw])prop('barrier',...tr(x,z),Math.PI/2-angle);
   }
-  if(isPort){
+  if(layout.piers){for(const p of layout.piers)pier(...tr(p.x,p.z-p.d/2),...tr(p.x,p.z+p.d/2),p.w);}
+  else if(isPort){
     pier(...tr(-51,7),...tr(51,7),10);
     for(const x of[-24,24])pier(...tr(x,7),...tr(x,48),6);
   }
   for(const [vehicleIndex,spec] of layout.vehicles.entries()){
     const t=spec.t==='llanxa_coets'&&rocketAssigned?'llanxa':layout.id==='heliport'&&heliportSites.length===1?'heli_combat':spec.t,[x,z]=tr(spec.x,spec.z),v={t,x,z,hd:rotatedHeading(spec.hd),compound:record.id};
     if(layout.id==='hangar'&&spec.t==='tanc'){v.insideHangar=true;v.hangar=record.buildings[0]}
-    if(layout.id==='heliport'){Object.assign(v,{heliport:true,military:true,guaranteed:true});heliportSites.push({x,z,hd:v.hd})}
+    if(layout.id==='heliport'){Object.assign(v,{heliport:true,military:true,guaranteed:true});heliportSites.push({x,z,hd:v.hd,type:t})}
     if(layout.id==='hq'){
       const u=mkEn(spec.t==='cotxe'?'jeep':spec.t,x,z);u.compound='hq';u.hd=v.hd;if(spec.t==='tanqueta')u.hqPatrolZone=vehicleIndex===0?'north':'south';
       const route=layout.vehiclePatrols[spec.t==='tanqueta'?vehicleIndex:2].points.slice(0,-1).map(p=>tr(...p));
@@ -146,5 +149,6 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
     if(!o)continue;
     const item=items[items.length-1];item.compound=record.id;record.loot.push(item);
   }
+  if(layout.spawn){const p=tr(layout.spawn.x,layout.spawn.z);record.spawn={x:p[0],z:p[1]};}
   return record;
 }

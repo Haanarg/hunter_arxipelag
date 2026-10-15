@@ -1,82 +1,36 @@
-const assert=require('assert');
+const assert=require('node:assert/strict');
 (async()=>{
- const g=await require('./harness.cjs')();g.start(process.env.SEED||'12345',Number(process.env.MAP_SCALE||1));
- const result=g.run(`(()=>{
- const issues=[],cs=world.userData.compounds;
- const check=(v,m)=>{if(!v)issues.push(m)};
- for(const id of ['base','hq','hangar','outpost','port','heliport','polvori','comunicacions'])check(cs.some(c=>c.id===id),'missing '+id);
- for(const c of cs){
-  const tr=compoundTransform(c,c.angle,c.mirror),layout=HUNTER_COMPOUND_LAYOUTS.find(l=>l.id===c.id);
-  check(c.buildings.length===layout.buildings.length,c.id+' buildings');
-  for(const b of c.buildings){
-   const door=Dr.find(d=>Math.abs(d.cx-b.x)<=b.hw&&Math.abs(d.cz-b.z)<=b.hd);
-   if(!b.hangar)check(!!door&&Math.abs(door.nx+Math.sin(c.angle))<1e-6&&Math.abs(door.nz-Math.cos(c.angle))<1e-6,c.id+' door direction');
-   if(b.stair)check(Math.abs(b.stair.nx+Math.sin(c.angle))<1e-6&&Math.abs(b.stair.nz-Math.cos(c.angle))<1e-6,c.id+' stair direction');
-  }
-  for(const v of c.vehicles){check(V.some(o=>o.t===v.t&&Math.hypot(o.x-v.x,o.z-v.z)<.1),c.id+' missing '+v.t);check(!Wl.some(w=>!w.open&&w.playerBlock!==false&&obbOverlap(vehicleBox(v),enemyWallBox(w))),c.id+' vehicle in wall');}
-  for(const u of c.soldiers)check(enemyMoveClear(u,u.x,u.z,u.hd),c.id+' enemy spawn');
-  const u={t:'soldat'};
-  for(let i=1;i<c.patrol.length;i++){
-    const a=c.patrol[i-1],b=c.patrol[i];check(enemySweep(u,...a,...b,0,0,false),c.id+' patrol '+i);
-  }
-  if(c.id==='base'){check(P.x===c.x&&P.z===c.z+20,'base spawn');check(c.vehicles.length===2,'base vehicles');}
-  if(c.id==='hq'){
-   check(!V.some(v=>v.t==='tanc'&&Math.hypot(v.x-c.x,v.z-c.z)<c.r),'no tank at HQ');
-   check(c.enemyVehicles.length===4&&c.soldiers.length===8,'HQ defenders');
-   check(E.filter(u=>u.t==='torre'&&u.compound==='hq').length===4,'HQ towers');
-   const b=c.buildings[0],d=b.door;
-   check(b.o.userData.bunkerWallInset===3.5&&b.roof.scale.x<1,'sloping bunker');
-   check(c.general.x===b.x&&c.general.z===b.z-9,'general inside bunker');
-   for(const u of c.enemyVehicles){check(enemyMoveClear(u,u.x,u.z,u.hd),'HQ vehicle spawn');for(let i=0;i<u.patrol.length;i++){const a=u.patrol[i],b=u.patrol[(i+1)%u.patrol.length],hd=Math.atan2(a.x-b.x,a.z-b.z);check(enemySweep(u,a.x,a.z,b.x,b.z,hd,hd,false),'HQ vehicle route')}}
-   const px=P.x,pz=P.z;P.x=d.cx+d.nx*2;P.z=d.cz+d.nz*2;updateDoors(4);check(Math.abs(d.openProgress-.4)<1e-8,'gate four seconds');P.x+=20;updateDoors(3);check(Math.abs(d.openProgress-.4)<1e-8,'gate preserves progress');P.x=d.cx+d.nx*2;updateDoors(6);check(d.open&&d.openProgress===1,'gate ten seconds');P.x=px;P.z=pz;
-  }
-  if(c.id==='polvori'){
-   for(const t of ['arma','granada','expl','bazooka','franctirador'])
-     check(c.loot.some(i=>i.t===t),'missing guaranteed '+t);
-   check(!c.loot.some(i=>LOOT_MAPS.has(i.t)),'polvorí with maps');
-  }
-  if(c.id==='hangar'){
-   check(!c.loot.some(i=>LOOT_WEAPONS.has(i.t)),'weapons inside workshop');
-   check(c.loot.some(i=>i.t==='arma'),'workshop must keep ammunition');
-   for(const i of c.loot)check(!itemInsideHangar(i.x,i.z),'loot inside hangar');
-  }
-  if(c.id==='comunicacions'){for(const t of ['mapa','mapa_heli','mapa_tanc'])check(c.loot.some(i=>i.t===t),'missing guaranteed '+t);check(c.antenna?.children.length<12,'batched antenna');const roof=c.buildings.find(b=>b.layoutBuilding==='radio').roof;check(roof.children.some(o=>o.userData.previewSatellite),'roof satellite');}
-  if(c.id==='comunicacions'){const w=Wl.find(w=>w.parts?.includes(c.antenna.children[0]));dmgW(w,1000);check(c.antenna.children.every(m=>!m.visible),'antenna destruction');const b=c.buildings.find(b=>b.layoutBuilding==='radio');roofBreak(b);check(!b.roof.visible,'satellite falls with roof');}
-  if(c.id==='polvori'){const v=c.vehicles[0],route=layout.routes[0].points.map(p=>tr(...p));for(let i=1;i<route.length;i++){const a=route[i-1],b=route[i],hd=Math.atan2(a[0]-b[0],a[1]-b[1]);check(enemySweep(v,...a,...b,hd,hd,false),'truck exit blocked')}}
-  if(layout.phase===2){const [x,z]=tr(0,50);check(!Wl.some(w=>w.barbed&&x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2),'phase 2 gate blocked')}
-  if(c.id==='heliport')check(c.loot.some(i=>i.t==='paracaigudes'),'heliport parachute');
-  for(const i of c.loot){check(!Wl.some(w=>!w.open&&w.playerBlock!==false&&i.x>w.x0-.6&&i.x<w.x1+.6&&i.z>w.z0-.6&&i.z<w.z1+.6),'loot inside wall');check(Math.abs(i.y-hAt(i.x,i.z)-1.3)<.01,'loot height')}
-  if(c.id==='outpost'){
-    for(const p of[[0,40],[-42,20]]){const [x,z]=tr(...p);check(!Wl.some(w=>w.barbed&&x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2),'fence gate blocked')}
-    for(const p of[[0,-40],[42,0],[-42,0]]){const [x,z]=tr(...p);check(Wl.some(w=>w.barbed&&x>=w.x0&&x<=w.x1&&z>=w.z0&&z<=w.z1),'missing perimeter fence')}
-  }
-  if(c.id==='hangar'){
-    // Només l'arc posterior: sense l'antic prisma baix ni col·lisió duplicada.
-    const b=c.buildings.find(b=>b.hangar),rearWalls=Wl.filter(w=>w.owner===b&&w.hangarRear);
-    check(rearWalls.length===1,'hangar must have one rear semicircular wall');
-    if(rearWalls.length===1){
-      const w=rearWalls[0];
-      check(w.m.geometry.type==='ExtrudeGeometry','hangar rear must be an arch, not a rectangular box');
-      check(w.parts.length===1&&w.parts[0]===w.m,'arched wall is the only rear destructible part');
-      check(w.rammable&&w.hp>0,'arched wall retains collision and damage');
-    }
-    const rearBox=b.o.children.filter(m=>m.isMesh&&m.geometry.type==='BoxGeometry'&&
-      Math.abs(m.position.z+layout.buildings[0].d/2)<1.5&&
-      m.geometry.parameters.width>=layout.buildings[0].w*.8&&
-      m.geometry.parameters.depth<2);
-    check(rearBox.length===0,'obsolete rectangular rear mesh still present');
-    const v=c.vehicles[0],route=layout.routes[0].points.map(p=>tr(...p));
-    for(let i=1;i<route.length;i++){
-      const a=route[i-1],b=route[i],hd=Math.atan2(a[0]-b[0],a[1]-b[1]);
-      check(enemySweep(v,...a,...b,hd,hd,false),'tank exit segment '+i);
-    }
-  }
-  if(c.id==='port')for(const x of[-24,24])for(let z=7;z<=48;z+=2){const p=tr(x,z);check(groundAt(...p)>=.85,'dock walking height');check(enemySolidAt(u,...p,0),'dock navigation')}
+ const {runtimeLayouts}=await import('../src/compound-runtime-layouts.mjs');
+ assert(!runtimeLayouts.some(l=>l.type==='road-checkpoint'));
+ for(const type of ['base','hq','hangar','outpost','port','heliport','polvori','comunicacions']){
+  const variants=runtimeLayouts.filter(l=>l.type===type);assert.equal(variants.length,4,type);
+  for(const l of variants)assert.equal(l.buildings.filter(b=>b.floors===2).length,l.variant===4?1:0,l.layoutId);
  }
- for(let i=0;i<cs.length;i++)for(let j=i+1;j<cs.length;j++)check(Math.hypot(cs[i].x-cs[j].x,cs[i].z-cs[j].z)>cs[i].r+cs[j].r,'compound separation');
- check(V.filter(v=>v.t==='llanxa_coets').length===1,'unique rocket boat');
- return{issues,counts:cs.reduce((a,c)=>(a[c.id]=(a[c.id]||0)+1,a),{}),turns:[...new Set(cs.map(c=>c.angle))],mirrors:[...new Set(cs.map(c=>c.mirror))]};
- })()`);
- const pickups=g.run(`(()=>{const c=world.userData.compounds.find(c=>c.id==='polvori'),rifle=c.loot.find(i=>i.t==='franctirador'),rocket=c.loot.find(i=>i.t==='bazooka');for(const i of [rifle,rocket]){P.x=i.x;P.z=i.z;P.y=hAt(i.x,i.z);update(.01,elapsed+.01)}return inv.franctirador===1&&sniperAmmo>=6&&inv.bazooka>=1})()`);assert(pickups,'guaranteed weapons can be collected');
- console.log(JSON.stringify(result,null,2));assert.equal(result.issues.length,0,'generated layout validation');
+ for(const l of runtimeLayouts.filter(l=>l.settlement)){assert.equal(l.routes.length,1);assert(new Set(l.buildings.map(b=>b.rotationY)).size>=3)}
+ const g=await require('./harness.cjs')();g.run('seedSearchMode=true');g.start(process.env.SEED||'12345');
+ const result=g.run(`(()=>{
+ const issues=[],check=(v,m)=>{if(!v)issues.push(m)},cs=world.userData.compounds;
+ for(const id of ['base','hq','hangar','outpost','port','heliport','polvori','comunicacions','civil-dock','ferry-terminal'])check(cs.some(c=>c.id===id),'missing '+id);
+ check(cs.filter(c=>c.id==='ferry-terminal').length===2,'two terminals');check(V.filter(v=>v.t==='ferry').length===2,'two ferries');check(V.filter(v=>v.t==='llanxa_coets').length===1,'one rocket boat');
+ check(cs.some(c=>c.layout.settlement),'settlement');check(!cs.some(c=>c.id==='road-checkpoint'),'no checkpoints');check(!!world.userData.baseCoast.points,'base coast route');
+ for(const c of cs){
+  check(c.buildings.filter(b=>b.floors===2).length===(c.variant===4?1:0),c.layoutId+' storeys');
+  for(const b of c.buildings){check(!b.wood||b.roof.userData.branchGable,'hut roof');if(b.wood)check(!b.o.children.some(m=>m.visible&&m.material?.color?.getHex()===0x3e7185),'hut glazing');}
+  if(c.id==='polvori'){for(const t of ['bazooka','franctirador'])check(c.loot.some(i=>i.t===t),'polvori '+t);check(!c.loot.some(i=>LOOT_MAPS.has(i.t)),'polvori maps');}
+  if(c.id==='comunicacions')for(const t of ['mapa','mapa_heli','mapa_tanc'])check(c.loot.some(i=>i.t===t),'comms '+t);
+  for(const v of c.vehicles)check(V.some(o=>o.t===v.t&&Math.hypot(o.x-v.x,o.z-v.z)<.1),c.layoutId+' missing vehicle '+v.t);
+ }
+ const b=B.find(b=>b.upperFloor);check(!!b,'upper floor coverage');
+ if(b){const a=b.interiorStair;let y=b.fy+.3;check(groundAt(b.x,b.z,y)<b.fy+b.storey,'no ground teleport');
+  for(let t=1;t>=0;t-=.025){const x=a.x+a.nx*a.length*t,z=a.z+a.nz*a.length*t,next=groundAt(x,z,y);check(Math.abs(next-y)<.5,'stair discontinuity');y=next;}
+  check(Math.abs(y-a.top)<.2,'reached upper floor');
+  const p=buildingWorldPoint(b,0,0);check(Math.abs(groundAt(p.x,p.z,y)-a.top)<.2,'upper support');
+  for(let t=0;t<=1;t+=.025){y=groundAt(a.x+a.nx*a.length*t,a.z+a.nz*a.length*t,y);}check(y<b.fy+1,'descended');
+  roofBreak(b);check(upperFloorHeight(b,p.x,p.z,a.top)===null,'destroyed floor support');
+ }
+ for(const c of cs.filter(c=>c.loadingRamp)){const r=c.loadingRamp,f=r.f;for(const y of [-.25,0,.25]){f.o.position.y=y;const s=terminalRampState(r),x=s.x+s.ux*s.length/2,z=s.z+s.uz*s.length/2;check(Math.abs(terminalRampHeight(x,z)-(s.startY+s.endY)/2)<1e-6,'wave bridge');}
+ f.x+=10;check(terminalRampState(r)===null,'bridge retracts');f.x-=10;
+ }
+ return{issues,sites:cs.map(c=>c.layoutId),buildings:B.length};})()`);
+ console.log(JSON.stringify(result,null,2));assert.equal(result.issues.length,0,result.issues.join("; "));
 })().catch(e=>{console.error(e);process.exitCode=1});

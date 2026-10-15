@@ -612,7 +612,7 @@ function wallBreak(w){const h=w.y1-w.y0-1,parts=w.parts&&w.parts.length?w.parts:
 if(w.parts&&w.parts.length){parts.forEach(m=>m.visible=false)}else if(w.m.visible)WA.push({m:w.m,h,t:.5});else world.remove(w.m);
 for(let i=0;i<(w.door?6:10);i++)debris(rn(w.x0,w.x1),w.y0+1+h*rn(.2,.9),rn(w.z0,w.z1),col,1,.9,7);
 for(let i=0;i<3;i++)puff(cx,w.y0+1+h*rn(.1,.6),cz,0xc9b48a,3.5)}
-function roofBreak(b){if(b.rb)return;b.rb=1;b.rhp=0;const col=b.roof.material?b.roof.material.color.getHex():(b.roof.userData.color||0x777777),y=b.fy+b.h+.6;
+function roofBreak(b){if(b.rb)return;b.rb=1;if(b.upperFloor)b.upperFloor.visible=false;for(const r of b.extraRoofs||[])r.visible=false;b.rhp=0;const col=b.roof.material?b.roof.material.color.getHex():(b.roof.userData.color||0x777777),y=b.fy+b.h+.6;
 if(b.hangar&&b.roof?.userData?.hangarRoof){
   HR.push({m:b.roof,t:0,dur:1.05,baseY:b.roof.position.y,baseRx:b.roof.rotation.x,baseRz:b.roof.rotation.z,dir:rn(-1,1)<0?-1:1,x:b.x,z:b.z,w:b.w,d:b.d,col});
   for(let i=0;i<12;i++)puff(b.x+rn(-b.w/2,b.w/2),b.fy+rn(1,b.w*.45),b.z+rn(-b.d/2,b.d/2),0x8b8580,3.8);
@@ -636,7 +636,7 @@ function treePush(){const r0=.5,cx=Math.floor(P.x/16),cz=Math.floor(P.z/16);for(
 function vehiclePushPlayer(){
   if(cv||playerFall)return;
   for(const v of [...V,...E.filter(u=>['jeep','tanqueta','tanc'].includes(u.t))]){
-    if(v.destroyed||!circleVehicleOverlap(P.x,P.z,.62,v))continue;
+    if(v.destroyed||!circleVehicleOverlap(P.x,P.z,.62,v))continue;if(v.t==='ferry'&&(terminalRampHeight(P.x,P.z)!==null||pedestrianFerry(P.x,P.z,P.y)?.f===v))continue;
     const b=vehicleBox(v),dx=P.x-b.x,dz=P.z-b.z,s=Math.sin(b.hd),c=Math.cos(b.hd),lx=dx*c-dz*s,lz=dx*s+dz*c,ex=b.w/2+.66-Math.abs(lx),ez=b.d/2+.66-Math.abs(lz);
     if(ex<ez){const sign=lx<0?-1:1,wx=sign*c,wz=-sign*s;P.x=b.x+(sign*(b.w/2+.66))*c+lz*s;P.z=b.z-(sign*(b.w/2+.66))*s+lz*c}
     else{const sign=lz<0?-1:1;P.x=b.x+lx*c+sign*(b.d/2+.66)*s;P.z=b.z-lx*s+sign*(b.d/2+.66)*c}
@@ -700,9 +700,10 @@ function checkRoofSupport(b,w){
 }
 function dmgW(w,d){if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}w.hp-=d;if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0){Wl.splice(i,1);wallGridCount=-1}i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);checkRoofSupport(w.owner,w);snd('boom',.3)}}
 function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=(opt.hangar?buildingVisual.createHangarShell:buildingVisual.createShell)({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide,structuralWalls=[];
+const wallH=opt.floors===2?h/2:h;
 let entranceDoor=null;
-const seg=(lx,lz,sx,sz,dr,windows=false,supportSide=null,supportWeight=0)=>{if(!dr){const parts=windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:h,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:h,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+h,hp:90,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,supportSide,supportWeight};Wl.push(o);if(supportWeight>0)structuralWalls.push(o);return}
-const parts=buildingVisual.addDoor(g,{lx,lz,sx,sz,height:h,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:35,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y};Wl.push(door);Dr.push(door);entranceDoor=door;
+const seg=(lx,lz,sx,sz,dr,windows=false,supportSide=null,supportWeight=0,level=0)=>{if(!dr){const parts=windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:wallH,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:wallH,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy+level-(level?0:1),y1:fy+level+wallH,hp:90,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,supportSide,supportWeight};for(const mesh of parts)mesh.position.y+=level;if(opt.wood){for(const mesh of parts)if(mesh.material?.color?.getHex()===0x3e7185)mesh.visible=false;}Wl.push(o);if(supportWeight>0)structuralWalls.push(o);return}
+const parts=buildingVisual.addDoor(g,{lx,lz,sx,sz,height:wallH,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:35,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y};Wl.push(door);Dr.push(door);entranceDoor=door;
 if(parts.lintel)Wl.push({x0:door.x0,x1:door.x1,z0:door.z0,z1:door.z1,y0:fy+parts.doorHeight,y1:fy+h,hp:70,m:parts.lintel,door:false,open:false,playerBlock:false,cx:x+lx,cz:z+lz})};
 if(opt.hangar){
   const sh=Math.max(3.1,h*.3),push=(lx,lz,sx,sz)=>{
@@ -717,6 +718,7 @@ if(opt.hangar){
   [[0,d/2-t/2,w,t,0],[0,-d/2+t/2,w,t,0],[w/2-t/2,0,t,d-2*t,1],[-w/2+t/2,0,t,d-2*t,1]].forEach(([cx,cz,sx,sz,ax],k)=>{if(k!=ds){seg(cx,cz,sx,sz,0,!opt.bunker&&!opt.solidWalls,k,1);return}const L=ax?sz:sx,sl=(L-dw)/2,off=dw/2+sl/2;for(const q of[-1,1]){if(ax)seg(cx,cz+q*off,sx,sl,0,false,k,.5);else seg(cx+q*off,cz,sl,sz,0,false,k,.5)}if(ax)seg(cx,cz,sx,dw,1);else seg(cx,cz,dw,sz,1)});
   if(!opt.noPartitions&&!opt.bunker&&w*d>=140&&R()<.5){const al=w>=d,L=al?d:w,gp=rr(-L/4,L/4),px=(R()<.5?-1:1)*rr((al?w:d)*.12,(al?w:d)*.2),a0=-L/2+t,a1=L/2-t,ps=(a,b)=>{if(b-a<.5)return;const cc=(a+b)/2,l=b-a;if(al)seg(px,cc,t,l);else seg(cc,px,l,t)};ps(a0,gp-1.6);ps(gp+1.6,a1)}
 }
+if(opt.floors===2)for(const [cx,cz,sx,sz]of[[0,d/2-t/2,w,t],[0,-d/2+t/2,w,t],[w/2-t/2,0,t,d-2*t],[-w/2+t/2,0,t,d-2*t]])seg(cx,cz,sx,sz,0,!opt.solidWalls,null,0,wallH);
 g.position.set(x,fy,z);world.add(g);
 const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,rhp:opt.hangar?90:120,hangar:!!opt.hangar,door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
 function mkEnemyBunker(x,z){
@@ -746,12 +748,14 @@ function mkEnemyBunker(x,z){
 // Door-aligned treads share the exact same geometry and walking height.
 function stairLocal(s,x,z){const dx=x-s.x,dz=z-s.z;return{along:dx*s.nx+dz*s.nz,side:dx*s.nz-dz*s.nx}}
 function stairContains(s,x,z,margin=0){const q=stairLocal(s,x,z);return q.along>=-margin&&q.along<=s.length+margin&&Math.abs(q.side)<=s.width/2+margin}
-function groundAt(x,z){
+function groundAt(x,z,previous=-Infinity){
   // No enfonsar el model sota els triangles que dibuixa el LOD actual.
   // Preservem l'altura física si és més alta (evita enfonsaments i salts negatius).
   const physical=hAt(x,z),visible=terrainStream?.visibleHeightAt(x,z);
-  let y=visible===null||visible===undefined?physical:Math.max(physical,visible);for(const s of stairs){if(stairContains(s,x,z)){const q=stairLocal(s,x,z);if(s.ramp){const t=Math.max(0,Math.min(1,q.along/s.length));y=Math.max(y,s.top+(s.bottom-s.top)*t)}else{const i=Math.min(s.steps-1,Math.max(0,Math.floor(q.along/s.tread)));y=Math.max(y,s.top-i*s.rise)}}}
+  let y=visible===null||visible===undefined?physical:Math.max(physical,visible);for(const s of stairs){if(s.internal&&s.owner?.rb)continue;if(stairContains(s,x,z)){const q=stairLocal(s,x,z);if(s.ramp){const t=Math.max(0,Math.min(1,q.along/s.length));y=Math.max(y,s.top+(s.bottom-s.top)*t)}else{const i=Math.min(s.steps-1,Math.max(0,Math.floor(q.along/s.tread)));y=Math.max(y,s.top-i*s.rise)}}}
 for(const p of piers){const dx=x-p.x,dz=z-p.z,along=dx*p.ux+dz*p.uz,side=dx*p.px+dz*p.pz;if(Math.abs(along)<=p.length/2+.35&&Math.abs(side)<=p.width/2+.2)y=Math.max(y,p.y)}
+for(const b of buildingCandidates(x,z)){const floor=upperFloorHeight(b,x,z,previous);if(floor!==null)y=Math.max(y,floor)}
+const ramp=terminalRampHeight(x,z);if(ramp!==null)y=Math.max(y,ramp);if(Number.isFinite(previous)){const deck=pedestrianFerry(x,z,previous);if(deck)y=Math.max(y,deck.y)}
 return y}
 function addRampAccess(b,side){const [nx,nz]=[[0,1],[0,-1],[1,0],[-1,0]][side],edge=(nx?b.w:b.d)/2+.2,x=b.x+nx*edge,z=b.z+nz*edge,top=b.fy+.3;
 let length=8,bottom=hAt(x+nx*length,z+nz*length);for(let L=8;L<=26;L+=2){const yy=hAt(x+nx*L,z+nz*L);if(Math.abs(top-yy)<Math.abs(top-bottom)){length=L;bottom=yy}if(Math.abs(top-yy)<.35){length=L;bottom=yy;break}}
@@ -763,7 +767,7 @@ const tread=.75;let steps=1;for(;steps<80;steps++){const end=steps*tread;if(top-
 const length=steps*tread,bottom=hAt(x+nx*length,z+nz*length),rise=Math.max(0,(top-bottom)/steps),s={x,z,nx,nz,top,steps,tread,length,rise,width:4.2};stairs.push(s);b.stair=s;
 for(let i=0;i<steps;i++){const a=(i+.5)*tread,xx=x+nx*a,zz=z+nz*a,y=top-i*rise,base=Math.min(y-.16,hAt(xx,zz)-.15);buildingVisual.addStep(b.o,{alongAxis:!!nx,riseWidth:tread,height:y-b.fy,base:base-b.fy,x:xx-b.x,z:zz-b.z,color:i%2?0xa69982:0xb5a68e})}
 }
-function wallPush(){const r=.6;for(const w of wallCandidates(P.x,P.z,r)){if(w.playerBlock===false)continue;if(w.towerLegOwner&&(P.y+1.5<w.y0||P.y>w.y1))continue;if(!w.open&&P.x>w.x0-r&&P.x<w.x1+r&&P.z>w.z0-r&&P.z<w.z1+r){const a=[P.x-(w.x0-r),w.x1+r-P.x,P.z-(w.z0-r),w.z1+r-P.z],i=a.indexOf(Math.min(...a));
+function wallPush(){const r=.6;for(const w of wallCandidates(P.x,P.z,r)){if(w.playerBlock===false||w.y0>P.y+3.1||w.y1<P.y+.15)continue;if(w.towerLegOwner&&(P.y+1.5<w.y0||P.y>w.y1))continue;if(!w.open&&P.x>w.x0-r&&P.x<w.x1+r&&P.z>w.z0-r&&P.z<w.z1+r){const a=[P.x-(w.x0-r),w.x1+r-P.x,P.z-(w.z0-r),w.z1+r-P.z],i=a.indexOf(Math.min(...a));
 if(i==0)P.x=w.x0-r;else if(i==1)P.x=w.x1+r;else if(i==2)P.z=w.z0-r;else P.z=w.z1+r}}}
 function updateDoors(dt){
   for(const d of Dr){
@@ -1133,7 +1137,7 @@ function updateDistanceVisibility(){
             !!focus?.contains(b.x,b.fy+b.h*.5,b.z,Math.max(b.hw,b.h*.5)),
           obscured=close&&!inside&&terrainConcealsBuilding(b,Math.sqrt(d2));
     b.o.visible=close&&!obscured;
-    b.roof.visible=!inside&&b.rhp>0;
+    b.roof.visible=!inside&&b.rhp>0;for(const r of b.extraRoofs||[])r.visible=b.roof.visible;if(b.upperFloor)b.upperFloor.visible=!b.rb&&(!inside||P.y>=b.fy+b.storey-.6);
     b.wm.opacity=b.dm.opacity=inside?.18:1;
     b.wm.depthWrite=b.dm.depthWrite=!inside;
     if(!b.o.visible)visibilityStats.buildings++;
@@ -1696,9 +1700,9 @@ else if(playerEject&&playerEject.t>0){P.x=Math.max(-lim,Math.min(lim,P.x+playerE
 }
 if(!playerFall){wallPush();treePush();vehiclePushPlayer()}}
 V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;v.strafeV=0;return}if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
-syncFerryCargo();
+syncFerryCargo();updateTerminalRamps();
 ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2)||null;
-const floor=ib?ib.fy+.3:groundAt(P.x,P.z),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;
+const floor=ib?Math.max(ib.fy+.3,groundAt(P.x,P.z,P.y)):groundAt(P.x,P.z,P.y),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;
 if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);
 if(!playerFall){
   // El suport segueix el triangle visible JUST sota el centre del jugador.

@@ -142,7 +142,10 @@ const batchStaticDecor=()=>{
 };
 const compoundProp=(kind,x,z,rot=0)=>{
   const y=Math.max(.05,hAt(x,z)),g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;
-  if(kind==='crate'){bx(g,1.2,.9,1,0x7b5a35,0,.45,0,'paint');bx(g,1.26,.1,1.06,0x3f3021,0,.2,0,'metal');bx(g,.1,.95,1.08,0x3f3021,0,.48,0,'metal')}
+  if(kind==='bench'){bx(g,4,.25,1.2,0x806447,0,.9,0);for(const x of[-1.4,1.4])bx(g,.2,.8,1,0x485249,x,.4,0)}
+  else if(kind==='well'){const m=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.7,1.4,12,1,true),M(0x858976,'masonry'));m.position.y=.7;g.add(m)}
+  else if(kind==='lifebuoy'){const m=new THREE.Mesh(new THREE.TorusGeometry(.6,.15,6,16),M(0xe57846,'paint'));m.position.y=1.5;g.add(m);bx(g,.12,2.3,.12,0x5b6050,0,1.15,0)}
+  else if(kind==='crate'){bx(g,1.2,.9,1,0x7b5a35,0,.45,0,'paint');bx(g,1.26,.1,1.06,0x3f3021,0,.2,0,'metal');bx(g,.1,.95,1.08,0x3f3021,0,.48,0,'metal')}
   else if(kind==='barrel'){const body=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.9,10),M(0x53616a,'metal'));body.position.y=.45;g.add(body);for(const y0 of[.12,.78]){const ring=new THREE.Mesh(new THREE.CylinderGeometry(.44,.44,.08,10),M(0x2e3438,'metal'));ring.position.y=y0;g.add(ring)}}
   else if(kind==='barrier'){bx(g,2.4,.72,.5,0x9a8c72,0,.36,0,'masonry');for(const x0 of[-.9,.9])bx(g,.28,.28,.8,0x5d5548,x0,.14,0,'masonry')}
   else if(kind==='ammo'){bx(g,1.5,.75,1.1,0x5f6846,0,.38,0,'paint');bx(g,1.55,.12,1.15,0x30352c,0,.78,0,'metal');bx(g,.12,.8,1.18,0x30352c,0,.38,0,'metal')}
@@ -182,8 +185,8 @@ const findPortWater=q=>{for(let a=0;a<32;a++){const aa=a*Math.PI/16;for(let d=28
 const findPortSite=(island,tries=18)=>{for(let n=0;n<tries;n++){const q=land(island,700,1);if(!q)continue;q.r=island.r;const portBest=findPortWater(q);if(portBest)return{...q,portBest}}return null};
 const makeStandalonePier=q=>{const best=q.portBest||findPortWater(q);if(!best)return false;const dx=best.x-q.x,dz=best.z-q.z,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L;let shore=null;for(let d=3;d<L;d+=2.5){const sx=q.x+ux*d,sz=q.z+uz*d;if(rawHAt(sx,sz)<.35){shore={x:sx-ux*1.8,z:sz-uz*1.8};break}}if(!shore)return false;const pierLen=Math.min(34,Math.max(14,L-5)),end={x:shore.x+ux*pierLen,z:shore.z+uz*pierLen};compoundPier(shore.x,shore.z,end.x,end.z,3.6);for(const side of[-1,1]){const px=-uz,pz=ux;compoundProp('bollard',end.x+px*side*1.1,end.z+pz*side*1.1,0)}compoundClear.push({x:q.x,z:q.z,r:18});return true};
 const phase3Options={pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites,rocketAssigned:false};
-const baseCompound=buildApprovedCompound(window.HUNTER_COMPOUND_LAYOUTS.find(l=>l.id==='base'),pa,phase3Options);
-const hqCompound=buildApprovedCompound(window.HUNTER_COMPOUND_LAYOUTS.find(l=>l.id==='hq'),pb,phase3Options);
+const baseCompound=buildApprovedCompound(window.HUNTER_CHOOSE_COMPOUND('base',R),pa,phase3Options);
+const hqCompound=buildApprovedCompound(window.HUNTER_CHOOSE_COMPOUND('hq',R),pb,phase3Options);
 markBuildStage('initialCompounds');
 const COMPOUND_RADII=Object.freeze({
   avancada:84,
@@ -200,7 +203,8 @@ const compoundCenters=[
   {x:pa.x,z:pa.z,r:baseCompound.r,type:'base'},
   {x:pb.x,z:pb.z,r:hqCompound.r,type:'hq'}
 ];
-const compoundRadius=type=>COMPOUND_RADII[type]||58;
+const typeId=t=>({avancada:'outpost',garatge:'hangar'}[t]||t);
+const compoundRadius=type=>Math.max(COMPOUND_RADII[type]||58,...window.HUNTER_RUNTIME_LAYOUTS.filter(l=>l.type===typeId(type)).map(layoutRadius));
 const compoundSiteClear=(type,q,minCenter=0)=>{
   const r=compoundRadius(type);
   return compoundCenters.every(c=>{
@@ -247,8 +251,9 @@ const compound=(type,q)=>{
   if(approvedId){
     if(type==='port'&&!q.portPrepared){if(!portSiteFeasible(q))return false;q=findRedesignedPort(q);if(!q)return false}
     if(!compoundSiteClear(type,q,0))return false;
-    const layout=window.HUNTER_COMPOUND_LAYOUTS.find(l=>l.id===approvedId);
-    if(layout.phase===2){const r=Math.max(...layout.size)/2;for(const dx of[-r,0,r])for(const dz of[-r,0,r])if(rawHAt(q.x+dx,q.z+dz)<.1)return false;}
+    let layout=window.HUNTER_CHOOSE_COMPOUND(approvedId,R);
+    if(type==='port'&&!coastalLayoutFits(layout,q)){layout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.type==='port'&&l.variant===1);if(!coastalLayoutFits(layout,q))return false;}
+    if(type!=='port'){const r=Math.max(...layout.size)/2;for(const dx of[-r,0,r])for(const dz of[-r,0,r])if(rawHAt(q.x+dx,q.z+dz)<.1)return false;}
     buildApprovedCompound(layout,q,{pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites,rocketAssigned:compoundVehicles.some(v=>v.t==='llanxa_coets')});
     registerCompound(type,q);return true;
   }
@@ -269,6 +274,32 @@ const forceReserve=(type,min)=>{
   }
   return null
 };
+const civilOptions={pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites,rocketAssigned:true};
+const dockLayout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.id==='civil-dock'),terminalLayout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.id==='ferry-terminal');
+const terminalRecords=[];
+let connection=null;
+const exit=baseCompound.entrances[0],roadStart={x:exit[0],z:exit[1]};
+const initialDock=findCoastalLayout(dockLayout,{...A},q=>{
+ if(!compoundSiteClear('civil-dock',q))return false;
+ const end=compoundTransform(q,q.angle)(0,-dockLayout.size[1]/2),points=solveCoastRoad(roadStart,{x:end[0],z:end[1]});
+ if(!points)return false;connection=points;return true;
+});
+if(initialDock){const c=buildApprovedCompound(dockLayout,initialDock,civilOptions);registerCompound('civil-dock',initialDock);buildCoastRoad(connection,compoundPath);world.userData.baseCoast.dockId=c.layoutId;world.userData.baseCoast.dock={x:c.x,z:c.z};}
+else world.userData.baseCoast={unavailable:true,reason:'No walkable coastal corridor for this base site'};
+for(const island of islands.filter(i=>i!==Bi).sort((a,b)=>b.r-a.r)){
+ if(terminalRecords.length>=2)break;
+ const site=findCoastalLayout(terminalLayout,island,q=>compoundSiteClear('ferry-terminal',q));if(!site)continue;
+ const c=buildApprovedCompound(terminalLayout,site,civilOptions);c.islandIndex=islands.indexOf(island);terminalRecords.push(c);registerCompound('ferry-terminal',site);
+}
+let villages=0,civilDocks=initialDock?1:0;
+for(const island of candidateIslands){
+ if(villages<2*MAP_SCALE){
+  const types=['hut-settlement-small','hut-settlement','hut-settlement-large'],chosen=types[Math.floor(R()*3)],l=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.id===chosen);
+  for(let tries=0;tries<6;tries++){const q=land(island,250,1);if(!q||!compoundSiteClear(l.id,q))continue;const r=Math.max(...l.size)/2;if([-r,0,r].some(dx=>[-r,0,r].some(dz=>rawHAt(q.x+dx,q.z+dz)<.3)))continue;buildApprovedCompound(l,q,civilOptions);registerCompound(l.id,q);villages++;break;}
+ }
+ if(civilDocks<2*MAP_SCALE){const q=findCoastalLayout(dockLayout,island,q=>compoundSiteClear('civil-dock',q));if(q){buildApprovedCompound(dockLayout,q,civilOptions);registerCompound('civil-dock',q);civilDocks++;}}
+}
+markBuildStage('civilCompoundsAndCoast');
 forceReserve('garatge',190);
 forceReserve('avancada',180);
 forceReserve('polvori',190);
@@ -341,12 +372,12 @@ vegetate(pa);if(seedSearchMode)fa=[];else spawnFauna();
 const vegetationMs=performance.now()-vegetationStarted;
 markBuildStage('vegetationAndFauna');HQ={x:hqCompound.buildings[0].x,z:hqCompound.buildings[0].z};const rb=B.slice(6);
 const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2);
-const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1),x=cx+Math.cos(a)*d,z=cz+Math.sin(a)*d;if(gl(x,z))return mkEn(t,x,z)}return null};
+const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1),x=cx+Math.cos(a)*d,z=cz+Math.sin(a)*d;if(gl(x,z)&&!world.userData.compounds.some(c=>c.layout.civilian&&Math.hypot(x-c.x,z-c.z)<c.r))return mkEn(t,x,z)}return null};
 islands.forEach(i=>{if(i===A||i===Bi||R()<.5)return;const q=land(i,60);if(!q)return;for(let k=0;k<1+(R()<.4);k++)sp2('soldat',q.x,q.z,0,10);if(R()<.25)sp2('torre',q.x,q.z,5,12)});
 rb.forEach(b=>{
   const n=R()<.25?0:R()<.6?1:2;
   const pool=['arma','arma','med','med','expl','granada','granada','disf','mapa','bazooka','franctirador','paracaigudes']
-    .filter(t=>lootAllowed(t,b));
+    .filter(t=>lootAllowed(t,b)&&(!b.civilian||['arma','med','disf'].includes(t)));
   for(let k=0;k<n&&pool.length;k++){
     const kind=pool[Math.floor(R()*pool.length)];
     addIt(kind,b);
@@ -355,14 +386,14 @@ rb.forEach(b=>{
 addIt('arma',B[0]);addIt('expl',B[1]);addIt('med',B[2]);
 // Les recollides garantides s'han de buscar entre edificis que realment
 // acceptin aquell tipus d'objecte: no perdre mapes per haver triat polvorins.
-const lootBuildings=t=>rb.filter(b=>lootAllowed(t,b));
+const lootBuildings=t=>rb.filter(b=>!b.civilian&&lootAllowed(t,b));
 const sniperSites=lootBuildings('franctirador');
 addIt('franctirador',sniperSites[Math.floor(R()*sniperSites.length)]||B[2]);
 for(const [type,count]of[['mapa',2],['mapa_heli',1+MAP_SCALE],['mapa_tanc',1+MAP_SCALE]]){
   lootBuildings(type).sort(()=>R()-.5).slice(0,count).forEach(b=>addIt(type,b));
 }
 markBuildStage('enemiesAndLoot');
-P.x=pa.x;P.z=pa.z+20;P.hd=0;P.base={x:pa.x,z:pa.z};V=[];cv=null;mm=null;
+P.x=baseCompound.spawn?.x??pa.x;P.z=baseCompound.spawn?.z??pa.z+20;P.hd=0;P.base={x:pa.x,z:pa.z};V=[];cv=null;mm=null;
 const add=(t,x,z,a,meta={})=>{const o=mkV(t),c=VT[t],surface=Math.max(0,hAt(x,z)),v={t,x,z,hd:a||0,v:0,alt:c.m==='a'?helicopterLandedAltitude({o},surface):surface+.8,o,armor:c.armor??0,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};if(t==='heli_combat')v.rockets=6;if(t==='llanxa_coets')v.rockets=Infinity;world.add(o);V.push(v);return v};
 // Cap tanc neutral dins del HQ: els tancs pilotables apareixen
 // distribuïts per l'arxipèlag, lluny de la base enemiga.
@@ -397,17 +428,17 @@ for(let islandIndex=0;islandIndex<islands.length;islandIndex++){
   const q=ferrySpotForIsland(islands[islandIndex],islandIndex);
   if(q)ferryCandidates.push(q)
 }
-const ferrySpots=[];
-if(ferryCandidates.length){
+const ferrySpots=terminalRecords.map(c=>{const v=c.vehicles.find(v=>v.t==='ferry'),island=islands[c.islandIndex];return{...v,islandIndex:c.islandIndex,islandX:island.x,islandZ:island.z,terminal:c}});
+if(ferryCandidates.length&&ferrySpots.length<2){
   const first=ferryCandidates[Math.floor(R()*ferryCandidates.length)];ferrySpots.push(first);
   const second=ferryCandidates.filter(q=>q.islandIndex!==first.islandIndex).sort((a,b)=>Math.hypot(b.x-first.x,b.z-first.z)-Math.hypot(a.x-first.x,a.z-first.z))[0];
-  if(second)ferrySpots.push(second)
+  if(second&&ferrySpots.length<2)ferrySpots.push(second)
 }
 for(let i=0;i<ferryCandidates.length&&ferrySpots.length<2;i++){
   const q=ferryCandidates[i];if(!ferrySpots.some(f=>f.islandIndex===q.islandIndex))ferrySpots.push(q)
 }
 markBuildStage('ferrySiteSearch');
-ferrySpots.slice(0,2).forEach(q=>add('ferry',q.x,q.z,q.hd,{coastal:true,guaranteed:true,ferryIslandIndex:q.islandIndex,ferryIslandX:q.islandX,ferryIslandZ:q.islandZ}));
+ferrySpots.slice(0,2).forEach(q=>{const f=add('ferry',q.x,q.z,q.hd,{coastal:true,guaranteed:true,ferryIslandIndex:q.islandIndex,ferryIslandX:q.islandX,ferryIslandZ:q.islandZ});if(q.terminal){q.terminal.ferry=f;createTerminalRamp(q.terminal,f)}});
 // La llanxa inicial comparteix sovint el millor punt de costa amb un ferry.
 // Si hi ha solapament, la desplacem 100 m seguint la costa (tangent local), no mar endins.
 if(launchSpot){
@@ -426,7 +457,7 @@ if(launchSpot){
   add('llanxa',lx,lz,rr(0,6.28));
 }
 const clearVehicle=(t,x,z)=>Math.abs(x)<H-vehicleRadius(t)-5&&Math.abs(z)<H-vehicleRadius(t)-5&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(x-v.x,z-v.z)<vehicleRadius(t)+vehicleRadius(v.t)+5);
-compoundVehicles.forEach(v=>{if(VT[v.t]?.m==='w'||VT[v.t]?.m==='wl'){if(hAt(v.x,v.z)<-2&&!V.some(o=>obbOverlap(vehicleBox(v),vehicleBox(o))))add(v.t,v.x,v.z,v.hd,v);return}
+compoundVehicles.forEach(v=>{if(v.t==='ferry')return;if(VT[v.t]?.m==='w'||VT[v.t]?.m==='wl'){if(hAt(v.x,v.z)<-2&&!V.some(o=>obbOverlap(vehicleBox(v),vehicleBox(o))))add(v.t,v.x,v.z,v.hd,v);return}
   const r=vehicleRadius(v.t),buildingClear=v.insideHangar?true:!B.some(b=>Math.abs(v.x-b.x)<b.hw+r&&Math.abs(v.z-b.z)<b.hd+r),clear=!treeHit(v.x,v.z,r*.7)&&buildingClear&&!V.some(o=>Math.hypot(v.x-o.x,v.z-o.z)<r+vehicleRadius(o.t)+3);
   if(clear||v.insideHangar)add(v.t,v.x,v.z,v.hd,v)
 });
@@ -463,7 +494,7 @@ islands.forEach(island=>{
 
 markBuildStage('coastalVehicles');
 heliportSites.forEach((p,i)=>{
-  const desired=i===1?'heli_combat':'heli',near=V.some(v=>v.t===desired&&Math.hypot(v.x-p.x,v.z-p.z)<10);
+  const desired=p.type||(i===1?'heli_combat':'heli'),near=V.some(v=>v.t===desired&&Math.hypot(v.x-p.x,v.z-p.z)<10);
   if(!near)add(desired,p.x,p.z,p.hd,{heliport:true,military:true,guaranteed:true});
 });
 if(heliportSites.length){
@@ -490,7 +521,7 @@ islands.forEach(i=>{if(i!==A&&R()<.65){const t=['cotxe','moto','bici'][Math.floo
 markBuildStage('guaranteedVehicles');
 ensureJetSkis(add);
 markBuildStage('jetSkis');
-P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0,0,0));prepareEnemyNavigation();const staticBatchStats=seedSearchMode?null:batchStaticDecor();if(!seedSearchMode&&visualQuality.shadows)prepareShadowCasters();else shadowCandidates.length=0;cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);
+P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0,0,0));updateTerminalRamps();prepareEnemyNavigation();const staticBatchStats=seedSearchMode?null:batchStaticDecor();if(!seedSearchMode&&visualQuality.shadows)prepareShadowCasters();else shadowCandidates.length=0;cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);
 markBuildStage('finalizationAndBatching');
 seedCompounds=compoundCenters.map(c=>({type:c.type,x:c.x,z:c.z}));
 window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,stages:buildStages,portSearch:buildCounters,initialTerrainMs,seabedMs,vegetationMs,seabedSamples:seedSearchMode?0:water.seabedStats.lastSamples,terrainTiles:terrain?.stats||null,palms:PM.stats,staticBatches:staticBatchStats};

@@ -1,4 +1,4 @@
-// Design-only catalogue. Deliberately not imported by compound-layouts or runtime.
+// Shared authored layouts. Runtime excludes road checkpoints and the coast mockup.
 import {compoundLayouts} from './compound-layouts.mjs';
 const route=(label,points,width=4,kind='path')=>({label,points,width,kind});
 const building=(id,label,x,z,w,d,h=6,extra={})=>({id,label,x,z,w,d,h,...extra});
@@ -60,7 +60,7 @@ function variant(type,number,title,placements,options={}){
  if(source.general)l.general=reposition(source.general);
  if(source.spawn)l.spawn={x:0,z:lane-12};
  if(source.tower)l.tower={x:edgeX-6,z:-edgeZ+6};
- l.notes=options.notes+' Es conserven els objectes garantits del tipus original. Disseny pendent d’integració.';
+ l.notes=options.notes+' Es conserven els objectes garantits del tipus original.';
  l.counts=source.counts+' · variant '+number;
  return l;
 }
@@ -96,33 +96,22 @@ export const coastConnection=draft({...base,id:'base-coast',type:'base-coast',ph
  routes:base.routes.map(r=>({...r,points:r.points.map(([x,z])=>[x,z-100])})).concat([route('Camí rodat · 8 m',[[0,-45],[0,-18],[30,16],[30,58],[0,94],[0,120]],8,'road'),route('Drecera a peu · 3 m',[[0,-18],[-24,26],[-24,80],[0,112]],3),route('Caseta',[[-43,110],[-43,120],[0,120]])]),
  piers:[{x:0,z:157,w:6,d:50}],zones:[{label:'Gir i aparcament · 24 × 18 m',x:0,z:117,w:24,d:18}],entrances:[[0,-45],[0,132]],counts:'Base completa · camí de 8 m · sender de 3 m · embarcador de 6 m',
  notes:'Connexió contínua amb carretera, drecera a peu, espai de gir i passera. Proposta de 150–350 m segons la costa real; pendent objectiu ≤10%, validació de vehicle i caminant abans de col·locar-la. Barca de rems garantida prevista; la llanxa mostra l’alternativa. Si no hi ha costa accessible, cal cercar un altre emplaçament, no dibuixar un camí sobre obstacles.'});
-// Three authored settlement sizes, with each doorway facing the shared square.
+// Three irregular settlement sizes with varied doorway directions.
 const settlementSource=clone(newWorldLayouts.find(l=>l.id==='hut-settlement'));
 function settlement(id,title,count,radius,size){
  const l=clone(settlementSource);Object.assign(l,{id,name:'Assentament · '+title,size:[size,size],settlement:true,hutCount:count});
- l.buildings=Array.from({length:count},(_,i)=>{
-  const a=Math.PI+(i+.35)*2*Math.PI/(count+1),x=Math.sin(a)*radius,z=Math.cos(a)*radius;
-  return building('hut'+(i+1),'Cabana '+(i+1),x,z,14+(i%2)*2,12,5.2,{wood:true,rotationY:Math.atan2(-x,-z)});
- });
- // The communal hut occupies the remaining place in the ring.
- const a=Math.PI+(count+.35)*2*Math.PI/(count+1),x=Math.sin(a)*radius,z=Math.cos(a)*radius;
- l.buildings.push(building('store','Cabana comunal',x,z,18,14,6,{wood:true,rotationY:Math.atan2(-x,-z)}));
- l.routes=l.buildings.map(b=>{
-  const a=b.rotationY,s=Math.sin(a),c=Math.cos(a),distance=b.d/2+4.2;
-  return route(b.label,[[b.x+s*distance,b.z+c*distance],[-s*14,-c*14]],4);
- });
- const ring=Array.from({length:17},(_,i)=>[Math.sin(i*Math.PI/8)*14,Math.cos(i*Math.PI/8)*14]);
- l.routes.push(route('Plaça comuna',ring,4));
- // Use the gap between the first and last huts for a clear approach.
- const entryAngle=Math.PI+(.35-.5)*2*Math.PI/(count+1),ex=Math.sin(entryAngle),ez=Math.cos(entryAngle);
- l.routes.push(route('Entrada del poblat',[[ex*(size/2-2),ez*(size/2-2)],[ex*14,ez*14]],5));
- l.entrances=[[ex*(size/2-2),ez*(size/2-2)]];
- l.props=[['well',0,0],['bench',-6,4],['bench',6,4],['lamp',0,-7]];
- l.vehicles=[vehicle('bici',-6,-6),vehicle('moto',6,-6)];l.loot=[{kind:'farmaciola',x,z}];
- l.zones=[{label:'Plaça comuna',x:0,z:0,w:20,d:20}];
- l.subtitle=count+' habitatges i cabana comunal · portes cap a la plaça';
+ const positions=[[-30,-26,0],[9,-33,Math.PI/2],[31,8,Math.PI],[-29,23,-Math.PI/2],[4,34,Math.PI],[52,-26,0],[-54,-2,Math.PI/2],[45,42,-Math.PI/2]];
+ l.buildings=positions.slice(0,count).map(([x,z,rotationY],i)=>building('hut'+(i+1),'Cabana '+(i+1),x,z,14+(i%2)*2,12,5.2,{wood:true,rotationY}));
+ const x=count===3?5:-8,z=count===3?24:4;
+ l.buildings.push(building('store','Cabana comunal',x,z,18,14,6,{wood:true,rotationY:count===3?Math.PI:0}));
+ l.routes=[route('Pas principal',[[l.size[0]/2, -6],[16,-6],[16,17],[6,17]],4)];
+ l.entrances=[[l.size[0]/2,-6]];
+ l.props=[['well',-15,-14],['bench',-21,-14],['bench',-9,-14],['lamp',16,-19]];
+ l.vehicles=[vehicle('bici',20,-14),vehicle('moto',29,-14)];l.loot=[{kind:'farmaciola',x,z}];
+ l.zones=[{label:'Plaça comuna',x:-15,z:-14,w:16,d:10}];
+ l.subtitle=count+' habitatges i cabana comunal · distribució irregular';
  l.counts=count+' cabanes + 1 comunal · pou · moto i bicicleta';
- l.notes='Poblat '+title.toLowerCase()+': '+count+' habitatges i una cabana comunal. Orientacions diverses, amb portes i porxos cap a la plaça, senders connectats i finestres obertes sense vidres. Cobertes de branques a dos aiguavessos. Disseny pendent d’integració.';
+ l.notes='Poblat '+title.toLowerCase()+': '+count+' habitatges i una cabana comunal. Agrupació irregular, amb portes i porxos en direccions diferents i una única traça principal de pas i finestres obertes sense vidres. Cobertes de branques a dos aiguavessos.';
  return l;
 }
 export const settlementLayouts=[settlement('hut-settlement-small','Petit',3,34,110),settlement('hut-settlement','Mitjà',5,43,140),settlement('hut-settlement-large','Gran',8,62,180)];
@@ -134,7 +123,7 @@ function replacementVariant(source,type){
  Object.assign(l,{id:type+'-v4',type,variant:4,phase:4,status:'design',name:(compoundLayouts.find(l=>l.id===type)?.name||source.name)+' · Edifici de dues plantes'});
  l.buildings=l.buildings.map(b=>({...b,floors:b.id===id?2:1,...(b.id===id?{h:5.4,replacement:true,label:b.label+' renovat'}:{})}));
  l.counts=source.counts.replace(/ · variant \d+/,'')+' · substitució de '+source.buildings.find(b=>b.id===id).label;
- l.notes='Variant extra: substitueix '+source.buildings.find(b=>b.id===id).label.toLowerCase()+' per un edifici nou de dues plantes, amb escala interior, finestres als dos nivells i terrat amb ampit. Conserva la petjada, els accessos i tots els subministraments; la resta d’edificis tenen una planta. Cap magatzem s’eleva. Disseny pendent d’integració.';
+ l.notes='Variant extra: substitueix '+source.buildings.find(b=>b.id===id).label.toLowerCase()+' per un edifici nou de dues plantes, amb escala interior, finestres als dos nivells i terrat amb ampit. Conserva la petjada, els accessos i tots els subministraments; la resta d’edificis tenen una planta. Cap magatzem s’eleva.';
  return l;
 }
 for(const source of compoundLayouts)compoundVariants.push(replacementVariant(source,source.id));

@@ -132,7 +132,7 @@ const shotClassFromSplash=spl=>spl>0?'heavy':'light';
 const isArmoredVehicle=v=>v?.t==='tanqueta'||v?.t==='tanc'||
   (v&&Math.max(v.armor??0,VT[v.t]?.armor??0)>=6);
 const isArmoredEnemy=u=>u?.t==='tanqueta'||u?.t==='tanc';
-const isMilitaryBuilding=b=>!!b?.compound||b?.kind==='enemy_bunker';
+const isMilitaryBuilding=b=>!!b&&!b.civilian&&(!!b.compound||b.kind==='enemy_bunker');
 const isMilitaryWall=w=>!!w?.towerLegOwner||isMilitaryBuilding(w?.owner);
 function damageVehicle(v,dmg,impacts=1,shotClass='heavy'){
   if(shotClass==='light'&&isArmoredVehicle(v))return;

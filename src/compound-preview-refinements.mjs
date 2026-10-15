@@ -1,6 +1,5 @@
-// Preview-only architectural revision. Runtime layouts remain untouched.
+// Architecture and decoration rules shared by previews and runtime.
 export const warehouseIds=new Set(['warehouse','air-store','ammo-store','heavy-store','store','freight','fish-store','shelter']);
-const upperFloor={hangar:'workshop',outpost:'barracks',port:'office',heliport:'control',polvori:'guard',comunicacions:'radio',base:'barracks',hq:'barracks','road-checkpoint':'guard','base-coast':'barracks'};
 export function siteBounds(l){
  const points=l.fence?.flat();
  return points?{minX:Math.min(...points.map(p=>p[0]))+.6,maxX:Math.max(...points.map(p=>p[0]))-.6,minZ:Math.min(...points.map(p=>p[1]))+.6,maxZ:Math.max(...points.map(p=>p[1]))-.6}:{minX:-l.size[0]/2+3,maxX:l.size[0]/2-3,minZ:-l.size[1]/2+3,maxZ:l.size[1]/2-3};
@@ -9,7 +8,7 @@ export function siteBounds(l){
 export function propFootprint(kind){return kind==='flag'?[-.3,5.3,-.3,.3]:kind==='fuel'?[-3,3,-1.5,1.5]:kind==='generator'?[-3.5,3.5,-2.25,2.25]:kind==='sandbag'?[-3.55,3.55,-.5,.5]:kind==='crate'?[-1.4,1.4,-1.33,1.33]:kind==='bench'?[-2,2,-.7,.7]:kind==='well'?[-2.2,2.2,-1.8,1.8]:kind==='lamp'?[-1,1,-.4,.4]:[-.8,.8,-.8,.8]}
 export function refinePreviewLayout(input){
  const l=JSON.parse(JSON.stringify(input)),type=l.type||l.id;
- l.buildings=l.buildings.map(b=>({...b,warehouse:warehouseIds.has(b.id),floors:b.floors??(b.id===upperFloor[type]&&!warehouseIds.has(b.id)?2:1)}));
+ l.buildings=l.buildings.map(b=>({...b,warehouse:warehouseIds.has(b.id),floors:l.variant===4&&b.replacement&&!warehouseIds.has(b.id)?2:1}));
  const bounds=siteBounds(l),placed=[];
  l.props=l.props.map(([kind,ox,oz])=>{
   const [left,right,back,front]=propFootprint(kind),radius=Math.max(-left,right,-back,front),shore=l.waterfront?.shore??(type==='port'?8:Infinity);

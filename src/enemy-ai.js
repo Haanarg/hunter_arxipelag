@@ -76,6 +76,7 @@ function soldierEnterBuilding(u,b,target,dt){
   const inside=Math.abs(u.x-b.x)<b.w/2-1.15&&
                Math.abs(u.z-b.z)<b.d/2-1.15;
   if(inside){
+    if(soldierChangeFloor(u,b,dt))return true;
     u.entryBuilding=null;u.entryPhase=0;return false;
   }
   // Dos trams amb memòria: aproximació per fora i pas cap a dins.

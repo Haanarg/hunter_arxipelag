@@ -154,10 +154,14 @@ Laboratoris conservats per a iteracions visuals:
 - [Dispar a dues mans](dispar-proves.html).
 - [Explosius](explosius-proves.html).
 - [Complexos, fases 1–3 integrades](compounds-preview.html).
-- [Fase 4: recintes nous, variants i base–costa](compounds-preview.html?fase=4): 32 dissenys (40 escenes amb V1): tres mides de poblat i variants militars V2/V3/V4, encara fora del generador. [Criteris i distribucions](docs/COMPOUNDS_PHASE4.md).
+- [Fase 4: recintes nous, variants i base–costa](compounds-preview.html?fase=4): 32 dissenys (40 escenes amb V1): tres mides de poblat i variants militars V1/V2/V3/V4 integrades al generador; controls de carretera ajornats. [Criteris i distribucions](docs/COMPOUNDS_PHASE4.md).
 
 ## Publicació i llicències
 
 `main` és la branca oficial. El domini del joc és https://hunter.paradoxa.cat/, amb desplegament a Cloudflare Pages; no s’ha de reintroduir GitHub Pages. Només el workflow de runtime funciona automàticament; la bateria de regressions es pot iniciar manualment.
 
 Three.js es distribueix sota MIT: [llicència](vendor/THREE-LICENSE.txt) i [procedència i reproducció](vendor/README.md). El projecte no té encara una llicència pròpia de distribució.
+
+## Recintes i costa (v0.5.13)
+
+Poblats irregulars amb portes variades, finestres obertes i teulades de branques. Només V4 incorpora un edifici de dues plantes. Embarcadors civils, dues terminals amb passeres adaptades als ferris i traçat base–costa segons el terreny. La fase 5 (controls de carretera) queda només al visor. [Estat i validació](docs/COMPOUNDS_PHASE4.md).

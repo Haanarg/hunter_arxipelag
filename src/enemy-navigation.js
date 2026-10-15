@@ -3,7 +3,7 @@ const enemyIsVehicle=u=>u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc';
 const enemyBodyRadius=u=>u.t==='torre'?2.4:1.05;
 const enemyRouteRadius=u=>enemyIsVehicle(u)?Math.hypot(vehicleBox(u).w,vehicleBox(u).d)/2+.3:enemyBodyRadius(u)+.15;
 let enemyPathBudget=2,enemyNodeBudget=160;
-const enemyGroundAt=(u,x,z)=>enemyIsVehicle(u)?hAt(x,z):groundAt(x,z);
+const enemyGroundAt=(u,x,z)=>enemyIsVehicle(u)?hAt(x,z):groundAt(x,z,u.walkY??u.o?.position.y??-Infinity);
 function enemyWallBox(w){return{x:(w.x0+w.x1)/2,z:(w.z0+w.z1)/2,w:w.x1-w.x0,d:w.z1-w.z0,hd:0}}
 function enemySolidAt(u,x,z,hd,route=false){
   const veh=enemyIsVehicle(u),r=route?enemyRouteRadius(u):veh?enemyRouteRadius(u):enemyBodyRadius(u),y=u.gy??enemyGroundAt(u,x,z);
@@ -117,7 +117,7 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
     const travel=veh&&!reverse?length*Math.max(0,1-Math.abs(wrapAngle(angle-nextHd))*2):length;
     const nx=u.x-Math.sin(moveHd)*travel,nz=u.z-Math.cos(moveHd)*travel;
     if(!enemySweep(u,u.x,u.z,nx,nz,oldHd,nextHd))return false;
-    const ox=u.x,oz=u.z;u.x=nx;u.z=nz;u.hd=nextHd;u.navHd=nextHd;enemyReindex(u,ox,oz);return true;
+    const ox=u.x,oz=u.z;u.x=nx;u.z=nz;if(!veh)u.walkY=enemyGroundAt(u,nx,nz);u.hd=nextHd;u.navHd=nextHd;enemyReindex(u,ox,oz);return true;
   };
   if(tryMove(hd)){u.navBlocked=0;return}
   // Keep a consistent passing side rather than alternately pushing into a neighbour.

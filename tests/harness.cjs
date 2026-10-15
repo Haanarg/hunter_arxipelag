@@ -40,6 +40,7 @@ module.exports=async function createGame(root=path.resolve(__dirname,'..')){
   const document={getElementById:el,querySelector:()=>el('mapSize'),querySelectorAll:s=>s==='#ini button[data-d]'?[button]:[],createElement:()=>el(Symbol()),addEventListener:noop,body:el('body')};
   const c=vm.createContext({Math,console,document,innerWidth:1360,innerHeight:900,devicePixelRatio:1,matchMedia:()=>({matches:false}),addEventListener:noop,performance:{now:()=>now},requestAnimationFrame:fn=>{nextFrame=fn},Uint8ClampedArray,Float32Array,setTimeout:noop,localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)}});c.window=c;
   c.HUNTER_COMPOUND_LAYOUTS=(await import(require("url").pathToFileURL(path.join(root,"src/compound-layouts.mjs")))).compoundLayouts;
+  const runtime=await import(require('url').pathToFileURL(path.join(root,'src/compound-runtime-layouts.mjs')));c.HUNTER_RUNTIME_LAYOUTS=runtime.runtimeLayouts;c.HUNTER_CHOOSE_COMPOUND=runtime.chooseCompoundLayout;c.HUNTER_COMPOUND_ARCHITECTURE=await import(require('url').pathToFileURL(path.join(root,'src/compound-architecture.mjs')));
   c.HUNTER_COMPOUND_STRUCTURES=(await import(require('url').pathToFileURL(path.join(root,'src/compound-structures.mjs')))).createCompoundStructures;
   class Renderer{constructor(){this.domElement=el('canvas');this.shadowMap={}}setPixelRatio(){}setSize(){}render(scene,cam){scene.updateMatrixWorld();cam.updateMatrixWorld()}}
   c.THREE={...await import(require('url').pathToFileURL(path.join(root,'vendor/three-r186.module.mjs'))),WebGLRenderer:Renderer};

@@ -59,6 +59,7 @@ window.HUNTER_MATERIALS = Object.freeze({
   glass: Object.freeze({roughness:.18,metalness:.04,transparent:true,opacity:.72,depthWrite:false})
 });
 
+
 ;
 // END src/materials-config.js
 // BEGIN src/high-graphics.js
@@ -138,6 +139,7 @@ window.HUNTER_PALETTE = Object.freeze({
   })
 });
 
+
 ;
 // END src/palette.js
 // BEGIN src/water-config.js
@@ -152,6 +154,7 @@ window.HUNTER_WATER = Object.freeze({
   absorptionDepth: 25.0,
   fogDensity: 0.000105
 });
+
 
 ;
 // END src/water-config.js
@@ -305,6 +308,7 @@ window.HUNTER_WAVES=(()=>{
   const glsl=`float hunterWaveHeight(vec2 p,float time,float seabed){return (${expression})*clamp((-seabed+${gl(shore.offset)})/${gl(shore.depth)},${gl(shore.min)},${gl(shore.max)});}`;
   return Object.freeze({components,shore,amplitude,height,glsl,maxDisplacement:components.reduce((sum,w)=>sum+w.amplitude,0)});
 })();
+
 
 ;
 // END src/waves.js
@@ -1998,6 +2002,7 @@ window.HUNTER_JOYSTICK=Object.freeze({
     return {state,reset};
   }
 });
+
 
 ;
 // END src/joystick.js
@@ -3763,6 +3768,7 @@ window.HUNTER_FAUNA = Object.freeze({
   }
 });
 
+
 ;
 // END src/fauna.js
 // BEGIN src/minimap.js
@@ -4294,7 +4300,7 @@ const shotClassFromSplash=spl=>spl>0?'heavy':'light';
 const isArmoredVehicle=v=>v?.t==='tanqueta'||v?.t==='tanc'||
   (v&&Math.max(v.armor??0,VT[v.t]?.armor??0)>=6);
 const isArmoredEnemy=u=>u?.t==='tanqueta'||u?.t==='tanc';
-const isMilitaryBuilding=b=>!!b?.compound||b?.kind==='enemy_bunker';
+const isMilitaryBuilding=b=>!!b&&!b.civilian&&(!!b.compound||b.kind==='enemy_bunker');
 const isMilitaryWall=w=>!!w?.towerLegOwner||isMilitaryBuilding(w?.owner);
 function damageVehicle(v,dmg,impacts=1,shotClass='heavy'){
   if(shotClass==='light'&&isArmoredVehicle(v))return;
@@ -4801,7 +4807,7 @@ const enemyIsVehicle=u=>u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc';
 const enemyBodyRadius=u=>u.t==='torre'?2.4:1.05;
 const enemyRouteRadius=u=>enemyIsVehicle(u)?Math.hypot(vehicleBox(u).w,vehicleBox(u).d)/2+.3:enemyBodyRadius(u)+.15;
 let enemyPathBudget=2,enemyNodeBudget=160;
-const enemyGroundAt=(u,x,z)=>enemyIsVehicle(u)?hAt(x,z):groundAt(x,z);
+const enemyGroundAt=(u,x,z)=>enemyIsVehicle(u)?hAt(x,z):groundAt(x,z,u.walkY??u.o?.position.y??-Infinity);
 function enemyWallBox(w){return{x:(w.x0+w.x1)/2,z:(w.z0+w.z1)/2,w:w.x1-w.x0,d:w.z1-w.z0,hd:0}}
 function enemySolidAt(u,x,z,hd,route=false){
   const veh=enemyIsVehicle(u),r=route?enemyRouteRadius(u):veh?enemyRouteRadius(u):enemyBodyRadius(u),y=u.gy??enemyGroundAt(u,x,z);
@@ -4915,7 +4921,7 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
     const travel=veh&&!reverse?length*Math.max(0,1-Math.abs(wrapAngle(angle-nextHd))*2):length;
     const nx=u.x-Math.sin(moveHd)*travel,nz=u.z-Math.cos(moveHd)*travel;
     if(!enemySweep(u,u.x,u.z,nx,nz,oldHd,nextHd))return false;
-    const ox=u.x,oz=u.z;u.x=nx;u.z=nz;u.hd=nextHd;u.navHd=nextHd;enemyReindex(u,ox,oz);return true;
+    const ox=u.x,oz=u.z;u.x=nx;u.z=nz;if(!veh)u.walkY=enemyGroundAt(u,nx,nz);u.hd=nextHd;u.navHd=nextHd;enemyReindex(u,ox,oz);return true;
   };
   if(tryMove(hd)){u.navBlocked=0;return}
   // Keep a consistent passing side rather than alternately pushing into a neighbour.
@@ -5029,6 +5035,7 @@ function soldierEnterBuilding(u,b,target,dt){
   const inside=Math.abs(u.x-b.x)<b.w/2-1.15&&
                Math.abs(u.z-b.z)<b.d/2-1.15;
   if(inside){
+    if(soldierChangeFloor(u,b,dt))return true;
     u.entryBuilding=null;u.entryPhase=0;return false;
   }
   // Dos trams amb memòria: aproximació per fora i pas cap a dins.
@@ -5308,6 +5315,7 @@ const len=Math.floor(AC.sampleRate*({shot:.12,cannon:.35,boom:.7,hurt:.15}[t]||.
 for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2);
 const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=buf;f.type=t=='shot'?'highpass':'lowpass';f.frequency.value=t=='shot'?1200:t=='boom'?300:600;
 g.gain.value=.5*v;s.connect(f);f.connect(g);g.connect(AC.destination);s.start(n)}
+
 
 ;
 // END src/audio.js
@@ -5681,6 +5689,142 @@ function updateVictoryCinematic(dt){
 
 ;
 // END src/victory-cinematic.js
+// BEGIN src/compound-building-runtime.js
+// Walkable upper floors use the actor's previous elevation; never teleport a ground-floor actor upstairs.
+function buildingLocalPoint(b,x,z){const c=Math.cos(b.angle||0),s=Math.sin(b.angle||0),dx=x-b.x,dz=z-b.z;return{x:dx*c+dz*s,z:-dx*s+dz*c}}
+function buildingWorldPoint(b,x,z){const c=Math.cos(b.angle||0),s=Math.sin(b.angle||0);return{x:b.x+x*c-z*s,z:b.z+x*s+z*c}}
+function upperFloorHeight(b,x,z,previous=-Infinity){
+ if(!b.upperFloor||b.rb)return null;
+ const p=buildingLocalPoint(b,x,z),a=b.interiorStair,level=b.fy+b.storey+.15;
+ if(Math.abs(p.x)>b.localW/2-.35||Math.abs(p.z)>b.localD/2-.35)return null;
+ if(stairContains(a,x,z))return null;
+ return previous>=level-.75?level:null;
+}
+function decorateRuntimeBuilding(b,spec){
+ const box=(g,w,h,d,c,x=0,y=0,z=0,profile='paint')=>bx(g,w,h,d,c,x,y,z,profile),rod=(g,a,v,r,c)=>{
+  const start=new THREE.Vector3(...a),end=new THREE.Vector3(...v),delta=end.clone().sub(start),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),6),M(c,'paint'));m.position.copy(start.add(end).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());g.add(m);return m;
+ },cylinder=(g,r,h,c,x,y,z)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,10),M(c,'paint'));m.position.set(x,y,z);g.add(m);return m},shell={group:b.o,roof:b.roof,walls:b.wm},roofs=[];
+ b.floors=spec.floors||1;b.localW=b.w;b.localD=b.d;b.wood=!!spec.wood;b.storey=b.h/b.floors;
+ if(spec.wood){window.HUNTER_COMPOUND_ARCHITECTURE.decorateTimber(THREE,{b:{...spec,h:b.h},shell,box,rod,cylinder,roofs});b.extraRoofs=roofs;}
+ if(b.floors===2){
+  b.upperFloor=window.HUNTER_COMPOUND_ARCHITECTURE.decorateUpper(THREE,{b:{...spec,h:b.h},storey:b.storey,shell,box,rod,roofs});
+  const width=2.8,run=Math.min(b.d-3,b.storey*1.05),x=b.x+b.w/2-width/2-.7,z=b.z-b.d/2+2.4;
+  b.interiorStair={x,z,nx:0,nz:1,top:b.fy+b.storey+.15,bottom:b.fy+.3,length:run,width,ramp:true,internal:true,owner:b};stairs.push(b.interiorStair);
+  for(const z of[-b.d/2,b.d/2])box(b.roof,b.w+.6,1,.35,0x647c72,0,b.h+1.7,z);
+  for(const x of[-b.w/2,b.w/2])box(b.roof,.35,1,b.d+.6,0x647c72,x,b.h+1.7,0);
+ }
+}
+function soldierChangeFloor(u,b,dt){
+ if(!b.upperFloor||b.rb)return false;
+ const floor=b.fy+b.storey+.15,current=u.walkY??u.o.position.y,wantsUp=P.y>floor-1,isUp=current>floor-.7;
+ if(wantsUp===isUp&&!u.floorRoute)return false;
+ const a=b.interiorStair;
+ if(!u.floorRoute||u.floorRoute.up!==wantsUp){
+  const bottom={x:a.x+a.nx*(a.length+.7),z:a.z+a.nz*(a.length+.7)},top={x:a.x,z:a.z};
+  // Exit sideways at the landing before pursuing a target away from the stairwell.
+  const side=buildingWorldPoint(b,b.localW/2-5,b.localD/-2+2.4);
+  u.floorRoute={up:wantsUp,points:wantsUp?[bottom,top,side]:[side,top,bottom],i:0};
+ }
+ const r=u.floorRoute,p=r.points[r.i];
+ if(Math.hypot(u.x-p.x,u.z-p.z)<.55){u.navDirectT=0;u.navPath=[];u.navSearch=null;u.navRetry=0;if(++r.i>=r.points.length){u.floorRoute=null;return false}}
+ const goal=r.points[r.i];if(goal)mvE(u,u.sp*dt,goal.x,goal.z);
+ u.walkY=groundAt(u.x,u.z,u.walkY??u.o.position.y);return true;
+}
+
+;
+// END src/compound-building-runtime.js
+// BEGIN src/compound-coast-runtime.js
+function layoutRadius(l){return Math.hypot(...l.size)/2+20}
+function coastalLayoutFits(l,q){
+ const tr=compoundTransform(q,q.angle),shore=l.waterfront?.shore??8;
+ for(const x of[-l.size[0]/2,0,l.size[0]/2])for(const z of[-l.size[1]/2,-l.size[1]/4,shore-8]){const p=tr(x,z);if(Math.abs(p[0])>H-15||Math.abs(p[1])>H-15||rawHAt(...p)<(z===shore-8?-2:.12))return false}
+ for(const b of l.buildings)for(const dx of[-b.w/2,0,b.w/2])for(const dz of[-b.d/2,0,b.d/2])if(rawHAt(...tr(b.x+dx,b.z+dz))<.2)return false;
+ for(const v of l.vehicles.filter(v=>['w','wl'].includes(VT[v.t]?.m))){
+  const hb=window.HUNTER_VEHICLES.hitboxes[v.t],sc=VS[v.t]||1,hw=hb[0]*sc/2+1,hd=hb[1]*sc/2+1;
+  for(const dx of[-hw,0,hw])for(let dz=-hd;dz<=hd+(v.t==='ferry'?45:16);dz+=5)if(rawHAt(...tr(v.x+dx,v.z+dz))>-2)return false;
+ }
+ return true;
+}
+function findCoastalLayout(l,anchor,accept=()=>true){
+ const shore=l.waterfront?.shore??8;
+ for(const offset of[0,60,-60,120,-120,180,-180,240,-240,300,-300,360,-360])for(let turn=0;turn<4;turn++){
+  const angle=turn*Math.PI/2,tr=compoundTransform(anchor,angle);
+  let landSeen=false;
+  for(let d=0;d<Math.min(900,(anchor.r||400)*1.6);d+=12){
+   const p=tr(offset,d),h=rawHAt(...p);if(h>.2){landSeen=true;continue}if(!landSeen)continue;
+   for(const shift of[-18,-12,-6,0,6,12,18,24]){
+    const center=tr(offset,d-shore+shift),q={x:center[0],z:center[1],angle,h:.86,r:anchor.r};
+    if(coastalLayoutFits(l,q)&&accept(q))return q;
+   }
+   break;
+  }
+ }
+ return null;
+}
+// Bounded terrain-aware search. It returns a path before changing the terrain.
+function solveCoastRoad(start,goal){
+ const step=12,nodes=new Map(),open=[],cache=new Map(),key=(x,z)=>x+','+z;
+ const sample=(x,z)=>{const k=key(x,z);if(cache.has(k))return cache.get(k);let y=hAt(x,z),ok=y>.15&&Math.abs(x)<H-20&&Math.abs(z)<H-20;
+  for(const b of B)if(Math.abs(x-b.x)<b.w/2+7&&Math.abs(z-b.z)<b.d/2+7)ok=false;
+  for(const [dx,dz]of[[-5,0],[5,0],[0,-5],[0,5]])if(hAt(x+dx,z+dz)<.1)ok=false;
+  const value={y,ok};cache.set(k,value);return value;
+ };
+ const first={x:start.x,z:start.z,ix:0,iz:0,g:0,h:Math.hypot(goal.x-start.x,goal.z-start.z)};first.f=first.h;open.push(first);nodes.set('0,0',first);let found=null,count=0;
+ while(open.length&&count++<14000){open.sort((a,b)=>b.f-a.f);const n=open.pop();if(n.closed)continue;n.closed=true;
+  if(Math.hypot(n.x-goal.x,n.z-goal.z)<step*1.3){found=n;break}
+  for(const[dx,dz]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]]){
+   const ix=n.ix+dx,iz=n.iz+dz,x=start.x+ix*step,z=start.z+iz*step,k=key(ix,iz),old=nodes.get(k);if(old?.closed||Math.hypot(x-start.x,z-start.z)>1600)continue;
+   const a=sample(n.x,n.z),b=sample(x,z),mid=sample((x+n.x)/2,(z+n.z)/2),dist=step*Math.hypot(dx,dz);if(!b.ok||!mid.ok||Math.abs(b.y-a.y)>dist*.38)continue;
+   const g=n.g+dist+Math.abs(b.y-a.y)*8;if(old&&g>=old.g)continue;
+   const next={ix,iz,x,z,g,f:g+Math.hypot(x-goal.x,z-goal.z),parent:n};nodes.set(k,next);open.push(next);
+  }
+ }
+ if(!found)return null;
+ const points=[{...goal,y:.86}];for(let n=found;n;n=n.parent)points.push({x:n.x,z:n.z,y:hAt(n.x,n.z)});points.reverse();
+ // Forward/backward slope projection fixes both endpoints and limits the road to 12%.
+ for(let pass=0;pass<6;pass++){
+  points[0].y=hAt(start.x,start.z);for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i],rise=Math.hypot(a.x-b.x,a.z-b.z)*.12;b.y=Math.max(a.y-rise,Math.min(a.y+rise,b.y))}
+  points.at(-1).y=.86;for(let i=points.length-2;i>=0;i--){const a=points[i+1],b=points[i],rise=Math.hypot(a.x-b.x,a.z-b.z)*.12;b.y=Math.max(a.y-rise,Math.min(a.y+rise,b.y))}
+ }
+ if(Math.abs(points[0].y-hAt(start.x,start.z))>.2||points.some(p=>Math.abs(p.y-hAt(p.x,p.z))>7))return null;
+ return points;
+}
+function buildCoastRoad(points,path){
+ for(let i=1;i<points.length;i++){
+  const a=points[i-1],b=points[i],len=Math.hypot(a.x-b.x,a.z-b.z),angle=Math.atan2(-(b.x-a.x),b.z-a.z),n=Math.max(1,Math.ceil(len/2));
+  for(let k=0;k<=n;k++){const t=k/n;addLevelArea(a.x+(b.x-a.x)*t,a.z+(b.z-a.z)*t,10,3,a.y+(b.y-a.y)*t,angle,7)}
+ }
+ for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i];path(a.x,a.z,b.x,b.z,8)}
+ world.userData.baseCoast={width:8,maxGrade:.12,points:points.map(p=>({...p}))};
+}
+// A terminal bridge follows the moored ferry's ramp and retracts on departure.
+function createTerminalRamp(c,f){
+ const p=compoundTransform(c,c.angle)(0,30),g=new THREE.Mesh(new THREE.BoxGeometry(10,.18,1),M(0x787d79,'metal'));
+ world.add(g);c.loadingRamp={x:p[0],z:p[1],f,homeX:f.x,homeZ:f.z,homeHD:f.hd,mesh:g};
+}
+function terminalRampState(r){
+ const f=r.f;if(f.destroyed||!V.includes(f)||Math.hypot(f.x-r.homeX,f.z-r.homeZ)>1.5||Math.abs(wrapAngle(f.hd-r.homeHD))>.06)return null;
+ const end=ferryWorld(f,0,14),dx=end.x-r.x,dz=end.z-r.z,length=Math.hypot(dx,dz);
+ return{x:r.x,z:r.z,ux:dx/length,uz:dz/length,length,startY:.86,endY:ferryLocalSurfaceY(f,14)+.04};
+}
+function terminalRampHeight(x,z){
+ for(const c of world?.userData.compounds||[]){if(!c.loadingRamp)continue;const s=terminalRampState(c.loadingRamp);if(!s)continue;
+  const dx=x-s.x,dz=z-s.z,t=(dx*s.ux+dz*s.uz)/s.length,side=dx*s.uz-dz*s.ux;
+  if(t>=0&&t<=1&&Math.abs(side)<=5)return s.startY+(s.endY-s.startY)*t;
+ }return null;
+}
+function updateTerminalRamps(){for(const c of world?.userData.compounds||[]){const r=c.loadingRamp;if(!r)continue;const s=terminalRampState(r);r.mesh.visible=!!s;if(!s)continue;
+ const rise=s.endY-s.startY;r.mesh.position.set(s.x+s.ux*s.length/2,(s.startY+s.endY)/2-.09,s.z+s.uz*s.length/2);
+ r.mesh.rotation.set(-Math.atan2(rise,s.length),Math.atan2(s.ux,s.uz),0,'YXZ');r.mesh.scale.z=Math.hypot(s.length,rise);
+}}
+function pedestrianFerry(x,z,previous){
+ for(const f of V){if(f.t!=='ferry'||f.destroyed)continue;const q=ferryLocal(f,x,z),y=ferryLocalSurfaceY(f,q.z);
+  if(Math.abs(q.x)<FERRY_DECK.halfW-.65&&Math.abs(q.z)<=FERRY_DECK.halfL+FERRY_DECK.ramp&&previous>=y-.9)return{f,q,y};
+ }return null;
+}
+
+;
+// END src/compound-coast-runtime.js
 // BEGIN src/compound-generation.js
 // Approved compound layouts share one specification with the preview.
 // Quarter turns keep the existing axis-aligned wall collision representation exact.
@@ -5710,19 +5854,21 @@ function findRedesignedPort(q){
   return null;
 }
 function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssigned,heliportSites}){
-  const isPort=layout.id==='port',angle=layout.phase===3?0:isPort?q.angle:Math.floor(R()*4)*Math.PI/2,mirror=isPort||layout.phase===3?1:R()<.5?-1:1,tr=compoundTransform(q,angle,mirror),c=Math.round(Math.cos(angle)),s=Math.round(Math.sin(angle));
+  const isPort=layout.id==='port',coastal=isPort||!!layout.waterfront,angle=['base','hq'].includes(layout.id)?0:coastal?q.angle:Math.floor(R()*4)*Math.PI/2,mirror=1,tr=compoundTransform(q,angle,mirror),c=Math.round(Math.cos(angle)),s=Math.round(Math.sin(angle));
   const vector=(x,z)=>[x*c-z*s,x*s+z*c],rotatedHeading=hd=>hd*mirror-angle;
-  const record={id:layout.id,x:q.x,z:q.z,angle,mirror,r:isPort?90:Math.hypot(...layout.size)/2+20,buildings:[],vehicles:[],soldiers:[],loot:[],entrances:layout.entrances.map(p=>tr(...p)),patrol:layout.patrol.map(p=>tr(...p))};
+  const record={id:layout.id,layoutId:layout.layoutId||layout.id,variant:layout.variant||1,layout,x:q.x,z:q.z,angle,mirror,r:Math.hypot(...layout.size)/2+20,buildings:[],vehicles:[],soldiers:[],loot:[],entrances:layout.entrances.map(p=>tr(...p)),patrol:layout.patrol.map(p=>tr(...p))};
   world.userData.compounds.push(record);
-  const center=tr(0,isPort?-27:0),height=isPort?.86:q.h??rawHAt(q.x,q.z);
-  addLevelArea(...center,isPort?110:layout.size[0]+8,isPort?70:layout.size[1]+8,height,angle,isPort?4:18);
-  const base=pad(...center,layout.size[0]-6,isPort?62:layout.size[1]-10);base.rotation.y=-angle;
+  const shore=layout.waterfront?.shore??8,landDepth=coastal?shore+layout.size[1]/2-5:layout.size[1]+8;
+  const center=tr(0,coastal?-layout.size[1]/2+landDepth/2:0),height=coastal?.86:q.h??rawHAt(q.x,q.z);
+  addLevelArea(...center,layout.size[0]+8,landDepth,height,angle,coastal?3:18);
+  if(!layout.civilian){const base=pad(...center,layout.size[0]-6,coastal?landDepth-2:layout.size[1]-10);base.rotation.y=-angle;}
   // Keep vegetation outside the complete reservation, including gates and turning space.
   compoundClear.push({x:q.x,z:q.z,r:record.r});
   for(const route of layout.routes)for(let i=1;i<route.points.length;i++)path(...tr(...route.points[i-1]),...tr(...route.points[i]),route.width);
   for(const spec of layout.buildings){
-    const [x,z]=tr(spec.x,spec.z),firstWall=Wl.length;
-    const b=spec.bunker?mkEnemyBunker(x,z):mkB(x,z,spec.w,spec.d,spec.h,spec.hangar?0xbab99d:0xc9b98d,layout.friendly?0x2c5fc0:spec.hangar?0xb7c1b4:0x79584e,{hangar:!!spec.hangar,kind:spec.hangar?'hangar':layout.id==='hangar'?'garage':layout.id,doorSide:0,doorWidth:spec.hangar?30:4,doorHeight:spec.hangar?11:4.4,openDoor:!!spec.hangar,noPartitions:true,solidWalls:layout.id==='polvori'&&spec.id!=='guard'});
+    const [x,z]=tr(spec.x,spec.z),firstWall=Wl.length,firstStair=stairs.length,buildingAngle=angle-(spec.rotationY||0),bc=Math.round(Math.cos(buildingAngle)),bs=Math.round(Math.sin(buildingAngle)),buildingVector=(x,z)=>[x*bc-z*bs,x*bs+z*bc];
+    const b=spec.bunker?mkEnemyBunker(x,z):mkB(x,z,spec.w,spec.d,spec.h*(spec.floors||1),spec.wood?0x96714b:spec.replacement?0xa9bdb0:spec.hangar?0xbab99d:0xc9b98d,layout.friendly?0x2c5fc0:spec.hangar?0xb7c1b4:0x79584e,{floors:spec.floors,wood:spec.wood,hangar:!!spec.hangar,kind:spec.hangar?'hangar':layout.id==='hangar'?'garage':layout.id,doorSide:0,doorWidth:spec.hangar?30:4,doorHeight:spec.hangar?11:4.4,openDoor:!!spec.hangar,noPartitions:true,solidWalls:!!spec.warehouse&&!spec.wood});
+    decorateRuntimeBuilding(b,spec);b.civilian=!!layout.civilian;
     if(spec.hangar){
       const shape=new THREE.Shape();shape.moveTo(-spec.w/2,0);shape.lineTo(spec.w/2,0);for(let i=0;i<=16;i++){const a=i*Math.PI/16;shape.lineTo(Math.cos(a)*spec.w/2,.12+Math.sin(a)*spec.w/2)}shape.closePath();
       // La paret semicircular és l'únic tancament posterior: sense l'antic
@@ -5745,26 +5891,26 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
     }
     if(layout.satellite?.buildingId===spec.id){
       const assembly=window.HUNTER_COMPOUND_STRUCTURES().satellite(layout.satellite.radius);
-      assembly.position.y=spec.h+1.2;b.roof.add(assembly);
-      window.HUNTER_AIR_OBSTACLES.registerSatellite(world,assembly,b,layout.satellite.radius);
+      assembly.scale.setScalar(layout.satellite.scale||1);assembly.position.y=b.h+1.2;b.roof.add(assembly);
+      window.HUNTER_AIR_OBSTACLES.registerSatellite(world,assembly,b,layout.satellite.radius*(layout.satellite.scale||1));
     }
     // Rotate both the visual shell and every associated physical record.
-    b.o.rotation.y=-angle;
-    const point=(wx,wz)=>{const p=vector(wx-x,wz-z);return[x+p[0],z+p[1]]};
+    b.o.rotation.y=-buildingAngle;b.angle=buildingAngle;
+    const point=(wx,wz)=>{const p=buildingVector(wx-x,wz-z);return[x+p[0],z+p[1]]};
     for(const w of Wl.slice(firstWall)){
       // Totes les parets, portes i llindes pertanyen a aquest edifici:
       // els projectils lleugers no poden degradar-ne l'estructura.
       w.owner=b;
       const corners=[[w.x0,w.z0],[w.x0,w.z1],[w.x1,w.z0],[w.x1,w.z1]].map(p=>point(...p));
-      w.x0=Math.min(...corners.map(p=>p[0]));w.x1=Math.max(...corners.map(p=>p[0]));w.z0=Math.min(...corners.map(p=>p[1]));w.z1=Math.max(...corners.map(p=>p[1]));[w.cx,w.cz]=point(w.cx,w.cz);if(w.nx!=null)[w.nx,w.nz]=vector(w.nx,w.nz);
+      w.x0=Math.min(...corners.map(p=>p[0]));w.x1=Math.max(...corners.map(p=>p[0]));w.z0=Math.min(...corners.map(p=>p[1]));w.z1=Math.max(...corners.map(p=>p[1]));[w.cx,w.cz]=point(w.cx,w.cz);if(w.nx!=null)[w.nx,w.nz]=buildingVector(w.nx,w.nz);
     }
-    if(b.stair){const a=b.stair;[a.x,a.z]=point(a.x,a.z);[a.nx,a.nz]=vector(a.nx,a.nz)}
-    if(s){[b.w,b.d]=[b.d,b.w];[b.hw,b.hd]=[b.hd,b.hw]}
-    b.doorSide=s===1?3:s===-1?2:c===-1?1:0;b.compound=record.id;b.layoutBuilding=spec.id;record.buildings.push(b);
+    for(const a of stairs.slice(firstStair)){[a.x,a.z]=point(a.x,a.z);[a.nx,a.nz]=buildingVector(a.nx,a.nz)}
+    if(bs){[b.w,b.d]=[b.d,b.w];[b.hw,b.hd]=[b.hd,b.hw]}
+    b.doorSide=bs===1?3:bs===-1?2:bc===-1?1:0;b.compound=record.id;b.layoutBuilding=spec.id;record.buildings.push(b);
   }
   if(layout.antenna){const a=layout.antenna,[x,z]=tr(a.x,a.z),g=window.HUNTER_COMPOUND_STRUCTURES().antenna(a);g.position.set(x,height+.2,z);g.rotation.y=-angle;world.add(g);record.antenna=g;
     // The solid plinth blocks movement and is destructible with the complete tower.
-    const footing={x0:x-8,x1:x+8,z0:z-8,z1:z+8,y0:height,y1:height+1.3,
+    const footing={x0:x-4*(a.scale||1),x1:x+4*(a.scale||1),z0:z-4*(a.scale||1),z1:z+4*(a.scale||1),y0:height,y1:height+1.3,
       hp:150,m:g.children[0],parts:g.children.slice(),door:false,open:false,
       rammable:true,cx:x,cz:z};
     Wl.push(footing);
@@ -5777,19 +5923,20 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
   for(const [kind,x,z] of layout.props){if(kind==='flag')flag(...tr(x,z),layout.friendly?0x2c7bff:0xe02828);else prop(kind,...tr(x,z),-angle);}
   // The outpost perimeter has exactly the same two openings as the approved preview.
   if(layout.fence)for(const [a,b] of layout.fence)barbedSegment(...tr(...a),...tr(...b));
-  if(layout.id==='hangar'||layout.friendly){
+  if(!layout.boundary&&(layout.id==='hangar'||layout.id==='base')){
     const hw=layout.friendly?56:47,hd=50;
     for(let x=-hw;x<=hw;x+=6){if(Math.abs(x)>10)prop('barrier',...tr(x,hd),-angle);prop('barrier',...tr(x,-hd),-angle)}
     for(let z=-hd+6;z<hd;z+=6)for(const x of[-hw,hw])prop('barrier',...tr(x,z),Math.PI/2-angle);
   }
-  if(isPort){
+  if(layout.piers){for(const p of layout.piers)pier(...tr(p.x,p.z-p.d/2),...tr(p.x,p.z+p.d/2),p.w);}
+  else if(isPort){
     pier(...tr(-51,7),...tr(51,7),10);
     for(const x of[-24,24])pier(...tr(x,7),...tr(x,48),6);
   }
   for(const [vehicleIndex,spec] of layout.vehicles.entries()){
     const t=spec.t==='llanxa_coets'&&rocketAssigned?'llanxa':layout.id==='heliport'&&heliportSites.length===1?'heli_combat':spec.t,[x,z]=tr(spec.x,spec.z),v={t,x,z,hd:rotatedHeading(spec.hd),compound:record.id};
     if(layout.id==='hangar'&&spec.t==='tanc'){v.insideHangar=true;v.hangar=record.buildings[0]}
-    if(layout.id==='heliport'){Object.assign(v,{heliport:true,military:true,guaranteed:true});heliportSites.push({x,z,hd:v.hd})}
+    if(layout.id==='heliport'){Object.assign(v,{heliport:true,military:true,guaranteed:true});heliportSites.push({x,z,hd:v.hd,type:t})}
     if(layout.id==='hq'){
       const u=mkEn(spec.t==='cotxe'?'jeep':spec.t,x,z);u.compound='hq';u.hd=v.hd;if(spec.t==='tanqueta')u.hqPatrolZone=vehicleIndex===0?'north':'south';
       const route=layout.vehiclePatrols[spec.t==='tanqueta'?vehicleIndex:2].points.slice(0,-1).map(p=>tr(...p));
@@ -5830,6 +5977,7 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
     if(!o)continue;
     const item=items[items.length-1];item.compound=record.id;record.loot.push(item);
   }
+  if(layout.spawn){const p=tr(layout.spawn.x,layout.spawn.z);record.spawn={x:p[0],z:p[1]};}
   return record;
 }
 
@@ -5980,7 +6128,10 @@ const batchStaticDecor=()=>{
 };
 const compoundProp=(kind,x,z,rot=0)=>{
   const y=Math.max(.05,hAt(x,z)),g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;
-  if(kind==='crate'){bx(g,1.2,.9,1,0x7b5a35,0,.45,0,'paint');bx(g,1.26,.1,1.06,0x3f3021,0,.2,0,'metal');bx(g,.1,.95,1.08,0x3f3021,0,.48,0,'metal')}
+  if(kind==='bench'){bx(g,4,.25,1.2,0x806447,0,.9,0);for(const x of[-1.4,1.4])bx(g,.2,.8,1,0x485249,x,.4,0)}
+  else if(kind==='well'){const m=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.7,1.4,12,1,true),M(0x858976,'masonry'));m.position.y=.7;g.add(m)}
+  else if(kind==='lifebuoy'){const m=new THREE.Mesh(new THREE.TorusGeometry(.6,.15,6,16),M(0xe57846,'paint'));m.position.y=1.5;g.add(m);bx(g,.12,2.3,.12,0x5b6050,0,1.15,0)}
+  else if(kind==='crate'){bx(g,1.2,.9,1,0x7b5a35,0,.45,0,'paint');bx(g,1.26,.1,1.06,0x3f3021,0,.2,0,'metal');bx(g,.1,.95,1.08,0x3f3021,0,.48,0,'metal')}
   else if(kind==='barrel'){const body=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.9,10),M(0x53616a,'metal'));body.position.y=.45;g.add(body);for(const y0 of[.12,.78]){const ring=new THREE.Mesh(new THREE.CylinderGeometry(.44,.44,.08,10),M(0x2e3438,'metal'));ring.position.y=y0;g.add(ring)}}
   else if(kind==='barrier'){bx(g,2.4,.72,.5,0x9a8c72,0,.36,0,'masonry');for(const x0 of[-.9,.9])bx(g,.28,.28,.8,0x5d5548,x0,.14,0,'masonry')}
   else if(kind==='ammo'){bx(g,1.5,.75,1.1,0x5f6846,0,.38,0,'paint');bx(g,1.55,.12,1.15,0x30352c,0,.78,0,'metal');bx(g,.12,.8,1.18,0x30352c,0,.38,0,'metal')}
@@ -6020,8 +6171,8 @@ const findPortWater=q=>{for(let a=0;a<32;a++){const aa=a*Math.PI/16;for(let d=28
 const findPortSite=(island,tries=18)=>{for(let n=0;n<tries;n++){const q=land(island,700,1);if(!q)continue;q.r=island.r;const portBest=findPortWater(q);if(portBest)return{...q,portBest}}return null};
 const makeStandalonePier=q=>{const best=q.portBest||findPortWater(q);if(!best)return false;const dx=best.x-q.x,dz=best.z-q.z,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L;let shore=null;for(let d=3;d<L;d+=2.5){const sx=q.x+ux*d,sz=q.z+uz*d;if(rawHAt(sx,sz)<.35){shore={x:sx-ux*1.8,z:sz-uz*1.8};break}}if(!shore)return false;const pierLen=Math.min(34,Math.max(14,L-5)),end={x:shore.x+ux*pierLen,z:shore.z+uz*pierLen};compoundPier(shore.x,shore.z,end.x,end.z,3.6);for(const side of[-1,1]){const px=-uz,pz=ux;compoundProp('bollard',end.x+px*side*1.1,end.z+pz*side*1.1,0)}compoundClear.push({x:q.x,z:q.z,r:18});return true};
 const phase3Options={pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites,rocketAssigned:false};
-const baseCompound=buildApprovedCompound(window.HUNTER_COMPOUND_LAYOUTS.find(l=>l.id==='base'),pa,phase3Options);
-const hqCompound=buildApprovedCompound(window.HUNTER_COMPOUND_LAYOUTS.find(l=>l.id==='hq'),pb,phase3Options);
+const baseCompound=buildApprovedCompound(window.HUNTER_CHOOSE_COMPOUND('base',R),pa,phase3Options);
+const hqCompound=buildApprovedCompound(window.HUNTER_CHOOSE_COMPOUND('hq',R),pb,phase3Options);
 markBuildStage('initialCompounds');
 const COMPOUND_RADII=Object.freeze({
   avancada:84,
@@ -6038,7 +6189,8 @@ const compoundCenters=[
   {x:pa.x,z:pa.z,r:baseCompound.r,type:'base'},
   {x:pb.x,z:pb.z,r:hqCompound.r,type:'hq'}
 ];
-const compoundRadius=type=>COMPOUND_RADII[type]||58;
+const typeId=t=>({avancada:'outpost',garatge:'hangar'}[t]||t);
+const compoundRadius=type=>Math.max(COMPOUND_RADII[type]||58,...window.HUNTER_RUNTIME_LAYOUTS.filter(l=>l.type===typeId(type)).map(layoutRadius));
 const compoundSiteClear=(type,q,minCenter=0)=>{
   const r=compoundRadius(type);
   return compoundCenters.every(c=>{
@@ -6085,8 +6237,9 @@ const compound=(type,q)=>{
   if(approvedId){
     if(type==='port'&&!q.portPrepared){if(!portSiteFeasible(q))return false;q=findRedesignedPort(q);if(!q)return false}
     if(!compoundSiteClear(type,q,0))return false;
-    const layout=window.HUNTER_COMPOUND_LAYOUTS.find(l=>l.id===approvedId);
-    if(layout.phase===2){const r=Math.max(...layout.size)/2;for(const dx of[-r,0,r])for(const dz of[-r,0,r])if(rawHAt(q.x+dx,q.z+dz)<.1)return false;}
+    let layout=window.HUNTER_CHOOSE_COMPOUND(approvedId,R);
+    if(type==='port'&&!coastalLayoutFits(layout,q)){layout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.type==='port'&&l.variant===1);if(!coastalLayoutFits(layout,q))return false;}
+    if(type!=='port'){const r=Math.max(...layout.size)/2;for(const dx of[-r,0,r])for(const dz of[-r,0,r])if(rawHAt(q.x+dx,q.z+dz)<.1)return false;}
     buildApprovedCompound(layout,q,{pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites,rocketAssigned:compoundVehicles.some(v=>v.t==='llanxa_coets')});
     registerCompound(type,q);return true;
   }
@@ -6107,6 +6260,32 @@ const forceReserve=(type,min)=>{
   }
   return null
 };
+const civilOptions={pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites,rocketAssigned:true};
+const dockLayout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.id==='civil-dock'),terminalLayout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.id==='ferry-terminal');
+const terminalRecords=[];
+let connection=null;
+const exit=baseCompound.entrances[0],roadStart={x:exit[0],z:exit[1]};
+const initialDock=findCoastalLayout(dockLayout,{...A},q=>{
+ if(!compoundSiteClear('civil-dock',q))return false;
+ const end=compoundTransform(q,q.angle)(0,-dockLayout.size[1]/2),points=solveCoastRoad(roadStart,{x:end[0],z:end[1]});
+ if(!points)return false;connection=points;return true;
+});
+if(initialDock){const c=buildApprovedCompound(dockLayout,initialDock,civilOptions);registerCompound('civil-dock',initialDock);buildCoastRoad(connection,compoundPath);world.userData.baseCoast.dockId=c.layoutId;world.userData.baseCoast.dock={x:c.x,z:c.z};}
+else world.userData.baseCoast={unavailable:true,reason:'No walkable coastal corridor for this base site'};
+for(const island of islands.filter(i=>i!==Bi).sort((a,b)=>b.r-a.r)){
+ if(terminalRecords.length>=2)break;
+ const site=findCoastalLayout(terminalLayout,island,q=>compoundSiteClear('ferry-terminal',q));if(!site)continue;
+ const c=buildApprovedCompound(terminalLayout,site,civilOptions);c.islandIndex=islands.indexOf(island);terminalRecords.push(c);registerCompound('ferry-terminal',site);
+}
+let villages=0,civilDocks=initialDock?1:0;
+for(const island of candidateIslands){
+ if(villages<2*MAP_SCALE){
+  const types=['hut-settlement-small','hut-settlement','hut-settlement-large'],chosen=types[Math.floor(R()*3)],l=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.id===chosen);
+  for(let tries=0;tries<6;tries++){const q=land(island,250,1);if(!q||!compoundSiteClear(l.id,q))continue;const r=Math.max(...l.size)/2;if([-r,0,r].some(dx=>[-r,0,r].some(dz=>rawHAt(q.x+dx,q.z+dz)<.3)))continue;buildApprovedCompound(l,q,civilOptions);registerCompound(l.id,q);villages++;break;}
+ }
+ if(civilDocks<2*MAP_SCALE){const q=findCoastalLayout(dockLayout,island,q=>compoundSiteClear('civil-dock',q));if(q){buildApprovedCompound(dockLayout,q,civilOptions);registerCompound('civil-dock',q);civilDocks++;}}
+}
+markBuildStage('civilCompoundsAndCoast');
 forceReserve('garatge',190);
 forceReserve('avancada',180);
 forceReserve('polvori',190);
@@ -6179,12 +6358,12 @@ vegetate(pa);if(seedSearchMode)fa=[];else spawnFauna();
 const vegetationMs=performance.now()-vegetationStarted;
 markBuildStage('vegetationAndFauna');HQ={x:hqCompound.buildings[0].x,z:hqCompound.buildings[0].z};const rb=B.slice(6);
 const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2);
-const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1),x=cx+Math.cos(a)*d,z=cz+Math.sin(a)*d;if(gl(x,z))return mkEn(t,x,z)}return null};
+const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1),x=cx+Math.cos(a)*d,z=cz+Math.sin(a)*d;if(gl(x,z)&&!world.userData.compounds.some(c=>c.layout.civilian&&Math.hypot(x-c.x,z-c.z)<c.r))return mkEn(t,x,z)}return null};
 islands.forEach(i=>{if(i===A||i===Bi||R()<.5)return;const q=land(i,60);if(!q)return;for(let k=0;k<1+(R()<.4);k++)sp2('soldat',q.x,q.z,0,10);if(R()<.25)sp2('torre',q.x,q.z,5,12)});
 rb.forEach(b=>{
   const n=R()<.25?0:R()<.6?1:2;
   const pool=['arma','arma','med','med','expl','granada','granada','disf','mapa','bazooka','franctirador','paracaigudes']
-    .filter(t=>lootAllowed(t,b));
+    .filter(t=>lootAllowed(t,b)&&(!b.civilian||['arma','med','disf'].includes(t)));
   for(let k=0;k<n&&pool.length;k++){
     const kind=pool[Math.floor(R()*pool.length)];
     addIt(kind,b);
@@ -6193,14 +6372,14 @@ rb.forEach(b=>{
 addIt('arma',B[0]);addIt('expl',B[1]);addIt('med',B[2]);
 // Les recollides garantides s'han de buscar entre edificis que realment
 // acceptin aquell tipus d'objecte: no perdre mapes per haver triat polvorins.
-const lootBuildings=t=>rb.filter(b=>lootAllowed(t,b));
+const lootBuildings=t=>rb.filter(b=>!b.civilian&&lootAllowed(t,b));
 const sniperSites=lootBuildings('franctirador');
 addIt('franctirador',sniperSites[Math.floor(R()*sniperSites.length)]||B[2]);
 for(const [type,count]of[['mapa',2],['mapa_heli',1+MAP_SCALE],['mapa_tanc',1+MAP_SCALE]]){
   lootBuildings(type).sort(()=>R()-.5).slice(0,count).forEach(b=>addIt(type,b));
 }
 markBuildStage('enemiesAndLoot');
-P.x=pa.x;P.z=pa.z+20;P.hd=0;P.base={x:pa.x,z:pa.z};V=[];cv=null;mm=null;
+P.x=baseCompound.spawn?.x??pa.x;P.z=baseCompound.spawn?.z??pa.z+20;P.hd=0;P.base={x:pa.x,z:pa.z};V=[];cv=null;mm=null;
 const add=(t,x,z,a,meta={})=>{const o=mkV(t),c=VT[t],surface=Math.max(0,hAt(x,z)),v={t,x,z,hd:a||0,v:0,alt:c.m==='a'?helicopterLandedAltitude({o},surface):surface+.8,o,armor:c.armor??0,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};if(t==='heli_combat')v.rockets=6;if(t==='llanxa_coets')v.rockets=Infinity;world.add(o);V.push(v);return v};
 // Cap tanc neutral dins del HQ: els tancs pilotables apareixen
 // distribuïts per l'arxipèlag, lluny de la base enemiga.
@@ -6235,17 +6414,17 @@ for(let islandIndex=0;islandIndex<islands.length;islandIndex++){
   const q=ferrySpotForIsland(islands[islandIndex],islandIndex);
   if(q)ferryCandidates.push(q)
 }
-const ferrySpots=[];
-if(ferryCandidates.length){
+const ferrySpots=terminalRecords.map(c=>{const v=c.vehicles.find(v=>v.t==='ferry'),island=islands[c.islandIndex];return{...v,islandIndex:c.islandIndex,islandX:island.x,islandZ:island.z,terminal:c}});
+if(ferryCandidates.length&&ferrySpots.length<2){
   const first=ferryCandidates[Math.floor(R()*ferryCandidates.length)];ferrySpots.push(first);
   const second=ferryCandidates.filter(q=>q.islandIndex!==first.islandIndex).sort((a,b)=>Math.hypot(b.x-first.x,b.z-first.z)-Math.hypot(a.x-first.x,a.z-first.z))[0];
-  if(second)ferrySpots.push(second)
+  if(second&&ferrySpots.length<2)ferrySpots.push(second)
 }
 for(let i=0;i<ferryCandidates.length&&ferrySpots.length<2;i++){
   const q=ferryCandidates[i];if(!ferrySpots.some(f=>f.islandIndex===q.islandIndex))ferrySpots.push(q)
 }
 markBuildStage('ferrySiteSearch');
-ferrySpots.slice(0,2).forEach(q=>add('ferry',q.x,q.z,q.hd,{coastal:true,guaranteed:true,ferryIslandIndex:q.islandIndex,ferryIslandX:q.islandX,ferryIslandZ:q.islandZ}));
+ferrySpots.slice(0,2).forEach(q=>{const f=add('ferry',q.x,q.z,q.hd,{coastal:true,guaranteed:true,ferryIslandIndex:q.islandIndex,ferryIslandX:q.islandX,ferryIslandZ:q.islandZ});if(q.terminal){q.terminal.ferry=f;createTerminalRamp(q.terminal,f)}});
 // La llanxa inicial comparteix sovint el millor punt de costa amb un ferry.
 // Si hi ha solapament, la desplacem 100 m seguint la costa (tangent local), no mar endins.
 if(launchSpot){
@@ -6264,7 +6443,7 @@ if(launchSpot){
   add('llanxa',lx,lz,rr(0,6.28));
 }
 const clearVehicle=(t,x,z)=>Math.abs(x)<H-vehicleRadius(t)-5&&Math.abs(z)<H-vehicleRadius(t)-5&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(x-v.x,z-v.z)<vehicleRadius(t)+vehicleRadius(v.t)+5);
-compoundVehicles.forEach(v=>{if(VT[v.t]?.m==='w'||VT[v.t]?.m==='wl'){if(hAt(v.x,v.z)<-2&&!V.some(o=>obbOverlap(vehicleBox(v),vehicleBox(o))))add(v.t,v.x,v.z,v.hd,v);return}
+compoundVehicles.forEach(v=>{if(v.t==='ferry')return;if(VT[v.t]?.m==='w'||VT[v.t]?.m==='wl'){if(hAt(v.x,v.z)<-2&&!V.some(o=>obbOverlap(vehicleBox(v),vehicleBox(o))))add(v.t,v.x,v.z,v.hd,v);return}
   const r=vehicleRadius(v.t),buildingClear=v.insideHangar?true:!B.some(b=>Math.abs(v.x-b.x)<b.hw+r&&Math.abs(v.z-b.z)<b.hd+r),clear=!treeHit(v.x,v.z,r*.7)&&buildingClear&&!V.some(o=>Math.hypot(v.x-o.x,v.z-o.z)<r+vehicleRadius(o.t)+3);
   if(clear||v.insideHangar)add(v.t,v.x,v.z,v.hd,v)
 });
@@ -6301,7 +6480,7 @@ islands.forEach(island=>{
 
 markBuildStage('coastalVehicles');
 heliportSites.forEach((p,i)=>{
-  const desired=i===1?'heli_combat':'heli',near=V.some(v=>v.t===desired&&Math.hypot(v.x-p.x,v.z-p.z)<10);
+  const desired=p.type||(i===1?'heli_combat':'heli'),near=V.some(v=>v.t===desired&&Math.hypot(v.x-p.x,v.z-p.z)<10);
   if(!near)add(desired,p.x,p.z,p.hd,{heliport:true,military:true,guaranteed:true});
 });
 if(heliportSites.length){
@@ -6328,7 +6507,7 @@ islands.forEach(i=>{if(i!==A&&R()<.65){const t=['cotxe','moto','bici'][Math.floo
 markBuildStage('guaranteedVehicles');
 ensureJetSkis(add);
 markBuildStage('jetSkis');
-P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0,0,0));prepareEnemyNavigation();const staticBatchStats=seedSearchMode?null:batchStaticDecor();if(!seedSearchMode&&visualQuality.shadows)prepareShadowCasters();else shadowCandidates.length=0;cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);
+P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0,0,0));updateTerminalRamps();prepareEnemyNavigation();const staticBatchStats=seedSearchMode?null:batchStaticDecor();if(!seedSearchMode&&visualQuality.shadows)prepareShadowCasters();else shadowCandidates.length=0;cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);
 markBuildStage('finalizationAndBatching');
 seedCompounds=compoundCenters.map(c=>({type:c.type,x:c.x,z:c.z}));
 window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,stages:buildStages,portSearch:buildCounters,initialTerrainMs,seabedMs,vegetationMs,seabedSamples:seedSearchMode?0:water.seabedStats.lastSamples,terrainTiles:terrain?.stats||null,palms:PM.stats,staticBatches:staticBatchStats};
@@ -6958,7 +7137,7 @@ function wallBreak(w){const h=w.y1-w.y0-1,parts=w.parts&&w.parts.length?w.parts:
 if(w.parts&&w.parts.length){parts.forEach(m=>m.visible=false)}else if(w.m.visible)WA.push({m:w.m,h,t:.5});else world.remove(w.m);
 for(let i=0;i<(w.door?6:10);i++)debris(rn(w.x0,w.x1),w.y0+1+h*rn(.2,.9),rn(w.z0,w.z1),col,1,.9,7);
 for(let i=0;i<3;i++)puff(cx,w.y0+1+h*rn(.1,.6),cz,0xc9b48a,3.5)}
-function roofBreak(b){if(b.rb)return;b.rb=1;b.rhp=0;const col=b.roof.material?b.roof.material.color.getHex():(b.roof.userData.color||0x777777),y=b.fy+b.h+.6;
+function roofBreak(b){if(b.rb)return;b.rb=1;if(b.upperFloor)b.upperFloor.visible=false;for(const r of b.extraRoofs||[])r.visible=false;b.rhp=0;const col=b.roof.material?b.roof.material.color.getHex():(b.roof.userData.color||0x777777),y=b.fy+b.h+.6;
 if(b.hangar&&b.roof?.userData?.hangarRoof){
   HR.push({m:b.roof,t:0,dur:1.05,baseY:b.roof.position.y,baseRx:b.roof.rotation.x,baseRz:b.roof.rotation.z,dir:rn(-1,1)<0?-1:1,x:b.x,z:b.z,w:b.w,d:b.d,col});
   for(let i=0;i<12;i++)puff(b.x+rn(-b.w/2,b.w/2),b.fy+rn(1,b.w*.45),b.z+rn(-b.d/2,b.d/2),0x8b8580,3.8);
@@ -6982,7 +7161,7 @@ function treePush(){const r0=.5,cx=Math.floor(P.x/16),cz=Math.floor(P.z/16);for(
 function vehiclePushPlayer(){
   if(cv||playerFall)return;
   for(const v of [...V,...E.filter(u=>['jeep','tanqueta','tanc'].includes(u.t))]){
-    if(v.destroyed||!circleVehicleOverlap(P.x,P.z,.62,v))continue;
+    if(v.destroyed||!circleVehicleOverlap(P.x,P.z,.62,v))continue;if(v.t==='ferry'&&(terminalRampHeight(P.x,P.z)!==null||pedestrianFerry(P.x,P.z,P.y)?.f===v))continue;
     const b=vehicleBox(v),dx=P.x-b.x,dz=P.z-b.z,s=Math.sin(b.hd),c=Math.cos(b.hd),lx=dx*c-dz*s,lz=dx*s+dz*c,ex=b.w/2+.66-Math.abs(lx),ez=b.d/2+.66-Math.abs(lz);
     if(ex<ez){const sign=lx<0?-1:1,wx=sign*c,wz=-sign*s;P.x=b.x+(sign*(b.w/2+.66))*c+lz*s;P.z=b.z-(sign*(b.w/2+.66))*s+lz*c}
     else{const sign=lz<0?-1:1;P.x=b.x+lx*c+sign*(b.d/2+.66)*s;P.z=b.z-lx*s+sign*(b.d/2+.66)*c}
@@ -7046,9 +7225,10 @@ function checkRoofSupport(b,w){
 }
 function dmgW(w,d){if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}w.hp-=d;if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0){Wl.splice(i,1);wallGridCount=-1}i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);checkRoofSupport(w.owner,w);snd('boom',.3)}}
 function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=(opt.hangar?buildingVisual.createHangarShell:buildingVisual.createShell)({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide,structuralWalls=[];
+const wallH=opt.floors===2?h/2:h;
 let entranceDoor=null;
-const seg=(lx,lz,sx,sz,dr,windows=false,supportSide=null,supportWeight=0)=>{if(!dr){const parts=windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:h,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:h,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+h,hp:90,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,supportSide,supportWeight};Wl.push(o);if(supportWeight>0)structuralWalls.push(o);return}
-const parts=buildingVisual.addDoor(g,{lx,lz,sx,sz,height:h,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:35,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y};Wl.push(door);Dr.push(door);entranceDoor=door;
+const seg=(lx,lz,sx,sz,dr,windows=false,supportSide=null,supportWeight=0,level=0)=>{if(!dr){const parts=windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:wallH,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:wallH,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy+level-(level?0:1),y1:fy+level+wallH,hp:90,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,supportSide,supportWeight};for(const mesh of parts)mesh.position.y+=level;if(opt.wood){for(const mesh of parts)if(mesh.material?.color?.getHex()===0x3e7185)mesh.visible=false;}Wl.push(o);if(supportWeight>0)structuralWalls.push(o);return}
+const parts=buildingVisual.addDoor(g,{lx,lz,sx,sz,height:wallH,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:35,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y};Wl.push(door);Dr.push(door);entranceDoor=door;
 if(parts.lintel)Wl.push({x0:door.x0,x1:door.x1,z0:door.z0,z1:door.z1,y0:fy+parts.doorHeight,y1:fy+h,hp:70,m:parts.lintel,door:false,open:false,playerBlock:false,cx:x+lx,cz:z+lz})};
 if(opt.hangar){
   const sh=Math.max(3.1,h*.3),push=(lx,lz,sx,sz)=>{
@@ -7063,6 +7243,7 @@ if(opt.hangar){
   [[0,d/2-t/2,w,t,0],[0,-d/2+t/2,w,t,0],[w/2-t/2,0,t,d-2*t,1],[-w/2+t/2,0,t,d-2*t,1]].forEach(([cx,cz,sx,sz,ax],k)=>{if(k!=ds){seg(cx,cz,sx,sz,0,!opt.bunker&&!opt.solidWalls,k,1);return}const L=ax?sz:sx,sl=(L-dw)/2,off=dw/2+sl/2;for(const q of[-1,1]){if(ax)seg(cx,cz+q*off,sx,sl,0,false,k,.5);else seg(cx+q*off,cz,sl,sz,0,false,k,.5)}if(ax)seg(cx,cz,sx,dw,1);else seg(cx,cz,dw,sz,1)});
   if(!opt.noPartitions&&!opt.bunker&&w*d>=140&&R()<.5){const al=w>=d,L=al?d:w,gp=rr(-L/4,L/4),px=(R()<.5?-1:1)*rr((al?w:d)*.12,(al?w:d)*.2),a0=-L/2+t,a1=L/2-t,ps=(a,b)=>{if(b-a<.5)return;const cc=(a+b)/2,l=b-a;if(al)seg(px,cc,t,l);else seg(cc,px,l,t)};ps(a0,gp-1.6);ps(gp+1.6,a1)}
 }
+if(opt.floors===2)for(const [cx,cz,sx,sz]of[[0,d/2-t/2,w,t],[0,-d/2+t/2,w,t],[w/2-t/2,0,t,d-2*t],[-w/2+t/2,0,t,d-2*t]])seg(cx,cz,sx,sz,0,!opt.solidWalls,null,0,wallH);
 g.position.set(x,fy,z);world.add(g);
 const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,rhp:opt.hangar?90:120,hangar:!!opt.hangar,door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
 function mkEnemyBunker(x,z){
@@ -7092,12 +7273,14 @@ function mkEnemyBunker(x,z){
 // Door-aligned treads share the exact same geometry and walking height.
 function stairLocal(s,x,z){const dx=x-s.x,dz=z-s.z;return{along:dx*s.nx+dz*s.nz,side:dx*s.nz-dz*s.nx}}
 function stairContains(s,x,z,margin=0){const q=stairLocal(s,x,z);return q.along>=-margin&&q.along<=s.length+margin&&Math.abs(q.side)<=s.width/2+margin}
-function groundAt(x,z){
+function groundAt(x,z,previous=-Infinity){
   // No enfonsar el model sota els triangles que dibuixa el LOD actual.
   // Preservem l'altura física si és més alta (evita enfonsaments i salts negatius).
   const physical=hAt(x,z),visible=terrainStream?.visibleHeightAt(x,z);
-  let y=visible===null||visible===undefined?physical:Math.max(physical,visible);for(const s of stairs){if(stairContains(s,x,z)){const q=stairLocal(s,x,z);if(s.ramp){const t=Math.max(0,Math.min(1,q.along/s.length));y=Math.max(y,s.top+(s.bottom-s.top)*t)}else{const i=Math.min(s.steps-1,Math.max(0,Math.floor(q.along/s.tread)));y=Math.max(y,s.top-i*s.rise)}}}
+  let y=visible===null||visible===undefined?physical:Math.max(physical,visible);for(const s of stairs){if(s.internal&&s.owner?.rb)continue;if(stairContains(s,x,z)){const q=stairLocal(s,x,z);if(s.ramp){const t=Math.max(0,Math.min(1,q.along/s.length));y=Math.max(y,s.top+(s.bottom-s.top)*t)}else{const i=Math.min(s.steps-1,Math.max(0,Math.floor(q.along/s.tread)));y=Math.max(y,s.top-i*s.rise)}}}
 for(const p of piers){const dx=x-p.x,dz=z-p.z,along=dx*p.ux+dz*p.uz,side=dx*p.px+dz*p.pz;if(Math.abs(along)<=p.length/2+.35&&Math.abs(side)<=p.width/2+.2)y=Math.max(y,p.y)}
+for(const b of buildingCandidates(x,z)){const floor=upperFloorHeight(b,x,z,previous);if(floor!==null)y=Math.max(y,floor)}
+const ramp=terminalRampHeight(x,z);if(ramp!==null)y=Math.max(y,ramp);if(Number.isFinite(previous)){const deck=pedestrianFerry(x,z,previous);if(deck)y=Math.max(y,deck.y)}
 return y}
 function addRampAccess(b,side){const [nx,nz]=[[0,1],[0,-1],[1,0],[-1,0]][side],edge=(nx?b.w:b.d)/2+.2,x=b.x+nx*edge,z=b.z+nz*edge,top=b.fy+.3;
 let length=8,bottom=hAt(x+nx*length,z+nz*length);for(let L=8;L<=26;L+=2){const yy=hAt(x+nx*L,z+nz*L);if(Math.abs(top-yy)<Math.abs(top-bottom)){length=L;bottom=yy}if(Math.abs(top-yy)<.35){length=L;bottom=yy;break}}
@@ -7109,7 +7292,7 @@ const tread=.75;let steps=1;for(;steps<80;steps++){const end=steps*tread;if(top-
 const length=steps*tread,bottom=hAt(x+nx*length,z+nz*length),rise=Math.max(0,(top-bottom)/steps),s={x,z,nx,nz,top,steps,tread,length,rise,width:4.2};stairs.push(s);b.stair=s;
 for(let i=0;i<steps;i++){const a=(i+.5)*tread,xx=x+nx*a,zz=z+nz*a,y=top-i*rise,base=Math.min(y-.16,hAt(xx,zz)-.15);buildingVisual.addStep(b.o,{alongAxis:!!nx,riseWidth:tread,height:y-b.fy,base:base-b.fy,x:xx-b.x,z:zz-b.z,color:i%2?0xa69982:0xb5a68e})}
 }
-function wallPush(){const r=.6;for(const w of wallCandidates(P.x,P.z,r)){if(w.playerBlock===false)continue;if(w.towerLegOwner&&(P.y+1.5<w.y0||P.y>w.y1))continue;if(!w.open&&P.x>w.x0-r&&P.x<w.x1+r&&P.z>w.z0-r&&P.z<w.z1+r){const a=[P.x-(w.x0-r),w.x1+r-P.x,P.z-(w.z0-r),w.z1+r-P.z],i=a.indexOf(Math.min(...a));
+function wallPush(){const r=.6;for(const w of wallCandidates(P.x,P.z,r)){if(w.playerBlock===false||w.y0>P.y+3.1||w.y1<P.y+.15)continue;if(w.towerLegOwner&&(P.y+1.5<w.y0||P.y>w.y1))continue;if(!w.open&&P.x>w.x0-r&&P.x<w.x1+r&&P.z>w.z0-r&&P.z<w.z1+r){const a=[P.x-(w.x0-r),w.x1+r-P.x,P.z-(w.z0-r),w.z1+r-P.z],i=a.indexOf(Math.min(...a));
 if(i==0)P.x=w.x0-r;else if(i==1)P.x=w.x1+r;else if(i==2)P.z=w.z0-r;else P.z=w.z1+r}}}
 function updateDoors(dt){
   for(const d of Dr){
@@ -7479,7 +7662,7 @@ function updateDistanceVisibility(){
             !!focus?.contains(b.x,b.fy+b.h*.5,b.z,Math.max(b.hw,b.h*.5)),
           obscured=close&&!inside&&terrainConcealsBuilding(b,Math.sqrt(d2));
     b.o.visible=close&&!obscured;
-    b.roof.visible=!inside&&b.rhp>0;
+    b.roof.visible=!inside&&b.rhp>0;for(const r of b.extraRoofs||[])r.visible=b.roof.visible;if(b.upperFloor)b.upperFloor.visible=!b.rb&&(!inside||P.y>=b.fy+b.storey-.6);
     b.wm.opacity=b.dm.opacity=inside?.18:1;
     b.wm.depthWrite=b.dm.depthWrite=!inside;
     if(!b.o.visible)visibilityStats.buildings++;
@@ -8042,9 +8225,9 @@ else if(playerEject&&playerEject.t>0){P.x=Math.max(-lim,Math.min(lim,P.x+playerE
 }
 if(!playerFall){wallPush();treePush();vehiclePushPlayer()}}
 V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;v.strafeV=0;return}if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
-syncFerryCargo();
+syncFerryCargo();updateTerminalRamps();
 ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2)||null;
-const floor=ib?ib.fy+.3:groundAt(P.x,P.z),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;
+const floor=ib?Math.max(ib.fy+.3,groundAt(P.x,P.z,P.y)):groundAt(P.x,P.z,P.y),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;
 if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);
 if(!playerFall){
   // El suport segueix el triangle visible JUST sota el centre del jugador.
