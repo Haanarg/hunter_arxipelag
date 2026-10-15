@@ -5519,7 +5519,8 @@ function startVictoryCinematic(general,killingShot=null){
     border:'1px solid #ffe3ab',borderRadius:'10px',padding:'12px 22px',color:'#fff',
     fontSize:'17px',letterSpacing:'.08em',cursor:'pointer',pointerEvents:'auto',opacity:'0',
     display:'none'});
-  hint.onclick=()=>panel('restart');
+  // Nova partida torna directament a la portada, sense obrir el diàleg de reinici.
+  hint.onclick=()=>window.location.reload();
   overlay.append(caption,title,hint);document.body.appendChild(overlay);
   const gulls=[];
   for(let i=0;i<9;i++){
