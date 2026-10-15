@@ -1,3 +1,5 @@
+import * as compoundPaths from './compound-paths.mjs';
+window.HUNTER_COMPOUND_PATHS=compoundPaths;
 import {runtimeLayouts,chooseCompoundLayout} from './compound-runtime-layouts.mjs';
 import * as compoundArchitecture from './compound-architecture.mjs';
 window.HUNTER_RUNTIME_LAYOUTS=runtimeLayouts;window.HUNTER_CHOOSE_COMPOUND=chooseCompoundLayout;window.HUNTER_COMPOUND_ARCHITECTURE=compoundArchitecture;

@@ -36,7 +36,7 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
   if(!layout.civilian){const base=pad(...center,layout.size[0]-6,coastal?landDepth-2:layout.size[1]-10);base.rotation.y=-angle;}
   // Keep vegetation outside the complete reservation, including gates and turning space.
   compoundClear.push({x:q.x,z:q.z,r:record.r});
-  for(const route of layout.routes)for(let i=1;i<route.points.length;i++)path(...tr(...route.points[i-1]),...tr(...route.points[i]),route.width);
+  for(const route of layout.routes)path(route.points.map(p=>tr(...p)),route.width);
   for(const spec of layout.buildings){
     const [x,z]=tr(spec.x,spec.z),firstWall=Wl.length,firstStair=stairs.length,buildingAngle=angle-(spec.rotationY||0),bc=Math.round(Math.cos(buildingAngle)),bs=Math.round(Math.sin(buildingAngle)),buildingVector=(x,z)=>[x*bc-z*bs,x*bs+z*bc];
     const b=spec.bunker?mkEnemyBunker(x,z):mkB(x,z,spec.w,spec.d,spec.h*(spec.floors||1),spec.wood?0x96714b:spec.replacement?0xa9bdb0:spec.hangar?0xbab99d:0xc9b98d,layout.friendly?0x2c5fc0:spec.hangar?0xb7c1b4:0x79584e,{floors:spec.floors,wood:spec.wood,hangar:!!spec.hangar,kind:spec.hangar?'hangar':layout.id==='hangar'?'garage':layout.id,doorSide:0,doorWidth:spec.hangar?30:4,doorHeight:spec.hangar?11:4.4,openDoor:!!spec.hangar,noPartitions:true,solidWalls:!!spec.warehouse&&!spec.wood});

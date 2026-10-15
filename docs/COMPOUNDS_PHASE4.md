@@ -89,3 +89,9 @@ La V4 utilitza una façana verd gris clar, dos pisos de 5,4 m, escala interior i
 | 7 · Validació | Generació, arquitectura i rampes comprovades; navegador d’escriptori i mòbil emulat sense errors. Sessió en Android físic pendent |
 
 Les comprovacions de generació i col·lisions es concentren a `tests/compound-generation.cjs`. No s’han restaurat les antigues bateries eliminades ni afegit workflows automàtics costosos. La prova de navegador no certifica rendiment en Android físic ni totes les llavors possibles.
+
+## Camins · revisió 0.5.15
+
+`compound-paths.mjs` genera una única superfície per xarxa, dividida en sectors de 48 m. Les polilínies tenen transicions arrodonides als girs; les cruïlles comparteixen la mateixa malla sense acumular plans. El color es fon amb el terra a les vores i als extrems lliures; les connexions entre rutes conserven la continuïtat. Els vèrtexs segueixen el terreny físic i els triangles visibles, amb actualització només quan canvia el LOD del sector. La reserva de vegetació segueix també els girs. El joc i tots els previews utilitzen el mateix generador.
+
+Comprovació dirigida: `node tests/compound-paths.cjs` (girs, cruïlles, transparència, extrems i canvi d’altura). Revisió visual de navegador al visor i en un mapa real.

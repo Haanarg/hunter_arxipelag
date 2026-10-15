@@ -165,3 +165,7 @@ Three.js es distribueix sota MIT: [llicència](vendor/THREE-LICENSE.txt) i [proc
 ## Recintes i costa (v0.5.13)
 
 Poblats irregulars amb portes variades, finestres obertes i teulades de branques. Només V4 incorpora un edifici de dues plantes. Embarcadors civils, dues terminals amb passeres adaptades als ferris i traçat base–costa segons el terreny. La fase 5 (controls de carretera) queda només al visor. [Estat i validació](docs/COMPOUNDS_PHASE4.md).
+
+## Camins integrats al terreny (v0.5.15)
+
+Xarxa contínua compartida entre joc i visor: girs arrodonits, cruïlles sense superfícies duplicades, vores suaus i extrems difuminats només quan no connecten amb un altre camí. La malla segueix el terreny visible i s’ajusta quan canvia el LOD del sector; polígon desplaçat en profunditat per evitar z-fighting.

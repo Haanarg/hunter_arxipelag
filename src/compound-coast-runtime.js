@@ -58,7 +58,7 @@ function buildCoastRoad(points,path){
   const a=points[i-1],b=points[i],len=Math.hypot(a.x-b.x,a.z-b.z),angle=Math.atan2(-(b.x-a.x),b.z-a.z),n=Math.max(1,Math.ceil(len/2));
   for(let k=0;k<=n;k++){const t=k/n;addLevelArea(a.x+(b.x-a.x)*t,a.z+(b.z-a.z)*t,10,3,a.y+(b.y-a.y)*t,angle,7)}
  }
- for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i];path(a.x,a.z,b.x,b.z,8)}
+ path(points.map(p=>[p.x,p.z]),8);
  world.userData.baseCoast={width:8,maxGrade:.12,points:points.map(p=>({...p}))};
 }
 // A terminal bridge follows the moored ferry's ramp and retracts on departure.

@@ -1,3 +1,4 @@
+import {createPathNetwork,smoothPath} from './compound-paths.mjs';
 import {decorateTimber,decorateUpper} from './compound-architecture.mjs';
 import {refinePreviewLayout} from './compound-preview-refinements.mjs';
 import {createCompoundStructures} from './compound-structures.mjs';
@@ -27,12 +28,7 @@ export function createCompoundConcept(layout){
  }
  box(root,layout.size[0]+14,3,layout.size[1]+12,0x43594e,0,-3.5,0);
  // Solid surfaces remain visible when the circulation overlay is hidden.
- if(layout.phase===4)for(const r of layout.routes)for(let i=1;i<r.points.length;i++){
-   const a=r.points[i-1],b=r.points[i],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz);
-   if(!len)continue;
-   const road=box(root,r.width,.065,len,r.kind==='road'?0x68716c:0xb2a17d,(a[0]+b[0])/2,.16,(a[1]+b[1])/2);road.rotation.y=Math.atan2(dx,dz);
-   if(r.kind==='road')for(let d=3;d<len-2;d+=8){const marker=box(root,.16,.016,3,0xe2d9b2,a[0]+dx*d/len,.202,a[1]+dz*d/len);marker.rotation.y=road.rotation.y;}
- }
+ root.add(createPathNetwork(T,{routes:layout.routes.map(r=>({...r,color:r.kind==='road'?0x8b826d:0xa28e68})),heightAt:()=>.18}));
  for(const p of layout.piers||[]){
    box(root,p.w,.5,p.d,0x927a58,p.x,.38,p.z);
    for(let z=p.z-p.d/2+1;z<p.z+p.d/2;z+=1.6)box(root,p.w-.1,.03,.05,0x554b3c,p.x,.65,z);
@@ -204,7 +200,7 @@ export function createCompoundConcept(layout){
  }
  const overlayMaterial=c=>new T.MeshBasicMaterial({color:c,transparent:true,opacity:.28,depthWrite:false});
  function strip(a,b,width,color){const dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz),m=new T.Mesh(new T.BoxGeometry(width,.015,len),overlayMaterial(color));m.rotation.y=Math.atan2(dx,dz);m.position.set((a[0]+b[0])/2,.85,(a[1]+b[1])/2);overlays.add(m)}
- for(const route of layout.routes){for(let i=1;i<route.points.length;i++)strip(route.points[i-1],route.points[i],route.width,0x53dfba)}
+ for(const route of layout.routes){const p=smoothPath(route.points,route.width);for(let i=1;i<p.length;i++)strip(p[i-1],p[i],route.width,0x53dfba)}
  for(const zone of layout.zones){const m=new T.Mesh(new T.PlaneGeometry(zone.w,zone.d),overlayMaterial(0xffc85c));m.rotation.x=-Math.PI/2;m.position.set(zone.x,.91,zone.z);overlays.add(m)}
  for(const patrol of layout.vehiclePatrols||[]){for(let i=1;i<patrol.points.length;i++)strip(patrol.points[i-1],patrol.points[i],patrol.width,0xe79563);tag(patrol.label,patrol.points[0][0],2,patrol.points[0][1]);}
  const line=new T.Line(new T.BufferGeometry().setFromPoints((layout.patrol.length?layout.patrol:[[0,-5],[0,-5]]).map(([x,z])=>new T.Vector3(x,1,z))),new T.LineDashedMaterial({color:0xed6464,dashSize:1.6,gapSize:.9}));line.computeLineDistances();overlays.add(line);

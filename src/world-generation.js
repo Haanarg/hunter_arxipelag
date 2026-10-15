@@ -63,7 +63,7 @@ function ensureJetSkis(add){
 function build(){clearVictoryCinematic();window.HUNTER_ENEMY_LOD.reset();const requestedPalmDisable=!!document.getElementById('disablePalms')?.checked;palmsDisabled=false;cancelGrenadeCharge();clearBulletImpacts();removeParachuteVisual();const buildStarted=performance.now(),buildStages={},buildCounters={landAttempts:0,landCandidates:0},markBuildStage=(()=>{let last=buildStarted;return name=>{const now=performance.now();buildStages[name]=Math.round((now-last)*100)/100;last=now}})();movementFx.reset();if(terrainStream)terrainStream.dispose();terrainStream=null;seedCompounds=[];elapsed=0;water.update(0);joystick.reset();compoundClear=[];terrainLevels=[];terrainLevelGrid.clear();if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}world=new THREE.Group();world.userData.compounds=[];world.userData.airObstacles=[];scene.add(world);B=[];stairs=[];piers=[];swimming=false;intelMarks=[];hqMapKnown=false;playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false;pl.userData.cisallaCut=0;sniperEquipped=false;sniperAmmo=0;setSniperScope(false);pl.userData.sniper.visible=false;pl.userData.bazooka.visible=false;pl.userData.grenade.visible=false;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;pl.userData.grenadePending=null;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];grenades=[];fx=[];logb=[];hp=100;ammo=16;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
 {const base=requestedSeed==null?Math.floor(Math.random()*0xffffffff)>>>0:requestedSeed>>>0;let tries=0;do{seed=(base+Math.imul(tries++,0x9e3779b1))>>>0;genIslands();pa=land(A,2000);pb=land(Bi,2000)}while((!pa||!pb)&&tries<8);if(!pa||!pb)throw new Error('No s’ha pogut generar un mapa vàlid amb aquesta llavor')}
 markBuildStage('islandsAndBasePositions');
-const cols=[0xd8b48a,0xc9a27a,0xb8c4c9,0xd9c9a0],compoundVehicles=[],heliportSites=[],staticDecorRoots=[];
+const cols=[0xd8b48a,0xc9a27a,0xb8c4c9,0xd9c9a0],compoundVehicles=[],heliportSites=[],staticDecorRoots=[],pathRoutes=[];
 
 // Camins, molls i decoració dels compounds: malles per sectors i material,
 // mantenint intactes les dades de física, construccions i saqueig.
@@ -80,7 +80,7 @@ const batchStaticDecor=()=>{
       const center=mesh.getWorldPosition(new THREE.Vector3()),
             cx=Math.floor(center.x/CHUNK),cz=Math.floor(center.z/CHUNK);
       const signature=[mat.type,mat.roughness??0,mat.metalness??0,mat.opacity??1,
-        mat.transparent?1:0,mat.side,mat.flatShading?1:0].join(':');
+        mat.transparent?1:0,mat.side,mat.flatShading?1:0,mat.polygonOffset?1:0,mat.polygonOffsetFactor,mat.polygonOffsetUnits].join(':');
       const key=cx+','+cz+'|'+signature;
       let group=groups.get(key);
       if(!group){group={cx,cz,mat,meshes:[]};groups.set(key,group)}
@@ -158,18 +158,21 @@ const compoundProp=(kind,x,z,rot=0)=>{
   else if(kind==='net'){for(const xx of[-1.2,1.2])bx(g,.12,2.1,.12,0x4d5356,xx,1.05,0,'metal');for(let yy=.45;yy<2;yy+=.42)bx(g,2.5,.035,.035,0x5b6062,0,yy,0,'metal');for(let xx=-1.05;xx<=1.05;xx+=.42)bx(g,.035,1.65,.035,0x5b6062,xx,1.2,0,'metal')}
   world.add(g);staticDecorRoots.push(g);return g
 };
-const compoundPad=(x,z,w,d,c=0x77736c)=>{const y=hAt(x,z)-.015,o=new THREE.Mesh(new THREE.BoxGeometry(w,.06,d),M(c,'masonry'));o.position.set(x,y,z);world.add(o);staticDecorRoots.push(o);compoundClear.push({x,z,r:Math.hypot(w,d)*.55});return o};
+const compoundPad=(x,z,w,d,c=0x77736c)=>{
+  const material=M(c,'masonry').clone();material.polygonOffset=true;material.polygonOffsetFactor=-1;material.polygonOffsetUnits=-1;
+  const geometry=new THREE.PlaneGeometry(w,d);geometry.rotateX(-Math.PI/2);
+  const o=new THREE.Mesh(geometry,material);o.position.set(x,hAt(x,z)+.06,z);world.add(o);staticDecorRoots.push(o);compoundClear.push({x,z,r:Math.hypot(w,d)*.55});return o;
+};
 const landingPad=(x,z,size=30,rot=0)=>{
   const y=hAt(x,z)+.025,g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;
   const base=new THREE.Mesh(new THREE.BoxGeometry(size,.12,size),M(0x666b6d,'masonry'));g.add(base);
   const w=Math.max(1.1,size*.07),L=size*.45;bx(g,w,.035,L,0xf2f2e9,-L*.28,.09,0,'paint');bx(g,w,.035,L,0xf2f2e9,L*.28,.09,0,'paint');bx(g,L*.62,.035,w,0xf2f2e9,0,.09,0,'paint');
   world.add(g);staticDecorRoots.push(g);compoundClear.push({x,z,r:size*.72});return g
 };
-const compoundPath=(x1,z1,x2,z2,width=4,c=0x766f61)=>{
-  const dx=x2-x1,dz=z2-z1,L=Math.hypot(dx,dz);if(L<1)return;
-  const n=Math.max(1,Math.ceil(L/5)),ux=dx/L,uz=dz/L,yaw=Math.atan2(dx,dz);
-  for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n,m=(a+b)/2,seg=L/n,mx=x1+dx*m,mz=z1+dz*m,my=hAt(mx,mz)+.035;
-    const shoulder=new THREE.Mesh(new THREE.BoxGeometry(width+1.4,.035,seg+.5),M(0x8a806c,'masonry'));shoulder.position.set(mx,my-.025,mz);shoulder.rotation.y=yaw;world.add(shoulder);staticDecorRoots.push(shoulder);const o=new THREE.Mesh(new THREE.BoxGeometry(width,.07,seg+.18),M(c,'masonry'));o.position.set(mx,my,mz);o.rotation.y=yaw;world.add(o);staticDecorRoots.push(o);compoundClear.push({x:mx,z:mz,r:width*.75+1.5})}
+const compoundPath=(points,width=4,color=0x8a795e)=>{
+  pathRoutes.push({points,width,color});
+  const curve=window.HUNTER_COMPOUND_PATHS.smoothPath(points,width);
+  for(let i=1;i<curve.length;i++){const a=curve[i-1],b=curve[i],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/3));for(let k=0;k<=n;k++){const t=k/n;compoundClear.push({x:a[0]+(b[0]-a[0])*t,z:a[1]+(b[1]-a[1])*t,r:width*.8+2})}}
 };
 const compoundPier=(x1,z1,x2,z2,width=4.2)=>{
   const dx=x2-x1,dz=z2-z1,L=Math.hypot(dx,dz);if(L<2)return;
@@ -521,7 +524,7 @@ islands.forEach(i=>{if(i!==A&&R()<.65){const t=['cotxe','moto','bici'][Math.floo
 markBuildStage('guaranteedVehicles');
 ensureJetSkis(add);
 markBuildStage('jetSkis');
-P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0,0,0));updateTerminalRamps();prepareEnemyNavigation();const staticBatchStats=seedSearchMode?null:batchStaticDecor();if(!seedSearchMode&&visualQuality.shadows)prepareShadowCasters();else shadowCandidates.length=0;cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);
+P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);V.forEach(v=>place(v,0,0,0));updateTerminalRamps();prepareEnemyNavigation();world.userData.paths=pathRoutes;if(!seedSearchMode){const roads=window.HUNTER_COMPOUND_PATHS.createPathNetwork(THREE,{routes:pathRoutes,heightAt:(x,z)=>Math.max(hAt(x,z),terrainStream?.visibleHeightAt(x,z)??-Infinity),heightVersion:(x,z)=>terrainStream?.surfaceVersionAt(x,z)??-1});world.add(roads);world.userData.pathStats=roads.userData.pathStats;}const staticBatchStats=seedSearchMode?null:batchStaticDecor();if(!seedSearchMode&&visualQuality.shadows)prepareShadowCasters();else shadowCandidates.length=0;cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);
 markBuildStage('finalizationAndBatching');
 seedCompounds=compoundCenters.map(c=>({type:c.type,x:c.x,z:c.z}));
 window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,stages:buildStages,portSearch:buildCounters,initialTerrainMs,seabedMs,vegetationMs,seabedSamples:seedSearchMode?0:water.seabedStats.lastSamples,terrainTiles:terrain?.stats||null,palms:PM.stats,staticBatches:staticBatchStats};

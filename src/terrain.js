@@ -229,6 +229,11 @@ window.HUNTER_TERRAIN=Object.freeze({
         }
       }
     }
+    // Road decals only refit when their own terrain tile changes LOD.
+    function surfaceVersionAt(x,z){
+      const ix=Math.max(0,Math.min(side-1,Math.floor((x+half)/cellSize))),iz=Math.max(0,Math.min(side-1,Math.floor((z+half)/cellSize)));
+      return tiles[iz*side+ix]?.geometry?.id??0;
+    }
     // Alçada real dels triangles visibles (no la funció contínua de física).
     // Una malla LOD interpola els seus vèrtexs: pot quedar per sobre de heightAt.
     function visibleHeightAt(x,z){
@@ -270,7 +275,7 @@ window.HUNTER_TERRAIN=Object.freeze({
       for(const tile of tiles)if(tile.geometry){tile.geometry.dispose();tile.geometry=null}
       root.clear();material.dispose();
     }
-    return {mesh:root,update,dispose,visibleHeightAt,stats,tileSize:cellSize,get pending(){return !!job}};
+    return {mesh:root,update,dispose,visibleHeightAt,surfaceVersionAt,stats,tileSize:cellSize,get pending(){return !!job}};
   },
   createBorder(THREE,{size,halfSize}){
     const group=new THREE.Group();
