@@ -59,7 +59,6 @@ window.HUNTER_MATERIALS = Object.freeze({
   glass: Object.freeze({roughness:.18,metalness:.04,transparent:true,opacity:.72,depthWrite:false})
 });
 
-
 ;
 // END src/materials-config.js
 // BEGIN src/high-graphics.js
@@ -139,7 +138,6 @@ window.HUNTER_PALETTE = Object.freeze({
   })
 });
 
-
 ;
 // END src/palette.js
 // BEGIN src/water-config.js
@@ -154,7 +152,6 @@ window.HUNTER_WATER = Object.freeze({
   absorptionDepth: 25.0,
   fogDensity: 0.000105
 });
-
 
 ;
 // END src/water-config.js
@@ -308,7 +305,6 @@ window.HUNTER_WAVES=(()=>{
   const glsl=`float hunterWaveHeight(vec2 p,float time,float seabed){return (${expression})*clamp((-seabed+${gl(shore.offset)})/${gl(shore.depth)},${gl(shore.min)},${gl(shore.max)});}`;
   return Object.freeze({components,shore,amplitude,height,glsl,maxDisplacement:components.reduce((sum,w)=>sum+w.amplitude,0)});
 })();
-
 
 ;
 // END src/waves.js
@@ -2045,7 +2041,6 @@ window.HUNTER_JOYSTICK=Object.freeze({
     return {state,reset};
   }
 });
-
 
 ;
 // END src/joystick.js
@@ -3815,7 +3810,6 @@ window.HUNTER_FAUNA = Object.freeze({
   }
 });
 
-
 ;
 // END src/fauna.js
 // BEGIN src/minimap.js
@@ -5362,7 +5356,6 @@ const len=Math.floor(AC.sampleRate*({shot:.12,cannon:.35,boom:.7,hurt:.15}[t]||.
 for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2);
 const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=buf;f.type=t=='shot'?'highpass':'lowpass';f.frequency.value=t=='shot'?1200:t=='boom'?300:600;
 g.gain.value=.5*v;s.connect(f);f.connect(g);g.connect(AC.destination);s.start(n)}
-
 
 ;
 // END src/audio.js
