@@ -98,10 +98,15 @@ function marineAimGun(u,weapon,target,dt){
   const worldDir=new THREE.Vector3(target.x-origin.x,target.y-origin.y,target.z-origin.z);
   const local=worldDir.clone().applyQuaternion(root.getWorldQuaternion(new THREE.Quaternion()).invert());
   const wanted=Math.atan2(-local.x,-local.z),
+        elevation=Math.max(-.45,Math.min(1.45,Math.atan2(local.y,Math.hypot(local.x,local.z)))),
         diff=marineAngle(wanted-mount.rotation.y);
   mount.rotation.y+=Math.max(-1.9*dt,Math.min(1.9*dt,diff));
+  // La metralladora i el llançacoets també s'inclinen cap a un helicòpter
+  // que vola per damunt, no només giren horitzontalment.
+  mount.rotation.x+=Math.max(-1.25*dt,Math.min(1.25*dt,elevation-mount.rotation.x));
   root.updateWorldMatrix(true,true);
-  return Math.abs(marineAngle(wanted-mount.rotation.y))<.16;
+  return Math.abs(marineAngle(wanted-mount.rotation.y))<.16&&
+    Math.abs(elevation-mount.rotation.x)<.16;
 }
 function marineFire(u,weapon,target,heavy){
   const p=weapon.muzzle.getWorldPosition(new THREE.Vector3()),
@@ -115,8 +120,14 @@ function marineFire(u,weapon,target,heavy){
           y=p.y+(target.y-p.y)*k;
     if(hAt(x,z)>y-.35)return false;
   }
-  shoot(p.x,p.y,p.z,dx/n,dy/n,dz/n,heavy?75:125,
+  const speed=heavy?75:125;
+  shoot(p.x,p.y,p.z,dx/n,dy/n,dz/n,speed,
     heavy?38:6,heavy?8:0,'e',heavy?mS:mW,heavy?2:SMALL_ARMS_SCALE);
+  if(heavy){
+    // A 245 m un coet lent necessita més de 4 segons. El TTL genèric
+    // de 2.2 s l'eliminava molt abans d'arribar a la diana.
+    Pj[Pj.length-1].life=Math.max(2.2,n/(speed*HEAVY_SHOT_SPEED_FACTOR)+.75);
+  }
   return true;
 }
 function updateMarinePatrol(u,dt){
@@ -131,7 +142,12 @@ function updateMarinePatrol(u,dt){
   u.marineSightT=(u.marineSightT||0)-dt;
   if(u.marineSightT<=0){
     u.marineSightT=.25;
-    u.marineVisible=distance<470&&sight(u.x,u.z,q.x,q.z,u.o.position.y+3);
+    // Contra aeronaus, la línia de visió és tridimensional: una
+    // paret a la costa no ha de tapar un helicòpter que hi passa per damunt.
+    const aerial=!!cv&&VT[cv.t]?.m==='a';
+    u.marineVisible=distance<470&&(aerial
+      ?weaponAimClear(u.x,u.o.position.y+3,u.z,q.x,targetY,q.z)
+      :sight(u.x,u.z,q.x,q.z,u.o.position.y+3));
   }
   const hostile=!disg&&!over&&distance<470&&!!u.marineVisible;
   u.wt-=dt;u.mgCd-=dt;u.rocketCd-=dt;

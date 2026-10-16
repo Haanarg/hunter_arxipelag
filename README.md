@@ -42,6 +42,13 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Marques d'heliport i danys de les patrulles (v0.5.20)
+
+- L'anella i la **H de les plataformes d'heliport** es dibuixen clarament per damunt de la llosa (amb separació real i desplaçament de profunditat), evitant que desapareguin de lluny per z-fighting.
+- El dany explosiu es calcula des de la **superfície de col·lisió dels vehicles**, no des del seu centre. Així, els coets navals poden danyar helicòpters i altres vehicles fins i tot quan impacten lluny del centre del model.
+- Els coets de patrulla conserven la trajectòria fins a arribar al seu abast d'atac; abans expiraven als 2,2 segons. Les armes embarcades també ajusten l'elevació quan apunten cap a aeronaus.
+- Es conserva la protecció contra bales lleugeres dels vehicles blindats. S'ha afegit una regressió específica del radi d'explosió als helicòpters, d'execució manual.
+
 ## Cercador de llavors ràpid (v0.5.19)
 
 - La cerca fa servir `buildSeedData()`, la mateixa lògica de generació del joc en **mode només dades**. Preserva els emplaçaments físics, l'ordre de les crides a `R()` i les tirades de color/variació que abans feia la construcció visual de vegetació.

@@ -92,8 +92,16 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
     if(!seedSearchMode)window.HUNTER_AIR_OBSTACLES.registerAntenna(world,g,a,footing);
   }
   if(layout.helipad&&!seedSearchMode){const p=layout.helipad,[x,z]=tr(p.x,p.z),g=new THREE.Group();g.position.set(x,height+.04,z);g.rotation.y=-angle;world.add(g);
-    bx(g,p.size,.08,p.size,0x66706e,0,0,0,'masonry');const ring=new THREE.Mesh(new THREE.RingGeometry(p.size*.39,p.size*.405,48),M(0xf3e5b1,'paint'));ring.rotation.x=-Math.PI/2;ring.position.y=.05;g.add(ring);
-    for(const side of[-1,1])bx(g,1.6,.02,12,0xf3e5b1,side*4,.06,0,'paint');bx(g,8,.02,1.6,0xf3e5b1,0,.06,0,'paint');
+    // La plataforma té la cara superior a y=.04. Abans l'anella era
+    // només 1 cm més alta: a distància el depth buffer la feia desaparèixer.
+    bx(g,p.size,.08,p.size,0x66706e,0,0,0,'masonry');
+    const marking=M(0xf3e5b1,'paint');
+    marking.polygonOffset=true;marking.polygonOffsetFactor=-2;marking.polygonOffsetUnits=-2;
+    const ring=new THREE.Mesh(new THREE.RingGeometry(p.size*.39,p.size*.405,48),marking);
+    ring.rotation.x=-Math.PI/2;ring.position.y=.145;ring.renderOrder=2;g.add(ring);
+    const stripe=(w,d,x,z)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,.025,d),marking);m.position.set(x,.145,z);m.renderOrder=2;g.add(m)};
+    for(const side of[-1,1])stripe(1.6,12,side*4,0);
+    stripe(8,1.6,0,0);
   }
   for(const [kind,x,z] of layout.props){if(kind==='flag')flag(...tr(x,z),layout.friendly?0x2c7bff:0xe02828);else prop(kind,...tr(x,z),-angle);}
   // The outpost perimeter has exactly the same two openings as the approved preview.

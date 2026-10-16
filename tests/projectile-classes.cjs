@@ -59,6 +59,13 @@ const assert=require('node:assert/strict');
      reset();vehicles=[vehicle('heli_combat')];
      fireShot();
      checks.armoredHelicopterProtected=vehicles[0].life===10;
+     // El coet de patrulla marina esclata al casc de l'helicòpter:
+     // la seva esfera de col·lisió queda fora del radi nominal de 8 m,
+     // però la distància a la superfície ha de ser zero.
+     const combatHeli=vehicles[0],hull=vehicleRadius(combatHeli.t)*.62;
+     checks.helicopterExplosiveHull=hull>8&&
+       explosionDistanceToVehicleHull(combatHeli,hull,1,0)<.001&&
+       explosionDistanceToVehicleHull(combatHeli,hull+9,1,0)>8;
      reset();vehicles=[vehicle('cotxe')];
      fireShot();
      checks.unarmoredVehicleDamaged=vehicles[0].life===9;
