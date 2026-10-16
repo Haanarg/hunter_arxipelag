@@ -63,6 +63,8 @@ function buildCoastRoad(points,path){
 }
 // A terminal bridge follows the moored ferry's ramp and retracts on departure.
 function createTerminalRamp(c,f){
+ // Les llavors només necessiten saber on està el ferri: cap geometria.
+ if(seedSearchMode)return;
  const p=compoundTransform(c,c.angle)(0,30),g=new THREE.Mesh(new THREE.BoxGeometry(10,.18,1),M(0x787d79,'metal'));
  world.add(g);c.loadingRamp={x:p[0],z:p[1],f,homeX:f.x,homeZ:f.z,homeHD:f.hd,mesh:g};
 }

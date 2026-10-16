@@ -42,6 +42,15 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Cercador de llavors ràpid (v0.5.19)
+
+- La cerca fa servir `buildSeedData()`, la mateixa lògica de generació del joc en **mode només dades**. Preserva els emplaçaments físics, l'ordre de les crides a `R()` i les tirades de color/variació que abans feia la construcció visual de vegetació.
+- No genera malles de cases, complexos, tanques, armes, enemics, vehicles, rampes, vegetació ni altres decoracions durant la cerca. Conserva les dades de sòls, parets, obstacles i objectes necessàries per obtenir les coordenades originals.
+- Reutilitza un contenidor temporal lògic per a totes les llavors, en comptes d'afegir i eliminar escenes 3D i geometries cada vegada.
+- **Sortides anticipades:** quan es busquen complexos s'atura després de situar-los; quan es busquen objectes s'atura després de distribuir el botí.
+- **Lots cooperatius:** fins a 8 llavors o 12 ms abans de tornar el control al navegador. La cerca es pot cancel·lar entre llavors i només actualitza els resultats en acabar cada lot.
+- La partida normal continua construint el món visual complet, sense aquests salts.
+
 ## Patrulles marines restaurades i cerca per llavor (v0.5.18)
 
 - Les **5–10 patrulles marines** tornen a formar part del joc. Una reorganització posterior havia perdut el fitxer i les crides de generació de v0.5.16.

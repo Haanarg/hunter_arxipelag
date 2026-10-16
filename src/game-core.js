@@ -1,5 +1,5 @@
 window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){const esc=v=>String(v||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])),m=(e&&e.message)?e.message:"Error desconegut",where=e&&e.filename?(e.filename.split("/").pop()+":"+e.lineno+":"+e.colno):"",stack=e&&e.error&&e.error.stack?e.error.stack:"";p.innerHTML="<h1>No s’ha pogut iniciar el joc</h1><p style=\"max-width:560px\">Error d’arrencada: <b>"+esc(m)+"</b></p>"+(where?"<p><b>"+esc(where)+"</b></p>":"")+(stack?"<pre style=\"max-width:90vw;white-space:pre-wrap;text-align:left;font-size:11px;opacity:.8\">"+esc(stack)+"</pre>":"")+"<p style=\"opacity:.8\">Envia una captura d’aquest missatge si persisteix.</p>"}});
-let terrainStream=null,seedSearchMode=false,seedCompounds=[];
+let terrainStream=null,seedSearchMode=false,seedCompounds=[],seedScratchWorld=null;
 const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_WAVES','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI','HUNTER_SEED_SEARCH'];
 const missingModules=requiredModules.filter(name=>!window[name]);if(missingModules.length)throw new Error('Mòduls Hunter absents: '+missingModules.join(', '));
 const missingSystems=Object.entries({generation:typeof build,combat:typeof fire,enemies:typeof updEn,audio:typeof initAudio}).filter(([,type])=>type!=='function').map(([name])=>name);if(missingSystems.length)throw new Error('Sistemes Hunter absents: '+missingSystems.join(', '));
@@ -527,6 +527,10 @@ async function runSeedSearch(){
   seedSearchResultsEl.replaceChildren();
   const oldScale=MAP_SCALE,oldS=S,oldH=H,oldRequested=requestedSeed,oldMode=seedSearchMode;
   let tested=0,found=0,within=0;
+  // Llindar de temps: si una llavor és ràpida, en processam diverses
+  // abans de cedir el fil; si és cara, retornam el control immediatament.
+  const batchBudgetMs=12,batchLimit=8;
+  let batchStart=performance.now(),batchCount=0,resultsDirty=false;
   MAP_SCALE=scale;S=4800*MAP_SCALE;H=S/2;seedSearchMode=true;
   minimap.setWorldSize(S,H);
   try{
@@ -535,30 +539,34 @@ async function runSeedSearch(){
       const raw=(start+i)>>>0;
       // Una llavor visible sempre correspon a una llavor real, sense XOR.
       requestedSeed=raw;
-      seedSearchStatusEl.textContent='Comprovant '+(i+1)+'/'+count+' · '+label+' · llavor '+raw+'…';
+      // Un canvi de DOM per lot en lloc de dos per cada llavor.
       try{
-        build();
-        const nearest=seedSearch.findNearest({
-          category,type,base:P.base,vehicles:V,
-          enemies:world.userData.marinePatrolPositions||[],items,compounds:seedCompounds
-        });
+        const generated=buildSeedData();
+        const nearest=seedSearch.findNearest({...generated,category,type});
         if(nearest){
           found++;if(nearest.distance<=target)within++;
           // En cas de reintent intern, oferim la llavor definitiva,
           // que coincidirà amb el HUD en iniciar la partida.
-          rows.push({seed,...nearest});
+          rows.push({seed:generated.seed,...nearest});
           rows.sort(seedSearch.compare);
           if(rows.length>12)rows.length=12;
-          renderSeedSearchResults(rows,target,label,category,type);
+          resultsDirty=true;
         }
       }catch(err){console.warn('Llavor descartada durant la cerca',raw,err)}
       tested++;
-      seedSearchStatusEl.textContent='Analitzades '+tested+'/'+count+' · '+found+
-        ' amb '+label+' · '+within+' a '+target+' m o menys.';
-      // Un fotograma entre llavors perquè funcionin el progrés i Cancel·la.
-      await new Promise(resolve=>requestAnimationFrame(resolve));
+      // Lots cooperatius: fins a 8 llavors, o 12 ms de feina.
+      // La cancel·lació es comprova al principi de CADA llavor.
+      batchCount++;
+      if(batchCount>=batchLimit||performance.now()-batchStart>=batchBudgetMs){
+        if(resultsDirty){renderSeedSearchResults(rows,target,label,category,type);resultsDirty=false}
+        seedSearchStatusEl.textContent='Analitzades '+tested+'/'+count+' · '+found+
+          ' amb '+label+' · '+within+' a '+target+' m o menys.';
+        await new Promise(resolve=>requestAnimationFrame(resolve));
+        batchStart=performance.now();batchCount=0;
+      }
     }
     if(token===seedSearchToken){
+      if(resultsDirty)renderSeedSearchResults(rows,target,label,category,type);
       const best=rows[0];
       seedSearchStatusEl.textContent=best
         ?'Cerca acabada: '+tested+' llavors · '+found+' amb '+label+
@@ -690,6 +698,13 @@ if(stairs.some(s=>stairContains(s,px,pz,2))||Math.hypot(px-pa.x,pz-pa.z)<14||B.s
 const s=1.15*rr(.75,1.25),yaw=rr(0,6.28);
 if(L==pm){const leafVar=R()<.33?-1:R()<.66?0:1,tone=rr(-.25,.25),idx=pm.length;pm.push([px,h-.3,pz,s,yaw,leafVar,tone]);const e={x:px,z:pz,y:h-.3,s,yaw,r:.6*Math.max(.75,s),p:true,alive:true,hp:40,i:idx,leafVar,tone};put(e);PL.push(e)}
 else{L.push([px,h-.3,pz,s,yaw]);if(L==rk)put({x:px,z:pz,r:1.4,rock:true})}}
+if(seedSearchMode){
+  // vegetationVisual.build consumeix 11 tirades/palmera (tronc + dues
+  // copes), 3/arbust i 5/roca. Preservam EXACTAMENT l'estat final del
+  // generador R sense construir cap InstancedMesh.
+  for(let n=pm.length*11+bu.length*3+rk.length*5;n>0;n--)R();
+  PM={stats:{},update(){},remove(){}};return;
+}
 const vegetationMeshes=vegetationVisual.build({
   world,palms:pm,bushes:bu,rocks:rk,playerX:pa.x,playerZ:pa.z,
   lowQuality:!visualQuality.shadows,lodProfile:qualityName
@@ -706,15 +721,18 @@ function checkRoofSupport(b,w){
   if(b.destroyedWallSupport>=3)roofBreak(b)
 }
 function dmgW(w,d){if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}w.hp-=d;if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0){Wl.splice(i,1);wallGridCount=-1}i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);checkRoofSupport(w.owner,w);snd('boom',.3)}}
-function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=(opt.hangar?buildingVisual.createHangarShell:buildingVisual.createShell)({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide,structuralWalls=[];
+function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=seedSearchMode
+  ?{group:new THREE.Group(),walls:null,doors:null,roof:new THREE.Group()}
+  :(opt.hangar?buildingVisual.createHangarShell:buildingVisual.createShell)({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),
+  g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide,structuralWalls=[];
 const wallH=opt.floors===2?h/2:h;
 let entranceDoor=null;
-const seg=(lx,lz,sx,sz,dr,windows=false,supportSide=null,supportWeight=0,level=0)=>{if(!dr){const parts=windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:wallH,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:wallH,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy+level-(level?0:1),y1:fy+level+wallH,hp:90,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,supportSide,supportWeight};for(const mesh of parts)mesh.position.y+=level;if(opt.wood){for(const mesh of parts)if(mesh.material?.color?.getHex()===0x3e7185)mesh.visible=false;}Wl.push(o);if(supportWeight>0)structuralWalls.push(o);return}
-const parts=buildingVisual.addDoor(g,{lx,lz,sx,sz,height:wallH,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:35,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y};Wl.push(door);Dr.push(door);entranceDoor=door;
+const seg=(lx,lz,sx,sz,dr,windows=false,supportSide=null,supportWeight=0,level=0)=>{if(!dr){const parts=seedSearchMode?[new THREE.Object3D()]:windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:wallH,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:wallH,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy+level-(level?0:1),y1:fy+level+wallH,hp:90,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,supportSide,supportWeight};for(const mesh of parts)mesh.position.y+=level;if(opt.wood){for(const mesh of parts)if(mesh.material?.color?.getHex()===0x3e7185)mesh.visible=false;}Wl.push(o);if(supportWeight>0)structuralWalls.push(o);return}
+const parts=seedSearchMode?{door:new THREE.Object3D(),doorHeight:opt.doorHeight||4.4}:buildingVisual.addDoor(g,{lx,lz,sx,sz,height:wallH,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:35,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y};Wl.push(door);Dr.push(door);entranceDoor=door;
 if(parts.lintel)Wl.push({x0:door.x0,x1:door.x1,z0:door.z0,z1:door.z1,y0:fy+parts.doorHeight,y1:fy+h,hp:70,m:parts.lintel,door:false,open:false,playerBlock:false,cx:x+lx,cz:z+lz})};
 if(opt.hangar){
   const sh=Math.max(3.1,h*.3),push=(lx,lz,sx,sz)=>{
-    const m=buildingVisual.addWall(g,{lx,lz,sx,sz,height:sh,material:wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+sh,hp:110,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz};Wl.push(o);return o
+    const m=seedSearchMode?new THREE.Object3D():buildingVisual.addWall(g,{lx,lz,sx,sz,height:sh,material:wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+sh,hp:110,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz};Wl.push(o);return o
   };
   // Sense parets laterals ni paret rectangular posterior:
   // el compound afegeix una sola paret semicircular al fons amb col·lisió pròpia.
@@ -726,10 +744,25 @@ if(opt.hangar){
   if(!opt.noPartitions&&!opt.bunker&&w*d>=140&&R()<.5){const al=w>=d,L=al?d:w,gp=rr(-L/4,L/4),px=(R()<.5?-1:1)*rr((al?w:d)*.12,(al?w:d)*.2),a0=-L/2+t,a1=L/2-t,ps=(a,b)=>{if(b-a<.5)return;const cc=(a+b)/2,l=b-a;if(al)seg(px,cc,t,l);else seg(cc,px,l,t)};ps(a0,gp-1.6);ps(gp+1.6,a1)}
 }
 if(opt.floors===2)for(const [cx,cz,sx,sz]of[[0,d/2-t/2,w,t],[0,-d/2+t/2,w,t],[w/2-t/2,0,t,d-2*t],[-w/2+t/2,0,t,d-2*t]])seg(cx,cz,sx,sz,0,!opt.solidWalls,null,0,wallH);
-g.position.set(x,fy,z);world.add(g);
+g.position.set(x,fy,z);if(!seedSearchMode)world.add(g);
 const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,rhp:opt.hangar?90:120,hangar:!!opt.hangar,door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
 function mkEnemyBunker(x,z){
   const firstWall=Wl.length,b=mkB(x,z,40,34,10,0xd9ded2,0xbfc6bb,{kind:'enemy_bunker',bunker:true,doorSide:0,doorWidth:4,doorHeight:4.4,lockedDoor:true}),g=b.o,inset=3.5;
+  if(seedSearchMode){
+    // Només els registres físics del búnquer: mateix volum que el joc.
+    for(const w of b.structuralWalls){const lean=inset*2.2/b.h;
+      if(w.supportSide===0)w.z0-=lean;
+      if(w.supportSide===1)w.z1+=lean;
+      if(w.supportSide===2)w.x0-=lean;
+      if(w.supportSide===3)w.x1+=lean;
+    }
+    const wall=(lx,lz,sx,sz)=>Wl.push({x0:x+lx-sx/2,x1:x+lx+sx/2,
+      z0:z+lz-sz/2,z1:z+lz+sz/2,y0:b.fy-1,y1:b.fy+8,hp:90,
+      door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,owner:b});
+    for(const lx of[-4,4])for(const [lz,d]of[[-12.5,3],[-4,6],[7,10]])wall(lx,lz,.6,d);
+    for(const lx of[-11,11])wall(lx,-7,12,.6);
+    b.generalSpots=[{x,z:z-9}];return b;
+  }
   // Taper every exterior face; keep the gate vertical and independently animated.
   const meshes=new Set(Wl.slice(firstWall).filter(w=>!w.door).flatMap(w=>w.parts||[w.m]));
   for(const mesh of meshes){
@@ -767,12 +800,12 @@ return y}
 function addRampAccess(b,side){const [nx,nz]=[[0,1],[0,-1],[1,0],[-1,0]][side],edge=(nx?b.w:b.d)/2+.2,x=b.x+nx*edge,z=b.z+nz*edge,top=b.fy+.3;
 let length=8,bottom=hAt(x+nx*length,z+nz*length);for(let L=8;L<=26;L+=2){const yy=hAt(x+nx*L,z+nz*L);if(Math.abs(top-yy)<Math.abs(top-bottom)){length=L;bottom=yy}if(Math.abs(top-yy)<.35){length=L;bottom=yy;break}}
 if(Math.abs(top-bottom)<.1)return;const width=Math.max(6,Math.min(b.doorWidth-.8,30)),r={x,z,nx,nz,top,bottom,length,width,ramp:true};stairs.push(r);b.stair=r;
-buildingVisual.addRamp(b.o,{alongAxis:!!nx,length,width,top:top-b.fy,bottom:bottom-b.fy,x:x-b.x+nx*length/2,z:z-b.z+nz*length/2,color:0x8f918e,direction:nx||nz})}
+if(!seedSearchMode)buildingVisual.addRamp(b.o,{alongAxis:!!nx,length,width,top:top-b.fy,bottom:bottom-b.fy,x:x-b.x+nx*length/2,z:z-b.z+nz*length/2,color:0x8f918e,direction:nx||nz})}
 function addStairs(b,side){const [nx,nz]=[[0,1],[0,-1],[1,0],[-1,0]][side],edge=(nx?b.w:b.d)/2+.15,x=b.x+nx*edge,z=b.z+nz*edge,top=b.fy+.3;
 if(top-hAt(x,z)<.12)return;
 const tread=.75;let steps=1;for(;steps<80;steps++){const end=steps*tread;if(top-hAt(x+nx*end,z+nz*end)<=steps*.32)break}
 const length=steps*tread,bottom=hAt(x+nx*length,z+nz*length),rise=Math.max(0,(top-bottom)/steps),s={x,z,nx,nz,top,steps,tread,length,rise,width:4.2};stairs.push(s);b.stair=s;
-for(let i=0;i<steps;i++){const a=(i+.5)*tread,xx=x+nx*a,zz=z+nz*a,y=top-i*rise,base=Math.min(y-.16,hAt(xx,zz)-.15);buildingVisual.addStep(b.o,{alongAxis:!!nx,riseWidth:tread,height:y-b.fy,base:base-b.fy,x:xx-b.x,z:zz-b.z,color:i%2?0xa69982:0xb5a68e})}
+if(!seedSearchMode)for(let i=0;i<steps;i++){const a=(i+.5)*tread,xx=x+nx*a,zz=z+nz*a,y=top-i*rise,base=Math.min(y-.16,hAt(xx,zz)-.15);buildingVisual.addStep(b.o,{alongAxis:!!nx,riseWidth:tread,height:y-b.fy,base:base-b.fy,x:xx-b.x,z:zz-b.z,color:i%2?0xa69982:0xb5a68e})}
 }
 function wallPush(){const r=.6;for(const w of wallCandidates(P.x,P.z,r)){if(w.playerBlock===false||w.y0>P.y+3.1||w.y1<P.y+.15)continue;if(w.towerLegOwner&&(P.y+1.5<w.y0||P.y>w.y1))continue;if(!w.open&&P.x>w.x0-r&&P.x<w.x1+r&&P.z>w.z0-r&&P.z<w.z1+r){const a=[P.x-(w.x0-r),w.x1+r-P.x,P.z-(w.z0-r),w.z1+r-P.z],i=a.indexOf(Math.min(...a));
 if(i==0)P.x=w.x0-r;else if(i==1)P.x=w.x1+r;else if(i==2)P.z=w.z0-r;else P.z=w.z1+r}}}
@@ -842,8 +875,8 @@ function lootAllowed(t,b=null,x=null,z=null,compound=null){
 }
 function addItemAt(t,x,z,compound=null){
   if(!lootAllowed(t,null,x,z,compound))return null;
-  const y=hAt(x,z)+1.3,o=createItemVisual(t);
-  o.position.set(x,y,z);world.add(o);items.push({t,x,z,y,o});return o;
+  const y=hAt(x,z)+1.3,o=seedSearchMode?null:createItemVisual(t);
+  if(o){o.position.set(x,y,z);world.add(o)}items.push({t,x,z,y,o});return o||items[items.length-1];
 }
 function addIt(t,b){
   const c=IT[t];
@@ -856,11 +889,11 @@ function addIt(t,b){
     if(!itemInsideHangar(x,z)&&!Wl.some(w=>x>w.x0-1.2&&x<w.x1+1.2&&z>w.z0-1.2&&z<w.z1+1.2))break;
   }
   if(!lootAllowed(t,b,x,z))return null;
-  const y=b.fy+1.3,o=createItemVisual(t);
-  o.position.set(x,y,z);world.add(o);items.push({t,x,z,y,o});
+  const y=b.fy+1.3,o=seedSearchMode?null:createItemVisual(t);
+  if(o){o.position.set(x,y,z);world.add(o)}items.push({t,x,z,y,o});
   return o;
 }
-function flag(x,z,c){world.add(buildingVisual.createFlag({x,y:hAt(x,z),z,color:c}))}
+function flag(x,z,c){if(!seedSearchMode)world.add(buildingVisual.createFlag({x,y:hAt(x,z),z,color:c}))}
 // jugador i vehicles
 const bx=(g,w,h,d,c,x,y,z,profile='organic')=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c,profile));m.position.set(x,y,z);g.add(m);return m};
 const buildingVisual=window.HUNTER_BUILDINGS.create(THREE,{material:M,materialProfile,box:bx});
@@ -909,6 +942,14 @@ function enemyCandidatesAt(x,z,r=24){
 }
 const vehicleObstacles=v=>vehicleCandidatesAt(v.x,v.z,32,false).filter(o=>o!==v&&!o.destroyed);
 const mkV=window.HUNTER_VEHICLES.createFactory(THREE,{box:bx,material:M,shadows:visualQuality.shadows});
+// Representació mínima: no cal cap malla de vehicle per calcular
+// les coordenades. Es respecta l'altura dels patins del model original.
+function seedVehicleStub(t){
+  const g=new THREE.Group();
+  g.userData.skidContactHeight=
+    t==='heli'||t==='heli_combat' ? (.48-.075)*VS[t] : 0;
+  return g;
+}
 const riderSystem=window.HUNTER_RIDER.create(THREE,{scene,box:bx,material:M,scales:VS,heightAt:hAt,shadows:visualQuality.shadows});
 const rider=riderSystem.object,poseRider=riderSystem.update;
 let swimming=false;let V=[],cv=null;const P={x:0,z:0,y:0,hd:0};
@@ -969,6 +1010,14 @@ const fencePostTemplate=new THREE.CylinderGeometry(.12,.16,1,6).toNonIndexed();
 const fenceWireTemplate=new THREE.CylinderGeometry(1,1,1,6).toNonIndexed();
 const fenceUp=new THREE.Vector3(0,1,0);
 function barbedSection(x1,z1,x2,z2){
+  if(seedSearchMode){
+    const y1=Math.max(hAt(x1,z1),0),y2=Math.max(hAt(x2,z2),0),pad=.24;
+    const w={x0:Math.min(x1,x2)-pad,x1:Math.max(x1,x2)+pad,
+      z0:Math.min(z1,z2)-pad,z1:Math.max(z1,z2)+pad,
+      y0:Math.min(y1,y2),y1:Math.max(y1,y2)+5,hp:32,
+      door:false,open:false,barbed:true,rammable:true,cx:(x1+x2)/2,cz:(z1+z2)/2};
+    Wl.push(w);wallGridCount=-1;return w;
+  }
   const y1=Math.max(hAt(x1,z1),0),y2=Math.max(hAt(x2,z2),0),
         dx=x2-x1,dz=z2-z1,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L,
         px=-uz,pz=ux,Hw=4.9,cx=(x1+x2)/2,cz=(z1+z2)/2,parts=[];
