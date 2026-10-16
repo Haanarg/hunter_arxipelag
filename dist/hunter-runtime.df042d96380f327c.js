@@ -4454,12 +4454,25 @@ function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc){
   o.position.set(x,y,z);world.add(o);
   Pj.push({x,y,z,sx:x,sy:y,sz:z,vx:dx*speed,vy:dy*speed,vz:dz*speed,dmg:power,spl,shotClass,own,life:2.2,o})
 }
+// Distància d'una explosió al CASC, no al centre del vehicle.
+// Els coets impacten sobre l'esfera de col·lisió; en helicòpters grans
+// aquesta superfície quedava fora del radi de l'explosió de 8 metres.
+function explosionDistanceToVehicleHull(v,x,y,z){
+  const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
+  return Math.max(0,Math.hypot(v.x-x,vy+1-y,v.z-z)-vehicleRadius(v.t)*.62);
+}
 function boom(x,y,z,r,dmg,own,source=null){snd('boom',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/200));const o=new THREE.Mesh(sphG,new THREE.MeshBasicMaterial({color:0xffa030,transparent:true}));o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6});
 if(own!='e')for(const u of enemyCandidatesAt(x,z,r+4)){const d=Math.hypot(u.x-x,u.o.position.y+1.5-y,u.z-z);if(d<r)hurtE(u,dmg*(1-d/r*.5),source||{x,y,z,sx:cv?.x??P.x,sy:(cv?.o?.position.y??P.y)+1.7,sz:cv?.z??P.z,spl:r,own})}
 for(const w of wallCandidates(x,z,r)){const dd=Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z);if(dd<r&&y<w.y1+3)dmgW(w,dmg*1.5*(1-dd/(2*r)))}
 for(const b of buildingCandidates(x,z,r)){const dd=Math.hypot(b.x-x,b.z-z),rr2=r+b.w/2;if(dd<rr2&&b.rhp>0){b.rhp-=dmg*1.2*(1-dd/rr2*.6);if(b.rhp<=0)roofBreak(b)}}
 PL.forEach(t=>{if(!t.alive)return;const dd=Math.hypot(t.x-x,t.z-z);if(dd<r)dmgP(t,dmg*1.5*(1-dd/(2*r)))});
-for(const v of vehicleCandidatesAt(x,z,r+12,true)){const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),dd=Math.hypot(v.x-x,vy-y,v.z-z);if(dd<r&&(own!=='p'||v!==cv)){const power=Math.max(1,Math.ceil((1-dd/r)*3));damageVehicle(v,dmg*.5*(1-dd/r),power,'heavy')}}
+for(const v of vehicleCandidatesAt(x,z,r+12,true)){
+  const surfaceDistance=explosionDistanceToVehicleHull(v,x,y,z);
+  if(surfaceDistance<r&&(own!=='p'||v!==cv)){
+    const power=Math.max(1,Math.ceil((1-surfaceDistance/r)*3));
+    damageVehicle(v,dmg*.5*(1-surfaceDistance/r),power,'heavy')
+  }
+}
 const q=cv?cv.o.position:P,d=Math.hypot(q.x-x,q.y-y,q.z-z);if(d<r&&own!='p'&&!cv)hurtP(dmg*.6*(1-d/r))}
 function plant(){if(over||cv||swimming||!inv.expl)return;if(--inv.expl<=0)delete inv.expl;setDis(false);
 const o=window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true);
@@ -5193,10 +5206,15 @@ function marineAimGun(u,weapon,target,dt){
   const worldDir=new THREE.Vector3(target.x-origin.x,target.y-origin.y,target.z-origin.z);
   const local=worldDir.clone().applyQuaternion(root.getWorldQuaternion(new THREE.Quaternion()).invert());
   const wanted=Math.atan2(-local.x,-local.z),
+        elevation=Math.max(-.45,Math.min(1.45,Math.atan2(local.y,Math.hypot(local.x,local.z)))),
         diff=marineAngle(wanted-mount.rotation.y);
   mount.rotation.y+=Math.max(-1.9*dt,Math.min(1.9*dt,diff));
+  // La metralladora i el llançacoets també s'inclinen cap a un helicòpter
+  // que vola per damunt, no només giren horitzontalment.
+  mount.rotation.x+=Math.max(-1.25*dt,Math.min(1.25*dt,elevation-mount.rotation.x));
   root.updateWorldMatrix(true,true);
-  return Math.abs(marineAngle(wanted-mount.rotation.y))<.16;
+  return Math.abs(marineAngle(wanted-mount.rotation.y))<.16&&
+    Math.abs(elevation-mount.rotation.x)<.16;
 }
 function marineFire(u,weapon,target,heavy){
   const p=weapon.muzzle.getWorldPosition(new THREE.Vector3()),
@@ -5210,8 +5228,14 @@ function marineFire(u,weapon,target,heavy){
           y=p.y+(target.y-p.y)*k;
     if(hAt(x,z)>y-.35)return false;
   }
-  shoot(p.x,p.y,p.z,dx/n,dy/n,dz/n,heavy?75:125,
+  const speed=heavy?75:125;
+  shoot(p.x,p.y,p.z,dx/n,dy/n,dz/n,speed,
     heavy?38:6,heavy?8:0,'e',heavy?mS:mW,heavy?2:SMALL_ARMS_SCALE);
+  if(heavy){
+    // A 245 m un coet lent necessita més de 4 segons. El TTL genèric
+    // de 2.2 s l'eliminava molt abans d'arribar a la diana.
+    Pj[Pj.length-1].life=Math.max(2.2,n/(speed*HEAVY_SHOT_SPEED_FACTOR)+.75);
+  }
   return true;
 }
 function updateMarinePatrol(u,dt){
@@ -5226,7 +5250,12 @@ function updateMarinePatrol(u,dt){
   u.marineSightT=(u.marineSightT||0)-dt;
   if(u.marineSightT<=0){
     u.marineSightT=.25;
-    u.marineVisible=distance<470&&sight(u.x,u.z,q.x,q.z,u.o.position.y+3);
+    // Contra aeronaus, la línia de visió és tridimensional: una
+    // paret a la costa no ha de tapar un helicòpter que hi passa per damunt.
+    const aerial=!!cv&&VT[cv.t]?.m==='a';
+    u.marineVisible=distance<470&&(aerial
+      ?weaponAimClear(u.x,u.o.position.y+3,u.z,q.x,targetY,q.z)
+      :sight(u.x,u.z,q.x,q.z,u.o.position.y+3));
   }
   const hostile=!disg&&!over&&distance<470&&!!u.marineVisible;
   u.wt-=dt;u.mgCd-=dt;u.rocketCd-=dt;
@@ -6275,8 +6304,16 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
     if(!seedSearchMode)window.HUNTER_AIR_OBSTACLES.registerAntenna(world,g,a,footing);
   }
   if(layout.helipad&&!seedSearchMode){const p=layout.helipad,[x,z]=tr(p.x,p.z),g=new THREE.Group();g.position.set(x,height+.04,z);g.rotation.y=-angle;world.add(g);
-    bx(g,p.size,.08,p.size,0x66706e,0,0,0,'masonry');const ring=new THREE.Mesh(new THREE.RingGeometry(p.size*.39,p.size*.405,48),M(0xf3e5b1,'paint'));ring.rotation.x=-Math.PI/2;ring.position.y=.05;g.add(ring);
-    for(const side of[-1,1])bx(g,1.6,.02,12,0xf3e5b1,side*4,.06,0,'paint');bx(g,8,.02,1.6,0xf3e5b1,0,.06,0,'paint');
+    // La plataforma té la cara superior a y=.04. Abans l'anella era
+    // només 1 cm més alta: a distància el depth buffer la feia desaparèixer.
+    bx(g,p.size,.08,p.size,0x66706e,0,0,0,'masonry');
+    const marking=M(0xf3e5b1,'paint');
+    marking.polygonOffset=true;marking.polygonOffsetFactor=-2;marking.polygonOffsetUnits=-2;
+    const ring=new THREE.Mesh(new THREE.RingGeometry(p.size*.39,p.size*.405,48),marking);
+    ring.rotation.x=-Math.PI/2;ring.position.y=.145;ring.renderOrder=2;g.add(ring);
+    const stripe=(w,d,x,z)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,.025,d),marking);m.position.set(x,.145,z);m.renderOrder=2;g.add(m)};
+    for(const side of[-1,1])stripe(1.6,12,side*4,0);
+    stripe(8,1.6,0,0);
   }
   for(const [kind,x,z] of layout.props){if(kind==='flag')flag(...tr(x,z),layout.friendly?0x2c7bff:0xe02828);else prop(kind,...tr(x,z),-angle);}
   // The outpost perimeter has exactly the same two openings as the approved preview.
