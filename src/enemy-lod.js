@@ -87,6 +87,15 @@ function proxy(T,type,level){
     box(0,8.1,0,4.15,.55,4.15,metal);
     box(0,9.1,0,2.9,1.55,2.9,0x812f35);
     box(0,10.23,0,3.5,.32,3.5,0x373c40);
+  }else if(type==='patrulla_marina'){
+    box(0,.54,0,3.2,1.03,8.9,0x626e71);
+    box(0,1.38,.85,2.45,.52,2.8,0x556166);
+    box(0,1.71,-.65,2.25,.58,.12,0x313e48);
+    if(mid)for(const x of[-.65,.65]){
+      box(x,2.05,1.22,.52,1.3,.52,0x586549);
+      box(x,2.85,1.22,.44,.46,.44,0xc18b64);
+      box(x,2.08,-.65,.44,.35,1.4,0x363c39);
+    }
   }else{
     const heavy=type==='tanc'||type==='tanqueta',
       w=type==='tanc'?5.8:type==='tanqueta'?4.2:3.1,

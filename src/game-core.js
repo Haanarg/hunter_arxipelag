@@ -539,7 +539,8 @@ async function runSeedSearch(){
       try{
         build();
         const nearest=seedSearch.findNearest({
-          category,type,base:P.base,vehicles:V,items,compounds:seedCompounds
+          category,type,base:P.base,vehicles:V,
+          enemies:world.userData.marinePatrolPositions||[],items,compounds:seedCompounds
         });
         if(nearest){
           found++;if(nearest.distance<=target)within++;

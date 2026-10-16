@@ -42,6 +42,13 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Patrulles marines restaurades i cerca per llavor (v0.5.18)
+
+- Les **5–10 patrulles marines** tornen a formar part del joc. Una reorganització posterior havia perdut el fitxer i les crides de generació de v0.5.16.
+- Les coordenades i el nombre es calculen amb el generador de la llavor, tant en partida com al cercador. El cercador mostra la categoria **Enemics → Patrulla marina**, amb nombre total i distància a la base, però no carrega models 3D ni IA.
+- S'ha corregit la inicialització de la velocitat angular de les llanxes perquè el moviment no quedi bloquejat.
+- Es conserven la metralladora, els coets, la navegació amb viratges graduals, els dos soldats visibles i la immunitat del jugador disfressat.
+
 ## Dispar als vehicles oberts i portes de l'helicòpter (v0.5.17)
 
 - Amb munició, la pistola del jugador també pot disparar des de **bicicleta, moto, moto aquàtica, barca de rems, windsurf i llanxa normal**. Manté cadència, dany i autoapuntat de la pistola a peu; no es pot fer cos a cos des d'aquests vehicles.

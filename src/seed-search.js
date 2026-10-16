@@ -13,6 +13,7 @@ window.HUNTER_SEED_SEARCH=Object.freeze((()=>{
   });
   const groups=Object.freeze({
     vehicle:'Vehicles',
+    enemy:'Enemics',
     item:'Objectes',
     compound:'Compounds'
   });
@@ -20,13 +21,14 @@ window.HUNTER_SEED_SEARCH=Object.freeze((()=>{
   function typeOptions(category,vehicleTypes,itemTypes){
     let entries=[];
     if(category==='vehicle')entries=Object.entries(vehicleTypes||{}).map(([value,info])=>({value,label:info.n||value}));
+    else if(category==='enemy')entries=[{value:'patrulla_marina',label:'Patrulla marina'}];
     else if(category==='item')entries=Object.entries(itemTypes||{}).map(([value,info])=>({value,label:info.n||value}));
     else if(category==='compound')entries=Object.entries(compounds).map(([value,label])=>({value,label}));
-    return [{value:'*',label:category==='vehicle'?'Qualsevol vehicle':category==='item'?'Qualsevol objecte':'Qualsevol compound'},...entries];
+    return [{value:'*',label:category==='vehicle'?'Qualsevol vehicle':category==='enemy'?'Qualsevol enemic':category==='item'?'Qualsevol objecte':'Qualsevol compound'},...entries];
   }
-  function findNearest({category,type,base,vehicles=[],items=[],compounds:sites=[]}){
+  function findNearest({category,type,base,vehicles=[],enemies=[],items=[],compounds:sites=[]}){
     if(!base||!Number.isFinite(base.x)||!Number.isFinite(base.z))return null;
-    const list=category==='vehicle'?vehicles:category==='item'?items:category==='compound'?sites:[];
+    const list=category==='vehicle'?vehicles:category==='enemy'?enemies:category==='item'?items:category==='compound'?sites:[];
     let closest=null,count=0;
     for(const entry of list){
       if((type!=='*'&&entry.t!==type&&entry.type!==type)||
