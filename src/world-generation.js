@@ -519,9 +519,6 @@ const ensureDistributedCount=(t,min)=>{let guard=0;while(V.filter(v=>v.t===t).le
 ensureDistributedCount('heli',2*MAP_SCALE);
 ensureDistributedCount('heli_combat',MAP_SCALE);
 ensureDistributedCount('tanqueta',1+MAP_SCALE);
-// Entre 5 i 10 llanxes militars per mapa, distribuïdes per l'arxipèlag.
-// El cercador de llavors no necessita simular IA naval.
-if(!seedSearchMode)spawnMarinePatrols();
 islands.forEach(i=>{if(i!==A&&R()<.65){const t=['cotxe','moto','bici'][Math.floor(R()*3)];for(let tries=0;tries<12;tries++){const q=land(i,80);if(q&&clearVehicle(t,q.x,q.z)){add(t,q.x,q.z,rr(0,6.28));break}}}});
 
 markBuildStage('guaranteedVehicles');

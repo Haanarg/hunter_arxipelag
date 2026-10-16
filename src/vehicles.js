@@ -521,8 +521,14 @@ window.HUNTER_VEHICLES=Object.freeze({
       if(t==='heli'||t==='heli_combat'){
         const combat=t==='heli_combat',bodyCol=combat?0x59634f:0x647768;
         if(!combat){
-          // Huey 3B-4: fuselatge estret amb cantonades arrodonides i cabina frontal tipus UH-1.
-          roundedPrism(g,2.7,1.74,4.18,.31,bodyCol,0,2.08,.3,'paint');
+          // Huey 3B-4: la secció central és un PASSADÍS OBERT de banda a
+          // banda, no un prisma massís amagat rere els marcs de les portes.
+          // Frontal i cua conserven el gruix; al mig, només sòl i sostre.
+          const doorFront=-.76,doorRear=1.76,frontEnd=-1.79,rearEnd=2.39;
+          roundedPrism(g,2.7,1.74,doorFront-frontEnd,.20,bodyCol,0,2.08,(frontEnd+doorFront)/2,'paint');
+          roundedPrism(g,2.7,1.74,rearEnd-doorRear,.16,bodyCol,0,2.08,(doorRear+rearEnd)/2,'paint');
+          roundedPrism(g,2.7,.16,doorRear-doorFront,.06,bodyCol,0,1.28,(doorFront+doorRear)/2,'paint');
+          roundedPrism(g,2.7,.20,doorRear-doorFront,.06,bodyCol,0,2.88,(doorFront+doorRear)/2,'paint');
           const belly=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(bodyCol,'paint'));belly.scale.set(1.24,.24,1.92);belly.position.set(0,1.39,.34);g.add(belly);
           const nose=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(glass,'glass'));nose.scale.set(1.28,.9,1.02);nose.position.set(0,2.17,-2.35);g.add(nose);
           roundedPrism(g,2.38,.32,2.12,.13,bodyCol,0,2.91,.04,'paint');
@@ -538,7 +544,7 @@ window.HUNTER_VEHICLES=Object.freeze({
             box(g,.08,.32,.46,0x343b35,side*1.364,1.88,-2.38,'metal');
           }
           // Bancs interiors visibles a través de les portes.
-          for(const x of[-.82,.82]){box(g,.4,.46,2.1,0x2d302c,x,1.55,.55,'paint');box(g,.4,.46,2.1,0x2d302c,-x,1.55,.55,'paint')}
+          for(const x of[-.82,.82])box(g,.4,.46,2.1,0x2d302c,x,1.55,.55,'paint');
           // Boom de cua afinat i estabilitzador.
           {const startZ=2,endZ=7.48,y0=2.58,y1=2.98,L=Math.hypot(endZ-startZ,y1-y0),boom=new THREE.Mesh(new THREE.CylinderGeometry(.176,.42,L,6),material(bodyCol,'paint'));boom.position.set(0,(y0+y1)/2,(startZ+endZ)/2);boom.rotation.x=Math.PI/2-Math.atan2(y1-y0,endZ-startZ);g.add(boom)}
           box(g,.12,1.35,.88,bodyCol,0,3.34,7.36,'paint');box(g,2.25,.1,.58,bodyCol,0,2.9,6.43,'paint');

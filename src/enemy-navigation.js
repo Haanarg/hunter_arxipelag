@@ -1,5 +1,5 @@
 // Local navigation uses the live collision world. No navigation mesh survives a rebuild.
-const enemyIsVehicle=u=>u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='patrulla_marina';
+const enemyIsVehicle=u=>u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc';
 const enemyBodyRadius=u=>u.t==='torre'?2.4:1.05;
 const enemyRouteRadius=u=>enemyIsVehicle(u)?Math.hypot(vehicleBox(u).w,vehicleBox(u).d)/2+.3:enemyBodyRadius(u)+.15;
 let enemyPathBudget=2,enemyNodeBudget=160;
@@ -131,10 +131,10 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
 }
 // Resolve invalid generated placements before play, never teleport a moving enemy.
 function prepareEnemyNavigation(){
-  for(const u of E)if(u.t!=='patrulla_marina')u.o.position.set(u.x,u.gy??enemyGroundAt(u,u.x,u.z),u.z);
+  for(const u of E)u.o.position.set(u.x,u.gy??enemyGroundAt(u,u.x,u.z),u.z);
   rebuildVehicleGrid();
   for(const u of E){
-    if(u.t==='torre'||u.t==='patrulla_marina')continue;
+    if(u.t==='torre')continue;
     if(!enemyMoveClear(u,u.x,u.z,u.hd)){
       const ox=u.x,oz=u.z;let found=false;
       for(let radius=2;radius<=48&&!found;radius+=2)for(let i=0;i<24;i++){

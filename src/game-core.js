@@ -377,7 +377,7 @@ mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial(
 // Els projectils explosius mantenen el color i volum original.
 mW=new THREE.MeshBasicMaterial({color:0xffffff}),SMALL_ARMS_SCALE=.7;
 const EC={soldat:{hp:30,sp:7,rng:32,rate:1.1,dmg:7,spl:0,r:2},jeep:{hp:70,sp:22,rng:22,rate:.5,dmg:5,spl:0,r:3.9},tanqueta:{hp:115,sp:13,rng:42,rate:.72,dmg:9,spl:0,r:4.5},tanc:{hp:140,sp:8,rng:100,rate:2.5,dmg:22,spl:7,r:6.8},
-torre:{hp:90,sp:0,rng:112.5,rate:.7,dmg:8,spl:0,r:3},patrulla_marina:{hp:95,sp:20,rng:245,rate:.4,dmg:6,spl:0,r:7.5},general:{hp:45,sp:0,rng:30,rate:.9,dmg:9,spl:0,r:2}};
+torre:{hp:90,sp:0,rng:112.5,rate:.7,dmg:8,spl:0,r:3},general:{hp:45,sp:0,rng:30,rate:.9,dmg:9,spl:0,r:2}};
 // extres: so, partícules, fauna, diari
 let started=0,DIF=1,AC=null,eng=null,seaAudio=null,logb=[],fa=[],pi_=0;const lastS={},rn=(a,b)=>a+Math.random()*(b-a);
 const PT=[];for(let i=0;i<100;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,depthWrite:false}));m.visible=false;scene.add(m);PT.push({m,life:0,max:1,s:1})}
@@ -875,9 +875,9 @@ const VS=window.HUNTER_VEHICLES.scales;
 // geometria escalada ha de quedar només 10 cm per damunt del sòl/pista.
 // Durant el vol, v.alt continua representant l'origen del model.
 const helicopterLandedAltitude=(v,surfaceY)=>surfaceY-(v.o?.userData?.skidContactHeight||0)+.1;
-const vehicleRadius=t=>{const type=t==='patrulla_marina'?'llanxa':t==='jeep'?'cotxe':t;return window.HUNTER_VEHICLES.radii[type]*VS[type]};
+const vehicleRadius=t=>window.HUNTER_VEHICLES.radii[t]*VS[t];
 const VHB=window.HUNTER_VEHICLES.hitboxes;
-const vehicleHitType=t=>t==='jeep'?'cotxe':t==='patrulla_marina'?'llanxa':t;
+const vehicleHitType=t=>t==='jeep'?'cotxe':t;
 const vehicleBox=(v,x=v.x,z=v.z,hd=v.hd)=>{const t=vehicleHitType(v.t),hb=VHB[t]||[vehicleRadius(t)*1.25,vehicleRadius(t)*1.6],sc=VS[t]||1;return{x,z,hd,w:hb[0]*sc,d:hb[1]*sc,v}};
 const obbAxes=b=>{const s=Math.sin(b.hd),c=Math.cos(b.hd);return[{x:c,z:-s},{x:s,z:c}]};
 const obbOverlap=(a,b)=>{const A=obbAxes(a),B=obbAxes(b),dx=b.x-a.x,dz=b.z-a.z,axes=[...A,...B];for(const ax of axes){const dist=Math.abs(dx*ax.x+dz*ax.z),ra=Math.abs(A[0].x*ax.x+A[0].z*ax.z)*a.w/2+Math.abs(A[1].x*ax.x+A[1].z*ax.z)*a.d/2,rb=Math.abs(B[0].x*ax.x+B[0].z*ax.z)*b.w/2+Math.abs(B[1].x*ax.x+B[1].z*ax.z)*b.d/2;if(dist>ra+rb)return false}return true};
@@ -890,7 +890,7 @@ const addVehicleToGrid=(grid,v)=>{const key=vehicleCellKey(Math.floor(v.x/VEHICL
 function rebuildVehicleGrid(){
   vehicleGrid.clear();playerVehicleGrid.clear();enemyGrid.clear();vehicleGridVSource=V;vehicleGridESource=E;
   for(const v of V)if(!v.destroyed){addVehicleToGrid(vehicleGrid,v);addVehicleToGrid(playerVehicleGrid,v)}
-  for(const u of E)if(!u.destroyed){addVehicleToGrid(enemyGrid,u);if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='patrulla_marina')addVehicleToGrid(vehicleGrid,u)}
+  for(const u of E)if(!u.destroyed){addVehicleToGrid(enemyGrid,u);if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc')addVehicleToGrid(vehicleGrid,u)}
 }
 function gridCandidatesAt(grid,x,z,r=24){
   const out=[],minX=Math.floor((x-r)/VEHICLE_CELL),maxX=Math.floor((x+r)/VEHICLE_CELL),

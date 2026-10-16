@@ -3206,18 +3206,6 @@ function proxy(T,type,level){
     box(0,8.1,0,4.15,.55,4.15,metal);
     box(0,9.1,0,2.9,1.55,2.9,0x812f35);
     box(0,10.23,0,3.5,.32,3.5,0x373c40);
-  }else if(type==='patrulla_marina'){
-    // Silueta lleugera del mateix casc que la llanxa del jugador.
-    box(0,.54,0,3.2,1.03,8.9,0x626e71);
-    box(0,1.38,.85,2.45,.52,2.8,0x556166);
-    box(0,1.71,-.65,2.25,.58,.12,0x313e48);
-    if(mid){
-      for(const x of[-.65,.65]){
-        box(x,2.05,1.22,.52,1.3,.52,0x586549);
-        box(x,2.85,1.22,.44,.46,.44,0xc18b64);
-        box(x,2.08,-.65,.44,.35,1.4,0x363c39);
-      }
-    }
   }else{
     const heavy=type==='tanc'||type==='tanqueta',
       w=type==='tanc'?5.8:type==='tanqueta'?4.2:3.1,
@@ -4321,7 +4309,7 @@ function killEnemy(u,killingShot=null){
   const i=E.indexOf(u);if(i<0)return;E.splice(i,1);kills++;
   if(u.t==='soldat'||u.t==='general'){window.HUNTER_ENEMY_LOD.setLevel(u.o,'full');u.deadT=0;u.deadSide=rn(-1,1)<0?-1:1;u.o.userData.legs?.forEach(l=>l.rotation.x=0);u.o.userData.arms?.forEach(a=>a.rotation.x=0);DEAD.push(u)}
   else if(u.t==='torre'){destroyTower(u);world.remove(u.o)}
-  else if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='patrulla_marina')explodeEnemyVehicle(u);
+  else if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc')explodeEnemyVehicle(u);
   else world.remove(u.o);
   if(u.t==='general')startVictoryCinematic(u,killingShot)
 }
@@ -4549,7 +4537,7 @@ function launchGrenade(pending){
 // Elements de l'escenari i vehicles abandonats no competeixen per l'autoapuntat.
 function weaponTargetPriority(enemy){
   if(enemy.t==='soldat'||enemy.t==='general')return 0;
-  if(enemy.t==='jeep'||enemy.t==='tanqueta'||enemy.t==='tanc'||enemy.t==='patrulla_marina')return 1;
+  if(enemy.t==='jeep'||enemy.t==='tanqueta'||enemy.t==='tanc')return 1;
   if(enemy.t==='torre')return 2;
   return 3;
 }
@@ -4584,7 +4572,7 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light'){
     const dx=e.x-x,dz=e.z-z,dist=Math.hypot(dx,dz);
     if(dist<=1||dist>range||(priority===bestPriority&&dist>=bestDist))continue;
     const baseY=e.o?.position?.y??(e.gy??0),
-          ty=baseY+(e.t==='torre'?4.5:e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:e.t==='patrulla_marina'?2:1.5),
+          ty=baseY+(e.t==='torre'?4.5:e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:1.5),
           dy=ty-y,len=Math.hypot(dx,dy,dz);
     if(len<=.001||(dx*fx+dy*fy+dz*fz)/len<cone)continue;
     if(!weaponAimClear(x,y,z,e.x,ty,e.z))continue;
@@ -4856,7 +4844,7 @@ updateBulletImpacts(dt);
 // END src/combat.js
 // BEGIN src/enemy-navigation.js
 // Local navigation uses the live collision world. No navigation mesh survives a rebuild.
-const enemyIsVehicle=u=>u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='patrulla_marina';
+const enemyIsVehicle=u=>u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc';
 const enemyBodyRadius=u=>u.t==='torre'?2.4:1.05;
 const enemyRouteRadius=u=>enemyIsVehicle(u)?Math.hypot(vehicleBox(u).w,vehicleBox(u).d)/2+.3:enemyBodyRadius(u)+.15;
 let enemyPathBudget=2,enemyNodeBudget=160;
@@ -4988,10 +4976,10 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
 }
 // Resolve invalid generated placements before play, never teleport a moving enemy.
 function prepareEnemyNavigation(){
-  for(const u of E)if(u.t!=='patrulla_marina')u.o.position.set(u.x,u.gy??enemyGroundAt(u,u.x,u.z),u.z);
+  for(const u of E)u.o.position.set(u.x,u.gy??enemyGroundAt(u,u.x,u.z),u.z);
   rebuildVehicleGrid();
   for(const u of E){
-    if(u.t==='torre'||u.t==='patrulla_marina')continue;
+    if(u.t==='torre')continue;
     if(!enemyMoveClear(u,u.x,u.z,u.hd)){
       const ox=u.x,oz=u.z;let found=false;
       for(let radius=2;radius<=48&&!found;radius+=2)for(let i=0;i<24;i++){
@@ -5009,194 +4997,6 @@ function prepareEnemyNavigation(){
 
 ;
 // END src/enemy-navigation.js
-// BEGIN src/marine-patrol.js
-// Patrulles navals: física, IA, armes i tripulació separades de la navegació terrestre.
-const MARINE_PATROL_MIN=5,MARINE_PATROL_MAX=10;
-const marineAngle=a=>Math.atan2(Math.sin(a),Math.cos(a));
-function createMarinePatrolVisual(boat){
-  // Mateix buc i cabina oberta que la llanxa pilotable.
-  const metal=0x313c3d,paint=0x596b57;
-  for(const side of [-1,1]){
-    const soldier=window.HUNTER_CHARACTERS.createCommando(THREE);
-    soldier.scale.setScalar(.43);soldier.position.set(side*.55,1.18,side<0?.9:1.75);
-    soldier.rotation.y=side*.18;
-    soldier.userData.ar.rotation.x=-.55;soldier.userData.al.rotation.x=-.72;
-    boat.add(soldier);
-  }
-  const barrel=(root,r,length,y,z,color)=>{
-    const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,length,8),M(color,'metal'));
-    o.rotation.x=Math.PI/2;o.position.set(0,y,z);root.add(o);return o;
-  };
-  const createMount=(x,rocket)=>{
-    const mount=new THREE.Group();
-    mount.position.set(x,2.08,rocket?.1:-.4);boat.add(mount);
-    bx(mount,.65,.27,.65,metal,0,0,0,'metal');
-    bx(mount,rocket?.78:.4,rocket?.45:.32,.75,paint,0,.28,-.43,'paint');
-    if(rocket){
-      for(const off of [-.18,.18])barrel(mount,.145,1.45,.29,-1.21,metal).position.x=off;
-    }else barrel(mount,.115,1.65,.29,-1.25,metal);
-    const muzzle=new THREE.Object3D();
-    muzzle.position.set(0,.29,rocket?-1.95:-2.075);mount.add(muzzle);
-    return {mount,muzzle};
-  };
-  const machineGun=createMount(-.8,false),rockets=createMount(.8,true);
-  boat.userData.marineWeapons={machineGun,rockets};
-}
-function marineSeaClear(x,z,r=10){
-  return Math.abs(x)<H-28&&Math.abs(z)<H-28&&
-    hAt(x,z)<-3.3&&hAt(x+r*.65,z)<-2.7&&hAt(x-r*.65,z)<-2.7&&
-    hAt(x,z+r*.65)<-2.7&&hAt(x,z-r*.65)<-2.7;
-}
-function marineTrafficClear(u,x,z,margin=23){
-  for(const v of vehicleCandidatesAt(x,z,margin+22)){
-    if(v===u||v.destroyed)continue;
-    const r=vehicleRadius(vehicleHitType(v.t));
-    if(Math.hypot(v.x-x,v.z-z)<margin+r*.55)return false;
-  }
-  return true;
-}
-function marinePickWaypoint(u){
-  // Patrulla d'una badia a una altra; mai no triem rumbs terrestres.
-  for(let i=0;i<28;i++){
-    const a=R()*Math.PI*2,d=130+R()*390,
-          x=u.home.x+Math.cos(a)*d,z=u.home.z+Math.sin(a)*d;
-    if(marineSeaClear(x,z,12)){u.tx=x;u.tz=z;u.wt=12+R()*12;return}
-  }
-  u.tx=u.home.x;u.tz=u.home.z;u.wt=8;
-}
-function spawnMarinePatrols(){
-  const count=MARINE_PATROL_MIN+Math.floor(R()*(MARINE_PATROL_MAX-MARINE_PATROL_MIN+1));
-  const starts=islands.slice().sort(()=>R()-.5);
-  let made=0;
-  const place=(x,z,hd)=>{
-    if(!marineSeaClear(x,z,13)||
-       E.some(e=>e.t==='patrulla_marina'&&Math.hypot(e.x-x,e.z-z)<130)||
-       V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+20))return false;
-    const u=mkEn('patrulla_marina',x,z);
-    u.hd=hd;u.navHd=hd;u.home={x,z};u.speed=12+R()*5;
-    u.orbitSign=R()<.5?-1:1;u.mgCd=.8+R();u.rocketCd=3+R()*3;
-    u.o.position.set(x,wy(x,z,0)+.2,z);u.o.rotation.y=hd;
-    marinePickWaypoint(u);made++;return true;
-  };
-  // Aproximació per la costa, però prou mar endins per maniobrar.
-  for(let pass=0;pass<5&&made<count;pass++)for(const island of starts){
-    if(made>=count)break;
-    for(let attempt=0;attempt<24;attempt++){
-      const a=R()*Math.PI*2,dist=island.r*(1.05+R()*.65)+30,
-            x=island.x+Math.cos(a)*dist,z=island.z+Math.sin(a)*dist;
-      if(place(x,z,a+Math.PI/2))break;
-    }
-  }
-  // Garantia de densitat en mapes amb costes difícils.
-  for(let attempts=0;made<count&&attempts<3500;attempts++){
-    const x=(R()*2-1)*(H-65),z=(R()*2-1)*(H-65);
-    if(place(x,z,R()*Math.PI*2))continue;
-  }
-  world.userData.marinePatrols={target:count,spawned:made};
-}
-function marineAimGun(u,weapon,target,dt){
-  const root=u.o,mount=weapon.mount;
-  root.updateWorldMatrix(true,true);
-  const origin=weapon.muzzle.getWorldPosition(new THREE.Vector3());
-  const worldDir=new THREE.Vector3(target.x-origin.x,target.y-origin.y,target.z-origin.z);
-  const local=worldDir.clone().applyQuaternion(root.getWorldQuaternion(new THREE.Quaternion()).invert());
-  const wanted=Math.atan2(-local.x,-local.z),
-        diff=marineAngle(wanted-mount.rotation.y);
-  mount.rotation.y+=Math.max(-1.9*dt,Math.min(1.9*dt,diff));
-  root.updateWorldMatrix(true,true);
-  return Math.abs(marineAngle(wanted-mount.rotation.y))<.16;
-}
-function marineFire(u,weapon,target,heavy){
-  const p=weapon.muzzle.getWorldPosition(new THREE.Vector3()),
-        dy=target.y-p.y,
-        dx=target.x-p.x+rn(-1.7,1.7),dz=target.z-p.z+rn(-1.7,1.7),
-        n=Math.max(.01,Math.hypot(dx,dy,dz));
-  if(!weaponAimClear(p.x,p.y,p.z,target.x,target.y,target.z))return false;
-  // Les costes i els turons també intercepten el foc disparat des del mar.
-  for(let i=1;i<8;i++){
-    const k=i/8,x=p.x+(target.x-p.x)*k,z=p.z+(target.z-p.z)*k,
-          y=p.y+(target.y-p.y)*k;
-    if(hAt(x,z)>y-.35)return false;
-  }
-  shoot(p.x,p.y,p.z,dx/n,dy/n,dz/n,heavy?75:125,
-    heavy?38:6,heavy?8:0,'e',heavy?mS:mW,heavy?2:SMALL_ARMS_SCALE);
-  return true;
-}
-function updateMarinePatrol(u,dt){
-  const q=cv||P,targetY=cv?cv.o.position.y+(VT[cv.t]?.m==='a'?2:1.6):P.y+1.45,
-        distance=Math.hypot(q.x-u.x,q.z-u.z);
-  // Lluny de la càmera n'hi ha prou amb 10 actualitzacions/s.
-  u.marineAcc=(u.marineAcc||0)+dt;
-  if(distance>700&&u.marineAcc<.1)return;
-  dt=Math.min(.12,u.marineAcc);u.marineAcc=0;
-  // El test de visió només es recalcula cada 0,25 s: evita escanejar
-  // centenars de punts costaners a cada fotograma.
-  u.marineSightT=(u.marineSightT||0)-dt;
-  if(u.marineSightT<=0){
-    u.marineSightT=.25;
-    u.marineVisible=distance<470&&sight(u.x,u.z,q.x,q.z,u.o.position.y+3);
-  }
-  const hostile=!disg&&!over&&distance<470&&!!u.marineVisible;
-  u.wt-=dt;u.mgCd-=dt;u.rocketCd-=dt;
-  if(!Number.isFinite(u.tx)||u.wt<=0||Math.hypot(u.tx-u.x,u.tz-u.z)<35)marinePickWaypoint(u);
-  let goalX=u.tx,goalZ=u.tz;
-  if(hostile){
-    if(distance>165){goalX=q.x;goalZ=q.z}
-    else{
-      // Aproximació tangencial, mantenint distància per poder disparar.
-      const radialX=(u.x-q.x)/Math.max(1,distance),
-            radialZ=(u.z-q.z)/Math.max(1,distance);
-      goalX=q.x+radialX*135-radialZ*u.orbitSign*150;
-      goalZ=q.z+radialZ*135+radialX*u.orbitSign*150;
-    }
-  }
-  const wanted=Math.atan2(u.x-goalX,u.z-goalZ);
-  let best=wanted,bestScore=Infinity,open=false;
-  // Estudiem un ventall de rumbs sense girar instantàniament la llanxa.
-  for(const offset of [0,.27,-.27,.55,-.55,.9,-.9,1.35,-1.35,Math.PI]){
-    const hd=marineAngle(wanted+offset),fx=-Math.sin(hd),fz=-Math.cos(hd);
-    const safe=marineSeaClear(u.x+fx*36,u.z+fz*36,11)&&
-      marineSeaClear(u.x+fx*69,u.z+fz*69,11)&&
-      marineTrafficClear(u,u.x+fx*34,u.z+fz*34,17);
-    if(!safe)continue;
-    const score=Math.abs(marineAngle(hd-wanted))*.8+
-      Math.abs(marineAngle(hd-u.hd))*.55;
-    if(score<bestScore){bestScore=score;best=hd;open=true}
-  }
-  if(!open){
-    // Costa al davant: primer reduir marxa i descriure una corba ampla.
-    best=marineAngle(u.hd+u.orbitSign*1.25);
-    if(u.wt>2)u.wt=2;
-  }
-  const steer=marineAngle(best-u.hd),
-        maxYaw=u.speed>12?.27:.39,
-        desiredYaw=Math.max(-maxYaw,Math.min(maxYaw,steer*1.1));
-  u.yawRate+=(desiredYaw-(u.yawRate||0))*(1-Math.exp(-2.3*dt));
-  u.hd=marineAngle(u.hd+u.yawRate*dt);
-  const bowX=-Math.sin(u.hd),bowZ=-Math.cos(u.hd),
-        nextSpeed=open?(Math.abs(steer)>.75?9:hostile?20:17):2.5;
-  u.speed+=(nextSpeed-u.speed)*(1-Math.exp(-1.15*dt));
-  const nx=u.x+bowX*u.speed*dt,nz=u.z+bowZ*u.speed*dt;
-  if(marineSeaClear(nx,nz,10)&&marineTrafficClear(u,nx,nz,16)){
-    const ox=u.x,oz=u.z;u.x=nx;u.z=nz;enemyReindex(u,ox,oz);
-  }else{
-    u.speed=Math.max(0,u.speed-13*dt);
-    u.wt=Math.min(u.wt,.5);
-  }
-  u.o.position.set(u.x,wy(u.x,u.z,elapsed)+.2,u.z);
-  const wave=Math.sin(elapsed*2+u.x*.03+u.z*.024);
-  u.o.rotation.set(wave*.028,u.hd,-u.yawRate*.12+wave*.024,'YXZ');
-  const weapons=u.o.userData.marineWeapons;
-  if(!hostile||distance>245)return;
-  const target=new THREE.Vector3(q.x,targetY,q.z);
-  const gunAligned=marineAimGun(u,weapons.machineGun,target,dt);
-  const rocketAligned=marineAimGun(u,weapons.rockets,target,dt);
-  if(distance<170&&gunAligned&&u.mgCd<=0&&marineFire(u,weapons.machineGun,target,false))u.mgCd=.28+rn(0,.15);
-  if(distance<245&&rocketAligned&&u.rocketCd<=0&&marineFire(u,weapons.rockets,target,true))u.rocketCd=4.4+rn(0,1.8);
-}
-
-;
-// END src/marine-patrol.js
 // BEGIN src/enemy-ai.js
 const ENEMY_SENSE_DT=.1;
 const SOLDIER_MEMORY=9,SOLDIER_RETREAT=9,SOLDIER_IDEAL=17,SOLDIER_FIRE_RANGE=125;
@@ -5340,7 +5140,6 @@ function towerWeaponForTarget(vehicle){
   return vehicle&&isArmoredVehicle(vehicle)?'heavy':'light';
 }
 function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.forEach(u=>{
-  if(u.t==='patrulla_marina'){updateMarinePatrol(u,dt);return}
   const oldX=u.x,oldZ=u.z;
   u.alert=Math.max(0,u.alert-dt);u.cd-=dt;if(u.t==='torre')u.heavyCd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);
   const q=cv||P,py=cv?cv.o.position.y:P.y,dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz),
@@ -5504,7 +5303,6 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
 function updDead(dt){for(let i=DEAD.length-1;i>=0;i--){const u=DEAD[i];u.deadT+=dt;const k=Math.min(1,u.deadT/.55),e=1-Math.pow(1-k,3),base=u.gy!=null?u.gy:enemyGroundAt(u,u.x,u.z);u.o.position.set(u.x,base+.05+(1-e)*.12,u.z);u.o.rotation.y=u.hd;u.o.rotation.z=u.deadSide*e*Math.PI*.48;if(u.o.userData.arms)u.o.userData.arms.forEach((a,j)=>{a.rotation.x=(-.35+j*.7)*e;a.rotation.z=(j?-.25:.25)*e});if(u.o.userData.legs)u.o.userData.legs.forEach((l,j)=>l.rotation.x=(j?-.18:.18)*e);if(u.o.userData.knees)window.HUNTER_CHARACTERS.animateSoldier(u.o,{dt,death:e});if(u.deadT>18){world.remove(u.o);DEAD.splice(i,1)}}}
 function mkEn(t,x,z,gy){const c=EC[t];let g;
 if(t=='soldat'||t=='general'){g=window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M,general:t==='general'})}
-else if(t==='patrulla_marina'){g=mkV('llanxa');createMarinePatrolVisual(g)}
 else if(t=='jeep'){g=mkV('cotxe');bx(g,.2,2,.2,0xff2020,0,3.4,0)}
 else if(t=='tanqueta'){g=mkV('tanqueta');bx(g,.18,1.7,.18,0xff2020,0,3.2,.4)}
 else if(t=='tanc'){g=mkV('tanc');bx(g,.2,2,.2,0xff2020,0,4,0)}
@@ -6747,9 +6545,6 @@ const ensureDistributedCount=(t,min)=>{let guard=0;while(V.filter(v=>v.t===t).le
 ensureDistributedCount('heli',2*MAP_SCALE);
 ensureDistributedCount('heli_combat',MAP_SCALE);
 ensureDistributedCount('tanqueta',1+MAP_SCALE);
-// Entre 5 i 10 llanxes militars per mapa, distribuïdes per l'arxipèlag.
-// El cercador de llavors no necessita simular IA naval.
-if(!seedSearchMode)spawnMarinePatrols();
 islands.forEach(i=>{if(i!==A&&R()<.65){const t=['cotxe','moto','bici'][Math.floor(R()*3)];for(let tries=0;tries<12;tries++){const q=land(i,80);if(q&&clearVehicle(t,q.x,q.z)){add(t,q.x,q.z,rr(0,6.28));break}}}});
 
 markBuildStage('guaranteedVehicles');
@@ -7150,7 +6945,7 @@ mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial(
 // Els projectils explosius mantenen el color i volum original.
 mW=new THREE.MeshBasicMaterial({color:0xffffff}),SMALL_ARMS_SCALE=.7;
 const EC={soldat:{hp:30,sp:7,rng:32,rate:1.1,dmg:7,spl:0,r:2},jeep:{hp:70,sp:22,rng:22,rate:.5,dmg:5,spl:0,r:3.9},tanqueta:{hp:115,sp:13,rng:42,rate:.72,dmg:9,spl:0,r:4.5},tanc:{hp:140,sp:8,rng:100,rate:2.5,dmg:22,spl:7,r:6.8},
-torre:{hp:90,sp:0,rng:112.5,rate:.7,dmg:8,spl:0,r:3},patrulla_marina:{hp:95,sp:20,rng:245,rate:.4,dmg:6,spl:0,r:7.5},general:{hp:45,sp:0,rng:30,rate:.9,dmg:9,spl:0,r:2}};
+torre:{hp:90,sp:0,rng:112.5,rate:.7,dmg:8,spl:0,r:3},general:{hp:45,sp:0,rng:30,rate:.9,dmg:9,spl:0,r:2}};
 // extres: so, partícules, fauna, diari
 let started=0,DIF=1,AC=null,eng=null,seaAudio=null,logb=[],fa=[],pi_=0;const lastS={},rn=(a,b)=>a+Math.random()*(b-a);
 const PT=[];for(let i=0;i<100;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,depthWrite:false}));m.visible=false;scene.add(m);PT.push({m,life:0,max:1,s:1})}
@@ -7648,9 +7443,9 @@ const VS=window.HUNTER_VEHICLES.scales;
 // geometria escalada ha de quedar només 10 cm per damunt del sòl/pista.
 // Durant el vol, v.alt continua representant l'origen del model.
 const helicopterLandedAltitude=(v,surfaceY)=>surfaceY-(v.o?.userData?.skidContactHeight||0)+.1;
-const vehicleRadius=t=>{const type=t==='patrulla_marina'?'llanxa':t==='jeep'?'cotxe':t;return window.HUNTER_VEHICLES.radii[type]*VS[type]};
+const vehicleRadius=t=>window.HUNTER_VEHICLES.radii[t]*VS[t];
 const VHB=window.HUNTER_VEHICLES.hitboxes;
-const vehicleHitType=t=>t==='jeep'?'cotxe':t==='patrulla_marina'?'llanxa':t;
+const vehicleHitType=t=>t==='jeep'?'cotxe':t;
 const vehicleBox=(v,x=v.x,z=v.z,hd=v.hd)=>{const t=vehicleHitType(v.t),hb=VHB[t]||[vehicleRadius(t)*1.25,vehicleRadius(t)*1.6],sc=VS[t]||1;return{x,z,hd,w:hb[0]*sc,d:hb[1]*sc,v}};
 const obbAxes=b=>{const s=Math.sin(b.hd),c=Math.cos(b.hd);return[{x:c,z:-s},{x:s,z:c}]};
 const obbOverlap=(a,b)=>{const A=obbAxes(a),B=obbAxes(b),dx=b.x-a.x,dz=b.z-a.z,axes=[...A,...B];for(const ax of axes){const dist=Math.abs(dx*ax.x+dz*ax.z),ra=Math.abs(A[0].x*ax.x+A[0].z*ax.z)*a.w/2+Math.abs(A[1].x*ax.x+A[1].z*ax.z)*a.d/2,rb=Math.abs(B[0].x*ax.x+B[0].z*ax.z)*b.w/2+Math.abs(B[1].x*ax.x+B[1].z*ax.z)*b.d/2;if(dist>ra+rb)return false}return true};
@@ -7663,7 +7458,7 @@ const addVehicleToGrid=(grid,v)=>{const key=vehicleCellKey(Math.floor(v.x/VEHICL
 function rebuildVehicleGrid(){
   vehicleGrid.clear();playerVehicleGrid.clear();enemyGrid.clear();vehicleGridVSource=V;vehicleGridESource=E;
   for(const v of V)if(!v.destroyed){addVehicleToGrid(vehicleGrid,v);addVehicleToGrid(playerVehicleGrid,v)}
-  for(const u of E)if(!u.destroyed){addVehicleToGrid(enemyGrid,u);if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='patrulla_marina')addVehicleToGrid(vehicleGrid,u)}
+  for(const u of E)if(!u.destroyed){addVehicleToGrid(enemyGrid,u);if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc')addVehicleToGrid(vehicleGrid,u)}
 }
 function gridCandidatesAt(grid,x,z,r=24){
   const out=[],minX=Math.floor((x-r)/VEHICLE_CELL),maxX=Math.floor((x+r)/VEHICLE_CELL),

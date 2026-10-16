@@ -42,6 +42,12 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Dispar als vehicles oberts i portes de l'helicòpter (v0.5.17)
+
+- Amb munició, la pistola del jugador també pot disparar des de **bicicleta, moto, moto aquàtica, barca de rems, windsurf i llanxa normal**. Manté cadència, dany i autoapuntat de la pistola a peu; no es pot fer cos a cos des d'aquests vehicles.
+- El pilot aixeca el braç dret per apuntar i torna a agafar el manillar, el rem o la botavara després del tret. L'arma té model i retrocés propi, amb projectils originats a la boca real del canó. La mà esquerra manté la postura de conducció. La llanxa llançacoets conserva l'arma pesada pròpia.
+- L'**helicòpter utilitari** té una obertura real de banda a banda alineada amb les dues portes laterals, sense prisma sòlid a l'interior de la cabina. Es mantenen sòl, sostre, marcs, bancs i patins; l'helicòpter de combat no canvia.
+
 ## Patrulles marines (v0.5.16)
 
 - Entre **5 i 10 llanxes militars per mapa**, generades a mar obert al voltant de l'arxipèlag, amb dos soldats visibles a bord. Són enemics que poden rebre dany i explotar.

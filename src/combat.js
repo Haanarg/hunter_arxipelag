@@ -477,6 +477,8 @@ function cutBarbedWire(){
  msg='Filferrada tallada silenciosament.';msgT=1.4;
  return true;
 }
+// La pistola personal és utilitzable només des dels vehicles oberts.
+const OPEN_RIDER_PISTOL=new Set(['bici','moto','moto_aquatica','barca_rems','windsurf','llanxa']);
 function fire(){if(cisallaEquipped&&!cv)return cutBarbedWire();if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
 if(c=='tanc'||c=='tanqueta'){
   // El projectil segueix el canó real mentre la torreta gira: no
@@ -495,6 +497,18 @@ else if(c=='heli'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+
 else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*4.1*VS.heli_combat,y=cv.o.position.y+.15,z=cv.z+fz*4.1*VS.heli_combat;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,130,.91);fcd=.12;shoot(x,y,z,ax,ay,az,145,9,0,'p',mB,.85)}
 
 else if(c=='llanxa_coets'){secondaryWeapon();return}
+else if(c&&OPEN_RIDER_PISTOL.has(c)){
+  // Un tret amb la pistola, des de la mà dreta del pilot, mantenint
+  // el mateix consum, dany, cadència i autoapuntat que quan va a peu.
+  if(ammo<=0)return;
+  const shot=riderSystem.firePistol(cv,(origin,direction)=>
+    autoAimWeaponShot(origin.x,origin.y,origin.z,
+      direction.x,direction.y,direction.z,75,.97));
+  if(!shot)return;
+  ammo--;fcd=.22;
+  const p=shot.origin,d=shot.direction;
+  shoot(p.x,p.y,p.z,d.x,d.y,d.z,130,12,0,'p',mW,SMALL_ARMS_SCALE);
+}
 else if(!cv&&sniperEquipped&&inv.franctirador){
   if(sniperAmmo<=0){msg='El rifle no té munició.';msgT=2;return}
   sniperAmmo--;fcd=1.05;pl.userData.firePose=.42;
