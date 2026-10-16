@@ -11,8 +11,8 @@ window.HUNTER_VISUAL_CONFIG = Object.freeze({
     shadows: false,
     shadowSize: 512,
     exposure: 1.08,
-    fog: 0.0013,
-    viewDistance: 1500,
+    fog: 0.00095,
+    viewDistance: 2400,
     sunDistance: 900,
     waterReflections: false,
     skySegments: Object.freeze([20, 12]),
@@ -24,7 +24,7 @@ window.HUNTER_VISUAL_CONFIG = Object.freeze({
     shadows: false,
     shadowSize: 768,
     exposure: 1.08,
-    fog: 0.00018,
+    fog: 0.00014,
     skySegments: Object.freeze([28, 16]),
     waterSegments: 200
   }),
@@ -38,7 +38,7 @@ window.HUNTER_VISUAL_CONFIG = Object.freeze({
     terrainDetailTexture: true,
     coastDetail: true,
     exposure: 1.06,
-    fog: 0.00012,
+    fog: 0.00010,
     viewDistance: 14000,
     skySegments: Object.freeze([52, 30]),
     waterSegments: 384
@@ -646,9 +646,9 @@ window.HUNTER_TERRAIN=Object.freeze({
     // rodes, però simplificam molt abans els sectors intermedis i llunyans.
     const profile=quality||(lowQuality?'mobile':'desktop');
     const configs={
-      desktop:{levels:[5,10,20,64],ranges:[270,790,1510]},
-      mobile:{levels:[3,6,12,40],ranges:[180,480,900]},
-      ultra:{levels:[2,4,8,24],ranges:[100,280,580]}
+      desktop:{levels:[5,10,20,64],ranges:[410,1120,2060]},
+      mobile:{levels:[3,6,12,40],ranges:[290,700,1350]},
+      ultra:{levels:[2,4,8,24],ranges:[165,440,900]}
     };
     const profileConfig=configs[profile]||configs.desktop,
           levels=profileConfig.levels,ranges=profileConfig.ranges,margin=50;
@@ -2711,9 +2711,9 @@ window.HUNTER_VEGETATION=Object.freeze({
       // Conservam l'abast dels models més simples per evitar illes despullades.
       const profile=lodProfile|| (lowQuality?'mobile':'desktop'),
             distanceProfiles={
-              desktop:[310,850,2350],
-              mobile:[190,470,1250],
-              ultra:[120,300,850]
+              desktop:[485,1240,3080],
+              mobile:[315,735,1850],
+              ultra:[190,475,1220]
             },
             distances=distanceProfiles[profile]||distanceProfiles.desktop,
             margin=55;
@@ -2748,10 +2748,10 @@ window.HUNTER_VEGETATION=Object.freeze({
       const rockGroup=sectorizeExtras(rocks,geometry.rock,'hunter-rock-sectors',
         0x777985,(d,s)=>d.scale.set(s*1.25,s*.75,s),{profile:'masonry',tilt:true});
       const extraRanges={
-        desktop:{bush:910,rock:1390},
-        mobile:{bush:470,rock:800},
-        ultra:{bush:280,rock:480}
-      }[profile]||{bush:720,rock:1150};
+        desktop:{bush:1300,rock:1900},
+        mobile:{bush:710,rock:1180},
+        ultra:{bush:440,rock:750}
+      }[profile]||{bush:1010,rock:1600};
       stats.bushSectors=bushGroup.sectors.length;
       stats.rockSectors=rockGroup.sectors.length;
       let lastX=Infinity,lastZ=Infinity;
@@ -4666,7 +4666,7 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light'){
     const dx=e.x-x,dz=e.z-z,dist=Math.hypot(dx,dz);
     if(dist<=1||dist>range||(priority===bestPriority&&dist>=bestDist))continue;
     const baseY=e.o?.position?.y??(e.gy??0),
-          ty=baseY+(e.t==='torre'?4.5:e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:e.t==='patrulla_marina'?2:1.5),
+          ty=baseY+(e.t==='torre'?4.5:e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:e.t==='patrulla_marina'?1.8:1.5),
           dy=ty-y,len=Math.hypot(dx,dy,dz);
     if(len<=.001||(dx*fx+dy*fy+dz*fz)/len<cone)continue;
     if(!weaponAimClear(x,y,z,e.x,ty,e.z))continue;
@@ -4889,7 +4889,12 @@ function updPj(dt){
     // Personatges i vehicles: intersecció contínua amb volum esfèric aproximat.
     if(p.own==='p'||p.own==='pb'){
       for(const u of enemyCandidatesAt(mx,mz,reach+4)){
-        consider(segmentSphereT(x0,y0,z0,x1,y1,z1,u.x,u.o.position.y+(u.t==='torre'?4.5:1.5),u.z,(u.r||1)+.6),'enemy',u)
+        // Les llanxes patrulleres reben bales lleugeres per tot el buc,
+        // també a proa i popa; el radi de soldat era massa petit.
+        const marine=u.t==='patrulla_marina',
+              cy=u.o.position.y+(marine?1.8:u.t==='torre'?4.5:1.5),
+              radius=marine?vehicleRadius('llanxa')*.62:(u.r||1)+.6;
+        consider(segmentSphereT(x0,y0,z0,x1,y1,z1,u.x,cy,u.z,radius),'enemy',u)
       }
     }
     for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){
@@ -6189,7 +6194,7 @@ function createTerminalRamp(c,f){
 function terminalRampState(r){
  const f=r.f;if(f.destroyed||!V.includes(f)||Math.hypot(f.x-r.homeX,f.z-r.homeZ)>1.5||Math.abs(wrapAngle(f.hd-r.homeHD))>.06)return null;
  const end=ferryWorld(f,0,14),dx=end.x-r.x,dz=end.z-r.z,length=Math.hypot(dx,dz);
- return{x:r.x,z:r.z,ux:dx/length,uz:dz/length,length,startY:.86,endY:ferryLocalSurfaceY(f,14)+.04};
+ return{x:r.x,z:r.z,ux:dx/length,uz:dz/length,length,startY:PIER_DECK_Y,endY:ferryLocalSurfaceY(f,14)+.04};
 }
 function terminalRampHeight(x,z){
  for(const c of world?.userData.compounds||[]){if(!c.loadingRamp)continue;const s=terminalRampState(c.loadingRamp);if(!s)continue;
@@ -6379,6 +6384,7 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
 ;
 // END src/compound-generation.js
 // BEGIN src/world-generation.js
+const PIER_DECK_Y=2.7; // Cota de coberta per sobre del màxim d'onatge (2.2 m).
 // Validació final contra TOTS els vehicles: també els afegits després dels molls.
 function jetSkiSpotClear(q,ignore=null){
   const box=vehicleBox({t:'moto_aquatica',...q});box.w+=2;box.d+=2;
@@ -6573,18 +6579,18 @@ const compoundPier=(x1,z1,x2,z2,width=4.2)=>{
     const ux=dx/L,uz=dz/L,px=-uz,pz=ux,n=Math.max(1,Math.ceil(L/5));
     for(let i=0;i<n;i++){
       const m=(i+.5)/n,seg=L/n,mx=x1+dx*m,mz=z1+dz*m;
-      piers.push({x:mx,z:mz,ux,uz,px,pz,length:seg+.12,width,y:.86});
+      piers.push({x:mx,z:mz,ux,uz,px,pz,length:seg+.12,width,y:PIER_DECK_Y});
       compoundClear.push({x:mx,z:mz,r:width*.8+1.5});
     }
     return;
   }
   const ux=dx/L,uz=dz/L,px=-uz,pz=ux,yaw=Math.atan2(dx,dz),n=Math.max(1,Math.ceil(L/5));
-  for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n,m=(a+b)/2,seg=L/n,mx=x1+dx*m,mz=z1+dz*m,y=.72;
+  for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n,m=(a+b)/2,seg=L/n,mx=x1+dx*m,mz=z1+dz*m,y=PIER_DECK_Y-.14;
     const deck=new THREE.Mesh(new THREE.BoxGeometry(width,.28,seg+.12),M(0x816346,'paint'));deck.position.set(mx,y,mz);deck.rotation.y=yaw;world.add(deck);staticDecorRoots.push(deck);piers.push({x:mx,z:mz,ux,uz,px,pz,length:seg+.12,width,y:y+.14});
-    for(const side of[-1,1]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,2.3,8),M(0x48433e,'metal'));post.position.set(mx+px*side*(width*.44),-.25,mz+pz*side*(width*.44));world.add(post);staticDecorRoots.push(post);if(i%2===0){const rail=wireRod([mx+px*side*(width*.44),1.05,mz+pz*side*(width*.44)],[mx+px*side*(width*.44)+ux*seg*.8,1.05,mz+pz*side*(width*.44)+uz*seg*.8],.035,0x4b5154);staticDecorRoots.push(rail)}}
+    for(const side of[-1,1]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,3.6,8),M(0x48433e,'metal'));post.position.set(mx+px*side*(width*.44),PIER_DECK_Y-1.0,mz+pz*side*(width*.44));world.add(post);staticDecorRoots.push(post);if(i%2===0){const rail=wireRod([mx+px*side*(width*.44),PIER_DECK_Y+.35,mz+pz*side*(width*.44)],[mx+px*side*(width*.44)+ux*seg*.8,PIER_DECK_Y+.35,mz+pz*side*(width*.44)+uz*seg*.8],.035,0x4b5154);staticDecorRoots.push(rail)}}
     compoundClear.push({x:mx,z:mz,r:width*.8+1.5})
   }
-  for(const side of[-1,1]){const b=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,.9,8),M(0x3e4447,'metal'));b.position.set(x2+px*side*(width*.35),1.12,z2+pz*side*(width*.35));world.add(b);staticDecorRoots.push(b)}
+  for(const side of[-1,1]){const b=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,.9,8),M(0x3e4447,'metal'));b.position.set(x2+px*side*(width*.35),PIER_DECK_Y+.26,z2+pz*side*(width*.35));world.add(b);staticDecorRoots.push(b)}
 };
 const findPortWater=q=>{for(let a=0;a<32;a++){const aa=a*Math.PI/16;for(let d=28;d<Math.max(100,q.r||180);d+=8){const wx=q.x+Math.cos(aa)*d,wz=q.z+Math.sin(aa)*d;if(rawHAt(wx,wz)<-3&&rawHAt(wx+Math.cos(aa)*12,wz+Math.sin(aa)*12)<-3)return{x:wx,z:wz,hd:Math.atan2(-Math.cos(aa),-Math.sin(aa)),aa}}}return null};
 const findPortSite=(island,tries=18)=>{for(let n=0;n<tries;n++){const q=land(island,700,1);if(!q)continue;q.r=island.r;const portBest=findPortWater(q);if(portBest)return{...q,portBest}}return null};
@@ -8081,15 +8087,15 @@ let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0,worldVisual
 const LOD_NEAR2=500*500,LOD_MID2=1200*1200,ITEM_ANIM2=500*500,FAUNA_NEAR2=650*650,FAUNA_MID2=1400*1400;
 // Distàncies visuals per família. NO afecten danys, física, IA ni mapa.
 const VISUAL_RANGES={
-  desktop:{buildings:1180,fences:740,props:920,vehicles:1510,enemies:1280,items:720,fauna:970,antennas:1250},
-  mobile:{buildings:650,fences:390,props:520,vehicles:800,enemies:700,items:420,fauna:530,antennas:750},
-  ultra:{buildings:410,fences:260,props:350,vehicles:520,enemies:460,items:300,fauna:350,antennas:510}
-}[qualityName]||{buildings:850,fences:560,props:690,vehicles:1150,enemies:1000,items:550,fauna:750,antennas:950};
+  desktop:{buildings:1650,fences:1020,props:1300,vehicles:2080,enemies:1850,items:1000,fauna:1350,antennas:1750},
+  mobile:{buildings:980,fences:580,props:750,vehicles:1200,enemies:1050,items:620,fauna:790,antennas:1100},
+  ultra:{buildings:650,fences:400,props:540,vehicles:780,enemies:700,items:450,fauna:530,antennas:770}
+}[qualityName]||{buildings:1200,fences:790,props:990,vehicles:1620,enemies:1410,items:800,fauna:1100,antennas:1360};
 const visibilityStats={buildings:0,fences:0,props:0,vehicles:0,enemies:0,items:0,fauna:0,antennas:0,terrainOccluded:0};
 const enemyLodStats={full:0,mid:0,far:0,hidden:0,vehicleFull:0};
 const ENEMY_LOD_RANGES={
-  desktop:{full:190,mid:550},mobile:{full:110,mid:300},ultra:{full:80,mid:195}
-}[qualityName]||{full:150,mid:440};
+  desktop:{full:310,mid:860},mobile:{full:185,mid:470},ultra:{full:135,mid:305}
+}[qualityName]||{full:240,mid:660};
 window.HUNTER_ENEMY_LOD_STATS=enemyLodStats;
 window.HUNTER_VISIBILITY_STATS=visibilityStats;
 let staticVisualBatches=[];
