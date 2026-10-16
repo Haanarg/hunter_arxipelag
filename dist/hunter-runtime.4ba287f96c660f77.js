@@ -1480,8 +1480,14 @@ window.HUNTER_VEHICLES=Object.freeze({
       if(t==='heli'||t==='heli_combat'){
         const combat=t==='heli_combat',bodyCol=combat?0x59634f:0x647768;
         if(!combat){
-          // Huey 3B-4: fuselatge estret amb cantonades arrodonides i cabina frontal tipus UH-1.
-          roundedPrism(g,2.7,1.74,4.18,.31,bodyCol,0,2.08,.3,'paint');
+          // Huey 3B-4: la secció central és un PASSADÍS OBERT de banda a
+          // banda, no un prisma massís amagat rere els marcs de les portes.
+          // Frontal i cua conserven el gruix; al mig, només sòl i sostre.
+          const doorFront=-.76,doorRear=1.76,frontEnd=-1.79,rearEnd=2.39;
+          roundedPrism(g,2.7,1.74,doorFront-frontEnd,.20,bodyCol,0,2.08,(frontEnd+doorFront)/2,'paint');
+          roundedPrism(g,2.7,1.74,rearEnd-doorRear,.16,bodyCol,0,2.08,(doorRear+rearEnd)/2,'paint');
+          roundedPrism(g,2.7,.16,doorRear-doorFront,.06,bodyCol,0,1.28,(doorFront+doorRear)/2,'paint');
+          roundedPrism(g,2.7,.20,doorRear-doorFront,.06,bodyCol,0,2.88,(doorFront+doorRear)/2,'paint');
           const belly=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(bodyCol,'paint'));belly.scale.set(1.24,.24,1.92);belly.position.set(0,1.39,.34);g.add(belly);
           const nose=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(glass,'glass'));nose.scale.set(1.28,.9,1.02);nose.position.set(0,2.17,-2.35);g.add(nose);
           roundedPrism(g,2.38,.32,2.12,.13,bodyCol,0,2.91,.04,'paint');
@@ -1497,7 +1503,7 @@ window.HUNTER_VEHICLES=Object.freeze({
             box(g,.08,.32,.46,0x343b35,side*1.364,1.88,-2.38,'metal');
           }
           // Bancs interiors visibles a través de les portes.
-          for(const x of[-.82,.82]){box(g,.4,.46,2.1,0x2d302c,x,1.55,.55,'paint');box(g,.4,.46,2.1,0x2d302c,-x,1.55,.55,'paint')}
+          for(const x of[-.82,.82])box(g,.4,.46,2.1,0x2d302c,x,1.55,.55,'paint');
           // Boom de cua afinat i estabilitzador.
           {const startZ=2,endZ=7.48,y0=2.58,y1=2.98,L=Math.hypot(endZ-startZ,y1-y0),boom=new THREE.Mesh(new THREE.CylinderGeometry(.176,.42,L,6),material(bodyCol,'paint'));boom.position.set(0,(y0+y1)/2,(startZ+endZ)/2);boom.rotation.x=Math.PI/2-Math.atan2(y1-y0,endZ-startZ);g.add(boom)}
           box(g,.12,1.35,.88,bodyCol,0,3.34,7.36,'paint');box(g,2.25,.1,.58,bodyCol,0,2.9,6.43,'paint');
@@ -2287,7 +2293,14 @@ window.HUNTER_RIDER=Object.freeze({
     }
     // The torso origin is the seat/hip, as expected by the existing vehicle poses.
     for(const part of [...model.children]){part.position.y-=rig.hipHeight;torso.add(part)}
-    g.userData={torso,limbs,boots,head:rig.head,neck:rig.neck,headVariant:rig.headVariant,mats:rig.mats,profile:rig.profile,motion:0};
+    // Pistola visual pròpia del rider; no reempram la del model ocult a peu.
+    // Mateixa geometria i retrocés que l'arma de la resta del joc.
+    const pistol=new THREE.Group();pistol.scale.setScalar(.92);g.add(pistol);
+    const pistolParts=createPlayerPistol(THREE,pistol);
+    pistol.visible=false;
+    g.userData={torso,limbs,boots,head:rig.head,neck:rig.neck,headVariant:rig.headVariant,
+      mats:rig.mats,profile:rig.profile,motion:0,shotTime:0,shotAge:10,shotBlend:0,
+      pistol,pistolParts,pistolAim:null};
     g.visible=false;g.traverse(o=>{if(o.isMesh)o.castShadow=shadows});scene.add(g);
     const down=new THREE.Vector3(0,-1,0),delta=new THREE.Vector3();
     const limbBetween=(m,a,b)=>{
@@ -2297,8 +2310,63 @@ window.HUNTER_RIDER=Object.freeze({
     };
     const vec=(x,y,z)=>new THREE.Vector3(x,y,z);
     const shoulderAt=side=>vec(side*.57,1.17,0).applyQuaternion(torso.quaternion).add(torso.position);
+    const muzzleLocal=new THREE.Vector3(0,.183,-.84),
+          forward=new THREE.Vector3(0,0,-1);
+    // Animació superposada després de la postura de conducció: la mà
+    // esquerra continua al manillar, rem o botavara; la dreta apunta.
+    const aimOneHand=(v,dt)=>{
+      const u=g.userData;
+      u.shotTime=Math.max(0,u.shotTime-dt);
+      u.shotAge=Math.min(10,u.shotAge+dt);
+      const active=u.shotTime>0;
+      u.shotBlend+=(Number(active)-u.shotBlend)*(1-Math.exp(-18*dt));
+      if(!active&&u.shotBlend<.01){
+        pistol.visible=false;pistolParts.flash.visible=false;return;
+      }
+      pistol.visible=true;
+      const sc=v.t==='llanxa'?1.3:v.t==='llanxa_coets'?1.35:scales[v.t],
+            shoulder=shoulderAt(v.t==='barca_rems'||v.t==='windsurf'?-1:1),
+            forearm=limbs[3],
+            restingHand=new THREE.Vector3(0,-forearm.userData.restLength*forearm.scale.y,0)
+              .applyQuaternion(forearm.quaternion).add(forearm.position),
+            target=shoulder.clone().add(vec(.25*sc,-.29,-1.13*sc)),
+            hand=restingHand.lerp(target,u.shotBlend),
+            elbow=shoulder.clone().lerp(hand,.57);
+      elbow.y-=.12;elbow.x+=.12*sc;
+      limbBetween(limbs[2],shoulder,elbow);limbBetween(limbs[3],elbow,hand);
+      const recoil=Math.exp(-u.shotAge*18)*.095;
+      pistol.position.copy(hand).add(vec(0,0,recoil));
+      pistol.quaternion.identity();
+      if(u.pistolAim)pistol.quaternion.setFromUnitVectors(forward,u.pistolAim);
+      pistolParts.slide.position.z=recoil*.65;
+      pistolParts.flash.visible=u.shotAge<.055;
+    };
+    // Retorna el tret des de la boca REAL de la pistola, i orienta
+    // l'arma segons l'autoapuntat del sistema existent.
+    const firePistol=(v,autoAim)=>{
+      if(!v||!g.visible)return null;
+      const u=g.userData;u.shotTime=.34;u.shotAge=0;
+      u.shotBlend=Math.max(u.shotBlend,.82);u.pistolAim=null;
+      aimOneHand(v,0);
+      g.updateWorldMatrix(true,true);
+      let origin=pistol.localToWorld(muzzleLocal.clone());
+      const initial=forward.clone().applyQuaternion(pistol.getWorldQuaternion(new THREE.Quaternion()));
+      const desired=autoAim(origin,initial);
+      if(desired){
+        const direction=new THREE.Vector3(...desired).normalize(),
+              localDirection=direction.clone()
+                .applyQuaternion(g.getWorldQuaternion(new THREE.Quaternion()).invert());
+        u.pistolAim=localDirection;
+        pistol.quaternion.setFromUnitVectors(forward,localDirection);
+        g.updateWorldMatrix(true,true);
+        origin=pistol.localToWorld(muzzleLocal.clone());
+      }
+      return {origin,direction:forward.clone().applyQuaternion(
+        pistol.getWorldQuaternion(new THREE.Quaternion())).normalize()};
+    };
     const update=(v,dt)=>{
-      const open=!!v&&['bici','moto','moto_aquatica','llanxa','llanxa_coets','barca_rems','windsurf'].includes(v.t);g.visible=open;if(!open)return;
+      const open=!!v&&['bici','moto','moto_aquatica','llanxa','llanxa_coets','barca_rems','windsurf'].includes(v.t);g.visible=open;
+      if(!open){g.userData.shotTime=0;g.userData.shotBlend=0;g.userData.pistolAim=null;pistol.visible=false;return}
       const u=g.userData,sc=v.t==='llanxa'?1.3:v.t==='llanxa_coets'?1.35:scales[v.t],moving=Math.min(1,Math.abs(v.v)/1.8);u.motion+=(moving-u.motion)*(1-Math.exp(-12*dt));const motion=u.motion,phase=(v.t==='bici'||v.t==='barca_rems')?-(v.pedalPhase||0):(v.pedalPhase||0);
       g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);torso.rotation.set(0,0,0);boots.forEach(b=>b.rotation.set(0,0,0));
 
@@ -2306,14 +2374,14 @@ window.HUNTER_RIDER=Object.freeze({
         const seat=1.65*sc;torso.position.set(0,seat,.4*sc);torso.rotation.x=.15*motion;
         for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.28,seat,.4*sc),shoulder=shoulderAt(side),hand=vec(side*.5*sc,1.96*sc,-sc),elbow=shoulder.clone().lerp(hand,.52);elbow.x+=side*.1;elbow.y-=.2;limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
           const foot=vec(side*.55,0,.45*sc),worldFoot=foot.clone().applyQuaternion(g.quaternion).add(g.position);worldFoot.y=heightAt(worldFoot.x,worldFoot.z)+.14;const groundFoot=worldFoot.sub(g.position).applyQuaternion(g.quaternion.clone().invert());const pedal=v.t==='bici'?vec(side*.4*sc,(.75-side*Math.sin(phase)*.28)*sc,side*Math.cos(phase)*.28*sc):vec(side*.5*sc,.72*sc,.1*sc);foot.copy(groundFoot).lerp(pedal,motion);const knee=hip.clone().lerp(foot,.5);knee.z-=.5*motion;knee.x+=side*.12*(1-motion);limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot);boots[i].rotation.x=0}
-        return;
+        aimOneHand(v,dt);return;
       }
 
       if(v.t==='moto_aquatica'){
         const seat=.98*sc,lean=.18+.12*motion;torso.position.set(0,seat,.3*sc);torso.rotation.x=lean;
         for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.25,seat,.3*sc),shoulder=shoulderAt(side),hand=vec(side*.38*sc,1.32*sc,-.58*sc),elbow=shoulder.clone().lerp(hand,.55);elbow.y-=.12;limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
           const foot=vec(side*.38*sc,.48*sc,.58*sc),knee=hip.clone().lerp(foot,.5);knee.z-=.25;limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot);boots[i].rotation.x=.15}
-        return;
+        aimOneHand(v,dt);return;
       }
 
       if(v.t==='barca_rems'){
@@ -2332,7 +2400,7 @@ window.HUNTER_RIDER=Object.freeze({
           limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);
           boots[i].position.copy(foot);boots[i].rotation.set(0,Math.PI,0);
         }
-        return;
+        aimOneHand(v,dt);return;
       }
 
       if(v.t==='windsurf'){
@@ -2360,7 +2428,7 @@ window.HUNTER_RIDER=Object.freeze({
           limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);
           boots[i].position.copy(foot);boots[i].rotation.set(0,-Math.PI/2,0);
         }
-        return;
+        aimOneHand(v,dt);return;
       }
 
       if(v.t==='llanxa'||v.t==='llanxa_coets'){
@@ -2382,15 +2450,17 @@ window.HUNTER_RIDER=Object.freeze({
                 knee=hip.clone().lerp(foot,.5);knee.y+=.18;
           limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot)
         }
-        return;
+        aimOneHand(v,dt);return;
       }
 
       const seat=1.45*sc;torso.position.set(0,seat,.55*sc);torso.rotation.x=.04;
       for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.28,seat,.55*sc),shoulder=shoulderAt(side),hand=vec(side*.48*sc,seat+.7,-.7*sc),elbow=shoulder.clone().lerp(hand,.52);limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
         const foot=vec(side*.42*sc,.92*sc,-.35*sc),knee=hip.clone().lerp(foot,.5);knee.y+=.18;limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot)}
+      aimOneHand(v,dt);
     };
-    const reset=()=>{g.visible=false;g.userData.motion=0};
-    return {object:g,update,reset};
+    const reset=()=>{g.visible=false;g.userData.motion=0;g.userData.shotTime=0;
+      g.userData.shotBlend=0;g.userData.pistolAim=null;pistol.visible=false};
+    return {object:g,update,reset,firePistol};
   }
 });
 
@@ -4309,7 +4379,7 @@ function killEnemy(u,killingShot=null){
   const i=E.indexOf(u);if(i<0)return;E.splice(i,1);kills++;
   if(u.t==='soldat'||u.t==='general'){window.HUNTER_ENEMY_LOD.setLevel(u.o,'full');u.deadT=0;u.deadSide=rn(-1,1)<0?-1:1;u.o.userData.legs?.forEach(l=>l.rotation.x=0);u.o.userData.arms?.forEach(a=>a.rotation.x=0);DEAD.push(u)}
   else if(u.t==='torre'){destroyTower(u);world.remove(u.o)}
-  else if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc')explodeEnemyVehicle(u);
+  else if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='patrulla_marina')explodeEnemyVehicle(u);
   else world.remove(u.o);
   if(u.t==='general')startVictoryCinematic(u,killingShot)
 }
@@ -4537,7 +4607,7 @@ function launchGrenade(pending){
 // Elements de l'escenari i vehicles abandonats no competeixen per l'autoapuntat.
 function weaponTargetPriority(enemy){
   if(enemy.t==='soldat'||enemy.t==='general')return 0;
-  if(enemy.t==='jeep'||enemy.t==='tanqueta'||enemy.t==='tanc')return 1;
+  if(enemy.t==='jeep'||enemy.t==='tanqueta'||enemy.t==='tanc'||enemy.t==='patrulla_marina')return 1;
   if(enemy.t==='torre')return 2;
   return 3;
 }
@@ -4572,7 +4642,7 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light'){
     const dx=e.x-x,dz=e.z-z,dist=Math.hypot(dx,dz);
     if(dist<=1||dist>range||(priority===bestPriority&&dist>=bestDist))continue;
     const baseY=e.o?.position?.y??(e.gy??0),
-          ty=baseY+(e.t==='torre'?4.5:e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:1.5),
+          ty=baseY+(e.t==='torre'?4.5:e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:e.t==='patrulla_marina'?2:1.5),
           dy=ty-y,len=Math.hypot(dx,dy,dz);
     if(len<=.001||(dx*fx+dy*fy+dz*fz)/len<cone)continue;
     if(!weaponAimClear(x,y,z,e.x,ty,e.z))continue;
@@ -4686,6 +4756,8 @@ function cutBarbedWire(){
  msg='Filferrada tallada silenciosament.';msgT=1.4;
  return true;
 }
+// La pistola personal és utilitzable només des dels vehicles oberts.
+const OPEN_RIDER_PISTOL=new Set(['bici','moto','moto_aquatica','barca_rems','windsurf','llanxa']);
 function fire(){if(cisallaEquipped&&!cv)return cutBarbedWire();if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
 if(c=='tanc'||c=='tanqueta'){
   // El projectil segueix el canó real mentre la torreta gira: no
@@ -4704,6 +4776,18 @@ else if(c=='heli'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+
 else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*4.1*VS.heli_combat,y=cv.o.position.y+.15,z=cv.z+fz*4.1*VS.heli_combat;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,130,.91);fcd=.12;shoot(x,y,z,ax,ay,az,145,9,0,'p',mB,.85)}
 
 else if(c=='llanxa_coets'){secondaryWeapon();return}
+else if(c&&OPEN_RIDER_PISTOL.has(c)){
+  // Un tret amb la pistola, des de la mà dreta del pilot, mantenint
+  // el mateix consum, dany, cadència i autoapuntat que quan va a peu.
+  if(ammo<=0)return;
+  const shot=riderSystem.firePistol(cv,(origin,direction)=>
+    autoAimWeaponShot(origin.x,origin.y,origin.z,
+      direction.x,direction.y,direction.z,75,.97));
+  if(!shot)return;
+  ammo--;fcd=.22;
+  const p=shot.origin,d=shot.direction;
+  shoot(p.x,p.y,p.z,d.x,d.y,d.z,130,12,0,'p',mW,SMALL_ARMS_SCALE);
+}
 else if(!cv&&sniperEquipped&&inv.franctirador){
   if(sniperAmmo<=0){msg='El rifle no té munició.';msgT=2;return}
   sniperAmmo--;fcd=1.05;pl.userData.firePose=.42;
