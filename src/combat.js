@@ -376,7 +376,7 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light'){
     const dx=e.x-x,dz=e.z-z,dist=Math.hypot(dx,dz);
     if(dist<=1||dist>range||(priority===bestPriority&&dist>=bestDist))continue;
     const baseY=e.o?.position?.y??(e.gy??0),
-          ty=baseY+(e.t==='torre'?4.5:e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:e.t==='patrulla_marina'?2:1.5),
+          ty=baseY+(e.t==='torre'?4.5:e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:e.t==='patrulla_marina'?1.8:1.5),
           dy=ty-y,len=Math.hypot(dx,dy,dz);
     if(len<=.001||(dx*fx+dy*fy+dz*fz)/len<cone)continue;
     if(!weaponAimClear(x,y,z,e.x,ty,e.z))continue;
@@ -599,7 +599,12 @@ function updPj(dt){
     // Personatges i vehicles: intersecció contínua amb volum esfèric aproximat.
     if(p.own==='p'||p.own==='pb'){
       for(const u of enemyCandidatesAt(mx,mz,reach+4)){
-        consider(segmentSphereT(x0,y0,z0,x1,y1,z1,u.x,u.o.position.y+(u.t==='torre'?4.5:1.5),u.z,(u.r||1)+.6),'enemy',u)
+        // Les llanxes patrulleres reben bales lleugeres per tot el buc,
+        // també a proa i popa; el radi de soldat era massa petit.
+        const marine=u.t==='patrulla_marina',
+              cy=u.o.position.y+(marine?1.8:u.t==='torre'?4.5:1.5),
+              radius=marine?vehicleRadius('llanxa')*.62:(u.r||1)+.6;
+        consider(segmentSphereT(x0,y0,z0,x1,y1,z1,u.x,cy,u.z,radius),'enemy',u)
       }
     }
     for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){

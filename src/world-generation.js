@@ -1,3 +1,4 @@
+const PIER_DECK_Y=2.7; // Cota de coberta per sobre del màxim d'onatge (2.2 m).
 // Validació final contra TOTS els vehicles: també els afegits després dels molls.
 function jetSkiSpotClear(q,ignore=null){
   const box=vehicleBox({t:'moto_aquatica',...q});box.w+=2;box.d+=2;
@@ -192,18 +193,18 @@ const compoundPier=(x1,z1,x2,z2,width=4.2)=>{
     const ux=dx/L,uz=dz/L,px=-uz,pz=ux,n=Math.max(1,Math.ceil(L/5));
     for(let i=0;i<n;i++){
       const m=(i+.5)/n,seg=L/n,mx=x1+dx*m,mz=z1+dz*m;
-      piers.push({x:mx,z:mz,ux,uz,px,pz,length:seg+.12,width,y:.86});
+      piers.push({x:mx,z:mz,ux,uz,px,pz,length:seg+.12,width,y:PIER_DECK_Y});
       compoundClear.push({x:mx,z:mz,r:width*.8+1.5});
     }
     return;
   }
   const ux=dx/L,uz=dz/L,px=-uz,pz=ux,yaw=Math.atan2(dx,dz),n=Math.max(1,Math.ceil(L/5));
-  for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n,m=(a+b)/2,seg=L/n,mx=x1+dx*m,mz=z1+dz*m,y=.72;
+  for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n,m=(a+b)/2,seg=L/n,mx=x1+dx*m,mz=z1+dz*m,y=PIER_DECK_Y-.14;
     const deck=new THREE.Mesh(new THREE.BoxGeometry(width,.28,seg+.12),M(0x816346,'paint'));deck.position.set(mx,y,mz);deck.rotation.y=yaw;world.add(deck);staticDecorRoots.push(deck);piers.push({x:mx,z:mz,ux,uz,px,pz,length:seg+.12,width,y:y+.14});
-    for(const side of[-1,1]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,2.3,8),M(0x48433e,'metal'));post.position.set(mx+px*side*(width*.44),-.25,mz+pz*side*(width*.44));world.add(post);staticDecorRoots.push(post);if(i%2===0){const rail=wireRod([mx+px*side*(width*.44),1.05,mz+pz*side*(width*.44)],[mx+px*side*(width*.44)+ux*seg*.8,1.05,mz+pz*side*(width*.44)+uz*seg*.8],.035,0x4b5154);staticDecorRoots.push(rail)}}
+    for(const side of[-1,1]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,3.6,8),M(0x48433e,'metal'));post.position.set(mx+px*side*(width*.44),PIER_DECK_Y-1.0,mz+pz*side*(width*.44));world.add(post);staticDecorRoots.push(post);if(i%2===0){const rail=wireRod([mx+px*side*(width*.44),PIER_DECK_Y+.35,mz+pz*side*(width*.44)],[mx+px*side*(width*.44)+ux*seg*.8,PIER_DECK_Y+.35,mz+pz*side*(width*.44)+uz*seg*.8],.035,0x4b5154);staticDecorRoots.push(rail)}}
     compoundClear.push({x:mx,z:mz,r:width*.8+1.5})
   }
-  for(const side of[-1,1]){const b=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,.9,8),M(0x3e4447,'metal'));b.position.set(x2+px*side*(width*.35),1.12,z2+pz*side*(width*.35));world.add(b);staticDecorRoots.push(b)}
+  for(const side of[-1,1]){const b=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,.9,8),M(0x3e4447,'metal'));b.position.set(x2+px*side*(width*.35),PIER_DECK_Y+.26,z2+pz*side*(width*.35));world.add(b);staticDecorRoots.push(b)}
 };
 const findPortWater=q=>{for(let a=0;a<32;a++){const aa=a*Math.PI/16;for(let d=28;d<Math.max(100,q.r||180);d+=8){const wx=q.x+Math.cos(aa)*d,wz=q.z+Math.sin(aa)*d;if(rawHAt(wx,wz)<-3&&rawHAt(wx+Math.cos(aa)*12,wz+Math.sin(aa)*12)<-3)return{x:wx,z:wz,hd:Math.atan2(-Math.cos(aa),-Math.sin(aa)),aa}}}return null};
 const findPortSite=(island,tries=18)=>{for(let n=0;n<tries;n++){const q=land(island,700,1);if(!q)continue;q.r=island.r;const portBest=findPortWater(q);if(portBest)return{...q,portBest}}return null};

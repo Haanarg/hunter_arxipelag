@@ -78,6 +78,14 @@ const assert=require('node:assert/strict');
      reset();enemies=[enemy('soldat')];
      fireShot();
      checks.soldierDamaged=enemies[0].hp<140;
+     reset();enemies=[{...enemy('patrulla_marina'),r:7.5}];
+     // Llanxa danyada per una bala que impacta a proa, no al centre.
+     shoot(-12,2,0,1,0,0,100,12,0,'p',mW,.7);
+     updPj(.12);
+     checks.marinePatrolLightHull=enemies[0].hp<140;
+     reset();enemies=[{...enemy('patrulla_marina'),r:7.5}];
+     fireShot();
+     checks.marinePatrolPistol=enemies[0].hp<140;
      reset();enemies=[enemy('torre')];
      fireShot();
      checks.towerProtected=enemies[0].hp===140;

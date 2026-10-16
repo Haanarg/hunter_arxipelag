@@ -42,6 +42,13 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Patrulleres vulnerables, molls elevats i visió ampliada (v0.5.21)
+
+- Les **patrulleres enemigues** tenen un volum d'impacte coherent amb la longitud del buc. Reben els impactes lleugers de la metralladora de l'helicòpter de combat, la tanqueta i la pistola del jugador; tancs i tanquetes continuen protegits.
+- La coberta dels **molls** queda a **2,7 m** sobre el nivell del mar, per damunt del màxim físic d'onatge de **2,2 m**. S'actualitzen les col·lisions de la coberta, els pilars, les baranes, els norais i les rampes de ferri. La cerca de llavors reutilitza la mateixa alçada.
+- Les tres qualitats gràfiques amplien la visibilitat d'edificis, vehicles, enemics, tanques i decoració. Els models detallats d'enemics i vegetació es mantenen visibles més lluny, i també s'allunyen les transicions LOD de terreny.
+- Es reajusten la boira i el pla de retall de la qualitat mínima per mostrar realment les distàncies noves. No canvien el rang de foc, la IA ni la física de conducció.
+
 ## Marques d'heliport i danys de les patrulles (v0.5.20)
 
 - L'anella i la **H de les plataformes d'heliport** es dibuixen clarament per damunt de la llosa (amb separació real i desplaçament de profunditat), evitant que desapareguin de lluny per z-fighting.

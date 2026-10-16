@@ -71,7 +71,7 @@ function createTerminalRamp(c,f){
 function terminalRampState(r){
  const f=r.f;if(f.destroyed||!V.includes(f)||Math.hypot(f.x-r.homeX,f.z-r.homeZ)>1.5||Math.abs(wrapAngle(f.hd-r.homeHD))>.06)return null;
  const end=ferryWorld(f,0,14),dx=end.x-r.x,dz=end.z-r.z,length=Math.hypot(dx,dz);
- return{x:r.x,z:r.z,ux:dx/length,uz:dz/length,length,startY:.86,endY:ferryLocalSurfaceY(f,14)+.04};
+ return{x:r.x,z:r.z,ux:dx/length,uz:dz/length,length,startY:PIER_DECK_Y,endY:ferryLocalSurfaceY(f,14)+.04};
 }
 function terminalRampHeight(x,z){
  for(const c of world?.userData.compounds||[]){if(!c.loadingRamp)continue;const s=terminalRampState(c.loadingRamp);if(!s)continue;

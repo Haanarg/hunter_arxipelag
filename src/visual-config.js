@@ -9,8 +9,8 @@ window.HUNTER_VISUAL_CONFIG = Object.freeze({
     shadows: false,
     shadowSize: 512,
     exposure: 1.08,
-    fog: 0.0013,
-    viewDistance: 1500,
+    fog: 0.00095,
+    viewDistance: 2400,
     sunDistance: 900,
     waterReflections: false,
     skySegments: Object.freeze([20, 12]),
@@ -22,7 +22,7 @@ window.HUNTER_VISUAL_CONFIG = Object.freeze({
     shadows: false,
     shadowSize: 768,
     exposure: 1.08,
-    fog: 0.00018,
+    fog: 0.00014,
     skySegments: Object.freeze([28, 16]),
     waterSegments: 200
   }),
@@ -36,7 +36,7 @@ window.HUNTER_VISUAL_CONFIG = Object.freeze({
     terrainDetailTexture: true,
     coastDetail: true,
     exposure: 1.06,
-    fog: 0.00012,
+    fog: 0.00010,
     viewDistance: 14000,
     skySegments: Object.freeze([52, 30]),
     waterSegments: 384

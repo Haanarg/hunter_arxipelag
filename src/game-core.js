@@ -1114,15 +1114,15 @@ let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0,worldVisual
 const LOD_NEAR2=500*500,LOD_MID2=1200*1200,ITEM_ANIM2=500*500,FAUNA_NEAR2=650*650,FAUNA_MID2=1400*1400;
 // Distàncies visuals per família. NO afecten danys, física, IA ni mapa.
 const VISUAL_RANGES={
-  desktop:{buildings:1180,fences:740,props:920,vehicles:1510,enemies:1280,items:720,fauna:970,antennas:1250},
-  mobile:{buildings:650,fences:390,props:520,vehicles:800,enemies:700,items:420,fauna:530,antennas:750},
-  ultra:{buildings:410,fences:260,props:350,vehicles:520,enemies:460,items:300,fauna:350,antennas:510}
-}[qualityName]||{buildings:850,fences:560,props:690,vehicles:1150,enemies:1000,items:550,fauna:750,antennas:950};
+  desktop:{buildings:1650,fences:1020,props:1300,vehicles:2080,enemies:1850,items:1000,fauna:1350,antennas:1750},
+  mobile:{buildings:980,fences:580,props:750,vehicles:1200,enemies:1050,items:620,fauna:790,antennas:1100},
+  ultra:{buildings:650,fences:400,props:540,vehicles:780,enemies:700,items:450,fauna:530,antennas:770}
+}[qualityName]||{buildings:1200,fences:790,props:990,vehicles:1620,enemies:1410,items:800,fauna:1100,antennas:1360};
 const visibilityStats={buildings:0,fences:0,props:0,vehicles:0,enemies:0,items:0,fauna:0,antennas:0,terrainOccluded:0};
 const enemyLodStats={full:0,mid:0,far:0,hidden:0,vehicleFull:0};
 const ENEMY_LOD_RANGES={
-  desktop:{full:190,mid:550},mobile:{full:110,mid:300},ultra:{full:80,mid:195}
-}[qualityName]||{full:150,mid:440};
+  desktop:{full:310,mid:860},mobile:{full:185,mid:470},ultra:{full:135,mid:305}
+}[qualityName]||{full:240,mid:660};
 window.HUNTER_ENEMY_LOD_STATS=enemyLodStats;
 window.HUNTER_VISIBILITY_STATS=visibilityStats;
 let staticVisualBatches=[];
