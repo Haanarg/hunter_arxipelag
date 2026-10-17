@@ -3668,13 +3668,13 @@ window.HUNTER_CHARACTERS=Object.freeze({
     player.scale.setScalar(2/3);
     return player;
   },
-  animatePlayer(player,{forward,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false}){
+  animatePlayer(player,{forward,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false,running=false}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),move=Math.min(1,Math.abs(forward)),dir=forward<0?-1:1;
     u.firePose=Math.max(0,(u.firePose||0)-dt);u.meleePose=Math.max(0,(u.meleePose||0)-dt);u.grenadeThrow=Math.max(0,(u.grenadeThrow||0)-dt);
     u.cisallaCut=Math.max(0,(u.cisallaCut||0)-dt);
     u.pistolAimTime=Math.max(0,(u.pistolAimTime||0)-dt);u.pistolShotAge=Math.min(10,(u.pistolShotAge??10)+dt);
     if(grenadeEquipped&&u.grenadeThrow<=0)u.grenadeReleased=false;u.breath=(u.breath||0)+dt*1.7;
-    u.ph+=dt*(swimming?(move?4.2:2.1):8.4*move);const ph=u.ph,breath=Math.sin(u.breath);
+    u.ph+=dt*(swimming?(move?4.2:2.1):(running?12.8:8.4)*move);const ph=u.ph,breath=Math.sin(u.breath);
 
     const tx=(joint,target,rate=limbK)=>joint.rotation.x+=(target-joint.rotation.x)*rate;
     const tz=(joint,target,rate=limbK)=>joint.rotation.z+=(target-joint.rotation.z)*rate;
@@ -3717,9 +3717,9 @@ window.HUNTER_CHARACTERS=Object.freeze({
       return
     }
 
-    player.rotation.x+=(0-player.rotation.x)*k;
+    player.rotation.x+=((running?-.24:0)-player.rotation.x)*k;
     const walk=Math.sin(ph)*move*dir,walk2=Math.cos(ph)*move;
-    const hip=.62*walk,kneeL=-(.08+Math.max(0,-Math.sin(ph)*dir)*.92*move),kneeR=-(.08+Math.max(0,Math.sin(ph)*dir)*.92*move);
+    const hip=(running?.88:.62)*walk,kneeL=-(.08+Math.max(0,-Math.sin(ph)*dir)*.92*move),kneeR=-(.08+Math.max(0,Math.sin(ph)*dir)*.92*move);
     tx(u.ll,hip);tx(u.lr,-hip);tx(u.lkl,kneeL);tx(u.lkr,kneeR);
     tz(u.ll,-.025*walk2);tz(u.lr,.025*walk2);
     player.rotation.z+=(-.035*walk-player.rotation.z)*k;
@@ -5382,8 +5382,8 @@ function marineAimGun(u,weapon,target,dt){
 }
 function marineFire(u,weapon,target,heavy){
   const p=weapon.muzzle.getWorldPosition(new THREE.Vector3()),
-        dy=target.y-p.y,
-        dx=target.x-p.x+rn(-1.7,1.7),dz=target.z-p.z+rn(-1.7,1.7),
+        dy=target.y-p.y+rn(-1,1)*(DIF<=.6?11:DIF<1?3:1),
+        dx=target.x-p.x+rn(-1,1)*(DIF<=.6?(heavy?23:18):DIF<1?7:2),dz=target.z-p.z+rn(-1,1)*(DIF<=.6?(heavy?23:18):DIF<1?7:2),
         n=Math.max(.01,Math.hypot(dx,dy,dz));
   if(!weaponAimClear(p.x,p.y,p.z,target.x,target.y,target.z))return false;
   // Les costes i els turons també intercepten el foc disparat des del mar.
@@ -8107,8 +8107,8 @@ function flag(x,z,c){if(!seedSearchMode)world.add(buildingVisual.createFlag({x,y
 const bx=(g,w,h,d,c,x,y,z,profile='organic')=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c,profile));m.position.set(x,y,z);g.add(m);return m};
 const buildingVisual=window.HUNTER_BUILDINGS.create(THREE,{material:M,materialProfile,box:bx});
 const pl=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});scene.add(pl);
-const animPl=(f,dt)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{
-  forward:f,dt,swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,
+const animPl=(f,dt,running=false)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{
+  forward:f,dt,running,swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,
   grenadeChargePower:grenadeCharge?Math.min(1,grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS):0,
   airborne:!!playerFall,parachuting:!!playerFall?.parachute
 });
@@ -8470,7 +8470,7 @@ function prepareVisibilitySystem(){
   updateDistanceVisibility();
 }
 
-const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joystick')),
+const K={},runButton=document.getElementById('runButton'),joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joystick')),
       strafeButtons={left:document.getElementById('strafeLeft'),right:document.getElementById('strafeRight')},
       strafePointers={left:null,right:null},
       STRAFE_VEHICLES=new Set(['hover','heli','heli_combat']);
@@ -8502,7 +8502,11 @@ for(const side of ['left','right']){
   };
   for(const name of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(name,release);
 }
+let runPointer=null;
+runButton.addEventListener('pointerdown',e=>{if(!started||paused||over||cv||swimming||scopeActive)return;e.preventDefault();runPointer=e.pointerId;runButton.setPointerCapture(e.pointerId);runButton.classList.add('held')});
+for(const name of ['pointerup','pointercancel','lostpointercapture'])runButton.addEventListener(name,e=>{if(runPointer!==e.pointerId)return;runPointer=null;runButton.classList.remove('held')});
 const clearKeys=()=>{
+  runPointer=null;runButton.classList.remove('held');
   cancelGrenadeCharge();Object.keys(K).forEach(k=>K[k]=0);
   joystick.reset();releaseStrafeButtons();
   document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))
@@ -8940,6 +8944,7 @@ const strafeEnabled=updateStrafeControls();
 if(!started||paused||over){updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
 rebuildVehicleGrid();elapsed+=dt;
 const pierOldX=P.x,pierOldZ=P.z;
+const running=!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive&&(runPointer!==null||K.ShiftLeft||K.ShiftRight);
 const jf=-joystick.state.y,jtr=-joystick.state.x,
       f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),
       tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),
@@ -8971,7 +8976,7 @@ else if(playerEject&&playerEject.t>0){
 }else{
   // Avanç i strafe simultanis sense variar el rumb. Normalitzam la
   // diagonal per mantenir la velocitat màxima d'un jugador a peu.
-  const length=Math.max(1,Math.hypot(f,strafe)),ss=(swimming?5:12)*f*dt/length,
+  const length=Math.max(1,Math.hypot(f,strafe)),ss=(swimming?5:running?19:12)*f*dt/length,
         lateral=(!swimming?9:0)*strafe*dt/length;
   P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*ss+Math.cos(P.hd)*lateral));
   P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*ss-Math.sin(P.hd)*lateral));
@@ -9025,7 +9030,7 @@ if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-i
 msgT-=dt;if(parachuteVisual)parachuteVisual.position.set(P.x,P.y,P.z);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;
 // També animam les passes quan el jugador es mou només lateralment,
 // sense modificar P.hd ni l'orientació de la càmera.
-animPl(cv||scopeActive?0:(Math.abs(f)>.02?f:Math.abs(strafe)*.7),dt);
+animPl(cv||scopeActive?0:(Math.abs(f)>.02?f:Math.abs(strafe)*.7),dt,running&&f>.1);
  // L'animació de caminar va a 8.4 rad/s: un esquitx a cada suport de
  // peu (creuament de fase PI). Sense esquitxos nedant ni en vehicles.
  movementFx.playerStep({
