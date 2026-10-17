@@ -1,4 +1,4 @@
-const PIER_DECK_Y=2.7; // Cota de coberta per sobre del màxim d'onatge (2.2 m).
+const PIER_DECK_Y=2.4; // 20 cm sobre el màxim de les ones, més proper al nivell de terra. // Cota de coberta per sobre del màxim d'onatge (2.2 m).
 // Validació final contra TOTS els vehicles: també els afegits després dels molls.
 function jetSkiSpotClear(q,ignore=null){
   const box=vehicleBox({t:'moto_aquatica',...q});box.w+=2;box.d+=2;
@@ -189,8 +189,14 @@ const compoundPath=(points,width=4,color=0x8a795e)=>{
 };
 const compoundPier=(x1,z1,x2,z2,width=4.2)=>{
   const dx=x2-x1,dz=z2-z1,L=Math.hypot(dx,dz);if(L<2)return;
+  // Una passarel·la inclinada connecta l'arrencada del moll amb terra ferma.
+  const ux=dx/L,uz=dz/L,px=-uz,pz=ux,n=Math.max(1,Math.ceil(L/5)),
+        rampLength=12,rampStartX=x1-ux*rampLength,rampStartZ=z1-uz*rampLength,
+        rampGround=Math.max(hAt(rampStartX,rampStartZ)+.08,0),
+        ramp={x:x1,z:z1,nx:-ux,nz:-uz,length:rampLength,
+          width:width-.25,bottom:rampGround,top:PIER_DECK_Y,ramp:true,pierAccess:true};
+  stairs.push(ramp);
   if(seedSearchMode){
-    const ux=dx/L,uz=dz/L,px=-uz,pz=ux,n=Math.max(1,Math.ceil(L/5));
     for(let i=0;i<n;i++){
       const m=(i+.5)/n,seg=L/n,mx=x1+dx*m,mz=z1+dz*m;
       piers.push({x:mx,z:mz,ux,uz,px,pz,length:seg+.12,width,y:PIER_DECK_Y});
@@ -198,10 +204,23 @@ const compoundPier=(x1,z1,x2,z2,width=4.2)=>{
     }
     return;
   }
-  const ux=dx/L,uz=dz/L,px=-uz,pz=ux,yaw=Math.atan2(dx,dz),n=Math.max(1,Math.ceil(L/5));
+  const rampMidX=(rampStartX+x1)/2,rampMidZ=(rampStartZ+z1)/2,
+        rise=PIER_DECK_Y-rampGround,
+        rampMesh=new THREE.Mesh(new THREE.BoxGeometry(width-.25,.22,rampLength),
+          M(0x957858,'paint'));
+  rampMesh.position.set(rampMidX,(rampGround+PIER_DECK_Y)/2-.11,rampMidZ);
+  rampMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),
+    new THREE.Vector3(ux*rampLength,rise,uz*rampLength).normalize());
+  world.add(rampMesh);staticDecorRoots.push(rampMesh);
+  for(const side of [-1,1]){
+    const rail=wireRod([rampStartX+px*side*(width*.48),rampGround+.7,rampStartZ+pz*side*(width*.48)],
+      [x1+px*side*(width*.48),PIER_DECK_Y+.7,z1+pz*side*(width*.48)],.055,0x554537);
+    staticDecorRoots.push(rail);
+  }
+  const yaw=Math.atan2(dx,dz);
   for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n,m=(a+b)/2,seg=L/n,mx=x1+dx*m,mz=z1+dz*m,y=PIER_DECK_Y-.14;
     const deck=new THREE.Mesh(new THREE.BoxGeometry(width,.28,seg+.12),M(0x816346,'paint'));deck.position.set(mx,y,mz);deck.rotation.y=yaw;world.add(deck);staticDecorRoots.push(deck);piers.push({x:mx,z:mz,ux,uz,px,pz,length:seg+.12,width,y:y+.14});
-    for(const side of[-1,1]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,3.6,8),M(0x48433e,'metal'));post.position.set(mx+px*side*(width*.44),PIER_DECK_Y-1.0,mz+pz*side*(width*.44));world.add(post);staticDecorRoots.push(post);if(i%2===0){const rail=wireRod([mx+px*side*(width*.44),PIER_DECK_Y+.35,mz+pz*side*(width*.44)],[mx+px*side*(width*.44)+ux*seg*.8,PIER_DECK_Y+.35,mz+pz*side*(width*.44)+uz*seg*.8],.035,0x4b5154);staticDecorRoots.push(rail)}}
+    for(const side of[-1,1]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,3.35,8),M(0x48433e,'metal'));post.position.set(mx+px*side*(width*.44),PIER_DECK_Y-1.15,mz+pz*side*(width*.44));world.add(post);staticDecorRoots.push(post);if(i%2===0){const rail=wireRod([mx+px*side*(width*.44),PIER_DECK_Y+.35,mz+pz*side*(width*.44)],[mx+px*side*(width*.44)+ux*seg*.8,PIER_DECK_Y+.35,mz+pz*side*(width*.44)+uz*seg*.8],.035,0x4b5154);staticDecorRoots.push(rail)}}
     compoundClear.push({x:mx,z:mz,r:width*.8+1.5})
   }
   for(const side of[-1,1]){const b=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,.9,8),M(0x3e4447,'metal'));b.position.set(x2+px*side*(width*.35),PIER_DECK_Y+.26,z2+pz*side*(width*.35));world.add(b);staticDecorRoots.push(b)}

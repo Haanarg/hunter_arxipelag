@@ -42,6 +42,13 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Pantalans accessibles amb rampa (v0.5.27)
+
+- Els pantalans de fusta baixen de **2,7 a 2,4 metres**, mantenint marge sobre el màxim de les ones.
+- Una **rampa inclinada de fusta de 12 metres**, amb baranes, connecta l'extrem de terra amb la coberta. La superfície caminable segueix exactament la pendent de la rampa. Es genera tant en partida com en les dades del cercador de llavors.
+- Les **baranes laterals** impedeixen travessar els costats del pantalà; la col·lisió lateral comprova el punt anterior i el nou punt del jugador. L'alçada de la coberta no s'aplica a qui intenta pujar-hi lateralment des de baix.
+- Les rampes de terminals de ferri continuen enllaçades amb la cota compartida del pantalà.
+
 ## Impuls d'explosions i caigudes variades (v0.5.26)
 
 - Les explosions empenyen el **jugador a peu** i els **soldats enemics** en direcció contrària al centre, amb distància i elevació dependents de la proximitat. El jugador gesticula amb braços i cames durant el vol i recupera el control després de l'aterratge. No altera les maniobres de sortida de vehicles ni la caiguda amb paracaigudes.
