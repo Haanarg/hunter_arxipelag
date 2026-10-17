@@ -102,8 +102,8 @@ const {pathToFileURL}=require('node:url');
    'En tornar a la braça s’ha de desfer el gir del tors');
  assert.ok(Math.abs(u.lowerBody.rotation.y)<.02,
    'La pelvis recupera l’orientació natural en braça');
- assert.ok(Math.abs(player.rotation.z)<.02,
-   'La braça desfà el gir nord-sud del crol');
+ assert.ok(Math.abs(player.rotation.z)<.06,
+   'La braça desfà el gir de 180° i conserva només la lleu oscil·lació normal');
  // El·lipse real de la mà esquerra: les projeccions XZ han de
  // dibuixar superfície, no només anar endavant i enrere en línia.
  const samples=[];
