@@ -7,6 +7,8 @@ on:
       - 'src/*.js'
       - 'src/runtime-scripts.mjs'
       - 'tools/build-runtime.cjs'
+      - 'tests/joystick-running.cjs'
+      - 'tests/player-locomotion.cjs'
       - '.github/workflows/runtime-bundle.yml'
   workflow_dispatch:
 permissions:
