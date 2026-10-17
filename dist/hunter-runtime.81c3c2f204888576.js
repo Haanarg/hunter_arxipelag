@@ -5003,7 +5003,7 @@ const bazookaReticleWorld=new THREE.Vector3(),bazookaReticleScreen=new THREE.Vec
 let bazookaReticleTimer=0,bazookaReticleHasHit=false,bazookaReticleMode=null;
 // Primera superfície real a la trajectòria; cap objectiu => cap retícula
 // damunt de mar buit o horitzó. No altera en absolut la balística.
-function bazookaFirstSolidHit(x,y,z,dx,dy,dz,range=105){
+function bazookaFirstSolidHit(x,y,z,dx,dy,dz,range=105,sourceVehicle=null){
   const tx=x+dx*range,ty=y+dy*range,tz=z+dz*range,
         mx=(x+tx)/2,mz=(z+tz)/2,reach=Math.hypot(tx-x,tz-z)/2;
   let best=Infinity;
@@ -5026,7 +5026,8 @@ function bazookaFirstSolidHit(x,y,z,dx,dy,dz,range=105){
       e.z,marine?vehicleRadius('llanxa')*.62:(e.r||1)+.6));
   }
   for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){
-    if(v.destroyed)continue;
+    // El propi vehicle mai no intercepta l'origen del seu dispar.
+    if(v.destroyed||v===sourceVehicle)continue;
     consider(segmentSphereT(x,y,z,tx,ty,tz,v.x,
       (v.o?.position.y??Math.max(0,hAt(v.x,v.z)))+1,v.z,vehicleRadius(v.t)*.62));
   }
@@ -5065,7 +5066,10 @@ function updateBazookaReticle(dt){
       const gun=window.HUNTER_VEHICLES.turretShot(THREE,cv.o);
       if(gun){
         const o=gun.origin,d=gun.direction,focus={};
-        hit=bazookaFirstSolidHit(o.x,o.y,o.z,d.x,d.y,d.z,220);
+        hit=bazookaFirstSolidHit(o.x,o.y,o.z,d.x,d.y,d.z,220,cv);
+        // Sense obstacle, el punt d'apuntat és la projecció a distància.
+        const aimPoint=hit||{x:o.x+d.x*160,y:o.y+d.y*160,z:o.z+d.z*160};
+        bazookaReticleWorld.set(aimPoint.x,aimPoint.y,aimPoint.z);
         // Només color verd si el canó intercepta de debò l'enemic.
         // Un objectiu proper al con, però fora de l'impacte, no és fixat.
         autoAimWeaponShot(o.x,o.y,o.z,d.x,d.y,d.z,220,.999,
@@ -5080,7 +5084,10 @@ function updateBazookaReticle(dt){
       // canó lleuger de F, i desapareix quan no hi ha míssils.
       const focus={},shot=combatHeliMissileAim(cv,focus),d=shot.direction;
       hit=focus.point||bazookaFirstSolidHit(shot.x,shot.y,shot.z,
-        d[0],d[1],d[2],120);
+        d[0],d[1],d[2],120,cv);
+      const aimPoint=hit||{x:shot.x+d[0]*120,y:shot.y+d[1]*120,
+        z:shot.z+d[2]*120};
+      bazookaReticleWorld.set(aimPoint.x,aimPoint.y,aimPoint.z);
       locked=!!focus.target;
     }else{
       const fx=-Math.sin(P.hd),fz=-Math.cos(P.hd),
@@ -5092,7 +5099,7 @@ function updateBazookaReticle(dt){
         direction[0],direction[1],direction[2]);
       locked=!!focus.target;
     }
-    bazookaReticleHasHit=!!hit;
+    bazookaReticleHasHit=!!hit||mode==='tank'||mode==='missile';
     if(hit)bazookaReticleWorld.set(hit.x,hit.y,hit.z);
     bazookaReticleElement.classList.toggle('locked',locked);
   }
@@ -5100,12 +5107,20 @@ function updateBazookaReticle(dt){
   cam.updateMatrixWorld();
   bazookaReticleScreen.copy(bazookaReticleWorld).project(cam);
   const p=bazookaReticleScreen;
-  if(p.z<-1||p.z>1||Math.abs(p.x)>1||Math.abs(p.y)>1){
+  const vehicleAim=bazookaReticleMode==='tank'||bazookaReticleMode==='missile',
+        behind=!Number.isFinite(p.z)||p.z<-1||p.z>1,
+        outside=behind||Math.abs(p.x)>1||Math.abs(p.y)>1;
+  if(outside&&!vehicleAim){
     bazookaReticleElement.style.display='none';return;
   }
+  // Si la trajectòria surt del camp visual, mantenim la retícula al
+  // marge amb menys intensitat en comptes de fer-la desaparèixer.
+  const sx=behind?.5:Math.max(.06,Math.min(.94,(p.x+1)/2)),
+        sy=behind?.5:Math.max(.06,Math.min(.94,(1-p.y)/2));
   bazookaReticleElement.style.display='block';
-  bazookaReticleElement.style.left=((p.x+1)*50)+'%';
-  bazookaReticleElement.style.top=((1-p.y)*50)+'%';
+  bazookaReticleElement.style.opacity=outside&&vehicleAim?'0.55':'1';
+  bazookaReticleElement.style.left=(sx*100)+'%';
+  bazookaReticleElement.style.top=(sy*100)+'%';
 }
 // Conservem el punt de sortida horitzontal del tanc i la tanqueta (0 graus).
 function autoAimArmoredShot(x,y,z,fx,fz,range){
