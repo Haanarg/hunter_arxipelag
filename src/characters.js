@@ -321,24 +321,23 @@ window.HUNTER_CHARACTERS=Object.freeze({
     sniper.visible=false;u.sniper=sniper;u.sniperMuzzle=sniperMuzzle;
     u.sniperRightGrip=sniperRightGrip;u.sniperLeftGrip=sniperLeftGrip;
     player.scale.setScalar(2/3);
-    // Yaw (Y) exterior, gir nord-sud (Z) i inclinació de natació (X).
-    // Amb YZX la volta del crol es fa sobre l'eix horitzontal del
-    // món, no sobre els malucs ni sobre l'eix vertical del model.
+    // Conservam el rumb Y i la inclinació X: aquesta ja situa el
+    // cap davant i la cara cap avall durant el crol. No cal cap volta
+    // addicional de 180° (la combinació anterior elevava els peus).
     player.rotation.order='YZX';
     u.swimChest=new THREE.Vector3();
     u.swimHead=new THREE.Vector3();
     return player;
   },
-  // Posicionament visual independent de la física: en fer crol cal
-  // portar el pit a la línia de flotació, no deixar tot el model
-  // sota l'aigua amb l'origen antic (2,1 m sota les ones).
+  // Posicionament visual independent de la física: el cap respira
+  // just sobre l'onada, el pit queda parcialment submergit i els peus
+  // més profunds. No hem de situar tot el tors per damunt de l'aigua.
   swimVisualLift(player,surface,physicalY){
     const crawl=Math.max(0,Math.min(1,player.userData.crawlBlend||0));
     // Fora de l'aigua no s'aplica mai la flotació visual del crol.
     if(crawl<.001||physicalY>=surface-.6)return 0;
-    // Cal mesurar els punts REALS després de combinar el pitch i el
-    // gir nord-sud. Cos(pi) no serveix: amb 180° el cap podria tornar
-    // sota les ones tot i que el pit quedàs flotant.
+    // Mesuram l'altura real del cap i pit transformats: el punt físic
+    // P.y queda intacte i només desplaçam el model durant el crol.
     const u=player.userData;
     player.updateMatrixWorld(true);
     u.swimChest.set(0,2.31*1.2-u.upperBodyPivotHeight,0);
@@ -346,8 +345,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.head.getWorldPosition(u.swimHead);
     const chestRel=u.swimChest.y-player.position.y,
           headRel=u.swimHead.y-player.position.y;
-    return crawl*Math.max(0,surface+.13-physicalY-chestRel,
-                            surface+.5-physicalY-headRel);
+    // La part central del pit es manté sota la superfície (-20 cm),
+    // mentre el centre del cap sobresurt tot just (+10 cm).
+    // El més restrictiu dels dos límits evita submergir el cap.
+    return crawl*Math.max(0,surface-.20-physicalY-chestRel,
+                            surface+.10-physicalY-headRel);
   },
   animatePlayer(player,{forward,strafe=0,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false,running=false}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),
@@ -356,9 +358,9 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // conserva el rumb del jugador (i, per tant, la càmera i la punteria).
     const strafeAngle=!swimming&&!inVehicle&&!airborne&&!parachuting?
       -Math.PI/4*Math.max(-1,Math.min(1,strafe)):0;
-    // Evitar que el reposicionament de l'strafe contraresti
-    // el gir longitudinal de 180 graus quan es neda a crol.
-    if(!swimming)u.lowerBody.rotation.y+=(strafeAngle-u.lowerBody.rotation.y)*(1-Math.exp(-13*dt));
+    // La pelvis no gira 180° per nedar; recupera l'eix natural
+    // durant la natació i manté els 45° d'strafe quan anam a peu.
+    u.lowerBody.rotation.y+=(strafeAngle-u.lowerBody.rotation.y)*(1-Math.exp(-13*dt));
     u.firePose=Math.max(0,(u.firePose||0)-dt);u.meleePose=Math.max(0,(u.meleePose||0)-dt);u.grenadeThrow=Math.max(0,(u.grenadeThrow||0)-dt);
     u.cisallaCut=Math.max(0,(u.cisallaCut||0)-dt);
     u.pistolAimTime=Math.max(0,(u.pistolAimTime||0)-dt);u.pistolShotAge=Math.min(10,(u.pistolShotAge??10)+dt);
@@ -415,22 +417,18 @@ window.HUNTER_CHARACTERS=Object.freeze({
       u.gun.visible=false;u.knife.visible=false;u.bazooka.visible=false;u.grenade.visible=false;u.sniper.visible=false;u.cisalla.visible=false;
       if(u.pistolFlash)u.pistolFlash.visible=false;
       u.pistolBlend=0;
-      // Braça: postura habitual. Crol: cos gairebé horitzontal sobre
-      // l'aigua, braçades alternes i batement continu dels peus.
-      // El gir anterior de tors i cames els deixava d'esquena.
-      // Afegim ara la volta COMPLETA sobre l'eix nord-sud (Z) de
-      // l'escena, al voltant del rumb de l'usuari, preservant el cap
-      // endavant. L'ordre YZX de l'arrel és essencial per això.
-      const crawlTurn=Math.PI*crawl;
-      u.upperBody.rotation.y+=(crawlTurn-u.upperBody.rotation.y)*k;
-      u.lowerBody.rotation.y+=(crawlTurn-u.lowerBody.rotation.y)*k;
+      // Braça: postura habitual. Crol: cos gairebé horitzontal,
+      // cap avançat i peus enfonsats. La volta anterior de 180° del
+      // tors, pelvis i arrel invertia l'altura del cap i els peus.
+      // La cara ja apunta cap avall amb el pitch X negatiu.
+      u.upperBody.rotation.y+=(0-u.upperBody.rotation.y)*k;
       u.upperBody.rotation.x+=(mix(-.1,0)-u.upperBody.rotation.x)*k;
       u.upperBody.rotation.z+=(.10*stroke*crawl-u.upperBody.rotation.z)*k;
       player.rotation.x+=(mix(0,-1.20)-player.rotation.x)*k;
-      // A diferència del gir dels malucs, aquest roll és el de tot
-      // el nedador al voltant del seu eix longitudinal ja horitzontal.
-      const longitudinalRoll=Math.PI*crawl+stroke*.035*(1-crawl);
-      player.rotation.z+=(longitudinalRoll-player.rotation.z)*k;
+      // Només una oscil·lació subtil de costat durant la braça;
+      // el crol es manté de panxa, sense girar cap i peus a l'inrevés.
+      const roll=stroke*.035*(1-crawl);
+      player.rotation.z+=(roll-player.rotation.z)*k;
       // Quan el cos s'ajau, el cap aixeca lleument la mirada i es gira
       // una mica de costat per respirar, sense oscil·lacions brusques.
       const headX=mix(-u.upperBody.rotation.x,.38),

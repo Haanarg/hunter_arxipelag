@@ -60,13 +60,12 @@ const {pathToFileURL}=require('node:url');
  assert.ok(Math.abs(player.rotation.x)<.005,'La braça ha de conservar la postura actual');
  for(let i=0;i<30;i++)swim(true);
  assert.ok(u.crawlBlend>.99,'La zona de velocitat activa el crol');
- assert.ok(Math.abs(u.upperBody.rotation.y-Math.PI)<.015,
-   'El tronc del crol ha de girar 180° sobre l’eix longitudinal');
- assert.ok(Math.abs(u.lowerBody.rotation.y-Math.PI)<.015,
-   'La pelvis i les cames han de girar 180° amb el tronc');
- assert.equal(player.rotation.order,'YZX','El gir nord-sud ha de ser exterior al pitch');
- assert.ok(Math.abs(player.rotation.z-Math.PI)<.02,
-   'El nedador s’ha de girar 180° al voltant de l’eix longitudinal del mar');
+ assert.ok(Math.abs(u.upperBody.rotation.y)<.02,
+   'El tors no s’ha de girar de cap per avall durant el crol');
+ assert.ok(Math.abs(u.lowerBody.rotation.y)<.02,
+   'La pelvis i els peus han de mantenir l’orientació normal');
+ assert.ok(Math.abs(player.rotation.z)<.02,
+   'El crol no ha d’invertir verticalment el cap i els peus');
  player.updateMatrixWorld(true);
  const faceWorld=new THREE.Vector3(0,0,-1)
    .applyQuaternion(u.head.getWorldQuaternion(new THREE.Quaternion()));
@@ -80,14 +79,19 @@ const {pathToFileURL}=require('node:url');
  // El model, en canvi, ha de deixar visibles cap i pit.
  const surface=0,physicalY=surface-2.1;
  const visualLift=ctx.window.HUNTER_CHARACTERS.swimVisualLift(player,surface,physicalY);
- assert.ok(visualLift>1.4,'La compensació vertical del crol ha de ser suficient');
+ assert.ok(visualLift>1,'La compensació del crol ha de salvar la immersió del cap');
+ assert.ok(visualLift<1.6,'No s’ha d’elevar tot el cos per damunt de les ones');
  player.position.set(0,physicalY+visualLift,0);
  player.updateMatrixWorld(true);
  const chestCenter=u.upperBody.localToWorld(
    new THREE.Vector3(0,2.31*1.2-u.upperBodyPivotHeight,0));
  const headCenter=u.head.getWorldPosition(new THREE.Vector3());
- assert.ok(chestCenter.y>surface+.10,'El pit del nedador ha de trencar la superfície');
- assert.ok(headCenter.y>surface+.30,'El cap ha de romandre fora de l’aigua');
+ const footCenter=u.boots[0].getWorldPosition(new THREE.Vector3());
+ assert.ok(headCenter.y>surface+.06,'El cap ha de poder respirar sobre la superfície');
+ assert.ok(chestCenter.y<surface-.04,'El pit ha de quedar parcialment sota l’aigua');
+ assert.ok(chestCenter.y>surface-.45,'El tronc no ha de desaparèixer sota l’aigua');
+ assert.ok(footCenter.y<surface-.40,'Els peus han de quedar sota la superfície');
+ assert.ok(headCenter.y>footCenter.y+.55,'El cap ha de ser clarament més alt que els peus');
  assert.equal(ctx.window.HUNTER_CHARACTERS.swimVisualLift(player,surface,1),0,
    'En sortir a terra no s’ha d’aixecar artificialment el model');
  assert.ok(Math.abs(u.al.rotation.x-u.ar.rotation.x)>.4,
@@ -103,7 +107,7 @@ const {pathToFileURL}=require('node:url');
  assert.ok(Math.abs(u.lowerBody.rotation.y)<.02,
    'La pelvis recupera l’orientació natural en braça');
  assert.ok(Math.abs(player.rotation.z)<.06,
-   'La braça desfà el gir de 180° i conserva només la lleu oscil·lació normal');
+   'La braça conserva només la lleu oscil·lació normal');
  // El·lipse real de la mà esquerra: les projeccions XZ han de
  // dibuixar superfície, no només anar endavant i enrere en línia.
  const samples=[];
