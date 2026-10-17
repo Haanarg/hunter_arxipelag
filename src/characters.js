@@ -468,7 +468,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // La pistola incorpora una rotació de cintura de fins a 18°.
     // El cap manté la mirada endavant i les cames el rumb.
     const waistAim=.32*(u.pistolBlend||0);
-    u.upperBody.rotation.y+=(waistAim-u.upperBody.rotation.y)*k;
+    u.upperBody.rotation.y+=(waistAim-u.upperBody.rotation.y)*(1-Math.exp(-17*dt));
     u.upperBody.rotation.z+=(0-u.upperBody.rotation.z)*k;
     // El cap compensa la inclinació del tronc i continua mirant de
     // front, també durant les transicions d'entrada i sortida de cursa.
