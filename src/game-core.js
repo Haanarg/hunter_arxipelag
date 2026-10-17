@@ -1748,7 +1748,19 @@ if(scopeActive){
   scopePitch=Math.max(-.65,Math.min(.65,scopePitch+f*dt*.30));
 }else if(cv){const driven=cv,alive=stepV(driven,f,tr,ud,dt,strafe);if(alive&&cv===driven){P.x=driven.x;P.z=driven.z;P.hd=driven.hd}}
 else{P.hd+=tr*dt*2.2;if(playerFall){playerFall.t+=dt;playerFall.vy-=playerFall.parachute?10*dt:24*dt;if(playerFall.parachute)playerFall.vy=Math.max(-4.8,playerFall.vy);playerFall.vx*=Math.exp(-(playerFall.parachute?1.6:.18)*dt);playerFall.vz*=Math.exp(-(playerFall.parachute?1.6:.18)*dt);P.x=Math.max(-lim,Math.min(lim,P.x+playerFall.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerFall.vz*dt));playerFall.y+=playerFall.vy*dt;const water=wy(P.x,P.z,t),landing=Math.max(hAt(P.x,P.z),water-1.4);P.y=playerFall.y;if(playerFall.y<=landing){P.y=landing;const fallH=playerFall.startHeight,impact=Math.max(0,-playerFall.vy),waterLanding=water>hAt(P.x,P.z)+1.5,dmg=playerFall.parachute?0:Math.min(100,Math.max(0,(fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8)));removeParachuteVisual();playerFall=null;if(dmg>0)hurtP(dmg);msg=dmg===0&&fallH>4?'Has aterrat amb seguretat.':waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5}}
-else if(playerEject&&playerEject.t>0){P.x=Math.max(-lim,Math.min(lim,P.x+playerEject.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerEject.vz*dt));playerEject.vx*=Math.exp(-2.4*dt);playerEject.vz*=Math.exp(-2.4*dt);playerEject.t=Math.max(0,playerEject.t-dt)}else{
+else if(playerEject&&playerEject.t>0){
+  P.x=Math.max(-lim,Math.min(lim,P.x+playerEject.vx*dt));
+  P.z=Math.max(-lim,Math.min(lim,P.z+playerEject.vz*dt));
+  if(playerEject.kind==='blast'){
+    playerEject.vy-=19*dt;
+    playerEject.height=Math.max(0,(playerEject.height||0)+playerEject.vy*dt);
+    if(playerEject.height===0)playerEject.vy=0;
+    playerEject.vx*=Math.exp(-3.3*dt);playerEject.vz*=Math.exp(-3.3*dt);
+  }else{
+    playerEject.vx*=Math.exp(-2.4*dt);playerEject.vz*=Math.exp(-2.4*dt);
+  }
+  playerEject.t=Math.max(0,playerEject.t-dt);
+}else{
   // Avanç i strafe simultanis sense variar el rumb. Normalitzam la
   // diagonal per mantenir la velocitat màxima d'un jugador a peu.
   const length=Math.max(1,Math.hypot(f,strafe)),ss=(swimming?5:12)*f*dt/length,
@@ -1843,6 +1855,15 @@ else if(!cv&&playerEject&&playerEject.t>=0){
     if(u.ael)u.ael.rotation.x=.5*compact;if(u.aer)u.aer.rotation.x=.5*compact;
     if(u.ll)u.ll.rotation.x=-.28*compact;if(u.lr)u.lr.rotation.x=-.28*compact;
     if(u.lkl)u.lkl.rotation.x=-.5*compact;if(u.lkr)u.lkr.rotation.x=-.5*compact;
+  }else if(playerEject.kind==='blast'){
+    const airborne=Math.max(0,playerEject.height||0),wave=Math.sin(Math.PI*p);
+    pl.position.y+=airborne;
+    pl.rotation.x=-wave*.8;
+    pl.rotation.z=(playerEject.roll||1)*wave*.65;
+    if(u.al)u.al.rotation.x=-1.05*wave;
+    if(u.ar)u.ar.rotation.x=-.9*wave;
+    if(u.ll)u.ll.rotation.x=.55*wave;
+    if(u.lr)u.lr.rotation.x=-.65*wave;
   }
 }
 V.forEach(v=>{

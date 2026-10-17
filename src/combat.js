@@ -98,7 +98,14 @@ function explodeEnemyVehicle(u){
 }
 function killEnemy(u,killingShot=null){
   const i=E.indexOf(u);if(i<0)return;E.splice(i,1);kills++;
-  if(u.t==='soldat'||u.t==='general'){window.HUNTER_ENEMY_LOD.setLevel(u.o,'full');u.deadT=0;u.deadSide=rn(-1,1)<0?-1:1;u.o.userData.legs?.forEach(l=>l.rotation.x=0);u.o.userData.arms?.forEach(a=>a.rotation.x=0);DEAD.push(u)}
+  if(u.t==='soldat'||u.t==='general'){window.HUNTER_ENEMY_LOD.setLevel(u.o,'full');u.deadT=0;
+    const impulse=u.blastImpulse;
+    u.deadSide=rn(-1,1)<0?-1:1;
+    u.deadPose={yaw:rn(-Math.PI,Math.PI),roll:u.deadSide*rn(.95,1.65),
+      pitch:rn(-.9,.9),armL:rn(-1.6,.8),armR:rn(-1.6,.8),
+      legL:rn(-.8,.85),legR:rn(-.8,.85),
+      vx:impulse?.vx??rn(-2.6,2.6),vz:impulse?.vz??rn(-2.6,2.6),
+      vy:impulse?.vy??rn(1.5,3.8),height:0};u.o.userData.legs?.forEach(l=>l.rotation.x=0);u.o.userData.arms?.forEach(a=>a.rotation.x=0);DEAD.push(u)}
   else if(u.t==='torre'){destroyTower(u);world.remove(u.o)}
   else if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='patrulla_marina')explodeEnemyVehicle(u);
   else world.remove(u.o);
@@ -172,6 +179,13 @@ function explosionDistanceToVehicleHull(v,x,y,z){
   const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
   return Math.max(0,Math.hypot(v.x-x,vy+1-y,v.z-z)-vehicleRadius(v.t)*.62);
 }
+// Impuls físic als personatges; els vehicles no s'envien volant.
+function blastImpulseAt(x,z,px,pz,r,falloff){
+  const dx=px-x,dz=pz-z,dist=Math.hypot(dx,dz),
+        dir=dist>.05?{x:dx/dist,z:dz/dist}:{x:Math.cos(rn(0,6.28)),z:Math.sin(rn(0,6.28))},
+        speed=(7+16*falloff)*Math.max(.3,Math.min(1,r/12));
+  return {vx:dir.x*speed,vz:dir.z*speed,vy:4+7*falloff};
+}
 function boom(x,y,z,r,dmg,own,source=null){snd('boom',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/200));const o=new THREE.Mesh(sphG,new THREE.MeshBasicMaterial({color:0xffa030,transparent:true}));o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6});
 if(own!='e')for(const u of enemyCandidatesAt(x,z,r+vehicleRadius('llanxa')*.62+4)){
   // Per a una patrullera es mesura la distància a la superfície del casc,
@@ -179,8 +193,15 @@ if(own!='e')for(const u of enemyCandidatesAt(x,z,r+vehicleRadius('llanxa')*.62+4
   const marine=u.t==='patrulla_marina',
         distance=Math.hypot(u.x-x,u.o.position.y+(marine?1.8:1.5)-y,u.z-z),
         d=marine?Math.max(0,distance-vehicleRadius('llanxa')*.62):distance;
-  if(d<r)hurtE(u,dmg*(1-d/r*.5),
-    source||{x,y,z,sx:cv?.x??P.x,sy:(cv?.o?.position.y??P.y)+1.7,sz:cv?.z??P.z,spl:r,own})
+  if(d<r){
+    if(u.t==='soldat'||u.t==='general'){
+      const power=1-d/r;
+      u.blastImpulse=blastImpulseAt(x,z,u.x,u.z,r,power);
+      if(u.hp>dmg*(1-d/r*.5))u.blastT=.95;
+    }
+    hurtE(u,dmg*(1-d/r*.5),
+      source||{x,y,z,sx:cv?.x??P.x,sy:(cv?.o?.position.y??P.y)+1.7,sz:cv?.z??P.z,spl:r,own});
+  }
 }
 for(const w of wallCandidates(x,z,r)){const dd=Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z);if(dd<r&&y<w.y1+3)dmgW(w,dmg*1.5*(1-dd/(2*r)))}
 for(const b of buildingCandidates(x,z,r)){const dd=Math.hypot(b.x-x,b.z-z),rr2=r+b.w/2;if(dd<rr2&&b.rhp>0){b.rhp-=dmg*1.2*(1-dd/rr2*.6);if(b.rhp<=0)roofBreak(b)}}
@@ -192,7 +213,14 @@ for(const v of vehicleCandidatesAt(x,z,r+12,true)){
     damageVehicle(v,dmg*.5*(1-surfaceDistance/r),power,'heavy')
   }
 }
-const q=cv?cv.o.position:P,d=Math.hypot(q.x-x,q.y-y,q.z-z);if(d<r&&own!='p'&&!cv)hurtP(dmg*.6*(1-d/r))}
+const q=cv?cv.o.position:P,d=Math.hypot(q.x-x,q.y-y,q.z-z);if(d<r&&own!='p'&&!cv){
+  const falloff=1-d/r,impulse=blastImpulseAt(x,z,P.x,P.z,r,falloff);
+  if(!playerFall){
+    playerEject={kind:'blast',...impulse,t:.85,dur:.85,
+      vy:impulse.vy,height:0,roll:rn(-1,1)<0?-1:1};
+  }
+  hurtP(dmg*.6*falloff);
+}}
 function plant(){if(over||cv||swimming||!inv.expl)return;if(--inv.expl<=0)delete inv.expl;setDis(false);
 const o=window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true);
 // El display és a la cara local -Z. Amb el gir oposat al del jugador

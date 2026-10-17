@@ -42,6 +42,13 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Impuls d'explosions i caigudes variades (v0.5.26)
+
+- Les explosions empenyen el **jugador a peu** i els **soldats enemics** en direcció contrària al centre, amb distància i elevació dependents de la proximitat. El jugador gesticula amb braços i cames durant el vol i recupera el control després de l'aterratge. No altera les maniobres de sortida de vehicles ni la caiguda amb paracaigudes.
+- Els soldats supervivents queden desestabilitzats breument i tornen a combatre quan acaba l'impuls.
+- En morir, cada soldat tria una **direcció de caiguda i postura aleatòries** (rotació, braços, cames, tombada), incloent el desplaçament balístic de l'explosió si n'hi havia. Els cossos es retiren passats 18 segons com abans.
+- L'impuls s'aplica una vegada per explosió i no afecta els vehicles.
+
 ## Projectils pesants i patrulleres destructibles (v0.5.25)
 
 - **Tots els projectils pesants** tenen la **meitat de mida visual** i una velocitat **50% superior** a la de v0.5.24 (factor de velocitat `0.78 → 1.17`, factor visual `0.5`). El dany, les explosions i les dimensions de les col·lisions no canvien.

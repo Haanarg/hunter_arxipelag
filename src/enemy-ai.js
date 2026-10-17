@@ -141,6 +141,20 @@ function towerWeaponForTarget(vehicle){
 }
 function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.forEach(u=>{
   if(u.t==='patrulla_marina'){updateMarinePatrol(u,dt);return}
+  if(u.blastT>0){
+    const imp=u.blastImpulse;u.blastT=Math.max(0,u.blastT-dt);
+    if(imp){
+      u.x+=imp.vx*dt;u.z+=imp.vz*dt;
+      imp.vy-=18*dt;
+      u.blastHeight=Math.max(0,(u.blastHeight||0)+imp.vy*dt);
+      if(u.blastHeight===0)imp.vy=0;
+      imp.vx*=Math.exp(-5*dt);imp.vz*=Math.exp(-5*dt);
+      u.o.position.set(u.x,Math.max(0,hAt(u.x,u.z))+u.blastHeight,u.z);
+      u.o.rotation.z=Math.sin((.95-u.blastT)*Math.PI/.95)*.5;
+    }
+    return;
+  }
+  if(u.blastImpulse){u.blastImpulse=null;u.blastHeight=0;u.o.rotation.z=0}
   const oldX=u.x,oldZ=u.z;
   u.alert=Math.max(0,u.alert-dt);u.cd-=dt;if(u.t==='torre')u.heavyCd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);
   const q=cv||P,py=cv?cv.o.position.y:P.y,dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz),
@@ -301,7 +315,30 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
     }
   }
 })}
-function updDead(dt){for(let i=DEAD.length-1;i>=0;i--){const u=DEAD[i];u.deadT+=dt;const k=Math.min(1,u.deadT/.55),e=1-Math.pow(1-k,3),base=u.gy!=null?u.gy:enemyGroundAt(u,u.x,u.z);u.o.position.set(u.x,base+.05+(1-e)*.12,u.z);u.o.rotation.y=u.hd;u.o.rotation.z=u.deadSide*e*Math.PI*.48;if(u.o.userData.arms)u.o.userData.arms.forEach((a,j)=>{a.rotation.x=(-.35+j*.7)*e;a.rotation.z=(j?-.25:.25)*e});if(u.o.userData.legs)u.o.userData.legs.forEach((l,j)=>l.rotation.x=(j?-.18:.18)*e);if(u.o.userData.knees)window.HUNTER_CHARACTERS.animateSoldier(u.o,{dt,death:e});if(u.deadT>18){world.remove(u.o);DEAD.splice(i,1)}}}
+function updDead(dt){
+  for(let i=DEAD.length-1;i>=0;i--){
+    const u=DEAD[i],pose=u.deadPose||(u.deadPose={yaw:0,roll:u.deadSide*1.4,
+      pitch:0,armL:-.5,armR:.5,legL:-.2,legR:.2,vx:0,vz:0,vy:0,height:0});
+    u.deadT+=dt;
+    const k=Math.min(1,u.deadT/.65),e=1-Math.pow(1-k,3);
+    pose.vy-=18*dt;
+    pose.height=Math.max(0,pose.height+pose.vy*dt);
+    if(pose.height===0){pose.vy=0;pose.vx*=Math.exp(-9*dt);pose.vz*=Math.exp(-9*dt)}
+    else{pose.vx*=Math.exp(-1.1*dt);pose.vz*=Math.exp(-1.1*dt)}
+    u.x+=pose.vx*dt;u.z+=pose.vz*dt;
+    const base=Math.max(0,hAt(u.x,u.z));
+    u.o.position.set(u.x,base+pose.height+.05+(1-e)*.12,u.z);
+    u.o.rotation.set(pose.pitch*e,u.hd+pose.yaw*e,pose.roll*e,'YXZ');
+    if(u.o.userData.arms)u.o.userData.arms.forEach((arm,j)=>{
+      arm.rotation.x=(j?pose.armR:pose.armL)*e;
+      arm.rotation.z=(j?-.3:.3)*e;
+    });
+    if(u.o.userData.legs)u.o.userData.legs.forEach((leg,j)=>
+      leg.rotation.x=(j?pose.legR:pose.legL)*e);
+    if(u.deadT>18){world.remove(u.o);DEAD.splice(i,1)}
+  }
+}
+
 function mkEn(t,x,z,gy){const c=EC[t];let g;
 if(seedSearchMode){
   g=new THREE.Group();
