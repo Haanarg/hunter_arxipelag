@@ -84,5 +84,30 @@ const {pathToFileURL}=require('node:url');
  assert.equal(ui.style.display,'none','Sense armes compatibles la retícula desapareix');
  assert.ok(src.includes('const shot=combatHeliMissileAim(cv),d=shot.direction'),
    'Míssil real i retícula usen el mateix origen i angle');
+ // El DOM simulava abans un punt d'impacte sempre visible. Repetim
+ // la comprovació amb el context real del joc i models Three.js.
+ const game=await require('./harness.cjs')();
+ const actual=game.run(`(()=>{
+   started=1;paused=false;over=0;
+   cv={t:'tanc',x:0,z:0,hd:0,o:mkV('tanc')};
+   cv.o.position.set(0,2,0);
+   cam.position.set(0,22,35);cam.lookAt(0,5,-40);
+   updateBazookaReticle(.2);
+   const tank={mode:bazookaReticleMode,
+     shown:bazookaReticleElement.style.display,
+     x:bazookaReticleElement.style.left,y:bazookaReticleElement.style.top};
+   cv={t:'heli_combat',x:0,z:0,hd:0,o:mkV('heli_combat'),rockets:4};
+   cv.o.position.set(0,40,0);
+   cam.position.set(0,55,65);cam.lookAt(0,40,-20);
+   updateBazookaReticle(.2);
+   const missile={mode:bazookaReticleMode,
+     shown:bazookaReticleElement.style.display,
+     x:bazookaReticleElement.style.left,y:bazookaReticleElement.style.top};
+   return{tank,missile};
+ })()`);
+ assert.equal(actual.tank.mode,'tank');
+ assert.equal(actual.tank.shown,'block','Retícula del tanc amb torreta i càmera reals');
+ assert.equal(actual.missile.mode,'missile');
+ assert.equal(actual.missile.shown,'block','Retícula de míssils amb helicòpter i càmera reals');
  console.log('OK retícula: tanc, míssils 45°, càrrega, canvi d’arma i bazuca');
 })().catch(e=>{console.error(e);process.exitCode=1});
