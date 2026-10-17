@@ -97,6 +97,21 @@ const assert=require('node:assert/strict');
      checks.heavyStopsAtWire=blasts.length===1&&Pj.length===0;
      checks.boomIsHeavy=String(updFx).includes("boom(g.x,g.y,g.z,16,100,'b')")&&
        String(updFx).includes("boom(b.x,b.y,b.z,48,300,'b')");
+     // Una patrullera de 95 HP ha de ser destruïda per una explosió de
+     // bazooka que toqui la superfície del buc, encara que el centre sigui
+     // fora de la línia directa del projectil.
+     reset();enemies=[{...enemy('patrulla_marina'),hp:95,r:7.5}];
+     const hullRadius=vehicleRadius('llanxa')*.62;
+     boom=saved.boom;
+     boom(hullRadius,1.8,0,18,135*HEAVY_SHOT_DAMAGE_FACTOR,'pb');
+     checks.bazookaDestroysMarineHull=enemies[0].hp<=0;
+     boom=(x,y,z,r,d,own)=>blasts.push({r,d,own});
+     // L'autoapuntat ha d'anticipar una llanxa que es desplaça de costat.
+     const marine={x:0,z:-85,hd:-Math.PI/2,speed:18},
+           aim=bazookaInterceptPoint(marine,0,2,0,2,72*HEAVY_SHOT_SPEED_FACTOR),
+           impactTime=Math.hypot(aim.x,aim.z)/(72*HEAVY_SHOT_SPEED_FACTOR);
+     checks.bazookaLeadsMarine=aim.x>15&&
+       Math.abs(aim.x-18*impactTime)<.01&&Math.abs(aim.z+85)<.01;
      results.heavyMultiplier=HEAVY_SHOT_DAMAGE_FACTOR;
      results.heavySpeedFactor=HEAVY_SHOT_SPEED_FACTOR;
    }finally{

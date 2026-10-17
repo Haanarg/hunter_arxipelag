@@ -172,7 +172,15 @@ function explosionDistanceToVehicleHull(v,x,y,z){
   return Math.max(0,Math.hypot(v.x-x,vy+1-y,v.z-z)-vehicleRadius(v.t)*.62);
 }
 function boom(x,y,z,r,dmg,own,source=null){snd('boom',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/200));const o=new THREE.Mesh(sphG,new THREE.MeshBasicMaterial({color:0xffa030,transparent:true}));o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6});
-if(own!='e')for(const u of enemyCandidatesAt(x,z,r+4)){const d=Math.hypot(u.x-x,u.o.position.y+1.5-y,u.z-z);if(d<r)hurtE(u,dmg*(1-d/r*.5),source||{x,y,z,sx:cv?.x??P.x,sy:(cv?.o?.position.y??P.y)+1.7,sz:cv?.z??P.z,spl:r,own})}
+if(own!='e')for(const u of enemyCandidatesAt(x,z,r+vehicleRadius('llanxa')*.62+4)){
+  // Per a una patrullera es mesura la distància a la superfície del casc,
+  // no al seu centre: impactar a la proa o a un costat també la destrueix.
+  const marine=u.t==='patrulla_marina',
+        distance=Math.hypot(u.x-x,u.o.position.y+(marine?1.8:1.5)-y,u.z-z),
+        d=marine?Math.max(0,distance-vehicleRadius('llanxa')*.62):distance;
+  if(d<r)hurtE(u,dmg*(1-d/r*.5),
+    source||{x,y,z,sx:cv?.x??P.x,sy:(cv?.o?.position.y??P.y)+1.7,sz:cv?.z??P.z,spl:r,own})
+}
 for(const w of wallCandidates(x,z,r)){const dd=Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z);if(dd<r&&y<w.y1+3)dmgW(w,dmg*1.5*(1-dd/(2*r)))}
 for(const b of buildingCandidates(x,z,r)){const dd=Math.hypot(b.x-x,b.z-z),rr2=r+b.w/2;if(dd<rr2&&b.rhp>0){b.rhp-=dmg*1.2*(1-dd/rr2*.6);if(b.rhp<=0)roofBreak(b)}}
 PL.forEach(t=>{if(!t.alive)return;const dd=Math.hypot(t.x-x,t.z-z);if(dd<r)dmgP(t,dmg*1.5*(1-dd/(2*r)))});
@@ -392,7 +400,20 @@ function weaponAimClear(x,y,z,tx,ty,tz){
   }
   return true;
 }
-function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus=null){
+// Solució del punt d'intercepció a velocitat constant per a llanxes mòbils.
+// S'utilitza només al bazooka: la resta d'armes conserva la seva punteria.
+function bazookaInterceptPoint(e,originX,originY,originZ,targetY,speed){
+  const vx=-Math.sin(e.hd)*(e.speed||0),vz=-Math.cos(e.hd)*(e.speed||0),
+        dx=e.x-originX,dy=targetY-originY,dz=e.z-originZ,
+        a=vx*vx+vz*vz-speed*speed,b=2*(dx*vx+dz*vz),
+        c=dx*dx+dy*dy+dz*dz,disc=b*b-4*a*c;
+  if(disc<0||Math.abs(a)<.00001)return {x:e.x,y:targetY,z:e.z};
+  const roots=[(-b-Math.sqrt(disc))/(2*a),(-b+Math.sqrt(disc))/(2*a)],
+        time=Math.min(...roots.filter(t=>t>0));
+  if(!Number.isFinite(time)||time>3.7)return {x:e.x,y:targetY,z:e.z};
+  return {x:e.x+vx*time,y:targetY,z:e.z+vz*time};
+}
+function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus=null,projectileSpeed=0){
   if(focus){focus.target=null;focus.point=null}
   let bestPriority=Infinity,bestDist=range,chosen=null;
   for(const e of E){
@@ -406,7 +427,12 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
           dy=ty-y,len=Math.hypot(dx,dy,dz);
     if(len<=.001||(dx*fx+dy*fy+dz*fz)/len<cone)continue;
     if(!weaponAimClear(x,y,z,e.x,ty,e.z))continue;
-    bestPriority=priority;bestDist=dist;chosen=[dx/len,dy/len,dz/len];
+    const lead=projectileSpeed>0&&e.t==='patrulla_marina'
+      ?bazookaInterceptPoint(e,x,y,z,ty,projectileSpeed):{x:e.x,y:ty,z:e.z},
+          leadX=lead.x-x,leadY=lead.y-y,leadZ=lead.z-z,
+          length=Math.hypot(leadX,leadY,leadZ);
+    bestPriority=priority;bestDist=dist;
+    chosen=[leadX/length,leadY/length,leadZ/length];
     if(focus){focus.target=e;focus.point={x:e.x,y:ty,z:e.z}}
   }
   return chosen||[fx,fy,fz];
@@ -416,12 +442,50 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
 // verda quan hi ha una diana enemiga seleccionada.
 const bazookaReticleElement=document.getElementById('bazookaReticle');
 const bazookaReticleWorld=new THREE.Vector3(),bazookaReticleScreen=new THREE.Vector3();
-let bazookaReticleTimer=0,bazookaReticleLocked=false;
+let bazookaReticleTimer=0,bazookaReticleHasHit=false,bazookaReticleLocked=false;
+// Primera superfície real a la trajectòria; cap objectiu => cap retícula
+// damunt de mar buit o horitzó. No altera en absolut la balística.
+function bazookaFirstSolidHit(x,y,z,dx,dy,dz,range=105){
+  const tx=x+dx*range,ty=y+dy*range,tz=z+dz*range,
+        mx=(x+tx)/2,mz=(z+tz)/2,reach=Math.hypot(tx-x,tz-z)/2;
+  let best=Infinity;
+  const consider=t=>{if(t!=null&&t>=0&&t<=1&&t<best)best=t};
+  for(const w of wallCandidates(mx,mz,reach+2)){
+    if(w.open)continue;
+    consider(segmentAabbT(x,y,z,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1));
+  }
+  for(const b of buildingCandidates(mx,mz,reach+2)){
+    if(b.rhp<=0)continue;
+    consider(b.hangar?hangarRoofSegmentT(x,y,z,tx,ty,tz,b)
+      :segmentAabbT(x,y,z,tx,ty,tz,b.x-b.w/2-.6,b.x+b.w/2+.6,
+        b.fy+b.h-.4,b.fy+b.h+1.4,b.z-b.d/2-.6,b.z+b.d/2+.6));
+  }
+  for(const e of enemyCandidatesAt(mx,mz,reach+16)){
+    if(e.destroyed||e.hp<=0)continue;
+    const marine=e.t==='patrulla_marina';
+    consider(segmentSphereT(x,y,z,tx,ty,tz,e.x,
+      e.o.position.y+(marine?1.8:e.t==='torre'?4.5:1.5),
+      e.z,marine?vehicleRadius('llanxa')*.62:(e.r||1)+.6));
+  }
+  for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){
+    if(v.destroyed)continue;
+    consider(segmentSphereT(x,y,z,tx,ty,tz,v.x,
+      (v.o?.position.y??Math.max(0,hAt(v.x,v.z)))+1,v.z,vehicleRadius(v.t)*.62));
+  }
+  const steps=Math.ceil(range/3);
+  for(let k=1;k<=steps;k++){
+    const t=k/steps;if(t>=best)break;
+    const px=x+(tx-x)*t,pz=z+(tz-z)*t,py=y+(ty-y)*t;
+    if(py<Math.max(hAt(px,pz),0)+.2){consider(t);break}
+  }
+  if(!Number.isFinite(best))return null;
+  return {x:x+(tx-x)*best,y:y+(ty-y)*best,z:z+(tz-z)*best};
+}
 function updateBazookaReticle(dt){
   if(!bazookaReticleElement)return;
   const visible=started&&!paused&&!over&&!cv&&!swimming&&!playerFall&&
     bazookaEquipped&&(inv.bazooka||0)>0;
-  if(!visible){bazookaReticleElement.style.display='none';bazookaReticleTimer=0;return}
+  if(!visible){bazookaReticleElement.style.display='none';bazookaReticleTimer=0;bazookaReticleHasHit=false;return}
   bazookaReticleTimer-=dt;
   if(bazookaReticleTimer<=0){
     bazookaReticleTimer=.08;
@@ -429,12 +493,15 @@ function updateBazookaReticle(dt){
           ox=P.x+fx*1.35,oy=P.y+1.9,oz=P.z+fz*1.35,
           base=Math.hypot(1,.01),focus={},
           direction=autoAimWeaponShot(ox,oy,oz,fx/base,.01/base,fz/base,
-            105,.94,'heavy',focus);
+            105,.94,'heavy',focus,72*HEAVY_SHOT_SPEED_FACTOR);
     bazookaReticleLocked=!!focus.target;
-    if(focus.point)bazookaReticleWorld.set(focus.point.x,focus.point.y,focus.point.z);
-    else bazookaReticleWorld.set(ox+direction[0]*105,oy+direction[1]*105,oz+direction[2]*105);
+    const hit=focus.point||bazookaFirstSolidHit(ox,oy,oz,
+      direction[0],direction[1],direction[2]);
+    bazookaReticleHasHit=!!hit;
+    if(hit)bazookaReticleWorld.set(hit.x,hit.y,hit.z);
     bazookaReticleElement.classList.toggle('locked',bazookaReticleLocked);
   }
+  if(!bazookaReticleHasHit){bazookaReticleElement.style.display='none';return}
   cam.updateMatrixWorld();
   bazookaReticleScreen.copy(bazookaReticleWorld).project(cam);
   const p=bazookaReticleScreen;
@@ -599,7 +666,7 @@ else if(!cv&&sniperEquipped&&inv.franctirador){
   msg='Rifle: '+sniperAmmo+' cartutxos.';msgT=1.5;
 }
 else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}
-else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9,z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,105,.94,'heavy');shoot(x,y,z,ax,ay,az,72,135,18,'pb',mS,3);msg='Bazooka: '+(inv.bazooka||0)+' coets restants.';msgT=2;setDis(false)}
+else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9,z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,105,.94,'heavy',null,72*HEAVY_SHOT_SPEED_FACTOR);shoot(x,y,z,ax,ay,az,72,135,18,'pb',mS,3);Pj[Pj.length-1].life=3.8;msg='Bazooka: '+(inv.bazooka||0)+' coets restants.';msgT=2;setDis(false)}
 else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5,z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,75,.97);shoot(x,y,z,ax,ay,az,130,12,0,'p',mW,SMALL_ARMS_SCALE)}
 else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}
 function segmentAabbT(x0,y0,z0,x1,y1,z1,minX,maxX,minY,maxY,minZ,maxZ){
@@ -659,7 +726,9 @@ function updPj(dt){
 
     // Personatges i vehicles: intersecció contínua amb volum esfèric aproximat.
     if(p.own==='p'||p.own==='pb'){
-      for(const u of enemyCandidatesAt(mx,mz,reach+4)){
+      // També cercam els centres de llanxes situats a cel·les veïnes
+      // quan només la proa o la popa intercepten el segment del coet.
+      for(const u of enemyCandidatesAt(mx,mz,reach+vehicleRadius('llanxa')*.62+4)){
         // Les llanxes patrulleres reben bales lleugeres per tot el buc,
         // també a proa i popa; el radi de soldat era massa petit.
         const marine=u.t==='patrulla_marina',

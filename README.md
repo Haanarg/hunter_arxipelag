@@ -42,6 +42,13 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Bazooka contra patrulleres i retícula discreta (v0.5.24)
+
+- La retícula del bazooka és **verda, petita i translúcida**. Només apareix si l'autoapuntat selecciona un enemic o la trajectòria troba una superfície sòlida (terreny, paret, edifici o vehicle). No es dibuixa quan el míssil només avançaria cap a l'horitzó.
+- Els coets del bazooka anticipen la posició de les **patrulleres en moviment** mitjançant la velocitat i el rumb de la llanxa. La retícula continua identificant la posició actual del blanc. El cercador espacial de projectils té en compte les dimensions completes del buc, fins i tot quan el centre queda en una altra cel·la.
+- El dany explosiu contra patrulleres té en compte **la superfície del buc** en lloc de dependre de la distància al centre; un impacte directe de bazooka ha de destruir-ne una de 95 HP. El coet disposa de temps de vol suficient per interceptar l'objectiu.
+- S'afegeixen dues comprovacions petites al test balístic: anticipació de moviment i explosió al buc, sense incorporar-les a una bateria automàtica llarga.
+
 ## Retícula del bazooka i granades de l'helicòpter utilitari (v0.5.23)
 
 - El bazooka mostra una **retícula projectada sobre el mateix objectiu** que selecciona l'autoapuntat (105 m i con de 0,94). És blanca si apunta lliurement i verda si ha fixat un enemic. La mira s'amaga en canviar d'arma, entrar en un vehicle o obrir un menú.
