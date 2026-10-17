@@ -9,6 +9,7 @@ on:
       - 'tools/build-runtime.cjs'
       - 'tests/joystick-running.cjs'
       - 'tests/player-locomotion.cjs'
+      - 'tests/pier-access.cjs'
       - '.github/workflows/runtime-bundle.yml'
   workflow_dispatch:
 permissions:
@@ -37,6 +38,7 @@ jobs:
         run: |
           node tests/joystick-running.cjs
           node tests/player-locomotion.cjs
+          node tests/pier-access.cjs
       - name: Publicar només si han passat les proves
         run: |
           git config user.name "github-actions[bot]"

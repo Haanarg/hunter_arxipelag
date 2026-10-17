@@ -212,15 +212,14 @@ const compoundPier=(x1,z1,x2,z2,width=4.2)=>{
   rampMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),
     new THREE.Vector3(ux*rampLength,rise,uz*rampLength).normalize());
   world.add(rampMesh);staticDecorRoots.push(rampMesh);
-  for(const side of [-1,1]){
-    const rail=wireRod([rampStartX+px*side*(width*.48),rampGround+.7,rampStartZ+pz*side*(width*.48)],
-      [x1+px*side*(width*.48),PIER_DECK_Y+.7,z1+pz*side*(width*.48)],.055,0x554537);
-    staticDecorRoots.push(rail);
-  }
+  // La rampa no porta baranes que obstaculitzin l'entrada.
+  // Es pot baixar pels laterals; el nivell del moll impedeix pujar de l'aigua.
   const yaw=Math.atan2(dx,dz);
   for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n,m=(a+b)/2,seg=L/n,mx=x1+dx*m,mz=z1+dz*m,y=PIER_DECK_Y-.14;
     const deck=new THREE.Mesh(new THREE.BoxGeometry(width,.28,seg+.12),M(0x816346,'paint'));deck.position.set(mx,y,mz);deck.rotation.y=yaw;world.add(deck);staticDecorRoots.push(deck);piers.push({x:mx,z:mz,ux,uz,px,pz,length:seg+.12,width,y:y+.14});
-    for(const side of[-1,1]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,3.35,8),M(0x48433e,'metal'));post.position.set(mx+px*side*(width*.44),PIER_DECK_Y-1.15,mz+pz*side*(width*.44));world.add(post);staticDecorRoots.push(post);if(i%2===0){const rail=wireRod([mx+px*side*(width*.44),PIER_DECK_Y+.35,mz+pz*side*(width*.44)],[mx+px*side*(width*.44)+ux*seg*.8,PIER_DECK_Y+.35,mz+pz*side*(width*.44)+uz*seg*.8],.035,0x4b5154);staticDecorRoots.push(rail)}}
+    // Els pilons decoratius no bloquegen la circulació; no hi ha
+    // barana contínua en les unions en T ni als costats del pantalà.
+    for(const side of[-1,1]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,3.35,8),M(0x48433e,'metal'));post.position.set(mx+px*side*(width*.44),PIER_DECK_Y-1.15,mz+pz*side*(width*.44));world.add(post);staticDecorRoots.push(post)}
     compoundClear.push({x:mx,z:mz,r:width*.8+1.5})
   }
   for(const side of[-1,1]){const b=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,.9,8),M(0x3e4447,'metal'));b.position.set(x2+px*side*(width*.35),PIER_DECK_Y+.26,z2+pz*side*(width*.35));world.add(b);staticDecorRoots.push(b)}
