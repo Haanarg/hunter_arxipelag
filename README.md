@@ -42,6 +42,11 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Cadència de la tanqueta enemiga (v0.5.22)
+
+- La tanqueta enemiga comparteix el mateix interval de tret que la del jugador: **0,16 segons** (fins a 6,25 trets/s).
+- La constant `TANKETTE_FIRE_INTERVAL` és comuna a ambdues tanquetes per evitar futures divergències. No canvien dany, precisió, moviment ni condicions de visibilitat i orientació del canó de la IA.
+
 ## Patrulleres vulnerables, molls elevats i visió ampliada (v0.5.21)
 
 - Les **patrulleres enemigues** tenen un volum d'impacte coherent amb la longitud del buc. Reben els impactes lleugers de la metralladora de l'helicòpter de combat, la tanqueta i la pistola del jugador; tancs i tanquetes continuen protegits.

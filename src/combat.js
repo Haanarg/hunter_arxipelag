@@ -503,7 +503,7 @@ if(c=='tanc'||c=='tanqueta'){
     fcd=.9;shoot(p.x,p.y,p.z,d.x,d.y,d.z,85,45,8,'p',mS,2.2);
     Pj[Pj.length-1].life=4.4;
   }else{
-    fcd=.16;shoot(p.x,p.y,p.z,d.x,d.y,d.z,135,10,0,'p',mW,SMALL_ARMS_SCALE);
+    fcd=TANKETTE_FIRE_INTERVAL;shoot(p.x,p.y,p.z,d.x,d.y,d.z,135,10,0,'p',mW,SMALL_ARMS_SCALE);
   }
 }
 else if(c=='heli'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*3.2*VS.heli,y=cv.o.position.y+.5*VS.heli,z=cv.z+fz*3.2*VS.heli;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,125,.91,'heavy');fcd=.6;shoot(x,y,z,ax,ay,az,85,45,8,'p',mS,2)}
