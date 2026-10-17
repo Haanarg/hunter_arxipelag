@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
  const report=game.run(`(()=>{
    world=new THREE.Group();scene.add(world);
    const saved={wallCandidates,buildingCandidates,enemyCandidatesAt,vehicleCandidatesAt,treeAt,hAt,
-     boom,cv,Px:P.x,Pz:P.z,Py:P.y};
+     boom,cv,E,seedSearchMode,kills,explodeEnemyVehicle,Px:P.x,Pz:P.z,Py:P.y};
    const checks={},results={};
    let walls=[],buildings=[],enemies=[],vehicles=[],blasts=[];
    const reset=()=>{
@@ -36,8 +36,10 @@ const assert=require('node:assert/strict');
      const light=fireShot();
      reset();const heavy=fireShot(8);
      checks.classes=light.type==='light'&&heavy.type==='heavy';
-     checks.heavySlower=heavy.speed<light.speed&&heavy.speed>0;
+     checks.heavyFaster=heavy.speed>light.speed&&Math.abs(heavy.speed/light.speed-1.17)<1e-9;
      checks.heavyLethal=heavy.power>light.power;
+     const model=Pj.at(-1)?.o;
+     checks.heavyHalfSize=!!model&&Math.abs(model.scale.x-.35)<1e-9;
      reset();walls=[wall(false,true)];
      fireShot();
      checks.lightThroughWire=walls[0].hp===100&&Pj.length===1;
@@ -86,6 +88,22 @@ const assert=require('node:assert/strict');
      reset();enemies=[{...enemy('patrulla_marina'),r:7.5}];
      fireShot();
      checks.marinePatrolPistol=enemies[0].hp<140;
+     // Regressió d'inicialització REAL: abans faltava EC.patrulla_marina,
+     // mkEn produïa u.hp undefined i restar dany el convertia en NaN.
+     const formerEnemies=E,formerSeedSearch=seedSearchMode;
+     seedSearchMode=true;E=[];
+     const livePatrol=mkEn('patrulla_marina',0,0,0);
+     checks.marinePatrolInitialHealth=livePatrol.hp===95&&
+       Number.isFinite(livePatrol.hp);
+     hurtE(livePatrol,35);
+     checks.marinePatrolTakesDamage=livePatrol.hp===60;
+     // Mateixa ruta de destrucció real (killEnemy): simulam només
+     // les partícules per no generar geometria durant aquest test.
+     explodeEnemyVehicle=u=>{u.destroyed=true};
+     hurtE(livePatrol,61);
+     checks.marinePatrolHeavyKill=livePatrol.destroyed&&!E.includes(livePatrol);
+     explodeEnemyVehicle=saved.explodeEnemyVehicle;
+     E=formerEnemies;seedSearchMode=formerSeedSearch;
      reset();enemies=[enemy('torre')];
      fireShot();
      checks.towerProtected=enemies[0].hp===140;
@@ -117,6 +135,8 @@ const assert=require('node:assert/strict');
    }finally{
      reset();for(const k of ['wallCandidates','buildingCandidates','enemyCandidatesAt','vehicleCandidatesAt',
        'treeAt','hAt','boom','cv'])globalThis[k]=saved[k];
+     E=saved.E;seedSearchMode=saved.seedSearchMode;kills=saved.kills;
+     explodeEnemyVehicle=saved.explodeEnemyVehicle;
      P.x=saved.Px;P.z=saved.Pz;P.y=saved.Py;scene.remove(world);
    }
    return {checks,results}

@@ -127,7 +127,8 @@ function explodeVehicle(v){
 }
 // Els blindats requereixen projectils pesats; la resta de vehicles
 // poden patir impactes lleugers. També protegeix el conductor.
-const HEAVY_SHOT_SPEED_FACTOR=.78,HEAVY_SHOT_DAMAGE_FACTOR=1.3;
+// Projectils explosius: 50% més ràpids i meitat de mida visual.
+const HEAVY_SHOT_SPEED_FACTOR=1.17,HEAVY_SHOT_DAMAGE_FACTOR=1.3,HEAVY_SHOT_VISUAL_SCALE=.5;
 const shotClassFromSplash=spl=>spl>0?'heavy':'light';
 const isArmoredVehicle=v=>v?.t==='tanqueta'||v?.t==='tanc'||
   (v&&Math.max(v.armor??0,VT[v.t]?.armor??0)>=6);
@@ -155,7 +156,7 @@ function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc){
   // ascendents, descendents i diagonals.
   const heavy=shotClass==='heavy';
   const o=new THREE.Mesh(heavy?gHeavy:gB,mat);
-  o.scale.setScalar(sc);
+  o.scale.setScalar(sc*(heavy?HEAVY_SHOT_VISUAL_SCALE:1));
   if(heavy){
     const heading=new THREE.Vector3(dx,dy,dz);
     if(heading.lengthSq()>1e-12)

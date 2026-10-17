@@ -42,6 +42,13 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Projectils pesants i patrulleres destructibles (v0.5.25)
+
+- **Tots els projectils pesants** tenen la **meitat de mida visual** i una velocitat **50% superior** a la de v0.5.24 (factor de velocitat `0.78 → 1.17`, factor visual `0.5`). El dany, les explosions i les dimensions de les col·lisions no canvien.
+- **Error de causa arrel corregit:** faltava `patrulla_marina` a la taula `EC`. Les patrulleres naixien sense `hp` i en rebre dany els punts de vida es transformaven en `NaN`, cosa que impedia destruir-les. Ara comencen amb **95 HP** i poden explotar quan s'esgoten.
+- Les patrulleres es registren també a la graella espacial de vehicles i la seva categoria es correspon amb la col·lisió de `llanxa`, per evitar radis invàlids en maniobres i consultes entre vehicles.
+- Test balístic ampliat per comprovar la velocitat i la mida dels projectils pesants, la vida inicial d'una patrullera **creada amb `mkEn`**, l'aplicació de dany i la seva destrucció. No s'afegeixen execucions automàtiques llargues.
+
 ## Bazooka contra patrulleres i retícula discreta (v0.5.24)
 
 - La retícula del bazooka és **verda, petita i translúcida**. Només apareix si l'autoapuntat selecciona un enemic o la trajectòria troba una superfície sòlida (terreny, paret, edifici o vehicle). No es dibuixa quan el míssil només avançaria cap a l'horitzó.
