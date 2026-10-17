@@ -1581,7 +1581,7 @@ window.HUNTER_VEHICLE_DYNAMICS=Object.freeze({
     cotxe:Object.freeze({n:'Cotxe',m:'l',a:36,dr:.9,tu:1.9,cd:22,ch:8,response:5.2,steerResponse:6.2,yawResponse:6.5,maxF:38,maxR:14,landGrip:.9,steerFade:.42,mass:1,armor:2,life:4}),
     moto:Object.freeze({n:'Moto',m:'l',a:42,dr:.9,tu:2.5,cd:18,ch:7,response:6.4,steerResponse:7.2,yawResponse:8,maxF:43,maxR:12,landGrip:.84,steerFade:.28,mass:.55,armor:0,life:2}),
     bici:Object.freeze({n:'Bicicleta',m:'l',a:14,dr:.8,tu:2.6,cd:14,ch:6,response:7.2,steerResponse:8,yawResponse:9,maxF:17,maxR:6,landGrip:.94,steerFade:.18,mass:.2,armor:0,life:1}),
-    barca_rems:Object.freeze({n:'Barca de rems',m:'w',a:8,dr:.95,tu:1.6,cd:8,ch:4,response:3.4,steerResponse:4,yawResponse:3.2,maxF:8,maxR:4,waterDrift:.2,waterSteerMin:.18,armor:0,life:2}),
+    barca_rems:Object.freeze({n:'Barca de rems',m:'w',a:8,dr:.95,tu:1.6,cd:15,ch:7,response:3.4,steerResponse:4,yawResponse:3.2,maxF:8,maxR:4,waterDrift:.2,waterSteerMin:.18,armor:0,life:2}),
     windsurf:Object.freeze({n:'Windsurf',m:'w',a:18,dr:.75,tu:2.1,cd:16,ch:5,response:4.5,steerResponse:5.5,yawResponse:4.8,maxF:22,maxR:5,waterDrift:.42,waterSteerMin:.3,armor:0,life:1}),
     camio:Object.freeze({n:'Camió militar',m:'l',a:24,dr:.92,tu:1.35,cd:27,ch:9,response:3.1,steerResponse:3.4,yawResponse:3.2,maxF:29,maxR:10,landGrip:.82,steerFade:.5,mass:2.2,armor:4,life:6}),
     tanqueta:Object.freeze({n:'Tanqueta blindada',m:'l',a:20,dr:.92,tu:1.45,cd:25,ch:10,response:2.8,steerResponse:3.1,yawResponse:2.9,maxF:24,maxR:9,landGrip:.88,steerFade:.38,mass:3.2,armor:7,life:10}),
@@ -2398,8 +2398,12 @@ window.HUNTER_RIDER=Object.freeze({
         pistol.visible=false;pistolParts.flash.visible=false;return;
       }
       pistol.visible=true;
+      // El braç dret surt SEMPRE de l'espatlla dreta. La pose antiga
+      // l'unia a l'esquerra en rems/windsurf, provocant torsions.
       const sc=v.t==='llanxa'?1.3:v.t==='llanxa_coets'?1.35:scales[v.t],
-            shoulder=shoulderAt(v.t==='barca_rems'||v.t==='windsurf'?-1:1),
+            twist=v.t==='barca_rems'?-.55:v.t==='windsurf'?.33:.24;
+      torso.rotation.y+=twist*u.shotBlend;
+      const shoulder=shoulderAt(1),
             forearm=limbs[3],
             restingHand=new THREE.Vector3(0,-forearm.userData.restLength*forearm.scale.y,0)
               .applyQuaternion(forearm.quaternion).add(forearm.position),
@@ -3687,7 +3691,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
       forearmLength:Math.hypot(.62*1.2,.025*1.2),
       axisX:new THREE.Vector3(1,0,0),
       v1:V(),v2:V(),v3:V(),v4:V(),right:V(),left:V(),idle:V(),aim:V(),
-      q1:Q(),q2:Q(),q3:Q(),idleQ:Q(),aimQ:Q()
+      q1:Q(),q2:Q(),q3:Q(),idleQ:Q(),aimQ:Q(),torsoQ:Q(),rootQ:Q()
     };
     const knife=new THREE.Group();u.aer.add(knife);
     makePlayerKnife(THREE,knife,box);
@@ -3884,12 +3888,15 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // i les cames no es desplacen cap endavant amb l'arrel del personatge.
     u.upperBody.rotation.x+=(-.32*run-u.upperBody.rotation.x)*k;
     // A terra i en sortir de l'aigua, desfem el gir propi del crol.
-    u.upperBody.rotation.y+=(0-u.upperBody.rotation.y)*k;
+    // La pistola incorpora una rotació de cintura de fins a 18°.
+    // El cap manté la mirada endavant i les cames el rumb.
+    const waistAim=.32*(u.pistolBlend||0);
+    u.upperBody.rotation.y+=(waistAim-u.upperBody.rotation.y)*(1-Math.exp(-17*dt));
     u.upperBody.rotation.z+=(0-u.upperBody.rotation.z)*k;
     // El cap compensa la inclinació del tronc i continua mirant de
     // front, també durant les transicions d'entrada i sortida de cursa.
     tx(u.head,-u.upperBody.rotation.x,k);
-    u.head.rotation.y+=(0-u.head.rotation.y)*k;
+    u.head.rotation.y+=(-u.upperBody.rotation.y-u.head.rotation.y)*k;
     u.head.rotation.z+=(0-u.head.rotation.z)*k;
     player.rotation.x+=(0-player.rotation.x)*k;
     const walk=Math.sin(ph)*move*dir,walk2=Math.cos(ph)*move;
@@ -4011,9 +4018,14 @@ window.HUNTER_CHARACTERS=Object.freeze({
       u.ar.rotation.y=0;u.al.rotation.y=0;
       u.aer.rotation.y=0;u.ael.rotation.y=0;
     }
+    // Les mans apunten al món seguint la direcció del jugador, no la
+    // nova rotació local de cintura. Després l'IK treballa en el tors.
     if(blend>.001){
-      rig.right.set(.12,2.95+up-u.upperBodyPivotHeight,-1.07+back);
-      rig.left.set(-.075,2.96+up-u.upperBodyPivotHeight,-1.115+back);
+      player.updateMatrixWorld(true);
+      rig.right.set(.12,2.95+up,-1.07+back);
+      player.localToWorld(rig.right);u.upperBody.worldToLocal(rig.right);
+      rig.left.set(-.075,2.96+up,-1.115+back);
+      player.localToWorld(rig.left);u.upperBody.worldToLocal(rig.left);
       aimPlayerPistolArm(u.ar,u.aer,rig.right,1,rig,blend);
       aimPlayerPistolArm(u.al,u.ael,rig.left,-1,rig,blend);
     }
@@ -4021,8 +4033,14 @@ window.HUNTER_CHARACTERS=Object.freeze({
     rig.idle.copy(u.pistolIdleMount.position).applyQuaternion(u.aer.quaternion)
       .add(u.aer.position).applyQuaternion(u.ar.quaternion).add(u.ar.position);
     rig.idleQ.copy(u.ar.quaternion).multiply(u.aer.quaternion).multiply(u.pistolIdleMount.quaternion);
-    rig.aim.set(.045,3.10+up-u.upperBodyPivotHeight,-1.13+back);
+    rig.aim.set(.045,3.10+up,-1.13+back);
+    player.updateMatrixWorld(true);
+    player.localToWorld(rig.aim);u.upperBody.worldToLocal(rig.aim);
     rig.aimQ.setFromAxisAngle(rig.axisX,.045+kick*.095);
+    // El canó manté el rumb del jugador mentre el tors es torsiona.
+    u.upperBody.getWorldQuaternion(rig.torsoQ).invert();
+    player.getWorldQuaternion(rig.rootQ);
+    rig.aimQ.premultiply(rig.torsoQ.multiply(rig.rootQ));
     u.gun.position.copy(rig.idle).lerp(rig.aim,blend);
     u.gun.quaternion.copy(rig.idleQ).slerp(rig.aimQ,blend);
     u.pistolSlide.position.z=kick*.065;
@@ -7810,11 +7828,12 @@ for(const u of E)if(ENEMY_TRAIL_TYPES.has(u.t))
 movementFx.update(dt,cam);
  PT.forEach(p=>{if(p.life>0){p.life-=dt;if(p.rise)p.m.position.y+=p.rise*dt;p.m.scale.setScalar(p.s*(1+(1-p.life/p.max)*1.15));p.m.material.opacity=Math.max(0,p.life/p.max)*.8;if(p.life<=0){p.m.visible=false;p.rise=0}}});
 if(seaAudio){const coastal=Math.max(.25,1-Math.max(0,hAt(P.x,P.z))/22),
-      // El windsurf només fa un fregadís molt suau d'aigua, no motor.
-      waterVolume=cv?.t==='windsurf'?.026+Math.min(1,Math.abs(cv.v)/22)*.016:.035+coastal*.05;
+      // La barca de rems, com el windsurf, només fa fregadís d'aigua.
+      waterVolume=cv&&(cv.t==='windsurf'||cv.t==='barca_rems')
+        ?.026+Math.min(1,Math.abs(cv.v)/22)*.016:.035+coastal*.05;
   seaAudio.gain.gain.setTargetAtTime(over?0:waterVolume,AC.currentTime,.5)}
 if(eng){const c=cv?VT[cv.t]:null;
-  eng.g.gain.value=c&&cv.t!=='bici'&&cv.t!=='windsurf'&&!over?.02+Math.min(1,Math.abs(cv.v)/40)*.03:0;
+  eng.g.gain.value=c&&!['bici','windsurf','barca_rems'].includes(cv.t)&&!over?.02+Math.min(1,Math.abs(cv.v)/40)*.03:0;
   eng.o.frequency.value=c?(c.m=='a'?60:35)+Math.abs(cv.v)*(c.m=='a'?1:2.5):40}}
 const seedRandomEl=document.getElementById('seedRandom'),seedInputEl=document.getElementById('seedInput'),iniEl=document.getElementById('ini'),
 startMenuEl=document.getElementById('startMenu'),seedSearchScreenEl=document.getElementById('seedSearchScreen'),
