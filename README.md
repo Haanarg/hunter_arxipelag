@@ -42,6 +42,12 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Retícula del bazooka i granades de l'helicòpter utilitari (v0.5.23)
+
+- El bazooka mostra una **retícula projectada sobre el mateix objectiu** que selecciona l'autoapuntat (105 m i con de 0,94). És blanca si apunta lliurement i verda si ha fixat un enemic. La mira s'amaga en canviar d'arma, entrar en un vehicle o obrir un menú.
+- L'**helicòpter utilitari ja no dispara projectils propis**. Amb **Dispar / F** llança una granada de l'inventari del jugador, encara que no estigui equipada; se'n resta una, es mostra la quantitat al HUD i s'avisa si no en queden.
+- Les granades surten de la porta lateral de l'helicòpter, amb inèrcia d'avançament i desplaçament lateral. Utilitzen la física, l'explosió i el model de les granades existents. El sistema de granades carregades a peu i les armes de l'helicòpter de combat continuen igual.
+
 ## Cadència de la tanqueta enemiga (v0.5.22)
 
 - La tanqueta enemiga comparteix el mateix interval de tret que la del jugador: **0,16 segons** (fins a 6,25 trets/s).

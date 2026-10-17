@@ -315,6 +315,31 @@ function updateGrenadeCharge(dt){
   a.circle.position.set(aim.landing.x,aim.landing.y+.035,aim.landing.z);
   a.fill.position.set(aim.landing.x,aim.landing.y+.02,aim.landing.z);
 }
+// Les granades de l'helicòpter utilitari provenen de l'inventari,
+ // sense requerir que el jugador les tengui equipades. Surten per la
+ // porta lateral i conserven la inèrcia de l'aparell.
+function throwHelicopterGrenade(){
+  if(!cv||cv.t!=='heli'||over||paused||fcd>0)return false;
+  if(!inv.granada){
+    msg='No tens granades a l’inventari.';msgT=2;fcd=.35;return false;
+  }
+  const v=cv,fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),
+        rightX=Math.cos(v.hd),rightZ=-Math.sin(v.hd),
+        forward=(v.v||0)*.9+7,side=(v.strafeV||0)+4.5,
+        flight={
+          x:v.x+fx*1.5+rightX*2.5,
+          y:v.o.position.y+2.4,
+          z:v.z+fz*1.5+rightZ*2.5,
+          vx:fx*forward+rightX*side,vy:5,
+          vz:fz*forward+rightZ*side,t:2.4
+        };
+  inv.granada--;
+  if(inv.granada<=0){delete inv.granada;grenadeEquipped=false}
+  fcd=.7;setDis(false);
+  launchGrenade({flight});
+  msg='Granades: '+(inv.granada||0);msgT=1.5;
+  return true;
+}
 function throwGrenade(power=0){
   if(over||cv||swimming||fcd>0||!grenadeEquipped||!inv.granada)return false;
   // Fixem el llançament quan s'allibera el botó perquè la predicció i
@@ -367,7 +392,8 @@ function weaponAimClear(x,y,z,tx,ty,tz){
   }
   return true;
 }
-function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light'){
+function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus=null){
+  if(focus){focus.target=null;focus.point=null}
   let bestPriority=Infinity,bestDist=range,chosen=null;
   for(const e of E){
     if(e.destroyed||e.hp<=0||shotClass==='light'&&(isArmoredEnemy(e)||e.t==='torre'))continue;
@@ -381,8 +407,43 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light'){
     if(len<=.001||(dx*fx+dy*fy+dz*fz)/len<cone)continue;
     if(!weaponAimClear(x,y,z,e.x,ty,e.z))continue;
     bestPriority=priority;bestDist=dist;chosen=[dx/len,dy/len,dz/len];
+    if(focus){focus.target=e;focus.point={x:e.x,y:ty,z:e.z}}
   }
   return chosen||[fx,fy,fz];
+}
+// Retícula del bazooka: empra EXACTAMENT les coordenades i el con de
+// selecció d'autoapuntat del tret real. Blanca si apunta lliurement,
+// verda quan hi ha una diana enemiga seleccionada.
+const bazookaReticleElement=document.getElementById('bazookaReticle');
+const bazookaReticleWorld=new THREE.Vector3(),bazookaReticleScreen=new THREE.Vector3();
+let bazookaReticleTimer=0,bazookaReticleLocked=false;
+function updateBazookaReticle(dt){
+  if(!bazookaReticleElement)return;
+  const visible=started&&!paused&&!over&&!cv&&!swimming&&!playerFall&&
+    bazookaEquipped&&(inv.bazooka||0)>0;
+  if(!visible){bazookaReticleElement.style.display='none';bazookaReticleTimer=0;return}
+  bazookaReticleTimer-=dt;
+  if(bazookaReticleTimer<=0){
+    bazookaReticleTimer=.08;
+    const fx=-Math.sin(P.hd),fz=-Math.cos(P.hd),
+          ox=P.x+fx*1.35,oy=P.y+1.9,oz=P.z+fz*1.35,
+          base=Math.hypot(1,.01),focus={},
+          direction=autoAimWeaponShot(ox,oy,oz,fx/base,.01/base,fz/base,
+            105,.94,'heavy',focus);
+    bazookaReticleLocked=!!focus.target;
+    if(focus.point)bazookaReticleWorld.set(focus.point.x,focus.point.y,focus.point.z);
+    else bazookaReticleWorld.set(ox+direction[0]*105,oy+direction[1]*105,oz+direction[2]*105);
+    bazookaReticleElement.classList.toggle('locked',bazookaReticleLocked);
+  }
+  cam.updateMatrixWorld();
+  bazookaReticleScreen.copy(bazookaReticleWorld).project(cam);
+  const p=bazookaReticleScreen;
+  if(p.z<-1||p.z>1||Math.abs(p.x)>1||Math.abs(p.y)>1){
+    bazookaReticleElement.style.display='none';return;
+  }
+  bazookaReticleElement.style.display='block';
+  bazookaReticleElement.style.left=((p.x+1)*50)+'%';
+  bazookaReticleElement.style.top=((1-p.y)*50)+'%';
 }
 // Conservem el punt de sortida horitzontal del tanc i la tanqueta (0 graus).
 function autoAimArmoredShot(x,y,z,fx,fz,range){
@@ -506,7 +567,7 @@ if(c=='tanc'||c=='tanqueta'){
     fcd=TANKETTE_FIRE_INTERVAL;shoot(p.x,p.y,p.z,d.x,d.y,d.z,135,10,0,'p',mW,SMALL_ARMS_SCALE);
   }
 }
-else if(c=='heli'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*3.2*VS.heli,y=cv.o.position.y+.5*VS.heli,z=cv.z+fz*3.2*VS.heli;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,125,.91,'heavy');fcd=.6;shoot(x,y,z,ax,ay,az,85,45,8,'p',mS,2)}
+else if(c==='heli'){throwHelicopterGrenade();return}
 else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*4.1*VS.heli_combat,y=cv.o.position.y+.15,z=cv.z+fz*4.1*VS.heli_combat;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,130,.91);fcd=.12;shoot(x,y,z,ax,ay,az,145,9,0,'p',mB,.85)}
 
 else if(c=='llanxa_coets'){secondaryWeapon();return}
