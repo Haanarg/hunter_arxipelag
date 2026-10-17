@@ -50,23 +50,22 @@ window.HUNTER_RIDER=Object.freeze({
       const sc=v.t==='llanxa'?1.3:v.t==='llanxa_coets'?1.35:scales[v.t],
             rowing=v.t==='barca_rems',
             twist=v.t==='windsurf'?.33:.24;
+      // A la barca l'arma s'ha de veure a escala amb el remador.
+      pistol.scale.setScalar(rowing?.56:.92);
       if(rowing){
-        // Remant mira a popa (Y=PI). Per disparar es gira per la seva
-        // DRETA (angle DECREIXENT: PI -> 0, passant per PI/2) fins
-        // encarar la proa (-Z). No giriam el buc ni les cames.
-        torso.rotation.y=Math.PI*(1-u.shotBlend);
+        // Remant mira a popa (PI): gira només 90° a la dreta
+        // fins al perfil (PI/2), i la mà dreta dispara cap a proa.
+        // No giram ni el buc ni la pelvis.
+        torso.rotation.y=Math.PI-Math.PI/2*u.shotBlend;
       }else torso.rotation.y+=twist*u.shotBlend;
       const shoulder=shoulderAt(1),
             forearm=limbs[3],
             restingHand=new THREE.Vector3(0,-forearm.userData.restLength*forearm.scale.y,0)
               .applyQuaternion(forearm.quaternion).add(forearm.position),
-            // La mà acompanya el gir del tors, davant de l'espatlla
-            // anatòmica dreta. A la barca acabarem apuntant a proa.
-            reach=rowing?vec(.52*sc,-.29,-.75*sc):
+            // Quan el tors està de perfil la proa és la seva dreta.
+            // El braç dret apunta cap a -Z sense haver de retorçar-lo.
+            reach=rowing?vec(.58*sc,-.29,-.88*sc):
               vec(.25*sc,-.29,-1.13*sc);
-      // En la transició popa->proa, el braç dret es manté al
-      // costat dret i passa davant del pit sense travessar-lo.
-      if(rowing)reach.applyQuaternion(torso.quaternion);
       const target=shoulder.clone().add(reach),
             hand=restingHand.lerp(target,u.shotBlend),
             elbow=shoulder.clone().lerp(hand,.57);

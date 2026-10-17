@@ -1,0 +1,60 @@
+#!/usr/bin/env node
+// Regressió de retícula: trajectòria de canó real, míssils i bazuca.
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const assert=require('node:assert/strict');
+const {pathToFileURL}=require('node:url');
+(async()=>{
+ const T=await import(pathToFileURL(path.join(__dirname,'../vendor/three-r186.module.mjs')).href);
+ const src=fs.readFileSync(path.join(__dirname,'../src/combat.js'),'utf8');
+ const helper=src.slice(src.indexOf('function combatHeliMissileAim('),
+    src.indexOf('// Retícula del bazooka:',src.indexOf('function combatHeliMissileAim(')));
+ const fn=src.slice(src.indexOf('function updateBazookaReticle(dt){'),
+    src.indexOf('// Conservem el punt',src.indexOf('function updateBazookaReticle(dt){')));
+ assert.ok(helper.startsWith('function combatHeliMissileAim('));
+ assert.ok(fn.startsWith('function updateBazookaReticle(dt){'));
+ const ui={style:{display:'none'},classList:{locked:false,toggle(name,val){this.locked=val}}};
+ const gun={origin:new T.Vector3(0,2,0),direction:new T.Vector3(0,0,-1)};
+ const ctx={
+   THREE:T,window:{HUNTER_VEHICLES:{turretShot:()=>gun}},bazookaReticleElement:ui,
+   bazookaReticleWorld:new T.Vector3(),bazookaReticleScreen:new T.Vector3(),
+   bazookaReticleTimer:0,bazookaReticleHasHit:false,bazookaReticleMode:null,
+   started:true,paused:false,over:false,playerFall:null,swimming:false,
+   bazookaEquipped:false,inv:{bazooka:2},P:{x:0,y:0,z:0,hd:0},cv:null,
+   VS:{heli_combat:1.82},HEAVY_SHOT_SPEED_FACTOR:1,
+   cam:new T.PerspectiveCamera(58,1,0.1,500),
+   // L'objectiu simulat està sempre a 25 m i dins del camp de visió.
+   bazookaFirstSolidHit:(x,y,z,dx,dy,dz,range)=>({x:0,y:0,z:-25}),
+   autoAimWeaponShot:(x,y,z,dx,dy,dz,range,cone,kind,focus)=>{
+     ctx.calls.push({x,y,z,dx,dy,dz,range,cone,kind});
+     if(focus){focus.target={r:2};focus.point={x:0,y:0,z:-25}}
+     return [dx,dy,dz];
+   },calls:[]
+ };
+ ctx.cam.position.set(0,3,10);ctx.cam.lookAt(0,0,-25);
+ vm.createContext(ctx);
+ vm.runInContext(helper+fn,ctx);
+ const refresh=()=>vm.runInContext('updateBazookaReticle(.1)',ctx);
+ ctx.cv={t:'tanc',o:new T.Group()};
+ refresh();
+ assert.equal(ctx.bazookaReticleMode,'tank','Canó del tanc seleccionat');
+ assert.equal(ctx.calls.at(-1).range,220,'Abast de la retícula del tanc');
+ assert.equal(ctx.calls.at(-1).kind,'heavy','Tanc: projectil pesat');
+ assert.equal(ui.style.display,'block','Impacte visible a la pantalla');
+ ctx.calls=[];
+ ctx.cv={t:'heli_combat',x:0,z:0,hd:0,o:new T.Group(),rockets:3};
+ ctx.cv.o.position.y=15;
+ refresh();
+ assert.equal(ctx.bazookaReticleMode,'missile','Retícula de míssils en combat');
+ assert.equal(ctx.calls.at(-1).range,120,'Abast del míssil');
+ assert.ok(ctx.calls.at(-1).dy<-.7,'Míssils: angle real de 45° cap avall');
+ assert.equal(ctx.calls.at(-1).kind,'heavy','Retícula usa foc pesat');
+ ctx.cv.rockets=0;refresh();
+ assert.equal(ui.style.display,'none','Sense míssils la retícula desapareix');
+ ctx.cv=null;ctx.bazookaEquipped=true;refresh();
+ assert.equal(ctx.bazookaReticleMode,'bazooka','Bazuca conserva la seva retícula');
+ ctx.bazookaEquipped=false;refresh();
+ assert.equal(ui.style.display,'none','Sense armes compatibles la retícula desapareix');
+ assert.ok(src.includes('const shot=combatHeliMissileAim(cv),d=shot.direction'),
+   'Míssil real i retícula usen el mateix origen i angle');
+ console.log('OK retícula: tanc, míssils 45°, càrrega, canvi d’arma i bazuca');
+})().catch(e=>{console.error(e);process.exitCode=1});

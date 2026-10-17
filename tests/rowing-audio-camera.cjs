@@ -15,8 +15,8 @@ const {pathToFileURL}=require('node:url');
  const rider=fs.readFileSync(path.join(root,'src/rider.js'),'utf8');
  assert.ok(rider.includes('oars[1-i]'),
    'La mà dreta del remador ha de subjectar el rem de babord');
- assert.ok(rider.includes('torso.rotation.y=Math.PI*(1-u.shotBlend)'),
-   'Gira de popa a proa per la seva dreta, sense girar el casc');
+ assert.ok(rider.includes('torso.rotation.y=Math.PI-Math.PI/2*u.shotBlend'),
+   'La cintura gira 90 graus a la dreta, no 180');
  // Exercim l'animació completa, el canó i la tornada a la remada.
  const palette={player:{},enemy:{primary:0x556644,general:0x778855,
    vest:0x445533,secondary:0x334422,skin:0xe0c0a0,dark:0x101a10,metal:0x444444}};
@@ -51,8 +51,10 @@ const {pathToFileURL}=require('node:url');
    'En remar el braç dret queda a babord i l’esquerre a estribord');
  const shot=ride.firePistol(state,(origin,direction)=>[0,0,-1]);
  assert.ok(shot,'Es pot disparar des de la barca');
- assert.ok(u.torso.rotation.y>0&&u.torso.rotation.y<Math.PI/2,
-   'El pilot comença a girar a la seva dreta cap a proa');
+ assert.ok(Math.abs(u.pistol.scale.x-.56)<1e-8,
+   'La pistola a la barca ha de ser proporcional al remador');
+ assert.ok(u.torso.rotation.y>Math.PI/2&&u.torso.rotation.y<Math.PI,
+   'El tors gira cap a la dreta sense superar els 90 graus');
  assert.ok(u.limbs[2].position.x>0,
    'Un cop orientat a proa, el braç dret surt de l’espatlla dreta');
  assert.ok(shot.direction.dot(new T.Vector3(0,0,-1))>.98,
@@ -60,8 +62,8 @@ const {pathToFileURL}=require('node:url');
  assert.ok(shot.origin.x>0,
    'La boca de la pistola queda al costat dret quan mira a proa');
  for(let i=0;i<3;i++)ride.update(state,.05);
- assert.ok(u.torso.rotation.y<.15,
-   'Mentre dispara, el tors acaba la rotació cap a proa');
+ assert.ok(Math.abs(u.torso.rotation.y-Math.PI/2)<.10,
+   'En disparar el tors queda de perfil a 90 graus');
  for(let i=0;i<35;i++)ride.update(state,.05);
  assert.ok(Math.abs(u.torso.rotation.y-Math.PI)<.03,
    'En acabar el tret el tors torna a mirar cap a popa per remar');

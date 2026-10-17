@@ -237,7 +237,7 @@ function sight(x,z,tx,tz,y,ignoreBarbed=true){const d=Math.hypot(tx-x,tz-z),n=Ma
 function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=pl.userData.knifeAttackDuration||.38;const fx_=-Math.sin(P.hd),fz=-Math.cos(P.hd);let hit=null,best=2.6;for(const u of E){const dx=u.x-P.x,dz=u.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx_+dz*fz)/d>.35&&sight(P.x,P.z,u.x,u.z,P.y+1.2,false)){best=d;hit=u}}if(hit)hurtE(hit,6);snd('hurt',hit?.45:.18);setDis(false);return true}
 function secondaryWeapon(){
   if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd),d45=Math.SQRT1_2;
-  if(cv.t==='heli_combat'){if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const x=cv.x+fx_*5,y=cv.o.position.y+1,z=cv.z+fz*5,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*d45,-d45,fz*d45,120,.91,'heavy');shoot(x,y,z,ax,ay,az,72,60,10,'p',mS,2.4);msg='Míssils: '+cv.rockets;msgT=1;return true}
+  if(cv.t==='heli_combat'){if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,60,10,'p',mS,2.4);msg='Míssils: '+cv.rockets;msgT=1;return true}
   if(cv.t==='llanxa_coets'){/* Munició infinita: no es consumeix ni es comprova el comptador. */fcd=.9;const x=cv.x+fx_*6,y=cv.o.position.y+1.2,z=cv.z+fz*6,base=Math.hypot(1,.015),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.015/base,fz/base,105,.94,'heavy');shoot(x,y,z,ax,ay,az,68,70,11,'p',mS,2.6);msg='Coets: ∞';msgT=1;return true}
   return false
 }
@@ -466,12 +466,20 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
   }
   return chosen||[fx,fy,fz];
 }
+// Una sola solució balística per al míssil de l'helicòpter: la retícula
+// i el dispar real comparteixen origen, angle descendent de 45° i autoapuntat.
+function combatHeliMissileAim(v,focus=null){
+  const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),diagonal=Math.SQRT1_2,
+        x=v.x+fx*5,y=v.o.position.y+1,z=v.z+fz*5;
+  return {x,y,z,direction:autoAimWeaponShot(x,y,z,fx*diagonal,-diagonal,
+    fz*diagonal,120,.91,'heavy',focus)};
+}
 // Retícula del bazooka: empra EXACTAMENT les coordenades i el con de
 // selecció d'autoapuntat del tret real. Blanca si apunta lliurement,
 // verda quan hi ha una diana enemiga seleccionada.
 const bazookaReticleElement=document.getElementById('bazookaReticle');
 const bazookaReticleWorld=new THREE.Vector3(),bazookaReticleScreen=new THREE.Vector3();
-let bazookaReticleTimer=0,bazookaReticleHasHit=false,bazookaReticleLocked=false;
+let bazookaReticleTimer=0,bazookaReticleHasHit=false,bazookaReticleMode=null;
 // Primera superfície real a la trajectòria; cap objectiu => cap retícula
 // damunt de mar buit o horitzó. No altera en absolut la balística.
 function bazookaFirstSolidHit(x,y,z,dx,dy,dz,range=105){
@@ -512,23 +520,60 @@ function bazookaFirstSolidHit(x,y,z,dx,dy,dz,range=105){
 }
 function updateBazookaReticle(dt){
   if(!bazookaReticleElement)return;
-  const visible=started&&!paused&&!over&&!cv&&!swimming&&!playerFall&&
-    bazookaEquipped&&(inv.bazooka||0)>0;
-  if(!visible){bazookaReticleElement.style.display='none';bazookaReticleTimer=0;bazookaReticleHasHit=false;return}
+  // Compartim una sola retícula entre bazuca, canó de tanc i míssils
+  // de l'helicòpter de combat (no la seva metralladora).
+  const mode=!started||paused||over||playerFall?null:
+    cv?.t==='tanc'?'tank':
+    cv?.t==='heli_combat'&&(cv.rockets||0)>0?'missile':
+    !cv&&!swimming&&bazookaEquipped&&(inv.bazooka||0)>0?'bazooka':null;
+  if(!mode){
+    bazookaReticleElement.style.display='none';
+    bazookaReticleTimer=0;bazookaReticleHasHit=false;bazookaReticleMode=null;return;
+  }
+  if(mode!==bazookaReticleMode){
+    bazookaReticleMode=mode;bazookaReticleTimer=0;
+    bazookaReticleHasHit=false;
+  }
   bazookaReticleTimer-=dt;
   if(bazookaReticleTimer<=0){
     bazookaReticleTimer=.08;
-    const fx=-Math.sin(P.hd),fz=-Math.cos(P.hd),
-          ox=P.x+fx*1.35,oy=P.y+1.9,oz=P.z+fz*1.35,
-          base=Math.hypot(1,.01),focus={},
-          direction=autoAimWeaponShot(ox,oy,oz,fx/base,.01/base,fz/base,
-            105,.94,'heavy',focus,72*HEAVY_SHOT_SPEED_FACTOR);
-    bazookaReticleLocked=!!focus.target;
-    const hit=focus.point||bazookaFirstSolidHit(ox,oy,oz,
-      direction[0],direction[1],direction[2]);
+    let hit=null,locked=false;
+    if(mode==='tank'){
+      // El projectil surt del canó visible, no del centre del tanc.
+      // El punt blanc és l'impacte REAL de la direcció de la torreta.
+      const gun=window.HUNTER_VEHICLES.turretShot(THREE,cv.o);
+      if(gun){
+        const o=gun.origin,d=gun.direction,focus={};
+        hit=bazookaFirstSolidHit(o.x,o.y,o.z,d.x,d.y,d.z,220);
+        // Només color verd si el canó intercepta de debò l'enemic.
+        // Un objectiu proper al con, però fora de l'impacte, no és fixat.
+        autoAimWeaponShot(o.x,o.y,o.z,d.x,d.y,d.z,220,.999,
+          'heavy',focus);
+        const target=focus.point,enemy=focus.target;
+        locked=!!(hit&&target&&enemy&&
+          Math.hypot(hit.x-target.x,hit.y-target.y,hit.z-target.z)<
+            (enemy.r||2)+1.5);
+      }
+    }else if(mode==='missile'){
+      // La retícula segueix el míssil de G (45° cap avall), no el
+      // canó lleuger de F, i desapareix quan no hi ha míssils.
+      const focus={},shot=combatHeliMissileAim(cv,focus),d=shot.direction;
+      hit=focus.point||bazookaFirstSolidHit(shot.x,shot.y,shot.z,
+        d[0],d[1],d[2],120);
+      locked=!!focus.target;
+    }else{
+      const fx=-Math.sin(P.hd),fz=-Math.cos(P.hd),
+            ox=P.x+fx*1.35,oy=P.y+1.9,oz=P.z+fz*1.35,
+            base=Math.hypot(1,.01),focus={},
+            direction=autoAimWeaponShot(ox,oy,oz,fx/base,.01/base,fz/base,
+              105,.94,'heavy',focus,72*HEAVY_SHOT_SPEED_FACTOR);
+      hit=focus.point||bazookaFirstSolidHit(ox,oy,oz,
+        direction[0],direction[1],direction[2]);
+      locked=!!focus.target;
+    }
     bazookaReticleHasHit=!!hit;
     if(hit)bazookaReticleWorld.set(hit.x,hit.y,hit.z);
-    bazookaReticleElement.classList.toggle('locked',bazookaReticleLocked);
+    bazookaReticleElement.classList.toggle('locked',locked);
   }
   if(!bazookaReticleHasHit){bazookaReticleElement.style.display='none';return}
   cam.updateMatrixWorld();
