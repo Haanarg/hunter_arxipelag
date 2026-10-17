@@ -9,7 +9,7 @@ window.HUNTER_VEHICLE_DYNAMICS=Object.freeze({
     cotxe:Object.freeze({n:'Cotxe',m:'l',a:36,dr:.9,tu:1.9,cd:22,ch:8,response:5.2,steerResponse:6.2,yawResponse:6.5,maxF:38,maxR:14,landGrip:.9,steerFade:.42,mass:1,armor:2,life:4}),
     moto:Object.freeze({n:'Moto',m:'l',a:42,dr:.9,tu:2.5,cd:18,ch:7,response:6.4,steerResponse:7.2,yawResponse:8,maxF:43,maxR:12,landGrip:.84,steerFade:.28,mass:.55,armor:0,life:2}),
     bici:Object.freeze({n:'Bicicleta',m:'l',a:14,dr:.8,tu:2.6,cd:14,ch:6,response:7.2,steerResponse:8,yawResponse:9,maxF:17,maxR:6,landGrip:.94,steerFade:.18,mass:.2,armor:0,life:1}),
-    barca_rems:Object.freeze({n:'Barca de rems',m:'w',a:8,dr:.95,tu:1.6,cd:15,ch:7,response:3.4,steerResponse:4,yawResponse:3.2,maxF:8,maxR:4,waterDrift:.2,waterSteerMin:.18,armor:0,life:2}),
+    barca_rems:Object.freeze({n:'Barca de rems',m:'w',a:8,dr:.95,tu:1.6,cd:25,ch:10,response:3.4,steerResponse:4,yawResponse:3.2,maxF:8,maxR:4,waterDrift:.2,waterSteerMin:.18,armor:0,life:2}),
     windsurf:Object.freeze({n:'Windsurf',m:'w',a:18,dr:.75,tu:2.1,cd:16,ch:5,response:4.5,steerResponse:5.5,yawResponse:4.8,maxF:22,maxR:5,waterDrift:.42,waterSteerMin:.3,armor:0,life:1}),
     camio:Object.freeze({n:'Camió militar',m:'l',a:24,dr:.92,tu:1.35,cd:27,ch:9,response:3.1,steerResponse:3.4,yawResponse:3.2,maxF:29,maxR:10,landGrip:.82,steerFade:.5,mass:2.2,armor:4,life:6}),
     tanqueta:Object.freeze({n:'Tanqueta blindada',m:'l',a:20,dr:.92,tu:1.45,cd:25,ch:10,response:2.8,steerResponse:3.1,yawResponse:2.9,maxF:24,maxR:9,landGrip:.88,steerFade:.38,mass:3.2,armor:7,life:10}),

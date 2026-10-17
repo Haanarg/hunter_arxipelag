@@ -10,9 +10,60 @@ const {pathToFileURL}=require('node:url');
  const ctx={window:{}};vm.createContext(ctx);
  vm.runInContext(fs.readFileSync(path.join(root,'src/vehicle-dynamics.js'),'utf8'),ctx);
  const v=ctx.window.HUNTER_VEHICLE_DYNAMICS.types;
- assert.ok(v.barca_rems.cd>=14&&v.barca_rems.ch>=7,'Càmera de rems allunyada');
+ assert.ok(v.barca_rems.cd>=24&&v.barca_rems.ch>=9,
+   'Càmera de rems encara més allunyada');
  const rider=fs.readFileSync(path.join(root,'src/rider.js'),'utf8');
- assert.ok(rider.includes('shoulder=shoulderAt(1)'),'El dret surt de la seva espatlla');
- assert.ok(rider.includes('torso.rotation.y+=twist*u.shotBlend'),'El rider gira la cintura');
- console.log('OK barca: so de rems, càmera i espatlla de dispar');
+ assert.ok(rider.includes('oars[1-i]'),
+   'La mà dreta del remador ha de subjectar el rem de babord');
+ assert.ok(rider.includes('torso.rotation.y=Math.PI*(1-u.shotBlend)'),
+   'Gira de popa a proa per la seva dreta, sense girar el casc');
+ // Exercim l'animació completa, el canó i la tornada a la remada.
+ const palette={player:{},enemy:{primary:0x556644,general:0x778855,
+   vest:0x445533,secondary:0x334422,skin:0xe0c0a0,dark:0x101a10,metal:0x444444}};
+ const ctxRig={window:{HUNTER_PALETTE:palette,HUNTER_BOLT_CUTTERS:{
+   create:()=>new T.Group(),pose:()=>{}
+ }}};
+ vm.createContext(ctxRig);
+ for(const file of ['src/player-model.js','src/characters.js','src/rider.js'])
+   vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctxRig,{filename:file});
+ const scene=new T.Scene(),box=(g,w,h,d,c,x=0,y=0,z=0)=>{
+   const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),
+     new T.MeshStandardMaterial({color:c||0x999999}));
+   mesh.position.set(x,y,z);g.add(mesh);return mesh;
+ };
+ const ride=ctxRig.window.HUNTER_RIDER.create(T,{
+   scene,box,material:color=>new T.MeshStandardMaterial({color}),
+   scales:{barca_rems:.98},heightAt:()=>0,shadows:false
+ });
+ const boat=new T.Group();boat.userData.rowingSeat={y:.855,z:-1.12};
+ boat.userData.oars=[-1,1].map(side=>{
+   const oar=new T.Group();oar.position.set(side*1.27,1.08,-.18);
+   oar.userData.grip=new T.Vector3(-side*.77,0,0);
+   boat.add(oar);return oar;
+ });
+ scene.add(boat);
+ const state={t:'barca_rems',o:boat,v:3,pedalPhase:0};
+ ride.update(state,.016);
+ const u=ride.object.userData;
+ assert.ok(Math.abs(u.torso.rotation.y-Math.PI)<.01,
+   'En remar el tors està orientat cap a popa');
+ assert.ok(u.limbs[2].position.x<0&&u.limbs[0].position.x>0,
+   'En remar el braç dret queda a babord i l’esquerre a estribord');
+ const shot=ride.firePistol(state,(origin,direction)=>[0,0,-1]);
+ assert.ok(shot,'Es pot disparar des de la barca');
+ assert.ok(u.torso.rotation.y>0&&u.torso.rotation.y<Math.PI/2,
+   'El pilot comença a girar a la seva dreta cap a proa');
+ assert.ok(u.limbs[2].position.x>0,
+   'Un cop orientat a proa, el braç dret surt de l’espatlla dreta');
+ assert.ok(shot.direction.dot(new T.Vector3(0,0,-1))>.98,
+   'La pistola i el tret han d’apuntar a proa');
+ assert.ok(shot.origin.x>0,
+   'La boca de la pistola queda al costat dret quan mira a proa');
+ for(let i=0;i<3;i++)ride.update(state,.05);
+ assert.ok(u.torso.rotation.y<.15,
+   'Mentre dispara, el tors acaba la rotació cap a proa');
+ for(let i=0;i<35;i++)ride.update(state,.05);
+ assert.ok(Math.abs(u.torso.rotation.y-Math.PI)<.03,
+   'En acabar el tret el tors torna a mirar cap a popa per remar');
+ console.log('OK barca: so, càmera, rems anatòmics i tir dret cap a proa');
 })().catch(e=>{console.error(e);process.exitCode=1});

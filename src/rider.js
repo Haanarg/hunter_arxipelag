@@ -47,22 +47,46 @@ window.HUNTER_RIDER=Object.freeze({
         pistol.visible=false;pistolParts.flash.visible=false;return;
       }
       pistol.visible=true;
-      // El braç dret surt SEMPRE de l'espatlla dreta. La pose antiga
-      // l'unia a l'esquerra en rems/windsurf, provocant torsions.
       const sc=v.t==='llanxa'?1.3:v.t==='llanxa_coets'?1.35:scales[v.t],
-            twist=v.t==='barca_rems'?-.55:v.t==='windsurf'?.33:.24;
-      torso.rotation.y+=twist*u.shotBlend;
+            rowing=v.t==='barca_rems',
+            twist=v.t==='windsurf'?.33:.24;
+      if(rowing){
+        // Remant mira a popa (Y=PI). Per disparar es gira per la seva
+        // DRETA (angle DECREIXENT: PI -> 0, passant per PI/2) fins
+        // encarar la proa (-Z). No giriam el buc ni les cames.
+        torso.rotation.y=Math.PI*(1-u.shotBlend);
+      }else torso.rotation.y+=twist*u.shotBlend;
       const shoulder=shoulderAt(1),
             forearm=limbs[3],
             restingHand=new THREE.Vector3(0,-forearm.userData.restLength*forearm.scale.y,0)
               .applyQuaternion(forearm.quaternion).add(forearm.position),
-            target=shoulder.clone().add(vec(.25*sc,-.29,-1.13*sc)),
+            // La mà acompanya el gir del tors, davant de l'espatlla
+            // anatòmica dreta. A la barca acabarem apuntant a proa.
+            reach=vec(.25*sc,-.29,-1.13*sc);
+      if(rowing)reach.applyQuaternion(torso.quaternion);
+      const target=shoulder.clone().add(reach),
             hand=restingHand.lerp(target,u.shotBlend),
             elbow=shoulder.clone().lerp(hand,.57);
-      elbow.y-=.12;elbow.x+=.12*sc;
+      elbow.y-=.12;elbow.x+=rowing?-.12*sc:.12*sc;
       limbBetween(limbs[2],shoulder,elbow);limbBetween(limbs[3],elbow,hand);
+      // La mà esquerra solta el rem durant el gir de cintura i
+      // acompanya el tronc, sense estirar el braç a l'altre costat.
+      if(rowing&&u.shotBlend>.001){
+        const leftShoulder=shoulderAt(-1),
+              relax=vec(-.22*sc,-.70,-.24*sc).applyQuaternion(torso.quaternion),
+              leftHand=leftShoulder.clone().add(relax),
+              leftElbow=leftShoulder.clone().lerp(leftHand,.53);
+        leftElbow.y-=.12;
+        const oldHand=vec(0,-limbs[1].userData.restLength*limbs[1].scale.y,0)
+          .applyQuaternion(limbs[1].quaternion).add(limbs[1].position);
+        const oldElbow=limbs[1].position.clone();
+        oldHand.lerp(leftHand,u.shotBlend);oldElbow.lerp(leftElbow,u.shotBlend);
+        limbBetween(limbs[0],leftShoulder,oldElbow);
+        limbBetween(limbs[1],oldElbow,oldHand);
+      }
       const recoil=Math.exp(-u.shotAge*18)*.095;
       pistol.position.copy(hand).add(vec(0,0,recoil));
+      // La pistola apunta a proa (-Z) quan el remador s'hi gira.
       pistol.quaternion.identity();
       if(u.pistolAim)pistol.quaternion.setFromUnitVectors(forward,u.pistolAim);
       pistolParts.slide.position.z=recoil*.65;
@@ -117,14 +141,22 @@ window.HUNTER_RIDER=Object.freeze({
         torso.position.set(0,seatY,seatZ);torso.rotation.set(-.06+.15*pull*motion,Math.PI,0);
         v.o.updateWorldMatrix(true,true);g.updateWorldMatrix(true,false);
         for(let i=0;i<2;i++){
-          const side=i?1:-1,hip=vec(side*.27,seatY,seatZ);
-          const shoulder=shoulderAt(-side);
-          // El punt d'agafada és el mateix que dibuixa el rem, incloent el balanceig del buc.
-          const oar=v.o.userData.oars[i],hand=g.worldToLocal(oar.localToWorld(oar.userData.grip.clone()));
-          const elbow=shoulder.clone().lerp(hand,.5);elbow.x+=side*.18;elbow.y-=.13;
-          limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
-          const foot=vec(side*.34,.2*sc,seatZ+.97*sc),knee=vec(side*.32,seatY-.05,seatZ+.52*sc);
-          limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);
+          const side=i?1:-1,boatSide=-side,
+                hip=vec(boatSide*.27,seatY,seatZ),
+                // Quan el remador mira a popa la seva dreta anatòmica
+                // és babord (-X). Cada mà agafa el rem del seu costat:
+                // el braç dret = limbs[2,3] = rem de babord (índex 0).
+                shoulder=shoulderAt(side);
+          const oar=v.o.userData.oars[1-i],
+                hand=g.worldToLocal(oar.localToWorld(oar.userData.grip.clone()));
+          const elbow=shoulder.clone().lerp(hand,.5);
+          elbow.x+=boatSide*.18;elbow.y-=.13;
+          limbBetween(limbs[i*2],shoulder,elbow);
+          limbBetween(limbs[i*2+1],elbow,hand);
+          const foot=vec(boatSide*.34,.2*sc,seatZ+.97*sc),
+                knee=vec(boatSide*.32,seatY-.05,seatZ+.52*sc);
+          limbBetween(limbs[4+i*2],hip,knee);
+          limbBetween(limbs[5+i*2],knee,foot);
           boots[i].position.copy(foot);boots[i].rotation.set(0,Math.PI,0);
         }
         aimOneHand(v,dt);return;
