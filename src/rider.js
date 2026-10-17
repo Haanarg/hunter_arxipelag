@@ -62,7 +62,10 @@ window.HUNTER_RIDER=Object.freeze({
               .applyQuaternion(forearm.quaternion).add(forearm.position),
             // La mà acompanya el gir del tors, davant de l'espatlla
             // anatòmica dreta. A la barca acabarem apuntant a proa.
-            reach=vec(.25*sc,-.29,-1.13*sc);
+            reach=rowing?vec(.52*sc,-.29,-.75*sc):
+              vec(.25*sc,-.29,-1.13*sc);
+      // En la transició popa->proa, el braç dret es manté al
+      // costat dret i passa davant del pit sense travessar-lo.
       if(rowing)reach.applyQuaternion(torso.quaternion);
       const target=shoulder.clone().add(reach),
             hand=restingHand.lerp(target,u.shotBlend),
