@@ -334,7 +334,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
   // sota l'aigua amb l'origen antic (2,1 m sota les ones).
   swimVisualLift(player,surface,physicalY){
     const crawl=Math.max(0,Math.min(1,player.userData.crawlBlend||0));
-    if(crawl<.001)return 0;
+    // Fora de l'aigua no s'aplica mai la flotació visual del crol.
+    if(crawl<.001||physicalY>=surface-.6)return 0;
     // Cal mesurar els punts REALS després de combinar el pitch i el
     // gir nord-sud. Cos(pi) no serveix: amb 180° el cap podria tornar
     // sota les ones tot i que el pit quedàs flotant.
