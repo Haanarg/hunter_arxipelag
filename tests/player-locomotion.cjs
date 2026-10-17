@@ -50,6 +50,26 @@ const {pathToFileURL}=require('node:url');
  assert.ok(Math.abs(u.lowerBody.rotation.y-Math.PI/4)<.005,'Strafe esquerre: +45°');
  for(let i=0;i<30;i++)animate(0,0);
  assert.ok(Math.abs(u.lowerBody.rotation.y)<.005,'Pelvis torna al front');
+ // Pistola: cintura activa i canó orientat endavant sense retorçar el braç.
+ const pistol=()=>ctx.window.HUNTER_CHARACTERS.animatePlayer(player,{
+   forward:0,strafe:0,running:false,dt:.016,
+   swimming:false,inVehicle:false,ammo:16
+ });
+ for(let i=0;i<32;i++){u.pistolAimTime=.32;u.pistolShotAge=.12;pistol()}
+ assert.ok(u.upperBody.rotation.y>.23&&u.upperBody.rotation.y<.36,
+   'El tir amb pistola gira la cintura dins un angle humà');
+ assert.ok(Math.abs(u.head.rotation.y+u.upperBody.rotation.y)<.04,
+   'El cap continua mirant endavant en disparar');
+ player.updateMatrixWorld(true);
+ const gunForward=new THREE.Vector3(0,0,-1)
+   .applyQuaternion(u.gun.getWorldQuaternion(new THREE.Quaternion()));
+ const bodyForward=new THREE.Vector3(0,0,-1)
+   .applyQuaternion(player.getWorldQuaternion(new THREE.Quaternion()));
+ assert.ok(gunForward.dot(bodyForward)>.98,
+   'El canó ha de mantenir la direcció del tret');
+ for(let i=0;i<40;i++)pistol();
+ assert.ok(Math.abs(u.upperBody.rotation.y)<.015,
+   'La cintura torna a repòs després del tret');
  // A l'aigua, el crol ha de variar tronc, braços i batement de cames,
  // sense reactivar les armes i tornant a la braça quan se solta.
  const swim=(fast,strafe=0,forward=1)=>ctx.window.HUNTER_CHARACTERS.animatePlayer(

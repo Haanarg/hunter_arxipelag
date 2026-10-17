@@ -47,8 +47,12 @@ window.HUNTER_RIDER=Object.freeze({
         pistol.visible=false;pistolParts.flash.visible=false;return;
       }
       pistol.visible=true;
+      // El braç dret surt SEMPRE de l'espatlla dreta. La pose antiga
+      // l'unia a l'esquerra en rems/windsurf, provocant torsions.
       const sc=v.t==='llanxa'?1.3:v.t==='llanxa_coets'?1.35:scales[v.t],
-            shoulder=shoulderAt(v.t==='barca_rems'||v.t==='windsurf'?-1:1),
+            twist=v.t==='barca_rems'?-.55:v.t==='windsurf'?.33:.24;
+      torso.rotation.y+=twist*u.shotBlend;
+      const shoulder=shoulderAt(1),
             forearm=limbs[3],
             restingHand=new THREE.Vector3(0,-forearm.userData.restLength*forearm.scale.y,0)
               .applyQuaternion(forearm.quaternion).add(forearm.position),
