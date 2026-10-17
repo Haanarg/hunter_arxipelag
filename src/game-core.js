@@ -919,8 +919,8 @@ function flag(x,z,c){if(!seedSearchMode)world.add(buildingVisual.createFlag({x,y
 const bx=(g,w,h,d,c,x,y,z,profile='organic')=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c,profile));m.position.set(x,y,z);g.add(m);return m};
 const buildingVisual=window.HUNTER_BUILDINGS.create(THREE,{material:M,materialProfile,box:bx});
 const pl=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});scene.add(pl);
-const animPl=(f,dt)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{
-  forward:f,dt,swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,
+const animPl=(f,dt,running=false)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{
+  forward:f,dt,running,swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,
   grenadeChargePower:grenadeCharge?Math.min(1,grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS):0,
   airborne:!!playerFall,parachuting:!!playerFall?.parachute
 });
@@ -1282,7 +1282,7 @@ function prepareVisibilitySystem(){
   updateDistanceVisibility();
 }
 
-const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joystick')),
+const K={},runButton=document.getElementById('runButton'),joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joystick')),
       strafeButtons={left:document.getElementById('strafeLeft'),right:document.getElementById('strafeRight')},
       strafePointers={left:null,right:null},
       STRAFE_VEHICLES=new Set(['hover','heli','heli_combat']);
@@ -1314,7 +1314,11 @@ for(const side of ['left','right']){
   };
   for(const name of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(name,release);
 }
+let runPointer=null;
+runButton.addEventListener('pointerdown',e=>{if(!started||paused||over||cv||swimming||scopeActive)return;e.preventDefault();runPointer=e.pointerId;runButton.setPointerCapture(e.pointerId);runButton.classList.add('held')});
+for(const name of ['pointerup','pointercancel','lostpointercapture'])runButton.addEventListener(name,e=>{if(runPointer!==e.pointerId)return;runPointer=null;runButton.classList.remove('held')});
 const clearKeys=()=>{
+  runPointer=null;runButton.classList.remove('held');
   cancelGrenadeCharge();Object.keys(K).forEach(k=>K[k]=0);
   joystick.reset();releaseStrafeButtons();
   document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))
@@ -1752,6 +1756,7 @@ const strafeEnabled=updateStrafeControls();
 if(!started||paused||over){updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
 rebuildVehicleGrid();elapsed+=dt;
 const pierOldX=P.x,pierOldZ=P.z;
+const running=!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive&&(runPointer!==null||K.ShiftLeft||K.ShiftRight);
 const jf=-joystick.state.y,jtr=-joystick.state.x,
       f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),
       tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),
@@ -1783,7 +1788,7 @@ else if(playerEject&&playerEject.t>0){
 }else{
   // Avanç i strafe simultanis sense variar el rumb. Normalitzam la
   // diagonal per mantenir la velocitat màxima d'un jugador a peu.
-  const length=Math.max(1,Math.hypot(f,strafe)),ss=(swimming?5:12)*f*dt/length,
+  const length=Math.max(1,Math.hypot(f,strafe)),ss=(swimming?5:running?19:12)*f*dt/length,
         lateral=(!swimming?9:0)*strafe*dt/length;
   P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*ss+Math.cos(P.hd)*lateral));
   P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*ss-Math.sin(P.hd)*lateral));
@@ -1837,7 +1842,7 @@ if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-i
 msgT-=dt;if(parachuteVisual)parachuteVisual.position.set(P.x,P.y,P.z);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;
 // També animam les passes quan el jugador es mou només lateralment,
 // sense modificar P.hd ni l'orientació de la càmera.
-animPl(cv||scopeActive?0:(Math.abs(f)>.02?f:Math.abs(strafe)*.7),dt);
+animPl(cv||scopeActive?0:(Math.abs(f)>.02?f:Math.abs(strafe)*.7),dt,running&&f>.1);
  // L'animació de caminar va a 8.4 rad/s: un esquitx a cada suport de
  // peu (creuament de fase PI). Sense esquitxos nedant ni en vehicles.
  movementFx.playerStep({

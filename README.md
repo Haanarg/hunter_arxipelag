@@ -42,6 +42,12 @@ Amb la mira activa, els controls de moviment orienten la mira i el personatge qu
 - Pistola, ganivet, granades, bazooka, rifle de franctirador, explosius, **cisalla silenciosa**, disfressa, farmacioles, mapes i paracaigudes. Les bales lleugeres travessen les filferrades; es trenquen amb granades, míssils, explosius o vehicles. Hi ha una cisalla garantida als tallers dels hangars, en lloc de les granades.
 - Transport de vehicles en ferry, natació, onatge, fauna, models articulats i tres perfils gràfics.
 
+## Punteria marina segons dificultat i esprint (v0.5.28)
+
+- Les metralladores i els coets navals reben una dispersió proporcional a la dificultat: **molt alta a Fàcil**, intermèdia a Normal i baixa a Difícil.
+- Botons de strafe més llargs i corbats, adaptats a la circumferència del joystick.
+- Botó superior **CÓRRER** i tecla **Majúscules**: velocitat a peu de 12 a 19, sense activar-se en vehicles, nedant ni amb la mira. Animació amb tronc inclinat cap endavant, passes més ràpides i cames més àmplies.
+
 ## Pantalans accessibles amb rampa (v0.5.27)
 
 - Els pantalans de fusta baixen de **2,7 a 2,4 metres**, mantenint marge sobre el màxim de les ones.

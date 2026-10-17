@@ -110,8 +110,8 @@ function marineAimGun(u,weapon,target,dt){
 }
 function marineFire(u,weapon,target,heavy){
   const p=weapon.muzzle.getWorldPosition(new THREE.Vector3()),
-        dy=target.y-p.y,
-        dx=target.x-p.x+rn(-1.7,1.7),dz=target.z-p.z+rn(-1.7,1.7),
+        dy=target.y-p.y+rn(-1,1)*(DIF<=.6?11:DIF<1?3:1),
+        dx=target.x-p.x+rn(-1,1)*(DIF<=.6?(heavy?23:18):DIF<1?7:2),dz=target.z-p.z+rn(-1,1)*(DIF<=.6?(heavy?23:18):DIF<1?7:2),
         n=Math.max(.01,Math.hypot(dx,dy,dz));
   if(!weaponAimClear(p.x,p.y,p.z,target.x,target.y,target.z))return false;
   // Les costes i els turons també intercepten el foc disparat des del mar.
