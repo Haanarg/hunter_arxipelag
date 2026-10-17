@@ -919,8 +919,8 @@ function flag(x,z,c){if(!seedSearchMode)world.add(buildingVisual.createFlag({x,y
 const bx=(g,w,h,d,c,x,y,z,profile='organic')=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c,profile));m.position.set(x,y,z);g.add(m);return m};
 const buildingVisual=window.HUNTER_BUILDINGS.create(THREE,{material:M,materialProfile,box:bx});
 const pl=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});scene.add(pl);
-const animPl=(f,dt,running=false)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{
-  forward:f,dt,running,swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,
+const animPl=(f,dt,running=false,strafe=0)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{
+  forward:f,strafe,dt,running,swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,
   grenadeChargePower:grenadeCharge?Math.min(1,grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS):0,
   airborne:!!playerFall,parachuting:!!playerFall?.parachute
 });
@@ -1838,9 +1838,8 @@ if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-i
   msg=mapMessage||'Has trobat: '+IT[it.t].n+(it.t==='granada'?' ×5':it.t==='bazooka'?' ×3':it.t==='franctirador'?' +6 cartutxos':'');
   msgT=3;snd('pick')}}
 msgT-=dt;if(parachuteVisual)parachuteVisual.position.set(P.x,P.y,P.z);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;
-// També animam les passes quan el jugador es mou només lateralment,
-// sense modificar P.hd ni l'orientació de la càmera.
-animPl(cv||scopeActive?0:(Math.abs(f)>.02?f:Math.abs(strafe)*.7),dt,running&&f>.1);
+// Strafe independent: gir visual de la cintura i les cames, no de P.hd.
+animPl(cv||scopeActive?0:f,dt,running&&f>.1,cv||scopeActive?0:strafe);
  // L'animació de caminar va a 8.4 rad/s: un esquitx a cada suport de
  // peu (creuament de fase PI). Sense esquitxos nedant ni en vehicles.
  movementFx.playerStep({

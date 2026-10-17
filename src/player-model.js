@@ -8,7 +8,7 @@ const HUNTER_COMPACT_HEAD_D=Object.freeze({
 });
 window.HUNTER_PLAYER_MODEL=Object.freeze({
  headStyles:Object.freeze({compactD:HUNTER_COMPACT_HEAD_D}),
- create(T,{unitScale=1,palette=window.HUNTER_PALETTE,headVariant=null}={}){
+ create(T,{unitScale=1,palette=window.HUNTER_PALETTE,headVariant=null,articulated=false}={}){
  
  const p={chest:1.04,waist:.76,head:.44,arm:.27,leg:.35,pack:.66};
  const g=new T.Group(),u=g.userData;u.boots=[];
@@ -54,7 +54,7 @@ window.HUNTER_PLAYER_MODEL=Object.freeze({
   u[side<0?'ll':'lr']=hip;u[side<0?'lkl':'lkr']=knee;
  }
  torsoShape(p.chest,p.waist,1.23,.61,colors.green,2.31);
- box(g,p.waist+.08,.15,.65,colors.dark,0,1.77,0);box(g,.19,.13,.055,0xb1b48a,0,1.78,-.355);
+ const waistBelt=box(g,p.waist+.08,.15,.65,colors.dark,0,1.77,0),waistBuckle=box(g,.19,.13,.055,0xb1b48a,0,1.78,-.355);
   torsoShape(p.chest+.05,p.waist+.06,.94,.76,0x314d27,2.35);
   for(const x of[-.30,0,.30]){
    box(g,.25,.34,.14,0x395333,x,2.12,-.44);
@@ -140,6 +140,24 @@ window.HUNTER_PLAYER_MODEL=Object.freeze({
  u.headVariant=headVariant||'original';u.neck=neck;
  u.profile='tactic-approved-long-visor';u.forwardAxis='-Z';u.kneeFlexionSign=-1;
  u.hipHeight=1.73*unitScale;
+ if(articulated){
+  // Únicament el jugador a peu necessita articulació independent.
+  // Els riders i els enemics conserven la jerarquia original.
+  const lowerBody=new T.Group(),upperBody=new T.Group();
+  lowerBody.name='hunter-pelvis-and-legs';upperBody.name='hunter-upper-torso';
+  lowerBody.position.y=u.hipHeight;
+  upperBody.position.y=1.84*unitScale; // pivot sobre la cintura
+  const lowerParts=new Set([u.ll,u.lr,waistBelt,waistBuckle]);
+  for(const part of [...g.children]){
+    const pivot=lowerParts.has(part)?lowerBody:upperBody;
+    // Reparentar sense alterar les posicions de repòs globals del model.
+    part.position.y-=pivot.position.y;
+    pivot.add(part);
+  }
+  g.add(lowerBody,upperBody);
+  u.lowerBody=lowerBody;u.upperBody=upperBody;
+  u.upperBodyPivotHeight=upperBody.position.y;
+ }
  return g;
  }
 });

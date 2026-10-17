@@ -43,10 +43,10 @@ jobs:
               set -- victory-cinematic
               ;;
             startup)
-              set -- smoke startup-cache
+              set -- smoke startup-cache joystick-running player-locomotion
               ;;
             all)
-              set -- smoke startup-cache terrain-level-index terrain-stream water seed-replay compound-generation enemy-navigation projectile-classes victory-cinematic
+              set -- smoke startup-cache joystick-running player-locomotion terrain-level-index terrain-stream water seed-replay compound-generation enemy-navigation projectile-classes victory-cinematic
               ;;
             *)
               echo "Grup de proves desconegut: $GRUP" >&2
