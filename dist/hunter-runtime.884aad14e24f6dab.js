@@ -3734,6 +3734,17 @@ window.HUNTER_CHARACTERS=Object.freeze({
     player.scale.setScalar(2/3);
     return player;
   },
+  // Posicionament visual independent de la física: en fer crol cal
+  // portar el pit a la línia de flotació, no deixar tot el model
+  // sota l'aigua amb l'origen antic (2,1 m sota les ones).
+  swimVisualLift(player,surface,physicalY){
+    const crawl=Math.max(0,Math.min(1,player.userData.crawlBlend||0));
+    if(crawl<.001)return 0;
+    // Al model del jugador, el centre del pit és a 2,31 unitats
+    // locals (model base ampliat 1,2; l'arrel redueix a 2/3).
+    const chestHeight=2.31*1.2*player.scale.y*Math.cos(player.rotation.x);
+    return crawl*Math.max(0,surface+.22-(physicalY+chestHeight));
+  },
   animatePlayer(player,{forward,strafe=0,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false,running=false}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),
           move=Math.min(1,Math.hypot(forward,strafe*.85)),dir=forward<-.02?-1:1;
@@ -3801,7 +3812,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
       // l'aigua, braçades alternes i batement continu dels peus.
       u.upperBody.rotation.x+=(mix(-.1,0)-u.upperBody.rotation.x)*k;
       u.upperBody.rotation.z+=(.10*stroke*crawl-u.upperBody.rotation.z)*k;
-      player.rotation.x+=(mix(0,-.95)-player.rotation.x)*k;
+      player.rotation.x+=(mix(0,-1.20)-player.rotation.x)*k;
       player.rotation.z+=(stroke*.035*(1-crawl)-player.rotation.z)*k;
       // Quan el cos s'ajau, el cap aixeca lleument la mirada i es gira
       // una mica de costat per respirar, sense oscil·lacions brusques.
@@ -9145,6 +9156,11 @@ if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-i
 msgT-=dt;if(parachuteVisual)parachuteVisual.position.set(P.x,P.y,P.z);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;
 // Strafe independent: gir visual de la cintura i les cames, no de P.hd.
 animPl(cv||scopeActive?0:f,dt,running&&f>.1,cv||scopeActive?0:strafe);
+// La física conserva P.y, sota l'aigua. Aixecam només el model per
+// deixar el pit vora la superfície quan s'ajau per nedar a crol.
+// La compensació desapareix en aigües somes i al sortir de l'aigua.
+if(!cv&&!scopeActive&&!playerFall&&!playerEject)
+  pl.position.y+=window.HUNTER_CHARACTERS.swimVisualLift(pl,surface,P.y);
  // L'animació de caminar va a 8.4 rad/s: un esquitx a cada suport de
  // peu (creuament de fase PI). Sense esquitxos nedant ni en vehicles.
  movementFx.playerStep({
