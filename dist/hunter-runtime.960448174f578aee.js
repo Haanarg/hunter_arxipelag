@@ -6883,15 +6883,14 @@ const compoundPier=(x1,z1,x2,z2,width=4.2)=>{
   rampMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),
     new THREE.Vector3(ux*rampLength,rise,uz*rampLength).normalize());
   world.add(rampMesh);staticDecorRoots.push(rampMesh);
-  for(const side of [-1,1]){
-    const rail=wireRod([rampStartX+px*side*(width*.48),rampGround+.7,rampStartZ+pz*side*(width*.48)],
-      [x1+px*side*(width*.48),PIER_DECK_Y+.7,z1+pz*side*(width*.48)],.055,0x554537);
-    staticDecorRoots.push(rail);
-  }
+  // La rampa no porta baranes que obstaculitzin l'entrada.
+  // Es pot baixar pels laterals; el nivell del moll impedeix pujar de l'aigua.
   const yaw=Math.atan2(dx,dz);
   for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n,m=(a+b)/2,seg=L/n,mx=x1+dx*m,mz=z1+dz*m,y=PIER_DECK_Y-.14;
     const deck=new THREE.Mesh(new THREE.BoxGeometry(width,.28,seg+.12),M(0x816346,'paint'));deck.position.set(mx,y,mz);deck.rotation.y=yaw;world.add(deck);staticDecorRoots.push(deck);piers.push({x:mx,z:mz,ux,uz,px,pz,length:seg+.12,width,y:y+.14});
-    for(const side of[-1,1]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,3.35,8),M(0x48433e,'metal'));post.position.set(mx+px*side*(width*.44),PIER_DECK_Y-1.15,mz+pz*side*(width*.44));world.add(post);staticDecorRoots.push(post);if(i%2===0){const rail=wireRod([mx+px*side*(width*.44),PIER_DECK_Y+.35,mz+pz*side*(width*.44)],[mx+px*side*(width*.44)+ux*seg*.8,PIER_DECK_Y+.35,mz+pz*side*(width*.44)+uz*seg*.8],.035,0x4b5154);staticDecorRoots.push(rail)}}
+    // Els pilons decoratius no bloquegen la circulació; no hi ha
+    // barana contínua en les unions en T ni als costats del pantalà.
+    for(const side of[-1,1]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,3.35,8),M(0x48433e,'metal'));post.position.set(mx+px*side*(width*.44),PIER_DECK_Y-1.15,mz+pz*side*(width*.44));world.add(post);staticDecorRoots.push(post)}
     compoundClear.push({x:mx,z:mz,r:width*.8+1.5})
   }
   for(const side of[-1,1]){const b=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,.9,8),M(0x3e4447,'metal'));b.position.set(x2+px*side*(width*.35),PIER_DECK_Y+.26,z2+pz*side*(width*.35));world.add(b);staticDecorRoots.push(b)}
@@ -8067,30 +8066,17 @@ function mkEnemyBunker(x,z){
 // Door-aligned treads share the exact same geometry and walking height.
 function stairLocal(s,x,z){const dx=x-s.x,dz=z-s.z;return{along:dx*s.nx+dz*s.nz,side:dx*s.nz-dz*s.nx}}
 function stairContains(s,x,z,margin=0){const q=stairLocal(s,x,z);return q.along>=-margin&&q.along<=s.length+margin&&Math.abs(q.side)<=s.width/2+margin}
-// Els laterals del moll tenen baranes: no es pot entrar ni sortir
-// travessant-les. L'accés des de terra és exclusivament per la rampa.
-function pierSidePush(oldX,oldZ){
-  for(const p of piers){
-    const oldDx=oldX-p.x,oldDz=oldZ-p.z,
-      dx=P.x-p.x,dz=P.z-p.z,
-      oldAlong=oldDx*p.ux+oldDz*p.uz,
-      along=dx*p.ux+dz*p.uz,
-      oldSide=oldDx*p.px+oldDz*p.pz,
-      side=dx*p.px+dz*p.pz,limit=p.width/2-.35;
-    if(Math.abs(along)>p.length/2+.35&&Math.abs(oldAlong)>p.length/2+.35)continue;
-    if((oldSide>limit&&side<=limit||oldSide< -limit&&side>=-limit||
-        Math.abs(oldSide)<limit&&Math.abs(side)>=limit)&&
-       Math.abs(along)<p.length/2+.3){
-      P.x=oldX;P.z=oldZ;return
-    }
-  }
-}
+// Els molls no tenen barrera lateral: rampes i unions en T són transitables,
+// i el personatge pot abandonar el pantalà cap a l'aigua.
+// L'altura comprovada a groundAt evita l'ascens instantani des de l'aigua.
 function groundAt(x,z,previous=-Infinity){
   // No enfonsar el model sota els triangles que dibuixa el LOD actual.
   // Preservem l'altura física si és més alta (evita enfonsaments i salts negatius).
   const physical=hAt(x,z),visible=terrainStream?.visibleHeightAt(x,z);
   let y=visible===null||visible===undefined?physical:Math.max(physical,visible);for(const s of stairs){if(s.internal&&s.owner?.rb)continue;if(stairContains(s,x,z)){const q=stairLocal(s,x,z);if(s.ramp){const t=Math.max(0,Math.min(1,q.along/s.length));y=Math.max(y,s.top+(s.bottom-s.top)*t)}else{const i=Math.min(s.steps-1,Math.max(0,Math.floor(q.along/s.tread)));y=Math.max(y,s.top-i*s.rise)}}}
-for(const p of piers){const dx=x-p.x,dz=z-p.z,along=dx*p.ux+dz*p.uz,side=dx*p.px+dz*p.pz;if(Math.abs(along)<=p.length/2+.35&&Math.abs(side)<=p.width/2+.2&&
+// En entrar des de l'aigua, P.y és massa baix per quedar-se damunt
+ // la plataforma. La rampa ascendeix de forma contínua fins a la coberta.
+ for(const p of piers){const dx=x-p.x,dz=z-p.z,along=dx*p.ux+dz*p.uz,side=dx*p.px+dz*p.pz;if(Math.abs(along)<=p.length/2+.35&&Math.abs(side)<=p.width/2+.2&&
     (!Number.isFinite(previous)||previous>=p.y-.55))y=Math.max(y,p.y)}
 for(const b of buildingCandidates(x,z)){const floor=upperFloorHeight(b,x,z,previous);if(floor!==null)y=Math.max(y,floor)}
 const ramp=terminalRampHeight(x,z);if(ramp!==null)y=Math.max(y,ramp);if(Number.isFinite(previous)){const deck=pedestrianFerry(x,z,previous);if(deck)y=Math.max(y,deck.y)}
@@ -9030,7 +9016,6 @@ const canRun=!!started&&!paused&&!over&&!cv&&!swimming&&!playerFall&&!playerEjec
 joystick.setRunEnabled(canRun);
 if(!started||paused||over){updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
 rebuildVehicleGrid();elapsed+=dt;
-const pierOldX=P.x,pierOldZ=P.z;
 const jf=-joystick.state.y,jtr=-joystick.state.x,
       f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),
       tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),
@@ -9068,7 +9053,7 @@ else if(playerEject&&playerEject.t>0){
   P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*ss+Math.cos(P.hd)*lateral));
   P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*ss-Math.sin(P.hd)*lateral));
 }
-if(!playerFall){if(!cv)pierSidePush(pierOldX,pierOldZ);wallPush();treePush();vehiclePushPlayer()}}
+if(!playerFall){wallPush();treePush();vehiclePushPlayer()}}
 V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;v.strafeV=0;return}if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
 syncFerryCargo();updateTerminalRamps();
 ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2)||null;
