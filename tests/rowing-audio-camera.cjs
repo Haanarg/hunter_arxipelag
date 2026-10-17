@@ -55,12 +55,14 @@ const {pathToFileURL}=require('node:url');
    'La pistola a la barca ha de ser proporcional al remador');
  assert.ok(u.torso.rotation.y>Math.PI/2&&u.torso.rotation.y<Math.PI,
    'El tors gira cap a la dreta sense superar els 90 graus');
- assert.ok(u.limbs[2].position.x>0,
-   'Un cop orientat a proa, el braç dret surt de l’espatlla dreta');
+ const rightShoulder=new T.Vector3(.57,1.17,0)
+   .applyQuaternion(u.torso.quaternion).add(u.torso.position);
+ assert.ok(u.limbs[2].position.distanceTo(rightShoulder)<.001,
+   'L’espatlla del braç dret segueix el tors també girat a 90 graus');
  assert.ok(shot.direction.dot(new T.Vector3(0,0,-1))>.98,
    'La pistola i el tret han d’apuntar a proa');
- assert.ok(shot.origin.x>0,
-   'La boca de la pistola queda al costat dret quan mira a proa');
+ assert.ok(shot.origin.z<u.torso.position.z-.25,
+   'La pistola surt cap a proa des de la mà dreta amb el tors de perfil');
  for(let i=0;i<3;i++)ride.update(state,.05);
  assert.ok(Math.abs(u.torso.rotation.y-Math.PI/2)<.10,
    'En disparar el tors queda de perfil a 90 graus');
