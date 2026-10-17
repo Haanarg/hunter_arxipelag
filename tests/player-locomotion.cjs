@@ -60,6 +60,10 @@ const {pathToFileURL}=require('node:url');
  assert.ok(Math.abs(player.rotation.x)<.005,'La braça ha de conservar la postura actual');
  for(let i=0;i<30;i++)swim(true);
  assert.ok(u.crawlBlend>.99,'La zona de velocitat activa el crol');
+ assert.ok(Math.abs(u.upperBody.rotation.y-Math.PI)<.015,
+   'El tronc del crol ha de girar 180° sobre l’eix longitudinal');
+ assert.ok(Math.abs(u.lowerBody.rotation.y-Math.PI)<.015,
+   'La pelvis i les cames han de girar 180° amb el tronc');
  assert.ok(player.rotation.x< -1.16,'El crol ha de ser gairebé horitzontal');
  // Aigües profundes: física del jugador 2,1 m sota l'onatge.
  // El model, en canvi, ha de deixar visibles cap i pit.
@@ -83,5 +87,9 @@ const {pathToFileURL}=require('node:url');
  for(let i=0;i<30;i++)swim(false,1,0);
  assert.ok(u.crawlBlend<.01,'En deixar córrer es torna a la braça');
  assert.ok(Math.abs(player.rotation.x)<.01,'Es recupera la postura de braça');
+ assert.ok(Math.abs(u.upperBody.rotation.y)<.02,
+   'En tornar a la braça s’ha de desfer el gir del tors');
+ assert.ok(Math.abs(u.lowerBody.rotation.y)<.02,
+   'La pelvis recupera l’orientació natural en braça');
  console.log('OK locomoció: cap frontal, strafe, braça i crol amb animació pròpia');
 })().catch(e=>{console.error(e);process.exitCode=1});

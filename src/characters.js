@@ -341,7 +341,9 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // conserva el rumb del jugador (i, per tant, la càmera i la punteria).
     const strafeAngle=!swimming&&!inVehicle&&!airborne&&!parachuting?
       -Math.PI/4*Math.max(-1,Math.min(1,strafe)):0;
-    u.lowerBody.rotation.y+=(strafeAngle-u.lowerBody.rotation.y)*(1-Math.exp(-13*dt));
+    // Evitar que el reposicionament de l'strafe contraresti
+    // el gir longitudinal de 180 graus quan es neda a crol.
+    if(!swimming)u.lowerBody.rotation.y+=(strafeAngle-u.lowerBody.rotation.y)*(1-Math.exp(-13*dt));
     u.firePose=Math.max(0,(u.firePose||0)-dt);u.meleePose=Math.max(0,(u.meleePose||0)-dt);u.grenadeThrow=Math.max(0,(u.grenadeThrow||0)-dt);
     u.cisallaCut=Math.max(0,(u.cisallaCut||0)-dt);
     u.pistolAimTime=Math.max(0,(u.pistolAimTime||0)-dt);u.pistolShotAge=Math.min(10,(u.pistolShotAge??10)+dt);
@@ -382,6 +384,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
       tx(u.lkl,parachuting?-.18:-.12,blend);
       tx(u.lkr,parachuting?-.18:-.12,blend);
       u.upperBody.rotation.x+=(0-u.upperBody.rotation.x)*k;
+      u.upperBody.rotation.y+=(0-u.upperBody.rotation.y)*k;
       u.upperBody.rotation.z+=(0-u.upperBody.rotation.z)*k;
       u.head.rotation.x+=(0-u.head.rotation.x)*k;
       u.head.rotation.y+=(0-u.head.rotation.y)*k;
@@ -399,6 +402,12 @@ window.HUNTER_CHARACTERS=Object.freeze({
       u.pistolBlend=0;
       // Braça: postura habitual. Crol: cos gairebé horitzontal sobre
       // l'aigua, braçades alternes i batement continu dels peus.
+      // Un gir de 180° sobre l'eix longitudinal del cos (+Y local
+      // abans d'inclinar-lo) inverteix esquena/panxa sense canviar
+      // cap a on avança el personatge ni la posició del cap i peus.
+      const crawlTurn=Math.PI*crawl;
+      u.upperBody.rotation.y+=(crawlTurn-u.upperBody.rotation.y)*k;
+      u.lowerBody.rotation.y+=(crawlTurn-u.lowerBody.rotation.y)*k;
       u.upperBody.rotation.x+=(mix(-.1,0)-u.upperBody.rotation.x)*k;
       u.upperBody.rotation.z+=(.10*stroke*crawl-u.upperBody.rotation.z)*k;
       player.rotation.x+=(mix(0,-1.20)-player.rotation.x)*k;
@@ -432,6 +441,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // Inclina només el tronc superior al voltant de la cintura: els malucs
     // i les cames no es desplacen cap endavant amb l'arrel del personatge.
     u.upperBody.rotation.x+=(-.32*run-u.upperBody.rotation.x)*k;
+    // A terra i en sortir de l'aigua, desfem el gir propi del crol.
+    u.upperBody.rotation.y+=(0-u.upperBody.rotation.y)*k;
     u.upperBody.rotation.z+=(0-u.upperBody.rotation.z)*k;
     // El cap compensa la inclinació del tronc i continua mirant de
     // front, també durant les transicions d'entrada i sortida de cursa.
