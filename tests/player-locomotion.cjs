@@ -64,6 +64,17 @@ const {pathToFileURL}=require('node:url');
    'El tronc del crol ha de girar 180° sobre l’eix longitudinal');
  assert.ok(Math.abs(u.lowerBody.rotation.y-Math.PI)<.015,
    'La pelvis i les cames han de girar 180° amb el tronc');
+ assert.equal(player.rotation.order,'YZX','El gir nord-sud ha de ser exterior al pitch');
+ assert.ok(Math.abs(player.rotation.z-Math.PI)<.02,
+   'El nedador s’ha de girar 180° al voltant de l’eix longitudinal del mar');
+ player.updateMatrixWorld(true);
+ const faceWorld=new THREE.Vector3(0,0,-1)
+   .applyQuaternion(u.head.getWorldQuaternion(new THREE.Quaternion()));
+ assert.ok(faceWorld.y<-.65,'El nas ha de mirar cap al fons i no cap al cel');
+ const headWorld=u.head.getWorldPosition(new THREE.Vector3());
+ const pelvisWorld=u.lowerBody.getWorldPosition(new THREE.Vector3());
+ assert.ok(headWorld.z<pelvisWorld.z-.5,
+   'El cap ha de continuar avançat en la direcció de natació');
  assert.ok(player.rotation.x< -1.16,'El crol ha de ser gairebé horitzontal');
  // Aigües profundes: física del jugador 2,1 m sota l'onatge.
  // El model, en canvi, ha de deixar visibles cap i pit.
@@ -91,5 +102,26 @@ const {pathToFileURL}=require('node:url');
    'En tornar a la braça s’ha de desfer el gir del tors');
  assert.ok(Math.abs(u.lowerBody.rotation.y)<.02,
    'La pelvis recupera l’orientació natural en braça');
+ assert.ok(Math.abs(player.rotation.z)<.02,
+   'La braça desfà el gir nord-sud del crol');
+ // El·lipse real de la mà esquerra: les projeccions XZ han de
+ // dibuixar superfície, no només anar endavant i enrere en línia.
+ const samples=[];
+ for(let i=0;i<=32;i++){
+   const phase=2*Math.PI*i/32;
+   u.ph=phase-.25*(4.2+3.5);
+   ctx.window.HUNTER_CHARACTERS.animatePlayer(player,{
+     forward:1,strafe:0,running:true,dt:.25,swimming:true,inVehicle:false,ammo:16
+   });
+   player.updateMatrixWorld(true);
+   const hand=u.ael.localToWorld(new THREE.Vector3(0,-.58*1.2,0));
+   u.upperBody.worldToLocal(hand);
+   samples.push([hand.x,hand.z]);
+ }
+ let ellipseArea=0;
+ for(let i=0;i<32;i++)
+   ellipseArea+=samples[i][0]*samples[i+1][1]-samples[i+1][0]*samples[i][1];
+ assert.ok(Math.abs(ellipseArea)*.5>.03,
+   'Les braçades de crol han de formar una el·lipse, no una línia');
  console.log('OK locomoció: cap frontal, strafe, braça i crol amb animació pròpia');
 })().catch(e=>{console.error(e);process.exitCode=1});
