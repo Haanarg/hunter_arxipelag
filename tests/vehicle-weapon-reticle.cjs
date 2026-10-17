@@ -50,6 +50,34 @@ const {pathToFileURL}=require('node:url');
  assert.equal(ctx.calls.at(-1).kind,'heavy','Retícula usa foc pesat');
  ctx.cv.rockets=0;refresh();
  assert.equal(ui.style.display,'none','Sense míssils la retícula desapareix');
+ // Abans el marcador es feia invisible sense un sòlid interceptat.
+ ctx.bazookaFirstSolidHit=()=>null;
+ ctx.autoAimWeaponShot=(x,y,z,dx,dy,dz,range,cone,kind,focus)=>{
+   ctx.calls.push({x,y,z,dx,dy,dz,range,cone,kind});
+   return [dx,dy,dz];
+ };
+ ctx.cv={t:'tanc',o:new T.Group()};refresh();
+ assert.equal(ui.style.display,'block','La retícula del tanc és visible en mar obert');
+ ctx.cv={t:'heli_combat',x:0,z:0,hd:0,o:new T.Group(),rockets:4};
+ ctx.cv.o.position.y=40;refresh();
+ assert.equal(ui.style.display,'block','Retícula de míssils sense impacte');
+ assert.ok(Number.parseFloat(ui.style.left)>=0&&Number.parseFloat(ui.style.left)<=100,
+   'Una trajectòria fora de càmera mostra la retícula dins pantalla');
+ const prefix=src.slice(src.indexOf('function bazookaFirstSolidHit('),
+   src.indexOf('function updateBazookaReticle(dt){'));
+ const own={t:'tanc',x:0,z:0,o:new T.Group()};
+ const sphereCtx={wallCandidates:()=>[],buildingCandidates:()=>[],
+   enemyCandidatesAt:()=>[],vehicleCandidatesAt:()=>[own],hAt:()=>-100,
+   vehicleRadius:()=>7,segmentSphereT:()=>0,segmentAabbT:()=>null};
+ vm.createContext(sphereCtx);
+ vm.runInContext(prefix,sphereCtx);
+ assert.equal(vm.runInContext(
+   'bazookaFirstSolidHit(0,40,0,0,0,-1,30)',sphereCtx)?.z,0,
+   'La hitbox pròpia interceptaria falsament sense exclusió');
+ sphereCtx.source=own;
+ assert.equal(vm.runInContext(
+   'bazookaFirstSolidHit(0,40,0,0,0,-1,30,source)',sphereCtx),null,
+   'La mira ignora el vehicle des d’on es dispara');
  ctx.cv=null;ctx.bazookaEquipped=true;refresh();
  assert.equal(ctx.bazookaReticleMode,'bazooka','Bazuca conserva la seva retícula');
  ctx.bazookaEquipped=false;refresh();
