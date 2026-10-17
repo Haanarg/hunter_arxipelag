@@ -1832,6 +1832,11 @@ if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-i
 msgT-=dt;if(parachuteVisual)parachuteVisual.position.set(P.x,P.y,P.z);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;
 // Strafe independent: gir visual de la cintura i les cames, no de P.hd.
 animPl(cv||scopeActive?0:f,dt,running&&f>.1,cv||scopeActive?0:strafe);
+// La física conserva P.y, sota l'aigua. Aixecam només el model per
+// deixar el pit vora la superfície quan s'ajau per nedar a crol.
+// La compensació desapareix en aigües somes i al sortir de l'aigua.
+if(!cv&&!scopeActive&&!playerFall&&!playerEject)
+  pl.position.y+=window.HUNTER_CHARACTERS.swimVisualLift(pl,surface,P.y);
  // L'animació de caminar va a 8.4 rad/s: un esquitx a cada suport de
  // peu (creuament de fase PI). Sense esquitxos nedant ni en vehicles.
  movementFx.playerStep({

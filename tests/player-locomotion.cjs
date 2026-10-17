@@ -60,7 +60,21 @@ const {pathToFileURL}=require('node:url');
  assert.ok(Math.abs(player.rotation.x)<.005,'La braça ha de conservar la postura actual');
  for(let i=0;i<30;i++)swim(true);
  assert.ok(u.crawlBlend>.99,'La zona de velocitat activa el crol');
- assert.ok(player.rotation.x<-.91,'El crol ha de ser en posició horitzontal');
+ assert.ok(player.rotation.x< -1.16,'El crol ha de ser gairebé horitzontal');
+ // Aigües profundes: física del jugador 2,1 m sota l'onatge.
+ // El model, en canvi, ha de deixar visibles cap i pit.
+ const surface=0,physicalY=surface-2.1;
+ const visualLift=ctx.window.HUNTER_CHARACTERS.swimVisualLift(player,surface,physicalY);
+ assert.ok(visualLift>1.4,'La compensació vertical del crol ha de ser suficient');
+ player.position.set(0,physicalY+visualLift,0);
+ player.updateMatrixWorld(true);
+ const chestCenter=u.upperBody.localToWorld(
+   new THREE.Vector3(0,2.31*1.2-u.upperBodyPivotHeight,0));
+ const headCenter=u.head.getWorldPosition(new THREE.Vector3());
+ assert.ok(chestCenter.y>surface+.10,'El pit del nedador ha de trencar la superfície');
+ assert.ok(headCenter.y>surface+.30,'El cap ha de romandre fora de l’aigua');
+ assert.equal(ctx.window.HUNTER_CHARACTERS.swimVisualLift(player,surface,1),0,
+   'En sortir a terra no s’ha d’aixecar artificialment el model');
  assert.ok(Math.abs(u.al.rotation.x-u.ar.rotation.x)>.4,
    'Les braçades de crol s’han d’alternar');
  assert.ok(Math.abs(u.ll.rotation.x-u.lr.rotation.x)>.05,
