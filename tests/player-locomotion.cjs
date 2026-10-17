@@ -37,6 +37,8 @@ const {pathToFileURL}=require('node:url');
  );
  for(let i=0;i<30;i++)animate(1,0,true);
  assert.ok(u.upperBody.rotation.x<-.29,'Només el tronc s’inclina en córrer');
+ assert.ok(Math.abs(u.upperBody.rotation.x+u.head.rotation.x)<.003,
+   'El cap ha de compensar la inclinació del tors i mirar endavant');
  assert.ok(Math.abs(player.rotation.x)<1e-5,'L’arrel no inclina la pelvis');
  assert.ok(Math.abs(u.lowerBody.rotation.x)<1e-5,'Les cames no s’inclinen');
  assert.equal(u.lowerBody.position.y,initialLowerHeight);
@@ -48,5 +50,24 @@ const {pathToFileURL}=require('node:url');
  assert.ok(Math.abs(u.lowerBody.rotation.y-Math.PI/4)<.005,'Strafe esquerre: +45°');
  for(let i=0;i<30;i++)animate(0,0);
  assert.ok(Math.abs(u.lowerBody.rotation.y)<.005,'Pelvis torna al front');
- console.log('OK locomoció: tronc inclinat independent, strafe simètric de 45°');
+ // A l'aigua, el crol ha de variar tronc, braços i batement de cames,
+ // sense reactivar les armes i tornant a la braça quan se solta.
+ const swim=(fast,strafe=0,forward=1)=>ctx.window.HUNTER_CHARACTERS.animatePlayer(
+   player,{forward,strafe,running:fast,dt:.08,swimming:true,inVehicle:false,ammo:16}
+ );
+ for(let i=0;i<30;i++)swim(false);
+ const breastLeft=u.al.rotation.x,breastRight=u.ar.rotation.x;
+ assert.ok(Math.abs(player.rotation.x)<.005,'La braça ha de conservar la postura actual');
+ for(let i=0;i<30;i++)swim(true);
+ assert.ok(u.crawlBlend>.99,'La zona de velocitat activa el crol');
+ assert.ok(player.rotation.x<-.91,'El crol ha de ser en posició horitzontal');
+ assert.ok(Math.abs(u.al.rotation.x-u.ar.rotation.x)>.4,
+   'Les braçades de crol s’han d’alternar');
+ assert.ok(Math.abs(u.ll.rotation.x-u.lr.rotation.x)>.05,
+   'Les cames han de bategar alternadament');
+ assert.equal(u.gun.visible,false,'No s’han de mostrar armes nedant');
+ for(let i=0;i<30;i++)swim(false,1,0);
+ assert.ok(u.crawlBlend<.01,'En deixar córrer es torna a la braça');
+ assert.ok(Math.abs(player.rotation.x)<.01,'Es recupera la postura de braça');
+ console.log('OK locomoció: cap frontal, strafe, braça i crol amb animació pròpia');
 })().catch(e=>{console.error(e);process.exitCode=1});

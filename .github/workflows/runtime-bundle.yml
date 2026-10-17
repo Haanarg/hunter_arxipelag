@@ -10,6 +10,8 @@ on:
       - 'tests/joystick-running.cjs'
       - 'tests/player-locomotion.cjs'
       - 'tests/pier-access.cjs'
+      - 'index.html'
+      - 'src/ui.js'
       - '.github/workflows/runtime-bundle.yml'
   workflow_dispatch:
 permissions:

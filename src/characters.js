@@ -338,8 +338,12 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // Transició suau de caminar a córrer: cadència i posicions diferents,
     // no només la velocitat de desplaçament.
     u.runBlend=(u.runBlend||0)+((running&&move>.08&&!swimming&&!inVehicle?1:0)-(u.runBlend||0))*(1-Math.exp(-10*dt));
-    const run=u.runBlend;
-    u.ph+=dt*(swimming?(move?4.2:2.1):(8.4+4.4*run)*move);const ph=u.ph,breath=Math.sin(u.breath);
+    // La mateixa acció de velocitat passa a ser crol quan som a l'aigua.
+    // Un blend propi preserva una transició suau entre braça i crol.
+    u.crawlBlend=(u.crawlBlend||0)+((swimming&&running&&forward>.08&&move>.08&&!inVehicle?1:0)-(u.crawlBlend||0))*(1-Math.exp(-9*dt));
+    const run=u.runBlend,crawl=u.crawlBlend;
+    u.ph+=dt*(swimming?(move?(4.2+3.5*crawl)*move:2.1):(8.4+4.4*run)*move);
+    const ph=u.ph,breath=Math.sin(u.breath);
 
     const tx=(joint,target,rate=limbK)=>joint.rotation.x+=(target-joint.rotation.x)*rate;
     const tz=(joint,target,rate=limbK)=>joint.rotation.z+=(target-joint.rotation.z)*rate;
@@ -367,22 +371,49 @@ window.HUNTER_CHARACTERS=Object.freeze({
       tx(u.lkl,parachuting?-.18:-.12,blend);
       tx(u.lkr,parachuting?-.18:-.12,blend);
       u.upperBody.rotation.x+=(0-u.upperBody.rotation.x)*k;
+      u.upperBody.rotation.z+=(0-u.upperBody.rotation.z)*k;
+      u.head.rotation.x+=(0-u.head.rotation.x)*k;
+      u.head.rotation.y+=(0-u.head.rotation.y)*k;
+      u.head.rotation.z+=(0-u.head.rotation.z)*k;
       player.rotation.x+=(0-player.rotation.x)*k;
       return;
     }
 
     if(swimming&&!inVehicle){
-      const stroke=Math.sin(ph),recover=(1-Math.cos(ph))*.5;
+      const stroke=Math.sin(ph),recover=(1-Math.cos(ph))*.5,
+            mix=(normal,fast)=>normal+(fast-normal)*crawl,
+            sinOpp=-Math.sin(ph),flutter=Math.sin(ph*2);
       u.gun.visible=false;u.knife.visible=false;u.bazooka.visible=false;u.grenade.visible=false;u.sniper.visible=false;u.cisalla.visible=false;
-      u.upperBody.rotation.x+=(-.1-u.upperBody.rotation.x)*k;
-      player.rotation.x+=(0-player.rotation.x)*k;
-      player.rotation.z+=(stroke*.035-player.rotation.z)*k;
-      tx(u.al,1.15+.18*stroke);tx(u.ar,1.15-.18*stroke);
-      tz(u.al,-.42-.38*stroke);tz(u.ar,.42+.38*stroke);
-      tx(u.ael,.72+.45*recover);tx(u.aer,.72+.45*(1-recover));
-      const kick=.22*Math.sin(ph*2);tx(u.ll,.18+kick);tx(u.lr,.18-kick);tx(u.lkl,-(.48-.18*kick));tx(u.lkr,-(.48+.18*kick));
-      player.position.y+=Math.sin(ph*2)*.035;
-      return
+      if(u.pistolFlash)u.pistolFlash.visible=false;
+      u.pistolBlend=0;
+      // Braça: postura habitual. Crol: cos gairebé horitzontal sobre
+      // l'aigua, braçades alternes i batement continu dels peus.
+      u.upperBody.rotation.x+=(mix(-.1,0)-u.upperBody.rotation.x)*k;
+      u.upperBody.rotation.z+=(.10*stroke*crawl-u.upperBody.rotation.z)*k;
+      player.rotation.x+=(mix(0,-.95)-player.rotation.x)*k;
+      player.rotation.z+=(stroke*.035*(1-crawl)-player.rotation.z)*k;
+      // Quan el cos s'ajau, el cap aixeca lleument la mirada i es gira
+      // una mica de costat per respirar, sense oscil·lacions brusques.
+      const headX=mix(-u.upperBody.rotation.x,.38),
+            headYaw=crawl*.18*Math.max(0,stroke);
+      tx(u.head,headX,k);
+      u.head.rotation.y+=(headYaw-u.head.rotation.y)*k;
+      u.head.rotation.z+=(-u.upperBody.rotation.z*.6-u.head.rotation.z)*k;
+      // El braç que es recupera sobre l'aigua passa per davant;
+      // l'altre completa la tracció. En braça tots dos són simètrics.
+      tx(u.al,mix(1.15+.18*stroke,1.03+1.23*stroke));
+      tx(u.ar,mix(1.15-.18*stroke,1.03+1.23*sinOpp));
+      tz(u.al,mix(-.42-.38*stroke,-.16-.14*stroke));
+      tz(u.ar,mix(.42+.38*stroke,.16+.14*sinOpp));
+      tx(u.ael,mix(.72+.45*recover,.38+.75*Math.max(0,-stroke)));
+      tx(u.aer,mix(.72+.45*(1-recover),.38+.75*Math.max(0,stroke)));
+      const kick=.22*flutter;
+      tx(u.ll,mix(.18+kick,.10+.30*flutter));
+      tx(u.lr,mix(.18-kick,.10-.30*flutter));
+      tx(u.lkl,mix(-(.48-.18*kick),-.20-.16*Math.max(0,flutter)));
+      tx(u.lkr,mix(-(.48+.18*kick),-.20-.16*Math.max(0,-flutter)));
+      player.position.y+=Math.sin(ph*2)*mix(.035,.018);
+      return;
     }
 
     // El cos es projecta endavant i les cames fan una passa més llarga:
@@ -390,6 +421,12 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // Inclina només el tronc superior al voltant de la cintura: els malucs
     // i les cames no es desplacen cap endavant amb l'arrel del personatge.
     u.upperBody.rotation.x+=(-.32*run-u.upperBody.rotation.x)*k;
+    u.upperBody.rotation.z+=(0-u.upperBody.rotation.z)*k;
+    // El cap compensa la inclinació del tronc i continua mirant de
+    // front, també durant les transicions d'entrada i sortida de cursa.
+    tx(u.head,-u.upperBody.rotation.x,k);
+    u.head.rotation.y+=(0-u.head.rotation.y)*k;
+    u.head.rotation.z+=(0-u.head.rotation.z)*k;
     player.rotation.x+=(0-player.rotation.x)*k;
     const walk=Math.sin(ph)*move*dir,walk2=Math.cos(ph)*move;
     const hip=(.62+.50*run)*walk,
