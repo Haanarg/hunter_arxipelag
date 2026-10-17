@@ -329,7 +329,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.cisallaCut=Math.max(0,(u.cisallaCut||0)-dt);
     u.pistolAimTime=Math.max(0,(u.pistolAimTime||0)-dt);u.pistolShotAge=Math.min(10,(u.pistolShotAge??10)+dt);
     if(grenadeEquipped&&u.grenadeThrow<=0)u.grenadeReleased=false;u.breath=(u.breath||0)+dt*1.7;
-    u.ph+=dt*(swimming?(move?4.2:2.1):(running?12.8:8.4)*move);const ph=u.ph,breath=Math.sin(u.breath);
+    // Transició suau de caminar a córrer: cadència i posicions diferents,
+    // no només la velocitat de desplaçament.
+    u.runBlend=(u.runBlend||0)+((running&&move>.08&&!swimming&&!inVehicle?1:0)-(u.runBlend||0))*(1-Math.exp(-10*dt));
+    const run=u.runBlend;
+    u.ph+=dt*(swimming?(move?4.2:2.1):(8.4+4.4*run)*move);const ph=u.ph,breath=Math.sin(u.breath);
 
     const tx=(joint,target,rate=limbK)=>joint.rotation.x+=(target-joint.rotation.x)*rate;
     const tz=(joint,target,rate=limbK)=>joint.rotation.z+=(target-joint.rotation.z)*rate;
@@ -372,12 +376,16 @@ window.HUNTER_CHARACTERS=Object.freeze({
       return
     }
 
-    player.rotation.x+=((running?-.24:0)-player.rotation.x)*k;
+    // El cos es projecta endavant i les cames fan una passa més llarga:
+    // els genolls es recullen durant la fase aèria de cada gambada.
+    player.rotation.x+=(-.32*run-player.rotation.x)*k;
     const walk=Math.sin(ph)*move*dir,walk2=Math.cos(ph)*move;
-    const hip=(running?.88:.62)*walk,kneeL=-(.08+Math.max(0,-Math.sin(ph)*dir)*.92*move),kneeR=-(.08+Math.max(0,Math.sin(ph)*dir)*.92*move);
+    const hip=(.62+.50*run)*walk,
+          kneeL=-(.08+Math.max(0,-Math.sin(ph)*dir)*(.92+.38*run)*move),
+          kneeR=-(.08+Math.max(0,Math.sin(ph)*dir)*(.92+.38*run)*move);
     tx(u.ll,hip);tx(u.lr,-hip);tx(u.lkl,kneeL);tx(u.lkr,kneeR);
-    tz(u.ll,-.025*walk2);tz(u.lr,.025*walk2);
-    player.rotation.z+=(-.035*walk-player.rotation.z)*k;
+    tz(u.ll,-(.025+.02*run)*walk2);tz(u.lr,(.025+.02*run)*walk2);
+    player.rotation.z+=(-(.035+.015*run)*walk-player.rotation.z)*k;
 
     const aiming=u.firePose>0&&!inVehicle,melee=u.meleePose>0&&!inVehicle,bazooka=!!bazookaEquipped&&!inVehicle,
           grenade=!!grenadeEquipped&&!inVehicle,cisalla=!!cisallaEquipped&&!inVehicle,
@@ -443,7 +451,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
       const p=melee?Math.max(0,Math.min(1,1-u.meleePose/u.knifeAttackDuration)):0,
             target=knifeAttack3BTargets(p),
             armRate=1-Math.exp(-(melee?38:16)*dt);
-      tx(u.ar,target.shoulderX+.035*walk,armRate);
+      tx(u.ar,target.shoulderX+(.035+.19*run)*walk,armRate);
       tz(u.ar,target.shoulderZ+.025*walk,armRate);
       tx(u.aer,target.elbowX,armRate);
       tz(u.aer,target.elbowZ,armRate);
@@ -452,7 +460,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
       u.knife.rotation.y=target.bladeY;
       u.knife.rotation.z+=(target.bladeZ-u.knife.rotation.z)*armRate;
       // L'esquerra acompanya la punyalada amb un contrapès moderat.
-      tx(u.al,-.40*walk+.018*breath+target.leftShoulderX,armRate);
+      tx(u.al,-(.40+.35*run)*walk+.018*breath+target.leftShoulderX,armRate);
       tz(u.al,-.12+target.leftShoulderZ,armRate);
       tx(u.ael,.16+.1*move+target.leftElbowX,armRate);
       tz(u.ael,-.04,armRate);
@@ -461,11 +469,13 @@ window.HUNTER_CHARACTERS=Object.freeze({
       tx(u.ar,1.18);tz(u.ar,-.08);tx(u.aer,.7);
       tx(u.al,1.05);tz(u.al,-.28);tx(u.ael,.82);
     }else{
-      const armSwing=.46*walk;
+      // A la cursa, els braços bombegen més i els colzes van flexionats.
+      const armSwing=(.46+.46*run)*walk;
       tx(u.al,-armSwing+.018*breath);tx(u.ar,armSwing-.018*breath);
-      tz(u.al,-.12);tz(u.ar,.12);tz(u.ael,-.04);tz(u.aer,.04);
-      tz(u.al,-.025);tz(u.ar,.025);
-      const bendL=.16+Math.max(0,Math.cos(ph))*.2*move,bendR=.16+Math.max(0,-Math.cos(ph))*.2*move;
+      tz(u.al,-.025-.035*run);tz(u.ar,.025+.035*run);
+      tz(u.ael,-.04);tz(u.aer,.04);
+      const bendL=.16+.60*run+Math.max(0,Math.cos(ph))*.2*move,
+            bendR=.16+.60*run+Math.max(0,-Math.cos(ph))*.2*move;
       tx(u.ael,bendL);tx(u.aer,bendR);
     }
 
@@ -503,7 +513,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.gun.quaternion.copy(rig.idleQ).slerp(rig.aimQ,blend);
     u.pistolSlide.position.z=kick*.065;
     u.pistolFlash.visible=targetBlend>0&&u.pistolShotAge<.055;
-    if(move>.02)player.position.y+=Math.abs(Math.sin(ph))*0.085*move;
+    if(move>.02)player.position.y+=Math.abs(Math.sin(ph))*(.085+.065*run)*move;
     else player.position.y+=breath*.012;
   }
 });

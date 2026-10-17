@@ -1282,7 +1282,7 @@ function prepareVisibilitySystem(){
   updateDistanceVisibility();
 }
 
-const K={},runButton=document.getElementById('runButton'),joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joystick')),
+const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joystick')),
       strafeButtons={left:document.getElementById('strafeLeft'),right:document.getElementById('strafeRight')},
       strafePointers={left:null,right:null},
       STRAFE_VEHICLES=new Set(['hover','heli','heli_combat']);
@@ -1314,11 +1314,7 @@ for(const side of ['left','right']){
   };
   for(const name of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(name,release);
 }
-let runPointer=null;
-runButton.addEventListener('pointerdown',e=>{if(!started||paused||over||cv||swimming||scopeActive)return;e.preventDefault();runPointer=e.pointerId;runButton.setPointerCapture(e.pointerId);runButton.classList.add('held')});
-for(const name of ['pointerup','pointercancel','lostpointercapture'])runButton.addEventListener(name,e=>{if(runPointer!==e.pointerId)return;runPointer=null;runButton.classList.remove('held')});
 const clearKeys=()=>{
-  runPointer=null;runButton.classList.remove('held');
   cancelGrenadeCharge();Object.keys(K).forEach(k=>K[k]=0);
   joystick.reset();releaseStrafeButtons();
   document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))
@@ -1753,16 +1749,18 @@ window.HUNTER_VEHICLES.animateSteering(o,v.t,tr,dt);
 v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0):(v.pedalPhase||0),sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*sweep;r.rotation.z=-side*(.12+dip);r.rotation.x=.06*Math.sin(rowPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})}
 function update(dt,t){
 const strafeEnabled=updateStrafeControls();
+const canRun=!!started&&!paused&&!over&&!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive;
+joystick.setRunEnabled(canRun);
 if(!started||paused||over){updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
 rebuildVehicleGrid();elapsed+=dt;
 const pierOldX=P.x,pierOldZ=P.z;
-const running=!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive&&(runPointer!==null||K.ShiftLeft||K.ShiftRight);
 const jf=-joystick.state.y,jtr=-joystick.state.x,
       f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),
       tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),
       strafe=strafeEnabled?Math.max(-1,Math.min(1,
         (K.KeyU?1:0)-(K.KeyY?1:0)+(strafePointers.right!==null?1:0)-(strafePointers.left!==null?1:0))):0,
       ud=(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),lim=H-2;
+const running=canRun&&f>.1&&(joystick.state.running||K.ShiftLeft||K.ShiftRight);
 if(scopeActive){
   // El joystick i el teclat controlen ÚNICAMENT la càmera de la mira:
   // sense traslació, gir ni animació de desplaçament del jugador.
