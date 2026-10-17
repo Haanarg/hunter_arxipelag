@@ -6580,7 +6580,7 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
 ;
 // END src/compound-generation.js
 // BEGIN src/world-generation.js
-const PIER_DECK_Y=2.7; // Cota de coberta per sobre del màxim d'onatge (2.2 m).
+const PIER_DECK_Y=2.4; // 20 cm sobre el màxim de les ones, més proper al nivell de terra. // Cota de coberta per sobre del màxim d'onatge (2.2 m).
 // Validació final contra TOTS els vehicles: també els afegits després dels molls.
 function jetSkiSpotClear(q,ignore=null){
   const box=vehicleBox({t:'moto_aquatica',...q});box.w+=2;box.d+=2;
@@ -6771,8 +6771,14 @@ const compoundPath=(points,width=4,color=0x8a795e)=>{
 };
 const compoundPier=(x1,z1,x2,z2,width=4.2)=>{
   const dx=x2-x1,dz=z2-z1,L=Math.hypot(dx,dz);if(L<2)return;
+  // Una passarel·la inclinada connecta l'arrencada del moll amb terra ferma.
+  const ux=dx/L,uz=dz/L,px=-uz,pz=ux,n=Math.max(1,Math.ceil(L/5)),
+        rampLength=12,rampStartX=x1-ux*rampLength,rampStartZ=z1-uz*rampLength,
+        rampGround=Math.max(hAt(rampStartX,rampStartZ)+.08,0),
+        ramp={x:x1,z:z1,nx:-ux,nz:-uz,length:rampLength,
+          width:width-.25,bottom:rampGround,top:PIER_DECK_Y,ramp:true,pierAccess:true};
+  stairs.push(ramp);
   if(seedSearchMode){
-    const ux=dx/L,uz=dz/L,px=-uz,pz=ux,n=Math.max(1,Math.ceil(L/5));
     for(let i=0;i<n;i++){
       const m=(i+.5)/n,seg=L/n,mx=x1+dx*m,mz=z1+dz*m;
       piers.push({x:mx,z:mz,ux,uz,px,pz,length:seg+.12,width,y:PIER_DECK_Y});
@@ -6780,10 +6786,23 @@ const compoundPier=(x1,z1,x2,z2,width=4.2)=>{
     }
     return;
   }
-  const ux=dx/L,uz=dz/L,px=-uz,pz=ux,yaw=Math.atan2(dx,dz),n=Math.max(1,Math.ceil(L/5));
+  const rampMidX=(rampStartX+x1)/2,rampMidZ=(rampStartZ+z1)/2,
+        rise=PIER_DECK_Y-rampGround,
+        rampMesh=new THREE.Mesh(new THREE.BoxGeometry(width-.25,.22,rampLength),
+          M(0x957858,'paint'));
+  rampMesh.position.set(rampMidX,(rampGround+PIER_DECK_Y)/2-.11,rampMidZ);
+  rampMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),
+    new THREE.Vector3(ux*rampLength,rise,uz*rampLength).normalize());
+  world.add(rampMesh);staticDecorRoots.push(rampMesh);
+  for(const side of [-1,1]){
+    const rail=wireRod([rampStartX+px*side*(width*.48),rampGround+.7,rampStartZ+pz*side*(width*.48)],
+      [x1+px*side*(width*.48),PIER_DECK_Y+.7,z1+pz*side*(width*.48)],.055,0x554537);
+    staticDecorRoots.push(rail);
+  }
+  const yaw=Math.atan2(dx,dz);
   for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n,m=(a+b)/2,seg=L/n,mx=x1+dx*m,mz=z1+dz*m,y=PIER_DECK_Y-.14;
     const deck=new THREE.Mesh(new THREE.BoxGeometry(width,.28,seg+.12),M(0x816346,'paint'));deck.position.set(mx,y,mz);deck.rotation.y=yaw;world.add(deck);staticDecorRoots.push(deck);piers.push({x:mx,z:mz,ux,uz,px,pz,length:seg+.12,width,y:y+.14});
-    for(const side of[-1,1]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,3.6,8),M(0x48433e,'metal'));post.position.set(mx+px*side*(width*.44),PIER_DECK_Y-1.0,mz+pz*side*(width*.44));world.add(post);staticDecorRoots.push(post);if(i%2===0){const rail=wireRod([mx+px*side*(width*.44),PIER_DECK_Y+.35,mz+pz*side*(width*.44)],[mx+px*side*(width*.44)+ux*seg*.8,PIER_DECK_Y+.35,mz+pz*side*(width*.44)+uz*seg*.8],.035,0x4b5154);staticDecorRoots.push(rail)}}
+    for(const side of[-1,1]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,3.35,8),M(0x48433e,'metal'));post.position.set(mx+px*side*(width*.44),PIER_DECK_Y-1.15,mz+pz*side*(width*.44));world.add(post);staticDecorRoots.push(post);if(i%2===0){const rail=wireRod([mx+px*side*(width*.44),PIER_DECK_Y+.35,mz+pz*side*(width*.44)],[mx+px*side*(width*.44)+ux*seg*.8,PIER_DECK_Y+.35,mz+pz*side*(width*.44)+uz*seg*.8],.035,0x4b5154);staticDecorRoots.push(rail)}}
     compoundClear.push({x:mx,z:mz,r:width*.8+1.5})
   }
   for(const side of[-1,1]){const b=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,.9,8),M(0x3e4447,'metal'));b.position.set(x2+px*side*(width*.35),PIER_DECK_Y+.26,z2+pz*side*(width*.35));world.add(b);staticDecorRoots.push(b)}
@@ -7959,12 +7978,31 @@ function mkEnemyBunker(x,z){
 // Door-aligned treads share the exact same geometry and walking height.
 function stairLocal(s,x,z){const dx=x-s.x,dz=z-s.z;return{along:dx*s.nx+dz*s.nz,side:dx*s.nz-dz*s.nx}}
 function stairContains(s,x,z,margin=0){const q=stairLocal(s,x,z);return q.along>=-margin&&q.along<=s.length+margin&&Math.abs(q.side)<=s.width/2+margin}
+// Els laterals del moll tenen baranes: no es pot entrar ni sortir
+// travessant-les. L'accés des de terra és exclusivament per la rampa.
+function pierSidePush(oldX,oldZ){
+  for(const p of piers){
+    const oldDx=oldX-p.x,oldDz=oldZ-p.z,
+      dx=P.x-p.x,dz=P.z-p.z,
+      oldAlong=oldDx*p.ux+oldDz*p.uz,
+      along=dx*p.ux+dz*p.uz,
+      oldSide=oldDx*p.px+oldDz*p.pz,
+      side=dx*p.px+dz*p.pz,limit=p.width/2-.35;
+    if(Math.abs(along)>p.length/2+.35&&Math.abs(oldAlong)>p.length/2+.35)continue;
+    if((oldSide>limit&&side<=limit||oldSide< -limit&&side>=-limit||
+        Math.abs(oldSide)<limit&&Math.abs(side)>=limit)&&
+       Math.abs(along)<p.length/2+.3){
+      P.x=oldX;P.z=oldZ;return
+    }
+  }
+}
 function groundAt(x,z,previous=-Infinity){
   // No enfonsar el model sota els triangles que dibuixa el LOD actual.
   // Preservem l'altura física si és més alta (evita enfonsaments i salts negatius).
   const physical=hAt(x,z),visible=terrainStream?.visibleHeightAt(x,z);
   let y=visible===null||visible===undefined?physical:Math.max(physical,visible);for(const s of stairs){if(s.internal&&s.owner?.rb)continue;if(stairContains(s,x,z)){const q=stairLocal(s,x,z);if(s.ramp){const t=Math.max(0,Math.min(1,q.along/s.length));y=Math.max(y,s.top+(s.bottom-s.top)*t)}else{const i=Math.min(s.steps-1,Math.max(0,Math.floor(q.along/s.tread)));y=Math.max(y,s.top-i*s.rise)}}}
-for(const p of piers){const dx=x-p.x,dz=z-p.z,along=dx*p.ux+dz*p.uz,side=dx*p.px+dz*p.pz;if(Math.abs(along)<=p.length/2+.35&&Math.abs(side)<=p.width/2+.2)y=Math.max(y,p.y)}
+for(const p of piers){const dx=x-p.x,dz=z-p.z,along=dx*p.ux+dz*p.uz,side=dx*p.px+dz*p.pz;if(Math.abs(along)<=p.length/2+.35&&Math.abs(side)<=p.width/2+.2&&
+    (!Number.isFinite(previous)||previous>=p.y-.55))y=Math.max(y,p.y)}
 for(const b of buildingCandidates(x,z)){const floor=upperFloorHeight(b,x,z,previous);if(floor!==null)y=Math.max(y,floor)}
 const ramp=terminalRampHeight(x,z);if(ramp!==null)y=Math.max(y,ramp);if(Number.isFinite(previous)){const deck=pedestrianFerry(x,z,previous);if(deck)y=Math.max(y,deck.y)}
 return y}
@@ -8901,6 +8939,7 @@ function update(dt,t){
 const strafeEnabled=updateStrafeControls();
 if(!started||paused||over){updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
 rebuildVehicleGrid();elapsed+=dt;
+const pierOldX=P.x,pierOldZ=P.z;
 const jf=-joystick.state.y,jtr=-joystick.state.x,
       f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),
       tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),
@@ -8937,7 +8976,7 @@ else if(playerEject&&playerEject.t>0){
   P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*ss+Math.cos(P.hd)*lateral));
   P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*ss-Math.sin(P.hd)*lateral));
 }
-if(!playerFall){wallPush();treePush();vehiclePushPlayer()}}
+if(!playerFall){if(!cv)pierSidePush(pierOldX,pierOldZ);wallPush();treePush();vehiclePushPlayer()}}
 V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;v.strafeV=0;return}if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
 syncFerryCargo();updateTerminalRamps();
 ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2)||null;
