@@ -397,7 +397,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
           kneeR=-(.08+Math.max(0,Math.sin(ph)*dir)*(.92+.38*run)*move);
     tx(u.ll,hip);tx(u.lr,-hip);tx(u.lkl,kneeL);tx(u.lkr,kneeR);
     tz(u.ll,-(.025+.02*run)*walk2);tz(u.lr,(.025+.02*run)*walk2);
-    player.rotation.z+=(-(.035+.015*run)*walk-player.rotation.z)*k;
+    // En strafe pur el tors roman vertical: giren només cintura i cames.
+    player.rotation.z+=(-(.035+.015*run)*walk*(Math.abs(forward)>.04?1:0)-player.rotation.z)*k;
 
     const aiming=u.firePose>0&&!inVehicle,melee=u.meleePose>0&&!inVehicle,bazooka=!!bazookaEquipped&&!inVehicle,
           grenade=!!grenadeEquipped&&!inVehicle,cisalla=!!cisallaEquipped&&!inVehicle,

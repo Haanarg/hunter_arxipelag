@@ -31,6 +31,10 @@ jobs:
         run: node tools/build-runtime.cjs --check
       - name: Comprovar la sintaxi del paquet generat
         run: node --check dist/hunter-runtime.*.js
+      - name: Comprovar els pivots i els controls del moviment
+        run: |
+          node tests/joystick-running.cjs
+          node tests/player-locomotion.cjs
       - name: Publicar només si han passat les proves
         run: |
           git config user.name "github-actions[bot]"
