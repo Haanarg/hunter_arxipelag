@@ -32,17 +32,21 @@ export function decorateTimber(T,{b,shell,box,rod,cylinder,roofs}){const g=shell
 export function decorateUpper(T,{b,storey,shell,box,rod,roofs}){const g=shell.group;
        // Internal stairs and a real opening in the upper slab; hide slab with roofs for ground-floor inspection.
        const upper=new T.Group();upper.userData.previewUpperFloor=true;g.add(upper);roofs.push(upper);
+       // El forjat incorpora els quatre marcs. Els graons, en un grup
+       // independent, podran rebre dany de projectils i explosions.
+       const stairGroup=new T.Group();stairGroup.name='hunter-interior-stair';
+       g.add(stairGroup);upper.userData.stairGroup=stairGroup;
        const stairW=2.8,run=Math.min(b.d-3,storey*1.05),sx=b.w/2-stairW/2-.7,sz=-b.d/2+2.4;
        box(upper,b.w-stairW-1,.3,b.d-.7,0x948b74,-(stairW+.3)/2,storey,0);
        box(upper,stairW+.3,.3,b.d-run-2.75,0x948b74,sx,storey,(run+2.05)/2);
        const steps=Math.ceil(storey/.35);
-       for(let i=0;i<steps;i++)box(g,stairW,storey*(i+1)/steps,run/steps+.02,0xa6a18c,sx,storey*(i+1)/steps/2,sz+run-(i+.5)*run/steps);
-       rod(g,[sx-stairW/2,1.1,sz+run],[sx-stairW/2,storey+1.1,sz],.07,0x46534c);
+       for(let i=0;i<steps;i++)box(stairGroup,stairW,storey*(i+1)/steps,run/steps+.02,0xa6a18c,sx,storey*(i+1)/steps/2,sz+run-(i+.5)*run/steps);
+       rod(stairGroup,[sx-stairW/2,1.1,sz+run],[sx-stairW/2,storey+1.1,sz],.07,0x46534c);
        // A landing across the back joins the stair top to the upper room.
        box(upper,stairW+.4,.3,2.4,0x948b74,sx,storey,-b.d/2+1.2);
        box(upper,3,1.2,1.6,0x776044,-b.w/2+3,storey+.75,0);
-       for(const z of[-b.d/2,b.d/2])box(g,b.w+.15,.25,.15,0xa69f88,0,storey,z);
-       for(const x of[-b.w/2,b.w/2])box(g,.15,.25,b.d+.15,0xa69f88,x,storey,0);
+       for(const z of[-b.d/2,b.d/2])box(upper,b.w+.15,.25,.15,0xa69f88,0,storey,z);
+       for(const x of[-b.w/2,b.w/2])box(upper,.15,.25,b.d+.15,0xa69f88,x,storey,0);
      
 return upper;
 }

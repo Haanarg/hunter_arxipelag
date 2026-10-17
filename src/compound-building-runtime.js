@@ -13,15 +13,28 @@ function decorateRuntimeBuilding(b,spec){
   const start=new THREE.Vector3(...a),end=new THREE.Vector3(...v),delta=end.clone().sub(start),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),6),M(c,'paint'));m.position.copy(start.add(end).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());g.add(m);return m;
  },cylinder=(g,r,h,c,x,y,z)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,10),M(c,'paint'));m.position.set(x,y,z);g.add(m);return m},shell={group:b.o,roof:b.roof,walls:b.wm},roofs=[];
  b.floors=spec.floors||1;b.localW=b.w;b.localD=b.d;b.wood=!!spec.wood;b.storey=b.h/b.floors;
+ const registerStair=(width,run,x,z,visualGroup=null)=>{
+   const stair={x,z,nx:0,nz:1,top:b.fy+b.storey+.15,bottom:b.fy+.3,
+     length:run,width,ramp:true,internal:true,owner:b,destroyed:false};
+   b.interiorStair=stair;stairs.push(stair);
+   if(visualGroup)b.interiorStairGroup=visualGroup;
+   // Hitbox només per rebre dany: mai no bloqueja el pas per la rampa.
+   const parts=visualGroup?.children.filter(o=>o.isMesh)||[];
+   const collider={x0:x-width/2,x1:x+width/2,
+     z0:z,z1:z+run,y0:b.fy+.2,y1:b.fy+b.storey+.25,
+     hp:140,m:parts[0]||new THREE.Object3D(),
+     parts:parts.length?parts:null,door:false,open:false,
+     rammable:false,playerBlock:false,stairStructure:stair,
+     cx:x,cz:z+run/2,owner:b};
+   stair.collider=collider;b.interiorStairCollider=collider;Wl.push(collider);
+ };
  if(seedSearchMode){
   // Únicament dades navegables: escala física i planta superior, sense Three.js.
   if(b.floors===2){
     b.upperFloor=true;
     const width=2.8,run=Math.min(b.d-3,b.storey*1.05),
           x=b.x+b.w/2-width/2-.7,z=b.z-b.d/2+2.4;
-    b.interiorStair={x,z,nx:0,nz:1,top:b.fy+b.storey+.15,bottom:b.fy+.3,
-      length:run,width,ramp:true,internal:true,owner:b};
-    stairs.push(b.interiorStair);
+    registerStair(width,run,x,z);
   }
   return;
  }
@@ -29,13 +42,13 @@ function decorateRuntimeBuilding(b,spec){
  if(b.floors===2){
   b.upperFloor=window.HUNTER_COMPOUND_ARCHITECTURE.decorateUpper(THREE,{b:{...spec,h:b.h},storey:b.storey,shell,box,rod,roofs});
   const width=2.8,run=Math.min(b.d-3,b.storey*1.05),x=b.x+b.w/2-width/2-.7,z=b.z-b.d/2+2.4;
-  b.interiorStair={x,z,nx:0,nz:1,top:b.fy+b.storey+.15,bottom:b.fy+.3,length:run,width,ramp:true,internal:true,owner:b};stairs.push(b.interiorStair);
+  registerStair(width,run,x,z,b.upperFloor.userData.stairGroup);
   for(const z of[-b.d/2,b.d/2])box(b.roof,b.w+.6,1,.35,0x647c72,0,b.h+1.7,z);
   for(const x of[-b.w/2,b.w/2])box(b.roof,.35,1,b.d+.6,0x647c72,x,b.h+1.7,0);
  }
 }
 function soldierChangeFloor(u,b,dt){
- if(!b.upperFloor||b.rb)return false;
+ if(!b.upperFloor||b.rb||!b.interiorStair||b.interiorStair.destroyed)return false;
  const floor=b.fy+b.storey+.15,current=u.walkY??u.o.position.y,wantsUp=P.y>floor-1,isUp=current>floor-.7;
  if(wantsUp===isUp&&!u.floorRoute)return false;
  const a=b.interiorStair;

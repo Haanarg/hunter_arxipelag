@@ -634,7 +634,18 @@ function wallBreak(w){const h=w.y1-w.y0-1,parts=w.parts&&w.parts.length?w.parts:
 if(w.parts&&w.parts.length){parts.forEach(m=>m.visible=false)}else if(w.m.visible)WA.push({m:w.m,h,t:.5});else world.remove(w.m);
 for(let i=0;i<(w.door?6:10);i++)debris(rn(w.x0,w.x1),w.y0+1+h*rn(.2,.9),rn(w.z0,w.z1),col,1,.9,7);
 for(let i=0;i<3;i++)puff(cx,w.y0+1+h*rn(.1,.6),cz,0xc9b48a,3.5)}
-function roofBreak(b){if(b.rb)return;b.rb=1;if(b.upperFloor)b.upperFloor.visible=false;for(const r of b.extraRoofs||[])r.visible=false;b.rhp=0;const col=b.roof.material?b.roof.material.color.getHex():(b.roof.userData.color||0x777777),y=b.fy+b.h+.6;
+function destroyInteriorStair(b){
+ const a=b?.interiorStair;if(!a||a.destroyed)return;
+ a.destroyed=true;
+ if(b.interiorStairGroup)b.interiorStairGroup.visible=false;
+ let i=stairs.indexOf(a);if(i>=0)stairs.splice(i,1);
+ i=Wl.indexOf(b.interiorStairCollider);
+ if(i>=0){Wl.splice(i,1);wallGridCount=-1}
+}
+function roofBreak(b){if(b.rb)return;b.rb=1;
+ // Quan cau la sustentació desapareixen el forjat, el marc i l'escala.
+ if(b.upperFloor){b.upperFloor.visible=false;destroyInteriorStair(b)}
+ for(const r of b.extraRoofs||[])r.visible=false;b.rhp=0;const col=b.roof.material?b.roof.material.color.getHex():(b.roof.userData.color||0x777777),y=b.fy+b.h+.6;
 if(b.hangar&&b.roof?.userData?.hangarRoof){
   HR.push({m:b.roof,t:0,dur:1.05,baseY:b.roof.position.y,baseRx:b.roof.rotation.x,baseRz:b.roof.rotation.z,dir:rn(-1,1)<0?-1:1,x:b.x,z:b.z,w:b.w,d:b.d,col});
   for(let i=0;i<12;i++)puff(b.x+rn(-b.w/2,b.w/2),b.fy+rn(1,b.w*.45),b.z+rn(-b.d/2,b.d/2),0x8b8580,3.8);
@@ -727,7 +738,7 @@ function checkRoofSupport(b,w){
   }
   if(b.destroyedWallSupport>=3)roofBreak(b)
 }
-function dmgW(w,d){if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}w.hp-=d;if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0){Wl.splice(i,1);wallGridCount=-1}i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);checkRoofSupport(w.owner,w);snd('boom',.3)}}
+function dmgW(w,d){if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}w.hp-=d;if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0){Wl.splice(i,1);wallGridCount=-1}i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);if(w.stairStructure)destroyInteriorStair(w.stairStructure.owner);checkRoofSupport(w.owner,w);snd('boom',.3)}}
 function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=seedSearchMode
   ?{group:new THREE.Group(),walls:null,doors:null,roof:new THREE.Group()}
   :(opt.hangar?buildingVisual.createHangarShell:buildingVisual.createShell)({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),
