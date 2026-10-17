@@ -3749,8 +3749,12 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // Transició suau de caminar a córrer: cadència i posicions diferents,
     // no només la velocitat de desplaçament.
     u.runBlend=(u.runBlend||0)+((running&&move>.08&&!swimming&&!inVehicle?1:0)-(u.runBlend||0))*(1-Math.exp(-10*dt));
-    const run=u.runBlend;
-    u.ph+=dt*(swimming?(move?4.2:2.1):(8.4+4.4*run)*move);const ph=u.ph,breath=Math.sin(u.breath);
+    // La mateixa acció de velocitat passa a ser crol quan som a l'aigua.
+    // Un blend propi preserva una transició suau entre braça i crol.
+    u.crawlBlend=(u.crawlBlend||0)+((swimming&&running&&forward>.08&&move>.08&&!inVehicle?1:0)-(u.crawlBlend||0))*(1-Math.exp(-9*dt));
+    const run=u.runBlend,crawl=u.crawlBlend;
+    u.ph+=dt*(swimming?(move?(4.2+3.5*crawl)*move:2.1):(8.4+4.4*run)*move);
+    const ph=u.ph,breath=Math.sin(u.breath);
 
     const tx=(joint,target,rate=limbK)=>joint.rotation.x+=(target-joint.rotation.x)*rate;
     const tz=(joint,target,rate=limbK)=>joint.rotation.z+=(target-joint.rotation.z)*rate;
@@ -3778,22 +3782,49 @@ window.HUNTER_CHARACTERS=Object.freeze({
       tx(u.lkl,parachuting?-.18:-.12,blend);
       tx(u.lkr,parachuting?-.18:-.12,blend);
       u.upperBody.rotation.x+=(0-u.upperBody.rotation.x)*k;
+      u.upperBody.rotation.z+=(0-u.upperBody.rotation.z)*k;
+      u.head.rotation.x+=(0-u.head.rotation.x)*k;
+      u.head.rotation.y+=(0-u.head.rotation.y)*k;
+      u.head.rotation.z+=(0-u.head.rotation.z)*k;
       player.rotation.x+=(0-player.rotation.x)*k;
       return;
     }
 
     if(swimming&&!inVehicle){
-      const stroke=Math.sin(ph),recover=(1-Math.cos(ph))*.5;
+      const stroke=Math.sin(ph),recover=(1-Math.cos(ph))*.5,
+            mix=(normal,fast)=>normal+(fast-normal)*crawl,
+            sinOpp=-Math.sin(ph),flutter=Math.sin(ph*2);
       u.gun.visible=false;u.knife.visible=false;u.bazooka.visible=false;u.grenade.visible=false;u.sniper.visible=false;u.cisalla.visible=false;
-      u.upperBody.rotation.x+=(-.1-u.upperBody.rotation.x)*k;
-      player.rotation.x+=(0-player.rotation.x)*k;
-      player.rotation.z+=(stroke*.035-player.rotation.z)*k;
-      tx(u.al,1.15+.18*stroke);tx(u.ar,1.15-.18*stroke);
-      tz(u.al,-.42-.38*stroke);tz(u.ar,.42+.38*stroke);
-      tx(u.ael,.72+.45*recover);tx(u.aer,.72+.45*(1-recover));
-      const kick=.22*Math.sin(ph*2);tx(u.ll,.18+kick);tx(u.lr,.18-kick);tx(u.lkl,-(.48-.18*kick));tx(u.lkr,-(.48+.18*kick));
-      player.position.y+=Math.sin(ph*2)*.035;
-      return
+      if(u.pistolFlash)u.pistolFlash.visible=false;
+      u.pistolBlend=0;
+      // Braça: postura habitual. Crol: cos gairebé horitzontal sobre
+      // l'aigua, braçades alternes i batement continu dels peus.
+      u.upperBody.rotation.x+=(mix(-.1,0)-u.upperBody.rotation.x)*k;
+      u.upperBody.rotation.z+=(.10*stroke*crawl-u.upperBody.rotation.z)*k;
+      player.rotation.x+=(mix(0,-.95)-player.rotation.x)*k;
+      player.rotation.z+=(stroke*.035*(1-crawl)-player.rotation.z)*k;
+      // Quan el cos s'ajau, el cap aixeca lleument la mirada i es gira
+      // una mica de costat per respirar, sense oscil·lacions brusques.
+      const headX=mix(-u.upperBody.rotation.x,.38),
+            headYaw=crawl*.18*Math.max(0,stroke);
+      tx(u.head,headX,k);
+      u.head.rotation.y+=(headYaw-u.head.rotation.y)*k;
+      u.head.rotation.z+=(-u.upperBody.rotation.z*.6-u.head.rotation.z)*k;
+      // El braç que es recupera sobre l'aigua passa per davant;
+      // l'altre completa la tracció. En braça tots dos són simètrics.
+      tx(u.al,mix(1.15+.18*stroke,1.03+1.23*stroke));
+      tx(u.ar,mix(1.15-.18*stroke,1.03+1.23*sinOpp));
+      tz(u.al,mix(-.42-.38*stroke,-.16-.14*stroke));
+      tz(u.ar,mix(.42+.38*stroke,.16+.14*sinOpp));
+      tx(u.ael,mix(.72+.45*recover,.38+.75*Math.max(0,-stroke)));
+      tx(u.aer,mix(.72+.45*(1-recover),.38+.75*Math.max(0,stroke)));
+      const kick=.22*flutter;
+      tx(u.ll,mix(.18+kick,.10+.30*flutter));
+      tx(u.lr,mix(.18-kick,.10-.30*flutter));
+      tx(u.lkl,mix(-(.48-.18*kick),-.20-.16*Math.max(0,flutter)));
+      tx(u.lkr,mix(-(.48+.18*kick),-.20-.16*Math.max(0,-flutter)));
+      player.position.y+=Math.sin(ph*2)*mix(.035,.018);
+      return;
     }
 
     // El cos es projecta endavant i les cames fan una passa més llarga:
@@ -3801,6 +3832,12 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // Inclina només el tronc superior al voltant de la cintura: els malucs
     // i les cames no es desplacen cap endavant amb l'arrel del personatge.
     u.upperBody.rotation.x+=(-.32*run-u.upperBody.rotation.x)*k;
+    u.upperBody.rotation.z+=(0-u.upperBody.rotation.z)*k;
+    // El cap compensa la inclinació del tronc i continua mirant de
+    // front, també durant les transicions d'entrada i sortida de cursa.
+    tx(u.head,-u.upperBody.rotation.x,k);
+    u.head.rotation.y+=(0-u.head.rotation.y)*k;
+    u.head.rotation.z+=(0-u.head.rotation.z)*k;
     player.rotation.x+=(0-player.rotation.x)*k;
     const walk=Math.sin(ph)*move*dir,walk2=Math.cos(ph)*move;
     const hip=(.62+.50*run)*walk,
@@ -4161,7 +4198,7 @@ window.HUNTER_UI=Object.freeze({
         body.innerHTML='<p>Es perdrà el progrés d’aquesta partida. Tria la dificultat del nou arxipèlag.</p><button data-diff=".6">Fàcil</button><button data-diff="1">Normal</button><button data-diff="1.5">Difícil</button>';
         body.querySelectorAll('[data-diff]').forEach(b=>b.onclick=()=>actions.restart(+b.dataset.diff))
       }else{
-        body.innerHTML='<div class="controls"><b>WASD / fletxes</b><span>Avança, frena i gira</span><b>Joystick / ⇧</b><span>Arrossega el pom cap a la prolongació superior, fora del cercle, per córrer a peu. Torna al cercle per caminar. Amb teclat: Majúscules + W.</span><b>◀ ▶ / Y i U</b><span>Desplaçament lateral sense girar: a peu, en hovercraft i en helicòpters. Els botons apareixen a banda i banda del joystick.</span><b>Acció / E</b><span>Motxilla: inventari. Icona d’un vehicle: puja-hi o baixa’n</span><b>Dispar / F</b><span>Dispara l’arma equipada. Amb la cisalla: talla silenciosament les filferrades properes. Amb granades: mantén premut per allunyar el llançament i deixa anar per llençar-la; veuràs la trajectòria i el punt de caiguda</span><b>T / Mira</b><span>Activa/desactiva la mira x8 del rifle de franctirador; amb la mira activa, el joystick, WASD i Y/U mouen només el punt de vista, sense desplaçar el personatge</span><b>I</b><span>Obre l’inventari</span><b>M</b><span>Obre el mapa</span><b>H / J</b><span>Puja / baixa l’helicòpter</span><b>Arrossega</b><span>Gira la vista i el personatge</span><b>Roda</b><span>Acosta o allunya la càmera</span></div><p>Farmacioles, cisalla, explosius, granades, bazooka, rifle de franctirador i disfressa es gestionen des de l’inventari. Els mapes de l’HQ, helicòpters i tancs s’activen automàticament quan els reculls. El bazooka mostra una retícula blanca quan apunta lliurement i verda sobre una diana seleccionada. L’helicòpter utilitari no té canó: Dispar / F llança granades de l’inventari, si en tens; l’helicòpter de combat conserva la metralladora i el botó 🚀 / G per als míssils. La llanxa llançacoets dispara coets amb Dispar.</p><button id="inventoryMenu">Inventari</button><button id="chetosMenu">Chetos</button><button id="restartMenu">Nova partida</button><button id="performanceMenu">⚙️ Rendiment</button><button id="zoomOut">Allunya càmera</button><button id="zoomIn">Acosta càmera</button>';
+        body.innerHTML='<div class="controls"><b>WASD / fletxes</b><span>Avança, frena i gira</span><b>Joystick / ⇧</b><span>Arrossega el pom cap a la prolongació superior per córrer a peu o nedar a crol dins l’aigua. Torna al cercle per caminar o nedar a braça. Amb teclat: Majúscules + W.</span><b>◀ ▶ / Y i U</b><span>Desplaçament lateral sense girar: a peu, nedant, en hovercraft i en helicòpters. Els botons apareixen a banda i banda del joystick.</span><b>Acció / E</b><span>Motxilla: inventari. Icona d’un vehicle: puja-hi o baixa’n</span><b>Dispar / F</b><span>Dispara l’arma equipada. Amb la cisalla: talla silenciosament les filferrades properes. Amb granades: mantén premut per allunyar el llançament i deixa anar per llençar-la; veuràs la trajectòria i el punt de caiguda</span><b>T / Mira</b><span>Activa/desactiva la mira x8 del rifle de franctirador; amb la mira activa, el joystick, WASD i Y/U mouen només el punt de vista, sense desplaçar el personatge</span><b>I</b><span>Obre l’inventari</span><b>M</b><span>Obre el mapa</span><b>H / J</b><span>Puja / baixa l’helicòpter</span><b>Arrossega</b><span>Gira la vista i el personatge</span><b>Roda</b><span>Acosta o allunya la càmera</span></div><p>Farmacioles, cisalla, explosius, granades, bazooka, rifle de franctirador i disfressa es gestionen des de l’inventari. Els mapes de l’HQ, helicòpters i tancs s’activen automàticament quan els reculls. El bazooka mostra una retícula blanca quan apunta lliurement i verda sobre una diana seleccionada. L’helicòpter utilitari no té canó: Dispar / F llança granades de l’inventari, si en tens; l’helicòpter de combat conserva la metralladora i el botó 🚀 / G per als míssils. La llanxa llançacoets dispara coets amb Dispar.</p><button id="inventoryMenu">Inventari</button><button id="chetosMenu">Chetos</button><button id="restartMenu">Nova partida</button><button id="performanceMenu">⚙️ Rendiment</button><button id="zoomOut">Allunya càmera</button><button id="zoomIn">Acosta càmera</button>';
         document.getElementById('inventoryMenu').onclick=()=>actions.open('inventory');
         document.getElementById('chetosMenu').onclick=()=>{
           actions.chetos();
@@ -8549,7 +8586,7 @@ const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joyst
       strafeButtons={left:document.getElementById('strafeLeft'),right:document.getElementById('strafeRight')},
       strafePointers={left:null,right:null},
       STRAFE_VEHICLES=new Set(['hover','heli','heli_combat']);
-const canStrafe=()=>!scopeActive&&(cv?STRAFE_VEHICLES.has(cv.t):!swimming&&!playerFall&&!playerEject);
+const canStrafe=()=>!scopeActive&&(cv?STRAFE_VEHICLES.has(cv.t):!playerFall&&!playerEject);
 const setStrafeHeld=(side,held)=>{
   const button=strafeButtons[side];
   button.classList.toggle('held',held);
@@ -9012,8 +9049,10 @@ window.HUNTER_VEHICLES.animateSteering(o,v.t,tr,dt);
 v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0):(v.pedalPhase||0),sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*sweep;r.rotation.z=-side*(.12+dip);r.rotation.x=.06*Math.sin(rowPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})}
 function update(dt,t){
 const strafeEnabled=updateStrafeControls();
-const canRun=!!started&&!paused&&!over&&!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive;
+// La prolongació del joystick funciona a peu i nedant: a l'aigua activa el crol.
+const canRun=!!started&&!paused&&!over&&!cv&&!playerFall&&!playerEject&&!scopeActive;
 joystick.setRunEnabled(canRun);
+document.body.classList.toggle('player-swimming',canRun&&swimming);
 if(!started||paused||over){updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
 rebuildVehicleGrid();elapsed+=dt;
 const jf=-joystick.state.y,jtr=-joystick.state.x,
@@ -9048,8 +9087,11 @@ else if(playerEject&&playerEject.t>0){
 }else{
   // Avanç i strafe simultanis sense variar el rumb. Normalitzam la
   // diagonal per mantenir la velocitat màxima d'un jugador a peu.
-  const length=Math.max(1,Math.hypot(f,strafe)),ss=(swimming?5:running?19:12)*f*dt/length,
-        lateral=(!swimming?9:0)*strafe*dt/length;
+  // Dins l'aigua: braça normal, crol accelerat quan es manté la
+  // prolongació superior i natació lateral amb els botons de strafe.
+  const length=Math.max(1,Math.hypot(f,strafe)),
+        ss=(swimming?(running?8.5:5):running?19:12)*f*dt/length,
+        lateral=(swimming?(running?6.5:4.5):9)*strafe*dt/length;
   P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*ss+Math.cos(P.hd)*lateral));
   P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*ss-Math.sin(P.hd)*lateral));
 }
@@ -9058,6 +9100,7 @@ V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;v.strafeV=0
 syncFerryCargo();updateTerminalRamps();
 ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2)||null;
 const floor=ib?Math.max(ib.fy+.3,groundAt(P.x,P.z,P.y)):groundAt(P.x,P.z,P.y),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;
+document.body.classList.toggle('player-swimming',canRun&&swimming);
 if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);
 if(!playerFall){
   // El suport segueix el triangle visible JUST sota el centre del jugador.
