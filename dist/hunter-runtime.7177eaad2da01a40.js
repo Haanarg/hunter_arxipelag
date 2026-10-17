@@ -3732,6 +3732,12 @@ window.HUNTER_CHARACTERS=Object.freeze({
     sniper.visible=false;u.sniper=sniper;u.sniperMuzzle=sniperMuzzle;
     u.sniperRightGrip=sniperRightGrip;u.sniperLeftGrip=sniperLeftGrip;
     player.scale.setScalar(2/3);
+    // Yaw (Y) exterior, gir nord-sud (Z) i inclinació de natació (X).
+    // Amb YZX la volta del crol es fa sobre l'eix horitzontal del
+    // món, no sobre els malucs ni sobre l'eix vertical del model.
+    player.rotation.order='YZX';
+    u.swimChest=new THREE.Vector3();
+    u.swimHead=new THREE.Vector3();
     return player;
   },
   // Posicionament visual independent de la física: en fer crol cal
@@ -3739,11 +3745,20 @@ window.HUNTER_CHARACTERS=Object.freeze({
   // sota l'aigua amb l'origen antic (2,1 m sota les ones).
   swimVisualLift(player,surface,physicalY){
     const crawl=Math.max(0,Math.min(1,player.userData.crawlBlend||0));
-    if(crawl<.001)return 0;
-    // Al model del jugador, el centre del pit és a 2,31 unitats
-    // locals (model base ampliat 1,2; l'arrel redueix a 2/3).
-    const chestHeight=2.31*1.2*player.scale.y*Math.cos(player.rotation.x);
-    return crawl*Math.max(0,surface+.22-(physicalY+chestHeight));
+    // Fora de l'aigua no s'aplica mai la flotació visual del crol.
+    if(crawl<.001||physicalY>=surface-.6)return 0;
+    // Cal mesurar els punts REALS després de combinar el pitch i el
+    // gir nord-sud. Cos(pi) no serveix: amb 180° el cap podria tornar
+    // sota les ones tot i que el pit quedàs flotant.
+    const u=player.userData;
+    player.updateMatrixWorld(true);
+    u.swimChest.set(0,2.31*1.2-u.upperBodyPivotHeight,0);
+    u.upperBody.localToWorld(u.swimChest);
+    u.head.getWorldPosition(u.swimHead);
+    const chestRel=u.swimChest.y-player.position.y,
+          headRel=u.swimHead.y-player.position.y;
+    return crawl*Math.max(0,surface+.13-physicalY-chestRel,
+                            surface+.5-physicalY-headRel);
   },
   animatePlayer(player,{forward,strafe=0,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false,running=false}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),
@@ -3813,16 +3828,20 @@ window.HUNTER_CHARACTERS=Object.freeze({
       u.pistolBlend=0;
       // Braça: postura habitual. Crol: cos gairebé horitzontal sobre
       // l'aigua, braçades alternes i batement continu dels peus.
-      // Un gir de 180° sobre l'eix longitudinal del cos (+Y local
-      // abans d'inclinar-lo) inverteix esquena/panxa sense canviar
-      // cap a on avança el personatge ni la posició del cap i peus.
+      // El gir anterior de tors i cames els deixava d'esquena.
+      // Afegim ara la volta COMPLETA sobre l'eix nord-sud (Z) de
+      // l'escena, al voltant del rumb de l'usuari, preservant el cap
+      // endavant. L'ordre YZX de l'arrel és essencial per això.
       const crawlTurn=Math.PI*crawl;
       u.upperBody.rotation.y+=(crawlTurn-u.upperBody.rotation.y)*k;
       u.lowerBody.rotation.y+=(crawlTurn-u.lowerBody.rotation.y)*k;
       u.upperBody.rotation.x+=(mix(-.1,0)-u.upperBody.rotation.x)*k;
       u.upperBody.rotation.z+=(.10*stroke*crawl-u.upperBody.rotation.z)*k;
       player.rotation.x+=(mix(0,-1.20)-player.rotation.x)*k;
-      player.rotation.z+=(stroke*.035*(1-crawl)-player.rotation.z)*k;
+      // A diferència del gir dels malucs, aquest roll és el de tot
+      // el nedador al voltant del seu eix longitudinal ja horitzontal.
+      const longitudinalRoll=Math.PI*crawl+stroke*.035*(1-crawl);
+      player.rotation.z+=(longitudinalRoll-player.rotation.z)*k;
       // Quan el cos s'ajau, el cap aixeca lleument la mirada i es gira
       // una mica de costat per respirar, sense oscil·lacions brusques.
       const headX=mix(-u.upperBody.rotation.x,.38),
@@ -3830,14 +3849,20 @@ window.HUNTER_CHARACTERS=Object.freeze({
       tx(u.head,headX,k);
       u.head.rotation.y+=(headYaw-u.head.rotation.y)*k;
       u.head.rotation.z+=(-u.upperBody.rotation.z*.6-u.head.rotation.z)*k;
-      // El braç que es recupera sobre l'aigua passa per davant;
-      // l'altre completa la tracció. En braça tots dos són simètrics.
-      tx(u.al,mix(1.15+.18*stroke,1.03+1.23*stroke));
-      tx(u.ar,mix(1.15-.18*stroke,1.03+1.23*sinOpp));
-      tz(u.al,mix(-.42-.38*stroke,-.16-.14*stroke));
-      tz(u.ar,mix(.42+.38*stroke,.16+.14*sinOpp));
-      tx(u.ael,mix(.72+.45*recover,.38+.75*Math.max(0,-stroke)));
-      tx(u.aer,mix(.72+.45*(1-recover),.38+.75*Math.max(0,stroke)));
+      // Braçada el·líptica: el sinus marca el recorregut
+      // endavant/enrere i el cosinus (desfasat 90°) dibuixa l'arc
+      // lateral i vertical. Els dos braços van en oposició de fase.
+      // Els colzes es flexionen a la recuperació per damunt l'aigua.
+      const arc=Math.cos(ph),leftRecovery=.5-.5*stroke,
+            rightRecovery=.5+.5*stroke;
+      tx(u.al,mix(1.15+.18*stroke,1.15+1.06*stroke));
+      tx(u.ar,mix(1.15-.18*stroke,1.15-1.06*stroke));
+      tz(u.al,mix(-.42-.38*stroke,-.20-.32*arc));
+      tz(u.ar,mix(.42+.38*stroke,.20-.32*arc));
+      tx(u.ael,mix(.72+.45*recover,.40+.68*leftRecovery));
+      tx(u.aer,mix(.72+.45*(1-recover),.40+.68*rightRecovery));
+      tz(u.ael,mix(0,-.09-.18*arc));
+      tz(u.aer,mix(0,.09-.18*arc));
       const kick=.22*flutter;
       tx(u.ll,mix(.18+kick,.10+.30*flutter));
       tx(u.lr,mix(.18-kick,.10-.30*flutter));
