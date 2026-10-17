@@ -1609,10 +1609,11 @@ window.HUNTER_VEHICLE_DYNAMICS=Object.freeze({
 window.HUNTER_MOVEMENT_FX=Object.freeze({
  create(T,{scene,quality='desktop',waveModel,waterTime,waterBed}){
    const settings={
-     desktop:{wake:210,ripple:64,air:155,smoke:105,range:250,spacing:1},
-     mobile:{wake:110,ripple:40,air:86,smoke:64,range:185,spacing:1.35},
-     ultra:{wake:60,ripple:24,air:48,smoke:36,range:140,spacing:1.9}
-   }[quality]||{wake:210,ripple:64,air:155,smoke:105,range:250,spacing:1};
+     // Enemics: distàncies LOD pròpies segons qualitat, sense més draw calls.
+     desktop:{wake:210,ripple:64,air:155,smoke:105,range:250,enemyRange:240,spacing:1},
+     mobile:{wake:110,ripple:40,air:86,smoke:64,range:185,enemyRange:160,spacing:1.35},
+     ultra:{wake:60,ripple:24,air:48,smoke:36,range:140,enemyRange:95,spacing:1.9}
+   }[quality]||{wake:210,ripple:64,air:155,smoke:105,range:250,enemyRange:200,spacing:1};
    const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),rand=Math.random,
      dummy=new T.Object3D(),face=new T.Quaternion(),color=new T.Color();
    const stats={
@@ -1755,9 +1756,9 @@ window.HUNTER_MOVEMENT_FX=Object.freeze({
    const backs={barca_rems:1.5,windsurf:1.4,moto_aquatica:1.55,
      llanxa:3.3,llanxa_coets:3.7,hover:2.3,ferry:7.5,
      bici:1.1,moto:1.1,cotxe:2.05,camio:3.35,tanc:3.3,tanqueta:2.5};
-   function landTrail(v,speed,back,ground){
-     const s=Math.sin(v.hd),c=Math.cos(v.hd),width=landWidths[v.t]||1,
-       bike=v.t==='bici',heavy=['tanc','tanqueta','camio'].includes(v.t),
+   function landTrail(v,speed,back,ground,type=v.t){
+     const s=Math.sin(v.hd),c=Math.cos(v.hd),width=landWidths[type]||1,
+       bike=type==='bici',heavy=['tanc','tanqueta','camio'].includes(type),
        density=clamp((speed-3)/22,.16,.8)*(bike?.42:1);
      for(const side of [-1,1]){
        const x=v.x+s*back+side*c*width,z=v.z+c*back-side*s*width;
@@ -1804,22 +1805,29 @@ window.HUNTER_MOVEMENT_FX=Object.freeze({
      }
      stats.downwash++;
    }
-   function vehicle(v,dt,{playerX,playerZ,playerVehicle=null,terrainAt,waterAt}){
+   function vehicle(v,dt,{playerX,playerZ,playerVehicle=null,terrainAt,waterAt,enemy=false}){
      if(v.destroyed||v.crashing||v.carrier)return;
+     // Jeep i patrullera comparteixen el model visual del cotxe i la llanxa.
+     const type=enemy?(v.t==='jeep'?'cotxe':
+       v.t==='patrulla_marina'?'llanxa':v.t):v.t;
      const dx=v.x-playerX,dz=v.z-playerZ,
-       near=dx*dx+dz*dz<settings.range*settings.range,
+       range=enemy?settings.enemyRange:settings.range,
+       near=dx*dx+dz*dz<range*range,
        prevX=v.fxPrevX,prevZ=v.fxPrevZ;
+     // Sempre actualitzam la posició per evitar esteles gegants al
+     // tornar a entrar dins la distància visible.
      v.fxPrevX=v.x;v.fxPrevZ=v.z;
      const distance=prevX==null?0:Math.hypot(v.x-prevX,v.z-prevZ),
        moved=distance<28?Math.min(distance,4):0,
-       speed=Math.abs(v.v||0);
-     if(!near)return;
+       // Els hostils no exposen velocitat 'v': feim servir el seu
+       // desplaçament real (així no hi ha fum si queden encallats).
+       speed=enemy?(dt>.0001&&distance<28?distance/dt:0):Math.abs(v.v||0);
+     if(!near){if(enemy)v.fxTrailDist=0;return}
      const terrain=terrainAt(v.x,v.z),water=waterAt(v.x,v.z),
-       mode=window.HUNTER_VEHICLE_DYNAMICS.types[v.t]?.m;
+       mode=window.HUNTER_VEHICLE_DYNAMICS.types[type]?.m;
      if(mode==='a'){
-       // Els helicòpters aparcats tenen el rotor aturat.
-       // Només el que està pilotat aixeca pols o aerosol.
-       if(v===playerVehicle)rotorDownwash(v,dt,terrain,water);
+       if(v===playerVehicle||(enemy&&speed>.5))
+         rotorDownwash(v,dt,terrain,water);
        return;
      }
      const watery=mode==='w'||(mode==='wl'&&water>terrain+.6);
@@ -1829,9 +1837,9 @@ window.HUNTER_MOVEMENT_FX=Object.freeze({
      v.fxTrailDist=(v.fxTrailDist||0)+moved;
      if(v.fxTrailDist<spacing)return;
      v.fxTrailDist%=spacing;
-     const back=(backs[v.t]||2)*(v.v>=0?1:-1);
-     if(watery)boatTrail(v,speed,back,waterWidths[v.t]||1);
-     else landTrail(v,speed,back,terrain);
+     const back=(backs[type]||2)*(enemy||v.v>=0?1:-1);
+     if(watery)boatTrail(v,speed,back,waterWidths[type]||1);
+     else landTrail(v,speed,back,terrain,type);
    }
    function damageSmoke(v,damage,y){
      const dark=damage>.65?0x2b2b2c:0x696966,
@@ -7513,6 +7521,8 @@ const movementFx=window.HUNTER_MOVEMENT_FX.create(THREE,{
  scene,quality:qualityName,waveModel:window.HUNTER_WAVES,
  waterTime:waterUniforms.time,waterBed:hAt
 });
+// Efectes hostils: només vehicles amb rodes, erugues o buc.
+const ENEMY_TRAIL_TYPES=new Set(['jeep','tanqueta','tanc','patrulla_marina']);
 window.HUNTER_MOVEMENT_FX_STATS=movementFx.stats;
 const updateSeabed=()=>water.setWorldSize(S);
 const waves=water.update;
@@ -7789,13 +7799,15 @@ V.forEach(v=>{
     }
   }
 });
-// Partícules persistents per distància recorreguda, no per fotograma:
- // només els vehicles propers contribueixen a la GPU.
- for(const v of V)movementFx.vehicle(v,dt,{
-   playerX:P.x,playerZ:P.z,playerVehicle:cv,terrainAt:hAt,
-   waterAt:(x,z)=>wy(x,z,t)
- });
- movementFx.update(dt,cam);
+// Esteles dels vehicles pilotables i dels enemics; tots els efectes
+// comparteixen quatre malles instanciades. LOD de distància al sistema.
+const fxContext={playerX:P.x,playerZ:P.z,playerVehicle:cv,
+  terrainAt:hAt,waterAt:(x,z)=>wy(x,z,t)};
+for(const v of V)movementFx.vehicle(v,dt,fxContext);
+fxContext.enemy=true;
+for(const u of E)if(ENEMY_TRAIL_TYPES.has(u.t))
+  movementFx.vehicle(u,dt,fxContext);
+movementFx.update(dt,cam);
  PT.forEach(p=>{if(p.life>0){p.life-=dt;if(p.rise)p.m.position.y+=p.rise*dt;p.m.scale.setScalar(p.s*(1+(1-p.life/p.max)*1.15));p.m.material.opacity=Math.max(0,p.life/p.max)*.8;if(p.life<=0){p.m.visible=false;p.rise=0}}});
 if(seaAudio){const coastal=Math.max(.25,1-Math.max(0,hAt(P.x,P.z))/22),
       // El windsurf només fa un fregadís molt suau d'aigua, no motor.
