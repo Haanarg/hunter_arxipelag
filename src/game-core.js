@@ -1882,11 +1882,13 @@ if(scopeNow){
   cam.lookAt(T.x-Math.sin(T.hd)*8,ty+2,T.z-Math.cos(T.hd)*8);
 }
 if(playerEject&&playerEject.t<=0)playerEject=null;
-fcd-=dt;updateGrenadeCharge(dt);if(K.KeyF&&!grenadeEquipped)fire();updEn(dt);updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);
+updateBazookaReticle(dt);
+fcd-=dt;updateGrenadeCharge(dt);if(K.KeyF&&(!grenadeEquipped||cv))fire();updEn(dt);updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);
 const nv=cv?null:nearV();
 uiTick+=dt;if(uiTick>.12){uiTick=0;const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',!!cv&&VT[cv.t]?.m==='a');contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}const fireButton=document.getElementById('mainFireButton');
 if(fireButton){
-  const grenade=!cv&&grenadeEquipped&&(inv.granada||0)>0,
+  const heliGrenade=cv?.t==='heli',
+        grenade=heliGrenade||!cv&&grenadeEquipped&&(inv.granada||0)>0,
         cutters=!cv&&cisallaEquipped&&(inv.cisalla||0)>0,
         knife=!cv&&!grenade&&!cutters&&!bazookaEquipped&&!sniperEquipped&&ammo<=0,
         weapon=cutters?'cisalla':grenade?'granada':knife?'ganivet':'normal';
@@ -1895,7 +1897,7 @@ if(fireButton){
     fireButton.innerHTML=cutters?ICON.cisalla:grenade?ICON.granada:knife?ICON.ganivet:'🎯';
     const action=cutters?'Talla filferrada':grenade?'Llançar granada':knife?'Atacar amb ganivet':'Dispar';
     fireButton.setAttribute('aria-label',action);
-    fireButton.title=grenade?'Mantén premut per arribar més lluny':action;
+    fireButton.title=heliGrenade?'Llançar granada de l’inventari':grenade?'Mantén premut per arribar més lluny':action;
   }
 }
 updateActionButton(nv);
