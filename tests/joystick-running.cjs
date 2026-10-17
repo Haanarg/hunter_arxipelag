@@ -34,7 +34,7 @@ fire('pointermove',248,94);
 assert.equal(joystick.state.running,false,'Fora pels costats no corre');
 fire('pointermove',174,94);
 joystick.setRunEnabled(false);
-assert.equal(joystick.state.running,false,'L'estat de vehicle/mira desactiva córrer');
+assert.equal(joystick.state.running,false,"L'estat de vehicle/mira desactiva córrer");
 assert.ok(!classes.has('run-enabled'));
 joystick.setRunEnabled(true);
 fire('pointerup',174,94);
