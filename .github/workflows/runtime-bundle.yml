@@ -11,6 +11,7 @@ on:
       - 'tests/player-locomotion.cjs'
       - 'tests/rowing-audio-camera.cjs'
       - 'tests/vehicle-weapon-reticle.cjs'
+      - 'tests/performance-stats-toggle.cjs'
       - 'tests/two-storey-destruction.cjs'
       - 'tests/pier-access.cjs'
       - 'tests/enemy-vehicle-trails.cjs'
@@ -46,6 +47,7 @@ jobs:
           node tests/player-locomotion.cjs
           node tests/rowing-audio-camera.cjs
           node tests/vehicle-weapon-reticle.cjs
+          node tests/performance-stats-toggle.cjs
           node tests/two-storey-destruction.cjs
           node tests/pier-access.cjs
           node tests/enemy-vehicle-trails.cjs

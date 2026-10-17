@@ -43,10 +43,10 @@ jobs:
               set -- victory-cinematic
               ;;
             startup)
-              set -- smoke startup-cache joystick-running player-locomotion rowing-audio-camera
+              set -- smoke startup-cache joystick-running player-locomotion rowing-audio-camera performance-stats-toggle
               ;;
             all)
-              set -- smoke startup-cache joystick-running player-locomotion rowing-audio-camera vehicle-weapon-reticle pier-access terrain-level-index terrain-stream water seed-replay compound-generation two-storey-destruction enemy-navigation projectile-classes enemy-vehicle-trails victory-cinematic
+              set -- smoke startup-cache joystick-running player-locomotion rowing-audio-camera performance-stats-toggle vehicle-weapon-reticle pier-access terrain-level-index terrain-stream water seed-replay compound-generation two-storey-destruction enemy-navigation projectile-classes enemy-vehicle-trails victory-cinematic
               ;;
             *)
               echo "Grup de proves desconegut: $GRUP" >&2

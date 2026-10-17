@@ -39,7 +39,8 @@ window.HUNTER_UI=Object.freeze({
           '<label><input id="disablePalmsPause" type="checkbox"> Sense palmeres</label>'+
           '<label><input id="disableWaterPause" type="checkbox"> Sense aigua</label>'+
           '<label><input id="disableShadowsPause" type="checkbox"> Sense ombres</label>'+
-          '</div><div id="performanceBreakdown" style="font:13px/1.5 monospace;white-space:pre-line;background:#0d1d30;border-radius:8px;padding:12px;margin-top:12px"></div>'+
+          '</div><label class="pause-stats-toggle"><input id="showPerfStatsOptions" type="checkbox"> Mostrar estadístiques de rendiment durant la partida</label>'+
+          '<div id="performanceBreakdown" style="font:13px/1.5 monospace;white-space:pre-line;background:#0d1d30;border-radius:8px;padding:12px;margin-top:12px"></div>'+
           '<button id="performanceRefresh">Actualitza diagnòstic</button><button id="performanceBack">← Pausa</button>';
         for(const [id,key,callback] of [
           ['disablePalmsPause','palmsDisabled',actions.setPalmsDisabled],
@@ -59,6 +60,9 @@ window.HUNTER_UI=Object.freeze({
             '\nEnemics LOD: '+JSON.stringify(s.enemyLodStats||{})+
             '\nObjectes ocults per distància: '+JSON.stringify(s.visibilityStats||{});
         };
+        const statsToggle=document.getElementById('showPerfStatsOptions');
+        statsToggle.checked=!!getState().performanceStatsVisible;
+        statsToggle.onchange=()=>actions.setPerformanceStatsVisible(statsToggle.checked);
         document.getElementById('performanceRefresh').onclick=refresh;
         document.getElementById('performanceBack').onclick=()=>actions.open('pause');
         refresh();
@@ -66,7 +70,7 @@ window.HUNTER_UI=Object.freeze({
         body.innerHTML='<p>Es perdrà el progrés d’aquesta partida. Tria la dificultat del nou arxipèlag.</p><button data-diff=".6">Fàcil</button><button data-diff="1">Normal</button><button data-diff="1.5">Difícil</button>';
         body.querySelectorAll('[data-diff]').forEach(b=>b.onclick=()=>actions.restart(+b.dataset.diff))
       }else{
-        body.innerHTML='<div class="controls"><b>WASD / fletxes</b><span>Avança, frena i gira</span><b>Joystick / ⇧</b><span>Arrossega el pom cap a la prolongació superior per córrer a peu o nedar a crol dins l’aigua. Torna al cercle per caminar o nedar a braça. Amb teclat: Majúscules + W.</span><b>◀ ▶ / Y i U</b><span>Desplaçament lateral sense girar: a peu, nedant, en hovercraft i en helicòpters. Els botons apareixen a banda i banda del joystick.</span><b>Acció / E</b><span>Motxilla: inventari. Icona d’un vehicle: puja-hi o baixa’n</span><b>Dispar / F</b><span>Dispara l’arma equipada. Amb la cisalla: talla silenciosament les filferrades properes. Amb granades: mantén premut per allunyar el llançament i deixa anar per llençar-la; veuràs la trajectòria i el punt de caiguda</span><b>T / Mira</b><span>Activa/desactiva la mira x8 del rifle de franctirador; amb la mira activa, el joystick, WASD i Y/U mouen només el punt de vista, sense desplaçar el personatge</span><b>I</b><span>Obre l’inventari</span><b>M</b><span>Obre el mapa</span><b>H / J</b><span>Puja / baixa l’helicòpter</span><b>Arrossega</b><span>Gira la vista i el personatge</span><b>Roda</b><span>Acosta o allunya la càmera</span></div><p>Farmacioles, cisalla, explosius, granades, bazooka, rifle de franctirador i disfressa es gestionen des de l’inventari. Els mapes de l’HQ, helicòpters i tancs s’activen automàticament quan els reculls. El bazooka mostra una retícula blanca quan apunta lliurement i verda sobre una diana seleccionada. L’helicòpter utilitari no té canó: Dispar / F llança granades de l’inventari, si en tens; l’helicòpter de combat conserva la metralladora i el botó 🚀 / G per als míssils. La llanxa llançacoets dispara coets amb Dispar.</p><button id="inventoryMenu">Inventari</button><button id="chetosMenu">Chetos</button><button id="restartMenu">Nova partida</button><button id="performanceMenu">⚙️ Rendiment</button><button id="zoomOut">Allunya càmera</button><button id="zoomIn">Acosta càmera</button>';
+        body.innerHTML='<div class="controls"><b>WASD / fletxes</b><span>Avança, frena i gira</span><b>Joystick / ⇧</b><span>Arrossega el pom cap a la prolongació superior per córrer a peu o nedar a crol dins l’aigua. Torna al cercle per caminar o nedar a braça. Amb teclat: Majúscules + W.</span><b>◀ ▶ / Y i U</b><span>Desplaçament lateral sense girar: a peu, nedant, en hovercraft i en helicòpters. Els botons apareixen a banda i banda del joystick.</span><b>Acció / E</b><span>Motxilla: inventari. Icona d’un vehicle: puja-hi o baixa’n</span><b>Dispar / F</b><span>Dispara l’arma equipada. Amb la cisalla: talla silenciosament les filferrades properes. Amb granades: mantén premut per allunyar el llançament i deixa anar per llençar-la; veuràs la trajectòria i el punt de caiguda</span><b>T / Mira</b><span>Activa/desactiva la mira x8 del rifle de franctirador; amb la mira activa, el joystick, WASD i Y/U mouen només el punt de vista, sense desplaçar el personatge</span><b>I</b><span>Obre l’inventari</span><b>M</b><span>Obre el mapa</span><b>H / J</b><span>Puja / baixa l’helicòpter</span><b>Arrossega</b><span>Gira la vista i el personatge</span><b>Roda</b><span>Acosta o allunya la càmera</span></div><p>Farmacioles, cisalla, explosius, granades, bazooka, rifle de franctirador i disfressa es gestionen des de l’inventari. Els mapes de l’HQ, helicòpters i tancs s’activen automàticament quan els reculls. El bazooka mostra una retícula blanca quan apunta lliurement i verda sobre una diana seleccionada. L’helicòpter utilitari no té canó: Dispar / F llança granades de l’inventari, si en tens; l’helicòpter de combat conserva la metralladora i el botó 🚀 / G per als míssils. La llanxa llançacoets dispara coets amb Dispar.</p><button id="inventoryMenu">Inventari</button><button id="chetosMenu">Chetos</button><button id="restartMenu">Nova partida</button><button id="performanceMenu">⚙️ Rendiment</button><label class="pause-stats-toggle"><input id="showPerfStatsPause" type="checkbox"> Mostrar estadístiques de rendiment</label><button id="zoomOut">Allunya càmera</button><button id="zoomIn">Acosta càmera</button>';
         document.getElementById('inventoryMenu').onclick=()=>actions.open('inventory');
         document.getElementById('chetosMenu').onclick=()=>{
           actions.chetos();
@@ -76,6 +80,9 @@ window.HUNTER_UI=Object.freeze({
         document.getElementById('zoomOut').onclick=()=>actions.zoom(.2);
         document.getElementById('zoomIn').onclick=()=>actions.zoom(-.2);
         document.getElementById('performanceMenu').onclick=()=>actions.open('performance');
+        const statsToggle=document.getElementById('showPerfStatsPause');
+        statsToggle.checked=!!getState().performanceStatsVisible;
+        statsToggle.onchange=()=>actions.setPerformanceStatsVisible(statsToggle.checked);
       }
     }
     resumeButton.onclick=actions.resume;

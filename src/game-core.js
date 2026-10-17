@@ -147,6 +147,13 @@ const adaptivePerformance=window.HUNTER_PERFORMANCE.create({
   minPixelRatio:visualQuality.minPixelRatio,
   element:document.getElementById('perfStats'),compact:qualityName!=='desktop'
 });
+// El panell es mostra només quan l'usuari activa l'interruptor de pausa.
+let performanceStatsVisible=false;
+document.body.classList.remove('performance-stats-visible');
+function setPerformanceStatsVisible(enabled){
+  performanceStatsVisible=!!enabled;
+  document.body.classList.toggle('performance-stats-visible',performanceStatsVisible);
+}
 window.HUNTER_PERFORMANCE_STATS=adaptivePerformance.stats;
 const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segments:visualQuality.waterSegments,initialSegments:Math.min(160,visualQuality.waterSegments),heightAt:hAt,config:window.HUNTER_WATER,reflections:visualQuality.waterReflections!==false,coastDetail:!!visualQuality.coastDetail,fogColor:scene.fog.color});
 let waterUpgradePending=false;
@@ -1508,7 +1515,7 @@ const ui=window.HUNTER_UI.create({
   getState:()=>({
     hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
     inventory:inv,itemTypes:IT,player:P,nearVehicle:cv?null:nearV(),messageTime:msgT,message:msg,
-    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
+    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
   }),
   actions:{
     resume,
@@ -1520,6 +1527,7 @@ const ui=window.HUNTER_UI.create({
     setPalmsDisabled,
     setWaterDisabled,
     setShadowsDisabled,
+    setPerformanceStatsVisible,
     zoom:d=>zoom=Math.max(.7,Math.min(1.9,zoom+d)),
     chetos:grantAllWeapons
   }
