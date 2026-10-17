@@ -155,6 +155,8 @@ const movementFx=window.HUNTER_MOVEMENT_FX.create(THREE,{
  scene,quality:qualityName,waveModel:window.HUNTER_WAVES,
  waterTime:waterUniforms.time,waterBed:hAt
 });
+// Efectes hostils: només vehicles amb rodes, erugues o buc.
+const ENEMY_TRAIL_TYPES=new Set(['jeep','tanqueta','tanc','patrulla_marina']);
 window.HUNTER_MOVEMENT_FX_STATS=movementFx.stats;
 const updateSeabed=()=>water.setWorldSize(S);
 const waves=water.update;
@@ -431,13 +433,15 @@ V.forEach(v=>{
     }
   }
 });
-// Partícules persistents per distància recorreguda, no per fotograma:
- // només els vehicles propers contribueixen a la GPU.
- for(const v of V)movementFx.vehicle(v,dt,{
-   playerX:P.x,playerZ:P.z,playerVehicle:cv,terrainAt:hAt,
-   waterAt:(x,z)=>wy(x,z,t)
- });
- movementFx.update(dt,cam);
+// Esteles dels vehicles pilotables i dels enemics; tots els efectes
+// comparteixen quatre malles instanciades. LOD de distància al sistema.
+const fxContext={playerX:P.x,playerZ:P.z,playerVehicle:cv,
+  terrainAt:hAt,waterAt:(x,z)=>wy(x,z,t)};
+for(const v of V)movementFx.vehicle(v,dt,fxContext);
+fxContext.enemy=true;
+for(const u of E)if(ENEMY_TRAIL_TYPES.has(u.t))
+  movementFx.vehicle(u,dt,fxContext);
+movementFx.update(dt,cam);
  PT.forEach(p=>{if(p.life>0){p.life-=dt;if(p.rise)p.m.position.y+=p.rise*dt;p.m.scale.setScalar(p.s*(1+(1-p.life/p.max)*1.15));p.m.material.opacity=Math.max(0,p.life/p.max)*.8;if(p.life<=0){p.m.visible=false;p.rise=0}}});
 if(seaAudio){const coastal=Math.max(.25,1-Math.max(0,hAt(P.x,P.z))/22),
       // El windsurf només fa un fregadís molt suau d'aigua, no motor.

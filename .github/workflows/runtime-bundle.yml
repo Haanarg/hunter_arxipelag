@@ -10,6 +10,7 @@ on:
       - 'tests/joystick-running.cjs'
       - 'tests/player-locomotion.cjs'
       - 'tests/pier-access.cjs'
+      - 'tests/enemy-vehicle-trails.cjs'
       - 'index.html'
       - 'src/ui.js'
       - '.github/workflows/runtime-bundle.yml'
@@ -41,6 +42,7 @@ jobs:
           node tests/joystick-running.cjs
           node tests/player-locomotion.cjs
           node tests/pier-access.cjs
+          node tests/enemy-vehicle-trails.cjs
       - name: Publicar només si han passat les proves
         run: |
           git config user.name "github-actions[bot]"
