@@ -6552,15 +6552,28 @@ function decorateRuntimeBuilding(b,spec){
   const start=new THREE.Vector3(...a),end=new THREE.Vector3(...v),delta=end.clone().sub(start),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),6),M(c,'paint'));m.position.copy(start.add(end).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());g.add(m);return m;
  },cylinder=(g,r,h,c,x,y,z)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,10),M(c,'paint'));m.position.set(x,y,z);g.add(m);return m},shell={group:b.o,roof:b.roof,walls:b.wm},roofs=[];
  b.floors=spec.floors||1;b.localW=b.w;b.localD=b.d;b.wood=!!spec.wood;b.storey=b.h/b.floors;
+ const registerStair=(width,run,x,z,visualGroup=null)=>{
+   const stair={x,z,nx:0,nz:1,top:b.fy+b.storey+.15,bottom:b.fy+.3,
+     length:run,width,ramp:true,internal:true,owner:b,destroyed:false};
+   b.interiorStair=stair;stairs.push(stair);
+   if(visualGroup)b.interiorStairGroup=visualGroup;
+   // Hitbox només per rebre dany: mai no bloqueja el pas per la rampa.
+   const parts=visualGroup?.children.filter(o=>o.isMesh)||[];
+   const collider={x0:x-width/2,x1:x+width/2,
+     z0:z,z1:z+run,y0:b.fy+.2,y1:b.fy+b.storey+.25,
+     hp:140,m:parts[0]||new THREE.Object3D(),
+     parts:parts.length?parts:null,door:false,open:false,
+     rammable:false,playerBlock:false,stairStructure:stair,
+     cx:x,cz:z+run/2,owner:b};
+   stair.collider=collider;b.interiorStairCollider=collider;Wl.push(collider);
+ };
  if(seedSearchMode){
   // Únicament dades navegables: escala física i planta superior, sense Three.js.
   if(b.floors===2){
     b.upperFloor=true;
     const width=2.8,run=Math.min(b.d-3,b.storey*1.05),
           x=b.x+b.w/2-width/2-.7,z=b.z-b.d/2+2.4;
-    b.interiorStair={x,z,nx:0,nz:1,top:b.fy+b.storey+.15,bottom:b.fy+.3,
-      length:run,width,ramp:true,internal:true,owner:b};
-    stairs.push(b.interiorStair);
+    registerStair(width,run,x,z);
   }
   return;
  }
@@ -6568,13 +6581,13 @@ function decorateRuntimeBuilding(b,spec){
  if(b.floors===2){
   b.upperFloor=window.HUNTER_COMPOUND_ARCHITECTURE.decorateUpper(THREE,{b:{...spec,h:b.h},storey:b.storey,shell,box,rod,roofs});
   const width=2.8,run=Math.min(b.d-3,b.storey*1.05),x=b.x+b.w/2-width/2-.7,z=b.z-b.d/2+2.4;
-  b.interiorStair={x,z,nx:0,nz:1,top:b.fy+b.storey+.15,bottom:b.fy+.3,length:run,width,ramp:true,internal:true,owner:b};stairs.push(b.interiorStair);
+  registerStair(width,run,x,z,b.upperFloor.userData.stairGroup);
   for(const z of[-b.d/2,b.d/2])box(b.roof,b.w+.6,1,.35,0x647c72,0,b.h+1.7,z);
   for(const x of[-b.w/2,b.w/2])box(b.roof,.35,1,b.d+.6,0x647c72,x,b.h+1.7,0);
  }
 }
 function soldierChangeFloor(u,b,dt){
- if(!b.upperFloor||b.rb)return false;
+ if(!b.upperFloor||b.rb||!b.interiorStair||b.interiorStair.destroyed)return false;
  const floor=b.fy+b.storey+.15,current=u.walkY??u.o.position.y,wantsUp=P.y>floor-1,isUp=current>floor-.7;
  if(wantsUp===isUp&&!u.floorRoute)return false;
  const a=b.interiorStair;
@@ -8097,7 +8110,18 @@ function wallBreak(w){const h=w.y1-w.y0-1,parts=w.parts&&w.parts.length?w.parts:
 if(w.parts&&w.parts.length){parts.forEach(m=>m.visible=false)}else if(w.m.visible)WA.push({m:w.m,h,t:.5});else world.remove(w.m);
 for(let i=0;i<(w.door?6:10);i++)debris(rn(w.x0,w.x1),w.y0+1+h*rn(.2,.9),rn(w.z0,w.z1),col,1,.9,7);
 for(let i=0;i<3;i++)puff(cx,w.y0+1+h*rn(.1,.6),cz,0xc9b48a,3.5)}
-function roofBreak(b){if(b.rb)return;b.rb=1;if(b.upperFloor)b.upperFloor.visible=false;for(const r of b.extraRoofs||[])r.visible=false;b.rhp=0;const col=b.roof.material?b.roof.material.color.getHex():(b.roof.userData.color||0x777777),y=b.fy+b.h+.6;
+function destroyInteriorStair(b){
+ const a=b?.interiorStair;if(!a||a.destroyed)return;
+ a.destroyed=true;
+ if(b.interiorStairGroup)b.interiorStairGroup.visible=false;
+ let i=stairs.indexOf(a);if(i>=0)stairs.splice(i,1);
+ i=Wl.indexOf(b.interiorStairCollider);
+ if(i>=0){Wl.splice(i,1);wallGridCount=-1}
+}
+function roofBreak(b){if(b.rb)return;b.rb=1;
+ // Quan cau la sustentació desapareixen el forjat, el marc i l'escala.
+ if(b.upperFloor){b.upperFloor.visible=false;destroyInteriorStair(b)}
+ for(const r of b.extraRoofs||[])r.visible=false;b.rhp=0;const col=b.roof.material?b.roof.material.color.getHex():(b.roof.userData.color||0x777777),y=b.fy+b.h+.6;
 if(b.hangar&&b.roof?.userData?.hangarRoof){
   HR.push({m:b.roof,t:0,dur:1.05,baseY:b.roof.position.y,baseRx:b.roof.rotation.x,baseRz:b.roof.rotation.z,dir:rn(-1,1)<0?-1:1,x:b.x,z:b.z,w:b.w,d:b.d,col});
   for(let i=0;i<12;i++)puff(b.x+rn(-b.w/2,b.w/2),b.fy+rn(1,b.w*.45),b.z+rn(-b.d/2,b.d/2),0x8b8580,3.8);
@@ -8190,7 +8214,7 @@ function checkRoofSupport(b,w){
   }
   if(b.destroyedWallSupport>=3)roofBreak(b)
 }
-function dmgW(w,d){if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}w.hp-=d;if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0){Wl.splice(i,1);wallGridCount=-1}i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);checkRoofSupport(w.owner,w);snd('boom',.3)}}
+function dmgW(w,d){if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}w.hp-=d;if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0){Wl.splice(i,1);wallGridCount=-1}i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);if(w.stairStructure)destroyInteriorStair(w.stairStructure.owner);checkRoofSupport(w.owner,w);snd('boom',.3)}}
 function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=seedSearchMode
   ?{group:new THREE.Group(),walls:null,doors:null,roof:new THREE.Group()}
   :(opt.hangar?buildingVisual.createHangarShell:buildingVisual.createShell)({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),
