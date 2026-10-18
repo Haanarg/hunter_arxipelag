@@ -650,6 +650,13 @@ function destroyInteriorStair(b){
  if(i>=0){Wl.splice(i,1);wallGridCount=-1}
 }
 function roofBreak(b){if(b.rb)return;b.rb=1;
+ // Els objectes del pis superior no poden quedar suspesos després
+ // de l'ensorrament: cauen a la planta baixa.
+ if(b.upperFloor)for(const it of items){
+   if(it.building===b&&it.y>b.fy+b.storey){
+     it.y=b.fy+1.3;if(it.o)it.o.position.y=it.y;
+   }
+ }
  // Quan cau la sustentació desapareixen el forjat, el marc i l'escala.
  if(b.upperFloor){b.upperFloor.visible=false;destroyInteriorStair(b)}
  for(const r of b.extraRoofs||[])r.visible=false;b.rhp=0;const col=b.roof.material?b.roof.material.color.getHex():(b.roof.userData.color||0x777777),y=b.fy+b.h+.6;
@@ -881,7 +888,35 @@ function createItemVisual(t){const g=new THREE.Group(),metal=0x454b4e,dark=0x3d3
     bx(g,.17,.19,.7,0x26322e,0,.95,-.18,'metal');bx(g,.15,.16,.3,0x26322e,0,1.06,-.45,'metal');
     bx(g,.13,.28,.22,0x2d322d,0,.34,-.08,'metal');
   }
-  else if(t==='paracaigudes'){bx(g,1.25,.9,.75,0x697f6a,0,.52,0,'paint');bx(g,1.32,.18,.79,0xd7ad70,0,.94,0,'paint');for(const z of[-.24,.24])bx(g,.1,1,.09,0xe8dbc0,-.54,.52,z,'paint')}
+  else if(t==='paracaigudes'){
+    // Motxilla de paracaigudes compacta de lona, no un bloc rectangular.
+    const canvas=M(0x718269,'paint'),trim=M(0x4c5847,'paint'),
+          straps=M(0xc9b891,'paint'),buckles=M(0x343d38,'metal');
+    const pack=new THREE.Mesh(new THREE.SphereGeometry(.6,12,9),canvas);
+    pack.scale.set(1.04,1.05,.73);pack.position.y=.66;g.add(pack);
+    const panel=new THREE.Mesh(new THREE.SphereGeometry(.56,10,8),trim);
+    panel.scale.set(.98,1,.21);panel.position.set(0,.65,.42);g.add(panel);
+    const cover=new THREE.Mesh(new THREE.SphereGeometry(.43,10,7),canvas);
+    cover.scale.set(1,.48,.8);cover.position.set(0,1.12,-.12);g.add(cover);
+    const band=(points,mat,r=.055)=>{
+      const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));
+      g.add(new THREE.Mesh(new THREE.TubeGeometry(curve,12,r,6,false),mat));
+    };
+    for(const side of[-1,1]){
+      band([[side*.37,1.11,.37],[side*.43,.93,.53],
+        [side*.42,.50,.56],[side*.32,.20,.40]],straps,.07);
+      band([[side*.53,.94,-.08],[side*.64,.70,-.14],
+        [side*.53,.33,-.18],[side*.36,.22,.16]],straps,.045);
+      bx(g,.16,.095,.10,0xc5c7b5,side*.40,.48,.58,'metal');
+      bx(g,.095,.05,.13,0x39483d,side*.40,.48,.65,'metal');
+    }
+    band([[-.47,.65,-.36],[-.23,.62,-.48],[.23,.62,-.48],
+      [.47,.65,-.36]],straps,.06);
+    bx(g,.55,.16,.12,0x596a52,0,.31,-.42,'paint');
+    bx(g,.23,.14,.16,0x343d38,0,.31,-.51,'metal');
+    band([[-.18,1.15,.24],[-.18,1.37,.20],[.18,1.37,.20],
+      [.18,1.15,.24]],buckles,.045);
+  }
   else if(t==='cisalla'){const cutter=window.HUNTER_BOLT_CUTTERS.create(THREE);cutter.rotation.z=Math.PI/2;cutter.position.y=.66;cutter.scale.setScalar(1.12);g.add(cutter)}
   else if(t==='granada'){for(const [x,z] of[[-.35,-.24],[0,-.24],[.35,-.24],[-.18,.22],[.18,.22]]){const body=new THREE.Mesh(new THREE.SphereGeometry(.17,8,6),M(0x4a5842,'metal'));body.scale.set(.88,1.08,.88);body.position.set(x,.42,z);g.add(body);bx(g,.07,.12,.07,0x252b27,x,.61,z,'metal')}}
   else if(t==='disf'){bx(g,.78,1.3,.16,0xb53232,0,.8,0,'paint');const l=bx(g,.7,.38,.16,0xb53232,-.62,1.18,0,'paint'),r=bx(g,.7,.38,.16,0xb53232,.62,1.18,0,'paint');l.rotation.z=-.55;r.rotation.z=.55;bx(g,.16,.18,.18,0xf1c7a1,0,1.44,0,'organic');bx(g,.08,1.05,.19,0x6f1f1f,0,.75,-.02,'paint')}
@@ -904,25 +939,63 @@ function lootAllowed(t,b=null,x=null,z=null,compound=null){
   if(complex==='hangar'&&LOOT_WEAPONS.has(t))return false;
   return true;
 }
+// Repartiment comú entre botí fix i aleatori: un màxim de tres
+// objectes en tot l'edifici, comptant totes les plantes.
+const MAX_BUILDING_ITEMS=3;
+function itemBuildingAt(x,z){
+  return B.find(b=>{
+    const p=buildingLocalPoint(b,x,z);
+    return Math.abs(p.x)<(b.localW||b.w)/2-.55 &&
+      Math.abs(p.z)<(b.localD||b.d)/2-.55;
+  })||null;
+}
+const buildingItemCount=b=>items.reduce((n,it)=>n+(it.building===b?1:0),0);
+function itemHeightInBuilding(b,x,z){
+  if(!b)return hAt(x,z)+1.3;
+  const n=buildingItemCount(b),
+        firstUpper=Math.floor(Math.abs(b.x*1.341+b.z*1.733))%2,
+        upstairs=b.floors===2&&!b.rb&&!!b.interiorStair&&
+          !stairContains(b.interiorStair,x,z,.6)&&
+          (n+firstUpper)%2===1;
+  return b.fy+(upstairs?b.storey:0)+1.3;
+}
+function canPlaceItem(t,b,compound){
+  if(b&&buildingItemCount(b)>=MAX_BUILDING_ITEMS)return false;
+  // Una sola farmaciola a tota la base de sortida.
+  if(t==='med'&&(compound==='base'||b?.compound==='base')&&
+    items.some(it=>it.t==='med'&&it.compound==='base'))return false;
+  return true;
+}
 function addItemAt(t,x,z,compound=null){
-  if(!lootAllowed(t,null,x,z,compound))return null;
-  const y=hAt(x,z)+1.3,o=seedSearchMode?null:createItemVisual(t);
-  if(o){o.position.set(x,y,z);world.add(o)}items.push({t,x,z,y,o});return o||items[items.length-1];
+  const b=itemBuildingAt(x,z);
+  if(!lootAllowed(t,b,x,z,compound)||!canPlaceItem(t,b,compound))return null;
+  const y=itemHeightInBuilding(b,x,z),o=seedSearchMode?null:createItemVisual(t);
+  if(o){o.position.set(x,y,z);world.add(o)}
+  const item={t,x,z,y,o,building:b,compound:compound||b?.compound||null};
+  items.push(item);return o||item;
 }
 function addIt(t,b){
-  const c=IT[t];
-  if(!c){console.warn('Tipus d’objecte desconegut:',t);return null}
-  if(!lootAllowed(t,b))return null;
-  let x,z;
-  for(let k=0;k<25;k++){
-    x=b.x+rr(-(b.w/2-2),b.w/2-2);
-    z=b.z+rr(-(b.d/2-2),b.d/2-2);
-    if(!itemInsideHangar(x,z)&&!Wl.some(w=>x>w.x0-1.2&&x<w.x1+1.2&&z>w.z0-1.2&&z<w.z1+1.2))break;
+  if(!IT[t]){console.warn('Tipus d’objecte desconegut:',t);return null}
+  if(!lootAllowed(t,b)||!canPlaceItem(t,b,b?.compound))return null;
+  let x,z,found=false;
+  const width=b.localW||b.w,depth=b.localD||b.d;
+  for(let k=0;k<35;k++){
+    const lx=rr(-(width/2-2),width/2-2),
+          lz=rr(-(depth/2-2),depth/2-2),
+          point=buildingWorldPoint(b,lx,lz);
+    x=point.x;z=point.z;
+    if(!itemInsideHangar(x,z)&&
+      !Wl.some(w=>!w.open&&w.playerBlock!==false&&
+        x>w.x0-.9&&x<w.x1+.9&&z>w.z0-.9&&z<w.z1+.9)&&
+      !(b.interiorStair&&stairContains(b.interiorStair,x,z,.75))){
+      found=true;break;
+    }
   }
-  if(!lootAllowed(t,b,x,z))return null;
-  const y=b.fy+1.3,o=seedSearchMode?null:createItemVisual(t);
-  if(o){o.position.set(x,y,z);world.add(o)}items.push({t,x,z,y,o});
-  return o;
+  if(!found||!lootAllowed(t,b,x,z))return null;
+  const y=itemHeightInBuilding(b,x,z),o=seedSearchMode?null:createItemVisual(t);
+  if(o){o.position.set(x,y,z);world.add(o)}
+  const item={t,x,z,y,o,building:b,compound:b.compound||null};
+  items.push(item);return o||item;
 }
 function flag(x,z,c){if(!seedSearchMode)world.add(buildingVisual.createFlag({x,y:hAt(x,z),z,color:c}))}
 // jugador i vehicles
