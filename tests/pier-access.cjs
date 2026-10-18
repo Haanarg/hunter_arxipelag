@@ -37,4 +37,27 @@ assert.equal(ctx.groundAt(3.2,5,2.4),0,'Es pot baixar del lateral a l’aigua');
 assert.equal(ctx.groundAt(0,5,.1),0,'No pujar directament des de l’aigua');
 assert.equal(ctx.groundAt(0,10,.1),0,'No pujar a la unió en T des de l’aigua');
 assert.equal(ctx.groundAt(0,5,2.4),2.4,'El moll manté el suport de qui ja hi és');
+// Els caps de la T no han de generar rampes: només el peu a terra.
+const pierStart=visual.indexOf('const compoundPier=(');
+const pierEnd=visual.indexOf('const findPortWater=',pierStart);
+assert.ok(pierStart>=0&&pierEnd>pierStart,'No s’ha trobat el generador de molls');
+const generator={
+  seedSearchMode:true,PIER_DECK_Y:2.4,stairs:[],piers:[],compoundClear:[],
+  hAt:(x,z)=>z<0?1:0,Math
+};
+vm.createContext(generator);
+vm.runInContext(visual.slice(pierStart,pierEnd)+'\nthis.pier=compoundPier;',generator);
+generator.pier(0,10,0,50,5,true);
+assert.equal(generator.stairs.length,1,'El braç longitudinal ha de tenir una rampa');
+assert.equal(generator.stairs[0].length,12,'Cal mantenir els 12 m si ja toca terra');
+generator.pier(-17,48,17,48,5,false);
+generator.pier(0,45.5,0,50.5,34,false);
+assert.equal(generator.stairs.length,1,'Ni la travessa ni el cap ample de la T poden crear rampes');
+generator.pier(0,45.5,0,50.5,34,true);
+assert.equal(generator.stairs.length,1,'La geometria transversal mai ha de generar una rampa ampla');
+generator.stairs.length=0;
+generator.hAt=(x,z)=>z< -19?.8:0;
+generator.pier(0,0,0,40,5,true);
+assert.equal(generator.stairs.length,1,'S’ha de trobar la terra encara que sigui a més de 12 m');
+assert.ok(generator.stairs[0].length>=20,'La rampa no pot començar submergida');
 console.log('OK pantalans: rampa, unió, sortida lliure i sense pujada instantània');

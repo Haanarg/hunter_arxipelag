@@ -19,6 +19,8 @@ on:
       - 'tests/loot-health.cjs'
       - 'tests/two-storey-destruction.cjs'
       - 'tests/pier-access.cjs'
+      - 'tests/truck-exit.cjs'
+      - 'tests/heavy-vehicle-collisions.cjs'
       - 'tests/enemy-vehicle-trails.cjs'
       - 'index.html'
       - 'src/ui.js'
@@ -60,6 +62,8 @@ jobs:
           node tests/loot-health.cjs
           node tests/two-storey-destruction.cjs
           node tests/pier-access.cjs
+          node tests/truck-exit.cjs
+          node tests/heavy-vehicle-collisions.cjs
           node tests/enemy-vehicle-trails.cjs
       - name: Publicar només si han passat les proves
         run: |

@@ -187,15 +187,25 @@ const compoundPath=(points,width=4,color=0x8a795e)=>{
   const curve=window.HUNTER_COMPOUND_PATHS.smoothPath(points,width);
   for(let i=1;i<curve.length;i++){const a=curve[i-1],b=curve[i],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/3));for(let k=0;k<=n;k++){const t=k/n;compoundClear.push({x:a[0]+(b[0]-a[0])*t,z:a[1]+(b[1]-a[1])*t,r:width*.8+2})}}
 };
-const compoundPier=(x1,z1,x2,z2,width=4.2)=>{
+const compoundPier=(x1,z1,x2,z2,width=4.2,accessRamp=true)=>{
   const dx=x2-x1,dz=z2-z1,L=Math.hypot(dx,dz);if(L<2)return;
-  // Una passarel·la inclinada connecta l'arrencada del moll amb terra ferma.
-  const ux=dx/L,uz=dz/L,px=-uz,pz=ux,n=Math.max(1,Math.ceil(L/5)),
-        rampLength=12,rampStartX=x1-ux*rampLength,rampStartZ=z1-uz*rampLength,
-        rampGround=Math.max(hAt(rampStartX,rampStartZ)+.08,0),
-        ramp={x:x1,z:z1,nx:-ux,nz:-uz,length:rampLength,
-          width:width-.25,bottom:rampGround,top:PIER_DECK_Y,ramp:true,pierAccess:true};
-  stairs.push(ramp);
+  const ux=dx/L,uz=dz/L,px=-uz,pz=ux,n=Math.max(1,Math.ceil(L/5));
+  // Només el tram longitudinal que arrenca de la costa té rampa.
+  // Els caps transversals de les T són plataformes, mai rampes de 34 m d'ample.
+  let ramp=null;
+  if(accessRamp&&L>width){
+    let rampLength=12,rampGround=null;
+    // Allargar la rampa si els primers 12 m encara són dins l'aigua.
+    for(let d=12;d<=40;d+=2){
+      const shoreH=hAt(x1-ux*d,z1-uz*d);
+      if(shoreH>.25){rampLength=d;rampGround=shoreH+.08;break}
+    }
+    if(rampGround!==null){
+      ramp={x:x1,z:z1,nx:-ux,nz:-uz,length:rampLength,
+        width:width-.25,bottom:rampGround,top:PIER_DECK_Y,ramp:true,pierAccess:true};
+      stairs.push(ramp);
+    }
+  }
   if(seedSearchMode){
     for(let i=0;i<n;i++){
       const m=(i+.5)/n,seg=L/n,mx=x1+dx*m,mz=z1+dz*m;
@@ -204,16 +214,16 @@ const compoundPier=(x1,z1,x2,z2,width=4.2)=>{
     }
     return;
   }
-  const rampMidX=(rampStartX+x1)/2,rampMidZ=(rampStartZ+z1)/2,
-        rise=PIER_DECK_Y-rampGround,
-        rampMesh=new THREE.Mesh(new THREE.BoxGeometry(width-.25,.22,rampLength),
-          M(0x957858,'paint'));
-  rampMesh.position.set(rampMidX,(rampGround+PIER_DECK_Y)/2-.11,rampMidZ);
-  rampMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),
-    new THREE.Vector3(ux*rampLength,rise,uz*rampLength).normalize());
-  world.add(rampMesh);staticDecorRoots.push(rampMesh);
-  // La rampa no porta baranes que obstaculitzin l'entrada.
-  // Es pot baixar pels laterals; el nivell del moll impedeix pujar de l'aigua.
+  if(ramp){
+    const rampMidX=x1-ux*ramp.length/2,rampMidZ=z1-uz*ramp.length/2,
+          rise=ramp.top-ramp.bottom,
+          rampMesh=new THREE.Mesh(new THREE.BoxGeometry(ramp.width,.22,ramp.length),
+            M(0x957858,'paint'));
+    rampMesh.position.set(rampMidX,(ramp.bottom+ramp.top)/2-.11,rampMidZ);
+    rampMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),
+      new THREE.Vector3(ux*ramp.length,rise,uz*ramp.length).normalize());
+    world.add(rampMesh);staticDecorRoots.push(rampMesh);
+  }
   const yaw=Math.atan2(dx,dz);
   for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n,m=(a+b)/2,seg=L/n,mx=x1+dx*m,mz=z1+dz*m,y=PIER_DECK_Y-.14;
     const deck=new THREE.Mesh(new THREE.BoxGeometry(width,.28,seg+.12),M(0x816346,'paint'));deck.position.set(mx,y,mz);deck.rotation.y=yaw;world.add(deck);staticDecorRoots.push(deck);piers.push({x:mx,z:mz,ux,uz,px,pz,length:seg+.12,width,y:y+.14});

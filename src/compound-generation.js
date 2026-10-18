@@ -111,9 +111,9 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
     for(let x=-hw;x<=hw;x+=6){if(Math.abs(x)>10)prop('barrier',...tr(x,hd),-angle);prop('barrier',...tr(x,-hd),-angle)}
     for(let z=-hd+6;z<hd;z+=6)for(const x of[-hw,hw])prop('barrier',...tr(x,z),Math.PI/2-angle);
   }
-  if(layout.piers){for(const p of layout.piers)pier(...tr(p.x,p.z-p.d/2),...tr(p.x,p.z+p.d/2),p.w);}
+  if(layout.piers){for(const p of layout.piers)pier(...tr(p.x,p.z-p.d/2),...tr(p.x,p.z+p.d/2),p.w,p.accessRamp!==false&&p.d>p.w);}
   else if(isPort){
-    pier(...tr(-51,7),...tr(51,7),10);
+    pier(...tr(-51,7),...tr(51,7),10,false);
     for(const x of[-24,24])pier(...tr(x,7),...tr(x,48),6);
   }
   for(const [vehicleIndex,spec] of layout.vehicles.entries()){

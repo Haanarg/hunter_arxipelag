@@ -1473,6 +1473,17 @@ function ejectFromHelicopter(v){
   v.reentryLockUntil=elapsed+8;
   playerEject=null;v.strafeV=0;cv=null;swimming=false;
 }
+// Sortida del camió: sempre pel costat i al darrere del sentit de marxa.
+// Els punts de prova ja són fora de la caixa física, no davant del para-xocs.
+function truckExitCandidate(v,side,index){
+  const box=vehicleBox(v),k=index%8,exitSide=index<8?side:-side,
+        lateral=box.w/2+2.2+Math.floor(k/4)*1.5,
+        behind=-(v.v<0?-1:1)*(box.d*.22+(k%4)*1.35),
+        fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),
+        sx=Math.cos(v.hd),sz=-Math.sin(v.hd);
+  return{x:v.x+sx*exitSide*lateral+fx*behind,
+    z:v.z+sz*exitSide*lateral+fz*behind,side:exitSide};
+}
 function toggle(){if(playerFall||playerEject)return;if(scopeActive)setSniperScope(false);if(cv){
 const leaving=cv,speed=Math.abs(leaving.v),isAir=VT[leaving.t].m==='a',ground=Math.max(0,hAt(leaving.x,leaving.z)),height=Math.max(0,leaving.alt-ground);
 if(isAir&&height>4){
@@ -1480,11 +1491,23 @@ if(isAir&&height>4){
   leaving.crashing=true;leaving.crashT=0;leaving.crashSpin=rn(-1,1)<0?-1:1;leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;
   msg=playerFall.parachute?'Paracaigudes desplegat!':'Has saltat! L’helicòpter està fora de control!';msgT=3;return
 }
-const moving=speed>3,side=rn(-1,1)<0?-1:1,rrad=vehicleRadius(leaving.t)+2.2;let spot=null;
-for(let i=0;i<16;i++){const a=leaving.hd+side*Math.PI/2+i*Math.PI/8,x=leaving.x+Math.cos(a)*rrad,z=leaving.z+Math.sin(a)*rrad;if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||wallCandidates(x,z,1).some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;spot={x,z};if(hAt(x,z)>0||VT[leaving.t].m==='w')break}
+const moving=speed>3,side=rn(-1,1)<0?-1:1,rrad=vehicleRadius(leaving.t)+2.2,movingTruck=moving&&leaving.t==='camio';let spot=null;
+for(let i=0;i<16;i++){
+  const a=leaving.hd+side*Math.PI/2+i*Math.PI/8,
+        candidate=movingTruck?truckExitCandidate(leaving,side,i):{x:leaving.x+Math.cos(a)*rrad,z:leaving.z+Math.sin(a)*rrad,side},
+        {x,z}=candidate;
+  if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||
+    circleVehicleOverlap(x,z,1.1,leaving)||
+    vehicleCandidatesAt(x,z,15).some(u=>u!==leaving&&!u.destroyed&&circleVehicleOverlap(x,z,1.1,u))||
+    wallCandidates(x,z,1).some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;
+  if(movingTruck&&hAt(x,z)<=0)continue;
+  spot=candidate;if(hAt(x,z)>0||VT[leaving.t].m==='w')break;
+}
 if(!spot){msg='No hi ha espai per baixar aquí.';msgT=3;return}
 P.x=spot.x;P.z=spot.z;P.hd=leaving.hd;leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;leaving.reentryLockUntil=elapsed+2;
-if(moving){const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),sx=Math.cos(leaving.hd)*side,sz=-Math.sin(leaving.hd)*side,carry=Math.min(28,speed*.72);playerEject={kind:'flip',vx:fx*carry+sx*1.4,vz:fz*carry+sz*1.4,t:.5,dur:.5,height:.68};msg='Has saltat del vehicle en marxa!';msgT=2.5}
+if(moving){const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),sx=Math.cos(leaving.hd)*spot.side,sz=-Math.sin(leaving.hd)*spot.side,
+  carry=Math.sign(leaving.v)*Math.min(movingTruck?11:28,speed*(movingTruck?.3:.72)),outward=movingTruck?8:1.4;
+  playerEject={kind:'flip',vx:fx*carry+sx*outward,vz:fz*carry+sz*outward,t:.5,dur:.5,height:.68};msg='Has saltat del vehicle en marxa!';msgT=2.5}
 cv=null}else{const v=nearV();if(v){cv=v;swimming=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
 addEventListener('keydown',e=>{
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
@@ -1624,6 +1647,14 @@ const ui=window.HUNTER_UI.create({
 mc.onclick=()=>started&&panel('map');
 function vehicleImpactFx(x,y,z){debris(x,y,z,0xffc14d,5,.16,5);puff(x,y,z,0x8a8478,.8)}
 function collisionDamageVehicle(v,dmg,impacts=1){if(v?.t==='tanc')return;damageVehicle(v,dmg,impacts)}
+function ramSpeedFactor(type,barbed){
+  if(type==='tanc')return .995;
+  if(type==='camio'&&barbed)return 1;
+  return barbed?.72:.55;
+}
+function tankCanCrush(v,other,ownMass,otherMass){
+  return v.t==='tanc'&&Math.abs(v.v)>1&&ownMass>otherMass&&other.t!=='ferry';
+}
 function killShark(f){
   if(f.dead)return;
   window.HUNTER_SHARKS.kill(f);
@@ -1651,7 +1682,7 @@ function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
   }
   if(v.envCd>0)return;
   const t=treeAt(v.x,v.z,radius*.48);if(!t)return;
-  if(t.p&&t.alive){killPalm(t);collisionDamageVehicle(v,Math.min(18,5+speed*.55),1);if(v.destroyed)return;v.v*=.9;v.bump=.18;v.envCd=.28;msg='Has tombat una palmera.';msgT=1;return}
+  if(t.p&&t.alive){const heavy=v.t==='tanc'||v.t==='camio';killPalm(t);if(!heavy)collisionDamageVehicle(v,Math.min(18,5+speed*.55),1);if(v.destroyed)return;if(!heavy)v.v*=.9;v.bump=heavy?.06:.18;v.envCd=heavy?.08:.28;msg='Has tombat una palmera.';msgT=1;return}
   if(t.rock){collisionDamageVehicle(v,Math.min(14,4+speed*.45),1);vehicleImpactFx(t.x,Math.max(0,hAt(t.x,t.z))+.8,t.z);if(v.destroyed)return;v.v*=.8;v.bump=.22;v.hd+=rn(-.045,.045);v.envCd=.32;msg='Impacte amb roca!';msgT=1}
 }
 // Hitboxes físics de les cobertes. Calculats a partir de la mateixa
@@ -1784,16 +1815,31 @@ if((!a||v.alt-g<16)&&!deckCarrier){for(const w of wallCandidates(nx,nz,radius))i
   !(a&&(v.alt+(v.o.userData.skidContactHeight||0)>w.y1+.15||
     v.alt+(v.o.userData.rotorContactHeight||7)<w.y0-.15))&&
   !(w.towerLegOwner&&a&&v.alt>w.y1+2)&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){
-  if(w.rammable&&land&&v.envCd<=0){const speed=Math.abs(v.v),barbed=!!w.barbed,breakSpeed=barbed?8:14,tank=v.t==='tanc';if(tank||speed>breakSpeed){dmgW(w,w.hp);collisionDamageVehicle(v,0,barbed?2:3);vehicleImpactFx(w.cx,Math.max(0,hAt(w.cx,w.cz))+1.1,w.cz);if(v.destroyed)return false;v.v*=tank?.9:(barbed?.72:.55);v.bump=barbed?.14:.2;v.envCd=.28;if(!Wl.includes(w)){msg=barbed?'Has trencat la filferrada!':'Has travessat una paret!';msgT=1;continue}}}
+  if(w.rammable&&land&&v.envCd<=0){const speed=Math.abs(v.v),barbed=!!w.barbed,breakSpeed=barbed?8:14,tank=v.t==='tanc',truckFence=v.t==='camio'&&barbed;if(tank||truckFence||speed>breakSpeed){dmgW(w,w.hp);if(!tank&&!truckFence)collisionDamageVehicle(v,0,barbed?2:3);vehicleImpactFx(w.cx,Math.max(0,hAt(w.cx,w.cz))+1.1,w.cz);if(v.destroyed)return false;v.v*=ramSpeedFactor(v.t,barbed);v.bump=(tank||truckFence)?.06:barbed?.14:.2;v.envCd=(tank||truckFence)?.08:.28;if(!Wl.includes(w)){msg=barbed?'Has trencat la filferrada!':'Has travessat una paret!';msgT=1;continue}}}
   ok=false;break
 }}
-if(ok){const test=vehicleBox(v,nx,nz,v.hd),hit=vehicleObstacles(v).find(o=>o!==deckCarrier&&o!==v.carrier&&o.carrier!==v&&vehicleHeightCompatible(v,o)&&obbOverlap(test,vehicleBox(o)));if(hit){const rel=Math.abs(v.v-(hit.v||0));const ownMass=c.mass||1,otherMass=VT[vehicleHitType(hit.t)]?.mass||1,ratio=Math.max(.35,Math.min(2.5,otherMass/ownMass));v.v*=rel>5?Math.max(.16,.42/ratio):Math.max(.3,.62/ratio);if('v'in hit)hit.v*=Math.max(.3,.72/Math.max(.5,ownMass/otherMass));if(rel>6){collisionDamageVehicle(v,Math.min(18,rel*.7*ratio),1);if(V.includes(hit))collisionDamageVehicle(hit,Math.min(18,rel*.55/ratio),1);vehicleImpactFx((v.x+hit.x)/2,Math.max(vehicleY(v),vehicleY(hit))+.5,(v.z+hit.z)/2)}v.bump=.14;v.envCd=.18;ok=false}}
+if(ok){const test=vehicleBox(v,nx,nz,v.hd),hit=vehicleObstacles(v).find(o=>o!==deckCarrier&&o!==v.carrier&&o.carrier!==v&&vehicleHeightCompatible(v,o)&&obbOverlap(test,vehicleBox(o)));if(hit){
+  const rel=Math.abs(v.v-(hit.v||0)),ownMass=c.mass||1,otherMass=VT[vehicleHitType(hit.t)]?.mass||1,
+        ratio=Math.max(.35,Math.min(2.5,otherMass/ownMass)),
+        tankCrush=tankCanCrush(v,hit,ownMass,otherMass);
+  if(tankCrush){
+    if(E.includes(hit))hurtE(hit,Math.max(300,hit.hp+1));
+    else damageVehicle(hit,0,Math.max(1,hit.life??VT[hit.t].life));
+    vehicleImpactFx(hit.x,Math.max(vehicleY(v),vehicleY(hit))+.5,hit.z);
+    v.v*=.99;v.bump=.08;v.envCd=.12;
+  }else{
+    v.v*=rel>5?Math.max(.16,.42/ratio):Math.max(.3,.62/ratio);
+    if('v'in hit)hit.v*=Math.max(.3,.72/Math.max(.5,ownMass/otherMass));
+    if(rel>6){collisionDamageVehicle(v,Math.min(18,rel*.7*ratio),1);if(V.includes(hit))collisionDamageVehicle(hit,Math.min(18,rel*.55/ratio),1);vehicleImpactFx((v.x+hit.x)/2,Math.max(vehicleY(v),vehicleY(hit))+.5,(v.z+hit.z)/2)}
+    v.bump=.14;v.envCd=.18;ok=false;
+  }
+}}
 if(ok){
   v.x=nx;v.z=nz;
   if(land){
     const f2=ferryForVehicle(v,v.x,v.z,true);if(f2)attachToFerry(v,f2);else if(v.carrier)detachFromFerry(v)
   }
-  handleVehicleImpacts(v,dt,oldX,oldZ);if(v.destroyed)return false;if(v.t==='tanc'||v.t==='tanqueta')crush(nx,nz,(v.t==='tanc'?3.2:2.4)*VS[v.t])
+  handleVehicleImpacts(v,dt,oldX,oldZ);if(v.destroyed)return false;if(v.t==='tanc'||v.t==='tanqueta'||v.t==='camio')crush(nx,nz,(v.t==='tanc'?3.2:v.t==='camio'?2.6:2.4)*VS[v.t])
 }else{v.v*=Math.exp(-12*dt);v.sideV*=Math.exp(-10*dt);v.strafeV*=Math.exp(-12*dt)}
 if(a){
   const g2=Math.max(0,hAt(v.x,v.z)),targetVz=ud*(c.climb||24);
