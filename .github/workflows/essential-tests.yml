@@ -34,10 +34,10 @@ jobs:
           set -euo pipefail
           case "$GRUP" in
             world)
-              set -- terrain-level-index terrain-stream water seed-replay compound-generation loot-health two-storey-destruction pier-access
+              set -- terrain-level-index terrain-stream water water-jumps seed-replay compound-generation loot-health two-storey-destruction pier-access
               ;;
             combat)
-              set -- enemy-navigation projectile-classes enemy-vehicle-trails vehicle-weapon-reticle
+              set -- enemy-navigation projectile-classes enemy-vehicle-trails vehicle-weapon-reticle water-jumps
               ;;
             ending)
               set -- victory-cinematic
@@ -46,7 +46,7 @@ jobs:
               set -- smoke startup-cache joystick-running player-locomotion rowing-audio-camera performance-stats-toggle loot-health
               ;;
             all)
-              set -- smoke startup-cache joystick-running player-locomotion rowing-audio-camera performance-stats-toggle loot-health vehicle-weapon-reticle pier-access terrain-level-index terrain-stream water seed-replay compound-generation two-storey-destruction enemy-navigation projectile-classes enemy-vehicle-trails victory-cinematic
+              set -- smoke startup-cache joystick-running player-locomotion rowing-audio-camera performance-stats-toggle loot-health vehicle-weapon-reticle water-jumps pier-access terrain-level-index terrain-stream water seed-replay compound-generation two-storey-destruction enemy-navigation projectile-classes enemy-vehicle-trails victory-cinematic
               ;;
             *)
               echo "Grup de proves desconegut: $GRUP" >&2

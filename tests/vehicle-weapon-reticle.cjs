@@ -6,11 +6,11 @@ const {pathToFileURL}=require('node:url');
 (async()=>{
  const T=await import(pathToFileURL(path.join(__dirname,'../vendor/three-r186.module.mjs')).href);
  const src=fs.readFileSync(path.join(__dirname,'../src/combat.js'),'utf8');
- const helper=src.slice(src.indexOf('function combatHeliMissileAim('),
-    src.indexOf('// Retícula del bazooka:',src.indexOf('function combatHeliMissileAim(')));
+ const helper=src.slice(src.indexOf('function combatBoatRocketAim('),
+    src.indexOf('// Retícula del bazooka:',src.indexOf('function combatBoatRocketAim(')));
  const fn=src.slice(src.indexOf('function updateBazookaReticle(dt){'),
     src.indexOf('// Conservem el punt',src.indexOf('function updateBazookaReticle(dt){')));
- assert.ok(helper.startsWith('function combatHeliMissileAim('));
+ assert.ok(helper.startsWith('function combatBoatRocketAim('));
  assert.ok(fn.startsWith('function updateBazookaReticle(dt){'));
  const ui={style:{display:'none'},classList:{locked:false,toggle(name,val){this.locked=val}}};
  const gun={origin:new T.Vector3(0,2,0),direction:new T.Vector3(0,0,-1)};
@@ -48,6 +48,16 @@ const {pathToFileURL}=require('node:url');
  assert.equal(ctx.calls.at(-1).range,120,'Abast del míssil');
  assert.ok(ctx.calls.at(-1).dy<-.7,'Míssils: angle real de 45° cap avall');
  assert.equal(ctx.calls.at(-1).kind,'heavy','Retícula usa foc pesat');
+ ctx.calls=[];
+ ctx.cv={t:'llanxa_coets',x:0,z:0,hd:0,o:new T.Group(),rockets:Infinity};
+ ctx.cv.o.position.y=2;
+ refresh();
+ assert.equal(ctx.bazookaReticleMode,'boat','Retícula de llanxa llançacoets');
+ assert.equal(ctx.calls.at(-1).range,105,'Coets de la llanxa: abast real');
+ assert.ok(ctx.calls.at(-1).dy>0&&ctx.calls.at(-1).dy<.02,
+   'La llanxa conserva la lleugera elevació real del coet');
+ assert.equal(ctx.calls.at(-1).kind,'heavy','Llanxa: armament pesat');
+ assert.equal(ui.style.display,'block','La mira de la llanxa és visible');
  ctx.cv.rockets=0;refresh();
  assert.equal(ui.style.display,'none','Sense míssils la retícula desapareix');
  // Abans el marcador es feia invisible sense un sòlid interceptat.
@@ -61,6 +71,11 @@ const {pathToFileURL}=require('node:url');
  ctx.cv={t:'heli_combat',x:0,z:0,hd:0,o:new T.Group(),rockets:4};
  ctx.cv.o.position.y=40;refresh();
  assert.equal(ui.style.display,'block','Retícula de míssils sense impacte');
+ ctx.cv={t:'llanxa_coets',x:0,z:0,hd:0,o:new T.Group(),rockets:Infinity};
+ ctx.cv.o.position.y=1;
+ refresh();
+ assert.equal(ctx.bazookaReticleMode,'boat');
+ assert.equal(ui.style.display,'block','Retícula de la llanxa visible a mar obert');
  assert.ok(Number.parseFloat(ui.style.left)>=0&&Number.parseFloat(ui.style.left)<=100,
    'Una trajectòria fora de càmera mostra la retícula dins pantalla');
  const prefix=src.slice(src.indexOf('function bazookaFirstSolidHit('),
@@ -84,6 +99,8 @@ const {pathToFileURL}=require('node:url');
  assert.equal(ui.style.display,'none','Sense armes compatibles la retícula desapareix');
  assert.ok(src.includes('const shot=combatHeliMissileAim(cv),d=shot.direction'),
    'Míssil real i retícula usen el mateix origen i angle');
+ assert.ok(src.includes('const shot=combatBoatRocketAim(cv),d=shot.direction'),
+   'El coet de llanxa usa el mateix origen i direcció que la retícula');
  // El DOM simulava abans un punt d'impacte sempre visible. Repetim
  // la comprovació amb el context real del joc i models Three.js.
  const game=await require('./harness.cjs')();
@@ -103,11 +120,21 @@ const {pathToFileURL}=require('node:url');
    const missile={mode:bazookaReticleMode,
      shown:bazookaReticleElement.style.display,
      x:bazookaReticleElement.style.left,y:bazookaReticleElement.style.top};
-   return{tank,missile};
+   cv={t:'llanxa_coets',x:0,z:0,hd:0,o:mkV('llanxa_coets'),rockets:Infinity};
+   cv.o.position.set(0,1,0);
+   cam.position.set(0,20,48);cam.lookAt(0,1,-25);
+   updateBazookaReticle(.2);
+   const boat={mode:bazookaReticleMode,
+     shown:bazookaReticleElement.style.display,
+     x:bazookaReticleElement.style.left,y:bazookaReticleElement.style.top};
+   return{tank,missile,boat};
  })()`);
  assert.equal(actual.tank.mode,'tank');
  assert.equal(actual.tank.shown,'block','Retícula del tanc amb torreta i càmera reals');
  assert.equal(actual.missile.mode,'missile');
  assert.equal(actual.missile.shown,'block','Retícula de míssils amb helicòpter i càmera reals');
+ assert.equal(actual.boat.mode,'boat');
+ assert.equal(actual.boat.shown,'block',
+   'Retícula de coets amb llanxa i càmera reals');
  console.log('OK retícula: tanc, míssils 45°, càrrega, canvi d’arma i bazuca');
 })().catch(e=>{console.error(e);process.exitCode=1});

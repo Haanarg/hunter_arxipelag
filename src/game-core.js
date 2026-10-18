@@ -1817,7 +1817,18 @@ else if(c.m==='a'){
   pi=-speedN*(c.pitch||.2);ro=-yawN*(c.bank||.32)-(v.strafeV||0)/(c.strafeMax||17)*(c.bank||.32)*.5;
   if(v.crashing){pi+=Math.sin(v.crashT*3)*.35;ro+=(v.crashSpin||1)*(.45+Math.min(.65,v.crashT*.12))}
 }
-else if(c.m==='w'){y=wy(v.x,v.z,t)+(v.t==='barca_rems'?-.1:.2);const speed=Math.min(1,Math.abs(v.v)/(c.maxF||30)),wave=Math.sin(t*2.4+v.x*.03+v.z*.025);pi=wave*.035*speed;ro=-(v.yawRate||0)*.11+wave*.025}
+else if(c.m==='w'){
+   y=wy(v.x,v.z,t)+(v.t==='barca_rems'?-.1:.2);
+   const speed=Math.min(1,Math.abs(v.v)/(c.maxF||30)),
+         wave=Math.sin(t*2.4+v.x*.03+v.z*.025);
+   pi=wave*.035*speed;ro=-(v.yawRate||0)*.11+wave*.025;
+   // Només la moto aquàtica i el windsurf s'enlairen en
+   // remuntar una ona a velocitat: els altres bucs no boten.
+   if(v.t==='moto_aquatica'||v.t==='windsurf'){
+     const jump=window.HUNTER_WATER_JUMPS.update(v,dt,t,wy,c.maxF);
+     y+=jump.lift;pi+=jump.pitch;
+   }
+ }
 else if(c.m==='wl'){y=Math.max(g,wy(v.x,v.z,t))+.6;ro=-(v.yawRate||0)*.08-(v.strafeV||0)*.008}
 else if(v.carrier){const q=ferryLocal(v.carrier,v.x,v.z);y=ferryLocalSurfaceY(v.carrier,q.z)+.05;pi=0;ro=0}
 else{

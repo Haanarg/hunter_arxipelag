@@ -238,7 +238,10 @@ function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePo
 function secondaryWeapon(){
   if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd),d45=Math.SQRT1_2;
   if(cv.t==='heli_combat'){if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,60,10,'p',mS,2.4);msg='Míssils: '+cv.rockets;msgT=1;return true}
-  if(cv.t==='llanxa_coets'){/* Munició infinita: no es consumeix ni es comprova el comptador. */fcd=.9;const x=cv.x+fx_*6,y=cv.o.position.y+1.2,z=cv.z+fz*6,base=Math.hypot(1,.015),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.015/base,fz/base,105,.94,'heavy');shoot(x,y,z,ax,ay,az,68,70,11,'p',mS,2.6);msg='Coets: ∞';msgT=1;return true}
+  if(cv.t==='llanxa_coets'){/* Munició infinita. */fcd=.9;
+    const shot=combatBoatRocketAim(cv),d=shot.direction;
+    shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],68,70,11,'p',mS,2.6);
+    msg='Coets: ∞';msgT=1;return true}
   return false
 }
 // Un toc deixa caure la granada a prop; 1,4 s de pressió assoleixen
@@ -468,6 +471,15 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
 }
 // Una sola solució balística per al míssil de l'helicòpter: la retícula
 // i el dispar real comparteixen origen, angle descendent de 45° i autoapuntat.
+// Una sola solució per als coets de la llanxa pilotable. La retícula
+// i el projectil comparteixen origen, elevació i autoapuntat.
+function combatBoatRocketAim(v,focus=null){
+  const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),
+        x=v.x+fx*6,y=v.o.position.y+1.2,z=v.z+fz*6,
+        base=Math.hypot(1,.015);
+  return {x,y,z,direction:autoAimWeaponShot(x,y,z,
+    fx/base,.015/base,fz/base,105,.94,'heavy',focus)};
+}
 function combatHeliMissileAim(v,focus=null){
   const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),diagonal=Math.SQRT1_2,
         x=v.x+fx*5,y=v.o.position.y+1,z=v.z+fz*5;
@@ -521,10 +533,11 @@ function bazookaFirstSolidHit(x,y,z,dx,dy,dz,range=105,sourceVehicle=null){
 }
 function updateBazookaReticle(dt){
   if(!bazookaReticleElement)return;
-  // Compartim una sola retícula entre bazuca, canó de tanc i míssils
-  // de l'helicòpter de combat (no la seva metralladora).
+  // Una sola retícula per bazuca, tanc, llanxa llançacoets i
+  // míssils de l'helicòpter (no per la metralladora).
   const mode=!started||paused||over||playerFall?null:
     cv?.t==='tanc'?'tank':
+    cv?.t==='llanxa_coets'?'boat':
     cv?.t==='heli_combat'&&(cv.rockets||0)>0?'missile':
     !cv&&!swimming&&bazookaEquipped&&(inv.bazooka||0)>0?'bazooka':null;
   if(!mode){
@@ -558,6 +571,15 @@ function updateBazookaReticle(dt){
           Math.hypot(hit.x-target.x,hit.y-target.y,hit.z-target.z)<
             (enemy.r||2)+1.5);
       }
+    }else if(mode==='boat'){
+      const focus={},shot=combatBoatRocketAim(cv,focus),d=shot.direction;
+      hit=focus.point||bazookaFirstSolidHit(shot.x,shot.y,shot.z,
+        d[0],d[1],d[2],105,cv);
+      // A mar obert continua visible, igual que la mira del tanc.
+      const aimPoint=hit||{x:shot.x+d[0]*105,
+        y:shot.y+d[1]*105,z:shot.z+d[2]*105};
+      bazookaReticleWorld.set(aimPoint.x,aimPoint.y,aimPoint.z);
+      locked=!!focus.target;
     }else if(mode==='missile'){
       // La retícula segueix el míssil de G (45° cap avall), no el
       // canó lleuger de F, i desapareix quan no hi ha míssils.
@@ -578,7 +600,7 @@ function updateBazookaReticle(dt){
         direction[0],direction[1],direction[2]);
       locked=!!focus.target;
     }
-    bazookaReticleHasHit=!!hit||mode==='tank'||mode==='missile';
+    bazookaReticleHasHit=!!hit||mode==='tank'||mode==='missile'||mode==='boat';
     if(hit)bazookaReticleWorld.set(hit.x,hit.y,hit.z);
     bazookaReticleElement.classList.toggle('locked',locked);
   }
@@ -586,7 +608,7 @@ function updateBazookaReticle(dt){
   cam.updateMatrixWorld();
   bazookaReticleScreen.copy(bazookaReticleWorld).project(cam);
   const p=bazookaReticleScreen;
-  const vehicleAim=bazookaReticleMode==='tank'||bazookaReticleMode==='missile',
+  const vehicleAim=bazookaReticleMode==='tank'||bazookaReticleMode==='missile'||bazookaReticleMode==='boat',
         behind=!Number.isFinite(p.z)||p.z<-1||p.z>1,
         outside=behind||Math.abs(p.x)>1||Math.abs(p.y)>1;
   if(outside&&!vehicleAim){

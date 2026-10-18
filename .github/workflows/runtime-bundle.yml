@@ -11,6 +11,7 @@ on:
       - 'tests/player-locomotion.cjs'
       - 'tests/rowing-audio-camera.cjs'
       - 'tests/vehicle-weapon-reticle.cjs'
+      - 'tests/water-jumps.cjs'
       - 'tests/performance-stats-toggle.cjs'
       - 'tests/loot-health.cjs'
       - 'tests/two-storey-destruction.cjs'
@@ -48,6 +49,7 @@ jobs:
           node tests/player-locomotion.cjs
           node tests/rowing-audio-camera.cjs
           node tests/vehicle-weapon-reticle.cjs
+          node tests/water-jumps.cjs
           node tests/performance-stats-toggle.cjs
           node tests/loot-health.cjs
           node tests/two-storey-destruction.cjs
