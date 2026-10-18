@@ -21,6 +21,8 @@ on:
       - 'tests/pier-access.cjs'
       - 'tests/truck-exit.cjs'
       - 'tests/heavy-vehicle-collisions.cjs'
+      - 'tests/fence-collision.cjs'
+      - 'tests/village-well.cjs'
       - 'tests/enemy-vehicle-trails.cjs'
       - 'index.html'
       - 'src/ui.js'
@@ -64,6 +66,8 @@ jobs:
           node tests/pier-access.cjs
           node tests/truck-exit.cjs
           node tests/heavy-vehicle-collisions.cjs
+          node tests/fence-collision.cjs
+          node tests/village-well.cjs
           node tests/enemy-vehicle-trails.cjs
       - name: Publicar només si han passat les proves
         run: |

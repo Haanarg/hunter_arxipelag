@@ -150,11 +150,35 @@ const batchStaticDecor=()=>{
   window.HUNTER_STATIC_BATCH_STATS=result;
   return result;
 };
+const addVillageWell=g=>{
+  const outer=new THREE.Mesh(
+    new THREE.CylinderGeometry(1.7,1.8,1.75,24,1,true),
+    M(0x858976,'masonry'));
+  outer.position.y=.875;g.add(outer);
+  // La cara interior necessita normals cap endins: el cilindre original
+  // era visible només des de fora i semblava buit/invisible des de dalt.
+  const lining=M(0x444b43,'masonry').clone();
+  lining.side=THREE.BackSide;
+  const inner=new THREE.Mesh(
+    new THREE.CylinderGeometry(1.08,1.04,1.72,24,1,true),lining);
+  inner.position.y=.88;g.add(inner);
+  // L'anella cobreix el gruix de la pedra; la superfície fosca queda
+  // molt més avall, però per sobre del terreny perquè no l'oculti el LOD.
+  const rim=new THREE.Mesh(
+    new THREE.RingGeometry(1.06,1.72,24),M(0x9d9b84,'masonry'));
+  rim.rotation.x=-Math.PI/2;rim.position.y=1.76;g.add(rim);
+  const water=new THREE.Mesh(
+    new THREE.CircleGeometry(1.035,24),M(0x142c33,'paint'));
+  water.rotation.x=-Math.PI/2;water.position.y=.22;g.add(water);
+  const innerShadow=new THREE.Mesh(
+    new THREE.RingGeometry(.78,1.035,24),M(0x1e2828,'masonry'));
+  innerShadow.rotation.x=-Math.PI/2;innerShadow.position.y=.235;g.add(innerShadow);
+};
 const compoundProp=(kind,x,z,rot=0)=>{
   if(seedSearchMode)return null; // Les props no participen als emplaçaments.
   const y=Math.max(.05,hAt(x,z)),g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;
   if(kind==='bench'){bx(g,4,.25,1.2,0x806447,0,.9,0);for(const x of[-1.4,1.4])bx(g,.2,.8,1,0x485249,x,.4,0)}
-  else if(kind==='well'){const m=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.7,1.4,12,1,true),M(0x858976,'masonry'));m.position.y=.7;g.add(m)}
+  else if(kind==='well')addVillageWell(g);
   else if(kind==='lifebuoy'){const m=new THREE.Mesh(new THREE.TorusGeometry(.6,.15,6,16),M(0xe57846,'paint'));m.position.y=1.5;g.add(m);bx(g,.12,2.3,.12,0x5b6050,0,1.15,0)}
   else if(kind==='crate'){bx(g,1.2,.9,1,0x7b5a35,0,.45,0,'paint');bx(g,1.26,.1,1.06,0x3f3021,0,.2,0,'metal');bx(g,.1,.95,1.08,0x3f3021,0,.48,0,'metal')}
   else if(kind==='barrel'){const body=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.9,10),M(0x53616a,'metal'));body.position.y=.45;g.add(body);for(const y0 of[.12,.78]){const ring=new THREE.Mesh(new THREE.CylinderGeometry(.44,.44,.08,10),M(0x2e3438,'metal'));ring.position.y=y0;g.add(ring)}}
