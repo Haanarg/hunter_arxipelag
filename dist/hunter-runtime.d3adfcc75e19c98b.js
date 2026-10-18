@@ -7237,11 +7237,35 @@ const batchStaticDecor=()=>{
   window.HUNTER_STATIC_BATCH_STATS=result;
   return result;
 };
+const addVillageWell=g=>{
+  const outer=new THREE.Mesh(
+    new THREE.CylinderGeometry(1.7,1.8,1.75,24,1,true),
+    M(0x858976,'masonry'));
+  outer.position.y=.875;g.add(outer);
+  // La cara interior necessita normals cap endins: el cilindre original
+  // era visible només des de fora i semblava buit/invisible des de dalt.
+  const lining=M(0x444b43,'masonry').clone();
+  lining.side=THREE.BackSide;
+  const inner=new THREE.Mesh(
+    new THREE.CylinderGeometry(1.08,1.04,1.72,24,1,true),lining);
+  inner.position.y=.88;g.add(inner);
+  // L'anella cobreix el gruix de la pedra; la superfície fosca queda
+  // molt més avall, però per sobre del terreny perquè no l'oculti el LOD.
+  const rim=new THREE.Mesh(
+    new THREE.RingGeometry(1.06,1.72,24),M(0x9d9b84,'masonry'));
+  rim.rotation.x=-Math.PI/2;rim.position.y=1.76;g.add(rim);
+  const water=new THREE.Mesh(
+    new THREE.CircleGeometry(1.035,24),M(0x142c33,'paint'));
+  water.rotation.x=-Math.PI/2;water.position.y=.22;g.add(water);
+  const innerShadow=new THREE.Mesh(
+    new THREE.RingGeometry(.78,1.035,24),M(0x1e2828,'masonry'));
+  innerShadow.rotation.x=-Math.PI/2;innerShadow.position.y=.235;g.add(innerShadow);
+};
 const compoundProp=(kind,x,z,rot=0)=>{
   if(seedSearchMode)return null; // Les props no participen als emplaçaments.
   const y=Math.max(.05,hAt(x,z)),g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;
   if(kind==='bench'){bx(g,4,.25,1.2,0x806447,0,.9,0);for(const x of[-1.4,1.4])bx(g,.2,.8,1,0x485249,x,.4,0)}
-  else if(kind==='well'){const m=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.7,1.4,12,1,true),M(0x858976,'masonry'));m.position.y=.7;g.add(m)}
+  else if(kind==='well')addVillageWell(g);
   else if(kind==='lifebuoy'){const m=new THREE.Mesh(new THREE.TorusGeometry(.6,.15,6,16),M(0xe57846,'paint'));m.position.y=1.5;g.add(m);bx(g,.12,2.3,.12,0x5b6050,0,1.15,0)}
   else if(kind==='crate'){bx(g,1.2,.9,1,0x7b5a35,0,.45,0,'paint');bx(g,1.26,.1,1.06,0x3f3021,0,.2,0,'metal');bx(g,.1,.95,1.08,0x3f3021,0,.48,0,'metal')}
   else if(kind==='barrel'){const body=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.9,10),M(0x53616a,'metal'));body.position.y=.45;g.add(body);for(const y0 of[.12,.78]){const ring=new THREE.Mesh(new THREE.CylinderGeometry(.44,.44,.08,10),M(0x2e3438,'metal'));ring.position.y=y0;g.add(ring)}}
@@ -8741,6 +8765,30 @@ const vehicleRadius=t=>{const type=t==='patrulla_marina'?'llanxa':t==='jeep'?'co
 const VHB=window.HUNTER_VEHICLES.hitboxes;
 const vehicleHitType=t=>t==='jeep'?'cotxe':t==='patrulla_marina'?'llanxa':t;
 const vehicleBox=(v,x=v.x,z=v.z,hd=v.hd)=>{const t=vehicleHitType(v.t),hb=VHB[t]||[vehicleRadius(t)*1.25,vehicleRadius(t)*1.6],sc=VS[t]||1;return{x,z,hd,w:hb[0]*sc,d:hb[1]*sc,v}};
+// Contacte entre el segment real de filferrada i la planta rectangular del vehicle.
+// El radi de cerca només serveix per obtenir candidats, mai per confirmar l'impacte.
+function fenceVehicleContact(w,box){
+  if(!w.barbed||!Number.isFinite(w.ax)||!Number.isFinite(w.bx))return null;
+  const s=Math.sin(box.hd),c=Math.cos(box.hd),
+        local=(x,z)=>{const dx=x-box.x,dz=z-box.z;return{x:dx*c-dz*s,z:dx*s+dz*c}},
+        a=local(w.ax,w.az),b=local(w.bx,w.bz),
+        dx=b.x-a.x,dz=b.z-a.z,hw=box.w/2+.3,hd=box.d/2+.3,
+        p=[-dx,dx,-dz,dz],q=[a.x+hw,hw-a.x,a.z+hd,hd-a.z];
+  let enter=0,leave=1;
+  for(let i=0;i<4;i++){
+    if(Math.abs(p[i])<1e-9){if(q[i]<0)return null;continue}
+    const t=q[i]/p[i];
+    if(p[i]<0)enter=Math.max(enter,t);else leave=Math.min(leave,t);
+    if(enter>leave)return null;
+  }
+  // Els fragments apareixen al punt tocat pel frontal i no al centre del tram.
+  const travel=box.v?.v<0?-1:1,nose=local(
+    box.x-Math.sin(box.hd)*travel*box.d/2,
+    box.z-Math.cos(box.hd)*travel*box.d/2),
+    d2=dx*dx+dz*dz,
+    t=d2>1e-9?Math.max(enter,Math.min(leave,((nose.x-a.x)*dx+(nose.z-a.z)*dz)/d2)):enter;
+  return{x:w.ax+(w.bx-w.ax)*t,z:w.az+(w.bz-w.az)*t};
+}
 const obbAxes=b=>{const s=Math.sin(b.hd),c=Math.cos(b.hd);return[{x:c,z:-s},{x:s,z:c}]};
 const obbOverlap=(a,b)=>{const A=obbAxes(a),B=obbAxes(b),dx=b.x-a.x,dz=b.z-a.z,axes=[...A,...B];for(const ax of axes){const dist=Math.abs(dx*ax.x+dz*ax.z),ra=Math.abs(A[0].x*ax.x+A[0].z*ax.z)*a.w/2+Math.abs(A[1].x*ax.x+A[1].z*ax.z)*a.d/2,rb=Math.abs(B[0].x*ax.x+B[0].z*ax.z)*b.w/2+Math.abs(B[1].x*ax.x+B[1].z*ax.z)*b.d/2;if(dist>ra+rb)return false}return true};
 const circleVehicleOverlap=(x,z,r,v)=>{const b=vehicleBox(v),dx=x-b.x,dz=z-b.z,s=Math.sin(b.hd),c=Math.cos(b.hd),lx=dx*c-dz*s,lz=dx*s+dz*c,cx=Math.max(-b.w/2,Math.min(b.w/2,lx)),cz=Math.max(-b.d/2,Math.min(b.d/2,lz)),ex=lx-cx,ez=lz-cz;return ex*ex+ez*ez<r*r};
@@ -8843,7 +8891,8 @@ function barbedSection(x1,z1,x2,z2){
     const w={x0:Math.min(x1,x2)-pad,x1:Math.max(x1,x2)+pad,
       z0:Math.min(z1,z2)-pad,z1:Math.max(z1,z2)+pad,
       y0:Math.min(y1,y2),y1:Math.max(y1,y2)+5,hp:32,
-      door:false,open:false,barbed:true,rammable:true,cx:(x1+x2)/2,cz:(z1+z2)/2};
+      door:false,open:false,barbed:true,rammable:true,
+      ax:x1,az:z1,bx:x2,bz:z2,cx:(x1+x2)/2,cz:(z1+z2)/2};
     Wl.push(w);wallGridCount=-1;return w;
   }
   const y1=Math.max(hAt(x1,z1),0),y2=Math.max(hAt(x2,z2),0),
@@ -8912,7 +8961,7 @@ function barbedSection(x1,z1,x2,z2){
     z0:Math.min(z1,z2)-pad,z1:Math.max(z1,z2)+pad,
     y0:Math.min(y1,y2),y1:Math.max(y1,y2)+5,hp:32,
     m:mesh,parts,door:false,open:false,barbed:true,rammable:true,
-    cx,cz};
+    ax:x1,az:z1,bx:x2,bz:z2,cx,cz};
   Wl.push(w);
   // Les altes/baixes poden compensar-se en longitud: invalidació explícita.
   wallGridCount=-1;
@@ -9360,6 +9409,9 @@ function ramSpeedFactor(type,barbed){
   if(type==='camio'&&barbed)return 1;
   return barbed?.72:.55;
 }
+function mayRamWhileRecovering(type,barbed,cooldown){
+  return cooldown<=0||type==='tanc'||(type==='camio'&&barbed);
+}
 function tankCanCrush(v,other,ownMass,otherMass){
   return v.t==='tanc'&&Math.abs(v.v)>1&&ownMass>otherMass&&other.t!=='ferry';
 }
@@ -9519,11 +9571,27 @@ if(ok&&a&&!deckCarrier){
   if(roofHit)ok=false;
 }
 if(ok&&a&&!deckCarrier&&v.alt-g<8&&treeHit(nx,nz,radius))ok=false;
-if((!a||v.alt-g<16)&&!deckCarrier){for(const w of wallCandidates(nx,nz,radius))if(!w.open&&w.playerBlock!==false&&
+if((!a||v.alt-g<16)&&!deckCarrier){const footprint=vehicleBox(v,nx,nz,v.hd);for(const w of wallCandidates(nx,nz,radius))if(!w.open&&w.playerBlock!==false&&
   !(a&&(v.alt+(v.o.userData.skidContactHeight||0)>w.y1+.15||
     v.alt+(v.o.userData.rotorContactHeight||7)<w.y0-.15))&&
   !(w.towerLegOwner&&a&&v.alt>w.y1+2)&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){
-  if(w.rammable&&land&&v.envCd<=0){const speed=Math.abs(v.v),barbed=!!w.barbed,breakSpeed=barbed?8:14,tank=v.t==='tanc',truckFence=v.t==='camio'&&barbed;if(tank||truckFence||speed>breakSpeed){dmgW(w,w.hp);if(!tank&&!truckFence)collisionDamageVehicle(v,0,barbed?2:3);vehicleImpactFx(w.cx,Math.max(0,hAt(w.cx,w.cz))+1.1,w.cz);if(v.destroyed)return false;v.v*=ramSpeedFactor(v.t,barbed);v.bump=(tank||truckFence)?.06:barbed?.14:.2;v.envCd=(tank||truckFence)?.08:.28;if(!Wl.includes(w)){msg=barbed?'Has trencat la filferrada!':'Has travessat una paret!';msgT=1;continue}}}
+  const touch=w.barbed?fenceVehicleContact(w,footprint):null;
+  if(w.barbed&&!touch)continue;
+  if(w.rammable&&land&&mayRamWhileRecovering(v.t,!!w.barbed,v.envCd)){
+    const speed=Math.abs(v.v),barbed=!!w.barbed,breakSpeed=barbed?8:14,
+          tank=v.t==='tanc',truckFence=v.t==='camio'&&barbed;
+    if(tank||truckFence||speed>breakSpeed){
+      dmgW(w,w.hp);
+      if(!tank&&!truckFence)collisionDamageVehicle(v,0,barbed?2:3);
+      const hitX=touch?.x??w.cx,hitZ=touch?.z??w.cz;
+      vehicleImpactFx(hitX,Math.max(0,hAt(hitX,hitZ))+1.1,hitZ);
+      if(v.destroyed)return false;
+      v.v*=ramSpeedFactor(v.t,barbed);
+      v.bump=(tank||truckFence)?.06:barbed?.14:.2;
+      v.envCd=(tank||truckFence)?.08:.28;
+      if(!Wl.includes(w)){msg=barbed?'Has trencat la filferrada!':'Has travessat una paret!';msgT=1;continue}
+    }
+  }
   ok=false;break
 }}
 if(ok){const test=vehicleBox(v,nx,nz,v.hd),hit=vehicleObstacles(v).find(o=>o!==deckCarrier&&o!==v.carrier&&o.carrier!==v&&vehicleHeightCompatible(v,o)&&obbOverlap(test,vehicleBox(o)));if(hit){
