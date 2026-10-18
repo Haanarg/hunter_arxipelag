@@ -183,11 +183,16 @@ function explosionDistanceToVehicleHull(v,x,y,z){
 function blastImpulseAt(x,z,px,pz,r,falloff){
   const dx=px-x,dz=pz-z,dist=Math.hypot(dx,dz),
         dir=dist>.05?{x:dx/dist,z:dz/dist}:{x:Math.cos(rn(0,6.28)),z:Math.sin(rn(0,6.28))},
-        speed=(7+16*falloff)*Math.max(.3,Math.min(1,r/12));
-  return {vx:dir.x*speed,vz:dir.z*speed,vy:4+7*falloff};
+        // L'ona de xoc projecta molt més lluny i més amunt.
+        // Els radis més petits continuen fent un impuls apreciable.
+        scale=Math.max(.45,Math.min(1.25,r/12)),
+        speed=(15+28*falloff)*scale;
+  return {vx:dir.x*speed,vz:dir.z*speed,vy:(9+13*falloff)*scale};
 }
 function boom(x,y,z,r,dmg,own,source=null){snd('boom',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/200));const o=new THREE.Mesh(sphG,new THREE.MeshBasicMaterial({color:0xffa030,transparent:true}));o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6});
-if(own!='e')for(const u of enemyCandidatesAt(x,z,r+vehicleRadius('llanxa')*.62+4)){
+// Totes les explosions projecten els soldats enemics; el dany
+// continua respectant el bàndol que ha disparat.
+for(const u of enemyCandidatesAt(x,z,r+vehicleRadius('llanxa')*.62+4)){
   // Per a una patrullera es mesura la distància a la superfície del casc,
   // no al seu centre: impactar a la proa o a un costat també la destrueix.
   const marine=u.t==='patrulla_marina',
@@ -197,9 +202,12 @@ if(own!='e')for(const u of enemyCandidatesAt(x,z,r+vehicleRadius('llanxa')*.62+4
     if(u.t==='soldat'||u.t==='general'){
       const power=1-d/r;
       u.blastImpulse=blastImpulseAt(x,z,u.x,u.z,r,power);
-      if(u.hp>dmg*(1-d/r*.5))u.blastT=.95;
+      if(u.hp>(own==='e'?0:dmg*(1-d/r*.5))){
+        u.blastT=Math.max(u.blastT||0,.55+u.blastImpulse.vy/8);
+        u.blastTotal=u.blastT;
+      }
     }
-    hurtE(u,dmg*(1-d/r*.5),
+    if(own!=='e')hurtE(u,dmg*(1-d/r*.5),
       source||{x,y,z,sx:cv?.x??P.x,sy:(cv?.o?.position.y??P.y)+1.7,sz:cv?.z??P.z,spl:r,own});
   }
 }
@@ -213,13 +221,17 @@ for(const v of vehicleCandidatesAt(x,z,r+12,true)){
     damageVehicle(v,dmg*.5*(1-surfaceDistance/r),power,'heavy')
   }
 }
-const q=cv?cv.o.position:P,d=Math.hypot(q.x-x,q.y-y,q.z-z);if(d<r&&own!='p'&&!cv){
+const q=cv?cv.o.position:P,d=Math.hypot(q.x-x,q.y-y,q.z-z);
+if(d<r&&!cv){
   const falloff=1-d/r,impulse=blastImpulseAt(x,z,P.x,P.z,r,falloff);
+  // Els explosius propis també llancen el jugador pels aires.
+  // El dany propi continua desactivat com abans.
   if(!playerFall){
-    playerEject={kind:'blast',...impulse,t:.85,dur:.85,
-      vy:impulse.vy,height:0,roll:rn(-1,1)<0?-1:1};
+    const flight=Math.max(1.5,.55+impulse.vy/8);
+    playerEject={kind:'blast',...impulse,t:flight,dur:flight,
+      height:0,roll:rn(-1,1)<0?-1:1};
   }
-  hurtP(dmg*.6*falloff);
+  if(own!=='p')hurtP(dmg*.6*falloff);
 }}
 function plant(){if(over||cv||swimming||!inv.expl)return;if(--inv.expl<=0)delete inv.expl;setDis(false);
 const o=window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true);

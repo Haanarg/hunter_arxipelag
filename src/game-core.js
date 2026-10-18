@@ -1842,6 +1842,7 @@ if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.
 // Direcció visual a l'eix davant (-Z): independent del rodament en X.
 window.HUNTER_VEHICLES.animateSteering(o,v.t,tr,dt);
 v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0):(v.pedalPhase||0),sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*sweep;r.rotation.z=-side*(.12+dip);r.rotation.x=.06*Math.sin(rowPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})}
+let runStepTimer=0;
 function update(dt,t){
 const strafeEnabled=updateStrafeControls();
 // La prolongació del joystick funciona a peu i nedant: a l'aigua activa el crol.
@@ -1857,6 +1858,11 @@ const jf=-joystick.state.y,jtr=-joystick.state.x,
         (K.KeyU?1:0)-(K.KeyY?1:0)+(strafePointers.right!==null?1:0)-(strafePointers.left!==null?1:0))):0,
       ud=(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),lim=H-2;
 const running=canRun&&f>.1&&(joystick.state.running||K.ShiftLeft||K.ShiftRight);
+// El córrer fa passes de bota a ritme viu, però no quan nedam.
+if(running&&!swimming&&!playerFall&&!playerEject&&f>.2){
+  runStepTimer-=dt;
+  if(runStepTimer<=0){snd('step',.65);runStepTimer=.29}
+}else runStepTimer=0;
 if(scopeActive){
   // El joystick i el teclat controlen ÚNICAMENT la càmera de la mira:
   // sense traslació, gir ni animació de desplaçament del jugador.
@@ -1874,7 +1880,10 @@ else if(playerEject&&playerEject.t>0){
     playerEject.vy-=19*dt;
     playerEject.height=Math.max(0,(playerEject.height||0)+playerEject.vy*dt);
     if(playerEject.height===0)playerEject.vy=0;
-    playerEject.vx*=Math.exp(-3.3*dt);playerEject.vz*=Math.exp(-3.3*dt);
+    const landed=playerEject.height===0;
+    playerEject.vx*=Math.exp(-(landed?7:1.7)*dt);
+    playerEject.vz*=Math.exp(-(landed?7:1.7)*dt);
+    if(landed&&playerEject.t<.25)playerEject.t=0;
   }else{
     playerEject.vx*=Math.exp(-2.4*dt);playerEject.vz*=Math.exp(-2.4*dt);
   }
@@ -1985,12 +1994,12 @@ else if(!cv&&playerEject&&playerEject.t>=0){
   }else if(playerEject.kind==='blast'){
     const airborne=Math.max(0,playerEject.height||0),wave=Math.sin(Math.PI*p);
     pl.position.y+=airborne;
-    pl.rotation.x=-wave*.8;
-    pl.rotation.z=(playerEject.roll||1)*wave*.65;
-    if(u.al)u.al.rotation.x=-1.05*wave;
-    if(u.ar)u.ar.rotation.x=-.9*wave;
-    if(u.ll)u.ll.rotation.x=.55*wave;
-    if(u.lr)u.lr.rotation.x=-.65*wave;
+    pl.rotation.x=-wave*1.05;
+    pl.rotation.z=(playerEject.roll||1)*wave*.95;
+    if(u.al)u.al.rotation.x=-1.25*wave;
+    if(u.ar)u.ar.rotation.x=-1.1*wave;
+    if(u.ll)u.ll.rotation.x=.75*wave;
+    if(u.lr)u.lr.rotation.x=-.85*wave;
   }
 }
 V.forEach(v=>{

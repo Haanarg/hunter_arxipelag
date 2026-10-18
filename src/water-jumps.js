@@ -22,7 +22,10 @@ window.HUNTER_WATER_JUMPS=Object.freeze({
       if(rise>configRise){
         const speed=Math.min(1,Math.max(0,v.v/(maxSpeed||30)));
         state.airborne=true;
-        state.vy=(jet?2.55:1.95)+speed*(jet?1.12:.76)+Math.min(.9,rise*.5);
+        // Windsurf: antic salt de moto. Moto: altura doble
+        // (velocitat inicial multiplicada per sqrt(2)).
+        const formerJetVy=2.55+speed*1.12+Math.min(.9,rise*.5);
+        state.vy=formerJetVy*(jet?Math.SQRT2:1);
         state.lift=.01;
         state.jumps++;
       }
@@ -32,11 +35,11 @@ window.HUNTER_WATER_JUMPS=Object.freeze({
       state.vy-=9.8*step;
       if(next<=0){
         state.airborne=false;state.lift=0;state.vy=0;
-        state.cooldown=jet?.9:1.15;
-      }else state.lift=Math.min(jet?2.4:1.25,next);
+        state.cooldown=jet?.9:1.05;
+      }else state.lift=Math.min(jet?4.8:2.4,next);
     }
     const pitch=state.airborne
-      ?Math.max(-.14,Math.min(.19,state.vy*.045))
+      ?Math.max(-.22,Math.min(.26,state.vy*.045))
       :0;
     return {lift:state.lift,pitch};
   }

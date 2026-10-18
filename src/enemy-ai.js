@@ -145,12 +145,17 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
     const imp=u.blastImpulse;u.blastT=Math.max(0,u.blastT-dt);
     if(imp){
       u.x+=imp.vx*dt;u.z+=imp.vz*dt;
-      imp.vy-=18*dt;
+      imp.vy-=19*dt;
       u.blastHeight=Math.max(0,(u.blastHeight||0)+imp.vy*dt);
       if(u.blastHeight===0)imp.vy=0;
-      imp.vx*=Math.exp(-5*dt);imp.vz*=Math.exp(-5*dt);
+      // En vol es manté l'empenta; a terra es frena ràpid.
+      const landed=u.blastHeight===0;
+      imp.vx*=Math.exp(-(landed?7:1.7)*dt);
+      imp.vz*=Math.exp(-(landed?7:1.7)*dt);
       u.o.position.set(u.x,Math.max(0,hAt(u.x,u.z))+u.blastHeight,u.z);
-      u.o.rotation.z=Math.sin((.95-u.blastT)*Math.PI/.95)*.5;
+      const elapsed=(u.blastTotal||2.5)-u.blastT;
+      u.o.rotation.z=Math.sin(elapsed*5)*.75*Math.min(1,u.blastHeight+.2);
+      if(landed&&u.blastT<.25)u.blastT=0;
     }
     return;
   }
