@@ -100,7 +100,7 @@ const {pathToFileURL}=require('node:url');
  const surface=0,physicalY=surface-2.1;
  const visualLift=ctx.window.HUNTER_CHARACTERS.swimVisualLift(player,surface,physicalY);
  assert.ok(visualLift>1,'La compensació del crol ha de salvar la immersió del cap');
- assert.ok(visualLift<1.6,'No s’ha d’elevar tot el cos per damunt de les ones');
+ assert.ok(visualLift<2.5,'La compensació ha de mantenir els peus sota les ones');
  player.position.set(0,physicalY+visualLift,0);
  player.updateMatrixWorld(true);
  const chestCenter=u.upperBody.localToWorld(
@@ -108,8 +108,8 @@ const {pathToFileURL}=require('node:url');
  const headCenter=u.head.getWorldPosition(new THREE.Vector3());
  const footCenter=u.boots[0].getWorldPosition(new THREE.Vector3());
  assert.ok(headCenter.y>surface+.06,'El cap ha de poder respirar sobre la superfície');
- assert.ok(chestCenter.y<surface-.04,'El pit ha de quedar parcialment sota l’aigua');
- assert.ok(chestCenter.y>surface-.45,'El tronc no ha de desaparèixer sota l’aigua');
+ assert.ok(chestCenter.y>surface+.10,'El pit ha de ser visible per damunt de les ones');
+ assert.ok(chestCenter.y<surface+.65,'El tors no ha de sortir completament de l’aigua');
  assert.ok(footCenter.y<surface-.40,'Els peus han de quedar sota la superfície');
  assert.ok(headCenter.y>footCenter.y+.55,'El cap ha de ser clarament més alt que els peus');
  assert.equal(ctx.window.HUNTER_CHARACTERS.swimVisualLift(player,surface,1),0,
