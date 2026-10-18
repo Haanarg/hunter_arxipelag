@@ -7321,14 +7321,20 @@ const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1)
 islands.forEach(i=>{if(i===A||i===Bi||R()<.5)return;const q=land(i,60);if(!q)return;for(let k=0;k<1+(R()<.4);k++)sp2('soldat',q.x,q.z,0,10);if(R()<.25)sp2('torre',q.x,q.z,5,12)});
 rb.forEach(b=>{
   const n=R()<.25?0:R()<.6?1:2;
-  const pool=['arma','arma','med','med','expl','granada','granada','disf','mapa','bazooka','franctirador','paracaigudes']
+  const pool=['arma','arma','med','expl','granada','granada','disf','mapa','bazooka','franctirador','paracaigudes']
     .filter(t=>lootAllowed(t,b)&&(!b.civilian||['arma','med','disf'].includes(t)));
   for(let k=0;k<n&&pool.length;k++){
     const kind=pool[Math.floor(R()*pool.length)];
     addIt(kind,b);
   }
 });
-addIt('arma',B[0]);addIt('expl',B[1]);addIt('med',B[2]);
+addIt('arma',B[0]);addIt('expl',B[1]);
+// El complex inicial ja sol tenir una farmaciola fixa al seu disseny.
+// No duplicar-la a les habitacions: màxim una a tota la base.
+if(!items.some(it=>it.t==='med'&&it.compound==='base')){
+  const firstBaseBuilding=B.find(b=>b.compound==='base'&&!b.hangar);
+  if(firstBaseBuilding)addIt('med',firstBaseBuilding);
+}
 // Les recollides garantides s'han de buscar entre edificis que realment
 // acceptin aquell tipus d'objecte: no perdre mapes per haver triat polvorins.
 const lootBuildings=t=>rb.filter(b=>!b.civilian&&lootAllowed(t,b));
