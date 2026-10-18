@@ -398,28 +398,44 @@ function spawnFauna(){fa=[];for(let k=0;k<48;k++){const bird=window.HUNTER_FAUNA
 const cx=rn(-H+200,H-200),cz=rn(-H+200,H-200),baseY=rn(25,55);
 fa.push({k:'g',o,wl,wr,cx,cz,r:rn(40,120),a:rn(0,6.28),sp:rn(.15,.3),y:baseY,flyY:Math.max(baseY,hAt(cx,cz)+10),x:cx,z:cz})}
 for(let k=0;k<30;k++){let cx,cz,n=0;do{cx=rn(-H+150,H-150);cz=rn(-H+150,H-150)}while(hAt(cx,cz)>-6&&++n<60);if(hAt(cx,cz)>-6)continue;
-const o=window.HUNTER_FAUNA.createShark(THREE,{material:M});world.add(o);fa.push({k:'s',o,cx,cz,r:rn(12,28),a:rn(0,6.28),sp:rn(.25,.45),x:cx,z:cz})}}
+const o=window.HUNTER_FAUNA.createShark(THREE,{material:M});world.add(o);fa.push({k:'s',o,cx,cz,r:rn(12,28),a:rn(0,6.28),sp:rn(.25,.45),x:cx,z:cz,sharkMode:'patrol',biteCd:0})}}
 function updExtra(dt,t){updDeb(dt);
-fa.forEach(f=>{
-  const px=f.x||f.cx,pz=f.z||f.cz,dx=px-P.x,dz=pz-P.z,d2=dx*dx+dz*dz,
-        interval=d2<FAUNA_NEAR2?0:(d2<FAUNA_MID2 ? .12 : .4);
+for(let i=fa.length-1;i>=0;i--){
+  const f=fa[i],px=f.x??f.cx,pz=f.z??f.cz,
+        dx=px-P.x,dz=pz-P.z,d2=dx*dx+dz*dz,
+        interval=d2<FAUNA_NEAR2?0:(d2<FAUNA_MID2?.12:.4);
   f.lodAcc=(f.lodAcc||0)+dt;
-  if(interval>0&&f.lodAcc<interval)return;
-  const step=f.lodAcc;f.lodAcc=0;f.a+=f.sp*step;f.x=f.cx+Math.cos(f.a)*f.r;f.z=f.cz+Math.sin(f.a)*f.r;f.o.rotation.y=Math.PI-f.a;
-  if(f.k=='g'){
-    const terrainY=Math.max(0,hAt(f.x,f.z))+10;
-    let obstacleY=terrainY;
-    for(const b of buildingCandidates(f.x,f.z,5))if(Math.abs(f.x-b.x)<b.w/2+5&&Math.abs(f.z-b.z)<b.d/2+5)obstacleY=Math.max(obstacleY,b.fy+b.h+8);
-    const cruiseY=f.y+Math.sin(t+f.cx)*2,targetY=Math.max(cruiseY,obstacleY),
-          climbK=1-Math.exp(-3.8*step);
-    f.flyY=(f.flyY??targetY)+(targetY-(f.flyY??targetY))*climbK;
-    // Si el relleu puja de cop, mai permetre que el model quedi dins de la muntanya/edifici.
-    if(f.flyY<obstacleY)f.flyY=obstacleY;
-    f.o.position.set(f.x,f.flyY,f.z);f.wl.rotation.z=Math.sin(t*8+f.cx)*.5;f.wr.rotation.z=-f.wl.rotation.z
+  if(interval>0&&f.lodAcc<interval)continue;
+  const step=f.lodAcc;f.lodAcc=0;
+  if(f.k==='s'){
+    const outcome=window.HUNTER_SHARKS.update(f,step,
+      !cv&&!over&&!playerFall&&!playerEject&&swimming?P:null,hAt);
+    if(outcome.remove){world.remove(f.o);fa.splice(i,1);continue}
+    f.o.position.set(f.x,wy(f.x,f.z,t)-.18-(f.dead?outcome.sink:0),f.z);
+    f.o.rotation.y=f.sharkYaw??Math.PI-f.a;
+    f.o.rotation.z=f.dead?Math.min(1.4,(f.deathT||0)*2):0;
+    if(outcome.bite&&!over){
+      hurtP(window.HUNTER_SHARKS.BITE_DAMAGE);
+      msg='Un tauró et mossega!';msgT=1.5;
+    }
+    if(!f.dead&&d2<FAUNA_NEAR2&&Math.random()<.1)
+      puff(f.x,wy(f.x,f.z,t)+.02,f.z,0xffffff,1.2);
+    continue;
   }
-  else{f.o.position.set(f.x,wy(f.x,f.z,t)-.18,f.z);if(d2<FAUNA_NEAR2&&Math.random()<.1)puff(f.x,wy(f.x,f.z,t)+.02,f.z,0xffffff,1.2);
-  const hx=P.x-f.x,hz=P.z-f.z;if(!cv&&!over&&hx*hx+hz*hz<36&&hAt(P.x,P.z)<-1.2){hurtP(step*10);msg='Un tauró et mossega!';msgT=1}}
-});
+  f.a+=f.sp*step;f.x=f.cx+Math.cos(f.a)*f.r;f.z=f.cz+Math.sin(f.a)*f.r;
+  f.o.rotation.y=Math.PI-f.a;
+  const terrainY=Math.max(0,hAt(f.x,f.z))+10;
+  let obstacleY=terrainY;
+  for(const b of buildingCandidates(f.x,f.z,5))
+    if(Math.abs(f.x-b.x)<b.w/2+5&&Math.abs(f.z-b.z)<b.d/2+5)
+      obstacleY=Math.max(obstacleY,b.fy+b.h+8);
+  const cruiseY=f.y+Math.sin(t+f.cx)*2,targetY=Math.max(cruiseY,obstacleY),
+        climbK=1-Math.exp(-3.8*step);
+  f.flyY=(f.flyY??targetY)+(targetY-(f.flyY??targetY))*climbK;
+  if(f.flyY<obstacleY)f.flyY=obstacleY;
+  f.o.position.set(f.x,f.flyY,f.z);
+  f.wl.rotation.z=Math.sin(t*8+f.cx)*.5;f.wr.rotation.z=-f.wl.rotation.z;
+}
 V.forEach(v=>{
   if(v.destroyed)return;
   v.playerHitCd=Math.max(0,(v.playerHitCd||0)-dt);
@@ -1608,8 +1624,27 @@ const ui=window.HUNTER_UI.create({
 mc.onclick=()=>started&&panel('map');
 function vehicleImpactFx(x,y,z){debris(x,y,z,0xffc14d,5,.16,5);puff(x,y,z,0x8a8478,.8)}
 function collisionDamageVehicle(v,dmg,impacts=1){if(v?.t==='tanc')return;damageVehicle(v,dmg,impacts)}
-function handleVehicleImpacts(v,dt){
+function killShark(f){
+  if(f.dead)return;
+  window.HUNTER_SHARKS.kill(f);
+  const y=wy(f.x,f.z,elapsed)+.1;
+  puff(f.x,y,f.z,0xffffff,2.8);
+  puff(f.x,y,f.z,0x92bac1,1.7);
+  if(victoryCinematic?.active)return;
+  msg='Has envestit un tauró!';msgT=1.8;
+}
+function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
   const c=VT[v.t],speed=Math.abs(v.v),radius=vehicleRadius(v.t);v.ramCd=Math.max(0,(v.ramCd||0)-dt);v.envCd=Math.max(0,(v.envCd||0)-dt);v.bump=Math.max(0,(v.bump||0)-dt);
+  // Els cascs i taules poden atropellar taurons. La trajectòria
+  // completa detecta col·lisions fins i tot entre dos fotogrames.
+  if(speed>=3&&(c.m==='w'||c.m==='wl')&&hAt(v.x,v.z)<-.8){
+    for(const f of fa){
+      if(f.k!=='s'||f.dead)continue;
+      if(Math.abs((v.o?.position?.y??0)-wy(f.x,f.z,elapsed))>2.5)continue;
+      if(window.HUNTER_SHARKS.vehicleHit(f,oldX,oldZ,v.x,v.z,radius))
+        killShark(f);
+    }
+  }
   if(speed<2.5||c.m==='a'||c.m==='w')return;
   if(v.ramCd<=0){
     for(const u of E){if(u.t!=='soldat')continue;const d=Math.hypot(v.x-u.x,v.z-u.z);if(d<radius*.68+u.r*.45){const dmg=Math.min(48,6+speed*2.4);hurtE(u,dmg);u.alert=12;v.ramCd=.35;v.v*=.86;msg='Atropellament!';msgT=1;break}}
@@ -1728,7 +1763,8 @@ if(water){
   sideV=v.sideV;
 }else v.sideV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.sideV||0,0,4,dt);
 
-const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),sx=Math.cos(v.hd),sz=-Math.sin(v.hd);
+const oldX=v.x,oldZ=v.z,
+      fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),sx=Math.cos(v.hd),sz=-Math.sin(v.hd);
 const totalSideV=sideV+v.strafeV,
       nx=v.x+(fx*v.v+sx*totalSideV)*dt,nz=v.z+(fz*v.v+sz*totalSideV)*dt,raw=hAt(nx,nz),h=land?groundAt(nx,nz):raw,g=Math.max(0,h),
       deckCarrier=(land||a)?ferryForVehicle(v,nx,nz,true):null;let ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;
@@ -1757,7 +1793,7 @@ if(ok){
   if(land){
     const f2=ferryForVehicle(v,v.x,v.z,true);if(f2)attachToFerry(v,f2);else if(v.carrier)detachFromFerry(v)
   }
-  handleVehicleImpacts(v,dt);if(v.destroyed)return false;if(v.t==='tanc'||v.t==='tanqueta')crush(nx,nz,(v.t==='tanc'?3.2:2.4)*VS[v.t])
+  handleVehicleImpacts(v,dt,oldX,oldZ);if(v.destroyed)return false;if(v.t==='tanc'||v.t==='tanqueta')crush(nx,nz,(v.t==='tanc'?3.2:2.4)*VS[v.t])
 }else{v.v*=Math.exp(-12*dt);v.sideV*=Math.exp(-10*dt);v.strafeV*=Math.exp(-12*dt)}
 if(a){
   const g2=Math.max(0,hAt(v.x,v.z)),targetVz=ud*(c.climb||24);
