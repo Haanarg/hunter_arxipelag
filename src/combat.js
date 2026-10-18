@@ -279,8 +279,8 @@ function grenadeLaunchParams(power=0,origin=P,hd=P.hd){
   return {x:origin.x+fx*.85,y:origin.y+2.05,z:origin.z+fz*.85,
           vx:fx*speed,vy:12,vz:fz*speed,t:2.4};
 }
-function grenadeImpactTrajectory(power=0,origin=P,hd=P.hd){
-  const g=grenadeLaunchParams(power,origin,hd),points=[{x:g.x,y:g.y,z:g.z}],dt=1/40;
+function grenadeImpactTrajectory(power=0,origin=P,hd=P.hd,flight=null){
+  const g={...(flight||grenadeLaunchParams(power,origin,hd))},points=[{x:g.x,y:g.y,z:g.z}],dt=1/40;
   for(let i=0;i<96;i++){
     const x0=g.x,y0=g.y,z0=g.z,x1=x0+g.vx*dt,y1=y0+(g.vy-24*dt)*dt,z1=z0+g.vz*dt,
           mx=(x0+x1)/2,mz=(z0+z1)/2,reach=Math.hypot(x1-x0,z1-z0)/2+.5;
@@ -338,14 +338,17 @@ function releaseGrenadeCharge(){
   return throwGrenade(power);
 }
 function updateGrenadeCharge(dt){
-  if(!grenadeCharge)return;
-  if(!grenadeEquipped||!inv.granada||cv||swimming||playerFall||paused||over){cancelGrenadeCharge();return}
-  grenadeCharge.elapsed=Math.min(GRENADE_CHARGE_SECONDS,grenadeCharge.elapsed+dt);
+  const heliAim=cv?.t==='heli'&&!over&&!paused&&(inv.granada||0)>0;
+  if(!grenadeCharge&&!heliAim){if(grenadeAimVisual)cancelGrenadeCharge();return}
+  if(grenadeCharge&&(!grenadeEquipped||!inv.granada||cv||swimming||playerFall||paused||over)){cancelGrenadeCharge();return}
+  if(grenadeCharge)grenadeCharge.elapsed=Math.min(GRENADE_CHARGE_SECONDS,grenadeCharge.elapsed+dt);
   // Actualitzar només a 25 Hz per mantenir baix el cost de les interseccions.
-  grenadeCharge.visualTimer=(grenadeCharge.visualTimer??0)-dt;
-  if(grenadeCharge.visualTimer>0)return;
-  grenadeCharge.visualTimer=.04;
-  const aim=grenadeImpactTrajectory(grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS);
+  const state=grenadeCharge||(updateGrenadeCharge.heliState??={visualTimer:0});
+  state.visualTimer=(state.visualTimer??0)-dt;
+  if(state.visualTimer>0)return;
+  state.visualTimer=.04;
+  const aim=heliAim?grenadeImpactTrajectory(0,P,P.hd,helicopterGrenadeFlight(cv)):
+    grenadeImpactTrajectory(grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS);
   if(!grenadeAimVisual){
     // Cinta de triangles d'uns 25 cm: una línia WebGL simple d'1 px
     // és massa fina per veure-la amb claredat en mòbils.
@@ -367,7 +370,7 @@ function updateGrenadeCharge(dt){
     world.add(line,circle,fill);grenadeAimVisual={line,circle,fill};
   }
   const a=grenadeAimVisual,attr=a.line.geometry.attributes.position,
-        start=grenadeAimStartIndex(aim.points),visiblePoints=start<0?[]:aim.points.slice(start);
+        start=heliAim?0:grenadeAimStartIndex(aim.points),visiblePoints=start<0?[]:aim.points.slice(start);
   for(let i=0;i<visiblePoints.length;i++){
     const p=visiblePoints[i],before=visiblePoints[Math.max(0,i-1)],
           after=visiblePoints[Math.min(visiblePoints.length-1,i+1)],
@@ -383,21 +386,20 @@ function updateGrenadeCharge(dt){
 // Les granades de l'helicòpter utilitari provenen de l'inventari,
  // sense requerir que el jugador les tengui equipades. Surten per la
  // porta lateral i conserven la inèrcia de l'aparell.
+function helicopterGrenadeFlight(v){
+  const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),
+        rightX=Math.cos(v.hd),rightZ=-Math.sin(v.hd),
+        forward=(v.v||0)*.9+7,side=(v.strafeV||0)+4.5;
+  return {x:v.x+fx*1.5+rightX*2.5,y:v.o.position.y+2.4,
+    z:v.z+fz*1.5+rightZ*2.5,vx:fx*forward+rightX*side,vy:5,
+    vz:fz*forward+rightZ*side,t:2.4};
+}
 function throwHelicopterGrenade(){
   if(!cv||cv.t!=='heli'||over||paused||fcd>0)return false;
   if(!inv.granada){
     msg='No tens granades a l’inventari.';msgT=2;fcd=.35;return false;
   }
-  const v=cv,fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),
-        rightX=Math.cos(v.hd),rightZ=-Math.sin(v.hd),
-        forward=(v.v||0)*.9+7,side=(v.strafeV||0)+4.5,
-        flight={
-          x:v.x+fx*1.5+rightX*2.5,
-          y:v.o.position.y+2.4,
-          z:v.z+fz*1.5+rightZ*2.5,
-          vx:fx*forward+rightX*side,vy:5,
-          vz:fz*forward+rightZ*side,t:2.4
-        };
+  const flight=helicopterGrenadeFlight(cv);
   inv.granada--;
   if(inv.granada<=0){delete inv.granada;grenadeEquipped=false}
   fcd=.7;setDis(false);

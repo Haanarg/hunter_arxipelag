@@ -1,0 +1,22 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const combat=fs.readFileSync('src/combat.js','utf8');
+const chars=fs.readFileSync('src/characters.js','utf8');
+const fx=fs.readFileSync('src/movement-fx.js','utf8');
+const audio=fs.readFileSync('src/audio.js','utf8');
+const core=fs.readFileSync('src/game-core.js','utf8');
+
+assert.match(combat,/const heliAim=cv\?\.t==='heli'[^;]+inv\.granada/);
+assert.match(combat,/grenadeImpactTrajectory\(0,P,P\.hd,helicopterGrenadeFlight\(cv\)\)/);
+assert.match(combat,/const flight=helicopterGrenadeFlight\(cv\)/);
+assert.match(combat,/start=heliAim\?0:grenadeAimStartIndex/);
+assert.match(combat,/if\(!grenadeCharge&&!heliAim\)\{if\(grenadeAimVisual\)cancelGrenadeCharge\(\)/);
+assert.match(chars,/surface\+\.22-physicalY-chestRel/);
+assert.match(chars,/surface\+\.38-physicalY-headRel/);
+assert.match(fx,/function swimStroke\(/);
+assert.match(fx,/for\(const s of \[-1,1\]\)/);
+assert.match(fx,/previousSwimBucket=null;return false/);
+assert.match(core,/movementFx\.swimStroke\(/);
+assert.match(core,/snd\('swim',\.65\)/);
+assert.match(audio,/if\(t==='swim'\)/);
+console.log('OK: arc heli, flotació del crol i esquitxos i so sincronitzats');

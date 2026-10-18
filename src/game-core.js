@@ -2088,6 +2088,10 @@ if(!cv&&!scopeActive&&!playerFall&&!playerEject)
    swimming,inVehicle:!!cv,falling:!!playerFall||!!playerEject||!!ib,
    surfaceAt:(x,z)=>wy(x,z,t),groundAt
  });
+ if(movementFx.swimStroke({phase:pl.userData.ph,x:P.x,z:P.z,heading:P.hd,
+    swimming,crawling:(pl.userData.crawlBlend||0)>.55,
+    moving:Math.abs(f)>.1&&!cv&&!playerFall&&!playerEject,
+    surfaceAt:(x,z)=>wy(x,z,t)}))snd('swim',.65);
 if(!cv&&playerFall){
   pl.position.y=playerFall.y;
   if(playerFall.parachute){

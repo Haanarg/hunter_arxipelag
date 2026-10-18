@@ -16,7 +16,7 @@ window.HUNTER_MOVEMENT_FX=Object.freeze({
      steps:0,droplets:0,landTrails:0,waterTrails:0,downwash:0,
      drawMeshes:0,resets:0,quality
    };
-   let waterVisible=true,previousFootBucket=null;
+   let waterVisible=true,previousFootBucket=null,previousSwimBucket=null;
    const groups={};
    function pool(name,capacity,flat){
      const geometry=new T.PlaneGeometry(1,1);
@@ -120,6 +120,31 @@ window.HUNTER_MOVEMENT_FX=Object.freeze({
        px=x+Math.cos(heading)*side*.32-Math.sin(heading)*.24,
        pz=z-Math.sin(heading)*side*.32-Math.cos(heading)*.24;
      return footstep(px,pz,surfaceAt(px,pz)-groundAt(px,pz),side);
+   }
+   function swimStroke({phase,x,z,heading,swimming,crawling,moving,surfaceAt}){
+     const bucket=Math.floor((phase+Math.PI/2)/Math.PI);
+     if(!swimming||!crawling||!moving||!waterVisible){previousSwimBucket=null;return false}
+     if(previousSwimBucket===null){previousSwimBucket=bucket;return false}
+     if(bucket===previousSwimBucket)return false;
+     previousSwimBucket=bucket;
+     // Alternam braços: esquitx visible a banda i banda al llarg del crol.
+     const side=bucket%2?1:-1,rx=Math.cos(heading),rz=-Math.sin(heading),
+       fx=-Math.sin(heading),fz=-Math.cos(heading);
+     for(const s of [-1,1]){
+       const x0=x+rx*s*.72+fx*.45,z0=z+rz*s*.72+fz*.45,
+         surface=surfaceAt(x0,z0),bed=waterBed(x0,z0),power=s===side?1:.67;
+       emit('ripple',{x:x0,z:z0,y:.13,bed,width:1.35*power,length:1.75*power,
+         life:.75,alpha:.75,growth:1.9,color:0xd7f7ff});
+       for(let i=0;i<4;i++){
+         const spread=(i-1.5)*.32,speed=1.5+i*.23;
+         emit('air',{x:x0+spread*fx,z:z0+spread*fz,y:surface+.12,bed,
+           vx:rx*s*speed+fx*.55,vz:rz*s*speed+fz*.55,
+           vy:(2.2+i*.29)*power,gravity:9,ground:surface+.03,
+           width:.10+power*.045,life:.54,alpha:.9,growth:.28,color:0xd8f8ff});
+         stats.droplets++;
+       }
+     }
+     return true;
    }
    function boatTrail(v,speed,back,width){
      const s=Math.sin(v.hd),c=Math.cos(v.hd),turn=clamp(v.yawRate||0,-2,2),
@@ -289,7 +314,7 @@ window.HUNTER_MOVEMENT_FX=Object.freeze({
        groups[kind].mesh.visible=waterVisible&&groups[kind].particles.length>0;
    }
    function reset(){
-     previousFootBucket=null;
+     previousFootBucket=null;previousSwimBucket=null;
      for(const [name,group] of Object.entries(groups)){
        group.particles.length=0;group.mesh.count=0;group.mesh.visible=false;
        stats.active[name]=0;
@@ -301,7 +326,7 @@ window.HUNTER_MOVEMENT_FX=Object.freeze({
        scene.remove(group.mesh);group.geometry.dispose();group.material.dispose();
      }
    }
-   return{stats,groups,emit,footstep,playerStep,vehicle,damageSmoke,update,
+   return{stats,groups,emit,footstep,playerStep,swimStroke,vehicle,damageSmoke,update,
      setWaterVisible,reset,dispose};
  }
 });

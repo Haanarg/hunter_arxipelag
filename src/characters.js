@@ -345,11 +345,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.head.getWorldPosition(u.swimHead);
     const chestRel=u.swimChest.y-player.position.y,
           headRel=u.swimHead.y-player.position.y;
-    // La part central del pit es manté sota la superfície (-20 cm),
-    // mentre el centre del cap sobresurt tot just (+10 cm).
+    // El pit i les espatlles han de ser visibles damunt l'aigua,
+    // i no únicament la motxilla. Conservam la posició física.
     // El més restrictiu dels dos límits evita submergir el cap.
-    return crawl*Math.max(0,surface-.20-physicalY-chestRel,
-                            surface+.10-physicalY-headRel);
+    return crawl*Math.max(0,surface+.22-physicalY-chestRel,
+                            surface+.38-physicalY-headRel);
   },
   animatePlayer(player,{forward,strafe=0,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false,running=false}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),

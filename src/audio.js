@@ -13,6 +13,21 @@ if(t==='step'){
   source.connect(filter);filter.connect(gain);gain.connect(AC.destination);
   source.start(n);return;
 }
+if(t==='swim'){
+  // Cop d'aigua curt i filtrat, amb una petita capa d'esquitx agut.
+  const len=Math.floor(AC.sampleRate*.24),buf=AC.createBuffer(1,len,AC.sampleRate),data=buf.getChannelData(0);
+  let low=0;
+  for(let i=0;i<len;i++){
+    const fade=Math.pow(1-i/len,2.4),noise=Math.random()*2-1;
+    low=low*.83+noise*.17;
+    data[i]=(low*.8+noise*.18)*fade;
+  }
+  const source=AC.createBufferSource(),filter=AC.createBiquadFilter(),gain=AC.createGain();
+  source.buffer=buf;filter.type='lowpass';filter.frequency.value=1100;
+  gain.gain.value=.32*v;
+  source.connect(filter);filter.connect(gain);gain.connect(AC.destination);
+  source.start(n);return;
+}
 const len=Math.floor(AC.sampleRate*({shot:.12,cannon:.35,boom:.7,hurt:.15}[t]||.2)),buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);
 for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2);
 const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=buf;f.type=t=='shot'?'highpass':'lowpass';f.frequency.value=t=='shot'?1200:t=='boom'?300:600;
