@@ -58,7 +58,7 @@ const {pathToFileURL}=require('node:url');
    'La llanxa conserva la lleugera elevació real del coet');
  assert.equal(ctx.calls.at(-1).kind,'heavy','Llanxa: armament pesat');
  assert.equal(ui.style.display,'block','La mira de la llanxa és visible');
- ctx.cv.rockets=0;refresh();
+ ctx.cv={t:'heli_combat',x:0,z:0,hd:0,o:new T.Group(),rockets:0};refresh();
  assert.equal(ui.style.display,'none','Sense míssils la retícula desapareix');
  // Abans el marcador es feia invisible sense un sòlid interceptat.
  ctx.bazookaFirstSolidHit=()=>null;
