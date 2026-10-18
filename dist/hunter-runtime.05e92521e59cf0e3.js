@@ -1603,6 +1603,53 @@ window.HUNTER_VEHICLE_DYNAMICS=Object.freeze({
 
 ;
 // END src/vehicle-dynamics.js
+// BEGIN src/water-jumps.js
+// Salts breus sobre ones per a motos aquàtiques i windsurf.
+ // Física relativa a la superfície ja mostrejada al render: sense
+ // tocar la navegació, el control ni el nivell de flotació dels altres bucs.
+window.HUNTER_WATER_JUMPS=Object.freeze({
+  update(v,dt,time,waterAt,maxSpeed){
+    if(v.t!=='moto_aquatica'&&v.t!=='windsurf')return {lift:0,pitch:0};
+    const jet=v.t==='moto_aquatica',
+          minSpeed=jet?18:12,
+          configRise=jet?.14:.095,
+          span=jet?4.8:3.8,
+          state=v.waveJump||(v.waveJump={lift:0,vy:0,cooldown:0,airborne:false,jumps:0});
+    if(dt<=0)return {lift:state.lift,pitch:0};
+    const step=Math.min(dt,.08);
+    state.cooldown=Math.max(0,state.cooldown-step);
+    if(!state.airborne&&v.v>minSpeed&&state.cooldown<=0){
+      const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),
+            ahead=waterAt(v.x+fx*span,v.z+fz*span,time),
+            behind=waterAt(v.x-fx*span,v.z-fz*span,time),
+            rise=ahead-behind;
+      // És el pendent de l'ona frontal (no una oscil·lació aleatòria):
+      // només es pot enlairar quan la proa puja prou de pressa.
+      if(rise>configRise){
+        const speed=Math.min(1,Math.max(0,v.v/(maxSpeed||30)));
+        state.airborne=true;
+        state.vy=(jet?2.55:1.95)+speed*(jet?1.12:.76)+Math.min(.9,rise*.5);
+        state.lift=.01;
+        state.jumps++;
+      }
+    }
+    if(state.airborne){
+      const next=state.lift+state.vy*step-4.9*step*step;
+      state.vy-=9.8*step;
+      if(next<=0){
+        state.airborne=false;state.lift=0;state.vy=0;
+        state.cooldown=jet?.9:1.15;
+      }else state.lift=Math.min(jet?2.4:1.25,next);
+    }
+    const pitch=state.airborne
+      ?Math.max(-.14,Math.min(.19,state.vy*.045))
+      :0;
+    return {lift:state.lift,pitch};
+  }
+});
+
+;
+// END src/water-jumps.js
 // BEGIN src/movement-fx.js
 // Esteles i esquitxos agrupats en només quatre malles instanciades.
 // El sistema és visual i no consumeix mai el RNG de generació d'illes.
@@ -4771,7 +4818,10 @@ function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePo
 function secondaryWeapon(){
   if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd),d45=Math.SQRT1_2;
   if(cv.t==='heli_combat'){if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,60,10,'p',mS,2.4);msg='Míssils: '+cv.rockets;msgT=1;return true}
-  if(cv.t==='llanxa_coets'){/* Munició infinita: no es consumeix ni es comprova el comptador. */fcd=.9;const x=cv.x+fx_*6,y=cv.o.position.y+1.2,z=cv.z+fz*6,base=Math.hypot(1,.015),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.015/base,fz/base,105,.94,'heavy');shoot(x,y,z,ax,ay,az,68,70,11,'p',mS,2.6);msg='Coets: ∞';msgT=1;return true}
+  if(cv.t==='llanxa_coets'){/* Munició infinita. */fcd=.9;
+    const shot=combatBoatRocketAim(cv),d=shot.direction;
+    shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],68,70,11,'p',mS,2.6);
+    msg='Coets: ∞';msgT=1;return true}
   return false
 }
 // Un toc deixa caure la granada a prop; 1,4 s de pressió assoleixen
@@ -5001,6 +5051,15 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
 }
 // Una sola solució balística per al míssil de l'helicòpter: la retícula
 // i el dispar real comparteixen origen, angle descendent de 45° i autoapuntat.
+// Una sola solució per als coets de la llanxa pilotable. La retícula
+// i el projectil comparteixen origen, elevació i autoapuntat.
+function combatBoatRocketAim(v,focus=null){
+  const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),
+        x=v.x+fx*6,y=v.o.position.y+1.2,z=v.z+fz*6,
+        base=Math.hypot(1,.015);
+  return {x,y,z,direction:autoAimWeaponShot(x,y,z,
+    fx/base,.015/base,fz/base,105,.94,'heavy',focus)};
+}
 function combatHeliMissileAim(v,focus=null){
   const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),diagonal=Math.SQRT1_2,
         x=v.x+fx*5,y=v.o.position.y+1,z=v.z+fz*5;
@@ -5054,10 +5113,11 @@ function bazookaFirstSolidHit(x,y,z,dx,dy,dz,range=105,sourceVehicle=null){
 }
 function updateBazookaReticle(dt){
   if(!bazookaReticleElement)return;
-  // Compartim una sola retícula entre bazuca, canó de tanc i míssils
-  // de l'helicòpter de combat (no la seva metralladora).
+  // Una sola retícula per bazuca, tanc, llanxa llançacoets i
+  // míssils de l'helicòpter (no per la metralladora).
   const mode=!started||paused||over||playerFall?null:
     cv?.t==='tanc'?'tank':
+    cv?.t==='llanxa_coets'?'boat':
     cv?.t==='heli_combat'&&(cv.rockets||0)>0?'missile':
     !cv&&!swimming&&bazookaEquipped&&(inv.bazooka||0)>0?'bazooka':null;
   if(!mode){
@@ -5091,6 +5151,15 @@ function updateBazookaReticle(dt){
           Math.hypot(hit.x-target.x,hit.y-target.y,hit.z-target.z)<
             (enemy.r||2)+1.5);
       }
+    }else if(mode==='boat'){
+      const focus={},shot=combatBoatRocketAim(cv,focus),d=shot.direction;
+      hit=focus.point||bazookaFirstSolidHit(shot.x,shot.y,shot.z,
+        d[0],d[1],d[2],105,cv);
+      // A mar obert continua visible, igual que la mira del tanc.
+      const aimPoint=hit||{x:shot.x+d[0]*105,
+        y:shot.y+d[1]*105,z:shot.z+d[2]*105};
+      bazookaReticleWorld.set(aimPoint.x,aimPoint.y,aimPoint.z);
+      locked=!!focus.target;
     }else if(mode==='missile'){
       // La retícula segueix el míssil de G (45° cap avall), no el
       // canó lleuger de F, i desapareix quan no hi ha míssils.
@@ -5111,7 +5180,7 @@ function updateBazookaReticle(dt){
         direction[0],direction[1],direction[2]);
       locked=!!focus.target;
     }
-    bazookaReticleHasHit=!!hit||mode==='tank'||mode==='missile';
+    bazookaReticleHasHit=!!hit||mode==='tank'||mode==='missile'||mode==='boat';
     if(hit)bazookaReticleWorld.set(hit.x,hit.y,hit.z);
     bazookaReticleElement.classList.toggle('locked',locked);
   }
@@ -5119,7 +5188,7 @@ function updateBazookaReticle(dt){
   cam.updateMatrixWorld();
   bazookaReticleScreen.copy(bazookaReticleWorld).project(cam);
   const p=bazookaReticleScreen;
-  const vehicleAim=bazookaReticleMode==='tank'||bazookaReticleMode==='missile',
+  const vehicleAim=bazookaReticleMode==='tank'||bazookaReticleMode==='missile'||bazookaReticleMode==='boat',
         behind=!Number.isFinite(p.z)||p.z<-1||p.z>1,
         outside=behind||Math.abs(p.x)>1||Math.abs(p.y)>1;
   if(outside&&!vehicleAim){
@@ -9326,7 +9395,18 @@ else if(c.m==='a'){
   pi=-speedN*(c.pitch||.2);ro=-yawN*(c.bank||.32)-(v.strafeV||0)/(c.strafeMax||17)*(c.bank||.32)*.5;
   if(v.crashing){pi+=Math.sin(v.crashT*3)*.35;ro+=(v.crashSpin||1)*(.45+Math.min(.65,v.crashT*.12))}
 }
-else if(c.m==='w'){y=wy(v.x,v.z,t)+(v.t==='barca_rems'?-.1:.2);const speed=Math.min(1,Math.abs(v.v)/(c.maxF||30)),wave=Math.sin(t*2.4+v.x*.03+v.z*.025);pi=wave*.035*speed;ro=-(v.yawRate||0)*.11+wave*.025}
+else if(c.m==='w'){
+   y=wy(v.x,v.z,t)+(v.t==='barca_rems'?-.1:.2);
+   const speed=Math.min(1,Math.abs(v.v)/(c.maxF||30)),
+         wave=Math.sin(t*2.4+v.x*.03+v.z*.025);
+   pi=wave*.035*speed;ro=-(v.yawRate||0)*.11+wave*.025;
+   // Només la moto aquàtica i el windsurf s'enlairen en
+   // remuntar una ona a velocitat: els altres bucs no boten.
+   if(v.t==='moto_aquatica'||v.t==='windsurf'){
+     const jump=window.HUNTER_WATER_JUMPS.update(v,dt,t,wy,c.maxF);
+     y+=jump.lift;pi+=jump.pitch;
+   }
+ }
 else if(c.m==='wl'){y=Math.max(g,wy(v.x,v.z,t))+.6;ro=-(v.yawRate||0)*.08-(v.strafeV||0)*.008}
 else if(v.carrier){const q=ferryLocal(v.carrier,v.x,v.z);y=ferryLocalSurfaceY(v.carrier,q.z)+.05;pi=0;ro=0}
 else{
