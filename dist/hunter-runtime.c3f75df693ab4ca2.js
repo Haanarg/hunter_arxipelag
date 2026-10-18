@@ -1577,11 +1577,11 @@ window.HUNTER_VEHICLE_DYNAMICS=Object.freeze({
     llanxa:Object.freeze({n:'Llanxa',m:'w',a:35,dr:.8,tu:1.4,cd:30,ch:12,response:2.6,steerResponse:2.8,yawResponse:2.4,maxF:35,maxR:9,waterDrift:.14,waterSteerMin:.22,armor:1,life:4}),
     moto_aquatica:Object.freeze({n:'Moto aquàtica',m:'w',a:46,dr:.68,tu:2.35,cd:20,ch:7,response:5.8,steerResponse:6.4,yawResponse:5.6,maxF:39,maxR:10,waterDrift:.24,waterSteerMin:.38,armor:0,life:2}),
     hover:Object.freeze({n:'Hovercraft',m:'wl',a:28,dr:.7,tu:1.7,cd:28,ch:11,response:2.9,steerResponse:3.2,yawResponse:2.8,maxF:31,maxR:10,waterDrift:.34,waterSteerMin:.5,landGrip:.48,armor:2,life:5}),
-    ferry:Object.freeze({n:'Ferry',m:'w',a:10,dr:.9,tu:.58,cd:48,ch:22,response:1.35,steerResponse:1.6,yawResponse:1.25,maxF:15,maxR:4,waterDrift:.035,waterSteerMin:.12,mass:10,armor:5,life:8}),
+    ferry:Object.freeze({n:'Ferry',m:'w',a:22,dr:.82,tu:.58,cd:48,ch:22,response:1.35,steerResponse:1.6,yawResponse:1.25,maxF:22,maxR:6,waterDrift:.035,waterSteerMin:.12,mass:10,armor:5,life:8}),
     cotxe:Object.freeze({n:'Cotxe',m:'l',a:36,dr:.9,tu:1.9,cd:22,ch:8,response:5.2,steerResponse:6.2,yawResponse:6.5,maxF:38,maxR:14,landGrip:.9,steerFade:.42,mass:1,armor:2,life:4}),
     moto:Object.freeze({n:'Moto',m:'l',a:42,dr:.9,tu:2.5,cd:18,ch:7,response:6.4,steerResponse:7.2,yawResponse:8,maxF:43,maxR:12,landGrip:.84,steerFade:.28,mass:.55,armor:0,life:2}),
     bici:Object.freeze({n:'Bicicleta',m:'l',a:14,dr:.8,tu:2.6,cd:14,ch:6,response:7.2,steerResponse:8,yawResponse:9,maxF:17,maxR:6,landGrip:.94,steerFade:.18,mass:.2,armor:0,life:1}),
-    barca_rems:Object.freeze({n:'Barca de rems',m:'w',a:8,dr:.95,tu:1.6,cd:25,ch:10,response:3.4,steerResponse:4,yawResponse:3.2,maxF:8,maxR:4,waterDrift:.2,waterSteerMin:.18,armor:0,life:2}),
+    barca_rems:Object.freeze({n:'Barca de rems',m:'w',a:20,dr:.82,tu:1.6,cd:25,ch:10,response:3.4,steerResponse:4,yawResponse:3.2,maxF:17,maxR:5,waterDrift:.2,waterSteerMin:.18,armor:0,life:2}),
     windsurf:Object.freeze({n:'Windsurf',m:'w',a:18,dr:.75,tu:2.1,cd:16,ch:5,response:4.5,steerResponse:5.5,yawResponse:4.8,maxF:22,maxR:5,waterDrift:.42,waterSteerMin:.3,armor:0,life:1}),
     camio:Object.freeze({n:'Camió militar',m:'l',a:24,dr:.92,tu:1.35,cd:27,ch:9,response:3.1,steerResponse:3.4,yawResponse:3.2,maxF:29,maxR:10,landGrip:.82,steerFade:.5,mass:2.2,armor:4,life:6}),
     tanqueta:Object.freeze({n:'Tanqueta blindada',m:'l',a:20,dr:.92,tu:1.45,cd:25,ch:10,response:2.8,steerResponse:3.1,yawResponse:2.9,maxF:24,maxR:9,landGrip:.88,steerFade:.38,mass:3.2,armor:7,life:10}),
@@ -1628,7 +1628,10 @@ window.HUNTER_WATER_JUMPS=Object.freeze({
       if(rise>configRise){
         const speed=Math.min(1,Math.max(0,v.v/(maxSpeed||30)));
         state.airborne=true;
-        state.vy=(jet?2.55:1.95)+speed*(jet?1.12:.76)+Math.min(.9,rise*.5);
+        // Windsurf: antic salt de moto. Moto: altura doble
+        // (velocitat inicial multiplicada per sqrt(2)).
+        const formerJetVy=2.55+speed*1.12+Math.min(.9,rise*.5);
+        state.vy=formerJetVy*(jet?Math.SQRT2:1);
         state.lift=.01;
         state.jumps++;
       }
@@ -1638,11 +1641,11 @@ window.HUNTER_WATER_JUMPS=Object.freeze({
       state.vy-=9.8*step;
       if(next<=0){
         state.airborne=false;state.lift=0;state.vy=0;
-        state.cooldown=jet?.9:1.15;
-      }else state.lift=Math.min(jet?2.4:1.25,next);
+        state.cooldown=jet?.9:1.05;
+      }else state.lift=Math.min(jet?4.8:2.4,next);
     }
     const pitch=state.airborne
-      ?Math.max(-.14,Math.min(.19,state.vy*.045))
+      ?Math.max(-.22,Math.min(.26,state.vy*.045))
       :0;
     return {lift:state.lift,pitch};
   }
@@ -4763,11 +4766,16 @@ function explosionDistanceToVehicleHull(v,x,y,z){
 function blastImpulseAt(x,z,px,pz,r,falloff){
   const dx=px-x,dz=pz-z,dist=Math.hypot(dx,dz),
         dir=dist>.05?{x:dx/dist,z:dz/dist}:{x:Math.cos(rn(0,6.28)),z:Math.sin(rn(0,6.28))},
-        speed=(7+16*falloff)*Math.max(.3,Math.min(1,r/12));
-  return {vx:dir.x*speed,vz:dir.z*speed,vy:4+7*falloff};
+        // L'ona de xoc projecta molt més lluny i més amunt.
+        // Els radis més petits continuen fent un impuls apreciable.
+        scale=Math.max(.45,Math.min(1.25,r/12)),
+        speed=(15+28*falloff)*scale;
+  return {vx:dir.x*speed,vz:dir.z*speed,vy:(9+13*falloff)*scale};
 }
 function boom(x,y,z,r,dmg,own,source=null){snd('boom',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/200));const o=new THREE.Mesh(sphG,new THREE.MeshBasicMaterial({color:0xffa030,transparent:true}));o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6});
-if(own!='e')for(const u of enemyCandidatesAt(x,z,r+vehicleRadius('llanxa')*.62+4)){
+// Totes les explosions projecten els soldats enemics; el dany
+// continua respectant el bàndol que ha disparat.
+for(const u of enemyCandidatesAt(x,z,r+vehicleRadius('llanxa')*.62+4)){
   // Per a una patrullera es mesura la distància a la superfície del casc,
   // no al seu centre: impactar a la proa o a un costat també la destrueix.
   const marine=u.t==='patrulla_marina',
@@ -4777,9 +4785,12 @@ if(own!='e')for(const u of enemyCandidatesAt(x,z,r+vehicleRadius('llanxa')*.62+4
     if(u.t==='soldat'||u.t==='general'){
       const power=1-d/r;
       u.blastImpulse=blastImpulseAt(x,z,u.x,u.z,r,power);
-      if(u.hp>dmg*(1-d/r*.5))u.blastT=.95;
+      if(u.hp>(own==='e'?0:dmg*(1-d/r*.5))){
+        u.blastT=Math.max(u.blastT||0,.55+u.blastImpulse.vy/8);
+        u.blastTotal=u.blastT;
+      }
     }
-    hurtE(u,dmg*(1-d/r*.5),
+    if(own!=='e')hurtE(u,dmg*(1-d/r*.5),
       source||{x,y,z,sx:cv?.x??P.x,sy:(cv?.o?.position.y??P.y)+1.7,sz:cv?.z??P.z,spl:r,own});
   }
 }
@@ -4793,13 +4804,17 @@ for(const v of vehicleCandidatesAt(x,z,r+12,true)){
     damageVehicle(v,dmg*.5*(1-surfaceDistance/r),power,'heavy')
   }
 }
-const q=cv?cv.o.position:P,d=Math.hypot(q.x-x,q.y-y,q.z-z);if(d<r&&own!='p'&&!cv){
+const q=cv?cv.o.position:P,d=Math.hypot(q.x-x,q.y-y,q.z-z);
+if(d<r&&!cv){
   const falloff=1-d/r,impulse=blastImpulseAt(x,z,P.x,P.z,r,falloff);
+  // Els explosius propis també llancen el jugador pels aires.
+  // El dany propi continua desactivat com abans.
   if(!playerFall){
-    playerEject={kind:'blast',...impulse,t:.85,dur:.85,
-      vy:impulse.vy,height:0,roll:rn(-1,1)<0?-1:1};
+    const flight=Math.max(1.5,.55+impulse.vy/8);
+    playerEject={kind:'blast',...impulse,t:flight,dur:flight,
+      height:0,roll:rn(-1,1)<0?-1:1};
   }
-  hurtP(dmg*.6*falloff);
+  if(own!=='p')hurtP(dmg*.6*falloff);
 }}
 function plant(){if(over||cv||swimming||!inv.expl)return;if(--inv.expl<=0)delete inv.expl;setDis(false);
 const o=window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true);
@@ -6002,12 +6017,17 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
     const imp=u.blastImpulse;u.blastT=Math.max(0,u.blastT-dt);
     if(imp){
       u.x+=imp.vx*dt;u.z+=imp.vz*dt;
-      imp.vy-=18*dt;
+      imp.vy-=19*dt;
       u.blastHeight=Math.max(0,(u.blastHeight||0)+imp.vy*dt);
       if(u.blastHeight===0)imp.vy=0;
-      imp.vx*=Math.exp(-5*dt);imp.vz*=Math.exp(-5*dt);
+      // En vol es manté l'empenta; a terra es frena ràpid.
+      const landed=u.blastHeight===0;
+      imp.vx*=Math.exp(-(landed?7:1.7)*dt);
+      imp.vz*=Math.exp(-(landed?7:1.7)*dt);
       u.o.position.set(u.x,Math.max(0,hAt(u.x,u.z))+u.blastHeight,u.z);
-      u.o.rotation.z=Math.sin((.95-u.blastT)*Math.PI/.95)*.5;
+      const elapsed=(u.blastTotal||2.5)-u.blastT;
+      u.o.rotation.z=Math.sin(elapsed*5)*.75*Math.min(1,u.blastHeight+.2);
+      if(landed&&u.blastT<.25)u.blastT=0;
     }
     return;
   }
@@ -6255,6 +6275,17 @@ return u}
 function initAudio(){try{AC=new(window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type='sawtooth';o.frequency.value=40;g.gain.value=0;o.connect(g);g.connect(AC.destination);o.start();eng={o,g};const length=AC.sampleRate*8,buf=AC.createBuffer(1,length,AC.sampleRate),samples=buf.getChannelData(0);let smooth=0;for(let i=0;i<length;i++){smooth=.985*smooth+.015*(Math.random()*2-1);const swell=.35+.65*Math.pow(.5+.5*Math.sin(i/length*Math.PI*4),2);samples[i]=smooth*9*swell}const noise=AC.createBufferSource(),filter=AC.createBiquadFilter(),gain=AC.createGain();noise.buffer=buf;noise.loop=true;filter.type='lowpass';filter.frequency.value=850;gain.gain.value=.055;noise.connect(filter);filter.connect(gain);gain.connect(AC.destination);noise.start();seaAudio={noise,filter,gain};AC.resume()}catch(e){}}
 function snd(t,v=1){if(!AC||v<=.02)return;const n=AC.currentTime;if(lastS[t]&&n-lastS[t]<.06)return;lastS[t]=n;
 if(t=='pick'){const o=AC.createOscillator(),g=AC.createGain();o.frequency.setValueAtTime(660,n);o.frequency.setValueAtTime(990,n+.08);g.gain.setValueAtTime(.15*v,n);g.gain.exponentialRampToValueAtTime(.001,n+.2);o.connect(g);g.connect(AC.destination);o.start(n);o.stop(n+.2);return}
+if(t==='step'){
+  const len=Math.floor(AC.sampleRate*.085),buf=AC.createBuffer(1,len,AC.sampleRate),
+        data=buf.getChannelData(0);
+  for(let i=0;i<len;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/len,3);
+  const source=AC.createBufferSource(),filter=AC.createBiquadFilter(),
+        gain=AC.createGain();
+  source.buffer=buf;filter.type='lowpass';filter.frequency.value=440;
+  gain.gain.value=.15*v;
+  source.connect(filter);filter.connect(gain);gain.connect(AC.destination);
+  source.start(n);return;
+}
 const len=Math.floor(AC.sampleRate*({shot:.12,cannon:.35,boom:.7,hurt:.15}[t]||.2)),buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);
 for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2);
 const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=buf;f.type=t=='shot'?'highpass':'lowpass';f.frequency.value=t=='shot'?1200:t=='boom'?300:600;
@@ -9420,6 +9451,7 @@ if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.
 // Direcció visual a l'eix davant (-Z): independent del rodament en X.
 window.HUNTER_VEHICLES.animateSteering(o,v.t,tr,dt);
 v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0):(v.pedalPhase||0),sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*sweep;r.rotation.z=-side*(.12+dip);r.rotation.x=.06*Math.sin(rowPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})}
+let runStepTimer=0;
 function update(dt,t){
 const strafeEnabled=updateStrafeControls();
 // La prolongació del joystick funciona a peu i nedant: a l'aigua activa el crol.
@@ -9435,6 +9467,11 @@ const jf=-joystick.state.y,jtr=-joystick.state.x,
         (K.KeyU?1:0)-(K.KeyY?1:0)+(strafePointers.right!==null?1:0)-(strafePointers.left!==null?1:0))):0,
       ud=(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),lim=H-2;
 const running=canRun&&f>.1&&(joystick.state.running||K.ShiftLeft||K.ShiftRight);
+// El córrer fa passes de bota a ritme viu, però no quan nedam.
+if(running&&!swimming&&!playerFall&&!playerEject&&f>.2){
+  runStepTimer-=dt;
+  if(runStepTimer<=0){snd('step',.65);runStepTimer=.29}
+}else runStepTimer=0;
 if(scopeActive){
   // El joystick i el teclat controlen ÚNICAMENT la càmera de la mira:
   // sense traslació, gir ni animació de desplaçament del jugador.
@@ -9452,7 +9489,10 @@ else if(playerEject&&playerEject.t>0){
     playerEject.vy-=19*dt;
     playerEject.height=Math.max(0,(playerEject.height||0)+playerEject.vy*dt);
     if(playerEject.height===0)playerEject.vy=0;
-    playerEject.vx*=Math.exp(-3.3*dt);playerEject.vz*=Math.exp(-3.3*dt);
+    const landed=playerEject.height===0;
+    playerEject.vx*=Math.exp(-(landed?7:1.7)*dt);
+    playerEject.vz*=Math.exp(-(landed?7:1.7)*dt);
+    if(landed&&playerEject.t<.25)playerEject.t=0;
   }else{
     playerEject.vx*=Math.exp(-2.4*dt);playerEject.vz*=Math.exp(-2.4*dt);
   }
@@ -9563,12 +9603,12 @@ else if(!cv&&playerEject&&playerEject.t>=0){
   }else if(playerEject.kind==='blast'){
     const airborne=Math.max(0,playerEject.height||0),wave=Math.sin(Math.PI*p);
     pl.position.y+=airborne;
-    pl.rotation.x=-wave*.8;
-    pl.rotation.z=(playerEject.roll||1)*wave*.65;
-    if(u.al)u.al.rotation.x=-1.05*wave;
-    if(u.ar)u.ar.rotation.x=-.9*wave;
-    if(u.ll)u.ll.rotation.x=.55*wave;
-    if(u.lr)u.lr.rotation.x=-.65*wave;
+    pl.rotation.x=-wave*1.05;
+    pl.rotation.z=(playerEject.roll||1)*wave*.95;
+    if(u.al)u.al.rotation.x=-1.25*wave;
+    if(u.ar)u.ar.rotation.x=-1.1*wave;
+    if(u.ll)u.ll.rotation.x=.75*wave;
+    if(u.lr)u.lr.rotation.x=-.85*wave;
   }
 }
 V.forEach(v=>{
