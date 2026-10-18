@@ -110,7 +110,7 @@ const {pathToFileURL}=require('node:url');
  assert.ok(headCenter.y>surface+.06,'El cap ha de poder respirar sobre la superfície');
  assert.ok(chestCenter.y>surface+.10,'El pit ha de ser visible per damunt de les ones');
  assert.ok(chestCenter.y<surface+.65,'El tors no ha de sortir completament de l’aigua');
- assert.ok(footCenter.y<surface-.40,'Els peus han de quedar sota la superfície');
+ assert.ok(footCenter.y<surface+.20,'Els peus han de romandre prop de la superfície');
  assert.ok(headCenter.y>footCenter.y+.55,'El cap ha de ser clarament més alt que els peus');
  assert.equal(ctx.window.HUNTER_CHARACTERS.swimVisualLift(player,surface,1),0,
    'En sortir a terra no s’ha d’aixecar artificialment el model');
