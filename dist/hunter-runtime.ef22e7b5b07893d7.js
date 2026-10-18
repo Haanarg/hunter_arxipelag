@@ -4636,7 +4636,20 @@ function clearBulletImpacts(){
 
 function setDis(v){disg=v;[...pl.userData.mats,...rider.userData.mats].forEach(([m,a,b])=>m.color.copy(vivid(v?b:a)))}
 function fin(m){setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+' · Obre Ⅱ / Esc per tornar a jugar';endEl.style.display='flex'}
-function hurtP(d){if(over)return;d*=DIF;hp-=d;snd('hurt',.5);if(hp<=0){hp=0;fin('HAS MORT')}}
+// Progressió per nivell, independent de la punteria i del dany ambiental:
+ // Fàcil = dany antic de Normal; Normal = dany antic de Difícil;
+ // Difícil = extrapolació del mateix increment (x2 sobre el dany base).
+function enemyWeaponDamageScale(){
+  if(DIF<=.6)return 1;
+  if(DIF<=1)return 1+(DIF-.6)*1.25;
+  return 1.5+(DIF-1);
+}
+function hurtP(d,fromEnemyWeapon=false){
+  if(over)return;
+  d*=fromEnemyWeapon?enemyWeaponDamageScale():DIF;
+  hp-=d;snd('hurt',.5);
+  if(hp<=0){hp=0;fin('HAS MORT')}
+}
 function destroyTower(u){
   if(!u?.o||u.destroyed)return;
   u.destroyed=true;
@@ -4727,14 +4740,14 @@ const isArmoredVehicle=v=>v?.t==='tanqueta'||v?.t==='tanc'||
 const isArmoredEnemy=u=>u?.t==='tanqueta'||u?.t==='tanc';
 const isMilitaryBuilding=b=>!!b&&!b.civilian&&(!!b.compound||b.kind==='enemy_bunker');
 const isMilitaryWall=w=>!!w?.towerLegOwner||isMilitaryBuilding(w?.owner);
-function damageVehicle(v,dmg,impacts=1,shotClass='heavy'){
+function damageVehicle(v,dmg,impacts=1,shotClass='heavy',fromEnemyWeapon=false){
   if(shotClass==='light'&&isArmoredVehicle(v))return;
   if(!v||v.destroyed)return;const c=VT[v.t],armor=Math.max(0,Math.min(10,v.armor??c.armor??0));
   v.life=Math.max(0,(v.life??c.life??1)-Math.max(1,impacts));v.smokeT=0;
   // Si l'helicòpter queda destruït, reservam el dany per a la
   // caiguda: un cop mortal aquí congelaria l'expulsió en ple aire.
   const fallingFromDestroyedHeli=cv===v&&v.life<=0&&VT[v.t]?.m==='a';
-  if(cv===v&&armor<10&&!fallingFromDestroyedHeli)hurtP(dmg*(1-armor/10)*.55);
+  if(cv===v&&armor<10&&!fallingFromDestroyedHeli)hurtP(dmg*(1-armor/10)*.55,fromEnemyWeapon);
   if(v.life<=0)explodeVehicle(v)
 }
 
@@ -4803,7 +4816,7 @@ for(const v of vehicleCandidatesAt(x,z,r+12,true)){
   const surfaceDistance=explosionDistanceToVehicleHull(v,x,y,z);
   if(surfaceDistance<r&&(own!=='p'||v!==cv)){
     const power=Math.max(1,Math.ceil((1-surfaceDistance/r)*3));
-    damageVehicle(v,dmg*.5*(1-surfaceDistance/r),power,'heavy')
+    damageVehicle(v,dmg*.5*(1-surfaceDistance/r),power,'heavy',own==='e')
   }
 }
 const q=cv?cv.o.position:P,d=Math.hypot(q.x-x,q.y-y,q.z-z);
@@ -4816,7 +4829,7 @@ if(d<r&&!cv){
     playerEject={kind:'blast',...impulse,t:flight,dur:flight,
       height:0,roll:rn(-1,1)<0?-1:1};
   }
-  if(own!=='p')hurtP(dmg*.6*falloff);
+  if(own!=='p')hurtP(dmg*.6*falloff,own==='e');
 }}
 function plant(){if(over||cv||swimming||!inv.expl)return;if(--inv.expl<=0)delete inv.expl;setDis(false);
 const o=window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true);
@@ -5477,8 +5490,8 @@ function updPj(dt){
       else if(kind==='building'){if(!isMilitaryBuilding(target)){target.rhp-=p.dmg*(p.own==='e'?.5:1);if(target.rhp<=0)roofBreak(target)}}
       else if(kind==='tree'&&target?.p)dmgP(target,p.dmg*(p.own==='e'?.5:1));
       else if(kind==='enemy'){if(!isArmoredEnemy(target)&&target.t!=='torre')hurtE(target,p.dmg,p)}
-      else if(kind==='vehicle')damageVehicle(target,p.dmg,1,'light');
-      else if(kind==='player')hurtP(p.dmg)
+      else if(kind==='vehicle')damageVehicle(target,p.dmg,1,'light',p.own==='e');
+      else if(kind==='player')hurtP(p.dmg,p.own==='e')
     }
     if(p.spl)boom(p.x,p.y,p.z,p.spl,p.dmg,p.own,p);
     world.remove(p.o);Pj.splice(i,1)
