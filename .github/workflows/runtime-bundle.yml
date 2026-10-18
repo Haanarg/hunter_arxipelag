@@ -1,33 +1,6 @@
 name: Generar i verificar el runtime agrupat
 on:
-  # Únic workflow de push: només quan cal regenerar el paquet clàssic.
-  push:
-    branches: [main]
-    paths:
-      - 'src/*.js'
-      - 'src/runtime-scripts.mjs'
-      - 'tools/build-runtime.cjs'
-      - 'tests/joystick-running.cjs'
-      - 'tests/player-locomotion.cjs'
-      - 'tests/rowing-audio-camera.cjs'
-      - 'tests/vehicle-weapon-reticle.cjs'
-      - 'tests/water-jumps.cjs'
-      - 'tests/locomotion-blast.cjs'
-      - 'tests/enemy-weapon-damage.cjs'
-      - 'tests/shark-behaviour.cjs'
-      - 'tests/performance-stats-toggle.cjs'
-      - 'tests/loot-health.cjs'
-      - 'tests/two-storey-destruction.cjs'
-      - 'tests/pier-access.cjs'
-      - 'tests/truck-exit.cjs'
-      - 'tests/heavy-vehicle-collisions.cjs'
-      - 'tests/fence-collision.cjs'
-      - 'tests/village-well.cjs'
-      - 'tests/enemy-vehicle-trails.cjs'
-      - 'tests/heli-grenade-crawl.cjs'
-      - 'index.html'
-      - 'src/ui.js'
-      - '.github/workflows/runtime-bundle.yml'
+  # Mai automàticament després d'un push: el paquet es genera localment.
   workflow_dispatch:
 permissions:
   contents: write

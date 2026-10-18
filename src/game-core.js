@@ -849,6 +849,12 @@ function groundAt(x,z,previous=-Infinity){
  for(const p of piers){const dx=x-p.x,dz=z-p.z,along=dx*p.ux+dz*p.uz,side=dx*p.px+dz*p.pz;if(Math.abs(along)<=p.length/2+.35&&Math.abs(side)<=p.width/2+.2&&
     (!Number.isFinite(previous)||previous>=p.y-.55))y=Math.max(y,p.y)}
 for(const b of buildingCandidates(x,z)){const floor=upperFloorHeight(b,x,z,previous);if(floor!==null)y=Math.max(y,floor)}
+// Un personatge que ja és damunt una coberta sòlida hi continua caminant.
+// La comprovació d'altura impedeix pujar-hi per art de màgia des del carrer.
+if(Number.isFinite(previous))for(const b of buildingCandidates(x,z)){
+  const roof=solidRoofAt(b,x,z);
+  if(roof&&previous>=roof.top-.22)y=Math.max(y,roof.top+.05);
+}
 const ramp=terminalRampHeight(x,z);if(ramp!==null)y=Math.max(y,ramp);if(Number.isFinite(previous)){const deck=pedestrianFerry(x,z,previous);if(deck)y=Math.max(y,deck.y)}
 return y}
 function addRampAccess(b,side){const [nx,nz]=[[0,1],[0,-1],[1,0],[-1,0]][side],edge=(nx?b.w:b.d)/2+.2,x=b.x+nx*edge,z=b.z+nz*edge,top=b.fy+.3;
@@ -1410,7 +1416,7 @@ const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joyst
       strafeButtons={left:document.getElementById('strafeLeft'),right:document.getElementById('strafeRight')},
       strafePointers={left:null,right:null},
       STRAFE_VEHICLES=new Set(['hover','heli','heli_combat']);
-const canStrafe=()=>!scopeActive&&(cv?STRAFE_VEHICLES.has(cv.t):!playerFall&&!playerEject);
+const canStrafe=()=>!scopeActive&&(cv?STRAFE_VEHICLES.has(cv.t):!playerEject&&(!playerFall||!!playerFall.parachute));
 const setStrafeHeld=(side,held)=>{
   const button=strafeButtons[side];
   button.classList.toggle('held',held);
@@ -1478,6 +1484,25 @@ function createParachuteVisual(){
   world.add(g);return g;
 }
 function removeParachuteVisual(){if(parachuteVisual){world.remove(parachuteVisual);parachuteVisual=null}}
+// Detecta el primer sostre travessat durant la caiguda, també quan el
+// desplaçament horitzontal canvia de teulada dins d'un sol fotograma.
+function parachuteRoofLanding(x0,z0,y0,x1,z1,y1){
+  if(y1>=y0)return null;
+  const steps=Math.max(1,Math.ceil(Math.hypot(x1-x0,z1-z0)/.65)),
+        fall=y0-y1;
+  let hit=null;
+  for(let i=0;i<=steps;i++){
+    const q=i/steps,x=x0+(x1-x0)*q,z=z0+(z1-z0)*q,
+          candidateY=y0-fall*q;
+    for(const b of buildingCandidates(x,z)){
+      const roof=solidRoofAt(b,x,z);
+      if(!roof||y0<roof.top-.15||y1>roof.top+.05)continue;
+      // No aterrar abans que els peus arribin a la coberta.
+      if(candidateY>=roof.top-.08&&(!hit||roof.top>hit))hit=roof.top;
+    }
+  }
+  return hit;
+}
 // Compartida per al salt voluntari i per a la destrucció de l'helicòpter.
 // La caiguda conserva l'altura i la inèrcia; el dany es calcula en aterrar.
 function ejectFromHelicopter(v){
@@ -1490,7 +1515,7 @@ function ejectFromHelicopter(v){
   playerFall={y:altitude,vy:0,
     vx:fx*(v.v||0)*.82+Math.cos(v.hd)*side*2.5,
     vz:fz*(v.v||0)*.82-Math.sin(v.hd)*side*2.5,
-    startHeight:Math.max(0,altitude-ground),t:0,spin:side};
+    startHeight:Math.max(0,altitude-ground),t:0,spin:side,leanF:0,leanS:0};
   const chute=!!inv.paracaigudes;
   playerFall.parachute=chute;
   removeParachuteVisual();
@@ -1886,7 +1911,7 @@ if(ok){
   handleVehicleImpacts(v,dt,oldX,oldZ);if(v.destroyed)return false;if(v.t==='tanc'||v.t==='tanqueta'||v.t==='camio')crush(nx,nz,(v.t==='tanc'?3.2:v.t==='camio'?2.6:2.4)*VS[v.t])
 }else{v.v*=Math.exp(-12*dt);v.sideV*=Math.exp(-10*dt);v.strafeV*=Math.exp(-12*dt)}
 if(a){
-  const g2=Math.max(0,hAt(v.x,v.z)),targetVz=ud*(c.climb||24);
+  const g2=Math.max(0,groundAt(v.x,v.z)),targetVz=ud*(c.climb||24);
   v.verticalV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.verticalV||0,targetVz,c.liftResponse||2.5,dt);
   if(Math.abs(ud)<.01)v.verticalV*=Math.exp(-1.5*dt);
   const previousAlt=v.alt;
@@ -1941,6 +1966,22 @@ if(c.m==='a'&&v.carrier&&!v.crashing){
 else if(c.m==='a'){
   y=v.alt;const speedN=Math.max(-1,Math.min(1,v.v/(c.maxF||35))),yawN=Math.max(-1,Math.min(1,(v.yawRate||0)/(c.tu||1)));
   pi=-speedN*(c.pitch||.2);ro=-yawN*(c.bank||.32)-(v.strafeV||0)/(c.strafeMax||17)*(c.bank||.32)*.5;
+  // Amb els patins en contacte, l'aparell descansa pla sobre el terreny.
+  // El balanceig residual del gir no ha de deixar els patins suspesos.
+  const landed=helicopterLandedAltitude(v,Math.max(0,groundAt(v.x,v.z)));
+  if(!v.crashing&&v.alt<=landed+.25){
+    const proximity=Math.max(0,Math.min(1,(v.alt-landed)/.25));
+    const s=Math.sin(v.hd),co=Math.cos(v.hd),front=2.05*(VS[v.t]||1),
+          halfSkid=1.458*(VS[v.t]||1),
+          frontY=groundAt(v.x-s*front,v.z-co*front),
+          backY=groundAt(v.x+s*front,v.z+co*front),
+          rightY=groundAt(v.x+co*halfSkid,v.z-s*halfSkid),
+          leftY=groundAt(v.x-co*halfSkid,v.z+s*halfSkid),
+          slopePitch=Math.max(-.24,Math.min(.24,Math.atan2(frontY-backY,2*front))),
+          slopeRoll=Math.max(-.24,Math.min(.24,Math.atan2(rightY-leftY,2*halfSkid)));
+    pi=slopePitch*(1-proximity)+pi*proximity;
+    ro=slopeRoll*(1-proximity)+ro*proximity;
+  }
   if(v.crashing){pi+=Math.sin(v.crashT*3)*.35;ro+=(v.crashSpin||1)*(.45+Math.min(.65,v.crashT*.12))}
 }
 else if(c.m==='w'){
@@ -1998,7 +2039,34 @@ if(scopeActive){
   scopeYaw+=(tr-scopeStrafe*.8)*dt*.38;
   scopePitch=Math.max(-.65,Math.min(.65,scopePitch+f*dt*.30));
 }else if(cv){const driven=cv,alive=stepV(driven,f,tr,ud,dt,strafe);if(alive&&cv===driven){P.x=driven.x;P.z=driven.z;P.hd=driven.hd}}
-else{P.hd+=tr*dt*2.2;if(playerFall){playerFall.t+=dt;playerFall.vy-=playerFall.parachute?10*dt:24*dt;if(playerFall.parachute)playerFall.vy=Math.max(-4.8,playerFall.vy);playerFall.vx*=Math.exp(-(playerFall.parachute?1.6:.18)*dt);playerFall.vz*=Math.exp(-(playerFall.parachute?1.6:.18)*dt);P.x=Math.max(-lim,Math.min(lim,P.x+playerFall.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerFall.vz*dt));playerFall.y+=playerFall.vy*dt;const water=wy(P.x,P.z,t),landing=Math.max(hAt(P.x,P.z),water-1.4);P.y=playerFall.y;if(playerFall.y<=landing){P.y=landing;const fallH=playerFall.startHeight,impact=Math.max(0,-playerFall.vy),waterLanding=water>hAt(P.x,P.z)+1.5,dmg=playerFall.parachute?0:Math.min(100,Math.max(0,(fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8)));removeParachuteVisual();playerFall=null;if(dmg>0)hurtP(dmg);msg=dmg===0&&fallH>4?'Has aterrat amb seguretat.':waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5}}
+else{P.hd+=tr*dt*2.2;if(playerFall){
+  const fall=playerFall,oldX=P.x,oldZ=P.z,oldY=fall.y;
+  fall.t+=dt;fall.vy-=fall.parachute?10*dt:24*dt;
+  if(fall.parachute){
+    fall.vy=Math.max(-4.8,fall.vy);
+    // Inclinació suau amb el joystick/tecles, conservant una mica d'inèrcia.
+    const desiredX=-Math.sin(P.hd)*f*2.8+Math.cos(P.hd)*strafe*2.2,
+          desiredZ=-Math.cos(P.hd)*f*2.8-Math.sin(P.hd)*strafe*2.2,
+          blend=1-Math.exp(-2.2*dt);
+    fall.vx+=(desiredX-fall.vx)*blend;fall.vz+=(desiredZ-fall.vz)*blend;
+    fall.leanF+=(f-fall.leanF)*blend;
+    fall.leanS+=(strafe-fall.leanS)*blend;
+  }else{fall.vx*=Math.exp(-.18*dt);fall.vz*=Math.exp(-.18*dt)}
+  P.x=Math.max(-lim,Math.min(lim,P.x+fall.vx*dt));
+  P.z=Math.max(-lim,Math.min(lim,P.z+fall.vz*dt));
+  fall.y+=fall.vy*dt;
+  const water=wy(P.x,P.z,t),roof=parachuteRoofLanding(oldX,oldZ,oldY,P.x,P.z,fall.y),
+        landing=Math.max(hAt(P.x,P.z),water-1.4,roof??-Infinity);
+  P.y=fall.y;
+  if(fall.y<=landing){
+    P.y=landing;const fallH=fall.startHeight,impact=Math.max(0,-fall.vy),
+      waterLanding=roof===null&&water>hAt(P.x,P.z)+1.5,
+      dmg=fall.parachute?0:Math.min(100,Math.max(0,(fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8)));
+    removeParachuteVisual();playerFall=null;
+    if(dmg>0)hurtP(dmg);
+    msg=dmg===0&&fallH>4?'Has aterrat amb seguretat.':waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5;
+  }
+}
 else if(playerEject&&playerEject.t>0){
   P.x=Math.max(-lim,Math.min(lim,P.x+playerEject.vx*dt));
   P.z=Math.max(-lim,Math.min(lim,P.z+playerEject.vz*dt));
@@ -2028,7 +2096,7 @@ else if(playerEject&&playerEject.t>0){
 if(!playerFall){wallPush();treePush();vehiclePushPlayer()}}
 V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;v.strafeV=0;return}if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
 syncFerryCargo();updateTerminalRamps();
-ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2)||null;
+ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2&&P.y<(solidRoofAt(b,P.x,P.z)?.bottom??b.fy+b.h+.1))||null;
 const floor=ib?Math.max(ib.fy+.3,groundAt(P.x,P.z,P.y)):groundAt(P.x,P.z,P.y),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;
 document.body.classList.toggle('player-swimming',canRun&&swimming);
 if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);
@@ -2080,6 +2148,18 @@ animPl(cv||scopeActive?0:f,dt,running&&f>.1,cv||scopeActive?0:strafe);
 // La compensació desapareix en aigües somes i al sortir de l'aigua.
 if(!cv&&!scopeActive&&!playerFall&&!playerEject)
   pl.position.y+=window.HUNTER_CHARACTERS.swimVisualLift(pl,surface,P.y);
+if(!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive){
+  // Contacte visual dels peus amb el triangle sota cada bota: a les
+  // baixades el centre del cos és més alt que la posició dels peus.
+  pl.updateMatrixWorld(true);
+  const boots=pl.userData.boots||[];
+  let closest=Infinity;
+  for(const boot of boots){
+    const p=boot.getWorldPosition(new THREE.Vector3());
+    closest=Math.min(closest,p.y-groundAt(p.x,p.z,P.y));
+  }
+  if(Number.isFinite(closest))pl.position.y-=Math.max(-.06,Math.min(.36,closest-.16));
+}
  // L'animació de caminar va a 8.4 rad/s: un esquitx a cada suport de
  // peu (creuament de fase PI). Sense esquitxos nedant ni en vehicles.
  movementFx.playerStep({
@@ -2098,7 +2178,8 @@ if(!cv&&playerFall){
     // Amb la cúpula oberta, postura suspesa (sense cabrioles), braços
     // aixecats agafant els tirants i una oscil·lació molt suau.
     pl.rotation.x=0;
-    pl.rotation.z=Math.sin(playerFall.t*1.8)*.045;
+    pl.rotation.x=-playerFall.leanF*.13;
+    pl.rotation.z=playerFall.leanS*.14+Math.sin(playerFall.t*1.8)*.045;
     // La postura de braços i la visibilitat de l'equipament ja són
     // exclusives de l'animació aèria (sense una segona capa contradictòria).
   }else{
