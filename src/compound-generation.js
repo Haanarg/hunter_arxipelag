@@ -118,7 +118,9 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
   }
   for(const [vehicleIndex,spec] of layout.vehicles.entries()){
     const t=spec.t==='llanxa_coets'&&rocketAssigned?'llanxa':layout.id==='heliport'&&heliportSites.length===1?'heli_combat':spec.t,[x,z]=tr(spec.x,spec.z),v={t,x,z,hd:rotatedHeading(spec.hd),compound:record.id};
-    if(layout.id==='hangar'&&spec.t==='tanc'){v.insideHangar=true;v.hangar=record.buildings[0]}
+    if(layout.id==='hangar'){
+      v.insideHangar=true;v.hangar=record.buildings[0];v.military=true;
+    }
     if(layout.id==='heliport'){Object.assign(v,{heliport:true,military:true,guaranteed:true});heliportSites.push({x,z,hd:v.hd,type:t})}
     if(layout.id==='hq'){
       const u=mkEn(spec.t==='cotxe'?'jeep':spec.t,x,z);u.compound='hq';u.hd=v.hd;if(spec.t==='tanqueta')u.hqPatrolZone=vehicleIndex===0?'north':'south';

@@ -1799,6 +1799,51 @@ function helicopterRoofAltitude(v,x,z,fromAlt,toAlt){
   }
   return toAlt;
 }
+// Volum escombrat de l'helicòpter: fuselatge, patins i disc complet
+// de les aspes. La Y evita que una palmera bloquegi un aparell molt alt.
+function helicopterEnvironmentContact(v,from,to){
+  const scale=VS[v.t]||1,skid=v.o.userData.skidContactHeight||0,
+    rotor=v.o.userData.rotorContactHeight||3.9*scale,
+    rotorRadius=(v.t==='heli_combat'?6.75:7.4)*scale,
+    bodyRadius=(v.t==='heli_combat'?1.45:1.65)*scale,
+    bodyTop=(v.t==='heli_combat'?3:3.45)*scale,
+    steps=Math.min(12,Math.max(1,Math.ceil(Math.hypot(to.x-from.x,to.z-from.z)/2.5+Math.abs(to.alt-from.alt)/2.5)));
+  for(let i=1;i<=steps;i++){
+    const q=i/steps,x=from.x+(to.x-from.x)*q,z=from.z+(to.z-from.z)*q,
+      alt=from.alt+(to.alt-from.alt)*q,bladeY=alt+rotor,
+      floor=Math.max(0,groundAt(x,z)),bottom=alt+skid;
+    if(bottom<floor-.18&&(Math.hypot(v.v||0,v.strafeV||0)>4||v.verticalV< -4))
+      return{x,z,alt,y:floor,kind:'ground'};
+    // Les puntes del rotor poden tocar un vessant encara que el centre voli alt.
+    for(const r of [rotorRadius*.6,rotorRadius])for(let a=0;a<12;a++){
+      const angle=a*Math.PI/6,px=x+Math.cos(angle)*r,pz=z+Math.sin(angle)*r,
+        terrain=Math.max(0,groundAt(px,pz));
+      if(bladeY<=terrain+.16)return{x,z,alt,y:terrain,kind:'ground'};
+    }
+    for(const b of buildingCandidates(x,z,rotorRadius+2)){
+      const bladeRoof=roofNearXZ(b,x,z,rotorRadius);
+      if(bladeRoof&&bladeY>=bladeRoof.bottom-.16&&bladeY<=bladeRoof.top+.16)
+        return{x,z,alt,y:bladeY,kind:'roof'};
+      const hull=roofNearXZ(b,x,z,bodyRadius);
+      if(hull&&bottom<hull.top+.06&&alt+bodyTop>hull.bottom-.06)
+        return{x,z,alt,y:hull.top,kind:'roof'};
+    }
+    const cells=Math.ceil((rotorRadius+6)/16),cx=Math.floor(x/16),cz=Math.floor(z/16);
+    for(let dx=-cells;dx<=cells;dx++)for(let dz=-cells;dz<=cells;dz++){
+      const list=TG.get((cx+dx)+','+(cz+dz));if(!list)continue;
+      for(const tree of list){
+        if(!tree.p||!tree.alive||palmsDisabled)continue;
+        const d=Math.hypot(tree.x-x,tree.z-z),height=tree.s*6.2,
+          crownRadius=tree.s*4.7,base=tree.y;
+        const bodyHit=d<bodyRadius+tree.r&&bottom<base+height&&alt+bodyTop>base;
+        const bladeHit=d<rotorRadius+crownRadius&&bladeY>=base+height-tree.s*1.2&&bladeY<=base+height+tree.s*1.8 ||
+          d<rotorRadius+tree.r&&bladeY>=base&&bladeY<=base+height;
+        if(bodyHit||bladeHit)return{x,z,alt,y:bladeHit?bladeY:bottom,kind:'tree'};
+      }
+    }
+  }
+  return null;
+}
 // Les antenes i les parabòliques són obstacles físics de l'aire:
 // el cos o el rotor poden xocar de front, lateralment o en ascens.
 function crashHelicopterStructure(v,contact){
@@ -1808,8 +1853,9 @@ function crashHelicopterStructure(v,contact){
   vehicleImpactFx(contact.x,contact.y,contact.z);
   damageVehicle(v,65,Math.max(1,v.life??VT[v.t].life));
   if(wasPiloted){
-    msg=contact.kind==='antenna'?'Has xocat contra l’antena!':
-      'Has xocat contra la parabòlica!';
+    msg={antenna:'Has xocat contra l’antena!',satellite:'Has xocat contra la parabòlica!',
+      tree:'Les aspes han tocat una palmera!',ground:'Has xocat contra el terreny!',
+      roof:'Has xocat contra un edifici!'}[contact.kind]||'Col·lisió de l’helicòpter!';
     msgT=3;
   }
   return false;
@@ -1857,13 +1903,10 @@ if(ok&&a&&!deckCarrier){
   const structureHit=window.HUNTER_AIR_OBSTACLES.hit(THREE,world,v,
     {x:v.x,z:v.z,alt:v.alt},{x:nx,z:nz,alt:v.alt},VS[v.t]||1);
   if(structureHit)return crashHelicopterStructure(v,structureHit);
-  // Contacte del fuselatge i del rotor amb la vora del sostre.
-  // Només bloquejam si entra en un volum nou: un vehicle ja sota un
-  // hangar pot sortir-ne per la porta.
-  const roofHit=helicopterRoofCollision(v,nx,nz,v.alt);
-  if(roofHit)ok=false;
+  const environmentHit=helicopterEnvironmentContact(v,
+    {x:v.x,z:v.z,alt:v.alt},{x:nx,z:nz,alt:v.alt});
+  if(environmentHit)return crashHelicopterStructure(v,environmentHit);
 }
-if(ok&&a&&!deckCarrier&&v.alt-g<8&&treeHit(nx,nz,radius))ok=false;
 if((!a||v.alt-g<16)&&!deckCarrier){const footprint=vehicleBox(v,nx,nz,v.hd);for(const w of wallCandidates(nx,nz,radius))if(!w.open&&w.playerBlock!==false&&
   !(a&&(v.alt+(v.o.userData.skidContactHeight||0)>w.y1+.15||
     v.alt+(v.o.userData.rotorContactHeight||7)<w.y0-.15))&&
@@ -1885,6 +1928,7 @@ if((!a||v.alt-g<16)&&!deckCarrier){const footprint=vehicleBox(v,nx,nz,v.hd);for(
       if(!Wl.includes(w)){msg=barbed?'Has trencat la filferrada!':'Has travessat una paret!';msgT=1;continue}
     }
   }
+  if(a)return crashHelicopterStructure(v,{x:nx,z:nz,alt:v.alt,y:w.y1,kind:'roof'});
   ok=false;break
 }}
 if(ok){const test=vehicleBox(v,nx,nz,v.hd),hit=vehicleObstacles(v).find(o=>o!==deckCarrier&&o!==v.carrier&&o.carrier!==v&&vehicleHeightCompatible(v,o)&&obbOverlap(test,vehicleBox(o)));if(hit){
@@ -1917,6 +1961,9 @@ if(a){
   const previousAlt=v.alt;
   v.alt=Math.max(helicopterLandedAltitude(v,g2),Math.min(150,v.alt+v.verticalV*dt));
   if(!deckCarrier){
+    const terrainHit=helicopterEnvironmentContact(v,
+      {x:v.x,z:v.z,alt:previousAlt},{x:v.x,z:v.z,alt:v.alt});
+    if(terrainHit)return crashHelicopterStructure(v,terrainHit);
     const structureHit=window.HUNTER_AIR_OBSTACLES.hit(THREE,world,v,
       {x:v.x,z:v.z,alt:previousAlt},{x:v.x,z:v.z,alt:v.alt},VS[v.t]||1);
     if(structureHit)return crashHelicopterStructure(v,structureHit);
