@@ -6,8 +6,10 @@ window.HUNTER_WATER_JUMPS=Object.freeze({
     if(v.t!=='moto_aquatica'&&v.t!=='windsurf')return {lift:0,pitch:0};
     const jet=v.t==='moto_aquatica',
           minSpeed=jet?18:12,
-          configRise=jet?.14:.095,
-          span=jet?4.8:3.8,
+          // Les dues taules aprofiten el mateix pendent d'ona que
+          // feia enlairar l'antiga moto aquàtica.
+          configRise=.14,
+          span=4.8,
           state=v.waveJump||(v.waveJump={lift:0,vy:0,cooldown:0,airborne:false,jumps:0});
     if(dt<=0)return {lift:state.lift,pitch:0};
     const step=Math.min(dt,.08);
