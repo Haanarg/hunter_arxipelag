@@ -618,9 +618,33 @@ const hardLandVehicleSpot=t=>{const r=vehicleRadius(t),ok=(x,z)=>Math.abs(x)<H-r
 const waterVehicleSpot=t=>{const r=vehicleRadius(t),pool=islands.slice().sort(()=>R()-.5);for(const i of pool){for(let tries=0;tries<3;tries++){const q=findPortSite(i,18);if(!q||!q.portBest)continue;const a=q.portBest.aa,px=-Math.sin(a),pz=Math.cos(a);for(const side of[-1,1]){const x=q.portBest.x+px*side*(r+4),z=q.portBest.z+pz*side*(r+4);if(hAt(x,z)<-2&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3))return{x,z,hd:q.portBest.hd}}}}return null};
 const ensureVehicleType=t=>{if(t==='heli'?V.some(v=>v.t==='heli'&&!v.heliport):V.some(v=>v.t===t))return;let q=null,c=VT[t];if(c.m==='w'||c.m==='wl')q=waterVehicleSpot(t);else if(t==='tanqueta')q=militaryCompoundSpot(t);else if(['heli','heli_combat','tanc','camio'].includes(t))q=distributedMilitarySpot(t)||hardLandVehicleSpot(t);else{const p=near(120,t);q={x:p[0],z:p[1],hd:rr(0,Math.PI*2)}}if(q)add(t,q.x,q.z,q.hd)};
 ['llanxa','moto_aquatica','barca_rems','windsurf','hover','cotxe','moto','bici','camio','tanqueta','tanc','heli','heli_combat'].forEach(ensureVehicleType);
-// La llanxa llançacohets és única per mapa.
-V.filter(v=>v.t==='llanxa_coets').slice(1).forEach(v=>{const i=V.indexOf(v);if(i>=0)V.splice(i,1);world.remove(v.o)});
-if(!V.some(v=>v.t==='llanxa_coets')){const q=waterVehicleSpot('llanxa_coets');if(q)add('llanxa_coets',q.x,q.z,q.hd,{unique:true,guaranteed:true})}
+// Dues llanxes llançacoets per mapa. Prioritzam cales i ports propers
+// a complexos militars; només si no hi ha aigua apta usam una altra costa.
+V.filter(v=>v.t==='llanxa_coets').slice(2).forEach(v=>{const i=V.indexOf(v);if(i>=0)V.splice(i,1);world.remove(v.o)});
+const militaryRocketBoatSpot=()=>{
+  const r=vehicleRadius('llanxa_coets'),sites=world.userData.compounds.filter(c=>
+    !c.layout?.friendly&&!c.layout?.civilian&&c.id!=='base');
+  sites.sort((a,b)=>Number(!!b.layout?.waterfront)-Number(!!a.layout?.waterfront));
+  for(const site of sites)for(let k=0;k<32;k++){
+    const a=k*Math.PI/16+R()*.12,d0=Math.max(16,site.r*.5);
+    for(let d=d0;d<Math.min(210,site.r+130);d+=6){
+      const x=site.x+Math.cos(a)*d,z=site.z+Math.sin(a)*d;
+      if(Math.abs(x)>H-r-8||Math.abs(z)>H-r-8)break;
+      if(hAt(x,z)>-2)continue;
+      const bx=x+Math.cos(a)*12,bz=z+Math.sin(a)*12;
+      if(hAt(bx,bz)>-1.5)continue;
+      if(V.some(v=>Math.hypot(x-v.x,z-v.z)<r+vehicleRadius(v.t)+5))continue;
+      return{x,z,hd:Math.atan2(-Math.cos(a),-Math.sin(a))};
+    }
+  }
+  return null;
+};
+let rocketBoatAttempts=0;
+while(V.filter(v=>v.t==='llanxa_coets').length<2&&rocketBoatAttempts++<4){
+  const q=militaryRocketBoatSpot()||waterVehicleSpot('llanxa_coets');
+  if(!q)break;
+  add('llanxa_coets',q.x,q.z,q.hd,{military:true,guaranteed:true});
+}
 const ensureVehicleCount=(t,min)=>{let guard=0;while(V.filter(v=>v.t===t).length<min&&guard++<12){const q=distributedMilitarySpot(t)||hardLandVehicleSpot(t);if(!q)break;add(t,q.x,q.z,q.hd,{military:true,guaranteed:true})}};
 ensureVehicleCount('tanc',2);
 const ensureDistributedCount=(t,min)=>{let guard=0;while(V.filter(v=>v.t===t).length<min&&guard++<16){const q=t==='tanqueta'?militaryCompoundSpot(t):distributedMilitarySpot(t)||hardLandVehicleSpot(t);if(!q)break;add(t,q.x,q.z,q.hd,{military:true,guaranteed:true})}};

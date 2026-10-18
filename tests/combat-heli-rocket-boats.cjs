@@ -1,0 +1,22 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const combat=fs.readFileSync('src/combat.js','utf8');
+const world=fs.readFileSync('src/world-generation.js','utf8');
+const start=combat.indexOf('const HELI_MISSILE_ANGLE='),end=combat.indexOf('// Retícula del bazooka',start);
+assert.ok(start>0&&end>start);
+const ctx={autoAimWeaponShot:(...args)=>args.slice(3,6)};
+vm.createContext(ctx);
+vm.runInContext(combat.slice(start,end),ctx);
+const shot=ctx.combatHeliMissileAim({hd:0,x:0,z:0,o:{position:{y:45}}});
+assert.ok(Math.abs(shot.direction[1]+Math.sin(25*Math.PI/180))<1e-8,
+  'Els míssils surten a 25 graus cap avall');
+assert.ok(Math.abs(shot.direction[2]+Math.cos(25*Math.PI/180))<1e-8);
+assert.match(combat,/HELI_MISSILE_RANGE=210/);
+assert.match(combat,/d\[0\],d\[1\],d\[2\],HELI_MISSILE_RANGE,cv/);
+assert.match(combat,/Pj\[Pj\.length-1\]\.life=3\.3/);
+assert.match(world,/V\.filter\(v=>v\.t==='llanxa_coets'\)\.slice\(2\)/);
+assert.match(world,/const militaryRocketBoatSpot=\(\)=>/);
+assert.match(world,/while\(V\.filter\(v=>v\.t==='llanxa_coets'\)\.length<2/);
+assert.match(world,/militaryRocketBoatSpot\(\)\|\|waterVehicleSpot\('llanxa_coets'\)/);
+console.log('OK: retícula i míssils de llarg abast; dues llanxes llançacoets');

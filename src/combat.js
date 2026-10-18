@@ -262,7 +262,7 @@ function sight(x,z,tx,tz,y,ignoreBarbed=true){const d=Math.hypot(tx-x,tz-z),n=Ma
 function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=pl.userData.knifeAttackDuration||.38;const fx_=-Math.sin(P.hd),fz=-Math.cos(P.hd);let hit=null,best=2.6;for(const u of E){const dx=u.x-P.x,dz=u.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx_+dz*fz)/d>.35&&sight(P.x,P.z,u.x,u.z,P.y+1.2,false)){best=d;hit=u}}if(hit)hurtE(hit,6);snd('hurt',hit?.45:.18);setDis(false);return true}
 function secondaryWeapon(){
   if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd),d45=Math.SQRT1_2;
-  if(cv.t==='heli_combat'){if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,60,10,'p',mS,2.4);msg='Míssils: '+cv.rockets;msgT=1;return true}
+  if(cv.t==='heli_combat'){if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,60,10,'p',mS,2.4);Pj[Pj.length-1].life=3.3;msg='Míssils: '+cv.rockets;msgT=1;return true}
   if(cv.t==='llanxa_coets'){/* Munició infinita. */fcd=.9;
     const shot=combatBoatRocketAim(cv),d=shot.direction;
     shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],68,70,11,'p',mS,2.6);
@@ -496,8 +496,9 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
   }
   return chosen||[fx,fy,fz];
 }
-// Una sola solució balística per al míssil de l'helicòpter: la retícula
-// i el dispar real comparteixen origen, angle descendent de 45° i autoapuntat.
+// La retícula i el míssil de l'helicòpter comparteixen la mateixa
+// trajectòria menys picada, el mateix abast i el mateix autoapuntat.
+const HELI_MISSILE_ANGLE=Math.PI*25/180,HELI_MISSILE_RANGE=210;
 // Una sola solució per als coets de la llanxa pilotable. La retícula
 // i el projectil comparteixen origen, elevació i autoapuntat.
 function combatBoatRocketAim(v,focus=null){
@@ -508,10 +509,10 @@ function combatBoatRocketAim(v,focus=null){
     fx/base,.015/base,fz/base,105,.94,'heavy',focus)};
 }
 function combatHeliMissileAim(v,focus=null){
-  const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),diagonal=Math.SQRT1_2,
+  const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),horizontal=Math.cos(HELI_MISSILE_ANGLE),
         x=v.x+fx*5,y=v.o.position.y+1,z=v.z+fz*5;
-  return {x,y,z,direction:autoAimWeaponShot(x,y,z,fx*diagonal,-diagonal,
-    fz*diagonal,120,.91,'heavy',focus)};
+  return {x,y,z,direction:autoAimWeaponShot(x,y,z,fx*horizontal,-Math.sin(HELI_MISSILE_ANGLE),
+    fz*horizontal,HELI_MISSILE_RANGE,.88,'heavy',focus)};
 }
 // Retícula del bazooka: empra EXACTAMENT les coordenades i el con de
 // selecció d'autoapuntat del tret real. Blanca si apunta lliurement,
@@ -608,13 +609,13 @@ function updateBazookaReticle(dt){
       bazookaReticleWorld.set(aimPoint.x,aimPoint.y,aimPoint.z);
       locked=!!focus.target;
     }else if(mode==='missile'){
-      // La retícula segueix el míssil de G (45° cap avall), no el
+      // La retícula segueix el míssil de G (25° cap avall), no el
       // canó lleuger de F, i desapareix quan no hi ha míssils.
       const focus={},shot=combatHeliMissileAim(cv,focus),d=shot.direction;
       hit=focus.point||bazookaFirstSolidHit(shot.x,shot.y,shot.z,
-        d[0],d[1],d[2],120,cv);
-      const aimPoint=hit||{x:shot.x+d[0]*120,y:shot.y+d[1]*120,
-        z:shot.z+d[2]*120};
+        d[0],d[1],d[2],HELI_MISSILE_RANGE,cv);
+      const aimPoint=hit||{x:shot.x+d[0]*HELI_MISSILE_RANGE,y:shot.y+d[1]*HELI_MISSILE_RANGE,
+        z:shot.z+d[2]*HELI_MISSILE_RANGE};
       bazookaReticleWorld.set(aimPoint.x,aimPoint.y,aimPoint.z);
       locked=!!focus.target;
     }else{
