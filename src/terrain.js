@@ -22,9 +22,26 @@ window.HUNTER_TERRAIN=Object.freeze({
     return new THREE.Color(a[1]).lerp(new THREE.Color(b[1]),t);
   },
   bandAt(h){return hunterTerrainBandAt(h)},
-  create(THREE,{size,segments,heightAt,material,startX=0,startZ=0,lowQuality=false,quality=null,shadows=false}){
+  create(THREE,{size,segments,heightAt,material,startX=0,startZ=0,lowQuality=false,quality=null,shadows=false,cutouts=[]}){
     const root=new THREE.Group();
     root.name='hunter-terrain-stream';
+    // Un forat precís al terreny deixa el soterrani sota el búnquer buit:
+    // no modificam hAt (ni l'orografia ni les rutes), i funciona amb tots
+    // els nivells LOD sense vores esglaonades ni regenerar sectors.
+    if(cutouts.length){
+      const cut=cutouts[0],c=Math.cos(cut.angle),s=Math.sin(cut.angle);
+      material.onBeforeCompile=shader=>{
+        shader.uniforms.hunterCutout={value:new THREE.Vector4(cut.x,cut.z,c,s)};
+        shader.uniforms.hunterCutoutSize={value:new THREE.Vector2(cut.halfWidth,cut.halfDepth)};
+        shader.vertexShader='varying vec2 hunterTerrainXZ;\n'+shader.vertexShader.replace(
+          '#include <begin_vertex>',
+          '#include <begin_vertex>\n hunterTerrainXZ=(modelMatrix*vec4(position,1.0)).xz;');
+        shader.fragmentShader='varying vec2 hunterTerrainXZ;\nuniform vec4 hunterCutout;\nuniform vec2 hunterCutoutSize;\n'+
+          shader.fragmentShader.replace('#include <clipping_planes_fragment>',
+            '#include <clipping_planes_fragment>\n vec2 hunterD=hunterTerrainXZ-hunterCutout.xy;\n vec2 hunterL=vec2(dot(hunterD,hunterCutout.zw),dot(hunterD,vec2(-hunterCutout.w,hunterCutout.z)));\n if(all(lessThan(abs(hunterL),hunterCutoutSize)))discard;');
+      };
+      material.customProgramCacheKey=()=>`hunter-bunker-cutout-v1`;
+    }
     const tileSize=800,side=Math.ceil(size/tileSize),cellSize=size/side,half=size/2;
     // Conservam la resolució propera per mantenir el contacte amb peus i
     // rodes, però simplificam molt abans els sectors intermedis i llunyans.

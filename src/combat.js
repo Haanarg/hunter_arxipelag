@@ -253,7 +253,7 @@ const o=window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true);
 o.rotation.y=P.hd+Math.PI;
 // La posem davant dels peus, no sota el personatge, perquè el visor es vegi.
 const forward=1.35,x=P.x-Math.sin(P.hd)*forward,z=P.z-Math.cos(P.hd)*forward,
-      y=Math.max(0,hAt(x,z))+.24;
+      y=groundAt(x,z,P.y)+.24;
 o.position.set(x,y,z);world.add(o);
 bombs.push({x,y,z,t:3,o});msg='Bomba col·locada: 3 s!';msgT=2}
 // La filferrada és permeable a la vista i al foc lleuger, però segueix
@@ -279,6 +279,11 @@ function grenadeLaunchParams(power=0,origin=P,hd=P.hd){
   return {x:origin.x+fx*.85,y:origin.y+2.05,z:origin.z+fz*.85,
           vx:fx*speed,vy:12,vz:fz*speed,t:2.4};
 }
+function bunkerProjectileSurface(x,z,y,water=false){
+  const floor=bunkerSubFloorAt(x,z,y);
+  if(floor!==null&&activeBunker&&y<activeBunker.fy+.1)return floor+.16;
+  return (water?Math.max(hAt(x,z),wy(x,z,elapsed)):Math.max(0,hAt(x,z)))+.16;
+}
 function grenadeImpactTrajectory(power=0,origin=P,hd=P.hd,flight=null){
   const g={...(flight||grenadeLaunchParams(power,origin,hd))},points=[{x:g.x,y:g.y,z:g.z}],dt=1/40;
   for(let i=0;i<96;i++){
@@ -299,14 +304,14 @@ function grenadeImpactTrajectory(power=0,origin=P,hd=P.hd,flight=null){
     const fraction=hitT==null?1:hitT;
     g.x=x0+(x1-x0)*fraction;g.y=y0+(y1-y0)*fraction;g.z=z0+(z1-z0)*fraction;
     g.vy-=24*dt;g.t-=dt;
-    const surface=Math.max(hAt(g.x,g.z),wy(g.x,g.z,elapsed))+.16;
+    const surface=bunkerProjectileSurface(g.x,g.z,g.y,true);
     if(hitT!=null||g.t<=0||g.y<=surface){
       g.y=Math.max(g.y,surface);points.push({x:g.x,y:g.y,z:g.z});break;
     }
     points.push({x:g.x,y:g.y,z:g.z});
   }
   const end=points[points.length-1];
-  return {points,landing:{x:end.x,z:end.z,y:Math.max(hAt(end.x,end.z),wy(end.x,end.z,elapsed))+.21}};
+  return {points,landing:{x:end.x,z:end.z,y:bunkerProjectileSurface(end.x,end.z,end.y,true)+.05}};
 }
 // Només la cinta visual comença per sobre del cap, deixant espai amb
 // el jugador. No retallam la simulació: el cercle continua marcant la
@@ -700,8 +705,8 @@ function sniperReticlePoint(focus,range=1000){
   }
   // Mostreig del terreny de 3 m, amb refinament binari del punt d'impacte.
   const samples=Math.ceil(range/3),surfaceDifference=t=>{
-    const x=ox+(tx-ox)*t,z=oz+(tz-oz)*t;
-    return oy+(ty-oy)*t-(Math.max(hAt(x,z),0)+.2);
+    const x=ox+(tx-ox)*t,y=oy+(ty-oy)*t,z=oz+(tz-oz)*t;
+    return y-(bunkerProjectileSurface(x,z,y)+.04);
   };
   let prev=0;
   for(let k=1;k<=samples;k++){
@@ -887,7 +892,7 @@ function updPj(dt){
     const sampleN=Math.max(1,Math.ceil(Math.hypot(sx,sy,sz)/1.15));
     for(let k=1;k<=sampleN;k++){
       const t=k/sampleN;if(t>=bestT)break;
-      const x=x0+sx*t,y=y0+sy*t,z=z0+sz*t,ground=Math.max(hAt(x,z),0)+.2;
+      const x=x0+sx*t,y=y0+sy*t,z=z0+sz*t,ground=bunkerProjectileSurface(x,z,y)+.04;
       if(y<ground){consider(t,'terrain',null);break}
       const tree=treeAt(x,z,.5);
       if(tree&&y<Math.max(hAt(x,z),0)+(tree.p?6.5:1.5)){consider(t,'tree',tree);break}
@@ -921,7 +926,7 @@ for(let i=grenades.length-1;i>=0;i--){const g=grenades[i],x0=g.x,y0=g.y,z0=g.z;g
   for(const w of wallCandidates(mx,mz,reach))if(!w.open){const q=segmentAabbT(x0,y0,z0,x1,y1,z1,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);if(q!=null&&(hitT==null||q<hitT))hitT=q}
   for(const b of buildingCandidates(mx,mz,reach)){const q=b.hangar?hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b):segmentAabbT(x0,y0,z0,x1,y1,z1,b.x-b.w/2,b.x+b.w/2,b.fy+b.h-.35,b.fy+b.h+.8,b.z-b.d/2,b.z+b.d/2);if(q!=null&&(hitT==null||q<hitT))hitT=q}
   const q=hitT==null?1:hitT;g.x=x0+(x1-x0)*q;g.y=y0+(y1-y0)*q;g.z=z0+(z1-z0)*q;g.o.position.set(g.x,g.y,g.z);g.o.rotation.x+=dt*8;g.o.rotation.z+=dt*5;
-  const surface=Math.max(hAt(g.x,g.z),wy(g.x,g.z,elapsed))+.16;
+  const surface=bunkerProjectileSurface(g.x,g.z,g.y,true);
   if(hitT!=null||g.t<=0||g.y<=surface){g.y=Math.max(g.y,surface);boom(g.x,g.y,g.z,16,100,'b');world.remove(g.o);grenades.splice(i,1)}
 }
 for(let i=bombs.length-1;i>=0;i--){const b=bombs[i];b.t-=dt;

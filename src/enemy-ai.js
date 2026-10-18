@@ -173,7 +173,11 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
   u.senseT=(u.senseT??0)-dt;
   if(u.senseT<=0){
     u.senseT+=ENEMY_SENSE_DT;
-    const seen=!over&&d<det&&sight(u.x,u.z,q.x,q.z,eyeY);
+    const bunker=activeBunker,withinBunker=bunker?.basement&&
+      Math.abs(q.x-bunker.x)<bunker.hw&&Math.abs(q.z-bunker.z)<bunker.hd,
+      acrossFloor=!!(u.basement||withinBunker&&py<bunker.fy-3.9)&&
+        Math.abs((u.gy??u.o.position.y)-py)>4.4,
+      seen=!over&&!acrossFloor&&d<det&&sight(u.x,u.z,q.x,q.z,eyeY);
     if(u.t==='soldat'){
       const acquired=seen&&!u.canSee;
       u.canSee=seen;
@@ -331,7 +335,7 @@ function updDead(dt){
     if(pose.height===0){pose.vy=0;pose.vx*=Math.exp(-9*dt);pose.vz*=Math.exp(-9*dt)}
     else{pose.vx*=Math.exp(-1.1*dt);pose.vz*=Math.exp(-1.1*dt)}
     u.x+=pose.vx*dt;u.z+=pose.vz*dt;
-    const base=Math.max(0,hAt(u.x,u.z));
+    const base=u.basement?u.basement.basement.floorY:Math.max(0,hAt(u.x,u.z));
     u.o.position.set(u.x,base+pose.height+.05+(1-e)*.12,u.z);
     u.o.rotation.set(pose.pitch*e,u.hd+pose.yaw*e,pose.roll*e,'YXZ');
     if(u.o.userData.arms)u.o.userData.arms.forEach((arm,j)=>{
@@ -344,7 +348,7 @@ function updDead(dt){
   }
 }
 
-function mkEn(t,x,z,gy){const c=EC[t];let g;
+function mkEn(t,x,z,gy,options={}){const c=EC[t];let g;
 if(seedSearchMode){
   g=new THREE.Group();
   // Mateixos registres de col·lisió de les potes, sense construir la torre.
@@ -352,7 +356,7 @@ if(seedSearchMode){
     [-1.45,1.45].map(lz=>({position:{x:lx,y:3.9,z:lz},
       geometry:{parameters:{width:.38,height:7.8,depth:.38}}})));
 }
-else if(t=='soldat'||t=='general'){g=window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M,general:t==='general'})}
+else if(t=='soldat'||t=='general'){g=window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M,general:t==='general',elite:!!options.elite})}
 else if(t==='patrulla_marina'){g=mkV('llanxa');createMarinePatrolVisual(g)}
 else if(t=='jeep'){g=mkV('cotxe');bx(g,.2,2,.2,0xff2020,0,3.4,0)}
 else if(t=='tanqueta'){g=mkV('tanqueta');bx(g,.18,1.7,.18,0xff2020,0,3.2,.4)}
@@ -377,6 +381,7 @@ bx(g,.42,.8,.42,0xe4d36f,0,10.78,0,'paint')}
 else{g=new THREE.Group();bx(g,1,1,.6,0x222222,0,.5,0);bx(g,1.3,1.6,.7,0xd4af37,0,1.8,0);bx(g,.8,.8,.8,0xf0c9a0,0,3,0);bx(g,.9,.5,.9,0xaa0000,0,3.6,0);g.scale.setScalar(1.2)}
 if(!seedSearchMode&&t!=='soldat'&&t!=='general')window.HUNTER_ENEMY_LOD.optimize(THREE,g,t);
 if(!seedSearchMode)world.add(g);const sensePhase=(E.length%10)*.01,u={t,x,z,gy,hd:rr(0,6.28),o:g,home:{x,z},cd:rr(0,1),alert:0,wt:0,tx:x,tz:z,senseT:sensePhase,canSee:false,defenseTarget:null,...c};
+if(options.elite){u.elite=true;u.hp=58;u.dmg=9;u.rng=85;u.rate=TANKETTE_FIRE_INTERVAL;u.sp=8;u.cd=.4+(E.length%4)*.14}
 if(t==='torre'){u.heavyCd=1.6+(E.length%5)*.4;u.heavyRate=4.2;u.heavyRange=95}
 E.push(u);
 if(t==='torre'){
@@ -393,5 +398,3 @@ if(t==='torre'){
   Wl.push(...u.towerLegColliders);
 }
 return u}
-
-

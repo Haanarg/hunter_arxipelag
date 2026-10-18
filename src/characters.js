@@ -230,8 +230,31 @@ window.HUNTER_CHARACTERS=Object.freeze({
     }
     return model;
   },
-  createSoldier(THREE,{box,material,general=false,palette=window.HUNTER_PALETTE}){
+  equipEliteMachineGun(THREE,model,{box}){
+    if(!model?.userData||model.userData.eliteSoldier)return model;
+    const u=model.userData,armor=(parent,w,h,d,color,x,y,z)=>box(parent,w,h,d,color,x,y,z);
+    // Mateixa silueta aprovada al preview del búnquer, afegida al comando del joc.
+    armor(model,1.16,.62,.44,0x303f37,0,2.63,-.37);
+    armor(model,.8,.25,.49,0x657463,0,2.92,-.34);
+    for(const side of [-1,1]){
+      armor(model,.53,.42,.58,0x303a34,side*.74,2.83,0);
+      armor(model,.12,.32,.42,0xad4e3d,side*.8,2.83,-.33);
+      armor(model,.43,.5,.45,0x293830,side*.3,1.39,-.18);
+    }
+    armor(u.head,.68,.18,.20,0x212c2b,0,.09,-.35);
+    armor(u.head,.54,.085,.1,0xcd4336,0,.09,-.47);
+    armor(u.gun,.2,.22,1.18,0x26302d,0,.02,-.35);
+    armor(u.gun,.28,.32,.3,0x54634e,.16,-.23,-.1);
+    const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.065,.08,1.25,8),
+      new THREE.MeshStandardMaterial({color:0x202728,metalness:.38,roughness:.65}));
+    barrel.rotation.x=Math.PI/2;barrel.position.set(0,.04,-1.06);u.gun.add(barrel);
+    for(const side of [-.12,.12])armor(u.gun,.07,.11,.6,0x181f20,side,.08,-.88);
+    u.eliteSoldier=true;
+    return model;
+  },
+  createSoldier(THREE,{box,material,general=false,elite=false,palette=window.HUNTER_PALETTE}){
     const kind=general?'general':'soldat',model=general?window.HUNTER_GENERAL_MODEL.create(THREE,{palette}):this.createCommando(THREE,{palette});
+    if(elite&&!general)this.equipEliteMachineGun(THREE,model,{box});
     return window.HUNTER_ENEMY_LOD.optimize(THREE,model,kind);
   },
   animateSoldier(model,{phase=0,moving=false,aim=false,dt=0,death=0}){

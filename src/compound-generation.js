@@ -151,7 +151,29 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
     let nearest=0;route.forEach((p,j)=>{if(Math.hypot(p[0]-pos[0],p[1]-pos[1])<Math.hypot(route[nearest][0]-pos[0],route[nearest][1]-pos[1]))nearest=j});
     setPatrol(u,route.map((_,j)=>route[(j+nearest)%route.length]));record.soldiers.push(u);
   }
-  if(layout.general){const p=tr(layout.general.x,layout.general.z);record.general=mkEn('general',...p,record.buildings[0].fy+.3);}
+  const bunker=record.buildings.find(b=>b.kind==='enemy_bunker'&&b.basement);
+  if(bunker){
+    const point=(p)=>buildingWorldPoint(bunker,p.x,p.z),level=bunker.basement.floorY;
+    // Guàrdia d'elit exclusiu del búnquer, amb la mateixa cadència que la
+    // metralladora de la tanqueta. Les rutes no surten del seu nivell.
+    for(const [i,p] of bunker.basement.eliteLocal.entries()){
+      const at=point(p),u=mkEn('soldat',at.x,at.z,level,{elite:true});
+      u.basement=bunker;u.walkY=level;u.compound='hq';
+      if(i<2){const z2=i===0?-6:4.5;setPatrol(u,[point({x:p.x,z:p.z}),point({x:p.x,z:z2})].map(q=>[q.x,q.z]),true)}
+      else setPatrol(u,[[at.x,at.z]],true);
+      record.soldiers.push(u);
+    }
+    for(const p of[{x:-11,z:0},{x:0,z:5}]){
+      const at=point(p),u=mkEn('soldat',at.x,at.z,bunker.fy+.3,{elite:true});
+      u.compound='hq';setPatrol(u,[[at.x,at.z]],true);record.soldiers.push(u);
+    }
+  }
+  if(layout.general){
+    const p=bunker?buildingWorldPoint(bunker,bunker.basement.generalLocal.x,bunker.basement.generalLocal.z):null;
+    record.general=mkEn('general',...(p?[p.x,p.z]:tr(layout.general.x,layout.general.z)),
+      bunker?bunker.basement.floorY:record.buildings[0].fy+.3);
+    if(bunker){record.general.basement=bunker;record.general.walkY=bunker.basement.floorY;}
+  }
   const lootKinds={'munició':'arma','farmaciola':'med','granades':'granada','cisalla':'cisalla','mapa':'mapa','mapa_heli':'mapa_heli','mapa_tanc':'mapa_tanc','explosius':'expl','bazooka':'bazooka','franctirador':'franctirador','disfressa':'disf','paracaigudes':'paracaigudes'};
   for(const loot of layout.loot){
     if(loot.kind==='disfressa'&&R()>=.5)continue;

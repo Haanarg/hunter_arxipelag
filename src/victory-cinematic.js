@@ -258,15 +258,27 @@ function updateVictoryCinematic(dt){
     const side=idx===0?1:idx===1?-1:.42,
           distance=idx===2?11:15,
           elev=idx===1?5.2:idx===2?3.2:6;
-    const desired=target.clone().addScaledVector(across,side*distance)
+    let desired=target.clone().addScaledVector(across,side*distance)
       .addScaledVector(dir,idx===2?-8:idx===1?8:-2);
     desired.y=Math.max(hAt(desired.x,desired.z)+2,target.y+elev);
+    if(v.general.basement?.basement){
+      // El general ara cau al despatx subterrani: tres angles dins de
+      // l'habitació, no càmeres a la superfície mirant a través del sostre.
+      const b=v.general.basement,p=b.basement.generalLocal,
+            relative=[[2.8,2.7],[-3.1,1.4],[.8,-3.2]][idx],
+            look=buildingWorldPoint(b,p.x+relative[0],p.z+relative[1]);
+      desired.set(look.x,b.basement.floorY+3.3,look.z);
+    }
     cam.position.copy(desired);
     cam.lookAt(target.x,target.y+(idx===1?.3:0),target.z);
     const fov=idx===2?43:48;
     if(cam.fov!==fov){cam.fov=fov;cam.updateProjectionMatrix()}
   }else if(v.t<overheadEnd){
     v.phase='overhead';victorySetFall(1);
+    if(v.general.basement?.basement){
+      for(const mesh of v.general.basement.basement.upperSlabMeshes)mesh.visible=false;
+      v.general.basement.roof.visible=false;
+    }
     const f=victoryEase((v.t-replayTotal)/VICTORY_OVERHEAD_SECONDS),
           h=10+175*f;
     // Ascens absolutament vertical, sense orbitar ni cridar lookAt

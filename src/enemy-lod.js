@@ -116,7 +116,9 @@ function proxy(T,type,level){
   return geo;
 }
 function optimize(T,model,type){
-  const reduction=(type==='soldat'||type==='general')?mergeRig(T,model,type):null;
+  // La metralladora i les plaques del soldat d'elit no poden compartir
+  // la geometria fusionada en memòria amb els soldats normals.
+  const reduction=(type==='soldat'||type==='general')?mergeRig(T,model,type+(model.userData.eliteSoldier?'-elite':'')):null;
   const full=new T.Group();full.name='hunter-enemy-full';
   for(const child of [...model.children])full.add(child);
   model.add(full);
@@ -124,6 +126,17 @@ function optimize(T,model,type){
   if(!mat){mat=material(T);proxyMaterials.set(type,mat)}
   const mid=new T.Mesh(proxy(T,type,'mid'),mat),far=new T.Mesh(proxy(T,type,'far'),mat);
   mid.name='hunter-enemy-mid';far.name='hunter-enemy-far';
+  if(type==='soldat'&&model.userData.eliteSoldier){
+    const armor=new T.MeshLambertMaterial({color:0x303a34}),mark=new T.MeshLambertMaterial({color:0xb83f38});
+    for(const lod of [mid,far]){
+      const plate=new T.Mesh(new T.BoxGeometry(1.18,.78,.21),armor);
+      plate.position.set(0,2.45,-.4);lod.add(plate);
+      const stripe=new T.Mesh(new T.BoxGeometry(.58,.13,.04),mark);
+      stripe.position.set(0,2.75,-.53);lod.add(stripe);
+      const gun=new T.Mesh(new T.BoxGeometry(.16,.17,1.65),armor);
+      gun.position.set(.4,2.25,-.85);lod.add(gun);
+    }
+  }
   mid.userData.noCastShadow=true;far.userData.noCastShadow=true;
   mid.castShadow=far.castShadow=mid.receiveShadow=far.receiveShadow=false;
   mid.visible=far.visible=false;

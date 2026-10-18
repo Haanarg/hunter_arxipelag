@@ -29,7 +29,7 @@ const MAT={
  },
  painted:c=>M(c,'paint'),metal:c=>M(c,'metal'),rubber:c=>M(c,'rubber'),glass:c=>M(c,'glass'),masonry:c=>M(c,'masonry')
 };
-let seed,R,islands,A,Bi,world,B=[],requestedSeed=null;
+let seed,R,islands,A,Bi,world,B=[],requestedSeed=null,activeBunker=null;
 const ISLAND_CELL=512,islandGrid=new Map(),islandCellKey=(cx,cz)=>cx+','+cz;
 function rebuildIslandGrid(){
   islandGrid.clear();
@@ -809,7 +809,7 @@ function mkEnemyBunker(x,z){
       door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,owner:b});
     for(const lx of[-4,4])for(const [lz,d]of[[-12.5,3],[-4,6],[7,10]])wall(lx,lz,.6,d);
     for(const lx of[-11,11])wall(lx,-7,12,.6);
-    b.generalSpots=[{x,z:z-9}];return b;
+    b.generalSpots=[{x,z:z-9}];addBunkerBasement(b);return b;
   }
   // Taper every exterior face; keep the gate vertical and independently animated.
   const meshes=new Set(Wl.slice(firstWall).filter(w=>!w.door).flatMap(w=>w.parts||[w.m]));
@@ -831,7 +831,105 @@ function mkEnemyBunker(x,z){
   for(const sign of[-1,1]){const shape=new THREE.Shape();shape.moveTo(sign*2,0);shape.lineTo(sign*3.5,0);shape.lineTo(sign*2.7,5.2);shape.lineTo(sign*2,5.2);shape.closePath();const post=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:3.3,bevelEnabled:false}),M(0x795337,'masonry'));post.position.z=b.d/2-2.8;g.add(post)}
   bx(g,5.4,.85,3.3,0x795337,0,4.8,b.d/2-1.15,'masonry');
   bx(g,5,1.1,2.5,0x5a5944,0,.9,-12,'paint');
-  b.generalSpots=[{x,z:z-9}];return b;
+  b.generalSpots=[{x,z:z-9}];addBunkerBasement(b);return b;
+}
+// Soterrani integrat sota el model existent: ni la porta blindada ni les
+// parets inclinades de la planta principal canvien. La variant deriva només
+// de la llavor i del lloc del búnquer, sense consumir cap tirada global R().
+function addBunkerBasement(b){
+  const random=mul((seed^Math.imul(Math.round(b.x),73856093)^Math.imul(Math.round(b.z),19349663)^0x6e7b32e1)>>>0);
+  const variant=Math.floor(random()*4),floorY=b.fy-9.15,
+        divisions=[-5+(variant%2)*1.7,4.3+Math.floor(variant/2)*1.6],
+        westDoors=[-10.1+(variant%2)*.7,-.25+Math.floor(variant/2)*1.1,10.1-(variant%2)],
+        eastDivider=-7+(variant%2)*1.2;
+  b.basement={variant,floorY,upperSlabMeshes:[],stair:{x:12,zTop:11.2,zBottom:-2.7,width:3.6},
+    generalLocal:{x:-12.5,z:variant%2?10:-10.5},eliteLocal:[
+      {x:0,z:-10.3},{x:-1,z:7.5},{x:12,z:-10.6},{x:-12,z:(divisions[0]+divisions[1])/2}
+    ]};
+  activeBunker=b;
+  const wall=(lx,lz,w,d,base=-9.2,height=9.25,color=0x68756d)=>{
+    const mesh=seedSearchMode?new THREE.Object3D():bx(b.o,w,height,d,color,lx,base+height/2,lz,'masonry');
+    mesh.castShadow=true;mesh.receiveShadow=true;
+    Wl.push({x0:b.x+lx-w/2,x1:b.x+lx+w/2,z0:b.z+lz-d/2,z1:b.z+lz+d/2,
+      y0:b.fy+base,y1:b.fy+base+height,hp:Infinity,m:mesh,door:false,
+      open:false,rammable:false,cx:b.x+lx,cz:b.z+lz,owner:b});
+  };
+  const floorPanel=(xa,xb,za,zb,level,color)=>{
+    if(seedSearchMode)return;
+    bx(b.o,xb-xa,.26,zb-za,color,(xa+xb)/2,level-.13,(za+zb)/2,'masonry');
+  };
+  // Forjat amb un buit real per a l'escala. Els projectils impacten al
+  // forjat però no bloqueja lateralment el moviment del jugador.
+  const slab=(xa,xb,za,zb)=>{
+    if(!seedSearchMode){
+      const before=b.o.children.length;
+      floorPanel(xa,xb,za,zb,.22,0x8e9588);
+      b.basement.upperSlabMeshes.push(...b.o.children.slice(before));
+    }
+    Wl.push({x0:b.x+xa,x1:b.x+xb,z0:b.z+za,z1:b.z+zb,
+      y0:b.fy-.03,y1:b.fy+.22,hp:Infinity,m:new THREE.Object3D(),
+      door:false,open:false,rammable:false,playerBlock:false,
+      cx:b.x+(xa+xb)/2,cz:b.z+(za+zb)/2,owner:b});
+  };
+  slab(-19.2,10,-16.2,16.2);slab(14,19.2,-16.2,16.2);
+  slab(10,14,-16.2,-2.7);slab(10,14,11.2,16.2);
+  floorPanel(-19,19,-16,16,-9.27,0x434c49);
+  // Fonaments profunds, tres cambres a ponent, dues a llevant i passadís.
+  wall(-19.1,0,.8,32.4);wall(19.1,0,.8,32.4);
+  wall(0,-16.1,38.2,.8);wall(0,16.1,38.2,.8);
+  for(const z of divisions)wall(-11.5,z,14.1,.65,-9.1,8.75);
+  wall(11.5,eastDivider,14.1,.65,-9.1,8.75);
+  const doorway=(lx,from,to,doorZ)=>{
+    const gap=3.5,lo=doorZ-gap/2,hi=doorZ+gap/2;
+    if(lo>from)wall(lx,(from+lo)/2,.7,lo-from,-9.1,8.7);
+    if(hi<to)wall(lx,(hi+to)/2,.7,to-hi,-9.1,8.7);
+    if(!seedSearchMode)bx(b.o,1,.65,gap+.05,0xadb7a4,lx,-.78,doorZ,'metal');
+  };
+  const limits=[-15.7,...divisions,15.7];
+  for(let i=0;i<3;i++)doorway(-4.2,limits[i],limits[i+1],westDoors[i]);
+  doorway(4.2,-15.7,eastDivider,-10.8);
+  doorway(4.2,eastDivider,15.7,-2.25);
+  // Escala dins l'habitació oriental de la planta principal. 15 esglaons
+  // amb alçada progressiva i suport físic interpolat a groundAt().
+  if(!seedSearchMode){
+    const st=b.basement.stair,steps=15;
+    for(let i=0;i<steps;i++){
+      const z=st.zTop-(i+.5)*(st.zTop-st.zBottom)/steps;
+      const y=.22-(i+1)*9.37/steps;
+      bx(b.o,st.width,.21,(st.zTop-st.zBottom)/steps+.035,
+        i%2?0x797f79:0x8b9289,st.x,y-.1,z,'masonry');
+    }
+    for(const xx of[st.x-st.width/2-.13,st.x+st.width/2+.13]){
+      const rail=bx(b.o,.12,1.3,st.zTop-st.zBottom,0x3a4c49,xx,-3.9,(st.zTop+st.zBottom)/2,'metal');
+      rail.rotation.x=-Math.atan2(9.37,st.zTop-st.zBottom);
+    }
+    // Despatx: taula, mapes, arxivadors, cadira i llum de treball.
+    const office=b.basement.generalLocal,oz=office.z,deskZ=oz+(oz<0?3:-3);
+    bx(b.o,4.6,.23,2.1,0x654633,office.x,-7.95,deskZ,'organic');
+    for(const dx of[-1.9,1.9])bx(b.o,.26,1.08,1.8,0x49392b,office.x+dx,-8.58,deskZ,'organic');
+    bx(b.o,1.15,1.02,1.1,0x414d46,office.x,-8.62,oz,'paint');
+    for(const dx of[-5,4.9])bx(b.o,1.35,3.3,1.1,0x59675e,office.x+dx,-7.48,oz,'metal');
+    bx(b.o,2.4,1.4,.09,0xc4b88f,office.x,-5.8,oz<0?-15.4:15.4,'paint');
+    for(const [lx,lz] of [[0,-12],[0,0],[0,12],[12,1],[-12,0]]){
+      const lamp=new THREE.PointLight(0xffe8bd,9,18,2);lamp.position.set(lx,-4.6,lz);b.o.add(lamp);
+      bx(b.o,.78,.17,.78,0xe2d2a6,lx,-4.78,lz,'paint');
+    }
+    for(const [lx,lz] of[[12,-11],[-12,0],[-12,10]]){
+      bx(b.o,1.6,2.5,.9,0x5c655a,lx,-7.83,lz,'metal');
+    }
+  }
+  return b.basement;
+}
+function bunkerSubFloorAt(x,z,previous=-Infinity){
+  const b=activeBunker;if(!b?.basement)return null;
+  const p=buildingLocalPoint(b,x,z);
+  if(Math.abs(p.x)>19||Math.abs(p.z)>16)return null;
+  const st=b.basement.stair;
+  if(Math.abs(p.x-st.x)<=st.width/2&&p.z>=st.zBottom&&p.z<=st.zTop){
+    const t=(st.zTop-p.z)/(st.zTop-st.zBottom);
+    return b.fy+.22-t*(b.fy+.22-b.basement.floorY);
+  }
+  return previous<b.fy-3.9?b.basement.floorY:b.fy+.22;
 }
 // Door-aligned treads share the exact same geometry and walking height.
 function stairLocal(s,x,z){const dx=x-s.x,dz=z-s.z;return{along:dx*s.nx+dz*s.nz,side:dx*s.nz-dz*s.nx}}
@@ -840,6 +938,8 @@ function stairContains(s,x,z,margin=0){const q=stairLocal(s,x,z);return q.along>
 // i el personatge pot abandonar el pantalà cap a l'aigua.
 // L'altura comprovada a groundAt evita l'ascens instantani des de l'aigua.
 function groundAt(x,z,previous=-Infinity){
+  const bunkerFloor=bunkerSubFloorAt(x,z,previous);
+  if(bunkerFloor!==null)return bunkerFloor;
   // No enfonsar el model sota els triangles que dibuixa el LOD actual.
   // Preservem l'altura física si és més alta (evita enfonsaments i salts negatius).
   const physical=hAt(x,z),visible=terrainStream?.visibleHeightAt(x,z);
@@ -2144,7 +2244,7 @@ if(!playerFall){wallPush();treePush();vehiclePushPlayer()}}
 V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;v.strafeV=0;return}if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
 syncFerryCargo();updateTerminalRamps();
 ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2&&P.y<(solidRoofAt(b,P.x,P.z)?.bottom??b.fy+b.h+.1))||null;
-const floor=ib?Math.max(ib.fy+.3,groundAt(P.x,P.z,P.y)):groundAt(P.x,P.z,P.y),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;
+const floor=ib&&ib.kind!=='enemy_bunker'?Math.max(ib.fy+.3,groundAt(P.x,P.z,P.y)):groundAt(P.x,P.z,P.y),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;
 document.body.classList.toggle('player-swimming',canRun&&swimming);
 if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);
 if(!playerFall){
