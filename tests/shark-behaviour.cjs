@@ -23,9 +23,10 @@ const lastX=f.x,lastZ=f.z;
 sharks.update(f,.016,null,deep);
 assert.equal(f.sharkMode,'patrol','Sense objectiu torna a patrullar');
 assert.ok(Math.hypot(f.x-lastX,f.z-lastZ)<1,'No teletransporta el tauró en perdre la presa');
-const coast=create(),shore=(x,z)=>x>14?-1: -12;
-for(let i=0;i<200;i++)sharks.update(coast,1/60,{x:22,z:0},shore);
-assert.ok(coast.x<15,'El tauró no surt de l’aigua per perseguir');
+const coast=create(),shore=(x,z)=>x>14?0:-12;
+for(let i=0;i<200;i++)sharks.update(coast,1/60,{x:14,z:0},shore);
+assert.ok(coast.x<=14&&shore(coast.x,coast.z)<-.8,
+  'El tauró no surt de l’aigua per perseguir');
 for(const radius of [2.3,3.25,8.6,19]){
   const hit=create();hit.x=2;hit.z=0;
   assert.equal(sharks.vehicleHit(hit,-18,0,18,0,radius),true,
