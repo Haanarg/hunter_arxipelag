@@ -19,6 +19,13 @@ assert.ok(surf.v.waveJump.jumps>=1,'El windsurf s’enlaira quan remunta una ona
 assert.ok(jet.peak>.38,'El salt de la moto ha de ser perceptible');
 assert.ok(surf.peak>.18,'El salt del windsurf és visible però més curt');
 assert.ok(jet.peak>surf.peak,'La moto salta més que el windsurf');
+const fullJet=simulate('moto_aquatica',39),
+      fullSurf=simulate('windsurf',22),
+      ratio=fullJet.peak/fullSurf.peak;
+assert.ok(ratio>1.8&&ratio<2.3,
+  'A velocitat màxima, la moto ha de saltar aproximadament el doble que el windsurf: '+ratio.toFixed(2));
+assert.ok(fullSurf.peak>.7,
+  'El windsurf assoleix l’altura de l’antiga moto aquàtica');
 assert.ok(jet.pitches.some(p=>p>.05)&&jet.pitches.some(p=>p<-.05),
   'La proa puja i després s’abaixa abans de tocar aigua');
 for(const type of ['moto_aquatica','windsurf']){
