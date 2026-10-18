@@ -4249,14 +4249,19 @@ window.HUNTER_UI=Object.freeze({
       if(mode==='inventory'){
         const state=getState(),keys=['med','paracaigudes','cisalla','expl','granada','bazooka','franctirador','disf','arma'],present=keys.filter(k=>state.inventory[k]>0);
         let selected=present[0]||null;
-        const renderInventory=()=>{
-          const st=getState(),items=keys.filter(k=>st.inventory[k]>0),def=selected&&st.itemTypes[selected];
-          body.innerHTML='<div class="inv-wrap"><section><div class="inv-grid" id="invGrid"></div></section><aside class="inv-detail" id="invDetail"></aside></div>';
+        const renderInventory=(healed=0)=>{
+          const st=getState(),items=keys.filter(k=>st.inventory[k]>0),
+                life=Math.max(0,Math.min(100,Math.round(st.hp)));
+          body.innerHTML='<div class="inv-health" role="status" aria-live="polite">'+
+            '<div class="inv-health-line"><b>❤️ Vida '+life+' / 100</b>'+
+            (healed>0?'<strong class="inv-healed">+'+healed+' vida</strong>':'')+'</div>'+
+            '<div class="inv-health-track"><div class="inv-health-fill" style="width:'+life+'%"></div></div></div>'+
+            '<div class="inv-wrap"><section><div class="inv-grid" id="invGrid"></div></section><aside class="inv-detail" id="invDetail"></aside></div>';
           const grid=document.getElementById('invGrid'),detail=document.getElementById('invDetail');
           const slots=Math.max(15,Math.ceil(Math.max(1,items.length)/5)*5);
           for(let i=0;i<slots;i++){
             const id=items[i],el=document.createElement('button');el.className='inv-slot'+(id===selected?' selected':'');
-            if(id){const d=st.itemTypes[id];el.innerHTML='<span>'+d.icon+'</span><span class="inv-count">×'+st.inventory[id]+'</span>';el.title=d.n;el.onclick=()=>{selected=id;if(d.usable){const changed=actions.useItem(id);if(changed&&id!=='expl'&&id!=='granada'&&id!=='bazooka'&&id!=='franctirador'&&id!=='mapa'&&id!=='mapa_heli'&&id!=='mapa_tanc')renderInventory()}else renderInventory()}}
+            if(id){const d=st.itemTypes[id];el.innerHTML='<span>'+d.icon+'</span><span class="inv-count">×'+st.inventory[id]+'</span>';el.title=d.n;el.onclick=()=>{selected=id;if(d.usable){const before=getState().hp,changed=actions.useItem(id);if(changed){renderHUD();if(id!=='expl'&&id!=='granada'&&id!=='bazooka'&&id!=='franctirador'&&id!=='mapa'&&id!=='mapa_heli'&&id!=='mapa_tanc')renderInventory(Math.max(0,Math.round(getState().hp-before)))}}else renderInventory()}}
             else{el.disabled=true;el.setAttribute('aria-hidden','true')}
             grid.appendChild(el)
           }
