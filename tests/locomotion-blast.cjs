@@ -47,6 +47,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
    P.x=4;P.z=0;P.y=1.5;
    E=[];PL.length=0;
    enemyCandidatesAt=()=>E;
+   // Terreny pla en ambdues explosions: cap turó no allunya
+   // artificialment el soldat del centre vertical de la detonació.
+   hAt=()=>0;
    wallCandidates=()=>[];buildingCandidates=()=>[];
    vehicleCandidatesAt=()=>[];
    const soldier={t:'soldat',x:2,z:0,hp:400,alert:0,
