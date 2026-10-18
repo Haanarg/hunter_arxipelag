@@ -1674,7 +1674,7 @@ window.HUNTER_MOVEMENT_FX=Object.freeze({
      steps:0,droplets:0,landTrails:0,waterTrails:0,downwash:0,
      drawMeshes:0,resets:0,quality
    };
-   let waterVisible=true,previousFootBucket=null;
+   let waterVisible=true,previousFootBucket=null,previousSwimBucket=null;
    const groups={};
    function pool(name,capacity,flat){
      const geometry=new T.PlaneGeometry(1,1);
@@ -1778,6 +1778,31 @@ window.HUNTER_MOVEMENT_FX=Object.freeze({
        px=x+Math.cos(heading)*side*.32-Math.sin(heading)*.24,
        pz=z-Math.sin(heading)*side*.32-Math.cos(heading)*.24;
      return footstep(px,pz,surfaceAt(px,pz)-groundAt(px,pz),side);
+   }
+   function swimStroke({phase,x,z,heading,swimming,crawling,moving,surfaceAt}){
+     const bucket=Math.floor((phase+Math.PI/2)/Math.PI);
+     if(!swimming||!crawling||!moving||!waterVisible){previousSwimBucket=null;return false}
+     if(previousSwimBucket===null){previousSwimBucket=bucket;return false}
+     if(bucket===previousSwimBucket)return false;
+     previousSwimBucket=bucket;
+     // Alternam braços: esquitx visible a banda i banda al llarg del crol.
+     const side=bucket%2?1:-1,rx=Math.cos(heading),rz=-Math.sin(heading),
+       fx=-Math.sin(heading),fz=-Math.cos(heading);
+     for(const s of [-1,1]){
+       const x0=x+rx*s*.72+fx*.45,z0=z+rz*s*.72+fz*.45,
+         surface=surfaceAt(x0,z0),bed=waterBed(x0,z0),power=s===side?1:.67;
+       emit('ripple',{x:x0,z:z0,y:.13,bed,width:1.35*power,length:1.75*power,
+         life:.75,alpha:.75,growth:1.9,color:0xd7f7ff});
+       for(let i=0;i<4;i++){
+         const spread=(i-1.5)*.32,speed=1.5+i*.23;
+         emit('air',{x:x0+spread*fx,z:z0+spread*fz,y:surface+.12,bed,
+           vx:rx*s*speed+fx*.55,vz:rz*s*speed+fz*.55,
+           vy:(2.2+i*.29)*power,gravity:9,ground:surface+.03,
+           width:.10+power*.045,life:.54,alpha:.9,growth:.28,color:0xd8f8ff});
+         stats.droplets++;
+       }
+     }
+     return true;
    }
    function boatTrail(v,speed,back,width){
      const s=Math.sin(v.hd),c=Math.cos(v.hd),turn=clamp(v.yawRate||0,-2,2),
@@ -1947,7 +1972,7 @@ window.HUNTER_MOVEMENT_FX=Object.freeze({
        groups[kind].mesh.visible=waterVisible&&groups[kind].particles.length>0;
    }
    function reset(){
-     previousFootBucket=null;
+     previousFootBucket=null;previousSwimBucket=null;
      for(const [name,group] of Object.entries(groups)){
        group.particles.length=0;group.mesh.count=0;group.mesh.visible=false;
        stats.active[name]=0;
@@ -1959,7 +1984,7 @@ window.HUNTER_MOVEMENT_FX=Object.freeze({
        scene.remove(group.mesh);group.geometry.dispose();group.material.dispose();
      }
    }
-   return{stats,groups,emit,footstep,playerStep,vehicle,damageSmoke,update,
+   return{stats,groups,emit,footstep,playerStep,swimStroke,vehicle,damageSmoke,update,
      setWaterVisible,reset,dispose};
  }
 });
@@ -3854,11 +3879,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.head.getWorldPosition(u.swimHead);
     const chestRel=u.swimChest.y-player.position.y,
           headRel=u.swimHead.y-player.position.y;
-    // La part central del pit es manté sota la superfície (-20 cm),
-    // mentre el centre del cap sobresurt tot just (+10 cm).
+    // El pit i les espatlles han de ser visibles damunt l'aigua,
+    // i no únicament la motxilla. Conservam la posició física.
     // El més restrictiu dels dos límits evita submergir el cap.
-    return crawl*Math.max(0,surface-.20-physicalY-chestRel,
-                            surface+.10-physicalY-headRel);
+    return crawl*Math.max(0,surface+.22-physicalY-chestRel,
+                            surface+.38-physicalY-headRel);
   },
   animatePlayer(player,{forward,strafe=0,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false,running=false}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),
@@ -4938,8 +4963,8 @@ function grenadeLaunchParams(power=0,origin=P,hd=P.hd){
   return {x:origin.x+fx*.85,y:origin.y+2.05,z:origin.z+fz*.85,
           vx:fx*speed,vy:12,vz:fz*speed,t:2.4};
 }
-function grenadeImpactTrajectory(power=0,origin=P,hd=P.hd){
-  const g=grenadeLaunchParams(power,origin,hd),points=[{x:g.x,y:g.y,z:g.z}],dt=1/40;
+function grenadeImpactTrajectory(power=0,origin=P,hd=P.hd,flight=null){
+  const g={...(flight||grenadeLaunchParams(power,origin,hd))},points=[{x:g.x,y:g.y,z:g.z}],dt=1/40;
   for(let i=0;i<96;i++){
     const x0=g.x,y0=g.y,z0=g.z,x1=x0+g.vx*dt,y1=y0+(g.vy-24*dt)*dt,z1=z0+g.vz*dt,
           mx=(x0+x1)/2,mz=(z0+z1)/2,reach=Math.hypot(x1-x0,z1-z0)/2+.5;
@@ -4997,14 +5022,17 @@ function releaseGrenadeCharge(){
   return throwGrenade(power);
 }
 function updateGrenadeCharge(dt){
-  if(!grenadeCharge)return;
-  if(!grenadeEquipped||!inv.granada||cv||swimming||playerFall||paused||over){cancelGrenadeCharge();return}
-  grenadeCharge.elapsed=Math.min(GRENADE_CHARGE_SECONDS,grenadeCharge.elapsed+dt);
+  const heliAim=cv?.t==='heli'&&!over&&!paused&&(inv.granada||0)>0;
+  if(!grenadeCharge&&!heliAim){if(grenadeAimVisual)cancelGrenadeCharge();return}
+  if(grenadeCharge&&(!grenadeEquipped||!inv.granada||cv||swimming||playerFall||paused||over)){cancelGrenadeCharge();return}
+  if(grenadeCharge)grenadeCharge.elapsed=Math.min(GRENADE_CHARGE_SECONDS,grenadeCharge.elapsed+dt);
   // Actualitzar només a 25 Hz per mantenir baix el cost de les interseccions.
-  grenadeCharge.visualTimer=(grenadeCharge.visualTimer??0)-dt;
-  if(grenadeCharge.visualTimer>0)return;
-  grenadeCharge.visualTimer=.04;
-  const aim=grenadeImpactTrajectory(grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS);
+  const state=grenadeCharge||(updateGrenadeCharge.heliState??={visualTimer:0});
+  state.visualTimer=(state.visualTimer??0)-dt;
+  if(state.visualTimer>0)return;
+  state.visualTimer=.04;
+  const aim=heliAim?grenadeImpactTrajectory(0,P,P.hd,helicopterGrenadeFlight(cv)):
+    grenadeImpactTrajectory(grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS);
   if(!grenadeAimVisual){
     // Cinta de triangles d'uns 25 cm: una línia WebGL simple d'1 px
     // és massa fina per veure-la amb claredat en mòbils.
@@ -5026,7 +5054,7 @@ function updateGrenadeCharge(dt){
     world.add(line,circle,fill);grenadeAimVisual={line,circle,fill};
   }
   const a=grenadeAimVisual,attr=a.line.geometry.attributes.position,
-        start=grenadeAimStartIndex(aim.points),visiblePoints=start<0?[]:aim.points.slice(start);
+        start=heliAim?0:grenadeAimStartIndex(aim.points),visiblePoints=start<0?[]:aim.points.slice(start);
   for(let i=0;i<visiblePoints.length;i++){
     const p=visiblePoints[i],before=visiblePoints[Math.max(0,i-1)],
           after=visiblePoints[Math.min(visiblePoints.length-1,i+1)],
@@ -5042,21 +5070,20 @@ function updateGrenadeCharge(dt){
 // Les granades de l'helicòpter utilitari provenen de l'inventari,
  // sense requerir que el jugador les tengui equipades. Surten per la
  // porta lateral i conserven la inèrcia de l'aparell.
+function helicopterGrenadeFlight(v){
+  const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),
+        rightX=Math.cos(v.hd),rightZ=-Math.sin(v.hd),
+        forward=(v.v||0)*.9+7,side=(v.strafeV||0)+4.5;
+  return {x:v.x+fx*1.5+rightX*2.5,y:v.o.position.y+2.4,
+    z:v.z+fz*1.5+rightZ*2.5,vx:fx*forward+rightX*side,vy:5,
+    vz:fz*forward+rightZ*side,t:2.4};
+}
 function throwHelicopterGrenade(){
   if(!cv||cv.t!=='heli'||over||paused||fcd>0)return false;
   if(!inv.granada){
     msg='No tens granades a l’inventari.';msgT=2;fcd=.35;return false;
   }
-  const v=cv,fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),
-        rightX=Math.cos(v.hd),rightZ=-Math.sin(v.hd),
-        forward=(v.v||0)*.9+7,side=(v.strafeV||0)+4.5,
-        flight={
-          x:v.x+fx*1.5+rightX*2.5,
-          y:v.o.position.y+2.4,
-          z:v.z+fz*1.5+rightZ*2.5,
-          vx:fx*forward+rightX*side,vy:5,
-          vz:fz*forward+rightZ*side,t:2.4
-        };
+  const flight=helicopterGrenadeFlight(cv);
   inv.granada--;
   if(inv.granada<=0){delete inv.granada;grenadeEquipped=false}
   fcd=.7;setDis(false);
@@ -6372,6 +6399,21 @@ if(t==='step'){
         gain=AC.createGain();
   source.buffer=buf;filter.type='lowpass';filter.frequency.value=440;
   gain.gain.value=.15*v;
+  source.connect(filter);filter.connect(gain);gain.connect(AC.destination);
+  source.start(n);return;
+}
+if(t==='swim'){
+  // Cop d'aigua curt i filtrat, amb una petita capa d'esquitx agut.
+  const len=Math.floor(AC.sampleRate*.24),buf=AC.createBuffer(1,len,AC.sampleRate),data=buf.getChannelData(0);
+  let low=0;
+  for(let i=0;i<len;i++){
+    const fade=Math.pow(1-i/len,2.4),noise=Math.random()*2-1;
+    low=low*.83+noise*.17;
+    data[i]=(low*.8+noise*.18)*fade;
+  }
+  const source=AC.createBufferSource(),filter=AC.createBiquadFilter(),gain=AC.createGain();
+  source.buffer=buf;filter.type='lowpass';filter.frequency.value=1100;
+  gain.gain.value=.32*v;
   source.connect(filter);filter.connect(gain);gain.connect(AC.destination);
   source.start(n);return;
 }
@@ -9820,6 +9862,10 @@ if(!cv&&!scopeActive&&!playerFall&&!playerEject)
    swimming,inVehicle:!!cv,falling:!!playerFall||!!playerEject||!!ib,
    surfaceAt:(x,z)=>wy(x,z,t),groundAt
  });
+ if(movementFx.swimStroke({phase:pl.userData.ph,x:P.x,z:P.z,heading:P.hd,
+    swimming,crawling:(pl.userData.crawlBlend||0)>.55,
+    moving:Math.abs(f)>.1&&!cv&&!playerFall&&!playerEject,
+    surfaceAt:(x,z)=>wy(x,z,t)}))snd('swim',.65);
 if(!cv&&playerFall){
   pl.position.y=playerFall.y;
   if(playerFall.parachute){
