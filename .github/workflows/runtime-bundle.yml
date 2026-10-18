@@ -13,6 +13,7 @@ on:
       - 'tests/vehicle-weapon-reticle.cjs'
       - 'tests/water-jumps.cjs'
       - 'tests/locomotion-blast.cjs'
+      - 'tests/enemy-weapon-damage.cjs'
       - 'tests/performance-stats-toggle.cjs'
       - 'tests/loot-health.cjs'
       - 'tests/two-storey-destruction.cjs'
@@ -52,6 +53,7 @@ jobs:
           node tests/vehicle-weapon-reticle.cjs
           node tests/water-jumps.cjs
           node tests/locomotion-blast.cjs
+          node tests/enemy-weapon-damage.cjs
           node tests/performance-stats-toggle.cjs
           node tests/loot-health.cjs
           node tests/two-storey-destruction.cjs
