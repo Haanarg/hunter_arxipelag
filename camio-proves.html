@@ -31,6 +31,13 @@ h1{font-size:clamp(19px,2.2vw,29px);line-height:1.15;letter-spacing:-.03em;margi
 .info{position:absolute;bottom:10px;left:10px;right:10px;padding:10px 12px;border-radius:8px;background:#101f22ef;box-shadow:0 0 0 1px #72857927}
 .info b{display:block;font-size:14px;margin-bottom:3px}
 .info small{display:block;font-size:11px;line-height:1.4;color:#c3d2c8}
+.fallback-scene{display:none;position:absolute;inset:0;align-items:center;justify-content:center;padding:20px 4%;background:radial-gradient(ellipse at 45% 60%,#65776c85,transparent 75%),linear-gradient(160deg,#344a49,#1c2c2f);overflow:hidden}
+.fallback-scene svg{width:100%;height:100%;max-height:310px;filter:drop-shadow(0 12px 14px #111a1b90)}
+.no-webgl .fallback-scene{display:flex}
+.no-webgl .card{cursor:default}
+.no-webgl #canvas{display:none}
+.no-webgl #webgl-hint{display:inline}
+#webgl-hint{display:none;color:#f1d8a3;font-weight:600}
 .footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;margin:9px 2px 0;color:#aebeb2;font-size:11px}
 .footer strong{color:#d4e5c4}
 @media(max-width:900px){
@@ -71,7 +78,7 @@ h1{font-size:clamp(19px,2.2vw,29px);line-height:1.15;letter-spacing:-.03em;margi
  </header>
  <section id="cards" aria-label="Les quatre propostes en tres dimensions"></section>
  <footer class="footer">
-  <span><strong>Arrossega</strong> cada camió per girar-lo. Les càmeres dels botons s'apliquen a tots quatre.</span>
+  <span><strong>Arrossega</strong> cada camió per girar-lo. Les càmeres dels botons s'apliquen a tots quatre. <span id="webgl-hint">En aquest navegador s'ha activat la vista estàtica perquè WebGL no està disponible.</span></span>
   <span>Comparació a la mateixa escala · Modelat amb Three.js</span>
  </footer>
 </main>
@@ -79,13 +86,61 @@ h1{font-size:clamp(19px,2.2vw,29px);line-height:1.15;letter-spacing:-.03em;margi
 import * as THREE from './vendor/three-r186.module.mjs';
 import {createTruckConcept,truckConcepts} from './src/truck-concepts.mjs';
 
-const canvas=document.getElementById('canvas'),renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
-renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.setClearColor(0x25373a,1);
-renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.30;
+const canvas=document.getElementById('canvas');
+let renderer=null;
+try{
+ renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+ renderer.outputColorSpace=THREE.SRGBColorSpace;
+ renderer.setClearColor(0x25373a,1);
+ renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ renderer.toneMapping=THREE.ACESFilmicToneMapping;
+ renderer.toneMappingExposure=1.30;
+}catch(error){
+ console.warn('Previsualització 3D no disponible; es mostra una il·lustració estàtica.',error);
+ document.documentElement.classList.add('no-webgl');
+ document.querySelectorAll('.controls button').forEach(btn=>{btn.disabled=true;btn.title='Cal un navegador amb WebGL per canviar la càmera';});
+}
+
+function fallbackTruck(i){
+ const palettes=[
+  ['#697556','#899776','#c1b69a','#3b4835'],
+  ['#414c43','#596858','#596459','#2d3532'],
+  ['#9b8968','#c7b48c','#c9b18a','#71634c'],
+  ['#52624b','#74835c','#788267','#313f32']
+ ];
+ const [cab,lit,tarp,dark]=palettes[i],uid=`truck-${i}`;
+ const wheel=(x)=>`<g transform="translate(${x} 255)"><circle r="43" fill="#171e1e" stroke="#343e39" stroke-width="4"/><circle r="32" fill="none" stroke="#495248" stroke-width="6" stroke-dasharray="5 6"/><circle r="22" fill="#778076" stroke="#232c28" stroke-width="8"/><circle r="9" fill="#3b443e" stroke="#b7bbb0" stroke-width="2"/><path d="M0 -21V21 M-21 0H21 M-15 -15L15 15 M15 -15L-15 15" stroke="#3e4742" stroke-width="4"/></g>`;
+ const cargo=i===2
+  ?`<path d="M283 133H566V212H283Z" fill="${cab}" stroke="#252c27" stroke-width="4"/><path d="M293 155H560V199H293Z" fill="#344039"/><rect x="305" y="165" width="73" height="43" rx="3" fill="#82765c" stroke="#ceb98c" stroke-width="3"/><rect x="386" y="150" width="73" height="58" rx="3" fill="#706e53" stroke="#aca582" stroke-width="3"/><rect x="469" y="159" width="82" height="49" rx="3" fill="#8d876b" stroke="#bfb38c" stroke-width="3"/><path d="M273 116Q425 88 578 120L562 151H292Z" fill="${tarp}" stroke="#5a5843" stroke-width="4"/><path d="M299 146Q420 126 558 148" fill="none" stroke="#e1cdaa" stroke-width="2"/>`
+  :`<path d="M276 ${i===3?91:110}Q414 ${i===3?71:90} 579 ${i===3?100:117}L589 214H272Z" fill="url(#${uid}-tarp)" stroke="${dark}" stroke-width="5"/><path d="M281 ${i===3?95:115}Q421 ${i===3?76:94} 574 ${i===3?103:120}" fill="none" stroke="#e7e7c780" stroke-width="3"/>${[320,368,418,468,520,561].map(x=>`<path d="M${x} 113L${x+4} 209" stroke="${dark}" stroke-width="2" opacity=".58"/>`).join('')}<path d="M285 209H581" stroke="#242f26" stroke-width="6"/>`;
+ return `<svg role="img" aria-label="Vista lateral il·lustrada del camió ${'ABCD'[i]}" viewBox="0 0 640 345" xmlns="http://www.w3.org/2000/svg">
+ <defs><linearGradient id="${uid}-cab" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${lit}"/><stop offset="1" stop-color="${cab}"/></linearGradient><linearGradient id="${uid}-tarp" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="${tarp}"/><stop offset="1" stop-color="${dark}"/></linearGradient></defs>
+ <ellipse cx="324" cy="304" rx="279" ry="16" fill="#0b16199c"/>
+ <path d="M104 232H592L603 251H95Z" fill="#263329" stroke="#151e1a" stroke-width="6"/>
+ <path d="M300 248H561V271H302Z" fill="#3c473b" stroke="#222e28" stroke-width="4"/>
+ <rect x="380" y="258" width="79" height="30" rx="5" fill="#30392f" stroke="#687561" stroke-width="3"/>
+ <rect x="501" y="252" width="58" height="23" rx="4" fill="#2d342d" stroke="#76826c" stroke-width="2"/>
+ ${cargo}
+ <path d="M106 113L233 105L272 142L282 235H79L77 171Z" fill="url(#${uid}-cab)" stroke="#2d392f" stroke-width="6"/>
+ <path d="M103 122L225 115L244 144L105 151Z" fill="#273e40" stroke="#9eb2a2" stroke-width="4"/>
+ <path d="M111 128L162 124L159 145L107 145Z" fill="#b4c6bf" opacity=".32"/>
+ <path d="M251 148L259 224M85 165H266" stroke="${dark}" stroke-width="4"/>
+ <path d="M97 164H146V218H82Z" fill="${dark}"/><path d="M105 171H140M105 181H140M105 191H140M105 201H140" stroke="#8a9281" stroke-width="4"/>
+ <path d="M174 156V225M177 157H243" stroke="${dark}" stroke-width="3"/>
+ <rect x="178" y="168" width="63" height="9" rx="3" fill="#303b34"/><rect x="240" y="180" width="14" height="5" rx="2" fill="#b4bbb0"/>
+ <path d="M84 151L61 146L52 166L70 170" fill="#3b453a" stroke="#212d26" stroke-width="4"/>
+ <rect x="67" y="212" width="49" height="19" rx="3" fill="#333f37" stroke="#9ea490" stroke-width="4"/>
+ <path d="M67 233L46 241L47 251H123V234Z" fill="#252f2d" stroke="#7d8b7b" stroke-width="4"/>
+ <circle cx="89" cy="210" r="10" fill="#d6cc9f" stroke="#353c33" stroke-width="4"/>
+ <path d="M116 118L114 92L130 91" fill="none" stroke="#303a34" stroke-width="7"/>
+ ${i===1?'<path d="M47 238L32 228L33 192L59 185M45 250L54 181" fill="none" stroke="#a4aba1" stroke-width="6"/><path d="M135 97L249 87" stroke="#292f2d" stroke-width="10"/><rect x="151" y="81" width="46" height="10" fill="#d6d2a8"/>':''}
+ ${i===3?'<path d="M258 224L260 100L272 93L278 102" fill="none" stroke="#283b31" stroke-width="10"/><circle cx="537" cy="207" r="31" fill="#212923" stroke="#a7ac9c" stroke-width="7"/><circle cx="537" cy="207" r="12" fill="#505e4b"/>':''}
+ ${i===0?'<rect x="120" y="258" width="40" height="20" rx="5" fill="#42493b" stroke="#9e9d88" stroke-width="3"/>':''}
+ ${wheel(176)}${wheel(500)}
+ <path d="M92 293H591" stroke="#9aa89b" stroke-opacity=".32" stroke-width="2"/>
+ </svg>`;
+}
 
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x25373a);
 scene.add(new THREE.HemisphereLight(0xdfe9e5,0x394238,2.0));
@@ -109,7 +164,8 @@ truckConcepts.forEach((entry,i)=>{
  const info=document.createElement('div');info.className='info';
  const title=document.createElement('b');title.textContent=entry.name;
  const description=document.createElement('small');description.textContent=entry.description;
- info.append(title,description);card.append(tag,chip,info);cardsEl.append(card);cards.push(card);
+ const fallback=document.createElement('div');fallback.className='fallback-scene';fallback.innerHTML=fallbackTruck(i);
+ info.append(title,description);card.append(fallback,tag,chip,info);cardsEl.append(card);cards.push(card);
  const model=createTruckConcept(THREE,i);model.visible=false;scene.add(model);models.push(model);
  cameras.push(new THREE.OrthographicCamera(-5,5,5,-5,.1,100));turns.push(0);
  let pointer=null;
@@ -149,7 +205,7 @@ for(const [id,detail]of [['full',false],['close',true]]){
    requestRender();
  });
 }
-function requestRender(){if(frameQueued)return;frameQueued=true;requestAnimationFrame(draw)}
+function requestRender(){if(!renderer||frameQueued)return;frameQueued=true;requestAnimationFrame(draw)}
 function draw(){
  frameQueued=false;
  const vw=window.innerWidth,vh=window.innerHeight;
