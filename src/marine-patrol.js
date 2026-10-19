@@ -122,7 +122,7 @@ function marineFire(u,weapon,target,heavy){
   }
   const speed=heavy?75:125;
   shoot(p.x,p.y,p.z,dx/n,dy/n,dz/n,speed,
-    heavy?38:6,heavy?8:0,'e',heavy?mS:mW,heavy?2:SMALL_ARMS_SCALE);
+    heavy?COMBAT_BALANCE.weapons.boatRocket:COMBAT_BALANCE.weapons.rifle,heavy?8:0,'e',heavy?mS:mW,heavy?2:SMALL_ARMS_SCALE);
   if(heavy){
     // A 245 m un coet lent necessita més de 4 segons. El TTL genèric
     // de 2.2 s l'eliminava molt abans d'arribar a la diana.

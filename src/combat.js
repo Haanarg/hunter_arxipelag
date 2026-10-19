@@ -51,19 +51,12 @@ function clearBulletImpacts(){
 
 function setDis(v){disg=v;[...pl.userData.mats,...rider.userData.mats].forEach(([m,a,b])=>m.color.copy(vivid(v?b:a)))}
 function fin(m){setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+' · Obre Ⅱ / Esc per tornar a jugar';endEl.style.display='flex'}
-// Progressió per nivell, independent de la punteria i del dany ambiental:
- // Fàcil = dany antic de Normal; Normal = dany antic de Difícil;
- // Difícil = extrapolació del mateix increment (x2 sobre el dany base).
-function enemyWeaponDamageScale(){
-  if(DIF<=.6)return 1;
-  if(DIF<=1)return 1+(DIF-.6)*1.25;
-  return 1.5+(DIF-1);
-}
+// El dany no canvia amb la dificultat: només la dispersió del tir enemic.
+function enemyWeaponDamageScale(){return 1}
 function hurtP(d,fromEnemyWeapon=false){
-  if(over)return;
-  d*=fromEnemyWeapon?enemyWeaponDamageScale():DIF;
-  hp-=d;snd('hurt',.5);
-  if(hp<=0){hp=0;fin('HAS MORT')}
+ if(over)return;
+ hp-=d;snd('hurt',.5);
+ if(hp<=0){hp=0;fin('HAS MORT')}
 }
 function destroyTower(u){
   if(!u?.o||u.destroyed)return;
@@ -97,7 +90,7 @@ function destroyTower(u){
   }
   for(let k=0;k<8;k++)puff(u.x+rn(-2,2),base+rn(.5,9),u.z+rn(-2,2),
     k%2?0x55534f:0x8b8176,rn(1.5,3.5));
-  boom(u.x,base+4,u.z,7,28,'p');
+  boom(u.x,base+4,u.z,7,COMBAT_BALANCE.weapons.grenade,'p');
 }
 function explodeEnemyVehicle(u){
   // Mateixa explosió visual que els vehicles pilotables: fragments de la
@@ -107,7 +100,7 @@ function explodeEnemyVehicle(u){
   const y=u.o?.position?.y??(u.gy??Math.max(0,hAt(u.x,u.z)));
   if(u.o){vehicleDebris(u,y);world.remove(u.o)}
   const heavy=u.t==='tanc'||u.t==='tanqueta';
-  boom(u.x,y+(heavy?1.8:1.2),u.z,heavy?12:9,heavy?48:32,'e');
+  boom(u.x,y+(heavy?1.8:1.2),u.z,heavy?12:9,heavy?10:8,'e');
 }
 function killEnemy(u,killingShot=null){
   const i=E.indexOf(u);if(i<0)return;E.splice(i,1);kills++;
@@ -155,30 +148,34 @@ function explodeVehicle(v){
       cv=null;P.x=v.x;P.z=v.z;
       const a=rn(0,Math.PI*2),sp=rn(14,24);
       playerEject={kind:'blast',vx:Math.cos(a)*sp,vz:Math.sin(a)*sp,t:.8,dur:.8,spin:rn(-1,1)<0?-1:1,height:1.25};
-      hurtP(rn(18,30));msg='El vehicle ha explotat!';msgT=3;
+      hurtP(rn(4,6));msg='El vehicle ha explotat!';msgT=3;
     }
   }
   const i=V.indexOf(v);if(i>=0)V.splice(i,1);
   intelMarks=intelMarks.filter(m=>m.ref!==v);
   if(v.o){vehicleDebris(v,yy);world.remove(v.o)}
-  boom(v.x,yy+1,v.z,10,45,'p');
+  boom(v.x,yy+1,v.z,10,8,'p');
 }
 // Tots els vehicles perden vides amb els impactes; el casc protegeix
 // els ocupants fins al moment que el vehicle explota.
 // Projectils explosius: 50% més ràpids i meitat de mida visual.
-const HEAVY_SHOT_SPEED_FACTOR=1.17,HEAVY_SHOT_DAMAGE_FACTOR=1.3,HEAVY_SHOT_VISUAL_SCALE=.5;
+const COMBAT_BALANCE=window.HUNTER_COMBAT_BALANCE;
+const HEAVY_SHOT_SPEED_FACTOR=1.17,HEAVY_SHOT_DAMAGE_FACTOR=1,HEAVY_SHOT_VISUAL_SCALE=.5;
 const shotClassFromSplash=spl=>spl>0?'heavy':'light';
 const isMilitaryBuilding=b=>!!b&&!b.civilian&&(!!b.compound||b.kind==='enemy_bunker');
 const isMilitaryWall=w=>!!w?.towerLegOwner||isMilitaryBuilding(w?.owner);
-function damageVehicle(v,dmg,impacts=1){
-  if(!v||v.destroyed)return;const c=VT[v.t];
-  v.life=Math.max(0,(v.life??c.life??1)-Math.max(1,impacts));v.smokeT=0;
-  if(v.life<=0)explodeVehicle(v)
+const isArmoredVehicleType=t=>t==='tanqueta'||t==='tanc';
+function damageVehicle(v,dmg,impacts=1,shotClass='collision'){
+ if(!v||v.destroyed||shotClass==='light'&&isArmoredVehicleType(v.t))return;
+ const amount=shotClass==='collision'?Math.max(1,impacts):Math.max(0,dmg);
+ if(amount<=0)return;
+ v.life=Math.max(0,(v.life??VT[v.t]?.life??1)-amount);v.smokeT=0;
+ if(v.life<=0)explodeVehicle(v);
 }
 
 function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc){
   const shotClass=shotClassFromSplash(spl),speed=sp*(shotClass==='heavy'?HEAVY_SHOT_SPEED_FACTOR:1),
-        power=dmg*(shotClass==='heavy'?HEAVY_SHOT_DAMAGE_FACTOR:1);
+        power=dmg;
   snd(spl?'cannon':'shot',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/140)*(own=='e'?.6:1));
   // Les bales petites conserven el seu model; les pesades són ojives
   // amb la punta orientada exactament segons el vector de velocitat.
@@ -212,50 +209,44 @@ function blastImpulseAt(x,z,px,pz,r,falloff){
         speed=(15+28*falloff)*scale;
   return {vx:dir.x*speed,vz:dir.z*speed,vy:(9+13*falloff)*scale};
 }
-function boom(x,y,z,r,dmg,own,source=null){snd('boom',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/200));const o=new THREE.Mesh(sphG,new THREE.MeshBasicMaterial({color:0xffa030,transparent:true}));o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6});
-// Totes les explosions projecten els soldats enemics; el dany
-// continua respectant el bàndol que ha disparat.
-for(const u of enemyCandidatesAt(x,z,r+vehicleRadius('llanxa')*.62+4)){
-  // Per a una patrullera es mesura la distància a la superfície del casc,
-  // no al seu centre: impactar a la proa o a un costat també la destrueix.
-  const marine=u.t==='patrulla_marina',
-        distance=Math.hypot(u.x-x,u.o.position.y+(marine?1.8:1.5)-y,u.z-z),
-        d=marine?Math.max(0,distance-vehicleRadius('llanxa')*.62):distance;
-  if(d<r){
-    if(u.t==='soldat'||u.t==='general'){
-      const power=1-d/r;
-      u.blastImpulse=blastImpulseAt(x,z,u.x,u.z,r,power);
-      if(u.hp>(own==='e'?0:dmg*(1-d/r*.5))){
-        u.blastT=Math.max(u.blastT||0,.55+u.blastImpulse.vy/8);
-        u.blastTotal=u.blastT;
-      }
-    }
-    if(own!=='e')hurtE(u,dmg*(1-d/r*.5),
-      source||{x,y,z,sx:cv?.x??P.x,sy:(cv?.o?.position.y??P.y)+1.7,sz:cv?.z??P.z,spl:r,own});
+// Decaïment lineal: 10 al centre, 5 a mig radi i 1 a la vora.
+function explosionDamage(dmg,distance,r){return distance>=r?0:Math.max(1,Math.ceil(dmg*(1-distance/r)))}
+function boom(x,y,z,r,dmg,own,source=null){
+ snd('boom',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/200));
+ const o=new THREE.Mesh(sphG,new THREE.MeshBasicMaterial({color:0xffa030,transparent:true}));
+ o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6});
+ for(const u of enemyCandidatesAt(x,z,r+vehicleRadius('llanxa')*.62+4)){
+  const marine=u.t==='patrulla_marina',distance=Math.hypot(u.x-x,u.o.position.y+(marine?1.8:1.5)-y,u.z-z),
+    d=marine?Math.max(0,distance-vehicleRadius('llanxa')*.62):distance,dealt=explosionDamage(dmg,d,r);
+  if(!dealt)continue;
+  if(u.t==='soldat'||u.t==='general'){
+   u.blastImpulse=blastImpulseAt(x,z,u.x,u.z,r,1-d/r);
+   if(u.hp>(own==='e'?0:dealt)){u.blastT=Math.max(u.blastT||0,.55+u.blastImpulse.vy/8);u.blastTotal=u.blastT}
   }
+  if(own!=='e')hurtE(u,dealt,source||{x,y,z,sx:cv?.x??P.x,sy:(cv?.o?.position.y??P.y)+1.7,sz:cv?.z??P.z,spl:r,own});
+ }
+ for(const w of wallCandidates(x,z,r)){
+  const dist=Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z);
+  if(y<w.y1+3){const dealt=explosionDamage(dmg,dist,r);if(dealt)dmgW(w,dealt)}
+ }
+ for(const b of buildingCandidates(x,z,r)){
+  if(b.rhp<=0)continue;
+  const dealt=explosionDamage(dmg,Math.hypot(b.x-x,b.z-z),r+b.w/2);
+  if(dealt){b.rhp-=dealt;if(b.rhp<=0)roofBreak(b)}
+ }
+ PL.forEach(t=>{if(!t.alive)return;const dealt=explosionDamage(dmg,Math.hypot(t.x-x,t.z-z),r);if(dealt)dmgP(t,dealt)});
+ for(const v of vehicleCandidatesAt(x,z,r+12,true)){
+  if((own==='p'||own==='pb'||own==='b')&&v===cv)continue;
+  const dealt=explosionDamage(dmg,explosionDistanceToVehicleHull(v,x,y,z),r);
+  if(dealt)damageVehicle(v,dealt,1,'heavy');
+ }
+ const q=cv?cv.o.position:P,d=Math.hypot(q.x-x,q.y-y,q.z-z);
+ if(d<r&&!cv){
+  const impulse=blastImpulseAt(x,z,P.x,P.z,r,1-d/r);
+  if(!playerFall){const flight=Math.max(1.5,.55+impulse.vy/8);playerEject={kind:'blast',...impulse,t:flight,dur:flight,height:0,roll:rn(-1,1)<0?-1:1}}
+  if(own==='e')hurtP(explosionDamage(dmg,d,r),true);
+ }
 }
-for(const w of wallCandidates(x,z,r)){const dd=Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z);if(dd<r&&y<w.y1+3)dmgW(w,dmg*1.5*(1-dd/(2*r)))}
-for(const b of buildingCandidates(x,z,r)){const dd=Math.hypot(b.x-x,b.z-z),rr2=r+b.w/2;if(dd<rr2&&b.rhp>0){b.rhp-=dmg*1.2*(1-dd/rr2*.6);if(b.rhp<=0)roofBreak(b)}}
-PL.forEach(t=>{if(!t.alive)return;const dd=Math.hypot(t.x-x,t.z-z);if(dd<r)dmgP(t,dmg*1.5*(1-dd/(2*r)))});
-for(const v of vehicleCandidatesAt(x,z,r+12,true)){
-  const surfaceDistance=explosionDistanceToVehicleHull(v,x,y,z);
-  if(surfaceDistance<r&&(own!=='p'||v!==cv)){
-    const power=Math.max(1,Math.ceil((1-surfaceDistance/r)*3));
-    damageVehicle(v,dmg*.5*(1-surfaceDistance/r),power,'heavy',own==='e')
-  }
-}
-const q=cv?cv.o.position:P,d=Math.hypot(q.x-x,q.y-y,q.z-z);
-if(d<r&&!cv){
-  const falloff=1-d/r,impulse=blastImpulseAt(x,z,P.x,P.z,r,falloff);
-  // Els explosius propis també llancen el jugador pels aires.
-  // El dany propi continua desactivat com abans.
-  if(!playerFall){
-    const flight=Math.max(1.5,.55+impulse.vy/8);
-    playerEject={kind:'blast',...impulse,t:flight,dur:flight,
-      height:0,roll:rn(-1,1)<0?-1:1};
-  }
-  if(own!=='p')hurtP(dmg*.6*falloff,own==='e');
-}}
 function plant(){if(over||cv||swimming||!inv.expl)return;if(--inv.expl<=0)delete inv.expl;setDis(false);
 const o=window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true);
 // El display és a la cara local -Z. Amb el gir oposat al del jugador
@@ -269,13 +260,13 @@ bombs.push({x,y,z,t:3,o});msg='Bomba col·locada: 3 s!';msgT=2}
 // La filferrada és permeable a la vista i al foc lleuger, però segueix
 // impedint els atacs cos a cos quan ignoreBarbed=false.
 function sight(x,z,tx,tz,y,ignoreBarbed=true){const d=Math.hypot(tx-x,tz-z),n=Math.max(1,Math.ceil(d/1.5));for(let k=1;k<n;k++){const xx=x+(tx-x)*k/n,zz=z+(tz-z)*k/n;if(wallCandidates(xx,zz).some(w=>!w.open&&(!ignoreBarbed||!w.barbed)&&y>w.y0&&y<w.y1&&xx>w.x0&&xx<w.x1&&zz>w.z0&&zz<w.z1))return false}return true}
-function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=pl.userData.knifeAttackDuration||.38;const fx_=-Math.sin(P.hd),fz=-Math.cos(P.hd);let hit=null,best=2.6;for(const u of E){if(u.t!=='soldat'&&u.t!=='general')continue;const dx=u.x-P.x,dz=u.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx_+dz*fz)/d>.35&&sight(P.x,P.z,u.x,u.z,P.y+1.2,false)){best=d;hit=u}}if(hit)hurtE(hit,12,{weapon:'knife',own:'p',sx:P.x,sy:P.y+1.35,sz:P.z,x:hit.x,y:hit.o.position.y+1.35,z:hit.z});snd('hurt',hit?.45:.18);setDis(false);return true}
+function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=pl.userData.knifeAttackDuration||.38;const fx_=-Math.sin(P.hd),fz=-Math.cos(P.hd);let hit=null,best=2.6;for(const u of E){if(u.t!=='soldat'&&u.t!=='general')continue;const dx=u.x-P.x,dz=u.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx_+dz*fz)/d>.35&&sight(P.x,P.z,u.x,u.z,P.y+1.2,false)){best=d;hit=u}}if(hit)hurtE(hit,COMBAT_BALANCE.weapons.knife,{weapon:'knife',own:'p',sx:P.x,sy:P.y+1.35,sz:P.z,x:hit.x,y:hit.o.position.y+1.35,z:hit.z});snd('hurt',hit?.45:.18);setDis(false);return true}
 function secondaryWeapon(){
   if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd),d45=Math.SQRT1_2;
-  if(cv.t==='heli_combat'){if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,60,10,'p',mS,2.4);Pj[Pj.length-1].life=3.3;msg='Míssils: '+cv.rockets;msgT=1;return true}
+  if(cv.t==='heli_combat'){if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,COMBAT_BALANCE.weapons.heliMissile,10,'p',mS,2.4);Pj[Pj.length-1].life=3.3;msg='Míssils: '+cv.rockets;msgT=1;return true}
   if(cv.t==='llanxa_coets'){/* Munició infinita. */fcd=.9;
     const shot=combatBoatRocketAim(cv),d=shot.direction;
-    shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],68,70,11,'p',mS,2.6);
+    shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],68,COMBAT_BALANCE.weapons.boatRocket,11,'p',mS,2.6);
     msg='Coets: ∞';msgT=1;return true}
   return false
 }
@@ -782,14 +773,14 @@ if(c=='tanc'||c=='tanqueta'){
   if(!gun)return;
   const {origin:p,direction:d}=gun;
   if(c=='tanc'){
-    fcd=.9;shoot(p.x,p.y,p.z,d.x,d.y,d.z,85,45,8,'p',mS,2.2);
+    fcd=.9;shoot(p.x,p.y,p.z,d.x,d.y,d.z,85,COMBAT_BALANCE.weapons.tank,8,'p',mS,2.2);
     Pj[Pj.length-1].life=4.4;
   }else{
-    fcd=TANKETTE_FIRE_INTERVAL;shoot(p.x,p.y,p.z,d.x,d.y,d.z,135,10,0,'p',mW,SMALL_ARMS_SCALE);
+    fcd=TANKETTE_FIRE_INTERVAL;shoot(p.x,p.y,p.z,d.x,d.y,d.z,135,COMBAT_BALANCE.weapons.tankette,0,'p',mW,SMALL_ARMS_SCALE);
   }
 }
 else if(c==='heli'){throwHelicopterGrenade();return}
-else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*4.1*VS.heli_combat,y=cv.o.position.y+.15,z=cv.z+fz*4.1*VS.heli_combat;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,130,.91);fcd=.12;shoot(x,y,z,ax,ay,az,145,9,0,'p',mB,.85)}
+else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*4.1*VS.heli_combat,y=cv.o.position.y+.15,z=cv.z+fz*4.1*VS.heli_combat;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,130,.91);fcd=.12;shoot(x,y,z,ax,ay,az,145,COMBAT_BALANCE.weapons.attackCannon,0,'p',mB,.85)}
 
 else if(c=='llanxa_coets'){secondaryWeapon();return}
 else if(c&&OPEN_RIDER_PISTOL.has(c)){
@@ -802,7 +793,7 @@ else if(c&&OPEN_RIDER_PISTOL.has(c)){
   if(!shot)return;
   ammo--;fcd=.22;
   const p=shot.origin,d=shot.direction;
-  shoot(p.x,p.y,p.z,d.x,d.y,d.z,130,12,0,'p',mW,SMALL_ARMS_SCALE);
+  shoot(p.x,p.y,p.z,d.x,d.y,d.z,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE);
 }
 else if(!cv&&sniperEquipped&&inv.franctirador){
   if(sniperAmmo<=0){msg='El rifle no té munició.';msgT=2;return}
@@ -816,12 +807,12 @@ else if(!cv&&sniperEquipped&&inv.franctirador){
         direction=focus
           ?sniperShotVector(muzzle,sniperReticlePoint(focus),focus)
           :new THREE.Vector3(...autoAimWeaponShot(muzzle.x,muzzle.y,muzzle.z,fx,0,fz,180,.984));
-  shoot(muzzle.x,muzzle.y,muzzle.z,direction.x,direction.y,direction.z,470,65,0,'p',mW,SMALL_ARMS_SCALE);
+  shoot(muzzle.x,muzzle.y,muzzle.z,direction.x,direction.y,direction.z,470,COMBAT_BALANCE.weapons.sniper,0,'p',mW,SMALL_ARMS_SCALE);
   msg='Rifle: '+sniperAmmo+' cartutxos.';msgT=1.5;
 }
 else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}
-else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9,z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,105,.94,'heavy',null,72*HEAVY_SHOT_SPEED_FACTOR);shoot(x,y,z,ax,ay,az,72,135,18,'pb',mS,3);Pj[Pj.length-1].life=3.8;Pj[Pj.length-1].weapon='bazooka';msg='Bazooka: '+(inv.bazooka||0)+' coets restants.';msgT=2;setDis(false)}
-else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5,z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,75,.97);shoot(x,y,z,ax,ay,az,130,12,0,'p',mW,SMALL_ARMS_SCALE)}
+else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9,z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,105,.94,'heavy',null,72*HEAVY_SHOT_SPEED_FACTOR);shoot(x,y,z,ax,ay,az,72,COMBAT_BALANCE.weapons.bazooka,18,'pb',mS,3);Pj[Pj.length-1].life=3.8;Pj[Pj.length-1].weapon='bazooka';msg='Bazooka: '+(inv.bazooka||0)+' coets restants.';msgT=2;setDis(false)}
+else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5,z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,75,.97);shoot(x,y,z,ax,ay,az,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE)}
 else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}
 function segmentAabbT(x0,y0,z0,x1,y1,z1,minX,maxX,minY,maxY,minZ,maxZ){
   let lo=0,hi=1;
@@ -922,8 +913,8 @@ function updPj(dt){
       if(kind==='wall'){if(!isMilitaryWall(target))dmgW(target,p.dmg*(p.own==='e'?.5:1))}
       else if(kind==='building'){if(!isMilitaryBuilding(target)){target.rhp-=p.dmg*(p.own==='e'?.5:1);if(target.rhp<=0)roofBreak(target)}}
       else if(kind==='tree'&&target?.p)dmgP(target,p.dmg*(p.own==='e'?.5:1));
-      else if(kind==='enemy'){if(target.t!=='torre')hurtE(target,p.dmg,p)}
-      else if(kind==='vehicle')damageVehicle(target,p.dmg,1,'light',p.own==='e');
+      else if(kind==='enemy'){if(target.t!=='torre'&&!(p.shotClass==='light'&&isArmoredVehicleType(target.t)))hurtE(target,p.dmg,p)}
+      else if(kind==='vehicle')damageVehicle(target,p.dmg,1,'light');
       else if(kind==='player')hurtP(p.dmg,p.own==='e')
     }
     if(p.spl)boom(p.x,p.y,p.z,p.spl,p.dmg,p.own,p);
@@ -937,11 +928,11 @@ for(let i=grenades.length-1;i>=0;i--){const g=grenades[i],x0=g.x,y0=g.y,z0=g.z;g
   for(const b of buildingCandidates(mx,mz,reach)){const q=b.hangar?hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b):segmentAabbT(x0,y0,z0,x1,y1,z1,b.x-b.w/2,b.x+b.w/2,b.fy+b.h-.35,b.fy+b.h+.8,b.z-b.d/2,b.z+b.d/2);if(q!=null&&(hitT==null||q<hitT))hitT=q}
   const q=hitT==null?1:hitT;g.x=x0+(x1-x0)*q;g.y=y0+(y1-y0)*q;g.z=z0+(z1-z0)*q;g.o.position.set(g.x,g.y,g.z);g.o.rotation.x+=dt*8;g.o.rotation.z+=dt*5;
   const surface=bunkerProjectileSurface(g.x,g.z,g.y,true);
-  if(hitT!=null||g.t<=0||g.y<=surface){g.y=Math.max(g.y,surface);boom(g.x,g.y,g.z,16,100,'b',{weapon:'grenade',own:'b',spl:16,x:g.x,y:g.y,z:g.z,sx:g.sx,sy:g.sy,sz:g.sz,o:g.o});world.remove(g.o);grenades.splice(i,1)}
+  if(hitT!=null||g.t<=0||g.y<=surface){g.y=Math.max(g.y,surface);boom(g.x,g.y,g.z,16,COMBAT_BALANCE.weapons.grenade,'b',{weapon:'grenade',own:'b',spl:16,x:g.x,y:g.y,z:g.z,sx:g.sx,sy:g.sy,sz:g.sz,o:g.o});world.remove(g.o);grenades.splice(i,1)}
 }
 for(let i=bombs.length-1;i>=0;i--){const b=bombs[i];b.t-=dt;
   if(b.t>0)window.HUNTER_EXPLOSIVE_VISUALS.update(b.o,b.t);
-  if(b.t<=0){boom(b.x,b.y,b.z,48,300,'b');world.remove(b.o);bombs.splice(i,1)}}
+  if(b.t<=0){boom(b.x,b.y,b.z,48,COMBAT_BALANCE.weapons.c4,'b');world.remove(b.o);bombs.splice(i,1)}}
 for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.life-=dt;f.o.scale.setScalar(1+(.6-f.life)*f.s);f.o.material.opacity=Math.max(0,f.life/.6);if(f.life<=0){world.remove(f.o);fx.splice(i,1)}}
 updateBulletImpacts(dt);
 }

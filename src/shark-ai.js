@@ -1,7 +1,7 @@
 // Taurons: persecució activa de nedadors i passades d'atac independents
 // de la freqüència visual. Les col·lisions són amb el casc dels vaixells.
 window.HUNTER_SHARKS=Object.freeze({
-  VISION:90,LOSE:145,BITE_RADIUS:3.7,BITE_DAMAGE:12,
+  VISION:90,LOSE:145,BITE_RADIUS:3.7,BITE_DAMAGE:3,
   kill(f){if(f.dead)return false;f.dead=true;f.deathT=0;f.sharkMode='dead';return true},
   vehicleHit(f,x0,z0,x1,z1,radius){
     if(f.dead)return false;

@@ -22,7 +22,7 @@ function decorateRuntimeBuilding(b,spec){
    const parts=visualGroup?.children.filter(o=>o.isMesh)||[];
    const collider={x0:x-width/2,x1:x+width/2,
      z0:z,z1:z+run,y0:b.fy+.2,y1:b.fy+b.storey+.25,
-     hp:140,m:parts[0]||new THREE.Object3D(),
+     hp:20,m:parts[0]||new THREE.Object3D(),
      parts:parts.length?parts:null,door:false,open:false,
      rammable:false,playerBlock:false,stairStructure:stair,
      cx:x,cz:z+run/2,owner:b};

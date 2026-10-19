@@ -14,11 +14,11 @@ window.HUNTER_UI=Object.freeze({
         let selected=present[0]||null;
         const renderInventory=(healed=0)=>{
           const st=getState(),items=keys.filter(k=>st.inventory[k]>0),
-                life=Math.max(0,Math.min(100,Math.round(st.hp)));
+                life=Math.max(0,Math.min(20,Math.round(st.hp)));
           body.innerHTML='<div class="inv-health" role="status" aria-live="polite">'+
-            '<div class="inv-health-line"><b>❤️ Vida '+life+' / 100</b>'+
+            '<div class="inv-health-line"><b>❤️ Vida '+life+' / 20</b>'+
             (healed>0?'<strong class="inv-healed">+'+healed+' vida</strong>':'')+'</div>'+
-            '<div class="inv-health-track"><div class="inv-health-fill" style="width:'+life+'%"></div></div></div>'+
+            '<div class="inv-health-track"><div class="inv-health-fill" style="width:'+(life/20*100)+'%"></div></div></div>'+
             '<div class="inv-wrap"><section><div class="inv-grid" id="invGrid"></div></section><aside class="inv-detail" id="invDetail"></aside></div>';
           const grid=document.getElementById('invGrid'),detail=document.getElementById('invDetail');
           const slots=Math.max(15,Math.ceil(Math.max(1,items.length)/5)*5);

@@ -230,7 +230,7 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
         const fx=-Math.sin(u.hd),fz=-Math.cos(u.hd),
               rightX=Math.cos(u.hd),rightZ=-Math.sin(u.hd);
         shoot(u.x+fx*1.65+rightX*.44,eyeY+.65,
-          u.z+fz*1.65+rightZ*.44,ax,ay,az,76,25,8,'e',mS,1.9);
+          u.z+fz*1.65+rightZ*.44,ax,ay,az,76,COMBAT_BALANCE.weapons.bazooka,8,'e',mS,1.9);
       }else shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE);
     }
   }else if(u.canSee){
@@ -256,7 +256,7 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
         const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY-.2),
               fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
         shoot(u.x+fx*2.4+Math.cos(u.hd)*.72,eyeY-.2,
-          u.z+fz*2.4-Math.sin(u.hd)*.72,ax,ay,az,76,24,7,'e',mS,1.8);
+          u.z+fz*2.4-Math.sin(u.hd)*.72,ax,ay,az,76,COMBAT_BALANCE.weapons.towerHeavy,7,'e',mS,1.8);
       }
     }else if(u.t!=='tanc'&&u.t!=='tanqueta'&&d<u.rng&&u.cd<=0){
       if(u.t==='jeep'){
@@ -430,7 +430,7 @@ bx(g,.42,.8,.42,0xe4d36f,0,10.78,0,'paint')}
 else{g=new THREE.Group();bx(g,1,1,.6,0x222222,0,.5,0);bx(g,1.3,1.6,.7,0xd4af37,0,1.8,0);bx(g,.8,.8,.8,0xf0c9a0,0,3,0);bx(g,.9,.5,.9,0xaa0000,0,3.6,0);g.scale.setScalar(1.2)}
 if(!seedSearchMode&&t!=='soldat'&&t!=='general')window.HUNTER_ENEMY_LOD.optimize(THREE,g,t);
 if(!seedSearchMode)world.add(g);const sensePhase=(E.length%10)*.01,u={t,x,z,gy,hd:rr(0,6.28),o:g,home:{x,z},cd:rr(0,1),alert:0,wt:0,tx:x,tz:z,senseT:sensePhase,canSee:false,defenseTarget:null,...c};
-if(options.elite){u.elite=true;u.hp=58;u.dmg=9;u.rng=85;u.rate=TANKETTE_FIRE_INTERVAL;u.sp=8;u.cd=.4+(E.length%4)*.14}
+if(options.elite){u.elite=true;u.hp=COMBAT_BALANCE.people.elite;u.dmg=COMBAT_BALANCE.weapons.eliteRifle;u.rng=85;u.rate=TANKETTE_FIRE_INTERVAL;u.sp=8;u.cd=.4+(E.length%4)*.14}
 if(t==='torre'){u.heavyCd=1.6+(E.length%5)*.4;u.heavyRate=4.2;u.heavyRange=95}
 E.push(u);
 if(t==='torre'){

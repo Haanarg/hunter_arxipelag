@@ -18,7 +18,7 @@ assert.ok(initial>sharks.BITE_RADIUS&&f.sharkMode!=='patrol',
   'Quan s’acosta un nedador, el tauró surt de l’òrbita');
 assert.ok(bites>=2&&bites<=6,'Ataca amb passades separades, no cada fotograma: '+bites);
 assert.ok(maximum>minimum+7,'Després de mossegar s’allunya abans de tornar');
-assert.ok(sharks.BITE_DAMAGE>=10&&sharks.BITE_DAMAGE<=18,'Mossegada puntual perceptible');
+assert.ok(sharks.BITE_DAMAGE>=2&&sharks.BITE_DAMAGE<=4,'Mossegada puntual perceptible');
 const lastX=f.x,lastZ=f.z;
 sharks.update(f,.016,null,deep);
 assert.equal(f.sharkMode,'patrol','Sense objectiu torna a patrullar');

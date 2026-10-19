@@ -12,7 +12,7 @@ const assert=require('node:assert/strict');
      Pj.length=0;clearBulletImpacts();
      walls=[];buildings=[];enemies=[];vehicles=[];blasts=[];
    };
-   const fireShot=(splash=0,owner='p',damage=20)=>{
+   const fireShot=(splash=0,owner='p',damage=2)=>{
      shoot(-9,2,0,1,0,0,100,damage,splash,owner,mW,.7);
      const shot=Pj[Pj.length-1],record={type:shot.shotClass,speed:shot.vx,power:shot.dmg};
      updPj(.15);
@@ -37,7 +37,7 @@ const assert=require('node:assert/strict');
      reset();const heavy=fireShot(8);
      checks.classes=light.type==='light'&&heavy.type==='heavy';
      checks.heavyFaster=heavy.speed>light.speed&&Math.abs(heavy.speed/light.speed-1.17)<1e-9;
-     checks.heavyLethal=heavy.power>light.power;
+     checks.heavySameDamage=heavy.power===light.power;
      const model=Pj.at(-1)?.o;
      checks.heavyHalfSize=!!model&&Math.abs(model.scale.x-.35)<1e-9;
      reset();walls=[wall(false,true)];
@@ -60,7 +60,7 @@ const assert=require('node:assert/strict');
      checks.armoredVehicleProtected=vehicles[0].life===10;
      reset();vehicles=[vehicle('heli_combat')];
      fireShot();
-     checks.armoredHelicopterProtected=vehicles[0].life===10;
+     checks.helicopterVulnerable=vehicles[0].life===8;
      // El coet de patrulla marina esclata al casc de l'helicòpter:
      // la seva esfera de col·lisió queda fora del radi nominal de 8 m,
      // però la distància a la superfície ha de ser zero.
@@ -70,7 +70,7 @@ const assert=require('node:assert/strict');
        explosionDistanceToVehicleHull(combatHeli,hull+9,1,0)>8;
      reset();vehicles=[vehicle('cotxe')];
      fireShot();
-     checks.unarmoredVehicleDamaged=vehicles[0].life===9;
+     checks.unarmoredVehicleDamaged=vehicles[0].life===8;
      reset();enemies=[enemy('tanc')];
      fireShot();
      checks.enemyTankProtected=enemies[0].hp===140;
@@ -93,14 +93,14 @@ const assert=require('node:assert/strict');
      const formerEnemies=E,formerSeedSearch=seedSearchMode;
      seedSearchMode=true;E=[];
      const livePatrol=mkEn('patrulla_marina',0,0,0);
-     checks.marinePatrolInitialHealth=livePatrol.hp===95&&
+     checks.marinePatrolInitialHealth=livePatrol.hp===5&&
        Number.isFinite(livePatrol.hp);
-     hurtE(livePatrol,35);
-     checks.marinePatrolTakesDamage=livePatrol.hp===60;
+     hurtE(livePatrol,2);
+     checks.marinePatrolTakesDamage=livePatrol.hp===3;
      // Mateixa ruta de destrucció real (killEnemy): simulam només
      // les partícules per no generar geometria durant aquest test.
      explodeEnemyVehicle=u=>{u.destroyed=true};
-     hurtE(livePatrol,61);
+     hurtE(livePatrol,3);
      checks.marinePatrolHeavyKill=livePatrol.destroyed&&!E.includes(livePatrol);
      explodeEnemyVehicle=saved.explodeEnemyVehicle;
      E=formerEnemies;seedSearchMode=formerSeedSearch;
@@ -109,19 +109,19 @@ const assert=require('node:assert/strict');
      checks.towerProtected=enemies[0].hp===140;
      reset();walls=[wall(true)];
      fireShot(8);
-     checks.heavyExplosion=blasts.length===1&&blasts[0].d>20;
+     checks.heavyExplosion=blasts.length===1&&blasts[0].d===2;
      reset();walls=[wall(false,true)];
      fireShot(8);
      checks.heavyStopsAtWire=blasts.length===1&&Pj.length===0;
-     checks.boomIsHeavy=String(updFx).includes("boom(g.x,g.y,g.z,16,100,'b')")&&
-       String(updFx).includes("boom(b.x,b.y,b.z,48,300,'b')");
+     checks.boomIsHeavy=String(updFx).includes("boom(g.x,g.y,g.z,16,COMBAT_BALANCE.weapons.grenade,'b')")&&
+       String(updFx).includes("boom(b.x,b.y,b.z,48,COMBAT_BALANCE.weapons.c4,'b')");
      // Una patrullera de 95 HP ha de ser destruïda per una explosió de
      // bazooka que toqui la superfície del buc, encara que el centre sigui
      // fora de la línia directa del projectil.
-     reset();enemies=[{...enemy('patrulla_marina'),hp:95,r:7.5}];
+     reset();enemies=[{...enemy('patrulla_marina'),hp:5,r:7.5}];
      const hullRadius=vehicleRadius('llanxa')*.62;
      boom=saved.boom;
-     boom(hullRadius,1.8,0,18,135*HEAVY_SHOT_DAMAGE_FACTOR,'pb');
+     boom(hullRadius,1.8,0,18,COMBAT_BALANCE.weapons.bazooka,'pb');
      checks.bazookaDestroysMarineHull=enemies[0].hp<=0;
      boom=(x,y,z,r,d,own)=>blasts.push({r,d,own});
      // L'autoapuntat ha d'anticipar una llanxa que es desplaça de costat.
@@ -142,5 +142,5 @@ const assert=require('node:assert/strict');
    return {checks,results}
  })()`);
  for(const [name,ok] of Object.entries(report.checks))assert(ok,name+' failed: '+JSON.stringify(report));
- console.log('PASS: classificació balística i protecció dels blindats',JSON.stringify(report));
+ console.log('PASS: classificació balística i resistència unificada',JSON.stringify(report));
 })().catch(error=>{console.error(error);process.exitCode=1});

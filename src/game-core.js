@@ -353,7 +353,7 @@ granada:'<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="31" cy="38" rx
 arma:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 19 H54 V50 H10 Z" fill="#75583a" stroke="#3e3024" stroke-width="3"/><path d="M14 24 H50" stroke="#b58a56" stroke-width="3"/><g fill="#d4aa42" stroke="#70591e" stroke-width="1"><circle cx="20" cy="34" r="4"/><circle cx="31" cy="34" r="4"/><circle cx="42" cy="34" r="4"/><circle cx="25" cy="44" r="4"/><circle cx="36" cy="44" r="4"/></g></svg>'
 };
 const IT={
-med:{n:'Farmaciola',c:0xf2f3de,s:[1.2,.8,.8],icon:ICON.med,desc:'Recupera 40 punts de vida.',usable:true},
+med:{n:'Farmaciola',c:0xf2f3de,s:[1.2,.8,.8],icon:ICON.med,desc:'Recupera 8 punts de vida.',usable:true},
 mapa:{n:'Mapa de l’HQ',c:0xffe27a,s:[1.6,.08,1.2],icon:ICON.mapa,desc:'En recollir-lo, revela immediatament la posició de l’HQ enemic.',usable:false},
 mapa_heli:{n:'Mapa d’helicòpters',c:0x9fd7ff,s:[1.6,.08,1.2],icon:ICON.mapa_heli,desc:'En recollir-lo, marca immediatament tots els helicòpters actius al mapa.',usable:false},
 mapa_tanc:{n:'Mapa de tancs',c:0xc6b06a,s:[1.6,.08,1.2],icon:ICON.mapa_tanc,desc:'En recollir-lo, marca immediatament tots els tancs actius al mapa.',usable:false},
@@ -367,7 +367,7 @@ expl:{n:'Explosius',c:0x617451,s:[.9,.9,.9],icon:ICON.expl,desc:'Bloc d’explos
 disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa enemiga vermella. Activa o desactiva la disfressa.',usable:true}
 };
 // combat i enemics
-let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=100,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null;
+let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=window.HUNTER_COMBAT_BALANCE.player,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null;
 // Ojiva compartida per tots els projectils pesats. Eix longitudinal -Z:
 // culata cilíndrica a +Z i punta cònica a -Z, com els canons del joc.
 // Geometria única reutilitzada, sense crear malles noves per cada tir.
@@ -387,8 +387,15 @@ mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial(
 mW=new THREE.MeshBasicMaterial({color:0xffffff}),SMALL_ARMS_SCALE=.7;
 // Cadència compartida entre la tanqueta del jugador i les enemigues.
 const TANKETTE_FIRE_INTERVAL=.16;
-const EC={soldat:{hp:30,sp:7,rng:32,rate:1.1,dmg:7,spl:0,r:2},jeep:{hp:70,sp:22,rng:75,rate:1.1,dmg:7,spl:0,r:3.9},tanqueta:{hp:115,sp:13,rng:42,rate:TANKETTE_FIRE_INTERVAL,dmg:9,spl:0,r:4.5},tanc:{hp:140,sp:8,rng:100,rate:2.5,dmg:22,spl:7,r:6.8},
-torre:{hp:90,sp:0,rng:112.5,rate:.7,dmg:8,spl:0,r:3},patrulla_marina:{hp:95,sp:20,rng:245,rate:.4,dmg:6,spl:0,r:7.5},general:{hp:45,sp:0,rng:30,rate:.9,dmg:9,spl:0,r:2}};
+const EC={
+ soldat:{hp:COMBAT_BALANCE.people.soldier,sp:7,rng:32,rate:1.1,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:2},
+ jeep:{hp:COMBAT_BALANCE.vehicles.cotxe,sp:22,rng:75,rate:1.1,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:3.9},
+ tanqueta:{hp:COMBAT_BALANCE.vehicles.tanqueta,sp:13,rng:42,rate:TANKETTE_FIRE_INTERVAL,dmg:COMBAT_BALANCE.weapons.tankette,spl:0,r:4.5},
+ tanc:{hp:COMBAT_BALANCE.vehicles.tanc,sp:8,rng:100,rate:2.5,dmg:COMBAT_BALANCE.weapons.tank,spl:7,r:6.8},
+ torre:{hp:24,sp:0,rng:112.5,rate:.7,dmg:COMBAT_BALANCE.weapons.towerLight,spl:0,r:3},
+ patrulla_marina:{hp:COMBAT_BALANCE.vehicles.llanxa,sp:20,rng:245,rate:.4,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:7.5},
+ general:{hp:COMBAT_BALANCE.people.general,sp:0,rng:30,rate:.9,dmg:COMBAT_BALANCE.weapons.pistol,spl:0,r:2}
+};
 // extres: so, partícules, fauna, diari
 let started=0,DIF=1,AC=null,eng=null,seaAudio=null,logb=[],fa=[],pi_=0;const lastS={},rn=(a,b)=>a+Math.random()*(b-a);
 const PT=[];for(let i=0;i<100;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,depthWrite:false}));m.visible=false;scene.add(m);PT.push({m,life:0,max:1,s:1})}
@@ -703,7 +710,7 @@ function vehiclePushPlayer(){
     const b=vehicleBox(v),dx=P.x-b.x,dz=P.z-b.z,s=Math.sin(b.hd),c=Math.cos(b.hd),lx=dx*c-dz*s,lz=dx*s+dz*c,ex=b.w/2+.66-Math.abs(lx),ez=b.d/2+.66-Math.abs(lz);
     if(ex<ez){const sign=lx<0?-1:1,wx=sign*c,wz=-sign*s;P.x=b.x+(sign*(b.w/2+.66))*c+lz*s;P.z=b.z-(sign*(b.w/2+.66))*s+lz*c}
     else{const sign=lz<0?-1:1;P.x=b.x+lx*c+sign*(b.d/2+.66)*s;P.z=b.z-lx*s+sign*(b.d/2+.66)*c}
-    const sp=Math.abs(v.v||0);if(sp>5&&!(playerEject?.kind==='flip'&&playerEject.t>0)&&(!v.playerHitCd||v.playerHitCd<=0)){hurtP(Math.min(22,2+sp*.55));v.playerHitCd=.45;msg='Impacte amb un vehicle!';msgT=1.5}
+    const sp=Math.abs(v.v||0);if(sp>5&&!(playerEject?.kind==='flip'&&playerEject.t>0)&&(!v.playerHitCd||v.playerHitCd<=0)){hurtP(Math.min(5,.4+sp*.11));v.playerHitCd=.45;msg='Impacte amb un vehicle!';msgT=1.5}
   }
 }
 const PL=[],FA=[],ZM=new THREE.Matrix4().makeScale(0,0,0);let PM={};
@@ -744,7 +751,7 @@ if(h<4)L=q<.12?pm:null;else if(dn>.55&&h<28)L=q<.20?pm:null;else if(h>=28&&q<hig
 if(!L||slope(px,pz,h)>4.5)continue;
 if(stairs.some(s=>stairContains(s,px,pz,2))||Math.hypot(px-pa.x,pz-pa.z)<14||B.some(b=>Math.abs(px-b.x)<b.w/2+5&&Math.abs(pz-b.z)<b.d/2+5)||compoundClear.some(c=>Math.hypot(px-c.x,pz-c.z)<c.r))continue;
 const s=1.15*rr(.75,1.25),yaw=rr(0,6.28);
-if(L==pm){const leafVar=R()<.33?-1:R()<.66?0:1,tone=rr(-.25,.25),idx=pm.length;pm.push([px,h-.3,pz,s,yaw,leafVar,tone]);const e={x:px,z:pz,y:h-.3,s,yaw,r:.6*Math.max(.75,s),p:true,alive:true,hp:40,i:idx,leafVar,tone};put(e);PL.push(e)}
+if(L==pm){const leafVar=R()<.33?-1:R()<.66?0:1,tone=rr(-.25,.25),idx=pm.length;pm.push([px,h-.3,pz,s,yaw,leafVar,tone]);const e={x:px,z:pz,y:h-.3,s,yaw,r:.6*Math.max(.75,s),p:true,alive:true,hp:8,i:idx,leafVar,tone};put(e);PL.push(e)}
 else{L.push([px,h-.3,pz,s,yaw]);if(L==rk)put({x:px,z:pz,r:1.4,rock:true})}}
 if(seedSearchMode){
   // vegetationVisual.build consumeix 11 tirades/palmera (tronc + dues
@@ -775,12 +782,12 @@ function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=seedSearchMode
   g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide,structuralWalls=[];
 const wallH=opt.floors===2?h/2:h;
 let entranceDoor=null;
-const seg=(lx,lz,sx,sz,dr,windows=false,supportSide=null,supportWeight=0,level=0)=>{if(!dr){const parts=seedSearchMode?[new THREE.Object3D()]:windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:wallH,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:wallH,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy+level-(level?0:1),y1:fy+level+wallH,hp:90,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,supportSide,supportWeight};for(const mesh of parts)mesh.position.y+=level;if(opt.wood){for(const mesh of parts)if(mesh.material?.color?.getHex()===0x3e7185)mesh.visible=false;}Wl.push(o);if(supportWeight>0)structuralWalls.push(o);return}
-const parts=seedSearchMode?{door:new THREE.Object3D(),doorHeight:opt.doorHeight||4.4}:buildingVisual.addDoor(g,{lx,lz,sx,sz,height:wallH,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:35,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y};Wl.push(door);Dr.push(door);entranceDoor=door;
-if(parts.lintel)Wl.push({x0:door.x0,x1:door.x1,z0:door.z0,z1:door.z1,y0:fy+parts.doorHeight,y1:fy+h,hp:70,m:parts.lintel,door:false,open:false,playerBlock:false,cx:x+lx,cz:z+lz})};
+const seg=(lx,lz,sx,sz,dr,windows=false,supportSide=null,supportWeight=0,level=0)=>{if(!dr){const parts=seedSearchMode?[new THREE.Object3D()]:windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:wallH,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:wallH,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy+level-(level?0:1),y1:fy+level+wallH,hp:12,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,supportSide,supportWeight};for(const mesh of parts)mesh.position.y+=level;if(opt.wood){for(const mesh of parts)if(mesh.material?.color?.getHex()===0x3e7185)mesh.visible=false;}Wl.push(o);if(supportWeight>0)structuralWalls.push(o);return}
+const parts=seedSearchMode?{door:new THREE.Object3D(),doorHeight:opt.doorHeight||4.4}:buildingVisual.addDoor(g,{lx,lz,sx,sz,height:wallH,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:8,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y};Wl.push(door);Dr.push(door);entranceDoor=door;
+if(parts.lintel)Wl.push({x0:door.x0,x1:door.x1,z0:door.z0,z1:door.z1,y0:fy+parts.doorHeight,y1:fy+h,hp:12,m:parts.lintel,door:false,open:false,playerBlock:false,cx:x+lx,cz:z+lz})};
 if(opt.hangar){
   const sh=Math.max(3.1,h*.3),push=(lx,lz,sx,sz)=>{
-    const m=seedSearchMode?new THREE.Object3D():buildingVisual.addWall(g,{lx,lz,sx,sz,height:sh,material:wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+sh,hp:110,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz};Wl.push(o);return o
+    const m=seedSearchMode?new THREE.Object3D():buildingVisual.addWall(g,{lx,lz,sx,sz,height:sh,material:wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+sh,hp:16,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz};Wl.push(o);return o
   };
   // Sense parets laterals ni paret rectangular posterior:
   // el compound afegeix una sola paret semicircular al fons amb col·lisió pròpia.
@@ -793,7 +800,7 @@ if(opt.hangar){
 }
 if(opt.floors===2)for(const [cx,cz,sx,sz]of[[0,d/2-t/2,w,t],[0,-d/2+t/2,w,t],[w/2-t/2,0,t,d-2*t],[-w/2+t/2,0,t,d-2*t]])seg(cx,cz,sx,sz,0,!opt.solidWalls,null,0,wallH);
 g.position.set(x,fy,z);if(!seedSearchMode)world.add(g);
-const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,rhp:opt.hangar?90:120,hangar:!!opt.hangar,door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
+const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,rhp:opt.hangar?12:16,hangar:!!opt.hangar,door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
 function mkEnemyBunker(x,z){
   const firstWall=Wl.length,b=mkB(x,z,40,34,10,0xd9ded2,0xbfc6bb,{kind:'enemy_bunker',bunker:true,doorSide:0,doorWidth:4,doorHeight:4.4,lockedDoor:true}),g=b.o,inset=3.5;
   if(seedSearchMode){
@@ -825,7 +832,7 @@ function mkEnemyBunker(x,z){
   b.roof.scale.set((b.w-2*inset)/(b.w+1.35),1,(b.d-2*inset)/(b.d+1.35));g.userData.bunkerWallInset=inset;
   // Physical footprints cover the inward lean at character height.
   for(const w of b.structuralWalls){const lean=inset*2.2/b.h;if(w.supportSide===0)w.z0-=lean;if(w.supportSide===1)w.z1+=lean;if(w.supportSide===2)w.x0-=lean;if(w.supportSide===3)w.x1+=lean;}
-  const wall=(lx,lz,sx,sz)=>{const m=buildingVisual.addWall(g,{lx,lz,sx,sz,height:8,material:b.wm});Wl.push({x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:b.fy-1,y1:b.fy+8,hp:90,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,owner:b})};
+  const wall=(lx,lz,sx,sz)=>{const m=buildingVisual.addWall(g,{lx,lz,sx,sz,height:8,material:b.wm});Wl.push({x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:b.fy-1,y1:b.fy+8,hp:12,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,owner:b})};
   for(const lx of[-4,4])for(const [lz,d]of[[-12.5,3],[-4,6],[7,10]])wall(lx,lz,.6,d);
   for(const lx of[-11,11])wall(lx,-7,12,.6);
   for(const sign of[-1,1]){const shape=new THREE.Shape();shape.moveTo(sign*2,0);shape.lineTo(sign*3.5,0);shape.lineTo(sign*2.7,5.2);shape.lineTo(sign*2,5.2);shape.closePath();const post=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:3.3,bevelEnabled:false}),M(0x795337,'masonry'));post.position.z=b.d/2-2.8;g.add(post)}
@@ -1264,7 +1271,7 @@ function barbedSection(x1,z1,x2,z2){
     const y1=Math.max(hAt(x1,z1),0),y2=Math.max(hAt(x2,z2),0),pad=.24;
     const w={x0:Math.min(x1,x2)-pad,x1:Math.max(x1,x2)+pad,
       z0:Math.min(z1,z2)-pad,z1:Math.max(z1,z2)+pad,
-      y0:Math.min(y1,y2),y1:Math.max(y1,y2)+5,hp:32,
+      y0:Math.min(y1,y2),y1:Math.max(y1,y2)+5,hp:8,
       door:false,open:false,barbed:true,rammable:true,
       ax:x1,az:z1,bx:x2,bz:z2,cx:(x1+x2)/2,cz:(z1+z2)/2};
     Wl.push(w);wallGridCount=-1;return w;
@@ -1333,7 +1340,7 @@ function barbedSection(x1,z1,x2,z2){
   world.add(mesh);parts.push(mesh);
   const pad=.24,w={x0:Math.min(x1,x2)-pad,x1:Math.max(x1,x2)+pad,
     z0:Math.min(z1,z2)-pad,z1:Math.max(z1,z2)+pad,
-    y0:Math.min(y1,y2),y1:Math.max(y1,y2)+5,hp:32,
+    y0:Math.min(y1,y2),y1:Math.max(y1,y2)+5,hp:8,
     m:mesh,parts,door:false,open:false,barbed:true,rammable:true,
     ax:x1,az:z1,bx:x2,bz:z2,cx,cz};
   Wl.push(w);
@@ -1738,7 +1745,7 @@ function revealMapPickup(kind){
 }
 function useInvItem(id){
   if(!inv[id])return false;
-  if(id==='med'){if(hp>=100){msg='Ja tens la vida al màxim.';msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(100,hp+40);msg='Has usat una farmaciola.';msgT=2;snd('pick');return true}
+  if(id==='med'){if(hp>=COMBAT_BALANCE.player){msg='Ja tens la vida al màxim.';msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(COMBAT_BALANCE.player,hp+COMBAT_BALANCE.medkit);msg='Has usat una farmaciola.';msgT=2;snd('pick');return true}
   if(id==='expl'){if(cv||swimming){msg='No pots col·locar explosius des d’aquí.';msgT=2;return false}resume();plant();return true}
   if(id==='cisalla'){
     if(cv||swimming||playerFall||playerEject){msg='La cisalla només es pot equipar a peu.';msgT=2;return false}
@@ -2208,7 +2215,7 @@ else{P.hd+=tr*dt*2.2;if(playerFall){
   if(fall.y<=landing){
     P.y=landing;const fallH=fall.startHeight,impact=Math.max(0,-fall.vy),
       waterLanding=roof===null&&water>hAt(P.x,P.z)+1.5,
-      dmg=fall.parachute?0:Math.min(100,Math.max(0,(fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8)));
+      dmg=fall.parachute?0:Math.min(COMBAT_BALANCE.player,Math.max(0,((fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8))*.2));
     removeParachuteVisual();playerFall=null;
     if(dmg>0)hurtP(dmg);
     msg=dmg===0&&fallH>4?'Has aterrat amb seguretat.':waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5;

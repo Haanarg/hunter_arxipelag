@@ -50,7 +50,7 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
       rear.position.z=rearZ;b.o.add(rear);
       Wl.push({
         x0:x-spec.w/2,x1:x+spec.w/2,z0:z+rearZ,z1:z+rearZ+rearThickness,
-        y0:b.fy-1,y1:b.fy+spec.h,hp:110,m:rear,parts:[rear],
+        y0:b.fy-1,y1:b.fy+spec.h,hp:16,m:rear,parts:[rear],
         door:false,open:false,rammable:true,hangarRear:true,
         cx:x,cz:z+rearZ+rearThickness/2,owner:b
       });
@@ -86,7 +86,7 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
     record.antenna=g;
     // The solid plinth blocks movement and is destructible with the complete tower.
     const footing={x0:x-4*(a.scale||1),x1:x+4*(a.scale||1),z0:z-4*(a.scale||1),z1:z+4*(a.scale||1),y0:height,y1:height+1.3,
-      hp:150,m:seedSearchMode?null:g.children[0],parts:seedSearchMode?[]:g.children.slice(),door:false,open:false,
+      hp:24,m:seedSearchMode?null:g.children[0],parts:seedSearchMode?[]:g.children.slice(),door:false,open:false,
       rammable:true,cx:x,cz:z};
     Wl.push(footing);
     if(!seedSearchMode)window.HUNTER_AIR_OBSTACLES.registerAntenna(world,g,a,footing);
