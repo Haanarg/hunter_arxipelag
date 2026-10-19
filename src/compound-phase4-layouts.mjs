@@ -16,7 +16,7 @@ export const newWorldLayouts=[
  draft({id:'ferry-terminal',name:'Terminal de ferri',family:'civil',size:[180,190],subtitle:'Carril d’embarcament · cua lateral · passeig segregat',
   waterfront:{shore:18},piers:[{x:0,z:25,w:18,d:21},{x:-25,z:44,w:5,d:53}],
   buildings:[building('ticket','Bitllets i espera',-48,-25,26,22,7),building('freight','Magatzem de càrrega',50,-36,28,24,8)],
-  vehicles:[vehicle('ferry',0,53),vehicle('camio',0,-32),vehicle('cotxe',29,-9),vehicle('bici',-66,-4)],
+  vehicles:[vehicle('ferry',0,62),vehicle('camio',0,-32),vehicle('cotxe',29,-9),vehicle('bici',-66,-4)],
   routes:[route('Accés rodat · 14 m',[[0,-95],[0,32]],14,'road'),route('Cua de reserva',[[29,-70],[29,3],[0,3]],9,'road'),route('Vianants · 5 m',[[-70,-95],[-70,-8],[-25,-8],[-25,68]],5),route('Càrrega',[[50,-22],[50,-11],[29,-11]],6)],
   zones:[{label:'Cua · 3 vehicles lleugers',x:29,z:-34,w:10,d:52},{label:'Evitar obstacles a la rampa',x:0,z:24,w:18,d:18}],
   props:[['lamp',-13,9],['lamp',44,9],['bench',-63,-7],['bench',-41,-7],['crate',66,-35],['lifebuoy',-28,32]],loot:[{kind:'farmaciola',x:-48,z:-25}],entrances:[[0,-95],[-70,-95]],

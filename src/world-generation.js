@@ -242,11 +242,11 @@ const compoundPier=(x1,z1,x2,z2,width=4.2,accessRamp=true)=>{
   if(ramp){
     const rampMidX=x1-ux*ramp.length/2,rampMidZ=z1-uz*ramp.length/2,
           rise=ramp.top-ramp.bottom,
-          rampMesh=new THREE.Mesh(new THREE.BoxGeometry(ramp.width,.22,ramp.length),
+          rampMesh=new THREE.Mesh(new THREE.BoxGeometry(ramp.width,.22,Math.hypot(ramp.length,rise)),
             M(0x957858,'paint'));
     rampMesh.position.set(rampMidX,(ramp.bottom+ramp.top)/2-.11,rampMidZ);
-    rampMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),
-      new THREE.Vector3(ux*ramp.length,rise,uz*ramp.length).normalize());
+    // Evitar roll en rampes diagonals: yaw més inclinació longitudinal.
+    rampMesh.rotation.set(-Math.atan2(rise,ramp.length),Math.atan2(ux,uz),0,'YXZ');
     world.add(rampMesh);staticDecorRoots.push(rampMesh);
   }
   const yaw=Math.atan2(dx,dz);

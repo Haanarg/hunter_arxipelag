@@ -60,4 +60,30 @@ generator.hAt=(x,z)=>z< -19?.8:0;
 generator.pier(0,0,0,40,5,true);
 assert.equal(generator.stairs.length,1,'S’ha de trobar la terra encara que sigui a més de 12 m');
 assert.ok(generator.stairs[0].length>=20,'La rampa no pot començar submergida');
+// Validació tridimensional dels pendents diagonals: sense roll.
+(async()=>{
+ const THREE=await import(require('node:url').pathToFileURL(path.join(root,'vendor/three-r186.module.mjs')).href);
+ for(const [ux,uz] of [[1,0],[0,1],[Math.SQRT1_2,Math.SQRT1_2],[-Math.SQRT1_2,Math.SQRT1_2]]){
+   const world=new THREE.Group(),visualCtx={
+     seedSearchMode:false,PIER_DECK_Y:2.4,stairs:[],piers:[],
+     compoundClear:[],staticDecorRoots:[],world,THREE,
+     M:()=>new THREE.MeshBasicMaterial(),Math,
+     hAt:(x,z)=>x*ux+z*uz<-10?.8:0
+   };
+   vm.createContext(visualCtx);
+   vm.runInContext(visual.slice(pierStart,pierEnd)+'\nthis.pier=compoundPier;',visualCtx);
+   visualCtx.pier(0,0,ux*34,uz*34,4,true);
+   const ramp=visualCtx.stairs[0];
+   assert(ramp,'Cal una rampa d’accés per a cada angle');
+   const mesh=world.children.find(m=>m.geometry?.type==='BoxGeometry'&&m.geometry.parameters.height===.22);
+   assert(mesh,'Cal malla de rampa en el món');
+   const lateral=new THREE.Vector3(1,0,0).applyQuaternion(mesh.quaternion);
+   assert(Math.abs(lateral.y)<1e-6,'La rampa ha de ser plana lateralment');
+   const longitudinal=new THREE.Vector3(0,0,1).applyQuaternion(mesh.quaternion);
+   const rise=ramp.top-ramp.bottom;
+   assert(Math.abs(longitudinal.y-Math.sin(Math.atan2(rise,ramp.length)))<1e-6,
+     'La inclinació de la rampa ha de seguir la diferència d’altura');
+ }
+ console.log('OK pantalans: rampes alineades, fins i tot en diagonal');
+})().catch(e=>{console.error(e);process.exitCode=1});
 console.log('OK pantalans: rampa, unió, sortida lliure i sense pujada instantània');

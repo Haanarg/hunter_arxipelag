@@ -44,6 +44,47 @@ const assert=require('node:assert/strict');
    return result
  })()`);
  for(const [key,ok]of Object.entries(ferry))assert(ok,`ferry: ${key}`);
+ // La posició de la terminal ha de correspondre al ferri ampliat, no al
+ // buc anterior: el cap de la rampa de popa queda a la zona del moll.
+ const {newWorldLayouts}=await import('../src/compound-phase4-layouts.mjs');
+ const terminalLayout=newWorldLayouts.find(l=>l.id==='ferry-terminal');
+ const ferryLocalZ=terminalLayout.vehicles.find(v=>v.t==='ferry').z;
+ const sternTip=ferryLocalZ-(game.context.HUNTER_VEHICLES.decks.ferry.halfL+
+   game.context.HUNTER_VEHICLES.decks.ferry.ramp);
+ assert(Math.abs(sternTip-30)<2,'La rampa del ferri s’ha d’alinear amb el carril de càrrega a z=30');
+ const actualTerminal=game.run(`(()=>{
+   const c=world.userData.compounds.find(c=>c.layoutId==='ferry-terminal'&&c.loadingRamp);
+   if(!c)return null;
+   const s=terminalRampState(c.loadingRamp);
+   return s&&{length:s.length,difference:Math.abs(s.startY-s.endY),hasFerry:!!c.ferry};
+ })()`);
+ if(actualTerminal){
+   assert(actualTerminal.hasFerry,'La rampa terminal ha de tenir un ferri amarrat');
+   assert(actualTerminal.length>=4&&actualTerminal.length<=12,
+     'La passarel·la d’accés no ha de començar sota el buc ni quedar desconnectada');
+   assert(actualTerminal.difference<1,'La passarel·la s’ha d’unir sense un salt vertical');
+ }
+
+ const boarding=game.run(`(()=>{
+   const f=V.find(v=>v.t==='ferry'),d=FERRY_DECK,results=[];
+   for(const type of ['cotxe','camio','tanqueta']){
+     const sc=VS[type],hb=VHB[type],halfLength=hb[1]*sc*.5;
+     const localZ=d.halfL+d.ramp+halfLength+.4,point=ferryWorld(f,0,localZ);
+     const v={t:type,x:point.x,z:point.z,hd:f.hd};
+     // Un vehicle s'ha de poder enganxar a la rampa abans d'entrar al buc:
+     // abans de la correcció hi quedava bloquejat per la col·lisió.
+     const enters=ferryForVehicle(v)===f;
+     const lateral=ferryWorld(f,d.rampHalfW+hb[0]*sc*.5+.9,localZ);
+     const misses=ferryForVehicle(v,lateral.x,lateral.z)!==f;
+     const deck=ferryWorld(f,0,0);
+     const centered=ferryForVehicle(v,deck.x,deck.z,false)===f;
+     results.push({type,enters,misses,centered});
+   }
+   return results
+ })()`);
+ for(const check of boarding)for(const [name,ok]of Object.entries(check))
+   if(name!=='type')assert(ok,`ferri ${check.type}: ${name}`);
+
 
  game.run(`{
    const f=V.find(v=>v.t==='ferry'),p=ferryWorld(f,0,-8);

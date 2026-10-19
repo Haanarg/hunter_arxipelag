@@ -647,14 +647,14 @@ function vehicleDebris(v,baseY){
   if(!v?.o)return;
   v.o.updateMatrixWorld(true);
   const meshes=[];v.o.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&o.geometry&&!o.userData.waterMask)meshes.push(o)});
-  const heavy=['tanc','tanqueta','camio'].includes(v.t),air=v.t==='heli'||v.t==='heli_combat',maxPieces=heavy?24:air?20:16;
+  const heavy=['tanc','tanqueta','camio'].includes(v.t),truck=v.t==='camio',air=v.t==='heli'||v.t==='heli_combat',maxPieces=heavy?24:air?20:16;
   const chosen=meshes.length<=maxPieces?meshes:meshes.filter((_,i)=>i%Math.ceil(meshes.length/maxPieces)===0).slice(0,maxPieces);
   const center=new THREE.Vector3(v.x,baseY+1,v.z),p=new THREE.Vector3(),q=new THREE.Quaternion(),sc=new THREE.Vector3();
   for(const src of chosen){
     src.matrixWorld.decompose(p,q,sc);
     const piece=new THREE.Mesh(src.geometry,src.material);piece.position.copy(p);piece.quaternion.copy(q);piece.scale.copy(sc);piece.castShadow=true;piece.receiveShadow=true;world.add(piece);
     const dx=p.x-center.x,dz=p.z-center.z,d=Math.max(.3,Math.hypot(dx,dz)),out=heavy?rn(7,16):rn(9,20);
-    DB.push({m:piece,s0:piece.scale.clone(),vx:dx/d*out+rn(-5,5),vy:rn(10,heavy?22:26),vz:dz/d*out+rn(-5,5),rx:rn(-9,9),ry:rn(-9,9),rz:rn(-9,9),life:rn(2.2,4.2),vehiclePart:true})
+    DB.push({m:piece,s0:piece.scale.clone(),vx:dx/d*out+rn(-5,5),vy:rn(10,heavy?22:26),vz:dz/d*out+rn(-5,5),rx:rn(truck?-1:-9,truck?1:9),ry:rn(truck?-1.25:-9,truck?1.25:9),rz:rn(truck?-.9:-9,truck?.9:9),life:rn(truck?2:2.2,truck?3.1:4.2),vehiclePart:true,truckPiece:truck})
   }
   const burst=heavy?14:10;debris(v.x,baseY+1.3,v.z,0x34383a,burst,.45,14);
   for(let i=0;i<(heavy?7:5);i++)puff(v.x+rn(-2,2),baseY+rn(.5,2.2),v.z+rn(-2,2),i%2?0x3b3b38:0x787064,rn(1.6,3.2));
@@ -694,7 +694,7 @@ if(b.hangar&&b.roof?.userData?.hangarRoof){
 }
 snd('boom',.4)}
 function updDeb(dt){for(let i=DB.length-1;i>=0;i--){const d=DB[i],m=d.m;d.vy-=28*dt;m.position.x+=d.vx*dt;m.position.y+=d.vy*dt;m.position.z+=d.vz*dt;m.rotation.x+=d.rx*dt;m.rotation.y+=(d.ry||0)*dt;m.rotation.z+=(d.rz||0)*dt;
-const g=Math.max(0,hAt(m.position.x,m.position.z))+.2;if(m.position.y<g){m.position.y=g;d.vy*=-.3;d.vx*=.6;d.vz*=.6;d.rx*=.82;if(d.ry)d.ry*=.82;if(d.rz)d.rz*=.82}
+const g=Math.max(0,hAt(m.position.x,m.position.z))+.2;if(m.position.y<g){m.position.y=g;d.vy*=-.3;d.vx*=.6;d.vz*=.6;d.rx*=d.truckPiece?.38:.82;if(d.ry)d.ry*=d.truckPiece?.38:.82;if(d.rz)d.rz*=d.truckPiece?.38:.82}
 d.life-=dt;const fade=d.vehiclePart?.55:.4,k=Math.max(0,Math.min(1,d.life/fade));m.scale.set(d.s0.x*k,d.s0.y*k,d.s0.z*k);if(d.life<=0){world.remove(m);DB.splice(i,1)}}
 for(let i=WA.length-1;i>=0;i--){const a=WA[i];a.t-=dt;const s=Math.max(0,a.t/.5);a.m.scale.y=s;a.m.position.y=a.h/2*s;if(a.t<=0){world.remove(a.m);WA.splice(i,1)}}
 for(let i=HR.length-1;i>=0;i--){const a=HR[i],m=a.m;a.t+=dt;const p=Math.min(1,a.t/a.dur),e=p*p*(3-2*p);m.rotation.z=a.baseRz+a.dir*e*.62;m.rotation.x=a.baseRx+Math.sin(p*Math.PI)*.08;m.position.y=a.baseY-e*8.5;if(p>.35&&Math.random()<.35)puff(a.x+rn(-a.w/2,a.w/2),Math.max(.4,m.parent.position.y+m.position.y+rn(0,3)),a.z+rn(-a.d/2,a.d/2),0x7c7772,2.4);if(p>=1){m.visible=false;if(m.parent)m.parent.remove(m);HR.splice(i,1)}}
@@ -1266,11 +1266,14 @@ function ferryForVehicle(v,x=v.x,z=v.z,includeRamp=true){
     const q=ferryLocal(f,x,z),fw=FERRY_DECK.halfW*sc,fl=FERRY_DECK.halfL*sc,r=includeRamp?FERRY_DECK.ramp*sc:0,
           rel=wrapAngle(v.hd-f.hd),ca=Math.abs(Math.cos(rel)),sa=Math.abs(Math.sin(rel)),
           ex=ca*hb.w*.5+sa*hb.d*.5,ez=sa*hb.w*.5+ca*hb.d*.5;
-    // La zona transitable es detecta amb tota la petjada del vehicle. Això permet
-    // que el frontal entri a la rampa abans que la hitbox rectangular del buc el bloquegi,
-    // però manté els costats del ferry sòlids.
-    if(Math.abs(q.x)+ex<=fw-.18&&Math.abs(q.z)-ez<=fl+r&&
-      (Math.abs(q.z)+ez<=fl||Math.abs(q.x)+ex<=FERRY_DECK.rampHalfW*sc-.18))return f
+    // Coberta ampla i rampa estreta: el morro del vehicle comença
+    // l'embarcament abans que el buc sòlid el bloquegi. Els laterals
+    // segueixen limitats per la projecció de la hitbox del vehicle.
+    const ax=Math.abs(q.x),az=Math.abs(q.z),rampHalf=FERRY_DECK.rampHalfW*sc;
+    if(ax+ex>fw-.18)continue;
+    if(az+ez<=fl)return f;
+    if(includeRamp&&az-ez<=fl+r+.65&&az<=fl+r+ez+.65&&
+       ax+ex<=rampHalf+.45)return f
   }
   return null
 }
