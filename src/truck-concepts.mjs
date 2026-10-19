@@ -1,20 +1,22 @@
 // Quatre camions blindats 6x6, derivats exclusivament del model A de previsualització.
 // Geometria simplificada al nivell visual del joc. Només són previews.
+// Totes quatre variants parteixen de l'A4 (cabina de comandament pesant).
+// El blindatge és visual i no altera el balanç del joc.
 export const truckConcepts=Object.freeze([
-  {id:'A',name:'A1 · Blindatge de camp',tag:'Protecció reforçada',description:'Cabina més massissa, plaques a les portes, defensa frontal gruixuda i parafangs protegits.',
-    cab:0x566548,roof:0x44553b,canvas:0x507b48,trim:0x303a2d,top:3.82,style:'armor_field',armor:1},
-  {id:'B',name:'A2 · Escut frontal',tag:'Frontal fortificat',description:'Gran escut angular al davant, reixa de protecció, defensa més ampla i reforços laterals.',
-    cab:0x526047,roof:0x404b38,canvas:0x507746,trim:0x292f28,top:3.82,style:'armor_shield',armor:2},
-  {id:'C',name:'A3 · Bastió logístic',tag:'Protecció integral',description:'Cabina blindada, faldons laterals, caixes protegides i plaques gruixudes als laterals de càrrega.',
-    cab:0x58664e,roof:0x43533c,canvas:0x4b7749,trim:0x303c33,top:3.89,style:'armor_bastion',armor:3},
-  {id:'D',name:'A4 · Comandament pesant',tag:'Cabina superblindada',description:'Caputxa reforçada, mòdul superior de blindatge, morro massís i parafangs angulars de gran volum.',
-    cab:0x60674b,roof:0x49563e,canvas:0x537b49,trim:0x31382f,top:3.90,style:'armor_command',armor:4}
+ {id:'A',name:'A4.1 · Arcs corregits',tag:'Parafangs segurs',description:'Arcs de roda corbats i separats dels pneumàtics; faldons retirats dels eixos i defensa posterior senzilla.',
+  cab:0x60674b,roof:0x49563e,canvas:0x537b49,trim:0x31382f,top:3.90,style:'a4_clear',armor:4},
+ {id:'B',name:'A4.2 · Protecció perifèrica',tag:'Arcs reforçats',description:'Parafangs de doble nervi, blindatge entre eixos i cantoneres posteriors més profundes.',
+  cab:0x5a674e,roof:0x485a42,canvas:0x537b49,trim:0x2d382e,top:3.90,style:'a4_guard',armor:4},
+ {id:'C',name:'A4.3 · Faldons modulars',tag:'Mòduls separats',description:'Faldons modulars alts amb retalls per a les rodes, parafangs perfilats i posterior amb placa central.',
+  cab:0x59654a,roof:0x45543e,canvas:0x527c4b,trim:0x303930,top:3.90,style:'a4_modular',armor:4},
+ {id:'D',name:'A4.4 · Bastió posterior',tag:'Blindatge màxim',description:'Arcs angulars, protecció inferior elevada, gran placa posterior i defensa reforçada sense interferir amb les rodes.',
+  cab:0x616b50,roof:0x465540,canvas:0x537d49,trim:0x303b31,top:3.93,style:'a4_bastion',armor:4}
 ]);
 export function createTruckConcept(T,variant=0){
  const cfg=truckConcepts[variant];
  if(!cfg)throw new Error('Proposta de camió desconeguda');
  const g=new T.Group();g.name='Camió expedició 6x6 · '+cfg.id;
- const classic=true; // Totes les variants hereten la cabina buida i ampliada del model A.
+ const classic=true; // Totes les variants hereten la cabina buida i ampliada del model A4.
  const mat=(hex,metalness=0)=>new T.MeshStandardMaterial({color:hex,roughness:.86,metalness,flatShading:true,side:T.DoubleSide});
  const body=mat(cfg.cab),roof=mat(cfg.roof),trim=mat(cfg.trim,.14),
    tarp=mat(cfg.canvas),tarpDark=mat(new T.Color(cfg.canvas).multiplyScalar(.77).getHex()),
@@ -58,7 +60,7 @@ export function createTruckConcept(T,variant=0){
  }
 
  // 6x6: eix central separat de l'eix posterior, igual que al model A aprovat.
- const axles=classic?[-2.68,.82,2.80]:[-2.68,1.58,2.73];
+ const axles=[-2.68,.82,2.80];
  for(const z of axles)for(const x of[-1.63,1.63])wheel(x,z);
  for(const x of[-1.02,1.02])box(.19,.26,7.45,trim,x,1.23,.03);
  for(const z of axles)rod([-1.65,.83,z],[1.65,.83,z],.10,trim);
@@ -155,8 +157,8 @@ export function createTruckConcept(T,variant=0){
    box(.32,.20,.09,red,x,1.74,3.72); // Llums posteriors.
    rod([x,1.55,3.85],[x,3.42,3.85],.046,trim);
  }
- // Escala posterior i esglaons amplis, com al model D original.
- for(const y of[1.74,2.20,2.66,3.12,3.55])rod([.80,y,3.90],[1.47,y,3.90],.046,silver);
+ // Escala baixa de l'A4 eliminada per deixar lliure la nova porta blindada posterior.
+ // Cada variant incorpora una solució posterior pròpia, sense cap roda lateral de recanvi.
 
  // La presa d'aire queda per fora de la nova cabina A. Sense recanvi lateral en A.
  const intakeX=classic?1.79:1.55;
@@ -205,23 +207,61 @@ export function createTruckConcept(T,variant=0){
  };
  const level=cfg.armor;
 
- // Reforços de porta i faldons; es mantenen sota la vora inferior de les finestres.
+ // Volum escombrat de cada pneumàtic: r=0.80 (pla YZ), eix X=±1.63,
+ // gruix=0.47; el parafang és fora d'aquest cilindre amb >=0.10 de marge.
+ // S'extrudeix un anell de sis facetes des de 0.30 fins a PI-0.30;
+ // els extrems dels dos arcs posteriors no es toquen.
+ const tireRadius=.80, fenderInner=.925, fenderOuter=1.005;
+ const fenderSteps=6, startAngle=.30, finishAngle=Math.PI-.30;
+ const wheelSpecs=[];
+ const clearanceArmor=[];
+ function addFender(sign,zc,extraLayer=false){
+   const halfTread=.235, xInner=sign*(1.63-halfTread-.060);
+   const xOuter=sign*(1.63+halfTread+(extraLayer?.20:.13));
+   const positions=[],indices=[];
+   const section=(theta)=>{
+     const yIn=.82+fenderInner*Math.sin(theta),zIn=zc+fenderInner*Math.cos(theta);
+     const yOut=.82+fenderOuter*Math.sin(theta),zOut=zc+fenderOuter*Math.cos(theta);
+     return [[xInner,yIn,zIn],[xOuter,yIn,zIn],[xOuter,yOut,zOut],[xInner,yOut,zOut]];
+   };
+   const pushQuad=(a,b,c,d)=>{
+     indices.push(a,b,c,a,c,d);
+   };
+   for(let n=0;n<fenderSteps;n++){
+     const a=startAngle+(finishAngle-startAngle)*n/fenderSteps;
+     const b=startAngle+(finishAngle-startAngle)*(n+1)/fenderSteps;
+     const begin=section(a),end=section(b),offset=positions.length/3;
+     for(const v of [...begin,...end])positions.push(...v);
+     // Inner arc, outer arc, exterior/interior lateral i dues tapes.
+     pushQuad(offset,offset+1,offset+5,offset+4);
+     pushQuad(offset+3,offset+7,offset+6,offset+2);
+     pushQuad(offset+1,offset+2,offset+6,offset+5);
+     pushQuad(offset,offset+4,offset+7,offset+3);
+     pushQuad(offset,offset+3,offset+2,offset+1);
+     pushQuad(offset+4,offset+5,offset+6,offset+7);
+   }
+   const geometry=new T.BufferGeometry();
+   geometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));
+   geometry.setIndex(indices);
+   geometry.computeVertexNormals();
+   const mesh=part(geometry,heavyMat);
+   mesh.name='fender-arc-'+sign+'-'+zc;
+   mesh.userData={wheelArch:true,sign,axleZ:zc,tireRadius,
+     innerRadius:fenderInner,outerRadius:fenderOuter,clearance:fenderInner-tireRadius};
+   armorParts.push(mesh);
+   wheelSpecs.push(mesh);
+   return mesh;
+ }
+ // Blindatge entre el primer i segon eix: els extrems es mantenen
+ // a més de 0.2 m de la projecció dels pneumàtics.
  for(const sign of[-1,1]){
    const side=sign*1.72;
    plate('armor-door-'+sign,.22,.57,1.33,heavyMat,side,2.19,-2.25);
    plate('armor-door-inset-'+sign,.055,.22,.79,bevelMat,side+sign*.13,2.29,-2.17);
-   plate('armor-step-'+sign,.54,.15,.91,edgeMat,sign*1.59,1.13,-1.54);
-   plate('armor-chassis-box-'+sign,.39,.64,1.38,heavyMat,sign*1.47,1.36,.05);
-   // Para-xocs lateral entre cabina i caixa sense tapar el pneumàtic.
-   plate('armor-side-runner-'+sign,.18,.21,2.14,edgeMat,sign*1.77,.97,-.25);
-   for(const z of[-2.68,.82,2.80]){
-     // Tres peces angulars per arc, sense sobreposar-se al pneumàtic.
-     const x=sign*1.96;
-     plate('armor-fender-upper-'+sign+'-'+z,.27,.17,.84,heavyMat,x,1.71,z);
-     const fore=plate('armor-fender-front-'+sign+'-'+z,.27,.34,.23,heavyMat,x,1.52,z-.69);
-     const aft=plate('armor-fender-rear-'+sign+'-'+z,.27,.34,.23,heavyMat,x,1.52,z+.69);
-     fore.rotation.x=-.35;aft.rotation.x=.35;
-   }
+   plate('armor-step-'+sign,.52,.14,.52,edgeMat,sign*1.60,1.12,-1.10);
+   const module=plate('armor-safe-mid-box-'+sign,.28,.44,1.15,heavyMat,sign*1.60,1.29,-.90);
+   clearanceArmor.push(module);
+   for(const z of axles)addFender(sign,z,cfg.style!=='a4_clear');
  }
  // Cabina i front resistents, sense cobrir els vidres.
  plate('armor-front-shield',3.41,.44,.24,heavyMat,0,2.34,-4.00);
@@ -235,50 +275,75 @@ export function createTruckConcept(T,variant=0){
  // Línia superior de blindatge. No toca la línia de visió del parabrisa.
  plate('armor-roof-viser',3.42,.19,.32,edgeMat,0,3.99,-3.59);
 
- if(cfg.style==='armor_shield'){
-   // B: frontal tècnic molt desenvolupat, protector del radiador i barra antibarricades.
-   plate('shield-center',2.55,.57,.35,heavyMat,0,2.06,-4.31);
-   for(const sign of[-1,1]){
-     const w=plate('shield-wing-'+sign,.60,.71,.40,bevelMat,sign*1.39,1.96,-4.24);
-     w.rotation.y=sign*.13;
-     brace('shield-vertical-'+sign,[sign*1.72,1.09,-4.48],[sign*1.72,2.54,-4.28],.082,edgeMat);
-   }
-   brace('shield-rail-lower',[-1.77,1.15,-4.51],[1.77,1.15,-4.51],.085,edgeMat);
-   brace('shield-rail-upper',[-1.77,2.38,-4.36],[1.77,2.38,-4.36],.083,edgeMat);
-   for(const sign of[-1,1])plate('shield-chassis-'+sign,.31,.60,1.22,heavyMat,sign*1.66,1.37,1.57);
- }else if(cfg.style==='armor_bastion'){
-   // C: carro blindat logístic amb laterals de la caixa i faldons reforçats.
-   for(const sign of[-1,1]){
-     plate('bastion-cargo-wall-'+sign,.24,.72,4.29,heavyMat,sign*1.63,1.99,1.33);
-     plate('bastion-cargo-rail-'+sign,.30,.15,4.29,edgeMat,sign*1.68,2.40,1.33);
-     for(const z of[.04,1.68,3.29]){
-       plate('bastion-buckle-'+sign+'-'+z,.07,.33,.12,bevelMat,sign*1.79,2.01,z);
-     }
-     plate('bastion-box-'+sign,.39,.52,1.23,edgeMat,sign*1.48,1.26,1.42);
-   }
-   plate('bastion-front-belly',3.38,.44,.62,heavyMat,0,.98,-4.07);
-   plate('bastion-roof-block',2.76,.29,1.10,heavyMat,0,4.12,-1.77);
- }else if(cfg.style==='armor_command'){
-   // D: gran protecció superior de cabina, costats i blindatge angulat frontal.
-   plate('command-roof-armor',3.42,.44,2.17,heavyMat,0,4.20,-2.51);
-   plate('command-roof-forward',3.51,.34,.46,edgeMat,0,4.17,-3.54);
-   plate('command-roof-hatch',1.02,.14,1.00,bevelMat,0,4.51,-2.55);
-   for(const sign of[-1,1]){
-     plate('command-cab-pillar-'+sign,.40,.34,.42,heavyMat,sign*1.53,3.95,-1.47);
-     plate('command-door-lower-'+sign,.33,.60,1.72,heavyMat,sign*1.88,2.05,-2.33);
-     plate('command-skirt-'+sign,.30,.62,1.78,heavyMat,sign*1.73,1.17,.04);
-     plate('command-rear-box-'+sign,.39,.65,.89,edgeMat,sign*1.43,1.35,1.74);
-   }
-   plate('command-front-ramp',3.52,.68,.41,heavyMat,0,1.05,-4.29).rotation.x=-.21;
-   brace('command-bullbar',[-1.85,1.21,-4.53],[1.85,1.21,-4.53],.104,edgeMat);
- }else{
-   // A: reforç de camp equilibrat: mantenim ben visible l'aspecte de camió.
-   for(const sign of[-1,1]){
-     plate('field-toolbox-'+sign,.38,.47,1.05,heavyMat,sign*1.48,1.33,1.52);
-     plate('field-door-bolster-'+sign,.12,.45,.42,bevelMat,sign*1.85,2.14,-2.87);
-   }
-   plate('field-underbody',2.62,.26,.77,heavyMat,0,1.01,-3.79);
+ // Estructura superior A4 comuna: mai no ocupa el pas de roda.
+ plate('command-roof-armor',3.42,.44,2.17,heavyMat,0,4.20,-2.51);
+ plate('command-roof-forward',3.51,.34,.46,edgeMat,0,4.17,-3.54);
+ plate('command-roof-hatch',1.02,.14,1.00,bevelMat,0,4.51,-2.55);
+ for(const sign of[-1,1]){
+   plate('command-cab-pillar-'+sign,.40,.34,.42,heavyMat,sign*1.53,3.95,-1.47);
+   plate('command-door-lower-'+sign,.31,.55,1.55,heavyMat,sign*1.88,2.06,-2.39);
  }
+ plate('command-front-ramp',3.52,.68,.41,heavyMat,0,1.05,-4.29).rotation.x=-.21;
+ brace('command-bullbar',[-1.85,1.21,-4.53],[1.85,1.21,-4.53],.104,edgeMat);
+
+ // Posteriors: totes les variants tenen placa central, cantoneres i para-xocs.
+ // Estan més enllà de l'últim eix (Z=2.80) i per damunt del seu arc.
+ const rearZ=3.94;
+ const bumperZ=4.05;
+ const bumper=plate('rear-armor-bumper',3.52,.34,.32,edgeMat,0,1.35,bumperZ);
+ plate('rear-armor-crossbar',2.75,.23,.20,heavyMat,0,1.57,4.10);
+ for(const sign of[-1,1]){
+   plate('rear-armor-corner-'+sign,.47,.66,.36,heavyMat,sign*1.49,2.18,rearZ);
+ }
+ // Plafó posterior superior separat de la lona i de la plataforma.
+ plate('rear-armor-upper',2.45,.33,.18,heavyMat,0,2.50,3.88);
+
+ if(cfg.style==='a4_guard'){
+   // A4.2: nervis que segueixen l'arc (radialment fora del parafang).
+   for(const sign of[-1,1])for(const z of axles){
+     const angleList=[.57,1.06,1.57,2.08,2.57];
+     for(const theta of angleList){
+       const x=sign*2.19,rr=1.055;
+       const y=.82+rr*Math.sin(theta), zz=z+rr*Math.cos(theta);
+       const rib=plate('guard-rib-'+sign+'-'+z+'-'+theta,.085,.16,.15,bevelMat,x,y,zz);
+       rib.rotation.x=-theta;
+     }
+   }
+   plate('rear-guard-skid',2.34,.29,.27,bevelMat,0,1.04,4.07);
+   for(const sign of[-1,1])
+     plate('rear-guard-column-'+sign,.25,.92,.27,edgeMat,sign*1.25,2.16,4.17);
+ }else if(cfg.style==='a4_modular'){
+   // A4.3: mòduls alts amb obertures per a tres rodes, sense faldó continu baix.
+   for(const sign of[-1,1]){
+     for(const [zc,len] of [[-1.09,.70], [1.81,.25], [3.78,.22]]){
+       // Mòdul entre eixos o per damunt del pneumàtic de l'últim eix.
+       const y=zc===1.81?1.98:zc===3.78?2.10:1.20;
+       const block=plate('modular-side-'+sign+'-'+zc,.20,.20,len,bevelMat,sign*1.97,y,zc);
+       clearanceArmor.push(block);
+     }
+     plate('modular-over-axles-'+sign,.20,.20,4.38,heavyMat,sign*1.96,2.14,1.45);
+   }
+   plate('rear-modular-center',2.08,.63,.20,heavyMat,0,2.07,4.15);
+   for(const x of[-.70,0,.70])
+     plate('rear-modular-rib-'+x,.08,.39,.11,bevelMat,x,2.05,4.28);
+ }else if(cfg.style==='a4_bastion'){
+   // A4.4: màxima massa per damunt del pas de roda, no pel mig dels pneumàtics.
+   for(const sign of[-1,1]){
+     plate('bastion-over-wheels-'+sign,.21,.28,4.40,edgeMat,sign*1.96,2.28,1.41);
+     plate('bastion-between-axles-'+sign,.29,.46,1.02,heavyMat,sign*1.76,1.30,-.94);
+     plate('bastion-rear-shoulder-'+sign,.43,.41,.54,heavyMat,sign*1.48,2.55,3.72);
+     plate('bastion-rear-column-'+sign,.37,1.00,.40,bevelMat,sign*1.48,2.03,4.12);
+   }
+   plate('rear-bastion-main',2.65,.78,.37,heavyMat,0,2.16,4.12);
+   plate('rear-bastion-low',2.76,.32,.37,edgeMat,0,1.14,4.17);
+   plate('rear-bastion-bumper',3.72,.36,.41,heavyMat,0,1.36,4.29);
+ }else{
+   // A4.1: retall net i defensa simple, sense peces baixes al costat de les rodes.
+   plate('rear-clear-center',2.30,.35,.17,bevelMat,0,2.08,4.12);
+ }
+ g.userData.archCount=wheelSpecs.length;
+ g.userData.wheelClearanceMin=fenderInner*Math.cos((finishAngle-startAngle)/(2*fenderSteps))-tireRadius;
+ g.userData.rearArmor=true;
  g.userData.armorLevel=level;
  g.userData.armorPartCount=armorParts.length;
 
