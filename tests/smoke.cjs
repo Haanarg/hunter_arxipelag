@@ -65,15 +65,22 @@ run(`{
       const gap=v.o.position.y+v.o.userData.skidContactHeight-ground;
       return Math.abs(v.alt-target)<1e-6&&Math.abs(gap-.1)<1e-6;
     });
+  globalThis.heliSpawnsDoNotOverlap=helis.every((v,i)=>helis.slice(i+1).every(u=>
+    Math.hypot(v.x-u.x,v.z-u.z)>=vehicleRadius(v.t)+vehicleRadius(u.t)+3));
   const h=helis.find(v=>v.t==='heli'),oldAlt=h.alt,oldVz=h.verticalV;
   try{
-    const target=helicopterLandedAltitude(h,Math.max(0,hAt(h.x,h.z)));
-    h.alt=target-3;h.verticalV=-12;
-    stepV(h,0,0,-1,.05);
-    globalThis.heliDescendClampedToSkids=Math.abs(h.alt-target)<1e-6;
+    const ground=Math.max(0,groundAt(h.x,h.z)),target=helicopterLandedAltitude(h,ground);
+    // Aproximació real des de sobre. Situar l'aparell sota terra activa
+    // correctament el sistema de col·lisions, no el d'aterratge.
+    h.alt=target+.45;h.verticalV=-6;
+    const survived=stepV(h,0,0,-1,.1);
+    const skidGap=h.alt+h.o.userData.skidContactHeight-ground;
+    globalThis.heliDescendClampedToSkids=survived&&!h.destroyed&&
+      Math.abs(h.alt-target)<1e-6&&Math.abs(skidGap-.1)<1e-6&&h.verticalV===0;
   }finally{h.alt=oldAlt;h.verticalV=oldVz;place(h,0,0,0)}
 }`);
 ok('heliSkidsRestOnGround','both helicopter models have skids 10 cm above the terrain when parked');
+ok('heliSpawnsDoNotOverlap','helicopters of either type spawn apart so both can be boarded');
 ok('heliDescendClampedToSkids','helicopter descent stops with skids on the terrain instead of hovering');
 
 const additionalWorldSource=require('fs').readFileSync(require('path').join(__dirname,'../src/world-generation.js'),'utf8');
@@ -82,7 +89,7 @@ ok('!!IT.paracaigudes&&!!ICON.paracaigudes','parachute is collectible inventory'
 ok("items.some(i=>i.t==='paracaigudes')", 'parachutes are generated at heliports');
 ok("String(nearV).includes('v.reentryLockUntil>elapsed')&&String(toggle).includes('if(playerFall||playerEject)return')",
   'player cannot re-enter the helicopter immediately after a jump');
-ok("String(ejectFromHelicopter).includes('playerFall.parachute=chute')&&String(update).includes('playerFall.parachute?0:')",
+ok("String(ejectFromHelicopter).includes('playerFall.parachute=chute')&&String(update).includes('dmg=fall.parachute?0:')",
   'parachute auto-deploys and negates landing damage');
 ok("String(update).includes('autoAimArmoredShot(')&&String(update).includes('range=cv.t===\\'tanc\\'?220:85')&&String(fire).includes('turretShot(THREE,cv.o)')&&String(fire).includes('Pj[Pj.length-1].life=4.4')",
   'armored shots use the rotating barrel and preserve the tank autoaim range');
@@ -161,7 +168,7 @@ assert(strafeMarkup.includes('id="strafeLeft"')&&strafeMarkup.includes('id="stra
 run(`{
   const saved={cv,swimming,playerFall,playerEject,paused,over},
         originalLeft=strafePointers.left,originalRight=strafePointers.right;
-  let enabledFoot=false,enabledVehicles=true,hiddenVehicles=true,clearsInput=false,hiddenWhenSwimming=false;
+  let enabledFoot=false,enabledVehicles=true,hiddenVehicles=true,clearsInput=false,enabledWhenSwimming=false;
   try{
     cv=null;swimming=false;playerFall=null;playerEject=null;paused=false;over=0;
     enabledFoot=updateStrafeControls()&&document.body.classList.contains('strafe-active');
@@ -176,8 +183,8 @@ run(`{
     cv={t:'cotxe'};updateStrafeControls();
     clearsInput=strafePointers.left===null&&!strafeButtons.left.classList.contains('held');
     cv=null;swimming=true;
-    hiddenWhenSwimming=!updateStrafeControls();
-    globalThis.strafeHudModes=enabledFoot&&enabledVehicles&&hiddenVehicles&&clearsInput&&hiddenWhenSwimming;
+    enabledWhenSwimming=updateStrafeControls()&&document.body.classList.contains('strafe-active');
+    globalThis.strafeHudModes=enabledFoot&&enabledVehicles&&hiddenVehicles&&clearsInput&&enabledWhenSwimming;
   }finally{
     cv=saved.cv;swimming=saved.swimming;playerFall=saved.playerFall;
     playerEject=saved.playerEject;paused=saved.paused;over=saved.over;
@@ -185,7 +192,7 @@ run(`{
     updateStrafeControls();
   }
 }`);
-ok('strafeHudModes','two buttons appear only on foot, hovercraft and both helicopters and release on vehicle changes');
+ok('strafeHudModes','two buttons appear on foot, while swimming, on hovercraft and helicopters and release on vehicle changes');
 
 const actionBindingString=run('String(act)');
 assert(actionBindingString.includes("if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory');return}")&&
@@ -531,7 +538,7 @@ run(`{
     near(pu.head.scale.x,d.headScale[0])&&near(ru.head.scale.x,d.headScale[0])&&
     near(pu.head.scale.y,d.headScale[1])&&near(ru.head.scale.y,d.headScale[1])&&
     near(pu.neck.scale.y,d.neckScale[1])&&near(ru.neck.scale.y,d.neckScale[1])&&
-    near(pu.head.position.y,1.2*d.headY)&&
+    near(pu.head.position.y+pu.upperBodyPivotHeight,1.2*d.headY)&&
     ru.head.parent===ru.torso;
   globalThis.enemyHeadModelsUnaffected=
     !!general&&!!soldat&&
@@ -573,7 +580,7 @@ run(`{
   const u=pl.userData;
   const pistolGeometry=u.gun&&u.gun.children.some(child=>child===u.pistolSlide);
   const enemy=E.find(e=>e.t==='soldat');
-  globalThis.pistolOnlyForPlayer=!!pistolGeometry&&u.gun.parent===pl&&
+  globalThis.pistolOnlyForPlayer=!!pistolGeometry&&u.gun.parent===u.upperBody&&
     !!u.pistolIdleMount&&u.pistolIdleMount.parent===u.aer&&
     !!enemy?.o?.userData?.gun&&!enemy.o.userData.pistolSlide;
   globalThis.pistolShortWithoutStock=!!u.pistolSlide&&
@@ -620,10 +627,10 @@ ok("terrainStream.stats.viewPriority===false",
   'terrain updates avoid redundant camera frustum intersections');
 ok("visualQuality.waterSegments===(qualityName==='mobile'?200:qualityName==='ultra'?120:384)",
   'sea geometry uses the selected desktop/mobile/ultra quality profile');
-ok("!!window.HUNTER_VISUAL_CONFIG.ultra&&window.HUNTER_VISUAL_CONFIG.ultra.viewDistance===1500&&window.HUNTER_VISUAL_CONFIG.ultra.waterReflections===false",
+ok("!!window.HUNTER_VISUAL_CONFIG.ultra&&window.HUNTER_VISUAL_CONFIG.ultra.viewDistance===2400&&window.HUNTER_VISUAL_CONFIG.ultra.waterReflections===false",
   'ultra quality exists with shorter draw distance and no water reflections');
-ok("qualityName!=='ultra'||(cam.far===1500&&!ren.shadowMap.enabled&&water.material.fragmentShader.includes('fogHorizon')&&!water.material.fragmentShader.includes('reflect(-light,n)'))",
-  'ultra graphics uses 1500m far plane, no shadows and a non-reflective sea');
+ok("qualityName!=='ultra'||(cam.far===2400&&!ren.shadowMap.enabled&&water.material.fragmentShader.includes('fogHorizon')&&!water.material.fragmentShader.includes('reflect(-light,n)'))",
+  'ultra graphics uses 2400m far plane, no shadows and a non-reflective sea');
 ok('noBlockingStartCapture','starting game no longer forces a blocking WebGL capture');
 ok('minimap.stats.draws>=1&&minimap.stats.backgroundBuilds===1&&minimap.stats.lastLandPixels>0',
   'minimap draws land and sea after game start');
@@ -754,7 +761,7 @@ run(`{
   globalThis.grenadeThrowAnimation=release>windup&&throwState.grenade.visible;
   globalThis.grenadeWorldPriority=window.HUNTER_COMPOUND_LAYOUTS.some(l=>l.id==='polvori'&&l.loot.some(i=>i.kind==='granades'))&&window.HUNTER_COMPOUND_LAYOUTS.some(l=>l.id==='outpost'&&l.loot.some(i=>i.kind==='granades'));
   globalThis.grenadeBallistics=String(throwGrenade).includes('grenadePending')&&String(grenadeLaunchParams).includes('vy:12')&&String(updFx).includes('g.vy-=24*dt');
-  globalThis.explosiveBalance=String(updFx).includes("boom(g.x,g.y,g.z,16,100,'b')")&&String(updFx).includes("boom(b.x,b.y,b.z,48,300,'b')");
+  globalThis.explosiveBalance=String(updFx).includes("boom(g.x,g.y,g.z,16,COMBAT_BALANCE.weapons.grenade,'b',")&&String(updFx).includes("boom(b.x,b.y,b.z,48,COMBAT_BALANCE.weapons.c4,'b')");
 }`);
 ok('grenadeItemConfigured','grenade pickup is a usable five-grenade item');
 ok('grenadePickupIsFive','one grenade pickup adds five grenades');
@@ -828,7 +835,7 @@ run(`{
     shoot=(...args)=>{shots.push(args)};
     fire();shoot=originalShoot;
     const fireOk=shots.length===1&&sniperAmmo===prior-1&&
-      shots[0][7]===65&&shots[0][8]===0&&shots[0][4]>0;
+      shots[0][7]===COMBAT_BALANCE.weapons.sniper&&shots[0][8]===0&&shots[0][4]>0;
     setSniperScope(false);
     const noScope=!scopeActive&&!document.body.classList.contains('sniper-scoped');
     globalThis.sniperAndChetosFunction=cheats&&visual&&scope&&fireOk&&noScope&&
@@ -936,7 +943,7 @@ ok('grenadePlayerModel','player has a grenade model in the throwing hand');
 ok('grenadeThrowAnimation','grenade throw has a dedicated arm animation');
 ok('grenadeWorldPriority','grenades are prioritized in powder magazines and outposts');
 ok('grenadeBallistics','grenades use delayed release, forward velocity and gravity');
-ok('explosiveBalance','grenades keep old TNT force while planted explosives are tripled');
+ok('explosiveBalance','grenades and planted explosives use the shared damage balance');
 run(`{
   const pick=createItemVisual('expl'),active=window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true);
   const p=pick.userData.explosiveDisplay,a=active.userData.explosiveDisplay;
@@ -1201,7 +1208,7 @@ run(`{
   const ta=segmentAabbT(0,1,0,10,1,0,4,6,0,2,-1,1);
   const ts=segmentSphereT(0,1,0,10,1,0,5,1,0,1);
   globalThis.projectileSegmentMath=Math.abs(ta-.4)<1e-9&&Math.abs(ts-.4)<1e-9;
-  globalThis.projectileUsesBroadPhase=String(updPj).includes('wallCandidates(mx,mz,reach+1)')&&String(updPj).includes('buildingCandidates(mx,mz,reach+1)')&&String(updPj).includes('enemyCandidatesAt(mx,mz,reach+4)')&&String(updPj).includes('vehicleCandidatesAt(mx,mz,reach+12,true)');
+  globalThis.projectileUsesBroadPhase=String(updPj).includes('wallCandidates(mx,mz,reach+1)')&&String(updPj).includes('buildingCandidates(mx,mz,reach+1)')&&String(updPj).includes("enemyCandidatesAt(mx,mz,reach+vehicleRadius('llanxa')*.62+4)")&&String(updPj).includes('vehicleCandidatesAt(mx,mz,reach+12,true)');
   globalThis.projectileNoGlobalMicrostep=!String(updPj).includes("Math.ceil(dt/.008)")&&!String(updPj).includes('updPjTick');
 }`);
 ok('projectileSegmentMath','projectile segment intersection helpers detect continuous hits');
@@ -1248,7 +1255,7 @@ run(`{
     ammo=16;fire();
     const p=Pj[Pj.length-1],pistolOk=Pj.length===before+1&&
       p.o.material===gunMaterial&&Math.abs(p.o.scale.x-smallScale)<1e-8&&
-      p.o.material.color.getHex()===0xffffff&&p.dmg===12&&p.vx*p.vx+p.vy*p.vy+p.vz*p.vz>0&&p.spl===0;
+      p.o.material.color.getHex()===0xffffff&&p.dmg===COMBAT_BALANCE.weapons.pistol&&p.vx*p.vx+p.vy*p.vy+p.vz*p.vz>0&&p.spl===0;
     // La geometria del projectil és visual: mantenim físics de dany i intersecció.
     globalThis.smallWhiteProjectileModel=pistolOk&&baseSize*smallScale<.27&&
       smallScale<.9&&mB.color.getHex()===0xffe45a&&
@@ -1263,33 +1270,33 @@ run(`{
   }
   const f=String(fire),en=String(updEn);
   globalThis.smallWhiteProjectileCallers=
-    f.includes("130,12,0,'p',mW,SMALL_ARMS_SCALE")&&
-    f.includes("470,65,0,'p',mW,SMALL_ARMS_SCALE")&&
-    f.includes("135,10,0,'p',mW,SMALL_ARMS_SCALE")&&
+    f.includes("130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE")&&
+    f.includes("470,COMBAT_BALANCE.weapons.sniper,0,'p',mW,SMALL_ARMS_SCALE")&&
+    f.includes("135,COMBAT_BALANCE.weapons.tankette,0,'p',mW,SMALL_ARMS_SCALE")&&
     en.includes("70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE")&&
-    en.includes("u.t==='tanqueta'||u.t==='general'")&&
+    en.includes("const smallBullet=u.t==='general'")&&
     en.includes("u.dmg,0,'e',mW,SMALL_ARMS_SCALE")&&
     en.includes("towerWeaponForTarget(cv)")&&
     en.includes("smallBullet?mW:mE")&&
-    f.includes("72,135,18,'pb',mS,3")&&
-    f.includes("85,45,8,'p',mS,2.2");
+    f.includes("72,COMBAT_BALANCE.weapons.bazooka,18,'pb',mS,3")&&
+    f.includes("85,COMBAT_BALANCE.weapons.tank,8,'p',mS,2.2");
 }`);
-ok('smallWhiteProjectileModel','player small-arms bullets render white and under 0.27 world units with unchanged pistol damage and speed');
+ok('smallWhiteProjectileModel','player small-arms bullets render white and under 0.27 world units with balanced pistol damage and speed');
 ok('smallWhiteProjectileCallers','soldiers, general, pistol, sniper and tankettes use shared small white bullets; rockets and tank shells remain unchanged');
 
 run(`{
   globalThis.lodThresholdsOk=LOD_NEAR2===250000&&LOD_MID2===1440000&&ITEM_ANIM2===250000&&FAUNA_NEAR2===422500&&FAUNA_MID2===1960000;
   globalThis.worldVisualThrottled=String(update).includes('worldVisualTick=.2')&&String(update).includes('visualLodAcc')&&String(update).includes("d2<LOD_MID2 ? .1 : .45");
-  globalThis.faunaLodEnabled=String(updExtra).includes('f.lodAcc')&&String(updExtra).includes("d2<FAUNA_MID2 ? .12 : .4");
+  globalThis.faunaLodEnabled=String(updExtra).includes('f.lodAcc')&&String(updExtra).includes('d2<FAUNA_MID2?.12:.4');
 }`);
 ok('lodThresholdsOk','logical LOD thresholds are configured');
 ok("String(qualityName).length>0||true",'visual profile selection remains initialized');
 ok("String(handleVehicleImpacts).includes('hurtE(u,dmg);u.alert=12')&&!String(handleVehicleImpacts).includes('hurtE(u,dmg);damageVehicle(v')",'running over soldiers does not damage vehicle structure');
-ok("String(handleVehicleImpacts).includes('killPalm(t);collisionDamageVehicle(v,Math.min(18,5+speed*.55),1)')&&!String(handleVehicleImpacts).includes('speed>18?2:1')",'palm collisions always cost exactly one structural impact');
-ok("String(stepV).includes('breakSpeed=barbed?8:14')&&String(stepV).includes(\"tank=v.t==='tanc'\")&&String(stepV).includes('if(tank||speed>breakSpeed)')",'tank breaks walls and barbed wire without a speed threshold');
+ok("String(handleVehicleImpacts).includes('if(!heavy)collisionDamageVehicle(v,Math.min(3,Math.max(1,Math.ceil(speed/(18*Math.sqrt(c.mass||1))))),1)')&&!String(handleVehicleImpacts).includes('speed>18?2:1')",'palm collisions use the shared low-damage formula, with heavy vehicles protected');
+ok("String(stepV).includes('breakSpeed=barbed?8:14')&&String(stepV).includes(\"tank=v.t==='tanc'\")&&String(stepV).includes('if(tank||truckFence||speed>breakSpeed)')",'tank breaks all walls and trucks break barbed wire without a speed threshold');
 ok("String(collisionDamageVehicle).includes(\"v?.t==='tanc'\")",'tank ignores structural damage from collisions');
 ok("String(mkB).includes('rammable:true')",'ordinary building walls are marked as rammable');
-ok("String(mkB).includes('rhp:opt.hangar?90:120')",'hangar roof shares wall-equivalent structural life');
+ok("String(mkB).includes('rhp:opt.hangar?12:16')",'hangar roof uses the current normalized structural life');
 ok("buildingSrc.includes('roofGroup.userData.hitSegments')&&buildingSrc.includes('roofGroup.userData.hangarRoof=true')",'hangar roof exposes segmented collision geometry as one destructible piece');
 ok("String(roofBreak).includes('HR.push')&&String(updDeb).includes('for(let i=HR.length-1')",'hangar roof destruction uses a collapse animation instead of instant hide');
 ok('worldVisualThrottled','buildings and remote vehicle visuals use reduced update rates');
@@ -1416,7 +1423,7 @@ run(`{
     let allLaunched=true;
     for(let i=0;i<8;i++){fcd=0;allLaunched=secondaryWeapon()&&allLaunched}
     const boatWorks=allLaunched&&shots.length===8&&boat.rockets===0&&
-      msg==='Coets: ∞'&&shots.every(s=>s[6]===68&&s[7]===70&&s[8]===11);
+      msg==='Coets: ∞'&&shots.every(s=>s[6]===68&&s[7]===COMBAT_BALANCE.weapons.boatRocket&&s[8]===11);
     cv=heli;fcd=0;
     const h1=secondaryWeapon();fcd=0;
     const h2=secondaryWeapon();fcd=0;

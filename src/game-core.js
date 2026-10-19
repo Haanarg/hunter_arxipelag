@@ -2120,6 +2120,8 @@ if(a){
     if(v.alt<=deckLandingY+.55&&ud<=.05){v.alt=deckLandingY;v.verticalV=0;attachToFerry(v,f2)}
     else if(v.carrier===f2&&v.alt>deckLandingY+1.4)detachFromFerry(v)
   }else if(v.carrier)detachFromFerry(v)
+  // Els patins ja suporten el pes: no acumulem velocitat de descens contra el terra.
+  if(!f2&&v.verticalV<0&&v.alt<=helicopterLandedAltitude(v,g2)+.001)v.verticalV=0;
 }
 if(v.carrier)attachToFerry(v,v.carrier);
 return !v.destroyed}

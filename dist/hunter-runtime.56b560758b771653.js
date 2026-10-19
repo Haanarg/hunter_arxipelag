@@ -8295,12 +8295,27 @@ islands.forEach(island=>{
 
 markBuildStage('coastalVehicles');
 heliportSites.forEach((p,i)=>{
-  const desired=p.type||(i===1?'heli_combat':'heli'),near=V.some(v=>v.t===desired&&Math.hypot(v.x-p.x,v.z-p.z)<10);
-  if(!near)add(desired,p.x,p.z,p.hd,{heliport:true,military:true,guaranteed:true});
+  const desired=p.type||(i===1?'heli_combat':'heli');
+  // Una plaça ocupada per l'altre tipus d'helicòpter també és ocupada:
+  // altrament dues cabines queden superposades i només una és accessible.
+  if(clearVehicle(desired,p.x,p.z))add(desired,p.x,p.z,p.hd,{heliport:true,military:true,guaranteed:true});
 });
 if(heliportSites.length){
-  if(!V.some(v=>v.t==='heli')){const p=heliportSites[0];add('heli',p.x,p.z,p.hd,{heliport:true,military:true,guaranteed:true})}
-  if(!V.some(v=>v.t==='heli_combat')){const p=heliportSites[Math.min(1,heliportSites.length-1)],a=p.hd+Math.PI/2,x=p.x+Math.sin(a)*22,z=p.z+Math.cos(a)*22;add('heli_combat',x,z,p.hd,{heliport:true,military:true,guaranteed:true})}
+  const addClearHeliAtPort=(t,preferred)=>{
+    for(let i=0;i<heliportSites.length;i++){
+      const p=heliportSites[(preferred+i)%heliportSites.length];
+      for(const [d,turn]of[[0,0],[22,Math.PI/2],[22,-Math.PI/2],[30,Math.PI/4],[30,-Math.PI/4],[36,Math.PI]]){
+        const a=p.hd+turn,x=p.x+Math.sin(a)*d,z=p.z+Math.cos(a)*d,
+              r=vehicleRadius(t);
+        if(!clearVehicle(t,x,z)||hAt(x,z)<=1.2||slope(x,z,hAt(x,z))>=3||
+           B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r))continue;
+        add(t,x,z,p.hd,{heliport:true,military:true,guaranteed:true});return true;
+      }
+    }
+    return false;
+  };
+  if(!V.some(v=>v.t==='heli'))addClearHeliAtPort('heli',0);
+  if(!V.some(v=>v.t==='heli_combat'))addClearHeliAtPort('heli_combat',Math.min(1,heliportSites.length-1));
 }
 const protectedVehicleSpot=t=>{const r=vehicleRadius(t),ok=(x,z)=>hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3);for(let k=0;k<240;k++){const a=rr(0,Math.PI*2),d=rr(30,58),x=pb.x+Math.cos(a)*d,z=pb.z+Math.sin(a)*d;if(ok(x,z))return{x,z,hd:a+Math.PI}}return null};
 const distributedMilitarySpot=t=>{const r=vehicleRadius(t),pool=islands.filter(i=>i!==Bi).slice().sort(()=>R()-.5),ok=(x,z)=>Math.hypot(x-pb.x,z-pb.z)>220&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3);for(const i of pool)for(let k=0;k<50;k++){const q=land(i,900,1);if(q&&ok(q.x,q.z))return{x:q.x,z:q.z,hd:rr(0,Math.PI*2)}}return null};
@@ -10513,6 +10528,8 @@ if(a){
     if(v.alt<=deckLandingY+.55&&ud<=.05){v.alt=deckLandingY;v.verticalV=0;attachToFerry(v,f2)}
     else if(v.carrier===f2&&v.alt>deckLandingY+1.4)detachFromFerry(v)
   }else if(v.carrier)detachFromFerry(v)
+  // Els patins ja suporten el pes: no acumulem velocitat de descens contra el terra.
+  if(!f2&&v.verticalV<0&&v.alt<=helicopterLandedAltitude(v,g2)+.001)v.verticalV=0;
 }
 if(v.carrier)attachToFerry(v,v.carrier);
 return !v.destroyed}
