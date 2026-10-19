@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Quatre propostes en Three.js del camió militar 4x4 inspirat en el MAN HX60 per a Hunter: Arxipèlag.">
+<title>Hunter · Quatre camions militars · Proves 3D</title>
+<style>
+:root{color-scheme:dark;--ink:#f0f1e8;--muted:#b3c1b5;--line:#74847565;--accent:#c4d89e}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#162327;color:var(--ink);font:14px system-ui,-apple-system,sans-serif}
+#canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none}
+#ui{position:relative;min-height:100vh;padding:15px 17px 20px;pointer-events:none}
+header{pointer-events:auto;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+.lead{max-width:720px}
+.eyebrow{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#b9d49f;display:block;margin-bottom:5px}
+h1{font-size:clamp(19px,2.2vw,29px);line-height:1.15;letter-spacing:-.03em;margin:0 0 7px}
+.lead p{margin:0;color:#cbd5cd;font-size:12px;line-height:1.5}
+.lead em{color:#def0bc;font-style:normal;font-weight:700}
+.controls{display:flex;gap:6px;flex-wrap:wrap;align-items:center;max-width:720px;justify-content:flex-end}
+.controls button,.controls a{border:1px solid #718d83;background:#223839;color:#edf6ed;border-radius:7px;padding:8px 11px;font:600 12px system-ui;cursor:pointer;text-decoration:none}
+.controls button:hover,.controls a:hover{background:#334e49}
+.controls button.active{background:var(--accent);color:#1c2921;border-color:var(--accent)}
+.controls button:focus-visible,.controls a:focus-visible,.card:focus-visible{outline:2px solid #d8f4bd;outline-offset:2px}
+.sep{height:23px;border-left:1px solid #58756a;margin:0 3px}
+#cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(280px,1fr));gap:11px;height:calc(100vh - 166px);min-height:580px}
+.card{position:relative;min-width:0;overflow:hidden;border:1px solid #8fa18b80;border-radius:13px;background:#ffffff06;pointer-events:auto;cursor:grab;touch-action:pan-y}
+.card.dragging{cursor:grabbing}
+.tag{position:absolute;top:11px;left:11px;padding:6px 9px;border-radius:6px;background:#182a2bea;border:1px solid #aec39c7c;color:#dcebcf;font-weight:800;font-size:11px;letter-spacing:.05em}
+.chip{position:absolute;top:11px;right:11px;max-width:55%;padding:6px 9px;border-radius:6px;background:#172a2bdf;border:1px solid #aec39c55;color:#d6e8ca;font-weight:600;font-size:11px;text-align:right}
+.info{position:absolute;bottom:10px;left:10px;right:10px;padding:10px 12px;border-radius:8px;background:#101f22ef;box-shadow:0 0 0 1px #72857927}
+.info b{display:block;font-size:14px;margin-bottom:3px}
+.info small{display:block;font-size:11px;line-height:1.4;color:#c3d2c8}
+.footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;margin:9px 2px 0;color:#aebeb2;font-size:11px}
+.footer strong{color:#d4e5c4}
+@media(max-width:900px){
+ #ui{padding:10px}
+ header{gap:12px}
+ .controls{justify-content:flex-start}
+ #cards{height:auto;min-height:0;grid-template-rows:repeat(2,minmax(330px,43vh))}
+}
+@media(max-width:630px){
+ #cards{grid-template-columns:1fr;grid-template-rows:repeat(4,360px)}
+ .tag,.chip{font-size:10px}
+ .sep{display:none}
+}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<canvas id="canvas" aria-hidden="true"></canvas>
+<main id="ui">
+ <header>
+  <div class="lead">
+   <span class="eyebrow">Hunter · Taller de vehicles</span>
+   <h1>Camió militar 4×4 · Quatre propostes</h1>
+   <p>Inspirades en el <em>MAN HX60</em> de la imatge de referència: cabina avançada, parabrisa inclinat, bastidor alt, pneumàtics tot terreny i caixa de càrrega. Són <em>prototips</em>; el camió del joc encara no s'ha modificat.</p>
+  </div>
+  <nav class="controls" aria-label="Controls de les càmeres">
+   <button type="button" data-view="quarter" class="active" aria-pressed="true">3/4 davant</button>
+   <button type="button" data-view="front" aria-pressed="false">Frontal</button>
+   <button type="button" data-view="side" aria-pressed="false">Perfil</button>
+   <button type="button" data-view="rear" aria-pressed="false">Darrere</button>
+   <span class="sep"></span>
+   <button type="button" id="full" class="active" aria-pressed="true">Camió sencer</button>
+   <button type="button" id="close" aria-pressed="false">Detall de cabina</button>
+   <span class="sep"></span>
+   <a href="proves.html">← Altres models</a>
+   <a href="index.html">Jugar ↗</a>
+  </nav>
+ </header>
+ <section id="cards" aria-label="Les quatre propostes en tres dimensions"></section>
+ <footer class="footer">
+  <span><strong>Arrossega</strong> cada camió per girar-lo. Les càmeres dels botons s'apliquen a tots quatre.</span>
+  <span>Comparació a la mateixa escala · Modelat amb Three.js</span>
+ </footer>
+</main>
+<script type="module">
+import * as THREE from './vendor/three-r186.module.mjs';
+import {createTruckConcept,truckConcepts} from './src/truck-concepts.mjs';
+
+const canvas=document.getElementById('canvas'),renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.setClearColor(0x25373a,1);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.30;
+
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x25373a);
+scene.add(new THREE.HemisphereLight(0xdfe9e5,0x394238,2.0));
+const sun=new THREE.DirectionalLight(0xfff1d8,3.3);sun.position.set(-5,12,-9);
+sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+sun.shadow.camera.left=-11;sun.shadow.camera.right=11;sun.shadow.camera.top=11;sun.shadow.camera.bottom=-11;
+sun.shadow.bias=-.0015;scene.add(sun);
+const rim=new THREE.DirectionalLight(0x96b3bc,1.5);rim.position.set(8,7,6);scene.add(rim);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(100,100),new THREE.MeshStandardMaterial({color:0x485950,roughness:1}));
+floor.rotation.x=-Math.PI/2;floor.position.y=-.045;floor.receiveShadow=true;scene.add(floor);
+const disk=new THREE.Mesh(new THREE.CylinderGeometry(5.35,5.50,.13,50),new THREE.MeshStandardMaterial({color:0x5c6c60,roughness:.92}));
+disk.position.y=-.10;disk.receiveShadow=true;scene.add(disk);
+
+const cards=[],models=[],cameras=[],turns=[];
+const cardsEl=document.getElementById('cards');
+truckConcepts.forEach((entry,i)=>{
+ const card=document.createElement('article');card.className='card';card.tabIndex=0;
+ card.setAttribute('aria-label',`Proposta ${entry.id}: ${entry.name}. Arrossega per girar el camió.`);
+ const tag=document.createElement('div');tag.className='tag';tag.textContent=`PROPOSTA ${entry.id}`;
+ const chip=document.createElement('div');chip.className='chip';chip.textContent=entry.tag;
+ const info=document.createElement('div');info.className='info';
+ const title=document.createElement('b');title.textContent=entry.name;
+ const description=document.createElement('small');description.textContent=entry.description;
+ info.append(title,description);card.append(tag,chip,info);cardsEl.append(card);cards.push(card);
+ const model=createTruckConcept(THREE,i);model.visible=false;scene.add(model);models.push(model);
+ cameras.push(new THREE.OrthographicCamera(-5,5,5,-5,.1,100));turns.push(0);
+ let pointer=null;
+ card.addEventListener('pointerdown',ev=>{
+   if(ev.button!==0)return;
+   pointer={id:ev.pointerId,x:ev.clientX,yaw:turns[i]};card.classList.add('dragging');card.setPointerCapture(ev.pointerId);
+ });
+ card.addEventListener('pointermove',ev=>{
+   if(!pointer||pointer.id!==ev.pointerId)return;
+   turns[i]=pointer.yaw+(ev.clientX-pointer.x)*.009;requestRender();
+ });
+ const release=()=>{pointer=null;card.classList.remove('dragging')};
+ for(const name of ['pointerup','pointercancel','lostpointercapture'])card.addEventListener(name,release);
+ card.addEventListener('keydown',ev=>{
+   if(ev.key==='ArrowLeft'||ev.key==='ArrowRight'){
+     ev.preventDefault();turns[i]+=(ev.key==='ArrowLeft'?-.17:.17);requestRender();
+   }
+ });
+});
+
+const viewPoints={quarter:[8.5,6.2,-11],front:[0,5.4,-13],side:[13,5.5,0],rear:[7.5,6.1,11]};
+let view='quarter',close=false,needsResize=true,frameQueued=false;
+for(const button of document.querySelectorAll('[data-view]'))button.addEventListener('click',()=>{
+ view=button.dataset.view;turns.fill(0);
+ for(const item of document.querySelectorAll('[data-view]')){
+   const selected=item===button;item.classList.toggle('active',selected);item.setAttribute('aria-pressed',String(selected));
+ }
+ requestRender();
+});
+for(const [id,detail]of [['full',false],['close',true]]){
+ document.getElementById(id).addEventListener('click',()=>{
+   close=detail;
+   for(const [key,val]of [['full',false],['close',true]]){
+     const btn=document.getElementById(key),selected=val===close;
+     btn.classList.toggle('active',selected);btn.setAttribute('aria-pressed',String(selected));
+   }
+   requestRender();
+ });
+}
+function requestRender(){if(frameQueued)return;frameQueued=true;requestAnimationFrame(draw)}
+function draw(){
+ frameQueued=false;
+ const vw=window.innerWidth,vh=window.innerHeight;
+ if(needsResize||canvas.width!==Math.floor(vw*renderer.getPixelRatio())||canvas.height!==Math.floor(vh*renderer.getPixelRatio())){
+   renderer.setSize(vw,vh,false);needsResize=false;
+ }
+ renderer.setScissorTest(false);renderer.setViewport(0,0,vw,vh);renderer.clear(true,true,true);
+ renderer.setScissorTest(true);
+ for(let i=0;i<cards.length;i++){
+   const r=cards[i].getBoundingClientRect();
+   if(r.bottom<=0||r.top>=vh||r.right<=0||r.left>=vw)continue;
+   const l=Math.max(0,Math.floor(r.left)),right=Math.min(vw,Math.ceil(r.right)),
+     t=Math.max(0,Math.floor(r.top)),bottom=Math.min(vh,Math.ceil(r.bottom)),
+     w=right-l,h=bottom-t;
+   if(w<2||h<2)continue;
+   const cam=cameras[i],aspect=w/h,vertical=close?Math.max(3.55,5.6/aspect):Math.max(6.65,10.3/aspect);
+   cam.left=-vertical*aspect/2;cam.right=vertical*aspect/2;
+   cam.top=vertical/2;cam.bottom=-vertical/2;
+   const target=close?new THREE.Vector3(0,2.65,-2.65):new THREE.Vector3(0,1.93,0),
+     dir=new THREE.Vector3(...viewPoints[view]).normalize().multiplyScalar(17);
+   cam.position.copy(target).add(dir);cam.lookAt(target);cam.updateProjectionMatrix();
+   renderer.setViewport(l,vh-bottom,w,h);renderer.setScissor(l,vh-bottom,w,h);
+   models.forEach((m,j)=>{m.visible=j===i;if(j===i)m.rotation.y=turns[j]});
+   disk.visible=!close;floor.visible=!close;
+   renderer.render(scene,cam);
+ }
+ models.forEach(m=>m.visible=false);renderer.setScissorTest(false);
+}
+window.addEventListener('resize',()=>{needsResize=true;requestRender()});
+window.addEventListener('scroll',requestRender,{passive:true});
+requestRender();
+</script>
+</body>
+</html>
