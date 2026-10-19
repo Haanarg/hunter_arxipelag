@@ -1,21 +1,20 @@
-// Quatre camions militars 6x6, derivats del model D (expedició).
+// Quatre camions blindats 6x6, derivats exclusivament del model A de previsualització.
 // Geometria simplificada al nivell visual del joc. Només són previews.
 export const truckConcepts=Object.freeze([
-  {id:'A',name:'D1 · Expedició clàssica',tag:'Lona verda + 6×6',description:'Sis rodes separades, cabina ampliada i buida amb vidres transparents, lona verda i sense recanvi lateral.',
-    cab:0x576b4b,roof:0x45593e,canvas:0x507b48,trim:0x303a2d,top:3.82,style:'classic'},
-  {id:'B',name:'D2 · Camuflat de bosc',tag:'Camuflatge + 6×6',description:'Lona en dos tons de verd, bagul d’eines, barres de sostre i equipament d’expedició.',
-    cab:0x4d6447,roof:0x41543e,canvas:0x4b7240,trim:0x2a362c,top:3.91,style:'forest'},
-  {id:'C',name:'D3 · Patrulla robusta',tag:'Proteccions + 6×6',description:'Sis rodes grans, para-xocs reforçat, protecció dels fars i lona baixa de verd intens.',
-    cab:0x465c44,roof:0x394e37,canvas:0x406e3f,trim:0x28362d,top:3.65,style:'patrol'},
-  {id:'D',name:'D4 · Expedició llarga',tag:'Lona alta + 6×6',description:'Lona verda més alta, reforços simples, equipament lateral i recanvi per a rutes llargues.',
-    cab:0x68744e,roof:0x4e6244,canvas:0x56844d,trim:0x303e32,top:4.03,style:'long'}
+  {id:'A',name:'A1 · Blindatge de camp',tag:'Protecció reforçada',description:'Cabina més massissa, plaques a les portes, defensa frontal gruixuda i parafangs protegits.',
+    cab:0x566548,roof:0x44553b,canvas:0x507b48,trim:0x303a2d,top:3.82,style:'armor_field',armor:1},
+  {id:'B',name:'A2 · Escut frontal',tag:'Frontal fortificat',description:'Gran escut angular al davant, reixa de protecció, defensa més ampla i reforços laterals.',
+    cab:0x526047,roof:0x404b38,canvas:0x507746,trim:0x292f28,top:3.82,style:'armor_shield',armor:2},
+  {id:'C',name:'A3 · Bastió logístic',tag:'Protecció integral',description:'Cabina blindada, faldons laterals, caixes protegides i plaques gruixudes als laterals de càrrega.',
+    cab:0x58664e,roof:0x43533c,canvas:0x4b7749,trim:0x303c33,top:3.89,style:'armor_bastion',armor:3},
+  {id:'D',name:'A4 · Comandament pesant',tag:'Cabina superblindada',description:'Caputxa reforçada, mòdul superior de blindatge, morro massís i parafangs angulars de gran volum.',
+    cab:0x60674b,roof:0x49563e,canvas:0x537b49,trim:0x31382f,top:3.90,style:'armor_command',armor:4}
 ]);
-
 export function createTruckConcept(T,variant=0){
  const cfg=truckConcepts[variant];
  if(!cfg)throw new Error('Proposta de camió desconeguda');
  const g=new T.Group();g.name='Camió expedició 6x6 · '+cfg.id;
- const classic=cfg.style==='classic';
+ const classic=true; // Totes les variants hereten la cabina buida i ampliada del model A.
  const mat=(hex,metalness=0)=>new T.MeshStandardMaterial({color:hex,roughness:.86,metalness,flatShading:true,side:T.DoubleSide});
  const body=mat(cfg.cab),roof=mat(cfg.roof),trim=mat(cfg.trim,.14),
    tarp=mat(cfg.canvas),tarpDark=mat(new T.Color(cfg.canvas).multiplyScalar(.77).getHex()),
@@ -58,7 +57,7 @@ export function createTruckConcept(T,variant=0){
    return w
  }
 
- // 6x6: un eix davanter i dos eixos posteriors junts.
+ // 6x6: eix central separat de l'eix posterior, igual que al model A aprovat.
  const axles=classic?[-2.68,.82,2.80]:[-2.68,1.58,2.73];
  for(const z of axles)for(const x of[-1.63,1.63])wheel(x,z);
  for(const x of[-1.02,1.02])box(.19,.26,7.45,trim,x,1.23,.03);
@@ -192,11 +191,102 @@ export function createTruckConcept(T,variant=0){
    for(const x of[-1.22,1.22])box(.43,.53,.53,trim,x,1.47,.47);
  }
 
+ // Blindatge geomètric: cada proposta parteix del mateix model A, no són renders.
+ // Les finestres i el parabrisa continuen oberts i transparents.
+ const heavyMat=mat(new T.Color(cfg.cab).multiplyScalar(.80).getHex(),.15);
+ const edgeMat=mat(new T.Color(cfg.cab).multiplyScalar(.67).getHex(),.16);
+ const bevelMat=mat(new T.Color(cfg.cab).multiplyScalar(1.10).getHex(),.12);
+ const armorParts=[];
+ const plate=(name,w,h,d,m,x,y,z)=>{
+   const mesh=box(w,h,d,m,x,y,z);mesh.name=name;armorParts.push(mesh);return mesh;
+ };
+ const brace=(name,a,b,r,m)=>{
+   const mesh=rod(a,b,r,m);mesh.name=name;armorParts.push(mesh);return mesh;
+ };
+ const level=cfg.armor;
+
+ // Reforços de porta i faldons; es mantenen sota la vora inferior de les finestres.
+ for(const sign of[-1,1]){
+   const side=sign*1.72;
+   plate('armor-door-'+sign,.22,.57,1.33,heavyMat,side,2.19,-2.25);
+   plate('armor-door-inset-'+sign,.055,.22,.79,bevelMat,side+sign*.13,2.29,-2.17);
+   plate('armor-step-'+sign,.54,.15,.91,edgeMat,sign*1.59,1.13,-1.54);
+   plate('armor-chassis-box-'+sign,.39,.64,1.38,heavyMat,sign*1.47,1.36,.05);
+   // Para-xocs lateral entre cabina i caixa sense tapar el pneumàtic.
+   plate('armor-side-runner-'+sign,.18,.21,2.14,edgeMat,sign*1.77,.97,-.25);
+   for(const z of[-2.68,.82,2.80]){
+     // Tres peces angulars per arc, sense sobreposar-se al pneumàtic.
+     const x=sign*1.96;
+     plate('armor-fender-upper-'+sign+'-'+z,.27,.17,.84,heavyMat,x,1.71,z);
+     const fore=plate('armor-fender-front-'+sign+'-'+z,.27,.34,.23,heavyMat,x,1.52,z-.69);
+     const aft=plate('armor-fender-rear-'+sign+'-'+z,.27,.34,.23,heavyMat,x,1.52,z+.69);
+     fore.rotation.x=-.35;aft.rotation.x=.35;
+   }
+ }
+ // Cabina i front resistents, sense cobrir els vidres.
+ plate('armor-front-shield',3.41,.44,.24,heavyMat,0,2.34,-4.00);
+ plate('armor-bumper',3.75,.37,.47,edgeMat,0,1.29,-4.11);
+ plate('armor-bumper-upper',3.55,.17,.30,heavyMat,0,1.52,-4.04);
+ for(const sign of[-1,1]){
+   plate('armor-front-corner-'+sign,.33,.71,.29,heavyMat,sign*1.60,1.91,-3.99);
+   plate('armor-headlight-guard-'+sign,.46,.37,.12,edgeMat,sign*1.27,1.91,-4.20);
+   plate('armor-roof-corner-'+sign,.42,.19,.46,heavyMat,sign*1.49,3.96,-3.38);
+ }
+ // Línia superior de blindatge. No toca la línia de visió del parabrisa.
+ plate('armor-roof-viser',3.42,.19,.32,edgeMat,0,3.99,-3.59);
+
+ if(cfg.style==='armor_shield'){
+   // B: frontal tècnic molt desenvolupat, protector del radiador i barra antibarricades.
+   plate('shield-center',2.55,.57,.35,heavyMat,0,2.06,-4.31);
+   for(const sign of[-1,1]){
+     const w=plate('shield-wing-'+sign,.60,.71,.40,bevelMat,sign*1.39,1.96,-4.24);
+     w.rotation.y=sign*.13;
+     brace('shield-vertical-'+sign,[sign*1.72,1.09,-4.48],[sign*1.72,2.54,-4.28],.082,edgeMat);
+   }
+   brace('shield-rail-lower',[-1.77,1.15,-4.51],[1.77,1.15,-4.51],.085,edgeMat);
+   brace('shield-rail-upper',[-1.77,2.38,-4.36],[1.77,2.38,-4.36],.083,edgeMat);
+   for(const sign of[-1,1])plate('shield-chassis-'+sign,.31,.60,1.22,heavyMat,sign*1.66,1.37,1.57);
+ }else if(cfg.style==='armor_bastion'){
+   // C: carro blindat logístic amb laterals de la caixa i faldons reforçats.
+   for(const sign of[-1,1]){
+     plate('bastion-cargo-wall-'+sign,.24,.72,4.29,heavyMat,sign*1.63,1.99,1.33);
+     plate('bastion-cargo-rail-'+sign,.30,.15,4.29,edgeMat,sign*1.68,2.40,1.33);
+     for(const z of[.04,1.68,3.29]){
+       plate('bastion-buckle-'+sign+'-'+z,.07,.33,.12,bevelMat,sign*1.79,2.01,z);
+     }
+     plate('bastion-box-'+sign,.39,.52,1.23,edgeMat,sign*1.48,1.26,1.42);
+   }
+   plate('bastion-front-belly',3.38,.44,.62,heavyMat,0,.98,-4.07);
+   plate('bastion-roof-block',2.76,.29,1.10,heavyMat,0,4.12,-1.77);
+ }else if(cfg.style==='armor_command'){
+   // D: gran protecció superior de cabina, costats i blindatge angulat frontal.
+   plate('command-roof-armor',3.42,.44,2.17,heavyMat,0,4.20,-2.51);
+   plate('command-roof-forward',3.51,.34,.46,edgeMat,0,4.17,-3.54);
+   plate('command-roof-hatch',1.02,.14,1.00,bevelMat,0,4.51,-2.55);
+   for(const sign of[-1,1]){
+     plate('command-cab-pillar-'+sign,.40,.34,.42,heavyMat,sign*1.53,3.95,-1.47);
+     plate('command-door-lower-'+sign,.33,.60,1.72,heavyMat,sign*1.88,2.05,-2.33);
+     plate('command-skirt-'+sign,.30,.62,1.78,heavyMat,sign*1.73,1.17,.04);
+     plate('command-rear-box-'+sign,.39,.65,.89,edgeMat,sign*1.43,1.35,1.74);
+   }
+   plate('command-front-ramp',3.52,.68,.41,heavyMat,0,1.05,-4.29).rotation.x=-.21;
+   brace('command-bullbar',[-1.85,1.21,-4.53],[1.85,1.21,-4.53],.104,edgeMat);
+ }else{
+   // A: reforç de camp equilibrat: mantenim ben visible l'aspecte de camió.
+   for(const sign of[-1,1]){
+     plate('field-toolbox-'+sign,.38,.47,1.05,heavyMat,sign*1.48,1.33,1.52);
+     plate('field-door-bolster-'+sign,.12,.45,.42,bevelMat,sign*1.85,2.14,-2.87);
+   }
+   plate('field-underbody',2.62,.26,.77,heavyMat,0,1.01,-3.79);
+ }
+ g.userData.armorLevel=level;
+ g.userData.armorPartCount=armorParts.length;
+
  g.userData.truckVariant=cfg.id;
  g.userData.axles=axles;
  g.userData.wheelCount=6;
- g.userData.cabinHollow=classic;
- g.userData.frontGlazingTransparent=classic;
+ g.userData.cabinHollow=true;
+ g.userData.frontGlazingTransparent=true;
  g.userData.cabin='cab-over 6x6';
  return g;
 }
