@@ -1852,7 +1852,7 @@ function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
       if(u.t!=='soldat')continue;
       const d=Math.hypot(v.x-u.x,v.z-u.z);
       if(d<radius*.68+u.r*.45){
-        const dmg=Math.min(10,Math.max(1,Math.ceil((speed-6)*Math.sqrt(c.mass||1)*.30)));
+        const dmg=Math.min(10,Math.max(1,Math.ceil((speed-6)*Math.min(2.2,c.mass||1)*10/(23*2.2))));
         hurtE(u,dmg);u.alert=12;v.ramCd=.35;v.v*=.86;
         msg='Atropellament!';msgT=1;break;
       }
