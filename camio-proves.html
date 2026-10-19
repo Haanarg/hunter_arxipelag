@@ -120,8 +120,8 @@ function fallbackTruck(i){
  <rect x="380" y="258" width="79" height="30" rx="5" fill="#30392f" stroke="#687561" stroke-width="3"/>
  <rect x="501" y="252" width="58" height="23" rx="4" fill="#2d342d" stroke="#76826c" stroke-width="2"/>
  ${cargo}
- <path d="M106 113L233 105L272 142L282 235H79L77 171Z" fill="url(#${uid}-cab)" stroke="#2d392f" stroke-width="6"/>
- <path d="M103 122L225 115L244 144L105 151Z" fill="#273e40" stroke="#9eb2a2" stroke-width="4"/>
+ <path d="${i===0?'M98 109L239 103L295 141L301 235H77L76 171Z':'M106 113L233 105L272 142L282 235H79L77 171Z'}" fill="url(#${uid}-cab)" stroke="#2d392f" stroke-width="6"/>
+ <path d="${i===0?'M103 121L239 111L267 145L105 151Z':'M103 122L225 115L244 144L105 151Z'}" fill="${i===0?'#9bbdc1':'#273e40'}" fill-opacity="${i===0?'.50':'1'}" stroke="#9eb2a2" stroke-width="4"/>
  <path d="M111 128L162 124L159 145L107 145Z" fill="#b4c6bf" opacity=".32"/>
  <path d="M251 148L259 224M85 165H266" stroke="${dark}" stroke-width="4"/>
  <path d="M97 164H146V218H82Z" fill="${dark}"/><path d="M105 171H140M105 181H140M105 191H140M105 201H140" stroke="#8a9281" stroke-width="4"/>
@@ -133,9 +133,9 @@ function fallbackTruck(i){
  <circle cx="89" cy="210" r="10" fill="#d6cc9f" stroke="#353c33" stroke-width="4"/>
  <path d="M116 118L114 92L130 91" fill="none" stroke="#303a34" stroke-width="7"/>
  ${i===2?'<path d="M47 238L32 228L33 192L59 185M45 250L54 181" fill="none" stroke="#a4aba1" stroke-width="6"/><path d="M135 97L249 87" stroke="#292f2d" stroke-width="10"/><rect x="151" y="81" width="46" height="10" fill="#d6d2a8"/>':''}
- <path d="M258 224L260 100L272 93L278 102" fill="none" stroke="#283b31" stroke-width="9"/><circle cx="390" cy="190" r="30" fill="#212923" stroke="#a7ac9c" stroke-width="6"/><circle cx="390" cy="190" r="11" fill="#505e4b"/>
+ <path d="M258 224L260 100L272 93L278 102" fill="none" stroke="#283b31" stroke-width="9"/>${i!==0?'<circle cx="390" cy="190" r="30" fill="#212923" stroke="#a7ac9c" stroke-width="6"/><circle cx="390" cy="190" r="11" fill="#505e4b"/>':''}
  ${i===0?'<rect x="120" y="258" width="40" height="20" rx="5" fill="#42493b" stroke="#9e9d88" stroke-width="3"/>':''}
- ${wheel(176)}${wheel(445)}${wheel(540)}
+ ${wheel(176)}${wheel(i===0?407:445)}${wheel(i===0?552:540)}
  <path d="M92 293H591" stroke="#9aa89b" stroke-opacity=".32" stroke-width="2"/>
  </svg>`;
 }
