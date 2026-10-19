@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#12292a">
+<title>Hunter · Proves Three.js de roques i taurons</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;color:#e6f0ea;background:#112326}
+#stage{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:0}
+main{position:relative;z-index:1;max-width:1390px;margin:auto;padding:23px clamp(13px,3vw,34px) 40px}
+header{display:flex;gap:18px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-bottom:20px}
+.eyebrow{text-transform:uppercase;letter-spacing:.17em;font-size:11px;color:#a4cea2;font-weight:700}
+h1{font-size:clamp(23px,3vw,34px);letter-spacing:-.035em;margin:6px 0 8px}
+h2{font-size:18px;margin:0 0 8px}
+p{line-height:1.52}
+.lead{max-width:800px;font-size:13px;color:#bbd0c8;margin:0}
+.nav{display:flex;gap:7px;flex-wrap:wrap}
+.nav a,.tab,.ctl{border:1px solid #64877e;background:#223b3a;color:#edf9ed;padding:10px 13px;text-decoration:none;border-radius:8px;font:600 12px system-ui;cursor:pointer}
+.nav a:hover,.tab:hover,.ctl:hover{background:#34544d}
+.tab[aria-selected=true],.ctl.active{background:#a9d3a4;color:#153222;border-color:#c5e5b8}
+.tab:focus-visible,.ctl:focus-visible,.nav a:focus-visible{outline:2px solid white;outline-offset:2px}
+.tabbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #3b6058;margin-bottom:17px;padding-bottom:13px}
+.toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 13px}
+.help{color:#b4c9c0;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.card{background:#203435;border:1px solid #52716a;border-radius:13px;overflow:hidden;box-shadow:0 10px 28px #0002}
+.view{height:clamp(235px,27vw,335px);position:relative;cursor:grab;touch-action:pan-y;overflow:hidden;background:linear-gradient(155deg,#516d65,#9cb6a6)}
+.view:active{cursor:grabbing}
+.tag{position:absolute;top:12px;left:12px;background:#163033e8;border:1px solid #b8d3b466;border-radius:7px;padding:7px 10px;pointer-events:none;font:bold 11px system-ui;letter-spacing:.04em}
+.metrics{position:absolute;top:12px;right:12px;background:#14282be8;border:1px solid #b8d3b466;border-radius:7px;padding:7px 10px;font:600 10px ui-monospace,monospace;pointer-events:none}
+.description{padding:15px 17px 18px;min-height:100px}
+.description h2{margin-bottom:5px}
+.description p{font-size:12px;color:#bfd1c8;margin:0}
+.caption{font-size:11px;color:#9ec7a9;margin-top:8px}
+section[hidden]{display:none!important}
+#sharkArea .view{height:min(65vh,600px);min-height:390px;background:#436c70}
+#sharkArea .grid{grid-template-columns:minmax(0,1fr)}
+#sharkArea .card{max-width:1100px;margin:auto;width:100%}
+#sharkArea .description{min-height:unset}
+.phase{color:#c9e5ca;font-weight:700;margin-left:auto;font-size:12px}
+#seek{min-width:135px;width:clamp(130px,28vw,350px);accent-color:#b9dbac;vertical-align:middle}
+#notice{font-size:12px;color:#e3d49e;display:none}
+#notes{margin-top:19px;background:#152e2f;border:1px solid #436259;border-radius:11px;padding:18px}
+#notes p{font-size:12px;color:#c1d2c7;margin:7px 0}
+#notes strong{color:#e4f2e0}
+.legend{display:flex;gap:16px;align-items:center;flex-wrap:wrap;color:#c7d7cd;font-size:11px;margin-top:10px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:-1px;margin-right:5px}
+.fallback{display:none;position:absolute;inset:0;pointer-events:none}
+.fallback svg{width:100%;height:100%}
+.no-webgl .fallback{display:block}
+#sharkFallback{position:absolute;inset:0;display:none;align-items:center;justify-content:center}
+.no-webgl #sharkFallback{display:flex}
+@media(max-width:720px){
+ main{padding:15px 12px 26px}
+ .grid{grid-template-columns:1fr}
+ .view{height:275px}
+ #sharkArea .view{height:430px;min-height:360px}
+ .phase{margin-left:0}
+}
+</style>
+</head>
+<body>
+<canvas id="stage" aria-hidden="true"></canvas>
+<main>
+<header>
+ <div>
+  <div class="eyebrow">HUNTER: ARXIPÈLAG · LABORATORI 3D</div>
+  <h1>Roques irregulars i atacs de tauró</h1>
+  <p class="lead">Propostes de baix cost gràfic construïdes amb Three.js. Quatre paisatges de roca i una seqüència de mossegada lateral, esquitx de sang, allunyament i retorn. Cap d'aquestes proves no modifica encara la partida.</p>
+ </div>
+ <nav class="nav" aria-label="Altres pàgines">
+  <a href="proves.html">← Altres previews</a>
+  <a href="https://hunter.paradoxa.cat/">Obrir el joc ↗</a>
+ </nav>
+</header>
+<div class="tabbar" role="tablist" aria-label="Tipus de prova">
+ <button class="tab" id="rocksTab" role="tab" aria-selected="true" aria-controls="rocksArea">🪨 Roques · 4 propostes</button>
+ <button class="tab" id="sharkTab" role="tab" aria-selected="false" aria-controls="sharkArea">🦈 Tauró · atac repetit</button>
+</div>
+<section id="rocksArea" role="tabpanel" aria-labelledby="rocksTab">
+ <div class="toolbar">
+  <button class="ctl" id="colliders" aria-pressed="false">◯ Mostrar col·lisions</button>
+  <button class="ctl active" id="rotate" aria-pressed="true">↻ Rotació suau</button>
+  <span class="help">Arrossega cada escena per girar-la. Mateixa geometria reutilitzada amb instàncies.</span>
+ </div>
+ <div class="grid" id="rockCards"></div>
+ <div class="legend"><span><i class="dot" style="background:#b0a591"></i> Roca visible</span><span><i class="dot" style="background:#ec9e74"></i> Volum de col·lisió simplificat</span><span><i class="dot" style="background:#528b93"></i> Aigua poc profunda</span></div>
+</section>
+<section id="sharkArea" role="tabpanel" aria-labelledby="sharkTab" hidden>
+ <div class="toolbar">
+  <button class="ctl active" id="pause" aria-pressed="true">⏸ Pausa</button>
+  <button class="ctl" id="replay">↶ Reinicia</button>
+  <label class="help" for="seek">Seqüència <input id="seek" type="range" min="0" max="1200" step="1" value="0"></label>
+  <label class="help" for="speed">Velocitat <select id="speed" class="ctl"><option value=".5">×0,5</option><option value="1" selected>×1</option><option value="1.5">×1,5</option></select></label>
+  <span class="phase" id="phase">Aproximació</span>
+ </div>
+ <div class="grid"><article class="card">
+  <div class="view" id="sharkView">
+   <div class="tag">DUES MOSSEGADES / CICLE DE 12 s</div>
+   <div class="metrics">Aleta 3D + FX instanciats</div>
+   <div id="sharkFallback" class="fallback"><svg viewBox="0 0 750 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Esquema de l'atac del tauró en dues passades"><rect width="750" height="400" fill="#547d83"/><path d="M140 330Q80 220 180 140T390 160T530 250T450 340" fill="none" stroke="#c3e5d0" stroke-width="4" stroke-dasharray="11 9"/><path d="M365 206L390 158L411 211Z" fill="#263e4a"/><circle cx="375" cy="230" r="44" fill="#9c2738" fill-opacity=".65"/><circle cx="375" cy="230" r="10" fill="#e2eddd"/><text x="28" y="48" font-size="20" fill="#fff">Mossegada lateral → passada → volta ampla → nova embestida</text></svg></div>
+  </div>
+  <div class="description"><h2>Atac per passades, sense frenar sobre el jugador</h2>
+   <p>El tauró arriba lleugerament desplaçat del centre del nedador, mossega sense aturar-se, passa de llarg, s'allunya fins a descriure un arc ample i torna des d'un altre angle. La sang és un esclat curt de partícules reciclades i una taca circular que s'esvaeix.</p>
+  </div>
+ </article></div>
+</section>
+<p id="notice">WebGL no està disponible en aquest navegador. Es mostren esquemes de reserva; obre la pàgina en un navegador compatible per manipular els models Three.js.</p>
+<div id="notes">
+ <h2>Com integrar-ho al joc sense penalitzar el rendiment</h2>
+ <p><strong>Rendiment de les roques:</strong> 20–36 triangles per model base. Les quatre escenes utilitzen entre 1 i 2 lots instanciats de roques, independentment del nombre de pedres. En el joc reutilitzaríem l'agrupació per sectors i l'LOD que ja existeixen.</p>
+ <p><strong>Col·lisions per a jugador i vehicles:</strong> cadascuna de les pedres tindria un o dos cercles de contacte en planta i una alçada. Una quadrícula espacial detectaria només els obstacles propers; no faríem col·lisions de triangles ni llegiríem malles de la GPU. Les roques submergides quedarien registrades igualment.</p>
+ <p><strong>Distribució:</strong> exemplars petits i mitjans a l'interior, grups allargats que travessen la línia de costa i blocs excepcionals als cims. Es reservarien distàncies lliures al voltant de camins, complexos, molls i zones de generació de vehicles.</p>
+ <p><strong>Taurons:</strong> una petita màquina d'estats amb objectiu de passada, fase de gir i nova aproximació; només una aleta simple per animal. La sang es dibuixaria amb un lot de partícules reutilitzables, sense simulació física ni efectes de pantalla completa.</p>
+</div>
+</main>
+<script type="module">
+import * as THREE from './vendor/three-r186.module.mjs';
+import {ROCK_CONCEPTS,rockGeometry,rockInstances,sharkSample,SHARK_CYCLE} from './src/nature-prototypes.mjs';
+const $=id=>document.getElementById(id);
+const cards=$('rockCards');
+const names=['A','B','C','D'];
+for(const entry of ROCK_CONCEPTS){
+ const card=document.createElement('article');card.className='card';
+ card.innerHTML='<div class="view" id="rock-'+entry.id+'"><span class="tag">PROPOSTA '+entry.id+'</span><span class="metrics">'+entry.count+' roques · '+entry.drawCalls+' lots</span><div class="fallback"></div></div>'+
+ '<div class="description"><h2>'+entry.name+'</h2><p>'+entry.subtitle+'</p></div>';
+ cards.append(card);
+}
+function fallbackRock(id){
+ const colors=['#81918b','#918c85','#8b9689','#8d9087'],svg=[];
+ svg.push('<svg viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg"><rect width="600" height="300" fill="#80988e"/><path d="M0 190L600 165V300H0Z" fill="#c5b79a"/>');
+ if(id==='C')svg.push('<path d="M0 202Q310 192 600 151V300H0Z" fill="#63929b" opacity=".83"/>');
+ if(id==='D')svg.push('<path d="M0 252L190 155L325 180L450 122L600 212V300H0Z" fill="#676e65"/>');
+ for(let i=0;i<(id==='C'?19:id==='D'?8:11);i++){
+  const n=i+1,x=55+(n*79)%510,y=184+(n*43)%74,size=(id==='D'&&i<3?55:12+(n*17)%27);
+  svg.push('<path d="M'+(x-size)+' '+y+'l'+(size*.35)+' '+(-size*.85)+' '+(size*.57)+' '+(-size*.27)+' '+(size*.83)+' '+(size*.48)+' '+(size*.35)+' '+(size*.64)+'Z" fill="'+colors[(i+n)%4]+'" stroke="#52645f" stroke-width="2"/>');
+ }
+ svg.push('</svg>');return svg.join('');
+}
+for(const id of names)$('rock-'+id).querySelector('.fallback').innerHTML=fallbackRock(id);
+let renderer=null,active='rocks',autoRotate=true,showColliders=false,playing=true,clock=0;
+let rockScenes=[],sharkScene=null;
+const dummy=new THREE.Object3D();
+function light(scene){
+ scene.add(new THREE.HemisphereLight(0xf2f2e2,0x405153,2.25));
+ const sun=new THREE.DirectionalLight(0xffe2ba,2);sun.position.set(-18,35,12);scene.add(sun);
+}
+const geoms=[0,1,2,3].map(kind=>rockGeometry(THREE,kind));
+function rockScene(family){
+ const scene=new THREE.Scene();scene.background=new THREE.Color(family===3?0x647b70:0x7e9b94);
+ light(scene);const rows=rockInstances(family),baseY=family===3?1.75:0;
+ const beach=new THREE.Mesh(new THREE.BoxGeometry(37,1.2,31),new THREE.MeshStandardMaterial({color:family===3?0x72796a:0xb6a58b,roughness:1}));
+ beach.position.y=baseY-.65;scene.add(beach);
+ if(family===3){
+  const plateau=new THREE.Mesh(new THREE.CylinderGeometry(9.5,11.8,2.1,7),new THREE.MeshStandardMaterial({color:0x5d7562,flatShading:true}));
+  plateau.position.set(2,.7,1);plateau.scale.set(1.3,1,.9);scene.add(plateau);
+ }
+ if(family===2){
+  const surf=new THREE.Mesh(new THREE.PlaneGeometry(38,16),new THREE.MeshStandardMaterial({color:0x438994,transparent:true,opacity:.68,roughness:.25,depthWrite:false,side:THREE.DoubleSide}));
+  surf.rotation.x=-Math.PI/2;surf.position.set(0,.16,9.0);scene.add(surf);
+  const line=new THREE.Mesh(new THREE.PlaneGeometry(37,.24),new THREE.MeshBasicMaterial({color:0xd4ddd1,transparent:true,opacity:.7,side:THREE.DoubleSide}));
+  line.rotation.x=-Math.PI/2;line.position.set(0,.17,1);scene.add(line);
+ }
+ const baseColors=[0x7d827d,0x949188,0x7d8a82,0x7d857e];
+ const material=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1,metalness:0,flatShading:true});
+ const kinds=[...new Set(rows.map(r=>r.kind))];
+ let triangles=0;
+ for(const kind of kinds){
+  const these=rows.filter(r=>r.kind===kind),geom=geoms[kind],mesh=new THREE.InstancedMesh(geom,material,these.length);
+  these.forEach((row,i)=>{
+   dummy.position.set(row.x,baseY+row.y+row.scale*(row.kind===3?1.15:.54),row.z);
+   dummy.rotation.set(row.tilt,row.rotation,row.tilt*.6);
+   dummy.scale.setScalar(row.scale);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
+   const c=new THREE.Color(baseColors[family]);c.multiplyScalar(.82+row.tone*.34);mesh.setColorAt(i,c);
+  });
+  mesh.instanceMatrix.needsUpdate=true;mesh.name='hunter-rock-instanced-'+kind;scene.add(mesh);
+  triangles+=(geom.index?geom.index.count/3:geom.attributes.position.count/3)*these.length;
+ }
+ const marker=new THREE.InstancedMesh(new THREE.TorusGeometry(1,.025,3,18),
+  new THREE.MeshBasicMaterial({color:0xf5a471,transparent:true,opacity:.95,depthWrite:false}),rows.length);
+ rows.forEach((row,i)=>{
+  dummy.position.set(row.x,baseY+.095,row.z);dummy.rotation.set(-Math.PI/2,0,0);
+  dummy.scale.set(row.radius,row.radius,1);dummy.updateMatrix();marker.setMatrixAt(i,dummy.matrix);
+ });
+ marker.instanceMatrix.needsUpdate=true;marker.visible=showColliders;scene.add(marker);
+ const camera=new THREE.PerspectiveCamera(40,1,.1,200);
+ const state={scene,camera,view:$('rock-'+names[family]),angle:family===2?-.4:.85,zoom:family===3?44:37,marker,target:new THREE.Vector3(0,baseY+1.1,family===2?3:0),triangles};
+ state.view.querySelector('.metrics').textContent=rows.length+' roques · '+kinds.length+' lots · '+Math.round(triangles)+' △';
+ return state;
+}
+function makeShark(){
+ const scene=new THREE.Scene();scene.background=new THREE.Color(0x477c81);light(scene);
+ const water=new THREE.Mesh(new THREE.PlaneGeometry(112,105),
+  new THREE.MeshStandardMaterial({color:0x337d85,roughness:.52,metalness:0,transparent:true,opacity:.91,side:THREE.DoubleSide}));
+ water.rotation.x=-Math.PI/2;water.position.y=-.09;scene.add(water);
+ const outline=new THREE.Mesh(new THREE.RingGeometry(.8,.84,28),
+  new THREE.MeshBasicMaterial({color:0xabcbd0,transparent:true,opacity:.7,side:THREE.DoubleSide}));
+ outline.rotation.x=-Math.PI/2;outline.position.y=.02;scene.add(outline);
+ const swimmer=new THREE.Group();
+ const suit=new THREE.MeshStandardMaterial({color:0xdfb576,roughness:.95});
+ const body=new THREE.Mesh(new THREE.BoxGeometry(.85,.25,1.85),new THREE.MeshStandardMaterial({color:0x35545d}));
+ swimmer.add(body);body.position.set(0,.07,.2);
+ const head=new THREE.Mesh(new THREE.IcosahedronGeometry(.50,1),suit);head.position.set(0,.24,-1.02);swimmer.add(head);
+ for(const side of[-1,1]){
+  const arm=new THREE.Mesh(new THREE.BoxGeometry(.25,.16,1.45),suit);
+  arm.position.set(side*.7,.065,-.3);arm.rotation.y=side*.45;swimmer.add(arm);
+ }
+ swimmer.position.y=.15;scene.add(swimmer);
+ const linePoints=[];for(let i=0;i<=140;i++){const s=sharkSample(i*SHARK_CYCLE/140);linePoints.push(new THREE.Vector3(s.x,.015,s.z))}
+ const track=new THREE.Line(new THREE.BufferGeometry().setFromPoints(linePoints),
+  new THREE.LineBasicMaterial({color:0xb8d6c1,transparent:true,opacity:.48}));scene.add(track);
+ const shark=new THREE.Group();
+ const finGeom=new THREE.BufferGeometry();
+ finGeom.setAttribute('position',new THREE.Float32BufferAttribute([
+ -.12,0,-1.17, -.12,0,1.17, -.075,1.78,.18,
+  .12,0,-1.17, .075,1.78,.18, .12,0,1.17
+ ],3));finGeom.computeVertexNormals();
+ const fin=new THREE.Mesh(finGeom,new THREE.MeshStandardMaterial({color:0x283b43,roughness:.8,side:THREE.DoubleSide,flatShading:true}));
+ shark.add(fin);
+ const shadow=new THREE.Mesh(new THREE.CapsuleGeometry(.55,2.6,2,4),
+ new THREE.MeshBasicMaterial({color:0x193d49,transparent:true,opacity:.38,depthWrite:false}));
+ shadow.rotation.x=Math.PI/2;shadow.position.y=-.3;shark.add(shadow);
+ scene.add(shark);
+ const wake=new THREE.Mesh(new THREE.RingGeometry(1.2,1.36,24),
+ new THREE.MeshBasicMaterial({color:0xc0dfdf,transparent:true,opacity:.48,depthWrite:false,side:THREE.DoubleSide}));
+ wake.rotation.x=-Math.PI/2;wake.position.y=.04;scene.add(wake);
+ const droplets=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.24,0),
+ new THREE.MeshBasicMaterial({color:0xa5192c,transparent:true,opacity:.85,depthWrite:false}),24);
+ droplets.frustumCulled=false;scene.add(droplets);
+ const bloodRing=new THREE.Mesh(new THREE.RingGeometry(.72,1,32),
+ new THREE.MeshBasicMaterial({color:0xa0182c,transparent:true,opacity:.0,side:THREE.DoubleSide,depthWrite:false}));
+ bloodRing.rotation.x=-Math.PI/2;bloodRing.position.y=.065;scene.add(bloodRing);
+ const camera=new THREE.PerspectiveCamera(42,1,.1,240);
+ camera.position.set(8,63,56);camera.lookAt(0,0,0);
+ return {scene,camera,view:$('sharkView'),shark,wake,droplets,bloodRing,swimmer};
+}
+function updateShark(t){
+ const v=sharkSample(t),a=v.biteAge;
+ sharkScene.shark.position.set(v.x,.02,v.z);
+ sharkScene.shark.rotation.y=v.yaw;
+ sharkScene.wake.position.set(v.x,.06,v.z);
+ sharkScene.wake.scale.setScalar(.8+Math.sin(t*3)*.10);
+ const visible=a<1.25,alpha=visible?Math.max(0,1-a/1.25):0;
+ sharkScene.bloodRing.visible=visible;sharkScene.bloodRing.material.opacity=alpha*.75;
+ sharkScene.bloodRing.scale.setScalar(.6+a*4.6);
+ const start=(t%SHARK_CYCLE)<5?1.65:-1.7;
+ for(let i=0;i<24;i++){
+  const theta=i*2.399963,seed=(i*13%17)/17,velocity=3.3+seed*4.8;
+  const d=a*velocity;
+  dummy.position.set(start+Math.cos(theta)*d, Math.max(-.03,.22+a*velocity*1.6-11*a*a),
+   -.05+Math.sin(theta)*d);
+  const sz=visible&&dummy.position.y>0?.45*(1-a/1.25):0;
+  dummy.rotation.set(0,theta,0);dummy.scale.setScalar(Math.max(0,sz));dummy.updateMatrix();
+  sharkScene.droplets.setMatrixAt(i,dummy.matrix);
+ }
+ sharkScene.droplets.instanceMatrix.needsUpdate=true;
+ $('phase').textContent=v.phase+' · '+t.toFixed(1)+' s';
+ $('seek').value=Math.round((t%SHARK_CYCLE)/SHARK_CYCLE*1200);
+}
+function orient(state){
+ state.camera.aspect=state.view.clientWidth/state.view.clientHeight;
+ state.camera.position.set(Math.sin(state.angle)*state.zoom,state.zoom*.59,Math.cos(state.angle)*state.zoom);
+ state.camera.lookAt(state.target);state.camera.updateProjectionMatrix();
+}
+function renderClip(state){
+ const box=state.view.getBoundingClientRect(),H=window.innerHeight,W=window.innerWidth;
+ const x=Math.floor(Math.max(0,box.left)),y=Math.floor(Math.max(0,H-box.bottom)),
+  w=Math.ceil(Math.min(box.right,W)-x),h=Math.ceil(Math.min(box.bottom,H)-Math.max(0,box.top));
+ if(w<=0||h<=0)return;
+ const camera=state.camera;camera.aspect=w/h;camera.updateProjectionMatrix();
+ renderer.setViewport(x,y,w,h);renderer.setScissor(x,y,w,h);renderer.render(state.scene,camera);
+}
+try{
+ renderer=new THREE.WebGLRenderer({canvas:$('stage'),antialias:true,alpha:true,powerPreference:'low-power'});
+ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.4));
+ renderer.setClearColor(0x112326,0);renderer.outputColorSpace=THREE.SRGBColorSpace;
+ for(let i=0;i<4;i++)rockScenes.push(rockScene(i));
+ sharkScene=makeShark();
+ const observer=new ResizeObserver(()=>resize());observer.observe(document.body);
+ function resize(){const w=window.innerWidth,h=window.innerHeight;renderer.setSize(w,h,false)}
+ window.addEventListener('resize',resize);resize();
+ let prior=performance.now();
+ function frame(now){
+  const dt=Math.min(.05,(now-prior)/1000);prior=now;
+  if(active==='rocks'){
+   for(const state of rockScenes){if(autoRotate)state.angle+=dt*.085;orient(state);}
+  }else if(playing){clock=(clock+dt*Number($('speed').value))%SHARK_CYCLE;updateShark(clock)}
+  renderer.setScissorTest(false);renderer.clear();renderer.setScissorTest(true);
+  if(active==='rocks')for(const state of rockScenes)renderClip(state);
+  else renderClip(sharkScene);
+  requestAnimationFrame(frame);
+ }
+ updateShark(0);requestAnimationFrame(frame);
+ for(const scene of rockScenes){
+  let pressed=false,startX=0,angle=0;
+  scene.view.addEventListener('pointerdown',e=>{pressed=true;startX=e.clientX;angle=scene.angle;scene.view.setPointerCapture(e.pointerId)});
+  scene.view.addEventListener('pointermove',e=>{if(pressed)scene.angle=angle+(e.clientX-startX)*.01});
+  scene.view.addEventListener('pointerup',()=>pressed=false);
+  scene.view.addEventListener('pointercancel',()=>pressed=false);
+ }
+}catch(err){
+ console.warn('No es pot obrir Three.js WebGL en aquest entorn',err);
+ document.body.classList.add('no-webgl');$('notice').style.display='block';
+ $('stage').style.display='none';$('colliders').disabled=true;$('rotate').disabled=true;
+}
+function tab(name){
+ active=name;
+ $('rocksArea').hidden=name!=='rocks';$('sharkArea').hidden=name!=='shark';
+ $('rocksTab').setAttribute('aria-selected',String(name==='rocks'));
+ $('sharkTab').setAttribute('aria-selected',String(name==='shark'));
+}
+$('rocksTab').addEventListener('click',()=>tab('rocks'));
+$('sharkTab').addEventListener('click',()=>tab('shark'));
+$('colliders').addEventListener('click',()=>{
+ showColliders=!showColliders;
+ for(const state of rockScenes)state.marker.visible=showColliders;
+ $('colliders').classList.toggle('active',showColliders);
+ $('colliders').setAttribute('aria-pressed',String(showColliders));
+});
+$('rotate').addEventListener('click',()=>{
+ autoRotate=!autoRotate;$('rotate').classList.toggle('active',autoRotate);
+ $('rotate').setAttribute('aria-pressed',String(autoRotate));
+});
+$('pause').addEventListener('click',()=>{
+ playing=!playing;$('pause').textContent=playing?'⏸ Pausa':'▶ Reprodueix';
+ $('pause').classList.toggle('active',playing);$('pause').setAttribute('aria-pressed',String(playing));
+});
+$('replay').addEventListener('click',()=>{clock=0;if(sharkScene)updateShark(0);playing=true;$('pause').textContent='⏸ Pausa';});
+$('seek').addEventListener('input',e=>{clock=Number(e.target.value)/100*1;if(sharkScene)updateShark(clock);playing=false;$('pause').textContent='▶ Reprodueix';$('pause').setAttribute('aria-pressed','false')});
+if(new URLSearchParams(location.search).get('mode')==='taurons')tab('shark');
+</script>
+</body>
+</html>
