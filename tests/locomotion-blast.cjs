@@ -43,7 +43,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
  const game=await require('./harness.cjs')();
  const results=game.run(`(()=>{
    world=new THREE.Group();scene.add(world);
-   cv=null;playerFall=null;playerEject=null;hp=100;
+   cv=null;playerFall=null;playerEject=null;hp=20;
    P.x=4;P.z=0;P.y=1.5;
    E=[];PL.length=0;
    enemyCandidatesAt=()=>E;
@@ -56,22 +56,22 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
       o:new THREE.Group(),destroyed:false};
    soldier.o.position.set(2,0,0);E.push(soldier);
    const initial=hp;
-   boom(0,1.5,0,12,35,'e');
+   boom(0,1.5,0,12,8,'e');
    const hostile={
      soldierFling:!!soldier.blastImpulse&&soldier.blastT>1.5,
-     enemyNotDamaged:soldier.hp===400,
+     enemyDamaged:soldier.hp<400,
      playerFling:playerEject?.kind==='blast'&&playerEject.vy>10,
      playerDamaged:hp<initial,
      impulse:Math.hypot(soldier.blastImpulse?.vx||0,soldier.blastImpulse?.vz||0)
    };
    updEn(.1);
    hostile.enemyAirborne=soldier.blastHeight>0&&soldier.x>2;
-   playerEject=null;hp=100;
+   playerEject=null;hp=20;
    soldier.blastT=0;soldier.blastImpulse=null;soldier.blastHeight=0;
-   boom(0,1.5,0,12,35,'p');
+   boom(0,1.5,0,12,8,'p');
    const friendly={
      playerFling:playerEject?.kind==='blast'&&playerEject.vy>10,
-     playerNotDamaged:hp===100,
+     playerDamaged:hp<20,
      soldierFling:!!soldier.blastImpulse,
      soldierDamaged:soldier.hp<400
    };

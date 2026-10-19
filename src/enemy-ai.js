@@ -289,7 +289,12 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
   }
 
   u.o.position.set(u.x,(u.gy!=null?u.gy:enemyGroundAt(u,u.x,u.z))+(u.t=='jeep'||u.t=='tanc'?.05:0),u.z);
-  if(enemyIsVehicle(u)){u.hd=u.navHd??u.hd}
+  if(enemyIsVehicle(u)){
+    // Velocitat real del desplaçament, no la velocitat nominal de patrulla.
+    // La col·lisió amb un jugador a peu la consultarà al fotograma següent.
+    u.impactSpeed=dt>.0001?Math.hypot(u.x-oldX,u.z-oldZ)/dt:0;
+    u.hd=u.navHd??u.hd;
+  }
   // Enemics que comparteixen model de cotxe/tanqueta: el tren davanter
   // segueix la direcció real del moviment, sense canviar la seva IA.
   const lastVisualHeading=u.o.rotation.y;

@@ -154,7 +154,7 @@ function explodeVehicle(v){
   const i=V.indexOf(v);if(i>=0)V.splice(i,1);
   intelMarks=intelMarks.filter(m=>m.ref!==v);
   if(v.o){vehicleDebris(v,yy);world.remove(v.o)}
-  boom(v.x,yy+1,v.z,10,8,'p');
+  boom(v.x,yy+1,v.z,10,8,'p',{skipPlayer:wasPilot});
 }
 // Tots els vehicles perden vides amb els impactes; el casc protegeix
 // els ocupants fins al moment que el vehicle explota.
@@ -171,6 +171,21 @@ function damageVehicle(v,dmg,impacts=1,shotClass='collision'){
  if(amount<=0)return;
  v.life=Math.max(0,(v.life??VT[v.t]?.life??1)-amount);v.smokeT=0;
  if(v.life<=0)explodeVehicle(v);
+}
+
+// Xocs amb criteris compartits: massa del receptor, massa de l'altre i velocitat relativa.
+// Els impactes ordinaris tenen un màxim de cinc punts de vida per contacte.
+function impactDamage(relativeSpeed,receiverMass=1,strikerMass=1){
+ if(!(relativeSpeed>6))return 0;
+ const ratio=Math.sqrt(Math.max(.2,strikerMass)/Math.max(.2,receiverMass));
+ return Math.max(1,Math.min(5,Math.ceil((relativeSpeed-6)*ratio/6)));
+}
+function impactVehicle(v,dmg){
+ if(!v||v.destroyed||v.t==='tanc'||dmg<=0)return;
+ const amount=Math.min(5,Math.max(1,Math.ceil(dmg)));
+ if(E.includes(v)){
+  if(v.t==='jeep'||v.t==='tanqueta'||v.t==='patrulla_marina')hurtE(v,amount);
+ }else damageVehicle(v,amount,1,'impact');
 }
 
 function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc){
@@ -209,42 +224,85 @@ function blastImpulseAt(x,z,px,pz,r,falloff){
         speed=(15+28*falloff)*scale;
   return {vx:dir.x*speed,vz:dir.z*speed,vy:(9+13*falloff)*scale};
 }
-// Decaïment lineal: 10 al centre, 5 a mig radi i 1 a la vora.
+// Explosions: dany complet al centre, mínim d'un punt a la vora.
 function explosionDamage(dmg,distance,r){return distance>=r?0:Math.max(1,Math.ceil(dmg*(1-distance/r)))}
+// Les parets, portes, forjats, teulades i relleu fan de cobertura real.
+// Especialment: una càrrega a la superfície no pot matar el general al soterrani.
+function blastOccluded(x,y,z,tx,ty,tz){
+ const dx=tx-x,dy=ty-y,dz=tz-z,length=Math.hypot(dx,dy,dz);
+ if(length<.15)return false;
+ const mx=(x+tx)/2,mz=(z+tz)/2,search=Math.hypot(dx,dz)/2+2;
+ for(const w of wallCandidates(mx,mz,search)){
+  if(w.open||w.barbed||w.hp<=0)continue;
+  // L'origen pot estar encastat dins un obstacle just quan detona.
+  if(x>w.x0+.03&&x<w.x1-.03&&y>w.y0+.03&&y<w.y1-.03&&z>w.z0+.03&&z<w.z1-.03)continue;
+  const t=segmentAabbT(x,y,z,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);
+  if(t!=null&&t>=0&&t<.995)return true;
+ }
+ for(const b of buildingCandidates(mx,mz,search)){
+  if(b.rhp<=0||b.rb)continue;
+  const t=b.hangar?hangarRoofSegmentT(x,y,z,tx,ty,tz,b):
+    segmentAabbT(x,y,z,tx,ty,tz,b.x-b.w/2,b.x+b.w/2,b.fy+b.h-.3,b.fy+b.h+1.15,b.z-b.d/2,b.z+b.d/2);
+  if(t!=null&&t>.005&&t<.995)return true;
+ }
+ // Mostreig curt del terreny: bunkerProjectileSurface distingeix el
+ // nivell excavable del búnquer i no crea una falsa roca a les habitacions.
+ const samples=Math.min(32,Math.max(4,Math.ceil(length/2)));
+ for(let i=1;i<samples;i++){
+  const t=i/samples,px=x+dx*t,py=y+dy*t,pz=z+dz*t;
+  if(py<bunkerProjectileSurface(px,pz,py)-.22)return true;
+ }
+ return false;
+}
 function boom(x,y,z,r,dmg,own,source=null){
  snd('boom',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/200));
  const o=new THREE.Mesh(sphG,new THREE.MeshBasicMaterial({color:0xffa030,transparent:true}));
  o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6});
- for(const u of enemyCandidatesAt(x,z,r+vehicleRadius('llanxa')*.62+4)){
-  const marine=u.t==='patrulla_marina',distance=Math.hypot(u.x-x,u.o.position.y+(marine?1.8:1.5)-y,u.z-z),
-    d=marine?Math.max(0,distance-vehicleRadius('llanxa')*.62):distance,dealt=explosionDamage(dmg,d,r);
-  if(!dealt)continue;
+ // El casc protegeix el pilot mentre encara és dins. Si el vehicle
+ // esclata dins aquest càlcul, no el feim rebre també un impacte directe.
+ const pilotedAtStart=!!cv;
+ for(const u of [...enemyCandidatesAt(x,z,r+vehicleRadius('llanxa')*.62+4)]){
+  if(u.hp<=0||u.destroyed)continue;
+  const marine=u.t==='patrulla_marina',targetY=u.o.position.y+(marine?1.8:1.5),
+    distance=Math.hypot(u.x-x,targetY-y,u.z-z),
+    d=marine?Math.max(0,distance-vehicleRadius('llanxa')*.62):distance,
+    dealt=explosionDamage(dmg,d,r);
+  if(!dealt||blastOccluded(x,y,z,u.x,targetY,u.z))continue;
   if(u.t==='soldat'||u.t==='general'){
    u.blastImpulse=blastImpulseAt(x,z,u.x,u.z,r,1-d/r);
-   if(u.hp>(own==='e'?0:dealt)){u.blastT=Math.max(u.blastT||0,.55+u.blastImpulse.vy/8);u.blastTotal=u.blastT}
+   if(u.hp>dealt){u.blastT=Math.max(u.blastT||0,.55+u.blastImpulse.vy/8);u.blastTotal=u.blastT}
   }
-  if(own!=='e')hurtE(u,dealt,source||{x,y,z,sx:cv?.x??P.x,sy:(cv?.o?.position.y??P.y)+1.7,sz:cv?.z??P.z,spl:r,own});
+  // Els enemics també poden ferir els seus companys amb les explosions.
+  hurtE(u,dealt,source||{x,y,z,sx:cv?.x??P.x,sy:(cv?.o?.position.y??P.y)+1.7,sz:cv?.z??P.z,spl:r,own});
  }
+
+ PL.forEach(t=>{if(!t.alive)return;const dealt=explosionDamage(dmg,Math.hypot(t.x-x,t.z-z),r);if(dealt&&!blastOccluded(x,y,z,t.x,t.y+2,t.z))dmgP(t,dealt)});
+ for(const v of [...vehicleCandidatesAt(x,z,r+12,true)]){
+  if(v.destroyed)continue;
+  const dealt=explosionDamage(dmg,explosionDistanceToVehicleHull(v,x,y,z),r);
+  if(dealt&&!blastOccluded(x,y,z,v.x,(v.o?.position?.y??0)+1,v.z))damageVehicle(v,dealt,1,'heavy');
+ }
+ // Les granades i el C4 propis també poden fer mal al jugador a peu.
+ if(!pilotedAtStart&&!source?.skipPlayer){
+  const d=Math.hypot(P.x-x,P.y+1-y,P.z-z),dealt=explosionDamage(dmg,d,r);
+  if(dealt&&!blastOccluded(x,y,z,P.x,P.y+1,P.z)){
+   const impulse=blastImpulseAt(x,z,P.x,P.z,r,1-d/r);
+   if(!playerFall){const flight=Math.max(1.5,.55+impulse.vy/8);
+    playerEject={kind:'blast',...impulse,t:flight,dur:flight,height:0,roll:rn(-1,1)<0?-1:1}}
+   hurtP(dealt,own==='e');
+  }
+
+ }
+ // Les estructures absorbeixen el dany, fins i tot quan tapen els ocupants.
  for(const w of wallCandidates(x,z,r)){
-  const dist=Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z);
-  if(y<w.y1+3){const dealt=explosionDamage(dmg,dist,r);if(dealt)dmgW(w,dealt)}
+  const dist=Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z),
+    dealt=explosionDamage(dmg,dist,r);
+  if(dealt&&y<w.y1+3&&w.hp>0)dmgW(w,dealt);
  }
  for(const b of buildingCandidates(x,z,r)){
   if(b.rhp<=0)continue;
   const dealt=explosionDamage(dmg,Math.hypot(b.x-x,b.z-z),r+b.w/2);
   if(dealt){b.rhp-=dealt;if(b.rhp<=0)roofBreak(b)}
- }
- PL.forEach(t=>{if(!t.alive)return;const dealt=explosionDamage(dmg,Math.hypot(t.x-x,t.z-z),r);if(dealt)dmgP(t,dealt)});
- for(const v of vehicleCandidatesAt(x,z,r+12,true)){
-  if((own==='p'||own==='pb'||own==='b')&&v===cv)continue;
-  const dealt=explosionDamage(dmg,explosionDistanceToVehicleHull(v,x,y,z),r);
-  if(dealt)damageVehicle(v,dealt,1,'heavy');
- }
- const q=cv?cv.o.position:P,d=Math.hypot(q.x-x,q.y-y,q.z-z);
- if(d<r&&!cv){
-  const impulse=blastImpulseAt(x,z,P.x,P.z,r,1-d/r);
-  if(!playerFall){const flight=Math.max(1.5,.55+impulse.vy/8);playerEject={kind:'blast',...impulse,t:flight,dur:flight,height:0,roll:rn(-1,1)<0?-1:1}}
-  if(own==='e')hurtP(explosionDamage(dmg,d,r),true);
  }
 }
 function plant(){if(over||cv||swimming||!inv.expl)return;if(--inv.expl<=0)delete inv.expl;setDis(false);
@@ -883,7 +941,7 @@ function updPj(dt){
       }
     }
     for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){
-      if(p.own==='p'&&v===cv)continue;
+      if((p.own==='p'||p.own==='pb')&&v===cv)continue;
       const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),rr=vehicleRadius(v.t)*.62;
       consider(segmentSphereT(x0,y0,z0,x1,y1,z1,v.x,vy+1,v.z,rr),'vehicle',v)
     }
@@ -910,9 +968,9 @@ function updPj(dt){
             solid=kind==='wall'||kind==='building'||kind==='vehicle'||kind==='enemy';
       if(person)spawnBulletImpact('blood',p.x,p.y,p.z,p);
       else if(solid&&!(kind==='enemy'&&(target.t==='soldat'||target.t==='general')))spawnBulletImpact('spark',p.x,p.y,p.z,p);
-      if(kind==='wall'){if(!isMilitaryWall(target))dmgW(target,p.dmg*(p.own==='e'?.5:1))}
-      else if(kind==='building'){if(!isMilitaryBuilding(target)){target.rhp-=p.dmg*(p.own==='e'?.5:1);if(target.rhp<=0)roofBreak(target)}}
-      else if(kind==='tree'&&target?.p)dmgP(target,p.dmg*(p.own==='e'?.5:1));
+      if(kind==='wall'){if(!isMilitaryWall(target))dmgW(target,p.dmg)}
+      else if(kind==='building'){if(!isMilitaryBuilding(target)){target.rhp-=p.dmg;if(target.rhp<=0)roofBreak(target)}}
+      else if(kind==='tree'&&target?.p)dmgP(target,p.dmg);
       else if(kind==='enemy'){if(target.t!=='torre'&&!(p.shotClass==='light'&&isArmoredVehicleType(target.t)))hurtE(target,p.dmg,p)}
       else if(kind==='vehicle')damageVehicle(target,p.dmg,1,'light');
       else if(kind==='player')hurtP(p.dmg,p.own==='e')
