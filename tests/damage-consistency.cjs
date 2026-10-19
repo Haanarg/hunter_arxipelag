@@ -10,7 +10,7 @@ const section=(s,a,b)=>{
  return s.slice(i,j);
 };
 const ctx={
- Math,E:[],PL:[],cv:null,P:{x:50,y:0,z:0},hp:20,over:0,
+ Math,E:[],V:[],PL:[],cv:null,P:{x:50,y:0,z:0},hp:20,over:0,
  playerFall:null,playerEject:null,elapsed:0,sphG:{},fx:[],
  walls:[],buildings:[],enemies:[],vehicles:[],
  world:{add(){}},THREE:{Mesh:class{constructor(){this.position={set(){}}}},
@@ -18,7 +18,10 @@ const ctx={
  snd(){},rn(a,b){return (a+b)/2},hAt(){return 0},wy(){return 0},
  wallCandidates(){return ctx.walls},buildingCandidates(){return ctx.buildings},
  enemyCandidatesAt(){return ctx.enemies},vehicleCandidatesAt(){return ctx.vehicles},
- vehicleRadius(){return 3},hangarRoofSegmentT(){return null},
+ vehicleRadius(){return 3},vehicleHitType(t){return t==='jeep'?'cotxe':t},
+ VT:{cotxe:{mass:1},tanc:{mass:5},tanqueta:{mass:3.2},camio:{mass:2.2}},
+ circleVehicleOverlap(){return false},terminalRampHeight(){return null},
+ pedestrianFerry(){return null},hangarRoofSegmentT(){return null},
  bunkerProjectileSurface(x,z,y){return y<0?-9:0},
  explosionDistanceToVehicleHull(v,x,y,z){
    return Math.max(0,Math.hypot(v.x-x,(v.o.position.y||0)+1-y,v.z-z)-2);
@@ -32,7 +35,8 @@ vm.runInContext([
  section(combat,'function impactDamage(','function shoot('),
  section(combat,'function segmentAabbT(','function segmentSphereT('),
  section(combat,'function explosionDamage(','function plant('),
- section(core,'function collisionDamageVehicle(','function ramSpeedFactor(')
+ section(core,'function collisionDamageVehicle(','function ramSpeedFactor('),
+ section(core,'function vehiclePushPlayer(','const PL=[],FA=')
 ].join('\n'),ctx);
 
 // A/B: les col·lisions de vehicles són simètriques i els enemics fan servir
@@ -53,12 +57,34 @@ assert.equal(car.life,3,'El cotxe del jugador perd els mateixos PV');
 assert.match(core,/v\.v\?\?v\.impactSpeed\?\?0/,'L’atropellament enemic té velocitat real');
 assert.match(ai,/u\.impactSpeed=dt>/,'La IA publica la velocitat observada');
 
-// C: l’atropellament té límit de 10 PV; un camió a velocitat punta hi arriba.
-const formula=core.match(/const dmg=Math\.min\(10,Math\.max\(1,Math\.ceil\(\(speed-6\)\*Math\.sqrt\(c\.mass\|\|1\)\*\.30\)\)\);/);
-assert.ok(formula,'El dany dels atropellaments ha de tenir un màxim de 10 PV');
-const runOver=(speed,mass)=>speed<=6?0:Math.min(10,Math.max(1,Math.ceil((speed-6)*Math.sqrt(mass||1)*.30)));
-assert.equal(runOver(29,2.2),10,'Camió a velocitat màxima: 10 PV');
-assert.ok(runOver(10,2.2)<runOver(29,2.2),'Un camió lent ha de fer menys mal');
+// C: una mateixa fórmula per als atropellaments rebuts i provocats.
+assert.equal(ctx.runoverDamage(6,5),0,'Per sota del llindar no hi ha dany');
+assert.equal(ctx.runoverDamage(29,2.2),10,'Camió a velocitat punta: 10 PV');
+assert.equal(ctx.runoverDamage(24,3.2),10,'Tanqueta: massa completa i límit 10');
+assert.equal(ctx.runoverDamage(21,5),10,'Tanc: massa completa i límit 10');
+assert.equal(ctx.runoverDamage(17,.2),1,'Bicicleta: dany mínim');
+assert.ok(ctx.runoverDamage(10,2.2)<ctx.runoverDamage(29,2.2),
+ 'Un camió lent ha de fer menys mal');
+assert.match(core,/const dmg=runoverDamage\(speed,c\.mass\|\|1\)/,
+ 'Els soldats reben la fórmula comuna');
+assert.match(core,/dmg=runoverDamage\(sp,VT\[vehicleHitType\(v\.t\)\]\?\.mass\|\|1\)/,
+ 'El jugador rep la mateixa fórmula sense reducció');
+assert.match(ai,/u\.impactFromX=oldX;u\.impactFromZ=oldZ/,
+ 'Els vehicles enemics guarden el trajecte real');
+assert.equal(ctx.runoverSweepHit(0,0,20,0,10,2,3),true,
+ 'El vehicle no pot travessar un soldat entre fotogrames');
+assert.equal(ctx.runoverSweepHit(0,0,20,0,10,4,3),false,
+ 'No es detecta atropellament quan passa prou lluny');
+// Exercitam la col·lisió real contra el jugador, sense solapament final.
+ctx.E=[{t:'jeep',x:20,z:0,impactFromX:0,impactFromZ:0,
+ impactSpeed:22,destroyed:false}];
+ctx.P={x:10,y:0,z:2};ctx.hp=20;
+ctx.vehiclePushPlayer();
+assert.equal(ctx.hp,20-ctx.runoverDamage(22,1),
+ 'El cotxe enemic aplica exactament la fórmula compartida');
+ctx.vehiclePushPlayer();
+assert.equal(ctx.hp,16,'El cooldown impedeix el dany repetit');
+ctx.E=[];ctx.hp=20;
 
 // D: la cobertura del búnquer impedeix el dany des de fora.
 const w={x0:2,x1:2.5,z0:-1,z1:1,y0:-2,y1:4,hp:12,open:false,barbed:false};

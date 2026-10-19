@@ -188,6 +188,25 @@ function impactVehicle(v,dmg){
  }else damageVehicle(v,amount,1,'impact');
 }
 
+// Mateix atropellament per a soldats i jugador: velocitat i massa sense
+// límit artificial per als vehicles pesants; 10 PV és el màxim global.
+const RUNOVER_MIN_SPEED=6,RUNOVER_MAX_DAMAGE=10;
+function runoverDamage(speed,mass=1){
+ if(!(speed>RUNOVER_MIN_SPEED))return 0;
+ return Math.min(RUNOVER_MAX_DAMAGE,Math.max(1,Math.ceil(
+  (speed-RUNOVER_MIN_SPEED)*Math.max(.2,mass)*RUNOVER_MAX_DAMAGE/(23*2.2)
+ )));
+}
+// Consulta tot el moviment del vehicle, també quan travessa una diana
+// entre dos fotogrames. El radi és el mateix que per a l'impacte puntual.
+function runoverSweepHit(x0,z0,x1,z1,tx,tz,radius){
+ const dx=x1-x0,dz=z1-z0,lengthSq=dx*dx+dz*dz;
+ const t=lengthSq>1e-8?Math.max(0,Math.min(1,
+  ((tx-x0)*dx+(tz-z0)*dz)/lengthSq)):0;
+ const px=x0+dx*t,pz=z0+dz*t;
+ return (tx-px)**2+(tz-pz)**2<radius*radius;
+}
+
 function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc){
   const shotClass=shotClassFromSplash(spl),speed=sp*(shotClass==='heavy'?HEAVY_SHOT_SPEED_FACTOR:1),
         power=dmg;

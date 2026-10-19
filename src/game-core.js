@@ -706,11 +706,24 @@ function treePush(){const r0=.5,cx=Math.floor(P.x/16),cz=Math.floor(P.z/16);for(
 function vehiclePushPlayer(){
   if(cv||playerFall)return;
   for(const v of [...V,...E.filter(u=>['jeep','tanqueta','tanc'].includes(u.t))]){
-    if(v.destroyed||!circleVehicleOverlap(P.x,P.z,.62,v))continue;if(v.t==='ferry'&&(terminalRampHeight(P.x,P.z)!==null||pedestrianFerry(P.x,P.z,P.y)?.f===v))continue;
-    const b=vehicleBox(v),dx=P.x-b.x,dz=P.z-b.z,s=Math.sin(b.hd),c=Math.cos(b.hd),lx=dx*c-dz*s,lz=dx*s+dz*c,ex=b.w/2+.66-Math.abs(lx),ez=b.d/2+.66-Math.abs(lz);
-    if(ex<ez){const sign=lx<0?-1:1,wx=sign*c,wz=-sign*s;P.x=b.x+(sign*(b.w/2+.66))*c+lz*s;P.z=b.z-(sign*(b.w/2+.66))*s+lz*c}
-    else{const sign=lz<0?-1:1;P.x=b.x+lx*c+sign*(b.d/2+.66)*s;P.z=b.z-lx*s+sign*(b.d/2+.66)*c}
-    const sp=Math.abs(v.v??v.impactSpeed??0);if(sp>5&&!(playerEject?.kind==='flip'&&playerEject.t>0)&&(!v.playerHitCd||v.playerHitCd<=0)){hurtP(Math.min(5,.4+sp*.11));v.playerHitCd=.45;msg='Impacte amb un vehicle!';msgT=1.5}
+    if(v.destroyed)continue;
+    const overlap=circleVehicleOverlap(P.x,P.z,.62,v),
+          sweep=runoverSweepHit(v.impactFromX??v.x,v.impactFromZ??v.z,
+            v.x,v.z,P.x,P.z,vehicleRadius(v.t)*.68+.62*.45);
+    if(!overlap&&!sweep)continue;
+    if(v.t==='ferry'&&(terminalRampHeight(P.x,P.z)!==null||pedestrianFerry(P.x,P.z,P.y)?.f===v))continue;
+    // Només apartam el jugador si el buc l'ocupa ara; un pas ràpid
+    // que ja l'ha travessat conserva el dany sense teletransportar-lo.
+    if(overlap){
+      const b=vehicleBox(v),dx=P.x-b.x,dz=P.z-b.z,s=Math.sin(b.hd),c=Math.cos(b.hd),lx=dx*c-dz*s,lz=dx*s+dz*c,ex=b.w/2+.66-Math.abs(lx),ez=b.d/2+.66-Math.abs(lz);
+      if(ex<ez){const sign=lx<0?-1:1;P.x=b.x+(sign*(b.w/2+.66))*c+lz*s;P.z=b.z-(sign*(b.w/2+.66))*s+lz*c}
+      else{const sign=lz<0?-1:1;P.x=b.x+lx*c+sign*(b.d/2+.66)*s;P.z=b.z-lx*s+sign*(b.d/2+.66)*c}
+    }
+    const sp=Math.abs(v.v??v.impactSpeed??0),
+          dmg=runoverDamage(sp,VT[vehicleHitType(v.t)]?.mass||1);
+    if(dmg>0&&!(playerEject?.kind==='flip'&&playerEject.t>0)&&(!v.playerHitCd||v.playerHitCd<=0)){
+      hurtP(dmg);v.playerHitCd=.45;msg='Impacte amb un vehicle!';msgT=1.5;
+    }
   }
 }
 const PL=[],FA=[],ZM=new THREE.Matrix4().makeScale(0,0,0);let PM={};
@@ -1834,7 +1847,9 @@ function killShark(f){
   msg='Has envestit un tauró!';msgT=1.8;
 }
 function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
-  const c=VT[v.t],speed=Math.abs(v.v),radius=vehicleRadius(v.t);v.ramCd=Math.max(0,(v.ramCd||0)-dt);v.envCd=Math.max(0,(v.envCd||0)-dt);v.bump=Math.max(0,(v.bump||0)-dt);
+  const c=VT[v.t],speed=Math.abs(v.v),radius=vehicleRadius(v.t);
+  v.impactFromX=oldX;v.impactFromZ=oldZ;
+  v.ramCd=Math.max(0,(v.ramCd||0)-dt);v.envCd=Math.max(0,(v.envCd||0)-dt);v.bump=Math.max(0,(v.bump||0)-dt);
   // Els cascs i taules poden atropellar taurons. La trajectòria
   // completa detecta col·lisions fins i tot entre dos fotogrames.
   if(speed>=3&&(c.m==='w'||c.m==='wl')&&hAt(v.x,v.z)<-.8){
@@ -1850,9 +1865,8 @@ function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
   if(v.ramCd<=0&&speed>6){
     for(const u of E){
       if(u.t!=='soldat')continue;
-      const d=Math.hypot(v.x-u.x,v.z-u.z);
-      if(d<radius*.68+u.r*.45){
-        const dmg=Math.min(10,Math.max(1,Math.ceil((speed-6)*Math.min(2.2,c.mass||1)*10/(23*2.2))));
+      if(runoverSweepHit(oldX,oldZ,v.x,v.z,u.x,u.z,radius*.68+u.r*.45)){
+        const dmg=runoverDamage(speed,c.mass||1);
         hurtE(u,dmg);u.alert=12;v.ramCd=.35;v.v*=.86;
         msg='Atropellament!';msgT=1;break;
       }

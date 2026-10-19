@@ -292,6 +292,7 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
   if(enemyIsVehicle(u)){
     // Velocitat real del desplaçament, no la velocitat nominal de patrulla.
     // La col·lisió amb un jugador a peu la consultarà al fotograma següent.
+    u.impactFromX=oldX;u.impactFromZ=oldZ;
     u.impactSpeed=dt>.0001?Math.hypot(u.x-oldX,u.z-oldZ)/dt:0;
     u.hd=u.navHd??u.hd;
   }
