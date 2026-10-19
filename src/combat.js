@@ -124,7 +124,25 @@ function killEnemy(u,killingShot=null){
   else world.remove(u.o);
   if(u.t==='general')startVictoryCinematic(u,killingShot)
 }
-function hurtE(u,d,killingShot=null){u.hp-=d;u.alert=12;if(u.hp<=0)killEnemy(u,killingShot)}
+function hurtE(u,d,killingShot=null){
+  if(d<=0||u.hp<=0)return;
+  u.hp-=d;u.alert=12;
+  if(u.t==='soldat'||u.t==='general'){
+    // Ferides de bala, ganivet, explosions i atropellaments: la sang
+    // surt del cos del soldat, també quan sobreviu a l'impacte.
+    const bullet=killingShot?.spl===0&&Number.isFinite(killingShot.vx),
+          x=bullet?killingShot.x:u.x+rn(-.15,.15),
+          y=bullet?killingShot.y:(u.o?.position.y??u.gy??hAt(u.x,u.z))+rn(1,1.5),
+          z=bullet?killingShot.z:u.z+rn(-.15,.15),
+          sourceX=killingShot?.x??P.x,sourceZ=killingShot?.z??P.z;
+    spawnBulletImpact('blood',x,y,z,{
+      vx:bullet?killingShot.vx:u.x-sourceX,
+      vy:bullet?killingShot.vy:0,
+      vz:bullet?killingShot.vz:u.z-sourceZ
+    });
+  }
+  if(u.hp<=0)killEnemy(u,killingShot);
+}
 function explodeVehicle(v){
   if(!v||v.destroyed)return;v.destroyed=true;const wasPilot=cv===v,yy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
   if(wasPilot){
@@ -259,7 +277,7 @@ bombs.push({x,y,z,t:3,o});msg='Bomba col·locada: 3 s!';msgT=2}
 // La filferrada és permeable a la vista i al foc lleuger, però segueix
 // impedint els atacs cos a cos quan ignoreBarbed=false.
 function sight(x,z,tx,tz,y,ignoreBarbed=true){const d=Math.hypot(tx-x,tz-z),n=Math.max(1,Math.ceil(d/1.5));for(let k=1;k<n;k++){const xx=x+(tx-x)*k/n,zz=z+(tz-z)*k/n;if(wallCandidates(xx,zz).some(w=>!w.open&&(!ignoreBarbed||!w.barbed)&&y>w.y0&&y<w.y1&&xx>w.x0&&xx<w.x1&&zz>w.z0&&zz<w.z1))return false}return true}
-function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=pl.userData.knifeAttackDuration||.38;const fx_=-Math.sin(P.hd),fz=-Math.cos(P.hd);let hit=null,best=2.6;for(const u of E){const dx=u.x-P.x,dz=u.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx_+dz*fz)/d>.35&&sight(P.x,P.z,u.x,u.z,P.y+1.2,false)){best=d;hit=u}}if(hit)hurtE(hit,6);snd('hurt',hit?.45:.18);setDis(false);return true}
+function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=pl.userData.knifeAttackDuration||.38;const fx_=-Math.sin(P.hd),fz=-Math.cos(P.hd);let hit=null,best=2.6;for(const u of E){if(u.t!=='soldat'&&u.t!=='general')continue;const dx=u.x-P.x,dz=u.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx_+dz*fz)/d>.35&&sight(P.x,P.z,u.x,u.z,P.y+1.2,false)){best=d;hit=u}}if(hit)hurtE(hit,12);snd('hurt',hit?.45:.18);setDis(false);return true}
 function secondaryWeapon(){
   if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd),d45=Math.SQRT1_2;
   if(cv.t==='heli_combat'){if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,60,10,'p',mS,2.4);Pj[Pj.length-1].life=3.3;msg='Míssils: '+cv.rockets;msgT=1;return true}
@@ -905,10 +923,10 @@ function updPj(dt){
     if(!p.spl){
       // La mateixa detecció de col·lisions dona feedback en ambdós sentits.
       // Soldats/general/jugador: sang discreta; altres dianes: espurnes.
-      const person=kind==='player'||(kind==='enemy'&&(target.t==='soldat'||target.t==='general')),
+      const person=kind==='player',
             solid=kind==='wall'||kind==='building'||kind==='vehicle'||kind==='enemy';
       if(person)spawnBulletImpact('blood',p.x,p.y,p.z,p);
-      else if(solid)spawnBulletImpact('spark',p.x,p.y,p.z,p);
+      else if(solid&&!(kind==='enemy'&&(target.t==='soldat'||target.t==='general')))spawnBulletImpact('spark',p.x,p.y,p.z,p);
       if(kind==='wall'){if(!isMilitaryWall(target))dmgW(target,p.dmg*(p.own==='e'?.5:1))}
       else if(kind==='building'){if(!isMilitaryBuilding(target)){target.rhp-=p.dmg*(p.own==='e'?.5:1);if(target.rhp<=0)roofBreak(target)}}
       else if(kind==='tree'&&target?.p)dmgP(target,p.dmg*(p.own==='e'?.5:1));
