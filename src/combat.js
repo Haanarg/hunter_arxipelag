@@ -50,13 +50,13 @@ function clearBulletImpacts(){
 }
 
 function setDis(v){disg=v;[...pl.userData.mats,...rider.userData.mats].forEach(([m,a,b])=>m.color.copy(vivid(v?b:a)))}
-function fin(m){setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+' · Obre Ⅱ / Esc per tornar a jugar';endEl.style.display='flex'}
+function fin(m,cause=null){if(m==='HAS MORT'&&startDeathCinematic(cause))return;setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+' · Obre Ⅱ / Esc per tornar a jugar';endEl.style.display='flex'}
 // El dany no canvia amb la dificultat: només la dispersió del tir enemic.
 function enemyWeaponDamageScale(){return 1}
-function hurtP(d,fromEnemyWeapon=false){
+function hurtP(d,fromEnemyWeapon=false,cause=null){
  if(over)return;
  hp-=d;snd('hurt',.5);
- if(hp<=0){hp=0;fin('HAS MORT')}
+ if(hp<=0){hp=0;fin('HAS MORT',cause||{type:fromEnemyWeapon?'bullet':'impact'})}
 }
 function destroyTower(u){
   if(!u?.o||u.destroyed)return;
@@ -148,7 +148,7 @@ function explodeVehicle(v){
       cv=null;P.x=v.x;P.z=v.z;
       const a=rn(0,Math.PI*2),sp=rn(14,24);
       playerEject={kind:'blast',vx:Math.cos(a)*sp,vz:Math.sin(a)*sp,t:.8,dur:.8,spin:rn(-1,1)<0?-1:1,height:1.25};
-      hurtP(rn(4,6));msg='El vehicle ha explotat!';msgT=3;
+      hurtP(rn(4,6),false,{type:'vehicleExplosion',x:v.x,y:yy+1,z:v.z});msg='El vehicle ha explotat!';msgT=3;
     }
   }
   const i=V.indexOf(v);if(i>=0)V.splice(i,1);
@@ -308,7 +308,7 @@ function boom(x,y,z,r,dmg,own,source=null){
    const impulse=blastImpulseAt(x,z,P.x,P.z,r,1-d/r);
    if(!playerFall){const flight=Math.max(1.5,.55+impulse.vy/8);
     playerEject={kind:'blast',...impulse,t:flight,dur:flight,height:0,roll:rn(-1,1)<0?-1:1}}
-   hurtP(dealt,own==='e');
+   hurtP(dealt,own==='e',{type:'explosion',x,y,z});
   }
 
  }
@@ -992,7 +992,7 @@ function updPj(dt){
       else if(kind==='tree'&&target?.p)dmgP(target,p.dmg);
       else if(kind==='enemy'){if(target.t!=='torre'&&!(p.shotClass==='light'&&isArmoredVehicleType(target.t)))hurtE(target,p.dmg,p)}
       else if(kind==='vehicle')damageVehicle(target,p.dmg,1,'light');
-      else if(kind==='player')hurtP(p.dmg,p.own==='e')
+      else if(kind==='player')hurtP(p.dmg,p.own==='e',{type:'bullet',x:p.sx,y:p.sy,z:p.sz})
     }
     if(p.spl)boom(p.x,p.y,p.z,p.spl,p.dmg,p.own,p);
     world.remove(p.o);Pj.splice(i,1)

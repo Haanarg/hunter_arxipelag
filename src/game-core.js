@@ -422,7 +422,7 @@ for(let i=fa.length-1;i>=0;i--){
     f.o.rotation.y=f.sharkYaw??Math.PI-f.a;
     f.o.rotation.z=f.dead?Math.min(1.4,(f.deathT||0)*2):0;
     if(outcome.bite&&!over){
-      hurtP(window.HUNTER_SHARKS.BITE_DAMAGE);
+      hurtP(window.HUNTER_SHARKS.BITE_DAMAGE,false,{type:'shark',x:f.x,y:f.o.position.y,z:f.z});
       msg='Un tauró et mossega!';msgT=1.5;
     }
     if(!f.dead&&d2<FAUNA_NEAR2&&Math.random()<.1)
@@ -722,7 +722,7 @@ function vehiclePushPlayer(){
     const sp=Math.abs(v.v??v.impactSpeed??0),
           dmg=runoverDamage(sp,VT[vehicleHitType(v.t)]?.mass||1);
     if(dmg>0&&!(playerEject?.kind==='flip'&&playerEject.t>0)&&(!v.playerHitCd||v.playerHitCd<=0)){
-      hurtP(dmg);v.playerHitCd=.45;msg='Impacte amb un vehicle!';msgT=1.5;
+      hurtP(dmg,false,{type:'runover',x:v.x,y:v.o?.position?.y??P.y,z:v.z});v.playerHitCd=.45;msg='Impacte amb un vehicle!';msgT=1.5;
     }
   }
 }
@@ -2253,7 +2253,7 @@ else{P.hd+=tr*dt*2.2;if(playerFall){
       waterLanding=roof===null&&water>hAt(P.x,P.z)+1.5,
       dmg=fall.parachute?0:Math.min(COMBAT_BALANCE.player,Math.max(0,((fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8))*.2));
     removeParachuteVisual();playerFall=null;
-    if(dmg>0)hurtP(dmg);
+    if(dmg>0)hurtP(dmg,false,{type:'fall',x:P.x,y:P.y+8,z:P.z});
     msg=dmg===0&&fallH>4?'Has aterrat amb seguretat.':waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5;
   }
 }
@@ -2466,6 +2466,7 @@ let last=performance.now();
 (function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(victoryCinematic?victoryCinematic.t:started&&!paused&&!over?dt:0),cpuStarted=performance.now();
 update(dt,t);
 if(victoryCinematic?.active||victoryCinematic?.finished)updateVictoryCinematic(dt);
+ if(deathCinematic?.active)updateDeathCinematic(dt);
 const simulationEnded=performance.now();
 if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
   terrainStream.update(victoryCinematic?.active?cam.position.x:P.x,
@@ -2473,7 +2474,11 @@ if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
     victoryCinematic?.active?null:currentSniperFocus());const terrainEnded=performance.now();waves(t);
 sun.target.position.set(victoryCinematic?cam.position.x:P.x,0,
   victoryCinematic?cam.position.z:P.z);
-sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();for(const k in renderCategories)renderCategories[k]=0;ren.render(scene,cam);
+sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();for(const k in renderCategories)renderCategories[k]=0;
+ if(deathVoidReady()){
+   const v=deathCinematic;v.voidCamera.aspect=cam.aspect;v.voidCamera.updateProjectionMatrix();
+   ren.render(v.voidScene,v.voidCamera);
+ }else ren.render(scene,cam);
 if(started&&!paused&&!over){
   advanceTerrainTexture();
   if(waterUpgradePending){water.queueResolutionUpgrade();waterUpgradePending=false}
