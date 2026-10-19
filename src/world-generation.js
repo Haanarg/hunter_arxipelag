@@ -486,7 +486,7 @@ if(seedSearchMode&&seedSearchCategoryEl.value==='item'){
   P.base={x:pa.x,z:pa.z};return;
 }
 P.x=baseCompound.spawn?.x??pa.x;P.z=baseCompound.spawn?.z??pa.z+20;P.hd=0;P.base={x:pa.x,z:pa.z};V=[];cv=null;mm=null;
-const add=(t,x,z,a,meta={})=>{const o=seedSearchMode?seedVehicleStub(t):mkV(t),c=VT[t],surface=Math.max(0,hAt(x,z)),v={t,x,z,hd:a||0,v:0,alt:c.m==='a'?helicopterLandedAltitude({o},surface):surface+.8,o,armor:c.armor??0,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};if(t==='heli_combat')v.rockets=6;if(t==='llanxa_coets')v.rockets=Infinity;if(!seedSearchMode)world.add(o);V.push(v);return v};
+const add=(t,x,z,a,meta={})=>{const o=seedSearchMode?seedVehicleStub(t):mkV(t),c=VT[t],surface=Math.max(0,hAt(x,z)),v={t,x,z,hd:a||0,v:0,alt:c.m==='a'?helicopterLandedAltitude({o},surface):surface+.8,o,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};if(t==='heli_combat')v.rockets=6;if(t==='llanxa_coets')v.rockets=Infinity;if(!seedSearchMode)world.add(o);V.push(v);return v};
 // Cap tanc neutral dins del HQ: els tancs pilotables apareixen
 // distribuïts per l'arxipèlag, lluny de la base enemiga.
 

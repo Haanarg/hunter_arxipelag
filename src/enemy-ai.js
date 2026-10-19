@@ -133,11 +133,32 @@ function soldierEngage(u,target,targetY,dt,d,visible){
   u.hd=Math.atan2(u.x-toward.x,u.z-toward.z); // la cara sempre al jugador
 }
 
-// Les defenses trien la cadència més ràpida que pugui fer mal
-// al jugador o al vehicle que pilota. L'arma pesada només és necessària
-// contra blindats (tancs, tanquetes, helicòpter de combat, etc.).
+// Les defenses utilitzen el canó pesat contra qualsevol vehicle i
+// el fusell lleuger contra el jugador a peu, sense nivells de blindatge.
 function towerWeaponForTarget(vehicle){
-  return vehicle&&isArmoredVehicle(vehicle)?'heavy':'light';
+  return vehicle?'heavy':'light';
+}
+// El fusell de l'artiller gira des de la finestra dreta del cotxe.
+// El marcador és fill de la boca del canó visible: l'origen del tret
+// segueix sempre el model real i no el centre del vehicle.
+function enemyCarRifleShot(u,target,targetY){
+  const crew=u.o.userData.enemyCarCrew;
+  if(!crew)return null;
+  u.o.position.set(u.x,(u.gy??enemyGroundAt(u,u.x,u.z))+.05,u.z);
+  u.o.rotation.y=u.navHd??u.hd;
+  u.o.updateMatrixWorld(true);
+  const spread=enemyAimSpread(),horizontal=1.5*spread,vertical=.85*(spread-1),
+        aim=new THREE.Vector3(target.x+rn(-horizontal,horizontal),
+          targetY+1.5+(vertical?rn(-vertical,vertical):0),target.z+rn(-horizontal,horizontal));
+  u.o.worldToLocal(aim);
+  const dx=aim.x-crew.mount.position.x,dy=aim.y-crew.mount.position.y,
+        dz=aim.z-crew.mount.position.z;
+  crew.mount.rotation.y=Math.atan2(-dx,-dz);
+  crew.pitch.rotation.x=Math.max(-.7,Math.min(.75,Math.atan2(dy,Math.hypot(dx,dz))));
+  u.o.updateMatrixWorld(true);
+  return {origin:crew.muzzle.getWorldPosition(new THREE.Vector3()),
+    direction:new THREE.Vector3(0,0,-1).applyQuaternion(
+      crew.muzzle.getWorldQuaternion(new THREE.Quaternion())).normalize()};
 }
 function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.forEach(u=>{
   if(u.t==='patrulla_marina'){updateMarinePatrol(u,dt);return}
@@ -223,7 +244,7 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
     if(u.t==='torre'){
       const weapon=towerWeaponForTarget(cv);
       // Mai no fem servir projectils pesats contra una persona a peu.
-      // Tampoc gastam bales lleugeres inútils contra un blindat.
+      // El tipus de tir depèn de si el jugador pilota un vehicle.
       if(weapon==='light'&&d<u.rng&&u.cd<=0){
         u.cd=u.rate;
         const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY),
@@ -238,10 +259,16 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
           u.z+fz*2.4-Math.sin(u.hd)*.72,ax,ay,az,76,24,7,'e',mS,1.8);
       }
     }else if(u.t!=='tanc'&&u.t!=='tanqueta'&&d<u.rng&&u.cd<=0){
-      u.cd=u.rate;const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
-      const smallBullet=u.t==='tanqueta'||u.t==='general';
-      shoot(u.x,eyeY,u.z,ax,ay,az,u.spl?60:70,u.dmg,u.spl,
-        'e',smallBullet?mW:mE,smallBullet?SMALL_ARMS_SCALE:(u.spl?2:1));
+      if(u.t==='jeep'){
+        const rifle=enemyCarRifleShot(u,q,py);
+        if(rifle){u.cd=u.rate;const p=rifle.origin,v=rifle.direction;
+          shoot(p.x,p.y,p.z,v.x,v.y,v.z,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE)}
+      }else{
+        u.cd=u.rate;const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
+        const smallBullet=u.t==='general';
+        shoot(u.x,eyeY,u.z,ax,ay,az,u.spl?60:70,u.dmg,u.spl,
+          'e',smallBullet?mW:mE,smallBullet?SMALL_ARMS_SCALE:(u.spl?2:1));
+      }
     }
   }else if(u.sp>0){
     const waypointDistance=Math.hypot(u.tx-u.x,u.tz-u.z),
@@ -348,6 +375,28 @@ function updDead(dt){
   }
 }
 
+function attachEnemyCarCrew(car){
+  const makeSoldier=()=>window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M}),
+        driver=makeSoldier(),gunner=makeSoldier();
+  driver.position.set(-.73,.94,-.43);gunner.position.set(.72,.94,-.43);
+  driver.scale.setScalar(.43);gunner.scale.setScalar(.43);
+  driver.userData.ar.rotation.x=1.18;driver.userData.al.rotation.x=1.12;
+  gunner.userData.ar.rotation.x=1.25;gunner.userData.aer.rotation.x=.35;
+  gunner.rotation.y=.26;
+  // Un conductor sense fusell; l'artiller treu el seu per la finestra.
+  driver.userData.gun.visible=false;
+  const rifle=gunner.userData.gun;
+  rifle.parent.remove(rifle);
+  const mount=new THREE.Group(),pitch=new THREE.Group();
+  mount.position.set(1.46,2.07,-.30);mount.add(pitch);car.add(mount);
+  rifle.position.set(0,-.035,-.14);rifle.rotation.set(0,0,0);rifle.scale.setScalar(.94);
+  pitch.add(rifle);
+  // Tram final visible del canó; el marcador coincideix amb l'extrem.
+  bx(rifle,.075,.075,.42,0x252d2c,0,0,-.97,'metal');
+  const muzzle=new THREE.Object3D();muzzle.position.set(0,0,-1.18);rifle.add(muzzle);
+  car.add(driver,gunner);
+  car.userData.enemyCarCrew={driver,gunner,mount,pitch,muzzle};
+}
 function mkEn(t,x,z,gy,options={}){const c=EC[t];let g;
 if(seedSearchMode){
   g=new THREE.Group();
@@ -358,7 +407,7 @@ if(seedSearchMode){
 }
 else if(t=='soldat'||t=='general'){g=window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M,general:t==='general',elite:!!options.elite})}
 else if(t==='patrulla_marina'){g=mkV('llanxa');createMarinePatrolVisual(g)}
-else if(t=='jeep'){g=mkV('cotxe');bx(g,.2,2,.2,0xff2020,0,3.4,0)}
+else if(t=='jeep'){g=mkV('cotxe');attachEnemyCarCrew(g);bx(g,.2,2,.2,0xff2020,0,3.4,0)}
 else if(t=='tanqueta'){g=mkV('tanqueta');bx(g,.18,1.7,.18,0xff2020,0,3.2,.4)}
 else if(t=='tanc'){g=mkV('tanc');bx(g,.2,2,.2,0xff2020,0,4,0)}
 else if(t=='torre'){g=new THREE.Group();const leg=0x4b5157,deck=0x626b70,cabin=0x7c2f2f,roof=0x343a3e;

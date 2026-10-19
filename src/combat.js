@@ -163,24 +163,16 @@ function explodeVehicle(v){
   if(v.o){vehicleDebris(v,yy);world.remove(v.o)}
   boom(v.x,yy+1,v.z,10,45,'p');
 }
-// Els blindats requereixen projectils pesats; la resta de vehicles
-// poden patir impactes lleugers. També protegeix el conductor.
+// Tots els vehicles perden vides amb els impactes; el casc protegeix
+// els ocupants fins al moment que el vehicle explota.
 // Projectils explosius: 50% més ràpids i meitat de mida visual.
 const HEAVY_SHOT_SPEED_FACTOR=1.17,HEAVY_SHOT_DAMAGE_FACTOR=1.3,HEAVY_SHOT_VISUAL_SCALE=.5;
 const shotClassFromSplash=spl=>spl>0?'heavy':'light';
-const isArmoredVehicle=v=>v?.t==='tanqueta'||v?.t==='tanc'||
-  (v&&Math.max(v.armor??0,VT[v.t]?.armor??0)>=6);
-const isArmoredEnemy=u=>u?.t==='tanqueta'||u?.t==='tanc';
 const isMilitaryBuilding=b=>!!b&&!b.civilian&&(!!b.compound||b.kind==='enemy_bunker');
 const isMilitaryWall=w=>!!w?.towerLegOwner||isMilitaryBuilding(w?.owner);
-function damageVehicle(v,dmg,impacts=1,shotClass='heavy',fromEnemyWeapon=false){
-  if(shotClass==='light'&&isArmoredVehicle(v))return;
-  if(!v||v.destroyed)return;const c=VT[v.t],armor=Math.max(0,Math.min(10,v.armor??c.armor??0));
+function damageVehicle(v,dmg,impacts=1){
+  if(!v||v.destroyed)return;const c=VT[v.t];
   v.life=Math.max(0,(v.life??c.life??1)-Math.max(1,impacts));v.smokeT=0;
-  // Si l'helicòpter queda destruït, reservam el dany per a la
-  // caiguda: un cop mortal aquí congelaria l'expulsió en ple aire.
-  const fallingFromDestroyedHeli=cv===v&&v.life<=0&&VT[v.t]?.m==='a';
-  if(cv===v&&armor<10&&!fallingFromDestroyedHeli)hurtP(dmg*(1-armor/10)*.55,fromEnemyWeapon);
   if(v.life<=0)explodeVehicle(v)
 }
 
@@ -499,7 +491,7 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
   if(focus){focus.target=null;focus.point=null}
   let bestPriority=Infinity,bestDist=range,chosen=null;
   for(const e of E){
-    if(e.destroyed||e.hp<=0||shotClass==='light'&&(isArmoredEnemy(e)||e.t==='torre'))continue;
+    if(e.destroyed||e.hp<=0||shotClass==='light'&&e.t==='torre')continue;
     const priority=weaponTargetPriority(e);
     if(priority>=3||priority>bestPriority)continue;
     const dx=e.x-x,dz=e.z-z,dist=Math.hypot(dx,dz);
@@ -930,7 +922,7 @@ function updPj(dt){
       if(kind==='wall'){if(!isMilitaryWall(target))dmgW(target,p.dmg*(p.own==='e'?.5:1))}
       else if(kind==='building'){if(!isMilitaryBuilding(target)){target.rhp-=p.dmg*(p.own==='e'?.5:1);if(target.rhp<=0)roofBreak(target)}}
       else if(kind==='tree'&&target?.p)dmgP(target,p.dmg*(p.own==='e'?.5:1));
-      else if(kind==='enemy'){if(!isArmoredEnemy(target)&&target.t!=='torre')hurtE(target,p.dmg,p)}
+      else if(kind==='enemy'){if(target.t!=='torre')hurtE(target,p.dmg,p)}
       else if(kind==='vehicle')damageVehicle(target,p.dmg,1,'light',p.own==='e');
       else if(kind==='player')hurtP(p.dmg,p.own==='e')
     }

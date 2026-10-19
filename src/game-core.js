@@ -387,7 +387,7 @@ mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial(
 mW=new THREE.MeshBasicMaterial({color:0xffffff}),SMALL_ARMS_SCALE=.7;
 // Cadència compartida entre la tanqueta del jugador i les enemigues.
 const TANKETTE_FIRE_INTERVAL=.16;
-const EC={soldat:{hp:30,sp:7,rng:32,rate:1.1,dmg:7,spl:0,r:2},jeep:{hp:70,sp:22,rng:22,rate:.5,dmg:5,spl:0,r:3.9},tanqueta:{hp:115,sp:13,rng:42,rate:TANKETTE_FIRE_INTERVAL,dmg:9,spl:0,r:4.5},tanc:{hp:140,sp:8,rng:100,rate:2.5,dmg:22,spl:7,r:6.8},
+const EC={soldat:{hp:30,sp:7,rng:32,rate:1.1,dmg:7,spl:0,r:2},jeep:{hp:70,sp:22,rng:75,rate:1.1,dmg:7,spl:0,r:3.9},tanqueta:{hp:115,sp:13,rng:42,rate:TANKETTE_FIRE_INTERVAL,dmg:9,spl:0,r:4.5},tanc:{hp:140,sp:8,rng:100,rate:2.5,dmg:22,spl:7,r:6.8},
 torre:{hp:90,sp:0,rng:112.5,rate:.7,dmg:8,spl:0,r:3},patrulla_marina:{hp:95,sp:20,rng:245,rate:.4,dmg:6,spl:0,r:7.5},general:{hp:45,sp:0,rng:30,rate:.9,dmg:9,spl:0,r:2}};
 // extres: so, partícules, fauna, diari
 let started=0,DIF=1,AC=null,eng=null,seaAudio=null,logb=[],fa=[],pi_=0;const lastS={},rn=(a,b)=>a+Math.random()*(b-a);
