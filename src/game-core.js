@@ -423,6 +423,14 @@ for(let i=fa.length-1;i>=0;i--){
     f.o.rotation.z=f.dead?Math.min(1.4,(f.deathT||0)*2):0;
     if(outcome.bite&&!over){
       hurtP(window.HUNTER_SHARKS.BITE_DAMAGE,false,{type:'shark',x:f.x,y:f.o.position.y,z:f.z});
+      // Gran esquitx de sang, sense materials ni partícules noves:
+      // reutilitza el pool d'efectes existent al nivell de l'aigua.
+      const biteY=wy(P.x,P.z,t)+.08;
+      for(let k=0;k<12;k++){
+        const a=k*Math.PI/6,d=.35+(k%4)*.33;
+        puff(P.x+Math.cos(a)*d,biteY+rn(0,.4),P.z+Math.sin(a)*d,
+          k%3?0xa51b2b:0xcc303d,1.65+rn(0,1.65));
+      }
       msg='Un tauró et mossega!';msgT=1.5;
     }
     if(!f.dead&&d2<FAUNA_NEAR2&&Math.random()<.1)
@@ -702,7 +710,24 @@ updFA(dt)}
 // vegetació
 const TG=new Map();
 function treeHit(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L)if(!(palmsDisabled&&t.p)&&Math.hypot(x-t.x,z-t.z)<t.r+r)return true}return false}
-function treePush(){const r0=.5,cx=Math.floor(P.x/16),cz=Math.floor(P.z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L){if(palmsDisabled&&t.p)continue;const dx=P.x-t.x,dz=P.z-t.z,d=Math.hypot(dx,dz),m=t.r+r0;if(d<m&&d>.001){P.x=t.x+dx/d*m;P.z=t.z+dz/d*m}}}}
+function treePush(){const r0=.5,cx=Math.floor(P.x/16),cz=Math.floor(P.z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L){if(palmsDisabled&&t.p)continue;
+  if(t.rock&&(P.y>t.topY+.6||P.y+1.5<t.bottomY))continue;
+  const dx=P.x-t.x,dz=P.z-t.z,d=Math.hypot(dx,dz),m=t.r+r0;
+  if(d<m&&d>.001){P.x=t.x+dx/d*m;P.z=t.z+dz/d*m}}}}
+function nearbyRock(x,z,r=0,baseY=-Infinity,topY=Infinity){
+ const cx=Math.floor(x/16),cz=Math.floor(z/16),
+   steps=Math.max(1,Math.ceil((r+8)/16));
+ let hit=null,dist=Infinity;
+ for(let a=-steps;a<=steps;a++)for(let b=-steps;b<=steps;b++){
+   const L=TG.get((cx+a)+','+(cz+b));if(!L)continue;
+   for(const t of L){
+     if(!t.rock||t.topY<baseY-.5||t.bottomY>topY+.5)continue;
+     const d=Math.hypot(x-t.x,z-t.z);
+     if(d<t.r+r&&d<dist){hit=t;dist=d}
+   }
+ }
+ return hit;
+}
 function vehiclePushPlayer(){
   if(cv||playerFall)return;
   for(const v of [...V,...E.filter(u=>['jeep','tanqueta','tanc'].includes(u.t))]){
@@ -758,6 +783,22 @@ function updFA(dt){for(let i=FA.length-1;i>=0;i--){const a=FA[i];a.t+=dt;const k
 if(k>=1){const c=Math.cos(a.yaw),s=Math.sin(a.yaw),lx=a.x+c*6.4*a.s,lz=a.z-s*6.4*a.s,ly=Math.max(hAt(lx,lz),0)+.6;
 debris(lx,ly,lz,0x4fa03a,8,1,5);debris(a.x+c*3*a.s,ly,a.z-s*3*a.s,0x8a6a3a,4,.7,3);puff(lx,ly,lz,0xc9b48a,3);world.remove(a.y);FA.splice(i,1)}}}
 function vegetate(pa){TG.clear();PL.length=0;FA.length=0;const pm=[],bu=[],rk=[],put=e=>{e.k=Math.floor(e.x/16)+','+Math.floor(e.z/16);let a=TG.get(e.k);if(!a)TG.set(e.k,a=[]);a.push(e)};
+ const rockSafe=(x,z,r=2)=>Math.abs(x)<H-35&&Math.abs(z)<H-35&&
+   !stairs.some(st=>stairContains(st,x,z,r+1))&&
+   Math.hypot(x-pa.x,z-pa.z)>16+r&&
+   !B.some(b=>Math.abs(x-b.x)<b.w/2+r+4&&Math.abs(z-b.z)<b.d/2+r+4)&&
+   !compoundClear.some(c=>Math.hypot(x-c.x,z-c.z)<c.r+r+5);
+ const addRock=(x,z,scale,kind)=>{
+   if(!rockSafe(x,z,scale*1.45))return false;
+   const h=hAt(x,z);if(h<-4.6)return false;
+   const tall=kind===1,y=h+(tall?.85:.38)*scale,
+     radius=(tall?1.27:1.44)*scale,
+     topY=h+(tall?2.3:1.18)*scale;
+   rk.push([x,y,z,scale,window.HUNTER_ROCK_FIELDS.rockNoise(x,z,5)*Math.PI*2,0,
+     (window.HUNTER_ROCK_FIELDS.rockNoise(x,z,6)-.5)*.33,kind]);
+   put({x,z,y,r:radius,rock:true,kind,s:scale,topY,bottomY:h-scale*.5});
+   return true;
+ };
 for(let x=-H+40;x<H-40;x+=14)for(let z=-H+40;z<H-40;z+=14){const px=x+rr(-4,4),pz=z+rr(-4,4),h=hAt(px,pz);if(h<1.3||h>42)continue;
 const dn=fbm(px/80+7,pz/80+3),q=R(),highPalm=.22+Math.max(0,Math.min(1,(h-28)/14))*.12;let L=null;
 if(h<4)L=q<.12?pm:null;else if(dn>.55&&h<28)L=q<.20?pm:null;else if(h>=28&&q<highPalm)L=pm;else if(dn>.4)L=q<.2?bu:null;else if(h>8&&q<.04)L=rk;else if(q<.024)L=pm;
@@ -765,7 +806,12 @@ if(!L||slope(px,pz,h)>4.5)continue;
 if(stairs.some(s=>stairContains(s,px,pz,2))||Math.hypot(px-pa.x,pz-pa.z)<14||B.some(b=>Math.abs(px-b.x)<b.w/2+5&&Math.abs(pz-b.z)<b.d/2+5)||compoundClear.some(c=>Math.hypot(px-c.x,pz-c.z)<c.r))continue;
 const s=1.15*rr(.75,1.25),yaw=rr(0,6.28);
 if(L==pm){const leafVar=R()<.33?-1:R()<.66?0:1,tone=rr(-.25,.25),idx=pm.length;pm.push([px,h-.3,pz,s,yaw,leafVar,tone]);const e={x:px,z:pz,y:h-.3,s,yaw,r:.6*Math.max(.75,s),p:true,alive:true,hp:8,i:idx,leafVar,tone};put(e);PL.push(e)}
-else{L.push([px,h-.3,pz,s,yaw]);if(L==rk)put({x:px,z:pz,r:1.4,rock:true})}}
+else if(L===rk)window.HUNTER_ROCK_FIELDS.baseRockCluster(px,pz,s,addRock);
+ else L.push([px,h-.3,pz,s,yaw])}
+const rockFieldStats=window.HUNTER_ROCK_FIELDS.generateRockFields({
+  islands,hAt,canPlace:rockSafe,addRock
+});
+world.userData.rockFieldStats={...rockFieldStats,totalRocks:rk.length};
 if(seedSearchMode){
   // vegetationVisual.build consumeix 11 tirades/palmera (tronc + dues
   // copes), 3/arbust i 5/roca. Preservam EXACTAMENT l'estat final del
@@ -778,7 +824,7 @@ const vegetationMeshes=vegetationVisual.build({
   lowQuality:!visualQuality.shadows,lodProfile:qualityName
 });
 PM=vegetationMeshes.palms;
-window.HUNTER_VEGETATION_STATS=PM.stats}
+window.HUNTER_VEGETATION_STATS={...PM.stats,rockFields:rockFieldStats}}
 function fr(x,z){let a=1e9,b=-1e9;for(const[i,j]of[[0,0],[9,9],[-9,9],[9,-9],[-9,-9],[9,0],[-9,0],[0,9],[0,-9]]){const h=hAt(x+i,z+j);a=Math.min(a,h);b=Math.max(b,h)}return b-a}
 function checkRoofSupport(b,w){
   if(!b||b.rb||b.hangar||b.kind==='enemy_bunker'||!w||!w.supportWeight)return;
@@ -1901,6 +1947,25 @@ function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
         killShark(f);
     }
   }
+  // Les roques emergides, també a la costa, aturen vehicles marítims i
+  // terrestres; els helicòpters només hi xoquen si volen prou baixos.
+  if(speed>=2.5&&v.envCd<=0){
+    const baseY=c.m==='a'?(v.alt??0)-1:
+      (c.m==='w'||c.m==='wl')?-1.4:hAt(v.x,v.z),
+      topY=c.m==='a'?(v.alt??0)+2:baseY+Math.max(2,(VS[v.t]||1)*2.2),
+      rock=nearbyRock(v.x,v.z,radius*.48,baseY,topY);
+    if(rock){
+      collisionDamageVehicle(v,Math.min(5,Math.max(1,Math.ceil(speed/(9*Math.sqrt(c.mass||1))))),1);
+      vehicleImpactFx(rock.x,Math.max(0,hAt(rock.x,rock.z))+.8,rock.z);
+      if(v.destroyed)return;
+      const dx=v.x-rock.x,dz=v.z-rock.z,dist=Math.hypot(dx,dz),
+        clear=rock.r+radius*.48+.08;
+      if(dist>.01){v.x=rock.x+dx/dist*clear;v.z=rock.z+dz/dist*clear}
+      else{v.x=oldX;v.z=oldZ}
+      v.v*=-.12;v.bump=.22;v.envCd=.32;
+      msg='Impacte amb roca!';msgT=1;return;
+    }
+  }
   if(speed<2.5||c.m==='a'||c.m==='w')return;
   // Els impactes lents no maten automàticament els soldats.
   if(v.ramCd<=0&&speed>6){
@@ -1916,7 +1981,7 @@ function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
   if(v.envCd>0)return;
   const t=treeAt(v.x,v.z,radius*.48);if(!t)return;
   if(t.p&&t.alive){const heavy=v.t==='tanc'||v.t==='camio';killPalm(t);if(!heavy)collisionDamageVehicle(v,Math.min(3,Math.max(1,Math.ceil(speed/(18*Math.sqrt(c.mass||1))))),1);if(v.destroyed)return;if(!heavy)v.v*=.9;v.bump=heavy?.06:.18;v.envCd=heavy?.08:.28;msg='Has tombat una palmera.';msgT=1;return}
-  if(t.rock){collisionDamageVehicle(v,Math.min(5,Math.max(1,Math.ceil(speed/(9*Math.sqrt(c.mass||1))))),1);vehicleImpactFx(t.x,Math.max(0,hAt(t.x,t.z))+.8,t.z);if(v.destroyed)return;v.v*=.8;v.bump=.22;v.hd+=rn(-.045,.045);v.envCd=.32;msg='Impacte amb roca!';msgT=1}
+  // Les roques ja s'han resolt abans, també per a les embarcacions.
 }
 // Hitboxes físics de les cobertes. Calculats a partir de la mateixa
 // geometria dels sostres, sense afegir malles al renderitzador.

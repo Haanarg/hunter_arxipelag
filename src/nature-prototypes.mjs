@@ -59,37 +59,28 @@ export function rockInstances(family){
  }
  return rows;
 }
-const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)};
-const mix=(a,b,t)=>a+(b-a)*t;
-function between(a,b,t){return {x:mix(a[0],b[0],t),z:mix(a[1],b[1],t)}}
-function bezier(a,b,c,t){
- const u=1-t;return {x:u*u*a[0]+2*u*t*b[0]+t*t*c[0],
- z:u*u*a[1]+2*u*t*b[1]+t*t*c[1]};
-}
+// L'última part de la demo és una lemniscata paramètrica C∞: velocitat
+// i tangent contínues als quatre quadrants, fins i tot en tancar el bucle.
+// Els dos creuaments tenen un desplaçament lateral d'1,7 m del nedador.
 export const SHARK_CYCLE=12;
-export const SHARK_BITES=Object.freeze([2.65,8.35]);
+export const SHARK_BITES=Object.freeze([2.65,8.65]);
+const TAU=Math.PI*2;
+function sharkPositionAt(seconds){
+ const theta=TAU*(seconds-SHARK_BITES[0])/SHARK_CYCLE;
+ return {x:18*Math.sin(theta)+1.7*Math.cos(theta),
+   z:15*Math.sin(2*theta)};
+}
 export function sharkSample(seconds){
  const t=((seconds%SHARK_CYCLE)+SHARK_CYCLE)%SHARK_CYCLE;
- let p,phase;
- if(t<2.65){p=between([-14,-25],[1.65,-.15],smooth(t/2.65));phase='Aproximació'}
- else if(t<3.85){p=between([1.65,-.15],[5.8,22],smooth((t-2.65)/1.2));phase='Mossegada i passada'}
- else if(t<6.05){p=bezier([5.8,22],[1.8,38],[-18,18],smooth((t-3.85)/2.2));phase='Gir ample'}
- else if(t<8.35){p=between([-18,18],[-1.7,.2],smooth((t-6.05)/2.3));phase='Nova embestida'}
- else if(t<9.8){p=between([-1.7,.2],[-8,-23],smooth((t-8.35)/1.45));phase='Passada de llarg'}
- else {p=bezier([-8,-23],[-19,-35],[-14,-25],smooth((t-9.8)/2.2));phase='Recol·locació'}
- const earlier=sharkPositionAt(t-.015),later=sharkPositionAt(t+.015);
- const yaw=Math.atan2(later.x-earlier.x,later.z-earlier.z);
- const biteAge=Math.min(...SHARK_BITES.map(b=>{const delta=(t-b+SHARK_CYCLE)%SHARK_CYCLE;return delta}));
+ const p=sharkPositionAt(t),earlier=sharkPositionAt(t-.015),later=sharkPositionAt(t+.015),
+   yaw=Math.atan2(later.x-earlier.x,later.z-earlier.z);
+ const biteAge=Math.min(...SHARK_BITES.map(b=>(t-b+SHARK_CYCLE)%SHARK_CYCLE));
+ let phase='Aproximació';
+ if(t>=2.65&&t<4)phase='Mossegada i passada';
+ else if(t>=4&&t<6.25)phase='Gir ample';
+ else if(t>=6.25&&t<8.65)phase='Nova embestida';
+ else if(t>=8.65&&t<10)phase='Passada de llarg';
+ else if(t>=10)phase='Retorn suau';
  return {...p,yaw,phase,bite:biteAge<.13,biteAge,
-   // Ambdós punts de mossegada passen al costat del nedador, no pel centre.
    biteOffset:Math.hypot(p.x,p.z)};
-}
-function sharkPositionAt(t){
- const v=((t%SHARK_CYCLE)+SHARK_CYCLE)%SHARK_CYCLE;
- if(v<2.65)return between([-14,-25],[1.65,-.15],smooth(v/2.65));
- if(v<3.85)return between([1.65,-.15],[5.8,22],smooth((v-2.65)/1.2));
- if(v<6.05)return bezier([5.8,22],[1.8,38],[-18,18],smooth((v-3.85)/2.2));
- if(v<8.35)return between([-18,18],[-1.7,.2],smooth((v-6.05)/2.3));
- if(v<9.8)return between([-1.7,.2],[-8,-23],smooth((v-8.35)/1.45));
- return bezier([-8,-23],[-19,-35],[-14,-25],smooth((v-9.8)/2.2));
 }

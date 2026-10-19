@@ -13,6 +13,8 @@ import {GAME_VERSION} from './version.mjs';
 import {createTruckConcept} from './truck-concepts.mjs';
 // Mateixa geometria A4.3 que es mostra a camio-proves.html.
 window.HUNTER_TRUCK_CONCEPT=createTruckConcept;
+import * as rockFields from './rock-fields.mjs';
+window.HUNTER_ROCK_FIELDS=rockFields;
 
 const versionBadge=document.getElementById('versionBadge');
 if(versionBadge)versionBadge.textContent='v'+GAME_VERSION;

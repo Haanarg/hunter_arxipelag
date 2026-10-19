@@ -8,14 +8,27 @@ sharks.update(f,.016,far,deep);
 assert.equal(f.sharkMode,'patrol','Un nedador fora del radi no és perseguit');
 const initial=Math.hypot(near.x-f.x,near.z-f.z);
 let bites=0,minimum=Infinity,maximum=0;
-for(let i=0;i<630;i++){
+let previousYaw=null,maxTurn=0,modeTransitions=0,lastMode=null;
+for(let i=0;i<1200;i++){
   const a=sharks.update(f,1/60,near,deep);
-  if(a.bite)bites++;
+  if(a.bite){
+    bites++;
+    assert.ok(Math.hypot(f.x-near.x,f.z-near.z)>1.2,'La mossegada és lateral');
+  }
+  if(previousYaw!==null){
+    const delta=Math.atan2(Math.sin(f.sharkYaw-previousYaw),Math.cos(f.sharkYaw-previousYaw));
+    maxTurn=Math.max(maxTurn,Math.abs(delta)*60);
+  }
+  previousYaw=f.sharkYaw;
+  if(lastMode!==null&&lastMode!==f.sharkMode)modeTransitions++;
+  lastMode=f.sharkMode;
   const dist=Math.hypot(f.x-near.x,f.z-near.z);
   minimum=Math.min(minimum,dist);maximum=Math.max(maximum,dist);
 }
 assert.ok(initial>sharks.BITE_RADIUS&&f.sharkMode!=='patrol',
   'Quan s’acosta un nedador, el tauró surt de l’òrbita');
+assert.ok(maxTurn<1.1,'Cap gir brusc durant les passades: '+maxTurn);
+assert.ok(modeTransitions>=4,'Passada, arc i retorn ben diferenciats');
 assert.ok(bites>=2&&bites<=6,'Ataca amb passades separades, no cada fotograma: '+bites);
 assert.ok(maximum>minimum+7,'Després de mossegar s’allunya abans de tornar');
 assert.ok(sharks.BITE_DAMAGE>=2&&sharks.BITE_DAMAGE<=4,'Mossegada puntual perceptible');
@@ -24,7 +37,7 @@ sharks.update(f,.016,null,deep);
 assert.equal(f.sharkMode,'patrol','Sense objectiu torna a patrullar');
 assert.ok(Math.hypot(f.x-lastX,f.z-lastZ)<1,'No teletransporta el tauró en perdre la presa');
 const coast=create(),shore=(x,z)=>x>14?0:-12;
-for(let i=0;i<200;i++)sharks.update(coast,1/60,{x:14,z:0},shore);
+for(let i=0;i<300;i++)sharks.update(coast,1/60,{x:14,z:0},shore);
 assert.ok(coast.x<=14&&shore(coast.x,coast.z)<-.8,
   'El tauró no surt de l’aigua per perseguir');
 for(const radius of [2.3,3.25,8.6,19]){

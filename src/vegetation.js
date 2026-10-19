@@ -98,6 +98,21 @@ window.HUNTER_VEGETATION=Object.freeze({
       geo.computeVertexNormals();
       return geo;
     };
+    // Dos perfils irregulars compartits: B baix/estratificat i D alt/angular.
+    // 36 i 20 triangles respectivament, deformació determinista per vèrtex.
+    const rockShape=kind=>{
+      const g=kind===0?new THREE.DodecahedronGeometry(1,0):
+        new THREE.IcosahedronGeometry(1,0);
+      const a=g.getAttribute('position');
+      for(let i=0;i<a.count;i++){
+        const x=a.getX(i),y=a.getY(i),z=a.getZ(i),
+          irregular=1+.13*Math.sin(x*5.1+z*2.9)+.10*Math.cos(z*4.4-y*3.5);
+        a.setXYZ(i,x*(kind?1.12:1.34)*irregular,
+          y*(kind?1.36:.63)*irregular,
+          z*(kind?1.14:1.11)*irregular);
+      }
+      a.needsUpdate=true;g.computeVertexNormals();return g;
+    };
     const geometry={
       trunk:curvedPalmTrunk(6.2,.42,.22,6,8,.25),
       // LOD 1: 4 cares, 3 seccions i 6 fulles planes.
@@ -114,7 +129,7 @@ window.HUNTER_VEGETATION=Object.freeze({
         {crown:palmCrown(4.7,0,10),crown2:palmCrown(3.1,.65,9,.18)}
       ],
       bush:new THREE.IcosahedronGeometry(1.15,1).translate(0,.62,0),
-      rock:new THREE.DodecahedronGeometry(1.25,0).translate(0,.5,0)
+      rock:rockShape(0), rockTall:rockShape(1)
     };
     const colorFor=(base,row)=>{
       const c=new THREE.Color(base),tone=Math.max(-.25,Math.min(.25,row?.[6]||0));
@@ -145,7 +160,7 @@ window.HUNTER_VEGETATION=Object.freeze({
           r,
           opts.tilt?random(-.04,.04):0
         );
-        if(scale)scale(dum,s);else dum.scale.setScalar(s);
+        if(scale)scale(dum,s,row);else dum.scale.setScalar(s);
         dum.updateMatrix();
         m.setMatrixAt(i,dum.matrix);
         m.setColorAt(i,colorFor(color,row));
@@ -261,21 +276,23 @@ window.HUNTER_VEGETATION=Object.freeze({
         const groups=new Map();
         for(const row of rows){
           const cx=Math.floor(row[0]/CHUNK),cz=Math.floor(row[2]/CHUNK),
-                key=cx+','+cz;
-          if(!groups.has(key))groups.set(key,{x:(cx+.5)*CHUNK,z:(cz+.5)*CHUNK,rows:[]});
+                type=opts.byKind?(row[7]||0):0,
+                key=cx+','+cz+(opts.byKind?','+type:'');
+          if(!groups.has(key))groups.set(key,{x:(cx+.5)*CHUNK,z:(cz+.5)*CHUNK,type,rows:[]});
           groups.get(key).rows.push(row);
         }
         const result=[];
         for(const g of groups.values()){
-          const mesh=inst(parent,geo,g.rows,color,scale,opts);
+          const mesh=inst(parent,opts.byKind?geo[g.type]:geo,g.rows,color,scale,opts);
           if(mesh)result.push({mesh,x:g.x,z:g.z,count:g.rows.length});
         }
         return {parent,sectors:result};
       }
       const bushGroup=sectorizeExtras(bushes,geometry.bush,'hunter-bush-sectors',
         0x2f8e42,(d,s)=>d.scale.set(s*1.15,s*.72,s),{profile:'organic'});
-      const rockGroup=sectorizeExtras(rocks,geometry.rock,'hunter-rock-sectors',
-        0x777985,(d,s)=>d.scale.set(s*1.25,s*.75,s),{profile:'masonry',tilt:true});
+      const rockGroup=sectorizeExtras(rocks,[geometry.rock,geometry.rockTall],
+        'hunter-rock-sectors',0x777985,
+        (d,s)=>d.scale.setScalar(s),{profile:'masonry',tilt:true,byKind:true});
       const extraRanges={
         desktop:{bush:1300,rock:1900},
         mobile:{bush:710,rock:1180},
