@@ -70,8 +70,10 @@ function createTerminalRamp(c,f){
 }
 function terminalRampState(r){
  const f=r.f;if(f.destroyed||!V.includes(f)||Math.hypot(f.x-r.homeX,f.z-r.homeZ)>1.5||Math.abs(wrapAngle(f.hd-r.homeHD))>.06)return null;
- const end=ferryWorld(f,0,14),dx=end.x-r.x,dz=end.z-r.z,length=Math.hypot(dx,dz);
- return{x:r.x,z:r.z,ux:dx/length,uz:dz/length,length,startY:PIER_DECK_Y,endY:ferryLocalSurfaceY(f,14)+.04};
+ const endZ=FERRY_DECK.halfL*(VS.ferry||1),end=ferryWorld(f,0,endZ),
+   dx=end.x-r.x,dz=end.z-r.z,length=Math.hypot(dx,dz);
+ if(length<.1)return null;
+ return{x:r.x,z:r.z,ux:dx/length,uz:dz/length,length,startY:PIER_DECK_Y,endY:ferryLocalSurfaceY(f,endZ)+.04};
 }
 function terminalRampHeight(x,z){
  for(const c of world?.userData.compounds||[]){if(!c.loadingRamp)continue;const s=terminalRampState(c.loadingRamp);if(!s)continue;
@@ -85,6 +87,6 @@ function updateTerminalRamps(){for(const c of world?.userData.compounds||[]){con
 }}
 function pedestrianFerry(x,z,previous){
  for(const f of V){if(f.t!=='ferry'||f.destroyed)continue;const q=ferryLocal(f,x,z),y=ferryLocalSurfaceY(f,q.z);
-  if(Math.abs(q.x)<FERRY_DECK.halfW-.65&&Math.abs(q.z)<=FERRY_DECK.halfL+FERRY_DECK.ramp&&previous>=y-.9)return{f,q,y};
+  if(ferryWalkable(q.x,q.z,.55)&&previous>=y-.9)return{f,q,y};
  }return null;
 }

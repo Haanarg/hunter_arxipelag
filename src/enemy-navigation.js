@@ -126,7 +126,11 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
   u.hd=oldHd;u.navBlocked=(u.navBlocked||0)+dt;
   if(u.navBlocked>.6){
     if(tryMove(oldHd+Math.PI,distance*.5,true)){u.navPath=[];u.navSearch=null;u.navRetry=0}
-    if(u.navBlocked>1.5){u.navPath=[];u.navRetry=0;u.avoidSide=-side;u.navBlocked=0;u.wt=0}
+    if(u.navBlocked>1.5){u.navPath=[];u.navRetry=0;u.avoidSide=-side;u.navBlocked=0;
+      // Les rutes entre complexos no poden abandonar un tram llarg
+      // pel simple fet d'haver trobat un arbre o un vehicle al camí.
+      if(!u.interCompoundPatrol)u.wt=0
+    }
   }
 }
 // Resolve invalid generated placements before play, never teleport a moving enemy.

@@ -272,7 +272,7 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
     }
   }else if(u.sp>0){
     const waypointDistance=Math.hypot(u.tx-u.x,u.tz-u.z),
-          hqPatrolVehicle=u.t==='tanqueta'&&!!u.hqPatrolZone||enemyIsVehicle(u)&&u.compound==='hq';
+          hqPatrolVehicle=u.t==='tanqueta'&&!!u.hqPatrolZone||enemyIsVehicle(u)&&u.compound==='hq'||!!u.interCompoundPatrol;
     // Una tanqueta tarda bastant més de 2,5 s a travessar un tram
     // de 68 m. No li avancem el waypoint abans d'arribar-hi:
     // això la feia tallar pel búnquer i acabar encallada a les cantonades.

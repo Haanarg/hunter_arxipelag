@@ -673,6 +673,97 @@ islands.forEach(i=>{if(i!==A&&R()<.65){const t=['cotxe','moto','bici'][Math.floo
 markBuildStage('guaranteedVehicles');
 ensureJetSkis(add);
 markBuildStage('jetSkis');
+// Cotxes militars amb conductor i tirador, com els que custodien la base.
+// La ruta connecta accessos reals de dos complexos de la mateixa illa gran.
+// Els punts de la carretera resolta eviten que la IA intenti creuar el mar.
+function spawnLandCarPatrols(){
+ const large=islands.filter(i=>i.r>=800).sort((a,b)=>b.r-a.r);
+ const sites=world.userData.compounds.filter(c=>!c.layout?.friendly&&c.id!=='base'&&c.id!=='hq');
+ const usedRoutes=new Set();
+ const routeKey=(a,b)=>[sites.indexOf(a.c),sites.indexOf(b.c)].sort((x,y)=>x-y).join(':');
+ const carR=Math.hypot(...VHB.cotxe.map(n=>n*VS.cotxe))/2+.8;
+ const clear=(x,z)=>Math.abs(x)<H-carR-5&&Math.abs(z)<H-carR-5&&
+   hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<5&&!treeHit(x,z,carR)&&
+   !wallCandidates(x,z,carR).some(w=>!w.open&&w.playerBlock!==false&&
+     x>w.x0-carR&&x<w.x1+carR&&z>w.z0-carR&&z<w.z1+carR)&&
+   !B.some(b=>Math.abs(x-b.x)<b.hw+carR&&Math.abs(z-b.z)<b.hd+carR);
+ const access=c=>{
+   for(const [ex,ez]of c.entrances){
+     const dx=ex-c.x,dz=ez-c.z,len=Math.hypot(dx,dz)||1;
+     for(const step of[12,20,30,42,55]){
+       const x=ex+dx/len*step,z=ez+dz/len*step;
+       if(clear(x,z))return{x,z}
+     }
+   }
+   for(let n=0;n<20;n++){
+     const a=n*Math.PI/10,x=c.x+Math.cos(a)*(c.r+24),z=c.z+Math.sin(a)*(c.r+24);
+     if(clear(x,z))return{x,z}
+   }
+   return null
+ };
+ let spawned=0;
+ for(const island of large){
+   const eligible=sites.filter(c=>Math.hypot(c.x-island.x,c.z-island.z)<island.r*1.02)
+     .map(c=>({c,p:access(c)})).filter(o=>o.p);
+   if(eligible.length<2)continue;
+   // Triam els complexos més propers amb un corredor transitable per terra.
+   // El navegador d'enemics esquiva els arbres i els obstacles puntuals.
+   const pairs=[];for(let a=0;a<eligible.length;a++)for(let b=a+1;b<eligible.length;b++){
+     const p=eligible[a].p,q=eligible[b].p;
+     pairs.push({a:eligible[a],b:eligible[b],distance:Math.hypot(p.x-q.x,p.z-q.z)})
+   }
+   // Prioritat als dos complexos militars; si només n'hi ha un a l'illa,
+   // la patrulla també pot connectar-lo amb un port o un nucli civil.
+   pairs.sort((a,b)=>Number(usedRoutes.has(routeKey(a.a,a.b)))-Number(usedRoutes.has(routeKey(b.a,b.b)))||
+       Number(!!a.a.c.layout?.civilian)+Number(!!a.b.c.layout?.civilian)-
+       Number(!!b.a.c.layout?.civilian)-Number(!!b.b.c.layout?.civilian)||a.distance-b.distance);
+   const drySegment=(a,b)=>{
+     const length=Math.hypot(a.x-b.x,a.z-b.z),n=Math.ceil(length/7);
+     for(let k=0;k<=n;k++){
+       const t=k/n,x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t;
+       if(hAt(x,z)<.9||hAt(x+4,z)<.1||hAt(x-4,z)<.1||
+          hAt(x,z+4)<.1||hAt(x,z-4)<.1)return false
+     }
+     return true
+   };
+   const routeBetween=(a,b)=>{
+     const peak={x:island.peakX,z:island.peakZ},center={x:island.x,z:island.z},
+       opts=[[],[center],[peak],
+         [{x:center.x+island.r*.22,z:center.z}],
+         [{x:center.x-island.r*.22,z:center.z}],
+         [{x:center.x,z:center.z+island.r*.22}],
+         [{x:center.x,z:center.z-island.r*.22}]];
+     for(const middle of opts){
+       const nodes=[a,...middle,b];if(!nodes.slice(1).every((p,i)=>drySegment(nodes[i],p)))continue;
+       const road=[a];for(let j=1;j<nodes.length;j++){
+         const from=nodes[j-1],to=nodes[j],steps=Math.ceil(Math.hypot(to.x-from.x,to.z-from.z)/24);
+         for(let k=1;k<=steps;k++)road.push({x:from.x+(to.x-from.x)*k/steps,z:from.z+(to.z-from.z)*k/steps})
+       }
+       return road
+     }
+     return null
+   };
+   for(const pair of pairs){
+     const key=routeKey(pair.a,pair.b),sameRoute=usedRoutes.has(key),
+       road=routeBetween(pair.a.p,pair.b.p);
+     if(!road||road.length<2)continue;
+     if(sameRoute)road.reverse(); // Mai no superposam els dos cotxes al punt de sortida.
+     const points=road.map(p=>[p.x,p.z]),start=points[0],next=points[1],
+       heading=Math.atan2(start[0]-next[0],start[1]-next[1]);
+     if(!clear(start[0],start[1]))continue;
+     const car=mkEn('jeep',start[0],start[1]);car.hd=heading;
+     // Anada i tornada: cap salt instantani del darrer waypoint al primer.
+     setPatrol(car,[...points,...points.slice(1,-1).reverse()],false);
+     car.interCompoundPatrol=true;car.patrolIslandIndex=islands.indexOf(island);
+     car.patrolComplexes=[pair.a.c.id,pair.b.c.id];car.patrolEnds=[pair.a.p,pair.b.p];
+     if(!sameRoute)pathRoutes.push({points,width:8,color:0x776b51});
+     usedRoutes.add(key);spawned++;break
+   }
+ }
+ return spawned
+}
+const landCarPatrolCount=spawnLandCarPatrols();
+markBuildStage('landCarPatrols');
 // Mateix recompte i posicions per llavor al joc i al cercador de llavors.
 // El cercador desa coordenades sense crear models ni IA.
 spawnMarinePatrols();
@@ -680,7 +771,7 @@ markBuildStage('marinePatrols');
 P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);if(!seedSearchMode){V.forEach(v=>place(v,0,0,0));updateTerminalRamps();prepareEnemyNavigation();}world.userData.paths=pathRoutes;if(!seedSearchMode){const roads=window.HUNTER_COMPOUND_PATHS.createPathNetwork(THREE,{routes:pathRoutes,heightAt:(x,z)=>Math.max(hAt(x,z),terrainStream?.visibleHeightAt(x,z)??-Infinity),heightVersion:(x,z)=>terrainStream?.surfaceVersionAt(x,z)??-1});world.add(roads);world.userData.pathStats=roads.userData.pathStats;}const staticBatchStats=seedSearchMode?null:batchStaticDecor();if(!seedSearchMode&&visualQuality.shadows)prepareShadowCasters();else shadowCandidates.length=0;cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);
 markBuildStage('finalizationAndBatching');
 seedCompounds=compoundCenters.map(c=>({type:c.type,x:c.x,z:c.z}));
-window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,stages:buildStages,portSearch:buildCounters,initialTerrainMs,seabedMs,vegetationMs,seabedSamples:seedSearchMode?0:water.seabedStats.lastSamples,terrainTiles:terrain?.stats||null,palms:PM.stats,staticBatches:staticBatchStats};
+window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,stages:buildStages,portSearch:buildCounters,initialTerrainMs,seabedMs,vegetationMs,seabedSamples:seedSearchMode?0:water.seabedStats.lastSamples,terrainTiles:terrain?.stats||null,palms:PM.stats,landCarPatrols:landCarPatrolCount,staticBatches:staticBatchStats};
 if(!seedSearchMode){
   setPalmsDisabled(requestedPalmDisable);
   setWaterDisabled(!!document.getElementById('disableWater')?.checked);
