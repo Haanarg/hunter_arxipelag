@@ -76,15 +76,49 @@ window.HUNTER_VEHICLES=Object.freeze({
     return function createVehicle(t){
       const g=new THREE.Group();g.rotation.order='YXZ';const metal=0x3e4849,glass=0x76acba,rubber=0x252d31;
       if(t==='cotxe'){const col=0xa35b38,trim=0x302f2d;box(g,3,1,5.6,col,0,1.15,0,'paint');box(g,2.92,.42,2.1,col,0,1.82,-1.72,'paint');box(g,2.62,.82,2.72,glass,0,2.04,.48,'glass');box(g,2.88,.18,2.95,col,0,2.52,.48,'paint');box(g,2.45,.1,1.1,0x7d432f,0,2.65,.5,'paint');for(const x of[-1.34,1.34]){box(g,.13,.28,2.9,col,x,1.7,.5,'paint');box(g,.15,.82,.14,col,x,2.04,-.82,'paint');box(g,.15,.82,.14,col,x,2.04,1.82,'paint');box(g,.18,.82,.15,col,x,2.04,.5,'paint');for(const z of[-1.85,1.85])wheel(g,x*1.16,.72,z,.72,.45,false,z<0);box(g,.35,.18,.4,metal,x*1.17,2.08,-.85,'metal')}for(const z of[-2.95,2.95])box(g,3.25,.3,.3,metal,0,.94,z,'metal');box(g,1.6,.45,.08,rubber,0,1.4,-2.84,'rubber');box(g,2.5,.14,.12,trim,0,1.12,-2.88,'rubber');for(const x of[-1.08,1.08]){box(g,.5,.34,.1,0xffedb2,x,1.43,-2.85,'paint');box(g,.38,.24,.1,0x9c2825,x,1.38,2.84,'paint')}for(const x of[-.72,.72])box(g,.5,.1,.16,0xd8d7c9,x,1.03,-2.9,'metal');const spare=wheel(g,0,1.5,3,.65,.45);spare.rotation.y=Math.PI/2;(g.userData.wheels||[]).pop()}
-      if(t==='camio'){const col=0x596a48,dark=0x30372e,canvas=0x69765a;
-        box(g,3.35,1.05,6.9,col,0,1.35,.35,'paint');box(g,3.2,.28,2.25,dark,0,.88,2.55,'metal');
-        box(g,3.05,1.7,2.35,col,0,2.25,-2.25,'paint');box(g,2.7,.78,.12,glass,0,2.45,-3.45,'glass');
-        for(const x of[-1.38,1.38]){box(g,.16,.8,.12,col,x,2.35,-3.45,'paint');box(g,.18,.85,2.15,col,x,2.22,-2.25,'paint')}
-        box(g,3.08,1.45,3.5,canvas,0,2.3,.95,'paint');for(const x of[-1.45,1.45])for(const z of[1.2,2.55])rod(g,[x,1.2,z],[x,3.05,z],.08,dark);
-        for(const x of[-1.52,1.52])for(const z of[-2.3,1.2,2.7])wheel(g,x,.84,z,.72,.46,false,z<0);
-        for(const z of[-3.55,3.75])box(g,3.55,.28,.28,dark,0,1.02,z,'metal');
-        for(const x of[-1.05,1.05]){box(g,.48,.34,.12,0xffe3a2,x,1.55,-3.48,'paint');box(g,.4,.26,.12,0x9e2924,x,1.35,3.55,'paint')}
-        box(g,.18,.22,.55,0xd7d3b7,0,1.2,-3.55,'metal');rod(g,[1.1,3.0,-1.4],[1.1,4.25,-1.4],.035,dark);
+      if(t==='camio'){
+        // A4.3: el mateix low-poly de la preview, adaptat a la
+        // caixa de col·lisió física existent (3.6 × 7.8, abans de VS).
+        const factory=window.HUNTER_TRUCK_CONCEPT;
+        if(typeof factory!=='function')throw new Error('Falta el model A4.3');
+        const truck=factory(THREE,2),fit=.82;
+        // Les sis rodes són animades; fusionam només malles estàtiques.
+        // Una malla per material evita 140+ draw calls per camió.
+        const groups=new Map();
+        for(const mesh of truck.children.filter(o=>o.isMesh)){
+          mesh.updateMatrix();
+          const geometry=mesh.geometry.clone();
+          geometry.applyMatrix4(mesh.matrix);
+          if(!geometry.getAttribute('normal'))geometry.computeVertexNormals();
+          const flat=geometry.index?geometry.toNonIndexed():geometry;
+          const grp=groups.get(mesh.material)||{pos:[],norm:[],material:mesh.material};
+          const positions=flat.getAttribute('position'),normals=flat.getAttribute('normal');
+          for(let i=0;i<positions.count;i++){
+            grp.pos.push(positions.getX(i),positions.getY(i),positions.getZ(i));
+            grp.norm.push(normals.getX(i),normals.getY(i),normals.getZ(i));
+          }
+          groups.set(mesh.material,grp);
+          truck.remove(mesh);
+          mesh.geometry.dispose();geometry.dispose();
+          if(flat!==geometry)flat.dispose();
+        }
+        let batches=0;
+        for(const grp of groups.values()){
+          const geometry=new THREE.BufferGeometry();
+          geometry.setAttribute('position',new THREE.Float32BufferAttribute(grp.pos,3));
+          geometry.setAttribute('normal',new THREE.Float32BufferAttribute(grp.norm,3));
+          const merged=new THREE.Mesh(geometry,grp.material);
+          merged.name='truck-static-batch-'+batches++;
+          truck.add(merged);
+        }
+        truck.scale.setScalar(fit);
+        g.add(truck);
+        g.userData.wheels=truck.userData.wheels||[];
+        g.userData.steeringPivots=truck.userData.steeringPivots||[];
+        for(const w of g.userData.wheels)w.userData.radius=.80*fit*VS.camio;
+        g.userData.truckModel='A4.3';
+        g.userData.truckStaticBatches=batches;
+        g.userData.truckVisualFit=fit;
       }
       if(t==='bici'||t==='moto'){
         const moto=t==='moto',r=moto?.65:.62,L=moto?1.5:1.22,col=moto?0xbc743d:0x3f9b9d;

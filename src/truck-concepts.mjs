@@ -52,10 +52,25 @@ export function createTruckConcept(T,variant=0){
    geometry.setIndex(indices);geometry.computeVertexNormals();return part(geometry,m,parent)
  }
  function wheel(x,z){
-   const w=new T.Group();w.position.set(x,.82,z);g.add(w);
+   // El model del joc ha de poder animar les sis rodes i girar les dues de davant.
+   // El pivot és independent de la rotació de rodament (X) de cada pneumàtic.
+   const steer=z===-2.68;
+   let parent=g;
+   if(steer){
+     const pivot=new T.Group();pivot.position.set(x,.82,z);
+     pivot.name='steering-'+(x<0?'left':'right');
+     g.add(pivot);parent=pivot;
+     (g.userData.steeringPivots||(g.userData.steeringPivots=[])).push(pivot);
+   }
+   const w=new T.Group();
+   w.position.set(steer?0:x,steer?0:.82,steer?0:z);
+   w.name='truck-wheel-'+(x<0?'left':'right')+'-'+z;
+   parent.add(w);
    cyl(.80,.47,rubber,0,0,0,w);
    cyl(.46,.485,hub,0,0,0,w,10);
    cyl(.20,.50,trim,0,0,0,w,8);
+   w.userData.radius=.80;
+   (g.userData.wheels||(g.userData.wheels=[])).push(w);
    return w
  }
 

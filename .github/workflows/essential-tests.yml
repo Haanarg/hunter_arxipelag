@@ -43,10 +43,10 @@ jobs:
               set -- victory-cinematic death-cinematic
               ;;
             startup)
-              set -- smoke startup-cache joystick-running player-locomotion rowing-audio-camera performance-stats-toggle loot-health locomotion-blast
+              set -- smoke startup-cache joystick-running player-locomotion rowing-audio-camera performance-stats-toggle loot-health locomotion-blast truck-preview truck-game-model
               ;;
             all)
-              set -- smoke startup-cache joystick-running player-locomotion rowing-audio-camera performance-stats-toggle loot-health vehicle-weapon-reticle water-jumps shark-behaviour locomotion-blast enemy-weapon-damage pier-access terrain-level-index terrain-stream water seed-replay compound-generation two-storey-destruction enemy-navigation projectile-classes enemy-vehicle-trails damage-consistency heavy-vehicle-collisions victory-cinematic death-cinematic
+              set -- smoke startup-cache joystick-running player-locomotion rowing-audio-camera performance-stats-toggle loot-health vehicle-weapon-reticle truck-preview truck-game-model water-jumps shark-behaviour locomotion-blast enemy-weapon-damage pier-access terrain-level-index terrain-stream water seed-replay compound-generation two-storey-destruction enemy-navigation projectile-classes enemy-vehicle-trails damage-consistency heavy-vehicle-collisions victory-cinematic death-cinematic
               ;;
             *)
               echo "Grup de proves desconegut: $GRUP" >&2
