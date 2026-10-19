@@ -8,6 +8,9 @@ const victoryClamp=t=>Math.max(0,Math.min(1,t));
 const victoryEase=t=>{const p=victoryClamp(t);return p*p*(3-2*p)};
 
 function victoryShotSnapshot(general,shot){
+  const attack=shot?.weapon==='knife'?'knife':shot?.weapon==='grenade'?'grenade':
+    shot?.weapon==='bazooka'||shot?.own==='pb'?'rocket':
+    !shot?'impact':shot.spl>0&&!Number.isFinite(shot.vx)?'explosion':'bullet';
   const hit=new THREE.Vector3(general.x,general.o.position.y+1.6,general.z),
         from=shot&&Number.isFinite(shot.sx)&&Number.isFinite(shot.sz)
           ?new THREE.Vector3(shot.sx,shot.sy,shot.sz)
@@ -19,9 +22,70 @@ function victoryShotSnapshot(general,shot){
   if(direction.lengthSq()<.01)direction.set(0,0,-1);
   direction.normalize();
   const distance=Math.min(34,Math.max(7,from.distanceTo(hit)));
-  return {hit,from,impact,direction,
-    approach:hit.clone().addScaledVector(direction,-distance),
+  return {hit,from,impact,direction,attack,
+    approach:attack==='grenade'?from.clone():hit.clone().addScaledVector(direction,-distance),
     heavy:!!(shot?.spl>0),source:shot?.own||'p'};
+}
+
+function victoryReplayProjectile(shot,source){
+  if(shot.attack==='knife'||shot.attack==='impact'||shot.attack==='explosion')return null;
+  if(shot.attack==='grenade'&&source?.o)return source.o.clone(true);
+  if(shot.attack==='rocket'){
+    // Coet amb cos i aletes recognoscibles, diferent de l'ojiva del canó.
+    const rocket=new THREE.Group(),metal=new THREE.MeshStandardMaterial({color:0x6f7960,metalness:.48,roughness:.48}),
+          body=new THREE.Mesh(gHeavy,metal);
+    body.scale.set(1.1,1.1,2.25);rocket.add(body);
+    for(let i=0;i<4;i++){
+      const a=i*Math.PI/2,fin=new THREE.Mesh(new THREE.BoxGeometry(.09,.39,.46),metal);
+      fin.position.set(Math.cos(a)*.23,Math.sin(a)*.23,.68);fin.rotation.z=a;rocket.add(fin);
+    }
+    const flame=new THREE.Mesh(new THREE.ConeGeometry(.15,.54,8),
+      new THREE.MeshBasicMaterial({color:0xffb04e,transparent:true,opacity:.85,depthWrite:false}));
+    flame.rotation.x=Math.PI/2;flame.position.z=1.34;rocket.add(flame);
+    return rocket;
+  }
+  return new THREE.Mesh(shot.heavy?gHeavy:gB,shot.heavy?mS:mW);
+}
+
+function victoryKnifeSlash(shot){
+  if(shot.attack!=='knife')return null;
+  const points=[];
+  for(let i=0;i<=16;i++){
+    const a=-1.15+2.3*i/16;
+    points.push(shot.hit.clone().addScaledVector(shot.direction,Math.sin(a)*.78)
+      .add(new THREE.Vector3(0,Math.cos(a)*.68-.14,0)));
+  }
+  const slash=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points),16,.045,5,false),
+    new THREE.MeshBasicMaterial({color:0xdbe9ed,transparent:true,opacity:.82,depthWrite:false}));
+  slash.visible=false;scene.add(slash);return slash;
+}
+
+function victoryReplaySound(shot){
+  if(shot.attack==='knife'||shot.attack==='impact'){snd('hurt',.55);return}
+  if(shot.attack==='grenade'||shot.attack==='rocket'||shot.attack==='explosion'){snd('boom',.72);return}
+  victorySlowGunshot(shot.heavy);
+}
+
+function victoryClearObstructions(v){
+  // La simulació s'atura quan mor el general: els fragments i el flaix
+  // de l'explosió quedarien congelats davant de la càmera.
+  for(const d of DB){
+    const mesh=d.m;if(!mesh||v.dimmedFragments.has(mesh))continue;
+    const original=mesh.material;
+    const dim=material=>{
+      if(!material)return material;
+      if(!v.fragmentMaterials.has(material)){
+        const faded=material.clone();faded.transparent=true;faded.opacity=.23;faded.depthWrite=false;
+        v.fragmentMaterials.set(material,faded);
+      }
+      return v.fragmentMaterials.get(material);
+    };
+    v.dimmedFragments.set(mesh,original);
+    mesh.material=Array.isArray(original)?original.map(dim):dim(original);
+  }
+  for(const f of fx)if(f.o&&!v.hiddenExplosionFx.has(f.o)){
+    v.hiddenExplosionFx.set(f.o,f.o.visible);f.o.visible=false;
+  }
 }
 
 function victorySlowGunshot(heavy){
@@ -89,7 +153,11 @@ function clearVictoryCinematic(){
   victoryUi(false);
   if(v.pose)window.HUNTER_VICTORY_POSE.apply(v.pose,0);
   if(v.bullet)scene.remove(v.bullet);
+  if(v.knifeSlash){scene.remove(v.knifeSlash);v.knifeSlash.geometry.dispose();v.knifeSlash.material.dispose()}
   if(v.impactFlash)scene.remove(v.impactFlash);
+  for(const [mesh,material] of v.dimmedFragments)mesh.material=material;
+  for(const material of v.fragmentMaterials.values())material.dispose();
+  for(const [mesh,visible] of v.hiddenExplosionFx)mesh.visible=visible;
   for(const gull of v.gulls)scene.remove(gull.o);
   if(v.overlay?.parentNode)v.overlay.parentNode.removeChild(v.overlay);
   // No manipulem ni destruïm geometries/materials compartits del joc.
@@ -106,10 +174,12 @@ function startVictoryCinematic(general,killingShot=null){
   if(eng)eng.g.gain.value=0;
   // El personatge havia entrat al sistema normal de morts.
   // Durant el replay animarem exclusivament aquest general.
-  const bg=new THREE.Mesh(shot.heavy?gHeavy:gB,shot.heavy?mS:mW);
-  bg.scale.setScalar(shot.heavy?1.6:.85);
-  bg.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1),shot.direction);
-  scene.add(bg);bg.visible=false;
+  const bg=victoryReplayProjectile(shot,killingShot),knifeSlash=victoryKnifeSlash(shot);
+  if(bg){
+    bg.scale.setScalar(shot.attack==='grenade'?2.7:shot.attack==='rocket'?1.35:shot.heavy?1.6:.85);
+    bg.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1),shot.direction);
+    scene.add(bg);bg.visible=false;
+  }
   const flash=new THREE.Mesh(new THREE.SphereGeometry(.52,9,6),
     new THREE.MeshBasicMaterial({color:0xffc975,transparent:true,opacity:.8,depthWrite:false}));
   flash.visible=false;scene.add(flash);
@@ -120,7 +190,7 @@ function startVictoryCinematic(general,killingShot=null){
     display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
     pointerEvents:'none',fontFamily:'system-ui,sans-serif',textAlign:'center'});
   const caption=document.createElement('div');
-  caption.textContent='EL DARRER DISPAR';
+  caption.textContent='KILL CAM';
   Object.assign(caption.style,{position:'absolute',top:'7%',fontSize:'clamp(14px,2vw,24px)',
     fontWeight:'700',letterSpacing:'.28em',color:'#fff1da',textShadow:'0 2px 10px #000',
     opacity:'0',transition:'opacity .3s'});
@@ -169,9 +239,10 @@ function startVictoryCinematic(general,killingShot=null){
             new THREE.Vector3(0,0,0),sunDir,new THREE.Vector3(0,1,0)));
   victoryCinematic={active:true,t:0,phase:'replay1',general,base,pose,
     overheadOrientation,sunsetOrientation,
-    shot,seaDir,seaCamera,bullet:bg,impactFlash:flash,
+    shot,seaDir,seaCamera,bullet:bg,knifeSlash,impactFlash:flash,
     gulls,overlay,caption,title,hint,originalVisibility:{},
-    lastReplay:-1,cryTime:0,finished:false};
+    lastReplay:-1,gullCries:0,finished:false,
+    dimmedFragments:new Map(),fragmentMaterials:new Map(),hiddenExplosionFx:new Map()};
   victoryUi(true);endEl.style.display='none';
   return true;
 }
@@ -221,38 +292,56 @@ function victoryAnimateGulls(v){
     const size=.95+(i%4)*.33;
     gull.o.scale.setScalar(size*(1-.62*victoryEase(p)));
   }
-  if(offset>0&&v.t-v.cryTime>2.1){victoryGullCry();v.cryTime=v.t}
+  if(v.gullCries<2&&offset>.5+v.gullCries*2.2){victoryGullCry();v.gullCries++}
 }
 function updateVictoryCinematic(dt){
   const v=victoryCinematic;
   if(!v||(!v.active&&!v.finished))return;
   v.t+=Math.max(0,Math.min(.1,dt));
+  victoryClearObstructions(v);
   if(v.finished){victoryAnimateGulls(v);return}
   const replayTotal=VICTORY_REPLAY_SECONDS*3,overheadEnd=replayTotal+VICTORY_OVERHEAD_SECONDS,
         end=overheadEnd+VICTORY_SUNSET_SECONDS;
   const target=v.shot.hit,dir=v.shot.direction,
         across=new THREE.Vector3(-dir.z,0,dir.x),base=v.base;
-  v.bullet.visible=false;v.impactFlash.visible=false;
+  if(v.bullet)v.bullet.visible=false;
+  if(v.knifeSlash)v.knifeSlash.visible=false;
+  v.impactFlash.visible=false;
   v.caption.style.opacity=v.t<replayTotal?'1':'0';
   if(v.t<replayTotal){
     const idx=Math.floor(v.t/VICTORY_REPLAY_SECONDS),
           local=v.t-idx*VICTORY_REPLAY_SECONDS;
     v.phase='replay'+(idx+1);
-    if(v.lastReplay!==idx){v.lastReplay=idx;victorySlowGunshot(v.shot.heavy)}
+    if(v.lastReplay!==idx){v.lastReplay=idx;victoryReplaySound(v.shot)}
     const fall=victoryClamp((local-.85)/1.22);
     victorySetFall(fall);
-    // El mateix tret torna a aparèixer tres vegades: sense tornar a fer
-    // dany ni a modificar la partida. Velocitat visual ≈ 20% de la normal.
+    // Tres repeticions visuals de l'atac real, sense tornar a fer dany.
     const bulletT=victoryClamp((local-.18)/.88);
-    if(local>=.18&&local<=1.06){
+    if(v.bullet&&local>=.18&&local<=1.06){
       v.bullet.visible=true;
-      v.bullet.position.copy(v.shot.approach).lerp(target,bulletT);
+      const destination=v.shot.heavy?v.shot.impact:target;
+      v.bullet.position.copy(v.shot.approach).lerp(destination,bulletT);
+      if(v.shot.attack==='grenade'){
+        v.bullet.position.y+=Math.sin(Math.PI*bulletT)*Math.min(7,v.shot.from.distanceTo(destination)*.23);
+        v.bullet.rotateX(dt*5);v.bullet.rotateZ(dt*3);
+      }
     }
-    if(local>=.98&&local<1.35){
+    if(v.shot.attack==='knife'){
+      // Animació de l'arma i del braç del jugador, no una bala inventada.
+      const knifeProgress=victoryClamp((local-.32)/.82);
+      pl.userData.meleePose=Math.max(.001,(pl.userData.knifeAttackDuration||.48)*(1-knifeProgress));
+      window.HUNTER_CHARACTERS.animatePlayer(pl,{forward:0,dt:.055,
+        swimming:false,inVehicle:false,ammo:0});
+      if(v.knifeSlash&&local>=.48&&local<=1.12){
+        v.knifeSlash.visible=true;
+        v.knifeSlash.material.opacity=.8*(1-victoryClamp((local-.62)/.5));
+      }
+    }
+    if(v.shot.attack!=='knife'&&v.shot.attack!=='impact'&&local>=.98&&local<1.35){
       v.impactFlash.visible=true;
-      v.impactFlash.position.copy(target);
+      v.impactFlash.position.copy(v.shot.heavy?v.shot.impact:target);
       const k=(local-.98)/.37;
-      v.impactFlash.scale.setScalar(.5+k*1.5);
+      v.impactFlash.scale.setScalar(v.shot.heavy?1+k*4:.5+k*1.5);
       v.impactFlash.material.opacity=(1-k)*.85;
     }
     const side=idx===0?1:idx===1?-1:.42,
