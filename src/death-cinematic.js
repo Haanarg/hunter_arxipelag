@@ -31,6 +31,43 @@ function deathUi(show){
   else el.style.visibility=v.previousVisibility[id]||'';
  }
 }
+// La postura de mort és la mateixa per a totes les causes: el cos queda
+// bocaterrosa, amb les extremitats relaxades i la cara visible de costat.
+// El model mira cap a -Z i té l'origen als peus, per això el compensam
+// longitudinalment quan l'ajau per evitar que el tors surti del pla.
+function deathPoseProne(player,centre,heading){
+ const u=player.userData,forwardX=-Math.sin(heading),forwardZ=-Math.cos(heading);
+ player.position.set(centre.x-forwardX*1.05,centre.y+.39,centre.z-forwardZ*1.05);
+ player.rotation.set(-Math.PI/2,heading,0);
+ if(u.upperBody)u.upperBody.rotation.set(0,0,0);
+ if(u.head)u.head.rotation.set(-.06,0,0);
+ if(u.al)u.al.rotation.set(-.15,0,-.24);
+ if(u.ar)u.ar.rotation.set(-.15,0,.24);
+ if(u.ael)u.ael.rotation.set(-.30,0,0);
+ if(u.aer)u.aer.rotation.set(-.30,0,0);
+ if(u.ll)u.ll.rotation.set(.07,0,-.08);
+ if(u.lr)u.lr.rotation.set(-.09,0,.08);
+ if(u.lkl)u.lkl.rotation.set(-.12,0,0);
+ if(u.lkr)u.lkr.rotation.set(-.16,0,0);
+ for(const weapon of [u.gun,u.knife,u.bazooka,u.grenade,u.sniper,u.cisalla])
+  if(weapon)weapon.visible=false;
+ if(u.pistolFlash)u.pistolFlash.visible=false;
+ player.visible=true;
+ player.updateMatrixWorld(true);
+}
+function deathFaceCamera(player,cameraPosition){
+ const head=player.userData?.head;
+ if(!head)return;
+ // El gir Y local, amb el cos ajagut, fa rodar la cara cap al costat
+ // des d'on mira la càmera. Limitam el gir per respectar el coll.
+ const headPosition=head.getWorldPosition(new THREE.Vector3()),
+       localView=new THREE.Vector3().copy(cameraPosition).sub(headPosition),
+       inverse=player.getWorldQuaternion(new THREE.Quaternion()).invert();
+ localView.applyQuaternion(inverse);
+ const angle=Math.atan2(-localView.x,-localView.z);
+ head.rotation.y=Math.max(-1.48,Math.min(1.48,angle));
+ head.rotation.x=-.06;
+}
 function deathBuildReaper(THREE){
  const g=new THREE.Group(),owned=[];
  const mat=(color,extras={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.93,...extras});owned.push(m);return m};
@@ -81,8 +118,8 @@ function deathCreateVoid(v){
  const player=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});
  if(disg)for(const [material,original,disguise] of player.userData.mats)
   material.color.copy(vivid(disguise));
- player.visible=true;player.position.set(0,0,1.45);
- player.rotation.set(0,Math.PI*.1,0);
+ deathPoseProne(player,{x:0,y:0,z:.85},-Math.PI/2);
+ deathFaceCamera(player,voidCamera.position);
  player.traverse(o=>{if(o.isMesh)o.castShadow=false});
  voidScene.add(player);
  const reaper=deathBuildReaper(THREE);
@@ -140,11 +177,21 @@ function startDeathCinematic(cause=null){
  causeEl.querySelector('small').textContent=info.detail;
  button.onclick=()=>window.location.reload();
  document.body.appendChild(overlay);
+ const onWater=info.kind==='shark'||(cv&&VT[cv.t]?.m==='w');
+ const floor=onWater?Math.max(P.y,wy(P.x,P.z,elapsed)-.15):cv?hAt(P.x,P.z):P.y;
+ const heading=P.hd||0;
+ const bodyFocus=new THREE.Vector3(P.x-Math.sin(heading)*.45,floor+.6,
+   P.z-Math.cos(heading)*.45);
  const v={active:true,finished:false,t:0,phase:'replay',cause:info,source,hit,direction,
   overlay,shade,replayLabel,causeEl,finale,button,previousVisibility:{},previousFov:cam.fov,
-  lastBell:-1,voidScene:null,reaper:null,replayEffect:null};
+  previousPlayerPose:{position:pl.position.clone(),rotation:pl.rotation.clone(),visible:pl.visible},
+  heading,bodyFocus,lastBell:-1,voidScene:null,reaper:null,replayEffect:null};
  deathCinematic=v;
  deathUi(true);endEl.style.display='none';
+ // En morir conduint el model del jugador estava ocult: també ha de
+ // poder veure's ajagut durant la repetició del darrer impacte.
+ deathPoseProne(pl,{x:P.x,y:floor,z:P.z},heading);
+ deathFaceCamera(pl,cam.position);
  deathCreateVoid(v);
  v.replayEffect=deathReplayEffect(v);
  return true;
@@ -158,6 +205,9 @@ function clearDeathCinematic(){
  }
  if(v.reaper)for(const resource of v.reaper.owned)resource.dispose();
  if(v.overlay.parentNode)v.overlay.parentNode.removeChild(v.overlay);
+ pl.position.copy(v.previousPlayerPose.position);
+ pl.rotation.copy(v.previousPlayerPose.rotation);
+ pl.visible=v.previousPlayerPose.visible;
  cam.fov=v.previousFov;cam.updateProjectionMatrix();
  deathCinematic=null;
 }
@@ -170,11 +220,13 @@ function updateDeathCinematic(dt){
  v.phase=deathStageAt(v.t);
  const replay=deathClamp(v.t/DEATH_REPLAY_SECONDS);
  if(v.phase==='replay'||v.phase==='fade'){
-  const a=v.direction,side=new THREE.Vector3(-a.z,0,a.x);
-  cam.position.copy(v.hit).addScaledVector(a,-9.5+replay*2.2)
-    .addScaledVector(side,5.5-replay*2.5);
-  cam.position.y+=3.3-replay*.65;
-  cam.lookAt(v.hit);
+  // Pla lateral del cos: permet veure la cara girada fins i tot quan
+  // el cop mortal ha arribat per l'esquena.
+  const right=new THREE.Vector3(Math.cos(v.heading),0,-Math.sin(v.heading));
+  cam.position.copy(v.bodyFocus).addScaledVector(right,8-replay*2)
+    .addScaledVector(v.direction,-2.3+replay);
+  cam.position.y+=3.7-replay*.7;
+  cam.lookAt(v.bodyFocus);
   if(cam.fov!==51){cam.fov=51;cam.updateProjectionMatrix()}
   if(v.replayEffect){
    const effect=v.replayEffect,material=effect.material;
@@ -190,10 +242,7 @@ function updateDeathCinematic(dt){
     effect.mesh.visible=v.t<2.95;
    }
   }
-  if(v.cause.kind==='fall'&&!cv&&pl){
-   pl.position.y=Math.max(P.y,Math.min(P.y+3.6,P.y+3.6*(1-deathEase(v.t/2.8))));
-   pl.rotation.x=-.55*(1-deathEase(v.t/3));
-  }
+  deathFaceCamera(pl,cam.position);
  }
  const fadeStart=DEATH_REPLAY_SECONDS,half=DEATH_FADE_SECONDS/2;
  const alpha=v.t<fadeStart?0:v.t<fadeStart+half
@@ -208,7 +257,8 @@ function updateDeathCinematic(dt){
         p=deathEase((v.t-start)/(DEATH_REAPER_SECONDS-.75));
   v.reaper.group.position.set(2.15-p*1.65,Math.sin(v.t*1.35)*.045,-14+p*12.3);
   v.reaper.group.rotation.y=-.35+p*.35;
-  v.voidPlayer.rotation.y=.1+Math.sin(v.t*.62)*.015;
+  if(v.voidPlayer?.userData?.head)
+   deathFaceCamera(v.voidPlayer,v.voidCamera.position);
   if(v.t>=start&&v.lastBell<0){deathBell(.83);v.lastBell=0}
   if(v.t>=start+2.15&&v.lastBell===0){deathBell(.65);v.lastBell=1}
   if(v.t>=start+4.4&&v.lastBell===1){deathBell(.55);v.lastBell=2}
@@ -221,3 +271,4 @@ function updateDeathCinematic(dt){
   v.button.style.display='block';v.button.focus();
  }
 }
+
