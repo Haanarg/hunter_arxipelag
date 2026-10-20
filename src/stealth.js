@@ -19,7 +19,7 @@ window.HUNTER_STEALTH=(()=>{
     // Un motor o una ràfega no han de crear desenes d'esdeveniments/frame.
     const old=events.findLast?.(e=>e.kind===kind&&e.age<.2&&
       Math.hypot(x-e.x,z-e.z)<9);
-    if(old){old.x=x;old.y=y;old.z=z;old.radius=radius;old.age=0;return old}
+    if(old){old.id=++nextId;old.x=x;old.y=y;old.z=z;old.radius=radius;old.age=0;return old}
     const e={id:++nextId,kind,x,y,z,radius,age:0};events.push(e);
     if(events.length>36)events.splice(0,events.length-36);
     return e;
