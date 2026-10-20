@@ -233,9 +233,9 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
       Math.abs(q.x-bunker.x)<bunker.hw&&Math.abs(q.z-bunker.z)<bunker.hd,
       acrossFloor=!!(u.basement||withinBunker&&py<bunker.fy-3.9)&&
         Math.abs((u.gy??u.o.position.y)-py)>4.4,
-       seen=!over&&!acrossFloor&&d<det&&sight(u.x,u.z,q.x,q.z,eyeY);
+       seen=!cheats.invisible&&!over&&!acrossFloor&&d<det&&sight(u.x,u.z,q.x,q.z,eyeY);
     if(u.t==='soldat'){
-       const raw=!!(cv? !over&&d<115&&
+       const raw=!cheats.invisible&&!!(cv? !over&&d<115&&
          STEALTH.inView(u.hd,dx,py+1.5-eyeY,dz,115)&&
          soldierClearShot(u,u.x,u.z,eyeY,q,py):
          !acrossFloor&&soldierVisualContact(u,q,py,d));
@@ -259,7 +259,7 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
            u.aiMode='suspicious';u.lastSeenX=q.x;u.lastSeenZ=q.z;u.lastSeenY=py;
            u.searchT=STEALTH.CONFIG.investigateSeconds+d/Math.max(1,u.sp*.65);
          }else if(!raw&&u.aiMode==='suspicious')u.aiMode='investigate';
-         const noise=STEALTH.heardAt(u.x,eyeY,u.z,u.heardId||0);
+         const noise=cheats.invisible?null:STEALTH.heardAt(u.x,eyeY,u.z,u.heardId||0);
          if(noise){
            u.heardId=noise.id;
            if(u.aiMode!=='search'&&u.aiMode!=='combat'){
