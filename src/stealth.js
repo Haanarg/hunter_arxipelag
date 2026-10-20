@@ -9,7 +9,11 @@ window.HUNTER_STEALTH=(()=>{
     bicycle:5,motorbike:90,car:70,truck:130,tank:130,apc:120,
     rowboat:5,windsurf:5,jetski:100,speedboat:120,ferry:125,
     helicopter:250,collision:100,grenade:7});
-  const events=[];let nextId=0,enabled=false;
+  const events=[];let nextId=0;
+  const debug={sight:false,hearing:false,noise:false};
+  const enabled=()=>debug.sight||debug.hearing||debug.noise;
+  const setLayer=(key,value)=>{if(Object.hasOwn(debug,key))debug[key]=!!value};
+  const layers=()=>({...debug});
   function emit(kind,x,y,z,radius=RADII[kind]||0){
     if(!(radius>0)||!Number.isFinite(x)||!Number.isFinite(z))return null;
     // Un motor o una ràfega no han de crear desenes d'esdeveniments/frame.
@@ -45,5 +49,5 @@ window.HUNTER_STEALTH=(()=>{
     return choice;
   }
   return Object.freeze({CONFIG,RADII,emit,tick,clear,inView,heardAt,
-    events:()=>events,enabled:()=>enabled,setDebug:v=>(enabled=!!v)});
+    events:()=>events,enabled,layers,setLayer,setDebug:v=>{for(const key of Object.keys(debug))debug[key]=!!v}});
 })();
