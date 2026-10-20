@@ -67,9 +67,9 @@ function preloadEngine(){
     link.fetchPriority='low';
     document.head.appendChild(link);
   };
-  if(RUNTIME_BUNDLE_PATH)preloadScript(RUNTIME_BUNDLE_PATH);
+  if(params.get('runtime')==='bundle'&&RUNTIME_BUNDLE_PATH)preloadScript(RUNTIME_BUNDLE_PATH);
   else import('./runtime-scripts.mjs').then(({runtimeScripts})=>{
-    // Mode compatible si encara no s'ha desplegat el bundle.
+    // Desenvolupament: precàrrega dels scripts font, sense compilar.
     for(const path of runtimeScripts)preloadScript(path,true);
   }).catch(error=>console.info('Precarrega opcional no disponible',error));
 }
