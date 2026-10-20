@@ -1,7 +1,6 @@
 // Volums de percepció, només creats quan el jugador activa el depurador.
 window.HUNTER_STEALTH_DEBUG=(()=>{
-  let group=null,cone=null,noiseSphere=null,materialSight=null,
-    materialNoise=null,entries=new Map(),pulses=[];
+  let group=null,cone=null,materialSight=null,entries=new Map(),pulses=[];
   const ring=(T,color,n=64)=>{const g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(new Float32Array(n*3),3));return new T.LineLoop(g,new T.LineBasicMaterial({color,depthWrite:false}))};
   const trace=(line,x,z,r,hd=0,half=null)=>{const a=line.geometry.attributes.position,n=a.count;for(let i=0;i<n;i++){const t=half===null?i*2*Math.PI/n:i===0?null:-half+(i-1)*2*half/(n-2),px=x+(t===null?0:Math.sin(t-hd)*r),pz=z+(t===null?0:-Math.cos(t-hd)*r);a.setXYZ(i,px,Math.max(0,hAt(px,pz))+.25,pz)}a.needsUpdate=true;line.geometry.computeBoundingSphere()};
   function create(THREE,world){
@@ -22,19 +21,16 @@ window.HUNTER_STEALTH_DEBUG=(()=>{
         bx,vertical,bz,ax,-vertical,az,bx,-vertical,bz);
     }
     cone=new THREE.BufferGeometry();cone.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));cone.computeVertexNormals();
-    noiseSphere=new THREE.SphereGeometry(1,10,6);
     materialSight=new THREE.MeshBasicMaterial({color:0x49f28b,transparent:true,opacity:.19,
-      depthWrite:false,side:THREE.DoubleSide});
-    materialNoise=new THREE.MeshBasicMaterial({color:0xff6556,transparent:true,opacity:.075,
       depthWrite:false,side:THREE.DoubleSide});
   }
   function reset(){
     if(group?.parent)group.parent.remove(group);
-    for(const g of [cone,noiseSphere])g?.dispose();
+    for(const g of [cone])g?.dispose();
     for(const v of entries.values()){v.sl.geometry.dispose();v.sl.material.dispose()}
     for(const p of pulses){p.line.geometry.dispose();p.line.material.dispose()}
-    for(const m of [materialSight,materialNoise])m?.dispose();
-    group=cone=noiseSphere=null;entries.clear();pulses=[];
+    for(const m of [materialSight])m?.dispose();
+    group=cone=null;entries.clear();pulses=[];
   }
   function update(THREE,world,enemies,player){
     const active=window.HUNTER_STEALTH.enabled();
@@ -62,12 +58,11 @@ window.HUNTER_STEALTH_DEBUG=(()=>{
     }
     const events=layers.noise?window.HUNTER_STEALTH.events().filter(e=>e.age<.85).slice(-8):[];
     while(pulses.length<events.length){
-      const mesh=new THREE.Mesh(noiseSphere,materialNoise);mesh.renderOrder=11;
-      const line=ring(THREE,0xff6556);group.add(mesh,line);pulses.push({mesh,line});
+      const line=ring(THREE,0xff6556);group.add(line);pulses.push({line});
     }
-    pulses.forEach(({mesh,line},i)=>{
-      const e=events[i];mesh.visible=line.visible=!!e;
-      if(e){mesh.position.set(e.x,e.y,e.z);mesh.scale.setScalar(e.radius);trace(line,e.x,e.z,e.radius)}
+    pulses.forEach(({line},i)=>{
+      const e=events[i];line.visible=!!e;
+      if(e){trace(line,e.x,e.z,e.radius)}
     });
   }
   return Object.freeze({update,reset});
