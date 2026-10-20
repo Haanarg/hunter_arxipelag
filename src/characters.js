@@ -521,10 +521,10 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.cisalla.visible=cisalla;
     window.HUNTER_BOLT_CUTTERS.pose(u.cisalla,
       cisalla&&u.cisallaCut>0?Math.sin(Math.PI*(1-u.cisallaCut/.46)):0);
-    u.gun.visible=!bazooka&&!sniper&&!grenade&&!cisalla&&!melee&&(ammo>0||aiming);
+    u.gun.visible=!bazooka&&!sniper&&!grenade&&!cisalla&&!knifeEquipped&&!melee&&(ammo>0||aiming);
     // Deixem acabar el retrocés de l'última bala: mai es veuen
     // pistola i ganivet superposats durant la transició.
-    const knifeReady=!inVehicle&&!cisalla&&ammo<=0&&!aiming&&u.pistolAimTime<=0;
+    const knifeReady=!inVehicle&&!cisalla&&(knifeEquipped||ammo<=0&&!aiming&&u.pistolAimTime<=0);
     u.knife.visible=!bazooka&&!sniper&&!grenade&&!cisalla&&(melee||knifeReady);
 
     if(cisalla){
