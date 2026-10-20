@@ -20,21 +20,6 @@ function soldierVisualContact(u,target,targetY,d){
   }
   return true;
 }
-function soldierHearingFactor(u,sound){
-  let factor=1;
-  const sy=u.o.position.y+1.5;
-  if(Math.abs(sound.y-sy)>4.5)factor*=.55;
-  const radius=Math.hypot(sound.x-u.x,sound.z-u.z)/2+2,
-        mx=(sound.x+u.x)/2,mz=(sound.z+u.z)/2;
-  for(const wall of wallCandidates(mx,mz,radius)){
-    if(wall.open||wall.barbed)continue;
-    if(segmentAabbT(u.x,sy,u.z,sound.x,sound.y,sound.z,
-      wall.x0,wall.x1,wall.y0,wall.y1,wall.z0,wall.z1)!==null){
-      factor*=.55;break;
-    }
-  }
-  return factor;
-}
 function soldierInvestigate(u,target,dt,speed=1){
   const dist=Math.hypot(target.x-u.x,target.z-u.z);
   if(dist>3){
@@ -46,14 +31,9 @@ function soldierInvestigate(u,target,dt,speed=1){
   return true;
 }
 function soldierWarnNeighbors(witness,target,targetY){
-  for(const ally of E){
-    if(ally===witness||ally.t!=='soldat'||ally.hp<=0||ally.aiMode==='combat')continue;
-    if(Math.hypot(witness.x-ally.x,witness.z-ally.z)>55||
-      Math.abs(witness.o.position.y-ally.o.position.y)>9)continue;
-    ally.aiMode='investigate';ally.lastSeenX=target.x;ally.lastSeenZ=target.z;
-    ally.lastSeenY=targetY;ally.searchT=STEALTH.CONFIG.investigateSeconds+
-      Math.hypot(ally.x-target.x,ally.z-target.z)/Math.max(1,ally.sp*.65);
-  }
+  // El crit és un esdeveniment sonor: els aliats dins del cercle l'investiguen.
+  // Evitem repetir-lo constantment mentre el mateix soldat manté contacte.
+  STEALTH.emit('alert',witness.x,witness.o.position.y+2,witness.z);
 }
 // Punteria per dificultat. DIF=1.5 conserva exactament la dispersió antiga.
 // Normal (1) falla més i Fàcil (.6) encara més, sense alterar el dany ni la IA.
@@ -279,17 +259,16 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
            u.aiMode='suspicious';u.lastSeenX=q.x;u.lastSeenZ=q.z;u.lastSeenY=py;
            u.searchT=STEALTH.CONFIG.investigateSeconds+d/Math.max(1,u.sp*.65);
          }else if(!raw&&u.aiMode==='suspicious')u.aiMode='investigate';
-         const noise=STEALTH.heardAt(u.x,eyeY,u.z,u.heardId||0,
-           event=>soldierHearingFactor(u,event));
+         const noise=STEALTH.heardAt(u.x,eyeY,u.z,u.heardId||0);
          if(noise){
            u.heardId=noise.id;
-           if(u.aiMode!=='search'){
+           if(u.aiMode!=='search'&&u.aiMode!=='combat'){
              u.aiMode='investigate';u.searchT=STEALTH.CONFIG.investigateSeconds+
                Math.hypot(noise.x-u.x,noise.z-u.z)/Math.max(1,u.sp*.65);
            }
            // El soroll no revela la posició ACTUAL del jugador; només
            // deixa un rastre de posició que pot tenir una petita imprecisió.
-           const uncertainty=noise.radius>=100?4:1.5;
+           const uncertainty=noise.kind==='alert'?0:noise.radius>=100?4:1.5;
            u.lastSeenX=noise.x+Math.sin(u.x+noise.id)*uncertainty;
            u.lastSeenZ=noise.z+Math.cos(u.z+noise.id)*uncertainty;
            u.lastSeenY=noise.y;
