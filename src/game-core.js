@@ -1676,12 +1676,15 @@ const clearKeys=()=>{
 };
 const quickWeapons=()=>['pistola','ganivet',...['franctirador','bazooka','granada','cisalla'].filter(k=>inv[k]>0)];
 const selectedWeapon=()=>knifeEquipped?'ganivet':sniperEquipped?'franctirador':bazookaEquipped?'bazooka':grenadeEquipped?'granada':cisallaEquipped?'cisalla':'pistola';
-function selectWeapon(k){if(!started||paused||over||cv||swimming||!quickWeapons().includes(k))return;cancelGrenadeCharge();setSniperScope(false);knifeEquipped=k==='ganivet';sniperEquipped=k==='franctirador';bazookaEquipped=k==='bazooka';grenadeEquipped=k==='granada';cisallaEquipped=k==='cisalla';msg=k+' equipat';msgT=1.5;drawWeaponPicker()}
+function selectWeapon(k){if(!weaponPickerAvailable()||swimming||!quickWeapons().includes(k))return;cancelGrenadeCharge();setSniperScope(false);knifeEquipped=k==='ganivet';sniperEquipped=k==='franctirador';bazookaEquipped=k==='bazooka';grenadeEquipped=k==='granada';cisallaEquipped=k==='cisalla';msg=k+' equipat';msgT=1.5;drawWeaponPicker()}
 function cycleWeapon(n){const w=quickWeapons(),i=w.indexOf(selectedWeapon());selectWeapon(w[(i+n+w.length)%w.length])}
 const picker=document.createElement('div');picker.style.cssText='position:fixed;z-index:100;right:10px;bottom:258px;background:#203239ed;padding:8px;border-radius:10px;display:none;flex-direction:column;gap:5px;max-height:50vh;overflow:auto';document.body.appendChild(picker);
 const pickerToggle=document.createElement('button');pickerToggle.textContent='⚔ Armes';pickerToggle.style.cssText='position:fixed;z-index:99;right:10px;bottom:210px;padding:8px;color:white;background:#304b52;border-radius:9px';pickerToggle.style.display='none';document.body.appendChild(pickerToggle);
-let pickerOpen=false;pickerToggle.onclick=()=>{pickerOpen=!pickerOpen;drawWeaponPicker()};
-function drawWeaponPicker(){picker.style.display=pickerOpen&&started&&!paused&&!over&&!cv?'flex':'none';picker.replaceChildren();if(picker.style.display==='none')return;const names={pistola:'🔫 Pistola',ganivet:'🔪 Ganivet',franctirador:'🔭 Rifle',bazooka:'🚀 Bazooka',granada:'💣 Granades',cisalla:'✂ Cisalla'};quickWeapons().forEach((k,i)=>{const b=document.createElement('button');b.textContent=(i+1)+' · '+names[k]+' · '+(k==='pistola'?ammo:k==='franctirador'?sniperAmmo:k==='ganivet'?'∞':inv[k]);b.style.cssText='padding:8px;color:white;background:'+(selectedWeapon()===k?'#356c51':'#364a52');b.onclick=()=>{selectWeapon(k);pickerOpen=false;drawWeaponPicker()};picker.appendChild(b)})}
+let pickerOpen=false;
+const weaponPickerAvailable=()=>!!started&&document.body.classList.contains('game-started')&&!paused&&!over&&hp>0&&!cv&&!deathCinematic?.active&&!victoryCinematic?.active&&!victoryCinematic?.finished;
+function syncWeaponPicker(){const visible=weaponPickerAvailable();pickerToggle.style.display=visible?'block':'none';if(!visible){pickerOpen=false;picker.style.display='none'}}
+pickerToggle.onclick=()=>{if(!weaponPickerAvailable())return;pickerOpen=!pickerOpen;drawWeaponPicker()};
+function drawWeaponPicker(){picker.style.display=pickerOpen&&weaponPickerAvailable()?'flex':'none';picker.replaceChildren();if(picker.style.display==='none')return;const names={pistola:'🔫 Pistola',ganivet:'🔪 Ganivet',franctirador:'🔭 Rifle',bazooka:'🚀 Bazooka',granada:'💣 Granades',cisalla:'✂ Cisalla'};quickWeapons().forEach((k,i)=>{const b=document.createElement('button');b.textContent=(i+1)+' · '+names[k]+' · '+(k==='pistola'?ammo:k==='franctirador'?sniperAmmo:k==='ganivet'?'∞':inv[k]);b.style.cssText='padding:8px;color:white;background:'+(selectedWeapon()===k?'#356c51':'#364a52');b.onclick=()=>{selectWeapon(k);pickerOpen=false;drawWeaponPicker()};picker.appendChild(b)})}
 const act=c=>{if(/^Digit[1-6]$/.test(c)){selectWeapon(quickWeapons()[Number(c.slice(5))-1]);return}if(c==='KeyV'){cycleWeapon(1);return}if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){if(!secondaryWeapon())plant();}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
 const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.reentryLockUntil>elapsed)continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
 function updateActionButton(nearby){
@@ -2649,13 +2652,14 @@ if(fireButton){
     fireButton.title=heliGrenade?'Llançar granada de l’inventari':grenade?'Mantén premut per arribar més lluny':action;
   }
 }
-updateActionButton(nv);pickerToggle.style.display=started&&document.body.classList.contains('game-started')&&!paused&&!over&&!cv?'block':'none';if(pickerOpen)drawWeaponPicker();
+updateActionButton(nv);syncWeaponPicker();if(pickerOpen)drawWeaponPicker();
 mini();ui.renderHUD();}}
 
 
 let last=performance.now();
 (function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(victoryCinematic?victoryCinematic.t:started&&!paused&&!over?dt:0),cpuStarted=performance.now();
 update(dt,t);
+syncWeaponPicker();
 if(victoryCinematic?.active||victoryCinematic?.finished)updateVictoryCinematic(dt);
  if(deathCinematic?.active)updateDeathCinematic(dt);
 const simulationEnded=performance.now();
