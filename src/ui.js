@@ -38,6 +38,20 @@ window.HUNTER_UI=Object.freeze({
         const map=document.getElementById('fullmap');minimap.drawFull(map,getState().waypoint);
         map.onclick=e=>{const r=e.currentTarget.getBoundingClientRect(),s=getState();actions.setWaypoint({x:((e.clientX-r.left)/r.width-.5)*s.worldSize,z:((e.clientY-r.top)/r.height-.5)*s.worldSize});minimap.drawFull(map,getState().waypoint)};
         document.getElementById('clearMark').onclick=()=>{actions.setWaypoint(null);minimap.drawFull(map,null)}
+      }else if(mode==='cheats'){
+        body.innerHTML='<p>Activa o desactiva cada avantatge per separat.</p>'+
+          '<div class="performance-options">'+
+          '<label><input id="cheatItems" type="checkbox"> Tots els objectes i munició infinits (també vehicles)</label>'+
+          '<label><input id="cheatInvisible" type="checkbox"> Invisible per als enemics</label>'+
+          '<label><input id="cheatImmune" type="checkbox"> Immune als atacs</label>'+
+          '<label><input id="cheatFly" type="checkbox"> Vol ràpid (H / J per pujar i baixar)</label>'+
+          '</div><button id="cheatsBack">← Pausa</button>';
+        for(const [id,key] of [['cheatItems','items'],['cheatInvisible','invisible'],['cheatImmune','immune'],['cheatFly','fly']]){
+          const input=document.getElementById(id);
+          input.checked=!!getState().cheats?.[key];
+          input.onchange=()=>actions.setCheat(key,input.checked);
+        }
+        document.getElementById('cheatsBack').onclick=()=>actions.open('pause');
       }else if(mode==='performance'){
         body.innerHTML='<p>Canvis immediats, sense regenerar el mapa.</p>'+
           '<div class="performance-options">'+
@@ -100,10 +114,7 @@ window.HUNTER_UI=Object.freeze({
           '<button id="restartMenu">Nova partida</button>'+
           '<button id="performanceMenu">⚙️ Rendiment</button>'+
           '</div>';
-        document.getElementById('chetosMenu').onclick=()=>{
-          actions.chetos();
-          document.getElementById('chetosMenu').textContent='Chetos ✓';
-        };
+        document.getElementById('chetosMenu').onclick=()=>actions.open('cheats');
         document.getElementById('restartMenu').onclick=()=>actions.open('restart');
         document.getElementById('performanceMenu').onclick=()=>actions.open('performance');
       }
