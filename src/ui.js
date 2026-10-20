@@ -46,8 +46,8 @@ window.HUNTER_UI=Object.freeze({
           '<label><input id="disableShadowsPause" type="checkbox"> Sense ombres</label>'+
           '</div><label class="pause-stats-toggle"><input id="showPerfStatsOptions" type="checkbox"> Mostrar estadístiques de rendiment durant la partida</label>'+
           '<label class="pause-stats-toggle"><input id="showStealthDebug" type="checkbox"> Cons de visió (F9)</label>'+
-          '<label><input id="showStealthHearing" type="checkbox"> Esferes d’escolta</label><label><input id="showStealthNoise" type="checkbox"> Radis de soroll</label>'+
-          '<p style="font:12px/1.4 system-ui;opacity:.8">Verd: visió · ambre: escolta de cursa (25 m) · vermell: radi de cada soroll emès.</p>'+
+          '<label><input id="showStealthNoise" type="checkbox"> Radis de soroll</label>'+
+          '<p style="font:12px/1.4 system-ui;opacity:.8">Verd: visió · vermell: radi dels sorolls i crits d’alerta.</p>'+
           '<div id="performanceBreakdown" style="font:13px/1.5 monospace;white-space:pre-line;background:#0d1d30;border-radius:8px;padding:12px;margin-top:12px"></div>'+
           '<button id="performanceRefresh">Actualitza diagnòstic</button><button id="performanceBack">← Pausa</button>';
         for(const [id,key,callback] of [
@@ -74,7 +74,7 @@ window.HUNTER_UI=Object.freeze({
         const stealthToggle=document.getElementById('showStealthDebug');
         stealthToggle.checked=!!getState().stealthLayers?.sight;
         stealthToggle.onchange=()=>actions.setStealthLayer('sight',stealthToggle.checked);
-        for(const [id,key] of [['showStealthHearing','hearing'],['showStealthNoise','noise']]){const el=document.getElementById(id);el.checked=!!getState().stealthLayers?.[key];el.onchange=()=>actions.setStealthLayer(key,el.checked)}
+        for(const [id,key] of [['showStealthNoise','noise']]){const el=document.getElementById(id);el.checked=!!getState().stealthLayers?.[key];el.onchange=()=>actions.setStealthLayer(key,el.checked)}
         document.getElementById('performanceRefresh').onclick=refresh;
         document.getElementById('performanceBack').onclick=()=>actions.open('pause');
         refresh();
