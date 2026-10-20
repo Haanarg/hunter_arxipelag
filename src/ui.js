@@ -3,7 +3,7 @@ window.HUNTER_UI=Object.freeze({
   create({hud,panel,title,body,resumeButton,minimap,getState,actions}){
     function renderHUD(){
       const s=getState(),state=s.vehicle?s.vehicleTypes[s.vehicle.t].n:s.inside?'Interior':s.swimming?'Nedant':'A peu',veh=s.vehicle,vehInfo=veh?'<br>🛡️ '+Math.max(0,veh.life??0)+'/'+(veh.maxLife??0)+(veh.t==='llanxa_coets'?' · 🚀 ∞':veh.rockets!=null?' · 🚀 '+veh.rockets:veh.t==='heli'?' · 💣 '+(s.inventory.granada||0)+' granades':''):'',weaponInfo=s.bazookaEquipped&&!veh?' · 🚀 Bazooka '+(s.inventory.bazooka||0)+' coets':s.grenadeEquipped&&!veh?' · 💣 Granades '+(s.inventory.granada||0):s.cisallaEquipped&&!veh?' · ✂ Cisalla':s.sniperEquipped&&!veh?' · 🔭 Rifle '+s.sniperAmmo+' cartutxos'+(s.scopeActive?' · Mira x8':''):'';
-      hud.innerHTML=`<b>HUNTER · ARXIPÈLAG</b><br>❤️ ${Math.round(s.hp)} · 🎯 ${s.ammo} · ☠ ${s.kills}<br>${state}${s.disguised?' · 🎭 Disfressat':''}${weaponInfo}${vehInfo}${s.nearVehicle&&!s.vehicle?'<br>Acció: puja a '+s.vehicleTypes[s.nearVehicle.t].n:''}${s.messageTime>0?'<br>'+s.message:''}${s.waypoint?'<br>Destinació: '+Math.round(Math.hypot(s.waypoint.x-s.player.x,s.waypoint.z-s.player.z))+' m':''}<br><span style="opacity:.72">Llavor ${s.seed>>>0} · X ${s.player.x|0} · Z ${s.player.z|0}</span>`;
+      hud.innerHTML=`<b>HUNTER · ARXIPÈLAG</b><br>❤️ ${s.hp>0?Math.max(1,Math.ceil(s.hp)):0} · 🎯 ${s.ammo} · ☠ ${s.kills}<br>${state}${s.disguised?' · 🎭 Disfressat':''}${weaponInfo}${vehInfo}${s.nearVehicle&&!s.vehicle?'<br>Acció: puja a '+s.vehicleTypes[s.nearVehicle.t].n:''}${s.messageTime>0?'<br>'+s.message:''}${s.waypoint?'<br>Destinació: '+Math.round(Math.hypot(s.waypoint.x-s.player.x,s.waypoint.z-s.player.z))+' m':''}<br><span style="opacity:.72">Llavor ${s.seed>>>0} · X ${s.player.x|0} · Z ${s.player.z|0}</span>`;
     }
     function hide(){panel.style.display='none'}
     function show(mode){
@@ -14,7 +14,7 @@ window.HUNTER_UI=Object.freeze({
         let selected=present[0]||null;
         const renderInventory=(healed=0)=>{
           const st=getState(),items=keys.filter(k=>st.inventory[k]>0),
-                life=Math.max(0,Math.min(20,Math.round(st.hp)));
+                life=Math.max(0,Math.min(20,st.hp>0?Math.ceil(st.hp):0));
           body.innerHTML='<div class="inv-health" role="status" aria-live="polite">'+
             '<div class="inv-health-line"><b>❤️ Vida '+life+' / 20</b>'+
             (healed>0?'<strong class="inv-healed">+'+healed+' vida</strong>':'')+'</div>'+
@@ -34,12 +34,12 @@ window.HUNTER_UI=Object.freeze({
         };
         renderInventory();
       }else if(mode==='map'){
-        body.innerHTML='<canvas id="fullmap" width="510" height="510" aria-label="Mapa: toca per marcar una destinació"></canvas><p>Toca per marcar una destinació. Blau: base · Groc: vehicles propers · Vermell: enemics i HQ descobert · Cian: helicòpter cartografiat · Taronja: tanc cartografiat.</p><button id="clearMark">Esborra destinació</button>';
+        body.innerHTML='<canvas id="fullmap" width="510" height="510" aria-label="Mapa: toca per marcar una destinació"></canvas><p>Toca el mapa per marcar una destinació. Blau: base · Groc: vehicles · Vermell: enemics · Cian: helicòpters · Taronja: tancs.</p><button id="clearMark">Esborra marca</button>';
         const map=document.getElementById('fullmap');minimap.drawFull(map,getState().waypoint);
         map.onclick=e=>{const r=e.currentTarget.getBoundingClientRect(),s=getState();actions.setWaypoint({x:((e.clientX-r.left)/r.width-.5)*s.worldSize,z:((e.clientY-r.top)/r.height-.5)*s.worldSize});minimap.drawFull(map,getState().waypoint)};
         document.getElementById('clearMark').onclick=()=>{actions.setWaypoint(null);minimap.drawFull(map,null)}
       }else if(mode==='performance'){
-        body.innerHTML='<p>Canvia les opcions en calent sense regenerar el mapa.</p>'+
+        body.innerHTML='<p>Canvis immediats, sense regenerar el mapa.</p>'+
           '<div class="performance-options">'+
           '<label><input id="disablePalmsPause" type="checkbox"> Sense palmeres</label>'+
           '<label><input id="disableWaterPause" type="checkbox"> Sense aigua</label>'+
@@ -72,22 +72,32 @@ window.HUNTER_UI=Object.freeze({
         document.getElementById('performanceBack').onclick=()=>actions.open('pause');
         refresh();
       }else if(mode==='restart'){
-        body.innerHTML='<p>Es perdrà el progrés d’aquesta partida. Tria la dificultat del nou arxipèlag.</p><button data-diff=".6">Fàcil</button><button data-diff="1">Normal</button><button data-diff="1.5">Difícil</button>';
+        body.innerHTML='<p>Perdràs el progrés. Dificultat de la nova partida:</p><button data-diff=".6">Fàcil</button><button data-diff="1">Normal</button><button data-diff="1.5">Difícil</button>';
         body.querySelectorAll('[data-diff]').forEach(b=>b.onclick=()=>actions.restart(+b.dataset.diff))
       }else{
-        body.innerHTML='<div class="controls"><b>WASD / fletxes</b><span>Avança, frena i gira</span><b>Joystick / ⇧</b><span>Arrossega el pom cap a la prolongació superior per córrer a peu o nedar a crol dins l’aigua. Torna al cercle per caminar o nedar a braça. Amb teclat: Majúscules + W.</span><b>◀ ▶ / Y i U</b><span>Desplaçament lateral sense girar: a peu, nedant, en hovercraft i en helicòpters. Els botons apareixen a banda i banda del joystick.</span><b>Acció / E</b><span>Motxilla: inventari. Icona d’un vehicle: puja-hi o baixa’n</span><b>Dispar / F</b><span>Dispara l’arma equipada. Amb la cisalla: talla silenciosament les filferrades properes. Amb granades: mantén premut per allunyar el llançament i deixa anar per llençar-la; veuràs la trajectòria i el punt de caiguda</span><b>T / Mira</b><span>Activa/desactiva la mira x8 del rifle de franctirador; amb la mira activa, el joystick, WASD i Y/U mouen només el punt de vista, sense desplaçar el personatge</span><b>I</b><span>Obre l’inventari</span><b>M</b><span>Obre el mapa</span><b>H / J</b><span>Puja / baixa l’helicòpter</span><b>Arrossega</b><span>Gira la vista i el personatge</span><b>Roda</b><span>Acosta o allunya la càmera</span></div><p>Farmacioles, cisalla, explosius, granades, bazooka, rifle de franctirador i disfressa es gestionen des de l’inventari. Els mapes de l’HQ, helicòpters i tancs s’activen automàticament quan els reculls. El bazooka mostra una retícula blanca quan apunta lliurement i verda sobre una diana seleccionada. L’helicòpter utilitari no té canó: Dispar / F llança granades de l’inventari, si en tens; l’helicòpter de combat conserva la metralladora i el botó 🚀 / G per als míssils. La llanxa llançacoets dispara coets amb Dispar.</p><button id="inventoryMenu">Inventari</button><button id="chetosMenu">Chetos</button><button id="restartMenu">Nova partida</button><button id="performanceMenu">⚙️ Rendiment</button><label class="pause-stats-toggle"><input id="showPerfStatsPause" type="checkbox"> Mostrar estadístiques de rendiment</label><button id="zoomOut">Allunya càmera</button><button id="zoomIn">Acosta càmera</button>';
-        document.getElementById('inventoryMenu').onclick=()=>actions.open('inventory');
+        body.innerHTML='<div class="pause-help" aria-label="Controls bàsics">'+
+          '<div><b>WASD / fletxes</b><span>Moviment i gir</span></div>'+
+          '<div><b>Maj. / joystick ↑</b><span>Córrer o nedar a crol</span></div>'+
+          '<div><b>Y / U · ◀ ▶</b><span>Desplaçament lateral, també nedant</span></div>'+
+          '<div><b>E · Acció</b><span>Pujar o baixar del vehicle; motxilla</span></div>'+
+          '<div><b>F · Dispar</b><span>Arma, cisalla o granada (mantén per llançar lluny)</span></div>'+
+          '<div><b>T · Mira</b><span>Zoom del franctirador</span></div>'+
+          '<div><b>M</b><span>Mapa i destinació</span></div>'+
+          '<div><b>H / J</b><span>Helicòpter: pujar / baixar</span></div>'+
+          '<div><b>Arrossega / roda</b><span>Girar vista / ajustar càmera</span></div>'+
+          '</div>'+
+          '<p class="pause-note">Els mapes recollits s’activen sols. Gestiona l’equipament amb la motxilla.</p>'+
+          '<div class="pause-menu-actions">'+
+          '<button id="chetosMenu">Chetos</button>'+
+          '<button id="restartMenu">Nova partida</button>'+
+          '<button id="performanceMenu">⚙️ Rendiment</button>'+
+          '</div>';
         document.getElementById('chetosMenu').onclick=()=>{
           actions.chetos();
           document.getElementById('chetosMenu').textContent='Chetos ✓';
         };
         document.getElementById('restartMenu').onclick=()=>actions.open('restart');
-        document.getElementById('zoomOut').onclick=()=>actions.zoom(.2);
-        document.getElementById('zoomIn').onclick=()=>actions.zoom(-.2);
         document.getElementById('performanceMenu').onclick=()=>actions.open('performance');
-        const statsToggle=document.getElementById('showPerfStatsPause');
-        statsToggle.checked=!!getState().performanceStatsVisible;
-        statsToggle.onchange=()=>actions.setPerformanceStatsVisible(statsToggle.checked);
       }
     }
     resumeButton.onclick=actions.resume;

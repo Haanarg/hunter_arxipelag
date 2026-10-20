@@ -2318,7 +2318,12 @@ const strafeEnabled=updateStrafeControls();
 const canRun=!!started&&!paused&&!over&&!cv&&!playerFall&&!playerEject&&!scopeActive;
 joystick.setRunEnabled(canRun);
 document.body.classList.toggle('player-swimming',canRun&&swimming);
-if(!started||paused||over){updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
+// Darrera defensa: cap estat actiu amb vida nul·la, fins i tot si una
+ // interacció externa o una restauració d'estat ha posat hp a zero.
+ if(started&&!over&&hp<=0){
+   hp=0;fin('HAS MORT',{type:'impact',x:P.x,y:P.y,z:P.z});
+ }
+ if(!started||paused||over){updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
 rebuildVehicleGrid();elapsed+=dt;
 const jf=-joystick.state.y,jtr=-joystick.state.x,
       f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),
