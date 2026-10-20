@@ -1,10 +1,5 @@
 name: Rebuild game runtime
 on:
-  push:
-    paths:
-      - '.github/workflows/rebuild-runtime.yml'
-      - 'src/**'
-      - 'tools/build-runtime.cjs'
   workflow_dispatch:
 permissions:
   contents: write
