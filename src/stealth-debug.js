@@ -21,9 +21,9 @@ window.HUNTER_STEALTH_DEBUG=(()=>{
     }
     cone=new THREE.BufferGeometry();cone.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));cone.computeVertexNormals();
     sphere=new THREE.SphereGeometry(1,12,8);noiseSphere=new THREE.SphereGeometry(1,10,6);
-    materialSight=new THREE.MeshBasicMaterial({color:0x49f28b,transparent:true,opacity:.105,
+    materialSight=new THREE.MeshBasicMaterial({color:0x49f28b,transparent:true,opacity:.19,
       depthWrite:false,side:THREE.DoubleSide});
-    materialHearing=new THREE.MeshBasicMaterial({color:0xf6b740,transparent:true,opacity:.075,
+    materialHearing=new THREE.MeshBasicMaterial({color:0xf6b740,transparent:true,opacity:.14,
       depthWrite:false,side:THREE.DoubleSide});
     materialNoise=new THREE.MeshBasicMaterial({color:0xff6556,transparent:true,opacity:.075,
       depthWrite:false,side:THREE.DoubleSide});
