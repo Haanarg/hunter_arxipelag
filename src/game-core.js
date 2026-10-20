@@ -367,7 +367,7 @@ expl:{n:'Explosius',c:0x617451,s:[.9,.9,.9],icon:ICON.expl,desc:'Bloc d’explos
 disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa enemiga vermella. Activa o desactiva la disfressa.',usable:true}
 };
 // combat i enemics
-let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=window.HUNTER_COMBAT_BALANCE.player,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null;
+let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=window.HUNTER_COMBAT_BALANCE.player,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null,playerCrouched=false;
 // Ojiva compartida per tots els projectils pesats. Eix longitudinal -Z:
 // culata cilíndrica a +Z i punta cònica a -Z, com els canons del joc.
 // Geometria única reutilitzada, sense crear malles noves per cada tir.
@@ -1045,6 +1045,7 @@ function updateDoors(dt){
       const dx=P.x-d.cx,dz=P.z-d.cz,front=dx*d.nx+dz*d.nz,side=Math.abs(dx*d.nz-dz*d.nx),
             inFront=!cv&&front>=0&&front<=4.8&&side<=d.doorWidth/2+1.15;
       if(inFront&&d.openProgress<1){
+        if(d.openProgress===0)window.HUNTER_STEALTH.emit('door',d.cx,(d.y0??hAt(d.cx,d.cz))+1,d.cz);
         d.openProgress=Math.min(1,d.openProgress+dt/d.openDuration);
         msg='Obrint porta del búnquer… '+Math.round(d.openProgress*100)+'%';msgT=.25
       }
@@ -1059,6 +1060,8 @@ function updateDoors(dt){
       soldierNear=!d.locked&&enemyCandidatesAt(d.cx,d.cz,4.7).some(u=>
         (u.t==='soldat'||u.t==='general')&&Math.hypot(u.x-d.cx,u.z-d.cz)<4.5),
       o=d.alwaysOpen||(!d.locked&&((!cv&&dx*dx+dz*dz<r*r)||soldierNear));
+    if(!d.open&&o&&!cv&&dx*dx+dz*dz<r*r)
+      window.HUNTER_STEALTH.emit('door',d.cx,(d.y0??hAt(d.cx,d.cz))+1,d.cz);
     d.open=o;d.m.visible=!o
   }
 }
@@ -1195,7 +1198,8 @@ const bx=(g,w,h,d,c,x,y,z,profile='organic')=>{const m=new THREE.Mesh(new THREE.
 const buildingVisual=window.HUNTER_BUILDINGS.create(THREE,{material:M,materialProfile,box:bx});
 const pl=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});scene.add(pl);
 const animPl=(f,dt,running=false,strafe=0)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{
-  forward:f,strafe,dt,running,swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,
+  forward:f,strafe,dt,running,crouching:playerCrouched&&!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive,
+  swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,
   grenadeChargePower:grenadeCharge?Math.min(1,grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS):0,
   airborne:!!playerFall,parachuting:!!playerFall?.parachute
 });
@@ -1614,6 +1618,29 @@ const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joyst
       strafeButtons={left:document.getElementById('strafeLeft'),right:document.getElementById('strafeRight')},
       strafePointers={left:null,right:null},
       STRAFE_VEHICLES=new Set(['hover','heli','heli_combat']);
+const crouchButton=document.createElement('button');
+crouchButton.id='crouchButton';crouchButton.type='button';
+crouchButton.textContent='AJUPIR';crouchButton.title='Ajupir-se o aixecar-se · X';
+crouchButton.setAttribute('aria-label','Ajupir-se o aixecar-se');
+crouchButton.setAttribute('aria-pressed','false');
+crouchButton.style.cssText='display:none;position:fixed;z-index:7;'+
+  'left:calc(12px + env(safe-area-inset-left,0px));'+
+  'bottom:calc(235px + env(safe-area-inset-bottom,0px));'+
+  'width:70px;height:42px;border-radius:12px;border:2px solid #b6d3b8;'+
+  'background:#10241edb;color:#fff;font:700 11px system-ui;'+
+  'box-shadow:0 3px 11px #0008;touch-action:manipulation';
+document.body.appendChild(crouchButton);
+const canCrouch=()=>started&&!paused&&!over&&!cv&&!swimming&&!scopeActive&&!playerFall&&!playerEject;
+function updateCrouchButton(){
+  const enabled=canCrouch();crouchButton.style.display=enabled?'block':'none';
+  crouchButton.style.background=playerCrouched?'#4a7655ee':'#10241edb';
+  crouchButton.textContent=playerCrouched?'AIXECAR':'AJUPIR';
+  crouchButton.setAttribute('aria-pressed',String(playerCrouched&&enabled));
+}
+crouchButton.addEventListener('click',e=>{
+  e.preventDefault();if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}
+});
+function setStealthDebug(enabled){window.HUNTER_STEALTH.setDebug(enabled)}
 const canStrafe=()=>!scopeActive&&(cv?STRAFE_VEHICLES.has(cv.t):!playerEject&&(!playerFall||!!playerFall.parachute));
 const setStrafeHeld=(side,held)=>{
   const button=strafeButtons[side];
@@ -1647,7 +1674,7 @@ const clearKeys=()=>{
   joystick.reset();releaseStrafeButtons();
   document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))
 };
-const act=c=>{if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(!started||paused||over)return;if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){if(!secondaryWeapon())plant();}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
+const act=c=>{if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){if(!secondaryWeapon())plant();}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
 const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.reentryLockUntil>elapsed)continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
 function updateActionButton(nearby){
   const button=document.getElementById('mainActionButton');
@@ -1769,7 +1796,7 @@ leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;leaving.reentryLockU
 if(moving){const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),sx=Math.cos(leaving.hd)*spot.side,sz=-Math.sin(leaving.hd)*spot.side,
   carry=Math.sign(leaving.v)*Math.min(movingTruck?11:28,speed*(movingTruck?.3:.72)),outward=movingTruck?8:1.4;
   playerEject={kind:'flip',vx:fx*carry+sx*outward,vz:fz*carry+sz*outward,t:.5,dur:.5,height:.68};msg='Has saltat del vehicle en marxa!';msgT=2.5}
-cv=null}else{const v=nearV();if(v){cv=v;swimming=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
+cv=null}else{const v=nearV();if(v){cv=v;swimming=false;playerCrouched=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
 addEventListener('keydown',e=>{
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
   if(e.repeat)return;
@@ -1802,6 +1829,7 @@ let drag=null;ren.domElement.addEventListener('pointerdown',e=>{if(!started||pau
 function setSniperScope(enabled){
   const wasActive=scopeActive;
   scopeActive=!!enabled&&sniperEquipped&&!!inv.franctirador&&!cv&&!swimming&&!over;
+  if(scopeActive)playerCrouched=false;
   if(scopeActive&&!wasActive){scopeYaw=P.hd;scopePitch=0;joystick.reset();releaseStrafeButtons()}
   if(!scopeActive){
     scopePitch=0;scopeYaw=P.hd;
@@ -1886,9 +1914,9 @@ const ui=window.HUNTER_UI.create({
   resumeButton:document.getElementById('resumeButton'),
   minimap,
   getState:()=>({
-    hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
+    hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
     inventory:inv,itemTypes:IT,player:P,nearVehicle:cv?null:nearV(),messageTime:msgT,message:msg,
-    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
+    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,stealthDebug:window.HUNTER_STEALTH.enabled(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
   }),
   actions:{
     resume,
@@ -1901,6 +1929,7 @@ const ui=window.HUNTER_UI.create({
     setWaterDisabled,
     setShadowsDisabled,
     setPerformanceStatsVisible,
+    setStealthDebug,
     zoom:d=>zoom=Math.max(.7,Math.min(1.9,zoom+d)),
     chetos:grantAllWeapons
   }
@@ -2315,13 +2344,14 @@ if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.
 // Direcció visual a l'eix davant (-Z): independent del rodament en X.
 window.HUNTER_VEHICLES.animateSteering(o,v.t,tr,dt);
 v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0):(v.pedalPhase||0),sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*sweep;r.rotation.z=-side*(.12+dip);r.rotation.x=.06*Math.sin(rowPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})}
-let runStepTimer=0;
+let runStepTimer=0,stealthStepTimer=0;
 function update(dt,t){
 const strafeEnabled=updateStrafeControls();
 // La prolongació del joystick funciona a peu i nedant: a l'aigua activa el crol.
 const canRun=!!started&&!paused&&!over&&!cv&&!playerFall&&!playerEject&&!scopeActive;
 joystick.setRunEnabled(canRun);
 document.body.classList.toggle('player-swimming',canRun&&swimming);
+updateCrouchButton();
 // Darrera defensa: cap estat actiu amb vida nul·la, fins i tot si una
  // interacció externa o una restauració d'estat ha posat hp a zero.
  if(started&&!over&&hp<=0){
@@ -2329,13 +2359,15 @@ document.body.classList.toggle('player-swimming',canRun&&swimming);
  }
  if(!started||paused||over){updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
 rebuildVehicleGrid();elapsed+=dt;
+window.HUNTER_STEALTH.tick(dt);
+const playerStartX=P.x,playerStartZ=P.z;
 const jf=-joystick.state.y,jtr=-joystick.state.x,
       f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),
       tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),
       strafe=strafeEnabled?Math.max(-1,Math.min(1,
         (K.KeyU?1:0)-(K.KeyY?1:0)+(strafePointers.right!==null?1:0)-(strafePointers.left!==null?1:0))):0,
       ud=(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),lim=H-2;
-const running=canRun&&f>.1&&(joystick.state.running||K.ShiftLeft||K.ShiftRight);
+const running=canRun&&!playerCrouched&&f>.1&&(joystick.state.running||K.ShiftLeft||K.ShiftRight);
 // El córrer fa passes de bota a ritme viu, però no quan nedam.
 if(running&&!swimming&&!playerFall&&!playerEject&&f>.2){
   runStepTimer-=dt;
@@ -2399,8 +2431,8 @@ else if(playerEject&&playerEject.t>0){
   // Dins l'aigua: braça normal, crol accelerat quan es manté la
   // prolongació superior i natació lateral amb els botons de strafe.
   const length=Math.max(1,Math.hypot(f,strafe)),
-        ss=(swimming?(running?8.5:5):running?19:12)*f*dt/length,
-        lateral=(swimming?(running?6.5:4.5):9)*strafe*dt/length;
+        ss=(swimming?(running?8.5:5):playerCrouched?4.5:running?19:12)*f*dt/length,
+        lateral=(swimming?(running?6.5:4.5):playerCrouched?3.8:9)*strafe*dt/length;
   P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*ss+Math.cos(P.hd)*lateral));
   P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*ss-Math.sin(P.hd)*lateral));
 }
@@ -2412,6 +2444,7 @@ syncFerryCargo();updateTerminalRamps();
 if(walkingDeck&&!walkingDeck.f.destroyed){const p=ferryWorld(walkingDeck.f,walkingDeck.q.x,walkingDeck.q.z);P.x=p.x;P.z=p.z}
 ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2&&P.y<(solidRoofAt(b,P.x,P.z)?.bottom??b.fy+b.h+.1))||null;
 const floor=ib&&ib.kind!=='enemy_bunker'?Math.max(ib.fy+.3,groundAt(P.x,P.z,P.y)):groundAt(P.x,P.z,P.y),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;
+if(swimming)playerCrouched=false;
 document.body.classList.toggle('player-swimming',canRun&&swimming);
 if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);
 if(!playerFall){
@@ -2419,6 +2452,28 @@ if(!playerFall){
   // Mostrejar el màxim de quatre punts manté el personatge en l'aire
   // en baixar una pendent, perquè els punts del darrere són més alts.
   P.y=ib?floor:Math.max(floor+.06,surface-2.1);
+}
+// Sons audibles per la IA: passos, braçades i motors. El volum de l'àudio
+// real no intervé en els radis, i no emetem res si el jugador està aturat.
+stealthStepTimer-=dt;
+if(stealthStepTimer<=0){
+  if(cv&&Math.abs(cv.v)>1){
+    const vehicleNoise={bici:'bicycle',moto:'motorbike',cotxe:'car',camio:'truck',
+      tanc:'tank',tanqueta:'apc',barca_rems:'rowboat',windsurf:'windsurf',
+      moto_aquatica:'jetski',llanxa:'speedboat',llanxa_coets:'speedboat',
+      ferry:'ferry',heli:'helicopter',heli_combat:'helicopter',hover:'jetski'},
+      kind=vehicleNoise[cv.t],maximum=window.HUNTER_STEALTH.RADII[kind];
+    if(maximum){
+      const velocity=Math.min(1,Math.abs(cv.v)/Math.max(1,VT[cv.t].maxF||35));
+      window.HUNTER_STEALTH.emit(kind,cv.x,cv.o.position.y+1,cv.z,
+        maximum*(.45+.55*velocity));
+    }
+  }else if(!cv&&!playerFall&&!playerEject&&!scopeActive&&
+    Math.hypot(P.x-playerStartX,P.z-playerStartZ)>.025){
+    window.HUNTER_STEALTH.emit(swimming?'swim':playerCrouched?'crouch':running?'run':'walk',
+      P.x,P.y+1,P.z);
+  }
+  stealthStepTimer=.24;
 }
 // Actualització del LOD de les palmeres a baixa freqüència (i també en vehicle).
 palmVisualTick-=dt;
@@ -2567,7 +2622,9 @@ if(scopeNow){
 }
 if(playerEject&&playerEject.t<=0)playerEject=null;
 updateBazookaReticle(dt);
-fcd-=dt;updateGrenadeCharge(dt);if(K.KeyF&&(!grenadeEquipped||cv))fire();updEn(dt);updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);
+fcd-=dt;updateGrenadeCharge(dt);if(K.KeyF&&(!grenadeEquipped||cv))fire();updEn(dt);
+window.HUNTER_STEALTH_DEBUG.update(THREE,world,E,P);
+updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);
 const nv=cv?null:nearV();
 uiTick+=dt;if(uiTick>.12){uiTick=0;const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',!!cv&&VT[cv.t]?.m==='a');contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}const fireButton=document.getElementById('mainFireButton');
 if(fireButton){

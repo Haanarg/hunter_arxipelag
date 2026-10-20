@@ -2,7 +2,7 @@
 window.HUNTER_UI=Object.freeze({
   create({hud,panel,title,body,resumeButton,minimap,getState,actions}){
     function renderHUD(){
-      const s=getState(),state=s.vehicle?s.vehicleTypes[s.vehicle.t].n:s.inside?'Interior':s.swimming?'Nedant':'A peu',veh=s.vehicle,vehInfo=veh?'<br>🛡️ '+Math.max(0,veh.life??0)+'/'+(veh.maxLife??0)+(veh.t==='llanxa_coets'?' · 🚀 ∞':veh.rockets!=null?' · 🚀 '+veh.rockets:veh.t==='heli'?' · 💣 '+(s.inventory.granada||0)+' granades':''):'',weaponInfo=s.bazookaEquipped&&!veh?' · 🚀 Bazooka '+(s.inventory.bazooka||0)+' coets':s.grenadeEquipped&&!veh?' · 💣 Granades '+(s.inventory.granada||0):s.cisallaEquipped&&!veh?' · ✂ Cisalla':s.sniperEquipped&&!veh?' · 🔭 Rifle '+s.sniperAmmo+' cartutxos'+(s.scopeActive?' · Mira x8':''):'';
+      const s=getState(),state=s.vehicle?s.vehicleTypes[s.vehicle.t].n:s.swimming?'Nedant':s.crouching?'Ajupit':s.inside?'Interior':'A peu',veh=s.vehicle,vehInfo=veh?'<br>🛡️ '+Math.max(0,veh.life??0)+'/'+(veh.maxLife??0)+(veh.t==='llanxa_coets'?' · 🚀 ∞':veh.rockets!=null?' · 🚀 '+veh.rockets:veh.t==='heli'?' · 💣 '+(s.inventory.granada||0)+' granades':''):'',weaponInfo=s.bazookaEquipped&&!veh?' · 🚀 Bazooka '+(s.inventory.bazooka||0)+' coets':s.grenadeEquipped&&!veh?' · 💣 Granades '+(s.inventory.granada||0):s.cisallaEquipped&&!veh?' · ✂ Cisalla':s.sniperEquipped&&!veh?' · 🔭 Rifle '+s.sniperAmmo+' cartutxos'+(s.scopeActive?' · Mira x8':''):'';
       hud.innerHTML=`<b>HUNTER · ARXIPÈLAG</b><br>❤️ ${s.hp>0?Math.max(1,Math.ceil(s.hp)):0} · 🎯 ${s.ammo} · ☠ ${s.kills}<br>${state}${s.disguised?' · 🎭 Disfressat':''}${weaponInfo}${vehInfo}${s.nearVehicle&&!s.vehicle?'<br>Acció: puja a '+s.vehicleTypes[s.nearVehicle.t].n:''}${s.messageTime>0?'<br>'+s.message:''}${s.waypoint?'<br>Destinació: '+Math.round(Math.hypot(s.waypoint.x-s.player.x,s.waypoint.z-s.player.z))+' m':''}<br><span style="opacity:.72">Llavor ${s.seed>>>0} · X ${s.player.x|0} · Z ${s.player.z|0}</span>`;
     }
     function hide(){panel.style.display='none'}
@@ -45,6 +45,8 @@ window.HUNTER_UI=Object.freeze({
           '<label><input id="disableWaterPause" type="checkbox"> Sense aigua</label>'+
           '<label><input id="disableShadowsPause" type="checkbox"> Sense ombres</label>'+
           '</div><label class="pause-stats-toggle"><input id="showPerfStatsOptions" type="checkbox"> Mostrar estadístiques de rendiment durant la partida</label>'+
+          '<label class="pause-stats-toggle"><input id="showStealthDebug" type="checkbox"> Mostrar cons de visió i esferes d’escolta (F9)</label>'+
+          '<p style="font:12px/1.4 system-ui;opacity:.8">Verd: visió · ambre: escolta de cursa (25 m) · vermell: radi de cada soroll emès.</p>'+
           '<div id="performanceBreakdown" style="font:13px/1.5 monospace;white-space:pre-line;background:#0d1d30;border-radius:8px;padding:12px;margin-top:12px"></div>'+
           '<button id="performanceRefresh">Actualitza diagnòstic</button><button id="performanceBack">← Pausa</button>';
         for(const [id,key,callback] of [
@@ -68,6 +70,9 @@ window.HUNTER_UI=Object.freeze({
         const statsToggle=document.getElementById('showPerfStatsOptions');
         statsToggle.checked=!!getState().performanceStatsVisible;
         statsToggle.onchange=()=>actions.setPerformanceStatsVisible(statsToggle.checked);
+        const stealthToggle=document.getElementById('showStealthDebug');
+        stealthToggle.checked=!!getState().stealthDebug;
+        stealthToggle.onchange=()=>actions.setStealthDebug(stealthToggle.checked);
         document.getElementById('performanceRefresh').onclick=refresh;
         document.getElementById('performanceBack').onclick=()=>actions.open('pause');
         refresh();
@@ -78,6 +83,7 @@ window.HUNTER_UI=Object.freeze({
         body.innerHTML='<div class="pause-help" aria-label="Controls bàsics">'+
           '<div><b>WASD / fletxes</b><span>Moviment i gir</span></div>'+
           '<div><b>Maj. / joystick ↑</b><span>Córrer o nedar a crol</span></div>'+
+          '<div><b>X · AJUPIR</b><span>Sigil: menys velocitat, soroll i visibilitat</span></div>'+
           '<div><b>Y / U · ◀ ▶</b><span>Desplaçament lateral, també nedant</span></div>'+
           '<div><b>E · Acció</b><span>Pujar o baixar del vehicle; motxilla</span></div>'+
           '<div><b>F · Dispar</b><span>Arma, cisalla o granada (mantén per llançar lluny)</span></div>'+
@@ -104,3 +110,4 @@ window.HUNTER_UI=Object.freeze({
     return Object.freeze({renderHUD,show,hide})
   }
 });
+

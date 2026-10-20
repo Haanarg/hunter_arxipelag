@@ -1,5 +1,60 @@
 const ENEMY_SENSE_DT=.1;
 const SOLDIER_MEMORY=9,SOLDIER_RETREAT=9,SOLDIER_IDEAL=17,SOLDIER_FIRE_RANGE=125;
+const STEALTH=window.HUNTER_STEALTH;
+// Visió i escolta comparteixen la posició tridimensional, però no l'estat:
+// sentir un tret només dóna una darrera posició aproximada a investigar.
+function soldierVisualContact(u,target,targetY,d){
+  const eyeY=u.o.position.y+2.2,
+        crouched=!!playerCrouched&&!cv,
+        range=STEALTH.CONFIG.sightRange*(crouched?STEALTH.CONFIG.crouchVisibility:1)*
+          ((disg&&!cv)?0.35:1),
+        targetEye=targetY+(crouched?1.25:1.5);
+  if(over||d>range||!STEALTH.inView(u.hd,target.x-u.x,targetEye-eyeY,target.z-u.z,range))return false;
+  if(!soldierClearShot(u,u.x,u.z,eyeY,target,targetY-(crouched?.25:0)))return false;
+  // A diferència de sight(), el pendent també tapa un enemic al darrere
+  // d'una cresta (sense fer raycasts de geometria per cada soldat).
+  const steps=Math.min(32,Math.ceil(d/3));
+  for(let i=1;i<steps;i++){
+    const q=i/steps,x=u.x+(target.x-u.x)*q,z=u.z+(target.z-u.z)*q;
+    if(hAt(x,z)>eyeY+(targetEye-eyeY)*q-.1)return false;
+  }
+  return true;
+}
+function soldierHearingFactor(u,sound){
+  let factor=1;
+  const sy=u.o.position.y+1.5;
+  if(Math.abs(sound.y-sy)>4.5)factor*=.55;
+  const radius=Math.hypot(sound.x-u.x,sound.z-u.z)/2+2,
+        mx=(sound.x+u.x)/2,mz=(sound.z+u.z)/2;
+  for(const wall of wallCandidates(mx,mz,radius)){
+    if(wall.open||wall.barbed)continue;
+    if(segmentAabbT(u.x,sy,u.z,sound.x,sound.y,sound.z,
+      wall.x0,wall.x1,wall.y0,wall.y1,wall.z0,wall.z1)!==null){
+      factor*=.55;break;
+    }
+  }
+  return factor;
+}
+function soldierInvestigate(u,target,dt,speed=1){
+  const dist=Math.hypot(target.x-u.x,target.z-u.z);
+  if(dist>3){
+    mvE(u,u.sp*speed*dt,target.x,target.z);
+    u.hd=Math.atan2(u.x-target.x,u.z-target.z);
+    return false;
+  }
+  u.hd+=dt*.8;
+  return true;
+}
+function soldierWarnNeighbors(witness,target,targetY){
+  for(const ally of E){
+    if(ally===witness||ally.t!=='soldat'||ally.hp<=0||ally.aiMode==='combat')continue;
+    if(Math.hypot(witness.x-ally.x,witness.z-ally.z)>55||
+      Math.abs(witness.o.position.y-ally.o.position.y)>9)continue;
+    ally.aiMode='investigate';ally.lastSeenX=target.x;ally.lastSeenZ=target.z;
+    ally.lastSeenY=targetY;ally.searchT=STEALTH.CONFIG.investigateSeconds+
+      Math.hypot(ally.x-target.x,ally.z-target.z)/Math.max(1,ally.sp*.65);
+  }
+}
 // Punteria per dificultat. DIF=1.5 conserva exactament la dispersió antiga.
 // Normal (1) falla més i Fàcil (.6) encara més, sense alterar el dany ni la IA.
 function enemyAimSpread(){
@@ -13,7 +68,7 @@ function enemyShotDirection(u,target,targetY,eyeY,roll=rn){
   const horizontal=1.5*spread*explosiveBoost,
         vertical=.85*(spread-1),
         dx=target.x-u.x+roll(-horizontal,horizontal),
-        dy=targetY+1.5-eyeY+(vertical>0?roll(-vertical,vertical):0),
+         dy=targetY+(!cv&&playerCrouched?1.25:1.5)-eyeY+(vertical>0?roll(-vertical,vertical):0),
         dz=target.z-u.z+roll(-horizontal,horizontal),
         length=Math.hypot(dx,dy,dz);
   return [dx/length,dy/length,dz/length];
@@ -148,8 +203,8 @@ function enemyCarRifleShot(u,target,targetY){
   u.o.rotation.y=u.navHd??u.hd;
   u.o.updateMatrixWorld(true);
   const spread=enemyAimSpread(),horizontal=1.5*spread,vertical=.85*(spread-1),
-        aim=new THREE.Vector3(target.x+rn(-horizontal,horizontal),
-          targetY+1.5+(vertical?rn(-vertical,vertical):0),target.z+rn(-horizontal,horizontal));
+         aim=new THREE.Vector3(target.x+rn(-horizontal,horizontal),
+           targetY+(!cv&&playerCrouched?1.25:1.5)+(vertical?rn(-vertical,vertical):0),target.z+rn(-horizontal,horizontal));
   u.o.worldToLocal(aim);
   const dx=aim.x-crew.mount.position.x,dy=aim.y-crew.mount.position.y,
         dz=aim.z-crew.mount.position.z;
@@ -183,8 +238,8 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
   if(u.blastImpulse){u.blastImpulse=null;u.blastHeight=0;u.o.rotation.z=0}
   const oldX=u.x,oldZ=u.z;
   u.alert=Math.max(0,u.alert-dt);u.cd-=dt;if(u.t==='torre')u.heavyCd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);
-  const q=cv||P,py=cv?cv.o.position.y:P.y,dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz),
-        det=disg&&!cv?20:u.alert>0?300:u.t=='general'?60:120,
+   const q=cv||P,py=cv?cv.o.position.y:P.y,dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz),
+         det=disg&&!cv?20:u.alert>0?300:u.t=='general'?60:120,
         eyeY=u.o.position.y+(u.t=='torre'?9.4:2.2);
 
   // Dins una casa es pot sentir el jugador encara que una paret talli
@@ -198,16 +253,48 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
       Math.abs(q.x-bunker.x)<bunker.hw&&Math.abs(q.z-bunker.z)<bunker.hd,
       acrossFloor=!!(u.basement||withinBunker&&py<bunker.fy-3.9)&&
         Math.abs((u.gy??u.o.position.y)-py)>4.4,
-      seen=!over&&!acrossFloor&&d<det&&sight(u.x,u.z,q.x,q.z,eyeY);
+       seen=!over&&!acrossFloor&&d<det&&sight(u.x,u.z,q.x,q.z,eyeY);
     if(u.t==='soldat'){
-      const acquired=seen&&!u.canSee;
-      u.canSee=seen;
-      u.canShoot=seen&&soldierClearShot(u,u.x,u.z,eyeY,q,py);
-      if(seen||hidingInside&&d<65){
-        u.lastSeenX=q.x;u.lastSeenZ=q.z;u.lastSeenY=py;
-        u.pursuitT=SOLDIER_MEMORY;
-        if(acquired)u.cd=0; // primer tret sense retard en detectar el jugador
-      }
+       const raw=!!(cv? !over&&d<115&&
+         STEALTH.inView(u.hd,dx,py+1.5-eyeY,dz,115)&&
+         soldierClearShot(u,u.x,u.z,eyeY,q,py):
+         !acrossFloor&&soldierVisualContact(u,q,py,d));
+       // La silueta ajupida tarda més a ser reconeguda i només és
+       // detectable de prop. Veure-la breument genera sospita, no foc.
+       u.recognition=Math.max(0,Math.min(1.5,(u.recognition||0)+
+         (raw?ENEMY_SENSE_DT*(d<12?4:((playerCrouched&&!cv)?0.9:2)):-ENEMY_SENSE_DT*3)));
+       const confirmed=raw&&u.recognition>=.45;
+       const acquired=confirmed&&!u.canSee;
+       u.canSee=confirmed;
+       u.canShoot=confirmed&&soldierClearShot(u,u.x,u.z,eyeY,q,
+         py-(!cv&&playerCrouched?.25:0));
+       if(confirmed){
+         u.lastSeenX=q.x;u.lastSeenZ=q.z;u.lastSeenY=py;
+         u.pursuitT=SOLDIER_MEMORY;u.aiMode='combat';
+         u.searchT=SOLDIER_MEMORY+d/Math.max(1,u.sp);
+         if(acquired){u.cd=0;soldierWarnNeighbors(u,q,py)}
+       }else{
+         if(u.aiMode==='combat')u.aiMode='search';
+         if(raw&&u.aiMode!=='search'){
+           u.aiMode='suspicious';u.lastSeenX=q.x;u.lastSeenZ=q.z;u.lastSeenY=py;
+           u.searchT=STEALTH.CONFIG.investigateSeconds+d/Math.max(1,u.sp*.65);
+         }else if(!raw&&u.aiMode==='suspicious')u.aiMode='investigate';
+         const noise=STEALTH.heardAt(u.x,eyeY,u.z,u.heardId||0,
+           event=>soldierHearingFactor(u,event));
+         if(noise){
+           u.heardId=noise.id;
+           if(u.aiMode!=='search'){
+             u.aiMode='investigate';u.searchT=STEALTH.CONFIG.investigateSeconds+
+               Math.hypot(noise.x-u.x,noise.z-u.z)/Math.max(1,u.sp*.65);
+           }
+           // El soroll no revela la posició ACTUAL del jugador; només
+           // deixa un rastre de posició que pot tenir una petita imprecisió.
+           const uncertainty=noise.radius>=100?4:1.5;
+           u.lastSeenX=noise.x+Math.sin(u.x+noise.id)*uncertainty;
+           u.lastSeenZ=noise.z+Math.cos(u.z+noise.id)*uncertainty;
+           u.lastSeenY=noise.y;
+         }
+       }
       u.defenseTarget=null;
     }else{
       u.canSee=seen;
@@ -215,15 +302,24 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
     }
   }
 
-  if(u.t==='soldat'&&(u.canSee||u.pursuitT>0)){
-    u.pursuitT=Math.max(0,(u.pursuitT||0)-dt);
+   if(u.t==='soldat'&&(u.canSee||u.aiMode&&u.aiMode!=='patrol')){
     u.tacticT=Math.max(0,(u.tacticT||0)-dt);
-    const target=u.canSee?q:{x:u.lastSeenX,z:u.lastSeenZ},
+     const target=u.canSee?q:{x:u.lastSeenX??u.x,z:u.lastSeenZ??u.z},
           targetY=u.canSee?py:(u.lastSeenY??py),
           td=Math.hypot(target.x-u.x,target.z-u.z);
-    const entering=hidingInside&&soldierEnterBuilding(u,ib,target,dt);
-    if(!entering)soldierEngage(u,target,targetY,dt,td,!!u.canSee);
-    if(!entering&&u.canSee&&u.canShoot&&d<=SOLDIER_FIRE_RANGE&&u.cd<=0){
+     if(!u.canSee){
+       u.searchT=Math.max(0,(u.searchT||0)-dt);
+       if(u.searchT<=0){u.aiMode='patrol';u.recognition=0;u.tacticGoal=null}
+     }
+     if(u.aiMode!=='patrol'){
+       const entering=!!ib&&(u.canSee||hidingInside&&td<17)&&
+         soldierEnterBuilding(u,ib,target,dt);
+       if(!entering){
+         if(u.canSee)soldierEngage(u,target,targetY,dt,td,true);
+         else soldierInvestigate(u,target,dt,u.aiMode==='search'?1:.65);
+       }
+     }
+     if(u.aiMode!=='patrol'&&u.canSee&&u.canShoot&&d<=SOLDIER_FIRE_RANGE&&u.cd<=0){
       u.cd=u.rate;
       const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
       if(u.rocketSoldier){
@@ -317,8 +413,8 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
       }
       const offset=u.armoredAimSpread,
             gun=window.HUNTER_VEHICLES.turretShot(THREE,u.o);
-      if(gun)desired.set(q.x+offset.x-gun.origin.x,
-        py+1.5+offset.y-gun.origin.y,q.z+offset.z-gun.origin.z);
+       if(gun)desired.set(q.x+offset.x-gun.origin.x,
+         py+(!cv&&playerCrouched?1.25:1.5)+offset.y-gun.origin.y,q.z+offset.z-gun.origin.z);
     }else u.armoredAimSpread=null;
     const aligned=window.HUNTER_VEHICLES.aimTurret(THREE,u.o,desired,dt);
     if(u.canSee&&d<u.rng&&u.cd<=0&&aligned){
@@ -453,3 +549,4 @@ if(t==='torre'){
   Wl.push(...u.towerLegColliders);
 }
 return u}
+

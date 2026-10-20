@@ -123,6 +123,13 @@ function hurtE(u,d,killingShot=null){
   const amount=wholeDamage(d);
   if(amount<=0||u.hp<=0)return;
   u.hp=Math.max(0,Math.ceil(u.hp)-amount);u.alert=12;
+  if(u.t==='soldat'&&!u.canSee){
+    u.aiMode='search';u.searchT=window.HUNTER_STEALTH.CONFIG.searchSeconds;
+    const vx=killingShot?.vx??0,vz=killingShot?.vz??0,
+          norm=Math.max(.01,Math.hypot(vx,vz));
+    u.lastSeenX=u.x-vx/norm*15;u.lastSeenZ=u.z-vz/norm*15;
+    u.lastSeenY=u.o.position.y;
+  }
   if(u.t==='soldat'||u.t==='general'){
     // Ferides de bala, ganivet, explosions i atropellaments: la sang
     // surt del cos del soldat, també quan sobreviu a l'impacte.
@@ -219,6 +226,10 @@ function runoverSweepHit(x0,z0,x1,z1,tx,tz,radius){
 function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc){
   const shotClass=shotClassFromSplash(spl),speed=sp*(shotClass==='heavy'?HEAVY_SHOT_SPEED_FACTOR:1),
         power=wholeDamage(dmg);
+  if(own==='p'||own==='pb'){
+    const sound=spl?'bazooka':!cv&&sniperEquipped?'sniper':cv?'rifle':'pistol';
+    window.HUNTER_STEALTH.emit(sound,x,y,z);
+  }
   snd(spl?'cannon':'shot',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/140)*(own=='e'?.6:1));
   // Tots els projectils tenen l'eix longitudinal -Z: cilindres fins per
   // a les bales lleugeres i ojives per a les pesades. S'orienten en 3D,
@@ -280,6 +291,7 @@ function blastOccluded(x,y,z,tx,ty,tz){
  return false;
 }
 function boom(x,y,z,r,dmg,own,source=null){
+ window.HUNTER_STEALTH.emit('explosion',x,y,z);
  snd('boom',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/200));
  const o=new THREE.Mesh(sphG,new THREE.MeshBasicMaterial({color:0xffa030,transparent:true}));
  o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6});
@@ -343,7 +355,7 @@ bombs.push({x,y,z,t:3,o});msg='Bomba col·locada: 3 s!';msgT=2}
 // La filferrada és permeable a la vista i al foc lleuger, però segueix
 // impedint els atacs cos a cos quan ignoreBarbed=false.
 function sight(x,z,tx,tz,y,ignoreBarbed=true){const d=Math.hypot(tx-x,tz-z),n=Math.max(1,Math.ceil(d/1.5));for(let k=1;k<n;k++){const xx=x+(tx-x)*k/n,zz=z+(tz-z)*k/n;if(wallCandidates(xx,zz).some(w=>!w.open&&(!ignoreBarbed||!w.barbed)&&y>w.y0&&y<w.y1&&xx>w.x0&&xx<w.x1&&zz>w.z0&&zz<w.z1))return false}return true}
-function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=pl.userData.knifeAttackDuration||.38;const fx_=-Math.sin(P.hd),fz=-Math.cos(P.hd);let hit=null,best=2.6;for(const u of E){if(u.t!=='soldat'&&u.t!=='general')continue;const dx=u.x-P.x,dz=u.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx_+dz*fz)/d>.35&&sight(P.x,P.z,u.x,u.z,P.y+1.2,false)){best=d;hit=u}}if(hit)hurtE(hit,COMBAT_BALANCE.weapons.knife,{weapon:'knife',own:'p',sx:P.x,sy:P.y+1.35,sz:P.z,x:hit.x,y:hit.o.position.y+1.35,z:hit.z});snd('hurt',hit?.45:.18);setDis(false);return true}
+function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=pl.userData.knifeAttackDuration||.38;window.HUNTER_STEALTH.emit('knife',P.x,P.y+1,P.z);const fx_=-Math.sin(P.hd),fz=-Math.cos(P.hd);let hit=null,best=2.6;for(const u of E){if(u.t!=='soldat'&&u.t!=='general')continue;const dx=u.x-P.x,dz=u.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx_+dz*fz)/d>.35&&sight(P.x,P.z,u.x,u.z,P.y+1.2,false)){best=d;hit=u}}if(hit)hurtE(hit,COMBAT_BALANCE.weapons.knife,{weapon:'knife',own:'p',sx:P.x,sy:P.y+1.35,sz:P.z,x:hit.x,y:hit.o.position.y+1.35,z:hit.z});snd('hurt',hit?.45:.18);setDis(false);return true}
 function secondaryWeapon(){
   if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd),d45=Math.SQRT1_2;
   if(cv.t==='heli_combat'){if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,COMBAT_BALANCE.weapons.heliMissile,10,'p',mS,2.4);Pj[Pj.length-1].life=3.3;msg='Míssils: '+cv.rockets;msgT=1;return true}
@@ -903,8 +915,8 @@ else if(!cv&&sniperEquipped&&inv.franctirador){
   msg='Rifle: '+sniperAmmo+' cartutxos.';msgT=1.5;
 }
 else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}
-else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9,z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,105,.94,'heavy',null,72*HEAVY_SHOT_SPEED_FACTOR);shoot(x,y,z,ax,ay,az,72,COMBAT_BALANCE.weapons.bazooka,18,'pb',mS,3);Pj[Pj.length-1].life=3.8;Pj[Pj.length-1].weapon='bazooka';msg='Bazooka: '+(inv.bazooka||0)+' coets restants.';msgT=2;setDis(false)}
-else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5,z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,75,.97,'light',null,130);shoot(x,y,z,ax,ay,az,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE)}
+else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9-(playerCrouched?.48:0),z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,105,.94,'heavy',null,72*HEAVY_SHOT_SPEED_FACTOR);shoot(x,y,z,ax,ay,az,72,COMBAT_BALANCE.weapons.bazooka,18,'pb',mS,3);Pj[Pj.length-1].life=3.8;Pj[Pj.length-1].weapon='bazooka';msg='Bazooka: '+(inv.bazooka||0)+' coets restants.';msgT=2;setDis(false)}
+else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5-(playerCrouched?.48:0),z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,75,.97,'light',null,130);shoot(x,y,z,ax,ay,az,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE)}
 else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}
 function segmentAabbT(x0,y0,z0,x1,y1,z1,minX,maxX,minY,maxY,minZ,maxZ){
   let lo=0,hi=1;
@@ -995,7 +1007,7 @@ function updPj(dt){
       const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),rr=vehicleRadius(v.t)*.62;
       consider(segmentSphereT(x0,y0,z0,x1,y1,z1,v.x,vy+1,v.z,rr),'vehicle',v)
     }
-    if(p.own==='e'&&!cv)consider(segmentSphereT(x0,y0,z0,x1,y1,z1,P.x,P.y+1.5,P.z,1.2),'player',P);
+    if(p.own==='e'&&!cv)consider(segmentSphereT(x0,y0,z0,x1,y1,z1,P.x,P.y+(playerCrouched?1.25:1.5),P.z,playerCrouched?1.05:1.2),'player',P);
 
     // Terreny i arbres continuen mostrejats a una densitat equivalent a l'antic substep.
     const sampleN=Math.max(1,Math.ceil(Math.hypot(sx,sy,sz)/1.15));

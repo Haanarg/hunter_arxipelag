@@ -374,7 +374,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     return crawl*Math.max(0,surface+.22-physicalY-chestRel,
                             surface+.38-physicalY-headRel);
   },
-  animatePlayer(player,{forward,strafe=0,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false,running=false}){
+  animatePlayer(player,{forward,strafe=0,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false,running=false,crouching=false}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),
           move=Math.min(1,Math.hypot(forward,strafe*.85)),dir=forward<-.02?-1:1;
     // Cintura i cames apunten 45° cap al desplaçament lateral; el tronc
@@ -390,12 +390,17 @@ window.HUNTER_CHARACTERS=Object.freeze({
     if(grenadeEquipped&&u.grenadeThrow<=0)u.grenadeReleased=false;u.breath=(u.breath||0)+dt*1.7;
     // Transició suau de caminar a córrer: cadència i posicions diferents,
     // no només la velocitat de desplaçament.
-    u.runBlend=(u.runBlend||0)+((running&&move>.08&&!swimming&&!inVehicle?1:0)-(u.runBlend||0))*(1-Math.exp(-10*dt));
+    u.runBlend=(u.runBlend||0)+((running&&move>.08&&!swimming&&!inVehicle&&!crouching?1:0)-(u.runBlend||0))*(1-Math.exp(-10*dt));
+    u.crouchBlend=(u.crouchBlend||0)+((crouching&&!swimming&&!inVehicle&&!airborne&&!parachuting?1:0)-(u.crouchBlend||0))*(1-Math.exp(-10*dt));
     // La mateixa acció de velocitat passa a ser crol quan som a l'aigua.
     // Un blend propi preserva una transició suau entre braça i crol.
     u.crawlBlend=(u.crawlBlend||0)+((swimming&&running&&forward>.08&&move>.08&&!inVehicle?1:0)-(u.crawlBlend||0))*(1-Math.exp(-9*dt));
-    const run=u.runBlend,crawl=u.crawlBlend;
-    u.ph+=dt*(swimming?(move?(4.2+3.5*crawl)*move:2.1):(8.4+4.4*run)*move);
+    const run=u.runBlend,crawl=u.crawlBlend,crouch=u.crouchBlend;
+    // Els malucs i el tronc baixen junts. La flexió de genolls manté
+    // les botes prop del terra i evita reduir l'escala de tot el model.
+    u.lowerBody.position.y+=(u.hipHeight-.72*crouch-u.lowerBody.position.y)*k;
+    u.upperBody.position.y+=(u.upperBodyPivotHeight-.72*crouch-u.upperBody.position.y)*k;
+    u.ph+=dt*(swimming?(move?(4.2+3.5*crawl)*move:2.1):(8.4+4.4*run)*(1-.48*crouch)*move);
     const ph=u.ph,breath=Math.sin(u.breath);
 
     const tx=(joint,target,rate=limbK)=>joint.rotation.x+=(target-joint.rotation.x)*rate;
@@ -486,7 +491,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // els genolls es recullen durant la fase aèria de cada gambada.
     // Inclina només el tronc superior al voltant de la cintura: els malucs
     // i les cames no es desplacen cap endavant amb l'arrel del personatge.
-    u.upperBody.rotation.x+=(-.32*run-u.upperBody.rotation.x)*k;
+    u.upperBody.rotation.x+=(-.32*run-.18*crouch-u.upperBody.rotation.x)*k;
     // A terra i en sortir de l'aigua, desfem el gir propi del crol.
     // La pistola incorpora una rotació de cintura de fins a 18°.
     // El cap manté la mirada endavant i les cames el rumb.
@@ -500,10 +505,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.head.rotation.z+=(0-u.head.rotation.z)*k;
     player.rotation.x+=(0-player.rotation.x)*k;
     const walk=Math.sin(ph)*move*dir,walk2=Math.cos(ph)*move;
-    const hip=(.62+.50*run)*walk,
+    const hip=(.62+.50*run)*(1-.6*crouch)*walk,
           kneeL=-(.08+Math.max(0,-Math.sin(ph)*dir)*(.92+.38*run)*move),
           kneeR=-(.08+Math.max(0,Math.sin(ph)*dir)*(.92+.38*run)*move);
-    tx(u.ll,hip);tx(u.lr,-hip);tx(u.lkl,kneeL);tx(u.lkr,kneeR);
+    tx(u.ll,hip+1.0*crouch);tx(u.lr,-hip+1.0*crouch);
+    tx(u.lkl,kneeL-1.5*crouch);tx(u.lkr,kneeR-1.5*crouch);
     tz(u.ll,-(.025+.02*run)*walk2);tz(u.lr,(.025+.02*run)*walk2);
     // En strafe pur el tors roman vertical: giren només cintura i cames.
     player.rotation.z+=(-(.035+.015*run)*walk*(Math.abs(forward)>.04?1:0)-player.rotation.z)*k;
@@ -649,6 +655,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     else player.position.y+=breath*.012;
   }
 });
+
 
 
 
