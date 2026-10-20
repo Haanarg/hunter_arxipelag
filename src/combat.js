@@ -587,7 +587,11 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
     if(priority>=3||priority>bestPriority)continue;
     const dx=e.x-x,dz=e.z-z,dist=Math.hypot(dx,dz),forward=Math.hypot(fx,fz);
     if(dist<=1||dist>range||(priority===bestPriority&&dist>=bestDist))continue;
-    const baseY=e.o?.position?.y??(e.gy??0),
+    const modelY=e.o?.position?.y??(e.gy??0),
+          // El model pot tenir una cota desfasada respecte del terreny
+          // (sobretot en pendents i cims). No apuntis sota els peus.
+          groundTarget=e.t==='soldat'||e.t==='general'||e.t==='jeep'||e.t==='tanqueta'||e.t==='tanc',
+          baseY=groundTarget?Math.max(modelY,hAt(e.x,e.z),e.gy??-Infinity):modelY,
           ty=e.t==='patrulla_marina'?marineHullTargetY(e):
             baseY+(e.t==='torre'?4.5:e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:1.5),
           dy=ty-y,len=Math.hypot(dx,dy,dz);
