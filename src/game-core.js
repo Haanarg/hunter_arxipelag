@@ -1859,16 +1859,17 @@ const cheats={items:false,invisible:false,immune:false,fly:false};
 let cheatFlightY=null;
 function grantAllWeapons(){
   ammo=Math.max(ammo,999);
-  for(const key of ['med','bazooka','granada','cisalla','expl','franctirador','paracaigudes','disfressa'])inv[key]=Math.max(inv[key]||0,999);
+  for(const key of ['med','bazooka','granada','cisalla','expl','franctirador','paracaigudes','disf'])inv[key]=Math.max(inv[key]||0,999);
   sniperAmmo=Math.max(sniperAmmo,999);
+  hqMapKnown=true;
   for(const v of V)if(v.rockets!=null)v.rockets=Math.max(v.rockets,999);
 }
 function setCheat(key,enabled){
   if(!Object.hasOwn(cheats,key))return;
   cheats[key]=!!enabled;
   if(key==='items'&&enabled)grantAllWeapons();
-  if(key==='fly'){cheatFlightY=enabled?P.y:null;if(enabled){playerFall=null;playerEject=null;swimming=false}}
-  if(key==='invisible'&&enabled)for(const u of E)if(u.t==='soldat'){u.canSee=false;u.canShoot=false;u.aiMode='patrol';u.alert=0;u.recognition=0;u.pursuitT=0}
+  if(key==='fly'){cheatFlightY=enabled?P.y:null;if(enabled){cv=null;playerFall=null;playerEject=null;swimming=false}}
+  if(key==='invisible'&&enabled)for(const u of E){u.canSee=false;u.canShoot=false;u.alert=0;u.recognition=0;u.pursuitT=0;if(u.t==='soldat'){u.aiMode='patrol';u.searchT=0}}
 }
 function resume(){paused=false;clearKeys();ui.hide();if(AC&&!muted)AC.resume()}
 function panel(mode){setSniperScope(false);paused=true;pickerOpen=false;picker.style.display='none';pickerToggle.style.display='none';clearKeys();if(eng)eng.g.gain.value=0;if(AC)AC.suspend();ui.show(mode)}
