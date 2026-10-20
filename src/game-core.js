@@ -1862,7 +1862,7 @@ function grantAllWeapons(){
   msg='Chetos: tens totes les armes i munició!';msgT=4;
 }
 function resume(){paused=false;clearKeys();ui.hide();if(AC&&!muted)AC.resume()}
-function panel(mode){setSniperScope(false);paused=true;clearKeys();if(eng)eng.g.gain.value=0;if(AC)AC.suspend();ui.show(mode)}
+function panel(mode){setSniperScope(false);paused=true;pickerOpen=false;picker.style.display='none';pickerToggle.style.display='none';clearKeys();if(eng)eng.g.gain.value=0;if(AC)AC.suspend();ui.show(mode)}
 // Les cartes revelen informació de forma immediata: no són objectes
 // d'inventari que s'hagin d'equipar ni obrir manualment.
 function revealMapPickup(kind){
