@@ -367,7 +367,7 @@ expl:{n:'Explosius',c:0x617451,s:[.9,.9,.9],icon:ICON.expl,desc:'Bloc d’explos
 disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa enemiga vermella. Activa o desactiva la disfressa.',usable:true}
 };
 // combat i enemics
-let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=window.HUNTER_COMBAT_BALANCE.player,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null,playerCrouched=false;
+let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=window.HUNTER_COMBAT_BALANCE.player,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,knifeEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null,playerCrouched=false;
 // Ojiva compartida per tots els projectils pesats. Eix longitudinal -Z:
 // culata cilíndrica a +Z i punta cònica a -Z, com els canons del joc.
 // Geometria única reutilitzada, sense crear malles noves per cada tir.
@@ -1674,7 +1674,15 @@ const clearKeys=()=>{
   joystick.reset();releaseStrafeButtons();
   document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))
 };
-const act=c=>{if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){if(!secondaryWeapon())plant();}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
+const quickWeapons=()=>['pistola','ganivet',...['franctirador','bazooka','granada','cisalla'].filter(k=>inv[k]>0)];
+const selectedWeapon=()=>knifeEquipped?'ganivet':sniperEquipped?'franctirador':bazookaEquipped?'bazooka':grenadeEquipped?'granada':cisallaEquipped?'cisalla':'pistola';
+function selectWeapon(k){if(!started||paused||over||cv||swimming||!quickWeapons().includes(k))return;cancelGrenadeCharge();setSniperScope(false);knifeEquipped=k==='ganivet';sniperEquipped=k==='franctirador';bazookaEquipped=k==='bazooka';grenadeEquipped=k==='granada';cisallaEquipped=k==='cisalla';msg=k+' equipat';msgT=1.5;drawWeaponPicker()}
+function cycleWeapon(n){const w=quickWeapons(),i=w.indexOf(selectedWeapon());selectWeapon(w[(i+n+w.length)%w.length])}
+const picker=document.createElement('div');picker.style.cssText='position:fixed;z-index:100;right:10px;bottom:160px;background:#203239ed;padding:8px;border-radius:10px;display:none;flex-direction:column;gap:5px;max-height:50vh;overflow:auto';document.body.appendChild(picker);
+const pickerToggle=document.createElement('button');pickerToggle.textContent='⚔ Armes';pickerToggle.style.cssText='position:fixed;z-index:99;right:10px;bottom:112px;padding:8px;color:white;background:#304b52;border-radius:9px';document.body.appendChild(pickerToggle);
+let pickerOpen=false;pickerToggle.onclick=()=>{pickerOpen=!pickerOpen;drawWeaponPicker()};
+function drawWeaponPicker(){picker.style.display=pickerOpen&&started&&!paused&&!over&&!cv?'flex':'none';picker.replaceChildren();if(picker.style.display==='none')return;const names={pistola:'🔫 Pistola',ganivet:'🔪 Ganivet',franctirador:'🔭 Rifle',bazooka:'🚀 Bazooka',granada:'💣 Granades',cisalla:'✂ Cisalla'};quickWeapons().forEach((k,i)=>{const b=document.createElement('button');b.textContent=(i+1)+' · '+names[k]+' · '+(k==='pistola'?ammo:k==='franctirador'?sniperAmmo:k==='ganivet'?'∞':inv[k]);b.style.cssText='padding:8px;color:white;background:'+(selectedWeapon()===k?'#356c51':'#364a52');b.onclick=()=>{selectWeapon(k);pickerOpen=false;drawWeaponPicker()};picker.appendChild(b)})}
+const act=c=>{if(/^Digit[1-6]$/.test(c)){selectWeapon(quickWeapons()[Number(c.slice(5))-1]);return}if(c==='KeyV'){cycleWeapon(1);return}if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){if(!secondaryWeapon())plant();}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
 const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.reentryLockUntil>elapsed)continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
 function updateActionButton(nearby){
   const button=document.getElementById('mainActionButton');
@@ -1824,7 +1832,7 @@ for(const b of document.querySelectorAll('[data-k]')){
     b.addEventListener(v,()=>{if(c==='KeyF')cancelGrenadeCharge();K[c]=0;b.classList.remove('held')});
 }
 addEventListener('blur',()=>{clearKeys();if(started&&!paused&&!over)panel('pause')});document.addEventListener('visibilitychange',()=>{if(document.hidden&&started&&!over)panel('pause')});
-ren.domElement.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.7,Math.min(1.9,zoom+e.deltaY*.001))},{passive:false});
+ren.domElement.addEventListener('wheel',e=>{e.preventDefault();if(e.shiftKey){cycleWeapon(e.deltaY>0?1:-1);return}zoom=Math.max(.7,Math.min(1.9,zoom+e.deltaY*.001))},{passive:false});
 let drag=null;ren.domElement.addEventListener('pointerdown',e=>{if(!started||paused||over)return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};ren.domElement.setPointerCapture(e.pointerId)});ren.domElement.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId||paused)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(scopeActive)scopePitch=Math.max(-.65,Math.min(.65,scopePitch-dy*.00115));drag.y=e.clientY;if(scopeActive)scopeYaw-=dx*.00115;else{const q=cv||P;q.hd-=dx*.006}drag.x=e.clientX});ren.domElement.addEventListener('pointerup',()=>drag=null);ren.domElement.addEventListener('pointercancel',()=>drag=null);
 function setSniperScope(enabled){
   const wasActive=scopeActive;
@@ -1882,16 +1890,16 @@ function useInvItem(id){
   if(id==='cisalla'){
     if(cv||swimming||playerFall||playerEject){msg='La cisalla només es pot equipar a peu.';msgT=2;return false}
     cancelGrenadeCharge();cisallaEquipped=!cisallaEquipped;
-    if(cisallaEquipped){bazookaEquipped=false;grenadeEquipped=false;sniperEquipped=false;setSniperScope(false)}
+    if(cisallaEquipped){knifeEquipped=false;bazookaEquipped=false;grenadeEquipped=false;sniperEquipped=false;setSniperScope(false)}
     resume();msg=cisallaEquipped?'Cisalla equipada · Acosta’t a una tanca i prem Talla / F.':'Cisalla desada.';msgT=2;return true
   }
-  if(id==='bazooka'){if(cv||swimming){msg='Has d’anar a peu per equipar el bazooka.';msgT=2;return false}cancelGrenadeCharge();bazookaEquipped=!bazookaEquipped;if(bazookaEquipped){grenadeEquipped=false;cisallaEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=bazookaEquipped?'Bazooka equipat: '+inv.bazooka+' coets disponibles.':'Bazooka desequipat.';msgT=2;return true}
-  if(id==='granada'){if(cv||swimming){msg='Has d’anar a peu per equipar les granades.';msgT=2;return false}cancelGrenadeCharge();grenadeEquipped=!grenadeEquipped;if(grenadeEquipped){bazookaEquipped=false;cisallaEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=grenadeEquipped?'Granades equipades: '+inv.granada+'.':'Granades desequipades.';msgT=2;return true}
+  if(id==='bazooka'){if(cv||swimming){msg='Has d’anar a peu per equipar el bazooka.';msgT=2;return false}cancelGrenadeCharge();bazookaEquipped=!bazookaEquipped;if(bazookaEquipped){knifeEquipped=false;grenadeEquipped=false;cisallaEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=bazookaEquipped?'Bazooka equipat: '+inv.bazooka+' coets disponibles.':'Bazooka desequipat.';msgT=2;return true}
+  if(id==='granada'){if(cv||swimming){msg='Has d’anar a peu per equipar les granades.';msgT=2;return false}cancelGrenadeCharge();grenadeEquipped=!grenadeEquipped;if(grenadeEquipped){knifeEquipped=false;bazookaEquipped=false;cisallaEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=grenadeEquipped?'Granades equipades: '+inv.granada+'.':'Granades desequipades.';msgT=2;return true}
   if(id==='franctirador'){
     cancelGrenadeCharge();
     if(cv||swimming){msg='Has d’anar a peu per equipar el rifle.';msgT=2;return false}
     sniperEquipped=!sniperEquipped;
-    if(sniperEquipped){bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false}
+    if(sniperEquipped){knifeEquipped=false;bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false}
     setSniperScope(false);resume();
     msg=sniperEquipped?'Rifle equipat · '+sniperAmmo+' cartutxos · Mira amb T.':'Rifle desequipat.';msgT=2;return true
   }
@@ -2631,7 +2639,7 @@ if(fireButton){
   const heliGrenade=cv?.t==='heli',
         grenade=heliGrenade||!cv&&grenadeEquipped&&(inv.granada||0)>0,
         cutters=!cv&&cisallaEquipped&&(inv.cisalla||0)>0,
-        knife=!cv&&!grenade&&!cutters&&!bazookaEquipped&&!sniperEquipped&&ammo<=0,
+        knife=!cv&&(knifeEquipped||!grenade&&!cutters&&!bazookaEquipped&&!sniperEquipped&&ammo<=0),
         weapon=cutters?'cisalla':grenade?'granada':knife?'ganivet':'normal';
   if(fireButton.dataset.weapon!==weapon){
     fireButton.dataset.weapon=weapon;
@@ -2641,7 +2649,7 @@ if(fireButton){
     fireButton.title=heliGrenade?'Llançar granada de l’inventari':grenade?'Mantén premut per arribar més lluny':action;
   }
 }
-updateActionButton(nv);
+updateActionButton(nv);pickerToggle.style.display=started&&!paused&&!over&&!cv?'block':'none';if(pickerOpen)drawWeaponPicker();
 mini();ui.renderHUD();}}
 
 
