@@ -68,14 +68,16 @@ try {
     script.onerror=()=>{cleanup();reject(new Error('No es pot carregar '+path))};
     document.head.append(script);
   });
-  const loadLegacy=()=>Promise.all(runtimeScripts.map(path=>loadClassic(path,true)));
-  if(RUNTIME_BUNDLE_PATH){
+  const loadLegacy=async()=>{for(const path of runtimeScripts)await loadClassic(path,true)};
+  const useBundle=params.get('runtime')==='bundle';
+  if(useBundle&&RUNTIME_BUNDLE_PATH){
     try{await loadClassic(RUNTIME_BUNDLE_PATH)}
     catch(error){
       console.warn('Paquet runtime no disponible; recuperant scripts individuals',error);
       await loadLegacy();
     }
   }else await loadLegacy();
+  window.HUNTER_RUNTIME_MODE=useBundle?'bundle':'source';
   window.HUNTER_READY = true;
 } catch (error) {
   console.error('No s’ha pogut iniciar Húnter', error);
