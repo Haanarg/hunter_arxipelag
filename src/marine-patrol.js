@@ -149,7 +149,7 @@ function updateMarinePatrol(u,dt){
       ?weaponAimClear(u.x,u.o.position.y+3,u.z,q.x,targetY,q.z)
       :sight(u.x,u.z,q.x,q.z,u.o.position.y+3));
   }
-  const hostile=!disg&&!over&&distance<470&&!!u.marineVisible;
+  const hostile=!cheats.invisible&&!disg&&!over&&distance<470&&!!u.marineVisible;
   u.wt-=dt;u.mgCd-=dt;u.rocketCd-=dt;
   if(!Number.isFinite(u.tx)||u.wt<=0||Math.hypot(u.tx-u.x,u.tz-u.z)<35)marinePickWaypoint(u);
   let goalX=u.tx,goalZ=u.tz;
