@@ -380,7 +380,11 @@ const gHeavy=new THREE.LatheGeometry([
 ],12);
 gHeavy.rotateX(-Math.PI/2);
 const heavyForward=new THREE.Vector3(0,0,-1);
-const endEl=document.getElementById('end'),gB=new THREE.BoxGeometry(.35,.35,.35),sphG=new THREE.SphereGeometry(1,10,8),
+// Bales lleugeres: petits cilindres allargats, amb l'eix longitudinal -Z.
+// Comparteixen geometria i cada projectil s'orienta segons la trajectòria.
+const gLight=new THREE.CylinderGeometry(.105,.105,.78,8);
+gLight.rotateX(-Math.PI/2);
+const endEl=document.getElementById('end'),sphG=new THREE.SphereGeometry(1,10,8),
 mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial({color:0xff7a1a}),mE=new THREE.MeshBasicMaterial({color:0xff4040}),
 // Bales de pistola, franctirador, soldats i tanqueta: petites i blanques.
 // Els projectils explosius mantenen el color i volum original.
@@ -2535,12 +2539,14 @@ V.forEach(v=>{
 // que triaria l'autoapuntat actual. El vehicle pot avançar/girar mentre
 // la torre conserva el seu propi rumb i l'elevació del canó.
 if(cv&&(cv.t==='tanc'||cv.t==='tanqueta')){
-  const gun=window.HUNTER_VEHICLES.turretShot(THREE,cv.o);
+    const gun=window.HUNTER_VEHICLES.turretShot(THREE,cv.o);
   if(gun){
     const hd=cv.hd,fx=-Math.sin(hd),fz=-Math.cos(hd),
           range=cv.t==='tanc'?220:85,
+          heavy=cv.t==='tanc',
           [ax,ay,az]=autoAimArmoredShot(
-            gun.origin.x,gun.origin.y,gun.origin.z,fx,fz,range);
+            gun.origin.x,gun.origin.y,gun.origin.z,fx,fz,range,
+            heavy?'heavy':'light',heavy?85*HEAVY_SHOT_SPEED_FACTOR:135);
     window.HUNTER_VEHICLES.aimTurret(THREE,cv.o,
       new THREE.Vector3(ax,ay,az),dt);
   }
@@ -2608,5 +2614,6 @@ adaptivePerformance.sample({dt:rawDt,renderCpuMs:performance.now()-renderStarted
   updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,
   active:!!started&&!paused&&!over,now});
 requestAnimationFrame(loop)})(last);
+
 
 

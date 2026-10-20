@@ -220,18 +220,15 @@ function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc){
   const shotClass=shotClassFromSplash(spl),speed=sp*(shotClass==='heavy'?HEAVY_SHOT_SPEED_FACTOR:1),
         power=wholeDamage(dmg);
   snd(spl?'cannon':'shot',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/140)*(own=='e'?.6:1));
-  // Les bales petites conserven el seu model; les pesades són ojives
-  // amb la punta orientada exactament segons el vector de velocitat.
-  // La rotació no depèn del rumb del vehicle i també funciona en tirs
-  // ascendents, descendents i diagonals.
+  // Tots els projectils tenen l'eix longitudinal -Z: cilindres fins per
+  // a les bales lleugeres i ojives per a les pesades. S'orienten en 3D,
+  // també en tirs ascendents, descendents i diagonals.
   const heavy=shotClass==='heavy';
-  const o=new THREE.Mesh(heavy?gHeavy:gB,mat);
+  const o=new THREE.Mesh(heavy?gHeavy:gLight,mat);
   o.scale.setScalar(sc*(heavy?HEAVY_SHOT_VISUAL_SCALE:1));
-  if(heavy){
-    const heading=new THREE.Vector3(dx,dy,dz);
-    if(heading.lengthSq()>1e-12)
-      o.quaternion.setFromUnitVectors(heavyForward,heading.normalize());
-  }
+  const heading=new THREE.Vector3(dx,dy,dz);
+  if(heading.lengthSq()>1e-12)
+    o.quaternion.setFromUnitVectors(heavyForward,heading.normalize());
   o.position.set(x,y,z);world.add(o);
   Pj.push({x,y,z,sx:x,sy:y,sz:z,vx:dx*speed,vy:dy*speed,vz:dz*speed,dmg:power,spl,shotClass,own,life:2.2,o})
 }
@@ -551,8 +548,8 @@ function weaponAimClear(x,y,z,tx,ty,tz){
   }
   return true;
 }
-// Solució del punt d'intercepció a velocitat constant per a llanxes mòbils.
-// S'utilitza només al bazooka: la resta d'armes conserva la seva punteria.
+// Punt d'intercepció per a patrulleres mòbils, amb la velocitat real de
+// cada arma: les bales ràpides també han d'arribar al centre del casc.
 function bazookaInterceptPoint(e,originX,originY,originZ,targetY,speed){
   const vx=-Math.sin(e.hd)*(e.speed||0),vz=-Math.cos(e.hd)*(e.speed||0),
         dx=e.x-originX,dy=targetY-originY,dz=e.z-originZ,
@@ -564,6 +561,11 @@ function bazookaInterceptPoint(e,originX,originY,originZ,targetY,speed){
   if(!Number.isFinite(time)||time>3.7)return {x:e.x,y:targetY,z:e.z};
   return {x:e.x+vx*time,y:targetY,z:e.z+vz*time};
 }
+// Alçada del centre del CASC, no de la coberta ni de les armes de bord.
+// El model de la llanxa s'escala uniformement des del seu origen flotant.
+function marineHullTargetY(e){
+ return (e.o?.position?.y??0)+.48*VS.llanxa;
+}
 function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus=null,projectileSpeed=0){
   if(focus){focus.target=null;focus.point=null}
   let bestPriority=Infinity,bestDist=range,chosen=null;
@@ -571,12 +573,16 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
     if(e.destroyed||e.hp<=0||shotClass==='light'&&e.t==='torre')continue;
     const priority=weaponTargetPriority(e);
     if(priority>=3||priority>bestPriority)continue;
-    const dx=e.x-x,dz=e.z-z,dist=Math.hypot(dx,dz);
+    const dx=e.x-x,dz=e.z-z,dist=Math.hypot(dx,dz),forward=Math.hypot(fx,fz);
     if(dist<=1||dist>range||(priority===bestPriority&&dist>=bestDist))continue;
     const baseY=e.o?.position?.y??(e.gy??0),
-          ty=baseY+(e.t==='torre'?4.5:e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:e.t==='patrulla_marina'?1.8:1.5),
+          ty=e.t==='patrulla_marina'?marineHullTargetY(e):
+            baseY+(e.t==='torre'?4.5:e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:1.5),
           dy=ty-y,len=Math.hypot(dx,dy,dz);
-    if(len<=.001||(dx*fx+dy*fy+dz*fz)/len<cone)continue;
+    // Triam la diana pel con HORITZONTAL. Un enemic que és al davant
+    // però molt més amunt/avall continua sent elegible; el vector
+    // final sí que incorpora tota la diferència vertical.
+    if(len<=.001||forward<.001||(dx*fx+dz*fz)/(dist*forward)<cone)continue;
     if(!weaponAimClear(x,y,z,e.x,ty,e.z))continue;
     const lead=projectileSpeed>0&&e.t==='patrulla_marina'
       ?bazookaInterceptPoint(e,x,y,z,ty,projectileSpeed):{x:e.x,y:ty,z:e.z},
@@ -632,9 +638,9 @@ function bazookaFirstSolidHit(x,y,z,dx,dy,dz,range=105,sourceVehicle=null){
   for(const e of enemyCandidatesAt(mx,mz,reach+16)){
     if(e.destroyed||e.hp<=0)continue;
     const marine=e.t==='patrulla_marina';
-    consider(segmentSphereT(x,y,z,tx,ty,tz,e.x,
-      e.o.position.y+(marine?1.8:e.t==='torre'?4.5:1.5),
-      e.z,marine?vehicleRadius('llanxa')*.62:(e.r||1)+.6));
+    consider(marine?marineHullSegmentT(x,y,z,tx,ty,tz,e):
+      segmentSphereT(x,y,z,tx,ty,tz,e.x,
+        e.o.position.y+(e.t==='torre'?4.5:1.5),e.z,(e.r||1)+.6));
   }
   for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){
     // El propi vehicle mai no intercepta l'origen del seu dispar.
@@ -744,8 +750,8 @@ function updateBazookaReticle(dt){
   bazookaReticleElement.style.top=(sy*100)+'%';
 }
 // Conservem el punt de sortida horitzontal del tanc i la tanqueta (0 graus).
-function autoAimArmoredShot(x,y,z,fx,fz,range){
-  return autoAimWeaponShot(x,y,z,fx,0,fz,range,.97,'heavy');
+function autoAimArmoredShot(x,y,z,fx,fz,range,shotClass='heavy',projectileSpeed=0){
+  return autoAimWeaponShot(x,y,z,fx,0,fz,range,.97,shotClass,null,projectileSpeed);
 }
 // Rifle: sortida REAL des de l'extrem del canó. En mode mira el model
 // invisible s'orienta com l'òptica; P.hd i el moviment no canvien.
@@ -866,7 +872,7 @@ if(c=='tanc'||c=='tanqueta'){
   }
 }
 else if(c==='heli'){throwHelicopterGrenade();return}
-else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*4.1*VS.heli_combat,y=cv.o.position.y+.15,z=cv.z+fz*4.1*VS.heli_combat;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,130,.91);fcd=.12;shoot(x,y,z,ax,ay,az,145,COMBAT_BALANCE.weapons.attackCannon,0,'p',mB,.85)}
+else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*4.1*VS.heli_combat,y=cv.o.position.y+.15,z=cv.z+fz*4.1*VS.heli_combat;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,130,.91,'light',null,145);fcd=.12;shoot(x,y,z,ax,ay,az,145,COMBAT_BALANCE.weapons.attackCannon,0,'p',mB,.85)}
 
 else if(c=='llanxa_coets'){secondaryWeapon();return}
 else if(c&&OPEN_RIDER_PISTOL.has(c)){
@@ -875,7 +881,7 @@ else if(c&&OPEN_RIDER_PISTOL.has(c)){
   if(ammo<=0)return;
   const shot=riderSystem.firePistol(cv,(origin,direction)=>
     autoAimWeaponShot(origin.x,origin.y,origin.z,
-      direction.x,direction.y,direction.z,75,.97));
+      direction.x,direction.y,direction.z,75,.97,'light',null,130));
   if(!shot)return;
   ammo--;fcd=.22;
   const p=shot.origin,d=shot.direction;
@@ -892,13 +898,13 @@ else if(!cv&&sniperEquipped&&inv.franctirador){
         focus=scopeActive?window.HUNTER_SCOPE_FOCUS.create(P.x,P.y+1.76,P.z,scopeYaw,scopePitch):null,
         direction=focus
           ?sniperShotVector(muzzle,sniperReticlePoint(focus),focus)
-          :new THREE.Vector3(...autoAimWeaponShot(muzzle.x,muzzle.y,muzzle.z,fx,0,fz,180,.984));
+          :new THREE.Vector3(...autoAimWeaponShot(muzzle.x,muzzle.y,muzzle.z,fx,0,fz,180,.984,'light',null,470));
   shoot(muzzle.x,muzzle.y,muzzle.z,direction.x,direction.y,direction.z,470,COMBAT_BALANCE.weapons.sniper,0,'p',mW,SMALL_ARMS_SCALE);
   msg='Rifle: '+sniperAmmo+' cartutxos.';msgT=1.5;
 }
 else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}
 else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9,z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,105,.94,'heavy',null,72*HEAVY_SHOT_SPEED_FACTOR);shoot(x,y,z,ax,ay,az,72,COMBAT_BALANCE.weapons.bazooka,18,'pb',mS,3);Pj[Pj.length-1].life=3.8;Pj[Pj.length-1].weapon='bazooka';msg='Bazooka: '+(inv.bazooka||0)+' coets restants.';msgT=2;setDis(false)}
-else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5,z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,75,.97);shoot(x,y,z,ax,ay,az,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE)}
+else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5,z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,75,.97,'light',null,130);shoot(x,y,z,ax,ay,az,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE)}
 else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}
 function segmentAabbT(x0,y0,z0,x1,y1,z1,minX,maxX,minY,maxY,minZ,maxZ){
   let lo=0,hi=1;
@@ -915,6 +921,23 @@ function segmentSphereT(x0,y0,z0,x1,y1,z1,cx,cy,cz,r){
   if(c<=0)return 0;if(a<1e-12)return null;
   const b=2*(mx*dx+my*dy+mz*dz),disc=b*b-4*a*c;if(disc<0)return null;
   const t=(-b-Math.sqrt(disc))/(2*a);return t>=0&&t<=1?t:null
+}
+// La patrullera no és una esfera de deu metres: només comptam el buc
+// allargat i la cabina, alineats amb el seu rumb. Això evita que una
+// bala que passa clarament per damunt provoqui dany fictici.
+function marineHullSegmentT(x0,y0,z0,x1,y1,z1,boat){
+  const scale=VS.llanxa,baseY=boat.o.position.y,
+        sine=Math.sin(boat.hd||0),cosine=Math.cos(boat.hd||0);
+  const local=(x,z)=>[(x-boat.x)*cosine-(z-boat.z)*sine,
+                     (x-boat.x)*sine+(z-boat.z)*cosine];
+  const [ax,az]=local(x0,z0),[bx,bz]=local(x1,z1);
+  const hull=segmentAabbT(ax,y0,az,bx,y1,bz,
+    -1.85*scale,1.85*scale,baseY-.22*scale,baseY+1.08*scale,
+    -4.5*scale,4.5*scale);
+  const cabin=segmentAabbT(ax,y0,az,bx,y1,bz,
+    -1.5*scale,1.5*scale,baseY+1.02*scale,baseY+2.12*scale,
+    -1.0*scale,2.85*scale);
+  return hull==null?cabin:cabin==null?hull:Math.min(hull,cabin);
 }
 function hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b){
   const segs=b.roof?.userData?.hitSegments;if(!segs?.length)return null;
@@ -960,12 +983,11 @@ function updPj(dt){
       // També cercam els centres de llanxes situats a cel·les veïnes
       // quan només la proa o la popa intercepten el segment del coet.
       for(const u of enemyCandidatesAt(mx,mz,reach+vehicleRadius('llanxa')*.62+4)){
-        // Les llanxes patrulleres reben bales lleugeres per tot el buc,
-        // també a proa i popa; el radi de soldat era massa petit.
         const marine=u.t==='patrulla_marina',
-              cy=u.o.position.y+(marine?1.8:u.t==='torre'?4.5:1.5),
-              radius=marine?vehicleRadius('llanxa')*.62:(u.r||1)+.6;
-        consider(segmentSphereT(x0,y0,z0,x1,y1,z1,u.x,cy,u.z,radius),'enemy',u)
+              cy=u.o.position.y+(u.t==='torre'?4.5:1.5),
+              radius=(u.r||1)+.6;
+        consider(marine?marineHullSegmentT(x0,y0,z0,x1,y1,z1,u):
+          segmentSphereT(x0,y0,z0,x1,y1,z1,u.x,cy,u.z,radius),'enemy',u)
       }
     }
     for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){
@@ -1022,4 +1044,5 @@ for(let i=bombs.length-1;i>=0;i--){const b=bombs[i];b.t-=dt;
 for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.life-=dt;f.o.scale.setScalar(1+(.6-f.life)*f.s);f.o.material.opacity=Math.max(0,f.life/.6);if(f.life<=0){world.remove(f.o);fx.splice(i,1)}}
 updateBulletImpacts(dt);
 }
+
 
