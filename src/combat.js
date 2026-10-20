@@ -55,8 +55,10 @@ function fin(m,cause=null){if(m==='HAS MORT'&&startDeathCinematic(cause))return;
 function enemyWeaponDamageScale(){return 1}
 function hurtP(d,fromEnemyWeapon=false,cause=null){
  if(over)return;
- hp-=d;snd('hurt',.5);
- if(hp<=0){hp=0;fin('HAS MORT',cause||{type:fromEnemyWeapon?'bullet':'impact'})}
+ const amount=wholeDamage(d);
+ if(amount<=0)return;
+ hp=Math.max(0,Math.ceil(hp)-amount);snd('hurt',.5);
+ if(hp<=0)fin('HAS MORT',cause||{type:fromEnemyWeapon?'bullet':'impact'});
 }
 function destroyTower(u){
   if(!u?.o||u.destroyed)return;
@@ -118,8 +120,9 @@ function killEnemy(u,killingShot=null){
   if(u.t==='general')startVictoryCinematic(u,killingShot)
 }
 function hurtE(u,d,killingShot=null){
-  if(d<=0||u.hp<=0)return;
-  u.hp-=d;u.alert=12;
+  const amount=wholeDamage(d);
+  if(amount<=0||u.hp<=0)return;
+  u.hp=Math.max(0,Math.ceil(u.hp)-amount);u.alert=12;
   if(u.t==='soldat'||u.t==='general'){
     // Ferides de bala, ganivet, explosions i atropellaments: la sang
     // surt del cos del soldat, també quan sobreviu a l'impacte.
@@ -167,12 +170,18 @@ const isMilitaryWall=w=>!!w?.towerLegOwner||isMilitaryBuilding(w?.owner);
 const isArmoredVehicleType=t=>t==='tanqueta'||t==='tanc';
 function damageVehicle(v,dmg,impacts=1,shotClass='collision'){
  if(!v||v.destroyed||shotClass==='light'&&isArmoredVehicleType(v.t))return;
- const amount=shotClass==='collision'?Math.max(1,impacts):Math.max(0,dmg);
+ const amount=shotClass==='collision'?Math.max(1,wholeDamage(impacts)):wholeDamage(dmg);
  if(amount<=0)return;
- v.life=Math.max(0,(v.life??VT[v.t]?.life??1)-amount);v.smokeT=0;
+ v.life=Math.max(0,Math.ceil(v.life??VT[v.t]?.life??1)-amount);v.smokeT=0;
  if(v.life<=0)explodeVehicle(v);
 }
 
+// Regla única: qualsevol mal positiu resta un nombre enter de punts de vida.
+// La física (velocitats, trajectòries i impulsos) continua emprant decimals.
+// Els nombres invàlids no afecten la vida.
+function wholeDamage(value){
+ return Number.isFinite(value)&&value>0?Math.ceil(value):0
+}
 // Xocs amb criteris compartits: massa del receptor, massa de l'altre i velocitat relativa.
 // Els impactes ordinaris tenen un màxim de cinc punts de vida per contacte.
 function impactDamage(relativeSpeed,receiverMass=1,strikerMass=1){
@@ -182,7 +191,7 @@ function impactDamage(relativeSpeed,receiverMass=1,strikerMass=1){
 }
 function impactVehicle(v,dmg){
  if(!v||v.destroyed||v.t==='tanc'||dmg<=0)return;
- const amount=Math.min(5,Math.max(1,Math.ceil(dmg)));
+ const amount=Math.min(5,wholeDamage(dmg));
  if(E.includes(v)){
   if(v.t==='jeep'||v.t==='tanqueta'||v.t==='patrulla_marina')hurtE(v,amount);
  }else damageVehicle(v,amount,1,'impact');
@@ -209,7 +218,7 @@ function runoverSweepHit(x0,z0,x1,z1,tx,tz,radius){
 
 function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc){
   const shotClass=shotClassFromSplash(spl),speed=sp*(shotClass==='heavy'?HEAVY_SHOT_SPEED_FACTOR:1),
-        power=dmg;
+        power=wholeDamage(dmg);
   snd(spl?'cannon':'shot',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/140)*(own=='e'?.6:1));
   // Les bales petites conserven el seu model; les pesades són ojives
   // amb la punta orientada exactament segons el vector de velocitat.

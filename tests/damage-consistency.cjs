@@ -32,6 +32,7 @@ const ctx={
 };
 vm.createContext(ctx);
 vm.runInContext([
+ section(combat,'function wholeDamage(','function impactDamage('),
  section(combat,'function impactDamage(','function shoot('),
  section(combat,'function segmentAabbT(','function segmentSphereT('),
  section(combat,'function explosionDamage(','function plant('),
@@ -114,4 +115,9 @@ assert.doesNotMatch(combat,/p\.dmg\*\(p\.own==='e'\?\.5:1\)/);
 assert.match(read('compound-generation.js'),/hp:16,m:side/,'No queden laterals d’hangar amb 110 PV');
 assert.equal(ctx.explosionDamage(10,0,10),10);
 assert.equal(ctx.explosionDamage(10,5,10),5);
+assert.equal(ctx.wholeDamage(.4),1,'Qualsevol mal positiu és enter i mínim un punt');
+assert.equal(ctx.wholeDamage(2.3),3);
+assert.equal(ctx.wholeDamage(2),2);
+assert.equal(ctx.wholeDamage(0),0);
+assert.equal(ctx.wholeDamage(-.3),0);
 console.log('OK dany coherent: col·lisions, màxim 10 atropellament, cobertura, foc amic i estructures');

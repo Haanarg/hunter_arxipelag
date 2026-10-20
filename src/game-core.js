@@ -773,7 +773,7 @@ const PG={t:vegetationVisual.geometry.trunk,c:vegetationVisual.geometry.crown,c2
 let compoundClear=[];
 function treeAt(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L)if(!(palmsDisabled&&t.p)&&Math.hypot(x-t.x,z-t.z)<t.r+r)return t}return null}
 function crush(x,z,r){if(palmsDisabled)return;const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)L.slice().forEach(t=>{if(t.p&&Math.hypot(x-t.x,z-t.z)<t.r+r)killPalm(t)})}}
-function dmgP(t,d){if(!t.alive)return;t.hp-=d;if(t.hp<=0)killPalm(t)}
+function dmgP(t,d){if(!t.alive)return;const amount=wholeDamage(d);if(!amount)return;t.hp=Math.max(0,Math.ceil(t.hp)-amount);if(t.hp<=0)killPalm(t)}
 function killPalm(t){if(!t.alive)return;t.alive=false;const a=TG.get(t.k);if(a){const i=a.indexOf(t);if(i>=0)a.splice(i,1)}
 // La geometria es gestiona ara en instàncies de cada sector.
 if(PM.remove)PM.remove(t.i,ZM);
@@ -834,7 +834,7 @@ function checkRoofSupport(b,w){
   }
   if(b.destroyedWallSupport>=3)roofBreak(b)
 }
-function dmgW(w,d){if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}w.hp-=d;if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0){Wl.splice(i,1);wallGridCount=-1}i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);if(w.stairStructure)destroyInteriorStair(w.stairStructure.owner);checkRoofSupport(w.owner,w);snd('boom',.3)}}
+function dmgW(w,d){if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}const amount=wholeDamage(d);if(!amount||!Number.isFinite(w.hp))return;w.hp=Math.max(0,Math.ceil(w.hp)-amount);if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0){Wl.splice(i,1);wallGridCount=-1}i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);if(w.stairStructure)destroyInteriorStair(w.stairStructure.owner);checkRoofSupport(w.owner,w);snd('boom',.3)}}
 function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=seedSearchMode
   ?{group:new THREE.Group(),walls:null,doors:null,roof:new THREE.Group()}
   :(opt.hangar?buildingVisual.createHangarShell:buildingVisual.createShell)({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),
@@ -1845,7 +1845,7 @@ function revealMapPickup(kind){
 }
 function useInvItem(id){
   if(!inv[id])return false;
-  if(id==='med'){if(hp>=COMBAT_BALANCE.player){msg='Ja tens la vida al màxim.';msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(COMBAT_BALANCE.player,hp+COMBAT_BALANCE.medkit);msg='Has usat una farmaciola.';msgT=2;snd('pick');return true}
+  if(id==='med'){if(hp>=COMBAT_BALANCE.player){msg='Ja tens la vida al màxim.';msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(COMBAT_BALANCE.player,Math.ceil(hp)+COMBAT_BALANCE.medkit);msg='Has usat una farmaciola.';msgT=2;snd('pick');return true}
   if(id==='expl'){if(cv||swimming){msg='No pots col·locar explosius des d’aquí.';msgT=2;return false}resume();plant();return true}
   if(id==='cisalla'){
     if(cv||swimming||playerFall||playerEject){msg='La cisalla només es pot equipar a peu.';msgT=2;return false}
@@ -2368,7 +2368,7 @@ else{P.hd+=tr*dt*2.2;if(playerFall){
   if(fall.y<=landing){
     P.y=landing;const fallH=fall.startHeight,impact=Math.max(0,-fall.vy),
       waterLanding=roof===null&&water>hAt(P.x,P.z)+1.5,
-      dmg=fall.parachute?0:Math.min(COMBAT_BALANCE.player,Math.max(0,((fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8))*.2));
+      dmg=fall.parachute?0:wholeDamage(Math.min(COMBAT_BALANCE.player,Math.max(0,((fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8))*.2)));
     removeParachuteVisual();playerFall=null;
     if(dmg>0)hurtP(dmg,false,{type:'fall',x:P.x,y:P.y+8,z:P.z});
     msg=dmg===0&&fallH>4?'Has aterrat amb seguretat.':waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5;
