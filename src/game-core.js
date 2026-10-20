@@ -1855,15 +1855,20 @@ function setSniperScope(enabled){
   if(button)button.setAttribute('aria-pressed',String(scopeActive));
 }
 function toggleSniperScope(){if(!paused)setSniperScope(!scopeActive)}
+const cheats={items:false,invisible:false,immune:false,fly:false};
+let cheatFlightY=null;
 function grantAllWeapons(){
-  ammo=Math.max(ammo,128);
-  inv.bazooka=Math.max(inv.bazooka||0,12);
-  inv.granada=Math.max(inv.granada||0,20);
-  inv.cisalla=1;
-  inv.expl=Math.max(inv.expl||0,10);
-  inv.franctirador=1;
-  sniperAmmo=Math.max(sniperAmmo,24);
-  msg='Chetos: tens totes les armes i munició!';msgT=4;
+  ammo=Math.max(ammo,999);
+  for(const key of ['med','bazooka','granada','cisalla','expl','franctirador','paracaigudes','disfressa'])inv[key]=Math.max(inv[key]||0,999);
+  sniperAmmo=Math.max(sniperAmmo,999);
+  for(const v of V)if(v.rockets!=null)v.rockets=Math.max(v.rockets,999);
+}
+function setCheat(key,enabled){
+  if(!Object.hasOwn(cheats,key))return;
+  cheats[key]=!!enabled;
+  if(key==='items'&&enabled)grantAllWeapons();
+  if(key==='fly'){cheatFlightY=enabled?P.y:null;if(enabled){playerFall=null;playerEject=null;swimming=false}}
+  if(key==='invisible'&&enabled)for(const u of E)if(u.t==='soldat'){u.canSee=false;u.canShoot=false;u.aiMode='patrol';u.alert=0;u.recognition=0;u.pursuitT=0}
 }
 function resume(){paused=false;clearKeys();ui.hide();if(AC&&!muted)AC.resume()}
 function panel(mode){setSniperScope(false);paused=true;pickerOpen=false;picker.style.display='none';pickerToggle.style.display='none';clearKeys();if(eng)eng.g.gain.value=0;if(AC)AC.suspend();ui.show(mode)}
@@ -1928,7 +1933,7 @@ const ui=window.HUNTER_UI.create({
   getState:()=>({
     hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
     inventory:inv,itemTypes:IT,player:P,nearVehicle:cv?null:nearV(),messageTime:msgT,message:msg,
-    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,stealthDebug:window.HUNTER_STEALTH.enabled(),stealthLayers:window.HUNTER_STEALTH.layers(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
+    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,cheats:{...cheats},stealthDebug:window.HUNTER_STEALTH.enabled(),stealthLayers:window.HUNTER_STEALTH.layers(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
   }),
   actions:{
     resume,
@@ -1944,7 +1949,7 @@ const ui=window.HUNTER_UI.create({
     setStealthDebug,
     setStealthLayer,
     zoom:d=>zoom=Math.max(.7,Math.min(1.9,zoom+d)),
-    chetos:grantAllWeapons
+    setCheat
   }
 });
 mc.onclick=()=>started&&panel('map');
@@ -2360,6 +2365,7 @@ v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.r
 let runStepTimer=0,stealthStepTimer=0;
 function update(dt,t){
 const strafeEnabled=updateStrafeControls();
+if(cheats.items)grantAllWeapons();
 // La prolongació del joystick funciona a peu i nedant: a l'aigua activa el crol.
 const canRun=!!started&&!paused&&!over&&!cv&&!playerFall&&!playerEject&&!scopeActive;
 joystick.setRunEnabled(canRun);
@@ -2395,7 +2401,13 @@ if(scopeActive){
   scopeYaw+=(tr-scopeStrafe*.8)*dt*.38;
   scopePitch=Math.max(-.65,Math.min(.65,scopePitch+f*dt*.30));
 }else if(cv){const driven=cv,alive=stepV(driven,f,tr,ud,dt,strafe);if(alive&&cv===driven){P.x=driven.x;P.z=driven.z;P.hd=driven.hd}}
-else{P.hd+=tr*dt*2.2;if(playerFall){
+else{P.hd+=tr*dt*2.2;if(cheats.fly){
+  const speed=65,vertical=(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),length=Math.max(1,Math.hypot(f,strafe));
+  P.x=Math.max(-lim,Math.min(lim,P.x+(-Math.sin(P.hd)*f+Math.cos(P.hd)*strafe)*speed*dt/length));
+  P.z=Math.max(-lim,Math.min(lim,P.z+(-Math.cos(P.hd)*f-Math.sin(P.hd)*strafe)*speed*dt/length));
+  cheatFlightY=Math.max(hAt(P.x,P.z)+1,Math.min(500,(cheatFlightY??P.y)+vertical*speed*dt));
+  P.y=cheatFlightY;
+}else if(playerFall){
   const fall=playerFall,oldX=P.x,oldZ=P.z,oldY=fall.y;
   fall.t+=dt;fall.vy-=fall.parachute?10*dt:24*dt;
   if(fall.parachute){
@@ -2449,18 +2461,18 @@ else if(playerEject&&playerEject.t>0){
   P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*ss+Math.cos(P.hd)*lateral));
   P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*ss-Math.sin(P.hd)*lateral));
 }
-if(!playerFall){wallPush();treePush();vehiclePushPlayer();ferryCabinPushPlayer()}}
+if(!playerFall&&!cheats.fly){wallPush();treePush();vehiclePushPlayer();ferryCabinPushPlayer()}}
 // Cal transportar també el jugador que va a peu sobre la coberta mòbil.
 const walkingDeck=!cv&&!playerFall?pedestrianFerry(P.x,P.z,P.y):null;
 V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;v.strafeV=0;return}if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
 syncFerryCargo();updateTerminalRamps();
 if(walkingDeck&&!walkingDeck.f.destroyed){const p=ferryWorld(walkingDeck.f,walkingDeck.q.x,walkingDeck.q.z);P.x=p.x;P.z=p.z}
 ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2&&P.y<(solidRoofAt(b,P.x,P.z)?.bottom??b.fy+b.h+.1))||null;
-const floor=ib&&ib.kind!=='enemy_bunker'?Math.max(ib.fy+.3,groundAt(P.x,P.z,P.y)):groundAt(P.x,P.z,P.y),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;
+const floor=ib&&ib.kind!=='enemy_bunker'?Math.max(ib.fy+.3,groundAt(P.x,P.z,P.y)):groundAt(P.x,P.z,P.y),surface=wy(P.x,P.z,t);swimming=!cheats.fly&&!cv&&!ib&&!playerFall&&floor<surface-2.1;
 if(swimming)playerCrouched=false;
 document.body.classList.toggle('player-swimming',canRun&&swimming);
 if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);
-if(!playerFall){
+if(!playerFall&&!cheats.fly){
   // El suport segueix el triangle visible JUST sota el centre del jugador.
   // Mostrejar el màxim de quatre punts manté el personatge en l'aire
   // en baixar una pendent, perquè els punts del darrere són més alts.
