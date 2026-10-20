@@ -1641,6 +1641,7 @@ crouchButton.addEventListener('click',e=>{
   e.preventDefault();if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}
 });
 function setStealthDebug(enabled){window.HUNTER_STEALTH.setDebug(enabled)}
+function setStealthLayer(key,value){window.HUNTER_STEALTH.setLayer(key,value)}
 const canStrafe=()=>!scopeActive&&(cv?STRAFE_VEHICLES.has(cv.t):!playerEject&&(!playerFall||!!playerFall.parachute));
 const setStrafeHeld=(side,held)=>{
   const button=strafeButtons[side];
@@ -1927,7 +1928,7 @@ const ui=window.HUNTER_UI.create({
   getState:()=>({
     hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
     inventory:inv,itemTypes:IT,player:P,nearVehicle:cv?null:nearV(),messageTime:msgT,message:msg,
-    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,stealthDebug:window.HUNTER_STEALTH.enabled(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
+    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,stealthDebug:window.HUNTER_STEALTH.enabled(),stealthLayers:window.HUNTER_STEALTH.layers(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
   }),
   actions:{
     resume,
@@ -1941,6 +1942,7 @@ const ui=window.HUNTER_UI.create({
     setShadowsDisabled,
     setPerformanceStatsVisible,
     setStealthDebug,
+    setStealthLayer,
     zoom:d=>zoom=Math.max(.7,Math.min(1.9,zoom+d)),
     chetos:grantAllWeapons
   }
