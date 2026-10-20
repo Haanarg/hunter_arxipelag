@@ -1867,7 +1867,7 @@ function grantAllWeapons(){
 function setCheat(key,enabled){
   if(!Object.hasOwn(cheats,key))return;
   cheats[key]=!!enabled;
-  if(key==='items'&&enabled)grantAllWeapons();
+  if(key==='items'&&enabled){grantAllWeapons();revealMapPickup('mapa');revealMapPickup('mapa_heli');revealMapPickup('mapa_tanc')}
   if(key==='fly'){cheatFlightY=enabled?P.y:null;if(enabled){cv=null;playerFall=null;playerEject=null;swimming=false}}
   if(key==='invisible'&&enabled)for(const u of E){u.canSee=false;u.canShoot=false;u.alert=0;u.recognition=0;u.pursuitT=0;if(u.t==='soldat'){u.aiMode='patrol';u.searchT=0}}
 }
