@@ -3,7 +3,7 @@ window.HUNTER_STEALTH_DEBUG=(()=>{
   let group=null,cone=null,sphere=null,noiseSphere=null,materialSight=null,
     materialHearing=null,materialNoise=null,entries=new Map(),pulses=[];
   const ring=(T,color,n=64)=>{const g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(new Float32Array(n*3),3));return new T.LineLoop(g,new T.LineBasicMaterial({color,depthWrite:false}))};
-  const trace=(line,x,z,r,hd=0,half=null)=>{const a=line.geometry.attributes.position,n=a.count;for(let i=0;i<n;i++){const t=half===null?i*2*Math.PI/n:i===0?null:-half+(i-1)*2*half/(n-2),px=x+(t===null?0:Math.sin(t+hd)*r),pz=z+(t===null?0:-Math.cos(t+hd)*r);a.setXYZ(i,px,Math.max(0,hAt(px,pz))+.25,pz)}a.needsUpdate=true;line.geometry.computeBoundingSphere()};
+  const trace=(line,x,z,r,hd=0,half=null)=>{const a=line.geometry.attributes.position,n=a.count;for(let i=0;i<n;i++){const t=half===null?i*2*Math.PI/n:i===0?null:-half+(i-1)*2*half/(n-2),px=x+(t===null?0:Math.sin(t-hd)*r),pz=z+(t===null?0:-Math.cos(t-hd)*r);a.setXYZ(i,px,Math.max(0,hAt(px,pz))+.25,pz)}a.needsUpdate=true;line.geometry.computeBoundingSphere()};
   function create(THREE,world){
     group=new THREE.Group();group.name='stealth-debug-volumes';world.add(group);
     const cfg=window.HUNTER_STEALTH.CONFIG,vertices=[],r=cfg.sightRange,
