@@ -1110,23 +1110,22 @@ function addBunkerBasement(b){
         piece('creu-infermeria',-18.52,mid,.12,.36,2.0,0xcc4d43,-6.67,false,'paint');
       }
     }
-    // Sala oriental del fons: armeria, amb armaris i una taula de
-    // manteniment però sense obstaculitzar la posició del guàrdia d'elit.
+    // Les dues sales orientals intercanvien funció segons on apareix
+    // l'escala; mai no hi ha prestatgeries o consoles a la seva caixa.
+    const armorySide=-stairSide,accessSide=stairSide;
     b.basement.roomTypes.push('armeria');
-    locker('armari-armes-1',17.2,-13.2,0x58665f);
-    locker('armari-armes-2',17.2,-9.1,0x58665f);
-    piece('banc-manteniment',7.6,-13.35,2.15,1.15,1.22,0x775e43);
+    locker('armari-armes-1',17.2,armorySide*13.2,0x58665f);
+    locker('armari-armes-2',17.2,armorySide*9.1,0x58665f);
+    piece('banc-manteniment',7.6,armorySide*13.35,2.15,1.15,1.22,0x775e43);
     for(const dz of[-.38,.12,.48])piece('eina-armeria',
-      7.6,-13.35+dz,1.10,.09,.09,0x303735,-7.88,false);
-    panel('inventari-armeria',18.53,-12.0,.08,1.3,0xb2bba5);
-    // Sala oriental d'accés: controls elèctrics, fusibles i guixeta.
-    // La zona x=10..14, z=-2.7..11.2 queda completament lliure
-    // perquè és el recorregut de l'escala.
+      7.6,armorySide*13.35+dz,1.10,.09,.09,0x303735,-7.88,false);
+    panel('inventari-armeria',18.53,armorySide*12.0,.08,1.3,0xb2bba5);
     b.basement.roomTypes.push('control i accés');
-    piece('quadre-electric',17.3,13.25,2.55,1.20,3.0,0x4b6060);
-    piece('visors-control',17.3,12.58,1.7,.17,.4,0x8eb0a1,-6.58,false);
-    piece('guixeta-seguretat',6.3,12.8,1.25,.82,2.9,0x697a74);
-    piece('consola-acces',6.55,-4.55,1.1,1.0,1.12,0x576662);
+    piece('quadre-electric',6.55,accessSide*13.25,1.88,1.2,3.0,0x4b6060);
+    piece('visors-control',6.55,accessSide*12.58,1.54,.17,.4,
+      0x8eb0a1,-6.58,false);
+    piece('guixeta-seguretat',17.8,accessSide*11.7,.9,.82,2.9,0x697a74);
+    piece('consola-acces',6.55,accessSide*4.55,1.1,1.0,1.12,0x576662);
     // Lluminàries subjectes a l'intradós del forjat y=+.22:
     // cap focus ni plafó no pot quedar flotant a mitja altura.
     for(const [lx,lz] of [[0,-12],[0,0],[0,12],[12,-11],[-12,0],[-12,-11],[-12,11],[16,13]]){
