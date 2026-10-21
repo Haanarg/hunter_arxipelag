@@ -10,6 +10,8 @@ window.HUNTER_ACTION_ICONS=(()=>{
   const boat=extra=>hull()+'<path d="M18 37L24 27H42L48 37Z" fill="'+steel+'" stroke="'+ink+'" stroke-width="2"/><path d="M26 29H39L43 35H23Z" fill="'+glass+'"/>'+extra;
   const forms={
     cotxe:svg('<path d="M8 41L13 31 23 27H43L54 35 57 42 55 47H8Z" fill="'+olive+'" stroke="'+ink+'" stroke-width="2.5"/><path d="M23 30H41L49 38H17Z" fill="'+glass+'"/>'+wheels(18,47)),
+    // Familiar civil C1A: icona pròpia, no la motxilla per defecte.
+    cotxe_civil:svg('<path d="M5 41L8 29L18 24H46L55 30L59 41L57 47H6Z" fill="'+olive+'" stroke="'+ink+'" stroke-width="2.5"/><path d="M19 27H45L51 35H12Z" fill="'+glass+'" stroke="'+ink+'" stroke-width="1.5"/><path d="M31 27V36M46 24V39" stroke="'+dark+'" stroke-width="2"/>'+wheels(17,48)),
     camio:svg('<path d="M4 31H35V45H4Z" fill="'+olive+'" stroke="'+ink+'" stroke-width="2.5"/><path d="M36 32H48L59 40V45H36Z" fill="'+metal+'" stroke="'+ink+'" stroke-width="2.5"/><path d="M39 34H47L53 39H39Z" fill="'+glass+'"/>'+wheels(15,49)),
     moto:svg('<path d="M14 42L28 31 39 35 47 42M27 31L40 31 48 28M30 30L25 25M33 30L36 43" fill="none" stroke="'+olive+'" stroke-width="5" stroke-linejoin="round"/><path d="M25 24H37M45 28H53" stroke="'+ink+'" stroke-width="3"/>'+wheels(15,49,45,8)),
     bici:svg('<path d="M15 44L26 31 36 44 15 44 31 27M26 31L42 31 49 44M29 27H36M42 31L45 25H51" fill="none" stroke="'+steel+'" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>'+wheels(15,49,44,8)),
