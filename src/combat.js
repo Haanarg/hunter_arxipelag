@@ -193,9 +193,10 @@ function wholeDamage(value){
 // Xocs amb criteris compartits: massa del receptor, massa de l'altre i velocitat relativa.
 // Els impactes ordinaris tenen un màxim de cinc punts de vida per contacte.
 function impactDamage(relativeSpeed,receiverMass=1,strikerMass=1){
- if(!(relativeSpeed>6))return 0;
+ // Els cops entre vehicles fins a 10 són maniobres, no impactes destructius.
+ if(!(relativeSpeed>10))return 0;
  const ratio=Math.sqrt(Math.max(.2,strikerMass)/Math.max(.2,receiverMass));
- return Math.max(1,Math.min(5,Math.ceil((relativeSpeed-6)*ratio/6)));
+ return Math.max(1,Math.min(5,Math.ceil((relativeSpeed-10)*ratio/6)));
 }
 function impactVehicle(v,dmg){
  if(!v||v.destroyed||v.t==='tanc'||dmg<=0)return;
