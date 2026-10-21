@@ -2642,7 +2642,20 @@ if(scopeNow){
 }else{
   const T=cv||P,c=cv?VT[cv.t]:ib?{cd:6,ch:11}:{cd:10,ch:5},ty=cv?cv.o.position.y:P.y,
     w=new THREE.Vector3(T.x+Math.sin(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1),0,T.z+Math.cos(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1));
-  w.y=Math.max(ty+c.ch*zoom*(cv?Math.sqrt(VS[cv.t]):1),hAt(w.x,w.z)+3,2.5);
+  // Al soterrani la càmera ha de quedar dins de la cambra, no sobre la muntanya.
+  const bunkerBelow=!cv&&activeBunker?.basement&&
+    Math.abs(buildingLocalPoint(activeBunker,P.x,P.z).x)<19&&
+    Math.abs(buildingLocalPoint(activeBunker,P.x,P.z).z)<16&&
+    P.y<activeBunker.fy-2;
+  if(bunkerBelow){
+    const b=activeBunker,p=buildingLocalPoint(b,w.x,w.z);
+    // Evitam que la càmera travessi els murs exteriors del soterrani.
+    p.x=Math.max(-17.2,Math.min(17.2,p.x));
+    p.z=Math.max(-14.2,Math.min(14.2,p.z));
+    const angle=b.o.rotation.y,co=Math.cos(angle),si=Math.sin(angle);
+    w.x=b.x+p.x*co+p.z*si;w.z=b.z-p.x*si+p.z*co;
+    w.y=Math.min(b.fy-1.5,Math.max(ty+3.2,b.basement.floorY+2.5));
+  }else w.y=Math.max(ty+c.ch*zoom*(cv?Math.sqrt(VS[cv.t]):1),hAt(w.x,w.z)+3,2.5);
   cam.position.lerp(w,1-Math.pow(.001,dt));
   cam.lookAt(T.x-Math.sin(T.hd)*8,ty+2,T.z-Math.cos(T.hd)*8);
 }
