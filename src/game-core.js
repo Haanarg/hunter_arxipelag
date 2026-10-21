@@ -339,7 +339,7 @@ function buildingCandidates(x,z,r=0){
 }
 const ICON={
 med:'<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="16" width="46" height="34" rx="5" fill="#fff" stroke="#657078" stroke-width="3"/><rect x="18" y="28" width="28" height="9" rx="4.5" fill="#d7ae7c" transform="rotate(-28 32 32.5)"/><circle cx="27" cy="35" r="1.8" fill="#9a6f45"/><circle cx="37" cy="30" r="1.8" fill="#9a6f45"/></svg>',
-expl:'<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="24" width="48" height="30" rx="5" fill="#667753" stroke="#25372c" stroke-width="3"/><path d="M14 27 C17 3 22 14 24 27 M22 27 C26 5 33 10 34 27 M32 27 C38 0 45 10 46 27 M42 27 C48 11 53 12 52 27" fill="none" stroke-width="3.3"/><path d="M14 27 C17 3 22 14 24 27" stroke="#dc493d" fill="none" stroke-width="3.3"/><path d="M22 27 C26 5 33 10 34 27" stroke="#35c866" fill="none" stroke-width="3.3"/><path d="M32 27 C38 0 45 10 46 27" stroke="#327cdd" fill="none" stroke-width="3.3"/><rect x="17" y="34" width="30" height="14" rx="2" fill="#172b27"/><text x="32" y="44" font-size="10" font-weight="bold" font-family="monospace" text-anchor="middle" fill="#91e795">03:00</text></svg>',
+expl:'<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="24" width="48" height="30" rx="5" fill="#667753" stroke="#25372c" stroke-width="3"/><path d="M14 27 C17 3 22 14 24 27 M22 27 C26 5 33 10 34 27 M32 27 C38 0 45 10 46 27 M42 27 C48 11 53 12 52 27" fill="none" stroke-width="3.3"/><path d="M14 27 C17 3 22 14 24 27" stroke="#dc493d" fill="none" stroke-width="3.3"/><path d="M22 27 C26 5 33 10 34 27" stroke="#35c866" fill="none" stroke-width="3.3"/><path d="M32 27 C38 0 45 10 46 27" stroke="#327cdd" fill="none" stroke-width="3.3"/><rect x="17" y="34" width="30" height="14" rx="2" fill="#172b27"/><text x="32" y="44" font-size="10" font-weight="bold" font-family="monospace" text-anchor="middle" fill="#91e795">00:03</text></svg>',
 disf:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M22 12 L30 17 L34 17 L42 12 L54 22 L47 30 L43 27 L43 55 L21 55 L21 27 L17 30 L10 22 Z" fill="#b83232" stroke="#661d1d" stroke-width="3"/><path d="M28 16 Q32 23 36 16" fill="none" stroke="#f0c7a2" stroke-width="3"/></svg>',
 mapa:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#ead69b" stroke="#7c693c" stroke-width="3"/><path d="M25 9 V50 M39 14 V55" stroke="#a18b56" stroke-width="2"/><rect x="30" y="28" width="15" height="11" fill="#7c4f3a"/><path d="M29 28 L37.5 21 L46 28" fill="#a33b32"/></svg>',
 mapa_heli:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#d9edf5" stroke="#557986" stroke-width="3"/><path d="M17 33 H49 M32 20 V46" stroke="#557986" stroke-width="2"/><ellipse cx="32" cy="33" rx="11" ry="5" fill="#587766"/><path d="M43 33 H54 M21 33 H10" stroke="#35453c" stroke-width="3"/></svg>',
@@ -363,7 +363,7 @@ paracaigudes:{n:'Paracaigudes',c:0xcfaa74,s:[1.2,.9,.9],icon:ICON.paracaigudes,d
 cisalla:{n:'Cisalla',c:0xb83f38,s:[1,1.4,.3],icon:ICON.cisalla,desc:'Talla silenciosament un tram de filferrada proper. Equipa-la i prem Talla / F mirant la tanca. No gasta munició ni alerta els enemics.',usable:true},
 granada:{n:'Granades',c:0x4a5842,s:[.65,.65,.65],icon:ICON.granada,desc:'Paquet de 5 granades. A peu, mantén Dispar per arribar més lluny i mira la trajectòria. Des de l’helicòpter utilitari, prem Dispar per llançar-ne una de l’inventari.',usable:true},
 arma:{n:'Munició',c:0x555b66,s:[1.6,.35,.35],icon:ICON.arma,desc:'Caixa de munició per a l’arma personal.',usable:false},
-expl:{n:'Explosius',c:0x617451,s:[.9,.9,.9],icon:ICON.expl,desc:'Bloc d’explosiu plàstic amb cables RGB i temporitzador digital. La càrrega col·locada parpelleja en vermell durant 3 segons i té força destructiva triple.',usable:true},
+expl:{n:'Explosius',c:0x617451,s:[.9,.9,.9],icon:ICON.expl,desc:'Bloc d’explosiu plàstic amb cables RGB. En activar-lo, configura el visor LED de 00 a 59 segons. El compte enrere parpelleja als últims 3 segons. La càrrega té força destructiva triple.',usable:true},
 disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa enemiga vermella. Activa o desactiva la disfressa.',usable:true}
 };
 // combat i enemics
@@ -1951,7 +1951,14 @@ const weaponPickerAvailable=()=>!!started&&document.body.classList.contains('gam
 function syncWeaponPicker(){const visible=weaponPickerAvailable();pickerToggle.style.display=visible?'block':'none';if(!visible){pickerOpen=false;picker.style.display='none'}}
 pickerToggle.onclick=()=>{if(!weaponPickerAvailable())return;pickerOpen=!pickerOpen;drawWeaponPicker()};
 function drawWeaponPicker(){picker.style.display=pickerOpen&&weaponPickerAvailable()?'flex':'none';picker.replaceChildren();if(picker.style.display==='none')return;const names={pistola:'🔫 Pistola',ganivet:'🔪 Ganivet',franctirador:'🔭 Rifle',bazooka:'🚀 Bazooka',granada:'💣 Granades',cisalla:'✂ Cisalla'};quickWeapons().forEach((k,i)=>{const b=document.createElement('button');b.textContent=(i+1)+' · '+names[k]+' · '+(k==='pistola'?ammo:k==='franctirador'?sniperAmmo:k==='ganivet'?'∞':inv[k]);b.style.cssText='padding:8px;color:white;background:'+(selectedWeapon()===k?'#356c51':'#364a52');b.onclick=()=>{selectWeapon(k);pickerOpen=false;drawWeaponPicker()};picker.appendChild(b)})}
-const act=c=>{if(/^Digit[1-6]$/.test(c)){selectWeapon(quickWeapons()[Number(c.slice(5))-1]);return}if(c==='KeyV'){cycleWeapon(1);return}if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){if(!secondaryWeapon())plant();}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
+const act=c=>{if(ui?.isBombTimerOpen?.()){
+  // No es pot tancar el programador ni detonar saltant-se la confirmació.
+  if(c==='Escape'||c==='KeyP'||c==='KeyI'){panel('inventory');return}
+  if(c==='Enter'||c==='NumpadEnter'){
+    document.getElementById('bombTimerConfirm')?.click?.();return
+  }
+  return
+}if(/^Digit[1-6]$/.test(c)){selectWeapon(quickWeapons()[Number(c.slice(5))-1]);return}if(c==='KeyV'){cycleWeapon(1);return}if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){if(!secondaryWeapon()&&inv.expl&&!cv&&!swimming&&!playerFall&&!playerEject)panel('bombtimer');}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
 const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.reentryLockUntil>elapsed)continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
 function updateActionButton(nearby){
   const button=document.getElementById('mainActionButton');
@@ -2161,7 +2168,12 @@ function revealMapPickup(kind){
 function useInvItem(id){
   if(!inv[id])return false;
   if(id==='med'){if(hp>=COMBAT_BALANCE.player){msg='Ja tens la vida al màxim.';msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(COMBAT_BALANCE.player,Math.ceil(hp)+COMBAT_BALANCE.medkit);msg='Has usat una farmaciola.';msgT=2;snd('pick');return true}
-  if(id==='expl'){if(cv||swimming){msg='No pots col·locar explosius des d’aquí.';msgT=2;return false}resume();plant();return true}
+  if(id==='expl'){
+    if(cv||swimming||playerFall||playerEject){
+      msg='No pots col·locar explosius des d’aquí.';msgT=2;return false
+    }
+    panel('bombtimer');return true
+  }
   if(id==='cisalla'){
     if(cv||swimming||playerFall||playerEject){msg='La cisalla només es pot equipar a peu.';msgT=2;return false}
     cancelGrenadeCharge();cisallaEquipped=!cisallaEquipped;
@@ -2206,6 +2218,10 @@ const ui=window.HUNTER_UI.create({
     open:mode=>panel(mode),
     setWaypoint:v=>waypoint=v,
     useItem:id=>useInvItem(id),
+    placeExplosive:seconds=>{
+      if(!plant(seconds))return false;
+      resume();return true
+    },
     dropItem:id=>dropInvItem(id),
     restart:d=>{DIF=d;elapsed=0;build();minimap.reset();mini();resume()},
     setPalmsDisabled,
