@@ -122,5 +122,15 @@ assert.ok(html.includes('.death-water-filter'),'Vel blau en CSS');
  game.run('clearDeathCinematic()');
  assert.equal(game.run('deathCinematic'),null);
  assert.equal(game.el('hud').style.visibility||'',started.previous);
- console.log('OK mort cinematogràfica: causes, càmera lenta, fosa, Parca, campanes, model 3D i reinici');
+
+ const aquatic=game.run("(()=>{\n hp=20;over=0;cv=null;ib=null;swimming=true;\n P.y=wy(P.x,P.z,elapsed)-2.1;\n const originalParent=pl.parent;\n const started=startDeathCinematic({type:'bullet'});\n const v=deathCinematic;\n if(!started||!v?.onWater||!v.underwaterScene)return {started:false};\n // El harness simplifica querySelector; assignam estils independents.\n v.waterFilter={style:{}};v.shade={style:{}};\n v.replayLabel={style:{}};v.causeEl={style:{}};\n const shallow=v.underwaterScene.background.getHex();\n for(let i=0;i<30;i++)updateDeathCinematic(.1);\n const result={\n   started:true,active:v.underwaterActive,\n   parent:pl.parent===v.underwaterScene,\n   darkened:v.underwaterScene.background.getHex()!==shallow,\n   tint:parseFloat(v.waterFilter.style.opacity)>0,\n   cameraBelow:cam.position.y<v.waterLevel,\n   filtered:!!v.waterFilter\n };\n clearDeathCinematic();\n result.restored=pl.parent===originalParent;\n return result;\n})()");
+ assert.equal(aquatic.started,true,'Les morts nedant han de tenir escena submarina');
+ assert.equal(aquatic.active,true,'El blau comença quan la càmera se submergeix');
+ assert.equal(aquatic.parent,true,'El cos ha d’aparèixer davant del blau');
+ assert.equal(aquatic.darkened,true,'El fons blau s’enfosqueix');
+ assert.equal(aquatic.tint,true,'Hi ha un vel blau translúcid per davant');
+ assert.equal(aquatic.cameraBelow,true,'La càmera acompanya el cos cap al fons');
+ assert.equal(aquatic.restored,true,'Restauram el jugador al món després de la mort');
+
+ console.log('OK mort cinematogràfica: causes, cos centrat, enfonsament blau, Parca, campanes, model 3D i reinici');
 })().catch(e=>{console.error(e);process.exitCode=1});
