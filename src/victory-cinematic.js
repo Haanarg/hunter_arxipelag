@@ -44,7 +44,9 @@ function victoryReplayProjectile(shot,source){
     flame.rotation.x=Math.PI/2;flame.position.z=1.34;rocket.add(flame);
     return rocket;
   }
-  return new THREE.Mesh(shot.heavy?gHeavy:gB,shot.heavy?mS:mW);
+  // gB va desaparèixer en substituir les bales per gLight: el darrer tret
+  // al general provocava ReferenceError just en començar la victòria.
+  return new THREE.Mesh(shot.heavy?gHeavy:gLight,shot.heavy?mS:mW);
 }
 
 function victoryKnifeSlash(shot){
