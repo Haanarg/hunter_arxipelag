@@ -121,10 +121,51 @@ window.HUNTER_RIDER=Object.freeze({
         pistol.getWorldQuaternion(new THREE.Quaternion())).normalize()};
     };
     const update=(v,dt)=>{
-      const open=!!v&&['bici','moto','moto_aquatica','llanxa','llanxa_coets','barca_rems','windsurf'].includes(v.t);g.visible=open;
-      if(!open){g.userData.shotTime=0;g.userData.shotBlend=0;g.userData.pistolAim=null;pistol.visible=false;return}
+      const car=!!v&&(v.t==='cotxe_civil'||v.t==='cotxe');
+      const open=!!v&&(car||['bici','moto','moto_aquatica','llanxa','llanxa_coets','barca_rems','windsurf'].includes(v.t));g.visible=open;
+      if(!open){g.userData.shotTime=0;g.userData.shotBlend=0;g.userData.pistolAim=null;pistol.visible=false;g.scale.setScalar(1);return}
       const u=g.userData,sc=v.t==='llanxa'?1.3:v.t==='llanxa_coets'?1.35:scales[v.t],moving=Math.min(1,Math.abs(v.v)/1.8);u.motion+=(moving-u.motion)*(1-Math.exp(-12*dt));const motion=u.motion,phase=(v.t==='bici'||v.t==='barca_rems')?-(v.pedalPhase||0):(v.pedalPhase||0);
+      // En cotxes l'habitacle és més baix que el protagonista dret.
+      // Escalam el mateix model de jugador i preservam l'orientació
+      // tridimensional del xassís en girs i pendents.
+      const riderScale=car?.82:1;
+      g.scale.setScalar(riderScale);
       g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);torso.rotation.set(0,0,0);boots.forEach(b=>b.rotation.set(0,0,0));
+
+      if(car){
+        // Seient esquerre, darrere del volant (C1A i cotxe utilitari).
+        // Posicions físiques convertides al sistema del rider escalat.
+        const civil=v.t==='cotxe_civil',seatX=(civil?-.613:-.72)*sc,
+              seatY=(civil?1.14:1.22)*sc,
+              seatZ=(civil?-.60:.42)*sc,
+              steeringX=seatX,steeringY=(civil?1.66:1.91)*sc,
+              steeringZ=(civil?-.94:-.67)*sc,
+              invScale=1/riderScale;
+        torso.position.set(seatX*invScale,seatY*invScale,seatZ*invScale);
+        torso.rotation.x=-.05;
+        for(let i=0;i<2;i++){
+          const side=i?1:-1,
+                shoulder=shoulderAt(side),
+                hip=vec((seatX+side*.20*sc)*invScale,
+                  seatY*invScale,seatZ*invScale),
+                hand=vec((steeringX+side*.22*sc)*invScale,
+                  steeringY*invScale,steeringZ*invScale),
+                elbow=shoulder.clone().lerp(hand,.50),
+                foot=vec((seatX+side*.20*sc)*invScale,
+                  .87*sc*invScale,(civil?-1.31:-.95)*sc*invScale),
+                knee=hip.clone().lerp(foot,.52);
+          elbow.y-=.10*sc*invScale;
+          knee.y+=.08*sc*invScale;knee.z+=.11*sc*invScale;
+          limbBetween(limbs[i*2],shoulder,elbow);
+          limbBetween(limbs[i*2+1],elbow,hand);
+          limbBetween(limbs[4+i*2],hip,knee);
+          limbBetween(limbs[5+i*2],knee,foot);
+          boots[i].position.copy(foot);
+          boots[i].rotation.x=-.2;
+        }
+        pistol.visible=false;
+        return;
+      }
 
       if(v.t==='bici'||v.t==='moto'){
         const seat=1.65*sc;torso.position.set(0,seat,.4*sc);torso.rotation.x=.15*motion;
