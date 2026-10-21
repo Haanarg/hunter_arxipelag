@@ -887,8 +887,8 @@ function dmgW(w,d){
  // pot conservar la col·lisió després de caure un dels dos brancals.
  const members=w.doorAssembly||[w];
  for(const piece of members){
-  if(!piece||piece.hp<=0)continue;
-  piece.hp=0;piece.open=true;piece.playerBlock=false;
+  if(!piece||piece.destroyedWall)continue;
+  piece.destroyedWall=true;piece.hp=0;piece.open=true;piece.playerBlock=false;
   wallBreak(piece);
   let i=Wl.indexOf(piece);if(i>=0){Wl.splice(i,1);wallGridCount=-1}
   i=Dr.indexOf(piece);if(i>=0)Dr.splice(i,1);
