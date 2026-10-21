@@ -1113,10 +1113,11 @@ function addBunkerBasement(b){
     // cap focus ni plafó no pot quedar flotant a mitja altura.
     for(const [lx,lz] of [[0,-12],[0,0],[0,12],[12,-11],[-12,0],[-12,-11],[-12,11],[16,13]]){
       const lamp=new THREE.PointLight(0xffe8bd,5.2,19,2);
-      lamp.position.set(lx,-.61,lz);b.o.add(lamp);
-      const light=bx(b.o,1.12,.15,.73,0xf1e2b8,lx,-.34,lz,'paint');
+      lamp.position.set(lx,-.55,lz);b.o.add(lamp);
+      const light=bx(b.o,1.12,.15,.73,0xf1e2b8,lx,-.30,lz,'paint');
       light.name='bunker-plafó-sostre';
-      const rim=bx(b.o,1.26,.10,.86,0x606c63,lx,-.17,lz,'metal');
+      // El suport toca físicament l'intradós del forjat y=-.04.
+      const rim=bx(b.o,1.26,.25,.86,0x606c63,lx,-.10,lz,'metal');
       rim.name='bunker-suport-plafó';
     }
   }
