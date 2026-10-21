@@ -958,7 +958,7 @@ function addBunkerBasement(b){
         divisions=[-5+(variant%2)*1.7,4.3+Math.floor(variant/2)*1.6],
         westDoors=[-10.1+(variant%2)*.7,-.25+Math.floor(variant/2)*1.1,10.1-(variant%2)],
         eastDivider=-7+(variant%2)*1.2;
-  b.basement={variant,floorY,upperSlabMeshes:[],stair:{x:12,zTop:11.2,zBottom:-2.7,width:3.6},
+  b.basement={variant,floorY,upperSlabMeshes:[],lights:[],lightsOn:false,stair:{x:12,zTop:11.2,zBottom:-2.7,width:3.6},
     generalLocal:{x:-12.5,z:variant%2?10:-10.5},eliteLocal:[
       {x:0,z:-10.3},{x:-1,z:7.5},{x:12,z:-10.6},{x:-12,z:(divisions[0]+divisions[1])/2}
     ]};
@@ -1114,7 +1114,8 @@ function addBunkerBasement(b){
     // cap focus ni plafó no pot quedar flotant a mitja altura.
     for(const [lx,lz] of [[0,-12],[0,0],[0,12],[12,-11],[-12,0],[-12,-11],[-12,11],[16,13]]){
       const lamp=new THREE.PointLight(0xffe8bd,5.2,19,2);
-      lamp.position.set(lx,-.55,lz);b.o.add(lamp);
+      lamp.position.set(lx,-.55,lz);lamp.visible=false;
+      b.o.add(lamp);b.basement.lights.push(lamp);
       const light=bx(b.o,1.12,.15,.73,0xf1e2b8,lx,-.30,lz,'paint');
       light.name='bunker-plafó-sostre';
       // El suport toca físicament l'intradós del forjat y=-.04.
@@ -2499,6 +2500,15 @@ window.HUNTER_VEHICLES.animateSteering(o,v.t,tr,dt);
 v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0):(v.pedalPhase||0),sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*sweep;r.rotation.z=-side*(.12+dip);r.rotation.x=.06*Math.sin(rowPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})}
 let runStepTimer=0,stealthStepTimer=0;
 function update(dt,t){
+if(activeBunker?.basement?.lights?.length){
+  const basement=activeBunker.basement;
+  const nearby=started&&!paused&&
+    Math.hypot(P.x-activeBunker.x,P.z-activeBunker.z)<160;
+  if(nearby!==basement.lightsOn){
+    for(const lamp of basement.lights)lamp.visible=nearby;
+    basement.lightsOn=nearby;
+  }
+}
 const strafeEnabled=updateStrafeControls();
 if(cheats.items)grantAllWeapons();
 // La prolongació del joystick funciona a peu i nedant: a l'aigua activa el crol.
