@@ -1018,19 +1018,106 @@ function addBunkerBasement(b){
       const rail=bx(b.o,.12,1.3,st.zTop-st.zBottom,0x3a4c49,xx,-3.9,(st.zTop+st.zBottom)/2,'metal');
       rail.rotation.x=-Math.atan2(9.37,st.zTop-st.zBottom);
     }
-    // Despatx: taula, mapes, arxivadors, cadira i llum de treball.
-    const office=b.basement.generalLocal,oz=office.z,deskZ=oz+(oz<0?3:-3);
-    bx(b.o,4.6,.23,2.1,0x654633,office.x,-7.95,deskZ,'organic');
-    for(const dx of[-1.9,1.9])bx(b.o,.26,1.08,1.8,0x49392b,office.x+dx,-8.58,deskZ,'organic');
-    bx(b.o,1.15,1.02,1.1,0x414d46,office.x,-8.62,oz,'paint');
-    for(const dx of[-5,4.9])bx(b.o,1.35,3.3,1.1,0x59675e,office.x+dx,-7.48,oz,'metal');
-    bx(b.o,2.4,1.4,.09,0xc4b88f,office.x,-5.8,oz<0?-15.4:15.4,'paint');
-    for(const [lx,lz] of [[0,-12],[0,0],[0,12],[12,1],[-12,0]]){
-      const lamp=new THREE.PointLight(0xffe8bd,9,18,2);lamp.position.set(lx,-4.6,lz);b.o.add(lamp);
-      bx(b.o,.78,.17,.78,0xe2d2a6,lx,-4.78,lz,'paint');
+    // Sales amb funció pròpia: comandament, ràdio, infermeria, dipòsit
+    // d'armes i control de la porta. Tot el mobiliari gran registra una
+    // caixa de col·lisió compartida per jugador, IA i projectils.
+    const basementLevel=-9.15,rooms=[
+      {lo:-15.65,hi:divisions[0]}, {lo:divisions[0],hi:divisions[1]},
+      {lo:divisions[1],hi:15.65}
+    ];
+    const generalRoomIndex=b.basement.generalLocal.z<0?0:2;
+    const generalRoom=rooms[generalRoomIndex];
+    b.basement.generalRoom={xMin:-17.3,xMax:-6.45,
+      zMin:generalRoom.lo+1.5,zMax:generalRoom.hi-1.5};
+    b.basement.roomTypes=[];
+    const piece=(name,lx,lz,width,depth,height,color,y0=basementLevel,
+      collision=true,profile='metal')=>{
+      const mesh=bx(b.o,width,height,depth,color,lx,y0+height/2,lz,profile);
+      mesh.name='bunker-'+name;
+      if(collision){
+        const center=buildingWorldPoint(b,lx,lz);
+        const collisionY=b.fy+Math.min(basementLevel,y0);
+        Wl.push({x0:center.x-width/2,x1:center.x+width/2,
+          z0:center.z-depth/2,z1:center.z+depth/2,
+          y0:collisionY,y1:b.fy+y0+height,hp:Infinity,m:mesh,
+          door:false,open:false,rammable:false,owner:b,indoorFurniture:true,
+          cx:center.x,cz:center.z});
+      }
+      return mesh;
+    };
+    const desk=(x,z,w,d)=>{
+      piece('taula-tauler',x,z,w,d,1.18,0x66503c,basementLevel,true,'organic');
+      piece('tapa-taula',x,z,w+.12,d+.10,.16,0x987054,-8.0,false,'organic');
+    };
+    const locker=(name,x,z,col=0x626f68)=>
+      piece(name,x,z,1.23,.82,3.4,col,basementLevel,true);
+    const panel=(name,x,z,w,h,color)=>{
+      // Senyalització, mapes i pantalles a l'altura dels ulls.
+      const m=piece(name,x,z,w,.085,h,color,-6.05,false);
+      m.castShadow=false;return m;
+    };
+    for(let roomIndex=0;roomIndex<rooms.length;roomIndex++){
+      const room=rooms[roomIndex],mid=(room.lo+room.hi)/2;
+      if(roomIndex===generalRoomIndex){
+        b.basement.roomTypes.push('despatx del general');
+        desk(-15.7,mid,3.3,1.65);
+        piece('cadira-general',-17.65,mid+.2,1.0,1.0,.94,0x4b473d);
+        locker('arxivador-general',-17.2,room.lo+1.5,0x65695b);
+        panel('mapa-operacions',-18.50,mid+1.8,2.25,1.50,0xc4b78c);
+        // Marques de tropes i rutes sobre el mapa.
+        for(const sign of[-1,1])piece('marca-mapa',
+          -18.42,mid+1.8+sign*.57,.18,.1,.16,
+          sign<0?0x9e362a:0x324b78,-5.43,false,'paint');
+        piece('telefon-desp',-15.15,mid-.30,.43,.30,.2,0x2c3232,-7.84,false);
+      }else if(roomIndex===1){
+        b.basement.roomTypes.push('centre de comunicacions');
+        for(const dz of[-2.3,2.35]){
+          piece('consola-radio',-16.5,mid+dz,2.15,1.18,1.40,0x43575e);
+          piece('pantalla-radio',-16.5,mid+dz-.18,1.48,.32,.70,0x294852,-7.6,false);
+          for(const dx of[-.54,.15,.59])piece('commutador',
+            -16.5+dx,mid+dz-.56,.20,.08,.10,0xb6d5b5,-7.30,false);
+        }
+        locker('armari-radio',-17.0,mid,0x586e69);
+        panel('esquema-antenes',-18.50,mid+1.0,1.65,1.10,0xa8b3a2);
+      }else{
+        b.basement.roomTypes.push('infermeria');
+        for(const dz of[-2.15,2.15]){
+          piece('llit-hospital',-16.3,mid+dz,2.3,2.70,.95,0x657d76);
+          piece('matalas',-16.3,mid+dz,2.0,2.38,.17,0xc4d4cc,
+            -8.18,false,'paint');
+          piece('coixi',-16.3,mid+dz-.84,1.15,.55,.22,0xe0ded0,-7.99,false,'paint');
+        }
+        locker('farmaciola-armari',-8.1,room.lo+1.5,0x8a9e93);
+        piece('creu-infermeria',-18.53,mid,.12,1.2,1.0,0xcc4d43,-6.17,false,'paint');
+        piece('creu-infermeria',-18.52,mid,.12,.36,2.0,0xcc4d43,-6.67,false,'paint');
+      }
     }
-    for(const [lx,lz] of[[12,-11],[-12,0],[-12,10]]){
-      bx(b.o,1.6,2.5,.9,0x5c655a,lx,-7.83,lz,'metal');
+    // Sala oriental del fons: armeria, amb armaris i una taula de
+    // manteniment però sense obstaculitzar la posició del guàrdia d'elit.
+    b.basement.roomTypes.push('armeria');
+    locker('armari-armes-1',17.2,-13.2,0x58665f);
+    locker('armari-armes-2',17.2,-9.1,0x58665f);
+    piece('banc-manteniment',7.6,-13.35,2.15,1.15,1.22,0x775e43);
+    for(const dz of[-.38,.12,.48])piece('eina-armeria',
+      7.6,-13.35+dz,1.10,.09,.09,0x303735,-7.88,false);
+    panel('inventari-armeria',18.53,-12.0,.08,1.3,0xb2bba5);
+    // Sala oriental d'accés: controls elèctrics, fusibles i guixeta.
+    // La zona x=10..14, z=-2.7..11.2 queda completament lliure
+    // perquè és el recorregut de l'escala.
+    b.basement.roomTypes.push('control i accés');
+    piece('quadre-electric',17.3,13.25,2.55,1.20,3.0,0x4b6060);
+    piece('visors-control',17.3,12.58,1.7,.17,.4,0x8eb0a1,-6.58,false);
+    piece('guixeta-seguretat',6.3,12.8,1.25,.82,2.9,0x697a74);
+    piece('consola-acces',6.55,-4.55,1.1,1.0,1.12,0x576662);
+    // Lluminàries subjectes a l'intradós del forjat y=+.22:
+    // cap focus ni plafó no pot quedar flotant a mitja altura.
+    for(const [lx,lz] of [[0,-12],[0,0],[0,12],[12,-11],[-12,0],[-12,-11],[-12,11],[16,13]]){
+      const lamp=new THREE.PointLight(0xffe8bd,5.2,19,2);
+      lamp.position.set(lx,-.61,lz);b.o.add(lamp);
+      const light=bx(b.o,1.12,.15,.73,0xf1e2b8,lx,-.34,lz,'paint');
+      light.name='bunker-plafó-sostre';
+      const rim=bx(b.o,1.26,.10,.86,0x606c63,lx,-.17,lz,'metal');
+      rim.name='bunker-suport-plafó';
     }
   }
   return b.basement;
