@@ -33,7 +33,35 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
   const shore=layout.waterfront?.shore??8,landDepth=coastal?shore+layout.size[1]/2-5:layout.size[1]+8;
   const center=tr(0,coastal?-layout.size[1]/2+landDepth/2:0),height=coastal?.86:q.h??rawHAt(q.x,q.z);
   addLevelArea(...center,layout.size[0]+8,landDepth,height,angle,coastal?3:18);
-  if(!layout.civilian){const base=pad(...center,layout.size[0]-6,coastal?landDepth-2:layout.size[1]-10);base.rotation.y=-angle;}
+  if(!layout.civilian){
+    const pw=layout.size[0]-6,pd=coastal?landDepth-2:layout.size[1]-10;
+    const bunkerSpec=layout.id==='hq'?layout.buildings.find(spec=>spec.bunker):null;
+    if(bunkerSpec){
+      // La llosa decorativa única de l'HQ travessava TAMBÉ el forat de
+      // l'escala. Retallam el rectangle complet del búnquer abans de crear
+      // cap malla, en lloc d'ocultar només el terreny LOD.
+      const left=-pw/2,right=pw/2,back=-pd/2,front=pd/2,
+        hx=bunkerSpec.x, hz=bunkerSpec.z,
+        holeLeft=Math.max(left, hx-bunkerSpec.w/2-1.0),
+        holeRight=Math.min(right,hx+bunkerSpec.w/2+1.0),
+        holeBack=Math.max(back,hz-bunkerSpec.d/2-1.0),
+        holeFront=Math.min(front,hz+bunkerSpec.d/2+1.0),
+        regions=[
+          [left,holeLeft,back,front],
+          [holeRight,right,back,front],
+          [holeLeft,holeRight,back,holeBack],
+          [holeLeft,holeRight,holeFront,front]
+        ];
+      for(const [x0,x1,z0,z1] of regions){
+        if(x1-x0<.25||z1-z0<.25)continue;
+        const base=pad(...tr((x0+x1)/2,(z0+z1)/2),x1-x0,z1-z0);
+        base.rotation.y=-angle;
+      }
+    }else{
+      const base=pad(...center,pw,pd);
+      base.rotation.y=-angle;
+    }
+  }
   // Keep vegetation outside the complete reservation, including gates and turning space.
   compoundClear.push({x:q.x,z:q.z,r:record.r});
   for(const route of layout.routes)path(route.points.map(p=>tr(...p)),route.width);
