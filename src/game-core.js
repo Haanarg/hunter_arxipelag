@@ -1084,7 +1084,8 @@ function addBunkerBasement(b){
     const d={x0:b.x+lx-.44,x1:b.x+lx+.44,
       z0:b.z+lo,z1:b.z+hi,y0:b.fy+base,y1:b.fy+base+doorHeight,
       hp:Infinity,m:mesh,door:true,open:false,rammable:false,
-      bunkerInteriorDoor:true,openProgress:0,doorHeight,
+      bunkerInteriorDoor:true,bunkerBasementWall:true,
+      openProgress:0,doorHeight,
       closedLocalY:base+doorHeight/2,owner:b,
       cx:b.x+lx,cz:b.z+doorZ};
     Wl.push(d);Dr.push(d);b.basement.doors.push(d);
@@ -1212,6 +1213,16 @@ function addBunkerBasement(b){
     }
   }
   return b.basement;
+}
+// El soterrani sobresurt de la planta exterior del búnquer. Detectar-lo
+// en 3D impedeix que les cambres exteses activin el mode natació quan
+// la seva cota és inferior al nivell de la mar.
+function playerInsideBunkerBasement(x,z,y){
+ const b=activeBunker;
+ if(!b?.basement||!Number.isFinite(y)||y>=b.fy-2)return false;
+ const q=buildingLocalPoint(b,x,z);
+ return Math.abs(q.x)<b.basement.halfX-.45&&
+   Math.abs(q.z)<b.basement.halfZ-.45;
 }
 function bunkerSubFloorAt(x,z,previous=-Infinity){
   const b=activeBunker;if(!b?.basement)return null;
@@ -2768,7 +2779,10 @@ V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;v.strafeV=0
 syncFerryCargo();updateTerminalRamps();
 if(walkingDeck&&!walkingDeck.f.destroyed){const p=ferryWorld(walkingDeck.f,walkingDeck.q.x,walkingDeck.q.z);P.x=p.x;P.z=p.z}
 ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2&&P.y<(solidRoofAt(b,P.x,P.z)?.bottom??b.fy+b.h+.1))||null;
-const floor=ib&&ib.kind!=='enemy_bunker'?Math.max(ib.fy+.3,groundAt(P.x,P.z,P.y)):groundAt(P.x,P.z,P.y),surface=wy(P.x,P.z,t);swimming=!cheats.fly&&!cv&&!ib&&!playerFall&&floor<surface-2.1;
+const floor=ib&&ib.kind!=='enemy_bunker'?Math.max(ib.fy+.3,groundAt(P.x,P.z,P.y)):groundAt(P.x,P.z,P.y),
+      surface=wy(P.x,P.z,t),
+      insideBasement=playerInsideBunkerBasement(P.x,P.z,P.y);
+swimming=!cheats.fly&&!cv&&!ib&&!insideBasement&&!playerFall&&floor<surface-2.1;
 if(swimming)playerCrouched=false;
 document.body.classList.toggle('player-swimming',canRun&&swimming);
 if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);
@@ -2776,7 +2790,9 @@ if(!playerFall&&!cheats.fly){
   // El suport segueix el triangle visible JUST sota el centre del jugador.
   // Mostrejar el màxim de quatre punts manté el personatge en l'aire
   // en baixar una pendent, perquè els punts del darrere són més alts.
-  P.y=ib?floor:Math.max(floor+.06,surface-2.1);
+  // Dins el búnquer, la superfície marina no és una superfície física:
+  // el nivell del terra de l'habitació ha de guanyar sempre.
+  P.y=insideBasement?floor+.06:ib?floor:Math.max(floor+.06,surface-2.1);
 }
 // Sons audibles per la IA: passos, braçades i motors. El volum de l'àudio
 // real no intervé en els radis, i no emetem res si el jugador està aturat.
@@ -2934,7 +2950,12 @@ if(cv&&(cv.t==='tanc'||cv.t==='tanqueta')){
 // Una càmera en mode mira no ha de deixar envans ocults del fotograma
 // anterior: la restauració és independent del mode de càmera.
 if(activeBunker?.basement?.cameraHiddenWalls){
-  for(const mesh of activeBunker.basement.cameraHiddenWalls)mesh.visible=true;
+  for(const mesh of activeBunker.basement.cameraHiddenWalls){
+    const door=activeBunker.basement.doors.find(d=>d.m===mesh);
+    // Les portes automàtiques obertes NO han de reapareixer en
+    // restaurar la paret amagada al fotograma anterior.
+    mesh.visible=!door||door.openProgress<.98;
+  }
   activeBunker.basement.cameraHiddenWalls.length=0;
 }
 const scopeNow=scopeActive&&sniperEquipped&&!cv&&!playerFall&&!swimming;
@@ -2990,7 +3011,8 @@ if(scopeNow){
     for(const wall of wallCandidates(
       (targetEye.x+cam.position.x)/2,(targetEye.z+cam.position.z)/2,
       cameraDistance/2+2)){
-      if(wall.owner!==b||!wall.bunkerBasementWall||!wall.m)continue;
+      if(wall.owner!==b||!wall.bunkerBasementWall||!wall.m||
+         !wall.m.visible)continue;
       if(wall.y1<Math.min(targetEye.y,cam.position.y)||
          wall.y0>Math.max(targetEye.y,cam.position.y))continue;
       const hit=segmentAabbT(targetEye.x,targetEye.y,targetEye.z,
