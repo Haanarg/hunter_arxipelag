@@ -122,6 +122,46 @@ body.sniper-scoped #joystick{cursor:crosshair}
 .inv-icon{font-size:74px;line-height:1;text-align:center;margin:8px 0 20px}
 .inv-detail h3{font-size:22px;margin:0 0 8px}.inv-detail p{line-height:1.45;opacity:.9}
 .inv-slot svg{width:42px;height:42px;display:block}.inv-icon svg{width:86px;height:86px;display:block;margin:auto}@media(max-width:700px){#gamepanel .card.inventory-card{width:min(96vw,620px);padding:12px}.inv-wrap{grid-template-columns:1fr}.inv-grid{grid-template-columns:repeat(4,minmax(48px,1fr))}.inv-detail{min-height:180px}.inv-icon{font-size:52px;margin:4px 0 10px}}/* Pausa compacta: lectura ràpida i botons separats del resum de controls. */
+/* Temporitzador de C4: visor LED frontal de la mateixa bomba,
+   controls independents per a desenes i unitats, aptes per a mòbil. */
+.bomb-timer-config{display:flex;flex-direction:column;align-items:center;gap:12px;max-width:100%}
+.bomb-timer-hint{margin:0;text-align:center;font-size:14px;line-height:1.4;color:#e1ede2}
+.bomb-timer-casing{position:relative;width:min(100%,415px);box-sizing:border-box;
+ border:9px solid #5a7153;border-bottom-color:#3d5141;border-radius:18px;
+ background:linear-gradient(155deg,#718665,#435941 75%);
+ box-shadow:inset 0 0 0 3px #23372d,0 9px 28px #0009;padding:18px 16px 14px}
+.bomb-timer-led{display:flex;align-items:center;justify-content:center;gap:3px;
+ background:#170b0c;border:6px solid #272b29;border-radius:10px;
+ box-shadow:inset 0 3px 14px #000,0 2px 3px #b0bca35c;
+ padding:13px 9px;color:#ff5145;text-shadow:0 0 8px #ff3826,0 0 20px #dc241b;
+ font:700 clamp(34px,7vw,60px)/1 ui-monospace,SFMono-Regular,Consolas,monospace;
+ font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.bomb-timer-prefix{align-self:center;flex-shrink:0;opacity:.48;margin-right:1px}
+.bomb-timer-digit{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.bomb-timer-digit span{min-width:1ch;text-align:center;line-height:1.08}
+#gamepanel .bomb-timer-digit button{font:700 15px/1 system-ui;
+ background:#29352f;color:#e4f4d9;border:1px solid #859d83;
+ width:52px;min-height:32px;padding:7px 9px;margin:0;touch-action:manipulation}
+#gamepanel .bomb-timer-digit button:active{background:#536b55}
+.bomb-timer-wires{display:flex;justify-content:space-evenly;gap:9px;
+ padding:13px 20px 0;max-width:210px;margin:auto}
+.bomb-timer-wires i{height:10px;flex:1;border:2px solid #232928;border-radius:9px}
+.bomb-timer-wires i:nth-child(1){background:#bf493c}
+.bomb-timer-wires i:nth-child(2){background:#3cb56e}
+.bomb-timer-wires i:nth-child(3){background:#327bcd}
+.bomb-timer-warning{margin:1px 0;color:#fac5a8;font-size:12px;text-align:center}
+.bomb-timer-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+#gamepanel .bomb-timer-actions button{min-width:140px;min-height:45px;font:700 14px system-ui}
+#gamepanel #bombTimerConfirm{background:#8d3027;color:white;border-color:#f29481}
+#gamepanel #bombTimerCancel{background:#37483f;border-color:#81958a}
+@media(max-width:490px),(max-height:580px){
+ .bomb-timer-config{gap:7px}
+ .bomb-timer-casing{padding:8px;border-width:6px}
+ .bomb-timer-led{padding:8px 5px;font-size:clamp(31px,10vw,46px)}
+ #gamepanel .bomb-timer-digit button{width:43px;min-height:28px;padding:5px 7px}
+ .bomb-timer-wires{padding-top:6px}
+ .bomb-timer-warning{font-size:11px}
+}
 #gamepanel .card:not(.inventory-card){width:min(560px,94vw);padding:22px 23px}
 #gamepanel #panelTitle{margin:0 38px 15px 0;font:700 22px/1.2 system-ui}
 #gamepanel .pause-help{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;row-gap:7px}
