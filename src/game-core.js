@@ -672,8 +672,11 @@ function vehicleDebris(v,baseY){
   for(let i=0;i<(heavy?7:5);i++)puff(v.x+rn(-2,2),baseY+rn(.5,2.2),v.z+rn(-2,2),i%2?0x3b3b38:0x787064,rn(1.6,3.2));
   while(DB.length>240){const d=DB.shift();if(d?.m)world.remove(d.m)}
 }
-function wallBreak(w){const h=w.y1-w.y0-1,parts=w.parts&&w.parts.length?w.parts:[w.m],base=parts[0],col=w.barbed?0x4a4f52:base.material.color.getHex(),cx=(w.x0+w.x1)/2,cz=(w.z0+w.z1)/2;
-if(w.parts&&w.parts.length){parts.forEach(m=>m.visible=false)}else if(w.m.visible)WA.push({m:w.m,h,t:.5});else world.remove(w.m);
+function wallBreak(w){const h=w.y1-w.y0-1,parts=w.parts&&w.parts.length?w.parts:[w.m],base=parts[0],col=w.barbed?0x4a4f52:(base?.material?.color?.getHex?.()??0x8d9389),cx=(w.x0+w.x1)/2,cz=(w.z0+w.z1)/2;
+// Els brancals, la porta i la llinda són un sol conjunt estructural.
+// Les peces d'una obertura s'oculten alhora, sense marcs residuals.
+if(w.doorAssembly||w.parts&&w.parts.length){parts.forEach(m=>{if(m)m.visible=false})}
+else if(w.m?.visible)WA.push({m:w.m,h,t:.5});else if(w.m?.parent)w.m.parent.remove(w.m);
 for(let i=0;i<(w.door?6:10);i++)debris(rn(w.x0,w.x1),w.y0+1+h*rn(.2,.9),rn(w.z0,w.z1),col,1,.9,7);
 for(let i=0;i<3;i++)puff(cx,w.y0+1+h*rn(.1,.6),cz,0xc9b48a,3.5)}
 function destroyInteriorStair(b){
@@ -874,16 +877,43 @@ function checkRoofSupport(b,w){
   }
   if(b.destroyedWallSupport>=3)roofBreak(b)
 }
-function dmgW(w,d){if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}const amount=wholeDamage(d);if(!amount||!Number.isFinite(w.hp))return;w.hp=Math.max(0,Math.ceil(w.hp)-amount);if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0){Wl.splice(i,1);wallGridCount=-1}i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);if(w.stairStructure)destroyInteriorStair(w.stairStructure.owner);checkRoofSupport(w.owner,w);snd('boom',.3)}}
+function dmgW(w,d){
+ if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}
+ const amount=wholeDamage(d);
+ if(!amount||!Number.isFinite(w.hp)||w.hp<=0)return;
+ w.hp=Math.max(0,Math.ceil(w.hp)-amount);
+ if(w.hp>0)return;
+ // Destrucció atòmica de tota l'obertura: cap porta o llinda invisible
+ // pot conservar la col·lisió després de caure un dels dos brancals.
+ const members=w.doorAssembly||[w];
+ for(const piece of members){
+  if(!piece||piece.hp<=0)continue;
+  piece.hp=0;piece.open=true;piece.playerBlock=false;
+  wallBreak(piece);
+  let i=Wl.indexOf(piece);if(i>=0){Wl.splice(i,1);wallGridCount=-1}
+  i=Dr.indexOf(piece);if(i>=0)Dr.splice(i,1);
+  if(piece.owner?.door===piece)piece.owner.door=null;
+  if(piece.stairStructure)destroyInteriorStair(piece.stairStructure.owner);
+  checkRoofSupport(piece.owner,piece);
+ }
+ snd('boom',.3);
+}
 function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=seedSearchMode
   ?{group:new THREE.Group(),walls:null,doors:null,roof:new THREE.Group()}
   :(opt.hangar?buildingVisual.createHangarShell:buildingVisual.createShell)({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),
-  g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide,structuralWalls=[];
+  g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide,structuralWalls=[],buildingWallStart=Wl.length;
 const wallH=opt.floors===2?h/2:h;
 let entranceDoor=null;
-const seg=(lx,lz,sx,sz,dr,windows=false,supportSide=null,supportWeight=0,level=0)=>{if(!dr){const parts=seedSearchMode?[new THREE.Object3D()]:windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:wallH,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:wallH,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy+level-(level?0:1),y1:fy+level+wallH,hp:12,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,supportSide,supportWeight};for(const mesh of parts)mesh.position.y+=level;if(opt.wood){for(const mesh of parts)if(mesh.material?.color?.getHex()===0x3e7185)mesh.visible=false;}Wl.push(o);if(supportWeight>0)structuralWalls.push(o);return}
-const parts=seedSearchMode?{door:new THREE.Object3D(),doorHeight:opt.doorHeight||4.4}:buildingVisual.addDoor(g,{lx,lz,sx,sz,height:wallH,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:8,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y};Wl.push(door);Dr.push(door);entranceDoor=door;
-if(parts.lintel)Wl.push({x0:door.x0,x1:door.x1,z0:door.z0,z1:door.z1,y0:fy+parts.doorHeight,y1:fy+h,hp:12,m:parts.lintel,door:false,open:false,playerBlock:false,cx:x+lx,cz:z+lz})};
+const seg=(lx,lz,sx,sz,dr,windows=false,supportSide=null,supportWeight=0,level=0)=>{if(!dr){const parts=seedSearchMode?[new THREE.Object3D()]:windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:wallH,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:wallH,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy+level-(level?0:1),y1:fy+level+wallH,hp:12,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,supportSide,supportWeight};for(const mesh of parts)mesh.position.y+=level;if(opt.wood){for(const mesh of parts)if(mesh.material?.color?.getHex()===0x3e7185)mesh.visible=false;}Wl.push(o);if(supportWeight>0)structuralWalls.push(o);return o}
+const parts=seedSearchMode?{door:new THREE.Object3D(),doorHeight:opt.doorHeight||4.4}:buildingVisual.addDoor(g,{lx,lz,sx,sz,height:wallH,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:8,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y,rammable:true};Wl.push(door);Dr.push(door);entranceDoor=door;
+let lintel=null;
+if(parts.lintel){
+ lintel={x0:door.x0,x1:door.x1,z0:door.z0,z1:door.z1,
+  y0:fy+parts.doorHeight,y1:fy+wallH,hp:12,m:parts.lintel,
+  door:false,open:false,playerBlock:false,cx:x+lx,cz:z+lz};
+ Wl.push(lintel);
+}
+return {door,lintel};};
 if(opt.hangar){
   const sh=Math.max(3.1,h*.3),push=(lx,lz,sx,sz)=>{
     const m=seedSearchMode?new THREE.Object3D():buildingVisual.addWall(g,{lx,lz,sx,sz,height:sh,material:wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+sh,hp:16,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz};Wl.push(o);return o
@@ -894,12 +924,21 @@ if(opt.hangar){
   const frontZ=ds===0?d/2-t/2:-d/2+t/2,sl=Math.max(.5,(w-dw)/2),off=dw/2+sl/2;
   push(-off,frontZ,sl,t);push(off,frontZ,sl,t);
 }else{
-  [[0,d/2-t/2,w,t,0],[0,-d/2+t/2,w,t,0],[w/2-t/2,0,t,d-2*t,1],[-w/2+t/2,0,t,d-2*t,1]].forEach(([cx,cz,sx,sz,ax],k)=>{if(k!=ds){seg(cx,cz,sx,sz,0,!opt.bunker&&!opt.solidWalls,k,1);return}const L=ax?sz:sx,sl=(L-dw)/2,off=dw/2+sl/2;for(const q of[-1,1]){if(ax)seg(cx,cz+q*off,sx,sl,0,false,k,.5);else seg(cx+q*off,cz,sl,sz,0,false,k,.5)}if(ax)seg(cx,cz,sx,dw,1);else seg(cx,cz,dw,sz,1)});
+  [[0,d/2-t/2,w,t,0],[0,-d/2+t/2,w,t,0],[w/2-t/2,0,t,d-2*t,1],[-w/2+t/2,0,t,d-2*t,1]].forEach(([cx,cz,sx,sz,ax],k)=>{if(k!=ds){seg(cx,cz,sx,sz,0,!opt.bunker&&!opt.solidWalls,k,1);return}const L=ax?sz:sx,sl=(L-dw)/2,off=dw/2+sl/2;
+    const flanks=[];
+    for(const q of[-1,1]){
+      flanks.push(ax?seg(cx,cz+q*off,sx,sl,0,false,k,.5):
+        seg(cx+q*off,cz,sl,sz,0,false,k,.5));
+    }
+    const opening=ax?seg(cx,cz,sx,dw,1):seg(cx,cz,dw,sz,1);
+    const assembly=[...flanks,opening.door,opening.lintel].filter(Boolean);
+    for(const part of assembly)part.doorAssembly=assembly});
   if(!opt.noPartitions&&!opt.bunker&&w*d>=140&&R()<.5){const al=w>=d,L=al?d:w,gp=rr(-L/4,L/4),px=(R()<.5?-1:1)*rr((al?w:d)*.12,(al?w:d)*.2),a0=-L/2+t,a1=L/2-t,ps=(a,b)=>{if(b-a<.5)return;const cc=(a+b)/2,l=b-a;if(al)seg(px,cc,t,l);else seg(cc,px,l,t)};ps(a0,gp-1.6);ps(gp+1.6,a1)}
 }
 if(opt.floors===2)for(const [cx,cz,sx,sz]of[[0,d/2-t/2,w,t],[0,-d/2+t/2,w,t],[w/2-t/2,0,t,d-2*t],[-w/2+t/2,0,t,d-2*t]])seg(cx,cz,sx,sz,0,!opt.solidWalls,null,0,wallH);
 g.position.set(x,fy,z);if(!seedSearchMode)world.add(g);
-const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,foundation:visual.foundation,rhp:opt.hangar?12:16,hangar:!!opt.hangar,door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
+const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,foundation:visual.foundation,rhp:opt.hangar?12:16,hangar:!!opt.hangar,door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};for(const piece of Wl.slice(buildingWallStart))piece.owner=b;
+structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
 function mkEnemyBunker(x,z){
   const firstWall=Wl.length,b=mkB(x,z,40,34,10,0xd9ded2,0xbfc6bb,{kind:'enemy_bunker',bunker:true,doorSide:0,doorWidth:4,doorHeight:4.4,lockedDoor:true}),g=b.o,inset=3.5;
   if(seedSearchMode){
@@ -2452,6 +2491,15 @@ if((!a||v.alt-g<16)&&!deckCarrier){const footprint=vehicleBox(v,nx,nz,v.hd);for(
   !(w.towerLegOwner&&a&&v.alt>w.y1+2)&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){
   const touch=w.barbed?fenceVehicleContact(w,footprint):null;
   if(w.barbed&&!touch)continue;
+  // Els murs empren la caixa real del vehicle. Abans el radi ample
+  // bloquejava el tanc quan encara no havia tocat la porta.
+  if(!w.barbed&&!obbOverlap(footprint,{
+    x:(w.x0+w.x1)/2,z:(w.z0+w.z1)/2,hd:0,
+    w:Math.max(.05,w.x1-w.x0),d:Math.max(.05,w.z1-w.z0)
+  }))continue;
+  // Les parets del pis superior no bloquegen vehicles a nivell de terra.
+  if(land&&(w.y1<g-.8||w.y0>g+
+    (v.t==='tanc'||v.t==='camio'?5.6:4.2)*(VS[v.t]||1)))continue;
   if(w.rammable&&land&&mayRamWhileRecovering(v.t,!!w.barbed,v.envCd)){
     const barbed=!!w.barbed,tank=v.t==='tanc',
           truckFence=v.t==='camio'&&barbed;
