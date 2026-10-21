@@ -2731,7 +2731,10 @@ const simulationEnded=performance.now();
 if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
   terrainStream.update(victoryCinematic?.active?cam.position.x:P.x,
     victoryCinematic?.active?cam.position.z:P.z,visualQuality.shadows?2:1.2,cam,
-    victoryCinematic?.active?null:currentSniperFocus());const terrainEnded=performance.now();waves(t);
+    victoryCinematic?.active?null:currentSniperFocus());const terrainEnded=performance.now();
+ // El món no queda congelat durant la repetició: les onades avancen
+ // lentament mentre la càmera i el cos es mouen a velocitat cinematogràfica.
+ waves(t+(deathCinematic?.active?deathCinematic.t*.18:0));
 sun.target.position.set(victoryCinematic?cam.position.x:P.x,0,
   victoryCinematic?cam.position.z:P.z);
 sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();for(const k in renderCategories)renderCategories[k]=0;
