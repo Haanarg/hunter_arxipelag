@@ -34,6 +34,10 @@ assert.doesNotMatch(cinematic,/deathFaceCamera\(pl[,)]/);
 assert.match(cinematic,/v\.motion=deathInitialMotion\(v\)/);
 assert.match(cinematic,/m\.velocity\.y-=\(inWater\?7:24\)\*step/);
 assert.match(cinematic,/pl\.quaternion\.copy\(m\.orientation\)/);
+assert.ok(cinematic.includes('player.traverseVisible('),'El cos s\'enquadra pel seu volum visible');
+assert.ok(cinematic.includes('voidCamera.lookAt(bodyCentre.x,'),'Cal centrar la càmera en el cos');
+assert.ok(cinematic.includes('deathCreateUnderwater(v)'),'Escena submarina');
+assert.ok(cinematic.includes('if(v.underwaterActive)scene.add(pl)'),'Restaurar pare del jugador');
 
 // El final és repetible, els tres tocs de campana no es dupliquen i
 // el botó apareix només quan la Parca ha acabat d'acostar-se.
@@ -65,6 +69,8 @@ assert.match(core,/type:'fall',x:P\.x/);
 assert.match(core,/type:'runover',x:v\.x/);
 assert.match(core,/if\(deathCinematic\?\.active\)updateDeathCinematic\(dt\)/);
 assert.match(core,/ren\.render\(v\.voidScene,v\.voidCamera\)/);
+assert.ok(core.includes('ren.render(deathCinematic.underwaterScene,cam)'),
+ 'El fons submarí s\'ha de renderitzar realment');
 assert.match(world,/clearVictoryCinematic\(\);clearDeathCinematic\(\)/);
 assert.match(audio,/function deathBell\(volume=1\)/);
 // Síntesi real dels parcials de campana, amb durada finita i silenci.
@@ -84,6 +90,7 @@ assert.equal(starts,5,'El silenci del jugador és respectat');
 assert.match(scripts,/"src\/death-cinematic\.js"/);
 assert.match(cinematic,/window\.location\.reload\(\)/);
 assert.match(html,/\.death-new-game/);
+assert.ok(html.includes('.death-water-filter'),'Vel blau en CSS');
 // Integració amb el model real del jugador, Three.js i el bucle del joc.
 (async()=>{
  const game=await require('./harness.cjs')();
