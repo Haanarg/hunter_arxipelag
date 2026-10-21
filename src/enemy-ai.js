@@ -14,7 +14,15 @@ function soldierVisualContact(u,target,targetY,d){
         // de la muntanya i faria invisibles els objectius a 30 metres.
         sameBasement=!!u.basement&&targetY<u.basement.fy-3.9&&
           eyeY<u.basement.fy-3.9;
-  if(over||d>range||!STEALTH.inView(u.hd,target.x-u.x,targetEye-eyeY,target.z-u.z,range))return false;
+  const dx=target.x-u.x,dz=target.z-u.z,
+        facing=(-Math.sin(u.hd)*dx-Math.cos(u.hd)*dz)/Math.max(.01,d),
+        // L'elit té un camp visual més ample als passadissos il·luminats,
+        // però les parets continuen tallant completament la visió.
+        eliteAwareness=u.elite&&sameBasement&&
+          (d<7||facing>Math.cos(80*Math.PI/180))&&
+          Math.abs(targetEye-eyeY)<8;
+  if(over||d>range||!(eliteAwareness||
+    STEALTH.inView(u.hd,dx,targetEye-eyeY,dz,range)))return false;
   if(!soldierClearShot(u,u.x,u.z,eyeY,target,targetY-(crouched?.25:0)))return false;
   // A diferència de sight(), el pendent també tapa un enemic al darrere
   // d'una cresta (sense fer raycasts de geometria per cada soldat).
