@@ -2832,29 +2832,44 @@ if(scopeNow){
   // produeix cap obstrucció; els llums queden ancorats al sostre real.
   if(b?.basement)for(const slab of b.basement.upperSlabMeshes)slab.visible=true;
   if(bunkerBelow){
-    // Càmera curta a nivell de persona; mai per sobre del sostre interior.
+    // Vista elevada de tercera persona (abans era massa baixa i a 6 m):
+    // 13,5 m de distància nominal i uns 7,2 m sobre el jugador.
+    // Sempre sota el forjat opac, mai dins la geometria del sostre.
     const targetEye=new THREE.Vector3(P.x,
-      Math.min(b.fy-.85,Math.max(b.basement.floorY+1.6,P.y+1.5)),P.z);
-    w.y=Math.min(b.fy-1.05,Math.max(b.basement.floorY+2.05,P.y+2.05));
-    // Comprovam la línia que va dels ulls fins a la posició desitjada
-    // contra TOTS els murs i mobles del soterrani. La càmera s'atura
-    // just davant de la primera paret; no atravessa cap habitació.
-    const dx=w.x-targetEye.x,dz=w.z-targetEye.z,
-      reach=Math.hypot(dx,dz),mx=(w.x+targetEye.x)/2,mz=(w.z+targetEye.z)/2;
-    let hit=1;
-    for(const wall of wallCandidates(mx,mz,reach/2+2)){
-      if(wall.open||wall.playerBlock===false||wall.y1<targetEye.y-.6||
-        wall.y0>Math.max(w.y,targetEye.y)+.5)continue;
-      const t=segmentAabbT(targetEye.x,targetEye.y,targetEye.z,
-        w.x,w.y,w.z,wall.x0-.22,wall.x1+.22,wall.y0-.1,
-        wall.y1+.1,wall.z0-.22,wall.z1+.22);
-      if(t!=null&&t>.015&&t<hit)hit=t;
+      Math.min(b.fy-.55,Math.max(b.basement.floorY+1.6,P.y+1.65)),P.z);
+    const cameraDistance=Math.max(10.5,Math.min(17,13.5*zoom));
+    const cameraHeight=Math.max(b.basement.floorY+5.4,
+      Math.min(b.fy-.75,P.y+7.2));
+    // En una cambra estreta, desplaçar la càmera al darrere
+    // directament la deixa enganxada a la paret. Provam angles
+    // laterals i prioritzam la posició amb més separació del jugador.
+    let bestPosition=null,bestScore=-Infinity;
+    for(const offset of [0,.4,-.4,.8,-.8,1.2,-1.2]){
+      const heading=T.hd+offset,
+        trial=new THREE.Vector3(P.x+Math.sin(heading)*cameraDistance,
+          cameraHeight,P.z+Math.cos(heading)*cameraDistance),
+        dx=trial.x-targetEye.x,dz=trial.z-targetEye.z,
+        reach=Math.hypot(dx,dz),
+        mx=(trial.x+targetEye.x)/2,mz=(trial.z+targetEye.z)/2;
+      let hit=1;
+      for(const wall of wallCandidates(mx,mz,reach/2+2)){
+        if(wall.open||wall.playerBlock===false||
+          wall.y1<Math.min(targetEye.y,cameraHeight)-.2||
+          wall.y0>Math.max(targetEye.y,cameraHeight)+.2)continue;
+        const t=segmentAabbT(targetEye.x,targetEye.y,targetEye.z,
+          trial.x,cameraHeight,trial.z,
+          wall.x0-.2,wall.x1+.2,wall.y0-.08,wall.y1+.08,
+          wall.z0-.2,wall.z1+.2);
+        if(t!=null&&t>.008&&t<hit)hit=t;
+      }
+      const distance=Math.max(.35,reach*hit-.68),
+        score=distance-Math.abs(offset)*1.6;
+      if(score>bestScore){
+        bestScore=score;
+        bestPosition=trial.lerp(targetEye,1-distance/reach);
+      }
     }
-    if(hit<1){
-      const fraction=hit<=.03?0:Math.max(.015,
-        Math.min(hit-.015,hit-1/Math.max(2,reach)));
-      w.lerpVectors(targetEye,w,fraction);
-    }
+    w.copy(bestPosition);
     // Una transició de planta ha de ser immediata: fer lerp des de
     // l'exterior podria deixar la càmera diversos frames sota una paret.
     if(!b.basement.cameraInside||Math.hypot(cam.position.x-P.x,cam.position.z-P.z)>17)
@@ -2884,9 +2899,9 @@ if(scopeNow){
     w.y=Math.max(ty+c.ch*zoom*(cv?Math.sqrt(VS[cv.t]):1),hAt(w.x,w.z)+3,2.5);
     cam.position.lerp(w,1-Math.pow(.001,dt));
   }
-  cam.lookAt(T.x-Math.sin(T.hd)*(bunkerBelow?3:8),
-    Math.min(bunkerBelow?b.fy-.65:Infinity,ty+(bunkerBelow?1.2:2)),
-    T.z-Math.cos(T.hd)*(bunkerBelow?3:8));
+  cam.lookAt(T.x-Math.sin(T.hd)*(bunkerBelow?3.5:8),
+    Math.min(bunkerBelow?b.fy-1.0:Infinity,ty+(bunkerBelow?2.0:2)),
+    T.z-Math.cos(T.hd)*(bunkerBelow?3.5:8));
 }
 if(playerEject&&playerEject.t<=0)playerEject=null;
 updateBazookaReticle(dt);
