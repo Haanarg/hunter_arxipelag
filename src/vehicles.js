@@ -118,6 +118,17 @@ window.HUNTER_VEHICLES=Object.freeze({
         g.userData.staticBatches=count;
       }
       if(t==='cotxe'){const col=0xa35b38,trim=0x302f2d;box(g,3,1,5.6,col,0,1.15,0,'paint');box(g,2.92,.42,2.1,col,0,1.82,-1.72,'paint');box(g,2.62,.82,2.72,glass,0,2.04,.48,'glass');box(g,2.88,.18,2.95,col,0,2.52,.48,'paint');box(g,2.45,.1,1.1,0x7d432f,0,2.65,.5,'paint');for(const x of[-1.34,1.34]){box(g,.13,.28,2.9,col,x,1.7,.5,'paint');box(g,.15,.82,.14,col,x,2.04,-.82,'paint');box(g,.15,.82,.14,col,x,2.04,1.82,'paint');box(g,.18,.82,.15,col,x,2.04,.5,'paint');for(const z of[-1.85,1.85])wheel(g,x*1.16,.72,z,.72,.45,false,z<0);box(g,.35,.18,.4,metal,x*1.17,2.08,-.85,'metal')}for(const z of[-2.95,2.95])box(g,3.25,.3,.3,metal,0,.94,z,'metal');box(g,1.6,.45,.08,rubber,0,1.4,-2.84,'rubber');box(g,2.5,.14,.12,trim,0,1.12,-2.88,'rubber');for(const x of[-1.08,1.08]){box(g,.5,.34,.1,0xffedb2,x,1.43,-2.85,'paint');box(g,.38,.24,.1,0x9c2825,x,1.38,2.84,'paint')}for(const x of[-.72,.72])box(g,.5,.1,.16,0xd8d7c9,x,1.03,-2.9,'metal');const spare=wheel(g,0,1.5,3,.65,.45);spare.rotation.y=Math.PI/2;(g.userData.wheels||[]).pop()}
+      if(t==='cotxe'){
+        // Volant i seient reals al lloc on s'asseurà el jugador.
+        // El conductor veu el volant per darrere del parabrisa.
+        const steeringWheel=new THREE.Mesh(
+          new THREE.TorusGeometry(.27,.045,8,16),
+          material(0x303735,'rubber'));
+        steeringWheel.position.set(-.72,1.91,-.67);
+        steeringWheel.rotation.x=-.35;g.add(steeringWheel);
+        box(g,.86,.14,.85,0x424640,-.72,1.15,.42,'rubber');
+        box(g,.82,.72,.13,0x424640,-.72,1.59,.85,'rubber');
+      }
       if(t==='camio'){
         // A4.3: el mateix low-poly de la preview, adaptat a la
         // caixa de col·lisió física existent (3.6 × 7.8, abans de VS).
