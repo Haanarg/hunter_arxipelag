@@ -2687,23 +2687,55 @@ if(scopeNow){
 }else{
   const T=cv||P,c=cv?VT[cv.t]:ib?{cd:6,ch:11}:{cd:10,ch:5},ty=cv?cv.o.position.y:P.y,
     w=new THREE.Vector3(T.x+Math.sin(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1),0,T.z+Math.cos(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1));
-  // Al soterrani la càmera ha de quedar dins de la cambra, no sobre la muntanya.
-  const bunkerBelow=!cv&&activeBunker?.basement&&
-    Math.abs(buildingLocalPoint(activeBunker,P.x,P.z).x)<19&&
-    Math.abs(buildingLocalPoint(activeBunker,P.x,P.z).z)<16&&
-    P.y<activeBunker.fy-2;
-  if(activeBunker?.basement)for(const slab of activeBunker.basement.upperSlabMeshes)slab.visible=!bunkerBelow;
+  // Mode soterrani també durant el PRIMER esglaó, no només quan
+  // el jugador ja ha baixat 2 m. La càmera no es pot quedar darrere
+  // d'un envà opac, ni pot perseguir l'altura exterior de la muntanya.
+  const b=activeBunker,inside=b?.basement&&!cv&&
+    Math.abs(buildingLocalPoint(b,P.x,P.z).x)<18.9&&
+    Math.abs(buildingLocalPoint(b,P.x,P.z).z)<15.9;
+  const local=inside?buildingLocalPoint(b,P.x,P.z):null;
+  const stair=b?.basement?.stair;
+  const descending=!!local&&Math.abs(local.x-stair.x)<stair.width/2+.45&&
+    local.z>=stair.zBottom-.5&&local.z<=stair.zTop+.4&&P.y<b.fy+.04;
+  const bunkerBelow=!!inside&&(P.y<b.fy-1||descending);
+  if(b?.basement)for(const slab of b.basement.upperSlabMeshes)slab.visible=!bunkerBelow;
   if(bunkerBelow){
-    const b=activeBunker,p=buildingLocalPoint(b,w.x,w.z);
-    // Evitam que la càmera travessi els murs exteriors del soterrani.
-    p.x=Math.max(-17.2,Math.min(17.2,p.x));
-    p.z=Math.max(-14.2,Math.min(14.2,p.z));
-    const angle=b.o.rotation.y,co=Math.cos(angle),si=Math.sin(angle);
-    w.x=b.x+p.x*co+p.z*si;w.z=b.z-p.x*si+p.z*co;
-    w.y=Math.min(b.fy-1.5,Math.max(ty+3.2,b.basement.floorY+2.5));
-  }else w.y=Math.max(ty+c.ch*zoom*(cv?Math.sqrt(VS[cv.t]):1),hAt(w.x,w.z)+3,2.5);
-  cam.position.lerp(w,1-Math.pow(.001,dt));
-  cam.lookAt(T.x-Math.sin(T.hd)*8,ty+2,T.z-Math.cos(T.hd)*8);
+    // Càmera curta a nivell de persona; mai per sobre del sostre interior.
+    const targetEye=new THREE.Vector3(P.x,
+      Math.min(b.fy-.85,Math.max(b.basement.floorY+1.6,P.y+1.5)),P.z);
+    w.y=Math.min(b.fy-1.05,Math.max(b.basement.floorY+2.05,P.y+2.05));
+    // Comprovam la línia que va dels ulls fins a la posició desitjada
+    // contra TOTS els murs i mobles del soterrani. La càmera s'atura
+    // just davant de la primera paret; no atravessa cap habitació.
+    const dx=w.x-targetEye.x,dz=w.z-targetEye.z,
+      reach=Math.hypot(dx,dz),mx=(w.x+targetEye.x)/2,mz=(w.z+targetEye.z)/2;
+    let hit=1;
+    for(const wall of wallCandidates(mx,mz,reach/2+2)){
+      if(wall.open||wall.playerBlock===false||wall.y1<targetEye.y-.6||
+        wall.y0>Math.max(w.y,targetEye.y)+.5)continue;
+      const t=segmentAabbT(targetEye.x,targetEye.y,targetEye.z,
+        w.x,w.y,w.z,wall.x0-.22,wall.x1+.22,wall.y0-.1,
+        wall.y1+.1,wall.z0-.22,wall.z1+.22);
+      if(t!=null&&t>.015&&t<hit)hit=t;
+    }
+    if(hit<1){
+      const fraction=Math.max(.13,hit-1.0/Math.max(2,reach));
+      w.lerpVectors(targetEye,w,fraction);
+    }
+    // Una transició de planta ha de ser immediata: fer lerp des de
+    // l'exterior podria deixar la càmera diversos frames sota una paret.
+    if(!b.basement.cameraInside||Math.hypot(cam.position.x-P.x,cam.position.z-P.z)>17)
+      cam.position.copy(w);
+    else cam.position.lerp(w,1-Math.pow(.00001,dt));
+    b.basement.cameraInside=true;
+  }else{
+    if(b?.basement)b.basement.cameraInside=false;
+    w.y=Math.max(ty+c.ch*zoom*(cv?Math.sqrt(VS[cv.t]):1),hAt(w.x,w.z)+3,2.5);
+    cam.position.lerp(w,1-Math.pow(.001,dt));
+  }
+  cam.lookAt(T.x-Math.sin(T.hd)*(bunkerBelow?3:8),
+    Math.min(bunkerBelow?b.fy-.65:Infinity,ty+(bunkerBelow?1.2:2)),
+    T.z-Math.cos(T.hd)*(bunkerBelow?3:8));
 }
 if(playerEject&&playerEject.t<=0)playerEject=null;
 updateBazookaReticle(dt);
