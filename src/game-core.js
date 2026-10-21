@@ -2855,6 +2855,12 @@ if(cv&&(cv.t==='tanc'||cv.t==='tanqueta')){
       new THREE.Vector3(ax,ay,az),dt);
   }
 }
+// Una càmera en mode mira no ha de deixar envans ocults del fotograma
+// anterior: la restauració és independent del mode de càmera.
+if(activeBunker?.basement?.cameraHiddenWalls){
+  for(const mesh of activeBunker.basement.cameraHiddenWalls)mesh.visible=true;
+  activeBunker.basement.cameraHiddenWalls.length=0;
+}
 const scopeNow=scopeActive&&sniperEquipped&&!cv&&!playerFall&&!swimming;
 const fieldOfView=scopeNow?2*Math.atan(Math.tan(58*Math.PI/360)/8)*180/Math.PI:58;
 if(Math.abs(cam.fov-fieldOfView)>.001){cam.fov=fieldOfView;cam.updateProjectionMatrix()}
@@ -2879,12 +2885,6 @@ if(scopeNow){
   // ara que la càmera és sempre a sota, es veu el plafó i no es
   // produeix cap obstrucció; els llums queden ancorats al sostre real.
   if(b?.basement)for(const slab of b.basement.upperSlabMeshes)slab.visible=true;
-  // Les parets ocultades a l'últim fotograma tornen a ser visibles
-  // abans de calcular les que ara queden entre la càmera i el jugador.
-  if(b?.basement?.cameraHiddenWalls){
-    for(const mesh of b.basement.cameraHiddenWalls)mesh.visible=true;
-    b.basement.cameraHiddenWalls.length=0;
-  }
   if(bunkerBelow){
     // Càmera estable a distància normal, sense correccions angulars
     // brusques ni l'antic raycast que la teletransportava davant dels envans.
