@@ -486,7 +486,24 @@ if(seedSearchMode&&seedSearchCategoryEl.value==='item'){
   P.base={x:pa.x,z:pa.z};return;
 }
 P.x=baseCompound.spawn?.x??pa.x;P.z=baseCompound.spawn?.z??pa.z+20;P.hd=0;P.base={x:pa.x,z:pa.z};V=[];cv=null;mm=null;
-const add=(t,x,z,a,meta={})=>{const o=seedSearchMode?seedVehicleStub(t):mkV(t),c=VT[t],surface=Math.max(0,hAt(x,z)),v={t,x,z,hd:a||0,v:0,alt:c.m==='a'?helicopterLandedAltitude({o},surface):surface+.8,o,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};if(t==='heli_combat')v.rockets=6;if(t==='llanxa_coets')v.rockets=Infinity;if(!seedSearchMode)world.add(o);V.push(v);return v};
+const add=(t,x,z,a,meta={})=>{
+  // Els colors són part de l'estat generat per llavor, no una aleatorietat
+  // del renderitzador. La cerca de llavors consumeix les mateixes tirades.
+  const civilian=t==='cotxe_civil',bicycle=t==='bici',palette=window.HUNTER_CIVILIAN_CARS.colors;
+  const color=(civilian||bicycle)?palette[Math.floor(R()*palette.length)].hex:undefined;
+  const variant=civilian?Math.floor(R()*window.HUNTER_CIVILIAN_CARS.variants.length):undefined;
+  const appearance={color:meta.color??color,variant:meta.variant??variant};
+  const o=seedSearchMode?seedVehicleStub(t):mkV(t,appearance),c=VT[t],
+    surface=Math.max(0,hAt(x,z));
+  const v={t,x,z,hd:a||0,v:0,alt:c.m==='a'?helicopterLandedAltitude({o},surface):surface+.8,
+    o,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};
+  if(civilian||bicycle)v.color=appearance.color;
+  if(civilian)v.variant=appearance.variant;
+  if(t==='heli_combat')v.rockets=6;
+  if(t==='llanxa_coets')v.rockets=Infinity;
+  if(!seedSearchMode)world.add(o);
+  V.push(v);return v;
+};
 // Cap tanc neutral dins del HQ: els tancs pilotables apareixen
 // distribuïts per l'arxipèlag, lluny de la base enemiga.
 
@@ -671,6 +688,52 @@ ensureDistributedCount('tanqueta',1+MAP_SCALE);
 islands.forEach(i=>{if(i!==A&&R()<.65){const t=['cotxe','moto','bici'][Math.floor(R()*3)];for(let tries=0;tries<12;tries++){const q=land(i,80);if(q&&clearVehicle(t,q.x,q.z)){add(t,q.x,q.z,rr(0,6.28));break}}}});
 
 markBuildStage('guaranteedVehicles');
+// Cotxes civils: aparcats fora dels edificis dels assentaments i les
+// terminals de ferri; alguns queden abandonats a l'interior de les illes.
+const civilianVehicleClear=(x,z,heading=0)=>{
+  const type='cotxe_civil',r=vehicleRadius(type)+1.2;
+  if(Math.abs(x)>H-r-5||Math.abs(z)>H-r-5)return false;
+  const h=hAt(x,z);
+  if(h<1.4||slope(x,z,h)>3.7)return false;
+  if(!clearVehicle(type,x,z)||treeHit(x,z,r*.83))return false;
+  if(B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r))return false;
+  if(wallCandidates(x,z,r+2).some(w=>!w.open&&
+    x>w.x0-r&&x<w.x1+r&&z>w.z0-r&&z<w.z1+r))return false;
+  return true;
+};
+let civilianNearSites=0,civilianAbandoned=0;
+for(const site of compoundCenters.filter(c=>c.type.startsWith('hut-settlement')||c.type==='ferry-terminal')){
+  const count=site.type==='ferry-terminal'?2:1+(R()<.32?1:0),
+    offset=R()*Math.PI*2;
+  for(let k=0;k<count;k++){
+    let placed=false;
+    for(let a=0;a<44;a++){
+      const angle=offset+(a%16)*Math.PI/8+(k*Math.PI*.65),
+        distance=Math.max(19,site.r*.62)+(Math.floor(a/16)*8),
+        x=site.x+Math.cos(angle)*distance,z=site.z+Math.sin(angle)*distance;
+      if(!civilianVehicleClear(x,z))continue;
+      add('cotxe_civil',x,z,angle+Math.PI/2,{civilian:true,parkedAt:site.type});
+      civilianNearSites++;placed=true;break;
+    }
+    if(!placed)break;
+  }
+}
+for(const island of islands){
+  if(island===Bi||island===A||R()>.56)continue;
+  for(let attempt=0;attempt<26;attempt++){
+    const q=land(island,160,1);
+    if(!q||!civilianVehicleClear(q.x,q.z))continue;
+    // L'abandonat no queda enganxat a una altra construcció civil.
+    if(compoundCenters.some(c=>
+      Math.hypot(q.x-c.x,q.z-c.z)<c.r+26))continue;
+    add('cotxe_civil',q.x,q.z,rr(0,Math.PI*2),{civilian:true,abandoned:true});
+    civilianAbandoned++;break;
+  }
+}
+world.userData.civilianCars={nearSites:civilianNearSites,abandoned:civilianAbandoned,
+  total:civilianNearSites+civilianAbandoned};
+markBuildStage('civilianCars');
+
 ensureJetSkis(add);
 markBuildStage('jetSkis');
 // Cotxes militars amb conductor i tirador, com els que custodien la base.
