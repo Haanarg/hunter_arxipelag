@@ -957,10 +957,19 @@ function addBunkerBasement(b){
   const variant=Math.floor(random()*4),floorY=b.fy-9.15,
         divisions=[-5+(variant%2)*1.7,4.3+Math.floor(variant/2)*1.6],
         westDoors=[-10.1+(variant%2)*.7,-.25+Math.floor(variant/2)*1.1,10.1-(variant%2)],
-        eastDivider=-7+(variant%2)*1.2;
-  b.basement={variant,floorY,upperSlabMeshes:[],lights:[],lightsOn:false,stair:{x:12,zTop:11.2,zBottom:-2.7,width:3.6},
+        eastDivider=0,
+        // Dos accessos possibles (cambra est nord o sud) i dos
+        // desplaçaments laterals. L'escala no apareix sempre al mateix
+        // lloc: cada combinació depèn exclusivament de la llavor.
+        stairSide=(variant&1)?-1:1,
+        stairX=(variant&2)?14.6:10.8,
+        stairTop=stairSide*13.6,stairBottom=stairSide*1.3;
+  b.basement={variant,floorY,upperSlabMeshes:[],lights:[],lightsOn:false,
+    stair:{x:stairX,zTop:stairTop,zBottom:stairBottom,width:3.3},
     generalLocal:{x:-12.5,z:variant%2?10:-10.5},eliteLocal:[
-      {x:0,z:-10.3},{x:-1,z:7.5},{x:12,z:-10.6},{x:-12,z:(divisions[0]+divisions[1])/2}
+      {x:0,z:-10.3},{x:-1,z:7.5},
+      {x:12,z:stairSide>0?-10.6:10.6},
+      {x:-12,z:(divisions[0]+divisions[1])/2}
     ]};
   activeBunker=b;
   const wall=(lx,lz,w,d,base=-9.2,height=9.25,color=0x68756d)=>{
@@ -987,8 +996,16 @@ function addBunkerBasement(b){
       door:false,open:false,rammable:false,playerBlock:false,
       cx:b.x+(xa+xb)/2,cz:b.z+(za+zb)/2,owner:b});
   };
-  slab(-19.2,10,-16.2,16.2);slab(14,19.2,-16.2,16.2);
-  slab(10,14,-16.2,-2.7);slab(10,14,11.2,16.2);
+  const st=b.basement.stair,shaftLeft=st.x-st.width/2,
+        shaftRight=st.x+st.width/2,
+        shaftNear=Math.min(st.zTop,st.zBottom),
+        shaftFar=Math.max(st.zTop,st.zBottom);
+  // Quatre peces reals del forjat deixen el buit exactament allà on
+  // la llavor ha situat l'escala, a qualsevol de les dues habitacions.
+  slab(-19.2,shaftLeft,-16.2,16.2);
+  slab(shaftRight,19.2,-16.2,16.2);
+  slab(shaftLeft,shaftRight,-16.2,shaftNear);
+  slab(shaftLeft,shaftRight,shaftFar,16.2);
   floorPanel(-19,19,-16,16,-9.27,0x434c49);
   // Fonaments profunds, tres cambres a ponent, dues a llevant i passadís.
   wall(-19.1,0,.8,32.4);wall(19.1,0,.8,32.4);
@@ -1004,20 +1021,20 @@ function addBunkerBasement(b){
   const limits=[-15.7,...divisions,15.7];
   for(let i=0;i<3;i++)doorway(-4.2,limits[i],limits[i+1],westDoors[i]);
   doorway(4.2,-15.7,eastDivider,-10.8);
-  doorway(4.2,eastDivider,15.7,-2.25);
-  // Escala dins l'habitació oriental de la planta principal. 15 esglaons
-  // amb alçada progressiva i suport físic interpolat a groundAt().
+  doorway(4.2,eastDivider,15.7,10.8);
+  // Graons a la cambra escollida, amb sentit de baixada nord o sud.
   if(!seedSearchMode){
-    const st=b.basement.stair,steps=15;
+    const steps=15,run=Math.abs(st.zTop-st.zBottom);
     for(let i=0;i<steps;i++){
-      const z=st.zTop-(i+.5)*(st.zTop-st.zBottom)/steps;
+      const z=st.zTop+(i+.5)*(st.zBottom-st.zTop)/steps;
       const y=.22-(i+1)*9.37/steps;
-      bx(b.o,st.width,.21,(st.zTop-st.zBottom)/steps+.035,
+      bx(b.o,st.width,.21,run/steps+.035,
         i%2?0x797f79:0x8b9289,st.x,y-.1,z,'masonry');
     }
-    for(const xx of[st.x-st.width/2-.13,st.x+st.width/2+.13]){
-      const rail=bx(b.o,.12,1.3,st.zTop-st.zBottom,0x3a4c49,xx,-3.9,(st.zTop+st.zBottom)/2,'metal');
-      rail.rotation.x=-Math.atan2(9.37,st.zTop-st.zBottom);
+    for(const xx of[shaftLeft-.13,shaftRight+.13]){
+      const rail=bx(b.o,.12,1.3,run,0x3a4c49,
+        xx,-3.9,(st.zTop+st.zBottom)/2,'metal');
+      rail.rotation.x=Math.sign(st.zBottom-st.zTop)*Math.atan2(9.37,run);
     }
     // Sales amb funció pròpia: comandament, ràdio, infermeria, dipòsit
     // d'armes i control de la porta. Tot el mobiliari gran registra una
@@ -1130,8 +1147,10 @@ function bunkerSubFloorAt(x,z,previous=-Infinity){
   const p=buildingLocalPoint(b,x,z);
   if(Math.abs(p.x)>19||Math.abs(p.z)>16)return null;
   const st=b.basement.stair;
-  if(Math.abs(p.x-st.x)<=st.width/2&&p.z>=st.zBottom&&p.z<=st.zTop){
-    const t=(st.zTop-p.z)/(st.zTop-st.zBottom);
+  if(Math.abs(p.x-st.x)<=st.width/2&&
+     p.z>=Math.min(st.zTop,st.zBottom)&&
+     p.z<=Math.max(st.zTop,st.zBottom)){
+    const t=(p.z-st.zTop)/(st.zBottom-st.zTop);
     return b.fy+.22-t*(b.fy+.22-b.basement.floorY);
   }
   return previous<b.fy-3.9?b.basement.floorY:b.fy+.22;
