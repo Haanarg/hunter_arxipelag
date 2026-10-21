@@ -899,7 +899,7 @@ if(opt.hangar){
 }
 if(opt.floors===2)for(const [cx,cz,sx,sz]of[[0,d/2-t/2,w,t],[0,-d/2+t/2,w,t],[w/2-t/2,0,t,d-2*t],[-w/2+t/2,0,t,d-2*t]])seg(cx,cz,sx,sz,0,!opt.solidWalls,null,0,wallH);
 g.position.set(x,fy,z);if(!seedSearchMode)world.add(g);
-const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,rhp:opt.hangar?12:16,hangar:!!opt.hangar,door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
+const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,foundation:visual.foundation,rhp:opt.hangar?12:16,hangar:!!opt.hangar,door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
 function mkEnemyBunker(x,z){
   const firstWall=Wl.length,b=mkB(x,z,40,34,10,0xd9ded2,0xbfc6bb,{kind:'enemy_bunker',bunker:true,doorSide:0,doorWidth:4,doorHeight:4.4,lockedDoor:true}),g=b.o,inset=3.5;
   if(seedSearchMode){
@@ -943,6 +943,15 @@ function mkEnemyBunker(x,z){
 // parets inclinades de la planta principal canvien. La variant deriva només
 // de la llavor i del lloc del búnquer, sense consumir cap tirada global R().
 function addBunkerBasement(b){
+  // L'edifici estàndard té una base massissa de 12,3 m: omplia
+  // completament el soterrani i ocultava tant les escales com els mobles.
+  // Només al búnquer retiram aquesta base i la substituïm pel forjat
+  // superior perforat i pel terra inferior construïts a continuació.
+  if(b.foundation){
+    b.o.remove(b.foundation);
+    b.foundation.geometry?.dispose();
+    b.foundation=null;
+  }
   const random=mul((seed^Math.imul(Math.round(b.x),73856093)^Math.imul(Math.round(b.z),19349663)^0x6e7b32e1)>>>0);
   const variant=Math.floor(random()*4),floorY=b.fy-9.15,
         divisions=[-5+(variant%2)*1.7,4.3+Math.floor(variant/2)*1.6],
