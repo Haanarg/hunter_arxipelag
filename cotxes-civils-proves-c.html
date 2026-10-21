@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Quatre noves iteracions del model C familiar amb vidres transparents, interior visible, passos de roda oberts i para-xocs sense z-fighting.">
+<title>Hunter: Arxipèlag · Familiar C · Iteració 2</title>
+<style>
+:root{color-scheme:dark;--ink:#eaf4ee;--muted:#bdcdc6;--line:#799e93;--accent:#c5e8cb;--bg:#152a2d}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:14px system-ui,-apple-system,sans-serif}
+#stage{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;display:block}
+main{position:relative;z-index:1;min-height:100vh;padding:16px 19px 22px;pointer-events:none}
+header{pointer-events:auto;display:flex;justify-content:space-between;align-items:flex-start;gap:13px;flex-wrap:wrap;margin-bottom:12px}
+h1{font-size:clamp(21px,3vw,30px);line-height:1.1;letter-spacing:-.024em;margin:4px 0 7px}
+header p{font-size:12px;color:var(--muted);margin:0;line-height:1.5;max-width:790px}
+.kicker{letter-spacing:.14em;font-weight:800;font-size:11px;color:#d7eeb7;text-transform:uppercase}
+.nav{display:flex;flex-wrap:wrap;gap:7px}
+.nav a,button{border:1px solid var(--line);background:#233e3f;color:var(--ink);border-radius:8px;padding:9px 12px;font:650 12px system-ui;cursor:pointer;text-decoration:none}
+.nav a:hover,button:hover{background:#335552}
+button:focus-visible,a:focus-visible,.card:focus-visible{outline:2px solid #f2f5d8;outline-offset:2px}
+button.active{background:#c6e5c7;color:#172c29;border-color:#e2f3d4}
+.toolbar{pointer-events:auto;display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 11px}
+.toolbar-label{font-size:11px;font-weight:700;white-space:nowrap;color:#d9e9df}
+.swatches{display:flex;flex-wrap:wrap;gap:7px;margin-right:12px}
+.swatch{height:32px;width:32px;padding:0;border-radius:50%;border:2px solid #b9cbc4}
+.swatch.active{outline:2px solid #fff4c7;outline-offset:2px}
+.modes{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-left:auto}
+.help{font-size:11px;color:#bdcec5;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(295px,1fr));gap:11px;height:calc(100vh - 195px);min-height:630px}
+.card{position:relative;pointer-events:auto;touch-action:pan-y;cursor:grab;overflow:hidden;border-radius:12px;border:1px solid #76978c85;background:#e2fff30a;box-shadow:inset 0 1px 0 #fff1}
+.card.dragging{cursor:grabbing}
+.tag{position:absolute;left:10px;top:10px;padding:6px 9px;border-radius:6px;background:#142b2ce8;border:1px solid #a9c5b362;letter-spacing:.09em;font-weight:750;font-size:11px}
+.tech{position:absolute;right:10px;top:10px;padding:6px 8px;border-radius:6px;background:#142b2ce8;border:1px solid #a9c5b362;font-size:10px;font-weight:700;color:#c5ddcf}
+.info{position:absolute;bottom:9px;left:9px;right:9px;border:1px solid #7293896f;border-radius:8px;padding:10px 13px;background:#102224e8;pointer-events:none}
+.info b{display:block;font-size:14px;margin-bottom:4px}
+.info span{display:block;font-size:11px;line-height:1.4;color:#c5d6ce}
+.footer{margin:9px 1px 0;font-size:11px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:#b7c9c4}
+.footer strong{color:#e6f0cf}
+.error{display:none;padding:18px;border:1px solid #e2ab9e;background:#543b3b;color:#fff;pointer-events:auto}
+.no-webgl .error{display:block}
+.no-webgl #stage{display:none}
+@media(max-width:940px){main{padding:12px}.modes{margin-left:0}.grid{height:auto;min-height:0;grid-template-rows:repeat(2,360px)}}
+@media(max-width:640px){.grid{grid-template-columns:1fr;grid-template-rows:repeat(4,350px)}.swatch{width:35px;height:35px}.tech{display:none}}
+</style>
+</head>
+<body>
+<canvas id="stage" aria-hidden="true"></canvas>
+<main>
+<header>
+ <div>
+  <div class="kicker">Hunter: Arxipèlag · Proves Three.js · Segona iteració</div>
+  <h1>Familiar C · quatre versions millorades</h1>
+  <p>Tots quatre parteixen del model C. <strong>Vidres de debò transparents</strong>, seients i volant visibles, rodes sota el volum lateral amb arcs de roda retallats, i para-xocs desplaçats fora de la carrosseria per evitar z-fighting. Arrossega els models per observar-ne els detalls.</p>
+ </div>
+ <nav class="nav" aria-label="Pàgines"><a href="cotxes-civils-proves.html">← Propostes originals</a><a href="proves.html">Totes les proves</a></nav>
+</header>
+<div class="toolbar">
+ <span class="toolbar-label">Pintura</span>
+ <div id="colors" class="swatches" role="group" aria-label="Colors de la carrosseria"></div>
+ <div class="modes" aria-label="Cambra">
+  <button data-view="quarter" class="active" aria-pressed="true">3/4</button>
+  <button data-view="side" aria-pressed="false">Lateral</button>
+  <button data-view="front" aria-pressed="false">Frontal</button>
+  <button data-view="high" aria-pressed="false">Des de dalt</button>
+  <button id="showInterior" aria-pressed="false">Oculta sostre</button>
+  <button id="spin" aria-pressed="false">↻ Gir automàtic</button>
+ </div>
+</div>
+<div id="grid" class="grid">
+ <section class="card" tabindex="0" aria-label="Familiar C1"><span class="tag">C1 · CLÀSSIC</span><span class="tech">2 bancs · vidres clars</span><div class="info"><b>Clàssic setanter</b><span>Muntants fins, graella cromada i formes properes al model original. Els arcs de roda són oberts i visibles.</span></div></section>
+ <section class="card" tabindex="0" aria-label="Familiar C2"><span class="tag">C2 · QUADRAT</span><span class="tech">Sostre alt · porta vertical</span><div class="info"><b>Familiar quadrat</b><span>Habitacle més alt, finestres grans i barres sobre el sostre. Interior en tapisseria clara.</span></div></section>
+ <section class="card" tabindex="0" aria-label="Familiar C3"><span class="tag">C3 · ELEGANT</span><span class="tech">Sostre baix · inclinació</span><div class="info"><b>Familiar elegant</b><span>Teulada baixa, parabrisa més estirat, línia de crom i seients color vi.</span></div></section>
+ <section class="card" tabindex="0" aria-label="Familiar C4"><span class="tag">C4 · UTILITARI</span><span class="tech">Arcs grans · reforços</span><div class="info"><b>Familiar de feina</b><span>Passos de roda més generosos, para-xocs senzills i baca transversal.</span></div></section>
+</div>
+<p class="footer"><span><strong>Comparació a escala comuna</strong> · 4 rodes sota la carrosseria · materials de vidre transparents · interiors low-poly</span><span>Arrossega cap als costats o fes servir ← → quan una targeta estigui seleccionada.</span></p>
+<div class="error" role="alert">Aquest navegador no ha pogut obrir Three.js/WebGL. Prova de tornar a carregar la pàgina amb WebGL activat.</div>
+</main>
+<script src="src/civilian-cars.js"></script>
+<script type="module">
+import * as THREE from './vendor/three-r186.module.mjs';
+import {createFamilyCIteration,FAMILY_C_ITERATIONS} from './src/civilian-car-c-iterations.mjs';
+const $=s=>document.querySelector(s),$$=s=>Array.from(document.querySelectorAll(s));
+const cards=$$('.card'),canvas=$('#stage'),palette=window.HUNTER_CIVILIAN_CARS.colors;
+let renderer,scene,models=[],cameras=[],view='quarter',color=palette[2].hex;
+let angles=[0,0,0,0],spin=false,roofHidden=false,requested=false,previousTime=0;
+const views={quarter:[1,.53,-1],side:[1,.21,0],front:[0,.2,-1],high:[1,1.9,-.8]};
+function buildModels(){
+ if(!scene)return;
+ for(const model of models){
+  scene.remove(model);
+  model.traverse(node=>{if(node.geometry)node.geometry.dispose();if(node.material){
+   const mats=Array.isArray(node.material)?node.material:[node.material];
+   for(const m of mats)if(!disposed.has(m)){m.dispose();disposed.add(m)}
+  }});
+ }
+ models=[];
+ for(let i=0;i<4;i++){
+  const model=createFamilyCIteration(THREE,i,color);
+  model.scale.setScalar(1.10);
+  model.userData.roofPanel=model.getObjectByName('civil-c-roof-panel');
+  if(model.userData.roofPanel)model.userData.roofPanel.visible=!roofHidden;
+  model.rotation.y=angles[i];
+  models.push(model);
+  scene.add(model);
+ }
+ disposed=new WeakSet();
+ requestRender();
+}
+let disposed=new WeakSet();
+function requestRender(){if(requested||!renderer)return;requested=true;requestAnimationFrame(render)}
+function render(now){
+ requested=false;
+ if(!renderer)return;
+ const width=window.innerWidth,height=window.innerHeight,ratio=renderer.getPixelRatio();
+ if(canvas.width!==Math.floor(width*ratio)||canvas.height!==Math.floor(height*ratio))
+  renderer.setSize(width,height,false);
+ const dt=Math.min(.07,previousTime?(now-previousTime)/1000:0);previousTime=now;
+ if(spin)angles=angles.map(a=>a+dt*.39);
+ renderer.setScissorTest(false);renderer.setViewport(0,0,width,height);renderer.clear(true,true,true);
+ renderer.setScissorTest(true);
+ for(let i=0;i<cards.length;i++){
+  const rect=cards[i].getBoundingClientRect();
+  if(rect.bottom<0||rect.top>height||rect.right<0||rect.left>width)continue;
+  const left=Math.max(0,Math.floor(rect.left)),right=Math.min(width,Math.ceil(rect.right));
+  const top=Math.max(0,Math.floor(rect.top)),bottom=Math.min(height,Math.ceil(rect.bottom));
+  const vw=right-left,vh=bottom-top;if(vw<2||vh<2)continue;
+  const camera=cameras[i];
+  const focus=new THREE.Vector3(0,1.55,0);
+  camera.position.copy(focus).add(new THREE.Vector3(...views[view]).normalize().multiplyScalar(11.6));
+  camera.lookAt(focus);camera.aspect=vw/vh;camera.fov=vw<vh?46:39;
+  camera.updateProjectionMatrix();
+  models.forEach((model,j)=>{model.visible=i===j;model.rotation.y=angles[j]});
+  renderer.setViewport(left,height-bottom,vw,vh);
+  renderer.setScissor(left,height-bottom,vw,vh);
+  renderer.render(scene,camera);
+ }
+ renderer.setScissorTest(false);
+ if(spin)requestRender();
+}
+function setColor(hex){
+ color=hex;
+ $$('.swatch').forEach(button=>{
+  const selected=Number(button.dataset.hex)===color;
+  button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));
+ });
+ buildModels();
+}
+for(const item of palette){
+ const b=document.createElement('button');b.className='swatch';b.type='button';
+ b.style.backgroundColor='#'+item.hex.toString(16).padStart(6,'0');
+ b.setAttribute('aria-label',item.name);b.title=item.name;b.dataset.hex=item.hex;
+ b.addEventListener('click',()=>setColor(item.hex));
+ $('#colors').appendChild(b);
+}
+$$('[data-view]').forEach(button=>button.addEventListener('click',()=>{
+ view=button.dataset.view;
+ $$('[data-view]').forEach(b=>{
+  const active=b===button;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));
+ });
+ requestRender();
+}));
+$('#showInterior').addEventListener('click',()=>{
+ roofHidden=!roofHidden;
+ $('#showInterior').classList.toggle('active',roofHidden);
+ $('#showInterior').setAttribute('aria-pressed',String(roofHidden));
+ $('#showInterior').textContent=roofHidden?'Mostra sostre':'Oculta sostre';
+ models.forEach(m=>{const roof=m.userData.roofPanel;if(roof)roof.visible=!roofHidden});
+ requestRender();
+});
+$('#spin').addEventListener('click',()=>{
+ spin=!spin;$('#spin').classList.toggle('active',spin);
+ $('#spin').setAttribute('aria-pressed',String(spin));requestRender();
+});
+cards.forEach((card,i)=>{
+ let held=false,origin=0,initial=0;
+ card.addEventListener('pointerdown',e=>{
+  held=true;origin=e.clientX;initial=angles[i];
+  card.classList.add('dragging');card.setPointerCapture(e.pointerId);
+ });
+ card.addEventListener('pointermove',e=>{
+  if(!held)return;
+  angles[i]=initial+(e.clientX-origin)*.012;requestRender();
+ });
+ const release=()=>{held=false;card.classList.remove('dragging')};
+ card.addEventListener('pointerup',release);
+ card.addEventListener('pointercancel',release);
+ card.addEventListener('keydown',e=>{
+  if(!['ArrowLeft','ArrowRight'].includes(e.key))return;
+  e.preventDefault();angles[i]+=(e.key==='ArrowLeft'?-1:1)*.16;requestRender();
+ });
+});
+window.addEventListener('resize',requestRender);
+window.addEventListener('scroll',requestRender,{passive:true});
+try{
+ renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'low-power'});
+ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7));
+ renderer.setClearColor(0x183339,0);
+ scene=new THREE.Scene();
+ scene.add(new THREE.HemisphereLight(0xe5f0ee,0x31453f,2.2));
+ const sun=new THREE.DirectionalLight(0xfff0dd,2.7);
+ sun.position.set(-7,12,-4);scene.add(sun);
+ const fill=new THREE.DirectionalLight(0x7cbed5,.9);
+ fill.position.set(6,7,8);scene.add(fill);
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(120,120),new THREE.MeshStandardMaterial({color:0x354b47,roughness:1}));
+ floor.rotation.x=-Math.PI/2;floor.position.y=-.21;scene.add(floor);
+ const grid=new THREE.GridHelper(24,12,0x5f8178,0x3c5952);
+ grid.position.y=-.203;scene.add(grid);
+ cameras=cards.map(()=>new THREE.PerspectiveCamera(40,1,.1,100));
+ buildModels();
+ setColor(color);
+}catch(error){
+ console.error('Three.js/WebGL',error);document.body.classList.add('no-webgl');
+}
+</script>
+</body>
+</html>
