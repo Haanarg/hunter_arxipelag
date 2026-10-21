@@ -112,7 +112,8 @@ export function createFamilyCIteration(THREE,variant=0,color=0x4b9fd1){
   geo.rotateY(-Math.PI/2);
   // Extreu cap a l'interior de la carroceria: la roda queda
   // pràcticament arran del lateral però mai fora de l'amplada.
-  const m=add(geo,paint,'paint',side*(hw-.025)+(side<0?-.075:0),0,0);
+  const panelX=side>0?hw:-hw+.075;
+  const m=add(geo,paint,'paint',panelX,0,0);
   m.name='lateral-retallat-'+side;
   // Vores reals de les portes per damunt dels arcs, no cap parafang.
   for(const z of[-.55,1.07]){
@@ -141,7 +142,7 @@ export function createFamilyCIteration(THREE,variant=0,color=0x4b9fd1){
  wheelCentre.add(steering);
  bar([-W*.21,1.47,q.frontBase+.40],[-W*.21,1.65,q.frontBase+.43],.055,0x555c5e,'metal');
  for(const z of [q.frontBase+.77,q.frontBase+2.21]){
-  const wide=W*.38,seatCount=2;
+  const wide=W*.38;
   for(const side of[-1,1]){
    const seatX=side*(W*.21);
    box(wide,.21,.81,q.upholstery,seatX,1.03,z);
