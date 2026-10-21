@@ -2184,6 +2184,17 @@ function ramSpeedFactor(type,barbed){
   if(type==='camio'&&barbed)return 1;
   return barbed?.72:.55;
 }
+// Llindars d'embestida: una maniobra lenta no pot fer esclatar una moto
+// ni destruir un tram de tanca. En marxa enrere cal encara més impuls.
+// El tanc conserva l'excepció de força a qualsevol velocitat.
+function vehicleRamThreshold(v,barbed){
+  if(v.t==='tanc')return 0;
+  const base=v.t==='camio'&&barbed?12:barbed?16:22;
+  return base+(v.v<0?5:0);
+}
+function vehicleCanBreakBarrier(v,barbed){
+  return v.t==='tanc'||Math.abs(v.v)>vehicleRamThreshold(v,barbed);
+}
 function mayRamWhileRecovering(type,barbed,cooldown){
   return cooldown<=0||type==='tanc'||(type==='camio'&&barbed);
 }
@@ -2221,8 +2232,12 @@ function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
       topY=c.m==='a'?(v.alt??0)+2:baseY+Math.max(2,(VS[v.t]||1)*2.2),
       rock=nearbyRock(v.x,v.z,radius*.48,baseY,topY);
     if(rock){
-      collisionDamageVehicle(v,Math.min(5,Math.max(1,Math.ceil(speed/(9*Math.sqrt(c.mass||1))))),1);
-      vehicleImpactFx(rock.x,Math.max(0,hAt(rock.x,rock.z))+.8,rock.z);
+      // Fins i tot a poc a poc, la roca és sòlida; però només els
+      // impactes ràpids treuen vida al vehicle.
+      if(speed>10){
+        collisionDamageVehicle(v,Math.min(5,Math.max(1,Math.ceil(speed/(9*Math.sqrt(c.mass||1))))),1);
+        vehicleImpactFx(rock.x,Math.max(0,hAt(rock.x,rock.z))+.8,rock.z);
+      }
       if(v.destroyed)return;
       const dx=v.x-rock.x,dz=v.z-rock.z,dist=Math.hypot(dx,dz),
         clear=rock.r+radius*.48+.08;
@@ -2246,7 +2261,20 @@ function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
   }
   if(v.envCd>0)return;
   const t=treeAt(v.x,v.z,radius*.48);if(!t)return;
-  if(t.p&&t.alive){const heavy=v.t==='tanc'||v.t==='camio';killPalm(t);if(!heavy)collisionDamageVehicle(v,Math.min(3,Math.max(1,Math.ceil(speed/(18*Math.sqrt(c.mass||1))))),1);if(v.destroyed)return;if(!heavy)v.v*=.9;v.bump=heavy?.06:.18;v.envCd=heavy?.08:.28;msg='Has tombat una palmera.';msgT=1;return}
+  if(t.p&&t.alive){
+    const heavy=v.t==='tanc'||v.t==='camio';
+    if(!heavy&&speed<=10){
+      // Una maniobra a poca velocitat topa amb la palmera, sense
+      // fer-la caure ni perdre PV. Els pesants conserven la força.
+      v.x=oldX;v.z=oldZ;v.v*=.12;v.bump=.12;v.envCd=.15;return;
+    }
+    killPalm(t);
+    if(!heavy)collisionDamageVehicle(v,Math.min(3,Math.max(1,Math.ceil(speed/(18*Math.sqrt(c.mass||1))))),1);
+    if(v.destroyed)return;
+    if(!heavy)v.v*=.9;
+    v.bump=heavy?.06:.18;v.envCd=heavy?.08:.28;
+    msg='Has tombat una palmera.';msgT=1;return;
+  }
   // Les roques ja s'han resolt abans, també per a les embarcacions.
 }
 // Hitboxes físics de les cobertes. Calculats a partir de la mateixa
@@ -2425,9 +2453,9 @@ if((!a||v.alt-g<16)&&!deckCarrier){const footprint=vehicleBox(v,nx,nz,v.hd);for(
   const touch=w.barbed?fenceVehicleContact(w,footprint):null;
   if(w.barbed&&!touch)continue;
   if(w.rammable&&land&&mayRamWhileRecovering(v.t,!!w.barbed,v.envCd)){
-    const speed=Math.abs(v.v),barbed=!!w.barbed,breakSpeed=barbed?8:14,
-          tank=v.t==='tanc',truckFence=v.t==='camio'&&barbed;
-    if(tank||truckFence||speed>breakSpeed){
+    const barbed=!!w.barbed,tank=v.t==='tanc',
+          truckFence=v.t==='camio'&&barbed;
+    if(vehicleCanBreakBarrier(v,barbed)){
       dmgW(w,w.hp);
       if(!tank&&!truckFence)collisionDamageVehicle(v,0,barbed?2:3);
       const hitX=touch?.x??w.cx,hitZ=touch?.z??w.cz;
@@ -2458,7 +2486,7 @@ if(ok){const test=vehicleBox(v,nx,nz,v.hd),hit=vehicleObstacles(v).find(o=>o!==d
   }else{
     v.v*=rel>5?Math.max(.16,.42/ratio):Math.max(.3,.62/ratio);
     if('v'in hit)hit.v*=Math.max(.3,.72/Math.max(.5,ownMass/otherMass));
-    if(rel>6&&v.envCd<=0){
+    if(rel>10&&v.envCd<=0){
       collisionDamageVehicle(v,impactDamage(rel,ownMass,otherMass),1);
       impactVehicle(hit,impactDamage(rel,otherMass,ownMass));
       vehicleImpactFx((v.x+hit.x)/2,Math.max(vehicleY(v),vehicleY(hit))+.5,(v.z+hit.z)/2);
