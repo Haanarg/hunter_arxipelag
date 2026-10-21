@@ -244,8 +244,11 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
   u.senseT=(u.senseT??0)-dt;
   if(u.senseT<=0){
     u.senseT+=ENEMY_SENSE_DT;
-    const bunker=activeBunker,withinBunker=bunker?.basement&&
-      Math.abs(q.x-bunker.x)<bunker.hw&&Math.abs(q.z-bunker.z)<bunker.hd,
+    const bunker=activeBunker,
+      localBunker=bunker?.basement?buildingLocalPoint(bunker,q.x,q.z):null,
+      withinBunker=!!localBunker&&
+        Math.abs(localBunker.x)<bunker.basement.halfX&&
+        Math.abs(localBunker.z)<bunker.basement.halfZ,
       acrossFloor=!!(u.basement||withinBunker&&py<bunker.fy-3.9)&&
         Math.abs((u.gy??u.o.position.y)-py)>4.4,
        sameBasement=!!u.basement&&py<bunker.fy-3.9&&eyeY<bunker.fy-3.9,
