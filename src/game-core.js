@@ -384,7 +384,8 @@ const heavyForward=new THREE.Vector3(0,0,-1);
 // Comparteixen geometria i cada projectil s'orienta segons la trajectòria.
 const gLight=new THREE.CylinderGeometry(.105,.105,.78,8);
 gLight.rotateX(-Math.PI/2);
-const endEl=document.getElementById('end'),sphG=new THREE.SphereGeometry(1,10,8),
+// Anell pla, mai un volum transparent que amagui els murs del món.
+const endEl=document.getElementById('end'),blastRingG=new THREE.RingGeometry(.91,1.08,48),
 mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial({color:0xff7a1a}),mE=new THREE.MeshBasicMaterial({color:0xff4040}),
 // Bales de pistola, franctirador, soldats i tanqueta: petites i blanques.
 // Els projectils explosius mantenen el color i volum original.
