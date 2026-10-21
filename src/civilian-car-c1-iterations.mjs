@@ -68,25 +68,31 @@ export function createFamilyC1Iteration(THREE,variant=0,color=0x4b9fd1){
   return m;
  };
  function wheel(z,side){
-  const x=side*(hw-.28),pivot=new THREE.Group();
-  pivot.position.set(x,wheelY,z);g.add(pivot);
+  const x=side*(hw-.28),steering=new THREE.Group(),
+        axle=new THREE.Group();
+  // La direcció gira al voltant de Y, el pneumàtic roda sobre X.
+  // Mai animam tots dos eixos al mateix Object3D: això feia ballar
+  // les rodes davanteres en combinar velocitat i gir.
+  steering.position.set(x,wheelY,z);g.add(steering);
+  steering.add(axle);
+  axle.userData.radius=wheelR;
   const rubber=mat(0x202428,'rubber');
   const tire=new THREE.Mesh(new THREE.CylinderGeometry(wheelR,wheelR,.38,18,1),rubber);
-  tire.rotation.z=Math.PI/2;pivot.add(tire);
+  tire.rotation.z=Math.PI/2;axle.add(tire);
   const hubMat=mat(0xd6d9d5,'metal');
   for(const s of [-1,1]){
    const hub=new THREE.Mesh(new THREE.CylinderGeometry(.45,.45,.015,14),hubMat);
-   hub.rotation.z=Math.PI/2;hub.position.x=s*.2;pivot.add(hub);
+   hub.rotation.z=Math.PI/2;hub.position.x=s*.2;axle.add(hub);
    const center=new THREE.Mesh(new THREE.CylinderGeometry(.15,.15,.024,12),mat(0x757f83,'metal'));
-   center.rotation.z=Math.PI/2;center.position.x=s*.216;pivot.add(center);
+   center.rotation.z=Math.PI/2;center.position.x=s*.216;axle.add(center);
    for(let a=0;a<6;a++){
     const r=a*Math.PI/3;
     const spoke=new THREE.Mesh(new THREE.BoxGeometry(.025,.32,.046),mat(0x939e9f,'metal'));
-    spoke.position.set(s*.223,Math.cos(r)*.24,Math.sin(r)*.24);spoke.rotation.x=-r;pivot.add(spoke);
+    spoke.position.set(s*.223,Math.cos(r)*.24,Math.sin(r)*.24);spoke.rotation.x=-r;axle.add(spoke);
    }
   }
-  g.userData.wheels.push(pivot);
-  if(z<0)g.userData.steeringPivots.push(pivot);
+  g.userData.wheels.push(axle);
+  if(z<0)g.userData.steeringPivots.push(steering);
  }
  g.userData.wheels=[];
  g.userData.steeringPivots=[];
