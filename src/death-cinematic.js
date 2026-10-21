@@ -89,7 +89,7 @@ function deathReplayPose(v){
   const drop=deathEase((t-.15)/2.85);
   settle=deathEase((t-2.78)/.53);
   lift=8.7*(1-drop);
-  crush=.31*Math.exp(-Math.pow((t-3.04)/.17,2));
+  crush=.38*Math.exp(-Math.pow((t-3.16)/.28,2));
  }else if(shark){
   const sink=deathEase((t-.40)/3.38);
   settle=.17*sink;
@@ -102,7 +102,7 @@ function deathReplayPose(v){
   launch=3.9*deathEase(flight);
   lift=2.4*Math.sin(Math.PI*flight);
   roll=-.48*Math.sin(Math.PI*flight);
-  crush=.2*Math.exp(-Math.pow((t-3.08)/.23,2));
+  crush=.28*Math.exp(-Math.pow((t-3.12)/.32,2));
  }else{
   settle=deathEase((t-.56)/2.7);
   launch=(kind==='bullet'?1.55:.85)*settle;
@@ -115,13 +115,13 @@ function deathReplayPose(v){
  const x=v.originX-v.direction.x*launch,z=v.originZ-v.direction.z*launch;
  const bodyY=v.floor+lift;
  deathPoseProne(pl,{x,y:bodyY,z},v.heading);
- const u=pl.userData,open=deathClamp(settle+(explosion?.35*Math.sin(Math.PI*deathClamp((t-.3)/3.2)):0));
+ const u=pl.userData,open=deathClamp(settle+(explosion ? .35*Math.sin(Math.PI*deathClamp((t-.3)/3.2)) : 0));
  pl.position.set(x-fx*1.05*settle,bodyY+.39*settle,z-fz*1.05*settle);
  pl.rotation.set(-Math.PI/2*settle+extraPitch,v.heading,roll);
  pl.scale.copy(v.previousPlayerPose.scale);
  pl.scale.y*=1-crush;
  if(u.lowerBody)u.lowerBody.rotation.set(0,0,0);
- if(u.upperBody)u.upperBody.rotation.x=shark?.16*Math.sin(t*7)*(1-settle):-.13*Math.sin(Math.PI*settle);
+ if(u.upperBody)u.upperBody.rotation.x=shark ? .16*Math.sin(t*7)*(1-settle) : -.13*Math.sin(Math.PI*settle);
  if(u.al)u.al.rotation.z=-(.18+.47*open);
  if(u.ar)u.ar.rotation.z=.18+.47*open;
  if(u.ael)u.ael.rotation.x=.16+.44*open;
@@ -133,7 +133,7 @@ function deathReplayPose(v){
   if(u.ll)u.ll.rotation.x=.20*Math.sin(t*7)*thrash;
   if(u.lr)u.lr.rotation.x=-.20*Math.sin(t*7+.5)*thrash;
  }
- const focusY=shark?bodyY+1.8:bodyY+(1-settle)*2.2+settle*.75;
+ const focusY=shark ? bodyY+1.8 : bodyY+(1-settle)*2.2+settle*.75;
  v.bodyFocus.set(x,focusY,z);
  if(!v.impactSoundPlayed&&t>=v.impactTime){
   v.impactSoundPlayed=true;
@@ -185,8 +185,9 @@ function deathBuildReaper(THREE){
   new THREE.Vector3(-.86,2.18,.32),new THREE.Vector3(-.90,2.98,.32),
   new THREE.Vector3(-.30,3.61,.32),new THREE.Vector3(1.34,3.85,.32));
  const edgeGeometry=new THREE.BufferGeometry().setFromPoints(cuttingEdge.getPoints(22));
- const edgeMaterial=mat(0xdde4e5,{metalness:.52,roughness:.28});
- part(edgeGeometry,edgeMaterial,0,0,0);
+ const edgeMaterial=new THREE.LineBasicMaterial({color:0xe1e5e3,transparent:true,opacity:.85});
+ owned.push(edgeGeometry,edgeMaterial);
+ g.add(new THREE.Line(edgeGeometry,edgeMaterial));
  return {group:g,owned};
 }
 function deathCreateVoid(v){
@@ -212,26 +213,37 @@ function deathCreateVoid(v){
  v.voidScene=voidScene;v.voidCamera=voidCamera;v.voidPlayer=player;
  v.reaper=reaper;
 }
+// Efectes de l'últim instant: projectil retardat, ona expansiva i
+// anells plans d'impacte/esquitx. No reprenen lògica de combat ni fan mal.
 function deathReplayEffect(v){
- const type=v.cause.kind;
- if(type==='fall')return null;
- const from=v.source.clone(),to=v.hit.clone();
+ const type=v.cause.kind,from=v.source.clone(),to=v.hit.clone();
  const toward=to.clone().sub(from);
  if(toward.lengthSq()<.01)toward.set(0,0,1);
  if(toward.length()>19)from.copy(to).addScaledVector(toward.normalize(),-19);
  let geometry,material,mesh;
- if(type==='bullet'){
+ const ripple=type==='fall'||type==='runover'||type==='shark';
+ if(ripple){
+  geometry=new THREE.RingGeometry(.65,.89,32);
+  material=new THREE.MeshBasicMaterial({
+   color:type==='shark'?0x9cd8e4:0xd1b7a0,
+   side:THREE.DoubleSide,transparent:true,opacity:.58,depthWrite:false
+  });
+  mesh=new THREE.Mesh(geometry,material);
+  mesh.rotation.x=-Math.PI/2;
+  mesh.position.set(v.originX,type==='shark'?v.waterLevel+.12:v.floor+.1,v.originZ);
+ }else if(type==='bullet'){
   geometry=new THREE.SphereGeometry(.15,10,7);
   material=new THREE.MeshBasicMaterial({color:0xffe6b8});
   mesh=new THREE.Mesh(geometry,material);mesh.position.copy(from);
  }else{
-  geometry=new THREE.SphereGeometry(type==='explosion'||type==='vehicleExplosion'?1.05:.54,12,8);
-  material=new THREE.MeshBasicMaterial({color:type==='shark'?0x94cddd:type==='runover'?0xffd6a5:0xff8c55,
+  geometry=new THREE.SphereGeometry(1.05,12,8);
+  material=new THREE.MeshBasicMaterial({color:0xff8c55,
    transparent:true,opacity:.75,depthWrite:false});
   mesh=new THREE.Mesh(geometry,material);mesh.position.copy(v.source);
  }
+ mesh.visible=false;
  scene.add(mesh);
- return {mesh,geometry,material,from};
+ return {mesh,geometry,material,from,ripple};
 }
 function startDeathCinematic(cause=null){
  if(deathCinematic||victoryCinematic)return false;
@@ -262,7 +274,12 @@ function startDeathCinematic(cause=null){
  button.onclick=()=>window.location.reload();
  document.body.appendChild(overlay);
  const onWater=info.kind==='shark'||(cv&&VT[cv.t]?.m==='w');
- const floor=onWater?Math.max(P.y,wy(P.x,P.z,elapsed)-.15):cv?hAt(P.x,P.z):P.y;
+ // En explosions de vehicles o cops en vol, P.y pot quedar a
+ // l'altura de l'helicòpter: l'animació ha d'aterrar al terreny real.
+ const ground=groundAt(P.x,P.z,P.y);
+ const airborneDeath=info.kind==='vehicleExplosion'||info.kind==='explosion'||info.kind==='runover';
+ const floor=onWater?Math.max(P.y,wy(P.x,P.z,elapsed)-.15):
+  (cv||airborneDeath)?ground:P.y;
  const heading=P.hd||0;
  const bodyFocus=new THREE.Vector3(P.x-Math.sin(heading)*.45,floor+.6,
    P.z-Math.cos(heading)*.45);
@@ -270,7 +287,7 @@ function startDeathCinematic(cause=null){
   overlay,shade,replayLabel,causeEl,finale,button,previousVisibility:{},previousFov:cam.fov,
   previousPlayerPose:{position:pl.position.clone(),rotation:pl.rotation.clone(),scale:pl.scale.clone(),visible:pl.visible},
   heading,bodyFocus,originX:P.x,originZ:P.z,floor,waterLevel:wy(P.x,P.z,elapsed),
-  impactTime:info.kind==='fall'?3.01:info.kind==='shark'?.68:info.kind==='runover'?2.9:.62,
+  impactTime:info.kind==='fall'?3.01:info.kind==='shark'? .68 :info.kind==='runover'?2.9:.62,
   impactSoundPlayed:false,lastBell:-1,voidScene:null,reaper:null,replayEffect:null};
  deathCinematic=v;
  deathUi(true);endEl.style.display='none';
@@ -317,17 +334,24 @@ function updateDeathCinematic(dt){
   const fieldOfView=(v.cause.kind==='explosion'||v.cause.kind==='vehicleExplosion'?58:53)-replay*4;
   if(Math.abs(cam.fov-fieldOfView)>.05){cam.fov=fieldOfView;cam.updateProjectionMatrix()}
   if(v.replayEffect){
-   const effect=v.replayEffect,material=effect.material;
-   if(v.cause.kind==='bullet'){
-    const f=deathEase((v.t-.24)/2.18);
-    effect.mesh.visible=v.t>.24&&v.t<2.72;
+   const effect=v.replayEffect,material=effect.material,type=v.cause.kind;
+   if(type==='bullet'){
+    // La bala arriba al personatge JUST quan comença a caure.
+    const f=deathEase((v.t-.09)/.49);
+    effect.mesh.visible=v.t>.09&&v.t<.71;
     effect.mesh.position.copy(effect.from).lerp(v.hit,f);
-    effect.mesh.scale.setScalar(1+.9*f);
+    effect.mesh.scale.setScalar(1+.7*f);
+   }else if(effect.ripple){
+    const impact=type==='shark'?.68:type==='fall'?3.02:3.01;
+    const p=deathClamp((v.t-impact)/1.35);
+    effect.mesh.visible=v.t>=impact&&p<1;
+    effect.mesh.scale.setScalar(.5+5*p);
+    material.opacity=.58*(1-p);
    }else{
-    const p=deathEase((v.t-.38)/2.35);
-    effect.mesh.scale.setScalar(.35+3.8*p);
-    material.opacity=.7*(1-p);
-    effect.mesh.visible=v.t<2.95;
+    const p=deathClamp((v.t-.42)/2.15);
+    effect.mesh.scale.setScalar(.3+4.1*p);
+    material.opacity=.72*(1-p);
+    effect.mesh.visible=v.t>=.42&&p<1;
    }
   }
   if(replay>.8&&v.cause.kind!=='shark')deathFaceCamera(pl,cam.position);
