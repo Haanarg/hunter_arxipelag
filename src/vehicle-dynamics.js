@@ -3,7 +3,7 @@ window.HUNTER_COMBAT_BALANCE=Object.freeze({
  player:20,medkit:8,
  people:Object.freeze({soldier:4,elite:8,general:8}),
  weapons:Object.freeze({knife:2,pistol:2,rifle:2,eliteRifle:2,sniper:10,tankette:2,attackCannon:2,bazooka:8,grenade:10,c4:20,tank:12,heliMissile:12,boatRocket:12,towerLight:2,towerHeavy:12}),
- vehicles:Object.freeze({bici:1,moto:2,cotxe:5,camio:10,tanqueta:12,tanc:20,windsurf:1,barca_rems:2,moto_aquatica:3,llanxa:5,llanxa_coets:10,ferry:15,hover:6,heli:10,heli_combat:15})
+ vehicles:Object.freeze({bici:1,moto:2,cotxe:5,cotxe_civil:4,camio:10,tanqueta:12,tanc:20,windsurf:1,barca_rems:2,moto_aquatica:3,llanxa:5,llanxa_coets:10,ferry:15,hover:6,heli:10,heli_combat:15})
 });
 // Física i resposta dels vehicles. Separat de la geometria visual.
 // Els perfils comparteixen interfície, però terra, aigua i aire tenen inèrcies diferents.
@@ -14,6 +14,7 @@ window.HUNTER_VEHICLE_DYNAMICS=Object.freeze({
     hover:Object.freeze({n:'Hovercraft',m:'wl',a:28,dr:.7,tu:1.7,cd:28,ch:11,response:2.9,steerResponse:3.2,yawResponse:2.8,maxF:31,maxR:10,waterDrift:.34,waterSteerMin:.5,landGrip:.48,life:window.HUNTER_COMBAT_BALANCE.vehicles.hover}),
     ferry:Object.freeze({n:'Ferry',m:'w',a:22,dr:.82,tu:.58,cd:48,ch:22,response:1.35,steerResponse:1.6,yawResponse:1.25,maxF:22,maxR:6,waterDrift:.035,waterSteerMin:.12,mass:10,life:window.HUNTER_COMBAT_BALANCE.vehicles.ferry}),
     cotxe:Object.freeze({n:'Cotxe',m:'l',a:36,dr:.9,tu:1.9,cd:22,ch:8,response:5.2,steerResponse:6.2,yawResponse:6.5,maxF:38,maxR:14,landGrip:.9,steerFade:.42,mass:1,life:window.HUNTER_COMBAT_BALANCE.vehicles.cotxe}),
+    cotxe_civil:Object.freeze({n:'Cotxe civil',m:'l',a:23,dr:.91,tu:1.55,cd:20,ch:8,response:3.8,steerResponse:4.8,yawResponse:4.3,maxF:26,maxR:8,landGrip:.79,steerFade:.52,mass:.93,life:window.HUNTER_COMBAT_BALANCE.vehicles.cotxe_civil}),
     moto:Object.freeze({n:'Moto',m:'l',a:42,dr:.9,tu:2.5,cd:18,ch:7,response:6.4,steerResponse:7.2,yawResponse:8,maxF:43,maxR:12,landGrip:.84,steerFade:.28,mass:.55,life:window.HUNTER_COMBAT_BALANCE.vehicles.moto}),
     bici:Object.freeze({n:'Bicicleta',m:'l',a:14,dr:.8,tu:2.6,cd:14,ch:6,response:7.2,steerResponse:8,yawResponse:9,maxF:17,maxR:6,landGrip:.94,steerFade:.18,mass:.2,life:window.HUNTER_COMBAT_BALANCE.vehicles.bici}),
     barca_rems:Object.freeze({n:'Barca de rems',m:'w',a:20,dr:.82,tu:1.6,cd:25,ch:10,response:3.4,steerResponse:4,yawResponse:3.2,maxF:17,maxR:5,waterDrift:.2,waterSteerMin:.18,life:window.HUNTER_COMBAT_BALANCE.vehicles.barca_rems}),
