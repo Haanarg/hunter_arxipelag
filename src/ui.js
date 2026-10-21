@@ -51,6 +51,7 @@ window.HUNTER_UI=Object.freeze({
         const tens=document.getElementById('bombTens'),ones=document.getElementById('bombOnes'),
               confirm=document.getElementById('bombTimerConfirm');
         const draw=()=>{tens.textContent=String(Math.floor(seconds/10));ones.textContent=String(seconds%10)};
+        draw();
         const changeDigit=(place,step)=>{
           const n=Math.floor(seconds/10),u=seconds%10;
           seconds=place==='tens'?((n+step+6)%6)*10+u:
