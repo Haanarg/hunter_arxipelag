@@ -22,15 +22,23 @@ for(const [type,label] of Object.entries(causes)){
 assert.equal(ctx.deathCauseInfo(null).kind,'impact');
 assert.equal(ctx.deathCauseInfo({type:'unknown'}).kind,'impact');
 assert.equal(ctx.deathStageAt(0),'replay');
-assert.equal(ctx.deathStageAt(3.19),'replay');
-assert.equal(ctx.deathStageAt(3.2),'fade');
-assert.equal(ctx.deathStageAt(5.4),'reaper');
-assert.equal(ctx.deathStageAt(11.7),'finished');
+assert.equal(ctx.deathStageAt(4.49),'replay');
+assert.equal(ctx.deathStageAt(4.5),'fade');
+assert.equal(ctx.deathStageAt(6.3),'reaper');
+assert.equal(ctx.deathStageAt(12.6),'finished');
+// La caiguda de càmera lenta no pot aplicar la postura fixa de la Parca.
+// Només la figura clonada dins l'escena negra pot adoptar-la.
+assert.match(cinematic,/deathPoseProne\(player,\{x:0,y:0,z:\.85\}/);
+assert.doesNotMatch(cinematic,/deathPoseProne\(pl[,)]/);
+assert.doesNotMatch(cinematic,/deathFaceCamera\(pl[,)]/);
+assert.match(cinematic,/v\.motion=deathInitialMotion\(v\)/);
+assert.match(cinematic,/m\.velocity\.y-=\(inWater\?7:24\)\*step/);
+assert.match(cinematic,/pl\.quaternion\.copy\(m\.orientation\)/);
 
 // El final és repetible, els tres tocs de campana no es dupliquen i
 // el botó apareix només quan la Parca ha acabat d'acostar-se.
 const position={x:0,y:0,z:0,set(x,y,z){this.x=x;this.y=y;this.z=z}};
-const v={active:true,finished:false,t:5.4,phase:'reaper',
+const v={active:true,finished:false,t:6.4,phase:'reaper',
  shade:{style:{}},replayLabel:{style:{}},causeEl:{style:{}},
  finale:{style:{}},button:{style:{display:'none'},focus(){this.focused=true}},
  reaper:{group:{position,rotation:{y:0}}},voidPlayer:{rotation:{y:0}},
@@ -88,7 +96,17 @@ assert.match(html,/\.death-new-game/);
  assert.equal(started.hasPlayer,true);
  assert.equal(started.hasReaper,true);
  assert.equal(started.hasEffect,true);
- for(let i=0;i<130;i++)game.run('updateDeathCinematic(.1)');
+ const natural=game.run("({angle:pl.rotation.x,voidAngle:deathCinematic.voidPlayer.rotation.x,hasMotion:!!deathCinematic.motion})");
+ assert.equal(natural.hasMotion,true);
+ assert.ok(Math.abs(natural.angle)<.1,
+   'A la repetició el jugador conserva la rotació prèvia, no es posa bocaterrosa');
+ assert.ok(Math.abs(natural.voidAngle+Math.PI/2)<.01,
+   'Després de la fosa la Parca troba el cos bocaterrosa');
+ game.run('updateDeathCinematic(.1)');
+ const moved=game.run("({delta:deathCinematic.motion.angular.length(),replayAngle:pl.rotation.x,phase:deathCinematic.phase})");
+ assert.equal(moved.phase,'replay');
+ assert.ok(moved.delta>0,'La caiguda conserva impuls angular físic');
+ for(let i=0;i<129;i++)game.run('updateDeathCinematic(.1)');
  const final=game.run("({phase:deathCinematic.phase,active:deathCinematic.active,button:deathCinematic.button.style.display,reaperZ:deathCinematic.reaper.group.position.z})");
  assert.equal(final.phase,'finished');
  assert.equal(final.button,'block');
