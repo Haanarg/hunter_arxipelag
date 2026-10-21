@@ -31,8 +31,8 @@ function deathUi(show){
   else el.style.visibility=v.previousVisibility[id]||'';
  }
 }
-// La postura de mort és la mateixa per a totes les causes: el cos queda
-// bocaterrosa, amb les extremitats relaxades i la cara visible de costat.
+// Només a l'escena de la Parca (després de la fosa): cos bocaterrosa,
+// extremitats relaxades i cara visible de costat, com a la referència.
 // El model mira cap a -Z i té l'origen als peus, per això el compensam
 // longitudinalment quan l'ajau per evitar que el tors surti del pla.
 function deathPoseProne(player,centre,heading){
