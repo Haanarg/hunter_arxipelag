@@ -2,10 +2,44 @@
 window.HUNTER_VEGETATION=Object.freeze({
   create(THREE,{materialProfile,random}){
     const dum=new THREE.Object3D();
+    // La punta de les tres malles de tronc és a la mateixa alçada.
+    // L'última secció del tronc detallat va de t=7/8 a t=1:
+    // prenem la seva tangent en lloc d'inclinar arbitràriament la copa.
+    const PALM_HEIGHT=6.2,TRUNK_BEND=.25,TRUNK_SECTIONS=8;
+    const lastT=(TRUNK_SECTIONS-1)/TRUNK_SECTIONS;
+    const lastDx=-Math.sin(Math.PI*lastT)*PALM_HEIGHT*TRUNK_BEND;
+    const lastDy=PALM_HEIGHT/TRUNK_SECTIONS;
+    const lastAngle=Math.atan2(-lastDx,lastDy);
+    const crownPivot=new THREE.Matrix4().makeTranslation(0,PALM_HEIGHT,0),
+          crownUnpivot=new THREE.Matrix4().makeTranslation(0,-PALM_HEIGHT,0),
+          crownTurn=new THREE.Matrix4(),trunkMatrix=new THREE.Matrix4(),
+          crownMatrix=new THREE.Matrix4();
+    // Variació estable derivada de cada palmera, sense consumir RNG global
+    // ni alterar les llavors, els spawns o la cerca de seeds.
+    const palmVariation=row=>{
+      const x=row[0]||0,z=row[2]||0,r=row[4]||0;
+      const n=Math.sin(x*12.9898+z*78.233+r*37.719)*43758.5453;
+      return n-Math.floor(n);
+    };
+    // Cada fulla té un to propi. Colors de vèrtex compartits a totes les
+    // instàncies: marrons secs puntuals, verds clars, oliva i verd base.
+    const frondColor=(index,count,layer=0)=>{
+      const k=(index*13+count*7+layer*11)%23;
+      const palettes=layer?[
+        0x4e923a,0x82b85e,0x718347,0x947746
+      ]:[
+        0x367d35,0x70af54,0x657849,0x856941
+      ];
+      return new THREE.Color(palettes[k<2?3:k<6?2:k<12?1:0]);
+    };
+    const paintFrond=(colors,color,vertexCount)=>{
+      for(let n=0;n<vertexCount;n++)colors.push(color.r,color.g,color.b);
+    };
     const palmCrown=(radius,rise,segments=8,phase=0)=>{
-      const pos=[];
+      const pos=[],colors=[];
       for(let j=0;j<segments;j++){
-        const a=phase+j*Math.PI*2/segments;
+        const a=phase+j*Math.PI*2/segments,
+              tint=frondColor(j,segments,rise>0?1:0);
         for(let k=0;k<4;k++){
           const t=k/4,u=(k+1)/4;
           const point=(v,side)=>{
@@ -17,11 +51,13 @@ window.HUNTER_VEGETATION=Object.freeze({
             ]
           };
           const p0=point(t,-1),p1=point(t,1),p2=point(u,-1),p3=point(u,1);
-          pos.push(...p0,...p1,...p2,...p1,...p3,...p2)
+          pos.push(...p0,...p1,...p2,...p1,...p3,...p2);
+          paintFrond(colors,tint,6);
         }
       }
       const g=new THREE.BufferGeometry();
       g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+      g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
       g.computeVertexNormals();
       return g
     };
@@ -58,9 +94,9 @@ window.HUNTER_VEGETATION=Object.freeze({
     // Caps simplificats sense transparències, billboards ni actualitzacions
     // per fotograma. Els grups distant són InstancedMesh per sector.
     const reducedCrown=(fronds,radius=4.65)=>{
-      const pos=[];
+      const pos=[],colors=[];
       for(let j=0;j<fronds;j++){
-        const a=j*Math.PI*2/fronds;
+        const a=j*Math.PI*2/fronds,tint=frondColor(j,fronds);
         const point=(v,side)=>{
           const len=radius*v,width=Math.sin(v*Math.PI)*.62*side;
           const y=6.35+Math.sin(v*Math.PI)*.7-v*v*1.65;
@@ -72,19 +108,22 @@ window.HUNTER_VEGETATION=Object.freeze({
                 a0=point(v0,-1),a1=point(v0,1),
                 b0=point(v1,-1),b1=point(v1,1);
           pos.push(...a0,...a1,...b0,...a1,...b1,...b0);
+          paintFrond(colors,tint,6);
         }
       }
       const geo=new THREE.BufferGeometry();
       geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+      geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
       geo.computeVertexNormals();
       return geo;
     };
     const crossedCrown=()=>{
       // Tres bandes planes creuades: 6 triangles en total i silueta verda
       // recognoscible de qualsevol angle, sense orientar-les a la càmera.
-      const pos=[],r=4.25;
+      const pos=[],colors=[],r=4.25;
       for(let i=0;i<3;i++){
         const a=i*Math.PI/3,dx=Math.cos(a),dz=Math.sin(a),
+              tint=new THREE.Color(i===0?0x45853b:0x739d53),
               wx=-dz*.72,wz=dx*.72;
         const left=[-dx*r+wx,4.95,-dz*r+wz],
               right=[dx*r+wx,4.95,dz*r+wz],
@@ -92,9 +131,11 @@ window.HUNTER_VEGETATION=Object.freeze({
               right2=[dx*r-wx,4.95,dz*r-wz],
               middle=[0,6.6,0];
         pos.push(...left,...middle,...left2,...right2,...middle,...right);
+        paintFrond(colors,tint,6);
       }
       const geo=new THREE.BufferGeometry();
       geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+      geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
       geo.computeVertexNormals();
       return geo;
     };
@@ -141,9 +182,9 @@ window.HUNTER_VEGETATION=Object.freeze({
     // programes i materials nous innecessàriament.
     const cache=new Map();
     const mat=(color,opts={})=>{
-      const key=color+':'+(opts.doubleSide?1:0)+':'+(opts.profile||'organic');
+      const key=color+':'+(opts.doubleSide?1:0)+':'+(opts.vertexColors?1:0)+':'+(opts.profile||'organic');
       if(!cache.has(key))cache.set(key,new THREE.MeshStandardMaterial({
-        color:0xffffff,flatShading:true,
+        color:0xffffff,flatShading:true,vertexColors:!!opts.vertexColors,
         side:opts.doubleSide?THREE.DoubleSide:THREE.FrontSide,
         ...materialProfile(opts.profile||'organic')
       }));
@@ -154,16 +195,32 @@ window.HUNTER_VEGETATION=Object.freeze({
       const m=new THREE.InstancedMesh(geo,mat(color,opts),arr.length);
       arr.forEach((row,i)=>{
         const [x,y,z,s,r]=row;
-        dum.position.set(x,y,z);
-        dum.rotation.set(
-          opts.tilt?random(-.04,.04):0,
-          r,
-          opts.tilt?random(-.04,.04):0
-        );
-        if(scale)scale(dum,s,row);else dum.scale.setScalar(s);
-        dum.updateMatrix();
-        m.setMatrixAt(i,dum.matrix);
-        m.setColorAt(i,colorFor(color,row));
+        if(opts.crownTrunk){
+          // Alineació amb el tronc real (inclosa la seva lleugera
+          // inclinació aleatòria). El gir pivota a la punta del tronc:
+          // la copa no es desplaça ni se separa quan s'inclina.
+          opts.crownTrunk.getMatrixAt(opts.trunkIndices[i],trunkMatrix);
+          const strength=.5+.3*palmVariation(row),
+                deviation=(palmVariation([z,y,x,s,r])-.5)*.14,
+                tilt=lastAngle*strength+deviation;
+          crownTurn.makeRotationZ(tilt);
+          crownMatrix.copy(trunkMatrix).multiply(crownPivot)
+            .multiply(crownTurn).multiply(crownUnpivot);
+          m.setMatrixAt(i,crownMatrix);
+        }else{
+          dum.position.set(x,y,z);
+          dum.rotation.set(
+            opts.tilt?random(-.04,.04):0,
+            r,
+            opts.tilt?random(-.04,.04):0
+          );
+          if(scale)scale(dum,s,row);else dum.scale.setScalar(s);
+          dum.updateMatrix();
+          m.setMatrixAt(i,dum.matrix);
+        }
+        // Es mantenen tres tirades de color per instància com abans.
+        // La variació individual de les fulles viu als vertexColors.
+        m.setColorAt(i,colorFor(opts.vertexColors?0xf2f5e9:color,row));
       });
       m.computeBoundingSphere();
       m.castShadow=false;
@@ -190,7 +247,7 @@ window.HUNTER_VEGETATION=Object.freeze({
     };
     const cloneCrowns=(parent,geo,rows,ch,refs)=>{
       if(!rows.length)return null;
-      const mesh=new THREE.InstancedMesh(geo,mat(0x2d9f36,{doubleSide:true}),rows.length),
+      const mesh=new THREE.InstancedMesh(geo,mat(0xffffff,{doubleSide:true,vertexColors:true}),rows.length),
             matrix=new THREE.Matrix4(),color=new THREE.Color();
       for(let i=0;i<rows.length;i++){
         const ref=refs[rows[i].i],source=ch.primary[ref.variant];
@@ -232,9 +289,11 @@ window.HUNTER_VEGETATION=Object.freeze({
         ch.primary=[];ch.secondary=[];
         for(let v=0;v<3;v++){
           const selected=rows.filter(p=>p.vi===v);
-          const crowns=selected.map(p=>p.row);
-          const primary=inst(root,geometry.palmVariants[v].crown,crowns,0x2d9f36,null,{doubleSide:true});
-          const secondary=inst(root,geometry.palmVariants[v].crown2,crowns,0x65c83f,null,{doubleSide:true});
+          const crowns=selected.map(p=>p.row),
+                crownOpts={doubleSide:true,vertexColors:true,crownTrunk:ch.trunk,
+                  trunkIndices:selected.map(p=>variantMap[p.i].trunkIndex)};
+          const primary=inst(root,geometry.palmVariants[v].crown,crowns,0xffffff,null,crownOpts);
+          const secondary=inst(root,geometry.palmVariants[v].crown2,crowns,0xffffff,null,crownOpts);
           ch.primary.push(primary);ch.secondary.push(secondary);
           selected.forEach((p,i)=>{variantMap[p.i].index=i});
         }
