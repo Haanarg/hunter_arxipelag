@@ -1020,7 +1020,11 @@ function updPj(dt){
       const t=k/sampleN;if(t>=bestT)break;
       const x=x0+sx*t,y=y0+sy*t,z=z0+sz*t,ground=bunkerProjectileSurface(x,z,y)+.04;
       if(y<ground){consider(t,'terrain',null);break}
-      const tree=treeAt(x,z,.5);
+      // Les palmeres exteriors no bloquegen bales que viatgen sota
+      // el forjat del búnquer, encara que la seva ombra vertical hi coincideixi.
+      const underground=activeBunker?.basement&&y<activeBunker.fy-1&&
+        Math.abs(x-activeBunker.x)<19&&Math.abs(z-activeBunker.z)<16;
+      const tree=underground?null:treeAt(x,z,.5);
       if(tree&&y<Math.max(hAt(x,z),0)+(tree.p?6.5:1.5)){consider(t,'tree',tree);break}
     }
 
