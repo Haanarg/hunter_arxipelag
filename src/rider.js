@@ -87,7 +87,7 @@ window.HUNTER_RIDER=Object.freeze({
         limbBetween(limbs[0],leftShoulder,oldElbow);
         limbBetween(limbs[1],oldElbow,oldHand);
       }
-      const recoil=Math.exp(-u.shotAge*18)*(rowing?.045:.095);
+      const recoil=Math.exp(-u.shotAge*18)*(rowing ? .045 : .095);
       pistol.position.copy(hand).add(vec(0,0,recoil));
       // La pistola apunta a proa (-Z) quan el remador s'hi gira.
       pistol.quaternion.identity();
@@ -99,7 +99,7 @@ window.HUNTER_RIDER=Object.freeze({
     // l'arma segons l'autoapuntat del sistema existent.
     const firePistol=(v,autoAim)=>{
       if(!v||!g.visible)return null;
-      const u=g.userData;u.shotTime=v.t==='barca_rems'?.52:.34;u.shotAge=0;
+      const u=g.userData;u.shotTime=v.t==='barca_rems' ? .52 : .34;u.shotAge=0;
       // No forçam shotBlend: l'animació del remador s'interpola en update().
       if(v.t!=='barca_rems')u.shotBlend=Math.max(u.shotBlend,.82);
       u.pistolAim=null;
