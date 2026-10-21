@@ -172,22 +172,22 @@ function deathBuildReaper(THREE){
   sleeve.rotation.z=side*.42;
   part(new THREE.SphereGeometry(.13,8,6),bone,side*.95,1.46,.27);
  }
- const shaft=part(new THREE.CylinderGeometry(.065,.085,3.6,8),trim,1.05,2.07,.3);
- shaft.rotation.z=-.16;
+ const shaft=part(new THREE.CylinderGeometry(.065,.085,4.45,8),trim,1.45,2.395,.3);
+ shaft.rotation.z=0;
  // Fulla plana i corbada com la referència: NOMÉS el perfil de la
  // fulla, no el mànec de la fotografia. La silueta afuada no és un tub.
  const blade=new THREE.Shape();
  // El tall apunta cap a fora (dreta) en lloc de travessar el cap.
  // Mirall del perfil original respecte a l'eix vertical del mànec.
- blade.moveTo(1.34,3.85);
- blade.bezierCurveTo(1.88,4.03,3.00,3.91,3.54,2.18);
- blade.bezierCurveTo(3.58,2.98,2.98,3.61,1.34,3.85);
+ blade.moveTo(1.45,4.62);
+ blade.bezierCurveTo(2.02,4.83,3.15,4.70,3.73,2.96);
+ blade.bezierCurveTo(3.78,3.77,3.16,4.40,1.45,4.62);
  const bladeMesh=part(new THREE.ShapeGeometry(blade,22),steel,0,0,.30);
  bladeMesh.material.side=THREE.DoubleSide;
  // Un fil clar al tall interior, en el mateix pla, sense gruix cilíndric.
  const cuttingEdge=new THREE.CubicBezierCurve3(
-  new THREE.Vector3(3.54,2.18,.32),new THREE.Vector3(3.58,2.98,.32),
-  new THREE.Vector3(2.98,3.61,.32),new THREE.Vector3(1.34,3.85,.32));
+  new THREE.Vector3(3.73,2.96,.32),new THREE.Vector3(3.78,3.77,.32),
+  new THREE.Vector3(3.16,4.40,.32),new THREE.Vector3(1.45,4.62,.32));
  const edgeGeometry=new THREE.BufferGeometry().setFromPoints(cuttingEdge.getPoints(22));
  const edgeMaterial=new THREE.LineBasicMaterial({color:0xe1e5e3,transparent:true,opacity:.85});
  owned.push(edgeGeometry,edgeMaterial);
