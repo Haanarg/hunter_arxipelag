@@ -352,16 +352,29 @@ function boom(x,y,z,r,dmg,own,source=null){
   if(dealt){b.rhp-=dealt;if(b.rhp<=0)roofBreak(b)}
  }
 }
-function plant(){if(over||cv||swimming||!inv.expl)return;if(--inv.expl<=0)delete inv.expl;setDis(false);
-const o=window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true);
-// El display és a la cara local -Z. Amb el gir oposat al del jugador
-// queda de cara a qui acaba de plantar la càrrega.
-o.rotation.y=P.hd+Math.PI;
-// La posem davant dels peus, no sota el personatge, perquè el visor es vegi.
-const forward=1.35,x=P.x-Math.sin(P.hd)*forward,z=P.z-Math.cos(P.hd)*forward,
-      y=groundAt(x,z,P.y)+.24;
-o.position.set(x,y,z);world.add(o);
-bombs.push({x,y,z,t:3,o});msg='Bomba col·locada: 3 s!';msgT=2}
+function plant(seconds=3){
+ // La configuració surt sempre del LED. La validació també protegeix
+ // l'acció davant clics repetits, entrada invàlida o una partida acabada.
+ if(over||cv||swimming||playerFall||playerEject||!inv.expl||
+    !Number.isInteger(seconds)||seconds<0||seconds>59)return false;
+ if(--inv.expl<=0)delete inv.expl;setDis(false);
+ const o=window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true,seconds);
+ // El display és a la cara local -Z. Amb el gir oposat al del jugador
+ // queda de cara a qui acaba de plantar la càrrega.
+ o.rotation.y=P.hd+Math.PI;
+ // La posem davant dels peus, no sota el personatge, perquè el visor es vegi.
+ const forward=1.35,x=P.x-Math.sin(P.hd)*forward,z=P.z-Math.cos(P.hd)*forward,
+       y=groundAt(x,z,P.y)+.24;
+ o.position.set(x,y,z);world.add(o);
+ if(seconds===0){
+  // 00 és una detonació immediata, no un compte enrere artificial d'1 s.
+  boom(x,y,z,48,COMBAT_BALANCE.weapons.c4,'b');
+  world.remove(o);
+ }else bombs.push({x,y,z,t:seconds,o});
+ msg=seconds===0?'Bomba detonada!':
+   'Bomba col·locada: '+String(seconds).padStart(2,'0')+' s!';
+ msgT=2;return true;
+}
 // La filferrada és permeable a la vista i al foc lleuger, però segueix
 // impedint els atacs cos a cos quan ignoreBarbed=false.
 function sight(x,z,tx,tz,y,ignoreBarbed=true){const d=Math.hypot(tx-x,tz-z),n=Math.max(1,Math.ceil(d/1.5));for(let k=1;k<n;k++){const xx=x+(tx-x)*k/n,zz=z+(tz-z)*k/n;if(wallCandidates(xx,zz).some(w=>!w.open&&(!ignoreBarbed||!w.barbed)&&y>w.y0&&y<w.y1&&xx>w.x0&&xx<w.x1&&zz>w.z0&&zz<w.z1))return false}return true}
