@@ -7,7 +7,8 @@ window.HUNTER_CIVILIAN_CARS=Object.freeze({
     Object.freeze({name:'Blau',hex:0x4b9fd1}),
     Object.freeze({name:'Groc',hex:0xe4b83f}),
     Object.freeze({name:'Verd',hex:0x609969}),
-    Object.freeze({name:'Marró',hex:0x896244})
+    Object.freeze({name:'Marró',hex:0x896244}),
+    Object.freeze({name:'Negre',hex:0x181c1e})
   ]),
   jetskiColors:Object.freeze([
     Object.freeze({name:'Vermell',hex:0xc94e3f}),
@@ -15,7 +16,8 @@ window.HUNTER_CIVILIAN_CARS=Object.freeze({
     Object.freeze({name:'Groc viu',hex:0xffdf18}),
     Object.freeze({name:'Rosa magenta',hex:0xef35a8}),
     Object.freeze({name:'Blau elèctric',hex:0x228fef}),
-    Object.freeze({name:'Taronja',hex:0xff7b19})
+    Object.freeze({name:'Taronja',hex:0xff7b19}),
+    Object.freeze({name:'Negre',hex:0x181c1e})
   ]),
   variants:Object.freeze([
     Object.freeze({name:'Berlina clàssica',description:'Sedan de tres volums, graella cromada i fars rectangulars, inspirat en la fotografia.',length:5.35,width:2.88,roof:2.67,front:.19,rear:.18,roofRear:.11}),
