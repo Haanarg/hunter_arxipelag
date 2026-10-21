@@ -493,7 +493,10 @@ const add=(t,x,z,a,meta={})=>{
     colors=window.HUNTER_CIVILIAN_CARS,
     palette=jetski?colors.jetskiColors:colors.colors;
   const color=(civilian||bicycle||jetski)?palette[Math.floor(R()*palette.length)].hex:undefined;
-  const variant=civilian?Math.floor(R()*colors.variants.length):undefined;
+  // Conservam la tirada de la llavor antiga, però tots els cotxes civils
+  // fan servir el model C1A seleccionat (variant 0).
+  if(civilian)R();
+  const variant=civilian?0:undefined;
   const appearance={color:meta.color??color,variant:meta.variant??variant};
   const o=seedSearchMode?seedVehicleStub(t):mkV(t,appearance),c=VT[t],
     surface=Math.max(0,hAt(x,z));
