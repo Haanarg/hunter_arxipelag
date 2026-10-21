@@ -1022,8 +1022,9 @@ function updPj(dt){
       if(y<ground){consider(t,'terrain',null);break}
       // Les palmeres exteriors no bloquegen bales que viatgen sota
       // el forjat del búnquer, encara que la seva ombra vertical hi coincideixi.
-      const underground=activeBunker?.basement&&y<activeBunker.fy-1&&
-        Math.abs(x-activeBunker.x)<19&&Math.abs(z-activeBunker.z)<16;
+      const p=activeBunker?.basement?buildingLocalPoint(activeBunker,x,z):null;
+      const underground=!!p&&y<activeBunker.fy-1&&
+        Math.abs(p.x)<19&&Math.abs(p.z)<16;
       const tree=underground?null:treeAt(x,z,.5);
       if(tree&&y<Math.max(hAt(x,z),0)+(tree.p?6.5:1.5)){consider(t,'tree',tree);break}
     }
