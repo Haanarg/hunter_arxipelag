@@ -2647,6 +2647,7 @@ if(scopeNow){
     Math.abs(buildingLocalPoint(activeBunker,P.x,P.z).x)<19&&
     Math.abs(buildingLocalPoint(activeBunker,P.x,P.z).z)<16&&
     P.y<activeBunker.fy-2;
+  if(activeBunker?.basement)for(const slab of activeBunker.basement.upperSlabMeshes)slab.visible=!bunkerBelow;
   if(bunkerBelow){
     const b=activeBunker,p=buildingLocalPoint(b,w.x,w.z);
     // Evitam que la càmera travessi els murs exteriors del soterrani.
