@@ -2797,7 +2797,10 @@ if(scopeNow){
   const descending=!!local&&Math.abs(local.x-stair.x)<stair.width/2+.45&&
     local.z>=stair.zBottom-.5&&local.z<=stair.zTop+.4&&P.y<b.fy+.04;
   const bunkerBelow=!!inside&&(P.y<b.fy-1||descending);
-  if(b?.basement)for(const slab of b.basement.upperSlabMeshes)slab.visible=!bunkerBelow;
+  // El forjat ÉS el sostre del soterrani. No s'ha d'amagar:
+  // ara que la càmera és sempre a sota, es veu el plafó i no es
+  // produeix cap obstrucció; els llums queden ancorats al sostre real.
+  if(b?.basement)for(const slab of b.basement.upperSlabMeshes)slab.visible=true;
   if(bunkerBelow){
     // Càmera curta a nivell de persona; mai per sobre del sostre interior.
     const targetEye=new THREE.Vector3(P.x,
