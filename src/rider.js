@@ -42,7 +42,8 @@ window.HUNTER_RIDER=Object.freeze({
       u.shotTime=Math.max(0,u.shotTime-dt);
       u.shotAge=Math.min(10,u.shotAge+dt);
       const active=u.shotTime>0;
-      u.shotBlend+=(Number(active)-u.shotBlend)*(1-Math.exp(-18*dt));
+      // Transicions suaus: el tret ja no força un gir instantani del tronc.
+      u.shotBlend+=(Number(active)-u.shotBlend)*(1-Math.exp(-(active?8:9)*dt));
       if(!active&&u.shotBlend<.01){
         pistol.visible=false;pistolParts.flash.visible=false;return;
       }
@@ -53,23 +54,22 @@ window.HUNTER_RIDER=Object.freeze({
       // A la barca l'arma s'ha de veure a escala amb el remador.
       pistol.scale.setScalar(rowing?.56:.92);
       if(rowing){
-        // Remant mira a popa (PI): gira només 90° a la dreta
-        // fins al perfil (PI/2), i la mà dreta dispara cap a proa.
-        // No giram ni el buc ni la pelvis.
-        torso.rotation.y=Math.PI-Math.PI/2*u.shotBlend;
+        // El remador només gira un poc les espatlles (uns 30°),
+        // sense retorçar el tronc ni passar de cop al perfil.
+        torso.rotation.y=Math.PI-.52*u.shotBlend;
       }else torso.rotation.y+=twist*u.shotBlend;
       const shoulder=shoulderAt(1),
             forearm=limbs[3],
             restingHand=new THREE.Vector3(0,-forearm.userData.restLength*forearm.scale.y,0)
               .applyQuaternion(forearm.quaternion).add(forearm.position),
-            // Quan el tors està de perfil la proa és la seva dreta.
-            // El braç dret apunta cap a -Z sense haver de retorçar-lo.
-            reach=rowing?vec(.58*sc,-.29,-.88*sc):
+            // El braç dret surt del rem amb una extensió curta cap a proa.
+            // Evitam que travessi el pit o arribi a l'altre costat del buc.
+            reach=rowing?vec(-.08*sc,-.26,-.48*sc):
               vec(.25*sc,-.29,-1.13*sc);
       const target=shoulder.clone().add(reach),
             hand=restingHand.lerp(target,u.shotBlend),
             elbow=shoulder.clone().lerp(hand,.57);
-      elbow.y-=.12;elbow.x+=rowing?-.12*sc:.12*sc;
+      elbow.y-=.12;elbow.x+=rowing?-.05*sc:.12*sc;
       limbBetween(limbs[2],shoulder,elbow);limbBetween(limbs[3],elbow,hand);
       // La mà esquerra solta el rem durant el gir de cintura i
       // acompanya el tronc, sense estirar el braç a l'altre costat.
@@ -82,11 +82,12 @@ window.HUNTER_RIDER=Object.freeze({
         const oldHand=vec(0,-limbs[1].userData.restLength*limbs[1].scale.y,0)
           .applyQuaternion(limbs[1].quaternion).add(limbs[1].position);
         const oldElbow=limbs[1].position.clone();
-        oldHand.lerp(leftHand,u.shotBlend);oldElbow.lerp(leftElbow,u.shotBlend);
+        // La mà esquerra continua pràcticament sobre el rem.
+        oldHand.lerp(leftHand,u.shotBlend*.2);oldElbow.lerp(leftElbow,u.shotBlend*.2);
         limbBetween(limbs[0],leftShoulder,oldElbow);
         limbBetween(limbs[1],oldElbow,oldHand);
       }
-      const recoil=Math.exp(-u.shotAge*18)*.095;
+      const recoil=Math.exp(-u.shotAge*18)*(rowing?.045:.095);
       pistol.position.copy(hand).add(vec(0,0,recoil));
       // La pistola apunta a proa (-Z) quan el remador s'hi gira.
       pistol.quaternion.identity();
@@ -98,8 +99,10 @@ window.HUNTER_RIDER=Object.freeze({
     // l'arma segons l'autoapuntat del sistema existent.
     const firePistol=(v,autoAim)=>{
       if(!v||!g.visible)return null;
-      const u=g.userData;u.shotTime=.34;u.shotAge=0;
-      u.shotBlend=Math.max(u.shotBlend,.82);u.pistolAim=null;
+      const u=g.userData;u.shotTime=v.t==='barca_rems'?.52:.34;u.shotAge=0;
+      // No forçam shotBlend: l'animació del remador s'interpola en update().
+      if(v.t!=='barca_rems')u.shotBlend=Math.max(u.shotBlend,.82);
+      u.pistolAim=null;
       aimOneHand(v,0);
       g.updateWorldMatrix(true,true);
       let origin=pistol.localToWorld(muzzleLocal.clone());
