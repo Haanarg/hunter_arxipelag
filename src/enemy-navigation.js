@@ -7,7 +7,7 @@ const enemyGroundAt=(u,x,z)=>u.basement?u.gy:enemyIsVehicle(u)?hAt(x,z):groundAt
 function enemyWallBox(w){return{x:(w.x0+w.x1)/2,z:(w.z0+w.z1)/2,w:w.x1-w.x0,d:w.z1-w.z0,hd:0}}
 function enemySolidAt(u,x,z,hd,route=false){
   const veh=enemyIsVehicle(u),r=route?enemyRouteRadius(u):veh?enemyRouteRadius(u):enemyBodyRadius(u),y=u.gy??enemyGroundAt(u,x,z);
-  if(Math.abs(x)>H-r||Math.abs(z)>H-r||!u.basement&&enemyGroundAt(u,x,z)<-.8||treeHit(x,z,r))return false;
+  if(Math.abs(x)>H-r||Math.abs(z)>H-r||!u.basement&&(enemyGroundAt(u,x,z)<-.8||treeHit(x,z,r)))return false;
   const box=veh&&!route?vehicleBox(u,x,z,hd):null;
   if(box){box.w+=.4;box.d+=.4}
   for(const w of wallCandidates(x,z,r)){
@@ -82,7 +82,7 @@ function enemyFindPath(u,tx,tz){
       if(!valid.has(k))valid.set(k,enemySolidAt(u,x,z,hd,true));
       if(!valid.get(k))continue;
       const r=enemyRouteRadius(u),mx=(n.x+x)/2,mz=(n.z+z)/2,y=u.gy??enemyGroundAt(u,mx,mz);
-      if(treeHit(mx,mz,r)||!u.basement&&enemyGroundAt(u,mx,mz)<-.8||
+      if((!u.basement&&treeHit(mx,mz,r))||!u.basement&&enemyGroundAt(u,mx,mz)<-.8||
          (!enemyIsVehicle(u)&&!enemySolidAt(u,mx,mz,hd,true))||
          wallCandidates(mx,mz,r+step).some(w=>!w.open&&w.playerBlock!==false&&w.y1>=y+.15&&w.y0<=y+4&&segmentAabbT(n.x,0,n.z,x,0,z,w.x0-r,w.x1+r,-1,1,w.z0-r,w.z1+r)!=null))continue;
       const h=heur(x,z),next={ix,iz,x,z,g,h,f:g+h,parent:n};nodes.set(k,next);push(next);
