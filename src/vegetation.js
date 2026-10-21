@@ -30,7 +30,7 @@ window.HUNTER_VEGETATION=Object.freeze({
       ]:[
         0x367d35,0x70af54,0x657849,0x856941
       ];
-      return new THREE.Color(palettes[k<2?3:k<6?2:k<12?1:0]);
+      return new THREE.Color(palettes[k<2?3:k<5?2:k<9?1:0]);
     };
     const paintFrond=(colors,color,vertexCount)=>{
       for(let n=0;n<vertexCount;n++)colors.push(color.r,color.g,color.b);
