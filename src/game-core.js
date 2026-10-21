@@ -714,10 +714,45 @@ updFA(dt)}
 // vegetació
 const TG=new Map();
 function treeHit(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L)if(!(palmsDisabled&&t.p)&&Math.hypot(x-t.x,z-t.z)<t.r+r)return true}return false}
-function treePush(){const r0=.5,cx=Math.floor(P.x/16),cz=Math.floor(P.z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L){if(palmsDisabled&&t.p)continue;
-  if(t.rock&&(P.y>t.topY+.6||P.y+1.5<t.bottomY))continue;
-  const dx=P.x-t.x,dz=P.z-t.z,d=Math.hypot(dx,dz),m=t.r+r0;
-  if(d<m&&d>.001){P.x=t.x+dx/d*m;P.z=t.z+dz/d*m}}}}
+// Col·lisió del jugador amb la silueta REAL del tronc corbat, no només
+// amb el cercle de l'arrel. La mateixa corba sinusoïdal s'usa a vegetation.js;
+// la rotació i l'escala provenen de la mateixa palmera determinista.
+function palmPush(t,r0){
+  const height=6.2*t.s,reach=t.r+r0+1.65*t.s;
+  if(P.y>t.y+height+.6||P.y+2<t.y)return;
+  if(Math.abs(P.x-t.x)>reach||Math.abs(P.z-t.z)>reach)return;
+  const yawCos=Math.cos(t.yaw),yawSin=Math.sin(t.yaw);
+  let overlap=0,nx=0,nz=0;
+  // El personatge ocupa un segment vertical: comprovam peus, malucs,
+  // pit i espatlles, sense crear col·liders per a cada palmera de l'illa.
+  for(const offset of [.3,.8,1.3,1.85]){
+    const y=P.y+offset;
+    if(y<t.y||y>t.y+height)continue;
+    const q=(y-t.y)/height;
+    const bend=height*.25*Math.sin(Math.PI*q);
+    const trunkX=t.x+bend*yawCos,trunkZ=t.z-bend*yawSin;
+    const dx=P.x-trunkX,dz=P.z-trunkZ,d=Math.hypot(dx,dz);
+    const radius=r0+t.r*(1-.43*q)+.04*t.s;
+    if(d<radius&&radius-d>overlap){
+      overlap=radius-d;
+      if(d>.0001){nx=dx/d;nz=dz/d}
+      else {nx=Math.cos(P.hd);nz=-Math.sin(P.hd)}
+    }
+  }
+  if(overlap>0){P.x+=nx*overlap;P.z+=nz*overlap}
+}
+function treePush(){
+  const r0=.5,cx=Math.floor(P.x/16),cz=Math.floor(P.z/16);
+  for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){
+    const L=TG.get((cx+a)+','+(cz+b));if(!L)continue;
+    for(const t of L){
+      if(t.p){if(!palmsDisabled)palmPush(t,r0);continue}
+      if(t.rock&&(P.y>t.topY+.6||P.y+1.5<t.bottomY))continue;
+      const dx=P.x-t.x,dz=P.z-t.z,d=Math.hypot(dx,dz),m=t.r+r0;
+      if(d<m&&d>.001){P.x=t.x+dx/d*m;P.z=t.z+dz/d*m}
+    }
+  }
+}
 function nearbyRock(x,z,r=0,baseY=-Infinity,topY=Infinity){
  const cx=Math.floor(x/16),cz=Math.floor(z/16),
    steps=Math.max(1,Math.ceil((r+8)/16));
