@@ -955,21 +955,23 @@ function addBunkerBasement(b){
   }
   const random=mul((seed^Math.imul(Math.round(b.x),73856093)^Math.imul(Math.round(b.z),19349663)^0x6e7b32e1)>>>0);
   const variant=Math.floor(random()*4),floorY=b.fy-9.15,
-        divisions=[-5+(variant%2)*1.7,4.3+Math.floor(variant/2)*1.6],
-        westDoors=[-10.1+(variant%2)*.7,-.25+Math.floor(variant/2)*1.1,10.1-(variant%2)],
-        eastDivider=0,
-        // Dos accessos possibles (cambra est nord o sud) i dos
-        // desplaçaments laterals. L'escala no apareix sempre al mateix
-        // lloc: cada combinació depèn exclusivament de la llavor.
-        stairSide=(variant&1)?-1:1,
+        // Prop del doble de superfície útil: cambres i passadís més amples
+        // sense engrandir el volum exterior de la fortificació.
+        halfX=27.0,halfZ=23.0,stairSide=(variant&1)?-1:1,
+        divisions=[-7.0+(variant%2)*1.3,6.4+Math.floor(variant/2)*1.3],
+        westDoors=[-15+(variant%2)*.7,0+Math.floor(variant/2)*.7,15-(variant%2)],
+        // Allunyam l'envà del final de l'escala: més de 8 m de replà
+        // per poder girar i veure la sala quan s'arriba a baix.
+        eastDivider=-stairSide*7,
         stairX=(variant&2)?14.6:10.8,
         stairTop=stairSide*13.6,stairBottom=stairSide*1.3;
-  b.basement={variant,floorY,upperSlabMeshes:[],lights:[],lightsOn:false,
+  b.basement={variant,floorY,halfX,halfZ,upperSlabMeshes:[],lights:[],
+    cameraHiddenWalls:[],lightsOn:false,doors:[],
     stair:{x:stairX,zTop:stairTop,zBottom:stairBottom,width:3.3},
-    generalLocal:{x:-12.5,z:variant%2?10:-10.5},eliteLocal:[
-      {x:0,z:-10.3},{x:-1,z:7.5},
-      {x:12,z:stairSide>0?-10.6:10.6},
-      {x:-12,z:(divisions[0]+divisions[1])/2}
+    generalLocal:{x:-19,z:variant%2?15:-15},eliteLocal:[
+      {x:0,z:-15},{x:-1,z:14},
+      {x:17,z:stairSide>0?-16:16},
+      {x:-19,z:(divisions[0]+divisions[1])/2}
     ]};
   activeBunker=b;
   const wall=(lx,lz,w,d,base=-9.2,height=9.25,color=0x68756d)=>{
@@ -1013,22 +1015,44 @@ function addBunkerBasement(b){
   slab(shaftRight,19.2,-16.2,16.2);
   slab(shaftLeft,shaftRight,-16.2,shaftNear);
   slab(shaftLeft,shaftRight,shaftFar,16.2);
-  floorPanel(-19,19,-16,16,-9.27,0x434c49);
-  // Fonaments profunds, tres cambres a ponent, dues a llevant i passadís.
-  wall(-19.1,0,.8,32.4);wall(19.1,0,.8,32.4);
-  wall(0,-16.1,38.2,.8);wall(0,16.1,38.2,.8);
-  for(const z of divisions)wall(-11.5,z,14.1,.65,-9.1,8.75);
-  wall(11.5,eastDivider,14.1,.65,-9.1,8.75);
+  floorPanel(-halfX+.4,halfX-.4,-halfZ+.4,halfZ-.4,-9.27,0x434c49);
+  // La part nova del soterrani queda coberta, sota el terreny.
+  // No engrandim el forat exterior de l'escala ni el forjat superior.
+  if(!seedSearchMode){
+    const cover=(xa,xb,za,zb)=>floorPanel(xa,xb,za,zb,-1.05,0x545e58);
+    cover(-halfX,-19.2,-halfZ,halfZ);
+    cover(19.2,halfX,-halfZ,halfZ);
+    cover(-19.2,19.2,-halfZ,-16.2);
+    cover(-19.2,19.2,16.2,halfZ);
+  }
+  // Tres cambres a ponent, dues a llevant i passadís central.
+  wall(-halfX+.4,0,.8,halfZ*2-.8);wall(halfX-.4,0,.8,halfZ*2-.8);
+  wall(0,-halfZ+.4,halfX*2-.8,.8);wall(0,halfZ-.4,halfX*2-.8,.8);
+  const span=halfX-7.5-.4, roomX=(halfX+7.5-.4)/2;
+  for(const z of divisions)wall(-roomX,z,span,.65,-9.1,8.75);
+  wall(roomX,eastDivider,span,.65,-9.1,8.75);
   const doorway=(lx,from,to,doorZ)=>{
-    const gap=3.5,lo=doorZ-gap/2,hi=doorZ+gap/2;
-    if(lo>from)wall(lx,(from+lo)/2,.7,lo-from,-9.1,8.7);
-    if(hi<to)wall(lx,(hi+to)/2,.7,to-hi,-9.1,8.7);
-    if(!seedSearchMode)bx(b.o,1,.65,gap+.05,0xadb7a4,lx,-.78,doorZ,'metal');
+    const gap=4.3,doorHeight=4.1,base=-9.15,lo=doorZ-gap/2,hi=doorZ+gap/2;
+    if(lo>from)wall(lx,(from+lo)/2,.7,lo-from,-9.15,9.0);
+    if(hi<to)wall(lx,(hi+to)/2,.7,to-hi,-9.15,9.0);
+    // Llinda opaca sobre una porta de mida humana, no pas un forat
+    // de nou metres fins al sostre. La fulla puja dins la llinda.
+    wall(lx,doorZ,.82,gap,base+doorHeight,9-doorHeight,0x69746d);
+    const mesh=seedSearchMode?new THREE.Object3D():
+      bx(b.o,.88,doorHeight,gap+.04,0x899990,lx,base+doorHeight/2,doorZ,'metal');
+    mesh.name='bunker-porta-interior-elevable';
+    const d={x0:b.x+lx-.44,x1:b.x+lx+.44,
+      z0:b.z+lo,z1:b.z+hi,y0:b.fy+base,y1:b.fy+base+doorHeight,
+      hp:Infinity,m:mesh,door:true,open:false,rammable:false,
+      bunkerInteriorDoor:true,openProgress:0,doorHeight,
+      closedLocalY:base+doorHeight/2,owner:b,
+      cx:b.x+lx,cz:b.z+doorZ};
+    Wl.push(d);Dr.push(d);b.basement.doors.push(d);
   };
-  const limits=[-15.7,...divisions,15.7];
-  for(let i=0;i<3;i++)doorway(-4.2,limits[i],limits[i+1],westDoors[i]);
-  doorway(4.2,-15.7,eastDivider,-10.8);
-  doorway(4.2,eastDivider,15.7,10.8);
+  const limits=[-halfZ+.65,...divisions,halfZ-.65];
+  for(let i=0;i<3;i++)doorway(-7.5,limits[i],limits[i+1],westDoors[i]);
+  doorway(7.5,-halfZ+.65,eastDivider,-16);
+  doorway(7.5,eastDivider,halfZ-.65,16);
   // Graons a la cambra escollida, amb sentit de baixada nord o sud.
   if(!seedSearchMode){
     const steps=15,run=Math.abs(st.zTop-st.zBottom);
@@ -1047,13 +1071,14 @@ function addBunkerBasement(b){
     // d'armes i control de la porta. Tot el mobiliari gran registra una
     // caixa de col·lisió compartida per jugador, IA i projectils.
     const basementLevel=-9.15,rooms=[
-      {lo:-15.65,hi:divisions[0]}, {lo:divisions[0],hi:divisions[1]},
-      {lo:divisions[1],hi:15.65}
+      {lo:-halfZ+.75,hi:divisions[0]},
+      {lo:divisions[0],hi:divisions[1]},
+      {lo:divisions[1],hi:halfZ-.75}
     ];
     const generalRoomIndex=b.basement.generalLocal.z<0?0:2;
     const generalRoom=rooms[generalRoomIndex];
-    b.basement.generalRoom={xMin:-17.3,xMax:-6.45,
-      zMin:generalRoom.lo+1.5,zMax:generalRoom.hi-1.5};
+    b.basement.generalRoom={xMin:-halfX+1.7,xMax:-9.1,
+      zMin:generalRoom.lo+2,zMax:generalRoom.hi-2};
     b.basement.roomTypes=[];
     const piece=(name,lx,lz,width,depth,height,color,y0=basementLevel,
       collision=true,profile='metal')=>{
@@ -1085,57 +1110,57 @@ function addBunkerBasement(b){
       const room=rooms[roomIndex],mid=(room.lo+room.hi)/2;
       if(roomIndex===generalRoomIndex){
         b.basement.roomTypes.push('despatx del general');
-        desk(-15.7,mid,3.3,1.65);
-        piece('cadira-general',-17.65,mid+.2,1.0,1.0,.94,0x4b473d);
-        locker('arxivador-general',-17.2,room.lo+1.5,0x65695b);
-        panel('mapa-operacions',-18.50,mid+1.8,2.25,1.50,0xc4b78c);
+        desk(-23,mid,3.3,1.65);
+        piece('cadira-general',-25.25,mid+.2,1.0,1.0,.94,0x4b473d);
+        locker('arxivador-general',-25.1,room.lo+2,0x65695b);
+        panel('mapa-operacions',-26.45,mid+1.8,2.25,1.50,0xc4b78c);
         // Marques de tropes i rutes sobre el mapa.
         for(const sign of[-1,1])piece('marca-mapa',
-          -18.42,mid+1.8+sign*.57,.18,.1,.16,
+          -26.37,mid+1.8+sign*.57,.18,.1,.16,
           sign<0?0x9e362a:0x324b78,-5.43,false,'paint');
-        piece('telefon-desp',-15.15,mid-.30,.43,.30,.2,0x2c3232,-7.84,false);
+        piece('telefon-desp',-22.5,mid-.30,.43,.30,.2,0x2c3232,-7.84,false);
       }else if(roomIndex===1){
         b.basement.roomTypes.push('centre de comunicacions');
         for(const dz of[-2.3,2.35]){
-          piece('consola-radio',-16.5,mid+dz,2.15,1.18,1.40,0x43575e);
-          piece('pantalla-radio',-16.5,mid+dz-.18,1.48,.32,.70,0x294852,-7.6,false);
+          piece('consola-radio',-23.3,mid+dz,2.15,1.18,1.40,0x43575e);
+          piece('pantalla-radio',-23.3,mid+dz-.18,1.48,.32,.70,0x294852,-7.6,false);
           for(const dx of[-.54,.15,.59])piece('commutador',
-            -16.5+dx,mid+dz-.56,.20,.08,.10,0xb6d5b5,-7.30,false);
+            -23.3+dx,mid+dz-.56,.20,.08,.10,0xb6d5b5,-7.30,false);
         }
-        locker('armari-radio',-17.0,mid,0x586e69);
-        panel('esquema-antenes',-18.50,mid+1.0,1.65,1.10,0xa8b3a2);
+        locker('armari-radio',-25.4,mid,0x586e69);
+        panel('esquema-antenes',-26.45,mid+1.0,1.65,1.10,0xa8b3a2);
       }else{
         b.basement.roomTypes.push('infermeria');
         for(const dz of[-2.15,2.15]){
-          piece('llit-hospital',-16.3,mid+dz,2.3,2.70,.95,0x657d76);
+          piece('llit-hospital',-23.3,mid+dz,2.3,2.70,.95,0x657d76);
           piece('matalas',-16.3,mid+dz,2.0,2.38,.17,0xc4d4cc,
             -8.18,false,'paint');
-          piece('coixi',-16.3,mid+dz-.84,1.15,.55,.22,0xe0ded0,-7.99,false,'paint');
+          piece('coixi',-23.3,mid+dz-.84,1.15,.55,.22,0xe0ded0,-7.99,false,'paint');
         }
-        locker('farmaciola-armari',-8.1,room.lo+1.5,0x8a9e93);
-        piece('creu-infermeria',-18.53,mid,.12,1.2,1.0,0xcc4d43,-6.17,false,'paint');
-        piece('creu-infermeria',-18.52,mid,.12,.36,2.0,0xcc4d43,-6.67,false,'paint');
+        locker('farmaciola-armari',-9.2,room.lo+2,0x8a9e93);
+        piece('creu-infermeria',-26.48,mid,.12,1.2,1.0,0xcc4d43,-6.17,false,'paint');
+        piece('creu-infermeria',-26.47,mid,.12,.36,2.0,0xcc4d43,-6.67,false,'paint');
       }
     }
     // Les dues sales orientals intercanvien funció segons on apareix
     // l'escala; mai no hi ha prestatgeries o consoles a la seva caixa.
     const armorySide=-stairSide,accessSide=stairSide;
     b.basement.roomTypes.push('armeria');
-    locker('armari-armes-1',17.2,armorySide*13.2,0x58665f);
-    locker('armari-armes-2',17.2,armorySide*9.1,0x58665f);
-    piece('banc-manteniment',7.6,armorySide*13.35,2.15,1.15,1.22,0x775e43);
+    locker('armari-armes-1',24.8,armorySide*19,0x58665f);
+    locker('armari-armes-2',24.8,armorySide*14.9,0x58665f);
+    piece('banc-manteniment',9.5,armorySide*19.35,2.15,1.15,1.22,0x775e43);
     for(const dz of[-.38,.12,.48])piece('eina-armeria',
-      7.6,armorySide*13.35+dz,1.10,.09,.09,0x303735,-7.88,false);
-    panel('inventari-armeria',18.53,armorySide*12.0,.08,1.3,0xb2bba5);
+      9.5,armorySide*19.35+dz,1.10,.09,.09,0x303735,-7.88,false);
+    panel('inventari-armeria',26.4,armorySide*18,.08,1.3,0xb2bba5);
     b.basement.roomTypes.push('control i accés');
-    piece('quadre-electric',6.55,accessSide*13.25,1.88,1.2,3.0,0x4b6060);
-    piece('visors-control',6.55,accessSide*12.58,1.54,.17,.4,
+    piece('quadre-electric',9.2,accessSide*20.5,1.88,1.2,3.0,0x4b6060);
+    piece('visors-control',9.2,accessSide*19.83,1.54,.17,.4,
       0x8eb0a1,-6.58,false);
-    piece('guixeta-seguretat',17.8,accessSide*11.7,.9,.82,2.9,0x697a74);
-    piece('consola-acces',6.55,accessSide*4.55,1.1,1.0,1.12,0x576662);
+    piece('guixeta-seguretat',25.5,accessSide*19.3,.9,.82,2.9,0x697a74);
+    piece('consola-acces',9.2,accessSide*6.3,1.1,1.0,1.12,0x576662);
     // Lluminàries subjectes a l'intradós del forjat y=+.22:
     // cap focus ni plafó no pot quedar flotant a mitja altura.
-    for(const [lx,lz] of [[0,-12],[0,0],[0,12],[12,-11],[-12,0],[-12,-11],[-12,11],[16,13]]){
+    for(const [lx,lz] of [[0,-19],[0,-8],[0,8],[0,19],[18,-18],[-19,0],[-19,-18],[-19,18],[19,18],[19,0]]){
       const lamp=new THREE.PointLight(0xffe8bd,5.2,19,2);
       lamp.position.set(lx,-.55,lz);lamp.visible=false;
       b.o.add(lamp);b.basement.lights.push(lamp);
@@ -1151,7 +1176,7 @@ function addBunkerBasement(b){
 function bunkerSubFloorAt(x,z,previous=-Infinity){
   const b=activeBunker;if(!b?.basement)return null;
   const p=buildingLocalPoint(b,x,z);
-  if(Math.abs(p.x)>19||Math.abs(p.z)>16)return null;
+  if(Math.abs(p.x)>b.basement.halfX-.4||Math.abs(p.z)>b.basement.halfZ-.4)return null;
   const st=b.basement.stair;
   if(Math.abs(p.x-st.x)<=st.width/2&&
      p.z>=Math.min(st.zTop,st.zBottom)&&
