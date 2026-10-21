@@ -719,20 +719,21 @@ function treeHit(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=
 // la rotació i l'escala provenen de la mateixa palmera determinista.
 function palmPush(t,r0){
   const height=6.2*t.s,reach=t.r+r0+1.65*t.s;
-  if(P.y>t.y+height+.6||P.y+2<t.y)return;
+  if(P.y>t.y+height+.6||P.y+4.2<t.y)return;
   if(Math.abs(P.x-t.x)>reach||Math.abs(P.z-t.z)>reach)return;
   const yawCos=Math.cos(t.yaw),yawSin=Math.sin(t.yaw);
   let overlap=0,nx=0,nz=0;
-  // El personatge ocupa un segment vertical: comprovam peus, malucs,
-  // pit i espatlles, sense crear col·liders per a cada palmera de l'illa.
-  for(const offset of [.3,.8,1.3,1.85]){
+  // El model a peu fa prop de quatre metres: comprovam tot el cos,
+  // incloent espatlles i cap, sense crear malles de col·lisió addicionals.
+  for(const offset of [.3,1,1.7,2.4,3.1,3.8]){
     const y=P.y+offset;
     if(y<t.y||y>t.y+height)continue;
     const q=(y-t.y)/height;
     const bend=height*.25*Math.sin(Math.PI*q);
     const trunkX=t.x+bend*yawCos,trunkZ=t.z-bend*yawSin;
     const dx=P.x-trunkX,dz=P.z-trunkZ,d=Math.hypot(dx,dz);
-    const radius=r0+t.r*(1-.43*q)+.04*t.s;
+    const bodyRadius=offset>3.1 ? r0*.75 : r0;
+    const radius=bodyRadius+t.r*(1-.43*q)+.04*t.s;
     if(d<radius&&radius-d>overlap){
       overlap=radius-d;
       if(d>.0001){nx=dx/d;nz=dz/d}
