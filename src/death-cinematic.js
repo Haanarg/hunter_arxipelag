@@ -41,10 +41,12 @@ function deathPoseProne(player,centre,heading){
  player.rotation.set(-Math.PI/2,heading,0);
  if(u.upperBody)u.upperBody.rotation.set(0,0,0);
  if(u.head)u.head.rotation.set(-.06,0,0);
- if(u.al)u.al.rotation.set(-.15,0,-.24);
- if(u.ar)u.ar.rotation.set(-.15,0,.24);
- if(u.ael)u.ael.rotation.set(-.30,0,0);
- if(u.aer)u.aer.rotation.set(-.30,0,0);
+ // Els braços queden oberts i els colzes flexionen cap al costat
+ // anatòmic correcte (en positiu, oposat a la postura invertida antiga).
+ if(u.al)u.al.rotation.set(-.22,-.08,-.65);
+ if(u.ar)u.ar.rotation.set(-.22,.08,.65);
+ if(u.ael)u.ael.rotation.set(.60,0,-.09);
+ if(u.aer)u.aer.rotation.set(.60,0,.09);
  if(u.ll)u.ll.rotation.set(.07,0,-.08);
  if(u.lr)u.lr.rotation.set(-.09,0,.08);
  if(u.lkl)u.lkl.rotation.set(-.12,0,0);
@@ -96,13 +98,21 @@ function deathBuildReaper(THREE){
  }
  const shaft=part(new THREE.CylinderGeometry(.065,.085,3.6,8),trim,1.05,2.07,.3);
  shaft.rotation.z=-.16;
- const bladeCurve=new THREE.CatmullRomCurve3([
-  new THREE.Vector3(.83,3.55,.3),new THREE.Vector3(1.16,3.89,.3),
-  new THREE.Vector3(1.69,4.05,.3),new THREE.Vector3(2.12,3.84,.3),
-  new THREE.Vector3(2.24,3.46,.3)]);
- part(new THREE.TubeGeometry(bladeCurve,18,.095,5,false),steel,0,0,0);
- const edge=part(new THREE.ConeGeometry(.18,.7,5),steel,2.2,3.56,.3);
- edge.rotation.z=Math.PI*.12;
+ // Fulla plana i corbada com la referència: NOMÉS el perfil de la
+ // fulla, no el mànec de la fotografia. La silueta afuada no és un tub.
+ const blade=new THREE.Shape();
+ blade.moveTo(1.34,3.85);
+ blade.bezierCurveTo(.80,4.03,-.32,3.91,-.86,2.18);
+ blade.bezierCurveTo(-.90,2.98,-.30,3.61,1.34,3.85);
+ const bladeMesh=part(new THREE.ShapeGeometry(blade,22),steel,0,0,.30);
+ bladeMesh.material.side=THREE.DoubleSide;
+ // Un fil clar al tall interior, en el mateix pla, sense gruix cilíndric.
+ const cuttingEdge=new THREE.CubicBezierCurve3(
+  new THREE.Vector3(-.86,2.18,.32),new THREE.Vector3(-.90,2.98,.32),
+  new THREE.Vector3(-.30,3.61,.32),new THREE.Vector3(1.34,3.85,.32));
+ const edgeGeometry=new THREE.BufferGeometry().setFromPoints(cuttingEdge.getPoints(22));
+ const edgeMaterial=mat(0xdde4e5,{metalness:.52,roughness:.28});
+ part(edgeGeometry,edgeMaterial,0,0,0);
  return {group:g,owned};
 }
 function deathCreateVoid(v){
