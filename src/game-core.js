@@ -979,7 +979,8 @@ function addBunkerBasement(b){
     mesh.castShadow=true;mesh.receiveShadow=true;
     Wl.push({x0:b.x+lx-w/2,x1:b.x+lx+w/2,z0:b.z+lz-d/2,z1:b.z+lz+d/2,
       y0:b.fy+base,y1:b.fy+base+height,hp:Infinity,m:mesh,door:false,
-      open:false,rammable:false,cx:b.x+lx,cz:b.z+lz,owner:b});
+      open:false,rammable:false,cx:b.x+lx,cz:b.z+lz,owner:b,
+      bunkerBasementWall:true});
   };
   const floorPanel=(xa,xb,za,zb,level,color)=>{
     if(seedSearchMode)return;
@@ -1226,6 +1227,21 @@ function wallPush(){const r=.6;for(const w of wallCandidates(P.x,P.z,r)){if(w.pl
 if(i==0)P.x=w.x0-r;else if(i==1)P.x=w.x1+r;else if(i==2)P.z=w.z0-r;else P.z=w.z1+r}}}
 function updateDoors(dt){
   for(const d of Dr){
+    if(d.bunkerInteriorDoor){
+      const nearPlayer=!cv&&P.y<d.owner.fy-2&&
+        Math.hypot(P.x-d.cx,P.z-d.cz)<5.6;
+      const nearSoldier=enemyCandidatesAt(d.cx,d.cz,5.7).some(u=>
+        (u.t==='soldat'||u.t==='general')&&u.hp>0&&
+        u.y<d.owner.fy-2&&Math.hypot(u.x-d.cx,u.z-d.cz)<5.6);
+      const target=nearPlayer||nearSoldier;
+      d.openProgress=Math.max(0,Math.min(1,d.openProgress+
+        (target?dt/1.15:-dt/1.6)));
+      const p=d.openProgress,ease=p*p*(3-2*p);
+      d.m.position.y=d.closedLocalY+(d.doorHeight+.55)*ease;
+      d.m.visible=p<.98;
+      d.open=p>.86;
+      continue;
+    }
     if(d.bunkerGate){
       const dx=P.x-d.cx,dz=P.z-d.cz,front=dx*d.nx+dz*d.nz,side=Math.abs(dx*d.nz-dz*d.nx),
             inFront=!cv&&front>=0&&front<=4.8&&side<=d.doorWidth/2+1.15;
@@ -1714,6 +1730,10 @@ function terrainConcealsBuilding(b,dist){
   return covered>=2;
 }
 function isInsideVisibleBuilding(b){
+  if(b?.basement&&!cv&&P.y<b.fy-1){
+    const local=buildingLocalPoint(b,P.x,P.z);
+    if(Math.abs(local.x)<b.basement.halfX&&Math.abs(local.z)<b.basement.halfZ)return true;
+  }
   if(b===ib)return true;
   if(!b.hangar||!cv||cv.destroyed)return false;
   const y=VT[cv.t]?.m==='a'?(cv.alt??cv.o?.position?.y):(cv.o?.position?.y??cv.alt);
@@ -2844,10 +2864,9 @@ if(scopeNow){
   // Mode soterrani també durant el PRIMER esglaó, no només quan
   // el jugador ja ha baixat 2 m. La càmera no es pot quedar darrere
   // d'un envà opac, ni pot perseguir l'altura exterior de la muntanya.
-  const b=activeBunker,inside=b?.basement&&!cv&&
-    Math.abs(buildingLocalPoint(b,P.x,P.z).x)<18.9&&
-    Math.abs(buildingLocalPoint(b,P.x,P.z).z)<15.9;
-  const local=inside?buildingLocalPoint(b,P.x,P.z):null;
+  const b=activeBunker,local=b?.basement&&!cv?buildingLocalPoint(b,P.x,P.z):null,
+        inside=!!local&&Math.abs(local.x)<b.basement.halfX-.5&&
+        Math.abs(local.z)<b.basement.halfZ-.5;
   const stair=b?.basement?.stair;
   const descending=!!local&&Math.abs(local.x-stair.x)<stair.width/2+.45&&
     local.z>=stair.zBottom-.5&&local.z<=stair.zTop+.4&&P.y<b.fy+.04;
@@ -2856,66 +2875,50 @@ if(scopeNow){
   // ara que la càmera és sempre a sota, es veu el plafó i no es
   // produeix cap obstrucció; els llums queden ancorats al sostre real.
   if(b?.basement)for(const slab of b.basement.upperSlabMeshes)slab.visible=true;
+  // Les parets ocultades a l'últim fotograma tornen a ser visibles
+  // abans de calcular les que ara queden entre la càmera i el jugador.
+  if(b?.basement?.cameraHiddenWalls){
+    for(const mesh of b.basement.cameraHiddenWalls)mesh.visible=true;
+    b.basement.cameraHiddenWalls.length=0;
+  }
   if(bunkerBelow){
-    // Vista elevada de tercera persona (abans era massa baixa i a 6 m):
-    // 13,5 m de distància nominal i uns 7,2 m sobre el jugador.
-    // Sempre sota el forjat opac, mai dins la geometria del sostre.
+    // Càmera estable a distància normal, sense correccions angulars
+    // brusques ni l'antic raycast que la teletransportava davant dels envans.
     const targetEye=new THREE.Vector3(P.x,
-      Math.min(b.fy-.55,Math.max(b.basement.floorY+1.6,P.y+1.65)),P.z);
+      Math.min(b.fy-1.0,Math.max(b.basement.floorY+1.6,P.y+1.65)),P.z);
     const cameraDistance=Math.max(10.5,Math.min(17,13.5*zoom));
     const cameraHeight=Math.max(b.basement.floorY+5.4,
-      Math.min(b.fy-.75,P.y+7.2));
-    // En una cambra estreta, desplaçar la càmera al darrere
-    // directament la deixa enganxada a la paret. Provam angles
-    // laterals i prioritzam la posició amb més separació del jugador.
-    let bestPosition=null,bestScore=-Infinity;
-    for(const offset of [0,.4,-.4,.8,-.8,1.2,-1.2]){
-      const heading=T.hd+offset,
-        trial=new THREE.Vector3(P.x+Math.sin(heading)*cameraDistance,
-          cameraHeight,P.z+Math.cos(heading)*cameraDistance),
-        dx=trial.x-targetEye.x,dz=trial.z-targetEye.z,
-        reach=Math.hypot(dx,dz),
-        mx=(trial.x+targetEye.x)/2,mz=(trial.z+targetEye.z)/2;
-      let hit=1;
-      for(const wall of wallCandidates(mx,mz,reach/2+2)){
-        if(wall.open||wall.playerBlock===false||
-          wall.y1<Math.min(targetEye.y,cameraHeight)-.2||
-          wall.y0>Math.max(targetEye.y,cameraHeight)+.2)continue;
-        const t=segmentAabbT(targetEye.x,targetEye.y,targetEye.z,
-          trial.x,cameraHeight,trial.z,
-          wall.x0-.2,wall.x1+.2,wall.y0-.08,wall.y1+.08,
-          wall.z0-.2,wall.z1+.2);
-        if(t!=null&&t>.008&&t<hit)hit=t;
-      }
-      const distance=Math.max(.35,reach*hit-.68),
-        score=distance-Math.abs(offset)*1.6;
-      if(score>bestScore){
-        bestScore=score;
-        bestPosition=trial.lerp(targetEye,1-distance/reach);
-      }
+      Math.min(b.fy-1.55,P.y+7.2));
+    const heading=T.hd;
+    w.set(P.x+Math.sin(heading)*cameraDistance,cameraHeight,
+      P.z+Math.cos(heading)*cameraDistance);
+    // No deixam sortir la càmera del volum subterrani, perquè llavors
+    // el terreny exterior pot ocultar completament la vista.
+    const cl=buildingLocalPoint(b,w.x,w.z);
+    const clampedX=Math.max(-b.basement.halfX+1.3,
+      Math.min(b.basement.halfX-1.3,cl.x));
+    const clampedZ=Math.max(-b.basement.halfZ+1.3,
+      Math.min(b.basement.halfZ-1.3,cl.z));
+    if(clampedX!==cl.x||clampedZ!==cl.z){
+      const q=buildingWorldPoint(b,clampedX,clampedZ);
+      w.x=q.x;w.z=q.z;
     }
-    w.copy(bestPosition);
-    // Una transició de planta ha de ser immediata: fer lerp des de
-    // l'exterior podria deixar la càmera diversos frames sota una paret.
-    if(!b.basement.cameraInside||Math.hypot(cam.position.x-P.x,cam.position.z-P.z)>17)
-      cam.position.copy(w);
-    else cam.position.lerp(w,1-Math.pow(.00001,dt));
-    // També comprovam l'interval interpolat: la posició del frame
-    // anterior pot estar en una altra cambra, darrere de l'envà.
-    const rx=cam.position.x-targetEye.x,rz=cam.position.z-targetEye.z,
-      cameraReach=Math.hypot(rx,rz);
-    if(cameraReach>.35){
-      const cx=(cam.position.x+targetEye.x)/2,
-        cz=(cam.position.z+targetEye.z)/2;
-      for(const wall of wallCandidates(cx,cz,cameraReach/2+1.4)){
-        if(wall.open||wall.playerBlock===false||
-           wall.y1<Math.min(targetEye.y,cam.position.y)-.2||
-           wall.y0>Math.max(targetEye.y,cam.position.y)+.2)continue;
-        const t=segmentAabbT(targetEye.x,targetEye.y,targetEye.z,
-          cam.position.x,cam.position.y,cam.position.z,
-          wall.x0-.15,wall.x1+.15,wall.y0-.08,wall.y1+.08,
-          wall.z0-.15,wall.z1+.15);
-        if(t!=null&&t>.02&&t<.98){cam.position.copy(w);break}
+    cam.position.copy(w);
+    // La càmera POT travessar els envans. Només ocultam les peces
+    // físiques interposades entre càmera i jugador, no les parets
+    // de tota la cambra ni les col·lisions del personatge.
+    for(const wall of wallCandidates(
+      (targetEye.x+cam.position.x)/2,(targetEye.z+cam.position.z)/2,
+      cameraDistance/2+2)){
+      if(wall.owner!==b||!wall.bunkerBasementWall||!wall.m)continue;
+      if(wall.y1<Math.min(targetEye.y,cam.position.y)||
+         wall.y0>Math.max(targetEye.y,cam.position.y))continue;
+      const hit=segmentAabbT(targetEye.x,targetEye.y,targetEye.z,
+        cam.position.x,cam.position.y,cam.position.z,
+        wall.x0,wall.x1,wall.y0,wall.y1,wall.z0,wall.z1);
+      if(hit!==null&&hit>.005&&hit<.995){
+        wall.m.visible=false;
+        b.basement.cameraHiddenWalls.push(wall.m);
       }
     }
     b.basement.cameraInside=true;
