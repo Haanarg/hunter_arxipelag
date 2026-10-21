@@ -43,6 +43,8 @@ vm.runInContext([
 // A/B: les col·lisions de vehicles són simètriques i els enemics fan servir
 // velocitat real, incloent-hi quan atropellen el jugador a peu.
 assert.equal(ctx.impactDamage(6,1,1),0);
+assert.equal(ctx.impactDamage(10,1,1),0,'Topades de maniobra sense danys');
+assert.equal(ctx.impactDamage(10.01,1,1),1,'Un impacte per damunt del llindar ja pot fer mal');
 assert.equal(ctx.impactDamage(30,1,1),4);
 assert.equal(ctx.impactDamage(100,1,1),5);
 assert.ok(ctx.impactDamage(15,.55,5)>ctx.impactDamage(15,5,.55));
