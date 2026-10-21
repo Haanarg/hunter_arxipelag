@@ -9,6 +9,14 @@ window.HUNTER_CIVILIAN_CARS=Object.freeze({
     Object.freeze({name:'Verd',hex:0x609969}),
     Object.freeze({name:'Marró',hex:0x896244})
   ]),
+  jetskiColors:Object.freeze([
+    Object.freeze({name:'Vermell',hex:0xc94e3f}),
+    Object.freeze({name:'Verd llima',hex:0xa4ec24}),
+    Object.freeze({name:'Groc viu',hex:0xffdf18}),
+    Object.freeze({name:'Rosa magenta',hex:0xef35a8}),
+    Object.freeze({name:'Blau elèctric',hex:0x228fef}),
+    Object.freeze({name:'Taronja',hex:0xff7b19})
+  ]),
   variants:Object.freeze([
     Object.freeze({name:'Berlina clàssica',description:'Sedan de tres volums, graella cromada i fars rectangulars, inspirat en la fotografia.',length:5.35,width:2.88,roof:2.67,front:.19,rear:.18,roofRear:.11}),
     Object.freeze({name:'Compacte urbà',description:'Carrosseria més curta, sostre alt, capó breu i finestres quadrades.',length:4.72,width:2.75,roof:2.79,front:.17,rear:.18,roofRear:.12}),
