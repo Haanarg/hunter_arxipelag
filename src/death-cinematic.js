@@ -1,6 +1,6 @@
 // Cinemàtica de mort: recreació a càmera lenta de la causa, fosa al buit
 // i trobada amb la Parca. No reprèn la simulació ni torna a aplicar dany.
-const DEATH_REPLAY_SECONDS=3.2,DEATH_FADE_SECONDS=2.2,DEATH_REAPER_SECONDS=6.3;
+const DEATH_REPLAY_SECONDS=4.5,DEATH_FADE_SECONDS=1.8,DEATH_REAPER_SECONDS=6.3;
 let deathCinematic=null;
 const deathClamp=t=>Math.max(0,Math.min(1,t));
 const deathEase=t=>{const p=deathClamp(t);return p*p*(3-2*p)};
@@ -69,6 +69,80 @@ function deathFaceCamera(player,cameraPosition){
  const angle=Math.atan2(-localView.x,-localView.z);
  head.rotation.y=Math.max(-1.48,Math.min(1.48,angle));
  head.rotation.x=-.06;
+}
+// La simulació de combat s'atura després del cop fatal, però el model,
+ // la càmera i els efectes continuen a temps cinematogràfic. Cada causa
+ // té una trajectòria pròpia fins que el cos arriba a la postura definitiva.
+function deathReplayPose(v){
+ const t=Math.min(v.t,DEATH_REPLAY_SECONDS),kind=v.cause.kind;
+ const explosion=kind==='explosion'||kind==='vehicleExplosion';
+ const shark=kind==='shark',fall=kind==='fall',runover=kind==='runover';
+ let settle=0,launch=0,lift=0,roll=0,extraPitch=0,crush=0;
+ if(explosion){
+  const flight=deathClamp((t-.32)/3.13);
+  settle=deathEase((t-2.55)/.83);
+  launch=7.8*deathEase(flight);
+  lift=6.5*Math.sin(Math.PI*flight);
+  extraPitch=-.9*Math.sin(Math.PI*flight);
+  roll=.7*Math.sin(Math.PI*flight)*Math.sin(flight*Math.PI*2);
+ }else if(fall){
+  const drop=deathEase((t-.15)/2.85);
+  settle=deathEase((t-2.78)/.53);
+  lift=8.7*(1-drop);
+  crush=.31*Math.exp(-Math.pow((t-3.04)/.17,2));
+ }else if(shark){
+  const sink=deathEase((t-.40)/3.38);
+  settle=.17*sink;
+  lift=-3.5*sink;
+  roll=.30*Math.sin(8*t)*(1-sink);
+  extraPitch=-.24*sink;
+ }else if(runover){
+  const flight=deathClamp((t-.48)/2.95);
+  settle=deathEase((t-1.78)/1.2);
+  launch=3.9*deathEase(flight);
+  lift=2.4*Math.sin(Math.PI*flight);
+  roll=-.48*Math.sin(Math.PI*flight);
+  crush=.2*Math.exp(-Math.pow((t-3.08)/.23,2));
+ }else{
+  settle=deathEase((t-.56)/2.7);
+  launch=(kind==='bullet'?1.55:.85)*settle;
+  lift=.55*Math.sin(Math.PI*settle);
+  roll=.22*Math.sin(Math.PI*settle)*(kind==='bullet'?-1:1);
+ }
+ // direction apunta des del jugador cap a l'origen del cop: sortim
+ // projectats en el sentit contrari, també en caigudes o atropellaments.
+ const fx=-Math.sin(v.heading),fz=-Math.cos(v.heading);
+ const x=v.originX-v.direction.x*launch,z=v.originZ-v.direction.z*launch;
+ const bodyY=v.floor+lift;
+ deathPoseProne(pl,{x,y:bodyY,z},v.heading);
+ const u=pl.userData,open=deathClamp(settle+(explosion?.35*Math.sin(Math.PI*deathClamp((t-.3)/3.2)):0));
+ pl.position.set(x-fx*1.05*settle,bodyY+.39*settle,z-fz*1.05*settle);
+ pl.rotation.set(-Math.PI/2*settle+extraPitch,v.heading,roll);
+ pl.scale.copy(v.previousPlayerPose.scale);
+ pl.scale.y*=1-crush;
+ if(u.lowerBody)u.lowerBody.rotation.set(0,0,0);
+ if(u.upperBody)u.upperBody.rotation.x=shark?.16*Math.sin(t*7)*(1-settle):-.13*Math.sin(Math.PI*settle);
+ if(u.al)u.al.rotation.z=-(.18+.47*open);
+ if(u.ar)u.ar.rotation.z=.18+.47*open;
+ if(u.ael)u.ael.rotation.x=.16+.44*open;
+ if(u.aer)u.aer.rotation.x=.16+.44*open;
+ if(shark){
+  const thrash=(1-deathClamp((t-.4)/3.4));
+  if(u.al)u.al.rotation.x=-.25+Math.sin(t*9)*.45*thrash;
+  if(u.ar)u.ar.rotation.x=-.25-Math.sin(t*8.3)*.45*thrash;
+  if(u.ll)u.ll.rotation.x=.20*Math.sin(t*7)*thrash;
+  if(u.lr)u.lr.rotation.x=-.20*Math.sin(t*7+.5)*thrash;
+ }
+ const focusY=shark?bodyY+1.8:bodyY+(1-settle)*2.2+settle*.75;
+ v.bodyFocus.set(x,focusY,z);
+ if(!v.impactSoundPlayed&&t>=v.impactTime){
+  v.impactSoundPlayed=true;
+  if(shark)snd('swim',.95);
+  else if(explosion)snd('boom',.5);
+  else if(fall||runover)snd('hurt',.75);
+  else snd('shot',.32);
+ }
+ pl.updateMatrixWorld(true);
 }
 function deathBuildReaper(THREE){
  const g=new THREE.Group(),owned=[];
@@ -194,14 +268,15 @@ function startDeathCinematic(cause=null){
    P.z-Math.cos(heading)*.45);
  const v={active:true,finished:false,t:0,phase:'replay',cause:info,source,hit,direction,
   overlay,shade,replayLabel,causeEl,finale,button,previousVisibility:{},previousFov:cam.fov,
-  previousPlayerPose:{position:pl.position.clone(),rotation:pl.rotation.clone(),visible:pl.visible},
-  heading,bodyFocus,lastBell:-1,voidScene:null,reaper:null,replayEffect:null};
+  previousPlayerPose:{position:pl.position.clone(),rotation:pl.rotation.clone(),scale:pl.scale.clone(),visible:pl.visible},
+  heading,bodyFocus,originX:P.x,originZ:P.z,floor,waterLevel:wy(P.x,P.z,elapsed),
+  impactTime:info.kind==='fall'?3.01:info.kind==='shark'?.68:info.kind==='runover'?2.9:.62,
+  impactSoundPlayed:false,lastBell:-1,voidScene:null,reaper:null,replayEffect:null};
  deathCinematic=v;
  deathUi(true);endEl.style.display='none';
  // En morir conduint el model del jugador estava ocult: també ha de
  // poder veure's ajagut durant la repetició del darrer impacte.
- deathPoseProne(pl,{x:P.x,y:floor,z:P.z},heading);
- deathFaceCamera(pl,cam.position);
+ deathReplayPose(v);
  deathCreateVoid(v);
  v.replayEffect=deathReplayEffect(v);
  return true;
@@ -217,6 +292,7 @@ function clearDeathCinematic(){
  if(v.overlay.parentNode)v.overlay.parentNode.removeChild(v.overlay);
  pl.position.copy(v.previousPlayerPose.position);
  pl.rotation.copy(v.previousPlayerPose.rotation);
+ pl.scale.copy(v.previousPlayerPose.scale);
  pl.visible=v.previousPlayerPose.visible;
  cam.fov=v.previousFov;cam.updateProjectionMatrix();
  deathCinematic=null;
@@ -230,14 +306,16 @@ function updateDeathCinematic(dt){
  v.phase=deathStageAt(v.t);
  const replay=deathClamp(v.t/DEATH_REPLAY_SECONDS);
  if(v.phase==='replay'||v.phase==='fade'){
-  // Pla lateral del cos: permet veure la cara girada fins i tot quan
-  // el cop mortal ha arribat per l'esquena.
+  // Seguiment lateral cinematogràfic del cos: la càmera acompanya
+  // l'enlairament, la caiguda o l'enfonsament, sense teleportar el model.
+  deathReplayPose(v);
   const right=new THREE.Vector3(Math.cos(v.heading),0,-Math.sin(v.heading));
-  cam.position.copy(v.bodyFocus).addScaledVector(right,8-replay*2)
-    .addScaledVector(v.direction,-2.3+replay);
-  cam.position.y+=3.7-replay*.7;
+  cam.position.copy(v.bodyFocus).addScaledVector(right,9-replay*2.5)
+    .addScaledVector(v.direction,-2.8+replay*.8);
+  cam.position.y+=v.cause.kind==='shark'?2.0-replay*.9:3.8-replay*.65;
   cam.lookAt(v.bodyFocus);
-  if(cam.fov!==51){cam.fov=51;cam.updateProjectionMatrix()}
+  const fieldOfView=(v.cause.kind==='explosion'||v.cause.kind==='vehicleExplosion'?58:53)-replay*4;
+  if(Math.abs(cam.fov-fieldOfView)>.05){cam.fov=fieldOfView;cam.updateProjectionMatrix()}
   if(v.replayEffect){
    const effect=v.replayEffect,material=effect.material;
    if(v.cause.kind==='bullet'){
@@ -252,7 +330,7 @@ function updateDeathCinematic(dt){
     effect.mesh.visible=v.t<2.95;
    }
   }
-  deathFaceCamera(pl,cam.position);
+  if(replay>.8&&v.cause.kind!=='shark')deathFaceCamera(pl,cam.position);
  }
  const fadeStart=DEATH_REPLAY_SECONDS,half=DEATH_FADE_SECONDS/2;
  const alpha=v.t<fadeStart?0:v.t<fadeStart+half
