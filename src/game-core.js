@@ -363,7 +363,7 @@ paracaigudes:{n:'Paracaigudes',c:0xcfaa74,s:[1.2,.9,.9],icon:ICON.paracaigudes,d
 cisalla:{n:'Cisalla',c:0xb83f38,s:[1,1.4,.3],icon:ICON.cisalla,desc:'Talla silenciosament un tram de filferrada proper. Equipa-la i prem Talla / F mirant la tanca. No gasta munició ni alerta els enemics.',usable:true},
 granada:{n:'Granades',c:0x4a5842,s:[.65,.65,.65],icon:ICON.granada,desc:'Paquet de 5 granades. A peu, mantén Dispar per arribar més lluny i mira la trajectòria. Des de l’helicòpter utilitari, prem Dispar per llançar-ne una de l’inventari.',usable:true},
 arma:{n:'Munició',c:0x555b66,s:[1.6,.35,.35],icon:ICON.arma,desc:'Caixa de munició per a l’arma personal.',usable:false},
-expl:{n:'Explosius',c:0x617451,s:[.9,.9,.9],icon:ICON.expl,desc:'Bloc d’explosiu plàstic amb cables RGB. En activar-lo, configura el visor LED de 00 a 59 segons. El compte enrere parpelleja als últims 3 segons. La càrrega té força destructiva triple.',usable:true},
+expl:{n:'Explosius',c:0x617451,s:[.9,.9,.9],icon:ICON.expl,desc:'Explosiu C4 amb visor LED de 00 a 59 segons. A peu es col·loca; des de l’helicòpter utilitari en vol cau per la porta lateral. Explota quan arriba a zero, fins i tot a l’aire. No es pot utilitzar des de l’helicòpter de combat.',usable:true},
 disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa enemiga vermella. Activa o desactiva la disfressa.',usable:true}
 };
 // combat i enemics
@@ -1958,7 +1958,10 @@ const act=c=>{if(ui?.isBombTimerOpen?.()){
     document.getElementById('bombTimerConfirm')?.click?.();return
   }
   return
-}if(/^Digit[1-6]$/.test(c)){selectWeapon(quickWeapons()[Number(c.slice(5))-1]);return}if(c==='KeyV'){cycleWeapon(1);return}if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){if(!secondaryWeapon()&&inv.expl&&!cv&&!swimming&&!playerFall&&!playerEject)panel('bombtimer');}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
+}if(/^Digit[1-6]$/.test(c)){selectWeapon(quickWeapons()[Number(c.slice(5))-1]);return}if(c==='KeyV'){cycleWeapon(1);return}if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){
+  if(!secondaryWeapon()&&inv.expl&&(!cv||cv.t==='heli')&&
+     !swimming&&!playerFall&&!playerEject)panel('bombtimer');
+}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
 const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.reentryLockUntil>elapsed)continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
 function updateActionButton(nearby){
   const button=document.getElementById('mainActionButton');
@@ -2169,8 +2172,11 @@ function useInvItem(id){
   if(!inv[id])return false;
   if(id==='med'){if(hp>=COMBAT_BALANCE.player){msg='Ja tens la vida al màxim.';msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(COMBAT_BALANCE.player,Math.ceil(hp)+COMBAT_BALANCE.medkit);msg='Has usat una farmaciola.';msgT=2;snd('pick');return true}
   if(id==='expl'){
-    if(cv||swimming||playerFall||playerEject){
-      msg='No pots col·locar explosius des d’aquí.';msgT=2;return false
+    if(cv&&cv.t!=='heli'||swimming||playerFall||playerEject){
+      msg=cv?.t==='heli_combat'?
+        'No pots utilitzar C4 des de l’helicòpter de combat.':
+        'No pots preparar explosius des d’aquí.';
+      msgT=2;return false
     }
     panel('bombtimer');return true
   }
