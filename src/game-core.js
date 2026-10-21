@@ -950,6 +950,7 @@ function addBunkerBasement(b){
   if(b.foundation){
     b.o.remove(b.foundation);
     b.foundation.geometry?.dispose();
+    b.foundation.material?.dispose();
     b.foundation=null;
   }
   const random=mul((seed^Math.imul(Math.round(b.x),73856093)^Math.imul(Math.round(b.z),19349663)^0x6e7b32e1)>>>0);
