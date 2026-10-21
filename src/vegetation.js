@@ -16,9 +16,10 @@ window.HUNTER_VEGETATION=Object.freeze({
           crownMatrix=new THREE.Matrix4();
     // Variació estable derivada de cada palmera, sense consumir RNG global
     // ni alterar les llavors, els spawns o la cerca de seeds.
-    const palmVariation=row=>{
+    const palmVariation=(row,salt=0)=>{
       const x=row[0]||0,z=row[2]||0,r=row[4]||0;
-      const n=Math.sin(x*12.9898+z*78.233+r*37.719)*43758.5453;
+      const n=Math.sin(x*(12.9898+salt*.037)+
+        z*(78.233+salt*.13)+r*(37.719+salt*.21))*43758.5453;
       return n-Math.floor(n);
     };
     // Cada fulla té un to propi. Colors de vèrtex compartits a totes les
@@ -201,7 +202,7 @@ window.HUNTER_VEGETATION=Object.freeze({
           // la copa no es desplaça ni se separa quan s'inclina.
           opts.crownTrunk.getMatrixAt(opts.trunkIndices[i],trunkMatrix);
           const strength=.5+.3*palmVariation(row),
-                deviation=(palmVariation([z,y,x,s,r])-.5)*.14,
+                deviation=(palmVariation(row,1)-.5)*.14,
                 tilt=lastAngle*strength+deviation;
           crownTurn.makeRotationZ(tilt);
           crownMatrix.copy(trunkMatrix).multiply(crownPivot)
