@@ -491,8 +491,8 @@ if(seaAudio){const coastal=Math.max(.25,1-Math.max(0,hAt(P.x,P.z))/22),
         ?.026+Math.min(1,Math.abs(cv.v)/22)*.016:.035+coastal*.05;
   seaAudio.gain.gain.setTargetAtTime(over?0:waterVolume,AC.currentTime,.5)}
 if(eng){const c=cv?VT[cv.t]:null;
-  eng.g.gain.value=c&&!['bici','windsurf','barca_rems'].includes(cv.t)&&!over?.02+Math.min(1,Math.abs(cv.v)/40)*.03:0;
-  eng.o.frequency.value=c?(c.m=='a'?60:35)+Math.abs(cv.v)*(c.m=='a'?1:2.5):40}}
+  eng.g.gain.value=c&&!['bici','windsurf','barca_rems'].includes(cv.t)&&!over?(cv.t==='cotxe_civil'?1.65:1)*(.02+Math.min(1,Math.abs(cv.v)/40)*.03):0;
+  eng.o.frequency.value=c?(cv.t==='cotxe_civil'?28:c.m=='a'?60:35)+Math.abs(cv.v)*(c.m=='a'?1.3:2.5):40}}
 const seedRandomEl=document.getElementById('seedRandom'),seedInputEl=document.getElementById('seedInput'),iniEl=document.getElementById('ini'),
 startMenuEl=document.getElementById('startMenu'),seedSearchScreenEl=document.getElementById('seedSearchScreen'),
 seedSearchOpenEl=document.getElementById('seedSearchOpen'),seedSearchBackEl=document.getElementById('seedSearchBack'),
@@ -2520,7 +2520,7 @@ if(!playerFall&&!cheats.fly){
 stealthStepTimer-=dt;
 if(stealthStepTimer<=0){
   if(cv&&Math.abs(cv.v)>1){
-    const vehicleNoise={bici:'bicycle',moto:'motorbike',cotxe:'car',camio:'truck',
+    const vehicleNoise={bici:'bicycle',moto:'motorbike',cotxe:'car',cotxe_civil:'civilianCar',camio:'truck',
       tanc:'tank',tanqueta:'apc',barca_rems:'rowboat',windsurf:'windsurf',
       moto_aquatica:'jetski',llanxa:'speedboat',llanxa_coets:'speedboat',
       ferry:'ferry',heli:'helicopter',heli_combat:'helicopter',hover:'jetski'},
