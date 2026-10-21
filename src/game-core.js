@@ -1235,7 +1235,8 @@ function updateDoors(dt){
         Math.hypot(P.x-d.cx,P.z-d.cz)<5.6;
       const nearSoldier=enemyCandidatesAt(d.cx,d.cz,5.7).some(u=>
         (u.t==='soldat'||u.t==='general')&&u.hp>0&&
-        u.y<d.owner.fy-2&&Math.hypot(u.x-d.cx,u.z-d.cz)<5.6);
+        (u.gy??u.o?.position?.y??Infinity)<d.owner.fy-2&&
+        Math.hypot(u.x-d.cx,u.z-d.cz)<5.6);
       const target=nearPlayer||nearSoldier;
       d.openProgress=Math.max(0,Math.min(1,d.openProgress+
         (target?dt/1.15:-dt/1.6)));
