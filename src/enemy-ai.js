@@ -6,17 +6,24 @@ const STEALTH=window.HUNTER_STEALTH;
 function soldierVisualContact(u,target,targetY,d){
   const eyeY=u.o.position.y+2.2,
         crouched=!!playerCrouched&&!cv,
-        range=STEALTH.CONFIG.sightRange*(crouched?STEALTH.CONFIG.crouchVisibility:1)*
+        range=STEALTH.CONFIG.sightRange*(u.elite?1.30:1)*
+          (crouched?STEALTH.CONFIG.crouchVisibility:1)*
           ((disg&&!cv)?0.35:1),
-        targetEye=targetY+(crouched?1.25:1.5);
+        targetEye=targetY+(crouched?1.25:1.5),
+        // No podem fer servir hAt() sota terra: retornaria l'altura
+        // de la muntanya i faria invisibles els objectius a 30 metres.
+        sameBasement=!!u.basement&&targetY<u.basement.fy-3.9&&
+          eyeY<u.basement.fy-3.9;
   if(over||d>range||!STEALTH.inView(u.hd,target.x-u.x,targetEye-eyeY,target.z-u.z,range))return false;
   if(!soldierClearShot(u,u.x,u.z,eyeY,target,targetY-(crouched?.25:0)))return false;
   // A diferència de sight(), el pendent també tapa un enemic al darrere
   // d'una cresta (sense fer raycasts de geometria per cada soldat).
-  const steps=Math.min(32,Math.ceil(d/3));
-  for(let i=1;i<steps;i++){
-    const q=i/steps,x=u.x+(target.x-u.x)*q,z=u.z+(target.z-u.z)*q;
-    if(hAt(x,z)>eyeY+(targetEye-eyeY)*q-.1)return false;
+  if(!sameBasement){
+    const steps=Math.min(32,Math.ceil(d/3));
+    for(let i=1;i<steps;i++){
+      const q=i/steps,x=u.x+(target.x-u.x)*q,z=u.z+(target.z-u.z)*q;
+      if(hAt(x,z)>eyeY+(targetEye-eyeY)*q-.1)return false;
+    }
   }
   return true;
 }
@@ -233,7 +240,13 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
       Math.abs(q.x-bunker.x)<bunker.hw&&Math.abs(q.z-bunker.z)<bunker.hd,
       acrossFloor=!!(u.basement||withinBunker&&py<bunker.fy-3.9)&&
         Math.abs((u.gy??u.o.position.y)-py)>4.4,
-       seen=!cheats.invisible&&!over&&!acrossFloor&&d<det&&sight(u.x,u.z,q.x,q.z,eyeY);
+       sameBasement=!!u.basement&&py<bunker.fy-3.9&&eyeY<bunker.fy-3.9,
+       // El general pot detectar intrusos dins del mateix nivell sense
+       // quedar falsament ocult per la muntanya, però respecta els murs.
+       seen=!cheats.invisible&&!over&&!acrossFloor&&d<det&&
+         (sameBasement&&u.t==='general'
+           ?soldierClearShot(u,u.x,u.z,eyeY,q,py)
+           :sight(u.x,u.z,q.x,q.z,eyeY));
     if(u.t==='soldat'){
        const raw=!cheats.invisible&&!!(cv? !over&&d<115&&
          STEALTH.inView(u.hd,dx,py+1.5-eyeY,dz,115)&&
@@ -307,6 +320,26 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
         shoot(u.x+fx*1.65+rightX*.44,eyeY+.65,
           u.z+fz*1.65+rightZ*.44,ax,ay,az,76,COMBAT_BALANCE.weapons.bazooka,8,'e',mS,1.9);
       }else shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE);
+    }
+  }else if(u.t==='general'&&u.canSee){
+    // Fugida lenta mentre dispara. El general continua sempre dins del
+    // seu despatx subterrani i no atravessa envans ni mobiliari.
+    if(u.basement?.basement?.generalRoom&&d<36&&d>.01){
+      const b=u.basement,room=b.basement.generalRoom;
+      const nx=dx/d,nz=dz/d;
+      const local=buildingLocalPoint(b,u.x-nx*7,u.z-nz*7);
+      const destination=buildingWorldPoint(b,
+        Math.max(room.xMin,Math.min(room.xMax,local.x)),
+        Math.max(room.zMin,Math.min(room.zMax,local.z)));
+      if(Math.hypot(destination.x-u.x,destination.z-u.z)>.7)
+        mvE(u,u.sp*dt,destination.x,destination.z);
+    }
+    // Independentment de la direcció de la fugida, mira el jugador.
+    u.hd=Math.atan2(u.x-q.x,u.z-q.z);
+    if(d<u.rng&&u.cd<=0&&soldierClearShot(u,u.x,u.z,eyeY,q,py)){
+      u.cd=u.rate;
+      const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
+      shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE);
     }
   }else if(u.canSee){
     u.hd=Math.atan2(-dx,-dz);
