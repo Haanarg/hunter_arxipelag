@@ -82,7 +82,9 @@ function deathReplayPose(v){
   const flight=deathClamp((t-.32)/3.13);
   settle=deathEase((t-2.55)/.83);
   launch=7.8*deathEase(flight);
-  lift=6.5*Math.sin(Math.PI*flight);
+  // Conservam l'altura real si el jugador sortia d'un vehicle aeri.
+  lift=Math.max(0,v.initialY-v.floor)*(1-deathEase(flight))+
+    6.5*Math.sin(Math.PI*flight);
   extraPitch=-.9*Math.sin(Math.PI*flight);
   roll=.7*Math.sin(Math.PI*flight)*Math.sin(flight*Math.PI*2);
  }else if(fall){
@@ -286,8 +288,9 @@ function startDeathCinematic(cause=null){
  const v={active:true,finished:false,t:0,phase:'replay',cause:info,source,hit,direction,
   overlay,shade,replayLabel,causeEl,finale,button,previousVisibility:{},previousFov:cam.fov,
   previousPlayerPose:{position:pl.position.clone(),rotation:pl.rotation.clone(),scale:pl.scale.clone(),visible:pl.visible},
-  heading,bodyFocus,originX:P.x,originZ:P.z,floor,waterLevel:wy(P.x,P.z,elapsed),
-  impactTime:info.kind==='fall'?3.01:info.kind==='shark'? .68 :info.kind==='runover'?2.9:.62,
+  heading,bodyFocus,originX:P.x,originZ:P.z,initialY:P.y,floor,waterLevel:wy(P.x,P.z,elapsed),
+  impactTime:info.kind==='fall' ? 3.01 : info.kind==='shark' ? .68 :
+   info.kind==='runover' ? 2.9 : .62,
   impactSoundPlayed:false,lastBell:-1,voidScene:null,reaper:null,replayEffect:null};
  deathCinematic=v;
  deathUi(true);endEl.style.display='none';
@@ -342,7 +345,7 @@ function updateDeathCinematic(dt){
     effect.mesh.position.copy(effect.from).lerp(v.hit,f);
     effect.mesh.scale.setScalar(1+.7*f);
    }else if(effect.ripple){
-    const impact=type==='shark'?.68:type==='fall'?3.02:3.01;
+    const impact=type==='shark' ? .68 : type==='fall' ? 3.02 : 3.01;
     const p=deathClamp((v.t-impact)/1.35);
     effect.mesh.visible=v.t>=impact&&p<1;
     effect.mesh.scale.setScalar(.5+5*p);
