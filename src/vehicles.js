@@ -633,6 +633,38 @@ window.HUNTER_VEHICLES=Object.freeze({
         const rotorY=combat?3.22:3.82,mastBaseY=combat?2.94:3.02;rod(g,[0,mastBaseY,0],[0,rotorY,0],.14,metal);round(g,.3,.2,metal,0,rotorY,0,'y','metal');const rotor=new THREE.Group();rotor.position.set(0,rotorY,0);for(const a of(combat?[0,Math.PI/3,Math.PI*2/3]:[0,Math.PI/2])){const blade=box(rotor,combat?13.5:14.8,.1,.36,rubber,0,0,0,'rubber');blade.rotation.y=a}g.add(rotor);g.userData.rotor=rotor;
         const tail=new THREE.Group();tail.position.set(.38,3.45,combat?7:7.38);box(tail,.1,1.9,.16,rubber,0,0,0,'rubber');box(tail,.1,.16,1.9,rubber,0,0,0,'rubber');g.add(tail);g.userData.tailRotor=tail;
       }
+      // Els cotxes civils apareixen en grups: fusionam les peces estàtiques
+      // per material, com el camió 6x6, però deixam rodes i pivots lliures.
+      if(t==='cotxe_civil'){
+        const groups=new Map();
+        for(const mesh of g.children.filter(o=>o.isMesh)){
+          mesh.updateMatrix();
+          const geometry=mesh.geometry.clone();
+          geometry.applyMatrix4(mesh.matrix);
+          if(!geometry.getAttribute('normal'))geometry.computeVertexNormals();
+          const flat=geometry.index?geometry.toNonIndexed():geometry;
+          const batch=groups.get(mesh.material)||{pos:[],norm:[],material:mesh.material};
+          const points=flat.getAttribute('position'),normals=flat.getAttribute('normal');
+          for(let i=0;i<points.count;i++){
+            batch.pos.push(points.getX(i),points.getY(i),points.getZ(i));
+            batch.norm.push(normals.getX(i),normals.getY(i),normals.getZ(i));
+          }
+          groups.set(mesh.material,batch);
+          g.remove(mesh);
+          mesh.geometry.dispose();geometry.dispose();
+          if(flat!==geometry)flat.dispose();
+        }
+        let count=0;
+        for(const b of groups.values()){
+          const geometry=new THREE.BufferGeometry();
+          geometry.setAttribute('position',new THREE.Float32BufferAttribute(b.pos,3));
+          geometry.setAttribute('normal',new THREE.Float32BufferAttribute(b.norm,3));
+          const mesh=new THREE.Mesh(geometry,b.material);
+          mesh.name='civil-car-batch-'+count++;
+          g.add(mesh);
+        }
+        g.userData.staticBatches=count;
+      }
       if(t==='bici'){const crank=new THREE.Group();crank.position.set(0,.75,0);for(const side of[-1,1]){rod(crank,[side*.3,0,0],[side*.3,0,side*.28],.045,metal);box(crank,.26,.08,.18,rubber,side*.4,0,side*.28,'rubber')}g.add(crank);g.userData.crank=crank}
       // La coordenada Y de l'origen no és l'altura dels patins.
       // Les dues barres inferiors estan centrades a y=.48 i tenen radi .075.
