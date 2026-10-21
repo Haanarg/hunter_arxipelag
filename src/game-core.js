@@ -2807,7 +2807,8 @@ if(scopeNow){
       if(t!=null&&t>.015&&t<hit)hit=t;
     }
     if(hit<1){
-      const fraction=Math.max(.13,hit-1.0/Math.max(2,reach));
+      const fraction=hit<=.03?0:Math.max(.015,
+        Math.min(hit-.015,hit-1/Math.max(2,reach)));
       w.lerpVectors(targetEye,w,fraction);
     }
     // Una transició de planta ha de ser immediata: fer lerp des de
@@ -2815,6 +2816,24 @@ if(scopeNow){
     if(!b.basement.cameraInside||Math.hypot(cam.position.x-P.x,cam.position.z-P.z)>17)
       cam.position.copy(w);
     else cam.position.lerp(w,1-Math.pow(.00001,dt));
+    // També comprovam l'interval interpolat: la posició del frame
+    // anterior pot estar en una altra cambra, darrere de l'envà.
+    const rx=cam.position.x-targetEye.x,rz=cam.position.z-targetEye.z,
+      cameraReach=Math.hypot(rx,rz);
+    if(cameraReach>.35){
+      const cx=(cam.position.x+targetEye.x)/2,
+        cz=(cam.position.z+targetEye.z)/2;
+      for(const wall of wallCandidates(cx,cz,cameraReach/2+1.4)){
+        if(wall.open||wall.playerBlock===false||
+           wall.y1<Math.min(targetEye.y,cam.position.y)-.2||
+           wall.y0>Math.max(targetEye.y,cam.position.y)+.2)continue;
+        const t=segmentAabbT(targetEye.x,targetEye.y,targetEye.z,
+          cam.position.x,cam.position.y,cam.position.z,
+          wall.x0-.15,wall.x1+.15,wall.y0-.08,wall.y1+.08,
+          wall.z0-.15,wall.z1+.15);
+        if(t!=null&&t>.02&&t<.98){cam.position.copy(w);break}
+      }
+    }
     b.basement.cameraInside=true;
   }else{
     if(b?.basement)b.basement.cameraInside=false;
