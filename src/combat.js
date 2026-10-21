@@ -352,26 +352,38 @@ function boom(x,y,z,r,dmg,own,source=null){
   if(dealt){b.rhp-=dealt;if(b.rhp<=0)roofBreak(b)}
  }
 }
+// Punt just fora de la porta dreta del Huey 3B. Les dimensions locals
+// corresponen a l'obertura real (x=1,36; z=-0,76..1,76).
+// localToWorld respecta gir, inclinació i escala del model 3D.
+function helicopterBombDoor(v){
+ v.o.updateWorldMatrix(true,false);
+ return v.o.localToWorld(new THREE.Vector3(1.96,2.02,.52));
+}
 function plant(seconds=3){
  // La configuració surt sempre del LED. La validació també protegeix
  // l'acció davant clics repetits, entrada invàlida o una partida acabada.
- if(over||cv||swimming||playerFall||playerEject||!inv.expl||
-    !Number.isInteger(seconds)||seconds<0||seconds>59)return false;
+ if(over||cv&&cv.t!=='heli'||swimming||playerFall||
+    playerEject||!inv.expl||!Number.isInteger(seconds)||
+    seconds<0||seconds>59)return false;
+ const airborne=!!cv&&cv.t==='heli';
+ // El Huey deixa caure l'artefacte des de l'obertura lateral;
+ // no el dispara ni li transmet velocitat horitzontal del vehicle.
+ const door=airborne?helicopterBombDoor(cv):null;
  if(--inv.expl<=0)delete inv.expl;setDis(false);
  const o=window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true,seconds);
- // El display és a la cara local -Z. Amb el gir oposat al del jugador
- // queda de cara a qui acaba de plantar la càrrega.
- o.rotation.y=P.hd+Math.PI;
- // La posem davant dels peus, no sota el personatge, perquè el visor es vegi.
- const forward=1.35,x=P.x-Math.sin(P.hd)*forward,z=P.z-Math.cos(P.hd)*forward,
-       y=groundAt(x,z,P.y)+.24;
+ o.rotation.y=(cv?.hd??P.hd)+Math.PI;
+ const forward=1.35,
+       x=airborne?door.x:P.x-Math.sin(P.hd)*forward,
+       z=airborne?door.z:P.z-Math.cos(P.hd)*forward,
+       y=airborne?door.y:groundAt(x,z,P.y)+.24;
  o.position.set(x,y,z);world.add(o);
  if(seconds===0){
-  // 00 és una detonació immediata, no un compte enrere artificial d'1 s.
+  // 00 és una detonació immediata, fins i tot en ple vol.
   boom(x,y,z,48,COMBAT_BALANCE.weapons.c4,'b');
   world.remove(o);
- }else bombs.push({x,y,z,t:seconds,o});
- msg=seconds===0?'Bomba detonada!':
+ }else bombs.push({x,y,z,t:seconds,o,falling:airborne,vy:0,landed:!airborne});
+ msg=seconds===0?'Bomba detonada!':airborne?
+   'Explosiu deixat anar: '+String(seconds).padStart(2,'0')+' s!':
    'Bomba col·locada: '+String(seconds).padStart(2,'0')+' s!';
  msgT=2;return true;
 }
@@ -1086,9 +1098,37 @@ for(let i=grenades.length-1;i>=0;i--){const g=grenades[i],x0=g.x,y0=g.y,z0=g.z;g
   const surface=bunkerProjectileSurface(g.x,g.z,g.y,true);
   if(hitT!=null||g.t<=0||g.y<=surface){g.y=Math.max(g.y,surface);boom(g.x,g.y,g.z,16,COMBAT_BALANCE.weapons.grenade,'b',{weapon:'grenade',own:'b',spl:16,x:g.x,y:g.y,z:g.z,sx:g.sx,sy:g.sy,sz:g.sz,o:g.o});world.remove(g.o);grenades.splice(i,1)}
 }
-for(let i=bombs.length-1;i>=0;i--){const b=bombs[i];b.t-=dt;
-  if(b.t>0)window.HUNTER_EXPLOSIVE_VISUALS.update(b.o,b.t);
-  if(b.t<=0){boom(b.x,b.y,b.z,48,COMBAT_BALANCE.weapons.c4,'b');world.remove(b.o);bombs.splice(i,1)}}
+for(let i=bombs.length-1;i>=0;i--){
+ const b=bombs[i];
+ // Temporitzador independent del contacte: la bomba explota tant si
+ // ha aterrat com si continua caient. Cap impuls horitzontal fictici.
+ if(b.falling&&!b.landed){
+   const oldY=b.y;
+   b.vy=Math.max(-65,(b.vy||0)-24*dt);
+   const nextY=oldY+b.vy*dt;
+   let support=Math.max(groundAt(b.x,b.z,oldY),wy(b.x,b.z,elapsed))+.24;
+   // Un sostre sòlid intercepta el trajecte vertical abans del terreny.
+   // Això permet posar càrregues sobre edificis sense travessar la teulada.
+   for(const building of buildingCandidates(b.x,b.z,1)){
+     if(building.rb||building.rhp<=0)continue;
+     const roof=solidRoofAt(building,b.x,b.z);
+     if(roof&&oldY>=roof.top&&nextY<=roof.top+.24)
+       support=Math.max(support,roof.top+.24);
+   }
+   if(nextY<=support){
+     b.y=support;b.vy=0;b.landed=true;
+     b.falling=false;
+   }else b.y=nextY;
+   b.o.position.y=b.y;
+ }
+ b.t=Math.max(0,b.t-dt);
+ if(b.t>0)window.HUNTER_EXPLOSIVE_VISUALS.update(b.o,b.t);
+ if(b.t<=0){
+   // S'usa la posició actual, mai la de sortida de l'helicòpter.
+   boom(b.x,b.y,b.z,48,COMBAT_BALANCE.weapons.c4,'b');
+   world.remove(b.o);bombs.splice(i,1);
+ }
+}
 for(let i=fx.length-1;i>=0;i--){
  const f=fx[i];f.life-=dt;
  f.o.scale.setScalar(1+(.6-Math.max(0,f.life))*f.s);
