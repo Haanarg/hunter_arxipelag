@@ -712,13 +712,20 @@ for(const site of compoundCenters.filter(c=>c.type.startsWith('hut-settlement')|
     offset=R()*Math.PI*2;
   for(let k=0;k<count;k++){
     let placed=false;
-    for(let a=0;a<44;a++){
-      const angle=offset+(a%16)*Math.PI/8+(k*Math.PI*.65),
-        distance=Math.max(19,site.r*.62)+(Math.floor(a/16)*8),
-        x=site.x+Math.cos(angle)*distance,z=site.z+Math.sin(angle)*distance;
-      if(!civilianVehicleClear(x,z))continue;
-      add('cotxe_civil',x,z,angle+Math.PI/2,{civilian:true,parkedAt:site.type});
-      civilianNearSites++;placed=true;break;
+    // Cercam primer places al costat de les cases, no al perímetre
+    // del poblat. Només ampliam el radi si no hi ha cap lloc lliure.
+    const isVillage=site.type.startsWith('hut-settlement');
+    const radii=isVillage?[10,14,18,23,29,36,44,54]:[18,24,32,42,54];
+    for(const distance of radii){
+      if(placed)break;
+      for(let a=0;a<24;a++){
+        const angle=offset+(a%24)*Math.PI/12+(k*Math.PI*.65),
+          x=site.x+Math.cos(angle)*distance,
+          z=site.z+Math.sin(angle)*distance;
+        if(!civilianVehicleClear(x,z))continue;
+        add('cotxe_civil',x,z,angle+Math.PI/2,{civilian:true,parkedAt:site.type});
+        civilianNearSites++;placed=true;break;
+      }
     }
     if(!placed)break;
   }
