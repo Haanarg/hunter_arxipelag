@@ -30,7 +30,7 @@ const createGame=require('./harness.cjs');
         errors.push('extended rooms have no floor');
       // Comprovam que hi ha espai per girar al peu de l'escala.
       const divider=sub.doors.find(d=>Math.abs(d.cx-b.x-7.5)<.1&&
-        Math.abs(d.cz-b.z+(st.zTop>0?16:-16))<.1);
+        Math.abs(d.cz-b.z-(st.zTop>0?16:-16))<.1);
       if(!divider)errors.push('missing access-room divider door');
       const minLanding=Math.min(...Wl.filter(w=>w.bunkerBasementWall&&
         Math.abs(w.cx-b.x-(sub.halfX+7.5-.4)/2)<.15&&
