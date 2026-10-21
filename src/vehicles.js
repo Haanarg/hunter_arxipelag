@@ -84,6 +84,10 @@ window.HUNTER_VEHICLES=Object.freeze({
         g.add(car);
         g.userData.wheels=car.userData.wheels;
         g.userData.steeringPivots=car.userData.steeringPivots;
+        // Distància rodada = velocitat × dt / radi real escalat.
+        // Evitam que el pneumàtic sembli relliscar per un radi genèric.
+        for(const wheel of g.userData.wheels)
+          wheel.userData.radius*=VS.cotxe_civil;
         g.userData.civilianModel='C1A';
         g.userData.civilianColor=appearance.color??0x4b9fd1;
         // Fusionam només peces estàtiques, i no els vidres transparents:
