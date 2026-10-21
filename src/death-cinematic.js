@@ -70,78 +70,83 @@ function deathFaceCamera(player,cameraPosition){
  head.rotation.y=Math.max(-1.48,Math.min(1.48,angle));
  head.rotation.x=-.06;
 }
-// La simulació de combat s'atura després del cop fatal, però el model,
- // la càmera i els efectes continuen a temps cinematogràfic. Cada causa
- // té una trajectòria pròpia fins que el cos arriba a la postura definitiva.
-function deathReplayPose(v){
- const t=Math.min(v.t,DEATH_REPLAY_SECONDS),kind=v.cause.kind;
- const explosion=kind==='explosion'||kind==='vehicleExplosion';
- const shark=kind==='shark',fall=kind==='fall',runover=kind==='runover';
- let settle=0,launch=0,lift=0,roll=0,extraPitch=0,crush=0;
- if(explosion){
-  const flight=deathClamp((t-.32)/3.13);
-  settle=deathEase((t-2.55)/.83);
-  launch=7.8*deathEase(flight);
-  // Conservam l'altura real si el jugador sortia d'un vehicle aeri.
-  lift=Math.max(0,v.initialY-v.floor)*(1-deathEase(flight))+
-    6.5*Math.sin(Math.PI*flight);
-  extraPitch=-.9*Math.sin(Math.PI*flight);
-  roll=.7*Math.sin(Math.PI*flight)*Math.sin(flight*Math.PI*2);
- }else if(fall){
-  const drop=deathEase((t-.15)/2.85);
-  settle=deathEase((t-2.78)/.53);
-  lift=8.7*(1-drop);
-  crush=.38*Math.exp(-Math.pow((t-3.16)/.28,2));
- }else if(shark){
-  const sink=deathEase((t-.40)/3.38);
-  settle=.17*sink;
-  lift=-3.5*sink;
-  roll=.30*Math.sin(8*t)*(1-sink);
-  extraPitch=-.24*sink;
- }else if(runover){
-  const flight=deathClamp((t-.48)/2.95);
-  settle=deathEase((t-1.78)/1.2);
-  launch=3.9*deathEase(flight);
-  lift=2.4*Math.sin(Math.PI*flight);
-  roll=-.48*Math.sin(Math.PI*flight);
-  crush=.28*Math.exp(-Math.pow((t-3.12)/.32,2));
- }else{
-  settle=deathEase((t-.56)/2.7);
-  launch=(kind==='bullet'?1.55:.85)*settle;
-  lift=.55*Math.sin(Math.PI*settle);
-  roll=.22*Math.sin(Math.PI*settle)*(kind==='bullet'?-1:1);
+// La càmera lenta no imposa cap postura al jugador. Continuam el moviment
+// amb gravetat, inèrcia i contacte amb el terreny, com a la resta del joc.
+// La rotació és conseqüència de l'impuls i del contacte (cos rígid simplificat),
+// no d'una interpolació programada cap a la postura bocaterrosa de la Parca.
+function deathInitialMotion(v){
+ const airborne=playerFall,blast=playerEject,
+       speed=cv?Math.max(-60,Math.min(60,cv.v||0)):0,
+       heading=cv?.hd??P.hd??0,
+       push=v.cause.kind==='explosion'||v.cause.kind==='vehicleExplosion';
+ const velocity=new THREE.Vector3(
+  airborne?.vx??blast?.vx??(-Math.sin(heading)*speed),
+  airborne?.vy??(blast?.kind==='blast'?blast.vy:0),
+  airborne?.vz??blast?.vz??(-Math.cos(heading)*speed));
+ // Si l'explosió fatal d'un vehicle no ha creat cap expulsió prèvia,
+ // aplicam l'impuls des del focus de la deflagració, sense cap gir fix.
+ if(push&&!airborne&&!blast){
+  velocity.addScaledVector(v.direction,-9);
+  velocity.y+=6;
  }
- // direction apunta des del jugador cap a l'origen del cop: sortim
- // projectats en el sentit contrari, també en caigudes o atropellaments.
- const fx=-Math.sin(v.heading),fz=-Math.cos(v.heading);
- const x=v.originX-v.direction.x*launch,z=v.originZ-v.direction.z*launch;
- const bodyY=v.floor+lift;
- deathPoseProne(pl,{x,y:bodyY,z},v.heading);
- const u=pl.userData,open=deathClamp(settle+(explosion ? .35*Math.sin(Math.PI*deathClamp((t-.3)/3.2)) : 0));
- pl.position.set(x-fx*1.05*settle,bodyY+.39*settle,z-fz*1.05*settle);
- pl.rotation.set(-Math.PI/2*settle+extraPitch,v.heading,roll);
- pl.scale.copy(v.previousPlayerPose.scale);
- pl.scale.y*=1-crush;
- if(u.lowerBody)u.lowerBody.rotation.set(0,0,0);
- if(u.upperBody)u.upperBody.rotation.x=shark ? .16*Math.sin(t*7)*(1-settle) : -.13*Math.sin(Math.PI*settle);
- if(u.al)u.al.rotation.z=-(.18+.47*open);
- if(u.ar)u.ar.rotation.z=.18+.47*open;
- if(u.ael)u.ael.rotation.x=.16+.44*open;
- if(u.aer)u.aer.rotation.x=.16+.44*open;
- if(shark){
-  const thrash=(1-deathClamp((t-.4)/3.4));
-  if(u.al)u.al.rotation.x=-.25+Math.sin(t*9)*.45*thrash;
-  if(u.ar)u.ar.rotation.x=-.25-Math.sin(t*8.3)*.45*thrash;
-  if(u.ll)u.ll.rotation.x=.20*Math.sin(t*7)*thrash;
-  if(u.lr)u.lr.rotation.x=-.20*Math.sin(t*7+.5)*thrash;
+ const kind=v.cause.kind;
+ const torque=kind==='explosion'||kind==='vehicleExplosion'?2.2:
+   kind==='runover'?1.8:kind==='shark'?.9:kind==='fall'?.55:1.15;
+ const angular=new THREE.Vector3(
+  -v.direction.z*torque,0,v.direction.x*torque);
+ if(airborne&&!airborne.parachute){
+  // Conservam la inèrcia angular que ja duia a la caiguda normal.
+  angular.x+=(airborne.spin||1)*2.5;
  }
- const focusY=shark ? bodyY+1.8 : bodyY+(1-settle)*2.2+settle*.75;
- v.bodyFocus.set(x,focusY,z);
- if(!v.impactSoundPlayed&&t>=v.impactTime){
+ const orientation=pl.quaternion.clone();
+ const up=new THREE.Vector3(0,1,0).applyQuaternion(orientation);
+ const centre=new THREE.Vector3(P.x,P.y,P.z).addScaledVector(up,1.7);
+ return {centre,velocity,angular,orientation,onWater:v.onWater};
+}
+function deathReplayPose(v,dt=0){
+ const m=v.motion;
+ if(!m)return;
+ // Reproduïm els mateixos ordres de magnitud que playerFall/playerEject,
+ // però a velocitat cinematogràfica. Cap animació força l'angle final.
+ const step=Math.min(.1,Math.max(0,dt))*.65;
+ if(step){
+  const inWater=m.onWater&&m.centre.y<v.waterLevel+2.2;
+  m.velocity.y-=(inWater?7:24)*step;
+  const drag=Math.exp(-(inWater?1.9:.2)*step);
+  m.velocity.x*=drag;m.velocity.z*=drag;
+  m.centre.addScaledVector(m.velocity,step);
+  const turn=m.angular.length();
+  if(turn>1e-5){
+   const dq=new THREE.Quaternion().setFromAxisAngle(m.angular.clone().normalize(),turn*step);
+   m.orientation.premultiply(dq).normalize();
+  }
+  const up=new THREE.Vector3(0,1,0).applyQuaternion(m.orientation);
+  const ground=groundAt(m.centre.x,m.centre.z,m.centre.y),
+        surface=inWater?Math.max(ground,v.waterLevel-3.5):ground,
+        support=.52+1.18*Math.abs(up.y);
+  if(m.centre.y<surface+support){
+   m.centre.y=surface+support;
+   if(m.velocity.y<0)m.velocity.y=Math.abs(m.velocity.y)<3?0:-m.velocity.y*.12;
+   const friction=Math.exp(-(inWater?5:3.7)*step);
+   m.velocity.x*=friction;m.velocity.z*=friction;
+   // El pes fa perdre l'equilibri al cos després del cop. L'eix
+   // depèn de la inclinació existent, no d'una direcció predeterminada.
+   m.angular.x+=up.z*4.2*step;
+   m.angular.z-=up.x*4.2*step;
+   m.angular.multiplyScalar(Math.exp(-(inWater?2.8:1.5)*step));
+  }else m.angular.multiplyScalar(Math.exp(-.14*step));
+ }
+ const up=new THREE.Vector3(0,1,0).applyQuaternion(m.orientation);
+ pl.position.copy(m.centre).addScaledVector(up,-1.7);
+ pl.quaternion.copy(m.orientation);
+ pl.visible=true;
+ v.bodyFocus.copy(m.centre);
+ if(!v.impactSoundPlayed&&v.t>=v.impactTime){
   v.impactSoundPlayed=true;
-  if(shark)snd('swim',.95);
-  else if(explosion)snd('boom',.5);
-  else if(fall||runover)snd('hurt',.75);
+  const kind=v.cause.kind;
+  if(kind==='shark')snd('swim',.95);
+  else if(kind==='explosion'||kind==='vehicleExplosion')snd('boom',.5);
+  else if(kind==='fall'||kind==='runover')snd('hurt',.75);
   else snd('shot',.32);
  }
  pl.updateMatrixWorld(true);
@@ -287,7 +292,7 @@ function startDeathCinematic(cause=null){
  const heading=P.hd||0;
  const bodyFocus=new THREE.Vector3(P.x-Math.sin(heading)*.45,floor+.6,
    P.z-Math.cos(heading)*.45);
- const v={active:true,finished:false,t:0,phase:'replay',cause:info,source,hit,direction,
+ const v={active:true,finished:false,t:0,phase:'replay',cause:info,source,hit,direction,onWater,
   overlay,shade,replayLabel,causeEl,finale,button,previousVisibility:{},previousFov:cam.fov,
   previousPlayerPose:{position:pl.position.clone(),rotation:pl.rotation.clone(),scale:pl.scale.clone(),visible:pl.visible},
   heading,bodyFocus,originX:P.x,originZ:P.z,initialY:P.y,floor,waterLevel:wy(P.x,P.z,elapsed),
@@ -296,8 +301,9 @@ function startDeathCinematic(cause=null){
   impactSoundPlayed:false,lastBell:-1,voidScene:null,reaper:null,replayEffect:null};
  deathCinematic=v;
  deathUi(true);endEl.style.display='none';
- // En morir conduint el model del jugador estava ocult: també ha de
- // poder veure's ajagut durant la repetició del darrer impacte.
+ // Conservam la postura i les velocitats del moment fatal. El cos no
+ // s'ajau artificialment fins a l'escena separada de la Parca.
+ v.motion=deathInitialMotion(v);
  deathReplayPose(v);
  deathCreateVoid(v);
  v.replayEffect=deathReplayEffect(v);
@@ -330,7 +336,7 @@ function updateDeathCinematic(dt){
  if(v.phase==='replay'||v.phase==='fade'){
   // Seguiment lateral cinematogràfic del cos: la càmera acompanya
   // l'enlairament, la caiguda o l'enfonsament, sense teleportar el model.
-  deathReplayPose(v);
+  deathReplayPose(v,dt);
   const right=new THREE.Vector3(Math.cos(v.heading),0,-Math.sin(v.heading));
   cam.position.copy(v.bodyFocus).addScaledVector(right,9-replay*2.5)
     .addScaledVector(v.direction,-2.8+replay*.8);
@@ -364,7 +370,6 @@ function updateDeathCinematic(dt){
     effect.mesh.visible=v.t>=.42&&p<1;
    }
   }
-  if(replay>.8&&v.cause.kind!=='shark')deathFaceCamera(pl,cam.position);
  }
  const fadeStart=DEATH_REPLAY_SECONDS,half=DEATH_FADE_SECONDS/2;
  const alpha=v.t<fadeStart?0:v.t<fadeStart+half
