@@ -11,6 +11,8 @@ import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
 import {GAME_VERSION} from './version.mjs';
 import {createTruckConcept} from './truck-concepts.mjs';
+import {createFamilyC1Iteration} from './civilian-car-c1-iterations.mjs';
+window.HUNTER_CIVIL_C1A=createFamilyC1Iteration;
 // Mateixa geometria A4.3 que es mostra a camio-proves.html.
 window.HUNTER_TRUCK_CONCEPT=createTruckConcept;
 import * as rockFields from './rock-fields.mjs';
