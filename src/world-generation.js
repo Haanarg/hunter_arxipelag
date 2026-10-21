@@ -489,15 +489,17 @@ P.x=baseCompound.spawn?.x??pa.x;P.z=baseCompound.spawn?.z??pa.z+20;P.hd=0;P.base
 const add=(t,x,z,a,meta={})=>{
   // Els colors són part de l'estat generat per llavor, no una aleatorietat
   // del renderitzador. La cerca de llavors consumeix les mateixes tirades.
-  const civilian=t==='cotxe_civil',bicycle=t==='bici',palette=window.HUNTER_CIVILIAN_CARS.colors;
-  const color=(civilian||bicycle)?palette[Math.floor(R()*palette.length)].hex:undefined;
-  const variant=civilian?Math.floor(R()*window.HUNTER_CIVILIAN_CARS.variants.length):undefined;
+  const civilian=t==='cotxe_civil',bicycle=t==='bici',jetski=t==='moto_aquatica',
+    colors=window.HUNTER_CIVILIAN_CARS,
+    palette=jetski?colors.jetskiColors:colors.colors;
+  const color=(civilian||bicycle||jetski)?palette[Math.floor(R()*palette.length)].hex:undefined;
+  const variant=civilian?Math.floor(R()*colors.variants.length):undefined;
   const appearance={color:meta.color??color,variant:meta.variant??variant};
   const o=seedSearchMode?seedVehicleStub(t):mkV(t,appearance),c=VT[t],
     surface=Math.max(0,hAt(x,z));
   const v={t,x,z,hd:a||0,v:0,alt:c.m==='a'?helicopterLandedAltitude({o},surface):surface+.8,
     o,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};
-  if(civilian||bicycle)v.color=appearance.color;
+  if(civilian||bicycle||jetski)v.color=appearance.color;
   if(civilian)v.variant=appearance.variant;
   if(t==='heli_combat')v.rockets=6;
   if(t==='llanxa_coets')v.rockets=Infinity;
