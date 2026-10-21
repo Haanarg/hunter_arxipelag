@@ -295,8 +295,16 @@ function blastOccluded(x,y,z,tx,ty,tz){
 function boom(x,y,z,r,dmg,own,source=null){
  window.HUNTER_STEALTH.emit('explosion',x,y,z);
  snd('boom',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/200));
- const o=new THREE.Mesh(sphG,new THREE.MeshBasicMaterial({color:0xffa030,transparent:true}));
- o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6});
+ // L'ona expansiva és un front anular subtil, no una esfera
+ // quasi opaca. L'efecte NO escriu profunditat: murs i portes que
+ // resisteixen l'explosió sempre continuen visibles, també en interiors.
+ const opacity=.38,
+       o=new THREE.Mesh(blastRingG,new THREE.MeshBasicMaterial({
+         color:0xffb15d,side:THREE.DoubleSide,
+         transparent:true,opacity,depthTest:true,depthWrite:false
+       }));
+ o.rotation.x=-Math.PI/2;
+ o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6,opacity});
  // El casc protegeix el pilot mentre encara és dins. Si el vehicle
  // esclata dins aquest càlcul, no el feim rebre també un impacte directe.
  const pilotedAtStart=!!cv;
@@ -1068,7 +1076,15 @@ for(let i=grenades.length-1;i>=0;i--){const g=grenades[i],x0=g.x,y0=g.y,z0=g.z;g
 for(let i=bombs.length-1;i>=0;i--){const b=bombs[i];b.t-=dt;
   if(b.t>0)window.HUNTER_EXPLOSIVE_VISUALS.update(b.o,b.t);
   if(b.t<=0){boom(b.x,b.y,b.z,48,COMBAT_BALANCE.weapons.c4,'b');world.remove(b.o);bombs.splice(i,1)}}
-for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.life-=dt;f.o.scale.setScalar(1+(.6-f.life)*f.s);f.o.material.opacity=Math.max(0,f.life/.6);if(f.life<=0){world.remove(f.o);fx.splice(i,1)}}
+for(let i=fx.length-1;i>=0;i--){
+ const f=fx[i];f.life-=dt;
+ f.o.scale.setScalar(1+(.6-Math.max(0,f.life))*f.s);
+ // Manté el mateix sostre d'opacitat que el primer fotograma.
+ f.o.material.opacity=Math.max(0,f.life/.6)*f.opacity;
+ if(f.life<=0){
+  world.remove(f.o);f.o.material.dispose();fx.splice(i,1);
+ }
+}
 updateBulletImpacts(dt);
 }
 
