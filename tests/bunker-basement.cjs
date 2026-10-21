@@ -28,6 +28,30 @@ const createGame=require('./harness.cjs');
       const distant=point(-24,20);
       if(Math.abs(groundAt(distant.x,distant.z,sub.floorY)-sub.floorY)>.03)
         errors.push('extended rooms have no floor');
+      // Les sales que sobresurten de la planta exterior no són mar.
+      if(!playerInsideBunkerBasement(distant.x,distant.z,sub.floorY))
+        errors.push('extended basement room is not recognized');
+      if(playerInsideBunkerBasement(distant.x,distant.z,b.fy+.3))
+        errors.push('upper floors mistaken for basement');
+      if(swimming&&!ib)errors.push('unexpected swimming during bunker setup');
+      if(!sub.doors.every(d=>d.bunkerBasementWall))
+        errors.push('doors missing bunker camera occlusion marker');
+      const general=c.general;
+      if(!!general.basement){
+        const oldE=E;
+        E=[general];
+        // En el despatx, l'altura del terreny exterior és >= 9 m
+        // superior a la del general i no pot alterar la direcció.
+        const sx=general.x+2.4,sz=general.z+2.4,sy=general.gy+1.5,
+              dx=general.x-sx,dz=general.z-sz,len=Math.hypot(dx,dz),
+              focus={},aim=autoAimWeaponShot(sx,sy,sz,dx/len,0,dz/len,
+                75,.96,'light',focus);
+        E=oldE;
+        if(focus.target!==general)
+          errors.push('no autoaim lock on underground general');
+        else if(Math.abs(aim[1])>.13)
+          errors.push('autoaim points towards the outside roof');
+      }
       // Comprovam que hi ha espai per girar al peu de l'escala.
       const divider=sub.doors.find(d=>Math.abs(d.cx-b.x-7.5)<.1&&
         Math.abs(d.cz-b.z-(st.zTop>0?16:-16))<.1);
