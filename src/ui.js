@@ -5,10 +5,12 @@ window.HUNTER_UI=Object.freeze({
       const s=getState(),state=s.vehicle?s.vehicleTypes[s.vehicle.t].n:s.swimming?'Nedant':s.crouching?'Ajupit':s.inside?'Interior':'A peu',veh=s.vehicle,vehInfo=veh?'<br>🛡️ '+Math.max(0,veh.life??0)+'/'+(veh.maxLife??0)+(veh.t==='llanxa_coets'?' · 🚀 ∞':veh.rockets!=null?' · 🚀 '+veh.rockets:veh.t==='heli'?' · 💣 '+(s.inventory.granada||0)+' granades':''):'',weaponInfo=s.bazookaEquipped&&!veh?' · 🚀 Bazooka '+(s.inventory.bazooka||0)+' coets':s.grenadeEquipped&&!veh?' · 💣 Granades '+(s.inventory.granada||0):s.cisallaEquipped&&!veh?' · ✂ Cisalla':s.sniperEquipped&&!veh?' · 🔭 Rifle '+s.sniperAmmo+' cartutxos'+(s.scopeActive?' · Mira x8':''):'';
       hud.innerHTML=`<b>HUNTER · ARXIPÈLAG</b><br>❤️ ${s.hp>0?Math.max(1,Math.ceil(s.hp)):0} · 🎯 ${s.ammo} · ☠ ${s.kills}<br>${state}${s.disguised?' · 🎭 Disfressat':''}${weaponInfo}${vehInfo}${s.nearVehicle&&!s.vehicle?'<br>Acció: puja a '+s.vehicleTypes[s.nearVehicle.t].n:''}${s.messageTime>0?'<br>'+s.message:''}${s.waypoint?'<br>Destinació: '+Math.round(Math.hypot(s.waypoint.x-s.player.x,s.waypoint.z-s.player.z))+' m':''}<br><span style="opacity:.72">Llavor ${s.seed>>>0} · X ${s.player.x|0} · Z ${s.player.z|0}</span>`;
     }
-    function hide(){panel.style.display='none'}
+    let currentMode=null;
+    function hide(){panel.style.display='none';currentMode=null}
     function show(mode){
-      panel.style.display='flex';
-      title.textContent=mode==='map'?'Carta de navegació':mode==='inventory'?'Inventari':mode==='restart'?'Nova operació?':mode==='performance'?'Rendiment':'Operació en pausa';panel.querySelector('.card').classList.toggle('inventory-card',mode==='inventory');
+      currentMode=mode;panel.style.display='flex';
+      resumeButton.onclick=mode==='bombtimer'?()=>actions.open('inventory'):actions.resume;
+      title.textContent=mode==='bombtimer'?'Programar explosiu':mode==='map'?'Carta de navegació':mode==='inventory'?'Inventari':mode==='restart'?'Nova operació?':mode==='performance'?'Rendiment':'Operació en pausa';panel.querySelector('.card').classList.toggle('inventory-card',mode==='inventory');
       if(mode==='inventory'){
         const state=getState(),keys=['med','paracaigudes','cisalla','expl','granada','bazooka','franctirador','disf','arma'],present=keys.filter(k=>state.inventory[k]>0);
         let selected=present[0]||null;
@@ -33,6 +35,40 @@ window.HUNTER_UI=Object.freeze({
           const d=st.itemTypes[selected];detail.innerHTML='<div class="inv-icon">'+d.icon+'</div><h3>'+d.n+'</h3><p>'+d.desc+'</p>';
         };
         renderInventory();
+      }else if(mode==='bombtimer'){
+        // El LED és la mateixa disposició 00:SS del model 3D. Només
+        // configuram els dos dígits dels segons, amb límit 00–59.
+        let seconds=3,confirmed=false;
+        body.innerHTML='<div class="bomb-timer-config" role="group" aria-label="Temporitzador de l’explosiu">'+
+          '<p class="bomb-timer-hint">Selecciona els segons abans de la detonació (00–59).</p>'+
+          '<div class="bomb-timer-casing"><div class="bomb-timer-led" role="timer" aria-label="Compte enrere configurat">'+
+          '<span class="bomb-timer-prefix">00:</span>'+
+          '<div class="bomb-timer-digit"><button id="bombTensUp" type="button" aria-label="Augmenta les desenes de segons">▲</button><span id="bombTens" aria-live="polite">0</span><button id="bombTensDown" type="button" aria-label="Redueix les desenes de segons">▼</button></div>'+
+          '<div class="bomb-timer-digit"><button id="bombOnesUp" type="button" aria-label="Augmenta les unitats de segons">▲</button><span id="bombOnes" aria-live="polite">3</span><button id="bombOnesDown" type="button" aria-label="Redueix les unitats de segons">▼</button></div>'+
+          '</div><div class="bomb-timer-wires" aria-hidden="true"><i></i><i></i><i></i></div></div>'+
+          '<p class="bomb-timer-warning">00 = detonació immediata després de col·locar la bomba.</p>'+
+          '<div class="bomb-timer-actions"><button id="bombTimerCancel" type="button">Cancel·lar</button><button id="bombTimerConfirm" type="button">Activar i col·locar</button></div></div>';
+        const tens=document.getElementById('bombTens'),ones=document.getElementById('bombOnes'),
+              confirm=document.getElementById('bombTimerConfirm');
+        const draw=()=>{tens.textContent=String(Math.floor(seconds/10));ones.textContent=String(seconds%10)};
+        const changeDigit=(place,step)=>{
+          const n=Math.floor(seconds/10),u=seconds%10;
+          seconds=place==='tens'?((n+step+6)%6)*10+u:
+            n*10+(u+step+10)%10;
+          draw();
+        };
+        document.getElementById('bombTensUp').onclick=()=>changeDigit('tens',1);
+        document.getElementById('bombTensDown').onclick=()=>changeDigit('tens',-1);
+        document.getElementById('bombOnesUp').onclick=()=>changeDigit('ones',1);
+        document.getElementById('bombOnesDown').onclick=()=>changeDigit('ones',-1);
+        document.getElementById('bombTimerCancel').onclick=()=>actions.open('inventory');
+        confirm.onclick=()=>{
+          if(confirmed)return;
+          confirmed=true;confirm.disabled=true;
+          if(!actions.placeExplosive(seconds)){
+            confirmed=false;confirm.disabled=false;
+          }
+        };
       }else if(mode==='map'){
         body.innerHTML='<canvas id="fullmap" width="510" height="510" aria-label="Mapa: toca per marcar una destinació"></canvas><p>Toca el mapa per marcar una destinació. Blau: base · Groc: vehicles · Vermell: enemics · Cian: helicòpters · Taronja: tancs.</p><button id="clearMark">Esborra marca</button>';
         const map=document.getElementById('fullmap');minimap.drawFull(map,getState().waypoint);
@@ -120,7 +156,7 @@ window.HUNTER_UI=Object.freeze({
       }
     }
     resumeButton.onclick=actions.resume;
-    return Object.freeze({renderHUD,show,hide})
+    return Object.freeze({renderHUD,show,hide,isBombTimerOpen:()=>currentMode==='bombtimer'})
   }
 });
 
