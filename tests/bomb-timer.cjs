@@ -1,0 +1,66 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'..');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const ui=read('src/ui.js'),explosive=read('src/explosive-visuals.js'),
+      combat=read('src/combat.js'),html=read('index.html'),
+      core=read('src/game-core.js');
+assert.match(html,/\.bomb-timer-led/,'Cal un visor LED tàctil');
+assert.match(ui,/bombTensUp/);
+assert.match(ui,/bombTensDown/);
+assert.match(ui,/bombOnesUp/);
+assert.match(ui,/bombOnesDown/);
+assert.match(ui,/actions\.placeExplosive\(seconds\)/);
+assert.match(combat,/function plant\(seconds=3\)/);
+assert.match(combat,/seconds===0/);
+assert.match(explosive,/Math\.min\(59,/);
+assert.match(core,/panel\('bombtimer'\)/);
+(async()=>{
+ const game=await require('./harness.cjs')();
+ game.start('12345');game.frame();
+ game.run('inv.expl=4');
+ const open=()=>game.run("panel('inventory');useInvItem('expl')");
+ const secs=()=>Number(game.el('bombTens').textContent)*10+
+   Number(game.el('bombOnes').textContent);
+ const press=(id,n=1)=>{for(let i=0;i<n;i++)game.el(id).onclick()};
+ const amount=()=>game.run('inv.expl||0');
+ assert.equal(open(),true);
+ assert.equal(game.run('ui.isBombTimerOpen()'),true);
+ assert.equal(game.run('paused'),true);
+ assert.equal(secs(),3,'S’inicia a 03 s i no col·loca res encara');
+ assert.equal(amount(),4,'Obrir la interfície no consumeix cap C4');
+ press('bombTensUp',5);press('bombOnesUp',6);
+ assert.equal(secs(),59,'Els dos dígits són independents i admeten 59');
+ press('bombTensUp');assert.equal(secs(),9,'Les desenes passen de 5 a 0');
+ press('bombTensDown');assert.equal(secs(),59,'Es pot tornar a 59');
+ const confirm=game.el('bombTimerConfirm');confirm.onclick();confirm.onclick();
+ assert.equal(game.run('paused'),false);
+ assert.equal(game.run('ui.isBombTimerOpen()'),false);
+ assert.equal(amount(),3,'Confirmar només consumeix una bomba');
+ assert.equal(game.run('bombs.length'),1);
+ assert.equal(game.run('bombs[0].t'),59,'La durada escollida substitueix els 3 s');
+ assert.equal(game.run('bombs[0].o.userData.explosiveDisplay.lastSecond'),59);
+ game.run('updFx(1)');
+ assert.equal(game.run('bombs[0].t'),58,'La bomba descompta des de 59');
+ assert.equal(game.run('bombs[0].o.userData.explosiveDisplay.lastSecond'),58);
+ assert.equal(open(),true);
+ const beforeCancel=amount();
+ game.el('bombTimerCancel').onclick();
+ assert.equal(game.run('ui.isBombTimerOpen()'),false);
+ assert.equal(game.run('paused'),true);
+ assert.equal(amount(),beforeCancel,'Cancel·lar no gasta explosiu');
+ assert.equal(open(),true);
+ press('bombOnesDown',3);
+ assert.equal(secs(),0,'Es permet 00');
+ game.run('cheats.immune=true'); // 00 esclata al costat del jugador.
+ const beforeZero=game.run('bombs.length');
+ game.el('bombTimerConfirm').onclick();
+ assert.equal(game.run('bombs.length'),beforeZero,'00 detona sense crear un temporitzador pendent');
+ assert.equal(amount(),2,'00 consumeix exactament una C4');
+ assert.equal(game.run('plant(60)'),false);
+ assert.equal(game.run('plant(-1)'),false);
+ assert.equal(game.run('plant(1.5)'),false);
+ assert.equal(amount(),2,'Els retards no vàlids no gasten bombes');
+ console.log('OK: LED 00–59, control per xifra, compte enrere 59, cancel·lació i detonació 00');
+})().catch(e=>{console.error(e);process.exitCode=1});
