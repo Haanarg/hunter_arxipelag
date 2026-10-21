@@ -14,6 +14,8 @@ assert.match(read('src/civilian-car-c1-iterations.mjs'),/steering.add\(axle\)/,
          steering=o.userData.steeringPivots;
    const front=W.filter(w=>steering.includes(w.parent));
    const rear=W.filter(w=>!steering.includes(w.parent));
+   const radiusCorrect=W.every(w=>
+     Math.abs(w.userData.radius-.70*VS.cotxe_civil)<1e-7);
    o.updateMatrixWorld(true);
    const centres=W.map(w=>w.getWorldPosition(new THREE.Vector3()));
    window.HUNTER_VEHICLES.animateSteering(o,'cotxe_civil',1,.25);
@@ -58,7 +60,7 @@ assert.match(read('src/civilian-car-c1-iterations.mjs'),/steering.add\(axle\)/,
    V=oldV;cv=oldCV;rebuildVehicleGrid();
    return {
      count:W.length,steerCount:steering.length,front:front.length,rear:rear.length,
-     yaw,stable,directionUnaffected,parentPitch,geometry,
+     radiusCorrect,yaw,stable,directionUnaffected,parentPitch,geometry,
      icon,iconSvg,near:near===v,driver,hidden,headingAligned,
      seatCorrect,hipX,headY:head.y,utilityDriver,utilityHip
    };
@@ -66,6 +68,7 @@ assert.match(read('src/civilian-car-c1-iterations.mjs'),/steering.add\(axle\)/,
  assert.equal(r.count,4,'Quatre rodes');
  assert.equal(r.steerCount,2,'Dues rodes direccionals');
  assert.equal(r.front,2);assert.equal(r.rear,2);
+ assert.equal(r.radiusCorrect,true,'El radi de cada roda és l’escalat real');
  assert(r.yaw.every(y=>y>.15),'Les rodes davanteres dirigeixen');
  assert.equal(r.stable,true,'Cap centre de roda oscil·la durant el rodatge i gir');
  assert.equal(r.directionUnaffected,true,'El rodament no afecta el pivot de direcció');
