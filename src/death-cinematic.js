@@ -332,7 +332,12 @@ function updateDeathCinematic(dt){
   const right=new THREE.Vector3(Math.cos(v.heading),0,-Math.sin(v.heading));
   cam.position.copy(v.bodyFocus).addScaledVector(right,9-replay*2.5)
     .addScaledVector(v.direction,-2.8+replay*.8);
-  cam.position.y+=v.cause.kind==='shark'?2.0-replay*.9:3.8-replay*.65;
+  if(v.cause.kind==='shark'){
+   // La càmera es capbussa amb el jugador: si es quedàs sobre l'aigua,
+   // la superfície opaca taparia justament l'enfonsament.
+   const dive=deathEase((v.t-.28)/3.38);
+   cam.position.y=v.waterLevel+1.7-5.7*dive;
+  }else cam.position.y+=3.8-replay*.65;
   cam.lookAt(v.bodyFocus);
   const fieldOfView=(v.cause.kind==='explosion'||v.cause.kind==='vehicleExplosion'?58:53)-replay*4;
   if(Math.abs(cam.fov-fieldOfView)>.05){cam.fov=fieldOfView;cam.updateProjectionMatrix()}
