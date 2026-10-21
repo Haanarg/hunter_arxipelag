@@ -1,15 +1,15 @@
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 window.HUNTER_VEHICLES=Object.freeze({
-  scales:Object.freeze({llanxa:1.95,llanxa_coets:1.95,moto_aquatica:1.08,barca_rems:.98,windsurf:1.05,hover:1.3,ferry:1,cotxe:1.3,moto:1.2,bici:1.2,camio:1.8125,tanqueta:1.8125,tanc:2.25,heli:1.75,heli_combat:1.82}),
-  radii:Object.freeze({llanxa:8.25,llanxa_coets:8.6,moto_aquatica:2.1,barca_rems:3.25,windsurf:2.3,hover:4.8,ferry:35,cotxe:3.6,moto:2.2,bici:1.9,camio:4.8,tanqueta:4.5,tanc:5.6,heli:8,heli_combat:8.4}),
+  scales:Object.freeze({llanxa:1.95,llanxa_coets:1.95,moto_aquatica:1.08,barca_rems:.98,windsurf:1.05,hover:1.3,ferry:1,cotxe:1.3,cotxe_civil:1.2,moto:1.2,bici:1.2,camio:1.8125,tanqueta:1.8125,tanc:2.25,heli:1.75,heli_combat:1.82}),
+  radii:Object.freeze({llanxa:8.25,llanxa_coets:8.6,moto_aquatica:2.1,barca_rems:3.25,windsurf:2.3,hover:4.8,ferry:35,cotxe:3.6,cotxe_civil:3.35,moto:2.2,bici:1.9,camio:4.8,tanqueta:4.5,tanc:5.6,heli:8,heli_combat:8.4}),
   hitboxes:Object.freeze({
     llanxa:[6.6,15.9],llanxa_coets:[6.8,16.1],moto_aquatica:[1.7,3.8],barca_rems:[2.7,6.1],windsurf:[1.9,4.3],hover:[4.2,7.4],ferry:[32,63],
-    cotxe:[3.2,5.9],moto:[1.35,2.8],bici:[1.15,2.4],camio:[3.6,7.8],tanqueta:[3.15,5.1],tanc:[4.2,7.1],
+    cotxe:[3.2,5.9],cotxe_civil:[3.2,5.85],moto:[1.35,2.8],bici:[1.15,2.4],camio:[3.6,7.8],tanqueta:[3.15,5.1],tanc:[4.2,7.1],
     heli:[3.4,11.2],heli_combat:[2.8,11.8]
   }),
   decks:Object.freeze({ferry:Object.freeze({halfW:14.3,halfL:25.6,rampHalfW:6.7,ramp:5.8,y:2.2,rampY:.45,
     cabin:Object.freeze({x:11.5,z:1.8,halfW:1.9,halfL:4.05})})}),
-  steeringMax:Object.freeze({bici:.60,moto:.52,cotxe:.44,camio:.36,tanqueta:.34}),
+  steeringMax:Object.freeze({bici:.60,moto:.52,cotxe:.44,cotxe_civil:.43,camio:.36,tanqueta:.34}),
   // Els pivots giren en Y, per separat de les rodes que roden en X.
   animateSteering(model,type,turn,dt){
     const pivots=model?.userData?.steeringPivots;
@@ -73,8 +73,12 @@ window.HUNTER_VEHICLES=Object.freeze({
       const p=new THREE.Group();p.position.set(px,py,pz);parent.add(p);const tire=new THREE.Mesh(new THREE.TorusGeometry(r*.8,r*.2,6,12),material(0x20252a,'rubber'));tire.rotation.y=Math.PI/2;tire.scale.z=width/(r*.4);p.add(tire);round(p,r*.45,width*.8,0x8b9699,0,0,0,'x','metal');if(spokes)for(let a=0;a<Math.PI;a+=Math.PI/3)rod(p,[0,Math.sin(a)*r*.75,Math.cos(a)*r*.75],[0,-Math.sin(a)*r*.75,-Math.cos(a)*r*.75],.035,0xb6bdc1,'metal');p.userData.radius=r;(owner.userData.wheels||(owner.userData.wheels=[])).push(p);return p};
     const shape=new THREE.Shape();[[-2,-5],[2,-5],[2.2,1],[0,5.5],[-2.2,1]].forEach(([x,y],i)=>i?shape.lineTo(x,y):shape.moveTo(x,y));
     const hull=new THREE.ExtrudeGeometry(shape,{depth:1.4,bevelEnabled:false});hull.rotateX(-Math.PI/2);
-    return function createVehicle(t){
+    return function createVehicle(t,appearance={}){
       const g=new THREE.Group();g.rotation.order='YXZ';const metal=0x3e4849,glass=0x76acba,rubber=0x252d31;
+      if(t==='cotxe_civil'){
+        window.HUNTER_CIVILIAN_CARS.build(THREE,g,{box,wheel,rod,material,
+          variant:appearance.variant??0,color:appearance.color??0x4b9fd1});
+      }
       if(t==='cotxe'){const col=0xa35b38,trim=0x302f2d;box(g,3,1,5.6,col,0,1.15,0,'paint');box(g,2.92,.42,2.1,col,0,1.82,-1.72,'paint');box(g,2.62,.82,2.72,glass,0,2.04,.48,'glass');box(g,2.88,.18,2.95,col,0,2.52,.48,'paint');box(g,2.45,.1,1.1,0x7d432f,0,2.65,.5,'paint');for(const x of[-1.34,1.34]){box(g,.13,.28,2.9,col,x,1.7,.5,'paint');box(g,.15,.82,.14,col,x,2.04,-.82,'paint');box(g,.15,.82,.14,col,x,2.04,1.82,'paint');box(g,.18,.82,.15,col,x,2.04,.5,'paint');for(const z of[-1.85,1.85])wheel(g,x*1.16,.72,z,.72,.45,false,z<0);box(g,.35,.18,.4,metal,x*1.17,2.08,-.85,'metal')}for(const z of[-2.95,2.95])box(g,3.25,.3,.3,metal,0,.94,z,'metal');box(g,1.6,.45,.08,rubber,0,1.4,-2.84,'rubber');box(g,2.5,.14,.12,trim,0,1.12,-2.88,'rubber');for(const x of[-1.08,1.08]){box(g,.5,.34,.1,0xffedb2,x,1.43,-2.85,'paint');box(g,.38,.24,.1,0x9c2825,x,1.38,2.84,'paint')}for(const x of[-.72,.72])box(g,.5,.1,.16,0xd8d7c9,x,1.03,-2.9,'metal');const spare=wheel(g,0,1.5,3,.65,.45);spare.rotation.y=Math.PI/2;(g.userData.wheels||[]).pop()}
       if(t==='camio'){
         // A4.3: el mateix low-poly de la preview, adaptat a la
@@ -121,7 +125,7 @@ window.HUNTER_VEHICLES=Object.freeze({
         g.userData.truckVisualFit=fit;
       }
       if(t==='bici'||t==='moto'){
-        const moto=t==='moto',r=moto?.65:.62,L=moto?1.5:1.22,col=moto?0xbc743d:0x3f9b9d;
+        const moto=t==='moto',r=moto?.65:.62,L=moto?1.5:1.22,col=moto?0xbc743d:(appearance.color??0x3f9b9d);
         // La forquilla i el manillar pivoten junts amb la roda de davant.
         // Centre de gir al coll de direcció (1.65, -0.95).
         const steering=new THREE.Group();steering.position.set(0,1.65,-.95);g.add(steering);
