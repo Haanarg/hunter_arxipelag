@@ -3056,6 +3056,10 @@ sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.
  if(deathVoidReady()){
    const v=deathCinematic;v.voidCamera.aspect=cam.aspect;v.voidCamera.updateProjectionMatrix();
    ren.render(v.voidScene,v.voidCamera);
+ }else if(deathCinematic?.underwaterActive){
+   // Mantenim la mateixa càmera i el mateix cos, però sense la superfície
+   // opaca del mar ni el cel exterior mentre el personatge s'enfonsa.
+   ren.render(deathCinematic.underwaterScene,cam);
  }else ren.render(scene,cam);
 if(started&&!paused&&!over){
   advanceTerrainTexture();
