@@ -1185,7 +1185,10 @@ function bunkerSubFloorAt(x,z,previous=-Infinity){
     const t=(p.z-st.zTop)/(st.zBottom-st.zTop);
     return b.fy+.22-t*(b.fy+.22-b.basement.floorY);
   }
-  return previous<b.fy-3.9?b.basement.floorY:b.fy+.22;
+  if(previous<b.fy-3.9)return b.basement.floorY;
+  // El forjat superior només existeix sota l'edifici visible, no sobre
+  // tot el soterrani ampliat: a fora deixam actuar el terreny natural.
+  return Math.abs(p.x)<=19&&Math.abs(p.z)<=16?b.fy+.22:null;
 }
 // Door-aligned treads share the exact same geometry and walking height.
 function stairLocal(s,x,z){const dx=x-s.x,dz=z-s.z;return{along:dx*s.nx+dz*s.nz,side:dx*s.nz-dz*s.nx}}
