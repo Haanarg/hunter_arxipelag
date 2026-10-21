@@ -989,7 +989,14 @@ function addBunkerBasement(b){
     if(!seedSearchMode){
       const before=b.o.children.length;
       floorPanel(xa,xb,za,zb,.22,0x8e9588);
-      b.basement.upperSlabMeshes.push(...b.o.children.slice(before));
+      for(const mesh of b.o.children.slice(before)){
+        mesh.name='bunker-forjat-opac';
+        mesh.material.transparent=false;
+        mesh.material.opacity=1;
+        mesh.material.depthWrite=true;
+        mesh.material.side=THREE.DoubleSide;
+        b.basement.upperSlabMeshes.push(mesh);
+      }
     }
     Wl.push({x0:b.x+xa,x1:b.x+xb,z0:b.z+za,z1:b.z+zb,
       y0:b.fy-.03,y1:b.fy+.22,hp:Infinity,m:new THREE.Object3D(),
@@ -1699,9 +1706,14 @@ function updateDistanceVisibility(){
             !!focus?.contains(b.x,b.fy+b.h*.5,b.z,Math.max(b.hw,b.h*.5)),
           obscured=close&&!inside&&terrainConcealsBuilding(b,Math.sqrt(d2));
     b.o.visible=close&&!obscured;
-    b.roof.visible=!inside&&b.rhp>0;for(const r of b.extraRoofs||[])r.visible=b.roof.visible;if(b.upperFloor)b.upperFloor.visible=!b.rb&&(!inside||P.y>=b.fy+b.storey-.6);
-    b.wm.opacity=b.dm.opacity=inside?.18:1;
-    b.wm.depthWrite=b.dm.depthWrite=!inside;
+    // Sota el búnquer, ni el forjat ni la coberta no es tornen
+    // transparents. L'opacitat reduïda és només per a cases normals.
+    const basementView=!!b.basement&&inside&&P.y<b.fy-1;
+    b.roof.visible=(!inside||basementView)&&b.rhp>0;
+    for(const r of b.extraRoofs||[])r.visible=b.roof.visible;
+    if(b.upperFloor)b.upperFloor.visible=!b.rb&&(!inside||P.y>=b.fy+b.storey-.6);
+    b.wm.opacity=b.dm.opacity=inside&&!basementView?.18:1;
+    b.wm.depthWrite=b.dm.depthWrite=!inside||basementView;
     if(!b.o.visible)visibilityStats.buildings++;
     if(obscured)visibilityStats.terrainOccluded++;
   }
