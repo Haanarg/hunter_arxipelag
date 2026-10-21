@@ -190,7 +190,7 @@ window.HUNTER_BUILDINGS=Object.freeze({
       roofGroup.add(rimN,rimS,rimE,rimW);
       batchStaticRoof(roofGroup,[rimN,rimS,rimE,rimW]);
       roofGroup.userData.color=roofColor;
-      return {group,walls,doors,roof:roofGroup};
+      return {group,walls,doors,roof:roofGroup,foundation:floor};
     };
 
     // Hangar de gran llum amb coberta arquejada low-poly.
