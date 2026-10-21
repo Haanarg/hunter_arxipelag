@@ -1733,7 +1733,7 @@ function terrainConcealsBuilding(b,dist){
   return covered>=2;
 }
 function isInsideVisibleBuilding(b){
-  if(b?.basement&&!cv&&P.y<b.fy-1){
+  if(b?.basement&&!cv&&P.y<b.fy-3.9){
     const local=buildingLocalPoint(b,P.x,P.z);
     if(Math.abs(local.x)<b.basement.halfX&&Math.abs(local.z)<b.basement.halfZ)return true;
   }
@@ -2873,7 +2873,7 @@ if(scopeNow){
   const stair=b?.basement?.stair;
   const descending=!!local&&Math.abs(local.x-stair.x)<stair.width/2+.45&&
     local.z>=stair.zBottom-.5&&local.z<=stair.zTop+.4&&P.y<b.fy+.04;
-  const bunkerBelow=!!inside&&(P.y<b.fy-1||descending);
+  const bunkerBelow=!!inside&&(P.y<b.fy-3.9||descending);
   // El forjat ÉS el sostre del soterrani. No s'ha d'amagar:
   // ara que la càmera és sempre a sota, es veu el plafó i no es
   // produeix cap obstrucció; els llums queden ancorats al sostre real.
