@@ -378,7 +378,7 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
           'e',smallBullet?mW:mE,smallBullet?SMALL_ARMS_SCALE:(u.spl?2:1));
       }
     }
-  }else if(u.sp>0){
+  }else if(u.sp>0&&u.t!=='general'){
     const waypointDistance=Math.hypot(u.tx-u.x,u.tz-u.z),
           hqPatrolVehicle=u.t==='tanqueta'&&!!u.hqPatrolZone||enemyIsVehicle(u)&&u.compound==='hq'||!!u.interCompoundPatrol;
     // Una tanqueta tarda bastant més de 2,5 s a travessar un tram
