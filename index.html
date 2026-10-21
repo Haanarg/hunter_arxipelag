@@ -36,6 +36,10 @@ body.player-swimming #joystick .joy-run-zone .swim-label{display:inline}
 #deathCinematicOverlay{position:fixed;inset:0;z-index:22;overflow:hidden;
  pointer-events:none;color:#e7dfd2;text-align:center;font-family:system-ui,sans-serif;
  text-shadow:0 3px 13px #000,0 1px 3px #000}
+/* Vel blau al davant del cos enfonsant-se; la fosa negra queda
+   per sobre i elimina el tint quan apareix la Parca. */
+#deathCinematicOverlay .death-water-filter{position:absolute;inset:0;
+ background:rgba(24,106,174,.36);opacity:0;pointer-events:none}
 #deathCinematicOverlay .death-shade{position:absolute;inset:0;background:#000;opacity:0}
 #deathCinematicOverlay .death-replay-label{position:absolute;top:max(5%,env(safe-area-inset-top));
  left:0;right:0;letter-spacing:.32em;font-size:clamp(11px,1.7vw,18px);font-weight:700;
