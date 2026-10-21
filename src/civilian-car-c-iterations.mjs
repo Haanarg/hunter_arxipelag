@@ -156,7 +156,8 @@ export function createFamilyCIteration(THREE,variant=0,color=0x4b9fd1){
  // Muntants de l'habitacle. El sostre és únicament una làmina,
  // NO un bloc extruït opac que amagui l'interior.
  const left=-hw+.12,right=hw-.12,roofFront=q.roofFront,roofRear=q.roofRear;
- box(W-.22,.105,roofRear-roofFront+.15,paint,0,top+.025,(roofFront+roofRear)/2);
+ const roofPanel=box(W-.22,.105,roofRear-roofFront+.15,paint,0,top+.025,(roofFront+roofRear)/2);
+ roofPanel.name='civil-c-roof-panel';
  for(const side of[-1,1]){
   const x=side*(hw-.12),outside=side*(hw+.018);
   // Muntants A, B, C i D, amb finestres reals entre ells.
