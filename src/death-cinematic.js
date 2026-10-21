@@ -202,7 +202,6 @@ function deathBuildReaper(THREE){
 function deathCreateVoid(v){
  const voidScene=new THREE.Scene();voidScene.background=new THREE.Color(0x000000);
  const voidCamera=new THREE.PerspectiveCamera(46,cam.aspect,.2,100);
- voidCamera.position.set(0,3.35,10.8);voidCamera.lookAt(0,1.65,0);
  voidScene.add(new THREE.AmbientLight(0x5f6479,.72));
  const rim=new THREE.DirectionalLight(0x9a9cbc,2.6);
  rim.position.set(-4,8,-6);voidScene.add(rim);
@@ -213,6 +212,15 @@ function deathCreateVoid(v){
  if(disg)for(const [material,original,disguise] of player.userData.mats)
   material.color.copy(vivid(disguise));
  deathPoseProne(player,{x:0,y:0,z:.85},-Math.PI/2);
+ // La posició del cos no coincideix amb l'origen del model (als peus).
+ // Apuntam al centre real dels elements visibles per evitar que el cos
+ // quedi desplaçat cap a la dreta quan és bocaterrosa.
+ const bodyBounds=new THREE.Box3();
+ player.traverseVisible(o=>{if(o.isMesh)bodyBounds.expandByObject(o)});
+ const bodyCentre=bodyBounds.isEmpty()?new THREE.Vector3(0,.65,0):
+  bodyBounds.getCenter(new THREE.Vector3());
+ voidCamera.position.set(bodyCentre.x,3.5,bodyCentre.z+10.8);
+ voidCamera.lookAt(bodyCentre.x,Math.max(1.15,bodyCentre.y+.6),bodyCentre.z-.15);
  deathFaceCamera(player,voidCamera.position);
  player.traverse(o=>{if(o.isMesh)o.castShadow=false});
  voidScene.add(player);
@@ -221,6 +229,40 @@ function deathCreateVoid(v){
  voidScene.add(reaper.group);
  v.voidScene=voidScene;v.voidCamera=voidCamera;v.voidPlayer=player;
  v.reaper=reaper;
+}
+// L'enfonsament es representa en una escena pròpia: sense el mar opac
+// ni el cel sobre la càmera. No afegim geometria ni animacions al món.
+function deathCreateUnderwater(v){
+ if(!v.onWater)return;
+ const underwaterScene=new THREE.Scene();
+ const shallow=new THREE.Color(0x8bd2e8),deep=new THREE.Color(0x0a2d50);
+ underwaterScene.background=shallow.clone();
+ const ambient=new THREE.AmbientLight(0x9bd8e8,1.65);
+ const key=new THREE.DirectionalLight(0xc5eaf2,1.25);
+ key.position.set(-3,8,6);
+ underwaterScene.add(ambient,key);
+ v.underwaterScene=underwaterScene;
+ v.underwaterShallow=shallow;
+ v.underwaterDeep=deep;
+ v.underwaterKey=key;
+}
+function deathUpdateUnderwater(v){
+ if(!v.underwaterScene||v.phase!=='replay'&&v.phase!=='fade')return;
+ // La transició comença quan la càmera queda per sota la superfície.
+ if(!v.underwaterActive&&cam.position.y<=v.waterLevel-.2){
+  v.underwaterScene.add(pl);
+  v.underwaterActive=true;
+ }
+ if(!v.underwaterActive)return;
+ const progress=deathEase((v.t-1.1)/3.45),
+       depth=deathClamp((v.waterLevel-v.bodyFocus.y)/5.8),
+       darkness=Math.max(progress,depth*.65);
+ v.underwaterScene.background.copy(v.underwaterShallow)
+  .lerp(v.underwaterDeep,darkness);
+ v.underwaterKey.intensity=1.25-darkness*.8;
+ // La làmina blava és al davant del personatge, però deixa veure el cos.
+ v.waterFilter.style.opacity=deathVoidReady()?'0':
+  String(.54+.28*progress);
 }
 // Efectes de l'últim instant: projectil retardat, ona expansiva i
 // anells plans d'impacte/esquitx. No reprenen lògica de combat ni fan mal.
@@ -269,33 +311,42 @@ function startDeathCinematic(cause=null){
  if(eng)eng.g.gain.value=0;
  const overlay=document.createElement('div');overlay.id='deathCinematicOverlay';
  overlay.setAttribute('aria-live','polite');
- overlay.innerHTML='<div class="death-shade"></div>'+
+ overlay.innerHTML='<div class="death-water-filter" aria-hidden="true"></div>'+
+  '<div class="death-shade"></div>'+
   '<div class="death-replay-label">DARRER INSTANT · CÀMERA LENTA</div>'+
   '<div class="death-cause">MORT PER <strong></strong><small></small></div>'+
   '<div class="death-finale"><div class="death-sigil" aria-hidden="true">✝</div>'+
   '<p>LA PARCA HA VINGUT A BUSCAR-TE</p><h2>HAS MORT</h2></div>'+
   '<button type="button" class="death-new-game">NOVA PARTIDA</button>';
- const shade=overlay.querySelector('.death-shade'),replayLabel=overlay.querySelector('.death-replay-label'),
+ const shade=overlay.querySelector('.death-shade'),
+       waterFilter=overlay.querySelector('.death-water-filter'),
+       replayLabel=overlay.querySelector('.death-replay-label'),
        causeEl=overlay.querySelector('.death-cause'),finale=overlay.querySelector('.death-finale'),
        button=overlay.querySelector('.death-new-game');
  causeEl.querySelector('strong').textContent=info.title;
  causeEl.querySelector('small').textContent=info.detail;
  button.onclick=()=>window.location.reload();
  document.body.appendChild(overlay);
- const onWater=info.kind==='shark'||(cv&&VT[cv.t]?.m==='w');
+ const waterLevel=wy(P.x,P.z,elapsed),
+       submerged=!cv&&!ib&&hAt(P.x,P.z)<waterLevel-1.5&&
+        P.y<waterLevel-.65,
+       onWater=info.kind==='shark'||swimming||submerged||
+        !!(cv&&['w','wl'].includes(VT[cv.t]?.m));
  // En explosions de vehicles o cops en vol, P.y pot quedar a
  // l'altura de l'helicòpter: l'animació ha d'aterrar al terreny real.
  const ground=groundAt(P.x,P.z,P.y);
  const airborneDeath=info.kind==='vehicleExplosion'||info.kind==='explosion'||info.kind==='runover';
- const floor=onWater?Math.max(P.y,wy(P.x,P.z,elapsed)-.15):
+ const floor=onWater?Math.max(P.y,waterLevel-.15):
   (cv||airborneDeath)?ground:P.y;
  const heading=P.hd||0;
  const bodyFocus=new THREE.Vector3(P.x-Math.sin(heading)*.45,floor+.6,
    P.z-Math.cos(heading)*.45);
  const v={active:true,finished:false,t:0,phase:'replay',cause:info,source,hit,direction,onWater,
-  overlay,shade,replayLabel,causeEl,finale,button,previousVisibility:{},previousFov:cam.fov,
+  overlay,shade,waterFilter,replayLabel,causeEl,finale,button,
+  underwaterScene:null,underwaterActive:false,underwaterKey:null,
+  previousVisibility:{},previousFov:cam.fov,
   previousPlayerPose:{position:pl.position.clone(),rotation:pl.rotation.clone(),scale:pl.scale.clone(),visible:pl.visible},
-  heading,bodyFocus,originX:P.x,originZ:P.z,initialY:P.y,floor,waterLevel:wy(P.x,P.z,elapsed),
+  heading,bodyFocus,originX:P.x,originZ:P.z,initialY:P.y,floor,waterLevel,
   impactTime:info.kind==='fall' ? 3.01 : info.kind==='shark' ? .68 :
    info.kind==='runover' ? 2.9 : .62,
   impactSoundPlayed:false,lastBell:-1,voidScene:null,reaper:null,replayEffect:null};
@@ -306,6 +357,7 @@ function startDeathCinematic(cause=null){
  v.motion=deathInitialMotion(v);
  deathReplayPose(v);
  deathCreateVoid(v);
+ deathCreateUnderwater(v);
  v.replayEffect=deathReplayEffect(v);
  return true;
 }
@@ -317,6 +369,9 @@ function clearDeathCinematic(){
   v.replayEffect.geometry.dispose();v.replayEffect.material.dispose();
  }
  if(v.reaper)for(const resource of v.reaper.owned)resource.dispose();
+ // Retornam el jugador a l'escena real abans de restaurar la seva
+ // posició; no deixam la referència a la cinemàtica submarina.
+ if(v.underwaterActive)scene.add(pl);
  if(v.overlay.parentNode)v.overlay.parentNode.removeChild(v.overlay);
  pl.position.copy(v.previousPlayerPose.position);
  pl.rotation.copy(v.previousPlayerPose.rotation);
@@ -340,13 +395,14 @@ function updateDeathCinematic(dt){
   const right=new THREE.Vector3(Math.cos(v.heading),0,-Math.sin(v.heading));
   cam.position.copy(v.bodyFocus).addScaledVector(right,9-replay*2.5)
     .addScaledVector(v.direction,-2.8+replay*.8);
-  if(v.cause.kind==='shark'){
+  if(v.onWater){
    // La càmera es capbussa amb el jugador: si es quedàs sobre l'aigua,
    // la superfície opaca taparia justament l'enfonsament.
    const dive=deathEase((v.t-.28)/3.38);
    cam.position.y=v.waterLevel+1.7-5.7*dive;
   }else cam.position.y+=3.8-replay*.65;
   cam.lookAt(v.bodyFocus);
+  deathUpdateUnderwater(v);
   const fieldOfView=(v.cause.kind==='explosion'||v.cause.kind==='vehicleExplosion'?58:53)-replay*4;
   if(Math.abs(cam.fov-fieldOfView)>.05){cam.fov=fieldOfView;cam.updateProjectionMatrix()}
   if(v.replayEffect){
@@ -377,6 +433,7 @@ function updateDeathCinematic(dt){
   :v.t<fadeStart+DEATH_FADE_SECONDS
    ?1-deathEase((v.t-fadeStart-half)/half):0;
  v.shade.style.opacity=String(alpha);
+ if(deathVoidReady()&&v.waterFilter)v.waterFilter.style.opacity='0';
  v.replayLabel.style.opacity=v.t<fadeStart?.94:0;
  v.causeEl.style.opacity=v.t<fadeStart?.98:0;
  if(deathVoidReady()){
