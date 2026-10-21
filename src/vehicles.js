@@ -400,7 +400,7 @@ window.HUNTER_VEHICLES=Object.freeze({
         box(g,.22,.12,.22,tubeCol,-.82,1.67,3.40,'metal');
       }
       if(t==='moto_aquatica'){
-        const bodyCol=0xc94e3f,dark=0x33383b;
+        const bodyCol=appearance.color??0xc94e3f,dark=0x33383b;
         const nose=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(bodyCol,'paint'));nose.scale.set(.72,.42,1.55);nose.position.set(0,.62,-.95);g.add(nose);
         box(g,1.38,.38,2.55,bodyCol,0,.54,.55,'paint');box(g,.72,.22,1.05,dark,0,.88,.6,'rubber');box(g,.82,.16,.56,0x222629,0,1.02,.2,'rubber');
         rod(g,[-.42,1.16,-.35],[.42,1.16,-.35],.055,metal);rod(g,[0,.94,-.2],[0,1.16,-.35],.05,metal);
