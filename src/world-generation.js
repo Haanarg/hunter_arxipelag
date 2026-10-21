@@ -443,7 +443,7 @@ const terrainStarted=performance.now();
 // La cerca comprova exactament el mateix món determinista, però no necessita
 // renderitzar terra, preparar GPU ni calcular el fons marí a cada candidat.
 const terrain=seedSearchMode?null:window.HUNTER_TERRAIN.create(THREE,{size:S,segments:SEG,heightAt:hAt,material:MAT.terrain(),startX:pa.x,startZ:pa.z,lowQuality:!visualQuality.shadows,quality:qualityName,shadows:visualQuality.shadows,
-  cutouts:activeBunker?[{x:activeBunker.x,z:activeBunker.z,angle:activeBunker.o?.rotation.y??activeBunker.angle??0,halfWidth:20,halfDepth:17}]:[]});
+  cutouts:activeBunker?[{x:activeBunker.x,z:activeBunker.z,angle:activeBunker.angle??-(activeBunker.o?.rotation.y??0),halfWidth:20,halfDepth:17}]:[]});
 if(terrain){terrainStream=terrain;world.add(terrain.mesh,window.HUNTER_TERRAIN.createBorder(THREE,{size:S,halfSize:H}))}
 const initialTerrainMs=performance.now()-terrainStarted;
 markBuildStage('terrain');
