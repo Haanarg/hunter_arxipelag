@@ -7,7 +7,7 @@
   // Factor 2/3 respecte de cadascuna de les mides de la versió anterior.
   const PICKUP_SCALE=2/3, PLANTED_SCALE=.82*PICKUP_SCALE;
 
-  function create(T,active=false){
+  function create(T,active=false,initialSeconds=3){
     const root=new T.Group(),cache=new Map();
     function material(color,metalness=.03,roughness=.78){
       const key=color+':'+metalness+':'+roughness;
@@ -82,7 +82,7 @@
       ctx.lineWidth=6;ctx.strokeStyle=active?'#8d3029':'#3a5755';
       ctx.strokeRect(7,7,498,178);
       if(on){
-        const digits=active?'00:'+String(seconds).padStart(2,'0'):'03:00';
+        const digits='00:'+String(active?seconds:3).padStart(2,'0');
         ctx.fillStyle=active?'#ff4437':'#89c58f';
         ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=active?18:8;
         ctx.font='bold 106px monospace';
@@ -115,7 +115,7 @@
 
     root.scale.setScalar(active?PLANTED_SCALE:PICKUP_SCALE);
     root.userData.explosiveDisplay={active,draw,lastSecond:-1,lastOn:null,face};
-    update(root,active?3:0);
+    update(root,active?initialSeconds:0);
     return root;
   }
 
@@ -126,9 +126,11 @@
       if(d.lastOn!==true){d.draw(0,true);d.lastOn=true;}
       return;
     }
-    const t=Math.max(0,Math.min(3,remaining));
+    const t=Math.max(0,Math.min(59,Number.isFinite(remaining)?remaining:0));
     const seconds=Math.ceil(t);
-    const blinkOn=Math.floor((3-t)*BLINK_HZ*2)%2===0;
+    // El visor es manté llegible durant els comptes enrere llargs;
+    // només parpelleja quan queden tres segons o menys.
+    const blinkOn=t>3||Math.floor((3-t)*BLINK_HZ*2)%2===0;
     if(seconds!==d.lastSecond||blinkOn!==d.lastOn){
       d.draw(seconds,blinkOn);
       d.lastSecond=seconds;
