@@ -2909,7 +2909,7 @@ fcd-=dt;updateGrenadeCharge(dt);if(K.KeyF&&(!grenadeEquipped||cv))fire();updEn(d
 window.HUNTER_STEALTH_DEBUG.update(THREE,world,E,P);
 updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);
 const nv=cv?null:nearV();
-uiTick+=dt;if(uiTick>.12){uiTick=0;const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',!!cv&&VT[cv.t]?.m==='a');contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}const fireButton=document.getElementById('mainFireButton');
+uiTick+=dt;if(uiTick>.12){uiTick=0;const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',(!cv&&cheats.fly)||(!!cv&&VT[cv.t]?.m==='a'));contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}const fireButton=document.getElementById('mainFireButton');
 if(fireButton){
   const heliGrenade=cv?.t==='heli',
         grenade=heliGrenade||!cv&&grenadeEquipped&&(inv.granada||0)>0,
