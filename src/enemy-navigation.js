@@ -143,9 +143,15 @@ function prepareEnemyNavigation(){
       const ox=u.x,oz=u.z;let found=false;
       for(let radius=2;radius<=48&&!found;radius+=2)for(let i=0;i<24;i++){
         const a=i*Math.PI/12,x=ox+Math.cos(a)*radius,z=oz+Math.sin(a)*radius;
-        // A general must remain inside the bunker, on its assigned floor.
-        const bunker=u.t==='general'?B.find(b=>b.kind==='enemy_bunker'):null;
-        if(bunker&&(Math.abs(x-bunker.x)>bunker.hw-2||Math.abs(z-bunker.z)>bunker.hd-2))continue;
+        // El general es manté dins del seu despatx subterrani ampliat,
+        // no dins l'antic rectangle de la planta superior del búnquer.
+        const bunker=u.t==='general'?u.basement:null;
+        if(bunker?.basement){
+          const q=buildingLocalPoint(bunker,x,z),room=bunker.basement.generalRoom;
+          if(room?(q.x<room.xMin||q.x>room.xMax||q.z<room.zMin||q.z>room.zMax):
+            (Math.abs(q.x)>bunker.basement.halfX-1.5||
+             Math.abs(q.z)>bunker.basement.halfZ-1.5))continue;
+        }
         if(enemyMoveClear(u,x,z,u.hd)){u.x=x;u.z=z;enemyReindex(u,ox,oz);found=true;break}
       }
     }
