@@ -39,15 +39,18 @@ window.HUNTER_UI=Object.freeze({
         // El LED és la mateixa disposició 00:SS del model 3D. Només
         // configuram els dos dígits dels segons, amb límit 00–59.
         let seconds=3,confirmed=false;
+        const fromHelicopter=getState().vehicle?.t==='heli';
         body.innerHTML='<div class="bomb-timer-config" role="group" aria-label="Temporitzador de l’explosiu">'+
-          '<p class="bomb-timer-hint">Selecciona els segons abans de la detonació (00–59).</p>'+
+          '<p class="bomb-timer-hint">'+(fromHelicopter?
+            'L’explosiu caurà de l’obertura lateral del Huey. Selecciona el temps (00–59 s).':
+            'Selecciona els segons abans de la detonació (00–59).')+'</p>'+
           '<div class="bomb-timer-casing"><div class="bomb-timer-led" role="timer" aria-label="Compte enrere configurat">'+
           '<span class="bomb-timer-prefix">00:</span>'+
           '<div class="bomb-timer-digit"><button id="bombTensUp" type="button" aria-label="Augmenta les desenes de segons">▲</button><span id="bombTens" aria-live="polite">0</span><button id="bombTensDown" type="button" aria-label="Redueix les desenes de segons">▼</button></div>'+
           '<div class="bomb-timer-digit"><button id="bombOnesUp" type="button" aria-label="Augmenta les unitats de segons">▲</button><span id="bombOnes" aria-live="polite">3</span><button id="bombOnesDown" type="button" aria-label="Redueix les unitats de segons">▼</button></div>'+
           '</div><div class="bomb-timer-wires" aria-hidden="true"><i></i><i></i><i></i></div></div>'+
-          '<p class="bomb-timer-warning">00 = detonació immediata després de col·locar la bomba.</p>'+
-          '<div class="bomb-timer-actions"><button id="bombTimerCancel" type="button">Cancel·lar</button><button id="bombTimerConfirm" type="button">Activar i col·locar</button></div></div>';
+          '<p class="bomb-timer-warning">00 = detonació immediata'+(fromHelicopter?' en deixar-la anar.':' després de col·locar la bomba.')+'</p>'+
+          '<div class="bomb-timer-actions"><button id="bombTimerCancel" type="button">Cancel·lar</button><button id="bombTimerConfirm" type="button">'+(fromHelicopter?'Activar i deixar caure':'Activar i col·locar')+'</button></div></div>';
         const tens=document.getElementById('bombTens'),ones=document.getElementById('bombOnes'),
               confirm=document.getElementById('bombTimerConfirm');
         const draw=()=>{tens.textContent=String(Math.floor(seconds/10));ones.textContent=String(seconds%10)};
