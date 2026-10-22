@@ -496,8 +496,12 @@ function updDead(dt){
     u.o.position.set(u.x,base+pose.height+.05+(1-e)*.12,u.z);
     u.o.rotation.set(pose.pitch*e,u.hd+pose.yaw*e,pose.roll*e,'YXZ');
     if(u.ragdoll){
-      window.HUNTER_RAGDOLL.update(u.ragdoll,dt,{
-        airborne:pose.height>.09,grounded:pose.height<=.09});
+      // El ragdoll queda en repòs després de 3,2 s. Els cadàvers
+      // continuen visibles fins als 18 s, però ja no consumeixen
+      // integracions d'articulacions durant els últims fotogrames.
+      if(u.deadT<3.2||pose.height>.09)
+        window.HUNTER_RAGDOLL.update(u.ragdoll,dt,{
+          airborne:pose.height>.09,grounded:pose.height<=.09});
     }else{
       // Animació específica del general, controlada per la victòria.
       if(u.o.userData.arms)u.o.userData.arms.forEach((arm,j)=>{
