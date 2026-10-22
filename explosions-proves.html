@@ -137,7 +137,7 @@ input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
     <span>Model B o C</span>
     <span>Radi visual ×2</span>
    </div>
-   <p class="variant-help">B: puntes radials. C: 8–12 volums quasi esfèrics i superposats, sense puntes. La paleta s'aplica als dos models.</p>
+   <p class="variant-help">B: puntes radials. C: blobs superposats que giren en sentits oposats i s'inflen i desinflen alternativament. La paleta s'aplica als dos models.</p>
    <div class="palette-preview" role="img" aria-label="Paleta viva: blanc, groc, taronja, corall, vermell i magenta">
     <i style="--swatch:#ffff61"></i><i style="--swatch:#ffef30"></i>
     <i style="--swatch:#ffae00"></i><i style="--swatch:#ff6900"></i>
@@ -161,7 +161,7 @@ input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
     <div class="seed"><input id="seed" type="number" value="67589" min="0" max="4294967295" step="1"><button id="shuffle" aria-label="Genera una llavor nova" title="Nova llavor" type="button">⤨</button></div>
     <p class="micro">Cada detonació canvia les peces. La llavor permet repetir la seqüència reiniciant la pàgina amb el mateix valor.</p>
    </div>
-   <p class="micro">El C utilitza volums 3D sòlids amb formes, mides i capes de color diferents. La densitat en controla el nombre; la llavor en varia les deformacions aparents i la disposició. <span class="key">Espai</span> detona.</p>
+   <p class="micro">Al model C, cada capa gira sobre l'eix vertical amb una velocitat pròpia. Les capes alternen expansió i contracció; la llavor determina la disposició i el moviment. <span class="key">Espai</span> detona.</p>
   </div>
  </aside>
 </div>
@@ -289,7 +289,7 @@ function chooseModel(model){
  }
  applyPalette();
  $('notice').textContent=model==='C'?
-  'Model C: volums quasi esfèrics superposats':'Model B: puntes radials';
+  'Model C: blobs que giren i respiren alternadament':'Model B: puntes radials';
 }
 $('modelB').addEventListener('click',()=>chooseModel('B'));
 $('modelC').addEventListener('click',()=>chooseModel('C'));
