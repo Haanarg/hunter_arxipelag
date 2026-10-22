@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Laboratori procedural d'explosions low-poly d'Hunter: Arxipèlag. Quatre radis, geometria aleatòria i controls interactius.">
+<title>Hunter: Arxipèlag · Laboratori d'explosions</title>
+<style>
+:root{color-scheme:dark;--bg:#080e13;--panel:#142027;--line:#30434a;--ink:#edf2e9;--muted:#9db4b0;--accent:#eeb765;--green:#b4d7ae}
+*{box-sizing:border-box}
+html,body{min-height:100%;margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input{font:inherit}button{cursor:pointer}button:disabled{cursor:default;opacity:.5}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+canvas#view{position:fixed;inset:0;width:100vw;height:100vh;display:block;pointer-events:none}
+.shell{position:relative;min-height:100vh;z-index:1;padding:20px clamp(12px,2.5vw,36px);pointer-events:none}
+.shell>*{pointer-events:auto}
+header{display:flex;align-items:flex-start;justify-content:space-between;gap:22px;flex-wrap:wrap;margin-bottom:20px}
+.eyebrow{font:800 10px/1.4 system-ui;letter-spacing:.21em;text-transform:uppercase;color:var(--accent)}
+h1{font-size:clamp(25px,3.3vw,44px);line-height:1.04;letter-spacing:-.045em;margin:8px 0 10px}
+.intro{max-width:730px;color:#bfcecc;font-size:13px;line-height:1.65;margin:0}
+nav{display:flex;flex-wrap:wrap;gap:8px}
+nav a,.outline{border:1px solid #435a5e;border-radius:8px;background:#1a2a2e;color:#e0ede5;text-decoration:none;padding:9px 13px;font-size:12px;font-weight:700}
+nav a:hover,.outline:hover{background:#294044;border-color:#6b8c87}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 265px;gap:15px;align-items:start}
+.stage{min-width:0}
+.stage-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 1px 10px}
+.stage-header h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;margin:0;color:#a7c1b6}
+.hint{color:#8ea8a7;font-size:11px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(260px,38vh));gap:11px}
+.card{position:relative;overflow:hidden;min-width:0;border-radius:13px;background:#0d151b;border:1px solid #3c50545e;
+  box-shadow:inset 0 1px #54656a35;touch-action:pan-y;cursor:grab}
+.card:active{cursor:grabbing}
+.card::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 52%,#18222b44,transparent 67%);pointer-events:none}
+.card-header{position:absolute;left:15px;top:13px;display:flex;align-items:flex-start;gap:9px;z-index:2}
+.ordinal{background:#f8c16f;color:#201913;border-radius:5px;min-width:26px;height:26px;display:grid;place-items:center;font-size:11px;font-weight:900}
+.card-title{font-size:15px;font-weight:800;letter-spacing:-.01em;line-height:1.2}
+.card-sub{font-size:11px;color:#aebcb6;margin-top:3px}
+.card-action{position:absolute;bottom:13px;right:13px;z-index:3;background:#f0b764;color:#251a11;border:0;border-radius:8px;
+ font-weight:850;font-size:12px;padding:9px 12px;box-shadow:0 3px 13px #090c0a90}
+.card-action:hover{background:#ffd38e}
+.card-stat{position:absolute;bottom:15px;left:15px;z-index:2;color:#dfbd90;font:700 11px ui-monospace,Consolas,monospace}
+.card-marker{position:absolute;right:13px;top:14px;border:1px solid #66716c70;color:#b4c8bf;
+ padding:4px 7px;border-radius:4px;font:600 10px ui-monospace,monospace;z-index:2}
+.controls{background:#142027ee;border:1px solid #405358b0;border-radius:13px;overflow:hidden;box-shadow:0 10px 28px #0003}
+.control-head{padding:19px 18px 13px;border-bottom:1px solid #334349}
+.control-head h2{font-size:18px;margin:0 0 5px;letter-spacing:-.02em}
+.control-head p{color:var(--muted);font-size:12px;margin:0}
+.action-block{display:grid;gap:7px;padding:16px 17px;border-bottom:1px solid #334349}
+.primary{background:#f1b662;border:1px solid #f1b662;color:#241d14;border-radius:9px;padding:12px;font-weight:850;font-size:13px}
+.primary:hover{background:#ffd092}
+.action-block .secondary{background:#273a3e;border:1px solid #536d6f;border-radius:9px;padding:9px;color:#e8f2ec;font-size:12px;font-weight:700}
+.settings{padding:17px;display:grid;gap:19px}
+.setting{display:grid;gap:7px}
+.setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.setting label{color:#c7d5d0;font-size:12px;font-weight:680}
+.readout{color:#ffd69b;font:700 12px ui-monospace,monospace}
+input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
+.minmax{display:flex;justify-content:space-between;color:#78918f;font-size:10px;margin-top:-6px}
+.toggle{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:#c6d2ce;cursor:pointer}
+.toggle input{accent-color:#e9b96a;width:16px;height:16px;margin:1px 0 0}
+.seed{display:flex;gap:6px}
+.seed input{width:100%;min-width:0;padding:9px;border-radius:7px;background:#0d181e;border:1px solid #455e60;color:#ecf0e9;font:12px ui-monospace,monospace}
+.seed button{padding:8px 10px;border:1px solid #50686d;border-radius:7px;background:#243b3e;color:#f3dcac}
+.micro{color:#8ea8a4;font-size:11px;margin:0;line-height:1.5}
+.key{font:700 10px ui-monospace,monospace;background:#24373b;border:1px solid #455e5d;border-radius:4px;padding:3px 5px;color:#cbdad0}
+.footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 1px 0;color:#91aaa5;font-size:11px}
+.footer b{color:#c5d9c3}
+#notice{color:#eec993}
+#error{display:none;color:#ffd49d;padding:12px;background:#35271b;border:1px solid #85603b;border-radius:9px;margin-top:10px}
+@media(max-width:1050px){
+ .main{grid-template-columns:minmax(0,1fr)}
+ .controls{display:grid;grid-template-columns:210px minmax(0,1fr);align-items:start}
+ .control-head{border-bottom:0}
+ .action-block{padding:16px;border-bottom:0;grid-column:1}
+ .settings{grid-column:2;grid-row:1/span 2;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}
+}
+@media(max-width:680px){
+ .shell{padding:14px 10px}
+ header{gap:14px;margin-bottom:13px}
+ h1{font-size:29px}
+ nav{gap:6px}
+ .grid{grid-template-columns:1fr;grid-template-rows:repeat(4,minmax(280px,42vh))}
+ .card{border-radius:10px}
+ .stage-header{flex-wrap:wrap}
+ .controls{display:block}
+ .control-head{border-bottom:1px solid #334349}
+ .action-block{border-bottom:1px solid #334349}
+ .settings{grid-template-columns:1fr}
+ .hint{max-width:180px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<canvas id="view" aria-hidden="true"></canvas>
+<div class="shell">
+<header>
+ <div>
+  <div class="eyebrow">Hunter: Arxipèlag / Laboratori FX</div>
+  <h1>Explosions procedurals <span style="color:#e9b466">low-poly</span></h1>
+  <p class="intro">Quatre escales, una mateixa idea: polígons incandescents que neixen del centre, es projecten de manera irregular i es desfan en brases. <strong>Una combinació nova a cada detonació.</strong></p>
+ </div>
+ <nav aria-label="Navegació">
+  <a href="proves.html">← Models de proves</a>
+  <a href="explosius-proves.html">Bombes RGB ↗</a>
+  <a href="index.html">Jugar ↗</a>
+ </nav>
+</header>
+<div class="main">
+ <section class="stage" aria-label="Quatre explosions de comparació">
+  <div class="stage-header"><h2>01 — Comparació d'escales</h2><span class="hint">Arrossega dins un quadre per canviar el punt de vista</span></div>
+  <div class="grid" id="cards">
+   <article class="card" data-index="0"><div class="card-header"><span class="ordinal">01</span><div><div class="card-title">Vehicle petit</div><div class="card-sub">Cotxe o llanxa</div></div></div><span class="card-marker">PROCEDURAL</span><span class="card-stat" data-stats="0">—</span><button type="button" class="card-action" data-fire="0" aria-label="Torna a detonar vehicle petit">↻ Detonar</button></article>
+   <article class="card" data-index="1"><div class="card-header"><span class="ordinal">02</span><div><div class="card-title">Granada</div><div class="card-sub">Esclat ràpid i compacte</div></div></div><span class="card-marker">PROCEDURAL</span><span class="card-stat" data-stats="1">—</span><button type="button" class="card-action" data-fire="1" aria-label="Torna a detonar granada">↻ Detonar</button></article>
+   <article class="card" data-index="2"><div class="card-header"><span class="ordinal">03</span><div><div class="card-title">Vehicle gran</div><div class="card-sub">Blindat pesant · proposta</div></div></div><span class="card-marker">PROCEDURAL</span><span class="card-stat" data-stats="2">—</span><button type="button" class="card-action" data-fire="2" aria-label="Torna a detonar vehicle gran">↻ Detonar</button></article>
+   <article class="card" data-index="3"><div class="card-header"><span class="ordinal">04</span><div><div class="card-title">C4</div><div class="card-sub">Càrrega de gran radi</div></div></div><span class="card-marker">PROCEDURAL</span><span class="card-stat" data-stats="3">—</span><button type="button" class="card-action" data-fire="3" aria-label="Torna a detonar C4">↻ Detonar</button></article>
+  </div>
+  <div id="error" role="alert"></div>
+ </section>
+ <aside class="controls" aria-label="Paràmetres de simulació">
+  <div class="control-head"><h2>Control d'efectes</h2><p>Ajusta el resultat sense modificar les explosions del joc.</p></div>
+  <div class="action-block">
+   <button type="button" class="primary" id="all">↻ Detonar les quatre</button>
+   <button type="button" class="secondary" id="pause" aria-pressed="false">⏸ Pausa</button>
+   <label class="toggle"><input type="checkbox" id="autoplay" checked>Repetició automàtica</label>
+  </div>
+  <div class="settings">
+   <div class="setting">
+    <div class="setting-row"><label for="density">Densitat de polígons</label><output class="readout" id="densityValue" for="density">100%</output></div>
+    <input id="density" type="range" min="40" max="180" value="100" step="10">
+    <div class="minmax"><span>Menys fragments</span><span>Més fragments</span></div>
+   </div>
+   <div class="setting">
+    <div class="setting-row"><label for="radius">Multiplicador del radi</label><output class="readout" id="radiusValue" for="radius">×1,0</output></div>
+    <input id="radius" type="range" min="50" max="180" value="100" step="10">
+    <div class="minmax"><span>×0,5</span><span>×1,8</span></div>
+   </div>
+   <label class="toggle"><input type="checkbox" id="sameScale">Mateixa escala de càmera per als quatre quadres</label>
+   <label class="toggle"><input type="checkbox" id="guides">Mostra el terra de referència</label>
+   <div class="setting">
+    <div class="setting-row"><label for="seed">Llavor de generació</label><span class="readout">32 bits</span></div>
+    <div class="seed"><input id="seed" type="number" value="67589" min="0" max="4294967295" step="1"><button id="shuffle" aria-label="Genera una llavor nova" title="Nova llavor" type="button">⤨</button></div>
+    <p class="micro">Cada detonació canvia les peces. La llavor permet repetir la seqüència reiniciant la pàgina amb el mateix valor.</p>
+   </div>
+   <p class="micro">La previsualització empra <b>InstancedMesh</b>, geometries simples i un límit de fragments. <span class="key">Espai</span> torna a detonar.</p>
+  </div>
+ </aside>
+</div>
+<footer class="footer">
+ <span><b>Simulació independent.</b> Cap canvi a la física o el mal de les armes del joc.</span>
+ <span id="notice" role="status" aria-live="polite">Procedural · quatre radiacions diferents</span>
+</footer>
+</div>
+<script type="module">
+import * as THREE from './vendor/three-r186.module.mjs';
+import {EXPLOSION_PRESETS,createProceduralExplosion} from './src/explosion-burst-preview.mjs';
+
+const $=id=>document.getElementById(id);
+const cards=[...document.querySelectorAll('.card')],actors=[];
+const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const canvas=$('view');
+let renderer;
+try{
+ renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+ renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));
+ renderer.outputColorSpace=THREE.SRGBColorSpace;
+ renderer.setClearColor(0x080e13);
+}catch(error){
+ $('error').textContent='La previsualització 3D necessita WebGL. '+error.message;
+ $('error').style.display='block';throw error;
+}
+for(const [i,preset] of EXPLOSION_PRESETS.entries()){
+ const scene=new THREE.Scene();scene.background=new THREE.Color(0x0d151b);
+ const effect=createProceduralExplosion(scene,preset);
+ const cam=new THREE.PerspectiveCamera(43,1,.1,380);
+ const guide=new THREE.GridHelper(115,23,0x536363,0x26373d);
+ guide.visible=false;scene.add(guide);
+ actors.push({preset,scene,effect,cam,guide,angle:-.38,pitch:.27,round:0,card:cards[i]});
+}
+let paused=false,repeat=$('autoplay').checked,scale=1,density=1,sameScale=false,
+    showGuides=false,lastTime=0,nextAuto=0,round=0,changePending=false;
+const seedValue=()=>Math.max(0,Math.min(4294967295,Math.trunc(Number($('seed').value)||0)))>>>0;
+function fire(i){
+ const a=actors[i],p=a.preset; a.round++;
+ const salt=(Math.imul(a.round,2654435761)^p.seed)>>>0;
+ const seed=(seedValue()^salt)>>>0;
+ const radius=p.radius*scale;
+ const metrics=a.effect.launch({radius,density,tone:p.tone,seed});
+ a.effect.show();
+ document.querySelector('[data-stats="'+i+'"]').textContent=
+   'R '+Math.round(metrics.radius)+' m  ·  '+metrics.count+' polígons';
+ a.card.querySelector('.card-marker').textContent='GEN #'+String(a.round).padStart(2,'0');
+}
+function fireAll(){round++;for(let i=0;i<actors.length;i++)fire(i);nextAuto=performance.now()+2800;
+ $('notice').textContent='Explosió #'+round+' · geometries regenerades per llavor'}
+$('all').addEventListener('click',()=>fireAll());
+document.querySelectorAll('[data-fire]').forEach(button=>{
+ button.addEventListener('click',()=>{fire(Number(button.dataset.fire));nextAuto=performance.now()+2800});
+});
+$('pause').addEventListener('click',()=>{
+ paused=!paused;$('pause').textContent=paused?'▶ Reprendre':'⏸ Pausa';
+ $('pause').setAttribute('aria-pressed',String(paused));
+ nextAuto=performance.now()+2800;
+});
+$('autoplay').addEventListener('change',e=>{
+ repeat=e.target.checked;nextAuto=performance.now()+2800;
+});
+$('density').addEventListener('input',e=>{
+ density=Number(e.target.value)/100;
+ $('densityValue').textContent=Math.round(density*100)+'%';
+ changePending=true;
+});
+$('radius').addEventListener('input',e=>{
+ scale=Number(e.target.value)/100;
+ $('radiusValue').textContent='×'+scale.toFixed(1).replace('.',',');
+ changePending=true;
+});
+for(const id of ['density','radius'])$(id).addEventListener('change',()=>{changePending=false;fireAll()});
+$('sameScale').addEventListener('change',e=>{sameScale=e.target.checked});
+$('guides').addEventListener('change',e=>{
+ showGuides=e.target.checked;actors.forEach(a=>a.guide.visible=showGuides);
+});
+$('seed').addEventListener('change',()=>{
+ $('seed').value=String(seedValue());actors.forEach(a=>a.round=0);
+ fireAll();
+});
+$('shuffle').addEventListener('click',()=>{
+ $('seed').value=String(Math.floor(Math.random()*4294967296));
+ actors.forEach(a=>a.round=0);fireAll();
+});
+for(const a of actors){
+ let held=null;
+ a.card.addEventListener('pointerdown',e=>{
+  if(e.target.closest('button'))return;
+  held={id:e.pointerId,x:e.clientX,y:e.clientY,yaw:a.angle,pitch:a.pitch};
+  a.card.setPointerCapture(e.pointerId);
+ });
+ a.card.addEventListener('pointermove',e=>{
+  if(!held||held.id!==e.pointerId)return;
+  a.angle=held.yaw+(e.clientX-held.x)*.008;
+  a.pitch=THREE.MathUtils.clamp(held.pitch+(held.y-e.clientY)*.006,-.70,1.08);
+ });
+ const end=()=>{held=null};for(const evt of ['pointerup','pointercancel','lostpointercapture'])a.card.addEventListener(evt,end);
+}
+window.addEventListener('keydown',e=>{
+ if(e.code==='Space'&&!e.repeat&&!['INPUT','BUTTON','TEXTAREA'].includes(document.activeElement?.tagName)){
+  e.preventDefault();fireAll();
+ }
+});
+let width=0,height=0;
+function resize(){
+ width=window.innerWidth;height=window.innerHeight;
+ renderer.setSize(width,height,false);
+}
+addEventListener('resize',resize);
+addEventListener('scroll',()=>{},{passive:true});
+resize();
+fireAll();if(reduced){paused=true;repeat=false;$('pause').textContent='▶ Reprendre';$('pause').setAttribute('aria-pressed','true');$('autoplay').checked=false}
+function animate(now){
+ requestAnimationFrame(animate);
+ const dt=Math.min(.06,Math.max(0,(now-(lastTime||now))/1000));lastTime=now;
+ if(!paused){
+  for(const a of actors)a.effect.tick(dt);
+  if(repeat&&now>=nextAuto)fireAll();
+ }
+ renderer.setScissorTest(true);
+ for(const a of actors){
+  const box=a.card.getBoundingClientRect();
+  if(box.right<=0||box.left>=width||box.bottom<=0||box.top>=height)continue;
+  const left=Math.max(0,Math.floor(box.left)),top=Math.max(0,Math.floor(box.top)),
+    right=Math.min(width,Math.ceil(box.right)),bottom=Math.min(height,Math.ceil(box.bottom));
+  const w=right-left,h=bottom-top;if(w<2||h<2)continue;
+  const radius=a.preset.radius*scale;
+  const distance=sameScale?Math.max(...actors.map(x=>x.preset.radius))*scale+19:radius+19;
+  a.cam.position.set(
+    Math.sin(a.angle)*Math.cos(a.pitch)*distance,
+    Math.sin(a.pitch)*distance+.8,
+    Math.cos(a.angle)*Math.cos(a.pitch)*distance);
+  a.cam.lookAt(0,0,0);
+  a.cam.aspect=w/h;a.cam.updateProjectionMatrix();
+  a.guide.position.y=-radius*.20;
+  renderer.setViewport(left,height-bottom,w,h);
+  renderer.setScissor(left,height-bottom,w,h);
+  renderer.render(a.scene,a.cam);
+ }
+ renderer.setScissorTest(false);
+}
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
