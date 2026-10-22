@@ -74,22 +74,45 @@ function irregularSpike(sides,spread,skew,twist){
  geo.computeVertexNormals();
  return geo;
 }
-// Model C: bola de foc low-poly amb closca irregular i llengües
-// superposades, inspirat en la referència. La closca té volum real i
-// es deforma radialment; no és una col·lecció de làmines planes.
-function fireballShell(){
- const g=new THREE.IcosahedronGeometry(1,2),p=g.getAttribute('position');
+// Model C: una massa central feta de volums quasi esfèrics
+// superposats, cadascun amb un color i una deformació diferents.
+// Sense puntes: els volums comparteixen pràcticament el mateix centre.
+function irregularBlobGeometry(seed,roughness=.14){
+ const geo=new THREE.IcosahedronGeometry(1,1),p=geo.getAttribute('position');
+ const phase=seed*.817;
  for(let i=0;i<p.count;i++){
   const x=p.getX(i),y=p.getY(i),z=p.getZ(i);
-  const wobble=1+.12*Math.sin(x*8+z*5)+.09*Math.cos(y*11-x*3);
+  const wobble=1+roughness*(
+    .49*Math.sin(x*5.9+y*2.1+phase)+
+    .36*Math.cos(z*7.7-y*3.3+phase*.7)+
+    .25*Math.sin(x*4.3+z*5.1-phase*.4)
+  );
   p.setXYZ(i,x*wobble,y*wobble,z*wobble);
  }
- p.needsUpdate=true;g.computeVertexNormals();return g;
+ p.needsUpdate=true;geo.computeVertexNormals();
+ return geo;
 }
+// Color: 0=clar, 1=groc, 2=or, 3=taronja,
+// 4=vermell, 5=vermell fosc. Els desplaçaments sempre
+// intersequen la massa principal: mai no són fragments solts.
+const FIREBALL_LAYERS=Object.freeze([
+ {size:.74,at:[0,0,0],color:3},
+ {size:.68,at:[-.13,.03,.07],color:1},
+ {size:.57,at:[.22,.19,-.06],color:2},
+ {size:.54,at:[-.14,-.19,.26],color:1},
+ {size:.42,at:[.15,.10,.40],color:0},
+ {size:.34,at:[.43,.05,.24],color:4},
+ {size:.40,at:[-.36,.17,.12],color:2},
+ {size:.29,at:[-.24,.34,.33],color:4},
+ {size:.38,at:[-.29,-.30,.30],color:1},
+ {size:.27,at:[.34,-.27,.32],color:5},
+ {size:.32,at:[.04,.46,-.30],color:3},
+ {size:.34,at:[.27,.31,-.32],color:0}
+]);
 export const EXPLOSION_VARIANTS=Object.freeze({
  A:Object.freeze({name:'Piràmides',description:'Cons i piràmides 3D de diverses cares'}),
  B:Object.freeze({name:'Estrella irregular',description:'Puntes 3D asimètriques amb facetes i espatlles'}),
- C:Object.freeze({name:'Bola de foc',description:'Volum polièdric irregular amb llengües de flama'})
+ C:Object.freeze({name:'Bola de foc',description:'Volums polièdrics arrodonits superposats de diferents colors'})
 });
 const smokeGeometry=new THREE.IcosahedronGeometry(.5,0);
 const sharedGeometry=Object.freeze({
@@ -100,12 +123,6 @@ const sharedGeometry=Object.freeze({
   spikes:irregularSpike(5,1.16,.18,.65),
   plates:irregularSpike(4,1.26,-.27,1.1),
   embers:irregularSpike(3,.96,.31,.42),
-  smoke:smokeGeometry
- }),
- C:Object.freeze({
-  spikes:irregularSpike(5,1.34,.26,.8),
-  plates:irregularSpike(4,1.55,-.24,1.4),
-  embers:irregularSpike(3,1.05,.18,.2),
   smoke:smokeGeometry
  })
 });
@@ -153,11 +170,39 @@ export function createProceduralExplosion(scene,options={}){
             tone:options.tone??'flash',seed:options.seed??1,
             variant:EXPLOSION_VARIANTS[options.variant]?options.variant:'B'};
  const group=new THREE.Group();scene.add(group);
- const shell=new THREE.Mesh(fireballShell(),new THREE.MeshStandardMaterial({
-  color:0xffa018,flatShading:true,roughness:1,metalness:0,
-  emissive:0xff6500,emissiveIntensity:.22,side:THREE.DoubleSide
- }));
- shell.visible=false;group.add(shell);
+ const fireballGroup=new THREE.Group();
+ fireballGroup.userData.model='C';
+ fireballGroup.visible=false;group.add(fireballGroup);
+ const fireballParts=FIREBALL_LAYERS.map((layer,i)=>{
+  const material=new THREE.MeshStandardMaterial({
+   color:0xffae00,flatShading:true,roughness:1,metalness:0,
+   emissive:0xff6100,emissiveIntensity:.17,
+   side:THREE.FrontSide
+  });
+  const mesh=new THREE.Mesh(irregularBlobGeometry(i+11,.13+i%3*.025),material);
+  mesh.userData.paletteIndex=layer.color;
+  mesh.userData.layer=i;
+  fireballGroup.add(mesh);
+  return mesh;
+ });
+ let fireballColors=[0xfff9bc,0xffe234,0xffad13,0xff6814,0xd93513,0x79220e];
+ let activeVolumeCount=0;
+ function updateFireballPalette(){
+  for(const part of fireballParts){
+   const color=fireballColors[part.userData.paletteIndex];
+   part.material.color.setHex(color);
+   part.material.emissive.setHex(color);
+  }
+ }
+ function setPalette(colors){
+  if(!Array.isArray(colors)||colors.length<6||
+      !colors.slice(0,6).every(c=>Number.isInteger(c)&&c>=0&&c<=0xffffff))
+   return false;
+  fireballColors=colors.slice(0,6);
+  updateFireballPalette();
+  return true;
+ }
+ updateFireballPalette();
  const meshes={};
  for(const kind of TYPES){
   // Els 3 grups incandescents són volums opacs, amb ombreig de facetes.
@@ -170,7 +215,7 @@ export function createProceduralExplosion(scene,options={}){
       emissive:kind==='spikes'?0x8c3303:
         kind==='plates'?0x671007:0x821923,
       emissiveIntensity:kind==='spikes'?.52:.29});
-  const inst=new THREE.InstancedMesh(sharedGeometry[cfg.variant][kind],mat,MAX_SHARDS);
+  const inst=new THREE.InstancedMesh(sharedGeometry[cfg.variant==='C'?'B':cfg.variant][kind],mat,MAX_SHARDS);
   inst.frustumCulled=false;inst.count=0;
   inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   inst.renderOrder=kind==='smoke'?5:2;
@@ -191,8 +236,12 @@ export function createProceduralExplosion(scene,options={}){
   if(!EXPLOSION_VARIANTS[variant])return false;
   if(cfg.variant===variant)return true;
   cfg.variant=variant;
-  for(const kind of TYPES)meshes[kind].geometry=sharedGeometry[variant][kind];
-  shell.visible=variant==='C'&&playing;
+  for(const kind of TYPES)
+   meshes[kind].geometry=sharedGeometry[variant==='C'?'B':variant][kind];
+  if(variant==='C'){
+   for(const kind of TYPES)meshes[kind].count=0;
+  }
+  fireballGroup.visible=variant==='C'&&playing;
   if(spawned)renderPose();
   return true;
  }
@@ -202,7 +251,32 @@ export function createProceduralExplosion(scene,options={}){
   if(typeof next.tone==='string')cfg.tone=next.tone;
   if(Number.isFinite(next.seed))cfg.seed=next.seed>>>0;
   if(next.variant)setVariant(next.variant);
-  spawned=allocate(cfg);age=0;playing=true;
+  // C no simula cap fragment radial: només els volums compartint centre.
+  // La densitat canvia de 8 a 12 blobs, sense augmentar draw calls per peça.
+  activeVolumeCount=cfg.variant==='C'?
+   Math.round(clamp(6+cfg.density*3,8,FIREBALL_LAYERS.length)):0;
+  spawned=cfg.variant==='C'?{
+   metrics:{...explosionMetrics(cfg.radius,cfg.density),
+     count:activeVolumeCount,volumeCount:activeVolumeCount},
+   seed:cfg.seed,
+   shards:{spikes:[],plates:[],embers:[],smoke:[]}
+  }:allocate(cfg);
+  age=0;playing=true;
+  if(cfg.variant==='C'){
+   const rand=mulberry32(cfg.seed);
+   for(const [i,part] of fireballParts.entries()){
+    const layer=FIREBALL_LAYERS[i],jitter=.035;
+    part.position.set(
+     layer.at[0]+(rand()-.5)*jitter,
+     layer.at[1]+(rand()-.5)*jitter,
+     layer.at[2]+(rand()-.5)*jitter
+    );
+    part.rotation.set(rand()*6.28,rand()*6.28,rand()*6.28);
+    part.scale.setScalar(layer.size*(.94+rand()*.12));
+    part.visible=i<activeVolumeCount;
+   }
+   updateFireballPalette();
+  }
   for(const kind of TYPES){
    const inst=meshes[kind],arr=spawned.shards[kind];
    inst.count=arr.length;
@@ -215,13 +289,19 @@ export function createProceduralExplosion(scene,options={}){
  function renderPose(){
   if(!spawned)return;
   const r=spawned.metrics.radius,duration=spawned.metrics.duration;
-  shell.visible=cfg.variant==='C'&&age<1.6;
-  if(shell.visible){
-   const k=clamp(age/.24,.08,1),fade=Math.max(.001,1-age/1.65);
-   shell.scale.setScalar(r*.135*k*fade);
-   shell.rotation.set(age*.22,age*.33,age*.12);
+  fireballGroup.visible=cfg.variant==='C'&&age<1.95;
+  if(fireballGroup.visible){
+   const growth=clamp(age/.19,.10,1);
+   const shrink=age<1.23?1:Math.max(.005,1-(age-1.23)/.72);
+   const pulse=1+.045*Math.sin(age*13)*Math.exp(-age*1.1);
+   fireballGroup.scale.setScalar(r*.20*growth*shrink*pulse);
+   fireballGroup.rotation.y=age*.11;
+   fireballGroup.rotation.z=age*.055;
   }
-  for(const kind of TYPES){
+  if(cfg.variant==='C'){
+   // Les 12 closques no es converteixen mai en raigs o estrelles.
+   for(const kind of TYPES){meshes[kind].count=0}
+  }else for(const kind of TYPES){
    const mesh=meshes[kind],shards=spawned.shards[kind];
    for(let i=0;i<shards.length;i++){
     const s=shards[i],delay=kind==='smoke'?.07:0,
@@ -257,7 +337,8 @@ export function createProceduralExplosion(scene,options={}){
    mesh.instanceMatrix.needsUpdate=true;
   }
   const f=clamp(age/.34,0,1),flash=(1-f)**1.6;
-  core.visible=glow.visible=age<.64;
+  core.visible=cfg.variant!=='C'&&age<.64;
+  glow.visible=cfg.variant!=='C'&&age<.64;
   core.scale.setScalar(r*(.024+.037*f));
   core.material.opacity=flash;
   core.rotation.set(age*2,age*3,0);
@@ -271,15 +352,18 @@ export function createProceduralExplosion(scene,options={}){
   renderPose();
   return playing;
  }
- function hide(){age=10;playing=false;group.visible=false;shell.visible=false}
+ function hide(){age=10;playing=false;group.visible=false;fireballGroup.visible=false}
  function show(){group.visible=true}
  function destroy(){
   scene.remove(group);
   for(const mesh of Object.values(meshes))mesh.material.dispose();
   core.geometry.dispose();core.material.dispose();glow.geometry.dispose();glow.material.dispose();
-  shell.geometry.dispose();shell.material.dispose();
+  for(const mesh of fireballParts){
+   mesh.geometry.dispose();mesh.material.dispose();
+  }
  }
- return {group,launch,setVariant,tick,hide,show,destroy,
+ return {group,fireballGroup,launch,setVariant,setPalette,tick,hide,show,destroy,
+   get volumeCount(){return activeVolumeCount},
    get metrics(){return spawned?.metrics??explosionMetrics(cfg.radius,cfg.density)},
    get playing(){return playing},
    get variant(){return cfg.variant},
