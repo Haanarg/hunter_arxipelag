@@ -140,6 +140,16 @@ function deathReplayPose(v,dt=0){
  pl.position.copy(m.centre).addScaledVector(up,-1.7);
  pl.quaternion.copy(m.orientation);
  pl.visible=true;
+ // Física d'articulacions independent de la trajectòria del cos.
+ // Els braços i les cames queden ben oberts després de la deflagració
+ // i es relaxen progressivament en contacte amb la superfície.
+ if(v.ragdoll){
+  const surface=groundAt(m.centre.x,m.centre.z,m.centre.y),
+        airborne=m.centre.y>surface+1.9;
+  window.HUNTER_RAGDOLL.update(v.ragdoll,step,{
+    airborne,grounded:!airborne
+  });
+ }
  v.bodyFocus.copy(m.centre);
  if(!v.impactSoundPlayed&&v.t>=v.impactTime){
   v.impactSoundPlayed=true;
@@ -351,6 +361,16 @@ function startDeathCinematic(cause=null){
    info.kind==='runover' ? 2.9 : .62,
   impactSoundPlayed:false,lastBell:-1,voidScene:null,reaper:null,replayEffect:null};
  deathCinematic=v;
+ // Si era una explosió i el jugador ja havia sortit disparat en vida,
+ // deixam una sola capa de ragdoll per a la repetició.
+ if(playerBlastRagdoll){
+  window.HUNTER_RAGDOLL.reset(playerBlastRagdoll);
+  playerBlastRagdoll=null;
+ }
+ v.ragdoll=window.HUNTER_RAGDOLL.make(pl,{
+  blast:info.kind==='explosion'||info.kind==='vehicleExplosion',
+  impulse:playerEject?.kind==='blast'?playerEject:null,
+  seed:P.x*.41+P.z*.27});
  deathUi(true);endEl.style.display='none';
  // Conservam la postura i les velocitats del moment fatal. El cos no
  // s'ajau artificialment fins a l'escena separada de la Parca.
@@ -369,6 +389,7 @@ function clearDeathCinematic(){
   v.replayEffect.geometry.dispose();v.replayEffect.material.dispose();
  }
  if(v.reaper)for(const resource of v.reaper.owned)resource.dispose();
+ if(v.ragdoll){window.HUNTER_RAGDOLL.reset(v.ragdoll);v.ragdoll=null}
  // Retornam el jugador a l'escena real abans de restaurar la seva
  // posició; no deixam la referència a la cinemàtica submarina.
  if(v.underwaterActive)scene.add(pl);
