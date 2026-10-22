@@ -271,8 +271,21 @@ export function createProceduralExplosion(scene,options={}){
      layer.at[1]+(rand()-.5)*jitter,
      layer.at[2]+(rand()-.5)*jitter
     );
-    part.rotation.set(rand()*6.28,rand()*6.28,rand()*6.28);
-    part.scale.setScalar(layer.size*(.94+rand()*.12));
+    const rx=rand()*Math.PI*2,ry=rand()*Math.PI*2,
+          rz=rand()*Math.PI*2;
+    part.rotation.set(rx,ry,rz);
+    const baseScale=layer.size*(.94+rand()*.12);
+    part.scale.setScalar(baseScale);
+    // Rotació de cada capa sobre Y amb velocitats diferents i
+    // sentit oposat al veí. Escala alternada entre parells i senars.
+    // La llavor determina tota l'animació, no només la geometria.
+    Object.assign(part.userData,{
+     baseScale,baseRotationY:ry,
+     spinY:(i%2===0?1:-1)*(.65+rand()*1.35),
+     pulseSpeed:5.2+rand()*2.6,
+     pulseAmplitude:.11+rand()*.10,
+     pulsePhase:(i%2===0?0:Math.PI)+(rand()-.5)*.22
+    });
     part.visible=i<activeVolumeCount;
    }
    updateFireballPalette();
@@ -293,10 +306,18 @@ export function createProceduralExplosion(scene,options={}){
   if(fireballGroup.visible){
    const growth=clamp(age/.19,.10,1);
    const shrink=age<1.23?1:Math.max(.005,1-(age-1.23)/.72);
-   const pulse=1+.045*Math.sin(age*13)*Math.exp(-age*1.1);
-   fireballGroup.scale.setScalar(r*.20*growth*shrink*pulse);
-   fireballGroup.rotation.y=age*.11;
-   fireballGroup.rotation.z=age*.055;
+   // El conjunt creix i s'esvaeix; cada blob respira al seu ritme.
+   fireballGroup.scale.setScalar(r*.20*growth*shrink);
+   fireballGroup.rotation.y=age*.045;
+   fireballGroup.rotation.z=age*.025;
+   for(const part of fireballParts){
+    if(!part.visible)continue;
+    const u=part.userData;
+    part.rotation.y=u.baseRotationY+age*u.spinY;
+    const pulse=1+Math.sin(age*u.pulseSpeed+u.pulsePhase)*
+      u.pulseAmplitude;
+    part.scale.setScalar(u.baseScale*pulse);
+   }
   }
   if(cfg.variant==='C'){
    // Les 12 closques no es converteixen mai en raigs o estrelles.
