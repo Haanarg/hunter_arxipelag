@@ -49,6 +49,13 @@ nav a:hover,.outline:hover{background:#294044;border-color:#6b8c87}
 .primary{background:#f1b662;border:1px solid #f1b662;color:#241d14;border-radius:9px;padding:12px;font-weight:850;font-size:13px}
 .primary:hover{background:#ffd092}
 .action-block .secondary{background:#273a3e;border:1px solid #536d6f;border-radius:9px;padding:9px;color:#e8f2ec;font-size:12px;font-weight:700}
+.variant-title{font:800 11px/1.2 system-ui;letter-spacing:.07em;color:#c6d6c9;text-transform:uppercase}
+.variant-choices{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.variant-choices button{border:1px solid #617574;border-radius:8px;background:#223536;
+ color:#e4eee5;font-weight:800;font-size:12px;padding:10px 7px;min-height:43px}
+.variant-choices button.selected{background:#f1b662;border-color:#f1b662;color:#21180d}
+.variant-choices button:not(.selected):hover{background:#35504b}
+.variant-help{font-size:11px;color:#b1c8bd;line-height:1.4;margin:0;min-height:31px}
 .settings{padding:17px;display:grid;gap:19px}
 .setting{display:grid;gap:7px}
 .setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -120,6 +127,12 @@ input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
  <aside class="controls" aria-label="Paràmetres de simulació">
   <div class="control-head"><h2>Control d'efectes</h2><p>Ajusta el resultat sense modificar les explosions del joc.</p></div>
   <div class="action-block">
+   <span class="variant-title">Geometria de les puntes</span>
+   <div class="variant-choices" role="group" aria-label="Tria la forma de les explosions">
+    <button type="button" id="variantA" class="selected" aria-pressed="true">A · Piràmides</button>
+    <button type="button" id="variantB" aria-pressed="false">B · Estrella irregular</button>
+   </div>
+   <p class="variant-help" id="variantHelp">A: cons i piràmides volumètriques de 3, 4 i 5 cares.</p>
    <button type="button" class="primary" id="all">↻ Detonar les quatre</button>
    <button type="button" class="secondary" id="pause" aria-pressed="false">⏸ Pausa</button>
    <label class="toggle"><input type="checkbox" id="autoplay" checked>Repetició automàtica</label>
@@ -142,7 +155,7 @@ input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
     <div class="seed"><input id="seed" type="number" value="67589" min="0" max="4294967295" step="1"><button id="shuffle" aria-label="Genera una llavor nova" title="Nova llavor" type="button">⤨</button></div>
     <p class="micro">Cada detonació canvia les peces. La llavor permet repetir la seqüència reiniciant la pàgina amb el mateix valor.</p>
    </div>
-   <p class="micro">El soldat a cada quadre és el <b>mateix model del protagonista</b>, amb la seva escala real. Els fragments s'agrupen en <b>InstancedMesh</b>, amb un topall de seguretat. <span class="key">Espai</span> torna a detonar.</p>
+   <p class="micro">A: puntes piramidals regulars. B: puntes poligonals asimètriques. Pots canviar A/B <b>amb la mateixa llavor i els mateixos fragments</b>. El personatge és el model real del joc. <span class="key">Espai</span> detona.</p>
   </div>
  </aside>
 </div>
@@ -196,7 +209,8 @@ for(const [i,preset] of EXPLOSION_PRESETS.entries()){
  actors.push({preset,scene,effect,cam,guide,player,feet,
    angle:-.38,pitch:.22,round:0,card:cards[i]});
 }
-let paused=false,repeat=$('autoplay').checked,scale=1,density=1.8,sameScale=false,
+let paused=false,repeat=$('autoplay').checked,scale=1,density=1.8,
+    variant='A',sameScale=false,
     showGuides=false,lastTime=0,nextAuto=0,round=0,changePending=false;
 const seedValue=()=>Math.max(0,Math.min(4294967295,Math.trunc(Number($('seed').value)||0)))>>>0;
 function fire(i){
@@ -208,14 +222,38 @@ function fire(i){
  // més pròxim a càmera que el nucli per mantenir-se llegible en C4.
  a.player.position.set(radius*.18+1.7,-.08,radius*.09+1.0);
  a.feet.position.set(a.player.position.x,-.09,a.player.position.z);
- const metrics=a.effect.launch({radius,density,tone:p.tone,seed});
+ a.lastLaunch={radius,density,tone:p.tone,seed};
+ const metrics=a.effect.launch({...a.lastLaunch,variant});
  a.effect.show();
  document.querySelector('[data-stats="'+i+'"]').textContent=
    'R '+Math.round(metrics.radius)+' m  ·  '+metrics.count+' polígons';
  a.card.querySelector('.card-marker').textContent='GEN #'+String(a.round).padStart(2,'0');
 }
 function fireAll(){round++;for(let i=0;i<actors.length;i++)fire(i);nextAuto=performance.now()+2100;
- $('notice').textContent='Explosió #'+round+' · geometries regenerades per llavor'}
+ $('notice').textContent='Explosió #'+round+' · variant '+variant+' · geometries regenerades per llavor'}
+function chooseVariant(next){
+ if(!['A','B'].includes(next)||next===variant)return;
+ variant=next;
+ for(const a of actors){
+  // Mateixa distribució, colors i llavor per fer la comparació justa:
+  // només canviam les geometries i reiniciam la mateixa animació.
+  a.effect.setVariant(variant);
+  if(a.lastLaunch)a.effect.launch({...a.lastLaunch,variant});
+  if(paused)a.effect.tick(.19);
+ }
+ for(const mode of ['A','B']){
+  const selected=mode===variant,button=$('variant'+mode);
+  button.classList.toggle('selected',selected);
+  button.setAttribute('aria-pressed',String(selected));
+ }
+ $('variantHelp').textContent=variant==='A'?
+  'A: cons i piràmides 3D regulars de 3, 4 i 5 cares.':
+  'B: puntes 3D irregulars, de facetes eixamplades i inclinació asimètrica.';
+ $('notice').textContent='Variant '+variant+' · mateixos fragments i mateixa llavor';
+ nextAuto=performance.now()+2100;
+}
+$('variantA').addEventListener('click',()=>chooseVariant('A'));
+$('variantB').addEventListener('click',()=>chooseVariant('B'));
 $('all').addEventListener('click',()=>fireAll());
 document.querySelectorAll('[data-fire]').forEach(button=>{
  button.addEventListener('click',()=>{fire(Number(button.dataset.fire));nextAuto=performance.now()+2100});
