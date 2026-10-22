@@ -115,7 +115,32 @@ const fs=require('node:fs');
  }
  const poses=blobs.map(x=>[...x.position.toArray(),...x.rotation.toArray(),
    ...x.scale.toArray()]);
+ const motion=blobs.map(x=>({
+   spin:x.userData.spinY,speed:x.userData.pulseSpeed,
+   amplitude:x.userData.pulseAmplitude,phase:x.userData.pulsePhase
+ }));
+ for(let i=1;i<C.volumeCount;i++){
+   assert(motion[i].spin*motion[i-1].spin<0,
+     'Els blobs consecutius han de rodar en sentits contraris');
+   assert.notEqual(Math.abs(motion[i].spin),Math.abs(motion[i-1].spin),
+     'Els blobs tenen velocitats de gir diferents');
+   assert(motion[i].amplitude>=.11&&motion[i].amplitude<=.21,
+     'La pulsació individual és visible però no desenganxa les capes');
+ }
+ for(let i=0;i<4;i++)fx.tick(.05);
+ for(let i=0;i<C.volumeCount;i++){
+   const blob=blobs[i],u=blob.userData;
+   assert(Math.abs(blob.rotation.y-poses[i][4]-u.spinY*.20)<1e-7,
+     'La rotació Y segueix la velocitat pròpia del blob');
+   const delta=blob.scale.x-u.baseScale;
+   assert(i%2===0?delta>0:delta<0,
+     'Els blobs alternen expansió i contracció als 0,2 segons');
+ }
  fx.launch({radius:96,density:1.8,seed:222,variant:'C'});
+ assert.deepEqual(blobs.map(x=>({
+   spin:x.userData.spinY,speed:x.userData.pulseSpeed,
+   amplitude:x.userData.pulseAmplitude,phase:x.userData.pulsePhase
+ })),motion,'La mateixa llavor també reprodueix tota la dinàmica');
  assert.deepEqual(blobs.map(x=>[...x.position.toArray(),...x.rotation.toArray(),
    ...x.scale.toArray()]),poses,'La mateixa llavor reprodueix la bola de foc');
  fx.launch({radius:96,density:1.8,seed:223,variant:'C'});
@@ -151,8 +176,10 @@ const fs=require('node:fs');
    'La càmera és significativament més propera que radius+19');
  assert.match(html,/a\.player\.position\.set\(/,
    'El jugador queda visible al costat de cada explosió');
- assert.match(html,/const RADIUS_MULTIPLIER=2,EXPLOSION_STYLE='B'/,
-   'La configuració del preview és fixament radi doble i estil B');
+ assert.match(html,/const RADIUS_MULTIPLIER=2/,
+   'La configuració del preview té el radi visual doble');
+ assert.match(html,/let EXPLOSION_STYLE='B'/,
+   'El preview comença amb B però permet alternar a C');
  assert.match(html,/createProceduralExplosion\(scene,\{\.\.\.preset,variant:'B'\}\)/,
    'Cada explosió comença realment amb la geometria B');
  assert.match(html,/p\.radius\*RADIUS_MULTIPLIER/,
