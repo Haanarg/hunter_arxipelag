@@ -7,7 +7,7 @@ const path=require('node:path');
 const fs=require('node:fs');
 (async()=>{
  const url=pathToFileURL(path.join(__dirname,'../src/explosion-burst-preview.mjs')).href;
- const {EXPLOSION_PRESETS,EXPLOSION_VARIANTS,
+ const {EXPLOSION_PRESETS,EXPLOSION_VARIANTS,EXPLOSION_PALETTE,
    createProceduralExplosion,explosionMetrics,mulberry32}=await import(url);
  const THREE=await import(pathToFileURL(path.join(__dirname,'../vendor/three-r186.module.mjs')).href);
  assert.deepEqual(EXPLOSION_PRESETS.map(x=>x.id),
@@ -27,13 +27,21 @@ const fs=require('node:fs');
  assert(defaults.every(count=>count>=100),
    'La densitat inicial ha de ser molt superior a la primera versió');
  assert(defaults[3]>=300,'C4 ha de tenir un núvol molt més dens');
+ assert.equal(explosionMetrics(48*2,1.8).radius,96,
+   'El radi ×2 del C4 no pot quedar retallat al límit antic de 90 m');
+ assert(explosionMetrics(48*2,1.8).count>500,
+   'El C4 de radi doble ha de tenir més de 500 volums procedurals');
+ assert(EXPLOSION_PALETTE.hot.some(color=>color===0xffef30),
+   'La nova paleta conté grocs molt intensos');
+ assert(EXPLOSION_PALETTE.dark.some(color=>color===0xf31e65),
+   'La nova paleta conté magentes saturats');
  const scene=new THREE.Scene();
  const fx=createProceduralExplosion(scene,{radius:16,density:1,seed:12});
  assert.equal(fx.group.parent,scene);
  const parts=fx.group.children.filter(x=>x.isInstancedMesh);
  assert.equal(parts.length,4,'Quatre famílies de polígons agrupades');
  assert.deepEqual(Object.keys(EXPLOSION_VARIANTS),['A','B']);
- assert.equal(fx.variant,'A');
+ assert.equal(fx.variant,'B','El motor arrenca en l’estil B seleccionat');
  for(const mesh of parts.slice(0,3)){
    assert(mesh.material.isMeshStandardMaterial,'La punta és un volum il·luminat');
    assert.equal(mesh.material.transparent,false,'Les puntes no són plaques planes/transparents');
@@ -59,13 +67,7 @@ const fs=require('node:fs');
    return arr;
  });
  const first=snapshots();
- const geometryA=parts.map(p=>p.geometry);
- assert.equal(fx.setVariant('B'),true);
- assert.equal(fx.variant,'B');
  const geometryB=parts.map(p=>p.geometry);
- assert.notEqual(geometryB[0],geometryA[0],'B ha de tenir una malla realment diferent');
- assert.notEqual(geometryB[1],geometryA[1],'B també canvia la segona família');
- assert.equal(geometryB[3],geometryA[3],'El fum es comparteix entre variants');
  for(const mesh of parts.slice(0,3)){
    mesh.geometry.computeBoundingBox();
    const bb=mesh.geometry.boundingBox;
@@ -73,12 +75,16 @@ const fs=require('node:fs');
    assert(bb.max.x-bb.min.x>.3&&bb.max.z-bb.min.z>.3,
      'Les puntes B no són superfícies planes');
  }
- assert.deepEqual(snapshots(),first,'Canviar A/B conserva la llavor i les matrius');
- assert.equal(fx.setVariant('C'),false,'Només s’admeten A o B');
- assert.equal(fx.variant,'B');
  assert.equal(fx.setVariant('A'),true);
  assert.equal(fx.variant,'A');
- assert.deepEqual(snapshots(),first,'Tornar a A recupera la mateixa explosió');
+ const geometryA=parts.map(p=>p.geometry);
+ assert.notEqual(geometryB[0],geometryA[0],'A/B han de tenir malles diferents');
+ assert.equal(geometryB[3],geometryA[3],'El fum es comparteix entre variants');
+ assert.deepEqual(snapshots(),first,'Canviar A/B conserva la llavor');
+ assert.equal(fx.setVariant('C'),false,'Només s’admeten A o B');
+ assert.equal(fx.setVariant('B'),true);
+ assert.equal(fx.variant,'B');
+ assert.deepEqual(snapshots(),first,'Tornar a B recupera la mateixa explosió');
  fx.launch({radius:48,density:1.2,seed:123});
  assert.deepEqual(snapshots(),first,
    'La mateixa llavor reprodueix la mateixa forma i els mateixos colors');
@@ -106,11 +112,17 @@ const fs=require('node:fs');
    'La càmera és significativament més propera que radius+19');
  assert.match(html,/a\.player\.position\.set\(/,
    'El jugador queda visible al costat de cada explosió');
- assert.match(html,/id="variantA"/,'Hi ha botó per la variant A');
- assert.match(html,/id="variantB"/,'Hi ha botó per la variant B');
- assert.match(html,/a\.effect\.setVariant\(variant\)/,
-   'El selector A/B ha d’actualitzar els quatre quadres');
- assert.match(html,/a\.effect\.launch\(\{\.\.\.a\.lastLaunch,variant\}\)/,
-   'A i B s’han de comparar amb la mateixa llavor');
- console.log('OK explosions 3D A/B: volum, variació, llavor intacta, selecció i neteja');
+ assert.match(html,/const RADIUS_MULTIPLIER=2,EXPLOSION_STYLE='B'/,
+   'La configuració del preview és fixament radi doble i estil B');
+ assert.match(html,/createProceduralExplosion\(scene,\{\.\.\.preset,variant:'B'\}\)/,
+   'Cada explosió comença realment amb la geometria B');
+ assert.match(html,/p\.radius\*RADIUS_MULTIPLIER/,
+   'Les distàncies de les explosions del preview s’escalen ×2');
+ assert.doesNotMatch(html,/id="radius"/,
+   'El multiplicador no pot tornar a ser ajustable al preview');
+ assert.doesNotMatch(html,/id="variantA"/,
+   'L’estil A no ha d’aparèixer com a selector en aquesta iteració');
+ assert.match(html,/class="palette-preview"/,
+   'La nova paleta de colors vius ha de ser visible al panell');
+ console.log('OK estil B fix, radi visual ×2, paleta viva, llavors i neteja');
 })().catch(err=>{console.error(err);process.exitCode=1});
