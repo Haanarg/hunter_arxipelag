@@ -107,7 +107,7 @@ input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
  <div>
   <div class="eyebrow">Hunter: Arxipèlag / Laboratori FX</div>
   <h1>Explosions procedurals <span style="color:#e9b466">low-poly</span></h1>
-  <p class="intro">Compara les puntes tridimensionals <strong>B</strong> amb una <strong>bola de foc polièdrica C</strong> inspirada en la imatge de referència. Sis paletes càlides, radi ×2 fix i personatge a escala.</p>
+  <p class="intro">Compara les puntes tridimensionals <strong>B</strong> amb el nou model <strong>C</strong>: una bola de foc de volums irregulars arrodonits, grocs, taronges i vermells, superposats al mateix nucli com a la referència. Sis paletes càlides, radi ×2 i jugador a escala.</p>
  </div>
  <nav aria-label="Navegació">
   <a href="proves.html">← Models de proves</a>
@@ -137,7 +137,7 @@ input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
     <span>Model B o C</span>
     <span>Radi visual ×2</span>
    </div>
-   <p class="variant-help">Prova cromàtica: puntes volumètriques de groc intens a magenta, amb brases vermelles.</p>
+   <p class="variant-help">B: puntes radials. C: 8–12 volums quasi esfèrics i superposats, sense puntes. La paleta s'aplica als dos models.</p>
    <div class="palette-preview" role="img" aria-label="Paleta viva: blanc, groc, taronja, corall, vermell i magenta">
     <i style="--swatch:#ffff61"></i><i style="--swatch:#ffef30"></i>
     <i style="--swatch:#ffae00"></i><i style="--swatch:#ff6900"></i>
@@ -161,7 +161,7 @@ input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
     <div class="seed"><input id="seed" type="number" value="67589" min="0" max="4294967295" step="1"><button id="shuffle" aria-label="Genera una llavor nova" title="Nova llavor" type="button">⤨</button></div>
     <p class="micro">Cada detonació canvia les peces. La llavor permet repetir la seqüència reiniciant la pàgina amb el mateix valor.</p>
    </div>
-   <p class="micro">Puntes irregulars B i nova paleta incandescent. La densitat i la llavor continuen ajustables. El personatge és el model real del joc. <span class="key">Espai</span> detona.</p>
+   <p class="micro">El C utilitza volums 3D sòlids amb formes, mides i capes de color diferents. La densitat en controla el nombre; la llavor en varia les deformacions aparents i la disposició. <span class="key">Espai</span> detona.</p>
   </div>
  </aside>
 </div>
@@ -234,8 +234,10 @@ function fire(i){
  a.lastLaunch={radius,density,tone:p.tone,seed};
  const metrics=a.effect.launch({...a.lastLaunch,variant:EXPLOSION_STYLE});
  a.effect.show();
+ recolorActor(a,paletteColors());
  document.querySelector('[data-stats="'+i+'"]').textContent=
-   'R '+Math.round(metrics.radius)+' m  ·  '+metrics.count+' polígons';
+   'R '+Math.round(metrics.radius)+' m  ·  '+metrics.count+
+   (EXPLOSION_STYLE==='C'?' volums':' fragments');
  a.card.querySelector('.card-marker').textContent='GEN #'+String(a.round).padStart(2,'0');
 }
 // Sis gammes càlides sense blau ni verd, comparables entre els dos models.
@@ -249,25 +251,44 @@ const PALETTES=[
 ];
 const paletteSelect=$('paletteChoice');
 PALETTES.forEach(([name],i)=>paletteSelect.add(new Option(name,String(i))));
-function applyPalette(){
- const colors=PALETTES[Number(paletteSelect.value)||0][1].map(x=>parseInt(x.slice(1),16));
- // L'assignació de color no altera les posicions ni la llavor.
- for(const a of actors){
+function paletteColors(){
+ return PALETTES[Number(paletteSelect.value)||0][1].map(x=>parseInt(x.slice(1),16));
+}
+function recolorActor(a,colors){
+ // Al model C modificam directament les dotze capes opaces,
+ // no les instàncies buides d'un sistema radial.
+ a.effect.setPalette(colors);
+ if(a.effect.variant!=='C'){
   const meshes=a.effect.group.children.filter(x=>x.isInstancedMesh);
   for(const mesh of meshes){
    if(mesh.material.transparent)continue;
-   for(let i=0;i<mesh.count;i++)mesh.setColorAt(i,new THREE.Color(colors[(i*7+Math.floor(i/5))%colors.length]));
+   for(let i=0;i<mesh.count;i++)
+    mesh.setColorAt(i,new THREE.Color(colors[(i*7+Math.floor(i/5))%colors.length]));
    if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
   }
  }
- document.querySelectorAll('.palette-preview i').forEach((el,i)=>el.style.setProperty('--swatch',PALETTES[Number(paletteSelect.value)||0][1][i]));
+}
+function applyPalette(){
+ const colors=paletteColors();
+ for(const a of actors)recolorActor(a,colors);
+ document.querySelectorAll('.palette-preview i').forEach((el,i)=>
+  el.style.setProperty('--swatch',PALETTES[Number(paletteSelect.value)||0][1][i]));
 }
 function chooseModel(model){
  EXPLOSION_STYLE=model;
  $('modelB').setAttribute('aria-pressed',String(model==='B'));
  $('modelC').setAttribute('aria-pressed',String(model==='C'));
- for(const a of actors){a.effect.setVariant(model);if(a.lastLaunch)a.effect.launch({...a.lastLaunch,variant:model});}
+ for(const a of actors){
+  a.effect.setVariant(model);
+  if(a.lastLaunch)a.effect.launch({...a.lastLaunch,variant:model});
+  const m=a.effect.metrics;
+  document.querySelector('[data-stats="'+actors.indexOf(a)+'"]').textContent=
+   'R '+Math.round(m.radius)+' m  ·  '+m.count+
+   (model==='C'?' volums':' fragments');
+ }
  applyPalette();
+ $('notice').textContent=model==='C'?
+  'Model C: volums quasi esfèrics superposats':'Model B: puntes radials';
 }
 $('modelB').addEventListener('click',()=>chooseModel('B'));
 $('modelC').addEventListener('click',()=>chooseModel('C'));
@@ -276,7 +297,8 @@ function fireAll(){
  round++;for(let i=0;i<actors.length;i++)fire(i);
  applyPalette();
  nextAuto=performance.now()+2100;
- $('notice').textContent='Explosió #'+round+' · estil B · radi visual ×2 · nova paleta';
+ $('notice').textContent='Explosió #'+round+' · model '+EXPLOSION_STYLE+
+  ' · radi visual ×2 · '+(EXPLOSION_STYLE==='C'?'blobs superposats':'puntes radials');
 }
 $('all').addEventListener('click',()=>fireAll());
 document.querySelectorAll('[data-fire]').forEach(button=>{
