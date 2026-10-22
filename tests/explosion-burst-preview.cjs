@@ -4,6 +4,7 @@
 const assert=require('node:assert/strict');
 const {pathToFileURL}=require('node:url');
 const path=require('node:path');
+const fs=require('node:fs');
 (async()=>{
  const url=pathToFileURL(path.join(__dirname,'../src/explosion-burst-preview.mjs')).href;
  const {EXPLOSION_PRESETS,createProceduralExplosion,explosionMetrics,mulberry32}=await import(url);
@@ -19,8 +20,12 @@ const path=require('node:path');
    'Un radi més gran ha de generar més peces');
  assert(explosionMetrics(48,1.8).count>explosionMetrics(48,.5).count,
    'La densitat ha de controlar el nombre de peces');
- assert(explosionMetrics(400,2).count<=140,
+ assert(explosionMetrics(400,2.6).count<=640,
    'Un límit global protegeix el rendiment');
+ const defaults=[10,16,24,48].map(radius=>explosionMetrics(radius,1.8).count);
+ assert(defaults.every(count=>count>=100),
+   'La densitat inicial ha de ser molt superior a la primera versió');
+ assert(defaults[3]>=300,'C4 ha de tenir un núvol molt més dens');
  const scene=new THREE.Scene();
  const fx=createProceduralExplosion(scene,{radius:16,density:1,seed:12});
  assert.equal(fx.group.parent,scene);
@@ -29,7 +34,7 @@ const path=require('node:path');
  const stats=fx.launch({radius:48,seed:123,density:1.2});
  assert.equal(parts.reduce((n,x)=>n+x.count,0),stats.count);
  for(const mesh of parts){
-   assert(mesh.count<=145);
+   assert(mesh.count<=640);
    assert(mesh.instanceColor,'Cada polígono té color procedural per instància');
  }
  const snapshots=()=>parts.flatMap(m=>{
@@ -57,5 +62,16 @@ const path=require('node:path');
  }
  fx.destroy();
  assert.equal(fx.group.parent,null,'La previsualització no deixa objectes orfes');
- console.log('OK laboratori procedural: 4 escales, llavors, shards instanciats i neteja');
+ const html=fs.readFileSync(path.join(__dirname,'../explosions-proves.html'),'utf8');
+ assert.match(html,/value="180" step="10"/,
+   'La pàgina s’obre amb una densitat del 180%');
+ assert.match(html,/density=1\.8/,'El motor de la pàgina usa el valor inicial real');
+ assert.match(html,/HUNTER_PLAYER_MODEL\.create\(THREE/,
+   'Els quatre quadres utilitzen el model del protagonista');
+ assert.match(html,/unitScale:1\.2/,'Es conserva la mida del model del joc');
+ assert.match(html,/radius\*\.49\+7/,
+   'La càmera és significativament més propera que radius+19');
+ assert.match(html,/a\.player\.position\.set\(/,
+   'El jugador queda visible al costat de cada explosió');
+ console.log('OK explosió densa, càmera pròxima, personatge a escala, llavors i neteja');
 })().catch(err=>{console.error(err);process.exitCode=1});
