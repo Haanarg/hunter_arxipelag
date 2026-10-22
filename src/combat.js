@@ -50,6 +50,7 @@ function clearBulletImpacts(){
 }
 
 function setDis(v){disg=v;[...pl.userData.mats,...rider.userData.mats].forEach(([m,a,b])=>m.color.copy(vivid(v?b:a)))}
+let playerBlastRagdoll=null;
 function fin(m,cause=null){if(m==='HAS MORT'&&startDeathCinematic(cause))return;setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+' · Obre Ⅱ / Esc per tornar a jugar';endEl.style.display='flex'}
 // El dany no canvia amb la dificultat: només la dispersió del tir enemic.
 function enemyWeaponDamageScale(){return 1}
@@ -113,7 +114,14 @@ function killEnemy(u,killingShot=null){
       pitch:rn(-.9,.9),armL:rn(-1.6,.8),armR:rn(-1.6,.8),
       legL:rn(-.8,.85),legR:rn(-.8,.85),
       vx:impulse?.vx??rn(-2.6,2.6),vz:impulse?.vz??rn(-2.6,2.6),
-      vy:impulse?.vy??rn(1.5,3.8),height:0};u.o.userData.legs?.forEach(l=>l.rotation.x=0);u.o.userData.arms?.forEach(a=>a.rotation.x=0);DEAD.push(u)}
+      vy:impulse?.vy??rn(1.5,3.8),height:0};
+    if(u.blastRagdoll){window.HUNTER_RAGDOLL.reset(u.blastRagdoll);u.blastRagdoll=null}
+    u.o.userData.legs?.forEach(l=>l.rotation.x=0);
+    u.o.userData.arms?.forEach(a=>a.rotation.x=0);
+    // El general conserva la seva representació teatral de victòria.
+    if(u.t!=='general')u.ragdoll=window.HUNTER_RAGDOLL.make(u.o,{
+      blast:!!impulse,impulse,seed:u.x*.41+u.z*.27});
+    DEAD.push(u)}
   else if(u.t==='torre'){destroyTower(u);world.remove(u.o)}
   else if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='patrulla_marina')explodeEnemyVehicle(u);
   else world.remove(u.o);
@@ -321,6 +329,10 @@ function boom(x,y,z,r,dmg,own,source=null){
   }
   // Els enemics també poden ferir els seus companys amb les explosions.
   hurtE(u,dealt,source||{x,y,z,sx:cv?.x??P.x,sy:(cv?.o?.position.y??P.y)+1.7,sz:cv?.z??P.z,spl:r,own});
+  // Si sobreviu, també obre braços i cames mentre surt volant.
+  if(u.hp>0&&u.blastT>0&&!u.blastRagdoll)
+    u.blastRagdoll=window.HUNTER_RAGDOLL.make(u.o,{
+      blast:true,impulse:u.blastImpulse,seed:u.x*.41+u.z*.27});
  }
 
  PL.forEach(t=>{if(!t.alive)return;const dealt=explosionDamage(dmg,Math.hypot(t.x-x,t.z-z),r);if(dealt&&!blastOccluded(x,y,z,t.x,t.y+2,t.z))dmgP(t,dealt)});
@@ -335,7 +347,11 @@ function boom(x,y,z,r,dmg,own,source=null){
   if(dealt&&!blastOccluded(x,y,z,P.x,P.y+1,P.z)){
    const impulse=blastImpulseAt(x,z,P.x,P.z,r,1-d/r);
    if(!playerFall){const flight=Math.max(1.5,.55+impulse.vy/8);
-    playerEject={kind:'blast',...impulse,t:flight,dur:flight,height:0,roll:rn(-1,1)<0?-1:1}}
+    playerEject={kind:'blast',...impulse,t:flight,dur:flight,height:0,roll:rn(-1,1)<0?-1:1};
+    if(playerBlastRagdoll)window.HUNTER_RAGDOLL.reset(playerBlastRagdoll);
+    playerBlastRagdoll=window.HUNTER_RAGDOLL.make(pl,{
+      blast:true,impulse,seed:P.x*.41+P.z*.27});
+   }
    hurtP(dealt,own==='e',{type:'explosion',x,y,z});
   }
 
