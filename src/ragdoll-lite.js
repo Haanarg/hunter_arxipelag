@@ -18,7 +18,9 @@ window.HUNTER_RAGDOLL=Object.freeze((()=>{
       const s=Math.sin((seed+1)*.71+i*2.399),
             home={x:node.rotation.x,y:node.rotation.y,z:node.rotation.z},
             position={x:node.position.x,y:node.position.y,z:node.position.z};
-      joints.push({node,type,side,home,position,vx:(s*.7+(impulse?.vy||0)*.025)*(blast?1.5:.5),
+      joints.push({node,type,side,home,position,
+        angleX:home.x,angleZ:home.z,
+        vx:(s*.7+(impulse?.vy||0)*.025)*(blast?1.5:.5),
         vz:(Math.cos(i*1.97+seed)*1.3+side*.5)*(blast?1.7:.4),
         offset:0,offsetV:0,variant:s});
     }
@@ -60,11 +62,16 @@ window.HUNTER_RAGDOLL=Object.freeze((()=>{
       // Són únicament 9 articulacions i 2 canals angulars.
       const spring=airborne?31:19,damp=airborne?5.6:8.8,
             gust=airborne?Math.sin(state.age*7.3+i*1.71)*wind*(state.blast?4:1):0;
-      j.vx+=(spring*(tx-j.node.rotation.x)-damp*j.vx+gust)*h;
-      j.vz+=(spring*(tz-j.node.rotation.z)-damp*j.vz+
+      // Els animadors normals poden escriure angles cada fotograma.
+      // Integrem en un estat propi per evitar que el moviment còmic
+      // quedi anul·lat per la postura de caminar o de disparar.
+      j.vx+=(spring*(tx-j.angleX)-damp*j.vx+gust)*h;
+      j.vz+=(spring*(tz-j.angleZ)-damp*j.vz+
         gust*j.side*.65)*h;
-      j.node.rotation.x=clamp(j.node.rotation.x+j.vx*h,...LIMITS[j.type]);
-      j.node.rotation.z=clamp(j.node.rotation.z+j.vz*h,-2.25,2.25);
+      j.angleX=clamp(j.angleX+j.vx*h,...LIMITS[j.type]);
+      j.angleZ=clamp(j.angleZ+j.vz*h,-2.25,2.25);
+      j.node.rotation.x=j.angleX;
+      j.node.rotation.z=j.angleZ;
       // Obrim espatlles i malucs sense separar malles del cos:
       // el pivot continua connectat i la posició retorna en aterrar.
       if(j.type==='arm'||j.type==='leg'){
