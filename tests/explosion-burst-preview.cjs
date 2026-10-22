@@ -7,7 +7,8 @@ const path=require('node:path');
 const fs=require('node:fs');
 (async()=>{
  const url=pathToFileURL(path.join(__dirname,'../src/explosion-burst-preview.mjs')).href;
- const {EXPLOSION_PRESETS,createProceduralExplosion,explosionMetrics,mulberry32}=await import(url);
+ const {EXPLOSION_PRESETS,EXPLOSION_VARIANTS,
+   createProceduralExplosion,explosionMetrics,mulberry32}=await import(url);
  const THREE=await import(pathToFileURL(path.join(__dirname,'../vendor/three-r186.module.mjs')).href);
  assert.deepEqual(EXPLOSION_PRESETS.map(x=>x.id),
    ['car','grenade','heavy','c4']);
@@ -31,6 +32,18 @@ const fs=require('node:fs');
  assert.equal(fx.group.parent,scene);
  const parts=fx.group.children.filter(x=>x.isInstancedMesh);
  assert.equal(parts.length,4,'Quatre famílies de polígons agrupades');
+ assert.deepEqual(Object.keys(EXPLOSION_VARIANTS),['A','B']);
+ assert.equal(fx.variant,'A');
+ for(const mesh of parts.slice(0,3)){
+   assert(mesh.material.isMeshStandardMaterial,'La punta és un volum il·luminat');
+   assert.equal(mesh.material.transparent,false,'Les puntes no són plaques planes/transparents');
+   mesh.geometry.computeBoundingBox();
+   const bb=mesh.geometry.boundingBox;
+   assert(bb.max.y-bb.min.y>.9,'Cada punta té longitud tridimensional');
+   assert(bb.max.x-bb.min.x>.3,'Cada punta té gruix real');
+   assert(bb.max.z-bb.min.z>.3,'Cada punta té profunditat real');
+   assert(Math.abs(bb.min.y)<1e-5,'La base de la punta neix del nucli');
+ }
  const stats=fx.launch({radius:48,seed:123,density:1.2});
  assert.equal(parts.reduce((n,x)=>n+x.count,0),stats.count);
  for(const mesh of parts){
@@ -46,6 +59,26 @@ const fs=require('node:fs');
    return arr;
  });
  const first=snapshots();
+ const geometryA=parts.map(p=>p.geometry);
+ assert.equal(fx.setVariant('B'),true);
+ assert.equal(fx.variant,'B');
+ const geometryB=parts.map(p=>p.geometry);
+ assert.notEqual(geometryB[0],geometryA[0],'B ha de tenir una malla realment diferent');
+ assert.notEqual(geometryB[1],geometryA[1],'B també canvia la segona família');
+ assert.equal(geometryB[3],geometryA[3],'El fum es comparteix entre variants');
+ for(const mesh of parts.slice(0,3)){
+   mesh.geometry.computeBoundingBox();
+   const bb=mesh.geometry.boundingBox;
+   assert(bb.max.y-bb.min.y>.9,'Les puntes B mantenen la longitud 3D');
+   assert(bb.max.x-bb.min.x>.3&&bb.max.z-bb.min.z>.3,
+     'Les puntes B no són superfícies planes');
+ }
+ assert.deepEqual(snapshots(),first,'Canviar A/B conserva la llavor i les matrius');
+ assert.equal(fx.setVariant('C'),false,'Només s’admeten A o B');
+ assert.equal(fx.variant,'B');
+ assert.equal(fx.setVariant('A'),true);
+ assert.equal(fx.variant,'A');
+ assert.deepEqual(snapshots(),first,'Tornar a A recupera la mateixa explosió');
  fx.launch({radius:48,density:1.2,seed:123});
  assert.deepEqual(snapshots(),first,
    'La mateixa llavor reprodueix la mateixa forma i els mateixos colors');
@@ -73,5 +106,11 @@ const fs=require('node:fs');
    'La càmera és significativament més propera que radius+19');
  assert.match(html,/a\.player\.position\.set\(/,
    'El jugador queda visible al costat de cada explosió');
- console.log('OK explosió densa, càmera pròxima, personatge a escala, llavors i neteja');
+ assert.match(html,/id="variantA"/,'Hi ha botó per la variant A');
+ assert.match(html,/id="variantB"/,'Hi ha botó per la variant B');
+ assert.match(html,/a\.effect\.setVariant\(variant\)/,
+   'El selector A/B ha d’actualitzar els quatre quadres');
+ assert.match(html,/a\.effect\.launch\(\{\.\.\.a\.lastLaunch,variant\}\)/,
+   'A i B s’han de comparar amb la mateixa llavor');
+ console.log('OK explosions 3D A/B: volum, variació, llavor intacta, selecció i neteja');
 })().catch(err=>{console.error(err);process.exitCode=1});
