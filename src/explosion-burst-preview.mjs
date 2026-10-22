@@ -30,11 +30,54 @@ const MAX_SHARDS=640;
 const TYPES=['spikes','plates','embers','smoke'];
 const UP=new THREE.Vector3(0,1,0);
 const dummy=new THREE.Object3D(),twistQuaternion=new THREE.Quaternion(),axis=new THREE.Vector3();
+// Tots els volums van de y=0 (base al centre de la deflagració)
+ // a y=1 (punta), per poder orientar-los radialment i fer-los créixer
+ // sense que flotin allunyats del nucli. Cap polígon pla.
+function pyramid(sides){
+ const geometry=new THREE.ConeGeometry(1,1,sides,1);
+ geometry.translate(0,.5,0);
+ return geometry;
+}
+// Piràmide irregular tancada amb anell intermedi eixamplat i descentrat.
+// Triangles independents = facetes amb normals planes i volum visible
+// des de qualsevol angle. La malla es crea una sola vegada per variant.
+function irregularSpike(sides,spread,skew,twist){
+ const points=[],vertices=[];
+ const ring=(height,radius,dx,dz,phase)=>Array.from({length:sides},(_,i)=>{
+  const a=i*2*Math.PI/sides+phase,dist=radius*(1+.19*Math.sin(i*2.4+twist));
+  return [Math.cos(a)*dist+dx,height,Math.sin(a)*dist+dz];
+ });
+ const base=ring(0,.73,0,0,0),
+       shoulder=ring(.33,spread,skew*.32,-skew*.24,twist*.18),
+       tip=[skew,1,-skew*.47];
+ const tri=(a,b,c)=>vertices.push(...a,...b,...c);
+ for(let i=0;i<sides;i++){
+  const j=(i+1)%sides;
+  tri(base[i],base[j],shoulder[i]);
+  tri(base[j],shoulder[j],shoulder[i]);
+  tri(shoulder[i],shoulder[j],tip);
+  tri([0,0,0],base[j],base[i]);
+ }
+ const geo=new THREE.BufferGeometry();
+ geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+ geo.computeVertexNormals();
+ return geo;
+}
+export const EXPLOSION_VARIANTS=Object.freeze({
+ A:Object.freeze({name:'Piràmides',description:'Cons i piràmides 3D de diverses cares'}),
+ B:Object.freeze({name:'Estrella irregular',description:'Puntes 3D asimètriques amb facetes i espatlles'})
+});
+const smokeGeometry=new THREE.IcosahedronGeometry(.5,0);
 const sharedGeometry=Object.freeze({
- spikes:new THREE.CylinderGeometry(.015,.29,1,3,1),
- plates:new THREE.TetrahedronGeometry(.56,0),
- embers:new THREE.BoxGeometry(.20,.95,.16),
- smoke:new THREE.IcosahedronGeometry(.50,0)
+ A:Object.freeze({
+  spikes:pyramid(3),plates:pyramid(4),embers:pyramid(5),smoke:smokeGeometry
+ }),
+ B:Object.freeze({
+  spikes:irregularSpike(5,1.16,.18,.65),
+  plates:irregularSpike(4,1.26,-.27,1.1),
+  embers:irregularSpike(3,.96,.31,.42),
+  smoke:smokeGeometry
+ })
 });
 export function explosionMetrics(radius,density=1){
  const r=clamp(Number(radius)||1,2,90),d=clamp(Number(density)||1,.4,2.6);
@@ -54,7 +97,7 @@ function allocate({radius,density,seed,tone}){
  const rand=mulberry32(seed),m=explosionMetrics(radius,density),
        count=m.count,shards={spikes:[],plates:[],embers:[],smoke:[]};
  for(let i=0;i<count;i++){
-  const roll=rand(),kind=roll<.42?'spikes':roll<.70?'plates':roll<.96?'embers':'smoke';
+  const roll=rand(),kind=roll<.46?'spikes':roll<.78?'plates':roll<.97?'embers':'smoke';
   const dir=sampleDirection(rand);
   // Els radis més grans creen més peces, amb recorreguts llargs i
   // velocitats escalades; cada reinici genera una altra distribució.
@@ -76,19 +119,24 @@ function allocate({radius,density,seed,tone}){
 }
 export function createProceduralExplosion(scene,options={}){
  const cfg={radius:options.radius??16,density:options.density??1,
-            tone:options.tone??'flash',seed:options.seed??1};
+            tone:options.tone??'flash',seed:options.seed??1,
+            variant:options.variant==='B'?'B':'A'};
  const group=new THREE.Group();scene.add(group);
  const meshes={};
  for(const kind of TYPES){
-  const mat=new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,
-    transparent:kind==='smoke'||kind==='spikes',
-    opacity:kind==='smoke'?.27:1,
-    depthWrite:kind!=='smoke'&&kind!=='spikes',
-    blending:kind==='spikes'?THREE.AdditiveBlending:THREE.NormalBlending});
-  const inst=new THREE.InstancedMesh(sharedGeometry[kind],mat,MAX_SHARDS);
+  // Els 3 grups incandescents són volums opacs, amb ombreig de facetes.
+  // El fum continua transparent, i mai no escriu profunditat.
+  const mat=kind==='smoke'?
+    new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,
+      transparent:true,opacity:.24,depthWrite:false}):
+    new THREE.MeshStandardMaterial({color:0xffffff,side:THREE.DoubleSide,
+      flatShading:true,roughness:.83,metalness:0,
+      emissive:kind==='spikes'?0x3e1a04:0x170a03,
+      emissiveIntensity:kind==='spikes'?.36:.14});
+  const inst=new THREE.InstancedMesh(sharedGeometry[cfg.variant][kind],mat,MAX_SHARDS);
   inst.frustumCulled=false;inst.count=0;
   inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  inst.renderOrder=kind==='smoke'?2:kind==='spikes'?4:3;
+  inst.renderOrder=kind==='smoke'?5:2;
   group.add(inst);meshes[kind]=inst;
  }
  const core=new THREE.Mesh(new THREE.IcosahedronGeometry(1,1),
@@ -100,11 +148,22 @@ export function createProceduralExplosion(scene,options={}){
      depthWrite:false,blending:THREE.AdditiveBlending}));
  glow.renderOrder=1;group.add(glow);
  let spawned=null,age=10,playing=false;
+ // Canviar de variant no canvia la llavor ni el recompte. Això permet
+ // comparar A/B exactament amb els mateixos fragments i posicions.
+ function setVariant(variant){
+  if(!EXPLOSION_VARIANTS[variant])return false;
+  if(cfg.variant===variant)return true;
+  cfg.variant=variant;
+  for(const kind of TYPES)meshes[kind].geometry=sharedGeometry[variant][kind];
+  if(spawned)renderPose();
+  return true;
+ }
  function launch(next={}){
   if(Number.isFinite(next.radius))cfg.radius=next.radius;
   if(Number.isFinite(next.density))cfg.density=next.density;
   if(typeof next.tone==='string')cfg.tone=next.tone;
   if(Number.isFinite(next.seed))cfg.seed=next.seed>>>0;
+  if(next.variant)setVariant(next.variant);
   spawned=allocate(cfg);age=0;playing=true;
   for(const kind of TYPES){
    const inst=meshes[kind],arr=spawned.shards[kind];
@@ -134,16 +193,21 @@ export function createProceduralExplosion(scene,options={}){
          Math.pow(Math.max(0,1-life),.42),
        axial=kind==='spikes'?(1+Math.sin(Math.PI*life)*.28):1,
        yaw=s.spin*time+s.phase;
-    dummy.position.copy(s.dir).multiplyScalar(outward).add(s.initial);
+    // Les bases de les puntes continuen gairebé al nucli, mentre que
+    // els seus extrems creixen cap enfora com una estrella volumètrica.
+    // Només les engrunes i el fum s'escampen amb més llibertat.
+    const baseOffset=kind==='smoke'?outward*.85:
+        r*.012+outward*(kind==='embers'?.32:.095);
+    dummy.position.copy(s.dir).multiplyScalar(baseOffset).add(s.initial);
     if(kind==='smoke')dummy.position.y+=r*.10*life;
     dummy.quaternion.setFromUnitVectors(UP,s.dir);
     axis.set(0,1,0);
     twistQuaternion.setFromAxisAngle(axis,yaw);
     dummy.quaternion.multiply(twistQuaternion);
-    const growth=clamp(age/.085,.24,1),
+    const growth=clamp(age/.12,.13,1),
           w=Math.max(.0001,s.width*fade*growth),
           h=Math.max(.0001,s.length*fade*growth*axial);
-    dummy.scale.set(kind==='smoke'?w*1.8:w,h,kind==='smoke'?w*1.5:w);
+    dummy.scale.set(kind==='smoke'?w*2.7:w,h,kind==='smoke'?w*2.4:w);
     dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
    }
    mesh.instanceMatrix.needsUpdate=true;
@@ -170,8 +234,9 @@ export function createProceduralExplosion(scene,options={}){
   for(const mesh of Object.values(meshes))mesh.material.dispose();
   core.geometry.dispose();core.material.dispose();glow.geometry.dispose();glow.material.dispose();
  }
- return {group,launch,tick,hide,show,destroy,
+ return {group,launch,setVariant,tick,hide,show,destroy,
    get metrics(){return spawned?.metrics??explosionMetrics(cfg.radius,cfg.density)},
    get playing(){return playing},
+   get variant(){return cfg.variant},
    get seed(){return cfg.seed}};
 }
