@@ -40,7 +40,7 @@ const fs=require('node:fs');
  assert.equal(fx.group.parent,scene);
  const parts=fx.group.children.filter(x=>x.isInstancedMesh);
  assert.equal(parts.length,4,'Quatre famílies de polígons agrupades');
- assert.deepEqual(Object.keys(EXPLOSION_VARIANTS),['A','B']);
+ assert.deepEqual(Object.keys(EXPLOSION_VARIANTS),['A','B','C']);
  assert.equal(fx.variant,'B','El motor arrenca en l’estil B seleccionat');
  for(const mesh of parts.slice(0,3)){
    assert(mesh.material.isMeshStandardMaterial,'La punta és un volum il·luminat');
@@ -81,7 +81,7 @@ const fs=require('node:fs');
  assert.notEqual(geometryB[0],geometryA[0],'A/B han de tenir malles diferents');
  assert.equal(geometryB[3],geometryA[3],'El fum es comparteix entre variants');
  assert.deepEqual(snapshots(),first,'Canviar A/B conserva la llavor');
- assert.equal(fx.setVariant('C'),false,'Només s’admeten A o B');
+ assert.equal(fx.setVariant('D'),false,'Només s’admeten A, B i C');
  assert.equal(fx.setVariant('B'),true);
  assert.equal(fx.variant,'B');
  assert.deepEqual(snapshots(),first,'Tornar a B recupera la mateixa explosió');
@@ -90,7 +90,46 @@ const fs=require('node:fs');
    'La mateixa llavor reprodueix la mateixa forma i els mateixos colors');
  fx.launch({radius:48,density:1.2,seed:124});
  assert.notDeepEqual(snapshots(),first,'Una altra llavor canvia l’explosió');
+ // Regressions del C: no és un pic ni una closca única.
+ assert.equal(fx.setVariant('C'),true);
+ const C=fx.launch({radius:96,density:1.8,seed:222,variant:'C'});
+ assert.equal(C.radius,96);
+ assert.equal(C.count,C.volumeCount,'El C mostra nombre de volums, no de fragments');
+ assert(C.volumeCount>=8&&C.volumeCount<=12);
+ assert.equal(fx.volumeCount,C.volumeCount);
+ assert.equal(parts.reduce((n,p)=>n+p.count,0),0,
+   'C no genera cap mena de puntes radials del model B');
+ assert(fx.fireballGroup.visible,'Els volums C són visibles');
+ const blobs=fx.fireballGroup.children;
+ assert.equal(blobs.length,12,'C té una paleta de dotze blobs quasi esfèrics');
+ assert.equal(blobs.filter(x=>x.visible).length,C.volumeCount);
+ for(const blob of blobs){
+  blob.geometry.computeBoundingBox();
+  const size=new THREE.Vector3();
+  blob.geometry.boundingBox.getSize(size);
+  const ratio=Math.max(size.x,size.y,size.z)/Math.min(size.x,size.y,size.z);
+  assert(ratio<1.65,'Cada capa és irregular però relativament esfèrica');
+  assert(blob.material.isMeshStandardMaterial,'Cada capa és un volum il·luminat');
+  assert(Math.hypot(blob.position.x,blob.position.y,blob.position.z)<.8,
+    'Les capes mantenen pràcticament el mateix centre');
+ }
+ const poses=blobs.map(x=>[...x.position.toArray(),...x.rotation.toArray(),
+   ...x.scale.toArray()]);
+ fx.launch({radius:96,density:1.8,seed:222,variant:'C'});
+ assert.deepEqual(blobs.map(x=>[...x.position.toArray(),...x.rotation.toArray(),
+   ...x.scale.toArray()]),poses,'La mateixa llavor reprodueix la bola de foc');
+ fx.launch({radius:96,density:1.8,seed:223,variant:'C'});
+ assert.notDeepEqual(blobs.map(x=>[...x.position.toArray(),...x.rotation.toArray(),
+   ...x.scale.toArray()]),poses,'La bola canvia lleument amb una nova llavor');
+ const custom=[0xffffff,0xffee22,0xffa500,0xff7000,0xe23b20,0x89200e];
+ assert.equal(fx.setPalette(custom),true);
+ assert.equal(blobs[0].material.color.getHex(),custom[3]);
+ assert.equal(blobs[1].material.color.getHex(),custom[1]);
+ assert.equal(blobs[5].material.color.getHex(),custom[4]);
+ assert.equal(fx.setPalette([0x123]),false,'Calen sis colors vàlids');
  for(let i=0;i<60;i++)fx.tick(.04);
+ assert.equal(fx.fireballGroup.visible,false,
+   'Els volums també desapareixen quan acaba el temps');
  assert.equal(fx.playing,false,'L’animació s’atura sola');
  for(const mesh of parts){
    const matrix=new THREE.Matrix4();
@@ -124,5 +163,11 @@ const fs=require('node:fs');
    'L’estil A no ha d’aparèixer com a selector en aquesta iteració');
  assert.match(html,/class="palette-preview"/,
    'La nova paleta de colors vius ha de ser visible al panell');
- console.log('OK estil B fix, radi visual ×2, paleta viva, llavors i neteja');
+ assert.match(html,/id="modelC"/,'El C es pot seleccionar per comparar');
+ assert.match(html,/id="modelB"/,'El B continua disponible');
+ assert.match(html,/a\.effect\.setPalette\(colors\)/,
+   'Les sis paletes canvien els colors dels volums C');
+ assert.match(html,/model==='C'\?' volums':' fragments'/,
+   'Es mostra el nombre real de volums del model C');
+ console.log('OK C quasi esfèric superposat, sense puntes, colors i llavors');
 })().catch(err=>{console.error(err);process.exitCode=1});
