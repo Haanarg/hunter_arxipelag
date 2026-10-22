@@ -25,10 +25,11 @@ const PALETTE=Object.freeze({
  dark:[0xa94a27,0x793a2b,0x553633,0x6f443a,0xbe713f],
  smoke:[0x594941,0x423b39,0x514a49,0x2e3338]
 });
+// Quatre InstancedMesh per explosió, encara que n'augmentem molt la densitat.
+const MAX_SHARDS=640;
 const TYPES=['spikes','plates','embers','smoke'];
 const UP=new THREE.Vector3(0,1,0);
-const dummy=new THREE.Object3D(),baseQuaternion=new THREE.Quaternion(),
-      twistQuaternion=new THREE.Quaternion(),axis=new THREE.Vector3();
+const dummy=new THREE.Object3D(),twistQuaternion=new THREE.Quaternion(),axis=new THREE.Vector3();
 const sharedGeometry=Object.freeze({
  spikes:new THREE.CylinderGeometry(.015,.29,1,3,1),
  plates:new THREE.TetrahedronGeometry(.56,0),
@@ -36,10 +37,12 @@ const sharedGeometry=Object.freeze({
  smoke:new THREE.IcosahedronGeometry(.50,0)
 });
 export function explosionMetrics(radius,density=1){
- const r=clamp(Number(radius)||1,2,90),d=clamp(Number(density)||1,.25,2);
- const count=Math.round(clamp((9+r*1.25)*d,10,140));
+ const r=clamp(Number(radius)||1,2,90),d=clamp(Number(density)||1,.4,2.6);
+ // Densitat base molt superior a la versió inicial: la comparació és
+ // visualment llegible a pantalla petita. El topall evita pèrdues de FPS.
+ const count=Math.round(clamp((24+r*3.2)*d,20,MAX_SHARDS));
  const size=r*.29;
- return {radius:r,count,size,duration:1.25+Math.min(.42,r*.008),
+ return {radius:r,count,size,duration:2.15,
    drawCalls:6,verticesPerShard:24};
 }
 function sampleDirection(rand){
@@ -51,15 +54,16 @@ function allocate({radius,density,seed,tone}){
  const rand=mulberry32(seed),m=explosionMetrics(radius,density),
        count=m.count,shards={spikes:[],plates:[],embers:[],smoke:[]};
  for(let i=0;i<count;i++){
-  const roll=rand(),kind=roll<.37?'spikes':roll<.68?'plates':roll<.91?'embers':'smoke';
+  const roll=rand(),kind=roll<.42?'spikes':roll<.70?'plates':roll<.96?'embers':'smoke';
   const dir=sampleDirection(rand);
   // Els radis més grans creen més peces, amb recorreguts llargs i
   // velocitats escalades; cada reinici genera una altra distribució.
-  const r=m.radius,reach=r*(.16+rand()*.25),
-        length=r*(kind==='spikes'?.075+rand()*.16:
-          kind==='embers'?.055+rand()*.11:.045+rand()*.10),
-        width=r*(kind==='plates'?.018+rand()*.037:.007+rand()*.021),
-        duration=kind==='smoke'?.66+rand()*.62:.28+rand()*.44,
+  const r=m.radius,reach=r*(.075+rand()*.17),
+        length=r*(kind==='spikes'?.055+rand()*.12:
+          kind==='embers'?.048+rand()*.105:.040+rand()*.095),
+        width=r*(kind==='plates'?.013+rand()*.030:.009+rand()*.024),
+        // Mantenim l'esclat visible prou temps per comparar-lo.
+        duration=kind==='smoke'?1.1+rand()*.8:.85+rand()*.70,
         color=kind==='smoke'?pick(rand,PALETTE.smoke):
           kind==='spikes'?pick(rand,PALETTE.core):
           kind==='plates'?pick(rand,tone==='metal'?PALETTE.dark:PALETTE.warm):
@@ -81,7 +85,7 @@ export function createProceduralExplosion(scene,options={}){
     opacity:kind==='smoke'?.27:1,
     depthWrite:kind!=='smoke'&&kind!=='spikes',
     blending:kind==='spikes'?THREE.AdditiveBlending:THREE.NormalBlending});
-  const inst=new THREE.InstancedMesh(sharedGeometry[kind],mat,145);
+  const inst=new THREE.InstancedMesh(sharedGeometry[kind],mat,MAX_SHARDS);
   inst.frustumCulled=false;inst.count=0;
   inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   inst.renderOrder=kind==='smoke'?2:kind==='spikes'?4:3;
@@ -127,7 +131,7 @@ export function createProceduralExplosion(scene,options={}){
     const eased=1-Math.exp(-4.1*life),
        outward=s.reach*(.12+.88*eased),
        fade=kind==='smoke'?Math.sin(Math.PI*clamp(life,0,1)):
-         Math.pow(Math.max(0,1-life),.62),
+         Math.pow(Math.max(0,1-life),.42),
        axial=kind==='spikes'?(1+Math.sin(Math.PI*life)*.28):1,
        yaw=s.spin*time+s.phase;
     dummy.position.copy(s.dir).multiplyScalar(outward).add(s.initial);
@@ -136,7 +140,7 @@ export function createProceduralExplosion(scene,options={}){
     axis.set(0,1,0);
     twistQuaternion.setFromAxisAngle(axis,yaw);
     dummy.quaternion.multiply(twistQuaternion);
-    const growth=clamp(age/.12,.08,1),
+    const growth=clamp(age/.085,.24,1),
           w=Math.max(.0001,s.width*fade*growth),
           h=Math.max(.0001,s.length*fade*growth*axial);
     dummy.scale.set(kind==='smoke'?w*1.8:w,h,kind==='smoke'?w*1.5:w);
@@ -144,8 +148,8 @@ export function createProceduralExplosion(scene,options={}){
    }
    mesh.instanceMatrix.needsUpdate=true;
   }
-  const f=clamp(age/.23,0,1),flash=(1-f)**1.8;
-  core.visible=glow.visible=age<.52;
+  const f=clamp(age/.34,0,1),flash=(1-f)**1.6;
+  core.visible=glow.visible=age<.64;
   core.scale.setScalar(r*(.024+.037*f));
   core.material.opacity=flash;
   core.rotation.set(age*2,age*3,0);
