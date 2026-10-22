@@ -51,6 +51,7 @@ nav a:hover,.outline:hover{background:#294044;border-color:#6b8c87}
 .action-block .secondary{background:#273a3e;border:1px solid #536d6f;border-radius:9px;padding:9px;color:#e8f2ec;font-size:12px;font-weight:700}
 .variant-title{font:800 11px/1.2 system-ui;letter-spacing:.07em;color:#c6d6c9;text-transform:uppercase}
 .fixed-settings{display:flex;gap:7px;flex-wrap:wrap}
+ .fixed-settings button{border:1px solid #8e754e;border-radius:7px;background:#423322;color:#ffdb92;font-size:12px;font-weight:800;padding:7px 10px}.fixed-settings button[aria-pressed=true]{background:#f1b662;color:#231b11}
 .fixed-settings span{border:1px solid #8e754e;border-radius:7px;background:#423322;
  color:#ffdb92;font-size:12px;font-weight:800;padding:7px 10px}
 .palette-preview{display:flex;flex-wrap:wrap;gap:6px;padding:5px 0 2px}
@@ -128,9 +129,12 @@ input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
  <aside class="controls" aria-label="Paràmetres de simulació">
   <div class="control-head"><h2>Control d'efectes</h2><p>Ajusta el resultat sense modificar les explosions del joc.</p></div>
   <div class="action-block">
-   <span class="variant-title">Configuració de la iteració</span>
+   <span class="variant-title">Model per comparar</span>
+   <div class="fixed-settings"><button id="modelB" type="button" aria-pressed="true">B · Estrella</button><button id="modelC" type="button" aria-pressed="false">C · Bola de foc</button></div>
+   <label class="variant-title" for="paletteChoice">Paleta de colors</label>
+   <select id="paletteChoice" style="width:100%;padding:9px;background:#24363b;color:#fff;border:1px solid #627471;border-radius:7px"></select>
    <div class="fixed-settings" aria-label="Opcions fixes del preview">
-    <span>Estil B · Estrella irregular</span>
+    <span>Model B o C</span>
     <span>Radi visual ×2</span>
    </div>
    <p class="variant-help">Prova cromàtica: puntes volumètriques de groc intens a magenta, amb brases vermelles.</p>
@@ -213,7 +217,8 @@ for(const [i,preset] of EXPLOSION_PRESETS.entries()){
 }
 // Radi i geometria són fixos en aquesta iteració: només canvien
 // densitat, seed, repetició i escala comparativa de càmera.
-const RADIUS_MULTIPLIER=2,EXPLOSION_STYLE='B';
+const RADIUS_MULTIPLIER=2;
+let EXPLOSION_STYLE='B';
 let paused=false,repeat=$('autoplay').checked,density=1.8,
     sameScale=false,showGuides=false,lastTime=0,nextAuto=0,round=0;
 const seedValue=()=>Math.max(0,Math.min(4294967295,Math.trunc(Number($('seed').value)||0)))>>>0;
@@ -229,10 +234,45 @@ function fire(i){
  a.lastLaunch={radius,density,tone:p.tone,seed};
  const metrics=a.effect.launch({...a.lastLaunch,variant:EXPLOSION_STYLE});
  a.effect.show();
+ applyPalette();
  document.querySelector('[data-stats="'+i+'"]').textContent=
    'R '+Math.round(metrics.radius)+' m  ·  '+metrics.count+' polígons';
  a.card.querySelector('.card-marker').textContent='GEN #'+String(a.round).padStart(2,'0');
 }
+// Sis gammes càlides sense blau ni verd, comparables entre els dos models.
+const PALETTES=[
+ ['01 · Flama clàssica',['#fff9bc','#ffe234','#ffad13','#ff6814','#d93513','#79220e']],
+ ['02 · Foc blanc',['#ffffff','#fff6d0','#ffe68a','#ffc45a','#f17b2a','#ad391b']],
+ ['03 · Lava',['#ffe75e','#ffb224','#f27614','#d94312','#a82513','#57190e']],
+ ['04 · Explosió daurada',['#fff2a4','#ffd85b','#f8ae30','#e57e20','#ba4517','#783014']],
+ ['05 · Incendi vermell',['#ffe780','#ffbd32','#ff8025','#f44319','#cb2116','#87141a']],
+ ['06 · Flama rosada',['#fff3c0','#ffcf67','#ff9940','#fa6137','#e33b50','#ac2549']]
+];
+const paletteSelect=$('paletteChoice');
+PALETTES.forEach(([name],i)=>paletteSelect.add(new Option(name,String(i))));
+function applyPalette(){
+ const colors=PALETTES[Number(paletteSelect.value)||0][1].map(x=>parseInt(x.slice(1),16));
+ // L'assignació de color no altera les posicions ni la llavor.
+ for(const a of actors){
+  const meshes=a.effect.group.children.filter(x=>x.isInstancedMesh);
+  for(const mesh of meshes){
+   if(mesh.material.transparent)continue;
+   for(let i=0;i<mesh.count;i++)mesh.setColorAt(i,new THREE.Color(colors[(i*7+Math.floor(i/5))%colors.length]));
+   if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
+  }
+ }
+ document.querySelectorAll('.palette-preview i').forEach((el,i)=>el.style.setProperty('--swatch',PALETTES[Number(paletteSelect.value)||0][1][i]));
+}
+function chooseModel(model){
+ EXPLOSION_STYLE=model;
+ $('modelB').setAttribute('aria-pressed',String(model==='B'));
+ $('modelC').setAttribute('aria-pressed',String(model==='C'));
+ for(const a of actors){a.effect.setVariant(model);if(a.lastLaunch)a.effect.launch({...a.lastLaunch,variant:model});}
+ applyPalette();
+}
+$('modelB').addEventListener('click',()=>chooseModel('B'));
+$('modelC').addEventListener('click',()=>chooseModel('C'));
+paletteSelect.addEventListener('change',applyPalette);
 function fireAll(){
  round++;for(let i=0;i<actors.length;i++)fire(i);
  nextAuto=performance.now()+2100;
