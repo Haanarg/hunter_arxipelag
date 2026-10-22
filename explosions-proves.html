@@ -263,6 +263,11 @@ function animate(now){
   for(const a of actors)a.effect.tick(dt);
   if(repeat&&now>=nextAuto)fireAll();
  }
+ // Netejam tot el canvas una vegada per fotograma. Així, quan
+ // els quadres canvien de lloc en fer scroll, no queden rastres antics.
+ renderer.setScissorTest(false);
+ renderer.setViewport(0,0,width,height);
+ renderer.clear();
  renderer.setScissorTest(true);
  for(const a of actors){
   const box=a.card.getBoundingClientRect();
