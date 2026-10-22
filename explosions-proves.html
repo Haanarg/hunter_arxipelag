@@ -281,6 +281,7 @@ function chooseModel(model){
  for(const a of actors){
   a.effect.setVariant(model);
   if(a.lastLaunch)a.effect.launch({...a.lastLaunch,variant:model});
+  if(paused)a.effect.tick(.19); // Mostra la bola inflada en pausa.
   const m=a.effect.metrics;
   document.querySelector('[data-stats="'+actors.indexOf(a)+'"]').textContent=
    'R '+Math.round(m.radius)+' m  ·  '+m.count+
@@ -358,7 +359,9 @@ addEventListener('resize',resize);
 addEventListener('scroll',()=>{},{passive:true});
 resize();
 fireAll();if(reduced){
- for(const a of actors)a.effect.tick(.06);
+ for(const a of actors){
+  for(let j=0;j<5;j++)a.effect.tick(.05);
+ }
  paused=true;repeat=false;$('pause').textContent='▶ Reprendre';
  $('pause').setAttribute('aria-pressed','true');$('autoplay').checked=false
 }
