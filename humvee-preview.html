@@ -16,60 +16,128 @@ button.selected{background:#b7dba9;color:#14271b}
 footer{padding:0 22px 20px;color:#b3c9c3;font-size:12px}
 @media(max-width:750px){#panels{grid-template-columns:1fr}.panel{height:340px}}
 </style></head><body>
-<header><div><h1>Humvee militar · 4 simplificacions</h1><p>Comparació de geometria per seleccionar la silueta dels cotxes de patrulla.</p></div>
+<header><div><h1>Humvee militar · 4 models de detall superior</h1><p>Quatre versions més elaborades que el model A anterior: xassís perfilat i finestres realment transparents.</p></div>
 <div><button id="spin" class="selected">⏸ Rotació automàtica</button> <button id="wire">Malla</button> <button id="doors">Conductor / artiller</button> <a href="proves.html">Altres proves</a></div></header>
-<main id="panels"></main><footer>Prototips geomètrics reconstruïts a partir de la silueta del Humvee aportat. No són encara decimacions directes de la seva malla original. Arrossega cada model per girar-lo i utilitza «Malla» per comparar-ne la geometria.</footer>
+<main id="panels"></main><footer>Models geomètrics nous inspirats en el Humvee original, encara no decimacions directes del GLB. Vidres transparents, pilars oberts, cabina amb seients i xassís més elaborat. Arrossega cada model per girar-lo i utilitza «Malla» per comparar-ne la geometria.</footer>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js';
 const specs=[
-{name:'A · Silueta completa',desc:'Carrosseria amb capó, graella, llums, finestres i passos de roda',detail:4},
-{name:'B · Low-poly equilibrat',desc:'Plans grans, elements característics i rodes simplificades',detail:3},
-{name:'C · Low-poly agressiu',desc:'Panells fusionats, finestres senzilles, menys peces',detail:2},
-{name:'D · Ultralleuger',desc:'Volums essencials, silueta recognoscible a distància',detail:1}
+{name:'A+ · Patrulla',desc:'Mínim nou: xassís bisellat, cabina real i finestres transparents',detail:1},
+{name:'B+ · Reforçat',desc:'Millors passos de roda, portes, reixetes i retrovisors',detail:2},
+{name:'C+ · Fidel',desc:'Més fidelitat de proporcions, panells, interior i sostre',detail:3},
+{name:'D+ · Màxim',desc:'Geometria superior: ajustaments, llandes, bisells i detalls fins',detail:4}
 ];
 const root=document.getElementById('panels');let auto=true,wire=false,crew=false;const previews=[];
 const mat=(c)=>new THREE.MeshStandardMaterial({color:c,roughness:.9,metalness:.05});
 const olive=mat(0x687856),dark=mat(0x2b3430),glass=mat(0x344b4b),rubber=mat(0x242725),metal=mat(0x8a8a7b),lamp=mat(0xd9ca95),face=mat(0xb18b65);
 function box(g,m,x,y,z,sx,sy,sz){const o=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),m);o.position.set(x,y,z);g.add(o);return o}
 function wedge(g,m,x,y,z,w,h,d,frontTop,backTop){const s=new THREE.Shape();s.moveTo(-d/2,0);s.lineTo(d/2,0);s.lineTo(d/2,backTop);s.lineTo(-d/2,frontTop);s.closePath();const geo=new THREE.ExtrudeGeometry(s,{depth:w,bevelEnabled:false});geo.rotateY(Math.PI/2);const ob=new THREE.Mesh(geo,m);ob.position.set(x-w/2,y,z);g.add(ob);return ob}
+const windowGlass=new THREE.MeshPhysicalMaterial({color:0x8ba9a1,metalness:0,roughness:.13,transparent:true,opacity:.27,depthWrite:false,side:THREE.DoubleSide});
+const roofmat=mat(0x5e6f50),trim=mat(0x1e2826),seatmat=mat(0x353c36),stopmat=mat(0x9d3835);
+function panel(g,m,pts){const shape=new THREE.BufferGeometry();const vv=[],ii=[];pts.forEach(p=>vv.push(...p));for(let i=1;i<pts.length-1;i++)ii.push(0,i,i+1);shape.setAttribute('position',new THREE.Float32BufferAttribute(vv,3));shape.setIndex(ii);shape.computeVertexNormals();const obj=new THREE.Mesh(shape,m);obj.material.side=THREE.DoubleSide;g.add(obj);return obj}
+function beam(g,m,a,b,r,sides=7){const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),v=B.clone().sub(A);const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,v.length(),sides),m);mesh.position.copy(A.add(B).multiplyScalar(.5));mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),v.normalize());g.add(mesh);return mesh}
+function cross(g,m,z0,z1,y0,y1,w0,w1){panel(g,m,[[-w0,y0,z0],[w0,y0,z0],[w1,y1,z1],[-w1,y1,z1]])}
 function car(l){
-const g=new THREE.Group();const wheels=[];const steps=l>=3?12:l===2?8:6;
-box(g,olive,0,0.98,0,2.17,.58,4.32);
-box(g,olive,0,1.3,-1.55,2.1,.39,1.2);
-box(g,olive,0,1.17,1.88,2.13,.24,.55);
-box(g,olive,0,1.79,.1,2.03,.93,2.43);
-box(g,olive,0,2.23,.13,2.00,.18,2.48);
-if(l>1){
-box(g,glass,0,1.86,-1.22,1.64,.49,.046);
-box(g,glass,0,1.87,1.35,1.55,.46,.045);
-for(const x of [-1.017,1.017]){
-box(g,glass,x,1.86,-.39,.048,.44,.80);
-box(g,glass,x,1.86,.61,.048,.44,.80);
+const g=new THREE.Group(),wheels=[],n=[0,10,14,18,24][l];let shapes=0;
+const bodyY=.96,front=-2.31,rear=2.26;
+const exterior=olive;
+box(g,trim,0,.59,-.02,2.06,.22,4.5); // independent lower chassis
+for(const x of [-.73,.73])box(g,trim,x,.44,0,.18,.19,4.28); // chassis rails
+// Body sides: stepped waist, angular sloping hood, less boxy than previous version.
+box(g,exterior,0,.99,.22,2.13,.52,3.95);
+box(g,exterior,0,1.04,-1.74,2.08,.46,1.06);
+cross(g,exterior,-2.34,-1.31,1.24,1.45,1.00,1.00);
+panel(g,exterior,[[-1.0,1.45,-1.31],[1.0,1.45,-1.31],[1.02,1.21,-2.30],[-1.02,1.21,-2.30]]);
+// Cab sides deliberately preserve open, readable windows.
+const roofFront=-.94,roofRear=1.53,roofTop=2.30,glassBase=1.52;
+box(g,roofmat,0,2.28,.30,1.86,.12,2.48);
+box(g,seatmat,0,1.48,.27,1.76,.10,2.25);
+for(const x of [-.48,.48]) {
+ for(const z of [-.42,.69]){
+ box(g,seatmat,x,1.40,z,.59,.24,.63);
+ box(g,seatmat,x,1.66,z+.24,.58,.56,.16);
+ }
 }
-} else {
-box(g,dark,0,1.82,-1.24,1.6,.42,.048);
-box(g,dark,0,1.82,1.34,1.6,.4,.048);
+// Cabin four solid sloping columns, thin realistic pillar frames.
+const sill=1.52,edge=.98,roofEdge=.91;
+for(const side of [-1,1]){
+ const x=side*edge,xt=side*roofEdge;
+ beam(g,exterior,[x,sill,-1.36],[xt,roofTop,-.93],.065,l>=3?10:6);
+ beam(g,exterior,[x,sill,.22],[xt,roofTop,.13],.045,l>=2?8:6);
+ beam(g,exterior,[x,sill,1.61],[xt,roofTop,1.46],.065,l>=3?10:6);
+ beam(g,exterior,[xt,roofTop,-.93],[xt,roofTop,1.46],.06);
+ box(g,exterior,x,1.36,.25,.13,.34,2.73);
+ // Two transparent trapezoidal side windows separated by B-pillar
+ panel(g,windowGlass,[[x,sill,-1.27],[x,sill,.15],[xt,2.21,.08],[xt,2.21,-.88]]);
+ panel(g,windowGlass,[[x,sill,.27],[x,sill,1.51],[xt,2.21,1.40],[xt,2.21,.20]]);
+ // Door seams and handles
+ for(const z of [-.34,.94]){
+ if(l>=2){beam(g,trim,[side*1.068,1.13,z-.49],[side*1.068,1.13,z+.49],.009,5);
+ box(g,trim,side*1.075,1.49,z+.26,.035,.045,.23);}
+ }
+ // wheel opening outline / outward curved fender lip
+ for(const z of [-1.48,1.48]){
+ const segments=l>=3?12:l===2?9:6;
+ for(let k=0;k<segments;k++){
+ const a=Math.PI*k/segments,b=Math.PI*(k+1)/segments;
+ const p=[side*1.105,.64+.55*Math.sin(a),z-.56*Math.cos(a)];
+ const q=[side*1.105,.64+.55*Math.sin(b),z-.56*Math.cos(b)];
+ beam(g,exterior,p,q,l>=3?.09:.07,l>=3?8:5);
+ }
+ if(l>=3)box(g,exterior,side*1.075,.73,z,.11,.12,1.32);
+ }
 }
-for(const x of [-1.05,1.05])for(const z of [-1.4,1.42]){
-const tire=new THREE.Mesh(new THREE.CylinderGeometry(.47,.47,.27,steps),rubber);tire.rotation.z=Math.PI/2;tire.position.set(x, .56,z);g.add(tire);wheels.push(tire);
-if(l>=2){const hub=new THREE.Mesh(new THREE.CylinderGeometry(.21,.21,.286,steps),metal);hub.rotation.z=Math.PI/2;hub.position.copy(tire.position);g.add(hub)}
+panel(g,windowGlass,[[-.96,1.54,-1.345],[.96,1.54,-1.345],[.89,2.19,-.94],[-.89,2.19,-.94]]);
+panel(g,windowGlass,[[-.96,1.52,1.62],[.96,1.52,1.62],[.89,2.19,1.44],[-.89,2.19,1.44]]);
+beam(g,exterior,[-.98,1.53,-1.35],[.98,1.53,-1.35],.045);
+beam(g,exterior,[-.92,2.23,-.94],[.92,2.23,-.94],.048);
+beam(g,exterior,[-.98,1.53,1.62],[.98,1.53,1.62],.045);
+beam(g,exterior,[-.92,2.23,1.45],[.92,2.23,1.45],.05);
+// bonnet rim and broad HMMWV grille with headlamp niches
+box(g,trim,0,1.09,-2.30,2.04,.32,.11);
+for(const x of [-.84,.84]){box(g,trim,x,1.15,-2.369,.39,.29,.035);box(g,lamp,x,1.16,-2.39,.28,.16,.042)}
+for(let i=-3;i<=3;i++)box(g,trim,i*.16,1.14,-2.38,.045,.28,.05);
+box(g,trim,0,.77,-2.34,2.22,.11,.16);box(g,trim,0,.78,2.29,2.20,.12,.17);
+for(const x of [-.82,.82])box(g,stopmat,x,1.12,2.32,.27,.15,.06);
+// Wheel rotation and hub faces correctly aligned with axle, with variable polygon counts.
+for(const x of [-1.10,1.10])for(const z of [-1.49,1.48]){
+ const tire=new THREE.Mesh(new THREE.CylinderGeometry(.495,.495,.28,n),rubber);tire.rotation.z=Math.PI/2;tire.position.set(x,.55,z);g.add(tire);wheels.push(tire);
+ const hub=new THREE.Mesh(new THREE.CylinderGeometry(.255,.255,.292,n),metal);hub.rotation.z=Math.PI/2;hub.position.copy(tire.position);g.add(hub);
+ if(l>=2){const disk=new THREE.Mesh(new THREE.CylinderGeometry(.18,.18,.305,n),trim);disk.rotation.z=Math.PI/2;disk.position.copy(tire.position);g.add(disk)}
+ if(l>=3){
+ for(let k=0;k<6;k++){const a=k*Math.PI/3;const hx=x+(x>0?.154:-.154);
+ const bolt=new THREE.Mesh(new THREE.SphereGeometry(.023,6,4),metal);bolt.position.set(hx,.55+.145*Math.sin(a),z+.145*Math.cos(a));g.add(bolt)}
+ }
+ if(l>=4){for(let k=0;k<10;k++){const a=k*Math.PI/5;const t=new THREE.Mesh(new THREE.BoxGeometry(.055,.06,.095),trim);t.position.set(x,.55+.48*Math.sin(a),z+.48*Math.cos(a));t.rotation.x=-a;g.add(t)}}
 }
 if(l>=2){
-for(const x of [-.78,.78]){box(g,lamp,x,1.14,-2.18,.30,.16,.035);box(g,dark,x,1.18,2.18,.31,.15,.035)}
-box(g,dark,0,1.10,-2.20,1.06,.30,.044);
+ // mirrors, bonnet vents, door hinge, bumper supports
+ for(const side of [-1,1]){
+ const x=side*1.18;beam(g,trim,[side*.96,1.65,-1.04],[x,1.73,-1.15],.026);
+ box(g,trim,x,1.77,-1.18,.19,.24,.30);
+ }
+ for(const x of [-.60,.60])box(g,trim,x,1.47,-1.56,.36,.02,.18);
+ for(const x of [-.69,.69])box(g,trim,x,1.29,2.285,.21,.15,.035);
 }
 if(l>=3){
-for(let x=-.45;x<=.46;x+=.17)box(g,metal,x,1.10,-2.23,.05,.25,.032);
-for(const x of [-1.12,1.12]){box(g,dark,x,1.68,-.83,.20,.15,.3);box(g,dark,x,1.68,1.0,.20,.15,.3)}
-for(const x of [-1.09,1.09]){box(g,dark,x,1.12,-1.46,.24,.22,.85);box(g,dark,x,1.12,1.43,.24,.22,.82)}
+ // hood extrusions and recessed grooves, wheel splash guards, roof trims
+ for(const x of [-.96,.96]){
+ beam(g,exterior,[x,1.24,-2.28],[x,1.45,-1.34],.047,8);
+ box(g,trim,x,1.34,1.92,.065,.11,.26);
+ }
+ for(const z of [-.90,1.47])box(g,trim,0,2.354,z,1.75,.025,.07);
+ box(g,trim,0,2.348,.32,.9,.018,1.37);
+ const steering=new THREE.Mesh(new THREE.TorusGeometry(.23,.025,7,12),trim);steering.position.set(-.46,1.75,-.76);steering.rotation.x=Math.PI/3;g.add(steering);
 }
 if(l>=4){
-box(g,dark,0,1.51,-1.51,1.76,.055,.17);
-for(const x of [-.77,.77]){box(g,metal,x,1.68,-1.23,.04,.32,.05);box(g,dark,x,1.4,-2.20,.32,.08,.15)}
-for(const x of [-.55,.55])box(g,dark,x,2.34,.68,.32,.075,.5);
+ // detailed front grille / bumper, roof hatch and window wipers
+ for(const x of [-.69,.69])box(g,trim,x,.84,-2.42,.12,.25,.14);
+ for(const x of [-.48,.48])beam(g,trim,[x-.30,1.58,-1.35],[x+.22,1.59,-1.34],.013,7);
+ const hatch=new THREE.Mesh(new THREE.TorusGeometry(.39,.055,8,28),trim);hatch.position.set(0,2.37,.43);hatch.rotation.x=Math.PI/2;g.add(hatch);
+ for(const x of [-.86,.86])for(const z of [-.3,.8])box(g,trim,x,1.26,z,.06,.06,.11);
 }
 if(crew){
-for(const x of [-.52,.52]){const head=new THREE.Mesh(new THREE.SphereGeometry(.18,8,6),face);head.position.set(x,1.98,-.36);g.add(head);box(g,dark,x,1.76,-.36,.4,.4,.32)}
+ for(const x of [-.48,.48]){const head=new THREE.Mesh(new THREE.SphereGeometry(.16,l>=3?12:8,8),face);head.position.set(x,1.84,-.41);g.add(head);box(g,dark,x,1.51,-.43,.37,.31,.35)}
 }
 return {g,wheels};
 }
@@ -81,7 +149,7 @@ const scene=new THREE.Scene();const camera=new THREE.PerspectiveCamera(38,1,.1,1
 scene.add(new THREE.HemisphereLight(0xffffff,0x40564e,2.3));const sun=new THREE.DirectionalLight(0xffffff,2.1);sun.position.set(4,9,6);scene.add(sun);
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.MeshStandardMaterial({color:0x536055,roughness:1}));floor.rotation.x=-Math.PI/2;floor.position.y=.04;scene.add(floor);
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace;panel.prepend(renderer.domElement);
-const carObj=car(spec.detail);scene.add(carObj.g);let yaw=-.3,drag=false,last=0,zoom=1;
+const carObj=car(spec.detail);scene.add(carObj.g);const tris=carObj.g.children.reduce((sum,o)=>sum+(o.isMesh?((o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count)/3):0),0);panel.querySelector('.tag small').textContent += ' · '+Math.round(tris).toLocaleString('ca')+' triangles';let yaw=-.3,drag=false,last=0,zoom=1;
 renderer.domElement.addEventListener('pointerdown',e=>{drag=true;last=e.clientX;renderer.domElement.setPointerCapture(e.pointerId)});
 renderer.domElement.addEventListener('pointerup',()=>drag=false);
 renderer.domElement.addEventListener('pointermove',e=>{if(!drag)return;yaw+=(e.clientX-last)*.008;last=e.clientX});
