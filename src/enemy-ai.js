@@ -227,10 +227,15 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
       const elapsed=(u.blastTotal||2.5)-u.blastT;
       u.o.rotation.z=Math.sin(elapsed*5)*.75*Math.min(1,u.blastHeight+.2);
       if(landed&&u.blastT<.25)u.blastT=0;
+      if(u.blastRagdoll)window.HUNTER_RAGDOLL.update(u.blastRagdoll,dt,{
+        airborne:!landed,grounded:landed});
     }
     return;
   }
-  if(u.blastImpulse){u.blastImpulse=null;u.blastHeight=0;u.o.rotation.z=0}
+  if(u.blastImpulse){
+    if(u.blastRagdoll)window.HUNTER_RAGDOLL.reset(u.blastRagdoll);
+    u.blastRagdoll=null;u.blastImpulse=null;u.blastHeight=0;u.o.rotation.z=0
+  }
   const oldX=u.x,oldZ=u.z;
   u.alert=Math.max(0,u.alert-dt);u.cd-=dt;if(u.t==='torre')u.heavyCd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);
    const q=cv||P,py=cv?cv.o.position.y:P.y,dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz),
@@ -490,13 +495,22 @@ function updDead(dt){
     const base=u.basement?u.basement.basement.floorY:Math.max(0,hAt(u.x,u.z));
     u.o.position.set(u.x,base+pose.height+.05+(1-e)*.12,u.z);
     u.o.rotation.set(pose.pitch*e,u.hd+pose.yaw*e,pose.roll*e,'YXZ');
-    if(u.o.userData.arms)u.o.userData.arms.forEach((arm,j)=>{
-      arm.rotation.x=(j?pose.armR:pose.armL)*e;
-      arm.rotation.z=(j?-.3:.3)*e;
-    });
-    if(u.o.userData.legs)u.o.userData.legs.forEach((leg,j)=>
-      leg.rotation.x=(j?pose.legR:pose.legL)*e);
-    if(u.deadT>18){world.remove(u.o);DEAD.splice(i,1)}
+    if(u.ragdoll){
+      window.HUNTER_RAGDOLL.update(u.ragdoll,dt,{
+        airborne:pose.height>.09,grounded:pose.height<=.09});
+    }else{
+      // Animació específica del general, controlada per la victòria.
+      if(u.o.userData.arms)u.o.userData.arms.forEach((arm,j)=>{
+        arm.rotation.x=(j?pose.armR:pose.armL)*e;
+        arm.rotation.z=(j?-.3:.3)*e;
+      });
+      if(u.o.userData.legs)u.o.userData.legs.forEach((leg,j)=>
+        leg.rotation.x=(j?pose.legR:pose.legL)*e);
+    }
+    if(u.deadT>18){
+      if(u.ragdoll){window.HUNTER_RAGDOLL.reset(u.ragdoll);u.ragdoll=null}
+      world.remove(u.o);DEAD.splice(i,1)
+    }
   }
 }
 
