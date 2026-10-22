@@ -242,6 +242,7 @@ Laboratoris conservats per a iteracions visuals:
 - [Models, caps i ganivet](proves.html).
 - [Dispar a dues mans](dispar-proves.html).
 - [Explosius](explosius-proves.html).
+- [Explosions procedurals · quatre escales](explosions-proves.html): laboratori Three.js amb fragments aleatoris, radi, densitat, llavors i comparació a escala; no modifica els efectes del joc.
 - [Complexos, fases 1–3 integrades](compounds-preview.html).
 - [Fase 4: recintes nous, variants i base–costa](compounds-preview.html?fase=4): 32 dissenys (40 escenes amb V1): tres mides de poblat i variants militars V1/V2/V3/V4 integrades al generador; controls de carretera ajornats. [Criteris i distribucions](docs/COMPOUNDS_PHASE4.md).
 
