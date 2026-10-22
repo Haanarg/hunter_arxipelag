@@ -50,12 +50,13 @@ nav a:hover,.outline:hover{background:#294044;border-color:#6b8c87}
 .primary:hover{background:#ffd092}
 .action-block .secondary{background:#273a3e;border:1px solid #536d6f;border-radius:9px;padding:9px;color:#e8f2ec;font-size:12px;font-weight:700}
 .variant-title{font:800 11px/1.2 system-ui;letter-spacing:.07em;color:#c6d6c9;text-transform:uppercase}
-.variant-choices{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-.variant-choices button{border:1px solid #617574;border-radius:8px;background:#223536;
- color:#e4eee5;font-weight:800;font-size:12px;padding:10px 7px;min-height:43px}
-.variant-choices button.selected{background:#f1b662;border-color:#f1b662;color:#21180d}
-.variant-choices button:not(.selected):hover{background:#35504b}
-.variant-help{font-size:11px;color:#b1c8bd;line-height:1.4;margin:0;min-height:31px}
+.fixed-settings{display:flex;gap:7px;flex-wrap:wrap}
+.fixed-settings span{border:1px solid #8e754e;border-radius:7px;background:#423322;
+ color:#ffdb92;font-size:12px;font-weight:800;padding:7px 10px}
+.palette-preview{display:flex;flex-wrap:wrap;gap:6px;padding:5px 0 2px}
+.palette-preview i{display:block;width:24px;height:24px;border-radius:6px;
+ background:var(--swatch);border:1px solid #ffffff40;box-shadow:0 2px 7px #0005}
+.variant-help{font-size:11px;color:#b1c8bd;line-height:1.4;margin:0}
 .settings{padding:17px;display:grid;gap:19px}
 .setting{display:grid;gap:7px}
 .setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -105,7 +106,7 @@ input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
  <div>
   <div class="eyebrow">Hunter: Arxipèlag / Laboratori FX</div>
   <h1>Explosions procedurals <span style="color:#e9b466">low-poly</span></h1>
-  <p class="intro">Quatre escales, esclats molt més densos i una càmera propera per veure les peces de debò. El protagonista apareix al costat de cada explosió, a l’escala real del joc. <strong>Una combinació nova a cada detonació.</strong></p>
+  <p class="intro">Nova prova amb puntes tridimensionals irregulars <strong>B</strong>, radi visual <strong>×2 fix</strong> i una paleta més viva de grocs elèctrics, taronges, vermells i magentes. El protagonista continua al costat per comparar-ne la mida.</p>
  </div>
  <nav aria-label="Navegació">
   <a href="proves.html">← Models de proves</a>
@@ -127,12 +128,17 @@ input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
  <aside class="controls" aria-label="Paràmetres de simulació">
   <div class="control-head"><h2>Control d'efectes</h2><p>Ajusta el resultat sense modificar les explosions del joc.</p></div>
   <div class="action-block">
-   <span class="variant-title">Geometria de les puntes</span>
-   <div class="variant-choices" role="group" aria-label="Tria la forma de les explosions">
-    <button type="button" id="variantA" class="selected" aria-pressed="true">A · Piràmides</button>
-    <button type="button" id="variantB" aria-pressed="false">B · Estrella irregular</button>
+   <span class="variant-title">Configuració de la iteració</span>
+   <div class="fixed-settings" aria-label="Opcions fixes del preview">
+    <span>Estil B · Estrella irregular</span>
+    <span>Radi visual ×2</span>
    </div>
-   <p class="variant-help" id="variantHelp">A: cons i piràmides volumètriques de 3, 4 i 5 cares.</p>
+   <p class="variant-help">Prova cromàtica: puntes volumètriques de groc intens a magenta, amb brases vermelles.</p>
+   <div class="palette-preview" role="img" aria-label="Paleta viva: blanc, groc, taronja, corall, vermell i magenta">
+    <i style="--swatch:#ffff61"></i><i style="--swatch:#ffef30"></i>
+    <i style="--swatch:#ffae00"></i><i style="--swatch:#ff6900"></i>
+    <i style="--swatch:#ff4132"></i><i style="--swatch:#f31e65"></i>
+   </div>
    <button type="button" class="primary" id="all">↻ Detonar les quatre</button>
    <button type="button" class="secondary" id="pause" aria-pressed="false">⏸ Pausa</button>
    <label class="toggle"><input type="checkbox" id="autoplay" checked>Repetició automàtica</label>
@@ -143,11 +149,7 @@ input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
     <input id="density" type="range" min="80" max="260" value="180" step="10">
     <div class="minmax"><span>Dens</span><span>Molt dens</span></div>
    </div>
-   <div class="setting">
-    <div class="setting-row"><label for="radius">Multiplicador del radi</label><output class="readout" id="radiusValue" for="radius">×1,0</output></div>
-    <input id="radius" type="range" min="50" max="180" value="100" step="10">
-    <div class="minmax"><span>×0,5</span><span>×1,8</span></div>
-   </div>
+   <p class="micro"><strong>Radi visual ×2 fix:</strong> les quatre explosions mostren el doble de radi respecte dels presets, sense canviar el dany del joc.</p>
    <label class="toggle"><input type="checkbox" id="sameScale">Mateixa escala de càmera per als quatre quadres</label>
    <label class="toggle"><input type="checkbox" id="guides">Mostra el terra de referència</label>
    <div class="setting">
@@ -155,7 +157,7 @@ input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
     <div class="seed"><input id="seed" type="number" value="67589" min="0" max="4294967295" step="1"><button id="shuffle" aria-label="Genera una llavor nova" title="Nova llavor" type="button">⤨</button></div>
     <p class="micro">Cada detonació canvia les peces. La llavor permet repetir la seqüència reiniciant la pàgina amb el mateix valor.</p>
    </div>
-   <p class="micro">A: puntes piramidals regulars. B: puntes poligonals asimètriques. Pots canviar A/B <b>amb la mateixa llavor i els mateixos fragments</b>. El personatge és el model real del joc. <span class="key">Espai</span> detona.</p>
+   <p class="micro">Puntes irregulars B i nova paleta incandescent. La densitat i la llavor continuen ajustables. El personatge és el model real del joc. <span class="key">Espai</span> detona.</p>
   </div>
  </aside>
 </div>
@@ -189,7 +191,7 @@ for(const [i,preset] of EXPLOSION_PRESETS.entries()){
  scene.add(new THREE.HemisphereLight(0xe6f5df,0x344941,1.65));
  const key=new THREE.DirectionalLight(0xffe8bd,2.25);
  key.position.set(-4,9,8);scene.add(key);
- const effect=createProceduralExplosion(scene,preset);
+ const effect=createProceduralExplosion(scene,{...preset,variant:'B'});
  // Referència de mida: model i proporcions EXACTES del protagonista real,
  // no un ninot genèric ni una silueta dibuixada sobre el canvas.
  const player=window.HUNTER_PLAYER_MODEL.create(THREE,{
@@ -209,51 +211,33 @@ for(const [i,preset] of EXPLOSION_PRESETS.entries()){
  actors.push({preset,scene,effect,cam,guide,player,feet,
    angle:-.38,pitch:.22,round:0,card:cards[i]});
 }
-let paused=false,repeat=$('autoplay').checked,scale=1,density=1.8,
-    variant='A',sameScale=false,
-    showGuides=false,lastTime=0,nextAuto=0,round=0,changePending=false;
+// Radi i geometria són fixos en aquesta iteració: només canvien
+// densitat, seed, repetició i escala comparativa de càmera.
+const RADIUS_MULTIPLIER=2,EXPLOSION_STYLE='B';
+let paused=false,repeat=$('autoplay').checked,density=1.8,
+    sameScale=false,showGuides=false,lastTime=0,nextAuto=0,round=0;
 const seedValue=()=>Math.max(0,Math.min(4294967295,Math.trunc(Number($('seed').value)||0)))>>>0;
 function fire(i){
  const a=actors[i],p=a.preset; a.round++;
  const salt=(Math.imul(a.round,2654435761)^p.seed)>>>0;
  const seed=(seedValue()^salt)>>>0;
- const radius=p.radius*scale;
+ const radius=p.radius*RADIUS_MULTIPLIER;
  // El model es mou a una distància proporcional al radi, però queda
  // més pròxim a càmera que el nucli per mantenir-se llegible en C4.
  a.player.position.set(radius*.18+1.7,-.08,radius*.09+1.0);
  a.feet.position.set(a.player.position.x,-.09,a.player.position.z);
  a.lastLaunch={radius,density,tone:p.tone,seed};
- const metrics=a.effect.launch({...a.lastLaunch,variant});
+ const metrics=a.effect.launch({...a.lastLaunch,variant:EXPLOSION_STYLE});
  a.effect.show();
  document.querySelector('[data-stats="'+i+'"]').textContent=
    'R '+Math.round(metrics.radius)+' m  ·  '+metrics.count+' polígons';
  a.card.querySelector('.card-marker').textContent='GEN #'+String(a.round).padStart(2,'0');
 }
-function fireAll(){round++;for(let i=0;i<actors.length;i++)fire(i);nextAuto=performance.now()+2100;
- $('notice').textContent='Explosió #'+round+' · variant '+variant+' · geometries regenerades per llavor'}
-function chooseVariant(next){
- if(!['A','B'].includes(next)||next===variant)return;
- variant=next;
- for(const a of actors){
-  // Mateixa distribució, colors i llavor per fer la comparació justa:
-  // només canviam les geometries i reiniciam la mateixa animació.
-  a.effect.setVariant(variant);
-  if(a.lastLaunch)a.effect.launch({...a.lastLaunch,variant});
-  if(paused)a.effect.tick(.19);
- }
- for(const mode of ['A','B']){
-  const selected=mode===variant,button=$('variant'+mode);
-  button.classList.toggle('selected',selected);
-  button.setAttribute('aria-pressed',String(selected));
- }
- $('variantHelp').textContent=variant==='A'?
-  'A: cons i piràmides 3D regulars de 3, 4 i 5 cares.':
-  'B: puntes 3D irregulars, de facetes eixamplades i inclinació asimètrica.';
- $('notice').textContent='Variant '+variant+' · mateixos fragments i mateixa llavor';
+function fireAll(){
+ round++;for(let i=0;i<actors.length;i++)fire(i);
  nextAuto=performance.now()+2100;
+ $('notice').textContent='Explosió #'+round+' · estil B · radi visual ×2 · nova paleta';
 }
-$('variantA').addEventListener('click',()=>chooseVariant('A'));
-$('variantB').addEventListener('click',()=>chooseVariant('B'));
 $('all').addEventListener('click',()=>fireAll());
 document.querySelectorAll('[data-fire]').forEach(button=>{
  button.addEventListener('click',()=>{fire(Number(button.dataset.fire));nextAuto=performance.now()+2100});
@@ -269,14 +253,9 @@ $('autoplay').addEventListener('change',e=>{
 $('density').addEventListener('input',e=>{
  density=Number(e.target.value)/100;
  $('densityValue').textContent=Math.round(density*100)+'%';
- changePending=true;
+ // El canvi visual s'aplica quan l'usuari deixa anar el selector.
 });
-$('radius').addEventListener('input',e=>{
- scale=Number(e.target.value)/100;
- $('radiusValue').textContent='×'+scale.toFixed(1).replace('.',',');
- changePending=true;
-});
-for(const id of ['density','radius'])$(id).addEventListener('change',()=>{changePending=false;fireAll()});
+$('density').addEventListener('change',()=>fireAll());
 $('sameScale').addEventListener('change',e=>{sameScale=e.target.checked});
 $('guides').addEventListener('change',e=>{
  showGuides=e.target.checked;actors.forEach(a=>a.guide.visible=showGuides);
@@ -340,12 +319,12 @@ function animate(now){
   const left=Math.max(0,Math.floor(box.left)),top=Math.max(0,Math.floor(box.top)),
     right=Math.min(width,Math.ceil(box.right)),bottom=Math.min(height,Math.ceil(box.bottom));
   const w=right-left,h=bottom-top;if(w<2||h<2)continue;
-  const radius=a.preset.radius*scale;
+  const radius=a.preset.radius*RADIUS_MULTIPLIER;
   // Mitja distància aproximada respecte del muntatge anterior.
   // Petita desviació del centre per mantenir l'avatar com a referència
   // sense obrir massa l'enquadrament de l'esclat.
   const distance=sameScale?
-    Math.max(...actors.map(x=>x.preset.radius))*scale*.49+7:
+    Math.max(...actors.map(x=>x.preset.radius))*RADIUS_MULTIPLIER*.49+7:
     radius*.49+7;
   const aim=new THREE.Vector3(radius*.042,1+radius*.025,0);
   a.cam.position.set(
