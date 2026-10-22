@@ -214,19 +214,19 @@ function fire(i){
    'R '+Math.round(metrics.radius)+' m  ·  '+metrics.count+' polígons';
  a.card.querySelector('.card-marker').textContent='GEN #'+String(a.round).padStart(2,'0');
 }
-function fireAll(){round++;for(let i=0;i<actors.length;i++)fire(i);nextAuto=performance.now()+2800;
+function fireAll(){round++;for(let i=0;i<actors.length;i++)fire(i);nextAuto=performance.now()+2100;
  $('notice').textContent='Explosió #'+round+' · geometries regenerades per llavor'}
 $('all').addEventListener('click',()=>fireAll());
 document.querySelectorAll('[data-fire]').forEach(button=>{
- button.addEventListener('click',()=>{fire(Number(button.dataset.fire));nextAuto=performance.now()+2800});
+ button.addEventListener('click',()=>{fire(Number(button.dataset.fire));nextAuto=performance.now()+2100});
 });
 $('pause').addEventListener('click',()=>{
  paused=!paused;$('pause').textContent=paused?'▶ Reprendre':'⏸ Pausa';
  $('pause').setAttribute('aria-pressed',String(paused));
- nextAuto=performance.now()+2800;
+ nextAuto=performance.now()+2100;
 });
 $('autoplay').addEventListener('change',e=>{
- repeat=e.target.checked;nextAuto=performance.now()+2800;
+ repeat=e.target.checked;nextAuto=performance.now()+2100;
 });
 $('density').addEventListener('input',e=>{
  density=Number(e.target.value)/100;
