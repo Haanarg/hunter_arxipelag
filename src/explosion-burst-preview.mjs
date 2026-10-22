@@ -18,13 +18,17 @@ export function mulberry32(seed){
  t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);
  return ((t^(t>>>14))>>>0)/4294967296};
 }
-const PALETTE=Object.freeze({
- core:[0xfff7bd,0xfff2a3,0xffe875,0xffffff],
- hot:[0xffe45d,0xffc348,0xffa43b,0xffe77d,0xffb451],
- warm:[0xffa74c,0xff8b36,0xe97e35,0xecb675,0xcf6735],
- dark:[0xa94a27,0x793a2b,0x553633,0x6f443a,0xbe713f],
- smoke:[0x594941,0x423b39,0x514a49,0x2e3338]
+// Iteració cromàtica del preview: foc viu, no ocres apagats.
+ // Les puntes conserven contrast entre facetes perquè les geometries
+ // irregulars B continuïn llegibles de prop i en miniatura.
+export const EXPLOSION_PALETTE=Object.freeze({
+ core:Object.freeze([0xffffff,0xfff9b1,0xffff61,0xffe928]),
+ hot:Object.freeze([0xffef30,0xffd400,0xffb300,0xff9200,0xff6900]),
+ warm:Object.freeze([0xffae00,0xff8100,0xff5e16,0xff4132,0xff2874]),
+ dark:Object.freeze([0xff5126,0xff293c,0xf31e65,0xe12681,0xc1195c]),
+ smoke:Object.freeze([0x9e365d,0x74345d,0x59335a,0x3c314f])
 });
+const PALETTE=EXPLOSION_PALETTE;
 // Quatre InstancedMesh per explosió, encara que n'augmentem molt la densitat.
 const MAX_SHARDS=640;
 const TYPES=['spikes','plates','embers','smoke'];
@@ -80,7 +84,7 @@ const sharedGeometry=Object.freeze({
  })
 });
 export function explosionMetrics(radius,density=1){
- const r=clamp(Number(radius)||1,2,90),d=clamp(Number(density)||1,.4,2.6);
+ const r=clamp(Number(radius)||1,2,120),d=clamp(Number(density)||1,.4,2.6);
  // Densitat base molt superior a la versió inicial: la comparació és
  // visualment llegible a pantalla petita. El topall evita pèrdues de FPS.
  const count=Math.round(clamp((24+r*3.2)*d,20,MAX_SHARDS));
@@ -120,7 +124,7 @@ function allocate({radius,density,seed,tone}){
 export function createProceduralExplosion(scene,options={}){
  const cfg={radius:options.radius??16,density:options.density??1,
             tone:options.tone??'flash',seed:options.seed??1,
-            variant:options.variant==='B'?'B':'A'};
+            variant:options.variant==='A'?'A':'B'};
  const group=new THREE.Group();scene.add(group);
  const meshes={};
  for(const kind of TYPES){
@@ -131,8 +135,9 @@ export function createProceduralExplosion(scene,options={}){
       transparent:true,opacity:.24,depthWrite:false}):
     new THREE.MeshStandardMaterial({color:0xffffff,side:THREE.DoubleSide,
       flatShading:true,roughness:.83,metalness:0,
-      emissive:kind==='spikes'?0x3e1a04:0x170a03,
-      emissiveIntensity:kind==='spikes'?.36:.14});
+      emissive:kind==='spikes'?0x8c3303:
+        kind==='plates'?0x671007:0x821923,
+      emissiveIntensity:kind==='spikes'?.52:.29});
   const inst=new THREE.InstancedMesh(sharedGeometry[cfg.variant][kind],mat,MAX_SHARDS);
   inst.frustumCulled=false;inst.count=0;
   inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -140,11 +145,11 @@ export function createProceduralExplosion(scene,options={}){
   group.add(inst);meshes[kind]=inst;
  }
  const core=new THREE.Mesh(new THREE.IcosahedronGeometry(1,1),
-   new THREE.MeshBasicMaterial({color:0xffdf8b,transparent:true,
+   new THREE.MeshBasicMaterial({color:0xffffa5,transparent:true,
      depthWrite:false,blending:THREE.AdditiveBlending}));
  core.renderOrder=5;group.add(core);
  const glow=new THREE.Mesh(new THREE.IcosahedronGeometry(1,1),
-   new THREE.MeshBasicMaterial({color:0xff7834,transparent:true,opacity:.13,
+   new THREE.MeshBasicMaterial({color:0xff5d12,transparent:true,opacity:.19,
      depthWrite:false,blending:THREE.AdditiveBlending}));
  glow.renderOrder=1;group.add(glow);
  let spawned=null,age=10,playing=false;
@@ -218,7 +223,7 @@ export function createProceduralExplosion(scene,options={}){
   core.material.opacity=flash;
   core.rotation.set(age*2,age*3,0);
   glow.scale.setScalar(r*(.09+.13*f));
-  glow.material.opacity=.20*flash;
+  glow.material.opacity=.26*flash;
   if(age>=duration){playing=false;core.visible=glow.visible=false}
  }
  function tick(dt){
