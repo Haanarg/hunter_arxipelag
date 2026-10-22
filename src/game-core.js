@@ -2940,10 +2940,11 @@ else if(!cv&&playerEject&&playerEject.t>=0){
     pl.position.y+=airborne;
     pl.rotation.x=-wave*1.05;
     pl.rotation.z=(playerEject.roll||1)*wave*.95;
-    if(u.al)u.al.rotation.x=-1.25*wave;
-    if(u.ar)u.ar.rotation.x=-1.1*wave;
-    if(u.ll)u.ll.rotation.x=.75*wave;
-    if(u.lr)u.lr.rotation.x=-.85*wave;
+    // Les extremitats les mou el ragdoll; el cos encara segueix
+    // la trajectòria simplificada existent (sense motors físics pesants).
+    if(playerBlastRagdoll)window.HUNTER_RAGDOLL.update(playerBlastRagdoll,dt,{
+      airborne:airborne>.12,grounded:airborne<=.12
+    });
   }
 }
 V.forEach(v=>{
@@ -3056,7 +3057,13 @@ if(scopeNow){
     Math.min(bunkerBelow?b.fy-1.0:Infinity,ty+(bunkerBelow?2.0:2)),
     T.z-Math.cos(T.hd)*(bunkerBelow?3.5:8));
 }
-if(playerEject&&playerEject.t<=0)playerEject=null;
+if(playerEject&&playerEject.t<=0){
+  if(playerBlastRagdoll){
+    window.HUNTER_RAGDOLL.reset(playerBlastRagdoll);
+    playerBlastRagdoll=null;
+  }
+  playerEject=null;
+}
 updateBazookaReticle(dt);
 fcd-=dt;updateGrenadeCharge(dt);if(K.KeyF&&(!grenadeEquipped||cv))fire();updEn(dt);
 window.HUNTER_STEALTH_DEBUG.update(THREE,world,E,P);
