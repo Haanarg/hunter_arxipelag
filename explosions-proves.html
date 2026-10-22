@@ -107,7 +107,7 @@ input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
  <div>
   <div class="eyebrow">Hunter: Arxipèlag / Laboratori FX</div>
   <h1>Explosions procedurals <span style="color:#e9b466">low-poly</span></h1>
-  <p class="intro">Nova prova amb puntes tridimensionals irregulars <strong>B</strong>, radi visual <strong>×2 fix</strong> i una paleta més viva de grocs elèctrics, taronges, vermells i magentes. El protagonista continua al costat per comparar-ne la mida.</p>
+  <p class="intro">Compara les puntes tridimensionals <strong>B</strong> amb una <strong>bola de foc polièdrica C</strong> inspirada en la imatge de referència. Sis paletes càlides, radi ×2 fix i personatge a escala.</p>
  </div>
  <nav aria-label="Navegació">
   <a href="proves.html">← Models de proves</a>
@@ -234,7 +234,6 @@ function fire(i){
  a.lastLaunch={radius,density,tone:p.tone,seed};
  const metrics=a.effect.launch({...a.lastLaunch,variant:EXPLOSION_STYLE});
  a.effect.show();
- applyPalette();
  document.querySelector('[data-stats="'+i+'"]').textContent=
    'R '+Math.round(metrics.radius)+' m  ·  '+metrics.count+' polígons';
  a.card.querySelector('.card-marker').textContent='GEN #'+String(a.round).padStart(2,'0');
@@ -275,6 +274,7 @@ $('modelC').addEventListener('click',()=>chooseModel('C'));
 paletteSelect.addEventListener('change',applyPalette);
 function fireAll(){
  round++;for(let i=0;i<actors.length;i++)fire(i);
+ applyPalette();
  nextAuto=performance.now()+2100;
  $('notice').textContent='Explosió #'+round+' · estil B · radi visual ×2 · nova paleta';
 }
