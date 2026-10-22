@@ -98,7 +98,7 @@ input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
  <div>
   <div class="eyebrow">Hunter: Arxipèlag / Laboratori FX</div>
   <h1>Explosions procedurals <span style="color:#e9b466">low-poly</span></h1>
-  <p class="intro">Quatre escales, una mateixa idea: polígons incandescents que neixen del centre, es projecten de manera irregular i es desfan en brases. <strong>Una combinació nova a cada detonació.</strong></p>
+  <p class="intro">Quatre escales, esclats molt més densos i una càmera propera per veure les peces de debò. El protagonista apareix al costat de cada explosió, a l’escala real del joc. <strong>Una combinació nova a cada detonació.</strong></p>
  </div>
  <nav aria-label="Navegació">
   <a href="proves.html">← Models de proves</a>
@@ -108,7 +108,7 @@ input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
 </header>
 <div class="main">
  <section class="stage" aria-label="Quatre explosions de comparació">
-  <div class="stage-header"><h2>01 — Comparació d'escales</h2><span class="hint">Arrossega dins un quadre per canviar el punt de vista</span></div>
+  <div class="stage-header"><h2>01 — Comparació d'escales</h2><span class="hint">Personatge a escala real · arrossega per girar la vista</span></div>
   <div class="grid" id="cards">
    <article class="card" data-index="0"><div class="card-header"><span class="ordinal">01</span><div><div class="card-title">Vehicle petit</div><div class="card-sub">Cotxe o llanxa</div></div></div><span class="card-marker">PROCEDURAL</span><span class="card-stat" data-stats="0">—</span><button type="button" class="card-action" data-fire="0" aria-label="Torna a detonar vehicle petit">↻ Detonar</button></article>
    <article class="card" data-index="1"><div class="card-header"><span class="ordinal">02</span><div><div class="card-title">Granada</div><div class="card-sub">Esclat ràpid i compacte</div></div></div><span class="card-marker">PROCEDURAL</span><span class="card-stat" data-stats="1">—</span><button type="button" class="card-action" data-fire="1" aria-label="Torna a detonar granada">↻ Detonar</button></article>
@@ -126,9 +126,9 @@ input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
   </div>
   <div class="settings">
    <div class="setting">
-    <div class="setting-row"><label for="density">Densitat de polígons</label><output class="readout" id="densityValue" for="density">100%</output></div>
-    <input id="density" type="range" min="40" max="180" value="100" step="10">
-    <div class="minmax"><span>Menys fragments</span><span>Més fragments</span></div>
+    <div class="setting-row"><label for="density">Densitat de polígons</label><output class="readout" id="densityValue" for="density">180%</output></div>
+    <input id="density" type="range" min="80" max="260" value="180" step="10">
+    <div class="minmax"><span>Dens</span><span>Molt dens</span></div>
    </div>
    <div class="setting">
     <div class="setting-row"><label for="radius">Multiplicador del radi</label><output class="readout" id="radiusValue" for="radius">×1,0</output></div>
@@ -142,7 +142,7 @@ input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
     <div class="seed"><input id="seed" type="number" value="67589" min="0" max="4294967295" step="1"><button id="shuffle" aria-label="Genera una llavor nova" title="Nova llavor" type="button">⤨</button></div>
     <p class="micro">Cada detonació canvia les peces. La llavor permet repetir la seqüència reiniciant la pàgina amb el mateix valor.</p>
    </div>
-   <p class="micro">La previsualització empra <b>InstancedMesh</b>, geometries simples i un límit de fragments. <span class="key">Espai</span> torna a detonar.</p>
+   <p class="micro">El soldat a cada quadre és el <b>mateix model del protagonista</b>, amb la seva escala real. Els fragments s'agrupen en <b>InstancedMesh</b>, amb un topall de seguretat. <span class="key">Espai</span> torna a detonar.</p>
   </div>
  </aside>
 </div>
@@ -153,6 +153,8 @@ input[type=range]{width:100%;accent-color:#ecb867;cursor:pointer}
 </div>
 <script type="module">
 import * as THREE from './vendor/three-r186.module.mjs';
+import './src/palette.js';
+import './src/player-model.js';
 import {EXPLOSION_PRESETS,createProceduralExplosion} from './src/explosion-burst-preview.mjs';
 
 const $=id=>document.getElementById(id);
@@ -171,13 +173,30 @@ try{
 }
 for(const [i,preset] of EXPLOSION_PRESETS.entries()){
  const scene=new THREE.Scene();scene.background=new THREE.Color(0x0d151b);
+ scene.add(new THREE.HemisphereLight(0xe6f5df,0x344941,1.65));
+ const key=new THREE.DirectionalLight(0xffe8bd,2.25);
+ key.position.set(-4,9,8);scene.add(key);
  const effect=createProceduralExplosion(scene,preset);
- const cam=new THREE.PerspectiveCamera(43,1,.1,380);
+ // Referència de mida: model i proporcions EXACTES del protagonista real,
+ // no un ninot genèric ni una silueta dibuixada sobre el canvas.
+ const player=window.HUNTER_PLAYER_MODEL.create(THREE,{
+  unitScale:1.2,palette:window.HUNTER_PALETTE,
+  headVariant:'compactD',articulated:true
+ });
+ player.rotation.y=Math.PI+.28;
+ player.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false}});
+ scene.add(player);
+ const feet=new THREE.Mesh(new THREE.CircleGeometry(1.25,24),
+   new THREE.MeshBasicMaterial({color:0x496a57,side:THREE.DoubleSide,
+     transparent:true,opacity:.42,depthWrite:false}));
+ feet.rotation.x=-Math.PI/2;scene.add(feet);
+ const cam=new THREE.PerspectiveCamera(47,1,.1,380);
  const guide=new THREE.GridHelper(115,23,0x536363,0x26373d);
  guide.visible=false;scene.add(guide);
- actors.push({preset,scene,effect,cam,guide,angle:-.38,pitch:.27,round:0,card:cards[i]});
+ actors.push({preset,scene,effect,cam,guide,player,feet,
+   angle:-.38,pitch:.22,round:0,card:cards[i]});
 }
-let paused=false,repeat=$('autoplay').checked,scale=1,density=1,sameScale=false,
+let paused=false,repeat=$('autoplay').checked,scale=1,density=1.8,sameScale=false,
     showGuides=false,lastTime=0,nextAuto=0,round=0,changePending=false;
 const seedValue=()=>Math.max(0,Math.min(4294967295,Math.trunc(Number($('seed').value)||0)))>>>0;
 function fire(i){
@@ -185,6 +204,10 @@ function fire(i){
  const salt=(Math.imul(a.round,2654435761)^p.seed)>>>0;
  const seed=(seedValue()^salt)>>>0;
  const radius=p.radius*scale;
+ // El model es mou a una distància proporcional al radi, però queda
+ // més pròxim a càmera que el nucli per mantenir-se llegible en C4.
+ a.player.position.set(radius*.18+1.7,-.08,radius*.09+1.0);
+ a.feet.position.set(a.player.position.x,-.09,a.player.position.z);
  const metrics=a.effect.launch({radius,density,tone:p.tone,seed});
  a.effect.show();
  document.querySelector('[data-stats="'+i+'"]').textContent=
@@ -255,7 +278,11 @@ function resize(){
 addEventListener('resize',resize);
 addEventListener('scroll',()=>{},{passive:true});
 resize();
-fireAll();if(reduced){paused=true;repeat=false;$('pause').textContent='▶ Reprendre';$('pause').setAttribute('aria-pressed','true');$('autoplay').checked=false}
+fireAll();if(reduced){
+ for(const a of actors)a.effect.tick(.06);
+ paused=true;repeat=false;$('pause').textContent='▶ Reprendre';
+ $('pause').setAttribute('aria-pressed','true');$('autoplay').checked=false
+}
 function animate(now){
  requestAnimationFrame(animate);
  const dt=Math.min(.06,Math.max(0,(now-(lastTime||now))/1000));lastTime=now;
@@ -276,12 +303,18 @@ function animate(now){
     right=Math.min(width,Math.ceil(box.right)),bottom=Math.min(height,Math.ceil(box.bottom));
   const w=right-left,h=bottom-top;if(w<2||h<2)continue;
   const radius=a.preset.radius*scale;
-  const distance=sameScale?Math.max(...actors.map(x=>x.preset.radius))*scale+19:radius+19;
+  // Mitja distància aproximada respecte del muntatge anterior.
+  // Petita desviació del centre per mantenir l'avatar com a referència
+  // sense obrir massa l'enquadrament de l'esclat.
+  const distance=sameScale?
+    Math.max(...actors.map(x=>x.preset.radius))*scale*.49+7:
+    radius*.49+7;
+  const aim=new THREE.Vector3(radius*.042,1+radius*.025,0);
   a.cam.position.set(
-    Math.sin(a.angle)*Math.cos(a.pitch)*distance,
-    Math.sin(a.pitch)*distance+.8,
-    Math.cos(a.angle)*Math.cos(a.pitch)*distance);
-  a.cam.lookAt(0,0,0);
+    aim.x+Math.sin(a.angle)*Math.cos(a.pitch)*distance,
+    aim.y+Math.sin(a.pitch)*distance,
+    aim.z+Math.cos(a.angle)*Math.cos(a.pitch)*distance);
+  a.cam.lookAt(aim);
   a.cam.aspect=w/h;a.cam.updateProjectionMatrix();
   a.guide.position.y=-radius*.20;
   renderer.setViewport(left,height-bottom,w,h);
