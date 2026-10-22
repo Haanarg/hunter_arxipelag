@@ -29,6 +29,13 @@ export const EXPLOSION_PALETTE=Object.freeze({
  smoke:Object.freeze([0x9e365d,0x74345d,0x59335a,0x3c314f])
 });
 const PALETTE=EXPLOSION_PALETTE;
+export const FIREBALL_PALETTE=Object.freeze({
+ core:Object.freeze([0xffff27,0xfff82a,0xffdf1b]),
+ hot:Object.freeze([0xffed23,0xffd21b,0xffb719]),
+ warm:Object.freeze([0xffb018,0xff9514,0xff7e1a]),
+ dark:Object.freeze([0xff641b,0xf14b21,0xd83c20]),
+ smoke:Object.freeze([0x8d4530,0x71412e,0x553d34])
+});
 // Quatre InstancedMesh per explosió, encara que n'augmentem molt la densitat.
 const MAX_SHARDS=640;
 const TYPES=['spikes','plates','embers','smoke'];
@@ -67,9 +74,22 @@ function irregularSpike(sides,spread,skew,twist){
  geo.computeVertexNormals();
  return geo;
 }
+// Model C: bola de foc low-poly amb closca irregular i llengües
+// superposades, inspirat en la referència. La closca té volum real i
+// es deforma radialment; no és una col·lecció de làmines planes.
+function fireballShell(){
+ const g=new THREE.IcosahedronGeometry(1,2),p=g.getAttribute('position');
+ for(let i=0;i<p.count;i++){
+  const x=p.getX(i),y=p.getY(i),z=p.getZ(i);
+  const wobble=1+.12*Math.sin(x*8+z*5)+.09*Math.cos(y*11-x*3);
+  p.setXYZ(i,x*wobble,y*wobble,z*wobble);
+ }
+ p.needsUpdate=true;g.computeVertexNormals();return g;
+}
 export const EXPLOSION_VARIANTS=Object.freeze({
  A:Object.freeze({name:'Piràmides',description:'Cons i piràmides 3D de diverses cares'}),
- B:Object.freeze({name:'Estrella irregular',description:'Puntes 3D asimètriques amb facetes i espatlles'})
+ B:Object.freeze({name:'Estrella irregular',description:'Puntes 3D asimètriques amb facetes i espatlles'}),
+ C:Object.freeze({name:'Bola de foc',description:'Volum polièdric irregular amb llengües de flama'})
 });
 const smokeGeometry=new THREE.IcosahedronGeometry(.5,0);
 const sharedGeometry=Object.freeze({
@@ -80,6 +100,12 @@ const sharedGeometry=Object.freeze({
   spikes:irregularSpike(5,1.16,.18,.65),
   plates:irregularSpike(4,1.26,-.27,1.1),
   embers:irregularSpike(3,.96,.31,.42),
+  smoke:smokeGeometry
+ }),
+ C:Object.freeze({
+  spikes:irregularSpike(5,1.34,.26,.8),
+  plates:irregularSpike(4,1.55,-.24,1.4),
+  embers:irregularSpike(3,1.05,.18,.2),
   smoke:smokeGeometry
  })
 });
@@ -97,8 +123,9 @@ function sampleDirection(rand){
  // L'elevació esbiaixada cap amunt manté una silueta poc esfèrica.
  return new THREE.Vector3(Math.cos(a)*root,up+.17,Math.sin(a)*root).normalize();
 }
-function allocate({radius,density,seed,tone}){
- const rand=mulberry32(seed),m=explosionMetrics(radius,density),
+function allocate({radius,density,seed,tone,variant}){
+ const rand=mulberry32(seed),palette=variant==='C'?FIREBALL_PALETTE:PALETTE,
+       m=explosionMetrics(radius,density),
        count=m.count,shards={spikes:[],plates:[],embers:[],smoke:[]};
  for(let i=0;i<count;i++){
   const roll=rand(),kind=roll<.46?'spikes':roll<.78?'plates':roll<.97?'embers':'smoke';
@@ -111,10 +138,10 @@ function allocate({radius,density,seed,tone}){
         width=r*(kind==='plates'?.013+rand()*.030:.009+rand()*.024),
         // Mantenim l'esclat visible prou temps per comparar-lo.
         duration=kind==='smoke'?1.1+rand()*.8:.85+rand()*.70,
-        color=kind==='smoke'?pick(rand,PALETTE.smoke):
-          kind==='spikes'?pick(rand,PALETTE.core):
+        color=kind==='smoke'?pick(rand,palette.smoke):
+          kind==='spikes'?pick(rand,palette.core):
           kind==='plates'?pick(rand,tone==='metal'?PALETTE.dark:PALETTE.warm):
-          pick(rand,PALETTE.hot);
+          pick(rand,palette.hot);
   shards[kind].push({dir,reach,length,width,duration,color,
     bias:rand()*.4,spin:(rand()-.5)*8,phase:rand()*6.28318,
     initial:new THREE.Vector3((rand()-.5)*r*.028,(rand()-.5)*r*.022,(rand()-.5)*r*.028)});
@@ -124,8 +151,13 @@ function allocate({radius,density,seed,tone}){
 export function createProceduralExplosion(scene,options={}){
  const cfg={radius:options.radius??16,density:options.density??1,
             tone:options.tone??'flash',seed:options.seed??1,
-            variant:options.variant==='A'?'A':'B'};
+            variant:EXPLOSION_VARIANTS[options.variant]?options.variant:'B'};
  const group=new THREE.Group();scene.add(group);
+ const shell=new THREE.Mesh(fireballShell(),new THREE.MeshStandardMaterial({
+  color:0xffa018,flatShading:true,roughness:1,metalness:0,
+  emissive:0xff6500,emissiveIntensity:.22,side:THREE.DoubleSide
+ }));
+ shell.visible=false;group.add(shell);
  const meshes={};
  for(const kind of TYPES){
   // Els 3 grups incandescents són volums opacs, amb ombreig de facetes.
@@ -160,6 +192,7 @@ export function createProceduralExplosion(scene,options={}){
   if(cfg.variant===variant)return true;
   cfg.variant=variant;
   for(const kind of TYPES)meshes[kind].geometry=sharedGeometry[variant][kind];
+  shell.visible=variant==='C'&&playing;
   if(spawned)renderPose();
   return true;
  }
@@ -182,6 +215,12 @@ export function createProceduralExplosion(scene,options={}){
  function renderPose(){
   if(!spawned)return;
   const r=spawned.metrics.radius,duration=spawned.metrics.duration;
+  shell.visible=cfg.variant==='C'&&age<1.6;
+  if(shell.visible){
+   const k=clamp(age/.24,.08,1),fade=Math.max(.001,1-age/1.65);
+   shell.scale.setScalar(r*.135*k*fade);
+   shell.rotation.set(age*.22,age*.33,age*.12);
+  }
   for(const kind of TYPES){
    const mesh=meshes[kind],shards=spawned.shards[kind];
    for(let i=0;i<shards.length;i++){
@@ -232,12 +271,13 @@ export function createProceduralExplosion(scene,options={}){
   renderPose();
   return playing;
  }
- function hide(){age=10;playing=false;group.visible=false}
+ function hide(){age=10;playing=false;group.visible=false;shell.visible=false}
  function show(){group.visible=true}
  function destroy(){
   scene.remove(group);
   for(const mesh of Object.values(meshes))mesh.material.dispose();
   core.geometry.dispose();core.material.dispose();glow.geometry.dispose();glow.material.dispose();
+  shell.geometry.dispose();shell.material.dispose();
  }
  return {group,launch,setVariant,tick,hide,show,destroy,
    get metrics(){return spawned?.metrics??explosionMetrics(cfg.radius,cfg.density)},
