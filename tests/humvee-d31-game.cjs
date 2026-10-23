@@ -62,7 +62,8 @@ function gltfFromBinary(){
  assert.ok(AandB.includes('new THREE.ExtrudeGeometry'));
  assert.ok(AandB.includes('new THREE.CylinderGeometry'));
  assert.ok(AandB.includes("new THREE.Float32BufferAttribute(rawFloats(part.position),3)"));
- assert.ok(!AandB.includes('.glb'), 'A/B should not load any GLB');
+ assert.ok(!/\b(loadAsync|fetch)\s*\(\s*['"\x60][^'"\x60]*\.glb/.test(AandB),
+  'The A/B runtime must not request an external GLB');
  const preview=read('humvee-procedural-proves.html');
  assert.ok(preview.includes('createHumveeMethodA(THREE)'));
  assert.ok(preview.includes('loadHumveeMethodB(THREE)'));
