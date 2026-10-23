@@ -1,6 +1,6 @@
-// Preview-only factory for the APPROVED Humvee D3.1 with four flattened doors.
-// Shares the same real GLB and geometry/UV reducers as humvee-preview.html.
-// Do not connect this to runtime vehicle spawning until the size is chosen.
+// Shared approved Humvee D3.1 geometry factory for preview AND gameplay.
+// The preview compares scales; the actual military car is fixed at 175%
+// by src/humvee-d31-runtime.mjs. Retain this single door/UV pipeline.
 import {createTruckConcept} from './truck-concepts.mjs';
 import {deriveSymmetricD3} from './humvee-d3-geometry.mjs';
 import {HUMVEE_WHEEL_SPEC,removeOriginalTires} from './humvee-d31-refinements.mjs';
