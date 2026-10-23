@@ -61,9 +61,33 @@ function sourceTriangles(){
  assert.ok(flattened.triangles.every(face=>face.length===3&&
   face.every(v=>v.p.every(Number.isFinite)&&v.uv.every(Number.isFinite))));
  const loader=read('src/humvee-d31-runtime.mjs');
- assert.ok(loader.includes("new THREE.TextureLoader().loadAsync(url)"),'GLB atlas must be loaded');
+ assert.ok(loader.includes("new THREE.TextureLoader().loadAsync(image)"),
+  'The baked GLB atlas must be loaded directly');
+ assert.ok(loader.includes("assets/humvee/humvee_D31_175.glb"),
+  'The game runtime must read the baked GLB, not the original');
+ assert.ok(!loader.includes("humvee_D.glb"),
+  'The original GLB must not be referenced during gameplay');
+ assert.ok(!loader.includes("deriveSymmetricD3"),
+  'Do not rebuild the D3.1 mesh when the game starts');
  assert.ok(loader.includes("root.userData.steeringPivots=steering"));
  assert.ok(loader.includes("root.userData.wheels=rolling"));
+ // Validate the actual committed standalone binary asset and wheel metadata.
+ const binary=fs.readFileSync(path.join(root,'assets/humvee/humvee_D31_175.glb'));
+ const h=new DataView(binary.buffer,binary.byteOffset,binary.byteLength);
+ assert.equal(h.getUint32(0,true),0x46546c67);
+ assert.equal(h.getUint32(4,true),2);
+ assert.equal(h.getUint32(8,true),binary.byteLength);
+ const jsonLength=h.getUint32(12,true);
+ const gltf=JSON.parse(binary.subarray(20,20+jsonLength).toString('utf8'));
+ const bakedRoot=gltf.nodes.find(n=>n.extras?.baked);
+ assert.ok(bakedRoot && bakedRoot.extras.gameScale===1.75);
+ assert.equal(bakedRoot.extras.bodyTriangles,1686);
+ assert.equal(gltf.nodes.filter(n=>n.extras?.wheel).length,4);
+ assert.equal(gltf.nodes.filter(n=>n.extras?.front).length,2);
+ assert.ok(gltf.materials[0].pbrMetallicRoughness.baseColorTexture,
+  'The body uses the embedded original atlas');
+ assert.equal(gltf.images[0].mimeType,'image/png');
+ assert.ok(gltf.meshes.length>=10,'The final GLB includes doors, glazing, details and wheels');
  const bootstrap=read('src/bootstrap.mjs');
  assert.ok(bootstrap.indexOf("prepareHumveeD31Runtime")<
   bootstrap.indexOf("else await loadLegacy()"),'Humvee must preload before vehicle factories');
@@ -76,8 +100,8 @@ function sourceTriangles(){
   'Les patrulles enemigues també han de carregar el Humvee');
  assert.ok(read('src/enemy-lod.js').includes("humvee?4.65:3.1"),
   'El LOD de les patrulles ha de tenir la mida de la carrosseria nova');
- assert.ok(read('src/version.mjs').includes("'0.5.70'"));
- console.log('Humvee D3.1 175% game regression OK:',{
+ assert.ok(read('src/version.mjs').includes("'0.5.71'"));
+ console.log('Humvee D3.1 baked 175% game regression OK:',{
   original:mesh.faces,withoutTyres:noTires.triangles.length,
   flattened:flattened.triangles.length,doorPanels:flattened.stats.panels
  });
