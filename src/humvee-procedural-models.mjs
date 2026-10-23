@@ -19,14 +19,17 @@ function rawFloats(base64){
  if(bytes.length%4)throw Error('Incorrect float32 encoded geometry length');
  return new Float32Array(bytes.buffer);
 }
-export function describeHumvee3D(group){
+export function describeHumvee3D(group, THREE){
  let meshes=0,triangles=0,drawCalls=0;
  group.traverse(object=>{
   if(!object.isMesh)return;
   meshes++;drawCalls++;
   triangles+=noIndex(object.geometry)/3;
  });
- const THREE=group.userData.THREE;
+ // Pass the Three.js namespace as an argument, NEVER via userData:
+ // Object3D.clone() JSON-serializes userData; storing the imported THREE
+ // namespace there prevented the B scene from being cloned/rendered.
+ if(!THREE?.Box3)throw Error('Cal passar THREE per mesurar el Humvee');
  const box=new THREE.Box3().setFromObject(group),size=box.getSize(new THREE.Vector3());
  return {meshes,triangles,drawCalls,width:size.x,height:size.y,length:size.z};
 }
@@ -91,7 +94,7 @@ export async function loadHumveeMethodB(THREE){
   const template=new THREE.Group();
   template.name='Humvee B · dades GLB convertides a BufferGeometry';
   template.add(fromNode(0));
-  const metric=describeHumvee3D(Object.assign(template,{userData:{THREE}}));
+  const metric=describeHumvee3D(template,THREE);
   const expected=src.meta.renderTriangles??2894;
   // Baked GLB: 2,534 unique triangles plus repeated wheel meshes
   // rendered four times -> 2,894 real on-screen triangles.
@@ -104,7 +107,6 @@ export async function loadHumveeMethodB(THREE){
    create(){
     const model=template.clone(true);
     model.userData.method='B';
-    model.userData.THREE=THREE;
     return model;
    }
   };
@@ -118,7 +120,7 @@ export async function loadHumveeMethodB(THREE){
 export function createHumveeMethodA(THREE){
  const model=new THREE.Group();
  model.name='Humvee A · malla procedural paramètrica';
- model.userData.method='A';model.userData.THREE=THREE;
+ model.userData.method='A';
  const mats=new Map();
  function material(hex,metal=0,glass=false){
   const key=hex+'_'+metal+'_'+glass;
