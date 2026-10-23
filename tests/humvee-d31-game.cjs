@@ -97,12 +97,18 @@ function gltfFromBinary(){
  assert.ok(scale.includes("loadHumveeMethodB"));
  assert.ok(!scale.includes("humvee_D.glb"));
  const runtime=read('src/humvee-d31-runtime.mjs');
- assert.ok(runtime.includes('assets/humvee/humvee_D31_175.glb'));
- assert.ok(!runtime.includes('humvee_D.glb'));
+ assert.ok(runtime.includes("import {loadHumveeMethodB}"),
+  'The game must construct the Humvee from procedural method B');
+ assert.ok(runtime.includes('await loadHumveeMethodB(THREE)'));
+ assert.ok(runtime.includes('const car=procedural.create()'));
+ assert.ok(runtime.includes('rigWheels(THREE,car)'));
+ assert.ok(!runtime.includes('fetch(')&&!runtime.includes('loadAsync(')&&
+  !runtime.includes('humvee_D31_175.glb'),
+  'Runtime must not fetch or decode the backup GLB');
  assert.ok(read('src/vehicles.js').includes('window.HUNTER_HUMVEE_D31.create()'));
- assert.ok(read('src/version.mjs').includes("'0.5.72'"));
+ assert.ok(read('src/version.mjs').includes("'0.5.73'"));
  assert.equal(fs.existsSync(path.join(root,'assets/humvee/humvee_D.glb')),false,
   'The original temporary D source was supposed to be deleted');
- console.log('Humvee D3.1 175%: verified GLB and exact JS procedural B,',
-  triangles,'triangles, 4 wheels; A parametric; no original source GLB');
+ console.log('Humvee D3.1 175%: verified reference GLB and exact procedural B,',
+  triangles,'unique triangles; game now uses procedural B and keeps the backup GLB');
 })().catch(err=>{console.error(err);process.exitCode=1});
