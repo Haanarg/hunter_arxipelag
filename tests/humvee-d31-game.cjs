@@ -29,7 +29,8 @@ function gltfFromBinary(){
  assert.equal(gltf.nodes.filter(n=>n.extras?.wheel).length,4);
  assert.equal(gltf.nodes.filter(n=>n.extras?.wheel&&n.extras.front).length,2);
  assert.equal(procedural.meta.scale,1.75);
- assert.equal(procedural.meta.triangles,2534);
+ assert.equal(procedural.meta.triangles,2534); // Unique mesh geometry
+ assert.equal(procedural.meta.renderTriangles,2894); // Four reused wheel geometries
  assert.equal(procedural.meta.sourceTriangles,1686);
  assert.equal(procedural.meshes.length,gltf.meshes.length);
  assert.equal(procedural.nodes.length,gltf.nodes.length);
