@@ -137,8 +137,7 @@ function localGLB(THREE,buffer){
   const rootNode=json.nodes.find(x=>x.extras?.baked);
   expect(rootNode?.extras?.bodyTriangles===EXPECTED_BODY_TRIANGLES,
    'el fitxer no és el D3.1 aprovat');
-  const wheelGroups=template.getObjectsByProperty
-    ?[]:[]; // gather explicitly to avoid depending on browser helper versions
+  const wheelGroups=[];
   template.traverse(o=>{if(o.userData.wheel)wheelGroups.push(o)});
   expect(wheelGroups.length===EXPECTED_WHEEL_COUNT,'no hi ha quatre rodes');
   expect(wheelGroups.filter(w=>w.userData.front).length===2,'falten les rodes davanteres');
