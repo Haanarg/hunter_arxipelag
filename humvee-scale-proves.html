@@ -50,7 +50,7 @@ footer a{color:#d3e9b3}
   <button id="side" type="button">Lateral</button>
   <button id="front" type="button">Frontal</button>
   <button id="spin" type="button" aria-pressed="false">Gir automàtic</button>
-  <a href="humvee-preview.html">Tornar al model D3.1</a>
+  <a href="humvee-procedural-proves.html">Comparar procedurals A/B</a>
   <a href="proves.html">Totes les proves</a>
  </nav>
 </header>
@@ -69,7 +69,6 @@ footer a{color:#d3e9b3}
 <script src="src/vehicles.js"></script>
 <script type="module">
 import * as THREE from 'three';
-import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {loadApprovedHumveeD31,createApprovedHumveeD31} from './src/humvee-d31-scale-preview.mjs';
 const BASE_HUMVEE_SCALE=1.75;
 const RELATIVE_VARIATION=.08;
@@ -77,7 +76,7 @@ const variations=[
  {id:'A',title:'A · Nova mida de referència',scale:BASE_HUMVEE_SCALE,description:'Jugador real + D3.1 al 175%'},
  {id:'B',title:'B · Un poc més gran',scale:BASE_HUMVEE_SCALE*(1+RELATIVE_VARIATION),description:'Jugador real + D3.1 al 189% (+8% de la base)'},
  {id:'C',title:'C · Un poc més petit',scale:BASE_HUMVEE_SCALE*(1-RELATIVE_VARIATION),description:'Jugador real + D3.1 al 161% (−8% de la base)'},
- {id:'D',title:'D · Model anterior vs Humvee al joc',scale:BASE_HUMVEE_SCALE,wide:true,description:'Cotxe militar anterior · jugador real · Humvee definitiu al 175%'}
+ {id:'D',title:'D · Model anterior vs Humvee al joc',scale:BASE_HUMVEE_SCALE,wide:true,description:'Cotxe militar antic · jugador real · Humvee B al 175%'}
 ];
 const cards=document.getElementById('cards');
 const status=document.getElementById('status');
@@ -219,7 +218,7 @@ function addMeasure(name,obj){
  document.getElementById('metrics').append(item);
 }
 try{
- const approved=await loadApprovedHumveeD31(THREE,GLTFLoader);
+ const approved=await loadApprovedHumveeD31(THREE);
  for(const v of variations)views.push(createCard(v,approved));
  addMeasure('Jugador (escala del joc)',views[0].objects.player);
  addMeasure('Nou D3.1 al 175%',views[0].objects.new);
