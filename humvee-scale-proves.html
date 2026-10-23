@@ -148,7 +148,7 @@ function label(parent,variation){
  const sub=document.createElement('small');sub.textContent=variation.description;
  tag.append(head,sub);
  const percent=document.createElement('div');percent.className='percent';
- percent.textContent=variation.wide?'3 models':Math.round(variation.scale*100)+'%';
+ percent.textContent=variation.wide?'200% vs joc':Math.round(variation.scale*100)+'%';
  top.append(tag,percent);parent.append(top);
  const key=document.createElement('div');key.className='legend';
  key.innerHTML=variation.wide?
@@ -191,7 +191,11 @@ function createCard(variation,prepared){
  });
  renderer.domElement.addEventListener('pointerup',e=>{if(drag?.id===e.pointerId)drag=null;});
  renderer.domElement.addEventListener('pointercancel',e=>{if(drag?.id===e.pointerId)drag=null;});
- return {card,renderer,scene,camera,objects,variation};
+ // Cached physical dimensions: do not traverse the 3D meshes on every frame.
+ const dimensions=Object.fromEntries(
+  Object.entries(objects).map(([name,object])=>[name,getSize(object)])
+ );
+ return {card,renderer,scene,camera,objects,dimensions,variation};
 }
 function setAngle(button,x,y){
  yaw=x;elevation=y;stopSpin();
@@ -230,27 +234,63 @@ try{
 function render(){
  requestAnimationFrame(render);
  if(spinning)yaw+=.003;
- for(const {card,renderer,scene,camera,objects,variation} of views){
-  // Place subjects along the right vector of the current camera.
-  // This keeps all THREE subjects legible even in exact side/front views.
-  const rx=Math.cos(yaw),rz=-Math.sin(yaw);
-  const slots=variation.wide?
-   [['old',-5.2],['player',0],['new',5.2]]:
-   [['player',-2],['new',1.30]];
-  for(const [name,position] of slots){
-   objects[name].position.x=position*rx;
-   objects[name].position.z=position*rz;
+ const rightX=Math.cos(yaw),rightZ=-Math.sin(yaw);
+ const sinElev=Math.sin(elevation),cosElev=Math.cos(elevation);
+ const layouts=[];
+ // Calculate every subject's apparent width using its REAL dimensions.
+ // Lay out the enlarged vehicles without overlaps at any camera angle.
+ for(const view of views){
+  const {card,objects,dimensions,variation}=view;
+  const names=variation.wide?['old','player','new']:['player','new'];
+  const gap=variation.wide?.8:.65;
+  const projected=names.map(name=>{
+   const d=dimensions[name];
+   const width=Math.abs(rightX)*d.x+Math.abs(rightZ)*d.z;
+   const depth=Math.abs(rightZ)*d.x+Math.abs(rightX)*d.z;
+   return {name,width,depth,height:d.y};
+  });
+  const totalWidth=projected.reduce((sum,item)=>sum+item.width,0)+gap*(names.length-1);
+  let offset=-totalWidth/2;
+  for(const item of projected){
+   const screenCenter=offset+item.width/2;
+   objects[item.name].position.x=screenCenter*rightX;
+   objects[item.name].position.z=screenCenter*rightZ;
+   offset+=item.width+gap;
   }
+  const maxHeight=Math.max(...projected.map(item=>item.height));
+  const targetY=Math.max(2.3,maxHeight/2);
+  let verticalHalf=0;
+  for(const item of projected){
+   const extra=sinElev*item.depth/2;
+   const top=cosElev*(item.height-targetY)+extra;
+   const bottom=cosElev*(-targetY)-extra;
+   verticalHalf=Math.max(verticalHalf,Math.abs(top),Math.abs(bottom));
+  }
+  // Responsive orthographic framing: fit both width AND height. Preserve
+  // precisely the same zoom for A/B/C, including after any resize or turn.
+  const aspect=Math.max(.25,card.clientWidth/Math.max(1,card.clientHeight));
+  const requiredHalfHeight=Math.max(
+   (totalWidth/2+.75)/aspect,
+   verticalHalf+.70,
+   4.1
+  );
+  layouts.push({view,requiredHalfHeight,targetY});
+ }
+ const firstThree=layouts.filter(item=>!item.view.variation.wide);
+ const commonHalfHeight=Math.max(4.1,...firstThree.map(item=>item.requiredHalfHeight));
+ for(const {view,requiredHalfHeight,targetY} of layouts){
+  const {card,renderer,scene,camera,variation}=view;
   const w=Math.max(1,card.clientWidth),h=Math.max(1,card.clientHeight);
-  const size=renderer.getSize(new THREE.Vector2());
-  if(size.x!==w||size.y!==h)renderer.setSize(w,h,false);
-  const halfHeight=4,aspect=w/h;
+  const renderSize=renderer.getSize(new THREE.Vector2());
+  if(renderSize.x!==w||renderSize.y!==h)renderer.setSize(w,h,false);
+  const halfHeight=variation.wide?requiredHalfHeight:commonHalfHeight;
+  const aspect=w/h;
   camera.left=-halfHeight*aspect;camera.right=halfHeight*aspect;
   camera.top=halfHeight;camera.bottom=-halfHeight;
   camera.updateProjectionMatrix();
-  const radius=25,targetY=1.45;
-  camera.position.set(Math.sin(yaw)*Math.cos(elevation)*radius,
-   targetY+Math.sin(elevation)*radius,Math.cos(yaw)*Math.cos(elevation)*radius);
+  const radius=28;
+  camera.position.set(Math.sin(yaw)*cosElev*radius,
+   targetY+sinElev*radius,Math.cos(yaw)*cosElev*radius);
   camera.lookAt(0,targetY,0);
   renderer.render(scene,camera);
  }
