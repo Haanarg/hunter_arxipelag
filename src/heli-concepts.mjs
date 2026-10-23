@@ -35,7 +35,8 @@ function rotorSet(g,span=14.4,tailZ=7.15){
   const hub=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.18,8),mat(C.metal,.5,.5));
   hub.position.set(0,3.82,0);g.add(hub);
   const rotor=new THREE.Group();rotor.position.set(0,3.82,0);
-  for(const a of[0,Math.PI/3,Math.PI*2/3]){
+  // Dues aspes oposades: una barra sencera que gira sobre el rotor central.
+  for(const a of[0]){
     const b=box(rotor,span,.08,.34,C.dark,0,0,0,.25);b.rotation.y=a;
   }
   g.add(rotor);
@@ -171,7 +172,7 @@ export function compactD(){
 }
 
 export const concepts=[
-  {name:'1 · Compacte B1 · Suau',create:compactA,desc:'Dues cabines iguals, unió diagonal integrada i rotor principal de 6 aspes.'},
+  {name:'1 · Compacte B1 · Suau',create:compactA,desc:'Dues cabines iguals, unió diagonal integrada i rotor principal de 2 aspes.'},
   {name:'2 · Compacte B2 · Angular',create:compactB,desc:'Cabines iguals més facetades i bloc diagonal més visible, mantenint la base del Compacte B.'},
   {name:'3 · Compacte B3 · Apache',create:compactC,desc:'Variant més agressiva: morro i cabines angulars tipus Apache, però amb volums igualats.'},
   {name:'4 · Compacte B4 · Blindat',create:compactD,desc:'La versió més robusta, amb unió diagonal ampla i cabina compacta de lectura blindada.'}
