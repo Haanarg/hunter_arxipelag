@@ -221,11 +221,15 @@ function loadDerived(){
   if(!meshes.length)throw Error('The D GLB has no mesh');
   const referenceMaterial=(Array.isArray(meshes[0].material)?meshes[0].material[0]:meshes[0].material);
   const triangles=collectTriangleVertices(source);
-  const reduced=deriveSymmetricD3(triangles,center.z,[2200,1900,1600,1300]);
+  // Protruding accessories skew the full bbox. Locate the real body centre
+  // from the central 90% of lateral vertex coordinates instead.
+  const zValues=triangles.flatMap(t=>t.map(v=>v.p[2])).sort((a,b)=>a-b);
+  const symmetryZ=(zValues[Math.floor(.05*(zValues.length-1))]+zValues[Math.floor(.95*(zValues.length-1))])*.5;
+  const reduced=deriveSymmetricD3(triangles,symmetryZ,[2200,1900,1600,1300]);
   if(reduced.some((v,i)=>v.faces>=2499||(i>0&&v.faces>=reduced[i-1].faces))){
    throw Error('The four derived models must each have fewer triangles than the previous one and original D3');
   }
-  return {source,center,referenceMaterial,reduced};
+  return {source,center,symmetryZ,referenceMaterial,reduced};
  });
  return preparedPromise;
 }
@@ -256,7 +260,7 @@ function createCard(v){
  canvas.addEventListener('pointerup',e=>{if(dragId===e.pointerId)dragging=false;});
  canvas.addEventListener('pointercancel',e=>{if(dragId===e.pointerId)dragging=false;});
  canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=THREE.MathUtils.clamp(zoom+e.deltaY*.001,.66,1.65);},{passive:false});
- loadDerived().then(({source,center,referenceMaterial,reduced})=>{
+ loadDerived().then(({source,center,symmetryZ,referenceMaterial,reduced})=>{
   if(v.reference){
    const obj=source.clone(true);
    obj.traverse(o=>{if(!o.isMesh)return;
@@ -272,11 +276,11 @@ function createCard(v){
    group.add(new THREE.Mesh(trianglesToGeometry(data.triangles),material));
    view.originalMaterials.push(material);
    meta.textContent=data.faces.toLocaleString('ca')+' triangles de malla · −'+Math.round(100*(1-data.faces/2499))+'%';
-   const doors=doorQuadrangles();doors.position.z=center.z;group.add(doors);view.doors=doors;
+   const doors=doorQuadrangles();doors.position.z=symmetryZ;group.add(doors);view.doors=doors;
   }
-  const pane=windowPanes(v);pane.position.z=v.reference?0:center.z;group.add(pane);view.panes=pane;
-  const details=upgradeDetails(v);details.position.z=v.reference?0:center.z;group.add(details);view.details=details;
-  group.position.set(-center.x,0,-center.z);
+  const pane=windowPanes(v);pane.position.z=v.reference?0:symmetryZ;group.add(pane);view.panes=pane;
+  const details=upgradeDetails(v);details.position.z=v.reference?0:symmetryZ;group.add(details);view.details=details;
+  group.position.set(-center.x,0,v.reference?-center.z:-symmetryZ);
   for(const m of view.originalMaterials)m.wireframe=meshMode;
   status.classList.add('done');
  }).catch(err=>{status.textContent='No s’ha pogut preparar el model: '+err.message;console.error(err);});
