@@ -98,16 +98,29 @@ function proxy(T,type,level){
     }
   }else{
     const heavy=type==='tanc'||type==='tanqueta',
-      w=type==='tanc'?5.8:type==='tanqueta'?4.2:3.1,
-      l=type==='tanc'?7:type==='tanqueta'?5.2:5.2;
-    box(0,.88,0,w,1.25,l,heavy?0x626a48:0x656f59);
-    box(0,1.84,type==='jeep'?.55:0,w*.73,heavy?.9:1.3,l*.46,heavy?0x536047:0x3e4d46);
-    if(mid){
-      for(const x of [-w*.47,w*.47]){
-        if(heavy)box(x,.59,0,.48,1.03,l*.9,0x242e2a);
-        else for(const z of [-l*.31,l*.31])box(x,.53,z,.42,.98,.66,0x232a28);
+      humvee=type==='jeep',
+      // Enemy jeep maps to the exact same cotxe D3.1 at 175% as the player.
+      // Distant proxy must preserve its ~4.6 × 8.2 metre footprint.
+      w=type==='tanc'?5.8:type==='tanqueta'?4.2:humvee?4.65:3.1,
+      l=type==='tanc'?7:type==='tanqueta'?5.2:humvee?8.18:5.2;
+    if(humvee){
+      box(0,1.10,0,w,1.6,l,0x687658);
+      box(0,2.55,.35,w*.80,1.15,l*.43,0x56654e);
+      if(mid){
+        for(const x of [-w*.46,w*.46])for(const z of [-l*.32,l*.32])
+          box(x,.88,z,.57,1.55,.70,0x232c28);
+        box(0,1.30,-l*.485,w*.36,.35,.12,0x343d38);
       }
-      if(heavy)box(0,2.17,-l*.38,.2,.2,l*.8,0x3e4540);
+    }else{
+      box(0,.88,0,w,1.25,l,heavy?0x626a48:0x656f59);
+      box(0,1.84,0,w*.73,heavy?.9:1.3,l*.46,heavy?0x536047:0x3e4d46);
+      if(mid){
+        for(const x of [-w*.47,w*.47]){
+          if(heavy)box(x,.59,0,.48,1.03,l*.9,0x242e2a);
+          else for(const z of [-l*.31,l*.31])box(x,.53,z,.42,.98,.66,0x232a28);
+        }
+        if(heavy)box(0,2.17,-l*.38,.2,.2,l*.8,0x3e4540);
+      }
     }
   }
   const geo=bake(T,parts);
