@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Dues geometries procedurals del Humvee D3.1 al 175%, comparades a la mateixa escala: A reconstrucció paramètrica i B conversió exacta del GLB a BufferGeometry.">
+<title>Hunter: Arxipèlag · Humvee D3.1 · Procedural A / B</title>
+<style>
+:root{color-scheme:dark;--bg:#112229;--panel:#1e3539;--muted:#bfd0c6;--line:#688780;--gold:#e5d7ac}
+*{box-sizing:border-box}
+body{margin:0;color:#eef5ed;background:var(--bg);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:19px 22px 15px;display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}
+h1{font-size:clamp(22px,2.8vw,34px);margin:0 0 6px;line-height:1.15}
+header p{color:var(--muted);max-width:780px;margin:0}
+nav{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+button,nav a{border:1px solid #77948b;border-radius:8px;background:#284348;color:#f0f7ee;padding:8px 12px;font:600 12px/1.3 system-ui;cursor:pointer;text-decoration:none}
+button.active{color:#193125;background:#d9e9c2;border-color:#d9e9c2}
+button:focus-visible,nav a:focus-visible{outline:2px solid white;outline-offset:2px}
+#status{margin:0 22px 12px;color:#dae5ce;min-height:19px;font-size:12px}
+#comparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;margin:0 22px 17px}
+.panel{position:relative;background:linear-gradient(#374f51,#182d31);height:540px;min-width:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.panel:nth-child(2){border-color:#c1cfa6}
+.panel canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+.panel canvas:active{cursor:grabbing}
+.overlay{position:absolute;left:13px;right:13px;top:12px;display:flex;justify-content:space-between;align-items:start;gap:8px;pointer-events:none}
+.panel-title{padding:9px 12px;background:#10292ce5;border-radius:8px;border:1px solid #708e807d;max-width:85%}
+.panel-title strong{display:block;font-size:17px;margin:0 0 3px}
+.panel-title span{display:block;color:#d0ded0;font-size:12px}
+.factor{font:700 13px ui-monospace,monospace;background:#163032ed;border:1px solid #809d91b0;padding:7px 9px;border-radius:8px;white-space:nowrap}
+.metrics{position:absolute;bottom:11px;left:12px;right:12px;display:flex;justify-content:center;flex-wrap:wrap;gap:6px;pointer-events:none}
+.metric{padding:6px 9px;border-radius:7px;background:#14282fe8;border:1px solid #6f908274;font:600 11px ui-monospace,monospace}
+#description{padding:0 22px 24px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.details{border:1px solid #537c737a;border-radius:11px;padding:15px 17px;background:#172e32}
+.details h2{font-size:16px;color:var(--gold);margin:0 0 6px}
+.details p{color:#c4d6ca;margin:0 0 8px}
+.details p:last-child{margin:0}
+footer{padding:0 22px 24px;color:#aabfb4;font-size:12px;line-height:1.5}
+footer a{color:#dff2ca}
+#notice{background:#223637;border:1px solid #577b6f;border-radius:8px;padding:9px 12px;margin-bottom:12px}
+@media(max-width:850px){#comparison,#description{grid-template-columns:1fr}.panel{height:470px}}
+@media(max-width:520px){header{padding:14px}#comparison{margin:0 10px 16px}.panel{height:400px}#description{padding:0 10px 18px}#status{margin:0 12px 12px}.overlay{left:8px;right:8px;top:8px}.panel-title strong{font-size:14px}.panel-title span{font-size:11px}}
+</style>
+</head>
+<body>
+<header>
+ <div>
+  <h1>Humvee D3.1 · procedural A contra B</h1>
+  <p>Mateix Humvee militar, mateixa mida <strong>175%</strong> i mateixa càmera. Dues maneres diferents de construir-lo sense carregar cap GLB. Gira qualsevol model: les dues vistes es mouran alhora.</p>
+ </div>
+ <nav aria-label="Controls de les comparatives">
+  <button id="viewThree" class="active" type="button">3/4</button>
+  <button id="viewSide" type="button">Lateral</button>
+  <button id="viewFront" type="button">Frontal</button>
+  <button id="viewRear" type="button">Posterior</button>
+  <button id="spin" type="button" aria-pressed="false">Gira automàticament</button>
+  <button id="wire" type="button" aria-pressed="false">Triangles</button>
+  <button id="zoomIn" type="button" aria-label="Apropa la càmera">＋</button>
+  <button id="zoomOut" type="button" aria-label="Allunya la càmera">−</button>
+  <a href="humvee-scale-proves.html">Mides amb el jugador</a>
+  <a href="proves.html">Totes les proves</a>
+ </nav>
+</header>
+<p id="status" role="status">Preparant les dues geometries procedurals…</p>
+<main id="comparison" aria-label="Comparació visual de Humvee procedural">
+ <section id="methodA" class="panel" aria-label="Model A construït amb primitives Three.js">
+  <div class="overlay">
+   <div class="panel-title"><strong>A · Reconstrucció paramètrica</strong><span>Caixes, plans, extrusions i cilindres editables</span></div>
+   <span class="factor">175%</span>
+  </div><div class="metrics" id="metricsA"></div>
+ </section>
+ <section id="methodB" class="panel" aria-label="Model B amb geometria exacta convertida en codi">
+  <div class="overlay">
+   <div class="panel-title"><strong>B · Geometria exacta en JS</strong><span>Vèrtexs i normals del D3.1 aprovat, sense GLB</span></div>
+   <span class="factor">175%</span>
+  </div><div class="metrics" id="metricsB"></div>
+ </section>
+</main>
+<div id="description">
+ <article class="details"><h2>Mètode A · Procedural pur</h2>
+  <p>El model es recrea amb geometries <code>BoxGeometry</code>, <code>CylinderGeometry</code>, perfils extruïts i quadrilàters construïts amb codi. L'objectiu és conservar la silueta i les proporcions del Humvee, simplificant-ne les superfícies.</p>
+  <p><strong>Punt fort:</strong> les portes, la cabina, les rodes o els para-xocs es poden redimensionar canviant paràmetres de codi. <strong>Limitació:</strong> és una interpretació del D3.1, no una reproducció exacta dels seus triangles.</p>
+ </article>
+ <article class="details"><h2>Mètode B · Geometria convertida</h2>
+  <p>Les coordenades exactes dels triangles, normals, materials i UV del GLB definitiu s'han extret i codificat en un mòdul JavaScript. El navegador els converteix directament en <code>THREE.BufferGeometry</code>, amb els vidres i les rodes A4.3.</p>
+  <p><strong>Punt fort:</strong> geometria visualment idèntica a l'aprovada. <strong>Limitació:</strong> modificar-ne les proporcions o alguns detalls requereix editar molts vèrtexs o regenerar les dades.</p>
+ </article>
+</div>
+<footer>
+ <div id="notice">El vehicle de la partida <strong>no canvia</strong>: el joc continua utilitzant el GLB definitiu D3.1 a escala 175%. Aquesta pàgina només serveix per comparar les dues alternatives procedurals abans de decidir res.</div>
+ <p>Ambdues variants comparteixen els mateixos controls de càmera i il·luminació. Les xifres de triangles i mides provenen de les malles realment generades. El mètode B no descarrega cap fitxer GLB: el material original està inclòs en el codi JavaScript.</p>
+</footer>
+<script type="module">
+import * as THREE from './vendor/three-r186.module.mjs';
+import {createHumveeMethodA,loadHumveeMethodB,describeHumvee3D} from './src/humvee-procedural-models.mjs?v=procedural-d31-v1';
+
+const views=[],status=document.querySelector('#status');
+let yaw=-2.27,elevation=.30,spin=false,wire=false,zoom=1;
+let drag=null,baseHalfHeight=5.6;
+const controls=['viewThree','viewSide','viewFront','viewRear'];
+function setAngle(id,angle,height){
+ yaw=angle;elevation=height;setSpin(false);
+ for(const key of controls)document.getElementById(key).classList.toggle('active',key===id);
+}
+function setSpin(value){
+ spin=value;document.getElementById('spin').classList.toggle('active',value);
+ document.getElementById('spin').setAttribute('aria-pressed',String(value));
+}
+document.getElementById('viewThree').onclick=()=>setAngle('viewThree',-2.27,.30);
+document.getElementById('viewSide').onclick=()=>setAngle('viewSide',-Math.PI/2,.13);
+document.getElementById('viewFront').onclick=()=>setAngle('viewFront',-Math.PI,.13);
+document.getElementById('viewRear').onclick=()=>setAngle('viewRear',0,.13);
+document.getElementById('spin').onclick=()=>setSpin(!spin);
+document.getElementById('wire').onclick=()=>{
+ wire=!wire;document.getElementById('wire').classList.toggle('active',wire);
+ document.getElementById('wire').setAttribute('aria-pressed',String(wire));
+ for(const {obj} of views)obj.traverse(node=>{
+  if(node.isMesh && node.material){
+   if(Array.isArray(node.material))node.material.forEach(m=>m.wireframe=wire);
+   else node.material.wireframe=wire;
+  }
+ });
+};
+document.getElementById('zoomIn').onclick=()=>zoom=Math.max(.55,zoom*.85);
+document.getElementById('zoomOut').onclick=()=>zoom=Math.min(2.3,zoom/ .85);
+function ground(scene){
+ const plane=new THREE.Mesh(new THREE.PlaneGeometry(50,50),
+  new THREE.MeshStandardMaterial({color:0x2a403e,roughness:.95}));
+ plane.rotation.x=-Math.PI/2;plane.position.y=-.06;plane.receiveShadow=true;scene.add(plane);
+ const grid=new THREE.GridHelper(26,26,0x769188,0x48615d);
+ grid.position.y=.009;scene.add(grid);
+}
+function create(id,object){
+ const card=document.getElementById(id);
+ const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.6));
+ renderer.setClearColor(0x000000,0);
+ renderer.outputColorSpace=THREE.SRGBColorSpace;
+ renderer.toneMapping=THREE.ACESFilmicToneMapping;
+ renderer.toneMappingExposure=1.33;
+ renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ card.insertBefore(renderer.domElement,card.firstChild);
+ const scene=new THREE.Scene();
+ scene.add(new THREE.HemisphereLight(0xffffff,0x768a80,2.2));
+ const sun=new THREE.DirectionalLight(0xffffff,2.25);
+ sun.position.set(-8,12,-6);sun.castShadow=true;
+ sun.shadow.mapSize.set(1024,1024);
+ sun.shadow.camera.left=-13;sun.shadow.camera.right=13;
+ sun.shadow.camera.top=13;sun.shadow.camera.bottom=-13;
+ sun.shadow.normalBias=.025;scene.add(sun);
+ ground(scene);
+ scene.add(object);
+ const initial=new THREE.Box3().setFromObject(object);
+ object.position.y-=initial.min.y; // identical ground contact for both versions
+ const camera=new THREE.OrthographicCamera(-6,6,6,-6,.1,120);
+ const stat=describeHumvee3D(object);
+ const idTarget=id==='methodA'?'metricsA':'metricsB';
+ const block=document.getElementById(idTarget);
+ const rounded=n=>Number(n).toFixed(2).replace('.',',');
+ for(const val of [
+  Math.round(stat.triangles).toLocaleString('ca')+' triangles',
+  stat.meshes+' malles',
+  rounded(stat.width)+' × '+rounded(stat.height)+' × '+rounded(stat.length)+' m (ample × alt × llarg)'
+ ]){
+  const tag=document.createElement('span');tag.className='metric';tag.textContent=val;
+  block.appendChild(tag);
+ }
+ let pointer=null;
+ const canvas=renderer.domElement;
+ canvas.addEventListener('pointerdown',e=>{
+  pointer={id:e.pointerId,x:e.clientX,y:e.clientY};
+  canvas.setPointerCapture(e.pointerId);
+ });
+ canvas.addEventListener('pointermove',e=>{
+  if(!pointer||e.pointerId!==pointer.id)return;
+  yaw+=(e.clientX-pointer.x)*.008;
+  elevation=THREE.MathUtils.clamp(elevation+(e.clientY-pointer.y)*.004,.05,1.10);
+  pointer.x=e.clientX;pointer.y=e.clientY;setSpin(false);
+ });
+ canvas.addEventListener('pointerup',e=>{if(pointer?.id===e.pointerId)pointer=null;});
+ canvas.addEventListener('pointercancel',()=>pointer=null);
+ canvas.addEventListener('wheel',e=>{
+  e.preventDefault();zoom=Math.min(2.3,Math.max(.55,zoom*(e.deltaY>0?1.06:.94)));
+ },{passive:false});
+ views.push({card,renderer,scene,camera,obj:object,stat});
+}
+function draw(){
+ requestAnimationFrame(draw);
+ if(spin)yaw+=.0034;
+ const sx=Math.sin(yaw),cx=Math.cos(yaw),se=Math.sin(elevation),ce=Math.cos(elevation);
+ const maxHalfHeight=Math.max(baseHalfHeight,...views.map(v=>{
+  const aspect=Math.max(.1,v.card.clientWidth/Math.max(1,v.card.clientHeight));
+  return 5.6/Math.min(1,aspect);
+ }));
+ for(const {card,renderer,scene,camera} of views){
+  const w=Math.max(1,card.clientWidth),h=Math.max(1,card.clientHeight);
+  const renderSize=renderer.getSize(new THREE.Vector2());
+  if(renderSize.x!==w||renderSize.y!==h)renderer.setSize(w,h,false);
+  const half=maxHalfHeight*zoom;
+  camera.left=-half*w/h;camera.right=half*w/h;
+  camera.top=half;camera.bottom=-half;
+  camera.updateProjectionMatrix();
+  const targetY=1.90,distance=27;
+  camera.position.set(sx*ce*distance,targetY+se*distance,cx*ce*distance);
+  camera.lookAt(0,targetY,0);
+  renderer.render(scene,camera);
+ }
+}
+try{
+ const A=createHumveeMethodA(THREE);
+ create('methodA',A);
+ status.textContent='Mètode A preparat. Generant les dades exactes de la versió B…';
+ const factoryB=await loadHumveeMethodB(THREE);
+ const B=factoryB.create();
+ create('methodB',B);
+ status.textContent='A i B preparats al 175%. Mateixa càmera, materials independents i cap GLB carregat. Gira amb el ratolí o selecciona una vista.';
+ const [statA,statB]=views.map(x=>x.stat);
+ if(statB.triangles!==2534)throw Error('La variant B no coincideix amb el D3.1 definitiu');
+ console.info('Procedural Humvee comparison', {A:statA,B:statB});
+}catch(err){
+ status.textContent='Error en preparar la comparació: '+err.message;
+ console.error('Humvee A/B:',err);
+}
+draw();
+</script>
+</body>
+</html>
