@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hunter: Arxipèlag · Humvee D — quatre variants</title>
+<title>Hunter: Arxipèlag · Humvee D3 — simetria i quatre reduccions</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -17,6 +17,7 @@ button:focus-visible,a:focus-visible{outline:2px solid #d9fad0;outline-offset:2p
 .stats{display:flex;gap:10px;flex-wrap:wrap;padding:1px 18px 12px;font-size:12px;color:#cadad3}
 .stat{background:#23383b;padding:5px 9px;border-radius:6px}
 #models{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:0 18px 16px}
+.card.featured{grid-column:1/-1;height:350px;border-color:#a2c6a4}
 .card{border:1px solid #5e7d73;min-width:0;background:linear-gradient(#2b444e,#17292f);border-radius:11px;overflow:hidden;position:relative;height:360px}
 .card canvas{width:100%;height:100%;touch-action:none;display:block;cursor:grab}
 .card canvas:active{cursor:grabbing}
@@ -33,8 +34,8 @@ footer a{color:#c9e9bb}
 </head>
 <body>
 <header>
-  <div><h1>Humvee D · quatre variants refinades</h1>
-  <p>Quatre iteracions reals sobre la mateixa malla GLB D de 2.499 triangles, amb graella, portes i vidres revisats.</p></div>
+  <div><h1>Humvee D3 · simetria i portes netes</h1>
+  <p>A dalt, el D3 original intacte. A sota, quatre versions simètriques i cada vegada més lleugeres, amb els triangles de les portes substituïts visualment per quadrilàters nets.</p></div>
   <nav aria-label="Opcions de visualització">
     <button id="spin" class="active" type="button" aria-pressed="true">⏸ Gir automàtic</button>
     <button id="mesh" type="button" aria-pressed="false">Veure triangles</button>
@@ -45,20 +46,23 @@ footer a{color:#c9e9bb}
     <a class="control" href="proves.html">Totes les proves</a>
   </nav>
 </header>
-<section class="stats"><span class="stat">4 variants sobre el D</span><span class="stat">Mateixa malla base i mateixa càmera</span><span class="stat">Arrossega per girar · roda del ratolí per ampliar</span></section>
+<section class="stats"><span class="stat">D3 original + 4 iteracions</span><span class="stat">Simetria esquerra/dreta centrada</span><span class="stat">Triangles reals de cada malla · gira per comparar</span></section>
 <main id="models" aria-label="Comparació dels models Humvee"></main>
 <footer>
-  <p><strong>Mètode:</strong> totes les variants parteixen de <code>assets/humvee/humvee_D.glb</code>, decimat directament de l'original (2.499 triangles). La graella i les decoracions de portes són petites peces experimentals afegides a la vista 3D, sense reconstruir el xassís. Els vidres translúcids omplen els buits del model. Quan triem una versió, aquests afegits es podran consolidar en un GLB final. Les rodes segueixen integrades en la malla.</p>
+  <p><strong>Què es compara:</strong> el D3 original es mostra a dalt, sense cap transformació nova. Les quatre iteracions inferiors es calculen a partir dels triangles reals de <code>humvee_D.glb</code>: es reté una meitat, se'n retalla la superfície al pla central i es reflecteix exactament a l'altra banda. Les dues portes de cada costat es representen com a panells quadrangulars plans (dos triangles per porta). La reducció agrupa vèrtexs progressivament, preservant l'atles UV sempre que és possible. El comptador indica triangles de la malla principal; els guarniments superposats no s'hi inclouen.</p>
+  <p><strong>Prova de selecció:</strong> encara no s'ha substituït cap vehicle del joc. Aquests quatre nivells es generen al navegador per comparar-los abans de generar el GLB final.</p>
   <p>Model base: <a href="https://poly.pizza/m/Ebryot9iKM" target="_blank" rel="noopener">«Humvee» de madtrollstudio</a> · <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>. Simplificacions geomètriques adaptades per a Hunter: Arxipèlag. No s'han substituït els vehicles del joc.</p>
 </footer>
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { deriveSymmetricD3 } from './src/humvee-d3-geometry.mjs';
 const variants=[
- {id:'D1',title:'D1 · Clàssic',file:'assets/humvee/humvee_D.glb',faces:2499,vertices:1498,desc:'7 ranures A · portes discretes · vidres amplis',grille:'classic',doors:'classic',tint:0x9ebbb7},
- {id:'D2',title:'D2 · Militar',file:'assets/humvee/humvee_D.glb',faces:2499,vertices:1498,desc:'Graella profunda · portes protegides · vidres amplis',grille:'deep',doors:'reinforced',tint:0x91b2a8},
- {id:'D3',title:'D3 · Perfil net',file:'assets/humvee/humvee_D.glb',faces:2499,vertices:1498,desc:'Barres fines · motllures lleugeres · vidres amplis',grille:'slim',doors:'fine',tint:0xa3bfc0},
- {id:'D4',title:'D4 · Fidel a l’A',file:'assets/humvee/humvee_D.glb',faces:2499,vertices:1498,desc:'Graella perfilada · manetes/frontisses A · vidres amplis',grille:'faithful',doors:'faithful',tint:0x98b3a9}
+ {id:'D3',title:'D3 · Original (referència)',faces:2499,vertices:1498,desc:'D3 anterior sense modificar: 2.499 triangles',reference:true,grille:'slim',doors:'fine',tint:0xa3bfc0},
+ {id:'D3.1',title:'D3.1 · Simetria precisa',budget:2200,stage:0,desc:'Primer refinament: simetria i panells de porta quadrangulars',grille:'slim',doors:'fine',tint:0xa3bfc0},
+ {id:'D3.2',title:'D3.2 · Reducció suau',budget:1900,stage:1,desc:'Menys facetes a rodes i detalls, silueta preservada',grille:'slim',doors:'fine',tint:0xa3bfc0},
+ {id:'D3.3',title:'D3.3 · Reducció mitjana',budget:1600,stage:2,desc:'Plans principals i cabina simètrics, menys geometria',grille:'slim',doors:'fine',tint:0xa3bfc0},
+ {id:'D3.4',title:'D3.4 · Reducció forta',budget:1300,stage:3,desc:'Opció més econòmica; avaluar la pèrdua de detalls',grille:'slim',doors:'fine',tint:0xa3bfc0}
 ];
 const root=document.getElementById('models');
 const loader=new GLTFLoader();
@@ -156,61 +160,133 @@ function upgradeDetails(v){
  }
  return g;
 }
+function collectTriangleVertices(scene){
+ scene.updateMatrixWorld(true);
+ const triangles=[];
+ scene.traverse(mesh=>{
+  if(!mesh.isMesh)return;
+  const geometry=mesh.geometry,attr=geometry.getAttribute('position'),uv=geometry.getAttribute('uv'),normal=geometry.getAttribute('normal'),index=geometry.index;
+  const normalMatrix=new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld);
+  const total=index?index.count:attr.count;
+  const material=mesh.material;
+  for(let i=0;i+2<total;i+=3){
+   const face=[];
+   for(let j=0;j<3;j++){
+    const k=index?index.getX(i+j):i+j;
+    const p=new THREE.Vector3().fromBufferAttribute(attr,k).applyMatrix4(mesh.matrixWorld);
+    const n=normal?new THREE.Vector3().fromBufferAttribute(normal,k).applyNormalMatrix(normalMatrix):new THREE.Vector3(0,1,0);
+    face.push({p:p.toArray(),uv:uv?[uv.getX(k),uv.getY(k)]:[0,0],n:n.toArray()});
+   }
+   triangles.push(face);
+  }
+ });
+ return triangles;
+}
+function trianglesToGeometry(triangles){
+ const p=[],uv=[],n=[];
+ for(const face of triangles)for(const v of face){
+  p.push(...v.p);uv.push(...v.uv);n.push(...v.n);
+ }
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));
+ g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+ g.setAttribute('normal',new THREE.Float32BufferAttribute(n,3));
+ g.computeBoundingSphere();
+ return g;
+}
+function doorQuadrangles(){
+ const g=new THREE.Group();g.name='replacedDoorFacetsWithQuadrangles';
+ const m=new THREE.MeshStandardMaterial({color:0x697353,roughness:.92,metalness:.02,
+  side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+ // A quadrilateral is rendered by two coplanar triangles, not four raised facets.
+ for(const side of [-1,1]){
+  const z=side*1.150;
+  for(const [minX,maxX] of [[-.785,-.035],[.045,.790]]){
+   g.add(quad([[minX,.87,z],[maxX,.87,z],[maxX,1.277,z],[minX,1.277,z]],m.clone()));
+  }
+ }
+ return g;
+}
+const loaderPromise=new Promise((resolve,reject)=>{
+ loader.load('assets/humvee/humvee_D.glb',resolve,undefined,reject);
+});
+let preparedPromise=null;
+function loadDerived(){
+ if(!preparedPromise)preparedPromise=loaderPromise.then(gltf=>{
+  const source=gltf.scene;
+  source.updateMatrixWorld(true);
+  const bounds=new THREE.Box3().setFromObject(source);
+  const center=bounds.getCenter(new THREE.Vector3());
+  const meshes=[];source.traverse(o=>{if(o.isMesh)meshes.push(o);});
+  if(!meshes.length)throw Error('The D GLB has no mesh');
+  const referenceMaterial=(Array.isArray(meshes[0].material)?meshes[0].material[0]:meshes[0].material);
+  const triangles=collectTriangleVertices(source);
+  const reduced=deriveSymmetricD3(triangles,center.z,[2200,1900,1600,1300]);
+  if(reduced.some((v,i)=>v.faces>=2499||(i>0&&v.faces>=reduced[i-1].faces))){
+   throw Error('The four derived models must each have fewer triangles than the previous one and original D3');
+  }
+  return {source,center,referenceMaterial,reduced};
+ });
+ return preparedPromise;
+}
 function createCard(v){
- const card=document.createElement('section');card.className='card';
+ const card=document.createElement('section');card.className='card'+(v.reference?' featured':'');
  const tag=document.createElement('div');tag.className='tag';
  const name=document.createElement('strong');name.textContent=v.title;
- const meta=document.createElement('small');meta.textContent=v.faces.toLocaleString('ca')+' triangles · '+v.vertices.toLocaleString('ca')+' vèrtexs';
+ const meta=document.createElement('small');meta.textContent=v.reference?'2.499 triangles · D3 original':'Objectiu: menys de '+v.budget.toLocaleString('ca')+' triangles';
  const desc=document.createElement('small');desc.textContent=v.desc;
  tag.append(name,meta,desc);card.append(tag);
- const status=document.createElement('div');status.className='state';status.textContent='Carregant el GLB…';card.append(status);
+ const status=document.createElement('div');status.className='state';status.textContent='Carregant i preparant la geometria…';card.append(status);
  root.append(card);
  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
- renderer.setPixelRatio(DPR);
- renderer.outputColorSpace=THREE.SRGBColorSpace;
- renderer.toneMapping=THREE.ACESFilmicToneMapping;
- renderer.toneMappingExposure=1.25;
- renderer.setClearColor(0x000000,0);
- card.insertBefore(renderer.domElement,tag);
- const scene=new THREE.Scene();
- scene.add(new THREE.HemisphereLight(0xffffff,0x657767,2.7));
+ renderer.setPixelRatio(DPR);renderer.outputColorSpace=THREE.SRGBColorSpace;
+ renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;
+ renderer.setClearColor(0x000000,0);card.insertBefore(renderer.domElement,tag);
+ const scene=new THREE.Scene();scene.add(new THREE.HemisphereLight(0xffffff,0x657767,2.7));
  const light=new THREE.DirectionalLight(0xffffff,2.2);light.position.set(-5,8,7);scene.add(light);
  const light2=new THREE.DirectionalLight(0xd4d5c5,.55);light2.position.set(5,3,-4);scene.add(light2);
  const grid=new THREE.GridHelper(8,8,0x44616a,0x3c5156);grid.position.y=-.06;scene.add(grid);
  const camera=new THREE.PerspectiveCamera(39,1,.1,50);
  const group=new THREE.Group();scene.add(group);
- const vdata={card,renderer,scene,camera,group,panes:null,details:null,originalMaterials:[]};
- views.push(vdata);
+ const view={card,renderer,scene,camera,group,panes:null,details:null,doors:null,originalMaterials:[]};
+ views.push(view);
  const canvas=renderer.domElement;
- canvas.addEventListener('pointerdown', e=>{dragging=true;dragId=e.pointerId;dragX=e.clientX;dragY=e.clientY;canvas.setPointerCapture(e.pointerId);});
+ canvas.addEventListener('pointerdown',e=>{dragging=true;dragId=e.pointerId;dragX=e.clientX;dragY=e.clientY;canvas.setPointerCapture(e.pointerId);});
  canvas.addEventListener('pointermove',e=>{if(!dragging||dragId!==e.pointerId)return;rotation+=(e.clientX-dragX)*.009;elevation=THREE.MathUtils.clamp(elevation+(e.clientY-dragY)*.004,.06,1.20);dragX=e.clientX;dragY=e.clientY;stopSpin();});
  canvas.addEventListener('pointerup',e=>{if(dragId===e.pointerId)dragging=false;});
  canvas.addEventListener('pointercancel',e=>{if(dragId===e.pointerId)dragging=false;});
  canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=THREE.MathUtils.clamp(zoom+e.deltaY*.001,.66,1.65);},{passive:false});
- loader.load(v.file, gltf=>{
-  const obj=gltf.scene;
-  obj.traverse(o=>{if(!o.isMesh)return;
-   const source=Array.isArray(o.material)?o.material:[o.material];
-   const cloned=source.map(m=>m.clone());
-   o.material=Array.isArray(o.material)?cloned:cloned[0];
-   vdata.originalMaterials.push(...cloned);
-  });
-  group.add(obj);
-  const pane=windowPanes(v);group.add(pane);vdata.panes=pane;
-  const details=upgradeDetails(v);group.add(details);vdata.details=details;
-  const bounds=new THREE.Box3().setFromObject(obj);
-  const midpoint=bounds.getCenter(new THREE.Vector3());
-  // Use exact original coordinates and the same camera target for all panels.
-  group.position.set(-midpoint.x,-.0,-midpoint.z);
-  obj.traverse(o=>{if(o.isMesh){for(const m of (Array.isArray(o.material)?o.material:[o.material]))m.wireframe=meshMode;}});
+ loadDerived().then(({source,center,referenceMaterial,reduced})=>{
+  if(v.reference){
+   const obj=source.clone(true);
+   obj.traverse(o=>{if(!o.isMesh)return;
+    const materials=Array.isArray(o.material)?o.material:[o.material];
+    const cloned=materials.map(m=>m.clone());
+    o.material=Array.isArray(o.material)?cloned:cloned[0];
+    view.originalMaterials.push(...cloned);
+   });
+   group.add(obj);
+  }else{
+   const data=reduced[v.stage];
+   const material=referenceMaterial.clone();material.wireframe=meshMode;
+   group.add(new THREE.Mesh(trianglesToGeometry(data.triangles),material));
+   view.originalMaterials.push(material);
+   meta.textContent=data.faces.toLocaleString('ca')+' triangles de malla · −'+Math.round(100*(1-data.faces/2499))+'%';
+   const doors=doorQuadrangles();doors.position.z=center.z;group.add(doors);view.doors=doors;
+  }
+  const pane=windowPanes(v);pane.position.z=v.reference?0:center.z;group.add(pane);view.panes=pane;
+  const details=upgradeDetails(v);details.position.z=v.reference?0:center.z;group.add(details);view.details=details;
+  group.position.set(-center.x,0,-center.z);
+  for(const m of view.originalMaterials)m.wireframe=meshMode;
   status.classList.add('done');
- },undefined,e=>{status.textContent='No s’ha pogut carregar '+v.file;console.error(e);});
+ }).catch(err=>{status.textContent='No s’ha pogut preparar el model: '+err.message;console.error(err);});
 }
 function stopSpin(){spinning=false;const button=document.getElementById('spin');button.classList.remove('active');button.setAttribute('aria-pressed','false');button.textContent='▶ Gir automàtic';}
 variants.forEach(createCard);
 document.getElementById('spin').addEventListener('click',e=>{spinning=!spinning;e.currentTarget.classList.toggle('active',spinning);e.currentTarget.setAttribute('aria-pressed',String(spinning));e.currentTarget.textContent=spinning?'⏸ Gir automàtic':'▶ Gir automàtic';});
 document.getElementById('mesh').addEventListener('click',e=>{meshMode=!meshMode;e.currentTarget.classList.toggle('active',meshMode);e.currentTarget.setAttribute('aria-pressed',String(meshMode));for(const v of views){for(const m of v.originalMaterials)m.wireframe=meshMode;
  if(v.details)v.details.traverse(o=>{if(o.isMesh)o.material.wireframe=meshMode;});
+ if(v.doors)v.doors.traverse(o=>{if(o.isMesh)o.material.wireframe=meshMode;});
  if(v.panes)v.panes.visible=glassMode&&!meshMode;}});
 document.getElementById('glass').addEventListener('click',e=>{glassMode=!glassMode;e.currentTarget.classList.toggle('active',glassMode);e.currentTarget.setAttribute('aria-pressed',String(glassMode));for(const v of views)if(v.panes)v.panes.visible=glassMode&&!meshMode;});
 document.getElementById('front').addEventListener('click',()=>{rotation=-Math.PI/2;elevation=.21;stopSpin();});
