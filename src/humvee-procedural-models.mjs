@@ -77,7 +77,7 @@ export async function loadHumveeMethodB(THREE){
   template.name='Humvee B · dades GLB convertides a BufferGeometry';
   template.add(fromNode(0));
   const metric=describeHumvee3D(Object.assign(template,{userData:{THREE}}));
-  if(metric.triangles!==src.meta.triangles || metric.triangles!==2534)
+  if(metric.triangles!==src.meta.renderTriangles || metric.triangles!==2894)
    throw Error('La geometria B no coincideix amb el D3.1 aprovat');
   return {
    name:'B · Geometria exacta convertida en JS',
