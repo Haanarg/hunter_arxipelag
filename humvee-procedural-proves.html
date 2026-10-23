@@ -64,7 +64,7 @@ footer a{color:#dff2ca}
 <main id="comparison" aria-label="Comparació visual de Humvee procedural">
  <section id="methodA" class="panel" aria-label="Model A construït amb primitives Three.js">
   <div class="overlay">
-   <div class="panel-title"><strong>A · Reconstrucció paramètrica</strong><span>Caixes, plans, extrusions i cilindres editables</span></div>
+   <div class="panel-title"><strong>A · Reconstrucció paramètrica</strong><span>Maleter inclinat fins al sostre · sense vidre posterior</span></div>
    <span class="factor">175%</span>
   </div><div class="metrics" id="metricsA"></div>
  </section>
@@ -77,7 +77,7 @@ footer a{color:#dff2ca}
 </main>
 <div id="description">
  <article class="details"><h2>Mètode A · Procedural pur</h2>
-  <p>El model es recrea amb geometries <code>BoxGeometry</code>, <code>CylinderGeometry</code>, perfils extruïts i quadrilàters construïts amb codi. L'objectiu és conservar la silueta i les proporcions del Humvee, simplificant-ne les superfícies.</p>
+  <p>El model es recrea amb geometries <code>BoxGeometry</code>, <code>CylinderGeometry</code>, perfils extruïts i quadrilàters construïts amb codi. La part posterior ara té un <strong>maleter de xapa inclinada</strong> que baixa des del sostre fins a la cua, tancat per panells laterals triangulars, sense finestra posterior.</p>
   <p><strong>Punt fort:</strong> les portes, la cabina, les rodes o els para-xocs es poden redimensionar canviant paràmetres de codi. <strong>Limitació:</strong> és una interpretació del D3.1, no una reproducció exacta dels seus triangles.</p>
  </article>
  <article class="details"><h2>Mètode B · Geometria convertida</h2>
@@ -91,7 +91,7 @@ footer a{color:#dff2ca}
 </footer>
 <script type="module">
 import * as THREE from './vendor/three-r186.module.mjs';
-import {createHumveeMethodA,loadHumveeMethodB,describeHumvee3D} from './src/humvee-procedural-models.mjs?v=procedural-d31-v1';
+import {createHumveeMethodA,loadHumveeMethodB,describeHumvee3D} from './src/humvee-procedural-models.mjs?v=d31-a2-b3-20261023';
 
 const views=[],status=document.querySelector('#status');
 let yaw=-2.27,elevation=.30,spin=false,wire=false,zoom=1;
@@ -218,6 +218,14 @@ try{
  console.info('Procedural Humvee comparison', {A:statA,B:statB});
 }catch(err){
  status.textContent='Error en preparar la comparació: '+err.message;
+ const failed=document.getElementById('methodB');
+ if(!views.some(v=>v.card===failed)){
+  const warning=document.createElement('div');
+  warning.className='metric';
+  warning.style.cssText='position:absolute;top:45%;left:8%;right:8%;text-align:center;padding:15px;color:#ffe7d5;white-space:normal;background:#4b2626;border-color:#af6352;pointer-events:none';
+  warning.textContent='No s’ha pogut mostrar el model B: '+err.message;
+  failed.appendChild(warning);
+ }
  console.error('Humvee A/B:',err);
 }
 draw();
