@@ -72,6 +72,10 @@ function sourceTriangles(){
  assert.ok(vehicles.includes("cotxe:[3.65,6.45]"));
  assert.ok(vehicles.includes("g.userData.humveeModel='D3.1'"));
  assert.ok(read('src/rider.js').includes("humveeModel==='D3.1'"));
+ assert.ok(read('src/enemy-ai.js').includes("mkV('cotxe');attachEnemyCarCrew(g)"),
+  'Les patrulles enemigues també han de carregar el Humvee');
+ assert.ok(read('src/enemy-lod.js').includes("humvee?4.65:3.1"),
+  'El LOD de les patrulles ha de tenir la mida de la carrosseria nova');
  assert.ok(read('src/version.mjs').includes("'0.5.70'"));
  console.log('Humvee D3.1 175% game regression OK:',{
   original:mesh.faces,withoutTyres:noTires.triangles.length,
