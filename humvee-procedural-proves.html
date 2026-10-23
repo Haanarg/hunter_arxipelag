@@ -91,7 +91,7 @@ footer a{color:#dff2ca}
 </footer>
 <script type="module">
 import * as THREE from './vendor/three-r186.module.mjs';
-import {createHumveeMethodA,loadHumveeMethodB,describeHumvee3D} from './src/humvee-procedural-models.mjs?v=d31-a2-b3-20261023';
+import {createHumveeMethodA,loadHumveeMethodB,describeHumvee3D} from './src/humvee-procedural-models.mjs?v=d31-a2-b4-20261023';
 
 const views=[],status=document.querySelector('#status');
 let yaw=-2.27,elevation=.30,spin=false,wire=false,zoom=1;
@@ -152,7 +152,7 @@ function create(id,object){
  const initial=new THREE.Box3().setFromObject(object);
  object.position.y-=initial.min.y; // identical ground contact for both versions
  const camera=new THREE.OrthographicCamera(-6,6,6,-6,.1,120);
- const stat=describeHumvee3D(object);
+ const stat=describeHumvee3D(object,THREE);
  const idTarget=id==='methodA'?'metricsA':'metricsB';
  const block=document.getElementById(idTarget);
  const rounded=n=>Number(n).toFixed(2).replace('.',',');
