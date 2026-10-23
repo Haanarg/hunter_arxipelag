@@ -93,7 +93,7 @@ function sourceTriangles(){
   bootstrap.indexOf("else await loadLegacy()"),'Humvee must preload before vehicle factories');
  const vehicles=read('src/vehicles.js');
  assert.ok(vehicles.includes("window.HUNTER_HUMVEE_D31.create()"));
- assert.ok(vehicles.includes("cotxe:[3.65,6.45]"));
+ assert.ok(vehicles.includes("cotxe:[4.10,6.45]"));
  assert.ok(vehicles.includes("g.userData.humveeModel='D3.1'"));
  assert.ok(read('src/rider.js').includes("humveeModel==='D3.1'"));
  assert.ok(read('src/enemy-ai.js').includes("mkV('cotxe');attachEnemyCarCrew(g)"),
