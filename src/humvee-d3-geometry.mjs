@@ -11,7 +11,7 @@ function area(tri){
  const u=a.map((v,i)=>b[i]-v),v=a.map((x,i)=>c[i]-x);
  return Math.hypot(u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0])*.5;
 }
-export function positiveHalf(triangles,centerZ){
+export function positiveHalf(triangles,centerZ,{dropDoorFacets=false}={}){
  const result=[];
  for(const triangle of triangles){
   const input=triangle.map(v=>({p:[v.p[0],v.p[1],v.p[2]-centerZ],uv:[...v.uv],n:[...v.n]}));
@@ -31,7 +31,7 @@ export function positiveHalf(triangles,centerZ){
    const inDoor=tri.every(v=>v.p[1]>.87&&v.p[1]<1.277&&v.p[2]>1.05)
     &&([[-.785,-.035],[.045,.790]].some(([lo,hi])=>
       tri.every(v=>v.p[0]>lo&&v.p[0]<hi)));
-   if(area(tri)>1e-9&&!inDoor)result.push(tri);
+   if(area(tri)>1e-9&&(!dropDoorFacets||!inDoor))result.push(tri);
   }
  }
  return result;
@@ -111,8 +111,8 @@ function reduce(half,target,maxFaces){
  if(!best)throw Error('Triangle budget not reachable without damaging UV seams');
  return best;
 }
-export function deriveSymmetricD3(triangles,centerZ,limits=[2200,1900,1600,1300]){
- const half=positiveHalf(triangles,centerZ);
+export function deriveSymmetricD3(triangles,centerZ,limits=[2200,1900,1600,1300],options={}){
+ const half=positiveHalf(triangles,centerZ,options);
  const output=[];let upperBudget=Infinity;
  for(const requested of limits){
   const budget=Math.min(requested,upperBudget-1);
