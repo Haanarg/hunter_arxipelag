@@ -2,7 +2,7 @@
 // The source D GLB has been retired. This module uses the exact method-B
 // JavaScript BufferGeometry data to preserve the player scale preview
 // without any GLB or external loader requests.
-import {loadHumveeMethodB} from './humvee-procedural-models.mjs?v=d31-a2-b3-20261023';
+import {loadHumveeMethodB} from './humvee-procedural-models.mjs?v=d31-a2-b4-20261023';
 const D31_BASE_SCALE=1.75;
 let T=null;
 export async function loadApprovedHumveeD31(THREE){
