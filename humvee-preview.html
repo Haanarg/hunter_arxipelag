@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hunter: Arxipèlag · D3.1 — carrosseria neta</title>
+<title>Hunter: Arxipèlag · D3.1 — quatre portes i color original</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -45,8 +45,8 @@ footer a{color:#c9e9bb}
 </head>
 <body>
 <header>
-  <div><h1>Humvee D3.1 · neteja del xassís</h1>
-  <p>Comparació del D3.1 seleccionat amb la nova carrosseria sense retrovisors ni blindatge de les portes. Hem reajustat les superfícies laterals i tancat els buits visibles del darrere, mantenint les rodes A4.3 i l’antena.</p></div>
+  <div><h1>Humvee D3.1 · portes amb el color original</h1>
+  <p>Comparació del D3.1 seleccionat amb el D3.1 net. Ara hi ha dues portes diferenciades a cada costat, amb una junta vertical fina i el mateix color de l’atles original de la carrosseria. Es mantenen les rodes A4.3 i l’antena.</p></div>
   <nav aria-label="Opcions de visualització">
     <button id="spin" class="active" type="button" aria-pressed="true">⏸ Gir automàtic</button>
     <button id="mesh" type="button" aria-pressed="false">Veure triangles</button>
@@ -76,7 +76,7 @@ footer a{color:#c9e9bb}
   <p id="doorMessage" role="status">Vista ampliada d’una porta completa. Canvia entre porta davantera i posterior, apropa la vista si cal i selecciona les quatre cares originals que vols fusionar.</p>
 </section>
 <footer>
-  <p><strong>Neteja de carrosseria:</strong> sobre el D3.1 revisat, s’eliminen de la malla els retrovisors i les facetes de relleu de les portes. Les vores dels triangles s’intersequen amb el contorn de les portes abans de reconstruir-ne els panells coplanaris, amb el material i l’atles originals; això evita els forats que deixaria eliminar cares senceres. El tancament del darrere és una pell interior alineada amb el portó i el sostre inclinat que cobreix les obertures conservant els detalls originals que hi ha davant. Les rodes A4.3 i l’antena es mantenen.</p>
+  <p><strong>Neteja de carrosseria:</strong> sobre el D3.1 revisat, s’eliminen de la malla els retrovisors i les facetes de relleu de les portes. Les vores dels triangles s’intersequen amb el contorn abans de reconstruir dues portes independents per costat: cadascuna és un quadrilàter de dos triangles i hi ha una junta central molt fina. Totes les superfícies noves mostren la mateixa mostra UV de pintura que el xassís original, en lloc de la mostra pàl·lida anterior; això evita tant el color blanc com els forats que deixaria eliminar cares senceres. El tancament del darrere és una pell interior alineada amb el portó i el sostre inclinat que cobreix les obertures conservant els detalls originals que hi ha davant. Les rodes A4.3 i l’antena es mantenen.</p>
   <p><strong>Abast:</strong> previsualització reversible; no s’han substituït encara els models dels vehicles del joc ni s’ha generat un GLB definitiu.</p>
   <p>Model base: <a href="https://poly.pizza/m/Ebryot9iKM" target="_blank" rel="noopener">«Humvee» de madtrollstudio</a> · <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>. Simplificacions geomètriques adaptades per a Hunter: Arxipèlag. No s'han substituït els vehicles del joc.</p>
 </footer>
@@ -87,10 +87,10 @@ import { deriveSymmetricD3 } from './src/humvee-d3-geometry.mjs';
 import { HUMVEE_WHEEL_SPEC, removeOriginalTires, mergeFourDoorTriangles, sideDoorCandidate } from './src/humvee-d31-refinements.mjs';
 import { createTruckConcept } from './src/truck-concepts.mjs';
 import { createD31DoorInspector } from './src/humvee-d31-door-inspector.mjs';
-import { cleanSelectedD31 } from './src/humvee-d31-bodywork.mjs';
+import { cleanSelectedD31 } from './src/humvee-d31-bodywork.mjs?v=doors-20261023';
 const variants=[
  {id:'D3.1-selected',title:'D3.1 · Seleccionat',selected:true,revised:true,desc:'Referència anterior: retrovisors, relleus de portes i buits posteriors',grille:'slim',doors:'fine',tint:0xa3bfc0},
- {id:'D3.1-clean',title:'D3.1 · Carrosseria neta',clean:true,revised:true,desc:'Sense retrovisors · portes enrasades · darrere tancat',grille:'slim',doors:'fine',tint:0xa3bfc0}
+ {id:'D3.1-clean',title:'D3.1 · Carrosseria neta',clean:true,revised:true,desc:'Quatre portes amb color original · junta central · darrere tancat',grille:'slim',doors:'fine',tint:0xa3bfc0}
 ];
 const root=document.getElementById('models');
 const loader=new GLTFLoader();
