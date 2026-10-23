@@ -287,3 +287,23 @@ function bakeHumveeD31(baseBytes,geometryFns){
  }};
 }
 if(typeof module!=='undefined'&&module.exports)module.exports={bakeHumveeD31};
+if(typeof require==='function'&&typeof module!=='undefined'&&require.main===module){
+ (async()=>{
+  const fs=require('node:fs'),path=require('node:path');
+  const root=path.resolve(__dirname,'..');
+  const [geo,ref,patch]=await Promise.all([
+   import('../src/humvee-d3-geometry.mjs'),
+   import('../src/humvee-d31-refinements.mjs'),
+   import('../src/humvee-d31-selected-patch.mjs')
+  ]);
+  const input=fs.readFileSync(path.join(root,'assets/humvee/humvee_D.glb'));
+  const {bytes,summary}=bakeHumveeD31(input,{
+   deriveSymmetricD3:geo.deriveSymmetricD3,
+   removeOriginalTires:ref.removeOriginalTires,
+   flattenSelectedDoorPatchOnAllDoors:patch.flattenSelectedDoorPatchOnAllDoors
+  });
+  const output=path.join(root,'assets/humvee/humvee_D31_175.glb');
+  fs.writeFileSync(output,bytes);
+  console.log('Created baked Humvee D3.1:',output,summary);
+ })().catch(error=>{console.error(error);process.exitCode=1});
+}
