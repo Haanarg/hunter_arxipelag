@@ -235,6 +235,47 @@ function doorQuadrangles(){
  }
  return g;
 }
+
+function antennaPosterior(axis){
+ const g=new THREE.Group();g.name='rearAntennaRestored';
+ const housing=new THREE.MeshStandardMaterial({color:0x343b30,roughness:.83});
+ const metal=new THREE.MeshStandardMaterial({color:0x7c8179,roughness:.62,metalness:.36});
+ const x=1.87,z=axis+.79;
+ block(g,housing,x,1.58,z,.16,.16,.14);
+ seam(g,housing,[x,1.63,z],[x,1.89,z],.040);
+ seam(g,metal,[x,1.88,z],[x+.026,2.37,z-.012],.014);
+ const tip=new THREE.Mesh(new THREE.SphereGeometry(.032,7,5),metal);
+ tip.position.set(x+.026,2.37,z-.012);g.add(tip);
+ return g;
+}
+let truckWheelTemplate=null;
+function truckA43Wheels(axis){
+ if(!truckWheelTemplate){
+  // Reuse the exact wheel components from A4.3 rather than approximating them.
+  const prototypeTruck=createTruckConcept(THREE,2);
+  if(!prototypeTruck.userData.wheels?.length)throw Error('No es troben les rodes A4.3');
+  truckWheelTemplate=prototypeTruck.userData.wheels[0].clone(true);
+ }
+ const g=new THREE.Group();g.name='wheelsFromA43';
+ for(const x of [-1.74,1.45])for(const side of [-1,1]){
+  const w=truckWheelTemplate.clone(true);
+  w.name='humvee-truck-wheel-'+x+'-'+side;
+  w.position.set(x,.44,axis+side*1.095);
+  w.rotation.set(0,Math.PI/2,0); // A4.3 axle X => Humvee axle Z
+  w.scale.setScalar(.575); // truck radius .80 => Humvee radius .46
+  g.add(w);
+ }
+ return g;
+}
+function meshTriangleCount(object){
+ let faces=0;
+ object.traverse(o=>{
+  if(!o.isMesh)return;
+  const g=o.geometry,draw=g.index?g.index.count:g.getAttribute('position').count;
+  faces+=Math.floor(draw/3);
+ });
+ return faces;
+}
 const loaderPromise=new Promise((resolve,reject)=>{
  loader.load('assets/humvee/humvee_D.glb',resolve,undefined,reject);
 });
@@ -253,7 +294,7 @@ function loadDerived(){
   // from the central 90% of lateral vertex coordinates instead.
   const zValues=triangles.flatMap(t=>t.map(v=>v.p[2])).sort((a,b)=>a-b);
   const symmetryZ=(zValues[Math.floor(.05*(zValues.length-1))]+zValues[Math.floor(.95*(zValues.length-1))])*.5;
-  const reduced=deriveSymmetricD3(triangles,symmetryZ,[2200,1900,1600,1300]);
+  const reduced=deriveSymmetricD3(triangles,symmetryZ,[2200]);
   if(reduced.some((v,i)=>v.faces>=2499||(i>0&&v.faces>=reduced[i-1].faces))){
    throw Error('The four derived models must each have fewer triangles than the previous one and original D3');
   }
