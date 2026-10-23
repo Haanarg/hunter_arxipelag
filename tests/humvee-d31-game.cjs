@@ -80,10 +80,14 @@ function gltfFromBinary(){
   'B needs an olive fallback hull if the atlas cannot be loaded');
  assert.ok(AandB.includes('src.meta.renderTriangles??2894'),
   'B must count the four rendered wheel instances, not unique mesh data');
+ assert.ok(AandB.includes('describeHumvee3D(template,THREE)'),
+  'B must not store the THREE module namespace on template.userData');
+ assert.ok(!AandB.includes('userData:{THREE}') && !AandB.includes('userData.THREE='),
+  'Object3D.clone JSON-serializes userData: never store THREE there');
  const preview=read('humvee-procedural-proves.html');
  assert.ok(preview.includes('createHumveeMethodA(THREE)'));
  assert.ok(preview.includes('loadHumveeMethodB(THREE)'));
- assert.ok(preview.includes('d31-a2-b3-20261023'),
+ assert.ok(preview.includes('d31-a2-b4-20261023'),
   'Cache-bust the first faulty procedural B script on the live preview');
  assert.ok(preview.includes('warning.textContent='),
   'A failed B must show an actionable error rather than a blank card');
