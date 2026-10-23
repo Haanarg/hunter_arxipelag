@@ -60,31 +60,52 @@ function panel(a,b,c,d){
 function reversedPanel(a,b,c,d){
  return panel(a,d,c,b);
 }
+// Original Humvee GLB atlas: the large olive/khaki body panels of BOTH
+// lower doors use the flat main-body swatch (U < .25, V > .75).
+// Prior hard-coded UVs (.607–.689) sampled a different palette swatch,
+// giving noticeably pale/white-looking replacement panels.
+export const D31_DOOR_SKIN_UV=Object.freeze({
+ body:Object.freeze([.126,.885]),
+ seam:Object.freeze([.375,.885])
+});
 function newDoorPanels(axis){
  const result=[];
- const doors=[[-.825,.006],[.006,.824]];
+ const bottom=.758,top=1.272;
+ const minX=-.825,maxX=.824;
+ // A narrow flush door shut-line is essential: previously the two quads
+ // met without a visible joint and looked like ONE large unbroken panel.
+ const center=-.001,halfSeam=.009;
+ const ranges=[
+  [minX,center-halfSeam,'front'],
+  [center+halfSeam,maxX,'rear']
+ ];
  for(const side of [-1,1]){
-  for(const [x0,x1] of doors){
-   // Flush skin slopes slightly with the original lower-door contour.
-   const z0=axis+side*1.125,z1=axis+side*1.102;
-   const n=[0,0,side],baseU=x0<0?.607:.647;
-   const vertices=[
-    vertex(x0,.758,z0,baseU,.868,n),
-    vertex(x1,.758,z0,baseU+.042,.868,n),
-    vertex(x1,1.272,z1,baseU+.042,.933,n),
-    vertex(x0,1.272,z1,baseU,.933,n)
+  const n=[0,0,side];
+  const z0=axis+side*1.125,z1=axis+side*1.102;
+  const pushQuad=(x0,x1,uv)=>{
+   // All four corners sample the SAME flat swatch in the source atlas.
+   // Therefore these faces render identically to the original door paint
+   // and cannot interpolate across the white/pale atlas region.
+   const [u,v]=uv;
+   const p=[
+    vertex(x0,bottom,z0,u,v,n),
+    vertex(x1,bottom,z0,u,v,n),
+    vertex(x1,top,z1,u,v,n),
+    vertex(x0,top,z1,u,v,n)
    ];
-   result.push(...(side===1?
-    panel(vertices[0],vertices[1],vertices[2],vertices[3]):
-    panel(vertices[0],vertices[3],vertices[2],vertices[1])));
-  }
+   result.push(...(side===1?panel(...p):reversedPanel(...p)));
+  };
+  for(const [x0,x1] of ranges)pushQuad(x0,x1,D31_DOOR_SKIN_UV.body);
+  // Slim recessed-looking dark seam occupies the actual join. It is
+  // geometry IN the body surface, not an added armour/cover panel.
+  pushQuad(center-halfSeam,center+halfSeam,D31_DOOR_SKIN_UV.seam);
  }
  return result;
 }
 function rearFill(axis){
  const out=[];
- const n=[1,0,0],u=.644,v=.898;
- const V=(x,y,z)=>vertex(x,y,axis+z,u+(z+1)*.023,v+(y-.7)*.039,n);
+ const n=[1,0,0],u=D31_DOOR_SKIN_UV.body[0],v=D31_DOOR_SKIN_UV.body[1];
+ const V=(x,y,z)=>vertex(x,y,axis+z,u,v,n);
  // Backing surfaces sit just INBOARD of the original rear fascia. Exterior
  // tail lamps and original seams remain visible; gaps show matching bodywork.
  out.push(...reversedPanel(
