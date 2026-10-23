@@ -81,6 +81,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { deriveSymmetricD3 } from './src/humvee-d3-geometry.mjs';
 import { removeOriginalTires, mergeFourDoorTriangles, sideDoorCandidate } from './src/humvee-d31-refinements.mjs';
 import { createTruckConcept } from './src/truck-concepts.mjs';
+import { createD31DoorInspector } from './src/humvee-d31-door-inspector.mjs';
 const variants=[
  {id:'D3',title:'D3 · Original',reference:true,desc:'Referència sense canvis · 2.499 triangles',grille:'slim',doors:'fine',tint:0xa3bfc0},
  {id:'D3.1-before',title:'D3.1 · Abans',before:true,desc:'Comparació de la versió anterior, amb plaques verdes',grille:'slim',doors:'fine',tint:0xa3bfc0},
@@ -89,6 +90,8 @@ const variants=[
 const root=document.getElementById('models');
 const loader=new GLTFLoader();
 const views=[];
+let inspector=null;
+let revisedView=null;
 let rotation=-0.72, elevation=.35, zoom=1,spinning=true,meshMode=false,glassMode=true,dragging=false,dragX=0,dragY=0,dragId=-1;
 const DPR=Math.min(devicePixelRatio||1,2);
 function quad(points, material){
@@ -302,11 +305,36 @@ function loadDerived(){
  });
  return preparedPromise;
 }
+
+function initializeDoorInspector(view,material){
+ const host=document.getElementById('doorViewport');
+ const message=document.getElementById('doorMessage');
+ const syncMain=(triangles)=>{
+  view.triangleData=triangles;
+  view.baseMesh.geometry.dispose();
+  view.baseMesh.geometry=trianglesToGeometry(triangles);
+  view.meta.textContent=triangles.length.toLocaleString('ca')+' triangles xassís · '+meshTriangleCount(view.wheels)+' de rodes A4.3';
+ };
+ if(!inspector)inspector=createD31DoorInspector(THREE,{
+  host,message,geometryFromTriangles:trianglesToGeometry,sideDoorCandidate,
+  onMerge:(selected)=>{
+   const result=mergeFourDoorTriangles(view.triangleData,selected,view.axis);
+   syncMain(result.triangles);
+   return result;
+  },
+  onReset:()=>{
+   const triangles=view.initialTriangles.slice();
+   syncMain(triangles);
+   inspector.setGeometry(triangles,view.axis,material);
+  }
+ });
+ inspector.setGeometry(view.triangleData,view.axis,material);
+}
 function createCard(v){
  const card=document.createElement('section');card.className='card'+(v.reference?' featured':'');
  const tag=document.createElement('div');tag.className='tag';
  const name=document.createElement('strong');name.textContent=v.title;
- const meta=document.createElement('small');meta.textContent=v.reference?'2.499 triangles · D3 original':'Objectiu: menys de '+v.budget.toLocaleString('ca')+' triangles';
+ const meta=document.createElement('small');meta.textContent=v.reference?'2.499 triangles · D3 original':'Malla simètrica del D3.1';
  const desc=document.createElement('small');desc.textContent=v.desc;
  tag.append(name,meta,desc);card.append(tag);
  const status=document.createElement('div');status.className='state';status.textContent='Carregant i preparant la geometria…';card.append(status);
@@ -321,7 +349,7 @@ function createCard(v){
  const grid=new THREE.GridHelper(8,8,0x44616a,0x3c5156);grid.position.y=-.06;scene.add(grid);
  const camera=new THREE.PerspectiveCamera(39,1,.1,50);
  const group=new THREE.Group();scene.add(group);
- const view={card,renderer,scene,camera,group,panes:null,details:null,doors:null,originalMaterials:[]};
+ const view={card,renderer,scene,camera,group,panes:null,details:null,doors:null,antenna:null,wheels:null,baseMesh:null,triangleData:null,initialTriangles:null,axis:0,meta,originalMaterials:[]};
  views.push(view);
  const canvas=renderer.domElement;
  canvas.addEventListener('pointerdown',e=>{dragging=true;dragId=e.pointerId;dragX=e.clientX;dragY=e.clientY;canvas.setPointerCapture(e.pointerId);});
@@ -340,12 +368,23 @@ function createCard(v){
    });
    group.add(obj);
   }else{
-   const data=reduced[v.stage];
+   const data=reduced[0];
+   const working=v.revised?removeOriginalTires(data.triangles,symmetryZ):{triangles:data.triangles,removed:0};
    const material=referenceMaterial.clone();material.wireframe=meshMode;
-   group.add(new THREE.Mesh(trianglesToGeometry(data.triangles),material));
+   const mesh=new THREE.Mesh(trianglesToGeometry(working.triangles),material);
+   mesh.name='D31_optimized_chassis';group.add(mesh);view.baseMesh=mesh;
    view.originalMaterials.push(material);
-   meta.textContent=data.faces.toLocaleString('ca')+' triangles de malla · −'+Math.round(100*(1-data.faces/2499))+'%';
-   const doors=doorQuadrangles();doors.position.z=symmetryZ;group.add(doors);view.doors=doors;
+   view.triangleData=working.triangles.slice();view.initialTriangles=working.triangles.slice();view.axis=symmetryZ;
+   if(v.before){
+    const oldDoors=doorQuadrangles();oldDoors.position.z=symmetryZ;group.add(oldDoors);view.doors=oldDoors;
+    meta.textContent=data.faces.toLocaleString('ca')+' triangles de malla · plaques anteriors';
+   }else{
+    const wheels=truckA43Wheels(symmetryZ);group.add(wheels);view.wheels=wheels;
+    const antenna=antennaPosterior(symmetryZ);group.add(antenna);view.antenna=antenna;
+    meta.textContent=working.triangles.length.toLocaleString('ca')+' triangles de xassís · '+meshTriangleCount(wheels)+' de rodes A4.3';
+    revisedView=view;
+    initializeDoorInspector(view,material);
+   }
   }
   const pane=windowPanes(v);pane.position.z=v.reference?0:symmetryZ;group.add(pane);view.panes=pane;
   const details=upgradeDetails(v);details.position.z=v.reference?0:symmetryZ;group.add(details);view.details=details;
@@ -360,6 +399,8 @@ document.getElementById('spin').addEventListener('click',e=>{spinning=!spinning;
 document.getElementById('mesh').addEventListener('click',e=>{meshMode=!meshMode;e.currentTarget.classList.toggle('active',meshMode);e.currentTarget.setAttribute('aria-pressed',String(meshMode));for(const v of views){for(const m of v.originalMaterials)m.wireframe=meshMode;
  if(v.details)v.details.traverse(o=>{if(o.isMesh)o.material.wireframe=meshMode;});
  if(v.doors)v.doors.traverse(o=>{if(o.isMesh)o.material.wireframe=meshMode;});
+ if(v.wheels)v.wheels.traverse(o=>{if(o.isMesh)o.material.wireframe=meshMode;});
+ if(v.antenna)v.antenna.traverse(o=>{if(o.isMesh)o.material.wireframe=meshMode;});
  if(v.panes)v.panes.visible=glassMode&&!meshMode;}});
 document.getElementById('glass').addEventListener('click',e=>{glassMode=!glassMode;e.currentTarget.classList.toggle('active',glassMode);e.currentTarget.setAttribute('aria-pressed',String(glassMode));for(const v of views)if(v.panes)v.panes.visible=glassMode&&!meshMode;});
 document.getElementById('front').addEventListener('click',()=>{rotation=-Math.PI/2;elevation=.21;stopSpin();});
@@ -376,6 +417,7 @@ function draw(){
   v.camera.lookAt(0,1.02,0);
   v.renderer.render(v.scene,v.camera);
  }
+ if(inspector)inspector.render();
 }
 draw();
 </script>
