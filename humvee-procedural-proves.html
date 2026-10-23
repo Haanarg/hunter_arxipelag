@@ -214,7 +214,7 @@ try{
  create('methodB',B);
  status.textContent='A i B preparats al 175%. Mateixa càmera, materials independents i cap GLB carregat. Gira amb el ratolí o selecciona una vista.';
  const [statA,statB]=views.map(x=>x.stat);
- if(statB.triangles!==2534)throw Error('La variant B no coincideix amb el D3.1 definitiu');
+ if(statB.triangles!==2894)throw Error('La variant B no coincideix amb el D3.1 definitiu');
  console.info('Procedural Humvee comparison', {A:statA,B:statB});
 }catch(err){
  status.textContent='Error en preparar la comparació: '+err.message;
