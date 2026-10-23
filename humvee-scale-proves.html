@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hunter: Arxipèlag · Humvee D3.1 · escales 184%, 200% i 216%</title>
+<title>Hunter: Arxipèlag · Humvee D3.1 · escala definitiva 175%</title>
 <style>
 :root{color-scheme:dark;--accent:#c4e4ab;--ink:#eef5ec;--sub:#c2d0c7}
 *{box-sizing:border-box}
@@ -43,7 +43,7 @@ footer a{color:#d3e9b3}
 <header>
  <div>
   <h1>Humvee D3.1 · escala respecte al personatge</h1>
-  <p>Quatre comparatives amb el <strong>protagonista real</strong> del joc. La nova mida de referència del Humvee és el <strong>200%</strong>: també provem el 216% i el 184% (±8% respecte a aquesta base). A la quarta hi ha el <strong>cotxe militar actual</strong> al costat del jugador i del Humvee al 200%. Les tres primeres comparteixen escala visual i totes conserven les proporcions reals.</p>
+  <p>Quatre comparatives amb el <strong>protagonista real</strong> del joc. El Humvee s'ha incorporat al joc al <strong>175%</strong>. També es mostren dues variants de comprovació, 189% i 161% (±8% respecte a aquesta base). La quarta compara el <strong>model militar anterior</strong> amb el jugador i el Humvee definitiu al 175%. Les tres primeres comparteixen escala visual i totes conserven les proporcions reals.</p>
  </div>
  <nav aria-label="Controls de visualització">
   <button id="three" type="button" class="active">3/4</button>
@@ -58,9 +58,9 @@ footer a{color:#d3e9b3}
 <main id="cards" aria-label="Quatre comparatives de mida del Humvee"></main>
 <section id="metrics" aria-label="Dimensions mesurades"></section>
 <footer>
- <p><strong>Escala física de referència:</strong> s'ha conservat la transformació real del jugador de <code>HUNTER_CHARACTERS.createPlayer</code> (unitScale 1,2 i factor final 2/3) i el vehicle <code>cotxe</code> de <code>HUNTER_VEHICLES.createFactory</code> (factor del joc 1,3). Les mesures mostrades són extretes de la geometria 3D visible, amb l'antena inclosa en el nou Humvee.</p>
- <p><strong>Referència del Humvee:</strong> el 200% correspon a una escala geomètrica 2,00 respecte al D3.1 original; el 216% i el 184% són un ±8% proporcional. La càmera manté la mateixa escala visual a les escenes A, B i C, i adapta l'enquadrament a l'amplada de cada pantalla. La quarta escena encaixa els tres models sense retallar-ne cap.</p>
- <p><strong>Només és una prova de mida:</strong> el Humvee nou conserva les quatre portes aplanades i les rodes A4.3. Encara no s'ha substituït el cotxe del joc: primer cal decidir l'escala definitiva.</p>
+ <p><strong>Escala física de referència:</strong> s'ha conservat la transformació real del jugador de <code>HUNTER_CHARACTERS.createPlayer</code> (unitScale 1,2 i factor final 2/3) i el <strong>cotxe militar anterior</strong>, conservat només com a referència visual (factor 1,3). Les mesures mostrades són extretes de la geometria 3D visible, amb l'antena inclosa en el nou Humvee.</p>
+ <p><strong>Referència del Humvee:</strong> el 175% correspon a una escala geomètrica 1,75 respecte al D3.1 original; el 189% i el 161% són un ±8% proporcional. La càmera manté la mateixa escala visual a les escenes A, B i C, i adapta l'enquadrament a l'amplada de cada pantalla. La quarta escena encaixa els tres models sense retallar-ne cap.</p>
+ <p><strong>Només és una prova de mida:</strong> el Humvee nou conserva les quatre portes aplanades i les rodes A4.3. El cotxe militar del joc s'ha substituït pel D3.1 al 175%. Les altres dues escales són únicament comparacions.</p>
 </footer>
 <script src="src/palette.js"></script>
 <script src="src/player-model.js"></script>
@@ -71,13 +71,13 @@ footer a{color:#d3e9b3}
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {loadApprovedHumveeD31,createApprovedHumveeD31} from './src/humvee-d31-scale-preview.mjs';
-const BASE_HUMVEE_SCALE=2;
+const BASE_HUMVEE_SCALE=1.75;
 const RELATIVE_VARIATION=.08;
 const variations=[
- {id:'A',title:'A · Nova mida de referència',scale:BASE_HUMVEE_SCALE,description:'Jugador real + D3.1 al 200%'},
- {id:'B',title:'B · Un poc més gran',scale:BASE_HUMVEE_SCALE*(1+RELATIVE_VARIATION),description:'Jugador real + D3.1 al 216% (+8% de la nova base)'},
- {id:'C',title:'C · Un poc més petit',scale:BASE_HUMVEE_SCALE*(1-RELATIVE_VARIATION),description:'Jugador real + D3.1 al 184% (−8% de la nova base)'},
- {id:'D',title:'D · Cotxe actual vs Humvee nou',scale:BASE_HUMVEE_SCALE,wide:true,description:'Cotxe actual del joc · jugador real · Humvee nou al 200%'}
+ {id:'A',title:'A · Nova mida de referència',scale:BASE_HUMVEE_SCALE,description:'Jugador real + D3.1 al 175%'},
+ {id:'B',title:'B · Un poc més gran',scale:BASE_HUMVEE_SCALE*(1+RELATIVE_VARIATION),description:'Jugador real + D3.1 al 189% (+8% de la base)'},
+ {id:'C',title:'C · Un poc més petit',scale:BASE_HUMVEE_SCALE*(1-RELATIVE_VARIATION),description:'Jugador real + D3.1 al 161% (−8% de la base)'},
+ {id:'D',title:'D · Model anterior vs Humvee al joc',scale:BASE_HUMVEE_SCALE,wide:true,description:'Cotxe militar anterior · jugador real · Humvee definitiu al 175%'}
 ];
 const cards=document.getElementById('cards');
 const status=document.getElementById('status');
@@ -148,11 +148,11 @@ function label(parent,variation){
  const sub=document.createElement('small');sub.textContent=variation.description;
  tag.append(head,sub);
  const percent=document.createElement('div');percent.className='percent';
- percent.textContent=variation.wide?'200% vs joc':Math.round(variation.scale*100)+'%';
+ percent.textContent=variation.wide?'175% vs antic':Math.round(variation.scale*100)+'%';
  top.append(tag,percent);parent.append(top);
  const key=document.createElement('div');key.className='legend';
  key.innerHTML=variation.wide?
-  '<span class="old"><b></b>Cotxe actual (1,3×)</span><span><b></b>Jugador real</span><span class="new"><b></b>Humvee nou (2,0×)</span>':
+  '<span class="old"><b></b>Cotxe anterior (1,3×)</span><span><b></b>Jugador real</span><span class="new"><b></b>Humvee al joc (1,75×)</span>':
   '<span><b></b>Jugador real</span><span class="new"><b></b>Humvee D3.1 ('+variation.scale.toFixed(2).replace('.',',')+'×)</span>';
  parent.append(key);
 }
@@ -222,11 +222,11 @@ try{
  const approved=await loadApprovedHumveeD31(THREE,GLTFLoader);
  for(const v of variations)views.push(createCard(v,approved));
  addMeasure('Jugador (escala del joc)',views[0].objects.player);
- addMeasure('Nou D3.1 al 200%',views[0].objects.new);
- addMeasure('Nou D3.1 al 216%',views[1].objects.new);
- addMeasure('Nou D3.1 al 184%',views[2].objects.new);
- addMeasure('Cotxe actual del joc',views[3].objects.old);
- status.textContent='Comparatives 184%, 200% i 216% carregades. Arrossega una escena per girar totes les càmeres. A, B i C comparteixen zoom; D enquadra els tres models.';
+ addMeasure('Nou D3.1 al 175%',views[0].objects.new);
+ addMeasure('Nou D3.1 al 189%',views[1].objects.new);
+ addMeasure('Nou D3.1 al 161%',views[2].objects.new);
+ addMeasure('Cotxe militar anterior',views[3].objects.old);
+ status.textContent='Comparatives 161%, 175% i 189% carregades. Arrossega una escena per girar totes les càmeres. A, B i C comparteixen zoom; D enquadra els tres models.';
 }catch(error){
  status.textContent='No s’han pogut preparar els models: '+error.message;
  console.error(error);
