@@ -3,7 +3,7 @@
 // B: original approved GLB vertices/normals/UV and scene graph regenerated
 //    directly into THREE.BufferGeometry from lossless JS data. NO .glb request.
 // Neither is substituted into the game until the user selects one.
-import {D31_PROCEDURAL_DATA} from './humvee-procedural-b-data.mjs';
+import {D31_PROCEDURAL_DATA} from './humvee-procedural-b-data.mjs?v=d31-a2-b3';
 const S=1.75;
 const PARAM={
  width:5.22,length:8.15,
@@ -35,15 +35,30 @@ export async function loadHumveeMethodB(THREE){
  if(cached)return cached;
  cached=(async()=>{
   const src=D31_PROCEDURAL_DATA;
-  const url='data:image/png;base64,'+src.png;
-  const texture=await new THREE.TextureLoader().loadAsync(url);
-  texture.flipY=false;texture.colorSpace=THREE.SRGBColorSpace;
+  // Some browsers/CSP profiles reject data:image URLs. Match the working
+  // game loader: make a local Blob URL, load it, then revoke it.
+  // A failed texture must not make the entire B model disappear.
+  let texture=null;
+  const bytes=Uint8Array.from(atob(src.png),char=>char.charCodeAt(0));
+  const pngURL=URL.createObjectURL(new Blob([bytes],{type:'image/png'}));
+  try{
+   texture=await new THREE.TextureLoader().loadAsync(pngURL);
+   texture.flipY=false;
+   texture.colorSpace=THREE.SRGBColorSpace;
+  }catch(error){
+   console.warn('Humvee B: atles PNG no carregat, mostrant carrosseria oliva de reserva',error);
+  }finally{
+   URL.revokeObjectURL(pngURL);
+  }
   const materials=src.materials.map(m=>{
    const p=m.pbr||{},f=p.baseColorFactor||[1,1,1,1];
    const color=new THREE.Color().setRGB(f[0],f[1],f[2],THREE.LinearSRGBColorSpace);
+   // GLB atlas only exists for the hull. Keep a colored hull even if the
+   // PNG is blocked or corrupted instead of white/transparent geometry.
+   if(p.baseColorTexture&&!texture)color.setHex(0x697653);
    const opt={color,metalness:p.metallicFactor??0,
     roughness:p.roughnessFactor??1,side:m.doubleSided?THREE.DoubleSide:THREE.FrontSide};
-   if(p.baseColorTexture)opt.map=texture;
+   if(p.baseColorTexture&&texture)opt.map=texture;
    if(m.alphaMode==='BLEND'||f[3]<1){
     opt.transparent=true;opt.opacity=f[3];opt.depthWrite=false;
    }
@@ -77,8 +92,12 @@ export async function loadHumveeMethodB(THREE){
   template.name='Humvee B · dades GLB convertides a BufferGeometry';
   template.add(fromNode(0));
   const metric=describeHumvee3D(Object.assign(template,{userData:{THREE}}));
-  if(metric.triangles!==src.meta.renderTriangles || metric.triangles!==2894)
-   throw Error('La geometria B no coincideix amb el D3.1 aprovat');
+  const expected=src.meta.renderTriangles??2894;
+  // Baked GLB: 2,534 unique triangles plus repeated wheel meshes
+  // rendered four times -> 2,894 real on-screen triangles.
+  if(!Number.isFinite(metric.triangles)||Math.abs(metric.triangles-expected)>.01)
+   throw Error('La geometria B no coincideix amb el D3.1 aprovat: '+
+    metric.triangles+' / '+expected);
   return {
    name:'B · Geometria exacta convertida en JS',
    meta:metric,
@@ -183,9 +202,10 @@ export function createHumveeMethodA(THREE){
   block(model,lights,[.53,.31,.055],[x,1.73,-4.055],'Headlight');
   block(model,red,[.52,.31,.06],[x,1.53,4.06],'Rear-lamp');
  }
- // Rear utility cargo section with a slightly raised deck.
+ // Rear cargo body: enclosed wedge from the roof down to the tail.
+ // At z=1.49, the roof starts its descent at y=3.09; at z=4.01
+ // the solid rear lid finishes at y=2.08. There is NO rear window.
  block(model,body,[3.84,.64,2.53],[0,1.74,2.84],'Rear-utility-shell');
- block(model,hood,[3.83,.13,2.55],[0,2.08,2.84],'Rear-flat-deck');
  block(model,frame,[3.70,.28,.28],[0,1.05,4.11],'Rear-bumper');
  // Hollow-looking four-door cabin: 2 separate doors per side with seams.
  block(model,frame,[3.30,.14,3.19],[0,1.22,.04],'Cabin-floor');
@@ -214,16 +234,41 @@ export function createHumveeMethodA(THREE){
  // Tapered windshield and rear window; front of vehicle faces -Z.
  surface(model,glass,[[-1.49,2.28,-1.55],[1.49,2.28,-1.55],
    [1.47,2.95,-1.25],[-1.47,2.95,-1.25]],'Windshield');
- surface(model,glass,[[1.46,2.27,1.63],[-1.46,2.27,1.63],
-   [-1.45,2.96,1.49],[1.45,2.96,1.49]],'Rear-window');
+ // Continuous opaque tailback: a real sloped roof, not a window cover.
+ // The broad slope meets the rear edge of the cabin roof without gaps.
+ const cargoTopZ=1.49,cargoTailZ=4.05;
+ const cargoRoofY=3.09,cargoTailY=2.075;
+ surface(model,roof,[
+  [-1.73,cargoRoofY,cargoTopZ],
+  [ 1.73,cargoRoofY,cargoTopZ],
+  [ 1.90,cargoTailY,cargoTailZ],
+  [-1.90,cargoTailY,cargoTailZ]
+ ],'Rear-cargo-sloping-roof');
+ // Solid triangular metal panels on both sides close the cargo space.
+ // Their upper edges follow the slope; the thick angled seams give the
+ // body a continuous, robust profile rather than a "covered window".
  for(const sign of [-1,1]){
+  const x=sign*1.815;
+  surface(model,body,[
+   [x,2.06,cargoTopZ],
+   [x,cargoRoofY,cargoTopZ],
+   [sign*1.90,cargoTailY,cargoTailZ],
+   [x,2.06,cargoTopZ]
+  ],'Rear-cargo-solid-wedge-'+sign);
+  shaft(model,frame,
+   [sign*1.73,cargoRoofY,cargoTopZ],
+   [sign*1.90,cargoTailY,cargoTailZ],
+   .070,8,'Rear-cargo-angled-edge-'+sign);
+  block(model,shadow,[.11,.13,2.55],
+   [sign*1.88,2.01,2.78],'Rear-cargo-side-sill-'+sign);
+ }
+ // Tailgate closes the wedge at the rear, behind the ramp.
+ block(model,body,[3.79,.20,.14],[0,2.005,4.02],'Rear-cargo-tailgate-top');
+ for(const sign of [-1,1])
   shaft(model,frame,[sign*1.53,2.22,-1.59],
    [sign*1.47,3.02,-1.26],.065,8,'Windscreen-pillar');
-  shaft(model,frame,[sign*1.53,2.22,1.68],
-   [sign*1.47,3.02,1.49],.065,8,'Rear-cabin-pillar');
- }
  block(model,roof,[3.48,.11,.14],[0,3.13,-1.39],'Front-roof-rail');
- block(model,roof,[3.48,.11,.14],[0,3.13,1.54],'Rear-roof-rail');
+ block(model,roof,[3.48,.11,.14],[0,3.13,1.51],'Rear-roof-to-cargo-seam');
  // Four real A4.3-style wheels at the correct approved dimensions.
  const steering=[],rolling=[];
  for(const z of PARAM.wheelCenters)for(const side of [-1,1]){
