@@ -1,7 +1,7 @@
 // Hunter: Arxipèlag — baked Humvee D3.1 runtime (approved at 175%).
 // This reader loads ONLY the final GLB: no original source mesh, decimation,
 // mirroring, texture-UV patching, or procedural truck/wheel rebuild at start.
-// The original humvee_D.glb is retained for the preview/editor until QA.
+// The legacy source model is retained for the editor until the player confirms QA.
 export const HUNTER_HUMVEE_GAME_SCALE=1.75;
 export const HUNTER_HUMVEE_BAKED_FILE='assets/humvee/humvee_D31_175.glb';
 const EXPECTED_BODY_TRIANGLES=1686;
