@@ -9,7 +9,7 @@ import {runtimeScripts} from './runtime-scripts.mjs';
 import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs';
 import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
-import {GAME_VERSION} from './version.mjs?v=0.5.72';
+import {GAME_VERSION} from './version.mjs?v=0.5.73';
 import {createTruckConcept} from './truck-concepts.mjs';
 import {createFamilyC1Iteration} from './civilian-car-c1-iterations.mjs';
 window.HUNTER_CIVIL_C1A=createFamilyC1Iteration;
@@ -52,18 +52,20 @@ try {
   const THREE = await import('../vendor/three-r186.module.mjs');
   THREE.ColorManagement.enabled = true;
   window.THREE = THREE;
-  // El model militar definitiu es prepara una vegada abans de generar el món.
-  // No fem servir cap loader extern: el GLB/atles D3.1 es llegeix del joc.
-  // Si falla la càrrega (p. ex. fitxer incomplet durant un desplegament),
-  // el vehicle recupera temporalment la geometria anterior sense aturar el joc.
+  // El model D3.1 del cotxe militar és ara la versió procedural B.
+  // La malla, normals, UV i textura es creen a partir de dades JavaScript
+  // una sola vegada; no es demana cap GLB durant la partida.
+  // Conservar el GLB definitiu al repositori fins a validar la prova al joc.
+  // Si les dades no es poden preparar, mantenim la geometria clàssica
+  // de reserva per no impedir l'inici de la partida.
   try {
-    const {prepareHumveeD31Runtime}=await import('./humvee-d31-runtime.mjs?v=0.5.72');
+    const {prepareHumveeD31Runtime}=await import('./humvee-d31-runtime.mjs?v=0.5.73');
     window.HUNTER_HUMVEE_D31=await prepareHumveeD31Runtime(THREE,{vehicleScale:1.3});
-    console.info('Humvee D3.1 a escala 175% carregat al joc',
+    console.info('Humvee D3.1 procedural B · 175% carregat al joc',
       window.HUNTER_HUMVEE_D31.dimensions);
   } catch (humveeError) {
     window.HUNTER_HUMVEE_D31=null;
-    console.warn('No es pot preparar el Humvee D3.1; geometria anterior de reserva',humveeError);
+    console.warn('No es pot preparar el Humvee B; geometria clàssica de reserva',humveeError);
   }
   // El bundle inclou els scripts clàssics en el mateix ordre i preserva
   // les variables globals de la versió anterior. Només fem UNA petició.
