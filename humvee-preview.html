@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hunter: Arxipèlag · Humvee D3 — simetria i quatre reduccions</title>
+<title>Hunter: Arxipèlag · Humvee D3.1 — portes, antena i rodes</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -29,13 +29,24 @@ footer{color:#b8d0c5;font-size:12px;line-height:1.5;padding:0 18px 24px}
 footer a{color:#c9e9bb}
 @media(max-width:1100px){#models{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:660px){#models{grid-template-columns:1fr}.card{height:320px}header{padding:12px}#models{padding:0 10px 14px}.stats{padding:0 10px 12px}h1{font-size:19px}}
+#doorLab{margin:0 18px 22px;padding:14px;border:1px solid #6c8a7f;border-radius:12px;background:#1d3336}
+#doorLab .labTop{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+#doorLab h2{font-size:17px;margin:0 0 6px}
+#doorLab .labTop p{font-size:12px;line-height:1.5}
+#selectedCount{font:700 13px ui-monospace,monospace;background:#243f3e;border:1px solid #63877a;border-radius:8px;padding:8px 12px;white-space:nowrap}
+.labTools{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.labTools button:disabled{opacity:.45;cursor:not-allowed}
+#doorViewport{height:330px;position:relative;border:1px solid #658279;border-radius:10px;background:#20373e;overflow:hidden}
+#doorViewport canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+#doorMessage{font-size:12px;color:#cfdfd7;margin:10px 0 0}
+@media(max-width:660px){#doorLab{margin:0 10px 18px}#doorViewport{height:290px}}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/"}}</script>
 </head>
 <body>
 <header>
-  <div><h1>Humvee D3 · simetria i portes netes</h1>
-  <p>A dalt, el D3 original intacte. A sota, quatre versions simètriques i cada vegada més lleugeres, amb els triangles interiors de les portes substituïts per quadrilàters plans.</p></div>
+  <div><h1>Humvee D3.1 · portes, rodes i antena</h1>
+  <p>Comparació entre el D3 original, el D3.1 anterior i el D3.1 revisat amb l’antena posterior i les rodes del camió militar. Pots seleccionar quatre cares reals d’una porta per fusionar-les.</p></div>
   <nav aria-label="Opcions de visualització">
     <button id="spin" class="active" type="button" aria-pressed="true">⏸ Gir automàtic</button>
     <button id="mesh" type="button" aria-pressed="false">Veure triangles</button>
@@ -46,23 +57,34 @@ footer a{color:#c9e9bb}
     <a class="control" href="proves.html">Totes les proves</a>
   </nav>
 </header>
-<section class="stats"><span class="stat">D3 original + 4 iteracions</span><span class="stat">Simetria esquerra/dreta centrada</span><span class="stat">Triangles reals de cada malla · gira per comparar</span></section>
+<section class="stats"><span class="stat">D3 / D3.1 / D3.1 revisat</span><span class="stat">Rodes A4.3 escalades al Humvee</span><span class="stat">Selecció interactiva de cares de porta</span></section>
 <main id="models" aria-label="Comparació dels models Humvee"></main>
+<section id="doorLab" aria-label="Editor de la superfície de la porta">
+  <div class="labTop"><div><h2>Porta lateral · ampliació de la malla real</h2><p>Clica exactament <strong>4 triangles</strong> de la mateixa porta. El botó Fusiona substitueix aquestes cares (i les seves simètriques) per un sol rectangle de <strong>2 triangles</strong>. No afegeix cap placa verda.</p></div><span id="selectedCount">0 / 4 cares</span></div>
+  <div class="labTools">
+    <button id="inspectSide" type="button">Veure l’altra banda</button>
+    <button id="mergeFaces" type="button" disabled>Fusiona 4 triangles</button>
+    <button id="clearFaces" type="button">Neteja selecció</button>
+    <button id="resetD31" type="button">Restableix el D3.1</button>
+  </div>
+  <div id="doorViewport"><div class="state" id="doorStatus">Preparant vista de la porta…</div></div>
+  <p id="doorMessage" role="status">La modificació s’aplicarà a la vista del D3.1 revisat. La porta original continua disponible per comparar.</p>
+</section>
 <footer>
-  <p><strong>Què es compara:</strong> el D3 original es mostra a dalt, sense cap transformació nova. Les quatre iteracions inferiors es calculen a partir dels triangles reals de <code>humvee_D.glb</code>: es reté una meitat, se'n retalla la superfície al pla central i es reflecteix exactament a l'altra banda. Els triangles interiors originals de les dues portes de cada costat s’eliminen i es reemplacen per panells quadrangulars plans (dos triangles per porta). La reducció agrupa vèrtexs progressivament, preservant l'atles UV sempre que és possible. El comptador indica triangles de la malla principal; els guarniments superposats no s'hi inclouen.</p>
-  <p><strong>Prova de selecció:</strong> encara no s'ha substituït cap vehicle del joc. Aquests quatre nivells es generen al navegador per comparar-los abans de generar el GLB final.</p>
+  <p><strong>Prova D3.1:</strong> el vehicle revisat conserva la malla simètrica directament reduïda del GLB D. S’han eliminat les plaques verdes afegides a les portes. Les quatre rodes s’extreuen del mateix generador del camió A4.3, escalades i girades al nou eix; les cares dels pneumàtics antics es retiren de la malla. L’antena posterior és una reconstrucció geomètrica lleugera. A l’ampliació pots seleccionar i substituir cares reals de porta; no s’apliquen fusions arbitràries fins que confirmis els quatre triangles. El recompte de triangles diferencia la malla base dels afegits.</p>
+  <p><strong>Abast:</strong> només la web de proves; cap cotxe del joc ha estat modificat.</p>
   <p>Model base: <a href="https://poly.pizza/m/Ebryot9iKM" target="_blank" rel="noopener">«Humvee» de madtrollstudio</a> · <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>. Simplificacions geomètriques adaptades per a Hunter: Arxipèlag. No s'han substituït els vehicles del joc.</p>
 </footer>
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { deriveSymmetricD3 } from './src/humvee-d3-geometry.mjs';
+import { removeOriginalTires, mergeFourDoorTriangles, sideDoorCandidate } from './src/humvee-d31-refinements.mjs';
+import { createTruckConcept } from './src/truck-concepts.mjs';
 const variants=[
- {id:'D3',title:'D3 · Original (referència)',faces:2499,vertices:1498,desc:'D3 anterior sense modificar: 2.499 triangles',reference:true,grille:'slim',doors:'fine',tint:0xa3bfc0},
- {id:'D3.1',title:'D3.1 · Simetria precisa',budget:2200,stage:0,desc:'Primer refinament: simetria i panells de porta quadrangulars',grille:'slim',doors:'fine',tint:0xa3bfc0},
- {id:'D3.2',title:'D3.2 · Reducció suau',budget:1900,stage:1,desc:'Menys facetes a rodes i detalls, silueta preservada',grille:'slim',doors:'fine',tint:0xa3bfc0},
- {id:'D3.3',title:'D3.3 · Reducció mitjana',budget:1600,stage:2,desc:'Plans principals i cabina simètrics, menys geometria',grille:'slim',doors:'fine',tint:0xa3bfc0},
- {id:'D3.4',title:'D3.4 · Reducció forta',budget:1300,stage:3,desc:'Opció més econòmica; avaluar la pèrdua de detalls',grille:'slim',doors:'fine',tint:0xa3bfc0}
+ {id:'D3',title:'D3 · Original',reference:true,desc:'Referència sense canvis · 2.499 triangles',grille:'slim',doors:'fine',tint:0xa3bfc0},
+ {id:'D3.1-before',title:'D3.1 · Abans',before:true,desc:'Comparació de la versió anterior, amb plaques verdes',grille:'slim',doors:'fine',tint:0xa3bfc0},
+ {id:'D3.1-after',title:'D3.1 · Revisat',revised:true,desc:'Sense plaques verdes · antena posterior · pneumàtics A4.3',grille:'slim',doors:'fine',tint:0xa3bfc0}
 ];
 const root=document.getElementById('models');
 const loader=new GLTFLoader();
