@@ -9,7 +9,7 @@ import {runtimeScripts} from './runtime-scripts.mjs';
 import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs';
 import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
-import {GAME_VERSION} from './version.mjs?v=0.5.71';
+import {GAME_VERSION} from './version.mjs?v=0.5.72';
 import {createTruckConcept} from './truck-concepts.mjs';
 import {createFamilyC1Iteration} from './civilian-car-c1-iterations.mjs';
 window.HUNTER_CIVIL_C1A=createFamilyC1Iteration;
@@ -57,7 +57,7 @@ try {
   // Si falla la càrrega (p. ex. fitxer incomplet durant un desplegament),
   // el vehicle recupera temporalment la geometria anterior sense aturar el joc.
   try {
-    const {prepareHumveeD31Runtime}=await import('./humvee-d31-runtime.mjs?v=0.5.71');
+    const {prepareHumveeD31Runtime}=await import('./humvee-d31-runtime.mjs?v=0.5.72');
     window.HUNTER_HUMVEE_D31=await prepareHumveeD31Runtime(THREE,{vehicleScale:1.3});
     console.info('Humvee D3.1 a escala 175% carregat al joc',
       window.HUNTER_HUMVEE_D31.dimensions);
