@@ -16,19 +16,26 @@ export const HUMVEE_WHEEL_SPEC=Object.freeze({
 });
 function wheelVolume(t,axles,axis){
  const c=centroid(t),lateral=Math.abs(c[2]-axis);
- if(lateral<.47||lateral>1.34||c[1]<-.08||c[1]>1.13)return false;
+ if(lateral<.45||lateral>1.34||c[1]<-.08||c[1]>1.13)return false;
+ // Keep large cabin/body/fender polygons even when their centroid overlaps
+ // the wheel opening. The old tyre polygons are much more local.
  const xs=t.map(v=>v.p[0]),ys=t.map(v=>v.p[1]);
- // Wide lower body panels and the wheel arch itself are not tyres.
  if(Math.max(...xs)-Math.min(...xs)>.96||Math.max(...ys)-Math.min(...ys)>.96)return false;
- return axles.some(x=>{
-  const radius=Math.hypot(c[0]-x,c[1]-HUMVEE_WHEEL_SPEC.centerY);
-  const tread=lateral>=.70 && radius<=.595;
-  // Inner circular disc left over from the original hub / brake assembly.
-  const hub=lateral>=.47 && radius<=.435;
-  // Upper black tyre fragments sat above the previous .84 Y clipping limit.
-  const upper=lateral>=.77 && c[1]>=.84 && radius<=.615;
-  return tread||hub||upper;
- });
+ const nearWheel=axles.some(x=>
+  Math.hypot(c[0]-x,c[1]-HUMVEE_WHEEL_SPEC.centerY)<.615
+ );
+ if(!nearWheel)return false;
+ const uv=t.map(v=>v.uv).filter(u=>u&&Number.isFinite(u[0]));
+ if(uv.length===3){
+  // The source Humvee atlas has a dedicated dark tyre/hub patch at U=.29–.45.
+  // The olive wheel arch is mapped at U=.04–.20. Using the atlas prevents
+  // chopping off the fenders while removing old upper tread and inner discs.
+  const meanU=uv.reduce((sum,v)=>sum+v[0],0)/3;
+  return meanU>.265&&meanU<.49;
+ }
+ // Conservative fallback for meshes without UV attributes.
+ const radius=Math.min(...axles.map(x=>Math.hypot(c[0]-x,c[1]-HUMVEE_WHEEL_SPEC.centerY)));
+ return lateral>=.70&&radius<.53;
 }
 export function removeOriginalTires(triangles,axis,axles=HUMVEE_WHEEL_SPEC.axles){
  let removed=0;
