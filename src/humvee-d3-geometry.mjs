@@ -26,7 +26,12 @@ export function positiveHalf(triangles,centerZ){
   }
   for(let j=1;j<polygon.length-1;j++){
    const tri=[polygon[0],polygon[j],polygon[j+1]];
-   if(area(tri)>1e-9)result.push(tri);
+   // Replace interior lower-door facets with one clean quadrilateral per door.
+   // The eight replacement triangles are supplied as separate preview meshes.
+   const inDoor=tri.every(v=>v.p[1]>.87&&v.p[1]<1.277&&v.p[2]>1.05)
+    &&([[-.785,-.035],[.045,.790]].some(([lo,hi])=>
+      tri.every(v=>v.p[0]>lo&&v.p[0]<hi)));
+   if(area(tri)>1e-9&&!inDoor)result.push(tri);
   }
  }
  return result;
