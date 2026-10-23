@@ -297,11 +297,13 @@ function loadDerived(){
   // from the central 90% of lateral vertex coordinates instead.
   const zValues=triangles.flatMap(t=>t.map(v=>v.p[2])).sort((a,b)=>a-b);
   const symmetryZ=(zValues[Math.floor(.05*(zValues.length-1))]+zValues[Math.floor(.95*(zValues.length-1))])*.5;
-  const reduced=deriveSymmetricD3(triangles,symmetryZ,[2200]);
+  const reduced=deriveSymmetricD3(triangles,symmetryZ,[2200],{dropDoorFacets:true});
+  // Unlike the previous preview, keep the real door facets for interactive selection.
+  const editableD31=deriveSymmetricD3(triangles,symmetryZ,[2200],{dropDoorFacets:false});
   if(reduced.some((v,i)=>v.faces>=2499||(i>0&&v.faces>=reduced[i-1].faces))){
    throw Error('The four derived models must each have fewer triangles than the previous one and original D3');
   }
-  return {source,center,symmetryZ,referenceMaterial,reduced};
+  return {source,center,symmetryZ,referenceMaterial,reduced,editableD31};
  });
  return preparedPromise;
 }
@@ -357,7 +359,7 @@ function createCard(v){
  canvas.addEventListener('pointerup',e=>{if(dragId===e.pointerId)dragging=false;});
  canvas.addEventListener('pointercancel',e=>{if(dragId===e.pointerId)dragging=false;});
  canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=THREE.MathUtils.clamp(zoom+e.deltaY*.001,.66,1.65);},{passive:false});
- loadDerived().then(({source,center,symmetryZ,referenceMaterial,reduced})=>{
+ loadDerived().then(({source,center,symmetryZ,referenceMaterial,reduced,editableD31})=>{
   if(v.reference){
    const obj=source.clone(true);
    obj.traverse(o=>{if(!o.isMesh)return;
@@ -368,7 +370,7 @@ function createCard(v){
    });
    group.add(obj);
   }else{
-   const data=reduced[0];
+   const data=v.revised?editableD31[0]:reduced[0];
    const working=v.revised?removeOriginalTires(data.triangles,symmetryZ):{triangles:data.triangles,removed:0};
    const material=referenceMaterial.clone();material.wireframe=meshMode;
    const mesh=new THREE.Mesh(trianglesToGeometry(working.triangles),material);
