@@ -171,11 +171,9 @@ function createCard(variation,prepared){
  if(variation.wide){
   objects.old=makeOldCar();objects.player=makePlayer();
   objects.new=createApprovedHumveeD31(prepared,variation.scale);
-  objects.old.position.x=-5.2;objects.player.position.x=0;objects.new.position.x=5.2;
   scene.add(objects.old,objects.player,objects.new);
  }else{
   objects.player=makePlayer();objects.new=createApprovedHumveeD31(prepared,variation.scale);
-  objects.player.position.x=-1.70;objects.new.position.x=1.10;
   scene.add(objects.player,objects.new);
  }
  renderer.domElement.addEventListener('pointerdown',e=>{
@@ -190,7 +188,7 @@ function createCard(variation,prepared){
  });
  renderer.domElement.addEventListener('pointerup',e=>{if(drag?.id===e.pointerId)drag=null;});
  renderer.domElement.addEventListener('pointercancel',e=>{if(drag?.id===e.pointerId)drag=null;});
- return {card,renderer,scene,camera,objects};
+ return {card,renderer,scene,camera,objects,variation};
 }
 function setAngle(button,x,y){
  yaw=x;elevation=y;stopSpin();
@@ -229,7 +227,17 @@ try{
 function render(){
  requestAnimationFrame(render);
  if(spinning)yaw+=.003;
- for(const {card,renderer,scene,camera} of views){
+ for(const {card,renderer,scene,camera,objects,variation} of views){
+  // Place subjects along the right vector of the current camera.
+  // This keeps all THREE subjects legible even in exact side/front views.
+  const rx=Math.cos(yaw),rz=-Math.sin(yaw);
+  const slots=variation.wide?
+   [['old',-5.2],['player',0],['new',5.2]]:
+   [['player',-2],['new',1.30]];
+  for(const [name,position] of slots){
+   objects[name].position.x=position*rx;
+   objects[name].position.z=position*rz;
+  }
   const w=Math.max(1,card.clientWidth),h=Math.max(1,card.clientHeight);
   const size=renderer.getSize(new THREE.Vector2());
   if(size.x!==w||size.y!==h)renderer.setSize(w,h,false);
