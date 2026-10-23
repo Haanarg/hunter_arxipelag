@@ -135,11 +135,16 @@ window.HUNTER_RIDER=Object.freeze({
       if(car){
         // Seient esquerre, darrere del volant (C1A i cotxe utilitari).
         // Posicions físiques convertides al sistema del rider escalat.
-        const civil=v.t==='cotxe_civil',seatX=(civil?-.613:-.72)*sc,
-              seatY=(civil?1.14:1.22)*sc,
-              seatZ=(civil?-.60:.42)*sc,
-              steeringX=seatX,steeringY=(civil?1.66:1.91)*sc,
-              steeringZ=(civil?-.94:-.67)*sc,
+        const civil=v.t==='cotxe_civil',
+              humvee=!civil&&v.o?.userData?.humveeModel==='D3.1',
+              // The Humvee cabin is forward-facing -Z and wider than the
+              // previous military car. Rider and wheel now share this seat.
+              seatX=(civil?-.613:humvee?-.84:-.72)*sc,
+              seatY=(civil?1.14:humvee?1.24:1.22)*sc,
+              seatZ=(civil?-.60:humvee?-.26:.42)*sc,
+              steeringX=seatX,
+              steeringY=(civil?1.66:humvee?1.60:1.91)*sc,
+              steeringZ=(civil?-.94:humvee?-.87:-.67)*sc,
               invScale=1/riderScale;
         torso.position.set(seatX*invScale,seatY*invScale,seatZ*invScale);
         torso.rotation.x=-.05;
@@ -152,7 +157,7 @@ window.HUNTER_RIDER=Object.freeze({
                   steeringY*invScale,steeringZ*invScale),
                 elbow=shoulder.clone().lerp(hand,.50),
                 foot=vec((seatX+side*.20*sc)*invScale,
-                  .87*sc*invScale,(civil?-1.31:-.95)*sc*invScale),
+                  .87*sc*invScale,(civil?-1.31:humvee?-1.10:-.95)*sc*invScale),
                 knee=hip.clone().lerp(foot,.52);
           elbow.y-=.10*sc*invScale;
           knee.y+=.08*sc*invScale;knee.z+=.11*sc*invScale;
