@@ -35,7 +35,7 @@ footer a{color:#c9e9bb}
 <body>
 <header>
   <div><h1>Humvee D3 · simetria i portes netes</h1>
-  <p>A dalt, el D3 original intacte. A sota, quatre versions simètriques i cada vegada més lleugeres, amb els triangles de les portes substituïts visualment per quadrilàters nets.</p></div>
+  <p>A dalt, el D3 original intacte. A sota, quatre versions simètriques i cada vegada més lleugeres, amb els triangles interiors de les portes substituïts per quadrilàters plans.</p></div>
   <nav aria-label="Opcions de visualització">
     <button id="spin" class="active" type="button" aria-pressed="true">⏸ Gir automàtic</button>
     <button id="mesh" type="button" aria-pressed="false">Veure triangles</button>
@@ -49,7 +49,7 @@ footer a{color:#c9e9bb}
 <section class="stats"><span class="stat">D3 original + 4 iteracions</span><span class="stat">Simetria esquerra/dreta centrada</span><span class="stat">Triangles reals de cada malla · gira per comparar</span></section>
 <main id="models" aria-label="Comparació dels models Humvee"></main>
 <footer>
-  <p><strong>Què es compara:</strong> el D3 original es mostra a dalt, sense cap transformació nova. Les quatre iteracions inferiors es calculen a partir dels triangles reals de <code>humvee_D.glb</code>: es reté una meitat, se'n retalla la superfície al pla central i es reflecteix exactament a l'altra banda. Les dues portes de cada costat es representen com a panells quadrangulars plans (dos triangles per porta). La reducció agrupa vèrtexs progressivament, preservant l'atles UV sempre que és possible. El comptador indica triangles de la malla principal; els guarniments superposats no s'hi inclouen.</p>
+  <p><strong>Què es compara:</strong> el D3 original es mostra a dalt, sense cap transformació nova. Les quatre iteracions inferiors es calculen a partir dels triangles reals de <code>humvee_D.glb</code>: es reté una meitat, se'n retalla la superfície al pla central i es reflecteix exactament a l'altra banda. Els triangles interiors originals de les dues portes de cada costat s’eliminen i es reemplacen per panells quadrangulars plans (dos triangles per porta). La reducció agrupa vèrtexs progressivament, preservant l'atles UV sempre que és possible. El comptador indica triangles de la malla principal; els guarniments superposats no s'hi inclouen.</p>
   <p><strong>Prova de selecció:</strong> encara no s'ha substituït cap vehicle del joc. Aquests quatre nivells es generen al navegador per comparar-los abans de generar el GLB final.</p>
   <p>Model base: <a href="https://poly.pizza/m/Ebryot9iKM" target="_blank" rel="noopener">«Humvee» de madtrollstudio</a> · <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>. Simplificacions geomètriques adaptades per a Hunter: Arxipèlag. No s'han substituït els vehicles del joc.</p>
 </footer>
@@ -195,14 +195,20 @@ function trianglesToGeometry(triangles){
  return g;
 }
 function doorQuadrangles(){
- const g=new THREE.Group();g.name='replacedDoorFacetsWithQuadrangles';
- const m=new THREE.MeshStandardMaterial({color:0x697353,roughness:.92,metalness:.02,
+ const g=new THREE.Group();g.name='doorPanelsReplacingOldFacets';
+ const paint=new THREE.MeshStandardMaterial({color:0x697353,roughness:.92,metalness:.02,
   side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
- // A quadrilateral is rendered by two coplanar triangles, not four raised facets.
+ const trim=new THREE.MeshStandardMaterial({color:0x293129,roughness:.88});
+ // Remove interior door facets in the mesh reducer and replace them with
+ // four planar quadrangles, each made from exactly two coplanar triangles.
  for(const side of [-1,1]){
-  const z=side*1.150;
+  const z=side*1.185,outer=side*1.205;
   for(const [minX,maxX] of [[-.785,-.035],[.045,.790]]){
-   g.add(quad([[minX,.87,z],[maxX,.87,z],[maxX,1.277,z],[minX,1.277,z]],m.clone()));
+   g.add(quad([[minX,.87,z],[maxX,.87,z],[maxX,1.277,z],[minX,1.277,z]],paint.clone()));
+   // Very light lines and a small door handle, mirrored across the car.
+   seam(g,trim,[minX,.89,outer],[minX,1.265,outer],.006);
+   seam(g,trim,[maxX,.89,outer],[maxX,1.265,outer],.006);
+   block(g,trim,maxX-.16,1.244,outer,.095,.028,.022);
   }
  }
  return g;
