@@ -57,6 +57,9 @@ function vertex(x,y,z,u,v,normal){
 function panel(a,b,c,d){
  return [[a,b,c],[a,c,d]];
 }
+function reversedPanel(a,b,c,d){
+ return panel(a,d,c,b);
+}
 function newDoorPanels(axis){
  const result=[];
  const doors=[[-.825,.006],[.006,.824]];
@@ -84,22 +87,23 @@ function rearFill(axis){
  const V=(x,y,z)=>vertex(x,y,axis+z,u+(z+1)*.023,v+(y-.7)*.039,n);
  // Backing surfaces sit just INBOARD of the original rear fascia. Exterior
  // tail lamps and original seams remain visible; gaps show matching bodywork.
- out.push(...panel(
+ out.push(...reversedPanel(
   V(2.105,.704,-.905),V(2.105,.704,.905),
   V(2.117,1.293,.905),V(2.117,1.293,-.905)
  ));
  // Sloping upper rear deck: stops voids appearing between roof and tailgate.
- out.push(...panel(
+ out.push(...reversedPanel(
   V(2.112,1.28,-.915),V(2.112,1.28,.915),
   V(1.505,1.683,.902),V(1.505,1.683,-.902)
  ));
  // Tapered side returns: close the corners where roof and back meet the sides.
  for(const sign of [-1,1]){
   const z=sign;
-  out.push(...panel(
+  const points=[
    V(2.105,.738,z*.905),V(1.926,.738,z*.986),
    V(1.565,1.638,z*.911),V(2.105,1.289,z*.905)
-  ));
+  ];
+  out.push(...(sign>0?reversedPanel(...points):panel(...points)));
  }
  return out;
 }
@@ -120,8 +124,11 @@ export function cleanSelectedD31(triangles,axis){
   // Target the raised outer door skin only, never interior cabin structures.
   const outer=z>1.065 &&
    face.some(v=>Math.abs(v.p[2]-axis)>1.074);
-  const overlaps=face.some(v=>v.p[0]>doorMinX&&v.p[0]<doorMaxX&&
-   v.p[1]>doorBottom&&v.p[1]<doorTop);
+  const minX=Math.min(...face.map(v=>v.p[0]));
+  const maxX=Math.max(...face.map(v=>v.p[0]));
+  const minY=Math.min(...face.map(v=>v.p[1]));
+  const maxY=Math.max(...face.map(v=>v.p[1]));
+  const overlaps=maxX>doorMinX&&minX<doorMaxX&&maxY>doorBottom&&minY<doorTop;
   const roofOrWindow=c[1]>1.40;
   if(outer&&overlaps&&!roofOrWindow &&
     face.every(v=>Math.sign(v.p[2]-axis)===Math.sign(c[2]-axis))){
