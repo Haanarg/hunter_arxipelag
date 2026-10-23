@@ -65,9 +65,28 @@ function gltfFromBinary(){
  assert.ok(AandB.includes("new THREE.Float32BufferAttribute(rawFloats(part.position),3)"));
  assert.ok(!/\b(loadAsync|fetch)\s*\(\s*['"\x60][^'"\x60]*\.glb/.test(AandB),
   'The A/B runtime must not request an external GLB');
+ // A: the rear cargo is a genuinely sloped opaque top with solid wedge sides.
+ assert.ok(AandB.includes("'Rear-cargo-sloping-roof'"),
+  'Procedural A must slope the back cargo roof all the way to the tail');
+ assert.ok(AandB.includes("'Rear-cargo-solid-wedge-'"),
+  'Procedural A needs solid angular side panels');
+ assert.ok(AandB.includes("'Rear-cargo-angled-edge-'"));
+ assert.ok(!AandB.includes("'Rear-window'"),
+  'Procedural A must not have a rear window');
+ // B: broken atlas loads must not make the model disappear entirely.
+ assert.ok(AandB.includes('URL.createObjectURL(new Blob([bytes]'),
+  'B must use a browser-compatible PNG Blob URL');
+ assert.ok(AandB.includes('if(p.baseColorTexture&&!texture)color.setHex'),
+  'B needs an olive fallback hull if the atlas cannot be loaded');
+ assert.ok(AandB.includes('src.meta.renderTriangles??2894'),
+  'B must count the four rendered wheel instances, not unique mesh data');
  const preview=read('humvee-procedural-proves.html');
  assert.ok(preview.includes('createHumveeMethodA(THREE)'));
  assert.ok(preview.includes('loadHumveeMethodB(THREE)'));
+ assert.ok(preview.includes('d31-a2-b3-20261023'),
+  'Cache-bust the first faulty procedural B script on the live preview');
+ assert.ok(preview.includes('warning.textContent='),
+  'A failed B must show an actionable error rather than a blank card');
  assert.ok(read('proves.html').includes('href="humvee-procedural-proves.html"'));
  assert.ok(read('humvee-preview.html').includes('humvee-procedural-proves.html'));
  const scale=read('src/humvee-d31-scale-preview.mjs');
