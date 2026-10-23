@@ -36,10 +36,10 @@ footer a{color:#c9e9bb}
 #selectedCount{font:700 13px ui-monospace,monospace;background:#243f3e;border:1px solid #63877a;border-radius:8px;padding:8px 12px;white-space:nowrap}
 .labTools{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
 .labTools button:disabled{opacity:.45;cursor:not-allowed}
-#doorViewport{height:330px;position:relative;border:1px solid #658279;border-radius:10px;background:#20373e;overflow:hidden}
+#doorViewport{height:650px;max-width:920px;position:relative;border:1px solid #658279;border-radius:10px;background:#20373e;overflow:hidden}
 #doorViewport canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
 #doorMessage{font-size:12px;color:#cfdfd7;margin:10px 0 0}
-@media(max-width:660px){#doorLab{margin:0 10px 18px}#doorViewport{height:290px}}
+@media(max-width:660px){#doorLab{margin:0 10px 18px}#doorViewport{height:520px}}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/"}}</script>
 </head>
@@ -63,15 +63,19 @@ footer a{color:#c9e9bb}
   <div class="labTop"><div><h2>Porta lateral · ampliació de la malla real</h2><p>Clica exactament <strong>4 triangles</strong> de la mateixa porta. El botó Fusiona substitueix aquestes cares (i les seves simètriques) per un sol rectangle de <strong>2 triangles</strong>. No afegeix cap placa verda.</p></div><span id="selectedCount">0 / 4 cares</span></div>
   <div class="labTools">
     <button id="inspectSide" type="button">Veure l’altra banda</button>
+    <button id="inspectDoor" type="button">Porta davantera · canviar a posterior</button>
+    <button id="doorZoomIn" type="button">+ Apropar</button>
+    <button id="doorZoomOut" type="button">− Allunyar</button>
+    <button id="doorFit" type="button">Enquadrar porta</button>
     <button id="mergeFaces" type="button" disabled>Fusiona 4 triangles</button>
     <button id="clearFaces" type="button">Neteja selecció</button>
     <button id="resetD31" type="button">Restableix el D3.1</button>
   </div>
   <div id="doorViewport"><div class="state" id="doorStatus">Preparant vista de la porta…</div></div>
-  <p id="doorMessage" role="status">La modificació s’aplicarà a la vista del D3.1 revisat. La porta original continua disponible per comparar.</p>
+  <p id="doorMessage" role="status">Vista ampliada d’una porta completa. Canvia entre porta davantera i posterior, apropa la vista si cal i selecciona les quatre cares originals que vols fusionar.</p>
 </section>
 <footer>
-  <p><strong>Prova D3.1:</strong> el vehicle revisat conserva la malla simètrica directament reduïda del GLB D. S’han eliminat les plaques verdes afegides a les portes. Les quatre rodes s’extreuen del mateix generador del camió A4.3, escalades i girades al nou eix; les cares dels pneumàtics antics es retiren de la malla. L’antena posterior és una reconstrucció geomètrica lleugera. A l’ampliació pots seleccionar i substituir cares reals de porta; no s’apliquen fusions arbitràries fins que confirmis els quatre triangles. El recompte de triangles diferencia la malla base dels afegits.</p>
+  <p><strong>Prova D3.1:</strong> el vehicle revisat conserva la malla simètrica directament reduïda del GLB D. S’han eliminat les plaques verdes afegides a les portes. Les quatre rodes provenen del generador del camió A4.3, se centren sobre els passos de roda i queden connectades al xassís per eixos. Es retiren també la part alta de les rodes antigues i els discs interiors. L’antena posterior és una reconstrucció geomètrica lleugera. A l’ampliació pots seleccionar i substituir cares reals de porta; no s’apliquen fusions arbitràries fins que confirmis els quatre triangles. El recompte de triangles diferencia la malla base dels afegits.</p>
   <p><strong>Abast:</strong> només la web de proves; cap cotxe del joc ha estat modificat.</p>
   <p>Model base: <a href="https://poly.pizza/m/Ebryot9iKM" target="_blank" rel="noopener">«Humvee» de madtrollstudio</a> · <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>. Simplificacions geomètriques adaptades per a Hunter: Arxipèlag. No s'han substituït els vehicles del joc.</p>
 </footer>
@@ -79,7 +83,7 @@ footer a{color:#c9e9bb}
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { deriveSymmetricD3 } from './src/humvee-d3-geometry.mjs';
-import { removeOriginalTires, mergeFourDoorTriangles, sideDoorCandidate } from './src/humvee-d31-refinements.mjs';
+import { HUMVEE_WHEEL_SPEC, removeOriginalTires, mergeFourDoorTriangles, sideDoorCandidate } from './src/humvee-d31-refinements.mjs';
 import { createTruckConcept } from './src/truck-concepts.mjs';
 import { createD31DoorInspector } from './src/humvee-d31-door-inspector.mjs';
 const variants=[
@@ -254,19 +258,31 @@ function antennaPosterior(axis){
 let truckWheelTemplate=null;
 function truckA43Wheels(axis){
  if(!truckWheelTemplate){
-  // Reuse the exact wheel components from A4.3 rather than approximating them.
+  // Clone the genuine A4.3 wheel (tire, rim, centre), not a generic cylinder.
   const prototypeTruck=createTruckConcept(THREE,2);
   if(!prototypeTruck.userData.wheels?.length)throw Error('No es troben les rodes A4.3');
   truckWheelTemplate=prototypeTruck.userData.wheels[0].clone(true);
  }
- const g=new THREE.Group();g.name='wheelsFromA43';
- for(const x of [-1.74,1.45])for(const side of [-1,1]){
-  const w=truckWheelTemplate.clone(true);
-  w.name='humvee-truck-wheel-'+x+'-'+side;
-  w.position.set(x,.44,axis+side*1.095);
-  w.rotation.set(0,Math.PI/2,0); // A4.3 axle X => Humvee axle Z
-  w.scale.setScalar(.575); // truck radius .80 => Humvee radius .46
-  g.add(w);
+ const g=new THREE.Group();g.name='humveeAxlesAndA43Wheels';
+ const mountMaterial=new THREE.MeshStandardMaterial({color:0x333b31,roughness:.89});
+ const {axles,centerY,offsetZ,truckScale}=HUMVEE_WHEEL_SPEC;
+ for(const x of axles){
+  // Both ends are connected to the same chassis axle, inside the body.
+  const axle=new THREE.Mesh(new THREE.CylinderGeometry(.078,.078,offsetZ*1.97,8),mountMaterial);
+  axle.rotation.x=Math.PI/2;
+  axle.position.set(x,centerY,axis);
+  axle.name='humveeAxle_'+x;g.add(axle);
+  for(const side of [-1,1]){
+   const w=truckWheelTemplate.clone(true);
+   w.name='humvee-truck-wheel-'+x+'-'+side;
+   w.position.set(x,centerY,axis+side*offsetZ);
+   w.rotation.set(0,Math.PI/2,0); // Truck axle X -> Humvee axle Z
+   w.scale.setScalar(truckScale); // .80 * .625 = 0.50 radius, like original Humvee
+   w.userData.radius=HUMVEE_WHEEL_SPEC.radius;
+   w.userData.axleX=x;
+   w.userData.side=side;
+   g.add(w);
+  }
  }
  return g;
 }
@@ -315,7 +331,7 @@ function initializeDoorInspector(view,material){
   view.triangleData=triangles;
   view.baseMesh.geometry.dispose();
   view.baseMesh.geometry=trianglesToGeometry(triangles);
-  view.meta.textContent=triangles.length.toLocaleString('ca')+' triangles xassís · '+meshTriangleCount(view.wheels)+' de rodes A4.3';
+  view.meta.textContent=triangles.length.toLocaleString('ca')+' triangles xassís · '+meshTriangleCount(view.wheels)+' de rodes/eixos A4.3';
  };
  if(!inspector)inspector=createD31DoorInspector(THREE,{
   host,message,geometryFromTriangles:trianglesToGeometry,sideDoorCandidate,
@@ -381,9 +397,11 @@ function createCard(v){
     const oldDoors=doorQuadrangles();oldDoors.position.z=symmetryZ;group.add(oldDoors);view.doors=oldDoors;
     meta.textContent=data.faces.toLocaleString('ca')+' triangles de malla · plaques anteriors';
    }else{
-    const wheels=truckA43Wheels(symmetryZ);group.add(wheels);view.wheels=wheels;
+    const wheels=truckA43Wheels(symmetryZ);
+    // Body and wheels share one coordinate system and world transform.
+    group.add(wheels);view.wheels=wheels;
     const antenna=antennaPosterior(symmetryZ);group.add(antenna);view.antenna=antenna;
-    meta.textContent=working.triangles.length.toLocaleString('ca')+' triangles de xassís · '+meshTriangleCount(wheels)+' de rodes A4.3';
+    meta.textContent=working.triangles.length.toLocaleString('ca')+' triangles de xassís · '+meshTriangleCount(wheels)+' de rodes i eixos A4.3 · '+working.removed+' cares antigues retirades';
     revisedView=view;
     initializeDoorInspector(view,material);
    }
