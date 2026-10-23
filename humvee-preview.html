@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hunter: Arxipèlag · Humvee — decimació directa</title>
+<title>Hunter: Arxipèlag · Humvee D — quatre variants</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -16,7 +16,7 @@ button.active{background:#b6dca7;border-color:#b6dca7;color:#192b1f}
 button:focus-visible,a:focus-visible{outline:2px solid #d9fad0;outline-offset:2px}
 .stats{display:flex;gap:10px;flex-wrap:wrap;padding:1px 18px 12px;font-size:12px;color:#cadad3}
 .stat{background:#23383b;padding:5px 9px;border-radius:6px}
-#models{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:0 18px 16px}
+#models{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:0 18px 16px}
 .card{border:1px solid #5e7d73;min-width:0;background:linear-gradient(#2b444e,#17292f);border-radius:11px;overflow:hidden;position:relative;height:360px}
 .card canvas{width:100%;height:100%;touch-action:none;display:block;cursor:grab}
 .card canvas:active{cursor:grabbing}
@@ -33,8 +33,8 @@ footer a{color:#c9e9bb}
 </head>
 <body>
 <header>
-  <div><h1>Humvee militar · simplificació directa del GLB</h1>
-  <p>El mateix vehicle original de madtrollstudio, sense reconstruir-ne el xassís a mà. Comparació real de malles.</p></div>
+  <div><h1>Humvee D · quatre variants refinades</h1>
+  <p>Quatre iteracions reals sobre la mateixa malla GLB D de 2.499 triangles, amb graella, portes i vidres revisats.</p></div>
   <nav aria-label="Opcions de visualització">
     <button id="spin" class="active" type="button" aria-pressed="true">⏸ Gir automàtic</button>
     <button id="mesh" type="button" aria-pressed="false">Veure triangles</button>
@@ -45,21 +45,20 @@ footer a{color:#c9e9bb}
     <a class="control" href="proves.html">Totes les proves</a>
   </nav>
 </header>
-<section class="stats"><span class="stat">5 versions comparables</span><span class="stat">Mateixa escala i perspectiva</span><span class="stat">Arrossega per girar · roda del ratolí per ampliar</span></section>
+<section class="stats"><span class="stat">4 variants sobre el D</span><span class="stat">Mateixa malla base i mateixa càmera</span><span class="stat">Arrossega per girar · roda del ratolí per ampliar</span></section>
 <main id="models" aria-label="Comparació dels models Humvee"></main>
 <footer>
-  <p><strong>Com s'han fet:</strong> A–D es generen directament a partir dels triangles del model original, amb agrupació espacial de vèrtexs preservant les zones de color de l'atles UV. Els panells comparteixen orientació, escala, material original i càmera. Els vidres semitransparents són un afegit de previsualització que omple les obertures originals; no estan incorporats encara als fitxers GLB. Les rodes continuen integrades a la malla i es podran separar després d'escollir el model.</p>
+  <p><strong>Mètode:</strong> totes les variants parteixen de <code>assets/humvee/humvee_D.glb</code>, decimat directament de l'original (2.499 triangles). La graella i les decoracions de portes són petites peces experimentals afegides a la vista 3D, sense reconstruir el xassís. Els vidres translúcids omplen els buits del model. Quan triem una versió, aquests afegits es podran consolidar en un GLB final. Les rodes segueixen integrades en la malla.</p>
   <p>Model base: <a href="https://poly.pizza/m/Ebryot9iKM" target="_blank" rel="noopener">«Humvee» de madtrollstudio</a> · <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>. Simplificacions geomètriques adaptades per a Hunter: Arxipèlag. No s'han substituït els vehicles del joc.</p>
 </footer>
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 const variants=[
- {title:'Original',file:'assets/humvee/humvee_original.glb',faces:8148,vertices:15802,desc:'Malla original sense simplificar'},
- {title:'A · Fidelitat màxima',file:'assets/humvee/humvee_A.glb',faces:7001,vertices:4422,desc:'14% menys triangles; tots els volums principals'},
- {title:'B · Fidelitat alta',file:'assets/humvee/humvee_B.glb',faces:5500,vertices:3392,desc:'32% menys; detall per a primer pla'},
- {title:'C · Equilibrat',file:'assets/humvee/humvee_C.glb',faces:3999,vertices:2450,desc:'51% menys; proposta de joc'},
- {title:'D · Lleuger',file:'assets/humvee/humvee_D.glb',faces:2499,vertices:1498,desc:'69% menys; candidat a LOD'}
+ {id:'D1',title:'D1 · Clàssic',file:'assets/humvee/humvee_D.glb',faces:2499,vertices:1498,desc:'7 ranures A · portes discretes · vidres amplis',grille:'classic',doors:'classic',tint:0x9ebbb7},
+ {id:'D2',title:'D2 · Militar',file:'assets/humvee/humvee_D.glb',faces:2499,vertices:1498,desc:'Graella profunda · portes protegides · vidres amplis',grille:'deep',doors:'reinforced',tint:0x91b2a8},
+ {id:'D3',title:'D3 · Perfil net',file:'assets/humvee/humvee_D.glb',faces:2499,vertices:1498,desc:'Barres fines · motllures lleugeres · vidres amplis',grille:'slim',doors:'fine',tint:0xa3bfc0},
+ {id:'D4',title:'D4 · Fidel a l’A',file:'assets/humvee/humvee_D.glb',faces:2499,vertices:1498,desc:'Graella perfilada · manetes/frontisses A · vidres amplis',grille:'faithful',doors:'faithful',tint:0x98b3a9}
 ];
 const root=document.getElementById('models');
 const loader=new GLTFLoader();
@@ -73,19 +72,88 @@ function quad(points, material){
  geometry.setIndex([0,1,2,0,2,3]);geometry.computeVertexNormals();
  return new THREE.Mesh(geometry,material);
 }
-function windowPanes(){
- const g=new THREE.Group();g.name='experimentalTransparentWindowPanes';
- const m=new THREE.MeshPhysicalMaterial({color:0x9dbab1,roughness:.17,metalness:0,transparent:true,opacity:.30,side:THREE.DoubleSide,depthWrite:false});
- for (const side of [-1,1]) {
-  // The source has two empty side window apertures on each flank.
-  // Sloped panes are inset within those openings, not replacements for chassis polygons.
-  const zb=side*1.066,zt=side*.986;
-  g.add(quad([[-.679,1.295,zb],[-.156,1.295,zb],[-.156,1.636,zt],[-.679,1.636,zt]],m));
-  g.add(quad([[.166,1.295,zb],[.637,1.295,zb],[.627,1.632,zt],[.176,1.632,zt]],m));
+
+function block(parent,material,x,y,z,sx,sy,sz){
+ const m=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),material);
+ m.position.set(x,y,z);parent.add(m);return m;
+}
+function seam(parent,material,a,b,r=.008){
+ const p=new THREE.Vector3(...a),q=new THREE.Vector3(...b),d=q.clone().sub(p);
+ const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),6),material);
+ mesh.position.copy(p).add(q).multiplyScalar(.5);
+ mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());
+ parent.add(mesh);
+}
+function windowPanes(v){
+ const g=new THREE.Group();g.name='fittedTransparentWindowPanes';
+ const mat=new THREE.MeshPhysicalMaterial({color:v.tint,roughness:.12,metalness:0,
+   transparent:true,opacity:.34,side:THREE.DoubleSide,depthWrite:false,
+   polygonOffset:true,polygonOffsetFactor:-1});
+ // Vehicle axis: front -X, up +Y, doors on +/-Z.
+ // Glass is placed just inside the open frames, rather than as short central panes.
+ for(const side of [-1,1]){
+  g.add(quad([[-.790,1.242,side*1.093],[-.065,1.242,side*1.093],
+     [-.106,1.714,side*.985],[-.748,1.714,side*.985]],mat));
+  g.add(quad([[.076,1.242,side*1.093],[.772,1.242,side*1.093],
+     [.727,1.708,side*.985],[.112,1.708,side*.985]],mat));
  }
- // Windscreen: thin tinted pane follows the forward slant of the existing cabin.
- g.add(quad([[-.903,1.310,-.83],[-.903,1.310,.83],[-.822,1.680,.76],[-.822,1.680,-.76]],m));
- g.visible=glassMode&&!meshMode;
+ // Fill both the sloped windscreen and the rear glass opening.
+ g.add(quad([[-.941,1.254,-.977],[-.941,1.254,.977],
+   [-.810,1.713,.913],[-.810,1.713,-.913]],mat));
+ g.add(quad([[.851,1.255,-.964],[.851,1.255,.964],
+   [.796,1.703,.911],[.796,1.703,-.911]],mat));
+ g.visible=glassMode&&!meshMode;return g;
+}
+function upgradeDetails(v){
+ const g=new THREE.Group();g.name='D_'+v.id+'_details';
+ const dark=new THREE.MeshStandardMaterial({color:0x202824,roughness:.87});
+ const shadow=new THREE.MeshStandardMaterial({color:0x343c32,roughness:.91});
+ const olive=new THREE.MeshStandardMaterial({color:0x707957,roughness:.90});
+ const metal=new THREE.MeshStandardMaterial({color:0x979889,roughness:.75,metalness:.18});
+ // Front fascia on the actual original front plane (-X).
+ const x=-2.295;
+ const grille=new THREE.Group();grille.name='visibleRadiatorGrille';g.add(grille);
+ block(grille,dark,x+.020,.965,0,.024,.267,.89);
+ if(v.grille==='deep'||v.grille==='faithful')block(grille,shadow,x-.007,.964,0,.018,.234,.79);
+ const slots=v.grille==='slim'?9:7;
+ const bw=v.grille==='deep'?.040:v.grille==='slim'?.019:.027;
+ const barMat=v.grille==='slim'?metal:olive;
+ for(let i=0;i<slots;i++){
+  const z=-.351+i*.702/(slots-1);
+  block(grille,barMat,x-.028,.966,z,.033,.213,bw);
+ }
+ block(grille,metal,x-.016,1.100,0,.036,.021,.89);
+ block(grille,dark,x-.020,.828,0,.039,.022,.89);
+ for(const z of [-.453,.453])block(grille,dark,x-.016,.964,z,.038,.263,.029);
+ if(v.grille==='faithful')for(const z of [-.59,.59])block(grille,metal,x-.030,.977,z,.020,.105,.065);
+ if(v.grille==='deep')for(const z of [-.58,.58])block(grille,shadow,x-.014,.956,z,.030,.196,.058);
+ // A-inspired door edges, handles, waist strips and hinges.
+ const doors=new THREE.Group();doors.name='doorMouldings';g.add(doors);
+ for(const side of [-1,1]){
+  const z=side*1.134;
+  for(const cx of [-.446,.426]){
+   const half=cx<0?.342:.333;
+   seam(doors,shadow,[cx-half,1.280,z],[cx+half,1.280,z],.008);
+   seam(doors,shadow,[cx-half,1.280,z],[cx-half,1.052,z],.007);
+   seam(doors,shadow,[cx+half,1.280,z],[cx+half,1.052,z],.007);
+   const dz=z+side*.015;
+   block(doors,dark,cx+.147,1.266,dz,.126,.036,.024);
+   if(v.doors==='faithful')block(doors,metal,cx+.145,1.273,dz+side*.018,.100,.011,.015);
+   if(v.doors==='reinforced')block(doors,olive,cx,1.107,z+side*.011,.020,.090,.50);
+  }
+  if(v.doors!=='fine')seam(doors,shadow,[-.796,1.060,z],[.768,1.060,z],v.doors==='reinforced'?.018:.011);
+  if(v.doors==='reinforced'){
+   for(const x of [-.80,.78])block(doors,olive,x,1.09,z,.065,.19,.060);
+  }
+  if(v.doors==='classic'||v.doors==='faithful'){
+   for(const x of [-.774,-.108,.096,.751]){
+    for(const y of [1.144,1.225])block(doors,dark,x,y,z+side*.014,.027,.046,.019);
+   }
+  }
+  if(v.doors==='faithful')for(const x of [-.755,.742]){
+   seam(doors,metal,[x,1.074,z+side*.01],[x,1.239,z+side*.01],.012);
+  }
+ }
  return g;
 }
 function createCard(v){
@@ -111,7 +179,7 @@ function createCard(v){
  const grid=new THREE.GridHelper(8,8,0x44616a,0x3c5156);grid.position.y=-.06;scene.add(grid);
  const camera=new THREE.PerspectiveCamera(39,1,.1,50);
  const group=new THREE.Group();scene.add(group);
- const vdata={card,renderer,scene,camera,group,panes:null,originalMaterials:[]};
+ const vdata={card,renderer,scene,camera,group,panes:null,details:null,originalMaterials:[]};
  views.push(vdata);
  const canvas=renderer.domElement;
  canvas.addEventListener('pointerdown', e=>{dragging=true;dragId=e.pointerId;dragX=e.clientX;dragY=e.clientY;canvas.setPointerCapture(e.pointerId);});
@@ -128,7 +196,8 @@ function createCard(v){
    vdata.originalMaterials.push(...cloned);
   });
   group.add(obj);
-  const pane=windowPanes();group.add(pane);vdata.panes=pane;
+  const pane=windowPanes(v);group.add(pane);vdata.panes=pane;
+  const details=upgradeDetails(v);group.add(details);vdata.details=details;
   const bounds=new THREE.Box3().setFromObject(obj);
   const midpoint=bounds.getCenter(new THREE.Vector3());
   // Use exact original coordinates and the same camera target for all panels.
@@ -140,7 +209,9 @@ function createCard(v){
 function stopSpin(){spinning=false;const button=document.getElementById('spin');button.classList.remove('active');button.setAttribute('aria-pressed','false');button.textContent='▶ Gir automàtic';}
 variants.forEach(createCard);
 document.getElementById('spin').addEventListener('click',e=>{spinning=!spinning;e.currentTarget.classList.toggle('active',spinning);e.currentTarget.setAttribute('aria-pressed',String(spinning));e.currentTarget.textContent=spinning?'⏸ Gir automàtic':'▶ Gir automàtic';});
-document.getElementById('mesh').addEventListener('click',e=>{meshMode=!meshMode;e.currentTarget.classList.toggle('active',meshMode);e.currentTarget.setAttribute('aria-pressed',String(meshMode));for(const v of views){for(const m of v.originalMaterials)m.wireframe=meshMode;if(v.panes)v.panes.visible=glassMode&&!meshMode;}});
+document.getElementById('mesh').addEventListener('click',e=>{meshMode=!meshMode;e.currentTarget.classList.toggle('active',meshMode);e.currentTarget.setAttribute('aria-pressed',String(meshMode));for(const v of views){for(const m of v.originalMaterials)m.wireframe=meshMode;
+ if(v.details)v.details.traverse(o=>{if(o.isMesh)o.material.wireframe=meshMode;});
+ if(v.panes)v.panes.visible=glassMode&&!meshMode;}});
 document.getElementById('glass').addEventListener('click',e=>{glassMode=!glassMode;e.currentTarget.classList.toggle('active',glassMode);e.currentTarget.setAttribute('aria-pressed',String(glassMode));for(const v of views)if(v.panes)v.panes.visible=glassMode&&!meshMode;});
 document.getElementById('front').addEventListener('click',()=>{rotation=-Math.PI/2;elevation=.21;stopSpin();});
 document.getElementById('side').addEventListener('click',()=>{rotation=0;elevation=.17;stopSpin();});
