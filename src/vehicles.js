@@ -1,10 +1,10 @@
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 window.HUNTER_VEHICLES=Object.freeze({
   scales:Object.freeze({llanxa:1.95,llanxa_coets:1.95,moto_aquatica:1.08,barca_rems:.98,windsurf:1.05,hover:1.3,ferry:1,cotxe:1.3,cotxe_civil:1.2,moto:1.2,bici:1.2,camio:1.8125,tanqueta:1.8125,tanc:2.25,heli:1.75,heli_combat:1.82}),
-  radii:Object.freeze({llanxa:8.25,llanxa_coets:8.6,moto_aquatica:2.1,barca_rems:3.25,windsurf:2.3,hover:4.8,ferry:35,cotxe:3.6,cotxe_civil:3.35,moto:2.2,bici:1.9,camio:4.8,tanqueta:4.5,tanc:5.6,heli:8,heli_combat:8.4}),
+  radii:Object.freeze({llanxa:8.25,llanxa_coets:8.6,moto_aquatica:2.1,barca_rems:3.25,windsurf:2.3,hover:4.8,ferry:35,cotxe:3.8,cotxe_civil:3.35,moto:2.2,bici:1.9,camio:4.8,tanqueta:4.5,tanc:5.6,heli:8,heli_combat:8.4}),
   hitboxes:Object.freeze({
     llanxa:[6.6,15.9],llanxa_coets:[6.8,16.1],moto_aquatica:[1.7,3.8],barca_rems:[2.7,6.1],windsurf:[1.9,4.3],hover:[4.2,7.4],ferry:[32,63],
-    cotxe:[3.2,5.9],cotxe_civil:[3.2,5.85],moto:[1.35,2.8],bici:[1.15,2.4],camio:[3.6,7.8],tanqueta:[3.15,5.1],tanc:[4.2,7.1],
+    cotxe:[3.65,6.45],cotxe_civil:[3.2,5.85],moto:[1.35,2.8],bici:[1.15,2.4],camio:[3.6,7.8],tanqueta:[3.15,5.1],tanc:[4.2,7.1],
     heli:[3.4,11.2],heli_combat:[2.8,11.8]
   }),
   decks:Object.freeze({ferry:Object.freeze({halfW:14.3,halfL:25.6,rampHalfW:6.7,ramp:5.8,y:2.2,rampY:.45,
@@ -121,9 +121,20 @@ window.HUNTER_VEHICLES=Object.freeze({
         }
         g.userData.staticBatches=count;
       }
-      if(t==='cotxe'){const col=0xa35b38,trim=0x302f2d;box(g,3,1,5.6,col,0,1.15,0,'paint');box(g,2.92,.42,2.1,col,0,1.82,-1.72,'paint');box(g,2.62,.82,2.72,glass,0,2.04,.48,'glass');box(g,2.88,.18,2.95,col,0,2.52,.48,'paint');box(g,2.45,.1,1.1,0x7d432f,0,2.65,.5,'paint');for(const x of[-1.34,1.34]){box(g,.13,.28,2.9,col,x,1.7,.5,'paint');box(g,.15,.82,.14,col,x,2.04,-.82,'paint');box(g,.15,.82,.14,col,x,2.04,1.82,'paint');box(g,.18,.82,.15,col,x,2.04,.5,'paint');for(const z of[-1.85,1.85])wheel(g,x*1.16,.72,z,.72,.45,false,z<0);box(g,.35,.18,.4,metal,x*1.17,2.08,-.85,'metal')}for(const z of[-2.95,2.95])box(g,3.25,.3,.3,metal,0,.94,z,'metal');box(g,1.6,.45,.08,rubber,0,1.4,-2.84,'rubber');box(g,2.5,.14,.12,trim,0,1.12,-2.88,'rubber');for(const x of[-1.08,1.08]){box(g,.5,.34,.1,0xffedb2,x,1.43,-2.85,'paint');box(g,.38,.24,.1,0x9c2825,x,1.38,2.84,'paint')}for(const x of[-.72,.72])box(g,.5,.1,.16,0xd8d7c9,x,1.03,-2.9,'metal');const spare=wheel(g,0,1.5,3,.65,.45);spare.rotation.y=Math.PI/2;(g.userData.wheels||[]).pop()}
-      if(t==='cotxe'){
-        // Volant i seient reals al lloc on s'asseurà el jugador.
+      if(t==='cotxe'&&window.HUNTER_HUMVEE_D31?.create){
+        // Model definitiu Humvee D3.1, aprovat amb les quatre portes planes.
+        // La seva escala interna = 1.75 / VS.cotxe; la fàbrica general
+        // aplica VS.cotxe una sola vegada al final.
+        const humvee=window.HUNTER_HUMVEE_D31.create();
+        g.add(humvee);
+        g.userData.wheels=humvee.userData.wheels;
+        g.userData.steeringPivots=humvee.userData.steeringPivots;
+        g.userData.humveeModel='D3.1';
+        g.userData.humveeScale=window.HUNTER_HUMVEE_D31.scale;
+      }
+      if(t==='cotxe'&&!window.HUNTER_HUMVEE_D31){const col=0xa35b38,trim=0x302f2d;box(g,3,1,5.6,col,0,1.15,0,'paint');box(g,2.92,.42,2.1,col,0,1.82,-1.72,'paint');box(g,2.62,.82,2.72,glass,0,2.04,.48,'glass');box(g,2.88,.18,2.95,col,0,2.52,.48,'paint');box(g,2.45,.1,1.1,0x7d432f,0,2.65,.5,'paint');for(const x of[-1.34,1.34]){box(g,.13,.28,2.9,col,x,1.7,.5,'paint');box(g,.15,.82,.14,col,x,2.04,-.82,'paint');box(g,.15,.82,.14,col,x,2.04,1.82,'paint');box(g,.18,.82,.15,col,x,2.04,.5,'paint');for(const z of[-1.85,1.85])wheel(g,x*1.16,.72,z,.72,.45,false,z<0);box(g,.35,.18,.4,metal,x*1.17,2.08,-.85,'metal')}for(const z of[-2.95,2.95])box(g,3.25,.3,.3,metal,0,.94,z,'metal');box(g,1.6,.45,.08,rubber,0,1.4,-2.84,'rubber');box(g,2.5,.14,.12,trim,0,1.12,-2.88,'rubber');for(const x of[-1.08,1.08]){box(g,.5,.34,.1,0xffedb2,x,1.43,-2.85,'paint');box(g,.38,.24,.1,0x9c2825,x,1.38,2.84,'paint')}for(const x of[-.72,.72])box(g,.5,.1,.16,0xd8d7c9,x,1.03,-2.9,'metal');const spare=wheel(g,0,1.5,3,.65,.45);spare.rotation.y=Math.PI/2;(g.userData.wheels||[]).pop()}
+      if(t==='cotxe'&&!window.HUNTER_HUMVEE_D31){
+        // Reserva per si el GLB encara no s'ha pogut carregar.
         // El conductor veu el volant per darrere del parabrisa.
         const steeringWheel=new THREE.Mesh(
           new THREE.TorusGeometry(.27,.045,8,16),
