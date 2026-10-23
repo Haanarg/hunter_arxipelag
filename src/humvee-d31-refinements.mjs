@@ -4,16 +4,39 @@ const average=(a)=>a.reduce((s,v)=>s+v,0)/a.length;
 const centroid=t=>[0,1,2].map(i=>average(t.map(v=>v.p[i])));
 const round=(v)=>Math.round(v*1e5)/1e5;
 const faceSignature=(t,axis)=>t.map(v=>[round(v.p[0]),round(v.p[1]),round(Math.abs(v.p[2]-axis))].join(':')).sort().join('|');
+// Match the complete ORIGINAL tyre, including the high outer tread and the
+// inner circular hub/brake-looking disk.  These are removed before placing
+// independent A4.3 wheels.  Retain large body/fender polygons around the hole.
+export const HUMVEE_WHEEL_SPEC=Object.freeze({
+ axles:Object.freeze([-1.78,1.45]),
+ centerY:.49,
+ offsetZ:1.02,
+ radius:.50,
+ truckScale:.625  // truck A4.3 radius .80 * .625 = .50
+});
 function wheelVolume(t,axles,axis){
- const c=centroid(t);
- if(Math.abs(c[2]-axis)<.80 || Math.abs(c[2]-axis)>1.35)return false;
- if(c[1]<-.08 || c[1]>.84)return false;
- // Wheel tread occupies a bounded radial disc. Do not delete the upper fenders.
- return axles.some(x=>Math.hypot(c[0]-x,c[1]-.44)<.48);
+ const c=centroid(t),lateral=Math.abs(c[2]-axis);
+ if(lateral<.47||lateral>1.34||c[1]<-.08||c[1]>1.13)return false;
+ const xs=t.map(v=>v.p[0]),ys=t.map(v=>v.p[1]);
+ // Wide lower body panels and the wheel arch itself are not tyres.
+ if(Math.max(...xs)-Math.min(...xs)>.96||Math.max(...ys)-Math.min(...ys)>.96)return false;
+ return axles.some(x=>{
+  const radius=Math.hypot(c[0]-x,c[1]-HUMVEE_WHEEL_SPEC.centerY);
+  const tread=lateral>=.70 && radius<=.595;
+  // Inner circular disc left over from the original hub / brake assembly.
+  const hub=lateral>=.47 && radius<=.435;
+  // Upper black tyre fragments sat above the previous .84 Y clipping limit.
+  const upper=lateral>=.77 && c[1]>=.84 && radius<=.615;
+  return tread||hub||upper;
+ });
 }
-export function removeOriginalTires(triangles,axis,axles=[-1.74,1.45]){
- const kept=triangles.filter(t=>!wheelVolume(t,axles,axis));
- return {triangles:kept,removed:triangles.length-kept.length};
+export function removeOriginalTires(triangles,axis,axles=HUMVEE_WHEEL_SPEC.axles){
+ let removed=0;
+ const kept=triangles.filter(t=>{
+  if(!wheelVolume(t,axles,axis))return true;
+  removed++;return false;
+ });
+ return {triangles:kept,removed};
 }
 function vertexUV(v){
  return {p:[...v.p],uv:[...v.uv],n:[...v.n]};
