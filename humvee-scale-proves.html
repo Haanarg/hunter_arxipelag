@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hunter: Arxipèlag · Humvee D3.1 · comparatives de mida</title>
+<style>
+:root{color-scheme:dark;--accent:#c4e4ab;--ink:#eef5ec;--sub:#c2d0c7}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#14262c;color:var(--ink);font:14px system-ui,-apple-system,Segoe UI,sans-serif}
+header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;padding:18px 20px 14px}
+h1{font-size:clamp(21px,2.4vw,30px);margin:0 0 8px;line-height:1.2}
+header p{max-width:750px;color:var(--sub);line-height:1.55;margin:0;font-size:13px}
+nav{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+button,nav a{background:#263c3e;color:#f2f7ee;border:1px solid #6e8b7f;border-radius:8px;padding:9px 12px;cursor:pointer;text-decoration:none;font:600 12px system-ui}
+button.active{background:var(--accent);color:#17271b}
+button:focus-visible,a:focus-visible{outline:2px solid #e4ffd5;outline-offset:2px}
+#status{min-height:18px;margin:0 20px 12px;font-size:12px;color:#d4e7d5}
+#cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:0 20px 18px}
+.card{position:relative;height:450px;min-width:0;overflow:hidden;border-radius:12px;border:1px solid #6c8a83;background:linear-gradient(#324b52,#182b32)}
+.card.wide{grid-column:1/-1;height:445px;border-color:#a9c5a5}
+.card canvas{width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+.card canvas:active{cursor:grabbing}
+.header-tag{position:absolute;top:11px;left:11px;right:11px;pointer-events:none;display:flex;justify-content:space-between;align-items:start;gap:8px}
+.tag{background:#10252bdf;padding:9px 10px;border:1px solid #829c8775;border-radius:8px;max-width:82%}
+.tag strong{display:block;font-size:14px;margin:0 0 4px}
+.tag small{display:block;font-size:11px;color:#c1d8cc;line-height:1.4}
+.percent{background:#183537d9;padding:8px 10px;border:1px solid #8ba8808c;border-radius:8px;font:700 13px ui-monospace,monospace;white-space:nowrap}
+.legend{position:absolute;bottom:10px;left:8px;right:8px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;pointer-events:none}
+.legend span{border:1px solid #67857e7a;background:#12262cd9;padding:5px 8px;border-radius:7px;font-size:11px;white-space:nowrap}
+.legend b{display:inline-block;width:8px;height:8px;border-radius:100%;margin-right:5px;background:#4aee58}
+.legend .new b{background:#b5c8ac}.legend .old b{background:#bd774d}
+#metrics{padding:0 20px 10px;display:flex;gap:8px;flex-wrap:wrap}
+.metric{background:#243b3d;border:1px solid #6a8780;border-radius:8px;padding:8px 11px;font:12px/1.5 system-ui;color:#e3eade}
+footer{padding:8px 20px 24px;font-size:12px;line-height:1.6;color:#b7cfc3}
+footer a{color:#d3e9b3}
+@media(max-width:1150px){#cards{grid-template-columns:repeat(2,minmax(0,1fr))}.card.wide{grid-column:1/-1}}
+@media(max-width:690px){header{padding:14px}#cards{grid-template-columns:1fr;padding:0 10px 15px}.card,.card.wide{grid-column:1;height:390px}#status{margin:0 10px 10px}#metrics,footer{padding-left:12px;padding-right:12px}}
+</style>
+<script type="importmap">{"imports":{"three":"./vendor/three-r186.module.mjs","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"}}</script>
+</head>
+<body>
+<header>
+ <div>
+  <h1>Humvee D3.1 · escala respecte al personatge</h1>
+  <p>Quatre comparatives amb el <strong>protagonista real</strong> del joc. En les tres primeres, el Humvee nou apareix a mida 100%, +8% o −8%. A la quarta, també hi ha el <strong>cotxe militar actual</strong> del joc. Les escenes comparteixen terra, angle i escala vertical.</p>
+ </div>
+ <nav aria-label="Controls de visualització">
+  <button id="three" type="button" class="active">3/4</button>
+  <button id="side" type="button">Lateral</button>
+  <button id="front" type="button">Frontal</button>
+  <button id="spin" type="button" aria-pressed="false">Gir automàtic</button>
+  <a href="humvee-preview.html">Tornar al model D3.1</a>
+  <a href="proves.html">Totes les proves</a>
+ </nav>
+</header>
+<p id="status" role="status">Carregant els models reals del jugador, del cotxe actual i del nou Humvee…</p>
+<main id="cards" aria-label="Quatre comparatives de mida del Humvee"></main>
+<section id="metrics" aria-label="Dimensions mesurades"></section>
+<footer>
+ <p><strong>Escala física de referència:</strong> s'ha conservat la transformació real del jugador de <code>HUNTER_CHARACTERS.createPlayer</code> (unitScale 1,2 i factor final 2/3) i el vehicle <code>cotxe</code> de <code>HUNTER_VEHICLES.createFactory</code> (factor del joc 1,3). Les mesures mostrades són extretes de la geometria 3D visible, amb l'antena inclosa en el nou Humvee.</p>
+ <p><strong>Només és una prova de mida:</strong> el Humvee nou és el D3.1 aprovat, amb les quatre portes aplanades i les rodes A4.3. Encara no s'ha substituït el cotxe del joc: primer cal decidir l'escala definitiva.</p>
+</footer>
+<script src="src/palette.js"></script>
+<script src="src/player-model.js"></script>
+<script src="src/bolt-cutters.js"></script>
+<script src="src/characters.js"></script>
+<script src="src/vehicles.js"></script>
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {loadApprovedHumveeD31,createApprovedHumveeD31} from './src/humvee-d31-scale-preview.mjs';
+const variations=[
+ {id:'A',title:'A · Humvee a la mida actual',scale:1,description:'Jugador real i D3.1 aprovat, sense canviar-ne les dimensions'},
+ {id:'B',title:'B · Humvee un poc més gran',scale:1.08,description:'Mateix jugador i Humvee ampliat un 8%'},
+ {id:'C',title:'C · Humvee un poc més petit',scale:.92,description:'Mateix jugador i Humvee reduït un 8%'},
+ {id:'D',title:'D · Actual del joc vs nou',scale:1,wide:true,description:'Cotxe militar actual, jugador del joc i Humvee D3.1 nou'}
+];
+const cards=document.getElementById('cards');
+const status=document.getElementById('status');
+const materials=new Map();
+function material(color,profile='paint'){
+ if(color?.isMaterial)return color;
+ const key=color+'-'+profile;
+ if(!materials.has(key))materials.set(key,new THREE.MeshStandardMaterial({
+  color,roughness:profile==='glass'?.28:profile==='metal'?.50:.86,
+  metalness:profile==='metal'?.42:.03,flatShading:true,
+  transparent:profile==='glass',opacity:profile==='glass'?.48:1,
+  depthWrite:profile!=='glass',side:THREE.DoubleSide
+ }));
+ return materials.get(key);
+}
+function box(parent,w,h,d,color,x=0,y=0,z=0,profile='paint'){
+ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material(color,profile));
+ m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;parent.add(m);return m;
+}
+const oldCarFactory=window.HUNTER_VEHICLES.createFactory(THREE,{box,material,shadows:true});
+const temp=new THREE.Box3();
+function boundsVisible(root){
+ const result=new THREE.Box3();
+ root.updateMatrixWorld(true);
+ root.traverseVisible(o=>{
+  if(!o.isMesh||!o.geometry)return;
+  if(!o.geometry.boundingBox)o.geometry.computeBoundingBox();
+  temp.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld);
+  result.union(temp);
+ });
+ return result;
+}
+function onGround(obj){
+ const b=boundsVisible(obj);
+ if(Number.isFinite(b.min.y))obj.position.y-=b.min.y;
+ return obj;
+}
+function getSize(obj){return boundsVisible(obj).getSize(new THREE.Vector3());}
+function makePlayer(){
+ // The actual game uses an internal 1.2 scale and a final scale of 2/3.
+ return onGround(window.HUNTER_CHARACTERS.createPlayer(THREE,{
+  box,palette:window.HUNTER_PALETTE
+ }));
+}
+function makeOldCar(){
+ // This real factory applies the game's VS.cotxe = 1.3 itself.
+ return onGround(oldCarFactory('cotxe'));
+}
+function stage(scene){
+ scene.add(new THREE.HemisphereLight(0xffffff,0x668078,2.2));
+ const sun=new THREE.DirectionalLight(0xffffff,2.15);
+ sun.position.set(-5,9,-7);sun.castShadow=true;
+ sun.shadow.mapSize.set(1024,1024);
+ sun.shadow.camera.left=-14;sun.shadow.camera.right=14;
+ sun.shadow.camera.top=14;sun.shadow.camera.bottom=-14;
+ sun.shadow.normalBias=.03;scene.add(sun);
+ const ground=new THREE.Mesh(new THREE.PlaneGeometry(100,100),
+  new THREE.MeshStandardMaterial({color:0x273d3b,roughness:1}));
+ ground.rotation.x=-Math.PI/2;ground.position.y=-.025;
+ ground.receiveShadow=true;scene.add(ground);
+ const grid=new THREE.GridHelper(25,25,0x708980,0x48615b);
+ grid.position.y=.015;scene.add(grid);
+}
+function label(parent,variation){
+ const top=document.createElement('div');top.className='header-tag';
+ const tag=document.createElement('div');tag.className='tag';
+ const head=document.createElement('strong');head.textContent=variation.title;
+ const sub=document.createElement('small');sub.textContent=variation.description;
+ tag.append(head,sub);
+ const percent=document.createElement('div');percent.className='percent';
+ percent.textContent=variation.wide?'3 models':Math.round(variation.scale*100)+'%';
+ top.append(tag,percent);parent.append(top);
+ const key=document.createElement('div');key.className='legend';
+ key.innerHTML=variation.wide?
+  '<span class="old"><b></b>Cotxe actual (1,3×)</span><span><b></b>Jugador real</span><span class="new"><b></b>Humvee nou (1,0×)</span>':
+  '<span><b></b>Jugador real</span><span class="new"><b></b>Humvee D3.1 ('+variation.scale.toFixed(2).replace('.',',')+'×)</span>';
+ parent.append(key);
+}
+const views=[];
+let yaw=-2.3,elevation=.30,spinning=false,drag=null;
+function createCard(variation,prepared){
+ const card=document.createElement('section');card.className='card'+(variation.wide?' wide':'');
+ card.dataset.variant=variation.id;cards.append(card);
+ const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+ renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));
+ renderer.outputColorSpace=THREE.SRGBColorSpace;
+ renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.24;
+ renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ renderer.setClearColor(0x000000,0);card.append(renderer.domElement);
+ label(card,variation);
+ const scene=new THREE.Scene();stage(scene);
+ const camera=new THREE.OrthographicCamera(-4,4,4,-4,.1,100);
+ const objects={};
+ if(variation.wide){
+  objects.old=makeOldCar();objects.player=makePlayer();
+  objects.new=createApprovedHumveeD31(prepared,variation.scale);
+  objects.old.position.x=-5.2;objects.player.position.x=0;objects.new.position.x=5.2;
+  scene.add(objects.old,objects.player,objects.new);
+ }else{
+  objects.player=makePlayer();objects.new=createApprovedHumveeD31(prepared,variation.scale);
+  objects.player.position.x=-1.70;objects.new.position.x=1.10;
+  scene.add(objects.player,objects.new);
+ }
+ renderer.domElement.addEventListener('pointerdown',e=>{
+  drag={id:e.pointerId,x:e.clientX,y:e.clientY};
+  renderer.domElement.setPointerCapture(e.pointerId);
+ });
+ renderer.domElement.addEventListener('pointermove',e=>{
+  if(!drag||drag.id!==e.pointerId)return;
+  yaw+=(e.clientX-drag.x)*.009;
+  elevation=THREE.MathUtils.clamp(elevation+(e.clientY-drag.y)*.004,.09,1.05);
+  drag.x=e.clientX;drag.y=e.clientY;stopSpin();
+ });
+ renderer.domElement.addEventListener('pointerup',e=>{if(drag?.id===e.pointerId)drag=null;});
+ renderer.domElement.addEventListener('pointercancel',e=>{if(drag?.id===e.pointerId)drag=null;});
+ return {card,renderer,scene,camera,objects};
+}
+function setAngle(button,x,y){
+ yaw=x;elevation=y;stopSpin();
+ for(const id of ['three','side','front'])document.getElementById(id).classList.toggle('active',id===button);
+}
+function stopSpin(){
+ spinning=false;
+ const b=document.getElementById('spin');b.classList.remove('active');b.setAttribute('aria-pressed','false');
+}
+document.getElementById('three').onclick=()=>setAngle('three',-2.3,.30);
+document.getElementById('side').onclick=()=>setAngle('side',-Math.PI/2,.16);
+document.getElementById('front').onclick=()=>setAngle('front',-Math.PI,.16);
+document.getElementById('spin').onclick=e=>{
+ spinning=!spinning;e.currentTarget.classList.toggle('active',spinning);
+ e.currentTarget.setAttribute('aria-pressed',String(spinning));
+};
+function addMeasure(name,obj){
+ const dim=getSize(obj),fmt=v=>v.toFixed(2).replace('.',',');
+ const item=document.createElement('div');item.className='metric';
+ item.textContent=name+': '+fmt(dim.y)+' alt × '+fmt(dim.x)+' ample × '+fmt(dim.z)+' llarg';
+ document.getElementById('metrics').append(item);
+}
+try{
+ const approved=await loadApprovedHumveeD31(THREE,GLTFLoader);
+ for(const v of variations)views.push(createCard(v,approved));
+ addMeasure('Jugador (escala del joc)',views[0].objects.player);
+ addMeasure('Nou D3.1 100%',views[0].objects.new);
+ addMeasure('Nou D3.1 +8%',views[1].objects.new);
+ addMeasure('Nou D3.1 −8%',views[2].objects.new);
+ addMeasure('Cotxe actual del joc',views[3].objects.old);
+ status.textContent='Comparatives carregades. Arrossega una escena per girar totes les càmeres alhora. Mateixa escala vertical a les quatre.';
+}catch(error){
+ status.textContent='No s’han pogut preparar els models: '+error.message;
+ console.error(error);
+}
+function render(){
+ requestAnimationFrame(render);
+ if(spinning)yaw+=.003;
+ for(const {card,renderer,scene,camera} of views){
+  const w=Math.max(1,card.clientWidth),h=Math.max(1,card.clientHeight);
+  const size=renderer.getSize(new THREE.Vector2());
+  if(size.x!==w||size.y!==h)renderer.setSize(w,h,false);
+  const halfHeight=4,aspect=w/h;
+  camera.left=-halfHeight*aspect;camera.right=halfHeight*aspect;
+  camera.top=halfHeight;camera.bottom=-halfHeight;
+  camera.updateProjectionMatrix();
+  const radius=25,targetY=1.45;
+  camera.position.set(Math.sin(yaw)*Math.cos(elevation)*radius,
+   targetY+Math.sin(elevation)*radius,Math.cos(yaw)*Math.cos(elevation)*radius);
+  camera.lookAt(0,targetY,0);
+  renderer.render(scene,camera);
+ }
+}
+render();
+</script>
+</body>
+</html>
