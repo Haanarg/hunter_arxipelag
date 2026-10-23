@@ -52,6 +52,19 @@ try {
   const THREE = await import('../vendor/three-r186.module.mjs');
   THREE.ColorManagement.enabled = true;
   window.THREE = THREE;
+  // El model militar definitiu es prepara una vegada abans de generar el món.
+  // No fem servir cap loader extern: el GLB/atles D3.1 es llegeix del joc.
+  // Si falla la càrrega (p. ex. fitxer incomplet durant un desplegament),
+  // el vehicle recupera temporalment la geometria anterior sense aturar el joc.
+  try {
+    const {prepareHumveeD31Runtime}=await import('./humvee-d31-runtime.mjs');
+    window.HUNTER_HUMVEE_D31=await prepareHumveeD31Runtime(THREE,{vehicleScale:1.3});
+    console.info('Humvee D3.1 a escala 175% carregat al joc',
+      window.HUNTER_HUMVEE_D31.dimensions);
+  } catch (humveeError) {
+    window.HUNTER_HUMVEE_D31=null;
+    console.warn('No es pot preparar el Humvee D3.1; geometria anterior de reserva',humveeError);
+  }
   // El bundle inclou els scripts clàssics en el mateix ordre i preserva
   // les variables globals de la versió anterior. Només fem UNA petició.
   // Si el fitxer empaquetat no s'ha desplegat, recuperem el loader antic.
