@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hunter: Arxipèlag · D3.1 — quatre portes i color original</title>
+<title>Hunter: Arxipèlag · D3.1 original — selecció de cares</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -16,8 +16,8 @@ button.active{background:#b6dca7;border-color:#b6dca7;color:#192b1f}
 button:focus-visible,a:focus-visible{outline:2px solid #d9fad0;outline-offset:2px}
 .stats{display:flex;gap:10px;flex-wrap:wrap;padding:1px 18px 12px;font-size:12px;color:#cadad3}
 .stat{background:#23383b;padding:5px 9px;border-radius:6px}
-#models{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:0 18px 16px}
-.card.featured{grid-column:1/-1;height:350px;border-color:#a2c6a4}
+#models{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding:0 18px 16px}
+.card.featured{grid-column:1/-1;height:480px;border-color:#a2c6a4}
 .card{border:1px solid #5e7d73;min-width:0;background:linear-gradient(#2b444e,#17292f);border-radius:11px;overflow:hidden;position:relative;height:360px}
 .card canvas{width:100%;height:100%;touch-action:none;display:block;cursor:grab}
 .card canvas:active{cursor:grabbing}
@@ -28,7 +28,7 @@ button:focus-visible,a:focus-visible{outline:2px solid #d9fad0;outline-offset:2p
 footer{color:#b8d0c5;font-size:12px;line-height:1.5;padding:0 18px 24px}
 footer a{color:#c9e9bb}
 @media(max-width:1100px){#models{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:660px){#models{grid-template-columns:1fr}.card{height:320px}header{padding:12px}#models{padding:0 10px 14px}.stats{padding:0 10px 12px}h1{font-size:19px}}
+@media(max-width:660px){#models{grid-template-columns:1fr}.card,.card.featured{height:370px}header{padding:12px}#models{padding:0 10px 14px}.stats{padding:0 10px 12px}h1{font-size:19px}}
 #doorLab{margin:0 18px 22px;padding:14px;border:1px solid #6c8a7f;border-radius:12px;background:#1d3336}
 #doorLab .labTop{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 #doorLab h2{font-size:17px;margin:0 0 6px}
@@ -40,13 +40,16 @@ footer a{color:#c9e9bb}
 #doorViewport canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
 #doorMessage{font-size:12px;color:#cfdfd7;margin:10px 0 0}
 @media(max-width:660px){#doorLab{margin:0 10px 18px}#doorViewport{height:520px}}
+#doorLab .selectionReference{margin-top:12px;display:flex;gap:8px;flex-direction:column;color:#d4e2d9;font-size:12px}
+#selectionData{font-family:ui-monospace,SFMono-Regular,monospace;font-size:12px;overflow-wrap:anywhere}
+#selectionLink{display:block;width:100%;max-width:920px;padding:10px 12px;background:#122729;color:#e9f5e9;border:1px solid #54766e;border-radius:8px;font:12px ui-monospace,monospace}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/"}}</script>
 </head>
 <body>
 <header>
-  <div><h1>Humvee D3.1 · portes amb el color original</h1>
-  <p>Comparació del D3.1 seleccionat amb el D3.1 net. Ara hi ha dues portes diferenciades a cada costat, amb una junta vertical fina i el mateix color de l’atles original de la carrosseria. Es mantenen les rodes A4.3 i l’antena.</p></div>
+  <div><h1>Humvee D3.1 original · inspector de portes</h1>
+  <p>Recuperem el D3.1 que havies seleccionat, sense les correccions fallides de les portes o del darrere. A sota hi ha un inspector de la seva malla real: marca les cares que vols dividir i pintar, i envia’m la referència de la selecció.</p></div>
   <nav aria-label="Opcions de visualització">
     <button id="spin" class="active" type="button" aria-pressed="true">⏸ Gir automàtic</button>
     <button id="mesh" type="button" aria-pressed="false">Veure triangles</button>
@@ -58,39 +61,39 @@ footer a{color:#c9e9bb}
     <a class="control" href="proves.html">Totes les proves</a>
   </nav>
 </header>
-<section class="stats"><span class="stat">D3.1 seleccionat / D3.1 net</span><span class="stat">Rodes A4.3 i antena conservades</span><span class="stat">Vistes de portes i posterior</span></section>
+<section class="stats"><span class="stat">Una única versió D3.1 original</span><span class="stat">Model i editor: mateixa malla</span><span class="stat">Selecció sense canvis de geometria ni de pintura</span></section>
 <main id="models" aria-label="Comparació dels models Humvee"></main>
 <section id="doorLab" aria-label="Editor de la superfície de la porta">
-  <div class="labTop"><div><h2>Inspector de la porta · D3.1 anterior</h2><p>Conservem l’editor de la versió anterior perquè puguis comparar els triangles originals. La versió <strong>D3.1 net</strong> ja elimina el blindatge de les portes i les refà amb superfícies ajustades al xassís.</p></div><span id="selectedCount">0 / 4 cares</span></div>
+  <div class="labTop"><div><h2>Selecciona les peces de la porta · D3.1 original</h2><p>Aquesta és <strong>la mateixa malla del D3.1 que es veu a dalt</strong>. Clica qualsevol nombre de triangles per marcar-los en taronja. No se’n fusionarà ni repintarà cap fins que m’indiquis què vols fer. Pots canviar de porta i de costat sense perdre la selecció.</p></div><span id="selectedCount">0 cares seleccionades</span></div>
   <div class="labTools">
     <button id="inspectSide" type="button">Veure l’altra banda</button>
     <button id="inspectDoor" type="button">Porta davantera · canviar a posterior</button>
     <button id="doorZoomIn" type="button">+ Apropar</button>
     <button id="doorZoomOut" type="button">− Allunyar</button>
     <button id="doorFit" type="button">Enquadrar porta</button>
-    <button id="mergeFaces" type="button" disabled>Fusiona 4 triangles</button>
     <button id="clearFaces" type="button">Neteja selecció</button>
-    <button id="resetD31" type="button">Restableix el D3.1</button>
+    <button id="copyFaces" type="button" disabled>Copiar triangles i enllaç</button>
   </div>
   <div id="doorViewport"><div class="state" id="doorStatus">Preparant vista de la porta…</div></div>
-  <p id="doorMessage" role="status">Vista ampliada d’una porta completa. Canvia entre porta davantera i posterior, apropa la vista si cal i selecciona les quatre cares originals que vols fusionar.</p>
+  <p id="doorMessage" role="status">Marca les cares exactes de la porta que vols que divideixi o pinti. La selecció no modifica el model.</p>
+  <div class="selectionReference"><strong id="selectionData">Encara no hi ha cap triangle seleccionat.</strong><input id="selectionLink" readonly aria-label="Enllaç amb els triangles seleccionats" placeholder="Enllaç de selecció quan marquis alguna cara"/></div>
 </section>
 <footer>
-  <p><strong>Neteja de carrosseria:</strong> sobre el D3.1 revisat, s’eliminen de la malla els retrovisors i les facetes de relleu de les portes. Les vores dels triangles s’intersequen amb el contorn abans de reconstruir dues portes independents per costat: cadascuna és un quadrilàter de dos triangles i hi ha una junta central molt fina. Totes les superfícies noves mostren la mateixa mostra UV de pintura que el xassís original, en lloc de la mostra pàl·lida anterior; això evita tant el color blanc com els forats que deixaria eliminar cares senceres. El tancament del darrere és una pell interior alineada amb el portó i el sostre inclinat que cobreix les obertures conservant els detalls originals que hi ha davant. Les rodes A4.3 i l’antena es mantenen.</p>
-  <p><strong>Abast:</strong> previsualització reversible; no s’han substituït encara els models dels vehicles del joc ni s’ha generat un GLB definitiu.</p>
+  <p><strong>Retorn al D3.1 original:</strong> aquesta preview torna a usar el D3.1 simètric directament derivat del GLB D, amb la textura original, les rodes A4.3 adaptades i l’antena. S’han descartat les modificacions fallides de portes i de carrosseria posterior. L’editor treballa amb els mateixos triangles que la vista principal, no amb un altre model. Els triangles seleccionats s’identifiquen mitjançant números i es poden compartir amb un enllaç reproduïble.</p>
+  <p><strong>Només selecció:</strong> el model no es pinta ni es divideix automàticament. Tria les peces i explica’m quin canvi vols que hi faci. El joc principal no s’ha modificat.</p>
   <p>Model base: <a href="https://poly.pizza/m/Ebryot9iKM" target="_blank" rel="noopener">«Humvee» de madtrollstudio</a> · <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>. Simplificacions geomètriques adaptades per a Hunter: Arxipèlag. No s'han substituït els vehicles del joc.</p>
 </footer>
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { deriveSymmetricD3 } from './src/humvee-d3-geometry.mjs';
-import { HUMVEE_WHEEL_SPEC, removeOriginalTires, mergeFourDoorTriangles, sideDoorCandidate } from './src/humvee-d31-refinements.mjs';
+import { HUMVEE_WHEEL_SPEC, removeOriginalTires, sideDoorCandidate } from './src/humvee-d31-refinements.mjs';
 import { createTruckConcept } from './src/truck-concepts.mjs';
-import { createD31DoorInspector } from './src/humvee-d31-door-inspector.mjs';
-import { cleanSelectedD31 } from './src/humvee-d31-bodywork.mjs?v=doors-20261023';
+import { createD31DoorInspector } from './src/humvee-d31-door-inspector.mjs?v=select-d31-original';
 const variants=[
- {id:'D3.1-selected',title:'D3.1 · Seleccionat',selected:true,revised:true,desc:'Referència anterior: retrovisors, relleus de portes i buits posteriors',grille:'slim',doors:'fine',tint:0xa3bfc0},
- {id:'D3.1-clean',title:'D3.1 · Carrosseria neta',clean:true,revised:true,desc:'Quatre portes amb color original · junta central · darrere tancat',grille:'slim',doors:'fine',tint:0xa3bfc0}
+ {id:'D3.1-original',title:'D3.1 · Original seleccionat',featured:true,
+  desc:'Malla simètrica intacta · rodes A4.3 · antena · material original',
+  grille:'slim',doors:'fine',tint:0xa3bfc0}
 ];
 const root=document.getElementById('models');
 const loader=new GLTFLoader();
@@ -328,32 +331,34 @@ function loadDerived(){
 function initializeDoorInspector(view,material){
  const host=document.getElementById('doorViewport');
  const message=document.getElementById('doorMessage');
- const syncMain=(triangles)=>{
-  view.triangleData=triangles;
-  view.baseMesh.geometry.dispose();
-  view.baseMesh.geometry=trianglesToGeometry(triangles);
-  view.meta.textContent=triangles.length.toLocaleString('ca')+' triangles xassís · '+meshTriangleCount(view.wheels)+' de rodes/eixos A4.3';
- };
+ const selectedMaterial=new THREE.MeshBasicMaterial({
+  color:0xffa73c,side:THREE.DoubleSide,transparent:true,
+  opacity:.88,depthTest:false,depthWrite:false
+ });
  if(!inspector)inspector=createD31DoorInspector(THREE,{
   host,message,geometryFromTriangles:trianglesToGeometry,sideDoorCandidate,
-  onMerge:(selected)=>{
-   const result=mergeFourDoorTriangles(view.triangleData,selected,view.axis);
-   syncMain(result.triangles);
-   return result;
-  },
-  onReset:()=>{
-   const triangles=view.initialTriangles.slice();
-   syncMain(triangles);
-   inspector.setGeometry(triangles,view.axis,material);
+  onSelection:(indices)=>{
+   if(view.selectionHighlight){
+    view.group.remove(view.selectionHighlight);
+    view.selectionHighlight.geometry.dispose();
+    view.selectionHighlight=null;
+   }
+   if(!indices.length)return;
+   const geometry=trianglesToGeometry(indices.map(i=>view.triangleData[i]));
+   const overlay=new THREE.Mesh(geometry,selectedMaterial);
+   overlay.name='Selected_D31_Faces';
+   overlay.renderOrder=30;
+   view.group.add(overlay);
+   view.selectionHighlight=overlay;
   }
  });
  inspector.setGeometry(view.triangleData,view.axis,material);
 }
 function createCard(v){
- const card=document.createElement('section');card.className='card'+(v.reference?' featured':'');
+ const card=document.createElement('section');card.className='card'+(v.featured?' featured':'');
  const tag=document.createElement('div');tag.className='tag';
  const name=document.createElement('strong');name.textContent=v.title;
- const meta=document.createElement('small');meta.textContent=v.reference?'2.499 triangles · D3 original':'Malla simètrica del D3.1';
+ const meta=document.createElement('small');meta.textContent='D3.1 original · carregant malla…';
  const desc=document.createElement('small');desc.textContent=v.desc;
  tag.append(name,meta,desc);card.append(tag);
  const status=document.createElement('div');status.className='state';status.textContent='Carregant i preparant la geometria…';card.append(status);
@@ -368,7 +373,7 @@ function createCard(v){
  const grid=new THREE.GridHelper(8,8,0x44616a,0x3c5156);grid.position.y=-.06;scene.add(grid);
  const camera=new THREE.PerspectiveCamera(39,1,.1,50);
  const group=new THREE.Group();scene.add(group);
- const view={card,renderer,scene,camera,group,panes:null,details:null,doors:null,antenna:null,wheels:null,baseMesh:null,triangleData:null,initialTriangles:null,axis:0,meta,originalMaterials:[]};
+ const view={card,renderer,scene,camera,group,panes:null,details:null,doors:null,antenna:null,wheels:null,baseMesh:null,triangleData:null,initialTriangles:null,selectionHighlight:null,axis:0,meta,originalMaterials:[]};
  views.push(view);
  const canvas=renderer.domElement;
  canvas.addEventListener('pointerdown',e=>{dragging=true;dragId=e.pointerId;dragX=e.clientX;dragY=e.clientY;canvas.setPointerCapture(e.pointerId);});
@@ -377,43 +382,28 @@ function createCard(v){
  canvas.addEventListener('pointercancel',e=>{if(dragId===e.pointerId)dragging=false;});
  canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=THREE.MathUtils.clamp(zoom+e.deltaY*.001,.66,1.65);},{passive:false});
  loadDerived().then(({source,center,symmetryZ,referenceMaterial,editableD31})=>{
-  if(v.reference){
-   const obj=source.clone(true);
-   obj.traverse(o=>{if(!o.isMesh)return;
-    const materials=Array.isArray(o.material)?o.material:[o.material];
-    const cloned=materials.map(m=>m.clone());
-    o.material=Array.isArray(o.material)?cloned:cloned[0];
-    view.originalMaterials.push(...cloned);
-   });
-   group.add(obj);
-  }else{
-   const data=editableD31[0];
-   const basic=removeOriginalTires(data.triangles,symmetryZ);
-   const cleaned=v.clean?cleanSelectedD31(basic.triangles,symmetryZ):null;
-   const working=cleaned?
-     {triangles:cleaned.triangles,removed:basic.removed,stats:cleaned.stats}:
-     basic;
-   const material=referenceMaterial.clone();material.wireframe=meshMode;
-   const mesh=new THREE.Mesh(trianglesToGeometry(working.triangles),material);
-   mesh.name='D31_optimized_chassis';group.add(mesh);view.baseMesh=mesh;
-   view.originalMaterials.push(material);
-   view.triangleData=working.triangles.slice();view.initialTriangles=working.triangles.slice();view.axis=symmetryZ;
-   const wheels=truckA43Wheels(symmetryZ);
-   group.add(wheels);view.wheels=wheels;
-   const antenna=antennaPosterior(symmetryZ);group.add(antenna);view.antenna=antenna;
-   if(v.clean){
-    const {mirrorsRemoved,doorFacesCut,doorTrianglesAdded,rearTrianglesAdded}=working.stats;
-    meta.textContent=working.triangles.length.toLocaleString('ca')+' triangles xassís · '+mirrorsRemoved+
-     ' cares retrovisors retirades · '+doorTrianglesAdded+' triangles nous de portes · '+rearTrianglesAdded+' posteriors';
-   }else{
-    meta.textContent=working.triangles.length.toLocaleString('ca')+' triangles xassís · referència D3.1';
-    revisedView=view;
-    initializeDoorInspector(view,material);
-   }
-  }
-  const pane=windowPanes(v);pane.position.z=v.reference?0:symmetryZ;group.add(pane);view.panes=pane;
-  const details=upgradeDetails(v);details.position.z=v.reference?0:symmetryZ;group.add(details);view.details=details;
-  group.position.set(-center.x,0,v.reference?-center.z:-symmetryZ);
+  // The only preview model, and the only editable mesh: original selected D3.1.
+  const data=editableD31[0];
+  const working=removeOriginalTires(data.triangles,symmetryZ);
+  const material=referenceMaterial.clone();
+  material.wireframe=meshMode;
+  const mesh=new THREE.Mesh(trianglesToGeometry(working.triangles),material);
+  mesh.name='D31_original_chassis';group.add(mesh);view.baseMesh=mesh;
+  view.originalMaterials.push(material);
+  view.triangleData=working.triangles.slice();
+  view.initialTriangles=view.triangleData.slice();
+  view.axis=symmetryZ;
+  const wheels=truckA43Wheels(symmetryZ);
+  group.add(wheels);view.wheels=wheels;
+  const antenna=antennaPosterior(symmetryZ);
+  group.add(antenna);view.antenna=antenna;
+  meta.textContent=working.triangles.length.toLocaleString('ca')+
+   ' triangles al xassís · rodes A4.3 i antena (sense canvis de portes)';
+  revisedView=view;
+  initializeDoorInspector(view,material);
+  const pane=windowPanes(v);pane.position.z=symmetryZ;group.add(pane);view.panes=pane;
+  const details=upgradeDetails(v);details.position.z=symmetryZ;group.add(details);view.details=details;
+  group.position.set(-center.x,0,-symmetryZ);
   for(const m of view.originalMaterials)m.wireframe=meshMode;
   status.classList.add('done');
  }).catch(err=>{status.textContent='No s’ha pogut preparar el model: '+err.message;console.error(err);});
