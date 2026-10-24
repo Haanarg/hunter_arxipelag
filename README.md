@@ -222,6 +222,7 @@ Les proves executables són a `tests/`, amb el suport compartit `tests/harness.c
 node tests/smoke.cjs
 node tests/startup-cache.cjs
 node tests/compound-generation.cjs
+npm run test:mission
 node tests/seed-replay.cjs
 node tests/terrain-level-index.cjs
 node tests/terrain-stream.cjs
@@ -232,7 +233,8 @@ node tests/victory-cinematic.cjs
 ```
 
 - **Manual:** `.github/workflows/runtime-bundle.yml` reconstrueix i verifica el paquet.
-- **Manual:** `.github/workflows/essential-tests.yml` executa grups de regressions. Cap workflow s’activa en fer push.
+- **Manual:** `.github/workflows/essential-tests.yml` executa grups de regressions; `mission` selecciona el contracte de missió, la matriu acotada i el soterrani. Cap workflow s’activa en fer push.
+- [Contracte de viabilitat de missió](docs/MISSION_VIABILITY.md): prerequisits, corredors locals mostrejats, reproducció de portes i límits de la prova. Les eines són fora del runtime i no allarguen l’arrencada.
 - `npm run test:optimization` comprova les plantilles compartides, els callbacks, la UI i la coherència del bundle.
 - Les comparatives actives es conserven; els prototips orfes i les referències retirades no formen part del runtime.
 
