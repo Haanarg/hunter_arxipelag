@@ -1,6 +1,6 @@
 # HUNTER · ARXIPÈLAG — progrés de les millores
 
-Actualitzat: 2026-10-24. Aquest fitxer és el punt de represa del pla de catorze fases, ordenat inicialment per impacte. S’han completat i desplegat **6 → 8**. L’usuari ha prioritzat ara **10 → 12**, seguides d’un qüestionari per dirigir la fase 11; la resta continua pendent segons la taula. «Implementada» no equival a validació física en Android.
+Actualitzat: 2026-10-24. Aquest fitxer és el punt de represa del pla de catorze fases, ordenat inicialment per impacte. S’han completat i desplegat les fases **6, 8, 10 i 12**. El següent pas acordat és el qüestionari per dirigir la fase 11 amb l’usuari; la resta continua pendent segons la taula. «Implementada» no equival a validació física en Android.
 
 ## Estat de les fases
 
@@ -17,7 +17,7 @@ Actualitzat: 2026-10-24. Aquest fitxer és el punt de represa del pla de catorze
 | 9 | Controls tàctils personalitzables | **Pendent.** | Esquerrans, sensibilitat, posicions i persistència de preferències. |
 | 10 | Generació progressiva del món | **Implementada i desplegada**, v0.5.80, commit `7d967fe`. Un mateix generador per camins síncron i progressiu, feina fragmentada i càrrega/cancel·lació recuperables. [Detall](docs/PHASE10_GENERATION.md). | Latència i aspecte en GPU/Android físic pendents. |
 | 11 | Exploració opcional amb decisions | **Qüestionari preparat; decisions de l’usuari pendents.** [Qüestionari](docs/PHASE11_QUESTIONNAIRE.md). No s’ha iniciat la implementació. | Recollir respostes i idees, presentar 2–3 propostes, acordar el primer prototip i revisar-lo jugant. |
-| 12 | So espacial informatiu | **Implementada**, v0.5.81, integrada sobre la fase 10. [Detall](docs/PHASE12_AUDIO.md). | Verificació del desplegament en curs; escolta i qualitat auditiva en Android físic pendents. |
+| 12 | So espacial informatiu | **Implementada i desplegada**, v0.5.81, commit `27b3d77`, integrada sobre la fase 10. [Detall](docs/PHASE12_AUDIO.md). | Escolta i qualitat auditiva en Android físic pendents. |
 | 13 | Modularització i regressions | **Pendent com a fase.** Hi ha extraccions i proves parcials a les fases anteriors. | Reduir dependències globals i ampliar regressions de comportament. |
 | 14 | Acabat visual i final de partida | **Pendent com a fase.** | Animacions/LOD, poliment, salt de cinemàtiques i resum final. |
 
@@ -70,11 +70,11 @@ Actualitzat: 2026-10-24. Aquest fitxer és el punt de represa del pla de catorze
 - Fonts i paquet: suite espacial i revisió independent d’integració superades. Buffer/context/bucles reutilitzats, atenuació única, listener real, veus 18/24 amb prioritats, throttle per emissor, neteja/pausa/mute/focus, errors de graf i autoplay provats.
 - Repetició del món físic 67/1 sobre el paquet integrat: buffers i 15.800 nodes exactes al baseline. Passen també timing (set perfils), càmera (16 perfils), feedback 6, sigil 8, mort/victòria i integritat/cache. La comprovació auditiva real en Android continua pendent.
 - La fase 11 té qüestionari preparat i no té implementació: cal recollir respostes/idees, acordar propostes i primer prototip.
-- Publicació i comprovació pública pendents en aquest commit; es registrarà el resultat a continuació.
+- Publicada com a `27b3d779ccdae5a6037f6f07a963149623487323`. Cloudflare: èxit, build `2c6a70e8-8a9e-4920-ad85-98535d2711a3`, Worker version `49154c54-aacd-4cb4-aea4-154cb66fab54`. Verificació HTTP `2026-10-24T21:48:05.039830+00:00`: entrada i version.mjs a **0.5.81**, runtime `70ae02e240d66267` de 634.752 bytes, idèntic al local verificat (SHA256 `d4bae8ce06dc72b1cb1cf10e6f60f7586ac73224dd87247afd3f39986d8461b9`).
 
 ## Represa
 
-La fase 10 està publicada i verificada a 0.5.80; la 12 està integrada a 0.5.81 i en verificació de desplegament. **Següent pas acordat: les respostes de l’usuari al [qüestionari de la fase 11](docs/PHASE11_QUESTIONNAIRE.md)**. Després es presentaran propostes concretes i s’acordarà el primer prototip abans de programar-lo. Les fases 4, 5, 7, 9, 13 i 14 continuen pendents segons la taula; la 1 continua parcial.
+La versió pública comprovada és **0.5.81**, amb les fases **10 i 12 completades** i les millores anteriors conservades. **Següent pas acordat: les respostes de l’usuari al [qüestionari de la fase 11](docs/PHASE11_QUESTIONNAIRE.md)**. Després es presentaran propostes concretes i s’acordarà el primer prototip abans de programar-lo. Les fases 4, 5, 7, 9, 13 i 14 continuen pendents segons la taula; la 1 continua parcial.
 
 ## Límits coneguts de la base
 
