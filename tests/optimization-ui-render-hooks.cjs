@@ -20,7 +20,7 @@ function segment(from,to){
   traverse(fn){fn(this);for(const child of this.children)child.traverse(fn)}
  });
  const world=group('world'),building=group('building'),pl=group('player');
- const mesh={name:'test-window',isMesh:true,children:[],parent:null,
+ const mesh={name:'test-window',isMesh:true,userData:{},children:[],parent:null,
   traverse(fn){fn(this)}};
  let previousCalls=0;
  mesh.onBeforeRender=function(){previousCalls++};
