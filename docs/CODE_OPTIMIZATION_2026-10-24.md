@@ -54,7 +54,7 @@ després de consolidar el Humvee procedural B, retirar els GLB antics i reparar
   L'auditoria anterior ja documentava un test general `KeyG` fallit anterior
   als canvis; no s'ha considerat un error nou.
 
-## Fases posteriors, no implementades
+## Pendents identificats a v0.5.74 (vegeu continuació a sota)
 
 1. Separar la geometria de camió A4.3 usada en producció de les tres
    variants només de la preview; fer-ho preservant els pivots de direcció,
@@ -79,3 +79,56 @@ executar `node tests/optimization-ui-render-hooks.cjs`,
 `node tests/truck-preview.cjs`, `node tests/truck-game-model.cjs`
 i `node tools/build-runtime.cjs --check` en un checkout amb Node,
 i començar per la separació del mòdul del camió o pel perfil de rendiment.
+
+
+## Continuació aplicada a v0.5.75
+
+S'ha contrastat `main` amb `4971b303` i s'han preservat totes les tasques de
+l'altra sessió descrites més amunt.
+
+- Separats els constructors de producció A4.3, C1A i Humvee B dels embolcalls
+  de previews; les variants actives continuen disponibles sense duplicar els
+  constructors de geometria. Les regles comunes dels complexos ara es diuen
+  `compound-layout-rules.mjs`.
+- Plantilles compartides de camió i cotxe civil (per color), amb geometries i
+  materials reutilitzats i pivots/rodes independents. `shared-resources.js`
+  diferencia recursos de fàbrica i recursos d'instància durant el reset.
+  Els materials comuns es reutilitzen; les modificacions locals els clonen.
+- Hooks de diagnòstic desconnectats quan el panell està ocult; es preserven els
+  callbacks previs i la reactivació. HUD i selector eviten reconstruccions
+  idèntiques; la cerca del vehicle proper es reutilitza al mateix tick.
+- Vectors de càmera reutilitzats, recomptes de vehicles sense arrays temporals
+  i agrupació/cache dels layouts durant la generació.
+- Bundle compacte per defecte, amb `?runtime=source` per depurar. Terser fixat
+  al lockfile, sense transformacions ni canvi de noms globals. Fallback a fonts
+  només quan falla la càrrega, no després d'executar parcialment el bundle.
+- Netejades referències a previews inexistents i adaptades les comprovacions
+  de controls/vehicles de smoke al contracte actual. No s'han retirat proves
+  vigents pel simple fet que fallin. Actions continuen només manuals.
+
+### Resultats i límits
+
+- Bundle: 719.661 → 574.327 bytes sense compressió HTTP (−20,2%).
+- Microprova de 20 instàncies del mateix tipus: camió de 700 geometries / 360
+  materials a 35 / 18; civil de 1.960 / 540 a 98 / 27. És recompte de recursos,
+  no una mesura d'FPS ni de memòria GPU en dispositiu.
+- Igualtat de geometria A4.3/C1A abans i després; quatre variants de camió,
+  Humvee B/rotor, conductor i rodes civils, recursos compartits, hooks/UI,
+  startup/cache, visibilitat de rendiment (fonts i bundle), temporitzador de
+  bomba i dany enter: proves superades.
+- Snapshot lògic de llavor 12345 idèntic abans/després i amb bundle:
+  base, HQ, vehicles, complexos i objectes.
+- Fallades reproduïdes també al baseline `74c8b00`: amplada esperada a
+  `truck-game-model`, expectatives de `compound-generation` i RNG no
+  inicialitzat a `projectile-classes`. Després d'actualitzar les dues primeres
+  comprovacions obsoletes, `smoke` falla a la mateixa asserció del franctirador
+  tant al baseline com al codi nou. No es presenten com regressions resoltes.
+- No s'ha validat visualment WebGL ni Android. No s'ha executat tota la bateria.
+- El repositori actual no conté GLB ni ZIP; no hi ha cap ZIP del Humvee pendent
+  de retirar a l'arbre. Les dades JS aprovades del Humvee B es conserven.
+
+### Treball que requereix mesurament o validació addicional
+
+Perfilar consultes espacials de combat abans d'introduir-les; validar arrencada,
+controls i memòria durant diversos resets en navegador/Android; valorar una
+separació progressiva de `game-core.js` en una intervenció independent.

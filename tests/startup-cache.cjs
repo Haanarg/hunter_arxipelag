@@ -13,7 +13,9 @@ const fs=require('node:fs'),path=require('node:path'),{pathToFileURL}=require('n
   const {RUNTIME_BUNDLE_PATH}=await import(pathToFileURL(path.join(root,'src/runtime-bundle.mjs')).href);
   if(RUNTIME_BUNDLE_PATH!==null){
     assert(/^dist\/hunter-runtime\.[a-f0-9]{16}\.js$/.test(RUNTIME_BUNDLE_PATH),'bundle filename must use content hash');
-    assert(fs.statSync(path.join(root,RUNTIME_BUNDLE_PATH)).size>400000,'bundle exists with runtime systems');
+    assert(fs.statSync(path.join(root,RUNTIME_BUNDLE_PATH)).size>100000,'bundle exists with runtime systems');
+    require('node:child_process').execFileSync(process.execPath,[path.join(root,'tools/build-runtime.cjs'),'--check']);
   }
+  assert(boot.includes("params.get('runtime')!=='source'")&&menu.includes("params.get('runtime')!=='source'"),'preload and boot default to the same bundle mode');
   console.log('PASS: Cloudflare cache policy, ESM revalidation and content-addressed bundle '+(RUNTIME_BUNDLE_PATH||'(fallback pending)'));
 })().catch(e=>{console.error(e);process.exitCode=1});

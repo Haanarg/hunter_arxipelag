@@ -59,7 +59,7 @@ window.HUNTER_VEHICLES=Object.freeze({
     };
   },
   createFactory(THREE,{box,material,shadows}){
-    const VS=this.scales;
+    const VS=this.scales,templates=new Map(),resources=window.HUNTER_RESOURCES;
     const rod=(g,a,b,r,c,profile='metal')=>{const v=new THREE.Vector3(...a),w=new THREE.Vector3(...b),delta=w.clone().sub(v),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),8),material(c,profile));m.position.copy(v.add(w).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());g.add(m);return m};
     const round=(g,r,h,c,x,y,z,axis='y',profile='metal')=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,12),material(c,profile));m.position.set(x,y,z);if(axis==='x')m.rotation.z=Math.PI/2;if(axis==='z')m.rotation.x=Math.PI/2;g.add(m);return m};
     const roundedPrism=(g,w,h,d,r,c,x,y,z,profile='paint')=>{const hw=w/2,hh=h/2,rr=Math.min(r,hw-.02,hh-.02),s=new THREE.Shape();s.moveTo(-hw+rr,-hh);s.lineTo(hw-rr,-hh);s.quadraticCurveTo(hw,-hh,hw,-hh+rr);s.lineTo(hw,hh-rr);s.quadraticCurveTo(hw,hh,hw-rr,hh);s.lineTo(-hw+rr,hh);s.quadraticCurveTo(-hw,hh,-hw,hh-rr);s.lineTo(-hw,-hh+rr);s.quadraticCurveTo(-hw,-hh,-hw+rr,-hh);s.closePath();const geo=new THREE.ExtrudeGeometry(s,{depth:d,bevelEnabled:false,curveSegments:2});geo.translate(0,0,-d/2);const m=new THREE.Mesh(geo,material(c,profile));m.position.set(x,y,z);g.add(m);return m};
@@ -71,16 +71,16 @@ window.HUNTER_VEHICLES=Object.freeze({
         parent=steering;px=0;py=0;pz=0;
       }
       const p=new THREE.Group();p.position.set(px,py,pz);parent.add(p);const tire=new THREE.Mesh(new THREE.TorusGeometry(r*.8,r*.2,6,12),material(0x20252a,'rubber'));tire.rotation.y=Math.PI/2;tire.scale.z=width/(r*.4);p.add(tire);round(p,r*.45,width*.8,0x8b9699,0,0,0,'x','metal');if(spokes)for(let a=0;a<Math.PI;a+=Math.PI/3)rod(p,[0,Math.sin(a)*r*.75,Math.cos(a)*r*.75],[0,-Math.sin(a)*r*.75,-Math.cos(a)*r*.75],.035,0xb6bdc1,'metal');p.userData.radius=r;(owner.userData.wheels||(owner.userData.wheels=[])).push(p);return p};
-    const shape=new THREE.Shape();[[-2,-5],[2,-5],[2.2,1],[0,5.5],[-2.2,1]].forEach(([x,y],i)=>i?shape.lineTo(x,y):shape.moveTo(x,y));
-    const hull=new THREE.ExtrudeGeometry(shape,{depth:1.4,bevelEnabled:false});hull.rotateX(-Math.PI/2);
     return function createVehicle(t,appearance={}){
+      const cacheKey=t==='camio'?'camio':t==='cotxe_civil'?'civil:'+String(appearance.color??0x4b9fd1):null;
+      if(resources&&cacheKey&&templates.has(cacheKey))return resources.cloneModel(templates.get(cacheKey));
       const g=new THREE.Group();g.rotation.order='YXZ';const metal=0x3e4849,glass=0x76acba,rubber=0x252d31;
       if(t==='cotxe_civil'){
         // Model definitiu C1A aprovat a la preview: mateixos passos de roda,
         // vidres, habitacle i maleter. La geometria s'instancia per cotxe.
         const factory=window.HUNTER_CIVIL_C1A;
         if(typeof factory!=='function')throw new Error('Falta el model civil C1A');
-        const car=factory(THREE,0,appearance.color??0x4b9fd1);
+        const car=factory(THREE,appearance.color??0x4b9fd1);
         g.add(car);
         g.userData.wheels=car.userData.wheels;
         g.userData.steeringPivots=car.userData.steeringPivots;
@@ -126,6 +126,7 @@ window.HUNTER_VEHICLES=Object.freeze({
         // La seva escala interna = 1.75 / VS.cotxe; la fàbrica general
         // aplica VS.cotxe una sola vegada al final.
         const humvee=window.HUNTER_HUMVEE_D31.create();
+        resources?.retainModel(humvee);
         g.add(humvee);
         g.userData.wheels=humvee.userData.wheels;
         g.userData.steeringPivots=humvee.userData.steeringPivots;
@@ -149,7 +150,7 @@ window.HUNTER_VEHICLES=Object.freeze({
         // caixa de col·lisió física existent (3.6 × 7.8, abans de VS).
         const factory=window.HUNTER_TRUCK_CONCEPT;
         if(typeof factory!=='function')throw new Error('Falta el model A4.3');
-        const truck=factory(THREE,2),fit=.82;
+        const truck=factory(THREE),fit=.82;
         // Les sis rodes són animades; fusionam només malles estàtiques.
         // Una malla per material evita 140+ draw calls per camió.
         const groups=new Map();
@@ -707,7 +708,12 @@ window.HUNTER_VEHICLES=Object.freeze({
         g.userData.rotorContactHeight=((t==='heli_combat'?3.22:3.82)+.05)*VS[t];
       }
       g.traverse(o=>{if(o.isMesh&&!o.userData.waterMask){o.castShadow=shadows;o.receiveShadow=shadows}});
-      g.scale.setScalar(VS[t]);return g;
+      g.scale.setScalar(VS[t]);
+      if(resources&&cacheKey){
+        resources.retainModel(g);templates.set(cacheKey,g);
+        return resources.cloneModel(g);
+      }
+      return g;
     };
   }
 });

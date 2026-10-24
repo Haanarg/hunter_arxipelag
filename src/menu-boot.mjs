@@ -1,4 +1,4 @@
-import {GAME_VERSION} from './version.mjs?v=0.5.74';
+import {GAME_VERSION} from './version.mjs?v=0.5.75';
 import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs';
 
 // La portada no carrega Three.js, WebGL, el món ni una llavor de fons.
@@ -67,7 +67,7 @@ function preloadEngine(){
     link.fetchPriority='low';
     document.head.appendChild(link);
   };
-  if(params.get('runtime')==='bundle'&&RUNTIME_BUNDLE_PATH)preloadScript(RUNTIME_BUNDLE_PATH);
+  if(params.get('runtime')!=='source'&&RUNTIME_BUNDLE_PATH)preloadScript(RUNTIME_BUNDLE_PATH);
   else import('./runtime-scripts.mjs').then(({runtimeScripts})=>{
     // Desenvolupament: precàrrega dels scripts font, sense compilar.
     for(const path of runtimeScripts)preloadScript(path,true);
@@ -85,7 +85,7 @@ const showLoading=(message)=>{
 };
 function loadGame(){
   if(window.HUNTER_READY)return Promise.resolve();
-  if(!bootPromise)bootPromise=import('./bootstrap.mjs?v=0.5.74').then(()=>{
+  if(!bootPromise)bootPromise=import('./bootstrap.mjs?v=0.5.75').then(()=>{
     if(!window.HUNTER_READY)throw new Error('El motor 3D no ha acabat de carregar');
   }).catch(error=>{bootPromise=null;throw error});
   return bootPromise;

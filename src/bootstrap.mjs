@@ -9,12 +9,12 @@ import {runtimeScripts} from './runtime-scripts.mjs';
 import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs';
 import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
-import {GAME_VERSION} from './version.mjs?v=0.5.74';
-import {createTruckConcept} from './truck-concepts.mjs';
-import {createFamilyC1Iteration} from './civilian-car-c1-iterations.mjs';
-window.HUNTER_CIVIL_C1A=createFamilyC1Iteration;
+import {GAME_VERSION} from './version.mjs?v=0.5.75';
+import {createTruckModel} from './truck-model.mjs';
+import {createCivilianCarModel} from './civilian-car-model.mjs';
+window.HUNTER_CIVIL_C1A=createCivilianCarModel;
 // Mateixa geometria A4.3 que es mostra a camio-proves.html.
-window.HUNTER_TRUCK_CONCEPT=createTruckConcept;
+window.HUNTER_TRUCK_CONCEPT=createTruckModel;
 import * as rockFields from './rock-fields.mjs';
 window.HUNTER_ROCK_FIELDS=rockFields;
 
@@ -59,7 +59,7 @@ try {
   // Si les dades no es poden preparar, mantenim la geometria clàssica
   // de reserva per no impedir l'inici de la partida.
   try {
-    const {prepareHumveeD31Runtime}=await import('./humvee-d31-runtime.mjs?v=0.5.74');
+    const {prepareHumveeD31Runtime}=await import('./humvee-d31-runtime.mjs?v=0.5.75');
     window.HUNTER_HUMVEE_D31=await prepareHumveeD31Runtime(THREE,{vehicleScale:1.3});
     console.info('Humvee D3.1 procedural B · 175% carregat al joc',
       window.HUNTER_HUMVEE_D31.dimensions);
@@ -78,7 +78,7 @@ try {
     script.src=url.href;
     const cleanup=()=>window.removeEventListener('error',onError);
     const onError=event=>{
-      if(event.filename===script.src){cleanup();reject(event.error||new Error(event.message))}
+      if(event.filename===script.src){cleanup();const error=event.error||new Error(event.message);error.runtimeExecution=true;reject(error)}
     };
     window.addEventListener('error',onError);
     script.onload=()=>{cleanup();resolve()};
@@ -86,15 +86,17 @@ try {
     document.head.append(script);
   });
   const loadLegacy=async()=>{for(const path of runtimeScripts)await loadClassic(path,true)};
-  const useBundle=params.get('runtime')==='bundle';
+  const useBundle=params.get('runtime')!=='source';
+  let runtimeMode='source';
   if(useBundle&&RUNTIME_BUNDLE_PATH){
-    try{await loadClassic(RUNTIME_BUNDLE_PATH)}
+    try{await loadClassic(RUNTIME_BUNDLE_PATH);runtimeMode='bundle'}
     catch(error){
+      if(error.runtimeExecution)throw error;
       console.warn('Paquet runtime no disponible; recuperant scripts individuals',error);
       await loadLegacy();
     }
   }else await loadLegacy();
-  window.HUNTER_RUNTIME_MODE=useBundle?'bundle':'source';
+  window.HUNTER_RUNTIME_MODE=runtimeMode;
   window.HUNTER_READY = true;
 } catch (error) {
   console.error('No s’ha pogut iniciar Húnter', error);

@@ -26,6 +26,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install pinned build tools
+        run: npm ci --ignore-scripts
       - name: Executar proves seleccionades (sense duplicats)
         env:
           GRUP: ${{ inputs.grup }}
@@ -43,10 +45,10 @@ jobs:
               set -- victory-cinematic death-cinematic
               ;;
             startup)
-              set -- smoke startup-cache optimization-ui-render-hooks joystick-running player-locomotion rowing-audio-camera performance-stats-toggle player-death-zero pause-menu integer-damage loot-health locomotion-blast truck-preview truck-game-model truck-debris ferry-land-patrols pier-access
+              set -- shared-resources smoke startup-cache optimization-ui-render-hooks joystick-running player-locomotion rowing-audio-camera performance-stats-toggle player-death-zero pause-menu integer-damage loot-health locomotion-blast truck-preview truck-game-model truck-debris ferry-land-patrols pier-access
               ;;
             all)
-              set -- smoke startup-cache optimization-ui-render-hooks joystick-running player-locomotion rowing-audio-camera performance-stats-toggle player-death-zero pause-menu integer-damage loot-health vehicle-weapon-reticle rock-fields nature-prototypes truck-preview truck-game-model truck-debris ferry-land-patrols water-jumps shark-behaviour locomotion-blast enemy-weapon-damage pier-access terrain-level-index terrain-stream water seed-replay compound-generation two-storey-destruction enemy-navigation projectile-classes enemy-vehicle-trails damage-consistency heavy-vehicle-collisions victory-cinematic death-cinematic
+              set -- shared-resources smoke startup-cache optimization-ui-render-hooks joystick-running player-locomotion rowing-audio-camera performance-stats-toggle player-death-zero pause-menu integer-damage loot-health vehicle-weapon-reticle rock-fields nature-prototypes truck-preview truck-game-model truck-debris ferry-land-patrols water-jumps shark-behaviour locomotion-blast enemy-weapon-damage pier-access terrain-level-index terrain-stream water seed-replay compound-generation two-storey-destruction enemy-navigation projectile-classes enemy-vehicle-trails damage-consistency heavy-vehicle-collisions victory-cinematic death-cinematic
               ;;
             *)
               echo "Grup de proves desconegut: $GRUP" >&2

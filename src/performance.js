@@ -10,7 +10,7 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       pixelRatio:ratio,maxPixelRatio:ratio,minPixelRatio:ratio,
       changes:0,active:false,mode:'fixed'
     };
-    function sample({dt,renderCpuMs=0,updateCpuMs=0,terrainCpuMs=0,active=true,now=0}){
+    function sample({dt,renderCpuMs=0,updateCpuMs=0,terrainCpuMs=0,active=true,now=0,display=false}){
       stats.active=!!active;
       const counts=renderer.info?.render;
       stats.drawCalls=counts?.calls||0;
@@ -30,7 +30,7 @@ window.HUNTER_PERFORMANCE=Object.freeze({
         stats.frameMs=1000/stats.fps;
         frames=0;frameAccum=0;lastFps=stats.fps;
       }
-      if(element&&now-lastDisplay>=350){
+      if(display&&element&&now-lastDisplay>=350){
         element.textContent='FPS '+Math.round(stats.fps||0)+
           ' · fotograma '+(stats.frameMs||0).toFixed(1)+' ms'+
           '\nCPU joc '+stats.updateCpuMs.toFixed(1)+' ms · terreny '+stats.terrainCpuMs.toFixed(1)+' ms'+

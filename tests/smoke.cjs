@@ -194,13 +194,18 @@ run(`{
 }`);
 ok('strafeHudModes','two buttons appear on foot, while swimming, on hovercraft and helicopters and release on vehicle changes');
 
-const actionBindingString=run('String(act)');
-assert(actionBindingString.includes("if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory');return}")&&
-  actionBindingString.includes("if(c==='KeyT'){toggleSniperScope();return}")&&
-  actionBindingString.includes("if(c==='KeyG'){if(!secondaryWeapon())plant();}")&&
-  !actionBindingString.includes("if(c==='KeyQ')")&&
-  !actionBindingString.includes("if(c==='KeyQ')"),
-  'action uses E, sniper scope T, helicopter missiles G; Y/U do not trigger actions');
+const bindings=run(`(()=>{
+ const saved={toggle,toggleSniperScope,secondaryWeapon,panel,started,paused,over,cv,inv,swimming,playerFall,playerEject};
+ const events=[];
+ try{
+  started=true;paused=false;over=false;cv={t:'heli'};inv={expl:1};swimming=false;playerFall=playerEject=null;
+  toggle=()=>events.push('vehicle');toggleSniperScope=()=>events.push('scope');
+  secondaryWeapon=()=>{events.push('secondary');return false};panel=name=>events.push(name);
+  act('KeyE');act('KeyT');act('KeyG');act('KeyY');act('KeyU');
+  return events;
+ }finally{({toggle,toggleSniperScope,secondaryWeapon,panel,started,paused,over,cv,inv,swimming,playerFall,playerEject}=saved)}
+})()`);
+assert.deepEqual(Array.from(bindings),['vehicle','scope','secondary','bombtimer']);
 ok("String(update).includes('(K.KeyU?1:0)-(K.KeyY?1:0)')&&!String(update).includes('K.KeyX')&&!String(update).includes('K.KeyZ')",
   'Y/U keyboard strafes left/right');
 const remappedKeysHtml=require('fs').readFileSync(require('path').join(__dirname,'../index.html'),'utf8');
@@ -518,12 +523,12 @@ run(`{
     cv=saved.cv;P.x=saved.x;P.z=saved.z;
     updateActionButton(cv?null:nearV());
   }
-  globalThis.actionVehicleIconsCoverAll=types.length===15&&
+  globalThis.actionVehicleIconsCoverAll=types.length===Object.keys(VT).length&&
     icons.types.length===types.length&&images.every(i=>i.startsWith('<svg '))&&
     new Set(images).size===types.length&&icons.backpack.startsWith('<svg ');
   globalThis.actionButtonMatchesBoarding=backpack&&near&&onboard&&away;
 }`);
-ok('actionVehicleIconsCoverAll','the action button has an individual image for each of the fifteen vehicle types and a backpack');
+ok('actionVehicleIconsCoverAll','the action button has an individual image for each of the vehicle types and a backpack');
 ok('actionButtonMatchesBoarding','the action button changes from backpack to the actual boarding target and back, including when inside a vehicle');
 
 

@@ -4,7 +4,7 @@ const fs=require('node:fs'),path=require('node:path');
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 assert.match(read('src/action-icons.js'),/cotxe_civil:svg\(/,
   'El cotxe familiar ha de tenir icona pròpia al botó d’acció');
-assert.match(read('src/civilian-car-c1-iterations.mjs'),/steering.add\(axle\)/,
+assert.match(read('src/civilian-car-model.mjs'),/steering.add\(axle\)/,
   'Rodes de direcció i rodatge en grups diferents');
 (async()=>{
  const game=await require('./harness.cjs')();

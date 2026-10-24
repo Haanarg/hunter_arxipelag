@@ -1,10 +1,10 @@
 import {createPathNetwork,smoothPath} from './compound-paths.mjs';
 import {decorateTimber,decorateUpper} from './compound-architecture.mjs';
-import {refinePreviewLayout} from './compound-preview-refinements.mjs';
+import {refineCompoundLayout} from './compound-layout-rules.mjs';
 import {createCompoundStructures} from './compound-structures.mjs';
 import * as T from '../vendor/three-r186.module.mjs';
 export function createCompoundConcept(layout){
- layout=refinePreviewLayout(layout);
+ layout=refineCompoundLayout(layout);
  const structures=createCompoundStructures();
  const root=new T.Group(),roofs=[],tags=[],overlays=new T.Group(),materials=new Map();root.add(overlays);
  const mat=(color,profile='paint')=>{const key=color+profile;if(!materials.has(key))materials.set(key,new T.MeshStandardMaterial({color,roughness:profile==='metal'?.57:.92,metalness:profile==='metal'?.25:0,flatShading:true}));return materials.get(key)};

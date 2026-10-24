@@ -1,3 +1,4 @@
+const countVehicles=type=>{let count=0;for(const v of V)if(v.t===type)count++;return count};
 const PIER_DECK_Y=2.4; // 20 cm sobre el màxim de les ones, més proper al nivell de terra. // Cota de coberta per sobre del màxim d'onatge (2.2 m).
 // Validació final contra TOTS els vehicles: també els afegits després dels molls.
 function jetSkiSpotClear(q,ignore=null){
@@ -53,7 +54,7 @@ function ensureJetSkis(add){
     if(!q)throw new Error('No s’ha trobat una costa lliure per a la moto aquàtica');
     Object.assign(v,q,{coastal:true});
   }
-  while(V.filter(v=>v.t==='moto_aquatica').length<4){
+  while(countVehicles('moto_aquatica')<4){
     const q=findJetSkiCoastSpot();
     if(!q)throw new Error('No s’han pogut situar quatre motos aquàtiques sense solapaments');
     add('moto_aquatica',q.x,q.z,q.hd,{coastal:true,guaranteed:true});
@@ -67,7 +68,7 @@ function build(){clearVictoryCinematic();clearDeathCinematic();window.HUNTER_ENE
   if(!seedScratchWorld)seedScratchWorld=new THREE.Group();
   seedScratchWorld.clear();world=seedScratchWorld;
 }else{
-  if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}
+  if(world){scene.remove(world);window.HUNTER_RESOURCES.dispose(world)}
   world=new THREE.Group();scene.add(world);
 }
 world.userData={compounds:[],airObstacles:[]};B=[];stairs=[];piers=[];swimming=false;intelMarks=[];hqMapKnown=false;playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false;pl.userData.cisallaCut=0;sniperEquipped=false;sniperAmmo=0;setSniperScope(false);pl.userData.sniper.visible=false;pl.userData.bazooka.visible=false;pl.userData.grenade.visible=false;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;pl.userData.grenadePending=null;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];grenades=[];fx=[];logb=[];hp=window.HUNTER_COMBAT_BALANCE.player;ammo=16;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
@@ -282,7 +283,12 @@ const compoundCenters=[
   {x:pb.x,z:pb.z,r:hqCompound.r,type:'hq'}
 ];
 const typeId=t=>({avancada:'outpost',garatge:'hangar'}[t]||t);
-const compoundRadius=type=>Math.max(COMPOUND_RADII[type]||58,...window.HUNTER_RUNTIME_LAYOUTS.filter(l=>l.type===typeId(type)).map(layoutRadius));
+const compoundRadiusCache=new Map();
+const compoundRadius=type=>{
+  if(!compoundRadiusCache.has(type))compoundRadiusCache.set(type,
+    Math.max(COMPOUND_RADII[type]||58,...window.HUNTER_RUNTIME_LAYOUTS.filter(l=>l.type===typeId(type)).map(layoutRadius)));
+  return compoundRadiusCache.get(type);
+};
 const compoundSiteClear=(type,q,minCenter=0)=>{
   const r=compoundRadius(type);
   return compoundCenters.every(c=>{
@@ -679,14 +685,14 @@ const militaryRocketBoatSpot=()=>{
   return null;
 };
 let rocketBoatAttempts=0;
-while(V.filter(v=>v.t==='llanxa_coets').length<2&&rocketBoatAttempts++<4){
+while(countVehicles('llanxa_coets')<2&&rocketBoatAttempts++<4){
   const q=militaryRocketBoatSpot()||waterVehicleSpot('llanxa_coets');
   if(!q)break;
   add('llanxa_coets',q.x,q.z,q.hd,{military:true,guaranteed:true});
 }
-const ensureVehicleCount=(t,min)=>{let guard=0;while(V.filter(v=>v.t===t).length<min&&guard++<12){const q=distributedMilitarySpot(t)||hardLandVehicleSpot(t);if(!q)break;add(t,q.x,q.z,q.hd,{military:true,guaranteed:true})}};
+const ensureVehicleCount=(t,min)=>{let guard=0;while(countVehicles(t)<min&&guard++<12){const q=distributedMilitarySpot(t)||hardLandVehicleSpot(t);if(!q)break;add(t,q.x,q.z,q.hd,{military:true,guaranteed:true})}};
 ensureVehicleCount('tanc',2);
-const ensureDistributedCount=(t,min)=>{let guard=0;while(V.filter(v=>v.t===t).length<min&&guard++<16){const q=t==='tanqueta'?militaryCompoundSpot(t):distributedMilitarySpot(t)||hardLandVehicleSpot(t);if(!q)break;add(t,q.x,q.z,q.hd,{military:true,guaranteed:true})}};
+const ensureDistributedCount=(t,min)=>{let guard=0;while(countVehicles(t)<min&&guard++<16){const q=t==='tanqueta'?militaryCompoundSpot(t):distributedMilitarySpot(t)||hardLandVehicleSpot(t);if(!q)break;add(t,q.x,q.z,q.hd,{military:true,guaranteed:true})}};
 ensureDistributedCount('heli',2*MAP_SCALE);
 ensureDistributedCount('heli_combat',MAP_SCALE);
 ensureDistributedCount('tanqueta',1+MAP_SCALE);

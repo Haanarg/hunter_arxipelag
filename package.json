@@ -1,0 +1,12 @@
+{
+  "devDependencies": {
+    "terser": "5.51.2"
+  },
+  "name": "hunter-arxipelag",
+  "private": true,
+  "scripts": {
+    "build": "node tools/build-runtime.cjs",
+    "check:build": "node tools/build-runtime.cjs --check",
+    "test:optimization": "node tests/shared-resources.cjs && node tests/optimization-ui-render-hooks.cjs && node tests/startup-cache.cjs"
+  }
+}

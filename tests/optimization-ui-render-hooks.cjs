@@ -27,7 +27,7 @@ function segment(from,to){
  building.add(mesh);world.add(building);
  const B=[{o:building}],V=[],E=[],fa=[],items=[],PM={trunk:null},
   terrainStream=null,renderCategories={edificis:0,vehicles:0,altres:0};
- const context={world,pl,B,V,E,fa,items,PM,terrainStream,renderCategories,Map,WeakMap};
+ const context={world,pl,B,V,E,fa,items,PM,terrainStream,renderCategories,performanceStatsVisible:true,Map,WeakMap};
  vm.runInNewContext(code+';this.registerDrawCategories=registerDrawCategories;',context);
  context.registerDrawCategories();
  const initialHook=mesh.onBeforeRender;
@@ -45,9 +45,16 @@ function segment(from,to){
  mesh.onBeforeRender();
  assert.equal(renderCategories.vehicles,1,'Existing callbacks must use updated category');
  assert.equal(renderCategories.edificis,2);
+ context.performanceStatsVisible=false;context.registerDrawCategories();
+ mesh.onBeforeRender();assert.equal(renderCategories.vehicles,1);
+ assert.equal(previousCalls,4);
+ context.performanceStatsVisible=true;context.registerDrawCategories();
+ assert.strictEqual(mesh.onBeforeRender,initialHook);
+ mesh.onBeforeRender();assert.equal(renderCategories.vehicles,2);
 }
+
 {
- const code=segment('let lastPickerAvailable=null;',
+ const code=segment('function syncWeaponPicker(){',
                     'pickerToggle.onclick=');
  let visible=true,toggleWrites=0,pickerWrites=0;
  const pickerToggle={style:{
@@ -56,7 +63,8 @@ function segment(from,to){
  }};
  const picker={style:{set display(value){this._display=value;pickerWrites++}}};
  const context={pickerToggle,picker,pickerOpen:true,
-  weaponPickerAvailable:()=>visible};
+  weaponPickerAvailable:()=>visible,
+  drawWeaponPicker:()=>{picker.style.display='none'}};
  vm.runInNewContext(code+';this.syncWeaponPicker=syncWeaponPicker;',context);
  context.syncWeaponPicker();context.syncWeaponPicker();
  assert.equal(toggleWrites,1,'Identical visibility must not rewrite the DOM');

@@ -18,6 +18,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install pinned build tools
+        run: npm ci --ignore-scripts
       - name: Agrupar fitxers en ordre
         run: node tools/build-runtime.cjs
       - name: Comprovar el hash i la integritat
@@ -26,6 +28,7 @@ jobs:
         run: node --check dist/hunter-runtime.*.js
       - name: Comprovar els pivots i els controls del moviment
         run: |
+          node tests/shared-resources.cjs
           node tests/optimization-ui-render-hooks.cjs
           node tests/joystick-running.cjs
           node tests/player-locomotion.cjs

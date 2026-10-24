@@ -157,7 +157,6 @@ La revisió **0.5.13** integra les fases 1, 2, 3, 4 i 6: arquitectura compartida
 | Cercador limitat a ferris | Substituït pel cercador per categories |
 | Toggles de rendiment dispersos a la portada | Agrupats en un menú propi |
 | «Optimització completada» sense matisos | Canvis implementats, mesura i estabilització contínues |
-| `heli-concepts.html` o `previews.html` com a pàgines presents | Aquests HTML no són al repositori actual; no mantenir-hi enllaços |
 | Versions descartades de models | Referència històrica, no obligacions pendents |
 | Laboratoris de fase 3 i dispar marcats com a no integrats | Rètols corregits a 0.4.25 |
 

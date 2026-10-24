@@ -2,7 +2,7 @@
 // No GLB or network model download during game startup: positions, normals,
 // UVs, wheel nodes, materials and the embedded PNG atlas come from JS data.
 // The approved geometry is preserved in the procedural JavaScript data.
-import {loadHumveeMethodB} from './humvee-procedural-models.mjs?v=0.5.73';
+import {loadHumveeMethodB} from './humvee-procedural-b.mjs';
 
 export const HUNTER_HUMVEE_GAME_SCALE=1.75;
 export const HUNTER_HUMVEE_RENDERER='procedural-B';

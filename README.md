@@ -203,8 +203,8 @@ Validació essencial actual: `node tests/seed-replay.cjs` i `node tests/smoke.cj
 ## Arrencada optimitzada
 
 - La portada continua sent una imatge fixa i precàrrega Three.js i el paquet del motor quan el navegador està disponible, sense activar WebGL.
-- Els 38 scripts clàssics s'agrupen en un sol fitxer `dist/hunter-runtime.<hash>.js` generat amb `node tools/build-runtime.cjs`; l'ordre original es conserva i existeix un carregador alternatiu per a errors de xarxa.
-- GitHub Actions regenera el paquet amb una única regressió bàsica automàtica; la resta de comprovacions s'executen manualment. El contingut del paquet determina el nom de fitxer, evitant invalidar tota la memòria cau en cada revisió.
+- Els scripts clàssics de `runtime-scripts.mjs` s'agrupen en un sol fitxer `dist/hunter-runtime.<hash>.js` minificat amb `npm ci --ignore-scripts` i `npm run build`; l'ordre original es conserva i existeix un carregador alternatiu per a errors de xarxa.
+- El bundle és el mode de producció; `?runtime=source` carrega els scripts individuals. GitHub Actions només s’executa manualment. El contingut del paquet determina el nom de fitxer, evitant invalidar tota la memòria cau en cada revisió.
 - Cloudflare Pages utilitza `_headers` per conservar els paquets amb hash i revalidar l'HTML i els manifests.
 - La textura detallada s'elabora progressivament després del primer fotograma i l'aigua comença amb una malla de 160 divisions (o menys, segons perfil); la malla final es prepara per blocs i substitueix l'anterior quan està completa.
 - Des de la consola es poden consultar `window.HUNTER_STARTUP_TIMINGS` (motor, món, total), `window.HUNTER_BUILD_STATS` (generació) i `water.resolution` en les proves. Aquestes xifres són de l'equip real i permeten comparar abans/després.
@@ -216,7 +216,7 @@ Validació essencial actual: `node tests/seed-replay.cjs` i `node tests/smoke.cj
 
 ### Proves essencials conservades
 
-S'han conservat **10 proves executables** i el suport compartit `tests/harness.cjs`. Es poden executar amb Node.js localment, sense consumir minuts de GitHub Actions:
+Les proves executables són a `tests/`, amb el suport compartit `tests/harness.cjs`. Es poden executar amb Node.js localment, sense consumir minuts de GitHub Actions:
 
 ```sh
 node tests/smoke.cjs
@@ -231,9 +231,10 @@ node tests/projectile-classes.cjs
 node tests/victory-cinematic.cjs
 ```
 
-- **Automàtic:** `.github/workflows/runtime-bundle.yml`, només quan canvien els scripts del runtime. Regenera el paquet, n'avalua la integritat i executa `smoke.cjs` una sola vegada.
-- **Manual:** `.github/workflows/essential-tests.yml`, amb grups `world`, `combat`, `ending`, `startup` o `all`. Les proves especialitzades només consumeixen minuts d'Actions quan algú les inicia expressament.
-- Les proves de previews, models experimentals, efectes puntuals i regressions duplicades s'han retirat; si cal es podran recrear. No s'ha eliminat codi funcional del joc.
+- **Manual:** `.github/workflows/runtime-bundle.yml` reconstrueix i verifica el paquet.
+- **Manual:** `.github/workflows/essential-tests.yml` executa grups de regressions. Cap workflow s’activa en fer push.
+- `npm run test:optimization` comprova les plantilles compartides, els callbacks, la UI i la coherència del bundle.
+- Les comparatives actives es conserven; els prototips orfes i les referències retirades no formen part del runtime.
 
 Per comprovar el paquet manualment sense regenerar-lo: `node tools/build-runtime.cjs --check`.
 
@@ -248,7 +249,7 @@ Laboratoris conservats per a iteracions visuals:
 
 ## Publicació i llicències
 
-`main` és la branca oficial. El domini del joc és https://hunter.paradoxa.cat/, amb desplegament a Cloudflare Pages; no s’ha de reintroduir GitHub Pages. Només el workflow de runtime funciona automàticament; la bateria de regressions es pot iniciar manualment.
+`main` és la branca oficial. El domini del joc és https://hunter.paradoxa.cat/, amb desplegament a Cloudflare Pages; no s’ha de reintroduir GitHub Pages. Tots els workflows són manuals.
 
 Three.js es distribueix sota MIT: [llicència](vendor/THREE-LICENSE.txt) i [procedència i reproducció](vendor/README.md). El projecte no té encara una llicència pròpia de distribució.
 

@@ -43,8 +43,8 @@ module.exports=async function createGame(root=path.resolve(__dirname,'..')){
   const runtime=await import(require('url').pathToFileURL(path.join(root,'src/compound-runtime-layouts.mjs')));c.HUNTER_RUNTIME_LAYOUTS=runtime.runtimeLayouts;c.HUNTER_CHOOSE_COMPOUND=runtime.chooseCompoundLayout;c.HUNTER_COMPOUND_ARCHITECTURE=await import(require('url').pathToFileURL(path.join(root,'src/compound-architecture.mjs')));
   c.HUNTER_COMPOUND_PATHS=await import(require('url').pathToFileURL(path.join(root,'src/compound-paths.mjs')));
   c.HUNTER_COMPOUND_STRUCTURES=(await import(require('url').pathToFileURL(path.join(root,'src/compound-structures.mjs')))).createCompoundStructures;
-  c.HUNTER_TRUCK_CONCEPT=(await import(require('url').pathToFileURL(path.join(root,'src/truck-concepts.mjs')))).createTruckConcept;
-  c.HUNTER_CIVIL_C1A=(await import(require('url').pathToFileURL(path.join(root,'src/civilian-car-c1-iterations.mjs')))).createFamilyC1Iteration;
+  c.HUNTER_TRUCK_CONCEPT=(await import(require('url').pathToFileURL(path.join(root,'src/truck-model.mjs')))).createTruckModel;
+  c.HUNTER_CIVIL_C1A=(await import(require('url').pathToFileURL(path.join(root,'src/civilian-car-model.mjs')))).createCivilianCarModel;
   c.HUNTER_ROCK_FIELDS=await import(require('url').pathToFileURL(path.join(root,'src/rock-fields.mjs')));
   class Renderer{constructor(){this.domElement=el('canvas');this.shadowMap={}}setPixelRatio(){}setSize(){}render(scene,cam){scene.updateMatrixWorld();cam.updateMatrixWorld()}}
   c.THREE={...await import(require('url').pathToFileURL(path.join(root,'vendor/three-r186.module.mjs'))),WebGLRenderer:Renderer};

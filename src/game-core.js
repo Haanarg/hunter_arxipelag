@@ -14,7 +14,13 @@ const missingSystems=Object.entries({generation:typeof build,combat:typeof fire,
    return k
  };
 const materialProfile=(name='organic')=>window.HUNTER_MATERIALS[name]||window.HUNTER_MATERIALS.organic;
-const M=(c,profile='organic')=>new THREE.MeshStandardMaterial({color:vivid(c),flatShading:true,...materialProfile(profile)});
+const sharedMaterials=new Map();
+const M=(c,profile='organic')=>{
+  const key=c+':'+profile;
+  if(!sharedMaterials.has(key))sharedMaterials.set(key,window.HUNTER_RESOURCES.retain(
+    new THREE.MeshStandardMaterial({color:vivid(c),flatShading:true,...materialProfile(profile)})));
+  return sharedMaterials.get(key);
+};
 const MAT={
  terrain:()=>{
    const mat=new THREE.MeshLambertMaterial({
@@ -152,6 +158,7 @@ let performanceStatsVisible=false;
 document.body.classList.remove('performance-stats-visible');
 function setPerformanceStatsVisible(enabled){
   performanceStatsVisible=!!enabled;
+  if(world)registerDrawCategories();
   document.body.classList.toggle('performance-stats-visible',performanceStatsVisible);
 }
 window.HUNTER_PERFORMANCE_STATS=adaptivePerformance.stats;
@@ -1034,6 +1041,7 @@ function addBunkerBasement(b){
       floorPanel(xa,xb,za,zb,.22,0x8e9588);
       for(const mesh of b.o.children.slice(before)){
         mesh.name='bunker-forjat-opac';
+        mesh.material=mesh.material.clone();
         mesh.material.transparent=false;
         mesh.material.opacity=1;
         mesh.material.depthWrite=true;
@@ -1738,8 +1746,6 @@ let staticVisualBatches=[];
 const renderCategories={terreny:0,edificis:0,filferrades:0,vehicles:0,enemics:0,vegetacio:0,decoracio:0,objectes:0,fauna:0,altres:0};
 window.HUNTER_DRAW_CALL_GROUPS=renderCategories;
 adaptivePerformance.stats.drawCategories=renderCategories;
-// Rebuilds must never stack another onBeforeRender callback on an old mesh.
-// WeakMap avoids retaining removed/rebuilt world meshes.
 const registeredDrawHooks=new WeakMap();
 function registerDrawCategories(){
   const tagged=new Map();
@@ -1753,6 +1759,11 @@ function registerDrawCategories(){
   tagged.set(pl,'altres');
   function track(mesh){
     if(!mesh.isMesh)return;
+    const installed=registeredDrawHooks.get(mesh);
+    if(!performanceStatsVisible){
+      if(installed)mesh.onBeforeRender=installed.previous;
+      return;
+    }
     let label='altres';
     if(mesh.userData.terrainTile)label='terreny';
     else if(mesh.name==='hunter-fence-section')label='filferrades';
@@ -1766,15 +1777,17 @@ function registerDrawCategories(){
     if(existing){
       // The same mesh can change parent/category across world rebuilds.
       existing.label=label;
+      mesh.onBeforeRender=existing.wrapper;
       return;
     }
     // Preserve any existing animation hook, wrapping each mesh only once.
     const previous=mesh.onBeforeRender;
-    const entry={label};
+    const entry={label,previous};
     mesh.onBeforeRender=function(...args){
       renderCategories[entry.label]++;
       if(previous)return previous.apply(this,args);
     };
+    entry.wrapper=mesh.onBeforeRender;
     registeredDrawHooks.set(mesh,entry);
   }
   world.traverse(track);
@@ -1957,18 +1970,14 @@ function selectWeapon(k){if(!weaponPickerAvailable()||swimming||!quickWeapons().
 function cycleWeapon(n){const w=quickWeapons(),i=w.indexOf(selectedWeapon());selectWeapon(w[(i+n+w.length)%w.length])}
 const picker=document.createElement('div');picker.style.cssText='position:fixed;z-index:100;right:10px;bottom:258px;background:#203239ed;padding:8px;border-radius:10px;display:none;flex-direction:column;gap:5px;max-height:50vh;overflow:auto';document.body.appendChild(picker);
 const pickerToggle=document.createElement('button');pickerToggle.textContent='⚔ Armes';pickerToggle.style.cssText='position:fixed;z-index:99;right:10px;bottom:210px;padding:8px;color:white;background:#304b52;border-radius:9px';pickerToggle.style.display='none';document.body.appendChild(pickerToggle);
-let pickerOpen=false;
+let pickerOpen=false,pickerSignature=null;
 const weaponPickerAvailable=()=>!!started&&document.body.classList.contains('game-started')&&!paused&&!over&&hp>0&&!cv&&!deathCinematic?.active&&!victoryCinematic?.active&&!victoryCinematic?.finished;
-let lastPickerAvailable=null;
-function syncWeaponPicker(){
-  const visible=weaponPickerAvailable();
-  if(visible===lastPickerAvailable)return;
-  lastPickerAvailable=visible;
-  pickerToggle.style.display=visible?'block':'none';
-  if(!visible){pickerOpen=false;picker.style.display='none'}
-}
+function syncWeaponPicker(){const visible=weaponPickerAvailable();const display=visible?'block':'none';if(pickerToggle.style.display!==display)pickerToggle.style.display=display;if(!visible&&pickerOpen){pickerOpen=false;drawWeaponPicker()}}
 pickerToggle.onclick=()=>{if(!weaponPickerAvailable())return;pickerOpen=!pickerOpen;drawWeaponPicker()};
-function drawWeaponPicker(){picker.style.display=pickerOpen&&weaponPickerAvailable()?'flex':'none';picker.replaceChildren();if(picker.style.display==='none')return;const names={pistola:'🔫 Pistola',ganivet:'🔪 Ganivet',franctirador:'🔭 Rifle',bazooka:'🚀 Bazooka',granada:'💣 Granades',cisalla:'✂ Cisalla'};quickWeapons().forEach((k,i)=>{const b=document.createElement('button');b.textContent=(i+1)+' · '+names[k]+' · '+(k==='pistola'?ammo:k==='franctirador'?sniperAmmo:k==='ganivet'?'∞':inv[k]);b.style.cssText='padding:8px;color:white;background:'+(selectedWeapon()===k?'#356c51':'#364a52');b.onclick=()=>{selectWeapon(k);pickerOpen=false;drawWeaponPicker()};picker.appendChild(b)})}
+function drawWeaponPicker(){const visible=pickerOpen&&weaponPickerAvailable(),weapons=visible?quickWeapons():[];
+const signature=visible?JSON.stringify([selectedWeapon(),ammo,sniperAmmo,weapons.map(k=>[k,inv[k]])]):'hidden';
+if(signature===pickerSignature)return;pickerSignature=signature;
+picker.style.display=visible?'flex':'none';picker.replaceChildren();if(!visible)return;const names={pistola:'🔫 Pistola',ganivet:'🔪 Ganivet',franctirador:'🔭 Rifle',bazooka:'🚀 Bazooka',granada:'💣 Granades',cisalla:'✂ Cisalla'};quickWeapons().forEach((k,i)=>{const b=document.createElement('button');b.textContent=(i+1)+' · '+names[k]+' · '+(k==='pistola'?ammo:k==='franctirador'?sniperAmmo:k==='ganivet'?'∞':inv[k]);b.style.cssText='padding:8px;color:white;background:'+(selectedWeapon()===k?'#356c51':'#364a52');b.onclick=()=>{selectWeapon(k);pickerOpen=false;drawWeaponPicker()};picker.appendChild(b)})}
 const act=c=>{if(ui?.isBombTimerOpen?.()){
   // No es pot tancar el programador ni detonar saltant-se la confirmació.
   if(c==='Escape'||c==='KeyP'||c==='KeyI'){panel('inventory');return}
@@ -2232,9 +2241,9 @@ const ui=window.HUNTER_UI.create({
   body:document.getElementById('panelBody'),
   resumeButton:document.getElementById('resumeButton'),
   minimap,
-  getState:()=>({
+  getState:({nearVehicle=cv?null:nearV()}={})=>({
     hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
-    inventory:inv,itemTypes:IT,player:P,nearVehicle:cv?null:nearV(),messageTime:msgT,message:msg,
+    inventory:inv,itemTypes:IT,player:P,nearVehicle,messageTime:msgT,message:msg,
     waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,cheats:{...cheats},stealthDebug:window.HUNTER_STEALTH.enabled(),stealthLayers:window.HUNTER_STEALTH.layers(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
   }),
   actions:{
@@ -2706,6 +2715,7 @@ if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.
 window.HUNTER_VEHICLES.animateSteering(o,v.t,tr,dt);
 v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0):(v.pedalPhase||0),sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*sweep;r.rotation.z=-side*(.12+dip);r.rotation.x=.06*Math.sin(rowPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})}
 let runStepTimer=0,stealthStepTimer=0;
+const cameraOffset=new THREE.Vector3(),bunkerEye=new THREE.Vector3();
 function update(dt,t){
 if(activeBunker?.basement?.lights?.length){
   const basement=activeBunker.basement;
@@ -3009,7 +3019,7 @@ if(scopeNow){
   cam.lookAt(P.x+fx*160,P.y+1.76+vertical*160,P.z+fz*160);
 }else{
   const T=cv||P,c=cv?VT[cv.t]:ib?{cd:6,ch:11}:{cd:10,ch:5},ty=cv?cv.o.position.y:P.y,
-    w=new THREE.Vector3(T.x+Math.sin(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1),0,T.z+Math.cos(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1));
+    w=cameraOffset.set(T.x+Math.sin(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1),0,T.z+Math.cos(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1));
   // Mode soterrani també durant el PRIMER esglaó, no només quan
   // el jugador ja ha baixat 2 m. La càmera no es pot quedar darrere
   // d'un envà opac, ni pot perseguir l'altura exterior de la muntanya.
@@ -3027,7 +3037,7 @@ if(scopeNow){
   if(bunkerBelow){
     // Càmera estable a distància normal, sense correccions angulars
     // brusques ni l'antic raycast que la teletransportava davant dels envans.
-    const targetEye=new THREE.Vector3(P.x,
+    const targetEye=bunkerEye.set(P.x,
       Math.min(b.fy-1.0,Math.max(b.basement.floorY+1.6,P.y+1.65)),P.z);
     const cameraDistance=Math.max(10.5,Math.min(17,13.5*zoom));
     const cameraHeight=Math.max(b.basement.floorY+5.4,
@@ -3102,7 +3112,7 @@ if(fireButton){
   }
 }
 updateActionButton(nv);if(pickerOpen)drawWeaponPicker();
-mini();ui.renderHUD();}}
+mini();ui.renderHUD({nearVehicle:nv});}}
 
 
 let last=performance.now();
@@ -3137,7 +3147,7 @@ if(started&&!paused&&!over){
 }
 adaptivePerformance.sample({dt:rawDt,renderCpuMs:performance.now()-renderStarted,
   updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,
-  active:!!started&&!paused&&!over,now});
+  active:!!started&&!paused&&!over,now,display:performanceStatsVisible});
 requestAnimationFrame(loop)})(last);
 
 
