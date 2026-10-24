@@ -1,6 +1,6 @@
 window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){const esc=v=>String(v||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])),m=(e&&e.message)?e.message:"Error desconegut",where=e&&e.filename?(e.filename.split("/").pop()+":"+e.lineno+":"+e.colno):"",stack=e&&e.error&&e.error.stack?e.error.stack:"";p.innerHTML="<h1>No s’ha pogut iniciar el joc</h1><p style=\"max-width:560px\">Error d’arrencada: <b>"+esc(m)+"</b></p>"+(where?"<p><b>"+esc(where)+"</b></p>":"")+(stack?"<pre style=\"max-width:90vw;white-space:pre-wrap;text-align:left;font-size:11px;opacity:.8\">"+esc(stack)+"</pre>":"")+"<p style=\"opacity:.8\">Envia una captura d’aquest missatge si persisteix.</p>"}});
 let terrainStream=null,seedSearchMode=false,seedCompounds=[],seedScratchWorld=null;
-const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_WAVES','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI','HUNTER_SEED_SEARCH','HUNTER_CAMERA_CONTROLS','HUNTER_SIMULATION_CLOCK'];
+const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_WAVES','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI','HUNTER_SEED_SEARCH','HUNTER_CAMERA_CONTROLS','HUNTER_SIMULATION_CLOCK','HUNTER_STEALTH_FEEDBACK'];
 const missingModules=requiredModules.filter(name=>!window[name]);if(missingModules.length)throw new Error('Mòduls Hunter absents: '+missingModules.join(', '));
 const missingSystems=Object.entries({generation:typeof build,combat:typeof fire,enemies:typeof updEn,audio:typeof initAudio}).filter(([,type])=>type!=='function').map(([name])=>name);if(missingSystems.length)throw new Error('Sistemes Hunter absents: '+missingSystems.join(', '));
 // La mida escollida a la portada ja és coneguda quan s'inicialitza el motor.
@@ -1730,10 +1730,13 @@ const mini=()=>minimap.draw();
 let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0,worldVisualTick=0,palmVisualTick=0;
 const simulationClock=window.HUNTER_SIMULATION_CLOCK.create(),
       cinematicClock=window.HUNTER_SIMULATION_CLOCK.create();
+const stealthFeedback=window.HUNTER_STEALTH_FEEDBACK.create(THREE);
+window.HUNTER_STEALTH_FEEDBACK_STATS=stealthFeedback.stats;
 let simulationFrameActive=false,simulationFocused=true;
 function resetSimulationClock(now=performance.now()){
   simulationClock.reset(now);cinematicClock.reset(now);
   combatFeedback?.clear();
+  stealthFeedback.reset();resetSoldierCoordination();
 }
 // Comptabilitat consultable: temps admès, simulat i descartat, també en pauses.
 window.HUNTER_SIMULATION_STATS={gameplay:simulationClock.stats,cinematic:cinematicClock.stats};
@@ -2306,6 +2309,61 @@ function renderCombatFeedback(){
   combatFeedback.update({active:!!started&&!paused&&!over&&simulationFocused&&!document.hidden,
     now:performance.now(),playerX:P.x,playerZ:P.z,
     forwardX:combatCameraForward.x,forwardZ:combatCameraForward.z});
+}
+let stealthVisibilityFrame=0;
+const stealthVehicleBounds=new WeakMap();
+function stealthFeedbackVisible(u,body,marker){
+  const from=cam.position;
+  function clear(to){
+    const reach=Math.hypot(to.x-from.x,to.z-from.z)/2+3,
+      mx=(from.x+to.x)/2,mz=(from.z+to.z)/2;
+    for(const w of wallCandidates(mx,mz,reach)){
+      if(w.open||w.barbed||w.hp<=0)continue;
+      const t=segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);
+      if(t!==null&&t>.002&&t<.998)return false;
+    }
+    for(const b of buildingCandidates(mx,mz,reach)){
+      if(b.rb||b.rhp<=0)continue;
+      if(b.upperFloor&&Number.isFinite(b.storey)&&Math.abs(to.y-from.y)>.001){
+        const floor=b.fy+b.storey+.15,q=(floor-from.y)/(to.y-from.y);
+        if(q>.002&&q<.998&&upperFloorHeight(b,from.x+(to.x-from.x)*q,
+          from.z+(to.z-from.z)*q,floor)!==null)return false;
+      }
+      const t=b.hangar?hangarRoofSegmentT(from.x,from.y,from.z,to.x,to.y,to.z,b):
+        segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,b.x-b.w/2,b.x+b.w/2,
+          b.fy+b.h-.35,b.fy+b.h+.8,b.z-b.d/2,b.z+b.d/2);
+      if(t!==null&&t>.002&&t<.998)return false;
+    }
+    for(const v of vehicleCandidatesAt(mx,mz,reach+18)){
+      if(v.destroyed||!v.o)continue;
+      let cached=stealthVehicleBounds.get(v);
+      if(!cached){cached={frame:-1,box:new THREE.Box3()};stealthVehicleBounds.set(v,cached)}
+      if(cached.frame!==stealthVisibilityFrame){
+        v.o.updateWorldMatrix(true,true);cached.box.setFromObject(v.o);cached.frame=stealthVisibilityFrame;
+      }
+      const box=cached.box;
+      if(box.isEmpty()){
+        const radius=vehicleRadius(v.t)*.55;
+        if(segmentSphereT(from.x,from.y,from.z,to.x,to.y,to.z,v.x,vehicleY(v)+1.5,v.z,radius)!==null)return false;
+      }else{
+        const t=segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,
+          box.min.x,box.max.x,box.min.y,box.max.y,box.min.z,box.max.z);
+        if(t!==null&&t>.002&&t<.998)return false;
+      }
+    }
+    const count=Math.min(96,Math.max(2,Math.ceil(from.distanceTo(to))));
+    for(let i=1;i<count;i++){
+      const q=i/count,x=from.x+(to.x-from.x)*q,y=from.y+(to.y-from.y)*q,z=from.z+(to.z-from.z)*q;
+      if(bunkerProjectileSurface(x,z,y)>y-.12)return false;
+    }
+    return true;
+  }
+  return clear(body)&&clear(marker);
+}
+function renderStealthFeedback(){
+  stealthVisibilityFrame++;
+  stealthFeedback.update({world,camera:cam,enemies:E,active:!!started&&!paused&&!over&&simulationFocused&&!document.hidden,
+    visible:stealthFeedbackVisible});
 }
 const ui=window.HUNTER_UI.create({
   hud:document.getElementById('hud'),
@@ -3241,6 +3299,7 @@ cinematicClock.advance(now,dt=>{
       deathCinematic===deathAtStart&&deathAtStart?.active);
 },cinematicActive);
 renderCombatFeedback();
+renderStealthFeedback();
 const t=elapsed+(victoryCinematic?victoryCinematic.t:0);
 const simulationEnded=performance.now();
 if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)

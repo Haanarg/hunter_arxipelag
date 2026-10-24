@@ -192,6 +192,7 @@ window.HUNTER_UI=Object.freeze({
           '<div><b>Arrossega / roda</b><span>Girar vista / ajustar càmera</span></div>'+
           '</div>'+
           '<p class="pause-note">Els mapes recollits s’activen sols. Gestiona l’equipament amb la motxilla.</p>'+
+          '<p class="pause-note">Senyals sobre soldats visibles: ? ambre · sospita; ! coral · contacte confirmat; ◇ blau · cerca o investigació. Desapareixen darrere la cobertura.</p>'+
           '<div class="pause-menu-actions">'+
           '<button id="chetosMenu">Chetos</button>'+
           '<button id="restartMenu">Nova partida</button>'+

@@ -47,9 +47,9 @@ function decorateRuntimeBuilding(b,spec){
   for(const x of[-b.w/2,b.w/2])box(b.roof,.35,1,b.d+.6,0x647c72,x,b.h+1.7,0);
  }
 }
-function soldierChangeFloor(u,b,dt){
+function soldierChangeFloor(u,b,dt,targetY=P.y){
  if(!b.upperFloor||b.rb||!b.interiorStair||b.interiorStair.destroyed)return false;
- const floor=b.fy+b.storey+.15,current=u.walkY??u.o.position.y,wantsUp=P.y>floor-1,isUp=current>floor-.7;
+ const floor=b.fy+b.storey+.15,current=u.walkY??u.o.position.y,wantsUp=targetY>floor-1,isUp=current>floor-.7;
  if(wantsUp===isUp&&!u.floorRoute)return false;
  const a=b.interiorStair;
  if(!u.floorRoute||u.floorRoute.up!==wantsUp){

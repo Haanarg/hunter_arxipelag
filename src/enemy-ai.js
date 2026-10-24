@@ -1,6 +1,78 @@
 const ENEMY_SENSE_DT=.1;
 const SOLDIER_MEMORY=9,SOLDIER_RETREAT=9,SOLDIER_IDEAL=17,SOLDIER_FIRE_RANGE=125;
 const STEALTH=window.HUNTER_STEALTH;
+const soldierReservations=new Map(),soldierReservationGrid=new Map(),soldierDoorQueues=new Map();
+let soldierCoordinationTime=0;
+const soldierReservationKey=(x,z)=>Math.floor(x/12)+','+Math.floor(z/12);
+function releaseSoldierReservation(u){
+  const old=soldierReservations.get(u);if(!old)return;
+  const bucket=soldierReservationGrid.get(old.key);bucket?.delete(u);
+  if(!bucket?.size)soldierReservationGrid.delete(old.key);
+  soldierReservations.delete(u);
+}
+function reserveSoldierGoal(u,goal){
+  releaseSoldierReservation(u);
+  const key=soldierReservationKey(goal.x,goal.z),entry={x:goal.x,z:goal.z,key,until:soldierCoordinationTime+1.4};
+  soldierReservations.set(u,entry);
+  let bucket=soldierReservationGrid.get(key);if(!bucket)soldierReservationGrid.set(key,bucket=new Set());
+  bucket.add(u);return goal;
+}
+function soldierPositionPenalty(u,x,z){
+  let cost=0,checked=0;
+  const cx=Math.floor(x/VEHICLE_CELL),cz=Math.floor(z/VEHICLE_CELL);
+  outer:for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){
+    for(const other of enemyGrid.get(vehicleCellKey(cx+dx,cz+dz))||[]){
+      if(++checked>24)break outer;
+      if(other===u||other.t!=='soldat'||other.hp<=0||Math.abs(enemyGroundAt(other,other.x,other.z)-enemyGroundAt(u,x,z))>4)continue;
+      const d=Math.hypot(x-other.x,z-other.z);if(d<7)cost+=(7-d)*4;
+    }
+  }
+  checked=0;const rx=Math.floor(x/12),rz=Math.floor(z/12);
+  outer:for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){
+    for(const other of soldierReservationGrid.get((rx+dx)+','+(rz+dz))||[]){
+      if(++checked>24)break outer;
+      const goal=soldierReservations.get(other);
+      if(other===u||!goal||goal.until<soldierCoordinationTime||other.hp<=0)continue;
+      const d=Math.hypot(x-goal.x,z-goal.z);if(d<8)cost+=(8-d)*10;
+    }
+  }
+  return cost;
+}
+function releaseSoldierEntry(u){
+  const door=u.entryDoor,queue=soldierDoorQueues.get(door);
+  if(queue){queue.queue=queue.queue.filter(entry=>entry.unit!==u);if(!queue.queue.length)soldierDoorQueues.delete(door)}
+  u.entryDoor=null;u.entryBuilding=null;u.entryPhase=0;u.entryWaiting=null;
+}
+function resetSoldierCoordination(){
+  const units=new Set(E);
+  for(const u of soldierReservations.keys())units.add(u);
+  for(const queue of soldierDoorQueues.values())for(const entry of queue.queue)units.add(entry.unit);
+  for(const u of units)if(u.t==='soldat'){
+    u.tacticGoal=null;u.tacticT=0;u.tacticMode=null;u.entryDoor=null;u.entryBuilding=null;
+    u.entryPhase=0;u.entryWaiting=null;u.doorRetryUntil=0;
+  }
+  soldierReservations.clear();soldierReservationGrid.clear();soldierDoorQueues.clear();soldierCoordinationTime=0;
+}
+function soldierCoordinationTick(dt){
+  soldierCoordinationTime+=Math.max(0,dt);
+  for(const [u,goal] of soldierReservations)if(u.hp<=0||u.destroyed||goal.until<soldierCoordinationTime||!u.canSee&&u.aiMode!=='combat')releaseSoldierReservation(u);
+  for(const [door,queue] of soldierDoorQueues){
+    for(const entry of [...queue.queue]){
+      const u=entry.unit;
+      if(u.hp<=0||u.destroyed||u.aiMode==='patrol'||door.locked||
+        soldierCoordinationTime-entry.touched>.35)releaseSoldierEntry(u);
+    }
+    const holder=queue.queue[0];
+    if(holder?.owner&&(soldierCoordinationTime-holder.progress>2.2||soldierCoordinationTime-holder.granted>8)){
+      holder.unit.doorRetryUntil=soldierCoordinationTime+1.2;releaseSoldierEntry(holder.unit);
+    }
+    if(!queue.queue.length)soldierDoorQueues.delete(door);
+  }
+}
+function soldierKnownBuilding(target,targetY){
+  return buildingCandidates(target.x,target.z).find(b=>!b.rb&&Math.abs(target.x-b.x)<b.w/2&&
+    Math.abs(target.z-b.z)<b.d/2&&targetY>b.fy-2&&targetY<b.fy+b.h+.5)||null;
+}
 // Visió i escolta comparteixen la posició tridimensional, però no l'estat:
 // sentir un tret només dóna una darrera posició aproximada a investigar.
 function soldierVisualContact(u,target,targetY,d){
@@ -48,7 +120,8 @@ function soldierInvestigate(u,target,dt,speed=1){
 function soldierWarnNeighbors(witness,target,targetY){
   // El crit és un esdeveniment sonor: els aliats dins del cercle l'investiguen.
   // Evitem repetir-lo constantment mentre el mateix soldat manté contacte.
-  STEALTH.emit('alert',witness.x,witness.o.position.y+2,witness.z);
+  const event=STEALTH.emit('alert',witness.x,witness.o.position.y+2,witness.z);
+  if(event)witness.heardId=event.id;
 }
 // Punteria per dificultat. DIF=1.5 conserva exactament la dispersió antiga.
 // Normal (1) falla més i Fàcil (.6) encara més, sense alterar el dany ni la IA.
@@ -105,34 +178,55 @@ function soldierFlankPosition(u,target,targetY){
       const x=u.x+side*sideX*lateral+fx*forward,z=u.z+side*sideZ*lateral+fz*forward;
       if(!enemySolidAt(u,x,z,u.hd,true))continue;
       if(!soldierClearShot(u,x,z,enemyGroundAt(u,x,z)+2.2,target,targetY))continue;
-      const score=lateral+forward*.5+(side===prefer?0:4);
+      const score=lateral+forward*.5+(side===prefer?0:4)+soldierPositionPenalty(u,x,z);
       if(score<bestScore){bestScore=score;best={x,z}}
     }
   }
   // Si encara no hi ha una línia de tir clara, avancem lateralment fins a
   // passar la vora de l'obstacle; mvE/A* decideix com rodejar-lo.
-  return best||{
+  return reserveSoldierGoal(u,best||{
     x:u.x+sideX*prefer*13+fx*9,
     z:u.z+sideZ*prefer*13+fz*9
-  };
+  });
 }
 // Quan el jugador es refugia a dins, el soldat ha de trobar el portal
 // d'entrada, creuar-lo i només llavors buscar una posició de tir.
-function soldierEnterBuilding(u,b,target,dt){
+function soldierEnterBuilding(u,b,target,dt,targetY=u.lastSeenY??u.o.position.y){
   const door=b?.door;
   if(!door||door.locked||door.bunkerGate||b.hangar){
-    u.entryBuilding=null;u.entryPhase=0;return false;
+    releaseSoldierEntry(u);return false;
   }
   const inside=Math.abs(u.x-b.x)<b.w/2-1.15&&
                Math.abs(u.z-b.z)<b.d/2-1.15;
   if(inside){
-    if(soldierChangeFloor(u,b,dt))return true;
-    u.entryBuilding=null;u.entryPhase=0;return false;
+    releaseSoldierEntry(u);
+    if(soldierChangeFloor(u,b,dt,targetY))return true;
+    return false;
   }
   // Dos trams amb memòria: aproximació per fora i pas cap a dins.
   // Sense retenir la fase, en allunyar-se 1 m del punt exterior el soldat
   // tornava enrere i quedava oscil·lant just davant del llindar.
-  if(u.entryBuilding!==b){u.entryBuilding=b;u.entryPhase=0}
+  if(u.entryBuilding!==b){releaseSoldierEntry(u);u.entryBuilding=b;u.entryPhase=0}
+  let queue=soldierDoorQueues.get(door);
+  if(!queue){if(soldierDoorQueues.size>=64)return false;soldierDoorQueues.set(door,queue={queue:[]})}
+  let entry=queue.queue.find(item=>item.unit===u);
+  if(!entry&&soldierCoordinationTime>=(u.doorRetryUntil||0)&&queue.queue.length<8){
+    entry={unit:u,touched:soldierCoordinationTime,progress:soldierCoordinationTime,
+      granted:soldierCoordinationTime,x:u.x,z:u.z};queue.queue.push(entry);u.entryDoor=door;
+  }
+  if(entry)entry.touched=soldierCoordinationTime;
+  const index=entry?queue.queue.indexOf(entry):8;
+  if(index!==0){
+    const rank=Math.max(1,index),side=rank%2?1:-1,
+      waiting={x:door.cx+door.nx*(5.5+Math.floor((rank-1)/2)*3.2)+door.nz*side*3.3,
+        z:door.cz+door.nz*(5.5+Math.floor((rank-1)/2)*3.2)-door.nx*side*3.3};
+    u.entryWaiting=waiting;u.entryPhase=0;
+    if(Math.hypot(u.x-waiting.x,u.z-waiting.z)>.4)mvE(u,u.sp*.75*dt,waiting.x,waiting.z);
+    return true;
+  }
+  if(!entry.owner){entry.owner=true;entry.granted=entry.progress=soldierCoordinationTime;entry.x=u.x;entry.z=u.z}
+  if(Math.hypot(u.x-entry.x,u.z-entry.z)>.35){entry.x=u.x;entry.z=u.z;entry.progress=soldierCoordinationTime}
+  u.entryWaiting=null;
   const exterior={x:door.cx+door.nx*2.1,z:door.cz+door.nz*2.1},
         interior={x:door.cx-door.nx*2.5,z:door.cz-door.nz*2.5},
         distance=Math.hypot(u.x-exterior.x,u.z-exterior.z);
@@ -144,16 +238,34 @@ function soldierEnterBuilding(u,b,target,dt){
   // Un radi lligat al pas del fotograma permet superar el llindar sense
   // canviar de fase prematurament des de les cantonades de la paret.
   const entryTolerance=Math.max(.35,Math.min(.95,u.sp*dt*1.25));
-  if(u.entryPhase===0&&distance<=entryTolerance)u.entryPhase=1;
+  const lateral=Math.abs((u.x-door.cx)*door.nz-(u.z-door.cz)*door.nx);
+  if(u.entryPhase===0&&distance<=entryTolerance&&lateral<=.025){
+    u.entryPhase=1;u.navDirectT=0;u.navGoal=null;u.navPath=[];u.navSearch=null;
+  }
   const goal=u.entryPhase?interior:exterior;
   u.tacticGoal=null;u.tacticT=0;
+  releaseSoldierReservation(u);
   mvE(u,u.sp*dt,goal.x,goal.z);
   u.hd=Math.atan2(u.x-target.x,u.z-target.z);
   return true;
 }
+function soldierFirePosition(u,target,targetY,d){
+  const base=Math.atan2(u.x-target.x,u.z-target.z),prefer=u.avoidSide||1,
+    radius=d<SOLDIER_RETREAT?15:d>17?16:13;
+  let best=null,score=Infinity;
+  for(const offset of [0,.3*prefer,-.3*prefer,.6*prefer,-.6*prefer,.95*prefer,-.95*prefer]){
+    const a=base+offset,x=target.x+Math.sin(a)*radius,z=target.z+Math.cos(a)*radius;
+    if(!enemySolidAt(u,x,z,u.hd,true)||!soldierClearShot(u,x,z,enemyGroundAt(u,x,z)+2.2,target,targetY))continue;
+    const value=Math.hypot(x-u.x,z-u.z)*.3+Math.abs(offset)*2+soldierPositionPenalty(u,x,z);
+    if(value<score){score=value;best={x,z}}
+  }
+  return reserveSoldierGoal(u,best||{x:u.x,z:u.z});
+}
 function soldierEngage(u,target,targetY,dt,d,visible){
   const eyeY=u.o.position.y+2.2,clear=visible&&u.canShoot;
   let goal=null,speed=u.sp;
+  const tacticMode=clear?'fire':'flank';
+  if(u.tacticMode!==tacticMode){u.tacticGoal=null;u.tacticT=0;u.tacticMode=tacticMode}
   if(!clear){
     if(!u.tacticGoal||(u.tacticT||0)<=0||
        Math.hypot(target.x-(u.tacticTargetX??target.x),target.z-(u.tacticTargetZ??target.z))>7||
@@ -163,20 +275,11 @@ function soldierEngage(u,target,targetY,dt,d,visible){
     }
     goal=u.tacticGoal;speed=u.sp*.95;
   }else{
-    u.tacticGoal=null;u.tacticT=0;
-    const fx=(target.x-u.x)/Math.max(d,.001),fz=(target.z-u.z)/Math.max(d,.001);
-    if(d<SOLDIER_RETREAT){
-      // Retirada mirant sempre el jugador, amb marge per evitar cantonades.
-      goal={x:u.x-fx*12,z:u.z-fz*12};speed=u.sp*.87;
-    }else if(d>SOLDIER_IDEAL){
-      goal=target;speed=u.sp;
-    }else if(d>13){
-      goal=target;speed=u.sp*.5;
-    }else{
-      // Moviment lateral curt en lloc de quedar congelat a distància fixa.
-      const side=u.avoidSide||1;
-      goal={x:u.x-fz*side*6,z:u.z+fx*side*6};speed=u.sp*.55;
+    if(!u.tacticGoal||(u.tacticT||0)<=0||Math.hypot(target.x-(u.tacticTargetX??target.x),target.z-(u.tacticTargetZ??target.z))>7){
+      u.tacticGoal=soldierFirePosition(u,target,targetY,d);u.tacticT=1.1;
+      u.tacticTargetX=target.x;u.tacticTargetZ=target.z;
     }
+    goal=u.tacticGoal;speed=u.sp*(d<SOLDIER_RETREAT?.87:d>SOLDIER_IDEAL?1:.55);
   }
   if(goal)mvE(u,speed*dt,goal.x,goal.z);
   const toward=target;
@@ -210,7 +313,7 @@ function enemyCarRifleShot(u,target,targetY){
     direction:new THREE.Vector3(0,0,-1).applyQuaternion(
       crew.muzzle.getWorldQuaternion(new THREE.Quaternion())).normalize()};
 }
-function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathBudget=2;enemyNodeBudget=160}rebuildVehicleGrid();E.forEach(u=>{
+function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathBudget=2;enemyNodeBudget=160}rebuildVehicleGrid();soldierCoordinationTick(dt);E.forEach(u=>{
   if(u.t==='patrulla_marina'){updateMarinePatrol(u,dt);return}
   if(u.blastT>0){
     const imp=u.blastImpulse;u.blastT=Math.max(0,u.blastT-dt);
@@ -244,7 +347,6 @@ function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathB
 
   // Dins una casa es pot sentir el jugador encara que una paret talli
   // la línia visual. Això inicia la persecució, mai el tret a cegues.
-  const hidingInside=!cv&&ib&&!ib.hangar&&!ib.door?.locked&&!disg;
   // Percepció desacoblada del moviment: ~10 Hz i desfasada entre enemics.
   u.senseT=(u.senseT??0)-dt;
   if(u.senseT<=0){
@@ -313,15 +415,16 @@ function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathB
    if(u.t==='soldat'&&(u.canSee||u.aiMode&&u.aiMode!=='patrol')){
     u.tacticT=Math.max(0,(u.tacticT||0)-dt);
      const target=u.canSee?q:{x:u.lastSeenX??u.x,z:u.lastSeenZ??u.z},
-          targetY=u.canSee?py:(u.lastSeenY??py),
+          targetY=u.canSee?py:(u.lastSeenY??u.o.position.y),
           td=Math.hypot(target.x-u.x,target.z-u.z);
      if(!u.canSee){
        u.searchT=Math.max(0,(u.searchT||0)-dt);
        if(u.searchT<=0){u.aiMode='patrol';u.recognition=0;u.tacticGoal=null}
      }
      if(u.aiMode!=='patrol'){
-       const entering=!!ib&&(u.canSee||hidingInside&&td<17)&&
-         soldierEnterBuilding(u,ib,target,dt);
+       const knownBuilding=soldierKnownBuilding(target,targetY),
+         entering=!!knownBuilding&&soldierEnterBuilding(u,knownBuilding,target,dt,targetY);
+       if(!knownBuilding&&u.entryDoor)releaseSoldierEntry(u);
        if(!entering){
          if(u.canSee)soldierEngage(u,target,targetY,dt,td,true);
          else soldierInvestigate(u,target,dt,u.aiMode==='search'?1:.65);

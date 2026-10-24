@@ -11,6 +11,7 @@
     "test:camera": "node tests/camera-controls.cjs",
     "test:mission": "node tests/mission-viability-validator.cjs && node tests/mission-viability.cjs",
     "test:optimization": "node tests/shared-resources.cjs && node tests/optimization-ui-render-hooks.cjs && node tests/startup-cache.cjs",
-    "test:feedback": "node tests/combat-feedback.cjs && node tests/phase6-independent.cjs"
+    "test:feedback": "node tests/combat-feedback.cjs && node tests/phase6-independent.cjs",
+    "test:stealth": "node tests/stealth-perception.cjs && node tests/stealth-feedback.cjs && node tests/stealth-coordination.cjs && node tests/phase8-independent.cjs"
   }
 }
