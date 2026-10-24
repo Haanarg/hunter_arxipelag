@@ -1,7 +1,7 @@
 // Hunter: Arxipèlag — final Humvee D3.1 at 175%, procedural method B.
 // No GLB or network model download during game startup: positions, normals,
 // UVs, wheel nodes, materials and the embedded PNG atlas come from JS data.
-// Preserve the approved reference asset in Git for user QA and rollback.
+// The approved geometry is preserved in the procedural JavaScript data.
 import {loadHumveeMethodB} from './humvee-procedural-models.mjs?v=0.5.73';
 
 export const HUNTER_HUMVEE_GAME_SCALE=1.75;

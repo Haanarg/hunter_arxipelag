@@ -638,9 +638,26 @@ window.HUNTER_TERRAIN=Object.freeze({
     return new THREE.Color(a[1]).lerp(new THREE.Color(b[1]),t);
   },
   bandAt(h){return hunterTerrainBandAt(h)},
-  create(THREE,{size,segments,heightAt,material,startX=0,startZ=0,lowQuality=false,quality=null,shadows=false}){
+  create(THREE,{size,segments,heightAt,material,startX=0,startZ=0,lowQuality=false,quality=null,shadows=false,cutouts=[]}){
     const root=new THREE.Group();
     root.name='hunter-terrain-stream';
+    // Un forat precís al terreny deixa el soterrani sota el búnquer buit:
+    // no modificam hAt (ni l'orografia ni les rutes), i funciona amb tots
+    // els nivells LOD sense vores esglaonades ni regenerar sectors.
+    if(cutouts.length){
+      const cut=cutouts[0],c=Math.cos(cut.angle),s=Math.sin(cut.angle);
+      material.onBeforeCompile=shader=>{
+        shader.uniforms.hunterCutout={value:new THREE.Vector4(cut.x,cut.z,c,s)};
+        shader.uniforms.hunterCutoutSize={value:new THREE.Vector2(cut.halfWidth,cut.halfDepth)};
+        shader.vertexShader='varying vec2 hunterTerrainXZ;\n'+shader.vertexShader.replace(
+          '#include <begin_vertex>',
+          '#include <begin_vertex>\n hunterTerrainXZ=(modelMatrix*vec4(position,1.0)).xz;');
+        shader.fragmentShader='varying vec2 hunterTerrainXZ;\nuniform vec4 hunterCutout;\nuniform vec2 hunterCutoutSize;\n'+
+          shader.fragmentShader.replace('#include <clipping_planes_fragment>',
+            '#include <clipping_planes_fragment>\n vec2 hunterD=hunterTerrainXZ-hunterCutout.xy;\n vec2 hunterL=vec2(dot(hunterD,hunterCutout.zw),dot(hunterD,vec2(-hunterCutout.w,hunterCutout.z)));\n if(all(lessThan(abs(hunterL),hunterCutoutSize)))discard;');
+      };
+      material.customProgramCacheKey=()=>`hunter-bunker-cutout-v1`;
+    }
     const tileSize=800,side=Math.ceil(size/tileSize),cellSize=size/side,half=size/2;
     // Conservam la resolució propera per mantenir el contacte amb peus i
     // rodes, però simplificam molt abans els sectors intermedis i llunyans.
@@ -956,18 +973,140 @@ window.HUNTER_SCOPE_FOCUS=Object.freeze({
 
 ;
 // END src/sniper-focus.js
+// BEGIN src/civilian-cars.js
+// Cotxes civils clàssics: quatre siluetes en Three.js i sis colors.
+ // La mateixa fàbrica s'empra al joc i a la pàgina de proves.
+window.HUNTER_CIVILIAN_CARS=Object.freeze({
+  colors:Object.freeze([
+    Object.freeze({name:'Vermell',hex:0xd34e3d}),
+    Object.freeze({name:'Blanc',hex:0xe7e8dc}),
+    Object.freeze({name:'Blau',hex:0x4b9fd1}),
+    Object.freeze({name:'Groc',hex:0xe4b83f}),
+    Object.freeze({name:'Verd',hex:0x609969}),
+    Object.freeze({name:'Marró',hex:0x896244}),
+    Object.freeze({name:'Negre',hex:0x181c1e})
+  ]),
+  jetskiColors:Object.freeze([
+    Object.freeze({name:'Vermell',hex:0xc94e3f}),
+    Object.freeze({name:'Verd llima',hex:0xa4ec24}),
+    Object.freeze({name:'Groc viu',hex:0xffdf18}),
+    Object.freeze({name:'Rosa magenta',hex:0xef35a8}),
+    Object.freeze({name:'Blau elèctric',hex:0x228fef}),
+    Object.freeze({name:'Taronja',hex:0xff7b19}),
+    Object.freeze({name:'Negre',hex:0x181c1e})
+  ]),
+  variants:Object.freeze([
+    Object.freeze({name:'Berlina clàssica',description:'Sedan de tres volums, graella cromada i fars rectangulars, inspirat en la fotografia.',length:5.35,width:2.88,roof:2.67,front:.19,rear:.18,roofRear:.11}),
+    Object.freeze({name:'Compacte urbà',description:'Carrosseria més curta, sostre alt, capó breu i finestres quadrades.',length:4.72,width:2.75,roof:2.79,front:.17,rear:.18,roofRear:.12}),
+    Object.freeze({name:'Familiar',description:'Cinc portes, sostre llarg, porta posterior gairebé vertical i maleter ampli.',length:5.75,width:2.91,roof:2.75,front:.20,rear:.35,roofRear:.30}),
+    Object.freeze({name:'Cupè fastback',description:'Sostre baix, parabrisa inclinat, posterior descendent i frontal allargat.',length:5.30,width:2.86,roof:2.41,front:.21,rear:.25,roofRear:.035})
+  ]),
+  build(THREE,group,{box,wheel,rod,material,color=0x4b9fd1,variant=0}){
+    const v=this.variants[Math.max(0,Math.min(3,variant|0))];
+    const l=v.length,w=v.width,mid=w*.42,paint=color;
+    const metal=0xbcc3c2,trim=0x273137,glass=0x6b9fb0;
+    const B=(width,height,depth,col,x,y,z,profile='paint')=>
+      box(group,width,height,depth,col,x,y,z,profile);
+    const R=(a,b,r,col,profile='metal')=>rod(group,a,b,r,col,profile);
+    // Xarrís, baixos i tres volums; la silueta continua sent visible des de lluny.
+    B(w-.10,.34,l-.1,0x333b3b,0,.74,0,'metal');
+    B(w,.86,l-.10,paint,0,1.19,0);
+    B(w-.12,.17,l-.17,paint,0,1.69,0);
+    const frontBase=-l*v.front,rearBase=l*v.rear;
+    const frontTop=-l*(v.front-.09),rearTop=l*v.roofRear;
+    const topY=v.roof,baseY=1.73;
+    // Habitacle trapezoïdal de quatre cares, amb sostre real i vidres laterals.
+    const roof=new THREE.Shape();
+    roof.moveTo(-rearBase,baseY);
+    roof.lineTo(-rearTop,topY);
+    roof.lineTo(-frontTop,topY);
+    roof.lineTo(-frontBase,baseY);
+    roof.closePath();
+    const roofGeo=new THREE.ExtrudeGeometry(roof,{depth:w*.84,bevelEnabled:false,curveSegments:1});
+    roofGeo.rotateY(Math.PI/2);
+    roofGeo.translate(-w*.42,0,0);
+    const roofMesh=new THREE.Mesh(roofGeo,material(paint,'paint'));
+    group.add(roofMesh);
+    const windows=[[-rearBase,-rearTop,-.05],[-.025,-frontTop,-frontBase]];
+    for(const side of [-1,1]){
+      // Vidres independents delimitats pel muntant central, sense transparències.
+      const glassMat=material(glass,'glass');
+      glassMat.side=THREE.DoubleSide;
+      for(const [uBack,uUpper,uFront] of windows){
+        const shape=new THREE.Shape();
+        shape.moveTo(uBack,baseY+.085);
+        shape.lineTo(uUpper,topY-.105);
+        shape.lineTo(uFront,topY-.105);
+        shape.lineTo(uFront+.10,baseY+.085);
+        shape.closePath();
+        const m=new THREE.Mesh(new THREE.ShapeGeometry(shape),glassMat);
+        m.rotation.y=Math.PI/2;
+        m.position.x=side*(w*.42+.018);
+        group.add(m);
+      }
+      B(.065,topY-baseY+.07,.08,paint,side*(w*.42+.02),(baseY+topY)/2,.02);
+      B(.065,.44,.07,trim,side*(w/2+.02),1.42,l*.09,'metal');
+      B(.07,.20,.26,metal,side*(w/2+.09),1.86,-l*.14,'metal');
+      // Manetes i línies de separació de portes.
+      for(const z of [-.60,.91])B(.085,.07,.29,metal,side*(w/2+.025),1.58,z,'metal');
+      B(.055,.06,l*.59,trim,side*(w/2+.024),1.07,.08,'metal');
+    }
+    // Llunes del davant i del darrere, lleument inclinades.
+    const windshield=B(w*.72,.70,.08,glass,0,(baseY+topY)/2,-l*(v.front-.045),'glass');
+    windshield.rotation.x=-.20;
+    const rearWindow=B(w*.71,.58,.07,glass,0,(baseY+topY)/2,l*(v.rear-.045),'glass');
+    rearWindow.rotation.x=variant===2?-.06:.18;
+    // Capó i maleter amb línies fines visibles.
+    B(w-.12,.10,Math.max(.6,l*.5+frontBase),paint,0,1.71,(-l/2+frontBase)/2);
+    B(w-.12,.10,Math.max(.45,l/2-rearBase),paint,0,1.71,(l/2+rearBase)/2);
+    B(w*.89,.25,.13,0x9aa7a9,0,1.30,-l/2-.06,'metal');
+    B(w*.89,.25,.13,0x9aa7a9,0,1.30,l/2+.06,'metal');
+    B(w*.57,.42,.09,0x414e54,0,1.48,-l/2-.085,'metal');
+    for(const x of [-w*.315,w*.315]){
+      const lamp=B(w*.19,.32,.095,0xece9cb,x,1.54,-l/2-.09);
+      B(.16,.16,.1,0xf0a43d,x,1.26,-l/2-.09);
+      B(w*.18,.21,.09,0xb5362a,x,1.53,l/2+.088);
+    }
+    for(const x of [-.53,-.28,-.03,.22,.47])B(.045,.29,.10,metal,x,1.48,-l/2-.15,'metal');
+    B(.59,.19,.045,0xe2ddc8,0,1.16,l/2+.15);
+    // Les quatre rodes passen pels pivots de direcció ja existents.
+    for(const z of [-l*.335,l*.335])for(const side of [-1,1]){
+      wheel(group,side*(w/2+.035),.69,z,.68,.38,false,z<0);
+      B(.14,.15,.57,paint,side*(w/2+.065),1.26,z);
+    }
+    // Petites particularitats que fan recognoscibles els quatre models.
+    if(variant===0){
+      for(const x of[-w*.44,w*.44])R([x,1.15,-l*.48],[x,1.15,-l*.52],.068,metal);
+    }else if(variant===1){
+      B(.72,.08,.45,trim,0,topY+.06,.2,'metal');
+    }else if(variant===2){
+      for(const x of [-w*.34,w*.34])R([x,topY+.075,-l*.1],[x,topY+.075,l*.27],.045,metal);
+      B(w*.72,.19,.14,metal,0,1.35,l/2+.085,'metal');
+    }else{
+      B(w*.78,.09,.46,paint,0,1.83,l*.37);
+      B(w*.62,.10,.11,trim,0,1.63,l/2+.10,'metal');
+    }
+    group.userData.civilianVariant=variant;
+    group.userData.civilianColor=color;
+    return group;
+  }
+});
+
+;
+// END src/civilian-cars.js
 // BEGIN src/vehicles.js
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 window.HUNTER_VEHICLES=Object.freeze({
-  scales:Object.freeze({llanxa:1.95,llanxa_coets:1.95,moto_aquatica:1.08,barca_rems:.98,windsurf:1.05,hover:1.3,ferry:1,cotxe:1.3,moto:1.2,bici:1.2,camio:1.8125,tanqueta:1.8125,tanc:2.25,heli:1.75,heli_combat:1.82}),
-  radii:Object.freeze({llanxa:8.25,llanxa_coets:8.6,moto_aquatica:2.1,barca_rems:3.25,windsurf:2.3,hover:4.8,ferry:19,cotxe:3.6,moto:2.2,bici:1.9,camio:4.8,tanqueta:4.5,tanc:5.6,heli:8,heli_combat:8.4}),
+  scales:Object.freeze({llanxa:1.95,llanxa_coets:1.95,moto_aquatica:1.08,barca_rems:.98,windsurf:1.05,hover:1.3,ferry:1,cotxe:1.3,cotxe_civil:1.2,moto:1.2,bici:1.2,camio:1.8125,tanqueta:1.8125,tanc:2.25,heli:1.75,heli_combat:1.82}),
+  radii:Object.freeze({llanxa:8.25,llanxa_coets:8.6,moto_aquatica:2.1,barca_rems:3.25,windsurf:2.3,hover:4.8,ferry:35,cotxe:3.8,cotxe_civil:3.35,moto:2.2,bici:1.9,camio:4.8,tanqueta:4.5,tanc:5.6,heli:8,heli_combat:8.4}),
   hitboxes:Object.freeze({
-    llanxa:[6.6,15.9],llanxa_coets:[6.8,16.1],moto_aquatica:[1.7,3.8],barca_rems:[2.7,6.1],windsurf:[1.9,4.3],hover:[4.2,7.4],ferry:[16,36],
-    cotxe:[3.2,5.9],moto:[1.35,2.8],bici:[1.15,2.4],camio:[3.6,7.8],tanqueta:[3.15,5.1],tanc:[4.2,7.1],
+    llanxa:[6.6,15.9],llanxa_coets:[6.8,16.1],moto_aquatica:[1.7,3.8],barca_rems:[2.7,6.1],windsurf:[1.9,4.3],hover:[4.2,7.4],ferry:[32,63],
+    cotxe:[4.10,6.45],cotxe_civil:[3.2,5.85],moto:[1.35,2.8],bici:[1.15,2.4],camio:[3.6,7.8],tanqueta:[3.15,5.1],tanc:[4.2,7.1],
     heli:[3.4,11.2],heli_combat:[2.8,11.8]
   }),
-  decks:Object.freeze({ferry:Object.freeze({halfW:6.7,halfL:12.8,ramp:5.8,y:2.2,rampY:.45})}),
-  steeringMax:Object.freeze({bici:.60,moto:.52,cotxe:.44,camio:.36,tanqueta:.34}),
+  decks:Object.freeze({ferry:Object.freeze({halfW:14.3,halfL:25.6,rampHalfW:6.7,ramp:5.8,y:2.2,rampY:.45,
+    cabin:Object.freeze({x:11.5,z:1.8,halfW:1.9,halfL:4.05})})}),
+  steeringMax:Object.freeze({bici:.60,moto:.52,cotxe:.44,cotxe_civil:.43,camio:.36,tanqueta:.34}),
   // Els pivots giren en Y, per separat de les rodes que roden en X.
   animateSteering(model,type,turn,dt){
     const pivots=model?.userData?.steeringPivots;
@@ -1031,21 +1170,123 @@ window.HUNTER_VEHICLES=Object.freeze({
       const p=new THREE.Group();p.position.set(px,py,pz);parent.add(p);const tire=new THREE.Mesh(new THREE.TorusGeometry(r*.8,r*.2,6,12),material(0x20252a,'rubber'));tire.rotation.y=Math.PI/2;tire.scale.z=width/(r*.4);p.add(tire);round(p,r*.45,width*.8,0x8b9699,0,0,0,'x','metal');if(spokes)for(let a=0;a<Math.PI;a+=Math.PI/3)rod(p,[0,Math.sin(a)*r*.75,Math.cos(a)*r*.75],[0,-Math.sin(a)*r*.75,-Math.cos(a)*r*.75],.035,0xb6bdc1,'metal');p.userData.radius=r;(owner.userData.wheels||(owner.userData.wheels=[])).push(p);return p};
     const shape=new THREE.Shape();[[-2,-5],[2,-5],[2.2,1],[0,5.5],[-2.2,1]].forEach(([x,y],i)=>i?shape.lineTo(x,y):shape.moveTo(x,y));
     const hull=new THREE.ExtrudeGeometry(shape,{depth:1.4,bevelEnabled:false});hull.rotateX(-Math.PI/2);
-    return function createVehicle(t){
+    return function createVehicle(t,appearance={}){
       const g=new THREE.Group();g.rotation.order='YXZ';const metal=0x3e4849,glass=0x76acba,rubber=0x252d31;
-      if(t==='cotxe'){const col=0xa35b38,trim=0x302f2d;box(g,3,1,5.6,col,0,1.15,0,'paint');box(g,2.92,.42,2.1,col,0,1.82,-1.72,'paint');box(g,2.62,.82,2.72,glass,0,2.04,.48,'glass');box(g,2.88,.18,2.95,col,0,2.52,.48,'paint');box(g,2.45,.1,1.1,0x7d432f,0,2.65,.5,'paint');for(const x of[-1.34,1.34]){box(g,.13,.28,2.9,col,x,1.7,.5,'paint');box(g,.15,.82,.14,col,x,2.04,-.82,'paint');box(g,.15,.82,.14,col,x,2.04,1.82,'paint');box(g,.18,.82,.15,col,x,2.04,.5,'paint');for(const z of[-1.85,1.85])wheel(g,x*1.16,.72,z,.72,.45,false,z<0);box(g,.35,.18,.4,metal,x*1.17,2.08,-.85,'metal')}for(const z of[-2.95,2.95])box(g,3.25,.3,.3,metal,0,.94,z,'metal');box(g,1.6,.45,.08,rubber,0,1.4,-2.84,'rubber');box(g,2.5,.14,.12,trim,0,1.12,-2.88,'rubber');for(const x of[-1.08,1.08]){box(g,.5,.34,.1,0xffedb2,x,1.43,-2.85,'paint');box(g,.38,.24,.1,0x9c2825,x,1.38,2.84,'paint')}for(const x of[-.72,.72])box(g,.5,.1,.16,0xd8d7c9,x,1.03,-2.9,'metal');const spare=wheel(g,0,1.5,3,.65,.45);spare.rotation.y=Math.PI/2;(g.userData.wheels||[]).pop()}
-      if(t==='camio'){const col=0x596a48,dark=0x30372e,canvas=0x69765a;
-        box(g,3.35,1.05,6.9,col,0,1.35,.35,'paint');box(g,3.2,.28,2.25,dark,0,.88,2.55,'metal');
-        box(g,3.05,1.7,2.35,col,0,2.25,-2.25,'paint');box(g,2.7,.78,.12,glass,0,2.45,-3.45,'glass');
-        for(const x of[-1.38,1.38]){box(g,.16,.8,.12,col,x,2.35,-3.45,'paint');box(g,.18,.85,2.15,col,x,2.22,-2.25,'paint')}
-        box(g,3.08,1.45,3.5,canvas,0,2.3,.95,'paint');for(const x of[-1.45,1.45])for(const z of[1.2,2.55])rod(g,[x,1.2,z],[x,3.05,z],.08,dark);
-        for(const x of[-1.52,1.52])for(const z of[-2.3,1.2,2.7])wheel(g,x,.84,z,.72,.46,false,z<0);
-        for(const z of[-3.55,3.75])box(g,3.55,.28,.28,dark,0,1.02,z,'metal');
-        for(const x of[-1.05,1.05]){box(g,.48,.34,.12,0xffe3a2,x,1.55,-3.48,'paint');box(g,.4,.26,.12,0x9e2924,x,1.35,3.55,'paint')}
-        box(g,.18,.22,.55,0xd7d3b7,0,1.2,-3.55,'metal');rod(g,[1.1,3.0,-1.4],[1.1,4.25,-1.4],.035,dark);
+      if(t==='cotxe_civil'){
+        // Model definitiu C1A aprovat a la preview: mateixos passos de roda,
+        // vidres, habitacle i maleter. La geometria s'instancia per cotxe.
+        const factory=window.HUNTER_CIVIL_C1A;
+        if(typeof factory!=='function')throw new Error('Falta el model civil C1A');
+        const car=factory(THREE,0,appearance.color??0x4b9fd1);
+        g.add(car);
+        g.userData.wheels=car.userData.wheels;
+        g.userData.steeringPivots=car.userData.steeringPivots;
+        // Distància rodada = velocitat × dt / radi real escalat.
+        // Evitam que el pneumàtic sembli relliscar per un radi genèric.
+        for(const wheel of g.userData.wheels)
+          wheel.userData.radius*=VS.cotxe_civil;
+        g.userData.civilianModel='C1A';
+        g.userData.civilianColor=appearance.color??0x4b9fd1;
+        // Fusionam només peces estàtiques, i no els vidres transparents:
+        // això conserva l'ordre de dibuix i permet moure les quatre rodes.
+        const batches=new Map();
+        for(const mesh of car.children.filter(o=>o.isMesh&&!o.material.transparent)){
+          mesh.updateMatrix();
+          const transformed=mesh.geometry.clone();
+          transformed.applyMatrix4(mesh.matrix);
+          if(!transformed.getAttribute('normal'))transformed.computeVertexNormals();
+          const flat=transformed.index?transformed.toNonIndexed():transformed;
+          const batch=batches.get(mesh.material)||{pos:[],norm:[],material:mesh.material};
+          const vertices=flat.getAttribute('position'),normals=flat.getAttribute('normal');
+          for(let i=0;i<vertices.count;i++){
+            batch.pos.push(vertices.getX(i),vertices.getY(i),vertices.getZ(i));
+            batch.norm.push(normals.getX(i),normals.getY(i),normals.getZ(i));
+          }
+          batches.set(mesh.material,batch);
+          car.remove(mesh);
+          mesh.geometry.dispose();transformed.dispose();
+          if(flat!==transformed)flat.dispose();
+        }
+        let count=0;
+        for(const b of batches.values()){
+          const geo=new THREE.BufferGeometry();
+          geo.setAttribute('position',new THREE.Float32BufferAttribute(b.pos,3));
+          geo.setAttribute('normal',new THREE.Float32BufferAttribute(b.norm,3));
+          const mesh=new THREE.Mesh(geo,b.material);
+          mesh.name='civil-c1a-batch-'+count++;
+          car.add(mesh);
+        }
+        g.userData.staticBatches=count;
+      }
+      if(t==='cotxe'&&window.HUNTER_HUMVEE_D31?.create){
+        // Model definitiu Humvee D3.1, aprovat amb les quatre portes planes.
+        // La seva escala interna = 1.75 / VS.cotxe; la fàbrica general
+        // aplica VS.cotxe una sola vegada al final.
+        const humvee=window.HUNTER_HUMVEE_D31.create();
+        g.add(humvee);
+        g.userData.wheels=humvee.userData.wheels;
+        g.userData.steeringPivots=humvee.userData.steeringPivots;
+        g.userData.humveeModel='D3.1';
+        g.userData.humveeScale=window.HUNTER_HUMVEE_D31.scale;
+      }
+      if(t==='cotxe'&&!window.HUNTER_HUMVEE_D31){const col=0xa35b38,trim=0x302f2d;box(g,3,1,5.6,col,0,1.15,0,'paint');box(g,2.92,.42,2.1,col,0,1.82,-1.72,'paint');box(g,2.62,.82,2.72,glass,0,2.04,.48,'glass');box(g,2.88,.18,2.95,col,0,2.52,.48,'paint');box(g,2.45,.1,1.1,0x7d432f,0,2.65,.5,'paint');for(const x of[-1.34,1.34]){box(g,.13,.28,2.9,col,x,1.7,.5,'paint');box(g,.15,.82,.14,col,x,2.04,-.82,'paint');box(g,.15,.82,.14,col,x,2.04,1.82,'paint');box(g,.18,.82,.15,col,x,2.04,.5,'paint');for(const z of[-1.85,1.85])wheel(g,x*1.16,.72,z,.72,.45,false,z<0);box(g,.35,.18,.4,metal,x*1.17,2.08,-.85,'metal')}for(const z of[-2.95,2.95])box(g,3.25,.3,.3,metal,0,.94,z,'metal');box(g,1.6,.45,.08,rubber,0,1.4,-2.84,'rubber');box(g,2.5,.14,.12,trim,0,1.12,-2.88,'rubber');for(const x of[-1.08,1.08]){box(g,.5,.34,.1,0xffedb2,x,1.43,-2.85,'paint');box(g,.38,.24,.1,0x9c2825,x,1.38,2.84,'paint')}for(const x of[-.72,.72])box(g,.5,.1,.16,0xd8d7c9,x,1.03,-2.9,'metal');const spare=wheel(g,0,1.5,3,.65,.45);spare.rotation.y=Math.PI/2;(g.userData.wheels||[]).pop()}
+      if(t==='cotxe'&&!window.HUNTER_HUMVEE_D31){
+        // Reserva per si el GLB encara no s'ha pogut carregar.
+        // El conductor veu el volant per darrere del parabrisa.
+        const steeringWheel=new THREE.Mesh(
+          new THREE.TorusGeometry(.27,.045,8,16),
+          material(0x303735,'rubber'));
+        steeringWheel.position.set(-.72,1.91,-.67);
+        steeringWheel.rotation.x=-.35;g.add(steeringWheel);
+        box(g,.86,.14,.85,0x424640,-.72,1.15,.42,'rubber');
+        box(g,.82,.72,.13,0x424640,-.72,1.59,.85,'rubber');
+      }
+      if(t==='camio'){
+        // A4.3: el mateix low-poly de la preview, adaptat a la
+        // caixa de col·lisió física existent (3.6 × 7.8, abans de VS).
+        const factory=window.HUNTER_TRUCK_CONCEPT;
+        if(typeof factory!=='function')throw new Error('Falta el model A4.3');
+        const truck=factory(THREE,2),fit=.82;
+        // Les sis rodes són animades; fusionam només malles estàtiques.
+        // Una malla per material evita 140+ draw calls per camió.
+        const groups=new Map();
+        for(const mesh of truck.children.filter(o=>o.isMesh)){
+          mesh.updateMatrix();
+          const geometry=mesh.geometry.clone();
+          geometry.applyMatrix4(mesh.matrix);
+          if(!geometry.getAttribute('normal'))geometry.computeVertexNormals();
+          const flat=geometry.index?geometry.toNonIndexed():geometry;
+          const grp=groups.get(mesh.material)||{pos:[],norm:[],material:mesh.material};
+          const positions=flat.getAttribute('position'),normals=flat.getAttribute('normal');
+          for(let i=0;i<positions.count;i++){
+            grp.pos.push(positions.getX(i),positions.getY(i),positions.getZ(i));
+            grp.norm.push(normals.getX(i),normals.getY(i),normals.getZ(i));
+          }
+          groups.set(mesh.material,grp);
+          truck.remove(mesh);
+          mesh.geometry.dispose();geometry.dispose();
+          if(flat!==geometry)flat.dispose();
+        }
+        let batches=0;
+        for(const grp of groups.values()){
+          const geometry=new THREE.BufferGeometry();
+          geometry.setAttribute('position',new THREE.Float32BufferAttribute(grp.pos,3));
+          geometry.setAttribute('normal',new THREE.Float32BufferAttribute(grp.norm,3));
+          const merged=new THREE.Mesh(geometry,grp.material);
+          merged.name='truck-static-batch-'+batches++;
+          truck.add(merged);
+        }
+        truck.scale.setScalar(fit);
+        g.add(truck);
+        g.userData.wheels=truck.userData.wheels||[];
+        g.userData.steeringPivots=truck.userData.steeringPivots||[];
+        for(const w of g.userData.wheels)w.userData.radius=.80*fit*VS.camio;
+        g.userData.truckModel='A4.3';
+        g.userData.truckStaticBatches=batches;
+        g.userData.truckVisualFit=fit;
       }
       if(t==='bici'||t==='moto'){
-        const moto=t==='moto',r=moto?.65:.62,L=moto?1.5:1.22,col=moto?0xbc743d:0x3f9b9d;
+        const moto=t==='moto',r=moto?.65:.62,L=moto?1.5:1.22,col=moto?0xbc743d:(appearance.color??0x3f9b9d);
         // La forquilla i el manillar pivoten junts amb la roda de davant.
         // Centre de gir al coll de direcció (1.65, -0.95).
         const steering=new THREE.Group();steering.position.set(0,1.65,-.95);g.add(steering);
@@ -1320,7 +1561,7 @@ window.HUNTER_VEHICLES=Object.freeze({
         box(g,.22,.12,.22,tubeCol,-.82,1.67,3.40,'metal');
       }
       if(t==='moto_aquatica'){
-        const bodyCol=0xc94e3f,dark=0x33383b;
+        const bodyCol=appearance.color??0xc94e3f,dark=0x33383b;
         const nose=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(bodyCol,'paint'));nose.scale.set(.72,.42,1.55);nose.position.set(0,.62,-.95);g.add(nose);
         box(g,1.38,.38,2.55,bodyCol,0,.54,.55,'paint');box(g,.72,.22,1.05,dark,0,.88,.6,'rubber');box(g,.82,.16,.56,0x222629,0,1.02,.2,'rubber');
         rod(g,[-.42,1.16,-.35],[.42,1.16,-.35],.055,metal);rod(g,[0,.94,-.2],[0,1.16,-.35],.05,metal);
@@ -1461,19 +1702,20 @@ window.HUNTER_VEHICLES=Object.freeze({
       }
       if(t==='ferry'){
         const hullCol=0x4e6570,deckCol=0x8f9692,edge=0xd7d2bd,cabin=0xe7e3d5;
-        box(g,16,2.25,27.5,hullCol,0,.7,0,'paint');
-        box(g,15.2,.3,25.8,deckCol,0,2.12,0,'metal');
-        for(const x of[-7.55,7.55])box(g,.28,1.05,25.6,edge,x,2.58,0,'metal');
-        const frontRamp=box(g,13.6,.3,6.2,deckCol,0,1.35,-15.6,'metal');frontRamp.rotation.x=-.22;
-        const rearRamp=box(g,13.6,.3,6.2,deckCol,0,1.35,15.6,'metal');rearRamp.rotation.x=.22;
-        for(const x of[-6.55,6.55]){rod(g,[x,2.3,-12.8],[x,.65,-18.4],.12,edge);rod(g,[x,2.3,12.8],[x,.65,18.4],.12,edge)}
-        box(g,3.35,3.7,7.6,cabin,5.35,4.05,1.8,'paint');
-        box(g,3.05,1.05,7.1,glass,5.35,4.62,1.8,'glass');
-        box(g,3.65,.28,8.05,hullCol,5.35,6.02,1.8,'metal');
-        for(const z of[-1.05,1.15,3.35])box(g,.16,1.05,.18,hullCol,3.72,4.62,z,'metal');
-        rod(g,[5.35,6.15,3.8],[5.35,9.4,3.8],.11,metal);box(g,1.25,.18,.18,0x30383a,5.35,9.42,3.8,'metal');
-        for(const x of[-6.8,6.8])for(const z of[-10,-5,0,5,10])round(g,.18,.28,0x252d31,x,1.45,z,'z','rubber');
-        for(const z of[-11.7,11.7])for(const x of[-4.5,0,4.5])box(g,2.2,.08,.28,0xf1e9c5,x,2.32,z,'paint');
+        box(g,32,2.25,55,hullCol,0,.7,0,'paint');
+        box(g,30.4,.3,51.6,deckCol,0,2.12,0,'metal');
+        for(const x of[-15.05,15.05])box(g,.28,1.05,51.4,edge,x,2.58,0,'metal');
+        // Les rampes conserven exactament les mides originals.
+        const frontRamp=box(g,13.6,.3,6.2,deckCol,0,1.35,-28.4,'metal');frontRamp.rotation.x=-.22;
+        const rearRamp=box(g,13.6,.3,6.2,deckCol,0,1.35,28.4,'metal');rearRamp.rotation.x=.22;
+        for(const x of[-6.55,6.55]){rod(g,[x,2.3,-25.6],[x,.65,-31.2],.12,edge);rod(g,[x,2.3,25.6],[x,.65,31.2],.12,edge)}
+        box(g,3.35,3.7,7.6,cabin,11.5,4.05,1.8,'paint');
+        box(g,3.05,1.05,7.1,glass,11.5,4.62,1.8,'glass');
+        box(g,3.65,.28,8.05,hullCol,11.5,6.02,1.8,'metal');
+        for(const z of[-1.05,1.15,3.35])box(g,.16,1.05,.18,hullCol,9.87,4.62,z,'metal');
+        rod(g,[11.5,6.15,3.8],[11.5,9.4,3.8],.11,metal);box(g,1.25,.18,.18,0x30383a,11.5,9.42,3.8,'metal');
+        for(const x of[-14.3,14.3])for(const z of[-21,-14,-7,0,7,14,21])round(g,.18,.28,0x252d31,x,1.45,z,'z','rubber');
+        for(const z of[-24.5,24.5])for(const x of[-10,-5,0,5,10])box(g,2.2,.08,.28,0xf1e9c5,x,2.32,z,'paint');
         g.userData.ferryDeck=true;
       }
       if(t==='hover'){box(g,5,.85,8,rubber,0,.55,0,'rubber');for(const x of[-2.35,2.35])for(let z=-3.5;z<4;z+=.65)box(g,.2,.7,.48,0x394145,x,.5,z,'rubber');box(g,4.45,.85,6.7,0xcf9e4f,0,1.38,-.2,'paint');box(g,2.75,1.12,2.9,glass,0,2.2,-.92,'glass');box(g,2.98,.22,3.2,0xcda75f,0,2.82,-.92,'paint');for(const x of[-2.05,2.05])box(g,.18,.3,6.7,0xa97835,x,1.25,-.2,'paint');for(const x of[-1.1,1.1])box(g,.42,.22,.16,0xffe09a,x,1.45,-3.55,'paint');const duct=new THREE.Mesh(new THREE.TorusGeometry(1.55,.2,8,20),material(metal,'metal'));duct.position.set(0,2.9,3);g.add(duct);const fan=new THREE.Group();fan.position.copy(duct.position);for(let i=0;i<4;i++){const blade=box(fan,.2,2.8,.12,rubber,0,0,0,'rubber');blade.rotation.z=i*Math.PI/4}g.add(fan);g.userData.fan=fan;round(g,.28,.3,0x7b8588,0,2.9,3,'z','metal');for(const x of[-1.7,1.7]){box(g,.15,2.05,1,0xbe8c43,x,2.68,3.5,'paint');rod(g,[x,1.7,2.65],[x,3.65,3.2],.07,metal)}box(g,1.4,.18,.8,0x5b4939,0,1.88,1.45,'paint')}
@@ -1549,7 +1791,8 @@ window.HUNTER_VEHICLES=Object.freeze({
           box(g,.12,1.35,.88,bodyCol,0,3.34,6.87,'paint');
           box(g,2.25,.1,.58,bodyCol,0,2.9,5.94,'paint');
         }
-        const rotorY=combat?3.22:3.82,mastBaseY=combat?2.94:3.02;rod(g,[0,mastBaseY,0],[0,rotorY,0],.14,metal);round(g,.3,.2,metal,0,rotorY,0,'y','metal');const rotor=new THREE.Group();rotor.position.set(0,rotorY,0);for(const a of(combat?[0,Math.PI/3,Math.PI*2/3]:[0,Math.PI/2])){const blade=box(rotor,combat?13.5:14.8,.1,.36,rubber,0,0,0,'rubber');blade.rotation.y=a}g.add(rotor);g.userData.rotor=rotor;
+        const rotorY=combat?3.22:3.82,mastBaseY=combat?2.94:3.02;rod(g,[0,mastBaseY,0],[0,rotorY,0],.14,metal);round(g,.3,.2,metal,0,rotorY,0,'y','metal');const rotor=new THREE.Group();rotor.position.set(0,rotorY,0);// Una sola pala contínua de punta a punta = dues aspes oposades al combat. El Huey manté quatre aspes.
+        for(const a of(combat?[0]:[0,Math.PI/2])){const blade=box(rotor,combat?13.5:14.8,.1,.36,rubber,0,0,0,'rubber');blade.rotation.y=a}g.add(rotor);g.userData.rotor=rotor;
         const tail=new THREE.Group();tail.position.set(.38,3.45,combat?7:7.38);box(tail,.1,1.9,.16,rubber,0,0,0,'rubber');box(tail,.1,.16,1.9,rubber,0,0,0,'rubber');g.add(tail);g.userData.tailRotor=tail;
       }
       if(t==='bici'){const crank=new THREE.Group();crank.position.set(0,.75,0);for(const side of[-1,1]){rod(crank,[side*.3,0,0],[side*.3,0,side*.28],.045,metal);box(crank,.26,.08,.18,rubber,side*.4,0,side*.28,'rubber')}g.add(crank);g.userData.crank=crank}
@@ -1570,25 +1813,33 @@ window.HUNTER_VEHICLES=Object.freeze({
 ;
 // END src/vehicles.js
 // BEGIN src/vehicle-dynamics.js
+// Escala única de resistència i armes per a tots els bàndols.
+window.HUNTER_COMBAT_BALANCE=Object.freeze({
+ player:20,medkit:8,
+ people:Object.freeze({soldier:4,elite:8,general:8}),
+ weapons:Object.freeze({knife:2,pistol:2,rifle:2,eliteRifle:2,sniper:10,tankette:2,attackCannon:2,bazooka:8,grenade:10,c4:20,tank:12,heliMissile:12,boatRocket:12,towerLight:2,towerHeavy:12}),
+ vehicles:Object.freeze({bici:1,moto:2,cotxe:5,cotxe_civil:4,camio:10,tanqueta:12,tanc:20,windsurf:1,barca_rems:2,moto_aquatica:3,llanxa:5,llanxa_coets:10,ferry:15,hover:6,heli:10,heli_combat:15})
+});
 // Física i resposta dels vehicles. Separat de la geometria visual.
 // Els perfils comparteixen interfície, però terra, aigua i aire tenen inèrcies diferents.
 window.HUNTER_VEHICLE_DYNAMICS=Object.freeze({
   types:Object.freeze({
-    llanxa:Object.freeze({n:'Llanxa',m:'w',a:35,dr:.8,tu:1.4,cd:30,ch:12,response:2.6,steerResponse:2.8,yawResponse:2.4,maxF:35,maxR:9,waterDrift:.14,waterSteerMin:.22,armor:1,life:4}),
-    moto_aquatica:Object.freeze({n:'Moto aquàtica',m:'w',a:46,dr:.68,tu:2.35,cd:20,ch:7,response:5.8,steerResponse:6.4,yawResponse:5.6,maxF:39,maxR:10,waterDrift:.24,waterSteerMin:.38,armor:0,life:2}),
-    hover:Object.freeze({n:'Hovercraft',m:'wl',a:28,dr:.7,tu:1.7,cd:28,ch:11,response:2.9,steerResponse:3.2,yawResponse:2.8,maxF:31,maxR:10,waterDrift:.34,waterSteerMin:.5,landGrip:.48,armor:2,life:5}),
-    ferry:Object.freeze({n:'Ferry',m:'w',a:22,dr:.82,tu:.58,cd:48,ch:22,response:1.35,steerResponse:1.6,yawResponse:1.25,maxF:22,maxR:6,waterDrift:.035,waterSteerMin:.12,mass:10,armor:5,life:8}),
-    cotxe:Object.freeze({n:'Cotxe',m:'l',a:36,dr:.9,tu:1.9,cd:22,ch:8,response:5.2,steerResponse:6.2,yawResponse:6.5,maxF:38,maxR:14,landGrip:.9,steerFade:.42,mass:1,armor:2,life:4}),
-    moto:Object.freeze({n:'Moto',m:'l',a:42,dr:.9,tu:2.5,cd:18,ch:7,response:6.4,steerResponse:7.2,yawResponse:8,maxF:43,maxR:12,landGrip:.84,steerFade:.28,mass:.55,armor:0,life:2}),
-    bici:Object.freeze({n:'Bicicleta',m:'l',a:14,dr:.8,tu:2.6,cd:14,ch:6,response:7.2,steerResponse:8,yawResponse:9,maxF:17,maxR:6,landGrip:.94,steerFade:.18,mass:.2,armor:0,life:1}),
-    barca_rems:Object.freeze({n:'Barca de rems',m:'w',a:20,dr:.82,tu:1.6,cd:25,ch:10,response:3.4,steerResponse:4,yawResponse:3.2,maxF:17,maxR:5,waterDrift:.2,waterSteerMin:.18,armor:0,life:2}),
-    windsurf:Object.freeze({n:'Windsurf',m:'w',a:18,dr:.75,tu:2.1,cd:16,ch:5,response:4.5,steerResponse:5.5,yawResponse:4.8,maxF:22,maxR:5,waterDrift:.42,waterSteerMin:.3,armor:0,life:1}),
-    camio:Object.freeze({n:'Camió militar',m:'l',a:24,dr:.92,tu:1.35,cd:27,ch:9,response:3.1,steerResponse:3.4,yawResponse:3.2,maxF:29,maxR:10,landGrip:.82,steerFade:.5,mass:2.2,armor:4,life:10}),
-    tanqueta:Object.freeze({n:'Tanqueta blindada',m:'l',a:20,dr:.92,tu:1.45,cd:25,ch:10,response:2.8,steerResponse:3.1,yawResponse:2.9,maxF:24,maxR:9,landGrip:.88,steerFade:.38,mass:3.2,armor:7,life:10}),
-    llanxa_coets:Object.freeze({n:'Llanxa llançacoets',m:'w',a:27,dr:.82,tu:1.35,cd:31,ch:12,response:2.5,steerResponse:2.7,yawResponse:2.2,maxF:29,maxR:8,waterDrift:.11,waterSteerMin:.2,armor:3,life:7}),
-    tanc:Object.freeze({n:'Tanc',m:'l',a:16,dr:.9,tu:1.1,cd:26,ch:10,response:2.2,steerResponse:2.4,yawResponse:2.4,maxF:21,maxR:8,landGrip:.96,steerFade:.3,mass:5,armor:10,life:18}),
-    heli:Object.freeze({n:'Helicòpter',m:'a',a:38,dr:.5,tu:1.6,cd:34,ch:12,response:2.8,steerResponse:3.2,yawResponse:2.3,maxF:50,maxR:17,strafeMax:17,climb:24,liftResponse:2.8,bank:.34,pitch:.22,mass:2.5,armor:4,life:8}),
-    heli_combat:Object.freeze({n:'Helicòpter de combat',m:'a',a:47,dr:.48,tu:2.25,cd:36,ch:13,response:5,steerResponse:6,yawResponse:5.1,maxF:60,maxR:21,strafeMax:24,climb:30,liftResponse:4.3,bank:.45,pitch:.29,mass:2.8,armor:6,life:12})
+    llanxa:Object.freeze({n:'Llanxa',m:'w',a:35,dr:.8,tu:1.4,cd:30,ch:12,response:2.6,steerResponse:2.8,yawResponse:2.4,maxF:35,maxR:9,waterDrift:.14,waterSteerMin:.22,life:window.HUNTER_COMBAT_BALANCE.vehicles.llanxa}),
+    moto_aquatica:Object.freeze({n:'Moto aquàtica',m:'w',a:46,dr:.68,tu:2.35,cd:20,ch:7,response:5.8,steerResponse:6.4,yawResponse:5.6,maxF:39,maxR:10,waterDrift:.24,waterSteerMin:.38,life:window.HUNTER_COMBAT_BALANCE.vehicles.moto_aquatica}),
+    hover:Object.freeze({n:'Hovercraft',m:'wl',a:28,dr:.7,tu:1.7,cd:28,ch:11,response:2.9,steerResponse:3.2,yawResponse:2.8,maxF:31,maxR:10,waterDrift:.34,waterSteerMin:.5,landGrip:.48,life:window.HUNTER_COMBAT_BALANCE.vehicles.hover}),
+    ferry:Object.freeze({n:'Ferry',m:'w',a:22,dr:.82,tu:.58,cd:48,ch:22,response:1.35,steerResponse:1.6,yawResponse:1.25,maxF:22,maxR:6,waterDrift:.035,waterSteerMin:.12,mass:10,life:window.HUNTER_COMBAT_BALANCE.vehicles.ferry}),
+    cotxe:Object.freeze({n:'Cotxe',m:'l',a:36,dr:.9,tu:1.9,cd:22,ch:8,response:5.2,steerResponse:6.2,yawResponse:6.5,maxF:38,maxR:14,landGrip:.9,steerFade:.42,mass:1,life:window.HUNTER_COMBAT_BALANCE.vehicles.cotxe}),
+    cotxe_civil:Object.freeze({n:'Cotxe civil',m:'l',a:23,dr:.91,tu:1.55,cd:20,ch:8,response:3.8,steerResponse:4.8,yawResponse:4.3,maxF:26,maxR:8,landGrip:.79,steerFade:.52,mass:.93,life:window.HUNTER_COMBAT_BALANCE.vehicles.cotxe_civil}),
+    moto:Object.freeze({n:'Moto',m:'l',a:42,dr:.9,tu:2.5,cd:18,ch:7,response:6.4,steerResponse:7.2,yawResponse:8,maxF:43,maxR:12,landGrip:.84,steerFade:.28,mass:.55,life:window.HUNTER_COMBAT_BALANCE.vehicles.moto}),
+    bici:Object.freeze({n:'Bicicleta',m:'l',a:14,dr:.8,tu:2.6,cd:14,ch:6,response:7.2,steerResponse:8,yawResponse:9,maxF:17,maxR:6,landGrip:.94,steerFade:.18,mass:.2,life:window.HUNTER_COMBAT_BALANCE.vehicles.bici}),
+    barca_rems:Object.freeze({n:'Barca de rems',m:'w',a:20,dr:.82,tu:1.6,cd:25,ch:10,response:3.4,steerResponse:4,yawResponse:3.2,maxF:17,maxR:5,waterDrift:.2,waterSteerMin:.18,life:window.HUNTER_COMBAT_BALANCE.vehicles.barca_rems}),
+    windsurf:Object.freeze({n:'Windsurf',m:'w',a:18,dr:.75,tu:2.1,cd:16,ch:5,response:4.5,steerResponse:5.5,yawResponse:4.8,maxF:22,maxR:5,waterDrift:.42,waterSteerMin:.3,life:window.HUNTER_COMBAT_BALANCE.vehicles.windsurf}),
+    camio:Object.freeze({n:'Camió militar',m:'l',a:24,dr:.92,tu:1.35,cd:27,ch:9,response:3.1,steerResponse:3.4,yawResponse:3.2,maxF:29,maxR:10,landGrip:.82,steerFade:.5,mass:2.2,life:window.HUNTER_COMBAT_BALANCE.vehicles.camio}),
+    tanqueta:Object.freeze({n:'Tanqueta',m:'l',a:20,dr:.92,tu:1.45,cd:25,ch:10,response:2.8,steerResponse:3.1,yawResponse:2.9,maxF:24,maxR:9,landGrip:.88,steerFade:.38,mass:3.2,life:window.HUNTER_COMBAT_BALANCE.vehicles.tanqueta}),
+    llanxa_coets:Object.freeze({n:'Llanxa llançacoets',m:'w',a:27,dr:.82,tu:1.35,cd:31,ch:12,response:2.5,steerResponse:2.7,yawResponse:2.2,maxF:29,maxR:8,waterDrift:.11,waterSteerMin:.2,life:window.HUNTER_COMBAT_BALANCE.vehicles.llanxa_coets}),
+    tanc:Object.freeze({n:'Tanc',m:'l',a:16,dr:.9,tu:1.1,cd:26,ch:10,response:2.2,steerResponse:2.4,yawResponse:2.4,maxF:21,maxR:8,landGrip:.96,steerFade:.3,mass:5,life:window.HUNTER_COMBAT_BALANCE.vehicles.tanc}),
+    heli:Object.freeze({n:'Helicòpter',m:'a',a:38,dr:.5,tu:1.6,cd:34,ch:12,response:2.8,steerResponse:3.2,yawResponse:2.3,maxF:50,maxR:17,strafeMax:17,climb:24,liftResponse:2.8,bank:.34,pitch:.22,mass:2.5,life:window.HUNTER_COMBAT_BALANCE.vehicles.heli}),
+    heli_combat:Object.freeze({n:'Helicòpter de combat',m:'a',a:47,dr:.48,tu:2.25,cd:36,ch:13,response:5,steerResponse:6,yawResponse:5.1,maxF:60,maxR:21,strafeMax:24,climb:30,liftResponse:4.3,bank:.45,pitch:.29,mass:2.8,life:window.HUNTER_COMBAT_BALANCE.vehicles.heli_combat})
   }),
   smooth(current,target,response,dt){return current+(target-current)*(1-Math.exp(-response*dt))},
   inputs(v,forward,turn,dt){
@@ -2196,6 +2447,8 @@ window.HUNTER_ACTION_ICONS=(()=>{
   const boat=extra=>hull()+'<path d="M18 37L24 27H42L48 37Z" fill="'+steel+'" stroke="'+ink+'" stroke-width="2"/><path d="M26 29H39L43 35H23Z" fill="'+glass+'"/>'+extra;
   const forms={
     cotxe:svg('<path d="M8 41L13 31 23 27H43L54 35 57 42 55 47H8Z" fill="'+olive+'" stroke="'+ink+'" stroke-width="2.5"/><path d="M23 30H41L49 38H17Z" fill="'+glass+'"/>'+wheels(18,47)),
+    // Familiar civil C1A: icona pròpia, no la motxilla per defecte.
+    cotxe_civil:svg('<path d="M5 41L8 29L18 24H46L55 30L59 41L57 47H6Z" fill="'+olive+'" stroke="'+ink+'" stroke-width="2.5"/><path d="M19 27H45L51 35H12Z" fill="'+glass+'" stroke="'+ink+'" stroke-width="1.5"/><path d="M31 27V36M46 24V39" stroke="'+dark+'" stroke-width="2"/>'+wheels(17,48)),
     camio:svg('<path d="M4 31H35V45H4Z" fill="'+olive+'" stroke="'+ink+'" stroke-width="2.5"/><path d="M36 32H48L59 40V45H36Z" fill="'+metal+'" stroke="'+ink+'" stroke-width="2.5"/><path d="M39 34H47L53 39H39Z" fill="'+glass+'"/>'+wheels(15,49)),
     moto:svg('<path d="M14 42L28 31 39 35 47 42M27 31L40 31 48 28M30 30L25 25M33 30L36 43" fill="none" stroke="'+olive+'" stroke-width="5" stroke-linejoin="round"/><path d="M25 24H37M45 28H53" stroke="'+ink+'" stroke-width="3"/>'+wheels(15,49,45,8)),
     bici:svg('<path d="M15 44L26 31 36 44 15 44 31 27M26 31L42 31 49 44M29 27H36M42 31L45 25H51" fill="none" stroke="'+steel+'" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>'+wheels(15,49,44,8)),
@@ -2470,7 +2723,8 @@ window.HUNTER_RIDER=Object.freeze({
       u.shotTime=Math.max(0,u.shotTime-dt);
       u.shotAge=Math.min(10,u.shotAge+dt);
       const active=u.shotTime>0;
-      u.shotBlend+=(Number(active)-u.shotBlend)*(1-Math.exp(-18*dt));
+      // Transicions suaus: el tret ja no força un gir instantani del tronc.
+      u.shotBlend+=(Number(active)-u.shotBlend)*(1-Math.exp(-(active?8:9)*dt));
       if(!active&&u.shotBlend<.01){
         pistol.visible=false;pistolParts.flash.visible=false;return;
       }
@@ -2481,23 +2735,22 @@ window.HUNTER_RIDER=Object.freeze({
       // A la barca l'arma s'ha de veure a escala amb el remador.
       pistol.scale.setScalar(rowing?.56:.92);
       if(rowing){
-        // Remant mira a popa (PI): gira només 90° a la dreta
-        // fins al perfil (PI/2), i la mà dreta dispara cap a proa.
-        // No giram ni el buc ni la pelvis.
-        torso.rotation.y=Math.PI-Math.PI/2*u.shotBlend;
+        // El remador només gira un poc les espatlles (uns 30°),
+        // sense retorçar el tronc ni passar de cop al perfil.
+        torso.rotation.y=Math.PI-.52*u.shotBlend;
       }else torso.rotation.y+=twist*u.shotBlend;
       const shoulder=shoulderAt(1),
             forearm=limbs[3],
             restingHand=new THREE.Vector3(0,-forearm.userData.restLength*forearm.scale.y,0)
               .applyQuaternion(forearm.quaternion).add(forearm.position),
-            // Quan el tors està de perfil la proa és la seva dreta.
-            // El braç dret apunta cap a -Z sense haver de retorçar-lo.
-            reach=rowing?vec(.58*sc,-.29,-.88*sc):
+            // El braç dret surt del rem amb una extensió curta cap a proa.
+            // Evitam que travessi el pit o arribi a l'altre costat del buc.
+            reach=rowing?vec(-.08*sc,-.26,-.48*sc):
               vec(.25*sc,-.29,-1.13*sc);
       const target=shoulder.clone().add(reach),
             hand=restingHand.lerp(target,u.shotBlend),
             elbow=shoulder.clone().lerp(hand,.57);
-      elbow.y-=.12;elbow.x+=rowing?-.12*sc:.12*sc;
+      elbow.y-=.12;elbow.x+=rowing?-.05*sc:.12*sc;
       limbBetween(limbs[2],shoulder,elbow);limbBetween(limbs[3],elbow,hand);
       // La mà esquerra solta el rem durant el gir de cintura i
       // acompanya el tronc, sense estirar el braç a l'altre costat.
@@ -2510,11 +2763,12 @@ window.HUNTER_RIDER=Object.freeze({
         const oldHand=vec(0,-limbs[1].userData.restLength*limbs[1].scale.y,0)
           .applyQuaternion(limbs[1].quaternion).add(limbs[1].position);
         const oldElbow=limbs[1].position.clone();
-        oldHand.lerp(leftHand,u.shotBlend);oldElbow.lerp(leftElbow,u.shotBlend);
+        // La mà esquerra continua pràcticament sobre el rem.
+        oldHand.lerp(leftHand,u.shotBlend*.2);oldElbow.lerp(leftElbow,u.shotBlend*.2);
         limbBetween(limbs[0],leftShoulder,oldElbow);
         limbBetween(limbs[1],oldElbow,oldHand);
       }
-      const recoil=Math.exp(-u.shotAge*18)*.095;
+      const recoil=Math.exp(-u.shotAge*18)*(rowing ? .045 : .095);
       pistol.position.copy(hand).add(vec(0,0,recoil));
       // La pistola apunta a proa (-Z) quan el remador s'hi gira.
       pistol.quaternion.identity();
@@ -2526,8 +2780,10 @@ window.HUNTER_RIDER=Object.freeze({
     // l'arma segons l'autoapuntat del sistema existent.
     const firePistol=(v,autoAim)=>{
       if(!v||!g.visible)return null;
-      const u=g.userData;u.shotTime=.34;u.shotAge=0;
-      u.shotBlend=Math.max(u.shotBlend,.82);u.pistolAim=null;
+      const u=g.userData;u.shotTime=v.t==='barca_rems' ? .52 : .34;u.shotAge=0;
+      // No forçam shotBlend: l'animació del remador s'interpola en update().
+      if(v.t!=='barca_rems')u.shotBlend=Math.max(u.shotBlend,.82);
+      u.pistolAim=null;
       aimOneHand(v,0);
       g.updateWorldMatrix(true,true);
       let origin=pistol.localToWorld(muzzleLocal.clone());
@@ -2546,10 +2802,56 @@ window.HUNTER_RIDER=Object.freeze({
         pistol.getWorldQuaternion(new THREE.Quaternion())).normalize()};
     };
     const update=(v,dt)=>{
-      const open=!!v&&['bici','moto','moto_aquatica','llanxa','llanxa_coets','barca_rems','windsurf'].includes(v.t);g.visible=open;
-      if(!open){g.userData.shotTime=0;g.userData.shotBlend=0;g.userData.pistolAim=null;pistol.visible=false;return}
+      const car=!!v&&(v.t==='cotxe_civil'||v.t==='cotxe');
+      const open=!!v&&(car||['bici','moto','moto_aquatica','llanxa','llanxa_coets','barca_rems','windsurf'].includes(v.t));g.visible=open;
+      if(!open){g.userData.shotTime=0;g.userData.shotBlend=0;g.userData.pistolAim=null;pistol.visible=false;g.scale.setScalar(1);return}
       const u=g.userData,sc=v.t==='llanxa'?1.3:v.t==='llanxa_coets'?1.35:scales[v.t],moving=Math.min(1,Math.abs(v.v)/1.8);u.motion+=(moving-u.motion)*(1-Math.exp(-12*dt));const motion=u.motion,phase=(v.t==='bici'||v.t==='barca_rems')?-(v.pedalPhase||0):(v.pedalPhase||0);
+      // En cotxes l'habitacle és més baix que el protagonista dret.
+      // Escalam el mateix model de jugador i preservam l'orientació
+      // tridimensional del xassís en girs i pendents.
+      const riderScale=car?.82:1;
+      g.scale.setScalar(riderScale);
       g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);torso.rotation.set(0,0,0);boots.forEach(b=>b.rotation.set(0,0,0));
+
+      if(car){
+        // Seient esquerre, darrere del volant (C1A i cotxe utilitari).
+        // Posicions físiques convertides al sistema del rider escalat.
+        const civil=v.t==='cotxe_civil',
+              humvee=!civil&&v.o?.userData?.humveeModel==='D3.1',
+              // The Humvee cabin is forward-facing -Z and wider than the
+              // previous military car. Rider and wheel now share this seat.
+              seatX=(civil?-.613:humvee?-.84:-.72)*sc,
+              seatY=(civil?1.14:humvee?1.24:1.22)*sc,
+              seatZ=(civil?-.60:humvee?-.26:.42)*sc,
+              steeringX=seatX,
+              steeringY=(civil?1.66:humvee?1.60:1.91)*sc,
+              steeringZ=(civil?-.94:humvee?-.87:-.67)*sc,
+              invScale=1/riderScale;
+        torso.position.set(seatX*invScale,seatY*invScale,seatZ*invScale);
+        torso.rotation.x=-.05;
+        for(let i=0;i<2;i++){
+          const side=i?1:-1,
+                shoulder=shoulderAt(side),
+                hip=vec((seatX+side*.20*sc)*invScale,
+                  seatY*invScale,seatZ*invScale),
+                hand=vec((steeringX+side*.22*sc)*invScale,
+                  steeringY*invScale,steeringZ*invScale),
+                elbow=shoulder.clone().lerp(hand,.50),
+                foot=vec((seatX+side*.20*sc)*invScale,
+                  .87*sc*invScale,(civil?-1.31:humvee?-1.10:-.95)*sc*invScale),
+                knee=hip.clone().lerp(foot,.52);
+          elbow.y-=.10*sc*invScale;
+          knee.y+=.08*sc*invScale;knee.z+=.11*sc*invScale;
+          limbBetween(limbs[i*2],shoulder,elbow);
+          limbBetween(limbs[i*2+1],elbow,hand);
+          limbBetween(limbs[4+i*2],hip,knee);
+          limbBetween(limbs[5+i*2],knee,foot);
+          boots[i].position.copy(foot);
+          boots[i].rotation.x=-.2;
+        }
+        pistol.visible=false;
+        return;
+      }
 
       if(v.t==='bici'||v.t==='moto'){
         const seat=1.65*sc;torso.position.set(0,seat,.4*sc);torso.rotation.x=.15*motion;
@@ -2662,10 +2964,45 @@ window.HUNTER_RIDER=Object.freeze({
 window.HUNTER_VEGETATION=Object.freeze({
   create(THREE,{materialProfile,random}){
     const dum=new THREE.Object3D();
+    // La punta de les tres malles de tronc és a la mateixa alçada.
+    // L'última secció del tronc detallat va de t=7/8 a t=1:
+    // prenem la seva tangent en lloc d'inclinar arbitràriament la copa.
+    const PALM_HEIGHT=6.2,TRUNK_BEND=.25,TRUNK_SECTIONS=8;
+    const lastT=(TRUNK_SECTIONS-1)/TRUNK_SECTIONS;
+    const lastDx=-Math.sin(Math.PI*lastT)*PALM_HEIGHT*TRUNK_BEND;
+    const lastDy=PALM_HEIGHT/TRUNK_SECTIONS;
+    const lastAngle=Math.atan2(-lastDx,lastDy);
+    const crownPivot=new THREE.Matrix4().makeTranslation(0,PALM_HEIGHT,0),
+          crownUnpivot=new THREE.Matrix4().makeTranslation(0,-PALM_HEIGHT,0),
+          crownTurn=new THREE.Matrix4(),trunkMatrix=new THREE.Matrix4(),
+          crownMatrix=new THREE.Matrix4();
+    // Variació estable derivada de cada palmera, sense consumir RNG global
+    // ni alterar les llavors, els spawns o la cerca de seeds.
+    const palmVariation=(row,salt=0)=>{
+      const x=row[0]||0,z=row[2]||0,r=row[4]||0;
+      const n=Math.sin(x*(12.9898+salt*.037)+
+        z*(78.233+salt*.13)+r*(37.719+salt*.21))*43758.5453;
+      return n-Math.floor(n);
+    };
+    // Cada fulla té un to propi. Colors de vèrtex compartits a totes les
+    // instàncies: marrons secs puntuals, verds clars, oliva i verd base.
+    const frondColor=(index,count,layer=0)=>{
+      const k=(index*13+count*7+layer*11)%23;
+      const palettes=layer?[
+        0x4e923a,0x82b85e,0x718347,0x947746
+      ]:[
+        0x367d35,0x70af54,0x657849,0x856941
+      ];
+      return new THREE.Color(palettes[k<2?3:k<5?2:k<9?1:0]);
+    };
+    const paintFrond=(colors,color,vertexCount)=>{
+      for(let n=0;n<vertexCount;n++)colors.push(color.r,color.g,color.b);
+    };
     const palmCrown=(radius,rise,segments=8,phase=0)=>{
-      const pos=[];
+      const pos=[],colors=[];
       for(let j=0;j<segments;j++){
-        const a=phase+j*Math.PI*2/segments;
+        const a=phase+j*Math.PI*2/segments,
+              tint=frondColor(j,segments,rise>0?1:0);
         for(let k=0;k<4;k++){
           const t=k/4,u=(k+1)/4;
           const point=(v,side)=>{
@@ -2677,11 +3014,13 @@ window.HUNTER_VEGETATION=Object.freeze({
             ]
           };
           const p0=point(t,-1),p1=point(t,1),p2=point(u,-1),p3=point(u,1);
-          pos.push(...p0,...p1,...p2,...p1,...p3,...p2)
+          pos.push(...p0,...p1,...p2,...p1,...p3,...p2);
+          paintFrond(colors,tint,6);
         }
       }
       const g=new THREE.BufferGeometry();
       g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+      g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
       g.computeVertexNormals();
       return g
     };
@@ -2718,9 +3057,9 @@ window.HUNTER_VEGETATION=Object.freeze({
     // Caps simplificats sense transparències, billboards ni actualitzacions
     // per fotograma. Els grups distant són InstancedMesh per sector.
     const reducedCrown=(fronds,radius=4.65)=>{
-      const pos=[];
+      const pos=[],colors=[];
       for(let j=0;j<fronds;j++){
-        const a=j*Math.PI*2/fronds;
+        const a=j*Math.PI*2/fronds,tint=frondColor(j,fronds);
         const point=(v,side)=>{
           const len=radius*v,width=Math.sin(v*Math.PI)*.62*side;
           const y=6.35+Math.sin(v*Math.PI)*.7-v*v*1.65;
@@ -2732,19 +3071,22 @@ window.HUNTER_VEGETATION=Object.freeze({
                 a0=point(v0,-1),a1=point(v0,1),
                 b0=point(v1,-1),b1=point(v1,1);
           pos.push(...a0,...a1,...b0,...a1,...b1,...b0);
+          paintFrond(colors,tint,6);
         }
       }
       const geo=new THREE.BufferGeometry();
       geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+      geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
       geo.computeVertexNormals();
       return geo;
     };
     const crossedCrown=()=>{
       // Tres bandes planes creuades: 6 triangles en total i silueta verda
       // recognoscible de qualsevol angle, sense orientar-les a la càmera.
-      const pos=[],r=4.25;
+      const pos=[],colors=[],r=4.25;
       for(let i=0;i<3;i++){
         const a=i*Math.PI/3,dx=Math.cos(a),dz=Math.sin(a),
+              tint=new THREE.Color(i===0?0x45853b:0x739d53),
               wx=-dz*.72,wz=dx*.72;
         const left=[-dx*r+wx,4.95,-dz*r+wz],
               right=[dx*r+wx,4.95,dz*r+wz],
@@ -2752,11 +3094,28 @@ window.HUNTER_VEGETATION=Object.freeze({
               right2=[dx*r-wx,4.95,dz*r-wz],
               middle=[0,6.6,0];
         pos.push(...left,...middle,...left2,...right2,...middle,...right);
+        paintFrond(colors,tint,6);
       }
       const geo=new THREE.BufferGeometry();
       geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+      geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
       geo.computeVertexNormals();
       return geo;
+    };
+    // Dos perfils irregulars compartits: B baix/estratificat i D alt/angular.
+    // 36 i 20 triangles respectivament, deformació determinista per vèrtex.
+    const rockShape=kind=>{
+      const g=kind===0?new THREE.DodecahedronGeometry(1,0):
+        new THREE.IcosahedronGeometry(1,0);
+      const a=g.getAttribute('position');
+      for(let i=0;i<a.count;i++){
+        const x=a.getX(i),y=a.getY(i),z=a.getZ(i),
+          irregular=1+.13*Math.sin(x*5.1+z*2.9)+.10*Math.cos(z*4.4-y*3.5);
+        a.setXYZ(i,x*(kind?1.12:1.34)*irregular,
+          y*(kind?1.36:.63)*irregular,
+          z*(kind?1.14:1.11)*irregular);
+      }
+      a.needsUpdate=true;g.computeVertexNormals();return g;
     };
     const geometry={
       trunk:curvedPalmTrunk(6.2,.42,.22,6,8,.25),
@@ -2774,7 +3133,7 @@ window.HUNTER_VEGETATION=Object.freeze({
         {crown:palmCrown(4.7,0,10),crown2:palmCrown(3.1,.65,9,.18)}
       ],
       bush:new THREE.IcosahedronGeometry(1.15,1).translate(0,.62,0),
-      rock:new THREE.DodecahedronGeometry(1.25,0).translate(0,.5,0)
+      rock:rockShape(0), rockTall:rockShape(1)
     };
     const colorFor=(base,row)=>{
       const c=new THREE.Color(base),tone=Math.max(-.25,Math.min(.25,row?.[6]||0));
@@ -2786,9 +3145,9 @@ window.HUNTER_VEGETATION=Object.freeze({
     // programes i materials nous innecessàriament.
     const cache=new Map();
     const mat=(color,opts={})=>{
-      const key=color+':'+(opts.doubleSide?1:0)+':'+(opts.profile||'organic');
+      const key=color+':'+(opts.doubleSide?1:0)+':'+(opts.vertexColors?1:0)+':'+(opts.profile||'organic');
       if(!cache.has(key))cache.set(key,new THREE.MeshStandardMaterial({
-        color:0xffffff,flatShading:true,
+        color:0xffffff,flatShading:true,vertexColors:!!opts.vertexColors,
         side:opts.doubleSide?THREE.DoubleSide:THREE.FrontSide,
         ...materialProfile(opts.profile||'organic')
       }));
@@ -2799,16 +3158,32 @@ window.HUNTER_VEGETATION=Object.freeze({
       const m=new THREE.InstancedMesh(geo,mat(color,opts),arr.length);
       arr.forEach((row,i)=>{
         const [x,y,z,s,r]=row;
-        dum.position.set(x,y,z);
-        dum.rotation.set(
-          opts.tilt?random(-.04,.04):0,
-          r,
-          opts.tilt?random(-.04,.04):0
-        );
-        if(scale)scale(dum,s);else dum.scale.setScalar(s);
-        dum.updateMatrix();
-        m.setMatrixAt(i,dum.matrix);
-        m.setColorAt(i,colorFor(color,row));
+        if(opts.crownTrunk){
+          // Alineació amb el tronc real (inclosa la seva lleugera
+          // inclinació aleatòria). El gir pivota a la punta del tronc:
+          // la copa no es desplaça ni se separa quan s'inclina.
+          opts.crownTrunk.getMatrixAt(opts.trunkIndices[i],trunkMatrix);
+          const strength=.5+.3*palmVariation(row),
+                deviation=(palmVariation(row,1)-.5)*.14,
+                tilt=lastAngle*strength+deviation;
+          crownTurn.makeRotationZ(tilt);
+          crownMatrix.copy(trunkMatrix).multiply(crownPivot)
+            .multiply(crownTurn).multiply(crownUnpivot);
+          m.setMatrixAt(i,crownMatrix);
+        }else{
+          dum.position.set(x,y,z);
+          dum.rotation.set(
+            opts.tilt?random(-.04,.04):0,
+            r,
+            opts.tilt?random(-.04,.04):0
+          );
+          if(scale)scale(dum,s,row);else dum.scale.setScalar(s);
+          dum.updateMatrix();
+          m.setMatrixAt(i,dum.matrix);
+        }
+        // Es mantenen tres tirades de color per instància com abans.
+        // La variació individual de les fulles viu als vertexColors.
+        m.setColorAt(i,colorFor(opts.vertexColors?0xf2f5e9:color,row));
       });
       m.computeBoundingSphere();
       m.castShadow=false;
@@ -2835,7 +3210,7 @@ window.HUNTER_VEGETATION=Object.freeze({
     };
     const cloneCrowns=(parent,geo,rows,ch,refs)=>{
       if(!rows.length)return null;
-      const mesh=new THREE.InstancedMesh(geo,mat(0x2d9f36,{doubleSide:true}),rows.length),
+      const mesh=new THREE.InstancedMesh(geo,mat(0xffffff,{doubleSide:true,vertexColors:true}),rows.length),
             matrix=new THREE.Matrix4(),color=new THREE.Color();
       for(let i=0;i<rows.length;i++){
         const ref=refs[rows[i].i],source=ch.primary[ref.variant];
@@ -2877,9 +3252,11 @@ window.HUNTER_VEGETATION=Object.freeze({
         ch.primary=[];ch.secondary=[];
         for(let v=0;v<3;v++){
           const selected=rows.filter(p=>p.vi===v);
-          const crowns=selected.map(p=>p.row);
-          const primary=inst(root,geometry.palmVariants[v].crown,crowns,0x2d9f36,null,{doubleSide:true});
-          const secondary=inst(root,geometry.palmVariants[v].crown2,crowns,0x65c83f,null,{doubleSide:true});
+          const crowns=selected.map(p=>p.row),
+                crownOpts={doubleSide:true,vertexColors:true,crownTrunk:ch.trunk,
+                  trunkIndices:selected.map(p=>variantMap[p.i].trunkIndex)};
+          const primary=inst(root,geometry.palmVariants[v].crown,crowns,0xffffff,null,crownOpts);
+          const secondary=inst(root,geometry.palmVariants[v].crown2,crowns,0xffffff,null,crownOpts);
           ch.primary.push(primary);ch.secondary.push(secondary);
           selected.forEach((p,i)=>{variantMap[p.i].index=i});
         }
@@ -2921,21 +3298,23 @@ window.HUNTER_VEGETATION=Object.freeze({
         const groups=new Map();
         for(const row of rows){
           const cx=Math.floor(row[0]/CHUNK),cz=Math.floor(row[2]/CHUNK),
-                key=cx+','+cz;
-          if(!groups.has(key))groups.set(key,{x:(cx+.5)*CHUNK,z:(cz+.5)*CHUNK,rows:[]});
+                type=opts.byKind?(row[7]||0):0,
+                key=cx+','+cz+(opts.byKind?','+type:'');
+          if(!groups.has(key))groups.set(key,{x:(cx+.5)*CHUNK,z:(cz+.5)*CHUNK,type,rows:[]});
           groups.get(key).rows.push(row);
         }
         const result=[];
         for(const g of groups.values()){
-          const mesh=inst(parent,geo,g.rows,color,scale,opts);
+          const mesh=inst(parent,opts.byKind?geo[g.type]:geo,g.rows,color,scale,opts);
           if(mesh)result.push({mesh,x:g.x,z:g.z,count:g.rows.length});
         }
         return {parent,sectors:result};
       }
       const bushGroup=sectorizeExtras(bushes,geometry.bush,'hunter-bush-sectors',
         0x2f8e42,(d,s)=>d.scale.set(s*1.15,s*.72,s),{profile:'organic'});
-      const rockGroup=sectorizeExtras(rocks,geometry.rock,'hunter-rock-sectors',
-        0x777985,(d,s)=>d.scale.set(s*1.25,s*.75,s),{profile:'masonry',tilt:true});
+      const rockGroup=sectorizeExtras(rocks,[geometry.rock,geometry.rockTall],
+        'hunter-rock-sectors',0x777985,
+        (d,s)=>d.scale.setScalar(s),{profile:'masonry',tilt:true,byKind:true});
       const extraRanges={
         desktop:{bush:1300,rock:1900},
         mobile:{bush:710,rock:1180},
@@ -3228,7 +3607,7 @@ window.HUNTER_BUILDINGS=Object.freeze({
       roofGroup.add(rimN,rimS,rimE,rimW);
       batchStaticRoof(roofGroup,[rimN,rimS,rimE,rimW]);
       roofGroup.userData.color=roofColor;
-      return {group,walls,doors,roof:roofGroup};
+      return {group,walls,doors,roof:roofGroup,foundation:floor};
     };
 
     // Hangar de gran llum amb coberta arquejada low-poly.
@@ -3476,16 +3855,29 @@ function proxy(T,type,level){
     }
   }else{
     const heavy=type==='tanc'||type==='tanqueta',
-      w=type==='tanc'?5.8:type==='tanqueta'?4.2:3.1,
-      l=type==='tanc'?7:type==='tanqueta'?5.2:5.2;
-    box(0,.88,0,w,1.25,l,heavy?0x626a48:0x656f59);
-    box(0,1.84,type==='jeep'?.55:0,w*.73,heavy?.9:1.3,l*.46,heavy?0x536047:0x3e4d46);
-    if(mid){
-      for(const x of [-w*.47,w*.47]){
-        if(heavy)box(x,.59,0,.48,1.03,l*.9,0x242e2a);
-        else for(const z of [-l*.31,l*.31])box(x,.53,z,.42,.98,.66,0x232a28);
+      humvee=type==='jeep',
+      // Enemy jeep maps to the exact same cotxe D3.1 at 175% as the player.
+      // Distant proxy must preserve its ~4.6 × 8.2 metre footprint.
+      w=type==='tanc'?5.8:type==='tanqueta'?4.2:humvee?4.65:3.1,
+      l=type==='tanc'?7:type==='tanqueta'?5.2:humvee?8.18:5.2;
+    if(humvee){
+      box(0,1.10,0,w,1.6,l,0x687658);
+      box(0,2.55,.35,w*.80,1.15,l*.43,0x56654e);
+      if(mid){
+        for(const x of [-w*.46,w*.46])for(const z of [-l*.32,l*.32])
+          box(x,.88,z,.57,1.55,.70,0x232c28);
+        box(0,1.30,-l*.485,w*.36,.35,.12,0x343d38);
       }
-      if(heavy)box(0,2.17,-l*.38,.2,.2,l*.8,0x3e4540);
+    }else{
+      box(0,.88,0,w,1.25,l,heavy?0x626a48:0x656f59);
+      box(0,1.84,0,w*.73,heavy?.9:1.3,l*.46,heavy?0x536047:0x3e4d46);
+      if(mid){
+        for(const x of [-w*.47,w*.47]){
+          if(heavy)box(x,.59,0,.48,1.03,l*.9,0x242e2a);
+          else for(const z of [-l*.31,l*.31])box(x,.53,z,.42,.98,.66,0x232a28);
+        }
+        if(heavy)box(0,2.17,-l*.38,.2,.2,l*.8,0x3e4540);
+      }
     }
   }
   const geo=bake(T,parts);
@@ -3494,7 +3886,9 @@ function proxy(T,type,level){
   return geo;
 }
 function optimize(T,model,type){
-  const reduction=(type==='soldat'||type==='general')?mergeRig(T,model,type):null;
+  // La metralladora i les plaques del soldat d'elit no poden compartir
+  // la geometria fusionada en memòria amb els soldats normals.
+  const reduction=(type==='soldat'||type==='general')?mergeRig(T,model,type+(model.userData.eliteSoldier?'-elite':'')):null;
   const full=new T.Group();full.name='hunter-enemy-full';
   for(const child of [...model.children])full.add(child);
   model.add(full);
@@ -3502,6 +3896,17 @@ function optimize(T,model,type){
   if(!mat){mat=material(T);proxyMaterials.set(type,mat)}
   const mid=new T.Mesh(proxy(T,type,'mid'),mat),far=new T.Mesh(proxy(T,type,'far'),mat);
   mid.name='hunter-enemy-mid';far.name='hunter-enemy-far';
+  if(type==='soldat'&&model.userData.eliteSoldier){
+    const armor=new T.MeshLambertMaterial({color:0x303a34}),mark=new T.MeshLambertMaterial({color:0xb83f38});
+    for(const lod of [mid,far]){
+      const plate=new T.Mesh(new T.BoxGeometry(1.18,.78,.21),armor);
+      plate.position.set(0,2.45,-.4);lod.add(plate);
+      const stripe=new T.Mesh(new T.BoxGeometry(.58,.13,.04),mark);
+      stripe.position.set(0,2.75,-.53);lod.add(stripe);
+      const gun=new T.Mesh(new T.BoxGeometry(.16,.17,1.65),armor);
+      gun.position.set(.4,2.25,-.85);lod.add(gun);
+    }
+  }
   mid.userData.noCastShadow=true;far.userData.noCastShadow=true;
   mid.castShadow=far.castShadow=mid.receiveShadow=far.receiveShadow=false;
   mid.visible=far.visible=false;
@@ -3764,8 +4169,31 @@ window.HUNTER_CHARACTERS=Object.freeze({
     }
     return model;
   },
-  createSoldier(THREE,{box,material,general=false,palette=window.HUNTER_PALETTE}){
+  equipEliteMachineGun(THREE,model,{box}){
+    if(!model?.userData||model.userData.eliteSoldier)return model;
+    const u=model.userData,armor=(parent,w,h,d,color,x,y,z)=>box(parent,w,h,d,color,x,y,z);
+    // Mateixa silueta aprovada al preview del búnquer, afegida al comando del joc.
+    armor(model,1.16,.62,.44,0x303f37,0,2.63,-.37);
+    armor(model,.8,.25,.49,0x657463,0,2.92,-.34);
+    for(const side of [-1,1]){
+      armor(model,.53,.42,.58,0x303a34,side*.74,2.83,0);
+      armor(model,.12,.32,.42,0xad4e3d,side*.8,2.83,-.33);
+      armor(model,.43,.5,.45,0x293830,side*.3,1.39,-.18);
+    }
+    armor(u.head,.68,.18,.20,0x212c2b,0,.09,-.35);
+    armor(u.head,.54,.085,.1,0xcd4336,0,.09,-.47);
+    armor(u.gun,.2,.22,1.18,0x26302d,0,.02,-.35);
+    armor(u.gun,.28,.32,.3,0x54634e,.16,-.23,-.1);
+    const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.065,.08,1.25,8),
+      new THREE.MeshStandardMaterial({color:0x202728,metalness:.38,roughness:.65}));
+    barrel.rotation.x=Math.PI/2;barrel.position.set(0,.04,-1.06);u.gun.add(barrel);
+    for(const side of [-.12,.12])armor(u.gun,.07,.11,.6,0x181f20,side,.08,-.88);
+    u.eliteSoldier=true;
+    return model;
+  },
+  createSoldier(THREE,{box,material,general=false,elite=false,palette=window.HUNTER_PALETTE}){
     const kind=general?'general':'soldat',model=general?window.HUNTER_GENERAL_MODEL.create(THREE,{palette}):this.createCommando(THREE,{palette});
+    if(elite&&!general)this.equipEliteMachineGun(THREE,model,{box});
     return window.HUNTER_ENEMY_LOD.optimize(THREE,model,kind);
   },
   animateSoldier(model,{phase=0,moving=false,aim=false,dt=0,death=0}){
@@ -3885,7 +4313,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     return crawl*Math.max(0,surface+.22-physicalY-chestRel,
                             surface+.38-physicalY-headRel);
   },
-  animatePlayer(player,{forward,strafe=0,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false,running=false}){
+  animatePlayer(player,{forward,strafe=0,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false,running=false,crouching=false}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),
           move=Math.min(1,Math.hypot(forward,strafe*.85)),dir=forward<-.02?-1:1;
     // Cintura i cames apunten 45° cap al desplaçament lateral; el tronc
@@ -3901,12 +4329,17 @@ window.HUNTER_CHARACTERS=Object.freeze({
     if(grenadeEquipped&&u.grenadeThrow<=0)u.grenadeReleased=false;u.breath=(u.breath||0)+dt*1.7;
     // Transició suau de caminar a córrer: cadència i posicions diferents,
     // no només la velocitat de desplaçament.
-    u.runBlend=(u.runBlend||0)+((running&&move>.08&&!swimming&&!inVehicle?1:0)-(u.runBlend||0))*(1-Math.exp(-10*dt));
+    u.runBlend=(u.runBlend||0)+((running&&move>.08&&!swimming&&!inVehicle&&!crouching?1:0)-(u.runBlend||0))*(1-Math.exp(-10*dt));
+    u.crouchBlend=(u.crouchBlend||0)+((crouching&&!swimming&&!inVehicle&&!airborne&&!parachuting?1:0)-(u.crouchBlend||0))*(1-Math.exp(-10*dt));
     // La mateixa acció de velocitat passa a ser crol quan som a l'aigua.
     // Un blend propi preserva una transició suau entre braça i crol.
     u.crawlBlend=(u.crawlBlend||0)+((swimming&&running&&forward>.08&&move>.08&&!inVehicle?1:0)-(u.crawlBlend||0))*(1-Math.exp(-9*dt));
-    const run=u.runBlend,crawl=u.crawlBlend;
-    u.ph+=dt*(swimming?(move?(4.2+3.5*crawl)*move:2.1):(8.4+4.4*run)*move);
+    const run=u.runBlend,crawl=u.crawlBlend,crouch=u.crouchBlend;
+    // Els malucs i el tronc baixen junts. La flexió de genolls manté
+    // les botes prop del terra i evita reduir l'escala de tot el model.
+    u.lowerBody.position.y+=(u.hipHeight-.72*crouch-u.lowerBody.position.y)*k;
+    u.upperBody.position.y+=(u.upperBodyPivotHeight-.72*crouch-u.upperBody.position.y)*k;
+    u.ph+=dt*(swimming?(move?(4.2+3.5*crawl)*move:2.1):(8.4+4.4*run)*(1-.48*crouch)*move);
     const ph=u.ph,breath=Math.sin(u.breath);
 
     const tx=(joint,target,rate=limbK)=>joint.rotation.x+=(target-joint.rotation.x)*rate;
@@ -3997,7 +4430,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // els genolls es recullen durant la fase aèria de cada gambada.
     // Inclina només el tronc superior al voltant de la cintura: els malucs
     // i les cames no es desplacen cap endavant amb l'arrel del personatge.
-    u.upperBody.rotation.x+=(-.32*run-u.upperBody.rotation.x)*k;
+    u.upperBody.rotation.x+=(-.32*run-.18*crouch-u.upperBody.rotation.x)*k;
     // A terra i en sortir de l'aigua, desfem el gir propi del crol.
     // La pistola incorpora una rotació de cintura de fins a 18°.
     // El cap manté la mirada endavant i les cames el rumb.
@@ -4011,10 +4444,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.head.rotation.z+=(0-u.head.rotation.z)*k;
     player.rotation.x+=(0-player.rotation.x)*k;
     const walk=Math.sin(ph)*move*dir,walk2=Math.cos(ph)*move;
-    const hip=(.62+.50*run)*walk,
+    const hip=(.62+.50*run)*(1-.6*crouch)*walk,
           kneeL=-(.08+Math.max(0,-Math.sin(ph)*dir)*(.92+.38*run)*move),
           kneeR=-(.08+Math.max(0,Math.sin(ph)*dir)*(.92+.38*run)*move);
-    tx(u.ll,hip);tx(u.lr,-hip);tx(u.lkl,kneeL);tx(u.lkr,kneeR);
+    tx(u.ll,hip+1.0*crouch);tx(u.lr,-hip+1.0*crouch);
+    tx(u.lkl,kneeL-1.5*crouch);tx(u.lkr,kneeR-1.5*crouch);
     tz(u.ll,-(.025+.02*run)*walk2);tz(u.lr,(.025+.02*run)*walk2);
     // En strafe pur el tors roman vertical: giren només cintura i cames.
     player.rotation.z+=(-(.035+.015*run)*walk*(Math.abs(forward)>.04?1:0)-player.rotation.z)*k;
@@ -4026,10 +4460,10 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.cisalla.visible=cisalla;
     window.HUNTER_BOLT_CUTTERS.pose(u.cisalla,
       cisalla&&u.cisallaCut>0?Math.sin(Math.PI*(1-u.cisallaCut/.46)):0);
-    u.gun.visible=!bazooka&&!sniper&&!grenade&&!cisalla&&!melee&&(ammo>0||aiming);
+    u.gun.visible=!bazooka&&!sniper&&!grenade&&!cisalla&&!knifeEquipped&&!melee&&(ammo>0||aiming);
     // Deixem acabar el retrocés de l'última bala: mai es veuen
     // pistola i ganivet superposats durant la transició.
-    const knifeReady=!inVehicle&&!cisalla&&ammo<=0&&!aiming&&u.pistolAimTime<=0;
+    const knifeReady=!inVehicle&&!cisalla&&(knifeEquipped||ammo<=0&&!aiming&&u.pistolAimTime<=0);
     u.knife.visible=!bazooka&&!sniper&&!grenade&&!cisalla&&(melee||knifeReady);
 
     if(cisalla){
@@ -4164,8 +4598,108 @@ window.HUNTER_CHARACTERS=Object.freeze({
 
 
 
+
 ;
 // END src/characters.js
+// BEGIN src/ragdoll-lite.js
+// Ragdoll lleuger: ressorts angulars i articulacions del model existent.
+// Cap biblioteca física, cap malla extra ni raycasts per extremitat.
+// La trajectòria del cos i el terra continuen governats pel motor del joc.
+window.HUNTER_RAGDOLL=Object.freeze((()=>{
+  const LIMITS={arm:[-2.65,2.65],elbow:[-.25,1.85],
+    leg:[-1.45,1.5],knee:[-1.9,.28],head:[-.72,.72]};
+  const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
+  const make=(model,{blast=false,seed=0,impulse=null}={})=>{
+    const rig=model?.userData||{},joints=[];
+    const config=[
+      ['al','arm',-1],['ar','arm',1],['ael','elbow',-1],['aer','elbow',1],
+      ['ll','leg',-1],['lr','leg',1],['lkl','knee',-1],['lkr','knee',1],
+      ['head','head',1]
+    ];
+    for(let i=0;i<config.length;i++){
+      const [key,type,side]=config[i],node=rig[key];
+      if(!node?.rotation)continue;
+      const s=Math.sin((seed+1)*.71+i*2.399),
+            home={x:node.rotation.x,y:node.rotation.y,z:node.rotation.z},
+            position={x:node.position.x,y:node.position.y,z:node.position.z};
+      joints.push({node,type,side,home,position,
+        angleX:home.x,angleZ:home.z,
+        vx:(s*.7+(impulse?.vy||0)*.025)*(blast?1.5:.5),
+        vz:(Math.cos(i*1.97+seed)*1.3+side*.5)*(blast?1.7:.4),
+        offset:0,offsetV:0,variant:s});
+    }
+    return {model,joints,blast,age:0,groundAge:0,strength:blast?1:.5,
+      active:true,seed};
+  };
+  function update(state,dt,{airborne=false,grounded=false,impact=false}={}){
+    if(!state?.active)return;
+    const h=clamp(Number.isFinite(dt)?dt:0,0,.05);
+    if(!h)return;
+    state.age+=h;
+    state.groundAge=grounded?state.groundAge+h:0;
+    // Durant el vol, "estrella" còmica: braços molt oberts,
+    // cames separades i colzes/genolls flexionats. En aterrar es
+    // relaxen progressivament en una postura asimètrica.
+    const spread=state.blast?1:.48,
+          airborneWeight=airborne?1:Math.exp(-state.groundAge*3.8),
+          s=spread*airborneWeight,
+          wind=state.blast?Math.exp(-state.age*.65):Math.exp(-state.age*1.2);
+    for(const [i,j] of state.joints.entries()){
+      let tx=j.home.x,tz=j.home.z;
+      if(j.type==='arm'){
+        tx=-.22*s+j.variant*.30*wind;
+        tz=j.side*(1.68*s+.28*(1-s));
+      }else if(j.type==='elbow'){
+        tx=.75*s+.32*(1-s)+j.variant*.25*wind;
+        tz=j.side*.17*s;
+      }else if(j.type==='leg'){
+        tx=(j.side===-1?.38:-.47)*s+j.variant*.34*wind;
+        tz=j.side*(.70*s+.12*(1-s));
+      }else if(j.type==='knee'){
+        tx=-.9*s-.27*(1-s);
+        tz=j.side*.09*s;
+      }else if(j.type==='head'){
+        tx=.12*wind+j.variant*.16;
+        tz=j.variant*.26*s;
+      }
+      // Oscil·lació amortida + integració semimplícita de ressort.
+      // Són únicament 9 articulacions i 2 canals angulars.
+      const spring=airborne?31:19,damp=airborne?5.6:8.8,
+            gust=airborne?Math.sin(state.age*7.3+i*1.71)*wind*(state.blast?4:1):0;
+      // Els animadors normals poden escriure angles cada fotograma.
+      // Integrem en un estat propi per evitar que el moviment còmic
+      // quedi anul·lat per la postura de caminar o de disparar.
+      j.vx+=(spring*(tx-j.angleX)-damp*j.vx+gust)*h;
+      j.vz+=(spring*(tz-j.angleZ)-damp*j.vz+
+        gust*j.side*.65)*h;
+      j.angleX=clamp(j.angleX+j.vx*h,...LIMITS[j.type]);
+      j.angleZ=clamp(j.angleZ+j.vz*h,-2.25,2.25);
+      j.node.rotation.x=j.angleX;
+      j.node.rotation.z=j.angleZ;
+      // Obrim espatlles i malucs sense separar malles del cos:
+      // el pivot continua connectat i la posició retorna en aterrar.
+      if(j.type==='arm'||j.type==='leg'){
+        const maxShift=j.type==='arm'?.32:.17;
+        const target=j.side*maxShift*s;
+        j.offsetV+=(33*(target-j.offset)-9*j.offsetV)*h;
+        j.offset=clamp(j.offset+j.offsetV*h,-maxShift,maxShift);
+        j.node.position.x=j.position.x+j.offset;
+      }
+    }
+  }
+  function reset(state){
+    if(!state)return;
+    for(const j of state.joints){
+      j.node.position.set(j.position.x,j.position.y,j.position.z);
+      j.node.rotation.set(j.home.x,j.home.y,j.home.z);
+    }
+    state.active=false;
+  }
+  return {make,update,reset};
+})());
+
+;
+// END src/ragdoll-lite.js
 // BEGIN src/fauna.js
 // Construcció visual de fauna. Moviment, dany i spawning continuen al nucli.
 window.HUNTER_FAUNA = Object.freeze({
@@ -4203,7 +4737,7 @@ window.HUNTER_FAUNA = Object.freeze({
 // Taurons: persecució activa de nedadors i passades d'atac independents
 // de la freqüència visual. Les col·lisions són amb el casc dels vaixells.
 window.HUNTER_SHARKS=Object.freeze({
-  VISION:90,LOSE:145,BITE_RADIUS:3.7,BITE_DAMAGE:12,
+  VISION:90,LOSE:145,BITE_RADIUS:3.7,BITE_DAMAGE:3,
   kill(f){if(f.dead)return false;f.dead=true;f.deathT=0;f.sharkMode='dead';return true},
   vehicleHit(f,x0,z0,x1,z1,radius){
     if(f.dead)return false;
@@ -4218,50 +4752,71 @@ window.HUNTER_SHARKS=Object.freeze({
       return {bite:false,sink:Math.min(2.4,f.deathT*2.8),remove:f.deathT>.95}}
     if(dt<=0)return {bite:false,sink:0,remove:false};
     const sense=player&&depthAt(player.x,player.z)<-.5,
-          distance=sense?Math.hypot(player.x-f.x,player.z-f.z):Infinity;
+      distance=sense?Math.hypot(player.x-f.x,player.z-f.z):Infinity;
     f.biteCd=Math.max(0,(f.biteCd||0)-dt);
-    let mode=f.sharkMode||'patrol';
+    let mode=f.sharkMode||'patrol',bite=false;
+    const angleDiff=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
+    const swimHeading=(desired,speed,turnRate=.92)=>{
+      // Contínuament limita el gir a 53º/s. Sense inversions instantànies
+      // en passar de la mossegada a la volta o a una altra embestida.
+      const yaw=f.sharkYaw??Math.PI-f.a,
+        delta=Math.max(-turnRate*dt,Math.min(turnRate*dt,angleDiff(desired,yaw))),
+        next=yaw+delta,ux=-Math.sin(next),uz=-Math.cos(next);
+      const nx=f.x+ux*speed*dt,nz=f.z+uz*speed*dt;
+      if(depthAt(nx,nz)<-.8){f.x=nx;f.z=nz}
+      else {
+        if(depthAt(nx,f.z)<-.8)f.x=nx;
+        if(depthAt(f.x,nz)<-.8)f.z=nz;
+      }
+      f.sharkYaw=next;
+    };
+    const swimTo=(x,z,speed,turnRate)=>{
+      const dx=x-f.x,dz=z-f.z;
+      if(Math.hypot(dx,dz)<.15)return;
+      swimHeading(Math.atan2(-dx,-dz),speed,turnRate);
+    };
     if(!sense||distance>this.LOSE){
       if(mode!=='patrol'){
-        // Reenganxar l'òrbita exactament a la posició actual, sense salts.
+        // Reenganxa l'òrbita al punt real, sense teletransportacions.
         f.cx=f.x-Math.cos(f.a)*f.r;
         f.cz=f.z-Math.sin(f.a)*f.r;
         mode='patrol';
       }
-    }else if(mode==='patrol'&&distance<this.VISION)mode='chase';
-    let bite=false;
-    const swim=(vx,vz,speed)=>{
-      const mag=Math.hypot(vx,vz);
-      if(mag<.0001)return;
-      const ux=vx/mag,uz=vz/mag,
-            nx=f.x+ux*speed*dt,nz=f.z+uz*speed*dt;
-      if(depthAt(nx,nz)<-.8){
-        f.x=nx;f.z=nz;
-      }else{
-        // Lliscament paral·lel a la costa, sense encallar-se a terra.
-        if(depthAt(nx,f.z)<-.8)f.x=nx;
-        if(depthAt(f.x,nz)<-.8)f.z=nz;
-      }
-      f.sharkYaw=Math.atan2(-ux,-uz);
-    };
+    }else if(mode==='patrol'&&distance<this.VISION){
+      mode='chase';
+      f.attackSide=f.attackSide||1;
+    }
     if(mode==='chase'){
       const dx=player.x-f.x,dz=player.z-f.z,d=Math.hypot(dx,dz);
       if(d<=this.BITE_RADIUS&&f.biteCd<=0){
-        bite=true;f.biteCd=2.1;
-        f.retreatT=1.05;
-        f.retreatX=d>.05?-dx/d:Math.sin(f.a);
-        f.retreatZ=d>.05?-dz/d:Math.cos(f.a);
-        mode='retreat';
-      }else swim(dx,dz,14.5);
-    }
-    if(mode==='retreat'){
-      swim(f.retreatX||0,f.retreatZ||-1,12.5);
-      f.retreatT-=dt;
-      if(f.retreatT<=0&&f.biteCd<=.95)mode='chase';
-    }
-    if(mode==='patrol'){
+        bite=true;f.biteCd=2.2;
+        // No canviar la direcció a la mossegada: continuar de llarg.
+        f.passT=1.08;f.arcT=0;mode='pass';
+        f.attackSide=-(f.attackSide||1);
+        swimHeading(f.sharkYaw??Math.PI-f.a,17,.92);
+      }else{
+        // Lleuger desplaçament lateral: mossega de passada, no al centre.
+        const yaw=f.sharkYaw??Math.PI-f.a,
+          rightX=Math.cos(yaw),rightZ=-Math.sin(yaw),
+          offset=d<14?1.45:0;
+        swimTo(player.x+rightX*(f.attackSide||1)*offset,
+          player.z+rightZ*(f.attackSide||1)*offset,17,1.0);
+      }
+    }else if(mode==='pass'){
+      // Els primers 22 metres conserven el rumb del mos.
+      swimHeading(f.sharkYaw??Math.PI-f.a,17,.92);
+      f.passT-=dt;
+      if(f.passT<=0){mode='arc';f.arcT=2.15;}
+    }else if(mode==='arc'){
+      // Arc de radi ~20 m; alternant costat es forma un 8 ample.
+      // Mantenim una taxa de gir constant (cap canvi brusc de yaw).
+      const side=f.attackSide||1;
+      swimHeading((f.sharkYaw??0)+side*.72*dt,15,.72);
+      f.arcT-=dt;
+      if(f.arcT<=0)mode='chase';
+    }else if(mode==='patrol'){
       const next=f.a+f.sp*dt,x=f.cx+Math.cos(next)*f.r,
-            z=f.cz+Math.sin(next)*f.r;
+        z=f.cz+Math.sin(next)*f.r;
       if(depthAt(x,z)<-.8){f.a=next;f.x=x;f.z=z}
       else f.a+=f.sp*dt*.15;
       f.sharkYaw=Math.PI-f.a;
@@ -4390,23 +4945,25 @@ window.HUNTER_MINIMAP=Object.freeze({
 window.HUNTER_UI=Object.freeze({
   create({hud,panel,title,body,resumeButton,minimap,getState,actions}){
     function renderHUD(){
-      const s=getState(),state=s.vehicle?s.vehicleTypes[s.vehicle.t].n:s.inside?'Interior':s.swimming?'Nedant':'A peu',veh=s.vehicle,vehInfo=veh?'<br>🛡️ '+(veh.armor??0)+'/10 · Vida '+Math.max(0,veh.life??0)+'/'+(veh.maxLife??0)+(veh.t==='llanxa_coets'?' · 🚀 ∞':veh.rockets!=null?' · 🚀 '+veh.rockets:veh.t==='heli'?' · 💣 '+(s.inventory.granada||0)+' granades':''):'',weaponInfo=s.bazookaEquipped&&!veh?' · 🚀 Bazooka '+(s.inventory.bazooka||0)+' coets':s.grenadeEquipped&&!veh?' · 💣 Granades '+(s.inventory.granada||0):s.cisallaEquipped&&!veh?' · ✂ Cisalla':s.sniperEquipped&&!veh?' · 🔭 Rifle '+s.sniperAmmo+' cartutxos'+(s.scopeActive?' · Mira x8':''):'';
-      hud.innerHTML=`<b>HUNTER · ARXIPÈLAG</b><br>❤️ ${Math.round(s.hp)} · 🎯 ${s.ammo} · ☠ ${s.kills}<br>${state}${s.disguised?' · 🎭 Disfressat':''}${weaponInfo}${vehInfo}${s.nearVehicle&&!s.vehicle?'<br>Acció: puja a '+s.vehicleTypes[s.nearVehicle.t].n:''}${s.messageTime>0?'<br>'+s.message:''}${s.waypoint?'<br>Destinació: '+Math.round(Math.hypot(s.waypoint.x-s.player.x,s.waypoint.z-s.player.z))+' m':''}<br><span style="opacity:.72">Llavor ${s.seed>>>0} · X ${s.player.x|0} · Z ${s.player.z|0}</span>`;
+      const s=getState(),state=s.vehicle?s.vehicleTypes[s.vehicle.t].n:s.swimming?'Nedant':s.crouching?'Ajupit':s.inside?'Interior':'A peu',veh=s.vehicle,vehInfo=veh?'<br>🛡️ '+Math.max(0,veh.life??0)+'/'+(veh.maxLife??0)+(veh.t==='llanxa_coets'?' · 🚀 ∞':veh.rockets!=null?' · 🚀 '+veh.rockets:veh.t==='heli'?' · 💣 '+(s.inventory.granada||0)+' granades':''):'',weaponInfo=s.bazookaEquipped&&!veh?' · 🚀 Bazooka '+(s.inventory.bazooka||0)+' coets':s.grenadeEquipped&&!veh?' · 💣 Granades '+(s.inventory.granada||0):s.cisallaEquipped&&!veh?' · ✂ Cisalla':s.sniperEquipped&&!veh?' · 🔭 Rifle '+s.sniperAmmo+' cartutxos'+(s.scopeActive?' · Mira x8':''):'';
+      hud.innerHTML=`<b>HUNTER · ARXIPÈLAG</b><br>❤️ ${s.hp>0?Math.max(1,Math.ceil(s.hp)):0} · 🎯 ${s.ammo} · ☠ ${s.kills}<br>${state}${s.disguised?' · 🎭 Disfressat':''}${weaponInfo}${vehInfo}${s.nearVehicle&&!s.vehicle?'<br>Acció: puja a '+s.vehicleTypes[s.nearVehicle.t].n:''}${s.messageTime>0?'<br>'+s.message:''}${s.waypoint?'<br>Destinació: '+Math.round(Math.hypot(s.waypoint.x-s.player.x,s.waypoint.z-s.player.z))+' m':''}<br><span style="opacity:.72">Llavor ${s.seed>>>0} · X ${s.player.x|0} · Z ${s.player.z|0}</span>`;
     }
-    function hide(){panel.style.display='none'}
+    let currentMode=null;
+    function hide(){panel.style.display='none';currentMode=null}
     function show(mode){
-      panel.style.display='flex';
-      title.textContent=mode==='map'?'Carta de navegació':mode==='inventory'?'Inventari':mode==='restart'?'Nova operació?':mode==='performance'?'Rendiment':'Operació en pausa';panel.querySelector('.card').classList.toggle('inventory-card',mode==='inventory');
+      currentMode=mode;panel.style.display='flex';
+      resumeButton.onclick=mode==='bombtimer'?()=>actions.open('inventory'):actions.resume;
+      title.textContent=mode==='bombtimer'?'Programar explosiu':mode==='map'?'Carta de navegació':mode==='inventory'?'Inventari':mode==='restart'?'Nova operació?':mode==='performance'?'Rendiment':'Operació en pausa';panel.querySelector('.card').classList.toggle('inventory-card',mode==='inventory');
       if(mode==='inventory'){
         const state=getState(),keys=['med','paracaigudes','cisalla','expl','granada','bazooka','franctirador','disf','arma'],present=keys.filter(k=>state.inventory[k]>0);
         let selected=present[0]||null;
         const renderInventory=(healed=0)=>{
           const st=getState(),items=keys.filter(k=>st.inventory[k]>0),
-                life=Math.max(0,Math.min(100,Math.round(st.hp)));
+                life=Math.max(0,Math.min(20,st.hp>0?Math.ceil(st.hp):0));
           body.innerHTML='<div class="inv-health" role="status" aria-live="polite">'+
-            '<div class="inv-health-line"><b>❤️ Vida '+life+' / 100</b>'+
+            '<div class="inv-health-line"><b>❤️ Vida '+life+' / 20</b>'+
             (healed>0?'<strong class="inv-healed">+'+healed+' vida</strong>':'')+'</div>'+
-            '<div class="inv-health-track"><div class="inv-health-fill" style="width:'+life+'%"></div></div></div>'+
+            '<div class="inv-health-track"><div class="inv-health-fill" style="width:'+(life/20*100)+'%"></div></div></div>'+
             '<div class="inv-wrap"><section><div class="inv-grid" id="invGrid"></div></section><aside class="inv-detail" id="invDetail"></aside></div>';
           const grid=document.getElementById('invGrid'),detail=document.getElementById('invDetail');
           const slots=Math.max(15,Math.ceil(Math.max(1,items.length)/5)*5);
@@ -4421,18 +4978,73 @@ window.HUNTER_UI=Object.freeze({
           const d=st.itemTypes[selected];detail.innerHTML='<div class="inv-icon">'+d.icon+'</div><h3>'+d.n+'</h3><p>'+d.desc+'</p>';
         };
         renderInventory();
+      }else if(mode==='bombtimer'){
+        // El LED és la mateixa disposició 00:SS del model 3D. Només
+        // configuram els dos dígits dels segons, amb límit 00–59.
+        let seconds=3,confirmed=false;
+        const fromHelicopter=getState().vehicle?.t==='heli';
+        body.innerHTML='<div class="bomb-timer-config" role="group" aria-label="Temporitzador de l’explosiu">'+
+          '<p class="bomb-timer-hint">'+(fromHelicopter?
+            'L’explosiu caurà de l’obertura lateral del Huey. Selecciona el temps (00–59 s).':
+            'Selecciona els segons abans de la detonació (00–59).')+'</p>'+
+          '<div class="bomb-timer-casing"><div class="bomb-timer-led" role="timer" aria-label="Compte enrere configurat">'+
+          '<span class="bomb-timer-prefix">00:</span>'+
+          '<div class="bomb-timer-digit"><button id="bombTensUp" type="button" aria-label="Augmenta les desenes de segons">▲</button><span id="bombTens" aria-live="polite">0</span><button id="bombTensDown" type="button" aria-label="Redueix les desenes de segons">▼</button></div>'+
+          '<div class="bomb-timer-digit"><button id="bombOnesUp" type="button" aria-label="Augmenta les unitats de segons">▲</button><span id="bombOnes" aria-live="polite">3</span><button id="bombOnesDown" type="button" aria-label="Redueix les unitats de segons">▼</button></div>'+
+          '</div><div class="bomb-timer-wires" aria-hidden="true"><i></i><i></i><i></i></div></div>'+
+          '<p class="bomb-timer-warning">00 = detonació immediata'+(fromHelicopter?' en deixar-la anar.':' després de col·locar la bomba.')+'</p>'+
+          '<div class="bomb-timer-actions"><button id="bombTimerCancel" type="button">Cancel·lar</button><button id="bombTimerConfirm" type="button">'+(fromHelicopter?'Activar i deixar caure':'Activar i col·locar')+'</button></div></div>';
+        const tens=document.getElementById('bombTens'),ones=document.getElementById('bombOnes'),
+              confirm=document.getElementById('bombTimerConfirm');
+        const draw=()=>{tens.textContent=String(Math.floor(seconds/10));ones.textContent=String(seconds%10)};
+        draw();
+        const changeDigit=(place,step)=>{
+          const n=Math.floor(seconds/10),u=seconds%10;
+          seconds=place==='tens'?((n+step+6)%6)*10+u:
+            n*10+(u+step+10)%10;
+          draw();
+        };
+        document.getElementById('bombTensUp').onclick=()=>changeDigit('tens',1);
+        document.getElementById('bombTensDown').onclick=()=>changeDigit('tens',-1);
+        document.getElementById('bombOnesUp').onclick=()=>changeDigit('ones',1);
+        document.getElementById('bombOnesDown').onclick=()=>changeDigit('ones',-1);
+        document.getElementById('bombTimerCancel').onclick=()=>actions.open('inventory');
+        confirm.onclick=()=>{
+          if(confirmed)return;
+          confirmed=true;confirm.disabled=true;
+          if(!actions.placeExplosive(seconds)){
+            confirmed=false;confirm.disabled=false;
+          }
+        };
       }else if(mode==='map'){
-        body.innerHTML='<canvas id="fullmap" width="510" height="510" aria-label="Mapa: toca per marcar una destinació"></canvas><p>Toca per marcar una destinació. Blau: base · Groc: vehicles propers · Vermell: enemics i HQ descobert · Cian: helicòpter cartografiat · Taronja: tanc cartografiat.</p><button id="clearMark">Esborra destinació</button>';
+        body.innerHTML='<canvas id="fullmap" width="510" height="510" aria-label="Mapa: toca per marcar una destinació"></canvas><p>Toca el mapa per marcar una destinació. Blau: base · Groc: vehicles · Vermell: enemics · Cian: helicòpters · Taronja: tancs.</p><button id="clearMark">Esborra marca</button>';
         const map=document.getElementById('fullmap');minimap.drawFull(map,getState().waypoint);
         map.onclick=e=>{const r=e.currentTarget.getBoundingClientRect(),s=getState();actions.setWaypoint({x:((e.clientX-r.left)/r.width-.5)*s.worldSize,z:((e.clientY-r.top)/r.height-.5)*s.worldSize});minimap.drawFull(map,getState().waypoint)};
         document.getElementById('clearMark').onclick=()=>{actions.setWaypoint(null);minimap.drawFull(map,null)}
+      }else if(mode==='cheats'){
+        body.innerHTML='<p>Activa o desactiva cada avantatge per separat.</p>'+
+          '<div class="performance-options">'+
+          '<label><input id="cheatItems" type="checkbox"> Tots els objectes i munició infinits (també vehicles)</label>'+
+          '<label><input id="cheatInvisible" type="checkbox"> Invisible per als enemics</label>'+
+          '<label><input id="cheatImmune" type="checkbox"> Immune als atacs</label>'+
+          '<label><input id="cheatFly" type="checkbox"> Vol ràpid (H / J per pujar i baixar)</label>'+
+          '</div><button id="cheatsBack">← Pausa</button>';
+        for(const [id,key] of [['cheatItems','items'],['cheatInvisible','invisible'],['cheatImmune','immune'],['cheatFly','fly']]){
+          const input=document.getElementById(id);
+          input.checked=!!getState().cheats?.[key];
+          input.onchange=()=>actions.setCheat(key,input.checked);
+        }
+        document.getElementById('cheatsBack').onclick=()=>actions.open('pause');
       }else if(mode==='performance'){
-        body.innerHTML='<p>Canvia les opcions en calent sense regenerar el mapa.</p>'+
+        body.innerHTML='<p>Canvis immediats, sense regenerar el mapa.</p>'+
           '<div class="performance-options">'+
           '<label><input id="disablePalmsPause" type="checkbox"> Sense palmeres</label>'+
           '<label><input id="disableWaterPause" type="checkbox"> Sense aigua</label>'+
           '<label><input id="disableShadowsPause" type="checkbox"> Sense ombres</label>'+
           '</div><label class="pause-stats-toggle"><input id="showPerfStatsOptions" type="checkbox"> Mostrar estadístiques de rendiment durant la partida</label>'+
+          '<label class="pause-stats-toggle"><input id="showStealthDebug" type="checkbox"> Cons de visió (F9)</label>'+
+          '<label><input id="showStealthNoise" type="checkbox"> Radis de soroll</label>'+
+          '<p style="font:12px/1.4 system-ui;opacity:.8">Verd: visió · vermell: radi dels sorolls i crits d’alerta.</p>'+
           '<div id="performanceBreakdown" style="font:13px/1.5 monospace;white-space:pre-line;background:#0d1d30;border-radius:8px;padding:12px;margin-top:12px"></div>'+
           '<button id="performanceRefresh">Actualitza diagnòstic</button><button id="performanceBack">← Pausa</button>';
         for(const [id,key,callback] of [
@@ -4456,30 +5068,42 @@ window.HUNTER_UI=Object.freeze({
         const statsToggle=document.getElementById('showPerfStatsOptions');
         statsToggle.checked=!!getState().performanceStatsVisible;
         statsToggle.onchange=()=>actions.setPerformanceStatsVisible(statsToggle.checked);
+        const stealthToggle=document.getElementById('showStealthDebug');
+        stealthToggle.checked=!!getState().stealthLayers?.sight;
+        stealthToggle.onchange=()=>actions.setStealthLayer('sight',stealthToggle.checked);
+        for(const [id,key] of [['showStealthNoise','noise']]){const el=document.getElementById(id);el.checked=!!getState().stealthLayers?.[key];el.onchange=()=>actions.setStealthLayer(key,el.checked)}
         document.getElementById('performanceRefresh').onclick=refresh;
         document.getElementById('performanceBack').onclick=()=>actions.open('pause');
         refresh();
       }else if(mode==='restart'){
-        body.innerHTML='<p>Es perdrà el progrés d’aquesta partida. Tria la dificultat del nou arxipèlag.</p><button data-diff=".6">Fàcil</button><button data-diff="1">Normal</button><button data-diff="1.5">Difícil</button>';
+        body.innerHTML='<p>Perdràs el progrés. Dificultat de la nova partida:</p><button data-diff=".6">Fàcil</button><button data-diff="1">Normal</button><button data-diff="1.5">Difícil</button>';
         body.querySelectorAll('[data-diff]').forEach(b=>b.onclick=()=>actions.restart(+b.dataset.diff))
       }else{
-        body.innerHTML='<div class="controls"><b>WASD / fletxes</b><span>Avança, frena i gira</span><b>Joystick / ⇧</b><span>Arrossega el pom cap a la prolongació superior per córrer a peu o nedar a crol dins l’aigua. Torna al cercle per caminar o nedar a braça. Amb teclat: Majúscules + W.</span><b>◀ ▶ / Y i U</b><span>Desplaçament lateral sense girar: a peu, nedant, en hovercraft i en helicòpters. Els botons apareixen a banda i banda del joystick.</span><b>Acció / E</b><span>Motxilla: inventari. Icona d’un vehicle: puja-hi o baixa’n</span><b>Dispar / F</b><span>Dispara l’arma equipada. Amb la cisalla: talla silenciosament les filferrades properes. Amb granades: mantén premut per allunyar el llançament i deixa anar per llençar-la; veuràs la trajectòria i el punt de caiguda</span><b>T / Mira</b><span>Activa/desactiva la mira x8 del rifle de franctirador; amb la mira activa, el joystick, WASD i Y/U mouen només el punt de vista, sense desplaçar el personatge</span><b>I</b><span>Obre l’inventari</span><b>M</b><span>Obre el mapa</span><b>H / J</b><span>Puja / baixa l’helicòpter</span><b>Arrossega</b><span>Gira la vista i el personatge</span><b>Roda</b><span>Acosta o allunya la càmera</span></div><p>Farmacioles, cisalla, explosius, granades, bazooka, rifle de franctirador i disfressa es gestionen des de l’inventari. Els mapes de l’HQ, helicòpters i tancs s’activen automàticament quan els reculls. El bazooka mostra una retícula blanca quan apunta lliurement i verda sobre una diana seleccionada. L’helicòpter utilitari no té canó: Dispar / F llança granades de l’inventari, si en tens; l’helicòpter de combat conserva la metralladora i el botó 🚀 / G per als míssils. La llanxa llançacoets dispara coets amb Dispar.</p><button id="inventoryMenu">Inventari</button><button id="chetosMenu">Chetos</button><button id="restartMenu">Nova partida</button><button id="performanceMenu">⚙️ Rendiment</button><label class="pause-stats-toggle"><input id="showPerfStatsPause" type="checkbox"> Mostrar estadístiques de rendiment</label><button id="zoomOut">Allunya càmera</button><button id="zoomIn">Acosta càmera</button>';
-        document.getElementById('inventoryMenu').onclick=()=>actions.open('inventory');
-        document.getElementById('chetosMenu').onclick=()=>{
-          actions.chetos();
-          document.getElementById('chetosMenu').textContent='Chetos ✓';
-        };
+        body.innerHTML='<div class="pause-help" aria-label="Controls bàsics">'+
+          '<div><b>WASD / fletxes</b><span>Moviment i gir</span></div>'+
+          '<div><b>Maj. / joystick ↑</b><span>Córrer o nedar a crol</span></div>'+
+          '<div><b>X · AJUPIR</b><span>Sigil: menys velocitat, soroll i visibilitat</span></div>'+
+          '<div><b>Y / U · ◀ ▶</b><span>Desplaçament lateral, també nedant</span></div>'+
+          '<div><b>E · Acció</b><span>Pujar o baixar del vehicle; motxilla</span></div>'+
+          '<div><b>F · Dispar</b><span>Arma, cisalla o granada (mantén per llançar lluny)</span></div>'+
+          '<div><b>T · Mira</b><span>Zoom del franctirador</span></div>'+
+          '<div><b>M</b><span>Mapa i destinació</span></div>'+
+          '<div><b>H / J</b><span>Helicòpter: pujar / baixar</span></div>'+
+          '<div><b>Arrossega / roda</b><span>Girar vista / ajustar càmera</span></div>'+
+          '</div>'+
+          '<p class="pause-note">Els mapes recollits s’activen sols. Gestiona l’equipament amb la motxilla.</p>'+
+          '<div class="pause-menu-actions">'+
+          '<button id="chetosMenu">Chetos</button>'+
+          '<button id="restartMenu">Nova partida</button>'+
+          '<button id="performanceMenu">⚙️ Rendiment</button>'+
+          '</div>';
+        document.getElementById('chetosMenu').onclick=()=>actions.open('cheats');
         document.getElementById('restartMenu').onclick=()=>actions.open('restart');
-        document.getElementById('zoomOut').onclick=()=>actions.zoom(.2);
-        document.getElementById('zoomIn').onclick=()=>actions.zoom(-.2);
         document.getElementById('performanceMenu').onclick=()=>actions.open('performance');
-        const statsToggle=document.getElementById('showPerfStatsPause');
-        statsToggle.checked=!!getState().performanceStatsVisible;
-        statsToggle.onchange=()=>actions.setPerformanceStatsVisible(statsToggle.checked);
       }
     }
     resumeButton.onclick=actions.resume;
-    return Object.freeze({renderHUD,show,hide})
+    return Object.freeze({renderHUD,show,hide,isBombTimerOpen:()=>currentMode==='bombtimer'})
   }
 });
 
@@ -4547,7 +5171,7 @@ window.HUNTER_SEED_SEARCH=Object.freeze((()=>{
   // Factor 2/3 respecte de cadascuna de les mides de la versió anterior.
   const PICKUP_SCALE=2/3, PLANTED_SCALE=.82*PICKUP_SCALE;
 
-  function create(T,active=false){
+  function create(T,active=false,initialSeconds=3){
     const root=new T.Group(),cache=new Map();
     function material(color,metalness=.03,roughness=.78){
       const key=color+':'+metalness+':'+roughness;
@@ -4622,7 +5246,7 @@ window.HUNTER_SEED_SEARCH=Object.freeze((()=>{
       ctx.lineWidth=6;ctx.strokeStyle=active?'#8d3029':'#3a5755';
       ctx.strokeRect(7,7,498,178);
       if(on){
-        const digits=active?'00:'+String(seconds).padStart(2,'0'):'03:00';
+        const digits='00:'+String(active?seconds:3).padStart(2,'0');
         ctx.fillStyle=active?'#ff4437':'#89c58f';
         ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=active?18:8;
         ctx.font='bold 106px monospace';
@@ -4655,7 +5279,7 @@ window.HUNTER_SEED_SEARCH=Object.freeze((()=>{
 
     root.scale.setScalar(active?PLANTED_SCALE:PICKUP_SCALE);
     root.userData.explosiveDisplay={active,draw,lastSecond:-1,lastOn:null,face};
-    update(root,active?3:0);
+    update(root,active?initialSeconds:0);
     return root;
   }
 
@@ -4666,9 +5290,11 @@ window.HUNTER_SEED_SEARCH=Object.freeze((()=>{
       if(d.lastOn!==true){d.draw(0,true);d.lastOn=true;}
       return;
     }
-    const t=Math.max(0,Math.min(3,remaining));
+    const t=Math.max(0,Math.min(59,Number.isFinite(remaining)?remaining:0));
     const seconds=Math.ceil(t);
-    const blinkOn=Math.floor((3-t)*BLINK_HZ*2)%2===0;
+    // El visor es manté llegible durant els comptes enrere llargs;
+    // només parpelleja quan queden tres segons o menys.
+    const blinkOn=t>3||Math.floor((3-t)*BLINK_HZ*2)%2===0;
     if(seconds!==d.lastSecond||blinkOn!==d.lastOn){
       d.draw(seconds,blinkOn);
       d.lastSecond=seconds;
@@ -4681,6 +5307,136 @@ window.HUNTER_SEED_SEARCH=Object.freeze((()=>{
 
 ;
 // END src/explosive-visuals.js
+// BEGIN src/stealth.js
+// Percepció compartida: els sons són esdeveniments de joc, no volum d'àudio.
+// Sense geometria ni WebAudio mentre el depurador no està activat.
+window.HUNTER_STEALTH=(()=>{
+  const CONFIG=Object.freeze({sightRange:85,sightHalfAngle:Math.PI*50/180,
+    sightVerticalAngle:Math.PI*33/180,searchSeconds:9,
+    investigateSeconds:11,closeRecognition:4,crouchVisibility:.58});
+  const RADII=Object.freeze({walk:7,run:25,crouch:2,swim:12,knife:3,cutters:3,
+    door:10,pistol:140,sniper:220,bazooka:250,rifle:160,explosion:300,
+    bicycle:5,motorbike:90,car:70,civilianCar:112,truck:130,tank:130,apc:120,
+    rowboat:5,windsurf:5,jetski:100,speedboat:120,ferry:125,
+    helicopter:250,collision:100,grenade:7,alert:65});
+  const events=[];let nextId=0;
+  const debug={sight:false,noise:false};
+  const enabled=()=>debug.sight||debug.hearing||debug.noise;
+  const setLayer=(key,value)=>{if(Object.hasOwn(debug,key))debug[key]=!!value};
+  const layers=()=>({...debug});
+  function emit(kind,x,y,z,radius=RADII[kind]||0){
+    if(!(radius>0)||!Number.isFinite(x)||!Number.isFinite(z))return null;
+    // Un motor o una ràfega no han de crear desenes d'esdeveniments/frame.
+    const old=events.findLast?.(e=>e.kind===kind&&e.age<.2&&
+      Math.hypot(x-e.x,z-e.z)<9);
+    if(old){old.id=++nextId;old.x=x;old.y=y;old.z=z;old.radius=radius;old.age=0;return old}
+    const e={id:++nextId,kind,x,y,z,radius,age:0};events.push(e);
+    if(events.length>36)events.splice(0,events.length-36);
+    return e;
+  }
+  function tick(dt){for(let i=events.length-1;i>=0;i--)
+    if((events[i].age+=dt)>.85)events.splice(i,1)}
+  function clear(){events.length=0}
+  function inView(heading,dx,dy,dz,range=CONFIG.sightRange){
+    const horizontal=Math.hypot(dx,dz),dist=Math.hypot(horizontal,dy);
+    if(dist>range||horizontal<.001)return false;
+    // El model avança cap a -Z, amb hd com a rotació mundial de Y.
+    const forward=(-Math.sin(heading)*dx-Math.cos(heading)*dz)/horizontal;
+    return forward>=Math.cos(CONFIG.sightHalfAngle)&&
+      Math.abs(Math.atan2(dy,horizontal))<=CONFIG.sightVerticalAngle;
+  }
+  function heardAt(x,y,z,lastId=0,attenuation=()=>1){
+    let choice=null,best=-Infinity;
+    for(const noise of events){
+      if(noise.id<=lastId)continue;
+      const d=Math.hypot(x-noise.x,z-noise.z);
+      if(d>noise.radius)continue;
+      const factor=attenuation(noise);
+      if(d>noise.radius*factor)continue;
+      const score=noise.radius*factor-d;
+      if(score>best){choice=noise;best=score}
+    }
+    return choice;
+  }
+  return Object.freeze({CONFIG,RADII,emit,tick,clear,inView,heardAt,
+    events:()=>events,enabled,layers,setLayer,setDebug:v=>{for(const key of Object.keys(debug))debug[key]=!!v}});
+})();
+
+;
+// END src/stealth.js
+// BEGIN src/stealth-debug.js
+// Volums de percepció, només creats quan el jugador activa el depurador.
+window.HUNTER_STEALTH_DEBUG=(()=>{
+  let group=null,cone=null,materialSight=null,entries=new Map(),pulses=[];
+  const ring=(T,color,n=64)=>{const g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(new Float32Array(n*3),3));return new T.LineLoop(g,new T.LineBasicMaterial({color,depthWrite:false}))};
+  const trace=(line,x,z,r,hd=0,half=null)=>{const a=line.geometry.attributes.position,n=a.count;for(let i=0;i<n;i++){const t=half===null?i*2*Math.PI/n:i===0?null:-half+(i-1)*2*half/(n-2),px=x+(t===null?0:Math.sin(t-hd)*r),pz=z+(t===null?0:-Math.cos(t-hd)*r);a.setXYZ(i,px,Math.max(0,hAt(px,pz))+.25,pz)}a.needsUpdate=true;line.geometry.computeBoundingSphere()};
+  function create(THREE,world){
+    group=new THREE.Group();group.name='stealth-debug-volumes';world.add(group);
+    const cfg=window.HUNTER_STEALTH.CONFIG,vertices=[],r=cfg.sightRange,
+          horizontal=r*Math.cos(cfg.sightVerticalAngle),
+          vertical=r*Math.sin(cfg.sightVerticalAngle),segments=18;
+    // Con cònic truncat per un arc de 85 m: no excedeix la distància
+    // màxima de detecció als costats com faria ConeGeometry.
+    for(let i=0;i<segments;i++){
+      const a=-cfg.sightHalfAngle+cfg.sightHalfAngle*2*i/segments,
+            b=-cfg.sightHalfAngle+cfg.sightHalfAngle*2*(i+1)/segments,
+            ax=Math.sin(a)*horizontal,az=-Math.cos(a)*horizontal,
+            bx=Math.sin(b)*horizontal,bz=-Math.cos(b)*horizontal;
+      vertices.push(0,0,0,ax,vertical,az,bx,vertical,bz,
+        0,0,0,bx,-vertical,bz,ax,-vertical,az,
+        ax,vertical,az,ax,-vertical,az,bx,vertical,bz,
+        bx,vertical,bz,ax,-vertical,az,bx,-vertical,bz);
+    }
+    cone=new THREE.BufferGeometry();cone.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));cone.computeVertexNormals();
+    materialSight=new THREE.MeshBasicMaterial({color:0x49f28b,transparent:true,opacity:.19,
+      depthWrite:false,side:THREE.DoubleSide});
+  }
+  function reset(){
+    if(group?.parent)group.parent.remove(group);
+    for(const g of [cone])g?.dispose();
+    for(const v of entries.values()){v.sl.geometry.dispose();v.sl.material.dispose()}
+    for(const p of pulses){p.line.geometry.dispose();p.line.material.dispose()}
+    for(const m of [materialSight])m?.dispose();
+    group=cone=null;entries.clear();pulses=[];
+  }
+  function update(THREE,world,enemies,player){
+    const active=window.HUNTER_STEALTH.enabled();
+    if(!active){if(group)group.visible=false;return}
+    if(!group||group.parent!==world){reset();create(THREE,world)}
+    group.visible=true;
+    const layers=window.HUNTER_STEALTH.layers(),visible=new Set(),maxD=210;
+    for(const u of enemies){
+      if(u.t!=='soldat'||Math.hypot(u.x-player.x,u.z-player.z)>maxD)continue;
+      visible.add(u);
+      let v=entries.get(u);
+      if(!v){
+        const sight=new THREE.Mesh(cone,materialSight),sl=ring(THREE,0x49f28b,38);
+        sight.renderOrder=10;group.add(sight,sl);
+        v={sight,sl};entries.set(u,v);
+      }
+      v.sight.visible=v.sl.visible=layers.sight;
+      v.sight.position.set(u.x,u.o.position.y+2.2,u.z);
+      v.sight.rotation.y=u.hd;
+      if(layers.sight)trace(v.sl,u.x,u.z,window.HUNTER_STEALTH.CONFIG.sightRange*Math.cos(window.HUNTER_STEALTH.CONFIG.sightVerticalAngle),u.hd,window.HUNTER_STEALTH.CONFIG.sightHalfAngle);
+    }
+    for(const [u,v] of entries){
+      if(visible.has(u))continue;
+      group.remove(v.sight,v.sl);v.sl.geometry.dispose();v.sl.material.dispose();entries.delete(u);
+    }
+    const events=layers.noise?window.HUNTER_STEALTH.events().filter(e=>e.age<.85).slice(-8):[];
+    while(pulses.length<events.length){
+      const line=ring(THREE,0xff6556);group.add(line);pulses.push({line});
+    }
+    pulses.forEach(({line},i)=>{
+      const e=events[i];line.visible=!!e;
+      if(e){trace(line,e.x,e.z,e.radius)}
+    });
+  }
+  return Object.freeze({update,reset});
+})();
+
+;
+// END src/stealth-debug.js
 // BEGIN src/combat.js
 // Compatibility extraction: shared state remains in game-core.js.
 // FX de bales normals: un conjunt petit de malles compartides i reciclables.
@@ -4734,20 +5490,16 @@ function clearBulletImpacts(){
 }
 
 function setDis(v){disg=v;[...pl.userData.mats,...rider.userData.mats].forEach(([m,a,b])=>m.color.copy(vivid(v?b:a)))}
-function fin(m){setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+' · Obre Ⅱ / Esc per tornar a jugar';endEl.style.display='flex'}
-// Progressió per nivell, independent de la punteria i del dany ambiental:
- // Fàcil = dany antic de Normal; Normal = dany antic de Difícil;
- // Difícil = extrapolació del mateix increment (x2 sobre el dany base).
-function enemyWeaponDamageScale(){
-  if(DIF<=.6)return 1;
-  if(DIF<=1)return 1+(DIF-.6)*1.25;
-  return 1.5+(DIF-1);
-}
-function hurtP(d,fromEnemyWeapon=false){
-  if(over)return;
-  d*=fromEnemyWeapon?enemyWeaponDamageScale():DIF;
-  hp-=d;snd('hurt',.5);
-  if(hp<=0){hp=0;fin('HAS MORT')}
+let playerBlastRagdoll=null;
+function fin(m,cause=null){if(m==='HAS MORT'&&startDeathCinematic(cause))return;setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+' · Obre Ⅱ / Esc per tornar a jugar';endEl.style.display='flex'}
+// El dany no canvia amb la dificultat: només la dispersió del tir enemic.
+function enemyWeaponDamageScale(){return 1}
+function hurtP(d,fromEnemyWeapon=false,cause=null){
+ if(over||cheats.immune)return;
+ const amount=wholeDamage(d);
+ if(amount<=0)return;
+ hp=Math.max(0,Math.ceil(hp)-amount);snd('hurt',.5);
+ if(hp<=0)fin('HAS MORT',cause||{type:fromEnemyWeapon?'bullet':'impact'});
 }
 function destroyTower(u){
   if(!u?.o||u.destroyed)return;
@@ -4781,7 +5533,7 @@ function destroyTower(u){
   }
   for(let k=0;k<8;k++)puff(u.x+rn(-2,2),base+rn(.5,9),u.z+rn(-2,2),
     k%2?0x55534f:0x8b8176,rn(1.5,3.5));
-  boom(u.x,base+4,u.z,7,28,'p');
+  boom(u.x,base+4,u.z,7,COMBAT_BALANCE.weapons.grenade,'p');
 }
 function explodeEnemyVehicle(u){
   // Mateixa explosió visual que els vehicles pilotables: fragments de la
@@ -4791,7 +5543,7 @@ function explodeEnemyVehicle(u){
   const y=u.o?.position?.y??(u.gy??Math.max(0,hAt(u.x,u.z)));
   if(u.o){vehicleDebris(u,y);world.remove(u.o)}
   const heavy=u.t==='tanc'||u.t==='tanqueta';
-  boom(u.x,y+(heavy?1.8:1.2),u.z,heavy?12:9,heavy?48:32,'e');
+  boom(u.x,y+(heavy?1.8:1.2),u.z,heavy?12:9,heavy?10:8,'e');
 }
 function killEnemy(u,killingShot=null){
   const i=E.indexOf(u);if(i<0)return;E.splice(i,1);kills++;
@@ -4802,13 +5554,46 @@ function killEnemy(u,killingShot=null){
       pitch:rn(-.9,.9),armL:rn(-1.6,.8),armR:rn(-1.6,.8),
       legL:rn(-.8,.85),legR:rn(-.8,.85),
       vx:impulse?.vx??rn(-2.6,2.6),vz:impulse?.vz??rn(-2.6,2.6),
-      vy:impulse?.vy??rn(1.5,3.8),height:0};u.o.userData.legs?.forEach(l=>l.rotation.x=0);u.o.userData.arms?.forEach(a=>a.rotation.x=0);DEAD.push(u)}
+      vy:impulse?.vy??rn(1.5,3.8),height:0};
+    if(u.blastRagdoll){window.HUNTER_RAGDOLL.reset(u.blastRagdoll);u.blastRagdoll=null}
+    u.o.userData.legs?.forEach(l=>l.rotation.x=0);
+    u.o.userData.arms?.forEach(a=>a.rotation.x=0);
+    // El general conserva la seva representació teatral de victòria.
+    if(u.t!=='general')u.ragdoll=window.HUNTER_RAGDOLL.make(u.o,{
+      blast:!!impulse,impulse,seed:u.x*.41+u.z*.27});
+    DEAD.push(u)}
   else if(u.t==='torre'){destroyTower(u);world.remove(u.o)}
   else if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='patrulla_marina')explodeEnemyVehicle(u);
   else world.remove(u.o);
   if(u.t==='general')startVictoryCinematic(u,killingShot)
 }
-function hurtE(u,d,killingShot=null){u.hp-=d;u.alert=12;if(u.hp<=0)killEnemy(u,killingShot)}
+function hurtE(u,d,killingShot=null){
+  const amount=wholeDamage(d);
+  if(amount<=0||u.hp<=0)return;
+  u.hp=Math.max(0,Math.ceil(u.hp)-amount);u.alert=12;
+  if(u.t==='soldat'&&!u.canSee){
+    u.aiMode='search';u.searchT=window.HUNTER_STEALTH.CONFIG.searchSeconds;
+    const vx=killingShot?.vx??0,vz=killingShot?.vz??0,
+          norm=Math.max(.01,Math.hypot(vx,vz));
+    u.lastSeenX=u.x-vx/norm*15;u.lastSeenZ=u.z-vz/norm*15;
+    u.lastSeenY=u.o.position.y;
+  }
+  if(u.t==='soldat'||u.t==='general'){
+    // Ferides de bala, ganivet, explosions i atropellaments: la sang
+    // surt del cos del soldat, també quan sobreviu a l'impacte.
+    const bullet=killingShot?.spl===0&&Number.isFinite(killingShot.vx),
+          x=bullet?killingShot.x:u.x+rn(-.15,.15),
+          y=bullet?killingShot.y:(u.o?.position.y??u.gy??hAt(u.x,u.z))+rn(1,1.5),
+          z=bullet?killingShot.z:u.z+rn(-.15,.15),
+          sourceX=killingShot?.x??P.x,sourceZ=killingShot?.z??P.z;
+    spawnBulletImpact('blood',x,y,z,{
+      vx:bullet?killingShot.vx:u.x-sourceX,
+      vy:bullet?killingShot.vy:0,
+      vz:bullet?killingShot.vz:u.z-sourceZ
+    });
+  }
+  if(u.hp<=0)killEnemy(u,killingShot);
+}
 function explodeVehicle(v){
   if(!v||v.destroyed)return;v.destroyed=true;const wasPilot=cv===v,yy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
   if(wasPilot){
@@ -4821,51 +5606,90 @@ function explodeVehicle(v){
       cv=null;P.x=v.x;P.z=v.z;
       const a=rn(0,Math.PI*2),sp=rn(14,24);
       playerEject={kind:'blast',vx:Math.cos(a)*sp,vz:Math.sin(a)*sp,t:.8,dur:.8,spin:rn(-1,1)<0?-1:1,height:1.25};
-      hurtP(rn(18,30));msg='El vehicle ha explotat!';msgT=3;
+      hurtP(rn(4,6),false,{type:'vehicleExplosion',x:v.x,y:yy+1,z:v.z});msg='El vehicle ha explotat!';msgT=3;
     }
   }
   const i=V.indexOf(v);if(i>=0)V.splice(i,1);
   intelMarks=intelMarks.filter(m=>m.ref!==v);
   if(v.o){vehicleDebris(v,yy);world.remove(v.o)}
-  boom(v.x,yy+1,v.z,10,45,'p');
+  boom(v.x,yy+1,v.z,10,8,'p',{skipPlayer:wasPilot});
 }
-// Els blindats requereixen projectils pesats; la resta de vehicles
-// poden patir impactes lleugers. També protegeix el conductor.
+// Tots els vehicles perden vides amb els impactes; el casc protegeix
+// els ocupants fins al moment que el vehicle explota.
 // Projectils explosius: 50% més ràpids i meitat de mida visual.
-const HEAVY_SHOT_SPEED_FACTOR=1.17,HEAVY_SHOT_DAMAGE_FACTOR=1.3,HEAVY_SHOT_VISUAL_SCALE=.5;
+const COMBAT_BALANCE=window.HUNTER_COMBAT_BALANCE;
+const HEAVY_SHOT_SPEED_FACTOR=1.17,HEAVY_SHOT_DAMAGE_FACTOR=1,HEAVY_SHOT_VISUAL_SCALE=.5;
 const shotClassFromSplash=spl=>spl>0?'heavy':'light';
-const isArmoredVehicle=v=>v?.t==='tanqueta'||v?.t==='tanc'||
-  (v&&Math.max(v.armor??0,VT[v.t]?.armor??0)>=6);
-const isArmoredEnemy=u=>u?.t==='tanqueta'||u?.t==='tanc';
 const isMilitaryBuilding=b=>!!b&&!b.civilian&&(!!b.compound||b.kind==='enemy_bunker');
 const isMilitaryWall=w=>!!w?.towerLegOwner||isMilitaryBuilding(w?.owner);
-function damageVehicle(v,dmg,impacts=1,shotClass='heavy',fromEnemyWeapon=false){
-  if(shotClass==='light'&&isArmoredVehicle(v))return;
-  if(!v||v.destroyed)return;const c=VT[v.t],armor=Math.max(0,Math.min(10,v.armor??c.armor??0));
-  v.life=Math.max(0,(v.life??c.life??1)-Math.max(1,impacts));v.smokeT=0;
-  // Si l'helicòpter queda destruït, reservam el dany per a la
-  // caiguda: un cop mortal aquí congelaria l'expulsió en ple aire.
-  const fallingFromDestroyedHeli=cv===v&&v.life<=0&&VT[v.t]?.m==='a';
-  if(cv===v&&armor<10&&!fallingFromDestroyedHeli)hurtP(dmg*(1-armor/10)*.55,fromEnemyWeapon);
-  if(v.life<=0)explodeVehicle(v)
+const isArmoredVehicleType=t=>t==='tanqueta'||t==='tanc';
+function damageVehicle(v,dmg,impacts=1,shotClass='collision'){
+ if(cheats.immune&&v===cv)return;
+ if(!v||v.destroyed||shotClass==='light'&&isArmoredVehicleType(v.t))return;
+ const amount=shotClass==='collision'?Math.max(1,wholeDamage(impacts)):wholeDamage(dmg);
+ if(amount<=0)return;
+ v.life=Math.max(0,Math.ceil(v.life??VT[v.t]?.life??1)-amount);v.smokeT=0;
+ if(v.life<=0)explodeVehicle(v);
+}
+
+// Regla única: qualsevol mal positiu resta un nombre enter de punts de vida.
+// La física (velocitats, trajectòries i impulsos) continua emprant decimals.
+// Els nombres invàlids no afecten la vida.
+function wholeDamage(value){
+ return Number.isFinite(value)&&value>0?Math.ceil(value):0
+}
+// Xocs amb criteris compartits: massa del receptor, massa de l'altre i velocitat relativa.
+// Els impactes ordinaris tenen un màxim de cinc punts de vida per contacte.
+function impactDamage(relativeSpeed,receiverMass=1,strikerMass=1){
+ // Els cops entre vehicles fins a 10 són maniobres, no impactes destructius.
+ if(!(relativeSpeed>10))return 0;
+ const ratio=Math.sqrt(Math.max(.2,strikerMass)/Math.max(.2,receiverMass));
+ return Math.max(1,Math.min(5,Math.ceil((relativeSpeed-10)*ratio/6)));
+}
+function impactVehicle(v,dmg){
+ if(!v||v.destroyed||v.t==='tanc'||dmg<=0)return;
+ const amount=Math.min(5,wholeDamage(dmg));
+ if(E.includes(v)){
+  if(v.t==='jeep'||v.t==='tanqueta'||v.t==='patrulla_marina')hurtE(v,amount);
+ }else damageVehicle(v,amount,1,'impact');
+}
+
+// Mateix atropellament per a soldats i jugador: velocitat i massa sense
+// límit artificial per als vehicles pesants; 10 PV és el màxim global.
+const RUNOVER_MIN_SPEED=6,RUNOVER_MAX_DAMAGE=10;
+function runoverDamage(speed,mass=1){
+ if(!(speed>RUNOVER_MIN_SPEED))return 0;
+ return Math.min(RUNOVER_MAX_DAMAGE,Math.max(1,Math.ceil(
+  (speed-RUNOVER_MIN_SPEED)*Math.max(.2,mass)*RUNOVER_MAX_DAMAGE/(23*2.2)
+ )));
+}
+// Consulta tot el moviment del vehicle, també quan travessa una diana
+// entre dos fotogrames. El radi és el mateix que per a l'impacte puntual.
+function runoverSweepHit(x0,z0,x1,z1,tx,tz,radius){
+ const dx=x1-x0,dz=z1-z0,lengthSq=dx*dx+dz*dz;
+ const t=lengthSq>1e-8?Math.max(0,Math.min(1,
+  ((tx-x0)*dx+(tz-z0)*dz)/lengthSq)):0;
+ const px=x0+dx*t,pz=z0+dz*t;
+ return (tx-px)**2+(tz-pz)**2<radius*radius;
 }
 
 function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc){
   const shotClass=shotClassFromSplash(spl),speed=sp*(shotClass==='heavy'?HEAVY_SHOT_SPEED_FACTOR:1),
-        power=dmg*(shotClass==='heavy'?HEAVY_SHOT_DAMAGE_FACTOR:1);
-  snd(spl?'cannon':'shot',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/140)*(own=='e'?.6:1));
-  // Les bales petites conserven el seu model; les pesades són ojives
-  // amb la punta orientada exactament segons el vector de velocitat.
-  // La rotació no depèn del rumb del vehicle i també funciona en tirs
-  // ascendents, descendents i diagonals.
-  const heavy=shotClass==='heavy';
-  const o=new THREE.Mesh(heavy?gHeavy:gB,mat);
-  o.scale.setScalar(sc*(heavy?HEAVY_SHOT_VISUAL_SCALE:1));
-  if(heavy){
-    const heading=new THREE.Vector3(dx,dy,dz);
-    if(heading.lengthSq()>1e-12)
-      o.quaternion.setFromUnitVectors(heavyForward,heading.normalize());
+        power=wholeDamage(dmg);
+  if(own==='p'||own==='pb'){
+    const sound=spl?'bazooka':!cv&&sniperEquipped?'sniper':cv?'rifle':'pistol';
+    window.HUNTER_STEALTH.emit(sound,x,y,z);
   }
+  snd(spl?'cannon':'shot',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/140)*(own=='e'?.6:1));
+  // Tots els projectils tenen l'eix longitudinal -Z: cilindres fins per
+  // a les bales lleugeres i ojives per a les pesades. S'orienten en 3D,
+  // també en tirs ascendents, descendents i diagonals.
+  const heavy=shotClass==='heavy';
+  const o=new THREE.Mesh(heavy?gHeavy:gLight,mat);
+  o.scale.setScalar(sc*(heavy?HEAVY_SHOT_VISUAL_SCALE:1));
+  const heading=new THREE.Vector3(dx,dy,dz);
+  if(heading.lengthSq()>1e-12)
+    o.quaternion.setFromUnitVectors(heavyForward,heading.normalize());
   o.position.set(x,y,z);world.add(o);
   Pj.push({x,y,z,sx:x,sy:y,sz:z,vx:dx*speed,vy:dy*speed,vz:dz*speed,dmg:power,spl,shotClass,own,life:2.2,o})
 }
@@ -4886,70 +5710,149 @@ function blastImpulseAt(x,z,px,pz,r,falloff){
         speed=(15+28*falloff)*scale;
   return {vx:dir.x*speed,vz:dir.z*speed,vy:(9+13*falloff)*scale};
 }
-function boom(x,y,z,r,dmg,own,source=null){snd('boom',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/200));const o=new THREE.Mesh(sphG,new THREE.MeshBasicMaterial({color:0xffa030,transparent:true}));o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6});
-// Totes les explosions projecten els soldats enemics; el dany
-// continua respectant el bàndol que ha disparat.
-for(const u of enemyCandidatesAt(x,z,r+vehicleRadius('llanxa')*.62+4)){
-  // Per a una patrullera es mesura la distància a la superfície del casc,
-  // no al seu centre: impactar a la proa o a un costat també la destrueix.
-  const marine=u.t==='patrulla_marina',
-        distance=Math.hypot(u.x-x,u.o.position.y+(marine?1.8:1.5)-y,u.z-z),
-        d=marine?Math.max(0,distance-vehicleRadius('llanxa')*.62):distance;
-  if(d<r){
-    if(u.t==='soldat'||u.t==='general'){
-      const power=1-d/r;
-      u.blastImpulse=blastImpulseAt(x,z,u.x,u.z,r,power);
-      if(u.hp>(own==='e'?0:dmg*(1-d/r*.5))){
-        u.blastT=Math.max(u.blastT||0,.55+u.blastImpulse.vy/8);
-        u.blastTotal=u.blastT;
-      }
-    }
-    if(own!=='e')hurtE(u,dmg*(1-d/r*.5),
-      source||{x,y,z,sx:cv?.x??P.x,sy:(cv?.o?.position.y??P.y)+1.7,sz:cv?.z??P.z,spl:r,own});
-  }
+// Explosions: dany complet al centre, mínim d'un punt a la vora.
+function explosionDamage(dmg,distance,r){return distance>=r?0:Math.max(1,Math.ceil(dmg*(1-distance/r)))}
+// Les parets, portes, forjats, teulades i relleu fan de cobertura real.
+// Especialment: una càrrega a la superfície no pot matar el general al soterrani.
+function blastOccluded(x,y,z,tx,ty,tz){
+ const dx=tx-x,dy=ty-y,dz=tz-z,length=Math.hypot(dx,dy,dz);
+ if(length<.15)return false;
+ const mx=(x+tx)/2,mz=(z+tz)/2,search=Math.hypot(dx,dz)/2+2;
+ for(const w of wallCandidates(mx,mz,search)){
+  if(w.open||w.barbed||w.hp<=0)continue;
+  // L'origen pot estar encastat dins un obstacle just quan detona.
+  if(x>w.x0+.03&&x<w.x1-.03&&y>w.y0+.03&&y<w.y1-.03&&z>w.z0+.03&&z<w.z1-.03)continue;
+  const t=segmentAabbT(x,y,z,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);
+  if(t!=null&&t>=0&&t<.995)return true;
+ }
+ for(const b of buildingCandidates(mx,mz,search)){
+  if(b.rhp<=0||b.rb)continue;
+  const t=b.hangar?hangarRoofSegmentT(x,y,z,tx,ty,tz,b):
+    segmentAabbT(x,y,z,tx,ty,tz,b.x-b.w/2,b.x+b.w/2,b.fy+b.h-.3,b.fy+b.h+1.15,b.z-b.d/2,b.z+b.d/2);
+  if(t!=null&&t>.005&&t<.995)return true;
+ }
+ // Mostreig curt del terreny: bunkerProjectileSurface distingeix el
+ // nivell excavable del búnquer i no crea una falsa roca a les habitacions.
+ const samples=Math.min(32,Math.max(4,Math.ceil(length/2)));
+ for(let i=1;i<samples;i++){
+  const t=i/samples,px=x+dx*t,py=y+dy*t,pz=z+dz*t;
+  if(py<bunkerProjectileSurface(px,pz,py)-.22)return true;
+ }
+ return false;
 }
-for(const w of wallCandidates(x,z,r)){const dd=Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z);if(dd<r&&y<w.y1+3)dmgW(w,dmg*1.5*(1-dd/(2*r)))}
-for(const b of buildingCandidates(x,z,r)){const dd=Math.hypot(b.x-x,b.z-z),rr2=r+b.w/2;if(dd<rr2&&b.rhp>0){b.rhp-=dmg*1.2*(1-dd/rr2*.6);if(b.rhp<=0)roofBreak(b)}}
-PL.forEach(t=>{if(!t.alive)return;const dd=Math.hypot(t.x-x,t.z-z);if(dd<r)dmgP(t,dmg*1.5*(1-dd/(2*r)))});
-for(const v of vehicleCandidatesAt(x,z,r+12,true)){
-  const surfaceDistance=explosionDistanceToVehicleHull(v,x,y,z);
-  if(surfaceDistance<r&&(own!=='p'||v!==cv)){
-    const power=Math.max(1,Math.ceil((1-surfaceDistance/r)*3));
-    damageVehicle(v,dmg*.5*(1-surfaceDistance/r),power,'heavy',own==='e')
+function boom(x,y,z,r,dmg,own,source=null){
+ window.HUNTER_STEALTH.emit('explosion',x,y,z);
+ snd('boom',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/200));
+ // L'ona expansiva és un front anular subtil, no una esfera
+ // quasi opaca. L'efecte NO escriu profunditat: murs i portes que
+ // resisteixen l'explosió sempre continuen visibles, també en interiors.
+ const opacity=.38,
+       o=new THREE.Mesh(blastRingG,new THREE.MeshBasicMaterial({
+         color:0xffb15d,side:THREE.DoubleSide,
+         transparent:true,opacity,depthTest:true,depthWrite:false
+       }));
+ o.rotation.x=-Math.PI/2;
+ o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6,opacity});
+ // El casc protegeix el pilot mentre encara és dins. Si el vehicle
+ // esclata dins aquest càlcul, no el feim rebre també un impacte directe.
+ const pilotedAtStart=!!cv;
+ for(const u of [...enemyCandidatesAt(x,z,r+vehicleRadius('llanxa')*.62+4)]){
+  if(u.hp<=0||u.destroyed)continue;
+  const marine=u.t==='patrulla_marina',targetY=u.o.position.y+(marine?1.8:1.5),
+    distance=Math.hypot(u.x-x,targetY-y,u.z-z),
+    d=marine?Math.max(0,distance-vehicleRadius('llanxa')*.62):distance,
+    dealt=explosionDamage(dmg,d,r);
+  if(!dealt||blastOccluded(x,y,z,u.x,targetY,u.z))continue;
+  if(u.t==='soldat'||u.t==='general'){
+   u.blastImpulse=blastImpulseAt(x,z,u.x,u.z,r,1-d/r);
+   if(u.hp>dealt){u.blastT=Math.max(u.blastT||0,.55+u.blastImpulse.vy/8);u.blastTotal=u.blastT}
   }
+  // Els enemics també poden ferir els seus companys amb les explosions.
+  hurtE(u,dealt,source||{x,y,z,sx:cv?.x??P.x,sy:(cv?.o?.position.y??P.y)+1.7,sz:cv?.z??P.z,spl:r,own});
+  // Si sobreviu, també obre braços i cames mentre surt volant.
+  if(u.hp>0&&u.blastT>0&&!u.blastRagdoll)
+    u.blastRagdoll=window.HUNTER_RAGDOLL.make(u.o,{
+      blast:true,impulse:u.blastImpulse,seed:u.x*.41+u.z*.27});
+ }
+
+ PL.forEach(t=>{if(!t.alive)return;const dealt=explosionDamage(dmg,Math.hypot(t.x-x,t.z-z),r);if(dealt&&!blastOccluded(x,y,z,t.x,t.y+2,t.z))dmgP(t,dealt)});
+ for(const v of [...vehicleCandidatesAt(x,z,r+12,true)]){
+  if(v.destroyed)continue;
+  const dealt=explosionDamage(dmg,explosionDistanceToVehicleHull(v,x,y,z),r);
+  if(dealt&&!blastOccluded(x,y,z,v.x,(v.o?.position?.y??0)+1,v.z))damageVehicle(v,dealt,1,'heavy');
+ }
+ // Les granades i el C4 propis també poden fer mal al jugador a peu.
+ if(!pilotedAtStart&&!source?.skipPlayer){
+  const d=Math.hypot(P.x-x,P.y+1-y,P.z-z),dealt=explosionDamage(dmg,d,r);
+  if(dealt&&!blastOccluded(x,y,z,P.x,P.y+1,P.z)){
+   const impulse=blastImpulseAt(x,z,P.x,P.z,r,1-d/r);
+   if(!playerFall){const flight=Math.max(1.5,.55+impulse.vy/8);
+    playerEject={kind:'blast',...impulse,t:flight,dur:flight,height:0,roll:rn(-1,1)<0?-1:1};
+    if(playerBlastRagdoll)window.HUNTER_RAGDOLL.reset(playerBlastRagdoll);
+    playerBlastRagdoll=window.HUNTER_RAGDOLL.make(pl,{
+      blast:true,impulse,seed:P.x*.41+P.z*.27});
+   }
+   hurtP(dealt,own==='e',{type:'explosion',x,y,z});
+  }
+
+ }
+ // Les estructures absorbeixen el dany, fins i tot quan tapen els ocupants.
+ for(const w of wallCandidates(x,z,r)){
+  const dist=Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z),
+    dealt=explosionDamage(dmg,dist,r);
+  if(dealt&&y<w.y1+3&&w.hp>0)dmgW(w,dealt);
+ }
+ for(const b of buildingCandidates(x,z,r)){
+  if(b.rhp<=0)continue;
+  const dealt=explosionDamage(dmg,Math.hypot(b.x-x,b.z-z),r+b.w/2);
+  if(dealt){b.rhp-=dealt;if(b.rhp<=0)roofBreak(b)}
+ }
 }
-const q=cv?cv.o.position:P,d=Math.hypot(q.x-x,q.y-y,q.z-z);
-if(d<r&&!cv){
-  const falloff=1-d/r,impulse=blastImpulseAt(x,z,P.x,P.z,r,falloff);
-  // Els explosius propis també llancen el jugador pels aires.
-  // El dany propi continua desactivat com abans.
-  if(!playerFall){
-    const flight=Math.max(1.5,.55+impulse.vy/8);
-    playerEject={kind:'blast',...impulse,t:flight,dur:flight,
-      height:0,roll:rn(-1,1)<0?-1:1};
-  }
-  if(own!=='p')hurtP(dmg*.6*falloff,own==='e');
-}}
-function plant(){if(over||cv||swimming||!inv.expl)return;if(--inv.expl<=0)delete inv.expl;setDis(false);
-const o=window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true);
-// El display és a la cara local -Z. Amb el gir oposat al del jugador
-// queda de cara a qui acaba de plantar la càrrega.
-o.rotation.y=P.hd+Math.PI;
-// La posem davant dels peus, no sota el personatge, perquè el visor es vegi.
-const forward=1.35,x=P.x-Math.sin(P.hd)*forward,z=P.z-Math.cos(P.hd)*forward,
-      y=Math.max(0,hAt(x,z))+.24;
-o.position.set(x,y,z);world.add(o);
-bombs.push({x,y,z,t:3,o});msg='Bomba col·locada: 3 s!';msgT=2}
+// Punt just fora de la porta dreta del Huey 3B. Les dimensions locals
+// corresponen a l'obertura real (x=1,36; z=-0,76..1,76).
+// localToWorld respecta gir, inclinació i escala del model 3D.
+function helicopterBombDoor(v){
+ v.o.updateWorldMatrix(true,false);
+ return v.o.localToWorld(new THREE.Vector3(1.96,2.02,.52));
+}
+function plant(seconds=3){
+ // La configuració surt sempre del LED. La validació també protegeix
+ // l'acció davant clics repetits, entrada invàlida o una partida acabada.
+ if(over||cv&&cv.t!=='heli'||swimming||playerFall||
+    playerEject||!inv.expl||!Number.isInteger(seconds)||
+    seconds<0||seconds>59)return false;
+ const airborne=!!cv&&cv.t==='heli';
+ // El Huey deixa caure l'artefacte des de l'obertura lateral;
+ // no el dispara ni li transmet velocitat horitzontal del vehicle.
+ const door=airborne?helicopterBombDoor(cv):null;
+ if(--inv.expl<=0)delete inv.expl;setDis(false);
+ const o=window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true,seconds);
+ o.rotation.y=(cv?.hd??P.hd)+Math.PI;
+ const forward=1.35,
+       x=airborne?door.x:P.x-Math.sin(P.hd)*forward,
+       z=airborne?door.z:P.z-Math.cos(P.hd)*forward,
+       y=airborne?door.y:groundAt(x,z,P.y)+.24;
+ o.position.set(x,y,z);world.add(o);
+ if(seconds===0){
+  // 00 és una detonació immediata, fins i tot en ple vol.
+  boom(x,y,z,48,COMBAT_BALANCE.weapons.c4,'b');
+  world.remove(o);
+ }else bombs.push({x,y,z,t:seconds,o,falling:airborne,vy:0,landed:!airborne});
+ msg=seconds===0?'Bomba detonada!':airborne?
+   'Explosiu deixat anar: '+String(seconds).padStart(2,'0')+' s!':
+   'Bomba col·locada: '+String(seconds).padStart(2,'0')+' s!';
+ msgT=2;return true;
+}
 // La filferrada és permeable a la vista i al foc lleuger, però segueix
 // impedint els atacs cos a cos quan ignoreBarbed=false.
 function sight(x,z,tx,tz,y,ignoreBarbed=true){const d=Math.hypot(tx-x,tz-z),n=Math.max(1,Math.ceil(d/1.5));for(let k=1;k<n;k++){const xx=x+(tx-x)*k/n,zz=z+(tz-z)*k/n;if(wallCandidates(xx,zz).some(w=>!w.open&&(!ignoreBarbed||!w.barbed)&&y>w.y0&&y<w.y1&&xx>w.x0&&xx<w.x1&&zz>w.z0&&zz<w.z1))return false}return true}
-function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=pl.userData.knifeAttackDuration||.38;const fx_=-Math.sin(P.hd),fz=-Math.cos(P.hd);let hit=null,best=2.6;for(const u of E){const dx=u.x-P.x,dz=u.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx_+dz*fz)/d>.35&&sight(P.x,P.z,u.x,u.z,P.y+1.2,false)){best=d;hit=u}}if(hit)hurtE(hit,6);snd('hurt',hit?.45:.18);setDis(false);return true}
+function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=pl.userData.knifeAttackDuration||.38;window.HUNTER_STEALTH.emit('knife',P.x,P.y+1,P.z);const fx_=-Math.sin(P.hd),fz=-Math.cos(P.hd);let hit=null,best=2.6;for(const u of E){if(u.t!=='soldat'&&u.t!=='general')continue;const dx=u.x-P.x,dz=u.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx_+dz*fz)/d>.35&&sight(P.x,P.z,u.x,u.z,P.y+1.2,false)){best=d;hit=u}}if(hit)hurtE(hit,COMBAT_BALANCE.weapons.knife,{weapon:'knife',own:'p',sx:P.x,sy:P.y+1.35,sz:P.z,x:hit.x,y:hit.o.position.y+1.35,z:hit.z});snd('hurt',hit?.45:.18);setDis(false);return true}
 function secondaryWeapon(){
   if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd),d45=Math.SQRT1_2;
-  if(cv.t==='heli_combat'){if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,60,10,'p',mS,2.4);Pj[Pj.length-1].life=3.3;msg='Míssils: '+cv.rockets;msgT=1;return true}
+  if(cv.t==='heli_combat'){if(cheats.items)cv.rockets=Math.max(cv.rockets||0,999);if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,COMBAT_BALANCE.weapons.heliMissile,10,'p',mS,2.4);Pj[Pj.length-1].life=3.3;msg='Míssils: '+cv.rockets;msgT=1;return true}
   if(cv.t==='llanxa_coets'){/* Munició infinita. */fcd=.9;
     const shot=combatBoatRocketAim(cv),d=shot.direction;
-    shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],68,70,11,'p',mS,2.6);
+    shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],68,COMBAT_BALANCE.weapons.boatRocket,11,'p',mS,2.6);
     msg='Coets: ∞';msgT=1;return true}
   return false
 }
@@ -4962,6 +5865,11 @@ function grenadeLaunchParams(power=0,origin=P,hd=P.hd){
         fx=-Math.sin(hd),fz=-Math.cos(hd);
   return {x:origin.x+fx*.85,y:origin.y+2.05,z:origin.z+fz*.85,
           vx:fx*speed,vy:12,vz:fz*speed,t:2.4};
+}
+function bunkerProjectileSurface(x,z,y,water=false){
+  const floor=bunkerSubFloorAt(x,z,y);
+  if(floor!==null&&activeBunker&&y<activeBunker.fy+.1)return floor+.16;
+  return (water?Math.max(hAt(x,z),wy(x,z,elapsed)):Math.max(0,hAt(x,z)))+.16;
 }
 function grenadeImpactTrajectory(power=0,origin=P,hd=P.hd,flight=null){
   const g={...(flight||grenadeLaunchParams(power,origin,hd))},points=[{x:g.x,y:g.y,z:g.z}],dt=1/40;
@@ -4983,14 +5891,14 @@ function grenadeImpactTrajectory(power=0,origin=P,hd=P.hd,flight=null){
     const fraction=hitT==null?1:hitT;
     g.x=x0+(x1-x0)*fraction;g.y=y0+(y1-y0)*fraction;g.z=z0+(z1-z0)*fraction;
     g.vy-=24*dt;g.t-=dt;
-    const surface=Math.max(hAt(g.x,g.z),wy(g.x,g.z,elapsed))+.16;
+    const surface=bunkerProjectileSurface(g.x,g.z,g.y,true);
     if(hitT!=null||g.t<=0||g.y<=surface){
       g.y=Math.max(g.y,surface);points.push({x:g.x,y:g.y,z:g.z});break;
     }
     points.push({x:g.x,y:g.y,z:g.z});
   }
   const end=points[points.length-1];
-  return {points,landing:{x:end.x,z:end.z,y:Math.max(hAt(end.x,end.z),wy(end.x,end.z,elapsed))+.21}};
+  return {points,landing:{x:end.x,z:end.z,y:bunkerProjectileSurface(end.x,end.z,end.y,true)+.05}};
 }
 // Només la cinta visual comença per sobre del cap, deixant espai amb
 // el jugador. No retallam la simulació: el cercle continua marcant la
@@ -5111,7 +6019,7 @@ function launchGrenade(pending){
   body.scale.set(.88,1.08,.88);o.add(body);
   const cap=new THREE.Mesh(new THREE.BoxGeometry(.08,.13,.08),new THREE.MeshStandardMaterial({color:0x252b27,roughness:.7,metalness:.25}));cap.position.y=.18;o.add(cap);
   o.position.set(x,y,z);world.add(o);
-  grenades.push({x,y,z,vx,vy,vz,t,o});
+  grenades.push({x,y,z,vx,vy,vz,t,o,sx:x,sy:y,sz:z});
 }
 // Prioritat compartida: 0 soldats/general, 1 vehicles enemics, 2 torres.
 // Elements de l'escenari i vehicles abandonats no competeixen per l'autoapuntat.
@@ -5143,8 +6051,8 @@ function weaponAimClear(x,y,z,tx,ty,tz){
   }
   return true;
 }
-// Solució del punt d'intercepció a velocitat constant per a llanxes mòbils.
-// S'utilitza només al bazooka: la resta d'armes conserva la seva punteria.
+// Punt d'intercepció per a patrulleres mòbils, amb la velocitat real de
+// cada arma: les bales ràpides també han d'arribar al centre del casc.
 function bazookaInterceptPoint(e,originX,originY,originZ,targetY,speed){
   const vx=-Math.sin(e.hd)*(e.speed||0),vz=-Math.cos(e.hd)*(e.speed||0),
         dx=e.x-originX,dy=targetY-originY,dz=e.z-originZ,
@@ -5156,19 +6064,36 @@ function bazookaInterceptPoint(e,originX,originY,originZ,targetY,speed){
   if(!Number.isFinite(time)||time>3.7)return {x:e.x,y:targetY,z:e.z};
   return {x:e.x+vx*time,y:targetY,z:e.z+vz*time};
 }
+// Alçada del centre del CASC, no de la coberta ni de les armes de bord.
+// El model de la llanxa s'escala uniformement des del seu origen flotant.
+function marineHullTargetY(e){
+ return (e.o?.position?.y??0)+.48*VS.llanxa;
+}
 function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus=null,projectileSpeed=0){
   if(focus){focus.target=null;focus.point=null}
   let bestPriority=Infinity,bestDist=range,chosen=null;
   for(const e of E){
-    if(e.destroyed||e.hp<=0||shotClass==='light'&&(isArmoredEnemy(e)||e.t==='torre'))continue;
+    if(e.destroyed||e.hp<=0||shotClass==='light'&&e.t==='torre')continue;
     const priority=weaponTargetPriority(e);
     if(priority>=3||priority>bestPriority)continue;
-    const dx=e.x-x,dz=e.z-z,dist=Math.hypot(dx,dz);
+    const dx=e.x-x,dz=e.z-z,dist=Math.hypot(dx,dz),forward=Math.hypot(fx,fz);
     if(dist<=1||dist>range||(priority===bestPriority&&dist>=bestDist))continue;
-    const baseY=e.o?.position?.y??(e.gy??0),
-          ty=baseY+(e.t==='torre'?4.5:e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:e.t==='patrulla_marina'?1.8:1.5),
+    const modelY=e.o?.position?.y??(e.gy??0),
+          // El model pot tenir una cota desfasada respecte del terreny
+          // (sobretot en pendents i cims). No apuntis sota els peus,
+          // PERÒ tampoc a la superfície quan el general és al soterrani.
+          groundTarget=e.t==='soldat'||e.t==='general'||e.t==='jeep'||e.t==='tanqueta'||e.t==='tanc',
+          underground=!!e.basement&&
+            (e.gy??modelY)<e.basement.fy-3.9,
+          baseY=underground?(e.gy??modelY):
+            groundTarget?Math.max(modelY,hAt(e.x,e.z),e.gy??-Infinity):modelY,
+          ty=e.t==='patrulla_marina'?marineHullTargetY(e):
+            baseY+(e.t==='torre'?4.5:e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:1.5),
           dy=ty-y,len=Math.hypot(dx,dy,dz);
-    if(len<=.001||(dx*fx+dy*fy+dz*fz)/len<cone)continue;
+    // Triam la diana pel con HORITZONTAL. Un enemic que és al davant
+    // però molt més amunt/avall continua sent elegible; el vector
+    // final sí que incorpora tota la diferència vertical.
+    if(len<=.001||forward<.001||(dx*fx+dz*fz)/(dist*forward)<cone)continue;
     if(!weaponAimClear(x,y,z,e.x,ty,e.z))continue;
     const lead=projectileSpeed>0&&e.t==='patrulla_marina'
       ?bazookaInterceptPoint(e,x,y,z,ty,projectileSpeed):{x:e.x,y:ty,z:e.z},
@@ -5224,9 +6149,9 @@ function bazookaFirstSolidHit(x,y,z,dx,dy,dz,range=105,sourceVehicle=null){
   for(const e of enemyCandidatesAt(mx,mz,reach+16)){
     if(e.destroyed||e.hp<=0)continue;
     const marine=e.t==='patrulla_marina';
-    consider(segmentSphereT(x,y,z,tx,ty,tz,e.x,
-      e.o.position.y+(marine?1.8:e.t==='torre'?4.5:1.5),
-      e.z,marine?vehicleRadius('llanxa')*.62:(e.r||1)+.6));
+    consider(marine?marineHullSegmentT(x,y,z,tx,ty,tz,e):
+      segmentSphereT(x,y,z,tx,ty,tz,e.x,
+        e.o.position.y+(e.t==='torre'?4.5:1.5),e.z,(e.r||1)+.6));
   }
   for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){
     // El propi vehicle mai no intercepta l'origen del seu dispar.
@@ -5336,8 +6261,8 @@ function updateBazookaReticle(dt){
   bazookaReticleElement.style.top=(sy*100)+'%';
 }
 // Conservem el punt de sortida horitzontal del tanc i la tanqueta (0 graus).
-function autoAimArmoredShot(x,y,z,fx,fz,range){
-  return autoAimWeaponShot(x,y,z,fx,0,fz,range,.97,'heavy');
+function autoAimArmoredShot(x,y,z,fx,fz,range,shotClass='heavy',projectileSpeed=0){
+  return autoAimWeaponShot(x,y,z,fx,0,fz,range,.97,shotClass,null,projectileSpeed);
 }
 // Rifle: sortida REAL des de l'extrem del canó. En mode mira el model
 // invisible s'orienta com l'òptica; P.hd i el moviment no canvien.
@@ -5384,8 +6309,8 @@ function sniperReticlePoint(focus,range=1000){
   }
   // Mostreig del terreny de 3 m, amb refinament binari del punt d'impacte.
   const samples=Math.ceil(range/3),surfaceDifference=t=>{
-    const x=ox+(tx-ox)*t,z=oz+(tz-oz)*t;
-    return oy+(ty-oy)*t-(Math.max(hAt(x,z),0)+.2);
+    const x=ox+(tx-ox)*t,y=oy+(ty-oy)*t,z=oz+(tz-oz)*t;
+    return y-(bunkerProjectileSurface(x,z,y)+.04);
   };
   let prev=0;
   for(let k=1;k<=samples;k++){
@@ -5443,7 +6368,7 @@ function cutBarbedWire(){
 }
 // La pistola personal és utilitzable només des dels vehicles oberts.
 const OPEN_RIDER_PISTOL=new Set(['bici','moto','moto_aquatica','barca_rems','windsurf','llanxa']);
-function fire(){if(cisallaEquipped&&!cv)return cutBarbedWire();if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
+function fire(){if(cisallaEquipped&&!cv)return cutBarbedWire();if(knifeEquipped&&!cv)return melee();if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
 if(c=='tanc'||c=='tanqueta'){
   // El projectil segueix el canó real mentre la torreta gira: no
   // s'alinea artificialment amb l'objectiu en prémer Dispar.
@@ -5451,14 +6376,14 @@ if(c=='tanc'||c=='tanqueta'){
   if(!gun)return;
   const {origin:p,direction:d}=gun;
   if(c=='tanc'){
-    fcd=.9;shoot(p.x,p.y,p.z,d.x,d.y,d.z,85,45,8,'p',mS,2.2);
+    fcd=.9;shoot(p.x,p.y,p.z,d.x,d.y,d.z,85,COMBAT_BALANCE.weapons.tank,8,'p',mS,2.2);
     Pj[Pj.length-1].life=4.4;
   }else{
-    fcd=TANKETTE_FIRE_INTERVAL;shoot(p.x,p.y,p.z,d.x,d.y,d.z,135,10,0,'p',mW,SMALL_ARMS_SCALE);
+    fcd=TANKETTE_FIRE_INTERVAL;shoot(p.x,p.y,p.z,d.x,d.y,d.z,135,COMBAT_BALANCE.weapons.tankette,0,'p',mW,SMALL_ARMS_SCALE);
   }
 }
 else if(c==='heli'){throwHelicopterGrenade();return}
-else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*4.1*VS.heli_combat,y=cv.o.position.y+.15,z=cv.z+fz*4.1*VS.heli_combat;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,130,.91);fcd=.12;shoot(x,y,z,ax,ay,az,145,9,0,'p',mB,.85)}
+else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*4.1*VS.heli_combat,y=cv.o.position.y+.15,z=cv.z+fz*4.1*VS.heli_combat;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,130,.91,'light',null,145);fcd=.12;shoot(x,y,z,ax,ay,az,145,COMBAT_BALANCE.weapons.attackCannon,0,'p',mB,.85)}
 
 else if(c=='llanxa_coets'){secondaryWeapon();return}
 else if(c&&OPEN_RIDER_PISTOL.has(c)){
@@ -5467,11 +6392,11 @@ else if(c&&OPEN_RIDER_PISTOL.has(c)){
   if(ammo<=0)return;
   const shot=riderSystem.firePistol(cv,(origin,direction)=>
     autoAimWeaponShot(origin.x,origin.y,origin.z,
-      direction.x,direction.y,direction.z,75,.97));
+      direction.x,direction.y,direction.z,75,.97,'light',null,130));
   if(!shot)return;
   ammo--;fcd=.22;
   const p=shot.origin,d=shot.direction;
-  shoot(p.x,p.y,p.z,d.x,d.y,d.z,130,12,0,'p',mW,SMALL_ARMS_SCALE);
+  shoot(p.x,p.y,p.z,d.x,d.y,d.z,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE);
 }
 else if(!cv&&sniperEquipped&&inv.franctirador){
   if(sniperAmmo<=0){msg='El rifle no té munició.';msgT=2;return}
@@ -5484,13 +6409,13 @@ else if(!cv&&sniperEquipped&&inv.franctirador){
         focus=scopeActive?window.HUNTER_SCOPE_FOCUS.create(P.x,P.y+1.76,P.z,scopeYaw,scopePitch):null,
         direction=focus
           ?sniperShotVector(muzzle,sniperReticlePoint(focus),focus)
-          :new THREE.Vector3(...autoAimWeaponShot(muzzle.x,muzzle.y,muzzle.z,fx,0,fz,180,.984));
-  shoot(muzzle.x,muzzle.y,muzzle.z,direction.x,direction.y,direction.z,470,65,0,'p',mW,SMALL_ARMS_SCALE);
+          :new THREE.Vector3(...autoAimWeaponShot(muzzle.x,muzzle.y,muzzle.z,fx,0,fz,180,.984,'light',null,470));
+  shoot(muzzle.x,muzzle.y,muzzle.z,direction.x,direction.y,direction.z,470,COMBAT_BALANCE.weapons.sniper,0,'p',mW,SMALL_ARMS_SCALE);
   msg='Rifle: '+sniperAmmo+' cartutxos.';msgT=1.5;
 }
 else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}
-else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9,z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,105,.94,'heavy',null,72*HEAVY_SHOT_SPEED_FACTOR);shoot(x,y,z,ax,ay,az,72,135,18,'pb',mS,3);Pj[Pj.length-1].life=3.8;msg='Bazooka: '+(inv.bazooka||0)+' coets restants.';msgT=2;setDis(false)}
-else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5,z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,75,.97);shoot(x,y,z,ax,ay,az,130,12,0,'p',mW,SMALL_ARMS_SCALE)}
+else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9-(playerCrouched?.48:0),z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,105,.94,'heavy',null,72*HEAVY_SHOT_SPEED_FACTOR);shoot(x,y,z,ax,ay,az,72,COMBAT_BALANCE.weapons.bazooka,18,'pb',mS,3);Pj[Pj.length-1].life=3.8;Pj[Pj.length-1].weapon='bazooka';msg='Bazooka: '+(inv.bazooka||0)+' coets restants.';msgT=2;setDis(false)}
+else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5-(playerCrouched?.48:0),z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,75,.97,'light',null,130);shoot(x,y,z,ax,ay,az,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE)}
 else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}
 function segmentAabbT(x0,y0,z0,x1,y1,z1,minX,maxX,minY,maxY,minZ,maxZ){
   let lo=0,hi=1;
@@ -5507,6 +6432,23 @@ function segmentSphereT(x0,y0,z0,x1,y1,z1,cx,cy,cz,r){
   if(c<=0)return 0;if(a<1e-12)return null;
   const b=2*(mx*dx+my*dy+mz*dz),disc=b*b-4*a*c;if(disc<0)return null;
   const t=(-b-Math.sqrt(disc))/(2*a);return t>=0&&t<=1?t:null
+}
+// La patrullera no és una esfera de deu metres: només comptam el buc
+// allargat i la cabina, alineats amb el seu rumb. Això evita que una
+// bala que passa clarament per damunt provoqui dany fictici.
+function marineHullSegmentT(x0,y0,z0,x1,y1,z1,boat){
+  const scale=VS.llanxa,baseY=boat.o.position.y,
+        sine=Math.sin(boat.hd||0),cosine=Math.cos(boat.hd||0);
+  const local=(x,z)=>[(x-boat.x)*cosine-(z-boat.z)*sine,
+                     (x-boat.x)*sine+(z-boat.z)*cosine];
+  const [ax,az]=local(x0,z0),[bx,bz]=local(x1,z1);
+  const hull=segmentAabbT(ax,y0,az,bx,y1,bz,
+    -1.85*scale,1.85*scale,baseY-.22*scale,baseY+1.08*scale,
+    -4.5*scale,4.5*scale);
+  const cabin=segmentAabbT(ax,y0,az,bx,y1,bz,
+    -1.5*scale,1.5*scale,baseY+1.02*scale,baseY+2.12*scale,
+    -1.0*scale,2.85*scale);
+  return hull==null?cabin:cabin==null?hull:Math.min(hull,cabin);
 }
 function hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b){
   const segs=b.roof?.userData?.hitSegments;if(!segs?.length)return null;
@@ -5552,28 +6494,32 @@ function updPj(dt){
       // També cercam els centres de llanxes situats a cel·les veïnes
       // quan només la proa o la popa intercepten el segment del coet.
       for(const u of enemyCandidatesAt(mx,mz,reach+vehicleRadius('llanxa')*.62+4)){
-        // Les llanxes patrulleres reben bales lleugeres per tot el buc,
-        // també a proa i popa; el radi de soldat era massa petit.
         const marine=u.t==='patrulla_marina',
-              cy=u.o.position.y+(marine?1.8:u.t==='torre'?4.5:1.5),
-              radius=marine?vehicleRadius('llanxa')*.62:(u.r||1)+.6;
-        consider(segmentSphereT(x0,y0,z0,x1,y1,z1,u.x,cy,u.z,radius),'enemy',u)
+              cy=u.o.position.y+(u.t==='torre'?4.5:1.5),
+              radius=(u.r||1)+.6;
+        consider(marine?marineHullSegmentT(x0,y0,z0,x1,y1,z1,u):
+          segmentSphereT(x0,y0,z0,x1,y1,z1,u.x,cy,u.z,radius),'enemy',u)
       }
     }
     for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){
-      if(p.own==='p'&&v===cv)continue;
+      if((p.own==='p'||p.own==='pb')&&v===cv)continue;
       const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),rr=vehicleRadius(v.t)*.62;
       consider(segmentSphereT(x0,y0,z0,x1,y1,z1,v.x,vy+1,v.z,rr),'vehicle',v)
     }
-    if(p.own==='e'&&!cv)consider(segmentSphereT(x0,y0,z0,x1,y1,z1,P.x,P.y+1.5,P.z,1.2),'player',P);
+    if(p.own==='e'&&!cv)consider(segmentSphereT(x0,y0,z0,x1,y1,z1,P.x,P.y+(playerCrouched?1.25:1.5),P.z,playerCrouched?1.05:1.2),'player',P);
 
     // Terreny i arbres continuen mostrejats a una densitat equivalent a l'antic substep.
     const sampleN=Math.max(1,Math.ceil(Math.hypot(sx,sy,sz)/1.15));
     for(let k=1;k<=sampleN;k++){
       const t=k/sampleN;if(t>=bestT)break;
-      const x=x0+sx*t,y=y0+sy*t,z=z0+sz*t,ground=Math.max(hAt(x,z),0)+.2;
+      const x=x0+sx*t,y=y0+sy*t,z=z0+sz*t,ground=bunkerProjectileSurface(x,z,y)+.04;
       if(y<ground){consider(t,'terrain',null);break}
-      const tree=treeAt(x,z,.5);
+      // Les palmeres exteriors no bloquegen bales que viatgen sota
+      // el forjat del búnquer, encara que la seva ombra vertical hi coincideixi.
+      const p=activeBunker?.basement?buildingLocalPoint(activeBunker,x,z):null;
+      const underground=!!p&&y<activeBunker.fy-1&&
+        Math.abs(p.x)<19&&Math.abs(p.z)<16;
+      const tree=underground?null:treeAt(x,z,.5);
       if(tree&&y<Math.max(hAt(x,z),0)+(tree.p?6.5:1.5)){consider(t,'tree',tree);break}
     }
 
@@ -5584,16 +6530,16 @@ function updPj(dt){
     if(!p.spl){
       // La mateixa detecció de col·lisions dona feedback en ambdós sentits.
       // Soldats/general/jugador: sang discreta; altres dianes: espurnes.
-      const person=kind==='player'||(kind==='enemy'&&(target.t==='soldat'||target.t==='general')),
+      const person=kind==='player',
             solid=kind==='wall'||kind==='building'||kind==='vehicle'||kind==='enemy';
       if(person)spawnBulletImpact('blood',p.x,p.y,p.z,p);
-      else if(solid)spawnBulletImpact('spark',p.x,p.y,p.z,p);
-      if(kind==='wall'){if(!isMilitaryWall(target))dmgW(target,p.dmg*(p.own==='e'?.5:1))}
-      else if(kind==='building'){if(!isMilitaryBuilding(target)){target.rhp-=p.dmg*(p.own==='e'?.5:1);if(target.rhp<=0)roofBreak(target)}}
-      else if(kind==='tree'&&target?.p)dmgP(target,p.dmg*(p.own==='e'?.5:1));
-      else if(kind==='enemy'){if(!isArmoredEnemy(target)&&target.t!=='torre')hurtE(target,p.dmg,p)}
-      else if(kind==='vehicle')damageVehicle(target,p.dmg,1,'light',p.own==='e');
-      else if(kind==='player')hurtP(p.dmg,p.own==='e')
+      else if(solid&&!(kind==='enemy'&&(target.t==='soldat'||target.t==='general')))spawnBulletImpact('spark',p.x,p.y,p.z,p);
+      if(kind==='wall'){if(!isMilitaryWall(target))dmgW(target,p.dmg)}
+      else if(kind==='building'){if(!isMilitaryBuilding(target)){target.rhp-=p.dmg;if(target.rhp<=0)roofBreak(target)}}
+      else if(kind==='tree'&&target?.p)dmgP(target,p.dmg);
+      else if(kind==='enemy'){if(target.t!=='torre'&&!(p.shotClass==='light'&&isArmoredVehicleType(target.t)))hurtE(target,p.dmg,p)}
+      else if(kind==='vehicle')damageVehicle(target,p.dmg,1,'light');
+      else if(kind==='player')hurtP(p.dmg,p.own==='e',{type:'bullet',x:p.sx,y:p.sy,z:p.sz})
     }
     if(p.spl)boom(p.x,p.y,p.z,p.spl,p.dmg,p.own,p);
     world.remove(p.o);Pj.splice(i,1)
@@ -5605,15 +6551,52 @@ for(let i=grenades.length-1;i>=0;i--){const g=grenades[i],x0=g.x,y0=g.y,z0=g.z;g
   for(const w of wallCandidates(mx,mz,reach))if(!w.open){const q=segmentAabbT(x0,y0,z0,x1,y1,z1,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);if(q!=null&&(hitT==null||q<hitT))hitT=q}
   for(const b of buildingCandidates(mx,mz,reach)){const q=b.hangar?hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b):segmentAabbT(x0,y0,z0,x1,y1,z1,b.x-b.w/2,b.x+b.w/2,b.fy+b.h-.35,b.fy+b.h+.8,b.z-b.d/2,b.z+b.d/2);if(q!=null&&(hitT==null||q<hitT))hitT=q}
   const q=hitT==null?1:hitT;g.x=x0+(x1-x0)*q;g.y=y0+(y1-y0)*q;g.z=z0+(z1-z0)*q;g.o.position.set(g.x,g.y,g.z);g.o.rotation.x+=dt*8;g.o.rotation.z+=dt*5;
-  const surface=Math.max(hAt(g.x,g.z),wy(g.x,g.z,elapsed))+.16;
-  if(hitT!=null||g.t<=0||g.y<=surface){g.y=Math.max(g.y,surface);boom(g.x,g.y,g.z,16,100,'b');world.remove(g.o);grenades.splice(i,1)}
+  const surface=bunkerProjectileSurface(g.x,g.z,g.y,true);
+  if(hitT!=null||g.t<=0||g.y<=surface){g.y=Math.max(g.y,surface);boom(g.x,g.y,g.z,16,COMBAT_BALANCE.weapons.grenade,'b',{weapon:'grenade',own:'b',spl:16,x:g.x,y:g.y,z:g.z,sx:g.sx,sy:g.sy,sz:g.sz,o:g.o});world.remove(g.o);grenades.splice(i,1)}
 }
-for(let i=bombs.length-1;i>=0;i--){const b=bombs[i];b.t-=dt;
-  if(b.t>0)window.HUNTER_EXPLOSIVE_VISUALS.update(b.o,b.t);
-  if(b.t<=0){boom(b.x,b.y,b.z,48,300,'b');world.remove(b.o);bombs.splice(i,1)}}
-for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.life-=dt;f.o.scale.setScalar(1+(.6-f.life)*f.s);f.o.material.opacity=Math.max(0,f.life/.6);if(f.life<=0){world.remove(f.o);fx.splice(i,1)}}
+for(let i=bombs.length-1;i>=0;i--){
+ const b=bombs[i];
+ // Temporitzador independent del contacte: la bomba explota tant si
+ // ha aterrat com si continua caient. Cap impuls horitzontal fictici.
+ if(b.falling&&!b.landed){
+   const oldY=b.y;
+   b.vy=Math.max(-65,(b.vy||0)-24*dt);
+   const nextY=oldY+b.vy*dt;
+   let support=Math.max(groundAt(b.x,b.z,oldY),wy(b.x,b.z,elapsed))+.24;
+   // Un sostre sòlid intercepta el trajecte vertical abans del terreny.
+   // Això permet posar càrregues sobre edificis sense travessar la teulada.
+   for(const building of buildingCandidates(b.x,b.z,1)){
+     if(building.rb||building.rhp<=0)continue;
+     const roof=solidRoofAt(building,b.x,b.z);
+     if(roof&&oldY>=roof.top&&nextY<=roof.top+.24)
+       support=Math.max(support,roof.top+.24);
+   }
+   if(nextY<=support){
+     b.y=support;b.vy=0;b.landed=true;
+     b.falling=false;
+   }else b.y=nextY;
+   b.o.position.y=b.y;
+ }
+ b.t=Math.max(0,b.t-dt);
+ if(b.t>0)window.HUNTER_EXPLOSIVE_VISUALS.update(b.o,b.t);
+ if(b.t<=0){
+   // S'usa la posició actual, mai la de sortida de l'helicòpter.
+   boom(b.x,b.y,b.z,48,COMBAT_BALANCE.weapons.c4,'b');
+   world.remove(b.o);bombs.splice(i,1);
+ }
+}
+for(let i=fx.length-1;i>=0;i--){
+ const f=fx[i];f.life-=dt;
+ f.o.scale.setScalar(1+(.6-Math.max(0,f.life))*f.s);
+ // Manté el mateix sostre d'opacitat que el primer fotograma.
+ f.o.material.opacity=Math.max(0,f.life/.6)*f.opacity;
+ if(f.life<=0){
+  world.remove(f.o);f.o.material.dispose();fx.splice(i,1);
+ }
+}
 updateBulletImpacts(dt);
 }
+
 
 
 ;
@@ -5624,11 +6607,11 @@ const enemyIsVehicle=u=>u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='pat
 const enemyBodyRadius=u=>u.t==='torre'?2.4:1.05;
 const enemyRouteRadius=u=>enemyIsVehicle(u)?Math.hypot(vehicleBox(u).w,vehicleBox(u).d)/2+.3:enemyBodyRadius(u)+.15;
 let enemyPathBudget=2,enemyNodeBudget=160;
-const enemyGroundAt=(u,x,z)=>enemyIsVehicle(u)?hAt(x,z):groundAt(x,z,u.walkY??u.o?.position.y??-Infinity);
+const enemyGroundAt=(u,x,z)=>u.basement?u.gy:enemyIsVehicle(u)?hAt(x,z):groundAt(x,z,u.walkY??u.o?.position.y??-Infinity);
 function enemyWallBox(w){return{x:(w.x0+w.x1)/2,z:(w.z0+w.z1)/2,w:w.x1-w.x0,d:w.z1-w.z0,hd:0}}
 function enemySolidAt(u,x,z,hd,route=false){
   const veh=enemyIsVehicle(u),r=route?enemyRouteRadius(u):veh?enemyRouteRadius(u):enemyBodyRadius(u),y=u.gy??enemyGroundAt(u,x,z);
-  if(Math.abs(x)>H-r||Math.abs(z)>H-r||enemyGroundAt(u,x,z)<-.8||treeHit(x,z,r))return false;
+  if(Math.abs(x)>H-r||Math.abs(z)>H-r||!u.basement&&(enemyGroundAt(u,x,z)<-.8||treeHit(x,z,r)))return false;
   const box=veh&&!route?vehicleBox(u,x,z,hd):null;
   if(box){box.w+=.4;box.d+=.4}
   for(const w of wallCandidates(x,z,r)){
@@ -5703,7 +6686,7 @@ function enemyFindPath(u,tx,tz){
       if(!valid.has(k))valid.set(k,enemySolidAt(u,x,z,hd,true));
       if(!valid.get(k))continue;
       const r=enemyRouteRadius(u),mx=(n.x+x)/2,mz=(n.z+z)/2,y=u.gy??enemyGroundAt(u,mx,mz);
-      if(treeHit(mx,mz,r)||enemyGroundAt(u,mx,mz)<-.8||
+      if((!u.basement&&treeHit(mx,mz,r))||!u.basement&&enemyGroundAt(u,mx,mz)<-.8||
          (!enemyIsVehicle(u)&&!enemySolidAt(u,mx,mz,hd,true))||
          wallCandidates(mx,mz,r+step).some(w=>!w.open&&w.playerBlock!==false&&w.y1>=y+.15&&w.y0<=y+4&&segmentAabbT(n.x,0,n.z,x,0,z,w.x0-r,w.x1+r,-1,1,w.z0-r,w.z1+r)!=null))continue;
       const h=heur(x,z),next={ix,iz,x,z,g,h,f:g+h,parent:n};nodes.set(k,next);push(next);
@@ -5747,7 +6730,11 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
   u.hd=oldHd;u.navBlocked=(u.navBlocked||0)+dt;
   if(u.navBlocked>.6){
     if(tryMove(oldHd+Math.PI,distance*.5,true)){u.navPath=[];u.navSearch=null;u.navRetry=0}
-    if(u.navBlocked>1.5){u.navPath=[];u.navRetry=0;u.avoidSide=-side;u.navBlocked=0;u.wt=0}
+    if(u.navBlocked>1.5){u.navPath=[];u.navRetry=0;u.avoidSide=-side;u.navBlocked=0;
+      // Les rutes entre complexos no poden abandonar un tram llarg
+      // pel simple fet d'haver trobat un arbre o un vehicle al camí.
+      if(!u.interCompoundPatrol)u.wt=0
+    }
   }
 }
 // Resolve invalid generated placements before play, never teleport a moving enemy.
@@ -5760,9 +6747,15 @@ function prepareEnemyNavigation(){
       const ox=u.x,oz=u.z;let found=false;
       for(let radius=2;radius<=48&&!found;radius+=2)for(let i=0;i<24;i++){
         const a=i*Math.PI/12,x=ox+Math.cos(a)*radius,z=oz+Math.sin(a)*radius;
-        // A general must remain inside the bunker, on its assigned floor.
-        const bunker=u.t==='general'?B.find(b=>b.kind==='enemy_bunker'):null;
-        if(bunker&&(Math.abs(x-bunker.x)>bunker.hw-2||Math.abs(z-bunker.z)>bunker.hd-2))continue;
+        // El general es manté dins del seu despatx subterrani ampliat,
+        // no dins l'antic rectangle de la planta superior del búnquer.
+        const bunker=u.t==='general'?u.basement:null;
+        if(bunker?.basement){
+          const q=buildingLocalPoint(bunker,x,z),room=bunker.basement.generalRoom;
+          if(room?(q.x<room.xMin||q.x>room.xMax||q.z<room.zMin||q.z>room.zMax):
+            (Math.abs(q.x)>bunker.basement.halfX-1.5||
+             Math.abs(q.z)>bunker.basement.halfZ-1.5))continue;
+        }
         if(enemyMoveClear(u,x,z,u.hd)){u.x=x;u.z=z;enemyReindex(u,ox,oz);found=true;break}
       }
     }
@@ -5898,7 +6891,7 @@ function marineFire(u,weapon,target,heavy){
   }
   const speed=heavy?75:125;
   shoot(p.x,p.y,p.z,dx/n,dy/n,dz/n,speed,
-    heavy?38:6,heavy?8:0,'e',heavy?mS:mW,heavy?2:SMALL_ARMS_SCALE);
+    heavy?COMBAT_BALANCE.weapons.boatRocket:COMBAT_BALANCE.weapons.rifle,heavy?8:0,'e',heavy?mS:mW,heavy?2:SMALL_ARMS_SCALE);
   if(heavy){
     // A 245 m un coet lent necessita més de 4 segons. El TTL genèric
     // de 2.2 s l'eliminava molt abans d'arribar a la diana.
@@ -5925,7 +6918,7 @@ function updateMarinePatrol(u,dt){
       ?weaponAimClear(u.x,u.o.position.y+3,u.z,q.x,targetY,q.z)
       :sight(u.x,u.z,q.x,q.z,u.o.position.y+3));
   }
-  const hostile=!disg&&!over&&distance<470&&!!u.marineVisible;
+  const hostile=!cheats.invisible&&!disg&&!over&&distance<470&&!!u.marineVisible;
   u.wt-=dt;u.mgCd-=dt;u.rocketCd-=dt;
   if(!Number.isFinite(u.tx)||u.wt<=0||Math.hypot(u.tx-u.x,u.tz-u.z)<35)marinePickWaypoint(u);
   let goalX=u.tx,goalZ=u.tz;
@@ -5989,6 +6982,56 @@ function updateMarinePatrol(u,dt){
 // BEGIN src/enemy-ai.js
 const ENEMY_SENSE_DT=.1;
 const SOLDIER_MEMORY=9,SOLDIER_RETREAT=9,SOLDIER_IDEAL=17,SOLDIER_FIRE_RANGE=125;
+const STEALTH=window.HUNTER_STEALTH;
+// Visió i escolta comparteixen la posició tridimensional, però no l'estat:
+// sentir un tret només dóna una darrera posició aproximada a investigar.
+function soldierVisualContact(u,target,targetY,d){
+  const eyeY=u.o.position.y+2.2,
+        crouched=!!playerCrouched&&!cv,
+        range=STEALTH.CONFIG.sightRange*(u.elite?1.30:1)*
+          (crouched?STEALTH.CONFIG.crouchVisibility:1)*
+          ((disg&&!cv)?0.35:1),
+        targetEye=targetY+(crouched?1.25:1.5),
+        // No podem fer servir hAt() sota terra: retornaria l'altura
+        // de la muntanya i faria invisibles els objectius a 30 metres.
+        sameBasement=!!u.basement&&targetY<u.basement.fy-3.9&&
+          eyeY<u.basement.fy-3.9;
+  const dx=target.x-u.x,dz=target.z-u.z,
+        facing=(-Math.sin(u.hd)*dx-Math.cos(u.hd)*dz)/Math.max(.01,d),
+        // L'elit té un camp visual més ample als passadissos il·luminats,
+        // però les parets continuen tallant completament la visió.
+        eliteAwareness=u.elite&&sameBasement&&
+          (d<7||facing>Math.cos(80*Math.PI/180))&&
+          Math.abs(targetEye-eyeY)<8;
+  if(over||d>range||!(eliteAwareness||
+    STEALTH.inView(u.hd,dx,targetEye-eyeY,dz,range)))return false;
+  if(!soldierClearShot(u,u.x,u.z,eyeY,target,targetY-(crouched?.25:0)))return false;
+  // A diferència de sight(), el pendent també tapa un enemic al darrere
+  // d'una cresta (sense fer raycasts de geometria per cada soldat).
+  if(!sameBasement){
+    const steps=Math.min(32,Math.ceil(d/3));
+    for(let i=1;i<steps;i++){
+      const q=i/steps,x=u.x+(target.x-u.x)*q,z=u.z+(target.z-u.z)*q;
+      if(hAt(x,z)>eyeY+(targetEye-eyeY)*q-.1)return false;
+    }
+  }
+  return true;
+}
+function soldierInvestigate(u,target,dt,speed=1){
+  const dist=Math.hypot(target.x-u.x,target.z-u.z);
+  if(dist>3){
+    mvE(u,u.sp*speed*dt,target.x,target.z);
+    u.hd=Math.atan2(u.x-target.x,u.z-target.z);
+    return false;
+  }
+  u.hd+=dt*.8;
+  return true;
+}
+function soldierWarnNeighbors(witness,target,targetY){
+  // El crit és un esdeveniment sonor: els aliats dins del cercle l'investiguen.
+  // Evitem repetir-lo constantment mentre el mateix soldat manté contacte.
+  STEALTH.emit('alert',witness.x,witness.o.position.y+2,witness.z);
+}
 // Punteria per dificultat. DIF=1.5 conserva exactament la dispersió antiga.
 // Normal (1) falla més i Fàcil (.6) encara més, sense alterar el dany ni la IA.
 function enemyAimSpread(){
@@ -6002,7 +7045,7 @@ function enemyShotDirection(u,target,targetY,eyeY,roll=rn){
   const horizontal=1.5*spread*explosiveBoost,
         vertical=.85*(spread-1),
         dx=target.x-u.x+roll(-horizontal,horizontal),
-        dy=targetY+1.5-eyeY+(vertical>0?roll(-vertical,vertical):0),
+         dy=targetY+(!cv&&playerCrouched?1.25:1.5)-eyeY+(vertical>0?roll(-vertical,vertical):0),
         dz=target.z-u.z+roll(-horizontal,horizontal),
         length=Math.hypot(dx,dy,dz);
   return [dx/length,dy/length,dz/length];
@@ -6122,11 +7165,32 @@ function soldierEngage(u,target,targetY,dt,d,visible){
   u.hd=Math.atan2(u.x-toward.x,u.z-toward.z); // la cara sempre al jugador
 }
 
-// Les defenses trien la cadència més ràpida que pugui fer mal
-// al jugador o al vehicle que pilota. L'arma pesada només és necessària
-// contra blindats (tancs, tanquetes, helicòpter de combat, etc.).
+// Les defenses utilitzen el canó pesat contra qualsevol vehicle i
+// el fusell lleuger contra el jugador a peu, sense nivells de blindatge.
 function towerWeaponForTarget(vehicle){
-  return vehicle&&isArmoredVehicle(vehicle)?'heavy':'light';
+  return vehicle?'heavy':'light';
+}
+// El fusell de l'artiller gira des de la finestra dreta del cotxe.
+// El marcador és fill de la boca del canó visible: l'origen del tret
+// segueix sempre el model real i no el centre del vehicle.
+function enemyCarRifleShot(u,target,targetY){
+  const crew=u.o.userData.enemyCarCrew;
+  if(!crew)return null;
+  u.o.position.set(u.x,(u.gy??enemyGroundAt(u,u.x,u.z))+.05,u.z);
+  u.o.rotation.y=u.navHd??u.hd;
+  u.o.updateMatrixWorld(true);
+  const spread=enemyAimSpread(),horizontal=1.5*spread,vertical=.85*(spread-1),
+         aim=new THREE.Vector3(target.x+rn(-horizontal,horizontal),
+           targetY+(!cv&&playerCrouched?1.25:1.5)+(vertical?rn(-vertical,vertical):0),target.z+rn(-horizontal,horizontal));
+  u.o.worldToLocal(aim);
+  const dx=aim.x-crew.mount.position.x,dy=aim.y-crew.mount.position.y,
+        dz=aim.z-crew.mount.position.z;
+  crew.mount.rotation.y=Math.atan2(-dx,-dz);
+  crew.pitch.rotation.x=Math.max(-.7,Math.min(.75,Math.atan2(dy,Math.hypot(dx,dz))));
+  u.o.updateMatrixWorld(true);
+  return {origin:crew.muzzle.getWorldPosition(new THREE.Vector3()),
+    direction:new THREE.Vector3(0,0,-1).applyQuaternion(
+      crew.muzzle.getWorldQuaternion(new THREE.Quaternion())).normalize()};
 }
 function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.forEach(u=>{
   if(u.t==='patrulla_marina'){updateMarinePatrol(u,dt);return}
@@ -6145,14 +7209,19 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
       const elapsed=(u.blastTotal||2.5)-u.blastT;
       u.o.rotation.z=Math.sin(elapsed*5)*.75*Math.min(1,u.blastHeight+.2);
       if(landed&&u.blastT<.25)u.blastT=0;
+      if(u.blastRagdoll)window.HUNTER_RAGDOLL.update(u.blastRagdoll,dt,{
+        airborne:!landed,grounded:landed});
     }
     return;
   }
-  if(u.blastImpulse){u.blastImpulse=null;u.blastHeight=0;u.o.rotation.z=0}
+  if(u.blastImpulse){
+    if(u.blastRagdoll)window.HUNTER_RAGDOLL.reset(u.blastRagdoll);
+    u.blastRagdoll=null;u.blastImpulse=null;u.blastHeight=0;u.o.rotation.z=0
+  }
   const oldX=u.x,oldZ=u.z;
   u.alert=Math.max(0,u.alert-dt);u.cd-=dt;if(u.t==='torre')u.heavyCd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);
-  const q=cv||P,py=cv?cv.o.position.y:P.y,dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz),
-        det=disg&&!cv?20:u.alert>0?300:u.t=='general'?60:120,
+   const q=cv||P,py=cv?cv.o.position.y:P.y,dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz),
+         det=disg&&!cv?20:u.alert>0?300:u.t=='general'?60:120,
         eyeY=u.o.position.y+(u.t=='torre'?9.4:2.2);
 
   // Dins una casa es pot sentir el jugador encara que una paret talli
@@ -6162,16 +7231,60 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
   u.senseT=(u.senseT??0)-dt;
   if(u.senseT<=0){
     u.senseT+=ENEMY_SENSE_DT;
-    const seen=!over&&d<det&&sight(u.x,u.z,q.x,q.z,eyeY);
+    const bunker=activeBunker,
+      localBunker=bunker?.basement?buildingLocalPoint(bunker,q.x,q.z):null,
+      withinBunker=!!localBunker&&
+        Math.abs(localBunker.x)<bunker.basement.halfX&&
+        Math.abs(localBunker.z)<bunker.basement.halfZ,
+      acrossFloor=!!(u.basement||withinBunker&&py<bunker.fy-3.9)&&
+        Math.abs((u.gy??u.o.position.y)-py)>4.4,
+       sameBasement=!!u.basement&&py<bunker.fy-3.9&&eyeY<bunker.fy-3.9,
+       // El general pot detectar intrusos dins del mateix nivell sense
+       // quedar falsament ocult per la muntanya, però respecta els murs.
+       seen=!cheats.invisible&&!over&&!acrossFloor&&d<det&&
+         (sameBasement&&u.t==='general'
+           ?soldierClearShot(u,u.x,u.z,eyeY,q,py)
+           :sight(u.x,u.z,q.x,q.z,eyeY));
     if(u.t==='soldat'){
-      const acquired=seen&&!u.canSee;
-      u.canSee=seen;
-      u.canShoot=seen&&soldierClearShot(u,u.x,u.z,eyeY,q,py);
-      if(seen||hidingInside&&d<65){
-        u.lastSeenX=q.x;u.lastSeenZ=q.z;u.lastSeenY=py;
-        u.pursuitT=SOLDIER_MEMORY;
-        if(acquired)u.cd=0; // primer tret sense retard en detectar el jugador
-      }
+       const raw=!cheats.invisible&&!!(cv? !over&&d<115&&
+         STEALTH.inView(u.hd,dx,py+1.5-eyeY,dz,115)&&
+         soldierClearShot(u,u.x,u.z,eyeY,q,py):
+         !acrossFloor&&soldierVisualContact(u,q,py,d));
+       // La silueta ajupida tarda més a ser reconeguda i només és
+       // detectable de prop. Veure-la breument genera sospita, no foc.
+       u.recognition=Math.max(0,Math.min(1.5,(u.recognition||0)+
+         (raw?ENEMY_SENSE_DT*(d<12?4:((playerCrouched&&!cv)?0.9:2)):-ENEMY_SENSE_DT*3)));
+       const confirmed=raw&&u.recognition>=.45;
+       const acquired=confirmed&&!u.canSee;
+       u.canSee=confirmed;
+       u.canShoot=confirmed&&soldierClearShot(u,u.x,u.z,eyeY,q,
+         py-(!cv&&playerCrouched?.25:0));
+       if(confirmed){
+         u.lastSeenX=q.x;u.lastSeenZ=q.z;u.lastSeenY=py;
+         u.pursuitT=SOLDIER_MEMORY;u.aiMode='combat';
+         u.searchT=SOLDIER_MEMORY+d/Math.max(1,u.sp);
+         if(acquired){u.cd=0;soldierWarnNeighbors(u,q,py)}
+       }else{
+         if(u.aiMode==='combat')u.aiMode='search';
+         if(raw&&u.aiMode!=='search'){
+           u.aiMode='suspicious';u.lastSeenX=q.x;u.lastSeenZ=q.z;u.lastSeenY=py;
+           u.searchT=STEALTH.CONFIG.investigateSeconds+d/Math.max(1,u.sp*.65);
+         }else if(!raw&&u.aiMode==='suspicious')u.aiMode='investigate';
+         const noise=cheats.invisible?null:STEALTH.heardAt(u.x,eyeY,u.z,u.heardId||0);
+         if(noise){
+           u.heardId=noise.id;
+           if(u.aiMode!=='search'&&u.aiMode!=='combat'){
+             u.aiMode='investigate';u.searchT=STEALTH.CONFIG.investigateSeconds+
+               Math.hypot(noise.x-u.x,noise.z-u.z)/Math.max(1,u.sp*.65);
+           }
+           // El soroll no revela la posició ACTUAL del jugador; només
+           // deixa un rastre de posició que pot tenir una petita imprecisió.
+           const uncertainty=noise.kind==='alert'?0:noise.radius>=100?4:1.5;
+           u.lastSeenX=noise.x+Math.sin(u.x+noise.id)*uncertainty;
+           u.lastSeenZ=noise.z+Math.cos(u.z+noise.id)*uncertainty;
+           u.lastSeenY=noise.y;
+         }
+       }
       u.defenseTarget=null;
     }else{
       u.canSee=seen;
@@ -6179,23 +7292,52 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
     }
   }
 
-  if(u.t==='soldat'&&(u.canSee||u.pursuitT>0)){
-    u.pursuitT=Math.max(0,(u.pursuitT||0)-dt);
+   if(u.t==='soldat'&&(u.canSee||u.aiMode&&u.aiMode!=='patrol')){
     u.tacticT=Math.max(0,(u.tacticT||0)-dt);
-    const target=u.canSee?q:{x:u.lastSeenX,z:u.lastSeenZ},
+     const target=u.canSee?q:{x:u.lastSeenX??u.x,z:u.lastSeenZ??u.z},
           targetY=u.canSee?py:(u.lastSeenY??py),
           td=Math.hypot(target.x-u.x,target.z-u.z);
-    const entering=hidingInside&&soldierEnterBuilding(u,ib,target,dt);
-    if(!entering)soldierEngage(u,target,targetY,dt,td,!!u.canSee);
-    if(!entering&&u.canSee&&u.canShoot&&d<=SOLDIER_FIRE_RANGE&&u.cd<=0){
+     if(!u.canSee){
+       u.searchT=Math.max(0,(u.searchT||0)-dt);
+       if(u.searchT<=0){u.aiMode='patrol';u.recognition=0;u.tacticGoal=null}
+     }
+     if(u.aiMode!=='patrol'){
+       const entering=!!ib&&(u.canSee||hidingInside&&td<17)&&
+         soldierEnterBuilding(u,ib,target,dt);
+       if(!entering){
+         if(u.canSee)soldierEngage(u,target,targetY,dt,td,true);
+         else soldierInvestigate(u,target,dt,u.aiMode==='search'?1:.65);
+       }
+     }
+     if(u.aiMode!=='patrol'&&u.canSee&&u.canShoot&&d<=SOLDIER_FIRE_RANGE&&u.cd<=0){
       u.cd=u.rate;
       const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
       if(u.rocketSoldier){
         const fx=-Math.sin(u.hd),fz=-Math.cos(u.hd),
               rightX=Math.cos(u.hd),rightZ=-Math.sin(u.hd);
         shoot(u.x+fx*1.65+rightX*.44,eyeY+.65,
-          u.z+fz*1.65+rightZ*.44,ax,ay,az,76,25,8,'e',mS,1.9);
+          u.z+fz*1.65+rightZ*.44,ax,ay,az,76,COMBAT_BALANCE.weapons.bazooka,8,'e',mS,1.9);
       }else shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE);
+    }
+  }else if(u.t==='general'&&u.canSee){
+    // Fugida lenta mentre dispara. El general continua sempre dins del
+    // seu despatx subterrani i no atravessa envans ni mobiliari.
+    if(u.basement?.basement?.generalRoom&&d<36&&d>.01){
+      const b=u.basement,room=b.basement.generalRoom;
+      const nx=dx/d,nz=dz/d;
+      const local=buildingLocalPoint(b,u.x-nx*7,u.z-nz*7);
+      const destination=buildingWorldPoint(b,
+        Math.max(room.xMin,Math.min(room.xMax,local.x)),
+        Math.max(room.zMin,Math.min(room.zMax,local.z)));
+      if(Math.hypot(destination.x-u.x,destination.z-u.z)>.7)
+        mvE(u,u.sp*dt,destination.x,destination.z);
+    }
+    // Independentment de la direcció de la fugida, mira el jugador.
+    u.hd=Math.atan2(u.x-q.x,u.z-q.z);
+    if(d<u.rng&&u.cd<=0&&soldierClearShot(u,u.x,u.z,eyeY,q,py)){
+      u.cd=u.rate;
+      const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
+      shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE);
     }
   }else if(u.canSee){
     u.hd=Math.atan2(-dx,-dz);
@@ -6208,7 +7350,7 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
     if(u.t==='torre'){
       const weapon=towerWeaponForTarget(cv);
       // Mai no fem servir projectils pesats contra una persona a peu.
-      // Tampoc gastam bales lleugeres inútils contra un blindat.
+      // El tipus de tir depèn de si el jugador pilota un vehicle.
       if(weapon==='light'&&d<u.rng&&u.cd<=0){
         u.cd=u.rate;
         const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY),
@@ -6220,17 +7362,23 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
         const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY-.2),
               fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
         shoot(u.x+fx*2.4+Math.cos(u.hd)*.72,eyeY-.2,
-          u.z+fz*2.4-Math.sin(u.hd)*.72,ax,ay,az,76,24,7,'e',mS,1.8);
+          u.z+fz*2.4-Math.sin(u.hd)*.72,ax,ay,az,76,COMBAT_BALANCE.weapons.towerHeavy,7,'e',mS,1.8);
       }
     }else if(u.t!=='tanc'&&u.t!=='tanqueta'&&d<u.rng&&u.cd<=0){
-      u.cd=u.rate;const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
-      const smallBullet=u.t==='tanqueta'||u.t==='general';
-      shoot(u.x,eyeY,u.z,ax,ay,az,u.spl?60:70,u.dmg,u.spl,
-        'e',smallBullet?mW:mE,smallBullet?SMALL_ARMS_SCALE:(u.spl?2:1));
+      if(u.t==='jeep'){
+        const rifle=enemyCarRifleShot(u,q,py);
+        if(rifle){u.cd=u.rate;const p=rifle.origin,v=rifle.direction;
+          shoot(p.x,p.y,p.z,v.x,v.y,v.z,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE)}
+      }else{
+        u.cd=u.rate;const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
+        const smallBullet=u.t==='general';
+        shoot(u.x,eyeY,u.z,ax,ay,az,u.spl?60:70,u.dmg,u.spl,
+          'e',smallBullet?mW:mE,smallBullet?SMALL_ARMS_SCALE:(u.spl?2:1));
+      }
     }
-  }else if(u.sp>0){
+  }else if(u.sp>0&&u.t!=='general'){
     const waypointDistance=Math.hypot(u.tx-u.x,u.tz-u.z),
-          hqPatrolVehicle=u.t==='tanqueta'&&!!u.hqPatrolZone||enemyIsVehicle(u)&&u.compound==='hq';
+          hqPatrolVehicle=u.t==='tanqueta'&&!!u.hqPatrolZone||enemyIsVehicle(u)&&u.compound==='hq'||!!u.interCompoundPatrol;
     // Una tanqueta tarda bastant més de 2,5 s a travessar un tram
     // de 68 m. No li avancem el waypoint abans d'arribar-hi:
     // això la feia tallar pel búnquer i acabar encallada a les cantonades.
@@ -6247,7 +7395,13 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
   }
 
   u.o.position.set(u.x,(u.gy!=null?u.gy:enemyGroundAt(u,u.x,u.z))+(u.t=='jeep'||u.t=='tanc'?.05:0),u.z);
-  if(enemyIsVehicle(u)){u.hd=u.navHd??u.hd}
+  if(enemyIsVehicle(u)){
+    // Velocitat real del desplaçament, no la velocitat nominal de patrulla.
+    // La col·lisió amb un jugador a peu la consultarà al fotograma següent.
+    u.impactFromX=oldX;u.impactFromZ=oldZ;
+    u.impactSpeed=dt>.0001?Math.hypot(u.x-oldX,u.z-oldZ)/dt:0;
+    u.hd=u.navHd??u.hd;
+  }
   // Enemics que comparteixen model de cotxe/tanqueta: el tren davanter
   // segueix la direcció real del moviment, sense canviar la seva IA.
   const lastVisualHeading=u.o.rotation.y;
@@ -6269,8 +7423,8 @@ function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.
       }
       const offset=u.armoredAimSpread,
             gun=window.HUNTER_VEHICLES.turretShot(THREE,u.o);
-      if(gun)desired.set(q.x+offset.x-gun.origin.x,
-        py+1.5+offset.y-gun.origin.y,q.z+offset.z-gun.origin.z);
+       if(gun)desired.set(q.x+offset.x-gun.origin.x,
+         py+(!cv&&playerCrouched?1.25:1.5)+offset.y-gun.origin.y,q.z+offset.z-gun.origin.z);
     }else u.armoredAimSpread=null;
     const aligned=window.HUNTER_VEHICLES.aimTurret(THREE,u.o,desired,dt);
     if(u.canSee&&d<u.rng&&u.cd<=0&&aligned){
@@ -6320,20 +7474,55 @@ function updDead(dt){
     if(pose.height===0){pose.vy=0;pose.vx*=Math.exp(-9*dt);pose.vz*=Math.exp(-9*dt)}
     else{pose.vx*=Math.exp(-1.1*dt);pose.vz*=Math.exp(-1.1*dt)}
     u.x+=pose.vx*dt;u.z+=pose.vz*dt;
-    const base=Math.max(0,hAt(u.x,u.z));
+    const base=u.basement?u.basement.basement.floorY:Math.max(0,hAt(u.x,u.z));
     u.o.position.set(u.x,base+pose.height+.05+(1-e)*.12,u.z);
     u.o.rotation.set(pose.pitch*e,u.hd+pose.yaw*e,pose.roll*e,'YXZ');
-    if(u.o.userData.arms)u.o.userData.arms.forEach((arm,j)=>{
-      arm.rotation.x=(j?pose.armR:pose.armL)*e;
-      arm.rotation.z=(j?-.3:.3)*e;
-    });
-    if(u.o.userData.legs)u.o.userData.legs.forEach((leg,j)=>
-      leg.rotation.x=(j?pose.legR:pose.legL)*e);
-    if(u.deadT>18){world.remove(u.o);DEAD.splice(i,1)}
+    if(u.ragdoll){
+      // El ragdoll queda en repòs després de 3,2 s. Els cadàvers
+      // continuen visibles fins als 18 s, però ja no consumeixen
+      // integracions d'articulacions durant els últims fotogrames.
+      if(u.deadT<3.2||pose.height>.09)
+        window.HUNTER_RAGDOLL.update(u.ragdoll,dt,{
+          airborne:pose.height>.09,grounded:pose.height<=.09});
+    }else{
+      // Animació específica del general, controlada per la victòria.
+      if(u.o.userData.arms)u.o.userData.arms.forEach((arm,j)=>{
+        arm.rotation.x=(j?pose.armR:pose.armL)*e;
+        arm.rotation.z=(j?-.3:.3)*e;
+      });
+      if(u.o.userData.legs)u.o.userData.legs.forEach((leg,j)=>
+        leg.rotation.x=(j?pose.legR:pose.legL)*e);
+    }
+    if(u.deadT>18){
+      if(u.ragdoll){window.HUNTER_RAGDOLL.reset(u.ragdoll);u.ragdoll=null}
+      world.remove(u.o);DEAD.splice(i,1)
+    }
   }
 }
 
-function mkEn(t,x,z,gy){const c=EC[t];let g;
+function attachEnemyCarCrew(car){
+  const makeSoldier=()=>window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M}),
+        driver=makeSoldier(),gunner=makeSoldier();
+  driver.position.set(-.73,.94,-.43);gunner.position.set(.72,.94,-.43);
+  driver.scale.setScalar(.43);gunner.scale.setScalar(.43);
+  driver.userData.ar.rotation.x=1.18;driver.userData.al.rotation.x=1.12;
+  gunner.userData.ar.rotation.x=1.25;gunner.userData.aer.rotation.x=.35;
+  gunner.rotation.y=.26;
+  // Un conductor sense fusell; l'artiller treu el seu per la finestra.
+  driver.userData.gun.visible=false;
+  const rifle=gunner.userData.gun;
+  rifle.parent.remove(rifle);
+  const mount=new THREE.Group(),pitch=new THREE.Group();
+  mount.position.set(1.46,2.07,-.30);mount.add(pitch);car.add(mount);
+  rifle.position.set(0,-.035,-.14);rifle.rotation.set(0,0,0);rifle.scale.setScalar(.94);
+  pitch.add(rifle);
+  // Tram final visible del canó; el marcador coincideix amb l'extrem.
+  bx(rifle,.075,.075,.42,0x252d2c,0,0,-.97,'metal');
+  const muzzle=new THREE.Object3D();muzzle.position.set(0,0,-1.18);rifle.add(muzzle);
+  car.add(driver,gunner);
+  car.userData.enemyCarCrew={driver,gunner,mount,pitch,muzzle};
+}
+function mkEn(t,x,z,gy,options={}){const c=EC[t];let g;
 if(seedSearchMode){
   g=new THREE.Group();
   // Mateixos registres de col·lisió de les potes, sense construir la torre.
@@ -6341,9 +7530,9 @@ if(seedSearchMode){
     [-1.45,1.45].map(lz=>({position:{x:lx,y:3.9,z:lz},
       geometry:{parameters:{width:.38,height:7.8,depth:.38}}})));
 }
-else if(t=='soldat'||t=='general'){g=window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M,general:t==='general'})}
+else if(t=='soldat'||t=='general'){g=window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M,general:t==='general',elite:!!options.elite})}
 else if(t==='patrulla_marina'){g=mkV('llanxa');createMarinePatrolVisual(g)}
-else if(t=='jeep'){g=mkV('cotxe');bx(g,.2,2,.2,0xff2020,0,3.4,0)}
+else if(t=='jeep'){g=mkV('cotxe');attachEnemyCarCrew(g);bx(g,.2,2,.2,0xff2020,0,3.4,0)}
 else if(t=='tanqueta'){g=mkV('tanqueta');bx(g,.18,1.7,.18,0xff2020,0,3.2,.4)}
 else if(t=='tanc'){g=mkV('tanc');bx(g,.2,2,.2,0xff2020,0,4,0)}
 else if(t=='torre'){g=new THREE.Group();const leg=0x4b5157,deck=0x626b70,cabin=0x7c2f2f,roof=0x343a3e;
@@ -6366,6 +7555,7 @@ bx(g,.42,.8,.42,0xe4d36f,0,10.78,0,'paint')}
 else{g=new THREE.Group();bx(g,1,1,.6,0x222222,0,.5,0);bx(g,1.3,1.6,.7,0xd4af37,0,1.8,0);bx(g,.8,.8,.8,0xf0c9a0,0,3,0);bx(g,.9,.5,.9,0xaa0000,0,3.6,0);g.scale.setScalar(1.2)}
 if(!seedSearchMode&&t!=='soldat'&&t!=='general')window.HUNTER_ENEMY_LOD.optimize(THREE,g,t);
 if(!seedSearchMode)world.add(g);const sensePhase=(E.length%10)*.01,u={t,x,z,gy,hd:rr(0,6.28),o:g,home:{x,z},cd:rr(0,1),alert:0,wt:0,tx:x,tz:z,senseT:sensePhase,canSee:false,defenseTarget:null,...c};
+if(options.elite){u.elite=true;u.hp=COMBAT_BALANCE.people.elite;u.dmg=COMBAT_BALANCE.weapons.eliteRifle;u.rng=85;u.rate=TANKETTE_FIRE_INTERVAL;u.sp=8;u.cd=.4+(E.length%4)*.14}
 if(t==='torre'){u.heavyCd=1.6+(E.length%5)*.4;u.heavyRate=4.2;u.heavyRange=95}
 E.push(u);
 if(t==='torre'){
@@ -6384,11 +7574,29 @@ if(t==='torre'){
 return u}
 
 
-
 ;
 // END src/enemy-ai.js
 // BEGIN src/audio.js
 // Compatibility extraction: shared state remains in game-core.js.
+// Campana fúnebre sintetitzada, amb harmònics metàl·lics i decaïment lent.
+// No necessita descarregar fitxers d'àudio ni manté oscil·ladors actius.
+function deathBell(volume=1){
+ if(!AC||muted)return;
+ try{
+  const now=AC.currentTime,partials=[1,2.01,2.49,3.98,5.03],
+        strengths=[.38,.17,.13,.08,.045];
+  for(let i=0;i<partials.length;i++){
+   const osc=AC.createOscillator(),gain=AC.createGain(),
+         start=Math.min(1,Math.max(0,volume))*strengths[i],length=4.4-i*.43;
+   osc.type='sine';osc.frequency.setValueAtTime(174.61*partials[i],now);
+   gain.gain.setValueAtTime(.0001,now);
+   gain.gain.exponentialRampToValueAtTime(start,now+.012);
+   gain.gain.exponentialRampToValueAtTime(.0001,now+length);
+   osc.connect(gain);gain.connect(AC.destination);
+   osc.start(now);osc.stop(now+length+.03);
+  }
+ }catch(e){}
+}
 function initAudio(){try{AC=new(window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type='sawtooth';o.frequency.value=40;g.gain.value=0;o.connect(g);g.connect(AC.destination);o.start();eng={o,g};const length=AC.sampleRate*8,buf=AC.createBuffer(1,length,AC.sampleRate),samples=buf.getChannelData(0);let smooth=0;for(let i=0;i<length;i++){smooth=.985*smooth+.015*(Math.random()*2-1);const swell=.35+.65*Math.pow(.5+.5*Math.sin(i/length*Math.PI*4),2);samples[i]=smooth*9*swell}const noise=AC.createBufferSource(),filter=AC.createBiquadFilter(),gain=AC.createGain();noise.buffer=buf;noise.loop=true;filter.type='lowpass';filter.frequency.value=850;gain.gain.value=.055;noise.connect(filter);filter.connect(gain);gain.connect(AC.destination);noise.start();seaAudio={noise,filter,gain};AC.resume()}catch(e){}}
 function snd(t,v=1){if(!AC||v<=.02)return;const n=AC.currentTime;if(lastS[t]&&n-lastS[t]<.06)return;lastS[t]=n;
 if(t=='pick'){const o=AC.createOscillator(),g=AC.createGain();o.frequency.setValueAtTime(660,n);o.frequency.setValueAtTime(990,n+.08);g.gain.setValueAtTime(.15*v,n);g.gain.exponentialRampToValueAtTime(.001,n+.2);o.connect(g);g.connect(AC.destination);o.start(n);o.stop(n+.2);return}
@@ -6505,6 +7713,9 @@ const victoryClamp=t=>Math.max(0,Math.min(1,t));
 const victoryEase=t=>{const p=victoryClamp(t);return p*p*(3-2*p)};
 
 function victoryShotSnapshot(general,shot){
+  const attack=shot?.weapon==='knife'?'knife':shot?.weapon==='grenade'?'grenade':
+    shot?.weapon==='bazooka'||shot?.own==='pb'?'rocket':
+    !shot?'impact':shot.spl>0&&!Number.isFinite(shot.vx)?'explosion':'bullet';
   const hit=new THREE.Vector3(general.x,general.o.position.y+1.6,general.z),
         from=shot&&Number.isFinite(shot.sx)&&Number.isFinite(shot.sz)
           ?new THREE.Vector3(shot.sx,shot.sy,shot.sz)
@@ -6516,9 +7727,72 @@ function victoryShotSnapshot(general,shot){
   if(direction.lengthSq()<.01)direction.set(0,0,-1);
   direction.normalize();
   const distance=Math.min(34,Math.max(7,from.distanceTo(hit)));
-  return {hit,from,impact,direction,
-    approach:hit.clone().addScaledVector(direction,-distance),
+  return {hit,from,impact,direction,attack,
+    approach:attack==='grenade'?from.clone():hit.clone().addScaledVector(direction,-distance),
     heavy:!!(shot?.spl>0),source:shot?.own||'p'};
+}
+
+function victoryReplayProjectile(shot,source){
+  if(shot.attack==='knife'||shot.attack==='impact'||shot.attack==='explosion')return null;
+  if(shot.attack==='grenade'&&source?.o)return source.o.clone(true);
+  if(shot.attack==='rocket'){
+    // Coet amb cos i aletes recognoscibles, diferent de l'ojiva del canó.
+    const rocket=new THREE.Group(),metal=new THREE.MeshStandardMaterial({color:0x6f7960,metalness:.48,roughness:.48}),
+          body=new THREE.Mesh(gHeavy,metal);
+    body.scale.set(1.1,1.1,2.25);rocket.add(body);
+    for(let i=0;i<4;i++){
+      const a=i*Math.PI/2,fin=new THREE.Mesh(new THREE.BoxGeometry(.09,.39,.46),metal);
+      fin.position.set(Math.cos(a)*.23,Math.sin(a)*.23,.68);fin.rotation.z=a;rocket.add(fin);
+    }
+    const flame=new THREE.Mesh(new THREE.ConeGeometry(.15,.54,8),
+      new THREE.MeshBasicMaterial({color:0xffb04e,transparent:true,opacity:.85,depthWrite:false}));
+    flame.rotation.x=Math.PI/2;flame.position.z=1.34;rocket.add(flame);
+    return rocket;
+  }
+  // gB va desaparèixer en substituir les bales per gLight: el darrer tret
+  // al general provocava ReferenceError just en començar la victòria.
+  return new THREE.Mesh(shot.heavy?gHeavy:gLight,shot.heavy?mS:mW);
+}
+
+function victoryKnifeSlash(shot){
+  if(shot.attack!=='knife')return null;
+  const points=[];
+  for(let i=0;i<=16;i++){
+    const a=-1.15+2.3*i/16;
+    points.push(shot.hit.clone().addScaledVector(shot.direction,Math.sin(a)*.78)
+      .add(new THREE.Vector3(0,Math.cos(a)*.68-.14,0)));
+  }
+  const slash=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points),16,.045,5,false),
+    new THREE.MeshBasicMaterial({color:0xdbe9ed,transparent:true,opacity:.82,depthWrite:false}));
+  slash.visible=false;scene.add(slash);return slash;
+}
+
+function victoryReplaySound(shot){
+  if(shot.attack==='knife'||shot.attack==='impact'){snd('hurt',.55);return}
+  if(shot.attack==='grenade'||shot.attack==='rocket'||shot.attack==='explosion'){snd('boom',.72);return}
+  victorySlowGunshot(shot.heavy);
+}
+
+function victoryClearObstructions(v){
+  // La simulació s'atura quan mor el general: els fragments i el flaix
+  // de l'explosió quedarien congelats davant de la càmera.
+  for(const d of DB){
+    const mesh=d.m;if(!mesh||v.dimmedFragments.has(mesh))continue;
+    const original=mesh.material;
+    const dim=material=>{
+      if(!material)return material;
+      if(!v.fragmentMaterials.has(material)){
+        const faded=material.clone();faded.transparent=true;faded.opacity=.23;faded.depthWrite=false;
+        v.fragmentMaterials.set(material,faded);
+      }
+      return v.fragmentMaterials.get(material);
+    };
+    v.dimmedFragments.set(mesh,original);
+    mesh.material=Array.isArray(original)?original.map(dim):dim(original);
+  }
+  for(const f of fx)if(f.o&&!v.hiddenExplosionFx.has(f.o)){
+    v.hiddenExplosionFx.set(f.o,f.o.visible);f.o.visible=false;
+  }
 }
 
 function victorySlowGunshot(heavy){
@@ -6586,7 +7860,11 @@ function clearVictoryCinematic(){
   victoryUi(false);
   if(v.pose)window.HUNTER_VICTORY_POSE.apply(v.pose,0);
   if(v.bullet)scene.remove(v.bullet);
+  if(v.knifeSlash){scene.remove(v.knifeSlash);v.knifeSlash.geometry.dispose();v.knifeSlash.material.dispose()}
   if(v.impactFlash)scene.remove(v.impactFlash);
+  for(const [mesh,material] of v.dimmedFragments)mesh.material=material;
+  for(const material of v.fragmentMaterials.values())material.dispose();
+  for(const [mesh,visible] of v.hiddenExplosionFx)mesh.visible=visible;
   for(const gull of v.gulls)scene.remove(gull.o);
   if(v.overlay?.parentNode)v.overlay.parentNode.removeChild(v.overlay);
   // No manipulem ni destruïm geometries/materials compartits del joc.
@@ -6603,10 +7881,12 @@ function startVictoryCinematic(general,killingShot=null){
   if(eng)eng.g.gain.value=0;
   // El personatge havia entrat al sistema normal de morts.
   // Durant el replay animarem exclusivament aquest general.
-  const bg=new THREE.Mesh(shot.heavy?gHeavy:gB,shot.heavy?mS:mW);
-  bg.scale.setScalar(shot.heavy?1.6:.85);
-  bg.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1),shot.direction);
-  scene.add(bg);bg.visible=false;
+  const bg=victoryReplayProjectile(shot,killingShot),knifeSlash=victoryKnifeSlash(shot);
+  if(bg){
+    bg.scale.setScalar(shot.attack==='grenade'?2.7:shot.attack==='rocket'?1.35:shot.heavy?1.6:.85);
+    bg.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1),shot.direction);
+    scene.add(bg);bg.visible=false;
+  }
   const flash=new THREE.Mesh(new THREE.SphereGeometry(.52,9,6),
     new THREE.MeshBasicMaterial({color:0xffc975,transparent:true,opacity:.8,depthWrite:false}));
   flash.visible=false;scene.add(flash);
@@ -6617,7 +7897,7 @@ function startVictoryCinematic(general,killingShot=null){
     display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
     pointerEvents:'none',fontFamily:'system-ui,sans-serif',textAlign:'center'});
   const caption=document.createElement('div');
-  caption.textContent='EL DARRER DISPAR';
+  caption.textContent='KILL CAM';
   Object.assign(caption.style,{position:'absolute',top:'7%',fontSize:'clamp(14px,2vw,24px)',
     fontWeight:'700',letterSpacing:'.28em',color:'#fff1da',textShadow:'0 2px 10px #000',
     opacity:'0',transition:'opacity .3s'});
@@ -6666,9 +7946,10 @@ function startVictoryCinematic(general,killingShot=null){
             new THREE.Vector3(0,0,0),sunDir,new THREE.Vector3(0,1,0)));
   victoryCinematic={active:true,t:0,phase:'replay1',general,base,pose,
     overheadOrientation,sunsetOrientation,
-    shot,seaDir,seaCamera,bullet:bg,impactFlash:flash,
+    shot,seaDir,seaCamera,bullet:bg,knifeSlash,impactFlash:flash,
     gulls,overlay,caption,title,hint,originalVisibility:{},
-    lastReplay:-1,cryTime:0,finished:false};
+    lastReplay:-1,gullCries:0,finished:false,
+    dimmedFragments:new Map(),fragmentMaterials:new Map(),hiddenExplosionFx:new Map()};
   victoryUi(true);endEl.style.display='none';
   return true;
 }
@@ -6718,52 +7999,82 @@ function victoryAnimateGulls(v){
     const size=.95+(i%4)*.33;
     gull.o.scale.setScalar(size*(1-.62*victoryEase(p)));
   }
-  if(offset>0&&v.t-v.cryTime>2.1){victoryGullCry();v.cryTime=v.t}
+  if(v.gullCries<2&&offset>.5+v.gullCries*2.2){victoryGullCry();v.gullCries++}
 }
 function updateVictoryCinematic(dt){
   const v=victoryCinematic;
   if(!v||(!v.active&&!v.finished))return;
   v.t+=Math.max(0,Math.min(.1,dt));
+  victoryClearObstructions(v);
   if(v.finished){victoryAnimateGulls(v);return}
   const replayTotal=VICTORY_REPLAY_SECONDS*3,overheadEnd=replayTotal+VICTORY_OVERHEAD_SECONDS,
         end=overheadEnd+VICTORY_SUNSET_SECONDS;
   const target=v.shot.hit,dir=v.shot.direction,
         across=new THREE.Vector3(-dir.z,0,dir.x),base=v.base;
-  v.bullet.visible=false;v.impactFlash.visible=false;
+  if(v.bullet)v.bullet.visible=false;
+  if(v.knifeSlash)v.knifeSlash.visible=false;
+  v.impactFlash.visible=false;
   v.caption.style.opacity=v.t<replayTotal?'1':'0';
   if(v.t<replayTotal){
     const idx=Math.floor(v.t/VICTORY_REPLAY_SECONDS),
           local=v.t-idx*VICTORY_REPLAY_SECONDS;
     v.phase='replay'+(idx+1);
-    if(v.lastReplay!==idx){v.lastReplay=idx;victorySlowGunshot(v.shot.heavy)}
+    if(v.lastReplay!==idx){v.lastReplay=idx;victoryReplaySound(v.shot)}
     const fall=victoryClamp((local-.85)/1.22);
     victorySetFall(fall);
-    // El mateix tret torna a aparèixer tres vegades: sense tornar a fer
-    // dany ni a modificar la partida. Velocitat visual ≈ 20% de la normal.
+    // Tres repeticions visuals de l'atac real, sense tornar a fer dany.
     const bulletT=victoryClamp((local-.18)/.88);
-    if(local>=.18&&local<=1.06){
+    if(v.bullet&&local>=.18&&local<=1.06){
       v.bullet.visible=true;
-      v.bullet.position.copy(v.shot.approach).lerp(target,bulletT);
+      const destination=v.shot.heavy?v.shot.impact:target;
+      v.bullet.position.copy(v.shot.approach).lerp(destination,bulletT);
+      if(v.shot.attack==='grenade'){
+        v.bullet.position.y+=Math.sin(Math.PI*bulletT)*Math.min(7,v.shot.from.distanceTo(destination)*.23);
+        v.bullet.rotateX(dt*5);v.bullet.rotateZ(dt*3);
+      }
     }
-    if(local>=.98&&local<1.35){
+    if(v.shot.attack==='knife'){
+      // Animació de l'arma i del braç del jugador, no una bala inventada.
+      const knifeProgress=victoryClamp((local-.32)/.82);
+      pl.userData.meleePose=Math.max(.001,(pl.userData.knifeAttackDuration||.48)*(1-knifeProgress));
+      window.HUNTER_CHARACTERS.animatePlayer(pl,{forward:0,dt:.055,
+        swimming:false,inVehicle:false,ammo:0});
+      if(v.knifeSlash&&local>=.48&&local<=1.12){
+        v.knifeSlash.visible=true;
+        v.knifeSlash.material.opacity=.8*(1-victoryClamp((local-.62)/.5));
+      }
+    }
+    if(v.shot.attack!=='knife'&&v.shot.attack!=='impact'&&local>=.98&&local<1.35){
       v.impactFlash.visible=true;
-      v.impactFlash.position.copy(target);
+      v.impactFlash.position.copy(v.shot.heavy?v.shot.impact:target);
       const k=(local-.98)/.37;
-      v.impactFlash.scale.setScalar(.5+k*1.5);
+      v.impactFlash.scale.setScalar(v.shot.heavy?1+k*4:.5+k*1.5);
       v.impactFlash.material.opacity=(1-k)*.85;
     }
     const side=idx===0?1:idx===1?-1:.42,
           distance=idx===2?11:15,
           elev=idx===1?5.2:idx===2?3.2:6;
-    const desired=target.clone().addScaledVector(across,side*distance)
+    let desired=target.clone().addScaledVector(across,side*distance)
       .addScaledVector(dir,idx===2?-8:idx===1?8:-2);
     desired.y=Math.max(hAt(desired.x,desired.z)+2,target.y+elev);
+    if(v.general.basement?.basement){
+      // El general ara cau al despatx subterrani: tres angles dins de
+      // l'habitació, no càmeres a la superfície mirant a través del sostre.
+      const b=v.general.basement,p=b.basement.generalLocal,
+            relative=[[2.8,2.7],[-3.1,1.4],[.8,-3.2]][idx],
+            look=buildingWorldPoint(b,p.x+relative[0],p.z+relative[1]);
+      desired.set(look.x,b.basement.floorY+3.3,look.z);
+    }
     cam.position.copy(desired);
     cam.lookAt(target.x,target.y+(idx===1?.3:0),target.z);
     const fov=idx===2?43:48;
     if(cam.fov!==fov){cam.fov=fov;cam.updateProjectionMatrix()}
   }else if(v.t<overheadEnd){
     v.phase='overhead';victorySetFall(1);
+    if(v.general.basement?.basement){
+      for(const mesh of v.general.basement.basement.upperSlabMeshes)mesh.visible=false;
+      v.general.basement.roof.visible=false;
+    }
     const f=victoryEase((v.t-replayTotal)/VICTORY_OVERHEAD_SECONDS),
           h=10+175*f;
     // Ascens absolutament vertical, sense orbitar ni cridar lookAt
@@ -6795,6 +8106,489 @@ function updateVictoryCinematic(dt){
 
 ;
 // END src/victory-cinematic.js
+// BEGIN src/death-cinematic.js
+// Cinemàtica de mort: recreació a càmera lenta de la causa, fosa al buit
+// i trobada amb la Parca. No reprèn la simulació ni torna a aplicar dany.
+const DEATH_REPLAY_SECONDS=4.5,DEATH_FADE_SECONDS=1.8,DEATH_REAPER_SECONDS=6.3;
+let deathCinematic=null;
+const deathClamp=t=>Math.max(0,Math.min(1,t));
+const deathEase=t=>{const p=deathClamp(t);return p*p*(3-2*p)};
+function deathStageAt(t){
+ if(t<DEATH_REPLAY_SECONDS)return 'replay';
+ if(t<DEATH_REPLAY_SECONDS+DEATH_FADE_SECONDS)return 'fade';
+ if(t<DEATH_REPLAY_SECONDS+DEATH_FADE_SECONDS+DEATH_REAPER_SECONDS)return 'reaper';
+ return 'finished';
+}
+function deathCauseInfo(cause){
+ const names={
+  bullet:['UN DISPAR','El projectil que t’ha abatut'],
+  explosion:['UNA EXPLOSIÓ','L’ona expansiva'],
+  fall:['UNA CAIGUDA','L’impacte contra el terra'],
+  shark:['UN TAURÓ','Un atac sota l’aigua'],
+  runover:['UN ATROPELLAMENT','L’envestida d’un vehicle'],
+  vehicleExplosion:['EL TEU VEHICLE','L’explosió del vehicle'],
+  impact:['UN IMPACTE','El cop definitiu']
+ };
+ const kind=names[cause?.type]?cause.type:'impact';
+ return {kind,title:names[kind][0],detail:names[kind][1]};
+}
+function deathUi(show){
+ const v=deathCinematic;if(!v)return;
+ for(const id of ['hud','mm','perfStats','contextButtons','joystick','strafeLeft','strafeRight','sniperScope','bazookaReticle']){
+  const el=document.getElementById(id);if(!el)continue;
+  if(show){v.previousVisibility[id]=el.style.visibility;el.style.visibility='hidden'}
+  else el.style.visibility=v.previousVisibility[id]||'';
+ }
+}
+// Només a l'escena de la Parca (després de la fosa): cos bocaterrosa,
+// extremitats relaxades i cara visible de costat, com a la referència.
+// El model mira cap a -Z i té l'origen als peus, per això el compensam
+// longitudinalment quan l'ajau per evitar que el tors surti del pla.
+function deathPoseProne(player,centre,heading){
+ const u=player.userData,forwardX=-Math.sin(heading),forwardZ=-Math.cos(heading);
+ player.position.set(centre.x-forwardX*1.05,centre.y+.39,centre.z-forwardZ*1.05);
+ player.rotation.set(-Math.PI/2,heading,0);
+ if(u.upperBody)u.upperBody.rotation.set(0,0,0);
+ if(u.head)u.head.rotation.set(-.06,0,0);
+ // Els braços queden oberts i els colzes flexionen cap al costat
+ // anatòmic correcte (en positiu, oposat a la postura invertida antiga).
+ if(u.al)u.al.rotation.set(-.22,-.08,-.65);
+ if(u.ar)u.ar.rotation.set(-.22,.08,.65);
+ if(u.ael)u.ael.rotation.set(.60,0,-.09);
+ if(u.aer)u.aer.rotation.set(.60,0,.09);
+ if(u.ll)u.ll.rotation.set(.07,0,-.08);
+ if(u.lr)u.lr.rotation.set(-.09,0,.08);
+ if(u.lkl)u.lkl.rotation.set(-.12,0,0);
+ if(u.lkr)u.lkr.rotation.set(-.16,0,0);
+ for(const weapon of [u.gun,u.knife,u.bazooka,u.grenade,u.sniper,u.cisalla])
+  if(weapon)weapon.visible=false;
+ if(u.pistolFlash)u.pistolFlash.visible=false;
+ player.visible=true;
+ player.updateMatrixWorld(true);
+}
+function deathFaceCamera(player,cameraPosition){
+ const head=player.userData?.head;
+ if(!head)return;
+ // El gir Y local, amb el cos ajagut, fa rodar la cara cap al costat
+ // des d'on mira la càmera. Limitam el gir per respectar el coll.
+ const headPosition=head.getWorldPosition(new THREE.Vector3()),
+       localView=new THREE.Vector3().copy(cameraPosition).sub(headPosition),
+       inverse=player.getWorldQuaternion(new THREE.Quaternion()).invert();
+ localView.applyQuaternion(inverse);
+ const angle=Math.atan2(-localView.x,-localView.z);
+ head.rotation.y=Math.max(-1.48,Math.min(1.48,angle));
+ head.rotation.x=-.06;
+}
+// La càmera lenta no imposa cap postura al jugador. Continuam el moviment
+// amb gravetat, inèrcia i contacte amb el terreny, com a la resta del joc.
+// La rotació és conseqüència de l'impuls i del contacte (cos rígid simplificat),
+// no d'una interpolació programada cap a la postura bocaterrosa de la Parca.
+function deathInitialMotion(v){
+ const airborne=playerFall,blast=playerEject,
+       speed=cv?Math.max(-60,Math.min(60,cv.v||0)):0,
+       heading=cv?.hd??P.hd??0,
+       push=v.cause.kind==='explosion'||v.cause.kind==='vehicleExplosion';
+ const velocity=new THREE.Vector3(
+  airborne?.vx??blast?.vx??(-Math.sin(heading)*speed),
+  airborne?.vy??(blast?.kind==='blast'?blast.vy:0),
+  airborne?.vz??blast?.vz??(-Math.cos(heading)*speed));
+ // Si l'explosió fatal d'un vehicle no ha creat cap expulsió prèvia,
+ // aplicam l'impuls des del focus de la deflagració, sense cap gir fix.
+ if(push&&!airborne&&!blast){
+  velocity.addScaledVector(v.direction,-9);
+  velocity.y+=6;
+ }
+ const kind=v.cause.kind;
+ const torque=kind==='explosion'||kind==='vehicleExplosion'?2.2:
+   kind==='runover'?1.8:kind==='shark'?.9:kind==='fall'?.55:1.15;
+ const angular=new THREE.Vector3(
+  -v.direction.z*torque,0,v.direction.x*torque);
+ if(airborne&&!airborne.parachute){
+  // Conservam la inèrcia angular que ja duia a la caiguda normal.
+  angular.x+=(airborne.spin||1)*2.5;
+ }
+ const orientation=pl.quaternion.clone();
+ const up=new THREE.Vector3(0,1,0).applyQuaternion(orientation);
+ const centre=new THREE.Vector3(P.x,P.y,P.z).addScaledVector(up,1.7);
+ return {centre,velocity,angular,orientation,onWater:v.onWater};
+}
+function deathReplayPose(v,dt=0){
+ const m=v.motion;
+ if(!m)return;
+ // Reproduïm els mateixos ordres de magnitud que playerFall/playerEject,
+ // però a velocitat cinematogràfica. Cap animació força l'angle final.
+ const step=Math.min(.1,Math.max(0,dt))*.65;
+ if(step){
+  const inWater=m.onWater&&m.centre.y<v.waterLevel+2.2;
+  m.velocity.y-=(inWater?7:24)*step;
+  const drag=Math.exp(-(inWater?1.9:.2)*step);
+  m.velocity.x*=drag;m.velocity.z*=drag;
+  m.centre.addScaledVector(m.velocity,step);
+  const turn=m.angular.length();
+  if(turn>1e-5){
+   const dq=new THREE.Quaternion().setFromAxisAngle(m.angular.clone().normalize(),turn*step);
+   m.orientation.premultiply(dq).normalize();
+  }
+  const up=new THREE.Vector3(0,1,0).applyQuaternion(m.orientation);
+  const ground=groundAt(m.centre.x,m.centre.z,m.centre.y),
+        surface=inWater?Math.max(ground,v.waterLevel-3.5):ground,
+        support=.52+1.18*Math.abs(up.y);
+  if(m.centre.y<surface+support){
+   m.centre.y=surface+support;
+   if(m.velocity.y<0)m.velocity.y=Math.abs(m.velocity.y)<3?0:-m.velocity.y*.12;
+   const friction=Math.exp(-(inWater?5:3.7)*step);
+   m.velocity.x*=friction;m.velocity.z*=friction;
+   // El pes fa perdre l'equilibri al cos després del cop. L'eix
+   // depèn de la inclinació existent, no d'una direcció predeterminada.
+   m.angular.x+=up.z*4.2*step;
+   m.angular.z-=up.x*4.2*step;
+   m.angular.multiplyScalar(Math.exp(-(inWater?2.8:1.5)*step));
+  }else m.angular.multiplyScalar(Math.exp(-.14*step));
+ }
+ const up=new THREE.Vector3(0,1,0).applyQuaternion(m.orientation);
+ pl.position.copy(m.centre).addScaledVector(up,-1.7);
+ pl.quaternion.copy(m.orientation);
+ pl.visible=true;
+ // Física d'articulacions independent de la trajectòria del cos.
+ // Els braços i les cames queden ben oberts després de la deflagració
+ // i es relaxen progressivament en contacte amb la superfície.
+ if(v.ragdoll){
+  const surface=groundAt(m.centre.x,m.centre.z,m.centre.y),
+        airborne=m.centre.y>surface+1.9;
+  window.HUNTER_RAGDOLL.update(v.ragdoll,step,{
+    airborne,grounded:!airborne
+  });
+ }
+ v.bodyFocus.copy(m.centre);
+ if(!v.impactSoundPlayed&&v.t>=v.impactTime){
+  v.impactSoundPlayed=true;
+  const kind=v.cause.kind;
+  if(kind==='shark')snd('swim',.95);
+  else if(kind==='explosion'||kind==='vehicleExplosion')snd('boom',.5);
+  else if(kind==='fall'||kind==='runover')snd('hurt',.75);
+  else snd('shot',.32);
+ }
+ pl.updateMatrixWorld(true);
+}
+function deathBuildReaper(THREE){
+ const g=new THREE.Group(),owned=[];
+ const mat=(color,extras={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.93,...extras});owned.push(m);return m};
+ const cloak=mat(0x11151b),inner=mat(0x030509),trim=mat(0x31313c),
+       bone=mat(0xb7b5a8),steel=mat(0x9da5ad,{metalness:.64,roughness:.33});
+ function part(geometry,material,x,y,z){owned.push(geometry);const m=new THREE.Mesh(geometry,material);m.position.set(x,y,z);g.add(m);return m}
+ part(new THREE.ConeGeometry(.93,3.05,9,1),cloak,0,1.49,0);
+ const shoulder=part(new THREE.SphereGeometry(.69,10,8),cloak,0,2.48,0);
+ shoulder.scale.set(1.24,.68,.85);
+ const hood=part(new THREE.SphereGeometry(.65,12,10),cloak,0,2.88,.12);
+ hood.scale.set(1,1.04,1.04);
+ const dark=part(new THREE.SphereGeometry(.47,10,8),inner,0,2.84,.55);
+ dark.scale.set(.83,.91,.3);
+ const skull=part(new THREE.SphereGeometry(.29,12,9),bone,0,2.83,.678);
+ skull.scale.set(1,.95,.42);
+ for(const x of [-.12,.12]){
+  const eye=part(new THREE.SphereGeometry(.083,8,6),inner,x,2.87,.795);
+  eye.scale.set(1,.72,.45);
+ }
+ const jaw=part(new THREE.BoxGeometry(.27,.1,.09),bone,0,2.64,.77);
+ jaw.rotation.x=.1;
+ for(const side of [-1,1]){
+  const sleeve=part(new THREE.ConeGeometry(.33,1.45,8),cloak,side*.67,2.13,.15);
+  sleeve.rotation.z=side*.42;
+  part(new THREE.SphereGeometry(.13,8,6),bone,side*.95,1.46,.27);
+ }
+ const shaft=part(new THREE.CylinderGeometry(.065,.085,4.45,8),trim,1.45,2.395,.3);
+ shaft.rotation.z=0;
+ // Fulla plana i corbada com la referència: NOMÉS el perfil de la
+ // fulla, no el mànec de la fotografia. La silueta afuada no és un tub.
+ const blade=new THREE.Shape();
+ // El tall apunta cap a fora (dreta) en lloc de travessar el cap.
+ // Mirall del perfil original respecte a l'eix vertical del mànec.
+ blade.moveTo(1.45,4.62);
+ blade.bezierCurveTo(2.02,4.83,3.15,4.70,3.73,2.96);
+ blade.bezierCurveTo(3.78,3.77,3.16,4.40,1.45,4.62);
+ const bladeMesh=part(new THREE.ShapeGeometry(blade,22),steel,0,0,.30);
+ bladeMesh.material.side=THREE.DoubleSide;
+ // Un fil clar al tall interior, en el mateix pla, sense gruix cilíndric.
+ const cuttingEdge=new THREE.CubicBezierCurve3(
+  new THREE.Vector3(3.73,2.96,.32),new THREE.Vector3(3.78,3.77,.32),
+  new THREE.Vector3(3.16,4.40,.32),new THREE.Vector3(1.45,4.62,.32));
+ const edgeGeometry=new THREE.BufferGeometry().setFromPoints(cuttingEdge.getPoints(22));
+ const edgeMaterial=new THREE.LineBasicMaterial({color:0xe1e5e3,transparent:true,opacity:.85});
+ owned.push(edgeGeometry,edgeMaterial);
+ g.add(new THREE.Line(edgeGeometry,edgeMaterial));
+ return {group:g,owned};
+}
+function deathCreateVoid(v){
+ const voidScene=new THREE.Scene();voidScene.background=new THREE.Color(0x000000);
+ const voidCamera=new THREE.PerspectiveCamera(46,cam.aspect,.2,100);
+ voidScene.add(new THREE.AmbientLight(0x5f6479,.72));
+ const rim=new THREE.DirectionalLight(0x9a9cbc,2.6);
+ rim.position.set(-4,8,-6);voidScene.add(rim);
+ const key=new THREE.SpotLight(0xf4ede1,10,22,Math.PI/4,.65,1.4);
+ key.position.set(3,7,5);key.target.position.set(0,1.2,0);
+ voidScene.add(key,key.target);
+ const player=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});
+ if(disg)for(const [material,original,disguise] of player.userData.mats)
+  material.color.copy(vivid(disguise));
+ deathPoseProne(player,{x:0,y:0,z:.85},-Math.PI/2);
+ // La posició del cos no coincideix amb l'origen del model (als peus).
+ // Apuntam al centre real dels elements visibles per evitar que el cos
+ // quedi desplaçat cap a la dreta quan és bocaterrosa.
+ const bodyBounds=new THREE.Box3();
+ player.traverseVisible(o=>{if(o.isMesh)bodyBounds.expandByObject(o)});
+ const bodyCentre=bodyBounds.isEmpty()?new THREE.Vector3(0,.65,0):
+  bodyBounds.getCenter(new THREE.Vector3());
+ voidCamera.position.set(bodyCentre.x,3.5,bodyCentre.z+10.8);
+ voidCamera.lookAt(bodyCentre.x,Math.max(1.15,bodyCentre.y+.6),bodyCentre.z-.15);
+ deathFaceCamera(player,voidCamera.position);
+ player.traverse(o=>{if(o.isMesh)o.castShadow=false});
+ voidScene.add(player);
+ const reaper=deathBuildReaper(THREE);
+ reaper.group.position.set(2.15,0,-14);
+ voidScene.add(reaper.group);
+ v.voidScene=voidScene;v.voidCamera=voidCamera;v.voidPlayer=player;
+ v.reaper=reaper;
+}
+// L'enfonsament es representa en una escena pròpia: sense el mar opac
+// ni el cel sobre la càmera. No afegim geometria ni animacions al món.
+function deathCreateUnderwater(v){
+ if(!v.onWater)return;
+ const underwaterScene=new THREE.Scene();
+ const shallow=new THREE.Color(0x8bd2e8),deep=new THREE.Color(0x0a2d50);
+ underwaterScene.background=shallow.clone();
+ const ambient=new THREE.AmbientLight(0x9bd8e8,1.65);
+ const key=new THREE.DirectionalLight(0xc5eaf2,1.25);
+ key.position.set(-3,8,6);
+ underwaterScene.add(ambient,key);
+ v.underwaterScene=underwaterScene;
+ v.underwaterShallow=shallow;
+ v.underwaterDeep=deep;
+ v.underwaterKey=key;
+}
+function deathUpdateUnderwater(v){
+ if(!v.underwaterScene||v.phase!=='replay'&&v.phase!=='fade')return;
+ // La transició comença quan la càmera queda per sota la superfície.
+ if(!v.underwaterActive&&cam.position.y<=v.waterLevel-.2){
+  v.underwaterScene.add(pl);
+  v.underwaterActive=true;
+ }
+ if(!v.underwaterActive)return;
+ const progress=deathEase((v.t-1.1)/3.45),
+       depth=deathClamp((v.waterLevel-v.bodyFocus.y)/5.8),
+       darkness=Math.max(progress,depth*.65);
+ v.underwaterScene.background.copy(v.underwaterShallow)
+  .lerp(v.underwaterDeep,darkness);
+ v.underwaterKey.intensity=1.25-darkness*.8;
+ // La làmina blava és al davant del personatge, però deixa veure el cos.
+ v.waterFilter.style.opacity=deathVoidReady()?'0':
+  String(.54+.28*progress);
+}
+// Efectes de l'últim instant: projectil retardat, ona expansiva i
+// anells plans d'impacte/esquitx. No reprenen lògica de combat ni fan mal.
+function deathReplayEffect(v){
+ const type=v.cause.kind,from=v.source.clone(),to=v.hit.clone();
+ const toward=to.clone().sub(from);
+ if(toward.lengthSq()<.01)toward.set(0,0,1);
+ if(toward.length()>19)from.copy(to).addScaledVector(toward.normalize(),-19);
+ let geometry,material,mesh;
+ const ripple=type==='fall'||type==='runover'||type==='shark';
+ if(ripple){
+  geometry=new THREE.RingGeometry(.65,.89,32);
+  material=new THREE.MeshBasicMaterial({
+   color:type==='shark'?0x9cd8e4:0xd1b7a0,
+   side:THREE.DoubleSide,transparent:true,opacity:.58,depthWrite:false
+  });
+  mesh=new THREE.Mesh(geometry,material);
+  mesh.rotation.x=-Math.PI/2;
+  mesh.position.set(v.originX,type==='shark'?v.waterLevel+.12:v.floor+.1,v.originZ);
+ }else if(type==='bullet'){
+  geometry=new THREE.SphereGeometry(.15,10,7);
+  material=new THREE.MeshBasicMaterial({color:0xffe6b8});
+  mesh=new THREE.Mesh(geometry,material);mesh.position.copy(from);
+ }else{
+  geometry=new THREE.SphereGeometry(1.05,12,8);
+  material=new THREE.MeshBasicMaterial({color:0xff8c55,
+   transparent:true,opacity:.75,depthWrite:false});
+  mesh=new THREE.Mesh(geometry,material);mesh.position.copy(v.source);
+ }
+ mesh.visible=false;
+ scene.add(mesh);
+ return {mesh,geometry,material,from,ripple};
+}
+function startDeathCinematic(cause=null){
+ if(deathCinematic||victoryCinematic)return false;
+ const info=deathCauseInfo(cause),
+       hit=new THREE.Vector3(P.x,P.y+1.45,P.z),
+       source=new THREE.Vector3(
+        Number.isFinite(cause?.x)?cause.x:P.x-Math.sin(P.hd||0)*8,
+        Number.isFinite(cause?.y)?cause.y:P.y+2,
+        Number.isFinite(cause?.z)?cause.z:P.z-Math.cos(P.hd||0)*8);
+ const direction=source.clone().sub(hit);direction.y=0;
+ if(direction.lengthSq()<.001)direction.set(0,0,-1);
+ direction.normalize();
+ setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);
+ if(eng)eng.g.gain.value=0;
+ const overlay=document.createElement('div');overlay.id='deathCinematicOverlay';
+ overlay.setAttribute('aria-live','polite');
+ overlay.innerHTML='<div class="death-water-filter" aria-hidden="true"></div>'+
+  '<div class="death-shade"></div>'+
+  '<div class="death-replay-label">DARRER INSTANT · CÀMERA LENTA</div>'+
+  '<div class="death-cause">MORT PER <strong></strong><small></small></div>'+
+  '<div class="death-finale"><div class="death-sigil" aria-hidden="true">✝</div>'+
+  '<p>LA PARCA HA VINGUT A BUSCAR-TE</p><h2>HAS MORT</h2></div>'+
+  '<button type="button" class="death-new-game">NOVA PARTIDA</button>';
+ const shade=overlay.querySelector('.death-shade'),
+       waterFilter=overlay.querySelector('.death-water-filter'),
+       replayLabel=overlay.querySelector('.death-replay-label'),
+       causeEl=overlay.querySelector('.death-cause'),finale=overlay.querySelector('.death-finale'),
+       button=overlay.querySelector('.death-new-game');
+ causeEl.querySelector('strong').textContent=info.title;
+ causeEl.querySelector('small').textContent=info.detail;
+ button.onclick=()=>window.location.reload();
+ document.body.appendChild(overlay);
+ const waterLevel=wy(P.x,P.z,elapsed),
+       submerged=!cv&&!ib&&hAt(P.x,P.z)<waterLevel-1.5&&
+        P.y<waterLevel-.65,
+       onWater=info.kind==='shark'||swimming||submerged||
+        !!(cv&&['w','wl'].includes(VT[cv.t]?.m));
+ // En explosions de vehicles o cops en vol, P.y pot quedar a
+ // l'altura de l'helicòpter: l'animació ha d'aterrar al terreny real.
+ const ground=groundAt(P.x,P.z,P.y);
+ const airborneDeath=info.kind==='vehicleExplosion'||info.kind==='explosion'||info.kind==='runover';
+ const floor=onWater?Math.max(P.y,waterLevel-.15):
+  (cv||airborneDeath)?ground:P.y;
+ const heading=P.hd||0;
+ const bodyFocus=new THREE.Vector3(P.x-Math.sin(heading)*.45,floor+.6,
+   P.z-Math.cos(heading)*.45);
+ const v={active:true,finished:false,t:0,phase:'replay',cause:info,source,hit,direction,onWater,
+  overlay,shade,waterFilter,replayLabel,causeEl,finale,button,
+  underwaterScene:null,underwaterActive:false,underwaterKey:null,
+  previousVisibility:{},previousFov:cam.fov,
+  previousPlayerPose:{position:pl.position.clone(),rotation:pl.rotation.clone(),scale:pl.scale.clone(),visible:pl.visible},
+  heading,bodyFocus,originX:P.x,originZ:P.z,initialY:P.y,floor,waterLevel,
+  impactTime:info.kind==='fall' ? 3.01 : info.kind==='shark' ? .68 :
+   info.kind==='runover' ? 2.9 : .62,
+  impactSoundPlayed:false,lastBell:-1,voidScene:null,reaper:null,replayEffect:null};
+ deathCinematic=v;
+ // Si era una explosió i el jugador ja havia sortit disparat en vida,
+ // deixam una sola capa de ragdoll per a la repetició.
+ if(playerBlastRagdoll){
+  window.HUNTER_RAGDOLL.reset(playerBlastRagdoll);
+  playerBlastRagdoll=null;
+ }
+ v.ragdoll=window.HUNTER_RAGDOLL.make(pl,{
+  blast:info.kind==='explosion'||info.kind==='vehicleExplosion',
+  impulse:playerEject?.kind==='blast'?playerEject:null,
+  seed:P.x*.41+P.z*.27});
+ deathUi(true);endEl.style.display='none';
+ // Conservam la postura i les velocitats del moment fatal. El cos no
+ // s'ajau artificialment fins a l'escena separada de la Parca.
+ v.motion=deathInitialMotion(v);
+ deathReplayPose(v);
+ deathCreateVoid(v);
+ deathCreateUnderwater(v);
+ v.replayEffect=deathReplayEffect(v);
+ return true;
+}
+function clearDeathCinematic(){
+ const v=deathCinematic;if(!v)return;
+ deathUi(false);
+ if(v.replayEffect){
+  scene.remove(v.replayEffect.mesh);
+  v.replayEffect.geometry.dispose();v.replayEffect.material.dispose();
+ }
+ if(v.reaper)for(const resource of v.reaper.owned)resource.dispose();
+ if(v.ragdoll){window.HUNTER_RAGDOLL.reset(v.ragdoll);v.ragdoll=null}
+ // Retornam el jugador a l'escena real abans de restaurar la seva
+ // posició; no deixam la referència a la cinemàtica submarina.
+ if(v.underwaterActive)scene.add(pl);
+ if(v.overlay.parentNode)v.overlay.parentNode.removeChild(v.overlay);
+ pl.position.copy(v.previousPlayerPose.position);
+ pl.rotation.copy(v.previousPlayerPose.rotation);
+ pl.scale.copy(v.previousPlayerPose.scale);
+ pl.visible=v.previousPlayerPose.visible;
+ cam.fov=v.previousFov;cam.updateProjectionMatrix();
+ deathCinematic=null;
+}
+function deathVoidReady(){
+ return !!deathCinematic&&deathCinematic.t>=DEATH_REPLAY_SECONDS+DEATH_FADE_SECONDS/2;
+}
+function updateDeathCinematic(dt){
+ const v=deathCinematic;if(!v||v.finished)return;
+ v.t+=Math.max(0,Math.min(.1,dt));
+ v.phase=deathStageAt(v.t);
+ const replay=deathClamp(v.t/DEATH_REPLAY_SECONDS);
+ if(v.phase==='replay'||v.phase==='fade'){
+  // Seguiment lateral cinematogràfic del cos: la càmera acompanya
+  // l'enlairament, la caiguda o l'enfonsament, sense teleportar el model.
+  deathReplayPose(v,dt);
+  const right=new THREE.Vector3(Math.cos(v.heading),0,-Math.sin(v.heading));
+  cam.position.copy(v.bodyFocus).addScaledVector(right,9-replay*2.5)
+    .addScaledVector(v.direction,-2.8+replay*.8);
+  if(v.onWater){
+   // La càmera es capbussa amb el jugador: si es quedàs sobre l'aigua,
+   // la superfície opaca taparia justament l'enfonsament.
+   const dive=deathEase((v.t-.28)/3.38);
+   cam.position.y=v.waterLevel+1.7-5.7*dive;
+  }else cam.position.y+=3.8-replay*.65;
+  cam.lookAt(v.bodyFocus);
+  deathUpdateUnderwater(v);
+  const fieldOfView=(v.cause.kind==='explosion'||v.cause.kind==='vehicleExplosion'?58:53)-replay*4;
+  if(Math.abs(cam.fov-fieldOfView)>.05){cam.fov=fieldOfView;cam.updateProjectionMatrix()}
+  if(v.replayEffect){
+   const effect=v.replayEffect,material=effect.material,type=v.cause.kind;
+   if(type==='bullet'){
+    // La bala arriba al personatge JUST quan comença a caure.
+    const f=deathEase((v.t-.09)/.49);
+    effect.mesh.visible=v.t>.09&&v.t<.71;
+    effect.mesh.position.copy(effect.from).lerp(v.hit,f);
+    effect.mesh.scale.setScalar(1+.7*f);
+   }else if(effect.ripple){
+    const impact=type==='shark' ? .68 : type==='fall' ? 3.02 : 3.01;
+    const p=deathClamp((v.t-impact)/1.35);
+    effect.mesh.visible=v.t>=impact&&p<1;
+    effect.mesh.scale.setScalar(.5+5*p);
+    material.opacity=.58*(1-p);
+   }else{
+    const p=deathClamp((v.t-.42)/2.15);
+    effect.mesh.scale.setScalar(.3+4.1*p);
+    material.opacity=.72*(1-p);
+    effect.mesh.visible=v.t>=.42&&p<1;
+   }
+  }
+ }
+ const fadeStart=DEATH_REPLAY_SECONDS,half=DEATH_FADE_SECONDS/2;
+ const alpha=v.t<fadeStart?0:v.t<fadeStart+half
+  ?deathEase((v.t-fadeStart)/half)
+  :v.t<fadeStart+DEATH_FADE_SECONDS
+   ?1-deathEase((v.t-fadeStart-half)/half):0;
+ v.shade.style.opacity=String(alpha);
+ if(deathVoidReady()&&v.waterFilter)v.waterFilter.style.opacity='0';
+ v.replayLabel.style.opacity=v.t<fadeStart?.94:0;
+ v.causeEl.style.opacity=v.t<fadeStart?.98:0;
+ if(deathVoidReady()){
+  const start=DEATH_REPLAY_SECONDS+DEATH_FADE_SECONDS,
+        p=deathEase((v.t-start)/(DEATH_REAPER_SECONDS-.75));
+  v.reaper.group.position.set(2.15-p*1.65,Math.sin(v.t*1.35)*.045,-14+p*12.3);
+  v.reaper.group.rotation.y=-.35+p*.35;
+  if(v.voidPlayer?.userData?.head)
+   deathFaceCamera(v.voidPlayer,v.voidCamera.position);
+  if(v.t>=start&&v.lastBell<0){deathBell(.83);v.lastBell=0}
+  if(v.t>=start+2.15&&v.lastBell===0){deathBell(.65);v.lastBell=1}
+  if(v.t>=start+4.4&&v.lastBell===1){deathBell(.55);v.lastBell=2}
+  const rise=deathEase((v.t-start-2.6)/2.2);
+  v.finale.style.opacity=String(rise);
+ }
+ if(v.phase==='finished'){
+  v.active=false;v.finished=true;
+  v.finale.style.opacity='1';
+  v.button.style.display='block';v.button.focus();
+ }
+}
+
+
+;
+// END src/death-cinematic.js
 // BEGIN src/compound-building-runtime.js
 // Walkable upper floors use the actor's previous elevation; never teleport a ground-floor actor upstairs.
 function buildingLocalPoint(b,x,z){const c=Math.cos(b.angle||0),s=Math.sin(b.angle||0),dx=x-b.x,dz=z-b.z;return{x:dx*c+dz*s,z:-dx*s+dz*c}}
@@ -6820,7 +8614,7 @@ function decorateRuntimeBuilding(b,spec){
    const parts=visualGroup?.children.filter(o=>o.isMesh)||[];
    const collider={x0:x-width/2,x1:x+width/2,
      z0:z,z1:z+run,y0:b.fy+.2,y1:b.fy+b.storey+.25,
-     hp:140,m:parts[0]||new THREE.Object3D(),
+     hp:20,m:parts[0]||new THREE.Object3D(),
      parts:parts.length?parts:null,door:false,open:false,
      rammable:false,playerBlock:false,stairStructure:stair,
      cx:x,cz:z+run/2,owner:b};
@@ -6937,8 +8731,10 @@ function createTerminalRamp(c,f){
 }
 function terminalRampState(r){
  const f=r.f;if(f.destroyed||!V.includes(f)||Math.hypot(f.x-r.homeX,f.z-r.homeZ)>1.5||Math.abs(wrapAngle(f.hd-r.homeHD))>.06)return null;
- const end=ferryWorld(f,0,14),dx=end.x-r.x,dz=end.z-r.z,length=Math.hypot(dx,dz);
- return{x:r.x,z:r.z,ux:dx/length,uz:dz/length,length,startY:PIER_DECK_Y,endY:ferryLocalSurfaceY(f,14)+.04};
+ const endZ=FERRY_DECK.halfL*(VS.ferry||1),end=ferryWorld(f,0,endZ),
+   dx=end.x-r.x,dz=end.z-r.z,length=Math.hypot(dx,dz);
+ if(length<.1)return null;
+ return{x:r.x,z:r.z,ux:dx/length,uz:dz/length,length,startY:PIER_DECK_Y,endY:ferryLocalSurfaceY(f,endZ)+.04};
 }
 function terminalRampHeight(x,z){
  for(const c of world?.userData.compounds||[]){if(!c.loadingRamp)continue;const s=terminalRampState(c.loadingRamp);if(!s)continue;
@@ -6952,7 +8748,7 @@ function updateTerminalRamps(){for(const c of world?.userData.compounds||[]){con
 }}
 function pedestrianFerry(x,z,previous){
  for(const f of V){if(f.t!=='ferry'||f.destroyed)continue;const q=ferryLocal(f,x,z),y=ferryLocalSurfaceY(f,q.z);
-  if(Math.abs(q.x)<FERRY_DECK.halfW-.65&&Math.abs(q.z)<=FERRY_DECK.halfL+FERRY_DECK.ramp&&previous>=y-.9)return{f,q,y};
+  if(ferryWalkable(q.x,q.z,.55)&&previous>=y-.9)return{f,q,y};
  }return null;
 }
 
@@ -6994,7 +8790,35 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
   const shore=layout.waterfront?.shore??8,landDepth=coastal?shore+layout.size[1]/2-5:layout.size[1]+8;
   const center=tr(0,coastal?-layout.size[1]/2+landDepth/2:0),height=coastal?.86:q.h??rawHAt(q.x,q.z);
   addLevelArea(...center,layout.size[0]+8,landDepth,height,angle,coastal?3:18);
-  if(!layout.civilian){const base=pad(...center,layout.size[0]-6,coastal?landDepth-2:layout.size[1]-10);base.rotation.y=-angle;}
+  if(!layout.civilian){
+    const pw=layout.size[0]-6,pd=coastal?landDepth-2:layout.size[1]-10;
+    const bunkerSpec=layout.id==='hq'?layout.buildings.find(spec=>spec.bunker):null;
+    if(bunkerSpec){
+      // La llosa decorativa única de l'HQ travessava TAMBÉ el forat de
+      // l'escala. Retallam el rectangle complet del búnquer abans de crear
+      // cap malla, en lloc d'ocultar només el terreny LOD.
+      const left=-pw/2,right=pw/2,back=-pd/2,front=pd/2,
+        hx=bunkerSpec.x, hz=bunkerSpec.z,
+        holeLeft=Math.max(left, hx-bunkerSpec.w/2-1.0),
+        holeRight=Math.min(right,hx+bunkerSpec.w/2+1.0),
+        holeBack=Math.max(back,hz-bunkerSpec.d/2-1.0),
+        holeFront=Math.min(front,hz+bunkerSpec.d/2+1.0),
+        regions=[
+          [left,holeLeft,back,front],
+          [holeRight,right,back,front],
+          [holeLeft,holeRight,back,holeBack],
+          [holeLeft,holeRight,holeFront,front]
+        ];
+      for(const [x0,x1,z0,z1] of regions){
+        if(x1-x0<.25||z1-z0<.25)continue;
+        const base=pad(...tr((x0+x1)/2,(z0+z1)/2),x1-x0,z1-z0);
+        base.rotation.y=-angle;
+      }
+    }else{
+      const base=pad(...center,pw,pd);
+      base.rotation.y=-angle;
+    }
+  }
   // Keep vegetation outside the complete reservation, including gates and turning space.
   compoundClear.push({x:q.x,z:q.z,r:record.r});
   for(const route of layout.routes)path(route.points.map(p=>tr(...p)),route.width);
@@ -7011,12 +8835,12 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
       rear.position.z=rearZ;b.o.add(rear);
       Wl.push({
         x0:x-spec.w/2,x1:x+spec.w/2,z0:z+rearZ,z1:z+rearZ+rearThickness,
-        y0:b.fy-1,y1:b.fy+spec.h,hp:110,m:rear,parts:[rear],
+        y0:b.fy-1,y1:b.fy+spec.h,hp:16,m:rear,parts:[rear],
         door:false,open:false,rammable:true,hangarRear:true,
         cx:x,cz:z+rearZ+rearThickness/2,owner:b
       });
       // The arched roof reaches the ground: its lower sides must be solid too.
-      for(const sign of[-1,1]){const lx=x+sign*(spec.w/2-.4),side=seedSearchMode?new THREE.Object3D():buildingVisual.addWall(b.o,{lx:lx-x,lz:0,sx:.8,sz:spec.d,height:1,material:b.wm});Wl.push({x0:lx-.4,x1:lx+.4,z0:z-spec.d/2,z1:z+spec.d/2,y0:b.fy-1,y1:b.fy+3,hp:110,m:side,rammable:true,hangarSide:true,door:false,open:false,cx:lx,cz:z,owner:b})}
+      for(const sign of[-1,1]){const lx=x+sign*(spec.w/2-.4),side=seedSearchMode?new THREE.Object3D():buildingVisual.addWall(b.o,{lx:lx-x,lz:0,sx:.8,sz:spec.d,height:1,material:b.wm});Wl.push({x0:lx-.4,x1:lx+.4,z0:z-spec.d/2,z1:z+spec.d/2,y0:b.fy-1,y1:b.fy+3,hp:16,m:side,rammable:true,hangarSide:true,door:false,open:false,cx:lx,cz:z,owner:b})}
     }
     if(layout.friendly&&!seedSearchMode){
       if(spec.id==='barracks')for(const xx of[-5,5])for(const zz of[-6,0]){bx(b.o,2.5,.65,4,0x4c5b43,xx,.6,zz,'paint');bx(b.o,2.2,.25,3.5,0x939978,xx,1.05,zz,'paint')}
@@ -7047,7 +8871,7 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
     record.antenna=g;
     // The solid plinth blocks movement and is destructible with the complete tower.
     const footing={x0:x-4*(a.scale||1),x1:x+4*(a.scale||1),z0:z-4*(a.scale||1),z1:z+4*(a.scale||1),y0:height,y1:height+1.3,
-      hp:150,m:seedSearchMode?null:g.children[0],parts:seedSearchMode?[]:g.children.slice(),door:false,open:false,
+      hp:24,m:seedSearchMode?null:g.children[0],parts:seedSearchMode?[]:g.children.slice(),door:false,open:false,
       rammable:true,cx:x,cz:z};
     Wl.push(footing);
     if(!seedSearchMode)window.HUNTER_AIR_OBSTACLES.registerAntenna(world,g,a,footing);
@@ -7112,7 +8936,29 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
     let nearest=0;route.forEach((p,j)=>{if(Math.hypot(p[0]-pos[0],p[1]-pos[1])<Math.hypot(route[nearest][0]-pos[0],route[nearest][1]-pos[1]))nearest=j});
     setPatrol(u,route.map((_,j)=>route[(j+nearest)%route.length]));record.soldiers.push(u);
   }
-  if(layout.general){const p=tr(layout.general.x,layout.general.z);record.general=mkEn('general',...p,record.buildings[0].fy+.3);}
+  const bunker=record.buildings.find(b=>b.kind==='enemy_bunker'&&b.basement);
+  if(bunker){
+    const point=(p)=>buildingWorldPoint(bunker,p.x,p.z),level=bunker.basement.floorY;
+    // Guàrdia d'elit exclusiu del búnquer, amb la mateixa cadència que la
+    // metralladora de la tanqueta. Les rutes no surten del seu nivell.
+    for(const [i,p] of bunker.basement.eliteLocal.entries()){
+      const at=point(p),u=mkEn('soldat',at.x,at.z,level,{elite:true});
+      u.basement=bunker;u.walkY=level;u.compound='hq';
+      if(i<2){const z2=i===0?-6:4.5;setPatrol(u,[point({x:p.x,z:p.z}),point({x:p.x,z:z2})].map(q=>[q.x,q.z]),true)}
+      else setPatrol(u,[[at.x,at.z]],true);
+      record.soldiers.push(u);
+    }
+    for(const p of[{x:-11,z:0},{x:0,z:5}]){
+      const at=point(p),u=mkEn('soldat',at.x,at.z,bunker.fy+.3,{elite:true});
+      u.compound='hq';setPatrol(u,[[at.x,at.z]],true);record.soldiers.push(u);
+    }
+  }
+  if(layout.general){
+    const p=bunker?buildingWorldPoint(bunker,bunker.basement.generalLocal.x,bunker.basement.generalLocal.z):null;
+    record.general=mkEn('general',...(p?[p.x,p.z]:tr(layout.general.x,layout.general.z)),
+      bunker?bunker.basement.floorY:record.buildings[0].fy+.3);
+    if(bunker){record.general.basement=bunker;record.general.walkY=bunker.basement.floorY;}
+  }
   const lootKinds={'munició':'arma','farmaciola':'med','granades':'granada','cisalla':'cisalla','mapa':'mapa','mapa_heli':'mapa_heli','mapa_tanc':'mapa_tanc','explosius':'expl','bazooka':'bazooka','franctirador':'franctirador','disfressa':'disf','paracaigudes':'paracaigudes'};
   for(const loot of layout.loot){
     if(loot.kind==='disfressa'&&R()>=.5)continue;
@@ -7193,7 +9039,7 @@ function ensureJetSkis(add){
 }
 
 // Compatibility extraction: shared state remains in game-core.js.
-function build(){clearVictoryCinematic();window.HUNTER_ENEMY_LOD.reset();const requestedPalmDisable=!!document.getElementById('disablePalms')?.checked;palmsDisabled=false;cancelGrenadeCharge();clearBulletImpacts();removeParachuteVisual();const buildStarted=performance.now(),buildStages={},buildCounters={landAttempts:0,landCandidates:0},markBuildStage=(()=>{let last=buildStarted;return name=>{const now=performance.now();buildStages[name]=Math.round((now-last)*100)/100;last=now}})();movementFx.reset();if(terrainStream)terrainStream.dispose();terrainStream=null;seedCompounds=[];elapsed=0;water.update(0);joystick.reset();compoundClear=[];terrainLevels=[];terrainLevelGrid.clear();if(seedSearchMode){
+function build(){clearVictoryCinematic();clearDeathCinematic();window.HUNTER_ENEMY_LOD.reset();window.HUNTER_STEALTH.clear();window.HUNTER_STEALTH_DEBUG.reset();playerCrouched=false;stealthStepTimer=0;const requestedPalmDisable=!!document.getElementById('disablePalms')?.checked;palmsDisabled=false;cancelGrenadeCharge();clearBulletImpacts();removeParachuteVisual();const buildStarted=performance.now(),buildStages={},buildCounters={landAttempts:0,landCandidates:0},markBuildStage=(()=>{let last=buildStarted;return name=>{const now=performance.now();buildStages[name]=Math.round((now-last)*100)/100;last=now}})();movementFx.reset();if(terrainStream)terrainStream.dispose();terrainStream=null;seedCompounds=[];elapsed=0;water.update(0);joystick.reset();compoundClear=[];terrainLevels=[];terrainLevelGrid.clear();if(seedSearchMode){
   // Un únic món lògic reutilitzable: res de desmuntar geometries o
   // afegir/eliminar escenes per cada llavor.
   if(!seedScratchWorld)seedScratchWorld=new THREE.Group();
@@ -7202,7 +9048,8 @@ function build(){clearVictoryCinematic();window.HUNTER_ENEMY_LOD.reset();const r
   if(world){scene.remove(world);const gs=new Set(),ms=new Set();world.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose())}
   world=new THREE.Group();scene.add(world);
 }
-world.userData={compounds:[],airObstacles:[]};B=[];stairs=[];piers=[];swimming=false;intelMarks=[];hqMapKnown=false;playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false;pl.userData.cisallaCut=0;sniperEquipped=false;sniperAmmo=0;setSniperScope(false);pl.userData.sniper.visible=false;pl.userData.bazooka.visible=false;pl.userData.grenade.visible=false;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;pl.userData.grenadePending=null;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];grenades=[];fx=[];logb=[];hp=100;ammo=16;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
+world.userData={compounds:[],airObstacles:[]};B=[];stairs=[];piers=[];swimming=false;intelMarks=[];hqMapKnown=false;playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false;pl.userData.cisallaCut=0;sniperEquipped=false;sniperAmmo=0;setSniperScope(false);pl.userData.sniper.visible=false;pl.userData.bazooka.visible=false;pl.userData.grenade.visible=false;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;pl.userData.grenadePending=null;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];grenades=[];fx=[];logb=[];hp=window.HUNTER_COMBAT_BALANCE.player;ammo=16;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
+activeBunker=null;
 {const base=requestedSeed==null?Math.floor(Math.random()*0xffffffff)>>>0:requestedSeed>>>0;let tries=0;do{seed=(base+Math.imul(tries++,0x9e3779b1))>>>0;genIslands();pa=land(A,2000);pb=land(Bi,2000)}while((!pa||!pb)&&tries<8);if(!pa||!pb)throw new Error('No s’ha pogut generar un mapa vàlid amb aquesta llavor')}
 markBuildStage('islandsAndBasePositions');
 const cols=[0xd8b48a,0xc9a27a,0xb8c4c9,0xd9c9a0],compoundVehicles=[],heliportSites=[],staticDecorRoots=[],pathRoutes=[];
@@ -7373,11 +9220,11 @@ const compoundPier=(x1,z1,x2,z2,width=4.2,accessRamp=true)=>{
   if(ramp){
     const rampMidX=x1-ux*ramp.length/2,rampMidZ=z1-uz*ramp.length/2,
           rise=ramp.top-ramp.bottom,
-          rampMesh=new THREE.Mesh(new THREE.BoxGeometry(ramp.width,.22,ramp.length),
+          rampMesh=new THREE.Mesh(new THREE.BoxGeometry(ramp.width,.22,Math.hypot(ramp.length,rise)),
             M(0x957858,'paint'));
     rampMesh.position.set(rampMidX,(ramp.bottom+ramp.top)/2-.11,rampMidZ);
-    rampMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),
-      new THREE.Vector3(ux*ramp.length,rise,uz*ramp.length).normalize());
+    // Evitar roll en rampes diagonals: yaw més inclinació longitudinal.
+    rampMesh.rotation.set(-Math.atan2(rise,ramp.length),Math.atan2(ux,uz),0,'YXZ');
     world.add(rampMesh);staticDecorRoots.push(rampMesh);
   }
   const yaw=Math.atan2(dx,dz);
@@ -7573,7 +9420,8 @@ if(seedSearchMode&&seedSearchCategoryEl.value==='compound'){
 const terrainStarted=performance.now();
 // La cerca comprova exactament el mateix món determinista, però no necessita
 // renderitzar terra, preparar GPU ni calcular el fons marí a cada candidat.
-const terrain=seedSearchMode?null:window.HUNTER_TERRAIN.create(THREE,{size:S,segments:SEG,heightAt:hAt,material:MAT.terrain(),startX:pa.x,startZ:pa.z,lowQuality:!visualQuality.shadows,quality:qualityName,shadows:visualQuality.shadows});
+const terrain=seedSearchMode?null:window.HUNTER_TERRAIN.create(THREE,{size:S,segments:SEG,heightAt:hAt,material:MAT.terrain(),startX:pa.x,startZ:pa.z,lowQuality:!visualQuality.shadows,quality:qualityName,shadows:visualQuality.shadows,
+  cutouts:activeBunker?[{x:activeBunker.x,z:activeBunker.z,angle:activeBunker.angle??-(activeBunker.o?.rotation.y??0),halfWidth:20,halfDepth:17}]:[]});
 if(terrain){terrainStream=terrain;world.add(terrain.mesh,window.HUNTER_TERRAIN.createBorder(THREE,{size:S,halfSize:H}))}
 const initialTerrainMs=performance.now()-terrainStarted;
 markBuildStage('terrain');
@@ -7616,7 +9464,29 @@ if(seedSearchMode&&seedSearchCategoryEl.value==='item'){
   P.base={x:pa.x,z:pa.z};return;
 }
 P.x=baseCompound.spawn?.x??pa.x;P.z=baseCompound.spawn?.z??pa.z+20;P.hd=0;P.base={x:pa.x,z:pa.z};V=[];cv=null;mm=null;
-const add=(t,x,z,a,meta={})=>{const o=seedSearchMode?seedVehicleStub(t):mkV(t),c=VT[t],surface=Math.max(0,hAt(x,z)),v={t,x,z,hd:a||0,v:0,alt:c.m==='a'?helicopterLandedAltitude({o},surface):surface+.8,o,armor:c.armor??0,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};if(t==='heli_combat')v.rockets=6;if(t==='llanxa_coets')v.rockets=Infinity;if(!seedSearchMode)world.add(o);V.push(v);return v};
+const add=(t,x,z,a,meta={})=>{
+  // Els colors són part de l'estat generat per llavor, no una aleatorietat
+  // del renderitzador. La cerca de llavors consumeix les mateixes tirades.
+  const civilian=t==='cotxe_civil',bicycle=t==='bici',jetski=t==='moto_aquatica',
+    colors=window.HUNTER_CIVILIAN_CARS,
+    palette=jetski?colors.jetskiColors:colors.colors;
+  const color=(civilian||bicycle||jetski)?palette[Math.floor(R()*palette.length)].hex:undefined;
+  // Conservam la tirada de la llavor antiga, però tots els cotxes civils
+  // fan servir el model C1A seleccionat (variant 0).
+  if(civilian)R();
+  const variant=civilian?0:undefined;
+  const appearance={color:meta.color??color,variant:meta.variant??variant};
+  const o=seedSearchMode?seedVehicleStub(t):mkV(t,appearance),c=VT[t],
+    surface=Math.max(0,hAt(x,z));
+  const v={t,x,z,hd:a||0,v:0,alt:c.m==='a'?helicopterLandedAltitude({o},surface):surface+.8,
+    o,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};
+  if(civilian||bicycle||jetski)v.color=appearance.color;
+  if(civilian)v.variant=appearance.variant;
+  if(t==='heli_combat')v.rockets=6;
+  if(t==='llanxa_coets')v.rockets=Infinity;
+  if(!seedSearchMode)world.add(o);
+  V.push(v);return v;
+};
 // Cap tanc neutral dins del HQ: els tancs pilotables apareixen
 // distribuïts per l'arxipèlag, lluny de la base enemiga.
 
@@ -7724,12 +9594,27 @@ islands.forEach(island=>{
 
 markBuildStage('coastalVehicles');
 heliportSites.forEach((p,i)=>{
-  const desired=p.type||(i===1?'heli_combat':'heli'),near=V.some(v=>v.t===desired&&Math.hypot(v.x-p.x,v.z-p.z)<10);
-  if(!near)add(desired,p.x,p.z,p.hd,{heliport:true,military:true,guaranteed:true});
+  const desired=p.type||(i===1?'heli_combat':'heli');
+  // Una plaça ocupada per l'altre tipus d'helicòpter també és ocupada:
+  // altrament dues cabines queden superposades i només una és accessible.
+  if(clearVehicle(desired,p.x,p.z))add(desired,p.x,p.z,p.hd,{heliport:true,military:true,guaranteed:true});
 });
 if(heliportSites.length){
-  if(!V.some(v=>v.t==='heli')){const p=heliportSites[0];add('heli',p.x,p.z,p.hd,{heliport:true,military:true,guaranteed:true})}
-  if(!V.some(v=>v.t==='heli_combat')){const p=heliportSites[Math.min(1,heliportSites.length-1)],a=p.hd+Math.PI/2,x=p.x+Math.sin(a)*22,z=p.z+Math.cos(a)*22;add('heli_combat',x,z,p.hd,{heliport:true,military:true,guaranteed:true})}
+  const addClearHeliAtPort=(t,preferred)=>{
+    for(let i=0;i<heliportSites.length;i++){
+      const p=heliportSites[(preferred+i)%heliportSites.length];
+      for(const [d,turn]of[[0,0],[22,Math.PI/2],[22,-Math.PI/2],[30,Math.PI/4],[30,-Math.PI/4],[36,Math.PI]]){
+        const a=p.hd+turn,x=p.x+Math.sin(a)*d,z=p.z+Math.cos(a)*d,
+              r=vehicleRadius(t);
+        if(!clearVehicle(t,x,z)||hAt(x,z)<=1.2||slope(x,z,hAt(x,z))>=3||
+           B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r))continue;
+        add(t,x,z,p.hd,{heliport:true,military:true,guaranteed:true});return true;
+      }
+    }
+    return false;
+  };
+  if(!V.some(v=>v.t==='heli'))addClearHeliAtPort('heli',0);
+  if(!V.some(v=>v.t==='heli_combat'))addClearHeliAtPort('heli_combat',Math.min(1,heliportSites.length-1));
 }
 const protectedVehicleSpot=t=>{const r=vehicleRadius(t),ok=(x,z)=>hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3);for(let k=0;k<240;k++){const a=rr(0,Math.PI*2),d=rr(30,58),x=pb.x+Math.cos(a)*d,z=pb.z+Math.sin(a)*d;if(ok(x,z))return{x,z,hd:a+Math.PI}}return null};
 const distributedMilitarySpot=t=>{const r=vehicleRadius(t),pool=islands.filter(i=>i!==Bi).slice().sort(()=>R()-.5),ok=(x,z)=>Math.hypot(x-pb.x,z-pb.z)>220&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3);for(const i of pool)for(let k=0;k<50;k++){const q=land(i,900,1);if(q&&ok(q.x,q.z))return{x:q.x,z:q.z,hd:rr(0,Math.PI*2)}}return null};
@@ -7786,8 +9671,152 @@ ensureDistributedCount('tanqueta',1+MAP_SCALE);
 islands.forEach(i=>{if(i!==A&&R()<.65){const t=['cotxe','moto','bici'][Math.floor(R()*3)];for(let tries=0;tries<12;tries++){const q=land(i,80);if(q&&clearVehicle(t,q.x,q.z)){add(t,q.x,q.z,rr(0,6.28));break}}}});
 
 markBuildStage('guaranteedVehicles');
+// Cotxes civils: aparcats fora dels edificis dels assentaments i les
+// terminals de ferri; alguns queden abandonats a l'interior de les illes.
+const civilianVehicleClear=(x,z,heading=0)=>{
+  const type='cotxe_civil',r=vehicleRadius(type)+1.2;
+  if(Math.abs(x)>H-r-5||Math.abs(z)>H-r-5)return false;
+  const h=hAt(x,z);
+  if(h<1.4||slope(x,z,h)>3.7)return false;
+  if(!clearVehicle(type,x,z)||treeHit(x,z,r*.83))return false;
+  if(B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r))return false;
+  if(wallCandidates(x,z,r+2).some(w=>!w.open&&
+    x>w.x0-r&&x<w.x1+r&&z>w.z0-r&&z<w.z1+r))return false;
+  return true;
+};
+let civilianNearSites=0,civilianAbandoned=0;
+for(const site of compoundCenters.filter(c=>c.type.startsWith('hut-settlement')||c.type==='ferry-terminal')){
+  const count=site.type==='ferry-terminal'?2:1+(R()<.32?1:0),
+    offset=R()*Math.PI*2;
+  for(let k=0;k<count;k++){
+    let placed=false;
+    // Cercam primer places al costat de les cases, no al perímetre
+    // del poblat. Només ampliam el radi si no hi ha cap lloc lliure.
+    const isVillage=site.type.startsWith('hut-settlement');
+    const radii=isVillage?[10,14,18,23,29,36,44,54]:[18,24,32,42,54];
+    for(const distance of radii){
+      if(placed)break;
+      for(let a=0;a<24;a++){
+        const angle=offset+(a%24)*Math.PI/12+(k*Math.PI*.65),
+          x=site.x+Math.cos(angle)*distance,
+          z=site.z+Math.sin(angle)*distance;
+        if(!civilianVehicleClear(x,z))continue;
+        add('cotxe_civil',x,z,angle+Math.PI/2,{civilian:true,parkedAt:site.type});
+        civilianNearSites++;placed=true;break;
+      }
+    }
+    if(!placed)break;
+  }
+}
+for(const island of islands){
+  if(island===Bi||island===A||R()>.56)continue;
+  for(let attempt=0;attempt<26;attempt++){
+    const q=land(island,160,1);
+    if(!q||!civilianVehicleClear(q.x,q.z))continue;
+    // L'abandonat no queda enganxat a una altra construcció civil.
+    if(compoundCenters.some(c=>
+      Math.hypot(q.x-c.x,q.z-c.z)<c.r+26))continue;
+    add('cotxe_civil',q.x,q.z,rr(0,Math.PI*2),{civilian:true,abandoned:true});
+    civilianAbandoned++;break;
+  }
+}
+world.userData.civilianCars={nearSites:civilianNearSites,abandoned:civilianAbandoned,
+  total:civilianNearSites+civilianAbandoned};
+markBuildStage('civilianCars');
+
 ensureJetSkis(add);
 markBuildStage('jetSkis');
+// Cotxes militars amb conductor i tirador, com els que custodien la base.
+// La ruta connecta accessos reals de dos complexos de la mateixa illa gran.
+// Els punts de la carretera resolta eviten que la IA intenti creuar el mar.
+function spawnLandCarPatrols(){
+ const large=islands.filter(i=>i.r>=800).sort((a,b)=>b.r-a.r);
+ const sites=world.userData.compounds.filter(c=>!c.layout?.friendly&&c.id!=='base'&&c.id!=='hq');
+ const usedRoutes=new Set();
+ const routeKey=(a,b)=>[sites.indexOf(a.c),sites.indexOf(b.c)].sort((x,y)=>x-y).join(':');
+ const carR=Math.hypot(...VHB.cotxe.map(n=>n*VS.cotxe))/2+.8;
+ const clear=(x,z)=>Math.abs(x)<H-carR-5&&Math.abs(z)<H-carR-5&&
+   hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<5&&!treeHit(x,z,carR)&&
+   !wallCandidates(x,z,carR).some(w=>!w.open&&w.playerBlock!==false&&
+     x>w.x0-carR&&x<w.x1+carR&&z>w.z0-carR&&z<w.z1+carR)&&
+   !B.some(b=>Math.abs(x-b.x)<b.hw+carR&&Math.abs(z-b.z)<b.hd+carR);
+ const access=c=>{
+   for(const [ex,ez]of c.entrances){
+     const dx=ex-c.x,dz=ez-c.z,len=Math.hypot(dx,dz)||1;
+     for(const step of[12,20,30,42,55]){
+       const x=ex+dx/len*step,z=ez+dz/len*step;
+       if(clear(x,z))return{x,z}
+     }
+   }
+   for(let n=0;n<20;n++){
+     const a=n*Math.PI/10,x=c.x+Math.cos(a)*(c.r+24),z=c.z+Math.sin(a)*(c.r+24);
+     if(clear(x,z))return{x,z}
+   }
+   return null
+ };
+ let spawned=0;
+ for(const island of large){
+   const eligible=sites.filter(c=>Math.hypot(c.x-island.x,c.z-island.z)<island.r*1.02)
+     .map(c=>({c,p:access(c)})).filter(o=>o.p);
+   if(eligible.length<2)continue;
+   // Triam els complexos més propers amb un corredor transitable per terra.
+   // El navegador d'enemics esquiva els arbres i els obstacles puntuals.
+   const pairs=[];for(let a=0;a<eligible.length;a++)for(let b=a+1;b<eligible.length;b++){
+     const p=eligible[a].p,q=eligible[b].p;
+     pairs.push({a:eligible[a],b:eligible[b],distance:Math.hypot(p.x-q.x,p.z-q.z)})
+   }
+   // Prioritat als dos complexos militars; si només n'hi ha un a l'illa,
+   // la patrulla també pot connectar-lo amb un port o un nucli civil.
+   pairs.sort((a,b)=>Number(usedRoutes.has(routeKey(a.a,a.b)))-Number(usedRoutes.has(routeKey(b.a,b.b)))||
+       Number(!!a.a.c.layout?.civilian)+Number(!!a.b.c.layout?.civilian)-
+       Number(!!b.a.c.layout?.civilian)-Number(!!b.b.c.layout?.civilian)||a.distance-b.distance);
+   const drySegment=(a,b)=>{
+     const length=Math.hypot(a.x-b.x,a.z-b.z),n=Math.ceil(length/7);
+     for(let k=0;k<=n;k++){
+       const t=k/n,x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t;
+       if(hAt(x,z)<.9||hAt(x+4,z)<.1||hAt(x-4,z)<.1||
+          hAt(x,z+4)<.1||hAt(x,z-4)<.1)return false
+     }
+     return true
+   };
+   const routeBetween=(a,b)=>{
+     const peak={x:island.peakX,z:island.peakZ},center={x:island.x,z:island.z},
+       opts=[[],[center],[peak],
+         [{x:center.x+island.r*.22,z:center.z}],
+         [{x:center.x-island.r*.22,z:center.z}],
+         [{x:center.x,z:center.z+island.r*.22}],
+         [{x:center.x,z:center.z-island.r*.22}]];
+     for(const middle of opts){
+       const nodes=[a,...middle,b];if(!nodes.slice(1).every((p,i)=>drySegment(nodes[i],p)))continue;
+       const road=[a];for(let j=1;j<nodes.length;j++){
+         const from=nodes[j-1],to=nodes[j],steps=Math.ceil(Math.hypot(to.x-from.x,to.z-from.z)/24);
+         for(let k=1;k<=steps;k++)road.push({x:from.x+(to.x-from.x)*k/steps,z:from.z+(to.z-from.z)*k/steps})
+       }
+       return road
+     }
+     return null
+   };
+   for(const pair of pairs){
+     const key=routeKey(pair.a,pair.b),sameRoute=usedRoutes.has(key),
+       road=routeBetween(pair.a.p,pair.b.p);
+     if(!road||road.length<2)continue;
+     if(sameRoute)road.reverse(); // Mai no superposam els dos cotxes al punt de sortida.
+     const points=road.map(p=>[p.x,p.z]),start=points[0],next=points[1],
+       heading=Math.atan2(start[0]-next[0],start[1]-next[1]);
+     if(!clear(start[0],start[1]))continue;
+     const car=mkEn('jeep',start[0],start[1]);car.hd=heading;
+     // Anada i tornada: cap salt instantani del darrer waypoint al primer.
+     setPatrol(car,[...points,...points.slice(1,-1).reverse()],false);
+     car.interCompoundPatrol=true;car.patrolIslandIndex=islands.indexOf(island);
+     car.patrolComplexes=[pair.a.c.id,pair.b.c.id];car.patrolEnds=[pair.a.p,pair.b.p];
+     if(!sameRoute)pathRoutes.push({points,width:8,color:0x776b51});
+     usedRoutes.add(key);spawned++;break
+   }
+ }
+ return spawned
+}
+const landCarPatrolCount=spawnLandCarPatrols();
+markBuildStage('landCarPatrols');
 // Mateix recompte i posicions per llavor al joc i al cercador de llavors.
 // El cercador desa coordenades sense crear models ni IA.
 spawnMarinePatrols();
@@ -7795,7 +9824,7 @@ markBuildStage('marinePatrols');
 P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);if(!seedSearchMode){V.forEach(v=>place(v,0,0,0));updateTerminalRamps();prepareEnemyNavigation();}world.userData.paths=pathRoutes;if(!seedSearchMode){const roads=window.HUNTER_COMPOUND_PATHS.createPathNetwork(THREE,{routes:pathRoutes,heightAt:(x,z)=>Math.max(hAt(x,z),terrainStream?.visibleHeightAt(x,z)??-Infinity),heightVersion:(x,z)=>terrainStream?.surfaceVersionAt(x,z)??-1});world.add(roads);world.userData.pathStats=roads.userData.pathStats;}const staticBatchStats=seedSearchMode?null:batchStaticDecor();if(!seedSearchMode&&visualQuality.shadows)prepareShadowCasters();else shadowCandidates.length=0;cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);
 markBuildStage('finalizationAndBatching');
 seedCompounds=compoundCenters.map(c=>({type:c.type,x:c.x,z:c.z}));
-window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,stages:buildStages,portSearch:buildCounters,initialTerrainMs,seabedMs,vegetationMs,seabedSamples:seedSearchMode?0:water.seabedStats.lastSamples,terrainTiles:terrain?.stats||null,palms:PM.stats,staticBatches:staticBatchStats};
+window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,stages:buildStages,portSearch:buildCounters,initialTerrainMs,seabedMs,vegetationMs,seabedSamples:seedSearchMode?0:water.seabedStats.lastSamples,terrainTiles:terrain?.stats||null,palms:PM.stats,landCarPatrols:landCarPatrolCount,staticBatches:staticBatchStats};
 if(!seedSearchMode){
   setPalmsDisabled(requestedPalmDisable);
   setWaterDisabled(!!document.getElementById('disableWater')?.checked);
@@ -7816,6 +9845,7 @@ function buildSeedData(){
   return {seed,base:P.base,vehicles:V,items,compounds:seedCompounds,
     enemies:world.userData.marinePatrolPositions||[]};
 }
+
 
 ;
 // END src/world-generation.js
@@ -7851,7 +9881,7 @@ const MAT={
  },
  painted:c=>M(c,'paint'),metal:c=>M(c,'metal'),rubber:c=>M(c,'rubber'),glass:c=>M(c,'glass'),masonry:c=>M(c,'masonry')
 };
-let seed,R,islands,A,Bi,world,B=[],requestedSeed=null;
+let seed,R,islands,A,Bi,world,B=[],requestedSeed=null,activeBunker=null;
 const ISLAND_CELL=512,islandGrid=new Map(),islandCellKey=(cx,cz)=>cx+','+cz;
 function rebuildIslandGrid(){
   islandGrid.clear();
@@ -8161,7 +10191,7 @@ function buildingCandidates(x,z,r=0){
 }
 const ICON={
 med:'<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="16" width="46" height="34" rx="5" fill="#fff" stroke="#657078" stroke-width="3"/><rect x="18" y="28" width="28" height="9" rx="4.5" fill="#d7ae7c" transform="rotate(-28 32 32.5)"/><circle cx="27" cy="35" r="1.8" fill="#9a6f45"/><circle cx="37" cy="30" r="1.8" fill="#9a6f45"/></svg>',
-expl:'<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="24" width="48" height="30" rx="5" fill="#667753" stroke="#25372c" stroke-width="3"/><path d="M14 27 C17 3 22 14 24 27 M22 27 C26 5 33 10 34 27 M32 27 C38 0 45 10 46 27 M42 27 C48 11 53 12 52 27" fill="none" stroke-width="3.3"/><path d="M14 27 C17 3 22 14 24 27" stroke="#dc493d" fill="none" stroke-width="3.3"/><path d="M22 27 C26 5 33 10 34 27" stroke="#35c866" fill="none" stroke-width="3.3"/><path d="M32 27 C38 0 45 10 46 27" stroke="#327cdd" fill="none" stroke-width="3.3"/><rect x="17" y="34" width="30" height="14" rx="2" fill="#172b27"/><text x="32" y="44" font-size="10" font-weight="bold" font-family="monospace" text-anchor="middle" fill="#91e795">03:00</text></svg>',
+expl:'<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="24" width="48" height="30" rx="5" fill="#667753" stroke="#25372c" stroke-width="3"/><path d="M14 27 C17 3 22 14 24 27 M22 27 C26 5 33 10 34 27 M32 27 C38 0 45 10 46 27 M42 27 C48 11 53 12 52 27" fill="none" stroke-width="3.3"/><path d="M14 27 C17 3 22 14 24 27" stroke="#dc493d" fill="none" stroke-width="3.3"/><path d="M22 27 C26 5 33 10 34 27" stroke="#35c866" fill="none" stroke-width="3.3"/><path d="M32 27 C38 0 45 10 46 27" stroke="#327cdd" fill="none" stroke-width="3.3"/><rect x="17" y="34" width="30" height="14" rx="2" fill="#172b27"/><text x="32" y="44" font-size="10" font-weight="bold" font-family="monospace" text-anchor="middle" fill="#91e795">00:03</text></svg>',
 disf:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M22 12 L30 17 L34 17 L42 12 L54 22 L47 30 L43 27 L43 55 L21 55 L21 27 L17 30 L10 22 Z" fill="#b83232" stroke="#661d1d" stroke-width="3"/><path d="M28 16 Q32 23 36 16" fill="none" stroke="#f0c7a2" stroke-width="3"/></svg>',
 mapa:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#ead69b" stroke="#7c693c" stroke-width="3"/><path d="M25 9 V50 M39 14 V55" stroke="#a18b56" stroke-width="2"/><rect x="30" y="28" width="15" height="11" fill="#7c4f3a"/><path d="M29 28 L37.5 21 L46 28" fill="#a33b32"/></svg>',
 mapa_heli:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#d9edf5" stroke="#557986" stroke-width="3"/><path d="M17 33 H49 M32 20 V46" stroke="#557986" stroke-width="2"/><ellipse cx="32" cy="33" rx="11" ry="5" fill="#587766"/><path d="M43 33 H54 M21 33 H10" stroke="#35453c" stroke-width="3"/></svg>',
@@ -8175,7 +10205,7 @@ granada:'<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="31" cy="38" rx
 arma:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 19 H54 V50 H10 Z" fill="#75583a" stroke="#3e3024" stroke-width="3"/><path d="M14 24 H50" stroke="#b58a56" stroke-width="3"/><g fill="#d4aa42" stroke="#70591e" stroke-width="1"><circle cx="20" cy="34" r="4"/><circle cx="31" cy="34" r="4"/><circle cx="42" cy="34" r="4"/><circle cx="25" cy="44" r="4"/><circle cx="36" cy="44" r="4"/></g></svg>'
 };
 const IT={
-med:{n:'Farmaciola',c:0xf2f3de,s:[1.2,.8,.8],icon:ICON.med,desc:'Recupera 40 punts de vida.',usable:true},
+med:{n:'Farmaciola',c:0xf2f3de,s:[1.2,.8,.8],icon:ICON.med,desc:'Recupera 8 punts de vida.',usable:true},
 mapa:{n:'Mapa de l’HQ',c:0xffe27a,s:[1.6,.08,1.2],icon:ICON.mapa,desc:'En recollir-lo, revela immediatament la posició de l’HQ enemic.',usable:false},
 mapa_heli:{n:'Mapa d’helicòpters',c:0x9fd7ff,s:[1.6,.08,1.2],icon:ICON.mapa_heli,desc:'En recollir-lo, marca immediatament tots els helicòpters actius al mapa.',usable:false},
 mapa_tanc:{n:'Mapa de tancs',c:0xc6b06a,s:[1.6,.08,1.2],icon:ICON.mapa_tanc,desc:'En recollir-lo, marca immediatament tots els tancs actius al mapa.',usable:false},
@@ -8185,11 +10215,11 @@ paracaigudes:{n:'Paracaigudes',c:0xcfaa74,s:[1.2,.9,.9],icon:ICON.paracaigudes,d
 cisalla:{n:'Cisalla',c:0xb83f38,s:[1,1.4,.3],icon:ICON.cisalla,desc:'Talla silenciosament un tram de filferrada proper. Equipa-la i prem Talla / F mirant la tanca. No gasta munició ni alerta els enemics.',usable:true},
 granada:{n:'Granades',c:0x4a5842,s:[.65,.65,.65],icon:ICON.granada,desc:'Paquet de 5 granades. A peu, mantén Dispar per arribar més lluny i mira la trajectòria. Des de l’helicòpter utilitari, prem Dispar per llançar-ne una de l’inventari.',usable:true},
 arma:{n:'Munició',c:0x555b66,s:[1.6,.35,.35],icon:ICON.arma,desc:'Caixa de munició per a l’arma personal.',usable:false},
-expl:{n:'Explosius',c:0x617451,s:[.9,.9,.9],icon:ICON.expl,desc:'Bloc d’explosiu plàstic amb cables RGB i temporitzador digital. La càrrega col·locada parpelleja en vermell durant 3 segons i té força destructiva triple.',usable:true},
+expl:{n:'Explosius',c:0x617451,s:[.9,.9,.9],icon:ICON.expl,desc:'Explosiu C4 amb visor LED de 00 a 59 segons. A peu es col·loca; des de l’helicòpter utilitari en vol cau per la porta lateral. Explota quan arriba a zero, fins i tot a l’aire. No es pot utilitzar des de l’helicòpter de combat.',usable:true},
 disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa enemiga vermella. Activa o desactiva la disfressa.',usable:true}
 };
 // combat i enemics
-let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=100,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null;
+let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=window.HUNTER_COMBAT_BALANCE.player,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,knifeEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null,playerCrouched=false;
 // Ojiva compartida per tots els projectils pesats. Eix longitudinal -Z:
 // culata cilíndrica a +Z i punta cònica a -Z, com els canons del joc.
 // Geometria única reutilitzada, sense crear malles noves per cada tir.
@@ -8202,15 +10232,27 @@ const gHeavy=new THREE.LatheGeometry([
 ],12);
 gHeavy.rotateX(-Math.PI/2);
 const heavyForward=new THREE.Vector3(0,0,-1);
-const endEl=document.getElementById('end'),gB=new THREE.BoxGeometry(.35,.35,.35),sphG=new THREE.SphereGeometry(1,10,8),
+// Bales lleugeres: petits cilindres allargats, amb l'eix longitudinal -Z.
+// Comparteixen geometria i cada projectil s'orienta segons la trajectòria.
+const gLight=new THREE.CylinderGeometry(.105,.105,.78,8);
+gLight.rotateX(-Math.PI/2);
+// Anell pla, mai un volum transparent que amagui els murs del món.
+const endEl=document.getElementById('end'),blastRingG=new THREE.RingGeometry(.91,1.08,48),
 mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial({color:0xff7a1a}),mE=new THREE.MeshBasicMaterial({color:0xff4040}),
 // Bales de pistola, franctirador, soldats i tanqueta: petites i blanques.
 // Els projectils explosius mantenen el color i volum original.
 mW=new THREE.MeshBasicMaterial({color:0xffffff}),SMALL_ARMS_SCALE=.7;
 // Cadència compartida entre la tanqueta del jugador i les enemigues.
 const TANKETTE_FIRE_INTERVAL=.16;
-const EC={soldat:{hp:30,sp:7,rng:32,rate:1.1,dmg:7,spl:0,r:2},jeep:{hp:70,sp:22,rng:22,rate:.5,dmg:5,spl:0,r:3.9},tanqueta:{hp:115,sp:13,rng:42,rate:TANKETTE_FIRE_INTERVAL,dmg:9,spl:0,r:4.5},tanc:{hp:140,sp:8,rng:100,rate:2.5,dmg:22,spl:7,r:6.8},
-torre:{hp:90,sp:0,rng:112.5,rate:.7,dmg:8,spl:0,r:3},patrulla_marina:{hp:95,sp:20,rng:245,rate:.4,dmg:6,spl:0,r:7.5},general:{hp:45,sp:0,rng:30,rate:.9,dmg:9,spl:0,r:2}};
+const EC={
+ soldat:{hp:COMBAT_BALANCE.people.soldier,sp:7,rng:32,rate:1.1,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:2},
+ jeep:{hp:COMBAT_BALANCE.vehicles.cotxe,sp:22,rng:75,rate:1.1,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:3.9},
+ tanqueta:{hp:COMBAT_BALANCE.vehicles.tanqueta,sp:13,rng:42,rate:TANKETTE_FIRE_INTERVAL,dmg:COMBAT_BALANCE.weapons.tankette,spl:0,r:4.5},
+ tanc:{hp:COMBAT_BALANCE.vehicles.tanc,sp:8,rng:100,rate:2.5,dmg:COMBAT_BALANCE.weapons.tank,spl:7,r:6.8},
+ torre:{hp:24,sp:0,rng:112.5,rate:.7,dmg:COMBAT_BALANCE.weapons.towerLight,spl:0,r:3},
+ patrulla_marina:{hp:COMBAT_BALANCE.vehicles.llanxa,sp:20,rng:245,rate:.4,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:7.5},
+ general:{hp:COMBAT_BALANCE.people.general,sp:1.45,rng:35,rate:.9,dmg:COMBAT_BALANCE.weapons.pistol,spl:0,r:2}
+};
 // extres: so, partícules, fauna, diari
 let started=0,DIF=1,AC=null,eng=null,seaAudio=null,logb=[],fa=[],pi_=0;const lastS={},rn=(a,b)=>a+Math.random()*(b-a);
 const PT=[];for(let i=0;i<100;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,depthWrite:false}));m.visible=false;scene.add(m);PT.push({m,life:0,max:1,s:1})}
@@ -8237,7 +10279,15 @@ for(let i=fa.length-1;i>=0;i--){
     f.o.rotation.y=f.sharkYaw??Math.PI-f.a;
     f.o.rotation.z=f.dead?Math.min(1.4,(f.deathT||0)*2):0;
     if(outcome.bite&&!over){
-      hurtP(window.HUNTER_SHARKS.BITE_DAMAGE);
+      hurtP(window.HUNTER_SHARKS.BITE_DAMAGE,false,{type:'shark',x:f.x,y:f.o.position.y,z:f.z});
+      // Gran esquitx de sang, sense materials ni partícules noves:
+      // reutilitza el pool d'efectes existent al nivell de l'aigua.
+      const biteY=wy(P.x,P.z,t)+.08;
+      for(let k=0;k<12;k++){
+        const a=k*Math.PI/6,d=.35+(k%4)*.33;
+        puff(P.x+Math.cos(a)*d,biteY+rn(0,.4),P.z+Math.sin(a)*d,
+          k%3?0xa51b2b:0xcc303d,1.65+rn(0,1.65));
+      }
       msg='Un tauró et mossega!';msgT=1.5;
     }
     if(!f.dead&&d2<FAUNA_NEAR2&&Math.random()<.1)
@@ -8294,8 +10344,8 @@ if(seaAudio){const coastal=Math.max(.25,1-Math.max(0,hAt(P.x,P.z))/22),
         ?.026+Math.min(1,Math.abs(cv.v)/22)*.016:.035+coastal*.05;
   seaAudio.gain.gain.setTargetAtTime(over?0:waterVolume,AC.currentTime,.5)}
 if(eng){const c=cv?VT[cv.t]:null;
-  eng.g.gain.value=c&&!['bici','windsurf','barca_rems'].includes(cv.t)&&!over?.02+Math.min(1,Math.abs(cv.v)/40)*.03:0;
-  eng.o.frequency.value=c?(c.m=='a'?60:35)+Math.abs(cv.v)*(c.m=='a'?1:2.5):40}}
+  eng.g.gain.value=c&&!['bici','windsurf','barca_rems'].includes(cv.t)&&!over?(cv.t==='cotxe_civil'?1.65:1)*(.02+Math.min(1,Math.abs(cv.v)/40)*.03):0;
+  eng.o.frequency.value=c?(cv.t==='cotxe_civil'?28:c.m=='a'?60:35)+Math.abs(cv.v)*(c.m=='a'?1.3:2.5):40}}
 const seedRandomEl=document.getElementById('seedRandom'),seedInputEl=document.getElementById('seedInput'),iniEl=document.getElementById('ini'),
 startMenuEl=document.getElementById('startMenu'),seedSearchScreenEl=document.getElementById('seedSearchScreen'),
 seedSearchOpenEl=document.getElementById('seedSearchOpen'),seedSearchBackEl=document.getElementById('seedSearchBack'),
@@ -8462,21 +10512,24 @@ function vehicleDebris(v,baseY){
   if(!v?.o)return;
   v.o.updateMatrixWorld(true);
   const meshes=[];v.o.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&o.geometry&&!o.userData.waterMask)meshes.push(o)});
-  const heavy=['tanc','tanqueta','camio'].includes(v.t),air=v.t==='heli'||v.t==='heli_combat',maxPieces=heavy?24:air?20:16;
+  const heavy=['tanc','tanqueta','camio'].includes(v.t),truck=v.t==='camio',air=v.t==='heli'||v.t==='heli_combat',maxPieces=heavy?24:air?20:16;
   const chosen=meshes.length<=maxPieces?meshes:meshes.filter((_,i)=>i%Math.ceil(meshes.length/maxPieces)===0).slice(0,maxPieces);
   const center=new THREE.Vector3(v.x,baseY+1,v.z),p=new THREE.Vector3(),q=new THREE.Quaternion(),sc=new THREE.Vector3();
   for(const src of chosen){
     src.matrixWorld.decompose(p,q,sc);
     const piece=new THREE.Mesh(src.geometry,src.material);piece.position.copy(p);piece.quaternion.copy(q);piece.scale.copy(sc);piece.castShadow=true;piece.receiveShadow=true;world.add(piece);
     const dx=p.x-center.x,dz=p.z-center.z,d=Math.max(.3,Math.hypot(dx,dz)),out=heavy?rn(7,16):rn(9,20);
-    DB.push({m:piece,s0:piece.scale.clone(),vx:dx/d*out+rn(-5,5),vy:rn(10,heavy?22:26),vz:dz/d*out+rn(-5,5),rx:rn(-9,9),ry:rn(-9,9),rz:rn(-9,9),life:rn(2.2,4.2),vehiclePart:true})
+    DB.push({m:piece,s0:piece.scale.clone(),vx:dx/d*out+rn(-5,5),vy:rn(10,heavy?22:26),vz:dz/d*out+rn(-5,5),rx:rn(truck?-1:-9,truck?1:9),ry:rn(truck?-1.25:-9,truck?1.25:9),rz:rn(truck?-.9:-9,truck?.9:9),life:rn(truck?2:2.2,truck?3.1:4.2),vehiclePart:true,truckPiece:truck})
   }
   const burst=heavy?14:10;debris(v.x,baseY+1.3,v.z,0x34383a,burst,.45,14);
   for(let i=0;i<(heavy?7:5);i++)puff(v.x+rn(-2,2),baseY+rn(.5,2.2),v.z+rn(-2,2),i%2?0x3b3b38:0x787064,rn(1.6,3.2));
   while(DB.length>240){const d=DB.shift();if(d?.m)world.remove(d.m)}
 }
-function wallBreak(w){const h=w.y1-w.y0-1,parts=w.parts&&w.parts.length?w.parts:[w.m],base=parts[0],col=w.barbed?0x4a4f52:base.material.color.getHex(),cx=(w.x0+w.x1)/2,cz=(w.z0+w.z1)/2;
-if(w.parts&&w.parts.length){parts.forEach(m=>m.visible=false)}else if(w.m.visible)WA.push({m:w.m,h,t:.5});else world.remove(w.m);
+function wallBreak(w){const h=w.y1-w.y0-1,parts=w.parts&&w.parts.length?w.parts:[w.m],base=parts[0],col=w.barbed?0x4a4f52:(base?.material?.color?.getHex?.()??0x8d9389),cx=(w.x0+w.x1)/2,cz=(w.z0+w.z1)/2;
+// Els brancals, la porta i la llinda són un sol conjunt estructural.
+// Les peces d'una obertura s'oculten alhora, sense marcs residuals.
+if(w.doorAssembly||w.parts&&w.parts.length){parts.forEach(m=>{if(m)m.visible=false})}
+else if(w.m?.visible)WA.push({m:w.m,h,t:.5});else if(w.m?.parent)w.m.parent.remove(w.m);
 for(let i=0;i<(w.door?6:10);i++)debris(rn(w.x0,w.x1),w.y0+1+h*rn(.2,.9),rn(w.z0,w.z1),col,1,.9,7);
 for(let i=0;i<3;i++)puff(cx,w.y0+1+h*rn(.1,.6),cz,0xc9b48a,3.5)}
 function destroyInteriorStair(b){
@@ -8509,7 +10562,7 @@ if(b.hangar&&b.roof?.userData?.hangarRoof){
 }
 snd('boom',.4)}
 function updDeb(dt){for(let i=DB.length-1;i>=0;i--){const d=DB[i],m=d.m;d.vy-=28*dt;m.position.x+=d.vx*dt;m.position.y+=d.vy*dt;m.position.z+=d.vz*dt;m.rotation.x+=d.rx*dt;m.rotation.y+=(d.ry||0)*dt;m.rotation.z+=(d.rz||0)*dt;
-const g=Math.max(0,hAt(m.position.x,m.position.z))+.2;if(m.position.y<g){m.position.y=g;d.vy*=-.3;d.vx*=.6;d.vz*=.6;d.rx*=.82;if(d.ry)d.ry*=.82;if(d.rz)d.rz*=.82}
+const g=Math.max(0,hAt(m.position.x,m.position.z))+.2;if(m.position.y<g){m.position.y=g;d.vy*=-.3;d.vx*=.6;d.vz*=.6;d.rx*=d.truckPiece?.38:.82;if(d.ry)d.ry*=d.truckPiece?.38:.82;if(d.rz)d.rz*=d.truckPiece?.38:.82}
 d.life-=dt;const fade=d.vehiclePart?.55:.4,k=Math.max(0,Math.min(1,d.life/fade));m.scale.set(d.s0.x*k,d.s0.y*k,d.s0.z*k);if(d.life<=0){world.remove(m);DB.splice(i,1)}}
 for(let i=WA.length-1;i>=0;i--){const a=WA[i];a.t-=dt;const s=Math.max(0,a.t/.5);a.m.scale.y=s;a.m.position.y=a.h/2*s;if(a.t<=0){world.remove(a.m);WA.splice(i,1)}}
 for(let i=HR.length-1;i>=0;i--){const a=HR[i],m=a.m;a.t+=dt;const p=Math.min(1,a.t/a.dur),e=p*p*(3-2*p);m.rotation.z=a.baseRz+a.dir*e*.62;m.rotation.x=a.baseRx+Math.sin(p*Math.PI)*.08;m.position.y=a.baseY-e*8.5;if(p>.35&&Math.random()<.35)puff(a.x+rn(-a.w/2,a.w/2),Math.max(.4,m.parent.position.y+m.position.y+rn(0,3)),a.z+rn(-a.d/2,a.d/2),0x7c7772,2.4);if(p>=1){m.visible=false;if(m.parent)m.parent.remove(m);HR.splice(i,1)}}
@@ -8517,15 +10570,81 @@ updFA(dt)}
 // vegetació
 const TG=new Map();
 function treeHit(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L)if(!(palmsDisabled&&t.p)&&Math.hypot(x-t.x,z-t.z)<t.r+r)return true}return false}
-function treePush(){const r0=.5,cx=Math.floor(P.x/16),cz=Math.floor(P.z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L){if(palmsDisabled&&t.p)continue;const dx=P.x-t.x,dz=P.z-t.z,d=Math.hypot(dx,dz),m=t.r+r0;if(d<m&&d>.001){P.x=t.x+dx/d*m;P.z=t.z+dz/d*m}}}}
+// Col·lisió del jugador amb la silueta REAL del tronc corbat, no només
+// amb el cercle de l'arrel. La mateixa corba sinusoïdal s'usa a vegetation.js;
+// la rotació i l'escala provenen de la mateixa palmera determinista.
+function palmPush(t,r0){
+  const height=6.2*t.s,reach=t.r+r0+1.65*t.s;
+  if(P.y>t.y+height+.6||P.y+4.2<t.y)return;
+  if(Math.abs(P.x-t.x)>reach||Math.abs(P.z-t.z)>reach)return;
+  const yawCos=Math.cos(t.yaw),yawSin=Math.sin(t.yaw);
+  let overlap=0,nx=0,nz=0;
+  // El model a peu fa prop de quatre metres: comprovam tot el cos,
+  // incloent espatlles i cap, sense crear malles de col·lisió addicionals.
+  for(const offset of [.3,1,1.7,2.4,3.1,3.8]){
+    const y=P.y+offset;
+    if(y<t.y||y>t.y+height)continue;
+    const q=(y-t.y)/height;
+    const bend=height*.25*Math.sin(Math.PI*q);
+    const trunkX=t.x+bend*yawCos,trunkZ=t.z-bend*yawSin;
+    const dx=P.x-trunkX,dz=P.z-trunkZ,d=Math.hypot(dx,dz);
+    const bodyRadius=offset>3.1 ? r0*.75 : r0;
+    const radius=bodyRadius+t.r*(1-.43*q)+.04*t.s;
+    if(d<radius&&radius-d>overlap){
+      overlap=radius-d;
+      if(d>.0001){nx=dx/d;nz=dz/d}
+      else {nx=Math.cos(P.hd);nz=-Math.sin(P.hd)}
+    }
+  }
+  if(overlap>0){P.x+=nx*overlap;P.z+=nz*overlap}
+}
+function treePush(){
+  const r0=.5,cx=Math.floor(P.x/16),cz=Math.floor(P.z/16);
+  for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){
+    const L=TG.get((cx+a)+','+(cz+b));if(!L)continue;
+    for(const t of L){
+      if(t.p){if(!palmsDisabled)palmPush(t,r0);continue}
+      if(t.rock&&(P.y>t.topY+.6||P.y+1.5<t.bottomY))continue;
+      const dx=P.x-t.x,dz=P.z-t.z,d=Math.hypot(dx,dz),m=t.r+r0;
+      if(d<m&&d>.001){P.x=t.x+dx/d*m;P.z=t.z+dz/d*m}
+    }
+  }
+}
+function nearbyRock(x,z,r=0,baseY=-Infinity,topY=Infinity){
+ const cx=Math.floor(x/16),cz=Math.floor(z/16),
+   steps=Math.max(1,Math.ceil((r+8)/16));
+ let hit=null,dist=Infinity;
+ for(let a=-steps;a<=steps;a++)for(let b=-steps;b<=steps;b++){
+   const L=TG.get((cx+a)+','+(cz+b));if(!L)continue;
+   for(const t of L){
+     if(!t.rock||t.topY<baseY-.5||t.bottomY>topY+.5)continue;
+     const d=Math.hypot(x-t.x,z-t.z);
+     if(d<t.r+r&&d<dist){hit=t;dist=d}
+   }
+ }
+ return hit;
+}
 function vehiclePushPlayer(){
   if(cv||playerFall)return;
   for(const v of [...V,...E.filter(u=>['jeep','tanqueta','tanc'].includes(u.t))]){
-    if(v.destroyed||!circleVehicleOverlap(P.x,P.z,.62,v))continue;if(v.t==='ferry'&&(terminalRampHeight(P.x,P.z)!==null||pedestrianFerry(P.x,P.z,P.y)?.f===v))continue;
-    const b=vehicleBox(v),dx=P.x-b.x,dz=P.z-b.z,s=Math.sin(b.hd),c=Math.cos(b.hd),lx=dx*c-dz*s,lz=dx*s+dz*c,ex=b.w/2+.66-Math.abs(lx),ez=b.d/2+.66-Math.abs(lz);
-    if(ex<ez){const sign=lx<0?-1:1,wx=sign*c,wz=-sign*s;P.x=b.x+(sign*(b.w/2+.66))*c+lz*s;P.z=b.z-(sign*(b.w/2+.66))*s+lz*c}
-    else{const sign=lz<0?-1:1;P.x=b.x+lx*c+sign*(b.d/2+.66)*s;P.z=b.z-lx*s+sign*(b.d/2+.66)*c}
-    const sp=Math.abs(v.v||0);if(sp>5&&!(playerEject?.kind==='flip'&&playerEject.t>0)&&(!v.playerHitCd||v.playerHitCd<=0)){hurtP(Math.min(22,2+sp*.55));v.playerHitCd=.45;msg='Impacte amb un vehicle!';msgT=1.5}
+    if(v.destroyed)continue;
+    const overlap=circleVehicleOverlap(P.x,P.z,.62,v),
+          sweep=runoverSweepHit(v.impactFromX??v.x,v.impactFromZ??v.z,
+            v.x,v.z,P.x,P.z,vehicleRadius(v.t)*.68+.62*.45);
+    if(!overlap&&!sweep)continue;
+    if(v.t==='ferry'&&(terminalRampHeight(P.x,P.z)!==null||pedestrianFerry(P.x,P.z,P.y)?.f===v))continue;
+    // Només apartam el jugador si el buc l'ocupa ara; un pas ràpid
+    // que ja l'ha travessat conserva el dany sense teletransportar-lo.
+    if(overlap){
+      const b=vehicleBox(v),dx=P.x-b.x,dz=P.z-b.z,s=Math.sin(b.hd),c=Math.cos(b.hd),lx=dx*c-dz*s,lz=dx*s+dz*c,ex=b.w/2+.66-Math.abs(lx),ez=b.d/2+.66-Math.abs(lz);
+      if(ex<ez){const sign=lx<0?-1:1;P.x=b.x+(sign*(b.w/2+.66))*c+lz*s;P.z=b.z-(sign*(b.w/2+.66))*s+lz*c}
+      else{const sign=lz<0?-1:1;P.x=b.x+lx*c+sign*(b.d/2+.66)*s;P.z=b.z-lx*s+sign*(b.d/2+.66)*c}
+    }
+    const sp=Math.abs(v.v??v.impactSpeed??0),
+          dmg=runoverDamage(sp,VT[vehicleHitType(v.t)]?.mass||1);
+    if(dmg>0&&!(playerEject?.kind==='flip'&&playerEject.t>0)&&(!v.playerHitCd||v.playerHitCd<=0)){
+      hurtP(dmg,false,{type:'runover',x:v.x,y:v.o?.position?.y??P.y,z:v.z});v.playerHitCd=.45;msg='Impacte amb un vehicle!';msgT=1.5;
+    }
   }
 }
 const PL=[],FA=[],ZM=new THREE.Matrix4().makeScale(0,0,0);let PM={};
@@ -8550,7 +10669,7 @@ const PG={t:vegetationVisual.geometry.trunk,c:vegetationVisual.geometry.crown,c2
 let compoundClear=[];
 function treeAt(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L)if(!(palmsDisabled&&t.p)&&Math.hypot(x-t.x,z-t.z)<t.r+r)return t}return null}
 function crush(x,z,r){if(palmsDisabled)return;const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)L.slice().forEach(t=>{if(t.p&&Math.hypot(x-t.x,z-t.z)<t.r+r)killPalm(t)})}}
-function dmgP(t,d){if(!t.alive)return;t.hp-=d;if(t.hp<=0)killPalm(t)}
+function dmgP(t,d){if(!t.alive)return;const amount=wholeDamage(d);if(!amount)return;t.hp=Math.max(0,Math.ceil(t.hp)-amount);if(t.hp<=0)killPalm(t)}
 function killPalm(t){if(!t.alive)return;t.alive=false;const a=TG.get(t.k);if(a){const i=a.indexOf(t);if(i>=0)a.splice(i,1)}
 // La geometria es gestiona ara en instàncies de cada sector.
 if(PM.remove)PM.remove(t.i,ZM);
@@ -8560,14 +10679,35 @@ function updFA(dt){for(let i=FA.length-1;i>=0;i--){const a=FA[i];a.t+=dt;const k
 if(k>=1){const c=Math.cos(a.yaw),s=Math.sin(a.yaw),lx=a.x+c*6.4*a.s,lz=a.z-s*6.4*a.s,ly=Math.max(hAt(lx,lz),0)+.6;
 debris(lx,ly,lz,0x4fa03a,8,1,5);debris(a.x+c*3*a.s,ly,a.z-s*3*a.s,0x8a6a3a,4,.7,3);puff(lx,ly,lz,0xc9b48a,3);world.remove(a.y);FA.splice(i,1)}}}
 function vegetate(pa){TG.clear();PL.length=0;FA.length=0;const pm=[],bu=[],rk=[],put=e=>{e.k=Math.floor(e.x/16)+','+Math.floor(e.z/16);let a=TG.get(e.k);if(!a)TG.set(e.k,a=[]);a.push(e)};
+ const rockSafe=(x,z,r=2)=>Math.abs(x)<H-35&&Math.abs(z)<H-35&&
+   !stairs.some(st=>stairContains(st,x,z,r+1))&&
+   Math.hypot(x-pa.x,z-pa.z)>16+r&&
+   !B.some(b=>Math.abs(x-b.x)<b.w/2+r+4&&Math.abs(z-b.z)<b.d/2+r+4)&&
+   !compoundClear.some(c=>Math.hypot(x-c.x,z-c.z)<c.r+r+5);
+ const addRock=(x,z,scale,kind)=>{
+   if(!rockSafe(x,z,scale*1.45))return false;
+   const h=hAt(x,z);if(h<-4.6)return false;
+   const tall=kind===1,y=h+(tall?.85:.38)*scale,
+     radius=(tall?1.27:1.44)*scale,
+     topY=h+(tall?2.3:1.18)*scale;
+   rk.push([x,y,z,scale,window.HUNTER_ROCK_FIELDS.rockNoise(x,z,5)*Math.PI*2,0,
+     (window.HUNTER_ROCK_FIELDS.rockNoise(x,z,6)-.5)*.33,kind]);
+   put({x,z,y,r:radius,rock:true,kind,s:scale,topY,bottomY:h-scale*.5});
+   return true;
+ };
 for(let x=-H+40;x<H-40;x+=14)for(let z=-H+40;z<H-40;z+=14){const px=x+rr(-4,4),pz=z+rr(-4,4),h=hAt(px,pz);if(h<1.3||h>42)continue;
 const dn=fbm(px/80+7,pz/80+3),q=R(),highPalm=.22+Math.max(0,Math.min(1,(h-28)/14))*.12;let L=null;
 if(h<4)L=q<.12?pm:null;else if(dn>.55&&h<28)L=q<.20?pm:null;else if(h>=28&&q<highPalm)L=pm;else if(dn>.4)L=q<.2?bu:null;else if(h>8&&q<.04)L=rk;else if(q<.024)L=pm;
 if(!L||slope(px,pz,h)>4.5)continue;
 if(stairs.some(s=>stairContains(s,px,pz,2))||Math.hypot(px-pa.x,pz-pa.z)<14||B.some(b=>Math.abs(px-b.x)<b.w/2+5&&Math.abs(pz-b.z)<b.d/2+5)||compoundClear.some(c=>Math.hypot(px-c.x,pz-c.z)<c.r))continue;
 const s=1.15*rr(.75,1.25),yaw=rr(0,6.28);
-if(L==pm){const leafVar=R()<.33?-1:R()<.66?0:1,tone=rr(-.25,.25),idx=pm.length;pm.push([px,h-.3,pz,s,yaw,leafVar,tone]);const e={x:px,z:pz,y:h-.3,s,yaw,r:.6*Math.max(.75,s),p:true,alive:true,hp:40,i:idx,leafVar,tone};put(e);PL.push(e)}
-else{L.push([px,h-.3,pz,s,yaw]);if(L==rk)put({x:px,z:pz,r:1.4,rock:true})}}
+if(L==pm){const leafVar=R()<.33?-1:R()<.66?0:1,tone=rr(-.25,.25),idx=pm.length;pm.push([px,h-.3,pz,s,yaw,leafVar,tone]);const e={x:px,z:pz,y:h-.3,s,yaw,r:.6*Math.max(.75,s),p:true,alive:true,hp:8,i:idx,leafVar,tone};put(e);PL.push(e)}
+else if(L===rk)window.HUNTER_ROCK_FIELDS.baseRockCluster(px,pz,s,addRock);
+ else L.push([px,h-.3,pz,s,yaw])}
+const rockFieldStats=window.HUNTER_ROCK_FIELDS.generateRockFields({
+  islands,hAt,canPlace:rockSafe,addRock
+});
+world.userData.rockFieldStats={...rockFieldStats,totalRocks:rk.length};
 if(seedSearchMode){
   // vegetationVisual.build consumeix 11 tirades/palmera (tronc + dues
   // copes), 3/arbust i 5/roca. Preservam EXACTAMENT l'estat final del
@@ -8580,7 +10720,7 @@ const vegetationMeshes=vegetationVisual.build({
   lowQuality:!visualQuality.shadows,lodProfile:qualityName
 });
 PM=vegetationMeshes.palms;
-window.HUNTER_VEGETATION_STATS=PM.stats}
+window.HUNTER_VEGETATION_STATS={...PM.stats,rockFields:rockFieldStats}}
 function fr(x,z){let a=1e9,b=-1e9;for(const[i,j]of[[0,0],[9,9],[-9,9],[9,-9],[-9,-9],[9,0],[-9,0],[0,9],[0,-9]]){const h=hAt(x+i,z+j);a=Math.min(a,h);b=Math.max(b,h)}return b-a}
 function checkRoofSupport(b,w){
   if(!b||b.rb||b.hangar||b.kind==='enemy_bunker'||!w||!w.supportWeight)return;
@@ -8590,19 +10730,46 @@ function checkRoofSupport(b,w){
   }
   if(b.destroyedWallSupport>=3)roofBreak(b)
 }
-function dmgW(w,d){if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}w.hp-=d;if(w.hp<=0){wallBreak(w);let i=Wl.indexOf(w);if(i>=0){Wl.splice(i,1);wallGridCount=-1}i=Dr.indexOf(w);if(i>=0)Dr.splice(i,1);if(w.stairStructure)destroyInteriorStair(w.stairStructure.owner);checkRoofSupport(w.owner,w);snd('boom',.3)}}
+function dmgW(w,d){
+ if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}
+ const amount=wholeDamage(d);
+ if(!amount||!Number.isFinite(w.hp)||w.hp<=0)return;
+ w.hp=Math.max(0,Math.ceil(w.hp)-amount);
+ if(w.hp>0)return;
+ // Destrucció atòmica de tota l'obertura: cap porta o llinda invisible
+ // pot conservar la col·lisió després de caure un dels dos brancals.
+ const members=w.doorAssembly||[w];
+ for(const piece of members){
+  if(!piece||piece.destroyedWall)continue;
+  piece.destroyedWall=true;piece.hp=0;piece.open=true;piece.playerBlock=false;
+  wallBreak(piece);
+  let i=Wl.indexOf(piece);if(i>=0){Wl.splice(i,1);wallGridCount=-1}
+  i=Dr.indexOf(piece);if(i>=0)Dr.splice(i,1);
+  if(piece.owner?.door===piece)piece.owner.door=null;
+  if(piece.stairStructure)destroyInteriorStair(piece.stairStructure.owner);
+  checkRoofSupport(piece.owner,piece);
+ }
+ snd('boom',.3);
+}
 function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=seedSearchMode
   ?{group:new THREE.Group(),walls:null,doors:null,roof:new THREE.Group()}
   :(opt.hangar?buildingVisual.createHangarShell:buildingVisual.createShell)({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),
-  g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide,structuralWalls=[];
+  g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide,structuralWalls=[],buildingWallStart=Wl.length;
 const wallH=opt.floors===2?h/2:h;
 let entranceDoor=null;
-const seg=(lx,lz,sx,sz,dr,windows=false,supportSide=null,supportWeight=0,level=0)=>{if(!dr){const parts=seedSearchMode?[new THREE.Object3D()]:windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:wallH,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:wallH,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy+level-(level?0:1),y1:fy+level+wallH,hp:90,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,supportSide,supportWeight};for(const mesh of parts)mesh.position.y+=level;if(opt.wood){for(const mesh of parts)if(mesh.material?.color?.getHex()===0x3e7185)mesh.visible=false;}Wl.push(o);if(supportWeight>0)structuralWalls.push(o);return}
-const parts=seedSearchMode?{door:new THREE.Object3D(),doorHeight:opt.doorHeight||4.4}:buildingVisual.addDoor(g,{lx,lz,sx,sz,height:wallH,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:35,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y};Wl.push(door);Dr.push(door);entranceDoor=door;
-if(parts.lintel)Wl.push({x0:door.x0,x1:door.x1,z0:door.z0,z1:door.z1,y0:fy+parts.doorHeight,y1:fy+h,hp:70,m:parts.lintel,door:false,open:false,playerBlock:false,cx:x+lx,cz:z+lz})};
+const seg=(lx,lz,sx,sz,dr,windows=false,supportSide=null,supportWeight=0,level=0)=>{if(!dr){const parts=seedSearchMode?[new THREE.Object3D()]:windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:wallH,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:wallH,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy+level-(level?0:1),y1:fy+level+wallH,hp:12,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,supportSide,supportWeight};for(const mesh of parts)mesh.position.y+=level;if(opt.wood){for(const mesh of parts)if(mesh.material?.color?.getHex()===0x3e7185)mesh.visible=false;}Wl.push(o);if(supportWeight>0)structuralWalls.push(o);return o}
+const parts=seedSearchMode?{door:new THREE.Object3D(),doorHeight:opt.doorHeight||4.4}:buildingVisual.addDoor(g,{lx,lz,sx,sz,height:wallH,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:8,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y,rammable:true};Wl.push(door);Dr.push(door);entranceDoor=door;
+let lintel=null;
+if(parts.lintel){
+ lintel={x0:door.x0,x1:door.x1,z0:door.z0,z1:door.z1,
+  y0:fy+parts.doorHeight,y1:fy+wallH,hp:12,m:parts.lintel,
+  door:false,open:false,playerBlock:false,cx:x+lx,cz:z+lz};
+ Wl.push(lintel);
+}
+return {door,lintel};};
 if(opt.hangar){
   const sh=Math.max(3.1,h*.3),push=(lx,lz,sx,sz)=>{
-    const m=seedSearchMode?new THREE.Object3D():buildingVisual.addWall(g,{lx,lz,sx,sz,height:sh,material:wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+sh,hp:110,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz};Wl.push(o);return o
+    const m=seedSearchMode?new THREE.Object3D():buildingVisual.addWall(g,{lx,lz,sx,sz,height:sh,material:wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+sh,hp:16,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz};Wl.push(o);return o
   };
   // Sense parets laterals ni paret rectangular posterior:
   // el compound afegeix una sola paret semicircular al fons amb col·lisió pròpia.
@@ -8610,12 +10777,21 @@ if(opt.hangar){
   const frontZ=ds===0?d/2-t/2:-d/2+t/2,sl=Math.max(.5,(w-dw)/2),off=dw/2+sl/2;
   push(-off,frontZ,sl,t);push(off,frontZ,sl,t);
 }else{
-  [[0,d/2-t/2,w,t,0],[0,-d/2+t/2,w,t,0],[w/2-t/2,0,t,d-2*t,1],[-w/2+t/2,0,t,d-2*t,1]].forEach(([cx,cz,sx,sz,ax],k)=>{if(k!=ds){seg(cx,cz,sx,sz,0,!opt.bunker&&!opt.solidWalls,k,1);return}const L=ax?sz:sx,sl=(L-dw)/2,off=dw/2+sl/2;for(const q of[-1,1]){if(ax)seg(cx,cz+q*off,sx,sl,0,false,k,.5);else seg(cx+q*off,cz,sl,sz,0,false,k,.5)}if(ax)seg(cx,cz,sx,dw,1);else seg(cx,cz,dw,sz,1)});
+  [[0,d/2-t/2,w,t,0],[0,-d/2+t/2,w,t,0],[w/2-t/2,0,t,d-2*t,1],[-w/2+t/2,0,t,d-2*t,1]].forEach(([cx,cz,sx,sz,ax],k)=>{if(k!=ds){seg(cx,cz,sx,sz,0,!opt.bunker&&!opt.solidWalls,k,1);return}const L=ax?sz:sx,sl=(L-dw)/2,off=dw/2+sl/2;
+    const flanks=[];
+    for(const q of[-1,1]){
+      flanks.push(ax?seg(cx,cz+q*off,sx,sl,0,false,k,.5):
+        seg(cx+q*off,cz,sl,sz,0,false,k,.5));
+    }
+    const opening=ax?seg(cx,cz,sx,dw,1):seg(cx,cz,dw,sz,1);
+    const assembly=[...flanks,opening.door,opening.lintel].filter(Boolean);
+    for(const part of assembly)part.doorAssembly=assembly});
   if(!opt.noPartitions&&!opt.bunker&&w*d>=140&&R()<.5){const al=w>=d,L=al?d:w,gp=rr(-L/4,L/4),px=(R()<.5?-1:1)*rr((al?w:d)*.12,(al?w:d)*.2),a0=-L/2+t,a1=L/2-t,ps=(a,b)=>{if(b-a<.5)return;const cc=(a+b)/2,l=b-a;if(al)seg(px,cc,t,l);else seg(cc,px,l,t)};ps(a0,gp-1.6);ps(gp+1.6,a1)}
 }
 if(opt.floors===2)for(const [cx,cz,sx,sz]of[[0,d/2-t/2,w,t],[0,-d/2+t/2,w,t],[w/2-t/2,0,t,d-2*t],[-w/2+t/2,0,t,d-2*t]])seg(cx,cz,sx,sz,0,!opt.solidWalls,null,0,wallH);
 g.position.set(x,fy,z);if(!seedSearchMode)world.add(g);
-const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,rhp:opt.hangar?90:120,hangar:!!opt.hangar,door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
+const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,foundation:visual.foundation,rhp:opt.hangar?12:16,hangar:!!opt.hangar,door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};for(const piece of Wl.slice(buildingWallStart))piece.owner=b;
+structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
 function mkEnemyBunker(x,z){
   const firstWall=Wl.length,b=mkB(x,z,40,34,10,0xd9ded2,0xbfc6bb,{kind:'enemy_bunker',bunker:true,doorSide:0,doorWidth:4,doorHeight:4.4,lockedDoor:true}),g=b.o,inset=3.5;
   if(seedSearchMode){
@@ -8627,11 +10803,11 @@ function mkEnemyBunker(x,z){
       if(w.supportSide===3)w.x1+=lean;
     }
     const wall=(lx,lz,sx,sz)=>Wl.push({x0:x+lx-sx/2,x1:x+lx+sx/2,
-      z0:z+lz-sz/2,z1:z+lz+sz/2,y0:b.fy-1,y1:b.fy+8,hp:90,
+      z0:z+lz-sz/2,z1:z+lz+sz/2,y0:b.fy-1,y1:b.fy+8,hp:12,
       door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,owner:b});
     for(const lx of[-4,4])for(const [lz,d]of[[-12.5,3],[-4,6],[7,10]])wall(lx,lz,.6,d);
     for(const lx of[-11,11])wall(lx,-7,12,.6);
-    b.generalSpots=[{x,z:z-9}];return b;
+    b.generalSpots=[{x,z:z-9}];addBunkerBasement(b);return b;
   }
   // Taper every exterior face; keep the gate vertical and independently animated.
   const meshes=new Set(Wl.slice(firstWall).filter(w=>!w.door).flatMap(w=>w.parts||[w.m]));
@@ -8647,13 +10823,275 @@ function mkEnemyBunker(x,z){
   b.roof.scale.set((b.w-2*inset)/(b.w+1.35),1,(b.d-2*inset)/(b.d+1.35));g.userData.bunkerWallInset=inset;
   // Physical footprints cover the inward lean at character height.
   for(const w of b.structuralWalls){const lean=inset*2.2/b.h;if(w.supportSide===0)w.z0-=lean;if(w.supportSide===1)w.z1+=lean;if(w.supportSide===2)w.x0-=lean;if(w.supportSide===3)w.x1+=lean;}
-  const wall=(lx,lz,sx,sz)=>{const m=buildingVisual.addWall(g,{lx,lz,sx,sz,height:8,material:b.wm});Wl.push({x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:b.fy-1,y1:b.fy+8,hp:90,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,owner:b})};
+  const wall=(lx,lz,sx,sz)=>{const m=buildingVisual.addWall(g,{lx,lz,sx,sz,height:8,material:b.wm});Wl.push({x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:b.fy-1,y1:b.fy+8,hp:12,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,owner:b})};
   for(const lx of[-4,4])for(const [lz,d]of[[-12.5,3],[-4,6],[7,10]])wall(lx,lz,.6,d);
   for(const lx of[-11,11])wall(lx,-7,12,.6);
   for(const sign of[-1,1]){const shape=new THREE.Shape();shape.moveTo(sign*2,0);shape.lineTo(sign*3.5,0);shape.lineTo(sign*2.7,5.2);shape.lineTo(sign*2,5.2);shape.closePath();const post=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:3.3,bevelEnabled:false}),M(0x795337,'masonry'));post.position.z=b.d/2-2.8;g.add(post)}
   bx(g,5.4,.85,3.3,0x795337,0,4.8,b.d/2-1.15,'masonry');
   bx(g,5,1.1,2.5,0x5a5944,0,.9,-12,'paint');
-  b.generalSpots=[{x,z:z-9}];return b;
+  b.generalSpots=[{x,z:z-9}];addBunkerBasement(b);return b;
+}
+// Soterrani integrat sota el model existent: ni la porta blindada ni les
+// parets inclinades de la planta principal canvien. La variant deriva només
+// de la llavor i del lloc del búnquer, sense consumir cap tirada global R().
+function addBunkerBasement(b){
+  // L'edifici estàndard té una base massissa de 12,3 m: omplia
+  // completament el soterrani i ocultava tant les escales com els mobles.
+  // Només al búnquer retiram aquesta base i la substituïm pel forjat
+  // superior perforat i pel terra inferior construïts a continuació.
+  if(b.foundation){
+    b.o.remove(b.foundation);
+    b.foundation.geometry?.dispose();
+    b.foundation.material?.dispose();
+    b.foundation=null;
+  }
+  const random=mul((seed^Math.imul(Math.round(b.x),73856093)^Math.imul(Math.round(b.z),19349663)^0x6e7b32e1)>>>0);
+  const variant=Math.floor(random()*4),floorY=b.fy-9.15,
+        // Prop del doble de superfície útil: cambres i passadís més amples
+        // sense engrandir el volum exterior de la fortificació.
+        halfX=27.0,halfZ=23.0,stairSide=(variant&1)?-1:1,
+        divisions=[-7.0+(variant%2)*1.3,6.4+Math.floor(variant/2)*1.3],
+        westDoors=[-15+(variant%2)*.7,0+Math.floor(variant/2)*.7,15-(variant%2)],
+        // Allunyam l'envà del final de l'escala: més de 8 m de replà
+        // per poder girar i veure la sala quan s'arriba a baix.
+        eastDivider=-stairSide*7,
+        stairX=(variant&2)?14.6:10.8,
+        stairTop=stairSide*13.6,stairBottom=stairSide*1.3;
+  b.basement={variant,floorY,halfX,halfZ,upperSlabMeshes:[],lights:[],
+    cameraHiddenWalls:[],lightsOn:false,doors:[],
+    stair:{x:stairX,zTop:stairTop,zBottom:stairBottom,width:3.3},
+    generalLocal:{x:-19,z:variant%2?15:-15},eliteLocal:[
+      {x:0,z:-15},{x:-1,z:14},
+      {x:17,z:stairSide>0?-16:16},
+      {x:-19,z:(divisions[0]+divisions[1])/2}
+    ]};
+  activeBunker=b;
+  const wall=(lx,lz,w,d,base=-9.2,height=9.25,color=0x68756d)=>{
+    const mesh=seedSearchMode?new THREE.Object3D():bx(b.o,w,height,d,color,lx,base+height/2,lz,'masonry');
+    mesh.castShadow=true;mesh.receiveShadow=true;
+    Wl.push({x0:b.x+lx-w/2,x1:b.x+lx+w/2,z0:b.z+lz-d/2,z1:b.z+lz+d/2,
+      y0:b.fy+base,y1:b.fy+base+height,hp:Infinity,m:mesh,door:false,
+      open:false,rammable:false,cx:b.x+lx,cz:b.z+lz,owner:b,
+      bunkerBasementWall:true});
+  };
+  const floorPanel=(xa,xb,za,zb,level,color)=>{
+    if(seedSearchMode)return;
+    bx(b.o,xb-xa,.26,zb-za,color,(xa+xb)/2,level-.13,(za+zb)/2,'masonry');
+  };
+  // Forjat amb un buit real per a l'escala. Els projectils impacten al
+  // forjat però no bloqueja lateralment el moviment del jugador.
+  const slab=(xa,xb,za,zb)=>{
+    if(!seedSearchMode){
+      const before=b.o.children.length;
+      floorPanel(xa,xb,za,zb,.22,0x8e9588);
+      for(const mesh of b.o.children.slice(before)){
+        mesh.name='bunker-forjat-opac';
+        mesh.material.transparent=false;
+        mesh.material.opacity=1;
+        mesh.material.depthWrite=true;
+        mesh.material.side=THREE.DoubleSide;
+        b.basement.upperSlabMeshes.push(mesh);
+      }
+    }
+    Wl.push({x0:b.x+xa,x1:b.x+xb,z0:b.z+za,z1:b.z+zb,
+      y0:b.fy-.03,y1:b.fy+.22,hp:Infinity,m:new THREE.Object3D(),
+      door:false,open:false,rammable:false,playerBlock:false,
+      cx:b.x+(xa+xb)/2,cz:b.z+(za+zb)/2,owner:b});
+  };
+  const st=b.basement.stair,shaftLeft=st.x-st.width/2,
+        shaftRight=st.x+st.width/2,
+        shaftNear=Math.min(st.zTop,st.zBottom),
+        shaftFar=Math.max(st.zTop,st.zBottom);
+  // Quatre peces reals del forjat deixen el buit exactament allà on
+  // la llavor ha situat l'escala, a qualsevol de les dues habitacions.
+  slab(-19.2,shaftLeft,-16.2,16.2);
+  slab(shaftRight,19.2,-16.2,16.2);
+  slab(shaftLeft,shaftRight,-16.2,shaftNear);
+  slab(shaftLeft,shaftRight,shaftFar,16.2);
+  floorPanel(-halfX+.4,halfX-.4,-halfZ+.4,halfZ-.4,-9.27,0x434c49);
+  // La part nova del soterrani queda coberta, sota el terreny.
+  // No engrandim el forat exterior de l'escala ni el forjat superior.
+  if(!seedSearchMode){
+    const cover=(xa,xb,za,zb)=>floorPanel(xa,xb,za,zb,-1.05,0x545e58);
+    cover(-halfX,-19.2,-halfZ,halfZ);
+    cover(19.2,halfX,-halfZ,halfZ);
+    cover(-19.2,19.2,-halfZ,-16.2);
+    cover(-19.2,19.2,16.2,halfZ);
+  }
+  // Tres cambres a ponent, dues a llevant i passadís central.
+  wall(-halfX+.4,0,.8,halfZ*2-.8);wall(halfX-.4,0,.8,halfZ*2-.8);
+  wall(0,-halfZ+.4,halfX*2-.8,.8);wall(0,halfZ-.4,halfX*2-.8,.8);
+  const span=halfX-7.5-.4, roomX=(halfX+7.5-.4)/2;
+  for(const z of divisions)wall(-roomX,z,span,.65,-9.1,8.75);
+  wall(roomX,eastDivider,span,.65,-9.1,8.75);
+  const doorway=(lx,from,to,doorZ)=>{
+    const gap=4.3,doorHeight=4.1,base=-9.15,lo=doorZ-gap/2,hi=doorZ+gap/2;
+    if(lo>from)wall(lx,(from+lo)/2,.7,lo-from,-9.15,9.0);
+    if(hi<to)wall(lx,(hi+to)/2,.7,to-hi,-9.15,9.0);
+    // Llinda opaca sobre una porta de mida humana, no pas un forat
+    // de nou metres fins al sostre. La fulla puja dins la llinda.
+    wall(lx,doorZ,.82,gap,base+doorHeight,9-doorHeight,0x69746d);
+    const mesh=seedSearchMode?new THREE.Object3D():
+      bx(b.o,.88,doorHeight,gap+.04,0x899990,lx,base+doorHeight/2,doorZ,'metal');
+    mesh.name='bunker-porta-interior-elevable';
+    const d={x0:b.x+lx-.44,x1:b.x+lx+.44,
+      z0:b.z+lo,z1:b.z+hi,y0:b.fy+base,y1:b.fy+base+doorHeight,
+      hp:Infinity,m:mesh,door:true,open:false,rammable:false,
+      bunkerInteriorDoor:true,bunkerBasementWall:true,
+      openProgress:0,doorHeight,
+      closedLocalY:base+doorHeight/2,owner:b,
+      cx:b.x+lx,cz:b.z+doorZ};
+    Wl.push(d);Dr.push(d);b.basement.doors.push(d);
+  };
+  const limits=[-halfZ+.65,...divisions,halfZ-.65];
+  for(let i=0;i<3;i++)doorway(-7.5,limits[i],limits[i+1],westDoors[i]);
+  doorway(7.5,-halfZ+.65,eastDivider,-16);
+  doorway(7.5,eastDivider,halfZ-.65,16);
+  // Graons a la cambra escollida, amb sentit de baixada nord o sud.
+  if(!seedSearchMode){
+    const steps=15,run=Math.abs(st.zTop-st.zBottom);
+    for(let i=0;i<steps;i++){
+      const z=st.zTop+(i+.5)*(st.zBottom-st.zTop)/steps;
+      const y=.22-(i+1)*9.37/steps;
+      bx(b.o,st.width,.21,run/steps+.035,
+        i%2?0x797f79:0x8b9289,st.x,y-.1,z,'masonry');
+    }
+    for(const xx of[shaftLeft-.13,shaftRight+.13]){
+      const rail=bx(b.o,.12,1.3,run,0x3a4c49,
+        xx,-3.9,(st.zTop+st.zBottom)/2,'metal');
+      rail.rotation.x=Math.sign(st.zBottom-st.zTop)*Math.atan2(9.37,run);
+    }
+    // Sales amb funció pròpia: comandament, ràdio, infermeria, dipòsit
+    // d'armes i control de la porta. Tot el mobiliari gran registra una
+    // caixa de col·lisió compartida per jugador, IA i projectils.
+    const basementLevel=-9.15,rooms=[
+      {lo:-halfZ+.75,hi:divisions[0]},
+      {lo:divisions[0],hi:divisions[1]},
+      {lo:divisions[1],hi:halfZ-.75}
+    ];
+    const generalRoomIndex=b.basement.generalLocal.z<0?0:2;
+    const generalRoom=rooms[generalRoomIndex];
+    b.basement.generalRoom={xMin:-halfX+1.7,xMax:-9.1,
+      zMin:generalRoom.lo+2,zMax:generalRoom.hi-2};
+    b.basement.roomTypes=[];
+    const piece=(name,lx,lz,width,depth,height,color,y0=basementLevel,
+      collision=true,profile='metal')=>{
+      const mesh=bx(b.o,width,height,depth,color,lx,y0+height/2,lz,profile);
+      mesh.name='bunker-'+name;
+      if(collision){
+        const center=buildingWorldPoint(b,lx,lz);
+        const collisionY=b.fy+Math.min(basementLevel,y0);
+        Wl.push({x0:center.x-width/2,x1:center.x+width/2,
+          z0:center.z-depth/2,z1:center.z+depth/2,
+          y0:collisionY,y1:b.fy+y0+height,hp:Infinity,m:mesh,
+          door:false,open:false,rammable:false,owner:b,indoorFurniture:true,
+          cx:center.x,cz:center.z});
+      }
+      return mesh;
+    };
+    const desk=(x,z,w,d)=>{
+      piece('taula-tauler',x,z,w,d,1.18,0x66503c,basementLevel,true,'organic');
+      piece('tapa-taula',x,z,w+.12,d+.10,.16,0x987054,-8.0,false,'organic');
+    };
+    const locker=(name,x,z,col=0x626f68)=>
+      piece(name,x,z,1.23,.82,3.4,col,basementLevel,true);
+    const panel=(name,x,z,w,h,color)=>{
+      // Senyalització, mapes i pantalles a l'altura dels ulls.
+      const m=piece(name,x,z,w,.085,h,color,-6.05,false);
+      m.castShadow=false;return m;
+    };
+    for(let roomIndex=0;roomIndex<rooms.length;roomIndex++){
+      const room=rooms[roomIndex],mid=(room.lo+room.hi)/2;
+      if(roomIndex===generalRoomIndex){
+        b.basement.roomTypes.push('despatx del general');
+        desk(-23,mid,3.3,1.65);
+        piece('cadira-general',-25.25,mid+.2,1.0,1.0,.94,0x4b473d);
+        locker('arxivador-general',-25.1,room.lo+2,0x65695b);
+        panel('mapa-operacions',-26.45,mid+1.8,2.25,1.50,0xc4b78c);
+        // Marques de tropes i rutes sobre el mapa.
+        for(const sign of[-1,1])piece('marca-mapa',
+          -26.37,mid+1.8+sign*.57,.18,.1,.16,
+          sign<0?0x9e362a:0x324b78,-5.43,false,'paint');
+        piece('telefon-desp',-22.5,mid-.30,.43,.30,.2,0x2c3232,-7.84,false);
+      }else if(roomIndex===1){
+        b.basement.roomTypes.push('centre de comunicacions');
+        for(const dz of[-2.3,2.35]){
+          piece('consola-radio',-23.3,mid+dz,2.15,1.18,1.40,0x43575e);
+          piece('pantalla-radio',-23.3,mid+dz-.18,1.48,.32,.70,0x294852,-7.6,false);
+          for(const dx of[-.54,.15,.59])piece('commutador',
+            -23.3+dx,mid+dz-.56,.20,.08,.10,0xb6d5b5,-7.30,false);
+        }
+        locker('armari-radio',-25.4,mid,0x586e69);
+        panel('esquema-antenes',-26.45,mid+1.0,1.65,1.10,0xa8b3a2);
+      }else{
+        b.basement.roomTypes.push('infermeria');
+        for(const dz of[-2.15,2.15]){
+          piece('llit-hospital',-23.3,mid+dz,2.3,2.70,.95,0x657d76);
+          piece('matalas',-16.3,mid+dz,2.0,2.38,.17,0xc4d4cc,
+            -8.18,false,'paint');
+          piece('coixi',-23.3,mid+dz-.84,1.15,.55,.22,0xe0ded0,-7.99,false,'paint');
+        }
+        locker('farmaciola-armari',-9.2,room.lo+2,0x8a9e93);
+        piece('creu-infermeria',-26.48,mid,.12,1.2,1.0,0xcc4d43,-6.17,false,'paint');
+        piece('creu-infermeria',-26.47,mid,.12,.36,2.0,0xcc4d43,-6.67,false,'paint');
+      }
+    }
+    // Les dues sales orientals intercanvien funció segons on apareix
+    // l'escala; mai no hi ha prestatgeries o consoles a la seva caixa.
+    const armorySide=-stairSide,accessSide=stairSide;
+    b.basement.roomTypes.push('armeria');
+    locker('armari-armes-1',24.8,armorySide*19,0x58665f);
+    locker('armari-armes-2',24.8,armorySide*14.9,0x58665f);
+    piece('banc-manteniment',9.5,armorySide*19.35,2.15,1.15,1.22,0x775e43);
+    for(const dz of[-.38,.12,.48])piece('eina-armeria',
+      9.5,armorySide*19.35+dz,1.10,.09,.09,0x303735,-7.88,false);
+    panel('inventari-armeria',26.4,armorySide*18,.08,1.3,0xb2bba5);
+    b.basement.roomTypes.push('control i accés');
+    piece('quadre-electric',9.2,accessSide*20.5,1.88,1.2,3.0,0x4b6060);
+    piece('visors-control',9.2,accessSide*19.83,1.54,.17,.4,
+      0x8eb0a1,-6.58,false);
+    piece('guixeta-seguretat',25.5,accessSide*19.3,.9,.82,2.9,0x697a74);
+    piece('consola-acces',9.2,accessSide*6.3,1.1,1.0,1.12,0x576662);
+    // Lluminàries subjectes a l'intradós del forjat y=+.22:
+    // cap focus ni plafó no pot quedar flotant a mitja altura.
+    for(const [lx,lz] of [[0,-19],[0,-8],[0,8],[0,19],[18,-18],[-19,0],[-19,-18],[-19,18],[19,18],[19,0]]){
+      const lamp=new THREE.PointLight(0xffe8bd,5.2,19,2);
+      lamp.position.set(lx,-.55,lz);lamp.visible=false;
+      b.o.add(lamp);b.basement.lights.push(lamp);
+      const light=bx(b.o,1.12,.15,.73,0xf1e2b8,lx,-.30,lz,'paint');
+      light.name='bunker-plafó-sostre';
+      // El suport toca físicament l'intradós del forjat y=-.04.
+      const rim=bx(b.o,1.26,.25,.86,0x606c63,lx,-.10,lz,'metal');
+      rim.name='bunker-suport-plafó';
+    }
+  }
+  return b.basement;
+}
+// El soterrani sobresurt de la planta exterior del búnquer. Detectar-lo
+// en 3D impedeix que les cambres exteses activin el mode natació quan
+// la seva cota és inferior al nivell de la mar.
+function playerInsideBunkerBasement(x,z,y){
+ const b=activeBunker;
+ if(!b?.basement||!Number.isFinite(y)||y>=b.fy-2)return false;
+ const q=buildingLocalPoint(b,x,z);
+ return Math.abs(q.x)<b.basement.halfX-.45&&
+   Math.abs(q.z)<b.basement.halfZ-.45;
+}
+function bunkerSubFloorAt(x,z,previous=-Infinity){
+  const b=activeBunker;if(!b?.basement)return null;
+  const p=buildingLocalPoint(b,x,z);
+  if(Math.abs(p.x)>b.basement.halfX-.4||Math.abs(p.z)>b.basement.halfZ-.4)return null;
+  const st=b.basement.stair;
+  if(Math.abs(p.x-st.x)<=st.width/2&&
+     p.z>=Math.min(st.zTop,st.zBottom)&&
+     p.z<=Math.max(st.zTop,st.zBottom)){
+    const t=(p.z-st.zTop)/(st.zBottom-st.zTop);
+    return b.fy+.22-t*(b.fy+.22-b.basement.floorY);
+  }
+  if(previous<b.fy-3.9)return b.basement.floorY;
+  // El forjat superior només existeix sota l'edifici visible, no sobre
+  // tot el soterrani ampliat: a fora deixam actuar el terreny natural.
+  return Math.abs(p.x)<=19&&Math.abs(p.z)<=16?b.fy+.22:null;
 }
 // Door-aligned treads share the exact same geometry and walking height.
 function stairLocal(s,x,z){const dx=x-s.x,dz=z-s.z;return{along:dx*s.nx+dz*s.nz,side:dx*s.nz-dz*s.nx}}
@@ -8662,6 +11100,8 @@ function stairContains(s,x,z,margin=0){const q=stairLocal(s,x,z);return q.along>
 // i el personatge pot abandonar el pantalà cap a l'aigua.
 // L'altura comprovada a groundAt evita l'ascens instantani des de l'aigua.
 function groundAt(x,z,previous=-Infinity){
+  const bunkerFloor=bunkerSubFloorAt(x,z,previous);
+  if(bunkerFloor!==null)return bunkerFloor;
   // No enfonsar el model sota els triangles que dibuixa el LOD actual.
   // Preservem l'altura física si és més alta (evita enfonsaments i salts negatius).
   const physical=hAt(x,z),visible=terrainStream?.visibleHeightAt(x,z);
@@ -8693,10 +11133,27 @@ function wallPush(){const r=.6;for(const w of wallCandidates(P.x,P.z,r)){if(w.pl
 if(i==0)P.x=w.x0-r;else if(i==1)P.x=w.x1+r;else if(i==2)P.z=w.z0-r;else P.z=w.z1+r}}}
 function updateDoors(dt){
   for(const d of Dr){
+    if(d.bunkerInteriorDoor){
+      const nearPlayer=!cv&&P.y<d.owner.fy-2&&
+        Math.hypot(P.x-d.cx,P.z-d.cz)<5.6;
+      const nearSoldier=enemyCandidatesAt(d.cx,d.cz,5.7).some(u=>
+        (u.t==='soldat'||u.t==='general')&&u.hp>0&&
+        (u.gy??u.o?.position?.y??Infinity)<d.owner.fy-2&&
+        Math.hypot(u.x-d.cx,u.z-d.cz)<5.6);
+      const target=nearPlayer||nearSoldier;
+      d.openProgress=Math.max(0,Math.min(1,d.openProgress+
+        (target?dt/1.15:-dt/1.6)));
+      const p=d.openProgress,ease=p*p*(3-2*p);
+      d.m.position.y=d.closedLocalY+(d.doorHeight+.55)*ease;
+      d.m.visible=p<.98;
+      d.open=p>.86;
+      continue;
+    }
     if(d.bunkerGate){
       const dx=P.x-d.cx,dz=P.z-d.cz,front=dx*d.nx+dz*d.nz,side=Math.abs(dx*d.nz-dz*d.nx),
             inFront=!cv&&front>=0&&front<=4.8&&side<=d.doorWidth/2+1.15;
       if(inFront&&d.openProgress<1){
+        if(d.openProgress===0)window.HUNTER_STEALTH.emit('door',d.cx,(d.y0??hAt(d.cx,d.cz))+1,d.cz);
         d.openProgress=Math.min(1,d.openProgress+dt/d.openDuration);
         msg='Obrint porta del búnquer… '+Math.round(d.openProgress*100)+'%';msgT=.25
       }
@@ -8711,6 +11168,8 @@ function updateDoors(dt){
       soldierNear=!d.locked&&enemyCandidatesAt(d.cx,d.cz,4.7).some(u=>
         (u.t==='soldat'||u.t==='general')&&Math.hypot(u.x-d.cx,u.z-d.cz)<4.5),
       o=d.alwaysOpen||(!d.locked&&((!cv&&dx*dx+dz*dz<r*r)||soldierNear));
+    if(!d.open&&o&&!cv&&dx*dx+dz*dz<r*r)
+      window.HUNTER_STEALTH.emit('door',d.cx,(d.y0??hAt(d.cx,d.cz))+1,d.cz);
     d.open=o;d.m.visible=!o
   }
 }
@@ -8847,7 +11306,8 @@ const bx=(g,w,h,d,c,x,y,z,profile='organic')=>{const m=new THREE.Mesh(new THREE.
 const buildingVisual=window.HUNTER_BUILDINGS.create(THREE,{material:M,materialProfile,box:bx});
 const pl=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});scene.add(pl);
 const animPl=(f,dt,running=false,strafe=0)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{
-  forward:f,strafe,dt,running,swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,
+  forward:f,strafe,dt,running,crouching:playerCrouched&&!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive,
+  swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,
   grenadeChargePower:grenadeCharge?Math.min(1,grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS):0,
   airborne:!!playerFall,parachuting:!!playerFall?.parachute
 });
@@ -8929,6 +11389,30 @@ const FERRY_DECK=window.HUNTER_VEHICLES.decks?.ferry;
 const wrapAngle=a=>Math.atan2(Math.sin(a),Math.cos(a));
 const ferryLocal=(f,x,z)=>{const dx=x-f.x,dz=z-f.z,s=Math.sin(f.hd),co=Math.cos(f.hd);return{x:dx*co-dz*s,z:dx*s+dz*co}};
 const ferryWorld=(f,lx,lz)=>{const s=Math.sin(f.hd),co=Math.cos(f.hd);return{x:f.x+lx*co+lz*s,z:f.z-lx*s+lz*co}};
+const ferryCabinContains=(lx,lz,margin=0)=>{
+  const c=FERRY_DECK?.cabin;
+  return !!c&&Math.abs(lx-c.x)<c.halfW+margin&&Math.abs(lz-c.z)<c.halfL+margin
+};
+const ferryWalkable=(lx,lz,margin=0)=>{
+  if(!FERRY_DECK)return false;
+  const d=FERRY_DECK,sc=VS.ferry||1,ax=Math.abs(lx),az=Math.abs(lz);
+  return ax+margin<=((az+margin<=d.halfL*sc)?d.halfW:d.rampHalfW)*sc&&
+    az+margin<= (d.halfL+d.ramp)*sc;
+};
+function ferryCabinVehicleHit(f,box){
+  const c=FERRY_DECK?.cabin;if(!c)return false;
+  const p=ferryWorld(f,c.x*(VS.ferry||1),c.z*(VS.ferry||1));
+  return obbOverlap(box,{...p,hd:f.hd,w:c.halfW*2*(VS.ferry||1),d:c.halfL*2*(VS.ferry||1)})
+}
+function ferryCabinPushPlayer(){
+  const deck=pedestrianFerry(P.x,P.z,P.y),c=FERRY_DECK?.cabin;
+  if(!deck||!c||!ferryCabinContains(deck.q.x,deck.q.z,.62))return;
+  const q=deck.q,m=.65,dx=deck.q.x-c.x,dz=deck.q.z-c.z,
+    ex=c.halfW+m-Math.abs(dx),ez=c.halfL+m-Math.abs(dz);
+  if(ex<ez)q.x=c.x+(dx<0?-1:1)*(c.halfW+m);
+  else q.z=c.z+(dz<0?-1:1)*(c.halfL+m);
+  const p=ferryWorld(deck.f,q.x,q.z);P.x=p.x;P.z=p.z
+}
 const ferryLocalSurfaceY=(f,lz)=>{
   const sc=VS.ferry||1,d=FERRY_DECK;if(!d)return f.o.position.y;
   const az=Math.abs(lz),deck=d.y*sc,edge=d.halfL*sc,ramp=d.ramp*sc;
@@ -8944,10 +11428,14 @@ function ferryForVehicle(v,x=v.x,z=v.z,includeRamp=true){
     const q=ferryLocal(f,x,z),fw=FERRY_DECK.halfW*sc,fl=FERRY_DECK.halfL*sc,r=includeRamp?FERRY_DECK.ramp*sc:0,
           rel=wrapAngle(v.hd-f.hd),ca=Math.abs(Math.cos(rel)),sa=Math.abs(Math.sin(rel)),
           ex=ca*hb.w*.5+sa*hb.d*.5,ez=sa*hb.w*.5+ca*hb.d*.5;
-    // La zona transitable es detecta amb tota la petjada del vehicle. Això permet
-    // que el frontal entri a la rampa abans que la hitbox rectangular del buc el bloquegi,
-    // però manté els costats del ferry sòlids.
-    if(Math.abs(q.x)+ex<=fw-.18&&Math.abs(q.z)-ez<=fl+r)return f
+    // Coberta ampla i rampa estreta: el morro del vehicle comença
+    // l'embarcament abans que el buc sòlid el bloquegi. Els laterals
+    // segueixen limitats per la projecció de la hitbox del vehicle.
+    const ax=Math.abs(q.x),az=Math.abs(q.z),rampHalf=FERRY_DECK.rampHalfW*sc;
+    if(ax+ex>fw-.18)continue;
+    if(az+ez<=fl)return f;
+    if(includeRamp&&az-ez<=fl+r+.65&&az<=fl+r+ez+.65&&
+       ax+ex<=rampHalf+.45)return f
   }
   return null
 }
@@ -8986,7 +11474,7 @@ function barbedSection(x1,z1,x2,z2){
     const y1=Math.max(hAt(x1,z1),0),y2=Math.max(hAt(x2,z2),0),pad=.24;
     const w={x0:Math.min(x1,x2)-pad,x1:Math.max(x1,x2)+pad,
       z0:Math.min(z1,z2)-pad,z1:Math.max(z1,z2)+pad,
-      y0:Math.min(y1,y2),y1:Math.max(y1,y2)+5,hp:32,
+      y0:Math.min(y1,y2),y1:Math.max(y1,y2)+5,hp:8,
       door:false,open:false,barbed:true,rammable:true,
       ax:x1,az:z1,bx:x2,bz:z2,cx:(x1+x2)/2,cz:(z1+z2)/2};
     Wl.push(w);wallGridCount=-1;return w;
@@ -9055,7 +11543,7 @@ function barbedSection(x1,z1,x2,z2){
   world.add(mesh);parts.push(mesh);
   const pad=.24,w={x0:Math.min(x1,x2)-pad,x1:Math.max(x1,x2)+pad,
     z0:Math.min(z1,z2)-pad,z1:Math.max(z1,z2)+pad,
-    y0:Math.min(y1,y2),y1:Math.max(y1,y2)+5,hp:32,
+    y0:Math.min(y1,y2),y1:Math.max(y1,y2)+5,hp:8,
     m:mesh,parts,door:false,open:false,barbed:true,rammable:true,
     ax:x1,az:z1,bx:x2,bz:z2,cx,cz};
   Wl.push(w);
@@ -9149,6 +11637,10 @@ function terrainConcealsBuilding(b,dist){
   return covered>=2;
 }
 function isInsideVisibleBuilding(b){
+  if(b?.basement&&!cv&&P.y<b.fy-3.9){
+    const local=buildingLocalPoint(b,P.x,P.z);
+    if(Math.abs(local.x)<b.basement.halfX&&Math.abs(local.z)<b.basement.halfZ)return true;
+  }
   if(b===ib)return true;
   if(!b.hangar||!cv||cv.destroyed)return false;
   const y=VT[cv.t]?.m==='a'?(cv.alt??cv.o?.position?.y):(cv.o?.position?.y??cv.alt);
@@ -9166,9 +11658,14 @@ function updateDistanceVisibility(){
             !!focus?.contains(b.x,b.fy+b.h*.5,b.z,Math.max(b.hw,b.h*.5)),
           obscured=close&&!inside&&terrainConcealsBuilding(b,Math.sqrt(d2));
     b.o.visible=close&&!obscured;
-    b.roof.visible=!inside&&b.rhp>0;for(const r of b.extraRoofs||[])r.visible=b.roof.visible;if(b.upperFloor)b.upperFloor.visible=!b.rb&&(!inside||P.y>=b.fy+b.storey-.6);
-    b.wm.opacity=b.dm.opacity=inside?.18:1;
-    b.wm.depthWrite=b.dm.depthWrite=!inside;
+    // Sota el búnquer, ni el forjat ni la coberta no es tornen
+    // transparents. L'opacitat reduïda és només per a cases normals.
+    const basementView=!!b.basement&&inside&&P.y<b.fy-1;
+    b.roof.visible=(!inside||basementView)&&b.rhp>0;
+    for(const r of b.extraRoofs||[])r.visible=b.roof.visible;
+    if(b.upperFloor)b.upperFloor.visible=!b.rb&&(!inside||P.y>=b.fy+b.storey-.6);
+    b.wm.opacity=b.dm.opacity=inside&&!basementView?.18:1;
+    b.wm.depthWrite=b.dm.depthWrite=!inside||basementView;
     if(!b.o.visible)visibilityStats.buildings++;
     if(obscured)visibilityStats.terrainOccluded++;
   }
@@ -9238,6 +11735,30 @@ const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joyst
       strafeButtons={left:document.getElementById('strafeLeft'),right:document.getElementById('strafeRight')},
       strafePointers={left:null,right:null},
       STRAFE_VEHICLES=new Set(['hover','heli','heli_combat']);
+const crouchButton=document.createElement('button');
+crouchButton.id='crouchButton';crouchButton.type='button';
+crouchButton.textContent='AJUPIR';crouchButton.title='Ajupir-se o aixecar-se · X';
+crouchButton.setAttribute('aria-label','Ajupir-se o aixecar-se');
+crouchButton.setAttribute('aria-pressed','false');
+crouchButton.style.cssText='display:none;position:fixed;z-index:7;'+
+  'left:calc(12px + env(safe-area-inset-left,0px));'+
+  'bottom:calc(235px + env(safe-area-inset-bottom,0px));'+
+  'width:70px;height:42px;border-radius:12px;border:2px solid #b6d3b8;'+
+  'background:#10241edb;color:#fff;font:700 11px system-ui;'+
+  'box-shadow:0 3px 11px #0008;touch-action:manipulation';
+document.body.appendChild(crouchButton);
+const canCrouch=()=>started&&!paused&&!over&&!cv&&!swimming&&!scopeActive&&!playerFall&&!playerEject;
+function updateCrouchButton(){
+  const enabled=canCrouch();crouchButton.style.display=enabled?'block':'none';
+  crouchButton.style.background=playerCrouched?'#4a7655ee':'#10241edb';
+  crouchButton.textContent=playerCrouched?'AIXECAR':'AJUPIR';
+  crouchButton.setAttribute('aria-pressed',String(playerCrouched&&enabled));
+}
+crouchButton.addEventListener('click',e=>{
+  e.preventDefault();if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}
+});
+function setStealthDebug(enabled){window.HUNTER_STEALTH.setDebug(enabled)}
+function setStealthLayer(key,value){window.HUNTER_STEALTH.setLayer(key,value)}
 const canStrafe=()=>!scopeActive&&(cv?STRAFE_VEHICLES.has(cv.t):!playerEject&&(!playerFall||!!playerFall.parachute));
 const setStrafeHeld=(side,held)=>{
   const button=strafeButtons[side];
@@ -9271,7 +11792,28 @@ const clearKeys=()=>{
   joystick.reset();releaseStrafeButtons();
   document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))
 };
-const act=c=>{if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(!started||paused||over)return;if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){if(!secondaryWeapon())plant();}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
+const quickWeapons=()=>['pistola','ganivet',...['franctirador','bazooka','granada','cisalla'].filter(k=>inv[k]>0)];
+const selectedWeapon=()=>knifeEquipped?'ganivet':sniperEquipped?'franctirador':bazookaEquipped?'bazooka':grenadeEquipped?'granada':cisallaEquipped?'cisalla':'pistola';
+function selectWeapon(k){if(!weaponPickerAvailable()||swimming||!quickWeapons().includes(k))return;cancelGrenadeCharge();setSniperScope(false);knifeEquipped=k==='ganivet';sniperEquipped=k==='franctirador';bazookaEquipped=k==='bazooka';grenadeEquipped=k==='granada';cisallaEquipped=k==='cisalla';msg=k+' equipat';msgT=1.5;drawWeaponPicker()}
+function cycleWeapon(n){const w=quickWeapons(),i=w.indexOf(selectedWeapon());selectWeapon(w[(i+n+w.length)%w.length])}
+const picker=document.createElement('div');picker.style.cssText='position:fixed;z-index:100;right:10px;bottom:258px;background:#203239ed;padding:8px;border-radius:10px;display:none;flex-direction:column;gap:5px;max-height:50vh;overflow:auto';document.body.appendChild(picker);
+const pickerToggle=document.createElement('button');pickerToggle.textContent='⚔ Armes';pickerToggle.style.cssText='position:fixed;z-index:99;right:10px;bottom:210px;padding:8px;color:white;background:#304b52;border-radius:9px';pickerToggle.style.display='none';document.body.appendChild(pickerToggle);
+let pickerOpen=false;
+const weaponPickerAvailable=()=>!!started&&document.body.classList.contains('game-started')&&!paused&&!over&&hp>0&&!cv&&!deathCinematic?.active&&!victoryCinematic?.active&&!victoryCinematic?.finished;
+function syncWeaponPicker(){const visible=weaponPickerAvailable();pickerToggle.style.display=visible?'block':'none';if(!visible){pickerOpen=false;picker.style.display='none'}}
+pickerToggle.onclick=()=>{if(!weaponPickerAvailable())return;pickerOpen=!pickerOpen;drawWeaponPicker()};
+function drawWeaponPicker(){picker.style.display=pickerOpen&&weaponPickerAvailable()?'flex':'none';picker.replaceChildren();if(picker.style.display==='none')return;const names={pistola:'🔫 Pistola',ganivet:'🔪 Ganivet',franctirador:'🔭 Rifle',bazooka:'🚀 Bazooka',granada:'💣 Granades',cisalla:'✂ Cisalla'};quickWeapons().forEach((k,i)=>{const b=document.createElement('button');b.textContent=(i+1)+' · '+names[k]+' · '+(k==='pistola'?ammo:k==='franctirador'?sniperAmmo:k==='ganivet'?'∞':inv[k]);b.style.cssText='padding:8px;color:white;background:'+(selectedWeapon()===k?'#356c51':'#364a52');b.onclick=()=>{selectWeapon(k);pickerOpen=false;drawWeaponPicker()};picker.appendChild(b)})}
+const act=c=>{if(ui?.isBombTimerOpen?.()){
+  // No es pot tancar el programador ni detonar saltant-se la confirmació.
+  if(c==='Escape'||c==='KeyP'||c==='KeyI'){panel('inventory');return}
+  if(c==='Enter'||c==='NumpadEnter'){
+    document.getElementById('bombTimerConfirm')?.click?.();return
+  }
+  return
+}if(/^Digit[1-6]$/.test(c)){selectWeapon(quickWeapons()[Number(c.slice(5))-1]);return}if(c==='KeyV'){cycleWeapon(1);return}if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){
+  if(!secondaryWeapon()&&inv.expl&&(!cv||cv.t==='heli')&&
+     !swimming&&!playerFall&&!playerEject)panel('bombtimer');
+}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
 const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.reentryLockUntil>elapsed)continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
 function updateActionButton(nearby){
   const button=document.getElementById('mainActionButton');
@@ -9357,30 +11899,43 @@ function truckExitCandidate(v,side,index){
     z:v.z+sz*exitSide*lateral+fz*behind,side:exitSide};
 }
 function toggle(){if(playerFall||playerEject)return;if(scopeActive)setSniperScope(false);if(cv){
-const leaving=cv,speed=Math.abs(leaving.v),isAir=VT[leaving.t].m==='a',ground=Math.max(0,hAt(leaving.x,leaving.z)),height=Math.max(0,leaving.alt-ground);
-if(isAir&&height>4){
+const leaving=cv,speed=Math.abs(leaving.v),isAir=VT[leaving.t].m==='a',
+      platform=leaving.t==='ferry'?leaving:leaving.carrier||ferryForVehicle(leaving),
+      platformLocal=platform?ferryLocal(platform,leaving.x,leaving.z):null,
+      ferry=platform&&(!isAir||Math.abs(leaving.alt-helicopterLandedAltitude(leaving,ferryLocalSurfaceY(platform,platformLocal.z)))<2)?platform:null,
+      ground=Math.max(0,hAt(leaving.x,leaving.z)),height=Math.max(0,leaving.alt-ground);
+if(isAir&&height>4&&!ferry){
   ejectFromHelicopter(leaving);
   leaving.crashing=true;leaving.crashT=0;leaving.crashSpin=rn(-1,1)<0?-1:1;leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;
   msg=playerFall.parachute?'Paracaigudes desplegat!':'Has saltat! L’helicòpter està fora de control!';msgT=3;return
 }
-const moving=speed>3,side=rn(-1,1)<0?-1:1,rrad=vehicleRadius(leaving.t)+2.2,movingTruck=moving&&leaving.t==='camio';let spot=null;
+const moving=speed>3&&!ferry,side=rn(-1,1)<0?-1:1,rrad=vehicleRadius(leaving.t)+2.2,
+      movingTruck=moving&&leaving.t==='camio';let spot=null;
 for(let i=0;i<16;i++){
   const a=leaving.hd+side*Math.PI/2+i*Math.PI/8,
-        candidate=movingTruck?truckExitCandidate(leaving,side,i):{x:leaving.x+Math.cos(a)*rrad,z:leaving.z+Math.sin(a)*rrad,side},
+        localFerryExit=leaving.t==='ferry'?[0,-5,5,-10,10,-15,15,-20,20][i%9]:null,
+        candidate=localFerryExit!==null?{...ferryWorld(ferry,0,localFerryExit),side}:
+          movingTruck?truckExitCandidate(leaving,side,i):
+          {x:leaving.x+Math.cos(a)*rrad,z:leaving.z+Math.sin(a)*rrad,side},
         {x,z}=candidate;
+  if(ferry){const q=ferryLocal(ferry,x,z);
+    if(!ferryWalkable(q.x,q.z,1.15)||ferryCabinContains(q.x,q.z,1.15))continue;
+  }
   if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||
-    circleVehicleOverlap(x,z,1.1,leaving)||
-    vehicleCandidatesAt(x,z,15).some(u=>u!==leaving&&!u.destroyed&&circleVehicleOverlap(x,z,1.1,u))||
+    (leaving!==ferry&&circleVehicleOverlap(x,z,1.1,leaving))||
+    vehicleCandidatesAt(x,z,40).some(u=>u!==leaving&&u!==ferry&&!u.destroyed&&circleVehicleOverlap(x,z,1.1,u))||
     wallCandidates(x,z,1).some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;
   if(movingTruck&&hAt(x,z)<=0)continue;
-  spot=candidate;if(hAt(x,z)>0||VT[leaving.t].m==='w')break;
+  spot=candidate;if(ferry||hAt(x,z)>0||VT[leaving.t].m==='w')break;
 }
 if(!spot){msg='No hi ha espai per baixar aquí.';msgT=3;return}
-P.x=spot.x;P.z=spot.z;P.hd=leaving.hd;leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;leaving.reentryLockUntil=elapsed+2;
+P.x=spot.x;P.z=spot.z;P.hd=leaving.hd;
+if(ferry){const q=ferryLocal(ferry,spot.x,spot.z);P.y=ferryLocalSurfaceY(ferry,q.z)+.12;swimming=false}
+leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;leaving.reentryLockUntil=elapsed+2;
 if(moving){const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),sx=Math.cos(leaving.hd)*spot.side,sz=-Math.sin(leaving.hd)*spot.side,
   carry=Math.sign(leaving.v)*Math.min(movingTruck?11:28,speed*(movingTruck?.3:.72)),outward=movingTruck?8:1.4;
   playerEject={kind:'flip',vx:fx*carry+sx*outward,vz:fz*carry+sz*outward,t:.5,dur:.5,height:.68};msg='Has saltat del vehicle en marxa!';msgT=2.5}
-cv=null}else{const v=nearV();if(v){cv=v;swimming=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
+cv=null}else{const v=nearV();if(v){cv=v;swimming=false;playerCrouched=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
 addEventListener('keydown',e=>{
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
   if(e.repeat)return;
@@ -9408,11 +11963,12 @@ for(const b of document.querySelectorAll('[data-k]')){
     b.addEventListener(v,()=>{if(c==='KeyF')cancelGrenadeCharge();K[c]=0;b.classList.remove('held')});
 }
 addEventListener('blur',()=>{clearKeys();if(started&&!paused&&!over)panel('pause')});document.addEventListener('visibilitychange',()=>{if(document.hidden&&started&&!over)panel('pause')});
-ren.domElement.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.7,Math.min(1.9,zoom+e.deltaY*.001))},{passive:false});
+ren.domElement.addEventListener('wheel',e=>{e.preventDefault();if(e.shiftKey){cycleWeapon(e.deltaY>0?1:-1);return}zoom=Math.max(.7,Math.min(1.9,zoom+e.deltaY*.001))},{passive:false});
 let drag=null;ren.domElement.addEventListener('pointerdown',e=>{if(!started||paused||over)return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};ren.domElement.setPointerCapture(e.pointerId)});ren.domElement.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId||paused)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(scopeActive)scopePitch=Math.max(-.65,Math.min(.65,scopePitch-dy*.00115));drag.y=e.clientY;if(scopeActive)scopeYaw-=dx*.00115;else{const q=cv||P;q.hd-=dx*.006}drag.x=e.clientX});ren.domElement.addEventListener('pointerup',()=>drag=null);ren.domElement.addEventListener('pointercancel',()=>drag=null);
 function setSniperScope(enabled){
   const wasActive=scopeActive;
   scopeActive=!!enabled&&sniperEquipped&&!!inv.franctirador&&!cv&&!swimming&&!over;
+  if(scopeActive)playerCrouched=false;
   if(scopeActive&&!wasActive){scopeYaw=P.hd;scopePitch=0;joystick.reset();releaseStrafeButtons()}
   if(!scopeActive){
     scopePitch=0;scopeYaw=P.hd;
@@ -9426,18 +11982,24 @@ function setSniperScope(enabled){
   if(button)button.setAttribute('aria-pressed',String(scopeActive));
 }
 function toggleSniperScope(){if(!paused)setSniperScope(!scopeActive)}
+const cheats={items:false,invisible:false,immune:false,fly:false};
+let cheatFlightY=null;
 function grantAllWeapons(){
-  ammo=Math.max(ammo,128);
-  inv.bazooka=Math.max(inv.bazooka||0,12);
-  inv.granada=Math.max(inv.granada||0,20);
-  inv.cisalla=1;
-  inv.expl=Math.max(inv.expl||0,10);
-  inv.franctirador=1;
-  sniperAmmo=Math.max(sniperAmmo,24);
-  msg='Chetos: tens totes les armes i munició!';msgT=4;
+  ammo=Math.max(ammo,999);
+  for(const key of ['med','bazooka','granada','cisalla','expl','franctirador','paracaigudes','disf'])inv[key]=Math.max(inv[key]||0,999);
+  sniperAmmo=Math.max(sniperAmmo,999);
+  hqMapKnown=true;
+  for(const v of V)if(v.rockets!=null)v.rockets=Math.max(v.rockets,999);
+}
+function setCheat(key,enabled){
+  if(!Object.hasOwn(cheats,key))return;
+  cheats[key]=!!enabled;
+  if(key==='items'&&enabled){grantAllWeapons();revealMapPickup('mapa');revealMapPickup('mapa_heli');revealMapPickup('mapa_tanc')}
+  if(key==='fly'){cheatFlightY=enabled?P.y:null;if(enabled){cv=null;playerFall=null;playerEject=null;swimming=false}}
+  if(key==='invisible'&&enabled)for(const u of E){u.canSee=false;u.canShoot=false;u.alert=0;u.recognition=0;u.pursuitT=0;if(u.t==='soldat'){u.aiMode='patrol';u.searchT=0}}
 }
 function resume(){paused=false;clearKeys();ui.hide();if(AC&&!muted)AC.resume()}
-function panel(mode){setSniperScope(false);paused=true;clearKeys();if(eng)eng.g.gain.value=0;if(AC)AC.suspend();ui.show(mode)}
+function panel(mode){setSniperScope(false);paused=true;pickerOpen=false;picker.style.display='none';pickerToggle.style.display='none';clearKeys();if(eng)eng.g.gain.value=0;if(AC)AC.suspend();ui.show(mode)}
 // Les cartes revelen informació de forma immediata: no són objectes
 // d'inventari que s'hagin d'equipar ni obrir manualment.
 function revealMapPickup(kind){
@@ -9460,21 +12022,29 @@ function revealMapPickup(kind){
 }
 function useInvItem(id){
   if(!inv[id])return false;
-  if(id==='med'){if(hp>=100){msg='Ja tens la vida al màxim.';msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(100,hp+40);msg='Has usat una farmaciola.';msgT=2;snd('pick');return true}
-  if(id==='expl'){if(cv||swimming){msg='No pots col·locar explosius des d’aquí.';msgT=2;return false}resume();plant();return true}
+  if(id==='med'){if(hp>=COMBAT_BALANCE.player){msg='Ja tens la vida al màxim.';msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(COMBAT_BALANCE.player,Math.ceil(hp)+COMBAT_BALANCE.medkit);msg='Has usat una farmaciola.';msgT=2;snd('pick');return true}
+  if(id==='expl'){
+    if(cv&&cv.t!=='heli'||swimming||playerFall||playerEject){
+      msg=cv?.t==='heli_combat'?
+        'No pots utilitzar C4 des de l’helicòpter de combat.':
+        'No pots preparar explosius des d’aquí.';
+      msgT=2;return false
+    }
+    panel('bombtimer');return true
+  }
   if(id==='cisalla'){
     if(cv||swimming||playerFall||playerEject){msg='La cisalla només es pot equipar a peu.';msgT=2;return false}
     cancelGrenadeCharge();cisallaEquipped=!cisallaEquipped;
-    if(cisallaEquipped){bazookaEquipped=false;grenadeEquipped=false;sniperEquipped=false;setSniperScope(false)}
+    if(cisallaEquipped){knifeEquipped=false;bazookaEquipped=false;grenadeEquipped=false;sniperEquipped=false;setSniperScope(false)}
     resume();msg=cisallaEquipped?'Cisalla equipada · Acosta’t a una tanca i prem Talla / F.':'Cisalla desada.';msgT=2;return true
   }
-  if(id==='bazooka'){if(cv||swimming){msg='Has d’anar a peu per equipar el bazooka.';msgT=2;return false}cancelGrenadeCharge();bazookaEquipped=!bazookaEquipped;if(bazookaEquipped){grenadeEquipped=false;cisallaEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=bazookaEquipped?'Bazooka equipat: '+inv.bazooka+' coets disponibles.':'Bazooka desequipat.';msgT=2;return true}
-  if(id==='granada'){if(cv||swimming){msg='Has d’anar a peu per equipar les granades.';msgT=2;return false}cancelGrenadeCharge();grenadeEquipped=!grenadeEquipped;if(grenadeEquipped){bazookaEquipped=false;cisallaEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=grenadeEquipped?'Granades equipades: '+inv.granada+'.':'Granades desequipades.';msgT=2;return true}
+  if(id==='bazooka'){if(cv||swimming){msg='Has d’anar a peu per equipar el bazooka.';msgT=2;return false}cancelGrenadeCharge();bazookaEquipped=!bazookaEquipped;if(bazookaEquipped){knifeEquipped=false;grenadeEquipped=false;cisallaEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=bazookaEquipped?'Bazooka equipat: '+inv.bazooka+' coets disponibles.':'Bazooka desequipat.';msgT=2;return true}
+  if(id==='granada'){if(cv||swimming){msg='Has d’anar a peu per equipar les granades.';msgT=2;return false}cancelGrenadeCharge();grenadeEquipped=!grenadeEquipped;if(grenadeEquipped){knifeEquipped=false;bazookaEquipped=false;cisallaEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=grenadeEquipped?'Granades equipades: '+inv.granada+'.':'Granades desequipades.';msgT=2;return true}
   if(id==='franctirador'){
     cancelGrenadeCharge();
     if(cv||swimming){msg='Has d’anar a peu per equipar el rifle.';msgT=2;return false}
     sniperEquipped=!sniperEquipped;
-    if(sniperEquipped){bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false}
+    if(sniperEquipped){knifeEquipped=false;bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false}
     setSniperScope(false);resume();
     msg=sniperEquipped?'Rifle equipat · '+sniperAmmo+' cartutxos · Mira amb T.':'Rifle desequipat.';msgT=2;return true
   }
@@ -9497,32 +12067,58 @@ const ui=window.HUNTER_UI.create({
   resumeButton:document.getElementById('resumeButton'),
   minimap,
   getState:()=>({
-    hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
+    hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
     inventory:inv,itemTypes:IT,player:P,nearVehicle:cv?null:nearV(),messageTime:msgT,message:msg,
-    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
+    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,cheats:{...cheats},stealthDebug:window.HUNTER_STEALTH.enabled(),stealthLayers:window.HUNTER_STEALTH.layers(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
   }),
   actions:{
     resume,
     open:mode=>panel(mode),
     setWaypoint:v=>waypoint=v,
     useItem:id=>useInvItem(id),
+    placeExplosive:seconds=>{
+      if(!plant(seconds))return false;
+      resume();return true
+    },
     dropItem:id=>dropInvItem(id),
     restart:d=>{DIF=d;elapsed=0;build();minimap.reset();mini();resume()},
     setPalmsDisabled,
     setWaterDisabled,
     setShadowsDisabled,
     setPerformanceStatsVisible,
+    setStealthDebug,
+    setStealthLayer,
     zoom:d=>zoom=Math.max(.7,Math.min(1.9,zoom+d)),
-    chetos:grantAllWeapons
+    setCheat
   }
 });
 mc.onclick=()=>started&&panel('map');
 function vehicleImpactFx(x,y,z){debris(x,y,z,0xffc14d,5,.16,5);puff(x,y,z,0x8a8478,.8)}
-function collisionDamageVehicle(v,dmg,impacts=1){if(v?.t==='tanc')return;damageVehicle(v,dmg,impacts)}
+function collisionDamageVehicle(v,dmg,impacts=1){
+ if(v?.t==='tanc')return;
+ impactVehicle(v,impacts>1?impacts:dmg);
+}
+function relativeVehicleImpactSpeed(a,b){
+ const ah=a.hd||0,bh=b.navHd??b.hd??0,
+  av=a.v??a.impactSpeed??0,bv=b.v??b.impactSpeed??0;
+ return Math.hypot(-Math.sin(ah)*av+Math.sin(bh)*bv,
+  -Math.cos(ah)*av+Math.cos(bh)*bv);
+}
 function ramSpeedFactor(type,barbed){
   if(type==='tanc')return .995;
   if(type==='camio'&&barbed)return 1;
   return barbed?.72:.55;
+}
+// Llindars d'embestida: una maniobra lenta no pot fer esclatar una moto
+// ni destruir un tram de tanca. En marxa enrere cal encara més impuls.
+// El tanc conserva l'excepció de força a qualsevol velocitat.
+function vehicleRamThreshold(v,barbed){
+  if(v.t==='tanc')return 0;
+  const base=v.t==='camio'&&barbed?12:barbed?16:22;
+  return base+(v.v<0?5:0);
+}
+function vehicleCanBreakBarrier(v,barbed){
+  return v.t==='tanc'||Math.abs(v.v)>vehicleRamThreshold(v,barbed);
 }
 function mayRamWhileRecovering(type,barbed,cooldown){
   return cooldown<=0||type==='tanc'||(type==='camio'&&barbed);
@@ -9540,7 +12136,9 @@ function killShark(f){
   msg='Has envestit un tauró!';msgT=1.8;
 }
 function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
-  const c=VT[v.t],speed=Math.abs(v.v),radius=vehicleRadius(v.t);v.ramCd=Math.max(0,(v.ramCd||0)-dt);v.envCd=Math.max(0,(v.envCd||0)-dt);v.bump=Math.max(0,(v.bump||0)-dt);
+  const c=VT[v.t],speed=Math.abs(v.v),radius=vehicleRadius(v.t);
+  v.impactFromX=oldX;v.impactFromZ=oldZ;
+  v.ramCd=Math.max(0,(v.ramCd||0)-dt);v.envCd=Math.max(0,(v.envCd||0)-dt);v.bump=Math.max(0,(v.bump||0)-dt);
   // Els cascs i taules poden atropellar taurons. La trajectòria
   // completa detecta col·lisions fins i tot entre dos fotogrames.
   if(speed>=3&&(c.m==='w'||c.m==='wl')&&hAt(v.x,v.z)<-.8){
@@ -9551,14 +12149,58 @@ function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
         killShark(f);
     }
   }
+  // Les roques emergides, també a la costa, aturen vehicles marítims i
+  // terrestres; els helicòpters només hi xoquen si volen prou baixos.
+  if(speed>=2.5&&v.envCd<=0){
+    const baseY=c.m==='a'?(v.alt??0)-1:
+      (c.m==='w'||c.m==='wl')?-1.4:hAt(v.x,v.z),
+      topY=c.m==='a'?(v.alt??0)+2:baseY+Math.max(2,(VS[v.t]||1)*2.2),
+      rock=nearbyRock(v.x,v.z,radius*.48,baseY,topY);
+    if(rock){
+      // Fins i tot a poc a poc, la roca és sòlida; però només els
+      // impactes ràpids treuen vida al vehicle.
+      if(speed>10){
+        collisionDamageVehicle(v,Math.min(5,Math.max(1,Math.ceil(speed/(9*Math.sqrt(c.mass||1))))),1);
+        vehicleImpactFx(rock.x,Math.max(0,hAt(rock.x,rock.z))+.8,rock.z);
+      }
+      if(v.destroyed)return;
+      const dx=v.x-rock.x,dz=v.z-rock.z,dist=Math.hypot(dx,dz),
+        clear=rock.r+radius*.48+.08;
+      if(dist>.01){v.x=rock.x+dx/dist*clear;v.z=rock.z+dz/dist*clear}
+      else{v.x=oldX;v.z=oldZ}
+      v.v*=-.12;v.bump=.22;v.envCd=.32;
+      msg='Impacte amb roca!';msgT=1;return;
+    }
+  }
   if(speed<2.5||c.m==='a'||c.m==='w')return;
-  if(v.ramCd<=0){
-    for(const u of E){if(u.t!=='soldat')continue;const d=Math.hypot(v.x-u.x,v.z-u.z);if(d<radius*.68+u.r*.45){const dmg=Math.min(48,6+speed*2.4);hurtE(u,dmg);u.alert=12;v.ramCd=.35;v.v*=.86;msg='Atropellament!';msgT=1;break}}
+  // Els impactes lents no maten automàticament els soldats.
+  if(v.ramCd<=0&&speed>6){
+    for(const u of E){
+      if(u.t!=='soldat')continue;
+      if(runoverSweepHit(oldX,oldZ,v.x,v.z,u.x,u.z,radius*.68+u.r*.45)){
+        const dmg=runoverDamage(speed,c.mass||1);
+        hurtE(u,dmg);u.alert=12;v.ramCd=.35;v.v*=.86;
+        msg='Atropellament!';msgT=1;break;
+      }
+    }
   }
   if(v.envCd>0)return;
   const t=treeAt(v.x,v.z,radius*.48);if(!t)return;
-  if(t.p&&t.alive){const heavy=v.t==='tanc'||v.t==='camio';killPalm(t);if(!heavy)collisionDamageVehicle(v,Math.min(18,5+speed*.55),1);if(v.destroyed)return;if(!heavy)v.v*=.9;v.bump=heavy?.06:.18;v.envCd=heavy?.08:.28;msg='Has tombat una palmera.';msgT=1;return}
-  if(t.rock){collisionDamageVehicle(v,Math.min(14,4+speed*.45),1);vehicleImpactFx(t.x,Math.max(0,hAt(t.x,t.z))+.8,t.z);if(v.destroyed)return;v.v*=.8;v.bump=.22;v.hd+=rn(-.045,.045);v.envCd=.32;msg='Impacte amb roca!';msgT=1}
+  if(t.p&&t.alive){
+    const heavy=v.t==='tanc'||v.t==='camio';
+    if(!heavy&&speed<=10){
+      // Una maniobra a poca velocitat topa amb la palmera, sense
+      // fer-la caure ni perdre PV. Els pesants conserven la força.
+      v.x=oldX;v.z=oldZ;v.v*=.12;v.bump=.12;v.envCd=.15;return;
+    }
+    killPalm(t);
+    if(!heavy)collisionDamageVehicle(v,Math.min(3,Math.max(1,Math.ceil(speed/(18*Math.sqrt(c.mass||1))))),1);
+    if(v.destroyed)return;
+    if(!heavy)v.v*=.9;
+    v.bump=heavy?.06:.18;v.envCd=heavy?.08:.28;
+    msg='Has tombat una palmera.';msgT=1;return;
+  }
+  // Les roques ja s'han resolt abans, també per a les embarcacions.
 }
 // Hitboxes físics de les cobertes. Calculats a partir de la mateixa
 // geometria dels sostres, sense afegir malles al renderitzador.
@@ -9735,10 +12377,19 @@ if((!a||v.alt-g<16)&&!deckCarrier){const footprint=vehicleBox(v,nx,nz,v.hd);for(
   !(w.towerLegOwner&&a&&v.alt>w.y1+2)&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){
   const touch=w.barbed?fenceVehicleContact(w,footprint):null;
   if(w.barbed&&!touch)continue;
+  // Els murs empren la caixa real del vehicle. Abans el radi ample
+  // bloquejava el tanc quan encara no havia tocat la porta.
+  if(!w.barbed&&!obbOverlap(footprint,{
+    x:(w.x0+w.x1)/2,z:(w.z0+w.z1)/2,hd:0,
+    w:Math.max(.05,w.x1-w.x0),d:Math.max(.05,w.z1-w.z0)
+  }))continue;
+  // Les parets del pis superior no bloquegen vehicles a nivell de terra.
+  if(land&&(w.y1<g-.8||w.y0>g+
+    (v.t==='tanc'||v.t==='camio'?5.6:4.2)*(VS[v.t]||1)))continue;
   if(w.rammable&&land&&mayRamWhileRecovering(v.t,!!w.barbed,v.envCd)){
-    const speed=Math.abs(v.v),barbed=!!w.barbed,breakSpeed=barbed?8:14,
-          tank=v.t==='tanc',truckFence=v.t==='camio'&&barbed;
-    if(tank||truckFence||speed>breakSpeed){
+    const barbed=!!w.barbed,tank=v.t==='tanc',
+          truckFence=v.t==='camio'&&barbed;
+    if(vehicleCanBreakBarrier(v,barbed)){
       dmgW(w,w.hp);
       if(!tank&&!truckFence)collisionDamageVehicle(v,0,barbed?2:3);
       const hitX=touch?.x??w.cx,hitZ=touch?.z??w.cz;
@@ -9753,8 +12404,12 @@ if((!a||v.alt-g<16)&&!deckCarrier){const footprint=vehicleBox(v,nx,nz,v.hd);for(
   if(a)return crashHelicopterStructure(v,{x:nx,z:nz,alt:v.alt,y:w.y1,kind:'roof'});
   ok=false;break
 }}
+if(ok&&deckCarrier&&ferryCabinVehicleHit(deckCarrier,vehicleBox(v,nx,nz,v.hd))){
+  // La cabina bloqueja els vehicles embarcats, com un edifici sòlid.
+  ok=false;v.bump=.12;
+}
 if(ok){const test=vehicleBox(v,nx,nz,v.hd),hit=vehicleObstacles(v).find(o=>o!==deckCarrier&&o!==v.carrier&&o.carrier!==v&&vehicleHeightCompatible(v,o)&&obbOverlap(test,vehicleBox(o)));if(hit){
-  const rel=Math.abs(v.v-(hit.v||0)),ownMass=c.mass||1,otherMass=VT[vehicleHitType(hit.t)]?.mass||1,
+  const rel=relativeVehicleImpactSpeed(v,hit),ownMass=c.mass||1,otherMass=VT[vehicleHitType(hit.t)]?.mass||1,
         ratio=Math.max(.35,Math.min(2.5,otherMass/ownMass)),
         tankCrush=tankCanCrush(v,hit,ownMass,otherMass);
   if(tankCrush){
@@ -9765,7 +12420,11 @@ if(ok){const test=vehicleBox(v,nx,nz,v.hd),hit=vehicleObstacles(v).find(o=>o!==d
   }else{
     v.v*=rel>5?Math.max(.16,.42/ratio):Math.max(.3,.62/ratio);
     if('v'in hit)hit.v*=Math.max(.3,.72/Math.max(.5,ownMass/otherMass));
-    if(rel>6){collisionDamageVehicle(v,Math.min(18,rel*.7*ratio),1);if(V.includes(hit))collisionDamageVehicle(hit,Math.min(18,rel*.55/ratio),1);vehicleImpactFx((v.x+hit.x)/2,Math.max(vehicleY(v),vehicleY(hit))+.5,(v.z+hit.z)/2)}
+    if(rel>10&&v.envCd<=0){
+      collisionDamageVehicle(v,impactDamage(rel,ownMass,otherMass),1);
+      impactVehicle(hit,impactDamage(rel,otherMass,ownMass));
+      vehicleImpactFx((v.x+hit.x)/2,Math.max(vehicleY(v),vehicleY(hit))+.5,(v.z+hit.z)/2);
+    }
     v.bump=.14;v.envCd=.18;ok=false;
   }
 }}
@@ -9799,6 +12458,8 @@ if(a){
     if(v.alt<=deckLandingY+.55&&ud<=.05){v.alt=deckLandingY;v.verticalV=0;attachToFerry(v,f2)}
     else if(v.carrier===f2&&v.alt>deckLandingY+1.4)detachFromFerry(v)
   }else if(v.carrier)detachFromFerry(v)
+  // Els patins ja suporten el pes: no acumulem velocitat de descens contra el terra.
+  if(!f2&&v.verticalV<0&&v.alt<=helicopterLandedAltitude(v,g2)+.001)v.verticalV=0;
 }
 if(v.carrier)attachToFerry(v,v.carrier);
 return !v.destroyed}
@@ -9878,22 +12539,40 @@ if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.
 // Direcció visual a l'eix davant (-Z): independent del rodament en X.
 window.HUNTER_VEHICLES.animateSteering(o,v.t,tr,dt);
 v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0):(v.pedalPhase||0),sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*sweep;r.rotation.z=-side*(.12+dip);r.rotation.x=.06*Math.sin(rowPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})}
-let runStepTimer=0;
+let runStepTimer=0,stealthStepTimer=0;
 function update(dt,t){
+if(activeBunker?.basement?.lights?.length){
+  const basement=activeBunker.basement;
+  const nearby=started&&!paused&&
+    Math.hypot(P.x-activeBunker.x,P.z-activeBunker.z)<160;
+  if(nearby!==basement.lightsOn){
+    for(const lamp of basement.lights)lamp.visible=nearby;
+    basement.lightsOn=nearby;
+  }
+}
 const strafeEnabled=updateStrafeControls();
+if(cheats.items)grantAllWeapons();
 // La prolongació del joystick funciona a peu i nedant: a l'aigua activa el crol.
 const canRun=!!started&&!paused&&!over&&!cv&&!playerFall&&!playerEject&&!scopeActive;
 joystick.setRunEnabled(canRun);
 document.body.classList.toggle('player-swimming',canRun&&swimming);
-if(!started||paused||over){updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
+updateCrouchButton();
+// Darrera defensa: cap estat actiu amb vida nul·la, fins i tot si una
+ // interacció externa o una restauració d'estat ha posat hp a zero.
+ if(started&&!over&&hp<=0){
+   hp=0;fin('HAS MORT',{type:'impact',x:P.x,y:P.y,z:P.z});
+ }
+ if(!started||paused||over){updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
 rebuildVehicleGrid();elapsed+=dt;
+window.HUNTER_STEALTH.tick(dt);
+const playerStartX=P.x,playerStartZ=P.z;
 const jf=-joystick.state.y,jtr=-joystick.state.x,
       f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),
       tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),
       strafe=strafeEnabled?Math.max(-1,Math.min(1,
         (K.KeyU?1:0)-(K.KeyY?1:0)+(strafePointers.right!==null?1:0)-(strafePointers.left!==null?1:0))):0,
       ud=(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),lim=H-2;
-const running=canRun&&f>.1&&(joystick.state.running||K.ShiftLeft||K.ShiftRight);
+const running=canRun&&!playerCrouched&&f>.1&&(joystick.state.running||K.ShiftLeft||K.ShiftRight);
 // El córrer fa passes de bota a ritme viu, però no quan nedam.
 if(running&&!swimming&&!playerFall&&!playerEject&&f>.2){
   runStepTimer-=dt;
@@ -9908,7 +12587,13 @@ if(scopeActive){
   scopeYaw+=(tr-scopeStrafe*.8)*dt*.38;
   scopePitch=Math.max(-.65,Math.min(.65,scopePitch+f*dt*.30));
 }else if(cv){const driven=cv,alive=stepV(driven,f,tr,ud,dt,strafe);if(alive&&cv===driven){P.x=driven.x;P.z=driven.z;P.hd=driven.hd}}
-else{P.hd+=tr*dt*2.2;if(playerFall){
+else{P.hd+=tr*dt*2.2;if(cheats.fly){
+  const speed=65,vertical=(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),length=Math.max(1,Math.hypot(f,strafe));
+  P.x=Math.max(-lim,Math.min(lim,P.x+(-Math.sin(P.hd)*f+Math.cos(P.hd)*strafe)*speed*dt/length));
+  P.z=Math.max(-lim,Math.min(lim,P.z+(-Math.cos(P.hd)*f-Math.sin(P.hd)*strafe)*speed*dt/length));
+  cheatFlightY=Math.max(hAt(P.x,P.z)+1,Math.min(500,(cheatFlightY??P.y)+vertical*speed*dt));
+  P.y=cheatFlightY;
+}else if(playerFall){
   const fall=playerFall,oldX=P.x,oldZ=P.z,oldY=fall.y;
   fall.t+=dt;fall.vy-=fall.parachute?10*dt:24*dt;
   if(fall.parachute){
@@ -9930,9 +12615,9 @@ else{P.hd+=tr*dt*2.2;if(playerFall){
   if(fall.y<=landing){
     P.y=landing;const fallH=fall.startHeight,impact=Math.max(0,-fall.vy),
       waterLanding=roof===null&&water>hAt(P.x,P.z)+1.5,
-      dmg=fall.parachute?0:Math.min(100,Math.max(0,(fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8)));
+      dmg=fall.parachute?0:wholeDamage(Math.min(COMBAT_BALANCE.player,Math.max(0,((fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8))*.2)));
     removeParachuteVisual();playerFall=null;
-    if(dmg>0)hurtP(dmg);
+    if(dmg>0)hurtP(dmg,false,{type:'fall',x:P.x,y:P.y+8,z:P.z});
     msg=dmg===0&&fallH>4?'Has aterrat amb seguretat.':waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5;
   }
 }
@@ -9957,23 +12642,54 @@ else if(playerEject&&playerEject.t>0){
   // Dins l'aigua: braça normal, crol accelerat quan es manté la
   // prolongació superior i natació lateral amb els botons de strafe.
   const length=Math.max(1,Math.hypot(f,strafe)),
-        ss=(swimming?(running?8.5:5):running?19:12)*f*dt/length,
-        lateral=(swimming?(running?6.5:4.5):9)*strafe*dt/length;
+        ss=(swimming?(running?8.5:5):playerCrouched?4.5:running?19:12)*f*dt/length,
+        lateral=(swimming?(running?6.5:4.5):playerCrouched?3.8:9)*strafe*dt/length;
   P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*ss+Math.cos(P.hd)*lateral));
   P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*ss-Math.sin(P.hd)*lateral));
 }
-if(!playerFall){wallPush();treePush();vehiclePushPlayer()}}
+if(!playerFall&&!cheats.fly){wallPush();treePush();vehiclePushPlayer();ferryCabinPushPlayer()}}
+// Cal transportar també el jugador que va a peu sobre la coberta mòbil.
+const walkingDeck=!cv&&!playerFall?pedestrianFerry(P.x,P.z,P.y):null;
 V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;v.strafeV=0;return}if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
 syncFerryCargo();updateTerminalRamps();
+if(walkingDeck&&!walkingDeck.f.destroyed){const p=ferryWorld(walkingDeck.f,walkingDeck.q.x,walkingDeck.q.z);P.x=p.x;P.z=p.z}
 ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2&&P.y<(solidRoofAt(b,P.x,P.z)?.bottom??b.fy+b.h+.1))||null;
-const floor=ib?Math.max(ib.fy+.3,groundAt(P.x,P.z,P.y)):groundAt(P.x,P.z,P.y),surface=wy(P.x,P.z,t);swimming=!cv&&!ib&&!playerFall&&floor<surface-2.1;
+const floor=ib&&ib.kind!=='enemy_bunker'?Math.max(ib.fy+.3,groundAt(P.x,P.z,P.y)):groundAt(P.x,P.z,P.y),
+      surface=wy(P.x,P.z,t),
+      insideBasement=playerInsideBunkerBasement(P.x,P.z,P.y);
+swimming=!cheats.fly&&!cv&&!ib&&!insideBasement&&!playerFall&&floor<surface-2.1;
+if(swimming)playerCrouched=false;
 document.body.classList.toggle('player-swimming',canRun&&swimming);
 if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);
-if(!playerFall){
+if(!playerFall&&!cheats.fly){
   // El suport segueix el triangle visible JUST sota el centre del jugador.
   // Mostrejar el màxim de quatre punts manté el personatge en l'aire
   // en baixar una pendent, perquè els punts del darrere són més alts.
-  P.y=ib?floor:Math.max(floor+.06,surface-2.1);
+  // Dins el búnquer, la superfície marina no és una superfície física:
+  // el nivell del terra de l'habitació ha de guanyar sempre.
+  P.y=insideBasement?floor+.06:ib?floor:Math.max(floor+.06,surface-2.1);
+}
+// Sons audibles per la IA: passos, braçades i motors. El volum de l'àudio
+// real no intervé en els radis, i no emetem res si el jugador està aturat.
+stealthStepTimer-=dt;
+if(stealthStepTimer<=0){
+  if(cv&&Math.abs(cv.v)>1){
+    const vehicleNoise={bici:'bicycle',moto:'motorbike',cotxe:'car',cotxe_civil:'civilianCar',camio:'truck',
+      tanc:'tank',tanqueta:'apc',barca_rems:'rowboat',windsurf:'windsurf',
+      moto_aquatica:'jetski',llanxa:'speedboat',llanxa_coets:'speedboat',
+      ferry:'ferry',heli:'helicopter',heli_combat:'helicopter',hover:'jetski'},
+      kind=vehicleNoise[cv.t],maximum=window.HUNTER_STEALTH.RADII[kind];
+    if(maximum){
+      const velocity=Math.min(1,Math.abs(cv.v)/Math.max(1,VT[cv.t].maxF||35));
+      window.HUNTER_STEALTH.emit(kind,cv.x,cv.o.position.y+1,cv.z,
+        maximum*(.45+.55*velocity));
+    }
+  }else if(!cv&&!playerFall&&!playerEject&&!scopeActive&&
+    Math.hypot(P.x-playerStartX,P.z-playerStartZ)>.025){
+    window.HUNTER_STEALTH.emit(swimming?'swim':playerCrouched?'crouch':running?'run':'walk',
+      P.x,P.y+1,P.z);
+  }
+  stealthStepTimer=.24;
 }
 // Actualització del LOD de les palmeres a baixa freqüència (i també en vehicle).
 palmVisualTick-=dt;
@@ -10076,10 +12792,11 @@ else if(!cv&&playerEject&&playerEject.t>=0){
     pl.position.y+=airborne;
     pl.rotation.x=-wave*1.05;
     pl.rotation.z=(playerEject.roll||1)*wave*.95;
-    if(u.al)u.al.rotation.x=-1.25*wave;
-    if(u.ar)u.ar.rotation.x=-1.1*wave;
-    if(u.ll)u.ll.rotation.x=.75*wave;
-    if(u.lr)u.lr.rotation.x=-.85*wave;
+    // Les extremitats les mou el ragdoll; el cos encara segueix
+    // la trajectòria simplificada existent (sense motors físics pesants).
+    if(playerBlastRagdoll)window.HUNTER_RAGDOLL.update(playerBlastRagdoll,dt,{
+      airborne:airborne>.12,grounded:airborne<=.12
+    });
   }
 }
 V.forEach(v=>{
@@ -10094,15 +12811,28 @@ V.forEach(v=>{
 // que triaria l'autoapuntat actual. El vehicle pot avançar/girar mentre
 // la torre conserva el seu propi rumb i l'elevació del canó.
 if(cv&&(cv.t==='tanc'||cv.t==='tanqueta')){
-  const gun=window.HUNTER_VEHICLES.turretShot(THREE,cv.o);
+    const gun=window.HUNTER_VEHICLES.turretShot(THREE,cv.o);
   if(gun){
     const hd=cv.hd,fx=-Math.sin(hd),fz=-Math.cos(hd),
           range=cv.t==='tanc'?220:85,
+          heavy=cv.t==='tanc',
           [ax,ay,az]=autoAimArmoredShot(
-            gun.origin.x,gun.origin.y,gun.origin.z,fx,fz,range);
+            gun.origin.x,gun.origin.y,gun.origin.z,fx,fz,range,
+            heavy?'heavy':'light',heavy?85*HEAVY_SHOT_SPEED_FACTOR:135);
     window.HUNTER_VEHICLES.aimTurret(THREE,cv.o,
       new THREE.Vector3(ax,ay,az),dt);
   }
+}
+// Una càmera en mode mira no ha de deixar envans ocults del fotograma
+// anterior: la restauració és independent del mode de càmera.
+if(activeBunker?.basement?.cameraHiddenWalls){
+  for(const mesh of activeBunker.basement.cameraHiddenWalls){
+    const door=activeBunker.basement.doors.find(d=>d.m===mesh);
+    // Les portes automàtiques obertes NO han de reapareixer en
+    // restaurar la paret amagada al fotograma anterior.
+    mesh.visible=!door||door.openProgress<.98;
+  }
+  activeBunker.basement.cameraHiddenWalls.length=0;
 }
 const scopeNow=scopeActive&&sniperEquipped&&!cv&&!playerFall&&!swimming;
 const fieldOfView=scopeNow?2*Math.atan(Math.tan(58*Math.PI/360)/8)*180/Math.PI:58;
@@ -10114,20 +12844,89 @@ if(scopeNow){
 }else{
   const T=cv||P,c=cv?VT[cv.t]:ib?{cd:6,ch:11}:{cd:10,ch:5},ty=cv?cv.o.position.y:P.y,
     w=new THREE.Vector3(T.x+Math.sin(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1),0,T.z+Math.cos(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1));
-  w.y=Math.max(ty+c.ch*zoom*(cv?Math.sqrt(VS[cv.t]):1),hAt(w.x,w.z)+3,2.5);
-  cam.position.lerp(w,1-Math.pow(.001,dt));
-  cam.lookAt(T.x-Math.sin(T.hd)*8,ty+2,T.z-Math.cos(T.hd)*8);
+  // Mode soterrani també durant el PRIMER esglaó, no només quan
+  // el jugador ja ha baixat 2 m. La càmera no es pot quedar darrere
+  // d'un envà opac, ni pot perseguir l'altura exterior de la muntanya.
+  const b=activeBunker,local=b?.basement&&!cv?buildingLocalPoint(b,P.x,P.z):null,
+        inside=!!local&&Math.abs(local.x)<b.basement.halfX-.5&&
+        Math.abs(local.z)<b.basement.halfZ-.5;
+  const stair=b?.basement?.stair;
+  const descending=!!local&&Math.abs(local.x-stair.x)<stair.width/2+.45&&
+    local.z>=stair.zBottom-.5&&local.z<=stair.zTop+.4&&P.y<b.fy+.04;
+  const bunkerBelow=!!inside&&(P.y<b.fy-3.9||descending);
+  // El forjat ÉS el sostre del soterrani. No s'ha d'amagar:
+  // ara que la càmera és sempre a sota, es veu el plafó i no es
+  // produeix cap obstrucció; els llums queden ancorats al sostre real.
+  if(b?.basement)for(const slab of b.basement.upperSlabMeshes)slab.visible=true;
+  if(bunkerBelow){
+    // Càmera estable a distància normal, sense correccions angulars
+    // brusques ni l'antic raycast que la teletransportava davant dels envans.
+    const targetEye=new THREE.Vector3(P.x,
+      Math.min(b.fy-1.0,Math.max(b.basement.floorY+1.6,P.y+1.65)),P.z);
+    const cameraDistance=Math.max(10.5,Math.min(17,13.5*zoom));
+    const cameraHeight=Math.max(b.basement.floorY+5.4,
+      Math.min(b.fy-1.55,P.y+7.2));
+    const heading=T.hd;
+    w.set(P.x+Math.sin(heading)*cameraDistance,cameraHeight,
+      P.z+Math.cos(heading)*cameraDistance);
+    // No deixam sortir la càmera del volum subterrani, perquè llavors
+    // el terreny exterior pot ocultar completament la vista.
+    const cl=buildingLocalPoint(b,w.x,w.z);
+    const clampedX=Math.max(-b.basement.halfX+1.3,
+      Math.min(b.basement.halfX-1.3,cl.x));
+    const clampedZ=Math.max(-b.basement.halfZ+1.3,
+      Math.min(b.basement.halfZ-1.3,cl.z));
+    if(clampedX!==cl.x||clampedZ!==cl.z){
+      const q=buildingWorldPoint(b,clampedX,clampedZ);
+      w.x=q.x;w.z=q.z;
+    }
+    cam.position.copy(w);
+    // La càmera POT travessar els envans. Només ocultam les peces
+    // físiques interposades entre càmera i jugador, no les parets
+    // de tota la cambra ni les col·lisions del personatge.
+    for(const wall of wallCandidates(
+      (targetEye.x+cam.position.x)/2,(targetEye.z+cam.position.z)/2,
+      cameraDistance/2+2)){
+      if(wall.owner!==b||!wall.bunkerBasementWall||!wall.m||
+         !wall.m.visible)continue;
+      if(wall.y1<Math.min(targetEye.y,cam.position.y)||
+         wall.y0>Math.max(targetEye.y,cam.position.y))continue;
+      const hit=segmentAabbT(targetEye.x,targetEye.y,targetEye.z,
+        cam.position.x,cam.position.y,cam.position.z,
+        wall.x0,wall.x1,wall.y0,wall.y1,wall.z0,wall.z1);
+      if(hit!==null&&hit>.005&&hit<.995){
+        wall.m.visible=false;
+        b.basement.cameraHiddenWalls.push(wall.m);
+      }
+    }
+    b.basement.cameraInside=true;
+  }else{
+    if(b?.basement)b.basement.cameraInside=false;
+    w.y=Math.max(ty+c.ch*zoom*(cv?Math.sqrt(VS[cv.t]):1),hAt(w.x,w.z)+3,2.5);
+    cam.position.lerp(w,1-Math.pow(.001,dt));
+  }
+  cam.lookAt(T.x-Math.sin(T.hd)*(bunkerBelow?3.5:8),
+    Math.min(bunkerBelow?b.fy-1.0:Infinity,ty+(bunkerBelow?2.0:2)),
+    T.z-Math.cos(T.hd)*(bunkerBelow?3.5:8));
 }
-if(playerEject&&playerEject.t<=0)playerEject=null;
+if(playerEject&&playerEject.t<=0){
+  if(playerBlastRagdoll){
+    window.HUNTER_RAGDOLL.reset(playerBlastRagdoll);
+    playerBlastRagdoll=null;
+  }
+  playerEject=null;
+}
 updateBazookaReticle(dt);
-fcd-=dt;updateGrenadeCharge(dt);if(K.KeyF&&(!grenadeEquipped||cv))fire();updEn(dt);updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);
+fcd-=dt;updateGrenadeCharge(dt);if(K.KeyF&&(!grenadeEquipped||cv))fire();updEn(dt);
+window.HUNTER_STEALTH_DEBUG.update(THREE,world,E,P);
+updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);
 const nv=cv?null:nearV();
-uiTick+=dt;if(uiTick>.12){uiTick=0;const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',!!cv&&VT[cv.t]?.m==='a');contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}const fireButton=document.getElementById('mainFireButton');
+uiTick+=dt;if(uiTick>.12){uiTick=0;const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',(!cv&&cheats.fly)||(!!cv&&VT[cv.t]?.m==='a'));contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}const fireButton=document.getElementById('mainFireButton');
 if(fireButton){
   const heliGrenade=cv?.t==='heli',
         grenade=heliGrenade||!cv&&grenadeEquipped&&(inv.granada||0)>0,
         cutters=!cv&&cisallaEquipped&&(inv.cisalla||0)>0,
-        knife=!cv&&!grenade&&!cutters&&!bazookaEquipped&&!sniperEquipped&&ammo<=0,
+        knife=!cv&&(knifeEquipped||!grenade&&!cutters&&!bazookaEquipped&&!sniperEquipped&&ammo<=0),
         weapon=cutters?'cisalla':grenade?'granada':knife?'ganivet':'normal';
   if(fireButton.dataset.weapon!==weapon){
     fireButton.dataset.weapon=weapon;
@@ -10137,22 +12936,35 @@ if(fireButton){
     fireButton.title=heliGrenade?'Llançar granada de l’inventari':grenade?'Mantén premut per arribar més lluny':action;
   }
 }
-updateActionButton(nv);
+updateActionButton(nv);syncWeaponPicker();if(pickerOpen)drawWeaponPicker();
 mini();ui.renderHUD();}}
 
 
 let last=performance.now();
 (function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(victoryCinematic?victoryCinematic.t:started&&!paused&&!over?dt:0),cpuStarted=performance.now();
 update(dt,t);
+syncWeaponPicker();
 if(victoryCinematic?.active||victoryCinematic?.finished)updateVictoryCinematic(dt);
+ if(deathCinematic?.active)updateDeathCinematic(dt);
 const simulationEnded=performance.now();
 if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
   terrainStream.update(victoryCinematic?.active?cam.position.x:P.x,
     victoryCinematic?.active?cam.position.z:P.z,visualQuality.shadows?2:1.2,cam,
-    victoryCinematic?.active?null:currentSniperFocus());const terrainEnded=performance.now();waves(t);
+    victoryCinematic?.active?null:currentSniperFocus());const terrainEnded=performance.now();
+ // El món no queda congelat durant la repetició: les onades avancen
+ // lentament mentre la càmera i el cos es mouen a velocitat cinematogràfica.
+ waves(t+(deathCinematic?.active?deathCinematic.t*.18:0));
 sun.target.position.set(victoryCinematic?cam.position.x:P.x,0,
   victoryCinematic?cam.position.z:P.z);
-sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();for(const k in renderCategories)renderCategories[k]=0;ren.render(scene,cam);
+sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();for(const k in renderCategories)renderCategories[k]=0;
+ if(deathVoidReady()){
+   const v=deathCinematic;v.voidCamera.aspect=cam.aspect;v.voidCamera.updateProjectionMatrix();
+   ren.render(v.voidScene,v.voidCamera);
+ }else if(deathCinematic?.underwaterActive){
+   // Mantenim la mateixa càmera i el mateix cos, però sense la superfície
+   // opaca del mar ni el cel exterior mentre el personatge s'enfonsa.
+   ren.render(deathCinematic.underwaterScene,cam);
+ }else ren.render(scene,cam);
 if(started&&!paused&&!over){
   advanceTerrainTexture();
   if(waterUpgradePending){water.queueResolutionUpgrade();waterUpgradePending=false}
@@ -10162,6 +12974,7 @@ adaptivePerformance.sample({dt:rawDt,renderCpuMs:performance.now()-renderStarted
   updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,
   active:!!started&&!paused&&!over,now});
 requestAnimationFrame(loop)})(last);
+
 
 
 

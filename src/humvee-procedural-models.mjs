@@ -2,7 +2,7 @@
 // A: editable procedural low-poly shapes (boxes, polygon panels, cylinders).
 // B: original approved GLB vertices/normals/UV and scene graph regenerated
 //    directly into THREE.BufferGeometry from lossless JS data. NO .glb request.
-// Neither is substituted into the game until the user selects one.
+// B is the in-game model; A remains available for visual comparison.
 import {D31_PROCEDURAL_DATA} from './humvee-procedural-b-data.mjs?v=d31-a2-b3';
 const S=1.75;
 const PARAM={

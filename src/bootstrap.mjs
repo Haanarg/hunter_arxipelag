@@ -55,7 +55,7 @@ try {
   // El model D3.1 del cotxe militar és ara la versió procedural B.
   // La malla, normals, UV i textura es creen a partir de dades JavaScript
   // una sola vegada; no es demana cap GLB durant la partida.
-  // Conservar el GLB definitiu al repositori fins a validar la prova al joc.
+  // Les dades procedurals són la font del model; els GLB s’han retirat.
   // Si les dades no es poden preparar, mantenim la geometria clàssica
   // de reserva per no impedir l'inici de la partida.
   try {
