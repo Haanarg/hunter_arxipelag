@@ -1,6 +1,6 @@
 # HUNTER · ARXIPÈLAG — progrés de les millores
 
-Actualitzat: 2026-10-24. Aquest fitxer és el punt de represa del pla de catorze fases, ordenat inicialment per impacte. L'usuari ha prioritzat ara **6 → 8**; les fases saltades continuen pendents. «Implementada» no equival a validació física en Android.
+Actualitzat: 2026-10-24. Aquest fitxer és el punt de represa del pla de catorze fases, ordenat inicialment per impacte. S'han completat i desplegat **6 → 8** per prioritat de l'usuari; les fases saltades continuen pendents. «Implementada» no equival a validació física en Android.
 
 ## Estat de les fases
 
@@ -13,7 +13,7 @@ Actualitzat: 2026-10-24. Aquest fitxer és el punt de represa del pla de catorze
 | 5 | Desar, suspendre i reprendre l'operació | **Pendent**, ajornada. | Format versionat de partida, restauració segura i proves de lifecycle. |
 | 6 | Combat llegible | **Implementada i desplegada**, v0.5.78, commit `f80705b`. Espurnes distintives d’ineficàcia, sang més visible als ferits, confirmació d’impacte real i direcció del dany. [Detall](docs/PHASE6_COMBAT.md). | Aspecte visual/GPU i Android físic pendents. |
 | 7 | Orientació i ritme de missió | **Pendent**, ajornada. | Guia d'intel/objectius i direcció útil del waypoint, sense revelar informació desconeguda. |
-| 8 | Sigil i IA llegibles | **Implementada**, v0.5.79. Marcadors visibles de sospita/contacte/cerca, posicions de tir i flanc reservades i torns d’entrada. [Detall](docs/PHASE8_STEALTH.md). | Comprovació del desplegament en curs; llegibilitat visual, GPU i Android físic pendents. |
+| 8 | Sigil i IA llegibles | **Implementada i desplegada**, v0.5.79, commit `fc2a3c3`. Marcadors visibles de sospita/contacte/cerca, posicions de tir i flanc reservades i torns d’entrada. [Detall](docs/PHASE8_STEALTH.md). | Llegibilitat visual, GPU i Android físic pendents. |
 | 9 | Controls tàctils personalitzables | **Pendent.** | Esquerrans, sensibilitat, posicions i persistència de preferències. |
 | 10 | Generació progressiva del món | **Pendent.** | Resposta durant la càrrega i treball distribuït sense canviar llavors. |
 | 11 | Exploració opcional amb decisions | **Pendent.** | Recompenses i alternatives que aportin decisions a la missió. |
@@ -50,8 +50,12 @@ Actualitzat: 2026-10-24. Aquest fitxer és el punt de represa del pla de catorze
 - Cas real de porta 2,5 m: de 1/3 soldats que entraven en 30 s a **3/3 en tots dos ordres**. Separació mínima 2,40029 m / 2,41392 m i zero posicions dins de murs. Tres reserves de tir separades almenys 10,20 m en el cas independent.
 - Provats alliberament per mort, absència de tasca, bloqueig i pausa; reintents després d’un reset amb rellotge antic de 1.000 s; desaparició de marcadors amb cobertura i immediata revalidació en obrir-la; cos/forjat/envà del soterrani; límits de malles i comprovacions.
 - La cerca conserva la posició i alçada recordades, ignora l’interior/planta actuals del jugador ocult i no reinvestiga el propi crit. Rang de detecció, dany i cadència conservats.
-- Publicació i comprovació pública: pendents en aquest commit; el resultat s’anotarà a la següent actualització.
+- Publicada com a `fc2a3c3e19718dccc68807c47d85d076a14b17d3`. Check de Cloudflare completat amb èxit (build `e1629722-49f0-4382-9087-e1a8be69b87a`, Worker version `01148b74-c0aa-4704-9459-c5f8a95bcc74`). Verificació pública `2026-10-24T20:52:48.015792+00:00`: entrada i `version.mjs` a **0.5.79**, runtime `2d9cc3d4303144f1`, 597.628 bytes, idèntic byte a byte al local verificat (SHA-256 `ea86d357006287bd34f08aafe6fe74b7f21ee1172c9d9fed4985ba1d4b1b8323`).
 - Fases **4, 5 i 7 pendents**, i resta del pla segons la taula. La fase 1 continua parcial; la validació visual en GPU/Android continua pendent.
+
+## Represa
+
+La versió pública comprovada és **0.5.79**, amb les fases 6 i 8 integrades. Per continuar el pla original, la fase pendent de més prioritat és la **4** (perfilar Android), després la **5** (desar/recuperar) i la **7** (orientació); la taula conserva també els pendents de les fases 1 i 9–14. Aquesta anotació no inicia cap fase nova.
 
 ## Límits coneguts de la base
 
