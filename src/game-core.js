@@ -506,12 +506,12 @@ for(const u of E)if(ENEMY_TRAIL_TYPES.has(u.t))
   movementFx.vehicle(u,dt,fxContext);
 movementFx.update(dt,cam);
  PT.forEach(p=>{if(p.life>0){p.life-=dt;if(p.rise)p.m.position.y+=p.rise*dt;p.m.scale.setScalar(p.s*(1+(1-p.life/p.max)*1.15));p.m.material.opacity=Math.max(0,p.life/p.max)*.8;if(p.life<=0){p.m.visible=false;p.rise=0}}});
-if(seaAudio){const coastal=Math.max(.25,1-Math.max(0,hAt(P.x,P.z))/22),
+if(seaAudio&&audioCanPlay()){const coastal=Math.max(.25,1-Math.max(0,hAt(P.x,P.z))/22),
       // La barca de rems, com el windsurf, només fa fregadís d'aigua.
       waterVolume=cv&&(cv.t==='windsurf'||cv.t==='barca_rems')
         ?.026+Math.min(1,Math.abs(cv.v)/22)*.016:.035+coastal*.05;
   seaAudio.gain.gain.setTargetAtTime(over?0:waterVolume,AC.currentTime,.5)}
-if(eng){const c=cv?VT[cv.t]:null;
+if(eng&&audioCanPlay()){const c=cv?VT[cv.t]:null;
   eng.g.gain.value=c&&!['bici','windsurf','barca_rems'].includes(cv.t)&&!over?(cv.t==='cotxe_civil'?1.65:1)*(.02+Math.min(1,Math.abs(cv.v)/40)*.03):0;
   eng.o.frequency.value=c?(cv.t==='cotxe_civil'?28:c.m=='a'?60:35)+Math.abs(cv.v)*(c.m=='a'?1.3:2.5):40}}
 const seedRandomEl=document.getElementById('seedRandom'),seedInputEl=document.getElementById('seedInput'),iniEl=document.getElementById('ini'),
@@ -705,6 +705,7 @@ function startGameProgressively(options=readGameStartOptions()){
   (async()=>{
     window.HUNTER_GENERATION_STATE={status:'starting',stage:'Preparant el món',completed:0,total:null,steps:0,yields:0,maxStepMs:0,maxTurnMs:0,error:null};
     try{
+      audioPause();
       applyGameStartOptions(options);started=0;paused=true;clearKeys();resetCameraState();ui.hide();
       document.body.classList.remove('game-started');document.body.classList.add('game-generating');
       iniEl.style.display='none';loading.hidden=false;controls.forEach(el=>el.disabled=true);
@@ -712,7 +713,7 @@ function startGameProgressively(options=readGameStartOptions()){
       // Unlock in the activation task. Synthesise audio only after the world,
       // as before: its Math.random calls must not precede generated fauna.
       initAudio({unlockOnly:true});
-      if(eng)eng.g.gain.value=0;if(seaAudio)seaAudio.gain.gain.value=0;
+      audioPause();
       const iterator=(function*(){
         yield* buildSteps();
         minimap.setWorldSize(S,H);minimap.reset();
@@ -721,7 +722,7 @@ function startGameProgressively(options=readGameStartOptions()){
       await buildProgressively({iterator,signal,schedule:options.schedule||window.HUNTER_GENERATION_SCHEDULE,onProgress:report});
       if(signal.aborted)throw generationAbortError();
       initAudio();started=1;paused=!simulationFocused||!!document.hidden;clearKeys();
-      if(paused){ui.show('pause');if(AC)Promise.resolve(AC.suspend()).catch(()=>{})}
+      if(paused){ui.show('pause');audioPause()}
       window.HUNTER_GENERATION_STATE.status='ready';
       iniEl.style.display='none';document.body.classList.add('game-started');
       resetSimulationClock();return {seed,mapScale:MAP_SCALE};
@@ -806,7 +807,7 @@ if(b.hangar&&b.roof?.userData?.hangarRoof){
   for(let i=0;i<20;i++)debris(b.x+rn(-b.w/2,b.w/2),y,b.z+rn(-b.d/2,b.d/2),col,1,1.3,9);
   for(let i=0;i<8;i++)puff(b.x+rn(-b.w/2,b.w/2),y,b.z+rn(-b.d/2,b.d/2),0xc9b48a,4.5)
 }
-snd('boom',.4)}
+snd('boom',.4,{x:b.x,y,z:b.z},b)}
 function updDeb(dt){for(let i=DB.length-1;i>=0;i--){const d=DB[i],m=d.m;d.vy-=28*dt;m.position.x+=d.vx*dt;m.position.y+=d.vy*dt;m.position.z+=d.vz*dt;m.rotation.x+=d.rx*dt;m.rotation.y+=(d.ry||0)*dt;m.rotation.z+=(d.rz||0)*dt;
 const g=Math.max(0,hAt(m.position.x,m.position.z))+.2;if(m.position.y<g){m.position.y=g;d.vy*=-.3;d.vx*=.6;d.vz*=.6;d.rx*=d.truckPiece?.38:.82;if(d.ry)d.ry*=d.truckPiece?.38:.82;if(d.rz)d.rz*=d.truckPiece?.38:.82}
 d.life-=dt;const fade=d.vehiclePart?.55:.4,k=Math.max(0,Math.min(1,d.life/fade));m.scale.set(d.s0.x*k,d.s0.y*k,d.s0.z*k);if(d.life<=0){world.remove(m);DB.splice(i,1)}}
@@ -997,7 +998,7 @@ function dmgW(w,d){
   if(piece.stairStructure)destroyInteriorStair(piece.stairStructure.owner);
   checkRoofSupport(piece.owner,piece);
  }
- snd('boom',.3);
+ snd('boom',.3,{x:w.cx??(w.x0+w.x1)/2,y:(w.y0+w.y1)/2,z:w.cz??(w.z0+w.z1)/2},w);
 }
 function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=seedSearchMode
   ?{group:new THREE.Group(),walls:null,doors:null,roof:new THREE.Group()}
@@ -1827,6 +1828,7 @@ const stealthFeedback=window.HUNTER_STEALTH_FEEDBACK.create(THREE);
 window.HUNTER_STEALTH_FEEDBACK_STATS=stealthFeedback.stats;
 let simulationFrameActive=false,simulationFocused=true;
 function resetSimulationClock(now=performance.now()){
+  if(now===null)audioReset();
   simulationClock.reset(now);cinematicClock.reset(now);
   combatFeedback?.clear();
   stealthFeedback.reset();resetSoldierCoordination();
@@ -2267,9 +2269,9 @@ for(const b of document.querySelectorAll('[data-k]')){
   for(const v of ['pointercancel','lostpointercapture'])
     b.addEventListener(v,()=>{if(c==='KeyF')cancelGrenadeCharge();K[c]=0;b.classList.remove('held')});
 }
-addEventListener('blur',()=>{simulationFocused=false;resetSimulationClock();clearKeys();if(started&&!paused&&!over)panel('pause')});
-addEventListener('focus',()=>{simulationFocused=true;resetSimulationClock()});
-document.addEventListener('visibilitychange',()=>{resetSimulationClock();if(document.hidden&&started&&!over)panel('pause')});
+addEventListener('blur',()=>{simulationFocused=false;audioPause();resetSimulationClock();clearKeys();if(started&&!paused&&!over)panel('pause')});
+addEventListener('focus',()=>{simulationFocused=true;resetSimulationClock();if(started&&!paused)audioResume()});
+document.addEventListener('visibilitychange',()=>{resetSimulationClock();if(document.hidden){audioPause();if(started&&!over)panel('pause')}else if(started&&!paused)audioResume()});
 ren.domElement.addEventListener('wheel',e=>{e.preventDefault();if(e.shiftKey){cycleWeapon(e.deltaY>0?1:-1);return}zoom=Math.max(.7,Math.min(1.9,zoom+e.deltaY*.001))},{passive:false});
 ren.domElement.addEventListener('pointerdown',e=>{
   syncCameraVehicle();
@@ -2329,8 +2331,8 @@ function setCheat(key,enabled){
   if(key==='fly'){cheatFlightY=enabled?P.y:null;if(enabled){cv=null;playerFall=null;playerEject=null;swimming=false}}
   if(key==='invisible'&&enabled)for(const u of E){u.canSee=false;u.canShoot=false;u.alert=0;u.recognition=0;u.pursuitT=0;if(u.t==='soldat'){u.aiMode='patrol';u.searchT=0}}
 }
-function resume(){if(generationPromise)return;paused=false;simulationFocused=true;clearKeys();ui.hide();if(AC&&!muted)AC.resume();resetSimulationClock()}
-function panel(mode){if(generationPromise)return;setSniperScope(false);paused=true;resetSimulationClock();pickerOpen=false;picker.style.display='none';pickerToggle.style.display='none';clearKeys();if(eng)eng.g.gain.value=0;if(AC)AC.suspend();ui.show(mode)}
+function resume(){if(generationPromise)return;paused=false;simulationFocused=true;clearKeys();ui.hide();audioResume();resetSimulationClock()}
+function panel(mode){if(generationPromise)return;setSniperScope(false);paused=true;resetSimulationClock();pickerOpen=false;picker.style.display='none';pickerToggle.style.display='none';clearKeys();audioPause();ui.show(mode)}
 // Les cartes revelen informació de forma immediata: no són objectes
 // d'inventari que s'hagin d'equipar ni obrir manualment.
 function revealMapPickup(kind){
@@ -2471,7 +2473,7 @@ const ui=window.HUNTER_UI.create({
   getState:({nearVehicle=cv?null:nearV()}={})=>({
     hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
     inventory:inv,itemTypes:IT,player:P,nearVehicle,messageTime:msgT,message:msg,
-    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,cheats:{...cheats},stealthDebug:window.HUNTER_STEALTH.enabled(),stealthLayers:window.HUNTER_STEALTH.layers(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
+    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,muted,cheats:{...cheats},stealthDebug:window.HUNTER_STEALTH.enabled(),stealthLayers:window.HUNTER_STEALTH.layers(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
   }),
   actions:{
     resume,
@@ -2488,6 +2490,7 @@ const ui=window.HUNTER_UI.create({
     setWaterDisabled,
     setShadowsDisabled,
     setPerformanceStatsVisible,
+    setAudioMuted,
     setStealthDebug,
     setStealthLayer,
     zoom:d=>zoom=Math.max(.7,Math.min(1.9,zoom+d)),
@@ -3397,6 +3400,7 @@ cinematicClock.advance(now,dt=>{
     (victoryCinematic===victoryAtStart&&(victoryAtStart?.active||victoryAtStart?.finished)||
       deathCinematic===deathAtStart&&deathAtStart?.active);
 },cinematicActive);
+updateAudioFrame();
 renderCombatFeedback();
 renderStealthFeedback();
 const t=elapsed+(victoryCinematic?victoryCinematic.t:0);

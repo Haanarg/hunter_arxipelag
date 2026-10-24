@@ -18,6 +18,7 @@ on:
           - feedback
           - stealth
           - loading
+          - audio
           - ending
           - startup
           - all
@@ -53,6 +54,9 @@ jobs:
             world)
               set -- terrain-level-index terrain-stream water water-jumps rock-fields shark-behaviour seed-replay compound-generation loot-health two-storey-destruction pier-access ferry-land-patrols
               ;;
+            audio)
+              set -- spatial-audio phase12-independent simulation-clock
+              ;;
             loading)
               set -- progressive-generation phase10-independent simulation-clock startup-cache
               ;;
@@ -72,7 +76,7 @@ jobs:
               set -- simulation-clock simulation-timing shared-resources camera-controls smoke startup-cache optimization-ui-render-hooks joystick-running player-locomotion rowing-audio-camera performance-stats-toggle player-death-zero pause-menu integer-damage loot-health locomotion-blast truck-preview truck-game-model truck-debris ferry-land-patrols pier-access
               ;;
             all)
-              set -- progressive-generation phase10-independent stealth-perception stealth-feedback stealth-coordination phase8-independent combat-feedback phase6-independent simulation-clock simulation-timing shared-resources camera-controls smoke startup-cache optimization-ui-render-hooks joystick-running player-locomotion rowing-audio-camera performance-stats-toggle player-death-zero pause-menu integer-damage loot-health vehicle-weapon-reticle rock-fields nature-prototypes truck-preview truck-game-model truck-debris ferry-land-patrols water-jumps shark-behaviour locomotion-blast enemy-weapon-damage pier-access terrain-level-index terrain-stream water seed-replay compound-generation mission-viability-validator mission-viability bunker-basement two-storey-destruction enemy-navigation projectile-classes enemy-vehicle-trails damage-consistency heavy-vehicle-collisions victory-cinematic death-cinematic
+              set -- spatial-audio phase12-independent progressive-generation phase10-independent stealth-perception stealth-feedback stealth-coordination phase8-independent combat-feedback phase6-independent simulation-clock simulation-timing shared-resources camera-controls smoke startup-cache optimization-ui-render-hooks joystick-running player-locomotion rowing-audio-camera performance-stats-toggle player-death-zero pause-menu integer-damage loot-health vehicle-weapon-reticle rock-fields nature-prototypes truck-preview truck-game-model truck-debris ferry-land-patrols water-jumps shark-behaviour locomotion-blast enemy-weapon-damage pier-access terrain-level-index terrain-stream water seed-replay compound-generation mission-viability-validator mission-viability bunker-basement two-storey-destruction enemy-navigation projectile-classes enemy-vehicle-trails damage-consistency heavy-vehicle-collisions victory-cinematic death-cinematic
               ;;
             *)
               echo "Grup de proves desconegut: $GRUP" >&2

@@ -193,6 +193,7 @@ window.HUNTER_UI=Object.freeze({
           '</div>'+
           '<p class="pause-note">Els mapes recollits s’activen sols. Gestiona l’equipament amb la motxilla.</p>'+
           '<p class="pause-note">Senyals sobre soldats visibles: ? ambre · sospita; ! coral · contacte confirmat; ◇ blau · cerca o investigació. Desapareixen darrere la cobertura.</p>'+
+          '<label class="pause-stats-toggle"><input id="audioEnabledPause" type="checkbox"> So activat</label>'+
           '<div class="pause-menu-actions">'+
           '<button id="chetosMenu">Chetos</button>'+
           '<button id="restartMenu">Nova partida</button>'+
@@ -201,6 +202,9 @@ window.HUNTER_UI=Object.freeze({
         document.getElementById('chetosMenu').onclick=()=>actions.open('cheats');
         document.getElementById('restartMenu').onclick=()=>actions.open('restart');
         document.getElementById('performanceMenu').onclick=()=>actions.open('performance');
+        const audioEnabled=document.getElementById('audioEnabledPause');
+        audioEnabled.checked=!getState().muted;
+        audioEnabled.onchange=()=>actions.setAudioMuted(!audioEnabled.checked);
       }
     }
     resumeButton.onclick=actions.resume;

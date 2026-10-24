@@ -91,35 +91,9 @@ function victoryClearObstructions(v){
 }
 
 function victorySlowGunshot(heavy){
-  if(!AC)return;
-  try{
-    const now=AC.currentTime,duration=heavy?.42:.24,
-          length=Math.max(1,Math.floor(AC.sampleRate*duration)),
-          buffer=AC.createBuffer(1,length,AC.sampleRate),samples=buffer.getChannelData(0);
-    for(let i=0;i<length;i++){
-      const p=i/length;
-      samples[i]=(Math.random()*2-1)*Math.pow(1-p,2.4);
-    }
-    const source=AC.createBufferSource(),filter=AC.createBiquadFilter(),gain=AC.createGain();
-    source.buffer=buffer;source.playbackRate.value=.55;
-    filter.type='lowpass';filter.frequency.value=heavy?340:750;
-    gain.gain.value=heavy?.44:.31;
-    source.connect(filter);filter.connect(gain);gain.connect(AC.destination);
-    source.start(now);
-  }catch(e){snd(heavy?'cannon':'shot',.75)}
+  snd(heavy?'replayCannon':'replayShot');
 }
-function victoryGullCry(){
-  if(!AC)return;
-  try{
-    const now=AC.currentTime,o=AC.createOscillator(),g=AC.createGain();
-    o.type='sine';o.frequency.setValueAtTime(1280,now);
-    o.frequency.exponentialRampToValueAtTime(830,now+.14);
-    o.frequency.exponentialRampToValueAtTime(1100,now+.28);
-    g.gain.setValueAtTime(.001,now);g.gain.linearRampToValueAtTime(.055,now+.06);
-    g.gain.exponentialRampToValueAtTime(.001,now+.36);
-    o.connect(g);g.connect(AC.destination);o.start(now);o.stop(now+.37);
-  }catch(e){}
-}
+function victoryGullCry(){audioGullCry()}
 function victoryFindSea(general){
   // Cercar aigua real, no un fons inventat. Afavorim el mateix costat del sol.
   let best=null,score=-Infinity;

@@ -122,6 +122,7 @@ function soldierWarnNeighbors(witness,target,targetY){
   // Evitem repetir-lo constantment mentre el mateix soldat manté contacte.
   const event=STEALTH.emit('alert',witness.x,witness.o.position.y+2,witness.z);
   if(event)witness.heardId=event.id;
+  snd('alert',.65,{x:witness.x,y:witness.o.position.y+2,z:witness.z},witness);
 }
 // Punteria per dificultat. DIF=1.5 conserva exactament la dispersió antiga.
 // Normal (1) falla més i Fàcil (.6) encara més, sense alterar el dany ni la IA.
@@ -437,8 +438,8 @@ function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathB
         const fx=-Math.sin(u.hd),fz=-Math.cos(u.hd),
               rightX=Math.cos(u.hd),rightZ=-Math.sin(u.hd);
         shoot(u.x+fx*1.65+rightX*.44,eyeY+.65,
-          u.z+fz*1.65+rightZ*.44,ax,ay,az,76,COMBAT_BALANCE.weapons.bazooka,8,'e',mS,1.9);
-      }else shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE);
+          u.z+fz*1.65+rightZ*.44,ax,ay,az,76,COMBAT_BALANCE.weapons.bazooka,8,'e',mS,1.9,u);
+      }else shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE,u);
     }
   }else if(u.t==='general'&&u.canSee){
     // Fugida lenta mentre dispara. El general continua sempre dins del
@@ -458,7 +459,7 @@ function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathB
     if(d<u.rng&&u.cd<=0&&soldierClearShot(u,u.x,u.z,eyeY,q,py)){
       u.cd=u.rate;
       const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
-      shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE);
+      shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE,u);
     }
   }else if(u.canSee){
     u.hd=Math.atan2(-dx,-dz);
@@ -477,24 +478,24 @@ function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathB
         const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY),
               fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
         shoot(u.x+fx*2.4-Math.cos(u.hd)*.72,eyeY,
-          u.z+fz*2.4+Math.sin(u.hd)*.72,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE);
+          u.z+fz*2.4+Math.sin(u.hd)*.72,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE,u);
       }else if(weapon==='heavy'&&d<u.heavyRange&&u.heavyCd<=0){
         u.heavyCd=u.heavyRate;
         const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY-.2),
               fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
         shoot(u.x+fx*2.4+Math.cos(u.hd)*.72,eyeY-.2,
-          u.z+fz*2.4-Math.sin(u.hd)*.72,ax,ay,az,76,COMBAT_BALANCE.weapons.towerHeavy,7,'e',mS,1.8);
+          u.z+fz*2.4-Math.sin(u.hd)*.72,ax,ay,az,76,COMBAT_BALANCE.weapons.towerHeavy,7,'e',mS,1.8,u);
       }
     }else if(u.t!=='tanc'&&u.t!=='tanqueta'&&d<u.rng&&u.cd<=0){
       if(u.t==='jeep'){
         const rifle=enemyCarRifleShot(u,q,py);
         if(rifle){u.cd=u.rate;const p=rifle.origin,v=rifle.direction;
-          shoot(p.x,p.y,p.z,v.x,v.y,v.z,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE)}
+          shoot(p.x,p.y,p.z,v.x,v.y,v.z,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE,u)}
       }else{
         u.cd=u.rate;const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
         const smallBullet=u.t==='general';
         shoot(u.x,eyeY,u.z,ax,ay,az,u.spl?60:70,u.dmg,u.spl,
-          'e',smallBullet?mW:mE,smallBullet?SMALL_ARMS_SCALE:(u.spl?2:1));
+          'e',smallBullet?mW:mE,smallBullet?SMALL_ARMS_SCALE:(u.spl?2:1),u);
       }
     }
   }else if(u.sp>0&&u.t!=='general'){
@@ -516,6 +517,7 @@ function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathB
   }
 
   u.o.position.set(u.x,(u.gy!=null?u.gy:enemyGroundAt(u,u.x,u.z))+(u.t=='jeep'||u.t=='tanc'?.05:0),u.z);
+  if(u.t==='soldat'||u.t==='general')enemyStepSound(u,Math.hypot(u.x-oldX,u.z-oldZ));
   if(enemyIsVehicle(u)){
     // Velocitat real del desplaçament, no la velocitat nominal de patrulla.
     // La col·lisió amb un jugador a peu la consultarà al fotograma següent.
@@ -554,7 +556,7 @@ function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathB
         u.cd=u.rate;u.armoredAimSpread=null;
         const p=gun.origin,v=gun.direction,small=u.t==='tanqueta';
         shoot(p.x,p.y,p.z,v.x,v.y,v.z,u.spl?60:70,u.dmg,u.spl,
-          'e',small?mW:mE,small?SMALL_ARMS_SCALE:(u.spl?2:1));
+          'e',small?mW:mE,small?SMALL_ARMS_SCALE:(u.spl?2:1),u);
       }
     }
   }

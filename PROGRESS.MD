@@ -15,9 +15,9 @@ Actualitzat: 2026-10-24. Aquest fitxer és el punt de represa del pla de catorze
 | 7 | Orientació i ritme de missió | **Pendent**, ajornada. | Guia d'intel/objectius i direcció útil del waypoint, sense revelar informació desconeguda. |
 | 8 | Sigil i IA llegibles | **Implementada i desplegada**, v0.5.79, commit `fc2a3c3`. Marcadors visibles de sospita/contacte/cerca, posicions de tir i flanc reservades i torns d’entrada. [Detall](docs/PHASE8_STEALTH.md). | Llegibilitat visual, GPU i Android físic pendents. |
 | 9 | Controls tàctils personalitzables | **Pendent.** | Esquerrans, sensibilitat, posicions i persistència de preferències. |
-| 10 | Generació progressiva del món | **Implementada**, v0.5.80. Un mateix generador per camins síncron i progressiu, feina fragmentada i càrrega/cancel·lació recuperables. [Detall](docs/PHASE10_GENERATION.md). | Verificació del desplegament en curs; latència i aspecte en GPU/Android físic pendents. |
-| 11 | Exploració opcional amb decisions | **Disseny amb l’usuari pendent.** S’ha demanat un qüestionari després de les fases 10 i 12; no s’ha iniciat la implementació. | Recollir prioritats, activitats, recompenses, escenes proposades i límits; acordar un primer prototip. |
-| 12 | So espacial informatiu | **En preparació en una branca separada**, per integrar després de la fase 10. | Posició/direcció, buffers reutilitzats, context únic, límits de veus, silenci i lifecycle. |
+| 10 | Generació progressiva del món | **Implementada i desplegada**, v0.5.80, commit `7d967fe`. Un mateix generador per camins síncron i progressiu, feina fragmentada i càrrega/cancel·lació recuperables. [Detall](docs/PHASE10_GENERATION.md). | Latència i aspecte en GPU/Android físic pendents. |
+| 11 | Exploració opcional amb decisions | **Qüestionari preparat; decisions de l’usuari pendents.** [Qüestionari](docs/PHASE11_QUESTIONNAIRE.md). No s’ha iniciat la implementació. | Recollir respostes i idees, presentar 2–3 propostes, acordar el primer prototip i revisar-lo jugant. |
+| 12 | So espacial informatiu | **Implementada**, v0.5.81, integrada sobre la fase 10. [Detall](docs/PHASE12_AUDIO.md). | Verificació del desplegament en curs; escolta i qualitat auditiva en Android físic pendents. |
 | 13 | Modularització i regressions | **Pendent com a fase.** Hi ha extraccions i proves parcials a les fases anteriors. | Reduir dependències globals i ampliar regressions de comportament. |
 | 14 | Acabat visual i final de partida | **Pendent com a fase.** | Animacions/LOD, poliment, salt de cinemàtiques i resum final. |
 
@@ -62,11 +62,19 @@ Actualitzat: 2026-10-24. Aquest fitxer és el punt de represa del pla de catorze
 - El scheduler té objectiu 6 ms/32 checkpoints, no termini dur. Es registren maxStepMs/maxTurnMs i etapa; encara hi ha constructors/operacions natives atòmiques. No s’ha afirmat millor rendiment Android ni equivalència universal de llavors.
 - Fonts i paquet final `5968caddcf5e5fe0`: suites pròpia i independent de generació superades (matriu de cinc casos, lifecycle i física). Les regressions de timing, càmera, combat/sigil, recursos, aigua, roques, palmeres, camins, navegació i cache també passen.
 - La passada final del paquet va mesurar un pas màxim de 52,49 ms al cas 67/1 físic (2.318 torns); és una mesura Node/harness amb renderer simulat, no un benchmark Android.
-- Publicació i comprovació pública pendents en aquest commit; la següent actualització registrarà el resultat. La fase12 està preparada en una branca separada, encara pendent d’integrar.
+- Publicada com a `7d967fe8a224b86be455a419f5011cc3d56920d2`. Cloudflare: èxit, build `0772c6e8-fcb8-465a-a7c9-1305b6686715`, Worker version `5860cdaf-29d1-4c6c-8549-29544ff704f2`. Verificació HTTP `2026-10-24T21:41:22.221803+00:00`: entrada i version.mjs a 0.5.80, runtime `5968caddcf5e5fe0` de 624.916 bytes, idèntic al local (SHA256 `f28000759f5313fb690e79b0fe701e7e99df721ceac76fe5d7239374ac934dff`).
+
+## Registre de la fase 12
+
+- v0.5.81 preparada amb runtime `70ae02e240d66267`: 54 mòduls, 634.752 bytes. Integrada sobre la fase 10, amb la mateixa geometria i inici progressiu.
+- Fonts i paquet: suite espacial i revisió independent d’integració superades. Buffer/context/bucles reutilitzats, atenuació única, listener real, veus 18/24 amb prioritats, throttle per emissor, neteja/pausa/mute/focus, errors de graf i autoplay provats.
+- Repetició del món físic 67/1 sobre el paquet integrat: buffers i 15.800 nodes exactes al baseline. Passen també timing (set perfils), càmera (16 perfils), feedback 6, sigil 8, mort/victòria i integritat/cache. La comprovació auditiva real en Android continua pendent.
+- La fase 11 té qüestionari preparat i no té implementació: cal recollir respostes/idees, acordar propostes i primer prototip.
+- Publicació i comprovació pública pendents en aquest commit; es registrarà el resultat a continuació.
 
 ## Represa
 
-La versió pública comprovada és **0.5.79**, amb les fases 6 i 8 integrades. Per continuar el pla original, la fase pendent de més prioritat és la **4** (perfilar Android), després la **5** (desar/recuperar) i la **7** (orientació); la taula conserva també els pendents de les fases 1 i 9–14. Aquesta anotació no inicia cap fase nova.
+La fase 10 està publicada i verificada a 0.5.80; la 12 està integrada a 0.5.81 i en verificació de desplegament. **Següent pas acordat: les respostes de l’usuari al [qüestionari de la fase 11](docs/PHASE11_QUESTIONNAIRE.md)**. Després es presentaran propostes concretes i s’acordarà el primer prototip abans de programar-lo. Les fases 4, 5, 7, 9, 13 i 14 continuen pendents segons la taula; la 1 continua parcial.
 
 ## Límits coneguts de la base
 

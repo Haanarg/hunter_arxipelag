@@ -270,14 +270,14 @@ function runoverSweepHit(x0,z0,x1,z1,tx,tz,radius){
  return (tx-px)**2+(tz-pz)**2<radius*radius;
 }
 
-function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc){
+function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc,audioSource=null){
   const shotClass=shotClassFromSplash(spl),speed=sp*(shotClass==='heavy'?HEAVY_SHOT_SPEED_FACTOR:1),
         power=wholeDamage(dmg);
   if(own==='p'||own==='pb'){
     const sound=spl?'bazooka':!cv&&sniperEquipped?'sniper':cv?'rifle':'pistol';
     window.HUNTER_STEALTH.emit(sound,x,y,z);
   }
-  snd(spl?'cannon':'shot',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/140)*(own=='e'?.6:1));
+  snd(spl?'cannon':'shot',own==='e'?.6:1,{x,y,z},audioSource||((own==='p'||own==='pb')?P:null));
   // Tots els projectils tenen l'eix longitudinal -Z: cilindres fins per
   // a les bales lleugeres i ojives per a les pesades. S'orienten en 3D,
   // també en tirs ascendents, descendents i diagonals.
@@ -339,7 +339,7 @@ function blastOccluded(x,y,z,tx,ty,tz){
 }
 function boom(x,y,z,r,dmg,own,source=null){
  window.HUNTER_STEALTH.emit('explosion',x,y,z);
- snd('boom',Math.max(0,1-Math.hypot(x-P.x,z-P.z)/200));
+ snd('boom',1,{x,y,z},source);
  // L'ona expansiva és un front anular subtil, no una esfera
  // quasi opaca. L'efecte NO escriu profunditat: murs i portes que
  // resisteixen l'explosió sempre continuen visibles, també en interiors.
