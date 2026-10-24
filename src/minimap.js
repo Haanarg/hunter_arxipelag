@@ -9,7 +9,8 @@ window.HUNTER_MINIMAP=Object.freeze({
     let background=null,ws=worldSize,hs=halfSize;
     const stats={draws:0,backgroundBuilds:0,lastLandPixels:0,lastBuildMs:0};
     const px=v=>(v+hs)/ws*width,pz=v=>(v+hs)/ws*height;
-    function buildBackground(){
+    function buildBackground(){const steps=buildBackgroundSteps();while(!steps.next().done){}}
+    function* buildBackgroundSteps(){
       const start=performance.now();
       const bg=document.createElement('canvas');
       bg.width=bg.height=sampleSize;
@@ -18,6 +19,7 @@ window.HUNTER_MINIMAP=Object.freeze({
       const im=c.createImageData(sampleSize,sampleSize),data=im.data;
       let land=0;
       for(let j=0;j<sampleSize;j++)for(let i=0;i<sampleSize;i++){
+        if((j*sampleSize+i)%128===0)yield {stage:'Carta de navegació',completed:j*sampleSize+i,total:sampleSize*sampleSize,unit:'píxels'};
         const x=((i+.5)/sampleSize-.5)*ws,z=((j+.5)/sampleSize-.5)*ws,
               h=heightAt(x,z),k=colorAt(THREE,h).convertLinearToSRGB(),
               p=(j*sampleSize+i)*4;
@@ -103,6 +105,6 @@ window.HUNTER_MINIMAP=Object.freeze({
     function setWorldSize(world,half){
       if(world!==ws||half!==hs){ws=world;hs=half;reset()}
     }
-    return Object.freeze({draw,drawFull,reset,setWorldSize,stats})
+    return Object.freeze({draw,drawFull,reset,setWorldSize,buildBackgroundSteps,stats})
   }
 });

@@ -46,7 +46,8 @@ window.HUNTER_COAST_FOAM=Object.freeze({
    mesh.name='hunter-shore-breakers';mesh.renderOrder=3;
    mesh.frustumCulled=true;mesh.visible=false;scene.add(mesh);
    const stats={segments:0,vertices:0,triangles:0,coastCells:0,sampledPoints:0};
-   function regenerate(ocean,segments){
+   function regenerate(ocean,segments){const steps=regenerateSteps(ocean,segments);while(!steps.next().done){}}
+   function* regenerateSteps(ocean,segments){
      const p=ocean.attributes.position,b=ocean.attributes.seabed,
        row=segments+1,pos=[],beds=[],sides=[],indices=[],
        subdivision=3,halfWidth=5.4,maxSegments=26000;
@@ -82,6 +83,7 @@ window.HUNTER_COAST_FOAM=Object.freeze({
        else if(hits.length===4){segment(hits[0],hits[1]);segment(hits[2],hits[3]);}
      }
      for(let iz=0;iz<segments&&!limit;iz++)for(let ix=0;ix<segments&&!limit;ix++){
+       if((iz*segments+ix)%64===0)yield {stage:'Escuma de costa',completed:iz*segments+ix,total:segments*segments,unit:'cel·les'};
        const k=iz*row+ix,
          h0=b.getX(k),h1=b.getX(k+1),
          h2=b.getX(k+row+1),h3=b.getX(k+row),
@@ -126,6 +128,6 @@ window.HUNTER_COAST_FOAM=Object.freeze({
      mesh.visible=stats.segments>0;
    }
    function dispose(){scene.remove(mesh);geo.dispose();mat.dispose()}
-   return {mesh,stats,regenerate,dispose};
+   return {mesh,stats,regenerate,regenerateSteps,dispose};
  }
 });

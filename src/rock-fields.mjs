@@ -15,10 +15,14 @@ export function baseRockCluster(x,z,s,addRock){
  }
  return placed;
 }
-export function generateRockFields({islands,hAt,canPlace,addRock}){
+export function generateRockFields(options){const steps=generateRockFieldsSteps(options);let next;while(!(next=steps.next()).done){}return next.value}
+export function* generateRockFieldsSteps({islands,hAt,canPlace,addRock}){
  const stats={summitB:0,summitD:0,shoreClusters:0,shoreRocks:0,summitRocks:0};
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+ let sampled=0;
+ let processed=0;
  for(const island of islands){
+   yield {stage:'Roques de costa i cims',completed:processed++,total:islands.length,unit:'illes'};
    const ix=island.x,iz=island.z,r=island.r;
    // Alguns vessants elevats, no el punt culminant. Roques del grup B o D
    // segons l'illa, amb variants de proporcions i grandària.
@@ -28,6 +32,7 @@ export function generateRockFields({islands,hAt,canPlace,addRock}){
        const kind=rockNoise(ix,iz,17+block)>.52?1:0;
        let center=null,score=-Infinity;
        for(let j=0;j<28;j++){
+         if(sampled++%32===0)yield {stage:'Mostrejant roques dels cims',completed:sampled-1,total:null,unit:'mostres'};
          const a=2*Math.PI*rockNoise(ix,iz,100+block*41+j),
            radial=r*(.25+.38*rockNoise(ix,iz,260+j+block*27)),
            x=ix+Math.cos(a)*radial,z=iz+Math.sin(a)*radial,
@@ -61,6 +66,7 @@ export function generateRockFields({islands,hAt,canPlace,addRock}){
        const a=startAngle+j*Math.PI*2/22,ux=Math.cos(a),uz=Math.sin(a);
        let land=null;
        for(let d=Math.max(18,r*.28);d<r*1.8;d+=4){
+         if(sampled++%32===0)yield {stage:'Mostrejant esculls de costa',completed:sampled-1,total:null,unit:'mostres'};
          const x=ix+ux*d,z=iz+uz*d,y=hAt(x,z);
          if(y>.75){land={x,z,d};continue}
          if(land&&y<-.55){

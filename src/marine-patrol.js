@@ -52,7 +52,8 @@ function marinePickWaypoint(u){
   }
   u.tx=u.home.x;u.tz=u.home.z;u.wt=8;
 }
-function spawnMarinePatrols(){
+function spawnMarinePatrols(){return drainBuildSteps(spawnMarinePatrolsSteps())}
+function* spawnMarinePatrolsSteps(){
   // Llocs deterministes per llavor: el cercador calcula el mateix mapa
   // sense haver de construir geometries, tripulació ni IA.
   const count=MARINE_PATROL_MIN+Math.floor(R()*(MARINE_PATROL_MAX-MARINE_PATROL_MIN+1));
@@ -67,6 +68,7 @@ function spawnMarinePatrols(){
   for(let pass=0;pass<5&&spots.length<count;pass++)for(const island of starts){
     if(spots.length>=count)break;
     for(let attempt=0;attempt<24;attempt++){
+      if(attempt%8===0)yield {stage:'Emplaçant patrulles navals',completed:spots.length,total:count,unit:'patrulles'};
       const a=R()*Math.PI*2,dist=island.r*(1.05+R()*.65)+30,
             x=island.x+Math.cos(a)*dist,z=island.z+Math.sin(a)*dist;
       if(place(x,z,a+Math.PI/2))break;
@@ -75,6 +77,7 @@ function spawnMarinePatrols(){
   // Zones de mar obert: evita quedarnos sense patrulles en llavors
   // amb costes estretes. No acceptam ni aigua poc profunda ni solapaments.
   for(let attempt=0;spots.length<count&&attempt<3500;attempt++){
+    if(attempt%16===0)yield {stage:'Mar obert per a les patrulles',completed:spots.length,total:count,unit:'patrulles'};
     const x=(R()*2-1)*(H-65),z=(R()*2-1)*(H-65);
     place(x,z,R()*Math.PI*2);
   }
@@ -82,6 +85,7 @@ function spawnMarinePatrols(){
   world.userData.marinePatrols={target:count,spawned:spots.length};
   if(seedSearchMode)return spots;
   for(const p of spots){
+    yield {stage:'Construint patrulles navals',completed:null,total:spots.length};
     const u=mkEn('patrulla_marina',p.x,p.z);
     u.hd=p.hd;u.navHd=p.hd;u.home={x:p.x,z:p.z};u.speed=12+R()*5;
     u.yawRate=0;u.orbitSign=R()<.5?-1:1;

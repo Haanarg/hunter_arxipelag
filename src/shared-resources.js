@@ -11,16 +11,24 @@ window.HUNTER_RESOURCES=(()=>{
       }
     });return root;
   }
-  function dispose(root){
-    const resources=new Set();
-    root.traverse(o=>{
+  function dispose(root){const steps=disposeSteps(root);while(!steps.next().done){}}
+  function* disposeSteps(root){
+    const resources=new Set(),stack=[root];let visited=0;
+    while(stack.length){
+      const o=stack.pop();
       if(o.geometry)resources.add(o.geometry);
       for(const m of (Array.isArray(o.material)?o.material:[o.material])){
         if(!m)continue;resources.add(m);
         // Texture ownership belongs to the texture factory, not to scene materials.
       }
-    });
-    for(const r of resources)if(!shared.has(r))r.dispose();
+      for(let i=o.children.length-1;i>=0;i--)stack.push(o.children[i]);
+      if(++visited%64===0)yield {stage:'Netejant el món anterior',completed:visited,total:null,unit:'objectes'};
+    }
+    let disposed=0;
+    for(const r of resources){
+      if(!shared.has(r))r.dispose();
+      if(++disposed%64===0)yield {stage:'Alliberant recursos anteriors',completed:disposed,total:resources.size,unit:'recursos'};
+    }
   }
   // Object3D.clone serializes userData, which can contain live wheel/pivot refs.
   // Clone the hierarchy first, then remap references without sharing animation state.
@@ -48,5 +56,5 @@ window.HUNTER_RESOURCES=(()=>{
     for(const [source,target] of nodes)target.userData=remap(source.userData);
     return result;
   }
-  return Object.freeze({retain,retainModel,dispose,cloneModel});
+  return Object.freeze({retain,retainModel,dispose,disposeSteps,cloneModel});
 })();

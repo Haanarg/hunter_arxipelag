@@ -1,0 +1,851 @@
+{
+  "origin": "untouched phase8-stealth snapshot / v0.5.79",
+  "capturedAt": "2026-10-24T21:10:31.987Z",
+  "ambientMathSeed": "0x10c0ffee; LCG1664525+1013904223 / 2^32; isolated VM Math after runtime boot, before generation",
+  "sourceHashes": {
+    "src/game-core.js": "014cd4a4b2635ec57035a6347b6f14523e403c66b176e70f0dbea67fb943a271",
+    "src/world-generation.js": "75f0f309e1e045454738ab7f099a173cf141c01363c15e175557c0bed072b530",
+    "src/terrain.js": "f5b436b7c1ec4782aa7b8602bd08a0b001a665618591023a2d2b804ee2c8790c",
+    "src/vegetation.js": "18f6d339303a3f3fbbdd9e5a4bb53cc11de3a788c5320403a0fc8123cba53f1e"
+  },
+  "cases": [
+    {
+      "seed": 67,
+      "scale": 1,
+      "physical": false,
+      "file": "seed-67-scale-1-logical.json.gz",
+      "sha256": "363fe27a26e8481cf4d988894a61aa84cf1c05850b9f93ed7a01701261439c7a",
+      "bytes": 3101251,
+      "counts": {
+        "buildings": 58,
+        "walls": 1159,
+        "loot": 100,
+        "vehicles": 98,
+        "enemies": 97,
+        "palms": 3583
+      },
+      "ms": 10104,
+      "fingerprints": {
+        "seed": "49d180ecf56132819571bf39d9b7b342522a2ac6d23c1418d3338251bfe469c8",
+        "scale": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+        "size": "dea1ae8613ee2a5ef5504d98bd969bd46b4c75e9c898341f497c74684599030c",
+        "player": "80fd38efe70104989550167d515fc649a5aff968884d18a49fba38b8898c271c",
+        "islands": "df4d6878c7aca4b67f49325a1a996c0d65e0333bd9eb7962d38e2b2296e09631",
+        "heights": "9d20ebe1b59a5060264c610a547bea8430013b4263f76a55ab17e6401ded9ada",
+        "buildings": "5db000ca3f4dd7dad51a28a295d1f1511aa2e3b2b8b33beba372efadc7a10411",
+        "walls": "1507e66282cc1efad5d5a6902f79d42bf2095312fce88bc743cb94b484787306",
+        "doors": "573be33655af4dff12ae5426929d1992c6e4abae08238a546aec4611205a084c",
+        "stairs": "fe00e7830a8bc2be2760cb90a36f545fc7a19a88994f586f60ae27719b6ebf5b",
+        "piers": "1e7281ecf760b6f166dcde908747961816236f8aab36a93de5c1608fa211de8c",
+        "loot": "ab5fe5b7558a7365056335b089c67de59a4eaa0a6e5bb25b12199b6a1e13f7ab",
+        "vehicles": "b1a4de19b3f0365422a0cc951fe182445ab0d799649714bbe8a4892c93b68e9a",
+        "enemies": "25afc0bbe3e92c3a0e57963c9ce78e13b38e96e8baa8fa8da567c70064ddaedf",
+        "vegetation": "e0969be18c9a5a7b783ef2394ae23fc70ee32113144f858b96c7092c0d0ab0b7",
+        "palms": "ca4fa480eec1461e6ebebb5199a45e5481e79ee3ec4bab175e94da9ff5d7d8fc",
+        "compounds": "e41d578933c036ce4e7db7078804a525844467cd342b9c4de81ce1d24a23f2ea",
+        "paths": "0e061078f02ceed936ca33e5164c30b50356a78792a736c8d96cf19fc1edd2a0",
+        "marinePatrolPositions": "7152cab82feb5b7192403597e47de6d2c9b03ac6a5aefe86992c5a74fedcecc4",
+        "terrainLevels": "1c041274e1ef7f3f363f83afa9e60b94c078d293a61bf94ed225b4586cf15807",
+        "compoundClear": "71b18083330a6ce7efe0352861e20c58446eeea54d80f0c7c616a1d3cbc04c33",
+        "rng": "3b554be05861e3c2c2d934d2293128f1941daa9c23693c79583cf7d39b598937"
+      },
+      "samples": {
+        "player": {
+          "base": {
+            "x": -1390.8530291448956,
+            "z": 1563.0482225695202
+          },
+          "hd": 0,
+          "x": -1390.8530291448956,
+          "y": 13.191678991397973,
+          "z": 1583.0482225695202
+        },
+        "buildings": [
+          {
+            "x": -1420.8530291448956,
+            "z": 1541.0482225695202,
+            "fy": 13.191678991397973,
+            "w": 24,
+            "d": 26,
+            "kind": "base",
+            "door": 0
+          },
+          {
+            "x": -1793.6885191842375,
+            "z": -981.7094043412482,
+            "fy": 8.75948308055037,
+            "w": 38,
+            "d": 36,
+            "kind": "hangar",
+            "door": -1
+          },
+          {
+            "x": 406.55146841680505,
+            "z": -1185.9499841609222,
+            "fy": 12.0585725617903,
+            "w": 18,
+            "d": 18,
+            "kind": "garage",
+            "door": 59
+          }
+        ],
+        "loot": [
+          {
+            "t": "arma",
+            "x": -1363.8530291448956,
+            "z": 1543.0482225695202,
+            "y": 14.491678991397974,
+            "building": 1
+          },
+          {
+            "t": "bazooka",
+            "x": 583.9348026233239,
+            "z": -557.5776301732585,
+            "y": 7.318090502537356,
+            "building": 54
+          },
+          {
+            "t": "mapa_tanc",
+            "x": 1991.163612510466,
+            "z": 1459.5316289310035,
+            "y": 14.492928145598407,
+            "building": 31
+          }
+        ],
+        "vehicles": [
+          {
+            "t": "moto",
+            "x": -1454.884481145968,
+            "z": 1588.1177134688521,
+            "alt": 13.991624855937598,
+            "hd": 2.7129105230607093
+          },
+          {
+            "t": "moto_aquatica",
+            "x": 1087.5273845409306,
+            "z": 1409.716586711418,
+            "alt": 0.8,
+            "hd": 0.020009376152966954
+          },
+          {
+            "t": "moto_aquatica",
+            "x": -852.7246272118236,
+            "z": 1371.180894846008,
+            "alt": 0.8,
+            "hd": 1.3744467859455345
+          }
+        ],
+        "enemies": [
+          {
+            "t": "tanqueta",
+            "x": 1499.5480137844008,
+            "z": -992.0818784262076,
+            "hd": 1.5707963267948966
+          },
+          {
+            "t": "soldat",
+            "x": 1114.484578937292,
+            "z": 1044.726281888783,
+            "hd": 5.091738931164146
+          },
+          {
+            "t": "jeep",
+            "x": 613.9348026233239,
+            "z": -635.5776301732585,
+            "hd": 0.27248434662347226
+          }
+        ],
+        "rng": [
+          0.5793612215202302,
+          0.34980517718940973,
+          0.7598579025361687,
+          0.30182386096566916,
+          0.7620658597443253,
+          0.5292852593120188,
+          0.5373757840134203,
+          0.8392644075211138,
+          0.9219853947870433,
+          0.316821516957134,
+          0.16230649896897376,
+          0.349192064255476,
+          0.9527169277425855,
+          0.8258169332984835,
+          0.8071336303837597,
+          0.8435991939622909
+        ]
+      }
+    },
+    {
+      "seed": 67,
+      "scale": 2,
+      "physical": false,
+      "file": "seed-67-scale-2-logical.json.gz",
+      "sha256": "210d816e9b8940ba19f7c94a32762d638f6d43aa4aaf7863a5da52323a583de2",
+      "bytes": 9764146,
+      "counts": {
+        "buildings": 137,
+        "walls": 2839,
+        "loot": 246,
+        "vehicles": 281,
+        "enemies": 298,
+        "palms": 12496
+      },
+      "ms": 51617,
+      "fingerprints": {
+        "seed": "49d180ecf56132819571bf39d9b7b342522a2ac6d23c1418d3338251bfe469c8",
+        "scale": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35",
+        "size": "cb4802988b933e8ff97a3e858151e41252e06a64e2e944ed6968ea5ed6018aa3",
+        "player": "12970ffce0020b824988814d278237c4855b522bcd02e592ba52311797f34862",
+        "islands": "b16dded3ece49bcd84abe74e6ad0bf1993cd5f127878ea6d122514befe3bbb62",
+        "heights": "df299bbde908a19a2f7ea173c006a734763a84664767a1583785e16223ac2c1a",
+        "buildings": "271a6bbaf018e06e54e9454e152a833f0adda911ce6bc0d255ff802a36464d4d",
+        "walls": "7e5f4b1a3398b0ba89bcd023b15da5537816b8f1d5c19ed7ef406d6898c90f29",
+        "doors": "5d8c704ced47ced2fb310343569e3c3ef574c1e7a8237875b16f893ad38b99db",
+        "stairs": "9d0f95c12b9537d14c248466d2a2c42b43c1f224d168a41116cbdeda59d07ea3",
+        "piers": "bfb0af74776835ee51e811484cd29c4f2a32ed1f1f0ad66f1f6d07e7831e45f9",
+        "loot": "44106ec9121d3635825eee8bb5d68f72158cbdfeddb27fc3b347b79887be15d4",
+        "vehicles": "e43842796e5d8990e71e72314f4df293c9cb3e4fcd8374ba14df2f6981254130",
+        "enemies": "9a2ea2a9dd5f6eda66f8c9a72ef57a2fe1c2bcf9de0975e3f8fcdc12eceb6df5",
+        "vegetation": "d102529c1ae4021eb15cfea7b93e2777beec9f74f24ddd2664d162a9af8ce393",
+        "palms": "20e5694747f0bb8820abb343155055d21053687401da03caa5050ef89e1aff77",
+        "compounds": "908bc79dd85dc7f432e1339a2ab721edaad2dbe1d74028a1ddc73f0cf9028a5a",
+        "paths": "903de2781d63f623a64e1ad98b3af39b178f1da01168f61e0cbbcadac32d103a",
+        "marinePatrolPositions": "cae17b8027e4c3eda5104b7d02b5767ede6565f59084bf2db00e9a14b013e61d",
+        "terrainLevels": "3ed311c415f352af8821f4f0c550fd5599d2f03445b4d04bd5838b961770dcbc",
+        "compoundClear": "7b3e7e519a7ad4804b704ef76535efade9d7dd5b56a4e4bf02af503aa13d7407",
+        "rng": "98f11709275a15ae26b4dd8f822eeecb4fba050d195a9b4be608c5e28694c917"
+      },
+      "samples": {
+        "player": {
+          "base": {
+            "x": -3269.0949902979605,
+            "z": 2604.8206149794573
+          },
+          "hd": 0,
+          "x": -3269.0949902979605,
+          "y": 4.115055344052565,
+          "z": 2638.8206149794573
+        },
+        "buildings": [
+          {
+            "x": -3312.0949902979605,
+            "z": 2578.8206149794573,
+            "fy": 4.115055344052565,
+            "w": 24,
+            "d": 26,
+            "kind": "base",
+            "door": 0
+          },
+          {
+            "x": 1945.4330145112,
+            "z": -3317.599209750648,
+            "fy": 9.270277177349598,
+            "w": 28,
+            "d": 24,
+            "kind": "polvori",
+            "door": 72
+          },
+          {
+            "x": -1079.3758654660678,
+            "z": 2893.495124887529,
+            "fy": 3.2982809785455247,
+            "w": 18,
+            "d": 18,
+            "kind": "garage",
+            "door": 126
+          }
+        ],
+        "loot": [
+          {
+            "t": "arma",
+            "x": -3272.0949902979605,
+            "z": 2574.8206149794573,
+            "y": 5.415055344052565,
+            "building": 1
+          },
+          {
+            "t": "granada",
+            "x": 1007.3158018601422,
+            "z": 5.902740871341621,
+            "y": 9.391580053695987,
+            "building": 118
+          },
+          {
+            "t": "mapa_tanc",
+            "x": 2565.5765101964303,
+            "z": 2399.5646768999154,
+            "y": 6.857327529634637,
+            "building": 84
+          }
+        ],
+        "vehicles": [
+          {
+            "t": "moto",
+            "x": -3298.538291879738,
+            "z": 2646.869733320404,
+            "alt": 4.915055344052565,
+            "hd": 1.8683618857990951
+          },
+          {
+            "t": "barca_rems",
+            "x": 3982.7888671360943,
+            "z": -2249.4179311157686,
+            "alt": 0.8,
+            "hd": 2.749834998457674
+          },
+          {
+            "t": "cotxe_civil",
+            "x": 1486.4907519868573,
+            "z": 2040.885105182886,
+            "alt": 14.20604217419577,
+            "hd": 3.481804309022248
+          }
+        ],
+        "enemies": [
+          {
+            "t": "tanqueta",
+            "x": 3232.6406222212604,
+            "z": -3482.7314989310516,
+            "hd": 1.5707963267948966
+          },
+          {
+            "t": "soldat",
+            "x": 3592.508270888858,
+            "z": -2116.7131944149032,
+            "hd": 4.280432057958096
+          },
+          {
+            "t": "jeep",
+            "x": -1802.293759224705,
+            "z": 2336.429319356995,
+            "hd": -2.5106560100266426
+          }
+        ],
+        "rng": [
+          0.5285635939799249,
+          0.7961940718814731,
+          0.9539841271471232,
+          0.5937617274466902,
+          0.8502683204133064,
+          0.20062432857230306,
+          0.2012470371555537,
+          0.6434299966786057,
+          0.5068023365456611,
+          0.7757063219323754,
+          0.3794323874171823,
+          0.362471632193774,
+          0.9408935613464564,
+          0.9926570372190326,
+          0.678516143001616,
+          0.27926123747602105
+        ]
+      }
+    },
+    {
+      "seed": 12345,
+      "scale": 1,
+      "physical": false,
+      "file": "seed-12345-scale-1-logical.json.gz",
+      "sha256": "1cc8628b39b4968175a9df3095092f171d8f8dce2f4ecbee1fe30877fe70e752",
+      "bytes": 3058234,
+      "counts": {
+        "buildings": 52,
+        "walls": 1184,
+        "loot": 82,
+        "vehicles": 89,
+        "enemies": 90,
+        "palms": 3506
+      },
+      "ms": 18718,
+      "fingerprints": {
+        "seed": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
+        "scale": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+        "size": "dea1ae8613ee2a5ef5504d98bd969bd46b4c75e9c898341f497c74684599030c",
+        "player": "e532b5c786bc7eab52c269df78c6e95a84059299708f401759c3b1fe6a1194a2",
+        "islands": "2ae94159edef1a96b406b1053bd789c52025d4341820c8bcd559ca244dddc6ab",
+        "heights": "630b71ccda0eff5747ea1c3cd374d3a9e231f3ee7cc36411fd0cf20f391e8d36",
+        "buildings": "200f39ac555fe255f35e3873308dc5a1e70af5665a5bcd01b334b148af03cca0",
+        "walls": "c6ea21e35d2bd3972d7d4a32c018b3863ecd7e0b02a9a7f56849dc7fbf36661b",
+        "doors": "73c9a5f492cabf2d80457588d9312498ab8f00df3bc0d70a59ae9e2168ecab06",
+        "stairs": "860806bb03a836c36cb2e6cb3b16cbd796a5143cfbf5fb547b14d9a200f7b075",
+        "piers": "0b53ba2d4ad5603ea7cedc61e7cd5e937e823895ee1faa07bbb49bd5151be807",
+        "loot": "f1a9276924bc53732917297e0d9605e0f2d6a6897bfe38158ec5b2b73fb6af49",
+        "vehicles": "b4c386895bdf310bab5dcf64dfa941cd4f21c121a40ab3b86c1810dd1e548921",
+        "enemies": "88901e6c2edafbba6291d783339496d85a7c9c78dd866efb5164aac12f81db77",
+        "vegetation": "a168d696a6de9b9733798e921b1cf64f7bf50af9ee54d085f25700bfe7bf2d01",
+        "palms": "5cb079b2f88cc8fb90bb34fde288681821afd92a34284f05db825eaa23b9ab52",
+        "compounds": "15b935fd7804c9e438f9b8e25a12603f456ed037266e40fce04ed571fec9dda1",
+        "paths": "b7e90bf489afa32549dd00c6dc8e6e1788553e54e0e9c014b0682e252d48e166",
+        "marinePatrolPositions": "24a909c401d281b2f4e86b201cf65ce4999e77dc34798cab9a19ae8a15126c51",
+        "terrainLevels": "003ea994a32cd5932e9aa393b63863997de037d38fc11abde81ba23fe95a7b86",
+        "compoundClear": "805dbf5dac7456ca3df6c989c5b75a09248e0634d8d298de6d664d6d5e933922",
+        "rng": "29ec22f67f8369e157f93bccf5da2857485a1764a4005c4f162f72a3e879e123"
+      },
+      "samples": {
+        "player": {
+          "base": {
+            "x": -1389.7426066255991,
+            "z": 1820.4660325410684
+          },
+          "hd": 0,
+          "x": -1389.7426066255991,
+          "y": 3.980823097732832,
+          "z": 1867.4660325410684
+        },
+        "buildings": [
+          {
+            "x": -1431.7426066255991,
+            "z": 1791.4660325410684,
+            "fy": 3.980823097732832,
+            "w": 24,
+            "d": 26,
+            "kind": "base",
+            "door": 0
+          },
+          {
+            "x": 336.64293828694474,
+            "z": 1793.3246485531263,
+            "fy": 8.149575388533323,
+            "w": 12,
+            "d": 16,
+            "kind": "hut-settlement",
+            "door": 31
+          },
+          {
+            "x": -484.95681148135543,
+            "z": -738.596017998138,
+            "fy": 7.618352216948686,
+            "w": 14,
+            "d": 16,
+            "kind": "comunicacions",
+            "door": 54
+          }
+        ],
+        "loot": [
+          {
+            "t": "arma",
+            "x": -1353.7426066255991,
+            "z": 1796.4660325410684,
+            "y": 5.280823097732832,
+            "building": 1
+          },
+          {
+            "t": "mapa_tanc",
+            "x": -533.9568114813554,
+            "z": -779.596017998138,
+            "y": 8.918352216948687,
+            "building": 50
+          },
+          {
+            "t": "mapa_tanc",
+            "x": 671.6884785501151,
+            "z": 1760.7062925948703,
+            "y": 4.314951621808044,
+            "building": 32
+          }
+        ],
+        "vehicles": [
+          {
+            "t": "moto",
+            "x": -1476.9961493589778,
+            "z": 1787.7277044073587,
+            "alt": 4.780823097732832,
+            "hd": 2.6164976380951703
+          },
+          {
+            "t": "barca_rems",
+            "x": 1549.5038881380249,
+            "z": -451.235262509387,
+            "alt": 0.8,
+            "hd": 2.553896802241997
+          },
+          {
+            "t": "moto_aquatica",
+            "x": -931.8649696329795,
+            "z": 1562.10221571359,
+            "alt": 0.8,
+            "hd": 1.3744467859455345
+          }
+        ],
+        "enemies": [
+          {
+            "t": "tanqueta",
+            "x": 1451.2735339963633,
+            "z": -1444.41844629719,
+            "hd": 1.5707963267948966
+          },
+          {
+            "t": "soldat",
+            "x": -1513.6929141171215,
+            "z": -814.3667951174351,
+            "hd": 4.783319327263162
+          },
+          {
+            "t": "jeep",
+            "x": 1221.6059426506642,
+            "z": -79.56764535278913,
+            "hd": 1.356570656905244
+          }
+        ],
+        "rng": [
+          0.789809460984543,
+          0.6288177731912583,
+          0.781668076524511,
+          0.5607077460736036,
+          0.576612253440544,
+          0.0380256287753582,
+          0.05985010741278529,
+          0.5749109839089215,
+          0.8735780557617545,
+          0.7595406286418438,
+          0.6272447982337326,
+          0.1785838375799358,
+          0.04271859605796635,
+          0.6710426534991711,
+          0.3500197841785848,
+          0.8477607055101544
+        ]
+      }
+    },
+    {
+      "seed": 12345,
+      "scale": 2,
+      "physical": false,
+      "file": "seed-12345-scale-2-logical.json.gz",
+      "sha256": "403739aec7809986e791fdbaf7cbae73e123a762ee1d6ad8d9891c20ed1f2d4e",
+      "bytes": 9422234,
+      "counts": {
+        "buildings": 116,
+        "walls": 2387,
+        "loot": 207,
+        "vehicles": 276,
+        "enemies": 241,
+        "palms": 12916
+      },
+      "ms": 52445,
+      "fingerprints": {
+        "seed": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
+        "scale": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35",
+        "size": "cb4802988b933e8ff97a3e858151e41252e06a64e2e944ed6968ea5ed6018aa3",
+        "player": "b394f03ff1f175f1ad25bd3dfec33ce8b1c37f938ee2a7aa60fae77d8f7f38e3",
+        "islands": "1d72187bf8c904c6e8a84738e80ae493c91558a3513b0a782f00da2332ebd481",
+        "heights": "1bd0c6ccd98cff9220c1af20fec92b9e41f2a4de4b95d29c23bac9c3f19e53f9",
+        "buildings": "0064bb09b059a4309bf4b30a5660cb04ee4dbfa02600b51b1bdd38ae2980b1ce",
+        "walls": "ff39cdf75ac6f5ddd8b80ea6afd6065cfdd347bba2d7e570a4f643304366125c",
+        "doors": "4e4aff9dceb49bf228b2b8797e8e6caa68d8d0e7441588e70aa54f8030bc602f",
+        "stairs": "7a7be25b4435fe0562ca1b5fe6b6525b86549774b8de486ebb00ec7df07cf68a",
+        "piers": "77447701ddc46b0ec6b6671cb532b458c6bf04655d7275bc3f2cd48deee61dd3",
+        "loot": "33ef5fc73d1fb3822b940ca8a3d8de6ca9545ca8102ab7d1d082a0ced1e305cc",
+        "vehicles": "addb8054b14e6c75f4777a010d9621278ecd5a639b5dee72445b237bba308916",
+        "enemies": "817843e284ad0f5312a445417363b44062f396e68d6954872e2acf7a884cd6f1",
+        "vegetation": "a4f47c8a27ad384586ac596d0d009a8bce9323a917579d7c43d6ab9a849ac620",
+        "palms": "d919e0bdd9308ffff1cd1b125d608b68f17a846d701a218a5fe6127be5e1561a",
+        "compounds": "d7237f2304333b7ed88ea9c1f3bf88550be078d699dfe4dfeffe433a4b8ebbac",
+        "paths": "be221fa82b250ccf3c91b576ff8f0f288c21c1e2bebec8734b2d4f2aa588f9b9",
+        "marinePatrolPositions": "3cd9cca5a3507cdca06fa29842dcd8202adad47d4897c84f515ab20e3385e819",
+        "terrainLevels": "7c0db6155985bcc400189955df358e1cf68792e6e01ddc376d65fc3bc6349bea",
+        "compoundClear": "ed19086da5352f7e13424bceb437efda6a094ebabcd3245fc5f1ac1acd32abac",
+        "rng": "51eaf4575550d5bf33eeb3f6a7ea0a3ab3a8e2aafe222da7f6c2deb04ee4dade"
+      },
+      "samples": {
+        "player": {
+          "base": {
+            "x": -3249.732120917156,
+            "z": 3325.2221587286595
+          },
+          "hd": 0,
+          "x": -3249.732120917156,
+          "y": 12.390945440780914,
+          "z": 3345.2221587286595
+        },
+        "buildings": [
+          {
+            "x": -3279.732120917156,
+            "z": 3303.2221587286595,
+            "fy": 12.390945440780914,
+            "w": 24,
+            "d": 26,
+            "kind": "base",
+            "door": 0
+          },
+          {
+            "x": -620.2655168026686,
+            "z": 2256.1201916337013,
+            "fy": 0.8599999999999999,
+            "w": 16,
+            "d": 16,
+            "kind": "port",
+            "door": 62
+          },
+          {
+            "x": -1246.0182426247036,
+            "z": 1481.197978350721,
+            "fy": 5.684418302663181,
+            "w": 18,
+            "d": 18,
+            "kind": "garage",
+            "door": 108
+          }
+        ],
+        "loot": [
+          {
+            "t": "arma",
+            "x": -3222.732120917156,
+            "z": 3305.2221587286595,
+            "y": 13.690945440780915,
+            "building": 1
+          },
+          {
+            "t": "expl",
+            "x": -2345.683336660461,
+            "z": 214.59342135091407,
+            "y": 9.082697714637094,
+            "building": 101
+          },
+          {
+            "t": "mapa_tanc",
+            "x": 1832.8898958330974,
+            "z": 1628.4696843087672,
+            "y": 7.56,
+            "building": 56
+          }
+        ],
+        "vehicles": [
+          {
+            "t": "moto",
+            "x": -3279.4134305370744,
+            "z": 3323.057283920728,
+            "alt": 13.190945440780915,
+            "hd": 2.950194585071877
+          },
+          {
+            "t": "barca_rems",
+            "x": -3126.267612439599,
+            "z": 697.3778987223814,
+            "alt": 0.8,
+            "hd": -0.8597811633125528
+          },
+          {
+            "t": "cotxe_civil",
+            "x": 2125.063577091987,
+            "z": 2946.2478808637625,
+            "alt": 4.963276678211948,
+            "hd": 1.503122957984594
+          }
+        ],
+        "enemies": [
+          {
+            "t": "tanqueta",
+            "x": 3135.1933500956893,
+            "z": -2476.699075642734,
+            "hd": 1.5707963267948966
+          },
+          {
+            "t": "torre",
+            "x": -665.7826219456048,
+            "z": 972.4394988015533,
+            "hd": 4.089592960318551
+          },
+          {
+            "t": "jeep",
+            "x": -691.7826219456048,
+            "z": 1054.4394988015533,
+            "hd": 2.3448314129351724
+          }
+        ],
+        "rng": [
+          0.7904413014184684,
+          0.47950061690062284,
+          0.985194468870759,
+          0.6988478498533368,
+          0.8554074603598565,
+          0.5286735300906003,
+          0.27308047167025506,
+          0.23472363105975091,
+          0.9056722018867731,
+          0.0031118488404899836,
+          0.2690080276224762,
+          0.8694892046041787,
+          0.8342029142659158,
+          0.9126012353226542,
+          0.3155180844478309,
+          0.2046224509831518
+        ]
+      }
+    },
+    {
+      "seed": 67,
+      "scale": 1,
+      "physical": true,
+      "file": "seed-67-scale-1-physical.json.gz",
+      "sha256": "80850e0476eff8f062a4737e2cbd897bc237bb51ac48b945da4b38217b8dfd1e",
+      "bytes": 3237183,
+      "counts": {
+        "buildings": 58,
+        "walls": 1229,
+        "loot": 100,
+        "vehicles": 98,
+        "enemies": 106,
+        "palms": 3583
+      },
+      "ms": 17708,
+      "fingerprints": {
+        "seed": "49d180ecf56132819571bf39d9b7b342522a2ac6d23c1418d3338251bfe469c8",
+        "scale": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+        "size": "dea1ae8613ee2a5ef5504d98bd969bd46b4c75e9c898341f497c74684599030c",
+        "player": "80fd38efe70104989550167d515fc649a5aff968884d18a49fba38b8898c271c",
+        "islands": "df4d6878c7aca4b67f49325a1a996c0d65e0333bd9eb7962d38e2b2296e09631",
+        "heights": "9d20ebe1b59a5060264c610a547bea8430013b4263f76a55ab17e6401ded9ada",
+        "buildings": "6f0cbd8a409c5ba9dba890202f89b1eb977a4acf04809afba23a0ffac910c1dd",
+        "walls": "5edf0e3552518c13eabe05ca883f3e129c175cd9be0224a01bdabc5a7167989f",
+        "doors": "17ac3c181fe88104ff43930102e86e8930aa7db3d65f35ae9756fe5ec6212d62",
+        "stairs": "fe00e7830a8bc2be2760cb90a36f545fc7a19a88994f586f60ae27719b6ebf5b",
+        "piers": "ef7f3c72622e5c17d0b639c8bda76302cd02e6a6c34699c08eccf3b27555eb9a",
+        "loot": "ab5fe5b7558a7365056335b089c67de59a4eaa0a6e5bb25b12199b6a1e13f7ab",
+        "vehicles": "f71ebb17fa2d69be67e1d2d403049ecdf66e5f321639aed9a6a7580e690a537d",
+        "enemies": "ee197d98cae344caf4d618c71c80c0f63e5acc678970f9a8f6288fda26144a66",
+        "vegetation": "e0969be18c9a5a7b783ef2394ae23fc70ee32113144f858b96c7092c0d0ab0b7",
+        "palms": "ca4fa480eec1461e6ebebb5199a45e5481e79ee3ec4bab175e94da9ff5d7d8fc",
+        "compounds": "1d87cf137497cadf7b0aa3d0dc3f4b39e368e500677a7967cc023b4f944a7bd8",
+        "paths": "0e061078f02ceed936ca33e5164c30b50356a78792a736c8d96cf19fc1edd2a0",
+        "marinePatrolPositions": "7152cab82feb5b7192403597e47de6d2c9b03ac6a5aefe86992c5a74fedcecc4",
+        "terrainLevels": "1c041274e1ef7f3f363f83afa9e60b94c078d293a61bf94ed225b4586cf15807",
+        "compoundClear": "51d4e7897c6d6c541036df6763605a356bab9023f72690daa857acee08de97a6",
+        "rng": "50faf97080335a9c1dd086b3fd3d2d1e1c487a0d7d53cf0ee9ca5aa14d0ba4e3"
+      },
+      "samples": {
+        "player": {
+          "base": {
+            "x": -1390.8530291448956,
+            "z": 1563.0482225695202
+          },
+          "hd": 0,
+          "x": -1390.8530291448956,
+          "y": 13.191678991397973,
+          "z": 1583.0482225695202
+        },
+        "buildings": [
+          {
+            "x": -1420.8530291448956,
+            "z": 1541.0482225695202,
+            "fy": 13.191678991397973,
+            "w": 24,
+            "d": 26,
+            "kind": "base",
+            "door": 0
+          },
+          {
+            "x": -1793.6885191842375,
+            "z": -981.7094043412482,
+            "fy": 8.75948308055037,
+            "w": 38,
+            "d": 36,
+            "kind": "hangar",
+            "door": -1
+          },
+          {
+            "x": 406.55146841680505,
+            "z": -1185.9499841609222,
+            "fy": 12.0585725617903,
+            "w": 18,
+            "d": 18,
+            "kind": "garage",
+            "door": 59
+          }
+        ],
+        "loot": [
+          {
+            "t": "arma",
+            "x": -1363.8530291448956,
+            "z": 1543.0482225695202,
+            "y": 14.491678991397974,
+            "building": 1
+          },
+          {
+            "t": "bazooka",
+            "x": 583.9348026233239,
+            "z": -557.5776301732585,
+            "y": 7.318090502537356,
+            "building": 54
+          },
+          {
+            "t": "mapa_tanc",
+            "x": 1991.163612510466,
+            "z": 1459.5316289310035,
+            "y": 14.492928145598407,
+            "building": 31
+          }
+        ],
+        "vehicles": [
+          {
+            "t": "moto",
+            "x": -1454.884481145968,
+            "z": 1588.1177134688521,
+            "alt": 13.991624855937598,
+            "hd": 2.7129105230607093
+          },
+          {
+            "t": "moto_aquatica",
+            "x": 1087.5273845409306,
+            "z": 1409.716586711418,
+            "alt": 0.8,
+            "hd": 0.14412768418676114
+          },
+          {
+            "t": "moto_aquatica",
+            "x": -852.7246272118236,
+            "z": 1371.180894846008,
+            "alt": 0.8,
+            "hd": 1.3744467859455345
+          }
+        ],
+        "enemies": [
+          {
+            "t": "tanqueta",
+            "x": 1499.5480137844008,
+            "z": -992.0818784262076,
+            "hd": 1.5707963267948966
+          },
+          {
+            "t": "torre",
+            "x": -559.8228420764208,
+            "z": 1487.6173128411174,
+            "hd": 5.080258600190282
+          },
+          {
+            "t": "patrulla_marina",
+            "x": -2232.149615447509,
+            "z": -423.85392731839426,
+            "hd": 4.094088980222171
+          }
+        ],
+        "rng": [
+          0.3423658481333405,
+          0.8041322180069983,
+          0.3400581334717572,
+          0.422609044238925,
+          0.047788331750780344,
+          0.7676073566544801,
+          0.7884589214809239,
+          0.14843859942629933,
+          0.8841477548703551,
+          0.11212467425502837,
+          0.6898219368886203,
+          0.8004099004901946,
+          0.9204180894885212,
+          0.2532241865992546,
+          0.46741151064634323,
+          0.32347307819873095
+        ]
+      }
+    }
+  ],
+  "baselineSnapshotCommit": "4ff277f136c8e62786cfe8b653ad5578a77d6e6f (records upstream 651884f)",
+  "reproduction": "Use untouched upstream 651884f / v0.5.79 source with the sourceHashes below; tests/harness.cjs; isolate VM Math after boot using ambientMathSeed; seedSearchMode=true for logical cases; call start(seed,scale); evaluate tests/phase10-snapshot.cjs before frames; SHA256 of JSON.stringify of each section.",
+  "snapshotSchema": 2,
+  "excludedTransientFields": [
+    "_buildingQueryStamp",
+    "_wallQueryStamp"
+  ],
+  "schemaProvenance": "Schema2 removes only numeric spatial-query cache stamps from the original untouched baseline captures. No changed-runtime output was used to update expected hashes."
+}

@@ -4,11 +4,13 @@ function compoundTransform(q,angle=0,mirror=1){
   const c=Math.round(Math.cos(angle)),s=Math.round(Math.sin(angle));
   return (x,z)=>[q.x+x*mirror*c-z*s,q.z+x*mirror*s+z*c];
 }
-function findRedesignedPort(q){
+function findRedesignedPort(q){return drainBuildSteps(findRedesignedPortSteps(q))}
+function* findRedesignedPortSteps(q){
   // Search for a wide shore, with inland space and three full-size launch lanes.
   for(let turn=0;turn<4;turn++){
     const angle=turn*Math.PI/2,point=compoundTransform(q,angle);
     for(let d=16;d<Math.max(180,(q.r||180)*1.4);d+=8){
+      yield {stage:'Emplaçaments de ports',completed:null,total:null};
       const [x,z]=point(0,d);if(rawHAt(x,z)>.3)continue;
       for(const offset of[-8,0,8]){
         const [cx,cz]=point(0,d+offset),site={x:cx,z:cz,h:.86,angle,r:q.r},tr=compoundTransform(site,angle);
@@ -25,7 +27,8 @@ function findRedesignedPort(q){
   }
   return null;
 }
-function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssigned,heliportSites}){
+function buildApprovedCompound(layout,q,options){return drainBuildSteps(buildApprovedCompoundSteps(layout,q,options))}
+function* buildApprovedCompoundSteps(layout,q,{pad,path,pier,prop,vehicles,rocketAssigned,heliportSites}){
   const isPort=layout.id==='port',coastal=isPort||!!layout.waterfront,angle=['base','hq'].includes(layout.id)?0:coastal?q.angle:Math.floor(R()*4)*Math.PI/2,mirror=1,tr=compoundTransform(q,angle,mirror),c=Math.round(Math.cos(angle)),s=Math.round(Math.sin(angle));
   const vector=(x,z)=>[x*c-z*s,x*s+z*c],rotatedHeading=hd=>hd*mirror-angle;
   const record={id:layout.id,layoutId:layout.layoutId||layout.id,variant:layout.variant||1,layout,x:q.x,z:q.z,angle,mirror,r:Math.hypot(...layout.size)/2+20,buildings:[],vehicles:[],soldiers:[],loot:[],entrances:layout.entrances.map(p=>tr(...p)),patrol:layout.patrol.map(p=>tr(...p))};
@@ -65,7 +68,9 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
   // Keep vegetation outside the complete reservation, including gates and turning space.
   compoundClear.push({x:q.x,z:q.z,r:record.r});
   for(const route of layout.routes)path(route.points.map(p=>tr(...p)),route.width);
+  let built=0;
   for(const spec of layout.buildings){
+    yield {stage:'Construint '+layout.id,completed:built++,total:layout.buildings.length,unit:'edificis'};
     const [x,z]=tr(spec.x,spec.z),firstWall=Wl.length,firstStair=stairs.length,buildingAngle=angle-(spec.rotationY||0),bc=Math.round(Math.cos(buildingAngle)),bs=Math.round(Math.sin(buildingAngle)),buildingVector=(x,z)=>[x*bc-z*bs,x*bs+z*bc];
     const b=spec.bunker?mkEnemyBunker(x,z):mkB(x,z,spec.w,spec.d,spec.h*(spec.floors||1),spec.wood?0x96714b:spec.replacement?0xa9bdb0:spec.hangar?0xbab99d:0xc9b98d,layout.friendly?0x2c5fc0:spec.hangar?0xb7c1b4:0x79584e,{floors:spec.floors,wood:spec.wood,hangar:!!spec.hangar,kind:spec.hangar?'hangar':layout.id==='hangar'?'garage':layout.id,doorSide:0,doorWidth:spec.hangar?30:4,doorHeight:spec.hangar?11:4.4,openDoor:!!spec.hangar,noPartitions:true,solidWalls:!!spec.warehouse&&!spec.wood});
     decorateRuntimeBuilding(b,spec);b.civilian=!!layout.civilian;
@@ -145,6 +150,7 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
     for(const x of[-24,24])pier(...tr(x,7),...tr(x,48),6);
   }
   for(const [vehicleIndex,spec] of layout.vehicles.entries()){
+    yield {stage:'Equipant '+layout.id,completed:null,total:null};
     const t=spec.t==='llanxa_coets'&&rocketAssigned?'llanxa':layout.id==='heliport'&&heliportSites.length===1?'heli_combat':spec.t,[x,z]=tr(spec.x,spec.z),v={t,x,z,hd:rotatedHeading(spec.hd),compound:record.id};
     if(layout.id==='hangar'){
       v.insideHangar=true;v.hangar=record.buildings[0];v.military=true;
@@ -161,6 +167,7 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
   for(const tower of layout.towers||[layout.tower].filter(Boolean)){const u=mkEn('torre',...tr(tower.x,tower.z));u.compound=layout.id;}
   const route=record.patrol.slice(0,-1);
   for(const [i,p]of layout.soldiers.entries()){
+    yield {stage:'Equipant '+layout.id,completed:null,total:null};
     const pos=tr(...p),u=mkEn('soldat',...pos);u.compound=layout.id;
     // Aproximadament un de cada cinc GUÀRDIES militars porta el mateix
     // bazuca que el jugador. El comptador viu al món reconstruït;
@@ -204,6 +211,7 @@ function buildApprovedCompound(layout,q,{pad,path,pier,prop,vehicles,rocketAssig
   }
   const lootKinds={'munició':'arma','farmaciola':'med','granades':'granada','cisalla':'cisalla','mapa':'mapa','mapa_heli':'mapa_heli','mapa_tanc':'mapa_tanc','explosius':'expl','bazooka':'bazooka','franctirador':'franctirador','disfressa':'disf','paracaigudes':'paracaigudes'};
   for(const loot of layout.loot){
+    yield {stage:'Equipant '+layout.id,completed:null,total:null};
     if(loot.kind==='disfressa'&&R()>=.5)continue;
     const t=lootKinds[loot.kind];if(!IT[t])throw new Error('Unknown compound loot: '+loot.kind);
     const [x,z]=tr(loot.x,loot.z);

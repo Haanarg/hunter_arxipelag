@@ -1,4 +1,5 @@
 window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){const esc=v=>String(v||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])),m=(e&&e.message)?e.message:"Error desconegut",where=e&&e.filename?(e.filename.split("/").pop()+":"+e.lineno+":"+e.colno):"",stack=e&&e.error&&e.error.stack?e.error.stack:"";p.innerHTML="<h1>No s’ha pogut iniciar el joc</h1><p style=\"max-width:560px\">Error d’arrencada: <b>"+esc(m)+"</b></p>"+(where?"<p><b>"+esc(where)+"</b></p>":"")+(stack?"<pre style=\"max-width:90vw;white-space:pre-wrap;text-align:left;font-size:11px;opacity:.8\">"+esc(stack)+"</pre>":"")+"<p style=\"opacity:.8\">Envia una captura d’aquest missatge si persisteix.</p>"}});
+let generationPromise=null,generationCancel=null;
 let terrainStream=null,seedSearchMode=false,seedCompounds=[],seedScratchWorld=null;
 const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_WAVES','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI','HUNTER_SEED_SEARCH','HUNTER_CAMERA_CONTROLS','HUNTER_SIMULATION_CLOCK','HUNTER_STEALTH_FEEDBACK'];
 const missingModules=requiredModules.filter(name=>!window[name]);if(missingModules.length)throw new Error('Mòduls Hunter absents: '+missingModules.join(', '));
@@ -123,7 +124,8 @@ for(let i=0;i<large;i++)islands.push({x:rr(-extent*.55,extent*.55)*2,z:rr(-exten
 for(let n=0;n<islands.length;n++){const i=islands[n],ox=(hash(i.x*.013+n*1.37,i.z*.011-7.1)-.5)*.42*i.r,oz=(hash(i.z*.017-n*.91,i.x*.009+11.3)-.5)*.42*i.r;i.peakX=i.x+ox;i.peakZ=i.z+oz}
 rebuildIslandGrid()}
 const slope=(x,z,h)=>Math.abs(hAt(x+5,z)-h)+Math.abs(hAt(x,z+5)-h);
-function land(i,n=600,fl){for(let k=0;k<n;k++){const a=R()*6.283,d=R()*i.r*.75,x=i.x+Math.cos(a)*d,z=i.z+Math.sin(a)*d,h=hAt(x,z);
+function land(i,n=600,fl){return drainBuildSteps(landSteps(i,n,fl))}
+function* landSteps(i,n=600,fl){for(let k=0;k<n;k++){if(k%16===0)yield {stage:'Cercant terreny lliure',completed:k,total:n,unit:'intents'};const a=R()*6.283,d=R()*i.r*.75,x=i.x+Math.cos(a)*d,z=i.z+Math.sin(a)*d,h=hAt(x,z);
 if(h>3&&h<14&&slope(x,z,h)<2.5&&(!fl||fr(x,z)<2.2)&&!B.some(b=>Math.abs(b.x-x)<b.hw+24&&Math.abs(b.z-z)<b.hd+24)&&!treeHit(x,z,3)&&Math.abs(x)<H-150&&Math.abs(z)<H-150)return{x,z,h}}return null}
 // escena
 const coarse=matchMedia('(pointer:coarse)').matches;
@@ -235,13 +237,23 @@ function setShadowsDisabled(disabled){
 }
 const shadowSettingCheckbox=document.getElementById('disableShadows');
 if(shadowSettingCheckbox)shadowSettingCheckbox.addEventListener('change',()=>setShadowsDisabled(shadowSettingCheckbox.checked));
-function prepareShadowCasters(){
+function* traverseGenerationSteps(root,visit,stage){
+  const stack=[root];let count=0;
+  while(stack.length){
+    const node=stack.pop();visit(node);
+    for(let i=node.children.length-1;i>=0;i--)stack.push(node.children[i]);
+    if(++count%64===0)yield {stage,completed:count,total:null,unit:'objectes'};
+  }
+}
+function prepareShadowCasters(){return drainBuildSteps(prepareShadowCastersSteps())}
+function* prepareShadowCastersSteps(){
   shadowCandidates.length=0;
   shadowLastX=Infinity;shadowLastZ=Infinity;shadowLastMs=-Infinity;
   shadowStats.candidates=0;shadowStats.active=0;shadowStats.excludedDetail=0;shadowStats.playerCasters=0;
   if(!visualQuality.shadows||!world)return;
   const dynamicRoots=new Set([pl,...V.map(v=>v.o),...E.map(e=>e.o),...fa.map(f=>f.o)].filter(Boolean));
-  world.updateMatrixWorld(true);
+  world.updateWorldMatrix(true,false);
+  yield* traverseGenerationSteps(world,o=>o.updateWorldMatrix(false,false),'Matrius d’ombres');
   pl.updateMatrixWorld(true);
   const collect=mesh=>{
     if(!mesh.isMesh)return;
@@ -261,7 +273,7 @@ function prepareShadowCasters(){
     if(!dynamicRoots.has(owner))owner=null;
     shadowCandidates.push({mesh,owner,point:owner?null:mesh.getWorldPosition(new THREE.Vector3())});
   };
-  world.traverse(collect);
+  yield* traverseGenerationSteps(world,collect,'Ombres');
   pl.traverse(collect);
   // Els caps i les extremitats del jugador eren massa petits per passar
   // el filtre general (0.85 m). Seleccionam onze malles representatives
@@ -413,10 +425,11 @@ let started=0,DIF=1,AC=null,eng=null,seaAudio=null,logb=[],fa=[],pi_=0;const las
 const PT=[];for(let i=0;i<100;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,depthWrite:false}));m.visible=false;scene.add(m);PT.push({m,life:0,max:1,s:1})}
 function puff(x,y,z,c,s,rise=0){const p=PT[pi_++%100];p.life=p.max=1.1;p.s=s;p.rise=rise;p.m.material.color.setHex(c);p.m.position.set(x+rn(-.6,.6),y,z+rn(-.6,.6));p.m.visible=true}
 function mark(){const q=cv||P;logb.push({n:'P'+(logb.length+1),x:q.x,z:q.z});msg='Coordenades guardades: '+(q.x|0)+', '+(q.z|0);msgT=2}
-function spawnFauna(){fa=[];for(let k=0;k<48;k++){const bird=window.HUNTER_FAUNA.createGull(THREE,{box:bx,material:M}),o=bird.o,wl=bird.wl,wr=bird.wr;world.add(o);
+function spawnFauna(){return drainBuildSteps(spawnFaunaSteps())}
+function* spawnFaunaSteps(){fa=[];for(let k=0;k<48;k++){yield {stage:'Fauna',completed:k,total:78,unit:'animals'};const bird=window.HUNTER_FAUNA.createGull(THREE,{box:bx,material:M}),o=bird.o,wl=bird.wl,wr=bird.wr;world.add(o);
 const cx=rn(-H+200,H-200),cz=rn(-H+200,H-200),baseY=rn(25,55);
 fa.push({k:'g',o,wl,wr,cx,cz,r:rn(40,120),a:rn(0,6.28),sp:rn(.15,.3),y:baseY,flyY:Math.max(baseY,hAt(cx,cz)+10),x:cx,z:cz})}
-for(let k=0;k<30;k++){let cx,cz,n=0;do{cx=rn(-H+150,H-150);cz=rn(-H+150,H-150)}while(hAt(cx,cz)>-6&&++n<60);if(hAt(cx,cz)>-6)continue;
+for(let k=0;k<30;k++){yield {stage:'Fauna',completed:48+k,total:78,unit:'animals'};let cx,cz,n=0;do{cx=rn(-H+150,H-150);cz=rn(-H+150,H-150)}while(hAt(cx,cz)>-6&&++n<60);if(hAt(cx,cz)>-6)continue;
 const o=window.HUNTER_FAUNA.createShark(THREE,{material:M});world.add(o);fa.push({k:'s',o,cx,cz,r:rn(12,28),a:rn(0,6.28),sp:rn(.25,.45),x:cx,z:cz,sharkMode:'patrol',biteCd:0})}}
 function updExtra(dt,t){updDeb(dt);
 for(let i=fa.length-1;i>=0;i--){
@@ -527,6 +540,7 @@ fillSeedSearchTypes('ferry'); // Conserva el cercador de ferris com a selecció 
 seedSearchCategoryEl.onchange=()=>{fillSeedSearchTypes();seedSearchResultsEl.replaceChildren();seedSearchStatusEl.textContent='Tria el tipus i prem Buscar.'};
 seedSearchTypeEl.onchange=()=>{seedSearchResultsEl.replaceChildren();seedSearchStatusEl.textContent='Prem Buscar per analitzar aquest tipus.'};
 const showSeedSearch=()=>{
+  if(generationPromise)return;
   const sc=currentMapScale();seedSearchMapSizeEl.value=sc===2?'Gran · 9,6 km':'Petit · 4,8 km';
   startMenuEl.style.display='none';seedSearchScreenEl.style.display='block';seedSearchScreenEl.setAttribute('aria-hidden','false')
 };
@@ -567,7 +581,7 @@ const renderSeedSearchResults=(rows,target,label,category,type)=>{
   }
 };
 async function runSeedSearch(){
-  if(seedSearchRunning||seedSearchRunEl.disabled)return;
+  if(generationPromise||seedSearchRunning||seedSearchRunEl.disabled)return;
   seedSearchRunning=true;
   const token=++seedSearchToken,
         start=Math.max(0,Math.min(4294967295,Math.trunc(Number(seedSearchStartEl.value)||0)))>>>0,
@@ -648,16 +662,93 @@ if(seedSearchCancelEl)seedSearchCancelEl.onclick=()=>{
 };
 // El fons del menú és un fitxer estàtic: ni llavors ni localStorage ni WebGL a la portada.
 seedRandomEl.onchange=()=>{seedInputEl.disabled=seedRandomEl.checked;if(!seedRandomEl.checked)seedInputEl.focus()};
-document.querySelectorAll('#ini button[data-d]').forEach(b=>b.onclick=()=>{
-  DIF=+b.dataset.d;MAP_SCALE=+(document.querySelector('input[name="mapSize"]:checked')?.value||1);S=4800*MAP_SCALE;H=S/2;
-  const rawSeed=seedRandomEl.checked?null:seedFromText(seedInputEl.value||'hunter');
-  // No alterar la llavor introduïda: la que es veu al HUD s'ha
-  // de poder reintroduir per recuperar exactament el mateix arxipèlag.
-  requestedSeed=rawSeed;
-  build();minimap.setWorldSize(S,H);minimap.reset();mini();
-  // Sense captura WebGL síncrona/toDataURL: evitar bloqueig després de generar el món.
-  started=1;iniEl.style.display='none';document.body.classList.add('game-started');initAudio();resetSimulationClock()
-});
+function readGameStartOptions(difficulty=DIF){
+  return {difficulty,scale:currentMapScale(),seed:seedRandomEl.checked?null:seedFromText(seedInputEl.value||'hunter')};
+}
+function applyGameStartOptions({difficulty=DIF,scale=MAP_SCALE,seed:inputSeed=requestedSeed}={}){
+  DIF=+difficulty;MAP_SCALE=+scale===2?2:1;S=4800*MAP_SCALE;H=S/2;
+  requestedSeed=inputSeed==null?null:seedFromText(inputSeed);
+}
+// Explicit compatibility entry point for tools/harnesses that need an immediate
+// complete world. Production buttons and restart exclusively use the Promise.
+function startGameSynchronously(options=readGameStartOptions()){
+  if(generationPromise||seedSearchRunning)throw new Error('Ja hi ha una generació en curs');
+  applyGameStartOptions(options);build();minimap.setWorldSize(S,H);minimap.reset();mini();
+  started=1;paused=false;iniEl.style.display='none';document.body.classList.add('game-started');initAudio();resetSimulationClock();
+}
+function discardGeneratedWorld(){
+  if(terrainStream)terrainStream.dispose();terrainStream=null;
+  if(world){scene.remove(world);window.HUNTER_RESOURCES.dispose(world)}world=null;
+  B=[];Wl=[];Dr=[];stairs=[];piers=[];items=[];V=[];E=[];fa=[];PL.length=FA.length=0;
+  TG.clear();terrainLevels=[];terrainLevelGrid.clear();PM={};cv=null;ib=null;activeBunker=null;
+  waterUpgradePending=false;seedCompounds=[];elapsed=0;clearKeys();resetSimulationClock();
+}
+function startGameProgressively(options=readGameStartOptions()){
+  if(generationPromise)return generationPromise;
+  if(seedSearchRunning)return Promise.reject(new Error('Espera que acabi la cerca de llavors'));
+  const listeners=new Set(),signal={aborted:false,
+    addEventListener(type,fn){if(type==='abort')listeners.add(fn)},
+    removeEventListener(type,fn){if(type==='abort')listeners.delete(fn)}};
+  generationCancel=()=>{signal.aborted=true;for(const fn of [...listeners])fn()};
+  const loading=document.getElementById('generationLoading'),label=document.getElementById('generationStatus'),bar=document.getElementById('generationProgress');
+  const controls=[...document.querySelectorAll('#ini button, #ini input, #ini select')],disabled=controls.map(el=>el.disabled);
+  const report=state=>{
+    const count=Number.isFinite(state.completed)?state.completed:null,total=Number.isFinite(state.total)?state.total:null;
+    label.textContent=state.stage+(count===null?'':(' · '+count+(total===null?'':' / '+total)+(state.unit?' '+state.unit:'')));
+    if(total>0&&count!==null){bar.max=total;bar.value=Math.min(total,count)}else bar.removeAttribute('value');
+  };
+  let resolveTask,rejectTask;
+  const task=new Promise((resolve,reject)=>{resolveTask=resolve;rejectTask=reject});
+  // Claim ownership before executing any startup code, including code that can
+  // throw before the first await. A synchronous failure must not relatch a job.
+  generationPromise=task;window.HUNTER_START_PROMISE=task;task.catch(()=>{});
+  (async()=>{
+    window.HUNTER_GENERATION_STATE={status:'starting',stage:'Preparant el món',completed:0,total:null,steps:0,yields:0,maxStepMs:0,maxTurnMs:0,error:null};
+    try{
+      applyGameStartOptions(options);started=0;paused=true;clearKeys();resetCameraState();ui.hide();
+      document.body.classList.remove('game-started');document.body.classList.add('game-generating');
+      iniEl.style.display='none';loading.hidden=false;controls.forEach(el=>el.disabled=true);
+      document.getElementById('startLoading').style.display='none';
+      // Unlock in the activation task. Synthesise audio only after the world,
+      // as before: its Math.random calls must not precede generated fauna.
+      initAudio({unlockOnly:true});
+      if(eng)eng.g.gain.value=0;if(seaAudio)seaAudio.gain.gain.value=0;
+      const iterator=(function*(){
+        yield* buildSteps();
+        minimap.setWorldSize(S,H);minimap.reset();
+        yield* minimap.buildBackgroundSteps();mini();
+      })();
+      await buildProgressively({iterator,signal,schedule:options.schedule||window.HUNTER_GENERATION_SCHEDULE,onProgress:report});
+      if(signal.aborted)throw generationAbortError();
+      initAudio();started=1;paused=!simulationFocused||!!document.hidden;clearKeys();
+      if(paused){ui.show('pause');if(AC)Promise.resolve(AC.suspend()).catch(()=>{})}
+      window.HUNTER_GENERATION_STATE.status='ready';
+      iniEl.style.display='none';document.body.classList.add('game-started');
+      resetSimulationClock();return {seed,mapScale:MAP_SCALE};
+    }catch(error){
+      Object.assign(window.HUNTER_GENERATION_STATE,{status:error.name==='AbortError'?'cancelled':'error',error:error.message});
+      started=0;paused=false;discardGeneratedWorld();ui.hide();
+      iniEl.style.display='flex';startMenuEl.style.display='flex';
+      seedSearchScreenEl.style.display='none';seedSearchScreenEl.setAttribute('aria-hidden','true');
+      const message=document.getElementById('startLoading');
+      message.textContent=error.name==='AbortError'?'Generació cancel·lada. Pots tornar a començar.':'No s’ha pogut generar el món. Torna a prémer per reintentar-ho.';
+      message.style.display='block';
+      if(error.name!=='AbortError')console.error('No es pot generar el món Hunter',error);
+      throw error;
+    }finally{
+      controls.forEach((el,i)=>el.disabled=disabled[i]);loading.hidden=true;
+      document.body.classList.remove('game-generating');generationCancel=null;generationPromise=null;resetSimulationClock();
+    }
+  })().then(resolveTask,rejectTask);
+  return task;
+}
+window.HUNTER_START_GAME=startGameProgressively;
+window.HUNTER_CANCEL_START=()=>{
+  const task=generationPromise;if(generationCancel)generationCancel();
+  return task?task.then(()=>{},()=>{}):Promise.resolve();
+};
+document.getElementById('generationCancel').onclick=()=>window.HUNTER_CANCEL_START();
+document.querySelectorAll('#ini button[data-d]').forEach(b=>b.onclick=()=>startGameProgressively(readGameStartOptions(+b.dataset.d)));
 // animacions de destrucció
 const DB=[],WA=[],HR=[],dgeo=new THREE.BoxGeometry(1,1,1),dmc={},dmat=c=>dmc[c]||(dmc[c]=M(c));
 function debris(x,y,z,col,n,sz,sp){for(let i=0;i<n;i++){const m=new THREE.Mesh(dgeo,dmat(col)),s=rn(.4,1)*sz;m.scale.set(s,s*rn(.5,1.2),s);m.position.set(x+rn(-1,1),y,z+rn(-1,1));m.rotation.set(rn(0,3),rn(0,3),0);world.add(m);
@@ -833,7 +924,8 @@ const y=new THREE.Group(),g=new THREE.Group();y.position.set(t.x,t.y,t.z);y.rota
 function updFA(dt){for(let i=FA.length-1;i>=0;i--){const a=FA[i];a.t+=dt;const k=Math.min(1,a.t/.9);a.g.rotation.z=-k*k*1.5;
 if(k>=1){const c=Math.cos(a.yaw),s=Math.sin(a.yaw),lx=a.x+c*6.4*a.s,lz=a.z-s*6.4*a.s,ly=Math.max(hAt(lx,lz),0)+.6;
 debris(lx,ly,lz,0x4fa03a,8,1,5);debris(a.x+c*3*a.s,ly,a.z-s*3*a.s,0x8a6a3a,4,.7,3);puff(lx,ly,lz,0xc9b48a,3);world.remove(a.y);FA.splice(i,1)}}}
-function vegetate(pa){TG.clear();PL.length=0;FA.length=0;const pm=[],bu=[],rk=[],put=e=>{e.k=Math.floor(e.x/16)+','+Math.floor(e.z/16);let a=TG.get(e.k);if(!a)TG.set(e.k,a=[]);a.push(e)};
+function vegetate(pa){return drainBuildSteps(vegetateSteps(pa))}
+function* vegetateSteps(pa){TG.clear();PL.length=0;FA.length=0;const pm=[],bu=[],rk=[],put=e=>{e.k=Math.floor(e.x/16)+','+Math.floor(e.z/16);let a=TG.get(e.k);if(!a)TG.set(e.k,a=[]);a.push(e)};
  const rockSafe=(x,z,r=2)=>Math.abs(x)<H-35&&Math.abs(z)<H-35&&
    !stairs.some(st=>stairContains(st,x,z,r+1))&&
    Math.hypot(x-pa.x,z-pa.z)>16+r&&
@@ -850,7 +942,8 @@ function vegetate(pa){TG.clear();PL.length=0;FA.length=0;const pm=[],bu=[],rk=[]
    put({x,z,y,r:radius,rock:true,kind,s:scale,topY,bottomY:h-scale*.5});
    return true;
  };
-for(let x=-H+40;x<H-40;x+=14)for(let z=-H+40;z<H-40;z+=14){const px=x+rr(-4,4),pz=z+rr(-4,4),h=hAt(px,pz);if(h<1.3||h>42)continue;
+let samples=0;const sampleSide=Math.ceil((2*H-80)/14),sampleTotal=sampleSide*sampleSide;
+for(let x=-H+40;x<H-40;x+=14)for(let z=-H+40;z<H-40;z+=14){if(samples++%128===0)yield {stage:'Distribuint vegetació',completed:samples-1,total:sampleTotal,unit:'mostres'};const px=x+rr(-4,4),pz=z+rr(-4,4),h=hAt(px,pz);if(h<1.3||h>42)continue;
 const dn=fbm(px/80+7,pz/80+3),q=R(),highPalm=.22+Math.max(0,Math.min(1,(h-28)/14))*.12;let L=null;
 if(h<4)L=q<.12?pm:null;else if(dn>.55&&h<28)L=q<.20?pm:null;else if(h>=28&&q<highPalm)L=pm;else if(dn>.4)L=q<.2?bu:null;else if(h>8&&q<.04)L=rk;else if(q<.024)L=pm;
 if(!L||slope(px,pz,h)>4.5)continue;
@@ -859,7 +952,7 @@ const s=1.15*rr(.75,1.25),yaw=rr(0,6.28);
 if(L==pm){const leafVar=R()<.33?-1:R()<.66?0:1,tone=rr(-.25,.25),idx=pm.length;pm.push([px,h-.3,pz,s,yaw,leafVar,tone]);const e={x:px,z:pz,y:h-.3,s,yaw,r:.6*Math.max(.75,s),p:true,alive:true,hp:8,i:idx,leafVar,tone};put(e);PL.push(e)}
 else if(L===rk)window.HUNTER_ROCK_FIELDS.baseRockCluster(px,pz,s,addRock);
  else L.push([px,h-.3,pz,s,yaw])}
-const rockFieldStats=window.HUNTER_ROCK_FIELDS.generateRockFields({
+const rockFieldStats=yield* window.HUNTER_ROCK_FIELDS.generateRockFieldsSteps({
   islands,hAt,canPlace:rockSafe,addRock
 });
 world.userData.rockFieldStats={...rockFieldStats,totalRocks:rk.length};
@@ -867,10 +960,10 @@ if(seedSearchMode){
   // vegetationVisual.build consumeix 11 tirades/palmera (tronc + dues
   // copes), 3/arbust i 5/roca. Preservam EXACTAMENT l'estat final del
   // generador R sense construir cap InstancedMesh.
-  for(let n=pm.length*11+bu.length*3+rk.length*5;n>0;n--)R();
+  for(let n=pm.length*11+bu.length*3+rk.length*5;n>0;n--){if(n%1024===0)yield {stage:'Colors de vegetació',completed:null,total:null};R()}
   PM={stats:{},update(){},remove(){}};return;
 }
-const vegetationMeshes=vegetationVisual.build({
+const vegetationMeshes=yield* vegetationVisual.buildSteps({
   world,palms:pm,bushes:bu,rocks:rk,playerX:pa.x,playerZ:pa.z,
   lowQuality:!visualQuality.shadows,lodProfile:qualityName
 });
@@ -1777,7 +1870,8 @@ const renderCategories={terreny:0,edificis:0,filferrades:0,vehicles:0,enemics:0,
 window.HUNTER_DRAW_CALL_GROUPS=renderCategories;
 adaptivePerformance.stats.drawCategories=renderCategories;
 const registeredDrawHooks=new WeakMap();
-function registerDrawCategories(){
+function registerDrawCategories(){const steps=registerDrawCategoriesSteps(false);while(!steps.next().done){}}
+function* registerDrawCategoriesSteps(progressive=true){
   const tagged=new Map();
   for(const b of B)tagged.set(b.o,'edificis');
   for(const v of V)tagged.set(v.o,'vehicles');
@@ -1820,7 +1914,8 @@ function registerDrawCategories(){
     entry.wrapper=mesh.onBeforeRender;
     registeredDrawHooks.set(mesh,entry);
   }
-  world.traverse(track);
+  if(progressive)yield* traverseGenerationSteps(world,track,'Preparant el render');
+  else world.traverse(track);
   pl.traverse(track);
   // Els objectes fora del món (mar, cel) compten al total del renderitzador
   // però no necessiten etiquetes de geometria terrestre.
@@ -1929,9 +2024,10 @@ function updateDistanceVisibility(){
     if(!compound.antenna.visible)visibilityStats.antennas++;
   }
 }
-function prepareVisibilitySystem(){
+function prepareVisibilitySystem(){return drainBuildSteps(prepareVisibilitySystemSteps())}
+function* prepareVisibilitySystemSteps(){
   staticVisualBatches=world.children.filter(o=>o.name==='hunter-static-decor-batch');
-  registerDrawCategories();
+  yield* registerDrawCategoriesSteps();
   updateDistanceVisibility();
 }
 
@@ -2011,7 +2107,7 @@ function drawWeaponPicker(){const visible=pickerOpen&&weaponPickerAvailable(),we
 const signature=visible?JSON.stringify([selectedWeapon(),ammo,sniperAmmo,weapons.map(k=>[k,inv[k]])]):'hidden';
 if(signature===pickerSignature)return;pickerSignature=signature;
 picker.style.display=visible?'flex':'none';picker.replaceChildren();if(!visible)return;const names={pistola:'🔫 Pistola',ganivet:'🔪 Ganivet',franctirador:'🔭 Rifle',bazooka:'🚀 Bazooka',granada:'💣 Granades',cisalla:'✂ Cisalla'};quickWeapons().forEach((k,i)=>{const b=document.createElement('button');b.textContent=(i+1)+' · '+names[k]+' · '+(k==='pistola'?ammo:k==='franctirador'?sniperAmmo:k==='ganivet'?'∞':inv[k]);b.style.cssText='padding:8px;color:white;background:'+(selectedWeapon()===k?'#356c51':'#364a52');b.onclick=()=>{selectWeapon(k);pickerOpen=false;drawWeaponPicker()};picker.appendChild(b)})}
-const act=c=>{if(ui?.isBombTimerOpen?.()){
+const act=c=>{if(generationPromise)return;if(ui?.isBombTimerOpen?.()){
   // No es pot tancar el programador ni detonar saltant-se la confirmació.
   if(c==='Escape'||c==='KeyP'||c==='KeyI'){panel('inventory');return}
   if(c==='Enter'||c==='NumpadEnter'){
@@ -2233,8 +2329,8 @@ function setCheat(key,enabled){
   if(key==='fly'){cheatFlightY=enabled?P.y:null;if(enabled){cv=null;playerFall=null;playerEject=null;swimming=false}}
   if(key==='invisible'&&enabled)for(const u of E){u.canSee=false;u.canShoot=false;u.alert=0;u.recognition=0;u.pursuitT=0;if(u.t==='soldat'){u.aiMode='patrol';u.searchT=0}}
 }
-function resume(){paused=false;simulationFocused=true;clearKeys();ui.hide();if(AC&&!muted)AC.resume();resetSimulationClock()}
-function panel(mode){setSniperScope(false);paused=true;resetSimulationClock();pickerOpen=false;picker.style.display='none';pickerToggle.style.display='none';clearKeys();if(eng)eng.g.gain.value=0;if(AC)AC.suspend();ui.show(mode)}
+function resume(){if(generationPromise)return;paused=false;simulationFocused=true;clearKeys();ui.hide();if(AC&&!muted)AC.resume();resetSimulationClock()}
+function panel(mode){if(generationPromise)return;setSniperScope(false);paused=true;resetSimulationClock();pickerOpen=false;picker.style.display='none';pickerToggle.style.display='none';clearKeys();if(eng)eng.g.gain.value=0;if(AC)AC.suspend();ui.show(mode)}
 // Les cartes revelen informació de forma immediata: no són objectes
 // d'inventari que s'hagin d'equipar ni obrir manualment.
 function revealMapPickup(kind){
@@ -2387,7 +2483,7 @@ const ui=window.HUNTER_UI.create({
       resume();return true
     },
     dropItem:id=>dropInvItem(id),
-    restart:d=>{DIF=d;elapsed=0;build();minimap.reset();mini();resume()},
+    restart:d=>startGameProgressively({difficulty:d,scale:MAP_SCALE,seed:requestedSeed,restart:true}),
     setPalmsDisabled,
     setWaterDisabled,
     setShadowsDisabled,
@@ -3270,6 +3366,9 @@ mini();ui.renderHUD({nearVehicle:nv});}}
 
 let last=performance.now();resetSimulationClock(last);
 (function loop(now){
+// DOM can repaint and accept cancel/retry between generation tasks. No world
+// simulation, RNG, LOD, fire, clock debt or partial-world render is permitted.
+if(generationPromise){last=now;simulationClock.reset(now);cinematicClock.reset(now);requestAnimationFrame(loop);return}
 const rawDt=Number.isFinite(now)&&now>=last?(now-last)/1000:0;
 last=Number.isFinite(now)&&now>=0?now:performance.now();
 const cpuStarted=performance.now(),victoryAtStart=victoryCinematic,

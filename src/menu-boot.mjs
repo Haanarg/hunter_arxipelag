@@ -1,4 +1,4 @@
-import {GAME_VERSION} from './version.mjs?v=0.5.79';
+import {GAME_VERSION} from './version.mjs?v=0.5.80';
 import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs';
 
 // La portada no carrega Three.js, WebGL, el món ni una llavor de fons.
@@ -85,13 +85,30 @@ const showLoading=(message)=>{
 };
 function loadGame(){
   if(window.HUNTER_READY)return Promise.resolve();
-  if(!bootPromise)bootPromise=import('./bootstrap.mjs?v=0.5.79').then(()=>{
+  if(!bootPromise)bootPromise=import('./bootstrap.mjs?v=0.5.80').then(()=>{
     if(!window.HUNTER_READY)throw new Error('El motor 3D no ha acabat de carregar');
   }).catch(error=>{bootPromise=null;throw error});
   return bootPromise;
 }
+// A delayed import can outlive transient user activation. Unlock an empty
+// context in the real difficulty click, without synthesising sound or using RNG.
+function primeAudioGesture(){
+  try{
+    let context=window.HUNTER_PRIMED_AUDIO_CONTEXT;
+    if(!context||context.state==='closed'){
+      const AudioContext=window.AudioContext||window.webkitAudioContext;
+      if(!AudioContext)return;
+      context=window.HUNTER_PRIMED_AUDIO_CONTEXT=new AudioContext();
+    }
+    Promise.resolve(context.resume()).catch(()=>{});
+  }catch(error){} // Audio is optional; generation must still be retryable.
+}
 function intercept(button,message){
   button.addEventListener('click',async event=>{
+    // READY may become true while the first click still awaits the paint
+    // handoff. Keep ownership of that request until its real Promise settles.
+    if(requestPending){event.preventDefault();event.stopImmediatePropagation();return}
+    if(button.dataset.d)primeAudioGesture();
     if(window.HUNTER_READY)return;
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -103,11 +120,14 @@ function intercept(button,message){
       await loadGame();
       const engineMs=performance.now()-startupStart;
       if(button.dataset.d)showLoading('Generant el món…');
-      // Pintam el canvi de fase ABANS d'entrar al build() síncron.
-      // Abans el doble rAF es produïa quan encara hi deia "Carregant motor".
+      // Paint the engine/world handoff; world generation has its own real
+      // cooperative scheduler and loading surface after this frame.
       await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
       const worldStart=performance.now();
-      button.click(); // Deleguem al gestor original, instal·lat per game-core.js.
+      // HTMLElement.click() discards the handler's Promise. Await the actual
+      // runtime handler so loading/timings also include the final world chunk.
+      if(typeof button.onclick!=='function')throw new Error('Falta el gestor d’inici');
+      await button.onclick.call(button);
       if(button.dataset.d){
         loadingLabel.style.display='none';
         window.HUNTER_STARTUP_TIMINGS={
@@ -117,8 +137,10 @@ function intercept(button,message){
         console.info('Hunter · arrencada',window.HUNTER_STARTUP_TIMINGS);
       }
     }catch(error){
-      console.error('No es pot carregar el motor Hunter',error);
-      showLoading('Error de càrrega. Torna a prémer per reintentar-ho.');
+      if(error.name!=='AbortError'){
+        console.error('No es pot carregar el motor Hunter',error);
+        showLoading('Error de càrrega. Torna a prémer per reintentar-ho.');
+      }
     }finally{requestPending=false}
   },true);
 }

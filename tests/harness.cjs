@@ -1,7 +1,7 @@
 const fs=require('fs'),vm=require('vm'),path=require('path');
-module.exports=async function createGame(root=path.resolve(__dirname,'..')){
+module.exports=async function createGame(root=path.resolve(__dirname,'..'),options={}){
   const {runtimeScripts:scripts}=await import(require('url').pathToFileURL(path.join(root,'src/runtime-scripts.mjs')));
-  const noop=()=>{},els=new Map(),storage=new Map();let nextFrame,now=1000;
+  const noop=()=>{},els=new Map(),storage=new Map();let nextFrame,now=1000,timerId=0;const timers=[];const gameMath=Object.create(Math);
   function eventTarget(target){
     const listeners=new Map(),captured=new Set();
     Object.assign(target,{
@@ -38,6 +38,7 @@ module.exports=async function createGame(root=path.resolve(__dirname,'..')){
         focus:noop,attributes:new Map(),
         setAttribute(k,v){this.attributes.set(k,String(v))},
         getAttribute(k){return this.attributes.get(k)??null},
+        removeAttribute(k){this.attributes.delete(k);delete this[k]},
         querySelector:()=>el('knob'),querySelectorAll:()=>[],
         getContext:()=>ctx2d,toDataURL:()=>'',prepend:noop,
         append(...args){this.children.push(...args)},
@@ -54,7 +55,7 @@ module.exports=async function createGame(root=path.resolve(__dirname,'..')){
 
   const button=el('normal');button.dataset.d='1';el('mapSize').value='1';el('seedRandom').checked=false;el('seedInput').value='12345';el('seedSearchCategory').value='vehicle';
   const document=eventTarget({getElementById:el,querySelector:()=>el('mapSize'),querySelectorAll:s=>s==='#ini button[data-d]'?[button]:[],createElement:()=>el(Symbol()),body:el('body')});
-  const c=vm.createContext(eventTarget({Math,console,document,innerWidth:1360,innerHeight:900,devicePixelRatio:1,matchMedia:()=>({matches:false}),performance:{now:()=>now},requestAnimationFrame:fn=>{nextFrame=fn},Uint8ClampedArray,Float32Array,setTimeout:noop,localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)}}));c.window=c;
+  const c=vm.createContext(eventTarget({Math:gameMath,console,document,innerWidth:1360,innerHeight:900,devicePixelRatio:1,matchMedia:()=>({matches:false}),performance:{now:()=>options.realPerformance?performance.now():now},requestAnimationFrame:fn=>{nextFrame=fn},Uint8ClampedArray,Float32Array,setTimeout:(fn,delay=0)=>{const id=++timerId;timers.push({id,fn,delay});return id},clearTimeout:id=>{const i=timers.findIndex(t=>t.id===id);if(i>=0)timers.splice(i,1)},localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)}}));c.window=c;
   c.HUNTER_COMPOUND_LAYOUTS=(await import(require("url").pathToFileURL(path.join(root,"src/compound-layouts.mjs")))).compoundLayouts;
   const runtime=await import(require('url').pathToFileURL(path.join(root,'src/compound-runtime-layouts.mjs')));c.HUNTER_RUNTIME_LAYOUTS=runtime.runtimeLayouts;c.HUNTER_CHOOSE_COMPOUND=runtime.chooseCompoundLayout;c.HUNTER_COMPOUND_ARCHITECTURE=await import(require('url').pathToFileURL(path.join(root,'src/compound-architecture.mjs')));
   c.HUNTER_COMPOUND_PATHS=await import(require('url').pathToFileURL(path.join(root,'src/compound-paths.mjs')));
@@ -77,6 +78,15 @@ module.exports=async function createGame(root=path.resolve(__dirname,'..')){
     vm.runInContext(fs.readFileSync(path.join(root,src),'utf8'),c,{filename:src,timeout:60000});
   c.VD=c.HUNTER_VEHICLE_DYNAMICS;
   const run=s=>vm.runInContext(s,c,{timeout:120000});
-  return {run,el,dispatch(target,type,init={}){const node=target==='window'?c:target==='document'?document:typeof target==='string'?el(target):target;const e={type,...init};node.dispatchEvent(e);return e},start(seed='12345',scale=1){el('seedInput').value=seed;el('mapSize').value=String(scale);button.onclick()},frame(ms=16){now+=ms;nextFrame(now)},get now(){return now},advanceTime(ms){now+=ms},frameAt(ms){now=ms;nextFrame(now)},context:c};
+  const microtasks=async()=>{for(let i=0;i<12;i++)await Promise.resolve()};
+  const selectStart=(seed,scale)=>{el('seedInput').value=seed;el('mapSize').value=String(scale)};
+  return {run,el,dispatch(target,type,init={}){const node=target==='window'?c:target==='document'?document:typeof target==='string'?el(target):target;const e={type,...init};node.dispatchEvent(e);return e},
+    // Existing regression suites intentionally exercise the sync compatibility
+    // API. startAsync invokes exactly the production button's onclick handler.
+    start(seed='12345',scale=1){selectStart(seed,scale);return run('startGameSynchronously(readGameStartOptions(1))')},
+    startAsync(seed='12345',scale=1){selectStart(seed,scale);return button.onclick()},
+    async runTask(ms=0){await microtasks();const task=timers.shift();if(!task)return false;now+=ms;task.fn();await microtasks();return true},
+    async flushTasks(limit=100000){let n=0;while(await this.runTask()){if(++n>limit)throw new Error('Generation scheduler did not settle')}return n},
+    get pendingTasks(){return timers.length},microtasks,
+    frame(ms=16){now+=ms;nextFrame(now)},get now(){return now},advanceTime(ms){now+=ms},frameAt(ms){now=ms;nextFrame(now)},context:c};
 };
-

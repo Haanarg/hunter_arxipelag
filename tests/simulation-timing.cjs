@@ -185,7 +185,8 @@ profiles.push({name:'stalls',deltas:[1000/60,1000/60,100,1000/60,250,1000/60,33]
   run(`timingFixture();requestedSeed=67;seedSearchMode=true;globalThis.timingAdvancedBuild=false;
     hAt=(...args)=>{if(!timingAdvancedBuild){timingAdvancedBuild=true;timingAdvanceHostTime(30000)}return timingHeight(...args)};
     elapsed=100;panel('restart')`);
-  restart.onclick();
+  const restartPromise=restart.onclick();
+  await game.flushTasks();await restartPromise;
   assert(run('!paused&&elapsed===0&&timingAdvancedBuild'),'Restart builds and resumes the real operation');
   run('hAt=timingHeight;E=[];items=[];fa=[];V=[];cv=null');game.frame(16);
   close(run('elapsed'),.016,1e-9,'World generation time never reaches restarted simulation');

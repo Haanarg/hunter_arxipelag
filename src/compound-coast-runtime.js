@@ -9,16 +9,22 @@ function coastalLayoutFits(l,q){
  }
  return true;
 }
-function findCoastalLayout(l,anchor,accept=()=>true){
+function findCoastalLayout(l,anchor,accept=()=>true){return drainBuildSteps(findCoastalLayoutSteps(l,anchor,accept))}
+function* findCoastalLayoutSteps(l,anchor,accept=()=>true){
  const shore=l.waterfront?.shore??8;
  for(const offset of[0,60,-60,120,-120,180,-180,240,-240,300,-300,360,-360])for(let turn=0;turn<4;turn++){
+  yield {stage:'Emplaçaments de costa',completed:null,total:null};
   const angle=turn*Math.PI/2,tr=compoundTransform(anchor,angle);
   let landSeen=false;
   for(let d=0;d<Math.min(900,(anchor.r||400)*1.6);d+=12){
    const p=tr(offset,d),h=rawHAt(...p);if(h>.2){landSeen=true;continue}if(!landSeen)continue;
    for(const shift of[-18,-12,-6,0,6,12,18,24]){
     const center=tr(offset,d-shore+shift),q={x:center[0],z:center[1],angle,h:.86,r:anchor.r};
-    if(coastalLayoutFits(l,q)&&accept(q))return q;
+    if(coastalLayoutFits(l,q)){
+      const accepted=accept(q);
+      if(accepted&&typeof accepted.next==='function'){if(yield* accepted)return q}
+      else if(accepted)return q;
+    }
    }
    break;
   }
@@ -26,7 +32,8 @@ function findCoastalLayout(l,anchor,accept=()=>true){
  return null;
 }
 // Bounded terrain-aware search. It returns a path before changing the terrain.
-function solveCoastRoad(start,goal){
+function solveCoastRoad(start,goal){return drainBuildSteps(solveCoastRoadSteps(start,goal))}
+function* solveCoastRoadSteps(start,goal){
  const step=12,nodes=new Map(),open=[],cache=new Map(),key=(x,z)=>x+','+z;
  const sample=(x,z)=>{const k=key(x,z);if(cache.has(k))return cache.get(k);let y=hAt(x,z),ok=y>.15&&Math.abs(x)<H-20&&Math.abs(z)<H-20;
   for(const b of B)if(Math.abs(x-b.x)<b.w/2+7&&Math.abs(z-b.z)<b.d/2+7)ok=false;
@@ -34,7 +41,7 @@ function solveCoastRoad(start,goal){
   const value={y,ok};cache.set(k,value);return value;
  };
  const first={x:start.x,z:start.z,ix:0,iz:0,g:0,h:Math.hypot(goal.x-start.x,goal.z-start.z)};first.f=first.h;open.push(first);nodes.set('0,0',first);let found=null,count=0;
- while(open.length&&count++<14000){open.sort((a,b)=>b.f-a.f);const n=open.pop();if(n.closed)continue;n.closed=true;
+ while(open.length&&count++<14000){if(count%8===0)yield {stage:'Camí de la base a la costa',completed:count,total:null,unit:'nodes'};open.sort((a,b)=>b.f-a.f);const n=open.pop();if(n.closed)continue;n.closed=true;
   if(Math.hypot(n.x-goal.x,n.z-goal.z)<step*1.3){found=n;break}
   for(const[dx,dz]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]]){
    const ix=n.ix+dx,iz=n.iz+dz,x=start.x+ix*step,z=start.z+iz*step,k=key(ix,iz),old=nodes.get(k);if(old?.closed||Math.hypot(x-start.x,z-start.z)>1600)continue;
@@ -53,8 +60,10 @@ function solveCoastRoad(start,goal){
  if(Math.abs(points[0].y-hAt(start.x,start.z))>.2||points.some(p=>Math.abs(p.y-hAt(p.x,p.z))>7))return null;
  return points;
 }
-function buildCoastRoad(points,path){
+function buildCoastRoad(points,path){return drainBuildSteps(buildCoastRoadSteps(points,path))}
+function* buildCoastRoadSteps(points,path){
  for(let i=1;i<points.length;i++){
+  yield {stage:'Camí de la base a la costa',completed:i,total:points.length-1,unit:'trams'};
   const a=points[i-1],b=points[i],len=Math.hypot(a.x-b.x,a.z-b.z),angle=Math.atan2(-(b.x-a.x),b.z-a.z),n=Math.max(1,Math.ceil(len/2));
   for(let k=0;k<=n;k++){const t=k/n;addLevelArea(a.x+(b.x-a.x)*t,a.z+(b.z-a.z)*t,10,3,a.y+(b.y-a.y)*t,angle,7)}
  }

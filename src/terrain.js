@@ -22,9 +22,14 @@ window.HUNTER_TERRAIN=Object.freeze({
     return new THREE.Color(a[1]).lerp(new THREE.Color(b[1]),t);
   },
   bandAt(h){return hunterTerrainBandAt(h)},
-  create(THREE,{size,segments,heightAt,material,startX=0,startZ=0,lowQuality=false,quality=null,shadows=false,cutouts=[]}){
+  create(THREE,options){
+    const steps=this.createSteps(THREE,options);let next;
+    while(!(next=steps.next()).done){}return next.value;
+  },
+  *createSteps(THREE,{size,segments,heightAt,material,startX=0,startZ=0,lowQuality=false,quality=null,shadows=false,cutouts=[],parent=null}){
     const root=new THREE.Group();
     root.name='hunter-terrain-stream';
+    if(parent)parent.add(root);
     // Un forat precís al terreny deixa el soterrani sota el búnquer buit:
     // no modificam hAt (ni l'orografia ni les rutes), i funciona amb tots
     // els nivells LOD sense vores esglaonades ni regenerar sectors.
@@ -195,12 +200,19 @@ window.HUNTER_TERRAIN=Object.freeze({
       while(!process(task,512)){}
       finish(task);
     }
+    let initialComplete=false;
+    try{
     // A l'arrencada només es prepara el sector inicial i les seves
     // vuit caselles veïnes. Això evita malles buides sota el jugador.
     for(const tile of tiles){
       if(Math.abs(tile.cx-startX)<cellSize*1.5&&Math.abs(tile.cz-startZ)<cellSize*1.5){
         const level=distance2(tile,startX,startZ)<1?3:targetLevel(tile,startX,startZ);
-        generateNow(tile,level);stats.initialTiles++;
+        const task=begin(tile,level);let committed=false;
+        try{
+          while(!process(task,256))yield {stage:'Terreny inicial',completed:task.next,total:task.p.count,unit:'vèrtexs'};
+          finish(task);committed=true;stats.initialTiles++;
+        }finally{if(!committed)task.geometry.dispose()}
+        yield {stage:'Terreny inicial',completed:stats.initialTiles,total:null,unit:'sectors'};
       }
     }
     function pick(x,z,focus=null){
@@ -292,7 +304,14 @@ window.HUNTER_TERRAIN=Object.freeze({
       for(const tile of tiles)if(tile.geometry){tile.geometry.dispose();tile.geometry=null}
       root.clear();material.dispose();
     }
+    initialComplete=true;
     return {mesh:root,update,dispose,visibleHeightAt,surfaceVersionAt,stats,tileSize:cellSize,get pending(){return !!job}};
+    }finally{
+      if(!initialComplete){
+        for(const tile of tiles)if(tile.geometry)tile.geometry.dispose();
+        root.parent?.remove(root);root.clear();material.dispose();
+      }
+    }
   },
   createBorder(THREE,{size,halfSize}){
     const group=new THREE.Group();

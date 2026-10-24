@@ -78,6 +78,12 @@ body.player-swimming #joystick .joy-run-zone .swim-label{display:inline}
  #deathCinematicOverlay .death-finale{top:2%}
  #deathCinematicOverlay .death-finale h2{font-size:clamp(29px,7vh,54px)}
  #deathCinematicOverlay .death-new-game{bottom:4%;padding:10px 20px}}
+#generationLoading[hidden]{display:none}
+#generationLoading{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;background:#102134f5;color:#e8f2e9;padding:24px;box-sizing:border-box;text-align:center}
+#generationLoading .loading-card{max-width:480px;width:100%;display:grid;gap:18px;justify-items:center}
+#generationLoading h2{margin:0;font-size:24px}#generationStatus{margin:0;min-height:44px;line-height:1.5}
+#generationProgress{width:min(360px,100%);height:14px;accent-color:#a6cf9c}
+#generationCancel{font:600 16px system-ui;padding:10px 20px;border:1px solid #ffffff99;border-radius:8px;background:#ffffff0c;color:#fff}
 </style><style>button{cursor:pointer}#gamepanel{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#0009;color:white;z-index:20;padding:20px}#gamepanel .card{position:relative;background:#24364b;padding:24px;border-radius:10px;max-width:600px;max-height:85vh;overflow:auto}.panel-close{position:absolute;top:8px;right:10px;width:38px;height:38px;padding:0!important;margin:0!important;border:0!important;background:transparent!important;font:700 30px/38px system-ui;color:#fff;opacity:.82}.panel-close:hover{opacity:1;background:#ffffff12!important}#gamepanel button{padding:10px;margin:4px;color:white;background:#0004;border:1px solid white;border-radius:6px}#gamepanel canvas{width:100%;max-width:440px;height:auto}.controls{display:grid;grid-template-columns:110px 1fr;gap:8px}.p b{cursor:pointer}#joystick{cursor:grab}.p b.held{background:#fff6}#mainFireButton svg,#mainActionButton svg{width:39px;height:39px;display:block;pointer-events:none}.p b.heli-control,.p b.heli-combat-control,.p b.sniper-control{display:none}.p.heli-active b.heli-control{display:flex}.p.heli-combat-active b.heli-combat-control{display:flex;position:absolute;right:66px;bottom:66px}
 .p.sniper-active b.sniper-control{display:flex;position:absolute;right:66px;bottom:66px}
 .p.sniper-active b.sniper-control[aria-pressed="true"]{background:#668b68;border-color:#b4e6bb}
@@ -196,6 +202,7 @@ body.sniper-scoped #joystick{cursor:crosshair}
 <button id="strafeRight" class="strafe-btn" type="button" aria-label="Desplaçar lateralment a la dreta" aria-pressed="false" title="Strafe dreta · U">▶</button>
 <div id="contextButtons" class="p" style="right:calc(14px + env(safe-area-inset-right,0px));grid-template-columns:repeat(1,64px)"><b class="heli-control" data-k="KeyH" aria-label="Pujar helicòpter" title="Pujar">⬆️</b><b class="heli-control" data-k="KeyJ" aria-label="Baixar helicòpter" title="Baixar">⬇️</b><b id="mainFireButton" data-k="KeyF" aria-label="Dispar">🎯</b><b id="sniperAimButton" class="sniper-control" data-k="KeyT" aria-pressed="false" aria-label="Activar mira x8" title="Mira x8 · T">🔭</b><b id="mainActionButton" data-k="KeyE" aria-label="Obrir inventari" title="Motxilla">🎒</b><b class="heli-combat-control" data-k="KeyG" aria-label="Disparar míssil" title="Míssil">🚀</b></div>
 <div id="end" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;text-align:center;padding:24px;color:#fff;font:700 26px system-ui;text-shadow:0 2px 8px #000;pointer-events:none;background:#0005"></div>
+<div id="generationLoading" hidden aria-busy="true" aria-label="Generació del món"><div class="loading-card"><h2>Preparant l’arxipèlag</h2><p id="generationStatus" role="status" aria-live="polite">Preparant el món…</p><label for="generationProgress" style="font-size:12px;opacity:.8">Progrés de l’etapa actual</label><progress id="generationProgress" aria-label="Progrés de l’etapa actual"></progress><button id="generationCancel" type="button">Cancel·la</button></div></div>
 <div id="ini" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;color:#fff;font-family:system-ui;background:linear-gradient(#15253695,#152536b0),url('assets/menu-seed-67.jpg') center/cover no-repeat,linear-gradient(#596a8f,#e99368)"><div id="versionBadge" aria-label="Versió del joc">v0.1</div>
 <div id="startMenu" class="start-menu">
 <h1 style="margin:0;font-size:34px">HUNTER · ARXIPÈLAG</h1>
@@ -235,5 +242,5 @@ body.sniper-scoped #joystick{cursor:crosshair}
 <div class="seed-search-actions"><button id="seedSearchRun" type="button">Buscar</button><button id="seedSearchCancel" type="button" disabled>Cancel·la</button><button id="seedSearchBack" type="button">← Tornar</button></div>
 <div id="seedSearchStatus" class="seed-search-status" role="status">Tria una categoria i un tipus per començar.</div><div id="seedSearchResults" class="seed-results" aria-live="polite"></div></div></div>
 <div id="gamepanel" role="dialog" aria-modal="true" aria-labelledby="panelTitle"><div class="card"><button id="resumeButton" class="panel-close" aria-label="Tanca">×</button><h2 id="panelTitle"></h2><div id="panelBody"></div></div></div>
-<script type="module" src="src/menu-boot.mjs?v=0.5.79"></script></body></html>
+<script type="module" src="src/menu-boot.mjs?v=0.5.80"></script></body></html>
 

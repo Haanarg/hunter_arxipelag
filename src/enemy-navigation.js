@@ -134,14 +134,18 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
   }
 }
 // Resolve invalid generated placements before play, never teleport a moving enemy.
-function prepareEnemyNavigation(){
+function prepareEnemyNavigation(){return drainBuildSteps(prepareEnemyNavigationSteps())}
+function* prepareEnemyNavigationSteps(){
   for(const u of E)if(u.t!=='patrulla_marina')u.o.position.set(u.x,u.gy??enemyGroundAt(u,u.x,u.z),u.z);
   rebuildVehicleGrid();
+  let prepared=0;
   for(const u of E){
+    yield {stage:'Navegació enemiga',completed:prepared++,total:E.length,unit:'enemics'};
     if(u.t==='torre'||u.t==='patrulla_marina')continue;
     if(!enemyMoveClear(u,u.x,u.z,u.hd)){
       const ox=u.x,oz=u.z;let found=false;
       for(let radius=2;radius<=48&&!found;radius+=2)for(let i=0;i<24;i++){
+        if(i%8===0)yield {stage:'Desbloquejant emplaçaments enemics',completed:prepared,total:E.length,unit:'enemics'};
         const a=i*Math.PI/12,x=ox+Math.cos(a)*radius,z=oz+Math.sin(a)*radius;
         // El general es manté dins del seu despatx subterrani ampliat,
         // no dins l'antic rectangle de la planta superior del búnquer.

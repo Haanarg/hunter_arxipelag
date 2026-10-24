@@ -191,10 +191,13 @@ window.HUNTER_VEGETATION=Object.freeze({
       }));
       return cache.get(key);
     };
-    const inst=(parent,geo,arr,color,scale,opts={})=>{
+    function* inst(parent,geo,arr,color,scale,opts={}){
       if(!arr.length)return null;
       const m=new THREE.InstancedMesh(geo,mat(color,opts),arr.length);
-      arr.forEach((row,i)=>{
+      parent.add(m);
+      for(let i=0;i<arr.length;i++){
+        if(i%64===0)yield {stage:'Instàncies de vegetació',completed:i,total:arr.length,unit:'instàncies'};
+        const row=arr[i];
         const [x,y,z,s,r]=row;
         if(opts.crownTrunk){
           // Alineació amb el tronc real (inclosa la seva lleugera
@@ -222,7 +225,7 @@ window.HUNTER_VEGETATION=Object.freeze({
         // Es mantenen tres tirades de color per instància com abans.
         // La variació individual de les fulles viu als vertexColors.
         m.setColorAt(i,colorFor(opts.vertexColors?0xf2f5e9:color,row));
-      });
+      }
       m.computeBoundingSphere();
       m.castShadow=false;
       m.receiveShadow=true;
@@ -261,13 +264,15 @@ window.HUNTER_VEGETATION=Object.freeze({
       parent.add(mesh);return mesh;
     };
     const CHUNK=420;
-    const build=({world,palms,bushes,rocks,playerX=0,playerZ=0,lowQuality=false,lodProfile=null})=>{
+    function* buildSteps({world,palms,bushes,rocks,playerX=0,playerZ=0,lowQuality=false,lodProfile=null}){
       const root=new THREE.Group();
       root.name='hunter-palm-sectors';
       world.add(root);
       const chunks=new Map();
       const variantMap=new Array(palms.length);
-      palms.forEach((row,i)=>{
+      for(let i=0;i<palms.length;i++){
+        if(i%256===0)yield {stage:'Sectors de palmeres',completed:i,total:palms.length,unit:'palmeres'};
+        const row=palms[i];
         const cx=Math.floor(row[0]/CHUNK),cz=Math.floor(row[2]/CHUNK),
               key=cx+','+cz;
         let ch=chunks.get(key);
@@ -277,7 +282,7 @@ window.HUNTER_VEGETATION=Object.freeze({
         }
         const vi=Math.max(0,Math.min(2,(row[5]??0)+1));
         ch.rows.push({row,i,vi});
-      });
+      }
       const sections=[];
       for(const ch of chunks.values()){
         // Les posicions i rotacions continuen en coordenades mundials:
@@ -286,15 +291,15 @@ window.HUNTER_VEGETATION=Object.freeze({
         rows.forEach((p,trunkIndex)=>{
           variantMap[p.i]={chunk:ch,trunkIndex,variant:p.vi,index:-1};
         });
-        ch.trunk=inst(root,geometry.trunk,rows.map(p=>p.row),0x8e6337,null,{profile:'organic',tilt:true});
+        ch.trunk=yield* inst(root,geometry.trunk,rows.map(p=>p.row),0x8e6337,null,{profile:'organic',tilt:true});
         ch.primary=[];ch.secondary=[];
         for(let v=0;v<3;v++){
           const selected=rows.filter(p=>p.vi===v);
           const crowns=selected.map(p=>p.row),
                 crownOpts={doubleSide:true,vertexColors:true,crownTrunk:ch.trunk,
                   trunkIndices:selected.map(p=>variantMap[p.i].trunkIndex)};
-          const primary=inst(root,geometry.palmVariants[v].crown,crowns,0xffffff,null,crownOpts);
-          const secondary=inst(root,geometry.palmVariants[v].crown2,crowns,0xffffff,null,crownOpts);
+          const primary=yield* inst(root,geometry.palmVariants[v].crown,crowns,0xffffff,null,crownOpts);
+          const secondary=yield* inst(root,geometry.palmVariants[v].crown2,crowns,0xffffff,null,crownOpts);
           ch.primary.push(primary);ch.secondary.push(secondary);
           selected.forEach((p,i)=>{variantMap[p.i].index=i});
         }
@@ -309,6 +314,7 @@ window.HUNTER_VEGETATION=Object.freeze({
           ch.midTrunk,ch.midCrown,ch.farTrunk,ch.farCrown].filter(Boolean);
         ch.rows=null;
         sections.push(ch);
+        yield {stage:'Sectors de palmeres',completed:sections.length,total:chunks.size,unit:'sectors'};
       }
       // LOD anticipat: el detall complet només es conserva a prop.
       // La distància es mesura fins a la vora del sector, no al centre.
@@ -331,7 +337,7 @@ window.HUNTER_VEGETATION=Object.freeze({
       // Abans els arbustos i les roques formaven DOS InstancedMesh gegants
       // que recorrien tot l'arxipèlag. Un sector llunyà ja no força tota
       // la vegetació baixa a passar pel pipeline de la GPU.
-      function sectorizeExtras(rows,geo,name,color,scale,opts){
+      function* sectorizeExtras(rows,geo,name,color,scale,opts){
         const parent=new THREE.Group();parent.name=name;world.add(parent);
         const groups=new Map();
         for(const row of rows){
@@ -343,14 +349,14 @@ window.HUNTER_VEGETATION=Object.freeze({
         }
         const result=[];
         for(const g of groups.values()){
-          const mesh=inst(parent,opts.byKind?geo[g.type]:geo,g.rows,color,scale,opts);
+          const mesh=yield* inst(parent,opts.byKind?geo[g.type]:geo,g.rows,color,scale,opts);
           if(mesh)result.push({mesh,x:g.x,z:g.z,count:g.rows.length});
         }
         return {parent,sectors:result};
       }
-      const bushGroup=sectorizeExtras(bushes,geometry.bush,'hunter-bush-sectors',
+      const bushGroup=yield* sectorizeExtras(bushes,geometry.bush,'hunter-bush-sectors',
         0x2f8e42,(d,s)=>d.scale.set(s*1.15,s*.72,s),{profile:'organic'});
-      const rockGroup=sectorizeExtras(rocks,[geometry.rock,geometry.rockTall],
+      const rockGroup=yield* sectorizeExtras(rocks,[geometry.rock,geometry.rockTall],
         'hunter-rock-sectors',0x777985,
         (d,s)=>d.scale.setScalar(s),{profile:'masonry',tilt:true,byKind:true});
       const extraRanges={
@@ -446,6 +452,7 @@ window.HUNTER_VEGETATION=Object.freeze({
         rocks:rockGroup.parent
       };
     };
-    return {geometry,build};
+    const build=options=>{const steps=buildSteps(options);let next;while(!(next=steps.next()).done){}return next.value};
+    return {geometry,build,buildSteps};
   }
 });

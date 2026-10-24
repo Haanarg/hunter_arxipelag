@@ -1,6 +1,6 @@
 # HUNTER · ARXIPÈLAG — progrés de les millores
 
-Actualitzat: 2026-10-24. Aquest fitxer és el punt de represa del pla de catorze fases, ordenat inicialment per impacte. S'han completat i desplegat **6 → 8** per prioritat de l'usuari; les fases saltades continuen pendents. «Implementada» no equival a validació física en Android.
+Actualitzat: 2026-10-24. Aquest fitxer és el punt de represa del pla de catorze fases, ordenat inicialment per impacte. S’han completat i desplegat **6 → 8**. L’usuari ha prioritzat ara **10 → 12**, seguides d’un qüestionari per dirigir la fase 11; la resta continua pendent segons la taula. «Implementada» no equival a validació física en Android.
 
 ## Estat de les fases
 
@@ -15,9 +15,9 @@ Actualitzat: 2026-10-24. Aquest fitxer és el punt de represa del pla de catorze
 | 7 | Orientació i ritme de missió | **Pendent**, ajornada. | Guia d'intel/objectius i direcció útil del waypoint, sense revelar informació desconeguda. |
 | 8 | Sigil i IA llegibles | **Implementada i desplegada**, v0.5.79, commit `fc2a3c3`. Marcadors visibles de sospita/contacte/cerca, posicions de tir i flanc reservades i torns d’entrada. [Detall](docs/PHASE8_STEALTH.md). | Llegibilitat visual, GPU i Android físic pendents. |
 | 9 | Controls tàctils personalitzables | **Pendent.** | Esquerrans, sensibilitat, posicions i persistència de preferències. |
-| 10 | Generació progressiva del món | **Pendent.** | Resposta durant la càrrega i treball distribuït sense canviar llavors. |
-| 11 | Exploració opcional amb decisions | **Pendent.** | Recompenses i alternatives que aportin decisions a la missió. |
-| 12 | So espacial informatiu | **Pendent.** | Indicacions acústiques i memòria cau dels buffers recurrents. |
+| 10 | Generació progressiva del món | **Implementada**, v0.5.80. Un mateix generador per camins síncron i progressiu, feina fragmentada i càrrega/cancel·lació recuperables. [Detall](docs/PHASE10_GENERATION.md). | Verificació del desplegament en curs; latència i aspecte en GPU/Android físic pendents. |
+| 11 | Exploració opcional amb decisions | **Disseny amb l’usuari pendent.** S’ha demanat un qüestionari després de les fases 10 i 12; no s’ha iniciat la implementació. | Recollir prioritats, activitats, recompenses, escenes proposades i límits; acordar un primer prototip. |
+| 12 | So espacial informatiu | **En preparació en una branca separada**, per integrar després de la fase 10. | Posició/direcció, buffers reutilitzats, context únic, límits de veus, silenci i lifecycle. |
 | 13 | Modularització i regressions | **Pendent com a fase.** Hi ha extraccions i proves parcials a les fases anteriors. | Reduir dependències globals i ampliar regressions de comportament. |
 | 14 | Acabat visual i final de partida | **Pendent com a fase.** | Animacions/LOD, poliment, salt de cinemàtiques i resum final. |
 
@@ -53,10 +53,21 @@ Actualitzat: 2026-10-24. Aquest fitxer és el punt de represa del pla de catorze
 - Publicada com a `fc2a3c3e19718dccc68807c47d85d076a14b17d3`. Check de Cloudflare completat amb èxit (build `e1629722-49f0-4382-9087-e1a8be69b87a`, Worker version `01148b74-c0aa-4704-9459-c5f8a95bcc74`). Verificació pública `2026-10-24T20:52:48.015792+00:00`: entrada i `version.mjs` a **0.5.79**, runtime `2d9cc3d4303144f1`, 597.628 bytes, idèntic byte a byte al local verificat (SHA-256 `ea86d357006287bd34f08aafe6fe74b7f21ee1172c9d9fed4985ba1d4b1b8323`).
 - Fases **4, 5 i 7 pendents**, i resta del pla segons la taula. La fase 1 continua parcial; la validació visual en GPU/Android continua pendent.
 
+## Registre de la fase 10
+
+- v0.5.80 preparada amb runtime `5968caddcf5e5fe0`: 54 mòduls, 624.916 bytes. Inici i reinici de producció asíncrons; eines i cercador conserven build síncron.
+- Matriu independent sobre la base intacta `651884f`: 67/12345 × escales 1/2 lògics i 67/1 físic, camins síncron i onclick progressiu. Conserven emplaçaments, col·lisions, botí i continuació RNG; fingerprints compactes amb procedència i dos comptadors interns de consulta exclosos.
+- Món físic 67/1: 15.800 nodes, buffers/instàncies/transforms/visibilitat exactes al baseline (`8c64015e34be5868a382ac2d14501452c76f218499ee9d203a5f20325e2635ca`).
+- Proves de dobleclic, cancel·lació/callback obsolet, error abans del primer await, retry/restart, recursos de terreny parcial, focus/hidden, promesa de bootstrap, desbloqueig d’àudio sense RNG anticipat i absència de simulació/deute temporal. Els errors injectats de prova són intencionats.
+- El scheduler té objectiu 6 ms/32 checkpoints, no termini dur. Es registren maxStepMs/maxTurnMs i etapa; encara hi ha constructors/operacions natives atòmiques. No s’ha afirmat millor rendiment Android ni equivalència universal de llavors.
+- Fonts i paquet final `5968caddcf5e5fe0`: suites pròpia i independent de generació superades (matriu de cinc casos, lifecycle i física). Les regressions de timing, càmera, combat/sigil, recursos, aigua, roques, palmeres, camins, navegació i cache també passen.
+- La passada final del paquet va mesurar un pas màxim de 52,49 ms al cas 67/1 físic (2.318 torns); és una mesura Node/harness amb renderer simulat, no un benchmark Android.
+- Publicació i comprovació pública pendents en aquest commit; la següent actualització registrarà el resultat. La fase12 està preparada en una branca separada, encara pendent d’integrar.
+
 ## Represa
 
 La versió pública comprovada és **0.5.79**, amb les fases 6 i 8 integrades. Per continuar el pla original, la fase pendent de més prioritat és la **4** (perfilar Android), després la **5** (desar/recuperar) i la **7** (orientació); la taula conserva també els pendents de les fases 1 i 9–14. Aquesta anotació no inicia cap fase nova.
 
 ## Límits coneguts de la base
 
-El harness usa geometria Three.js amb un renderitzador simulat: no certifica aspecte visual ni rendiment en GPU o Android. Es conserven discrepàncies antigues en proves aïllades (`compound-generation` a 12345/1, contextos de `vehicle-weapon-reticle` i `player-locomotion`, una expectativa literal de `rowing-audio-camera`, `light-projectile-aim` (`autoAimDown`, reproduït també sobre la base intacta `9a1b87b`), i fixtures antics de `damage-consistency` (context sense `window`) i `combat-heli-rocket-boats` (regex de generació antiga)); no s'han eliminat per obtenir un resultat verd. Vegeu les notes de cada fase.
+El harness usa geometria Three.js amb un renderitzador simulat: no certifica aspecte visual ni rendiment en GPU o Android. Es conserven discrepàncies antigues en proves aïllades (`compound-generation` a 12345/1, contextos de `vehicle-weapon-reticle` i `player-locomotion`, una expectativa literal de `rowing-audio-camera`, les distàncies LOD antigues de `terrain-stream` (reproduït també sobre `651884f`), `light-projectile-aim` (`autoAimDown`, reproduït també sobre la base intacta `9a1b87b`), i fixtures antics de `damage-consistency` (context sense `window`) i `combat-heli-rocket-boats` (regex de generació antiga)); no s'han eliminat per obtenir un resultat verd. Vegeu les notes de cada fase.

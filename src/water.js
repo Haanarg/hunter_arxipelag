@@ -110,12 +110,13 @@ void main(){
       };
       return {step,get samples(){return samples},vertices:p.count};
     };
-    const updateSeabed=()=>{
-      const job=sampler(geometry,resolution);
-      while(!job.step(1000)){}
+    function* updateSeabedSteps(){
+      const job=sampler(geometry,resolution);let rows=0;
+      while(!job.step(1))yield {stage:'Fons marí',completed:++rows,total:null,unit:'files'};
       seabedStats.lastSamples=job.samples;seabedStats.totalVertices=job.vertices;
-      if(shore)shore.regenerate(geometry,resolution);
-    };
+      if(shore)yield* shore.regenerateSteps(geometry,resolution);
+    }
+    const updateSeabed=()=>{const steps=updateSeabedSteps();while(!steps.next().done){}};
     const queueResolutionUpgrade=()=>{
       if(resolution>=segments||refinement)return false;
       const nextGeometry=makeGeometry(segments);
@@ -136,14 +137,15 @@ void main(){
     const cancelRefinement=()=>{
       if(refinement){refinement.geometry.dispose();refinement=null}
     };
-    const setWorldSize=value=>{
+    function* setWorldSizeSteps(value){
       cancelRefinement();
       if(value!==worldSize){
         worldSize=value;span=value+2200;
         const old=geometry;geometry=makeGeometry();mesh.geometry=geometry;old.dispose();
       }
-      updateSeabed();
-    };
+      yield* updateSeabedSteps();
+    }
+    const setWorldSize=value=>{const steps=setWorldSizeSteps(value);while(!steps.next().done){}};
     // Barycentric interpolation of the SAME vertices/triangles displaced by the shader.
     // This avoids floating above/below the rendered surface on coarse mobile meshes.
     const surfaceHeight=(x,z,time)=>{
@@ -160,7 +162,7 @@ void main(){
     const update=t=>{uniforms.time.value=t};
     const dispose=()=>{cancelRefinement();if(shore)shore.dispose();scene.remove(mesh,deep);geometry.dispose();material.dispose();deep.geometry.dispose();deep.material.dispose()};
     return {mesh,deep,shore:shore?.mesh||null,shoreStats:shore?.stats||{segments:0},
-      material,get geometry(){return geometry},get resolution(){return resolution},uniforms,updateSeabed,setWorldSize,queueResolutionUpgrade,stepResolutionUpgrade,surfaceHeight,update,dispose,seabedStats};
+      material,get geometry(){return geometry},get resolution(){return resolution},uniforms,updateSeabed,updateSeabedSteps,setWorldSize,setWorldSizeSteps,queueResolutionUpgrade,stepResolutionUpgrade,surfaceHeight,update,dispose,seabedStats};
   }
 });
 
