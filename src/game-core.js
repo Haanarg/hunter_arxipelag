@@ -1738,6 +1738,9 @@ let staticVisualBatches=[];
 const renderCategories={terreny:0,edificis:0,filferrades:0,vehicles:0,enemics:0,vegetacio:0,decoracio:0,objectes:0,fauna:0,altres:0};
 window.HUNTER_DRAW_CALL_GROUPS=renderCategories;
 adaptivePerformance.stats.drawCategories=renderCategories;
+// Rebuilds must never stack another onBeforeRender callback on an old mesh.
+// WeakMap avoids retaining removed/rebuilt world meshes.
+const registeredDrawHooks=new WeakMap();
 function registerDrawCategories(){
   const tagged=new Map();
   for(const b of B)tagged.set(b.o,'edificis');
@@ -1759,12 +1762,20 @@ function registerDrawCategories(){
       while(root){if(tagged.has(root)){label=tagged.get(root);break}root=root.parent}
       if(label==='altres'&&(mesh.parent?.name==='hunter-bush-sectors'||mesh.parent?.name==='hunter-rock-sectors'))label='vegetacio';
     }
-    // No substituïm les possibles animacions/callbacks ja existents.
+    const existing=registeredDrawHooks.get(mesh);
+    if(existing){
+      // The same mesh can change parent/category across world rebuilds.
+      existing.label=label;
+      return;
+    }
+    // Preserve any existing animation hook, wrapping each mesh only once.
     const previous=mesh.onBeforeRender;
+    const entry={label};
     mesh.onBeforeRender=function(...args){
-      renderCategories[label]++;
-      if(previous)previous.apply(this,args);
+      renderCategories[entry.label]++;
+      if(previous)return previous.apply(this,args);
     };
+    registeredDrawHooks.set(mesh,entry);
   }
   world.traverse(track);
   pl.traverse(track);
@@ -1948,7 +1959,14 @@ const picker=document.createElement('div');picker.style.cssText='position:fixed;
 const pickerToggle=document.createElement('button');pickerToggle.textContent='⚔ Armes';pickerToggle.style.cssText='position:fixed;z-index:99;right:10px;bottom:210px;padding:8px;color:white;background:#304b52;border-radius:9px';pickerToggle.style.display='none';document.body.appendChild(pickerToggle);
 let pickerOpen=false;
 const weaponPickerAvailable=()=>!!started&&document.body.classList.contains('game-started')&&!paused&&!over&&hp>0&&!cv&&!deathCinematic?.active&&!victoryCinematic?.active&&!victoryCinematic?.finished;
-function syncWeaponPicker(){const visible=weaponPickerAvailable();pickerToggle.style.display=visible?'block':'none';if(!visible){pickerOpen=false;picker.style.display='none'}}
+let lastPickerAvailable=null;
+function syncWeaponPicker(){
+  const visible=weaponPickerAvailable();
+  if(visible===lastPickerAvailable)return;
+  lastPickerAvailable=visible;
+  pickerToggle.style.display=visible?'block':'none';
+  if(!visible){pickerOpen=false;picker.style.display='none'}
+}
 pickerToggle.onclick=()=>{if(!weaponPickerAvailable())return;pickerOpen=!pickerOpen;drawWeaponPicker()};
 function drawWeaponPicker(){picker.style.display=pickerOpen&&weaponPickerAvailable()?'flex':'none';picker.replaceChildren();if(picker.style.display==='none')return;const names={pistola:'🔫 Pistola',ganivet:'🔪 Ganivet',franctirador:'🔭 Rifle',bazooka:'🚀 Bazooka',granada:'💣 Granades',cisalla:'✂ Cisalla'};quickWeapons().forEach((k,i)=>{const b=document.createElement('button');b.textContent=(i+1)+' · '+names[k]+' · '+(k==='pistola'?ammo:k==='franctirador'?sniperAmmo:k==='ganivet'?'∞':inv[k]);b.style.cssText='padding:8px;color:white;background:'+(selectedWeapon()===k?'#356c51':'#364a52');b.onclick=()=>{selectWeapon(k);pickerOpen=false;drawWeaponPicker()};picker.appendChild(b)})}
 const act=c=>{if(ui?.isBombTimerOpen?.()){
@@ -3068,8 +3086,7 @@ updateBazookaReticle(dt);
 fcd-=dt;updateGrenadeCharge(dt);if(K.KeyF&&(!grenadeEquipped||cv))fire();updEn(dt);
 window.HUNTER_STEALTH_DEBUG.update(THREE,world,E,P);
 updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);
-const nv=cv?null:nearV();
-uiTick+=dt;if(uiTick>.12){uiTick=0;const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',(!cv&&cheats.fly)||(!!cv&&VT[cv.t]?.m==='a'));contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}const fireButton=document.getElementById('mainFireButton');
+uiTick+=dt;if(uiTick>.12){uiTick=0;const nv=cv?null:nearV();const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',(!cv&&cheats.fly)||(!!cv&&VT[cv.t]?.m==='a'));contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}const fireButton=document.getElementById('mainFireButton');
 if(fireButton){
   const heliGrenade=cv?.t==='heli',
         grenade=heliGrenade||!cv&&grenadeEquipped&&(inv.granada||0)>0,
@@ -3084,7 +3101,7 @@ if(fireButton){
     fireButton.title=heliGrenade?'Llançar granada de l’inventari':grenade?'Mantén premut per arribar més lluny':action;
   }
 }
-updateActionButton(nv);syncWeaponPicker();if(pickerOpen)drawWeaponPicker();
+updateActionButton(nv);if(pickerOpen)drawWeaponPicker();
 mini();ui.renderHUD();}}
 
 
