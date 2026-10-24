@@ -16,12 +16,11 @@ export function createTruckConcept(T,variant=0){
  const cfg=truckConcepts[variant];
  if(!cfg)throw new Error('Proposta de camió desconeguda');
  const g=new T.Group();g.name='Camió expedició 6x6 · '+cfg.id;
- const classic=true; // Totes les variants hereten la cabina buida i ampliada del model A4.
  const mat=(hex,metalness=0)=>new T.MeshStandardMaterial({color:hex,roughness:.86,metalness,flatShading:true,side:T.DoubleSide});
  const body=mat(cfg.cab),roof=mat(cfg.roof),trim=mat(cfg.trim,.14),
    tarp=mat(cfg.canvas),tarpDark=mat(new T.Color(cfg.canvas).multiplyScalar(.77).getHex()),
    tarpLight=mat(new T.Color(cfg.canvas).multiplyScalar(1.16).getHex()),
-   glass=mat(0x365661,.16),rubber=mat(0x242924),hub=mat(0x717b70,.25),
+   rubber=mat(0x242924),hub=mat(0x717b70,.25),
    silver=mat(0x899288,.2),lamp=mat(0xe7dcae),amber=mat(0xd59645),red=mat(0xa33e36);
  // Material de vidre clar que revela l'interior; no escriu profunditat.
  const transparentGlass=new T.MeshStandardMaterial({
@@ -88,7 +87,8 @@ export function createTruckConcept(T,variant=0){
 
  // A: cabina de volum realment buit, ampliada cap enrere.
  // Els panells sòlids queden exclusivament a terra, baixos, paret posterior i sostre.
- if(classic){
+ // Cabina A4 aprovada: única geometria que es feia servir.
+
    const front=-3.66,rear=-1.13,width=3.23,center=(front+rear)/2,length=rear-front;
    box(width,.16,length,floorMat,0,1.67,center).name='A-cabin-floor';
    box(width,.92,.14,body,0,2.10,front+.07).name='A-lower-windscreen-panel';
@@ -130,27 +130,8 @@ export function createTruckConcept(T,variant=0){
    const steering=part(new T.TorusGeometry(.25,.03,5,10),trim);
    steering.position.set(-.77,2.60,-2.90);steering.name='A-steering-wheel';
    rod([-.77,2.60,-2.90],[-.77,2.28,-2.75],.035,trim);
- }else{
- // Cabina avançada, gairebé vertical: tres peces estructurals.
- box(2.92,1.06,2.12,body,0,1.92,-2.52);
- box(2.92,1.28,2.04,body,0,3.01,-2.54);
- box(3.07,.19,2.17,roof,0,3.71,-2.54);
- // Parabrisa inclinat i finestres laterals: només tres superfícies.
- face([[-1.27,2.59,-3.59],[1.27,2.59,-3.59],[1.27,3.46,-3.43],[-1.27,3.46,-3.43]],glass);
- rod([0,2.59,-3.60],[0,3.46,-3.44],.030,trim);
- for(const sign of[-1,1]){
-   const sx=sign*1.475;
-   face([[sx,2.58,-3.28],[sx,3.40,-3.21],[sx,3.40,-2.10],[sx,2.60,-2.14]],glass);
-   rod([sx,1.58,-1.54],[sx,3.53,-1.54],.030,trim);
-   box(.08,.065,.30,trim,sx,2.18,-2.26); // Maneta.
-   rod([sx,3.12,-3.18],[sign*1.75,3.13,-3.25],.038,trim);
-   box(.17,.45,.31,trim,sign*1.79,3.07,-3.25); // Retrovisor.
-   box(.31,.22,.10,lamp,sign*1.20,1.95,-3.65);
-   box(.13,.12,.07,amber,sign*1.23,1.64,-3.64);
- }
 
- }
- const frontShift=classic?-.19:0;
+ const frontShift=-.19;
  box(2.08,.69,.09,trim,0,1.96,-3.65+frontShift); // Reixa frontal.
  for(const y of[1.76,1.96,2.16])box(1.96,.045,.11,silver,0,y,-3.73+frontShift);
  box(3.20,.21,.34,trim,0,1.32,-3.85+frontShift); // Para-xocs.
@@ -176,37 +157,9 @@ export function createTruckConcept(T,variant=0){
  // Cada variant incorpora una solució posterior pròpia, sense cap roda lateral de recanvi.
 
  // La presa d'aire queda per fora de la nova cabina A. Sense recanvi lateral en A.
- const intakeX=classic?1.79:1.55;
- rod([classic?1.68:1.44,1.66,-1.56],[intakeX,3.98,-1.56],.105,trim);
- box(.35,.21,.43,trim,intakeX,4.05,-1.73);
- if(!classic){
-   const spare=new T.Group();spare.name='lateral-spare-wheel';
-   spare.position.set(-1.66,2.77,2.44);spare.rotation.z=.12;g.add(spare);
-   cyl(.62,.24,rubber,0,0,0,spare,12);
-   cyl(.34,.26,hub,0,0,0,spare,10);
- }
-
- if(cfg.style==='forest'){
-   // Camuflatge de blocs grans; cap textura de milions de triangles.
-   for(const z of[-.42,1.20,2.86]){
-     face([[-1.521,2.46,z],[-1.522,3.07,z+.22],[-1.522,2.98,z+.87],[-1.522,2.43,z+.64]],tarpDark);
-     face([[1.521,2.63,z],[1.522,3.17,z+.22],[1.522,2.93,z+.90],[1.522,2.53,z+.74]],tarpLight);
-   }
-   box(1.37,.12,.65,roof,0,3.90,-2.49); // Porta-equipatge pla.
-   box(.48,.46,.73,trim,-1.25,1.42,.30);
- }else if(cfg.style==='patrol'){
-   for(const x of[-1.46,1.46])rod([x,1.31,-4.09],[x,2.11,-3.86],.092,trim);
-   for(const y of[1.42,1.91])rod([-1.52,y,-4.13],[1.52,y,-4.13],.078,trim);
-   box(2.66,.10,.19,trim,0,3.87,-2.85);
-   for(const x of[-.92,0,.92])box(.30,.13,.17,lamp,x,3.94,-2.89);
- }else if(cfg.style==='long'){
-   // Els reforços de la lona alta tenen menys trams que el model inicial.
-   for(const z of[.18,2.07]){
-     rod([-1.20,top-.08,z],[0,top+.015,z],.025,tarpDark);
-     rod([0,top+.015,z],[1.20,top-.08,z],.025,tarpDark);
-   }
-   for(const x of[-1.22,1.22])box(.43,.53,.53,trim,x,1.47,.47);
- }
+ rod([1.68,1.66,-1.56],[1.79,3.98,-1.56],.105,trim);
+ box(.35,.21,.43,trim,1.79,4.05,-1.73);
+ // S'han retirat les versions forest/patrol/long i la roda lateral no usada.
 
  // Blindatge geomètric: cada proposta parteix del mateix model A, no són renders.
  // Les finestres i el parabrisa continuen oberts i transparents.
