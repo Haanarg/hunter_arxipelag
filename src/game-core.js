@@ -1733,6 +1733,7 @@ const simulationClock=window.HUNTER_SIMULATION_CLOCK.create(),
 let simulationFrameActive=false,simulationFocused=true;
 function resetSimulationClock(now=performance.now()){
   simulationClock.reset(now);cinematicClock.reset(now);
+  combatFeedback?.clear();
 }
 // Comptabilitat consultable: temps admès, simulat i descartat, també en pauses.
 window.HUNTER_SIMULATION_STATS={gameplay:simulationClock.stats,cinematic:cinematicClock.stats};
@@ -2289,6 +2290,22 @@ function useInvItem(id){
 function dropInvItem(id){
   if(!inv[id]||id==='arma')return false;inv[id]--;if(inv[id]<=0)delete inv[id];if(id==='disf'&&disg)setDis(false);if(id==='bazooka'&&bazookaEquipped&&!inv.bazooka)bazookaEquipped=false;if(id==='cisalla'&&cisallaEquipped&&!inv.cisalla){cisallaEquipped=false;pl.userData.cisallaCut=0}if(id==='granada'&&grenadeEquipped&&!inv.granada){grenadeEquipped=false;cancelGrenadeCharge()}if(id==='franctirador'&&!inv.franctirador){sniperEquipped=false;setSniperScope(false)}
   msg='Has deixat: '+IT[id].n;msgT=2;return true
+}
+combatFeedback=window.HUNTER_UI.createCombatFeedback({
+  element:document.getElementById('combatFeedback'),
+  hit:document.getElementById('hitConfirm'),
+  direction:document.getElementById('damageDirection')
+});
+const combatCameraForward=new THREE.Vector3(),combatCameraRight=new THREE.Vector3();
+function renderCombatFeedback(){
+  cam.getWorldDirection(combatCameraForward);
+  if(Math.hypot(combatCameraForward.x,combatCameraForward.z)<.001){
+    combatCameraRight.set(1,0,0).applyQuaternion(cam.quaternion);
+    combatCameraForward.set(combatCameraRight.z,0,-combatCameraRight.x);
+  }
+  combatFeedback.update({active:!!started&&!paused&&!over&&simulationFocused&&!document.hidden,
+    now:performance.now(),playerX:P.x,playerZ:P.z,
+    forwardX:combatCameraForward.x,forwardZ:combatCameraForward.z});
 }
 const ui=window.HUNTER_UI.create({
   hud:document.getElementById('hud'),
@@ -3223,6 +3240,7 @@ cinematicClock.advance(now,dt=>{
     (victoryCinematic===victoryAtStart&&(victoryAtStart?.active||victoryAtStart?.finished)||
       deathCinematic===deathAtStart&&deathAtStart?.active);
 },cinematicActive);
+renderCombatFeedback();
 const t=elapsed+(victoryCinematic?victoryCinematic.t:0);
 const simulationEnded=performance.now();
 if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)

@@ -3,28 +3,49 @@
 // Les explosions i les col·lisions sense projectils conserven els FX originals.
 const BULLET_IMPACT_LIMIT=112,bulletImpacts=[],bulletImpactFree=[];
 const bulletBloodGeometry=new THREE.IcosahedronGeometry(.061,0),
-      bulletSparkGeometry=new THREE.BoxGeometry(.045,.045,.17);
+      bulletSparkGeometry=new THREE.BoxGeometry(.045,.045,.17),
+      bulletRicochetGeometry=new THREE.BoxGeometry(.045,.045,.32);
 const bulletImpactMaterials={
   blood:[0x87262a,0xab3535].map(color=>new THREE.MeshBasicMaterial({color,transparent:true,opacity:.86,depthWrite:false})),
-  spark:[0xffdb83,0xffa23d].map(color=>new THREE.MeshBasicMaterial({color,transparent:true,opacity:.94,depthWrite:false}))
+  wound:[0xb52b35,0xd84942].map(color=>new THREE.MeshBasicMaterial({color,transparent:true,opacity:.9,depthWrite:false})),
+  spark:[0xffdb83,0xffa23d].map(color=>new THREE.MeshBasicMaterial({color,transparent:true,opacity:.94,depthWrite:false})),
+  ricochet:[0xd8f3ff,0x7ec9ed].map(color=>new THREE.MeshBasicMaterial({color,transparent:true,opacity:.96,depthWrite:false}))
 };
+let combatFeedback=null;
+function confirmCombatDamage(source,before,after){
+  if(Number.isFinite(before)&&Number.isFinite(after)&&after<before&&
+    (source?.own==='p'||source?.own==='pb'||source?.own==='b'))combatFeedback?.confirmHit();
+}
+function projectileImpactImmune(kind,target,p){
+  if(!(p.dmg>0))return false;
+  const light=!p.spl;
+  if(kind==='wall')return target.towerLegOwner
+    ?light||target.towerLegOwner.hp===Infinity
+    :light&&isMilitaryWall(target)||target.hp===Infinity;
+  if(kind==='building')return light&&isMilitaryBuilding(target)||target.rhp===Infinity;
+  if(kind==='enemy')return target.hp===Infinity||light&&
+    (target.t==='torre'||p.shotClass==='light'&&isArmoredVehicleType(target.t));
+  if(kind==='vehicle')return target.life===Infinity||light&&isArmoredVehicleType(target.t)||cheats.immune&&target===cv;
+  return kind==='player'&&cheats.immune;
+}
 function spawnBulletImpact(type,x,y,z,p){
-  if(!world||(type!=='blood'&&type!=='spark'))return;
-  const blood=type==='blood',count=blood?5:7,
+  if(!world||!bulletImpactMaterials[type])return;
+  const wound=type==='wound',blood=type==='blood'||wound,ricochet=type==='ricochet',
+        count=wound?9:blood?5:ricochet?10:7,
         length=Math.max(.001,Math.hypot(p.vx,p.vy,p.vz)),
         backX=-p.vx/length,backY=-p.vy/length,backZ=-p.vz/length;
   for(let n=0;n<count&&bulletImpacts.length<BULLET_IMPACT_LIMIT;n++){
     const mats=bulletImpactMaterials[type],
-          geometry=blood?bulletBloodGeometry:bulletSparkGeometry,
+          geometry=blood?bulletBloodGeometry:ricochet?bulletRicochetGeometry:bulletSparkGeometry,
           m=bulletImpactFree.pop()||new THREE.Mesh(geometry,mats[n%2]);
     m.geometry=geometry;m.material=mats[n%2];
-    const size=blood?rn(.7,1.1):rn(.7,1.4),
-          life=blood?rn(.24,.38):rn(.13,.27),
-          speed=blood?rn(.5,2.1):rn(1.8,5.4);
+    const size=wound?rn(1.6,2.6):blood?rn(.7,1.1):ricochet?rn(1,1.6):rn(.7,1.4),
+          life=wound?rn(.4,.6):blood?rn(.24,.38):ricochet?rn(.22,.4):rn(.13,.27),
+          speed=wound?rn(.7,2.8):blood?rn(.5,2.1):ricochet?rn(3.5,7.5):rn(1.8,5.4);
     m.position.set(x+backX*.09+rn(-.045,.045),y+backY*.09+rn(-.045,.045),z+backZ*.09+rn(-.045,.045));
     m.rotation.set(rn(0,6.28),rn(0,6.28),rn(0,6.28));
     m.scale.setScalar(size);m.visible=true;world.add(m);
-    bulletImpacts.push({m,life,maxLife:life,size,
+    bulletImpacts.push({m,type,life,maxLife:life,size,
       vx:backX*speed+rn(-speed*.8,speed*.8),
       vy:backY*speed+rn(blood?.15:.7,blood?1.25:3.3),
       vz:backZ*speed+rn(-speed*.8,speed*.8),
@@ -40,7 +61,7 @@ function updateBulletImpacts(dt){
     }
     f.vy-=f.gravity*dt;
     f.m.position.x+=f.vx*dt;f.m.position.y+=f.vy*dt;f.m.position.z+=f.vz*dt;
-    if(f.m.geometry===bulletSparkGeometry){f.m.rotation.x+=dt*17;f.m.rotation.z+=dt*13}
+    if(f.type==='spark'||f.type==='ricochet'){f.m.rotation.x+=dt*17;f.m.rotation.z+=dt*13}
     f.m.scale.setScalar(f.size*Math.max(.05,f.life/f.maxLife));
   }
 }
@@ -51,14 +72,16 @@ function clearBulletImpacts(){
 
 function setDis(v){disg=v;[...pl.userData.mats,...rider.userData.mats].forEach(([m,a,b])=>m.color.copy(vivid(v?b:a)))}
 let playerBlastRagdoll=null;
-function fin(m,cause=null){if(m==='HAS MORT'&&startDeathCinematic(cause))return;setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+' · Obre Ⅱ / Esc per tornar a jugar';endEl.style.display='flex'}
+function fin(m,cause=null){combatFeedback?.clear();if(m==='HAS MORT'&&startDeathCinematic(cause))return;setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+' · Obre Ⅱ / Esc per tornar a jugar';endEl.style.display='flex'}
 // El dany no canvia amb la dificultat: només la dispersió del tir enemic.
 function enemyWeaponDamageScale(){return 1}
 function hurtP(d,fromEnemyWeapon=false,cause=null){
  if(over||cheats.immune)return;
  const amount=wholeDamage(d);
  if(amount<=0)return;
+ const before=hp;
  hp=Math.max(0,Math.ceil(hp)-amount);snd('hurt',.5);
+ if(hp<before)combatFeedback?.damage(cause);
  if(hp<=0)fin('HAS MORT',cause||{type:fromEnemyWeapon?'bullet':'impact'});
 }
 function destroyTower(u){
@@ -125,12 +148,14 @@ function killEnemy(u,killingShot=null){
   else if(u.t==='torre'){destroyTower(u);world.remove(u.o)}
   else if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='patrulla_marina')explodeEnemyVehicle(u);
   else world.remove(u.o);
-  if(u.t==='general')startVictoryCinematic(u,killingShot)
+  if(u.t==='general'){combatFeedback?.clear();startVictoryCinematic(u,killingShot)}
 }
 function hurtE(u,d,killingShot=null){
   const amount=wholeDamage(d);
   if(amount<=0||u.hp<=0)return;
+  const before=u.hp;
   u.hp=Math.max(0,Math.ceil(u.hp)-amount);u.alert=12;
+  confirmCombatDamage(killingShot,before,u.hp);
   if(u.t==='soldat'&&!u.canSee){
     u.aiMode='search';u.searchT=window.HUNTER_STEALTH.CONFIG.searchSeconds;
     const vx=killingShot?.vx??0,vz=killingShot?.vz??0,
@@ -138,15 +163,20 @@ function hurtE(u,d,killingShot=null){
     u.lastSeenX=u.x-vx/norm*15;u.lastSeenZ=u.z-vz/norm*15;
     u.lastSeenY=u.o.position.y;
   }
-  if(u.t==='soldat'||u.t==='general'){
+  if(u.hp<before&&(u.t==='soldat'||u.t==='general')){
     // Ferides de bala, ganivet, explosions i atropellaments: la sang
     // surt del cos del soldat, també quan sobreviu a l'impacte.
-    const bullet=killingShot?.spl===0&&Number.isFinite(killingShot.vx),
-          x=bullet?killingShot.x:u.x+rn(-.15,.15),
-          y=bullet?killingShot.y:(u.o?.position.y??u.gy??hAt(u.x,u.z))+rn(1,1.5),
-          z=bullet?killingShot.z:u.z+rn(-.15,.15),
+    const bullet=killingShot?.spl===0&&Number.isFinite(killingShot.vx)&&
+            Number.isFinite(killingShot.x)&&Number.isFinite(killingShot.y)&&Number.isFinite(killingShot.z),
+          baseY=u.o?.position.y??u.gy??hAt(u.x,u.z),
+          hitDistance=bullet?Math.hypot(killingShot.x-u.x,killingShot.z-u.z):0,
+          hitScale=hitDistance>.6?.6/hitDistance:1,
+          // La col·lisió usa una esfera ampla; només el FX es fixa al cos.
+          x=bullet?u.x+(killingShot.x-u.x)*hitScale:u.x+rn(-.15,.15),
+          y=bullet?Math.max(baseY+.6,Math.min(baseY+2.8,killingShot.y)):baseY+rn(1,1.5),
+          z=bullet?u.z+(killingShot.z-u.z)*hitScale:u.z+rn(-.15,.15),
           sourceX=killingShot?.x??P.x,sourceZ=killingShot?.z??P.z;
-    spawnBulletImpact('blood',x,y,z,{
+    spawnBulletImpact(u.hp>0?'wound':'blood',x,y,z,{
       vx:bullet?killingShot.vx:u.x-sourceX,
       vy:bullet?killingShot.vy:0,
       vz:bullet?killingShot.vz:u.z-sourceZ
@@ -184,12 +214,18 @@ const shotClassFromSplash=spl=>spl>0?'heavy':'light';
 const isMilitaryBuilding=b=>!!b&&!b.civilian&&(!!b.compound||b.kind==='enemy_bunker');
 const isMilitaryWall=w=>!!w?.towerLegOwner||isMilitaryBuilding(w?.owner);
 const isArmoredVehicleType=t=>t==='tanqueta'||t==='tanc';
-function damageVehicle(v,dmg,impacts=1,shotClass='collision'){
+function damageVehicle(v,dmg,impacts=1,shotClass='collision',source=null){
  if(cheats.immune&&v===cv)return;
  if(!v||v.destroyed||shotClass==='light'&&isArmoredVehicleType(v.t))return;
  const amount=shotClass==='collision'?Math.max(1,wholeDamage(impacts)):wholeDamage(dmg);
  if(amount<=0)return;
- v.life=Math.max(0,Math.ceil(v.life??VT[v.t]?.life??1)-amount);v.smokeT=0;
+ const before=v.life??VT[v.t]?.life??1;
+ v.life=Math.max(0,Math.ceil(before)-amount);v.smokeT=0;
+ confirmCombatDamage(source,before,v.life);
+ if(v===cv&&v.life<before)combatFeedback?.damage({
+   x:source?.spl===0?source.sx:source?.x,
+   z:source?.spl===0?source.sz:source?.z
+ });
  if(v.life<=0)explodeVehicle(v);
 }
 
@@ -340,7 +376,7 @@ function boom(x,y,z,r,dmg,own,source=null){
  for(const v of [...vehicleCandidatesAt(x,z,r+12,true)]){
   if(v.destroyed)continue;
   const dealt=explosionDamage(dmg,explosionDistanceToVehicleHull(v,x,y,z),r);
-  if(dealt&&!blastOccluded(x,y,z,v.x,(v.o?.position?.y??0)+1,v.z))damageVehicle(v,dealt,1,'heavy');
+  if(dealt&&!blastOccluded(x,y,z,v.x,(v.o?.position?.y??0)+1,v.z))damageVehicle(v,dealt,1,'heavy',source||{x,y,z,own});
  }
  // Les granades i el C4 propis també poden fer mal al jugador a peu.
  if(!pilotedAtStart&&!source?.skipPlayer){
@@ -1088,19 +1124,23 @@ function updPj(dt){
     const t=hit?bestT:1;p.x=x0+sx*t;p.y=y0+sy*t;p.z=z0+sz*t;p.o.position.set(p.x,p.y,p.z);
     if(!hit)continue;
 
+    const ineffective=projectileImpactImmune(kind,target,p);
+    if(p.spl&&ineffective)spawnBulletImpact('ricochet',p.x,p.y,p.z,p);
     if(!p.spl){
       // La mateixa detecció de col·lisions dona feedback en ambdós sentits.
       // Soldats/general/jugador: sang discreta; altres dianes: espurnes.
-      const person=kind==='player',
-            solid=kind==='wall'||kind==='building'||kind==='vehicle'||kind==='enemy';
-      if(person)spawnBulletImpact('blood',p.x,p.y,p.z,p);
+      const solid=kind==='wall'||kind==='building'||kind==='vehicle'||kind==='enemy';
+      if(ineffective)spawnBulletImpact('ricochet',p.x,p.y,p.z,p);
       else if(solid&&!(kind==='enemy'&&(target.t==='soldat'||target.t==='general')))spawnBulletImpact('spark',p.x,p.y,p.z,p);
       if(kind==='wall'){if(!isMilitaryWall(target))dmgW(target,p.dmg)}
       else if(kind==='building'){if(!isMilitaryBuilding(target)){target.rhp-=p.dmg;if(target.rhp<=0)roofBreak(target)}}
       else if(kind==='tree'&&target?.p)dmgP(target,p.dmg);
       else if(kind==='enemy'){if(target.t!=='torre'&&!(p.shotClass==='light'&&isArmoredVehicleType(target.t)))hurtE(target,p.dmg,p)}
-      else if(kind==='vehicle')damageVehicle(target,p.dmg,1,'light');
-      else if(kind==='player')hurtP(p.dmg,p.own==='e',{type:'bullet',x:p.sx,y:p.sy,z:p.sz})
+      else if(kind==='vehicle')damageVehicle(target,p.dmg,1,'light',p);
+      else if(kind==='player'){
+        const before=hp;hurtP(p.dmg,p.own==='e',{type:'bullet',x:p.sx,y:p.sy,z:p.sz});
+        if(hp<before)spawnBulletImpact('blood',p.x,p.y,p.z,p);
+      }
     }
     if(p.spl)boom(p.x,p.y,p.z,p.spl,p.dmg,p.own,p);
     world.remove(p.o);Pj.splice(i,1)

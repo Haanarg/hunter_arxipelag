@@ -1,5 +1,47 @@
 // HUD i menús. Manté la presentació fora del bucle principal de simulació.
 window.HUNTER_UI=Object.freeze({
+  createCombatFeedback({element,hit,direction}){
+    const HIT_SECONDS=.18,DAMAGE_SECONDS=.72,
+      state={hitUntil:0,damageUntil:0,sourceX:null,sourceZ:null,
+        directionAngle:0,hitVisible:false,damageVisible:false};
+    function clear(){
+      state.hitUntil=0;state.damageUntil=0;state.sourceX=null;state.sourceZ=null;
+      state.directionAngle=0;state.hitVisible=false;state.damageVisible=false;
+      element.hidden=true;hit.hidden=true;direction.hidden=true;
+      hit.style.opacity='0';direction.style.opacity='0';
+    }
+    function confirmHit(now=performance.now()){
+      if(Number.isFinite(now))state.hitUntil=now+HIT_SECONDS*1000;
+    }
+    function damage(source,now=performance.now()){
+      if(!Number.isFinite(now))return;
+      state.damageUntil=now+DAMAGE_SECONDS*1000;
+      state.sourceX=Number.isFinite(source?.x)?source.x:null;
+      state.sourceZ=Number.isFinite(source?.z)?source.z:null;
+    }
+    function update({now=performance.now(),active,playerX,playerZ,forwardX,forwardZ}){
+      if(!active||!Number.isFinite(now)){clear();return}
+      const hitLeft=Math.max(0,(state.hitUntil-now)/1000),
+        damageLeft=Math.max(0,(state.damageUntil-now)/1000),
+        dx=state.sourceX===null?0:state.sourceX-playerX,
+        dz=state.sourceZ===null?0:state.sourceZ-playerZ,
+        validDirection=state.sourceX!==null&&state.sourceZ!==null&&
+          Math.hypot(dx,dz)>.1&&Math.hypot(forwardX,forwardZ)>.001;
+      state.hitVisible=hitLeft>0;
+      state.damageVisible=damageLeft>0&&validDirection;
+      if(state.damageVisible){
+        // Dalt = davant de la càmera; +90° = dreta de la pantalla.
+        state.directionAngle=Math.atan2(-dx*forwardZ+dz*forwardX,dx*forwardX+dz*forwardZ);
+        direction.style.transform='translate(-50%,-50%) rotate('+state.directionAngle+'rad)';
+      }
+      hit.hidden=!state.hitVisible;direction.hidden=!state.damageVisible;
+      hit.style.opacity=String(Math.min(1,hitLeft/HIT_SECONDS));
+      direction.style.opacity=String(.78*Math.min(1,damageLeft/DAMAGE_SECONDS));
+      element.hidden=!state.hitVisible&&!state.damageVisible;
+    }
+    clear();
+    return Object.freeze({state,confirmHit,damage,update,clear});
+  },
   create({hud,panel,title,body,resumeButton,minimap,getState,actions}){
     function renderHUD(context){
       const s=getState(context),state=s.vehicle?s.vehicleTypes[s.vehicle.t].n:s.swimming?'Nedant':s.crouching?'Ajupit':s.inside?'Interior':'A peu',veh=s.vehicle,vehInfo=veh?'<br>🛡️ '+Math.max(0,veh.life??0)+'/'+(veh.maxLife??0)+(veh.t==='llanxa_coets'?' · 🚀 ∞':veh.rockets!=null?' · 🚀 '+veh.rockets:veh.t==='heli'?' · 💣 '+(s.inventory.granada||0)+' granades':''):'',weaponInfo=s.bazookaEquipped&&!veh?' · 🚀 Bazooka '+(s.inventory.bazooka||0)+' coets':s.grenadeEquipped&&!veh?' · 💣 Granades '+(s.inventory.granada||0):s.cisallaEquipped&&!veh?' · ✂ Cisalla':s.sniperEquipped&&!veh?' · 🔭 Rifle '+s.sniperAmmo+' cartutxos'+(s.scopeActive?' · Mira x8':''):'';
