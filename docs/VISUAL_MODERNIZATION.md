@@ -8,6 +8,10 @@ Aquest document substitueix la cronologia acumulada de propostes i revisions int
 
 La fase 2 separa la mirada lliure de la direcció física dels vehicles, amb retorn gradual en moviment. Els interiors ordinaris passen a ocultar només els obstacles interposats a la càmera; el soterrani conserva les col·lisions i el sostre opac, amb transicions limitades al seu volum. El detall de comportament, proves i límits és a [PHASE2_CAMERA.md](PHASE2_CAMERA.md). El resum i les referències històriques següents mantenen l’abast de les revisions anteriors.
 
+## Actualització del ritme de simulació — 0.5.77, 24 d’octubre de 2026
+
+La fase 3 substitueix el límit antic de 50 ms per passos semi-fixos de fins a 1/60 s, amb una resta final i recuperació acotada a 250 ms per fotograma. Joc i cinemàtiques tenen rellotges separats; les pauses i la generació reinicien la referència temporal. La cadència sostinguda del jugador conserva l’excés del subpas corrent, sense acumular trets en inactivitat. Renderitzat i pressupost de navegació continuen per fotograma. Detall, proves i límits a [PHASE3_SIMULATION.md](PHASE3_SIMULATION.md).
+
 ## Resum de la revisió
 
 | Àmbit | Estat actual |

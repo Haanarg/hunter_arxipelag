@@ -226,6 +226,7 @@ node tests/startup-cache.cjs
 node tests/compound-generation.cjs
 npm run test:mission
 npm run test:camera
+npm run test:timing
 node tests/seed-replay.cjs
 node tests/terrain-level-index.cjs
 node tests/terrain-stream.cjs
@@ -239,6 +240,7 @@ node tests/victory-cinematic.cjs
 - **Manual:** `.github/workflows/essential-tests.yml` executa grups de regressions; `mission` selecciona el contracte de missió, la matriu acotada i el soterrani. Cap workflow s’activa en fer push.
 - [Contracte de viabilitat de missió](docs/MISSION_VIABILITY.md): prerequisits, corredors locals mostrejats, reproducció de portes i límits de la prova. Les eines són fora del runtime i no allarguen l’arrencada.
 - [Càmera i conducció, fase 2](docs/PHASE2_CAMERA.md): mirada independent en vehicles, interiors i comprovacions; grup manual `camera`.
+- [Ritme de simulació, fase 3](docs/PHASE3_SIMULATION.md): subpassos acotats, rellotges de joc i cinemàtiques, cadència i pauses; grup manual `timing`.
 - `npm run test:optimization` comprova les plantilles compartides, els callbacks, la UI i la coherència del bundle.
 - Les comparatives actives es conserven; els prototips orfes i les referències retirades no formen part del runtime.
 

@@ -210,7 +210,7 @@ function enemyCarRifleShot(u,target,targetY){
     direction:new THREE.Vector3(0,0,-1).applyQuaternion(
       crew.muzzle.getWorldQuaternion(new THREE.Quaternion())).normalize()};
 }
-function updEn(dt){enemyPathBudget=2;enemyNodeBudget=160;rebuildVehicleGrid();E.forEach(u=>{
+function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathBudget=2;enemyNodeBudget=160}rebuildVehicleGrid();E.forEach(u=>{
   if(u.t==='patrulla_marina'){updateMarinePatrol(u,dt);return}
   if(u.blastT>0){
     const imp=u.blastImpulse;u.blastT=Math.max(0,u.blastT-dt);

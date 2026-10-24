@@ -1,6 +1,6 @@
 window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){const esc=v=>String(v||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])),m=(e&&e.message)?e.message:"Error desconegut",where=e&&e.filename?(e.filename.split("/").pop()+":"+e.lineno+":"+e.colno):"",stack=e&&e.error&&e.error.stack?e.error.stack:"";p.innerHTML="<h1>No s’ha pogut iniciar el joc</h1><p style=\"max-width:560px\">Error d’arrencada: <b>"+esc(m)+"</b></p>"+(where?"<p><b>"+esc(where)+"</b></p>":"")+(stack?"<pre style=\"max-width:90vw;white-space:pre-wrap;text-align:left;font-size:11px;opacity:.8\">"+esc(stack)+"</pre>":"")+"<p style=\"opacity:.8\">Envia una captura d’aquest missatge si persisteix.</p>"}});
 let terrainStream=null,seedSearchMode=false,seedCompounds=[],seedScratchWorld=null;
-const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_WAVES','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI','HUNTER_SEED_SEARCH','HUNTER_CAMERA_CONTROLS'];
+const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_WAVES','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI','HUNTER_SEED_SEARCH','HUNTER_CAMERA_CONTROLS','HUNTER_SIMULATION_CLOCK'];
 const missingModules=requiredModules.filter(name=>!window[name]);if(missingModules.length)throw new Error('Mòduls Hunter absents: '+missingModules.join(', '));
 const missingSystems=Object.entries({generation:typeof build,combat:typeof fire,enemies:typeof updEn,audio:typeof initAudio}).filter(([,type])=>type!=='function').map(([name])=>name);if(missingSystems.length)throw new Error('Sistemes Hunter absents: '+missingSystems.join(', '));
 // La mida escollida a la portada ja és coneguda quan s'inicialitza el motor.
@@ -656,7 +656,7 @@ document.querySelectorAll('#ini button[data-d]').forEach(b=>b.onclick=()=>{
   requestedSeed=rawSeed;
   build();minimap.setWorldSize(S,H);minimap.reset();mini();
   // Sense captura WebGL síncrona/toDataURL: evitar bloqueig després de generar el món.
-  started=1;iniEl.style.display='none';document.body.classList.add('game-started');initAudio()
+  started=1;iniEl.style.display='none';document.body.classList.add('game-started');initAudio();resetSimulationClock()
 });
 // animacions de destrucció
 const DB=[],WA=[],HR=[],dgeo=new THREE.BoxGeometry(1,1,1),dmc={},dmat=c=>dmc[c]||(dmc[c]=M(c));
@@ -1728,6 +1728,14 @@ window.HUNTER_MINIMAP_STATS=minimap.stats;
 const mini=()=>minimap.draw();
 // control
 let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0,worldVisualTick=0,palmVisualTick=0;
+const simulationClock=window.HUNTER_SIMULATION_CLOCK.create(),
+      cinematicClock=window.HUNTER_SIMULATION_CLOCK.create();
+let simulationFrameActive=false,simulationFocused=true;
+function resetSimulationClock(now=performance.now()){
+  simulationClock.reset(now);cinematicClock.reset(now);
+}
+// Comptabilitat consultable: temps admès, simulat i descartat, també en pauses.
+window.HUNTER_SIMULATION_STATS={gameplay:simulationClock.stats,cinematic:cinematicClock.stats};
 const vehicleLook=window.HUNTER_CAMERA_CONTROLS.createVehicleLook(),
       cameraOcclusion=window.HUNTER_CAMERA_CONTROLS.createOcclusion();
 let drag=null,cameraVehicle=null,cameraBasement=null;
@@ -2159,7 +2167,9 @@ for(const b of document.querySelectorAll('[data-k]')){
   for(const v of ['pointercancel','lostpointercapture'])
     b.addEventListener(v,()=>{if(c==='KeyF')cancelGrenadeCharge();K[c]=0;b.classList.remove('held')});
 }
-addEventListener('blur',()=>{clearKeys();if(started&&!paused&&!over)panel('pause')});document.addEventListener('visibilitychange',()=>{if(document.hidden&&started&&!over)panel('pause')});
+addEventListener('blur',()=>{simulationFocused=false;resetSimulationClock();clearKeys();if(started&&!paused&&!over)panel('pause')});
+addEventListener('focus',()=>{simulationFocused=true;resetSimulationClock()});
+document.addEventListener('visibilitychange',()=>{resetSimulationClock();if(document.hidden&&started&&!over)panel('pause')});
 ren.domElement.addEventListener('wheel',e=>{e.preventDefault();if(e.shiftKey){cycleWeapon(e.deltaY>0?1:-1);return}zoom=Math.max(.7,Math.min(1.9,zoom+e.deltaY*.001))},{passive:false});
 ren.domElement.addEventListener('pointerdown',e=>{
   syncCameraVehicle();
@@ -2219,8 +2229,8 @@ function setCheat(key,enabled){
   if(key==='fly'){cheatFlightY=enabled?P.y:null;if(enabled){cv=null;playerFall=null;playerEject=null;swimming=false}}
   if(key==='invisible'&&enabled)for(const u of E){u.canSee=false;u.canShoot=false;u.alert=0;u.recognition=0;u.pursuitT=0;if(u.t==='soldat'){u.aiMode='patrol';u.searchT=0}}
 }
-function resume(){paused=false;clearKeys();ui.hide();if(AC&&!muted)AC.resume()}
-function panel(mode){setSniperScope(false);paused=true;pickerOpen=false;picker.style.display='none';pickerToggle.style.display='none';clearKeys();if(eng)eng.g.gain.value=0;if(AC)AC.suspend();ui.show(mode)}
+function resume(){paused=false;simulationFocused=true;clearKeys();ui.hide();if(AC&&!muted)AC.resume();resetSimulationClock()}
+function panel(mode){setSniperScope(false);paused=true;resetSimulationClock();pickerOpen=false;picker.style.display='none';pickerToggle.style.display='none';clearKeys();if(eng)eng.g.gain.value=0;if(AC)AC.suspend();ui.show(mode)}
 // Les cartes revelen informació de forma immediata: no són objectes
 // d'inventari que s'hagin d'equipar ni obrir manualment.
 function revealMapPickup(kind){
@@ -2799,6 +2809,7 @@ updateCrouchButton();
    hp=0;fin('HAS MORT',{type:'impact',x:P.x,y:P.y,z:P.z});
  }
  if(!started||paused||over){resetCameraState();updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
+if(!(dt>0))return;
 rebuildVehicleGrid();elapsed+=dt;
 window.HUNTER_STEALTH.tick(dt);
 const playerStartX=P.x,playerStartZ=P.z;
@@ -3151,7 +3162,16 @@ if(playerEject&&playerEject.t<=0){
   playerEject=null;
 }
 updateBazookaReticle(dt);
-fcd-=dt;updateGrenadeCharge(dt);if(K.KeyF&&(!grenadeEquipped||cv))fire();updEn(dt);
+const previousCooldown=Math.max(0,fcd);
+fcd=Math.max(0,previousCooldown-dt);updateGrenadeCharge(dt);
+if(K.KeyF&&(!grenadeEquipped||cv)){
+  const overshoot=previousCooldown>0?Math.min(0,previousCooldown-dt):0;
+  fire();
+  // Conservam només la fracció del pas que travessa el cooldown actual.
+  // Aturats a zero no es guarden trets ni escurçam la primera espera.
+  if(fcd>0)fcd=Math.max(0,fcd+overshoot);
+}
+updEn(dt,simulationFrameActive);
 window.HUNTER_STEALTH_DEBUG.update(THREE,world,E,P);
 updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);
 uiTick+=dt;if(uiTick>.12){uiTick=0;const nv=cv?null:nearV();const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',(!cv&&cheats.fly)||(!!cv&&VT[cv.t]?.m==='a'));contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}const fireButton=document.getElementById('mainFireButton');
@@ -3173,12 +3193,37 @@ updateActionButton(nv);if(pickerOpen)drawWeaponPicker();
 mini();ui.renderHUD({nearVehicle:nv});}}
 
 
-let last=performance.now();
-(function loop(now){const rawDt=(now-last)/1000,dt=Math.min(.05,Math.max(0,rawDt));last=now;const t=elapsed+(victoryCinematic?victoryCinematic.t:started&&!paused&&!over?dt:0),cpuStarted=performance.now();
-update(dt,t);
+let last=performance.now();resetSimulationClock(last);
+(function loop(now){
+const rawDt=Number.isFinite(now)&&now>=last?(now-last)/1000:0;
+last=Number.isFinite(now)&&now>=0?now:performance.now();
+const cpuStarted=performance.now(),victoryAtStart=victoryCinematic,
+      deathAtStart=deathCinematic,visible=simulationFocused&&!document.hidden,
+      gameplayActive=!!started&&!paused&&!over&&visible,
+      cinematicActive=!!started&&!paused&&visible&&
+        (!!victoryAtStart&&(victoryAtStart.active||victoryAtStart.finished)||!!deathAtStart?.active);
+// El pressupost de navegació és per fotograma, no es multiplica pels subpassos.
+enemyPathBudget=2;enemyNodeBudget=160;simulationFrameActive=true;
+let simulated;
+try{
+  simulated=simulationClock.advance(now,dt=>{
+    update(dt,elapsed+dt);
+    return !!started&&!paused&&!over&&simulationFocused&&!document.hidden;
+  },gameplayActive);
+}finally{simulationFrameActive=false}
+// També sense temps nou cal netejar controls, HUD i estat de càmera.
+if(!simulated.steps)update(0,elapsed);
 syncWeaponPicker();
-if(victoryCinematic?.active||victoryCinematic?.finished)updateVictoryCinematic(dt);
- if(deathCinematic?.active)updateDeathCinematic(dt);
+// Només avança la cinemàtica que ja existia a l'inici del fotograma.
+// El seu rellotge separat també admet 250 ms, en passos de fins a 1/60.
+cinematicClock.advance(now,dt=>{
+  if(victoryCinematic===victoryAtStart&&(victoryAtStart?.active||victoryAtStart?.finished))updateVictoryCinematic(dt);
+  if(deathCinematic===deathAtStart&&deathAtStart?.active)updateDeathCinematic(dt);
+  return !paused&&simulationFocused&&!document.hidden&&
+    (victoryCinematic===victoryAtStart&&(victoryAtStart?.active||victoryAtStart?.finished)||
+      deathCinematic===deathAtStart&&deathAtStart?.active);
+},cinematicActive);
+const t=elapsed+(victoryCinematic?victoryCinematic.t:0);
 const simulationEnded=performance.now();
 if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
   terrainStream.update(victoryCinematic?.active?cam.position.x:P.x,

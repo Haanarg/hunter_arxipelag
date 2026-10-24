@@ -67,7 +67,6 @@ assert.match(combat,/type:'vehicleExplosion',x:v\.x/);
 assert.match(core,/type:'shark',x:f\.x/);
 assert.match(core,/type:'fall',x:P\.x/);
 assert.match(core,/type:'runover',x:v\.x/);
-assert.match(core,/if\(deathCinematic\?\.active\)updateDeathCinematic\(dt\)/);
 assert.match(core,/ren\.render\(v\.voidScene,v\.voidCamera\)/);
 assert.ok(core.includes('ren.render(deathCinematic.underwaterScene,cam)'),
  'El fons submarí s\'ha de renderitzar realment');
@@ -109,7 +108,9 @@ assert.ok(html.includes('.death-water-filter'),'Vel blau en CSS');
    'A la repetició el jugador conserva la rotació prèvia, no es posa bocaterrosa');
  assert.ok(Math.abs(natural.voidAngle+Math.PI/2)<.01,
    'Després de la fosa la Parca troba el cos bocaterrosa');
- game.run('updateDeathCinematic(.1)');
+ game.frame(100);
+ assert.ok(Math.abs(game.run('deathCinematic.t')-.1)<1e-9,
+   'El bucle real avança la cinemàtica 100 ms sense perdre temps');
  const moved=game.run("({delta:deathCinematic.motion.angular.length(),replayAngle:pl.rotation.x,phase:deathCinematic.phase})");
  assert.equal(moved.phase,'replay');
  assert.ok(moved.delta>0,'La caiguda conserva impuls angular físic');

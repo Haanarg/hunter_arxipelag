@@ -77,6 +77,6 @@ module.exports=async function createGame(root=path.resolve(__dirname,'..')){
     vm.runInContext(fs.readFileSync(path.join(root,src),'utf8'),c,{filename:src,timeout:60000});
   c.VD=c.HUNTER_VEHICLE_DYNAMICS;
   const run=s=>vm.runInContext(s,c,{timeout:120000});
-  return {run,el,dispatch(target,type,init={}){const node=target==='window'?c:target==='document'?document:typeof target==='string'?el(target):target;const e={type,...init};node.dispatchEvent(e);return e},start(seed='12345',scale=1){el('seedInput').value=seed;el('mapSize').value=String(scale);button.onclick()},frame(ms=16){now+=ms;nextFrame(now)},context:c};
+  return {run,el,dispatch(target,type,init={}){const node=target==='window'?c:target==='document'?document:typeof target==='string'?el(target):target;const e={type,...init};node.dispatchEvent(e);return e},start(seed='12345',scale=1){el('seedInput').value=seed;el('mapSize').value=String(scale);button.onclick()},frame(ms=16){now+=ms;nextFrame(now)},get now(){return now},advanceTime(ms){now+=ms},frameAt(ms){now=ms;nextFrame(now)},context:c};
 };
 
