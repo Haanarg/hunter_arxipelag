@@ -207,7 +207,7 @@ Validació essencial actual: `node tests/seed-replay.cjs` i `node tests/smoke.cj
 - La portada continua sent una imatge fixa i precàrrega Three.js i el paquet del motor quan el navegador està disponible, sense activar WebGL.
 - Els scripts clàssics de `runtime-scripts.mjs` s'agrupen en un sol fitxer `dist/hunter-runtime.<hash>.js` minificat amb `npm ci --ignore-scripts` i `npm run build`; l'ordre original es conserva i existeix un carregador alternatiu per a errors de xarxa.
 - El bundle és el mode de producció; `?runtime=source` carrega els scripts individuals. GitHub Actions només s’executa manualment. El contingut del paquet determina el nom de fitxer, evitant invalidar tota la memòria cau en cada revisió.
-- Cloudflare Pages utilitza `_headers` per conservar els paquets amb hash i revalidar l'HTML i els manifests.
+- Cloudflare Workers Static Assets utilitza `_headers` per conservar els paquets amb hash i revalidar l'HTML i els manifests.
 - La textura detallada s'elabora progressivament després del primer fotograma i l'aigua comença amb una malla de 160 divisions (o menys, segons perfil); la malla final es prepara per blocs i substitueix l'anterior quan està completa.
 - Des de la consola es poden consultar `window.HUNTER_STARTUP_TIMINGS` (motor, món, total), `window.HUNTER_BUILD_STATS` (generació) i `water.resolution` en les proves. Aquestes xifres són de l'equip real i permeten comparar abans/després.
 
@@ -257,7 +257,9 @@ Laboratoris conservats per a iteracions visuals:
 
 ## Publicació i llicències
 
-`main` és la branca oficial. El domini del joc és https://hunter.paradoxa.cat/, amb desplegament a Cloudflare Pages; no s’ha de reintroduir GitHub Pages. Tots els workflows són manuals.
+`main` és la branca oficial. El domini del joc és https://hunter.paradoxa.cat/, amb desplegament a Cloudflare Workers Static Assets; no s’ha de reintroduir GitHub Pages. Tots els workflows de GitHub Actions són manuals.
+
+`wrangler.jsonc` fixa el Worker existent `hunter-arxipelag` i la carpeta pública. Cloudflare pot continuar executant `npx wrangler deploy`: `.assetsignore` exclou dependències, eines, proves i metadades, conservant les pàgines de comparació, `src/`, `dist/`, `vendor/`, `assets/` i `_headers`. `.gitignore` no substitueix aquest filtre de publicació. El bundle verificat es conserva al repositori i el desplegament no necessita reconstruir-lo.
 
 Three.js es distribueix sota MIT: [llicència](vendor/THREE-LICENSE.txt) i [procedència i reproducció](vendor/README.md). El projecte no té encara una llicència pròpia de distribució.
 

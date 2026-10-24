@@ -1,0 +1,19 @@
+# Dependencies, build tooling and repository metadata are not website assets.
+/node_modules/
+**/node_modules/
+/.git/
+/.github/
+/.wrangler/
+/tests/
+/tools/
+/docs/
+/package.json
+/package-lock.json
+/wrangler.jsonc
+/.assetsignore
+/.gitignore
+/README.md
+/.dev.vars*
+/.env*
+.DS_Store
+Thumbs.db
