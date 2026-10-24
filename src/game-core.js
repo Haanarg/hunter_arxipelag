@@ -1,6 +1,6 @@
 window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){const esc=v=>String(v||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])),m=(e&&e.message)?e.message:"Error desconegut",where=e&&e.filename?(e.filename.split("/").pop()+":"+e.lineno+":"+e.colno):"",stack=e&&e.error&&e.error.stack?e.error.stack:"";p.innerHTML="<h1>No s’ha pogut iniciar el joc</h1><p style=\"max-width:560px\">Error d’arrencada: <b>"+esc(m)+"</b></p>"+(where?"<p><b>"+esc(where)+"</b></p>":"")+(stack?"<pre style=\"max-width:90vw;white-space:pre-wrap;text-align:left;font-size:11px;opacity:.8\">"+esc(stack)+"</pre>":"")+"<p style=\"opacity:.8\">Envia una captura d’aquest missatge si persisteix.</p>"}});
 let terrainStream=null,seedSearchMode=false,seedCompounds=[],seedScratchWorld=null;
-const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_WAVES','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI','HUNTER_SEED_SEARCH'];
+const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_WAVES','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI','HUNTER_SEED_SEARCH','HUNTER_CAMERA_CONTROLS'];
 const missingModules=requiredModules.filter(name=>!window[name]);if(missingModules.length)throw new Error('Mòduls Hunter absents: '+missingModules.join(', '));
 const missingSystems=Object.entries({generation:typeof build,combat:typeof fire,enemies:typeof updEn,audio:typeof initAudio}).filter(([,type])=>type!=='function').map(([name])=>name);if(missingSystems.length)throw new Error('Sistemes Hunter absents: '+missingSystems.join(', '));
 // La mida escollida a la portada ja és coneguda quan s'inicialitza el motor.
@@ -1728,6 +1728,24 @@ window.HUNTER_MINIMAP_STATS=minimap.stats;
 const mini=()=>minimap.draw();
 // control
 let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0,worldVisualTick=0,palmVisualTick=0;
+const vehicleLook=window.HUNTER_CAMERA_CONTROLS.createVehicleLook(),
+      cameraOcclusion=window.HUNTER_CAMERA_CONTROLS.createOcclusion();
+let drag=null,cameraVehicle=null,cameraBasement=null;
+function restoreCameraWalls(){
+  cameraOcclusion.restore();
+  if(activeBunker?.basement)activeBunker.basement.cameraHiddenWalls.length=0;
+}
+function cancelCameraDrag(){
+  const id=drag?.id;drag=null;
+  if(id==null)return;
+  // Un pointer cancel·lat o perdut ja pot haver perdut la captura nativa.
+  try{if(ren.domElement.hasPointerCapture(id))ren.domElement.releasePointerCapture(id)}catch{}
+}
+function resetCameraState(){
+  cancelCameraDrag();vehicleLook.reset();cameraVehicle=cv;
+  restoreCameraWalls();
+}
+function syncCameraVehicle(){if(cameraVehicle!==cv)resetCameraState()}
 const LOD_NEAR2=500*500,LOD_MID2=1200*1200,ITEM_ANIM2=500*500,FAUNA_NEAR2=650*650,FAUNA_MID2=1400*1400;
 // Distàncies visuals per família. NO afecten danys, física, IA ni mapa.
 const VISUAL_RANGES={
@@ -1836,8 +1854,10 @@ function updateDistanceVisibility(){
     b.roof.visible=(!inside||basementView)&&b.rhp>0;
     for(const r of b.extraRoofs||[])r.visible=b.roof.visible;
     if(b.upperFloor)b.upperFloor.visible=!b.rb&&(!inside||P.y>=b.fy+b.storey-.6);
-    b.wm.opacity=b.dm.opacity=inside&&!basementView?.18:1;
-    b.wm.depthWrite=b.dm.depthWrite=!inside||basementView;
+    // Les peces interposades s'oculten a la càmera, no totes les parets
+    // de l'habitació. La resta conserva el material opac original.
+    b.wm.opacity=b.dm.opacity=1;
+    b.wm.depthWrite=b.dm.depthWrite=true;
     if(!b.o.visible)visibilityStats.buildings++;
     if(obscured)visibilityStats.terrainOccluded++;
   }
@@ -1960,6 +1980,7 @@ for(const side of ['left','right']){
   for(const name of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(name,release);
 }
 const clearKeys=()=>{
+  resetCameraState();
   cancelGrenadeCharge();Object.keys(K).forEach(k=>K[k]=0);
   joystick.reset();releaseStrafeButtons();
   document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))
@@ -2045,6 +2066,7 @@ function parachuteRoofLanding(x0,z0,y0,x1,z1,y1){
 // Compartida per al salt voluntari i per a la destrucció de l'helicòpter.
 // La caiguda conserva l'altura i la inèrcia; el dany es calcula en aterrar.
 function ejectFromHelicopter(v){
+  resetCameraState();
   const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),side=rn(-1,1)<0?-1:1,
         ground=Math.max(0,hAt(v.x,v.z)),
         altitude=Number.isFinite(v.alt)?v.alt:(v.o?.position?.y??ground);
@@ -2073,7 +2095,7 @@ function truckExitCandidate(v,side,index){
   return{x:v.x+sx*exitSide*lateral+fx*behind,
     z:v.z+sz*exitSide*lateral+fz*behind,side:exitSide};
 }
-function toggle(){if(playerFall||playerEject)return;if(scopeActive)setSniperScope(false);if(cv){
+function toggle(){if(playerFall||playerEject)return;resetCameraState();if(scopeActive)setSniperScope(false);if(cv){
 const leaving=cv,speed=Math.abs(leaving.v),isAir=VT[leaving.t].m==='a',
       platform=leaving.t==='ferry'?leaving:leaving.carrier||ferryForVehicle(leaving),
       platformLocal=platform?ferryLocal(platform,leaving.x,leaving.z):null,
@@ -2139,8 +2161,32 @@ for(const b of document.querySelectorAll('[data-k]')){
 }
 addEventListener('blur',()=>{clearKeys();if(started&&!paused&&!over)panel('pause')});document.addEventListener('visibilitychange',()=>{if(document.hidden&&started&&!over)panel('pause')});
 ren.domElement.addEventListener('wheel',e=>{e.preventDefault();if(e.shiftKey){cycleWeapon(e.deltaY>0?1:-1);return}zoom=Math.max(.7,Math.min(1.9,zoom+e.deltaY*.001))},{passive:false});
-let drag=null;ren.domElement.addEventListener('pointerdown',e=>{if(!started||paused||over)return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};ren.domElement.setPointerCapture(e.pointerId)});ren.domElement.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId||paused)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(scopeActive)scopePitch=Math.max(-.65,Math.min(.65,scopePitch-dy*.00115));drag.y=e.clientY;if(scopeActive)scopeYaw-=dx*.00115;else{const q=cv||P;q.hd-=dx*.006}drag.x=e.clientX});ren.domElement.addEventListener('pointerup',()=>drag=null);ren.domElement.addEventListener('pointercancel',()=>drag=null);
+ren.domElement.addEventListener('pointerdown',e=>{
+  syncCameraVehicle();
+  if(!started||paused||over||drag||e.button!=null&&e.button!==0)return;
+  drag={id:e.pointerId,x:e.clientX,y:e.clientY,vehicle:cv,scope:scopeActive};
+  try{ren.domElement.setPointerCapture(e.pointerId)}catch{cancelCameraDrag()}
+});
+ren.domElement.addEventListener('pointermove',e=>{
+  syncCameraVehicle();
+  if(!drag||drag.id!==e.pointerId)return;
+  if(!started||paused||over||drag.vehicle!==cv||drag.scope!==scopeActive){resetCameraState();return}
+  const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+  if(scopeActive){
+    scopePitch=Math.max(-.65,Math.min(.65,scopePitch-dy*.00115));
+    scopeYaw-=dx*.00115;
+  }else if(cv)vehicleLook.turn(dx);
+  else P.hd-=dx*.006;
+  drag.x=e.clientX;drag.y=e.clientY;
+});
+const releaseCameraPointer=e=>{
+  if(!drag||drag.id!==e.pointerId)return;
+  cancelCameraDrag();vehicleLook.release();
+};
+for(const name of ['pointerup','pointercancel','lostpointercapture'])
+  ren.domElement.addEventListener(name,releaseCameraPointer);
 function setSniperScope(enabled){
+  resetCameraState();
   const wasActive=scopeActive;
   scopeActive=!!enabled&&sniperEquipped&&!!inv.franctirador&&!cv&&!swimming&&!over;
   if(scopeActive)playerCrouched=false;
@@ -2716,7 +2762,21 @@ window.HUNTER_VEHICLES.animateSteering(o,v.t,tr,dt);
 v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0):(v.pedalPhase||0),sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*sweep;r.rotation.z=-side*(.12+dip);r.rotation.x=.06*Math.sin(rowPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})}
 let runStepTimer=0,stealthStepTimer=0;
 const cameraOffset=new THREE.Vector3(),bunkerEye=new THREE.Vector3();
+function hideCameraObstructions(owner,eye,basement){
+  const radius=Math.hypot(eye.x-cam.position.x,eye.z-cam.position.z)/2+2;
+  for(const wall of wallCandidates((eye.x+cam.position.x)/2,(eye.z+cam.position.z)/2,radius)){
+    if(wall.owner!==owner||!!wall.bunkerBasementWall!==basement||
+      !wall.m?.visible||wall.destroyedWall||wall.hp<=0)continue;
+    if(wall.y1<Math.min(eye.y,cam.position.y)||wall.y0>Math.max(eye.y,cam.position.y))continue;
+    const hit=segmentAabbT(eye.x,eye.y,eye.z,cam.position.x,cam.position.y,cam.position.z,
+      wall.x0,wall.x1,wall.y0,wall.y1,wall.z0,wall.z1);
+    if(hit===null||hit<=.005||hit>=.995)continue;
+    cameraOcclusion.hide(wall);
+    if(basement)owner.basement.cameraHiddenWalls.push(wall.m);
+  }
+}
 function update(dt,t){
+syncCameraVehicle();
 if(activeBunker?.basement?.lights?.length){
   const basement=activeBunker.basement;
   const nearby=started&&!paused&&
@@ -2738,7 +2798,7 @@ updateCrouchButton();
  if(started&&!over&&hp<=0){
    hp=0;fin('HAS MORT',{type:'impact',x:P.x,y:P.y,z:P.z});
  }
- if(!started||paused||over){updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
+ if(!started||paused||over){resetCameraState();updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
 rebuildVehicleGrid();elapsed+=dt;
 window.HUNTER_STEALTH.tick(dt);
 const playerStartX=P.x,playerStartZ=P.z;
@@ -2829,7 +2889,9 @@ const walkingDeck=!cv&&!playerFall?pedestrianFerry(P.x,P.z,P.y):null;
 V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;v.strafeV=0;return}if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
 syncFerryCargo();updateTerminalRamps();
 if(walkingDeck&&!walkingDeck.f.destroyed){const p=ferryWorld(walkingDeck.f,walkingDeck.q.x,walkingDeck.q.z);P.x=p.x;P.z=p.z}
+const previousInterior=ib;
 ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2&&P.y<(solidRoofAt(b,P.x,P.z)?.bottom??b.fy+b.h+.1))||null;
+if(ib!==previousInterior)worldVisualTick=0;
 const floor=ib&&ib.kind!=='enemy_bunker'?Math.max(ib.fy+.3,groundAt(P.x,P.z,P.y)):groundAt(P.x,P.z,P.y),
       surface=wy(P.x,P.z,t),
       insideBasement=playerInsideBunkerBasement(P.x,P.z,P.y);
@@ -2999,27 +3061,22 @@ if(cv&&(cv.t==='tanc'||cv.t==='tanqueta')){
       new THREE.Vector3(ax,ay,az),dt);
   }
 }
-// Una càmera en mode mira no ha de deixar envans ocults del fotograma
-// anterior: la restauració és independent del mode de càmera.
-if(activeBunker?.basement?.cameraHiddenWalls){
-  for(const mesh of activeBunker.basement.cameraHiddenWalls){
-    const door=activeBunker.basement.doors.find(d=>d.m===mesh);
-    // Les portes automàtiques obertes NO han de reapareixer en
-    // restaurar la paret amagada al fotograma anterior.
-    mesh.visible=!door||door.openProgress<.98;
-  }
-  activeBunker.basement.cameraHiddenWalls.length=0;
-}
+// Restituïm només peces vives que la càmera havia ocultat, també en
+// canviar d'edifici. La física de parets i portes continua intacta.
+restoreCameraWalls();
+syncCameraVehicle();
 const scopeNow=scopeActive&&sniperEquipped&&!cv&&!playerFall&&!swimming;
 const fieldOfView=scopeNow?2*Math.atan(Math.tan(58*Math.PI/360)/8)*180/Math.PI:58;
 if(Math.abs(cam.fov-fieldOfView)>.001){cam.fov=fieldOfView;cam.updateProjectionMatrix()}
 if(scopeNow){
+  cameraBasement=null;
   const fx=-Math.sin(scopeYaw),fz=-Math.cos(scopeYaw),vertical=Math.tan(scopePitch);
   cam.position.set(P.x-fx*.12,P.y+1.76,P.z-fz*.12);
   cam.lookAt(P.x+fx*160,P.y+1.76+vertical*160,P.z+fz*160);
 }else{
   const T=cv||P,c=cv?VT[cv.t]:ib?{cd:6,ch:11}:{cd:10,ch:5},ty=cv?cv.o.position.y:P.y,
-    w=cameraOffset.set(T.x+Math.sin(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1),0,T.z+Math.cos(T.hd)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1));
+    heading=cv?vehicleLook.heading(cv,dt,!!drag):P.hd,
+    w=cameraOffset.set(T.x+Math.sin(heading)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1),0,T.z+Math.cos(heading)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1));
   // Mode soterrani també durant el PRIMER esglaó, no només quan
   // el jugador ja ha baixat 2 m. La càmera no es pot quedar darrere
   // d'un envà opac, ni pot perseguir l'altura exterior de la muntanya.
@@ -3035,14 +3092,14 @@ if(scopeNow){
   // produeix cap obstrucció; els llums queden ancorats al sostre real.
   if(b?.basement)for(const slab of b.basement.upperSlabMeshes)slab.visible=true;
   if(bunkerBelow){
-    // Càmera estable a distància normal, sense correccions angulars
-    // brusques ni l'antic raycast que la teletransportava davant dels envans.
+    // Distància normal i suavitzat dins el volum segur del soterrani.
+    // L'entrada es fixa sota el forjat: interpolar des de fora creuaria
+    // el sostre opac. La resta del recorregut no pot tornar-hi a passar.
     const targetEye=bunkerEye.set(P.x,
       Math.min(b.fy-1.0,Math.max(b.basement.floorY+1.6,P.y+1.65)),P.z);
     const cameraDistance=Math.max(10.5,Math.min(17,13.5*zoom));
     const cameraHeight=Math.max(b.basement.floorY+5.4,
       Math.min(b.fy-1.55,P.y+7.2));
-    const heading=T.hd;
     w.set(P.x+Math.sin(heading)*cameraDistance,cameraHeight,
       P.z+Math.cos(heading)*cameraDistance);
     // No deixam sortir la càmera del volum subterrani, perquè llavors
@@ -3056,34 +3113,35 @@ if(scopeNow){
       const q=buildingWorldPoint(b,clampedX,clampedZ);
       w.x=q.x;w.z=q.z;
     }
-    cam.position.copy(w);
+    if(cameraBasement!==b)cam.position.copy(w);
+    else cam.position.lerp(w,1-Math.exp(-7*dt));
+    const smoothLocal=buildingLocalPoint(b,cam.position.x,cam.position.z),
+      safe=buildingWorldPoint(b,
+        Math.max(-b.basement.halfX+1.3,Math.min(b.basement.halfX-1.3,smoothLocal.x)),
+        Math.max(-b.basement.halfZ+1.3,Math.min(b.basement.halfZ-1.3,smoothLocal.z)));
+    cam.position.set(safe.x,
+      Math.max(b.basement.floorY+5.4,Math.min(b.fy-1.55,cam.position.y)),safe.z);
     // La càmera POT travessar els envans. Només ocultam les peces
     // físiques interposades entre càmera i jugador, no les parets
     // de tota la cambra ni les col·lisions del personatge.
-    for(const wall of wallCandidates(
-      (targetEye.x+cam.position.x)/2,(targetEye.z+cam.position.z)/2,
-      cameraDistance/2+2)){
-      if(wall.owner!==b||!wall.bunkerBasementWall||!wall.m||
-         !wall.m.visible)continue;
-      if(wall.y1<Math.min(targetEye.y,cam.position.y)||
-         wall.y0>Math.max(targetEye.y,cam.position.y))continue;
-      const hit=segmentAabbT(targetEye.x,targetEye.y,targetEye.z,
-        cam.position.x,cam.position.y,cam.position.z,
-        wall.x0,wall.x1,wall.y0,wall.y1,wall.z0,wall.z1);
-      if(hit!==null&&hit>.005&&hit<.995){
-        wall.m.visible=false;
-        b.basement.cameraHiddenWalls.push(wall.m);
-      }
-    }
+    hideCameraObstructions(b,targetEye,true);
     b.basement.cameraInside=true;
+    cameraBasement=b;
   }else{
     if(b?.basement)b.basement.cameraInside=false;
     w.y=Math.max(ty+c.ch*zoom*(cv?Math.sqrt(VS[cv.t]):1),hAt(w.x,w.z)+3,2.5);
-    cam.position.lerp(w,1-Math.pow(.001,dt));
+    // En sortir del soterrani cal passar directament al costat exterior
+    // del forjat. El suavitzat exterior es manté sempre damunt el terreny,
+    // inclòs l'arc entre dues posicions segures al voltant d'un turó.
+    if(cameraBasement)cam.position.copy(w);
+    else cam.position.lerp(w,1-Math.pow(.001,dt));
+    cam.position.y=Math.max(cam.position.y,hAt(cam.position.x,cam.position.z)+3,2.5);
+    cameraBasement=null;
+    if(ib&&!cv)hideCameraObstructions(ib,bunkerEye.set(P.x,P.y+1.65,P.z),false);
   }
-  cam.lookAt(T.x-Math.sin(T.hd)*(bunkerBelow?3.5:8),
+  cam.lookAt(T.x-Math.sin(heading)*(bunkerBelow?3.5:8),
     Math.min(bunkerBelow?b.fy-1.0:Infinity,ty+(bunkerBelow?2.0:2)),
-    T.z-Math.cos(T.hd)*(bunkerBelow?3.5:8));
+    T.z-Math.cos(heading)*(bunkerBelow?3.5:8));
 }
 if(playerEject&&playerEject.t<=0){
   if(playerBlastRagdoll){

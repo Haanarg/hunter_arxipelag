@@ -157,6 +157,7 @@ function hurtE(u,d,killingShot=null){
 function explodeVehicle(v){
   if(!v||v.destroyed)return;v.destroyed=true;const wasPilot=cv===v,yy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
   if(wasPilot){
+    resetCameraState();
     if(VT[v.t]?.m==='a'){
       // Abandonament forçat en ple vol: el jugador surt realment des de
       // l'altura de l'helicòpter i rep el dany corresponent quan cau.

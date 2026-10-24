@@ -7,6 +7,7 @@
   "scripts": {
     "build": "node tools/build-runtime.cjs",
     "check:build": "node tools/build-runtime.cjs --check",
+    "test:camera": "node tests/camera-controls.cjs",
     "test:mission": "node tests/mission-viability-validator.cjs && node tests/mission-viability.cjs",
     "test:optimization": "node tests/shared-resources.cjs && node tests/optimization-ui-render-hooks.cjs && node tests/startup-cache.cjs"
   }

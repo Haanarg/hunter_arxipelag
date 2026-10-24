@@ -33,6 +33,8 @@ Obre http://localhost:8000. Three.js 0.186.1 es carrega des de `vendor/`, sense 
 
 Amb la mira activa, els controls de moviment orienten la mira i el personatge queda quiet. En mòbil hi ha joystick, desplaçament lateral i botons contextuals. Els mapes recollits s’activen automàticament. Els ajustos gràfics i interruptors de diagnòstic són al menú **Rendiment**, accessible des de la portada i la pausa.
 
+En un vehicle, arrossegar gira la càmera independentment de la direcció. En deixar anar, la vista torna suaument al darrere quan el vehicle es mou; aturat, conserva l’angle de mirada. A peu es manté el gir del personatge, i el franctirador conserva els controls de la mira.
+
 ## Contingut implementat
 
 - Mapes de 4,8 × 4,8 km o 9,6 × 9,6 km, llavor configurable i cercador per vehicles, objectes o complexos.
@@ -223,6 +225,7 @@ node tests/smoke.cjs
 node tests/startup-cache.cjs
 node tests/compound-generation.cjs
 npm run test:mission
+npm run test:camera
 node tests/seed-replay.cjs
 node tests/terrain-level-index.cjs
 node tests/terrain-stream.cjs
@@ -235,6 +238,7 @@ node tests/victory-cinematic.cjs
 - **Manual:** `.github/workflows/runtime-bundle.yml` reconstrueix i verifica el paquet.
 - **Manual:** `.github/workflows/essential-tests.yml` executa grups de regressions; `mission` selecciona el contracte de missió, la matriu acotada i el soterrani. Cap workflow s’activa en fer push.
 - [Contracte de viabilitat de missió](docs/MISSION_VIABILITY.md): prerequisits, corredors locals mostrejats, reproducció de portes i límits de la prova. Les eines són fora del runtime i no allarguen l’arrencada.
+- [Càmera i conducció, fase 2](docs/PHASE2_CAMERA.md): mirada independent en vehicles, interiors i comprovacions; grup manual `camera`.
 - `npm run test:optimization` comprova les plantilles compartides, els callbacks, la UI i la coherència del bundle.
 - Les comparatives actives es conserven; els prototips orfes i les referències retirades no formen part del runtime.
 

@@ -4,6 +4,10 @@ Revisió documental: **13 d’octubre de 2026**. Base contrastada: **0.4.24**, c
 
 Aquest document substitueix la cronologia acumulada de propostes i revisions intermèdies. Descriu el que existeix al codi i conserva els objectius encara oberts. L’historial detallat es pot recuperar amb Git. **Implementat no vol dir validat en totes les llavors ni en tots els dispositius.**
 
+## Actualització de càmera i conducció — 0.5.76, 24 d’octubre de 2026
+
+La fase 2 separa la mirada lliure de la direcció física dels vehicles, amb retorn gradual en moviment. Els interiors ordinaris passen a ocultar només els obstacles interposats a la càmera; el soterrani conserva les col·lisions i el sostre opac, amb transicions limitades al seu volum. El detall de comportament, proves i límits és a [PHASE2_CAMERA.md](PHASE2_CAMERA.md). El resum i les referències històriques següents mantenen l’abast de les revisions anteriors.
+
 ## Resum de la revisió
 
 | Àmbit | Estat actual |
