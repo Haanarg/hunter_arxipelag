@@ -1,6 +1,6 @@
 # HUNTER · ARXIPÈLAG — progrés de les millores
 
-Actualitzat: 2026-10-24. Aquest fitxer és el punt de represa del pla de catorze fases, ordenat inicialment per impacte. S’han completat i desplegat les fases **6, 8, 10 i 12**. El següent pas acordat és el qüestionari per dirigir la fase 11 amb l’usuari; la resta continua pendent segons la taula. «Implementada» no equival a validació física en Android.
+Actualitzat: 2026-10-25. Aquest fitxer és el punt de represa del pla de catorze fases, ordenat inicialment per impacte. S’han completat i desplegat les fases **6, 8, 10 i 12**. Les respostes de direcció de la fase 11 ja estan desades; hi ha tres propostes i falta que l’usuari triï l’abast del primer prototip. La resta continua pendent segons la taula. «Implementada» no equival a validació física en Android.
 
 ## Estat de les fases
 
@@ -16,7 +16,7 @@ Actualitzat: 2026-10-24. Aquest fitxer és el punt de represa del pla de catorze
 | 8 | Sigil i IA llegibles | **Implementada i desplegada**, v0.5.79, commit `fc2a3c3`. Marcadors visibles de sospita/contacte/cerca, posicions de tir i flanc reservades i torns d’entrada. [Detall](docs/PHASE8_STEALTH.md). | Llegibilitat visual, GPU i Android físic pendents. |
 | 9 | Controls tàctils personalitzables | **Pendent.** | Esquerrans, sensibilitat, posicions i persistència de preferències. |
 | 10 | Generació progressiva del món | **Implementada i desplegada**, v0.5.80, commit `7d967fe`. Un mateix generador per camins síncron i progressiu, feina fragmentada i càrrega/cancel·lació recuperables. [Detall](docs/PHASE10_GENERATION.md). | Latència i aspecte en GPU/Android físic pendents. |
-| 11 | Exploració opcional amb decisions | **Qüestionari preparat; decisions de l’usuari pendents.** [Qüestionari](docs/PHASE11_QUESTIONNAIRE.md). No s’ha iniciat la implementació. | Recollir respostes i idees, presentar 2–3 propostes, acordar el primer prototip i revisar-lo jugant. |
+| 11 | Exploració opcional amb decisions | **Direcció de l’usuari recollida; primer prototip pendent d’elecció.** [Respostes](docs/PHASE11_QUESTIONNAIRE.md) i [tres propostes](docs/PHASE11_DESIGN.md). No s’ha iniciat la implementació. | Triar o combinar propostes, acordar si la nit/espera entra al primer prototip, desenvolupar-lo i revisar-lo jugant. |
 | 12 | So espacial informatiu | **Implementada i desplegada**, v0.5.81, commit `27b3d77`, integrada sobre la fase 10. [Detall](docs/PHASE12_AUDIO.md). | Escolta i qualitat auditiva en Android físic pendents. |
 | 13 | Modularització i regressions | **Pendent com a fase.** Hi ha extraccions i proves parcials a les fases anteriors. | Reduir dependències globals i ampliar regressions de comportament. |
 | 14 | Acabat visual i final de partida | **Pendent com a fase.** | Animacions/LOD, poliment, salt de cinemàtiques i resum final. |
@@ -69,12 +69,21 @@ Actualitzat: 2026-10-24. Aquest fitxer és el punt de represa del pla de catorze
 - v0.5.81 preparada amb runtime `70ae02e240d66267`: 54 mòduls, 634.752 bytes. Integrada sobre la fase 10, amb la mateixa geometria i inici progressiu.
 - Fonts i paquet: suite espacial i revisió independent d’integració superades. Buffer/context/bucles reutilitzats, atenuació única, listener real, veus 18/24 amb prioritats, throttle per emissor, neteja/pausa/mute/focus, errors de graf i autoplay provats.
 - Repetició del món físic 67/1 sobre el paquet integrat: buffers i 15.800 nodes exactes al baseline. Passen també timing (set perfils), càmera (16 perfils), feedback 6, sigil 8, mort/victòria i integritat/cache. La comprovació auditiva real en Android continua pendent.
-- La fase 11 té qüestionari preparat i no té implementació: cal recollir respostes/idees, acordar propostes i primer prototip.
+- En acabar la fase 12 es va lliurar el qüestionari de la fase 11. Les respostes s’han recollit el 2026-10-25; vegeu-ne el registre següent. La fase 11 encara no té implementació.
 - Publicada com a `27b3d779ccdae5a6037f6f07a963149623487323`. Cloudflare: èxit, build `2c6a70e8-8a9e-4920-ad85-98535d2711a3`, Worker version `49154c54-aacd-4cb4-aea4-154cb66fab54`. Verificació HTTP `2026-10-24T21:48:05.039830+00:00`: entrada i version.mjs a **0.5.81**, runtime `70ae02e240d66267` de 634.752 bytes, idèntic al local verificat (SHA256 `d4bae8ce06dc72b1cb1cf10e6f60f7586ac73224dd87247afd3f39986d8461b9`).
+
+## Registre de la fase 11 — direcció creativa
+
+- 2026-10-25: respostes de l’usuari desades al [qüestionari](docs/PHASE11_QUESTIONNAIRE.md), amb la seva escena literal i els límits explícits.
+- Sandbox obert: preparació de l’assalt, aventures i descoberta lliure. Prioritat d’activitats: **vehicles/equipament → sabotatge → rescats**. Prioritat de recompenses: **equipament/transport → defenses/patrulles → conseqüències visibles**.
+- Descoberta per pistes, documents/ràdio i identificació després de descobrir; ritme mixt. Les errades poden canviar condicions tàctiques, mantenint viable l’objectiu principal. Sense fabricació d’objectes, diàlegs llargs ni obligacions secundàries.
+- Tres [propostes concretes](docs/PHASE11_DESIGN.md): A, magatzem de costa; B, relé de comunicacions sabotejable; C, presoner del taller. Són compatibles, però l’usuari encara ha de triar el primer prototip.
+- Revisió de viabilitat delegada, sense canvis de codi: cisalla, disfressa, patrulles, búnquer, general i guàrdies ja existeixen. La nit/espera, el sabotatge de comunicacions proposat i els rescats necessiten implementació. La disfressa no garanteix pas segur i la porta actual del búnquer fa soroll.
+- Recomanació **pendent d’acceptació**: A, amb nit i espera si l’usuari ho vol per provar la seva incursió. No s’ha iniciat cap funcionalitat de la fase 11 ni s’ha canviat la versió del joc.
 
 ## Represa
 
-La versió pública comprovada és **0.5.81**, amb les fases **10 i 12 completades** i les millores anteriors conservades. **Següent pas acordat: les respostes de l’usuari al [qüestionari de la fase 11](docs/PHASE11_QUESTIONNAIRE.md)**. Després es presentaran propostes concretes i s’acordarà el primer prototip abans de programar-lo. Les fases 4, 5, 7, 9, 13 i 14 continuen pendents segons la taula; la 1 continua parcial.
+La darrera versió pública verificada continua sent **0.5.81**, amb les fases **10 i 12 completades** i les millores anteriors conservades. Les [respostes de la fase 11](docs/PHASE11_QUESTIONNAIRE.md) ja estan desades. **Següent pas: l’usuari tria, combina o corregeix les [propostes de primer prototip](docs/PHASE11_DESIGN.md), inclosa la decisió sobre nit i espera.** La recomanació és A (magatzem de costa), opcionalment amb nit/espera; encara no està acceptada ni programada. Les fases 4, 5, 7, 9, 13 i 14 continuen pendents segons la taula; la 1 continua parcial.
 
 ## Límits coneguts de la base
 
