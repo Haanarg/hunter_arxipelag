@@ -1184,15 +1184,12 @@ function addBunkerBasement(b){
   slab(shaftLeft,shaftRight,-16.2,shaftNear);
   slab(shaftLeft,shaftRight,shaftFar,16.2);
   floorPanel(-halfX+.4,halfX-.4,-halfZ+.4,halfZ-.4,-9.27,0x434c49);
-  // La part nova del soterrani queda coberta, sota el terreny.
-  // No engrandim el forat exterior de l'escala ni el forjat superior.
-  if(!seedSearchMode){
-    const cover=(xa,xb,za,zb)=>floorPanel(xa,xb,za,zb,-1.05,0x545e58);
-    cover(-halfX,-19.2,-halfZ,halfZ);
-    cover(19.2,halfX,-halfZ,halfZ);
-    cover(-19.2,19.2,-halfZ,-16.2);
-    cover(-19.2,19.2,16.2,halfZ);
-  }
+  // Sostre continu, independent dels envans destructibles del búnquer.
+  // La única obertura és la caixa d'escala.
+  slab(-halfX,-19.2,-halfZ,halfZ);
+  slab(19.2,halfX,-halfZ,halfZ);
+  slab(-19.2,19.2,-halfZ,-16.2);
+  slab(-19.2,19.2,16.2,halfZ);
   // Tres cambres a ponent, dues a llevant i passadís central.
   wall(-halfX+.4,0,.8,halfZ*2-.8);wall(halfX-.4,0,.8,halfZ*2-.8);
   wall(0,-halfZ+.4,halfX*2-.8,.8);wall(0,halfZ-.4,halfX*2-.8,.8);
@@ -1394,6 +1391,24 @@ if(Number.isFinite(previous))for(const b of buildingCandidates(x,z)){
 }
 const ramp=terminalRampHeight(x,z);if(ramp!==null)y=Math.max(y,ramp);if(Number.isFinite(previous)){const deck=pedestrianFerry(x,z,previous);if(deck)y=Math.max(y,deck.y)}
 return y}
+// Deixar un replà i entrar lateralment al forat activa gravetat.
+function stairDropAt(x,z,previousY){
+  if(!Number.isFinite(previousY))return false;
+  const b=activeBunker;
+  if(b?.basement&&previousY>b.fy-1){
+    const p=buildingLocalPoint(b,x,z),st=b.basement.stair;
+    if(Math.abs(p.x-st.x)<st.width/2&&
+      p.z>Math.min(st.zTop,st.zBottom)&&p.z<Math.max(st.zTop,st.zBottom)&&
+      previousY-bunkerSubFloorAt(x,z,previousY)>.7)return true;
+  }
+  for(const building of buildingCandidates(x,z)){
+    if(!building.upperFloor||building.rb||!building.interiorStair||building.interiorStair.destroyed)continue;
+    const level=building.fy+building.storey+.15;
+    if(previousY<level-.6||!stairContains(building.interiorStair,x,z))continue;
+    if(previousY-groundAt(x,z,previousY)>.7)return true;
+  }
+  return false;
+}
 function addRampAccess(b,side){const [nx,nz]=[[0,1],[0,-1],[1,0],[-1,0]][side],edge=(nx?b.w:b.d)/2+.2,x=b.x+nx*edge,z=b.z+nz*edge,top=b.fy+.3;
 let length=8,bottom=hAt(x+nx*length,z+nz*length);for(let L=8;L<=26;L+=2){const yy=hAt(x+nx*L,z+nz*L);if(Math.abs(top-yy)<Math.abs(top-bottom)){length=L;bottom=yy}if(Math.abs(top-yy)<.35){length=L;bottom=yy;break}}
 if(Math.abs(top-bottom)<.1)return;const width=Math.max(6,Math.min(b.doorWidth-.8,30)),r={x,z,nx,nz,top,bottom,length,width,ramp:true};stairs.push(r);b.stair=r;
@@ -3184,7 +3199,8 @@ const cameraOffset=new THREE.Vector3(),bunkerEye=new THREE.Vector3();
 function hideCameraObstructions(owner,eye,basement){
   const radius=Math.hypot(eye.x-cam.position.x,eye.z-cam.position.z)/2+2;
   for(const wall of wallCandidates((eye.x+cam.position.x)/2,(eye.z+cam.position.z)/2,radius)){
-    if(wall.owner!==owner||!!wall.bunkerBasementWall!==basement||
+    if(wall.owner!==owner||
+      (!!wall.bunkerBasementWall!==basement&&!(basement&&wall.indoorFurniture))||
       !wall.m?.visible||wall.destroyedWall||wall.hp<=0)continue;
     if(wall.y1<Math.min(eye.y,cam.position.y)||wall.y0>Math.max(eye.y,cam.position.y))continue;
     const hit=segmentAabbT(eye.x,eye.y,eye.z,cam.position.x,cam.position.y,cam.position.z,
@@ -3265,16 +3281,18 @@ else{P.hd+=tr*dt*2.2;if(cheats.fly){
   P.x=Math.max(-lim,Math.min(lim,P.x+fall.vx*dt));
   P.z=Math.max(-lim,Math.min(lim,P.z+fall.vz*dt));
   fall.y+=fall.vy*dt;
-  const water=wy(P.x,P.z,t),roof=parachuteRoofLanding(oldX,oldZ,oldY,P.x,P.z,fall.y),
-        landing=Math.max(hAt(P.x,P.z),water-1.4,roof??-Infinity);
+  const water=wy(P.x,P.z,t),shaft=fall.kind==='shaft',
+        roof=shaft?null:parachuteRoofLanding(oldX,oldZ,oldY,P.x,P.z,fall.y),
+        landing=shaft?groundAt(P.x,P.z,fall.y):
+          Math.max(hAt(P.x,P.z),water-1.4,roof??-Infinity);
   P.y=fall.y;
-  if(fall.y<=landing){
+  if(fall.y<=landing&&(!shaft||oldY>=landing-.08)){
     P.y=landing;const fallH=fall.startHeight,impact=Math.max(0,-fall.vy),
       waterLanding=roof===null&&water>hAt(P.x,P.z)+1.5,
       dmg=fall.parachute?0:wholeDamage(Math.min(COMBAT_BALANCE.player,Math.max(0,((fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8))*.2)));
     removeParachuteVisual();playerFall=null;
     if(dmg>0)hurtP(dmg,false,{type:'fall',x:P.x,y:P.y+8,z:P.z});
-    msg=dmg===0&&fallH>4?'Has aterrat amb seguretat.':waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5;
+    if(!shaft){msg=dmg===0&&fallH>4?'Has aterrat amb seguretat.':waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5;}
   }
 }
 else if(playerEject&&playerEject.t>0){
@@ -3302,8 +3320,17 @@ else if(playerEject&&playerEject.t>0){
         lateral=(swimming?(running?6.5:4.5):playerCrouched?3.8:9)*strafe*dt/length;
   P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*ss+Math.cos(P.hd)*lateral));
   P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*ss-Math.sin(P.hd)*lateral));
+  if(!cheats.fly&&stairDropAt(P.x,P.z,P.y)){
+    const below=groundAt(P.x,P.z,P.y);
+    playerFall={kind:'shaft',y:P.y,vy:0,vx:0,vz:0,
+      startHeight:P.y-below,t:0,spin:0,leanF:0,leanS:0,parachute:false};
+    swimming=false;
+  }
 }
-if(!playerFall&&!cheats.fly){wallPush();treePush();vehiclePushPlayer();ferryCabinPushPlayer()}}
+if(!cheats.fly){
+  if(!playerFall){wallPush();treePush();vehiclePushPlayer();ferryCabinPushPlayer()}
+  else if(playerFall.kind==='shaft')wallPush();
+}}
 // Cal transportar també el jugador que va a peu sobre la coberta mòbil.
 const walkingDeck=!cv&&!playerFall?pedestrianFerry(P.x,P.z,P.y):null;
 V.slice().forEach(v=>{if(v===cv)return;
@@ -3435,6 +3462,9 @@ if(!cv&&playerFall){
     pl.rotation.z=playerFall.leanS*.14+Math.sin(playerFall.t*1.8)*.045;
     // La postura de braços i la visibilitat de l'equipament ja són
     // exclusives de l'animació aèria (sense una segona capa contradictòria).
+  }else if(playerFall.kind==='shaft'){
+    pl.rotation.x=-Math.min(.22,playerFall.t*.3);
+    pl.rotation.z=0;
   }else{
     pl.rotation.x=(playerFall.spin||1)*playerFall.t*7.5;
     pl.rotation.z=Math.sin(playerFall.t*8)*.45;
@@ -3515,7 +3545,8 @@ if(scopeNow){
         Math.abs(local.z)<b.basement.halfZ-.5;
   const stair=b?.basement?.stair;
   const descending=!!local&&Math.abs(local.x-stair.x)<stair.width/2+.45&&
-    local.z>=stair.zBottom-.5&&local.z<=stair.zTop+.4&&P.y<b.fy+.04;
+    local.z>=Math.min(stair.zTop,stair.zBottom)-.5&&
+    local.z<=Math.max(stair.zTop,stair.zBottom)+.5&&P.y<b.fy+.18;
   const bunkerBelow=!!inside&&(P.y<b.fy-3.9||descending);
   // El forjat ÉS el sostre del soterrani. No s'ha d'amagar:
   // ara que la càmera és sempre a sota, es veu el plafó i no es
@@ -3527,9 +3558,9 @@ if(scopeNow){
     // el sostre opac. La resta del recorregut no pot tornar-hi a passar.
     const targetEye=bunkerEye.set(P.x,
       Math.min(b.fy-1.0,Math.max(b.basement.floorY+1.6,P.y+1.65)),P.z);
-    const cameraDistance=Math.max(10.5,Math.min(17,13.5*zoom));
-    const cameraHeight=Math.max(b.basement.floorY+5.4,
-      Math.min(b.fy-1.55,P.y+7.2));
+    const cameraDistance=Math.max(8.8,Math.min(14,11.5*zoom));
+    const cameraHeight=Math.max(b.basement.floorY+4.5,
+      Math.min(b.fy-1.45,P.y+5.4));
     w.set(P.x+Math.sin(heading)*cameraDistance,cameraHeight,
       P.z+Math.cos(heading)*cameraDistance);
     // No deixam sortir la càmera del volum subterrani, perquè llavors
@@ -3550,7 +3581,7 @@ if(scopeNow){
         Math.max(-b.basement.halfX+1.3,Math.min(b.basement.halfX-1.3,smoothLocal.x)),
         Math.max(-b.basement.halfZ+1.3,Math.min(b.basement.halfZ-1.3,smoothLocal.z)));
     cam.position.set(safe.x,
-      Math.max(b.basement.floorY+5.4,Math.min(b.fy-1.55,cam.position.y)),safe.z);
+      Math.max(b.basement.floorY+4.5,Math.min(b.fy-1.45,cam.position.y)),safe.z);
     // La càmera POT travessar els envans. Només ocultam les peces
     // físiques interposades entre càmera i jugador, no les parets
     // de tota la cambra ni les col·lisions del personatge.
