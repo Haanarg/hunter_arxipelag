@@ -5,7 +5,7 @@ window.HUNTER_PRISONERS=Object.freeze({
    notify=()=>{},sound=()=>{},vehicleRadius=()=>4,vehicleName=v=>v.t}={}){
   const entities=[],resources=new Set();
   let world=null,camp=null,rescuePoint=null,station=null,escapeRoute=[],mechanicRoute=[],
-    discovered=false,released=false,repair=null,lastContext=null,serial=0;
+    discovered=false,released=false,repair=null,lastContext=null,serial=0,cheerNotified=false;
   const config=Object.freeze({discoverRange:80,rescueRange:6,personRange:9,
     maxServiceRange:32,repairSeconds:6,walkSpeed:3.2,mechanicSpeed:2.8,
     // Upright protagonist mesh (compact D head, 1.2 baked units × 2/3 scale).
@@ -25,40 +25,89 @@ window.HUNTER_PRISONERS=Object.freeze({
    for(const u of entities)u.o?.removeFromParent();
    for(const resource of resources)resource.dispose?.();
    resources.clear();entities.length=0;world=camp=rescuePoint=station=null;
-   escapeRoute=[];mechanicRoute=[];discovered=false;released=false;repair=null;lastContext=null;serial++;
+   escapeRoute=[];mechanicRoute=[];discovered=false;released=false;repair=null;lastContext=null;cheerNotified=false;serial++;
   }
+  // Low-poly humans with anatomically shaped torsos, faces, clothing,
+  // articulated arms and proper shoes. All geometry is shared across NPCs.
   function createModels(){
-   const cube=own(new T.BoxGeometry(1,1,1)),head=own(new T.SphereGeometry(.18,7,5)),
-     hat=own(new T.CylinderGeometry(.31,.34,.055,8)),
-     mat=hex=>own(new T.MeshStandardMaterial({color:hex,roughness:.9,flatShading:true})),
-     skin=mat(0xba8b63),farmer=mat(0xd8cba7),trousers=mat(0x665642),
-     overall=mat(0x3d6980),boots=mat(0x363932),straw=mat(0xb49a58),
-     tool=mat(0xa8b3b1),belt=mat(0x795332);
+   const cube=own(new T.BoxGeometry(1,1,1)),
+     head=own(new T.SphereGeometry(.18,12,10)),
+     joint=own(new T.SphereGeometry(.12,10,8)),
+     torso=own(new T.CylinderGeometry(.295,.245,.57,10)),
+     upperLeg=own(new T.CylinderGeometry(.12,.096,.37,9)),
+     lowerLeg=own(new T.CylinderGeometry(.10,.077,.35,9)),
+     sleeve=own(new T.CylinderGeometry(.105,.083,.36,9)),
+     forearm=own(new T.CylinderGeometry(.083,.066,.26,9)),
+     collar=own(new T.CylinderGeometry(.115,.14,.085,10)),
+     brim=own(new T.CylinderGeometry(.31,.34,.055,10)),
+     cap=own(new T.CylinderGeometry(.28,.29,.12,10)),
+     eye=own(new T.SphereGeometry(.035,8,6)),
+     nose=own(new T.ConeGeometry(.047,.12,7)),
+     hairCap=own(new T.SphereGeometry(.183,12,6,0,Math.PI*2,0,Math.PI*.46)),
+     mat=hex=>own(new T.MeshStandardMaterial({color:hex,roughness:.93,flatShading:true})),
+     skin=[mat(0xc59168),mat(0xa87354),mat(0xdbac7f),mat(0x976348),mat(0xc89370)],
+     shirts=[mat(0xb9aa87),mat(0x7a846b),mat(0x8c795e),mat(0x9b8f77)],
+     pants=[mat(0x655f51),mat(0x545746),mat(0x635747)],
+     overall=mat(0x3c6578),overallDark=mat(0x263f50),
+     boots=mat(0x333b38),straw=mat(0xb49b65),hair=mat(0x4c392f),
+     metal=mat(0xa8b3b1),belt=mat(0x514338),white=mat(0xd4cabb),eyes=mat(0x242a2a);
    function mesh(parent,geometry,material,w,h,d,x,y,z){
     const o=new T.Mesh(geometry,material);o.scale.set(w,h,d);o.position.set(x,y,z);
     o.castShadow=true;parent.add(o);return o;
    }
    return u=>{
-    const root=new T.Group(),rig=new T.Group(),mechanic=u.role==='mechanic',shirt=mechanic?overall:farmer;
+    const root=new T.Group(),rig=new T.Group(),mechanic=u.role==='mechanic',
+      variant=Number((u.id||'').match(/\\d+/)?.[0]||0),shirt=mechanic?overall:shirts[variant%shirts.length],
+      trousers=mechanic?overallDark:pants[variant%pants.length],tone=skin[variant%skin.length];
     root.name='hunter-prisoner-'+u.id;root.add(rig);u.rig=rig;
-    mesh(rig,cube,shirt,.51,.55,.29,0,1.08,0);
-    mesh(rig,cube,belt,.52,.09,.31,0,.85,0);
-    mesh(rig,cube,mechanic?overall:trousers,.50,.22,.32,0,.81,0);
-    mesh(rig,head,skin,1,1,1,0,1.57,0);
+    // Torso narrows to the waist; shoulders/neck and layered collar
+    // prevent the rectangular toy-like silhouette of the old model.
+    mesh(rig,torso,shirt,1,1,.92,0,1.085,0);
+    mesh(rig,joint,shirt,2.15,.72,1.2,0,1.33,0);
+    mesh(rig,collar,mechanic?white:shirt,1,1,1,0,1.398,0);
+    mesh(rig,cube,belt,.49,.068,.31,0,.834,0);
+    mesh(rig,joint,trousers,2.04,.96,1.24,0,.805,0);
+    // Head with a neck, ears, nose, eyes, eyebrows and distinct hairstyles.
+    mesh(rig,collar,tone,.58,.9,.62,0,1.417,0);
+    const face=mesh(rig,head,tone,1,.99,.93,0,1.57,0);
+    u.head=face;
+    for(const side of[-1,1]){
+     mesh(rig,joint,tone,.5,.66,.50,side*.18,1.57,0);
+     mesh(rig,eye,eyes,1,1,1,side*.065,1.585,-.167);
+     mesh(rig,cube,hair,.064,.022,.019,side*.067,1.638,-.165);
+    }
+    mesh(rig,nose,tone,.8,.7,.8,0,1.535,-.181);
     if(mechanic){
-     mesh(rig,cube,overall,.36,.12,.34,0,1.75,-.015);
-     mesh(rig,cube,tool,.055,.32,.055,.29,.79,-.02);
-     mesh(rig,cube,tool,.19,.055,.055,.29,.95,-.02);
-     mesh(rig,cube,farmer,.11,.16,.025,-.13,1.22,-.158);
-    }else mesh(rig,hat,straw,1,1,1,0,1.75,0);
+     mesh(rig,hairCap,hair,1,1,1,0,1.616,0);
+     // Work cap, peak, pockets and a wrench secured to the overalls.
+     mesh(rig,cap,overallDark,1,1,1,0,1.75,0);
+     mesh(rig,cube,overallDark,.23,.022,.18,0,1.70,-.25);
+     for(const side of[-1,1])mesh(rig,cube,overallDark,.12,.15,.017,side*.13,1.09,-.259);
+     mesh(rig,cube,metal,.052,.30,.052,.28,.83,-.02);
+     mesh(rig,cube,metal,.18,.052,.052,.28,.95,-.02);
+     mesh(rig,cube,white,.11,.13,.025,-.12,1.19,-.267);
+    }else{
+     mesh(rig,hairCap,hair,1,1,1,0,1.63,0);
+     mesh(rig,brim,straw,1,1,1,0,1.75,0);
+     mesh(rig,cube,straw,.42,.12,.32,0,1.69,0);
+     mesh(rig,cube,trousers,.18,.10,.07,0,1.255,-.231); // torn shirt opening
+    }
     const legs=[],arms=[];
     for(const side of[-1,1]){
      const leg=new T.Group();leg.position.set(side*.14,.82,0);rig.add(leg);
-     mesh(leg,cube,mechanic?overall:trousers,.20,.64,.24,0,-.32,0);
-     mesh(leg,cube,boots,.22,.16,.33,0,-.68,-.04);legs.push(leg);
+     mesh(leg,upperLeg,trousers,1,1,1,0,-.20,0);
+     mesh(leg,joint,trousers,.84,.78,.94,0,-.385,0);
+     mesh(leg,lowerLeg,trousers,1,1,1,0,-.51,0);
+     mesh(leg,cube,boots,.22,.16,.32,0,-.68,-.045);
+     mesh(leg,joint,boots,1.05,.62,1.32,0,-.685,-.105);
+     legs.push(leg);
      const arm=new T.Group();arm.position.set(side*.34,1.30,0);rig.add(arm);
-     mesh(arm,cube,shirt,.16,.35,.20,0,-.15,0);
-     mesh(arm,cube,skin,.14,.25,.16,0,-.43,0);arms.push(arm);
+     mesh(arm,joint,shirt,1,.94,1.0,0,-.045,0);
+     mesh(arm,sleeve,shirt,1,1,1,0,-.20,0);
+     mesh(arm,joint,tone,.65,.65,.65,0,-.375,0);
+     mesh(arm,forearm,tone,1,1,1,0,-.47,0);
+     mesh(arm,joint,tone,.69,.70,.73,0,-.606,0);
+     arms.push(arm);
     }
     root.userData.civilian=true;root.userData.prisonerId=u.id;
     root.scale.setScalar(u.modelScale);
@@ -97,7 +146,8 @@ window.HUNTER_PRISONERS=Object.freeze({
       role,...p,hp:4,maxHp:4,radius:.55,height:config.standingHeight,state:'captive',
       modelScale:config.standingHeight/(role==='mechanic'?1.75:1.7175),
       captivePose:spec.pose||(role==='farmer'&&farmerIndex++%2===1?'seated':'standing'),
-      destroyed:false,path:[],waypoint:0,phase:0,blocked:0,following:false,followWarning:false,o:null};
+      destroyed:false,path:[],waypoint:0,phase:0,blocked:0,following:false,followWarning:false,
+      cheering:false,cheerPhase:farmerIndex*.9,o:null};
     if(model){u.o=model(u);u.o.position.set(u.x,u.y,u.z);u.o.visible=false;world.add(u.o)}
     pose(u,u.captivePose==='seated');entities.push(u);
    }
@@ -146,12 +196,71 @@ window.HUNTER_PRISONERS=Object.freeze({
    }
    return target;
   }
-  function getAction(ctx=lastContext){
-   if(!validContext(ctx)||ctx.canInteract===false||!camp||!discovered)return null;
-   if(!released){
-    if(ctx.vehicle||!entities.some(alive)||!visiblePoint(ctx,rescuePoint,config.rescueRange))return null;
-    return{kind:'rescue',label:'Alliberar presoners',icon:'🔓',target:camp,serial};
+  // Physical campaign goal: all six guards and four towers must be
+  // neutralised AND at least one segment of the INNER enclosure destroyed.
+  // The original E-on-a-specific-gate shortcut is intentionally removed.
+  function rescueStatus(ctx){
+   const troops=new Set([...(camp?.soldiers||[]),...(camp?.towers||[]),
+     ...(ctx?.enemies||[]).filter(u=>u.compound===camp?.id)]);
+   let guards=0,towers=0;
+   for(const u of troops){
+    if(!alive(u))continue;
+    if(u.t==='torre')towers++;
+    else if(u.t==='soldat')guards++;
    }
+   const gaps=(camp?.prisonFenceSegments||[])
+     .filter(s=>s?.collider&&(s.collider.hp<=0||s.collider.open));
+   const gate=camp?.prisonGate;
+   // Compatibility with saved layouts that have a gate but no section index.
+   if(!camp?.prisonFenceSegments?.length&&gate?.colliders?.some(w=>w.hp<=0||w.open))
+    gaps.push({collider:gate.colliders[0],gate:true});
+   return{guards,towers,breach:gaps.length>0,gaps};
+  }
+  function routeThroughBreach(entry){
+   const w=entry.collider,wx=(w.ax+w.bx)*.5,wz=(w.az+w.bz)*.5,
+     c=Math.round(Math.cos(camp.angle||0)),s=Math.round(Math.sin(camp.angle||0)),
+     x=(wx-camp.x)*c+(wz-camp.z)*s,
+     z=-(wx-camp.x)*s+(wz-camp.z)*c,
+     side=x<0?-1:1;
+   let exit;
+   // Approach the hole perpendicularly and never use an intact section.
+   if(z<=-9.5)exit=[[x,z+3],[x,z-3.5],[side*26,-16],[side*26,30],[0,37]];
+   else if(Math.abs(x)>=19.5)exit=[[x-side*3,z],[x+side*3.5,z],[side*26,30],[0,37]];
+   else exit=[[x,z-3],[x,z+3.5],[x,32],[0,37]];
+   return exit.map(localPoint);
+  }
+  function releaseCaptives(ctx,status){
+   if(released||!status.breach||status.guards||status.towers)return;
+   // Prefer a front/gate gap when there are several: fewer corners for
+   // unarmed NPCs and a clean approach to the single outer exit.
+   const best=status.gaps.slice().sort((a,b)=>{
+    const score=e=>{
+     const w=e.collider,cx=(w.ax+w.bx)*.5,cz=(w.az+w.bz)*.5,
+       dx=cx-camp.x,dz=cz-camp.z,
+       c=Math.round(Math.cos(camp.angle||0)),s=Math.round(Math.sin(camp.angle||0));
+     return Math.hypot(dx*c+dz*s,(-dx*s+dz*c)-24);
+    };
+    return score(a)-score(b);
+   })[0];
+   const exit=routeThroughBreach(best),farmersEnd=escapeRoute.slice(-2);
+   released=true;
+   let index=0;
+   for(const u of entities){
+    if(!alive(u))continue;
+    if(u.role==='mechanic'){
+     u.path=[...exit,...[[33,36],[33,16]].map(localPoint)];u.state='to-station';
+    }else{
+     // A small stagger avoids prisoners occupying exactly the same spot.
+     u.path=[...exit,...farmersEnd];u.state='evacuating';u.phase=index++*.7;
+    }
+    pose(u,false);u.waypoint=0;u.cheering=false;
+   }
+   discovered=true;
+   notify('Camp alliberat! Els presoners escapen per la bretxa; el mecànic va al taller.');
+   sound('pick',.5,rescuePoint);
+  }
+  function getAction(ctx=lastContext){
+   if(!validContext(ctx)||ctx.canInteract===false||!camp||!discovered||!released)return null;
    const u=mechanic();if(!u||u.state!=='ready')return null;
    if(repair){
     if(!serviceVehicle(repair.vehicle,ctx,u,{requireDamage:false}))return null;
@@ -172,24 +281,6 @@ window.HUNTER_PRISONERS=Object.freeze({
    if(!validContext(ctx)||ctx.canInteract===false||!action||action.serial!==serial)return false;
    const current=getAction(ctx);
    if(!current||current.kind!==action.kind||current.target!==action.target)return false;
-   if(action.kind==='rescue'){
-    if(danger(ctx)){notify('Allunya els guàrdies abans d’alliberar-los.');return true}
-    camp.prisonGate?.open();released=true;
-    let farmerIndex=0;
-    const c=Math.round(Math.cos(camp.angle||0)),s=Math.round(Math.sin(camp.angle||0));
-    for(const u of entities){
-     if(!alive(u))continue;
-     if(u.role==='mechanic'){
-      u.path=mechanicRoute.map(p=>({...p}));u.state='to-station';
-     }else{
-      const lane=(farmerIndex++-1.5)*1.5;
-      u.path=escapeRoute.map(p=>({...p,x:p.x+lane*c,z:p.z+lane*s}));u.state='evacuating';
-     }
-     pose(u,false);u.waypoint=0;
-    }
-    notify('Presoners alliberats. El mecànic va al taller.');sound('pick',.55,rescuePoint);
-    return true;
-   }
    if(action.kind==='mechanicFollow'){
     const u=action.target;u.following=!u.following;u.path=[];u.followWarning=false;
     notify(u.following?'El mecànic et segueix a peu.':'El mecànic espera aquí.');return true;
@@ -232,13 +323,25 @@ window.HUNTER_PRISONERS=Object.freeze({
   }
   function animate(u,dt){
    if(!u.o||!alive(u))return;
-   if(u.state==='captive'){pose(u,u.captivePose==='seated');return}
+   if(u.state==='captive'){
+    pose(u,u.captivePose==='seated');
+    if(u.cheering){
+     u.cheerPhase+=dt*5;
+     const wave=Math.sin(u.cheerPhase)*.26;
+     for(let i=0;i<u.arms.length;i++){
+      u.arms[i].rotation.z=(i?1:-1)*(2.32+wave);
+      u.arms[i].rotation.x=Math.sin(u.cheerPhase*.7+i)*.19;
+     }
+     if(u.head)u.head.rotation.y=Math.sin(u.cheerPhase*.35)*.17;
+    }
+    return;
+   }
    const walking=u.path.length>0&&u.blocked===0,
      stride=walking?Math.sin(u.phase)*.58:0;
    for(let i=0;i<u.legs.length;i++)u.legs[i].rotation.x=(i?-1:1)*stride;
    for(let i=0;i<u.arms.length;i++){
     u.arms[i].rotation.x=(i?1:-1)*stride*.65;
-    u.arms[i].rotation.z=u.state==='captive'?(i?-1:1)*.22:0;
+    u.arms[i].rotation.z=0;
    }
    if(repair?.mechanic===u){u.arms[0].rotation.x=-1.1+Math.sin(repair.progress*14)*.18;u.arms[1].rotation.x=-.7}
   }
@@ -253,9 +356,21 @@ window.HUNTER_PRISONERS=Object.freeze({
    if(ctx.canInteract===false)stopRepair();
    if(!camp)return;
    if(!discovered&&visiblePoint(ctx,rescuePoint,config.discoverRange)){
-    discovered=true;notify('Camp de presoners descobert.');
+    discovered=true;notify('Camp de presoners: elimina els guàrdies i les torres; obre una bretxa a la tanca interior.');
    }
    const step=Math.max(0,Math.min(.25,Number.isFinite(dt)?dt:0));
+   // The wire mesh is transparent to the captives' perception. Looking at
+   // the rescuer makes them wave and call encouragement even while locked up.
+   let greeted=false;
+   for(const u of entities)if(alive(u)&&u.state==='captive'){
+    const p=position(observer(ctx));
+    u.cheering=distance(p,position(u))<32&&Math.abs(p.y-u.y)<8;
+    greeted ||= u.cheering;
+   }
+   if(greeted&&!cheerNotified){
+    cheerNotified=true;notify('Els presoners et veuen i t’animen: «Som aquí! Allibera’ns!»');
+   }
+   if(!released)releaseCaptives(ctx,rescueStatus(ctx));
    for(const u of entities){follow(u,ctx);move(u,step);animate(u,step)}
    if(repair){
     const v=repair.vehicle,u=repair.mechanic,p=position(v),
@@ -285,14 +400,17 @@ window.HUNTER_PRISONERS=Object.freeze({
    if(!discovered||!camp)return[];
    const result=[],u=mechanic();
    if(!released)result.push({kind:'prison',x:rescuePoint.x,z:rescuePoint.z,
-     label:entities.some(alive)?'Camp de presoners':'Camp de presoners buit',state:entities.some(alive)?'captive':'lost'});
+     label:entities.some(alive)?'Camp de presoners · destrueix defenses i tanca interior':'Camp de presoners buit',
+     state:entities.some(alive)?'captive':'lost'});
    if(released&&u)result.push({kind:'mechanic',x:u.x,z:u.z,
     label:u.state==='ready'?'Mecànic · reparacions':'Mecànic alliberat',state:u.following?'following':u.state});
    return result;
   }
   function snapshot(){
+   const status=rescueStatus(lastContext);
    return{configured:!!camp,discovered,released,
-    entities:entities.map(u=>({id:u.id,role:u.role,state:u.state,hp:u.hp,x:u.x,y:u.y,z:u.z,waypoint:u.waypoint,blocked:u.blocked,following:u.following})),
+    rescue:{guards:status.guards,towers:status.towers,breach:status.breach},
+    entities:entities.map(u=>({id:u.id,role:u.role,state:u.state,hp:u.hp,x:u.x,y:u.y,z:u.z,waypoint:u.waypoint,blocked:u.blocked,following:u.following,cheering:u.cheering})),
     repair:repair?{vehicle:repair.vehicle.t,progress:repair.progress,duration:config.repairSeconds}:null};
   }
   return Object.freeze({configure,reset,update,getAction,interact,markers,hurt,snapshot,entities,config});
