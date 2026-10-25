@@ -576,33 +576,56 @@ window.HUNTER_VEHICLES=Object.freeze({
         deckGeo.rotateX(-Math.PI/2);
         const deck=new THREE.Mesh(deckGeo,material(0xf2e2b9,'paint'));
         deck.position.y=.16;g.add(deck);
-        // Superfície útil de la vela aproximadament doble: més alta,
-        // més ampla i amb la vora de sortida suaument corbada.
-        rod(g,[0,.32,.25],[0,5.97,.25],.085,metal);
+        // Rigg amb pivot al peu del pal. La vela és ara un 40% més alta,
+        // s'inclina cap a proa (-Z) en navegar i es pot abatre sobre la
+        // sorra, paral·lela a l'eix longitudinal de la taula.
+        // Orientació en mirall: drap a babord (-X), rider a estribord (+X).
+        const rig=new THREE.Group();
+        rig.name='windsurf-sail-rig';
+        rig.position.set(0,.34,.20);g.add(rig);
+        const mastTop=8.35;
+        rod(rig,[0,0,0],[0,mastTop,0],.075,metal);
         const sailPoints=[
-          [0,5.82,.25],[0,.83,.25],[1.19,1.02,.25],
-          [2.75,1.45,.25],[2.71,2.48,.25],
-          [2.22,3.77,.25],[1.18,5.18,.25]
+          [0,8.18,0],[0,.55,0],[-1.05,.73,0],
+          [-2.92,1.54,0],[-2.84,3.12,0],
+          [-2.19,5.30,0],[-1.12,7.34,0]
         ];
         const geom=new THREE.BufferGeometry();
         geom.setAttribute('position',new THREE.Float32BufferAttribute(sailPoints.flat(),3));
         geom.setIndex([0,1,2,0,2,3,0,3,4,0,4,5,0,5,6]);
         geom.computeVertexNormals();
-        const cloth=material(0xe86d4b,'paint');cloth.side=THREE.DoubleSide;
-        const sail=new THREE.Mesh(geom,cloth);g.add(sail);
-        rod(g,[0,.83,.25],[2.75,1.45,.25],.036,metal);
-        rod(g,[2.75,1.45,.25],[2.71,2.48,.25],.033,metal);
-        rod(g,[2.71,2.48,.25],[2.22,3.77,.25],.033,metal);
-        rod(g,[2.22,3.77,.25],[1.18,5.18,.25],.033,metal);
-        rod(g,[1.18,5.18,.25],[0,5.82,.25],.033,metal);
-        // Travesser per davant de la vela, visible des de la càmera (+Z).
-        // Les dues mans utilitzen aquests punts exactes de contacte.
-        const boomStart=new THREE.Vector3(0,2.85,.70),
-              boomEnd=new THREE.Vector3(2,2.10,.70);
-        rod(g,boomStart.toArray(),boomEnd.toArray(),.065,metal);
-        rod(g,[0,2.85,.25],boomStart.toArray(),.045,metal);
-        g.userData.windsurfGrips=[.35,.60].map(k=>
+        const cloth=material(0x12b8cf,'paint');cloth.side=THREE.DoubleSide;
+        rig.add(new THREE.Mesh(geom,cloth));
+        // Contrast panels make the mirrored sail clearly readable.
+        const detail=new THREE.BufferGeometry();
+        detail.setAttribute('position',new THREE.Float32BufferAttribute([
+          0,8.18,.017, -1.12,7.34,.017, -2.19,5.30,.017,
+          0,.55,.017, -1.05,.73,.017, -2.92,1.54,.017
+        ],3));
+        detail.setIndex([0,1,2,3,4,5]);detail.computeVertexNormals();
+        const trim=material(0xe75a46,'paint');trim.side=THREE.DoubleSide;
+        rig.add(new THREE.Mesh(detail,trim));
+        for(const [a,b] of [
+          [[0,.55,0],[-2.92,1.54,0]],
+          [[-2.92,1.54,0],[-2.84,3.12,0]],
+          [[-2.84,3.12,0],[-2.19,5.30,0]],
+          [[-2.19,5.30,0],[-1.12,7.34,0]],
+          [[-1.12,7.34,0],[0,8.18,0]]
+        ])rod(rig,a,b,.031,metal);
+        // Botavara sobre la cara del rider (+Z). Les dues mans segueixen
+        // punts diferents del travesser; la dreta es pot alliberar per disparar.
+        const boomStart=new THREE.Vector3(0,3.40,.57),
+              boomEnd=new THREE.Vector3(-1.85,3.12,.57);
+        rod(rig,boomStart.toArray(),boomEnd.toArray(),.055,metal);
+        rod(rig,[0,3.40,0],boomStart.toArray(),.044,metal);
+        g.userData.windsurfRig=rig;
+        // Anatomia: índex 0 = mà esquerra (més exterior);
+        // índex 1 = dreta, que empunya la pistola quan dispara.
+        g.userData.windsurfGrips=[.61,.27].map(k=>
           boomStart.clone().lerp(boomEnd,k));
+        g.userData.windsurfLay=null;
+        rig.rotation.x=-.14;
+        rig.rotation.z=.055;
       }
       if(t==='ferry'){
         const hullCol=0x4e6570,deckCol=0x8f9692,edge=0xd7d2bd,cabin=0xe7e3d5;
