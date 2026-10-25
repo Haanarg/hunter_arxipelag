@@ -26,6 +26,65 @@ window.HUNTER_VEHICLE_DYNAMICS=Object.freeze({
     heli:Object.freeze({n:'Helicòpter',m:'a',a:38,dr:.5,tu:1.6,cd:34,ch:12,response:2.8,steerResponse:3.2,yawResponse:2.3,maxF:50,maxR:17,strafeMax:17,climb:24,liftResponse:2.8,bank:.34,pitch:.22,mass:2.5,life:window.HUNTER_COMBAT_BALANCE.vehicles.heli}),
     heli_combat:Object.freeze({n:'Helicòpter de combat',m:'a',a:47,dr:.48,tu:2.25,cd:36,ch:13,response:5,steerResponse:6,yawResponse:5.1,maxF:60,maxR:21,strafeMax:24,climb:30,liftResponse:4.3,bank:.45,pitch:.29,mass:2.8,life:window.HUNTER_COMBAT_BALANCE.vehicles.heli_combat})
   }),
+  // Shore contact uses actual water height and the vehicle's hull footprint.
+  // No shoreline teleportation or universal -1.2 m collision cutoff.
+  shore:Object.freeze({
+    land:Object.freeze({
+      bici:{wade:.1,stall:.65,delay:.1,sinkRate:2.5},
+      moto:{wade:.25,stall:1.0,delay:.35,sinkRate:1.8},
+      cotxe:{wade:.4,stall:1.65,delay:1.25,sinkRate:1.1},
+      cotxe_civil:{wade:.4,stall:1.55,delay:1.1,sinkRate:1.2},
+      camio:{wade:.8,stall:2.35,delay:.75,sinkRate:1.4},
+      tanqueta:{wade:1.2,stall:2.9,delay:.4,sinkRate:1.3},
+      tanc:{wade:1.4,stall:3.4,delay:.35,sinkRate:1.1}
+    }),
+    draft:Object.freeze({windsurf:.12,barca_rems:.4,moto_aquatica:.26,llanxa:1.05,llanxa_coets:1.2,ferry:2.15}),
+    beachLimit:Object.freeze({windsurf:-.4,barca_rems:.05,moto_aquatica:-.65,llanxa:.08,llanxa_coets:.1,ferry:.25}),
+    depth(x,z,terrainAt,waterAt){return waterAt(x,z)-terrainAt(x,z)},
+    clearance(v,x,z,box,terrainAt,waterAt){
+      // A hull grounds at the bow or flank before its centre reaches land.
+      // Use smaller extremities for ferry ramps, so terminal docking remains possible.
+      const s=Math.sin(v.hd||0),c=Math.cos(v.hd||0),front=Math.min(box.d*.38,box.d/2-0.1),
+        side=Math.min(box.w*.31,box.w/2-.05),sample=[[0,0],[0,-front],[0,front*.75],[-side,0],[side,0]];
+      let min=Infinity;
+      for(const [lx,lz] of sample){
+        const px=x+lx*c+lz*s,pz=z-lx*s+lz*c;
+        min=Math.min(min,this.depth(px,pz,terrainAt,waterAt));
+      }
+      return min;
+    },
+    wetLand(v,depth,dt){
+      const p=this.land[v.t],state=v.waterIngress||(v.waterIngress={dead:false,elapsed:0,sink:0,buoyancy:0});
+      if(!p)return {engine:1,drag:0,wet:0,disabled:false};
+      const wet=Math.max(0,Math.min(1,(depth-p.wade)/(p.stall-p.wade)));
+      if(depth>=p.stall)state.dead=true;
+      if(state.dead){
+        state.elapsed+=Math.max(0,dt);
+        state.sink=Math.max(0,(state.elapsed-p.delay)*p.sinkRate);
+      }else{
+        state.elapsed=0;
+        state.buoyancy=Math.max(0,state.buoyancy-Math.max(0,dt)*.85);
+      }
+      if(depth>p.wade){
+        state.buoyancy=Math.min(1,state.buoyancy+Math.max(0,dt)*.75);
+      }
+      if(state.dead&&state.elapsed>=p.delay+3.5)v.sunk=true;
+      return {engine:state.dead?0:1-wet*.84,
+        drag:state.dead?1.4:wet*(.8+wet*.6),
+        wet,disabled:state.dead};
+    },
+    boatContact(v,previous,next,dt){
+      const draft=this.draft[v.t]??.8,limit=this.beachLimit[v.t]??.05,
+        shallow=Math.max(0,Math.min(1,(draft-next)/Math.max(.3,draft-limit)));
+      const approaching=next<previous-.0005,
+        blocked=next<limit&&approaching,
+        grounded=next<draft;
+      v.grounded=grounded;
+      return {draft,limit,shallow,grounded,blocked,
+        drag:shallow*(v.t==='moto_aquatica'?3.2:v.t==='windsurf'?2.5:2.1),
+        power:1-shallow*.93};
+    }
+  }),
   smooth(current,target,response,dt){return current+(target-current)*(1-Math.exp(-response*dt))},
   inputs(v,forward,turn,dt){
     const c=this.types[v.t];
