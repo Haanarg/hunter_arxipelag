@@ -594,8 +594,26 @@ window.HUNTER_VEHICLES=Object.freeze({
         geom.setAttribute('position',new THREE.Float32BufferAttribute(sailPoints.flat(),3));
         geom.setIndex([0,1,2,0,2,3,0,3,4,0,4,5,0,5,6]);
         geom.computeVertexNormals();
-        const cloth=material(0x12b8cf,'paint');cloth.side=THREE.DoubleSide;
-        rig.add(new THREE.Mesh(geom,cloth));
+        // Same vivid body palette as the jet skis. The main membrane and
+        // the contrasting upper/lower panels are colored per instance;
+        // neither depends on renderer randomness or a shared cached model.
+        const sailColor=appearance.color??0xc94e3f;
+        const sailAccents={
+          0xc94e3f:0xffdf18, // red / vivid yellow
+          0xa4ec24:0x228fef, // lime / electric blue
+          0xffdf18:0xef35a8, // yellow / magenta
+          0xef35a8:0xffdf18, // magenta / yellow
+          0x228fef:0xa4ec24, // blue / lime
+          0xff7b19:0x12c9e4, // orange / cyan
+          0x181c1e:0xffdf18  // black / luminous yellow
+        };
+        const sailAccent=sailAccents[sailColor]??0xf3f2db;
+        const cloth=material(sailColor,'paint');cloth.side=THREE.DoubleSide;
+        const sail=new THREE.Mesh(geom,cloth);
+        sail.name='windsurf-sail';
+        rig.add(sail);
+        g.userData.windsurfSailColor=sailColor;
+        g.userData.windsurfSailAccent=sailAccent;
         // Contrast panels make the mirrored sail clearly readable.
         const detail=new THREE.BufferGeometry();
         detail.setAttribute('position',new THREE.Float32BufferAttribute([
@@ -603,8 +621,10 @@ window.HUNTER_VEHICLES=Object.freeze({
           0,.55,.017, -1.05,.73,.017, -2.92,1.54,.017
         ],3));
         detail.setIndex([0,1,2,3,4,5]);detail.computeVertexNormals();
-        const trim=material(0xe75a46,'paint');trim.side=THREE.DoubleSide;
-        rig.add(new THREE.Mesh(detail,trim));
+        const trim=material(sailAccent,'paint');trim.side=THREE.DoubleSide;
+        const contrast=new THREE.Mesh(detail,trim);
+        contrast.name='windsurf-sail-panels';
+        rig.add(contrast);
         for(const [a,b] of [
           [[0,.55,0],[-2.92,1.54,0]],
           [[-2.92,1.54,0],[-2.84,3.12,0]],
