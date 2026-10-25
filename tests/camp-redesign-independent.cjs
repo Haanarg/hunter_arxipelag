@@ -18,8 +18,34 @@ const plain=value=>JSON.parse(JSON.stringify(value));
    return optionalCivilianCanMove(a,b,r);
   };
   const barrack=c.buildings.find(b=>b.layoutBuilding==='prison-barracks'),
-    guardhouse=c.buildings.find(b=>b.layoutBuilding==='guardhouse');
-  check(c.buildings.length===2,'one barrack and one guardhouse');
+    guardhouse=c.buildings.find(b=>b.layoutBuilding==='guardhouse'),
+    workshop=c.buildings.find(b=>b.layoutBuilding==='prison-workshop');
+  check(c.buildings.length===3,'barrack, guardhouse and open repair workshop');
+  check(!!workshop&&workshop.workshop&&workshop.h===12&&workshop.w===24&&workshop.d===24,
+    'double-height 24x24 workshop with open front');
+  if(workshop){
+    const walls=Wl.filter(w=>w.owner===workshop&&!w.open&&w.hp>0);
+    check(walls.length===3,'workshop has exactly three real full-height solid walls');
+    check(walls.every(w=>Math.abs(w.y1-workshop.fy-12)<.01),'each wall reaches the 12m roof');
+    check(!workshop.door&&!walls.some(w=>Math.abs(w.cx-workshop.x)<1&&w.cz>workshop.z+9),
+      'there is no entrance door, frame, sill or invisible fourth wall');
+    check(workshop.roof?.children.length>0,'the three walls support a visible roof');
+    const at=(x,z)=>point([x,z]),bay=at(33,16),
+      truck=vehicleBox({t:'camio',x:bay.x,z:bay.z,hd:0}),
+      overlaps=(box,w)=>obbOverlap(box,{x:(w.x0+w.x1)/2,z:(w.z0+w.z1)/2,hd:0,
+        w:w.x1-w.x0,d:w.z1-w.z0});
+    check(!wallCandidates(bay.x,bay.z,18).some(w=>!w.open&&w.hp>0&&overlaps(truck,w)),
+      'full-size truck fits beneath the workshop roof');
+    for(const z of[34,30,27,24,20,16]){
+      const p=at(33,z),box=vehicleBox({t:'camio',x:p.x,z:p.z,hd:0});
+      check(!wallCandidates(p.x,p.z,18).some(w=>!w.open&&w.hp>0&&overlaps(box,w)),
+        'truck has a collision-free straight drive through the open frontage at local z'+z);
+    }
+    check(!optionalCivilianCanMove(
+      {...at(19,16),y:hAt(at(19,16).x,at(19,16).z)},
+      {...at(23,16),y:hAt(at(23,16).x,at(23,16).z)},.94),
+      'west workshop wall stops NPCs');
+  }
   check(barrack?.wood&&barrack.w===68&&barrack.d===18,'long wooden barrack has world footprint68x18');
   check(barrack?.roof.userData.branchGable===true,'barrack uses existing fishing-hut gable architecture');
   check(barrack?.localW===18&&barrack.localD===68,'narrow gable continues along the extended length');
@@ -71,7 +97,7 @@ const plain=value=>JSON.parse(JSON.stringify(value));
    patrols:c.soldiers.filter(u=>u.campDuty==='patrol').length,sentries:sentries.length};
  })()`));
  assert.deepEqual(shape.issues,[],JSON.stringify(shape));
- console.log('PASS independent physical camp perimeter, inner confinement, timber barrack, towers, guards and adult poses',JSON.stringify(shape));
+ console.log('PASS independent physical camp perimeter, covered open-front workshop, confinement, guards and adult poses',JSON.stringify(shape));
  const patrol=plain(game.run(`(()=>{
   const c=world.userData.prisonCamp,units=c.soldiers;
   // Retain the real collision world and neutral vehicles, and isolate only the
