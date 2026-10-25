@@ -614,14 +614,14 @@ window.HUNTER_VEHICLES=Object.freeze({
         ])rod(rig,a,b,.031,metal);
         // Botavara sobre la cara del rider (+Z). Les dues mans segueixen
         // punts diferents del travesser; la dreta es pot alliberar per disparar.
-        const boomStart=new THREE.Vector3(0,3.40,.57),
-              boomEnd=new THREE.Vector3(-1.85,3.12,.57);
+        const boomStart=new THREE.Vector3(0,2.66,.57),
+              boomEnd=new THREE.Vector3(-1.85,2.45,.57);
         rod(rig,boomStart.toArray(),boomEnd.toArray(),.055,metal);
-        rod(rig,[0,3.40,0],boomStart.toArray(),.044,metal);
+        rod(rig,[0,2.66,0],boomStart.toArray(),.044,metal);
         g.userData.windsurfRig=rig;
         // Anatomia: índex 0 = mà esquerra (més exterior);
         // índex 1 = dreta, que empunya la pistola quan dispara.
-        g.userData.windsurfGrips=[.61,.27].map(k=>
+        g.userData.windsurfGrips=[.49,.22].map(k=>
           boomStart.clone().lerp(boomEnd,k));
         g.userData.windsurfLay=null;
         rig.rotation.x=-.14;
