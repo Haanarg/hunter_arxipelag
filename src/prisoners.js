@@ -119,7 +119,7 @@ window.HUNTER_PRISONERS=Object.freeze({
    // Keep the root at the world foot point: movement and projectile bounds share it.
    u.pose=seated?'seated':'standing';
    u.height=seated?(u.role==='mechanic'?1.115:1.0825)*u.modelScale:config.standingHeight;
-   u.radius=(u.cheering?.86:seated?.76:.56)*u.modelScale;
+   u.radius=(u.cheering?.98:seated?.76:.56)*u.modelScale;
    if(!u.o)return;
    u.rig.position.y=seated?-.695:-.06;
    for(let i=0;i<u.legs.length;i++)u.legs[i].rotation.x=seated?Math.PI/2:0;
