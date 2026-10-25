@@ -410,7 +410,8 @@ function boom(x,y,z,r,dmg,own,source=null){
   if(dealt&&y<w.y1+3&&w.hp>0)dmgW(w,dealt);
  }
  for(const b of buildingCandidates(x,z,r)){
-  if(b.rhp<=0)continue;
+  // El sostre estructural del búnquer roman intacte encara que es destrueixin murs.
+  if(b.kind==='enemy_bunker'||b.rhp<=0)continue;
   const dealt=explosionDamage(dmg,Math.hypot(b.x-x,b.z-z),r+b.w/2);
   if(dealt){b.rhp-=dealt;if(b.rhp<=0)roofBreak(b)}
  }
