@@ -230,7 +230,7 @@ window.HUNTER_PRISONERS=Object.freeze({
    return exit.map(localPoint);
   }
   function releaseCaptives(ctx,status){
-   if(released||!status.breach||status.guards||status.towers)return;
+   if(released||!status.breach||status.guards||status.towers||!entities.some(alive))return;
    // Prefer a front/gate gap when there are several: fewer corners for
    // unarmed NPCs and a clean approach to the single outer exit.
    const best=status.gaps.slice().sort((a,b)=>{
@@ -344,6 +344,12 @@ window.HUNTER_PRISONERS=Object.freeze({
     u.arms[i].rotation.z=0;
    }
    if(repair?.mechanic===u){u.arms[0].rotation.x=-1.1+Math.sin(repair.progress*14)*.18;u.arms[1].rotation.x=-.7}
+   else if(u.role==='mechanic'&&u.state==='ready'&&!u.following){
+    // Idle workshop behaviour: the rescued mechanic inspects his tools.
+    u.arms[0].rotation.x=-.45+Math.sin(u.phase)*.10;
+    u.arms[1].rotation.x=-.22;
+    u.phase+=dt*1.5;
+   }
   }
   function update(dt,ctx){
    lastContext=ctx;
