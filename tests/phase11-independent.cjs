@@ -18,6 +18,7 @@ const assert=require('node:assert/strict');
       playerFall=null;playerEject=null;P.x=0;P.y=3;P.z=8;P.hd=0;
       const layout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.type==='prison-camp');
       if(!layout)throw Error('Missing prison compound in runtime layouts');
+      P.x=layout.rescuePoint.x;P.z=layout.rescuePoint.z;
       const camp={id:'prison-camp',layoutId:'prison-camp',x:0,z:0,angle:0,layout,
         buildings:[],soldiers:[],vehicles:[],loot:[],r:115};
       world.userData={compounds:[camp],prisonCamp:camp};

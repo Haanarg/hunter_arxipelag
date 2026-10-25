@@ -17,7 +17,7 @@ const inspect=`(()=>{
  check(world.userData.compounds.filter(c=>c.id==='prison-camp').length===1,'one camp');
  check(layout.prisoners.filter(p=>p.role==='mechanic').length===1,'one mechanic');
  check(layout.prisoners.filter(p=>p.role==='farmer').length===4,'four farmers');
- check(camp.buildings.length===2&&camp.buildings.every(b=>!b.upperFloor),'one-storey barracks/workshop');
+ check(camp.buildings.length===2&&camp.buildings.every(b=>!b.upperFloor),'one-storey barrack and guardhouse');
  const counts=Object.fromEntries(['polvori','comunicacions','heliport','port'].map(id=>[id,world.userData.compounds.filter(c=>c.id===id).length]));
  check(counts.polvori>=1,'powder magazine coverage');check(counts.comunicacions>=1,'communications coverage');
  check(counts.heliport>=1+MAP_SCALE,'heliport coverage');
@@ -25,7 +25,12 @@ const inspect=`(()=>{
  check(counts.port>=1,'port fallback coverage');
  const other=world.userData.compounds.filter(c=>c!==camp);
  for(const c of other)check(Math.hypot(c.x-camp.x,c.z-camp.z)>c.r+camp.r+33,'safe reservation from '+c.id);
- const solid=(x,z,r=.85)=>wallCandidates(x,z,r).some(w=>!w.open&&w.hp>0&&x>w.x0-r&&x<w.x1+r&&z>w.z0-r&&z<w.z1+r);
+ const gate=camp.prisonGate;
+ check(!!gate&&gate.colliders.length>0,'inner prison gate exists');
+ check(gate?.opened===false&&gate.colliders.every(w=>!w.open),'prison gate begins closed');
+ const gateBefore=gate?{opened:gate.opened,walls:gate.colliders.map(w=>({open:w.open,hp:w.hp})),visible:gate.meshes.map(m=>m.visible)}:null;
+ gate?.open();
+ const solid=(x,z,r=.94)=>wallCandidates(x,z,r).some(w=>!w.open&&w.hp>0&&x>w.x0-r&&x<w.x1+r&&z>w.z0-r&&z<w.z1+r);
  let last=null,maxRise=0,samples=0;
  const route=layout.escapeRoute.map(point);
  for(let i=1;i<route.length;i++){
@@ -51,16 +56,16 @@ const inspect=`(()=>{
     let from={...a,y:hAt(a.x,a.z)};
     for(let n=1;n<=steps;n++){
      const t=n/steps,next={x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t};next.y=hAt(next.x,next.z);
-     check(optionalCivilianCanMove(from,next,.55),'farmer production canMove lane '+lane);from=next;
+     check(optionalCivilianCanMove(from,next,.94),'farmer production canMove lane '+lane);from=next;
     }
    }
   }
-  const mechanicPath=[[0,3],[layout.rescuePoint.x,layout.rescuePoint.z],[layout.mechanicStation.x,layout.mechanicStation.z]].map(point);
+  const mechanicSpec=layout.prisoners.find(p=>p.role==='mechanic'),mechanicPath=[[mechanicSpec.x,mechanicSpec.z],...(layout.mechanicRoute||[[layout.rescuePoint.x,layout.rescuePoint.z],[layout.mechanicStation.x,layout.mechanicStation.z]])].map(point);
   for(let i=1;i<mechanicPath.length;i++){
    const a=mechanicPath[i-1],b=mechanicPath[i],steps=Math.ceil(Math.hypot(b.x-a.x,b.z-a.z)/.1);let from={...a,y:hAt(a.x,a.z)};
    for(let n=1;n<=steps;n++){
     const t=n/steps,next={x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t};next.y=hAt(next.x,next.z);
-    check(optionalCivilianCanMove(from,next,.55),'mechanic production canMove');from=next;
+    check(optionalCivilianCanMove(from,next,.94),'mechanic production canMove');from=next;
    }
   }
  }
@@ -76,6 +81,7 @@ const inspect=`(()=>{
    check(!wallCandidates(x,z,18).some(w=>!w.open&&w.hp>0&&overlaps(box,w)),'truck access through gate/workshop');
   }
  }
+ if(gateBefore){gate.opened=gateBefore.opened;gate.colliders.forEach((w,i)=>Object.assign(w,gateBefore.walls[i]));gate.meshes.forEach((m,i)=>m.visible=gateBefore.visible[i])}
  return{issues,counts,portTarget:2*MAP_SCALE,camp:{x:camp.x,z:camp.z,angle:camp.angle},routeSamples:samples,maxRise,truck:{w:truck.w,d:truck.d},candidates:window.HUNTER_BUILD_STATS.portSearch.prisonCampCandidates};
 })()`;
 async function complete(game,promise){

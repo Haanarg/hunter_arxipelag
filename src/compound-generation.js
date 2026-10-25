@@ -137,8 +137,21 @@ function* buildApprovedCompoundSteps(layout,q,{pad,path,pier,prop,vehicles,rocke
     stripe(8,1.6,0,0);
   }
   for(const [kind,x,z] of layout.props){if(kind==='flag')flag(...tr(x,z),layout.friendly?0x2c7bff:0xe02828);else prop(kind,...tr(x,z),-angle);}
-  // The outpost perimeter has exactly the same two openings as the approved preview.
+  // Build only the openings authored in each compound's perimeter.
   if(layout.fence)for(const [a,b] of layout.fence)barbedSegment(...tr(...a),...tr(...b));
+  if(layout.prisonerFence)for(const [a,b] of layout.prisonerFence)barbedSegment(...tr(...a),...tr(...b));
+  if(layout.prisonerGate){
+    const [a,b]=layout.prisonerGate,collider=barbedSection(...tr(...a),...tr(...b)),
+      colliders=[collider],meshes=colliders.flatMap(w=>w.parts||[w.m]).filter(Boolean);
+    collider.prisonGate=true;
+    record.prisonGate={colliders,meshes,opened:false,open(){
+      if(this.opened)return;
+      this.opened=true;
+      for(const w of colliders){w.open=true;w.hp=0}
+      for(const mesh of meshes)mesh.visible=false;
+      wallGridCount=-1;
+    }};
+  }
   if(!layout.boundary&&(layout.id==='hangar'||layout.id==='base')){
     const hw=layout.friendly?56:47,hd=50;
     for(let x=-hw;x<=hw;x+=6){if(Math.abs(x)>10)prop('barrier',...tr(x,hd),-angle);prop('barrier',...tr(x,-hd),-angle)}
@@ -182,6 +195,12 @@ function* buildApprovedCompoundSteps(layout,q,{pad,path,pier,prop,vehicles,rocke
       }
     }
     if(layout.id==='hq'&&i>=5){setPatrol(u,[[pos[0],pos[1]-1],[pos[0],pos[1]+1]],true);record.soldiers.push(u);continue;}
+    const sentry=layout.sentries?.find(s=>s.soldier===i);
+    if(sentry){
+      u.campDuty='sentry';u.hd=rotatedHeading(sentry.heading||0);
+      setPatrol(u,[pos],true);record.soldiers.push(u);continue;
+    }
+    if(layout.id==='prison-camp')u.campDuty='patrol';
     // Start at the nearest patrol waypoint so the first leg does not cut a building.
     let nearest=0;route.forEach((p,j)=>{if(Math.hypot(p[0]-pos[0],p[1]-pos[1])<Math.hypot(route[nearest][0]-pos[0],route[nearest][1]-pos[1]))nearest=j});
     setPatrol(u,route.map((_,j)=>route[(j+nearest)%route.length]));record.soldiers.push(u);

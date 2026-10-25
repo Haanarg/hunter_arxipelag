@@ -1,13 +1,13 @@
 # Fase 11 — sabotatge, camp de presoners i mecànic
 
-Primer prototip B + C introduït a v0.5.82, amb garantia de camp reforçada a v0.5.83. L’usuari ha triat aquestes dues oportunitats i ha concretat que el presoner mecànic sigui l’únic que pugui reparar vehicles. La proposta A i la nit/espera queden pendents.
+Primer prototip B + C introduït a v0.5.82, amb garantia de camp reforçada a v0.5.83 i camp redissenyat a v0.5.84. L’usuari ha triat aquestes dues oportunitats i ha concretat que el presoner mecànic sigui l’únic que pugui reparar vehicles. La proposta A i la nit/espera queden pendents.
 
 ## Com es juga
 
 - **Ràdio:** apropa’t a un panell de comunicacions i usa **E / el botó d’acció** per sabotejar-lo discretament. També el pots destruir amb armament pesant o explosius. La llum i el marcador indiquen si continua operatiu.
-- **Camp de presoners:** un nou complex militar té quatre camperols, un mecànic, guàrdies, filferrada, una caserna i un taller amb espai exterior per als vehicles. Al pati, E / el botó d’acció permet alliberar el grup si no hi ha una amenaça immediata que ho impedeixi.
+- **Camp de presoners:** un complex amb una única entrada exterior, quatre torres a les cantonades, un barracó llarg de fusta com les cases de pescadors i una caseta de guàrdia. Quatre soldats patrullen i dos sentinelles custodien la porta d’un recinte interior de filferrada. Dins hi ha quatre camperols i un mecànic, drets o asseguts a terra, amb l’alçada adulta del jugador. Davant la porta interior, **E / el botó d’acció** allibera el grup i obre físicament la porta si no hi ha una amenaça immediata. [Disseny i proves](PRISON_CAMP_REDESIGN.md).
 - **Camperols:** un cop alliberats, fugen per una ruta curta a través de la porta del camp. El rescat no exigeix acompanyar-los fins a la base ni acaba l’operació.
-- **Mecànic:** va al punt exterior del taller. Apropa-hi un vehicle danyat i aturat, baixa’n i activa **Reparar**. La reparació dura sis segons, retorna la vida màxima i conserva la munició. No necessita materials ni inventari de fabricació.
+- **Mecànic:** va a la badia exterior de reparació, seguint la ruta per la porta interior i al voltant de la tanca. Apropa-hi un vehicle danyat i aturat, baixa’n i activa **Reparar**. La reparació dura sis segons, retorna la vida màxima i conserva la munició. No necessita materials ni inventari de fabricació.
 - **Moure el mecànic:** a peu, prop seu i sense un vehicle que ocupi l’acció contextual, pots demanar-li **segueix-me / espera aquí**. Això permet acostar-lo a un vehicle o a la costa. Camina, respecta obstacles i no travessa el mar; cal guiar-lo al voltant d’un bloqueig. No és passatger dels vehicles en aquest prototip.
 - **Mapa:** les oportunitats només es marquen després de descobrir-les amb proximitat i visió. **R** és ràdio, **P** presoners i **M** mecànic; el gris identifica un estat desactivat o perdut.
 
@@ -29,9 +29,9 @@ Totes dues activitats continuen sent opcionals. No s’han afegit claus, fabrica
 
 ## Implementació
 
-- `src/prison-camp-layout.mjs`: especificació del complex de 130 × 130 m, porta de 24 m, pati, captius, ruta d’evacuació i badia de reparació.
+- `src/prison-camp-layout.mjs`: especificació del complex de 130 × 130 m, entrada exterior de 24 m, barracó, caseta, quatre torres, quatre patrullers, dos sentinelles, recinte de captius amb porta, rutes d’evacuació i badia de reparació.
 - `src/world-generation.js`: camp obligatori reservat després de base/HQ i abans dels altres recintes. Cerca seca determinista, terrassa si cal i illa de reserva com a últim recurs. Plataforma i sortides protegides. Abans d’entrar a jugar es valida un camp amb quatre camperols i un mecànic; el món no es declara preparat si falten. [Garantia i proves](PRISON_CAMP_GUARANTEE.md).
-- `src/prisoners.js`: estat i models procedurals de cinc civils, evacuació, seguiment, reparació, dany i neteja. No entren a la llista d’enemics ni a l’autoapuntat.
+- `src/prisoners.js`: estat i models procedurals de cinc civils a escala del jugador, postures dretes/assegudes, obertura de la porta interior, evacuació, seguiment, reparació, dany i neteja. No entren a la llista d’enemics ni a l’autoapuntat.
 - `src/radio-relay.js`: panells amb col·lisions i dany reals, descoberta, sabotatge, missatges coneguts i resposta limitada d’unitats existents.
 - `src/game-core.js`, `src/combat.js`, `src/enemy-ai.js`, `src/minimap.js` i `src/ui.js`: controls contextuals, dany amb cobertura, avisos i presentació.
 

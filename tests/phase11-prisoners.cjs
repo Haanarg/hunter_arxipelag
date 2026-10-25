@@ -31,6 +31,56 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
    setClear:v=>clear=v,setMove:v=>move=v,setWater:v=>water=v};
  }
 
+ // Adult civilians match the real upright protagonist, with grounded captive poses.
+ {
+  const game=await require('./harness.cjs')();
+  const playerHeight=game.run(`(()=>{
+   const player=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});
+   player.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(player);
+   return box.max.y-box.min.y;
+  })()`);
+  const f=fixture(),bounds=u=>{u.o.updateMatrixWorld(true);return new THREE.Box3().setFromObject(u.o)};
+  const standing=f.api.entities.filter(u=>u.pose==='standing'),seated=f.api.entities.filter(u=>u.pose==='seated');
+  assert.equal(standing.length,3,'two farmers and the mechanic stand');
+  assert.equal(seated.length,2,'two farmers sit on the ground');
+  const check=u=>{
+   const box=bounds(u),actualHeight=box.max.y-box.min.y;
+   assert(Math.abs(box.min.y-u.y)<1e-6,u.id+' rests on terrain');
+   assert(Math.abs(actualHeight-u.height)<1e-5,u.id+' projectile height follows posed geometry');
+   for(const extent of[box.min.x-u.x,box.max.x-u.x,box.min.z-u.z,box.max.z-u.z])
+    assert(Math.abs(extent)<=u.radius+1e-5,u.id+' projectile footprint contains the model');
+   if(u.pose==='standing')assert(Math.abs(actualHeight-playerHeight)<1e-4,u.id+' is as tall as the actual protagonist');
+   else assert(actualHeight<playerHeight*.7,u.id+' is visibly sitting rather than scaled down');
+  };
+  f.api.entities.forEach(check);f.tick(5);f.api.entities.forEach(check);
+  assert.equal(f.mech().pose,'standing','mechanic waits upright');
+  f.release();assert(f.api.entities.every(u=>u.pose==='standing'),'all captives stand before walking');
+  f.api.entities.forEach(check);f.tick(40);f.api.entities.forEach(check);f.api.reset();
+ }
+
+ // The physical pen opens only on a successful rescue, before any escape motion.
+ {
+  const {prisonCampLayout}=await import('../src/prison-camp-layout.mjs');
+  const f=fixture();f.camp.layout=prisonCampLayout;let opens=0;
+  f.camp.prisonGate={opened:false,colliders:[{open:false,hp:4}],open(){
+   assert(f.api.entities.every(u=>u.state==='captive'&&!u.path.length),'gate opens while prisoners remain inside');
+   opens++;this.opened=true;this.colliders[0].open=true;this.colliders[0].hp=0;
+  }};
+  f.api.configure({world:f.world,camp:f.camp});
+  f.player.x=prisonCampLayout.rescuePoint.x;f.player.z=prisonCampLayout.rescuePoint.z;
+  f.ctx.enemies=[{t:'soldat',x:0,y:3,z:28,hp:4,canSee:true}];
+  f.release();assert.equal(opens,0,'near combat cannot unlock the inner gate');
+  assert.equal(f.api.snapshot().released,false);
+  f.ctx.enemies=[];f.release();assert.equal(opens,1);
+  assert.equal(f.camp.prisonGate.opened,true);assert.equal(f.camp.prisonGate.colliders[0].open,true);
+  const mechanic=f.mech();
+  assert.deepEqual(mechanic.path.map(p=>[p.x,p.z]),prisonCampLayout.mechanicRoute,
+   'mechanic follows the authored route through the inner gate, then around the fence');
+  f.tick(40);assert.equal(mechanic.state,'ready');
+  assert(f.api.entities.filter(u=>u.role==='farmer').every(u=>u.state==='rescued'));
+  f.api.update(0,f.ctx);assert.equal(opens,1,'gate opening cannot replay during later frames');f.api.reset();
+ }
+
  // Discovery is a real observation, never a map-wide quest reveal.
  {
   const f=fixture();assert.equal(f.api.entities.length,5);assert.equal(f.world.children.length,5);
@@ -179,5 +229,5 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
   assert.equal(f.api.snapshot().released,true,'loss of repair does not undo the rescue or principal mission');
   f.api.reset();
  }
- console.log('OK presoners: descoberta/LOS, rescat opcional, camins sense teleports, mecànic únic, reparació local6s, interrupcions, seguiment/aigua, dany enter i reset');
+ console.log('OK presoners: escala adulta/postures a terra/hitbox, porta interior, descoberta/LOS, rescat opcional, camins sense teleports, mecànic únic, reparació local6s, interrupcions, seguiment/aigua, dany enter i reset');
 })().catch(error=>{console.error(error);process.exitCode=1});

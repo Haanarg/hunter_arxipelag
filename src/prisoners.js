@@ -4,10 +4,12 @@ window.HUNTER_PRISONERS=Object.freeze({
  create({THREE:T,heightAt=()=>0,canMove=()=>true,clearLine=()=>true,
    notify=()=>{},sound=()=>{},vehicleRadius=()=>4,vehicleName=v=>v.t}={}){
   const entities=[],resources=new Set();
-  let world=null,camp=null,rescuePoint=null,station=null,escapeRoute=[],
+  let world=null,camp=null,rescuePoint=null,station=null,escapeRoute=[],mechanicRoute=[],
     discovered=false,released=false,repair=null,lastContext=null,serial=0;
   const config=Object.freeze({discoverRange:80,rescueRange:6,personRange:9,
-    maxServiceRange:32,repairSeconds:6,walkSpeed:3.2,mechanicSpeed:2.8});
+    maxServiceRange:32,repairSeconds:6,walkSpeed:3.2,mechanicSpeed:2.8,
+    // Upright protagonist mesh (compact D head, 1.2 baked units × 2/3 scale).
+    standingHeight:2.84648});
   const own=r=>(resources.add(r),r),alive=u=>!!u&&u.hp>0&&!u.destroyed;
   const position=o=>({x:o.x,y:Number.isFinite(o.y)?o.y:
     (o.t==='heli'||o.t==='heli_combat')&&Number.isFinite(o.alt)?o.alt:o.o?.position?.y??0,z:o.z});
@@ -23,7 +25,7 @@ window.HUNTER_PRISONERS=Object.freeze({
    for(const u of entities)u.o?.removeFromParent();
    for(const resource of resources)resource.dispose?.();
    resources.clear();entities.length=0;world=camp=rescuePoint=station=null;
-   escapeRoute=[];discovered=false;released=false;repair=null;lastContext=null;serial++;
+   escapeRoute=[];mechanicRoute=[];discovered=false;released=false;repair=null;lastContext=null;serial++;
   }
   function createModels(){
    const cube=own(new T.BoxGeometry(1,1,1)),head=own(new T.SphereGeometry(.18,7,5)),
@@ -37,29 +39,46 @@ window.HUNTER_PRISONERS=Object.freeze({
     o.castShadow=true;parent.add(o);return o;
    }
    return u=>{
-    const root=new T.Group(),mechanic=u.role==='mechanic',shirt=mechanic?overall:farmer;
-    root.name='hunter-prisoner-'+u.id;
-    mesh(root,cube,shirt,.51,.55,.29,0,1.08,0);
-    mesh(root,cube,belt,.52,.09,.31,0,.85,0);
-    mesh(root,head,skin,1,1,1,0,1.57,0);
+    const root=new T.Group(),rig=new T.Group(),mechanic=u.role==='mechanic',shirt=mechanic?overall:farmer;
+    root.name='hunter-prisoner-'+u.id;root.add(rig);u.rig=rig;
+    mesh(rig,cube,shirt,.51,.55,.29,0,1.08,0);
+    mesh(rig,cube,belt,.52,.09,.31,0,.85,0);
+    mesh(rig,cube,mechanic?overall:trousers,.50,.22,.32,0,.81,0);
+    mesh(rig,head,skin,1,1,1,0,1.57,0);
     if(mechanic){
-     mesh(root,cube,overall,.36,.12,.34,0,1.75,-.015);
-     mesh(root,cube,tool,.055,.32,.055,.29,.79,-.02);
-     mesh(root,cube,tool,.19,.055,.055,.29,.95,-.02);
-     mesh(root,cube,farmer,.11,.16,.025,-.13,1.22,-.158);
-    }else mesh(root,hat,straw,1,1,1,0,1.75,0);
+     mesh(rig,cube,overall,.36,.12,.34,0,1.75,-.015);
+     mesh(rig,cube,tool,.055,.32,.055,.29,.79,-.02);
+     mesh(rig,cube,tool,.19,.055,.055,.29,.95,-.02);
+     mesh(rig,cube,farmer,.11,.16,.025,-.13,1.22,-.158);
+    }else mesh(rig,hat,straw,1,1,1,0,1.75,0);
     const legs=[],arms=[];
     for(const side of[-1,1]){
-     const leg=new T.Group();leg.position.set(side*.14,.82,0);root.add(leg);
+     const leg=new T.Group();leg.position.set(side*.14,.82,0);rig.add(leg);
      mesh(leg,cube,mechanic?overall:trousers,.20,.64,.24,0,-.32,0);
      mesh(leg,cube,boots,.22,.16,.33,0,-.68,-.04);legs.push(leg);
-     const arm=new T.Group();arm.position.set(side*.34,1.30,0);root.add(arm);
+     const arm=new T.Group();arm.position.set(side*.34,1.30,0);rig.add(arm);
      mesh(arm,cube,shirt,.16,.35,.20,0,-.15,0);
      mesh(arm,cube,skin,.14,.25,.16,0,-.43,0);arms.push(arm);
     }
     root.userData.civilian=true;root.userData.prisonerId=u.id;
+    root.scale.setScalar(u.modelScale);
     u.legs=legs;u.arms=arms;return root;
    };
+  }
+  function pose(u,seated=false){
+   // The seat is the pelvis at ground level, with straight legs on the ground.
+   // Keep the root at the world foot point: movement and projectile bounds share it.
+   u.pose=seated?'seated':'standing';
+   u.height=seated?(u.role==='mechanic'?1.115:1.0825)*u.modelScale:config.standingHeight;
+   u.radius=(seated?.76:.56)*u.modelScale;
+   if(!u.o)return;
+   u.rig.position.y=seated?-.695:-.06;
+   for(let i=0;i<u.legs.length;i++)u.legs[i].rotation.x=seated?Math.PI/2:0;
+   for(let i=0;i<u.arms.length;i++){
+    u.arms[i].rotation.x=seated?-.5:0;
+    u.arms[i].rotation.z=u.state==='captive'?(i?-1:1)*.22:0;
+   }
+   u.o.userData.pose=u.pose;
   }
   function configure({world:nextWorld,camp:nextCamp,logicalOnly=false}={}){
    reset();world=nextWorld||null;camp=nextCamp||null;
@@ -67,16 +86,20 @@ window.HUNTER_PRISONERS=Object.freeze({
    rescuePoint=localPoint(camp.layout.rescuePoint||{x:0,z:8});
    station=localPoint(camp.layout.mechanicStation||{x:33,z:16});
    escapeRoute=(camp.layout.escapeRoute||[[0,8],[0,30],[0,62],[0,86]]).map(localPoint);
+   mechanicRoute=(camp.layout.mechanicRoute||[camp.layout.rescuePoint||{x:0,z:8},
+    camp.layout.mechanicStation||{x:33,z:16}]).map(localPoint);
    const model=logicalOnly?null:createModels();
-   let mechanicAdded=false;
+   let mechanicAdded=false,farmerIndex=0;
    for(const spec of camp.layout.prisoners||[]){
     if(spec.role==='mechanic'&&mechanicAdded)continue;
     const role=spec.role==='mechanic'?'mechanic':'farmer';if(role==='mechanic')mechanicAdded=true;
     const p=localPoint(spec),u={t:'civilian',civilian:true,friendly:true,id:spec.id,
-      role,...p,hp:4,maxHp:4,radius:.55,height:1.85,state:'captive',
+      role,...p,hp:4,maxHp:4,radius:.55,height:config.standingHeight,state:'captive',
+      modelScale:config.standingHeight/(role==='mechanic'?1.75:1.7175),
+      captivePose:spec.pose||(role==='farmer'&&farmerIndex++%2===1?'seated':'standing'),
       destroyed:false,path:[],waypoint:0,phase:0,blocked:0,following:false,followWarning:false,o:null};
     if(model){u.o=model(u);u.o.position.set(u.x,u.y,u.z);u.o.visible=false;world.add(u.o)}
-    entities.push(u);
+    pose(u,u.captivePose==='seated');entities.push(u);
    }
   }
   function mechanic(){return entities.find(u=>u.role==='mechanic'&&alive(u))||null}
@@ -151,18 +174,18 @@ window.HUNTER_PRISONERS=Object.freeze({
    if(!current||current.kind!==action.kind||current.target!==action.target)return false;
    if(action.kind==='rescue'){
     if(danger(ctx)){notify('Allunya els guàrdies abans d’alliberar-los.');return true}
-    released=true;
+    camp.prisonGate?.open();released=true;
     let farmerIndex=0;
     const c=Math.round(Math.cos(camp.angle||0)),s=Math.round(Math.sin(camp.angle||0));
     for(const u of entities){
      if(!alive(u))continue;
      if(u.role==='mechanic'){
-      u.path=[{...rescuePoint},{...station}];u.state='to-station';
+      u.path=mechanicRoute.map(p=>({...p}));u.state='to-station';
      }else{
       const lane=(farmerIndex++-1.5)*1.5;
       u.path=escapeRoute.map(p=>({...p,x:p.x+lane*c,z:p.z+lane*s}));u.state='evacuating';
      }
-     u.waypoint=0;
+     pose(u,false);u.waypoint=0;
     }
     notify('Presoners alliberats. El mecànic va al taller.');sound('pick',.55,rescuePoint);
     return true;
@@ -209,6 +232,7 @@ window.HUNTER_PRISONERS=Object.freeze({
   }
   function animate(u,dt){
    if(!u.o||!alive(u))return;
+   if(u.state==='captive'){pose(u,u.captivePose==='seated');return}
    const walking=u.path.length>0&&u.blocked===0,
      stride=walking?Math.sin(u.phase)*.58:0;
    for(let i=0;i<u.legs.length;i++)u.legs[i].rotation.x=(i?-1:1)*stride;

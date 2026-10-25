@@ -22,12 +22,21 @@ const inspect=`(()=>{
  for(const other of world.userData.compounds.filter(c=>c!==camp))
   check(Math.hypot(other.x-camp.x,other.z-camp.z)>other.r+camp.r+33,'reserve overlaps '+other.id);
  const transform=compoundTransform(camp,camp.angle),point=p=>{const q=transform(...p);return{x:q[0],z:q[1]}};
+ // The cage must really confine the captives until rescue. Route checks below
+ // concern evacuation, so open the authored gate before testing their passage.
+ const gate=camp.prisonGate;
+ check(!!gate&&gate.colliders.length>0&&!gate.opened,'closed prisoner gate exists');
+ const approach=point([0,23]),outside=point([0,25]);
+ check(!optionalCivilianCanMove({...approach,y:hAt(approach.x,approach.z)},
+   {...outside,y:hAt(outside.x,outside.z)},.94),'closed cage blocks escape');
+ gate?.open();
+ check(!!gate?.opened&&gate.colliders.every(w=>w.open),'rescue gate opens physically');
  const paths=[];
  for(const lane of[-2.25,-.75,.75,2.25])paths.push(camp.layout.escapeRoute.map(p=>point([p[0]+lane,p[1]])));
- paths.push([[0,3],[camp.layout.rescuePoint.x,camp.layout.rescuePoint.z],
-  [camp.layout.mechanicStation.x,camp.layout.mechanicStation.z]].map(point));
+ const mechanic=camp.layout.prisoners.find(p=>p.role==='mechanic');
+ paths.push([[mechanic.x,mechanic.z],...camp.layout.mechanicRoute].map(point));
  for(const prisoner of camp.layout.prisoners){const start=point([prisoner.x,prisoner.z]);
-  paths.push([start,point([camp.layout.rescuePoint.x,camp.layout.rescuePoint.z])]);}
+  paths.push([start,point(camp.layout.escapeRoute[0])]);}
  let movementSamples=0,maxRise=0;
  for(const path of paths)for(let i=1;i<path.length;i++){
   const a=path[i-1],b=path[i],steps=Math.max(1,Math.ceil(Math.hypot(b.x-a.x,b.z-a.z)/.25));
@@ -35,7 +44,7 @@ const inspect=`(()=>{
   for(let k=1;k<=steps;k++){
    const t=k/steps,next={x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t};next.y=hAt(next.x,next.z);
    check(next.y>.2,'dry NPC access');maxRise=Math.max(maxRise,Math.abs(next.y-previous.y));
-   check(optionalCivilianCanMove(previous,next,.55),'production NPC access');movementSamples++;previous=next;
+   check(optionalCivilianCanMove(previous,next,.94),'production NPC access');movementSamples++;previous=next;
   }
  }
  const road=world.userData.baseCoast?.points||[];
@@ -149,11 +158,11 @@ async function actualBuilds(){
  for(const scale of[1,2]){
   const game=await createGame();ambient(game);game.run("seedSearchMode=true;seedSearchCategoryEl.value='vehicle';surveyPrisonCampSiteSteps=function*(){return null}");
   game.start('67',scale);
+  if(scale===1)synchronous=hash(game);
   const state=plain(game.run(inspect));assert.deepEqual(state.issues,[],JSON.stringify(state));
   assert.equal(state.seed,67);assert.equal(state.requestedSeed,67);assert.equal(state.placement,'support-island');
   assert.deepEqual(state.support,[{x:0,z:0,r:320,peakX:0,peakZ:0}]);assert.equal(state.candidates,(scale===1?26:98)*257);
   assert(state.counts.polvori>=1&&state.counts.comunicacions>=1&&state.counts.heliport>=1+scale&&state.counts.port>=1,JSON.stringify(state));
-  if(scale===1)synchronous=hash(game);
   game.run('discardGeneratedWorld()');console.log('OK forced emergency full logical world',JSON.stringify({...state,portTarget:2*scale}));
  }
  const game=await createGame();ambient(game);game.run("seedSearchMode=true;seedSearchCategoryEl.value='vehicle';surveyPrisonCampSiteSteps=function*(){return null}");

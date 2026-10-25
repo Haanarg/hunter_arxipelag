@@ -466,8 +466,11 @@ const prisonBounds=prisonCampFootprint(prisonLayout),prisonTr=compoundTransform(
 addLevelArea(prisonCamp.x,prisonCamp.z+(prisonBounds.padHalfDepth+prisonBounds.escapeEnd)/2,
   28,prisonBounds.escapeEnd-prisonBounds.padHalfDepth,prisonPlan.site.h,0,18);
 for(const p of [...prisonEscape,{x:escapeEnd[0],z:escapeEnd[1]}])compoundClear.push({x:p.x,z:p.z,r:14});
-const mechanicPoints=[[0,3],[prisonLayout.rescuePoint.x,prisonLayout.rescuePoint.z],
-  [prisonLayout.mechanicStation.x,prisonLayout.mechanicStation.z]].map(p=>{const q=prisonTr(...p);return{x:q[0],z:q[1]}});
+const mechanicSpec=prisonLayout.prisoners.find(p=>p.role==='mechanic'),
+  mechanicPoints=[[mechanicSpec.x,mechanicSpec.z],...(prisonLayout.mechanicRoute||[
+    [prisonLayout.rescuePoint.x,prisonLayout.rescuePoint.z],
+    [prisonLayout.mechanicStation.x,prisonLayout.mechanicStation.z]
+  ])].map(p=>{const q=prisonTr(...p);return{x:q[0],z:q[1]}});
 const prisonCorridors=[];
 for(const [points,width]of[[[...prisonEscape,{x:escapeEnd[0],z:escapeEnd[1]}],6],[mechanicPoints,2]])
   for(let i=1;i<points.length;i++)prisonCorridors.push({a:points[i-1],b:points[i],width});

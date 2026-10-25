@@ -59,6 +59,11 @@ function assertCamp(game,label){
 const accessSource=`(()=>{
  const c=world.userData.prisonCamp,l=c.layout,issues=[];
  const check=(ok,message)=>{if(!ok&&issues.length<30)issues.push(message)};
+ const gate=c.prisonGate;
+ check(!!gate&&gate.colliders.length>0,'inner prison gate exists');
+ check(gate?.opened===false&&gate.colliders.every(w=>!w.open),'inner gate begins physically closed');
+ const gateBefore=gate?{opened:gate.opened,walls:gate.colliders.map(w=>({open:w.open,hp:w.hp})),visible:gate.meshes.map(m=>m.visible)}:null;
+ gate?.open();
  const tr=compoundTransform(c,c.angle),point=p=>{const q=tr(p[0],p[1]);return{x:q[0],z:q[1]}};
  const walk=points=>{
   let from={...points[0],y:hAt(points[0].x,points[0].z)};
@@ -68,7 +73,7 @@ const accessSource=`(()=>{
     const t=k/n,to={x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t};to.y=hAt(to.x,to.z);
     check(to.y>.2,'route has dry support');
     check(Math.abs(to.y-from.y)<.65,'route has continuous height');
-    check(optionalCivilianCanMove(from,to,.55),'production civilian collision predicate rejects route');
+    check(optionalCivilianCanMove(from,to,.94),'production civilian collision predicate rejects route');
     from=to;
    }
   }
@@ -76,7 +81,8 @@ const accessSource=`(()=>{
  for(const lane of[-2.25,-.75,.75,2.25])walk(l.escapeRoute.map(p=>point([p[0]+lane,p[1]])));
  const route=l.escapeRoute.map(point);
  for(const p of l.prisoners)walk([point([p.x,p.z]),route[0]]);
- walk([point([0,3]),point([l.rescuePoint.x,l.rescuePoint.z]),point([l.mechanicStation.x,l.mechanicStation.z])]);
+ const mechanic=l.prisoners.find(p=>p.role==='mechanic');
+ walk([[mechanic.x,mechanic.z],...(l.mechanicRoute||[[l.rescuePoint.x,l.rescuePoint.z],[l.mechanicStation.x,l.mechanicStation.z]])].map(point));
  const overlaps=(box,w)=>obbOverlap(box,{x:(w.x0+w.x1)/2,z:(w.z0+w.z1)/2,hd:0,w:w.x1-w.x0,d:w.z1-w.z0});
  const access=[[0,82],[0,36],[33,36],[33,16]].map(point);
  for(let i=1;i<access.length;i++){
@@ -90,6 +96,7 @@ const accessSource=`(()=>{
    }
   }
  }
+ if(gateBefore){gate.opened=gateBefore.opened;gate.colliders.forEach((w,i)=>Object.assign(w,gateBefore.walls[i]));gate.meshes.forEach((m,i)=>m.visible=gateBefore.visible[i])}
  return{issues,escapeY:route.map(p=>hAt(p.x,p.z)),layoutNPCs:l.prisoners.map(p=>({id:p.id,role:p.role}))};
 })()`;
 function assertAccess(game,label){
