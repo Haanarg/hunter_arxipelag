@@ -2342,7 +2342,7 @@ for(let i=0;i<16;i++){
     (leaving!==ferry&&circleVehicleOverlap(x,z,1.1,leaving))||
     vehicleCandidatesAt(x,z,40).some(u=>u!==leaving&&u!==ferry&&!u.destroyed&&circleVehicleOverlap(x,z,1.1,u))||
     wallCandidates(x,z,1).some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;
-  if(movingTruck&&hAt(x,z)<=0)continue;
+  if(movingTruck&&hAt(x,z)<=0&&hAt(leaving.x,leaving.z)>0)continue;
   spot=candidate;if(ferry||hAt(x,z)>0||VT[leaving.t].m==='w')break;
 }
 if(!spot){msg='No hi ha espai per baixar aquí.';msgT=3;return}
