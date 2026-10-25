@@ -4,7 +4,13 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
-const combat=read('src/combat.js'),core=read('src/game-core.js');
+const combat=read('src/combat.js'),core=read('src/game-core.js'),html=read('index.html');
+// The utility helicopter's G action must have its own touch target,
+// separate from the F grenade and the combat helicopter's G missile.
+assert.match(html,/<b id="heliBombButton" class="heli-bomb-control" data-k="KeyG"/);
+assert.match(html,/id="mainFireButton" data-k="KeyF"/);
+assert.match(html,/class="heli-combat-control" data-k="KeyG"/);
+assert.match(core,/classList\.toggle\('heli-bomb-active',cv\?\.t==='heli'\)/);
 assert.match(combat,/function helicopterBombDoor\(v\)/);
 assert.match(combat,/v\.o\.localToWorld\(new THREE\.Vector3\(1\.96,2\.02,\.52\)\)/);
 assert.match(combat,/b\.vy=Math\.max\(-65,\(b\.vy\|\|0\)-24\*dt\)/);
@@ -27,6 +33,18 @@ assert.match(core,/cv&&cv\.t!=='heli'/);
  assert.equal(game.run("useInvItem('expl')"),true,'El Huey permet programar C4');
  assert.equal(game.run("ui.isBombTimerOpen()"),true);
  assert.equal(game.run('inv.expl'),5,'Obrir el LED no consumeix C4');
+ // The HUD presents the separate C4 button while piloting the Huey.
+ game.run('resume();uiTick=.2');game.frame();
+ assert.equal(game.el('contextButtons').classList.contains('heli-bomb-active'),true,
+   'Show the C4 button on the utility helicopter');
+ assert.equal(game.el('contextButtons').classList.contains('heli-combat-active'),false,
+   'Hide the missile button on the utility helicopter');
+ assert.equal(game.el('heliBombButton').dataset.count,'5',
+   'Display the number of C4 charges on the HUD');
+ game.run("act('KeyG')");
+ assert.equal(game.run('ui.isBombTimerOpen()'),true,
+   'The C4 button and G must open the exact same bomb timer');
+ assert.equal(game.run('inv.expl'),5,'Pressing the C4 action does not spend a charge');
  assert.match(game.el('panelBody').innerHTML,/Activar i deixar caure/);
  game.el('bombTimerCancel').onclick();
  assert.equal(game.run('inv.expl'),5,'Cancel·lar des del Huey no consumeix C4');
@@ -86,6 +104,21 @@ assert.match(core,/cv&&cv\.t!=='heli'/);
  assert.equal(landed.landed,true,'La bomba arriba al terra');
  assert.equal(landed.y,landed.after,'Queda quieta quan aterra');
  assert(landed.afterTimer<landed.remain,'El compte enrere segueix a terra');
- game.run("cv=null;scene.remove(window.__c4TestHelicopter.o)");
- console.log('OK C4 Huey: LED, caiguda vertical, detonació aèria, aterratge i combat prohibit');
+ // HUD shows a present but inactive C4 action when there are no charges.
+ game.run("cv.t='heli';inv.expl=0;resume();uiTick=.2");game.frame();
+ assert.equal(game.el('heliBombButton').dataset.count,'0');
+ assert.equal(game.el('heliBombButton').getAttribute('aria-disabled'),'true');
+ game.run("act('KeyG')");
+ assert.equal(game.run('ui.isBombTimerOpen()'),false,'No timer without C4');
+ assert.match(game.run('msg'),/No tens explosius C4/);
+ game.run("inv.expl=2;cv.t='heli_combat';uiTick=.2");game.frame();
+ assert.equal(game.el('contextButtons').classList.contains('heli-bomb-active'),false,
+   'The combat helicopter never exposes the C4 control');
+ assert.equal(game.el('contextButtons').classList.contains('heli-combat-active'),true,
+   'The combat helicopter keeps its missile action');
+ game.run("cv=null;uiTick=.2");game.frame();
+ assert.equal(game.el('contextButtons').classList.contains('heli-bomb-active'),false,
+   'Leaving the helicopter hides the C4 button');
+ game.run("scene.remove(window.__c4TestHelicopter.o)");
+ console.log('OK C4 Huey: touch HUD + G, LED, vertical drop, aerial detonation, landing and combat denied');
 })().catch(err=>{console.error(err);process.exitCode=1});
