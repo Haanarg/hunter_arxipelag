@@ -2217,7 +2217,7 @@ const act=c=>{if(generationPromise)return;if(ui?.isBombTimerOpen?.()){
   if(!secondaryWeapon()&&inv.expl&&(!cv||cv.t==='heli')&&
      !swimming&&!playerFall&&!playerEject)panel('bombtimer');
 }if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
-const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.sunk||v.reentryLockUntil>elapsed)continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
+const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.sunk||v.waterIngress?.dead||v.reentryLockUntil>elapsed)continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
 function updateActionButton(nearby){
   const button=document.getElementById('mainActionButton');
   if(!button)return;
@@ -3098,6 +3098,7 @@ else if(c.m==='w'){
    pi=wave*.035*speed;ro=-(v.yawRate||0)*.11+wave*.025;
    // Només la moto aquàtica i el windsurf s'enlairen en
    // remuntar una ona a velocitat: els altres bucs no boten.
+   if(v.grounded&&v.waveJump){v.waveJump.lift=0;v.waveJump.vy=0;v.waveJump.airborne=false}
    if((v.t==='moto_aquatica'||v.t==='windsurf')&&!v.grounded){
      const jump=window.HUNTER_WATER_JUMPS.update(v,dt,t,wy,c.maxF);
      y+=jump.lift;pi+=jump.pitch;
@@ -3115,7 +3116,8 @@ else{
   if(v.waterIngress){
     const state=v.waterIngress,surface=wy(v.x,v.z,t),bed=hAt(v.x,v.z);
     const floated=Math.max(y,surface-.5);
-    y=y+(floated-y)*state.buoyancy;
+    // A steep coastal shelf must not catapult a car upward in one frame.
+    y=y+Math.min(2.5,floated-y)*state.buoyancy;
     if(state.dead)y=Math.max(bed-.4,y-state.sink);
     if(state.dead)pi=Math.min(.27,pi+.025*state.elapsed);
   }
@@ -3251,7 +3253,17 @@ else if(playerEject&&playerEject.t>0){
 if(!playerFall&&!cheats.fly){wallPush();treePush();vehiclePushPlayer();ferryCabinPushPlayer()}}
 // Cal transportar també el jugador que va a peu sobre la coberta mòbil.
 const walkingDeck=!cv&&!playerFall?pedestrianFerry(P.x,P.z,P.y):null;
-V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;v.strafeV=0;return}if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08||v.waterIngress?.dead&&!v.sunk){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
+V.slice().forEach(v=>{if(v===cv)return;
+  if(v.sunk&&v.waterIngress){
+    // The hull continues to descend to the seabed even after its engine
+    // becomes unusable and it is no longer being simulated as a driver.
+    const bed=hAt(v.x,v.z),depth=Math.max(0,wy(v.x,v.z,t)-bed),
+      rate=window.HUNTER_VEHICLE_DYNAMICS.shore.land[v.t]?.sinkRate||1.2;
+    v.waterIngress.sink=Math.min(depth+2,
+      v.waterIngress.sink+rate*dt);
+    v.v=0;v.sideV=0;v.strafeV=0;return;
+  }
+  if(v.carrier){v.v=0;v.sideV=0;v.strafeV=0;return}if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08||v.waterIngress?.dead&&!v.sunk){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
 syncFerryCargo();updateTerminalRamps();
 if(walkingDeck&&!walkingDeck.f.destroyed){const p=ferryWorld(walkingDeck.f,walkingDeck.q.x,walkingDeck.q.z);P.x=p.x;P.z=p.z}
 const previousInterior=ib;
