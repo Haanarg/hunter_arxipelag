@@ -824,6 +824,25 @@ const beachedWaterSpot=function* (island,t){let checkpointUnits=0;
       const x=island.x+ux*d,z=island.z+uz*d,h=hAt(x,z);
       if(h>.15){wasLand=true;continue}
       if(!wasLand)continue;
+      if(t==='windsurf'&&h<=.15){
+        // A parked windsurf is genuinely on the sandy shore, not 1–3 m
+        // underwater as the other shore boats can be. Binary-search the
+        // land/sea crossing so the fallen mast lies over dry beach.
+        let lo=d-5,hi=d;
+        for(let step=0;step<11;step++){
+          const mid=(lo+hi)/2;
+          if(hAt(island.x+ux*mid,island.z+uz*mid)>.32)lo=mid;
+          else hi=mid;
+        }
+        const beachD=(lo+hi)/2,x=island.x+ux*beachD,z=island.z+uz*beachD,
+          surface=hAt(x,z);
+        if(surface>-.05&&surface<.8&&
+           Math.abs(x)<H-r-5&&Math.abs(z)<H-r-5&&
+           !V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+4)&&
+           !B.some(b=>Math.abs(x-b.x)<b.hw+r+3&&Math.abs(z-b.z)<b.hd+r+3)){
+          return {x,z,hd:Math.atan2(ux,uz)+rn(-.18,.18)};
+        }
+      }
       if(h<-1.25&&h>-3.15){
         const clear=Math.abs(x)<H-r-5&&Math.abs(z)<H-r-5&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+4)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r+3&&Math.abs(z-b.z)<b.hd+r+3);
         if(clear){
