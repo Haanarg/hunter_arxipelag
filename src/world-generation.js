@@ -313,8 +313,34 @@ const addVillageWell=g=>{
   innerShadow.rotation.x=-Math.PI/2;innerShadow.position.y=.235;g.add(innerShadow);
 };
 const compoundProp=(kind,x,z,rot=0)=>{
-  if(seedSearchMode)return null; // Les props no participen als emplaçaments.
-  const y=Math.max(.05,hAt(x,z)),g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;
+  // Fixed physical pieces must exist even when graphics are disabled.
+  // Wells are annular, leaving the visual hollow centre unblocked.
+  // Benches use one narrow rotated footprint, not an oversized circle.
+  const y=Math.max(.05,hAt(x,z)),
+    collide=(cx,cz,w,d,height)=>{
+      const cs=Math.cos(rot),sn=Math.sin(rot),
+        px=x+cx*cs+cz*sn,pz=z-cx*sn+cz*cs,
+        hw=(Math.abs(cs)*w+Math.abs(sn)*d)/2,
+        hd=(Math.abs(sn)*w+Math.abs(cs)*d)/2;
+      Wl.push({x0:px-hw,x1:px+hw,z0:pz-hd,z1:pz+hd,
+        cx:px,cz:pz,y0:y-.12,y1:y+height,
+        hp:Infinity,open:false,door:false,rammable:false,
+        civicFurniture:kind});
+      wallGridCount=-1;
+    };
+  if(kind==='bench')collide(0,0,3.95,1.12,1.2);
+  if(kind==='well'){
+    // Narrow stone sections round the hollow mouth; twelve segments
+    // approximate the 1.06–1.8m physical ring, leaving the centre open.
+    for(let i=0;i<12;i++){
+      const t=(i+.5)*Math.PI/6;
+      collide(Math.cos(t)*1.46,Math.sin(t)*1.46,
+        Math.abs(Math.sin(t))*.63+.32,
+        Math.abs(Math.cos(t))*.63+.32,1.85);
+    }
+  }
+  if(seedSearchMode)return null;
+  const g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;
   if(kind==='bench'){bx(g,4,.25,1.2,0x806447,0,.9,0);for(const x of[-1.4,1.4])bx(g,.2,.8,1,0x485249,x,.4,0)}
   else if(kind==='well')addVillageWell(g);
   else if(kind==='lifebuoy'){const m=new THREE.Mesh(new THREE.TorusGeometry(.6,.15,6,16),M(0xe57846,'paint'));m.position.y=1.5;g.add(m);bx(g,.12,2.3,.12,0x5b6050,0,1.15,0)}
