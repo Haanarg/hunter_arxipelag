@@ -58,6 +58,12 @@ const root=path.resolve(__dirname,'..');
   assert.equal(radio.warn(f.witness,{x:40,z:40},3,f.ctx),0,'disabled relay cannot transmit');
   const panel=f.world.getObjectByName('radio-relay-panel');
   assert.ok(panel.getObjectByName('radio-relay-disabled').visible,'disabled state has a visible model');
+  radio.update(.1,f.ctx);
+  assert.equal(panel.visible,true,'a sabotaged but physically intact control remains visible');
+  f=fresh();p=radio.snapshot().relays[0];Object.assign(f.player,{x:p.x,y:p.y,z:p.z+2});
+  f.source.antennaFooting.hp=0;radio.update(.1,f.ctx);
+  assert.equal(f.world.getObjectByName('radio-relay-panel').visible,true,
+    'destroying the antenna preserves the intact disabled control');
 
   // Only an actual, living witness in this sector may send one immutable report.
   f=fresh({extraSources:true});
@@ -158,7 +164,8 @@ const root=path.resolve(__dirname,'..');
       source.soldiers.push(mkEn('soldat',0,0,3));
       hq.soldiers.push(mkEn('soldat',1990,100,3),mkEn('soldat',2010,100,3));
       source.soldiers[0].canSee=true;
-      world.userData.compounds=[source,hq];configureOptionalWorld();rebuildVehicleGrid();
+      world.userData.compounds=[source,hq];seedSearchMode=false;
+      configureOptionalWorld();seedSearchMode=true;rebuildVehicleGrid();
       return source;
     };
   `);
@@ -173,23 +180,29 @@ const root=path.resolve(__dirname,'..');
     Wl.push(cover);wallGridCount=-1;
     const otherWallBlocks=!getOptionalAction();Wl.splice(Wl.indexOf(cover),1);wallGridCount=-1;
     act('KeyE');const sabotaged=!radioRelay.snapshot().relays[0].operational;
-    radioIntegrationFresh();const live=radioRelay.snapshot().relays[0];
+    radioIntegrationFresh();const live=radioRelay.snapshot().relays[0],liveNode=world.getObjectByName('radio-relay-panel');
     P.x=500;P.z=500;boom(live.x,live.y+1.5,live.z,6,10,'p');
     updateOptionalSystems(.05,true);
-    const destroyed=radioRelay.snapshot().relays[0],removed=!Wl.some(w=>w.owner?.kind==='radio-relay');
+    const destroyed=radioRelay.snapshot().relays[0],removed=!Wl.some(w=>w.owner?.kind==='radio-relay'),
+      destroyedVisibility=[];
+    for(const [x,z]of[[live.x,live.z+2],[live.x+1000,live.z+1000],[live.x,live.z+2]]){
+      P.x=x;P.y=live.y;P.z=z;updateOptionalSystems(.05,true);destroyedVisibility.push(liveNode.visible);
+    }
     const witness=radioIntegrationFresh().soldiers[0];
     soldierWarnNeighbors(witness,{x:42,z:-22},3);
     const localShout=STEALTH.events().some(e=>e.kind==='alert'),report=radioRelay.snapshot();
     const recipients=E.slice(1).map(u=>({mode:u.aiMode,canSee:u.canSee,canShoot:u.canShoot,
       x:u.lastSeenX,y:u.lastSeenY,z:u.lastSeenZ}));
     return {kind:action?.kind,otherWallBlocks,sabotaged,before,after:E.length,destroyed:destroyed.operational===false,
-      reason:destroyed.disabledReason,removed,localShout,dispatches:report.relays[0].dispatches,recipients};
+      reason:destroyed.disabledReason,removed,destroyedVisibility,localShout,dispatches:report.relays[0].dispatches,recipients};
   })()`);
   assert.equal(native.kind,'sabotage','real E LOS is not blocked by the control itself');
   assert.equal(native.otherWallBlocks,true,'ignoring the own collider never bypasses another solid wall');
   assert.equal(native.sabotaged,true);assert.equal(native.before,native.after,'no enemies are spawned');
   assert.equal(native.destroyed,true);assert.equal(native.reason,'destroyed');
   assert.equal(native.removed,true,'real explosion removes the panel collider');
+  assert.deepEqual(Array.from(native.destroyedVisibility),[false,false,false],
+    'a destroyed control never reappears when the observer moves near, far and near again');
   assert.equal(native.localShout,true,'radio preserves native local hearing');
   assert.equal(native.dispatches,2,'actual soldier warning relays to two HQ guards');
   assert.ok(native.recipients.every(u=>u.mode==='investigate'&&!u.canSee&&!u.canShoot),

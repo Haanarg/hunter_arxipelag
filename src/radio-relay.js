@@ -144,7 +144,7 @@ window.HUNTER_RADIO_RELAY=Object.freeze({
       const observer=playerFor(context),visualRange=Number.isFinite(context.visualRange)?Math.max(0,context.visualRange):400;
       for(const relay of relays){
         syncDestroyed(relay);discover(relay,context);
-        if(relay.o)relay.o.visible=!!observer&&
+        if(relay.o)relay.o.visible=relay.collider.hp>0&&!!observer&&
           Math.hypot(observer.x-relay.x,footY(observer)-relay.y,observer.z-relay.z)<visualRange;
       }
       for(const [unit,lease]of leases){
