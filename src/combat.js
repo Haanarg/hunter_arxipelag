@@ -658,6 +658,10 @@ function weaponAimClear(x,y,z,tx,ty,tz){
   }
   return true;
 }
+// Bazuca: adquisició de fins a 185 m i ±35° en horitzontal.
+// No limitam la diferència d'altura: torres i objectius elevats dins
+// d'aquest sector són elegibles i el míssil es corregeix també en Y.
+const BAZOOKA_AIM_RANGE=185,BAZOOKA_AIM_CONE=.82;
 // Punt d'intercepció per a patrulleres mòbils, amb la velocitat real de
 // cada arma: les bales ràpides també han d'arribar al centre del casc.
 function bazookaInterceptPoint(e,originX,originY,originZ,targetY,speed){
@@ -684,7 +688,7 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
     const priority=weaponTargetPriority(e);
     if(priority>=3||priority>bestPriority)continue;
     const dx=e.x-x,dz=e.z-z,dist=Math.hypot(dx,dz),forward=Math.hypot(fx,fz);
-    if(dist<=1||dist>range||(priority===bestPriority&&dist>=bestDist))continue;
+    if(Math.hypot(dx,dz)<=.15||(priority===bestPriority&&dist>=bestDist))continue;
     const modelY=e.o?.position?.y??(e.gy??0),
           // El model pot tenir una cota desfasada respecte del terreny
           // (sobretot en pendents i cims). No apuntis sota els peus,
@@ -697,6 +701,7 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
           ty=e.t==='patrulla_marina'?marineHullTargetY(e):
             baseY+(e.t==='torre'?4.5:e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:1.5),
           dy=ty-y,len=Math.hypot(dx,dy,dz);
+    if(len>range)continue;
     // Triam la diana pel con HORITZONTAL. Un enemic que és al davant
     // però molt més amunt/avall continua sent elegible; el vector
     // final sí que incorpora tota la diferència vertical.
@@ -738,7 +743,7 @@ const bazookaReticleWorld=new THREE.Vector3(),bazookaReticleScreen=new THREE.Vec
 let bazookaReticleTimer=0,bazookaReticleHasHit=false,bazookaReticleMode=null;
 // Primera superfície real a la trajectòria; cap objectiu => cap retícula
 // damunt de mar buit o horitzó. No altera en absolut la balística.
-function bazookaFirstSolidHit(x,y,z,dx,dy,dz,range=105,sourceVehicle=null){
+function bazookaFirstSolidHit(x,y,z,dx,dy,dz,range=BAZOOKA_AIM_RANGE,sourceVehicle=null){
   const tx=x+dx*range,ty=y+dy*range,tz=z+dz*range,
         mx=(x+tx)/2,mz=(z+tz)/2,reach=Math.hypot(tx-x,tz-z)/2;
   let best=Infinity;
@@ -839,7 +844,7 @@ function updateBazookaReticle(dt){
             ox=P.x+fx*1.35,oy=P.y+1.9,oz=P.z+fz*1.35,
             base=Math.hypot(1,.01),focus={},
             direction=autoAimWeaponShot(ox,oy,oz,fx/base,.01/base,fz/base,
-              105,.94,'heavy',focus,72*HEAVY_SHOT_SPEED_FACTOR);
+              BAZOOKA_AIM_RANGE,BAZOOKA_AIM_CONE,'heavy',focus,72*HEAVY_SHOT_SPEED_FACTOR);
       hit=focus.point||bazookaFirstSolidHit(ox,oy,oz,
         direction[0],direction[1],direction[2]);
       locked=!!focus.target;
@@ -1021,7 +1026,7 @@ else if(!cv&&sniperEquipped&&inv.franctirador){
   msg='Rifle: '+sniperAmmo+' cartutxos.';msgT=1.5;
 }
 else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}
-else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9-(playerCrouched?.48:0),z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,105,.94,'heavy',null,72*HEAVY_SHOT_SPEED_FACTOR);shoot(x,y,z,ax,ay,az,72,COMBAT_BALANCE.weapons.bazooka,18,'pb',mS,3);Pj[Pj.length-1].life=3.8;Pj[Pj.length-1].weapon='bazooka';msg='Bazooka: '+(inv.bazooka||0)+' coets restants.';msgT=2;setDis(false)}
+else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9-(playerCrouched?.48:0),z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,BAZOOKA_AIM_RANGE,BAZOOKA_AIM_CONE,'heavy',null,72*HEAVY_SHOT_SPEED_FACTOR);shoot(x,y,z,ax,ay,az,72,COMBAT_BALANCE.weapons.bazooka,18,'pb',mS,3);Pj[Pj.length-1].life=3.8;Pj[Pj.length-1].weapon='bazooka';msg='Bazooka: '+(inv.bazooka||0)+' coets restants.';msgT=2;setDis(false)}
 else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5-(playerCrouched?.48:0),z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,75,.97,'light',null,130);shoot(x,y,z,ax,ay,az,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE)}
 else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}
 function segmentAabbT(x0,y0,z0,x1,y1,z1,minX,maxX,minY,maxY,minZ,maxZ){
