@@ -3128,6 +3128,24 @@ else if(c.m==='a'){
 else if(c.m==='w'){
    y=wy(v.x,v.z,t)+(v.t==='barca_rems'?-.1:.2);
    if(v.grounded)y=Math.max(y,hAt(v.x,v.z)+Math.min(.85,(window.HUNTER_VEHICLE_DYNAMICS.shore.draft[v.t]||.8)*.5));
+   if(v.t==='windsurf'&&o.userData.windsurfRig){
+     // A varada board has its sail laid lengthwise over the sand. The mast
+     // is physically parented to its universal joint, not rotated around
+     // the middle of the board. Raising the rig is smooth upon boarding.
+     const shore=window.HUNTER_VEHICLE_DYNAMICS.shore,
+       clearance=shore.clearance(v,v.x,v.z,vehicleBox(v),hAt,
+         (x,z)=>wy(x,z,t)),
+       onBeach=v.beached||v.grounded||hAt(v.x,v.z)>-.12;
+     if(v===cv&&Math.abs(v.v)>1&&clearance>.6)v.beached=false;
+     const layTarget=v!==cv&&onBeach?1:0;
+     if(o.userData.windsurfLay==null)o.userData.windsurfLay=layTarget;
+     const factor=1-Math.exp(-4*Math.max(0,dt));
+     o.userData.windsurfLay+=(layTarget-o.userData.windsurfLay)*factor;
+     const lay=o.userData.windsurfLay,rig=o.userData.windsurfRig;
+     rig.rotation.set(-.14+(Math.PI/2+.14)*lay,0,.055*(1-lay));
+     rig.position.y=.34-.08*lay;
+     if(lay>.05)y=Math.max(y,hAt(v.x,v.z)+.12);
+   }
    const speed=Math.min(1,Math.abs(v.v)/(c.maxF||30)),
          wave=Math.sin(t*2.4+v.x*.03+v.z*.025);
    pi=wave*.035*speed;ro=-(v.yawRate||0)*.11+wave*.025;
