@@ -97,40 +97,45 @@ const plain=value=>JSON.parse(JSON.stringify(value));
   'both sentries keep their posts at rest: '+JSON.stringify(patrol));
  console.log('PASS independent180s real idle AI: four moving patrols and two stationary sentries',JSON.stringify(patrol));
  const rescue=plain(game.run(`(()=>{
-  const c=world.userData.prisonCamp,l=c.layout,g=c.prisonGate;
-  P.x=c.x+l.rescuePoint.x;P.z=c.z+l.rescuePoint.z;P.y=hAt(P.x,P.z);
+  const c=world.userData.prisonCamp,g=c.prisonGate;
+  P.x=c.x;P.z=c.z+27;P.y=hAt(P.x,P.z);
   cv=null;swimming=false;playerFall=null;playerEject=null;scopeActive=false;
   updateOptionalSystems(0,true);
-  const sentry=c.soldiers.find(u=>u.campDuty==='sentry');sentry.canSee=true;
-  const action=getOptionalAction();act('KeyE');
-  const blocked=!!action&&action.kind==='rescue'&&!prisonerSystem.snapshot().released&&!g.opened;
-  // Remove the threat after checking the production danger gate. Rescue remains
-  // optional and uses the same liveE/HUD path as the game.
-  E=[];rebuildVehicleGrid();updateOptionalSystems(0,true);act('KeyE');
-  const opened=g.opened&&g.colliders.every(w=>w.open&&w.hp===0)&&g.meshes.every(m=>!m.visible),
-    atRelease=prisonerSystem.entities.map(u=>{
-     const b=new THREE.Box3().setFromObject(u.o);return{id:u.id,pose:u.pose,height:b.max.y-b.min.y,
-      hitHeight:u.height,bottom:b.min.y-u.y,state:u.state};
-    });
-  const playerBounds=new THREE.Box3().setFromObject(pl),playerHeight=playerBounds.max.y-playerBounds.min.y;
-  let crossed=false;
-  const from={x:c.x,y:hAt(c.x,c.z+23),z:c.z+23},to={x:c.x,y:hAt(c.x,c.z+25),z:c.z+25};
-  crossed=optionalCivilianCanMove(from,to,Math.max(...prisonerSystem.entities.map(u=>u.radius)));
-  for(let tick=0;tick<240;tick++)updateOptionalSystems(.25,true);
-  return{blocked,opened,crossed,released:prisonerSystem.snapshot().released,atRelease,playerHeight,
-   entities:prisonerSystem.snapshot().entities.map(u=>({id:u.id,role:u.role,state:u.state,blocked:u.blocked})),
-   mechanics:prisonerSystem.entities.filter(u=>u.role==='mechanic').length,over};
+  const start=prisonerSystem.snapshot();
+  // A cut anywhere on the interior perimeter works, not just at the gate.
+  const section=c.prisonFenceSegments.find(s=>!s.gate&&Math.abs(s.collider.cx-c.x-20)<.3&&
+    Math.abs(s.collider.cz-c.z-7)<5);
+  if(!section)throw Error('Missing east-side cuttable fence piece');
+  const w=section.collider;w.hp=0;w.cut=true;
+  for(const part of w.parts||[w.m]){if(part){part.visible=false;part.parent?.remove(part)}}
+  const wi=Wl.indexOf(w);if(wi>=0)Wl.splice(wi,1);wallGridCount=-1;
+  updateOptionalSystems(0,true);
+  const breachOnly=prisonerSystem.snapshot();
+  for(const soldier of c.soldiers)soldier.hp=0;
+  updateOptionalSystems(0,true);const noTowersYet=prisonerSystem.snapshot();
+  for(const tower of c.towers)tower.hp=0;
+  updateOptionalSystems(0,true);const liberated=prisonerSystem.snapshot();
+  const gateIntact=!g.opened&&g.colliders.every(w=>w.hp>0&&!w.open);
+  const pos={x:w.cx,y:hAt(w.cx,w.cz),z:w.cz};
+  const crossed=optionalCivilianCanMove({...pos,x:pos.x-2},{...pos,x:pos.x+2},.94);
+  for(let tick=0;tick<300;tick++)updateOptionalSystems(.25,true);
+  return{start,breachOnly:breachOnly.released,noTowersYet:noTowersYet.released,
+   gateIntact,crossed,liberated:liberated.released,
+   entities:prisonerSystem.snapshot().entities.map(u=>({role:u.role,state:u.state,blocked:u.blocked})),
+   over};
  })()`));
- assert.equal(rescue.blocked,true,'a live aware sentry prevents rescue and keeps physical gate closed');
- assert.equal(rescue.opened,true,'E rescues civilians and physically opens/hides the inner gate');
- assert.equal(rescue.crossed,true,'adult sized civilians can cross the open gate');
- assert.equal(rescue.released,true);
- assert(rescue.atRelease.every(u=>u.pose==='standing'&&Math.abs(u.height-rescue.playerHeight)<.003&&Math.abs(u.bottom)<.003),
-  'seated civilians stand at full player height before evacuation: '+JSON.stringify(rescue));
- assert(rescue.entities.filter(u=>u.role==='farmer').every(u=>u.state==='rescued'),'four farmers escape through real opened gate');
- assert.equal(rescue.entities.find(u=>u.role==='mechanic').state,'ready','mechanic follows the authored path around the inner fence');
- assert.equal(rescue.mechanics,1);assert.equal(rescue.over,0);
- console.log('PASS independent physical rescue: threat blocks closed gate, E opens it, all civilians stand and escape in60s',JSON.stringify(rescue));
+ assert.equal(rescue.start.rescue.guards,6);
+ assert.equal(rescue.start.rescue.towers,4);
+ assert.equal(rescue.breachOnly,false,'cutting all or part of the cage is not enough with armed guards');
+ assert.equal(rescue.noTowersYet,false,'the four towers must also be neutralised');
+ assert.equal(rescue.gateIntact,true,'the automatic objective must not open an undamaged gate');
+ assert.equal(rescue.crossed,true,'NPCs can walk through the cut section on the east side');
+ assert.equal(rescue.liberated,true,'the new objective automatically releases the prisoners');
+ assert(rescue.entities.filter(u=>u.role==='farmer').every(u=>u.state==='rescued'&&u.blocked===0),
+  'four farmers escape through the cut section');
+ assert.equal(rescue.entities.find(u=>u.role==='mechanic').state,'ready','mechanic reaches workshop');
+ assert.equal(rescue.over,0);
+ console.log('PASS physical prison liberation via side breach, six soldiers and four towers; mechanics and evacuation',JSON.stringify(rescue));
  game.run('discardGeneratedWorld()');
  console.log('PASS camp redesign independent; logical/physical CPU harness, Android/GPU visual remains pending');
 })().catch(error=>{console.error(error);process.exitCode=1});
