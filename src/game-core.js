@@ -773,7 +773,8 @@ function vehicleDebris(v,baseY){
   for(let i=0;i<(heavy?7:5);i++)puff(v.x+rn(-2,2),baseY+rn(.5,2.2),v.z+rn(-2,2),i%2?0x3b3b38:0x787064,rn(1.6,3.2));
   while(DB.length>240){const d=DB.shift();if(d?.m)world.remove(d.m)}
 }
-function wallBreak(w){const h=w.y1-w.y0-1,parts=w.parts&&w.parts.length?w.parts:[w.m],base=parts[0],col=w.barbed?0x4a4f52:(base?.material?.color?.getHex?.()??0x8d9389),cx=(w.x0+w.x1)/2,cz=(w.z0+w.z1)/2;
+function wallBreak(w){for(const trim of w.timberTrim||[])trim.visible=false;
+const h=w.y1-w.y0-1,parts=w.parts&&w.parts.length?w.parts:[w.m],base=parts[0],col=w.barbed?0x4a4f52:(base?.material?.color?.getHex?.()??0x8d9389),cx=(w.x0+w.x1)/2,cz=(w.z0+w.z1)/2;
 // Els brancals, la porta i la llinda són un sol conjunt estructural.
 // Les peces d'una obertura s'oculten alhora, sense marcs residuals.
 if(w.doorAssembly||w.parts&&w.parts.length){parts.forEach(m=>{if(m)m.visible=false})}
@@ -980,10 +981,26 @@ function checkRoofSupport(b,w){
   }
   if(b.destroyedWallSupport>=3)roofBreak(b)
 }
+function demolishCivilianHut(b){
+ if(!b?.civilianHut||b.hutCollapsed)return;
+ b.hutCollapsed=true;
+ for(const part of Wl.slice()){
+  if(part.owner!==b||part.destroyedWall)continue;
+  part.destroyedWall=true;part.hp=0;part.open=true;part.playerBlock=false;
+  wallBreak(part);
+  const i=Wl.indexOf(part);if(i>=0){Wl.splice(i,1);wallGridCount=-1}
+  const j=Dr.indexOf(part);if(j>=0)Dr.splice(j,1);
+  if(b.door===part)b.door=null;
+ }
+ roofBreak(b);
+}
 function dmgW(w,d){
  if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}
  const amount=wholeDamage(d);
  if(!amount||!Number.isFinite(w.hp)||w.hp<=0)return;
+ if(w.owner?.civilianHut&&amount>=COMBAT_BALANCE.weapons.bazooka){
+  demolishCivilianHut(w.owner);return;
+ }
  w.hp=Math.max(0,Math.ceil(w.hp)-amount);
  if(w.hp>0)return;
  // Destrucció atòmica de tota l'obertura: cap porta o llinda invisible
@@ -1005,14 +1022,14 @@ function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=seedSearchMode
   ?{group:new THREE.Group(),walls:null,doors:null,roof:new THREE.Group()}
   :(opt.hangar?buildingVisual.createHangarShell:buildingVisual.createShell)({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),
   g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide,structuralWalls=[],buildingWallStart=Wl.length;
-const wallH=opt.floors===2?h/2:h;
+const wallH=opt.floors===2?h/2:h,wallHp=opt.civilianHut?4:12,roofHp=opt.civilianHut?8:opt.hangar?12:16;
 let entranceDoor=null;
-const seg=(lx,lz,sx,sz,dr,windows=false,supportSide=null,supportWeight=0,level=0)=>{if(!dr){const parts=seedSearchMode?[new THREE.Object3D()]:windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:wallH,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:wallH,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy+level-(level?0:1),y1:fy+level+wallH,hp:12,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,supportSide,supportWeight};for(const mesh of parts)mesh.position.y+=level;if(opt.wood){for(const mesh of parts)if(mesh.material?.color?.getHex()===0x3e7185)mesh.visible=false;}Wl.push(o);if(supportWeight>0)structuralWalls.push(o);return o}
-const parts=seedSearchMode?{door:new THREE.Object3D(),doorHeight:opt.doorHeight||4.4}:buildingVisual.addDoor(g,{lx,lz,sx,sz,height:wallH,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:8,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y,rammable:true};Wl.push(door);Dr.push(door);entranceDoor=door;
+const seg=(lx,lz,sx,sz,dr,windows=false,supportSide=null,supportWeight=0,level=0)=>{if(!dr){const parts=seedSearchMode?[new THREE.Object3D()]:windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:wallH,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:wallH,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy+level-(level?0:1),y1:fy+level+wallH,hp:wallHp,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,supportSide,supportWeight};for(const mesh of parts)mesh.position.y+=level;if(opt.wood){for(const mesh of parts)if(mesh.material?.color?.getHex()===0x3e7185)mesh.visible=false;}Wl.push(o);if(supportWeight>0)structuralWalls.push(o);return o}
+const parts=seedSearchMode?{door:new THREE.Object3D(),doorHeight:opt.doorHeight||4.4}:buildingVisual.addDoor(g,{lx,lz,sx,sz,height:wallH,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:opt.civilianHut?4:8,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y,rammable:true};Wl.push(door);Dr.push(door);entranceDoor=door;
 let lintel=null;
 if(parts.lintel){
  lintel={x0:door.x0,x1:door.x1,z0:door.z0,z1:door.z1,
-  y0:fy+parts.doorHeight,y1:fy+wallH,hp:12,m:parts.lintel,
+  y0:fy+parts.doorHeight,y1:fy+wallH,hp:wallHp,m:parts.lintel,
   door:false,open:false,playerBlock:false,cx:x+lx,cz:z+lz};
  Wl.push(lintel);
 }
@@ -1047,7 +1064,7 @@ if(opt.workshop){
 }
 if(opt.floors===2)for(const [cx,cz,sx,sz]of[[0,d/2-t/2,w,t],[0,-d/2+t/2,w,t],[w/2-t/2,0,t,d-2*t],[-w/2+t/2,0,t,d-2*t]])seg(cx,cz,sx,sz,0,!opt.solidWalls,null,0,wallH);
 g.position.set(x,fy,z);if(!seedSearchMode)world.add(g);
-const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,foundation:visual.foundation,rhp:opt.hangar?12:16,hangar:!!opt.hangar,door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};for(const piece of Wl.slice(buildingWallStart))piece.owner=b;
+const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,foundation:visual.foundation,rhp:roofHp,hangar:!!opt.hangar,civilianHut:!!opt.civilianHut,door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};for(const piece of Wl.slice(buildingWallStart))piece.owner=b;
 structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else if(!opt.workshop)addStairs(b,ds);return b}
 function mkEnemyBunker(x,z){
   const firstWall=Wl.length,b=mkB(x,z,40,34,10,0xd9ded2,0xbfc6bb,{kind:'enemy_bunker',bunker:true,doorSide:0,doorWidth:4,doorHeight:4.4,lockedDoor:true}),g=b.o,inset=3.5;
