@@ -220,14 +220,14 @@ window.HUNTER_RIDER=Object.freeze({
         // sail on port (-X), with hips back and slightly bent knees.
         // The rig pitches toward the bow; both hands follow actual points
         // on the moving boom, not hand positions guessed in rider space.
-        const bodyX=.55*sc,hipY=1.38*sc,footY=.35*sc,
+        const bodyX=.42*sc,hipY=1.38*sc,footY=.35*sc,
               sail=v.o.userData.windsurfRig,
               grips=v.o.userData.windsurfGrips||[],
               lean=.17+Math.min(.07,Math.abs(v.v)/230);
-        torso.position.set(bodyX,hipY,.48*sc);
+        torso.position.set(bodyX,hipY,.29*sc);
         torso.rotation.set(lean,1.13,.08);
-        const hips=[vec(bodyX-.05*sc,hipY,.23*sc),
-                    vec(bodyX+.08*sc,hipY,.65*sc)];
+        const hips=[vec(bodyX-.05*sc,hipY,.04*sc),
+                    vec(bodyX+.08*sc,hipY,.46*sc)];
         // Crucial: anatomically correct shoulder index.
         // i=0 -> left arm, i=1 -> right arm (firing arm).
         v.o.updateWorldMatrix(true,true);
