@@ -23,10 +23,17 @@ export function decorateTimber(T,{b,shell,box,rod,cylinder,roofs}){const g=shell
          for(const mesh of parts){mesh.updateMatrix();const geo=mesh.geometry.toNonIndexed();geo.applyMatrix4(mesh.matrix);positions.push(...geo.attributes.position.array);normals.push(...geo.attributes.normal.array);shell.roof.remove(mesh);mesh.geometry.dispose();geo.dispose()}
          const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));geo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));const batch=new T.Mesh(geo,material);batch.castShadow=batch.receiveShadow=true;shell.roof.add(batch);
        }
-       for(const side of[-1,1])for(let z=-b.d/2+.8;z<b.d/2;z+=1.3)box(g,.08,b.h-.4,.08,0x654f39,side*(b.w/2+.06),b.h/2,z);
+       // Cada muntant es vincularà a la paret física corresponent:
+       // no ha de quedar visible quan aquella paret es destrueix.
+       const sideRibs=[];
+       for(const side of[-1,1])for(let z=-b.d/2+.8;z<b.d/2;z+=1.3){
+         const mesh=box(g,.08,b.h-.4,.08,0x654f39,side*(b.w/2+.06),b.h/2,z);
+         sideRibs.push({mesh,side,z});
+       }
        box(g,6,.25,3.6,0x9f835e,0,.28,b.d/2+1.8);
        for(const x of[-2.7,2.7])cylinder(g,.10,4.5,0x67523a,x,2.5,b.d/2+3.2);
        const porch=box(g,6.6,.18,4.2,0x79613f,0,4.8,b.d/2+1.7);roofs.push(porch);
+       return {sideRibs};
      
 }
 export function decorateUpper(T,{b,storey,shell,box,rod,roofs}){const g=shell.group;
