@@ -3485,6 +3485,11 @@ else if(!cv&&playerEject&&playerEject.t>=0){
     if(u.ael)u.ael.rotation.x=.5*compact;if(u.aer)u.aer.rotation.x=.5*compact;
     if(u.ll)u.ll.rotation.x=-.28*compact;if(u.lr)u.lr.rotation.x=-.28*compact;
     if(u.lkl)u.lkl.rotation.x=-.5*compact;if(u.lkr)u.lkr.rotation.x=-.5*compact;
+  }else if(playerEject.kind==='bicycle'){
+    // Petita pèrdua d'equilibri sense desplaçament ni efecte explosiu.
+    const stumble=Math.sin(Math.PI*p);
+    pl.rotation.x=-.24*stumble;
+    pl.rotation.z=.35*stumble;
   }else if(playerEject.kind==='blast'){
     const airborne=Math.max(0,playerEject.height||0),wave=Math.sin(Math.PI*p);
     pl.position.y+=airborne;
