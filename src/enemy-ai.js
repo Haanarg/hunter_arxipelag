@@ -316,20 +316,45 @@ function enemyCarRifleShot(u,target,targetY){
     direction:new THREE.Vector3(0,0,-1).applyQuaternion(
       crew.muzzle.getWorldQuaternion(new THREE.Quaternion())).normalize()};
 }
+// Les ones explosives no poden impulsar una unitat a través de parets.
+// Especialment, el general no pot sortir del seu despatx subterrani.
+function moveBlastedEnemy(u,dt){
+  const imp=u.blastImpulse,dx=imp.vx*dt,dz=imp.vz*dt,
+        room=u.t==='general'?u.basement?.basement?.generalRoom:null;
+  const clear=(x,z)=>{
+    if(room){
+      const p=buildingLocalPoint(u.basement,x,z),margin=.35;
+      if(p.x<room.xMin+margin||p.x>room.xMax-margin||
+         p.z<room.zMin+margin||p.z>room.zMax-margin)return false;
+    }
+    return enemySolidAt(u,x,z,u.hd);
+  };
+  const ox=u.x,oz=u.z,steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.45));
+  for(let i=0;i<steps;i++){
+    const sx=dx/steps,sz=dz/steps;
+    if(clear(u.x+sx,u.z+sz)){u.x+=sx;u.z+=sz;continue}
+    if(clear(u.x+sx,u.z)){u.x+=sx;imp.vz=0;continue}
+    if(clear(u.x,u.z+sz)){u.z+=sz;imp.vx=0;continue}
+    imp.vx=imp.vz=0;break;
+  }
+  if(u.x!==ox||u.z!==oz)enemyReindex(u,ox,oz);
+}
 function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathBudget=2;enemyNodeBudget=160}rebuildVehicleGrid();soldierCoordinationTick(dt);E.forEach(u=>{
   if(u.t==='patrulla_marina'){updateMarinePatrol(u,dt);return}
   if(u.blastT>0){
     const imp=u.blastImpulse;u.blastT=Math.max(0,u.blastT-dt);
     if(imp){
-      u.x+=imp.vx*dt;u.z+=imp.vz*dt;
+      moveBlastedEnemy(u,dt);
       imp.vy-=19*dt;
       u.blastHeight=Math.max(0,(u.blastHeight||0)+imp.vy*dt);
+      // El forjat del soterrani és un límit físic, també durant el ragdoll.
+      if(u.basement?.basement&&u.blastHeight>5.4){u.blastHeight=5.4;imp.vy=Math.min(0,imp.vy)}
       if(u.blastHeight===0)imp.vy=0;
       // En vol es manté l'empenta; a terra es frena ràpid.
       const landed=u.blastHeight===0;
       imp.vx*=Math.exp(-(landed?7:1.7)*dt);
       imp.vz*=Math.exp(-(landed?7:1.7)*dt);
-      u.o.position.set(u.x,Math.max(0,hAt(u.x,u.z))+u.blastHeight,u.z);
+      u.o.position.set(u.x,enemyGroundAt(u,u.x,u.z)+u.blastHeight,u.z);
       const elapsed=(u.blastTotal||2.5)-u.blastT;
       u.o.rotation.z=Math.sin(elapsed*5)*.75*Math.min(1,u.blastHeight+.2);
       if(landed&&u.blastT<.25)u.blastT=0;
