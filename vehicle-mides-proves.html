@@ -233,12 +233,11 @@ function selectGroup(group){
  updateActive();viewFit();
 }
 function selectFocus(id){
- currentFocus=id;
  if(id!=='tots'){
   const record=records.find(r=>r.id===id);
   if(record&&currentGroup!=='tots'&&currentGroup!==record.row)selectGroup('tots');
  }
- focus.value=id;updateActive();viewFit();
+ currentFocus=id;focus.value=id;updateActive();viewFit();
 }
 function updateActive(){
  for(const element of measurements.querySelectorAll('[data-id]'))
