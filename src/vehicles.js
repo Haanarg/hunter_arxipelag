@@ -621,7 +621,7 @@ window.HUNTER_VEHICLES=Object.freeze({
         g.userData.windsurfRig=rig;
         // Anatomia: índex 0 = mà esquerra (més exterior);
         // índex 1 = dreta, que empunya la pistola quan dispara.
-        g.userData.windsurfGrips=[.49,.22].map(k=>
+        g.userData.windsurfGrips=[.37,.12].map(k=>
           boomStart.clone().lerp(boomEnd,k));
         g.userData.windsurfLay=null;
         rig.rotation.x=-.14;
