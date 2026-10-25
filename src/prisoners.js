@@ -119,7 +119,7 @@ window.HUNTER_PRISONERS=Object.freeze({
    // Keep the root at the world foot point: movement and projectile bounds share it.
    u.pose=seated?'seated':'standing';
    u.height=seated?(u.role==='mechanic'?1.115:1.0825)*u.modelScale:config.standingHeight;
-   u.radius=(u.cheering?.98:seated?.76:.56)*u.modelScale;
+   u.radius=(u.cheering?.92:seated?.76:.56)*u.modelScale;
    if(!u.o)return;
    u.rig.position.y=seated?-.695:-.06;
    for(let i=0;i<u.legs.length;i++)u.legs[i].rotation.x=seated?Math.PI/2:0;
@@ -253,7 +253,7 @@ window.HUNTER_PRISONERS=Object.freeze({
      // A small stagger avoids prisoners occupying exactly the same spot.
      u.path=[...exit,...farmersEnd];u.state='evacuating';u.phase=index++*.7;
     }
-    pose(u,false);u.waypoint=0;u.cheering=false;
+    u.cheering=false;pose(u,false);u.waypoint=0;
    }
    discovered=true;
    notify('Camp alliberat! Els presoners escapen per la bretxa; el mecànic va al taller.');
@@ -329,14 +329,14 @@ window.HUNTER_PRISONERS=Object.freeze({
      u.cheerPhase+=dt*5;
      const wave=Math.sin(u.cheerPhase)*.26;
      for(let i=0;i<u.arms.length;i++){
-      u.arms[i].rotation.z=(i?1:-1)*(2.32+wave);
+      u.arms[i].rotation.z=(i?1:-1)*(2.05+wave*.5);
       u.arms[i].rotation.x=Math.sin(u.cheerPhase*.7+i)*.19;
      }
      if(u.head)u.head.rotation.y=Math.sin(u.cheerPhase*.35)*.17;
     }
     return;
    }
-   const walking=u.path.length>0&&u.blocked===0,
+   const walking=dt>0&&u.path.length>0&&u.blocked===0,
      stride=walking?Math.sin(u.phase)*.58:0;
    for(let i=0;i<u.legs.length;i++)u.legs[i].rotation.x=(i?-1:1)*stride;
    for(let i=0;i<u.arms.length;i++){
