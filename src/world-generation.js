@@ -718,10 +718,21 @@ P.x=baseCompound.spawn?.x??pa.x;P.z=baseCompound.spawn?.z??pa.z+20;P.hd=0;P.base
 const add=(t,x,z,a,meta={})=>{
   // Els colors són part de l'estat generat per llavor, no una aleatorietat
   // del renderitzador. La cerca de llavors consumeix les mateixes tirades.
-  const civilian=t==='cotxe_civil',bicycle=t==='bici',jetski=t==='moto_aquatica',
+  const civilian=t==='cotxe_civil',bicycle=t==='bici',
+    jetski=t==='moto_aquatica',windsurf=t==='windsurf',
     colors=window.HUNTER_CIVILIAN_CARS,
-    palette=jetski?colors.jetskiColors:colors.colors;
-  const color=(civilian||bicycle||jetski)?palette[Math.floor(R()*palette.length)].hex:undefined;
+    palette=jetski||windsurf?colors.jetskiColors:colors.colors;
+  // Every windsurf gets the same vivid palette as the jet skis, but the
+  // start hue is determined by the island seed's base position and each
+  // successive windsurf advances by one hue. Crucially, this uses NO
+  // additional R() calls, preserving all existing world-generation seeds.
+  const windsurfStart=(
+    Math.imul(Math.floor(pa.x*10),73856093)^
+    Math.imul(Math.floor(pa.z*10),19349663)
+  )>>>0;
+  const windsurfOrdinal=windsurf?V.reduce((n,v)=>n+(v.t==='windsurf'),0):0;
+  const color=windsurf?palette[(windsurfStart%palette.length+windsurfOrdinal)%palette.length].hex:
+    (civilian||bicycle||jetski)?palette[Math.floor(R()*palette.length)].hex:undefined;
   // Conservam la tirada de la llavor antiga, però tots els cotxes civils
   // fan servir el model C1A seleccionat (variant 0).
   if(civilian)R();
@@ -731,7 +742,7 @@ const add=(t,x,z,a,meta={})=>{
     surface=Math.max(0,hAt(x,z));
   const v={t,x,z,hd:a||0,v:0,alt:c.m==='a'?helicopterLandedAltitude({o},surface):surface+.8,
     o,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};
-  if(civilian||bicycle||jetski)v.color=appearance.color;
+  if(civilian||bicycle||jetski||windsurf)v.color=appearance.color;
   if(civilian)v.variant=appearance.variant;
   if(t==='heli_combat')v.rockets=6;
   if(t==='llanxa_coets')v.rockets=Infinity;
