@@ -147,13 +147,19 @@ async function forcedFallback(){
     assert.deepEqual(npc.markers,[],'undiscovered camp does not pre-reveal a marker');
     const evacuation=plain(game.run(`(()=>{
       const c=world.userData.prisonCamp,p=c.layout.rescuePoint,tr=compoundTransform(c,c.angle),q=tr(p.x,p.z),
-        ctx={player:{x:q[0],y:hAt(q[0],q[1]),z:q[1]},vehicle:null,vehicles:[],enemies:[],active:true,canInteract:true};
-      prisonerSystem.update(0,ctx);const action=prisonerSystem.getAction(ctx),released=prisonerSystem.interact(action,ctx);
-      for(let tick=0;tick<240;tick++)prisonerSystem.update(.25,ctx);
-      return{action:action?.kind,released,entities:prisonerSystem.snapshot().entities.map(p=>({role:p.role,state:p.state}))};
+        ctx={player:{x:q[0],y:hAt(q[0],q[1]),z:q[1]},vehicle:null,vehicles:[],enemies:E,active:true,canInteract:true};
+      prisonerSystem.update(0,ctx);
+      const before=prisonerSystem.snapshot().rescue;
+      c.prisonGate.open();prisonerSystem.update(0,ctx);
+      const alone=prisonerSystem.snapshot().released;
+      for(const u of [...c.soldiers,...c.towers])u.hp=0;
+      prisonerSystem.update(0,ctx);
+      const released=prisonerSystem.snapshot().released;
+      for(let tick=0;tick<300;tick++)prisonerSystem.update(.25,ctx);
+      return{before,alone,released,entities:prisonerSystem.snapshot().entities.map(p=>({role:p.role,state:p.state,blocked:p.blocked}))};
     })()`));
-    assert.equal(evacuation.action,'rescue',mode+': observation makes a local rescue action available');
-    assert.equal(evacuation.released,true,mode+': civilians can actually be released');
+    assert.equal(evacuation.alone,false,mode+': an opened gate alone is insufficient');
+    assert.equal(evacuation.released,true,mode+': all defences neutralised and gate breached free the camp automatically');
     assert(evacuation.entities.filter(p=>p.role==='farmer').every(p=>p.state==='rescued'),mode+': all four farmers traverse real terrace collision/height');
     assert.equal(evacuation.entities.find(p=>p.role==='mechanic').state,'ready',mode+': mechanic reaches real station');
     game.run(`prisonerSystem.configure({world,camp:world.userData.prisonCamp,logicalOnly:false})`);
