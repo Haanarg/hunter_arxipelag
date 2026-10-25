@@ -173,7 +173,7 @@ window.HUNTER_PRISONERS=Object.freeze({
   function serviceRange(v){return Math.min(config.maxServiceRange,Math.max(7,(vehicleRadius(v.t)||4)+5))}
   function serviceVehicle(v,ctx,u,{requireDamage=true}={}){
    if(ctx.canInteract===false)return false;
-   if(!alive(u)||u.state!=='ready'||!v||v.destroyed||!(ctx.vehicles||[]).includes(v))return false;
+   if(!alive(u)||u.state!=='ready'||!v||v.destroyed||v.sunk||v.waterIngress?.dead||!(ctx.vehicles||[]).includes(v))return false;
    if(!Number.isFinite(v.life)||!Number.isFinite(v.maxLife)||v.maxLife<=0||v.life<=0)return false;
    if(requireDamage&&v.life>=v.maxLife)return false;
    if(Math.abs(v.v||0)>.35||Math.abs(v.strafeV||0)>.35||Math.abs(v.vy||0)>.35)return false;
