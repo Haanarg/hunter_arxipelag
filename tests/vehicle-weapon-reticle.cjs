@@ -21,6 +21,8 @@ const {pathToFileURL}=require('node:url');
    started:true,paused:false,over:false,playerFall:null,swimming:false,
    bazookaEquipped:false,inv:{bazooka:2},P:{x:0,y:0,z:0,hd:0},cv:null,
    VS:{heli_combat:1.82},HEAVY_SHOT_SPEED_FACTOR:1,
+   BAZOOKA_AIM_RANGE:185,BAZOOKA_AIM_CONE:.82,
+   HELI_MISSILE_RANGE:210,HELI_MISSILE_ANGLE:Math.PI*25/180,
    cam:new T.PerspectiveCamera(58,1,0.1,500),
    // L'objectiu simulat està sempre a 25 m i dins del camp de visió.
    bazookaFirstSolidHit:(x,y,z,dx,dy,dz,range)=>({x:0,y:0,z:-25}),
@@ -45,8 +47,8 @@ const {pathToFileURL}=require('node:url');
  ctx.cv.o.position.y=15;
  refresh();
  assert.equal(ctx.bazookaReticleMode,'missile','Retícula de míssils en combat');
- assert.equal(ctx.calls.at(-1).range,120,'Abast del míssil');
- assert.ok(ctx.calls.at(-1).dy<-.7,'Míssils: angle real de 45° cap avall');
+ assert.equal(ctx.calls.at(-1).range,210,'Abast del míssil');
+ assert.ok(ctx.calls.at(-1).dy<-.4&&ctx.calls.at(-1).dy>-.5,'Míssils: angle real de 25° cap avall');
  assert.equal(ctx.calls.at(-1).kind,'heavy','Retícula usa foc pesat');
  ctx.calls=[];
  ctx.cv={t:'llanxa_coets',x:0,z:0,hd:0,o:new T.Group(),rockets:Infinity};
@@ -95,6 +97,8 @@ const {pathToFileURL}=require('node:url');
    'La mira ignora el vehicle des d’on es dispara');
  ctx.cv=null;ctx.bazookaEquipped=true;refresh();
  assert.equal(ctx.bazookaReticleMode,'bazooka','Bazuca conserva la seva retícula');
+ assert.equal(ctx.calls.at(-1).range,185,'Bazuca: abast ampliat també a la retícula');
+ assert.equal(ctx.calls.at(-1).cone,.82,'Bazuca: con ampliat també a la retícula');
  ctx.bazookaEquipped=false;refresh();
  assert.equal(ui.style.display,'none','Sense armes compatibles la retícula desapareix');
  assert.ok(src.includes('const shot=combatHeliMissileAim(cv),d=shot.direction'),
@@ -136,5 +140,5 @@ const {pathToFileURL}=require('node:url');
  assert.equal(actual.boat.mode,'boat');
  assert.equal(actual.boat.shown,'block',
    'Retícula de coets amb llanxa i càmera reals');
- console.log('OK retícula: tanc, míssils 45°, càrrega, canvi d’arma i bazuca');
+ console.log('OK retícula: tanc, míssils 25°, càrrega, canvi d’arma i bazuca');
 })().catch(e=>{console.error(e);process.exitCode=1});
