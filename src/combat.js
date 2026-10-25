@@ -72,7 +72,7 @@ function clearBulletImpacts(){
 
 function setDis(v){disg=v;[...pl.userData.mats,...rider.userData.mats].forEach(([m,a,b])=>m.color.copy(vivid(v?b:a)))}
 let playerBlastRagdoll=null;
-function fin(m,cause=null){combatFeedback?.clear();if(m==='HAS MORT'&&startDeathCinematic(cause))return;setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+' · Obre Ⅱ / Esc per tornar a jugar';endEl.style.display='flex'}
+function fin(m,cause=null){updateOptionalSystems(0,false);combatFeedback?.clear();if(m==='HAS MORT'&&startDeathCinematic(cause))return;setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+' · Obre Ⅱ / Esc per tornar a jugar';endEl.style.display='flex'}
 // El dany no canvia amb la dificultat: només la dispersió del tir enemic.
 function enemyWeaponDamageScale(){return 1}
 function hurtP(d,fromEnemyWeapon=false,cause=null){
@@ -148,7 +148,7 @@ function killEnemy(u,killingShot=null){
   else if(u.t==='torre'){destroyTower(u);world.remove(u.o)}
   else if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='patrulla_marina')explodeEnemyVehicle(u);
   else world.remove(u.o);
-  if(u.t==='general'){combatFeedback?.clear();startVictoryCinematic(u,killingShot)}
+  if(u.t==='general'){updateOptionalSystems(0,false);combatFeedback?.clear();startVictoryCinematic(u,killingShot)}
 }
 function hurtE(u,d,killingShot=null){
   const amount=wholeDamage(d);
@@ -311,12 +311,12 @@ function blastImpulseAt(x,z,px,pz,r,falloff){
 function explosionDamage(dmg,distance,r){return distance>=r?0:Math.max(1,Math.ceil(dmg*(1-distance/r)))}
 // Les parets, portes, forjats, teulades i relleu fan de cobertura real.
 // Especialment: una càrrega a la superfície no pot matar el general al soterrani.
-function blastOccluded(x,y,z,tx,ty,tz){
+function blastOccluded(x,y,z,tx,ty,tz,ignoreWall=null){
  const dx=tx-x,dy=ty-y,dz=tz-z,length=Math.hypot(dx,dy,dz);
  if(length<.15)return false;
  const mx=(x+tx)/2,mz=(z+tz)/2,search=Math.hypot(dx,dz)/2+2;
  for(const w of wallCandidates(mx,mz,search)){
-  if(w.open||w.barbed||w.hp<=0)continue;
+  if(w===ignoreWall||w.open||w.barbed||w.hp<=0)continue;
   // L'origen pot estar encastat dins un obstacle just quan detona.
   if(x>w.x0+.03&&x<w.x1-.03&&y>w.y0+.03&&y<w.y1-.03&&z>w.z0+.03&&z<w.z1-.03)continue;
   const t=segmentAabbT(x,y,z,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);
@@ -372,6 +372,16 @@ function boom(x,y,z,r,dmg,own,source=null){
       blast:true,impulse:u.blastImpulse,seed:u.x*.41+u.z*.27});
  }
 
+ // Civilians use the same cover before this explosion damages any walls.
+ for(const civilian of prisonerSystem.entities){
+  if(civilian.hp<=0||civilian.destroyed)continue;
+  const targetY=civilian.y+1,
+    dealt=explosionDamage(dmg,Math.hypot(civilian.x-x,targetY-y,civilian.z-z),r);
+  if(dealt&&!blastOccluded(x,y,z,civilian.x,targetY,civilian.z)){
+   const lost=prisonerSystem.hurt(civilian,dealt,source||{x,y,z,own});
+   if(lost)spawnBulletImpact('blood',civilian.x,targetY,civilian.z,{sx:x,sy:y,sz:z});
+  }
+ }
  PL.forEach(t=>{if(!t.alive)return;const dealt=explosionDamage(dmg,Math.hypot(t.x-x,t.z-z),r);if(dealt&&!blastOccluded(x,y,z,t.x,t.y+2,t.z))dmgP(t,dealt)});
  for(const v of [...vehicleCandidatesAt(x,z,r+12,true)]){
   if(v.destroyed)continue;
@@ -1087,6 +1097,15 @@ function updPj(dt){
     }
 
     // Personatges i vehicles: intersecció contínua amb volum esfèric aproximat.
+    // Neutrals share the nearest-hit comparison with cover and other bodies.
+    // They are deliberately absent from all auto-aim candidate sets.
+    for(const civilian of prisonerSystem.entities){
+      if(civilian.hp<=0||civilian.destroyed)continue;
+      const radius=civilian.radius||.55;
+      consider(segmentAabbT(x0,y0,z0,x1,y1,z1,
+        civilian.x-radius,civilian.x+radius,civilian.y,civilian.y+(civilian.height||1.85),
+        civilian.z-radius,civilian.z+radius),'civilian',civilian);
+    }
     if(p.own==='p'||p.own==='pb'){
       // També cercam els centres de llanxes situats a cel·les veïnes
       // quan només la proa o la popa intercepten el segment del coet.
@@ -1137,6 +1156,9 @@ function updPj(dt){
       else if(kind==='tree'&&target?.p)dmgP(target,p.dmg);
       else if(kind==='enemy'){if(target.t!=='torre'&&!(p.shotClass==='light'&&isArmoredVehicleType(target.t)))hurtE(target,p.dmg,p)}
       else if(kind==='vehicle')damageVehicle(target,p.dmg,1,'light',p);
+      else if(kind==='civilian'){
+        if(prisonerSystem.hurt(target,p.dmg,p))spawnBulletImpact('blood',p.x,p.y,p.z,p);
+      }
       else if(kind==='player'){
         const before=hp;hurtP(p.dmg,p.own==='e',{type:'bullet',x:p.sx,y:p.sy,z:p.sz});
         if(hp<before)spawnBulletImpact('blood',p.x,p.y,p.z,p);

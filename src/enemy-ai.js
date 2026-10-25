@@ -123,6 +123,8 @@ function soldierWarnNeighbors(witness,target,targetY){
   const event=STEALTH.emit('alert',witness.x,witness.o.position.y+2,witness.z);
   if(event)witness.heardId=event.id;
   snd('alert',.65,{x:witness.x,y:witness.o.position.y+2,z:witness.z},witness);
+  // Radio supplements a real witnessed contact; the local shout always remains.
+  radioRelay.warn(witness,target,targetY,{enemies:E,active:!!started&&!paused&&!over});
 }
 // Punteria per dificultat. DIF=1.5 conserva exactament la dispersió antiga.
 // Normal (1) falla més i Fàcil (.6) encara més, sense alterar el dany ni la IA.

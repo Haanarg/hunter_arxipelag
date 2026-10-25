@@ -2,22 +2,27 @@
 'use strict';
 // Complement the independent semantic matrix with exact physical-buffer parity,
 // activation/clock lifecycle, pre-await failure recovery and partial-tile disposal.
-// The fixed geometry fingerprint was captured with untouched upstream 651884f,
-// v0.5.79, seed 67 / scale 1 / desktop, before frames, with ambient LCG below.
+// By default compare a clean synchronous world with production progressive start.
+// PHASE10_LEGACY_BASELINE=1 additionally requires the immutable v0.5.79 world:
+// upstream 651884f, seed 67 / scale 1 / desktop, before frames, ambient LCG below.
+// That historical mode intentionally rejects later authored world additions.
 const assert=require('node:assert/strict');
 const crypto=require('node:crypto');
 const createGame=require('./harness.cjs');
 const snapshotSource=require('./phase10-snapshot.cjs');
 const manifest=require('./fixtures/phase10/manifest.json');
 const GEOMETRY_BASELINE='8c64015e34be5868a382ac2d14501452c76f218499ee9d203a5f20325e2635ca';
+const legacyBaseline=process.env.PHASE10_LEGACY_BASELINE==='1';
 function seedAmbient(game){
   let ambient=0x10c0ffee;
   game.context.Math.random=()=>{ambient=(Math.imul(ambient,1664525)+1013904223)>>>0;return ambient/4294967296};
 }
-function semanticBaseline(game,physical){
+function semanticFingerprint(game){
+  return crypto.createHash('sha256').update(JSON.stringify(game.run(snapshotSource))).digest('hex');
+}
+function semanticBaseline(actual,physical){
   const expected=manifest.cases.find(c=>c.seed===67&&c.scale===1&&c.physical===physical);
-  const actual=crypto.createHash('sha256').update(JSON.stringify(game.run(snapshotSource))).digest('hex');
-  assert.equal(actual,expected.sha256,'complete semantic state and continuation of R match untouched baseline');
+  assert.equal(actual,expected.sha256,'PHASE10_LEGACY_BASELINE=1: complete state and continuation of R must match untouched v0.5.79; later world additions require default current-world parity');
 }
 function geometryFingerprint(game){
   const hash=crypto.createHash('sha256');
@@ -49,9 +54,13 @@ async function finish(game,promise,between=()=>{}){
 }
 async function exactPhysicalParity(){
   let game=await createGame();seedAmbient(game);
-  game.run('requestedSeed=67;build()');
-  assert.deepEqual(geometryFingerprint(game),{nodes:15800,hash:GEOMETRY_BASELINE},'sync adapter preserves every physical geometry/instance buffer and transform');
-  semanticBaseline(game,true);
+  game.run('requestedSeed=67;build()'+(legacyBaseline?'':';configureOptionalWorld()'));
+  const expectedGeometry=geometryFingerprint(game),expectedSemantic=semanticFingerprint(game);
+  if(legacyBaseline){
+    assert.deepEqual(expectedGeometry,{nodes:15800,hash:GEOMETRY_BASELINE},
+      'PHASE10_LEGACY_BASELINE=1: immutable original geometry; authored additions deliberately fail this historical comparison');
+    semanticBaseline(expectedSemantic,true);
+  }
   // Dispose the first complete world before allocating the second full fixture.
   game.run('discardGeneratedWorld()');game=null;
   const asyncGame=await createGame();seedAmbient(asyncGame);
@@ -71,12 +80,16 @@ async function exactPhysicalParity(){
   assert(turns>20);assert(stages.size>20,'real task labels evolve while scheduled frames and input execute');
   assert.equal(inputEvents,turns);assert.equal(asyncGame.context.HUNTER_GENERATION_STATE.status,'ready');
   assert.equal(asyncGame.el('generationLoading').hidden,true);
-  assert.deepEqual(geometryFingerprint(asyncGame),{nodes:15800,hash:GEOMETRY_BASELINE},'real async UI preserves the original physical world exactly');
-  semanticBaseline(asyncGame,true);
+  assert.deepEqual(geometryFingerprint(asyncGame),expectedGeometry,
+    'real async UI preserves every geometry/instance buffer, transform and visibility of the clean synchronous world');
+  const actualSemantic=semanticFingerprint(asyncGame);
+  assert.equal(actualSemantic,expectedSemantic,'real async UI preserves complete clean synchronous state and continuation of R');
+  if(legacyBaseline)semanticBaseline(actualSemantic,true);
   asyncGame.dispatch('window','keyup',{code:'KeyF'});asyncGame.frame(16);
   assert(Math.abs(asyncGame.run('elapsed')-.016)<1e-9,'time spent generating never reaches the first playable frame');
   asyncGame.run('discardGeneratedWorld()');
-  console.log('OK: physical sync/real async UI match untouched geometry buffers and semantic baseline; responsive tasks, no simulation/clock debt',turns);
+  console.log('OK: physical sync/real async UI match '+(legacyBaseline?'untouched v0.5.79':'clean current-world')+
+    ' geometry buffers and semantic/RNG state; responsive tasks, no simulation/clock debt',turns,JSON.stringify(expectedGeometry));
 }
 async function failureAndFocus(){
   const game=await createGame();game.run('seedSearchMode=true');seedAmbient(game);

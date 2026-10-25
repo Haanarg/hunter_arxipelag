@@ -1,6 +1,6 @@
 # Fase 11 — propostes de sandbox opcional
 
-Data: 2026-10-25. Base funcional: v0.5.81. **Disseny pendent d’elecció de l’usuari; cap implementació iniciada.** Les prioritats i els límits aprovats consten al [qüestionari respost](PHASE11_QUESTIONNAIRE.md).
+Data: 2026-10-25. **L’usuari ha triat B + C**, ampliant C amb un camp de camperols i un únic mecànic que repari vehicles. El primer prototip és v0.5.82; vegeu-ne el [comportament implementat](PHASE11_EXPLORATION.md). A i la nit/espera continuen pendents. Les seccions següents conserven el ventall inicial de propostes, no una llista de funcionalitats implementades. Les prioritats i els límits aprovats consten al [qüestionari respost](PHASE11_QUESTIONNAIRE.md).
 
 L’escena de referència és la incursió nocturna que ha proposat l’usuari. Ha de poder sorgir de les decisions del jugador: aconseguir material, triar hora i ruta, aprofitar una disfressa, esquivar patrulles i assaltar el búnquer. Cap pas de preparació es converteix en requisit de la missió principal.
 
@@ -63,8 +63,10 @@ Revisió del codi v0.5.81; no és una prova visual nova en WebGL o Android.
 | Sabotatge funcional de comunicacions | Pendent. Hi ha instal·lacions i elements decoratius, però no l’enllaç de ràdio proposat. |
 | Rescats | Pendents: no hi ha estats de presoner ni evacuació del rescat proposat. |
 
-## Recomanació pendent d’acceptació
+## Abast escollit per l’usuari
 
-Començar per **A**, d’acord amb la prioritat d’equipament i vehicles. Si l’usuari vol provar aviat l’escena nocturna, combinar aquest magatzem amb **nit i espera** en el primer prototip. B i C poden afegir-se després com a oportunitats independents. Les tres propostes són compatibles dins el sandbox; escollir una primera prova no exclou les altres del pla.
+**B + C**, amb un nou camp de presoners i una recompensa de rescat concreta: només el mecànic alliberat pot reparar vehicles. La C inicial del taller queda substituïda per aquest camp amb quatre camperols i un mecànic. El sabotatge transmet o talla avisos entre comunicacions i dues unitats exteriors existents del quarter general.
 
-Abans de programar cal que l’usuari triï, combini o corregeixi aquesta primera prova. Després es comprovaran accés, resposta justa de les patrulles, absència d’obligacions secundàries, continuïtat de la missió principal i recuperació dels estats en reiniciar. La persistència completa entre sessions continua pendent de la fase 5.
+La reparació és local, dura sis segons i no consumeix materials; no omple munició ni reviu vehicles destruïts. El mecànic pot seguir el jugador a peu voluntàriament. Els camperols evacuen sense una escorta obligatòria. La missió principal continua sent eliminar el general.
+
+El detall del prototip, les comprovacions i els límits són a [PHASE11_EXPLORATION.md](PHASE11_EXPLORATION.md). A, nit/espera, transport del mecànic com a passatger i ampliacions del sandbox requereixen decisions posteriors; no formen part d’aquest primer prototip.

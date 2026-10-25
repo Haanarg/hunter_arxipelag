@@ -1,7 +1,7 @@
 window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){const esc=v=>String(v||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])),m=(e&&e.message)?e.message:"Error desconegut",where=e&&e.filename?(e.filename.split("/").pop()+":"+e.lineno+":"+e.colno):"",stack=e&&e.error&&e.error.stack?e.error.stack:"";p.innerHTML="<h1>No s’ha pogut iniciar el joc</h1><p style=\"max-width:560px\">Error d’arrencada: <b>"+esc(m)+"</b></p>"+(where?"<p><b>"+esc(where)+"</b></p>":"")+(stack?"<pre style=\"max-width:90vw;white-space:pre-wrap;text-align:left;font-size:11px;opacity:.8\">"+esc(stack)+"</pre>":"")+"<p style=\"opacity:.8\">Envia una captura d’aquest missatge si persisteix.</p>"}});
 let generationPromise=null,generationCancel=null;
 let terrainStream=null,seedSearchMode=false,seedCompounds=[],seedScratchWorld=null;
-const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_WAVES','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI','HUNTER_SEED_SEARCH','HUNTER_CAMERA_CONTROLS','HUNTER_SIMULATION_CLOCK','HUNTER_STEALTH_FEEDBACK'];
+const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_WAVES','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI','HUNTER_SEED_SEARCH','HUNTER_CAMERA_CONTROLS','HUNTER_SIMULATION_CLOCK','HUNTER_STEALTH_FEEDBACK','HUNTER_PRISONERS','HUNTER_RADIO_RELAY'];
 const missingModules=requiredModules.filter(name=>!window[name]);if(missingModules.length)throw new Error('Mòduls Hunter absents: '+missingModules.join(', '));
 const missingSystems=Object.entries({generation:typeof build,combat:typeof fire,enemies:typeof updEn,audio:typeof initAudio}).filter(([,type])=>type!=='function').map(([name])=>name);if(missingSystems.length)throw new Error('Sistemes Hunter absents: '+missingSystems.join(', '));
 // La mida escollida a la portada ja és coneguda quan s'inicialitza el motor.
@@ -673,10 +673,11 @@ function applyGameStartOptions({difficulty=DIF,scale=MAP_SCALE,seed:inputSeed=re
 // complete world. Production buttons and restart exclusively use the Promise.
 function startGameSynchronously(options=readGameStartOptions()){
   if(generationPromise||seedSearchRunning)throw new Error('Ja hi ha una generació en curs');
-  applyGameStartOptions(options);build();minimap.setWorldSize(S,H);minimap.reset();mini();
+  applyGameStartOptions(options);build();configureOptionalWorld();minimap.setWorldSize(S,H);minimap.reset();mini();
   started=1;paused=false;iniEl.style.display='none';document.body.classList.add('game-started');initAudio();resetSimulationClock();
 }
 function discardGeneratedWorld(){
+  resetOptionalSystems();
   if(terrainStream)terrainStream.dispose();terrainStream=null;
   if(world){scene.remove(world);window.HUNTER_RESOURCES.dispose(world)}world=null;
   B=[];Wl=[];Dr=[];stairs=[];piers=[];items=[];V=[];E=[];fa=[];PL.length=FA.length=0;
@@ -715,7 +716,7 @@ function startGameProgressively(options=readGameStartOptions()){
       initAudio({unlockOnly:true});
       audioPause();
       const iterator=(function*(){
-        yield* buildSteps();
+        yield* buildSteps();configureOptionalWorld();
         minimap.setWorldSize(S,H);minimap.reset();
         yield* minimap.buildBackgroundSteps();mini();
       })();
@@ -1635,6 +1636,75 @@ function seedVehicleStub(t){
 const riderSystem=window.HUNTER_RIDER.create(THREE,{scene,box:bx,material:M,scales:VS,heightAt:hAt,shadows:visualQuality.shadows});
 const rider=riderSystem.object,poseRider=riderSystem.update;
 let swimming=false;let V=[],cv=null;const P={x:0,z:0,y:0,hd:0};
+// Optional opportunities share the real world, controls, cover and game clock.
+// NPCs remain neutral and never enter enemy auto-aim or enemy perception lists.
+function optionalLineClear(from,to,ignoreWall=null){
+  return !blastOccluded(from.x,from.y,from.z,to.x,to.y,to.z,ignoreWall);
+}
+function optionalCivilianCanMove(from,to,radius){
+  if(Math.abs(to.x)>H-2||Math.abs(to.z)>H-2||hAt(to.x,to.z)<.12||
+    Math.abs(to.y-from.y)>.65||treeHit(to.x,to.z,radius))return false;
+  const reach=Math.hypot(to.x-from.x,to.z-from.z)/2+radius;
+  for(const wall of wallCandidates((from.x+to.x)/2,(from.z+to.z)/2,reach)){
+    if(wall.open||wall.hp<=0||wall.y1<Math.min(from.y,to.y)+.15||
+      wall.y0>Math.max(from.y,to.y)+1.8)continue;
+    if(segmentAabbT(from.x,from.y+.9,from.z,to.x,to.y+.9,to.z,
+      wall.x0-radius,wall.x1+radius,wall.y0,wall.y1,wall.z0-radius,wall.z1+radius)!==null)return false;
+  }
+  return !vehicleCandidatesAt(to.x,to.z,24,true).some(v=>
+    !v.destroyed&&Math.abs(vehicleY(v)-to.y)<3&&circleVehicleOverlap(to.x,to.z,radius,v));
+}
+const optionalNotify=text=>{msg=text;msgT=3};
+const prisonerSystem=window.HUNTER_PRISONERS.create({
+  THREE,box:bx,material:M,heightAt:(x,z)=>hAt(x,z),canMove:optionalCivilianCanMove,
+  clearLine:optionalLineClear,notify:optionalNotify,sound:snd,vehicleRadius,
+  vehicleName:v=>VT[v.t]?.n||v.t
+});
+const radioRelay=window.HUNTER_RADIO_RELAY.create({
+  THREE,box:bx,material:M,heightAt:(x,z)=>hAt(x,z),clearLine:optionalLineClear,
+  notify:optionalNotify,sound:snd,
+  registerCollider:collider=>{Wl.push(collider);wallGridCount=-1},
+  unregisterCollider:collider=>{
+    const index=Wl.indexOf(collider);if(index>=0)Wl.splice(index,1);wallGridCount=-1;
+  },
+  onAlert:(unit,position)=>{
+    if(!E.includes(unit)||unit.hp<=0||unit.canSee)return;
+    releaseSoldierReservation(unit);releaseSoldierEntry(unit);
+    unit.aiMode='investigate';unit.tacticGoal=null;unit.tacticT=0;
+    unit.lastSeenX=position.x;unit.lastSeenY=position.y;unit.lastSeenZ=position.z;
+    unit.searchT=(position.duration||30)+Math.hypot(position.x-unit.x,position.z-unit.z)/Math.max(1,unit.sp*.65);
+    unit.alert=Math.max(unit.alert||0,position.duration||30);
+  }
+});
+function optionalContext(active=!!started&&!paused&&!over&&simulationFocused&&!document.hidden&&!generationPromise){
+  return {player:P,vehicle:cv,vehicles:V,enemies:E,
+    active,canInteract:!playerFall&&!playerEject&&!swimming&&!scopeActive,
+    visualRange:scopeActive?3500:400};
+}
+function resetOptionalSystems(){prisonerSystem.reset();radioRelay.reset()}
+function configureOptionalWorld(){
+  const compounds=world?.userData?.compounds||[];
+  prisonerSystem.configure({world,camp:world?.userData?.prisonCamp||compounds.find(c=>c.id==='prison-camp'),base:P.base,logicalOnly:seedSearchMode});
+  radioRelay.configure({world,compounds,logicalOnly:seedSearchMode});
+}
+function updateOptionalSystems(dt,active){
+  const context=optionalContext(active);
+  prisonerSystem.update(dt,context);radioRelay.update(dt,context);
+}
+function getOptionalAction(){
+  const context=optionalContext();
+  if(!context.active||!context.canInteract||cv)return null;
+  const prisonerAction=prisonerSystem.getAction(context);
+  // Asking the mechanic to follow must never trap the player beside a vehicle.
+  if(prisonerAction?.kind==='mechanicFollow'&&nearV())return radioRelay.getAction(context);
+  return prisonerAction||radioRelay.getAction(context);
+}
+function performOptionalAction(){
+  const action=getOptionalAction();if(!action)return false;
+  const context=optionalContext();
+  return action.kind==='sabotage'?radioRelay.interact(action,context):prisonerSystem.interact(action,context);
+}
+function optionalMapMarkers(){return [...radioRelay.markers(),...prisonerSystem.markers()]}
 const FERRY_DECK=window.HUNTER_VEHICLES.decks?.ferry;
 const wrapAngle=a=>Math.atan2(Math.sin(a),Math.cos(a));
 const ferryLocal=(f,x,z)=>{const dx=x-f.x,dz=z-f.z,s=Math.sin(f.hd),co=Math.cos(f.hd);return{x:dx*co-dz*s,z:dx*s+dz*co}};
@@ -1816,7 +1886,7 @@ const barbedHQ=(cx,cz,hw=50,hd=46,gap=13,gateOffset=0)=>{
 const mc=document.getElementById('mm');
 const minimap=window.HUNTER_MINIMAP.create({
   THREE,canvas:mc,worldSize:S,halfSize:H,heightAt:hAt,colorAt:window.HUNTER_TERRAIN.colorAt,
-  getState:()=>({base:P.base,hq:HQ,mapKnown:hqMapKnown||!!inv.mapa,current:cv||P,currentVehicle:cv,vehicles:V,enemies:E,log:logb,intel:intelMarks})
+  getState:()=>({base:P.base,hq:HQ,mapKnown:hqMapKnown||!!inv.mapa,current:cv||P,currentVehicle:cv,vehicles:V,enemies:E,log:logb,intel:intelMarks,opportunities:optionalMapMarkers()})
 });
 window.HUNTER_MINIMAP_STATS=minimap.stats;
 const mini=()=>minimap.draw();
@@ -2116,7 +2186,7 @@ const act=c=>{if(generationPromise)return;if(ui?.isBombTimerOpen?.()){
     document.getElementById('bombTimerConfirm')?.click?.();return
   }
   return
-}if(/^Digit[1-6]$/.test(c)){selectWeapon(quickWeapons()[Number(c.slice(5))-1]);return}if(c==='KeyV'){cycleWeapon(1);return}if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv||nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){
+}if(/^Digit[1-6]$/.test(c)){selectWeapon(quickWeapons()[Number(c.slice(5))-1]);return}if(c==='KeyV'){cycleWeapon(1);return}if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv)toggle();else if(getOptionalAction())performOptionalAction();else if(nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){
   if(!secondaryWeapon()&&inv.expl&&(!cv||cv.t==='heli')&&
      !swimming&&!playerFall&&!playerEject)panel('bombtimer');
 }if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
@@ -2126,12 +2196,13 @@ function updateActionButton(nearby){
   if(!button)return;
   // El mateix vehicle que retornaria nearV() a la tecla E.
   // En conduir, la icona continua identificant el vehicle del qual baixarem.
-  const vehicle=cv||nearby||null,type=vehicle?.t||'backpack',
-        name=vehicle?VT[type]?.n||type:null,
-        title=cv?'Baixar de '+name:nearby?'Pujar a '+name:'Obrir inventari';
+  const optional=getOptionalAction();
+  const vehicle=cv||nearby||null,type=optional?'optional-'+optional.kind:vehicle?.t||'backpack',
+        name=vehicle?VT[vehicle.t]?.n||vehicle.t:null,
+        title=optional?optional.label:cv?'Baixar de '+name:nearby?'Pujar a '+name:'Obrir inventari';
   if(button.dataset.vehicle!==type){
     button.dataset.vehicle=type;
-    button.innerHTML=vehicle?window.HUNTER_ACTION_ICONS.vehicle(type):window.HUNTER_ACTION_ICONS.backpack;
+    button.innerHTML=optional?optional.icon||'✋':vehicle?window.HUNTER_ACTION_ICONS.vehicle(type):window.HUNTER_ACTION_ICONS.backpack;
   }
   if(button.title!==title){
     button.title=title;
@@ -2269,9 +2340,9 @@ for(const b of document.querySelectorAll('[data-k]')){
   for(const v of ['pointercancel','lostpointercapture'])
     b.addEventListener(v,()=>{if(c==='KeyF')cancelGrenadeCharge();K[c]=0;b.classList.remove('held')});
 }
-addEventListener('blur',()=>{simulationFocused=false;audioPause();resetSimulationClock();clearKeys();if(started&&!paused&&!over)panel('pause')});
+addEventListener('blur',()=>{simulationFocused=false;updateOptionalSystems(0,false);audioPause();resetSimulationClock();clearKeys();if(started&&!paused&&!over)panel('pause')});
 addEventListener('focus',()=>{simulationFocused=true;resetSimulationClock();if(started&&!paused)audioResume()});
-document.addEventListener('visibilitychange',()=>{resetSimulationClock();if(document.hidden){audioPause();if(started&&!over)panel('pause')}else if(started&&!paused)audioResume()});
+document.addEventListener('visibilitychange',()=>{resetSimulationClock();if(document.hidden){updateOptionalSystems(0,false);audioPause();if(started&&!over)panel('pause')}else if(started&&!paused)audioResume()});
 ren.domElement.addEventListener('wheel',e=>{e.preventDefault();if(e.shiftKey){cycleWeapon(e.deltaY>0?1:-1);return}zoom=Math.max(.7,Math.min(1.9,zoom+e.deltaY*.001))},{passive:false});
 ren.domElement.addEventListener('pointerdown',e=>{
   syncCameraVehicle();
@@ -2332,7 +2403,7 @@ function setCheat(key,enabled){
   if(key==='invisible'&&enabled)for(const u of E){u.canSee=false;u.canShoot=false;u.alert=0;u.recognition=0;u.pursuitT=0;if(u.t==='soldat'){u.aiMode='patrol';u.searchT=0}}
 }
 function resume(){if(generationPromise)return;paused=false;simulationFocused=true;clearKeys();ui.hide();audioResume();resetSimulationClock()}
-function panel(mode){if(generationPromise)return;setSniperScope(false);paused=true;resetSimulationClock();pickerOpen=false;picker.style.display='none';pickerToggle.style.display='none';clearKeys();audioPause();ui.show(mode)}
+function panel(mode){if(generationPromise)return;setSniperScope(false);paused=true;updateOptionalSystems(0,false);resetSimulationClock();pickerOpen=false;picker.style.display='none';pickerToggle.style.display='none';clearKeys();audioPause();ui.show(mode)}
 // Les cartes revelen informació de forma immediata: no són objectes
 // d'inventari que s'hagin d'equipar ni obrir manualment.
 function revealMapPickup(kind){
@@ -2472,7 +2543,7 @@ const ui=window.HUNTER_UI.create({
   minimap,
   getState:({nearVehicle=cv?null:nearV()}={})=>({
     hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
-    inventory:inv,itemTypes:IT,player:P,nearVehicle,messageTime:msgT,message:msg,
+    inventory:inv,itemTypes:IT,player:P,nearVehicle,optionalAction:getOptionalAction(),messageTime:msgT,message:msg,
     waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,muted,cheats:{...cheats},stealthDebug:window.HUNTER_STEALTH.enabled(),stealthLayers:window.HUNTER_STEALTH.layers(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
   }),
   actions:{
@@ -2586,6 +2657,16 @@ function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
         const dmg=runoverDamage(speed,c.mass||1);
         hurtE(u,dmg);u.alert=12;v.ramCd=.35;v.v*=.86;
         msg='Atropellament!';msgT=1;break;
+      }
+    }
+  }
+  if(v.ramCd<=0&&speed>6){
+    for(const civilian of prisonerSystem.entities){
+      if(civilian.hp<=0||civilian.destroyed||Math.abs(vehicleY(v)-civilian.y)>3)continue;
+      if(runoverSweepHit(oldX,oldZ,v.x,v.z,civilian.x,civilian.z,radius*.68+civilian.radius*.45)){
+        const lost=prisonerSystem.hurt(civilian,runoverDamage(speed,c.mass||1),{type:'vehicle',x:v.x,z:v.z});
+        if(lost)spawnBulletImpact('blood',civilian.x,civilian.y+1,civilian.z,{sx:oldX,sy:vehicleY(v)+1,sz:oldZ});
+        v.ramCd=.35;v.v*=.86;msg='Atropellament d’un civil!';msgT=2;break;
       }
     }
   }
@@ -2982,7 +3063,7 @@ updateCrouchButton();
  if(started&&!over&&hp<=0){
    hp=0;fin('HAS MORT',{type:'impact',x:P.x,y:P.y,z:P.z});
  }
- if(!started||paused||over){resetCameraState();updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
+ if(!started||paused||over){updateOptionalSystems(0,false);resetCameraState();updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
 if(!(dt>0))return;
 rebuildVehicleGrid();elapsed+=dt;
 window.HUNTER_STEALTH.tick(dt);
@@ -3348,6 +3429,7 @@ if(K.KeyF&&(!grenadeEquipped||cv)){
 updEn(dt,simulationFrameActive);
 window.HUNTER_STEALTH_DEBUG.update(THREE,world,E,P);
 updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);
+updateOptionalSystems(dt,!!started&&!paused&&!over&&simulationFocused&&!document.hidden);
 uiTick+=dt;if(uiTick>.12){uiTick=0;const nv=cv?null:nearV();const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',(!cv&&cheats.fly)||(!!cv&&VT[cv.t]?.m==='a'));contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}const fireButton=document.getElementById('mainFireButton');
 if(fireButton){
   const heliGrenade=cv?.t==='heli',

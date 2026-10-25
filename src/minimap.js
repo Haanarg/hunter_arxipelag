@@ -79,6 +79,20 @@ window.HUNTER_MINIMAP=Object.freeze({
         ctx.fillText(m.kind==='heli'?'H':'T',px(x),pz(z)+.5);
         ctx.restore();
       }
+      // These opportunities enter the map only after an actual discovery.
+      for(const m of s.opportunities||[]){
+        if(!Number.isFinite(m.x)||!Number.isFinite(m.z))continue;
+        ctx.save();
+        ctx.fillStyle=m.state==='disabled'||m.state==='lost'?'#8a9697':
+          m.kind==='mechanic'?'#78e5ae':m.kind==='radio'?'#82d8e5':'#ffd17f';
+        ctx.strokeStyle='#14212b';ctx.lineWidth=1.3;
+        ctx.fillRect(px(m.x)-4,pz(m.z)-4,8,8);
+        ctx.strokeRect(px(m.x)-4,pz(m.z)-4,8,8);
+        ctx.fillStyle='#15232d';ctx.font='bold 7px system-ui';
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(m.kind==='mechanic'?'M':m.kind==='radio'?'R':'P',px(m.x),pz(m.z)+.5);
+        ctx.restore();
+      }
       ctx.fillStyle='#fff';ctx.beginPath();
       ctx.arc(px(q.x),pz(q.z),4,0,Math.PI*2);ctx.fill();
       ctx.strokeStyle='#fff';ctx.beginPath();

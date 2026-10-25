@@ -9,7 +9,8 @@ window.HUNTER_SEED_SEARCH=Object.freeze((()=>{
     heliport:'Heliport',
     polvori:'Polvorí',
     comunicacions:'Comunicacions',
-    port:'Port'
+    port:'Port',
+    'prison-camp':'Camp de presoners'
   });
   const groups=Object.freeze({
     vehicle:'Vehicles',

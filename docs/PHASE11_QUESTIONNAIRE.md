@@ -1,6 +1,6 @@
 # Fase 11 — qüestionari de direcció creativa
 
-La fase 11 ha de donar valor a l’exploració opcional amb decisions i conseqüències útils. Les respostes de l’usuari ja s’han recollit a continuació. El primer prototip encara s’ha d’acordar; no s’ha iniciat la implementació.
+La fase 11 ha de donar valor a l’exploració opcional amb decisions i conseqüències útils. Les respostes de l’usuari ja s’han recollit a continuació. L’usuari ha escollit B + C i ha concretat el camp de presoners i el mecànic; vegeu la decisió al final.
 
 Pots respondre amb lletres, combinar opcions, ordenar-les o escriure una alternativa. No hi ha respostes correctes ni una opció predeterminada. Si alguna pregunta no et convenç, pots reformular-la.
 
@@ -52,8 +52,12 @@ Escena de l’usuari, literal:
 - Els missatges i les interaccions han de ser breus. Els marcadors poden ajudar després de la descoberta, respectant què sap el jugador.
 - La nit ha de donar una opció tàctica real. Els detalls del cicle, l’espera i la visibilitat són propostes de disseny, encara no decisions aprovades.
 
-## Decisions encara obertes
+## Decisió de primer prototip — 2026-10-25
 
-Les [tres propostes de prototip](PHASE11_DESIGN.md) són **propostes per triar, combinar o corregir**, no funcionalitats aprovades. Falta acordar la primera oportunitat jugable i si la nit amb espera forma part d’aquest primer prototip.
+L’usuari ha escollit **B + C**, amb aquesta ampliació literal:
 
-Un cop triat l’abast, es desaran aquí les decisions i el prototip es revisarà jugant abans d’ampliar-lo.
+> Comencem per la B i la C. El presoner serà l'únic que pugui reparar vehicles. Haurem d'afegir un camp de presoners com a complex on hi hagi els camperols i el mecànic.
+
+Abast triat: sabotatge funcional de ràdio, nou camp amb camperols i un mecànic únic, rescat opcional i reparació exclusivament a càrrec del mecànic alliberat. El primer prototip s’implementa com a v0.5.82; [comportament i validació](PHASE11_EXPLORATION.md).
+
+La proposta A i la nit/espera continuen pendents. L’usuari revisarà jugant aquest primer prototip abans d’ampliar-lo. Queden oberts els ajustos de ritme, dificultat, seguiment/transport del mecànic i possibles recompenses addicionals dels camperols.

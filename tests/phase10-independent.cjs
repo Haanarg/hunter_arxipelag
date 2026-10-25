@@ -8,6 +8,10 @@ const vm=require('node:vm');
 const snapshotSource=require('./phase10-snapshot.cjs');
 const createGame=require('./harness.cjs');
 const ROOT=path.resolve(__dirname,'..');
+// The original fixtures stay immutable and available as an explicit historical
+// regression mode. Default checks compare independently generated current sync
+// worlds with the production async path, including recovery/restart.
+const legacyBaseline=process.env.PHASE10_LEGACY_BASELINE==='1';
 const FIXTURES=path.join(__dirname,'fixtures/phase10');
 const manifest=JSON.parse(fs.readFileSync(path.join(FIXTURES,'manifest.json'),'utf8'));
 const hash=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
@@ -50,14 +54,32 @@ function checkSnapshot(game,testCase,label){
   if(hash(bytes)!==testCase.sha256){
     let difference=Object.keys(testCase.fingerprints).filter(key=>hash(JSON.stringify(actual[key]))!==testCase.fingerprints[key]).join(', ');
     // Full original snapshots remain optional diagnostics outside the repository.
-    if(process.env.PHASE10_BASELINE_DIAGNOSTIC_DIR){
+    if(!testCase.currentBaseline&&process.env.PHASE10_BASELINE_DIAGNOSTIC_DIR){
       const baselineBytes=zlib.gunzipSync(fs.readFileSync(path.join(process.env.PHASE10_BASELINE_DIAGNOSTIC_DIR,testCase.file)));
       assert.equal(hash(baselineBytes),testCase.sha256,'original full diagnostic fixture integrity');
       difference=firstDifference(actual,JSON.parse(baselineBytes));
     }
-    assert.fail(`${label}: semantic state differs from untouched v0.5.79: ${difference}`);
+    const origin=testCase.currentBaseline?'the independently generated current synchronous world':
+      'untouched v0.5.79 (PHASE10_LEGACY_BASELINE=1; later authored world additions deliberately fail this historical comparison)';
+    assert.fail(`${label}: semantic state differs from ${origin}: ${difference}`);
   }
   return actual;
+}
+function captureCurrentBaseline(game,testCase){
+  // This is a separate clean synchronous generation, never the async result
+  // being checked. No expected fixture on disk is replaced or rewritten.
+  const state=game.run(snapshotSource),counts=plain(game.run(`({
+    buildings:B.length,walls:Wl.length,loot:items.length,vehicles:V.length,
+    enemies:E.length,palms:PL.length})`));
+  return {...testCase,currentBaseline:true,sha256:hash(JSON.stringify(state)),counts,
+    fingerprints:Object.fromEntries(Object.entries(state).map(([key,value])=>[key,hash(JSON.stringify(value))]))};
+}
+async function cleanCurrentBaseline(testCase){
+  const game=await createGame(ROOT);seedAmbientRandom(game);
+  if(!testCase.physical)game.run('seedSearchMode=true');
+  game.run(`requestedSeed=${testCase.seed};MAP_SCALE=${testCase.scale};S=4800*MAP_SCALE;H=S/2;build();configureOptionalWorld()`);
+  const expected=captureCurrentBaseline(game,testCase);
+  game.run('discardGeneratedWorld()');return expected;
 }
 const observeSource=`(()=>({
   started,elapsed,hp,kills,projectiles:Pj.length,
@@ -178,13 +200,16 @@ function summarizeWork(review){
 }
 async function semanticCase(testCase){
   const label=`${testCase.seed}/${testCase.scale}/${testCase.physical?'physical':'logical'}`;
-  const sync=await createGame(ROOT);
+  let sync=await createGame(ROOT);
   seedAmbientRandom(sync);
   if(!testCase.physical)sync.run('seedSearchMode=true');
   sync.el('seedInput').value=String(testCase.seed);sync.el('mapSize').value=String(testCase.scale);
   // Explicitly exercise the synchronous adapter, separately from the real UI below.
-  sync.run(`requestedSeed=${testCase.seed};MAP_SCALE=${testCase.scale};S=4800*MAP_SCALE;H=S/2;build()`);
-  checkSnapshot(sync,testCase,label+' sync');
+  sync.run(`requestedSeed=${testCase.seed};MAP_SCALE=${testCase.scale};S=4800*MAP_SCALE;H=S/2;build()`+
+    (legacyBaseline?'':';configureOptionalWorld()'));
+  if(legacyBaseline)checkSnapshot(sync,testCase,label+' sync');
+  else testCase=captureCurrentBaseline(sync,testCase);
+  sync.run('discardGeneratedWorld()');sync=null;
   const review=await reviewGame(testCase);
   let primed=null;
   if(testCase.physical){
@@ -213,10 +238,12 @@ async function semanticCase(testCase){
   const work=summarizeWork(review);
   assert.ok(Number.isFinite(work.maxStepMs)&&work.maxStepMs>=0,'maximum generator step duration is recorded');
   assert.ok(work.maxRngCalls<review.game.run('phase10ReviewWork.rngCalls')*.5,'largest RNG chunk is smaller than half of actual generation work');
-  console.log('OK: phase10 untouched baseline parity and real UI tasks',label,JSON.stringify(work));
+  console.log('OK: phase10 '+(legacyBaseline?'untouched v0.5.79':'independent current sync/progressive')+' parity and real UI tasks',label,JSON.stringify(work));
+  review.game.run('discardGeneratedWorld()');
   return review;
 }
 async function recoveryCase(testCase){
+  const expected=legacyBaseline?testCase:await cleanCurrentBaseline(testCase);
   const review=await reviewGame(testCase),{game,queue}=review;
   const first=track(clickStart(review));
   while(game.run('B.length')===0)await nextTask(review);
@@ -242,7 +269,7 @@ async function recoveryCase(testCase){
   game.run('phase10ReviewFailHeight=false');
   seedAmbientRandom(game);
   const retry=track(clickStart(review));await finish(review,retry);
-  checkSnapshot(game,testCase,'retry after cancel/error');
+  checkSnapshot(game,expected,'retry after cancel/error');
   // Use the actual restart menu handler and its action closure.
   const restartButton=game.el('phase10-review-restart');restartButton.dataset.diff='1';
   const body=game.el('panelBody'),oldQuery=body.querySelectorAll;
@@ -253,10 +280,12 @@ async function recoveryCase(testCase){
   const restarted=track(restartButton.onclick());
   assert.equal(game.run('started'),0,'restart disables gameplay while rebuilding');
   await finish(review,restarted);
-  checkSnapshot(game,testCase,'actual restart UI');
+  checkSnapshot(game,expected,'actual restart UI');
+  game.run('discardGeneratedWorld()');
   console.log('OK: phase10 cancel, stale callback, generation error, retry and actual restart UI');
 }
 async function earlyFailureCase(testCase){
+  const expected=legacyBaseline?testCase:await cleanCurrentBaseline(testCase);
   const review=await reviewGame(testCase),{game}=review;
   game.run(`var phase10ReviewApply=applyGameStartOptions;
     applyGameStartOptions=function(...args){applyGameStartOptions=phase10ReviewApply;
@@ -270,7 +299,8 @@ async function earlyFailureCase(testCase){
   const retriedPromise=clickStart(review);
   assert.notEqual(retriedPromise,rejectedPromise,'retry after a synchronous startup error creates a new generation');
   const retry=track(retriedPromise);await finish(review,retry);
-  checkSnapshot(game,testCase,'retry after first-await error');
+  checkSnapshot(game,expected,'retry after first-await error');
+  game.run('discardGeneratedWorld()');
   console.log('OK: phase10 startup error before first await releases slot and permits real UI retry');
 }
 async function focusCase(testCase){
@@ -294,6 +324,7 @@ async function focusCase(testCase){
     // that same performance clock when starting actual simulation after loading.
     const resumeAt=performance.now();game.frameAt(resumeAt+16);game.frameAt(resumeAt+32);
     assert.ok(game.run('elapsed')>0,'actual resume button activates the ready world');
+    game.run('discardGeneratedWorld()');
   }
   console.log('OK: phase10 blur/hidden during load preserve pause until actual resume');
 }
@@ -423,7 +454,7 @@ async function menuBootCase(){
   assert.match(markup,/<progress[^>]*id="generationProgress"[^>]*aria-label="Progrés de l’etapa actual"/,'stage progress has an explicit accessible label');
   const selected=manifest.cases.filter(testCase=>!process.env.PHASE10_CASE||
     `${testCase.seed}/${testCase.scale}/${testCase.physical?'physical':'logical'}`.includes(process.env.PHASE10_CASE));
-  assert.ok(selected.length,'selected untouched baseline cases exist');
+  assert.ok(selected.length,'selected seed/scale/physical comparison cases exist');
   if(process.env.PHASE10_ONLY==='menu'){await menuBootCase();return}
   if(process.env.PHASE10_ONLY==='recovery'){await recoveryCase(manifest.cases[0]);return}
   if(process.env.PHASE10_ONLY==='early'){await earlyFailureCase(manifest.cases[0]);return}

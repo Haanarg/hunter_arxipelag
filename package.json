@@ -14,6 +14,7 @@
     "test:feedback": "node tests/combat-feedback.cjs && node tests/phase6-independent.cjs",
     "test:stealth": "node tests/stealth-perception.cjs && node tests/stealth-feedback.cjs && node tests/stealth-coordination.cjs && node tests/phase8-independent.cjs",
     "test:loading": "node tests/progressive-generation.cjs && node tests/phase10-independent.cjs",
-    "test:audio": "node tests/spatial-audio.cjs && node tests/phase12-independent.cjs"
+    "test:audio": "node tests/spatial-audio.cjs && node tests/phase12-independent.cjs",
+    "test:exploration": "node tests/phase11-prisoners.cjs && node tests/phase11-radio.cjs && node tests/phase11-independent.cjs && node tests/phase11-camp-generation.cjs"
   }
 }

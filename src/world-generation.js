@@ -127,7 +127,7 @@ async function buildProgressively({iterator=null,onProgress=()=>{},schedule=wind
     publish({status:error.name==='AbortError'?'cancelled':'error',error:error.message});throw error;
   }finally{try{steps.return()}finally{generationDrainActive=false}}
 }
-function* buildSteps(){let checkpointUnits=0;resetSimulationClock(null);resetCameraState();cameraBasement=null;clearVictoryCinematic();clearDeathCinematic();window.HUNTER_ENEMY_LOD.reset();window.HUNTER_STEALTH.clear();window.HUNTER_STEALTH_DEBUG.reset();playerCrouched=false;stealthStepTimer=0;const requestedPalmDisable=!!document.getElementById('disablePalms')?.checked;palmsDisabled=false;cancelGrenadeCharge();clearBulletImpacts();removeParachuteVisual();const buildStarted=performance.now(),buildStages={},buildCounters={landAttempts:0,landCandidates:0},markBuildStage=(()=>{let last=buildStarted;return name=>{const now=performance.now();buildStages[name]=Math.round((now-last)*100)/100;last=now}})();movementFx.reset();if(terrainStream)terrainStream.dispose();terrainStream=null;seedCompounds=[];elapsed=0;water.update(0);joystick.reset();compoundClear=[];terrainLevels=[];terrainLevelGrid.clear();if(seedSearchMode){
+function* buildSteps(){let checkpointUnits=0;resetOptionalSystems();resetSimulationClock(null);resetCameraState();cameraBasement=null;clearVictoryCinematic();clearDeathCinematic();window.HUNTER_ENEMY_LOD.reset();window.HUNTER_STEALTH.clear();window.HUNTER_STEALTH_DEBUG.reset();playerCrouched=false;stealthStepTimer=0;const requestedPalmDisable=!!document.getElementById('disablePalms')?.checked;palmsDisabled=false;cancelGrenadeCharge();clearBulletImpacts();removeParachuteVisual();const buildStarted=performance.now(),buildStages={},buildCounters={landAttempts:0,landCandidates:0},markBuildStage=(()=>{let last=buildStarted;return name=>{const now=performance.now();buildStages[name]=Math.round((now-last)*100)/100;last=now}})();movementFx.reset();if(terrainStream)terrainStream.dispose();terrainStream=null;seedCompounds=[];elapsed=0;water.update(0);joystick.reset();compoundClear=[];terrainLevels=[];terrainLevelGrid.clear();if(seedSearchMode){
   // Un únic món lògic reutilitzable: res de desmuntar geometries o
   // afegir/eliminar escenes per cada llavor.
   if(!seedScratchWorld)seedScratchWorld=new THREE.Group();
@@ -516,6 +516,58 @@ if(type==='port'){const pq=(yield* findPortSite(i,14));if(pq&&compoundSiteClear(
 if(i.r>520&&R()<.22){const type2=R()<.6?'garatge':'avancada';let q2=null;for(let n=0;n<14&&!q2;n++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const c=(yield* landSteps(i,800,1));if(c&&Math.hypot(c.x-q.x,c.z-q.z)>190&&compoundSiteClear(type2,c,150))q2=c}if(q2){q2.r=i.r;(yield* compound(type2,q2))}}};
 markBuildStage('remainingCompounds');
 yield {stage:'Assentaments',completed:1,total:1};
+// Optional rescue comes after existing military/port reservations. Its bounded
+// deterministic search never takes an earlier compound's site or consumes R().
+const prisonLayout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.type==='prison-camp');
+let prisonCamp=null,prisonCandidates=0;
+if(prisonLayout){
+ const primaryPrisonIslands=islands.filter(i=>i!==A&&i!==Bi).slice().sort((a,b)=>b.r-a.r||a.x-b.x||a.z-b.z);
+ // Existing islands are preferred. Only after exhausting them may a camp use
+ // genuinely free land elsewhere on the base/HQ islands, outside every reserve.
+ const prisonIslands=[...primaryPrisonIslands,A,Bi];
+ const safePrisonSite=(x,z)=>{
+  if(Math.abs(x)>H-100||Math.abs(z)>H-105||!compoundSiteClear('prison-camp',{x,z}))return null;
+  const coastRoad=world.userData.baseCoast?.points||[],roadClearance=layoutRadius(prisonLayout)+12;
+  for(let i=1;i<coastRoad.length;i++){
+   const a=coastRoad[i-1],b=coastRoad[i],dx=b.x-a.x,dz=b.z-a.z,
+     t=Math.max(0,Math.min(1,((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz||1)));
+   if(Math.hypot(x-a.x-t*dx,z-a.z-t*dz)<roadClearance)return null;
+  }
+  const height=rawHAt(x,z);if(height<.5)return null;
+  let low=height,high=height;
+  // The complete pad, gate and final evacuation segment must remain on land.
+  for(const dx of[-70,-35,0,35,70])for(const dz of[-70,-35,0,35,70,90]){
+   const h=rawHAt(x+dx,z+dz);if(h<.25)return null;
+   low=Math.min(low,h);high=Math.max(high,h);
+  }
+  if(high-low>28)return null;
+  return{x,z,h:height};
+ };
+ prisonSearch:for(const island of prisonIslands){
+  // At most 1 + 8*32 candidates per island, with a checkpoint per candidate.
+  for(let ring=0;ring<=8;ring++){
+   const count=ring?32:1,distance=ring*Math.max(20,island.r*.085);
+   for(let point=0;point<count;point++){
+    yield {stage:'Cercant camp de presoners',completed:null,total:null};
+    prisonCandidates++;
+    const angle=point*Math.PI*2/count,
+      q=safePrisonSite(island.x+Math.cos(angle)*distance,island.z+Math.sin(angle)*distance);
+    if(!q)continue;
+    // Fixed orientation preserves the authored gate, evacuation and truck bay.
+    prisonCamp=yield* buildApprovedCompoundSteps(prisonLayout,q,{...civilOptions});
+    prisonCamp.islandIndex=islands.indexOf(island);
+    prisonCamp.fallbackIsland=island===A?'base':island===Bi?'hq':null;
+    registerCompound('prison-camp',q);break prisonSearch;
+   }
+  }
+ }
+}
+if(prisonCamp)world.userData.prisonCamp=prisonCamp;
+else world.userData.prisonCampUnavailable={reason:prisonLayout?'No safe unoccupied land site for the prison camp':'Prison camp layout is unavailable',candidates:prisonCandidates};
+buildCounters.prisonCampCandidates=prisonCandidates;
+buildCounters.prisonCamps=prisonCamp?1:0;
+markBuildStage('prisonCamp');
+yield {stage:prisonCamp?'Camp de presoners':'Camp de presoners: sense emplaçament segur',completed:1,total:1};
 let standalonePiers=0,targetPiers=(3+Math.floor(R()*3))*MAP_SCALE;for(const i of candidateIslands){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};if(standalonePiers>=targetPiers)break;if(usedPortIslands.has(i))continue;const q=(yield* findPortSite(i,12));if(!q||!compoundSiteClear('port',q,110)||compoundClear.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<80))continue;if((yield* makeStandalonePier(q)))standalonePiers++}
 markBuildStage('civilianPiers');
 yield {stage:'Molls',completed:1,total:1};
