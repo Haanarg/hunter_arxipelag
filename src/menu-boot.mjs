@@ -1,4 +1,4 @@
-import {GAME_VERSION} from './version.mjs?v=0.5.84';
+import {GAME_VERSION} from './version.mjs?v=0.5.85';
 import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs';
 
 // La portada no carrega Three.js, WebGL, el món ni una llavor de fons.
