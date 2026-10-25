@@ -2231,7 +2231,15 @@ const act=c=>{if(generationPromise)return;if(ui?.isBombTimerOpen?.()){
   }
   return
 }if(/^Digit[1-6]$/.test(c)){selectWeapon(quickWeapons()[Number(c.slice(5))-1]);return}if(c==='KeyV'){cycleWeapon(1);return}if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv)toggle();else if(getOptionalAction())performOptionalAction();else if(nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){
-  if(!secondaryWeapon()&&inv.expl&&(!cv||cv.t==='heli')&&
+  // The utility helicopter has two independent actions: F throws
+  // grenades and G programmes a timed explosive for the side door.
+  if(cv?.t==='heli'){
+    if((inv.expl||0)>0&&!swimming&&!playerFall&&!playerEject)
+      panel('bombtimer');
+    else if(!inv.expl){msg='No tens explosius C4 per deixar caure.';msgT=2}
+    return;
+  }
+  if(!secondaryWeapon()&&inv.expl&&!cv&&
      !swimming&&!playerFall&&!playerEject)panel('bombtimer');
 }if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
 const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.sunk||v.waterIngress?.dead||v.reentryLockUntil>elapsed)continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
@@ -3561,7 +3569,19 @@ updEn(dt,simulationFrameActive);
 window.HUNTER_STEALTH_DEBUG.update(THREE,world,E,P);
 updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);
 updateOptionalSystems(dt,!!started&&!paused&&!over&&simulationFocused&&!document.hidden);
-uiTick+=dt;if(uiTick>.12){uiTick=0;const nv=cv?null:nearV();const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',(!cv&&cheats.fly)||(!!cv&&VT[cv.t]?.m==='a'));contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}const fireButton=document.getElementById('mainFireButton');
+uiTick+=dt;if(uiTick>.12){uiTick=0;const nv=cv?null:nearV();const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',(!cv&&cheats.fly)||(!!cv&&VT[cv.t]?.m==='a'));contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('heli-bomb-active',cv?.t==='heli');contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}
+const heliBombButton=document.getElementById('heliBombButton');
+if(heliBombButton){
+  const count=inv.expl||0,available=count>0;
+  heliBombButton.dataset.count=String(count);
+  heliBombButton.setAttribute('aria-disabled',String(!available));
+  const title=available?'Programar i deixar caure C4 ('+count+' disponibles) · G':'No tens explosius C4 · G';
+  if(heliBombButton.title!==title){
+    heliBombButton.title=title;
+    heliBombButton.setAttribute('aria-label',title);
+  }
+}
+const fireButton=document.getElementById('mainFireButton');
 if(fireButton){
   const heliGrenade=cv?.t==='heli',
         grenade=heliGrenade||!cv&&grenadeEquipped&&(inv.granada||0)>0,
