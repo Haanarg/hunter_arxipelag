@@ -42,9 +42,9 @@ const plain=value=>JSON.parse(JSON.stringify(value));
         'truck has a collision-free straight drive through the open frontage at local z'+z);
     }
     check(!optionalCivilianCanMove(
-      {...at(19,16),y:hAt(at(19,16).x,at(19,16).z)},
-      {...at(23,16),y:hAt(at(23,16).x,at(23,16).z)},.94),
-      'west workshop wall stops NPCs');
+      {...at(43,16),y:hAt(at(43,16).x,at(43,16).z)},
+      {...at(47,16),y:hAt(at(47,16).x,at(47,16).z)},.94),
+      'east workshop wall stops NPCs');
   }
   check(barrack?.wood&&barrack.w===68&&barrack.d===18,'long wooden barrack has world footprint68x18');
   check(barrack?.roof.userData.branchGable===true,'barrack uses existing fishing-hut gable architecture');
