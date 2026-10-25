@@ -72,8 +72,31 @@ function* buildApprovedCompoundSteps(layout,q,{pad,path,pier,prop,vehicles,rocke
   for(const spec of layout.buildings){
     yield {stage:'Construint '+layout.id,completed:built++,total:layout.buildings.length,unit:'edificis'};
     const [x,z]=tr(spec.x,spec.z),firstWall=Wl.length,firstStair=stairs.length,buildingAngle=angle-(spec.rotationY||0),bc=Math.round(Math.cos(buildingAngle)),bs=Math.round(Math.sin(buildingAngle)),buildingVector=(x,z)=>[x*bc-z*bs,x*bs+z*bc];
-    const b=spec.bunker?mkEnemyBunker(x,z):mkB(x,z,spec.w,spec.d,spec.h*(spec.floors||1),spec.wood?0x96714b:spec.replacement?0xa9bdb0:spec.hangar?0xbab99d:0xc9b98d,layout.friendly?0x2c5fc0:spec.hangar?0xb7c1b4:0x79584e,{floors:spec.floors,wood:spec.wood,hangar:!!spec.hangar,kind:spec.hangar?'hangar':layout.id==='hangar'?'garage':layout.id,doorSide:0,doorWidth:spec.hangar?30:4,doorHeight:spec.hangar?11:4.4,openDoor:!!spec.hangar,noPartitions:true,solidWalls:!!spec.warehouse&&!spec.wood});
+    const b=spec.bunker?mkEnemyBunker(x,z):mkB(x,z,spec.w,spec.d,spec.h*(spec.floors||1),spec.workshop?0x90968d:spec.wood?0x96714b:spec.replacement?0xa9bdb0:spec.hangar?0xbab99d:0xc9b98d,spec.workshop?0x54635c:layout.friendly?0x2c5fc0:spec.hangar?0xb7c1b4:0x79584e,{floors:spec.floors,wood:spec.wood,hangar:!!spec.hangar,workshop:!!spec.workshop,kind:spec.workshop?'workshop':spec.hangar?'hangar':layout.id==='hangar'?'garage':layout.id,doorSide:0,doorWidth:spec.hangar?30:4,doorHeight:spec.hangar?11:4.4,openDoor:!!spec.hangar,noPartitions:true,solidWalls:!!spec.workshop||!!spec.warehouse&&!spec.wood});
     decorateRuntimeBuilding(b,spec);b.civilian=!!layout.civilian;
+    if(spec.workshop){
+      b.workshop=true;
+      b.workshopParking={x,z,frontZ:z+spec.d/2,width:spec.w,depth:spec.d};
+      if(!seedSearchMode){
+        // Painted service rectangle and safety stripes are flat markers, not
+        // invisible collision barriers. The entrance and central bay stay clear.
+        const paint=(w,d,x0,z0,color,y=.37)=>bx(b.o,w,.035,d,color,x0,y,z0,'paint');
+        for(const side of[-1,1]){
+          paint(.22,15,side*6.1,-.5,0xebbd4e);
+          paint(1.15,.30,side*6.1,8.5,0xebbd4e);
+        }
+        paint(12,.22,0,-8.4,0xebbd4e);
+        // Tool cabinet and workbench are tucked against the back wall,
+        // outside the truck's central manoeuvring footprint.
+        bx(b.o,5.8,2.0,.65,0x56615d,-5.4,1.18,-10.65,'metal');
+        bx(b.o,5.9,.22,1.1,0x9b8060,-5.4,2.3,-10.2,'wood');
+        for(let k=0;k<3;k++)bx(b.o,.12,.8,.12,0xb7aaa0,-7.25+k*1.8,2.85,-10.3,'metal');
+        // A shallow sign above the open frontage makes the garage legible
+        // without closing the opening or affecting vehicle clearance.
+        bx(b.o,10,.65,.25,0x344d48,0,11.1,12.1,'paint');
+        for(const side of[-1,1])bx(b.o,.65,.65,.28,0xe2c455,side*4.05,11.12,12.22,'paint');
+      }
+    }
     if(spec.hangar){
       const shape=seedSearchMode?null:new THREE.Shape();if(shape){shape.moveTo(-spec.w/2,0);shape.lineTo(spec.w/2,0);for(let i=0;i<=16;i++){const a=i*Math.PI/16;shape.lineTo(Math.cos(a)*spec.w/2,.12+Math.sin(a)*spec.w/2)}shape.closePath();}
       // La paret semicircular és l'únic tancament posterior: sense l'antic
