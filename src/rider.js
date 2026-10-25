@@ -50,7 +50,7 @@ window.HUNTER_RIDER=Object.freeze({
       pistol.visible=true;
       const sc=v.t==='llanxa'?1.3:v.t==='llanxa_coets'?1.35:scales[v.t],
             rowing=v.t==='barca_rems',
-            twist=v.t==='windsurf'?.33:.24;
+            twist=v.t==='windsurf'?.055:.24;
       // A la barca l'arma s'ha de veure a escala amb el remador.
       pistol.scale.setScalar(rowing?.56:.92);
       if(rowing){
@@ -65,6 +65,7 @@ window.HUNTER_RIDER=Object.freeze({
             // El braç dret surt del rem amb una extensió curta cap a proa.
             // Evitam que travessi el pit o arribi a l'altre costat del buc.
             reach=rowing?vec(-.08*sc,-.26,-.48*sc):
+              v.t==='windsurf'?vec(.17*sc,-.14,-1.02*sc):
               vec(.25*sc,-.29,-1.13*sc);
       const target=shoulder.clone().add(reach),
             hand=restingHand.lerp(target,u.shotBlend),
@@ -214,30 +215,47 @@ window.HUNTER_RIDER=Object.freeze({
       }
 
       if(v.t==='windsurf'){
-        // Tors de costat i cames rectes. Les dues mans agafen el mateix
-        // costat del travesser (+Z), davant de la vela i de cara a la càmera.
-        const lean=Math.max(-.08,Math.min(.08,v.v/42)),
-              bodyX=-.44*sc,hipY=1.36*sc,footY=.29*sc;
-        torso.position.set(bodyX,hipY,.18*sc);
-        torso.rotation.set(0,-Math.PI/2,-.035+lean);
-        const hips=[vec(bodyX,hipY,-.25*sc),vec(bodyX,hipY,.25*sc)];
-        const shoulders=[shoulderAt(1),shoulderAt(-1)];
-        // Llegim els punts reals del travesser: si en canviam la mida,
-        // les mans continuaran exactament al mateix costat visible.
+        // 7/8 mirrored relative to the old silhouette: surfer stands on
+        // starboard (+X) and faces across the board toward the mirrored
+        // sail on port (-X), with hips back and slightly bent knees.
+        // The rig pitches toward the bow; both hands follow actual points
+        // on the moving boom, not hand positions guessed in rider space.
+        const bodyX=.55*sc,hipY=1.38*sc,footY=.35*sc,
+              sail=v.o.userData.windsurfRig,
+              grips=v.o.userData.windsurfGrips||[],
+              lean=.17+Math.min(.07,Math.abs(v.v)/230);
+        torso.position.set(bodyX,hipY,.48*sc);
+        torso.rotation.set(lean,1.13,.08);
+        const hips=[vec(bodyX-.05*sc,hipY,.23*sc),
+                    vec(bodyX+.08*sc,hipY,.65*sc)];
+        // Crucial: anatomically correct shoulder index.
+        // i=0 -> left arm, i=1 -> right arm (firing arm).
         v.o.updateWorldMatrix(true,true);
         g.updateWorldMatrix(true,false);
-        const grips=v.o.userData.windsurfGrips;
-        const hands=grips.map(point=>g.worldToLocal(v.o.localToWorld(point.clone())));
-        const feet=[vec(bodyX,footY,.72*sc),vec(bodyX,footY,-.72*sc)];
+        const hands=grips.map(p=>g.worldToLocal(
+          (sail||v.o).localToWorld(p.clone())));
+        const feet=[vec(.66*sc,footY,.99*sc),
+                    vec(.72*sc,footY,-.63*sc)];
         for(let i=0;i<2;i++){
-          const hip=hips[i],shoulder=shoulders[i],hand=hands[i],foot=feet[i];
-          const elbow=shoulder.clone().lerp(hand,.58);
-          elbow.y-=.1;elbow.z=Math.max(elbow.z,.52*sc);
-          limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
-          const knee=hip.clone().lerp(foot,.5);knee.x+=.015*sc;
-          limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);
-          boots[i].position.copy(foot);boots[i].rotation.set(0,-Math.PI/2,0);
+          const shoulder=shoulderAt(i?1:-1),hip=hips[i],
+                hand=hands[i]||vec(-.5*sc,2.6*sc,.5*sc),
+                foot=feet[i],
+                elbow=shoulder.clone().lerp(hand,.47),
+                knee=hip.clone().lerp(foot,.51);
+          // Bend the elbows down slightly, without forcing an
+          // impossible knee/elbow pose away from the true grip.
+          elbow.y-=.17*sc;
+          elbow.z+=i?.08*sc:-.055*sc;
+          limbBetween(limbs[i*2],shoulder,elbow);
+          limbBetween(limbs[i*2+1],elbow,hand);
+          knee.y+=.13*sc;knee.x-=.10*sc;
+          limbBetween(limbs[4+i*2],hip,knee);
+          limbBetween(limbs[5+i*2],knee,foot);
+          boots[i].position.copy(foot);
+          boots[i].rotation.set(-.12,1.13,0);
         }
+        // Right hand releases only during the pistol animation; the
+        // left hand stays planted on the rig and the torso barely twists.
         aimOneHand(v,dt);return;
       }
 
