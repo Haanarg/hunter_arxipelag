@@ -2217,7 +2217,7 @@ const act=c=>{if(generationPromise)return;if(ui?.isBombTimerOpen?.()){
   if(!secondaryWeapon()&&inv.expl&&(!cv||cv.t==='heli')&&
      !swimming&&!playerFall&&!playerEject)panel('bombtimer');
 }if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
-const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.reentryLockUntil>elapsed)continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
+const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.sunk||v.reentryLockUntil>elapsed)continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
 function updateActionButton(nearby){
   const button=document.getElementById('mainActionButton');
   if(!button)return;
@@ -2303,6 +2303,18 @@ function truckExitCandidate(v,side,index){
   return{x:v.x+sx*exitSide*lateral+fx*behind,
     z:v.z+sz*exitSide*lateral+fz*behind,side:exitSide};
 }
+// A deep-water wreck cannot keep the player captive or be entered again.
+function escapeSubmergedVehicle(v){
+  if(cv!==v)return;
+  resetCameraState();
+  const distance=vehicleBox(v).w/2+2.1,side=rn(-1,1)<0?-1:1;
+  P.x=Math.max(-H+4,Math.min(H-4,v.x+Math.cos(v.hd)*side*distance));
+  P.z=Math.max(-H+4,Math.min(H-4,v.z-Math.sin(v.hd)*side*distance));
+  P.hd=v.hd;P.y=wy(P.x,P.z,elapsed)-1.9;
+  v.v=0;v.driveInput=0;v.steerInput=0;v.reentryLockUntil=Infinity;
+  cv=null;swimming=true;playerEject=null;
+  msg='Vehicle enfonsat! Has sortit a l’aigua.';msgT=3;
+}
 function toggle(){if(playerFall||playerEject)return;resetCameraState();if(scopeActive)setSniperScope(false);if(cv){
 const leaving=cv,speed=Math.abs(leaving.v),isAir=VT[leaving.t].m==='a',
       platform=leaving.t==='ferry'?leaving:leaving.carrier||ferryForVehicle(leaving),
@@ -2340,7 +2352,7 @@ leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;leaving.reentryLockU
 if(moving){const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),sx=Math.cos(leaving.hd)*spot.side,sz=-Math.sin(leaving.hd)*spot.side,
   carry=Math.sign(leaving.v)*Math.min(movingTruck?11:28,speed*(movingTruck?.3:.72)),outward=movingTruck?8:1.4;
   playerEject={kind:'flip',vx:fx*carry+sx*outward,vz:fz*carry+sz*outward,t:.5,dur:.5,height:.68};msg='Has saltat del vehicle en marxa!';msgT=2.5}
-cv=null}else{const v=nearV();if(v){cv=v;swimming=false;playerCrouched=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
+cv=null}else{const v=nearV();if(v&&!v.sunk){cv=v;swimming=false;playerCrouched=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
 addEventListener('keydown',e=>{
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
   if(e.repeat)return;
@@ -2838,7 +2850,25 @@ function crashHelicopterStructure(v,contact){
   return false;
 }
 function stepV(v,f,tr,ud,dt,strafe=0){
-const c=VT[v.t],a=c.m==='a',water=c.m==='w'||c.m==='wl',land=c.m==='l',radius=vehicleRadius(v.t),input=window.HUNTER_VEHICLE_DYNAMICS.inputs(v,f,tr,dt);f=input.forward;tr=input.turn;
+const c=VT[v.t],a=c.m==='a',water=c.m==='w'||c.m==='wl',land=c.m==='l',radius=vehicleRadius(v.t),
+  shore=window.HUNTER_VEHICLE_DYNAMICS.shore;
+if(v.sunk){v.v=0;v.sideV=0;v.strafeV=0;if(cv===v)escapeSubmergedVehicle(v);return !v.destroyed}
+const depth=land?shore.depth(v.x,v.z,hAt,(x,z)=>wy(x,z,elapsed)):0,
+  flooded=land?shore.wetLand(v,depth,dt):null,
+  input=window.HUNTER_VEHICLE_DYNAMICS.inputs(v,f,tr,dt);
+f=input.forward;tr=input.turn;
+if(land){
+  if(flooded.disabled){f=0;v.driveInput=0;}
+  else f*=flooded.engine;
+  if(flooded.wet>.02){
+    v.waterSplashCd=Math.max(0,(v.waterSplashCd||0)-dt);
+    if(Math.abs(v.v)>1.5&&v.waterSplashCd<=0){
+      puff(v.x,wy(v.x,v.z,elapsed),v.z,0xb4d7dc,.55+flooded.wet*.8);
+      v.waterSplashCd=.25;
+    }
+  }
+  if(v.sunk){v.v=0;if(cv===v)escapeSubmergedVehicle(v);return !v.destroyed}
+}
 // Strafe sense girar: només hovercraft i els dos helicòpters.
 // Conservar la deriva natural existent (sideV) i afegir-hi una velocitat
 // lateral independent amb acceleració i frenada suaus.
@@ -2850,6 +2880,7 @@ if(a&&v.carrier&&ud>.12){detachFromFerry(v);v.verticalV=Math.max(v.verticalV||0,
 v.v+=f*c.a*dt;
 const dragBase=c.dr*(water?1.08:land?.86:1),coastBoost=Math.abs(f)<.03?(water?1.18:land?1.04:.82):1;
 v.v*=Math.max(0,1-dragBase*coastBoost*dt);
+if(land&&flooded.drag>0)v.v*=Math.exp(-flooded.drag*dt);
 v.v=Math.max(-(c.maxR||12),Math.min(c.maxF||40,v.v));
 
 let steerScale=1;
@@ -2872,10 +2903,42 @@ if(water){
 
 const oldX=v.x,oldZ=v.z,
       fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),sx=Math.cos(v.hd),sz=-Math.sin(v.hd);
-const totalSideV=sideV+v.strafeV,
-      nx=v.x+(fx*v.v+sx*totalSideV)*dt,nz=v.z+(fz*v.v+sz*totalSideV)*dt,raw=hAt(nx,nz),h=land?groundAt(nx,nz):raw,g=Math.max(0,h),
-      deckCarrier=(land||a)?ferryForVehicle(v,nx,nz,true):null;let ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;
-if(c.m==='w')ok=ok&&raw<-1.2;if(c.m==='l')ok=ok&&(!!deckCarrier||h>-1.2);
+const totalSideV=sideV+v.strafeV;
+let nx=v.x+(fx*v.v+sx*totalSideV)*dt,nz=v.z+(fz*v.v+sz*totalSideV)*dt;
+if(c.m==='w'){
+  const footprint=vehicleBox(v),current=shore.clearance(v,v.x,v.z,footprint,hAt,(x,z)=>wy(x,z,elapsed));
+  let next=shore.clearance(v,nx,nz,footprint,hAt,(x,z)=>wy(x,z,elapsed)),
+    contact=shore.boatContact(v,current,next,dt),incomingSpeed=Math.abs(v.v);
+  if(contact.shallow>0){
+    // Friction begins before the boat actually grounds, preserving momentum
+    // and making slow approaches controllable rather than instant stops.
+    v.v*=Math.exp(-contact.drag*dt);
+    nx=v.x+(fx*v.v+sx*totalSideV)*dt;nz=v.z+(fz*v.v+sz*totalSideV)*dt;
+    next=shore.clearance(v,nx,nz,footprint,hAt,(x,z)=>wy(x,z,elapsed));
+    contact=shore.boatContact(v,current,next,dt);
+  }
+  if(contact.blocked){
+    // Stop the bow where the hull first reaches the beach, not at its
+    // previous frame position. Reverse travel toward deeper water is free.
+    const dx=nx-v.x,dz=nz-v.z;let lo=0,hi=1;
+    for(let i=0;i<9;i++){
+      const m=(lo+hi)/2,clear=shore.clearance(v,v.x+dx*m,v.z+dz*m,
+        footprint,hAt,(x,z)=>wy(x,z,elapsed));
+      if(clear>=contact.limit)lo=m;else hi=m;
+    }
+    nx=v.x+dx*lo;nz=v.z+dz*lo;
+    v.v*=-.055;
+    if(incomingSpeed>12&&(v.shoreHitCd||0)<=0){
+      collisionDamageVehicle(v,Math.min(4,Math.max(1,Math.ceil((incomingSpeed-12)/9))));
+      vehicleImpactFx(nx,Math.max(0,hAt(nx,nz))+.5,nz);
+      if(cv===v){msg='La quilla ha impactat contra la costa!';msgT=2}
+      v.shoreHitCd=.8;
+    }
+  }
+  v.shoreHitCd=Math.max(0,(v.shoreHitCd||0)-dt);
+}
+let raw=hAt(nx,nz),h=land?groundAt(nx,nz):raw,g=Math.max(0,h),
+    deckCarrier=(land||a)?ferryForVehicle(v,nx,nz,true):null,ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;
 if(ok&&a&&!deckCarrier){
   const structureHit=window.HUNTER_AIR_OBSTACLES.hit(THREE,world,v,
     {x:v.x,z:v.z,alt:v.alt},{x:nx,z:nz,alt:v.alt},VS[v.t]||1);
@@ -3029,12 +3092,13 @@ else if(c.m==='a'){
 }
 else if(c.m==='w'){
    y=wy(v.x,v.z,t)+(v.t==='barca_rems'?-.1:.2);
+   if(v.grounded)y=Math.max(y,hAt(v.x,v.z)+Math.min(.85,(window.HUNTER_VEHICLE_DYNAMICS.shore.draft[v.t]||.8)*.5));
    const speed=Math.min(1,Math.abs(v.v)/(c.maxF||30)),
          wave=Math.sin(t*2.4+v.x*.03+v.z*.025);
    pi=wave*.035*speed;ro=-(v.yawRate||0)*.11+wave*.025;
    // Només la moto aquàtica i el windsurf s'enlairen en
    // remuntar una ona a velocitat: els altres bucs no boten.
-   if(v.t==='moto_aquatica'||v.t==='windsurf'){
+   if((v.t==='moto_aquatica'||v.t==='windsurf')&&!v.grounded){
      const jump=window.HUNTER_WATER_JUMPS.update(v,dt,t,wy,c.maxF);
      y+=jump.lift;pi+=jump.pitch;
    }
@@ -3047,7 +3111,15 @@ else{
   // del darrere han de fixar una alçada antiga en una baixada.
   // La inclinació continua seguint la diferència de les mostres frontal/darrere.
   y=groundAt(v.x,v.z)+.05;
-  pi=Math.atan((groundAt(v.x-s2*3,v.z-k*3)-groundAt(v.x+s2*3,v.z+k*3))/6);ro=-(v.sideV||0)*.018}
+  pi=Math.atan((groundAt(v.x-s2*3,v.z-k*3)-groundAt(v.x+s2*3,v.z+k*3))/6);ro=-(v.sideV||0)*.018;
+  if(v.waterIngress){
+    const state=v.waterIngress,surface=wy(v.x,v.z,t),bed=hAt(v.x,v.z);
+    const floated=Math.max(y,surface-.5);
+    y=y+(floated-y)*state.buoyancy;
+    if(state.dead)y=Math.max(bed-.4,y-state.sink);
+    if(state.dead)pi=Math.min(.27,pi+.025*state.elapsed);
+  }
+}
 if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.rotation.set(pi,v.hd,ro);
 // Direcció visual a l'eix davant (-Z): independent del rodament en X.
 window.HUNTER_VEHICLES.animateSteering(o,v.t,tr,dt);
@@ -3179,7 +3251,7 @@ else if(playerEject&&playerEject.t>0){
 if(!playerFall&&!cheats.fly){wallPush();treePush();vehiclePushPlayer();ferryCabinPushPlayer()}}
 // Cal transportar també el jugador que va a peu sobre la coberta mòbil.
 const walkingDeck=!cv&&!playerFall?pedestrianFerry(P.x,P.z,P.y):null;
-V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;v.strafeV=0;return}if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
+V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;v.strafeV=0;return}if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08||v.waterIngress?.dead&&!v.sunk){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
 syncFerryCargo();updateTerminalRamps();
 if(walkingDeck&&!walkingDeck.f.destroyed){const p=ferryWorld(walkingDeck.f,walkingDeck.q.x,walkingDeck.q.z);P.x=p.x;P.z=p.z}
 const previousInterior=ib;
