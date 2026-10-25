@@ -1169,6 +1169,12 @@ function updPj(dt){
         if(hp<before)spawnBulletImpact('blood',p.x,p.y,p.z,p);
       }
     }
+    // Un impacte directe de bazuca enderroca tota una cabana de fusta,
+    // incloses les parets, les barres laterals i la coberta.
+    if(p.weapon==='bazooka'){
+      const b=kind==='building'?target:kind==='wall'?target?.owner:null;
+      if(b?.civilianHut)demolishCivilianHut(b);
+    }
     if(p.spl)boom(p.x,p.y,p.z,p.spl,p.dmg,p.own,p);
     world.remove(p.o);Pj.splice(i,1)
   }
