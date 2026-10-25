@@ -2404,6 +2404,13 @@ for(const b of document.querySelectorAll('[data-k]')){
   for(const v of ['pointercancel','lostpointercapture'])
     b.addEventListener(v,()=>{if(c==='KeyF')cancelGrenadeCharge();K[c]=0;b.classList.remove('held')});
 }
+// The utility-helicopter C4 action is also accessible by tabbing to its
+// touch control and pressing Enter/Space. It shares the same G handler.
+document.getElementById('heliBombButton')?.addEventListener('keydown',e=>{
+  if(e.code!=='Enter'&&e.code!=='Space')return;
+  e.preventDefault();e.stopPropagation();
+  act('KeyG');
+});
 addEventListener('blur',()=>{simulationFocused=false;updateOptionalSystems(0,false);audioPause();resetSimulationClock();clearKeys();if(started&&!paused&&!over)panel('pause')});
 addEventListener('focus',()=>{simulationFocused=true;resetSimulationClock();if(started&&!paused)audioResume()});
 document.addEventListener('visibilitychange',()=>{resetSimulationClock();if(document.hidden){updateOptionalSystems(0,false);audioPause();if(started&&!over)panel('pause')}else if(started&&!paused)audioResume()});
