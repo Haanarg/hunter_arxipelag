@@ -87,7 +87,7 @@ window.HUNTER_PRISONERS=Object.freeze({
      mesh(rig,cube,metal,.18,.052,.052,.28,.95,-.02);
      mesh(rig,cube,white,.11,.13,.025,-.12,1.19,-.267);
     }else{
-     mesh(rig,hairCap,hair,1,1,1,0,1.63,0);
+     mesh(rig,hairCap,hair,1,1,1,0,1.58,0);
      mesh(rig,brim,straw,1,1,1,0,1.75,0);
      mesh(rig,cube,straw,.42,.12,.32,0,1.69,0);
      mesh(rig,cube,trousers,.18,.10,.07,0,1.255,-.231); // torn shirt opening
@@ -98,7 +98,7 @@ window.HUNTER_PRISONERS=Object.freeze({
      mesh(leg,upperLeg,trousers,1,1,1,0,-.20,0);
      mesh(leg,joint,trousers,.84,.78,.94,0,-.385,0);
      mesh(leg,lowerLeg,trousers,1,1,1,0,-.51,0);
-     mesh(leg,cube,boots,.22,.16,.32,0,-.68,-.045);
+     mesh(leg,cube,boots,.22,.16,.34,0,-.68,-.045);
      mesh(leg,joint,boots,1.05,.62,1.32,0,-.685,-.105);
      legs.push(leg);
      const arm=new T.Group();arm.position.set(side*.34,1.30,0);rig.add(arm);
