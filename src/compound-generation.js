@@ -139,11 +139,23 @@ function* buildApprovedCompoundSteps(layout,q,{pad,path,pier,prop,vehicles,rocke
   for(const [kind,x,z] of layout.props){if(kind==='flag')flag(...tr(x,z),layout.friendly?0x2c7bff:0xe02828);else prop(kind,...tr(x,z),-angle);}
   // Build only the openings authored in each compound's perimeter.
   if(layout.fence)for(const [a,b] of layout.fence)barbedSegment(...tr(...a),...tr(...b));
-  if(layout.prisonerFence)for(const [a,b] of layout.prisonerFence)barbedSegment(...tr(...a),...tr(...b));
+  // Keep references to every *individual* inner-fence section, including
+  // removed colliders: cutters, explosions and vehicles can all make a breach.
+  // Outer wire is deliberately excluded from the liberation condition.
+  if(layout.prisonerFence){
+    record.prisonFenceSegments=[];
+    for(const [a,b] of layout.prisonerFence){
+      const before=Wl.length;
+      barbedSegment(...tr(...a),...tr(...b));
+      for(const collider of Wl.slice(before))
+        record.prisonFenceSegments.push({collider,gate:false});
+    }
+  }
   if(layout.prisonerGate){
     const [a,b]=layout.prisonerGate,collider=barbedSection(...tr(...a),...tr(...b)),
       colliders=[collider],meshes=colliders.flatMap(w=>w.parts||[w.m]).filter(Boolean);
     collider.prisonGate=true;
+    record.prisonFenceSegments?.push({collider,gate:true});
     record.prisonGate={colliders,meshes,opened:false,open(){
       if(this.opened)return;
       this.opened=true;
