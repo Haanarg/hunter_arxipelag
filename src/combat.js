@@ -184,7 +184,34 @@ function hurtE(u,d,killingShot=null){
   }
   if(u.hp<=0)killEnemy(u,killingShot);
 }
+// La bicicleta no té motor ni combustible: queda espanyada, però mai no
+// origina una explosió, ona expansiva, dany en àrea ni expulsió balística.
+function destroyBicycle(v){
+  if(!v||v.destroyed)return;
+  const wasRiding=cv===v;
+  v.destroyed=true;v.life=0;v.v=0;v.driveInput=0;v.steerInput=0;
+  v.reentryLockUntil=Infinity;
+  if(wasRiding){
+    resetCameraState();
+    cv=null;P.x=v.x;P.z=v.z;P.hd=v.hd;
+    P.y=groundAt(v.x,v.z,P.y);
+    // Una ensopegada curta, sense velocitat d'ejecció ni girs aeris.
+    playerEject={kind:'bicycle',vx:0,vz:0,t:.42,dur:.42};
+    msg='La bicicleta s’ha romput!';msgT=2.5;
+  }
+  const i=V.indexOf(v);if(i>=0)V.splice(i,1);
+  intelMarks=intelMarks.filter(mark=>mark.ref!==v);
+  // La ferralla continua al món, tombada i fora de la llista de vehicles.
+  // Ajustam l'altura després de girar-la perquè toqui el sòl.
+  if(v.o){
+    v.o.rotation.z=(Math.sin(v.x*2.13+v.z*.79)>0?1:-1)*Math.PI*.43;
+    v.o.updateMatrixWorld(true);
+    const bounds=new THREE.Box3().setFromObject(v.o),floor=hAt(v.x,v.z);
+    if(Number.isFinite(bounds.min.y))v.o.position.y+=floor-bounds.min.y+.04;
+  }
+}
 function explodeVehicle(v){
+  if(v?.t==='bici'){destroyBicycle(v);return;}
   if(!v||v.destroyed)return;v.destroyed=true;const wasPilot=cv===v,yy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
   if(wasPilot){
     resetCameraState();
