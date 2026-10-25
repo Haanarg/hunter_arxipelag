@@ -1017,7 +1017,14 @@ if(parts.lintel){
  Wl.push(lintel);
 }
 return {door,lintel};};
-if(opt.hangar){
+if(opt.workshop){
+  // Three full-height load-bearing walls. The entire +Z facade remains
+  // physically open, with no door, lintel, threshold or entrance steps.
+  // The real collider list and the visuals use the same dimensions.
+  seg(0,-d/2+t/2,w,t,0,false,0,1);
+  seg(w/2-t/2,0,t,d,0,false,1,1);
+  seg(-w/2+t/2,0,t,d,0,false,2,1);
+}else if(opt.hangar){
   const sh=Math.max(3.1,h*.3),push=(lx,lz,sx,sz)=>{
     const m=seedSearchMode?new THREE.Object3D():buildingVisual.addWall(g,{lx,lz,sx,sz,height:sh,material:wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+sh,hp:16,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz};Wl.push(o);return o
   };
@@ -1041,7 +1048,7 @@ if(opt.hangar){
 if(opt.floors===2)for(const [cx,cz,sx,sz]of[[0,d/2-t/2,w,t],[0,-d/2+t/2,w,t],[w/2-t/2,0,t,d-2*t],[-w/2+t/2,0,t,d-2*t]])seg(cx,cz,sx,sz,0,!opt.solidWalls,null,0,wallH);
 g.position.set(x,fy,z);if(!seedSearchMode)world.add(g);
 const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,foundation:visual.foundation,rhp:opt.hangar?12:16,hangar:!!opt.hangar,door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};for(const piece of Wl.slice(buildingWallStart))piece.owner=b;
-structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}
+structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else if(!opt.workshop)addStairs(b,ds);return b}
 function mkEnemyBunker(x,z){
   const firstWall=Wl.length,b=mkB(x,z,40,34,10,0xd9ded2,0xbfc6bb,{kind:'enemy_bunker',bunker:true,doorSide:0,doorWidth:4,doorHeight:4.4,lockedDoor:true}),g=b.o,inset=3.5;
   if(seedSearchMode){
