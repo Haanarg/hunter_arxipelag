@@ -35,8 +35,10 @@ assert(parts.al.rotation.z<-.6&&parts.ar.rotation.z>.6,
  'Amb l’ona expansiva, els braços s’obren cap als costats');
 assert(parts.ll.rotation.z<-.3&&parts.lr.rotation.z>.3,
  'Les cames se separen del cos, com a la referència');
-assert(parts.al.position.x<initialPositions[0]-.1);
-assert(parts.ar.position.x>initialPositions[1]+.1);
+assert.equal(parts.al.position.x,initialPositions[0],
+ 'L’espatlla esquerra no pot separar-se del tors durant el vol');
+assert.equal(parts.ar.position.x,initialPositions[1],
+ 'L’espatlla dreta no pot separar-se del tors durant el vol');
 for(const key of Object.keys(parts))
  for(const angle of ['x','z'])assert(Number.isFinite(parts[key].rotation[angle]));
 for(let i=0;i<120;i++)engine.update(state,.02,{grounded:true});
