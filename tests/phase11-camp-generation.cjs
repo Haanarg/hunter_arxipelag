@@ -17,7 +17,18 @@ const inspect=`(()=>{
  check(world.userData.compounds.filter(c=>c.id==='prison-camp').length===1,'one camp');
  check(layout.prisoners.filter(p=>p.role==='mechanic').length===1,'one mechanic');
  check(layout.prisoners.filter(p=>p.role==='farmer').length===4,'four farmers');
- check(camp.buildings.length===2&&camp.buildings.every(b=>!b.upperFloor),'one-storey barrack and guardhouse');
+ check(camp.buildings.length===3&&camp.buildings.every(b=>!b.upperFloor),'barrack, guardhouse and tall single-volume workshop');
+ const workshop=camp.buildings.find(b=>b.layoutBuilding==='prison-workshop');
+ check(!!workshop&&workshop.workshop&&workshop.h===12&&workshop.w===24&&workshop.d===24,
+   'physical 12m workshop shell with 24x24 clear footprint');
+ if(workshop){
+   const walls=Wl.filter(w=>w.owner===workshop&&w.hp>0&&!w.open);
+   check(walls.length===3,'workshop has three physical walls');
+   check(!workshop.door,'open workshop frontage must not be blocked by an invisible door');
+   check(walls.every(w=>Math.abs(w.y1-workshop.fy-12)<.01),'three full-height walls');
+   check(layout.mechanicStation.x===40&&layout.mechanicStation.z===16,
+     'mechanic works off the central vehicle line');
+ }
  const counts=Object.fromEntries(['polvori','comunicacions','heliport','port'].map(id=>[id,world.userData.compounds.filter(c=>c.id===id).length]));
  check(counts.polvori>=1,'powder magazine coverage');check(counts.comunicacions>=1,'communications coverage');
  check(counts.heliport>=1+MAP_SCALE,'heliport coverage');
