@@ -248,7 +248,7 @@ window.HUNTER_PRISONERS=Object.freeze({
    for(const u of entities){
     if(!alive(u))continue;
     if(u.role==='mechanic'){
-     u.path=[...exit,...[[33,36],[33,16]].map(localPoint)];u.state='to-station';
+     u.path=[...exit,...(camp.layout.mechanicAccess||[[33,36],[33,16]]).map(localPoint)];u.state='to-station';
     }else{
      // A small stagger avoids prisoners occupying exactly the same spot.
      u.path=[...exit,...farmersEnd];u.state='evacuating';u.phase=index++*.7;
