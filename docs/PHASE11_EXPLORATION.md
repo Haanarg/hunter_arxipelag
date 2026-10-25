@@ -1,6 +1,6 @@
 # Fase 11 — sabotatge, camp de presoners i mecànic
 
-Primer prototip B + C, v0.5.82. L’usuari ha triat aquestes dues oportunitats i ha concretat que el presoner mecànic sigui l’únic que pugui reparar vehicles. La proposta A i la nit/espera queden pendents.
+Primer prototip B + C introduït a v0.5.82, amb garantia de camp reforçada a v0.5.83. L’usuari ha triat aquestes dues oportunitats i ha concretat que el presoner mecànic sigui l’únic que pugui reparar vehicles. La proposta A i la nit/espera queden pendents.
 
 ## Com es juga
 
@@ -30,7 +30,7 @@ Totes dues activitats continuen sent opcionals. No s’han afegit claus, fabrica
 ## Implementació
 
 - `src/prison-camp-layout.mjs`: especificació del complex de 130 × 130 m, porta de 24 m, pati, captius, ruta d’evacuació i badia de reparació.
-- `src/world-generation.js`: cerca espacial acotada amb checkpoints després dels recintes militars i ports existents. Primer es proven altres illes; només després, espai lliure de les illes inicial i HQ amb les mateixes separacions. Es protegeix també el corredor base–costa. Si no hi ha lloc segur, es registra explícitament `prisonCampUnavailable`; no es tapa un recinte ni es força el camp dins l’aigua. No s’ha demostrat presència universal en totes les llavors.
+- `src/world-generation.js`: camp obligatori reservat després de base/HQ i abans dels altres recintes. Cerca seca determinista, terrassa si cal i illa de reserva com a últim recurs. Plataforma i sortides protegides. Abans d’entrar a jugar es valida un camp amb quatre camperols i un mecànic; el món no es declara preparat si falten. [Garantia i proves](PRISON_CAMP_GUARANTEE.md).
 - `src/prisoners.js`: estat i models procedurals de cinc civils, evacuació, seguiment, reparació, dany i neteja. No entren a la llista d’enemics ni a l’autoapuntat.
 - `src/radio-relay.js`: panells amb col·lisions i dany reals, descoberta, sabotatge, missatges coneguts i resposta limitada d’unitats existents.
 - `src/game-core.js`, `src/combat.js`, `src/enemy-ai.js`, `src/minimap.js` i `src/ui.js`: controls contextuals, dany amb cobertura, avisos i presentació.
@@ -39,6 +39,7 @@ Els NPC i panells tenen culling visual a 400 m, ampliat amb la mira. La simulaci
 
 ## Verificació reproduïble
 
+- `npm run test:camp` i `npm run test:camp:stress`: garantia estructural i 2.048 prefixos reals de generació.
 - `npm run test:exploration`: estat dels presoners/reparació, ràdio, revisió independent d’integració i generació del camp.
 - `node tests/phase11-camp-generation.cjs --presence`: sis llavors addicionals en el camí real de cerca de complexos.
 - `npm run test:loading`: paritat entre generació síncrona i progressiva del món actual, continuació RNG, recuperació, cancel·lació, focus i bootstrap.

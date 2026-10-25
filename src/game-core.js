@@ -673,7 +673,7 @@ function applyGameStartOptions({difficulty=DIF,scale=MAP_SCALE,seed:inputSeed=re
 // complete world. Production buttons and restart exclusively use the Promise.
 function startGameSynchronously(options=readGameStartOptions()){
   if(generationPromise||seedSearchRunning)throw new Error('Ja hi ha una generació en curs');
-  applyGameStartOptions(options);build();configureOptionalWorld();minimap.setWorldSize(S,H);minimap.reset();mini();
+  applyGameStartOptions(options);build();configureOptionalWorld();validateRequiredWorldFeatures();minimap.setWorldSize(S,H);minimap.reset();mini();
   started=1;paused=false;iniEl.style.display='none';document.body.classList.add('game-started');initAudio();resetSimulationClock();
 }
 function discardGeneratedWorld(){
@@ -716,7 +716,7 @@ function startGameProgressively(options=readGameStartOptions()){
       initAudio({unlockOnly:true});
       audioPause();
       const iterator=(function*(){
-        yield* buildSteps();configureOptionalWorld();
+        yield* buildSteps();configureOptionalWorld();validateRequiredWorldFeatures();
         minimap.setWorldSize(S,H);minimap.reset();
         yield* minimap.buildBackgroundSteps();mini();
       })();
@@ -1681,11 +1681,31 @@ function optionalContext(active=!!started&&!paused&&!over&&simulationFocused&&!d
     active,canInteract:!playerFall&&!playerEject&&!swimming&&!scopeActive,
     visualRange:scopeActive?3500:400};
 }
-function resetOptionalSystems(){prisonerSystem.reset();radioRelay.reset()}
+function resetOptionalSystems(){
+  window.HUNTER_REQUIRED_WORLD_FEATURES=null;
+  prisonerSystem.reset();radioRelay.reset();
+}
 function configureOptionalWorld(){
   const compounds=world?.userData?.compounds||[];
   prisonerSystem.configure({world,camp:world?.userData?.prisonCamp||compounds.find(c=>c.id==='prison-camp'),base:P.base,logicalOnly:seedSearchMode});
   radioRelay.configure({world,compounds,logicalOnly:seedSearchMode});
+}
+function validateRequiredWorldFeatures(){
+  const camps=(world?.userData?.compounds||[]).filter(c=>c.id==='prison-camp'),
+    prisoners=prisonerSystem.entities,
+    mechanics=prisoners.filter(u=>u.role==='mechanic'),
+    farmers=prisoners.filter(u=>u.role==='farmer');
+  if(camps.length!==1||world.userData.prisonCamp!==camps[0]||
+    !Number.isFinite(camps[0].x)||!Number.isFinite(camps[0].z)||
+    prisoners.length!==5||mechanics.length!==1||farmers.length!==4||
+    prisoners.some(u=>!Number.isFinite(u.hp)||u.hp<=0||!Number.isFinite(u.x)||!Number.isFinite(u.y)||
+      !Number.isFinite(u.z)||u.y<=0||!seedSearchMode&&u.o?.parent!==world)){
+    throw new Error('Món incomplet: cal un camp de presoners amb quatre camperols i un mecànic. Llavor '+(seed>>>0));
+  }
+  window.HUNTER_REQUIRED_WORLD_FEATURES=Object.freeze({
+    seed:seed>>>0,mapScale:MAP_SCALE,prisonCamps:1,farmers:4,mechanics:1,
+    status:'validated'
+  });
 }
 function updateOptionalSystems(dt,active){
   const context=optionalContext(active);

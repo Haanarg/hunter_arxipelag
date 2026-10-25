@@ -18,6 +18,11 @@ const inspect=`(()=>{
  check(layout.prisoners.filter(p=>p.role==='mechanic').length===1,'one mechanic');
  check(layout.prisoners.filter(p=>p.role==='farmer').length===4,'four farmers');
  check(camp.buildings.length===2&&camp.buildings.every(b=>!b.upperFloor),'one-storey barracks/workshop');
+ const counts=Object.fromEntries(['polvori','comunicacions','heliport','port'].map(id=>[id,world.userData.compounds.filter(c=>c.id===id).length]));
+ check(counts.polvori>=1,'powder magazine coverage');check(counts.comunicacions>=1,'communications coverage');
+ check(counts.heliport>=1+MAP_SCALE,'heliport coverage');
+ // Existing port placement guarantees one; 2*MAP_SCALE remains its target.
+ check(counts.port>=1,'port fallback coverage');
  const other=world.userData.compounds.filter(c=>c!==camp);
  for(const c of other)check(Math.hypot(c.x-camp.x,c.z-camp.z)>c.r+camp.r+33,'safe reservation from '+c.id);
  const solid=(x,z,r=.85)=>wallCandidates(x,z,r).some(w=>!w.open&&w.hp>0&&x>w.x0-r&&x<w.x1+r&&z>w.z0-r&&z<w.z1+r);
@@ -71,7 +76,7 @@ const inspect=`(()=>{
    check(!wallCandidates(x,z,18).some(w=>!w.open&&w.hp>0&&overlaps(box,w)),'truck access through gate/workshop');
   }
  }
- return{issues,camp:{x:camp.x,z:camp.z,angle:camp.angle},routeSamples:samples,maxRise,truck:{w:truck.w,d:truck.d},candidates:window.HUNTER_BUILD_STATS.portSearch.prisonCampCandidates};
+ return{issues,counts,portTarget:2*MAP_SCALE,camp:{x:camp.x,z:camp.z,angle:camp.angle},routeSamples:samples,maxRise,truck:{w:truck.w,d:truck.d},candidates:window.HUNTER_BUILD_STATS.portSearch.prisonCampCandidates};
 })()`;
 async function complete(game,promise){
  let done=false,error,turns=0;promise.then(()=>done=true,e=>{error=e;done=true});

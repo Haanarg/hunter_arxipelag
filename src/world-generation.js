@@ -1,4 +1,68 @@
 const countVehicles=type=>{let count=0;for(const v of V)if(v.t===type)count++;return count};
+// The planner does not draw from R(): normal play, progressive loading and seed
+// searches reserve the same camp before any optional coast/civil/military site.
+function prisonCampFootprint(layout){
+  const padHalfWidth=layout.size[0]/2+4,padHalfDepth=layout.size[1]/2+4,
+    escapeEnd=Math.max(...layout.escapeRoute.map(p=>p[1]))+12,blend=18;
+  return {minX:-padHalfWidth-blend,maxX:padHalfWidth+blend,
+    minZ:-padHalfDepth-blend,maxZ:Math.max(padHalfDepth,escapeEnd)+blend,
+    padHalfWidth,padHalfDepth,escapeEnd,blend};
+}
+function prisonCampSegmentDistance(x,z,a,b){
+  const dx=b.x-a.x,dz=b.z-a.z,
+    t=Math.max(0,Math.min(1,((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz||1)));
+  return Math.hypot(x-a.x-t*dx,z-a.z-t*dz);
+}
+function* surveyPrisonCampSiteSteps(layout,x,z,{heightAt,halfSize,siteClear}){
+  const bounds=prisonCampFootprint(layout);
+  // All earthworks, including their blend and evacuation runout, stay inside
+  // the playable terrain. Sampling the full envelope excludes sea terraces.
+  if(x+bounds.minX<=-halfSize+120||x+bounds.maxX>=halfSize-120||
+     z+bounds.minZ<=-halfSize+120||z+bounds.maxZ>=halfSize-120||!siteClear({x,z}))return null;
+  const height=heightAt(x,z);if(!Number.isFinite(height)||height<.5)return null;
+  let low=height,high=height,samples=1;
+  const nx=Math.ceil((bounds.maxX-bounds.minX)/8),nz=Math.ceil((bounds.maxZ-bounds.minZ)/8);
+  for(let ix=0;ix<=nx;ix++)for(let iz=0;iz<=nz;iz++){
+    if(samples%64===0)yield {stage:'Comprovant terreny del camp',completed:null,total:null};
+    const h=heightAt(x+bounds.minX+(bounds.maxX-bounds.minX)*ix/nx,
+      z+bounds.minZ+(bounds.maxZ-bounds.minZ)*iz/nz);samples++;
+    if(!Number.isFinite(h)||h<.5)return null;
+    low=Math.min(low,h);high=Math.max(high,h);
+  }
+  return {site:{x,z,h:height},terrain:{minHeight:low,maxHeight:high,samples,spacing:8,bounds}};
+}
+function* planPrisonCampSteps(layout,{islandList,baseIsland,hqIsland,heightAt,halfSize,siteClear,createSupportIsland}){
+  if(!layout||!layout.fixedOrientation||!layout.escapeRoute?.length)
+    throw new Error('Invariant del camp: manca un disseny de presoners vàlid');
+  const primary=islandList.filter(i=>i!==baseIsland&&i!==hqIsland).slice()
+    .sort((a,b)=>b.r-a.r||a.x-b.x||a.z-b.z),ordered=[...primary,baseIsland,hqIsland];
+  let candidates=0,terrace=null;
+  for(const island of ordered){
+    for(let ring=0;ring<=8;ring++){
+      const count=ring?32:1,distance=ring*Math.max(20,island.r*.085);
+      for(let point=0;point<count;point++){
+        yield {stage:'Cercant camp de presoners',completed:null,total:null};candidates++;
+        const angle=point*Math.PI*2/count,
+          surveyed=yield* surveyPrisonCampSiteSteps(layout,island.x+Math.cos(angle)*distance,
+            island.z+Math.sin(angle)*distance,{heightAt,halfSize,siteClear});
+        if(!surveyed)continue;
+        const result={...surveyed,island,candidates,placement:'natural'},
+          relief=surveyed.terrain.maxHeight-surveyed.terrain.minHeight;
+        if(relief<=28)return result;
+        // A steep but completely dry site is still usable: grade a terrace
+        // instead of silently omitting the camp when no naturally flat site fits.
+        if(!terrace||relief<terrace.terrain.maxHeight-terrace.terrain.minHeight)terrace=result;
+      }
+    }
+  }
+  if(terrace){terrace.site.h=Math.max(3,(terrace.terrain.minHeight+terrace.terrain.maxHeight)/2);
+    return {...terrace,candidates,placement:'terrace'};}
+  // Structural last resort, independent of natural terrain candidates. The
+  // caller validates the origin's separation before extending the island set.
+  const island=createSupportIsland(),site={x:island.x,z:island.z,h:Math.max(3,heightAt(island.x,island.z))};
+  if(!Number.isFinite(site.h)||!siteClear(site))throw new Error('Invariant del camp: illa de reserva ocupada o altura invàlida');
+  return {site,island,candidates,placement:'support-island',terrain:{bounds:prisonCampFootprint(layout)}};
+}
 const PIER_DECK_Y=2.4; // 20 cm sobre el màxim de les ones, més proper al nivell de terra. // Cota de coberta per sobre del màxim d'onatge (2.2 m).
 // Validació final contra TOTS els vehicles: també els afegits després dels molls.
 function jetSkiSpotClear(q,ignore=null){
@@ -370,6 +434,55 @@ const compoundSiteClear=(type,q,minCenter=0)=>{
   })
 };
 const registerCompound=(type,q)=>compoundCenters.push({x:q.x,z:q.z,r:compoundRadius(type),type});
+// Reserve the rescue opportunity first. Its existence is a world invariant,
+// while entering it and rescuing the prisoners remain optional for the player.
+const civilOptions={pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites,rocketAssigned:true};
+const prisonLayout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.type==='prison-camp');
+if(!prisonLayout)throw new Error('Invariant del camp: manca el disseny del camp de presoners');
+const prisonPlan=yield* planPrisonCampSteps(prisonLayout,{
+  islandList:islands,baseIsland:A,hqIsland:Bi,heightAt:rawHAt,halfSize:H,
+  siteClear:q=>compoundSiteClear('prison-camp',q),
+  createSupportIsland:()=>{
+    const radius=320,influence=radius*2;
+    // genIslands puts A/Bi >= 1414 m from the origin on scale 1, and
+    // landSteps moves <= 510 m. Their closest possible site is > 904 m.
+    // 640 m of island influence + the largest current HQ reserve + 34 m
+    // remains below that distance. Check the actual data for future layouts.
+    if(H<=influence+120||compoundCenters.some(c=>Math.hypot(c.x,c.z)<=influence+c.r+COMPOUND_GAP))
+      throw new Error('Invariant del camp: l’origen no permet una illa de reserva separada de la base i del quarter general');
+    const island={x:0,z:0,r:radius,peakX:0,peakZ:0,prisonCampSupport:true};
+    islands.push(island);rebuildIslandGrid();return island;
+  }
+});
+const prisonCamp=yield* buildApprovedCompoundSteps(prisonLayout,prisonPlan.site,civilOptions);
+prisonCamp.islandIndex=islands.indexOf(prisonPlan.island);
+prisonCamp.fallbackIsland=prisonPlan.island===A?'base':prisonPlan.island===Bi?'hq':null;
+prisonCamp.placement=prisonPlan.placement;prisonCamp.terrainSurvey=prisonPlan.terrain;
+const prisonBounds=prisonCampFootprint(prisonLayout),prisonTr=compoundTransform(prisonCamp,prisonCamp.angle),
+  prisonEscape=prisonLayout.escapeRoute.map(p=>{const q=prisonTr(...p);return{x:q[0],z:q[1]}}),
+  escapeEnd=prisonTr(0,prisonBounds.escapeEnd);
+// The standard pad ends at z=69. Level the complete evacuation, including all
+// farmer lanes and a runout, to avoid the old final 17 m becoming a cliff.
+addLevelArea(prisonCamp.x,prisonCamp.z+(prisonBounds.padHalfDepth+prisonBounds.escapeEnd)/2,
+  28,prisonBounds.escapeEnd-prisonBounds.padHalfDepth,prisonPlan.site.h,0,18);
+for(const p of [...prisonEscape,{x:escapeEnd[0],z:escapeEnd[1]}])compoundClear.push({x:p.x,z:p.z,r:14});
+const mechanicPoints=[[0,3],[prisonLayout.rescuePoint.x,prisonLayout.rescuePoint.z],
+  [prisonLayout.mechanicStation.x,prisonLayout.mechanicStation.z]].map(p=>{const q=prisonTr(...p);return{x:q[0],z:q[1]}});
+const prisonCorridors=[];
+for(const [points,width]of[[[...prisonEscape,{x:escapeEnd[0],z:escapeEnd[1]}],6],[mechanicPoints,2]])
+  for(let i=1;i<points.length;i++)prisonCorridors.push({a:points[i-1],b:points[i],width});
+const prisonCampCorridorClear=(x,z,padding=0)=>prisonCorridors.every(c=>prisonCampSegmentDistance(x,z,c.a,c.b)>c.width+padding);
+const prisonCampRoadClear=points=>{
+  for(let i=1;i<points.length;i++)if(prisonCampSegmentDistance(prisonCamp.x,prisonCamp.z,points[i-1],points[i])<=prisonCamp.r+18)return false;
+  return true;
+};
+registerCompound('prison-camp',prisonPlan.site);
+world.userData.prisonCamp=prisonCamp;
+world.userData.prisonCampReservation={x:prisonCamp.x,z:prisonCamp.z,r:prisonCamp.r,
+  corridors:prisonCorridors.map(c=>({...c,a:{...c.a},b:{...c.b}}))};
+buildCounters.prisonCampCandidates=prisonPlan.candidates;buildCounters.prisonCamps=1;
+markBuildStage('prisonCamp');
+yield {stage:'Camp de presoners',completed:1,total:1};
 // Mateixa validació espacial que findRedesignedPort, però abandona
 // cada emplaçament a la primera comprovació impossible. És només un
 // filtre: la funció original encara confirma els ports acceptats.
@@ -431,7 +544,6 @@ const forceReserve=function* (type,min){let checkpointUnits=0;
   }
   return null
 };
-const civilOptions={pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites,rocketAssigned:true};
 const dockLayout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.id==='civil-dock'),terminalLayout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.id==='ferry-terminal');
 const terminalRecords=[];
 let connection=null;
@@ -439,7 +551,7 @@ const exit=baseCompound.entrances[0],roadStart={x:exit[0],z:exit[1]};
 const initialDock=(yield* findCoastalLayoutSteps(dockLayout,{...A},function*(q){let checkpointUnits=0;
  if(!compoundSiteClear('civil-dock',q))return false;
  const end=compoundTransform(q,q.angle)(0,-dockLayout.size[1]/2),points=(yield* solveCoastRoadSteps(roadStart,{x:end[0],z:end[1]}));
- if(!points)return false;connection=points;return true;
+ if(!points||!prisonCampRoadClear(points))return false;connection=points;return true;
 }));
 if(initialDock){const c=(yield* buildApprovedCompoundSteps(dockLayout,initialDock,civilOptions));registerCompound('civil-dock',initialDock);(yield* buildCoastRoadSteps(connection,compoundPath));world.userData.baseCoast.dockId=c.layoutId;world.userData.baseCoast.dock={x:c.x,z:c.z};}
 else world.userData.baseCoast={unavailable:true,reason:'No walkable coastal corridor for this base site'};
@@ -516,58 +628,6 @@ if(type==='port'){const pq=(yield* findPortSite(i,14));if(pq&&compoundSiteClear(
 if(i.r>520&&R()<.22){const type2=R()<.6?'garatge':'avancada';let q2=null;for(let n=0;n<14&&!q2;n++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const c=(yield* landSteps(i,800,1));if(c&&Math.hypot(c.x-q.x,c.z-q.z)>190&&compoundSiteClear(type2,c,150))q2=c}if(q2){q2.r=i.r;(yield* compound(type2,q2))}}};
 markBuildStage('remainingCompounds');
 yield {stage:'Assentaments',completed:1,total:1};
-// Optional rescue comes after existing military/port reservations. Its bounded
-// deterministic search never takes an earlier compound's site or consumes R().
-const prisonLayout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.type==='prison-camp');
-let prisonCamp=null,prisonCandidates=0;
-if(prisonLayout){
- const primaryPrisonIslands=islands.filter(i=>i!==A&&i!==Bi).slice().sort((a,b)=>b.r-a.r||a.x-b.x||a.z-b.z);
- // Existing islands are preferred. Only after exhausting them may a camp use
- // genuinely free land elsewhere on the base/HQ islands, outside every reserve.
- const prisonIslands=[...primaryPrisonIslands,A,Bi];
- const safePrisonSite=(x,z)=>{
-  if(Math.abs(x)>H-100||Math.abs(z)>H-105||!compoundSiteClear('prison-camp',{x,z}))return null;
-  const coastRoad=world.userData.baseCoast?.points||[],roadClearance=layoutRadius(prisonLayout)+12;
-  for(let i=1;i<coastRoad.length;i++){
-   const a=coastRoad[i-1],b=coastRoad[i],dx=b.x-a.x,dz=b.z-a.z,
-     t=Math.max(0,Math.min(1,((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz||1)));
-   if(Math.hypot(x-a.x-t*dx,z-a.z-t*dz)<roadClearance)return null;
-  }
-  const height=rawHAt(x,z);if(height<.5)return null;
-  let low=height,high=height;
-  // The complete pad, gate and final evacuation segment must remain on land.
-  for(const dx of[-70,-35,0,35,70])for(const dz of[-70,-35,0,35,70,90]){
-   const h=rawHAt(x+dx,z+dz);if(h<.25)return null;
-   low=Math.min(low,h);high=Math.max(high,h);
-  }
-  if(high-low>28)return null;
-  return{x,z,h:height};
- };
- prisonSearch:for(const island of prisonIslands){
-  // At most 1 + 8*32 candidates per island, with a checkpoint per candidate.
-  for(let ring=0;ring<=8;ring++){
-   const count=ring?32:1,distance=ring*Math.max(20,island.r*.085);
-   for(let point=0;point<count;point++){
-    yield {stage:'Cercant camp de presoners',completed:null,total:null};
-    prisonCandidates++;
-    const angle=point*Math.PI*2/count,
-      q=safePrisonSite(island.x+Math.cos(angle)*distance,island.z+Math.sin(angle)*distance);
-    if(!q)continue;
-    // Fixed orientation preserves the authored gate, evacuation and truck bay.
-    prisonCamp=yield* buildApprovedCompoundSteps(prisonLayout,q,{...civilOptions});
-    prisonCamp.islandIndex=islands.indexOf(island);
-    prisonCamp.fallbackIsland=island===A?'base':island===Bi?'hq':null;
-    registerCompound('prison-camp',q);break prisonSearch;
-   }
-  }
- }
-}
-if(prisonCamp)world.userData.prisonCamp=prisonCamp;
-else world.userData.prisonCampUnavailable={reason:prisonLayout?'No safe unoccupied land site for the prison camp':'Prison camp layout is unavailable',candidates:prisonCandidates};
-buildCounters.prisonCampCandidates=prisonCandidates;
-buildCounters.prisonCamps=prisonCamp?1:0;
-markBuildStage('prisonCamp');
-yield {stage:prisonCamp?'Camp de presoners':'Camp de presoners: sense emplaçament segur',completed:1,total:1};
 let standalonePiers=0,targetPiers=(3+Math.floor(R()*3))*MAP_SCALE;for(const i of candidateIslands){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};if(standalonePiers>=targetPiers)break;if(usedPortIslands.has(i))continue;const q=(yield* findPortSite(i,12));if(!q||!compoundSiteClear('port',q,110)||compoundClear.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<80))continue;if((yield* makeStandalonePier(q)))standalonePiers++}
 markBuildStage('civilianPiers');
 yield {stage:'Molls',completed:1,total:1};
@@ -652,7 +712,7 @@ const add=(t,x,z,a,meta={})=>{
 // Cap tanc neutral dins del HQ: els tancs pilotables apareixen
 // distribuïts per l'arxipèlag, lluny de la base enemiga.
 
-const near=function* (r,t){let checkpointUnits=0;for(let k=0;k<80;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const x=pa.x+rr(-r,r),z=pa.z+rr(-r,r),h=hAt(x,z);if(h>1.5&&slope(x,z,h)<2.5&&!B.some(b=>Math.abs(x-b.x)<b.hw+vehicleRadius(t)&&Math.abs(z-b.z)<b.hd+vehicleRadius(t))&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(t)+vehicleRadius(v.t)+2))return[x,z]}return[pa.x+30,pa.z+30]};
+const near=function* (r,t){let checkpointUnits=0;for(let k=0;k<80;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const x=pa.x+rr(-r,r),z=pa.z+rr(-r,r),h=hAt(x,z);if(prisonCampCorridorClear(x,z,vehicleRadius(t)+2)&&h>1.5&&slope(x,z,h)<2.5&&!B.some(b=>Math.abs(x-b.x)<b.hw+vehicleRadius(t)&&Math.abs(z-b.z)<b.hd+vehicleRadius(t))&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(t)+vehicleRadius(v.t)+2))return[x,z]}return[pa.x+30,pa.z+30]};
 for(const t of ['moto']){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const q=(yield* near(90,t));add(t,q[0],q[1],rr(0,6.28))};
 const shores=[];for(let a=0;a<360;a+=12){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};for(let d=10;d<700;d+=10){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const x=pa.x+Math.cos(a*.01745)*d,z=pa.z+Math.sin(a*.01745)*d;if(Math.abs(x)>H-60||Math.abs(z)>H-60)break;if(hAt(x,z)<-2){shores.push({d,x,z,a:a*.01745});break}}}
 shores.sort((a,b)=>a.d-b.d);
@@ -711,7 +771,7 @@ if(launchSpot){
   }
   add('llanxa',lx,lz,rr(0,6.28));
 }
-const clearVehicle=(t,x,z)=>Math.abs(x)<H-vehicleRadius(t)-5&&Math.abs(z)<H-vehicleRadius(t)-5&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(x-v.x,z-v.z)<vehicleRadius(t)+vehicleRadius(v.t)+5);
+const clearVehicle=(t,x,z)=>prisonCampCorridorClear(x,z,vehicleRadius(t)+2)&&Math.abs(x)<H-vehicleRadius(t)-5&&Math.abs(z)<H-vehicleRadius(t)-5&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(x-v.x,z-v.z)<vehicleRadius(t)+vehicleRadius(v.t)+5);
 // Dos tancs pilotables dins d'hangars per mapa. A la resta, variants
 // més lleugeres; conservam les posicions i les portes existents.
 let hangarTanks=0,alternateHangar=0;
@@ -780,14 +840,14 @@ if(heliportSites.length){
   if(!V.some(v=>v.t==='heli'))addClearHeliAtPort('heli',0);
   if(!V.some(v=>v.t==='heli_combat'))addClearHeliAtPort('heli_combat',Math.min(1,heliportSites.length-1));
 }
-const protectedVehicleSpot=t=>{const r=vehicleRadius(t),ok=(x,z)=>hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3);for(let k=0;k<240;k++){const a=rr(0,Math.PI*2),d=rr(30,58),x=pb.x+Math.cos(a)*d,z=pb.z+Math.sin(a)*d;if(ok(x,z))return{x,z,hd:a+Math.PI}}return null};
-const distributedMilitarySpot=function* (t){let checkpointUnits=0;const r=vehicleRadius(t),pool=islands.filter(i=>i!==Bi).slice().sort(()=>R()-.5),ok=(x,z)=>Math.hypot(x-pb.x,z-pb.z)>220&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3);for(const i of pool){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};for(let k=0;k<50;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const q=(yield* landSteps(i,900,1));if(q&&ok(q.x,q.z))return{x:q.x,z:q.z,hd:rr(0,Math.PI*2)}}}return null};
+const protectedVehicleSpot=t=>{const r=vehicleRadius(t),ok=(x,z)=>prisonCampCorridorClear(x,z,r+2)&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3);for(let k=0;k<240;k++){const a=rr(0,Math.PI*2),d=rr(30,58),x=pb.x+Math.cos(a)*d,z=pb.z+Math.sin(a)*d;if(ok(x,z))return{x,z,hd:a+Math.PI}}return null};
+const distributedMilitarySpot=function* (t){let checkpointUnits=0;const r=vehicleRadius(t),pool=islands.filter(i=>i!==Bi).slice().sort(()=>R()-.5),ok=(x,z)=>prisonCampCorridorClear(x,z,r+2)&&Math.hypot(x-pb.x,z-pb.z)>220&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3);for(const i of pool){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};for(let k=0;k<50;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const q=(yield* landSteps(i,900,1));if(q&&ok(q.x,q.z))return{x:q.x,z:q.z,hd:rr(0,Math.PI*2)}}}return null};
 const militaryCompoundSpot=function* (t){let checkpointUnits=0;
   const r=vehicleRadius(t),sites=world.userData.compounds.filter(c=>
     !c.layout?.friendly&&!c.layout?.civilian&&c.id!=='base'&&c.id!=='port');
   for(const site of sites.slice().sort(()=>R()-.5)){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};for(let k=0;k<75;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
     const a=rr(0,Math.PI*2),d=site.r+rr(8,65),x=site.x+Math.cos(a)*d,z=site.z+Math.sin(a)*d;
-    if(Math.abs(x)>=H-r-8||Math.abs(z)>=H-r-8||hAt(x,z)<1.2||
+    if(!prisonCampCorridorClear(x,z,r+2)||Math.abs(x)>=H-r-8||Math.abs(z)>=H-r-8||hAt(x,z)<1.2||
        slope(x,z,hAt(x,z))>=3||treeHit(x,z,r*.7)||
        B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)||
        V.some(v=>Math.hypot(x-v.x,z-v.z)<vehicleRadius(v.t)+r+3))continue;
@@ -795,7 +855,7 @@ const militaryCompoundSpot=function* (t){let checkpointUnits=0;
   }}
   return null;
 };
-const hardLandVehicleSpot=function* (t){let checkpointUnits=0;const r=vehicleRadius(t),ok=(x,z)=>Math.abs(x)<H-r-8&&Math.abs(z)<H-r-8&&Math.hypot(x-pb.x,z-pb.z)>220&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<4&&!treeHit(x,z,r*.65)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+4);for(let k=0;k<1600;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const x=rr(-H+r+10,H-r-10),z=rr(-H+r+10,H-r-10);if(ok(x,z))return{x,z,hd:rr(0,Math.PI*2)}}for(let k=0;k<72;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const a=k*Math.PI/36,d=110+(k%4)*20,x=pa.x+Math.cos(a)*d,z=pa.z+Math.sin(a)*d;if(ok(x,z))return{x,z,hd:a+Math.PI}}return null};
+const hardLandVehicleSpot=function* (t){let checkpointUnits=0;const r=vehicleRadius(t),ok=(x,z)=>prisonCampCorridorClear(x,z,r+2)&&Math.abs(x)<H-r-8&&Math.abs(z)<H-r-8&&Math.hypot(x-pb.x,z-pb.z)>220&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<4&&!treeHit(x,z,r*.65)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+4);for(let k=0;k<1600;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const x=rr(-H+r+10,H-r-10),z=rr(-H+r+10,H-r-10);if(ok(x,z))return{x,z,hd:rr(0,Math.PI*2)}}for(let k=0;k<72;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const a=k*Math.PI/36,d=110+(k%4)*20,x=pa.x+Math.cos(a)*d,z=pa.z+Math.sin(a)*d;if(ok(x,z))return{x,z,hd:a+Math.PI}}return null};
 const waterVehicleSpot=function* (t){let checkpointUnits=0;const r=vehicleRadius(t),pool=islands.slice().sort(()=>R()-.5);for(const i of pool){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};for(let tries=0;tries<3;tries++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const q=(yield* findPortSite(i,18));if(!q||!q.portBest)continue;const a=q.portBest.aa,px=-Math.sin(a),pz=Math.cos(a);for(const side of[-1,1]){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const x=q.portBest.x+px*side*(r+4),z=q.portBest.z+pz*side*(r+4);if(hAt(x,z)<-2&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3))return{x,z,hd:q.portBest.hd}}}}return null};
 const ensureVehicleType=function* (t){let checkpointUnits=0;if(t==='heli'?V.some(v=>v.t==='heli'&&!v.heliport):V.some(v=>v.t===t))return;let q=null,c=VT[t];if(c.m==='w'||c.m==='wl')q=(yield* waterVehicleSpot(t));else if(t==='tanqueta')q=(yield* militaryCompoundSpot(t));else if(['heli','heli_combat','tanc','camio'].includes(t))q=(yield* distributedMilitarySpot(t))||(yield* hardLandVehicleSpot(t));else{const p=(yield* near(120,t));q={x:p[0],z:p[1],hd:rr(0,Math.PI*2)}}if(q)add(t,q.x,q.z,q.hd)};
 for(const type of ['llanxa','moto_aquatica','barca_rems','windsurf','hover','cotxe','moto','bici','camio','tanqueta','tanc','heli','heli_combat']){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};(yield* ensureVehicleType(type));}
@@ -898,11 +958,11 @@ yield {stage:'Motos aquàtiques',completed:1,total:1};
 // Els punts de la carretera resolta eviten que la IA intenti creuar el mar.
 function* spawnLandCarPatrols(){let checkpointUnits=0;
  const large=islands.filter(i=>i.r>=800).sort((a,b)=>b.r-a.r);
- const sites=world.userData.compounds.filter(c=>!c.layout?.friendly&&c.id!=='base'&&c.id!=='hq');
+ const sites=world.userData.compounds.filter(c=>!c.layout?.friendly&&c.id!=='base'&&c.id!=='hq'&&c.id!=='prison-camp');
  const usedRoutes=new Set();
  const routeKey=(a,b)=>[sites.indexOf(a.c),sites.indexOf(b.c)].sort((x,y)=>x-y).join(':');
  const carR=Math.hypot(...VHB.cotxe.map(n=>n*VS.cotxe))/2+.8;
- const clear=(x,z)=>Math.abs(x)<H-carR-5&&Math.abs(z)<H-carR-5&&
+ const clear=(x,z)=>prisonCampCorridorClear(x,z,carR+2)&&Math.abs(x)<H-carR-5&&Math.abs(z)<H-carR-5&&
    hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<5&&!treeHit(x,z,carR)&&
    !wallCandidates(x,z,carR).some(w=>!w.open&&w.playerBlock!==false&&
      x>w.x0-carR&&x<w.x1+carR&&z>w.z0-carR&&z<w.z1+carR)&&
@@ -938,6 +998,7 @@ function* spawnLandCarPatrols(){let checkpointUnits=0;
        Number(!!a.a.c.layout?.civilian)+Number(!!a.b.c.layout?.civilian)-
        Number(!!b.a.c.layout?.civilian)-Number(!!b.b.c.layout?.civilian)||a.distance-b.distance);
    const drySegment=(a,b)=>{
+     if(prisonCampSegmentDistance(prisonCamp.x,prisonCamp.z,a,b)<=prisonCamp.r+12)return false;
      const length=Math.hypot(a.x-b.x,a.z-b.z),n=Math.ceil(length/7);
      for(let k=0;k<=n;k++){
        const t=k/n,x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t;
