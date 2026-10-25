@@ -1,5 +1,7 @@
 # Camp de presoners — redisseny v0.5.84
 
+> **Actualització v0.5.85:** el rescat per la tecla E i l'obertura automàtica de la porta descrits en aquest document corresponen al disseny anterior. Ara cal eliminar els sis guàrdies i les quatre torres i obrir una bretxa física a qualsevol tram de la tanca interior. Vegeu [PRISON_CAMP_RESCUE.md](PRISON_CAMP_RESCUE.md).
+
 Petició de Gaspar: concretar el camp com un complex militar amb una única entrada exterior, barracó llarg, caseta de guàrdia, quatre torres, presoners dins un segon recinte i guàrdies amb funcions diferenciades.
 
 ## Distribució
