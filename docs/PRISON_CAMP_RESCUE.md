@@ -16,6 +16,12 @@ Quan es compleixen, el sistema allibera automàticament els captius, sense tecla
 - No es pot obtenir l'alliberament eliminant guàrdies d'altres complexos, tallant tanques exteriors o deixant enrere torres intactes.
 - Els models civils comparteixen un nou conjunt de geometries de baixa poligonització amb torsos arrodonits, mans, colzes, cames diferenciades, cabells, nassos, orelles, ulls, barrets i roba individualitzada. Mantenen l'alçada real del protagonista, l'escala de la postura asseguda i la física de dany.
 
+## Taller mecànic v0.5.86
+
+El recinte incorpora un edifici industrial de **24 × 24 m i 12 m d'alçada**, sense planta intermèdia. Disposa de **tres parets físiques** (fons i laterals) i una **façana sud totalment oberta** per accedir-hi directament amb camions i altres vehicles terrestres. Té una coberta, marques de seguretat al paviment, armaris d'eines i un banc de treball retirat del recorregut principal.
+
+El punt de treball del mecànic és a **(40,16)** en coordenades locals del camp, al costat est de la nau; el centre d'aparcament resta a **(33,16)**. L'itinerari després del rescat travessa l'entrada pel sud amb punts **(33,36) → (40,30) → (40,16)**, sense travessar les parets. L'entrada no genera graons, porta, llinda ni col·lisions ocultes. L'acció de reparar i la seva durada de sis segons no canvien.
+
 ## Implementació
 
 - `src/compound-generation.js` conserva els colliders individuals de la filferrada interior fins i tot si desapareixen del conjunt global després d'una explosió o d'un tall, i registra les quatre torres en el mateix camp.
