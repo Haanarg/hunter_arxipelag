@@ -1,5 +1,5 @@
-import {GAME_VERSION} from './version.mjs?v=0.5.85';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.5.85';
+import {GAME_VERSION} from './version.mjs?v=0.5.86';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.5.86';
 
 // La portada no carrega Three.js, WebGL, el món ni una llavor de fons.
 // Una imatge estàtica renderitzada amb la llavor 67 és suficient.
