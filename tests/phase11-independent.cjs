@@ -20,15 +20,24 @@ const assert=require('node:assert/strict');
       if(!layout)throw Error('Missing prison compound in runtime layouts');
       P.x=layout.rescuePoint.x;P.z=layout.rescuePoint.z;
       const camp={id:'prison-camp',layoutId:'prison-camp',x:0,z:0,angle:0,layout,
-        buildings:[],soldiers:[],vehicles:[],loot:[],r:115};
+        buildings:[],soldiers:Array.from({length:6},()=>({t:'soldat',hp:4})),
+        towers:Array.from({length:4},()=>({t:'torre',hp:24})),
+        prisonFenceSegments:[{collider:{ax:-5,az:24,bx:5,bz:24,hp:8,open:false},gate:true}],
+        vehicles:[],loot:[],r:115};
       world.userData={compounds:[camp],prisonCamp:camp};
       P.base={x:0,z:200};
       configureOptionalWorld();rebuildVehicleGrid();
       updateOptionalSystems(.05,true);
       return camp;
     }
+    function phase11ReviewRelease(){
+      const c=world.userData.prisonCamp;
+      c.soldiers.forEach(u=>u.hp=0);c.towers.forEach(u=>u.hp=0);
+      c.prisonFenceSegments[0].collider.hp=0;
+      updateOptionalSystems(0,true);
+    }
     function phase11ReviewRepairSetup(){
-      phase11ReviewFresh();act('KeyE');
+      phase11ReviewFresh();phase11ReviewRelease();
       for(let i=0;i<400;i++)updateOptionalSystems(.1,true);
       const u=prisonerSystem.entities.find(p=>p.role==='mechanic');
       if(u.state!=='ready')throw Error('Mechanic did not reach the workshop');
@@ -45,23 +54,26 @@ const assert=require('node:assert/strict');
     const before=prisonerSystem.snapshot();
     const action=getOptionalAction();updateActionButton(nearV());
     const title=document.getElementById('mainActionButton').title;
-    act('KeyE');
+    const beforeRequirements=prisonerSystem.snapshot();
+    phase11ReviewRelease();
     const after=prisonerSystem.snapshot();
     for(let i=0;i<400;i++)updateOptionalSystems(.1,true);
     return {count:before.entities.length,mechanics:before.entities.filter(u=>u.role==='mechanic').length,
-      action:action?.kind,title,released:after.released,
+      action:action?.kind,title,guards:beforeRequirements.rescue.guards,
+      towers:beforeRequirements.rescue.towers,released:after.released,
       farmers:prisonerSystem.snapshot().entities.filter(u=>u.role==='farmer').map(u=>u.state),
       mechanic:prisonerSystem.snapshot().entities.find(u=>u.role==='mechanic').state,
       noEnemy:prisonerSystem.entities.every(u=>!E.includes(u)),over};
   })()`);
   assert.equal(rescue.count,5);assert.equal(rescue.mechanics,1);
-  assert.equal(rescue.action,'rescue');assert.match(rescue.title,/Alliberar presoners/);
+  assert.equal(rescue.action,undefined,'manual rescue shortcut must not appear');
+  assert.equal(rescue.guards,6);assert.equal(rescue.towers,4);
   assert.equal(rescue.released,true);assert.equal(rescue.mechanic,'ready');
   assert.deepEqual(Array.from(rescue.farmers),['rescued','rescued','rescued','rescued']);
   assert.equal(rescue.noEnemy,true);assert.equal(rescue.over,0,'rescue never ends or replaces the principal mission');
 
   const swimming=run(`(()=>{
-    phase11ReviewFresh();act('KeyE');swimming=true;
+    phase11ReviewFresh();phase11ReviewRelease();swimming=true;
     const beforeRadioTime=radioRelay.snapshot().time;
     for(let i=0;i<400;i++)updateOptionalSystems(.1,true);
     const result={farmers:prisonerSystem.snapshot().entities.filter(u=>u.role==='farmer').map(u=>u.state),
