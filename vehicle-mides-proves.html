@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hunter · Comparativa de mida de tots els vehicles</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#142329;color:#eff5f0}
+header{padding:15px clamp(12px,3vw,28px) 12px;background:#1b3036;border-bottom:1px solid #516e66}
+h1{margin:0 0 5px;font-size:clamp(19px,3vw,27px)}
+header p{margin:0;color:#bdd0c9;font-size:13px;line-height:1.45}
+nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+button,select,a.btn{font:600 13px system-ui;background:#253e43;color:#f0f7f0;border:1px solid #718e83;border-radius:7px;padding:9px 10px;cursor:pointer;text-decoration:none}
+button.active{background:#b6dca7;border-color:#b6dca7;color:#1b2b21}
+button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid white;outline-offset:2px}
+select{max-width:240px}
+#status{color:#c9e3d1;padding:7px clamp(12px,3vw,28px);font:600 12px system-ui;min-height:31px}
+#showroom{position:relative;height:clamp(420px,66vh,890px);min-height:420px;overflow:hidden;background:linear-gradient(#314a51,#16292e);touch-action:none}
+#view{width:100%;height:100%;display:block;touch-action:none}
+#tags{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.place{position:absolute;transform:translate(-50%,-100%);background:#142c30ed;border:1px solid #8ead9b;border-radius:7px;padding:4px 7px;color:#f2fff0;text-align:center;font-size:11px;line-height:1.3;white-space:nowrap;text-shadow:0 1px 3px #101d1b}
+.place small{display:block;color:#c8ddd5;font-size:10px}
+#hint{position:absolute;bottom:9px;left:12px;right:12px;color:#edf3e7;font-size:12px;pointer-events:none;text-shadow:0 1px 4px #07141a;background:#12252ba8;border-radius:5px;padding:6px 8px;width:max-content;max-width:calc(100% - 24px)}
+#sizes{padding:13px clamp(12px,3vw,28px) 27px}
+#sizes h2{font-size:17px;margin:4px 0 8px}
+#sizes p{color:#bed0c6;margin:0 0 12px;font-size:12px;line-height:1.5}
+#measurements{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.measure{display:block;width:100%;text-align:left;background:#20383c;border:1px solid #55756d;border-radius:9px;padding:9px 12px}
+.measure strong{display:block;font-size:13px}
+.measure small{display:block;color:#c8ddd3;margin-top:3px;font-size:11px;line-height:1.5}
+.measure:hover,.measure.current{border-color:#c1e2a7;background:#344c44}
+footer{padding:0 clamp(12px,3vw,28px) 28px;color:#b9d1c8;font-size:12px}
+footer a{color:#cfe5a8}
+@media(max-width:650px){nav{gap:6px}nav button,nav a.btn{padding:8px}select{max-width:180px}#showroom{height:63vh;min-height:460px}#hint{font-size:11px}#measurements{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<header>
+<h1>Vehicles · comparativa de mides reals</h1>
+<p>Els <strong>16 models del joc</strong>, amb els factors d'escala originals i el protagonista real dret al costat de cadascun. Una graella equival a 1 metre. No es modifica cap mida del joc.</p>
+<nav aria-label="Controls">
+<button data-group="tots" class="active">Tots</button>
+<button data-group="terra">Terra</button>
+<button data-group="mar">Mar</button>
+<button data-group="aire">Aire</button>
+<select id="focus" aria-label="Centra un vehicle"><option value="tots">Tota la comparativa</option></select>
+<button id="previous" title="Vehicle anterior">◀</button>
+<button id="next" title="Vehicle següent">▶</button>
+<button id="quarter" class="active">3/4</button>
+<button id="side">Lateral</button>
+<button id="top">Zenital</button>
+<button id="zoomIn" title="Acosta">＋</button>
+<button id="zoomOut" title="Allunya">－</button>
+<button id="fit">Enquadra</button>
+<a class="btn" href="proves.html">Altres proves</a>
+</nav>
+</header>
+<div id="status" role="status">Carregant els models oficials…</div>
+<section id="showroom" aria-label="Escena 3D comparativa">
+<canvas id="view"></canvas>
+<div id="tags" aria-hidden="true"></div>
+<div id="hint">Arrossega per girar · roda o pessiga per ampliar · tria un vehicle per examinar-lo</div>
+</section>
+<section id="sizes">
+<h2>Dimensions visibles mesurades</h2>
+<p>Amplada × altura × longitud, en unitats del món del joc. Les mides inclouen la vela, les aspes i els accessoris visibles; són mesures de la geometria, no de les caixes de col·lisió. Toca un nom per centrar-hi la càmera. El ferri conserva expressament l'escala grossa del joc.</p>
+<div id="measurements"></div>
+</section>
+<footer>Models de <code>HUNTER_VEHICLES.createFactory</code> · escala del jugador de <code>HUNTER_CHARACTERS.createPlayer</code>. El Humvee usa el model procedural D3.1; el camió, l'A4.3; el cotxe civil, el C1A. <a href="./">Torna al joc</a>.</footer>
+<script src="src/shared-resources.js?v=0.5.94"></script>
+<script src="src/palette.js?v=0.5.94"></script>
+<script src="src/player-model.js?v=0.5.94"></script>
+<script src="src/bolt-cutters.js?v=0.5.94"></script>
+<script src="src/characters.js?v=0.5.94"></script>
+<script src="src/vehicles.js?v=0.5.94"></script>
+<script type="module">
+import * as THREE from './vendor/three-r186.module.mjs';
+import {createTruckModel} from './src/truck-model.mjs';
+import {createCivilianCarModel} from './src/civilian-car-model.mjs';
+import {prepareHumveeD31Runtime} from './src/humvee-d31-runtime.mjs';
+
+const STATUS=document.getElementById('status'),canvas=document.getElementById('view'),
+      stage=document.getElementById('showroom'),tags=document.getElementById('tags'),
+      focus=document.getElementById('focus'),measurements=document.getElementById('measurements');
+const TYPES=[
+  {id:'bici',name:'Bicicleta',row:'terra'},
+  {id:'moto',name:'Motocicleta',row:'terra'},
+  {id:'cotxe_civil',name:'Cotxe civil C1A',row:'terra'},
+  {id:'cotxe',name:'Humvee D3.1',row:'terra'},
+  {id:'camio',name:'Camió militar A4.3',row:'terra'},
+  {id:'tanqueta',name:'Tanqueta',row:'terra'},
+  {id:'tanc',name:'Tanc',row:'terra'},
+  {id:'windsurf',name:'Windsurf',row:'mar'},
+  {id:'barca_rems',name:'Barca de rems',row:'mar'},
+  {id:'moto_aquatica',name:'Moto aquàtica',row:'mar'},
+  {id:'llanxa',name:'Llanxa ràpida',row:'mar'},
+  {id:'llanxa_coets',name:'Llanxa armada',row:'mar'},
+  {id:'hover',name:'Hovercraft',row:'mar'},
+  {id:'ferry',name:'Ferri',row:'mar'},
+  {id:'heli',name:'Helicòpter utilitari',row:'aire'},
+  {id:'heli_combat',name:'Helicòpter de combat',row:'aire'}
+];
+const fmt=n=>n.toFixed(2).replace('.',',')+' m';
+const groups=['terra','mar','aire'];
+let currentGroup='tots',currentFocus='tots',yaw=.58,elev=.46,span=100;
+const look=new THREE.Vector3(),scratch=new THREE.Vector3(),records=[];
+const materials=new Map();
+function mat(hex,profile='paint'){
+ if(hex?.isMaterial)return hex;
+ const key=String(hex)+':'+profile;
+ if(!materials.has(key))materials.set(key,new THREE.MeshStandardMaterial({
+  color:hex,flatShading:profile!=='glass',roughness:profile==='metal'?.48:profile==='glass'?.18:.80,
+  metalness:profile==='metal'?.55:.03,transparent:profile==='glass',
+  opacity:profile==='glass'?.65:1,depthWrite:profile!=='glass',side:THREE.DoubleSide
+ }));
+ return materials.get(key);
+}
+function box(parent,w,h,d,color,x=0,y=0,z=0,profile='paint'){
+ const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(color,profile));
+ mesh.position.set(x,y,z);mesh.castShadow=mesh.receiveShadow=true;parent.add(mesh);return mesh;
+}
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.35;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x354a4a);
+scene.add(new THREE.HemisphereLight(0xddefff,0x465343,2.4));
+const sun=new THREE.DirectionalLight(0xffe9ca,2.9);
+sun.position.set(-60,120,65);scene.add(sun);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(320,250),
+ new THREE.MeshStandardMaterial({color:0x54685c,roughness:1}));
+ground.rotation.x=-Math.PI/2;ground.position.y=-.06;scene.add(ground);
+const grid=new THREE.GridHelper(320,320,0x9daea6,0x718679);
+grid.position.y=.01;grid.material.transparent=true;grid.material.opacity=.31;scene.add(grid);
+const camera=new THREE.OrthographicCamera(-50,50,30,-30,.1,1400);
+const boundsOf=o=>new THREE.Box3().setFromObject(o);
+const sizeOf=o=>boundsOf(o).getSize(new THREE.Vector3());
+function groundModel(obj){
+ const b=boundsOf(obj);
+ if(Number.isFinite(b.min.y))obj.position.y-=b.min.y;
+ obj.updateMatrixWorld(true);
+ return obj;
+}
+function referencePlayer(){
+ const obj=window.HUNTER_CHARACTERS.createPlayer(THREE,{box,palette:window.HUNTER_PALETTE});
+ return groundModel(obj);
+}
+function makeLabel(record){
+ const tag=document.createElement('div');tag.className='place';
+ const title=document.createElement('b');title.textContent=record.name;
+ const detail=document.createElement('small');detail.textContent=fmt(record.dims.y)+' d’altura';
+ tag.append(title,detail);tags.append(tag);return tag;
+}
+function buildRows(factory){
+ const rowDepth={terra:51,mar:0,aire:-72};
+ for(const group of groups){
+  let cursor=0;
+  for(const config of TYPES.filter(t=>t.row===group)){
+   const vehicle=groundModel(factory(config.id,{color:config.id==='windsurf'?0xe94e33:0x4b9fd1}));
+   const dim=sizeOf(vehicle),player=referencePlayer(),playerDim=sizeOf(player);
+   // Distància real entre objectes: mai no redimensionam individualment.
+   const bx=boundsOf(vehicle),width=dim.x,playerWidth=playerDim.x;
+   vehicle.position.x+=cursor-bx.min.x;
+   vehicle.position.z+=rowDepth[group]-(bx.min.z+bx.max.z)/2;
+   scene.add(vehicle);
+   player.position.x=cursor+width+1.45;
+   player.position.z=rowDepth[group];
+   scene.add(player);
+   const record={...config,vehicle,player,dims:dim,
+      center:new THREE.Vector3(cursor+width/2,0,rowDepth[group]),
+      footprintWidth:width+1.45+playerWidth};
+   record.tag=makeLabel(record);
+   records.push(record);
+   cursor+=width+playerWidth+6.0;
+  }
+  // Cada família queda centrada respecte de les altres.
+  const own=records.filter(r=>r.row===group),shift=cursor/2;
+  for(const r of own){r.vehicle.position.x-=shift;r.player.position.x-=shift;r.center.x-=shift;}
+ }
+}
+function getVisible(){
+ return records.filter(r=>currentGroup==='tots'||r.row===currentGroup);
+}
+function visibleBounds(){
+ const b=new THREE.Box3().makeEmpty();
+ for(const r of getVisible()){
+  if(currentFocus!=='tots'&&currentFocus!==r.id)continue;
+  b.union(boundsOf(r.vehicle));b.union(boundsOf(r.player));
+ }
+ if(b.isEmpty())for(const r of getVisible()){b.union(boundsOf(r.vehicle));b.union(boundsOf(r.player));}
+ return b;
+}
+function viewFit(){
+ const b=visibleBounds();if(b.isEmpty())return;
+ const sz=b.getSize(scratch),center=b.getCenter(new THREE.Vector3()),aspect=Math.max(.8,stage.clientWidth/Math.max(1,stage.clientHeight));
+ look.copy(center);look.y=Math.max(2,center.y*.55);
+ // Costat llarg, altura i profunditat real. El mode all mostra les tres files.
+ span=Math.max(9,sz.y*2.4,sz.x/aspect*1.22,sz.z*1.52);
+ if(currentFocus!=='tots')span=Math.max(11,span*1.20);
+ updateCamera();
+}
+function updateCamera(){
+ const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight),ratio=w/h;
+ renderer.setSize(w,h,false);camera.left=-span*ratio/2;camera.right=span*ratio/2;
+ camera.top=span/2;camera.bottom=-span/2;camera.updateProjectionMatrix();
+ const horizontal=Math.cos(elev),direction=new THREE.Vector3(
+   Math.sin(yaw)*horizontal,Math.sin(elev),Math.cos(yaw)*horizontal);
+ camera.position.copy(look).addScaledVector(direction,400);
+ camera.lookAt(look);
+}
+function updateMarks(){
+ const w=stage.clientWidth,h=stage.clientHeight;
+ for(const r of records){
+  if(!r.vehicle.visible){r.tag.style.display='none';continue}
+  // Una vista massa distant no ha d'emplenar la pantalla d'etiquetes minúscules.
+  if(span>95&&currentFocus==='tots'){r.tag.style.display='none';continue}
+  const b=boundsOf(r.vehicle),p=new THREE.Vector3(r.center.x,b.max.y+1,r.center.z);
+  p.project(camera);
+  const x=(p.x*.5+.5)*w,y=(-p.y*.5+.5)*h;
+  const show=p.z>-1&&p.z<1&&x>35&&x<w-35&&y>22&&y<h-16;
+  r.tag.style.display=show?'block':'none';
+  r.tag.style.left=x+'px';r.tag.style.top=y+'px';
+ }
+}
+function render(){updateMarks();renderer.render(scene,camera);requestAnimationFrame(render);}
+function selectGroup(group){
+ currentGroup=group;currentFocus='tots';focus.value='tots';
+ for(const r of records){const show=group==='tots'||r.row===group;r.vehicle.visible=show;r.player.visible=show;}
+ document.querySelectorAll('[data-group]').forEach(el=>el.classList.toggle('active',el.dataset.group===group));
+ updateActive();viewFit();
+}
+function selectFocus(id){
+ currentFocus=id;
+ if(id!=='tots'){
+  const record=records.find(r=>r.id===id);
+  if(record&&currentGroup!=='tots'&&currentGroup!==record.row)selectGroup('tots');
+ }
+ focus.value=id;updateActive();viewFit();
+}
+function updateActive(){
+ for(const element of measurements.querySelectorAll('[data-id]'))
+  element.classList.toggle('current',element.dataset.id===currentFocus);
+}
+function listMetrics(){
+ const player=referencePlayer(),dimension=sizeOf(player);
+ const first=document.createElement('button');first.className='measure';
+ first.innerHTML='<strong>Personatge de referència</strong>';
+ const desc=document.createElement('small');desc.textContent='Altura '+fmt(dimension.y)+' · model real del joc';
+ first.append(desc);first.addEventListener('click',()=>selectFocus('tots'));measurements.append(first);
+ for(const r of records){
+  const option=document.createElement('option');option.value=r.id;option.textContent=r.name;focus.append(option);
+  const item=document.createElement('button');item.className='measure';item.dataset.id=r.id;
+  const title=document.createElement('strong');title.textContent=r.name;
+  const sizes=document.createElement('small');
+  sizes.textContent=fmt(r.dims.x)+' ample × '+fmt(r.dims.y)+' alt × '+fmt(r.dims.z)+' llarg';
+  item.append(title,sizes);item.addEventListener('click',()=>selectFocus(r.id));
+  measurements.append(item);
+ }
+}
+function setAngle(type){
+ if(type==='quarter'){yaw=.58;elev=.46}
+ if(type==='side'){yaw=Math.PI/2;elev=.12}
+ if(type==='top'){yaw=0;elev=Math.PI/2-.02}
+ for(const id of ['quarter','side','top'])document.getElementById(id).classList.toggle('active',id===type);
+ updateCamera();
+}
+function zoom(factor){span=Math.max(4,Math.min(430,span*factor));updateCamera();}
+document.querySelectorAll('[data-group]').forEach(el=>el.addEventListener('click',()=>selectGroup(el.dataset.group)));
+focus.addEventListener('change',()=>selectFocus(focus.value));
+for(const [id,fn] of [['quarter',()=>setAngle('quarter')],['side',()=>setAngle('side')],['top',()=>setAngle('top')],
+ ['zoomIn',()=>zoom(.75)],['zoomOut',()=>zoom(1.33)],['fit',viewFit],
+ ['previous',()=>stepFocus(-1)],['next',()=>stepFocus(1)]])document.getElementById(id).addEventListener('click',fn);
+function stepFocus(delta){
+ const arr=['tots',...getVisible().map(r=>r.id)],idx=arr.indexOf(currentFocus);
+ selectFocus(arr[(Math.max(0,idx)+delta+arr.length)%arr.length]);
+}
+const pointers=new Map();let oldPinch=0;
+canvas.addEventListener('pointerdown',event=>{
+ canvas.setPointerCapture(event.pointerId);pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
+});
+canvas.addEventListener('pointermove',event=>{
+ if(!pointers.has(event.pointerId))return;
+ const old=pointers.get(event.pointerId),dx=event.clientX-old.x,dy=event.clientY-old.y;
+ pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
+ if(pointers.size===1){yaw-=dx*.008;elev=Math.max(.08,Math.min(1.52,elev+dy*.006));updateCamera();}
+ else if(pointers.size===2){
+  const a=[...pointers.values()],dist=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);
+  if(oldPinch>0)zoom(oldPinch/Math.max(1,dist));oldPinch=dist;
+ }
+});
+for(const event of ['pointerup','pointercancel','lostpointercapture'])
+ canvas.addEventListener(event,evt=>{pointers.delete(evt.pointerId);oldPinch=0;});
+canvas.addEventListener('wheel',event=>{event.preventDefault();zoom(event.deltaY>0?1.13:.885)},{passive:false});
+window.addEventListener('resize',updateCamera);
+try{
+ window.HUNTER_CIVIL_C1A=createCivilianCarModel;
+ window.HUNTER_TRUCK_CONCEPT=createTruckModel;
+ try{
+  window.HUNTER_HUMVEE_D31=await prepareHumveeD31Runtime(THREE,{vehicleScale:1.3});
+ }catch(error){
+  window.HUNTER_HUMVEE_D31=null;
+  console.warn('Humvee procedural no disponible',error);
+  STATUS.textContent='Avís: Humvee D3.1 no disponible; es mostrarà la reserva del cotxe militar.';
+ }
+ const factory=window.HUNTER_VEHICLES.createFactory(THREE,{box,material:mat,shadows:false});
+ buildRows(factory);listMetrics();selectGroup('tots');
+ STATUS.textContent='16 vehicles · 3 files · 1 figura humana per vehicle · graella d’1 metre';
+ renderer.setAnimationLoop(null);
+ render();
+}catch(error){
+ console.error(error);
+ STATUS.textContent='Error en generar la comparativa: '+(error?.message||String(error));
+}
+</script>
+</body>
+</html>
