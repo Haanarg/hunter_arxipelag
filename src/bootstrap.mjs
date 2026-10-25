@@ -1,15 +1,15 @@
 import * as compoundPaths from './compound-paths.mjs';
 window.HUNTER_COMPOUND_PATHS=compoundPaths;
-import {runtimeLayouts,chooseCompoundLayout} from './compound-runtime-layouts.mjs?v=0.5.92';
-import * as compoundArchitecture from './compound-architecture.mjs?v=0.5.92';
+import {runtimeLayouts,chooseCompoundLayout} from './compound-runtime-layouts.mjs?v=0.5.93';
+import * as compoundArchitecture from './compound-architecture.mjs?v=0.5.93';
 window.HUNTER_RUNTIME_LAYOUTS=runtimeLayouts;window.HUNTER_CHOOSE_COMPOUND=chooseCompoundLayout;window.HUNTER_COMPOUND_ARCHITECTURE=compoundArchitecture;
 import {createCompoundStructures} from './compound-structures.mjs';
 window.HUNTER_COMPOUND_STRUCTURES=createCompoundStructures;
 import {runtimeScripts} from './runtime-scripts.mjs';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.5.92';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.5.93';
 import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
-import {GAME_VERSION} from './version.mjs?v=0.5.92';
+import {GAME_VERSION} from './version.mjs?v=0.5.93';
 import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs';
 window.HUNTER_CIVIL_C1A=createCivilianCarModel;
@@ -59,7 +59,7 @@ try {
   // Si les dades no es poden preparar, mantenim la geometria clàssica
   // de reserva per no impedir l'inici de la partida.
   try {
-    const {prepareHumveeD31Runtime}=await import('./humvee-d31-runtime.mjs?v=0.5.92');
+    const {prepareHumveeD31Runtime}=await import('./humvee-d31-runtime.mjs?v=0.5.93');
     window.HUNTER_HUMVEE_D31=await prepareHumveeD31Runtime(THREE,{vehicleScale:1.3});
     console.info('Humvee D3.1 procedural B · 175% carregat al joc',
       window.HUNTER_HUMVEE_D31.dimensions);
@@ -103,6 +103,9 @@ try {
   const message = document.createElement('p');
   message.setAttribute('role', 'alert');
   message.style.cssText = 'position:fixed;inset:20%;z-index:999;background:#172b36;color:white;padding:24px';
-  message.textContent = 'No s’ha pogut iniciar el joc. Cal un navegador amb WebGL 2 i obrir el joc des d’un servidor HTTP. Recarrega la pàgina o prova un navegador actualitzat.';
+  // Mostrar l'error real: un problema del runtime no és un error de WebGL.
+  message.style.cssText += ';inset:15%;overflow:auto;font:16px/1.45 system-ui;white-space:pre-wrap';
+  message.textContent = 'Error en iniciar Húnter (v'+GAME_VERSION+').\n'+
+    (error?.name||'Error')+': '+(error?.message||'Causa desconeguda')+`\n\nSi persisteix, envia una captura d’aquest missatge.`;
   document.body.append(message);
 }
