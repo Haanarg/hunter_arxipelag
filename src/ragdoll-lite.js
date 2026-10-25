@@ -72,15 +72,11 @@ window.HUNTER_RAGDOLL=Object.freeze((()=>{
       j.angleZ=clamp(j.angleZ+j.vz*h,-2.25,2.25);
       j.node.rotation.x=j.angleX;
       j.node.rotation.z=j.angleZ;
-      // Obrim espatlles i malucs sense separar malles del cos:
-      // el pivot continua connectat i la posició retorna en aterrar.
-      if(j.type==='arm'||j.type==='leg'){
-        const maxShift=j.type==='arm'?.32:.17;
-        const target=j.side*maxShift*s;
-        j.offsetV+=(33*(target-j.offset)-9*j.offsetV)*h;
-        j.offset=clamp(j.offset+j.offsetV*h,-maxShift,maxShift);
-        j.node.position.x=j.position.x+j.offset;
-      }
+      // Els pivots de les espatlles i dels malucs són ancoratges
+      // anatòmics, no masses amb translació. Només roten: cap espatlla
+      // pot sortir fora del tronc durant l'impuls o l'aterratge.
+      if(j.type==='arm'||j.type==='leg')
+        j.node.position.set(j.position.x,j.position.y,j.position.z);
     }
   }
   function reset(state){
