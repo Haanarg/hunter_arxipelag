@@ -38,7 +38,21 @@ function decorateRuntimeBuilding(b,spec){
   }
   return;
  }
- if(spec.wood){window.HUNTER_COMPOUND_ARCHITECTURE.decorateTimber(THREE,{b:{...spec,h:b.h},shell,box,rod,cylinder,roofs});b.extraRoofs=roofs;}
+ if(spec.wood){
+  const timber=window.HUNTER_COMPOUND_ARCHITECTURE.decorateTimber(THREE,{
+    b:{...spec,h:b.h},shell,box,rod,cylinder,roofs
+  });
+  b.extraRoofs=roofs;
+  // The ribs are authored in building-local space, before the compound's
+  // quarter-turn. Associate each with its real wall collision segment.
+  for(const {mesh,side,z} of timber?.sideRibs||[]){
+    const targetX=b.x+side*b.w/2,targetZ=b.z+z;
+    const wall=Wl.find(w=>w.owner===b&&!w.door&&
+      targetX>=w.x0-.15&&targetX<=w.x1+.15&&
+      targetZ>=w.z0-.15&&targetZ<=w.z1+.15);
+    if(wall)(wall.timberTrim||(wall.timberTrim=[])).push(mesh);
+  }
+ }
  if(b.floors===2){
   b.upperFloor=window.HUNTER_COMPOUND_ARCHITECTURE.decorateUpper(THREE,{b:{...spec,h:b.h},storey:b.storey,shell,box,rod,roofs});
   const width=2.8,run=Math.min(b.d-3,b.storey*1.05),x=b.x+b.w/2-width/2-.7,z=b.z-b.d/2+2.4;
