@@ -18,6 +18,10 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
    api=factory.create({THREE,heightAt:()=>water?-1:3,canMove:()=>move,clearLine:()=>clear,
     vehicleRadius:t=>t==='ferry'?30:4,vehicleName:v=>v.t==='camio'?'Camió':v.t,
     notify:t=>messages.push(t),sound:(...args)=>sounds.push(args)});
+  const gateWall={ax:-5,az:24,bx:5,bz:24,hp:8,open:false};
+  camp.id='prison-camp';camp.prisonFenceSegments=[{collider:gateWall,gate:true}];
+  camp.soldiers=Array.from({length:6},(_,i)=>({t:'soldat',hp:4,x:4+i,z:30,y:3}));
+  camp.towers=Array.from({length:4},(_,i)=>({t:'torre',hp:24,x:50+i,z:50,y:3}));
   api.configure({world,camp,...options});
   const tick=(seconds=1)=>{for(let t=0;t<seconds-1e-9;t+=.25)api.update(Math.min(.25,seconds-t),ctx)};
   const mech=()=>api.entities.find(u=>u.role==='mechanic');
@@ -25,7 +29,11 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
    const v={t:'camio',x:36,z:16,v:0,life:4,maxLife:10,ammo:7,rockets:2,
     o:new THREE.Object3D(),...overrides};v.o.position.set(v.x,3,v.z);ctx.vehicles.push(v);return v;
   };
-  function release(){api.update(0,ctx);const action=api.getAction(ctx);assert.equal(action?.kind,'rescue');assert.equal(api.interact(action,ctx),true)}
+  function release(){
+   camp.soldiers.forEach(u=>u.hp=0);camp.towers.forEach(u=>u.hp=0);
+   camp.prisonFenceSegments[0].collider.hp=0;
+   api.update(0,ctx);assert.equal(api.snapshot().released,true);
+  }
   function ready(){release();tick(40);assert.equal(mech().state,'ready');player.x=33;player.z=16}
   return{api,ctx,world,camp,player,messages,sounds,tick,mech,vehicle,release,ready,
    setClear:v=>clear=v,setMove:v=>move=v,setWater:v=>water=v};
@@ -58,29 +66,26 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
   f.api.entities.forEach(check);f.tick(40);f.api.entities.forEach(check);f.api.reset();
  }
 
- // The physical pen opens only on a successful rescue, before any escape motion.
+ // A physical opening without all neutralised camp defences is not a rescue.
  {
   const {prisonCampLayout}=await import('../src/prison-camp-layout.mjs');
-  const f=fixture();f.camp.layout=prisonCampLayout;let opens=0;
-  f.camp.prisonGate={opened:false,colliders:[{open:false,hp:4}],open(){
-   assert(f.api.entities.every(u=>u.state==='captive'&&!u.path.length),'gate opens while prisoners remain inside');
-   opens++;this.opened=true;this.colliders[0].open=true;this.colliders[0].hp=0;
-  }};
+  const f=fixture();f.camp.layout=prisonCampLayout;
   f.api.configure({world:f.world,camp:f.camp});
-  f.player.x=prisonCampLayout.rescuePoint.x;f.player.z=prisonCampLayout.rescuePoint.z;
-  f.ctx.enemies=[{t:'soldat',x:0,y:3,z:28,hp:4,canSee:true}];
-  f.release();assert.equal(opens,0,'near combat cannot unlock the inner gate');
-  assert.equal(f.api.snapshot().released,false);
-  f.ctx.enemies=[];f.release();assert.equal(opens,1);
-  assert.equal(f.camp.prisonGate.opened,true);assert.equal(f.camp.prisonGate.colliders[0].open,true);
+  const wall=f.camp.prisonFenceSegments[0].collider;
+  wall.hp=0;f.api.update(0,f.ctx);
+  assert.equal(f.api.snapshot().released,false,'a gap alone does not free prisoners');
+  f.camp.soldiers.forEach(u=>u.hp=0);f.api.update(0,f.ctx);
+  assert.equal(f.api.snapshot().released,false,'all four towers must fall too');
+  f.camp.towers.forEach(u=>u.hp=0);f.api.update(0,f.ctx);
+  assert.equal(f.api.snapshot().released,true,'liberation is automatic after both requirements');
   const mechanic=f.mech();
-  assert.deepEqual(mechanic.path.map(p=>[p.x,p.z]),prisonCampLayout.mechanicRoute,
-   'mechanic follows the authored route through the inner gate, then around the fence');
-  f.tick(40);assert.equal(mechanic.state,'ready');
+  assert.deepEqual(mechanic.path.map(p=>[p.x,p.z]),[[0,21],[0,27.5],[0,32],[0,37],[33,36],[33,16]]);
+  f.tick(50);assert.equal(mechanic.state,'ready');
   assert(f.api.entities.filter(u=>u.role==='farmer').every(u=>u.state==='rescued'));
-  f.api.update(0,f.ctx);assert.equal(opens,1,'gate opening cannot replay during later frames');f.api.reset();
+  f.api.update(0,f.ctx);assert.equal(f.api.snapshot().released,true,'no repeat of liberation');
+  f.api.reset();
  }
-
+ 
  // Discovery is a real observation, never a map-wide quest reveal.
  {
   const f=fixture();assert.equal(f.api.entities.length,5);assert.equal(f.world.children.length,5);
@@ -112,22 +117,24 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
   f.api.reset();
  }
 
- // The group can be freed by stealth; it does not require killing every guard.
+ // A surviving registered enemy blocks liberation even when other defences fall.
  {
   const f=fixture();f.tick();
-  const guard={t:'soldat',x:1,y:3,z:10,hp:4,canSee:true};f.ctx.enemies=[guard];
-  const action=f.api.getAction(f.ctx);assert.equal(f.api.interact(action,f.ctx),true);
-  assert.equal(f.api.snapshot().released,false,'close combat blocks the release');
-  guard.x=100;guard.canSee=false;f.release();
+  const guard={t:'soldat',compound:'prison-camp',x:1,y:3,z:10,hp:4,canSee:true};
+  f.ctx.enemies=[guard];f.camp.soldiers.forEach(u=>u.hp=0);
+  f.camp.towers.forEach(u=>u.hp=0);f.camp.prisonFenceSegments[0].collider.hp=0;
+  f.api.update(0,f.ctx);
+  assert.equal(f.api.snapshot().released,false);
+  assert.equal(f.api.getAction(f.ctx),null,'there is no manual rescue shortcut');
+  guard.hp=0;f.api.update(0,f.ctx);
   assert.equal(f.api.snapshot().released,true);
-  assert.equal(f.api.getAction(f.ctx),null,'no repair before the mechanic reaches his station');
-  assert(f.api.entities.filter(u=>u.role==='farmer').every(u=>u.state==='evacuating'));
-  f.tick(40);
+  assert.equal(f.api.getAction(f.ctx),null,'no repair until the mechanic arrives at his station');
+  f.tick(45);
   assert(f.api.entities.filter(u=>u.role==='farmer').every(u=>u.state==='rescued'&&u.z>85));
   assert.equal(f.mech().state,'ready');assert(Math.hypot(f.mech().x-33,f.mech().z-16)<.2);
   assert.equal(f.api.markers()[0].kind,'mechanic');f.api.reset();
  }
-
+ 
  // Geometry and RNG are reproducible under quarter-turn placement.
  {
   const f=fixture({logicalOnly:true});f.camp.x=100;f.camp.z=200;f.camp.angle=Math.PI/2;
@@ -229,5 +236,5 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
   assert.equal(f.api.snapshot().released,true,'loss of repair does not undo the rescue or principal mission');
   f.api.reset();
  }
- console.log('OK presoners: escala adulta/postures a terra/hitbox, porta interior, descoberta/LOS, rescat opcional, camins sense teleports, mecànic únic, reparació local6s, interrupcions, seguiment/aigua, dany enter i reset');
+ console.log('OK presoners: models adults, detecció, alliberament automàtic amb bretxa i defenses, escapada, mecànic i reparacions');
 })().catch(error=>{console.error(error);process.exitCode=1});
