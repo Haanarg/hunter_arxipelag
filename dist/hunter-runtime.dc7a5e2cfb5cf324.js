@@ -249,7 +249,7 @@ window.HUNTER_PRISONERS=Object.freeze({
    for(const u of entities){
     if(!alive(u))continue;
     if(u.role==='mechanic'){
-     u.path=[...exit,...[[33,36],[33,16]].map(localPoint)];u.state='to-station';
+     u.path=[...exit,...(camp.layout.mechanicAccess||[[33,36],[33,16]]).map(localPoint)];u.state='to-station';
     }else{
      // A small stagger avoids prisoners occupying exactly the same spot.
      u.path=[...exit,...farmersEnd];u.state='evacuating';u.phase=index++*.7;
@@ -427,6 +427,8 @@ window.HUNTER_PRISONERS=Object.freeze({
 ;
 window.HUNTER_RADIO_RELAY=Object.freeze({create({THREE:T,heightAt:heightAt=()=>0,clearLine:clearLine=()=>true,notify:notify=()=>{},sound:sound=()=>{},onAlert:onAlert=()=>{},onRelease:onRelease=()=>{},registerCollider:registerCollider=()=>{},unregisterCollider:unregisterCollider=()=>{}}={}){const relays=[],resources=new Set,leases=new Map,receiverPools=new Map;const DISCOVER_RANGE=70,ACTION_RANGE=2.9,COOLDOWN=18,DEFENSE_SECONDS=30;let time=0,world=null;const finite=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&Number.isFinite(p.z);const point=(record,x,z)=>{const c=Math.round(Math.cos(record.angle||0)),s=Math.round(Math.sin(record.angle||0));return{x:record.x+x*c-z*s,z:record.z+x*s+z*c}};const alive=u=>u&&u.hp>0&&!u.destroyed;const footY=p=>Number.isFinite(p?.y)?p.y:(p?.t==="heli"||p?.t==="heli_combat")&&Number.isFinite(p.alt)?p.alt:Number.isFinite(p?.o?.position?.y)?p.o.position.y:Number.isFinite(p?.alt)?p.alt:heightAt(p.x,p.z);const playerFor=context=>context?.vehicle||context?.player;function own(resource){resources.add(resource);return resource}function reset(){for(const relay of relays){unregisterCollider(relay.collider);relay.o?.removeFromParent()}for(const resource of resources)resource.dispose?.();relays.length=0;resources.clear();leases.clear();receiverPools.clear();time=0;world=null}function panelPosition(record){const layout=record.layout,radio=layout.buildings.find(b=>b.id==="radio"),a=layout.antenna||{x:radio?.x||0,z:(radio?.z||0)+(radio?.d||0)/2+3.5,scale:0},radius=layout.antenna?4*(a.scale||1):0,margin=1.35,fencePoints=layout.fence?.flat()||[],bounds={x:fencePoints.length?Math.max(...fencePoints.map(p=>Math.abs(p[0]))):layout.size[0]/2-2,z:fencePoints.length?Math.max(...fencePoints.map(p=>Math.abs(p[1]))):layout.size[1]/2-2};const offsets=[];for(const distance of[radius+2.6,radius+5.2,radius+8.2]){for(const[dx,dz]of[[0,1],[1,0],[-1,0],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]])offsets.push([a.x+dx*distance,a.z+dz*distance])}const blocked=(x,z)=>{if(Math.abs(x)>bounds.x-margin||Math.abs(z)>bounds.z-margin)return true;if(radius&&Math.abs(x-a.x)<radius+margin&&Math.abs(z-a.z)<radius+margin)return true;if(layout.buildings.some(b=>{const turn=Math.abs(Math.round(Math.sin(b.rotationY||0))),w=turn?b.d:b.w,d=turn?b.w:b.d;return Math.abs(x-b.x)<w/2+margin&&Math.abs(z-b.z)<d/2+margin}))return true;return(layout.props||[]).some(([kind,px,pz])=>{const r=kind==="generator"?4.5:kind==="fuel"?3.8:kind==="flag"?5.5:2;return Math.hypot(x-px,z-pz)<r+margin})};let local=offsets.find(([x,z])=>!blocked(x,z));if(!local){const candidates=[];for(let x=-bounds.x+2;x<bounds.x-2;x+=2)for(let z=-bounds.z+2;z<bounds.z-2;z+=2)if(!blocked(x,z))candidates.push({x:x,z:z,d:(x-a.x)**2+(z-a.z)**2});candidates.sort((a,b)=>a.d-b.d);if(candidates.length)local=[candidates[0].x,candidates[0].z]}if(!local)return null;const p=point(record,...local);p.y=heightAt(p.x,p.z);return{...p,local:{x:local[0],z:local[1]}}}function createPanel(relay){const root=new T.Group;root.name="radio-relay-panel";root.position.set(relay.x,relay.y,relay.z);root.rotation.y=-(relay.source.angle||0);const dark=own(new T.MeshStandardMaterial({color:3490880,roughness:.8})),metal=own(new T.MeshStandardMaterial({color:9016717,roughness:.65})),light=own(new T.MeshBasicMaterial({color:7071899})),broken=own(new T.MeshBasicMaterial({color:15039072}));const box=(w,h,d,mat,x,y,z)=>{const mesh=new T.Mesh(own(new T.BoxGeometry(w,h,d)),mat);mesh.position.set(x,y,z);mesh.castShadow=false;root.add(mesh);return mesh};box(.16,1.8,.16,metal,0,.9,0);box(1.1,.82,.56,dark,0,1.6,0);box(.66,.25,.06,metal,-.1,1.64,.31);relay.lamp=box(.17,.17,.08,light,.34,1.65,.32);box(.5,.06,.07,metal,-.14,1.37,.32);const cut=new T.Group;cut.name="radio-relay-disabled";cut.visible=false;for(const sign of[-1,1]){const mesh=new T.Mesh(own(new T.BoxGeometry(.7,.09,.08)),broken);mesh.rotation.z=sign*.65;mesh.position.set(-.1,1.64,.38);cut.add(mesh)}root.add(cut);relay.cutVisual=cut;relay.o=root;world.add(root)}function entryFor(receiver){const entry=receiver.entrances?.[0]||[receiver.x,receiver.z+(receiver.r||70)*.8];const dx=entry[0]-receiver.x,dz=entry[1]-receiver.z,len=Math.hypot(dx,dz)||1;return{x:entry[0],z:entry[1],nx:dx/len,nz:dz/len}}function poolFor(receiver){if(receiverPools.has(receiver))return receiverPools.get(receiver);const entry=entryFor(receiver),units=(receiver.soldiers||[]).filter(u=>u.t==="soldat"&&!u.elite&&!u.basement&&alive(u)).slice().sort((a,b)=>Math.hypot(a.x-entry.x,a.z-entry.z)-Math.hypot(b.x-entry.x,b.z-entry.z)).slice(0,2);receiverPools.set(receiver,units);return units}function configure({world:nextWorld,compounds:compounds=[],logicalOnly:logicalOnly=false}={}){reset();world=nextWorld||null;const receiver=compounds.find(c=>c.id==="hq"&&!c.layout?.friendly&&!c.layout?.civilian);for(const source of compounds){if(source.id!=="comunicacions"||!source.layout)continue;const p=panelPosition(source);if(!p)continue;const relay={id:"radio-"+relays.length,source:source,receiver:receiver||null,...p,operational:true,disabledReason:null,discovered:false,lastWarn:-Infinity,reports:0,dispatches:0,lastReport:null,o:null,lamp:null,cutVisual:null};const turned=Math.abs(Math.round(Math.sin(source.angle||0))),hx=turned?.35:.6,hz=turned?.6:.35;relay.collider={x0:p.x-hx,x1:p.x+hx,z0:p.z-hz,z1:p.z+hz,y0:p.y+.8,y1:p.y+2.1,hp:4,m:null,parts:[],owner:{compound:"comunicacions",kind:"radio-relay"},rammable:true,door:false,open:false,cx:p.x,cz:p.z};relays.push(relay);if(receiver)poolFor(receiver);if(world&&!logicalOnly)createPanel(relay);relay.collider.m=relay.o;relay.collider.parts=relay.o?[relay.o]:[];registerCollider(relay.collider);syncDestroyed(relay)}return relays.length}function disable(relay,reason){if(!relay.operational)return false;relay.operational=false;relay.disabledReason=reason;if(relay.lamp)relay.lamp.material.color.setHex(8007723);if(relay.cutVisual)relay.cutVisual.visible=true;return true}function syncDestroyed(relay){if(relay.collider?.hp<=0||relay.source.antennaFooting?.hp<=0)disable(relay,"destroyed")}function visibleTo(relay,p){if(!p)return false;const eye={x:p.x,y:footY(p)+1.55,z:p.z},control={x:relay.x,y:relay.y+1.6,z:relay.z};return clearLine(eye,control,relay.collider)}function discover(relay,context){if(relay.discovered)return;const p=playerFor(context);if(!p)return;if(Math.hypot(p.x-relay.x,footY(p)-relay.y,p.z-relay.z)<=DISCOVER_RANGE&&visibleTo(relay,p)){relay.discovered=true;notify(relay.operational?"Rel\xe9 de r\xe0dio descobert \xb7 Enlla\xe7 amb el quarter general.":"Rel\xe9 de r\xe0dio destru\xeft.")}}function update(dt,context={}){if(context.active===false)return;time+=Math.max(0,Number.isFinite(dt)?dt:0);const observer=playerFor(context),visualRange=Number.isFinite(context.visualRange)?Math.max(0,context.visualRange):400;for(const relay of relays){syncDestroyed(relay);discover(relay,context);if(relay.o)relay.o.visible=relay.collider.hp>0&&!!observer&&Math.hypot(observer.x-relay.x,footY(observer)-relay.y,observer.z-relay.z)<visualRange}for(const[unit,lease]of leases){if(time>=lease.until||!alive(unit)){leases.delete(unit);if(alive(unit)&&!unit.canSee&&Math.hypot((unit.lastSeenX??Infinity)-lease.destination.x,(unit.lastSeenZ??Infinity)-lease.destination.z)<.1)onRelease(unit,{...lease.destination})}}}function getAction(context={}){if(context.active===false||context.vehicle||!context.player)return null;const p=context.player;for(const relay of relays){syncDestroyed(relay);if(!relay.operational||Math.hypot(p.x-relay.x,p.z-relay.z)>ACTION_RANGE||Math.abs(footY(p)-relay.y)>2||!visibleTo(relay,p))continue;discover(relay,context);return{kind:"sabotage",label:"Sabotejar el rel\xe9 de r\xe0dio",icon:"\ud83d\udce1",target:relay}}return null}function interact(action,context={}){if(action?.kind!=="sabotage"||!relays.includes(action.target))return false;const current=getAction(context);if(!current||current.target!==action.target)return false;disable(action.target,"sabotage");notify("Rel\xe9 sabotejat \xb7 Tallats els avisos al quarter general.");sound("pick",.45,{x:action.target.x,y:action.target.y+1.6,z:action.target.z});return true}function destinationFor(relay,index,report){const receiver=relay.receiver,near=Math.hypot(report.x-receiver.x,report.z-receiver.z)<(receiver.r||100)+35;if(near)return{x:report.x+(index?3:-3),y:report.y,z:report.z,duration:DEFENSE_SECONDS,defensive:false,report:{...report}};const entry=entryFor(receiver),side=index?1:-1;const x=entry.x-entry.nx*8-entry.nz*side*5,z=entry.z-entry.nz*8+entry.nx*side*5;return{x:x,y:heightAt(x,z),z:z,duration:DEFENSE_SECONDS,defensive:true,report:{...report}}}function warn(witness,target,targetY,context={}){if(context.active===false||witness?.t!=="soldat"||!alive(witness)||witness.canSee!==true)return 0;const report={x:target?.x,y:targetY,z:target?.z};if(!finite(report))return 0;const enemies=context.enemies||[];if(!enemies.includes(witness))return 0;let dispatched=0;for(const relay of relays){syncDestroyed(relay);if(!relay.operational||!relay.receiver||time-relay.lastWarn<COOLDOWN||!relay.source.soldiers?.includes(witness)||Math.hypot(witness.x-relay.source.x,witness.z-relay.source.z)>(relay.source.r||100)+35)continue;relay.lastWarn=time;relay.lastReport=Object.freeze({...report});relay.reports++;const units=poolFor(relay.receiver);for(let i=0;i<units.length;i++){const unit=units[i];if(!alive(unit)||unit.canSee||unit.aiMode==="combat"||leases.has(unit)||!enemies.includes(unit))continue;const destination=destinationFor(relay,i,report);leases.set(unit,{until:time+DEFENSE_SECONDS,destination:{...destination}});onAlert(unit,{...destination,report:{...report}});relay.dispatches++;dispatched++}if(relay.discovered&&dispatched)notify("Av\xeds de r\xe0dio \xb7 Gu\xe0rdies del quarter general mobilitzats.")}return dispatched}function markers(){return relays.filter(r=>r.discovered).map(r=>({kind:"radio",id:r.id,x:r.x,z:r.z,label:r.operational?"R\xe0dio \u2192 HQ":"R\xe0dio desactivada",state:r.operational?"active":"disabled"}))}function snapshot(){return{time:time,activeDefenders:leases.size,relays:relays.map(r=>({id:r.id,x:r.x,y:r.y,z:r.z,local:{...r.local},operational:r.operational,disabledReason:r.disabledReason,discovered:r.discovered,sourceId:r.source.layoutId||r.source.id,receiverId:r.receiver?.layoutId||r.receiver?.id||null,reports:r.reports,dispatches:r.dispatches,lastReport:r.lastReport?{...r.lastReport}:null}))}}return Object.freeze({configure:configure,reset:reset,update:update,getAction:getAction,interact:interact,warn:warn,markers:markers,snapshot:snapshot})}});const BULLET_IMPACT_LIMIT=112,bulletImpacts=[],bulletImpactFree=[];const bulletBloodGeometry=new THREE.IcosahedronGeometry(.061,0),bulletSparkGeometry=new THREE.BoxGeometry(.045,.045,.17),bulletRicochetGeometry=new THREE.BoxGeometry(.045,.045,.32);const bulletImpactMaterials={blood:[8857130,11220277].map(color=>new THREE.MeshBasicMaterial({color:color,transparent:true,opacity:.86,depthWrite:false})),wound:[11873077,14174530].map(color=>new THREE.MeshBasicMaterial({color:color,transparent:true,opacity:.9,depthWrite:false})),spark:[16767875,16753213].map(color=>new THREE.MeshBasicMaterial({color:color,transparent:true,opacity:.94,depthWrite:false})),ricochet:[14218239,8309229].map(color=>new THREE.MeshBasicMaterial({color:color,transparent:true,opacity:.96,depthWrite:false}))};let combatFeedback=null;function confirmCombatDamage(source,before,after){if(Number.isFinite(before)&&Number.isFinite(after)&&after<before&&(source?.own==="p"||source?.own==="pb"||source?.own==="b"))combatFeedback?.confirmHit()}function projectileImpactImmune(kind,target,p){if(!(p.dmg>0))return false;const light=!p.spl;if(kind==="wall")return target.towerLegOwner?light||target.towerLegOwner.hp===Infinity:light&&isMilitaryWall(target)||target.hp===Infinity;if(kind==="building")return light&&isMilitaryBuilding(target)||target.rhp===Infinity;if(kind==="enemy")return target.hp===Infinity||light&&(target.t==="torre"||p.shotClass==="light"&&isArmoredVehicleType(target.t));if(kind==="vehicle")return target.life===Infinity||light&&isArmoredVehicleType(target.t)||cheats.immune&&target===cv;return kind==="player"&&cheats.immune}function spawnBulletImpact(type,x,y,z,p){if(!world||!bulletImpactMaterials[type])return;const wound=type==="wound",blood=type==="blood"||wound,ricochet=type==="ricochet",count=wound?9:blood?5:ricochet?10:7,length=Math.max(.001,Math.hypot(p.vx,p.vy,p.vz)),backX=-p.vx/length,backY=-p.vy/length,backZ=-p.vz/length;for(let n=0;n<count&&bulletImpacts.length<BULLET_IMPACT_LIMIT;n++){const mats=bulletImpactMaterials[type],geometry=blood?bulletBloodGeometry:ricochet?bulletRicochetGeometry:bulletSparkGeometry,m=bulletImpactFree.pop()||new THREE.Mesh(geometry,mats[n%2]);m.geometry=geometry;m.material=mats[n%2];const size=wound?rn(1.6,2.6):blood?rn(.7,1.1):ricochet?rn(1,1.6):rn(.7,1.4),life=wound?rn(.4,.6):blood?rn(.24,.38):ricochet?rn(.22,.4):rn(.13,.27),speed=wound?rn(.7,2.8):blood?rn(.5,2.1):ricochet?rn(3.5,7.5):rn(1.8,5.4);m.position.set(x+backX*.09+rn(-.045,.045),y+backY*.09+rn(-.045,.045),z+backZ*.09+rn(-.045,.045));m.rotation.set(rn(0,6.28),rn(0,6.28),rn(0,6.28));m.scale.setScalar(size);m.visible=true;world.add(m);bulletImpacts.push({m:m,type:type,life:life,maxLife:life,size:size,vx:backX*speed+rn(-speed*.8,speed*.8),vy:backY*speed+rn(blood?.15:.7,blood?1.25:3.3),vz:backZ*speed+rn(-speed*.8,speed*.8),gravity:blood?9:14})}}function updateBulletImpacts(dt){for(let i=bulletImpacts.length-1;i>=0;i--){const f=bulletImpacts[i];f.life-=dt;if(f.life<=0){world.remove(f.m);f.m.visible=false;bulletImpactFree.push(f.m);bulletImpacts.splice(i,1);continue}f.vy-=f.gravity*dt;f.m.position.x+=f.vx*dt;f.m.position.y+=f.vy*dt;f.m.position.z+=f.vz*dt;if(f.type==="spark"||f.type==="ricochet"){f.m.rotation.x+=dt*17;f.m.rotation.z+=dt*13}f.m.scale.setScalar(f.size*Math.max(.05,f.life/f.maxLife))}}function clearBulletImpacts(){for(const f of bulletImpacts){world?.remove(f.m);f.m.visible=false;bulletImpactFree.push(f.m)}bulletImpacts.length=0}function setDis(v){disg=v;[...pl.userData.mats,...rider.userData.mats].forEach(([m,a,b])=>m.color.copy(vivid(v?b:a)))}let playerBlastRagdoll=null;function fin(m,cause=null){updateOptionalSystems(0,false);combatFeedback?.clear();if(m==="HAS MORT"&&startDeathCinematic(cause))return;setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+" \xb7 Obre \u2161 / Esc per tornar a jugar";endEl.style.display="flex"}function enemyWeaponDamageScale(){return 1}function hurtP(d,fromEnemyWeapon=false,cause=null){if(over||cheats.immune)return;const amount=wholeDamage(d);if(amount<=0)return;const before=hp;hp=Math.max(0,Math.ceil(hp)-amount);snd("hurt",.5);if(hp<before)combatFeedback?.damage(cause);if(hp<=0)fin("HAS MORT",cause||{type:fromEnemyWeapon?"bullet":"impact"})}function destroyTower(u){if(!u?.o||u.destroyed)return;u.destroyed=true;for(const leg of u.towerLegColliders||[]){const i=Wl.indexOf(leg);if(i>=0)Wl.splice(i,1)}wallGridCount=-1;u.towerLegColliders=[];const base=u.o.position.y;for(let k=0;k<26;k++){const high=k<10,yy=base+(high?rn(7.5,10.2):rn(.8,7.6)),xx=u.x+rn(-1.85,1.85),zz=u.z+rn(-1.85,1.85),color=high?k%3?8138543:3422782:4936023,m=new THREE.Mesh(dgeo,dmat(color)),size=high?rn(.45,1.12):rn(.32,.78);m.scale.set(size*rn(.6,1.3),size*rn(.45,1),size*rn(.6,1.25));m.position.set(xx,yy,zz);m.rotation.set(rn(-.4,.4),rn(0,Math.PI),rn(-.4,.4));m.castShadow=true;world.add(m);const dx=xx-u.x,dz=zz-u.z,length=Math.max(.35,Math.hypot(dx,dz));DB.push({m:m,s0:m.scale.clone(),vx:dx/length*rn(6,13)+rn(-3,3),vy:rn(5,15),vz:dz/length*rn(6,13)+rn(-3,3),rx:rn(-7,7),ry:rn(-7,7),rz:rn(-7,7),life:rn(1.9,3.1),vehiclePart:true})}for(let k=0;k<8;k++)puff(u.x+rn(-2,2),base+rn(.5,9),u.z+rn(-2,2),k%2?5591887:9142646,rn(1.5,3.5));boom(u.x,base+4,u.z,7,COMBAT_BALANCE.weapons.grenade,"p")}function explodeEnemyVehicle(u){if(u.destroyed)return;u.destroyed=true;const y=u.o?.position?.y??(u.gy??Math.max(0,hAt(u.x,u.z)));if(u.o){vehicleDebris(u,y);world.remove(u.o)}const heavy=u.t==="tanc"||u.t==="tanqueta";boom(u.x,y+(heavy?1.8:1.2),u.z,heavy?12:9,heavy?10:8,"e")}function killEnemy(u,killingShot=null){const i=E.indexOf(u);if(i<0)return;E.splice(i,1);kills++;if(u.t==="soldat"||u.t==="general"){window.HUNTER_ENEMY_LOD.setLevel(u.o,"full");u.deadT=0;const impulse=u.blastImpulse;u.deadSide=rn(-1,1)<0?-1:1;u.deadPose={yaw:rn(-Math.PI,Math.PI),roll:u.deadSide*rn(.95,1.65),pitch:rn(-.9,.9),armL:rn(-1.6,.8),armR:rn(-1.6,.8),legL:rn(-.8,.85),legR:rn(-.8,.85),vx:impulse?.vx??rn(-2.6,2.6),vz:impulse?.vz??rn(-2.6,2.6),vy:impulse?.vy??rn(1.5,3.8),height:0};if(u.blastRagdoll){window.HUNTER_RAGDOLL.reset(u.blastRagdoll);u.blastRagdoll=null}u.o.userData.legs?.forEach(l=>l.rotation.x=0);u.o.userData.arms?.forEach(a=>a.rotation.x=0);if(u.t!=="general")u.ragdoll=window.HUNTER_RAGDOLL.make(u.o,{blast:!!impulse,impulse:impulse,seed:u.x*.41+u.z*.27});DEAD.push(u)}else if(u.t==="torre"){destroyTower(u);world.remove(u.o)}else if(u.t==="jeep"||u.t==="tanqueta"||u.t==="tanc"||u.t==="patrulla_marina")explodeEnemyVehicle(u);else world.remove(u.o);if(u.t==="general"){updateOptionalSystems(0,false);combatFeedback?.clear();startVictoryCinematic(u,killingShot)}}function hurtE(u,d,killingShot=null){const amount=wholeDamage(d);if(amount<=0||u.hp<=0)return;const before=u.hp;u.hp=Math.max(0,Math.ceil(u.hp)-amount);u.alert=12;confirmCombatDamage(killingShot,before,u.hp);if(u.t==="soldat"&&!u.canSee){u.aiMode="search";u.searchT=window.HUNTER_STEALTH.CONFIG.searchSeconds;const vx=killingShot?.vx??0,vz=killingShot?.vz??0,norm=Math.max(.01,Math.hypot(vx,vz));u.lastSeenX=u.x-vx/norm*15;u.lastSeenZ=u.z-vz/norm*15;u.lastSeenY=u.o.position.y}if(u.hp<before&&(u.t==="soldat"||u.t==="general")){const bullet=killingShot?.spl===0&&Number.isFinite(killingShot.vx)&&Number.isFinite(killingShot.x)&&Number.isFinite(killingShot.y)&&Number.isFinite(killingShot.z),baseY=u.o?.position.y??u.gy??hAt(u.x,u.z),hitDistance=bullet?Math.hypot(killingShot.x-u.x,killingShot.z-u.z):0,hitScale=hitDistance>.6?.6/hitDistance:1,x=bullet?u.x+(killingShot.x-u.x)*hitScale:u.x+rn(-.15,.15),y=bullet?Math.max(baseY+.6,Math.min(baseY+2.8,killingShot.y)):baseY+rn(1,1.5),z=bullet?u.z+(killingShot.z-u.z)*hitScale:u.z+rn(-.15,.15),sourceX=killingShot?.x??P.x,sourceZ=killingShot?.z??P.z;spawnBulletImpact(u.hp>0?"wound":"blood",x,y,z,{vx:bullet?killingShot.vx:u.x-sourceX,vy:bullet?killingShot.vy:0,vz:bullet?killingShot.vz:u.z-sourceZ})}if(u.hp<=0)killEnemy(u,killingShot)}function explodeVehicle(v){if(!v||v.destroyed)return;v.destroyed=true;const wasPilot=cv===v,yy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));if(wasPilot){resetCameraState();if(VT[v.t]?.m==="a"){ejectFromHelicopter(v);msg="L\u2019helic\xf2pter ha explotat! Est\xe0s caient!";msgT=3}else{cv=null;P.x=v.x;P.z=v.z;const a=rn(0,Math.PI*2),sp=rn(14,24);playerEject={kind:"blast",vx:Math.cos(a)*sp,vz:Math.sin(a)*sp,t:.8,dur:.8,spin:rn(-1,1)<0?-1:1,height:1.25};hurtP(rn(4,6),false,{type:"vehicleExplosion",x:v.x,y:yy+1,z:v.z});msg="El vehicle ha explotat!";msgT=3}}const i=V.indexOf(v);if(i>=0)V.splice(i,1);intelMarks=intelMarks.filter(m=>m.ref!==v);if(v.o){vehicleDebris(v,yy);world.remove(v.o)}boom(v.x,yy+1,v.z,10,8,"p",{skipPlayer:wasPilot})}const COMBAT_BALANCE=window.HUNTER_COMBAT_BALANCE;const HEAVY_SHOT_SPEED_FACTOR=1.17,HEAVY_SHOT_DAMAGE_FACTOR=1,HEAVY_SHOT_VISUAL_SCALE=.5;const shotClassFromSplash=spl=>spl>0?"heavy":"light";const isMilitaryBuilding=b=>!!b&&!b.civilian&&(!!b.compound||b.kind==="enemy_bunker");const isMilitaryWall=w=>!!w?.towerLegOwner||isMilitaryBuilding(w?.owner);const isArmoredVehicleType=t=>t==="tanqueta"||t==="tanc";function damageVehicle(v,dmg,impacts=1,shotClass="collision",source=null){if(cheats.immune&&v===cv)return;if(!v||v.destroyed||shotClass==="light"&&isArmoredVehicleType(v.t))return;const amount=shotClass==="collision"?Math.max(1,wholeDamage(impacts)):wholeDamage(dmg);if(amount<=0)return;const before=v.life??VT[v.t]?.life??1;v.life=Math.max(0,Math.ceil(before)-amount);v.smokeT=0;confirmCombatDamage(source,before,v.life);if(v===cv&&v.life<before)combatFeedback?.damage({x:source?.spl===0?source.sx:source?.x,z:source?.spl===0?source.sz:source?.z});if(v.life<=0)explodeVehicle(v)}function wholeDamage(value){return Number.isFinite(value)&&value>0?Math.ceil(value):0}function impactDamage(relativeSpeed,receiverMass=1,strikerMass=1){if(!(relativeSpeed>10))return 0;const ratio=Math.sqrt(Math.max(.2,strikerMass)/Math.max(.2,receiverMass));return Math.max(1,Math.min(5,Math.ceil((relativeSpeed-10)*ratio/6)))}function impactVehicle(v,dmg){if(!v||v.destroyed||v.t==="tanc"||dmg<=0)return;const amount=Math.min(5,wholeDamage(dmg));if(E.includes(v)){if(v.t==="jeep"||v.t==="tanqueta"||v.t==="patrulla_marina")hurtE(v,amount)}else damageVehicle(v,amount,1,"impact")}const RUNOVER_MIN_SPEED=6,RUNOVER_MAX_DAMAGE=10;function runoverDamage(speed,mass=1){if(!(speed>RUNOVER_MIN_SPEED))return 0;return Math.min(RUNOVER_MAX_DAMAGE,Math.max(1,Math.ceil((speed-RUNOVER_MIN_SPEED)*Math.max(.2,mass)*RUNOVER_MAX_DAMAGE/(23*2.2))))}function runoverSweepHit(x0,z0,x1,z1,tx,tz,radius){const dx=x1-x0,dz=z1-z0,lengthSq=dx*dx+dz*dz;const t=lengthSq>1e-8?Math.max(0,Math.min(1,((tx-x0)*dx+(tz-z0)*dz)/lengthSq)):0;const px=x0+dx*t,pz=z0+dz*t;return(tx-px)**2+(tz-pz)**2<radius*radius}function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc,audioSource=null){const shotClass=shotClassFromSplash(spl),speed=sp*(shotClass==="heavy"?HEAVY_SHOT_SPEED_FACTOR:1),power=wholeDamage(dmg);if(own==="p"||own==="pb"){const sound=spl?"bazooka":!cv&&sniperEquipped?"sniper":cv?"rifle":"pistol";window.HUNTER_STEALTH.emit(sound,x,y,z)}snd(spl?"cannon":"shot",own==="e"?.6:1,{x:x,y:y,z:z},audioSource||(own==="p"||own==="pb"?P:null));const heavy=shotClass==="heavy";const o=new THREE.Mesh(heavy?gHeavy:gLight,mat);o.scale.setScalar(sc*(heavy?HEAVY_SHOT_VISUAL_SCALE:1));const heading=new THREE.Vector3(dx,dy,dz);if(heading.lengthSq()>1e-12)o.quaternion.setFromUnitVectors(heavyForward,heading.normalize());o.position.set(x,y,z);world.add(o);Pj.push({x:x,y:y,z:z,sx:x,sy:y,sz:z,vx:dx*speed,vy:dy*speed,vz:dz*speed,dmg:power,spl:spl,shotClass:shotClass,own:own,life:2.2,o:o})}function explosionDistanceToVehicleHull(v,x,y,z){const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));return Math.max(0,Math.hypot(v.x-x,vy+1-y,v.z-z)-vehicleRadius(v.t)*.62)}function blastImpulseAt(x,z,px,pz,r,falloff){const dx=px-x,dz=pz-z,dist=Math.hypot(dx,dz),dir=dist>.05?{x:dx/dist,z:dz/dist}:{x:Math.cos(rn(0,6.28)),z:Math.sin(rn(0,6.28))},scale=Math.max(.45,Math.min(1.25,r/12)),speed=(15+28*falloff)*scale;return{vx:dir.x*speed,vz:dir.z*speed,vy:(9+13*falloff)*scale}}function explosionDamage(dmg,distance,r){return distance>=r?0:Math.max(1,Math.ceil(dmg*(1-distance/r)))}function blastOccluded(x,y,z,tx,ty,tz,ignoreWall=null){const dx=tx-x,dy=ty-y,dz=tz-z,length=Math.hypot(dx,dy,dz);if(length<.15)return false;const mx=(x+tx)/2,mz=(z+tz)/2,search=Math.hypot(dx,dz)/2+2;for(const w of wallCandidates(mx,mz,search)){if(w===ignoreWall||w.open||w.barbed||w.hp<=0)continue;if(x>w.x0+.03&&x<w.x1-.03&&y>w.y0+.03&&y<w.y1-.03&&z>w.z0+.03&&z<w.z1-.03)continue;const t=segmentAabbT(x,y,z,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);if(t!=null&&t>=0&&t<.995)return true}for(const b of buildingCandidates(mx,mz,search)){if(b.rhp<=0||b.rb)continue;const t=b.hangar?hangarRoofSegmentT(x,y,z,tx,ty,tz,b):segmentAabbT(x,y,z,tx,ty,tz,b.x-b.w/2,b.x+b.w/2,b.fy+b.h-.3,b.fy+b.h+1.15,b.z-b.d/2,b.z+b.d/2);if(t!=null&&t>.005&&t<.995)return true}const samples=Math.min(32,Math.max(4,Math.ceil(length/2)));for(let i=1;i<samples;i++){const t=i/samples,px=x+dx*t,py=y+dy*t,pz=z+dz*t;if(py<bunkerProjectileSurface(px,pz,py)-.22)return true}return false}function boom(x,y,z,r,dmg,own,source=null){window.HUNTER_STEALTH.emit("explosion",x,y,z);snd("boom",1,{x:x,y:y,z:z},source);const opacity=.38,o=new THREE.Mesh(blastRingG,new THREE.MeshBasicMaterial({color:16757085,side:THREE.DoubleSide,transparent:true,opacity:opacity,depthTest:true,depthWrite:false}));o.rotation.x=-Math.PI/2;o.position.set(x,y,z);world.add(o);fx.push({o:o,life:.6,s:r*1.6,opacity:opacity});const pilotedAtStart=!!cv;for(const u of[...enemyCandidatesAt(x,z,r+vehicleRadius("llanxa")*.62+4)]){if(u.hp<=0||u.destroyed)continue;const marine=u.t==="patrulla_marina",targetY=u.o.position.y+(marine?1.8:1.5),distance=Math.hypot(u.x-x,targetY-y,u.z-z),d=marine?Math.max(0,distance-vehicleRadius("llanxa")*.62):distance,dealt=explosionDamage(dmg,d,r);if(!dealt||blastOccluded(x,y,z,u.x,targetY,u.z))continue;if(u.t==="soldat"||u.t==="general"){u.blastImpulse=blastImpulseAt(x,z,u.x,u.z,r,1-d/r);if(u.hp>dealt){u.blastT=Math.max(u.blastT||0,.55+u.blastImpulse.vy/8);u.blastTotal=u.blastT}}hurtE(u,dealt,source||{x:x,y:y,z:z,sx:cv?.x??P.x,sy:(cv?.o?.position.y??P.y)+1.7,sz:cv?.z??P.z,spl:r,own:own});if(u.hp>0&&u.blastT>0&&!u.blastRagdoll)u.blastRagdoll=window.HUNTER_RAGDOLL.make(u.o,{blast:true,impulse:u.blastImpulse,seed:u.x*.41+u.z*.27})}for(const civilian of prisonerSystem.entities){if(civilian.hp<=0||civilian.destroyed)continue;const targetY=civilian.y+1,dealt=explosionDamage(dmg,Math.hypot(civilian.x-x,targetY-y,civilian.z-z),r);if(dealt&&!blastOccluded(x,y,z,civilian.x,targetY,civilian.z)){const lost=prisonerSystem.hurt(civilian,dealt,source||{x:x,y:y,z:z,own:own});if(lost)spawnBulletImpact("blood",civilian.x,targetY,civilian.z,{sx:x,sy:y,sz:z})}}PL.forEach(t=>{if(!t.alive)return;const dealt=explosionDamage(dmg,Math.hypot(t.x-x,t.z-z),r);if(dealt&&!blastOccluded(x,y,z,t.x,t.y+2,t.z))dmgP(t,dealt)});for(const v of[...vehicleCandidatesAt(x,z,r+12,true)]){if(v.destroyed)continue;const dealt=explosionDamage(dmg,explosionDistanceToVehicleHull(v,x,y,z),r);if(dealt&&!blastOccluded(x,y,z,v.x,(v.o?.position?.y??0)+1,v.z))damageVehicle(v,dealt,1,"heavy",source||{x:x,y:y,z:z,own:own})}if(!pilotedAtStart&&!source?.skipPlayer){const d=Math.hypot(P.x-x,P.y+1-y,P.z-z),dealt=explosionDamage(dmg,d,r);if(dealt&&!blastOccluded(x,y,z,P.x,P.y+1,P.z)){const impulse=blastImpulseAt(x,z,P.x,P.z,r,1-d/r);if(!playerFall){const flight=Math.max(1.5,.55+impulse.vy/8);playerEject={kind:"blast",...impulse,t:flight,dur:flight,height:0,roll:rn(-1,1)<0?-1:1};if(playerBlastRagdoll)window.HUNTER_RAGDOLL.reset(playerBlastRagdoll);playerBlastRagdoll=window.HUNTER_RAGDOLL.make(pl,{blast:true,impulse:impulse,seed:P.x*.41+P.z*.27})}hurtP(dealt,own==="e",{type:"explosion",x:x,y:y,z:z})}}for(const w of wallCandidates(x,z,r)){const dist=Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z),dealt=explosionDamage(dmg,dist,r);if(dealt&&y<w.y1+3&&w.hp>0)dmgW(w,dealt)}for(const b of buildingCandidates(x,z,r)){if(b.rhp<=0)continue;const dealt=explosionDamage(dmg,Math.hypot(b.x-x,b.z-z),r+b.w/2);if(dealt){b.rhp-=dealt;if(b.rhp<=0)roofBreak(b)}}}function helicopterBombDoor(v){v.o.updateWorldMatrix(true,false);return v.o.localToWorld(new THREE.Vector3(1.96,2.02,.52))}function plant(seconds=3){if(over||cv&&cv.t!=="heli"||swimming||playerFall||playerEject||!inv.expl||!Number.isInteger(seconds)||seconds<0||seconds>59)return false;const airborne=!!cv&&cv.t==="heli";const door=airborne?helicopterBombDoor(cv):null;if(--inv.expl<=0)delete inv.expl;setDis(false);const o=window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true,seconds);o.rotation.y=(cv?.hd??P.hd)+Math.PI;const forward=1.35,x=airborne?door.x:P.x-Math.sin(P.hd)*forward,z=airborne?door.z:P.z-Math.cos(P.hd)*forward,y=airborne?door.y:groundAt(x,z,P.y)+.24;o.position.set(x,y,z);world.add(o);if(seconds===0){boom(x,y,z,48,COMBAT_BALANCE.weapons.c4,"b");world.remove(o)}else bombs.push({x:x,y:y,z:z,t:seconds,o:o,falling:airborne,vy:0,landed:!airborne});msg=seconds===0?"Bomba detonada!":airborne?"Explosiu deixat anar: "+String(seconds).padStart(2,"0")+" s!":"Bomba col\xb7locada: "+String(seconds).padStart(2,"0")+" s!";msgT=2;return true}function sight(x,z,tx,tz,y,ignoreBarbed=true){const d=Math.hypot(tx-x,tz-z),n=Math.max(1,Math.ceil(d/1.5));for(let k=1;k<n;k++){const xx=x+(tx-x)*k/n,zz=z+(tz-z)*k/n;if(wallCandidates(xx,zz).some(w=>!w.open&&(!ignoreBarbed||!w.barbed)&&y>w.y0&&y<w.y1&&xx>w.x0&&xx<w.x1&&zz>w.z0&&zz<w.z1))return false}return true}function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=pl.userData.knifeAttackDuration||.38;window.HUNTER_STEALTH.emit("knife",P.x,P.y+1,P.z);const fx_=-Math.sin(P.hd),fz=-Math.cos(P.hd);let hit=null,best=2.6;for(const u of E){if(u.t!=="soldat"&&u.t!=="general")continue;const dx=u.x-P.x,dz=u.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx_+dz*fz)/d>.35&&sight(P.x,P.z,u.x,u.z,P.y+1.2,false)){best=d;hit=u}}if(hit)hurtE(hit,COMBAT_BALANCE.weapons.knife,{weapon:"knife",own:"p",sx:P.x,sy:P.y+1.35,sz:P.z,x:hit.x,y:hit.o.position.y+1.35,z:hit.z});snd("hurt",hit?.45:.18);setDis(false);return true}function secondaryWeapon(){if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd),d45=Math.SQRT1_2;if(cv.t==="heli_combat"){if(cheats.items)cv.rockets=Math.max(cv.rockets||0,999);if((cv.rockets||0)<=0){msg="Sense m\xedssils.";msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,COMBAT_BALANCE.weapons.heliMissile,10,"p",mS,2.4);Pj[Pj.length-1].life=3.3;msg="M\xedssils: "+cv.rockets;msgT=1;return true}if(cv.t==="llanxa_coets"){fcd=.9;const shot=combatBoatRocketAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],68,COMBAT_BALANCE.weapons.boatRocket,11,"p",mS,2.6);msg="Coets: \u221e";msgT=1;return true}return false}const GRENADE_CHARGE_SECONDS=1.4,GRENADE_MIN_SPEED=3.5,GRENADE_MAX_SPEED=33;let grenadeCharge=null,grenadeAimVisual=null;function grenadeLaunchParams(power=0,origin=P,hd=P.hd){const ratio=Math.max(0,Math.min(1,power)),speed=GRENADE_MIN_SPEED+(GRENADE_MAX_SPEED-GRENADE_MIN_SPEED)*ratio,fx=-Math.sin(hd),fz=-Math.cos(hd);return{x:origin.x+fx*.85,y:origin.y+2.05,z:origin.z+fz*.85,vx:fx*speed,vy:12,vz:fz*speed,t:2.4}}function bunkerProjectileSurface(x,z,y,water=false){const floor=bunkerSubFloorAt(x,z,y);if(floor!==null&&activeBunker&&y<activeBunker.fy+.1)return floor+.16;return(water?Math.max(hAt(x,z),wy(x,z,elapsed)):Math.max(0,hAt(x,z)))+.16}function grenadeImpactTrajectory(power=0,origin=P,hd=P.hd,flight=null){const g={...flight||grenadeLaunchParams(power,origin,hd)},points=[{x:g.x,y:g.y,z:g.z}],dt=1/40;for(let i=0;i<96;i++){const x0=g.x,y0=g.y,z0=g.z,x1=x0+g.vx*dt,y1=y0+(g.vy-24*dt)*dt,z1=z0+g.vz*dt,mx=(x0+x1)/2,mz=(z0+z1)/2,reach=Math.hypot(x1-x0,z1-z0)/2+.5;let hitT=null;for(const w of wallCandidates(mx,mz,reach)){if(w.open)continue;const q=segmentAabbT(x0,y0,z0,x1,y1,z1,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);if(q!=null&&(hitT==null||q<hitT))hitT=q}for(const b of buildingCandidates(mx,mz,reach)){if(b.rhp<=0)continue;const q=b.hangar?hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b):segmentAabbT(x0,y0,z0,x1,y1,z1,b.x-b.w/2,b.x+b.w/2,b.fy+b.h-.35,b.fy+b.h+.8,b.z-b.d/2,b.z+b.d/2);if(q!=null&&(hitT==null||q<hitT))hitT=q}const fraction=hitT==null?1:hitT;g.x=x0+(x1-x0)*fraction;g.y=y0+(y1-y0)*fraction;g.z=z0+(z1-z0)*fraction;g.vy-=24*dt;g.t-=dt;const surface=bunkerProjectileSurface(g.x,g.z,g.y,true);if(hitT!=null||g.t<=0||g.y<=surface){g.y=Math.max(g.y,surface);points.push({x:g.x,y:g.y,z:g.z});break}points.push({x:g.x,y:g.y,z:g.z})}const end=points[points.length-1];return{points:points,landing:{x:end.x,z:end.z,y:bunkerProjectileSurface(end.x,end.z,end.y,true)+.05}}}function grenadeAimStartIndex(points,origin=P){const minHeight=origin.y+3.55,minimumGap=1.45;return points.findIndex((p,i)=>i>0&&p.y>=minHeight&&Math.hypot(p.x-origin.x,p.z-origin.z)>=minimumGap)}function beginGrenadeCharge(){if(grenadeCharge||over||paused||cv||swimming||playerFall||fcd>0||!grenadeEquipped||!inv.granada)return false;grenadeCharge={elapsed:0};return true}function cancelGrenadeCharge(){grenadeCharge=null;if(grenadeAimVisual){const a=grenadeAimVisual;world.remove(a.line,a.circle,a.fill);a.line.geometry.dispose();a.line.material.dispose();a.circle.geometry.dispose();a.circle.material.dispose();a.fill.geometry.dispose();a.fill.material.dispose();grenadeAimVisual=null}}function releaseGrenadeCharge(){if(!grenadeCharge)return false;const power=Math.min(1,grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS);cancelGrenadeCharge();return throwGrenade(power)}function updateGrenadeCharge(dt){const heliAim=cv?.t==="heli"&&!over&&!paused&&(inv.granada||0)>0;if(!grenadeCharge&&!heliAim){if(grenadeAimVisual)cancelGrenadeCharge();return}if(grenadeCharge&&(!grenadeEquipped||!inv.granada||cv||swimming||playerFall||paused||over)){cancelGrenadeCharge();return}if(grenadeCharge)grenadeCharge.elapsed=Math.min(GRENADE_CHARGE_SECONDS,grenadeCharge.elapsed+dt);const state=grenadeCharge||(updateGrenadeCharge.heliState??={visualTimer:0});state.visualTimer=(state.visualTimer??0)-dt;if(state.visualTimer>0)return;state.visualTimer=.04;const aim=heliAim?grenadeImpactTrajectory(0,P,P.hd,helicopterGrenadeFlight(cv)):grenadeImpactTrajectory(grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS);if(!grenadeAimVisual){const geometry=new THREE.BufferGeometry,positions=new THREE.BufferAttribute(new Float32Array(97*2*3),3),indices=[];for(let i=0;i<96;i++)indices.push(i*2,i*2+1,i*2+2,i*2+1,i*2+3,i*2+2);positions.setUsage(THREE.DynamicDrawUsage);geometry.setAttribute("position",positions);geometry.setIndex(indices);const line=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:16730441,side:THREE.DoubleSide,transparent:true,opacity:.48,depthWrite:false,depthTest:false}));line.frustumCulled=false;line.renderOrder=1001;const circle=new THREE.Mesh(new THREE.RingGeometry(.72,1.03,40).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:16728642,side:THREE.DoubleSide,transparent:true,opacity:.8,depthWrite:false,depthTest:false}));const fill=new THREE.Mesh(new THREE.CircleGeometry(.72,40).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:16728642,side:THREE.DoubleSide,transparent:true,opacity:.18,depthWrite:false,depthTest:false}));circle.renderOrder=1002;fill.renderOrder=1001;world.add(line,circle,fill);grenadeAimVisual={line:line,circle:circle,fill:fill}}const a=grenadeAimVisual,attr=a.line.geometry.attributes.position,start=heliAim?0:grenadeAimStartIndex(aim.points),visiblePoints=start<0?[]:aim.points.slice(start);for(let i=0;i<visiblePoints.length;i++){const p=visiblePoints[i],before=visiblePoints[Math.max(0,i-1)],after=visiblePoints[Math.min(visiblePoints.length-1,i+1)],dx=after.x-before.x,dz=after.z-before.z,d=Math.max(.001,Math.hypot(dx,dz)),sx=-dz/d*.125,sz=dx/d*.125;attr.setXYZ(i*2,p.x-sx,p.y+.06,p.z-sz);attr.setXYZ(i*2+1,p.x+sx,p.y+.06,p.z+sz)}a.line.geometry.setDrawRange(0,Math.max(0,visiblePoints.length-1)*6);attr.needsUpdate=true;a.circle.position.set(aim.landing.x,aim.landing.y+.035,aim.landing.z);a.fill.position.set(aim.landing.x,aim.landing.y+.02,aim.landing.z)}function helicopterGrenadeFlight(v){const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),rightX=Math.cos(v.hd),rightZ=-Math.sin(v.hd),forward=(v.v||0)*.9+7,side=(v.strafeV||0)+4.5;return{x:v.x+fx*1.5+rightX*2.5,y:v.o.position.y+2.4,z:v.z+fz*1.5+rightZ*2.5,vx:fx*forward+rightX*side,vy:5,vz:fz*forward+rightZ*side,t:2.4}}function throwHelicopterGrenade(){if(!cv||cv.t!=="heli"||over||paused||fcd>0)return false;if(!inv.granada){msg="No tens granades a l\u2019inventari.";msgT=2;fcd=.35;return false}const flight=helicopterGrenadeFlight(cv);inv.granada--;if(inv.granada<=0){delete inv.granada;grenadeEquipped=false}fcd=.7;setDis(false);launchGrenade({flight:flight});msg="Granades: "+(inv.granada||0);msgT=1.5;return true}function throwGrenade(power=0){if(over||cv||swimming||fcd>0||!grenadeEquipped||!inv.granada)return false;const flight=grenadeLaunchParams(power);inv.granada--;if(inv.granada<=0){delete inv.granada;grenadeEquipped=false}fcd=.7;setDis(false);pl.userData.grenadeThrow=.55;pl.userData.grenadeReleased=false;pl.userData.grenadeThrowPower=Math.max(0,Math.min(1,power));pl.userData.grenadePending={t:.23,flight:flight};msg="Granades: "+(inv.granada||0);msgT=1.5;return true}function launchGrenade(pending){const flight=pending.flight||grenadeLaunchParams(),{x:x,y:y,z:z,vx:vx,vy:vy,vz:vz,t:t}=flight,o=new THREE.Group,body=new THREE.Mesh(new THREE.SphereGeometry(.18,8,6),new THREE.MeshStandardMaterial({color:4608319,roughness:.82,metalness:.08}));body.scale.set(.88,1.08,.88);o.add(body);const cap=new THREE.Mesh(new THREE.BoxGeometry(.08,.13,.08),new THREE.MeshStandardMaterial({color:2435879,roughness:.7,metalness:.25}));cap.position.y=.18;o.add(cap);o.position.set(x,y,z);world.add(o);grenades.push({x:x,y:y,z:z,vx:vx,vy:vy,vz:vz,t:t,o:o,sx:x,sy:y,sz:z})}function weaponTargetPriority(enemy){if(enemy.t==="soldat"||enemy.t==="general")return 0;if(enemy.t==="jeep"||enemy.t==="tanqueta"||enemy.t==="tanc"||enemy.t==="patrulla_marina")return 1;if(enemy.t==="torre")return 2;return 3}function weaponAimClear(x,y,z,tx,ty,tz){const mx=(x+tx)/2,mz=(z+tz)/2,reach=Math.hypot(tx-x,tz-z)/2+3;for(const w of wallCandidates(mx,mz,reach)){if(w.open||w.barbed)continue;const t=segmentAabbT(x,y,z,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);if(t!=null&&t<.98)return false}for(const b of buildingCandidates(mx,mz,reach)){if(b.rhp<=0)continue;const t=b.hangar?hangarRoofSegmentT(x,y,z,tx,ty,tz,b):segmentAabbT(x,y,z,tx,ty,tz,b.x-b.w/2-.6,b.x+b.w/2+.6,b.fy+b.h-.4,b.fy+b.h+1.4,b.z-b.d/2-.6,b.z+b.d/2+.6);if(t!=null&&t<.98)return false}return true}function bazookaInterceptPoint(e,originX,originY,originZ,targetY,speed){const vx=-Math.sin(e.hd)*(e.speed||0),vz=-Math.cos(e.hd)*(e.speed||0),dx=e.x-originX,dy=targetY-originY,dz=e.z-originZ,a=vx*vx+vz*vz-speed*speed,b=2*(dx*vx+dz*vz),c=dx*dx+dy*dy+dz*dz,disc=b*b-4*a*c;if(disc<0||Math.abs(a)<1e-5)return{x:e.x,y:targetY,z:e.z};const roots=[(-b-Math.sqrt(disc))/(2*a),(-b+Math.sqrt(disc))/(2*a)],time=Math.min(...roots.filter(t=>t>0));if(!Number.isFinite(time)||time>3.7)return{x:e.x,y:targetY,z:e.z};return{x:e.x+vx*time,y:targetY,z:e.z+vz*time}}function marineHullTargetY(e){return(e.o?.position?.y??0)+.48*VS.llanxa}function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass="light",focus=null,projectileSpeed=0){if(focus){focus.target=null;focus.point=null}let bestPriority=Infinity,bestDist=range,chosen=null;for(const e of E){if(e.destroyed||e.hp<=0||shotClass==="light"&&e.t==="torre")continue;const priority=weaponTargetPriority(e);if(priority>=3||priority>bestPriority)continue;const dx=e.x-x,dz=e.z-z,dist=Math.hypot(dx,dz),forward=Math.hypot(fx,fz);if(dist<=1||dist>range||priority===bestPriority&&dist>=bestDist)continue;const modelY=e.o?.position?.y??(e.gy??0),groundTarget=e.t==="soldat"||e.t==="general"||e.t==="jeep"||e.t==="tanqueta"||e.t==="tanc",underground=!!e.basement&&(e.gy??modelY)<e.basement.fy-3.9,baseY=underground?e.gy??modelY:groundTarget?Math.max(modelY,hAt(e.x,e.z),e.gy??-Infinity):modelY,ty=e.t==="patrulla_marina"?marineHullTargetY(e):baseY+(e.t==="torre"?4.5:e.t==="tanc"?2.8:e.t==="tanqueta"?2.1:1.5),dy=ty-y,len=Math.hypot(dx,dy,dz);if(len<=.001||forward<.001||(dx*fx+dz*fz)/(dist*forward)<cone)continue;if(!weaponAimClear(x,y,z,e.x,ty,e.z))continue;const lead=projectileSpeed>0&&e.t==="patrulla_marina"?bazookaInterceptPoint(e,x,y,z,ty,projectileSpeed):{x:e.x,y:ty,z:e.z},leadX=lead.x-x,leadY=lead.y-y,leadZ=lead.z-z,length=Math.hypot(leadX,leadY,leadZ);bestPriority=priority;bestDist=dist;chosen=[leadX/length,leadY/length,leadZ/length];if(focus){focus.target=e;focus.point={x:e.x,y:ty,z:e.z}}}return chosen||[fx,fy,fz]}const HELI_MISSILE_ANGLE=Math.PI*25/180,HELI_MISSILE_RANGE=210;function combatBoatRocketAim(v,focus=null){const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),x=v.x+fx*6,y=v.o.position.y+1.2,z=v.z+fz*6,base=Math.hypot(1,.015);return{x:x,y:y,z:z,direction:autoAimWeaponShot(x,y,z,fx/base,.015/base,fz/base,105,.94,"heavy",focus)}}function combatHeliMissileAim(v,focus=null){const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),horizontal=Math.cos(HELI_MISSILE_ANGLE),x=v.x+fx*5,y=v.o.position.y+1,z=v.z+fz*5;return{x:x,y:y,z:z,direction:autoAimWeaponShot(x,y,z,fx*horizontal,-Math.sin(HELI_MISSILE_ANGLE),fz*horizontal,HELI_MISSILE_RANGE,.88,"heavy",focus)}}const bazookaReticleElement=document.getElementById("bazookaReticle");const bazookaReticleWorld=new THREE.Vector3,bazookaReticleScreen=new THREE.Vector3;let bazookaReticleTimer=0,bazookaReticleHasHit=false,bazookaReticleMode=null;function bazookaFirstSolidHit(x,y,z,dx,dy,dz,range=105,sourceVehicle=null){const tx=x+dx*range,ty=y+dy*range,tz=z+dz*range,mx=(x+tx)/2,mz=(z+tz)/2,reach=Math.hypot(tx-x,tz-z)/2;let best=Infinity;const consider=t=>{if(t!=null&&t>=0&&t<=1&&t<best)best=t};for(const w of wallCandidates(mx,mz,reach+2)){if(w.open)continue;consider(segmentAabbT(x,y,z,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1))}for(const b of buildingCandidates(mx,mz,reach+2)){if(b.rhp<=0)continue;consider(b.hangar?hangarRoofSegmentT(x,y,z,tx,ty,tz,b):segmentAabbT(x,y,z,tx,ty,tz,b.x-b.w/2-.6,b.x+b.w/2+.6,b.fy+b.h-.4,b.fy+b.h+1.4,b.z-b.d/2-.6,b.z+b.d/2+.6))}for(const e of enemyCandidatesAt(mx,mz,reach+16)){if(e.destroyed||e.hp<=0)continue;const marine=e.t==="patrulla_marina";consider(marine?marineHullSegmentT(x,y,z,tx,ty,tz,e):segmentSphereT(x,y,z,tx,ty,tz,e.x,e.o.position.y+(e.t==="torre"?4.5:1.5),e.z,(e.r||1)+.6))}for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){if(v.destroyed||v===sourceVehicle)continue;consider(segmentSphereT(x,y,z,tx,ty,tz,v.x,(v.o?.position.y??Math.max(0,hAt(v.x,v.z)))+1,v.z,vehicleRadius(v.t)*.62))}const steps=Math.ceil(range/3);for(let k=1;k<=steps;k++){const t=k/steps;if(t>=best)break;const px=x+(tx-x)*t,pz=z+(tz-z)*t,py=y+(ty-y)*t;if(py<Math.max(hAt(px,pz),0)+.2){consider(t);break}}if(!Number.isFinite(best))return null;return{x:x+(tx-x)*best,y:y+(ty-y)*best,z:z+(tz-z)*best}}function updateBazookaReticle(dt){if(!bazookaReticleElement)return;const mode=!started||paused||over||playerFall?null:cv?.t==="tanc"?"tank":cv?.t==="llanxa_coets"?"boat":cv?.t==="heli_combat"&&(cv.rockets||0)>0?"missile":!cv&&!swimming&&bazookaEquipped&&(inv.bazooka||0)>0?"bazooka":null;if(!mode){bazookaReticleElement.style.display="none";bazookaReticleTimer=0;bazookaReticleHasHit=false;bazookaReticleMode=null;return}if(mode!==bazookaReticleMode){bazookaReticleMode=mode;bazookaReticleTimer=0;bazookaReticleHasHit=false}bazookaReticleTimer-=dt;if(bazookaReticleTimer<=0){bazookaReticleTimer=.08;let hit=null,locked=false;if(mode==="tank"){const gun=window.HUNTER_VEHICLES.turretShot(THREE,cv.o);if(gun){const o=gun.origin,d=gun.direction,focus={};hit=bazookaFirstSolidHit(o.x,o.y,o.z,d.x,d.y,d.z,220,cv);const aimPoint=hit||{x:o.x+d.x*160,y:o.y+d.y*160,z:o.z+d.z*160};bazookaReticleWorld.set(aimPoint.x,aimPoint.y,aimPoint.z);autoAimWeaponShot(o.x,o.y,o.z,d.x,d.y,d.z,220,.999,"heavy",focus);const target=focus.point,enemy=focus.target;locked=!!(hit&&target&&enemy&&Math.hypot(hit.x-target.x,hit.y-target.y,hit.z-target.z)<(enemy.r||2)+1.5)}}else if(mode==="boat"){const focus={},shot=combatBoatRocketAim(cv,focus),d=shot.direction;hit=focus.point||bazookaFirstSolidHit(shot.x,shot.y,shot.z,d[0],d[1],d[2],105,cv);const aimPoint=hit||{x:shot.x+d[0]*105,y:shot.y+d[1]*105,z:shot.z+d[2]*105};bazookaReticleWorld.set(aimPoint.x,aimPoint.y,aimPoint.z);locked=!!focus.target}else if(mode==="missile"){const focus={},shot=combatHeliMissileAim(cv,focus),d=shot.direction;hit=focus.point||bazookaFirstSolidHit(shot.x,shot.y,shot.z,d[0],d[1],d[2],HELI_MISSILE_RANGE,cv);const aimPoint=hit||{x:shot.x+d[0]*HELI_MISSILE_RANGE,y:shot.y+d[1]*HELI_MISSILE_RANGE,z:shot.z+d[2]*HELI_MISSILE_RANGE};bazookaReticleWorld.set(aimPoint.x,aimPoint.y,aimPoint.z);locked=!!focus.target}else{const fx=-Math.sin(P.hd),fz=-Math.cos(P.hd),ox=P.x+fx*1.35,oy=P.y+1.9,oz=P.z+fz*1.35,base=Math.hypot(1,.01),focus={},direction=autoAimWeaponShot(ox,oy,oz,fx/base,.01/base,fz/base,105,.94,"heavy",focus,72*HEAVY_SHOT_SPEED_FACTOR);hit=focus.point||bazookaFirstSolidHit(ox,oy,oz,direction[0],direction[1],direction[2]);locked=!!focus.target}bazookaReticleHasHit=!!hit||mode==="tank"||mode==="missile"||mode==="boat";if(hit)bazookaReticleWorld.set(hit.x,hit.y,hit.z);bazookaReticleElement.classList.toggle("locked",locked)}if(!bazookaReticleHasHit){bazookaReticleElement.style.display="none";return}cam.updateMatrixWorld();bazookaReticleScreen.copy(bazookaReticleWorld).project(cam);const p=bazookaReticleScreen;const vehicleAim=bazookaReticleMode==="tank"||bazookaReticleMode==="missile"||bazookaReticleMode==="boat",behind=!Number.isFinite(p.z)||p.z<-1||p.z>1,outside=behind||Math.abs(p.x)>1||Math.abs(p.y)>1;if(outside&&!vehicleAim){bazookaReticleElement.style.display="none";return}const sx=behind?.5:Math.max(.06,Math.min(.94,(p.x+1)/2)),sy=behind?.5:Math.max(.06,Math.min(.94,(1-p.y)/2));bazookaReticleElement.style.display="block";bazookaReticleElement.style.opacity=outside&&vehicleAim?"0.55":"1";bazookaReticleElement.style.left=sx*100+"%";bazookaReticleElement.style.top=sy*100+"%"}function autoAimArmoredShot(x,y,z,fx,fz,range,shotClass="heavy",projectileSpeed=0){return autoAimWeaponShot(x,y,z,fx,0,fz,range,.97,shotClass,null,projectileSpeed)}function sniperMuzzleWorld(heading,pitch=0){const rifle=pl.userData.sniper,muzzle=pl.userData.sniperMuzzle;if(!rifle||!muzzle)throw new Error("Falta el pivot del can\xf3 del franctirador");rifle.rotation.set(pitch,heading-P.hd,0,"YXZ");pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.updateMatrixWorld(true);return muzzle.getWorldPosition(new THREE.Vector3)}function sniperReticlePoint(focus,range=1e3){const ox=P.x+Math.sin(scopeYaw)*.12,oy=P.y+1.76,oz=P.z+Math.cos(scopeYaw)*.12,tx=ox+focus.dx*range,ty=oy+focus.dy*range,tz=oz+focus.dz*range,mx=(ox+tx)/2,mz=(oz+tz)/2,reach=Math.hypot(tx-ox,tz-oz)/2+8;let bestT=1;const consider=t=>{if(t!=null&&t>0&&t<bestT)bestT=t};for(const w of wallCandidates(mx,mz,reach)){if(!w.open&&!w.barbed)consider(segmentAabbT(ox,oy,oz,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1))}for(const b of buildingCandidates(mx,mz,reach)){if(b.rhp<=0)continue;const hit=b.hangar?hangarRoofSegmentT(ox,oy,oz,tx,ty,tz,b):segmentAabbT(ox,oy,oz,tx,ty,tz,b.x-b.w/2-.6,b.x+b.w/2+.6,b.fy+b.h-.4,b.fy+b.h+1.4,b.z-b.d/2-.6,b.z+b.d/2+.6);consider(hit)}for(const e of enemyCandidatesAt(mx,mz,reach+4)){if(e.hp<=0||e.destroyed)continue;consider(segmentSphereT(ox,oy,oz,tx,ty,tz,e.x,e.o.position.y+(e.t==="torre"?4.5:1.5),e.z,(e.r||1)+.6))}for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){if(v.destroyed)continue;const baseY=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));consider(segmentSphereT(ox,oy,oz,tx,ty,tz,v.x,baseY+1,v.z,vehicleRadius(v.t)*.62))}const samples=Math.ceil(range/3),surfaceDifference=t=>{const x=ox+(tx-ox)*t,y=oy+(ty-oy)*t,z=oz+(tz-oz)*t;return y-(bunkerProjectileSurface(x,z,y)+.04)};let prev=0;for(let k=1;k<=samples;k++){const t=k/samples;if(t>=bestT)break;if(surfaceDifference(t)<0){let lo=prev,hi=t;for(let j=0;j<9;j++){const mid=(lo+hi)*.5;if(surfaceDifference(mid)<0)hi=mid;else lo=mid}bestT=Math.min(bestT,hi);break}prev=t}return new THREE.Vector3(ox+(tx-ox)*bestT,oy+(ty-oy)*bestT,oz+(tz-oz)*bestT)}function sniperShotVector(muzzle,target,focus){const d=target.clone().sub(muzzle),heading=new THREE.Vector3(focus.dx,focus.dy,focus.dz);if(d.lengthSq()<16||d.dot(heading)<0)return heading;return d.normalize()}function cutBarbedWire(){if(!cisallaEquipped||!inv.cisalla||cv||swimming||playerFall||playerEject||over||fcd>0)return false;const reach=2.75,fx=-Math.sin(P.hd),fz=-Math.cos(P.hd);let target=null,closest=Infinity;for(const w of wallCandidates(P.x,P.z,reach+1)){if(!w.barbed||w.open||w.hp<=0||P.y+1.1<w.y0||P.y+1.1>w.y1)continue;const x=Math.max(w.x0,Math.min(w.x1,P.x)),z=Math.max(w.z0,Math.min(w.z1,P.z)),nx=x-P.x,nz=z-P.z,near=Math.hypot(nx,nz),facing=near>.08?(nx*fx+nz*fz)/near:((w.cx-P.x)*fx+(w.cz-P.z)*fz)/Math.max(.01,Math.hypot(w.cx-P.x,w.cz-P.z));if(near>reach||facing<.3)continue;if(near<closest){closest=near;target=w}}if(!target){fcd=.28;msg="Acosta\u2019t a una filferrada i mira-la per tallar-la.";msgT=1.6;return false}target.hp=0;target.cut=true;for(const piece of target.parts?.length?target.parts:[target.m]){piece.visible=false;piece.parent?.remove(piece)}const index=Wl.indexOf(target);if(index>=0){Wl.splice(index,1);wallGridCount=-1}const doorIndex=Dr.indexOf(target);if(doorIndex>=0)Dr.splice(doorIndex,1);pl.userData.cisallaCut=.46;fcd=.52;msg="Filferrada tallada silenciosament.";msgT=1.4;return true}const OPEN_RIDER_PISTOL=new Set(["bici","moto","moto_aquatica","barca_rems","windsurf","llanxa"]);function fire(){if(cisallaEquipped&&!cv)return cutBarbedWire();if(knifeEquipped&&!cv)return melee();if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);if(c=="tanc"||c=="tanqueta"){const gun=window.HUNTER_VEHICLES.turretShot(THREE,cv.o);if(!gun)return;const{origin:p,direction:d}=gun;if(c=="tanc"){fcd=.9;shoot(p.x,p.y,p.z,d.x,d.y,d.z,85,COMBAT_BALANCE.weapons.tank,8,"p",mS,2.2);Pj[Pj.length-1].life=4.4}else{fcd=TANKETTE_FIRE_INTERVAL;shoot(p.x,p.y,p.z,d.x,d.y,d.z,135,COMBAT_BALANCE.weapons.tankette,0,"p",mW,SMALL_ARMS_SCALE)}}else if(c==="heli"){throwHelicopterGrenade();return}else if(c=="heli_combat"){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*4.1*VS.heli_combat,y=cv.o.position.y+.15,z=cv.z+fz*4.1*VS.heli_combat;const[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,130,.91,"light",null,145);fcd=.12;shoot(x,y,z,ax,ay,az,145,COMBAT_BALANCE.weapons.attackCannon,0,"p",mB,.85)}else if(c=="llanxa_coets"){secondaryWeapon();return}else if(c&&OPEN_RIDER_PISTOL.has(c)){if(ammo<=0)return;const shot=riderSystem.firePistol(cv,(origin,direction)=>autoAimWeaponShot(origin.x,origin.y,origin.z,direction.x,direction.y,direction.z,75,.97,"light",null,130));if(!shot)return;ammo--;fcd=.22;const p=shot.origin,d=shot.direction;shoot(p.x,p.y,p.z,d.x,d.y,d.z,130,COMBAT_BALANCE.weapons.pistol,0,"p",mW,SMALL_ARMS_SCALE)}else if(!cv&&sniperEquipped&&inv.franctirador){if(sniperAmmo<=0){msg="El rifle no t\xe9 munici\xf3.";msgT=2;return}sniperAmmo--;fcd=1.05;pl.userData.firePose=.42;const heading=scopeActive?scopeYaw:hd,muzzle=sniperMuzzleWorld(heading,scopeActive?scopePitch:0),fx=-Math.sin(heading),fz=-Math.cos(heading),focus=scopeActive?window.HUNTER_SCOPE_FOCUS.create(P.x,P.y+1.76,P.z,scopeYaw,scopePitch):null,direction=focus?sniperShotVector(muzzle,sniperReticlePoint(focus),focus):new THREE.Vector3(...autoAimWeaponShot(muzzle.x,muzzle.y,muzzle.z,fx,0,fz,180,.984,"light",null,470));shoot(muzzle.x,muzzle.y,muzzle.z,direction.x,direction.y,direction.z,470,COMBAT_BALANCE.weapons.sniper,0,"p",mW,SMALL_ARMS_SCALE);msg="Rifle: "+sniperAmmo+" cartutxos.";msgT=1.5}else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9-(playerCrouched?.48:0),z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,105,.94,"heavy",null,72*HEAVY_SHOT_SPEED_FACTOR);shoot(x,y,z,ax,ay,az,72,COMBAT_BALANCE.weapons.bazooka,18,"pb",mS,3);Pj[Pj.length-1].life=3.8;Pj[Pj.length-1].weapon="bazooka";msg="Bazooka: "+(inv.bazooka||0)+" coets restants.";msgT=2;setDis(false)}else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5-(playerCrouched?.48:0),z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,75,.97,"light",null,130);shoot(x,y,z,ax,ay,az,130,COMBAT_BALANCE.weapons.pistol,0,"p",mW,SMALL_ARMS_SCALE)}else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}function segmentAabbT(x0,y0,z0,x1,y1,z1,minX,maxX,minY,maxY,minZ,maxZ){let lo=0,hi=1;const clip=(p,d,mn,mx)=>{if(Math.abs(d)<1e-9)return p>=mn&&p<=mx;let a=(mn-p)/d,b=(mx-p)/d;if(a>b){const q=a;a=b;b=q}lo=Math.max(lo,a);hi=Math.min(hi,b);return lo<=hi};return clip(x0,x1-x0,minX,maxX)&&clip(y0,y1-y0,minY,maxY)&&clip(z0,z1-z0,minZ,maxZ)&&hi>=0&&lo<=1?Math.max(0,lo):null}function segmentSphereT(x0,y0,z0,x1,y1,z1,cx,cy,cz,r){const dx=x1-x0,dy=y1-y0,dz=z1-z0,mx=x0-cx,my=y0-cy,mz=z0-cz,a=dx*dx+dy*dy+dz*dz,c=mx*mx+my*my+mz*mz-r*r;if(c<=0)return 0;if(a<1e-12)return null;const b=2*(mx*dx+my*dy+mz*dz),disc=b*b-4*a*c;if(disc<0)return null;const t=(-b-Math.sqrt(disc))/(2*a);return t>=0&&t<=1?t:null}function marineHullSegmentT(x0,y0,z0,x1,y1,z1,boat){const scale=VS.llanxa,baseY=boat.o.position.y,sine=Math.sin(boat.hd||0),cosine=Math.cos(boat.hd||0);const local=(x,z)=>[(x-boat.x)*cosine-(z-boat.z)*sine,(x-boat.x)*sine+(z-boat.z)*cosine];const[ax,az]=local(x0,z0),[bx,bz]=local(x1,z1);const hull=segmentAabbT(ax,y0,az,bx,y1,bz,-1.85*scale,1.85*scale,baseY-.22*scale,baseY+1.08*scale,-4.5*scale,4.5*scale);const cabin=segmentAabbT(ax,y0,az,bx,y1,bz,-1.5*scale,1.5*scale,baseY+1.02*scale,baseY+2.12*scale,-1*scale,2.85*scale);return hull==null?cabin:cabin==null?hull:Math.min(hull,cabin)}function hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b){const segs=b.roof?.userData?.hitSegments;if(!segs?.length)return null;let best=null;for(const s of segs){const rz=s.a-Math.PI/2,c=Math.cos(rz),sn=Math.sin(rz),ax=x0-b.x-s.x,ay=y0-b.fy-s.y,az=z0-b.z,bx=x1-b.x-s.x,by=y1-b.fy-s.y,bz=z1-b.z,lx0=ax*c+ay*sn,ly0=-ax*sn+ay*c,lx1=bx*c+by*sn,ly1=-bx*sn+by*c,t=segmentAabbT(lx0,ly0,az,lx1,ly1,bz,-s.chord/2,s.chord/2,-.16,.16,-s.depth/2,s.depth/2);if(t!=null&&(best==null||t<best))best=t}return best}function updPj(dt){for(let i=Pj.length-1;i>=0;i--){const p=Pj[i],x0=p.x,y0=p.y,z0=p.z,x1=x0+p.vx*dt,y1=y0+p.vy*dt,z1=z0+p.vz*dt,sx=x1-x0,sy=y1-y0,sz=z1-z0,horiz=Math.hypot(sx,sz),mx=(x0+x1)/2,mz=(z0+z1)/2,reach=horiz/2;p.life-=dt;let bestT=p.life<=0?1:Infinity,kind=p.life<=0?"expire":null,target=null;const consider=(t,k,o)=>{if(t!=null&&t>=0&&t<=1&&t<bestT){bestT=t;kind=k;target=o}};for(const w of wallCandidates(mx,mz,reach+1)){if(w.open||w.barbed&&p.shotClass==="light")continue;consider(segmentAabbT(x0,y0,z0,x1,y1,z1,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1),"wall",w)}for(const b of buildingCandidates(mx,mz,reach+1)){if(b.rhp<=0)continue;const bt=b.hangar?hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b):segmentAabbT(x0,y0,z0,x1,y1,z1,b.x-b.w/2-.6,b.x+b.w/2+.6,b.fy+b.h-.4,b.fy+b.h+1.4,b.z-b.d/2-.6,b.z+b.d/2+.6);consider(bt,"building",b)}for(const civilian of prisonerSystem.entities){if(civilian.hp<=0||civilian.destroyed)continue;const radius=civilian.radius||.55;consider(segmentAabbT(x0,y0,z0,x1,y1,z1,civilian.x-radius,civilian.x+radius,civilian.y,civilian.y+(civilian.height||1.85),civilian.z-radius,civilian.z+radius),"civilian",civilian)}if(p.own==="p"||p.own==="pb"){for(const u of enemyCandidatesAt(mx,mz,reach+vehicleRadius("llanxa")*.62+4)){const marine=u.t==="patrulla_marina",cy=u.o.position.y+(u.t==="torre"?4.5:1.5),radius=(u.r||1)+.6;consider(marine?marineHullSegmentT(x0,y0,z0,x1,y1,z1,u):segmentSphereT(x0,y0,z0,x1,y1,z1,u.x,cy,u.z,radius),"enemy",u)}}for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){if((p.own==="p"||p.own==="pb")&&v===cv)continue;const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),rr=vehicleRadius(v.t)*.62;consider(segmentSphereT(x0,y0,z0,x1,y1,z1,v.x,vy+1,v.z,rr),"vehicle",v)}if(p.own==="e"&&!cv)consider(segmentSphereT(x0,y0,z0,x1,y1,z1,P.x,P.y+(playerCrouched?1.25:1.5),P.z,playerCrouched?1.05:1.2),"player",P);const sampleN=Math.max(1,Math.ceil(Math.hypot(sx,sy,sz)/1.15));for(let k=1;k<=sampleN;k++){const t=k/sampleN;if(t>=bestT)break;const x=x0+sx*t,y=y0+sy*t,z=z0+sz*t,ground=bunkerProjectileSurface(x,z,y)+.04;if(y<ground){consider(t,"terrain",null);break}const p=activeBunker?.basement?buildingLocalPoint(activeBunker,x,z):null;const underground=!!p&&y<activeBunker.fy-1&&Math.abs(p.x)<19&&Math.abs(p.z)<16;const tree=underground?null:treeAt(x,z,.5);if(tree&&y<Math.max(hAt(x,z),0)+(tree.p?6.5:1.5)){consider(t,"tree",tree);break}}const hit=bestT!==Infinity;const t=hit?bestT:1;p.x=x0+sx*t;p.y=y0+sy*t;p.z=z0+sz*t;p.o.position.set(p.x,p.y,p.z);if(!hit)continue;const ineffective=projectileImpactImmune(kind,target,p);if(p.spl&&ineffective)spawnBulletImpact("ricochet",p.x,p.y,p.z,p);if(!p.spl){const solid=kind==="wall"||kind==="building"||kind==="vehicle"||kind==="enemy";if(ineffective)spawnBulletImpact("ricochet",p.x,p.y,p.z,p);else if(solid&&!(kind==="enemy"&&(target.t==="soldat"||target.t==="general")))spawnBulletImpact("spark",p.x,p.y,p.z,p);if(kind==="wall"){if(!isMilitaryWall(target))dmgW(target,p.dmg)}else if(kind==="building"){if(!isMilitaryBuilding(target)){target.rhp-=p.dmg;if(target.rhp<=0)roofBreak(target)}}else if(kind==="tree"&&target?.p)dmgP(target,p.dmg);else if(kind==="enemy"){if(target.t!=="torre"&&!(p.shotClass==="light"&&isArmoredVehicleType(target.t)))hurtE(target,p.dmg,p)}else if(kind==="vehicle")damageVehicle(target,p.dmg,1,"light",p);else if(kind==="civilian"){if(prisonerSystem.hurt(target,p.dmg,p))spawnBulletImpact("blood",p.x,p.y,p.z,p)}else if(kind==="player"){const before=hp;hurtP(p.dmg,p.own==="e",{type:"bullet",x:p.sx,y:p.sy,z:p.sz});if(hp<before)spawnBulletImpact("blood",p.x,p.y,p.z,p)}}if(p.spl)boom(p.x,p.y,p.z,p.spl,p.dmg,p.own,p);world.remove(p.o);Pj.splice(i,1)}}function updFx(dt){const pending=pl.userData.grenadePending;if(pending){pending.t-=dt;if(pending.t<=0){launchGrenade(pending);pl.userData.grenadeReleased=true;pl.userData.grenadePending=null}}for(let i=grenades.length-1;i>=0;i--){const g=grenades[i],x0=g.x,y0=g.y,z0=g.z;g.t-=dt;g.vy-=24*dt;const x1=x0+g.vx*dt,y1=y0+g.vy*dt,z1=z0+g.vz*dt,mx=(x0+x1)/2,mz=(z0+z1)/2,reach=Math.hypot(x1-x0,z1-z0)/2+.5;let hitT=null;for(const w of wallCandidates(mx,mz,reach))if(!w.open){const q=segmentAabbT(x0,y0,z0,x1,y1,z1,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);if(q!=null&&(hitT==null||q<hitT))hitT=q}for(const b of buildingCandidates(mx,mz,reach)){const q=b.hangar?hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b):segmentAabbT(x0,y0,z0,x1,y1,z1,b.x-b.w/2,b.x+b.w/2,b.fy+b.h-.35,b.fy+b.h+.8,b.z-b.d/2,b.z+b.d/2);if(q!=null&&(hitT==null||q<hitT))hitT=q}const q=hitT==null?1:hitT;g.x=x0+(x1-x0)*q;g.y=y0+(y1-y0)*q;g.z=z0+(z1-z0)*q;g.o.position.set(g.x,g.y,g.z);g.o.rotation.x+=dt*8;g.o.rotation.z+=dt*5;const surface=bunkerProjectileSurface(g.x,g.z,g.y,true);if(hitT!=null||g.t<=0||g.y<=surface){g.y=Math.max(g.y,surface);boom(g.x,g.y,g.z,16,COMBAT_BALANCE.weapons.grenade,"b",{weapon:"grenade",own:"b",spl:16,x:g.x,y:g.y,z:g.z,sx:g.sx,sy:g.sy,sz:g.sz,o:g.o});world.remove(g.o);grenades.splice(i,1)}}for(let i=bombs.length-1;i>=0;i--){const b=bombs[i];if(b.falling&&!b.landed){const oldY=b.y;b.vy=Math.max(-65,(b.vy||0)-24*dt);const nextY=oldY+b.vy*dt;let support=Math.max(groundAt(b.x,b.z,oldY),wy(b.x,b.z,elapsed))+.24;for(const building of buildingCandidates(b.x,b.z,1)){if(building.rb||building.rhp<=0)continue;const roof=solidRoofAt(building,b.x,b.z);if(roof&&oldY>=roof.top&&nextY<=roof.top+.24)support=Math.max(support,roof.top+.24)}if(nextY<=support){b.y=support;b.vy=0;b.landed=true;b.falling=false}else b.y=nextY;b.o.position.y=b.y}b.t=Math.max(0,b.t-dt);if(b.t>0)window.HUNTER_EXPLOSIVE_VISUALS.update(b.o,b.t);if(b.t<=0){boom(b.x,b.y,b.z,48,COMBAT_BALANCE.weapons.c4,"b");world.remove(b.o);bombs.splice(i,1)}}for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.life-=dt;f.o.scale.setScalar(1+(.6-Math.max(0,f.life))*f.s);f.o.material.opacity=Math.max(0,f.life/.6)*f.opacity;if(f.life<=0){world.remove(f.o);f.o.material.dispose();fx.splice(i,1)}}updateBulletImpacts(dt)}const enemyIsVehicle=u=>u.t==="jeep"||u.t==="tanqueta"||u.t==="tanc"||u.t==="patrulla_marina";const enemyBodyRadius=u=>u.t==="torre"?2.4:1.05;const enemyRouteRadius=u=>enemyIsVehicle(u)?Math.hypot(vehicleBox(u).w,vehicleBox(u).d)/2+.3:enemyBodyRadius(u)+.15;let enemyPathBudget=2,enemyNodeBudget=160;const enemyGroundAt=(u,x,z)=>u.basement?u.gy:enemyIsVehicle(u)?hAt(x,z):groundAt(x,z,u.walkY??u.o?.position.y??-Infinity);function enemyWallBox(w){return{x:(w.x0+w.x1)/2,z:(w.z0+w.z1)/2,w:w.x1-w.x0,d:w.z1-w.z0,hd:0}}function enemySolidAt(u,x,z,hd,route=false){const veh=enemyIsVehicle(u),r=route?enemyRouteRadius(u):veh?enemyRouteRadius(u):enemyBodyRadius(u),y=u.gy??enemyGroundAt(u,x,z);if(Math.abs(x)>H-r||Math.abs(z)>H-r||!u.basement&&(enemyGroundAt(u,x,z)<-.8||treeHit(x,z,r)))return false;const box=veh&&!route?vehicleBox(u,x,z,hd):null;if(box){box.w+=.4;box.d+=.4}for(const w of wallCandidates(x,z,r)){if(w.open||w.playerBlock===false||w.y1<y+.15||w.y0>y+(veh?4:3.4))continue;if(box?obbOverlap(box,enemyWallBox(w)):x>w.x0-r&&x<w.x1+r&&z>w.z0-r&&z<w.z1+r)return false}if(route&&!veh){for(const v of vehicleCandidatesAt(x,z,r+22)){if(v===u||v.destroyed||Math.abs(vehicleY(v)-y)>5)continue;if(circleVehicleOverlap(x,z,r+.25,v))return false}}return true}function enemyBodiesClear(u,x,z,hd){const veh=enemyIsVehicle(u),r=enemyBodyRadius(u),y=u.gy??enemyGroundAt(u,x,z),box=veh?vehicleBox(u,x,z,hd):null;if(box){box.w+=.5;box.d+=.5}for(const v of vehicleCandidatesAt(x,z,48)){if(v===u||v.destroyed||Math.abs(vehicleY(v)-y)>5)continue;if(veh?obbOverlap(box,vehicleBox(v)):circleVehicleOverlap(x,z,r+.3,v))return false}for(const v of enemyCandidatesAt(x,z,32)){if(v===u||v.destroyed||enemyIsVehicle(v)||Math.abs((v.gy??enemyGroundAt(v,v.x,v.z))-y)>4)continue;if(veh?circleVehicleOverlap(v.x,v.z,enemyBodyRadius(v)+.3,{...u,x:x,z:z,hd:hd}):Math.hypot(x-v.x,z-v.z)<r+enemyBodyRadius(v)+.3)return false}return true}function enemySweep(u,ax,az,bx,bz,fromHd,toHd,dynamic=true,route=false){const angle=enemyIsVehicle(u)?wrapAngle(toHd-fromHd):0;const n=Math.max(1,Math.ceil((Math.hypot(bx-ax,bz-az)+Math.abs(angle)*enemyRouteRadius(u))/(route?1.2:.45)));for(let i=0;i<=n;i++){const t=i/n,x=ax+(bx-ax)*t,z=az+(bz-az)*t,hd=fromHd+angle*t;if(!enemySolidAt(u,x,z,hd,route)||dynamic&&!enemyBodiesClear(u,x,z,hd))return false}return true}function enemyMoveClear(u,x,z,hd){return enemySolidAt(u,x,z,hd)&&enemyBodiesClear(u,x,z,hd)}function enemyReindex(u,oldX,oldZ){const before=vehicleCellKey(Math.floor(oldX/VEHICLE_CELL),Math.floor(oldZ/VEHICLE_CELL)),after=vehicleCellKey(Math.floor(u.x/VEHICLE_CELL),Math.floor(u.z/VEHICLE_CELL));if(before===after)return;for(const grid of enemyIsVehicle(u)?[enemyGrid,vehicleGrid]:[enemyGrid]){const bucket=grid.get(before),i=bucket?.indexOf(u)??-1;if(i>=0)bucket.splice(i,1);addVehicleToGrid(grid,u)}}function enemyFindPath(u,tx,tz){if(u.navSearch)return u.navSearch();const step=Math.max(2,enemyRouteRadius(u)*.7),sx=u.x,sz=u.z,dist=Math.hypot(tx-sx,tz-sz),reach=Math.min(dist,140);if(dist<.1)return[];const gx=sx+(tx-sx)*reach/dist,gz=sz+(tz-sz)*reach/dist,pad=60,minX=Math.min(sx,gx)-pad,maxX=Math.max(sx,gx)+pad,minZ=Math.min(sz,gz)-pad,maxZ=Math.max(sz,gz)+pad;const nodes=new Map,valid=new Map,heap=[],key=(x,z)=>x+","+z,heur=(x,z)=>Math.hypot(gx-x,gz-z);function push(n){heap.push(n);let i=heap.length-1;while(i){const p=i-1>>1;if(heap[p].f<=n.f)break;heap[i]=heap[p];i=p}heap[i]=n}function pop(){const top=heap[0],last=heap.pop();if(heap.length){let i=0;while(2*i+1<heap.length){let j=2*i+1;if(j+1<heap.length&&heap[j+1].f<heap[j].f)j++;if(heap[j].f>=last.f)break;heap[i]=heap[j];i=j}heap[i]=last}return top}const start={ix:0,iz:0,x:sx,z:sz,g:0,f:heur(sx,sz),h:heur(sx,sz)};nodes.set("0,0",start);push(start);let best=start;let count=0;const advance=()=>{while(heap.length&&count<1600){if(enemyNodeBudget<=0)return null;enemyNodeBudget--;count++;const n=pop();if(n.closed||nodes.get(key(n.ix,n.iz))!==n)continue;n.closed=true;if(n.h<best.h)best=n;if(n.h<step*1.2){best=n;break}for(const[dx,dz]of[[1,0],[0,1],[-1,0],[0,-1],[1,1],[-1,1],[-1,-1],[1,-1]]){const ix=n.ix+dx,iz=n.iz+dz,k=key(ix,iz),x=sx+ix*step,z=sz+iz*step,old=nodes.get(k),g=n.g+step*Math.hypot(dx,dz);if(x<minX||x>maxX||z<minZ||z>maxZ||old?.closed||old&&old.g<=g)continue;const hd=Math.atan2(n.x-x,n.z-z);if(!valid.has(k))valid.set(k,enemySolidAt(u,x,z,hd,true));if(!valid.get(k))continue;const r=enemyRouteRadius(u),mx=(n.x+x)/2,mz=(n.z+z)/2,y=u.gy??enemyGroundAt(u,mx,mz);if(!u.basement&&treeHit(mx,mz,r)||!u.basement&&enemyGroundAt(u,mx,mz)<-.8||!enemyIsVehicle(u)&&!enemySolidAt(u,mx,mz,hd,true)||wallCandidates(mx,mz,r+step).some(w=>!w.open&&w.playerBlock!==false&&w.y1>=y+.15&&w.y0<=y+4&&segmentAabbT(n.x,0,n.z,x,0,z,w.x0-r,w.x1+r,-1,1,w.z0-r,w.z1+r)!=null))continue;const h=heur(x,z),next={ix:ix,iz:iz,x:x,z:z,g:g,h:h,f:g+h,parent:n};nodes.set(k,next);push(next)}}u.navSearch=null;if(best===start||start.h-best.h<step*.5)return[];const path=[];for(let n=best;n.parent;n=n.parent)path.push({x:n.x,z:n.z});return path.reverse()};u.navSearch=advance;return advance()}function mvE(u,s,tx=u.tx,tz=u.tz){if(!(s>0)||!Number.isFinite(tx)||!Number.isFinite(tz))return;const oldHd=u.navHd??u.o.rotation.y,veh=enemyIsVehicle(u),dt=Math.min(.1,s/Math.max(.1,u.sp));u.navRetry=Math.max(0,(u.navRetry||0)-dt);const goalChanged=!u.navGoal||Math.hypot(tx-u.navGoal.x,tz-u.navGoal.z)>6;if(goalChanged){u.navPath=[];u.navSearch=null;u.navGoal={x:tx,z:tz};u.navRetry=0}let target={x:tx,z:tz},hd=Math.atan2(u.x-tx,u.z-tz);u.navDirectT=(u.navDirectT||0)-dt;if(goalChanged||u.navDirectT<=0){u.navDirect=enemySweep(u,u.x,u.z,tx,tz,oldHd,hd,false,!veh);u.navDirectT=.45}const direct=u.navDirect;if(!direct){if(!u.navPath?.length&&u.navRetry<=0&&enemyPathBudget>0){enemyPathBudget--;const path=enemyFindPath(u,tx,tz);if(path!==null){u.navPath=path;u.navRetry=1.2}}while(u.navPath?.length&&Math.hypot(u.navPath[0].x-u.x,u.navPath[0].z-u.z)<.6)u.navPath.shift();if(u.navPath?.length)target=u.navPath[0];else{u.hd=oldHd;return}hd=Math.atan2(u.x-target.x,u.z-target.z)}else{u.navPath=[];u.navSearch=null}const distance=Math.min(s,Math.hypot(target.x-u.x,target.z-u.z));const tryMove=(angle,length=distance,reverse=false)=>{const nextHd=veh?reverse?oldHd:oldHd+Math.max(-dt*1.5,Math.min(dt*1.5,wrapAngle(angle-oldHd))):angle;const moveHd=veh?nextHd+(reverse?Math.PI:0):angle;const travel=veh&&!reverse?length*Math.max(0,1-Math.abs(wrapAngle(angle-nextHd))*2):length;const nx=u.x-Math.sin(moveHd)*travel,nz=u.z-Math.cos(moveHd)*travel;if(!enemySweep(u,u.x,u.z,nx,nz,oldHd,nextHd))return false;const ox=u.x,oz=u.z;u.x=nx;u.z=nz;if(!veh)u.walkY=enemyGroundAt(u,nx,nz);u.hd=nextHd;u.navHd=nextHd;enemyReindex(u,ox,oz);return true};if(tryMove(hd)){u.navBlocked=0;return}const side=u.avoidSide||1;for(const angle of[.45,.9,1.35])if(tryMove(hd+side*angle)||tryMove(hd-side*angle))return;u.hd=oldHd;u.navBlocked=(u.navBlocked||0)+dt;if(u.navBlocked>.6){if(tryMove(oldHd+Math.PI,distance*.5,true)){u.navPath=[];u.navSearch=null;u.navRetry=0}if(u.navBlocked>1.5){u.navPath=[];u.navRetry=0;u.avoidSide=-side;u.navBlocked=0;if(!u.interCompoundPatrol)u.wt=0}}}function prepareEnemyNavigation(){return drainBuildSteps(prepareEnemyNavigationSteps())}function*prepareEnemyNavigationSteps(){for(const u of E)if(u.t!=="patrulla_marina")u.o.position.set(u.x,u.gy??enemyGroundAt(u,u.x,u.z),u.z);rebuildVehicleGrid();let prepared=0;for(const u of E){yield{stage:"Navegaci\xf3 enemiga",completed:prepared++,total:E.length,unit:"enemics"};if(u.t==="torre"||u.t==="patrulla_marina")continue;if(!enemyMoveClear(u,u.x,u.z,u.hd)){const ox=u.x,oz=u.z;let found=false;for(let radius=2;radius<=48&&!found;radius+=2)for(let i=0;i<24;i++){if(i%8===0)yield{stage:"Desbloquejant empla\xe7aments enemics",completed:prepared,total:E.length,unit:"enemics"};const a=i*Math.PI/12,x=ox+Math.cos(a)*radius,z=oz+Math.sin(a)*radius;const bunker=u.t==="general"?u.basement:null;if(bunker?.basement){const q=buildingLocalPoint(bunker,x,z),room=bunker.basement.generalRoom;if(room?q.x<room.xMin||q.x>room.xMax||q.z<room.zMin||q.z>room.zMax:Math.abs(q.x)>bunker.basement.halfX-1.5||Math.abs(q.z)>bunker.basement.halfZ-1.5)continue}if(enemyMoveClear(u,x,z,u.hd)){u.x=x;u.z=z;enemyReindex(u,ox,oz);found=true;break}}}u.navHd=u.hd;u.navPath=[];u.navGoal=null;u.o.position.set(u.x,u.gy??enemyGroundAt(u,u.x,u.z),u.z);u.o.rotation.y=u.hd}}const MARINE_PATROL_MIN=5,MARINE_PATROL_MAX=10;const marineAngle=a=>Math.atan2(Math.sin(a),Math.cos(a));function createMarinePatrolVisual(boat){const metal=3226685,paint=5860183;for(const side of[-1,1]){const soldier=window.HUNTER_CHARACTERS.createCommando(THREE);soldier.scale.setScalar(.43);soldier.position.set(side*.55,1.18,side<0?.9:1.75);soldier.rotation.y=side*.18;soldier.userData.ar.rotation.x=-.55;soldier.userData.al.rotation.x=-.72;boat.add(soldier)}const barrel=(root,r,length,y,z,color)=>{const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,length,8),M(color,"metal"));o.rotation.x=Math.PI/2;o.position.set(0,y,z);root.add(o);return o};const createMount=(x,rocket)=>{const mount=new THREE.Group;mount.position.set(x,2.08,rocket?.1:-.4);boat.add(mount);bx(mount,.65,.27,.65,metal,0,0,0,"metal");bx(mount,rocket?.78:.4,rocket?.45:.32,.75,paint,0,.28,-.43,"paint");if(rocket){for(const off of[-.18,.18])barrel(mount,.145,1.45,.29,-1.21,metal).position.x=off}else barrel(mount,.115,1.65,.29,-1.25,metal);const muzzle=new THREE.Object3D;muzzle.position.set(0,.29,rocket?-1.95:-2.075);mount.add(muzzle);return{mount:mount,muzzle:muzzle}};const machineGun=createMount(-.8,false),rockets=createMount(.8,true);boat.userData.marineWeapons={machineGun:machineGun,rockets:rockets}}function marineSeaClear(x,z,r=10){return Math.abs(x)<H-28&&Math.abs(z)<H-28&&hAt(x,z)<-3.3&&hAt(x+r*.65,z)<-2.7&&hAt(x-r*.65,z)<-2.7&&hAt(x,z+r*.65)<-2.7&&hAt(x,z-r*.65)<-2.7}function marineTrafficClear(u,x,z,margin=23){for(const v of vehicleCandidatesAt(x,z,margin+22)){if(v===u||v.destroyed)continue;const r=vehicleRadius(vehicleHitType(v.t));if(Math.hypot(v.x-x,v.z-z)<margin+r*.55)return false}return true}function marinePickWaypoint(u){for(let i=0;i<28;i++){const a=R()*Math.PI*2,d=130+R()*390,x=u.home.x+Math.cos(a)*d,z=u.home.z+Math.sin(a)*d;if(marineSeaClear(x,z,12)){u.tx=x;u.tz=z;u.wt=12+R()*12;return}}u.tx=u.home.x;u.tz=u.home.z;u.wt=8}function spawnMarinePatrols(){return drainBuildSteps(spawnMarinePatrolsSteps())}function*spawnMarinePatrolsSteps(){const count=MARINE_PATROL_MIN+Math.floor(R()*(MARINE_PATROL_MAX-MARINE_PATROL_MIN+1));const starts=islands.slice().sort(()=>R()-.5),spots=[];const place=(x,z,hd)=>{if(!marineSeaClear(x,z,13)||spots.some(p=>Math.hypot(p.x-x,p.z-z)<130)||V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+20))return false;spots.push({t:"patrulla_marina",x:x,z:z,hd:hd});return true};for(let pass=0;pass<5&&spots.length<count;pass++)for(const island of starts){if(spots.length>=count)break;for(let attempt=0;attempt<24;attempt++){if(attempt%8===0)yield{stage:"Empla\xe7ant patrulles navals",completed:spots.length,total:count,unit:"patrulles"};const a=R()*Math.PI*2,dist=island.r*(1.05+R()*.65)+30,x=island.x+Math.cos(a)*dist,z=island.z+Math.sin(a)*dist;if(place(x,z,a+Math.PI/2))break}}for(let attempt=0;spots.length<count&&attempt<3500;attempt++){if(attempt%16===0)yield{stage:"Mar obert per a les patrulles",completed:spots.length,total:count,unit:"patrulles"};const x=(R()*2-1)*(H-65),z=(R()*2-1)*(H-65);place(x,z,R()*Math.PI*2)}world.userData.marinePatrolPositions=spots;world.userData.marinePatrols={target:count,spawned:spots.length};if(seedSearchMode)return spots;for(const p of spots){yield{stage:"Construint patrulles navals",completed:null,total:spots.length};const u=mkEn("patrulla_marina",p.x,p.z);u.hd=p.hd;u.navHd=p.hd;u.home={x:p.x,z:p.z};u.speed=12+R()*5;u.yawRate=0;u.orbitSign=R()<.5?-1:1;u.mgCd=.8+R();u.rocketCd=3+R()*3;u.o.position.set(p.x,wy(p.x,p.z,0)+.2,p.z);u.o.rotation.y=p.hd;marinePickWaypoint(u)}return spots}function marineAimGun(u,weapon,target,dt){const root=u.o,mount=weapon.mount;root.updateWorldMatrix(true,true);const origin=weapon.muzzle.getWorldPosition(new THREE.Vector3);const worldDir=new THREE.Vector3(target.x-origin.x,target.y-origin.y,target.z-origin.z);const local=worldDir.clone().applyQuaternion(root.getWorldQuaternion(new THREE.Quaternion).invert());const wanted=Math.atan2(-local.x,-local.z),elevation=Math.max(-.45,Math.min(1.45,Math.atan2(local.y,Math.hypot(local.x,local.z)))),diff=marineAngle(wanted-mount.rotation.y);mount.rotation.y+=Math.max(-1.9*dt,Math.min(1.9*dt,diff));mount.rotation.x+=Math.max(-1.25*dt,Math.min(1.25*dt,elevation-mount.rotation.x));root.updateWorldMatrix(true,true);return Math.abs(marineAngle(wanted-mount.rotation.y))<.16&&Math.abs(elevation-mount.rotation.x)<.16}function marineFire(u,weapon,target,heavy){const p=weapon.muzzle.getWorldPosition(new THREE.Vector3),dy=target.y-p.y+rn(-1,1)*(DIF<=.6?11:DIF<1?3:1),dx=target.x-p.x+rn(-1,1)*(DIF<=.6?heavy?23:18:DIF<1?7:2),dz=target.z-p.z+rn(-1,1)*(DIF<=.6?heavy?23:18:DIF<1?7:2),n=Math.max(.01,Math.hypot(dx,dy,dz));if(!weaponAimClear(p.x,p.y,p.z,target.x,target.y,target.z))return false;for(let i=1;i<8;i++){const k=i/8,x=p.x+(target.x-p.x)*k,z=p.z+(target.z-p.z)*k,y=p.y+(target.y-p.y)*k;if(hAt(x,z)>y-.35)return false}const speed=heavy?75:125;shoot(p.x,p.y,p.z,dx/n,dy/n,dz/n,speed,heavy?COMBAT_BALANCE.weapons.boatRocket:COMBAT_BALANCE.weapons.rifle,heavy?8:0,"e",heavy?mS:mW,heavy?2:SMALL_ARMS_SCALE,u);if(heavy){Pj[Pj.length-1].life=Math.max(2.2,n/(speed*HEAVY_SHOT_SPEED_FACTOR)+.75)}return true}function updateMarinePatrol(u,dt){const q=cv||P,targetY=cv?cv.o.position.y+(VT[cv.t]?.m==="a"?2:1.6):P.y+1.45,distance=Math.hypot(q.x-u.x,q.z-u.z);u.marineAcc=(u.marineAcc||0)+dt;if(distance>700&&u.marineAcc<.1)return;dt=Math.min(.12,u.marineAcc);u.marineAcc=0;u.marineSightT=(u.marineSightT||0)-dt;if(u.marineSightT<=0){u.marineSightT=.25;const aerial=!!cv&&VT[cv.t]?.m==="a";u.marineVisible=distance<470&&(aerial?weaponAimClear(u.x,u.o.position.y+3,u.z,q.x,targetY,q.z):sight(u.x,u.z,q.x,q.z,u.o.position.y+3))}const hostile=!cheats.invisible&&!disg&&!over&&distance<470&&!!u.marineVisible;u.wt-=dt;u.mgCd-=dt;u.rocketCd-=dt;if(!Number.isFinite(u.tx)||u.wt<=0||Math.hypot(u.tx-u.x,u.tz-u.z)<35)marinePickWaypoint(u);let goalX=u.tx,goalZ=u.tz;if(hostile){if(distance>165){goalX=q.x;goalZ=q.z}else{const radialX=(u.x-q.x)/Math.max(1,distance),radialZ=(u.z-q.z)/Math.max(1,distance);goalX=q.x+radialX*135-radialZ*u.orbitSign*150;goalZ=q.z+radialZ*135+radialX*u.orbitSign*150}}const wanted=Math.atan2(u.x-goalX,u.z-goalZ);let best=wanted,bestScore=Infinity,open=false;for(const offset of[0,.27,-.27,.55,-.55,.9,-.9,1.35,-1.35,Math.PI]){const hd=marineAngle(wanted+offset),fx=-Math.sin(hd),fz=-Math.cos(hd);const safe=marineSeaClear(u.x+fx*36,u.z+fz*36,11)&&marineSeaClear(u.x+fx*69,u.z+fz*69,11)&&marineTrafficClear(u,u.x+fx*34,u.z+fz*34,17);if(!safe)continue;const score=Math.abs(marineAngle(hd-wanted))*.8+Math.abs(marineAngle(hd-u.hd))*.55;if(score<bestScore){bestScore=score;best=hd;open=true}}if(!open){best=marineAngle(u.hd+u.orbitSign*1.25);if(u.wt>2)u.wt=2}const steer=marineAngle(best-u.hd),maxYaw=u.speed>12?.27:.39,desiredYaw=Math.max(-maxYaw,Math.min(maxYaw,steer*1.1));u.yawRate=(u.yawRate||0)+(desiredYaw-(u.yawRate||0))*(1-Math.exp(-2.3*dt));u.hd=marineAngle(u.hd+u.yawRate*dt);const bowX=-Math.sin(u.hd),bowZ=-Math.cos(u.hd),nextSpeed=open?Math.abs(steer)>.75?9:hostile?20:17:2.5;u.speed+=(nextSpeed-u.speed)*(1-Math.exp(-1.15*dt));const nx=u.x+bowX*u.speed*dt,nz=u.z+bowZ*u.speed*dt;if(marineSeaClear(nx,nz,10)&&marineTrafficClear(u,nx,nz,16)){const ox=u.x,oz=u.z;u.x=nx;u.z=nz;enemyReindex(u,ox,oz)}else{u.speed=Math.max(0,u.speed-13*dt);u.wt=Math.min(u.wt,.5)}u.o.position.set(u.x,wy(u.x,u.z,elapsed)+.2,u.z);const wave=Math.sin(elapsed*2+u.x*.03+u.z*.024);u.o.rotation.set(wave*.028,u.hd,-u.yawRate*.12+wave*.024,"YXZ");const weapons=u.o.userData.marineWeapons;if(!hostile||distance>245)return;const target=new THREE.Vector3(q.x,targetY,q.z);const gunAligned=marineAimGun(u,weapons.machineGun,target,dt);const rocketAligned=marineAimGun(u,weapons.rockets,target,dt);if(distance<170&&gunAligned&&u.mgCd<=0&&marineFire(u,weapons.machineGun,target,false))u.mgCd=.28+rn(0,.15);if(distance<245&&rocketAligned&&u.rocketCd<=0&&marineFire(u,weapons.rockets,target,true))u.rocketCd=4.4+rn(0,1.8)}const ENEMY_SENSE_DT=.1;const SOLDIER_MEMORY=9,SOLDIER_RETREAT=9,SOLDIER_IDEAL=17,SOLDIER_FIRE_RANGE=125;const STEALTH=window.HUNTER_STEALTH;const soldierReservations=new Map,soldierReservationGrid=new Map,soldierDoorQueues=new Map;let soldierCoordinationTime=0;const soldierReservationKey=(x,z)=>Math.floor(x/12)+","+Math.floor(z/12);function releaseSoldierReservation(u){const old=soldierReservations.get(u);if(!old)return;const bucket=soldierReservationGrid.get(old.key);bucket?.delete(u);if(!bucket?.size)soldierReservationGrid.delete(old.key);soldierReservations.delete(u)}function reserveSoldierGoal(u,goal){releaseSoldierReservation(u);const key=soldierReservationKey(goal.x,goal.z),entry={x:goal.x,z:goal.z,key:key,until:soldierCoordinationTime+1.4};soldierReservations.set(u,entry);let bucket=soldierReservationGrid.get(key);if(!bucket)soldierReservationGrid.set(key,bucket=new Set);bucket.add(u);return goal}function soldierPositionPenalty(u,x,z){let cost=0,checked=0;const cx=Math.floor(x/VEHICLE_CELL),cz=Math.floor(z/VEHICLE_CELL);outer:for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){for(const other of enemyGrid.get(vehicleCellKey(cx+dx,cz+dz))||[]){if(++checked>24)break outer;if(other===u||other.t!=="soldat"||other.hp<=0||Math.abs(enemyGroundAt(other,other.x,other.z)-enemyGroundAt(u,x,z))>4)continue;const d=Math.hypot(x-other.x,z-other.z);if(d<7)cost+=(7-d)*4}}checked=0;const rx=Math.floor(x/12),rz=Math.floor(z/12);outer:for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){for(const other of soldierReservationGrid.get(rx+dx+","+(rz+dz))||[]){if(++checked>24)break outer;const goal=soldierReservations.get(other);if(other===u||!goal||goal.until<soldierCoordinationTime||other.hp<=0)continue;const d=Math.hypot(x-goal.x,z-goal.z);if(d<8)cost+=(8-d)*10}}return cost}function releaseSoldierEntry(u){const door=u.entryDoor,queue=soldierDoorQueues.get(door);if(queue){queue.queue=queue.queue.filter(entry=>entry.unit!==u);if(!queue.queue.length)soldierDoorQueues.delete(door)}u.entryDoor=null;u.entryBuilding=null;u.entryPhase=0;u.entryWaiting=null}function resetSoldierCoordination(){const units=new Set(E);for(const u of soldierReservations.keys())units.add(u);for(const queue of soldierDoorQueues.values())for(const entry of queue.queue)units.add(entry.unit);for(const u of units)if(u.t==="soldat"){u.tacticGoal=null;u.tacticT=0;u.tacticMode=null;u.entryDoor=null;u.entryBuilding=null;u.entryPhase=0;u.entryWaiting=null;u.doorRetryUntil=0}soldierReservations.clear();soldierReservationGrid.clear();soldierDoorQueues.clear();soldierCoordinationTime=0}function soldierCoordinationTick(dt){soldierCoordinationTime+=Math.max(0,dt);for(const[u,goal]of soldierReservations)if(u.hp<=0||u.destroyed||goal.until<soldierCoordinationTime||!u.canSee&&u.aiMode!=="combat")releaseSoldierReservation(u);for(const[door,queue]of soldierDoorQueues){for(const entry of[...queue.queue]){const u=entry.unit;if(u.hp<=0||u.destroyed||u.aiMode==="patrol"||door.locked||soldierCoordinationTime-entry.touched>.35)releaseSoldierEntry(u)}const holder=queue.queue[0];if(holder?.owner&&(soldierCoordinationTime-holder.progress>2.2||soldierCoordinationTime-holder.granted>8)){holder.unit.doorRetryUntil=soldierCoordinationTime+1.2;releaseSoldierEntry(holder.unit)}if(!queue.queue.length)soldierDoorQueues.delete(door)}}function soldierKnownBuilding(target,targetY){return buildingCandidates(target.x,target.z).find(b=>!b.rb&&Math.abs(target.x-b.x)<b.w/2&&Math.abs(target.z-b.z)<b.d/2&&targetY>b.fy-2&&targetY<b.fy+b.h+.5)||null}function soldierVisualContact(u,target,targetY,d){const eyeY=u.o.position.y+2.2,crouched=!!playerCrouched&&!cv,range=STEALTH.CONFIG.sightRange*(u.elite?1.3:1)*(crouched?STEALTH.CONFIG.crouchVisibility:1)*(disg&&!cv?.35:1),targetEye=targetY+(crouched?1.25:1.5),sameBasement=!!u.basement&&targetY<u.basement.fy-3.9&&eyeY<u.basement.fy-3.9;const dx=target.x-u.x,dz=target.z-u.z,facing=(-Math.sin(u.hd)*dx-Math.cos(u.hd)*dz)/Math.max(.01,d),eliteAwareness=u.elite&&sameBasement&&(d<7||facing>Math.cos(80*Math.PI/180))&&Math.abs(targetEye-eyeY)<8;if(over||d>range||!(eliteAwareness||STEALTH.inView(u.hd,dx,targetEye-eyeY,dz,range)))return false;if(!soldierClearShot(u,u.x,u.z,eyeY,target,targetY-(crouched?.25:0)))return false;if(!sameBasement){const steps=Math.min(32,Math.ceil(d/3));for(let i=1;i<steps;i++){const q=i/steps,x=u.x+(target.x-u.x)*q,z=u.z+(target.z-u.z)*q;if(hAt(x,z)>eyeY+(targetEye-eyeY)*q-.1)return false}}return true}function soldierInvestigate(u,target,dt,speed=1){const dist=Math.hypot(target.x-u.x,target.z-u.z);if(dist>3){mvE(u,u.sp*speed*dt,target.x,target.z);u.hd=Math.atan2(u.x-target.x,u.z-target.z);return false}u.hd+=dt*.8;return true}function soldierWarnNeighbors(witness,target,targetY){const event=STEALTH.emit("alert",witness.x,witness.o.position.y+2,witness.z);if(event)witness.heardId=event.id;snd("alert",.65,{x:witness.x,y:witness.o.position.y+2,z:witness.z},witness);radioRelay.warn(witness,target,targetY,{enemies:E,active:!!started&&!paused&&!over})}function enemyAimSpread(){const difficulty=Math.max(.6,Math.min(1.5,DIF));return difficulty>=1?1+(1.5-difficulty)*2.4:2.2+(1-difficulty)*5.5}function enemyShotDirection(u,target,targetY,eyeY,roll=rn){const spread=enemyAimSpread();const explosiveBoost=u.spl?1+Math.min(1,u.spl/8)*(spread-1)*.5:1;const horizontal=1.5*spread*explosiveBoost,vertical=.85*(spread-1),dx=target.x-u.x+roll(-horizontal,horizontal),dy=targetY+(!cv&&playerCrouched?1.25:1.5)-eyeY+(vertical>0?roll(-vertical,vertical):0),dz=target.z-u.z+roll(-horizontal,horizontal),length=Math.hypot(dx,dy,dz);return[dx/length,dy/length,dz/length]}function soldierClearShot(u,x,z,y,target,targetY){const tx=target.x,tz=target.z,ty=targetY+1.5,reach=Math.hypot(tx-x,tz-z)/2+3,mx=(x+tx)/2,mz=(z+tz)/2;for(const w of wallCandidates(mx,mz,reach)){if(w.open||w.barbed)continue;const t=segmentAabbT(x,y,z,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);if(t!=null&&t<.97)return false}for(const b of buildingCandidates(mx,mz,reach)){if(b.rhp<=0)continue;const t=b.hangar?hangarRoofSegmentT(x,y,z,tx,ty,tz,b):segmentAabbT(x,y,z,tx,ty,tz,b.x-b.w/2-.6,b.x+b.w/2+.6,b.fy+b.h-.4,b.fy+b.h+1.4,b.z-b.d/2-.6,b.z+b.d/2+.6);if(t!=null&&t<.97)return false}for(const v of vehicleCandidatesAt(mx,mz,reach+18)){if(v===cv||v.destroyed)continue;const radius=vehicleRadius(v.t)*.55,vy=vehicleY(v)+Math.min(1.7,radius*.6);const t=segmentSphereT(x,y,z,tx,ty,tz,v.x,vy,v.z,radius);if(t!=null&&t<.97)return false}return true}function soldierFlankPosition(u,target,targetY){const dx=target.x-u.x,dz=target.z-u.z,d=Math.max(1,Math.hypot(dx,dz)),fx=dx/d,fz=dz/d,sideX=-fz,sideZ=fx,prefer=u.avoidSide||1;let best=null,bestScore=Infinity;for(const side of[prefer,-prefer])for(const lateral of[7,13,22]){for(const forward of[4,11]){const x=u.x+side*sideX*lateral+fx*forward,z=u.z+side*sideZ*lateral+fz*forward;if(!enemySolidAt(u,x,z,u.hd,true))continue;if(!soldierClearShot(u,x,z,enemyGroundAt(u,x,z)+2.2,target,targetY))continue;const score=lateral+forward*.5+(side===prefer?0:4)+soldierPositionPenalty(u,x,z);if(score<bestScore){bestScore=score;best={x:x,z:z}}}}return reserveSoldierGoal(u,best||{x:u.x+sideX*prefer*13+fx*9,z:u.z+sideZ*prefer*13+fz*9})}function soldierEnterBuilding(u,b,target,dt,targetY=u.lastSeenY??u.o.position.y){const door=b?.door;if(!door||door.locked||door.bunkerGate||b.hangar){releaseSoldierEntry(u);return false}const inside=Math.abs(u.x-b.x)<b.w/2-1.15&&Math.abs(u.z-b.z)<b.d/2-1.15;if(inside){releaseSoldierEntry(u);if(soldierChangeFloor(u,b,dt,targetY))return true;return false}if(u.entryBuilding!==b){releaseSoldierEntry(u);u.entryBuilding=b;u.entryPhase=0}let queue=soldierDoorQueues.get(door);if(!queue){if(soldierDoorQueues.size>=64)return false;soldierDoorQueues.set(door,queue={queue:[]})}let entry=queue.queue.find(item=>item.unit===u);if(!entry&&soldierCoordinationTime>=(u.doorRetryUntil||0)&&queue.queue.length<8){entry={unit:u,touched:soldierCoordinationTime,progress:soldierCoordinationTime,granted:soldierCoordinationTime,x:u.x,z:u.z};queue.queue.push(entry);u.entryDoor=door}if(entry)entry.touched=soldierCoordinationTime;const index=entry?queue.queue.indexOf(entry):8;if(index!==0){const rank=Math.max(1,index),side=rank%2?1:-1,waiting={x:door.cx+door.nx*(5.5+Math.floor((rank-1)/2)*3.2)+door.nz*side*3.3,z:door.cz+door.nz*(5.5+Math.floor((rank-1)/2)*3.2)-door.nx*side*3.3};u.entryWaiting=waiting;u.entryPhase=0;if(Math.hypot(u.x-waiting.x,u.z-waiting.z)>.4)mvE(u,u.sp*.75*dt,waiting.x,waiting.z);return true}if(!entry.owner){entry.owner=true;entry.granted=entry.progress=soldierCoordinationTime;entry.x=u.x;entry.z=u.z}if(Math.hypot(u.x-entry.x,u.z-entry.z)>.35){entry.x=u.x;entry.z=u.z;entry.progress=soldierCoordinationTime}u.entryWaiting=null;const exterior={x:door.cx+door.nx*2.1,z:door.cz+door.nz*2.1},interior={x:door.cx-door.nx*2.5,z:door.cz-door.nz*2.5},distance=Math.hypot(u.x-exterior.x,u.z-exterior.z);const entryTolerance=Math.max(.35,Math.min(.95,u.sp*dt*1.25));const lateral=Math.abs((u.x-door.cx)*door.nz-(u.z-door.cz)*door.nx);if(u.entryPhase===0&&distance<=entryTolerance&&lateral<=.025){u.entryPhase=1;u.navDirectT=0;u.navGoal=null;u.navPath=[];u.navSearch=null}const goal=u.entryPhase?interior:exterior;u.tacticGoal=null;u.tacticT=0;releaseSoldierReservation(u);mvE(u,u.sp*dt,goal.x,goal.z);u.hd=Math.atan2(u.x-target.x,u.z-target.z);return true}function soldierFirePosition(u,target,targetY,d){const base=Math.atan2(u.x-target.x,u.z-target.z),prefer=u.avoidSide||1,radius=d<SOLDIER_RETREAT?15:d>17?16:13;let best=null,score=Infinity;for(const offset of[0,.3*prefer,-.3*prefer,.6*prefer,-.6*prefer,.95*prefer,-.95*prefer]){const a=base+offset,x=target.x+Math.sin(a)*radius,z=target.z+Math.cos(a)*radius;if(!enemySolidAt(u,x,z,u.hd,true)||!soldierClearShot(u,x,z,enemyGroundAt(u,x,z)+2.2,target,targetY))continue;const value=Math.hypot(x-u.x,z-u.z)*.3+Math.abs(offset)*2+soldierPositionPenalty(u,x,z);if(value<score){score=value;best={x:x,z:z}}}return reserveSoldierGoal(u,best||{x:u.x,z:u.z})}function soldierEngage(u,target,targetY,dt,d,visible){const eyeY=u.o.position.y+2.2,clear=visible&&u.canShoot;let goal=null,speed=u.sp;const tacticMode=clear?"fire":"flank";if(u.tacticMode!==tacticMode){u.tacticGoal=null;u.tacticT=0;u.tacticMode=tacticMode}if(!clear){if(!u.tacticGoal||(u.tacticT||0)<=0||Math.hypot(target.x-(u.tacticTargetX??target.x),target.z-(u.tacticTargetZ??target.z))>7||Math.hypot(u.tacticGoal.x-u.x,u.tacticGoal.z-u.z)<2){u.tacticGoal=soldierFlankPosition(u,target,targetY);u.tacticTargetX=target.x;u.tacticTargetZ=target.z;u.tacticT=.85}goal=u.tacticGoal;speed=u.sp*.95}else{if(!u.tacticGoal||(u.tacticT||0)<=0||Math.hypot(target.x-(u.tacticTargetX??target.x),target.z-(u.tacticTargetZ??target.z))>7){u.tacticGoal=soldierFirePosition(u,target,targetY,d);u.tacticT=1.1;u.tacticTargetX=target.x;u.tacticTargetZ=target.z}goal=u.tacticGoal;speed=u.sp*(d<SOLDIER_RETREAT?.87:d>SOLDIER_IDEAL?1:.55)}if(goal)mvE(u,speed*dt,goal.x,goal.z);const toward=target;u.hd=Math.atan2(u.x-toward.x,u.z-toward.z)}function towerWeaponForTarget(vehicle){return vehicle?"heavy":"light"}function enemyCarRifleShot(u,target,targetY){const crew=u.o.userData.enemyCarCrew;if(!crew)return null;u.o.position.set(u.x,(u.gy??enemyGroundAt(u,u.x,u.z))+.05,u.z);u.o.rotation.y=u.navHd??u.hd;u.o.updateMatrixWorld(true);const spread=enemyAimSpread(),horizontal=1.5*spread,vertical=.85*(spread-1),aim=new THREE.Vector3(target.x+rn(-horizontal,horizontal),targetY+(!cv&&playerCrouched?1.25:1.5)+(vertical?rn(-vertical,vertical):0),target.z+rn(-horizontal,horizontal));u.o.worldToLocal(aim);const dx=aim.x-crew.mount.position.x,dy=aim.y-crew.mount.position.y,dz=aim.z-crew.mount.position.z;crew.mount.rotation.y=Math.atan2(-dx,-dz);crew.pitch.rotation.x=Math.max(-.7,Math.min(.75,Math.atan2(dy,Math.hypot(dx,dz))));u.o.updateMatrixWorld(true);return{origin:crew.muzzle.getWorldPosition(new THREE.Vector3),direction:new THREE.Vector3(0,0,-1).applyQuaternion(crew.muzzle.getWorldQuaternion(new THREE.Quaternion)).normalize()}}function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathBudget=2;enemyNodeBudget=160}rebuildVehicleGrid();soldierCoordinationTick(dt);E.forEach(u=>{if(u.t==="patrulla_marina"){updateMarinePatrol(u,dt);return}if(u.blastT>0){const imp=u.blastImpulse;u.blastT=Math.max(0,u.blastT-dt);if(imp){u.x+=imp.vx*dt;u.z+=imp.vz*dt;imp.vy-=19*dt;u.blastHeight=Math.max(0,(u.blastHeight||0)+imp.vy*dt);if(u.blastHeight===0)imp.vy=0;const landed=u.blastHeight===0;imp.vx*=Math.exp(-(landed?7:1.7)*dt);imp.vz*=Math.exp(-(landed?7:1.7)*dt);u.o.position.set(u.x,Math.max(0,hAt(u.x,u.z))+u.blastHeight,u.z);const elapsed=(u.blastTotal||2.5)-u.blastT;u.o.rotation.z=Math.sin(elapsed*5)*.75*Math.min(1,u.blastHeight+.2);if(landed&&u.blastT<.25)u.blastT=0;if(u.blastRagdoll)window.HUNTER_RAGDOLL.update(u.blastRagdoll,dt,{airborne:!landed,grounded:landed})}return}if(u.blastImpulse){if(u.blastRagdoll)window.HUNTER_RAGDOLL.reset(u.blastRagdoll);u.blastRagdoll=null;u.blastImpulse=null;u.blastHeight=0;u.o.rotation.z=0}const oldX=u.x,oldZ=u.z;u.alert=Math.max(0,u.alert-dt);u.cd-=dt;if(u.t==="torre")u.heavyCd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);const q=cv||P,py=cv?cv.o.position.y:P.y,dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz),det=disg&&!cv?20:u.alert>0?300:u.t=="general"?60:120,eyeY=u.o.position.y+(u.t=="torre"?9.4:2.2);u.senseT=(u.senseT??0)-dt;if(u.senseT<=0){u.senseT+=ENEMY_SENSE_DT;const bunker=activeBunker,localBunker=bunker?.basement?buildingLocalPoint(bunker,q.x,q.z):null,withinBunker=!!localBunker&&Math.abs(localBunker.x)<bunker.basement.halfX&&Math.abs(localBunker.z)<bunker.basement.halfZ,acrossFloor=!!(u.basement||withinBunker&&py<bunker.fy-3.9)&&Math.abs((u.gy??u.o.position.y)-py)>4.4,sameBasement=!!u.basement&&py<bunker.fy-3.9&&eyeY<bunker.fy-3.9,seen=!cheats.invisible&&!over&&!acrossFloor&&d<det&&(sameBasement&&u.t==="general"?soldierClearShot(u,u.x,u.z,eyeY,q,py):sight(u.x,u.z,q.x,q.z,eyeY));if(u.t==="soldat"){const raw=!cheats.invisible&&!!(cv?!over&&d<115&&STEALTH.inView(u.hd,dx,py+1.5-eyeY,dz,115)&&soldierClearShot(u,u.x,u.z,eyeY,q,py):!acrossFloor&&soldierVisualContact(u,q,py,d));u.recognition=Math.max(0,Math.min(1.5,(u.recognition||0)+(raw?ENEMY_SENSE_DT*(d<12?4:playerCrouched&&!cv?.9:2):-ENEMY_SENSE_DT*3)));const confirmed=raw&&u.recognition>=.45;const acquired=confirmed&&!u.canSee;u.canSee=confirmed;u.canShoot=confirmed&&soldierClearShot(u,u.x,u.z,eyeY,q,py-(!cv&&playerCrouched?.25:0));if(confirmed){u.lastSeenX=q.x;u.lastSeenZ=q.z;u.lastSeenY=py;u.pursuitT=SOLDIER_MEMORY;u.aiMode="combat";u.searchT=SOLDIER_MEMORY+d/Math.max(1,u.sp);if(acquired){u.cd=0;soldierWarnNeighbors(u,q,py)}}else{if(u.aiMode==="combat")u.aiMode="search";if(raw&&u.aiMode!=="search"){u.aiMode="suspicious";u.lastSeenX=q.x;u.lastSeenZ=q.z;u.lastSeenY=py;u.searchT=STEALTH.CONFIG.investigateSeconds+d/Math.max(1,u.sp*.65)}else if(!raw&&u.aiMode==="suspicious")u.aiMode="investigate";const noise=cheats.invisible?null:STEALTH.heardAt(u.x,eyeY,u.z,u.heardId||0);if(noise){u.heardId=noise.id;if(u.aiMode!=="search"&&u.aiMode!=="combat"){u.aiMode="investigate";u.searchT=STEALTH.CONFIG.investigateSeconds+Math.hypot(noise.x-u.x,noise.z-u.z)/Math.max(1,u.sp*.65)}const uncertainty=noise.kind==="alert"?0:noise.radius>=100?4:1.5;u.lastSeenX=noise.x+Math.sin(u.x+noise.id)*uncertainty;u.lastSeenZ=noise.z+Math.cos(u.z+noise.id)*uncertainty;u.lastSeenY=noise.y}}u.defenseTarget=null}else{u.canSee=seen;u.defenseTarget=seen&&u.sp>0&&d>u.rng*.55?chooseDefense(u,q):null}}if(u.t==="soldat"&&(u.canSee||u.aiMode&&u.aiMode!=="patrol")){u.tacticT=Math.max(0,(u.tacticT||0)-dt);const target=u.canSee?q:{x:u.lastSeenX??u.x,z:u.lastSeenZ??u.z},targetY=u.canSee?py:u.lastSeenY??u.o.position.y,td=Math.hypot(target.x-u.x,target.z-u.z);if(!u.canSee){u.searchT=Math.max(0,(u.searchT||0)-dt);if(u.searchT<=0){u.aiMode="patrol";u.recognition=0;u.tacticGoal=null}}if(u.aiMode!=="patrol"){const knownBuilding=soldierKnownBuilding(target,targetY),entering=!!knownBuilding&&soldierEnterBuilding(u,knownBuilding,target,dt,targetY);if(!knownBuilding&&u.entryDoor)releaseSoldierEntry(u);if(!entering){if(u.canSee)soldierEngage(u,target,targetY,dt,td,true);else soldierInvestigate(u,target,dt,u.aiMode==="search"?1:.65)}}if(u.aiMode!=="patrol"&&u.canSee&&u.canShoot&&d<=SOLDIER_FIRE_RANGE&&u.cd<=0){u.cd=u.rate;const[ax,ay,az]=enemyShotDirection(u,q,py,eyeY);if(u.rocketSoldier){const fx=-Math.sin(u.hd),fz=-Math.cos(u.hd),rightX=Math.cos(u.hd),rightZ=-Math.sin(u.hd);shoot(u.x+fx*1.65+rightX*.44,eyeY+.65,u.z+fz*1.65+rightZ*.44,ax,ay,az,76,COMBAT_BALANCE.weapons.bazooka,8,"e",mS,1.9,u)}else shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,"e",mW,SMALL_ARMS_SCALE,u)}}else if(u.t==="general"&&u.canSee){if(u.basement?.basement?.generalRoom&&d<36&&d>.01){const b=u.basement,room=b.basement.generalRoom;const nx=dx/d,nz=dz/d;const local=buildingLocalPoint(b,u.x-nx*7,u.z-nz*7);const destination=buildingWorldPoint(b,Math.max(room.xMin,Math.min(room.xMax,local.x)),Math.max(room.zMin,Math.min(room.zMax,local.z)));if(Math.hypot(destination.x-u.x,destination.z-u.z)>.7)mvE(u,u.sp*dt,destination.x,destination.z)}u.hd=Math.atan2(u.x-q.x,u.z-q.z);if(d<u.rng&&u.cd<=0&&soldierClearShot(u,u.x,u.z,eyeY,q,py)){u.cd=u.rate;const[ax,ay,az]=enemyShotDirection(u,q,py,eyeY);shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,"e",mW,SMALL_ARMS_SCALE,u)}}else if(u.canSee){u.hd=Math.atan2(-dx,-dz);if(u.sp>0&&d>u.rng*.55){const dp=u.defenseTarget;if(dp&&Math.hypot(dp.x-u.x,dp.z-u.z)>1.8){u.hd=Math.atan2(u.x-dp.x,u.z-dp.z);mvE(u,u.sp*.75*dt,dp.x,dp.z)}else if(d>u.rng*.72)mvE(u,u.sp*dt,q.x,q.z)}if(u.t==="torre"){const weapon=towerWeaponForTarget(cv);if(weapon==="light"&&d<u.rng&&u.cd<=0){u.cd=u.rate;const[ax,ay,az]=enemyShotDirection(u,q,py,eyeY),fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);shoot(u.x+fx*2.4-Math.cos(u.hd)*.72,eyeY,u.z+fz*2.4+Math.sin(u.hd)*.72,ax,ay,az,70,u.dmg,0,"e",mW,SMALL_ARMS_SCALE,u)}else if(weapon==="heavy"&&d<u.heavyRange&&u.heavyCd<=0){u.heavyCd=u.heavyRate;const[ax,ay,az]=enemyShotDirection(u,q,py,eyeY-.2),fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);shoot(u.x+fx*2.4+Math.cos(u.hd)*.72,eyeY-.2,u.z+fz*2.4-Math.sin(u.hd)*.72,ax,ay,az,76,COMBAT_BALANCE.weapons.towerHeavy,7,"e",mS,1.8,u)}}else if(u.t!=="tanc"&&u.t!=="tanqueta"&&d<u.rng&&u.cd<=0){if(u.t==="jeep"){const rifle=enemyCarRifleShot(u,q,py);if(rifle){u.cd=u.rate;const p=rifle.origin,v=rifle.direction;shoot(p.x,p.y,p.z,v.x,v.y,v.z,70,u.dmg,0,"e",mW,SMALL_ARMS_SCALE,u)}}else{u.cd=u.rate;const[ax,ay,az]=enemyShotDirection(u,q,py,eyeY);const smallBullet=u.t==="general";shoot(u.x,eyeY,u.z,ax,ay,az,u.spl?60:70,u.dmg,u.spl,"e",smallBullet?mW:mE,smallBullet?SMALL_ARMS_SCALE:u.spl?2:1,u)}}}else if(u.sp>0&&u.t!=="general"){const waypointDistance=Math.hypot(u.tx-u.x,u.tz-u.z),hqPatrolVehicle=u.t==="tanqueta"&&!!u.hqPatrolZone||enemyIsVehicle(u)&&u.compound==="hq"||!!u.interCompoundPatrol;if(hqPatrolVehicle?u.pi<0||waypointDistance<5||u.wt<-30:u.wt<=0||waypointDistance<2){if(u.patrol&&u.patrol.length){u.pi=((u.pi==null?-1:u.pi)+1)%u.patrol.length;u.tx=u.patrol[u.pi].x;u.tz=u.patrol[u.pi].z;u.wt=hqPatrolVehicle?Math.max(2.5,Math.hypot(u.tx-u.x,u.tz-u.z)/Math.max(1,u.sp*.35)):u.guard?2.5:8}else{const roam=u.guard?8:25;u.tx=u.home.x+rr(-roam,roam);u.tz=u.home.z+rr(-roam,roam);u.wt=u.guard?3:6}}u.wt-=dt;u.hd=Math.atan2(u.x-u.tx,u.z-u.tz);mvE(u,u.sp*(u.guard?.35:.5)*dt)}u.o.position.set(u.x,(u.gy!=null?u.gy:enemyGroundAt(u,u.x,u.z))+(u.t=="jeep"||u.t=="tanc"?.05:0),u.z);if(u.t==="soldat"||u.t==="general")enemyStepSound(u,Math.hypot(u.x-oldX,u.z-oldZ));if(enemyIsVehicle(u)){u.impactFromX=oldX;u.impactFromZ=oldZ;u.impactSpeed=dt>1e-4?Math.hypot(u.x-oldX,u.z-oldZ)/dt:0;u.hd=u.navHd??u.hd}const lastVisualHeading=u.o.rotation.y;if(u.t!="torre")u.o.rotation.y=u.hd;else if(u.o.userData.towerTurret)u.o.userData.towerTurret.rotation.y=u.hd;if((u.t==="tanc"||u.t==="tanqueta")&&u.o.userData.turretPivot){let desired=new THREE.Vector3(-Math.sin(u.hd),0,-Math.cos(u.hd));if(u.canSee){if(!u.armoredAimSpread){const spread=enemyAimSpread(),boost=u.spl?1+Math.min(1,u.spl/8)*(spread-1)*.5:1,horizontal=1.5*spread*boost,vertical=.85*(spread-1);u.armoredAimSpread={x:rn(-horizontal,horizontal),y:vertical?rn(-vertical,vertical):0,z:rn(-horizontal,horizontal)}}const offset=u.armoredAimSpread,gun=window.HUNTER_VEHICLES.turretShot(THREE,u.o);if(gun)desired.set(q.x+offset.x-gun.origin.x,py+(!cv&&playerCrouched?1.25:1.5)+offset.y-gun.origin.y,q.z+offset.z-gun.origin.z)}else u.armoredAimSpread=null;const aligned=window.HUNTER_VEHICLES.aimTurret(THREE,u.o,desired,dt);if(u.canSee&&d<u.rng&&u.cd<=0&&aligned){const gun=window.HUNTER_VEHICLES.turretShot(THREE,u.o);if(gun){u.cd=u.rate;u.armoredAimSpread=null;const p=gun.origin,v=gun.direction,small=u.t==="tanqueta";shoot(p.x,p.y,p.z,v.x,v.y,v.z,u.spl?60:70,u.dmg,u.spl,"e",small?mW:mE,small?SMALL_ARMS_SCALE:u.spl?2:1,u)}}}if((u.t==="jeep"||u.t==="tanqueta")&&u.o.userData.steeringPivots){const dxMoved=u.x-oldX,dzMoved=u.z-oldZ,distance=Math.hypot(dxMoved,dzMoved),delta=Math.atan2(Math.sin(u.hd-lastVisualHeading),Math.cos(u.hd-lastVisualHeading)),visualTurn=distance>.003&&dt>0?Math.max(-1,Math.min(1,delta/(1.6*dt))):0;window.HUNTER_VEHICLES.animateSteering(u.o,u.t==="jeep"?"cotxe":u.t,visualTurn,dt);if(distance>.003){const signedDistance=dxMoved*-Math.sin(u.hd)+dzMoved*-Math.cos(u.hd);for(const wheel of u.o.userData.wheels||[])wheel.rotation.x-=signedDistance/(wheel.userData.radius||.65)}}if(u.o.userData.legs){const a=u.o.userData;u.phase=(u.phase||0)+dt*u.sp;const moving=Math.hypot(u.x-oldX,u.z-oldZ)>.001,swing=moving?Math.sin(u.phase)*.45:0;if(a.knees&&a.enemyLOD==="full")window.HUNTER_CHARACTERS.animateSoldier(u.o,{phase:u.phase,moving:moving,aim:!!u.canSee,dt:dt});else if(a.knees&&a.enemyLOD==="mid"){u.visualAnimT=(u.visualAnimT||0)+dt;if(u.visualAnimT>=.16){a.enemyMidMesh.rotation.z=moving?Math.sin(u.phase)*.035:0;u.visualAnimT=0}}else{a.legs[0].rotation.x=swing;a.legs[1].rotation.x=-swing;const aim=!!u.canSee;a.arms.forEach((arm,i)=>arm.rotation.x+=((aim?u.rocketSoldier?i?1.2:1.04:1.45:(i?swing:-swing)*.5)-arm.rotation.x)*(1-Math.exp(-12*dt)))}}})}function updDead(dt){for(let i=DEAD.length-1;i>=0;i--){const u=DEAD[i],pose=u.deadPose||(u.deadPose={yaw:0,roll:u.deadSide*1.4,pitch:0,armL:-.5,armR:.5,legL:-.2,legR:.2,vx:0,vz:0,vy:0,height:0});u.deadT+=dt;const k=Math.min(1,u.deadT/.65),e=1-Math.pow(1-k,3);pose.vy-=18*dt;pose.height=Math.max(0,pose.height+pose.vy*dt);if(pose.height===0){pose.vy=0;pose.vx*=Math.exp(-9*dt);pose.vz*=Math.exp(-9*dt)}else{pose.vx*=Math.exp(-1.1*dt);pose.vz*=Math.exp(-1.1*dt)}u.x+=pose.vx*dt;u.z+=pose.vz*dt;const base=u.basement?u.basement.basement.floorY:Math.max(0,hAt(u.x,u.z));u.o.position.set(u.x,base+pose.height+.05+(1-e)*.12,u.z);u.o.rotation.set(pose.pitch*e,u.hd+pose.yaw*e,pose.roll*e,"YXZ");if(u.ragdoll){if(u.deadT<3.2||pose.height>.09)window.HUNTER_RAGDOLL.update(u.ragdoll,dt,{airborne:pose.height>.09,grounded:pose.height<=.09})}else{if(u.o.userData.arms)u.o.userData.arms.forEach((arm,j)=>{arm.rotation.x=(j?pose.armR:pose.armL)*e;arm.rotation.z=(j?-.3:.3)*e});if(u.o.userData.legs)u.o.userData.legs.forEach((leg,j)=>leg.rotation.x=(j?pose.legR:pose.legL)*e)}if(u.deadT>18){if(u.ragdoll){window.HUNTER_RAGDOLL.reset(u.ragdoll);u.ragdoll=null}world.remove(u.o);DEAD.splice(i,1)}}}function attachEnemyCarCrew(car){const makeSoldier=()=>window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M}),driver=makeSoldier(),gunner=makeSoldier();driver.position.set(-.73,.94,-.43);gunner.position.set(.72,.94,-.43);driver.scale.setScalar(.43);gunner.scale.setScalar(.43);driver.userData.ar.rotation.x=1.18;driver.userData.al.rotation.x=1.12;gunner.userData.ar.rotation.x=1.25;gunner.userData.aer.rotation.x=.35;gunner.rotation.y=.26;driver.userData.gun.visible=false;const rifle=gunner.userData.gun;rifle.parent.remove(rifle);const mount=new THREE.Group,pitch=new THREE.Group;mount.position.set(1.46,2.07,-.3);mount.add(pitch);car.add(mount);rifle.position.set(0,-.035,-.14);rifle.rotation.set(0,0,0);rifle.scale.setScalar(.94);pitch.add(rifle);bx(rifle,.075,.075,.42,2436396,0,0,-.97,"metal");const muzzle=new THREE.Object3D;muzzle.position.set(0,0,-1.18);rifle.add(muzzle);car.add(driver,gunner);car.userData.enemyCarCrew={driver:driver,gunner:gunner,mount:mount,pitch:pitch,muzzle:muzzle}}function mkEn(t,x,z,gy,options={}){const c=EC[t];let g;if(seedSearchMode){g=new THREE.Group;if(t==="torre")g.userData.towerLegMeshes=[-1.45,1.45].flatMap(lx=>[-1.45,1.45].map(lz=>({position:{x:lx,y:3.9,z:lz},geometry:{parameters:{width:.38,height:7.8,depth:.38}}})))}else if(t=="soldat"||t=="general"){g=window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M,general:t==="general",elite:!!options.elite})}else if(t==="patrulla_marina"){g=mkV("llanxa");createMarinePatrolVisual(g)}else if(t=="jeep"){g=mkV("cotxe");attachEnemyCarCrew(g);bx(g,.2,2,.2,16719904,0,3.4,0)}else if(t=="tanqueta"){g=mkV("tanqueta");bx(g,.18,1.7,.18,16719904,0,3.2,.4)}else if(t=="tanc"){g=mkV("tanc");bx(g,.2,2,.2,16719904,0,4,0)}else if(t=="torre"){g=new THREE.Group;const leg=4936023,deck=6450032,cabin=8138543,roof=3422782;g.userData.towerLegMeshes=[];for(const lx of[-1.45,1.45])for(const lz of[-1.45,1.45])g.userData.towerLegMeshes.push(bx(g,.38,7.8,.38,leg,lx,3.9,lz,"metal"));bx(g,4.4,.45,4.4,deck,0,7.9,0,"metal");for(const x of[-2.05,2.05])bx(g,.16,1.25,4.15,leg,x,8.65,0,"metal");for(const z of[-2.05,2.05])bx(g,4.15,1.25,.16,leg,0,8.65,z,"metal");bx(g,2.75,1.8,2.75,cabin,0,9.15,0,"paint");bx(g,1.9,.72,.08,7051941,0,9.35,-1.39,"glass");bx(g,3.35,.28,3.35,roof,0,10.25,0,"metal");const turret=new THREE.Group;turret.position.y=9.25;g.add(turret);bx(turret,.32,.32,2.1,roof,-.72,0,-2.25,"metal");bx(turret,.58,.58,2.35,3621692,.72,-.2,-2.25,"metal");bx(turret,.68,.65,.22,6712162,.72,-.2,-3.43,"metal");g.userData.towerTurret=turret;bx(g,.42,.8,.42,14996335,0,10.78,0,"paint")}else{g=new THREE.Group;bx(g,1,1,.6,2236962,0,.5,0);bx(g,1.3,1.6,.7,13938487,0,1.8,0);bx(g,.8,.8,.8,15780256,0,3,0);bx(g,.9,.5,.9,11141120,0,3.6,0);g.scale.setScalar(1.2)}if(!seedSearchMode&&t!=="soldat"&&t!=="general")window.HUNTER_ENEMY_LOD.optimize(THREE,g,t);if(!seedSearchMode)world.add(g);const sensePhase=E.length%10*.01,u={t:t,x:x,z:z,gy:gy,hd:rr(0,6.28),o:g,home:{x:x,z:z},cd:rr(0,1),alert:0,wt:0,tx:x,tz:z,senseT:sensePhase,canSee:false,defenseTarget:null,...c};if(options.elite){u.elite=true;u.hp=COMBAT_BALANCE.people.elite;u.dmg=COMBAT_BALANCE.weapons.eliteRifle;u.rng=85;u.rate=TANKETTE_FIRE_INTERVAL;u.sp=8;u.cd=.4+E.length%4*.14}if(t==="torre"){u.heavyCd=1.6+E.length%5*.4;u.heavyRate=4.2;u.heavyRange=95}E.push(u);if(t==="torre"){const base=gy??enemyGroundAt(u,x,z);u.towerLegColliders=g.userData.towerLegMeshes.map(m=>{const hw=m.geometry.parameters.width/2,hd=m.geometry.parameters.depth/2,hh=m.geometry.parameters.height/2,cx=x+m.position.x,cz=z+m.position.z;return{towerLegOwner:u,m:m,x0:cx-hw,x1:cx+hw,z0:cz-hd,z1:cz+hd,y0:base+m.position.y-hh,y1:base+m.position.y+hh,hp:Infinity,door:false,open:false,rammable:false,cx:cx,cz:cz}});Wl.push(...u.towerLegColliders)}return u}const AUDIO_SOUNDS=Object.freeze({shot:{duration:.12,filter:"highpass",frequency:1200,gain:.5,range:140},cannon:{duration:.35,frequency:600,gain:.5,range:140},boom:{duration:.7,frequency:300,gain:.5,range:200,priority:2},hurt:{duration:.15,frequency:600,gain:.5},step:{duration:.085,frequency:440,gain:.15,fade:3},enemyStep:{duration:.085,frequency:440,gain:.15,fade:3,range:30,throttle:.18,priority:0},swim:{duration:.24,frequency:1100,gain:.32},pick:{duration:.2,gain:.15},alert:{duration:.38,frequency:1250,gain:.32,range:70,throttle:.8,priority:2},replayShot:{duration:.24,frequency:750,gain:.31,fade:2.4,rate:.55},replayCannon:{duration:.42,frequency:340,gain:.44,fade:2.4,rate:.55}});const audioRuntime={context:null,master:null,buffers:new WeakMap,voices:new Set,objectTimes:new WeakMap,sourceTimes:new Map,steps:new WeakMap,paused:false,muted:false,resumeSerial:0,listener:{x:0,y:1.65,z:0},maxVoices:24,maxWorldVoices:18};function audioIsMuted(){return typeof muted!=="undefined"&&!!muted}function audioVisible(){return!(typeof document!=="undefined"&&document.hidden)}function audioCanPlay(){return!!AC&&!audioRuntime.paused&&!audioIsMuted()&&audioVisible()&&!(typeof simulationFocused!=="undefined"&&!simulationFocused)&&AC.state!=="suspended"&&AC.state!=="interrupted"&&AC.state!=="closed"}function audioDisconnect(node){try{node?.disconnect?.()}catch(e){}}function audioReleaseVoice(voice,stop=false){if(!audioRuntime.voices.delete(voice))return;voice.source.onended=null;if(stop)try{voice.source.stop()}catch(e){}for(const node of voice.nodes)audioDisconnect(node)}function audioClearVoices(){for(const voice of[...audioRuntime.voices])audioReleaseVoice(voice,true);audioRuntime.objectTimes=new WeakMap;audioRuntime.sourceTimes.clear();audioRuntime.steps=new WeakMap}function audioPrune(){const now=AC?.currentTime||0;for(const voice of audioRuntime.voices)if(now>voice.end+.05)audioReleaseVoice(voice,true);for(const[key,time]of audioRuntime.sourceTimes)if(now-time>8)audioRuntime.sourceTimes.delete(key)}function audioReserveVoice(priority,spatial){audioPrune();if(spatial){const world=[...audioRuntime.voices].filter(voice=>voice.position);if(world.length>=audioRuntime.maxWorldVoices){const victim=world.find(voice=>voice.priority<=priority);if(!victim)return false;audioReleaseVoice(victim,true)}}if(audioRuntime.voices.size>=audioRuntime.maxVoices){const victim=[...audioRuntime.voices].find(voice=>voice.priority<=priority);if(!victim)return false;audioReleaseVoice(victim,true)}return true}function audioOwnVoice(source,nodes,{duration:duration,priority:priority=2,position:position=null,gain:gain=null,baseGain:baseGain=0,range:range=0}={}){const voice={source:source,nodes:nodes,priority:priority,position:position,gain:gain,baseGain:baseGain,range:range,end:AC.currentTime+duration};audioRuntime.voices.add(voice);source.onended=()=>audioReleaseVoice(voice);return voice}function audioStopLoops(){if(eng?.g?.gain){eng.g.gain.cancelScheduledValues?.(AC?.currentTime||0);eng.g.gain.value=0}if(seaAudio?.gain?.gain){seaAudio.gain.gain.cancelScheduledValues?.(AC?.currentTime||0);seaAudio.gain.gain.value=0}}function audioDisposeGraph(){audioClearVoices();const engine=typeof eng!=="undefined"?eng:null,sea=typeof seaAudio!=="undefined"?seaAudio:null;for(const source of[engine?.o,sea?.noise])if(source)try{source.stop()}catch(e){}for(const node of[engine?.o,engine?.g,sea?.noise,sea?.filter,sea?.gain,audioRuntime.master])audioDisconnect(node);eng=null;seaAudio=null;audioRuntime.master=null}function audioUseContext(){if(audioRuntime.context===AC)return;audioDisposeGraph();audioRuntime.context=AC;audioRuntime.resumeSerial++}function audioOutput(){audioUseContext();if(!audioRuntime.master){const gain=AC.createGain();gain.gain.value=audioIsMuted()?0:1;gain.connect(AC.destination);audioRuntime.master=gain}return audioRuntime.master}function audioNoise(seed){let state=seed>>>0;return()=>{state=Math.imul(state,1664525)+1013904223>>>0;return state/2147483648-1}}function audioBuffer(type){let cache=audioRuntime.buffers.get(AC);if(!cache)audioRuntime.buffers.set(AC,cache=new Map);if(cache.has(type))return cache.get(type);const spec=AUDIO_SOUNDS[type],duration=type==="sea"?8:spec.duration,length=Math.max(1,Math.floor(AC.sampleRate*duration)),buffer=AC.createBuffer(1,length,AC.sampleRate),samples=buffer.getChannelData(0),noise=audioNoise([...type].reduce((n,c)=>Math.imul(n,31)+c.charCodeAt(0),5171));let low=0,phase=0;for(let i=0;i<length;i++){const p=i/length,t=i/AC.sampleRate,n=noise();if(type==="sea"){low=.985*low+.015*n;const swell=.35+.65*Math.pow(.5+.5*Math.sin(p*Math.PI*4),2);samples[i]=low*9*swell}else if(type==="swim"){low=low*.83+n*.17;samples[i]=(low*.8+n*.18)*Math.pow(1-p,2.4)}else if(type==="pick"){phase+=Math.PI*2*(t<.08?660:990)/AC.sampleRate;samples[i]=Math.sin(phase)*Math.pow(.001/.15,p)}else if(type==="alert"){phase+=Math.PI*2*(t<.18?310:420)/AC.sampleRate;const syllable=t<.18?t/.18:(t-.18)/.2,envelope=Math.sin(Math.PI*syllable)**2;samples[i]=(Math.sin(phase)*.65+n*.35)*envelope}else samples[i]=n*Math.pow(1-p,spec.fade||2)}cache.set(type,buffer);return buffer}function audioInitLoops(){const output=audioOutput();if(!eng){const o=AC.createOscillator(),g=AC.createGain();try{o.type="sawtooth";o.frequency.value=40;g.gain.value=0;o.connect(g);g.connect(output);o.start();eng={o:o,g:g}}catch(e){try{o.stop()}catch(e){}audioDisconnect(o);audioDisconnect(g)}}if(!seaAudio){const noise=AC.createBufferSource(),filter=AC.createBiquadFilter(),gain=AC.createGain();try{noise.buffer=audioBuffer("sea");noise.loop=true;filter.type="lowpass";filter.frequency.value=850;gain.gain.value=0;noise.connect(filter);filter.connect(gain);gain.connect(output);noise.start();seaAudio={noise:noise,filter:filter,gain:gain}}catch(e){try{noise.stop()}catch(e){}audioDisconnect(noise);audioDisconnect(filter);audioDisconnect(gain)}}}function audioSuspend(){const context=AC;try{return Promise.resolve(context?.suspend?.()).then(()=>false,()=>false)}catch(e){return Promise.resolve(false)}}function audioResume(){audioRuntime.paused=false;if(!AC||audioIsMuted()||!audioVisible()||typeof simulationFocused!=="undefined"&&!simulationFocused)return Promise.resolve(false);const context=AC,serial=++audioRuntime.resumeSerial;let resumed;try{resumed=context.resume?.()}catch(e){return Promise.resolve(false)}return Promise.resolve(resumed).then(()=>{if(AC!==context)return false;if(audioRuntime.paused||audioIsMuted()||!audioVisible()||typeof simulationFocused!=="undefined"&&!simulationFocused){audioSuspend();return false}if(serial!==audioRuntime.resumeSerial)return false;if(audioRuntime.master)audioRuntime.master.gain.value=1;return context.state!=="suspended"&&context.state!=="closed"},()=>false)}function initAudio(options={}){try{const host=typeof window!=="undefined"?window:globalThis;if(!AC||AC.state==="closed"){const primed=host.HUNTER_PRIMED_AUDIO_CONTEXT,Constructor=host.AudioContext||host.webkitAudioContext;if(primed&&primed.state!=="closed")AC=primed;else if(Constructor)AC=new Constructor;else return Promise.resolve(false)}host.HUNTER_PRIMED_AUDIO_CONTEXT=AC;audioUseContext();const resumed=audioResume();if(!options.unlockOnly)audioInitLoops();return resumed}catch(e){return Promise.resolve(false)}}function audioPause(){audioRuntime.paused=true;audioRuntime.resumeSerial++;audioClearVoices();audioStopLoops();if(audioRuntime.master)audioRuntime.master.gain.value=0;return audioSuspend()}function audioReset(){audioRuntime.resumeSerial++;audioClearVoices();audioStopLoops()}function setAudioMuted(value){muted=!!value;audioRuntime.muted=muted;if(muted){audioRuntime.resumeSerial++;audioClearVoices();audioStopLoops();if(audioRuntime.master)audioRuntime.master.gain.value=0;audioSuspend()}else if(!audioRuntime.paused&&!(typeof paused!=="undefined"&&paused))return audioResume();return Promise.resolve(false)}function audioSetPosition(node,point){if(node.positionX){node.positionX.value=point.x;node.positionY.value=point.y;node.positionZ.value=point.z}else node.setPosition?.(point.x,point.y,point.z)}function audioDistanceGain(position,range){const ear=audioRuntime.listener;return Math.max(0,1-Math.hypot(position.x-ear.x,position.y-ear.y,position.z-ear.z)/range)}function updateAudioListener(){if(!AC)return;let player=typeof P!=="undefined"?P:null;if(typeof deathCinematic!=="undefined"&&deathCinematic?.active&&typeof pl!=="undefined")player=pl.position;if(player)audioRuntime.listener={x:player.x,y:(player.y||0)+1.65,z:player.z};const listener=AC.listener;if(listener){audioSetPosition(listener,audioRuntime.listener);let camera=typeof cam!=="undefined"?cam:null;if(typeof deathVoidReady==="function"&&deathVoidReady())camera=deathCinematic.voidCamera;camera?.updateMatrixWorld?.(true);const e=camera?.matrixWorld?.elements;if(e){const f=Math.hypot(e[8],e[9],e[10])||1,u=Math.hypot(e[4],e[5],e[6])||1,forward=[-e[8]/f,-e[9]/f,-e[10]/f],up=[e[4]/u,e[5]/u,e[6]/u];if(listener.forwardX){for(const[name,values]of[["forward",forward],["up",up]])for(let i=0;i<3;i++)listener[name+"XYZ"[i]].value=values[i]}else listener.setOrientation?.(...forward,...up)}}for(const voice of audioRuntime.voices)if(voice.position&&voice.gain)voice.gain.gain.value=voice.baseGain*audioDistanceGain(voice.position,voice.range)}function updateAudioFrame(){if(!AC)return;if(audioRuntime.muted!==audioIsMuted())setAudioMuted(audioIsMuted());if(typeof paused!=="undefined"&&paused||!audioVisible()||typeof simulationFocused!=="undefined"&&!simulationFocused){if(!audioRuntime.paused)audioPause();return}if(typeof over!=="undefined"&&over)audioStopLoops();updateAudioListener();audioPrune()}function audioThrottle(type,source,position,interval){const now=AC.currentTime;if(source&&(typeof source==="object"||typeof source==="function")){let times=audioRuntime.objectTimes.get(source);if(!times)audioRuntime.objectTimes.set(source,times=new Map);const previous=times.get(type);if(previous!==undefined&&now-previous<interval)return false;times.set(type,now);return true}const key=type+":"+(source??(position?Math.round(position.x)+","+Math.round(position.y)+","+Math.round(position.z):"personal")),previous=audioRuntime.sourceTimes.get(key);if(previous!==undefined&&now-previous<interval)return false;if(audioRuntime.sourceTimes.size>=256)audioRuntime.sourceTimes.delete(audioRuntime.sourceTimes.keys().next().value);audioRuntime.sourceTimes.set(key,now);return true}function snd(type,volume=1,position=null,source=null){if(!audioCanPlay()||!Number.isFinite(volume)||volume<=.02)return false;const t=Object.hasOwn(AUDIO_SOUNDS,type)?type:"hurt",spec=AUDIO_SOUNDS[t],spatial=position&&Number.isFinite(position.x)&&Number.isFinite(position.y)&&Number.isFinite(position.z),point=spatial?{x:position.x,y:position.y,z:position.z}:null,range=spec.range||140,priority=spatial?spec.priority??1:3;try{audioOutput();updateAudioListener();if(point&&audioDistanceGain(point,range)<=.001)return false;if(!audioThrottle(t,source,point,spec.throttle||.06)||!audioReserveVoice(priority,spatial))return false;const buffer=audioBuffer(t),voiceNodes=[],s=AC.createBufferSource();voiceNodes.push(s);let voice;try{s.buffer=buffer;if(spec.rate)s.playbackRate.value=spec.rate;const gain=AC.createGain();voiceNodes.push(gain);const baseGain=spec.gain*Math.min(1,volume);gain.gain.value=baseGain*(point?audioDistanceGain(point,range):1);let tail=s;if(spec.frequency){const filter=AC.createBiquadFilter();voiceNodes.push(filter);filter.type=spec.filter||"lowpass";filter.frequency.value=spec.frequency;tail.connect(filter);tail=filter}tail.connect(gain);tail=gain;if(point&&AC.createPanner){let panner;try{panner=AC.createPanner();panner.panningModel="HRTF";panner.distanceModel="linear";panner.refDistance=1;panner.maxDistance=range;panner.rolloffFactor=0;audioSetPosition(panner,point);gain.connect(panner);tail=panner;voiceNodes.push(panner)}catch(e){audioDisconnect(panner)}}tail.connect(audioRuntime.master);voice=audioOwnVoice(s,voiceNodes,{duration:spec.duration/(spec.rate||1),priority:priority,position:point,gain:gain,baseGain:baseGain,range:range});s.start(AC.currentTime);return true}catch(e){if(voice)audioReleaseVoice(voice,true);else for(const node of voiceNodes)audioDisconnect(node);return false}}catch(e){return false}}function enemyStepSound(unit,distance){if(!audioCanPlay()||!(distance>0)||distance>4)return;let travelled=(audioRuntime.steps.get(unit)||0)+distance;if(travelled>=1.6){travelled%=1.6;snd("enemyStep",.9,{x:unit.x,y:unit.o.position.y+.12,z:unit.z},unit)}audioRuntime.steps.set(unit,travelled)}function deathBell(volume=1){if(!audioCanPlay())return;try{const now=AC.currentTime,partials=[1,2.01,2.49,3.98,5.03],strengths=[.38,.17,.13,.08,.045],output=audioOutput();for(let i=0;i<partials.length;i++){if(!audioReserveVoice(4,false))break;const osc=AC.createOscillator(),gain=AC.createGain(),start=Math.min(1,Math.max(0,volume))*strengths[i],length=4.4-i*.43;osc.type="sine";osc.frequency.setValueAtTime(174.61*partials[i],now);gain.gain.setValueAtTime(1e-4,now);gain.gain.exponentialRampToValueAtTime(start,now+.012);gain.gain.exponentialRampToValueAtTime(1e-4,now+length);osc.connect(gain);gain.connect(output);audioOwnVoice(osc,[osc,gain],{duration:length+.03,priority:4});osc.start(now);osc.stop(now+length+.03)}}catch(e){}}function audioGullCry(){if(!audioCanPlay())return;try{const now=AC.currentTime,output=audioOutput();if(!audioReserveVoice(3,false))return;const o=AC.createOscillator(),g=AC.createGain();o.type="sine";o.frequency.setValueAtTime(1280,now);o.frequency.exponentialRampToValueAtTime(830,now+.14);o.frequency.exponentialRampToValueAtTime(1100,now+.28);g.gain.setValueAtTime(.001,now);g.gain.linearRampToValueAtTime(.055,now+.06);g.gain.exponentialRampToValueAtTime(.001,now+.36);o.connect(g);g.connect(output);audioOwnVoice(o,[o,g],{duration:.37,priority:3});o.start(now);o.stop(now+.37)}catch(e){}}window.HUNTER_VICTORY_POSE=Object.freeze((()=>{const clamp=t=>Math.max(0,Math.min(1,t));const ease=t=>{const x=clamp(t);return x*x*(3-2*x)};const joints=items=>(items||[]).filter(Boolean).map(node=>({node:node,rotation:node.rotation.clone()}));function capture(THREE,model,direction,pelvisHeight=1.35){const rig=model.userData||{};const fallDir=new THREE.Vector3(direction?.x||0,0,direction?.z||-1);if(fallDir.lengthSq()<1e-5)fallDir.set(0,0,-1);fallDir.normalize();const axis=new THREE.Vector3(0,1,0).cross(fallDir).normalize();return{THREE:THREE,model:model,axis:axis,pelvisHeight:pelvisHeight,position:model.position.clone(),quaternion:model.quaternion.clone(),hips:joints(rig.legs||[rig.ll,rig.lr]),knees:joints(rig.knees||[rig.lkl,rig.lkr]),arms:joints(rig.arms||[rig.al,rig.ar]),elbows:joints(rig.elbows||[rig.ael,rig.aer]),head:joints([rig.head])}}function apply(pose,progress){const{THREE:THREE,model:model}=pose,p=clamp(progress);const lift=ease((p-.01)/.35),fall=ease((p-.16)/.81);const recoil=Math.sin(Math.PI*clamp(p/.29))*.13;const angle=recoil+1.48*fall;model.quaternion.setFromAxisAngle(pose.axis,angle).multiply(pose.quaternion);const pelvis=new THREE.Vector3(0,pose.pelvisHeight,0);const before=pelvis.clone().applyQuaternion(pose.quaternion);const after=pelvis.clone().applyQuaternion(model.quaternion);model.position.copy(pose.position).add(before).sub(after);model.position.y-=.83*fall;pose.arms.forEach(({node:node,rotation:rotation},i)=>{const side=i===0?-1:1;node.rotation.set(rotation.x+(i===0?-.27:.22)*lift,rotation.y+side*.32*lift,rotation.z+side*2.03*lift)});pose.elbows.forEach(({node:node,rotation:rotation},i)=>{node.rotation.copy(rotation);node.rotation.x+=(i===0?.27:.34)*lift;node.rotation.z+=(i===0?-.1:.1)*lift});pose.hips.forEach(({node:node,rotation:rotation},i)=>{node.rotation.copy(rotation);node.rotation.x+=(i===0?-.23:.29)*fall});pose.knees.forEach(({node:node,rotation:rotation},i)=>{node.rotation.copy(rotation);node.rotation.x-=(i===0?.39:.63)*fall});pose.head.forEach(({node:node,rotation:rotation})=>{node.rotation.copy(rotation);node.rotation.x-=.3*ease((p-.08)/.46)})}return{capture:capture,apply:apply}})());const VICTORY_REPLAY_SECONDS=2.35,VICTORY_OVERHEAD_SECONDS=3.25,VICTORY_SUNSET_SECONDS=8.7;let victoryCinematic=null;const victoryClamp=t=>Math.max(0,Math.min(1,t));const victoryEase=t=>{const p=victoryClamp(t);return p*p*(3-2*p)};function victoryShotSnapshot(general,shot){const attack=shot?.weapon==="knife"?"knife":shot?.weapon==="grenade"?"grenade":shot?.weapon==="bazooka"||shot?.own==="pb"?"rocket":!shot?"impact":shot.spl>0&&!Number.isFinite(shot.vx)?"explosion":"bullet";const hit=new THREE.Vector3(general.x,general.o.position.y+1.6,general.z),from=shot&&Number.isFinite(shot.sx)&&Number.isFinite(shot.sz)?new THREE.Vector3(shot.sx,shot.sy,shot.sz):new THREE.Vector3(cv?.x??P.x,(cv?.o?.position.y??P.y)+1.6,cv?.z??P.z),impact=shot&&Number.isFinite(shot.x)&&Number.isFinite(shot.y)?new THREE.Vector3(shot.x,shot.y,shot.z):hit.clone();let direction=impact.clone().sub(from);if(direction.lengthSq()<.01)direction=hit.clone().sub(from);if(direction.lengthSq()<.01)direction.set(0,0,-1);direction.normalize();const distance=Math.min(34,Math.max(7,from.distanceTo(hit)));return{hit:hit,from:from,impact:impact,direction:direction,attack:attack,approach:attack==="grenade"?from.clone():hit.clone().addScaledVector(direction,-distance),heavy:!!(shot?.spl>0),source:shot?.own||"p"}}function victoryReplayProjectile(shot,source){if(shot.attack==="knife"||shot.attack==="impact"||shot.attack==="explosion")return null;if(shot.attack==="grenade"&&source?.o)return source.o.clone(true);if(shot.attack==="rocket"){const rocket=new THREE.Group,metal=new THREE.MeshStandardMaterial({color:7305568,metalness:.48,roughness:.48}),body=new THREE.Mesh(gHeavy,metal);body.scale.set(1.1,1.1,2.25);rocket.add(body);for(let i=0;i<4;i++){const a=i*Math.PI/2,fin=new THREE.Mesh(new THREE.BoxGeometry(.09,.39,.46),metal);fin.position.set(Math.cos(a)*.23,Math.sin(a)*.23,.68);fin.rotation.z=a;rocket.add(fin)}const flame=new THREE.Mesh(new THREE.ConeGeometry(.15,.54,8),new THREE.MeshBasicMaterial({color:16756814,transparent:true,opacity:.85,depthWrite:false}));flame.rotation.x=Math.PI/2;flame.position.z=1.34;rocket.add(flame);return rocket}return new THREE.Mesh(shot.heavy?gHeavy:gLight,shot.heavy?mS:mW)}function victoryKnifeSlash(shot){if(shot.attack!=="knife")return null;const points=[];for(let i=0;i<=16;i++){const a=-1.15+2.3*i/16;points.push(shot.hit.clone().addScaledVector(shot.direction,Math.sin(a)*.78).add(new THREE.Vector3(0,Math.cos(a)*.68-.14,0)))}const slash=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points),16,.045,5,false),new THREE.MeshBasicMaterial({color:14412269,transparent:true,opacity:.82,depthWrite:false}));slash.visible=false;scene.add(slash);return slash}function victoryReplaySound(shot){if(shot.attack==="knife"||shot.attack==="impact"){snd("hurt",.55);return}if(shot.attack==="grenade"||shot.attack==="rocket"||shot.attack==="explosion"){snd("boom",.72);return}victorySlowGunshot(shot.heavy)}function victoryClearObstructions(v){for(const d of DB){const mesh=d.m;if(!mesh||v.dimmedFragments.has(mesh))continue;const original=mesh.material;const dim=material=>{if(!material)return material;if(!v.fragmentMaterials.has(material)){const faded=material.clone();faded.transparent=true;faded.opacity=.23;faded.depthWrite=false;v.fragmentMaterials.set(material,faded)}return v.fragmentMaterials.get(material)};v.dimmedFragments.set(mesh,original);mesh.material=Array.isArray(original)?original.map(dim):dim(original)}for(const f of fx)if(f.o&&!v.hiddenExplosionFx.has(f.o)){v.hiddenExplosionFx.set(f.o,f.o.visible);f.o.visible=false}}function victorySlowGunshot(heavy){snd(heavy?"replayCannon":"replayShot")}function victoryGullCry(){audioGullCry()}function victoryFindSea(general){let best=null,score=-Infinity;const sunHeading=new THREE.Vector3(sunDir.x,0,sunDir.z).normalize();for(let i=0;i<24;i++){const a=i*Math.PI*2/24,dir=new THREE.Vector3(Math.cos(a),0,Math.sin(a));let water=0;for(const dist of[140,260,400,600,820]){const x=Math.max(-H+35,Math.min(H-35,general.x+dir.x*dist)),z=Math.max(-H+35,Math.min(H-35,general.z+dir.z*dist));if(hAt(x,z)<-.9)water+=1}const rank=water*3+dir.dot(sunHeading)*2;if(rank>score){score=rank;best=dir}}return best||sunHeading}function victoryUi(show){const ids=["hud","mm","perfStats","contextButtons","joystick","strafeLeft","strafeRight","sniperScope"],c=victoryCinematic;if(!c)return;if(show){for(const id of ids){const node=document.getElementById(id);c.originalVisibility[id]=node.style.visibility;node.style.visibility="hidden"}}else for(const id of ids)document.getElementById(id).style.visibility=c.originalVisibility[id]||""}function clearVictoryCinematic(){const v=victoryCinematic;if(!v)return;victoryUi(false);if(v.pose)window.HUNTER_VICTORY_POSE.apply(v.pose,0);if(v.bullet)scene.remove(v.bullet);if(v.knifeSlash){scene.remove(v.knifeSlash);v.knifeSlash.geometry.dispose();v.knifeSlash.material.dispose()}if(v.impactFlash)scene.remove(v.impactFlash);for(const[mesh,material]of v.dimmedFragments)mesh.material=material;for(const material of v.fragmentMaterials.values())material.dispose();for(const[mesh,visible]of v.hiddenExplosionFx)mesh.visible=visible;for(const gull of v.gulls)scene.remove(gull.o);if(v.overlay?.parentNode)v.overlay.parentNode.removeChild(v.overlay);if(cam.fov!==58){cam.fov=58;cam.updateProjectionMatrix()}victoryCinematic=null}function startVictoryCinematic(general,killingShot=null){if(victoryCinematic||!general?.o)return false;const shot=victoryShotSnapshot(general,killingShot),seaDir=victoryFindSea(general),base=general.o.position.clone(),pose=window.HUNTER_VICTORY_POSE.capture(THREE,general.o,shot.direction);setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);if(eng)eng.g.gain.value=0;const bg=victoryReplayProjectile(shot,killingShot),knifeSlash=victoryKnifeSlash(shot);if(bg){bg.scale.setScalar(shot.attack==="grenade"?2.7:shot.attack==="rocket"?1.35:shot.heavy?1.6:.85);bg.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1),shot.direction);scene.add(bg);bg.visible=false}const flash=new THREE.Mesh(new THREE.SphereGeometry(.52,9,6),new THREE.MeshBasicMaterial({color:16763253,transparent:true,opacity:.8,depthWrite:false}));flash.visible=false;scene.add(flash);const overlay=document.createElement("div");overlay.id="victoryCinematicOverlay";overlay.setAttribute("aria-live","polite");Object.assign(overlay.style,{position:"fixed",inset:"0",zIndex:"20",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none",fontFamily:"system-ui,sans-serif",textAlign:"center"});const caption=document.createElement("div");caption.textContent="KILL CAM";Object.assign(caption.style,{position:"absolute",top:"7%",fontSize:"clamp(14px,2vw,24px)",fontWeight:"700",letterSpacing:".28em",color:"#fff1da",textShadow:"0 2px 10px #000",opacity:"0",transition:"opacity .3s"});const title=document.createElement("div");title.textContent="MISSI\xd3 COMPLERTA";Object.assign(title.style,{fontSize:"clamp(44px,8vw,116px)",fontWeight:"900",letterSpacing:".075em",lineHeight:"1.05",color:"#ffe3ab",textShadow:"0 3px 6px #382211,0 6px 28px #000",opacity:"0",transform:"scale(.96)",transition:"opacity .45s"});const hint=document.createElement("button");hint.textContent="NOVA PARTIDA";Object.assign(hint.style,{position:"absolute",bottom:"12%",background:"#11263bde",border:"1px solid #ffe3ab",borderRadius:"10px",padding:"12px 22px",color:"#fff",fontSize:"17px",letterSpacing:".08em",cursor:"pointer",pointerEvents:"auto",opacity:"0",display:"none"});hint.onclick=()=>window.location.reload();overlay.append(caption,title,hint);document.body.appendChild(overlay);const gulls=[];for(let i=0;i<9;i++){const gull=window.HUNTER_FAUNA.createGull(THREE,{box:bx,material:M});gull.o.visible=false;gull.o.scale.setScalar(.95+i%4*.33);scene.add(gull.o);gulls.push({...gull,index:i})}const seaCamera=base.clone();let bestSea=Infinity;for(const dist of[130,190,270,380,520,680,850,1050]){const x=Math.max(-H+35,Math.min(H-35,base.x+seaDir.x*dist)),z=Math.max(-H+35,Math.min(H-35,base.z+seaDir.z*dist)),level=hAt(x,z);if(level<bestSea){bestSea=level;seaCamera.x=x;seaCamera.z=z}if(level<-1.5)break}seaCamera.y=Math.max(20,hAt(seaCamera.x,seaCamera.z)+16);const overheadUp=new THREE.Vector3(-sunDir.x,0,-sunDir.z).normalize(),overheadOrientation=(new THREE.Quaternion).setFromRotationMatrix((new THREE.Matrix4).lookAt(new THREE.Vector3(0,1,0),new THREE.Vector3(0,0,0),overheadUp)),sunsetOrientation=(new THREE.Quaternion).setFromRotationMatrix((new THREE.Matrix4).lookAt(new THREE.Vector3(0,0,0),sunDir,new THREE.Vector3(0,1,0)));victoryCinematic={active:true,t:0,phase:"replay1",general:general,base:base,pose:pose,overheadOrientation:overheadOrientation,sunsetOrientation:sunsetOrientation,shot:shot,seaDir:seaDir,seaCamera:seaCamera,bullet:bg,knifeSlash:knifeSlash,impactFlash:flash,gulls:gulls,overlay:overlay,caption:caption,title:title,hint:hint,originalVisibility:{},lastReplay:-1,gullCries:0,finished:false,dimmedFragments:new Map,fragmentMaterials:new Map,hiddenExplosionFx:new Map};victoryUi(true);endEl.style.display="none";return true}function victorySetFall(progress){window.HUNTER_VICTORY_POSE.apply(victoryCinematic.pose,progress)}function victoryAnimateGulls(v){const offset=v.t-(VICTORY_REPLAY_SECONDS*3+VICTORY_OVERHEAD_SECONDS)-2.15,forward=new THREE.Vector3(sunDir.x,0,sunDir.z).normalize(),right=new THREE.Vector3(-forward.z,0,forward.x),cameraBase=v.seaCamera;for(const gull of v.gulls){const i=gull.index,local=offset-i*.17,p=victoryClamp(local/(4.25+i*.1));gull.o.visible=local>=0&&p<1;if(!gull.o.visible)continue;const launch=cameraBase.clone().addScaledVector(forward,-9-i*.65).addScaledVector(right,-16-i*2);launch.y+=4+i%3*2;const cross=cameraBase.clone().addScaledVector(forward,25+i*3).addScaledVector(right,2+i%4*2);cross.y+=5+i%4*1.6;const horizon=cameraBase.clone().addScaledVector(forward,215+i*27).addScaledVector(right,85+i*9);horizon.y+=3+i%5;const waypoint=.37,f=p<waypoint?victoryEase(p/waypoint):victoryEase((p-waypoint)/(1-waypoint));gull.o.position.copy(p<waypoint?launch:cross).lerp(p<waypoint?cross:horizon,f);const tangent=(p<waypoint?cross.clone().sub(launch):horizon.clone().sub(cross)).normalize();gull.o.rotation.y=Math.atan2(-tangent.x,-tangent.z);gull.o.rotation.z=Math.sin(v.t*2.3+i)*.12;const flap=Math.sin(local*8.1+i*.55)*.66;gull.wl.rotation.z=flap;gull.wr.rotation.z=-flap;const size=.95+i%4*.33;gull.o.scale.setScalar(size*(1-.62*victoryEase(p)))}if(v.gullCries<2&&offset>.5+v.gullCries*2.2){victoryGullCry();v.gullCries++}}function updateVictoryCinematic(dt){const v=victoryCinematic;if(!v||!v.active&&!v.finished)return;v.t+=Math.max(0,Math.min(.1,dt));victoryClearObstructions(v);if(v.finished){victoryAnimateGulls(v);return}const replayTotal=VICTORY_REPLAY_SECONDS*3,overheadEnd=replayTotal+VICTORY_OVERHEAD_SECONDS,end=overheadEnd+VICTORY_SUNSET_SECONDS;const target=v.shot.hit,dir=v.shot.direction,across=new THREE.Vector3(-dir.z,0,dir.x),base=v.base;if(v.bullet)v.bullet.visible=false;if(v.knifeSlash)v.knifeSlash.visible=false;v.impactFlash.visible=false;v.caption.style.opacity=v.t<replayTotal?"1":"0";if(v.t<replayTotal){const idx=Math.floor(v.t/VICTORY_REPLAY_SECONDS),local=v.t-idx*VICTORY_REPLAY_SECONDS;v.phase="replay"+(idx+1);if(v.lastReplay!==idx){v.lastReplay=idx;victoryReplaySound(v.shot)}const fall=victoryClamp((local-.85)/1.22);victorySetFall(fall);const bulletT=victoryClamp((local-.18)/.88);if(v.bullet&&local>=.18&&local<=1.06){v.bullet.visible=true;const destination=v.shot.heavy?v.shot.impact:target;v.bullet.position.copy(v.shot.approach).lerp(destination,bulletT);if(v.shot.attack==="grenade"){v.bullet.position.y+=Math.sin(Math.PI*bulletT)*Math.min(7,v.shot.from.distanceTo(destination)*.23);v.bullet.rotateX(dt*5);v.bullet.rotateZ(dt*3)}}if(v.shot.attack==="knife"){const knifeProgress=victoryClamp((local-.32)/.82);pl.userData.meleePose=Math.max(.001,(pl.userData.knifeAttackDuration||.48)*(1-knifeProgress));window.HUNTER_CHARACTERS.animatePlayer(pl,{forward:0,dt:.055,swimming:false,inVehicle:false,ammo:0});if(v.knifeSlash&&local>=.48&&local<=1.12){v.knifeSlash.visible=true;v.knifeSlash.material.opacity=.8*(1-victoryClamp((local-.62)/.5))}}if(v.shot.attack!=="knife"&&v.shot.attack!=="impact"&&local>=.98&&local<1.35){v.impactFlash.visible=true;v.impactFlash.position.copy(v.shot.heavy?v.shot.impact:target);const k=(local-.98)/.37;v.impactFlash.scale.setScalar(v.shot.heavy?1+k*4:.5+k*1.5);v.impactFlash.material.opacity=(1-k)*.85}const side=idx===0?1:idx===1?-1:.42,distance=idx===2?11:15,elev=idx===1?5.2:idx===2?3.2:6;let desired=target.clone().addScaledVector(across,side*distance).addScaledVector(dir,idx===2?-8:idx===1?8:-2);desired.y=Math.max(hAt(desired.x,desired.z)+2,target.y+elev);if(v.general.basement?.basement){const b=v.general.basement,p=b.basement.generalLocal,relative=[[2.8,2.7],[-3.1,1.4],[.8,-3.2]][idx],look=buildingWorldPoint(b,p.x+relative[0],p.z+relative[1]);desired.set(look.x,b.basement.floorY+3.3,look.z)}cam.position.copy(desired);cam.lookAt(target.x,target.y+(idx===1?.3:0),target.z);const fov=idx===2?43:48;if(cam.fov!==fov){cam.fov=fov;cam.updateProjectionMatrix()}}else if(v.t<overheadEnd){v.phase="overhead";victorySetFall(1);if(v.general.basement?.basement){for(const mesh of v.general.basement.basement.upperSlabMeshes)mesh.visible=false;v.general.basement.roof.visible=false}const f=victoryEase((v.t-replayTotal)/VICTORY_OVERHEAD_SECONDS),h=10+175*f;cam.position.set(base.x,base.y+h,base.z);cam.quaternion.copy(v.overheadOrientation);if(cam.fov!==54){cam.fov=54;cam.updateProjectionMatrix()}}else{v.phase="sunset";victorySetFall(1);const f=victoryEase((v.t-overheadEnd)/2.6);const from=new THREE.Vector3(base.x,base.y+185,base.z);cam.position.copy(from).lerp(v.seaCamera,f);cam.quaternion.copy(v.overheadOrientation).slerp(v.sunsetOrientation,f);const fov=54+6*f;if(Math.abs(cam.fov-fov)>.01){cam.fov=fov;cam.updateProjectionMatrix()}v.title.style.opacity=String(victoryEase((v.t-overheadEnd-3.1)/1.2));v.title.style.transform="scale("+(1-.04*(1-victoryEase((v.t-overheadEnd-3.1)/1.3)))+")";victoryAnimateGulls(v);if(v.t>=end){v.phase="finished";v.finished=true;v.active=false;v.title.style.opacity="1";v.hint.style.display="block";v.hint.style.opacity="1"}}}const DEATH_REPLAY_SECONDS=4.5,DEATH_FADE_SECONDS=1.8,DEATH_REAPER_SECONDS=6.3;let deathCinematic=null;const deathClamp=t=>Math.max(0,Math.min(1,t));const deathEase=t=>{const p=deathClamp(t);return p*p*(3-2*p)};function deathStageAt(t){if(t<DEATH_REPLAY_SECONDS)return"replay";if(t<DEATH_REPLAY_SECONDS+DEATH_FADE_SECONDS)return"fade";if(t<DEATH_REPLAY_SECONDS+DEATH_FADE_SECONDS+DEATH_REAPER_SECONDS)return"reaper";return"finished"}function deathCauseInfo(cause){const names={bullet:["UN DISPAR","El projectil que t\u2019ha abatut"],explosion:["UNA EXPLOSI\xd3","L\u2019ona expansiva"],fall:["UNA CAIGUDA","L\u2019impacte contra el terra"],shark:["UN TAUR\xd3","Un atac sota l\u2019aigua"],runover:["UN ATROPELLAMENT","L\u2019envestida d\u2019un vehicle"],vehicleExplosion:["EL TEU VEHICLE","L\u2019explosi\xf3 del vehicle"],impact:["UN IMPACTE","El cop definitiu"]};const kind=names[cause?.type]?cause.type:"impact";return{kind:kind,title:names[kind][0],detail:names[kind][1]}}function deathUi(show){const v=deathCinematic;if(!v)return;for(const id of["hud","mm","perfStats","contextButtons","joystick","strafeLeft","strafeRight","sniperScope","bazookaReticle"]){const el=document.getElementById(id);if(!el)continue;if(show){v.previousVisibility[id]=el.style.visibility;el.style.visibility="hidden"}else el.style.visibility=v.previousVisibility[id]||""}}function deathPoseProne(player,centre,heading){const u=player.userData,forwardX=-Math.sin(heading),forwardZ=-Math.cos(heading);player.position.set(centre.x-forwardX*1.05,centre.y+.39,centre.z-forwardZ*1.05);player.rotation.set(-Math.PI/2,heading,0);if(u.upperBody)u.upperBody.rotation.set(0,0,0);if(u.head)u.head.rotation.set(-.06,0,0);if(u.al)u.al.rotation.set(-.22,-.08,-.65);if(u.ar)u.ar.rotation.set(-.22,.08,.65);if(u.ael)u.ael.rotation.set(.6,0,-.09);if(u.aer)u.aer.rotation.set(.6,0,.09);if(u.ll)u.ll.rotation.set(.07,0,-.08);if(u.lr)u.lr.rotation.set(-.09,0,.08);if(u.lkl)u.lkl.rotation.set(-.12,0,0);if(u.lkr)u.lkr.rotation.set(-.16,0,0);for(const weapon of[u.gun,u.knife,u.bazooka,u.grenade,u.sniper,u.cisalla])if(weapon)weapon.visible=false;if(u.pistolFlash)u.pistolFlash.visible=false;player.visible=true;player.updateMatrixWorld(true)}function deathFaceCamera(player,cameraPosition){const head=player.userData?.head;if(!head)return;const headPosition=head.getWorldPosition(new THREE.Vector3),localView=(new THREE.Vector3).copy(cameraPosition).sub(headPosition),inverse=player.getWorldQuaternion(new THREE.Quaternion).invert();localView.applyQuaternion(inverse);const angle=Math.atan2(-localView.x,-localView.z);head.rotation.y=Math.max(-1.48,Math.min(1.48,angle));head.rotation.x=-.06}function deathInitialMotion(v){const airborne=playerFall,blast=playerEject,speed=cv?Math.max(-60,Math.min(60,cv.v||0)):0,heading=cv?.hd??P.hd??0,push=v.cause.kind==="explosion"||v.cause.kind==="vehicleExplosion";const velocity=new THREE.Vector3(airborne?.vx??blast?.vx??-Math.sin(heading)*speed,airborne?.vy??(blast?.kind==="blast"?blast.vy:0),airborne?.vz??blast?.vz??-Math.cos(heading)*speed);if(push&&!airborne&&!blast){velocity.addScaledVector(v.direction,-9);velocity.y+=6}const kind=v.cause.kind;const torque=kind==="explosion"||kind==="vehicleExplosion"?2.2:kind==="runover"?1.8:kind==="shark"?.9:kind==="fall"?.55:1.15;const angular=new THREE.Vector3(-v.direction.z*torque,0,v.direction.x*torque);if(airborne&&!airborne.parachute){angular.x+=(airborne.spin||1)*2.5}const orientation=pl.quaternion.clone();const up=new THREE.Vector3(0,1,0).applyQuaternion(orientation);const centre=new THREE.Vector3(P.x,P.y,P.z).addScaledVector(up,1.7);return{centre:centre,velocity:velocity,angular:angular,orientation:orientation,onWater:v.onWater}}function deathReplayPose(v,dt=0){const m=v.motion;if(!m)return;const step=Math.min(.1,Math.max(0,dt))*.65;if(step){const inWater=m.onWater&&m.centre.y<v.waterLevel+2.2;m.velocity.y-=(inWater?7:24)*step;const drag=Math.exp(-(inWater?1.9:.2)*step);m.velocity.x*=drag;m.velocity.z*=drag;m.centre.addScaledVector(m.velocity,step);const turn=m.angular.length();if(turn>1e-5){const dq=(new THREE.Quaternion).setFromAxisAngle(m.angular.clone().normalize(),turn*step);m.orientation.premultiply(dq).normalize()}const up=new THREE.Vector3(0,1,0).applyQuaternion(m.orientation);const ground=groundAt(m.centre.x,m.centre.z,m.centre.y),surface=inWater?Math.max(ground,v.waterLevel-3.5):ground,support=.52+1.18*Math.abs(up.y);if(m.centre.y<surface+support){m.centre.y=surface+support;if(m.velocity.y<0)m.velocity.y=Math.abs(m.velocity.y)<3?0:-m.velocity.y*.12;const friction=Math.exp(-(inWater?5:3.7)*step);m.velocity.x*=friction;m.velocity.z*=friction;m.angular.x+=up.z*4.2*step;m.angular.z-=up.x*4.2*step;m.angular.multiplyScalar(Math.exp(-(inWater?2.8:1.5)*step))}else m.angular.multiplyScalar(Math.exp(-.14*step))}const up=new THREE.Vector3(0,1,0).applyQuaternion(m.orientation);pl.position.copy(m.centre).addScaledVector(up,-1.7);pl.quaternion.copy(m.orientation);pl.visible=true;if(v.ragdoll){const surface=groundAt(m.centre.x,m.centre.z,m.centre.y),airborne=m.centre.y>surface+1.9;window.HUNTER_RAGDOLL.update(v.ragdoll,step,{airborne:airborne,grounded:!airborne})}v.bodyFocus.copy(m.centre);if(!v.impactSoundPlayed&&v.t>=v.impactTime){v.impactSoundPlayed=true;const kind=v.cause.kind;if(kind==="shark")snd("swim",.95);else if(kind==="explosion"||kind==="vehicleExplosion")snd("boom",.5);else if(kind==="fall"||kind==="runover")snd("hurt",.75);else snd("shot",.32)}pl.updateMatrixWorld(true)}function deathBuildReaper(THREE){const g=new THREE.Group,owned=[];const mat=(color,extras={})=>{const m=new THREE.MeshStandardMaterial({color:color,roughness:.93,...extras});owned.push(m);return m};const cloak=mat(1119515),inner=mat(197897),trim=mat(3223868),bone=mat(12039592),steel=mat(10331565,{metalness:.64,roughness:.33});function part(geometry,material,x,y,z){owned.push(geometry);const m=new THREE.Mesh(geometry,material);m.position.set(x,y,z);g.add(m);return m}part(new THREE.ConeGeometry(.93,3.05,9,1),cloak,0,1.49,0);const shoulder=part(new THREE.SphereGeometry(.69,10,8),cloak,0,2.48,0);shoulder.scale.set(1.24,.68,.85);const hood=part(new THREE.SphereGeometry(.65,12,10),cloak,0,2.88,.12);hood.scale.set(1,1.04,1.04);const dark=part(new THREE.SphereGeometry(.47,10,8),inner,0,2.84,.55);dark.scale.set(.83,.91,.3);const skull=part(new THREE.SphereGeometry(.29,12,9),bone,0,2.83,.678);skull.scale.set(1,.95,.42);for(const x of[-.12,.12]){const eye=part(new THREE.SphereGeometry(.083,8,6),inner,x,2.87,.795);eye.scale.set(1,.72,.45)}const jaw=part(new THREE.BoxGeometry(.27,.1,.09),bone,0,2.64,.77);jaw.rotation.x=.1;for(const side of[-1,1]){const sleeve=part(new THREE.ConeGeometry(.33,1.45,8),cloak,side*.67,2.13,.15);sleeve.rotation.z=side*.42;part(new THREE.SphereGeometry(.13,8,6),bone,side*.95,1.46,.27)}const shaft=part(new THREE.CylinderGeometry(.065,.085,4.45,8),trim,1.45,2.395,.3);shaft.rotation.z=0;const blade=new THREE.Shape;blade.moveTo(1.45,4.62);blade.bezierCurveTo(2.02,4.83,3.15,4.7,3.73,2.96);blade.bezierCurveTo(3.78,3.77,3.16,4.4,1.45,4.62);const bladeMesh=part(new THREE.ShapeGeometry(blade,22),steel,0,0,.3);bladeMesh.material.side=THREE.DoubleSide;const cuttingEdge=new THREE.CubicBezierCurve3(new THREE.Vector3(3.73,2.96,.32),new THREE.Vector3(3.78,3.77,.32),new THREE.Vector3(3.16,4.4,.32),new THREE.Vector3(1.45,4.62,.32));const edgeGeometry=(new THREE.BufferGeometry).setFromPoints(cuttingEdge.getPoints(22));const edgeMaterial=new THREE.LineBasicMaterial({color:14804451,transparent:true,opacity:.85});owned.push(edgeGeometry,edgeMaterial);g.add(new THREE.Line(edgeGeometry,edgeMaterial));return{group:g,owned:owned}}function deathCreateVoid(v){const voidScene=new THREE.Scene;voidScene.background=new THREE.Color(0);const voidCamera=new THREE.PerspectiveCamera(46,cam.aspect,.2,100);voidScene.add(new THREE.AmbientLight(6251641,.72));const rim=new THREE.DirectionalLight(10132668,2.6);rim.position.set(-4,8,-6);voidScene.add(rim);const key=new THREE.SpotLight(16051681,10,22,Math.PI/4,.65,1.4);key.position.set(3,7,5);key.target.position.set(0,1.2,0);voidScene.add(key,key.target);const player=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});if(disg)for(const[material,original,disguise]of player.userData.mats)material.color.copy(vivid(disguise));deathPoseProne(player,{x:0,y:0,z:.85},-Math.PI/2);const bodyBounds=new THREE.Box3;player.traverseVisible(o=>{if(o.isMesh)bodyBounds.expandByObject(o)});const bodyCentre=bodyBounds.isEmpty()?new THREE.Vector3(0,.65,0):bodyBounds.getCenter(new THREE.Vector3);voidCamera.position.set(bodyCentre.x,3.5,bodyCentre.z+10.8);voidCamera.lookAt(bodyCentre.x,Math.max(1.15,bodyCentre.y+.6),bodyCentre.z-.15);deathFaceCamera(player,voidCamera.position);player.traverse(o=>{if(o.isMesh)o.castShadow=false});voidScene.add(player);const reaper=deathBuildReaper(THREE);reaper.group.position.set(2.15,0,-14);voidScene.add(reaper.group);v.voidScene=voidScene;v.voidCamera=voidCamera;v.voidPlayer=player;v.reaper=reaper}function deathCreateUnderwater(v){if(!v.onWater)return;const underwaterScene=new THREE.Scene;const shallow=new THREE.Color(9163496),deep=new THREE.Color(666960);underwaterScene.background=shallow.clone();const ambient=new THREE.AmbientLight(10213608,1.65);const key=new THREE.DirectionalLight(12970738,1.25);key.position.set(-3,8,6);underwaterScene.add(ambient,key);v.underwaterScene=underwaterScene;v.underwaterShallow=shallow;v.underwaterDeep=deep;v.underwaterKey=key}function deathUpdateUnderwater(v){if(!v.underwaterScene||v.phase!=="replay"&&v.phase!=="fade")return;if(!v.underwaterActive&&cam.position.y<=v.waterLevel-.2){v.underwaterScene.add(pl);v.underwaterActive=true}if(!v.underwaterActive)return;const progress=deathEase((v.t-1.1)/3.45),depth=deathClamp((v.waterLevel-v.bodyFocus.y)/5.8),darkness=Math.max(progress,depth*.65);v.underwaterScene.background.copy(v.underwaterShallow).lerp(v.underwaterDeep,darkness);v.underwaterKey.intensity=1.25-darkness*.8;v.waterFilter.style.opacity=deathVoidReady()?"0":String(.54+.28*progress)}function deathReplayEffect(v){const type=v.cause.kind,from=v.source.clone(),to=v.hit.clone();const toward=to.clone().sub(from);if(toward.lengthSq()<.01)toward.set(0,0,1);if(toward.length()>19)from.copy(to).addScaledVector(toward.normalize(),-19);let geometry,material,mesh;const ripple=type==="fall"||type==="runover"||type==="shark";if(ripple){geometry=new THREE.RingGeometry(.65,.89,32);material=new THREE.MeshBasicMaterial({color:type==="shark"?10279140:13744032,side:THREE.DoubleSide,transparent:true,opacity:.58,depthWrite:false});mesh=new THREE.Mesh(geometry,material);mesh.rotation.x=-Math.PI/2;mesh.position.set(v.originX,type==="shark"?v.waterLevel+.12:v.floor+.1,v.originZ)}else if(type==="bullet"){geometry=new THREE.SphereGeometry(.15,10,7);material=new THREE.MeshBasicMaterial({color:16770744});mesh=new THREE.Mesh(geometry,material);mesh.position.copy(from)}else{geometry=new THREE.SphereGeometry(1.05,12,8);material=new THREE.MeshBasicMaterial({color:16747605,transparent:true,opacity:.75,depthWrite:false});mesh=new THREE.Mesh(geometry,material);mesh.position.copy(v.source)}mesh.visible=false;scene.add(mesh);return{mesh:mesh,geometry:geometry,material:material,from:from,ripple:ripple}}function startDeathCinematic(cause=null){if(deathCinematic||victoryCinematic)return false;const info=deathCauseInfo(cause),hit=new THREE.Vector3(P.x,P.y+1.45,P.z),source=new THREE.Vector3(Number.isFinite(cause?.x)?cause.x:P.x-Math.sin(P.hd||0)*8,Number.isFinite(cause?.y)?cause.y:P.y+2,Number.isFinite(cause?.z)?cause.z:P.z-Math.cos(P.hd||0)*8);const direction=source.clone().sub(hit);direction.y=0;if(direction.lengthSq()<.001)direction.set(0,0,-1);direction.normalize();setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);if(eng)eng.g.gain.value=0;const overlay=document.createElement("div");overlay.id="deathCinematicOverlay";overlay.setAttribute("aria-live","polite");overlay.innerHTML='<div class="death-water-filter" aria-hidden="true"></div>'+'<div class="death-shade"></div>'+'<div class="death-replay-label">DARRER INSTANT \xb7 C\xc0MERA LENTA</div>'+'<div class="death-cause">MORT PER <strong></strong><small></small></div>'+'<div class="death-finale"><div class="death-sigil" aria-hidden="true">\u271d</div>'+"<p>LA PARCA HA VINGUT A BUSCAR-TE</p><h2>HAS MORT</h2></div>"+'<button type="button" class="death-new-game">NOVA PARTIDA</button>';const shade=overlay.querySelector(".death-shade"),waterFilter=overlay.querySelector(".death-water-filter"),replayLabel=overlay.querySelector(".death-replay-label"),causeEl=overlay.querySelector(".death-cause"),finale=overlay.querySelector(".death-finale"),button=overlay.querySelector(".death-new-game");causeEl.querySelector("strong").textContent=info.title;causeEl.querySelector("small").textContent=info.detail;button.onclick=()=>window.location.reload();document.body.appendChild(overlay);const waterLevel=wy(P.x,P.z,elapsed),submerged=!cv&&!ib&&hAt(P.x,P.z)<waterLevel-1.5&&P.y<waterLevel-.65,onWater=info.kind==="shark"||swimming||submerged||!!(cv&&["w","wl"].includes(VT[cv.t]?.m));const ground=groundAt(P.x,P.z,P.y);const airborneDeath=info.kind==="vehicleExplosion"||info.kind==="explosion"||info.kind==="runover";const floor=onWater?Math.max(P.y,waterLevel-.15):cv||airborneDeath?ground:P.y;const heading=P.hd||0;const bodyFocus=new THREE.Vector3(P.x-Math.sin(heading)*.45,floor+.6,P.z-Math.cos(heading)*.45);const v={active:true,finished:false,t:0,phase:"replay",cause:info,source:source,hit:hit,direction:direction,onWater:onWater,overlay:overlay,shade:shade,waterFilter:waterFilter,replayLabel:replayLabel,causeEl:causeEl,finale:finale,button:button,underwaterScene:null,underwaterActive:false,underwaterKey:null,previousVisibility:{},previousFov:cam.fov,previousPlayerPose:{position:pl.position.clone(),rotation:pl.rotation.clone(),scale:pl.scale.clone(),visible:pl.visible},heading:heading,bodyFocus:bodyFocus,originX:P.x,originZ:P.z,initialY:P.y,floor:floor,waterLevel:waterLevel,impactTime:info.kind==="fall"?3.01:info.kind==="shark"?.68:info.kind==="runover"?2.9:.62,impactSoundPlayed:false,lastBell:-1,voidScene:null,reaper:null,replayEffect:null};deathCinematic=v;if(playerBlastRagdoll){window.HUNTER_RAGDOLL.reset(playerBlastRagdoll);playerBlastRagdoll=null}v.ragdoll=window.HUNTER_RAGDOLL.make(pl,{blast:info.kind==="explosion"||info.kind==="vehicleExplosion",impulse:playerEject?.kind==="blast"?playerEject:null,seed:P.x*.41+P.z*.27});deathUi(true);endEl.style.display="none";v.motion=deathInitialMotion(v);deathReplayPose(v);deathCreateVoid(v);deathCreateUnderwater(v);v.replayEffect=deathReplayEffect(v);return true}function clearDeathCinematic(){const v=deathCinematic;if(!v)return;deathUi(false);if(v.replayEffect){scene.remove(v.replayEffect.mesh);v.replayEffect.geometry.dispose();v.replayEffect.material.dispose()}if(v.reaper)for(const resource of v.reaper.owned)resource.dispose();if(v.ragdoll){window.HUNTER_RAGDOLL.reset(v.ragdoll);v.ragdoll=null}if(v.underwaterActive)scene.add(pl);if(v.overlay.parentNode)v.overlay.parentNode.removeChild(v.overlay);pl.position.copy(v.previousPlayerPose.position);pl.rotation.copy(v.previousPlayerPose.rotation);pl.scale.copy(v.previousPlayerPose.scale);pl.visible=v.previousPlayerPose.visible;cam.fov=v.previousFov;cam.updateProjectionMatrix();deathCinematic=null}function deathVoidReady(){return!!deathCinematic&&deathCinematic.t>=DEATH_REPLAY_SECONDS+DEATH_FADE_SECONDS/2}function updateDeathCinematic(dt){const v=deathCinematic;if(!v||v.finished)return;v.t+=Math.max(0,Math.min(.1,dt));v.phase=deathStageAt(v.t);const replay=deathClamp(v.t/DEATH_REPLAY_SECONDS);if(v.phase==="replay"||v.phase==="fade"){deathReplayPose(v,dt);const right=new THREE.Vector3(Math.cos(v.heading),0,-Math.sin(v.heading));cam.position.copy(v.bodyFocus).addScaledVector(right,9-replay*2.5).addScaledVector(v.direction,-2.8+replay*.8);if(v.onWater){const dive=deathEase((v.t-.28)/3.38);cam.position.y=v.waterLevel+1.7-5.7*dive}else cam.position.y+=3.8-replay*.65;cam.lookAt(v.bodyFocus);deathUpdateUnderwater(v);const fieldOfView=(v.cause.kind==="explosion"||v.cause.kind==="vehicleExplosion"?58:53)-replay*4;if(Math.abs(cam.fov-fieldOfView)>.05){cam.fov=fieldOfView;cam.updateProjectionMatrix()}if(v.replayEffect){const effect=v.replayEffect,material=effect.material,type=v.cause.kind;if(type==="bullet"){const f=deathEase((v.t-.09)/.49);effect.mesh.visible=v.t>.09&&v.t<.71;effect.mesh.position.copy(effect.from).lerp(v.hit,f);effect.mesh.scale.setScalar(1+.7*f)}else if(effect.ripple){const impact=type==="shark"?.68:type==="fall"?3.02:3.01;const p=deathClamp((v.t-impact)/1.35);effect.mesh.visible=v.t>=impact&&p<1;effect.mesh.scale.setScalar(.5+5*p);material.opacity=.58*(1-p)}else{const p=deathClamp((v.t-.42)/2.15);effect.mesh.scale.setScalar(.3+4.1*p);material.opacity=.72*(1-p);effect.mesh.visible=v.t>=.42&&p<1}}}const fadeStart=DEATH_REPLAY_SECONDS,half=DEATH_FADE_SECONDS/2;const alpha=v.t<fadeStart?0:v.t<fadeStart+half?deathEase((v.t-fadeStart)/half):v.t<fadeStart+DEATH_FADE_SECONDS?1-deathEase((v.t-fadeStart-half)/half):0;v.shade.style.opacity=String(alpha);if(deathVoidReady()&&v.waterFilter)v.waterFilter.style.opacity="0";v.replayLabel.style.opacity=v.t<fadeStart?.94:0;v.causeEl.style.opacity=v.t<fadeStart?.98:0;if(deathVoidReady()){const start=DEATH_REPLAY_SECONDS+DEATH_FADE_SECONDS,p=deathEase((v.t-start)/(DEATH_REAPER_SECONDS-.75));v.reaper.group.position.set(2.15-p*1.65,Math.sin(v.t*1.35)*.045,-14+p*12.3);v.reaper.group.rotation.y=-.35+p*.35;if(v.voidPlayer?.userData?.head)deathFaceCamera(v.voidPlayer,v.voidCamera.position);if(v.t>=start&&v.lastBell<0){deathBell(.83);v.lastBell=0}if(v.t>=start+2.15&&v.lastBell===0){deathBell(.65);v.lastBell=1}if(v.t>=start+4.4&&v.lastBell===1){deathBell(.55);v.lastBell=2}const rise=deathEase((v.t-start-2.6)/2.2);v.finale.style.opacity=String(rise)}if(v.phase==="finished"){v.active=false;v.finished=true;v.finale.style.opacity="1";v.button.style.display="block";v.button.focus()}}function buildingLocalPoint(b,x,z){const c=Math.cos(b.angle||0),s=Math.sin(b.angle||0),dx=x-b.x,dz=z-b.z;return{x:dx*c+dz*s,z:-dx*s+dz*c}}function buildingWorldPoint(b,x,z){const c=Math.cos(b.angle||0),s=Math.sin(b.angle||0);return{x:b.x+x*c-z*s,z:b.z+x*s+z*c}}function upperFloorHeight(b,x,z,previous=-Infinity){if(!b.upperFloor||b.rb)return null;const p=buildingLocalPoint(b,x,z),a=b.interiorStair,level=b.fy+b.storey+.15;if(Math.abs(p.x)>b.localW/2-.35||Math.abs(p.z)>b.localD/2-.35)return null;if(stairContains(a,x,z))return null;return previous>=level-.75?level:null}function decorateRuntimeBuilding(b,spec){const box=(g,w,h,d,c,x=0,y=0,z=0,profile="paint")=>bx(g,w,h,d,c,x,y,z,profile),rod=(g,a,v,r,c)=>{const start=new THREE.Vector3(...a),end=new THREE.Vector3(...v),delta=end.clone().sub(start),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),6),M(c,"paint"));m.position.copy(start.add(end).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());g.add(m);return m},cylinder=(g,r,h,c,x,y,z)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,10),M(c,"paint"));m.position.set(x,y,z);g.add(m);return m},shell={group:b.o,roof:b.roof,walls:b.wm},roofs=[];b.floors=spec.floors||1;b.localW=b.w;b.localD=b.d;b.wood=!!spec.wood;b.storey=b.h/b.floors;const registerStair=(width,run,x,z,visualGroup=null)=>{const stair={x:x,z:z,nx:0,nz:1,top:b.fy+b.storey+.15,bottom:b.fy+.3,length:run,width:width,ramp:true,internal:true,owner:b,destroyed:false};b.interiorStair=stair;stairs.push(stair);if(visualGroup)b.interiorStairGroup=visualGroup;const parts=visualGroup?.children.filter(o=>o.isMesh)||[];const collider={x0:x-width/2,x1:x+width/2,z0:z,z1:z+run,y0:b.fy+.2,y1:b.fy+b.storey+.25,hp:20,m:parts[0]||new THREE.Object3D,parts:parts.length?parts:null,door:false,open:false,rammable:false,playerBlock:false,stairStructure:stair,cx:x,cz:z+run/2,owner:b};stair.collider=collider;b.interiorStairCollider=collider;Wl.push(collider)};if(seedSearchMode){if(b.floors===2){b.upperFloor=true;const width=2.8,run=Math.min(b.d-3,b.storey*1.05),x=b.x+b.w/2-width/2-.7,z=b.z-b.d/2+2.4;registerStair(width,run,x,z)}return}if(spec.wood){window.HUNTER_COMPOUND_ARCHITECTURE.decorateTimber(THREE,{b:{...spec,h:b.h},shell:shell,box:box,rod:rod,cylinder:cylinder,roofs:roofs});b.extraRoofs=roofs}if(b.floors===2){b.upperFloor=window.HUNTER_COMPOUND_ARCHITECTURE.decorateUpper(THREE,{b:{...spec,h:b.h},storey:b.storey,shell:shell,box:box,rod:rod,roofs:roofs});const width=2.8,run=Math.min(b.d-3,b.storey*1.05),x=b.x+b.w/2-width/2-.7,z=b.z-b.d/2+2.4;registerStair(width,run,x,z,b.upperFloor.userData.stairGroup);for(const z of[-b.d/2,b.d/2])box(b.roof,b.w+.6,1,.35,6585458,0,b.h+1.7,z);for(const x of[-b.w/2,b.w/2])box(b.roof,.35,1,b.d+.6,6585458,x,b.h+1.7,0)}}function soldierChangeFloor(u,b,dt,targetY=P.y){if(!b.upperFloor||b.rb||!b.interiorStair||b.interiorStair.destroyed)return false;const floor=b.fy+b.storey+.15,current=u.walkY??u.o.position.y,wantsUp=targetY>floor-1,isUp=current>floor-.7;if(wantsUp===isUp&&!u.floorRoute)return false;const a=b.interiorStair;if(!u.floorRoute||u.floorRoute.up!==wantsUp){const bottom={x:a.x+a.nx*(a.length+.7),z:a.z+a.nz*(a.length+.7)},top={x:a.x,z:a.z};const side=buildingWorldPoint(b,b.localW/2-5,b.localD/-2+2.4);u.floorRoute={up:wantsUp,points:wantsUp?[bottom,top,side]:[side,top,bottom],i:0}}const r=u.floorRoute,p=r.points[r.i];if(Math.hypot(u.x-p.x,u.z-p.z)<.55){u.navDirectT=0;u.navPath=[];u.navSearch=null;u.navRetry=0;if(++r.i>=r.points.length){u.floorRoute=null;return false}}const goal=r.points[r.i];if(goal)mvE(u,u.sp*dt,goal.x,goal.z);u.walkY=groundAt(u.x,u.z,u.walkY??u.o.position.y);return true}function layoutRadius(l){return Math.hypot(...l.size)/2+20}function coastalLayoutFits(l,q){const tr=compoundTransform(q,q.angle),shore=l.waterfront?.shore??8;for(const x of[-l.size[0]/2,0,l.size[0]/2])for(const z of[-l.size[1]/2,-l.size[1]/4,shore-8]){const p=tr(x,z);if(Math.abs(p[0])>H-15||Math.abs(p[1])>H-15||rawHAt(...p)<(z===shore-8?-2:.12))return false}for(const b of l.buildings)for(const dx of[-b.w/2,0,b.w/2])for(const dz of[-b.d/2,0,b.d/2])if(rawHAt(...tr(b.x+dx,b.z+dz))<.2)return false;for(const v of l.vehicles.filter(v=>["w","wl"].includes(VT[v.t]?.m))){const hb=window.HUNTER_VEHICLES.hitboxes[v.t],sc=VS[v.t]||1,hw=hb[0]*sc/2+1,hd=hb[1]*sc/2+1;for(const dx of[-hw,0,hw])for(let dz=-hd;dz<=hd+(v.t==="ferry"?45:16);dz+=5)if(rawHAt(...tr(v.x+dx,v.z+dz))>-2)return false}return true}function findCoastalLayout(l,anchor,accept=()=>true){return drainBuildSteps(findCoastalLayoutSteps(l,anchor,accept))}function*findCoastalLayoutSteps(l,anchor,accept=()=>true){const shore=l.waterfront?.shore??8;for(const offset of[0,60,-60,120,-120,180,-180,240,-240,300,-300,360,-360])for(let turn=0;turn<4;turn++){yield{stage:"Empla\xe7aments de costa",completed:null,total:null};const angle=turn*Math.PI/2,tr=compoundTransform(anchor,angle);let landSeen=false;for(let d=0;d<Math.min(900,(anchor.r||400)*1.6);d+=12){const p=tr(offset,d),h=rawHAt(...p);if(h>.2){landSeen=true;continue}if(!landSeen)continue;for(const shift of[-18,-12,-6,0,6,12,18,24]){const center=tr(offset,d-shore+shift),q={x:center[0],z:center[1],angle:angle,h:.86,r:anchor.r};if(coastalLayoutFits(l,q)){const accepted=accept(q);if(accepted&&typeof accepted.next==="function"){if(yield*accepted)return q}else if(accepted)return q}}break}}return null}function solveCoastRoad(start,goal){return drainBuildSteps(solveCoastRoadSteps(start,goal))}function*solveCoastRoadSteps(start,goal){const step=12,nodes=new Map,open=[],cache=new Map,key=(x,z)=>x+","+z;const sample=(x,z)=>{const k=key(x,z);if(cache.has(k))return cache.get(k);let y=hAt(x,z),ok=y>.15&&Math.abs(x)<H-20&&Math.abs(z)<H-20;for(const b of B)if(Math.abs(x-b.x)<b.w/2+7&&Math.abs(z-b.z)<b.d/2+7)ok=false;for(const[dx,dz]of[[-5,0],[5,0],[0,-5],[0,5]])if(hAt(x+dx,z+dz)<.1)ok=false;const value={y:y,ok:ok};cache.set(k,value);return value};const first={x:start.x,z:start.z,ix:0,iz:0,g:0,h:Math.hypot(goal.x-start.x,goal.z-start.z)};first.f=first.h;open.push(first);nodes.set("0,0",first);let found=null,count=0;while(open.length&&count++<14e3){if(count%8===0)yield{stage:"Cam\xed de la base a la costa",completed:count,total:null,unit:"nodes"};open.sort((a,b)=>b.f-a.f);const n=open.pop();if(n.closed)continue;n.closed=true;if(Math.hypot(n.x-goal.x,n.z-goal.z)<step*1.3){found=n;break}for(const[dx,dz]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]]){const ix=n.ix+dx,iz=n.iz+dz,x=start.x+ix*step,z=start.z+iz*step,k=key(ix,iz),old=nodes.get(k);if(old?.closed||Math.hypot(x-start.x,z-start.z)>1600)continue;const a=sample(n.x,n.z),b=sample(x,z),mid=sample((x+n.x)/2,(z+n.z)/2),dist=step*Math.hypot(dx,dz);if(!b.ok||!mid.ok||Math.abs(b.y-a.y)>dist*.38)continue;const g=n.g+dist+Math.abs(b.y-a.y)*8;if(old&&g>=old.g)continue;const next={ix:ix,iz:iz,x:x,z:z,g:g,f:g+Math.hypot(x-goal.x,z-goal.z),parent:n};nodes.set(k,next);open.push(next)}}if(!found)return null;const points=[{...goal,y:.86}];for(let n=found;n;n=n.parent)points.push({x:n.x,z:n.z,y:hAt(n.x,n.z)});points.reverse();for(let pass=0;pass<6;pass++){points[0].y=hAt(start.x,start.z);for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i],rise=Math.hypot(a.x-b.x,a.z-b.z)*.12;b.y=Math.max(a.y-rise,Math.min(a.y+rise,b.y))}points.at(-1).y=.86;for(let i=points.length-2;i>=0;i--){const a=points[i+1],b=points[i],rise=Math.hypot(a.x-b.x,a.z-b.z)*.12;b.y=Math.max(a.y-rise,Math.min(a.y+rise,b.y))}}if(Math.abs(points[0].y-hAt(start.x,start.z))>.2||points.some(p=>Math.abs(p.y-hAt(p.x,p.z))>7))return null;return points}function buildCoastRoad(points,path){return drainBuildSteps(buildCoastRoadSteps(points,path))}function*buildCoastRoadSteps(points,path){for(let i=1;i<points.length;i++){yield{stage:"Cam\xed de la base a la costa",completed:i,total:points.length-1,unit:"trams"};const a=points[i-1],b=points[i],len=Math.hypot(a.x-b.x,a.z-b.z),angle=Math.atan2(-(b.x-a.x),b.z-a.z),n=Math.max(1,Math.ceil(len/2));for(let k=0;k<=n;k++){const t=k/n;addLevelArea(a.x+(b.x-a.x)*t,a.z+(b.z-a.z)*t,10,3,a.y+(b.y-a.y)*t,angle,7)}}path(points.map(p=>[p.x,p.z]),8);world.userData.baseCoast={width:8,maxGrade:.12,points:points.map(p=>({...p}))}}function createTerminalRamp(c,f){if(seedSearchMode)return;const p=compoundTransform(c,c.angle)(0,30),g=new THREE.Mesh(new THREE.BoxGeometry(10,.18,1),M(7896441,"metal"));world.add(g);c.loadingRamp={x:p[0],z:p[1],f:f,homeX:f.x,homeZ:f.z,homeHD:f.hd,mesh:g}}function terminalRampState(r){const f=r.f;if(f.destroyed||!V.includes(f)||Math.hypot(f.x-r.homeX,f.z-r.homeZ)>1.5||Math.abs(wrapAngle(f.hd-r.homeHD))>.06)return null;const endZ=FERRY_DECK.halfL*(VS.ferry||1),end=ferryWorld(f,0,endZ),dx=end.x-r.x,dz=end.z-r.z,length=Math.hypot(dx,dz);if(length<.1)return null;return{x:r.x,z:r.z,ux:dx/length,uz:dz/length,length:length,startY:PIER_DECK_Y,endY:ferryLocalSurfaceY(f,endZ)+.04}}function terminalRampHeight(x,z){for(const c of world?.userData.compounds||[]){if(!c.loadingRamp)continue;const s=terminalRampState(c.loadingRamp);if(!s)continue;const dx=x-s.x,dz=z-s.z,t=(dx*s.ux+dz*s.uz)/s.length,side=dx*s.uz-dz*s.ux;if(t>=0&&t<=1&&Math.abs(side)<=5)return s.startY+(s.endY-s.startY)*t}return null}function updateTerminalRamps(){for(const c of world?.userData.compounds||[]){const r=c.loadingRamp;if(!r)continue;const s=terminalRampState(r);r.mesh.visible=!!s;if(!s)continue;const rise=s.endY-s.startY;r.mesh.position.set(s.x+s.ux*s.length/2,(s.startY+s.endY)/2-.09,s.z+s.uz*s.length/2);r.mesh.rotation.set(-Math.atan2(rise,s.length),Math.atan2(s.ux,s.uz),0,"YXZ");r.mesh.scale.z=Math.hypot(s.length,rise)}}function pedestrianFerry(x,z,previous){for(const f of V){if(f.t!=="ferry"||f.destroyed)continue;const q=ferryLocal(f,x,z),y=ferryLocalSurfaceY(f,q.z);if(ferryWalkable(q.x,q.z,.55)&&previous>=y-.9)return{f:f,q:q,y:y}}return null}// Approved compound layouts share one specification with the preview.
 // Quarter turns keep the existing axis-aligned wall collision representation exact.
+// Approved compound layouts share one specification with the preview.
+// Quarter turns keep the existing axis-aligned wall collision representation exact.
 function compoundTransform(q,angle=0,mirror=1){
   const c=Math.round(Math.cos(angle)),s=Math.round(Math.sin(angle));
   return (x,z)=>[q.x+x*mirror*c-z*s,q.z+x*mirror*s+z*c];
@@ -499,8 +501,31 @@ function* buildApprovedCompoundSteps(layout,q,{pad,path,pier,prop,vehicles,rocke
   for(const spec of layout.buildings){
     yield {stage:'Construint '+layout.id,completed:built++,total:layout.buildings.length,unit:'edificis'};
     const [x,z]=tr(spec.x,spec.z),firstWall=Wl.length,firstStair=stairs.length,buildingAngle=angle-(spec.rotationY||0),bc=Math.round(Math.cos(buildingAngle)),bs=Math.round(Math.sin(buildingAngle)),buildingVector=(x,z)=>[x*bc-z*bs,x*bs+z*bc];
-    const b=spec.bunker?mkEnemyBunker(x,z):mkB(x,z,spec.w,spec.d,spec.h*(spec.floors||1),spec.wood?0x96714b:spec.replacement?0xa9bdb0:spec.hangar?0xbab99d:0xc9b98d,layout.friendly?0x2c5fc0:spec.hangar?0xb7c1b4:0x79584e,{floors:spec.floors,wood:spec.wood,hangar:!!spec.hangar,kind:spec.hangar?'hangar':layout.id==='hangar'?'garage':layout.id,doorSide:0,doorWidth:spec.hangar?30:4,doorHeight:spec.hangar?11:4.4,openDoor:!!spec.hangar,noPartitions:true,solidWalls:!!spec.warehouse&&!spec.wood});
+    const b=spec.bunker?mkEnemyBunker(x,z):mkB(x,z,spec.w,spec.d,spec.h*(spec.floors||1),spec.workshop?0x90968d:spec.wood?0x96714b:spec.replacement?0xa9bdb0:spec.hangar?0xbab99d:0xc9b98d,spec.workshop?0x54635c:layout.friendly?0x2c5fc0:spec.hangar?0xb7c1b4:0x79584e,{floors:spec.floors,wood:spec.wood,hangar:!!spec.hangar,workshop:!!spec.workshop,kind:spec.workshop?'workshop':spec.hangar?'hangar':layout.id==='hangar'?'garage':layout.id,doorSide:0,doorWidth:spec.hangar?30:4,doorHeight:spec.hangar?11:4.4,openDoor:!!spec.hangar,noPartitions:true,solidWalls:!!spec.workshop||!!spec.warehouse&&!spec.wood});
     decorateRuntimeBuilding(b,spec);b.civilian=!!layout.civilian;
+    if(spec.workshop){
+      b.workshop=true;
+      b.workshopParking={x,z,frontZ:z+spec.d/2,width:spec.w,depth:spec.d};
+      if(!seedSearchMode){
+        // Painted service rectangle and safety stripes are flat markers, not
+        // invisible collision barriers. The entrance and central bay stay clear.
+        const paint=(w,d,x0,z0,color,y=.37)=>bx(b.o,w,.035,d,color,x0,y,z0,'paint');
+        for(const side of[-1,1]){
+          paint(.22,15,side*6.1,-.5,0xebbd4e);
+          paint(1.15,.30,side*6.1,8.5,0xebbd4e);
+        }
+        paint(12,.22,0,-8.4,0xebbd4e);
+        // Tool cabinet and workbench are tucked against the back wall,
+        // outside the truck's central manoeuvring footprint.
+        bx(b.o,5.8,2.0,.65,0x56615d,-5.4,1.18,-10.65,'metal');
+        bx(b.o,5.9,.22,1.1,0x9b8060,-5.4,2.3,-10.2,'wood');
+        for(let k=0;k<3;k++)bx(b.o,.12,.8,.12,0xb7aaa0,-7.25+k*1.8,2.85,-10.3,'metal');
+        // A shallow sign above the open frontage makes the garage legible
+        // without closing the opening or affecting vehicle clearance.
+        bx(b.o,10,.65,.25,0x344d48,0,11.1,12.1,'paint');
+        for(const side of[-1,1])bx(b.o,.65,.65,.28,0xe2c455,side*4.05,11.12,12.22,'paint');
+      }
+    }
     if(spec.hangar){
       const shape=seedSearchMode?null:new THREE.Shape();if(shape){shape.moveTo(-spec.w/2,0);shape.lineTo(spec.w/2,0);for(let i=0;i<=16;i++){const a=i*Math.PI/16;shape.lineTo(Math.cos(a)*spec.w/2,.12+Math.sin(a)*spec.w/2)}shape.closePath();}
       // La paret semicircular és l'únic tancament posterior: sense l'antic
@@ -683,4 +708,3551 @@ function* buildApprovedCompoundSteps(layout,q,{pad,path,pier,prop,vehicles,rocke
 }
 
 ;
-const countVehicles=type=>{let count=0;for(const v of V)if(v.t===type)count++;return count};function prisonCampFootprint(layout){const padHalfWidth=layout.size[0]/2+4,padHalfDepth=layout.size[1]/2+4,escapeEnd=Math.max(...layout.escapeRoute.map(p=>p[1]))+12,blend=18;return{minX:-padHalfWidth-blend,maxX:padHalfWidth+blend,minZ:-padHalfDepth-blend,maxZ:Math.max(padHalfDepth,escapeEnd)+blend,padHalfWidth:padHalfWidth,padHalfDepth:padHalfDepth,escapeEnd:escapeEnd,blend:blend}}function prisonCampSegmentDistance(x,z,a,b){const dx=b.x-a.x,dz=b.z-a.z,t=Math.max(0,Math.min(1,((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz||1)));return Math.hypot(x-a.x-t*dx,z-a.z-t*dz)}function*surveyPrisonCampSiteSteps(layout,x,z,{heightAt:heightAt,halfSize:halfSize,siteClear:siteClear}){const bounds=prisonCampFootprint(layout);if(x+bounds.minX<=-halfSize+120||x+bounds.maxX>=halfSize-120||z+bounds.minZ<=-halfSize+120||z+bounds.maxZ>=halfSize-120||!siteClear({x:x,z:z}))return null;const height=heightAt(x,z);if(!Number.isFinite(height)||height<.5)return null;let low=height,high=height,samples=1;const nx=Math.ceil((bounds.maxX-bounds.minX)/8),nz=Math.ceil((bounds.maxZ-bounds.minZ)/8);for(let ix=0;ix<=nx;ix++)for(let iz=0;iz<=nz;iz++){if(samples%64===0)yield{stage:"Comprovant terreny del camp",completed:null,total:null};const h=heightAt(x+bounds.minX+(bounds.maxX-bounds.minX)*ix/nx,z+bounds.minZ+(bounds.maxZ-bounds.minZ)*iz/nz);samples++;if(!Number.isFinite(h)||h<.5)return null;low=Math.min(low,h);high=Math.max(high,h)}return{site:{x:x,z:z,h:height},terrain:{minHeight:low,maxHeight:high,samples:samples,spacing:8,bounds:bounds}}}function*planPrisonCampSteps(layout,{islandList:islandList,baseIsland:baseIsland,hqIsland:hqIsland,heightAt:heightAt,halfSize:halfSize,siteClear:siteClear,createSupportIsland:createSupportIsland}){if(!layout||!layout.fixedOrientation||!layout.escapeRoute?.length)throw new Error("Invariant del camp: manca un disseny de presoners v\xe0lid");const primary=islandList.filter(i=>i!==baseIsland&&i!==hqIsland).slice().sort((a,b)=>b.r-a.r||a.x-b.x||a.z-b.z),ordered=[...primary,baseIsland,hqIsland];let candidates=0,terrace=null;for(const island of ordered){for(let ring=0;ring<=8;ring++){const count=ring?32:1,distance=ring*Math.max(20,island.r*.085);for(let point=0;point<count;point++){yield{stage:"Cercant camp de presoners",completed:null,total:null};candidates++;const angle=point*Math.PI*2/count,surveyed=yield*surveyPrisonCampSiteSteps(layout,island.x+Math.cos(angle)*distance,island.z+Math.sin(angle)*distance,{heightAt:heightAt,halfSize:halfSize,siteClear:siteClear});if(!surveyed)continue;const result={...surveyed,island:island,candidates:candidates,placement:"natural"},relief=surveyed.terrain.maxHeight-surveyed.terrain.minHeight;if(relief<=28)return result;if(!terrace||relief<terrace.terrain.maxHeight-terrace.terrain.minHeight)terrace=result}}}if(terrace){terrace.site.h=Math.max(3,(terrace.terrain.minHeight+terrace.terrain.maxHeight)/2);return{...terrace,candidates:candidates,placement:"terrace"}}const island=createSupportIsland(),site={x:island.x,z:island.z,h:Math.max(3,heightAt(island.x,island.z))};if(!Number.isFinite(site.h)||!siteClear(site))throw new Error("Invariant del camp: illa de reserva ocupada o altura inv\xe0lida");return{site:site,island:island,candidates:candidates,placement:"support-island",terrain:{bounds:prisonCampFootprint(layout)}}}const PIER_DECK_Y=2.4;function jetSkiSpotClear(q,ignore=null){const box=vehicleBox({t:"moto_aquatica",...q});box.w+=2;box.d+=2;const r=Math.hypot(box.w,box.d)/2;if(Math.abs(q.x)>H-r-5||Math.abs(q.z)>H-r-5||hAt(q.x,q.z)>-1.2)return false;if(B.some(b=>Math.abs(q.x-b.x)<b.hw+r&&Math.abs(q.z-b.z)<b.hd+r))return false;return!V.some(v=>v!==ignore&&obbOverlap(box,vehicleBox(v)))&&!E.some(v=>["jeep","tanqueta","tanc"].includes(v.t)&&obbOverlap(box,vehicleBox(v)))}function*shiftJetSkiAlongCoast(origin,ignore){let checkpointUnits=0;const depth=Math.max(-3,Math.min(-1.8,hAt(origin.x,origin.z)));for(const side of[1,-1]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};let x=origin.x,z=origin.z,walked=0;for(let step=0;step<80;step++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const gx=hAt(x+2,z)-hAt(x-2,z),gz=hAt(x,z+2)-hAt(x,z-2),len=Math.hypot(gx,gz);if(len<1e-5)break;x+=side*(-gz/len)*5;z+=side*(gx/len)*5;walked+=5;for(let j=0;j<8;j++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const error=hAt(x,z)-depth;if(Math.abs(error)<.12)break;const dx=(hAt(x+1,z)-hAt(x-1,z))/2,dz=(hAt(x,z+1)-hAt(x,z-1))/2,den=dx*dx+dz*dz;if(den<1e-6)break;const k=Math.max(-3,Math.min(3,error/Math.sqrt(den)))/Math.sqrt(den);x-=dx*k;z-=dz*k}const q={x:x,z:z,hd:origin.hd};if(walked%100===0&&Math.abs(hAt(x,z)-depth)<.3&&jetSkiSpotClear(q,ignore))return{...q,coastShift:walked}}}return null}function*findJetSkiCoastSpot(ignore=null){let checkpointUnits=0;for(const island of islands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(let n=0;n<64;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const a=n*Math.PI/32,ux=Math.cos(a),uz=Math.sin(a);let landD=null;for(let d=0;d<island.r*1.6;d+=10){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const h=hAt(island.x+ux*d,island.z+uz*d);if(h>0){landD=d;continue}if(landD===null||h>-2.5)continue;let lo=landD,hi=d;for(let k=0;k<15;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const mid=(lo+hi)/2;if(hAt(island.x+ux*mid,island.z+uz*mid)>-2.5)lo=mid;else hi=mid}const q={x:island.x+ux*hi,z:island.z+uz*hi,hd:Math.atan2(ux,uz)};if(jetSkiSpotClear(q,ignore))return q;break}}}return null}function*ensureJetSkis(add){let checkpointUnits=0;for(const v of V.filter(v=>v.t==="moto_aquatica")){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(jetSkiSpotClear(v,v))continue;const q=(yield*shiftJetSkiAlongCoast(v,v))||(yield*findJetSkiCoastSpot(v));if(!q)throw new Error("No s\u2019ha trobat una costa lliure per a la moto aqu\xe0tica");Object.assign(v,q,{coastal:true})}while(countVehicles("moto_aquatica")<4){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*findJetSkiCoastSpot();if(!q)throw new Error("No s\u2019han pogut situar quatre motos aqu\xe0tiques sense solapaments");add("moto_aquatica",q.x,q.z,q.hd,{coastal:true,guaranteed:true})}}function drainBuildSteps(steps){let next;while(!(next=steps.next()).done){}return next.value}let generationDrainActive=false;function build(){if(generationDrainActive)throw new Error("Ja hi ha una generaci\xf3 en curs");generationDrainActive=true;try{return drainBuildSteps(buildSteps())}finally{generationDrainActive=false}}function generationAbortError(){const error=new Error("Generaci\xf3 cancel\xb7lada");error.name="AbortError";return error}let generationYieldChannel=null;function scheduleGenerationTurn(){if(typeof window.scheduler?.yield==="function")return window.scheduler.yield();if(typeof MessageChannel==="function"){if(!generationYieldChannel){const channel=new MessageChannel,queue=[];channel.port1.onmessage=()=>queue.shift()?.();generationYieldChannel={channel:channel,queue:queue}}return new Promise(resolve=>{generationYieldChannel.queue.push(resolve);generationYieldChannel.channel.port2.postMessage(0)})}return new Promise(resolve=>setTimeout(resolve,0))}async function buildProgressively({iterator:iterator=null,onProgress:onProgress=()=>{},schedule:schedule=window.HUNTER_GENERATION_SCHEDULE||scheduleGenerationTurn,signal:signal,budgetMs:budgetMs=6,maxSteps:maxSteps=32}={}){if(generationDrainActive)throw new Error("Ja hi ha una generaci\xf3 en curs");generationDrainActive=true;const steps=iterator||buildSteps(),state={status:"generating",stage:"Preparant el m\xf3n",completed:0,total:null,steps:0,yields:0,maxStepMs:0,maxStepStage:null,maxTurnMs:0,error:null};window.HUNTER_GENERATION_STATE=state;const check=()=>{if(signal?.aborted)throw generationAbortError()};const publish=checkpoint=>{Object.assign(state,{unit:null},checkpoint);onProgress({...state})};const pause=async()=>{check();state.yields++;let abort;const cancelled=new Promise((_,reject)=>{abort=()=>reject(generationAbortError());signal?.addEventListener?.("abort",abort,{once:true})});try{await Promise.race([Promise.resolve().then(()=>schedule({...state})),cancelled]);check()}finally{signal?.removeEventListener?.("abort",abort)}};try{publish({});await pause();for(;;){check();const turnStart=performance.now();let count=0,next;do{check();const before=performance.now(),previousStage=state.stage;next=steps.next();const stepMs=performance.now()-before;if(stepMs>state.maxStepMs){state.maxStepMs=stepMs;state.maxStepStage=previousStage}state.steps++;if(next.done){state.maxTurnMs=Math.max(state.maxTurnMs,performance.now()-turnStart);publish({status:"complete",stage:"M\xf3n preparat",completed:1,total:1});return next.value}publish(next.value||{})}while(++count<Math.max(1,maxSteps)&&performance.now()-turnStart<Math.max(1,budgetMs));state.maxTurnMs=Math.max(state.maxTurnMs,performance.now()-turnStart);await pause()}}catch(error){publish({status:error.name==="AbortError"?"cancelled":"error",error:error.message});throw error}finally{try{steps.return()}finally{generationDrainActive=false}}}function*buildSteps(){let checkpointUnits=0;resetOptionalSystems();resetSimulationClock(null);resetCameraState();cameraBasement=null;clearVictoryCinematic();clearDeathCinematic();window.HUNTER_ENEMY_LOD.reset();window.HUNTER_STEALTH.clear();window.HUNTER_STEALTH_DEBUG.reset();playerCrouched=false;stealthStepTimer=0;const requestedPalmDisable=!!document.getElementById("disablePalms")?.checked;palmsDisabled=false;cancelGrenadeCharge();clearBulletImpacts();removeParachuteVisual();const buildStarted=performance.now(),buildStages={},buildCounters={landAttempts:0,landCandidates:0},markBuildStage=(()=>{let last=buildStarted;return name=>{const now=performance.now();buildStages[name]=Math.round((now-last)*100)/100;last=now}})();movementFx.reset();if(terrainStream)terrainStream.dispose();terrainStream=null;seedCompounds=[];elapsed=0;water.update(0);joystick.reset();compoundClear=[];terrainLevels=[];terrainLevelGrid.clear();if(seedSearchMode){if(!seedScratchWorld)seedScratchWorld=new THREE.Group;seedScratchWorld.clear();world=seedScratchWorld}else{if(world){scene.remove(world);yield*window.HUNTER_RESOURCES.disposeSteps(world)}world=new THREE.Group;scene.add(world)}world.userData={compounds:[],airObstacles:[]};B=[];stairs=[];piers=[];swimming=false;intelMarks=[];hqMapKnown=false;playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false;pl.userData.cisallaCut=0;sniperEquipped=false;sniperAmmo=0;setSniperScope(false);pl.userData.sniper.visible=false;pl.userData.bazooka.visible=false;pl.userData.grenade.visible=false;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;pl.userData.grenadePending=null;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];grenades=[];fx=[];logb=[];hp=window.HUNTER_COMBAT_BALANCE.player;ammo=16;fcd=0;kills=0;over=0;endEl.style.display="none";setDis(false);let pa,pb;activeBunker=null;{const base=requestedSeed==null?Math.floor(Math.random()*4294967295)>>>0:requestedSeed>>>0;let tries=0;do{if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};seed=base+Math.imul(tries++,2654435761)>>>0;genIslands();pa=yield*landSteps(A,2e3);pb=yield*landSteps(Bi,2e3)}while((!pa||!pb)&&tries<8);if(!pa||!pb)throw new Error("No s\u2019ha pogut generar un mapa v\xe0lid amb aquesta llavor")}markBuildStage("islandsAndBasePositions");yield{stage:"Illes i empla\xe7aments inicials",completed:1,total:1};const cols=[14201994,13214330,12109001,14272928],compoundVehicles=[],heliportSites=[],staticDecorRoots=[],pathRoutes=[];const batchStaticDecor=function*(){let checkpointUnits=0;const CHUNK=160,groups=new Map,materialMap=new Map;world.updateWorldMatrix(true,false);let originals=0,batches=0,vertices=0;for(const root of staticDecorRoots){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(!root.parent)continue;root.updateMatrixWorld(true);yield{stage:"Agrupant decoraci\xf3",completed:originals,total:null,unit:"malles"};root.traverse(mesh=>{if(!mesh.isMesh||mesh.isInstancedMesh||!mesh.geometry?.attributes.position)return;const mat=mesh.material;if(!mat?.color||Array.isArray(mat))return;const center=mesh.getWorldPosition(new THREE.Vector3),cx=Math.floor(center.x/CHUNK),cz=Math.floor(center.z/CHUNK);const signature=[mat.type,mat.roughness??0,mat.metalness??0,mat.opacity??1,mat.transparent?1:0,mat.side,mat.flatShading?1:0,mat.polygonOffset?1:0,mat.polygonOffsetFactor,mat.polygonOffsetUnits].join(":");const key=cx+","+cz+"|"+signature;let group=groups.get(key);if(!group){group={cx:cx,cz:cz,mat:mat,meshes:[]};groups.set(key,group)}group.meshes.push(mesh);originals++})}const transform=new THREE.Matrix4,geometries=[];for(const group of groups.values()){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const x=(group.cx+.5)*CHUNK,z=(group.cz+.5)*CHUNK,pieces=[],sizes=[];let total=0;try{for(const mesh of group.meshes){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};yield{stage:"Agrupant decoraci\xf3",completed:batches,total:groups.size,unit:"grups"};transform.makeTranslation(-x,0,-z).multiply(mesh.matrixWorld);const copy=mesh.geometry.index?mesh.geometry.toNonIndexed():mesh.geometry.clone();copy.applyMatrix4(transform);const n=copy.attributes.position.count,color=new Float32Array(n*3);pieces.push(copy);sizes.push(n);total+=n;for(let k=0;k<n;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(k%256===0)yield{stage:"Colors de decoraci\xf3",completed:k,total:n,unit:"v\xe8rtexs"};color[k*3]=mesh.material.color.r;color[k*3+1]=mesh.material.color.g;color[k*3+2]=mesh.material.color.b}copy.setAttribute("color",new THREE.BufferAttribute(color,3))}const geom=new THREE.BufferGeometry;for(const[attribute,width]of[["position",3],["normal",3],["uv",2],["color",3]]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const data=new Float32Array(total*width);let offset=0;for(let k=0;k<pieces.length;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const src=pieces[k].getAttribute(attribute);if(src)data.set(src.array,offset);offset+=sizes[k]*width}geom.setAttribute(attribute,new THREE.BufferAttribute(data,width))}geom.computeBoundingSphere();const mat=group.mat.clone();mat.color.setHex(16777215);mat.vertexColors=true;mat.needsUpdate=true;const mesh=new THREE.Mesh(geom,mat);mesh.name="hunter-static-decor-batch";mesh.position.set(x,0,z);mesh.castShadow=false;world.add(mesh);batches++;vertices+=total}finally{for(const g of pieces){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};g.dispose()}}}const disposed=new Set,materials=new Set;for(const root of staticDecorRoots){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};yield{stage:"Netejant decoraci\xf3 original",completed:null,total:null};root.traverse(o=>{if(o.geometry&&!disposed.has(o.geometry)){disposed.add(o.geometry);o.geometry.dispose()}if(o.material){for(const mat of Array.isArray(o.material)?o.material:[o.material])materials.add(mat)}});root.parent?.remove(root)}for(const mat of materials){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};mat.dispose()}staticDecorRoots.length=0;const result={originalMeshes:originals,batchedMeshes:batches,drawCallsSaved:originals-batches,vertices:vertices};window.HUNTER_STATIC_BATCH_STATS=result;return result};const addVillageWell=g=>{const outer=new THREE.Mesh(new THREE.CylinderGeometry(1.7,1.8,1.75,24,1,true),M(8751478,"masonry"));outer.position.y=.875;g.add(outer);const lining=M(4475715,"masonry").clone();lining.side=THREE.BackSide;const inner=new THREE.Mesh(new THREE.CylinderGeometry(1.08,1.04,1.72,24,1,true),lining);inner.position.y=.88;g.add(inner);const rim=new THREE.Mesh(new THREE.RingGeometry(1.06,1.72,24),M(10328964,"masonry"));rim.rotation.x=-Math.PI/2;rim.position.y=1.76;g.add(rim);const water=new THREE.Mesh(new THREE.CircleGeometry(1.035,24),M(1322035,"paint"));water.rotation.x=-Math.PI/2;water.position.y=.22;g.add(water);const innerShadow=new THREE.Mesh(new THREE.RingGeometry(.78,1.035,24),M(1976360,"masonry"));innerShadow.rotation.x=-Math.PI/2;innerShadow.position.y=.235;g.add(innerShadow)};const compoundProp=(kind,x,z,rot=0)=>{if(seedSearchMode)return null;const y=Math.max(.05,hAt(x,z)),g=new THREE.Group;g.position.set(x,y,z);g.rotation.y=rot;if(kind==="bench"){bx(g,4,.25,1.2,8414279,0,.9,0);for(const x of[-1.4,1.4])bx(g,.2,.8,1,4739657,x,.4,0)}else if(kind==="well")addVillageWell(g);else if(kind==="lifebuoy"){const m=new THREE.Mesh(new THREE.TorusGeometry(.6,.15,6,16),M(15038534,"paint"));m.position.y=1.5;g.add(m);bx(g,.12,2.3,.12,5988432,0,1.15,0)}else if(kind==="crate"){bx(g,1.2,.9,1,8084021,0,.45,0,"paint");bx(g,1.26,.1,1.06,4141089,0,.2,0,"metal");bx(g,.1,.95,1.08,4141089,0,.48,0,"metal")}else if(kind==="barrel"){const body=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.9,10),M(5464426,"metal"));body.position.y=.45;g.add(body);for(const y0 of[.12,.78]){const ring=new THREE.Mesh(new THREE.CylinderGeometry(.44,.44,.08,10),M(3028024,"metal"));ring.position.y=y0;g.add(ring)}}else if(kind==="barrier"){bx(g,2.4,.72,.5,10128498,0,.36,0,"masonry");for(const x0 of[-.9,.9])bx(g,.28,.28,.8,6116680,x0,.14,0,"masonry")}else if(kind==="ammo"){bx(g,1.5,.75,1.1,6252614,0,.38,0,"paint");bx(g,1.55,.12,1.15,3159340,0,.78,0,"metal");bx(g,.12,.8,1.18,3159340,0,.38,0,"metal")}else if(kind==="bollard"){const post=new THREE.Mesh(new THREE.CylinderGeometry(.18,.18,.85,10),M(4936020,"metal"));post.position.y=.42;g.add(post);const base=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.1,10),M(3093559,"metal"));base.position.y=.08;g.add(base)}else if(kind==="sign"){bx(g,.12,7.4,.12,4541263,0,3.7,0,"metal");const fg=new THREE.Group;fg.position.set(0,6.55,0);g.add(fg);bx(fg,2.5,1.25,.06,11740710,1.22,0,0,"paint");const tip=new THREE.Mesh(new THREE.ConeGeometry(.16,.42,8),M(13745522,"metal"));tip.position.set(0,7.58,0);g.add(tip)}else if(kind==="sandbag"){for(const xx of[-.8,0,.8])bx(g,.72,.38,.48,10193512,xx,.2,0,"masonry");for(const xx of[-.4,.4])bx(g,.72,.38,.48,10720114,xx,.52,0,"masonry")}else if(kind==="fuel"){const tank=new THREE.Mesh(new THREE.CylinderGeometry(.72,.72,2.2,12),M(6910063,"metal"));tank.rotation.z=Math.PI/2;tank.position.y=.9;g.add(tank);for(const xx of[-.82,.82])bx(g,.12,1.15,.9,4277831,xx,.62,0,"metal")}else if(kind==="lamp"){bx(g,.14,4.2,.14,4541263,0,2.1,0,"metal");bx(g,.7,.22,.45,15193738,0,4.15,0,"paint")}else if(kind==="generator"){bx(g,7,.4,4.5,7172969,0,.2,0,"metal");bx(g,5,2.5,3,5728591,0,1.65,0,"metal");for(let k=-2;k<=2;k++)bx(g,.12,1.6,.06,2701370,k*.55,1.75,1.53,"metal");bx(g,.25,3,.25,4278347,1.5,3.05,-.7,"metal")}else if(kind==="net"){for(const xx of[-1.2,1.2])bx(g,.12,2.1,.12,5067606,xx,1.05,0,"metal");for(let yy=.45;yy<2;yy+=.42)bx(g,2.5,.035,.035,5988450,0,yy,0,"metal");for(let xx=-1.05;xx<=1.05;xx+=.42)bx(g,.035,1.65,.035,5988450,xx,1.2,0,"metal")}world.add(g);staticDecorRoots.push(g);return g};const compoundPad=(x,z,w,d,c=7828332)=>{if(seedSearchMode){compoundClear.push({x:x,z:z,r:Math.hypot(w,d)*.55});return{rotation:{y:0}}}const material=M(c,"masonry").clone();material.polygonOffset=true;material.polygonOffsetFactor=-1;material.polygonOffsetUnits=-1;const geometry=new THREE.PlaneGeometry(w,d);geometry.rotateX(-Math.PI/2);const o=new THREE.Mesh(geometry,material);o.position.set(x,hAt(x,z)+.06,z);world.add(o);staticDecorRoots.push(o);compoundClear.push({x:x,z:z,r:Math.hypot(w,d)*.55});return o};const landingPad=(x,z,size=30,rot=0)=>{if(seedSearchMode){compoundClear.push({x:x,z:z,r:size*.72});return{rotation:{y:rot}}}const y=hAt(x,z)+.025,g=new THREE.Group;g.position.set(x,y,z);g.rotation.y=rot;const base=new THREE.Mesh(new THREE.BoxGeometry(size,.12,size),M(6712173,"masonry"));g.add(base);const w=Math.max(1.1,size*.07),L=size*.45;bx(g,w,.035,L,15921897,-L*.28,.09,0,"paint");bx(g,w,.035,L,15921897,L*.28,.09,0,"paint");bx(g,L*.62,.035,w,15921897,0,.09,0,"paint");world.add(g);staticDecorRoots.push(g);compoundClear.push({x:x,z:z,r:size*.72});return g};const compoundPath=(points,width=4,color=9075038)=>{pathRoutes.push({points:points,width:width,color:color});const curve=window.HUNTER_COMPOUND_PATHS.smoothPath(points,width);for(let i=1;i<curve.length;i++){const a=curve[i-1],b=curve[i],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/3));for(let k=0;k<=n;k++){const t=k/n;compoundClear.push({x:a[0]+(b[0]-a[0])*t,z:a[1]+(b[1]-a[1])*t,r:width*.8+2})}}};const compoundPier=(x1,z1,x2,z2,width=4.2,accessRamp=true)=>{const dx=x2-x1,dz=z2-z1,L=Math.hypot(dx,dz);if(L<2)return;const ux=dx/L,uz=dz/L,px=-uz,pz=ux,n=Math.max(1,Math.ceil(L/5));let ramp=null;if(accessRamp&&L>width){let rampLength=12,rampGround=null;for(let d=12;d<=40;d+=2){const shoreH=hAt(x1-ux*d,z1-uz*d);if(shoreH>.25){rampLength=d;rampGround=shoreH+.08;break}}if(rampGround!==null){ramp={x:x1,z:z1,nx:-ux,nz:-uz,length:rampLength,width:width-.25,bottom:rampGround,top:PIER_DECK_Y,ramp:true,pierAccess:true};stairs.push(ramp)}}if(seedSearchMode){for(let i=0;i<n;i++){const m=(i+.5)/n,seg=L/n,mx=x1+dx*m,mz=z1+dz*m;piers.push({x:mx,z:mz,ux:ux,uz:uz,px:px,pz:pz,length:seg+.12,width:width,y:PIER_DECK_Y});compoundClear.push({x:mx,z:mz,r:width*.8+1.5})}return}if(ramp){const rampMidX=x1-ux*ramp.length/2,rampMidZ=z1-uz*ramp.length/2,rise=ramp.top-ramp.bottom,rampMesh=new THREE.Mesh(new THREE.BoxGeometry(ramp.width,.22,Math.hypot(ramp.length,rise)),M(9795672,"paint"));rampMesh.position.set(rampMidX,(ramp.bottom+ramp.top)/2-.11,rampMidZ);rampMesh.rotation.set(-Math.atan2(rise,ramp.length),Math.atan2(ux,uz),0,"YXZ");world.add(rampMesh);staticDecorRoots.push(rampMesh)}const yaw=Math.atan2(dx,dz);for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n,m=(a+b)/2,seg=L/n,mx=x1+dx*m,mz=z1+dz*m,y=PIER_DECK_Y-.14;const deck=new THREE.Mesh(new THREE.BoxGeometry(width,.28,seg+.12),M(8479558,"paint"));deck.position.set(mx,y,mz);deck.rotation.y=yaw;world.add(deck);staticDecorRoots.push(deck);piers.push({x:mx,z:mz,ux:ux,uz:uz,px:px,pz:pz,length:seg+.12,width:width,y:y+.14});for(const side of[-1,1]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,3.35,8),M(4735806,"metal"));post.position.set(mx+px*side*(width*.44),PIER_DECK_Y-1.15,mz+pz*side*(width*.44));world.add(post);staticDecorRoots.push(post)}compoundClear.push({x:mx,z:mz,r:width*.8+1.5})}for(const side of[-1,1]){const b=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,.9,8),M(4080711,"metal"));b.position.set(x2+px*side*(width*.35),PIER_DECK_Y+.26,z2+pz*side*(width*.35));world.add(b);staticDecorRoots.push(b)}};const findPortWater=function*(q){let checkpointUnits=0;for(let a=0;a<32;a++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const aa=a*Math.PI/16;for(let d=28;d<Math.max(100,q.r||180);d+=8){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const wx=q.x+Math.cos(aa)*d,wz=q.z+Math.sin(aa)*d;if(rawHAt(wx,wz)<-3&&rawHAt(wx+Math.cos(aa)*12,wz+Math.sin(aa)*12)<-3)return{x:wx,z:wz,hd:Math.atan2(-Math.cos(aa),-Math.sin(aa)),aa:aa}}}return null};const findPortSite=function*(island,tries=18){let checkpointUnits=0;for(let n=0;n<tries;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*landSteps(island,700,1);if(!q)continue;q.r=island.r;const portBest=yield*findPortWater(q);if(portBest)return{...q,portBest:portBest}}return null};const makeStandalonePier=function*(q){let checkpointUnits=0;const best=q.portBest||(yield*findPortWater(q));if(!best)return false;const dx=best.x-q.x,dz=best.z-q.z,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L;let shore=null;for(let d=3;d<L;d+=2.5){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const sx=q.x+ux*d,sz=q.z+uz*d;if(rawHAt(sx,sz)<.35){shore={x:sx-ux*1.8,z:sz-uz*1.8};break}}if(!shore)return false;const pierLen=Math.min(34,Math.max(14,L-5)),end={x:shore.x+ux*pierLen,z:shore.z+uz*pierLen};compoundPier(shore.x,shore.z,end.x,end.z,3.6);for(const side of[-1,1]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const px=-uz,pz=ux;compoundProp("bollard",end.x+px*side*1.1,end.z+pz*side*1.1,0)}compoundClear.push({x:q.x,z:q.z,r:18});return true};const phase3Options={pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites:heliportSites,rocketAssigned:false};const baseCompound=yield*buildApprovedCompoundSteps(window.HUNTER_CHOOSE_COMPOUND("base",R),pa,phase3Options);const hqCompound=yield*buildApprovedCompoundSteps(window.HUNTER_CHOOSE_COMPOUND("hq",R),pb,phase3Options);markBuildStage("initialCompounds");yield{stage:"Base i quarter general",completed:1,total:1};const COMPOUND_RADII=Object.freeze({avancada:84,garatge:95,heliport:102,polvori:98,comunicacions:95,port:90});const COMPOUND_GAP=34;const compoundCenters=[{x:pa.x,z:pa.z,r:baseCompound.r,type:"base"},{x:pb.x,z:pb.z,r:hqCompound.r,type:"hq"}];const typeId=t=>({avancada:"outpost",garatge:"hangar"}[t]||t);const compoundRadiusCache=new Map;const compoundRadius=type=>{if(!compoundRadiusCache.has(type))compoundRadiusCache.set(type,Math.max(COMPOUND_RADII[type]||58,...window.HUNTER_RUNTIME_LAYOUTS.filter(l=>l.type===typeId(type)).map(layoutRadius)));return compoundRadiusCache.get(type)};const compoundSiteClear=(type,q,minCenter=0)=>{const r=compoundRadius(type);return compoundCenters.every(c=>{const d=Math.hypot(q.x-c.x,q.z-c.z);return d>Math.max(minCenter,r+c.r+COMPOUND_GAP)})};const registerCompound=(type,q)=>compoundCenters.push({x:q.x,z:q.z,r:compoundRadius(type),type:type});const civilOptions={pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites:heliportSites,rocketAssigned:true};const prisonLayout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.type==="prison-camp");if(!prisonLayout)throw new Error("Invariant del camp: manca el disseny del camp de presoners");const prisonPlan=yield*planPrisonCampSteps(prisonLayout,{islandList:islands,baseIsland:A,hqIsland:Bi,heightAt:rawHAt,halfSize:H,siteClear:q=>compoundSiteClear("prison-camp",q),createSupportIsland:()=>{const radius=320,influence=radius*2;if(H<=influence+120||compoundCenters.some(c=>Math.hypot(c.x,c.z)<=influence+c.r+COMPOUND_GAP))throw new Error("Invariant del camp: l\u2019origen no permet una illa de reserva separada de la base i del quarter general");const island={x:0,z:0,r:radius,peakX:0,peakZ:0,prisonCampSupport:true};islands.push(island);rebuildIslandGrid();return island}});const prisonCamp=yield*buildApprovedCompoundSteps(prisonLayout,prisonPlan.site,civilOptions);prisonCamp.islandIndex=islands.indexOf(prisonPlan.island);prisonCamp.fallbackIsland=prisonPlan.island===A?"base":prisonPlan.island===Bi?"hq":null;prisonCamp.placement=prisonPlan.placement;prisonCamp.terrainSurvey=prisonPlan.terrain;const prisonBounds=prisonCampFootprint(prisonLayout),prisonTr=compoundTransform(prisonCamp,prisonCamp.angle),prisonEscape=prisonLayout.escapeRoute.map(p=>{const q=prisonTr(...p);return{x:q[0],z:q[1]}}),escapeEnd=prisonTr(0,prisonBounds.escapeEnd);addLevelArea(prisonCamp.x,prisonCamp.z+(prisonBounds.padHalfDepth+prisonBounds.escapeEnd)/2,28,prisonBounds.escapeEnd-prisonBounds.padHalfDepth,prisonPlan.site.h,0,18);for(const p of[...prisonEscape,{x:escapeEnd[0],z:escapeEnd[1]}])compoundClear.push({x:p.x,z:p.z,r:14});const mechanicSpec=prisonLayout.prisoners.find(p=>p.role==="mechanic"),mechanicPoints=[[mechanicSpec.x,mechanicSpec.z],...prisonLayout.mechanicRoute||[[prisonLayout.rescuePoint.x,prisonLayout.rescuePoint.z],[prisonLayout.mechanicStation.x,prisonLayout.mechanicStation.z]]].map(p=>{const q=prisonTr(...p);return{x:q[0],z:q[1]}});const prisonCorridors=[];for(const[points,width]of[[[...prisonEscape,{x:escapeEnd[0],z:escapeEnd[1]}],6],[mechanicPoints,2]])for(let i=1;i<points.length;i++)prisonCorridors.push({a:points[i-1],b:points[i],width:width});const prisonCampCorridorClear=(x,z,padding=0)=>prisonCorridors.every(c=>prisonCampSegmentDistance(x,z,c.a,c.b)>c.width+padding);const prisonCampRoadClear=points=>{for(let i=1;i<points.length;i++)if(prisonCampSegmentDistance(prisonCamp.x,prisonCamp.z,points[i-1],points[i])<=prisonCamp.r+18)return false;return true};registerCompound("prison-camp",prisonPlan.site);world.userData.prisonCamp=prisonCamp;world.userData.prisonCampReservation={x:prisonCamp.x,z:prisonCamp.z,r:prisonCamp.r,corridors:prisonCorridors.map(c=>({...c,a:{...c.a},b:{...c.b}}))};buildCounters.prisonCampCandidates=prisonPlan.candidates;buildCounters.prisonCamps=1;markBuildStage("prisonCamp");yield{stage:"Camp de presoners",completed:1,total:1};const portSiteFeasible=function*(q){let checkpointUnits=0;for(let turn=0;turn<4;turn++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const angle=turn*Math.PI/2,point=compoundTransform(q,angle);for(let d=16;d<Math.max(180,(q.r||180)*1.4);d+=8){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const[x,z]=point(0,d);if(rawHAt(x,z)>.3)continue;for(const offset of[-8,0,8]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const[cx,cz]=point(0,d+offset),site={x:cx,z:cz,h:.86,angle:angle,r:q.r},tr=compoundTransform(site,angle);if(Math.abs(cx)>H-100||Math.abs(cz)>H-100)continue;let valid=true;for(const lx of[-52,-26,0,26,52]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(const lz of[-60,-35,-10]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const p=tr(lx,lz);if(rawHAt(...p)<.1){valid=false;break}}if(!valid)break}if(!valid)continue;coastTest:for(const[lx,lz]of[[-13,31],[15,26],[35,34]]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(const dx of[-7,0,7]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(let dz=-16;dz<=52;dz+=4){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const p=tr(lx+dx,lz+dz);if(rawHAt(...p)>-2.2){valid=false;break coastTest}}}}if(valid)return true}if(rawHAt(x,z)<-15)break}}return false};const compound=function*(type,q){let checkpointUnits=0;const approvedId={avancada:"outpost",garatge:"hangar",port:"port",heliport:"heliport",polvori:"polvori",comunicacions:"comunicacions"}[type];if(approvedId){if(type==="port"&&!q.portPrepared){if(!(yield*portSiteFeasible(q)))return false;q=yield*findRedesignedPortSteps(q);if(!q)return false}if(!compoundSiteClear(type,q,0))return false;let layout=window.HUNTER_CHOOSE_COMPOUND(approvedId,R);if(type==="port"&&!coastalLayoutFits(layout,q)){layout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.type==="port"&&l.variant===1);if(!coastalLayoutFits(layout,q))return false}if(type!=="port"){const r=Math.max(...layout.size)/2;for(const dx of[-r,0,r]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(const dz of[-r,0,r]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(rawHAt(q.x+dx,q.z+dz)<.1)return false}}}yield*buildApprovedCompoundSteps(layout,q,{pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites:heliportSites,rocketAssigned:compoundVehicles.some(v=>v.t==="llanxa_coets")});registerCompound(type,q);return true}return false};const usedPortIslands=new Set;const candidateIslands=islands.filter(i=>i!==A&&i!==Bi).slice().sort(()=>R()-.5),usedSpecialIslands=new Set;const reserveCompound=function*(type,min=180){let checkpointUnits=0;for(const i of candidateIslands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(usedSpecialIslands.has(i))continue;for(let n=0;n<18;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*landSteps(i,850,1);if(q&&compoundSiteClear(type,q,min)){q.r=i.r;if(yield*compound(type,q)){usedSpecialIslands.add(i);return q}}}}return null};const forceReserve=function*(type,min){let checkpointUnits=0;let q=(yield*reserveCompound(type,min))||(yield*reserveCompound(type,110));if(q)return q;for(const i of candidateIslands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(usedSpecialIslands.has(i))continue;for(let n=0;n<48;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const c=yield*landSteps(i,1800,1);if(!c||!compoundSiteClear(type,c,95))continue;c.r=i.r;if(yield*compound(type,c)){usedSpecialIslands.add(i);return c}}}return null};const dockLayout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.id==="civil-dock"),terminalLayout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.id==="ferry-terminal");const terminalRecords=[];let connection=null;const exit=baseCompound.entrances[0],roadStart={x:exit[0],z:exit[1]};const initialDock=yield*findCoastalLayoutSteps(dockLayout,{...A},function*(q){let checkpointUnits=0;if(!compoundSiteClear("civil-dock",q))return false;const end=compoundTransform(q,q.angle)(0,-dockLayout.size[1]/2),points=yield*solveCoastRoadSteps(roadStart,{x:end[0],z:end[1]});if(!points||!prisonCampRoadClear(points))return false;connection=points;return true});if(initialDock){const c=yield*buildApprovedCompoundSteps(dockLayout,initialDock,civilOptions);registerCompound("civil-dock",initialDock);yield*buildCoastRoadSteps(connection,compoundPath);world.userData.baseCoast.dockId=c.layoutId;world.userData.baseCoast.dock={x:c.x,z:c.z}}else world.userData.baseCoast={unavailable:true,reason:"No walkable coastal corridor for this base site"};for(const island of islands.filter(i=>i!==Bi).sort((a,b)=>b.r-a.r)){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(terminalRecords.length>=2)break;const site=yield*findCoastalLayoutSteps(terminalLayout,island,q=>compoundSiteClear("ferry-terminal",q));if(!site)continue;const c=yield*buildApprovedCompoundSteps(terminalLayout,site,civilOptions);c.islandIndex=islands.indexOf(island);terminalRecords.push(c);registerCompound("ferry-terminal",site)}let villages=0,civilDocks=initialDock?1:0;for(const island of candidateIslands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(villages<2*MAP_SCALE){const types=["hut-settlement-small","hut-settlement","hut-settlement-large"],chosen=types[Math.floor(R()*3)],l=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.id===chosen);for(let tries=0;tries<6;tries++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*landSteps(island,250,1);if(!q||!compoundSiteClear(l.id,q))continue;const r=Math.max(...l.size)/2;if([-r,0,r].some(dx=>[-r,0,r].some(dz=>rawHAt(q.x+dx,q.z+dz)<.3)))continue;yield*buildApprovedCompoundSteps(l,q,civilOptions);registerCompound(l.id,q);villages++;break}}if(civilDocks<2*MAP_SCALE){const q=yield*findCoastalLayoutSteps(dockLayout,island,q=>compoundSiteClear("civil-dock",q));if(q){yield*buildApprovedCompoundSteps(dockLayout,q,civilOptions);registerCompound("civil-dock",q);civilDocks++}}}markBuildStage("civilCompoundsAndCoast");yield{stage:"Poblats i costa",completed:1,total:1};yield*forceReserve("garatge",190);yield*forceReserve("avancada",180);yield*forceReserve("polvori",190);yield*forceReserve("comunicacions",190);const reserveHeliportFallback=function*(){let checkpointUnits=0;const all=islands.filter(i=>i!==Bi).slice().sort(()=>R()-.5);for(const i of all){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(let n=0;n<28;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*landSteps(i,1200,1);if(!q)continue;if(Math.hypot(q.x-pb.x,q.z-pb.z)<260||Math.hypot(q.x-pa.x,q.z-pa.z)<120)continue;if(!compoundSiteClear("heliport",q,120))continue;q.r=i.r;if(yield*compound("heliport",q))return q}}return null};const heliportTarget=1+MAP_SCALE;let heliportsMade=0;for(let n=0;n<heliportTarget;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=(yield*forceReserve("heliport",n?160:210))||(yield*reserveHeliportFallback());if(q)heliportsMade++}markBuildStage("militaryCompounds");yield{stage:"Complexos militars",completed:1,total:1};let guaranteedPorts=0,fastPortCandidates=0,fastPortAccepted=0;for(const i of candidateIslands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(guaranteedPorts>=2*MAP_SCALE)break;if(usedSpecialIslands.has(i))continue;const r=i.r*.24,anchors=[[i.x,i.z],[i.x+r,i.z],[i.x-r,i.z],[i.x,i.z+r],[i.x,i.z-r]];for(const[x,z]of anchors){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};fastPortCandidates++;const site=yield*findRedesignedPortSteps({x:x,z:z,r:i.r});if(!site||!compoundSiteClear("port",site,180))continue;if(yield*compound("port",{...site,portPrepared:true})){usedPortIslands.add(i);guaranteedPorts++;fastPortAccepted++;break}}}for(const i of candidateIslands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(guaranteedPorts>=2*MAP_SCALE)break;if(usedSpecialIslands.has(i)||usedPortIslands.has(i))continue;for(let attempt=0;attempt<4;attempt++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*findPortSite(i,6);if(!q||!compoundSiteClear("port",q,180))continue;if(yield*compound("port",q)){usedPortIslands.add(i);guaranteedPorts++;break}}}if(!guaranteedPorts){for(const i of candidateIslands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(usedSpecialIslands.has(i))continue;const q=yield*findPortSite(i,32);if(q&&compoundSiteClear("port",q,110)&&(yield*compound("port",q))){usedPortIslands.add(i);guaranteedPorts=1;break}}}buildCounters.guaranteedPorts=guaranteedPorts;buildCounters.fastPortCandidates=fastPortCandidates;buildCounters.fastPortAccepted=fastPortAccepted;markBuildStage("guaranteedPorts");yield{stage:"Ports",completed:1,total:1};for(const i of islands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(i===A||i===Bi||usedPortIslands.has(i)||usedSpecialIslands.has(i))continue;const roll=R();let type=roll<.25?"avancada":roll<.5?"garatge":roll<.72?"polvori":roll<.86?"comunicacions":"port",q=null;for(let n=0;n<10&&!q;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const c=yield*landSteps(i,700,1);if(c&&compoundSiteClear(type,c,150))q=c}if(!q)continue;q.r=i.r;if(type==="port"){const pq=yield*findPortSite(i,14);if(pq&&compoundSiteClear("port",pq,150)){q=pq}else type=R()<.5?"avancada":"polvori"}yield*compound(type,q);if(i.r>520&&R()<.22){const type2=R()<.6?"garatge":"avancada";let q2=null;for(let n=0;n<14&&!q2;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const c=yield*landSteps(i,800,1);if(c&&Math.hypot(c.x-q.x,c.z-q.z)>190&&compoundSiteClear(type2,c,150))q2=c}if(q2){q2.r=i.r;yield*compound(type2,q2)}}}markBuildStage("remainingCompounds");yield{stage:"Assentaments",completed:1,total:1};let standalonePiers=0,targetPiers=(3+Math.floor(R()*3))*MAP_SCALE;for(const i of candidateIslands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(standalonePiers>=targetPiers)break;if(usedPortIslands.has(i))continue;const q=yield*findPortSite(i,12);if(!q||!compoundSiteClear("port",q,110)||compoundClear.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<80))continue;if(yield*makeStandalonePier(q))standalonePiers++}markBuildStage("civilianPiers");yield{stage:"Molls",completed:1,total:1};if(seedSearchMode&&seedSearchCategoryEl.value==="compound"){seedCompounds=compoundCenters.map(c=>({type:c.type,x:c.x,z:c.z}));P.base={x:pa.x,z:pa.z};return}const terrainStarted=performance.now();const terrain=seedSearchMode?null:yield*window.HUNTER_TERRAIN.createSteps(THREE,{size:S,segments:SEG,heightAt:hAt,material:MAT.terrain(),parent:world,startX:pa.x,startZ:pa.z,lowQuality:!visualQuality.shadows,quality:qualityName,shadows:visualQuality.shadows,cutouts:activeBunker?[{x:activeBunker.x,z:activeBunker.z,angle:activeBunker.angle??-(activeBunker.o?.rotation.y??0),halfWidth:20,halfDepth:17}]:[]});if(terrain){terrainStream=terrain;world.add(terrain.mesh,window.HUNTER_TERRAIN.createBorder(THREE,{size:S,halfSize:H}))}const initialTerrainMs=performance.now()-terrainStarted;markBuildStage("terrain");yield{stage:"Terreny inicial",completed:1,total:1};const seabedStarted=performance.now();if(!seedSearchMode)yield*water.setWorldSizeSteps(S);const seabedMs=performance.now()-seabedStarted,vegetationStarted=performance.now();markBuildStage("seabed");yield{stage:"Fons mar\xed",completed:1,total:1};yield*vegetateSteps(pa);if(seedSearchMode)fa=[];else yield*spawnFaunaSteps();const vegetationMs=performance.now()-vegetationStarted;markBuildStage("vegetationAndFauna");yield{stage:"Vegetaci\xf3 i fauna",completed:1,total:1};HQ={x:hqCompound.buildings[0].x,z:hqCompound.buildings[0].z};const rb=B.slice(6);const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2);const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1),x=cx+Math.cos(a)*d,z=cz+Math.sin(a)*d;if(gl(x,z)&&!world.userData.compounds.some(c=>c.layout.civilian&&Math.hypot(x-c.x,z-c.z)<c.r))return mkEn(t,x,z)}return null};for(const i of islands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(i===A||i===Bi||R()<.5)continue;const q=yield*landSteps(i,60);if(!q)continue;for(let k=0;k<1+(R()<.4);k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};sp2("soldat",q.x,q.z,0,10)}if(R()<.25)sp2("torre",q.x,q.z,5,12)}for(const b of rb){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const n=R()<.25?0:R()<.6?1:2;const pool=["arma","arma","med","expl","granada","granada","disf","mapa","bazooka","franctirador","paracaigudes"].filter(t=>lootAllowed(t,b)&&(!b.civilian||["arma","med","disf"].includes(t)));for(let k=0;k<n&&pool.length;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const kind=pool[Math.floor(R()*pool.length)];addIt(kind,b)}}addIt("arma",B[0]);addIt("expl",B[1]);if(!items.some(it=>it.t==="med"&&it.compound==="base")){const firstBaseBuilding=B.find(b=>b.compound==="base"&&!b.hangar);if(firstBaseBuilding)addIt("med",firstBaseBuilding)}const lootBuildings=t=>rb.filter(b=>!b.civilian&&lootAllowed(t,b));const sniperSites=lootBuildings("franctirador");addIt("franctirador",sniperSites[Math.floor(R()*sniperSites.length)]||B[2]);for(const[type,count]of[["mapa",2],["mapa_heli",1+MAP_SCALE],["mapa_tanc",1+MAP_SCALE]]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};lootBuildings(type).sort(()=>R()-.5).slice(0,count).forEach(b=>addIt(type,b))}markBuildStage("enemiesAndLoot");yield{stage:"Gu\xe0rdies i equipament",completed:1,total:1};if(seedSearchMode&&seedSearchCategoryEl.value==="item"){P.base={x:pa.x,z:pa.z};return}P.x=baseCompound.spawn?.x??pa.x;P.z=baseCompound.spawn?.z??pa.z+20;P.hd=0;P.base={x:pa.x,z:pa.z};V=[];cv=null;mm=null;const add=(t,x,z,a,meta={})=>{const civilian=t==="cotxe_civil",bicycle=t==="bici",jetski=t==="moto_aquatica",colors=window.HUNTER_CIVILIAN_CARS,palette=jetski?colors.jetskiColors:colors.colors;const color=civilian||bicycle||jetski?palette[Math.floor(R()*palette.length)].hex:undefined;if(civilian)R();const variant=civilian?0:undefined;const appearance={color:meta.color??color,variant:meta.variant??variant};const o=seedSearchMode?seedVehicleStub(t):mkV(t,appearance),c=VT[t],surface=Math.max(0,hAt(x,z));const v={t:t,x:x,z:z,hd:a||0,v:0,alt:c.m==="a"?helicopterLandedAltitude({o:o},surface):surface+.8,o:o,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};if(civilian||bicycle||jetski)v.color=appearance.color;if(civilian)v.variant=appearance.variant;if(t==="heli_combat")v.rockets=6;if(t==="llanxa_coets")v.rockets=Infinity;if(!seedSearchMode)world.add(o);V.push(v);return v};const near=function*(r,t){let checkpointUnits=0;for(let k=0;k<80;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const x=pa.x+rr(-r,r),z=pa.z+rr(-r,r),h=hAt(x,z);if(prisonCampCorridorClear(x,z,vehicleRadius(t)+2)&&h>1.5&&slope(x,z,h)<2.5&&!B.some(b=>Math.abs(x-b.x)<b.hw+vehicleRadius(t)&&Math.abs(z-b.z)<b.hd+vehicleRadius(t))&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(t)+vehicleRadius(v.t)+2))return[x,z]}return[pa.x+30,pa.z+30]};for(const t of["moto"]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*near(90,t);add(t,q[0],q[1],rr(0,6.28))}const shores=[];for(let a=0;a<360;a+=12){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(let d=10;d<700;d+=10){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const x=pa.x+Math.cos(a*.01745)*d,z=pa.z+Math.sin(a*.01745)*d;if(Math.abs(x)>H-60||Math.abs(z)>H-60)break;if(hAt(x,z)<-2){shores.push({d:d,x:x,z:z,a:a*.01745});break}}}shores.sort((a,b)=>a.d-b.d);const launchSpot=shores[0]?{x:shores[0].x,z:shores[0].z,a:shores[0].a}:null;const ferrySpotForIsland=function*(island,islandIndex){let checkpointUnits=0;const start=R()*Math.PI*2;for(let n=0;n<36;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const a=start+n*Math.PI*2/36,ux=Math.cos(a),uz=Math.sin(a);let touchedLand=false;for(let d=Math.max(24,island.r*.22);d<island.r*1.5;d+=8){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const sx=island.x+ux*d,sz=island.z+uz*d,h=hAt(sx,sz);if(h>.2){touchedLand=true;continue}if(!touchedLand)continue;if(h<-1.7){const x=sx+ux*14,z=sz+uz*14;if(Math.abs(x)>H-28||Math.abs(z)>H-28||hAt(x,z)>-1.25)break;return{x:x,z:z,hd:Math.atan2(island.x-x,island.z-z),islandIndex:islandIndex,islandX:island.x,islandZ:island.z}}if(h<-5)break}}return null};const ferryCandidates=[];for(let islandIndex=0;islandIndex<islands.length;islandIndex++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*ferrySpotForIsland(islands[islandIndex],islandIndex);if(q)ferryCandidates.push(q)}const ferrySpots=terminalRecords.map(c=>{const v=c.vehicles.find(v=>v.t==="ferry"),island=islands[c.islandIndex];return{...v,islandIndex:c.islandIndex,islandX:island.x,islandZ:island.z,terminal:c}});if(ferryCandidates.length&&ferrySpots.length<2){const first=ferryCandidates[Math.floor(R()*ferryCandidates.length)];ferrySpots.push(first);const second=ferryCandidates.filter(q=>q.islandIndex!==first.islandIndex).sort((a,b)=>Math.hypot(b.x-first.x,b.z-first.z)-Math.hypot(a.x-first.x,a.z-first.z))[0];if(second&&ferrySpots.length<2)ferrySpots.push(second)}for(let i=0;i<ferryCandidates.length&&ferrySpots.length<2;i++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=ferryCandidates[i];if(!ferrySpots.some(f=>f.islandIndex===q.islandIndex))ferrySpots.push(q)}markBuildStage("ferrySiteSearch");yield{stage:"Terminals dels ferris",completed:1,total:1};ferrySpots.slice(0,2).forEach(q=>{const f=add("ferry",q.x,q.z,q.hd,{coastal:true,guaranteed:true,ferryIslandIndex:q.islandIndex,ferryIslandX:q.islandX,ferryIslandZ:q.islandZ});if(q.terminal){q.terminal.ferry=f;createTerminalRamp(q.terminal,f)}});if(launchSpot){let lx=launchSpot.x,lz=launchSpot.z;const overlapsFerry=()=>ferrySpots.some(f=>Math.hypot(lx-f.x,lz-f.z)<vehicleRadius("ferry")+vehicleRadius("llanxa")+6);if(overlapsFerry()){const tx=-Math.sin(launchSpot.a),tz=Math.cos(launchSpot.a);const candidates=[{x:launchSpot.x+tx*100,z:launchSpot.z+tz*100},{x:launchSpot.x-tx*100,z:launchSpot.z-tz*100}];const valid=q=>Math.abs(q.x)<H-vehicleRadius("llanxa")-5&&Math.abs(q.z)<H-vehicleRadius("llanxa")-5&&hAt(q.x,q.z)<-1.2;const best=candidates.find(valid)||candidates[0];lx=best.x;lz=best.z}add("llanxa",lx,lz,rr(0,6.28))}const clearVehicle=(t,x,z)=>prisonCampCorridorClear(x,z,vehicleRadius(t)+2)&&Math.abs(x)<H-vehicleRadius(t)-5&&Math.abs(z)<H-vehicleRadius(t)-5&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(x-v.x,z-v.z)<vehicleRadius(t)+vehicleRadius(v.t)+5);let hangarTanks=0,alternateHangar=0;for(const v of compoundVehicles){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(!v.insideHangar||v.t!=="tanc")continue;if(hangarTanks<2){hangarTanks++;continue}v.t=alternateHangar++%2===0?"tanqueta":"camio"}for(const v of compoundVehicles){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(v.t==="ferry")continue;if(VT[v.t]?.m==="w"||VT[v.t]?.m==="wl"){if(hAt(v.x,v.z)<-2&&!V.some(o=>obbOverlap(vehicleBox(v),vehicleBox(o))))add(v.t,v.x,v.z,v.hd,v);continue}const r=vehicleRadius(v.t),buildingClear=v.insideHangar?true:!B.some(b=>Math.abs(v.x-b.x)<b.hw+r&&Math.abs(v.z-b.z)<b.hd+r),clear=!treeHit(v.x,v.z,r*.7)&&buildingClear&&!V.some(o=>Math.hypot(v.x-o.x,v.z-o.z)<r+vehicleRadius(o.t)+3);if(clear||v.insideHangar)add(v.t,v.x,v.z,v.hd,v)}const coastalWaterTypes=["barca_rems","windsurf","moto_aquatica","llanxa"];const pickCoastalWaterType=()=>{const q=R();return q<.4?"barca_rems":q<.72?"windsurf":q<.88?"moto_aquatica":"llanxa"};const beachedWaterSpot=function*(island,t){let checkpointUnits=0;const r=vehicleRadius(t),start=R()*Math.PI*2;for(let n=0;n<32;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const a=start+n*Math.PI*2/32,ux=Math.cos(a),uz=Math.sin(a);let wasLand=false;for(let d=Math.max(18,island.r*.18);d<island.r*1.35;d+=5){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const x=island.x+ux*d,z=island.z+uz*d,h=hAt(x,z);if(h>.15){wasLand=true;continue}if(!wasLand)continue;if(h<-1.25&&h>-3.15){const clear=Math.abs(x)<H-r-5&&Math.abs(z)<H-r-5&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+4)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r+3&&Math.abs(z-b.z)<b.hd+r+3);if(clear){const hd=Math.atan2(ux,uz)+rn(-.18,.18);return{x:x,z:z,hd:hd}}}if(h<-3.15)break}}return null};let beachedWaterCount=0;for(const island of islands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(R()>=.75)continue;const t=pickCoastalWaterType(),q=yield*beachedWaterSpot(island,t);if(q){add(t,q.x,q.z,q.hd,{beached:true,coastal:true});beachedWaterCount++}}markBuildStage("coastalVehicles");yield{stage:"Embarcacions de costa",completed:1,total:1};heliportSites.forEach((p,i)=>{const desired=p.type||(i===1?"heli_combat":"heli");if(clearVehicle(desired,p.x,p.z))add(desired,p.x,p.z,p.hd,{heliport:true,military:true,guaranteed:true})});if(heliportSites.length){const addClearHeliAtPort=(t,preferred)=>{for(let i=0;i<heliportSites.length;i++){const p=heliportSites[(preferred+i)%heliportSites.length];for(const[d,turn]of[[0,0],[22,Math.PI/2],[22,-Math.PI/2],[30,Math.PI/4],[30,-Math.PI/4],[36,Math.PI]]){const a=p.hd+turn,x=p.x+Math.sin(a)*d,z=p.z+Math.cos(a)*d,r=vehicleRadius(t);if(!clearVehicle(t,x,z)||hAt(x,z)<=1.2||slope(x,z,hAt(x,z))>=3||B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r))continue;add(t,x,z,p.hd,{heliport:true,military:true,guaranteed:true});return true}}return false};if(!V.some(v=>v.t==="heli"))addClearHeliAtPort("heli",0);if(!V.some(v=>v.t==="heli_combat"))addClearHeliAtPort("heli_combat",Math.min(1,heliportSites.length-1))}const protectedVehicleSpot=t=>{const r=vehicleRadius(t),ok=(x,z)=>prisonCampCorridorClear(x,z,r+2)&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3);for(let k=0;k<240;k++){const a=rr(0,Math.PI*2),d=rr(30,58),x=pb.x+Math.cos(a)*d,z=pb.z+Math.sin(a)*d;if(ok(x,z))return{x:x,z:z,hd:a+Math.PI}}return null};const distributedMilitarySpot=function*(t){let checkpointUnits=0;const r=vehicleRadius(t),pool=islands.filter(i=>i!==Bi).slice().sort(()=>R()-.5),ok=(x,z)=>prisonCampCorridorClear(x,z,r+2)&&Math.hypot(x-pb.x,z-pb.z)>220&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3);for(const i of pool){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(let k=0;k<50;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*landSteps(i,900,1);if(q&&ok(q.x,q.z))return{x:q.x,z:q.z,hd:rr(0,Math.PI*2)}}}return null};const militaryCompoundSpot=function*(t){let checkpointUnits=0;const r=vehicleRadius(t),sites=world.userData.compounds.filter(c=>!c.layout?.friendly&&!c.layout?.civilian&&c.id!=="base"&&c.id!=="port");for(const site of sites.slice().sort(()=>R()-.5)){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(let k=0;k<75;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const a=rr(0,Math.PI*2),d=site.r+rr(8,65),x=site.x+Math.cos(a)*d,z=site.z+Math.sin(a)*d;if(!prisonCampCorridorClear(x,z,r+2)||Math.abs(x)>=H-r-8||Math.abs(z)>=H-r-8||hAt(x,z)<1.2||slope(x,z,hAt(x,z))>=3||treeHit(x,z,r*.7)||B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)||V.some(v=>Math.hypot(x-v.x,z-v.z)<vehicleRadius(v.t)+r+3))continue;return{x:x,z:z,hd:a+Math.PI}}}return null};const hardLandVehicleSpot=function*(t){let checkpointUnits=0;const r=vehicleRadius(t),ok=(x,z)=>prisonCampCorridorClear(x,z,r+2)&&Math.abs(x)<H-r-8&&Math.abs(z)<H-r-8&&Math.hypot(x-pb.x,z-pb.z)>220&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<4&&!treeHit(x,z,r*.65)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+4);for(let k=0;k<1600;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const x=rr(-H+r+10,H-r-10),z=rr(-H+r+10,H-r-10);if(ok(x,z))return{x:x,z:z,hd:rr(0,Math.PI*2)}}for(let k=0;k<72;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const a=k*Math.PI/36,d=110+k%4*20,x=pa.x+Math.cos(a)*d,z=pa.z+Math.sin(a)*d;if(ok(x,z))return{x:x,z:z,hd:a+Math.PI}}return null};const waterVehicleSpot=function*(t){let checkpointUnits=0;const r=vehicleRadius(t),pool=islands.slice().sort(()=>R()-.5);for(const i of pool){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(let tries=0;tries<3;tries++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*findPortSite(i,18);if(!q||!q.portBest)continue;const a=q.portBest.aa,px=-Math.sin(a),pz=Math.cos(a);for(const side of[-1,1]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const x=q.portBest.x+px*side*(r+4),z=q.portBest.z+pz*side*(r+4);if(hAt(x,z)<-2&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3))return{x:x,z:z,hd:q.portBest.hd}}}}return null};const ensureVehicleType=function*(t){let checkpointUnits=0;if(t==="heli"?V.some(v=>v.t==="heli"&&!v.heliport):V.some(v=>v.t===t))return;let q=null,c=VT[t];if(c.m==="w"||c.m==="wl")q=yield*waterVehicleSpot(t);else if(t==="tanqueta")q=yield*militaryCompoundSpot(t);else if(["heli","heli_combat","tanc","camio"].includes(t))q=(yield*distributedMilitarySpot(t))||(yield*hardLandVehicleSpot(t));else{const p=yield*near(120,t);q={x:p[0],z:p[1],hd:rr(0,Math.PI*2)}}if(q)add(t,q.x,q.z,q.hd)};for(const type of["llanxa","moto_aquatica","barca_rems","windsurf","hover","cotxe","moto","bici","camio","tanqueta","tanc","heli","heli_combat"]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};yield*ensureVehicleType(type)}V.filter(v=>v.t==="llanxa_coets").slice(2).forEach(v=>{const i=V.indexOf(v);if(i>=0)V.splice(i,1);world.remove(v.o)});const militaryRocketBoatSpot=function*(){let checkpointUnits=0;const r=vehicleRadius("llanxa_coets"),sites=world.userData.compounds.filter(c=>!c.layout?.friendly&&!c.layout?.civilian&&c.id!=="base");sites.sort((a,b)=>Number(!!b.layout?.waterfront)-Number(!!a.layout?.waterfront));for(const site of sites){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(let k=0;k<32;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const a=k*Math.PI/16+R()*.12,d0=Math.max(16,site.r*.5);for(let d=d0;d<Math.min(210,site.r+130);d+=6){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const x=site.x+Math.cos(a)*d,z=site.z+Math.sin(a)*d;if(Math.abs(x)>H-r-8||Math.abs(z)>H-r-8)break;if(hAt(x,z)>-2)continue;const bx=x+Math.cos(a)*12,bz=z+Math.sin(a)*12;if(hAt(bx,bz)>-1.5)continue;if(V.some(v=>Math.hypot(x-v.x,z-v.z)<r+vehicleRadius(v.t)+5))continue;return{x:x,z:z,hd:Math.atan2(-Math.cos(a),-Math.sin(a))}}}}return null};let rocketBoatAttempts=0;while(countVehicles("llanxa_coets")<2&&rocketBoatAttempts++<4){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=(yield*militaryRocketBoatSpot())||(yield*waterVehicleSpot("llanxa_coets"));if(!q)break;add("llanxa_coets",q.x,q.z,q.hd,{military:true,guaranteed:true})}const ensureVehicleCount=function*(t,min){let checkpointUnits=0;let guard=0;while(countVehicles(t)<min&&guard++<12){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=(yield*distributedMilitarySpot(t))||(yield*hardLandVehicleSpot(t));if(!q)break;add(t,q.x,q.z,q.hd,{military:true,guaranteed:true})}};yield*ensureVehicleCount("tanc",2);const ensureDistributedCount=function*(t,min){let checkpointUnits=0;let guard=0;while(countVehicles(t)<min&&guard++<16){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=t==="tanqueta"?yield*militaryCompoundSpot(t):(yield*distributedMilitarySpot(t))||(yield*hardLandVehicleSpot(t));if(!q)break;add(t,q.x,q.z,q.hd,{military:true,guaranteed:true})}};yield*ensureDistributedCount("heli",2*MAP_SCALE);yield*ensureDistributedCount("heli_combat",MAP_SCALE);yield*ensureDistributedCount("tanqueta",1+MAP_SCALE);for(const i of islands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(i!==A&&R()<.65){const t=["cotxe","moto","bici"][Math.floor(R()*3)];for(let tries=0;tries<12;tries++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*landSteps(i,80);if(q&&clearVehicle(t,q.x,q.z)){add(t,q.x,q.z,rr(0,6.28));break}}}}markBuildStage("guaranteedVehicles");yield{stage:"Vehicles distribu\xefts",completed:1,total:1};const civilianVehicleClear=(x,z,heading=0)=>{const type="cotxe_civil",r=vehicleRadius(type)+1.2;if(Math.abs(x)>H-r-5||Math.abs(z)>H-r-5)return false;const h=hAt(x,z);if(h<1.4||slope(x,z,h)>3.7)return false;if(!clearVehicle(type,x,z)||treeHit(x,z,r*.83))return false;if(B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r))return false;if(wallCandidates(x,z,r+2).some(w=>!w.open&&x>w.x0-r&&x<w.x1+r&&z>w.z0-r&&z<w.z1+r))return false;return true};let civilianNearSites=0,civilianAbandoned=0;for(const site of compoundCenters.filter(c=>c.type.startsWith("hut-settlement")||c.type==="ferry-terminal")){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const count=site.type==="ferry-terminal"?2:1+(R()<.32?1:0),offset=R()*Math.PI*2;for(let k=0;k<count;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};let placed=false;const isVillage=site.type.startsWith("hut-settlement");const radii=isVillage?[10,14,18,23,29,36,44,54]:[18,24,32,42,54];for(const distance of radii){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(placed)break;for(let a=0;a<24;a++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const angle=offset+a%24*Math.PI/12+k*Math.PI*.65,x=site.x+Math.cos(angle)*distance,z=site.z+Math.sin(angle)*distance;if(!civilianVehicleClear(x,z))continue;add("cotxe_civil",x,z,angle+Math.PI/2,{civilian:true,parkedAt:site.type});civilianNearSites++;placed=true;break}}if(!placed)break}}for(const island of islands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(island===Bi||island===A||R()>.56)continue;for(let attempt=0;attempt<26;attempt++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*landSteps(island,160,1);if(!q||!civilianVehicleClear(q.x,q.z))continue;if(compoundCenters.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<c.r+26))continue;add("cotxe_civil",q.x,q.z,rr(0,Math.PI*2),{civilian:true,abandoned:true});civilianAbandoned++;break}}world.userData.civilianCars={nearSites:civilianNearSites,abandoned:civilianAbandoned,total:civilianNearSites+civilianAbandoned};markBuildStage("civilianCars");yield{stage:"Vehicles civils",completed:1,total:1};yield*ensureJetSkis(add);markBuildStage("jetSkis");yield{stage:"Motos aqu\xe0tiques",completed:1,total:1};function*spawnLandCarPatrols(){let checkpointUnits=0;const large=islands.filter(i=>i.r>=800).sort((a,b)=>b.r-a.r);const sites=world.userData.compounds.filter(c=>!c.layout?.friendly&&c.id!=="base"&&c.id!=="hq"&&c.id!=="prison-camp");const usedRoutes=new Set;const routeKey=(a,b)=>[sites.indexOf(a.c),sites.indexOf(b.c)].sort((x,y)=>x-y).join(":");const carR=Math.hypot(...VHB.cotxe.map(n=>n*VS.cotxe))/2+.8;const clear=(x,z)=>prisonCampCorridorClear(x,z,carR+2)&&Math.abs(x)<H-carR-5&&Math.abs(z)<H-carR-5&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<5&&!treeHit(x,z,carR)&&!wallCandidates(x,z,carR).some(w=>!w.open&&w.playerBlock!==false&&x>w.x0-carR&&x<w.x1+carR&&z>w.z0-carR&&z<w.z1+carR)&&!B.some(b=>Math.abs(x-b.x)<b.hw+carR&&Math.abs(z-b.z)<b.hd+carR);const access=c=>{for(const[ex,ez]of c.entrances){const dx=ex-c.x,dz=ez-c.z,len=Math.hypot(dx,dz)||1;for(const step of[12,20,30,42,55]){const x=ex+dx/len*step,z=ez+dz/len*step;if(clear(x,z))return{x:x,z:z}}}for(let n=0;n<20;n++){const a=n*Math.PI/10,x=c.x+Math.cos(a)*(c.r+24),z=c.z+Math.sin(a)*(c.r+24);if(clear(x,z))return{x:x,z:z}}return null};let spawned=0;for(const island of large){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const eligible=sites.filter(c=>Math.hypot(c.x-island.x,c.z-island.z)<island.r*1.02).map(c=>({c:c,p:access(c)})).filter(o=>o.p);if(eligible.length<2)continue;const pairs=[];for(let a=0;a<eligible.length;a++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(let b=a+1;b<eligible.length;b++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const p=eligible[a].p,q=eligible[b].p;pairs.push({a:eligible[a],b:eligible[b],distance:Math.hypot(p.x-q.x,p.z-q.z)})}}pairs.sort((a,b)=>Number(usedRoutes.has(routeKey(a.a,a.b)))-Number(usedRoutes.has(routeKey(b.a,b.b)))||Number(!!a.a.c.layout?.civilian)+Number(!!a.b.c.layout?.civilian)-Number(!!b.a.c.layout?.civilian)-Number(!!b.b.c.layout?.civilian)||a.distance-b.distance);const drySegment=(a,b)=>{if(prisonCampSegmentDistance(prisonCamp.x,prisonCamp.z,a,b)<=prisonCamp.r+12)return false;const length=Math.hypot(a.x-b.x,a.z-b.z),n=Math.ceil(length/7);for(let k=0;k<=n;k++){const t=k/n,x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t;if(hAt(x,z)<.9||hAt(x+4,z)<.1||hAt(x-4,z)<.1||hAt(x,z+4)<.1||hAt(x,z-4)<.1)return false}return true};const routeBetween=(a,b)=>{const peak={x:island.peakX,z:island.peakZ},center={x:island.x,z:island.z},opts=[[],[center],[peak],[{x:center.x+island.r*.22,z:center.z}],[{x:center.x-island.r*.22,z:center.z}],[{x:center.x,z:center.z+island.r*.22}],[{x:center.x,z:center.z-island.r*.22}]];for(const middle of opts){const nodes=[a,...middle,b];if(!nodes.slice(1).every((p,i)=>drySegment(nodes[i],p)))continue;const road=[a];for(let j=1;j<nodes.length;j++){const from=nodes[j-1],to=nodes[j],steps=Math.ceil(Math.hypot(to.x-from.x,to.z-from.z)/24);for(let k=1;k<=steps;k++)road.push({x:from.x+(to.x-from.x)*k/steps,z:from.z+(to.z-from.z)*k/steps})}return road}return null};for(const pair of pairs){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const key=routeKey(pair.a,pair.b),sameRoute=usedRoutes.has(key),road=routeBetween(pair.a.p,pair.b.p);if(!road||road.length<2)continue;if(sameRoute)road.reverse();const points=road.map(p=>[p.x,p.z]),start=points[0],next=points[1],heading=Math.atan2(start[0]-next[0],start[1]-next[1]);if(!clear(start[0],start[1]))continue;const car=mkEn("jeep",start[0],start[1]);car.hd=heading;setPatrol(car,[...points,...points.slice(1,-1).reverse()],false);car.interCompoundPatrol=true;car.patrolIslandIndex=islands.indexOf(island);car.patrolComplexes=[pair.a.c.id,pair.b.c.id];car.patrolEnds=[pair.a.p,pair.b.p];if(!sameRoute)pathRoutes.push({points:points,width:8,color:7826257});usedRoutes.add(key);spawned++;break}}return spawned}const landCarPatrolCount=yield*spawnLandCarPatrols();markBuildStage("landCarPatrols");yield{stage:"Patrulles terrestres",completed:1,total:1};yield*spawnMarinePatrolsSteps();markBuildStage("marinePatrols");yield{stage:"Patrulles navals",completed:1,total:1};P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);if(!seedSearchMode){for(const v of V){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};place(v,0,0,0);yield{stage:"Situant vehicles",completed:null,total:null}}updateTerminalRamps();yield*prepareEnemyNavigationSteps()}world.userData.paths=pathRoutes;if(!seedSearchMode){const roads=yield*window.HUNTER_COMPOUND_PATHS.createPathNetworkSteps(THREE,{parent:world,routes:pathRoutes,heightAt:(x,z)=>Math.max(hAt(x,z),terrainStream?.visibleHeightAt(x,z)??-Infinity),heightVersion:(x,z)=>terrainStream?.surfaceVersionAt(x,z)??-1});world.add(roads);world.userData.pathStats=roads.userData.pathStats}const staticBatchStats=seedSearchMode?null:yield*batchStaticDecor();if(!seedSearchMode&&visualQuality.shadows)yield*prepareShadowCastersSteps();else shadowCandidates.length=0;cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);markBuildStage("finalizationAndBatching");yield{stage:"Comprovacions finals",completed:1,total:1};seedCompounds=compoundCenters.map(c=>({type:c.type,x:c.x,z:c.z}));window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,stages:buildStages,portSearch:buildCounters,initialTerrainMs:initialTerrainMs,seabedMs:seabedMs,vegetationMs:vegetationMs,seabedSamples:seedSearchMode?0:water.seabedStats.lastSamples,terrainTiles:terrain?.stats||null,palms:PM.stats,landCarPatrols:landCarPatrolCount,staticBatches:staticBatchStats};if(!seedSearchMode){setPalmsDisabled(requestedPalmDisable);setWaterDisabled(!!document.getElementById("disableWater")?.checked);setShadowsDisabled(!!document.getElementById("disableShadows")?.checked)}if(!seedSearchMode){yield*prepareVisibilitySystemSteps();waterUpgradePending=true}if(window.HUNTER_PERF_DEBUG)console.info("Hunter \xb7 generaci\xf3",window.HUNTER_BUILD_STATS);resetSimulationClock()}function buildSeedData(){if(!seedSearchMode)throw new Error("buildSeedData requereix mode cerca");build();return{seed:seed,base:P.base,vehicles:V,items:items,compounds:seedCompounds,enemies:world.userData.marinePatrolPositions||[]}}window.HUNTER_CAMERA_CONTROLS=Object.freeze({createVehicleLook(){let offset=0,grace=0;const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));return{get offset(){return offset},reset(){offset=0;grace=0},turn(dx){offset=wrap(offset-dx*.006);grace=.7},release(){grace=.7},heading(vehicle,dt,dragging){if(!dragging){const wait=grace;grace=Math.max(0,grace-dt);const moving=Math.hypot(vehicle.v||0,vehicle.sideV||0,vehicle.strafeV||0,vehicle.verticalV||0)>.65;if(moving&&grace===0){offset*=Math.exp(-2.7*Math.max(0,dt-wait));if(Math.abs(offset)<1e-4)offset=0}}return vehicle.hd+offset}}},createOcclusion(){const hidden=[];return{get count(){return hidden.length},hide(wall){for(const mesh of wall.parts||[wall.m]){if(!mesh?.visible)continue;hidden.push({wall:wall,mesh:mesh,parent:mesh.parent});mesh.visible=false}},restore(){for(const{wall:wall,mesh:mesh,parent:parent}of hidden){if(wall.destroyedWall||wall.hp<=0||mesh.parent!==parent)continue;if(wall.door&&(wall.openProgress!=null?wall.openProgress>=.98:wall.open))continue;mesh.visible=true}hidden.length=0}}}});window.HUNTER_SIMULATION_CLOCK=Object.freeze({create({maxStep:maxStep=1/60,maxFrame:maxFrame=.25,maxSteps:maxSteps=15}={}){if(!Number.isFinite(maxStep)||maxStep<=0||!Number.isFinite(maxFrame)||maxFrame<=0||!Number.isInteger(maxSteps)||maxSteps<1)throw new RangeError("Invalid simulation clock limits");const frameLimit=Math.min(maxFrame,maxStep*maxSteps),epsilon=1e-12,stats={frames:0,steps:0,rawSeconds:0,acceptedSeconds:0,simulatedSeconds:0,droppedSeconds:0,interruptedSeconds:0,idleSeconds:0,invalidFrames:0,last:null};let last=null,epoch=0;return{maxStep:maxStep,maxSteps:maxSteps,maxFrame:frameLimit,stats:stats,reset(now=null){last=Number.isFinite(now)&&now>=0?now:null;epoch++},advance(now,step,active=true){let rawDt=0,invalid=false;if(!Number.isFinite(now)||now<0||last!==null&&now<last){invalid=true;last=null}else{if(last!==null)rawDt=(now-last)/1e3;last=now}const acceptedDt=active?Math.min(rawDt,frameLimit):0,version=epoch;let remaining=acceptedDt,steps=0;while(remaining>epsilon&&steps<maxSteps){const dt=Math.min(maxStep,remaining);remaining=Math.max(0,remaining-dt);steps++;if(step(dt)===false||version!==epoch)break}if(remaining<epsilon)remaining=0;const simulatedDt=acceptedDt-remaining,idleDt=active?0:rawDt,interruptedDt=remaining,droppedDt=active?rawDt-simulatedDt:0,frame={rawDt:rawDt,acceptedDt:acceptedDt,simulatedDt:simulatedDt,droppedDt:droppedDt,interruptedDt:interruptedDt,idleDt:idleDt,steps:steps,invalid:invalid,active:!!active};stats.frames++;stats.steps+=steps;stats.rawSeconds+=rawDt;stats.acceptedSeconds+=acceptedDt;stats.simulatedSeconds+=simulatedDt;stats.droppedSeconds+=droppedDt;stats.interruptedSeconds+=interruptedDt;stats.idleSeconds+=idleDt;if(invalid)stats.invalidFrames++;stats.last=frame;return frame}}}});window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){const esc=v=>String(v||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])),m=e&&e.message?e.message:"Error desconegut",where=e&&e.filename?e.filename.split("/").pop()+":"+e.lineno+":"+e.colno:"",stack=e&&e.error&&e.error.stack?e.error.stack:"";p.innerHTML='<h1>No s\u2019ha pogut iniciar el joc</h1><p style="max-width:560px">Error d\u2019arrencada: <b>'+esc(m)+"</b></p>"+(where?"<p><b>"+esc(where)+"</b></p>":"")+(stack?'<pre style="max-width:90vw;white-space:pre-wrap;text-align:left;font-size:11px;opacity:.8">'+esc(stack)+"</pre>":"")+'<p style="opacity:.8">Envia una captura d\u2019aquest missatge si persisteix.</p>'}});let generationPromise=null,generationCancel=null;let terrainStream=null,seedSearchMode=false,seedCompounds=[],seedScratchWorld=null;const requiredModules=["HUNTER_VISUAL_CONFIG","HUNTER_MATERIALS","HUNTER_PALETTE","HUNTER_WATER","HUNTER_RENDERING","HUNTER_WATER_SYSTEM","HUNTER_WAVES","HUNTER_TERRAIN","HUNTER_VEHICLES","HUNTER_VEHICLE_DYNAMICS","HUNTER_JOYSTICK","HUNTER_RIDER","HUNTER_VEGETATION","HUNTER_BUILDINGS","HUNTER_CHARACTERS","HUNTER_FAUNA","HUNTER_MINIMAP","HUNTER_UI","HUNTER_SEED_SEARCH","HUNTER_CAMERA_CONTROLS","HUNTER_SIMULATION_CLOCK","HUNTER_STEALTH_FEEDBACK","HUNTER_PRISONERS","HUNTER_RADIO_RELAY"];const missingModules=requiredModules.filter(name=>!window[name]);if(missingModules.length)throw new Error("M\xf2duls Hunter absents: "+missingModules.join(", "));const missingSystems=Object.entries({generation:typeof build,combat:typeof fire,enemies:typeof updEn,audio:typeof initAudio}).filter(([,type])=>type!=="function").map(([name])=>name);if(missingSystems.length)throw new Error("Sistemes Hunter absents: "+missingSystems.join(", "));let MAP_SCALE=+(document.querySelector('input[name="mapSize"]:checked')?.value||1),S=4800*MAP_SCALE,H=S/2;const SEG=400,vividCache=new Map,vivid=c=>{let k=vividCache.get(c);if(!k){k=new THREE.Color(c);const h={};k.getHSL(h,THREE.SRGBColorSpace);k.setHSL(h.h,Math.min(1,h.s*1.5),h.l,THREE.SRGBColorSpace);vividCache.set(c,k)}return k};const materialProfile=(name="organic")=>window.HUNTER_MATERIALS[name]||window.HUNTER_MATERIALS.organic;const sharedMaterials=new Map;const M=(c,profile="organic")=>{const key=c+":"+profile;if(!sharedMaterials.has(key))sharedMaterials.set(key,window.HUNTER_RESOURCES.retain(new THREE.MeshStandardMaterial({color:vivid(c),flatShading:true,...materialProfile(profile)})));return sharedMaterials.get(key)};const MAT={terrain:()=>{const mat=new THREE.MeshLambertMaterial({vertexColors:true,flatShading:!highTerrainTexture,...highTerrainTexture?{map:highTerrainTexture}:{}});if(terrainTextureTask&&!highTerrainTexture){mat.userData.requiresDetailUV=true;awaitingTerrainMaterials.push(mat)}return mat},painted:c=>M(c,"paint"),metal:c=>M(c,"metal"),rubber:c=>M(c,"rubber"),glass:c=>M(c,"glass"),masonry:c=>M(c,"masonry")};let seed,R,islands,A,Bi,world,B=[],requestedSeed=null,activeBunker=null;const ISLAND_CELL=512,islandGrid=new Map,islandCellKey=(cx,cz)=>cx+","+cz;function rebuildIslandGrid(){islandGrid.clear();if(!islands)return;for(const island of islands){const reach=island.r*2,minX=Math.floor((island.x-reach)/ISLAND_CELL),maxX=Math.floor((island.x+reach)/ISLAND_CELL),minZ=Math.floor((island.z-reach)/ISLAND_CELL),maxZ=Math.floor((island.z+reach)/ISLAND_CELL);for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){const key=islandCellKey(cx,cz),bucket=islandGrid.get(key);if(bucket)bucket.push(island);else islandGrid.set(key,[island])}}}const islandCandidates=(x,z)=>islandGrid.get(islandCellKey(Math.floor(x/ISLAND_CELL),Math.floor(z/ISLAND_CELL)))||(islands||[]);const seedFromText=v=>{v=String(v??"").trim();if(/^-?\d+$/.test(v))return Number(BigInt(v)&0xffffffffn);let h=2166136261>>>0;for(let i=0;i<v.length;i++){h^=v.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0};const mul=a=>()=>{a|=0;a=a+1831565813|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};const hash=(x,y)=>{const h=Math.sin(x*127.1+y*311.7+seed*.001)*43758.5453;return h-Math.floor(h)};function vn(x,y){const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);return hash(ix,iy)*(1-u)*(1-v)+hash(ix+1,iy)*u*(1-v)+hash(ix,iy+1)*(1-u)*v+hash(ix+1,iy+1)*u*v}const fbm=(x,y)=>vn(x,y)*.5+vn(x*2,y*2)*.25+vn(x*4,y*4)*.125+vn(x*8,y*8)*.0625;const clamp01=v=>Math.max(0,Math.min(1,v)),smooth01=t=>t*t*(3-2*t);function islandReliefAt(x,z,list){let m=-1,dom=null;for(const i of list){const q=1-Math.hypot(x-i.x,z-i.z)/i.r;if(q>m){m=q;dom=i}}let h=(m-.25+.6*(fbm(x/520,z/520)-.47))*45;if(dom&&h>0){const interior=smooth01(clamp01((m-.3)/.48));if(interior>0){const mid=(fbm(x/155+13,z/155-9)-.46875)*12*interior;const pd=Math.hypot(x-dom.peakX,z-dom.peakZ)/(dom.r*.72),peak=smooth01(clamp01(1-pd)),sizeGain=Math.max(.72,Math.min(1.22,dom.r/620));h=h*(1+.24*interior)+mid+peak*9*sizeGain*interior}}return h}function rawHAt(x,z){let h=islandReliefAt(x,z,islandCandidates(x,z));const e=Math.max(Math.abs(x),Math.abs(z));if(e>H-120)h=Math.min(h,-4-(e-(H-120))*.05);if(h>=-1.5)return h;const depth=-h-1.5;return-1.5-Math.min(72,depth*depth*2.8+depth*.8)}let terrainLevels=[];const LEVEL_CELL=256,terrainLevelGrid=new Map;const levelCellKey=(cx,cz)=>cx+","+cz;const addLevelArea=(x,z,w,d,y,rot=0,blend=12)=>{const m={x:x,z:z,hw:w/2,hd:d/2,y:y,rot:rot,c:Math.cos(rot),s:Math.sin(rot),blend:blend};terrainLevels.push(m);const reach=Math.hypot(m.hw,m.hd)+blend,minX=Math.floor((x-reach)/LEVEL_CELL),maxX=Math.floor((x+reach)/LEVEL_CELL),minZ=Math.floor((z-reach)/LEVEL_CELL),maxZ=Math.floor((z+reach)/LEVEL_CELL);for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){const key=levelCellKey(cx,cz),bucket=terrainLevelGrid.get(key);if(bucket)bucket.push(m);else terrainLevelGrid.set(key,[m])}};function hAt(x,z){let h=rawHAt(x,z);const candidates=terrainLevelGrid.get(levelCellKey(Math.floor(x/LEVEL_CELL),Math.floor(z/LEVEL_CELL)));if(!candidates)return h;for(const m of candidates){const dx=x-m.x,dz=z-m.z,lx=dx*m.c+dz*m.s,lz=-dx*m.s+dz*m.c,ox=Math.max(0,Math.abs(lx)-m.hw),oz=Math.max(0,Math.abs(lz)-m.hd),out=Math.hypot(ox,oz);if(out<m.blend){const k=out<=0?1:1-smooth01(out/m.blend);h=h+(m.y-h)*k}}return h}const waveAmp=window.HUNTER_WAVES.amplitude;const wy=(x,z,t)=>water.surfaceHeight(x,z,t);const rr=(a,b)=>a+R()*(b-a);function genIslands(){R=mul(seed);const q=R()<.5?-1:1,q2=R()<.5?-1:1,extent=MAP_SCALE===1?1e3:2200,baseMin=MAP_SCALE===1?500:1200,baseMax=MAP_SCALE===1?800:1800;A={x:-q*rr(baseMin,baseMax)*2,z:-q2*rr(baseMin,baseMax)*2,r:rr(520,680)};Bi={x:q*rr(baseMin,baseMax)*2,z:q2*rr(baseMin,baseMax)*2,r:rr(520,680)};islands=[A,Bi];const regular=22*MAP_SCALE*MAP_SCALE,large=2*MAP_SCALE*MAP_SCALE;for(let i=0;i<regular;i++)islands.push({x:rr(-extent,extent)*2,z:rr(-extent,extent)*2,r:rr(180,520)});for(let i=0;i<large;i++)islands.push({x:rr(-extent*.55,extent*.55)*2,z:rr(-extent*.55,extent*.55)*2,r:rr(800,1040)});for(let n=0;n<islands.length;n++){const i=islands[n],ox=(hash(i.x*.013+n*1.37,i.z*.011-7.1)-.5)*.42*i.r,oz=(hash(i.z*.017-n*.91,i.x*.009+11.3)-.5)*.42*i.r;i.peakX=i.x+ox;i.peakZ=i.z+oz}rebuildIslandGrid()}const slope=(x,z,h)=>Math.abs(hAt(x+5,z)-h)+Math.abs(hAt(x,z+5)-h);function land(i,n=600,fl){return drainBuildSteps(landSteps(i,n,fl))}function*landSteps(i,n=600,fl){for(let k=0;k<n;k++){if(k%16===0)yield{stage:"Cercant terreny lliure",completed:k,total:n,unit:"intents"};const a=R()*6.283,d=R()*i.r*.75,x=i.x+Math.cos(a)*d,z=i.z+Math.sin(a)*d,h=hAt(x,z);if(h>3&&h<14&&slope(x,z,h)<2.5&&(!fl||fr(x,z)<2.2)&&!B.some(b=>Math.abs(b.x-x)<b.hw+24&&Math.abs(b.z-z)<b.hd+24)&&!treeHit(x,z,3)&&Math.abs(x)<H-150&&Math.abs(z)<H-150)return{x:x,z:z,h:h}}return null}const coarse=matchMedia("(pointer:coarse)").matches;const qualityName=window.HUNTER_GRAPHICS_QUALITY||(coarse||window.HUNTER_FORCE_LOW_QUALITY?"mobile":"desktop");const visualQuality=window.HUNTER_VISUAL_CONFIG[qualityName];let highTerrainTexture=null;const terrainTextureTask=visualQuality.terrainDetailTexture?window.HUNTER_HIGH_GRAPHICS.createTerrainTextureTask(THREE):null;const awaitingTerrainMaterials=[];function advanceTerrainTexture(){if(!terrainTextureTask||highTerrainTexture)return;const tex=terrainTextureTask.advance(4);if(!tex)return;highTerrainTexture=tex;for(const mat of awaitingTerrainMaterials){mat.map=tex;mat.flatShading=false;mat.needsUpdate=true}awaitingTerrainMaterials.length=0}const rendering=window.HUNTER_RENDERING.create(THREE,visualQuality);const ren=rendering.renderer,scene=rendering.scene,cam=rendering.camera,sunDir=rendering.sunDir,sun=rendering.sun,sky=rendering.sky,sunM=rendering.sunMesh;document.body.prepend(ren.domElement);const rs=rendering.resize;addEventListener("resize",rs);rs();const maxRenderRatio=Math.min(devicePixelRatio||1,visualQuality.pixelRatio);const adaptivePerformance=window.HUNTER_PERFORMANCE.create({renderer:ren,maxPixelRatio:maxRenderRatio,minPixelRatio:visualQuality.minPixelRatio,element:document.getElementById("perfStats"),compact:qualityName!=="desktop"});let performanceStatsVisible=false;document.body.classList.remove("performance-stats-visible");function setPerformanceStatsVisible(enabled){performanceStatsVisible=!!enabled;if(world)registerDrawCategories();document.body.classList.toggle("performance-stats-visible",performanceStatsVisible)}window.HUNTER_PERFORMANCE_STATS=adaptivePerformance.stats;const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene:scene,sunDir:sunDir,size:S,segments:visualQuality.waterSegments,initialSegments:Math.min(160,visualQuality.waterSegments),heightAt:hAt,config:window.HUNTER_WATER,reflections:visualQuality.waterReflections!==false,coastDetail:!!visualQuality.coastDetail,fogColor:scene.fog.color});let waterUpgradePending=false;const waterMat=water.material,waterUniforms=water.uniforms;const movementFx=window.HUNTER_MOVEMENT_FX.create(THREE,{scene:scene,quality:qualityName,waveModel:window.HUNTER_WAVES,waterTime:waterUniforms.time,waterBed:hAt});const ENEMY_TRAIL_TYPES=new Set(["jeep","tanqueta","tanc","patrulla_marina"]);window.HUNTER_MOVEMENT_FX_STATS=movementFx.stats;const updateSeabed=()=>water.setWorldSize(S);const waves=water.update;let waterDisabled=false;function setWaterDisabled(disabled){waterDisabled=!!disabled;const checkbox=document.getElementById("disableWater");if(checkbox)checkbox.checked=waterDisabled;water.mesh.visible=!waterDisabled;water.deep.visible=!waterDisabled;movementFx.setWaterVisible(!waterDisabled);if(water.shore)water.shore.visible=!waterDisabled&&water.shoreStats.segments>0;window.HUNTER_WATER_DISABLED=waterDisabled;return waterDisabled}const waterSettingCheckbox=document.getElementById("disableWater");if(waterSettingCheckbox)waterSettingCheckbox.addEventListener("change",()=>setWaterDisabled(waterSettingCheckbox.checked));let shadowsDisabled=false;const shadowCandidates=[],shadowStats={candidates:0,active:0,excludedDetail:0,updates:0,playerCasters:0};let shadowLastX=Infinity,shadowLastZ=Infinity,shadowLastMs=-Infinity;window.HUNTER_SHADOW_STATS=shadowStats;function updateShadowCasters(force=false){if(!visualQuality.shadows||shadowsDisabled)return;const now=performance.now();if(!force&&Math.abs(P.x-shadowLastX)<30&&Math.abs(P.z-shadowLastZ)<30&&now-shadowLastMs<1e3)return;shadowLastX=P.x;shadowLastZ=P.z;shadowLastMs=now;const range2=Math.pow(visualQuality.shadowDistance||225,2),dynamicPositions=new Map;let count=0;for(const entry of shadowCandidates){let q=entry.point;if(entry.owner){q=dynamicPositions.get(entry.owner);if(!q){q=entry.owner.getWorldPosition(new THREE.Vector3);dynamicPositions.set(entry.owner,q)}}const dx=q.x-P.x,dz=q.z-P.z,near=dx*dx+dz*dz<range2;entry.mesh.castShadow=near;if(near)count++}shadowStats.active=count;shadowStats.updates++}function setShadowsDisabled(disabled){shadowsDisabled=!!disabled;const checkbox=document.getElementById("disableShadows");if(checkbox)checkbox.checked=shadowsDisabled;const enabled=!!visualQuality.shadows&&!shadowsDisabled;ren.shadowMap.enabled=enabled;sun.castShadow=enabled;if(enabled){ren.shadowMap.needsUpdate=true;updateShadowCasters(true)}else{for(const entry of shadowCandidates)entry.mesh.castShadow=false;shadowStats.active=0}window.HUNTER_SHADOWS_DISABLED=shadowsDisabled;return shadowsDisabled}const shadowSettingCheckbox=document.getElementById("disableShadows");if(shadowSettingCheckbox)shadowSettingCheckbox.addEventListener("change",()=>setShadowsDisabled(shadowSettingCheckbox.checked));function*traverseGenerationSteps(root,visit,stage){const stack=[root];let count=0;while(stack.length){const node=stack.pop();visit(node);for(let i=node.children.length-1;i>=0;i--)stack.push(node.children[i]);if(++count%64===0)yield{stage:stage,completed:count,total:null,unit:"objectes"}}}function prepareShadowCasters(){return drainBuildSteps(prepareShadowCastersSteps())}function*prepareShadowCastersSteps(){shadowCandidates.length=0;shadowLastX=Infinity;shadowLastZ=Infinity;shadowLastMs=-Infinity;shadowStats.candidates=0;shadowStats.active=0;shadowStats.excludedDetail=0;shadowStats.playerCasters=0;if(!visualQuality.shadows||!world)return;const dynamicRoots=new Set([pl,...V.map(v=>v.o),...E.map(e=>e.o),...fa.map(f=>f.o)].filter(Boolean));world.updateWorldMatrix(true,false);yield*traverseGenerationSteps(world,o=>o.updateWorldMatrix(false,false),"Matrius d\u2019ombres");pl.updateMatrixWorld(true);const collect=mesh=>{if(!mesh.isMesh)return;mesh.castShadow=false;const geometry=mesh.geometry;if(!geometry||mesh.isInstancedMesh||mesh.userData.waterMask||mesh.userData.terrainTile||mesh.userData.noCastShadow)return;if(!geometry.boundingSphere)geometry.computeBoundingSphere();const radius=(geometry.boundingSphere?.radius||0)*mesh.matrixWorld.getMaxScaleOnAxis(),mat=Array.isArray(mesh.material)?mesh.material[0]:mesh.material;if(radius<.85||mat?.transparent&&mat.opacity<.9){shadowStats.excludedDetail++;mesh.receiveShadow=false;return}let owner=mesh.parent;while(owner&&owner!==world&&owner!==scene&&!dynamicRoots.has(owner))owner=owner.parent;if(!dynamicRoots.has(owner))owner=null;shadowCandidates.push({mesh:mesh,owner:owner,point:owner?null:mesh.getWorldPosition(new THREE.Vector3)})};yield*traverseGenerationSteps(world,collect,"Ombres");pl.traverse(collect);if(visualQuality.playerShadows){const chosen=new Set,u=pl.userData;const largest=(root,n,direct=false)=>{if(!root)return;const candidates=[];const offer=mesh=>{if(!mesh.isMesh||mesh.userData.noCastShadow||mesh.material?.transparent)return;const geo=mesh.geometry;if(!geo.boundingSphere)geo.computeBoundingSphere();candidates.push({mesh:mesh,radius:(geo.boundingSphere?.radius||0)*mesh.matrixWorld.getMaxScaleOnAxis()})};if(direct)for(const child of root.children)offer(child);else root.traverse(offer);candidates.sort((a,b)=>b.radius-a.radius);for(const c of candidates.slice(0,n))chosen.add(c.mesh)};largest(pl,3,true);largest(u.ll,2);largest(u.lr,2);largest(u.al,1);largest(u.ar,1);largest(u.head,2);const already=new Set(shadowCandidates.map(e=>e.mesh));for(const mesh of chosen)if(!already.has(mesh))shadowCandidates.push({mesh:mesh,owner:pl,point:null});shadowStats.playerCasters=chosen.size}else shadowStats.playerCasters=0;shadowStats.candidates=shadowCandidates.length;if(!shadowsDisabled)updateShadowCasters(true)}let stairs=[],piers=[];let Wl=[],Dr=[],items=[],inv={},msg="",msgT=0,HQ=null,ib=null;const WALL_CELL=64,wallGrid=new Map;let wallGridSource=null,wallGridCount=-1,wallQueryStamp=0;const wallCellKey=(cx,cz)=>cx+","+cz;function rebuildWallGrid(){wallGrid.clear();wallGridSource=Wl;wallGridCount=Wl.length;for(const w of Wl){const minX=Math.floor(w.x0/WALL_CELL),maxX=Math.floor(w.x1/WALL_CELL),minZ=Math.floor(w.z0/WALL_CELL),maxZ=Math.floor(w.z1/WALL_CELL);for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){const key=wallCellKey(cx,cz),bucket=wallGrid.get(key);if(bucket)bucket.push(w);else wallGrid.set(key,[w])}}}function wallCandidates(x,z,r=0){if(wallGridSource!==Wl||wallGridCount!==Wl.length)rebuildWallGrid();const out=[],stamp=++wallQueryStamp,minX=Math.floor((x-r)/WALL_CELL),maxX=Math.floor((x+r)/WALL_CELL),minZ=Math.floor((z-r)/WALL_CELL),maxZ=Math.floor((z+r)/WALL_CELL);for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){const bucket=wallGrid.get(wallCellKey(cx,cz));if(!bucket)continue;for(const w of bucket)if(w._wallQueryStamp!==stamp){w._wallQueryStamp=stamp;out.push(w)}}return out}const BUILDING_CELL=96,buildingGrid=new Map;let buildingGridSource=null,buildingGridCount=-1,buildingQueryStamp=0;const buildingCellKey=(cx,cz)=>cx+","+cz;function rebuildBuildingGrid(){buildingGrid.clear();buildingGridSource=B;buildingGridCount=B.length;for(const b of B){const minX=Math.floor((b.x-b.w/2)/BUILDING_CELL),maxX=Math.floor((b.x+b.w/2)/BUILDING_CELL),minZ=Math.floor((b.z-b.d/2)/BUILDING_CELL),maxZ=Math.floor((b.z+b.d/2)/BUILDING_CELL);for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){const key=buildingCellKey(cx,cz),bucket=buildingGrid.get(key);if(bucket)bucket.push(b);else buildingGrid.set(key,[b])}}}function buildingCandidates(x,z,r=0){if(buildingGridSource!==B||buildingGridCount!==B.length)rebuildBuildingGrid();const out=[],stamp=++buildingQueryStamp,minX=Math.floor((x-r)/BUILDING_CELL),maxX=Math.floor((x+r)/BUILDING_CELL),minZ=Math.floor((z-r)/BUILDING_CELL),maxZ=Math.floor((z+r)/BUILDING_CELL);for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){const bucket=buildingGrid.get(buildingCellKey(cx,cz));if(!bucket)continue;for(const b of bucket)if(b._buildingQueryStamp!==stamp){b._buildingQueryStamp=stamp;out.push(b)}}return out}const ICON={med:'<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="16" width="46" height="34" rx="5" fill="#fff" stroke="#657078" stroke-width="3"/><rect x="18" y="28" width="28" height="9" rx="4.5" fill="#d7ae7c" transform="rotate(-28 32 32.5)"/><circle cx="27" cy="35" r="1.8" fill="#9a6f45"/><circle cx="37" cy="30" r="1.8" fill="#9a6f45"/></svg>',expl:'<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="24" width="48" height="30" rx="5" fill="#667753" stroke="#25372c" stroke-width="3"/><path d="M14 27 C17 3 22 14 24 27 M22 27 C26 5 33 10 34 27 M32 27 C38 0 45 10 46 27 M42 27 C48 11 53 12 52 27" fill="none" stroke-width="3.3"/><path d="M14 27 C17 3 22 14 24 27" stroke="#dc493d" fill="none" stroke-width="3.3"/><path d="M22 27 C26 5 33 10 34 27" stroke="#35c866" fill="none" stroke-width="3.3"/><path d="M32 27 C38 0 45 10 46 27" stroke="#327cdd" fill="none" stroke-width="3.3"/><rect x="17" y="34" width="30" height="14" rx="2" fill="#172b27"/><text x="32" y="44" font-size="10" font-weight="bold" font-family="monospace" text-anchor="middle" fill="#91e795">00:03</text></svg>',disf:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M22 12 L30 17 L34 17 L42 12 L54 22 L47 30 L43 27 L43 55 L21 55 L21 27 L17 30 L10 22 Z" fill="#b83232" stroke="#661d1d" stroke-width="3"/><path d="M28 16 Q32 23 36 16" fill="none" stroke="#f0c7a2" stroke-width="3"/></svg>',mapa:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#ead69b" stroke="#7c693c" stroke-width="3"/><path d="M25 9 V50 M39 14 V55" stroke="#a18b56" stroke-width="2"/><rect x="30" y="28" width="15" height="11" fill="#7c4f3a"/><path d="M29 28 L37.5 21 L46 28" fill="#a33b32"/></svg>',mapa_heli:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#d9edf5" stroke="#557986" stroke-width="3"/><path d="M17 33 H49 M32 20 V46" stroke="#557986" stroke-width="2"/><ellipse cx="32" cy="33" rx="11" ry="5" fill="#587766"/><path d="M43 33 H54 M21 33 H10" stroke="#35453c" stroke-width="3"/></svg>',mapa_tanc:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#e5d6a8" stroke="#786b46" stroke-width="3"/><rect x="18" y="31" width="28" height="11" rx="4" fill="#68754b"/><rect x="25" y="25" width="15" height="8" rx="3" fill="#78845b"/><path d="M40 29 H55" stroke="#40473a" stroke-width="3"/></svg>',bazooka:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 35 L51 18" stroke="#536148" stroke-width="11" stroke-linecap="round"/><path d="M8 38 L17 34" stroke="#252b27" stroke-width="13" stroke-linecap="round"/><path d="M48 20 L56 17" stroke="#252b27" stroke-width="14" stroke-linecap="round"/><path d="M29 30 L25 42" stroke="#2c302d" stroke-width="5" stroke-linecap="round"/><path d="M35 26 L39 18" stroke="#737b74" stroke-width="3"/><circle cx="51" cy="18" r="4" fill="#b76b2d"/></svg>',franctirador:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M5 35 L53 35" stroke="#343d39" stroke-width="7"/><rect x="20" y="23" width="20" height="8" rx="2" fill="#778577" stroke="#292f2b" stroke-width="2"/><rect x="25" y="17" width="13" height="5" rx="1" fill="#243333"/><path d="M16 36 L8 48 H22 L28 36" fill="#846948" stroke="#3d3126" stroke-width="2"/><rect x="52" y="30" width="7" height="10" rx="1" fill="#242b2b"/><path d="M31 35 L28 46" stroke="#343d39" stroke-width="5"/></svg>',ganivet:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M13 52L34 31" stroke="#4d3528" stroke-width="9" stroke-linecap="round"/><path d="M10 55L15 50" stroke="#cba87c" stroke-width="4" stroke-linecap="round"/><path d="M27 29L36 38" stroke="#303b3c" stroke-width="5" stroke-linecap="round"/><path d="M34 31L51 9Q56 6 53 14L42 35Z" fill="#c9d2d2" stroke="#455255" stroke-width="2"/><path d="M35 30L50 13" stroke="#f3faf4" stroke-width="2"/></svg>',cisalla:'<svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke-linecap="round"><path d="M14 56L30 30M50 56L34 30" stroke="#b73a36" stroke-width="8"/><path d="M30 30L24 8M34 30L40 8" stroke="#a3b2b4" stroke-width="6"/><path d="M24 8L32 17 40 8" stroke="#d3dde0" stroke-width="3"/></g><circle cx="32" cy="30" r="6" fill="#414b4c" stroke="#b7c7c9" stroke-width="2"/></svg>',paracaigudes:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M6 27 Q32 -5 58 27 Z" fill="#e9d9aa" stroke="#6c5945" stroke-width="3"/><path d="M32 7 Q13 18 6 27 M32 7 Q51 18 58 27 M21 12L21 27 M43 12L43 27" fill="none" stroke="#bb7151" stroke-width="2"/><path d="M6 27L24 49 M58 27L40 49 M32 27V50" fill="none" stroke="#52565a" stroke-width="2"/><rect x="23" y="46" width="18" height="12" rx="2" fill="#70816a"/></svg>',granada:'<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="31" cy="38" rx="16" ry="18" fill="#4a5842" stroke="#263028" stroke-width="3"/><rect x="27" y="14" width="10" height="10" rx="2" fill="#303632"/><path d="M34 15 C44 8 51 14 48 23" fill="none" stroke="#727b72" stroke-width="4"/><circle cx="48" cy="24" r="5" fill="none" stroke="#727b72" stroke-width="3"/></svg>',arma:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 19 H54 V50 H10 Z" fill="#75583a" stroke="#3e3024" stroke-width="3"/><path d="M14 24 H50" stroke="#b58a56" stroke-width="3"/><g fill="#d4aa42" stroke="#70591e" stroke-width="1"><circle cx="20" cy="34" r="4"/><circle cx="31" cy="34" r="4"/><circle cx="42" cy="34" r="4"/><circle cx="25" cy="44" r="4"/><circle cx="36" cy="44" r="4"/></g></svg>'};const IT={med:{n:"Farmaciola",c:15922142,s:[1.2,.8,.8],icon:ICON.med,desc:"Recupera 8 punts de vida.",usable:true},mapa:{n:"Mapa de l\u2019HQ",c:16769658,s:[1.6,.08,1.2],icon:ICON.mapa,desc:"En recollir-lo, revela immediatament la posici\xf3 de l\u2019HQ enemic.",usable:false},mapa_heli:{n:"Mapa d\u2019helic\xf2pters",c:10475519,s:[1.6,.08,1.2],icon:ICON.mapa_heli,desc:"En recollir-lo, marca immediatament tots els helic\xf2pters actius al mapa.",usable:false},mapa_tanc:{n:"Mapa de tancs",c:13021290,s:[1.6,.08,1.2],icon:ICON.mapa_tanc,desc:"En recollir-lo, marca immediatament tots els tancs actius al mapa.",usable:false},bazooka:{n:"Bazooka",c:5793354,s:[2.1,.45,.45],icon:ICON.bazooka,desc:"Llan\xe7acoets amb 3 coets per recollida. La ret\xedcula indica el punt d\u2019apuntat i es torna verda si l\u2019autoapuntat fixa un enemic.",usable:true},franctirador:{n:"Rifle de franctirador",c:6583142,s:[2.7,.5,.42],icon:ICON.franctirador,desc:"Rifle de llarg abast. 6 cartutxos per recollida; elimina soldats d\u2019un tret. Equipa\u2019l i prem Mira / T per activar l\u2019\xf2ptica x8.",usable:true},paracaigudes:{n:"Paracaigudes",c:13609588,s:[1.2,.9,.9],icon:ICON.paracaigudes,desc:"Es desplega autom\xe0ticament en saltar d\u2019un helic\xf2pter en vol. Frena la caiguda i evita els danys de l\u2019aterratge.",usable:false},cisalla:{n:"Cisalla",c:12074808,s:[1,1.4,.3],icon:ICON.cisalla,desc:"Talla silenciosament un tram de filferrada proper. Equipa-la i prem Talla / F mirant la tanca. No gasta munici\xf3 ni alerta els enemics.",usable:true},granada:{n:"Granades",c:4872258,s:[.65,.65,.65],icon:ICON.granada,desc:"Paquet de 5 granades. A peu, mant\xe9n Dispar per arribar m\xe9s lluny i mira la traject\xf2ria. Des de l\u2019helic\xf2pter utilitari, prem Dispar per llan\xe7ar-ne una de l\u2019inventari.",usable:true},arma:{n:"Munici\xf3",c:5593958,s:[1.6,.35,.35],icon:ICON.arma,desc:"Caixa de munici\xf3 per a l\u2019arma personal.",usable:false},expl:{n:"Explosius",c:6386769,s:[.9,.9,.9],icon:ICON.expl,desc:"Explosiu C4 amb visor LED de 00 a 59 segons. A peu es col\xb7loca; des de l\u2019helic\xf2pter utilitari en vol cau per la porta lateral. Explota quan arriba a zero, fins i tot a l\u2019aire. No es pot utilitzar des de l\u2019helic\xf2pter de combat.",usable:true},disf:{n:"Disfressa enemiga",c:4880954,s:[1,1.2,.6],icon:ICON.disf,desc:"Camisa enemiga vermella. Activa o desactiva la disfressa.",usable:true}};let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=window.HUNTER_COMBAT_BALANCE.player,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,knifeEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null,playerCrouched=false;const gHeavy=new THREE.LatheGeometry([new THREE.Vector2(0,-.46),new THREE.Vector2(.19,-.46),new THREE.Vector2(.24,-.42),new THREE.Vector2(.24,-.34),new THREE.Vector2(.18,-.33),new THREE.Vector2(.18,.12),new THREE.Vector2(.22,.15),new THREE.Vector2(.19,.23),new THREE.Vector2(.12,.36),new THREE.Vector2(0,.48)],12);gHeavy.rotateX(-Math.PI/2);const heavyForward=new THREE.Vector3(0,0,-1);const gLight=new THREE.CylinderGeometry(.105,.105,.78,8);gLight.rotateX(-Math.PI/2);const endEl=document.getElementById("end"),blastRingG=new THREE.RingGeometry(.91,1.08,48),mB=new THREE.MeshBasicMaterial({color:16770138}),mS=new THREE.MeshBasicMaterial({color:16742938}),mE=new THREE.MeshBasicMaterial({color:16728128}),mW=new THREE.MeshBasicMaterial({color:16777215}),SMALL_ARMS_SCALE=.7;const TANKETTE_FIRE_INTERVAL=.16;const EC={soldat:{hp:COMBAT_BALANCE.people.soldier,sp:7,rng:32,rate:1.1,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:2},jeep:{hp:COMBAT_BALANCE.vehicles.cotxe,sp:22,rng:75,rate:1.1,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:3.9},tanqueta:{hp:COMBAT_BALANCE.vehicles.tanqueta,sp:13,rng:42,rate:TANKETTE_FIRE_INTERVAL,dmg:COMBAT_BALANCE.weapons.tankette,spl:0,r:4.5},tanc:{hp:COMBAT_BALANCE.vehicles.tanc,sp:8,rng:100,rate:2.5,dmg:COMBAT_BALANCE.weapons.tank,spl:7,r:6.8},torre:{hp:24,sp:0,rng:112.5,rate:.7,dmg:COMBAT_BALANCE.weapons.towerLight,spl:0,r:3},patrulla_marina:{hp:COMBAT_BALANCE.vehicles.llanxa,sp:20,rng:245,rate:.4,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:7.5},general:{hp:COMBAT_BALANCE.people.general,sp:1.45,rng:35,rate:.9,dmg:COMBAT_BALANCE.weapons.pistol,spl:0,r:2}};let started=0,DIF=1,AC=null,eng=null,seaAudio=null,logb=[],fa=[],pi_=0;const lastS={},rn=(a,b)=>a+Math.random()*(b-a);const PT=[];for(let i=0;i<100;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:16777215,transparent:true,depthWrite:false}));m.visible=false;scene.add(m);PT.push({m:m,life:0,max:1,s:1})}function puff(x,y,z,c,s,rise=0){const p=PT[pi_++%100];p.life=p.max=1.1;p.s=s;p.rise=rise;p.m.material.color.setHex(c);p.m.position.set(x+rn(-.6,.6),y,z+rn(-.6,.6));p.m.visible=true}function mark(){const q=cv||P;logb.push({n:"P"+(logb.length+1),x:q.x,z:q.z});msg="Coordenades guardades: "+(q.x|0)+", "+(q.z|0);msgT=2}function spawnFauna(){return drainBuildSteps(spawnFaunaSteps())}function*spawnFaunaSteps(){fa=[];for(let k=0;k<48;k++){yield{stage:"Fauna",completed:k,total:78,unit:"animals"};const bird=window.HUNTER_FAUNA.createGull(THREE,{box:bx,material:M}),o=bird.o,wl=bird.wl,wr=bird.wr;world.add(o);const cx=rn(-H+200,H-200),cz=rn(-H+200,H-200),baseY=rn(25,55);fa.push({k:"g",o:o,wl:wl,wr:wr,cx:cx,cz:cz,r:rn(40,120),a:rn(0,6.28),sp:rn(.15,.3),y:baseY,flyY:Math.max(baseY,hAt(cx,cz)+10),x:cx,z:cz})}for(let k=0;k<30;k++){yield{stage:"Fauna",completed:48+k,total:78,unit:"animals"};let cx,cz,n=0;do{cx=rn(-H+150,H-150);cz=rn(-H+150,H-150)}while(hAt(cx,cz)>-6&&++n<60);if(hAt(cx,cz)>-6)continue;const o=window.HUNTER_FAUNA.createShark(THREE,{material:M});world.add(o);fa.push({k:"s",o:o,cx:cx,cz:cz,r:rn(12,28),a:rn(0,6.28),sp:rn(.25,.45),x:cx,z:cz,sharkMode:"patrol",biteCd:0})}}function updExtra(dt,t){updDeb(dt);for(let i=fa.length-1;i>=0;i--){const f=fa[i],px=f.x??f.cx,pz=f.z??f.cz,dx=px-P.x,dz=pz-P.z,d2=dx*dx+dz*dz,interval=d2<FAUNA_NEAR2?0:d2<FAUNA_MID2?.12:.4;f.lodAcc=(f.lodAcc||0)+dt;if(interval>0&&f.lodAcc<interval)continue;const step=f.lodAcc;f.lodAcc=0;if(f.k==="s"){const outcome=window.HUNTER_SHARKS.update(f,step,!cv&&!over&&!playerFall&&!playerEject&&swimming?P:null,hAt);if(outcome.remove){world.remove(f.o);fa.splice(i,1);continue}f.o.position.set(f.x,wy(f.x,f.z,t)-.18-(f.dead?outcome.sink:0),f.z);f.o.rotation.y=f.sharkYaw??Math.PI-f.a;f.o.rotation.z=f.dead?Math.min(1.4,(f.deathT||0)*2):0;if(outcome.bite&&!over){hurtP(window.HUNTER_SHARKS.BITE_DAMAGE,false,{type:"shark",x:f.x,y:f.o.position.y,z:f.z});const biteY=wy(P.x,P.z,t)+.08;for(let k=0;k<12;k++){const a=k*Math.PI/6,d=.35+k%4*.33;puff(P.x+Math.cos(a)*d,biteY+rn(0,.4),P.z+Math.sin(a)*d,k%3?10820395:13381693,1.65+rn(0,1.65))}msg="Un taur\xf3 et mossega!";msgT=1.5}if(!f.dead&&d2<FAUNA_NEAR2&&Math.random()<.1)puff(f.x,wy(f.x,f.z,t)+.02,f.z,16777215,1.2);continue}f.a+=f.sp*step;f.x=f.cx+Math.cos(f.a)*f.r;f.z=f.cz+Math.sin(f.a)*f.r;f.o.rotation.y=Math.PI-f.a;const terrainY=Math.max(0,hAt(f.x,f.z))+10;let obstacleY=terrainY;for(const b of buildingCandidates(f.x,f.z,5))if(Math.abs(f.x-b.x)<b.w/2+5&&Math.abs(f.z-b.z)<b.d/2+5)obstacleY=Math.max(obstacleY,b.fy+b.h+8);const cruiseY=f.y+Math.sin(t+f.cx)*2,targetY=Math.max(cruiseY,obstacleY),climbK=1-Math.exp(-3.8*step);f.flyY=(f.flyY??targetY)+(targetY-(f.flyY??targetY))*climbK;if(f.flyY<obstacleY)f.flyY=obstacleY;f.o.position.set(f.x,f.flyY,f.z);f.wl.rotation.z=Math.sin(t*8+f.cx)*.5;f.wr.rotation.z=-f.wl.rotation.z}V.forEach(v=>{if(v.destroyed)return;v.playerHitCd=Math.max(0,(v.playerHitCd||0)-dt);const frac=1-v.life/(v.maxLife||1);if(frac>.08){v.smokeT=(v.smokeT||0)-dt;if(v.smokeT<=0){const baseY=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));if(v.smokeTopOffset==null&&v.o){v.o.updateMatrixWorld(true);const bb=(new THREE.Box3).setFromObject(v.o);v.smokeTopOffset=Math.max(.7,bb.max.y-baseY)}if(Math.hypot(v.x-P.x,v.z-P.z)<250)movementFx.damageSmoke(v,frac,baseY+(v.smokeTopOffset||1.8));v.smokeT=Math.max(.08,.55-frac*.42)}}});const fxContext={playerX:P.x,playerZ:P.z,playerVehicle:cv,terrainAt:hAt,waterAt:(x,z)=>wy(x,z,t)};for(const v of V)movementFx.vehicle(v,dt,fxContext);fxContext.enemy=true;for(const u of E)if(ENEMY_TRAIL_TYPES.has(u.t))movementFx.vehicle(u,dt,fxContext);movementFx.update(dt,cam);PT.forEach(p=>{if(p.life>0){p.life-=dt;if(p.rise)p.m.position.y+=p.rise*dt;p.m.scale.setScalar(p.s*(1+(1-p.life/p.max)*1.15));p.m.material.opacity=Math.max(0,p.life/p.max)*.8;if(p.life<=0){p.m.visible=false;p.rise=0}}});if(seaAudio&&audioCanPlay()){const coastal=Math.max(.25,1-Math.max(0,hAt(P.x,P.z))/22),waterVolume=cv&&(cv.t==="windsurf"||cv.t==="barca_rems")?.026+Math.min(1,Math.abs(cv.v)/22)*.016:.035+coastal*.05;seaAudio.gain.gain.setTargetAtTime(over?0:waterVolume,AC.currentTime,.5)}if(eng&&audioCanPlay()){const c=cv?VT[cv.t]:null;eng.g.gain.value=c&&!["bici","windsurf","barca_rems"].includes(cv.t)&&!over?(cv.t==="cotxe_civil"?1.65:1)*(.02+Math.min(1,Math.abs(cv.v)/40)*.03):0;eng.o.frequency.value=c?(cv.t==="cotxe_civil"?28:c.m=="a"?60:35)+Math.abs(cv.v)*(c.m=="a"?1.3:2.5):40}}const seedRandomEl=document.getElementById("seedRandom"),seedInputEl=document.getElementById("seedInput"),iniEl=document.getElementById("ini"),startMenuEl=document.getElementById("startMenu"),seedSearchScreenEl=document.getElementById("seedSearchScreen"),seedSearchOpenEl=document.getElementById("seedSearchOpen"),seedSearchBackEl=document.getElementById("seedSearchBack"),seedSearchRunEl=document.getElementById("seedSearchRun"),seedSearchCancelEl=document.getElementById("seedSearchCancel"),seedSearchStartEl=document.getElementById("seedSearchStart"),seedSearchCountEl=document.getElementById("seedSearchCount"),seedSearchDistanceEl=document.getElementById("seedSearchDistance"),seedSearchMapSizeEl=document.getElementById("seedSearchMapSize"),seedSearchStatusEl=document.getElementById("seedSearchStatus"),seedSearchResultsEl=document.getElementById("seedSearchResults"),seedSearchCategoryEl=document.getElementById("seedSearchCategory"),seedSearchTypeEl=document.getElementById("seedSearchType");let seedSearchToken=0,seedSearchRunning=false,seedSearchPromise=null;const seedSearch=window.HUNTER_SEED_SEARCH;const currentMapScale=()=>+(document.querySelector('input[name="mapSize"]:checked')?.value||1);const fillSeedSearchTypes=preferred=>{const options=seedSearch.typeOptions(seedSearchCategoryEl.value,window.HUNTER_VEHICLE_DYNAMICS.types,IT);const wanted=preferred||"*";seedSearchTypeEl.replaceChildren();for(const entry of options){const option=document.createElement("option");option.value=entry.value;option.textContent=entry.label;seedSearchTypeEl.appendChild(option)}seedSearchTypeEl.value=options.some(q=>q.value===wanted)?wanted:"*"};fillSeedSearchTypes("ferry");seedSearchCategoryEl.onchange=()=>{fillSeedSearchTypes();seedSearchResultsEl.replaceChildren();seedSearchStatusEl.textContent="Tria el tipus i prem Buscar."};seedSearchTypeEl.onchange=()=>{seedSearchResultsEl.replaceChildren();seedSearchStatusEl.textContent="Prem Buscar per analitzar aquest tipus."};const showSeedSearch=()=>{if(generationPromise)return;const sc=currentMapScale();seedSearchMapSizeEl.value=sc===2?"Gran \xb7 9,6 km":"Petit \xb7 4,8 km";startMenuEl.style.display="none";seedSearchScreenEl.style.display="block";seedSearchScreenEl.setAttribute("aria-hidden","false")};const hideSeedSearch=()=>{seedSearchToken++;seedSearchCancelEl.disabled=true;seedSearchRunEl.disabled=true;const close=()=>{seedSearchRunEl.disabled=false;seedSearchCancelEl.disabled=true;seedSearchScreenEl.style.display="none";seedSearchScreenEl.setAttribute("aria-hidden","true");startMenuEl.style.display="flex"};if(seedSearchRunning&&seedSearchPromise)seedSearchPromise.then(close,close);else close()};const renderSeedSearchResults=(rows,target,label,category,type)=>{const labelMap=new Map(seedSearch.typeOptions(category,window.HUNTER_VEHICLE_DYNAMICS.types,IT).map(q=>[q.value,q.label]));seedSearchResultsEl.replaceChildren();for(const[i,r]of rows.slice(0,8).entries()){const el=document.createElement("div");el.className="seed-result"+(r.distance<=target?" is-near":"");const main=document.createElement("div"),head=document.createElement("b"),details=document.createElement("small");head.textContent="#"+(i+1)+" \xb7 llavor "+r.seed;const dx=Math.round(r.x),dz=Math.round(r.z);details.textContent=label+" \xb7 "+r.count+" al mapa"+(type==="*"?" \xb7 m\xe9s proper: "+(labelMap.get(r.type)||r.type):"")+" \xb7 a "+Math.round(r.distance)+" m"+(r.distance<=target?" \xb7 dins l\u2019objectiu":"")+" \xb7 X: "+dx+", Z: "+dz;main.append(head,details);const dist=document.createElement("b");dist.textContent=Math.round(r.distance)+" m";const use=document.createElement("button");use.type="button";use.textContent="Usa aquesta llavor";use.onclick=()=>{seedRandomEl.checked=false;seedInputEl.disabled=false;seedInputEl.value=String(r.seed);hideSeedSearch();seedInputEl.focus()};el.append(main,dist,use);seedSearchResultsEl.appendChild(el)}};async function runSeedSearch(){if(generationPromise||seedSearchRunning||seedSearchRunEl.disabled)return;seedSearchRunning=true;const token=++seedSearchToken,start=Math.max(0,Math.min(4294967295,Math.trunc(Number(seedSearchStartEl.value)||0)))>>>0,count=Math.max(1,Math.min(100,Math.trunc(Number(seedSearchCountEl.value)||30))),target=Math.max(0,Math.min(1e4,Number(seedSearchDistanceEl.value)||0)),category=seedSearchCategoryEl.value,type=seedSearchTypeEl.value,label=seedSearchTypeEl.options[seedSearchTypeEl.selectedIndex]?.textContent||type,scale=currentMapScale(),rows=[];seedSearchStartEl.value=String(start);seedSearchCountEl.value=String(count);seedSearchDistanceEl.value=String(target);seedSearchMapSizeEl.value=scale===2?"Gran \xb7 9,6 km":"Petit \xb7 4,8 km";seedSearchRunEl.disabled=true;seedSearchCancelEl.disabled=false;seedSearchCategoryEl.disabled=true;seedSearchTypeEl.disabled=true;seedSearchResultsEl.replaceChildren();const oldScale=MAP_SCALE,oldS=S,oldH=H,oldRequested=requestedSeed,oldMode=seedSearchMode;let tested=0,found=0,within=0;const batchBudgetMs=12,batchLimit=8;let batchStart=performance.now(),batchCount=0,resultsDirty=false;MAP_SCALE=scale;S=4800*MAP_SCALE;H=S/2;seedSearchMode=true;minimap.setWorldSize(S,H);try{for(let i=0;i<count;i++){if(token!==seedSearchToken)break;const raw=start+i>>>0;requestedSeed=raw;try{const generated=buildSeedData();const nearest=seedSearch.findNearest({...generated,category:category,type:type});if(nearest){found++;if(nearest.distance<=target)within++;rows.push({seed:generated.seed,...nearest});rows.sort(seedSearch.compare);if(rows.length>12)rows.length=12;resultsDirty=true}}catch(err){console.warn("Llavor descartada durant la cerca",raw,err)}tested++;batchCount++;if(batchCount>=batchLimit||performance.now()-batchStart>=batchBudgetMs){if(resultsDirty){renderSeedSearchResults(rows,target,label,category,type);resultsDirty=false}seedSearchStatusEl.textContent="Analitzades "+tested+"/"+count+" \xb7 "+found+" amb "+label+" \xb7 "+within+" a "+target+" m o menys.";await new Promise(resolve=>requestAnimationFrame(resolve));batchStart=performance.now();batchCount=0}}if(token===seedSearchToken){if(resultsDirty)renderSeedSearchResults(rows,target,label,category,type);const best=rows[0];seedSearchStatusEl.textContent=best?"Cerca acabada: "+tested+" llavors \xb7 "+found+" amb "+label+" \xb7 "+within+" dins "+target+" m \xb7 millor: "+Math.round(best.distance)+" m.":"Cerca acabada: "+tested+" llavors; no s\u2019ha trobat cap "+label.toLowerCase()+"."}}finally{MAP_SCALE=oldScale;S=oldS;H=oldH;requestedSeed=oldRequested;seedSearchMode=oldMode;minimap.setWorldSize(S,H);seedSearchRunning=false;seedSearchRunEl.disabled=false;seedSearchCancelEl.disabled=true;seedSearchCategoryEl.disabled=false;seedSearchTypeEl.disabled=false}}if(seedSearchOpenEl)seedSearchOpenEl.onclick=showSeedSearch;if(seedSearchBackEl)seedSearchBackEl.onclick=hideSeedSearch;if(seedSearchRunEl)seedSearchRunEl.onclick=()=>{seedSearchPromise=runSeedSearch();return seedSearchPromise};if(seedSearchCancelEl)seedSearchCancelEl.onclick=()=>{seedSearchToken++;seedSearchStatusEl.textContent="Cerca cancel\xb7lada.";seedSearchRunEl.disabled=true;seedSearchCancelEl.disabled=true};seedRandomEl.onchange=()=>{seedInputEl.disabled=seedRandomEl.checked;if(!seedRandomEl.checked)seedInputEl.focus()};function readGameStartOptions(difficulty=DIF){return{difficulty:difficulty,scale:currentMapScale(),seed:seedRandomEl.checked?null:seedFromText(seedInputEl.value||"hunter")}}function applyGameStartOptions({difficulty:difficulty=DIF,scale:scale=MAP_SCALE,seed:inputSeed=requestedSeed}={}){DIF=+difficulty;MAP_SCALE=+scale===2?2:1;S=4800*MAP_SCALE;H=S/2;requestedSeed=inputSeed==null?null:seedFromText(inputSeed)}function startGameSynchronously(options=readGameStartOptions()){if(generationPromise||seedSearchRunning)throw new Error("Ja hi ha una generaci\xf3 en curs");applyGameStartOptions(options);build();configureOptionalWorld();validateRequiredWorldFeatures();minimap.setWorldSize(S,H);minimap.reset();mini();started=1;paused=false;iniEl.style.display="none";document.body.classList.add("game-started");initAudio();resetSimulationClock()}function discardGeneratedWorld(){resetOptionalSystems();if(terrainStream)terrainStream.dispose();terrainStream=null;if(world){scene.remove(world);window.HUNTER_RESOURCES.dispose(world)}world=null;B=[];Wl=[];Dr=[];stairs=[];piers=[];items=[];V=[];E=[];fa=[];PL.length=FA.length=0;TG.clear();terrainLevels=[];terrainLevelGrid.clear();PM={};cv=null;ib=null;activeBunker=null;waterUpgradePending=false;seedCompounds=[];elapsed=0;clearKeys();resetSimulationClock()}function startGameProgressively(options=readGameStartOptions()){if(generationPromise)return generationPromise;if(seedSearchRunning)return Promise.reject(new Error("Espera que acabi la cerca de llavors"));const listeners=new Set,signal={aborted:false,addEventListener(type,fn){if(type==="abort")listeners.add(fn)},removeEventListener(type,fn){if(type==="abort")listeners.delete(fn)}};generationCancel=()=>{signal.aborted=true;for(const fn of[...listeners])fn()};const loading=document.getElementById("generationLoading"),label=document.getElementById("generationStatus"),bar=document.getElementById("generationProgress");const controls=[...document.querySelectorAll("#ini button, #ini input, #ini select")],disabled=controls.map(el=>el.disabled);const report=state=>{const count=Number.isFinite(state.completed)?state.completed:null,total=Number.isFinite(state.total)?state.total:null;label.textContent=state.stage+(count===null?"":" \xb7 "+count+(total===null?"":" / "+total)+(state.unit?" "+state.unit:""));if(total>0&&count!==null){bar.max=total;bar.value=Math.min(total,count)}else bar.removeAttribute("value")};let resolveTask,rejectTask;const task=new Promise((resolve,reject)=>{resolveTask=resolve;rejectTask=reject});generationPromise=task;window.HUNTER_START_PROMISE=task;task.catch(()=>{});(async()=>{window.HUNTER_GENERATION_STATE={status:"starting",stage:"Preparant el m\xf3n",completed:0,total:null,steps:0,yields:0,maxStepMs:0,maxTurnMs:0,error:null};try{audioPause();applyGameStartOptions(options);started=0;paused=true;clearKeys();resetCameraState();ui.hide();document.body.classList.remove("game-started");document.body.classList.add("game-generating");iniEl.style.display="none";loading.hidden=false;controls.forEach(el=>el.disabled=true);document.getElementById("startLoading").style.display="none";initAudio({unlockOnly:true});audioPause();const iterator=function*(){yield*buildSteps();configureOptionalWorld();validateRequiredWorldFeatures();minimap.setWorldSize(S,H);minimap.reset();yield*minimap.buildBackgroundSteps();mini()}();await buildProgressively({iterator:iterator,signal:signal,schedule:options.schedule||window.HUNTER_GENERATION_SCHEDULE,onProgress:report});if(signal.aborted)throw generationAbortError();initAudio();started=1;paused=!simulationFocused||!!document.hidden;clearKeys();if(paused){ui.show("pause");audioPause()}window.HUNTER_GENERATION_STATE.status="ready";iniEl.style.display="none";document.body.classList.add("game-started");resetSimulationClock();return{seed:seed,mapScale:MAP_SCALE}}catch(error){Object.assign(window.HUNTER_GENERATION_STATE,{status:error.name==="AbortError"?"cancelled":"error",error:error.message});started=0;paused=false;discardGeneratedWorld();ui.hide();iniEl.style.display="flex";startMenuEl.style.display="flex";seedSearchScreenEl.style.display="none";seedSearchScreenEl.setAttribute("aria-hidden","true");const message=document.getElementById("startLoading");message.textContent=error.name==="AbortError"?"Generaci\xf3 cancel\xb7lada. Pots tornar a comen\xe7ar.":"No s\u2019ha pogut generar el m\xf3n. Torna a pr\xe9mer per reintentar-ho.";message.style.display="block";if(error.name!=="AbortError")console.error("No es pot generar el m\xf3n Hunter",error);throw error}finally{controls.forEach((el,i)=>el.disabled=disabled[i]);loading.hidden=true;document.body.classList.remove("game-generating");generationCancel=null;generationPromise=null;resetSimulationClock()}})().then(resolveTask,rejectTask);return task}window.HUNTER_START_GAME=startGameProgressively;window.HUNTER_CANCEL_START=()=>{const task=generationPromise;if(generationCancel)generationCancel();return task?task.then(()=>{},()=>{}):Promise.resolve()};document.getElementById("generationCancel").onclick=()=>window.HUNTER_CANCEL_START();document.querySelectorAll("#ini button[data-d]").forEach(b=>b.onclick=()=>startGameProgressively(readGameStartOptions(+b.dataset.d)));const DB=[],WA=[],HR=[],dgeo=new THREE.BoxGeometry(1,1,1),dmc={},dmat=c=>dmc[c]||(dmc[c]=M(c));function debris(x,y,z,col,n,sz,sp){for(let i=0;i<n;i++){const m=new THREE.Mesh(dgeo,dmat(col)),s=rn(.4,1)*sz;m.scale.set(s,s*rn(.5,1.2),s);m.position.set(x+rn(-1,1),y,z+rn(-1,1));m.rotation.set(rn(0,3),rn(0,3),0);world.add(m);DB.push({m:m,s0:m.scale.clone(),vx:rn(-sp,sp),vy:rn(sp*.4,sp*1.3),vz:rn(-sp,sp),rx:rn(-6,6),life:rn(1.2,2)})}while(DB.length>160)world.remove(DB.shift().m)}function vehicleDebris(v,baseY){if(!v?.o)return;v.o.updateMatrixWorld(true);const meshes=[];v.o.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&o.geometry&&!o.userData.waterMask)meshes.push(o)});const heavy=["tanc","tanqueta","camio"].includes(v.t),truck=v.t==="camio",air=v.t==="heli"||v.t==="heli_combat",maxPieces=heavy?24:air?20:16;const chosen=meshes.length<=maxPieces?meshes:meshes.filter((_,i)=>i%Math.ceil(meshes.length/maxPieces)===0).slice(0,maxPieces);const center=new THREE.Vector3(v.x,baseY+1,v.z),p=new THREE.Vector3,q=new THREE.Quaternion,sc=new THREE.Vector3;for(const src of chosen){src.matrixWorld.decompose(p,q,sc);const piece=new THREE.Mesh(src.geometry,src.material);piece.position.copy(p);piece.quaternion.copy(q);piece.scale.copy(sc);piece.castShadow=true;piece.receiveShadow=true;world.add(piece);const dx=p.x-center.x,dz=p.z-center.z,d=Math.max(.3,Math.hypot(dx,dz)),out=heavy?rn(7,16):rn(9,20);DB.push({m:piece,s0:piece.scale.clone(),vx:dx/d*out+rn(-5,5),vy:rn(10,heavy?22:26),vz:dz/d*out+rn(-5,5),rx:rn(truck?-1:-9,truck?1:9),ry:rn(truck?-1.25:-9,truck?1.25:9),rz:rn(truck?-.9:-9,truck?.9:9),life:rn(truck?2:2.2,truck?3.1:4.2),vehiclePart:true,truckPiece:truck})}const burst=heavy?14:10;debris(v.x,baseY+1.3,v.z,3422266,burst,.45,14);for(let i=0;i<(heavy?7:5);i++)puff(v.x+rn(-2,2),baseY+rn(.5,2.2),v.z+rn(-2,2),i%2?3881784:7893092,rn(1.6,3.2));while(DB.length>240){const d=DB.shift();if(d?.m)world.remove(d.m)}}function wallBreak(w){const h=w.y1-w.y0-1,parts=w.parts&&w.parts.length?w.parts:[w.m],base=parts[0],col=w.barbed?4869970:base?.material?.color?.getHex?.()??9278345,cx=(w.x0+w.x1)/2,cz=(w.z0+w.z1)/2;if(w.doorAssembly||w.parts&&w.parts.length){parts.forEach(m=>{if(m)m.visible=false})}else if(w.m?.visible)WA.push({m:w.m,h:h,t:.5});else if(w.m?.parent)w.m.parent.remove(w.m);for(let i=0;i<(w.door?6:10);i++)debris(rn(w.x0,w.x1),w.y0+1+h*rn(.2,.9),rn(w.z0,w.z1),col,1,.9,7);for(let i=0;i<3;i++)puff(cx,w.y0+1+h*rn(.1,.6),cz,13218954,3.5)}function destroyInteriorStair(b){const a=b?.interiorStair;if(!a||a.destroyed)return;a.destroyed=true;if(b.interiorStairGroup)b.interiorStairGroup.visible=false;let i=stairs.indexOf(a);if(i>=0)stairs.splice(i,1);i=Wl.indexOf(b.interiorStairCollider);if(i>=0){Wl.splice(i,1);wallGridCount=-1}}function roofBreak(b){if(b.rb)return;b.rb=1;if(b.upperFloor)for(const it of items){if(it.building===b&&it.y>b.fy+b.storey){it.y=b.fy+1.3;if(it.o)it.o.position.y=it.y}}if(b.upperFloor){b.upperFloor.visible=false;destroyInteriorStair(b)}for(const r of b.extraRoofs||[])r.visible=false;b.rhp=0;const col=b.roof.material?b.roof.material.color.getHex():b.roof.userData.color||7829367,y=b.fy+b.h+.6;if(b.hangar&&b.roof?.userData?.hangarRoof){HR.push({m:b.roof,t:0,dur:1.05,baseY:b.roof.position.y,baseRx:b.roof.rotation.x,baseRz:b.roof.rotation.z,dir:rn(-1,1)<0?-1:1,x:b.x,z:b.z,w:b.w,d:b.d,col:col});for(let i=0;i<12;i++)puff(b.x+rn(-b.w/2,b.w/2),b.fy+rn(1,b.w*.45),b.z+rn(-b.d/2,b.d/2),9143680,3.8);for(let i=0;i<10;i++)debris(b.x+rn(-b.w/2,b.w/2),b.fy+rn(1,b.w*.45),b.z+rn(-b.d/2,b.d/2),col,1,.75,6)}else{b.roof.visible=false;for(let i=0;i<20;i++)debris(b.x+rn(-b.w/2,b.w/2),y,b.z+rn(-b.d/2,b.d/2),col,1,1.3,9);for(let i=0;i<8;i++)puff(b.x+rn(-b.w/2,b.w/2),y,b.z+rn(-b.d/2,b.d/2),13218954,4.5)}snd("boom",.4,{x:b.x,y:y,z:b.z},b)}function updDeb(dt){for(let i=DB.length-1;i>=0;i--){const d=DB[i],m=d.m;d.vy-=28*dt;m.position.x+=d.vx*dt;m.position.y+=d.vy*dt;m.position.z+=d.vz*dt;m.rotation.x+=d.rx*dt;m.rotation.y+=(d.ry||0)*dt;m.rotation.z+=(d.rz||0)*dt;const g=Math.max(0,hAt(m.position.x,m.position.z))+.2;if(m.position.y<g){m.position.y=g;d.vy*=-.3;d.vx*=.6;d.vz*=.6;d.rx*=d.truckPiece?.38:.82;if(d.ry)d.ry*=d.truckPiece?.38:.82;if(d.rz)d.rz*=d.truckPiece?.38:.82}d.life-=dt;const fade=d.vehiclePart?.55:.4,k=Math.max(0,Math.min(1,d.life/fade));m.scale.set(d.s0.x*k,d.s0.y*k,d.s0.z*k);if(d.life<=0){world.remove(m);DB.splice(i,1)}}for(let i=WA.length-1;i>=0;i--){const a=WA[i];a.t-=dt;const s=Math.max(0,a.t/.5);a.m.scale.y=s;a.m.position.y=a.h/2*s;if(a.t<=0){world.remove(a.m);WA.splice(i,1)}}for(let i=HR.length-1;i>=0;i--){const a=HR[i],m=a.m;a.t+=dt;const p=Math.min(1,a.t/a.dur),e=p*p*(3-2*p);m.rotation.z=a.baseRz+a.dir*e*.62;m.rotation.x=a.baseRx+Math.sin(p*Math.PI)*.08;m.position.y=a.baseY-e*8.5;if(p>.35&&Math.random()<.35)puff(a.x+rn(-a.w/2,a.w/2),Math.max(.4,m.parent.position.y+m.position.y+rn(0,3)),a.z+rn(-a.d/2,a.d/2),8157042,2.4);if(p>=1){m.visible=false;if(m.parent)m.parent.remove(m);HR.splice(i,1)}}updFA(dt)}const TG=new Map;function treeHit(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get(cx+a+","+(cz+b));if(L)for(const t of L)if(!(palmsDisabled&&t.p)&&Math.hypot(x-t.x,z-t.z)<t.r+r)return true}return false}function palmPush(t,r0){const height=6.2*t.s,reach=t.r+r0+1.65*t.s;if(P.y>t.y+height+.6||P.y+4.2<t.y)return;if(Math.abs(P.x-t.x)>reach||Math.abs(P.z-t.z)>reach)return;const yawCos=Math.cos(t.yaw),yawSin=Math.sin(t.yaw);let overlap=0,nx=0,nz=0;for(const offset of[.3,1,1.7,2.4,3.1,3.8]){const y=P.y+offset;if(y<t.y||y>t.y+height)continue;const q=(y-t.y)/height;const bend=height*.25*Math.sin(Math.PI*q);const trunkX=t.x+bend*yawCos,trunkZ=t.z-bend*yawSin;const dx=P.x-trunkX,dz=P.z-trunkZ,d=Math.hypot(dx,dz);const bodyRadius=offset>3.1?r0*.75:r0;const radius=bodyRadius+t.r*(1-.43*q)+.04*t.s;if(d<radius&&radius-d>overlap){overlap=radius-d;if(d>1e-4){nx=dx/d;nz=dz/d}else{nx=Math.cos(P.hd);nz=-Math.sin(P.hd)}}}if(overlap>0){P.x+=nx*overlap;P.z+=nz*overlap}}function treePush(){const r0=.5,cx=Math.floor(P.x/16),cz=Math.floor(P.z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get(cx+a+","+(cz+b));if(!L)continue;for(const t of L){if(t.p){if(!palmsDisabled)palmPush(t,r0);continue}if(t.rock&&(P.y>t.topY+.6||P.y+1.5<t.bottomY))continue;const dx=P.x-t.x,dz=P.z-t.z,d=Math.hypot(dx,dz),m=t.r+r0;if(d<m&&d>.001){P.x=t.x+dx/d*m;P.z=t.z+dz/d*m}}}}function nearbyRock(x,z,r=0,baseY=-Infinity,topY=Infinity){const cx=Math.floor(x/16),cz=Math.floor(z/16),steps=Math.max(1,Math.ceil((r+8)/16));let hit=null,dist=Infinity;for(let a=-steps;a<=steps;a++)for(let b=-steps;b<=steps;b++){const L=TG.get(cx+a+","+(cz+b));if(!L)continue;for(const t of L){if(!t.rock||t.topY<baseY-.5||t.bottomY>topY+.5)continue;const d=Math.hypot(x-t.x,z-t.z);if(d<t.r+r&&d<dist){hit=t;dist=d}}}return hit}function vehiclePushPlayer(){if(cv||playerFall)return;for(const v of[...V,...E.filter(u=>["jeep","tanqueta","tanc"].includes(u.t))]){if(v.destroyed)continue;const overlap=circleVehicleOverlap(P.x,P.z,.62,v),sweep=runoverSweepHit(v.impactFromX??v.x,v.impactFromZ??v.z,v.x,v.z,P.x,P.z,vehicleRadius(v.t)*.68+.62*.45);if(!overlap&&!sweep)continue;if(v.t==="ferry"&&(terminalRampHeight(P.x,P.z)!==null||pedestrianFerry(P.x,P.z,P.y)?.f===v))continue;if(overlap){const b=vehicleBox(v),dx=P.x-b.x,dz=P.z-b.z,s=Math.sin(b.hd),c=Math.cos(b.hd),lx=dx*c-dz*s,lz=dx*s+dz*c,ex=b.w/2+.66-Math.abs(lx),ez=b.d/2+.66-Math.abs(lz);if(ex<ez){const sign=lx<0?-1:1;P.x=b.x+sign*(b.w/2+.66)*c+lz*s;P.z=b.z-sign*(b.w/2+.66)*s+lz*c}else{const sign=lz<0?-1:1;P.x=b.x+lx*c+sign*(b.d/2+.66)*s;P.z=b.z-lx*s+sign*(b.d/2+.66)*c}}const sp=Math.abs(v.v??v.impactSpeed??0),dmg=runoverDamage(sp,VT[vehicleHitType(v.t)]?.mass||1);if(dmg>0&&!(playerEject?.kind==="flip"&&playerEject.t>0)&&(!v.playerHitCd||v.playerHitCd<=0)){hurtP(dmg,false,{type:"runover",x:v.x,y:v.o?.position?.y??P.y,z:v.z});v.playerHitCd=.45;msg="Impacte amb un vehicle!";msgT=1.5}}}const PL=[],FA=[],ZM=(new THREE.Matrix4).makeScale(0,0,0);let PM={};let palmsDisabled=false;function setPalmsDisabled(disabled){palmsDisabled=!!disabled;const checkbox=document.getElementById("disablePalms");if(checkbox)checkbox.checked=palmsDisabled;if(PM.trunk)PM.trunk.visible=!palmsDisabled;for(const a of FA)if(a.y)a.y.visible=!palmsDisabled;if(!palmsDisabled&&PM.update)PM.update(P.x,P.z,true);window.HUNTER_PALMS_DISABLED=palmsDisabled;return palmsDisabled}const palmSettingCheckbox=document.getElementById("disablePalms");if(palmSettingCheckbox)palmSettingCheckbox.addEventListener("change",()=>setPalmsDisabled(palmSettingCheckbox.checked));const vegetationVisual=window.HUNTER_VEGETATION.create(THREE,{materialProfile:materialProfile,random:rr});const PG={t:vegetationVisual.geometry.trunk,c:vegetationVisual.geometry.crown,c2:vegetationVisual.geometry.crown2};let compoundClear=[];function treeAt(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get(cx+a+","+(cz+b));if(L)for(const t of L)if(!(palmsDisabled&&t.p)&&Math.hypot(x-t.x,z-t.z)<t.r+r)return t}return null}function crush(x,z,r){if(palmsDisabled)return;const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get(cx+a+","+(cz+b));if(L)L.slice().forEach(t=>{if(t.p&&Math.hypot(x-t.x,z-t.z)<t.r+r)killPalm(t)})}}function dmgP(t,d){if(!t.alive)return;const amount=wholeDamage(d);if(!amount)return;t.hp=Math.max(0,Math.ceil(t.hp)-amount);if(t.hp<=0)killPalm(t)}function killPalm(t){if(!t.alive)return;t.alive=false;const a=TG.get(t.k);if(a){const i=a.indexOf(t);if(i>=0)a.splice(i,1)}if(PM.remove)PM.remove(t.i,ZM);const y=new THREE.Group,g=new THREE.Group;y.position.set(t.x,t.y,t.z);y.rotation.y=t.yaw;y.scale.setScalar(t.s);y.add(g);[[PG.t,9071162],[PG.c,5218362],[PG.c2,7323450]].forEach(([ge,c])=>g.add(new THREE.Mesh(ge,dmat(c))));world.add(y);FA.push({y:y,g:g,t:0,s:t.s,x:t.x,z:t.z,yaw:t.yaw})}function updFA(dt){for(let i=FA.length-1;i>=0;i--){const a=FA[i];a.t+=dt;const k=Math.min(1,a.t/.9);a.g.rotation.z=-k*k*1.5;if(k>=1){const c=Math.cos(a.yaw),s=Math.sin(a.yaw),lx=a.x+c*6.4*a.s,lz=a.z-s*6.4*a.s,ly=Math.max(hAt(lx,lz),0)+.6;debris(lx,ly,lz,5218362,8,1,5);debris(a.x+c*3*a.s,ly,a.z-s*3*a.s,9071162,4,.7,3);puff(lx,ly,lz,13218954,3);world.remove(a.y);FA.splice(i,1)}}}function vegetate(pa){return drainBuildSteps(vegetateSteps(pa))}function*vegetateSteps(pa){TG.clear();PL.length=0;FA.length=0;const pm=[],bu=[],rk=[],put=e=>{e.k=Math.floor(e.x/16)+","+Math.floor(e.z/16);let a=TG.get(e.k);if(!a)TG.set(e.k,a=[]);a.push(e)};const rockSafe=(x,z,r=2)=>Math.abs(x)<H-35&&Math.abs(z)<H-35&&!stairs.some(st=>stairContains(st,x,z,r+1))&&Math.hypot(x-pa.x,z-pa.z)>16+r&&!B.some(b=>Math.abs(x-b.x)<b.w/2+r+4&&Math.abs(z-b.z)<b.d/2+r+4)&&!compoundClear.some(c=>Math.hypot(x-c.x,z-c.z)<c.r+r+5);const addRock=(x,z,scale,kind)=>{if(!rockSafe(x,z,scale*1.45))return false;const h=hAt(x,z);if(h<-4.6)return false;const tall=kind===1,y=h+(tall?.85:.38)*scale,radius=(tall?1.27:1.44)*scale,topY=h+(tall?2.3:1.18)*scale;rk.push([x,y,z,scale,window.HUNTER_ROCK_FIELDS.rockNoise(x,z,5)*Math.PI*2,0,(window.HUNTER_ROCK_FIELDS.rockNoise(x,z,6)-.5)*.33,kind]);put({x:x,z:z,y:y,r:radius,rock:true,kind:kind,s:scale,topY:topY,bottomY:h-scale*.5});return true};let samples=0;const sampleSide=Math.ceil((2*H-80)/14),sampleTotal=sampleSide*sampleSide;for(let x=-H+40;x<H-40;x+=14)for(let z=-H+40;z<H-40;z+=14){if(samples++%128===0)yield{stage:"Distribuint vegetaci\xf3",completed:samples-1,total:sampleTotal,unit:"mostres"};const px=x+rr(-4,4),pz=z+rr(-4,4),h=hAt(px,pz);if(h<1.3||h>42)continue;const dn=fbm(px/80+7,pz/80+3),q=R(),highPalm=.22+Math.max(0,Math.min(1,(h-28)/14))*.12;let L=null;if(h<4)L=q<.12?pm:null;else if(dn>.55&&h<28)L=q<.2?pm:null;else if(h>=28&&q<highPalm)L=pm;else if(dn>.4)L=q<.2?bu:null;else if(h>8&&q<.04)L=rk;else if(q<.024)L=pm;if(!L||slope(px,pz,h)>4.5)continue;if(stairs.some(s=>stairContains(s,px,pz,2))||Math.hypot(px-pa.x,pz-pa.z)<14||B.some(b=>Math.abs(px-b.x)<b.w/2+5&&Math.abs(pz-b.z)<b.d/2+5)||compoundClear.some(c=>Math.hypot(px-c.x,pz-c.z)<c.r))continue;const s=1.15*rr(.75,1.25),yaw=rr(0,6.28);if(L==pm){const leafVar=R()<.33?-1:R()<.66?0:1,tone=rr(-.25,.25),idx=pm.length;pm.push([px,h-.3,pz,s,yaw,leafVar,tone]);const e={x:px,z:pz,y:h-.3,s:s,yaw:yaw,r:.6*Math.max(.75,s),p:true,alive:true,hp:8,i:idx,leafVar:leafVar,tone:tone};put(e);PL.push(e)}else if(L===rk)window.HUNTER_ROCK_FIELDS.baseRockCluster(px,pz,s,addRock);else L.push([px,h-.3,pz,s,yaw])}const rockFieldStats=yield*window.HUNTER_ROCK_FIELDS.generateRockFieldsSteps({islands:islands,hAt:hAt,canPlace:rockSafe,addRock:addRock});world.userData.rockFieldStats={...rockFieldStats,totalRocks:rk.length};if(seedSearchMode){for(let n=pm.length*11+bu.length*3+rk.length*5;n>0;n--){if(n%1024===0)yield{stage:"Colors de vegetaci\xf3",completed:null,total:null};R()}PM={stats:{},update(){},remove(){}};return}const vegetationMeshes=yield*vegetationVisual.buildSteps({world:world,palms:pm,bushes:bu,rocks:rk,playerX:pa.x,playerZ:pa.z,lowQuality:!visualQuality.shadows,lodProfile:qualityName});PM=vegetationMeshes.palms;window.HUNTER_VEGETATION_STATS={...PM.stats,rockFields:rockFieldStats}}function fr(x,z){let a=1e9,b=-1e9;for(const[i,j]of[[0,0],[9,9],[-9,9],[9,-9],[-9,-9],[9,0],[-9,0],[0,9],[0,-9]]){const h=hAt(x+i,z+j);a=Math.min(a,h);b=Math.max(b,h)}return b-a}function checkRoofSupport(b,w){if(!b||b.rb||b.hangar||b.kind==="enemy_bunker"||!w||!w.supportWeight)return;if(!w.supportCounted){w.supportCounted=true;b.destroyedWallSupport=(b.destroyedWallSupport||0)+w.supportWeight}if(b.destroyedWallSupport>=3)roofBreak(b)}function dmgW(w,d){if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}const amount=wholeDamage(d);if(!amount||!Number.isFinite(w.hp)||w.hp<=0)return;w.hp=Math.max(0,Math.ceil(w.hp)-amount);if(w.hp>0)return;const members=w.doorAssembly||[w];for(const piece of members){if(!piece||piece.destroyedWall)continue;piece.destroyedWall=true;piece.hp=0;piece.open=true;piece.playerBlock=false;wallBreak(piece);let i=Wl.indexOf(piece);if(i>=0){Wl.splice(i,1);wallGridCount=-1}i=Dr.indexOf(piece);if(i>=0)Dr.splice(i,1);if(piece.owner?.door===piece)piece.owner.door=null;if(piece.stairStructure)destroyInteriorStair(piece.stairStructure.owner);checkRoofSupport(piece.owner,piece)}snd("boom",.3,{x:w.cx??(w.x0+w.x1)/2,y:(w.y0+w.y1)/2,z:w.cz??(w.z0+w.z1)/2},w)}function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=seedSearchMode?{group:new THREE.Group,walls:null,doors:null,roof:new THREE.Group}:(opt.hangar?buildingVisual.createHangarShell:buildingVisual.createShell)({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide,structuralWalls=[],buildingWallStart=Wl.length;const wallH=opt.floors===2?h/2:h;let entranceDoor=null;const seg=(lx,lz,sx,sz,dr,windows=false,supportSide=null,supportWeight=0,level=0)=>{if(!dr){const parts=seedSearchMode?[new THREE.Object3D]:windows?buildingVisual.addWindowedWall(g,{lx:lx,lz:lz,sx:sx,sz:sz,height:wallH,material:wm}):[buildingVisual.addWall(g,{lx:lx,lz:lz,sx:sx,sz:sz,height:wallH,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy+level-(level?0:1),y1:fy+level+wallH,hp:12,m:m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,supportSide:supportSide,supportWeight:supportWeight};for(const mesh of parts)mesh.position.y+=level;if(opt.wood){for(const mesh of parts)if(mesh.material?.color?.getHex()===4092293)mesh.visible=false}Wl.push(o);if(supportWeight>0)structuralWalls.push(o);return o}const parts=seedSearchMode?{door:new THREE.Object3D,doorHeight:opt.doorHeight||4.4}:buildingVisual.addDoor(g,{lx:lx,lz:lz,sx:sx,sz:sz,height:wallH,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:8,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y,rammable:true};Wl.push(door);Dr.push(door);entranceDoor=door;let lintel=null;if(parts.lintel){lintel={x0:door.x0,x1:door.x1,z0:door.z0,z1:door.z1,y0:fy+parts.doorHeight,y1:fy+wallH,hp:12,m:parts.lintel,door:false,open:false,playerBlock:false,cx:x+lx,cz:z+lz};Wl.push(lintel)}return{door:door,lintel:lintel}};if(opt.hangar){const sh=Math.max(3.1,h*.3),push=(lx,lz,sx,sz)=>{const m=seedSearchMode?new THREE.Object3D:buildingVisual.addWall(g,{lx:lx,lz:lz,sx:sx,sz:sz,height:sh,material:wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+sh,hp:16,m:m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz};Wl.push(o);return o};const frontZ=ds===0?d/2-t/2:-d/2+t/2,sl=Math.max(.5,(w-dw)/2),off=dw/2+sl/2;push(-off,frontZ,sl,t);push(off,frontZ,sl,t)}else{[[0,d/2-t/2,w,t,0],[0,-d/2+t/2,w,t,0],[w/2-t/2,0,t,d-2*t,1],[-w/2+t/2,0,t,d-2*t,1]].forEach(([cx,cz,sx,sz,ax],k)=>{if(k!=ds){seg(cx,cz,sx,sz,0,!opt.bunker&&!opt.solidWalls,k,1);return}const L=ax?sz:sx,sl=(L-dw)/2,off=dw/2+sl/2;const flanks=[];for(const q of[-1,1]){flanks.push(ax?seg(cx,cz+q*off,sx,sl,0,false,k,.5):seg(cx+q*off,cz,sl,sz,0,false,k,.5))}const opening=ax?seg(cx,cz,sx,dw,1):seg(cx,cz,dw,sz,1);const assembly=[...flanks,opening.door,opening.lintel].filter(Boolean);for(const part of assembly)part.doorAssembly=assembly});if(!opt.noPartitions&&!opt.bunker&&w*d>=140&&R()<.5){const al=w>=d,L=al?d:w,gp=rr(-L/4,L/4),px=(R()<.5?-1:1)*rr((al?w:d)*.12,(al?w:d)*.2),a0=-L/2+t,a1=L/2-t,ps=(a,b)=>{if(b-a<.5)return;const cc=(a+b)/2,l=b-a;if(al)seg(px,cc,t,l);else seg(cc,px,l,t)};ps(a0,gp-1.6);ps(gp+1.6,a1)}}if(opt.floors===2)for(const[cx,cz,sx,sz]of[[0,d/2-t/2,w,t],[0,-d/2+t/2,w,t],[w/2-t/2,0,t,d-2*t],[-w/2+t/2,0,t,d-2*t]])seg(cx,cz,sx,sz,0,!opt.solidWalls,null,0,wallH);g.position.set(x,fy,z);if(!seedSearchMode)world.add(g);const b={o:g,x:x,z:z,hw:w/2+1.5,hd:d/2+1.5,w:w,d:d,h:h,fy:fy,wm:wm,dm:dm,roof:visual.roof,foundation:visual.foundation,rhp:opt.hangar?12:16,hangar:!!opt.hangar,door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||"house",structuralWalls:structuralWalls,destroyedWallSupport:0};for(const piece of Wl.slice(buildingWallStart))piece.owner=b;structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else addStairs(b,ds);return b}function mkEnemyBunker(x,z){const firstWall=Wl.length,b=mkB(x,z,40,34,10,14278354,12568251,{kind:"enemy_bunker",bunker:true,doorSide:0,doorWidth:4,doorHeight:4.4,lockedDoor:true}),g=b.o,inset=3.5;if(seedSearchMode){for(const w of b.structuralWalls){const lean=inset*2.2/b.h;if(w.supportSide===0)w.z0-=lean;if(w.supportSide===1)w.z1+=lean;if(w.supportSide===2)w.x0-=lean;if(w.supportSide===3)w.x1+=lean}const wall=(lx,lz,sx,sz)=>Wl.push({x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:b.fy-1,y1:b.fy+8,hp:12,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,owner:b});for(const lx of[-4,4])for(const[lz,d]of[[-12.5,3],[-4,6],[7,10]])wall(lx,lz,.6,d);for(const lx of[-11,11])wall(lx,-7,12,.6);b.generalSpots=[{x:x,z:z-9}];addBunkerBasement(b);return b}const meshes=new Set(Wl.slice(firstWall).filter(w=>!w.door).flatMap(w=>w.parts||[w.m]));for(const mesh of meshes){const p=mesh.geometry.attributes.position;for(let i=0;i<p.count;i++){const t=Math.max(0,Math.min(1,(p.getY(i)+mesh.position.y)/b.h));p.setX(i,(p.getX(i)+mesh.position.x)*(1-2*inset*t/b.w)-mesh.position.x);p.setZ(i,(p.getZ(i)+mesh.position.z)*(1-2*inset*t/b.d)-mesh.position.z)}p.needsUpdate=true;mesh.geometry.computeVertexNormals();mesh.geometry.computeBoundingSphere()}b.roof.scale.set((b.w-2*inset)/(b.w+1.35),1,(b.d-2*inset)/(b.d+1.35));g.userData.bunkerWallInset=inset;for(const w of b.structuralWalls){const lean=inset*2.2/b.h;if(w.supportSide===0)w.z0-=lean;if(w.supportSide===1)w.z1+=lean;if(w.supportSide===2)w.x0-=lean;if(w.supportSide===3)w.x1+=lean}const wall=(lx,lz,sx,sz)=>{const m=buildingVisual.addWall(g,{lx:lx,lz:lz,sx:sx,sz:sz,height:8,material:b.wm});Wl.push({x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:b.fy-1,y1:b.fy+8,hp:12,m:m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,owner:b})};for(const lx of[-4,4])for(const[lz,d]of[[-12.5,3],[-4,6],[7,10]])wall(lx,lz,.6,d);for(const lx of[-11,11])wall(lx,-7,12,.6);for(const sign of[-1,1]){const shape=new THREE.Shape;shape.moveTo(sign*2,0);shape.lineTo(sign*3.5,0);shape.lineTo(sign*2.7,5.2);shape.lineTo(sign*2,5.2);shape.closePath();const post=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:3.3,bevelEnabled:false}),M(7951159,"masonry"));post.position.z=b.d/2-2.8;g.add(post)}bx(g,5.4,.85,3.3,7951159,0,4.8,b.d/2-1.15,"masonry");bx(g,5,1.1,2.5,5921092,0,.9,-12,"paint");b.generalSpots=[{x:x,z:z-9}];addBunkerBasement(b);return b}function addBunkerBasement(b){if(b.foundation){b.o.remove(b.foundation);b.foundation.geometry?.dispose();b.foundation.material?.dispose();b.foundation=null}const random=mul((seed^Math.imul(Math.round(b.x),73856093)^Math.imul(Math.round(b.z),19349663)^1853567713)>>>0);const variant=Math.floor(random()*4),floorY=b.fy-9.15,halfX=27,halfZ=23,stairSide=variant&1?-1:1,divisions=[-7+variant%2*1.3,6.4+Math.floor(variant/2)*1.3],westDoors=[-15+variant%2*.7,0+Math.floor(variant/2)*.7,15-variant%2],eastDivider=-stairSide*7,stairX=variant&2?14.6:10.8,stairTop=stairSide*13.6,stairBottom=stairSide*1.3;b.basement={variant:variant,floorY:floorY,halfX:halfX,halfZ:halfZ,upperSlabMeshes:[],lights:[],cameraHiddenWalls:[],lightsOn:false,doors:[],stair:{x:stairX,zTop:stairTop,zBottom:stairBottom,width:3.3},generalLocal:{x:-19,z:variant%2?15:-15},eliteLocal:[{x:0,z:-15},{x:-1,z:14},{x:17,z:stairSide>0?-16:16},{x:-19,z:(divisions[0]+divisions[1])/2}]};activeBunker=b;const wall=(lx,lz,w,d,base=-9.2,height=9.25,color=6845805)=>{const mesh=seedSearchMode?new THREE.Object3D:bx(b.o,w,height,d,color,lx,base+height/2,lz,"masonry");mesh.castShadow=true;mesh.receiveShadow=true;Wl.push({x0:b.x+lx-w/2,x1:b.x+lx+w/2,z0:b.z+lz-d/2,z1:b.z+lz+d/2,y0:b.fy+base,y1:b.fy+base+height,hp:Infinity,m:mesh,door:false,open:false,rammable:false,cx:b.x+lx,cz:b.z+lz,owner:b,bunkerBasementWall:true})};const floorPanel=(xa,xb,za,zb,level,color)=>{if(seedSearchMode)return;bx(b.o,xb-xa,.26,zb-za,color,(xa+xb)/2,level-.13,(za+zb)/2,"masonry")};const slab=(xa,xb,za,zb)=>{if(!seedSearchMode){const before=b.o.children.length;floorPanel(xa,xb,za,zb,.22,9344392);for(const mesh of b.o.children.slice(before)){mesh.name="bunker-forjat-opac";mesh.material=mesh.material.clone();mesh.material.transparent=false;mesh.material.opacity=1;mesh.material.depthWrite=true;mesh.material.side=THREE.DoubleSide;b.basement.upperSlabMeshes.push(mesh)}}Wl.push({x0:b.x+xa,x1:b.x+xb,z0:b.z+za,z1:b.z+zb,y0:b.fy-.03,y1:b.fy+.22,hp:Infinity,m:new THREE.Object3D,door:false,open:false,rammable:false,playerBlock:false,cx:b.x+(xa+xb)/2,cz:b.z+(za+zb)/2,owner:b})};const st=b.basement.stair,shaftLeft=st.x-st.width/2,shaftRight=st.x+st.width/2,shaftNear=Math.min(st.zTop,st.zBottom),shaftFar=Math.max(st.zTop,st.zBottom);slab(-19.2,shaftLeft,-16.2,16.2);slab(shaftRight,19.2,-16.2,16.2);slab(shaftLeft,shaftRight,-16.2,shaftNear);slab(shaftLeft,shaftRight,shaftFar,16.2);floorPanel(-halfX+.4,halfX-.4,-halfZ+.4,halfZ-.4,-9.27,4410441);if(!seedSearchMode){const cover=(xa,xb,za,zb)=>floorPanel(xa,xb,za,zb,-1.05,5529176);cover(-halfX,-19.2,-halfZ,halfZ);cover(19.2,halfX,-halfZ,halfZ);cover(-19.2,19.2,-halfZ,-16.2);cover(-19.2,19.2,16.2,halfZ)}wall(-halfX+.4,0,.8,halfZ*2-.8);wall(halfX-.4,0,.8,halfZ*2-.8);wall(0,-halfZ+.4,halfX*2-.8,.8);wall(0,halfZ-.4,halfX*2-.8,.8);const span=halfX-7.5-.4,roomX=(halfX+7.5-.4)/2;for(const z of divisions)wall(-roomX,z,span,.65,-9.1,8.75);wall(roomX,eastDivider,span,.65,-9.1,8.75);const doorway=(lx,from,to,doorZ)=>{const gap=4.3,doorHeight=4.1,base=-9.15,lo=doorZ-gap/2,hi=doorZ+gap/2;if(lo>from)wall(lx,(from+lo)/2,.7,lo-from,-9.15,9);if(hi<to)wall(lx,(hi+to)/2,.7,to-hi,-9.15,9);wall(lx,doorZ,.82,gap,base+doorHeight,9-doorHeight,6911085);const mesh=seedSearchMode?new THREE.Object3D:bx(b.o,.88,doorHeight,gap+.04,9017744,lx,base+doorHeight/2,doorZ,"metal");mesh.name="bunker-porta-interior-elevable";const d={x0:b.x+lx-.44,x1:b.x+lx+.44,z0:b.z+lo,z1:b.z+hi,y0:b.fy+base,y1:b.fy+base+doorHeight,hp:Infinity,m:mesh,door:true,open:false,rammable:false,bunkerInteriorDoor:true,bunkerBasementWall:true,openProgress:0,doorHeight:doorHeight,closedLocalY:base+doorHeight/2,owner:b,cx:b.x+lx,cz:b.z+doorZ};Wl.push(d);Dr.push(d);b.basement.doors.push(d)};const limits=[-halfZ+.65,...divisions,halfZ-.65];for(let i=0;i<3;i++)doorway(-7.5,limits[i],limits[i+1],westDoors[i]);doorway(7.5,-halfZ+.65,eastDivider,-16);doorway(7.5,eastDivider,halfZ-.65,16);if(!seedSearchMode){const steps=15,run=Math.abs(st.zTop-st.zBottom);for(let i=0;i<steps;i++){const z=st.zTop+(i+.5)*(st.zBottom-st.zTop)/steps;const y=.22-(i+1)*9.37/steps;bx(b.o,st.width,.21,run/steps+.035,i%2?7962489:9147017,st.x,y-.1,z,"masonry")}for(const xx of[shaftLeft-.13,shaftRight+.13]){const rail=bx(b.o,.12,1.3,run,3820617,xx,-3.9,(st.zTop+st.zBottom)/2,"metal");rail.rotation.x=Math.sign(st.zBottom-st.zTop)*Math.atan2(9.37,run)}const basementLevel=-9.15,rooms=[{lo:-halfZ+.75,hi:divisions[0]},{lo:divisions[0],hi:divisions[1]},{lo:divisions[1],hi:halfZ-.75}];const generalRoomIndex=b.basement.generalLocal.z<0?0:2;const generalRoom=rooms[generalRoomIndex];b.basement.generalRoom={xMin:-halfX+1.7,xMax:-9.1,zMin:generalRoom.lo+2,zMax:generalRoom.hi-2};b.basement.roomTypes=[];const piece=(name,lx,lz,width,depth,height,color,y0=basementLevel,collision=true,profile="metal")=>{const mesh=bx(b.o,width,height,depth,color,lx,y0+height/2,lz,profile);mesh.name="bunker-"+name;if(collision){const center=buildingWorldPoint(b,lx,lz);const collisionY=b.fy+Math.min(basementLevel,y0);Wl.push({x0:center.x-width/2,x1:center.x+width/2,z0:center.z-depth/2,z1:center.z+depth/2,y0:collisionY,y1:b.fy+y0+height,hp:Infinity,m:mesh,door:false,open:false,rammable:false,owner:b,indoorFurniture:true,cx:center.x,cz:center.z})}return mesh};const desk=(x,z,w,d)=>{piece("taula-tauler",x,z,w,d,1.18,6705212,basementLevel,true,"organic");piece("tapa-taula",x,z,w+.12,d+.1,.16,9990228,-8,false,"organic")};const locker=(name,x,z,col=6451048)=>piece(name,x,z,1.23,.82,3.4,col,basementLevel,true);const panel=(name,x,z,w,h,color)=>{const m=piece(name,x,z,w,.085,h,color,-6.05,false);m.castShadow=false;return m};for(let roomIndex=0;roomIndex<rooms.length;roomIndex++){const room=rooms[roomIndex],mid=(room.lo+room.hi)/2;if(roomIndex===generalRoomIndex){b.basement.roomTypes.push("despatx del general");desk(-23,mid,3.3,1.65);piece("cadira-general",-25.25,mid+.2,1,1,.94,4933437);locker("arxivador-general",-25.1,room.lo+2,6646107);panel("mapa-operacions",-26.45,mid+1.8,2.25,1.5,12892044);for(const sign of[-1,1])piece("marca-mapa",-26.37,mid+1.8+sign*.57,.18,.1,.16,sign<0?10368554:3296120,-5.43,false,"paint");piece("telefon-desp",-22.5,mid-.3,.43,.3,.2,2896434,-7.84,false)}else if(roomIndex===1){b.basement.roomTypes.push("centre de comunicacions");for(const dz of[-2.3,2.35]){piece("consola-radio",-23.3,mid+dz,2.15,1.18,1.4,4413278);piece("pantalla-radio",-23.3,mid+dz-.18,1.48,.32,.7,2705490,-7.6,false);for(const dx of[-.54,.15,.59])piece("commutador",-23.3+dx,mid+dz-.56,.2,.08,.1,11982261,-7.3,false)}locker("armari-radio",-25.4,mid,5795433);panel("esquema-antenes",-26.45,mid+1,1.65,1.1,11056034)}else{b.basement.roomTypes.push("infermeria");for(const dz of[-2.15,2.15]){piece("llit-hospital",-23.3,mid+dz,2.3,2.7,.95,6651254);piece("matalas",-16.3,mid+dz,2,2.38,.17,12899532,-8.18,false,"paint");piece("coixi",-23.3,mid+dz-.84,1.15,.55,.22,14737104,-7.99,false,"paint")}locker("farmaciola-armari",-9.2,room.lo+2,9084563);piece("creu-infermeria",-26.48,mid,.12,1.2,1,13389123,-6.17,false,"paint");piece("creu-infermeria",-26.47,mid,.12,.36,2,13389123,-6.67,false,"paint")}}const armorySide=-stairSide,accessSide=stairSide;b.basement.roomTypes.push("armeria");locker("armari-armes-1",24.8,armorySide*19,5793375);locker("armari-armes-2",24.8,armorySide*14.9,5793375);piece("banc-manteniment",9.5,armorySide*19.35,2.15,1.15,1.22,7822915);for(const dz of[-.38,.12,.48])piece("eina-armeria",9.5,armorySide*19.35+dz,1.1,.09,.09,3159861,-7.88,false);panel("inventari-armeria",26.4,armorySide*18,.08,1.3,11713445);b.basement.roomTypes.push("control i acc\xe9s");piece("quadre-electric",9.2,accessSide*20.5,1.88,1.2,3,4939872);piece("visors-control",9.2,accessSide*19.83,1.54,.17,.4,9351329,-6.58,false);piece("guixeta-seguretat",25.5,accessSide*19.3,.9,.82,2.9,6912628);piece("consola-acces",9.2,accessSide*6.3,1.1,1,1.12,5727842);for(const[lx,lz]of[[0,-19],[0,-8],[0,8],[0,19],[18,-18],[-19,0],[-19,-18],[-19,18],[19,18],[19,0]]){const lamp=new THREE.PointLight(16771261,5.2,19,2);lamp.position.set(lx,-.55,lz);lamp.visible=false;b.o.add(lamp);b.basement.lights.push(lamp);const light=bx(b.o,1.12,.15,.73,15852216,lx,-.3,lz,"paint");light.name="bunker-plaf\xf3-sostre";const rim=bx(b.o,1.26,.25,.86,6319203,lx,-.1,lz,"metal");rim.name="bunker-suport-plaf\xf3"}}return b.basement}function playerInsideBunkerBasement(x,z,y){const b=activeBunker;if(!b?.basement||!Number.isFinite(y)||y>=b.fy-2)return false;const q=buildingLocalPoint(b,x,z);return Math.abs(q.x)<b.basement.halfX-.45&&Math.abs(q.z)<b.basement.halfZ-.45}function bunkerSubFloorAt(x,z,previous=-Infinity){const b=activeBunker;if(!b?.basement)return null;const p=buildingLocalPoint(b,x,z);if(Math.abs(p.x)>b.basement.halfX-.4||Math.abs(p.z)>b.basement.halfZ-.4)return null;const st=b.basement.stair;if(Math.abs(p.x-st.x)<=st.width/2&&p.z>=Math.min(st.zTop,st.zBottom)&&p.z<=Math.max(st.zTop,st.zBottom)){const t=(p.z-st.zTop)/(st.zBottom-st.zTop);return b.fy+.22-t*(b.fy+.22-b.basement.floorY)}if(previous<b.fy-3.9)return b.basement.floorY;return Math.abs(p.x)<=19&&Math.abs(p.z)<=16?b.fy+.22:null}function stairLocal(s,x,z){const dx=x-s.x,dz=z-s.z;return{along:dx*s.nx+dz*s.nz,side:dx*s.nz-dz*s.nx}}function stairContains(s,x,z,margin=0){const q=stairLocal(s,x,z);return q.along>=-margin&&q.along<=s.length+margin&&Math.abs(q.side)<=s.width/2+margin}function groundAt(x,z,previous=-Infinity){const bunkerFloor=bunkerSubFloorAt(x,z,previous);if(bunkerFloor!==null)return bunkerFloor;const physical=hAt(x,z),visible=terrainStream?.visibleHeightAt(x,z);let y=visible===null||visible===undefined?physical:Math.max(physical,visible);for(const s of stairs){if(s.internal&&s.owner?.rb)continue;if(stairContains(s,x,z)){const q=stairLocal(s,x,z);if(s.ramp){const t=Math.max(0,Math.min(1,q.along/s.length));y=Math.max(y,s.top+(s.bottom-s.top)*t)}else{const i=Math.min(s.steps-1,Math.max(0,Math.floor(q.along/s.tread)));y=Math.max(y,s.top-i*s.rise)}}}for(const p of piers){const dx=x-p.x,dz=z-p.z,along=dx*p.ux+dz*p.uz,side=dx*p.px+dz*p.pz;if(Math.abs(along)<=p.length/2+.35&&Math.abs(side)<=p.width/2+.2&&(!Number.isFinite(previous)||previous>=p.y-.55))y=Math.max(y,p.y)}for(const b of buildingCandidates(x,z)){const floor=upperFloorHeight(b,x,z,previous);if(floor!==null)y=Math.max(y,floor)}if(Number.isFinite(previous))for(const b of buildingCandidates(x,z)){const roof=solidRoofAt(b,x,z);if(roof&&previous>=roof.top-.22)y=Math.max(y,roof.top+.05)}const ramp=terminalRampHeight(x,z);if(ramp!==null)y=Math.max(y,ramp);if(Number.isFinite(previous)){const deck=pedestrianFerry(x,z,previous);if(deck)y=Math.max(y,deck.y)}return y}function addRampAccess(b,side){const[nx,nz]=[[0,1],[0,-1],[1,0],[-1,0]][side],edge=(nx?b.w:b.d)/2+.2,x=b.x+nx*edge,z=b.z+nz*edge,top=b.fy+.3;let length=8,bottom=hAt(x+nx*length,z+nz*length);for(let L=8;L<=26;L+=2){const yy=hAt(x+nx*L,z+nz*L);if(Math.abs(top-yy)<Math.abs(top-bottom)){length=L;bottom=yy}if(Math.abs(top-yy)<.35){length=L;bottom=yy;break}}if(Math.abs(top-bottom)<.1)return;const width=Math.max(6,Math.min(b.doorWidth-.8,30)),r={x:x,z:z,nx:nx,nz:nz,top:top,bottom:bottom,length:length,width:width,ramp:true};stairs.push(r);b.stair=r;if(!seedSearchMode)buildingVisual.addRamp(b.o,{alongAxis:!!nx,length:length,width:width,top:top-b.fy,bottom:bottom-b.fy,x:x-b.x+nx*length/2,z:z-b.z+nz*length/2,color:9408910,direction:nx||nz})}function addStairs(b,side){const[nx,nz]=[[0,1],[0,-1],[1,0],[-1,0]][side],edge=(nx?b.w:b.d)/2+.15,x=b.x+nx*edge,z=b.z+nz*edge,top=b.fy+.3;if(top-hAt(x,z)<.12)return;const tread=.75;let steps=1;for(;steps<80;steps++){const end=steps*tread;if(top-hAt(x+nx*end,z+nz*end)<=steps*.32)break}const length=steps*tread,bottom=hAt(x+nx*length,z+nz*length),rise=Math.max(0,(top-bottom)/steps),s={x:x,z:z,nx:nx,nz:nz,top:top,steps:steps,tread:tread,length:length,rise:rise,width:4.2};stairs.push(s);b.stair=s;if(!seedSearchMode)for(let i=0;i<steps;i++){const a=(i+.5)*tread,xx=x+nx*a,zz=z+nz*a,y=top-i*rise,base=Math.min(y-.16,hAt(xx,zz)-.15);buildingVisual.addStep(b.o,{alongAxis:!!nx,riseWidth:tread,height:y-b.fy,base:base-b.fy,x:xx-b.x,z:zz-b.z,color:i%2?10918274:11904654})}}function wallPush(){const r=.6;for(const w of wallCandidates(P.x,P.z,r)){if(w.playerBlock===false||w.y0>P.y+3.1||w.y1<P.y+.15)continue;if(w.towerLegOwner&&(P.y+1.5<w.y0||P.y>w.y1))continue;if(!w.open&&P.x>w.x0-r&&P.x<w.x1+r&&P.z>w.z0-r&&P.z<w.z1+r){const a=[P.x-(w.x0-r),w.x1+r-P.x,P.z-(w.z0-r),w.z1+r-P.z],i=a.indexOf(Math.min(...a));if(i==0)P.x=w.x0-r;else if(i==1)P.x=w.x1+r;else if(i==2)P.z=w.z0-r;else P.z=w.z1+r}}}function updateDoors(dt){for(const d of Dr){if(d.bunkerInteriorDoor){const nearPlayer=!cv&&P.y<d.owner.fy-2&&Math.hypot(P.x-d.cx,P.z-d.cz)<5.6;const nearSoldier=enemyCandidatesAt(d.cx,d.cz,5.7).some(u=>(u.t==="soldat"||u.t==="general")&&u.hp>0&&(u.gy??u.o?.position?.y??Infinity)<d.owner.fy-2&&Math.hypot(u.x-d.cx,u.z-d.cz)<5.6);const target=nearPlayer||nearSoldier;d.openProgress=Math.max(0,Math.min(1,d.openProgress+(target?dt/1.15:-dt/1.6)));const p=d.openProgress,ease=p*p*(3-2*p);d.m.position.y=d.closedLocalY+(d.doorHeight+.55)*ease;d.m.visible=p<.98;d.open=p>.86;continue}if(d.bunkerGate){const dx=P.x-d.cx,dz=P.z-d.cz,front=dx*d.nx+dz*d.nz,side=Math.abs(dx*d.nz-dz*d.nx),inFront=!cv&&front>=0&&front<=4.8&&side<=d.doorWidth/2+1.15;if(inFront&&d.openProgress<1){if(d.openProgress===0)window.HUNTER_STEALTH.emit("door",d.cx,(d.y0??hAt(d.cx,d.cz))+1,d.cz);d.openProgress=Math.min(1,d.openProgress+dt/d.openDuration);msg="Obrint porta del b\xfanquer\u2026 "+Math.round(d.openProgress*100)+"%";msgT=.25}const p=d.openProgress,ease=p*p*(3-2*p);d.m.scale.y=Math.max(.025,1-ease);d.m.position.y=d.closedLocalY+d.doorHeight*ease*.5;d.m.visible=p<.999;d.open=p>=.999;continue}const dx=P.x-d.cx,dz=P.z-d.cz,r=d.open?6:4.5,soldierNear=!d.locked&&enemyCandidatesAt(d.cx,d.cz,4.7).some(u=>(u.t==="soldat"||u.t==="general")&&Math.hypot(u.x-d.cx,u.z-d.cz)<4.5),o=d.alwaysOpen||!d.locked&&(!cv&&dx*dx+dz*dz<r*r||soldierNear);if(!d.open&&o&&!cv&&dx*dx+dz*dz<r*r)window.HUNTER_STEALTH.emit("door",d.cx,(d.y0??hAt(d.cx,d.cz))+1,d.cz);d.open=o;d.m.visible=!o}}function itemMapTexture(kind){const c=document.createElement("canvas");c.width=192;c.height=144;const q=c.getContext("2d");q.fillStyle=kind==="heli"?"#dceff4":kind==="tanc"?"#eadfb9":"#ead59b";q.fillRect(0,0,c.width,c.height);q.strokeStyle="#8f7b52";q.lineWidth=5;q.strokeRect(5,5,c.width-10,c.height-10);q.strokeStyle="#baa36b";q.lineWidth=2;for(let x=30;x<190;x+=32){q.beginPath();q.moveTo(x,7);q.lineTo(x,137);q.stroke()}for(let y=26;y<140;y+=28){q.beginPath();q.moveTo(7,y);q.lineTo(185,y);q.stroke()}q.save();q.translate(96,72);q.strokeStyle="#313a36";q.fillStyle="#596d55";q.lineWidth=6;if(kind==="heli"){q.beginPath();q.ellipse(0,5,32,13,0,0,Math.PI*2);q.fill();q.beginPath();q.moveTo(-55,-13);q.lineTo(55,-13);q.stroke();q.beginPath();q.moveTo(0,-31);q.lineTo(0,22);q.stroke();q.fillRect(28,1,35,7)}else if(kind==="tanc"){q.fillRect(-34,-8,58,24);q.fillRect(-18,-21,29,15);q.beginPath();q.moveTo(10,-14);q.lineTo(48,-14);q.stroke();q.strokeRect(-38,17,67,9)}else{q.fillStyle="#7a4e3d";q.fillRect(-28,-4,56,31);q.fillStyle="#a94338";q.beginPath();q.moveTo(-34,-4);q.lineTo(0,-33);q.lineTo(34,-4);q.closePath();q.fill();q.fillStyle="#ead59b";q.fillRect(-6,12,12,15)}q.restore();const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.needsUpdate=true;return tex}function createItemVisual(t){const g=new THREE.Group,metal=4541262,dark=4010021;if(t==="mapa"||t==="mapa_heli"||t==="mapa_tanc"){const kind=t==="mapa_heli"?"heli":t==="mapa_tanc"?"tanc":"hq",paper=new THREE.Mesh(new THREE.BoxGeometry(1.65,.07,1.25),M(t==="mapa_heli"?14479348:t==="mapa_tanc"?15392697:15390107,"paint"));g.add(paper);const top=new THREE.Mesh(new THREE.PlaneGeometry(1.52,1.12),new THREE.MeshBasicMaterial({map:itemMapTexture(kind),transparent:false}));top.rotation.x=-Math.PI/2;top.position.y=.041;g.add(top)}else if(t==="expl")return window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,false);else if(t==="med"){bx(g,1.35,.7,1,16053488,0,.35,0,"paint");bx(g,1.05,.08,.28,14002806,0,.74,0,"paint");bx(g,.28,.08,.95,14002806,0,.75,0,"paint");for(const x of[-.18,.18])for(const z of[-.18,.18]){const d=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.03,6),M(10187595,"paint"));d.position.set(x,.81,z);g.add(d)}}else if(t==="arma"){bx(g,1.45,.55,1.05,7623993,0,.28,0,"paint");bx(g,1.5,.1,1.1,dark,0,.04,0,"metal");for(const x of[-.48,-.16,.16,.48])for(const z of[-.27,.27]){const bullet=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.48,8),M(13214271,"metal"));bullet.position.set(x,.72,z);g.add(bullet);const tip=new THREE.Mesh(new THREE.ConeGeometry(.08,.16,8),M(12023595,"metal"));tip.position.set(x,1.04,z);g.add(tip)}}else if(t==="bazooka"){const tube=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,2.65,10),M(5793354,"paint"));tube.rotation.z=Math.PI/2;tube.position.set(0,.62,0);g.add(tube);const rear=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.18,10),M(2435879,"metal"));rear.rotation.z=Math.PI/2;rear.position.set(-1.37,.62,0);g.add(rear);const muzzle=new THREE.Mesh(new THREE.CylinderGeometry(.29,.22,.24,10),M(2435879,"metal"));muzzle.rotation.z=Math.PI/2;muzzle.position.set(1.42,.62,0);g.add(muzzle);bx(g,.16,.4,.22,2435879,-.35,.35,0,"metal");bx(g,.12,.2,.3,7568244,.35,.83,0,"metal")}else if(t==="franctirador"){bx(g,.35,.3,2.25,5794394,0,.62,0,"paint");bx(g,.16,.16,1.65,3159862,0,.65,-1.55,"metal");bx(g,.19,.24,.7,8151623,0,.52,.95,"paint");bx(g,.28,.35,.45,8151623,0,.56,1.58,"paint");bx(g,.17,.19,.7,2503214,0,.95,-.18,"metal");bx(g,.15,.16,.3,2503214,0,1.06,-.45,"metal");bx(g,.13,.28,.22,2961965,0,.34,-.08,"metal")}else if(t==="paracaigudes"){const canvas=M(7438953,"paint"),trim=M(5003335,"paint"),straps=M(13219985,"paint"),buckles=M(3423544,"metal");const pack=new THREE.Mesh(new THREE.SphereGeometry(.6,12,9),canvas);pack.scale.set(1.04,1.05,.73);pack.position.y=.66;g.add(pack);const panel=new THREE.Mesh(new THREE.SphereGeometry(.56,10,8),trim);panel.scale.set(.98,1,.21);panel.position.set(0,.65,.42);g.add(panel);const cover=new THREE.Mesh(new THREE.SphereGeometry(.43,10,7),canvas);cover.scale.set(1,.48,.8);cover.position.set(0,1.12,-.12);g.add(cover);const band=(points,mat,r=.055)=>{const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));g.add(new THREE.Mesh(new THREE.TubeGeometry(curve,12,r,6,false),mat))};for(const side of[-1,1]){band([[side*.37,1.11,.37],[side*.43,.93,.53],[side*.42,.5,.56],[side*.32,.2,.4]],straps,.07);band([[side*.53,.94,-.08],[side*.64,.7,-.14],[side*.53,.33,-.18],[side*.36,.22,.16]],straps,.045);bx(g,.16,.095,.1,12961717,side*.4,.48,.58,"metal");bx(g,.095,.05,.13,3754045,side*.4,.48,.65,"metal")}band([[-.47,.65,-.36],[-.23,.62,-.48],[.23,.62,-.48],[.47,.65,-.36]],straps,.06);bx(g,.55,.16,.12,5859922,0,.31,-.42,"paint");bx(g,.23,.14,.16,3423544,0,.31,-.51,"metal");band([[-.18,1.15,.24],[-.18,1.37,.2],[.18,1.37,.2],[.18,1.15,.24]],buckles,.045)}else if(t==="cisalla"){const cutter=window.HUNTER_BOLT_CUTTERS.create(THREE);cutter.rotation.z=Math.PI/2;cutter.position.y=.66;cutter.scale.setScalar(1.12);g.add(cutter)}else if(t==="granada"){for(const[x,z]of[[-.35,-.24],[0,-.24],[.35,-.24],[-.18,.22],[.18,.22]]){const body=new THREE.Mesh(new THREE.SphereGeometry(.17,8,6),M(4872258,"metal"));body.scale.set(.88,1.08,.88);body.position.set(x,.42,z);g.add(body);bx(g,.07,.12,.07,2435879,x,.61,z,"metal")}}else if(t==="disf"){bx(g,.78,1.3,.16,11874866,0,.8,0,"paint");const l=bx(g,.7,.38,.16,11874866,-.62,1.18,0,"paint"),r=bx(g,.7,.38,.16,11874866,.62,1.18,0,"paint");l.rotation.z=-.55;r.rotation.z=.55;bx(g,.16,.18,.18,15845281,0,1.44,0,"organic");bx(g,.08,1.05,.19,7282463,0,.75,-.02,"paint")}else bx(g,...IT[t].s,IT[t].c,0,.4,0,"paint");return g}const LOOT_MAPS=new Set(["mapa","mapa_heli","mapa_tanc"]);const LOOT_WEAPONS=new Set(["bazooka","franctirador","granada","expl"]);function itemInsideHangar(x,z){return B.some(b=>b.hangar&&Math.abs(x-b.x)<b.w/2&&Math.abs(z-b.z)<b.d/2)}function lootAllowed(t,b=null,x=null,z=null,compound=null){if(b?.hangar)return false;if(x!=null&&z!=null&&itemInsideHangar(x,z))return false;const complex=compound||b?.compound;if(complex==="polvori"&&LOOT_MAPS.has(t))return false;if(complex==="hangar"&&LOOT_WEAPONS.has(t))return false;return true}const MAX_BUILDING_ITEMS=3;function itemBuildingAt(x,z){return B.find(b=>{const p=buildingLocalPoint(b,x,z);return Math.abs(p.x)<(b.localW||b.w)/2-.55&&Math.abs(p.z)<(b.localD||b.d)/2-.55})||null}const buildingItemCount=b=>items.reduce((n,it)=>n+(it.building===b?1:0),0);function itemHeightInBuilding(b,x,z){if(!b)return hAt(x,z)+1.3;const n=buildingItemCount(b),firstUpper=Math.floor(Math.abs(b.x*1.341+b.z*1.733))%2,upstairs=b.floors===2&&!b.rb&&!!b.interiorStair&&!stairContains(b.interiorStair,x,z,.6)&&(n+firstUpper)%2===1;return b.fy+(upstairs?b.storey:0)+1.3}function canPlaceItem(t,b,compound){if(b&&buildingItemCount(b)>=MAX_BUILDING_ITEMS)return false;if(t==="med"&&(compound==="base"||b?.compound==="base")&&items.some(it=>it.t==="med"&&it.compound==="base"))return false;return true}function addItemAt(t,x,z,compound=null){const b=itemBuildingAt(x,z);if(!lootAllowed(t,b,x,z,compound)||!canPlaceItem(t,b,compound))return null;const y=itemHeightInBuilding(b,x,z),o=seedSearchMode?null:createItemVisual(t);if(o){o.position.set(x,y,z);world.add(o)}const item={t:t,x:x,z:z,y:y,o:o,building:b,compound:compound||b?.compound||null};items.push(item);return o||item}function addIt(t,b){if(!IT[t]){console.warn("Tipus d\u2019objecte desconegut:",t);return null}if(!lootAllowed(t,b)||!canPlaceItem(t,b,b?.compound))return null;let x,z,found=false;const width=b.localW||b.w,depth=b.localD||b.d;for(let k=0;k<35;k++){const lx=rr(-(width/2-2),width/2-2),lz=rr(-(depth/2-2),depth/2-2),point=buildingWorldPoint(b,lx,lz);x=point.x;z=point.z;if(!itemInsideHangar(x,z)&&!Wl.some(w=>!w.open&&w.playerBlock!==false&&x>w.x0-.9&&x<w.x1+.9&&z>w.z0-.9&&z<w.z1+.9)&&!(b.interiorStair&&stairContains(b.interiorStair,x,z,.75))){found=true;break}}if(!found||!lootAllowed(t,b,x,z))return null;const y=itemHeightInBuilding(b,x,z),o=seedSearchMode?null:createItemVisual(t);if(o){o.position.set(x,y,z);world.add(o)}const item={t:t,x:x,z:z,y:y,o:o,building:b,compound:b.compound||null};items.push(item);return o||item}function flag(x,z,c){if(!seedSearchMode)world.add(buildingVisual.createFlag({x:x,y:hAt(x,z),z:z,color:c}))}const bx=(g,w,h,d,c,x,y,z,profile="organic")=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c,profile));m.position.set(x,y,z);g.add(m);return m};const buildingVisual=window.HUNTER_BUILDINGS.create(THREE,{material:M,materialProfile:materialProfile,box:bx});const pl=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});scene.add(pl);const animPl=(f,dt,running=false,strafe=0)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{forward:f,strafe:strafe,dt:dt,running:running,crouching:playerCrouched&&!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive,swimming:swimming,inVehicle:!!cv,ammo:ammo,bazookaEquipped:bazookaEquipped,grenadeEquipped:grenadeEquipped,cisallaEquipped:cisallaEquipped,sniperEquipped:sniperEquipped,grenadeChargePower:grenadeCharge?Math.min(1,grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS):0,airborne:!!playerFall,parachuting:!!playerFall?.parachute});const VT=window.HUNTER_VEHICLE_DYNAMICS.types;const VS=window.HUNTER_VEHICLES.scales;const helicopterLandedAltitude=(v,surfaceY)=>surfaceY-(v.o?.userData?.skidContactHeight||0)+.1;const vehicleRadius=t=>{const type=t==="patrulla_marina"?"llanxa":t==="jeep"?"cotxe":t;return window.HUNTER_VEHICLES.radii[type]*VS[type]};const VHB=window.HUNTER_VEHICLES.hitboxes;const vehicleHitType=t=>t==="jeep"?"cotxe":t==="patrulla_marina"?"llanxa":t;const vehicleBox=(v,x=v.x,z=v.z,hd=v.hd)=>{const t=vehicleHitType(v.t),hb=VHB[t]||[vehicleRadius(t)*1.25,vehicleRadius(t)*1.6],sc=VS[t]||1;return{x:x,z:z,hd:hd,w:hb[0]*sc,d:hb[1]*sc,v:v}};function fenceVehicleContact(w,box){if(!w.barbed||!Number.isFinite(w.ax)||!Number.isFinite(w.bx))return null;const s=Math.sin(box.hd),c=Math.cos(box.hd),local=(x,z)=>{const dx=x-box.x,dz=z-box.z;return{x:dx*c-dz*s,z:dx*s+dz*c}},a=local(w.ax,w.az),b=local(w.bx,w.bz),dx=b.x-a.x,dz=b.z-a.z,hw=box.w/2+.3,hd=box.d/2+.3,p=[-dx,dx,-dz,dz],q=[a.x+hw,hw-a.x,a.z+hd,hd-a.z];let enter=0,leave=1;for(let i=0;i<4;i++){if(Math.abs(p[i])<1e-9){if(q[i]<0)return null;continue}const t=q[i]/p[i];if(p[i]<0)enter=Math.max(enter,t);else leave=Math.min(leave,t);if(enter>leave)return null}const travel=box.v?.v<0?-1:1,nose=local(box.x-Math.sin(box.hd)*travel*box.d/2,box.z-Math.cos(box.hd)*travel*box.d/2),d2=dx*dx+dz*dz,t=d2>1e-9?Math.max(enter,Math.min(leave,((nose.x-a.x)*dx+(nose.z-a.z)*dz)/d2)):enter;return{x:w.ax+(w.bx-w.ax)*t,z:w.az+(w.bz-w.az)*t}}const obbAxes=b=>{const s=Math.sin(b.hd),c=Math.cos(b.hd);return[{x:c,z:-s},{x:s,z:c}]};const obbOverlap=(a,b)=>{const A=obbAxes(a),B=obbAxes(b),dx=b.x-a.x,dz=b.z-a.z,axes=[...A,...B];for(const ax of axes){const dist=Math.abs(dx*ax.x+dz*ax.z),ra=Math.abs(A[0].x*ax.x+A[0].z*ax.z)*a.w/2+Math.abs(A[1].x*ax.x+A[1].z*ax.z)*a.d/2,rb=Math.abs(B[0].x*ax.x+B[0].z*ax.z)*b.w/2+Math.abs(B[1].x*ax.x+B[1].z*ax.z)*b.d/2;if(dist>ra+rb)return false}return true};const circleVehicleOverlap=(x,z,r,v)=>{const b=vehicleBox(v),dx=x-b.x,dz=z-b.z,s=Math.sin(b.hd),c=Math.cos(b.hd),lx=dx*c-dz*s,lz=dx*s+dz*c,cx=Math.max(-b.w/2,Math.min(b.w/2,lx)),cz=Math.max(-b.d/2,Math.min(b.d/2,lz)),ex=lx-cx,ez=lz-cz;return ex*ex+ez*ez<r*r};const vehicleY=v=>v.alt!=null&&VT[vehicleHitType(v.t)]?.m==="a"?v.alt:v.o?.position?.y??Math.max(0,hAt(v.x,v.z));const vehicleHeightCompatible=(a,b)=>Math.abs(vehicleY(a)-vehicleY(b))<Math.max(2.2,Math.min(vehicleRadius(vehicleHitType(a.t)),vehicleRadius(vehicleHitType(b.t)))*.55);const VEHICLE_CELL=64,vehicleGrid=new Map,playerVehicleGrid=new Map,enemyGrid=new Map,vehicleCellKey=(cx,cz)=>cx+","+cz;let vehicleGridVSource=null,vehicleGridESource=null;const addVehicleToGrid=(grid,v)=>{const key=vehicleCellKey(Math.floor(v.x/VEHICLE_CELL),Math.floor(v.z/VEHICLE_CELL)),bucket=grid.get(key);if(bucket)bucket.push(v);else grid.set(key,[v])};function rebuildVehicleGrid(){vehicleGrid.clear();playerVehicleGrid.clear();enemyGrid.clear();vehicleGridVSource=V;vehicleGridESource=E;for(const v of V)if(!v.destroyed){addVehicleToGrid(vehicleGrid,v);addVehicleToGrid(playerVehicleGrid,v)}for(const u of E)if(!u.destroyed){addVehicleToGrid(enemyGrid,u);if(u.t==="jeep"||u.t==="tanqueta"||u.t==="tanc"||u.t==="patrulla_marina")addVehicleToGrid(vehicleGrid,u)}}function gridCandidatesAt(grid,x,z,r=24){const out=[],minX=Math.floor((x-r)/VEHICLE_CELL),maxX=Math.floor((x+r)/VEHICLE_CELL),minZ=Math.floor((z-r)/VEHICLE_CELL),maxZ=Math.floor((z+r)/VEHICLE_CELL);for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){const b=grid.get(vehicleCellKey(cx,cz));if(b)for(const v of b)out.push(v)}return out}function vehicleCandidatesAt(x,z,r=24,playersOnly=false){if(vehicleGridVSource!==V||vehicleGridESource!==E)rebuildVehicleGrid();return gridCandidatesAt(playersOnly?playerVehicleGrid:vehicleGrid,x,z,r)}function enemyCandidatesAt(x,z,r=24){if(vehicleGridVSource!==V||vehicleGridESource!==E)rebuildVehicleGrid();return gridCandidatesAt(enemyGrid,x,z,r)}const vehicleObstacles=v=>vehicleCandidatesAt(v.x,v.z,32,false).filter(o=>o!==v&&!o.destroyed);const mkV=window.HUNTER_VEHICLES.createFactory(THREE,{box:bx,material:M,shadows:visualQuality.shadows});function seedVehicleStub(t){const g=new THREE.Group;g.userData.skidContactHeight=t==="heli"||t==="heli_combat"?(.48-.075)*VS[t]:0;return g}const riderSystem=window.HUNTER_RIDER.create(THREE,{scene:scene,box:bx,material:M,scales:VS,heightAt:hAt,shadows:visualQuality.shadows});const rider=riderSystem.object,poseRider=riderSystem.update;let swimming=false;let V=[],cv=null;const P={x:0,z:0,y:0,hd:0};function optionalLineClear(from,to,ignoreWall=null){return!blastOccluded(from.x,from.y,from.z,to.x,to.y,to.z,ignoreWall)}function optionalCivilianCanMove(from,to,radius){if(Math.abs(to.x)>H-2||Math.abs(to.z)>H-2||hAt(to.x,to.z)<.12||Math.abs(to.y-from.y)>.65||treeHit(to.x,to.z,radius))return false;const reach=Math.hypot(to.x-from.x,to.z-from.z)/2+radius;for(const wall of wallCandidates((from.x+to.x)/2,(from.z+to.z)/2,reach)){if(wall.open||wall.hp<=0||wall.y1<Math.min(from.y,to.y)+.15||wall.y0>Math.max(from.y,to.y)+1.8)continue;if(segmentAabbT(from.x,from.y+.9,from.z,to.x,to.y+.9,to.z,wall.x0-radius,wall.x1+radius,wall.y0,wall.y1,wall.z0-radius,wall.z1+radius)!==null)return false}return!vehicleCandidatesAt(to.x,to.z,24,true).some(v=>!v.destroyed&&Math.abs(vehicleY(v)-to.y)<3&&circleVehicleOverlap(to.x,to.z,radius,v))}const optionalNotify=text=>{msg=text;msgT=3};const prisonerSystem=window.HUNTER_PRISONERS.create({THREE:THREE,box:bx,material:M,heightAt:(x,z)=>hAt(x,z),canMove:optionalCivilianCanMove,clearLine:optionalLineClear,notify:optionalNotify,sound:snd,vehicleRadius:vehicleRadius,vehicleName:v=>VT[v.t]?.n||v.t});const radioRelay=window.HUNTER_RADIO_RELAY.create({THREE:THREE,box:bx,material:M,heightAt:(x,z)=>hAt(x,z),clearLine:optionalLineClear,notify:optionalNotify,sound:snd,registerCollider:collider=>{Wl.push(collider);wallGridCount=-1},unregisterCollider:collider=>{const index=Wl.indexOf(collider);if(index>=0)Wl.splice(index,1);wallGridCount=-1},onAlert:(unit,position)=>{if(!E.includes(unit)||unit.hp<=0||unit.canSee)return;releaseSoldierReservation(unit);releaseSoldierEntry(unit);unit.aiMode="investigate";unit.tacticGoal=null;unit.tacticT=0;unit.lastSeenX=position.x;unit.lastSeenY=position.y;unit.lastSeenZ=position.z;unit.searchT=(position.duration||30)+Math.hypot(position.x-unit.x,position.z-unit.z)/Math.max(1,unit.sp*.65);unit.alert=Math.max(unit.alert||0,position.duration||30)}});function optionalContext(active=!!started&&!paused&&!over&&simulationFocused&&!document.hidden&&!generationPromise){return{player:P,vehicle:cv,vehicles:V,enemies:E,active:active,canInteract:!playerFall&&!playerEject&&!swimming&&!scopeActive,visualRange:scopeActive?3500:400}}function resetOptionalSystems(){window.HUNTER_REQUIRED_WORLD_FEATURES=null;prisonerSystem.reset();radioRelay.reset()}function configureOptionalWorld(){const compounds=world?.userData?.compounds||[];prisonerSystem.configure({world:world,camp:world?.userData?.prisonCamp||compounds.find(c=>c.id==="prison-camp"),base:P.base,logicalOnly:seedSearchMode});radioRelay.configure({world:world,compounds:compounds,logicalOnly:seedSearchMode})}function validateRequiredWorldFeatures(){const camps=(world?.userData?.compounds||[]).filter(c=>c.id==="prison-camp"),prisoners=prisonerSystem.entities,mechanics=prisoners.filter(u=>u.role==="mechanic"),farmers=prisoners.filter(u=>u.role==="farmer");if(camps.length!==1||world.userData.prisonCamp!==camps[0]||!Number.isFinite(camps[0].x)||!Number.isFinite(camps[0].z)||prisoners.length!==5||mechanics.length!==1||farmers.length!==4||prisoners.some(u=>!Number.isFinite(u.hp)||u.hp<=0||!Number.isFinite(u.x)||!Number.isFinite(u.y)||!Number.isFinite(u.z)||u.y<=0||!seedSearchMode&&u.o?.parent!==world)){throw new Error("M\xf3n incomplet: cal un camp de presoners amb quatre camperols i un mec\xe0nic. Llavor "+(seed>>>0))}window.HUNTER_REQUIRED_WORLD_FEATURES=Object.freeze({seed:seed>>>0,mapScale:MAP_SCALE,prisonCamps:1,farmers:4,mechanics:1,status:"validated"})}function updateOptionalSystems(dt,active){const context=optionalContext(active);prisonerSystem.update(dt,context);radioRelay.update(dt,context)}function getOptionalAction(){const context=optionalContext();if(!context.active||!context.canInteract||cv)return null;const prisonerAction=prisonerSystem.getAction(context);if(prisonerAction?.kind==="mechanicFollow"&&nearV())return radioRelay.getAction(context);return prisonerAction||radioRelay.getAction(context)}function performOptionalAction(){const action=getOptionalAction();if(!action)return false;const context=optionalContext();return action.kind==="sabotage"?radioRelay.interact(action,context):prisonerSystem.interact(action,context)}function optionalMapMarkers(){return[...radioRelay.markers(),...prisonerSystem.markers()]}const FERRY_DECK=window.HUNTER_VEHICLES.decks?.ferry;const wrapAngle=a=>Math.atan2(Math.sin(a),Math.cos(a));const ferryLocal=(f,x,z)=>{const dx=x-f.x,dz=z-f.z,s=Math.sin(f.hd),co=Math.cos(f.hd);return{x:dx*co-dz*s,z:dx*s+dz*co}};const ferryWorld=(f,lx,lz)=>{const s=Math.sin(f.hd),co=Math.cos(f.hd);return{x:f.x+lx*co+lz*s,z:f.z-lx*s+lz*co}};const ferryCabinContains=(lx,lz,margin=0)=>{const c=FERRY_DECK?.cabin;return!!c&&Math.abs(lx-c.x)<c.halfW+margin&&Math.abs(lz-c.z)<c.halfL+margin};const ferryWalkable=(lx,lz,margin=0)=>{if(!FERRY_DECK)return false;const d=FERRY_DECK,sc=VS.ferry||1,ax=Math.abs(lx),az=Math.abs(lz);return ax+margin<=(az+margin<=d.halfL*sc?d.halfW:d.rampHalfW)*sc&&az+margin<=(d.halfL+d.ramp)*sc};function ferryCabinVehicleHit(f,box){const c=FERRY_DECK?.cabin;if(!c)return false;const p=ferryWorld(f,c.x*(VS.ferry||1),c.z*(VS.ferry||1));return obbOverlap(box,{...p,hd:f.hd,w:c.halfW*2*(VS.ferry||1),d:c.halfL*2*(VS.ferry||1)})}function ferryCabinPushPlayer(){const deck=pedestrianFerry(P.x,P.z,P.y),c=FERRY_DECK?.cabin;if(!deck||!c||!ferryCabinContains(deck.q.x,deck.q.z,.62))return;const q=deck.q,m=.65,dx=deck.q.x-c.x,dz=deck.q.z-c.z,ex=c.halfW+m-Math.abs(dx),ez=c.halfL+m-Math.abs(dz);if(ex<ez)q.x=c.x+(dx<0?-1:1)*(c.halfW+m);else q.z=c.z+(dz<0?-1:1)*(c.halfL+m);const p=ferryWorld(deck.f,q.x,q.z);P.x=p.x;P.z=p.z}const ferryLocalSurfaceY=(f,lz)=>{const sc=VS.ferry||1,d=FERRY_DECK;if(!d)return f.o.position.y;const az=Math.abs(lz),deck=d.y*sc,edge=d.halfL*sc,ramp=d.ramp*sc;if(az<=edge)return f.o.position.y+deck;const q=Math.max(0,Math.min(1,(az-edge)/Math.max(.01,ramp)));return f.o.position.y+(deck+(d.rampY*sc-deck)*q)};function ferryForVehicle(v,x=v.x,z=v.z,includeRamp=true){if(!FERRY_DECK||v.t==="ferry")return null;const hb=vehicleBox(v,x,z,v.hd),sc=VS.ferry||1;for(const f of V){if(f===v||f.destroyed||f.t!=="ferry")continue;const q=ferryLocal(f,x,z),fw=FERRY_DECK.halfW*sc,fl=FERRY_DECK.halfL*sc,r=includeRamp?FERRY_DECK.ramp*sc:0,rel=wrapAngle(v.hd-f.hd),ca=Math.abs(Math.cos(rel)),sa=Math.abs(Math.sin(rel)),ex=ca*hb.w*.5+sa*hb.d*.5,ez=sa*hb.w*.5+ca*hb.d*.5;const ax=Math.abs(q.x),az=Math.abs(q.z),rampHalf=FERRY_DECK.rampHalfW*sc;if(ax+ex>fw-.18)continue;if(az+ez<=fl)return f;if(includeRamp&&az-ez<=fl+r+.65&&az<=fl+r+ez+.65&&ax+ex<=rampHalf+.45)return f}return null}function attachToFerry(v,f){if(!f||f.destroyed){v.carrier=null;return}const q=ferryLocal(f,v.x,v.z);v.carrier=f;v.carrierLX=q.x;v.carrierLZ=q.z;v.carrierHD=wrapAngle(v.hd-f.hd)}function detachFromFerry(v){v.carrier=null;delete v.carrierLX;delete v.carrierLZ;delete v.carrierHD}function syncFerryCargo(){if(!FERRY_DECK)return;for(const v of V){const f=v.carrier;if(!f)continue;if(f.destroyed||v.destroyed){detachFromFerry(v);continue}const p=ferryWorld(f,v.carrierLX||0,v.carrierLZ||0);v.x=p.x;v.z=p.z;v.hd=wrapAngle(f.hd+(v.carrierHD||0));if(VT[v.t]?.m==="a")v.alt=helicopterLandedAltitude(v,ferryLocalSurfaceY(f,v.carrierLZ||0))}}const setPatrol=(u,pts,guard=false)=>{if(!u)return u;u.patrol=pts.map(([x,z])=>({x:x,z:z}));u.pi=-1;u.guard=guard;u.wt=0;return u};const setDefense=(u,pts)=>{if(!u)return u;u.defense=pts.map(([x,z])=>({x:x,z:z}));u.defenseTarget=null;return u};const chooseDefense=(u,q)=>{if(!u.defense||!u.defense.length)return null;let best=null,score=1e9;for(const p of u.defense){if(hAt(p.x,p.z)<-.5||treeHit(p.x,p.z,1))continue;const du=Math.hypot(p.x-u.x,p.z-u.z),dq=Math.hypot(p.x-q.x,p.z-q.z),sc=du+dq*.08;if(sc<score&&sight(p.x,p.z,q.x,q.z,hAt(p.x,p.z)+1.7)){score=sc;best=p}}return best};const wireRod=(a,b,r=.045,c=4014403)=>{const v=new THREE.Vector3(...a),w=new THREE.Vector3(...b),d=w.clone().sub(v),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),6),M(c,"metal"));m.position.copy(v.add(w).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());world.add(m);return m};const fenceMaterial=new THREE.MeshLambertMaterial({color:16777215,vertexColors:true,flatShading:true});const fencePostTemplate=new THREE.CylinderGeometry(.12,.16,1,6).toNonIndexed();const fenceWireTemplate=new THREE.CylinderGeometry(1,1,1,6).toNonIndexed();const fenceUp=new THREE.Vector3(0,1,0);function barbedSection(x1,z1,x2,z2){if(seedSearchMode){const y1=Math.max(hAt(x1,z1),0),y2=Math.max(hAt(x2,z2),0),pad=.24;const w={x0:Math.min(x1,x2)-pad,x1:Math.max(x1,x2)+pad,z0:Math.min(z1,z2)-pad,z1:Math.max(z1,z2)+pad,y0:Math.min(y1,y2),y1:Math.max(y1,y2)+5,hp:8,door:false,open:false,barbed:true,rammable:true,ax:x1,az:z1,bx:x2,bz:z2,cx:(x1+x2)/2,cz:(z1+z2)/2};Wl.push(w);wallGridCount=-1;return w}const y1=Math.max(hAt(x1,z1),0),y2=Math.max(hAt(x2,z2),0),dx=x2-x1,dz=z2-z1,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L,px=-uz,pz=ux,Hw=4.9,cx=(x1+x2)/2,cz=(z1+z2)/2,parts=[];const posA=new THREE.Vector3,posB=new THREE.Vector3,direction=new THREE.Vector3,center=new THREE.Vector3,rotation=new THREE.Quaternion,size=new THREE.Vector3,transform=new THREE.Matrix4;const items=[];const addCylinder=(ax,ay,az,bx,by,bz,r,color,post=false)=>{posA.set(ax,ay,az);posB.set(bx,by,bz);direction.subVectors(posB,posA);const len=direction.length();if(len<.001)return;center.copy(posA).add(posB).multiplyScalar(.5);rotation.setFromUnitVectors(fenceUp,direction.multiplyScalar(1/len));size.set(post?1:r,len,post?1:r);transform.compose(center,rotation,size);items.push({geo:post?fencePostTemplate:fenceWireTemplate,matrix:transform.clone(),color:new THREE.Color(color)})};for(const[x,z,y]of[[x1,z1,y1],[x2,z2,y2]])addCylinder(x,y,z,x,y+Hw,z,1,4869970,true);for(const h of[.55,1.55,2.55,3.55,4.35])addCylinder(x1,y1+h,z1,x2,y2+h,z2,.028,3159610);for(const[a,b]of[[.6,2.5],[2.5,4.35],[4.35,2.5],[2.5,.6]])addCylinder(x1,y1+a,z1,x2,y2+b,z2,.024,3488574);for(let n=0;n<4;n++){const a=(n+.12)/4,b=(n+.88)/4,xa=x1+dx*a,za=z1+dz*a,xb=x1+dx*b,zb=z1+dz*b,ya=Math.max(hAt(xa,za),0)+4.72,yb=Math.max(hAt(xb,zb),0)+4.72,side=n%2?-.22:.22;addCylinder(xa+px*side,ya,za+pz*side,xb-px*side,yb,zb-pz*side,.024,2699058)}const vertices=items.reduce((sum,item)=>sum+item.geo.attributes.position.count,0),positions=new Float32Array(vertices*3),normals=new Float32Array(vertices*3),colors=new Float32Array(vertices*3);const p=new THREE.Vector3,normal=new THREE.Vector3,normalMatrix=new THREE.Matrix3;let offset=0;for(const{geo:geo,matrix:matrix,color:color}of items){const srcPos=geo.attributes.position,srcNorm=geo.attributes.normal;normalMatrix.getNormalMatrix(matrix);for(let v=0;v<srcPos.count;v++){const at=(offset+v)*3;p.fromBufferAttribute(srcPos,v).applyMatrix4(matrix);normal.fromBufferAttribute(srcNorm,v).applyMatrix3(normalMatrix).normalize();positions[at]=p.x-cx;positions[at+1]=p.y;positions[at+2]=p.z-cz;normals[at]=normal.x;normals[at+1]=normal.y;normals[at+2]=normal.z;colors[at]=color.r;colors[at+1]=color.g;colors[at+2]=color.b}offset+=srcPos.count}const geometry=new THREE.BufferGeometry;geometry.setAttribute("position",new THREE.BufferAttribute(positions,3));geometry.setAttribute("normal",new THREE.BufferAttribute(normals,3));geometry.setAttribute("color",new THREE.BufferAttribute(colors,3));geometry.computeBoundingSphere();const mesh=new THREE.Mesh(geometry,fenceMaterial);mesh.name="hunter-fence-section";mesh.position.set(cx,0,cz);mesh.castShadow=false;mesh.receiveShadow=false;mesh.userData.noCastShadow=true;mesh.userData.noReceiveShadow=true;world.add(mesh);parts.push(mesh);const pad=.24,w={x0:Math.min(x1,x2)-pad,x1:Math.max(x1,x2)+pad,z0:Math.min(z1,z2)-pad,z1:Math.max(z1,z2)+pad,y0:Math.min(y1,y2),y1:Math.max(y1,y2)+5,hp:8,m:mesh,parts:parts,door:false,open:false,barbed:true,rammable:true,ax:x1,az:z1,bx:x2,bz:z2,cx:cx,cz:cz};Wl.push(w);wallGridCount=-1;return w}const barbedSegment=(x1,z1,x2,z2)=>{const L=Math.hypot(x2-x1,z2-z1),n=Math.max(1,Math.ceil(L/6));for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n;barbedSection(x1+(x2-x1)*a,z1+(z2-z1)*a,x1+(x2-x1)*b,z1+(z2-z1)*b)}};const barbedHQ=(cx,cz,hw=50,hd=46,gap=13,gateOffset=0)=>{const n=cz-hd,s=cz+hd,w=cx-hw,e=cx+hw,gx=Math.max(w+gap,Math.min(e-gap,cx+gateOffset));barbedSegment(w,n,e,n);barbedSegment(w,n,w,s);barbedSegment(e,n,e,s);barbedSegment(w,s,gx-gap/2,s);barbedSegment(gx+gap/2,s,e,s);compoundClear.push({x:cx,z:cz,r:Math.hypot(hw,hd)*1.02})};const mc=document.getElementById("mm");const minimap=window.HUNTER_MINIMAP.create({THREE:THREE,canvas:mc,worldSize:S,halfSize:H,heightAt:hAt,colorAt:window.HUNTER_TERRAIN.colorAt,getState:()=>({base:P.base,hq:HQ,mapKnown:hqMapKnown||!!inv.mapa,current:cv||P,currentVehicle:cv,vehicles:V,enemies:E,log:logb,intel:intelMarks,opportunities:optionalMapMarkers()})});window.HUNTER_MINIMAP_STATS=minimap.stats;const mini=()=>minimap.draw();let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0,worldVisualTick=0,palmVisualTick=0;const simulationClock=window.HUNTER_SIMULATION_CLOCK.create(),cinematicClock=window.HUNTER_SIMULATION_CLOCK.create();const stealthFeedback=window.HUNTER_STEALTH_FEEDBACK.create(THREE);window.HUNTER_STEALTH_FEEDBACK_STATS=stealthFeedback.stats;let simulationFrameActive=false,simulationFocused=true;function resetSimulationClock(now=performance.now()){if(now===null)audioReset();simulationClock.reset(now);cinematicClock.reset(now);combatFeedback?.clear();stealthFeedback.reset();resetSoldierCoordination()}window.HUNTER_SIMULATION_STATS={gameplay:simulationClock.stats,cinematic:cinematicClock.stats};const vehicleLook=window.HUNTER_CAMERA_CONTROLS.createVehicleLook(),cameraOcclusion=window.HUNTER_CAMERA_CONTROLS.createOcclusion();let drag=null,cameraVehicle=null,cameraBasement=null;function restoreCameraWalls(){cameraOcclusion.restore();if(activeBunker?.basement)activeBunker.basement.cameraHiddenWalls.length=0}function cancelCameraDrag(){const id=drag?.id;drag=null;if(id==null)return;try{if(ren.domElement.hasPointerCapture(id))ren.domElement.releasePointerCapture(id)}catch{}}function resetCameraState(){cancelCameraDrag();vehicleLook.reset();cameraVehicle=cv;restoreCameraWalls()}function syncCameraVehicle(){if(cameraVehicle!==cv)resetCameraState()}const LOD_NEAR2=500*500,LOD_MID2=1200*1200,ITEM_ANIM2=500*500,FAUNA_NEAR2=650*650,FAUNA_MID2=1400*1400;const VISUAL_RANGES={desktop:{buildings:1650,fences:1020,props:1300,vehicles:2080,enemies:1850,items:1e3,fauna:1350,antennas:1750},mobile:{buildings:980,fences:580,props:750,vehicles:1200,enemies:1050,items:620,fauna:790,antennas:1100},ultra:{buildings:650,fences:400,props:540,vehicles:780,enemies:700,items:450,fauna:530,antennas:770}}[qualityName]||{buildings:1200,fences:790,props:990,vehicles:1620,enemies:1410,items:800,fauna:1100,antennas:1360};const visibilityStats={buildings:0,fences:0,props:0,vehicles:0,enemies:0,items:0,fauna:0,antennas:0,terrainOccluded:0};const enemyLodStats={full:0,mid:0,far:0,hidden:0,vehicleFull:0};const ENEMY_LOD_RANGES={desktop:{full:310,mid:860},mobile:{full:185,mid:470},ultra:{full:135,mid:305}}[qualityName]||{full:240,mid:660};window.HUNTER_ENEMY_LOD_STATS=enemyLodStats;window.HUNTER_VISIBILITY_STATS=visibilityStats;let staticVisualBatches=[];const renderCategories={terreny:0,edificis:0,filferrades:0,vehicles:0,enemics:0,vegetacio:0,decoracio:0,objectes:0,fauna:0,altres:0};window.HUNTER_DRAW_CALL_GROUPS=renderCategories;adaptivePerformance.stats.drawCategories=renderCategories;const registeredDrawHooks=new WeakMap;function registerDrawCategories(){const steps=registerDrawCategoriesSteps(false);while(!steps.next().done){}}function*registerDrawCategoriesSteps(progressive=true){const tagged=new Map;for(const b of B)tagged.set(b.o,"edificis");for(const v of V)tagged.set(v.o,"vehicles");for(const e of E)if(e.o)tagged.set(e.o,"enemics");for(const f of fa)if(f.o)tagged.set(f.o,"fauna");for(const item of items)tagged.set(item.o,"objectes");if(PM.trunk)tagged.set(PM.trunk,"vegetacio");if(terrainStream?.mesh)tagged.set(terrainStream.mesh,"terreny");tagged.set(pl,"altres");function track(mesh){if(!mesh.isMesh)return;const installed=registeredDrawHooks.get(mesh);if(!performanceStatsVisible){if(installed)mesh.onBeforeRender=installed.previous;return}let label="altres";if(mesh.userData.terrainTile)label="terreny";else if(mesh.name==="hunter-fence-section")label="filferrades";else if(mesh.name==="hunter-static-decor-batch")label="decoracio";else{let root=mesh;while(root){if(tagged.has(root)){label=tagged.get(root);break}root=root.parent}if(label==="altres"&&(mesh.parent?.name==="hunter-bush-sectors"||mesh.parent?.name==="hunter-rock-sectors"))label="vegetacio"}const existing=registeredDrawHooks.get(mesh);if(existing){existing.label=label;mesh.onBeforeRender=existing.wrapper;return}const previous=mesh.onBeforeRender;const entry={label:label,previous:previous};mesh.onBeforeRender=function(...args){renderCategories[entry.label]++;if(previous)return previous.apply(this,args)};entry.wrapper=mesh.onBeforeRender;registeredDrawHooks.set(mesh,entry)}if(progressive)yield*traverseGenerationSteps(world,track,"Preparant el render");else world.traverse(track);pl.traverse(track)}function terrainConcealsBuilding(b,dist){if(dist<340)return false;const fromY=Math.max(P.y+3,cam.position.y),toY=b.fy+b.h+5;let covered=0;for(const t of[.3,.52,.74]){const x=P.x+(b.x-P.x)*t,z=P.z+(b.z-P.z)*t,line=fromY+(toY-fromY)*t;if(hAt(x,z)>line+9)covered++}return covered>=2}function isInsideVisibleBuilding(b){if(b?.basement&&!cv&&P.y<b.fy-3.9){const local=buildingLocalPoint(b,P.x,P.z);if(Math.abs(local.x)<b.basement.halfX&&Math.abs(local.z)<b.basement.halfZ)return true}if(b===ib)return true;if(!b.hangar||!cv||cv.destroyed)return false;const y=VT[cv.t]?.m==="a"?cv.alt??cv.o?.position?.y:cv.o?.position?.y??cv.alt;return Math.abs(cv.x-b.x)<b.w/2&&Math.abs(cv.z-b.z)<b.d/2&&y!=null&&y>=b.fy-2&&y<b.fy+b.h+2}function currentSniperFocus(){return scopeActive?window.HUNTER_SCOPE_FOCUS.create(P.x,P.y+1.76,P.z,scopeYaw,scopePitch):null}function updateDistanceVisibility(){const max=VISUAL_RANGES,focus=currentSniperFocus();for(const k of Object.keys(visibilityStats))visibilityStats[k]=0;for(const b of B){const dx=b.x-P.x,dz=b.z-P.z,d2=dx*dx+dz*dz,inside=isInsideVisibleBuilding(b),close=inside||d2<(max.buildings+b.hw)*(max.buildings+b.hw)||!!focus?.contains(b.x,b.fy+b.h*.5,b.z,Math.max(b.hw,b.h*.5)),obscured=close&&!inside&&terrainConcealsBuilding(b,Math.sqrt(d2));b.o.visible=close&&!obscured;const basementView=!!b.basement&&inside&&P.y<b.fy-1;b.roof.visible=(!inside||basementView)&&b.rhp>0;for(const r of b.extraRoofs||[])r.visible=b.roof.visible;if(b.upperFloor)b.upperFloor.visible=!b.rb&&(!inside||P.y>=b.fy+b.storey-.6);b.wm.opacity=b.dm.opacity=1;b.wm.depthWrite=b.dm.depthWrite=true;if(!b.o.visible)visibilityStats.buildings++;if(obscured)visibilityStats.terrainOccluded++}for(const w of Wl){if(!w.barbed||!w.m)continue;const dx=w.cx-P.x,dz=w.cz-P.z;w.m.visible=w.hp>0&&(dx*dx+dz*dz<max.fences*max.fences||!!focus?.contains(w.cx,(w.y0+w.y1)*.5,w.cz,5));if(!w.m.visible)visibilityStats.fences++}const chunkRadius=113;for(const mesh of staticVisualBatches){const dx=mesh.position.x-P.x,dz=mesh.position.z-P.z,r=max.props+chunkRadius;mesh.visible=dx*dx+dz*dz<r*r||!!focus?.intersectsXZBox(mesh.position.x,mesh.position.z,80);if(!mesh.visible)visibilityStats.props++}for(const v of V){const dx=v.x-P.x,dz=v.z-P.z;v.o.visible=v===cv||dx*dx+dz*dz<max.vehicles*max.vehicles||!!focus?.contains(v.x,v.o.position.y+1.5,v.z,5);if(!v.o.visible)visibilityStats.vehicles++}for(const key in enemyLodStats)enemyLodStats[key]=0;for(const e of E){if(!e.o)continue;const dx=e.x-P.x,dz=e.z-P.z,d2=dx*dx+dz*dz,scopeDetailed=!!focus?.contains(e.x,e.o.position.y+(e.t==="torre"?8:2),e.z,e.t==="torre"?3:1.5),visible=d2<max.enemies*max.enemies||scopeDetailed;e.o.visible=visible;if(!visible){window.HUNTER_ENEMY_LOD.setLevel(e.o,"far");visibilityStats.enemies++;enemyLodStats.hidden++;continue}const d=Math.sqrt(d2),old=e.o.userData.enemyLOD,fullLimit=ENEMY_LOD_RANGES.full+(old==="full"?12:-12),midLimit=ENEMY_LOD_RANGES.mid+(old==="mid"?12:-12),level=scopeDetailed||d<fullLimit?"full":d<midLimit?"mid":"far";window.HUNTER_ENEMY_LOD.setLevel(e.o,level);enemyLodStats[level]++;if(level==="full"&&e.t!=="soldat"&&e.t!=="general")enemyLodStats.vehicleFull++}for(const item of items){const dx=item.x-P.x,dz=item.z-P.z;item.o.visible=dx*dx+dz*dz<max.items*max.items||!!focus?.contains(item.x,item.y+1,item.z,2);if(!item.o.visible)visibilityStats.items++}for(const f of fa){const dx=(f.x??f.cx)-P.x,dz=(f.z??f.cz)-P.z;f.o.visible=dx*dx+dz*dz<max.fauna*max.fauna||!!focus?.contains(f.x??f.cx,f.o.position.y??4,f.z??f.cz,2);if(!f.o.visible)visibilityStats.fauna++}for(const compound of world.userData.compounds||[]){if(!compound.antenna)continue;const dx=compound.x-P.x,dz=compound.z-P.z;compound.antenna.visible=dx*dx+dz*dz<max.antennas*max.antennas||!!focus?.contains(compound.x,compound.antenna.position.y,compound.z,10);if(!compound.antenna.visible)visibilityStats.antennas++}}function prepareVisibilitySystem(){return drainBuildSteps(prepareVisibilitySystemSteps())}function*prepareVisibilitySystemSteps(){staticVisualBatches=world.children.filter(o=>o.name==="hunter-static-decor-batch");yield*registerDrawCategoriesSteps();updateDistanceVisibility()}const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById("joystick")),strafeButtons={left:document.getElementById("strafeLeft"),right:document.getElementById("strafeRight")},strafePointers={left:null,right:null},STRAFE_VEHICLES=new Set(["hover","heli","heli_combat"]);const crouchButton=document.createElement("button");crouchButton.id="crouchButton";crouchButton.type="button";crouchButton.textContent="AJUPIR";crouchButton.title="Ajupir-se o aixecar-se \xb7 X";crouchButton.setAttribute("aria-label","Ajupir-se o aixecar-se");crouchButton.setAttribute("aria-pressed","false");crouchButton.style.cssText="display:none;position:fixed;z-index:7;"+"left:calc(12px + env(safe-area-inset-left,0px));"+"bottom:calc(235px + env(safe-area-inset-bottom,0px));"+"width:70px;height:42px;border-radius:12px;border:2px solid #b6d3b8;"+"background:#10241edb;color:#fff;font:700 11px system-ui;"+"box-shadow:0 3px 11px #0008;touch-action:manipulation";document.body.appendChild(crouchButton);const canCrouch=()=>started&&!paused&&!over&&!cv&&!swimming&&!scopeActive&&!playerFall&&!playerEject;function updateCrouchButton(){const enabled=canCrouch();crouchButton.style.display=enabled?"block":"none";crouchButton.style.background=playerCrouched?"#4a7655ee":"#10241edb";crouchButton.textContent=playerCrouched?"AIXECAR":"AJUPIR";crouchButton.setAttribute("aria-pressed",String(playerCrouched&&enabled))}crouchButton.addEventListener("click",e=>{e.preventDefault();if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}});function setStealthDebug(enabled){window.HUNTER_STEALTH.setDebug(enabled)}function setStealthLayer(key,value){window.HUNTER_STEALTH.setLayer(key,value)}const canStrafe=()=>!scopeActive&&(cv?STRAFE_VEHICLES.has(cv.t):!playerEject&&(!playerFall||!!playerFall.parachute));const setStrafeHeld=(side,held)=>{const button=strafeButtons[side];button.classList.toggle("held",held);button.setAttribute("aria-pressed",String(held))};const releaseStrafeButtons=()=>{for(const side of["left","right"]){strafePointers[side]=null;setStrafeHeld(side,false)}};const updateStrafeControls=()=>{const enabled=!!started&&!paused&&!over&&canStrafe();document.body.classList.toggle("strafe-active",enabled);if(!enabled&&(strafePointers.left!==null||strafePointers.right!==null))releaseStrafeButtons();return enabled};for(const side of["left","right"]){const button=strafeButtons[side];button.addEventListener("pointerdown",e=>{if(!updateStrafeControls()||strafePointers[side]!==null)return;e.preventDefault();strafePointers[side]=e.pointerId;button.setPointerCapture(e.pointerId);setStrafeHeld(side,true)});const release=e=>{if(strafePointers[side]!==e.pointerId)return;strafePointers[side]=null;setStrafeHeld(side,false)};for(const name of["pointerup","pointercancel","lostpointercapture"])button.addEventListener(name,release)}const clearKeys=()=>{resetCameraState();cancelGrenadeCharge();Object.keys(K).forEach(k=>K[k]=0);joystick.reset();releaseStrafeButtons();document.querySelectorAll("[data-k]").forEach(b=>b.classList.remove("held"))};const quickWeapons=()=>["pistola","ganivet",...["franctirador","bazooka","granada","cisalla"].filter(k=>inv[k]>0)];const selectedWeapon=()=>knifeEquipped?"ganivet":sniperEquipped?"franctirador":bazookaEquipped?"bazooka":grenadeEquipped?"granada":cisallaEquipped?"cisalla":"pistola";function selectWeapon(k){if(!weaponPickerAvailable()||swimming||!quickWeapons().includes(k))return;cancelGrenadeCharge();setSniperScope(false);knifeEquipped=k==="ganivet";sniperEquipped=k==="franctirador";bazookaEquipped=k==="bazooka";grenadeEquipped=k==="granada";cisallaEquipped=k==="cisalla";msg=k+" equipat";msgT=1.5;drawWeaponPicker()}function cycleWeapon(n){const w=quickWeapons(),i=w.indexOf(selectedWeapon());selectWeapon(w[(i+n+w.length)%w.length])}const picker=document.createElement("div");picker.style.cssText="position:fixed;z-index:100;right:10px;bottom:258px;background:#203239ed;padding:8px;border-radius:10px;display:none;flex-direction:column;gap:5px;max-height:50vh;overflow:auto";document.body.appendChild(picker);const pickerToggle=document.createElement("button");pickerToggle.textContent="\u2694 Armes";pickerToggle.style.cssText="position:fixed;z-index:99;right:10px;bottom:210px;padding:8px;color:white;background:#304b52;border-radius:9px";pickerToggle.style.display="none";document.body.appendChild(pickerToggle);let pickerOpen=false,pickerSignature=null;const weaponPickerAvailable=()=>!!started&&document.body.classList.contains("game-started")&&!paused&&!over&&hp>0&&!cv&&!deathCinematic?.active&&!victoryCinematic?.active&&!victoryCinematic?.finished;function syncWeaponPicker(){const visible=weaponPickerAvailable();const display=visible?"block":"none";if(pickerToggle.style.display!==display)pickerToggle.style.display=display;if(!visible&&pickerOpen){pickerOpen=false;drawWeaponPicker()}}pickerToggle.onclick=()=>{if(!weaponPickerAvailable())return;pickerOpen=!pickerOpen;drawWeaponPicker()};function drawWeaponPicker(){const visible=pickerOpen&&weaponPickerAvailable(),weapons=visible?quickWeapons():[];const signature=visible?JSON.stringify([selectedWeapon(),ammo,sniperAmmo,weapons.map(k=>[k,inv[k]])]):"hidden";if(signature===pickerSignature)return;pickerSignature=signature;picker.style.display=visible?"flex":"none";picker.replaceChildren();if(!visible)return;const names={pistola:"\ud83d\udd2b Pistola",ganivet:"\ud83d\udd2a Ganivet",franctirador:"\ud83d\udd2d Rifle",bazooka:"\ud83d\ude80 Bazooka",granada:"\ud83d\udca3 Granades",cisalla:"\u2702 Cisalla"};quickWeapons().forEach((k,i)=>{const b=document.createElement("button");b.textContent=i+1+" \xb7 "+names[k]+" \xb7 "+(k==="pistola"?ammo:k==="franctirador"?sniperAmmo:k==="ganivet"?"\u221e":inv[k]);b.style.cssText="padding:8px;color:white;background:"+(selectedWeapon()===k?"#356c51":"#364a52");b.onclick=()=>{selectWeapon(k);pickerOpen=false;drawWeaponPicker()};picker.appendChild(b)})}const act=c=>{if(generationPromise)return;if(ui?.isBombTimerOpen?.()){if(c==="Escape"||c==="KeyP"||c==="KeyI"){panel("inventory");return}if(c==="Enter"||c==="NumpadEnter"){document.getElementById("bombTimerConfirm")?.click?.();return}return}if(/^Digit[1-6]$/.test(c)){selectWeapon(quickWeapons()[Number(c.slice(5))-1]);return}if(c==="KeyV"){cycleWeapon(1);return}if(c==="Escape"||c==="KeyP"){if(started)paused?resume():panel("pause");return}if(c==="KeyM"){if(started)paused?resume():panel("map");return}if(c==="KeyI"){if(started)paused?resume():panel("inventory");return}if(c==="F9"){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==="KeyX"){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==="KeyT"){toggleSniperScope();return}if(c==="KeyE"){if(cv)toggle();else if(getOptionalAction())performOptionalAction();else if(nearV())toggle();else panel("inventory");return}if(c==="KeyR"){panel("inventory");return}if(c==="KeyG"){if(!secondaryWeapon()&&inv.expl&&(!cv||cv.t==="heli")&&!swimming&&!playerFall&&!playerEject)panel("bombtimer")}if(c==="KeyC"){if(inv.disf)setDis(!disg);else{msg="Busca una disfressa dins dels edificis.";msgT=3}}if(c==="KeyL")mark()};const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.reentryLockUntil>elapsed)continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};function updateActionButton(nearby){const button=document.getElementById("mainActionButton");if(!button)return;const optional=getOptionalAction();const vehicle=cv||nearby||null,type=optional?"optional-"+optional.kind:vehicle?.t||"backpack",name=vehicle?VT[vehicle.t]?.n||vehicle.t:null,title=optional?optional.label:cv?"Baixar de "+name:nearby?"Pujar a "+name:"Obrir inventari";if(button.dataset.vehicle!==type){button.dataset.vehicle=type;button.innerHTML=optional?optional.icon||"\u270b":vehicle?window.HUNTER_ACTION_ICONS.vehicle(type):window.HUNTER_ACTION_ICONS.backpack}if(button.title!==title){button.title=title;button.setAttribute("aria-label",title)}}let parachuteVisual=null;function createParachuteVisual(){const g=new THREE.Group;const canopy=new THREE.Mesh(new THREE.SphereGeometry(3.45,16,7,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:15062960,side:THREE.DoubleSide,roughness:.88,flatShading:true}));canopy.position.y=5.3;canopy.castShadow=true;g.add(canopy);const vertices=[];for(let i=0;i<8;i++){const a=i*Math.PI/4,x=Math.cos(a)*3.42,z=Math.sin(a)*3.42;vertices.push(x,5.25,z,.57*Math.cos(a),2.56,.43*Math.sin(a))}const lines=new THREE.BufferGeometry;lines.setAttribute("position",new THREE.Float32BufferAttribute(vertices,3));g.add(new THREE.LineSegments(lines,new THREE.LineBasicMaterial({color:15331045})));world.add(g);return g}function removeParachuteVisual(){if(parachuteVisual){world.remove(parachuteVisual);parachuteVisual=null}}function parachuteRoofLanding(x0,z0,y0,x1,z1,y1){if(y1>=y0)return null;const steps=Math.max(1,Math.ceil(Math.hypot(x1-x0,z1-z0)/.65)),fall=y0-y1;let hit=null;for(let i=0;i<=steps;i++){const q=i/steps,x=x0+(x1-x0)*q,z=z0+(z1-z0)*q,candidateY=y0-fall*q;for(const b of buildingCandidates(x,z)){const roof=solidRoofAt(b,x,z);if(!roof||y0<roof.top-.15||y1>roof.top+.05)continue;if(candidateY>=roof.top-.08&&(!hit||roof.top>hit))hit=roof.top}}return hit}function ejectFromHelicopter(v){resetCameraState();const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),side=rn(-1,1)<0?-1:1,ground=Math.max(0,hAt(v.x,v.z)),altitude=Number.isFinite(v.alt)?v.alt:v.o?.position?.y??ground;P.x=v.x+Math.cos(v.hd)*side*1.8;P.z=v.z-Math.sin(v.hd)*side*1.8;P.hd=v.hd;P.y=altitude;playerFall={y:altitude,vy:0,vx:fx*(v.v||0)*.82+Math.cos(v.hd)*side*2.5,vz:fz*(v.v||0)*.82-Math.sin(v.hd)*side*2.5,startHeight:Math.max(0,altitude-ground),t:0,spin:side,leanF:0,leanS:0};const chute=!!inv.paracaigudes;playerFall.parachute=chute;removeParachuteVisual();if(chute)parachuteVisual=createParachuteVisual();v.reentryLockUntil=elapsed+8;playerEject=null;v.strafeV=0;cv=null;swimming=false}function truckExitCandidate(v,side,index){const box=vehicleBox(v),k=index%8,exitSide=index<8?side:-side,lateral=box.w/2+2.2+Math.floor(k/4)*1.5,behind=-(v.v<0?-1:1)*(box.d*.22+k%4*1.35),fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),sx=Math.cos(v.hd),sz=-Math.sin(v.hd);return{x:v.x+sx*exitSide*lateral+fx*behind,z:v.z+sz*exitSide*lateral+fz*behind,side:exitSide}}function toggle(){if(playerFall||playerEject)return;resetCameraState();if(scopeActive)setSniperScope(false);if(cv){const leaving=cv,speed=Math.abs(leaving.v),isAir=VT[leaving.t].m==="a",platform=leaving.t==="ferry"?leaving:leaving.carrier||ferryForVehicle(leaving),platformLocal=platform?ferryLocal(platform,leaving.x,leaving.z):null,ferry=platform&&(!isAir||Math.abs(leaving.alt-helicopterLandedAltitude(leaving,ferryLocalSurfaceY(platform,platformLocal.z)))<2)?platform:null,ground=Math.max(0,hAt(leaving.x,leaving.z)),height=Math.max(0,leaving.alt-ground);if(isAir&&height>4&&!ferry){ejectFromHelicopter(leaving);leaving.crashing=true;leaving.crashT=0;leaving.crashSpin=rn(-1,1)<0?-1:1;leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;msg=playerFall.parachute?"Paracaigudes desplegat!":"Has saltat! L\u2019helic\xf2pter est\xe0 fora de control!";msgT=3;return}const moving=speed>3&&!ferry,side=rn(-1,1)<0?-1:1,rrad=vehicleRadius(leaving.t)+2.2,movingTruck=moving&&leaving.t==="camio";let spot=null;for(let i=0;i<16;i++){const a=leaving.hd+side*Math.PI/2+i*Math.PI/8,localFerryExit=leaving.t==="ferry"?[0,-5,5,-10,10,-15,15,-20,20][i%9]:null,candidate=localFerryExit!==null?{...ferryWorld(ferry,0,localFerryExit),side:side}:movingTruck?truckExitCandidate(leaving,side,i):{x:leaving.x+Math.cos(a)*rrad,z:leaving.z+Math.sin(a)*rrad,side:side},{x:x,z:z}=candidate;if(ferry){const q=ferryLocal(ferry,x,z);if(!ferryWalkable(q.x,q.z,1.15)||ferryCabinContains(q.x,q.z,1.15))continue}if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||leaving!==ferry&&circleVehicleOverlap(x,z,1.1,leaving)||vehicleCandidatesAt(x,z,40).some(u=>u!==leaving&&u!==ferry&&!u.destroyed&&circleVehicleOverlap(x,z,1.1,u))||wallCandidates(x,z,1).some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;if(movingTruck&&hAt(x,z)<=0)continue;spot=candidate;if(ferry||hAt(x,z)>0||VT[leaving.t].m==="w")break}if(!spot){msg="No hi ha espai per baixar aqu\xed.";msgT=3;return}P.x=spot.x;P.z=spot.z;P.hd=leaving.hd;if(ferry){const q=ferryLocal(ferry,spot.x,spot.z);P.y=ferryLocalSurfaceY(ferry,q.z)+.12;swimming=false}leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;leaving.reentryLockUntil=elapsed+2;if(moving){const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),sx=Math.cos(leaving.hd)*spot.side,sz=-Math.sin(leaving.hd)*spot.side,carry=Math.sign(leaving.v)*Math.min(movingTruck?11:28,speed*(movingTruck?.3:.72)),outward=movingTruck?8:1.4;playerEject={kind:"flip",vx:fx*carry+sx*outward,vz:fz*carry+sz*outward,t:.5,dur:.5,height:.68};msg="Has saltat del vehicle en marxa!";msgT=2.5}cv=null}else{const v=nearV();if(v){cv=v;swimming=false;playerCrouched=false;P.hd=v.hd;msg=VT[v.t].n+" \xb7 accelera amb joystick / W";msgT=3}}}addEventListener("keydown",e=>{if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code))e.preventDefault();if(e.repeat)return;if(e.code==="KeyF"&&started&&!paused&&!over&&grenadeEquipped&&!cv){beginGrenadeCharge();K.KeyF=0;return}act(e.code);if(started&&!paused&&!over)K[e.code]=1});addEventListener("keyup",e=>{if(e.code==="KeyF")releaseGrenadeCharge();K[e.code]=0});for(const b of document.querySelectorAll("[data-k]")){const c=b.dataset.k;b.addEventListener("pointerdown",e=>{e.preventDefault();b.setPointerCapture(e.pointerId);if(c==="KeyF"&&started&&!paused&&!over&&grenadeEquipped&&!cv){beginGrenadeCharge();K.KeyF=0;b.classList.add("held");return}act(c);if(started&&!paused&&!over){K[c]=1;b.classList.add("held")}});b.addEventListener("pointerup",()=>{if(c==="KeyF")releaseGrenadeCharge();K[c]=0;b.classList.remove("held")});for(const v of["pointercancel","lostpointercapture"])b.addEventListener(v,()=>{if(c==="KeyF")cancelGrenadeCharge();K[c]=0;b.classList.remove("held")})}addEventListener("blur",()=>{simulationFocused=false;updateOptionalSystems(0,false);audioPause();resetSimulationClock();clearKeys();if(started&&!paused&&!over)panel("pause")});addEventListener("focus",()=>{simulationFocused=true;resetSimulationClock();if(started&&!paused)audioResume()});document.addEventListener("visibilitychange",()=>{resetSimulationClock();if(document.hidden){updateOptionalSystems(0,false);audioPause();if(started&&!over)panel("pause")}else if(started&&!paused)audioResume()});ren.domElement.addEventListener("wheel",e=>{e.preventDefault();if(e.shiftKey){cycleWeapon(e.deltaY>0?1:-1);return}zoom=Math.max(.7,Math.min(1.9,zoom+e.deltaY*.001))},{passive:false});ren.domElement.addEventListener("pointerdown",e=>{syncCameraVehicle();if(!started||paused||over||drag||e.button!=null&&e.button!==0)return;drag={id:e.pointerId,x:e.clientX,y:e.clientY,vehicle:cv,scope:scopeActive};try{ren.domElement.setPointerCapture(e.pointerId)}catch{cancelCameraDrag()}});ren.domElement.addEventListener("pointermove",e=>{syncCameraVehicle();if(!drag||drag.id!==e.pointerId)return;if(!started||paused||over||drag.vehicle!==cv||drag.scope!==scopeActive){resetCameraState();return}const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(scopeActive){scopePitch=Math.max(-.65,Math.min(.65,scopePitch-dy*.00115));scopeYaw-=dx*.00115}else if(cv)vehicleLook.turn(dx);else P.hd-=dx*.006;drag.x=e.clientX;drag.y=e.clientY});const releaseCameraPointer=e=>{if(!drag||drag.id!==e.pointerId)return;cancelCameraDrag();vehicleLook.release()};for(const name of["pointerup","pointercancel","lostpointercapture"])ren.domElement.addEventListener(name,releaseCameraPointer);function setSniperScope(enabled){resetCameraState();const wasActive=scopeActive;scopeActive=!!enabled&&sniperEquipped&&!!inv.franctirador&&!cv&&!swimming&&!over;if(scopeActive)playerCrouched=false;if(scopeActive&&!wasActive){scopeYaw=P.hd;scopePitch=0;joystick.reset();releaseStrafeButtons()}if(!scopeActive){scopePitch=0;scopeYaw=P.hd;if(wasActive){joystick.reset();releaseStrafeButtons()}if(cam.fov!==58){cam.fov=58;cam.updateProjectionMatrix()}}if(!scopeActive&&pl.userData.sniper)pl.userData.sniper.rotation.set(0,0,0,"YXZ");if(wasActive!==scopeActive){worldVisualTick=0;palmVisualTick=0}document.body.classList.toggle("sniper-scoped",scopeActive);const button=document.getElementById("sniperAimButton");if(button)button.setAttribute("aria-pressed",String(scopeActive))}function toggleSniperScope(){if(!paused)setSniperScope(!scopeActive)}const cheats={items:false,invisible:false,immune:false,fly:false};let cheatFlightY=null;function grantAllWeapons(){ammo=Math.max(ammo,999);for(const key of["med","bazooka","granada","cisalla","expl","franctirador","paracaigudes","disf"])inv[key]=Math.max(inv[key]||0,999);sniperAmmo=Math.max(sniperAmmo,999);hqMapKnown=true;for(const v of V)if(v.rockets!=null)v.rockets=Math.max(v.rockets,999)}function setCheat(key,enabled){if(!Object.hasOwn(cheats,key))return;cheats[key]=!!enabled;if(key==="items"&&enabled){grantAllWeapons();revealMapPickup("mapa");revealMapPickup("mapa_heli");revealMapPickup("mapa_tanc")}if(key==="fly"){cheatFlightY=enabled?P.y:null;if(enabled){cv=null;playerFall=null;playerEject=null;swimming=false}}if(key==="invisible"&&enabled)for(const u of E){u.canSee=false;u.canShoot=false;u.alert=0;u.recognition=0;u.pursuitT=0;if(u.t==="soldat"){u.aiMode="patrol";u.searchT=0}}}function resume(){if(generationPromise)return;paused=false;simulationFocused=true;clearKeys();ui.hide();audioResume();resetSimulationClock()}function panel(mode){if(generationPromise)return;setSniperScope(false);paused=true;updateOptionalSystems(0,false);resetSimulationClock();pickerOpen=false;picker.style.display="none";pickerToggle.style.display="none";clearKeys();audioPause();ui.show(mode)}function revealMapPickup(kind){if(kind==="mapa"){hqMapKnown=true;return"HQ enemic descobert al mapa!"}const isHeli=kind==="mapa_heli",isTank=kind==="mapa_tanc";if(!isHeli&&!isTank)return null;const markKind=isHeli?"heli":"tanc",targets=(isHeli?V.filter(v=>v.t==="heli"||v.t==="heli_combat"):[...V.filter(v=>v.t==="tanc"),...E.filter(e=>e.t==="tanc")]).filter(v=>!v.destroyed);intelMarks=intelMarks.filter(m=>m.kind!==markKind);targets.forEach((v,i)=>intelMarks.push({kind:markKind,ref:v,label:(isHeli?v.t==="heli_combat"?"Helic\xf2pter de combat ":"Helic\xf2pter ":"Tanc ")+(i+1)}));return"Mapa actualitzat: "+targets.length+" "+(isHeli?"helic\xf2pters":"tancs")+" localitzats."}function useInvItem(id){if(!inv[id])return false;if(id==="med"){if(hp>=COMBAT_BALANCE.player){msg="Ja tens la vida al m\xe0xim.";msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(COMBAT_BALANCE.player,Math.ceil(hp)+COMBAT_BALANCE.medkit);msg="Has usat una farmaciola.";msgT=2;snd("pick");return true}if(id==="expl"){if(cv&&cv.t!=="heli"||swimming||playerFall||playerEject){msg=cv?.t==="heli_combat"?"No pots utilitzar C4 des de l\u2019helic\xf2pter de combat.":"No pots preparar explosius des d\u2019aqu\xed.";msgT=2;return false}panel("bombtimer");return true}if(id==="cisalla"){if(cv||swimming||playerFall||playerEject){msg="La cisalla nom\xe9s es pot equipar a peu.";msgT=2;return false}cancelGrenadeCharge();cisallaEquipped=!cisallaEquipped;if(cisallaEquipped){knifeEquipped=false;bazookaEquipped=false;grenadeEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=cisallaEquipped?"Cisalla equipada \xb7 Acosta\u2019t a una tanca i prem Talla / F.":"Cisalla desada.";msgT=2;return true}if(id==="bazooka"){if(cv||swimming){msg="Has d\u2019anar a peu per equipar el bazooka.";msgT=2;return false}cancelGrenadeCharge();bazookaEquipped=!bazookaEquipped;if(bazookaEquipped){knifeEquipped=false;grenadeEquipped=false;cisallaEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=bazookaEquipped?"Bazooka equipat: "+inv.bazooka+" coets disponibles.":"Bazooka desequipat.";msgT=2;return true}if(id==="granada"){if(cv||swimming){msg="Has d\u2019anar a peu per equipar les granades.";msgT=2;return false}cancelGrenadeCharge();grenadeEquipped=!grenadeEquipped;if(grenadeEquipped){knifeEquipped=false;bazookaEquipped=false;cisallaEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=grenadeEquipped?"Granades equipades: "+inv.granada+".":"Granades desequipades.";msgT=2;return true}if(id==="franctirador"){cancelGrenadeCharge();if(cv||swimming){msg="Has d\u2019anar a peu per equipar el rifle.";msgT=2;return false}sniperEquipped=!sniperEquipped;if(sniperEquipped){knifeEquipped=false;bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false}setSniperScope(false);resume();msg=sniperEquipped?"Rifle equipat \xb7 "+sniperAmmo+" cartutxos \xb7 Mira amb T.":"Rifle desequipat.";msgT=2;return true}if(id==="disf"){setDis(!disg);msg=disg?"Disfressa activada.":"Disfressa desactivada.";msgT=2;return true}if(id==="mapa"||id==="mapa_heli"||id==="mapa_tanc"){msg=revealMapPickup(id);msgT=3;delete inv[id];mini();return true}return false}function dropInvItem(id){if(!inv[id]||id==="arma")return false;inv[id]--;if(inv[id]<=0)delete inv[id];if(id==="disf"&&disg)setDis(false);if(id==="bazooka"&&bazookaEquipped&&!inv.bazooka)bazookaEquipped=false;if(id==="cisalla"&&cisallaEquipped&&!inv.cisalla){cisallaEquipped=false;pl.userData.cisallaCut=0}if(id==="granada"&&grenadeEquipped&&!inv.granada){grenadeEquipped=false;cancelGrenadeCharge()}if(id==="franctirador"&&!inv.franctirador){sniperEquipped=false;setSniperScope(false)}msg="Has deixat: "+IT[id].n;msgT=2;return true}combatFeedback=window.HUNTER_UI.createCombatFeedback({element:document.getElementById("combatFeedback"),hit:document.getElementById("hitConfirm"),direction:document.getElementById("damageDirection")});const combatCameraForward=new THREE.Vector3,combatCameraRight=new THREE.Vector3;function renderCombatFeedback(){cam.getWorldDirection(combatCameraForward);if(Math.hypot(combatCameraForward.x,combatCameraForward.z)<.001){combatCameraRight.set(1,0,0).applyQuaternion(cam.quaternion);combatCameraForward.set(combatCameraRight.z,0,-combatCameraRight.x)}combatFeedback.update({active:!!started&&!paused&&!over&&simulationFocused&&!document.hidden,now:performance.now(),playerX:P.x,playerZ:P.z,forwardX:combatCameraForward.x,forwardZ:combatCameraForward.z})}let stealthVisibilityFrame=0;const stealthVehicleBounds=new WeakMap;function stealthFeedbackVisible(u,body,marker){const from=cam.position;function clear(to){const reach=Math.hypot(to.x-from.x,to.z-from.z)/2+3,mx=(from.x+to.x)/2,mz=(from.z+to.z)/2;for(const w of wallCandidates(mx,mz,reach)){if(w.open||w.barbed||w.hp<=0)continue;const t=segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);if(t!==null&&t>.002&&t<.998)return false}for(const b of buildingCandidates(mx,mz,reach)){if(b.rb||b.rhp<=0)continue;if(b.upperFloor&&Number.isFinite(b.storey)&&Math.abs(to.y-from.y)>.001){const floor=b.fy+b.storey+.15,q=(floor-from.y)/(to.y-from.y);if(q>.002&&q<.998&&upperFloorHeight(b,from.x+(to.x-from.x)*q,from.z+(to.z-from.z)*q,floor)!==null)return false}const t=b.hangar?hangarRoofSegmentT(from.x,from.y,from.z,to.x,to.y,to.z,b):segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,b.x-b.w/2,b.x+b.w/2,b.fy+b.h-.35,b.fy+b.h+.8,b.z-b.d/2,b.z+b.d/2);if(t!==null&&t>.002&&t<.998)return false}for(const v of vehicleCandidatesAt(mx,mz,reach+18)){if(v.destroyed||!v.o)continue;let cached=stealthVehicleBounds.get(v);if(!cached){cached={frame:-1,box:new THREE.Box3};stealthVehicleBounds.set(v,cached)}if(cached.frame!==stealthVisibilityFrame){v.o.updateWorldMatrix(true,true);cached.box.setFromObject(v.o);cached.frame=stealthVisibilityFrame}const box=cached.box;if(box.isEmpty()){const radius=vehicleRadius(v.t)*.55;if(segmentSphereT(from.x,from.y,from.z,to.x,to.y,to.z,v.x,vehicleY(v)+1.5,v.z,radius)!==null)return false}else{const t=segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,box.min.x,box.max.x,box.min.y,box.max.y,box.min.z,box.max.z);if(t!==null&&t>.002&&t<.998)return false}}const count=Math.min(96,Math.max(2,Math.ceil(from.distanceTo(to))));for(let i=1;i<count;i++){const q=i/count,x=from.x+(to.x-from.x)*q,y=from.y+(to.y-from.y)*q,z=from.z+(to.z-from.z)*q;if(bunkerProjectileSurface(x,z,y)>y-.12)return false}return true}return clear(body)&&clear(marker)}function renderStealthFeedback(){stealthVisibilityFrame++;stealthFeedback.update({world:world,camera:cam,enemies:E,active:!!started&&!paused&&!over&&simulationFocused&&!document.hidden,visible:stealthFeedbackVisible})}const ui=window.HUNTER_UI.create({hud:document.getElementById("hud"),panel:document.getElementById("gamepanel"),title:document.getElementById("panelTitle"),body:document.getElementById("panelBody"),resumeButton:document.getElementById("resumeButton"),minimap:minimap,getState:({nearVehicle:nearVehicle=(cv?null:nearV())}={})=>({hp:hp,ammo:ammo,kills:kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming:swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped:bazookaEquipped,grenadeEquipped:grenadeEquipped,cisallaEquipped:cisallaEquipped,sniperEquipped:sniperEquipped,sniperAmmo:sniperAmmo,scopeActive:scopeActive,inventory:inv,itemTypes:IT,player:P,nearVehicle:nearVehicle,optionalAction:getOptionalAction(),messageTime:msgT,message:msg,waypoint:waypoint,worldSize:S,seed:seed,mapScale:MAP_SCALE,palmsDisabled:palmsDisabled,waterDisabled:waterDisabled,shadowsDisabled:shadowsDisabled,performanceStatsVisible:performanceStatsVisible,muted:muted,cheats:{...cheats},stealthDebug:window.HUNTER_STEALTH.enabled(),stealthLayers:window.HUNTER_STEALTH.layers(),shadowStats:shadowStats,performance:adaptivePerformance.stats,visibilityStats:visibilityStats,enemyLodStats:enemyLodStats}),actions:{resume:resume,open:mode=>panel(mode),setWaypoint:v=>waypoint=v,useItem:id=>useInvItem(id),placeExplosive:seconds=>{if(!plant(seconds))return false;resume();return true},dropItem:id=>dropInvItem(id),restart:d=>startGameProgressively({difficulty:d,scale:MAP_SCALE,seed:requestedSeed,restart:true}),setPalmsDisabled:setPalmsDisabled,setWaterDisabled:setWaterDisabled,setShadowsDisabled:setShadowsDisabled,setPerformanceStatsVisible:setPerformanceStatsVisible,setAudioMuted:setAudioMuted,setStealthDebug:setStealthDebug,setStealthLayer:setStealthLayer,zoom:d=>zoom=Math.max(.7,Math.min(1.9,zoom+d)),setCheat:setCheat}});mc.onclick=()=>started&&panel("map");function vehicleImpactFx(x,y,z){debris(x,y,z,16761165,5,.16,5);puff(x,y,z,9077880,.8)}function collisionDamageVehicle(v,dmg,impacts=1){if(v?.t==="tanc")return;impactVehicle(v,impacts>1?impacts:dmg)}function relativeVehicleImpactSpeed(a,b){const ah=a.hd||0,bh=b.navHd??b.hd??0,av=a.v??a.impactSpeed??0,bv=b.v??b.impactSpeed??0;return Math.hypot(-Math.sin(ah)*av+Math.sin(bh)*bv,-Math.cos(ah)*av+Math.cos(bh)*bv)}function ramSpeedFactor(type,barbed){if(type==="tanc")return.995;if(type==="camio"&&barbed)return 1;return barbed?.72:.55}function vehicleRamThreshold(v,barbed){if(v.t==="tanc")return 0;const base=v.t==="camio"&&barbed?12:barbed?16:22;return base+(v.v<0?5:0)}function vehicleCanBreakBarrier(v,barbed){return v.t==="tanc"||Math.abs(v.v)>vehicleRamThreshold(v,barbed)}function mayRamWhileRecovering(type,barbed,cooldown){return cooldown<=0||type==="tanc"||type==="camio"&&barbed}function tankCanCrush(v,other,ownMass,otherMass){return v.t==="tanc"&&Math.abs(v.v)>1&&ownMass>otherMass&&other.t!=="ferry"}function killShark(f){if(f.dead)return;window.HUNTER_SHARKS.kill(f);const y=wy(f.x,f.z,elapsed)+.1;puff(f.x,y,f.z,16777215,2.8);puff(f.x,y,f.z,9616065,1.7);if(victoryCinematic?.active)return;msg="Has envestit un taur\xf3!";msgT=1.8}function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){const c=VT[v.t],speed=Math.abs(v.v),radius=vehicleRadius(v.t);v.impactFromX=oldX;v.impactFromZ=oldZ;v.ramCd=Math.max(0,(v.ramCd||0)-dt);v.envCd=Math.max(0,(v.envCd||0)-dt);v.bump=Math.max(0,(v.bump||0)-dt);if(speed>=3&&(c.m==="w"||c.m==="wl")&&hAt(v.x,v.z)<-.8){for(const f of fa){if(f.k!=="s"||f.dead)continue;if(Math.abs((v.o?.position?.y??0)-wy(f.x,f.z,elapsed))>2.5)continue;if(window.HUNTER_SHARKS.vehicleHit(f,oldX,oldZ,v.x,v.z,radius))killShark(f)}}if(speed>=2.5&&v.envCd<=0){const baseY=c.m==="a"?(v.alt??0)-1:c.m==="w"||c.m==="wl"?-1.4:hAt(v.x,v.z),topY=c.m==="a"?(v.alt??0)+2:baseY+Math.max(2,(VS[v.t]||1)*2.2),rock=nearbyRock(v.x,v.z,radius*.48,baseY,topY);if(rock){if(speed>10){collisionDamageVehicle(v,Math.min(5,Math.max(1,Math.ceil(speed/(9*Math.sqrt(c.mass||1))))),1);vehicleImpactFx(rock.x,Math.max(0,hAt(rock.x,rock.z))+.8,rock.z)}if(v.destroyed)return;const dx=v.x-rock.x,dz=v.z-rock.z,dist=Math.hypot(dx,dz),clear=rock.r+radius*.48+.08;if(dist>.01){v.x=rock.x+dx/dist*clear;v.z=rock.z+dz/dist*clear}else{v.x=oldX;v.z=oldZ}v.v*=-.12;v.bump=.22;v.envCd=.32;msg="Impacte amb roca!";msgT=1;return}}if(speed<2.5||c.m==="a"||c.m==="w")return;if(v.ramCd<=0&&speed>6){for(const u of E){if(u.t!=="soldat")continue;if(runoverSweepHit(oldX,oldZ,v.x,v.z,u.x,u.z,radius*.68+u.r*.45)){const dmg=runoverDamage(speed,c.mass||1);hurtE(u,dmg);u.alert=12;v.ramCd=.35;v.v*=.86;msg="Atropellament!";msgT=1;break}}}if(v.ramCd<=0&&speed>6){for(const civilian of prisonerSystem.entities){if(civilian.hp<=0||civilian.destroyed||Math.abs(vehicleY(v)-civilian.y)>3)continue;if(runoverSweepHit(oldX,oldZ,v.x,v.z,civilian.x,civilian.z,radius*.68+civilian.radius*.45)){const lost=prisonerSystem.hurt(civilian,runoverDamage(speed,c.mass||1),{type:"vehicle",x:v.x,z:v.z});if(lost)spawnBulletImpact("blood",civilian.x,civilian.y+1,civilian.z,{sx:oldX,sy:vehicleY(v)+1,sz:oldZ});v.ramCd=.35;v.v*=.86;msg="Atropellament d\u2019un civil!";msgT=2;break}}}if(v.envCd>0)return;const t=treeAt(v.x,v.z,radius*.48);if(!t)return;if(t.p&&t.alive){const heavy=v.t==="tanc"||v.t==="camio";if(!heavy&&speed<=10){v.x=oldX;v.z=oldZ;v.v*=.12;v.bump=.12;v.envCd=.15;return}killPalm(t);if(!heavy)collisionDamageVehicle(v,Math.min(3,Math.max(1,Math.ceil(speed/(18*Math.sqrt(c.mass||1))))),1);if(v.destroyed)return;if(!heavy)v.v*=.9;v.bump=heavy?.06:.18;v.envCd=heavy?.08:.28;msg="Has tombat una palmera.";msgT=1;return}}function solidRoofAt(b,x,z){if(!b||b.rhp<=0||b.rb)return null;const rx=x-b.x,rz=z-b.z;if(!b.hangar){const sx=b.roof?.scale?.x||1,sz=b.roof?.scale?.z||1;if(Math.abs(rx)>(b.w+1.35)*sx/2||Math.abs(rz)>(b.d+1.35)*sz/2)return null;return{bottom:b.fy+b.h+.045,top:b.fy+b.h+1.195,building:b}}if(Math.abs(rz)>(b.d+1.15)/2)return null;const radius=b.w/2;if(Math.abs(rx)>radius+.2)return null;const curvedY=b.fy+.12+Math.sqrt(Math.max(0,radius*radius-Math.min(radius,Math.abs(rx))**2));return{bottom:curvedY-.32,top:curvedY+.32,building:b}}function roofNearXZ(b,x,z,r=0){if(!b||b.rhp<=0||b.rb)return null;const hw=b.hangar?b.w/2+.1:(b.w+1.35)*(b.roof?.scale?.x||1)/2,hd=b.hangar?(b.d+1.15)/2:(b.d+1.35)*(b.roof?.scale?.z||1)/2,xx=Math.max(b.x-hw,Math.min(b.x+hw,x)),zz=Math.max(b.z-hd,Math.min(b.z+hd,z));if((x-xx)**2+(z-zz)**2>r*r)return null;const safeX=b.hangar?Math.max(b.x-hw+.23,Math.min(b.x+hw-.23,xx)):xx;return solidRoofAt(b,safeX,zz)}function helicopterRoofCollision(v,x,z,alt){const scale=VS[v.t]||1,skid=v.o.userData.skidContactHeight||0,rotor=v.o.userData.rotorContactHeight||(v.t==="heli_combat"?3.3:3.9)*scale,bodyTop=alt+(v.t==="heli_combat"?3:3.45)*scale,bodyBottom=alt+skid,rotorY=alt+rotor,bodyRadius=(v.t==="heli_combat"?1.45:1.65)*scale,rotorRadius=(v.t==="heli_combat"?6.75:7.4)*scale;for(const b of buildingCandidates(x,z,rotorRadius+2)){const hull=roofNearXZ(b,x,z,bodyRadius);if(hull&&bodyBottom<hull.top+.08&&bodyTop>hull.bottom-.08)return hull;const blades=roofNearXZ(b,x,z,rotorRadius);if(blades&&rotorY>=blades.bottom-.11&&rotorY<=blades.top+.11)return blades}return null}function helicopterRoofAltitude(v,x,z,fromAlt,toAlt){const skid=v.o.userData.skidContactHeight||0,rotor=v.o.userData.rotorContactHeight||(v.t==="heli_combat"?3.3:3.9)*(VS[v.t]||1),radius=(v.t==="heli_combat"?1.45:1.65)*(VS[v.t]||1);for(const b of buildingCandidates(x,z,radius+2)){const roof=roofNearXZ(b,x,z,radius);if(!roof)continue;if(toAlt<fromAlt&&fromAlt+skid>=roof.top-.12&&toAlt+skid<roof.top+.12)toAlt=Math.max(toAlt,roof.top-skid+.1);else if(toAlt>fromAlt&&fromAlt+rotor<=roof.bottom+.12&&toAlt+rotor>roof.bottom-.12)toAlt=Math.min(toAlt,roof.bottom-rotor-.12)}return toAlt}function helicopterEnvironmentContact(v,from,to){const scale=VS[v.t]||1,skid=v.o.userData.skidContactHeight||0,rotor=v.o.userData.rotorContactHeight||3.9*scale,rotorRadius=(v.t==="heli_combat"?6.75:7.4)*scale,bodyRadius=(v.t==="heli_combat"?1.45:1.65)*scale,bodyTop=(v.t==="heli_combat"?3:3.45)*scale,steps=Math.min(12,Math.max(1,Math.ceil(Math.hypot(to.x-from.x,to.z-from.z)/2.5+Math.abs(to.alt-from.alt)/2.5)));for(let i=1;i<=steps;i++){const q=i/steps,x=from.x+(to.x-from.x)*q,z=from.z+(to.z-from.z)*q,alt=from.alt+(to.alt-from.alt)*q,bladeY=alt+rotor,floor=Math.max(0,groundAt(x,z)),bottom=alt+skid;if(bottom<floor-.18&&(Math.hypot(v.v||0,v.strafeV||0)>4||v.verticalV<-4))return{x:x,z:z,alt:alt,y:floor,kind:"ground"};for(const r of[rotorRadius*.6,rotorRadius])for(let a=0;a<12;a++){const angle=a*Math.PI/6,px=x+Math.cos(angle)*r,pz=z+Math.sin(angle)*r,terrain=Math.max(0,groundAt(px,pz));if(bladeY<=terrain+.16)return{x:x,z:z,alt:alt,y:terrain,kind:"ground"}}for(const b of buildingCandidates(x,z,rotorRadius+2)){const bladeRoof=roofNearXZ(b,x,z,rotorRadius);if(bladeRoof&&bladeY>=bladeRoof.bottom-.16&&bladeY<=bladeRoof.top+.16)return{x:x,z:z,alt:alt,y:bladeY,kind:"roof"};const hull=roofNearXZ(b,x,z,bodyRadius);if(hull&&bottom<hull.top+.06&&alt+bodyTop>hull.bottom-.06)return{x:x,z:z,alt:alt,y:hull.top,kind:"roof"}}const cells=Math.ceil((rotorRadius+6)/16),cx=Math.floor(x/16),cz=Math.floor(z/16);for(let dx=-cells;dx<=cells;dx++)for(let dz=-cells;dz<=cells;dz++){const list=TG.get(cx+dx+","+(cz+dz));if(!list)continue;for(const tree of list){if(!tree.p||!tree.alive||palmsDisabled)continue;const d=Math.hypot(tree.x-x,tree.z-z),height=tree.s*6.2,crownRadius=tree.s*4.7,base=tree.y;const bodyHit=d<bodyRadius+tree.r&&bottom<base+height&&alt+bodyTop>base;const bladeHit=d<rotorRadius+crownRadius&&bladeY>=base+height-tree.s*1.2&&bladeY<=base+height+tree.s*1.8||d<rotorRadius+tree.r&&bladeY>=base&&bladeY<=base+height;if(bodyHit||bladeHit)return{x:x,z:z,alt:alt,y:bladeHit?bladeY:bottom,kind:"tree"}}}}return null}function crashHelicopterStructure(v,contact){const wasPiloted=cv===v;v.x=contact.x;v.z=contact.z;v.alt=contact.alt;place(v,elapsed,0,0);vehicleImpactFx(contact.x,contact.y,contact.z);damageVehicle(v,65,Math.max(1,v.life??VT[v.t].life));if(wasPiloted){msg={antenna:"Has xocat contra l\u2019antena!",satellite:"Has xocat contra la parab\xf2lica!",tree:"Les aspes han tocat una palmera!",ground:"Has xocat contra el terreny!",roof:"Has xocat contra un edifici!"}[contact.kind]||"Col\xb7lisi\xf3 de l\u2019helic\xf2pter!";msgT=3}return false}function stepV(v,f,tr,ud,dt,strafe=0){const c=VT[v.t],a=c.m==="a",water=c.m==="w"||c.m==="wl",land=c.m==="l",radius=vehicleRadius(v.t),input=window.HUNTER_VEHICLE_DYNAMICS.inputs(v,f,tr,dt);f=input.forward;tr=input.turn;const maxStrafe=v.t==="hover"?12:a?c.strafeMax||17:0,targetStrafe=maxStrafe*Math.max(-1,Math.min(1,strafe));v.strafeV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.strafeV||0,targetStrafe,6.5,dt);if(Math.abs(targetStrafe)<.01&&Math.abs(v.strafeV)<.02)v.strafeV=0;if(a&&v.carrier&&ud>.12){detachFromFerry(v);v.verticalV=Math.max(v.verticalV||0,3)}v.v+=f*c.a*dt;const dragBase=c.dr*(water?1.08:land?.86:1),coastBoost=Math.abs(f)<.03?water?1.18:land?1.04:.82:1;v.v*=Math.max(0,1-dragBase*coastBoost*dt);v.v=Math.max(-(c.maxR||12),Math.min(c.maxF||40,v.v));let steerScale=1;if(land){const speed=Math.abs(v.v),fade=c.steerFade??.4;steerScale=(.35+.65*Math.min(1,speed/9))*(1-fade*Math.min(1,speed/(c.maxF||35))*.55)}else if(water){const speed=Math.abs(v.v),min=c.waterSteerMin??.2;steerScale=min+(1-min)*Math.min(1,speed/10)}const targetYaw=tr*c.tu*steerScale*(a?1:v.v<0?-1:1);v.yawRate=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.yawRate||0,targetYaw,c.yawResponse||4,dt);v.hd+=v.yawRate*dt;let sideV=0;if(water){const drift=(c.waterDrift||0)*v.v*v.yawRate;v.sideV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.sideV||0,drift,2.2,dt);sideV=v.sideV}else if(land){const grip=c.landGrip??.9,slip=(1-grip)*v.v*v.yawRate*.42;v.sideV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.sideV||0,slip,5+grip*5,dt);sideV=v.sideV}else v.sideV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.sideV||0,0,4,dt);const oldX=v.x,oldZ=v.z,fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),sx=Math.cos(v.hd),sz=-Math.sin(v.hd);const totalSideV=sideV+v.strafeV,nx=v.x+(fx*v.v+sx*totalSideV)*dt,nz=v.z+(fz*v.v+sz*totalSideV)*dt,raw=hAt(nx,nz),h=land?groundAt(nx,nz):raw,g=Math.max(0,h),deckCarrier=land||a?ferryForVehicle(v,nx,nz,true):null;let ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;if(c.m==="w")ok=ok&&raw<-1.2;if(c.m==="l")ok=ok&&(!!deckCarrier||h>-1.2);if(ok&&a&&!deckCarrier){const structureHit=window.HUNTER_AIR_OBSTACLES.hit(THREE,world,v,{x:v.x,z:v.z,alt:v.alt},{x:nx,z:nz,alt:v.alt},VS[v.t]||1);if(structureHit)return crashHelicopterStructure(v,structureHit);const environmentHit=helicopterEnvironmentContact(v,{x:v.x,z:v.z,alt:v.alt},{x:nx,z:nz,alt:v.alt});if(environmentHit)return crashHelicopterStructure(v,environmentHit)}if((!a||v.alt-g<16)&&!deckCarrier){const footprint=vehicleBox(v,nx,nz,v.hd);for(const w of wallCandidates(nx,nz,radius))if(!w.open&&w.playerBlock!==false&&!(a&&(v.alt+(v.o.userData.skidContactHeight||0)>w.y1+.15||v.alt+(v.o.userData.rotorContactHeight||7)<w.y0-.15))&&!(w.towerLegOwner&&a&&v.alt>w.y1+2)&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){const touch=w.barbed?fenceVehicleContact(w,footprint):null;if(w.barbed&&!touch)continue;if(!w.barbed&&!obbOverlap(footprint,{x:(w.x0+w.x1)/2,z:(w.z0+w.z1)/2,hd:0,w:Math.max(.05,w.x1-w.x0),d:Math.max(.05,w.z1-w.z0)}))continue;if(land&&(w.y1<g-.8||w.y0>g+(v.t==="tanc"||v.t==="camio"?5.6:4.2)*(VS[v.t]||1)))continue;if(w.rammable&&land&&mayRamWhileRecovering(v.t,!!w.barbed,v.envCd)){const barbed=!!w.barbed,tank=v.t==="tanc",truckFence=v.t==="camio"&&barbed;if(vehicleCanBreakBarrier(v,barbed)){dmgW(w,w.hp);if(!tank&&!truckFence)collisionDamageVehicle(v,0,barbed?2:3);const hitX=touch?.x??w.cx,hitZ=touch?.z??w.cz;vehicleImpactFx(hitX,Math.max(0,hAt(hitX,hitZ))+1.1,hitZ);if(v.destroyed)return false;v.v*=ramSpeedFactor(v.t,barbed);v.bump=tank||truckFence?.06:barbed?.14:.2;v.envCd=tank||truckFence?.08:.28;if(!Wl.includes(w)){msg=barbed?"Has trencat la filferrada!":"Has travessat una paret!";msgT=1;continue}}}if(a)return crashHelicopterStructure(v,{x:nx,z:nz,alt:v.alt,y:w.y1,kind:"roof"});ok=false;break}}if(ok&&deckCarrier&&ferryCabinVehicleHit(deckCarrier,vehicleBox(v,nx,nz,v.hd))){ok=false;v.bump=.12}if(ok){const test=vehicleBox(v,nx,nz,v.hd),hit=vehicleObstacles(v).find(o=>o!==deckCarrier&&o!==v.carrier&&o.carrier!==v&&vehicleHeightCompatible(v,o)&&obbOverlap(test,vehicleBox(o)));if(hit){const rel=relativeVehicleImpactSpeed(v,hit),ownMass=c.mass||1,otherMass=VT[vehicleHitType(hit.t)]?.mass||1,ratio=Math.max(.35,Math.min(2.5,otherMass/ownMass)),tankCrush=tankCanCrush(v,hit,ownMass,otherMass);if(tankCrush){if(E.includes(hit))hurtE(hit,Math.max(300,hit.hp+1));else damageVehicle(hit,0,Math.max(1,hit.life??VT[hit.t].life));vehicleImpactFx(hit.x,Math.max(vehicleY(v),vehicleY(hit))+.5,hit.z);v.v*=.99;v.bump=.08;v.envCd=.12}else{v.v*=rel>5?Math.max(.16,.42/ratio):Math.max(.3,.62/ratio);if("v"in hit)hit.v*=Math.max(.3,.72/Math.max(.5,ownMass/otherMass));if(rel>10&&v.envCd<=0){collisionDamageVehicle(v,impactDamage(rel,ownMass,otherMass),1);impactVehicle(hit,impactDamage(rel,otherMass,ownMass));vehicleImpactFx((v.x+hit.x)/2,Math.max(vehicleY(v),vehicleY(hit))+.5,(v.z+hit.z)/2)}v.bump=.14;v.envCd=.18;ok=false}}}if(ok){v.x=nx;v.z=nz;if(land){const f2=ferryForVehicle(v,v.x,v.z,true);if(f2)attachToFerry(v,f2);else if(v.carrier)detachFromFerry(v)}handleVehicleImpacts(v,dt,oldX,oldZ);if(v.destroyed)return false;if(v.t==="tanc"||v.t==="tanqueta"||v.t==="camio")crush(nx,nz,(v.t==="tanc"?3.2:v.t==="camio"?2.6:2.4)*VS[v.t])}else{v.v*=Math.exp(-12*dt);v.sideV*=Math.exp(-10*dt);v.strafeV*=Math.exp(-12*dt)}if(a){const g2=Math.max(0,groundAt(v.x,v.z)),targetVz=ud*(c.climb||24);v.verticalV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.verticalV||0,targetVz,c.liftResponse||2.5,dt);if(Math.abs(ud)<.01)v.verticalV*=Math.exp(-1.5*dt);const previousAlt=v.alt;v.alt=Math.max(helicopterLandedAltitude(v,g2),Math.min(150,v.alt+v.verticalV*dt));if(!deckCarrier){const terrainHit=helicopterEnvironmentContact(v,{x:v.x,z:v.z,alt:previousAlt},{x:v.x,z:v.z,alt:v.alt});if(terrainHit)return crashHelicopterStructure(v,terrainHit);const structureHit=window.HUNTER_AIR_OBSTACLES.hit(THREE,world,v,{x:v.x,z:v.z,alt:previousAlt},{x:v.x,z:v.z,alt:v.alt},VS[v.t]||1);if(structureHit)return crashHelicopterStructure(v,structureHit);const corrected=helicopterRoofAltitude(v,v.x,v.z,previousAlt,v.alt);if(corrected!==v.alt){v.alt=corrected;v.verticalV=0}}const f2=ferryForVehicle(v,v.x,v.z,false);if(f2){const q=ferryLocal(f2,v.x,v.z),deckY=ferryLocalSurfaceY(f2,q.z);const deckLandingY=helicopterLandedAltitude(v,deckY);if(v.alt<=deckLandingY+.55&&ud<=.05){v.alt=deckLandingY;v.verticalV=0;attachToFerry(v,f2)}else if(v.carrier===f2&&v.alt>deckLandingY+1.4)detachFromFerry(v)}else if(v.carrier)detachFromFerry(v);if(!f2&&v.verticalV<0&&v.alt<=helicopterLandedAltitude(v,g2)+.001)v.verticalV=0}if(v.carrier)attachToFerry(v,v.carrier);return!v.destroyed}function animateTankTracks(v,dt){const tracks=v.o?.userData?.tracks;if(!tracks?.length)return;const scale=VS[v.t]||1,yaw=v.yawRate||0,halfTrack=2.1;for(const track of tracks){const beltSpeed=v.v/scale+track.side*yaw*halfTrack;track.phase=(track.phase+beltSpeed*dt)%track.perimeter;if(track.phase<0)track.phase+=track.perimeter;for(const link of track.links){let q=(link.userData.trackOffset+track.phase)%track.perimeter;let y,z,rx=0;if(q<track.straight){y=track.cy+track.r;z=track.front+q;rx=0}else if((q-=track.straight)<Math.PI*track.r){const a=q/track.r;y=track.cy+track.r*Math.cos(a);z=track.rear+track.r*Math.sin(a);rx=a}else if((q-=Math.PI*track.r)<track.straight){y=track.cy-track.r;z=track.rear-q;rx=Math.PI}else{q-=track.straight;const a=q/track.r;y=track.cy-track.r*Math.cos(a);z=track.front-track.r*Math.sin(a);rx=Math.PI+a}link.position.set(track.x,y,z);link.rotation.set(rx,0,0)}}}function place(v,t,dt,tr){const c=VT[v.t],o=v.o,g=hAt(v.x,v.z);let y,pi=0,ro=Math.sin(t*2+v.x)*.02;if(c.m==="a"&&v.carrier&&!v.crashing){const q=ferryLocal(v.carrier,v.x,v.z);y=helicopterLandedAltitude(v,ferryLocalSurfaceY(v.carrier,q.z));v.alt=y;pi=v.carrier.o.rotation.x;ro=v.carrier.o.rotation.z}else if(c.m==="a"){y=v.alt;const speedN=Math.max(-1,Math.min(1,v.v/(c.maxF||35))),yawN=Math.max(-1,Math.min(1,(v.yawRate||0)/(c.tu||1)));pi=-speedN*(c.pitch||.2);ro=-yawN*(c.bank||.32)-(v.strafeV||0)/(c.strafeMax||17)*(c.bank||.32)*.5;const landed=helicopterLandedAltitude(v,Math.max(0,groundAt(v.x,v.z)));if(!v.crashing&&v.alt<=landed+.25){const proximity=Math.max(0,Math.min(1,(v.alt-landed)/.25));const s=Math.sin(v.hd),co=Math.cos(v.hd),front=2.05*(VS[v.t]||1),halfSkid=1.458*(VS[v.t]||1),frontY=groundAt(v.x-s*front,v.z-co*front),backY=groundAt(v.x+s*front,v.z+co*front),rightY=groundAt(v.x+co*halfSkid,v.z-s*halfSkid),leftY=groundAt(v.x-co*halfSkid,v.z+s*halfSkid),slopePitch=Math.max(-.24,Math.min(.24,Math.atan2(frontY-backY,2*front))),slopeRoll=Math.max(-.24,Math.min(.24,Math.atan2(rightY-leftY,2*halfSkid)));pi=slopePitch*(1-proximity)+pi*proximity;ro=slopeRoll*(1-proximity)+ro*proximity}if(v.crashing){pi+=Math.sin(v.crashT*3)*.35;ro+=(v.crashSpin||1)*(.45+Math.min(.65,v.crashT*.12))}}else if(c.m==="w"){y=wy(v.x,v.z,t)+(v.t==="barca_rems"?-.1:.2);const speed=Math.min(1,Math.abs(v.v)/(c.maxF||30)),wave=Math.sin(t*2.4+v.x*.03+v.z*.025);pi=wave*.035*speed;ro=-(v.yawRate||0)*.11+wave*.025;if(v.t==="moto_aquatica"||v.t==="windsurf"){const jump=window.HUNTER_WATER_JUMPS.update(v,dt,t,wy,c.maxF);y+=jump.lift;pi+=jump.pitch}}else if(c.m==="wl"){y=Math.max(g,wy(v.x,v.z,t))+.6;ro=-(v.yawRate||0)*.08-(v.strafeV||0)*.008}else if(v.carrier){const q=ferryLocal(v.carrier,v.x,v.z);y=ferryLocalSurfaceY(v.carrier,q.z)+.05;pi=0;ro=0}else{const s2=Math.sin(v.hd),k=Math.cos(v.hd);y=groundAt(v.x,v.z)+.05;pi=Math.atan((groundAt(v.x-s2*3,v.z-k*3)-groundAt(v.x+s2*3,v.z+k*3))/6);ro=-(v.sideV||0)*.018}if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.rotation.set(pi,v.hd,ro);window.HUNTER_VEHICLES.animateSteering(o,v.t,tr,dt);v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=v.t==="bici"?-v.pedalPhase:v.pedalPhase;if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=v.t==="barca_rems"?-(v.pedalPhase||0):v.pedalPhase||0,sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*sweep;r.rotation.z=-side*(.12+dip);r.rotation.x=.06*Math.sin(rowPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==="tanc")animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==="tanc"&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})}let runStepTimer=0,stealthStepTimer=0;const cameraOffset=new THREE.Vector3,bunkerEye=new THREE.Vector3;function hideCameraObstructions(owner,eye,basement){const radius=Math.hypot(eye.x-cam.position.x,eye.z-cam.position.z)/2+2;for(const wall of wallCandidates((eye.x+cam.position.x)/2,(eye.z+cam.position.z)/2,radius)){if(wall.owner!==owner||!!wall.bunkerBasementWall!==basement||!wall.m?.visible||wall.destroyedWall||wall.hp<=0)continue;if(wall.y1<Math.min(eye.y,cam.position.y)||wall.y0>Math.max(eye.y,cam.position.y))continue;const hit=segmentAabbT(eye.x,eye.y,eye.z,cam.position.x,cam.position.y,cam.position.z,wall.x0,wall.x1,wall.y0,wall.y1,wall.z0,wall.z1);if(hit===null||hit<=.005||hit>=.995)continue;cameraOcclusion.hide(wall);if(basement)owner.basement.cameraHiddenWalls.push(wall.m)}}function update(dt,t){syncCameraVehicle();if(activeBunker?.basement?.lights?.length){const basement=activeBunker.basement;const nearby=started&&!paused&&Math.hypot(P.x-activeBunker.x,P.z-activeBunker.z)<160;if(nearby!==basement.lightsOn){for(const lamp of basement.lights)lamp.visible=nearby;basement.lightsOn=nearby}}const strafeEnabled=updateStrafeControls();if(cheats.items)grantAllWeapons();const canRun=!!started&&!paused&&!over&&!cv&&!playerFall&&!playerEject&&!scopeActive;joystick.setRunEnabled(canRun);document.body.classList.toggle("player-swimming",canRun&&swimming);updateCrouchButton();if(started&&!over&&hp<=0){hp=0;fin("HAS MORT",{type:"impact",x:P.x,y:P.y,z:P.z})}if(!started||paused||over){updateOptionalSystems(0,false);resetCameraState();updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}if(!(dt>0))return;rebuildVehicleGrid();elapsed+=dt;window.HUNTER_STEALTH.tick(dt);const playerStartX=P.x,playerStartZ=P.z;const jf=-joystick.state.y,jtr=-joystick.state.x,f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),strafe=strafeEnabled?Math.max(-1,Math.min(1,(K.KeyU?1:0)-(K.KeyY?1:0)+(strafePointers.right!==null?1:0)-(strafePointers.left!==null?1:0))):0,ud=(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),lim=H-2;const running=canRun&&!playerCrouched&&f>.1&&(joystick.state.running||K.ShiftLeft||K.ShiftRight);if(running&&!swimming&&!playerFall&&!playerEject&&f>.2){runStepTimer-=dt;if(runStepTimer<=0){snd("step",.65);runStepTimer=.29}}else runStepTimer=0;if(scopeActive){const scopeStrafe=(K.KeyU?1:0)-(K.KeyY?1:0);scopeYaw+=(tr-scopeStrafe*.8)*dt*.38;scopePitch=Math.max(-.65,Math.min(.65,scopePitch+f*dt*.3))}else if(cv){const driven=cv,alive=stepV(driven,f,tr,ud,dt,strafe);if(alive&&cv===driven){P.x=driven.x;P.z=driven.z;P.hd=driven.hd}}else{P.hd+=tr*dt*2.2;if(cheats.fly){const speed=65,vertical=(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),length=Math.max(1,Math.hypot(f,strafe));P.x=Math.max(-lim,Math.min(lim,P.x+(-Math.sin(P.hd)*f+Math.cos(P.hd)*strafe)*speed*dt/length));P.z=Math.max(-lim,Math.min(lim,P.z+(-Math.cos(P.hd)*f-Math.sin(P.hd)*strafe)*speed*dt/length));cheatFlightY=Math.max(hAt(P.x,P.z)+1,Math.min(500,(cheatFlightY??P.y)+vertical*speed*dt));P.y=cheatFlightY}else if(playerFall){const fall=playerFall,oldX=P.x,oldZ=P.z,oldY=fall.y;fall.t+=dt;fall.vy-=fall.parachute?10*dt:24*dt;if(fall.parachute){fall.vy=Math.max(-4.8,fall.vy);const desiredX=-Math.sin(P.hd)*f*2.8+Math.cos(P.hd)*strafe*2.2,desiredZ=-Math.cos(P.hd)*f*2.8-Math.sin(P.hd)*strafe*2.2,blend=1-Math.exp(-2.2*dt);fall.vx+=(desiredX-fall.vx)*blend;fall.vz+=(desiredZ-fall.vz)*blend;fall.leanF+=(f-fall.leanF)*blend;fall.leanS+=(strafe-fall.leanS)*blend}else{fall.vx*=Math.exp(-.18*dt);fall.vz*=Math.exp(-.18*dt)}P.x=Math.max(-lim,Math.min(lim,P.x+fall.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+fall.vz*dt));fall.y+=fall.vy*dt;const water=wy(P.x,P.z,t),roof=parachuteRoofLanding(oldX,oldZ,oldY,P.x,P.z,fall.y),landing=Math.max(hAt(P.x,P.z),water-1.4,roof??-Infinity);P.y=fall.y;if(fall.y<=landing){P.y=landing;const fallH=fall.startHeight,impact=Math.max(0,-fall.vy),waterLanding=roof===null&&water>hAt(P.x,P.z)+1.5,dmg=fall.parachute?0:wholeDamage(Math.min(COMBAT_BALANCE.player,Math.max(0,((fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8))*.2)));removeParachuteVisual();playerFall=null;if(dmg>0)hurtP(dmg,false,{type:"fall",x:P.x,y:P.y+8,z:P.z});msg=dmg===0&&fallH>4?"Has aterrat amb seguretat.":waterLanding?"Has caigut a l\u2019aigua.":"Has impactat contra el terra!";msgT=2.5}}else if(playerEject&&playerEject.t>0){P.x=Math.max(-lim,Math.min(lim,P.x+playerEject.vx*dt));P.z=Math.max(-lim,Math.min(lim,P.z+playerEject.vz*dt));if(playerEject.kind==="blast"){playerEject.vy-=19*dt;playerEject.height=Math.max(0,(playerEject.height||0)+playerEject.vy*dt);if(playerEject.height===0)playerEject.vy=0;const landed=playerEject.height===0;playerEject.vx*=Math.exp(-(landed?7:1.7)*dt);playerEject.vz*=Math.exp(-(landed?7:1.7)*dt);if(landed&&playerEject.t<.25)playerEject.t=0}else{playerEject.vx*=Math.exp(-2.4*dt);playerEject.vz*=Math.exp(-2.4*dt)}playerEject.t=Math.max(0,playerEject.t-dt)}else{const length=Math.max(1,Math.hypot(f,strafe)),ss=(swimming?running?8.5:5:playerCrouched?4.5:running?19:12)*f*dt/length,lateral=(swimming?running?6.5:4.5:playerCrouched?3.8:9)*strafe*dt/length;P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*ss+Math.cos(P.hd)*lateral));P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*ss-Math.sin(P.hd)*lateral))}if(!playerFall&&!cheats.fly){wallPush();treePush();vehiclePushPlayer();ferryCabinPushPlayer()}}const walkingDeck=!cv&&!playerFall?pedestrianFerry(P.x,P.z,P.y):null;V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;v.strafeV=0;return}if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});syncFerryCargo();updateTerminalRamps();if(walkingDeck&&!walkingDeck.f.destroyed){const p=ferryWorld(walkingDeck.f,walkingDeck.q.x,walkingDeck.q.z);P.x=p.x;P.z=p.z}const previousInterior=ib;ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2&&P.y<(solidRoofAt(b,P.x,P.z)?.bottom??b.fy+b.h+.1))||null;if(ib!==previousInterior)worldVisualTick=0;const floor=ib&&ib.kind!=="enemy_bunker"?Math.max(ib.fy+.3,groundAt(P.x,P.z,P.y)):groundAt(P.x,P.z,P.y),surface=wy(P.x,P.z,t),insideBasement=playerInsideBunkerBasement(P.x,P.z,P.y);swimming=!cheats.fly&&!cv&&!ib&&!insideBasement&&!playerFall&&floor<surface-2.1;if(swimming)playerCrouched=false;document.body.classList.toggle("player-swimming",canRun&&swimming);if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);if(!playerFall&&!cheats.fly){P.y=insideBasement?floor+.06:ib?floor:Math.max(floor+.06,surface-2.1)}stealthStepTimer-=dt;if(stealthStepTimer<=0){if(cv&&Math.abs(cv.v)>1){const vehicleNoise={bici:"bicycle",moto:"motorbike",cotxe:"car",cotxe_civil:"civilianCar",camio:"truck",tanc:"tank",tanqueta:"apc",barca_rems:"rowboat",windsurf:"windsurf",moto_aquatica:"jetski",llanxa:"speedboat",llanxa_coets:"speedboat",ferry:"ferry",heli:"helicopter",heli_combat:"helicopter",hover:"jetski"},kind=vehicleNoise[cv.t],maximum=window.HUNTER_STEALTH.RADII[kind];if(maximum){const velocity=Math.min(1,Math.abs(cv.v)/Math.max(1,VT[cv.t].maxF||35));window.HUNTER_STEALTH.emit(kind,cv.x,cv.o.position.y+1,cv.z,maximum*(.45+.55*velocity))}}else if(!cv&&!playerFall&&!playerEject&&!scopeActive&&Math.hypot(P.x-playerStartX,P.z-playerStartZ)>.025){window.HUNTER_STEALTH.emit(swimming?"swim":playerCrouched?"crouch":running?"run":"walk",P.x,P.y+1,P.z)}stealthStepTimer=.24}palmVisualTick-=dt;if(palmVisualTick<=0){palmVisualTick=scopeActive?.1:.16;if(PM.update)PM.update(P.x,P.z,!!scopeActive,palmsDisabled,currentSniperFocus());updateShadowCasters()}function viewInsideBuilding(b){if(b===ib)return true;if(!b.hangar||!cv||cv.destroyed)return false;const y=VT[cv.t]?.m==="a"?cv.alt??cv.o?.position?.y:cv.o?.position?.y??cv.alt;return Math.abs(cv.x-b.x)<b.w/2&&Math.abs(cv.z-b.z)<b.d/2&&y!=null&&y>=b.fy-2&&y<b.fy+b.h+2}worldVisualTick-=dt;if(worldVisualTick<=0){worldVisualTick=.2;updateDistanceVisibility()}updateDoors(dt);items.forEach(it=>{const dx=it.x-P.x,dz=it.z-P.z;if(dx*dx+dz*dz<ITEM_ANIM2){it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25}});if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-it.z;if(dx*dx+dz*dz<4.84&&Math.abs(P.y-it.y)<3){let mapMessage=null;if(it.t==="arma")ammo+=16;else if(it.t==="mapa"||it.t==="mapa_heli"||it.t==="mapa_tanc"){mapMessage=revealMapPickup(it.t);mini()}else if(it.t==="franctirador"){inv.franctirador=1;sniperAmmo+=6}else inv[it.t]=(inv[it.t]||0)+(it.t==="granada"?5:it.t==="bazooka"?3:1);world.remove(it.o);items.splice(k,1);msg=mapMessage||"Has trobat: "+IT[it.t].n+(it.t==="granada"?" \xd75":it.t==="bazooka"?" \xd73":it.t==="franctirador"?" +6 cartutxos":"");msgT=3;snd("pick")}}msgT-=dt;if(parachuteVisual)parachuteVisual.position.set(P.x,P.y,P.z);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;animPl(cv||scopeActive?0:f,dt,running&&f>.1,cv||scopeActive?0:strafe);if(!cv&&!scopeActive&&!playerFall&&!playerEject)pl.position.y+=window.HUNTER_CHARACTERS.swimVisualLift(pl,surface,P.y);if(!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive){pl.updateMatrixWorld(true);const boots=pl.userData.boots||[];let closest=Infinity;for(const boot of boots){const p=boot.getWorldPosition(new THREE.Vector3);closest=Math.min(closest,p.y-groundAt(p.x,p.z,P.y))}if(Number.isFinite(closest))pl.position.y-=Math.max(-.06,Math.min(.36,closest-.16))}movementFx.playerStep({phase:pl.userData.ph,x:P.x,z:P.z,heading:P.hd,moving:!scopeActive&&(Math.abs(f)>.04||Math.abs(strafe)>.04),swimming:swimming,inVehicle:!!cv,falling:!!playerFall||!!playerEject||!!ib,surfaceAt:(x,z)=>wy(x,z,t),groundAt:groundAt});if(movementFx.swimStroke({phase:pl.userData.ph,x:P.x,z:P.z,heading:P.hd,swimming:swimming,crawling:(pl.userData.crawlBlend||0)>.55,moving:Math.abs(f)>.1&&!cv&&!playerFall&&!playerEject,surfaceAt:(x,z)=>wy(x,z,t)}))snd("swim",.65);if(!cv&&playerFall){pl.position.y=playerFall.y;if(playerFall.parachute){pl.rotation.x=0;pl.rotation.x=-playerFall.leanF*.13;pl.rotation.z=playerFall.leanS*.14+Math.sin(playerFall.t*1.8)*.045}else{pl.rotation.x=(playerFall.spin||1)*playerFall.t*7.5;pl.rotation.z=Math.sin(playerFall.t*8)*.45}}else if(!cv&&playerEject&&playerEject.t>=0){const dur=playerEject.dur||.5,p=Math.max(0,Math.min(1,1-playerEject.t/dur)),u=pl.userData;if(playerEject.kind==="flip"){const turn=p>=1?0:-Math.PI*2*p,waistLocal=2.05,waistScaled=waistLocal*pl.scale.y;pl.rotation.x=turn;pl.rotation.z=0;const waistOffset=new THREE.Vector3(0,waistScaled,0).applyQuaternion(pl.quaternion);pl.position.x-=waistOffset.x;pl.position.y+=waistScaled-waistOffset.y+Math.sin(Math.PI*p)*(playerEject.height||.68);pl.position.z-=waistOffset.z;const compact=1-Math.pow(p,8);if(u.al)u.al.rotation.x=.58*compact;if(u.ar)u.ar.rotation.x=.58*compact;if(u.ael)u.ael.rotation.x=.5*compact;if(u.aer)u.aer.rotation.x=.5*compact;if(u.ll)u.ll.rotation.x=-.28*compact;if(u.lr)u.lr.rotation.x=-.28*compact;if(u.lkl)u.lkl.rotation.x=-.5*compact;if(u.lkr)u.lkr.rotation.x=-.5*compact}else if(playerEject.kind==="blast"){const airborne=Math.max(0,playerEject.height||0),wave=Math.sin(Math.PI*p);pl.position.y+=airborne;pl.rotation.x=-wave*1.05;pl.rotation.z=(playerEject.roll||1)*wave*.95;if(playerBlastRagdoll)window.HUNTER_RAGDOLL.update(playerBlastRagdoll,dt,{airborne:airborne>.12,grounded:airborne<=.12})}}V.forEach(v=>{if(v===cv){place(v,t,dt,v.steerInput||0);return}const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,scopeVisual=scopeActive&&currentSniperFocus().contains(v.x,v.o.position.y+1.5,v.z,5),interval=scopeVisual||d2<LOD_NEAR2?0:d2<LOD_MID2?.1:.45;if(interval===0){place(v,t,dt,0);v.visualLodAcc=0}else{v.visualLodAcc=(v.visualLodAcc||0)+dt;if(v.visualLodAcc>=interval){const step=v.visualLodAcc;v.visualLodAcc=0;place(v,t,step,0)}}});poseRider(cv,dt);if(cv&&(cv.t==="tanc"||cv.t==="tanqueta")){const gun=window.HUNTER_VEHICLES.turretShot(THREE,cv.o);if(gun){const hd=cv.hd,fx=-Math.sin(hd),fz=-Math.cos(hd),range=cv.t==="tanc"?220:85,heavy=cv.t==="tanc",[ax,ay,az]=autoAimArmoredShot(gun.origin.x,gun.origin.y,gun.origin.z,fx,fz,range,heavy?"heavy":"light",heavy?85*HEAVY_SHOT_SPEED_FACTOR:135);window.HUNTER_VEHICLES.aimTurret(THREE,cv.o,new THREE.Vector3(ax,ay,az),dt)}}restoreCameraWalls();syncCameraVehicle();const scopeNow=scopeActive&&sniperEquipped&&!cv&&!playerFall&&!swimming;const fieldOfView=scopeNow?2*Math.atan(Math.tan(58*Math.PI/360)/8)*180/Math.PI:58;if(Math.abs(cam.fov-fieldOfView)>.001){cam.fov=fieldOfView;cam.updateProjectionMatrix()}if(scopeNow){cameraBasement=null;const fx=-Math.sin(scopeYaw),fz=-Math.cos(scopeYaw),vertical=Math.tan(scopePitch);cam.position.set(P.x-fx*.12,P.y+1.76,P.z-fz*.12);cam.lookAt(P.x+fx*160,P.y+1.76+vertical*160,P.z+fz*160)}else{const T=cv||P,c=cv?VT[cv.t]:ib?{cd:6,ch:11}:{cd:10,ch:5},ty=cv?cv.o.position.y:P.y,heading=cv?vehicleLook.heading(cv,dt,!!drag):P.hd,w=cameraOffset.set(T.x+Math.sin(heading)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1),0,T.z+Math.cos(heading)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1));const b=activeBunker,local=b?.basement&&!cv?buildingLocalPoint(b,P.x,P.z):null,inside=!!local&&Math.abs(local.x)<b.basement.halfX-.5&&Math.abs(local.z)<b.basement.halfZ-.5;const stair=b?.basement?.stair;const descending=!!local&&Math.abs(local.x-stair.x)<stair.width/2+.45&&local.z>=stair.zBottom-.5&&local.z<=stair.zTop+.4&&P.y<b.fy+.04;const bunkerBelow=!!inside&&(P.y<b.fy-3.9||descending);if(b?.basement)for(const slab of b.basement.upperSlabMeshes)slab.visible=true;if(bunkerBelow){const targetEye=bunkerEye.set(P.x,Math.min(b.fy-1,Math.max(b.basement.floorY+1.6,P.y+1.65)),P.z);const cameraDistance=Math.max(10.5,Math.min(17,13.5*zoom));const cameraHeight=Math.max(b.basement.floorY+5.4,Math.min(b.fy-1.55,P.y+7.2));w.set(P.x+Math.sin(heading)*cameraDistance,cameraHeight,P.z+Math.cos(heading)*cameraDistance);const cl=buildingLocalPoint(b,w.x,w.z);const clampedX=Math.max(-b.basement.halfX+1.3,Math.min(b.basement.halfX-1.3,cl.x));const clampedZ=Math.max(-b.basement.halfZ+1.3,Math.min(b.basement.halfZ-1.3,cl.z));if(clampedX!==cl.x||clampedZ!==cl.z){const q=buildingWorldPoint(b,clampedX,clampedZ);w.x=q.x;w.z=q.z}if(cameraBasement!==b)cam.position.copy(w);else cam.position.lerp(w,1-Math.exp(-7*dt));const smoothLocal=buildingLocalPoint(b,cam.position.x,cam.position.z),safe=buildingWorldPoint(b,Math.max(-b.basement.halfX+1.3,Math.min(b.basement.halfX-1.3,smoothLocal.x)),Math.max(-b.basement.halfZ+1.3,Math.min(b.basement.halfZ-1.3,smoothLocal.z)));cam.position.set(safe.x,Math.max(b.basement.floorY+5.4,Math.min(b.fy-1.55,cam.position.y)),safe.z);hideCameraObstructions(b,targetEye,true);b.basement.cameraInside=true;cameraBasement=b}else{if(b?.basement)b.basement.cameraInside=false;w.y=Math.max(ty+c.ch*zoom*(cv?Math.sqrt(VS[cv.t]):1),hAt(w.x,w.z)+3,2.5);if(cameraBasement)cam.position.copy(w);else cam.position.lerp(w,1-Math.pow(.001,dt));cam.position.y=Math.max(cam.position.y,hAt(cam.position.x,cam.position.z)+3,2.5);cameraBasement=null;if(ib&&!cv)hideCameraObstructions(ib,bunkerEye.set(P.x,P.y+1.65,P.z),false)}cam.lookAt(T.x-Math.sin(heading)*(bunkerBelow?3.5:8),Math.min(bunkerBelow?b.fy-1:Infinity,ty+(bunkerBelow?2:2)),T.z-Math.cos(heading)*(bunkerBelow?3.5:8))}if(playerEject&&playerEject.t<=0){if(playerBlastRagdoll){window.HUNTER_RAGDOLL.reset(playerBlastRagdoll);playerBlastRagdoll=null}playerEject=null}updateBazookaReticle(dt);const previousCooldown=Math.max(0,fcd);fcd=Math.max(0,previousCooldown-dt);updateGrenadeCharge(dt);if(K.KeyF&&(!grenadeEquipped||cv)){const overshoot=previousCooldown>0?Math.min(0,previousCooldown-dt):0;fire();if(fcd>0)fcd=Math.max(0,fcd+overshoot)}updEn(dt,simulationFrameActive);window.HUNTER_STEALTH_DEBUG.update(THREE,world,E,P);updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);updateOptionalSystems(dt,!!started&&!paused&&!over&&simulationFocused&&!document.hidden);uiTick+=dt;if(uiTick>.12){uiTick=0;const nv=cv?null:nearV();const contextButtons=document.getElementById("contextButtons");if(contextButtons){contextButtons.classList.toggle("heli-active",!cv&&cheats.fly||!!cv&&VT[cv.t]?.m==="a");contextButtons.classList.toggle("heli-combat-active",cv?.t==="heli_combat");contextButtons.classList.toggle("sniper-active",!!sniperEquipped&&!!inv.franctirador&&!cv)}const fireButton=document.getElementById("mainFireButton");if(fireButton){const heliGrenade=cv?.t==="heli",grenade=heliGrenade||!cv&&grenadeEquipped&&(inv.granada||0)>0,cutters=!cv&&cisallaEquipped&&(inv.cisalla||0)>0,knife=!cv&&(knifeEquipped||!grenade&&!cutters&&!bazookaEquipped&&!sniperEquipped&&ammo<=0),weapon=cutters?"cisalla":grenade?"granada":knife?"ganivet":"normal";if(fireButton.dataset.weapon!==weapon){fireButton.dataset.weapon=weapon;fireButton.innerHTML=cutters?ICON.cisalla:grenade?ICON.granada:knife?ICON.ganivet:"\ud83c\udfaf";const action=cutters?"Talla filferrada":grenade?"Llan\xe7ar granada":knife?"Atacar amb ganivet":"Dispar";fireButton.setAttribute("aria-label",action);fireButton.title=heliGrenade?"Llan\xe7ar granada de l\u2019inventari":grenade?"Mant\xe9n premut per arribar m\xe9s lluny":action}}updateActionButton(nv);if(pickerOpen)drawWeaponPicker();mini();ui.renderHUD({nearVehicle:nv})}}let last=performance.now();resetSimulationClock(last);(function loop(now){if(generationPromise){last=now;simulationClock.reset(now);cinematicClock.reset(now);requestAnimationFrame(loop);return}const rawDt=Number.isFinite(now)&&now>=last?(now-last)/1e3:0;last=Number.isFinite(now)&&now>=0?now:performance.now();const cpuStarted=performance.now(),victoryAtStart=victoryCinematic,deathAtStart=deathCinematic,visible=simulationFocused&&!document.hidden,gameplayActive=!!started&&!paused&&!over&&visible,cinematicActive=!!started&&!paused&&visible&&(!!victoryAtStart&&(victoryAtStart.active||victoryAtStart.finished)||!!deathAtStart?.active);enemyPathBudget=2;enemyNodeBudget=160;simulationFrameActive=true;let simulated;try{simulated=simulationClock.advance(now,dt=>{update(dt,elapsed+dt);return!!started&&!paused&&!over&&simulationFocused&&!document.hidden},gameplayActive)}finally{simulationFrameActive=false}if(!simulated.steps)update(0,elapsed);syncWeaponPicker();cinematicClock.advance(now,dt=>{if(victoryCinematic===victoryAtStart&&(victoryAtStart?.active||victoryAtStart?.finished))updateVictoryCinematic(dt);if(deathCinematic===deathAtStart&&deathAtStart?.active)updateDeathCinematic(dt);return!paused&&simulationFocused&&!document.hidden&&(victoryCinematic===victoryAtStart&&(victoryAtStart?.active||victoryAtStart?.finished)||deathCinematic===deathAtStart&&deathAtStart?.active)},cinematicActive);updateAudioFrame();renderCombatFeedback();renderStealthFeedback();const t=elapsed+(victoryCinematic?victoryCinematic.t:0);const simulationEnded=performance.now();if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)terrainStream.update(victoryCinematic?.active?cam.position.x:P.x,victoryCinematic?.active?cam.position.z:P.z,visualQuality.shadows?2:1.2,cam,victoryCinematic?.active?null:currentSniperFocus());const terrainEnded=performance.now();waves(t+(deathCinematic?.active?deathCinematic.t*.18:0));sun.target.position.set(victoryCinematic?cam.position.x:P.x,0,victoryCinematic?cam.position.z:P.z);sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();for(const k in renderCategories)renderCategories[k]=0;if(deathVoidReady()){const v=deathCinematic;v.voidCamera.aspect=cam.aspect;v.voidCamera.updateProjectionMatrix();ren.render(v.voidScene,v.voidCamera)}else if(deathCinematic?.underwaterActive){ren.render(deathCinematic.underwaterScene,cam)}else ren.render(scene,cam);if(started&&!paused&&!over){advanceTerrainTexture();if(waterUpgradePending){water.queueResolutionUpgrade();waterUpgradePending=false}water.stepResolutionUpgrade(2)}adaptivePerformance.sample({dt:rawDt,renderCpuMs:performance.now()-renderStarted,updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,active:!!started&&!paused&&!over,now:now,display:performanceStatsVisible});requestAnimationFrame(loop)})(last);
+const countVehicles=type=>{let count=0;for(const v of V)if(v.t===type)count++;return count};function prisonCampFootprint(layout){const padHalfWidth=layout.size[0]/2+4,padHalfDepth=layout.size[1]/2+4,escapeEnd=Math.max(...layout.escapeRoute.map(p=>p[1]))+12,blend=18;return{minX:-padHalfWidth-blend,maxX:padHalfWidth+blend,minZ:-padHalfDepth-blend,maxZ:Math.max(padHalfDepth,escapeEnd)+blend,padHalfWidth:padHalfWidth,padHalfDepth:padHalfDepth,escapeEnd:escapeEnd,blend:blend}}function prisonCampSegmentDistance(x,z,a,b){const dx=b.x-a.x,dz=b.z-a.z,t=Math.max(0,Math.min(1,((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz||1)));return Math.hypot(x-a.x-t*dx,z-a.z-t*dz)}function*surveyPrisonCampSiteSteps(layout,x,z,{heightAt:heightAt,halfSize:halfSize,siteClear:siteClear}){const bounds=prisonCampFootprint(layout);if(x+bounds.minX<=-halfSize+120||x+bounds.maxX>=halfSize-120||z+bounds.minZ<=-halfSize+120||z+bounds.maxZ>=halfSize-120||!siteClear({x:x,z:z}))return null;const height=heightAt(x,z);if(!Number.isFinite(height)||height<.5)return null;let low=height,high=height,samples=1;const nx=Math.ceil((bounds.maxX-bounds.minX)/8),nz=Math.ceil((bounds.maxZ-bounds.minZ)/8);for(let ix=0;ix<=nx;ix++)for(let iz=0;iz<=nz;iz++){if(samples%64===0)yield{stage:"Comprovant terreny del camp",completed:null,total:null};const h=heightAt(x+bounds.minX+(bounds.maxX-bounds.minX)*ix/nx,z+bounds.minZ+(bounds.maxZ-bounds.minZ)*iz/nz);samples++;if(!Number.isFinite(h)||h<.5)return null;low=Math.min(low,h);high=Math.max(high,h)}return{site:{x:x,z:z,h:height},terrain:{minHeight:low,maxHeight:high,samples:samples,spacing:8,bounds:bounds}}}function*planPrisonCampSteps(layout,{islandList:islandList,baseIsland:baseIsland,hqIsland:hqIsland,heightAt:heightAt,halfSize:halfSize,siteClear:siteClear,createSupportIsland:createSupportIsland}){if(!layout||!layout.fixedOrientation||!layout.escapeRoute?.length)throw new Error("Invariant del camp: manca un disseny de presoners v\xe0lid");const primary=islandList.filter(i=>i!==baseIsland&&i!==hqIsland).slice().sort((a,b)=>b.r-a.r||a.x-b.x||a.z-b.z),ordered=[...primary,baseIsland,hqIsland];let candidates=0,terrace=null;for(const island of ordered){for(let ring=0;ring<=8;ring++){const count=ring?32:1,distance=ring*Math.max(20,island.r*.085);for(let point=0;point<count;point++){yield{stage:"Cercant camp de presoners",completed:null,total:null};candidates++;const angle=point*Math.PI*2/count,surveyed=yield*surveyPrisonCampSiteSteps(layout,island.x+Math.cos(angle)*distance,island.z+Math.sin(angle)*distance,{heightAt:heightAt,halfSize:halfSize,siteClear:siteClear});if(!surveyed)continue;const result={...surveyed,island:island,candidates:candidates,placement:"natural"},relief=surveyed.terrain.maxHeight-surveyed.terrain.minHeight;if(relief<=28)return result;if(!terrace||relief<terrace.terrain.maxHeight-terrace.terrain.minHeight)terrace=result}}}if(terrace){terrace.site.h=Math.max(3,(terrace.terrain.minHeight+terrace.terrain.maxHeight)/2);return{...terrace,candidates:candidates,placement:"terrace"}}const island=createSupportIsland(),site={x:island.x,z:island.z,h:Math.max(3,heightAt(island.x,island.z))};if(!Number.isFinite(site.h)||!siteClear(site))throw new Error("Invariant del camp: illa de reserva ocupada o altura inv\xe0lida");return{site:site,island:island,candidates:candidates,placement:"support-island",terrain:{bounds:prisonCampFootprint(layout)}}}const PIER_DECK_Y=2.4;function jetSkiSpotClear(q,ignore=null){const box=vehicleBox({t:"moto_aquatica",...q});box.w+=2;box.d+=2;const r=Math.hypot(box.w,box.d)/2;if(Math.abs(q.x)>H-r-5||Math.abs(q.z)>H-r-5||hAt(q.x,q.z)>-1.2)return false;if(B.some(b=>Math.abs(q.x-b.x)<b.hw+r&&Math.abs(q.z-b.z)<b.hd+r))return false;return!V.some(v=>v!==ignore&&obbOverlap(box,vehicleBox(v)))&&!E.some(v=>["jeep","tanqueta","tanc"].includes(v.t)&&obbOverlap(box,vehicleBox(v)))}function*shiftJetSkiAlongCoast(origin,ignore){let checkpointUnits=0;const depth=Math.max(-3,Math.min(-1.8,hAt(origin.x,origin.z)));for(const side of[1,-1]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};let x=origin.x,z=origin.z,walked=0;for(let step=0;step<80;step++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const gx=hAt(x+2,z)-hAt(x-2,z),gz=hAt(x,z+2)-hAt(x,z-2),len=Math.hypot(gx,gz);if(len<1e-5)break;x+=side*(-gz/len)*5;z+=side*(gx/len)*5;walked+=5;for(let j=0;j<8;j++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const error=hAt(x,z)-depth;if(Math.abs(error)<.12)break;const dx=(hAt(x+1,z)-hAt(x-1,z))/2,dz=(hAt(x,z+1)-hAt(x,z-1))/2,den=dx*dx+dz*dz;if(den<1e-6)break;const k=Math.max(-3,Math.min(3,error/Math.sqrt(den)))/Math.sqrt(den);x-=dx*k;z-=dz*k}const q={x:x,z:z,hd:origin.hd};if(walked%100===0&&Math.abs(hAt(x,z)-depth)<.3&&jetSkiSpotClear(q,ignore))return{...q,coastShift:walked}}}return null}function*findJetSkiCoastSpot(ignore=null){let checkpointUnits=0;for(const island of islands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(let n=0;n<64;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const a=n*Math.PI/32,ux=Math.cos(a),uz=Math.sin(a);let landD=null;for(let d=0;d<island.r*1.6;d+=10){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const h=hAt(island.x+ux*d,island.z+uz*d);if(h>0){landD=d;continue}if(landD===null||h>-2.5)continue;let lo=landD,hi=d;for(let k=0;k<15;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const mid=(lo+hi)/2;if(hAt(island.x+ux*mid,island.z+uz*mid)>-2.5)lo=mid;else hi=mid}const q={x:island.x+ux*hi,z:island.z+uz*hi,hd:Math.atan2(ux,uz)};if(jetSkiSpotClear(q,ignore))return q;break}}}return null}function*ensureJetSkis(add){let checkpointUnits=0;for(const v of V.filter(v=>v.t==="moto_aquatica")){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(jetSkiSpotClear(v,v))continue;const q=(yield*shiftJetSkiAlongCoast(v,v))||(yield*findJetSkiCoastSpot(v));if(!q)throw new Error("No s\u2019ha trobat una costa lliure per a la moto aqu\xe0tica");Object.assign(v,q,{coastal:true})}while(countVehicles("moto_aquatica")<4){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*findJetSkiCoastSpot();if(!q)throw new Error("No s\u2019han pogut situar quatre motos aqu\xe0tiques sense solapaments");add("moto_aquatica",q.x,q.z,q.hd,{coastal:true,guaranteed:true})}}function drainBuildSteps(steps){let next;while(!(next=steps.next()).done){}return next.value}let generationDrainActive=false;function build(){if(generationDrainActive)throw new Error("Ja hi ha una generaci\xf3 en curs");generationDrainActive=true;try{return drainBuildSteps(buildSteps())}finally{generationDrainActive=false}}function generationAbortError(){const error=new Error("Generaci\xf3 cancel\xb7lada");error.name="AbortError";return error}let generationYieldChannel=null;function scheduleGenerationTurn(){if(typeof window.scheduler?.yield==="function")return window.scheduler.yield();if(typeof MessageChannel==="function"){if(!generationYieldChannel){const channel=new MessageChannel,queue=[];channel.port1.onmessage=()=>queue.shift()?.();generationYieldChannel={channel:channel,queue:queue}}return new Promise(resolve=>{generationYieldChannel.queue.push(resolve);generationYieldChannel.channel.port2.postMessage(0)})}return new Promise(resolve=>setTimeout(resolve,0))}async function buildProgressively({iterator:iterator=null,onProgress:onProgress=()=>{},schedule:schedule=window.HUNTER_GENERATION_SCHEDULE||scheduleGenerationTurn,signal:signal,budgetMs:budgetMs=6,maxSteps:maxSteps=32}={}){if(generationDrainActive)throw new Error("Ja hi ha una generaci\xf3 en curs");generationDrainActive=true;const steps=iterator||buildSteps(),state={status:"generating",stage:"Preparant el m\xf3n",completed:0,total:null,steps:0,yields:0,maxStepMs:0,maxStepStage:null,maxTurnMs:0,error:null};window.HUNTER_GENERATION_STATE=state;const check=()=>{if(signal?.aborted)throw generationAbortError()};const publish=checkpoint=>{Object.assign(state,{unit:null},checkpoint);onProgress({...state})};const pause=async()=>{check();state.yields++;let abort;const cancelled=new Promise((_,reject)=>{abort=()=>reject(generationAbortError());signal?.addEventListener?.("abort",abort,{once:true})});try{await Promise.race([Promise.resolve().then(()=>schedule({...state})),cancelled]);check()}finally{signal?.removeEventListener?.("abort",abort)}};try{publish({});await pause();for(;;){check();const turnStart=performance.now();let count=0,next;do{check();const before=performance.now(),previousStage=state.stage;next=steps.next();const stepMs=performance.now()-before;if(stepMs>state.maxStepMs){state.maxStepMs=stepMs;state.maxStepStage=previousStage}state.steps++;if(next.done){state.maxTurnMs=Math.max(state.maxTurnMs,performance.now()-turnStart);publish({status:"complete",stage:"M\xf3n preparat",completed:1,total:1});return next.value}publish(next.value||{})}while(++count<Math.max(1,maxSteps)&&performance.now()-turnStart<Math.max(1,budgetMs));state.maxTurnMs=Math.max(state.maxTurnMs,performance.now()-turnStart);await pause()}}catch(error){publish({status:error.name==="AbortError"?"cancelled":"error",error:error.message});throw error}finally{try{steps.return()}finally{generationDrainActive=false}}}function*buildSteps(){let checkpointUnits=0;resetOptionalSystems();resetSimulationClock(null);resetCameraState();cameraBasement=null;clearVictoryCinematic();clearDeathCinematic();window.HUNTER_ENEMY_LOD.reset();window.HUNTER_STEALTH.clear();window.HUNTER_STEALTH_DEBUG.reset();playerCrouched=false;stealthStepTimer=0;const requestedPalmDisable=!!document.getElementById("disablePalms")?.checked;palmsDisabled=false;cancelGrenadeCharge();clearBulletImpacts();removeParachuteVisual();const buildStarted=performance.now(),buildStages={},buildCounters={landAttempts:0,landCandidates:0},markBuildStage=(()=>{let last=buildStarted;return name=>{const now=performance.now();buildStages[name]=Math.round((now-last)*100)/100;last=now}})();movementFx.reset();if(terrainStream)terrainStream.dispose();terrainStream=null;seedCompounds=[];elapsed=0;water.update(0);joystick.reset();compoundClear=[];terrainLevels=[];terrainLevelGrid.clear();if(seedSearchMode){if(!seedScratchWorld)seedScratchWorld=new THREE.Group;seedScratchWorld.clear();world=seedScratchWorld}else{if(world){scene.remove(world);yield*window.HUNTER_RESOURCES.disposeSteps(world)}world=new THREE.Group;scene.add(world)}world.userData={compounds:[],airObstacles:[]};B=[];stairs=[];piers=[];swimming=false;intelMarks=[];hqMapKnown=false;playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false;pl.userData.cisallaCut=0;sniperEquipped=false;sniperAmmo=0;setSniperScope(false);pl.userData.sniper.visible=false;pl.userData.bazooka.visible=false;pl.userData.grenade.visible=false;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;pl.userData.grenadePending=null;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];grenades=[];fx=[];logb=[];hp=window.HUNTER_COMBAT_BALANCE.player;ammo=16;fcd=0;kills=0;over=0;endEl.style.display="none";setDis(false);let pa,pb;activeBunker=null;{const base=requestedSeed==null?Math.floor(Math.random()*4294967295)>>>0:requestedSeed>>>0;let tries=0;do{if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};seed=base+Math.imul(tries++,2654435761)>>>0;genIslands();pa=yield*landSteps(A,2e3);pb=yield*landSteps(Bi,2e3)}while((!pa||!pb)&&tries<8);if(!pa||!pb)throw new Error("No s\u2019ha pogut generar un mapa v\xe0lid amb aquesta llavor")}markBuildStage("islandsAndBasePositions");yield{stage:"Illes i empla\xe7aments inicials",completed:1,total:1};const cols=[14201994,13214330,12109001,14272928],compoundVehicles=[],heliportSites=[],staticDecorRoots=[],pathRoutes=[];const batchStaticDecor=function*(){let checkpointUnits=0;const CHUNK=160,groups=new Map,materialMap=new Map;world.updateWorldMatrix(true,false);let originals=0,batches=0,vertices=0;for(const root of staticDecorRoots){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(!root.parent)continue;root.updateMatrixWorld(true);yield{stage:"Agrupant decoraci\xf3",completed:originals,total:null,unit:"malles"};root.traverse(mesh=>{if(!mesh.isMesh||mesh.isInstancedMesh||!mesh.geometry?.attributes.position)return;const mat=mesh.material;if(!mat?.color||Array.isArray(mat))return;const center=mesh.getWorldPosition(new THREE.Vector3),cx=Math.floor(center.x/CHUNK),cz=Math.floor(center.z/CHUNK);const signature=[mat.type,mat.roughness??0,mat.metalness??0,mat.opacity??1,mat.transparent?1:0,mat.side,mat.flatShading?1:0,mat.polygonOffset?1:0,mat.polygonOffsetFactor,mat.polygonOffsetUnits].join(":");const key=cx+","+cz+"|"+signature;let group=groups.get(key);if(!group){group={cx:cx,cz:cz,mat:mat,meshes:[]};groups.set(key,group)}group.meshes.push(mesh);originals++})}const transform=new THREE.Matrix4,geometries=[];for(const group of groups.values()){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const x=(group.cx+.5)*CHUNK,z=(group.cz+.5)*CHUNK,pieces=[],sizes=[];let total=0;try{for(const mesh of group.meshes){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};yield{stage:"Agrupant decoraci\xf3",completed:batches,total:groups.size,unit:"grups"};transform.makeTranslation(-x,0,-z).multiply(mesh.matrixWorld);const copy=mesh.geometry.index?mesh.geometry.toNonIndexed():mesh.geometry.clone();copy.applyMatrix4(transform);const n=copy.attributes.position.count,color=new Float32Array(n*3);pieces.push(copy);sizes.push(n);total+=n;for(let k=0;k<n;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(k%256===0)yield{stage:"Colors de decoraci\xf3",completed:k,total:n,unit:"v\xe8rtexs"};color[k*3]=mesh.material.color.r;color[k*3+1]=mesh.material.color.g;color[k*3+2]=mesh.material.color.b}copy.setAttribute("color",new THREE.BufferAttribute(color,3))}const geom=new THREE.BufferGeometry;for(const[attribute,width]of[["position",3],["normal",3],["uv",2],["color",3]]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const data=new Float32Array(total*width);let offset=0;for(let k=0;k<pieces.length;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const src=pieces[k].getAttribute(attribute);if(src)data.set(src.array,offset);offset+=sizes[k]*width}geom.setAttribute(attribute,new THREE.BufferAttribute(data,width))}geom.computeBoundingSphere();const mat=group.mat.clone();mat.color.setHex(16777215);mat.vertexColors=true;mat.needsUpdate=true;const mesh=new THREE.Mesh(geom,mat);mesh.name="hunter-static-decor-batch";mesh.position.set(x,0,z);mesh.castShadow=false;world.add(mesh);batches++;vertices+=total}finally{for(const g of pieces){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};g.dispose()}}}const disposed=new Set,materials=new Set;for(const root of staticDecorRoots){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};yield{stage:"Netejant decoraci\xf3 original",completed:null,total:null};root.traverse(o=>{if(o.geometry&&!disposed.has(o.geometry)){disposed.add(o.geometry);o.geometry.dispose()}if(o.material){for(const mat of Array.isArray(o.material)?o.material:[o.material])materials.add(mat)}});root.parent?.remove(root)}for(const mat of materials){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};mat.dispose()}staticDecorRoots.length=0;const result={originalMeshes:originals,batchedMeshes:batches,drawCallsSaved:originals-batches,vertices:vertices};window.HUNTER_STATIC_BATCH_STATS=result;return result};const addVillageWell=g=>{const outer=new THREE.Mesh(new THREE.CylinderGeometry(1.7,1.8,1.75,24,1,true),M(8751478,"masonry"));outer.position.y=.875;g.add(outer);const lining=M(4475715,"masonry").clone();lining.side=THREE.BackSide;const inner=new THREE.Mesh(new THREE.CylinderGeometry(1.08,1.04,1.72,24,1,true),lining);inner.position.y=.88;g.add(inner);const rim=new THREE.Mesh(new THREE.RingGeometry(1.06,1.72,24),M(10328964,"masonry"));rim.rotation.x=-Math.PI/2;rim.position.y=1.76;g.add(rim);const water=new THREE.Mesh(new THREE.CircleGeometry(1.035,24),M(1322035,"paint"));water.rotation.x=-Math.PI/2;water.position.y=.22;g.add(water);const innerShadow=new THREE.Mesh(new THREE.RingGeometry(.78,1.035,24),M(1976360,"masonry"));innerShadow.rotation.x=-Math.PI/2;innerShadow.position.y=.235;g.add(innerShadow)};const compoundProp=(kind,x,z,rot=0)=>{if(seedSearchMode)return null;const y=Math.max(.05,hAt(x,z)),g=new THREE.Group;g.position.set(x,y,z);g.rotation.y=rot;if(kind==="bench"){bx(g,4,.25,1.2,8414279,0,.9,0);for(const x of[-1.4,1.4])bx(g,.2,.8,1,4739657,x,.4,0)}else if(kind==="well")addVillageWell(g);else if(kind==="lifebuoy"){const m=new THREE.Mesh(new THREE.TorusGeometry(.6,.15,6,16),M(15038534,"paint"));m.position.y=1.5;g.add(m);bx(g,.12,2.3,.12,5988432,0,1.15,0)}else if(kind==="crate"){bx(g,1.2,.9,1,8084021,0,.45,0,"paint");bx(g,1.26,.1,1.06,4141089,0,.2,0,"metal");bx(g,.1,.95,1.08,4141089,0,.48,0,"metal")}else if(kind==="barrel"){const body=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.9,10),M(5464426,"metal"));body.position.y=.45;g.add(body);for(const y0 of[.12,.78]){const ring=new THREE.Mesh(new THREE.CylinderGeometry(.44,.44,.08,10),M(3028024,"metal"));ring.position.y=y0;g.add(ring)}}else if(kind==="barrier"){bx(g,2.4,.72,.5,10128498,0,.36,0,"masonry");for(const x0 of[-.9,.9])bx(g,.28,.28,.8,6116680,x0,.14,0,"masonry")}else if(kind==="ammo"){bx(g,1.5,.75,1.1,6252614,0,.38,0,"paint");bx(g,1.55,.12,1.15,3159340,0,.78,0,"metal");bx(g,.12,.8,1.18,3159340,0,.38,0,"metal")}else if(kind==="bollard"){const post=new THREE.Mesh(new THREE.CylinderGeometry(.18,.18,.85,10),M(4936020,"metal"));post.position.y=.42;g.add(post);const base=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.1,10),M(3093559,"metal"));base.position.y=.08;g.add(base)}else if(kind==="sign"){bx(g,.12,7.4,.12,4541263,0,3.7,0,"metal");const fg=new THREE.Group;fg.position.set(0,6.55,0);g.add(fg);bx(fg,2.5,1.25,.06,11740710,1.22,0,0,"paint");const tip=new THREE.Mesh(new THREE.ConeGeometry(.16,.42,8),M(13745522,"metal"));tip.position.set(0,7.58,0);g.add(tip)}else if(kind==="sandbag"){for(const xx of[-.8,0,.8])bx(g,.72,.38,.48,10193512,xx,.2,0,"masonry");for(const xx of[-.4,.4])bx(g,.72,.38,.48,10720114,xx,.52,0,"masonry")}else if(kind==="fuel"){const tank=new THREE.Mesh(new THREE.CylinderGeometry(.72,.72,2.2,12),M(6910063,"metal"));tank.rotation.z=Math.PI/2;tank.position.y=.9;g.add(tank);for(const xx of[-.82,.82])bx(g,.12,1.15,.9,4277831,xx,.62,0,"metal")}else if(kind==="lamp"){bx(g,.14,4.2,.14,4541263,0,2.1,0,"metal");bx(g,.7,.22,.45,15193738,0,4.15,0,"paint")}else if(kind==="generator"){bx(g,7,.4,4.5,7172969,0,.2,0,"metal");bx(g,5,2.5,3,5728591,0,1.65,0,"metal");for(let k=-2;k<=2;k++)bx(g,.12,1.6,.06,2701370,k*.55,1.75,1.53,"metal");bx(g,.25,3,.25,4278347,1.5,3.05,-.7,"metal")}else if(kind==="net"){for(const xx of[-1.2,1.2])bx(g,.12,2.1,.12,5067606,xx,1.05,0,"metal");for(let yy=.45;yy<2;yy+=.42)bx(g,2.5,.035,.035,5988450,0,yy,0,"metal");for(let xx=-1.05;xx<=1.05;xx+=.42)bx(g,.035,1.65,.035,5988450,xx,1.2,0,"metal")}world.add(g);staticDecorRoots.push(g);return g};const compoundPad=(x,z,w,d,c=7828332)=>{if(seedSearchMode){compoundClear.push({x:x,z:z,r:Math.hypot(w,d)*.55});return{rotation:{y:0}}}const material=M(c,"masonry").clone();material.polygonOffset=true;material.polygonOffsetFactor=-1;material.polygonOffsetUnits=-1;const geometry=new THREE.PlaneGeometry(w,d);geometry.rotateX(-Math.PI/2);const o=new THREE.Mesh(geometry,material);o.position.set(x,hAt(x,z)+.06,z);world.add(o);staticDecorRoots.push(o);compoundClear.push({x:x,z:z,r:Math.hypot(w,d)*.55});return o};const landingPad=(x,z,size=30,rot=0)=>{if(seedSearchMode){compoundClear.push({x:x,z:z,r:size*.72});return{rotation:{y:rot}}}const y=hAt(x,z)+.025,g=new THREE.Group;g.position.set(x,y,z);g.rotation.y=rot;const base=new THREE.Mesh(new THREE.BoxGeometry(size,.12,size),M(6712173,"masonry"));g.add(base);const w=Math.max(1.1,size*.07),L=size*.45;bx(g,w,.035,L,15921897,-L*.28,.09,0,"paint");bx(g,w,.035,L,15921897,L*.28,.09,0,"paint");bx(g,L*.62,.035,w,15921897,0,.09,0,"paint");world.add(g);staticDecorRoots.push(g);compoundClear.push({x:x,z:z,r:size*.72});return g};const compoundPath=(points,width=4,color=9075038)=>{pathRoutes.push({points:points,width:width,color:color});const curve=window.HUNTER_COMPOUND_PATHS.smoothPath(points,width);for(let i=1;i<curve.length;i++){const a=curve[i-1],b=curve[i],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/3));for(let k=0;k<=n;k++){const t=k/n;compoundClear.push({x:a[0]+(b[0]-a[0])*t,z:a[1]+(b[1]-a[1])*t,r:width*.8+2})}}};const compoundPier=(x1,z1,x2,z2,width=4.2,accessRamp=true)=>{const dx=x2-x1,dz=z2-z1,L=Math.hypot(dx,dz);if(L<2)return;const ux=dx/L,uz=dz/L,px=-uz,pz=ux,n=Math.max(1,Math.ceil(L/5));let ramp=null;if(accessRamp&&L>width){let rampLength=12,rampGround=null;for(let d=12;d<=40;d+=2){const shoreH=hAt(x1-ux*d,z1-uz*d);if(shoreH>.25){rampLength=d;rampGround=shoreH+.08;break}}if(rampGround!==null){ramp={x:x1,z:z1,nx:-ux,nz:-uz,length:rampLength,width:width-.25,bottom:rampGround,top:PIER_DECK_Y,ramp:true,pierAccess:true};stairs.push(ramp)}}if(seedSearchMode){for(let i=0;i<n;i++){const m=(i+.5)/n,seg=L/n,mx=x1+dx*m,mz=z1+dz*m;piers.push({x:mx,z:mz,ux:ux,uz:uz,px:px,pz:pz,length:seg+.12,width:width,y:PIER_DECK_Y});compoundClear.push({x:mx,z:mz,r:width*.8+1.5})}return}if(ramp){const rampMidX=x1-ux*ramp.length/2,rampMidZ=z1-uz*ramp.length/2,rise=ramp.top-ramp.bottom,rampMesh=new THREE.Mesh(new THREE.BoxGeometry(ramp.width,.22,Math.hypot(ramp.length,rise)),M(9795672,"paint"));rampMesh.position.set(rampMidX,(ramp.bottom+ramp.top)/2-.11,rampMidZ);rampMesh.rotation.set(-Math.atan2(rise,ramp.length),Math.atan2(ux,uz),0,"YXZ");world.add(rampMesh);staticDecorRoots.push(rampMesh)}const yaw=Math.atan2(dx,dz);for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n,m=(a+b)/2,seg=L/n,mx=x1+dx*m,mz=z1+dz*m,y=PIER_DECK_Y-.14;const deck=new THREE.Mesh(new THREE.BoxGeometry(width,.28,seg+.12),M(8479558,"paint"));deck.position.set(mx,y,mz);deck.rotation.y=yaw;world.add(deck);staticDecorRoots.push(deck);piers.push({x:mx,z:mz,ux:ux,uz:uz,px:px,pz:pz,length:seg+.12,width:width,y:y+.14});for(const side of[-1,1]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,3.35,8),M(4735806,"metal"));post.position.set(mx+px*side*(width*.44),PIER_DECK_Y-1.15,mz+pz*side*(width*.44));world.add(post);staticDecorRoots.push(post)}compoundClear.push({x:mx,z:mz,r:width*.8+1.5})}for(const side of[-1,1]){const b=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,.9,8),M(4080711,"metal"));b.position.set(x2+px*side*(width*.35),PIER_DECK_Y+.26,z2+pz*side*(width*.35));world.add(b);staticDecorRoots.push(b)}};const findPortWater=function*(q){let checkpointUnits=0;for(let a=0;a<32;a++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const aa=a*Math.PI/16;for(let d=28;d<Math.max(100,q.r||180);d+=8){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const wx=q.x+Math.cos(aa)*d,wz=q.z+Math.sin(aa)*d;if(rawHAt(wx,wz)<-3&&rawHAt(wx+Math.cos(aa)*12,wz+Math.sin(aa)*12)<-3)return{x:wx,z:wz,hd:Math.atan2(-Math.cos(aa),-Math.sin(aa)),aa:aa}}}return null};const findPortSite=function*(island,tries=18){let checkpointUnits=0;for(let n=0;n<tries;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*landSteps(island,700,1);if(!q)continue;q.r=island.r;const portBest=yield*findPortWater(q);if(portBest)return{...q,portBest:portBest}}return null};const makeStandalonePier=function*(q){let checkpointUnits=0;const best=q.portBest||(yield*findPortWater(q));if(!best)return false;const dx=best.x-q.x,dz=best.z-q.z,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L;let shore=null;for(let d=3;d<L;d+=2.5){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const sx=q.x+ux*d,sz=q.z+uz*d;if(rawHAt(sx,sz)<.35){shore={x:sx-ux*1.8,z:sz-uz*1.8};break}}if(!shore)return false;const pierLen=Math.min(34,Math.max(14,L-5)),end={x:shore.x+ux*pierLen,z:shore.z+uz*pierLen};compoundPier(shore.x,shore.z,end.x,end.z,3.6);for(const side of[-1,1]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const px=-uz,pz=ux;compoundProp("bollard",end.x+px*side*1.1,end.z+pz*side*1.1,0)}compoundClear.push({x:q.x,z:q.z,r:18});return true};const phase3Options={pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites:heliportSites,rocketAssigned:false};const baseCompound=yield*buildApprovedCompoundSteps(window.HUNTER_CHOOSE_COMPOUND("base",R),pa,phase3Options);const hqCompound=yield*buildApprovedCompoundSteps(window.HUNTER_CHOOSE_COMPOUND("hq",R),pb,phase3Options);markBuildStage("initialCompounds");yield{stage:"Base i quarter general",completed:1,total:1};const COMPOUND_RADII=Object.freeze({avancada:84,garatge:95,heliport:102,polvori:98,comunicacions:95,port:90});const COMPOUND_GAP=34;const compoundCenters=[{x:pa.x,z:pa.z,r:baseCompound.r,type:"base"},{x:pb.x,z:pb.z,r:hqCompound.r,type:"hq"}];const typeId=t=>({avancada:"outpost",garatge:"hangar"}[t]||t);const compoundRadiusCache=new Map;const compoundRadius=type=>{if(!compoundRadiusCache.has(type))compoundRadiusCache.set(type,Math.max(COMPOUND_RADII[type]||58,...window.HUNTER_RUNTIME_LAYOUTS.filter(l=>l.type===typeId(type)).map(layoutRadius)));return compoundRadiusCache.get(type)};const compoundSiteClear=(type,q,minCenter=0)=>{const r=compoundRadius(type);return compoundCenters.every(c=>{const d=Math.hypot(q.x-c.x,q.z-c.z);return d>Math.max(minCenter,r+c.r+COMPOUND_GAP)})};const registerCompound=(type,q)=>compoundCenters.push({x:q.x,z:q.z,r:compoundRadius(type),type:type});const civilOptions={pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites:heliportSites,rocketAssigned:true};const prisonLayout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.type==="prison-camp");if(!prisonLayout)throw new Error("Invariant del camp: manca el disseny del camp de presoners");const prisonPlan=yield*planPrisonCampSteps(prisonLayout,{islandList:islands,baseIsland:A,hqIsland:Bi,heightAt:rawHAt,halfSize:H,siteClear:q=>compoundSiteClear("prison-camp",q),createSupportIsland:()=>{const radius=320,influence=radius*2;if(H<=influence+120||compoundCenters.some(c=>Math.hypot(c.x,c.z)<=influence+c.r+COMPOUND_GAP))throw new Error("Invariant del camp: l\u2019origen no permet una illa de reserva separada de la base i del quarter general");const island={x:0,z:0,r:radius,peakX:0,peakZ:0,prisonCampSupport:true};islands.push(island);rebuildIslandGrid();return island}});const prisonCamp=yield*buildApprovedCompoundSteps(prisonLayout,prisonPlan.site,civilOptions);prisonCamp.islandIndex=islands.indexOf(prisonPlan.island);prisonCamp.fallbackIsland=prisonPlan.island===A?"base":prisonPlan.island===Bi?"hq":null;prisonCamp.placement=prisonPlan.placement;prisonCamp.terrainSurvey=prisonPlan.terrain;const prisonBounds=prisonCampFootprint(prisonLayout),prisonTr=compoundTransform(prisonCamp,prisonCamp.angle),prisonEscape=prisonLayout.escapeRoute.map(p=>{const q=prisonTr(...p);return{x:q[0],z:q[1]}}),escapeEnd=prisonTr(0,prisonBounds.escapeEnd);addLevelArea(prisonCamp.x,prisonCamp.z+(prisonBounds.padHalfDepth+prisonBounds.escapeEnd)/2,28,prisonBounds.escapeEnd-prisonBounds.padHalfDepth,prisonPlan.site.h,0,18);for(const p of[...prisonEscape,{x:escapeEnd[0],z:escapeEnd[1]}])compoundClear.push({x:p.x,z:p.z,r:14});const mechanicSpec=prisonLayout.prisoners.find(p=>p.role==="mechanic"),mechanicPoints=[[mechanicSpec.x,mechanicSpec.z],...prisonLayout.mechanicRoute||[[prisonLayout.rescuePoint.x,prisonLayout.rescuePoint.z],[prisonLayout.mechanicStation.x,prisonLayout.mechanicStation.z]]].map(p=>{const q=prisonTr(...p);return{x:q[0],z:q[1]}});const prisonCorridors=[];for(const[points,width]of[[[...prisonEscape,{x:escapeEnd[0],z:escapeEnd[1]}],6],[mechanicPoints,2]])for(let i=1;i<points.length;i++)prisonCorridors.push({a:points[i-1],b:points[i],width:width});const prisonCampCorridorClear=(x,z,padding=0)=>prisonCorridors.every(c=>prisonCampSegmentDistance(x,z,c.a,c.b)>c.width+padding);const prisonCampRoadClear=points=>{for(let i=1;i<points.length;i++)if(prisonCampSegmentDistance(prisonCamp.x,prisonCamp.z,points[i-1],points[i])<=prisonCamp.r+18)return false;return true};registerCompound("prison-camp",prisonPlan.site);world.userData.prisonCamp=prisonCamp;world.userData.prisonCampReservation={x:prisonCamp.x,z:prisonCamp.z,r:prisonCamp.r,corridors:prisonCorridors.map(c=>({...c,a:{...c.a},b:{...c.b}}))};buildCounters.prisonCampCandidates=prisonPlan.candidates;buildCounters.prisonCamps=1;markBuildStage("prisonCamp");yield{stage:"Camp de presoners",completed:1,total:1};const portSiteFeasible=function*(q){let checkpointUnits=0;for(let turn=0;turn<4;turn++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const angle=turn*Math.PI/2,point=compoundTransform(q,angle);for(let d=16;d<Math.max(180,(q.r||180)*1.4);d+=8){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const[x,z]=point(0,d);if(rawHAt(x,z)>.3)continue;for(const offset of[-8,0,8]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const[cx,cz]=point(0,d+offset),site={x:cx,z:cz,h:.86,angle:angle,r:q.r},tr=compoundTransform(site,angle);if(Math.abs(cx)>H-100||Math.abs(cz)>H-100)continue;let valid=true;for(const lx of[-52,-26,0,26,52]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(const lz of[-60,-35,-10]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const p=tr(lx,lz);if(rawHAt(...p)<.1){valid=false;break}}if(!valid)break}if(!valid)continue;coastTest:for(const[lx,lz]of[[-13,31],[15,26],[35,34]]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(const dx of[-7,0,7]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(let dz=-16;dz<=52;dz+=4){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const p=tr(lx+dx,lz+dz);if(rawHAt(...p)>-2.2){valid=false;break coastTest}}}}if(valid)return true}if(rawHAt(x,z)<-15)break}}return false};const compound=function*(type,q){let checkpointUnits=0;const approvedId={avancada:"outpost",garatge:"hangar",port:"port",heliport:"heliport",polvori:"polvori",comunicacions:"comunicacions"}[type];if(approvedId){if(type==="port"&&!q.portPrepared){if(!(yield*portSiteFeasible(q)))return false;q=yield*findRedesignedPortSteps(q);if(!q)return false}if(!compoundSiteClear(type,q,0))return false;let layout=window.HUNTER_CHOOSE_COMPOUND(approvedId,R);if(type==="port"&&!coastalLayoutFits(layout,q)){layout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.type==="port"&&l.variant===1);if(!coastalLayoutFits(layout,q))return false}if(type!=="port"){const r=Math.max(...layout.size)/2;for(const dx of[-r,0,r]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(const dz of[-r,0,r]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(rawHAt(q.x+dx,q.z+dz)<.1)return false}}}yield*buildApprovedCompoundSteps(layout,q,{pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites:heliportSites,rocketAssigned:compoundVehicles.some(v=>v.t==="llanxa_coets")});registerCompound(type,q);return true}return false};const usedPortIslands=new Set;const candidateIslands=islands.filter(i=>i!==A&&i!==Bi).slice().sort(()=>R()-.5),usedSpecialIslands=new Set;const reserveCompound=function*(type,min=180){let checkpointUnits=0;for(const i of candidateIslands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(usedSpecialIslands.has(i))continue;for(let n=0;n<18;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*landSteps(i,850,1);if(q&&compoundSiteClear(type,q,min)){q.r=i.r;if(yield*compound(type,q)){usedSpecialIslands.add(i);return q}}}}return null};const forceReserve=function*(type,min){let checkpointUnits=0;let q=(yield*reserveCompound(type,min))||(yield*reserveCompound(type,110));if(q)return q;for(const i of candidateIslands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(usedSpecialIslands.has(i))continue;for(let n=0;n<48;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const c=yield*landSteps(i,1800,1);if(!c||!compoundSiteClear(type,c,95))continue;c.r=i.r;if(yield*compound(type,c)){usedSpecialIslands.add(i);return c}}}return null};const dockLayout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.id==="civil-dock"),terminalLayout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.id==="ferry-terminal");const terminalRecords=[];let connection=null;const exit=baseCompound.entrances[0],roadStart={x:exit[0],z:exit[1]};const initialDock=yield*findCoastalLayoutSteps(dockLayout,{...A},function*(q){let checkpointUnits=0;if(!compoundSiteClear("civil-dock",q))return false;const end=compoundTransform(q,q.angle)(0,-dockLayout.size[1]/2),points=yield*solveCoastRoadSteps(roadStart,{x:end[0],z:end[1]});if(!points||!prisonCampRoadClear(points))return false;connection=points;return true});if(initialDock){const c=yield*buildApprovedCompoundSteps(dockLayout,initialDock,civilOptions);registerCompound("civil-dock",initialDock);yield*buildCoastRoadSteps(connection,compoundPath);world.userData.baseCoast.dockId=c.layoutId;world.userData.baseCoast.dock={x:c.x,z:c.z}}else world.userData.baseCoast={unavailable:true,reason:"No walkable coastal corridor for this base site"};for(const island of islands.filter(i=>i!==Bi).sort((a,b)=>b.r-a.r)){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(terminalRecords.length>=2)break;const site=yield*findCoastalLayoutSteps(terminalLayout,island,q=>compoundSiteClear("ferry-terminal",q));if(!site)continue;const c=yield*buildApprovedCompoundSteps(terminalLayout,site,civilOptions);c.islandIndex=islands.indexOf(island);terminalRecords.push(c);registerCompound("ferry-terminal",site)}let villages=0,civilDocks=initialDock?1:0;for(const island of candidateIslands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(villages<2*MAP_SCALE){const types=["hut-settlement-small","hut-settlement","hut-settlement-large"],chosen=types[Math.floor(R()*3)],l=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.id===chosen);for(let tries=0;tries<6;tries++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*landSteps(island,250,1);if(!q||!compoundSiteClear(l.id,q))continue;const r=Math.max(...l.size)/2;if([-r,0,r].some(dx=>[-r,0,r].some(dz=>rawHAt(q.x+dx,q.z+dz)<.3)))continue;yield*buildApprovedCompoundSteps(l,q,civilOptions);registerCompound(l.id,q);villages++;break}}if(civilDocks<2*MAP_SCALE){const q=yield*findCoastalLayoutSteps(dockLayout,island,q=>compoundSiteClear("civil-dock",q));if(q){yield*buildApprovedCompoundSteps(dockLayout,q,civilOptions);registerCompound("civil-dock",q);civilDocks++}}}markBuildStage("civilCompoundsAndCoast");yield{stage:"Poblats i costa",completed:1,total:1};yield*forceReserve("garatge",190);yield*forceReserve("avancada",180);yield*forceReserve("polvori",190);yield*forceReserve("comunicacions",190);const reserveHeliportFallback=function*(){let checkpointUnits=0;const all=islands.filter(i=>i!==Bi).slice().sort(()=>R()-.5);for(const i of all){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(let n=0;n<28;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*landSteps(i,1200,1);if(!q)continue;if(Math.hypot(q.x-pb.x,q.z-pb.z)<260||Math.hypot(q.x-pa.x,q.z-pa.z)<120)continue;if(!compoundSiteClear("heliport",q,120))continue;q.r=i.r;if(yield*compound("heliport",q))return q}}return null};const heliportTarget=1+MAP_SCALE;let heliportsMade=0;for(let n=0;n<heliportTarget;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=(yield*forceReserve("heliport",n?160:210))||(yield*reserveHeliportFallback());if(q)heliportsMade++}markBuildStage("militaryCompounds");yield{stage:"Complexos militars",completed:1,total:1};let guaranteedPorts=0,fastPortCandidates=0,fastPortAccepted=0;for(const i of candidateIslands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(guaranteedPorts>=2*MAP_SCALE)break;if(usedSpecialIslands.has(i))continue;const r=i.r*.24,anchors=[[i.x,i.z],[i.x+r,i.z],[i.x-r,i.z],[i.x,i.z+r],[i.x,i.z-r]];for(const[x,z]of anchors){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};fastPortCandidates++;const site=yield*findRedesignedPortSteps({x:x,z:z,r:i.r});if(!site||!compoundSiteClear("port",site,180))continue;if(yield*compound("port",{...site,portPrepared:true})){usedPortIslands.add(i);guaranteedPorts++;fastPortAccepted++;break}}}for(const i of candidateIslands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(guaranteedPorts>=2*MAP_SCALE)break;if(usedSpecialIslands.has(i)||usedPortIslands.has(i))continue;for(let attempt=0;attempt<4;attempt++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*findPortSite(i,6);if(!q||!compoundSiteClear("port",q,180))continue;if(yield*compound("port",q)){usedPortIslands.add(i);guaranteedPorts++;break}}}if(!guaranteedPorts){for(const i of candidateIslands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(usedSpecialIslands.has(i))continue;const q=yield*findPortSite(i,32);if(q&&compoundSiteClear("port",q,110)&&(yield*compound("port",q))){usedPortIslands.add(i);guaranteedPorts=1;break}}}buildCounters.guaranteedPorts=guaranteedPorts;buildCounters.fastPortCandidates=fastPortCandidates;buildCounters.fastPortAccepted=fastPortAccepted;markBuildStage("guaranteedPorts");yield{stage:"Ports",completed:1,total:1};for(const i of islands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(i===A||i===Bi||usedPortIslands.has(i)||usedSpecialIslands.has(i))continue;const roll=R();let type=roll<.25?"avancada":roll<.5?"garatge":roll<.72?"polvori":roll<.86?"comunicacions":"port",q=null;for(let n=0;n<10&&!q;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const c=yield*landSteps(i,700,1);if(c&&compoundSiteClear(type,c,150))q=c}if(!q)continue;q.r=i.r;if(type==="port"){const pq=yield*findPortSite(i,14);if(pq&&compoundSiteClear("port",pq,150)){q=pq}else type=R()<.5?"avancada":"polvori"}yield*compound(type,q);if(i.r>520&&R()<.22){const type2=R()<.6?"garatge":"avancada";let q2=null;for(let n=0;n<14&&!q2;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const c=yield*landSteps(i,800,1);if(c&&Math.hypot(c.x-q.x,c.z-q.z)>190&&compoundSiteClear(type2,c,150))q2=c}if(q2){q2.r=i.r;yield*compound(type2,q2)}}}markBuildStage("remainingCompounds");yield{stage:"Assentaments",completed:1,total:1};let standalonePiers=0,targetPiers=(3+Math.floor(R()*3))*MAP_SCALE;for(const i of candidateIslands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(standalonePiers>=targetPiers)break;if(usedPortIslands.has(i))continue;const q=yield*findPortSite(i,12);if(!q||!compoundSiteClear("port",q,110)||compoundClear.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<80))continue;if(yield*makeStandalonePier(q))standalonePiers++}markBuildStage("civilianPiers");yield{stage:"Molls",completed:1,total:1};if(seedSearchMode&&seedSearchCategoryEl.value==="compound"){seedCompounds=compoundCenters.map(c=>({type:c.type,x:c.x,z:c.z}));P.base={x:pa.x,z:pa.z};return}const terrainStarted=performance.now();const terrain=seedSearchMode?null:yield*window.HUNTER_TERRAIN.createSteps(THREE,{size:S,segments:SEG,heightAt:hAt,material:MAT.terrain(),parent:world,startX:pa.x,startZ:pa.z,lowQuality:!visualQuality.shadows,quality:qualityName,shadows:visualQuality.shadows,cutouts:activeBunker?[{x:activeBunker.x,z:activeBunker.z,angle:activeBunker.angle??-(activeBunker.o?.rotation.y??0),halfWidth:20,halfDepth:17}]:[]});if(terrain){terrainStream=terrain;world.add(terrain.mesh,window.HUNTER_TERRAIN.createBorder(THREE,{size:S,halfSize:H}))}const initialTerrainMs=performance.now()-terrainStarted;markBuildStage("terrain");yield{stage:"Terreny inicial",completed:1,total:1};const seabedStarted=performance.now();if(!seedSearchMode)yield*water.setWorldSizeSteps(S);const seabedMs=performance.now()-seabedStarted,vegetationStarted=performance.now();markBuildStage("seabed");yield{stage:"Fons mar\xed",completed:1,total:1};yield*vegetateSteps(pa);if(seedSearchMode)fa=[];else yield*spawnFaunaSteps();const vegetationMs=performance.now()-vegetationStarted;markBuildStage("vegetationAndFauna");yield{stage:"Vegetaci\xf3 i fauna",completed:1,total:1};HQ={x:hqCompound.buildings[0].x,z:hqCompound.buildings[0].z};const rb=B.slice(6);const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2);const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1),x=cx+Math.cos(a)*d,z=cz+Math.sin(a)*d;if(gl(x,z)&&!world.userData.compounds.some(c=>c.layout.civilian&&Math.hypot(x-c.x,z-c.z)<c.r))return mkEn(t,x,z)}return null};for(const i of islands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(i===A||i===Bi||R()<.5)continue;const q=yield*landSteps(i,60);if(!q)continue;for(let k=0;k<1+(R()<.4);k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};sp2("soldat",q.x,q.z,0,10)}if(R()<.25)sp2("torre",q.x,q.z,5,12)}for(const b of rb){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const n=R()<.25?0:R()<.6?1:2;const pool=["arma","arma","med","expl","granada","granada","disf","mapa","bazooka","franctirador","paracaigudes"].filter(t=>lootAllowed(t,b)&&(!b.civilian||["arma","med","disf"].includes(t)));for(let k=0;k<n&&pool.length;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const kind=pool[Math.floor(R()*pool.length)];addIt(kind,b)}}addIt("arma",B[0]);addIt("expl",B[1]);if(!items.some(it=>it.t==="med"&&it.compound==="base")){const firstBaseBuilding=B.find(b=>b.compound==="base"&&!b.hangar);if(firstBaseBuilding)addIt("med",firstBaseBuilding)}const lootBuildings=t=>rb.filter(b=>!b.civilian&&lootAllowed(t,b));const sniperSites=lootBuildings("franctirador");addIt("franctirador",sniperSites[Math.floor(R()*sniperSites.length)]||B[2]);for(const[type,count]of[["mapa",2],["mapa_heli",1+MAP_SCALE],["mapa_tanc",1+MAP_SCALE]]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};lootBuildings(type).sort(()=>R()-.5).slice(0,count).forEach(b=>addIt(type,b))}markBuildStage("enemiesAndLoot");yield{stage:"Gu\xe0rdies i equipament",completed:1,total:1};if(seedSearchMode&&seedSearchCategoryEl.value==="item"){P.base={x:pa.x,z:pa.z};return}P.x=baseCompound.spawn?.x??pa.x;P.z=baseCompound.spawn?.z??pa.z+20;P.hd=0;P.base={x:pa.x,z:pa.z};V=[];cv=null;mm=null;const add=(t,x,z,a,meta={})=>{const civilian=t==="cotxe_civil",bicycle=t==="bici",jetski=t==="moto_aquatica",colors=window.HUNTER_CIVILIAN_CARS,palette=jetski?colors.jetskiColors:colors.colors;const color=civilian||bicycle||jetski?palette[Math.floor(R()*palette.length)].hex:undefined;if(civilian)R();const variant=civilian?0:undefined;const appearance={color:meta.color??color,variant:meta.variant??variant};const o=seedSearchMode?seedVehicleStub(t):mkV(t,appearance),c=VT[t],surface=Math.max(0,hAt(x,z));const v={t:t,x:x,z:z,hd:a||0,v:0,alt:c.m==="a"?helicopterLandedAltitude({o:o},surface):surface+.8,o:o,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};if(civilian||bicycle||jetski)v.color=appearance.color;if(civilian)v.variant=appearance.variant;if(t==="heli_combat")v.rockets=6;if(t==="llanxa_coets")v.rockets=Infinity;if(!seedSearchMode)world.add(o);V.push(v);return v};const near=function*(r,t){let checkpointUnits=0;for(let k=0;k<80;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const x=pa.x+rr(-r,r),z=pa.z+rr(-r,r),h=hAt(x,z);if(prisonCampCorridorClear(x,z,vehicleRadius(t)+2)&&h>1.5&&slope(x,z,h)<2.5&&!B.some(b=>Math.abs(x-b.x)<b.hw+vehicleRadius(t)&&Math.abs(z-b.z)<b.hd+vehicleRadius(t))&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(t)+vehicleRadius(v.t)+2))return[x,z]}return[pa.x+30,pa.z+30]};for(const t of["moto"]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*near(90,t);add(t,q[0],q[1],rr(0,6.28))}const shores=[];for(let a=0;a<360;a+=12){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(let d=10;d<700;d+=10){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const x=pa.x+Math.cos(a*.01745)*d,z=pa.z+Math.sin(a*.01745)*d;if(Math.abs(x)>H-60||Math.abs(z)>H-60)break;if(hAt(x,z)<-2){shores.push({d:d,x:x,z:z,a:a*.01745});break}}}shores.sort((a,b)=>a.d-b.d);const launchSpot=shores[0]?{x:shores[0].x,z:shores[0].z,a:shores[0].a}:null;const ferrySpotForIsland=function*(island,islandIndex){let checkpointUnits=0;const start=R()*Math.PI*2;for(let n=0;n<36;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const a=start+n*Math.PI*2/36,ux=Math.cos(a),uz=Math.sin(a);let touchedLand=false;for(let d=Math.max(24,island.r*.22);d<island.r*1.5;d+=8){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const sx=island.x+ux*d,sz=island.z+uz*d,h=hAt(sx,sz);if(h>.2){touchedLand=true;continue}if(!touchedLand)continue;if(h<-1.7){const x=sx+ux*14,z=sz+uz*14;if(Math.abs(x)>H-28||Math.abs(z)>H-28||hAt(x,z)>-1.25)break;return{x:x,z:z,hd:Math.atan2(island.x-x,island.z-z),islandIndex:islandIndex,islandX:island.x,islandZ:island.z}}if(h<-5)break}}return null};const ferryCandidates=[];for(let islandIndex=0;islandIndex<islands.length;islandIndex++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*ferrySpotForIsland(islands[islandIndex],islandIndex);if(q)ferryCandidates.push(q)}const ferrySpots=terminalRecords.map(c=>{const v=c.vehicles.find(v=>v.t==="ferry"),island=islands[c.islandIndex];return{...v,islandIndex:c.islandIndex,islandX:island.x,islandZ:island.z,terminal:c}});if(ferryCandidates.length&&ferrySpots.length<2){const first=ferryCandidates[Math.floor(R()*ferryCandidates.length)];ferrySpots.push(first);const second=ferryCandidates.filter(q=>q.islandIndex!==first.islandIndex).sort((a,b)=>Math.hypot(b.x-first.x,b.z-first.z)-Math.hypot(a.x-first.x,a.z-first.z))[0];if(second&&ferrySpots.length<2)ferrySpots.push(second)}for(let i=0;i<ferryCandidates.length&&ferrySpots.length<2;i++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=ferryCandidates[i];if(!ferrySpots.some(f=>f.islandIndex===q.islandIndex))ferrySpots.push(q)}markBuildStage("ferrySiteSearch");yield{stage:"Terminals dels ferris",completed:1,total:1};ferrySpots.slice(0,2).forEach(q=>{const f=add("ferry",q.x,q.z,q.hd,{coastal:true,guaranteed:true,ferryIslandIndex:q.islandIndex,ferryIslandX:q.islandX,ferryIslandZ:q.islandZ});if(q.terminal){q.terminal.ferry=f;createTerminalRamp(q.terminal,f)}});if(launchSpot){let lx=launchSpot.x,lz=launchSpot.z;const overlapsFerry=()=>ferrySpots.some(f=>Math.hypot(lx-f.x,lz-f.z)<vehicleRadius("ferry")+vehicleRadius("llanxa")+6);if(overlapsFerry()){const tx=-Math.sin(launchSpot.a),tz=Math.cos(launchSpot.a);const candidates=[{x:launchSpot.x+tx*100,z:launchSpot.z+tz*100},{x:launchSpot.x-tx*100,z:launchSpot.z-tz*100}];const valid=q=>Math.abs(q.x)<H-vehicleRadius("llanxa")-5&&Math.abs(q.z)<H-vehicleRadius("llanxa")-5&&hAt(q.x,q.z)<-1.2;const best=candidates.find(valid)||candidates[0];lx=best.x;lz=best.z}add("llanxa",lx,lz,rr(0,6.28))}const clearVehicle=(t,x,z)=>prisonCampCorridorClear(x,z,vehicleRadius(t)+2)&&Math.abs(x)<H-vehicleRadius(t)-5&&Math.abs(z)<H-vehicleRadius(t)-5&&!treeHit(x,z,vehicleRadius(t))&&!V.some(v=>Math.hypot(x-v.x,z-v.z)<vehicleRadius(t)+vehicleRadius(v.t)+5);let hangarTanks=0,alternateHangar=0;for(const v of compoundVehicles){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(!v.insideHangar||v.t!=="tanc")continue;if(hangarTanks<2){hangarTanks++;continue}v.t=alternateHangar++%2===0?"tanqueta":"camio"}for(const v of compoundVehicles){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(v.t==="ferry")continue;if(VT[v.t]?.m==="w"||VT[v.t]?.m==="wl"){if(hAt(v.x,v.z)<-2&&!V.some(o=>obbOverlap(vehicleBox(v),vehicleBox(o))))add(v.t,v.x,v.z,v.hd,v);continue}const r=vehicleRadius(v.t),buildingClear=v.insideHangar?true:!B.some(b=>Math.abs(v.x-b.x)<b.hw+r&&Math.abs(v.z-b.z)<b.hd+r),clear=!treeHit(v.x,v.z,r*.7)&&buildingClear&&!V.some(o=>Math.hypot(v.x-o.x,v.z-o.z)<r+vehicleRadius(o.t)+3);if(clear||v.insideHangar)add(v.t,v.x,v.z,v.hd,v)}const coastalWaterTypes=["barca_rems","windsurf","moto_aquatica","llanxa"];const pickCoastalWaterType=()=>{const q=R();return q<.4?"barca_rems":q<.72?"windsurf":q<.88?"moto_aquatica":"llanxa"};const beachedWaterSpot=function*(island,t){let checkpointUnits=0;const r=vehicleRadius(t),start=R()*Math.PI*2;for(let n=0;n<32;n++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const a=start+n*Math.PI*2/32,ux=Math.cos(a),uz=Math.sin(a);let wasLand=false;for(let d=Math.max(18,island.r*.18);d<island.r*1.35;d+=5){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const x=island.x+ux*d,z=island.z+uz*d,h=hAt(x,z);if(h>.15){wasLand=true;continue}if(!wasLand)continue;if(h<-1.25&&h>-3.15){const clear=Math.abs(x)<H-r-5&&Math.abs(z)<H-r-5&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+4)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r+3&&Math.abs(z-b.z)<b.hd+r+3);if(clear){const hd=Math.atan2(ux,uz)+rn(-.18,.18);return{x:x,z:z,hd:hd}}}if(h<-3.15)break}}return null};let beachedWaterCount=0;for(const island of islands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(R()>=.75)continue;const t=pickCoastalWaterType(),q=yield*beachedWaterSpot(island,t);if(q){add(t,q.x,q.z,q.hd,{beached:true,coastal:true});beachedWaterCount++}}markBuildStage("coastalVehicles");yield{stage:"Embarcacions de costa",completed:1,total:1};heliportSites.forEach((p,i)=>{const desired=p.type||(i===1?"heli_combat":"heli");if(clearVehicle(desired,p.x,p.z))add(desired,p.x,p.z,p.hd,{heliport:true,military:true,guaranteed:true})});if(heliportSites.length){const addClearHeliAtPort=(t,preferred)=>{for(let i=0;i<heliportSites.length;i++){const p=heliportSites[(preferred+i)%heliportSites.length];for(const[d,turn]of[[0,0],[22,Math.PI/2],[22,-Math.PI/2],[30,Math.PI/4],[30,-Math.PI/4],[36,Math.PI]]){const a=p.hd+turn,x=p.x+Math.sin(a)*d,z=p.z+Math.cos(a)*d,r=vehicleRadius(t);if(!clearVehicle(t,x,z)||hAt(x,z)<=1.2||slope(x,z,hAt(x,z))>=3||B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r))continue;add(t,x,z,p.hd,{heliport:true,military:true,guaranteed:true});return true}}return false};if(!V.some(v=>v.t==="heli"))addClearHeliAtPort("heli",0);if(!V.some(v=>v.t==="heli_combat"))addClearHeliAtPort("heli_combat",Math.min(1,heliportSites.length-1))}const protectedVehicleSpot=t=>{const r=vehicleRadius(t),ok=(x,z)=>prisonCampCorridorClear(x,z,r+2)&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3);for(let k=0;k<240;k++){const a=rr(0,Math.PI*2),d=rr(30,58),x=pb.x+Math.cos(a)*d,z=pb.z+Math.sin(a)*d;if(ok(x,z))return{x:x,z:z,hd:a+Math.PI}}return null};const distributedMilitarySpot=function*(t){let checkpointUnits=0;const r=vehicleRadius(t),pool=islands.filter(i=>i!==Bi).slice().sort(()=>R()-.5),ok=(x,z)=>prisonCampCorridorClear(x,z,r+2)&&Math.hypot(x-pb.x,z-pb.z)>220&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3);for(const i of pool){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(let k=0;k<50;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*landSteps(i,900,1);if(q&&ok(q.x,q.z))return{x:q.x,z:q.z,hd:rr(0,Math.PI*2)}}}return null};const militaryCompoundSpot=function*(t){let checkpointUnits=0;const r=vehicleRadius(t),sites=world.userData.compounds.filter(c=>!c.layout?.friendly&&!c.layout?.civilian&&c.id!=="base"&&c.id!=="port");for(const site of sites.slice().sort(()=>R()-.5)){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(let k=0;k<75;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const a=rr(0,Math.PI*2),d=site.r+rr(8,65),x=site.x+Math.cos(a)*d,z=site.z+Math.sin(a)*d;if(!prisonCampCorridorClear(x,z,r+2)||Math.abs(x)>=H-r-8||Math.abs(z)>=H-r-8||hAt(x,z)<1.2||slope(x,z,hAt(x,z))>=3||treeHit(x,z,r*.7)||B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)||V.some(v=>Math.hypot(x-v.x,z-v.z)<vehicleRadius(v.t)+r+3))continue;return{x:x,z:z,hd:a+Math.PI}}}return null};const hardLandVehicleSpot=function*(t){let checkpointUnits=0;const r=vehicleRadius(t),ok=(x,z)=>prisonCampCorridorClear(x,z,r+2)&&Math.abs(x)<H-r-8&&Math.abs(z)<H-r-8&&Math.hypot(x-pb.x,z-pb.z)>220&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<4&&!treeHit(x,z,r*.65)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+4);for(let k=0;k<1600;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const x=rr(-H+r+10,H-r-10),z=rr(-H+r+10,H-r-10);if(ok(x,z))return{x:x,z:z,hd:rr(0,Math.PI*2)}}for(let k=0;k<72;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const a=k*Math.PI/36,d=110+k%4*20,x=pa.x+Math.cos(a)*d,z=pa.z+Math.sin(a)*d;if(ok(x,z))return{x:x,z:z,hd:a+Math.PI}}return null};const waterVehicleSpot=function*(t){let checkpointUnits=0;const r=vehicleRadius(t),pool=islands.slice().sort(()=>R()-.5);for(const i of pool){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(let tries=0;tries<3;tries++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*findPortSite(i,18);if(!q||!q.portBest)continue;const a=q.portBest.aa,px=-Math.sin(a),pz=Math.cos(a);for(const side of[-1,1]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const x=q.portBest.x+px*side*(r+4),z=q.portBest.z+pz*side*(r+4);if(hAt(x,z)<-2&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3))return{x:x,z:z,hd:q.portBest.hd}}}}return null};const ensureVehicleType=function*(t){let checkpointUnits=0;if(t==="heli"?V.some(v=>v.t==="heli"&&!v.heliport):V.some(v=>v.t===t))return;let q=null,c=VT[t];if(c.m==="w"||c.m==="wl")q=yield*waterVehicleSpot(t);else if(t==="tanqueta")q=yield*militaryCompoundSpot(t);else if(["heli","heli_combat","tanc","camio"].includes(t))q=(yield*distributedMilitarySpot(t))||(yield*hardLandVehicleSpot(t));else{const p=yield*near(120,t);q={x:p[0],z:p[1],hd:rr(0,Math.PI*2)}}if(q)add(t,q.x,q.z,q.hd)};for(const type of["llanxa","moto_aquatica","barca_rems","windsurf","hover","cotxe","moto","bici","camio","tanqueta","tanc","heli","heli_combat"]){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};yield*ensureVehicleType(type)}V.filter(v=>v.t==="llanxa_coets").slice(2).forEach(v=>{const i=V.indexOf(v);if(i>=0)V.splice(i,1);world.remove(v.o)});const militaryRocketBoatSpot=function*(){let checkpointUnits=0;const r=vehicleRadius("llanxa_coets"),sites=world.userData.compounds.filter(c=>!c.layout?.friendly&&!c.layout?.civilian&&c.id!=="base");sites.sort((a,b)=>Number(!!b.layout?.waterfront)-Number(!!a.layout?.waterfront));for(const site of sites){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(let k=0;k<32;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const a=k*Math.PI/16+R()*.12,d0=Math.max(16,site.r*.5);for(let d=d0;d<Math.min(210,site.r+130);d+=6){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const x=site.x+Math.cos(a)*d,z=site.z+Math.sin(a)*d;if(Math.abs(x)>H-r-8||Math.abs(z)>H-r-8)break;if(hAt(x,z)>-2)continue;const bx=x+Math.cos(a)*12,bz=z+Math.sin(a)*12;if(hAt(bx,bz)>-1.5)continue;if(V.some(v=>Math.hypot(x-v.x,z-v.z)<r+vehicleRadius(v.t)+5))continue;return{x:x,z:z,hd:Math.atan2(-Math.cos(a),-Math.sin(a))}}}}return null};let rocketBoatAttempts=0;while(countVehicles("llanxa_coets")<2&&rocketBoatAttempts++<4){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=(yield*militaryRocketBoatSpot())||(yield*waterVehicleSpot("llanxa_coets"));if(!q)break;add("llanxa_coets",q.x,q.z,q.hd,{military:true,guaranteed:true})}const ensureVehicleCount=function*(t,min){let checkpointUnits=0;let guard=0;while(countVehicles(t)<min&&guard++<12){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=(yield*distributedMilitarySpot(t))||(yield*hardLandVehicleSpot(t));if(!q)break;add(t,q.x,q.z,q.hd,{military:true,guaranteed:true})}};yield*ensureVehicleCount("tanc",2);const ensureDistributedCount=function*(t,min){let checkpointUnits=0;let guard=0;while(countVehicles(t)<min&&guard++<16){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=t==="tanqueta"?yield*militaryCompoundSpot(t):(yield*distributedMilitarySpot(t))||(yield*hardLandVehicleSpot(t));if(!q)break;add(t,q.x,q.z,q.hd,{military:true,guaranteed:true})}};yield*ensureDistributedCount("heli",2*MAP_SCALE);yield*ensureDistributedCount("heli_combat",MAP_SCALE);yield*ensureDistributedCount("tanqueta",1+MAP_SCALE);for(const i of islands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(i!==A&&R()<.65){const t=["cotxe","moto","bici"][Math.floor(R()*3)];for(let tries=0;tries<12;tries++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*landSteps(i,80);if(q&&clearVehicle(t,q.x,q.z)){add(t,q.x,q.z,rr(0,6.28));break}}}}markBuildStage("guaranteedVehicles");yield{stage:"Vehicles distribu\xefts",completed:1,total:1};const civilianVehicleClear=(x,z,heading=0)=>{const type="cotxe_civil",r=vehicleRadius(type)+1.2;if(Math.abs(x)>H-r-5||Math.abs(z)>H-r-5)return false;const h=hAt(x,z);if(h<1.4||slope(x,z,h)>3.7)return false;if(!clearVehicle(type,x,z)||treeHit(x,z,r*.83))return false;if(B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r))return false;if(wallCandidates(x,z,r+2).some(w=>!w.open&&x>w.x0-r&&x<w.x1+r&&z>w.z0-r&&z<w.z1+r))return false;return true};let civilianNearSites=0,civilianAbandoned=0;for(const site of compoundCenters.filter(c=>c.type.startsWith("hut-settlement")||c.type==="ferry-terminal")){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const count=site.type==="ferry-terminal"?2:1+(R()<.32?1:0),offset=R()*Math.PI*2;for(let k=0;k<count;k++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};let placed=false;const isVillage=site.type.startsWith("hut-settlement");const radii=isVillage?[10,14,18,23,29,36,44,54]:[18,24,32,42,54];for(const distance of radii){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(placed)break;for(let a=0;a<24;a++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const angle=offset+a%24*Math.PI/12+k*Math.PI*.65,x=site.x+Math.cos(angle)*distance,z=site.z+Math.sin(angle)*distance;if(!civilianVehicleClear(x,z))continue;add("cotxe_civil",x,z,angle+Math.PI/2,{civilian:true,parkedAt:site.type});civilianNearSites++;placed=true;break}}if(!placed)break}}for(const island of islands){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};if(island===Bi||island===A||R()>.56)continue;for(let attempt=0;attempt<26;attempt++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const q=yield*landSteps(island,160,1);if(!q||!civilianVehicleClear(q.x,q.z))continue;if(compoundCenters.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<c.r+26))continue;add("cotxe_civil",q.x,q.z,rr(0,Math.PI*2),{civilian:true,abandoned:true});civilianAbandoned++;break}}world.userData.civilianCars={nearSites:civilianNearSites,abandoned:civilianAbandoned,total:civilianNearSites+civilianAbandoned};markBuildStage("civilianCars");yield{stage:"Vehicles civils",completed:1,total:1};yield*ensureJetSkis(add);markBuildStage("jetSkis");yield{stage:"Motos aqu\xe0tiques",completed:1,total:1};function*spawnLandCarPatrols(){let checkpointUnits=0;const large=islands.filter(i=>i.r>=800).sort((a,b)=>b.r-a.r);const sites=world.userData.compounds.filter(c=>!c.layout?.friendly&&c.id!=="base"&&c.id!=="hq"&&c.id!=="prison-camp");const usedRoutes=new Set;const routeKey=(a,b)=>[sites.indexOf(a.c),sites.indexOf(b.c)].sort((x,y)=>x-y).join(":");const carR=Math.hypot(...VHB.cotxe.map(n=>n*VS.cotxe))/2+.8;const clear=(x,z)=>prisonCampCorridorClear(x,z,carR+2)&&Math.abs(x)<H-carR-5&&Math.abs(z)<H-carR-5&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<5&&!treeHit(x,z,carR)&&!wallCandidates(x,z,carR).some(w=>!w.open&&w.playerBlock!==false&&x>w.x0-carR&&x<w.x1+carR&&z>w.z0-carR&&z<w.z1+carR)&&!B.some(b=>Math.abs(x-b.x)<b.hw+carR&&Math.abs(z-b.z)<b.hd+carR);const access=c=>{for(const[ex,ez]of c.entrances){const dx=ex-c.x,dz=ez-c.z,len=Math.hypot(dx,dz)||1;for(const step of[12,20,30,42,55]){const x=ex+dx/len*step,z=ez+dz/len*step;if(clear(x,z))return{x:x,z:z}}}for(let n=0;n<20;n++){const a=n*Math.PI/10,x=c.x+Math.cos(a)*(c.r+24),z=c.z+Math.sin(a)*(c.r+24);if(clear(x,z))return{x:x,z:z}}return null};let spawned=0;for(const island of large){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const eligible=sites.filter(c=>Math.hypot(c.x-island.x,c.z-island.z)<island.r*1.02).map(c=>({c:c,p:access(c)})).filter(o=>o.p);if(eligible.length<2)continue;const pairs=[];for(let a=0;a<eligible.length;a++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};for(let b=a+1;b<eligible.length;b++){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const p=eligible[a].p,q=eligible[b].p;pairs.push({a:eligible[a],b:eligible[b],distance:Math.hypot(p.x-q.x,p.z-q.z)})}}pairs.sort((a,b)=>Number(usedRoutes.has(routeKey(a.a,a.b)))-Number(usedRoutes.has(routeKey(b.a,b.b)))||Number(!!a.a.c.layout?.civilian)+Number(!!a.b.c.layout?.civilian)-Number(!!b.a.c.layout?.civilian)-Number(!!b.b.c.layout?.civilian)||a.distance-b.distance);const drySegment=(a,b)=>{if(prisonCampSegmentDistance(prisonCamp.x,prisonCamp.z,a,b)<=prisonCamp.r+12)return false;const length=Math.hypot(a.x-b.x,a.z-b.z),n=Math.ceil(length/7);for(let k=0;k<=n;k++){const t=k/n,x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t;if(hAt(x,z)<.9||hAt(x+4,z)<.1||hAt(x-4,z)<.1||hAt(x,z+4)<.1||hAt(x,z-4)<.1)return false}return true};const routeBetween=(a,b)=>{const peak={x:island.peakX,z:island.peakZ},center={x:island.x,z:island.z},opts=[[],[center],[peak],[{x:center.x+island.r*.22,z:center.z}],[{x:center.x-island.r*.22,z:center.z}],[{x:center.x,z:center.z+island.r*.22}],[{x:center.x,z:center.z-island.r*.22}]];for(const middle of opts){const nodes=[a,...middle,b];if(!nodes.slice(1).every((p,i)=>drySegment(nodes[i],p)))continue;const road=[a];for(let j=1;j<nodes.length;j++){const from=nodes[j-1],to=nodes[j],steps=Math.ceil(Math.hypot(to.x-from.x,to.z-from.z)/24);for(let k=1;k<=steps;k++)road.push({x:from.x+(to.x-from.x)*k/steps,z:from.z+(to.z-from.z)*k/steps})}return road}return null};for(const pair of pairs){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};const key=routeKey(pair.a,pair.b),sameRoute=usedRoutes.has(key),road=routeBetween(pair.a.p,pair.b.p);if(!road||road.length<2)continue;if(sameRoute)road.reverse();const points=road.map(p=>[p.x,p.z]),start=points[0],next=points[1],heading=Math.atan2(start[0]-next[0],start[1]-next[1]);if(!clear(start[0],start[1]))continue;const car=mkEn("jeep",start[0],start[1]);car.hd=heading;setPatrol(car,[...points,...points.slice(1,-1).reverse()],false);car.interCompoundPatrol=true;car.patrolIslandIndex=islands.indexOf(island);car.patrolComplexes=[pair.a.c.id,pair.b.c.id];car.patrolEnds=[pair.a.p,pair.b.p];if(!sameRoute)pathRoutes.push({points:points,width:8,color:7826257});usedRoutes.add(key);spawned++;break}}return spawned}const landCarPatrolCount=yield*spawnLandCarPatrols();markBuildStage("landCarPatrols");yield{stage:"Patrulles terrestres",completed:1,total:1};yield*spawnMarinePatrolsSteps();markBuildStage("marinePatrols");yield{stage:"Patrulles navals",completed:1,total:1};P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);if(!seedSearchMode){for(const v of V){if(++checkpointUnits%64===0)yield{stage:"Cercant i construint el m\xf3n",completed:null,total:null};place(v,0,0,0);yield{stage:"Situant vehicles",completed:null,total:null}}updateTerminalRamps();yield*prepareEnemyNavigationSteps()}world.userData.paths=pathRoutes;if(!seedSearchMode){const roads=yield*window.HUNTER_COMPOUND_PATHS.createPathNetworkSteps(THREE,{parent:world,routes:pathRoutes,heightAt:(x,z)=>Math.max(hAt(x,z),terrainStream?.visibleHeightAt(x,z)??-Infinity),heightVersion:(x,z)=>terrainStream?.surfaceVersionAt(x,z)??-1});world.add(roads);world.userData.pathStats=roads.userData.pathStats}const staticBatchStats=seedSearchMode?null:yield*batchStaticDecor();if(!seedSearchMode&&visualQuality.shadows)yield*prepareShadowCastersSteps();else shadowCandidates.length=0;cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);markBuildStage("finalizationAndBatching");yield{stage:"Comprovacions finals",completed:1,total:1};seedCompounds=compoundCenters.map(c=>({type:c.type,x:c.x,z:c.z}));window.HUNTER_BUILD_STATS={totalMs:performance.now()-buildStarted,stages:buildStages,portSearch:buildCounters,initialTerrainMs:initialTerrainMs,seabedMs:seabedMs,vegetationMs:vegetationMs,seabedSamples:seedSearchMode?0:water.seabedStats.lastSamples,terrainTiles:terrain?.stats||null,palms:PM.stats,landCarPatrols:landCarPatrolCount,staticBatches:staticBatchStats};if(!seedSearchMode){setPalmsDisabled(requestedPalmDisable);setWaterDisabled(!!document.getElementById("disableWater")?.checked);setShadowsDisabled(!!document.getElementById("disableShadows")?.checked)}if(!seedSearchMode){yield*prepareVisibilitySystemSteps();waterUpgradePending=true}if(window.HUNTER_PERF_DEBUG)console.info("Hunter \xb7 generaci\xf3",window.HUNTER_BUILD_STATS);resetSimulationClock()}function buildSeedData(){if(!seedSearchMode)throw new Error("buildSeedData requereix mode cerca");build();return{seed:seed,base:P.base,vehicles:V,items:items,compounds:seedCompounds,enemies:world.userData.marinePatrolPositions||[]}}window.HUNTER_CAMERA_CONTROLS=Object.freeze({createVehicleLook(){let offset=0,grace=0;const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));return{get offset(){return offset},reset(){offset=0;grace=0},turn(dx){offset=wrap(offset-dx*.006);grace=.7},release(){grace=.7},heading(vehicle,dt,dragging){if(!dragging){const wait=grace;grace=Math.max(0,grace-dt);const moving=Math.hypot(vehicle.v||0,vehicle.sideV||0,vehicle.strafeV||0,vehicle.verticalV||0)>.65;if(moving&&grace===0){offset*=Math.exp(-2.7*Math.max(0,dt-wait));if(Math.abs(offset)<1e-4)offset=0}}return vehicle.hd+offset}}},createOcclusion(){const hidden=[];return{get count(){return hidden.length},hide(wall){for(const mesh of wall.parts||[wall.m]){if(!mesh?.visible)continue;hidden.push({wall:wall,mesh:mesh,parent:mesh.parent});mesh.visible=false}},restore(){for(const{wall:wall,mesh:mesh,parent:parent}of hidden){if(wall.destroyedWall||wall.hp<=0||mesh.parent!==parent)continue;if(wall.door&&(wall.openProgress!=null?wall.openProgress>=.98:wall.open))continue;mesh.visible=true}hidden.length=0}}}});window.HUNTER_SIMULATION_CLOCK=Object.freeze({create({maxStep:maxStep=1/60,maxFrame:maxFrame=.25,maxSteps:maxSteps=15}={}){if(!Number.isFinite(maxStep)||maxStep<=0||!Number.isFinite(maxFrame)||maxFrame<=0||!Number.isInteger(maxSteps)||maxSteps<1)throw new RangeError("Invalid simulation clock limits");const frameLimit=Math.min(maxFrame,maxStep*maxSteps),epsilon=1e-12,stats={frames:0,steps:0,rawSeconds:0,acceptedSeconds:0,simulatedSeconds:0,droppedSeconds:0,interruptedSeconds:0,idleSeconds:0,invalidFrames:0,last:null};let last=null,epoch=0;return{maxStep:maxStep,maxSteps:maxSteps,maxFrame:frameLimit,stats:stats,reset(now=null){last=Number.isFinite(now)&&now>=0?now:null;epoch++},advance(now,step,active=true){let rawDt=0,invalid=false;if(!Number.isFinite(now)||now<0||last!==null&&now<last){invalid=true;last=null}else{if(last!==null)rawDt=(now-last)/1e3;last=now}const acceptedDt=active?Math.min(rawDt,frameLimit):0,version=epoch;let remaining=acceptedDt,steps=0;while(remaining>epsilon&&steps<maxSteps){const dt=Math.min(maxStep,remaining);remaining=Math.max(0,remaining-dt);steps++;if(step(dt)===false||version!==epoch)break}if(remaining<epsilon)remaining=0;const simulatedDt=acceptedDt-remaining,idleDt=active?0:rawDt,interruptedDt=remaining,droppedDt=active?rawDt-simulatedDt:0,frame={rawDt:rawDt,acceptedDt:acceptedDt,simulatedDt:simulatedDt,droppedDt:droppedDt,interruptedDt:interruptedDt,idleDt:idleDt,steps:steps,invalid:invalid,active:!!active};stats.frames++;stats.steps+=steps;stats.rawSeconds+=rawDt;stats.acceptedSeconds+=acceptedDt;stats.simulatedSeconds+=simulatedDt;stats.droppedSeconds+=droppedDt;stats.interruptedSeconds+=interruptedDt;stats.idleSeconds+=idleDt;if(invalid)stats.invalidFrames++;stats.last=frame;return frame}}}});window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){const esc=v=>String(v||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])),m=(e&&e.message)?e.message:"Error desconegut",where=e&&e.filename?(e.filename.split("/").pop()+":"+e.lineno+":"+e.colno):"",stack=e&&e.error&&e.error.stack?e.error.stack:"";p.innerHTML="<h1>No s’ha pogut iniciar el joc</h1><p style=\"max-width:560px\">Error d’arrencada: <b>"+esc(m)+"</b></p>"+(where?"<p><b>"+esc(where)+"</b></p>":"")+(stack?"<pre style=\"max-width:90vw;white-space:pre-wrap;text-align:left;font-size:11px;opacity:.8\">"+esc(stack)+"</pre>":"")+"<p style=\"opacity:.8\">Envia una captura d’aquest missatge si persisteix.</p>"}});
+let generationPromise=null,generationCancel=null;
+let terrainStream=null,seedSearchMode=false,seedCompounds=[],seedScratchWorld=null;
+const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_WAVES','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI','HUNTER_SEED_SEARCH','HUNTER_CAMERA_CONTROLS','HUNTER_SIMULATION_CLOCK','HUNTER_STEALTH_FEEDBACK','HUNTER_PRISONERS','HUNTER_RADIO_RELAY'];
+const missingModules=requiredModules.filter(name=>!window[name]);if(missingModules.length)throw new Error('Mòduls Hunter absents: '+missingModules.join(', '));
+const missingSystems=Object.entries({generation:typeof build,combat:typeof fire,enemies:typeof updEn,audio:typeof initAudio}).filter(([,type])=>type!=='function').map(([name])=>name);if(missingSystems.length)throw new Error('Sistemes Hunter absents: '+missingSystems.join(', '));
+// La mida escollida a la portada ja és coneguda quan s'inicialitza el motor.
+ // Crear l'aigua directament amb aquesta mida evita reservar i destruir
+ // una malla de centenars de milers de vèrtexs al primer build().
+ let MAP_SCALE=+(document.querySelector('input[name="mapSize"]:checked')?.value||1),S=4800*MAP_SCALE,H=S/2;
+ const SEG=400,vividCache=new Map(),vivid=c=>{
+   let k=vividCache.get(c);
+   if(!k){k=new THREE.Color(c);const h={};k.getHSL(h,THREE.SRGBColorSpace);
+     k.setHSL(h.h,Math.min(1,h.s*1.5),h.l,THREE.SRGBColorSpace);vividCache.set(c,k)}
+   return k
+ };
+const materialProfile=(name='organic')=>window.HUNTER_MATERIALS[name]||window.HUNTER_MATERIALS.organic;
+const sharedMaterials=new Map();
+const M=(c,profile='organic')=>{
+  const key=c+':'+profile;
+  if(!sharedMaterials.has(key))sharedMaterials.set(key,window.HUNTER_RESOURCES.retain(
+    new THREE.MeshStandardMaterial({color:vivid(c),flatShading:true,...materialProfile(profile)})));
+  return sharedMaterials.get(key);
+};
+const MAT={
+ terrain:()=>{
+   const mat=new THREE.MeshLambertMaterial({
+     vertexColors:true,flatShading:!highTerrainTexture,
+     ...(highTerrainTexture?{map:highTerrainTexture}:{})
+   });
+   if(terrainTextureTask&&!highTerrainTexture){
+     mat.userData.requiresDetailUV=true;
+     awaitingTerrainMaterials.push(mat);
+   }
+   return mat;
+ },
+ painted:c=>M(c,'paint'),metal:c=>M(c,'metal'),rubber:c=>M(c,'rubber'),glass:c=>M(c,'glass'),masonry:c=>M(c,'masonry')
+};
+let seed,R,islands,A,Bi,world,B=[],requestedSeed=null,activeBunker=null;
+const ISLAND_CELL=512,islandGrid=new Map(),islandCellKey=(cx,cz)=>cx+','+cz;
+function rebuildIslandGrid(){
+  islandGrid.clear();
+  if(!islands)return;
+  for(const island of islands){
+    // rawHAt parteix de m=-1: una illa només pot millorar aquest valor si d < 2*r.
+    const reach=island.r*2,minX=Math.floor((island.x-reach)/ISLAND_CELL),maxX=Math.floor((island.x+reach)/ISLAND_CELL),
+          minZ=Math.floor((island.z-reach)/ISLAND_CELL),maxZ=Math.floor((island.z+reach)/ISLAND_CELL);
+    for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){
+      const key=islandCellKey(cx,cz),bucket=islandGrid.get(key);
+      if(bucket)bucket.push(island);else islandGrid.set(key,[island])
+    }
+  }
+}
+const islandCandidates=(x,z)=>islandGrid.get(islandCellKey(Math.floor(x/ISLAND_CELL),Math.floor(z/ISLAND_CELL)))||(islands||[]);
+const seedFromText=v=>{v=String(v??'').trim();if(/^-?\d+$/.test(v))return Number(BigInt(v)&0xffffffffn);let h=2166136261>>>0;for(let i=0;i<v.length;i++){h^=v.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0};
+const mul=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const hash=(x,y)=>{const h=Math.sin(x*127.1+y*311.7+seed*.001)*43758.5453;return h-Math.floor(h)};
+function vn(x,y){const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);
+return hash(ix,iy)*(1-u)*(1-v)+hash(ix+1,iy)*u*(1-v)+hash(ix,iy+1)*(1-u)*v+hash(ix+1,iy+1)*u*v}
+const fbm=(x,y)=>vn(x,y)*.5+vn(x*2,y*2)*.25+vn(x*4,y*4)*.125+vn(x*8,y*8)*.0625;
+const clamp01=v=>Math.max(0,Math.min(1,v)),smooth01=t=>t*t*(3-2*t);
+function islandReliefAt(x,z,list){
+  let m=-1,dom=null;
+  for(const i of list){const q=1-Math.hypot(x-i.x,z-i.z)/i.r;if(q>m){m=q;dom=i}}
+  let h=(m-.25+.6*(fbm(x/520,z/520)-.47))*45;
+  if(dom&&h>0){
+    // La costa es manté gairebé intacta; el relleu addicional entra progressivament cap a l'interior.
+    const interior=smooth01(clamp01((m-.30)/.48));
+    if(interior>0){
+      const mid=(fbm(x/155+13,z/155-9)-.46875)*12*interior;
+      const pd=Math.hypot(x-dom.peakX,z-dom.peakZ)/(dom.r*.72),
+            peak=smooth01(clamp01(1-pd)),
+            sizeGain=Math.max(.72,Math.min(1.22,dom.r/620));
+      h=h*(1+.24*interior)+mid+peak*9*sizeGain*interior
+    }
+  }
+  return h
+}
+function rawHAt(x,z){let h=islandReliefAt(x,z,islandCandidates(x,z));const e=Math.max(Math.abs(x),Math.abs(z));
+if(e>H-120)h=Math.min(h,-4-(e-(H-120))*.05);
+if(h>=-1.5)return h;
+const depth=-h-1.5;return -1.5-Math.min(72,depth*depth*2.8+depth*.8)}
+// Evitem recórrer TOTES les plataformes de TOTS els compounds en cada
+// consulta d'altura. L'ordre d'inserció dels candidates és l'original:
+// solapaments, altures, llavors i col·lisions continuen idèntics.
+let terrainLevels=[];
+const LEVEL_CELL=256,terrainLevelGrid=new Map();
+const levelCellKey=(cx,cz)=>cx+','+cz;
+const addLevelArea=(x,z,w,d,y,rot=0,blend=12)=>{
+  const m={x,z,hw:w/2,hd:d/2,y,rot,c:Math.cos(rot),s:Math.sin(rot),blend};
+  terrainLevels.push(m);
+  // La circumferència circumscrita conté qualsevol punt amb out < blend,
+  // també en les plataformes girades.
+  const reach=Math.hypot(m.hw,m.hd)+blend,
+        minX=Math.floor((x-reach)/LEVEL_CELL),maxX=Math.floor((x+reach)/LEVEL_CELL),
+        minZ=Math.floor((z-reach)/LEVEL_CELL),maxZ=Math.floor((z+reach)/LEVEL_CELL);
+  for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){
+    const key=levelCellKey(cx,cz),bucket=terrainLevelGrid.get(key);
+    if(bucket)bucket.push(m);else terrainLevelGrid.set(key,[m]);
+  }
+};
+function hAt(x,z){
+  let h=rawHAt(x,z);
+  const candidates=terrainLevelGrid.get(levelCellKey(
+    Math.floor(x/LEVEL_CELL),Math.floor(z/LEVEL_CELL)));
+  if(!candidates)return h;
+  for(const m of candidates){
+    const dx=x-m.x,dz=z-m.z,lx=dx*m.c+dz*m.s,lz=-dx*m.s+dz*m.c,
+          ox=Math.max(0,Math.abs(lx)-m.hw),oz=Math.max(0,Math.abs(lz)-m.hd),
+          out=Math.hypot(ox,oz);
+    if(out<m.blend){const k=out<=0?1:1-smooth01(out/m.blend);h=h+(m.y-h)*k}
+  }
+  return h;
+}
+const waveAmp=window.HUNTER_WAVES.amplitude;
+const wy=(x,z,t)=>water.surfaceHeight(x,z,t);
+const rr=(a,b)=>a+R()*(b-a);
+function genIslands(){R=mul(seed);const q=R()<.5?-1:1,q2=R()<.5?-1:1,extent=MAP_SCALE===1?1000:2200,baseMin=MAP_SCALE===1?500:1200,baseMax=MAP_SCALE===1?800:1800;
+A={x:-q*rr(baseMin,baseMax)*2,z:-q2*rr(baseMin,baseMax)*2,r:rr(520,680)};Bi={x:q*rr(baseMin,baseMax)*2,z:q2*rr(baseMin,baseMax)*2,r:rr(520,680)};
+islands=[A,Bi];const regular=22*MAP_SCALE*MAP_SCALE,large=2*MAP_SCALE*MAP_SCALE;
+for(let i=0;i<regular;i++)islands.push({x:rr(-extent,extent)*2,z:rr(-extent,extent)*2,r:rr(180,520)});
+for(let i=0;i<large;i++)islands.push({x:rr(-extent*.55,extent*.55)*2,z:rr(-extent*.55,extent*.55)*2,r:rr(800,1040)});
+// Cim principal desplaçat de manera determinista, sense consumir R() ni alterar la resta de la generació.
+for(let n=0;n<islands.length;n++){const i=islands[n],ox=(hash(i.x*.013+n*1.37,i.z*.011-7.1)-.5)*.42*i.r,oz=(hash(i.z*.017-n*.91,i.x*.009+11.3)-.5)*.42*i.r;i.peakX=i.x+ox;i.peakZ=i.z+oz}
+rebuildIslandGrid()}
+const slope=(x,z,h)=>Math.abs(hAt(x+5,z)-h)+Math.abs(hAt(x,z+5)-h);
+function land(i,n=600,fl){return drainBuildSteps(landSteps(i,n,fl))}
+function* landSteps(i,n=600,fl){for(let k=0;k<n;k++){if(k%16===0)yield {stage:'Cercant terreny lliure',completed:k,total:n,unit:'intents'};const a=R()*6.283,d=R()*i.r*.75,x=i.x+Math.cos(a)*d,z=i.z+Math.sin(a)*d,h=hAt(x,z);
+if(h>3&&h<14&&slope(x,z,h)<2.5&&(!fl||fr(x,z)<2.2)&&!B.some(b=>Math.abs(b.x-x)<b.hw+24&&Math.abs(b.z-z)<b.hd+24)&&!treeHit(x,z,3)&&Math.abs(x)<H-150&&Math.abs(z)<H-150)return{x,z,h}}return null}
+// escena
+const coarse=matchMedia('(pointer:coarse)').matches;
+const qualityName=window.HUNTER_GRAPHICS_QUALITY||((coarse||window.HUNTER_FORCE_LOW_QUALITY)?'mobile':'desktop');
+const visualQuality=window.HUNTER_VISUAL_CONFIG[qualityName];
+let highTerrainTexture=null;
+const terrainTextureTask=visualQuality.terrainDetailTexture
+  ?window.HUNTER_HIGH_GRAPHICS.createTerrainTextureTask(THREE):null;
+const awaitingTerrainMaterials=[];
+function advanceTerrainTexture(){
+  if(!terrainTextureTask||highTerrainTexture)return;
+  const tex=terrainTextureTask.advance(4);
+  if(!tex)return;
+  highTerrainTexture=tex;
+  for(const mat of awaitingTerrainMaterials){
+    mat.map=tex;mat.flatShading=false;mat.needsUpdate=true;
+  }
+  awaitingTerrainMaterials.length=0;
+}
+const rendering=window.HUNTER_RENDERING.create(THREE,visualQuality);
+const ren=rendering.renderer,scene=rendering.scene,cam=rendering.camera,sunDir=rendering.sunDir,sun=rendering.sun,sky=rendering.sky,sunM=rendering.sunMesh;
+document.body.prepend(ren.domElement);
+const rs=rendering.resize;addEventListener('resize',rs);rs();
+const maxRenderRatio=Math.min(devicePixelRatio||1,visualQuality.pixelRatio);
+const adaptivePerformance=window.HUNTER_PERFORMANCE.create({
+  renderer:ren,maxPixelRatio:maxRenderRatio,
+  minPixelRatio:visualQuality.minPixelRatio,
+  element:document.getElementById('perfStats'),compact:qualityName!=='desktop'
+});
+// El panell es mostra només quan l'usuari activa l'interruptor de pausa.
+let performanceStatsVisible=false;
+document.body.classList.remove('performance-stats-visible');
+function setPerformanceStatsVisible(enabled){
+  performanceStatsVisible=!!enabled;
+  if(world)registerDrawCategories();
+  document.body.classList.toggle('performance-stats-visible',performanceStatsVisible);
+}
+window.HUNTER_PERFORMANCE_STATS=adaptivePerformance.stats;
+const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segments:visualQuality.waterSegments,initialSegments:Math.min(160,visualQuality.waterSegments),heightAt:hAt,config:window.HUNTER_WATER,reflections:visualQuality.waterReflections!==false,coastDetail:!!visualQuality.coastDetail,fogColor:scene.fog.color});
+let waterUpgradePending=false;
+const waterMat=water.material,waterUniforms=water.uniforms;
+const movementFx=window.HUNTER_MOVEMENT_FX.create(THREE,{
+ scene,quality:qualityName,waveModel:window.HUNTER_WAVES,
+ waterTime:waterUniforms.time,waterBed:hAt
+});
+// Efectes hostils: només vehicles amb rodes, erugues o buc.
+const ENEMY_TRAIL_TYPES=new Set(['jeep','tanqueta','tanc','patrulla_marina']);
+window.HUNTER_MOVEMENT_FX_STATS=movementFx.stats;
+const updateSeabed=()=>water.setWorldSize(S);
+const waves=water.update;
+// Diagnòstic de GPU: amagam les dues malles del mar, sense alterar
+// la física d'onades ni el relleu. Això permet comparar FPS en calent.
+let waterDisabled=false;
+function setWaterDisabled(disabled){
+  waterDisabled=!!disabled;
+  const checkbox=document.getElementById('disableWater');
+  if(checkbox)checkbox.checked=waterDisabled;
+  water.mesh.visible=!waterDisabled;
+  water.deep.visible=!waterDisabled;
+  movementFx.setWaterVisible(!waterDisabled);
+  if(water.shore)water.shore.visible=!waterDisabled&&water.shoreStats.segments>0;
+  window.HUNTER_WATER_DISABLED=waterDisabled;
+  return waterDisabled;
+}
+const waterSettingCheckbox=document.getElementById('disableWater');
+if(waterSettingCheckbox)waterSettingCheckbox.addEventListener('change',()=>setWaterDisabled(waterSettingCheckbox.checked));
+// Ombres de proximitat. Malles classificades una vegada per mapa,
+// amb actualització ocasional i sense passejar l'arbre de l'escena.
+let shadowsDisabled=false;
+const shadowCandidates=[],shadowStats={candidates:0,active:0,excludedDetail:0,updates:0,playerCasters:0};
+let shadowLastX=Infinity,shadowLastZ=Infinity,shadowLastMs=-Infinity;
+window.HUNTER_SHADOW_STATS=shadowStats;
+function updateShadowCasters(force=false){
+  if(!visualQuality.shadows||shadowsDisabled)return;
+  const now=performance.now();
+  if(!force&&Math.abs(P.x-shadowLastX)<30&&Math.abs(P.z-shadowLastZ)<30&&now-shadowLastMs<1000)return;
+  shadowLastX=P.x;shadowLastZ=P.z;shadowLastMs=now;
+  const range2=Math.pow(visualQuality.shadowDistance||225,2),
+        dynamicPositions=new Map();
+  let count=0;
+  for(const entry of shadowCandidates){
+    let q=entry.point;
+    if(entry.owner){
+      q=dynamicPositions.get(entry.owner);
+      if(!q){q=entry.owner.getWorldPosition(new THREE.Vector3());dynamicPositions.set(entry.owner,q)}
+    }
+    const dx=q.x-P.x,dz=q.z-P.z,near=dx*dx+dz*dz<range2;
+    entry.mesh.castShadow=near;
+    if(near)count++;
+  }
+  shadowStats.active=count;shadowStats.updates++;
+}
+function setShadowsDisabled(disabled){
+  shadowsDisabled=!!disabled;
+  const checkbox=document.getElementById('disableShadows');
+  if(checkbox)checkbox.checked=shadowsDisabled;
+  const enabled=!!visualQuality.shadows&&!shadowsDisabled;
+  ren.shadowMap.enabled=enabled;
+  sun.castShadow=enabled;
+  if(enabled){
+    ren.shadowMap.needsUpdate=true;
+    updateShadowCasters(true);
+  }else{
+    for(const entry of shadowCandidates)entry.mesh.castShadow=false;
+    shadowStats.active=0;
+  }
+  window.HUNTER_SHADOWS_DISABLED=shadowsDisabled;
+  return shadowsDisabled;
+}
+const shadowSettingCheckbox=document.getElementById('disableShadows');
+if(shadowSettingCheckbox)shadowSettingCheckbox.addEventListener('change',()=>setShadowsDisabled(shadowSettingCheckbox.checked));
+function* traverseGenerationSteps(root,visit,stage){
+  const stack=[root];let count=0;
+  while(stack.length){
+    const node=stack.pop();visit(node);
+    for(let i=node.children.length-1;i>=0;i--)stack.push(node.children[i]);
+    if(++count%64===0)yield {stage,completed:count,total:null,unit:'objectes'};
+  }
+}
+function prepareShadowCasters(){return drainBuildSteps(prepareShadowCastersSteps())}
+function* prepareShadowCastersSteps(){
+  shadowCandidates.length=0;
+  shadowLastX=Infinity;shadowLastZ=Infinity;shadowLastMs=-Infinity;
+  shadowStats.candidates=0;shadowStats.active=0;shadowStats.excludedDetail=0;shadowStats.playerCasters=0;
+  if(!visualQuality.shadows||!world)return;
+  const dynamicRoots=new Set([pl,...V.map(v=>v.o),...E.map(e=>e.o),...fa.map(f=>f.o)].filter(Boolean));
+  world.updateWorldMatrix(true,false);
+  yield* traverseGenerationSteps(world,o=>o.updateWorldMatrix(false,false),'Matrius d’ombres');
+  pl.updateMatrixWorld(true);
+  const collect=mesh=>{
+    if(!mesh.isMesh)return;
+    mesh.castShadow=false;
+    const geometry=mesh.geometry;
+    if(!geometry||mesh.isInstancedMesh||mesh.userData.waterMask||
+       mesh.userData.terrainTile||mesh.userData.noCastShadow)return;
+    if(!geometry.boundingSphere)geometry.computeBoundingSphere();
+    const radius=(geometry.boundingSphere?.radius||0)*mesh.matrixWorld.getMaxScaleOnAxis(),
+          mat=Array.isArray(mesh.material)?mesh.material[0]:mesh.material;
+    // Les peces molt petites i els vidres no fan una passada d'ombres.
+    if(radius<.85||(mat?.transparent&&mat.opacity<.9)){
+      shadowStats.excludedDetail++;mesh.receiveShadow=false;return;
+    }
+    let owner=mesh.parent;
+    while(owner&&owner!==world&&owner!==scene&&!dynamicRoots.has(owner))owner=owner.parent;
+    if(!dynamicRoots.has(owner))owner=null;
+    shadowCandidates.push({mesh,owner,point:owner?null:mesh.getWorldPosition(new THREE.Vector3())});
+  };
+  yield* traverseGenerationSteps(world,collect,'Ombres');
+  pl.traverse(collect);
+  // Els caps i les extremitats del jugador eren massa petits per passar
+  // el filtre general (0.85 m). Seleccionam onze malles representatives
+  // del rig, conservant les animacions sense processar detalls microscòpics.
+  if(visualQuality.playerShadows){
+    const chosen=new Set(),u=pl.userData;
+    const largest=(root,n,direct=false)=>{
+      if(!root)return;
+      const candidates=[];
+      const offer=mesh=>{
+        if(!mesh.isMesh||mesh.userData.noCastShadow||mesh.material?.transparent)return;
+        const geo=mesh.geometry;
+        if(!geo.boundingSphere)geo.computeBoundingSphere();
+        candidates.push({mesh,radius:(geo.boundingSphere?.radius||0)*mesh.matrixWorld.getMaxScaleOnAxis()});
+      };
+      if(direct)for(const child of root.children)offer(child);
+      else root.traverse(offer);
+      candidates.sort((a,b)=>b.radius-a.radius);
+      for(const c of candidates.slice(0,n))chosen.add(c.mesh);
+    };
+    largest(pl,3,true);
+    largest(u.ll,2);largest(u.lr,2);
+    largest(u.al,1);largest(u.ar,1);
+    largest(u.head,2);
+    const already=new Set(shadowCandidates.map(e=>e.mesh));
+    for(const mesh of chosen)if(!already.has(mesh))
+      shadowCandidates.push({mesh,owner:pl,point:null});
+    shadowStats.playerCasters=chosen.size;
+  }else shadowStats.playerCasters=0;
+  shadowStats.candidates=shadowCandidates.length;
+  if(!shadowsDisabled)updateShadowCasters(true);
+}
+
+// terreny visual a src/terrain.js
+let stairs=[],piers=[];
+let Wl=[],Dr=[],items=[],inv={},msg='',msgT=0,HQ=null,ib=null;
+const WALL_CELL=64,wallGrid=new Map();let wallGridSource=null,wallGridCount=-1,wallQueryStamp=0;
+const wallCellKey=(cx,cz)=>cx+','+cz;
+function rebuildWallGrid(){
+  wallGrid.clear();wallGridSource=Wl;wallGridCount=Wl.length;
+  for(const w of Wl){
+    const minX=Math.floor(w.x0/WALL_CELL),maxX=Math.floor(w.x1/WALL_CELL),
+          minZ=Math.floor(w.z0/WALL_CELL),maxZ=Math.floor(w.z1/WALL_CELL);
+    for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){
+      const key=wallCellKey(cx,cz),bucket=wallGrid.get(key);
+      if(bucket)bucket.push(w);else wallGrid.set(key,[w])
+    }
+  }
+}
+function wallCandidates(x,z,r=0){
+  if(wallGridSource!==Wl||wallGridCount!==Wl.length)rebuildWallGrid();
+  const out=[],stamp=++wallQueryStamp,minX=Math.floor((x-r)/WALL_CELL),maxX=Math.floor((x+r)/WALL_CELL),
+        minZ=Math.floor((z-r)/WALL_CELL),maxZ=Math.floor((z+r)/WALL_CELL);
+  for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){
+    const bucket=wallGrid.get(wallCellKey(cx,cz));if(!bucket)continue;
+    for(const w of bucket)if(w._wallQueryStamp!==stamp){w._wallQueryStamp=stamp;out.push(w)}
+  }
+  return out
+}
+const BUILDING_CELL=96,buildingGrid=new Map();let buildingGridSource=null,buildingGridCount=-1,buildingQueryStamp=0;
+const buildingCellKey=(cx,cz)=>cx+','+cz;
+function rebuildBuildingGrid(){
+  buildingGrid.clear();buildingGridSource=B;buildingGridCount=B.length;
+  for(const b of B){
+    const minX=Math.floor((b.x-b.w/2)/BUILDING_CELL),maxX=Math.floor((b.x+b.w/2)/BUILDING_CELL),
+          minZ=Math.floor((b.z-b.d/2)/BUILDING_CELL),maxZ=Math.floor((b.z+b.d/2)/BUILDING_CELL);
+    for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){
+      const key=buildingCellKey(cx,cz),bucket=buildingGrid.get(key);
+      if(bucket)bucket.push(b);else buildingGrid.set(key,[b])
+    }
+  }
+}
+function buildingCandidates(x,z,r=0){
+  if(buildingGridSource!==B||buildingGridCount!==B.length)rebuildBuildingGrid();
+  const out=[],stamp=++buildingQueryStamp,minX=Math.floor((x-r)/BUILDING_CELL),maxX=Math.floor((x+r)/BUILDING_CELL),
+        minZ=Math.floor((z-r)/BUILDING_CELL),maxZ=Math.floor((z+r)/BUILDING_CELL);
+  for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){
+    const bucket=buildingGrid.get(buildingCellKey(cx,cz));if(!bucket)continue;
+    for(const b of bucket)if(b._buildingQueryStamp!==stamp){b._buildingQueryStamp=stamp;out.push(b)}
+  }
+  return out
+}
+const ICON={
+med:'<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="16" width="46" height="34" rx="5" fill="#fff" stroke="#657078" stroke-width="3"/><rect x="18" y="28" width="28" height="9" rx="4.5" fill="#d7ae7c" transform="rotate(-28 32 32.5)"/><circle cx="27" cy="35" r="1.8" fill="#9a6f45"/><circle cx="37" cy="30" r="1.8" fill="#9a6f45"/></svg>',
+expl:'<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="24" width="48" height="30" rx="5" fill="#667753" stroke="#25372c" stroke-width="3"/><path d="M14 27 C17 3 22 14 24 27 M22 27 C26 5 33 10 34 27 M32 27 C38 0 45 10 46 27 M42 27 C48 11 53 12 52 27" fill="none" stroke-width="3.3"/><path d="M14 27 C17 3 22 14 24 27" stroke="#dc493d" fill="none" stroke-width="3.3"/><path d="M22 27 C26 5 33 10 34 27" stroke="#35c866" fill="none" stroke-width="3.3"/><path d="M32 27 C38 0 45 10 46 27" stroke="#327cdd" fill="none" stroke-width="3.3"/><rect x="17" y="34" width="30" height="14" rx="2" fill="#172b27"/><text x="32" y="44" font-size="10" font-weight="bold" font-family="monospace" text-anchor="middle" fill="#91e795">00:03</text></svg>',
+disf:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M22 12 L30 17 L34 17 L42 12 L54 22 L47 30 L43 27 L43 55 L21 55 L21 27 L17 30 L10 22 Z" fill="#b83232" stroke="#661d1d" stroke-width="3"/><path d="M28 16 Q32 23 36 16" fill="none" stroke="#f0c7a2" stroke-width="3"/></svg>',
+mapa:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#ead69b" stroke="#7c693c" stroke-width="3"/><path d="M25 9 V50 M39 14 V55" stroke="#a18b56" stroke-width="2"/><rect x="30" y="28" width="15" height="11" fill="#7c4f3a"/><path d="M29 28 L37.5 21 L46 28" fill="#a33b32"/></svg>',
+mapa_heli:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#d9edf5" stroke="#557986" stroke-width="3"/><path d="M17 33 H49 M32 20 V46" stroke="#557986" stroke-width="2"/><ellipse cx="32" cy="33" rx="11" ry="5" fill="#587766"/><path d="M43 33 H54 M21 33 H10" stroke="#35453c" stroke-width="3"/></svg>',
+mapa_tanc:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#e5d6a8" stroke="#786b46" stroke-width="3"/><rect x="18" y="31" width="28" height="11" rx="4" fill="#68754b"/><rect x="25" y="25" width="15" height="8" rx="3" fill="#78845b"/><path d="M40 29 H55" stroke="#40473a" stroke-width="3"/></svg>',
+bazooka:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 35 L51 18" stroke="#536148" stroke-width="11" stroke-linecap="round"/><path d="M8 38 L17 34" stroke="#252b27" stroke-width="13" stroke-linecap="round"/><path d="M48 20 L56 17" stroke="#252b27" stroke-width="14" stroke-linecap="round"/><path d="M29 30 L25 42" stroke="#2c302d" stroke-width="5" stroke-linecap="round"/><path d="M35 26 L39 18" stroke="#737b74" stroke-width="3"/><circle cx="51" cy="18" r="4" fill="#b76b2d"/></svg>',
+franctirador:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M5 35 L53 35" stroke="#343d39" stroke-width="7"/><rect x="20" y="23" width="20" height="8" rx="2" fill="#778577" stroke="#292f2b" stroke-width="2"/><rect x="25" y="17" width="13" height="5" rx="1" fill="#243333"/><path d="M16 36 L8 48 H22 L28 36" fill="#846948" stroke="#3d3126" stroke-width="2"/><rect x="52" y="30" width="7" height="10" rx="1" fill="#242b2b"/><path d="M31 35 L28 46" stroke="#343d39" stroke-width="5"/></svg>',
+ganivet:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M13 52L34 31" stroke="#4d3528" stroke-width="9" stroke-linecap="round"/><path d="M10 55L15 50" stroke="#cba87c" stroke-width="4" stroke-linecap="round"/><path d="M27 29L36 38" stroke="#303b3c" stroke-width="5" stroke-linecap="round"/><path d="M34 31L51 9Q56 6 53 14L42 35Z" fill="#c9d2d2" stroke="#455255" stroke-width="2"/><path d="M35 30L50 13" stroke="#f3faf4" stroke-width="2"/></svg>',
+cisalla:'<svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke-linecap="round"><path d="M14 56L30 30M50 56L34 30" stroke="#b73a36" stroke-width="8"/><path d="M30 30L24 8M34 30L40 8" stroke="#a3b2b4" stroke-width="6"/><path d="M24 8L32 17 40 8" stroke="#d3dde0" stroke-width="3"/></g><circle cx="32" cy="30" r="6" fill="#414b4c" stroke="#b7c7c9" stroke-width="2"/></svg>',
+paracaigudes:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M6 27 Q32 -5 58 27 Z" fill="#e9d9aa" stroke="#6c5945" stroke-width="3"/><path d="M32 7 Q13 18 6 27 M32 7 Q51 18 58 27 M21 12L21 27 M43 12L43 27" fill="none" stroke="#bb7151" stroke-width="2"/><path d="M6 27L24 49 M58 27L40 49 M32 27V50" fill="none" stroke="#52565a" stroke-width="2"/><rect x="23" y="46" width="18" height="12" rx="2" fill="#70816a"/></svg>',
+granada:'<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="31" cy="38" rx="16" ry="18" fill="#4a5842" stroke="#263028" stroke-width="3"/><rect x="27" y="14" width="10" height="10" rx="2" fill="#303632"/><path d="M34 15 C44 8 51 14 48 23" fill="none" stroke="#727b72" stroke-width="4"/><circle cx="48" cy="24" r="5" fill="none" stroke="#727b72" stroke-width="3"/></svg>',
+arma:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 19 H54 V50 H10 Z" fill="#75583a" stroke="#3e3024" stroke-width="3"/><path d="M14 24 H50" stroke="#b58a56" stroke-width="3"/><g fill="#d4aa42" stroke="#70591e" stroke-width="1"><circle cx="20" cy="34" r="4"/><circle cx="31" cy="34" r="4"/><circle cx="42" cy="34" r="4"/><circle cx="25" cy="44" r="4"/><circle cx="36" cy="44" r="4"/></g></svg>'
+};
+const IT={
+med:{n:'Farmaciola',c:0xf2f3de,s:[1.2,.8,.8],icon:ICON.med,desc:'Recupera 8 punts de vida.',usable:true},
+mapa:{n:'Mapa de l’HQ',c:0xffe27a,s:[1.6,.08,1.2],icon:ICON.mapa,desc:'En recollir-lo, revela immediatament la posició de l’HQ enemic.',usable:false},
+mapa_heli:{n:'Mapa d’helicòpters',c:0x9fd7ff,s:[1.6,.08,1.2],icon:ICON.mapa_heli,desc:'En recollir-lo, marca immediatament tots els helicòpters actius al mapa.',usable:false},
+mapa_tanc:{n:'Mapa de tancs',c:0xc6b06a,s:[1.6,.08,1.2],icon:ICON.mapa_tanc,desc:'En recollir-lo, marca immediatament tots els tancs actius al mapa.',usable:false},
+bazooka:{n:'Bazooka',c:0x58664a,s:[2.1,.45,.45],icon:ICON.bazooka,desc:'Llançacoets amb 3 coets per recollida. La retícula indica el punt d’apuntat i es torna verda si l’autoapuntat fixa un enemic.',usable:true},
+franctirador:{n:'Rifle de franctirador',c:0x647366,s:[2.7,.5,.42],icon:ICON.franctirador,desc:'Rifle de llarg abast. 6 cartutxos per recollida; elimina soldats d’un tret. Equipa’l i prem Mira / T per activar l’òptica x8.',usable:true},
+paracaigudes:{n:'Paracaigudes',c:0xcfaa74,s:[1.2,.9,.9],icon:ICON.paracaigudes,desc:'Es desplega automàticament en saltar d’un helicòpter en vol. Frena la caiguda i evita els danys de l’aterratge.',usable:false},
+cisalla:{n:'Cisalla',c:0xb83f38,s:[1,1.4,.3],icon:ICON.cisalla,desc:'Talla silenciosament un tram de filferrada proper. Equipa-la i prem Talla / F mirant la tanca. No gasta munició ni alerta els enemics.',usable:true},
+granada:{n:'Granades',c:0x4a5842,s:[.65,.65,.65],icon:ICON.granada,desc:'Paquet de 5 granades. A peu, mantén Dispar per arribar més lluny i mira la trajectòria. Des de l’helicòpter utilitari, prem Dispar per llançar-ne una de l’inventari.',usable:true},
+arma:{n:'Munició',c:0x555b66,s:[1.6,.35,.35],icon:ICON.arma,desc:'Caixa de munició per a l’arma personal.',usable:false},
+expl:{n:'Explosius',c:0x617451,s:[.9,.9,.9],icon:ICON.expl,desc:'Explosiu C4 amb visor LED de 00 a 59 segons. A peu es col·loca; des de l’helicòpter utilitari en vol cau per la porta lateral. Explota quan arriba a zero, fins i tot a l’aire. No es pot utilitzar des de l’helicòpter de combat.',usable:true},
+disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa enemiga vermella. Activa o desactiva la disfressa.',usable:true}
+};
+// combat i enemics
+let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=window.HUNTER_COMBAT_BALANCE.player,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,knifeEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null,playerCrouched=false;
+// Ojiva compartida per tots els projectils pesats. Eix longitudinal -Z:
+// culata cilíndrica a +Z i punta cònica a -Z, com els canons del joc.
+// Geometria única reutilitzada, sense crear malles noves per cada tir.
+const gHeavy=new THREE.LatheGeometry([
+  new THREE.Vector2(0,-.46),new THREE.Vector2(.19,-.46),
+  new THREE.Vector2(.24,-.42),new THREE.Vector2(.24,-.34),
+  new THREE.Vector2(.18,-.33),new THREE.Vector2(.18,.12),
+  new THREE.Vector2(.22,.15),new THREE.Vector2(.19,.23),
+  new THREE.Vector2(.12,.36),new THREE.Vector2(0,.48)
+],12);
+gHeavy.rotateX(-Math.PI/2);
+const heavyForward=new THREE.Vector3(0,0,-1);
+// Bales lleugeres: petits cilindres allargats, amb l'eix longitudinal -Z.
+// Comparteixen geometria i cada projectil s'orienta segons la trajectòria.
+const gLight=new THREE.CylinderGeometry(.105,.105,.78,8);
+gLight.rotateX(-Math.PI/2);
+// Anell pla, mai un volum transparent que amagui els murs del món.
+const endEl=document.getElementById('end'),blastRingG=new THREE.RingGeometry(.91,1.08,48),
+mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial({color:0xff7a1a}),mE=new THREE.MeshBasicMaterial({color:0xff4040}),
+// Bales de pistola, franctirador, soldats i tanqueta: petites i blanques.
+// Els projectils explosius mantenen el color i volum original.
+mW=new THREE.MeshBasicMaterial({color:0xffffff}),SMALL_ARMS_SCALE=.7;
+// Cadència compartida entre la tanqueta del jugador i les enemigues.
+const TANKETTE_FIRE_INTERVAL=.16;
+const EC={
+ soldat:{hp:COMBAT_BALANCE.people.soldier,sp:7,rng:32,rate:1.1,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:2},
+ jeep:{hp:COMBAT_BALANCE.vehicles.cotxe,sp:22,rng:75,rate:1.1,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:3.9},
+ tanqueta:{hp:COMBAT_BALANCE.vehicles.tanqueta,sp:13,rng:42,rate:TANKETTE_FIRE_INTERVAL,dmg:COMBAT_BALANCE.weapons.tankette,spl:0,r:4.5},
+ tanc:{hp:COMBAT_BALANCE.vehicles.tanc,sp:8,rng:100,rate:2.5,dmg:COMBAT_BALANCE.weapons.tank,spl:7,r:6.8},
+ torre:{hp:24,sp:0,rng:112.5,rate:.7,dmg:COMBAT_BALANCE.weapons.towerLight,spl:0,r:3},
+ patrulla_marina:{hp:COMBAT_BALANCE.vehicles.llanxa,sp:20,rng:245,rate:.4,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:7.5},
+ general:{hp:COMBAT_BALANCE.people.general,sp:1.45,rng:35,rate:.9,dmg:COMBAT_BALANCE.weapons.pistol,spl:0,r:2}
+};
+// extres: so, partícules, fauna, diari
+let started=0,DIF=1,AC=null,eng=null,seaAudio=null,logb=[],fa=[],pi_=0;const lastS={},rn=(a,b)=>a+Math.random()*(b-a);
+const PT=[];for(let i=0;i<100;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,depthWrite:false}));m.visible=false;scene.add(m);PT.push({m,life:0,max:1,s:1})}
+function puff(x,y,z,c,s,rise=0){const p=PT[pi_++%100];p.life=p.max=1.1;p.s=s;p.rise=rise;p.m.material.color.setHex(c);p.m.position.set(x+rn(-.6,.6),y,z+rn(-.6,.6));p.m.visible=true}
+function mark(){const q=cv||P;logb.push({n:'P'+(logb.length+1),x:q.x,z:q.z});msg='Coordenades guardades: '+(q.x|0)+', '+(q.z|0);msgT=2}
+function spawnFauna(){return drainBuildSteps(spawnFaunaSteps())}
+function* spawnFaunaSteps(){fa=[];for(let k=0;k<48;k++){yield {stage:'Fauna',completed:k,total:78,unit:'animals'};const bird=window.HUNTER_FAUNA.createGull(THREE,{box:bx,material:M}),o=bird.o,wl=bird.wl,wr=bird.wr;world.add(o);
+const cx=rn(-H+200,H-200),cz=rn(-H+200,H-200),baseY=rn(25,55);
+fa.push({k:'g',o,wl,wr,cx,cz,r:rn(40,120),a:rn(0,6.28),sp:rn(.15,.3),y:baseY,flyY:Math.max(baseY,hAt(cx,cz)+10),x:cx,z:cz})}
+for(let k=0;k<30;k++){yield {stage:'Fauna',completed:48+k,total:78,unit:'animals'};let cx,cz,n=0;do{cx=rn(-H+150,H-150);cz=rn(-H+150,H-150)}while(hAt(cx,cz)>-6&&++n<60);if(hAt(cx,cz)>-6)continue;
+const o=window.HUNTER_FAUNA.createShark(THREE,{material:M});world.add(o);fa.push({k:'s',o,cx,cz,r:rn(12,28),a:rn(0,6.28),sp:rn(.25,.45),x:cx,z:cz,sharkMode:'patrol',biteCd:0})}}
+function updExtra(dt,t){updDeb(dt);
+for(let i=fa.length-1;i>=0;i--){
+  const f=fa[i],px=f.x??f.cx,pz=f.z??f.cz,
+        dx=px-P.x,dz=pz-P.z,d2=dx*dx+dz*dz,
+        interval=d2<FAUNA_NEAR2?0:(d2<FAUNA_MID2?.12:.4);
+  f.lodAcc=(f.lodAcc||0)+dt;
+  if(interval>0&&f.lodAcc<interval)continue;
+  const step=f.lodAcc;f.lodAcc=0;
+  if(f.k==='s'){
+    const outcome=window.HUNTER_SHARKS.update(f,step,
+      !cv&&!over&&!playerFall&&!playerEject&&swimming?P:null,hAt);
+    if(outcome.remove){world.remove(f.o);fa.splice(i,1);continue}
+    f.o.position.set(f.x,wy(f.x,f.z,t)-.18-(f.dead?outcome.sink:0),f.z);
+    f.o.rotation.y=f.sharkYaw??Math.PI-f.a;
+    f.o.rotation.z=f.dead?Math.min(1.4,(f.deathT||0)*2):0;
+    if(outcome.bite&&!over){
+      hurtP(window.HUNTER_SHARKS.BITE_DAMAGE,false,{type:'shark',x:f.x,y:f.o.position.y,z:f.z});
+      // Gran esquitx de sang, sense materials ni partícules noves:
+      // reutilitza el pool d'efectes existent al nivell de l'aigua.
+      const biteY=wy(P.x,P.z,t)+.08;
+      for(let k=0;k<12;k++){
+        const a=k*Math.PI/6,d=.35+(k%4)*.33;
+        puff(P.x+Math.cos(a)*d,biteY+rn(0,.4),P.z+Math.sin(a)*d,
+          k%3?0xa51b2b:0xcc303d,1.65+rn(0,1.65));
+      }
+      msg='Un tauró et mossega!';msgT=1.5;
+    }
+    if(!f.dead&&d2<FAUNA_NEAR2&&Math.random()<.1)
+      puff(f.x,wy(f.x,f.z,t)+.02,f.z,0xffffff,1.2);
+    continue;
+  }
+  f.a+=f.sp*step;f.x=f.cx+Math.cos(f.a)*f.r;f.z=f.cz+Math.sin(f.a)*f.r;
+  f.o.rotation.y=Math.PI-f.a;
+  const terrainY=Math.max(0,hAt(f.x,f.z))+10;
+  let obstacleY=terrainY;
+  for(const b of buildingCandidates(f.x,f.z,5))
+    if(Math.abs(f.x-b.x)<b.w/2+5&&Math.abs(f.z-b.z)<b.d/2+5)
+      obstacleY=Math.max(obstacleY,b.fy+b.h+8);
+  const cruiseY=f.y+Math.sin(t+f.cx)*2,targetY=Math.max(cruiseY,obstacleY),
+        climbK=1-Math.exp(-3.8*step);
+  f.flyY=(f.flyY??targetY)+(targetY-(f.flyY??targetY))*climbK;
+  if(f.flyY<obstacleY)f.flyY=obstacleY;
+  f.o.position.set(f.x,f.flyY,f.z);
+  f.wl.rotation.z=Math.sin(t*8+f.cx)*.5;f.wr.rotation.z=-f.wl.rotation.z;
+}
+V.forEach(v=>{
+  if(v.destroyed)return;
+  v.playerHitCd=Math.max(0,(v.playerHitCd||0)-dt);
+  const frac=1-(v.life/(v.maxLife||1));
+  if(frac>.08){
+    v.smokeT=(v.smokeT||0)-dt;
+    if(v.smokeT<=0){
+      const baseY=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
+      if(v.smokeTopOffset==null&&v.o){
+        v.o.updateMatrixWorld(true);
+        const bb=new THREE.Box3().setFromObject(v.o);
+        v.smokeTopOffset=Math.max(.7,bb.max.y-baseY);
+      }
+      // Fum billboarding agrupat en una sola malla per a tots els vehicles.
+      if(Math.hypot(v.x-P.x,v.z-P.z)<250)
+        movementFx.damageSmoke(v,frac,baseY+(v.smokeTopOffset||1.8));
+      v.smokeT=Math.max(.08,.55-frac*.42)
+    }
+  }
+});
+// Esteles dels vehicles pilotables i dels enemics; tots els efectes
+// comparteixen quatre malles instanciades. LOD de distància al sistema.
+const fxContext={playerX:P.x,playerZ:P.z,playerVehicle:cv,
+  terrainAt:hAt,waterAt:(x,z)=>wy(x,z,t)};
+for(const v of V)movementFx.vehicle(v,dt,fxContext);
+fxContext.enemy=true;
+for(const u of E)if(ENEMY_TRAIL_TYPES.has(u.t))
+  movementFx.vehicle(u,dt,fxContext);
+movementFx.update(dt,cam);
+ PT.forEach(p=>{if(p.life>0){p.life-=dt;if(p.rise)p.m.position.y+=p.rise*dt;p.m.scale.setScalar(p.s*(1+(1-p.life/p.max)*1.15));p.m.material.opacity=Math.max(0,p.life/p.max)*.8;if(p.life<=0){p.m.visible=false;p.rise=0}}});
+if(seaAudio&&audioCanPlay()){const coastal=Math.max(.25,1-Math.max(0,hAt(P.x,P.z))/22),
+      // La barca de rems, com el windsurf, només fa fregadís d'aigua.
+      waterVolume=cv&&(cv.t==='windsurf'||cv.t==='barca_rems')
+        ?.026+Math.min(1,Math.abs(cv.v)/22)*.016:.035+coastal*.05;
+  seaAudio.gain.gain.setTargetAtTime(over?0:waterVolume,AC.currentTime,.5)}
+if(eng&&audioCanPlay()){const c=cv?VT[cv.t]:null;
+  eng.g.gain.value=c&&!['bici','windsurf','barca_rems'].includes(cv.t)&&!over?(cv.t==='cotxe_civil'?1.65:1)*(.02+Math.min(1,Math.abs(cv.v)/40)*.03):0;
+  eng.o.frequency.value=c?(cv.t==='cotxe_civil'?28:c.m=='a'?60:35)+Math.abs(cv.v)*(c.m=='a'?1.3:2.5):40}}
+const seedRandomEl=document.getElementById('seedRandom'),seedInputEl=document.getElementById('seedInput'),iniEl=document.getElementById('ini'),
+startMenuEl=document.getElementById('startMenu'),seedSearchScreenEl=document.getElementById('seedSearchScreen'),
+seedSearchOpenEl=document.getElementById('seedSearchOpen'),seedSearchBackEl=document.getElementById('seedSearchBack'),
+seedSearchRunEl=document.getElementById('seedSearchRun'),seedSearchCancelEl=document.getElementById('seedSearchCancel'),
+seedSearchStartEl=document.getElementById('seedSearchStart'),seedSearchCountEl=document.getElementById('seedSearchCount'),
+seedSearchDistanceEl=document.getElementById('seedSearchDistance'),seedSearchMapSizeEl=document.getElementById('seedSearchMapSize'),
+seedSearchStatusEl=document.getElementById('seedSearchStatus'),seedSearchResultsEl=document.getElementById('seedSearchResults'),
+seedSearchCategoryEl=document.getElementById('seedSearchCategory'),seedSearchTypeEl=document.getElementById('seedSearchType');
+let seedSearchToken=0,seedSearchRunning=false,seedSearchPromise=null;
+const seedSearch=window.HUNTER_SEED_SEARCH;
+const currentMapScale=()=>+(document.querySelector('input[name="mapSize"]:checked')?.value||1);
+const fillSeedSearchTypes=(preferred)=>{
+  const options=seedSearch.typeOptions(seedSearchCategoryEl.value,window.HUNTER_VEHICLE_DYNAMICS.types,IT);
+  const wanted=preferred||'*';
+  seedSearchTypeEl.replaceChildren();
+  for(const entry of options){
+    const option=document.createElement('option');
+    option.value=entry.value;option.textContent=entry.label;
+    seedSearchTypeEl.appendChild(option);
+  }
+  seedSearchTypeEl.value=options.some(q=>q.value===wanted)?wanted:'*';
+};
+fillSeedSearchTypes('ferry'); // Conserva el cercador de ferris com a selecció inicial.
+seedSearchCategoryEl.onchange=()=>{fillSeedSearchTypes();seedSearchResultsEl.replaceChildren();seedSearchStatusEl.textContent='Tria el tipus i prem Buscar.'};
+seedSearchTypeEl.onchange=()=>{seedSearchResultsEl.replaceChildren();seedSearchStatusEl.textContent='Prem Buscar per analitzar aquest tipus.'};
+const showSeedSearch=()=>{
+  if(generationPromise)return;
+  const sc=currentMapScale();seedSearchMapSizeEl.value=sc===2?'Gran · 9,6 km':'Petit · 4,8 km';
+  startMenuEl.style.display='none';seedSearchScreenEl.style.display='block';seedSearchScreenEl.setAttribute('aria-hidden','false')
+};
+const hideSeedSearch=()=>{
+  seedSearchToken++;seedSearchCancelEl.disabled=true;seedSearchRunEl.disabled=true;
+  const close=()=>{
+    seedSearchRunEl.disabled=false;seedSearchCancelEl.disabled=true;
+    seedSearchScreenEl.style.display='none';seedSearchScreenEl.setAttribute('aria-hidden','true');
+    startMenuEl.style.display='flex';
+  };
+  // En seleccionar una llavor durant una cerca, esperem la neteja del
+  // generador abans de tornar a mostrar els botons d'inici de partida.
+  if(seedSearchRunning&&seedSearchPromise)seedSearchPromise.then(close,close);
+  else close();
+};
+const renderSeedSearchResults=(rows,target,label,category,type)=>{
+  const labelMap=new Map(seedSearch.typeOptions(category,window.HUNTER_VEHICLE_DYNAMICS.types,IT)
+    .map(q=>[q.value,q.label]));
+  seedSearchResultsEl.replaceChildren();
+  for(const [i,r] of rows.slice(0,8).entries()){
+    const el=document.createElement('div');
+    el.className='seed-result'+(r.distance<=target?' is-near':'');
+    const main=document.createElement('div'),head=document.createElement('b'),details=document.createElement('small');
+    head.textContent='#'+(i+1)+' · llavor '+r.seed;
+    const dx=Math.round(r.x),dz=Math.round(r.z);
+    details.textContent=label+' · '+r.count+' al mapa'+
+      (type==='*'?' · més proper: '+(labelMap.get(r.type)||r.type):'')+
+      ' · a '+Math.round(r.distance)+' m'+
+      (r.distance<=target?' · dins l’objectiu':'')+' · X: '+dx+', Z: '+dz;
+    main.append(head,details);
+    const dist=document.createElement('b');dist.textContent=Math.round(r.distance)+' m';
+    const use=document.createElement('button');use.type='button';use.textContent='Usa aquesta llavor';
+    use.onclick=()=>{
+      seedRandomEl.checked=false;seedInputEl.disabled=false;
+      seedInputEl.value=String(r.seed);hideSeedSearch();seedInputEl.focus()
+    };
+    el.append(main,dist,use);seedSearchResultsEl.appendChild(el);
+  }
+};
+async function runSeedSearch(){
+  if(generationPromise||seedSearchRunning||seedSearchRunEl.disabled)return;
+  seedSearchRunning=true;
+  const token=++seedSearchToken,
+        start=Math.max(0,Math.min(4294967295,Math.trunc(Number(seedSearchStartEl.value)||0)))>>>0,
+        count=Math.max(1,Math.min(100,Math.trunc(Number(seedSearchCountEl.value)||30))),
+        target=Math.max(0,Math.min(10000,Number(seedSearchDistanceEl.value)||0)),
+        category=seedSearchCategoryEl.value,type=seedSearchTypeEl.value,
+        label=seedSearchTypeEl.options[seedSearchTypeEl.selectedIndex]?.textContent||type,
+        scale=currentMapScale(),rows=[];
+  seedSearchStartEl.value=String(start);seedSearchCountEl.value=String(count);
+  seedSearchDistanceEl.value=String(target);
+  seedSearchMapSizeEl.value=scale===2?'Gran · 9,6 km':'Petit · 4,8 km';
+  seedSearchRunEl.disabled=true;seedSearchCancelEl.disabled=false;
+  seedSearchCategoryEl.disabled=true;seedSearchTypeEl.disabled=true;
+  seedSearchResultsEl.replaceChildren();
+  const oldScale=MAP_SCALE,oldS=S,oldH=H,oldRequested=requestedSeed,oldMode=seedSearchMode;
+  let tested=0,found=0,within=0;
+  // Llindar de temps: si una llavor és ràpida, en processam diverses
+  // abans de cedir el fil; si és cara, retornam el control immediatament.
+  const batchBudgetMs=12,batchLimit=8;
+  let batchStart=performance.now(),batchCount=0,resultsDirty=false;
+  MAP_SCALE=scale;S=4800*MAP_SCALE;H=S/2;seedSearchMode=true;
+  minimap.setWorldSize(S,H);
+  try{
+    for(let i=0;i<count;i++){
+      if(token!==seedSearchToken)break;
+      const raw=(start+i)>>>0;
+      // Una llavor visible sempre correspon a una llavor real, sense XOR.
+      requestedSeed=raw;
+      // Un canvi de DOM per lot en lloc de dos per cada llavor.
+      try{
+        const generated=buildSeedData();
+        const nearest=seedSearch.findNearest({...generated,category,type});
+        if(nearest){
+          found++;if(nearest.distance<=target)within++;
+          // En cas de reintent intern, oferim la llavor definitiva,
+          // que coincidirà amb el HUD en iniciar la partida.
+          rows.push({seed:generated.seed,...nearest});
+          rows.sort(seedSearch.compare);
+          if(rows.length>12)rows.length=12;
+          resultsDirty=true;
+        }
+      }catch(err){console.warn('Llavor descartada durant la cerca',raw,err)}
+      tested++;
+      // Lots cooperatius: fins a 8 llavors, o 12 ms de feina.
+      // La cancel·lació es comprova al principi de CADA llavor.
+      batchCount++;
+      if(batchCount>=batchLimit||performance.now()-batchStart>=batchBudgetMs){
+        if(resultsDirty){renderSeedSearchResults(rows,target,label,category,type);resultsDirty=false}
+        seedSearchStatusEl.textContent='Analitzades '+tested+'/'+count+' · '+found+
+          ' amb '+label+' · '+within+' a '+target+' m o menys.';
+        await new Promise(resolve=>requestAnimationFrame(resolve));
+        batchStart=performance.now();batchCount=0;
+      }
+    }
+    if(token===seedSearchToken){
+      if(resultsDirty)renderSeedSearchResults(rows,target,label,category,type);
+      const best=rows[0];
+      seedSearchStatusEl.textContent=best
+        ?'Cerca acabada: '+tested+' llavors · '+found+' amb '+label+
+          ' · '+within+' dins '+target+' m · millor: '+Math.round(best.distance)+' m.'
+        :'Cerca acabada: '+tested+' llavors; no s’ha trobat cap '+label.toLowerCase()+'.';
+    }
+  }finally{
+    // Mai deixem la mida del mapa ni la llavor provisional de la cerca actives.
+    MAP_SCALE=oldScale;S=oldS;H=oldH;requestedSeed=oldRequested;seedSearchMode=oldMode;
+    minimap.setWorldSize(S,H);
+    seedSearchRunning=false;
+    seedSearchRunEl.disabled=false;seedSearchCancelEl.disabled=true;
+    seedSearchCategoryEl.disabled=false;seedSearchTypeEl.disabled=false;
+  }
+}
+if(seedSearchOpenEl)seedSearchOpenEl.onclick=showSeedSearch;
+if(seedSearchBackEl)seedSearchBackEl.onclick=hideSeedSearch;
+if(seedSearchRunEl)seedSearchRunEl.onclick=()=>{seedSearchPromise=runSeedSearch();return seedSearchPromise};
+if(seedSearchCancelEl)seedSearchCancelEl.onclick=()=>{
+  seedSearchToken++;seedSearchStatusEl.textContent='Cerca cancel·lada.';
+  seedSearchRunEl.disabled=true;seedSearchCancelEl.disabled=true
+};
+// El fons del menú és un fitxer estàtic: ni llavors ni localStorage ni WebGL a la portada.
+seedRandomEl.onchange=()=>{seedInputEl.disabled=seedRandomEl.checked;if(!seedRandomEl.checked)seedInputEl.focus()};
+function readGameStartOptions(difficulty=DIF){
+  return {difficulty,scale:currentMapScale(),seed:seedRandomEl.checked?null:seedFromText(seedInputEl.value||'hunter')};
+}
+function applyGameStartOptions({difficulty=DIF,scale=MAP_SCALE,seed:inputSeed=requestedSeed}={}){
+  DIF=+difficulty;MAP_SCALE=+scale===2?2:1;S=4800*MAP_SCALE;H=S/2;
+  requestedSeed=inputSeed==null?null:seedFromText(inputSeed);
+}
+// Explicit compatibility entry point for tools/harnesses that need an immediate
+// complete world. Production buttons and restart exclusively use the Promise.
+function startGameSynchronously(options=readGameStartOptions()){
+  if(generationPromise||seedSearchRunning)throw new Error('Ja hi ha una generació en curs');
+  applyGameStartOptions(options);build();configureOptionalWorld();validateRequiredWorldFeatures();minimap.setWorldSize(S,H);minimap.reset();mini();
+  started=1;paused=false;iniEl.style.display='none';document.body.classList.add('game-started');initAudio();resetSimulationClock();
+}
+function discardGeneratedWorld(){
+  resetOptionalSystems();
+  if(terrainStream)terrainStream.dispose();terrainStream=null;
+  if(world){scene.remove(world);window.HUNTER_RESOURCES.dispose(world)}world=null;
+  B=[];Wl=[];Dr=[];stairs=[];piers=[];items=[];V=[];E=[];fa=[];PL.length=FA.length=0;
+  TG.clear();terrainLevels=[];terrainLevelGrid.clear();PM={};cv=null;ib=null;activeBunker=null;
+  waterUpgradePending=false;seedCompounds=[];elapsed=0;clearKeys();resetSimulationClock();
+}
+function startGameProgressively(options=readGameStartOptions()){
+  if(generationPromise)return generationPromise;
+  if(seedSearchRunning)return Promise.reject(new Error('Espera que acabi la cerca de llavors'));
+  const listeners=new Set(),signal={aborted:false,
+    addEventListener(type,fn){if(type==='abort')listeners.add(fn)},
+    removeEventListener(type,fn){if(type==='abort')listeners.delete(fn)}};
+  generationCancel=()=>{signal.aborted=true;for(const fn of [...listeners])fn()};
+  const loading=document.getElementById('generationLoading'),label=document.getElementById('generationStatus'),bar=document.getElementById('generationProgress');
+  const controls=[...document.querySelectorAll('#ini button, #ini input, #ini select')],disabled=controls.map(el=>el.disabled);
+  const report=state=>{
+    const count=Number.isFinite(state.completed)?state.completed:null,total=Number.isFinite(state.total)?state.total:null;
+    label.textContent=state.stage+(count===null?'':(' · '+count+(total===null?'':' / '+total)+(state.unit?' '+state.unit:'')));
+    if(total>0&&count!==null){bar.max=total;bar.value=Math.min(total,count)}else bar.removeAttribute('value');
+  };
+  let resolveTask,rejectTask;
+  const task=new Promise((resolve,reject)=>{resolveTask=resolve;rejectTask=reject});
+  // Claim ownership before executing any startup code, including code that can
+  // throw before the first await. A synchronous failure must not relatch a job.
+  generationPromise=task;window.HUNTER_START_PROMISE=task;task.catch(()=>{});
+  (async()=>{
+    window.HUNTER_GENERATION_STATE={status:'starting',stage:'Preparant el món',completed:0,total:null,steps:0,yields:0,maxStepMs:0,maxTurnMs:0,error:null};
+    try{
+      audioPause();
+      applyGameStartOptions(options);started=0;paused=true;clearKeys();resetCameraState();ui.hide();
+      document.body.classList.remove('game-started');document.body.classList.add('game-generating');
+      iniEl.style.display='none';loading.hidden=false;controls.forEach(el=>el.disabled=true);
+      document.getElementById('startLoading').style.display='none';
+      // Unlock in the activation task. Synthesise audio only after the world,
+      // as before: its Math.random calls must not precede generated fauna.
+      initAudio({unlockOnly:true});
+      audioPause();
+      const iterator=(function*(){
+        yield* buildSteps();configureOptionalWorld();validateRequiredWorldFeatures();
+        minimap.setWorldSize(S,H);minimap.reset();
+        yield* minimap.buildBackgroundSteps();mini();
+      })();
+      await buildProgressively({iterator,signal,schedule:options.schedule||window.HUNTER_GENERATION_SCHEDULE,onProgress:report});
+      if(signal.aborted)throw generationAbortError();
+      initAudio();started=1;paused=!simulationFocused||!!document.hidden;clearKeys();
+      if(paused){ui.show('pause');audioPause()}
+      window.HUNTER_GENERATION_STATE.status='ready';
+      iniEl.style.display='none';document.body.classList.add('game-started');
+      resetSimulationClock();return {seed,mapScale:MAP_SCALE};
+    }catch(error){
+      Object.assign(window.HUNTER_GENERATION_STATE,{status:error.name==='AbortError'?'cancelled':'error',error:error.message});
+      started=0;paused=false;discardGeneratedWorld();ui.hide();
+      iniEl.style.display='flex';startMenuEl.style.display='flex';
+      seedSearchScreenEl.style.display='none';seedSearchScreenEl.setAttribute('aria-hidden','true');
+      const message=document.getElementById('startLoading');
+      message.textContent=error.name==='AbortError'?'Generació cancel·lada. Pots tornar a començar.':'No s’ha pogut generar el món. Torna a prémer per reintentar-ho.';
+      message.style.display='block';
+      if(error.name!=='AbortError')console.error('No es pot generar el món Hunter',error);
+      throw error;
+    }finally{
+      controls.forEach((el,i)=>el.disabled=disabled[i]);loading.hidden=true;
+      document.body.classList.remove('game-generating');generationCancel=null;generationPromise=null;resetSimulationClock();
+    }
+  })().then(resolveTask,rejectTask);
+  return task;
+}
+window.HUNTER_START_GAME=startGameProgressively;
+window.HUNTER_CANCEL_START=()=>{
+  const task=generationPromise;if(generationCancel)generationCancel();
+  return task?task.then(()=>{},()=>{}):Promise.resolve();
+};
+document.getElementById('generationCancel').onclick=()=>window.HUNTER_CANCEL_START();
+document.querySelectorAll('#ini button[data-d]').forEach(b=>b.onclick=()=>startGameProgressively(readGameStartOptions(+b.dataset.d)));
+// animacions de destrucció
+const DB=[],WA=[],HR=[],dgeo=new THREE.BoxGeometry(1,1,1),dmc={},dmat=c=>dmc[c]||(dmc[c]=M(c));
+function debris(x,y,z,col,n,sz,sp){for(let i=0;i<n;i++){const m=new THREE.Mesh(dgeo,dmat(col)),s=rn(.4,1)*sz;m.scale.set(s,s*rn(.5,1.2),s);m.position.set(x+rn(-1,1),y,z+rn(-1,1));m.rotation.set(rn(0,3),rn(0,3),0);world.add(m);
+DB.push({m,s0:m.scale.clone(),vx:rn(-sp,sp),vy:rn(sp*.4,sp*1.3),vz:rn(-sp,sp),rx:rn(-6,6),life:rn(1.2,2)})}
+while(DB.length>160)world.remove(DB.shift().m)}
+function vehicleDebris(v,baseY){
+  if(!v?.o)return;
+  v.o.updateMatrixWorld(true);
+  const meshes=[];v.o.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&o.geometry&&!o.userData.waterMask)meshes.push(o)});
+  const heavy=['tanc','tanqueta','camio'].includes(v.t),truck=v.t==='camio',air=v.t==='heli'||v.t==='heli_combat',maxPieces=heavy?24:air?20:16;
+  const chosen=meshes.length<=maxPieces?meshes:meshes.filter((_,i)=>i%Math.ceil(meshes.length/maxPieces)===0).slice(0,maxPieces);
+  const center=new THREE.Vector3(v.x,baseY+1,v.z),p=new THREE.Vector3(),q=new THREE.Quaternion(),sc=new THREE.Vector3();
+  for(const src of chosen){
+    src.matrixWorld.decompose(p,q,sc);
+    const piece=new THREE.Mesh(src.geometry,src.material);piece.position.copy(p);piece.quaternion.copy(q);piece.scale.copy(sc);piece.castShadow=true;piece.receiveShadow=true;world.add(piece);
+    const dx=p.x-center.x,dz=p.z-center.z,d=Math.max(.3,Math.hypot(dx,dz)),out=heavy?rn(7,16):rn(9,20);
+    DB.push({m:piece,s0:piece.scale.clone(),vx:dx/d*out+rn(-5,5),vy:rn(10,heavy?22:26),vz:dz/d*out+rn(-5,5),rx:rn(truck?-1:-9,truck?1:9),ry:rn(truck?-1.25:-9,truck?1.25:9),rz:rn(truck?-.9:-9,truck?.9:9),life:rn(truck?2:2.2,truck?3.1:4.2),vehiclePart:true,truckPiece:truck})
+  }
+  const burst=heavy?14:10;debris(v.x,baseY+1.3,v.z,0x34383a,burst,.45,14);
+  for(let i=0;i<(heavy?7:5);i++)puff(v.x+rn(-2,2),baseY+rn(.5,2.2),v.z+rn(-2,2),i%2?0x3b3b38:0x787064,rn(1.6,3.2));
+  while(DB.length>240){const d=DB.shift();if(d?.m)world.remove(d.m)}
+}
+function wallBreak(w){const h=w.y1-w.y0-1,parts=w.parts&&w.parts.length?w.parts:[w.m],base=parts[0],col=w.barbed?0x4a4f52:(base?.material?.color?.getHex?.()??0x8d9389),cx=(w.x0+w.x1)/2,cz=(w.z0+w.z1)/2;
+// Els brancals, la porta i la llinda són un sol conjunt estructural.
+// Les peces d'una obertura s'oculten alhora, sense marcs residuals.
+if(w.doorAssembly||w.parts&&w.parts.length){parts.forEach(m=>{if(m)m.visible=false})}
+else if(w.m?.visible)WA.push({m:w.m,h,t:.5});else if(w.m?.parent)w.m.parent.remove(w.m);
+for(let i=0;i<(w.door?6:10);i++)debris(rn(w.x0,w.x1),w.y0+1+h*rn(.2,.9),rn(w.z0,w.z1),col,1,.9,7);
+for(let i=0;i<3;i++)puff(cx,w.y0+1+h*rn(.1,.6),cz,0xc9b48a,3.5)}
+function destroyInteriorStair(b){
+ const a=b?.interiorStair;if(!a||a.destroyed)return;
+ a.destroyed=true;
+ if(b.interiorStairGroup)b.interiorStairGroup.visible=false;
+ let i=stairs.indexOf(a);if(i>=0)stairs.splice(i,1);
+ i=Wl.indexOf(b.interiorStairCollider);
+ if(i>=0){Wl.splice(i,1);wallGridCount=-1}
+}
+function roofBreak(b){if(b.rb)return;b.rb=1;
+ // Els objectes del pis superior no poden quedar suspesos després
+ // de l'ensorrament: cauen a la planta baixa.
+ if(b.upperFloor)for(const it of items){
+   if(it.building===b&&it.y>b.fy+b.storey){
+     it.y=b.fy+1.3;if(it.o)it.o.position.y=it.y;
+   }
+ }
+ // Quan cau la sustentació desapareixen el forjat, el marc i l'escala.
+ if(b.upperFloor){b.upperFloor.visible=false;destroyInteriorStair(b)}
+ for(const r of b.extraRoofs||[])r.visible=false;b.rhp=0;const col=b.roof.material?b.roof.material.color.getHex():(b.roof.userData.color||0x777777),y=b.fy+b.h+.6;
+if(b.hangar&&b.roof?.userData?.hangarRoof){
+  HR.push({m:b.roof,t:0,dur:1.05,baseY:b.roof.position.y,baseRx:b.roof.rotation.x,baseRz:b.roof.rotation.z,dir:rn(-1,1)<0?-1:1,x:b.x,z:b.z,w:b.w,d:b.d,col});
+  for(let i=0;i<12;i++)puff(b.x+rn(-b.w/2,b.w/2),b.fy+rn(1,b.w*.45),b.z+rn(-b.d/2,b.d/2),0x8b8580,3.8);
+  for(let i=0;i<10;i++)debris(b.x+rn(-b.w/2,b.w/2),b.fy+rn(1,b.w*.45),b.z+rn(-b.d/2,b.d/2),col,1,.75,6);
+}else{
+  b.roof.visible=false;
+  for(let i=0;i<20;i++)debris(b.x+rn(-b.w/2,b.w/2),y,b.z+rn(-b.d/2,b.d/2),col,1,1.3,9);
+  for(let i=0;i<8;i++)puff(b.x+rn(-b.w/2,b.w/2),y,b.z+rn(-b.d/2,b.d/2),0xc9b48a,4.5)
+}
+snd('boom',.4,{x:b.x,y,z:b.z},b)}
+function updDeb(dt){for(let i=DB.length-1;i>=0;i--){const d=DB[i],m=d.m;d.vy-=28*dt;m.position.x+=d.vx*dt;m.position.y+=d.vy*dt;m.position.z+=d.vz*dt;m.rotation.x+=d.rx*dt;m.rotation.y+=(d.ry||0)*dt;m.rotation.z+=(d.rz||0)*dt;
+const g=Math.max(0,hAt(m.position.x,m.position.z))+.2;if(m.position.y<g){m.position.y=g;d.vy*=-.3;d.vx*=.6;d.vz*=.6;d.rx*=d.truckPiece?.38:.82;if(d.ry)d.ry*=d.truckPiece?.38:.82;if(d.rz)d.rz*=d.truckPiece?.38:.82}
+d.life-=dt;const fade=d.vehiclePart?.55:.4,k=Math.max(0,Math.min(1,d.life/fade));m.scale.set(d.s0.x*k,d.s0.y*k,d.s0.z*k);if(d.life<=0){world.remove(m);DB.splice(i,1)}}
+for(let i=WA.length-1;i>=0;i--){const a=WA[i];a.t-=dt;const s=Math.max(0,a.t/.5);a.m.scale.y=s;a.m.position.y=a.h/2*s;if(a.t<=0){world.remove(a.m);WA.splice(i,1)}}
+for(let i=HR.length-1;i>=0;i--){const a=HR[i],m=a.m;a.t+=dt;const p=Math.min(1,a.t/a.dur),e=p*p*(3-2*p);m.rotation.z=a.baseRz+a.dir*e*.62;m.rotation.x=a.baseRx+Math.sin(p*Math.PI)*.08;m.position.y=a.baseY-e*8.5;if(p>.35&&Math.random()<.35)puff(a.x+rn(-a.w/2,a.w/2),Math.max(.4,m.parent.position.y+m.position.y+rn(0,3)),a.z+rn(-a.d/2,a.d/2),0x7c7772,2.4);if(p>=1){m.visible=false;if(m.parent)m.parent.remove(m);HR.splice(i,1)}}
+updFA(dt)}
+// vegetació
+const TG=new Map();
+function treeHit(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L)if(!(palmsDisabled&&t.p)&&Math.hypot(x-t.x,z-t.z)<t.r+r)return true}return false}
+// Col·lisió del jugador amb la silueta REAL del tronc corbat, no només
+// amb el cercle de l'arrel. La mateixa corba sinusoïdal s'usa a vegetation.js;
+// la rotació i l'escala provenen de la mateixa palmera determinista.
+function palmPush(t,r0){
+  const height=6.2*t.s,reach=t.r+r0+1.65*t.s;
+  if(P.y>t.y+height+.6||P.y+4.2<t.y)return;
+  if(Math.abs(P.x-t.x)>reach||Math.abs(P.z-t.z)>reach)return;
+  const yawCos=Math.cos(t.yaw),yawSin=Math.sin(t.yaw);
+  let overlap=0,nx=0,nz=0;
+  // El model a peu fa prop de quatre metres: comprovam tot el cos,
+  // incloent espatlles i cap, sense crear malles de col·lisió addicionals.
+  for(const offset of [.3,1,1.7,2.4,3.1,3.8]){
+    const y=P.y+offset;
+    if(y<t.y||y>t.y+height)continue;
+    const q=(y-t.y)/height;
+    const bend=height*.25*Math.sin(Math.PI*q);
+    const trunkX=t.x+bend*yawCos,trunkZ=t.z-bend*yawSin;
+    const dx=P.x-trunkX,dz=P.z-trunkZ,d=Math.hypot(dx,dz);
+    const bodyRadius=offset>3.1 ? r0*.75 : r0;
+    const radius=bodyRadius+t.r*(1-.43*q)+.04*t.s;
+    if(d<radius&&radius-d>overlap){
+      overlap=radius-d;
+      if(d>.0001){nx=dx/d;nz=dz/d}
+      else {nx=Math.cos(P.hd);nz=-Math.sin(P.hd)}
+    }
+  }
+  if(overlap>0){P.x+=nx*overlap;P.z+=nz*overlap}
+}
+function treePush(){
+  const r0=.5,cx=Math.floor(P.x/16),cz=Math.floor(P.z/16);
+  for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){
+    const L=TG.get((cx+a)+','+(cz+b));if(!L)continue;
+    for(const t of L){
+      if(t.p){if(!palmsDisabled)palmPush(t,r0);continue}
+      if(t.rock&&(P.y>t.topY+.6||P.y+1.5<t.bottomY))continue;
+      const dx=P.x-t.x,dz=P.z-t.z,d=Math.hypot(dx,dz),m=t.r+r0;
+      if(d<m&&d>.001){P.x=t.x+dx/d*m;P.z=t.z+dz/d*m}
+    }
+  }
+}
+function nearbyRock(x,z,r=0,baseY=-Infinity,topY=Infinity){
+ const cx=Math.floor(x/16),cz=Math.floor(z/16),
+   steps=Math.max(1,Math.ceil((r+8)/16));
+ let hit=null,dist=Infinity;
+ for(let a=-steps;a<=steps;a++)for(let b=-steps;b<=steps;b++){
+   const L=TG.get((cx+a)+','+(cz+b));if(!L)continue;
+   for(const t of L){
+     if(!t.rock||t.topY<baseY-.5||t.bottomY>topY+.5)continue;
+     const d=Math.hypot(x-t.x,z-t.z);
+     if(d<t.r+r&&d<dist){hit=t;dist=d}
+   }
+ }
+ return hit;
+}
+function vehiclePushPlayer(){
+  if(cv||playerFall)return;
+  for(const v of [...V,...E.filter(u=>['jeep','tanqueta','tanc'].includes(u.t))]){
+    if(v.destroyed)continue;
+    const overlap=circleVehicleOverlap(P.x,P.z,.62,v),
+          sweep=runoverSweepHit(v.impactFromX??v.x,v.impactFromZ??v.z,
+            v.x,v.z,P.x,P.z,vehicleRadius(v.t)*.68+.62*.45);
+    if(!overlap&&!sweep)continue;
+    if(v.t==='ferry'&&(terminalRampHeight(P.x,P.z)!==null||pedestrianFerry(P.x,P.z,P.y)?.f===v))continue;
+    // Només apartam el jugador si el buc l'ocupa ara; un pas ràpid
+    // que ja l'ha travessat conserva el dany sense teletransportar-lo.
+    if(overlap){
+      const b=vehicleBox(v),dx=P.x-b.x,dz=P.z-b.z,s=Math.sin(b.hd),c=Math.cos(b.hd),lx=dx*c-dz*s,lz=dx*s+dz*c,ex=b.w/2+.66-Math.abs(lx),ez=b.d/2+.66-Math.abs(lz);
+      if(ex<ez){const sign=lx<0?-1:1;P.x=b.x+(sign*(b.w/2+.66))*c+lz*s;P.z=b.z-(sign*(b.w/2+.66))*s+lz*c}
+      else{const sign=lz<0?-1:1;P.x=b.x+lx*c+sign*(b.d/2+.66)*s;P.z=b.z-lx*s+sign*(b.d/2+.66)*c}
+    }
+    const sp=Math.abs(v.v??v.impactSpeed??0),
+          dmg=runoverDamage(sp,VT[vehicleHitType(v.t)]?.mass||1);
+    if(dmg>0&&!(playerEject?.kind==='flip'&&playerEject.t>0)&&(!v.playerHitCd||v.playerHitCd<=0)){
+      hurtP(dmg,false,{type:'runover',x:v.x,y:v.o?.position?.y??P.y,z:v.z});v.playerHitCd=.45;msg='Impacte amb un vehicle!';msgT=1.5;
+    }
+  }
+}
+const PL=[],FA=[],ZM=new THREE.Matrix4().makeScale(0,0,0);let PM={};
+// L'opció només canvia el render, les col·lisions i les actualitzacions
+// durant la partida. La generació conserva els mateixos nombres aleatoris
+// i posicions per permetre una comparació justa amb la mateixa llavor.
+let palmsDisabled=false;
+function setPalmsDisabled(disabled){
+  palmsDisabled=!!disabled;
+  const checkbox=document.getElementById('disablePalms');
+  if(checkbox)checkbox.checked=palmsDisabled;
+  if(PM.trunk)PM.trunk.visible=!palmsDisabled;
+  for(const a of FA)if(a.y)a.y.visible=!palmsDisabled;
+  if(!palmsDisabled&&PM.update)PM.update(P.x,P.z,true);
+  window.HUNTER_PALMS_DISABLED=palmsDisabled;
+  return palmsDisabled;
+}
+const palmSettingCheckbox=document.getElementById('disablePalms');
+if(palmSettingCheckbox)palmSettingCheckbox.addEventListener('change',()=>setPalmsDisabled(palmSettingCheckbox.checked));
+const vegetationVisual=window.HUNTER_VEGETATION.create(THREE,{materialProfile,random:rr});
+const PG={t:vegetationVisual.geometry.trunk,c:vegetationVisual.geometry.crown,c2:vegetationVisual.geometry.crown2};
+let compoundClear=[];
+function treeAt(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L)if(!(palmsDisabled&&t.p)&&Math.hypot(x-t.x,z-t.z)<t.r+r)return t}return null}
+function crush(x,z,r){if(palmsDisabled)return;const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)L.slice().forEach(t=>{if(t.p&&Math.hypot(x-t.x,z-t.z)<t.r+r)killPalm(t)})}}
+function dmgP(t,d){if(!t.alive)return;const amount=wholeDamage(d);if(!amount)return;t.hp=Math.max(0,Math.ceil(t.hp)-amount);if(t.hp<=0)killPalm(t)}
+function killPalm(t){if(!t.alive)return;t.alive=false;const a=TG.get(t.k);if(a){const i=a.indexOf(t);if(i>=0)a.splice(i,1)}
+// La geometria es gestiona ara en instàncies de cada sector.
+if(PM.remove)PM.remove(t.i,ZM);
+const y=new THREE.Group(),g=new THREE.Group();y.position.set(t.x,t.y,t.z);y.rotation.y=t.yaw;y.scale.setScalar(t.s);y.add(g);
+[[PG.t,0x8a6a3a],[PG.c,0x4fa03a],[PG.c2,0x6fbf3a]].forEach(([ge,c])=>g.add(new THREE.Mesh(ge,dmat(c))));world.add(y);FA.push({y,g,t:0,s:t.s,x:t.x,z:t.z,yaw:t.yaw})}
+function updFA(dt){for(let i=FA.length-1;i>=0;i--){const a=FA[i];a.t+=dt;const k=Math.min(1,a.t/.9);a.g.rotation.z=-k*k*1.5;
+if(k>=1){const c=Math.cos(a.yaw),s=Math.sin(a.yaw),lx=a.x+c*6.4*a.s,lz=a.z-s*6.4*a.s,ly=Math.max(hAt(lx,lz),0)+.6;
+debris(lx,ly,lz,0x4fa03a,8,1,5);debris(a.x+c*3*a.s,ly,a.z-s*3*a.s,0x8a6a3a,4,.7,3);puff(lx,ly,lz,0xc9b48a,3);world.remove(a.y);FA.splice(i,1)}}}
+function vegetate(pa){return drainBuildSteps(vegetateSteps(pa))}
+function* vegetateSteps(pa){TG.clear();PL.length=0;FA.length=0;const pm=[],bu=[],rk=[],put=e=>{e.k=Math.floor(e.x/16)+','+Math.floor(e.z/16);let a=TG.get(e.k);if(!a)TG.set(e.k,a=[]);a.push(e)};
+ const rockSafe=(x,z,r=2)=>Math.abs(x)<H-35&&Math.abs(z)<H-35&&
+   !stairs.some(st=>stairContains(st,x,z,r+1))&&
+   Math.hypot(x-pa.x,z-pa.z)>16+r&&
+   !B.some(b=>Math.abs(x-b.x)<b.w/2+r+4&&Math.abs(z-b.z)<b.d/2+r+4)&&
+   !compoundClear.some(c=>Math.hypot(x-c.x,z-c.z)<c.r+r+5);
+ const addRock=(x,z,scale,kind)=>{
+   if(!rockSafe(x,z,scale*1.45))return false;
+   const h=hAt(x,z);if(h<-4.6)return false;
+   const tall=kind===1,y=h+(tall?.85:.38)*scale,
+     radius=(tall?1.27:1.44)*scale,
+     topY=h+(tall?2.3:1.18)*scale;
+   rk.push([x,y,z,scale,window.HUNTER_ROCK_FIELDS.rockNoise(x,z,5)*Math.PI*2,0,
+     (window.HUNTER_ROCK_FIELDS.rockNoise(x,z,6)-.5)*.33,kind]);
+   put({x,z,y,r:radius,rock:true,kind,s:scale,topY,bottomY:h-scale*.5});
+   return true;
+ };
+let samples=0;const sampleSide=Math.ceil((2*H-80)/14),sampleTotal=sampleSide*sampleSide;
+for(let x=-H+40;x<H-40;x+=14)for(let z=-H+40;z<H-40;z+=14){if(samples++%128===0)yield {stage:'Distribuint vegetació',completed:samples-1,total:sampleTotal,unit:'mostres'};const px=x+rr(-4,4),pz=z+rr(-4,4),h=hAt(px,pz);if(h<1.3||h>42)continue;
+const dn=fbm(px/80+7,pz/80+3),q=R(),highPalm=.22+Math.max(0,Math.min(1,(h-28)/14))*.12;let L=null;
+if(h<4)L=q<.12?pm:null;else if(dn>.55&&h<28)L=q<.20?pm:null;else if(h>=28&&q<highPalm)L=pm;else if(dn>.4)L=q<.2?bu:null;else if(h>8&&q<.04)L=rk;else if(q<.024)L=pm;
+if(!L||slope(px,pz,h)>4.5)continue;
+if(stairs.some(s=>stairContains(s,px,pz,2))||Math.hypot(px-pa.x,pz-pa.z)<14||B.some(b=>Math.abs(px-b.x)<b.w/2+5&&Math.abs(pz-b.z)<b.d/2+5)||compoundClear.some(c=>Math.hypot(px-c.x,pz-c.z)<c.r))continue;
+const s=1.15*rr(.75,1.25),yaw=rr(0,6.28);
+if(L==pm){const leafVar=R()<.33?-1:R()<.66?0:1,tone=rr(-.25,.25),idx=pm.length;pm.push([px,h-.3,pz,s,yaw,leafVar,tone]);const e={x:px,z:pz,y:h-.3,s,yaw,r:.6*Math.max(.75,s),p:true,alive:true,hp:8,i:idx,leafVar,tone};put(e);PL.push(e)}
+else if(L===rk)window.HUNTER_ROCK_FIELDS.baseRockCluster(px,pz,s,addRock);
+ else L.push([px,h-.3,pz,s,yaw])}
+const rockFieldStats=yield* window.HUNTER_ROCK_FIELDS.generateRockFieldsSteps({
+  islands,hAt,canPlace:rockSafe,addRock
+});
+world.userData.rockFieldStats={...rockFieldStats,totalRocks:rk.length};
+if(seedSearchMode){
+  // vegetationVisual.build consumeix 11 tirades/palmera (tronc + dues
+  // copes), 3/arbust i 5/roca. Preservam EXACTAMENT l'estat final del
+  // generador R sense construir cap InstancedMesh.
+  for(let n=pm.length*11+bu.length*3+rk.length*5;n>0;n--){if(n%1024===0)yield {stage:'Colors de vegetació',completed:null,total:null};R()}
+  PM={stats:{},update(){},remove(){}};return;
+}
+const vegetationMeshes=yield* vegetationVisual.buildSteps({
+  world,palms:pm,bushes:bu,rocks:rk,playerX:pa.x,playerZ:pa.z,
+  lowQuality:!visualQuality.shadows,lodProfile:qualityName
+});
+PM=vegetationMeshes.palms;
+window.HUNTER_VEGETATION_STATS={...PM.stats,rockFields:rockFieldStats}}
+function fr(x,z){let a=1e9,b=-1e9;for(const[i,j]of[[0,0],[9,9],[-9,9],[9,-9],[-9,-9],[9,0],[-9,0],[0,9],[0,-9]]){const h=hAt(x+i,z+j);a=Math.min(a,h);b=Math.max(b,h)}return b-a}
+function checkRoofSupport(b,w){
+  if(!b||b.rb||b.hangar||b.kind==='enemy_bunker'||!w||!w.supportWeight)return;
+  if(!w.supportCounted){
+    w.supportCounted=true;
+    b.destroyedWallSupport=(b.destroyedWallSupport||0)+w.supportWeight;
+  }
+  if(b.destroyedWallSupport>=3)roofBreak(b)
+}
+function dmgW(w,d){
+ if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}
+ const amount=wholeDamage(d);
+ if(!amount||!Number.isFinite(w.hp)||w.hp<=0)return;
+ w.hp=Math.max(0,Math.ceil(w.hp)-amount);
+ if(w.hp>0)return;
+ // Destrucció atòmica de tota l'obertura: cap porta o llinda invisible
+ // pot conservar la col·lisió després de caure un dels dos brancals.
+ const members=w.doorAssembly||[w];
+ for(const piece of members){
+  if(!piece||piece.destroyedWall)continue;
+  piece.destroyedWall=true;piece.hp=0;piece.open=true;piece.playerBlock=false;
+  wallBreak(piece);
+  let i=Wl.indexOf(piece);if(i>=0){Wl.splice(i,1);wallGridCount=-1}
+  i=Dr.indexOf(piece);if(i>=0)Dr.splice(i,1);
+  if(piece.owner?.door===piece)piece.owner.door=null;
+  if(piece.stairStructure)destroyInteriorStair(piece.stairStructure.owner);
+  checkRoofSupport(piece.owner,piece);
+ }
+ snd('boom',.3,{x:w.cx??(w.x0+w.x1)/2,y:(w.y0+w.y1)/2,z:w.cz??(w.z0+w.z1)/2},w);
+}
+function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=seedSearchMode
+  ?{group:new THREE.Group(),walls:null,doors:null,roof:new THREE.Group()}
+  :(opt.hangar?buildingVisual.createHangarShell:buildingVisual.createShell)({width:w,depth:d,height:h,wallColor:col,roofColor:roof}),
+  g=visual.group,wm=visual.walls,dm=visual.doors,t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(R()*4):opt.doorSide,structuralWalls=[],buildingWallStart=Wl.length;
+const wallH=opt.floors===2?h/2:h;
+let entranceDoor=null;
+const seg=(lx,lz,sx,sz,dr,windows=false,supportSide=null,supportWeight=0,level=0)=>{if(!dr){const parts=seedSearchMode?[new THREE.Object3D()]:windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:wallH,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:wallH,material:wm})],m=parts[0],o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy+level-(level?0:1),y1:fy+level+wallH,hp:12,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,supportSide,supportWeight};for(const mesh of parts)mesh.position.y+=level;if(opt.wood){for(const mesh of parts)if(mesh.material?.color?.getHex()===0x3e7185)mesh.visible=false;}Wl.push(o);if(supportWeight>0)structuralWalls.push(o);return o}
+const parts=seedSearchMode?{door:new THREE.Object3D(),doorHeight:opt.doorHeight||4.4}:buildingVisual.addDoor(g,{lx,lz,sx,sz,height:wallH,wallMaterial:wm,doorMaterial:dm,doorHeight:opt.doorHeight||4.4}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],door={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+parts.doorHeight,hp:8,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y,rammable:true};Wl.push(door);Dr.push(door);entranceDoor=door;
+let lintel=null;
+if(parts.lintel){
+ lintel={x0:door.x0,x1:door.x1,z0:door.z0,z1:door.z1,
+  y0:fy+parts.doorHeight,y1:fy+wallH,hp:12,m:parts.lintel,
+  door:false,open:false,playerBlock:false,cx:x+lx,cz:z+lz};
+ Wl.push(lintel);
+}
+return {door,lintel};};
+if(opt.workshop){
+  // Three full-height load-bearing walls. The entire +Z facade remains
+  // physically open, with no door, lintel, threshold or entrance steps.
+  // The real collider list and the visuals use the same dimensions.
+  seg(0,-d/2+t/2,w,t,0,false,0,1);
+  seg(w/2-t/2,0,t,d,0,false,1,1);
+  seg(-w/2+t/2,0,t,d,0,false,2,1);
+}else if(opt.hangar){
+  const sh=Math.max(3.1,h*.3),push=(lx,lz,sx,sz)=>{
+    const m=seedSearchMode?new THREE.Object3D():buildingVisual.addWall(g,{lx,lz,sx,sz,height:sh,material:wm}),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+sh,hp:16,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz};Wl.push(o);return o
+  };
+  // Sense parets laterals ni paret rectangular posterior:
+  // el compound afegeix una sola paret semicircular al fons amb col·lisió pròpia.
+  // Aquí només calen els dos muntants de la boca frontal.
+  const frontZ=ds===0?d/2-t/2:-d/2+t/2,sl=Math.max(.5,(w-dw)/2),off=dw/2+sl/2;
+  push(-off,frontZ,sl,t);push(off,frontZ,sl,t);
+}else{
+  [[0,d/2-t/2,w,t,0],[0,-d/2+t/2,w,t,0],[w/2-t/2,0,t,d-2*t,1],[-w/2+t/2,0,t,d-2*t,1]].forEach(([cx,cz,sx,sz,ax],k)=>{if(k!=ds){seg(cx,cz,sx,sz,0,!opt.bunker&&!opt.solidWalls,k,1);return}const L=ax?sz:sx,sl=(L-dw)/2,off=dw/2+sl/2;
+    const flanks=[];
+    for(const q of[-1,1]){
+      flanks.push(ax?seg(cx,cz+q*off,sx,sl,0,false,k,.5):
+        seg(cx+q*off,cz,sl,sz,0,false,k,.5));
+    }
+    const opening=ax?seg(cx,cz,sx,dw,1):seg(cx,cz,dw,sz,1);
+    const assembly=[...flanks,opening.door,opening.lintel].filter(Boolean);
+    for(const part of assembly)part.doorAssembly=assembly});
+  if(!opt.noPartitions&&!opt.bunker&&w*d>=140&&R()<.5){const al=w>=d,L=al?d:w,gp=rr(-L/4,L/4),px=(R()<.5?-1:1)*rr((al?w:d)*.12,(al?w:d)*.2),a0=-L/2+t,a1=L/2-t,ps=(a,b)=>{if(b-a<.5)return;const cc=(a+b)/2,l=b-a;if(al)seg(px,cc,t,l);else seg(cc,px,l,t)};ps(a0,gp-1.6);ps(gp+1.6,a1)}
+}
+if(opt.floors===2)for(const [cx,cz,sx,sz]of[[0,d/2-t/2,w,t],[0,-d/2+t/2,w,t],[w/2-t/2,0,t,d-2*t],[-w/2+t/2,0,t,d-2*t]])seg(cx,cz,sx,sz,0,!opt.solidWalls,null,0,wallH);
+g.position.set(x,fy,z);if(!seedSearchMode)world.add(g);
+const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,foundation:visual.foundation,rhp:opt.hangar?12:16,hangar:!!opt.hangar,door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};for(const piece of Wl.slice(buildingWallStart))piece.owner=b;
+structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else if(!opt.workshop)addStairs(b,ds);return b}
+function mkEnemyBunker(x,z){
+  const firstWall=Wl.length,b=mkB(x,z,40,34,10,0xd9ded2,0xbfc6bb,{kind:'enemy_bunker',bunker:true,doorSide:0,doorWidth:4,doorHeight:4.4,lockedDoor:true}),g=b.o,inset=3.5;
+  if(seedSearchMode){
+    // Només els registres físics del búnquer: mateix volum que el joc.
+    for(const w of b.structuralWalls){const lean=inset*2.2/b.h;
+      if(w.supportSide===0)w.z0-=lean;
+      if(w.supportSide===1)w.z1+=lean;
+      if(w.supportSide===2)w.x0-=lean;
+      if(w.supportSide===3)w.x1+=lean;
+    }
+    const wall=(lx,lz,sx,sz)=>Wl.push({x0:x+lx-sx/2,x1:x+lx+sx/2,
+      z0:z+lz-sz/2,z1:z+lz+sz/2,y0:b.fy-1,y1:b.fy+8,hp:12,
+      door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,owner:b});
+    for(const lx of[-4,4])for(const [lz,d]of[[-12.5,3],[-4,6],[7,10]])wall(lx,lz,.6,d);
+    for(const lx of[-11,11])wall(lx,-7,12,.6);
+    b.generalSpots=[{x,z:z-9}];addBunkerBasement(b);return b;
+  }
+  // Taper every exterior face; keep the gate vertical and independently animated.
+  const meshes=new Set(Wl.slice(firstWall).filter(w=>!w.door).flatMap(w=>w.parts||[w.m]));
+  for(const mesh of meshes){
+    const p=mesh.geometry.attributes.position;
+    for(let i=0;i<p.count;i++){
+      const t=Math.max(0,Math.min(1,(p.getY(i)+mesh.position.y)/b.h));
+      p.setX(i,(p.getX(i)+mesh.position.x)*(1-2*inset*t/b.w)-mesh.position.x);
+      p.setZ(i,(p.getZ(i)+mesh.position.z)*(1-2*inset*t/b.d)-mesh.position.z);
+    }
+    p.needsUpdate=true;mesh.geometry.computeVertexNormals();mesh.geometry.computeBoundingSphere();
+  }
+  b.roof.scale.set((b.w-2*inset)/(b.w+1.35),1,(b.d-2*inset)/(b.d+1.35));g.userData.bunkerWallInset=inset;
+  // Physical footprints cover the inward lean at character height.
+  for(const w of b.structuralWalls){const lean=inset*2.2/b.h;if(w.supportSide===0)w.z0-=lean;if(w.supportSide===1)w.z1+=lean;if(w.supportSide===2)w.x0-=lean;if(w.supportSide===3)w.x1+=lean;}
+  const wall=(lx,lz,sx,sz)=>{const m=buildingVisual.addWall(g,{lx,lz,sx,sz,height:8,material:b.wm});Wl.push({x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:b.fy-1,y1:b.fy+8,hp:12,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,owner:b})};
+  for(const lx of[-4,4])for(const [lz,d]of[[-12.5,3],[-4,6],[7,10]])wall(lx,lz,.6,d);
+  for(const lx of[-11,11])wall(lx,-7,12,.6);
+  for(const sign of[-1,1]){const shape=new THREE.Shape();shape.moveTo(sign*2,0);shape.lineTo(sign*3.5,0);shape.lineTo(sign*2.7,5.2);shape.lineTo(sign*2,5.2);shape.closePath();const post=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:3.3,bevelEnabled:false}),M(0x795337,'masonry'));post.position.z=b.d/2-2.8;g.add(post)}
+  bx(g,5.4,.85,3.3,0x795337,0,4.8,b.d/2-1.15,'masonry');
+  bx(g,5,1.1,2.5,0x5a5944,0,.9,-12,'paint');
+  b.generalSpots=[{x,z:z-9}];addBunkerBasement(b);return b;
+}
+// Soterrani integrat sota el model existent: ni la porta blindada ni les
+// parets inclinades de la planta principal canvien. La variant deriva només
+// de la llavor i del lloc del búnquer, sense consumir cap tirada global R().
+function addBunkerBasement(b){
+  // L'edifici estàndard té una base massissa de 12,3 m: omplia
+  // completament el soterrani i ocultava tant les escales com els mobles.
+  // Només al búnquer retiram aquesta base i la substituïm pel forjat
+  // superior perforat i pel terra inferior construïts a continuació.
+  if(b.foundation){
+    b.o.remove(b.foundation);
+    b.foundation.geometry?.dispose();
+    b.foundation.material?.dispose();
+    b.foundation=null;
+  }
+  const random=mul((seed^Math.imul(Math.round(b.x),73856093)^Math.imul(Math.round(b.z),19349663)^0x6e7b32e1)>>>0);
+  const variant=Math.floor(random()*4),floorY=b.fy-9.15,
+        // Prop del doble de superfície útil: cambres i passadís més amples
+        // sense engrandir el volum exterior de la fortificació.
+        halfX=27.0,halfZ=23.0,stairSide=(variant&1)?-1:1,
+        divisions=[-7.0+(variant%2)*1.3,6.4+Math.floor(variant/2)*1.3],
+        westDoors=[-15+(variant%2)*.7,0+Math.floor(variant/2)*.7,15-(variant%2)],
+        // Allunyam l'envà del final de l'escala: més de 8 m de replà
+        // per poder girar i veure la sala quan s'arriba a baix.
+        eastDivider=-stairSide*7,
+        stairX=(variant&2)?14.6:10.8,
+        stairTop=stairSide*13.6,stairBottom=stairSide*1.3;
+  b.basement={variant,floorY,halfX,halfZ,upperSlabMeshes:[],lights:[],
+    cameraHiddenWalls:[],lightsOn:false,doors:[],
+    stair:{x:stairX,zTop:stairTop,zBottom:stairBottom,width:3.3},
+    generalLocal:{x:-19,z:variant%2?15:-15},eliteLocal:[
+      {x:0,z:-15},{x:-1,z:14},
+      {x:17,z:stairSide>0?-16:16},
+      {x:-19,z:(divisions[0]+divisions[1])/2}
+    ]};
+  activeBunker=b;
+  const wall=(lx,lz,w,d,base=-9.2,height=9.25,color=0x68756d)=>{
+    const mesh=seedSearchMode?new THREE.Object3D():bx(b.o,w,height,d,color,lx,base+height/2,lz,'masonry');
+    mesh.castShadow=true;mesh.receiveShadow=true;
+    Wl.push({x0:b.x+lx-w/2,x1:b.x+lx+w/2,z0:b.z+lz-d/2,z1:b.z+lz+d/2,
+      y0:b.fy+base,y1:b.fy+base+height,hp:Infinity,m:mesh,door:false,
+      open:false,rammable:false,cx:b.x+lx,cz:b.z+lz,owner:b,
+      bunkerBasementWall:true});
+  };
+  const floorPanel=(xa,xb,za,zb,level,color)=>{
+    if(seedSearchMode)return;
+    bx(b.o,xb-xa,.26,zb-za,color,(xa+xb)/2,level-.13,(za+zb)/2,'masonry');
+  };
+  // Forjat amb un buit real per a l'escala. Els projectils impacten al
+  // forjat però no bloqueja lateralment el moviment del jugador.
+  const slab=(xa,xb,za,zb)=>{
+    if(!seedSearchMode){
+      const before=b.o.children.length;
+      floorPanel(xa,xb,za,zb,.22,0x8e9588);
+      for(const mesh of b.o.children.slice(before)){
+        mesh.name='bunker-forjat-opac';
+        mesh.material=mesh.material.clone();
+        mesh.material.transparent=false;
+        mesh.material.opacity=1;
+        mesh.material.depthWrite=true;
+        mesh.material.side=THREE.DoubleSide;
+        b.basement.upperSlabMeshes.push(mesh);
+      }
+    }
+    Wl.push({x0:b.x+xa,x1:b.x+xb,z0:b.z+za,z1:b.z+zb,
+      y0:b.fy-.03,y1:b.fy+.22,hp:Infinity,m:new THREE.Object3D(),
+      door:false,open:false,rammable:false,playerBlock:false,
+      cx:b.x+(xa+xb)/2,cz:b.z+(za+zb)/2,owner:b});
+  };
+  const st=b.basement.stair,shaftLeft=st.x-st.width/2,
+        shaftRight=st.x+st.width/2,
+        shaftNear=Math.min(st.zTop,st.zBottom),
+        shaftFar=Math.max(st.zTop,st.zBottom);
+  // Quatre peces reals del forjat deixen el buit exactament allà on
+  // la llavor ha situat l'escala, a qualsevol de les dues habitacions.
+  slab(-19.2,shaftLeft,-16.2,16.2);
+  slab(shaftRight,19.2,-16.2,16.2);
+  slab(shaftLeft,shaftRight,-16.2,shaftNear);
+  slab(shaftLeft,shaftRight,shaftFar,16.2);
+  floorPanel(-halfX+.4,halfX-.4,-halfZ+.4,halfZ-.4,-9.27,0x434c49);
+  // La part nova del soterrani queda coberta, sota el terreny.
+  // No engrandim el forat exterior de l'escala ni el forjat superior.
+  if(!seedSearchMode){
+    const cover=(xa,xb,za,zb)=>floorPanel(xa,xb,za,zb,-1.05,0x545e58);
+    cover(-halfX,-19.2,-halfZ,halfZ);
+    cover(19.2,halfX,-halfZ,halfZ);
+    cover(-19.2,19.2,-halfZ,-16.2);
+    cover(-19.2,19.2,16.2,halfZ);
+  }
+  // Tres cambres a ponent, dues a llevant i passadís central.
+  wall(-halfX+.4,0,.8,halfZ*2-.8);wall(halfX-.4,0,.8,halfZ*2-.8);
+  wall(0,-halfZ+.4,halfX*2-.8,.8);wall(0,halfZ-.4,halfX*2-.8,.8);
+  const span=halfX-7.5-.4, roomX=(halfX+7.5-.4)/2;
+  for(const z of divisions)wall(-roomX,z,span,.65,-9.1,8.75);
+  wall(roomX,eastDivider,span,.65,-9.1,8.75);
+  const doorway=(lx,from,to,doorZ)=>{
+    const gap=4.3,doorHeight=4.1,base=-9.15,lo=doorZ-gap/2,hi=doorZ+gap/2;
+    if(lo>from)wall(lx,(from+lo)/2,.7,lo-from,-9.15,9.0);
+    if(hi<to)wall(lx,(hi+to)/2,.7,to-hi,-9.15,9.0);
+    // Llinda opaca sobre una porta de mida humana, no pas un forat
+    // de nou metres fins al sostre. La fulla puja dins la llinda.
+    wall(lx,doorZ,.82,gap,base+doorHeight,9-doorHeight,0x69746d);
+    const mesh=seedSearchMode?new THREE.Object3D():
+      bx(b.o,.88,doorHeight,gap+.04,0x899990,lx,base+doorHeight/2,doorZ,'metal');
+    mesh.name='bunker-porta-interior-elevable';
+    const d={x0:b.x+lx-.44,x1:b.x+lx+.44,
+      z0:b.z+lo,z1:b.z+hi,y0:b.fy+base,y1:b.fy+base+doorHeight,
+      hp:Infinity,m:mesh,door:true,open:false,rammable:false,
+      bunkerInteriorDoor:true,bunkerBasementWall:true,
+      openProgress:0,doorHeight,
+      closedLocalY:base+doorHeight/2,owner:b,
+      cx:b.x+lx,cz:b.z+doorZ};
+    Wl.push(d);Dr.push(d);b.basement.doors.push(d);
+  };
+  const limits=[-halfZ+.65,...divisions,halfZ-.65];
+  for(let i=0;i<3;i++)doorway(-7.5,limits[i],limits[i+1],westDoors[i]);
+  doorway(7.5,-halfZ+.65,eastDivider,-16);
+  doorway(7.5,eastDivider,halfZ-.65,16);
+  // Graons a la cambra escollida, amb sentit de baixada nord o sud.
+  if(!seedSearchMode){
+    const steps=15,run=Math.abs(st.zTop-st.zBottom);
+    for(let i=0;i<steps;i++){
+      const z=st.zTop+(i+.5)*(st.zBottom-st.zTop)/steps;
+      const y=.22-(i+1)*9.37/steps;
+      bx(b.o,st.width,.21,run/steps+.035,
+        i%2?0x797f79:0x8b9289,st.x,y-.1,z,'masonry');
+    }
+    for(const xx of[shaftLeft-.13,shaftRight+.13]){
+      const rail=bx(b.o,.12,1.3,run,0x3a4c49,
+        xx,-3.9,(st.zTop+st.zBottom)/2,'metal');
+      rail.rotation.x=Math.sign(st.zBottom-st.zTop)*Math.atan2(9.37,run);
+    }
+    // Sales amb funció pròpia: comandament, ràdio, infermeria, dipòsit
+    // d'armes i control de la porta. Tot el mobiliari gran registra una
+    // caixa de col·lisió compartida per jugador, IA i projectils.
+    const basementLevel=-9.15,rooms=[
+      {lo:-halfZ+.75,hi:divisions[0]},
+      {lo:divisions[0],hi:divisions[1]},
+      {lo:divisions[1],hi:halfZ-.75}
+    ];
+    const generalRoomIndex=b.basement.generalLocal.z<0?0:2;
+    const generalRoom=rooms[generalRoomIndex];
+    b.basement.generalRoom={xMin:-halfX+1.7,xMax:-9.1,
+      zMin:generalRoom.lo+2,zMax:generalRoom.hi-2};
+    b.basement.roomTypes=[];
+    const piece=(name,lx,lz,width,depth,height,color,y0=basementLevel,
+      collision=true,profile='metal')=>{
+      const mesh=bx(b.o,width,height,depth,color,lx,y0+height/2,lz,profile);
+      mesh.name='bunker-'+name;
+      if(collision){
+        const center=buildingWorldPoint(b,lx,lz);
+        const collisionY=b.fy+Math.min(basementLevel,y0);
+        Wl.push({x0:center.x-width/2,x1:center.x+width/2,
+          z0:center.z-depth/2,z1:center.z+depth/2,
+          y0:collisionY,y1:b.fy+y0+height,hp:Infinity,m:mesh,
+          door:false,open:false,rammable:false,owner:b,indoorFurniture:true,
+          cx:center.x,cz:center.z});
+      }
+      return mesh;
+    };
+    const desk=(x,z,w,d)=>{
+      piece('taula-tauler',x,z,w,d,1.18,0x66503c,basementLevel,true,'organic');
+      piece('tapa-taula',x,z,w+.12,d+.10,.16,0x987054,-8.0,false,'organic');
+    };
+    const locker=(name,x,z,col=0x626f68)=>
+      piece(name,x,z,1.23,.82,3.4,col,basementLevel,true);
+    const panel=(name,x,z,w,h,color)=>{
+      // Senyalització, mapes i pantalles a l'altura dels ulls.
+      const m=piece(name,x,z,w,.085,h,color,-6.05,false);
+      m.castShadow=false;return m;
+    };
+    for(let roomIndex=0;roomIndex<rooms.length;roomIndex++){
+      const room=rooms[roomIndex],mid=(room.lo+room.hi)/2;
+      if(roomIndex===generalRoomIndex){
+        b.basement.roomTypes.push('despatx del general');
+        desk(-23,mid,3.3,1.65);
+        piece('cadira-general',-25.25,mid+.2,1.0,1.0,.94,0x4b473d);
+        locker('arxivador-general',-25.1,room.lo+2,0x65695b);
+        panel('mapa-operacions',-26.45,mid+1.8,2.25,1.50,0xc4b78c);
+        // Marques de tropes i rutes sobre el mapa.
+        for(const sign of[-1,1])piece('marca-mapa',
+          -26.37,mid+1.8+sign*.57,.18,.1,.16,
+          sign<0?0x9e362a:0x324b78,-5.43,false,'paint');
+        piece('telefon-desp',-22.5,mid-.30,.43,.30,.2,0x2c3232,-7.84,false);
+      }else if(roomIndex===1){
+        b.basement.roomTypes.push('centre de comunicacions');
+        for(const dz of[-2.3,2.35]){
+          piece('consola-radio',-23.3,mid+dz,2.15,1.18,1.40,0x43575e);
+          piece('pantalla-radio',-23.3,mid+dz-.18,1.48,.32,.70,0x294852,-7.6,false);
+          for(const dx of[-.54,.15,.59])piece('commutador',
+            -23.3+dx,mid+dz-.56,.20,.08,.10,0xb6d5b5,-7.30,false);
+        }
+        locker('armari-radio',-25.4,mid,0x586e69);
+        panel('esquema-antenes',-26.45,mid+1.0,1.65,1.10,0xa8b3a2);
+      }else{
+        b.basement.roomTypes.push('infermeria');
+        for(const dz of[-2.15,2.15]){
+          piece('llit-hospital',-23.3,mid+dz,2.3,2.70,.95,0x657d76);
+          piece('matalas',-16.3,mid+dz,2.0,2.38,.17,0xc4d4cc,
+            -8.18,false,'paint');
+          piece('coixi',-23.3,mid+dz-.84,1.15,.55,.22,0xe0ded0,-7.99,false,'paint');
+        }
+        locker('farmaciola-armari',-9.2,room.lo+2,0x8a9e93);
+        piece('creu-infermeria',-26.48,mid,.12,1.2,1.0,0xcc4d43,-6.17,false,'paint');
+        piece('creu-infermeria',-26.47,mid,.12,.36,2.0,0xcc4d43,-6.67,false,'paint');
+      }
+    }
+    // Les dues sales orientals intercanvien funció segons on apareix
+    // l'escala; mai no hi ha prestatgeries o consoles a la seva caixa.
+    const armorySide=-stairSide,accessSide=stairSide;
+    b.basement.roomTypes.push('armeria');
+    locker('armari-armes-1',24.8,armorySide*19,0x58665f);
+    locker('armari-armes-2',24.8,armorySide*14.9,0x58665f);
+    piece('banc-manteniment',9.5,armorySide*19.35,2.15,1.15,1.22,0x775e43);
+    for(const dz of[-.38,.12,.48])piece('eina-armeria',
+      9.5,armorySide*19.35+dz,1.10,.09,.09,0x303735,-7.88,false);
+    panel('inventari-armeria',26.4,armorySide*18,.08,1.3,0xb2bba5);
+    b.basement.roomTypes.push('control i accés');
+    piece('quadre-electric',9.2,accessSide*20.5,1.88,1.2,3.0,0x4b6060);
+    piece('visors-control',9.2,accessSide*19.83,1.54,.17,.4,
+      0x8eb0a1,-6.58,false);
+    piece('guixeta-seguretat',25.5,accessSide*19.3,.9,.82,2.9,0x697a74);
+    piece('consola-acces',9.2,accessSide*6.3,1.1,1.0,1.12,0x576662);
+    // Lluminàries subjectes a l'intradós del forjat y=+.22:
+    // cap focus ni plafó no pot quedar flotant a mitja altura.
+    for(const [lx,lz] of [[0,-19],[0,-8],[0,8],[0,19],[18,-18],[-19,0],[-19,-18],[-19,18],[19,18],[19,0]]){
+      const lamp=new THREE.PointLight(0xffe8bd,5.2,19,2);
+      lamp.position.set(lx,-.55,lz);lamp.visible=false;
+      b.o.add(lamp);b.basement.lights.push(lamp);
+      const light=bx(b.o,1.12,.15,.73,0xf1e2b8,lx,-.30,lz,'paint');
+      light.name='bunker-plafó-sostre';
+      // El suport toca físicament l'intradós del forjat y=-.04.
+      const rim=bx(b.o,1.26,.25,.86,0x606c63,lx,-.10,lz,'metal');
+      rim.name='bunker-suport-plafó';
+    }
+  }
+  return b.basement;
+}
+// El soterrani sobresurt de la planta exterior del búnquer. Detectar-lo
+// en 3D impedeix que les cambres exteses activin el mode natació quan
+// la seva cota és inferior al nivell de la mar.
+function playerInsideBunkerBasement(x,z,y){
+ const b=activeBunker;
+ if(!b?.basement||!Number.isFinite(y)||y>=b.fy-2)return false;
+ const q=buildingLocalPoint(b,x,z);
+ return Math.abs(q.x)<b.basement.halfX-.45&&
+   Math.abs(q.z)<b.basement.halfZ-.45;
+}
+function bunkerSubFloorAt(x,z,previous=-Infinity){
+  const b=activeBunker;if(!b?.basement)return null;
+  const p=buildingLocalPoint(b,x,z);
+  if(Math.abs(p.x)>b.basement.halfX-.4||Math.abs(p.z)>b.basement.halfZ-.4)return null;
+  const st=b.basement.stair;
+  if(Math.abs(p.x-st.x)<=st.width/2&&
+     p.z>=Math.min(st.zTop,st.zBottom)&&
+     p.z<=Math.max(st.zTop,st.zBottom)){
+    const t=(p.z-st.zTop)/(st.zBottom-st.zTop);
+    return b.fy+.22-t*(b.fy+.22-b.basement.floorY);
+  }
+  if(previous<b.fy-3.9)return b.basement.floorY;
+  // El forjat superior només existeix sota l'edifici visible, no sobre
+  // tot el soterrani ampliat: a fora deixam actuar el terreny natural.
+  return Math.abs(p.x)<=19&&Math.abs(p.z)<=16?b.fy+.22:null;
+}
+// Door-aligned treads share the exact same geometry and walking height.
+function stairLocal(s,x,z){const dx=x-s.x,dz=z-s.z;return{along:dx*s.nx+dz*s.nz,side:dx*s.nz-dz*s.nx}}
+function stairContains(s,x,z,margin=0){const q=stairLocal(s,x,z);return q.along>=-margin&&q.along<=s.length+margin&&Math.abs(q.side)<=s.width/2+margin}
+// Els molls no tenen barrera lateral: rampes i unions en T són transitables,
+// i el personatge pot abandonar el pantalà cap a l'aigua.
+// L'altura comprovada a groundAt evita l'ascens instantani des de l'aigua.
+function groundAt(x,z,previous=-Infinity){
+  const bunkerFloor=bunkerSubFloorAt(x,z,previous);
+  if(bunkerFloor!==null)return bunkerFloor;
+  // No enfonsar el model sota els triangles que dibuixa el LOD actual.
+  // Preservem l'altura física si és més alta (evita enfonsaments i salts negatius).
+  const physical=hAt(x,z),visible=terrainStream?.visibleHeightAt(x,z);
+  let y=visible===null||visible===undefined?physical:Math.max(physical,visible);for(const s of stairs){if(s.internal&&s.owner?.rb)continue;if(stairContains(s,x,z)){const q=stairLocal(s,x,z);if(s.ramp){const t=Math.max(0,Math.min(1,q.along/s.length));y=Math.max(y,s.top+(s.bottom-s.top)*t)}else{const i=Math.min(s.steps-1,Math.max(0,Math.floor(q.along/s.tread)));y=Math.max(y,s.top-i*s.rise)}}}
+// En entrar des de l'aigua, P.y és massa baix per quedar-se damunt
+ // la plataforma. La rampa ascendeix de forma contínua fins a la coberta.
+ for(const p of piers){const dx=x-p.x,dz=z-p.z,along=dx*p.ux+dz*p.uz,side=dx*p.px+dz*p.pz;if(Math.abs(along)<=p.length/2+.35&&Math.abs(side)<=p.width/2+.2&&
+    (!Number.isFinite(previous)||previous>=p.y-.55))y=Math.max(y,p.y)}
+for(const b of buildingCandidates(x,z)){const floor=upperFloorHeight(b,x,z,previous);if(floor!==null)y=Math.max(y,floor)}
+// Un personatge que ja és damunt una coberta sòlida hi continua caminant.
+// La comprovació d'altura impedeix pujar-hi per art de màgia des del carrer.
+if(Number.isFinite(previous))for(const b of buildingCandidates(x,z)){
+  const roof=solidRoofAt(b,x,z);
+  if(roof&&previous>=roof.top-.22)y=Math.max(y,roof.top+.05);
+}
+const ramp=terminalRampHeight(x,z);if(ramp!==null)y=Math.max(y,ramp);if(Number.isFinite(previous)){const deck=pedestrianFerry(x,z,previous);if(deck)y=Math.max(y,deck.y)}
+return y}
+function addRampAccess(b,side){const [nx,nz]=[[0,1],[0,-1],[1,0],[-1,0]][side],edge=(nx?b.w:b.d)/2+.2,x=b.x+nx*edge,z=b.z+nz*edge,top=b.fy+.3;
+let length=8,bottom=hAt(x+nx*length,z+nz*length);for(let L=8;L<=26;L+=2){const yy=hAt(x+nx*L,z+nz*L);if(Math.abs(top-yy)<Math.abs(top-bottom)){length=L;bottom=yy}if(Math.abs(top-yy)<.35){length=L;bottom=yy;break}}
+if(Math.abs(top-bottom)<.1)return;const width=Math.max(6,Math.min(b.doorWidth-.8,30)),r={x,z,nx,nz,top,bottom,length,width,ramp:true};stairs.push(r);b.stair=r;
+if(!seedSearchMode)buildingVisual.addRamp(b.o,{alongAxis:!!nx,length,width,top:top-b.fy,bottom:bottom-b.fy,x:x-b.x+nx*length/2,z:z-b.z+nz*length/2,color:0x8f918e,direction:nx||nz})}
+function addStairs(b,side){const [nx,nz]=[[0,1],[0,-1],[1,0],[-1,0]][side],edge=(nx?b.w:b.d)/2+.15,x=b.x+nx*edge,z=b.z+nz*edge,top=b.fy+.3;
+if(top-hAt(x,z)<.12)return;
+const tread=.75;let steps=1;for(;steps<80;steps++){const end=steps*tread;if(top-hAt(x+nx*end,z+nz*end)<=steps*.32)break}
+const length=steps*tread,bottom=hAt(x+nx*length,z+nz*length),rise=Math.max(0,(top-bottom)/steps),s={x,z,nx,nz,top,steps,tread,length,rise,width:4.2};stairs.push(s);b.stair=s;
+if(!seedSearchMode)for(let i=0;i<steps;i++){const a=(i+.5)*tread,xx=x+nx*a,zz=z+nz*a,y=top-i*rise,base=Math.min(y-.16,hAt(xx,zz)-.15);buildingVisual.addStep(b.o,{alongAxis:!!nx,riseWidth:tread,height:y-b.fy,base:base-b.fy,x:xx-b.x,z:zz-b.z,color:i%2?0xa69982:0xb5a68e})}
+}
+function wallPush(){const r=.6;for(const w of wallCandidates(P.x,P.z,r)){if(w.playerBlock===false||w.y0>P.y+3.1||w.y1<P.y+.15)continue;if(w.towerLegOwner&&(P.y+1.5<w.y0||P.y>w.y1))continue;if(!w.open&&P.x>w.x0-r&&P.x<w.x1+r&&P.z>w.z0-r&&P.z<w.z1+r){const a=[P.x-(w.x0-r),w.x1+r-P.x,P.z-(w.z0-r),w.z1+r-P.z],i=a.indexOf(Math.min(...a));
+if(i==0)P.x=w.x0-r;else if(i==1)P.x=w.x1+r;else if(i==2)P.z=w.z0-r;else P.z=w.z1+r}}}
+function updateDoors(dt){
+  for(const d of Dr){
+    if(d.bunkerInteriorDoor){
+      const nearPlayer=!cv&&P.y<d.owner.fy-2&&
+        Math.hypot(P.x-d.cx,P.z-d.cz)<5.6;
+      const nearSoldier=enemyCandidatesAt(d.cx,d.cz,5.7).some(u=>
+        (u.t==='soldat'||u.t==='general')&&u.hp>0&&
+        (u.gy??u.o?.position?.y??Infinity)<d.owner.fy-2&&
+        Math.hypot(u.x-d.cx,u.z-d.cz)<5.6);
+      const target=nearPlayer||nearSoldier;
+      d.openProgress=Math.max(0,Math.min(1,d.openProgress+
+        (target?dt/1.15:-dt/1.6)));
+      const p=d.openProgress,ease=p*p*(3-2*p);
+      d.m.position.y=d.closedLocalY+(d.doorHeight+.55)*ease;
+      d.m.visible=p<.98;
+      d.open=p>.86;
+      continue;
+    }
+    if(d.bunkerGate){
+      const dx=P.x-d.cx,dz=P.z-d.cz,front=dx*d.nx+dz*d.nz,side=Math.abs(dx*d.nz-dz*d.nx),
+            inFront=!cv&&front>=0&&front<=4.8&&side<=d.doorWidth/2+1.15;
+      if(inFront&&d.openProgress<1){
+        if(d.openProgress===0)window.HUNTER_STEALTH.emit('door',d.cx,(d.y0??hAt(d.cx,d.cz))+1,d.cz);
+        d.openProgress=Math.min(1,d.openProgress+dt/d.openDuration);
+        msg='Obrint porta del búnquer… '+Math.round(d.openProgress*100)+'%';msgT=.25
+      }
+      const p=d.openProgress,ease=p*p*(3-2*p);
+      d.m.scale.y=Math.max(.025,1-ease);
+      d.m.position.y=d.closedLocalY+d.doorHeight*ease*.5;
+      d.m.visible=p<.999;
+      d.open=p>=.999;
+      continue
+    }
+    const dx=P.x-d.cx,dz=P.z-d.cz,r=d.open?6:4.5,
+      soldierNear=!d.locked&&enemyCandidatesAt(d.cx,d.cz,4.7).some(u=>
+        (u.t==='soldat'||u.t==='general')&&Math.hypot(u.x-d.cx,u.z-d.cz)<4.5),
+      o=d.alwaysOpen||(!d.locked&&((!cv&&dx*dx+dz*dz<r*r)||soldierNear));
+    if(!d.open&&o&&!cv&&dx*dx+dz*dz<r*r)
+      window.HUNTER_STEALTH.emit('door',d.cx,(d.y0??hAt(d.cx,d.cz))+1,d.cz);
+    d.open=o;d.m.visible=!o
+  }
+}
+function itemMapTexture(kind){const c=document.createElement('canvas');c.width=192;c.height=144;const q=c.getContext('2d');q.fillStyle=kind==='heli'?'#dceff4':kind==='tanc'?'#eadfb9':'#ead59b';q.fillRect(0,0,c.width,c.height);q.strokeStyle='#8f7b52';q.lineWidth=5;q.strokeRect(5,5,c.width-10,c.height-10);q.strokeStyle='#baa36b';q.lineWidth=2;for(let x=30;x<190;x+=32){q.beginPath();q.moveTo(x,7);q.lineTo(x,137);q.stroke()}for(let y=26;y<140;y+=28){q.beginPath();q.moveTo(7,y);q.lineTo(185,y);q.stroke()}
+  q.save();q.translate(96,72);q.strokeStyle='#313a36';q.fillStyle='#596d55';q.lineWidth=6;
+  if(kind==='heli'){q.beginPath();q.ellipse(0,5,32,13,0,0,Math.PI*2);q.fill();q.beginPath();q.moveTo(-55,-13);q.lineTo(55,-13);q.stroke();q.beginPath();q.moveTo(0,-31);q.lineTo(0,22);q.stroke();q.fillRect(28,1,35,7)}
+  else if(kind==='tanc'){q.fillRect(-34,-8,58,24);q.fillRect(-18,-21,29,15);q.beginPath();q.moveTo(10,-14);q.lineTo(48,-14);q.stroke();q.strokeRect(-38,17,67,9)}
+  else{q.fillStyle='#7a4e3d';q.fillRect(-28,-4,56,31);q.fillStyle='#a94338';q.beginPath();q.moveTo(-34,-4);q.lineTo(0,-33);q.lineTo(34,-4);q.closePath();q.fill();q.fillStyle='#ead59b';q.fillRect(-6,12,12,15)}
+  q.restore();const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.needsUpdate=true;return tex}
+function createItemVisual(t){const g=new THREE.Group(),metal=0x454b4e,dark=0x3d3025;
+  if(t==='mapa'||t==='mapa_heli'||t==='mapa_tanc'){const kind=t==='mapa_heli'?'heli':t==='mapa_tanc'?'tanc':'hq',paper=new THREE.Mesh(new THREE.BoxGeometry(1.65,.07,1.25),M(t==='mapa_heli'?0xdceff4:t==='mapa_tanc'?0xeadfb9:0xead59b,'paint'));g.add(paper);const top=new THREE.Mesh(new THREE.PlaneGeometry(1.52,1.12),new THREE.MeshBasicMaterial({map:itemMapTexture(kind),transparent:false}));top.rotation.x=-Math.PI/2;top.position.y=.041;g.add(top)}
+  else if(t==='expl')return window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,false);
+  else if(t==='med'){bx(g,1.35,.7,1,0xf4f4f0,0,.35,0,'paint');bx(g,1.05,.08,.28,0xd5aa76,0,.74,0,'paint');bx(g,.28,.08,.95,0xd5aa76,0,.75,0,'paint');for(const x of[-.18,.18])for(const z of[-.18,.18]){const d=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.03,6),M(0x9b734b,'paint'));d.position.set(x,.81,z);g.add(d)}}
+  else if(t==='arma'){bx(g,1.45,.55,1.05,0x745539,0,.28,0,'paint');bx(g,1.5,.1,1.1,dark,0,.04,0,'metal');for(const x of[-.48,-.16,.16,.48])for(const z of[-.27,.27]){const bullet=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.48,8),M(0xc9a23f,'metal'));bullet.position.set(x,.72,z);g.add(bullet);const tip=new THREE.Mesh(new THREE.ConeGeometry(.08,.16,8),M(0xb7772b,'metal'));tip.position.set(x,1.04,z);g.add(tip)}}
+  else if(t==='bazooka'){const tube=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,2.65,10),M(0x58664a,'paint'));tube.rotation.z=Math.PI/2;tube.position.set(0,.62,0);g.add(tube);const rear=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.18,10),M(0x252b27,'metal'));rear.rotation.z=Math.PI/2;rear.position.set(-1.37,.62,0);g.add(rear);const muzzle=new THREE.Mesh(new THREE.CylinderGeometry(.29,.22,.24,10),M(0x252b27,'metal'));muzzle.rotation.z=Math.PI/2;muzzle.position.set(1.42,.62,0);g.add(muzzle);bx(g,.16,.4,.22,0x252b27,-.35,.35,0,'metal');bx(g,.12,.2,.3,0x737b74,.35,.83,0,'metal')}
+  else if(t==='franctirador'){
+    bx(g,.35,.3,2.25,0x586a5a,0,.62,0,'paint');bx(g,.16,.16,1.65,0x303736,0,.65,-1.55,'metal');
+    bx(g,.19,.24,.7,0x7c6247,0,.52,.95,'paint');bx(g,.28,.35,.45,0x7c6247,0,.56,1.58,'paint');
+    bx(g,.17,.19,.7,0x26322e,0,.95,-.18,'metal');bx(g,.15,.16,.3,0x26322e,0,1.06,-.45,'metal');
+    bx(g,.13,.28,.22,0x2d322d,0,.34,-.08,'metal');
+  }
+  else if(t==='paracaigudes'){
+    // Motxilla de paracaigudes compacta de lona, no un bloc rectangular.
+    const canvas=M(0x718269,'paint'),trim=M(0x4c5847,'paint'),
+          straps=M(0xc9b891,'paint'),buckles=M(0x343d38,'metal');
+    const pack=new THREE.Mesh(new THREE.SphereGeometry(.6,12,9),canvas);
+    pack.scale.set(1.04,1.05,.73);pack.position.y=.66;g.add(pack);
+    const panel=new THREE.Mesh(new THREE.SphereGeometry(.56,10,8),trim);
+    panel.scale.set(.98,1,.21);panel.position.set(0,.65,.42);g.add(panel);
+    const cover=new THREE.Mesh(new THREE.SphereGeometry(.43,10,7),canvas);
+    cover.scale.set(1,.48,.8);cover.position.set(0,1.12,-.12);g.add(cover);
+    const band=(points,mat,r=.055)=>{
+      const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));
+      g.add(new THREE.Mesh(new THREE.TubeGeometry(curve,12,r,6,false),mat));
+    };
+    for(const side of[-1,1]){
+      band([[side*.37,1.11,.37],[side*.43,.93,.53],
+        [side*.42,.50,.56],[side*.32,.20,.40]],straps,.07);
+      band([[side*.53,.94,-.08],[side*.64,.70,-.14],
+        [side*.53,.33,-.18],[side*.36,.22,.16]],straps,.045);
+      bx(g,.16,.095,.10,0xc5c7b5,side*.40,.48,.58,'metal');
+      bx(g,.095,.05,.13,0x39483d,side*.40,.48,.65,'metal');
+    }
+    band([[-.47,.65,-.36],[-.23,.62,-.48],[.23,.62,-.48],
+      [.47,.65,-.36]],straps,.06);
+    bx(g,.55,.16,.12,0x596a52,0,.31,-.42,'paint');
+    bx(g,.23,.14,.16,0x343d38,0,.31,-.51,'metal');
+    band([[-.18,1.15,.24],[-.18,1.37,.20],[.18,1.37,.20],
+      [.18,1.15,.24]],buckles,.045);
+  }
+  else if(t==='cisalla'){const cutter=window.HUNTER_BOLT_CUTTERS.create(THREE);cutter.rotation.z=Math.PI/2;cutter.position.y=.66;cutter.scale.setScalar(1.12);g.add(cutter)}
+  else if(t==='granada'){for(const [x,z] of[[-.35,-.24],[0,-.24],[.35,-.24],[-.18,.22],[.18,.22]]){const body=new THREE.Mesh(new THREE.SphereGeometry(.17,8,6),M(0x4a5842,'metal'));body.scale.set(.88,1.08,.88);body.position.set(x,.42,z);g.add(body);bx(g,.07,.12,.07,0x252b27,x,.61,z,'metal')}}
+  else if(t==='disf'){bx(g,.78,1.3,.16,0xb53232,0,.8,0,'paint');const l=bx(g,.7,.38,.16,0xb53232,-.62,1.18,0,'paint'),r=bx(g,.7,.38,.16,0xb53232,.62,1.18,0,'paint');l.rotation.z=-.55;r.rotation.z=.55;bx(g,.16,.18,.18,0xf1c7a1,0,1.44,0,'organic');bx(g,.08,1.05,.19,0x6f1f1f,0,.75,-.02,'paint')}
+  else bx(g,...IT[t].s,IT[t].c,0,.4,0,'paint');
+  return g}
+// Restriccions de botí compartides pel generador de complexos i pels
+// objectes aleatoris. Només afecten objectes recollibles, NO vehicles ni
+// decoració: els tancs continuen dins els hangars.
+const LOOT_MAPS=new Set(['mapa','mapa_heli','mapa_tanc']);
+const LOOT_WEAPONS=new Set(['bazooka','franctirador','granada','expl']);
+function itemInsideHangar(x,z){
+  return B.some(b=>b.hangar&&Math.abs(x-b.x)<b.w/2&&Math.abs(z-b.z)<b.d/2);
+}
+function lootAllowed(t,b=null,x=null,z=null,compound=null){
+  if(b?.hangar)return false;
+  if(x!=null&&z!=null&&itemInsideHangar(x,z))return false;
+  const complex=compound||b?.compound;
+  if(complex==='polvori'&&LOOT_MAPS.has(t))return false;
+  // El taller només ofereix subministraments i eines; mai armament.
+  if(complex==='hangar'&&LOOT_WEAPONS.has(t))return false;
+  return true;
+}
+// Repartiment comú entre botí fix i aleatori: un màxim de tres
+// objectes en tot l'edifici, comptant totes les plantes.
+const MAX_BUILDING_ITEMS=3;
+function itemBuildingAt(x,z){
+  return B.find(b=>{
+    const p=buildingLocalPoint(b,x,z);
+    return Math.abs(p.x)<(b.localW||b.w)/2-.55 &&
+      Math.abs(p.z)<(b.localD||b.d)/2-.55;
+  })||null;
+}
+const buildingItemCount=b=>items.reduce((n,it)=>n+(it.building===b?1:0),0);
+function itemHeightInBuilding(b,x,z){
+  if(!b)return hAt(x,z)+1.3;
+  const n=buildingItemCount(b),
+        firstUpper=Math.floor(Math.abs(b.x*1.341+b.z*1.733))%2,
+        upstairs=b.floors===2&&!b.rb&&!!b.interiorStair&&
+          !stairContains(b.interiorStair,x,z,.6)&&
+          (n+firstUpper)%2===1;
+  return b.fy+(upstairs?b.storey:0)+1.3;
+}
+function canPlaceItem(t,b,compound){
+  if(b&&buildingItemCount(b)>=MAX_BUILDING_ITEMS)return false;
+  // Una sola farmaciola a tota la base de sortida.
+  if(t==='med'&&(compound==='base'||b?.compound==='base')&&
+    items.some(it=>it.t==='med'&&it.compound==='base'))return false;
+  return true;
+}
+function addItemAt(t,x,z,compound=null){
+  const b=itemBuildingAt(x,z);
+  if(!lootAllowed(t,b,x,z,compound)||!canPlaceItem(t,b,compound))return null;
+  const y=itemHeightInBuilding(b,x,z),o=seedSearchMode?null:createItemVisual(t);
+  if(o){o.position.set(x,y,z);world.add(o)}
+  const item={t,x,z,y,o,building:b,compound:compound||b?.compound||null};
+  items.push(item);return o||item;
+}
+function addIt(t,b){
+  if(!IT[t]){console.warn('Tipus d’objecte desconegut:',t);return null}
+  if(!lootAllowed(t,b)||!canPlaceItem(t,b,b?.compound))return null;
+  let x,z,found=false;
+  const width=b.localW||b.w,depth=b.localD||b.d;
+  for(let k=0;k<35;k++){
+    const lx=rr(-(width/2-2),width/2-2),
+          lz=rr(-(depth/2-2),depth/2-2),
+          point=buildingWorldPoint(b,lx,lz);
+    x=point.x;z=point.z;
+    if(!itemInsideHangar(x,z)&&
+      !Wl.some(w=>!w.open&&w.playerBlock!==false&&
+        x>w.x0-.9&&x<w.x1+.9&&z>w.z0-.9&&z<w.z1+.9)&&
+      !(b.interiorStair&&stairContains(b.interiorStair,x,z,.75))){
+      found=true;break;
+    }
+  }
+  if(!found||!lootAllowed(t,b,x,z))return null;
+  const y=itemHeightInBuilding(b,x,z),o=seedSearchMode?null:createItemVisual(t);
+  if(o){o.position.set(x,y,z);world.add(o)}
+  const item={t,x,z,y,o,building:b,compound:b.compound||null};
+  items.push(item);return o||item;
+}
+function flag(x,z,c){if(!seedSearchMode)world.add(buildingVisual.createFlag({x,y:hAt(x,z),z,color:c}))}
+// jugador i vehicles
+const bx=(g,w,h,d,c,x,y,z,profile='organic')=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c,profile));m.position.set(x,y,z);g.add(m);return m};
+const buildingVisual=window.HUNTER_BUILDINGS.create(THREE,{material:M,materialProfile,box:bx});
+const pl=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});scene.add(pl);
+const animPl=(f,dt,running=false,strafe=0)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{
+  forward:f,strafe,dt,running,crouching:playerCrouched&&!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive,
+  swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,
+  grenadeChargePower:grenadeCharge?Math.min(1,grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS):0,
+  airborne:!!playerFall,parachuting:!!playerFall?.parachute
+});
+const VT=window.HUNTER_VEHICLE_DYNAMICS.types;
+const VS=window.HUNTER_VEHICLES.scales;
+// Quan els patins reposen sobre una superfície, el punt inferior de la
+// geometria escalada ha de quedar només 10 cm per damunt del sòl/pista.
+// Durant el vol, v.alt continua representant l'origen del model.
+const helicopterLandedAltitude=(v,surfaceY)=>surfaceY-(v.o?.userData?.skidContactHeight||0)+.1;
+const vehicleRadius=t=>{const type=t==='patrulla_marina'?'llanxa':t==='jeep'?'cotxe':t;return window.HUNTER_VEHICLES.radii[type]*VS[type]};
+const VHB=window.HUNTER_VEHICLES.hitboxes;
+const vehicleHitType=t=>t==='jeep'?'cotxe':t==='patrulla_marina'?'llanxa':t;
+const vehicleBox=(v,x=v.x,z=v.z,hd=v.hd)=>{const t=vehicleHitType(v.t),hb=VHB[t]||[vehicleRadius(t)*1.25,vehicleRadius(t)*1.6],sc=VS[t]||1;return{x,z,hd,w:hb[0]*sc,d:hb[1]*sc,v}};
+// Contacte entre el segment real de filferrada i la planta rectangular del vehicle.
+// El radi de cerca només serveix per obtenir candidats, mai per confirmar l'impacte.
+function fenceVehicleContact(w,box){
+  if(!w.barbed||!Number.isFinite(w.ax)||!Number.isFinite(w.bx))return null;
+  const s=Math.sin(box.hd),c=Math.cos(box.hd),
+        local=(x,z)=>{const dx=x-box.x,dz=z-box.z;return{x:dx*c-dz*s,z:dx*s+dz*c}},
+        a=local(w.ax,w.az),b=local(w.bx,w.bz),
+        dx=b.x-a.x,dz=b.z-a.z,hw=box.w/2+.3,hd=box.d/2+.3,
+        p=[-dx,dx,-dz,dz],q=[a.x+hw,hw-a.x,a.z+hd,hd-a.z];
+  let enter=0,leave=1;
+  for(let i=0;i<4;i++){
+    if(Math.abs(p[i])<1e-9){if(q[i]<0)return null;continue}
+    const t=q[i]/p[i];
+    if(p[i]<0)enter=Math.max(enter,t);else leave=Math.min(leave,t);
+    if(enter>leave)return null;
+  }
+  // Els fragments apareixen al punt tocat pel frontal i no al centre del tram.
+  const travel=box.v?.v<0?-1:1,nose=local(
+    box.x-Math.sin(box.hd)*travel*box.d/2,
+    box.z-Math.cos(box.hd)*travel*box.d/2),
+    d2=dx*dx+dz*dz,
+    t=d2>1e-9?Math.max(enter,Math.min(leave,((nose.x-a.x)*dx+(nose.z-a.z)*dz)/d2)):enter;
+  return{x:w.ax+(w.bx-w.ax)*t,z:w.az+(w.bz-w.az)*t};
+}
+const obbAxes=b=>{const s=Math.sin(b.hd),c=Math.cos(b.hd);return[{x:c,z:-s},{x:s,z:c}]};
+const obbOverlap=(a,b)=>{const A=obbAxes(a),B=obbAxes(b),dx=b.x-a.x,dz=b.z-a.z,axes=[...A,...B];for(const ax of axes){const dist=Math.abs(dx*ax.x+dz*ax.z),ra=Math.abs(A[0].x*ax.x+A[0].z*ax.z)*a.w/2+Math.abs(A[1].x*ax.x+A[1].z*ax.z)*a.d/2,rb=Math.abs(B[0].x*ax.x+B[0].z*ax.z)*b.w/2+Math.abs(B[1].x*ax.x+B[1].z*ax.z)*b.d/2;if(dist>ra+rb)return false}return true};
+const circleVehicleOverlap=(x,z,r,v)=>{const b=vehicleBox(v),dx=x-b.x,dz=z-b.z,s=Math.sin(b.hd),c=Math.cos(b.hd),lx=dx*c-dz*s,lz=dx*s+dz*c,cx=Math.max(-b.w/2,Math.min(b.w/2,lx)),cz=Math.max(-b.d/2,Math.min(b.d/2,lz)),ex=lx-cx,ez=lz-cz;return ex*ex+ez*ez<r*r};
+const vehicleY=v=>v.alt!=null&&VT[vehicleHitType(v.t)]?.m==='a'?v.alt:(v.o?.position?.y??Math.max(0,hAt(v.x,v.z)));
+const vehicleHeightCompatible=(a,b)=>Math.abs(vehicleY(a)-vehicleY(b))<Math.max(2.2,Math.min(vehicleRadius(vehicleHitType(a.t)),vehicleRadius(vehicleHitType(b.t)))*.55);
+const VEHICLE_CELL=64,vehicleGrid=new Map(),playerVehicleGrid=new Map(),enemyGrid=new Map(),vehicleCellKey=(cx,cz)=>cx+','+cz;
+let vehicleGridVSource=null,vehicleGridESource=null;
+const addVehicleToGrid=(grid,v)=>{const key=vehicleCellKey(Math.floor(v.x/VEHICLE_CELL),Math.floor(v.z/VEHICLE_CELL)),bucket=grid.get(key);if(bucket)bucket.push(v);else grid.set(key,[v])};
+function rebuildVehicleGrid(){
+  vehicleGrid.clear();playerVehicleGrid.clear();enemyGrid.clear();vehicleGridVSource=V;vehicleGridESource=E;
+  for(const v of V)if(!v.destroyed){addVehicleToGrid(vehicleGrid,v);addVehicleToGrid(playerVehicleGrid,v)}
+  for(const u of E)if(!u.destroyed){addVehicleToGrid(enemyGrid,u);if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='patrulla_marina')addVehicleToGrid(vehicleGrid,u)}
+}
+function gridCandidatesAt(grid,x,z,r=24){
+  const out=[],minX=Math.floor((x-r)/VEHICLE_CELL),maxX=Math.floor((x+r)/VEHICLE_CELL),
+        minZ=Math.floor((z-r)/VEHICLE_CELL),maxZ=Math.floor((z+r)/VEHICLE_CELL);
+  for(let cx=minX;cx<=maxX;cx++)for(let cz=minZ;cz<=maxZ;cz++){const b=grid.get(vehicleCellKey(cx,cz));if(b)for(const v of b)out.push(v)}
+  return out
+}
+function vehicleCandidatesAt(x,z,r=24,playersOnly=false){
+  if(vehicleGridVSource!==V||vehicleGridESource!==E)rebuildVehicleGrid();
+  return gridCandidatesAt(playersOnly?playerVehicleGrid:vehicleGrid,x,z,r)
+}
+function enemyCandidatesAt(x,z,r=24){
+  if(vehicleGridVSource!==V||vehicleGridESource!==E)rebuildVehicleGrid();
+  return gridCandidatesAt(enemyGrid,x,z,r)
+}
+const vehicleObstacles=v=>vehicleCandidatesAt(v.x,v.z,32,false).filter(o=>o!==v&&!o.destroyed);
+const mkV=window.HUNTER_VEHICLES.createFactory(THREE,{box:bx,material:M,shadows:visualQuality.shadows});
+// Representació mínima: no cal cap malla de vehicle per calcular
+// les coordenades. Es respecta l'altura dels patins del model original.
+function seedVehicleStub(t){
+  const g=new THREE.Group();
+  g.userData.skidContactHeight=
+    t==='heli'||t==='heli_combat' ? (.48-.075)*VS[t] : 0;
+  return g;
+}
+const riderSystem=window.HUNTER_RIDER.create(THREE,{scene,box:bx,material:M,scales:VS,heightAt:hAt,shadows:visualQuality.shadows});
+const rider=riderSystem.object,poseRider=riderSystem.update;
+let swimming=false;let V=[],cv=null;const P={x:0,z:0,y:0,hd:0};
+// Optional opportunities share the real world, controls, cover and game clock.
+// NPCs remain neutral and never enter enemy auto-aim or enemy perception lists.
+function optionalLineClear(from,to,ignoreWall=null){
+  return !blastOccluded(from.x,from.y,from.z,to.x,to.y,to.z,ignoreWall);
+}
+function optionalCivilianCanMove(from,to,radius){
+  if(Math.abs(to.x)>H-2||Math.abs(to.z)>H-2||hAt(to.x,to.z)<.12||
+    Math.abs(to.y-from.y)>.65||treeHit(to.x,to.z,radius))return false;
+  const reach=Math.hypot(to.x-from.x,to.z-from.z)/2+radius;
+  for(const wall of wallCandidates((from.x+to.x)/2,(from.z+to.z)/2,reach)){
+    if(wall.open||wall.hp<=0||wall.y1<Math.min(from.y,to.y)+.15||
+      wall.y0>Math.max(from.y,to.y)+1.8)continue;
+    if(segmentAabbT(from.x,from.y+.9,from.z,to.x,to.y+.9,to.z,
+      wall.x0-radius,wall.x1+radius,wall.y0,wall.y1,wall.z0-radius,wall.z1+radius)!==null)return false;
+  }
+  return !vehicleCandidatesAt(to.x,to.z,24,true).some(v=>
+    !v.destroyed&&Math.abs(vehicleY(v)-to.y)<3&&circleVehicleOverlap(to.x,to.z,radius,v));
+}
+const optionalNotify=text=>{msg=text;msgT=3};
+const prisonerSystem=window.HUNTER_PRISONERS.create({
+  THREE,box:bx,material:M,heightAt:(x,z)=>hAt(x,z),canMove:optionalCivilianCanMove,
+  clearLine:optionalLineClear,notify:optionalNotify,sound:snd,vehicleRadius,
+  vehicleName:v=>VT[v.t]?.n||v.t
+});
+const radioRelay=window.HUNTER_RADIO_RELAY.create({
+  THREE,box:bx,material:M,heightAt:(x,z)=>hAt(x,z),clearLine:optionalLineClear,
+  notify:optionalNotify,sound:snd,
+  registerCollider:collider=>{Wl.push(collider);wallGridCount=-1},
+  unregisterCollider:collider=>{
+    const index=Wl.indexOf(collider);if(index>=0)Wl.splice(index,1);wallGridCount=-1;
+  },
+  onAlert:(unit,position)=>{
+    if(!E.includes(unit)||unit.hp<=0||unit.canSee)return;
+    releaseSoldierReservation(unit);releaseSoldierEntry(unit);
+    unit.aiMode='investigate';unit.tacticGoal=null;unit.tacticT=0;
+    unit.lastSeenX=position.x;unit.lastSeenY=position.y;unit.lastSeenZ=position.z;
+    unit.searchT=(position.duration||30)+Math.hypot(position.x-unit.x,position.z-unit.z)/Math.max(1,unit.sp*.65);
+    unit.alert=Math.max(unit.alert||0,position.duration||30);
+  }
+});
+function optionalContext(active=!!started&&!paused&&!over&&simulationFocused&&!document.hidden&&!generationPromise){
+  return {player:P,vehicle:cv,vehicles:V,enemies:E,
+    active,canInteract:!playerFall&&!playerEject&&!swimming&&!scopeActive,
+    visualRange:scopeActive?3500:400};
+}
+function resetOptionalSystems(){
+  window.HUNTER_REQUIRED_WORLD_FEATURES=null;
+  prisonerSystem.reset();radioRelay.reset();
+}
+function configureOptionalWorld(){
+  const compounds=world?.userData?.compounds||[];
+  prisonerSystem.configure({world,camp:world?.userData?.prisonCamp||compounds.find(c=>c.id==='prison-camp'),base:P.base,logicalOnly:seedSearchMode});
+  radioRelay.configure({world,compounds,logicalOnly:seedSearchMode});
+}
+function validateRequiredWorldFeatures(){
+  const camps=(world?.userData?.compounds||[]).filter(c=>c.id==='prison-camp'),
+    prisoners=prisonerSystem.entities,
+    mechanics=prisoners.filter(u=>u.role==='mechanic'),
+    farmers=prisoners.filter(u=>u.role==='farmer');
+  if(camps.length!==1||world.userData.prisonCamp!==camps[0]||
+    !Number.isFinite(camps[0].x)||!Number.isFinite(camps[0].z)||
+    prisoners.length!==5||mechanics.length!==1||farmers.length!==4||
+    prisoners.some(u=>!Number.isFinite(u.hp)||u.hp<=0||!Number.isFinite(u.x)||!Number.isFinite(u.y)||
+      !Number.isFinite(u.z)||u.y<=0||!seedSearchMode&&u.o?.parent!==world)){
+    throw new Error('Món incomplet: cal un camp de presoners amb quatre camperols i un mecànic. Llavor '+(seed>>>0));
+  }
+  window.HUNTER_REQUIRED_WORLD_FEATURES=Object.freeze({
+    seed:seed>>>0,mapScale:MAP_SCALE,prisonCamps:1,farmers:4,mechanics:1,
+    status:'validated'
+  });
+}
+function updateOptionalSystems(dt,active){
+  const context=optionalContext(active);
+  prisonerSystem.update(dt,context);radioRelay.update(dt,context);
+}
+function getOptionalAction(){
+  const context=optionalContext();
+  if(!context.active||!context.canInteract||cv)return null;
+  const prisonerAction=prisonerSystem.getAction(context);
+  // Asking the mechanic to follow must never trap the player beside a vehicle.
+  if(prisonerAction?.kind==='mechanicFollow'&&nearV())return radioRelay.getAction(context);
+  return prisonerAction||radioRelay.getAction(context);
+}
+function performOptionalAction(){
+  const action=getOptionalAction();if(!action)return false;
+  const context=optionalContext();
+  return action.kind==='sabotage'?radioRelay.interact(action,context):prisonerSystem.interact(action,context);
+}
+function optionalMapMarkers(){return [...radioRelay.markers(),...prisonerSystem.markers()]}
+const FERRY_DECK=window.HUNTER_VEHICLES.decks?.ferry;
+const wrapAngle=a=>Math.atan2(Math.sin(a),Math.cos(a));
+const ferryLocal=(f,x,z)=>{const dx=x-f.x,dz=z-f.z,s=Math.sin(f.hd),co=Math.cos(f.hd);return{x:dx*co-dz*s,z:dx*s+dz*co}};
+const ferryWorld=(f,lx,lz)=>{const s=Math.sin(f.hd),co=Math.cos(f.hd);return{x:f.x+lx*co+lz*s,z:f.z-lx*s+lz*co}};
+const ferryCabinContains=(lx,lz,margin=0)=>{
+  const c=FERRY_DECK?.cabin;
+  return !!c&&Math.abs(lx-c.x)<c.halfW+margin&&Math.abs(lz-c.z)<c.halfL+margin
+};
+const ferryWalkable=(lx,lz,margin=0)=>{
+  if(!FERRY_DECK)return false;
+  const d=FERRY_DECK,sc=VS.ferry||1,ax=Math.abs(lx),az=Math.abs(lz);
+  return ax+margin<=((az+margin<=d.halfL*sc)?d.halfW:d.rampHalfW)*sc&&
+    az+margin<= (d.halfL+d.ramp)*sc;
+};
+function ferryCabinVehicleHit(f,box){
+  const c=FERRY_DECK?.cabin;if(!c)return false;
+  const p=ferryWorld(f,c.x*(VS.ferry||1),c.z*(VS.ferry||1));
+  return obbOverlap(box,{...p,hd:f.hd,w:c.halfW*2*(VS.ferry||1),d:c.halfL*2*(VS.ferry||1)})
+}
+function ferryCabinPushPlayer(){
+  const deck=pedestrianFerry(P.x,P.z,P.y),c=FERRY_DECK?.cabin;
+  if(!deck||!c||!ferryCabinContains(deck.q.x,deck.q.z,.62))return;
+  const q=deck.q,m=.65,dx=deck.q.x-c.x,dz=deck.q.z-c.z,
+    ex=c.halfW+m-Math.abs(dx),ez=c.halfL+m-Math.abs(dz);
+  if(ex<ez)q.x=c.x+(dx<0?-1:1)*(c.halfW+m);
+  else q.z=c.z+(dz<0?-1:1)*(c.halfL+m);
+  const p=ferryWorld(deck.f,q.x,q.z);P.x=p.x;P.z=p.z
+}
+const ferryLocalSurfaceY=(f,lz)=>{
+  const sc=VS.ferry||1,d=FERRY_DECK;if(!d)return f.o.position.y;
+  const az=Math.abs(lz),deck=d.y*sc,edge=d.halfL*sc,ramp=d.ramp*sc;
+  if(az<=edge)return f.o.position.y+deck;
+  const q=Math.max(0,Math.min(1,(az-edge)/Math.max(.01,ramp)));
+  return f.o.position.y+(deck+(d.rampY*sc-deck)*q)
+};
+function ferryForVehicle(v,x=v.x,z=v.z,includeRamp=true){
+  if(!FERRY_DECK||v.t==='ferry')return null;
+  const hb=vehicleBox(v,x,z,v.hd),sc=VS.ferry||1;
+  for(const f of V){
+    if(f===v||f.destroyed||f.t!=='ferry')continue;
+    const q=ferryLocal(f,x,z),fw=FERRY_DECK.halfW*sc,fl=FERRY_DECK.halfL*sc,r=includeRamp?FERRY_DECK.ramp*sc:0,
+          rel=wrapAngle(v.hd-f.hd),ca=Math.abs(Math.cos(rel)),sa=Math.abs(Math.sin(rel)),
+          ex=ca*hb.w*.5+sa*hb.d*.5,ez=sa*hb.w*.5+ca*hb.d*.5;
+    // Coberta ampla i rampa estreta: el morro del vehicle comença
+    // l'embarcament abans que el buc sòlid el bloquegi. Els laterals
+    // segueixen limitats per la projecció de la hitbox del vehicle.
+    const ax=Math.abs(q.x),az=Math.abs(q.z),rampHalf=FERRY_DECK.rampHalfW*sc;
+    if(ax+ex>fw-.18)continue;
+    if(az+ez<=fl)return f;
+    if(includeRamp&&az-ez<=fl+r+.65&&az<=fl+r+ez+.65&&
+       ax+ex<=rampHalf+.45)return f
+  }
+  return null
+}
+function attachToFerry(v,f){
+  if(!f||f.destroyed){v.carrier=null;return}
+  const q=ferryLocal(f,v.x,v.z);v.carrier=f;v.carrierLX=q.x;v.carrierLZ=q.z;v.carrierHD=wrapAngle(v.hd-f.hd)
+}
+function detachFromFerry(v){v.carrier=null;delete v.carrierLX;delete v.carrierLZ;delete v.carrierHD}
+function syncFerryCargo(){
+  if(!FERRY_DECK)return;
+  for(const v of V){
+    const f=v.carrier;if(!f)continue;
+    if(f.destroyed||v.destroyed){detachFromFerry(v);continue}
+    const p=ferryWorld(f,v.carrierLX||0,v.carrierLZ||0);v.x=p.x;v.z=p.z;v.hd=wrapAngle(f.hd+(v.carrierHD||0));
+    if(VT[v.t]?.m==='a')v.alt=helicopterLandedAltitude(v,ferryLocalSurfaceY(f,v.carrierLZ||0))
+  }
+}
+const setPatrol=(u,pts,guard=false)=>{if(!u)return u;u.patrol=pts.map(([x,z])=>({x,z}));u.pi=-1;u.guard=guard;u.wt=0;return u};
+const setDefense=(u,pts)=>{if(!u)return u;u.defense=pts.map(([x,z])=>({x,z}));u.defenseTarget=null;return u};
+const chooseDefense=(u,q)=>{
+  if(!u.defense||!u.defense.length)return null;let best=null,score=1e9;
+  for(const p of u.defense){if(hAt(p.x,p.z)<-.5||treeHit(p.x,p.z,1))continue;const du=Math.hypot(p.x-u.x,p.z-u.z),dq=Math.hypot(p.x-q.x,p.z-q.z),sc=du+dq*.08;if(sc<score&&sight(p.x,p.z,q.x,q.z,hAt(p.x,p.z)+1.7)){score=sc;best=p}}
+  return best
+};
+const wireRod=(a,b,r=.045,c=0x3d4143)=>{const v=new THREE.Vector3(...a),w=new THREE.Vector3(...b),d=w.clone().sub(v),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),6),M(c,'metal'));m.position.copy(v.add(w).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());world.add(m);return m};
+// Una filferrada tenia abans 15 malles independents per cada tram de 6 m:
+// dos pals, cinc filferros, quatre diagonals i quatre espines. Aquí es
+// combinen en una única geometria amb colors per vèrtex. La lògica Wl
+// conserva UN objecte per tram perquè els dispars i els tancs el trenquin.
+const fenceMaterial=new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true,flatShading:true});
+const fencePostTemplate=new THREE.CylinderGeometry(.12,.16,1,6).toNonIndexed();
+const fenceWireTemplate=new THREE.CylinderGeometry(1,1,1,6).toNonIndexed();
+const fenceUp=new THREE.Vector3(0,1,0);
+function barbedSection(x1,z1,x2,z2){
+  if(seedSearchMode){
+    const y1=Math.max(hAt(x1,z1),0),y2=Math.max(hAt(x2,z2),0),pad=.24;
+    const w={x0:Math.min(x1,x2)-pad,x1:Math.max(x1,x2)+pad,
+      z0:Math.min(z1,z2)-pad,z1:Math.max(z1,z2)+pad,
+      y0:Math.min(y1,y2),y1:Math.max(y1,y2)+5,hp:8,
+      door:false,open:false,barbed:true,rammable:true,
+      ax:x1,az:z1,bx:x2,bz:z2,cx:(x1+x2)/2,cz:(z1+z2)/2};
+    Wl.push(w);wallGridCount=-1;return w;
+  }
+  const y1=Math.max(hAt(x1,z1),0),y2=Math.max(hAt(x2,z2),0),
+        dx=x2-x1,dz=z2-z1,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L,
+        px=-uz,pz=ux,Hw=4.9,cx=(x1+x2)/2,cz=(z1+z2)/2,parts=[];
+  const posA=new THREE.Vector3(),posB=new THREE.Vector3(),
+        direction=new THREE.Vector3(),center=new THREE.Vector3(),
+        rotation=new THREE.Quaternion(),size=new THREE.Vector3(),
+        transform=new THREE.Matrix4();
+  const items=[];
+  const addCylinder=(ax,ay,az,bx,by,bz,r,color,post=false)=>{
+    posA.set(ax,ay,az);posB.set(bx,by,bz);
+    direction.subVectors(posB,posA);const len=direction.length();
+    if(len<.001)return;
+    center.copy(posA).add(posB).multiplyScalar(.5);
+    rotation.setFromUnitVectors(fenceUp,direction.multiplyScalar(1/len));
+    size.set(post?1:r,len,post?1:r);
+    transform.compose(center,rotation,size);
+    items.push({geo:post?fencePostTemplate:fenceWireTemplate,matrix:transform.clone(),color:new THREE.Color(color)});
+  };
+  for(const [x,z,y] of [[x1,z1,y1],[x2,z2,y2]])
+    addCylinder(x,y,z,x,y+Hw,z,1,0x4a4f52,true);
+  for(const h of [.55,1.55,2.55,3.55,4.35])
+    addCylinder(x1,y1+h,z1,x2,y2+h,z2,.028,0x30363a);
+  for(const [a,b] of [[.6,2.5],[2.5,4.35],[4.35,2.5],[2.5,.6]])
+    addCylinder(x1,y1+a,z1,x2,y2+b,z2,.024,0x353b3e);
+  for(let n=0;n<4;n++){
+    const a=(n+.12)/4,b=(n+.88)/4,
+          xa=x1+dx*a,za=z1+dz*a,xb=x1+dx*b,zb=z1+dz*b,
+          ya=Math.max(hAt(xa,za),0)+4.72,
+          yb=Math.max(hAt(xb,zb),0)+4.72,
+          side=n%2?-.22:.22;
+    addCylinder(xa+px*side,ya,za+pz*side,xb-px*side,yb,zb-pz*side,.024,0x292f32);
+  }
+  const vertices=items.reduce((sum,item)=>sum+item.geo.attributes.position.count,0),
+        positions=new Float32Array(vertices*3),normals=new Float32Array(vertices*3),
+        colors=new Float32Array(vertices*3);
+  const p=new THREE.Vector3(),normal=new THREE.Vector3(),normalMatrix=new THREE.Matrix3();
+  let offset=0;
+  for(const {geo,matrix,color} of items){
+    const srcPos=geo.attributes.position,srcNorm=geo.attributes.normal;
+    normalMatrix.getNormalMatrix(matrix);
+    for(let v=0;v<srcPos.count;v++){
+      const at=(offset+v)*3;
+      p.fromBufferAttribute(srcPos,v).applyMatrix4(matrix);
+      normal.fromBufferAttribute(srcNorm,v).applyMatrix3(normalMatrix).normalize();
+      positions[at]=p.x-cx;positions[at+1]=p.y;positions[at+2]=p.z-cz;
+      normals[at]=normal.x;normals[at+1]=normal.y;normals[at+2]=normal.z;
+      colors[at]=color.r;colors[at+1]=color.g;colors[at+2]=color.b;
+    }
+    offset+=srcPos.count;
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
+  geometry.setAttribute('normal',new THREE.BufferAttribute(normals,3));
+  geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
+  geometry.computeBoundingSphere();
+  const mesh=new THREE.Mesh(geometry,fenceMaterial);
+  mesh.name='hunter-fence-section';
+  mesh.position.set(cx,0,cz);
+  mesh.castShadow=false;mesh.receiveShadow=false;
+  mesh.userData.noCastShadow=true;
+  mesh.userData.noReceiveShadow=true;
+  world.add(mesh);parts.push(mesh);
+  const pad=.24,w={x0:Math.min(x1,x2)-pad,x1:Math.max(x1,x2)+pad,
+    z0:Math.min(z1,z2)-pad,z1:Math.max(z1,z2)+pad,
+    y0:Math.min(y1,y2),y1:Math.max(y1,y2)+5,hp:8,
+    m:mesh,parts,door:false,open:false,barbed:true,rammable:true,
+    ax:x1,az:z1,bx:x2,bz:z2,cx,cz};
+  Wl.push(w);
+  // Les altes/baixes poden compensar-se en longitud: invalidació explícita.
+  wallGridCount=-1;
+  return w;
+};
+const barbedSegment=(x1,z1,x2,z2)=>{
+  const L=Math.hypot(x2-x1,z2-z1),n=Math.max(1,Math.ceil(L/6));
+  for(let i=0;i<n;i++){const a=i/n,b=(i+1)/n;barbedSection(x1+(x2-x1)*a,z1+(z2-z1)*a,x1+(x2-x1)*b,z1+(z2-z1)*b)}
+};
+const barbedHQ=(cx,cz,hw=50,hd=46,gap=13,gateOffset=0)=>{
+  const n=cz-hd,s=cz+hd,w=cx-hw,e=cx+hw,gx=Math.max(w+gap,Math.min(e-gap,cx+gateOffset));
+  barbedSegment(w,n,e,n);barbedSegment(w,n,w,s);barbedSegment(e,n,e,s);
+  barbedSegment(w,s,gx-gap/2,s);barbedSegment(gx+gap/2,s,e,s);
+  compoundClear.push({x:cx,z:cz,r:Math.hypot(hw,hd)*1.02});
+};
+// construir món
+// minimapa
+const mc=document.getElementById('mm');
+const minimap=window.HUNTER_MINIMAP.create({
+  THREE,canvas:mc,worldSize:S,halfSize:H,heightAt:hAt,colorAt:window.HUNTER_TERRAIN.colorAt,
+  getState:()=>({base:P.base,hq:HQ,mapKnown:hqMapKnown||!!inv.mapa,current:cv||P,currentVehicle:cv,vehicles:V,enemies:E,log:logb,intel:intelMarks,opportunities:optionalMapMarkers()})
+});
+window.HUNTER_MINIMAP_STATS=minimap.stats;
+const mini=()=>minimap.draw();
+// control
+let paused=false,muted=false,zoom=1,waypoint=null,elapsed=0,uiTick=0,worldVisualTick=0,palmVisualTick=0;
+const simulationClock=window.HUNTER_SIMULATION_CLOCK.create(),
+      cinematicClock=window.HUNTER_SIMULATION_CLOCK.create();
+const stealthFeedback=window.HUNTER_STEALTH_FEEDBACK.create(THREE);
+window.HUNTER_STEALTH_FEEDBACK_STATS=stealthFeedback.stats;
+let simulationFrameActive=false,simulationFocused=true;
+function resetSimulationClock(now=performance.now()){
+  if(now===null)audioReset();
+  simulationClock.reset(now);cinematicClock.reset(now);
+  combatFeedback?.clear();
+  stealthFeedback.reset();resetSoldierCoordination();
+}
+// Comptabilitat consultable: temps admès, simulat i descartat, també en pauses.
+window.HUNTER_SIMULATION_STATS={gameplay:simulationClock.stats,cinematic:cinematicClock.stats};
+const vehicleLook=window.HUNTER_CAMERA_CONTROLS.createVehicleLook(),
+      cameraOcclusion=window.HUNTER_CAMERA_CONTROLS.createOcclusion();
+let drag=null,cameraVehicle=null,cameraBasement=null;
+function restoreCameraWalls(){
+  cameraOcclusion.restore();
+  if(activeBunker?.basement)activeBunker.basement.cameraHiddenWalls.length=0;
+}
+function cancelCameraDrag(){
+  const id=drag?.id;drag=null;
+  if(id==null)return;
+  // Un pointer cancel·lat o perdut ja pot haver perdut la captura nativa.
+  try{if(ren.domElement.hasPointerCapture(id))ren.domElement.releasePointerCapture(id)}catch{}
+}
+function resetCameraState(){
+  cancelCameraDrag();vehicleLook.reset();cameraVehicle=cv;
+  restoreCameraWalls();
+}
+function syncCameraVehicle(){if(cameraVehicle!==cv)resetCameraState()}
+const LOD_NEAR2=500*500,LOD_MID2=1200*1200,ITEM_ANIM2=500*500,FAUNA_NEAR2=650*650,FAUNA_MID2=1400*1400;
+// Distàncies visuals per família. NO afecten danys, física, IA ni mapa.
+const VISUAL_RANGES={
+  desktop:{buildings:1650,fences:1020,props:1300,vehicles:2080,enemies:1850,items:1000,fauna:1350,antennas:1750},
+  mobile:{buildings:980,fences:580,props:750,vehicles:1200,enemies:1050,items:620,fauna:790,antennas:1100},
+  ultra:{buildings:650,fences:400,props:540,vehicles:780,enemies:700,items:450,fauna:530,antennas:770}
+}[qualityName]||{buildings:1200,fences:790,props:990,vehicles:1620,enemies:1410,items:800,fauna:1100,antennas:1360};
+const visibilityStats={buildings:0,fences:0,props:0,vehicles:0,enemies:0,items:0,fauna:0,antennas:0,terrainOccluded:0};
+const enemyLodStats={full:0,mid:0,far:0,hidden:0,vehicleFull:0};
+const ENEMY_LOD_RANGES={
+  desktop:{full:310,mid:860},mobile:{full:185,mid:470},ultra:{full:135,mid:305}
+}[qualityName]||{full:240,mid:660};
+window.HUNTER_ENEMY_LOD_STATS=enemyLodStats;
+window.HUNTER_VISIBILITY_STATS=visibilityStats;
+let staticVisualBatches=[];
+const renderCategories={terreny:0,edificis:0,filferrades:0,vehicles:0,enemics:0,vegetacio:0,decoracio:0,objectes:0,fauna:0,altres:0};
+window.HUNTER_DRAW_CALL_GROUPS=renderCategories;
+adaptivePerformance.stats.drawCategories=renderCategories;
+const registeredDrawHooks=new WeakMap();
+function registerDrawCategories(){const steps=registerDrawCategoriesSteps(false);while(!steps.next().done){}}
+function* registerDrawCategoriesSteps(progressive=true){
+  const tagged=new Map();
+  for(const b of B)tagged.set(b.o,'edificis');
+  for(const v of V)tagged.set(v.o,'vehicles');
+  for(const e of E)if(e.o)tagged.set(e.o,'enemics');
+  for(const f of fa)if(f.o)tagged.set(f.o,'fauna');
+  for(const item of items)tagged.set(item.o,'objectes');
+  if(PM.trunk)tagged.set(PM.trunk,'vegetacio');
+  if(terrainStream?.mesh)tagged.set(terrainStream.mesh,'terreny');
+  tagged.set(pl,'altres');
+  function track(mesh){
+    if(!mesh.isMesh)return;
+    const installed=registeredDrawHooks.get(mesh);
+    if(!performanceStatsVisible){
+      if(installed)mesh.onBeforeRender=installed.previous;
+      return;
+    }
+    let label='altres';
+    if(mesh.userData.terrainTile)label='terreny';
+    else if(mesh.name==='hunter-fence-section')label='filferrades';
+    else if(mesh.name==='hunter-static-decor-batch')label='decoracio';
+    else {
+      let root=mesh;
+      while(root){if(tagged.has(root)){label=tagged.get(root);break}root=root.parent}
+      if(label==='altres'&&(mesh.parent?.name==='hunter-bush-sectors'||mesh.parent?.name==='hunter-rock-sectors'))label='vegetacio';
+    }
+    const existing=registeredDrawHooks.get(mesh);
+    if(existing){
+      // The same mesh can change parent/category across world rebuilds.
+      existing.label=label;
+      mesh.onBeforeRender=existing.wrapper;
+      return;
+    }
+    // Preserve any existing animation hook, wrapping each mesh only once.
+    const previous=mesh.onBeforeRender;
+    const entry={label,previous};
+    mesh.onBeforeRender=function(...args){
+      renderCategories[entry.label]++;
+      if(previous)return previous.apply(this,args);
+    };
+    entry.wrapper=mesh.onBeforeRender;
+    registeredDrawHooks.set(mesh,entry);
+  }
+  if(progressive)yield* traverseGenerationSteps(world,track,'Preparant el render');
+  else world.traverse(track);
+  pl.traverse(track);
+  // Els objectes fora del món (mar, cel) compten al total del renderitzador
+  // però no necessiten etiquetes de geometria terrestre.
+}
+function terrainConcealsBuilding(b,dist){
+  // Oclusió conservadora només per a edificis força llunyans.
+  if(dist<340)return false;
+  const fromY=Math.max(P.y+3,cam.position.y),
+        toY=b.fy+b.h+5;
+  let covered=0;
+  for(const t of [.3,.52,.74]){
+    const x=P.x+(b.x-P.x)*t,z=P.z+(b.z-P.z)*t,
+          line=fromY+(toY-fromY)*t;
+    if(hAt(x,z)>line+9)covered++;
+  }
+  return covered>=2;
+}
+function isInsideVisibleBuilding(b){
+  if(b?.basement&&!cv&&P.y<b.fy-3.9){
+    const local=buildingLocalPoint(b,P.x,P.z);
+    if(Math.abs(local.x)<b.basement.halfX&&Math.abs(local.z)<b.basement.halfZ)return true;
+  }
+  if(b===ib)return true;
+  if(!b.hangar||!cv||cv.destroyed)return false;
+  const y=VT[cv.t]?.m==='a'?(cv.alt??cv.o?.position?.y):(cv.o?.position?.y??cv.alt);
+  return Math.abs(cv.x-b.x)<b.w/2&&Math.abs(cv.z-b.z)<b.d/2&&
+    y!=null&&y>=b.fy-2&&y<b.fy+b.h+2;
+}
+function currentSniperFocus(){return scopeActive?window.HUNTER_SCOPE_FOCUS.create(P.x,P.y+1.76,P.z,scopeYaw,scopePitch):null}
+function updateDistanceVisibility(){
+  const max=VISUAL_RANGES,focus=currentSniperFocus();
+  for(const k of Object.keys(visibilityStats))visibilityStats[k]=0;
+  for(const b of B){
+    const dx=b.x-P.x,dz=b.z-P.z,d2=dx*dx+dz*dz,
+          inside=isInsideVisibleBuilding(b),
+          close=inside||d2<(max.buildings+b.hw)* (max.buildings+b.hw)||
+            !!focus?.contains(b.x,b.fy+b.h*.5,b.z,Math.max(b.hw,b.h*.5)),
+          obscured=close&&!inside&&terrainConcealsBuilding(b,Math.sqrt(d2));
+    b.o.visible=close&&!obscured;
+    // Sota el búnquer, ni el forjat ni la coberta no es tornen
+    // transparents. L'opacitat reduïda és només per a cases normals.
+    const basementView=!!b.basement&&inside&&P.y<b.fy-1;
+    b.roof.visible=(!inside||basementView)&&b.rhp>0;
+    for(const r of b.extraRoofs||[])r.visible=b.roof.visible;
+    if(b.upperFloor)b.upperFloor.visible=!b.rb&&(!inside||P.y>=b.fy+b.storey-.6);
+    // Les peces interposades s'oculten a la càmera, no totes les parets
+    // de l'habitació. La resta conserva el material opac original.
+    b.wm.opacity=b.dm.opacity=1;
+    b.wm.depthWrite=b.dm.depthWrite=true;
+    if(!b.o.visible)visibilityStats.buildings++;
+    if(obscured)visibilityStats.terrainOccluded++;
+  }
+  for(const w of Wl){
+    if(!w.barbed||!w.m)continue;
+    const dx=w.cx-P.x,dz=w.cz-P.z;
+    w.m.visible=(w.hp>0&&(dx*dx+dz*dz<max.fences*max.fences||
+      !!focus?.contains(w.cx,(w.y0+w.y1)*.5,w.cz,5)));
+    if(!w.m.visible)visibilityStats.fences++;
+  }
+  const chunkRadius=113; // diagonal mitja del sector de 160 m
+  for(const mesh of staticVisualBatches){
+    const dx=mesh.position.x-P.x,dz=mesh.position.z-P.z,
+          r=max.props+chunkRadius;
+    mesh.visible=dx*dx+dz*dz<r*r||!!focus?.intersectsXZBox(mesh.position.x,mesh.position.z,80);
+    if(!mesh.visible)visibilityStats.props++;
+  }
+  for(const v of V){
+    const dx=v.x-P.x,dz=v.z-P.z;
+    v.o.visible=v===cv||dx*dx+dz*dz<max.vehicles*max.vehicles||
+      !!focus?.contains(v.x,v.o.position.y+1.5,v.z,5);
+    if(!v.o.visible)visibilityStats.vehicles++;
+  }
+  for(const key in enemyLodStats)enemyLodStats[key]=0;
+  for(const e of E){
+    if(!e.o)continue;
+    const dx=e.x-P.x,dz=e.z-P.z,d2=dx*dx+dz*dz,
+          scopeDetailed=!!focus?.contains(e.x,e.o.position.y+(e.t==='torre'?8:2),e.z,e.t==='torre'?3:1.5),
+          visible=d2<max.enemies*max.enemies||scopeDetailed;
+    e.o.visible=visible;
+    if(!visible){window.HUNTER_ENEMY_LOD.setLevel(e.o,'far');visibilityStats.enemies++;enemyLodStats.hidden++;continue}
+    const d=Math.sqrt(d2),old=e.o.userData.enemyLOD,
+      fullLimit=ENEMY_LOD_RANGES.full+(old==='full'?12:-12),
+      midLimit=ENEMY_LOD_RANGES.mid+(old==='mid'?12:-12),
+      level=scopeDetailed||d<fullLimit?'full':d<midLimit?'mid':'far';
+    window.HUNTER_ENEMY_LOD.setLevel(e.o,level);
+    enemyLodStats[level]++;
+    if(level==='full'&&e.t!=='soldat'&&e.t!=='general')enemyLodStats.vehicleFull++;
+  }
+  for(const item of items){
+    const dx=item.x-P.x,dz=item.z-P.z;
+    item.o.visible=dx*dx+dz*dz<max.items*max.items||
+      !!focus?.contains(item.x,item.y+1,item.z,2);
+    if(!item.o.visible)visibilityStats.items++;
+  }
+  for(const f of fa){
+    const dx=(f.x??f.cx)-P.x,dz=(f.z??f.cz)-P.z;
+    f.o.visible=dx*dx+dz*dz<max.fauna*max.fauna||
+      !!focus?.contains(f.x??f.cx,f.o.position.y??4,f.z??f.cz,2);
+    if(!f.o.visible)visibilityStats.fauna++;
+  }
+  for(const compound of world.userData.compounds||[]){
+    if(!compound.antenna)continue;
+    const dx=compound.x-P.x,dz=compound.z-P.z;
+    compound.antenna.visible=dx*dx+dz*dz<max.antennas*max.antennas||
+      !!focus?.contains(compound.x,compound.antenna.position.y,compound.z,10);
+    if(!compound.antenna.visible)visibilityStats.antennas++;
+  }
+}
+function prepareVisibilitySystem(){return drainBuildSteps(prepareVisibilitySystemSteps())}
+function* prepareVisibilitySystemSteps(){
+  staticVisualBatches=world.children.filter(o=>o.name==='hunter-static-decor-batch');
+  yield* registerDrawCategoriesSteps();
+  updateDistanceVisibility();
+}
+
+const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joystick')),
+      strafeButtons={left:document.getElementById('strafeLeft'),right:document.getElementById('strafeRight')},
+      strafePointers={left:null,right:null},
+      STRAFE_VEHICLES=new Set(['hover','heli','heli_combat']);
+const crouchButton=document.createElement('button');
+crouchButton.id='crouchButton';crouchButton.type='button';
+crouchButton.textContent='AJUPIR';crouchButton.title='Ajupir-se o aixecar-se · X';
+crouchButton.setAttribute('aria-label','Ajupir-se o aixecar-se');
+crouchButton.setAttribute('aria-pressed','false');
+crouchButton.style.cssText='display:none;position:fixed;z-index:7;'+
+  'left:calc(12px + env(safe-area-inset-left,0px));'+
+  'bottom:calc(235px + env(safe-area-inset-bottom,0px));'+
+  'width:70px;height:42px;border-radius:12px;border:2px solid #b6d3b8;'+
+  'background:#10241edb;color:#fff;font:700 11px system-ui;'+
+  'box-shadow:0 3px 11px #0008;touch-action:manipulation';
+document.body.appendChild(crouchButton);
+const canCrouch=()=>started&&!paused&&!over&&!cv&&!swimming&&!scopeActive&&!playerFall&&!playerEject;
+function updateCrouchButton(){
+  const enabled=canCrouch();crouchButton.style.display=enabled?'block':'none';
+  crouchButton.style.background=playerCrouched?'#4a7655ee':'#10241edb';
+  crouchButton.textContent=playerCrouched?'AIXECAR':'AJUPIR';
+  crouchButton.setAttribute('aria-pressed',String(playerCrouched&&enabled));
+}
+crouchButton.addEventListener('click',e=>{
+  e.preventDefault();if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}
+});
+function setStealthDebug(enabled){window.HUNTER_STEALTH.setDebug(enabled)}
+function setStealthLayer(key,value){window.HUNTER_STEALTH.setLayer(key,value)}
+const canStrafe=()=>!scopeActive&&(cv?STRAFE_VEHICLES.has(cv.t):!playerEject&&(!playerFall||!!playerFall.parachute));
+const setStrafeHeld=(side,held)=>{
+  const button=strafeButtons[side];
+  button.classList.toggle('held',held);
+  button.setAttribute('aria-pressed',String(held));
+};
+const releaseStrafeButtons=()=>{
+  for(const side of ['left','right']){strafePointers[side]=null;setStrafeHeld(side,false)}
+};
+const updateStrafeControls=()=>{
+  const enabled=!!started&&!paused&&!over&&canStrafe();
+  document.body.classList.toggle('strafe-active',enabled);
+  if(!enabled&&(strafePointers.left!==null||strafePointers.right!==null))releaseStrafeButtons();
+  return enabled;
+};
+for(const side of ['left','right']){
+  const button=strafeButtons[side];
+  button.addEventListener('pointerdown',e=>{
+    if(!updateStrafeControls()||strafePointers[side]!==null)return;
+    e.preventDefault();strafePointers[side]=e.pointerId;
+    button.setPointerCapture(e.pointerId);setStrafeHeld(side,true);
+  });
+  const release=e=>{
+    if(strafePointers[side]!==e.pointerId)return;
+    strafePointers[side]=null;setStrafeHeld(side,false);
+  };
+  for(const name of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(name,release);
+}
+const clearKeys=()=>{
+  resetCameraState();
+  cancelGrenadeCharge();Object.keys(K).forEach(k=>K[k]=0);
+  joystick.reset();releaseStrafeButtons();
+  document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))
+};
+const quickWeapons=()=>['pistola','ganivet',...['franctirador','bazooka','granada','cisalla'].filter(k=>inv[k]>0)];
+const selectedWeapon=()=>knifeEquipped?'ganivet':sniperEquipped?'franctirador':bazookaEquipped?'bazooka':grenadeEquipped?'granada':cisallaEquipped?'cisalla':'pistola';
+function selectWeapon(k){if(!weaponPickerAvailable()||swimming||!quickWeapons().includes(k))return;cancelGrenadeCharge();setSniperScope(false);knifeEquipped=k==='ganivet';sniperEquipped=k==='franctirador';bazookaEquipped=k==='bazooka';grenadeEquipped=k==='granada';cisallaEquipped=k==='cisalla';msg=k+' equipat';msgT=1.5;drawWeaponPicker()}
+function cycleWeapon(n){const w=quickWeapons(),i=w.indexOf(selectedWeapon());selectWeapon(w[(i+n+w.length)%w.length])}
+const picker=document.createElement('div');picker.style.cssText='position:fixed;z-index:100;right:10px;bottom:258px;background:#203239ed;padding:8px;border-radius:10px;display:none;flex-direction:column;gap:5px;max-height:50vh;overflow:auto';document.body.appendChild(picker);
+const pickerToggle=document.createElement('button');pickerToggle.textContent='⚔ Armes';pickerToggle.style.cssText='position:fixed;z-index:99;right:10px;bottom:210px;padding:8px;color:white;background:#304b52;border-radius:9px';pickerToggle.style.display='none';document.body.appendChild(pickerToggle);
+let pickerOpen=false,pickerSignature=null;
+const weaponPickerAvailable=()=>!!started&&document.body.classList.contains('game-started')&&!paused&&!over&&hp>0&&!cv&&!deathCinematic?.active&&!victoryCinematic?.active&&!victoryCinematic?.finished;
+function syncWeaponPicker(){const visible=weaponPickerAvailable();const display=visible?'block':'none';if(pickerToggle.style.display!==display)pickerToggle.style.display=display;if(!visible&&pickerOpen){pickerOpen=false;drawWeaponPicker()}}
+pickerToggle.onclick=()=>{if(!weaponPickerAvailable())return;pickerOpen=!pickerOpen;drawWeaponPicker()};
+function drawWeaponPicker(){const visible=pickerOpen&&weaponPickerAvailable(),weapons=visible?quickWeapons():[];
+const signature=visible?JSON.stringify([selectedWeapon(),ammo,sniperAmmo,weapons.map(k=>[k,inv[k]])]):'hidden';
+if(signature===pickerSignature)return;pickerSignature=signature;
+picker.style.display=visible?'flex':'none';picker.replaceChildren();if(!visible)return;const names={pistola:'🔫 Pistola',ganivet:'🔪 Ganivet',franctirador:'🔭 Rifle',bazooka:'🚀 Bazooka',granada:'💣 Granades',cisalla:'✂ Cisalla'};quickWeapons().forEach((k,i)=>{const b=document.createElement('button');b.textContent=(i+1)+' · '+names[k]+' · '+(k==='pistola'?ammo:k==='franctirador'?sniperAmmo:k==='ganivet'?'∞':inv[k]);b.style.cssText='padding:8px;color:white;background:'+(selectedWeapon()===k?'#356c51':'#364a52');b.onclick=()=>{selectWeapon(k);pickerOpen=false;drawWeaponPicker()};picker.appendChild(b)})}
+const act=c=>{if(generationPromise)return;if(ui?.isBombTimerOpen?.()){
+  // No es pot tancar el programador ni detonar saltant-se la confirmació.
+  if(c==='Escape'||c==='KeyP'||c==='KeyI'){panel('inventory');return}
+  if(c==='Enter'||c==='NumpadEnter'){
+    document.getElementById('bombTimerConfirm')?.click?.();return
+  }
+  return
+}if(/^Digit[1-6]$/.test(c)){selectWeapon(quickWeapons()[Number(c.slice(5))-1]);return}if(c==='KeyV'){cycleWeapon(1);return}if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv)toggle();else if(getOptionalAction())performOptionalAction();else if(nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){
+  if(!secondaryWeapon()&&inv.expl&&(!cv||cv.t==='heli')&&
+     !swimming&&!playerFall&&!playerEject)panel('bombtimer');
+}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
+const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.reentryLockUntil>elapsed)continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
+function updateActionButton(nearby){
+  const button=document.getElementById('mainActionButton');
+  if(!button)return;
+  // El mateix vehicle que retornaria nearV() a la tecla E.
+  // En conduir, la icona continua identificant el vehicle del qual baixarem.
+  const optional=getOptionalAction();
+  const vehicle=cv||nearby||null,type=optional?'optional-'+optional.kind:vehicle?.t||'backpack',
+        name=vehicle?VT[vehicle.t]?.n||vehicle.t:null,
+        title=optional?optional.label:cv?'Baixar de '+name:nearby?'Pujar a '+name:'Obrir inventari';
+  if(button.dataset.vehicle!==type){
+    button.dataset.vehicle=type;
+    button.innerHTML=optional?optional.icon||'✋':vehicle?window.HUNTER_ACTION_ICONS.vehicle(type):window.HUNTER_ACTION_ICONS.backpack;
+  }
+  if(button.title!==title){
+    button.title=title;
+    button.setAttribute('aria-label',title);
+  }
+}
+// Cúpula del paracaigudes amb vuit cordes, visible mentre es descendeix.
+let parachuteVisual=null;
+function createParachuteVisual(){
+  const g=new THREE.Group();
+  const canopy=new THREE.Mesh(new THREE.SphereGeometry(3.45,16,7,0,Math.PI*2,0,Math.PI/2),
+    new THREE.MeshStandardMaterial({color:0xe5d7b0,side:THREE.DoubleSide,roughness:.88,flatShading:true}));
+  canopy.position.y=5.3;canopy.castShadow=true;g.add(canopy);
+  const vertices=[];
+  for(let i=0;i<8;i++){const a=i*Math.PI/4,x=Math.cos(a)*3.42,z=Math.sin(a)*3.42;
+    vertices.push(x,5.25,z,.57*Math.cos(a),2.56,.43*Math.sin(a))}
+  const lines=new THREE.BufferGeometry();
+  lines.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+  g.add(new THREE.LineSegments(lines,new THREE.LineBasicMaterial({color:0xe9eee5})));
+  world.add(g);return g;
+}
+function removeParachuteVisual(){if(parachuteVisual){world.remove(parachuteVisual);parachuteVisual=null}}
+// Detecta el primer sostre travessat durant la caiguda, també quan el
+// desplaçament horitzontal canvia de teulada dins d'un sol fotograma.
+function parachuteRoofLanding(x0,z0,y0,x1,z1,y1){
+  if(y1>=y0)return null;
+  const steps=Math.max(1,Math.ceil(Math.hypot(x1-x0,z1-z0)/.65)),
+        fall=y0-y1;
+  let hit=null;
+  for(let i=0;i<=steps;i++){
+    const q=i/steps,x=x0+(x1-x0)*q,z=z0+(z1-z0)*q,
+          candidateY=y0-fall*q;
+    for(const b of buildingCandidates(x,z)){
+      const roof=solidRoofAt(b,x,z);
+      if(!roof||y0<roof.top-.15||y1>roof.top+.05)continue;
+      // No aterrar abans que els peus arribin a la coberta.
+      if(candidateY>=roof.top-.08&&(!hit||roof.top>hit))hit=roof.top;
+    }
+  }
+  return hit;
+}
+// Compartida per al salt voluntari i per a la destrucció de l'helicòpter.
+// La caiguda conserva l'altura i la inèrcia; el dany es calcula en aterrar.
+function ejectFromHelicopter(v){
+  resetCameraState();
+  const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),side=rn(-1,1)<0?-1:1,
+        ground=Math.max(0,hAt(v.x,v.z)),
+        altitude=Number.isFinite(v.alt)?v.alt:(v.o?.position?.y??ground);
+  P.x=v.x+Math.cos(v.hd)*side*1.8;
+  P.z=v.z-Math.sin(v.hd)*side*1.8;
+  P.hd=v.hd;P.y=altitude;
+  playerFall={y:altitude,vy:0,
+    vx:fx*(v.v||0)*.82+Math.cos(v.hd)*side*2.5,
+    vz:fz*(v.v||0)*.82-Math.sin(v.hd)*side*2.5,
+    startHeight:Math.max(0,altitude-ground),t:0,spin:side,leanF:0,leanS:0};
+  const chute=!!inv.paracaigudes;
+  playerFall.parachute=chute;
+  removeParachuteVisual();
+  if(chute)parachuteVisual=createParachuteVisual();
+  v.reentryLockUntil=elapsed+8;
+  playerEject=null;v.strafeV=0;cv=null;swimming=false;
+}
+// Sortida del camió: sempre pel costat i al darrere del sentit de marxa.
+// Els punts de prova ja són fora de la caixa física, no davant del para-xocs.
+function truckExitCandidate(v,side,index){
+  const box=vehicleBox(v),k=index%8,exitSide=index<8?side:-side,
+        lateral=box.w/2+2.2+Math.floor(k/4)*1.5,
+        behind=-(v.v<0?-1:1)*(box.d*.22+(k%4)*1.35),
+        fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),
+        sx=Math.cos(v.hd),sz=-Math.sin(v.hd);
+  return{x:v.x+sx*exitSide*lateral+fx*behind,
+    z:v.z+sz*exitSide*lateral+fz*behind,side:exitSide};
+}
+function toggle(){if(playerFall||playerEject)return;resetCameraState();if(scopeActive)setSniperScope(false);if(cv){
+const leaving=cv,speed=Math.abs(leaving.v),isAir=VT[leaving.t].m==='a',
+      platform=leaving.t==='ferry'?leaving:leaving.carrier||ferryForVehicle(leaving),
+      platformLocal=platform?ferryLocal(platform,leaving.x,leaving.z):null,
+      ferry=platform&&(!isAir||Math.abs(leaving.alt-helicopterLandedAltitude(leaving,ferryLocalSurfaceY(platform,platformLocal.z)))<2)?platform:null,
+      ground=Math.max(0,hAt(leaving.x,leaving.z)),height=Math.max(0,leaving.alt-ground);
+if(isAir&&height>4&&!ferry){
+  ejectFromHelicopter(leaving);
+  leaving.crashing=true;leaving.crashT=0;leaving.crashSpin=rn(-1,1)<0?-1:1;leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;
+  msg=playerFall.parachute?'Paracaigudes desplegat!':'Has saltat! L’helicòpter està fora de control!';msgT=3;return
+}
+const moving=speed>3&&!ferry,side=rn(-1,1)<0?-1:1,rrad=vehicleRadius(leaving.t)+2.2,
+      movingTruck=moving&&leaving.t==='camio';let spot=null;
+for(let i=0;i<16;i++){
+  const a=leaving.hd+side*Math.PI/2+i*Math.PI/8,
+        localFerryExit=leaving.t==='ferry'?[0,-5,5,-10,10,-15,15,-20,20][i%9]:null,
+        candidate=localFerryExit!==null?{...ferryWorld(ferry,0,localFerryExit),side}:
+          movingTruck?truckExitCandidate(leaving,side,i):
+          {x:leaving.x+Math.cos(a)*rrad,z:leaving.z+Math.sin(a)*rrad,side},
+        {x,z}=candidate;
+  if(ferry){const q=ferryLocal(ferry,x,z);
+    if(!ferryWalkable(q.x,q.z,1.15)||ferryCabinContains(q.x,q.z,1.15))continue;
+  }
+  if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||
+    (leaving!==ferry&&circleVehicleOverlap(x,z,1.1,leaving))||
+    vehicleCandidatesAt(x,z,40).some(u=>u!==leaving&&u!==ferry&&!u.destroyed&&circleVehicleOverlap(x,z,1.1,u))||
+    wallCandidates(x,z,1).some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;
+  if(movingTruck&&hAt(x,z)<=0)continue;
+  spot=candidate;if(ferry||hAt(x,z)>0||VT[leaving.t].m==='w')break;
+}
+if(!spot){msg='No hi ha espai per baixar aquí.';msgT=3;return}
+P.x=spot.x;P.z=spot.z;P.hd=leaving.hd;
+if(ferry){const q=ferryLocal(ferry,spot.x,spot.z);P.y=ferryLocalSurfaceY(ferry,q.z)+.12;swimming=false}
+leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;leaving.reentryLockUntil=elapsed+2;
+if(moving){const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),sx=Math.cos(leaving.hd)*spot.side,sz=-Math.sin(leaving.hd)*spot.side,
+  carry=Math.sign(leaving.v)*Math.min(movingTruck?11:28,speed*(movingTruck?.3:.72)),outward=movingTruck?8:1.4;
+  playerEject={kind:'flip',vx:fx*carry+sx*outward,vz:fz*carry+sz*outward,t:.5,dur:.5,height:.68};msg='Has saltat del vehicle en marxa!';msgT=2.5}
+cv=null}else{const v=nearV();if(v){cv=v;swimming=false;playerCrouched=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
+addEventListener('keydown',e=>{
+  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
+  if(e.repeat)return;
+  if(e.code==='KeyF'&&started&&!paused&&!over&&grenadeEquipped&&!cv){
+    beginGrenadeCharge();K.KeyF=0;return;
+  }
+  act(e.code);if(started&&!paused&&!over)K[e.code]=1;
+});
+addEventListener('keyup',e=>{if(e.code==='KeyF')releaseGrenadeCharge();K[e.code]=0});
+for(const b of document.querySelectorAll('[data-k]')){
+  const c=b.dataset.k;
+  b.addEventListener('pointerdown',e=>{
+    e.preventDefault();b.setPointerCapture(e.pointerId);
+    if(c==='KeyF'&&started&&!paused&&!over&&grenadeEquipped&&!cv){
+      beginGrenadeCharge();K.KeyF=0;b.classList.add('held');return;
+    }
+    act(c);
+    if(started&&!paused&&!over){K[c]=1;b.classList.add('held')}
+  });
+  b.addEventListener('pointerup',()=>{
+    if(c==='KeyF')releaseGrenadeCharge();
+    K[c]=0;b.classList.remove('held');
+  });
+  for(const v of ['pointercancel','lostpointercapture'])
+    b.addEventListener(v,()=>{if(c==='KeyF')cancelGrenadeCharge();K[c]=0;b.classList.remove('held')});
+}
+addEventListener('blur',()=>{simulationFocused=false;updateOptionalSystems(0,false);audioPause();resetSimulationClock();clearKeys();if(started&&!paused&&!over)panel('pause')});
+addEventListener('focus',()=>{simulationFocused=true;resetSimulationClock();if(started&&!paused)audioResume()});
+document.addEventListener('visibilitychange',()=>{resetSimulationClock();if(document.hidden){updateOptionalSystems(0,false);audioPause();if(started&&!over)panel('pause')}else if(started&&!paused)audioResume()});
+ren.domElement.addEventListener('wheel',e=>{e.preventDefault();if(e.shiftKey){cycleWeapon(e.deltaY>0?1:-1);return}zoom=Math.max(.7,Math.min(1.9,zoom+e.deltaY*.001))},{passive:false});
+ren.domElement.addEventListener('pointerdown',e=>{
+  syncCameraVehicle();
+  if(!started||paused||over||drag||e.button!=null&&e.button!==0)return;
+  drag={id:e.pointerId,x:e.clientX,y:e.clientY,vehicle:cv,scope:scopeActive};
+  try{ren.domElement.setPointerCapture(e.pointerId)}catch{cancelCameraDrag()}
+});
+ren.domElement.addEventListener('pointermove',e=>{
+  syncCameraVehicle();
+  if(!drag||drag.id!==e.pointerId)return;
+  if(!started||paused||over||drag.vehicle!==cv||drag.scope!==scopeActive){resetCameraState();return}
+  const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+  if(scopeActive){
+    scopePitch=Math.max(-.65,Math.min(.65,scopePitch-dy*.00115));
+    scopeYaw-=dx*.00115;
+  }else if(cv)vehicleLook.turn(dx);
+  else P.hd-=dx*.006;
+  drag.x=e.clientX;drag.y=e.clientY;
+});
+const releaseCameraPointer=e=>{
+  if(!drag||drag.id!==e.pointerId)return;
+  cancelCameraDrag();vehicleLook.release();
+};
+for(const name of ['pointerup','pointercancel','lostpointercapture'])
+  ren.domElement.addEventListener(name,releaseCameraPointer);
+function setSniperScope(enabled){
+  resetCameraState();
+  const wasActive=scopeActive;
+  scopeActive=!!enabled&&sniperEquipped&&!!inv.franctirador&&!cv&&!swimming&&!over;
+  if(scopeActive)playerCrouched=false;
+  if(scopeActive&&!wasActive){scopeYaw=P.hd;scopePitch=0;joystick.reset();releaseStrafeButtons()}
+  if(!scopeActive){
+    scopePitch=0;scopeYaw=P.hd;
+    if(wasActive){joystick.reset();releaseStrafeButtons()}
+    if(cam.fov!==58){cam.fov=58;cam.updateProjectionMatrix()}
+  }
+  if(!scopeActive&&pl.userData.sniper)pl.userData.sniper.rotation.set(0,0,0,'YXZ');
+  if(wasActive!==scopeActive){worldVisualTick=0;palmVisualTick=0}
+  document.body.classList.toggle('sniper-scoped',scopeActive);
+  const button=document.getElementById('sniperAimButton');
+  if(button)button.setAttribute('aria-pressed',String(scopeActive));
+}
+function toggleSniperScope(){if(!paused)setSniperScope(!scopeActive)}
+const cheats={items:false,invisible:false,immune:false,fly:false};
+let cheatFlightY=null;
+function grantAllWeapons(){
+  ammo=Math.max(ammo,999);
+  for(const key of ['med','bazooka','granada','cisalla','expl','franctirador','paracaigudes','disf'])inv[key]=Math.max(inv[key]||0,999);
+  sniperAmmo=Math.max(sniperAmmo,999);
+  hqMapKnown=true;
+  for(const v of V)if(v.rockets!=null)v.rockets=Math.max(v.rockets,999);
+}
+function setCheat(key,enabled){
+  if(!Object.hasOwn(cheats,key))return;
+  cheats[key]=!!enabled;
+  if(key==='items'&&enabled){grantAllWeapons();revealMapPickup('mapa');revealMapPickup('mapa_heli');revealMapPickup('mapa_tanc')}
+  if(key==='fly'){cheatFlightY=enabled?P.y:null;if(enabled){cv=null;playerFall=null;playerEject=null;swimming=false}}
+  if(key==='invisible'&&enabled)for(const u of E){u.canSee=false;u.canShoot=false;u.alert=0;u.recognition=0;u.pursuitT=0;if(u.t==='soldat'){u.aiMode='patrol';u.searchT=0}}
+}
+function resume(){if(generationPromise)return;paused=false;simulationFocused=true;clearKeys();ui.hide();audioResume();resetSimulationClock()}
+function panel(mode){if(generationPromise)return;setSniperScope(false);paused=true;updateOptionalSystems(0,false);resetSimulationClock();pickerOpen=false;picker.style.display='none';pickerToggle.style.display='none';clearKeys();audioPause();ui.show(mode)}
+// Les cartes revelen informació de forma immediata: no són objectes
+// d'inventari que s'hagin d'equipar ni obrir manualment.
+function revealMapPickup(kind){
+  if(kind==='mapa'){
+    hqMapKnown=true;
+    return 'HQ enemic descobert al mapa!';
+  }
+  const isHeli=kind==='mapa_heli',isTank=kind==='mapa_tanc';
+  if(!isHeli&&!isTank)return null;
+  const markKind=isHeli?'heli':'tanc',
+        targets=(isHeli?V.filter(v=>v.t==='heli'||v.t==='heli_combat'):
+          [...V.filter(v=>v.t==='tanc'),...E.filter(e=>e.t==='tanc')])
+          .filter(v=>!v.destroyed);
+  intelMarks=intelMarks.filter(m=>m.kind!==markKind);
+  targets.forEach((v,i)=>intelMarks.push({
+    kind:markKind,ref:v,
+    label:(isHeli?(v.t==='heli_combat'?'Helicòpter de combat ':'Helicòpter '):'Tanc ')+(i+1)
+  }));
+  return 'Mapa actualitzat: '+targets.length+' '+(isHeli?'helicòpters':'tancs')+' localitzats.';
+}
+function useInvItem(id){
+  if(!inv[id])return false;
+  if(id==='med'){if(hp>=COMBAT_BALANCE.player){msg='Ja tens la vida al màxim.';msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(COMBAT_BALANCE.player,Math.ceil(hp)+COMBAT_BALANCE.medkit);msg='Has usat una farmaciola.';msgT=2;snd('pick');return true}
+  if(id==='expl'){
+    if(cv&&cv.t!=='heli'||swimming||playerFall||playerEject){
+      msg=cv?.t==='heli_combat'?
+        'No pots utilitzar C4 des de l’helicòpter de combat.':
+        'No pots preparar explosius des d’aquí.';
+      msgT=2;return false
+    }
+    panel('bombtimer');return true
+  }
+  if(id==='cisalla'){
+    if(cv||swimming||playerFall||playerEject){msg='La cisalla només es pot equipar a peu.';msgT=2;return false}
+    cancelGrenadeCharge();cisallaEquipped=!cisallaEquipped;
+    if(cisallaEquipped){knifeEquipped=false;bazookaEquipped=false;grenadeEquipped=false;sniperEquipped=false;setSniperScope(false)}
+    resume();msg=cisallaEquipped?'Cisalla equipada · Acosta’t a una tanca i prem Talla / F.':'Cisalla desada.';msgT=2;return true
+  }
+  if(id==='bazooka'){if(cv||swimming){msg='Has d’anar a peu per equipar el bazooka.';msgT=2;return false}cancelGrenadeCharge();bazookaEquipped=!bazookaEquipped;if(bazookaEquipped){knifeEquipped=false;grenadeEquipped=false;cisallaEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=bazookaEquipped?'Bazooka equipat: '+inv.bazooka+' coets disponibles.':'Bazooka desequipat.';msgT=2;return true}
+  if(id==='granada'){if(cv||swimming){msg='Has d’anar a peu per equipar les granades.';msgT=2;return false}cancelGrenadeCharge();grenadeEquipped=!grenadeEquipped;if(grenadeEquipped){knifeEquipped=false;bazookaEquipped=false;cisallaEquipped=false;sniperEquipped=false;setSniperScope(false)}resume();msg=grenadeEquipped?'Granades equipades: '+inv.granada+'.':'Granades desequipades.';msgT=2;return true}
+  if(id==='franctirador'){
+    cancelGrenadeCharge();
+    if(cv||swimming){msg='Has d’anar a peu per equipar el rifle.';msgT=2;return false}
+    sniperEquipped=!sniperEquipped;
+    if(sniperEquipped){knifeEquipped=false;bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false}
+    setSniperScope(false);resume();
+    msg=sniperEquipped?'Rifle equipat · '+sniperAmmo+' cartutxos · Mira amb T.':'Rifle desequipat.';msgT=2;return true
+  }
+  if(id==='disf'){setDis(!disg);msg=disg?'Disfressa activada.':'Disfressa desactivada.';msgT=2;return true}
+  if(id==='mapa'||id==='mapa_heli'||id==='mapa_tanc'){
+    // Compatibilitat amb una carta que encara pugui existir en un inventari antic.
+    msg=revealMapPickup(id);msgT=3;delete inv[id];mini();return true;
+  }
+  return false
+}
+function dropInvItem(id){
+  if(!inv[id]||id==='arma')return false;inv[id]--;if(inv[id]<=0)delete inv[id];if(id==='disf'&&disg)setDis(false);if(id==='bazooka'&&bazookaEquipped&&!inv.bazooka)bazookaEquipped=false;if(id==='cisalla'&&cisallaEquipped&&!inv.cisalla){cisallaEquipped=false;pl.userData.cisallaCut=0}if(id==='granada'&&grenadeEquipped&&!inv.granada){grenadeEquipped=false;cancelGrenadeCharge()}if(id==='franctirador'&&!inv.franctirador){sniperEquipped=false;setSniperScope(false)}
+  msg='Has deixat: '+IT[id].n;msgT=2;return true
+}
+combatFeedback=window.HUNTER_UI.createCombatFeedback({
+  element:document.getElementById('combatFeedback'),
+  hit:document.getElementById('hitConfirm'),
+  direction:document.getElementById('damageDirection')
+});
+const combatCameraForward=new THREE.Vector3(),combatCameraRight=new THREE.Vector3();
+function renderCombatFeedback(){
+  cam.getWorldDirection(combatCameraForward);
+  if(Math.hypot(combatCameraForward.x,combatCameraForward.z)<.001){
+    combatCameraRight.set(1,0,0).applyQuaternion(cam.quaternion);
+    combatCameraForward.set(combatCameraRight.z,0,-combatCameraRight.x);
+  }
+  combatFeedback.update({active:!!started&&!paused&&!over&&simulationFocused&&!document.hidden,
+    now:performance.now(),playerX:P.x,playerZ:P.z,
+    forwardX:combatCameraForward.x,forwardZ:combatCameraForward.z});
+}
+let stealthVisibilityFrame=0;
+const stealthVehicleBounds=new WeakMap();
+function stealthFeedbackVisible(u,body,marker){
+  const from=cam.position;
+  function clear(to){
+    const reach=Math.hypot(to.x-from.x,to.z-from.z)/2+3,
+      mx=(from.x+to.x)/2,mz=(from.z+to.z)/2;
+    for(const w of wallCandidates(mx,mz,reach)){
+      if(w.open||w.barbed||w.hp<=0)continue;
+      const t=segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);
+      if(t!==null&&t>.002&&t<.998)return false;
+    }
+    for(const b of buildingCandidates(mx,mz,reach)){
+      if(b.rb||b.rhp<=0)continue;
+      if(b.upperFloor&&Number.isFinite(b.storey)&&Math.abs(to.y-from.y)>.001){
+        const floor=b.fy+b.storey+.15,q=(floor-from.y)/(to.y-from.y);
+        if(q>.002&&q<.998&&upperFloorHeight(b,from.x+(to.x-from.x)*q,
+          from.z+(to.z-from.z)*q,floor)!==null)return false;
+      }
+      const t=b.hangar?hangarRoofSegmentT(from.x,from.y,from.z,to.x,to.y,to.z,b):
+        segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,b.x-b.w/2,b.x+b.w/2,
+          b.fy+b.h-.35,b.fy+b.h+.8,b.z-b.d/2,b.z+b.d/2);
+      if(t!==null&&t>.002&&t<.998)return false;
+    }
+    for(const v of vehicleCandidatesAt(mx,mz,reach+18)){
+      if(v.destroyed||!v.o)continue;
+      let cached=stealthVehicleBounds.get(v);
+      if(!cached){cached={frame:-1,box:new THREE.Box3()};stealthVehicleBounds.set(v,cached)}
+      if(cached.frame!==stealthVisibilityFrame){
+        v.o.updateWorldMatrix(true,true);cached.box.setFromObject(v.o);cached.frame=stealthVisibilityFrame;
+      }
+      const box=cached.box;
+      if(box.isEmpty()){
+        const radius=vehicleRadius(v.t)*.55;
+        if(segmentSphereT(from.x,from.y,from.z,to.x,to.y,to.z,v.x,vehicleY(v)+1.5,v.z,radius)!==null)return false;
+      }else{
+        const t=segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,
+          box.min.x,box.max.x,box.min.y,box.max.y,box.min.z,box.max.z);
+        if(t!==null&&t>.002&&t<.998)return false;
+      }
+    }
+    const count=Math.min(96,Math.max(2,Math.ceil(from.distanceTo(to))));
+    for(let i=1;i<count;i++){
+      const q=i/count,x=from.x+(to.x-from.x)*q,y=from.y+(to.y-from.y)*q,z=from.z+(to.z-from.z)*q;
+      if(bunkerProjectileSurface(x,z,y)>y-.12)return false;
+    }
+    return true;
+  }
+  return clear(body)&&clear(marker);
+}
+function renderStealthFeedback(){
+  stealthVisibilityFrame++;
+  stealthFeedback.update({world,camera:cam,enemies:E,active:!!started&&!paused&&!over&&simulationFocused&&!document.hidden,
+    visible:stealthFeedbackVisible});
+}
+const ui=window.HUNTER_UI.create({
+  hud:document.getElementById('hud'),
+  panel:document.getElementById('gamepanel'),
+  title:document.getElementById('panelTitle'),
+  body:document.getElementById('panelBody'),
+  resumeButton:document.getElementById('resumeButton'),
+  minimap,
+  getState:({nearVehicle=cv?null:nearV()}={})=>({
+    hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
+    inventory:inv,itemTypes:IT,player:P,nearVehicle,optionalAction:getOptionalAction(),messageTime:msgT,message:msg,
+    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,muted,cheats:{...cheats},stealthDebug:window.HUNTER_STEALTH.enabled(),stealthLayers:window.HUNTER_STEALTH.layers(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
+  }),
+  actions:{
+    resume,
+    open:mode=>panel(mode),
+    setWaypoint:v=>waypoint=v,
+    useItem:id=>useInvItem(id),
+    placeExplosive:seconds=>{
+      if(!plant(seconds))return false;
+      resume();return true
+    },
+    dropItem:id=>dropInvItem(id),
+    restart:d=>startGameProgressively({difficulty:d,scale:MAP_SCALE,seed:requestedSeed,restart:true}),
+    setPalmsDisabled,
+    setWaterDisabled,
+    setShadowsDisabled,
+    setPerformanceStatsVisible,
+    setAudioMuted,
+    setStealthDebug,
+    setStealthLayer,
+    zoom:d=>zoom=Math.max(.7,Math.min(1.9,zoom+d)),
+    setCheat
+  }
+});
+mc.onclick=()=>started&&panel('map');
+function vehicleImpactFx(x,y,z){debris(x,y,z,0xffc14d,5,.16,5);puff(x,y,z,0x8a8478,.8)}
+function collisionDamageVehicle(v,dmg,impacts=1){
+ if(v?.t==='tanc')return;
+ impactVehicle(v,impacts>1?impacts:dmg);
+}
+function relativeVehicleImpactSpeed(a,b){
+ const ah=a.hd||0,bh=b.navHd??b.hd??0,
+  av=a.v??a.impactSpeed??0,bv=b.v??b.impactSpeed??0;
+ return Math.hypot(-Math.sin(ah)*av+Math.sin(bh)*bv,
+  -Math.cos(ah)*av+Math.cos(bh)*bv);
+}
+function ramSpeedFactor(type,barbed){
+  if(type==='tanc')return .995;
+  if(type==='camio'&&barbed)return 1;
+  return barbed?.72:.55;
+}
+// Llindars d'embestida: una maniobra lenta no pot fer esclatar una moto
+// ni destruir un tram de tanca. En marxa enrere cal encara més impuls.
+// El tanc conserva l'excepció de força a qualsevol velocitat.
+function vehicleRamThreshold(v,barbed){
+  if(v.t==='tanc')return 0;
+  const base=v.t==='camio'&&barbed?12:barbed?16:22;
+  return base+(v.v<0?5:0);
+}
+function vehicleCanBreakBarrier(v,barbed){
+  return v.t==='tanc'||Math.abs(v.v)>vehicleRamThreshold(v,barbed);
+}
+function mayRamWhileRecovering(type,barbed,cooldown){
+  return cooldown<=0||type==='tanc'||(type==='camio'&&barbed);
+}
+function tankCanCrush(v,other,ownMass,otherMass){
+  return v.t==='tanc'&&Math.abs(v.v)>1&&ownMass>otherMass&&other.t!=='ferry';
+}
+function killShark(f){
+  if(f.dead)return;
+  window.HUNTER_SHARKS.kill(f);
+  const y=wy(f.x,f.z,elapsed)+.1;
+  puff(f.x,y,f.z,0xffffff,2.8);
+  puff(f.x,y,f.z,0x92bac1,1.7);
+  if(victoryCinematic?.active)return;
+  msg='Has envestit un tauró!';msgT=1.8;
+}
+function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
+  const c=VT[v.t],speed=Math.abs(v.v),radius=vehicleRadius(v.t);
+  v.impactFromX=oldX;v.impactFromZ=oldZ;
+  v.ramCd=Math.max(0,(v.ramCd||0)-dt);v.envCd=Math.max(0,(v.envCd||0)-dt);v.bump=Math.max(0,(v.bump||0)-dt);
+  // Els cascs i taules poden atropellar taurons. La trajectòria
+  // completa detecta col·lisions fins i tot entre dos fotogrames.
+  if(speed>=3&&(c.m==='w'||c.m==='wl')&&hAt(v.x,v.z)<-.8){
+    for(const f of fa){
+      if(f.k!=='s'||f.dead)continue;
+      if(Math.abs((v.o?.position?.y??0)-wy(f.x,f.z,elapsed))>2.5)continue;
+      if(window.HUNTER_SHARKS.vehicleHit(f,oldX,oldZ,v.x,v.z,radius))
+        killShark(f);
+    }
+  }
+  // Les roques emergides, també a la costa, aturen vehicles marítims i
+  // terrestres; els helicòpters només hi xoquen si volen prou baixos.
+  if(speed>=2.5&&v.envCd<=0){
+    const baseY=c.m==='a'?(v.alt??0)-1:
+      (c.m==='w'||c.m==='wl')?-1.4:hAt(v.x,v.z),
+      topY=c.m==='a'?(v.alt??0)+2:baseY+Math.max(2,(VS[v.t]||1)*2.2),
+      rock=nearbyRock(v.x,v.z,radius*.48,baseY,topY);
+    if(rock){
+      // Fins i tot a poc a poc, la roca és sòlida; però només els
+      // impactes ràpids treuen vida al vehicle.
+      if(speed>10){
+        collisionDamageVehicle(v,Math.min(5,Math.max(1,Math.ceil(speed/(9*Math.sqrt(c.mass||1))))),1);
+        vehicleImpactFx(rock.x,Math.max(0,hAt(rock.x,rock.z))+.8,rock.z);
+      }
+      if(v.destroyed)return;
+      const dx=v.x-rock.x,dz=v.z-rock.z,dist=Math.hypot(dx,dz),
+        clear=rock.r+radius*.48+.08;
+      if(dist>.01){v.x=rock.x+dx/dist*clear;v.z=rock.z+dz/dist*clear}
+      else{v.x=oldX;v.z=oldZ}
+      v.v*=-.12;v.bump=.22;v.envCd=.32;
+      msg='Impacte amb roca!';msgT=1;return;
+    }
+  }
+  if(speed<2.5||c.m==='a'||c.m==='w')return;
+  // Els impactes lents no maten automàticament els soldats.
+  if(v.ramCd<=0&&speed>6){
+    for(const u of E){
+      if(u.t!=='soldat')continue;
+      if(runoverSweepHit(oldX,oldZ,v.x,v.z,u.x,u.z,radius*.68+u.r*.45)){
+        const dmg=runoverDamage(speed,c.mass||1);
+        hurtE(u,dmg);u.alert=12;v.ramCd=.35;v.v*=.86;
+        msg='Atropellament!';msgT=1;break;
+      }
+    }
+  }
+  if(v.ramCd<=0&&speed>6){
+    for(const civilian of prisonerSystem.entities){
+      if(civilian.hp<=0||civilian.destroyed||Math.abs(vehicleY(v)-civilian.y)>3)continue;
+      if(runoverSweepHit(oldX,oldZ,v.x,v.z,civilian.x,civilian.z,radius*.68+civilian.radius*.45)){
+        const lost=prisonerSystem.hurt(civilian,runoverDamage(speed,c.mass||1),{type:'vehicle',x:v.x,z:v.z});
+        if(lost)spawnBulletImpact('blood',civilian.x,civilian.y+1,civilian.z,{sx:oldX,sy:vehicleY(v)+1,sz:oldZ});
+        v.ramCd=.35;v.v*=.86;msg='Atropellament d’un civil!';msgT=2;break;
+      }
+    }
+  }
+  if(v.envCd>0)return;
+  const t=treeAt(v.x,v.z,radius*.48);if(!t)return;
+  if(t.p&&t.alive){
+    const heavy=v.t==='tanc'||v.t==='camio';
+    if(!heavy&&speed<=10){
+      // Una maniobra a poca velocitat topa amb la palmera, sense
+      // fer-la caure ni perdre PV. Els pesants conserven la força.
+      v.x=oldX;v.z=oldZ;v.v*=.12;v.bump=.12;v.envCd=.15;return;
+    }
+    killPalm(t);
+    if(!heavy)collisionDamageVehicle(v,Math.min(3,Math.max(1,Math.ceil(speed/(18*Math.sqrt(c.mass||1))))),1);
+    if(v.destroyed)return;
+    if(!heavy)v.v*=.9;
+    v.bump=heavy?.06:.18;v.envCd=heavy?.08:.28;
+    msg='Has tombat una palmera.';msgT=1;return;
+  }
+  // Les roques ja s'han resolt abans, també per a les embarcacions.
+}
+// Hitboxes físics de les cobertes. Calculats a partir de la mateixa
+// geometria dels sostres, sense afegir malles al renderitzador.
+function solidRoofAt(b,x,z){
+  if(!b||b.rhp<=0||b.rb)return null;
+  const rx=x-b.x,rz=z-b.z;
+  if(!b.hangar){
+    const sx=b.roof?.scale?.x||1,sz=b.roof?.scale?.z||1;
+    if(Math.abs(rx)>(b.w+1.35)*sx/2||Math.abs(rz)>(b.d+1.35)*sz/2)return null;
+    // Coberta rectangular: gruix 1.15, centre a h+.62.
+    return {bottom:b.fy+b.h+.045,top:b.fy+b.h+1.195,building:b};
+  }
+  // La volta visual té 10 segments amb juntes mínimes entre plaques.
+  // L'envolupant semicircular omple aquestes juntes, sense forats
+  // a la hitbox, i manté la mateixa alçada i pendent que les plaques.
+  if(Math.abs(rz)>(b.d+1.15)/2)return null;
+  const radius=b.w/2;
+  if(Math.abs(rx)>radius+.2)return null;
+  const curvedY=b.fy+.12+Math.sqrt(Math.max(0,radius*radius-Math.min(radius,Math.abs(rx))**2));
+  return {bottom:curvedY-.32,top:curvedY+.32,building:b};
+}
+function roofNearXZ(b,x,z,r=0){
+  if(!b||b.rhp<=0||b.rb)return null;
+  const hw=b.hangar?b.w/2+.1:(b.w+1.35)*(b.roof?.scale?.x||1)/2,
+        hd=b.hangar?(b.d+1.15)/2:(b.d+1.35)*(b.roof?.scale?.z||1)/2,
+        xx=Math.max(b.x-hw,Math.min(b.x+hw,x)),
+        zz=Math.max(b.z-hd,Math.min(b.z+hd,z));
+  if((x-xx)**2+(z-zz)**2>r*r)return null;
+  const safeX=b.hangar?Math.max(b.x-hw+.23,Math.min(b.x+hw-.23,xx)):xx;
+  return solidRoofAt(b,safeX,zz);
+}
+function helicopterRoofCollision(v,x,z,alt){
+  const scale=VS[v.t]||1,skid=v.o.userData.skidContactHeight||0,
+        rotor=v.o.userData.rotorContactHeight||((v.t==='heli_combat'?3.3:3.9)*scale),
+        bodyTop=alt+(v.t==='heli_combat'?3.0:3.45)*scale,
+        bodyBottom=alt+skid,rotorY=alt+rotor,
+        bodyRadius=(v.t==='heli_combat'?1.45:1.65)*scale,
+        rotorRadius=(v.t==='heli_combat'?6.75:7.4)*scale;
+  for(const b of buildingCandidates(x,z,rotorRadius+2)){
+    const hull=roofNearXZ(b,x,z,bodyRadius);
+    if(hull&&bodyBottom<hull.top+.08&&bodyTop>hull.bottom-.08)return hull;
+    const blades=roofNearXZ(b,x,z,rotorRadius);
+    if(blades&&rotorY>=blades.bottom-.11&&rotorY<=blades.top+.11)return blades;
+  }
+  return null;
+}
+function helicopterRoofAltitude(v,x,z,fromAlt,toAlt){
+  const skid=v.o.userData.skidContactHeight||0,
+        rotor=v.o.userData.rotorContactHeight||((v.t==='heli_combat'?3.3:3.9)*(VS[v.t]||1)),
+        radius=(v.t==='heli_combat'?1.45:1.65)*(VS[v.t]||1);
+  for(const b of buildingCandidates(x,z,radius+2)){
+    const roof=roofNearXZ(b,x,z,radius);
+    if(!roof)continue;
+    // Descens des de sobre: patins sobre la coberta.
+    if(toAlt<fromAlt&&fromAlt+skid>=roof.top-.12&&toAlt+skid<roof.top+.12)
+      toAlt=Math.max(toAlt,roof.top-skid+.1);
+    // Ascens des de l'interior: el rotor no travessa la volta.
+    else if(toAlt>fromAlt&&fromAlt+rotor<=roof.bottom+.12&&toAlt+rotor>roof.bottom-.12)
+      toAlt=Math.min(toAlt,roof.bottom-rotor-.12);
+  }
+  return toAlt;
+}
+// Volum escombrat de l'helicòpter: fuselatge, patins i disc complet
+// de les aspes. La Y evita que una palmera bloquegi un aparell molt alt.
+function helicopterEnvironmentContact(v,from,to){
+  const scale=VS[v.t]||1,skid=v.o.userData.skidContactHeight||0,
+    rotor=v.o.userData.rotorContactHeight||3.9*scale,
+    rotorRadius=(v.t==='heli_combat'?6.75:7.4)*scale,
+    bodyRadius=(v.t==='heli_combat'?1.45:1.65)*scale,
+    bodyTop=(v.t==='heli_combat'?3:3.45)*scale,
+    steps=Math.min(12,Math.max(1,Math.ceil(Math.hypot(to.x-from.x,to.z-from.z)/2.5+Math.abs(to.alt-from.alt)/2.5)));
+  for(let i=1;i<=steps;i++){
+    const q=i/steps,x=from.x+(to.x-from.x)*q,z=from.z+(to.z-from.z)*q,
+      alt=from.alt+(to.alt-from.alt)*q,bladeY=alt+rotor,
+      floor=Math.max(0,groundAt(x,z)),bottom=alt+skid;
+    if(bottom<floor-.18&&(Math.hypot(v.v||0,v.strafeV||0)>4||v.verticalV< -4))
+      return{x,z,alt,y:floor,kind:'ground'};
+    // Les puntes del rotor poden tocar un vessant encara que el centre voli alt.
+    for(const r of [rotorRadius*.6,rotorRadius])for(let a=0;a<12;a++){
+      const angle=a*Math.PI/6,px=x+Math.cos(angle)*r,pz=z+Math.sin(angle)*r,
+        terrain=Math.max(0,groundAt(px,pz));
+      if(bladeY<=terrain+.16)return{x,z,alt,y:terrain,kind:'ground'};
+    }
+    for(const b of buildingCandidates(x,z,rotorRadius+2)){
+      const bladeRoof=roofNearXZ(b,x,z,rotorRadius);
+      if(bladeRoof&&bladeY>=bladeRoof.bottom-.16&&bladeY<=bladeRoof.top+.16)
+        return{x,z,alt,y:bladeY,kind:'roof'};
+      const hull=roofNearXZ(b,x,z,bodyRadius);
+      if(hull&&bottom<hull.top+.06&&alt+bodyTop>hull.bottom-.06)
+        return{x,z,alt,y:hull.top,kind:'roof'};
+    }
+    const cells=Math.ceil((rotorRadius+6)/16),cx=Math.floor(x/16),cz=Math.floor(z/16);
+    for(let dx=-cells;dx<=cells;dx++)for(let dz=-cells;dz<=cells;dz++){
+      const list=TG.get((cx+dx)+','+(cz+dz));if(!list)continue;
+      for(const tree of list){
+        if(!tree.p||!tree.alive||palmsDisabled)continue;
+        const d=Math.hypot(tree.x-x,tree.z-z),height=tree.s*6.2,
+          crownRadius=tree.s*4.7,base=tree.y;
+        const bodyHit=d<bodyRadius+tree.r&&bottom<base+height&&alt+bodyTop>base;
+        const bladeHit=d<rotorRadius+crownRadius&&bladeY>=base+height-tree.s*1.2&&bladeY<=base+height+tree.s*1.8 ||
+          d<rotorRadius+tree.r&&bladeY>=base&&bladeY<=base+height;
+        if(bodyHit||bladeHit)return{x,z,alt,y:bladeHit?bladeY:bottom,kind:'tree'};
+      }
+    }
+  }
+  return null;
+}
+// Les antenes i les parabòliques són obstacles físics de l'aire:
+// el cos o el rotor poden xocar de front, lateralment o en ascens.
+function crashHelicopterStructure(v,contact){
+  const wasPiloted=cv===v;
+  v.x=contact.x;v.z=contact.z;v.alt=contact.alt;
+  place(v,elapsed,0,0);
+  vehicleImpactFx(contact.x,contact.y,contact.z);
+  damageVehicle(v,65,Math.max(1,v.life??VT[v.t].life));
+  if(wasPiloted){
+    msg={antenna:'Has xocat contra l’antena!',satellite:'Has xocat contra la parabòlica!',
+      tree:'Les aspes han tocat una palmera!',ground:'Has xocat contra el terreny!',
+      roof:'Has xocat contra un edifici!'}[contact.kind]||'Col·lisió de l’helicòpter!';
+    msgT=3;
+  }
+  return false;
+}
+function stepV(v,f,tr,ud,dt,strafe=0){
+const c=VT[v.t],a=c.m==='a',water=c.m==='w'||c.m==='wl',land=c.m==='l',radius=vehicleRadius(v.t),input=window.HUNTER_VEHICLE_DYNAMICS.inputs(v,f,tr,dt);f=input.forward;tr=input.turn;
+// Strafe sense girar: només hovercraft i els dos helicòpters.
+// Conservar la deriva natural existent (sideV) i afegir-hi una velocitat
+// lateral independent amb acceleració i frenada suaus.
+const maxStrafe=v.t==='hover'?12:(a?(c.strafeMax||17):0),
+      targetStrafe=maxStrafe*Math.max(-1,Math.min(1,strafe));
+v.strafeV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.strafeV||0,targetStrafe,6.5,dt);
+if(Math.abs(targetStrafe)<.01&&Math.abs(v.strafeV)<.02)v.strafeV=0;
+if(a&&v.carrier&&ud>.12){detachFromFerry(v);v.verticalV=Math.max(v.verticalV||0,3)}
+v.v+=f*c.a*dt;
+const dragBase=c.dr*(water?1.08:land?.86:1),coastBoost=Math.abs(f)<.03?(water?1.18:land?1.04:.82):1;
+v.v*=Math.max(0,1-dragBase*coastBoost*dt);
+v.v=Math.max(-(c.maxR||12),Math.min(c.maxF||40,v.v));
+
+let steerScale=1;
+if(land){const speed=Math.abs(v.v),fade=c.steerFade??.4;steerScale=(.35+.65*Math.min(1,speed/9))*(1-fade*Math.min(1,speed/(c.maxF||35))*.55)}
+else if(water){const speed=Math.abs(v.v),min=c.waterSteerMin??.2;steerScale=min+(1-min)*Math.min(1,speed/10)}
+const targetYaw=tr*c.tu*steerScale*(a?1:(v.v<0?-1:1));
+v.yawRate=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.yawRate||0,targetYaw,c.yawResponse||4,dt);
+v.hd+=v.yawRate*dt;
+
+let sideV=0;
+if(water){
+  const drift=(c.waterDrift||0)*v.v*v.yawRate;
+  v.sideV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.sideV||0,drift,2.2,dt);
+  sideV=v.sideV;
+}else if(land){
+  const grip=c.landGrip??.9,slip=(1-grip)*v.v*v.yawRate*.42;
+  v.sideV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.sideV||0,slip,5+grip*5,dt);
+  sideV=v.sideV;
+}else v.sideV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.sideV||0,0,4,dt);
+
+const oldX=v.x,oldZ=v.z,
+      fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),sx=Math.cos(v.hd),sz=-Math.sin(v.hd);
+const totalSideV=sideV+v.strafeV,
+      nx=v.x+(fx*v.v+sx*totalSideV)*dt,nz=v.z+(fz*v.v+sz*totalSideV)*dt,raw=hAt(nx,nz),h=land?groundAt(nx,nz):raw,g=Math.max(0,h),
+      deckCarrier=(land||a)?ferryForVehicle(v,nx,nz,true):null;let ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;
+if(c.m==='w')ok=ok&&raw<-1.2;if(c.m==='l')ok=ok&&(!!deckCarrier||h>-1.2);
+if(ok&&a&&!deckCarrier){
+  const structureHit=window.HUNTER_AIR_OBSTACLES.hit(THREE,world,v,
+    {x:v.x,z:v.z,alt:v.alt},{x:nx,z:nz,alt:v.alt},VS[v.t]||1);
+  if(structureHit)return crashHelicopterStructure(v,structureHit);
+  const environmentHit=helicopterEnvironmentContact(v,
+    {x:v.x,z:v.z,alt:v.alt},{x:nx,z:nz,alt:v.alt});
+  if(environmentHit)return crashHelicopterStructure(v,environmentHit);
+}
+if((!a||v.alt-g<16)&&!deckCarrier){const footprint=vehicleBox(v,nx,nz,v.hd);for(const w of wallCandidates(nx,nz,radius))if(!w.open&&w.playerBlock!==false&&
+  !(a&&(v.alt+(v.o.userData.skidContactHeight||0)>w.y1+.15||
+    v.alt+(v.o.userData.rotorContactHeight||7)<w.y0-.15))&&
+  !(w.towerLegOwner&&a&&v.alt>w.y1+2)&&nx>w.x0-radius&&nx<w.x1+radius&&nz>w.z0-radius&&nz<w.z1+radius){
+  const touch=w.barbed?fenceVehicleContact(w,footprint):null;
+  if(w.barbed&&!touch)continue;
+  // Els murs empren la caixa real del vehicle. Abans el radi ample
+  // bloquejava el tanc quan encara no havia tocat la porta.
+  if(!w.barbed&&!obbOverlap(footprint,{
+    x:(w.x0+w.x1)/2,z:(w.z0+w.z1)/2,hd:0,
+    w:Math.max(.05,w.x1-w.x0),d:Math.max(.05,w.z1-w.z0)
+  }))continue;
+  // Les parets del pis superior no bloquegen vehicles a nivell de terra.
+  if(land&&(w.y1<g-.8||w.y0>g+
+    (v.t==='tanc'||v.t==='camio'?5.6:4.2)*(VS[v.t]||1)))continue;
+  if(w.rammable&&land&&mayRamWhileRecovering(v.t,!!w.barbed,v.envCd)){
+    const barbed=!!w.barbed,tank=v.t==='tanc',
+          truckFence=v.t==='camio'&&barbed;
+    if(vehicleCanBreakBarrier(v,barbed)){
+      dmgW(w,w.hp);
+      if(!tank&&!truckFence)collisionDamageVehicle(v,0,barbed?2:3);
+      const hitX=touch?.x??w.cx,hitZ=touch?.z??w.cz;
+      vehicleImpactFx(hitX,Math.max(0,hAt(hitX,hitZ))+1.1,hitZ);
+      if(v.destroyed)return false;
+      v.v*=ramSpeedFactor(v.t,barbed);
+      v.bump=(tank||truckFence)?.06:barbed?.14:.2;
+      v.envCd=(tank||truckFence)?.08:.28;
+      if(!Wl.includes(w)){msg=barbed?'Has trencat la filferrada!':'Has travessat una paret!';msgT=1;continue}
+    }
+  }
+  if(a)return crashHelicopterStructure(v,{x:nx,z:nz,alt:v.alt,y:w.y1,kind:'roof'});
+  ok=false;break
+}}
+if(ok&&deckCarrier&&ferryCabinVehicleHit(deckCarrier,vehicleBox(v,nx,nz,v.hd))){
+  // La cabina bloqueja els vehicles embarcats, com un edifici sòlid.
+  ok=false;v.bump=.12;
+}
+if(ok){const test=vehicleBox(v,nx,nz,v.hd),hit=vehicleObstacles(v).find(o=>o!==deckCarrier&&o!==v.carrier&&o.carrier!==v&&vehicleHeightCompatible(v,o)&&obbOverlap(test,vehicleBox(o)));if(hit){
+  const rel=relativeVehicleImpactSpeed(v,hit),ownMass=c.mass||1,otherMass=VT[vehicleHitType(hit.t)]?.mass||1,
+        ratio=Math.max(.35,Math.min(2.5,otherMass/ownMass)),
+        tankCrush=tankCanCrush(v,hit,ownMass,otherMass);
+  if(tankCrush){
+    if(E.includes(hit))hurtE(hit,Math.max(300,hit.hp+1));
+    else damageVehicle(hit,0,Math.max(1,hit.life??VT[hit.t].life));
+    vehicleImpactFx(hit.x,Math.max(vehicleY(v),vehicleY(hit))+.5,hit.z);
+    v.v*=.99;v.bump=.08;v.envCd=.12;
+  }else{
+    v.v*=rel>5?Math.max(.16,.42/ratio):Math.max(.3,.62/ratio);
+    if('v'in hit)hit.v*=Math.max(.3,.72/Math.max(.5,ownMass/otherMass));
+    if(rel>10&&v.envCd<=0){
+      collisionDamageVehicle(v,impactDamage(rel,ownMass,otherMass),1);
+      impactVehicle(hit,impactDamage(rel,otherMass,ownMass));
+      vehicleImpactFx((v.x+hit.x)/2,Math.max(vehicleY(v),vehicleY(hit))+.5,(v.z+hit.z)/2);
+    }
+    v.bump=.14;v.envCd=.18;ok=false;
+  }
+}}
+if(ok){
+  v.x=nx;v.z=nz;
+  if(land){
+    const f2=ferryForVehicle(v,v.x,v.z,true);if(f2)attachToFerry(v,f2);else if(v.carrier)detachFromFerry(v)
+  }
+  handleVehicleImpacts(v,dt,oldX,oldZ);if(v.destroyed)return false;if(v.t==='tanc'||v.t==='tanqueta'||v.t==='camio')crush(nx,nz,(v.t==='tanc'?3.2:v.t==='camio'?2.6:2.4)*VS[v.t])
+}else{v.v*=Math.exp(-12*dt);v.sideV*=Math.exp(-10*dt);v.strafeV*=Math.exp(-12*dt)}
+if(a){
+  const g2=Math.max(0,groundAt(v.x,v.z)),targetVz=ud*(c.climb||24);
+  v.verticalV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.verticalV||0,targetVz,c.liftResponse||2.5,dt);
+  if(Math.abs(ud)<.01)v.verticalV*=Math.exp(-1.5*dt);
+  const previousAlt=v.alt;
+  v.alt=Math.max(helicopterLandedAltitude(v,g2),Math.min(150,v.alt+v.verticalV*dt));
+  if(!deckCarrier){
+    const terrainHit=helicopterEnvironmentContact(v,
+      {x:v.x,z:v.z,alt:previousAlt},{x:v.x,z:v.z,alt:v.alt});
+    if(terrainHit)return crashHelicopterStructure(v,terrainHit);
+    const structureHit=window.HUNTER_AIR_OBSTACLES.hit(THREE,world,v,
+      {x:v.x,z:v.z,alt:previousAlt},{x:v.x,z:v.z,alt:v.alt},VS[v.t]||1);
+    if(structureHit)return crashHelicopterStructure(v,structureHit);
+    const corrected=helicopterRoofAltitude(v,v.x,v.z,previousAlt,v.alt);
+    if(corrected!==v.alt){v.alt=corrected;v.verticalV=0}
+  }
+  const f2=ferryForVehicle(v,v.x,v.z,false);
+  if(f2){
+    const q=ferryLocal(f2,v.x,v.z),deckY=ferryLocalSurfaceY(f2,q.z);
+    const deckLandingY=helicopterLandedAltitude(v,deckY);
+    if(v.alt<=deckLandingY+.55&&ud<=.05){v.alt=deckLandingY;v.verticalV=0;attachToFerry(v,f2)}
+    else if(v.carrier===f2&&v.alt>deckLandingY+1.4)detachFromFerry(v)
+  }else if(v.carrier)detachFromFerry(v)
+  // Els patins ja suporten el pes: no acumulem velocitat de descens contra el terra.
+  if(!f2&&v.verticalV<0&&v.alt<=helicopterLandedAltitude(v,g2)+.001)v.verticalV=0;
+}
+if(v.carrier)attachToFerry(v,v.carrier);
+return !v.destroyed}
+function animateTankTracks(v,dt){
+  const tracks=v.o?.userData?.tracks;if(!tracks?.length)return;
+  const scale=VS[v.t]||1,yaw=v.yawRate||0,halfTrack=2.1;
+  for(const track of tracks){
+    // Fase positiva = la part superior de l'eruga corre cap enrere (+Z local).
+    // En gir pivotant, yaw reparteix velocitats oposades a esquerra/dreta.
+    const beltSpeed=v.v/scale+track.side*yaw*halfTrack;
+    track.phase=(track.phase+beltSpeed*dt)%track.perimeter;if(track.phase<0)track.phase+=track.perimeter;
+    for(const link of track.links){
+      let q=(link.userData.trackOffset+track.phase)%track.perimeter;
+      let y,z,rx=0;
+      if(q<track.straight){
+        y=track.cy+track.r;z=track.front+q;rx=0;
+      }else if((q-=track.straight)<Math.PI*track.r){
+        const a=q/track.r;y=track.cy+track.r*Math.cos(a);z=track.rear+track.r*Math.sin(a);rx=a;
+      }else if((q-=Math.PI*track.r)<track.straight){
+        y=track.cy-track.r;z=track.rear-q;rx=Math.PI;
+      }else{
+        q-=track.straight;const a=q/track.r;y=track.cy-track.r*Math.cos(a);z=track.front-track.r*Math.sin(a);rx=Math.PI+a;
+      }
+      link.position.set(track.x,y,z);link.rotation.set(rx,0,0);
+    }
+  }
+}
+function place(v,t,dt,tr){const c=VT[v.t],o=v.o,g=hAt(v.x,v.z);let y,pi=0,ro=Math.sin(t*2+v.x)*.02;
+if(c.m==='a'&&v.carrier&&!v.crashing){
+  const q=ferryLocal(v.carrier,v.x,v.z);
+  y=helicopterLandedAltitude(v,ferryLocalSurfaceY(v.carrier,q.z));v.alt=y;
+  pi=v.carrier.o.rotation.x;ro=v.carrier.o.rotation.z;
+}
+else if(c.m==='a'){
+  y=v.alt;const speedN=Math.max(-1,Math.min(1,v.v/(c.maxF||35))),yawN=Math.max(-1,Math.min(1,(v.yawRate||0)/(c.tu||1)));
+  pi=-speedN*(c.pitch||.2);ro=-yawN*(c.bank||.32)-(v.strafeV||0)/(c.strafeMax||17)*(c.bank||.32)*.5;
+  // Amb els patins en contacte, l'aparell descansa pla sobre el terreny.
+  // El balanceig residual del gir no ha de deixar els patins suspesos.
+  const landed=helicopterLandedAltitude(v,Math.max(0,groundAt(v.x,v.z)));
+  if(!v.crashing&&v.alt<=landed+.25){
+    const proximity=Math.max(0,Math.min(1,(v.alt-landed)/.25));
+    const s=Math.sin(v.hd),co=Math.cos(v.hd),front=2.05*(VS[v.t]||1),
+          halfSkid=1.458*(VS[v.t]||1),
+          frontY=groundAt(v.x-s*front,v.z-co*front),
+          backY=groundAt(v.x+s*front,v.z+co*front),
+          rightY=groundAt(v.x+co*halfSkid,v.z-s*halfSkid),
+          leftY=groundAt(v.x-co*halfSkid,v.z+s*halfSkid),
+          slopePitch=Math.max(-.24,Math.min(.24,Math.atan2(frontY-backY,2*front))),
+          slopeRoll=Math.max(-.24,Math.min(.24,Math.atan2(rightY-leftY,2*halfSkid)));
+    pi=slopePitch*(1-proximity)+pi*proximity;
+    ro=slopeRoll*(1-proximity)+ro*proximity;
+  }
+  if(v.crashing){pi+=Math.sin(v.crashT*3)*.35;ro+=(v.crashSpin||1)*(.45+Math.min(.65,v.crashT*.12))}
+}
+else if(c.m==='w'){
+   y=wy(v.x,v.z,t)+(v.t==='barca_rems'?-.1:.2);
+   const speed=Math.min(1,Math.abs(v.v)/(c.maxF||30)),
+         wave=Math.sin(t*2.4+v.x*.03+v.z*.025);
+   pi=wave*.035*speed;ro=-(v.yawRate||0)*.11+wave*.025;
+   // Només la moto aquàtica i el windsurf s'enlairen en
+   // remuntar una ona a velocitat: els altres bucs no boten.
+   if(v.t==='moto_aquatica'||v.t==='windsurf'){
+     const jump=window.HUNTER_WATER_JUMPS.update(v,dt,t,wy,c.maxF);
+     y+=jump.lift;pi+=jump.pitch;
+   }
+ }
+else if(c.m==='wl'){y=Math.max(g,wy(v.x,v.z,t))+.6;ro=-(v.yawRate||0)*.08-(v.strafeV||0)*.008}
+else if(v.carrier){const q=ferryLocal(v.carrier,v.x,v.z);y=ferryLocalSurfaceY(v.carrier,q.z)+.05;pi=0;ro=0}
+else{
+  const s2=Math.sin(v.hd),k=Math.cos(v.hd);
+  // Suport al centre del vehicle: ni el màxim físic ni les rodes
+  // del darrere han de fixar una alçada antiga en una baixada.
+  // La inclinació continua seguint la diferència de les mostres frontal/darrere.
+  y=groundAt(v.x,v.z)+.05;
+  pi=Math.atan((groundAt(v.x-s2*3,v.z-k*3)-groundAt(v.x+s2*3,v.z+k*3))/6);ro=-(v.sideV||0)*.018}
+if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.rotation.set(pi,v.hd,ro);
+// Direcció visual a l'eix davant (-Z): independent del rodament en X.
+window.HUNTER_VEHICLES.animateSteering(o,v.t,tr,dt);
+v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0):(v.pedalPhase||0),sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*sweep;r.rotation.z=-side*(.12+dip);r.rotation.x=.06*Math.sin(rowPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})}
+let runStepTimer=0,stealthStepTimer=0;
+const cameraOffset=new THREE.Vector3(),bunkerEye=new THREE.Vector3();
+function hideCameraObstructions(owner,eye,basement){
+  const radius=Math.hypot(eye.x-cam.position.x,eye.z-cam.position.z)/2+2;
+  for(const wall of wallCandidates((eye.x+cam.position.x)/2,(eye.z+cam.position.z)/2,radius)){
+    if(wall.owner!==owner||!!wall.bunkerBasementWall!==basement||
+      !wall.m?.visible||wall.destroyedWall||wall.hp<=0)continue;
+    if(wall.y1<Math.min(eye.y,cam.position.y)||wall.y0>Math.max(eye.y,cam.position.y))continue;
+    const hit=segmentAabbT(eye.x,eye.y,eye.z,cam.position.x,cam.position.y,cam.position.z,
+      wall.x0,wall.x1,wall.y0,wall.y1,wall.z0,wall.z1);
+    if(hit===null||hit<=.005||hit>=.995)continue;
+    cameraOcclusion.hide(wall);
+    if(basement)owner.basement.cameraHiddenWalls.push(wall.m);
+  }
+}
+function update(dt,t){
+syncCameraVehicle();
+if(activeBunker?.basement?.lights?.length){
+  const basement=activeBunker.basement;
+  const nearby=started&&!paused&&
+    Math.hypot(P.x-activeBunker.x,P.z-activeBunker.z)<160;
+  if(nearby!==basement.lightsOn){
+    for(const lamp of basement.lights)lamp.visible=nearby;
+    basement.lightsOn=nearby;
+  }
+}
+const strafeEnabled=updateStrafeControls();
+if(cheats.items)grantAllWeapons();
+// La prolongació del joystick funciona a peu i nedant: a l'aigua activa el crol.
+const canRun=!!started&&!paused&&!over&&!cv&&!playerFall&&!playerEject&&!scopeActive;
+joystick.setRunEnabled(canRun);
+document.body.classList.toggle('player-swimming',canRun&&swimming);
+updateCrouchButton();
+// Darrera defensa: cap estat actiu amb vida nul·la, fins i tot si una
+ // interacció externa o una restauració d'estat ha posat hp a zero.
+ if(started&&!over&&hp<=0){
+   hp=0;fin('HAS MORT',{type:'impact',x:P.x,y:P.y,z:P.z});
+ }
+ if(!started||paused||over){updateOptionalSystems(0,false);resetCameraState();updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
+if(!(dt>0))return;
+rebuildVehicleGrid();elapsed+=dt;
+window.HUNTER_STEALTH.tick(dt);
+const playerStartX=P.x,playerStartZ=P.z;
+const jf=-joystick.state.y,jtr=-joystick.state.x,
+      f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),
+      tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),
+      strafe=strafeEnabled?Math.max(-1,Math.min(1,
+        (K.KeyU?1:0)-(K.KeyY?1:0)+(strafePointers.right!==null?1:0)-(strafePointers.left!==null?1:0))):0,
+      ud=(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),lim=H-2;
+const running=canRun&&!playerCrouched&&f>.1&&(joystick.state.running||K.ShiftLeft||K.ShiftRight);
+// El córrer fa passes de bota a ritme viu, però no quan nedam.
+if(running&&!swimming&&!playerFall&&!playerEject&&f>.2){
+  runStepTimer-=dt;
+  if(runStepTimer<=0){snd('step',.65);runStepTimer=.29}
+}else runStepTimer=0;
+if(scopeActive){
+  // El joystick i el teclat controlen ÚNICAMENT la càmera de la mira:
+  // sense traslació, gir ni animació de desplaçament del jugador.
+  // Y/U (strafe habitual) també passa a moure horitzontalment la mira.
+  const scopeStrafe=(K.KeyU?1:0)-(K.KeyY?1:0);
+  // Sensibilitat baixa per controlar amb precisió l'òptica x8.
+  scopeYaw+=(tr-scopeStrafe*.8)*dt*.38;
+  scopePitch=Math.max(-.65,Math.min(.65,scopePitch+f*dt*.30));
+}else if(cv){const driven=cv,alive=stepV(driven,f,tr,ud,dt,strafe);if(alive&&cv===driven){P.x=driven.x;P.z=driven.z;P.hd=driven.hd}}
+else{P.hd+=tr*dt*2.2;if(cheats.fly){
+  const speed=65,vertical=(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),length=Math.max(1,Math.hypot(f,strafe));
+  P.x=Math.max(-lim,Math.min(lim,P.x+(-Math.sin(P.hd)*f+Math.cos(P.hd)*strafe)*speed*dt/length));
+  P.z=Math.max(-lim,Math.min(lim,P.z+(-Math.cos(P.hd)*f-Math.sin(P.hd)*strafe)*speed*dt/length));
+  cheatFlightY=Math.max(hAt(P.x,P.z)+1,Math.min(500,(cheatFlightY??P.y)+vertical*speed*dt));
+  P.y=cheatFlightY;
+}else if(playerFall){
+  const fall=playerFall,oldX=P.x,oldZ=P.z,oldY=fall.y;
+  fall.t+=dt;fall.vy-=fall.parachute?10*dt:24*dt;
+  if(fall.parachute){
+    fall.vy=Math.max(-4.8,fall.vy);
+    // Inclinació suau amb el joystick/tecles, conservant una mica d'inèrcia.
+    const desiredX=-Math.sin(P.hd)*f*2.8+Math.cos(P.hd)*strafe*2.2,
+          desiredZ=-Math.cos(P.hd)*f*2.8-Math.sin(P.hd)*strafe*2.2,
+          blend=1-Math.exp(-2.2*dt);
+    fall.vx+=(desiredX-fall.vx)*blend;fall.vz+=(desiredZ-fall.vz)*blend;
+    fall.leanF+=(f-fall.leanF)*blend;
+    fall.leanS+=(strafe-fall.leanS)*blend;
+  }else{fall.vx*=Math.exp(-.18*dt);fall.vz*=Math.exp(-.18*dt)}
+  P.x=Math.max(-lim,Math.min(lim,P.x+fall.vx*dt));
+  P.z=Math.max(-lim,Math.min(lim,P.z+fall.vz*dt));
+  fall.y+=fall.vy*dt;
+  const water=wy(P.x,P.z,t),roof=parachuteRoofLanding(oldX,oldZ,oldY,P.x,P.z,fall.y),
+        landing=Math.max(hAt(P.x,P.z),water-1.4,roof??-Infinity);
+  P.y=fall.y;
+  if(fall.y<=landing){
+    P.y=landing;const fallH=fall.startHeight,impact=Math.max(0,-fall.vy),
+      waterLanding=roof===null&&water>hAt(P.x,P.z)+1.5,
+      dmg=fall.parachute?0:wholeDamage(Math.min(COMBAT_BALANCE.player,Math.max(0,((fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8))*.2)));
+    removeParachuteVisual();playerFall=null;
+    if(dmg>0)hurtP(dmg,false,{type:'fall',x:P.x,y:P.y+8,z:P.z});
+    msg=dmg===0&&fallH>4?'Has aterrat amb seguretat.':waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5;
+  }
+}
+else if(playerEject&&playerEject.t>0){
+  P.x=Math.max(-lim,Math.min(lim,P.x+playerEject.vx*dt));
+  P.z=Math.max(-lim,Math.min(lim,P.z+playerEject.vz*dt));
+  if(playerEject.kind==='blast'){
+    playerEject.vy-=19*dt;
+    playerEject.height=Math.max(0,(playerEject.height||0)+playerEject.vy*dt);
+    if(playerEject.height===0)playerEject.vy=0;
+    const landed=playerEject.height===0;
+    playerEject.vx*=Math.exp(-(landed?7:1.7)*dt);
+    playerEject.vz*=Math.exp(-(landed?7:1.7)*dt);
+    if(landed&&playerEject.t<.25)playerEject.t=0;
+  }else{
+    playerEject.vx*=Math.exp(-2.4*dt);playerEject.vz*=Math.exp(-2.4*dt);
+  }
+  playerEject.t=Math.max(0,playerEject.t-dt);
+}else{
+  // Avanç i strafe simultanis sense variar el rumb. Normalitzam la
+  // diagonal per mantenir la velocitat màxima d'un jugador a peu.
+  // Dins l'aigua: braça normal, crol accelerat quan es manté la
+  // prolongació superior i natació lateral amb els botons de strafe.
+  const length=Math.max(1,Math.hypot(f,strafe)),
+        ss=(swimming?(running?8.5:5):playerCrouched?4.5:running?19:12)*f*dt/length,
+        lateral=(swimming?(running?6.5:4.5):playerCrouched?3.8:9)*strafe*dt/length;
+  P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*ss+Math.cos(P.hd)*lateral));
+  P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*ss-Math.sin(P.hd)*lateral));
+}
+if(!playerFall&&!cheats.fly){wallPush();treePush();vehiclePushPlayer();ferryCabinPushPlayer()}}
+// Cal transportar també el jugador que va a peu sobre la coberta mòbil.
+const walkingDeck=!cv&&!playerFall?pedestrianFerry(P.x,P.z,P.y):null;
+V.slice().forEach(v=>{if(v===cv)return;if(v.carrier){v.v=0;v.sideV=0;v.strafeV=0;return}if(v.crashing){v.crashT=(v.crashT||0)+dt;v.hd+=(v.crashSpin||1)*(1.8+v.crashT*.35)*dt;v.v*=Math.exp(-.12*dt);v.x-=Math.sin(v.hd)*v.v*dt;v.z-=Math.cos(v.hd)*v.v*dt;const ground=Math.max(0,hAt(v.x,v.z)),water=wy(v.x,v.z,t),impactY=Math.max(ground,water);v.alt-=(5+v.crashT*8)*dt;if(v.alt<=impactY+1){v.alt=impactY+.8;explodeVehicle(v)}return}if(Math.abs(v.v)>.08){v.driveInput=0;v.steerInput=0;stepV(v,0,0,0,dt);if(Math.abs(v.v)<.08)v.v=0}});
+syncFerryCargo();updateTerminalRamps();
+if(walkingDeck&&!walkingDeck.f.destroyed){const p=ferryWorld(walkingDeck.f,walkingDeck.q.x,walkingDeck.q.z);P.x=p.x;P.z=p.z}
+const previousInterior=ib;
+ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2&&P.y<(solidRoofAt(b,P.x,P.z)?.bottom??b.fy+b.h+.1))||null;
+if(ib!==previousInterior)worldVisualTick=0;
+const floor=ib&&ib.kind!=='enemy_bunker'?Math.max(ib.fy+.3,groundAt(P.x,P.z,P.y)):groundAt(P.x,P.z,P.y),
+      surface=wy(P.x,P.z,t),
+      insideBasement=playerInsideBunkerBasement(P.x,P.z,P.y);
+swimming=!cheats.fly&&!cv&&!ib&&!insideBasement&&!playerFall&&floor<surface-2.1;
+if(swimming)playerCrouched=false;
+document.body.classList.toggle('player-swimming',canRun&&swimming);
+if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);
+if(!playerFall&&!cheats.fly){
+  // El suport segueix el triangle visible JUST sota el centre del jugador.
+  // Mostrejar el màxim de quatre punts manté el personatge en l'aire
+  // en baixar una pendent, perquè els punts del darrere són més alts.
+  // Dins el búnquer, la superfície marina no és una superfície física:
+  // el nivell del terra de l'habitació ha de guanyar sempre.
+  P.y=insideBasement?floor+.06:ib?floor:Math.max(floor+.06,surface-2.1);
+}
+// Sons audibles per la IA: passos, braçades i motors. El volum de l'àudio
+// real no intervé en els radis, i no emetem res si el jugador està aturat.
+stealthStepTimer-=dt;
+if(stealthStepTimer<=0){
+  if(cv&&Math.abs(cv.v)>1){
+    const vehicleNoise={bici:'bicycle',moto:'motorbike',cotxe:'car',cotxe_civil:'civilianCar',camio:'truck',
+      tanc:'tank',tanqueta:'apc',barca_rems:'rowboat',windsurf:'windsurf',
+      moto_aquatica:'jetski',llanxa:'speedboat',llanxa_coets:'speedboat',
+      ferry:'ferry',heli:'helicopter',heli_combat:'helicopter',hover:'jetski'},
+      kind=vehicleNoise[cv.t],maximum=window.HUNTER_STEALTH.RADII[kind];
+    if(maximum){
+      const velocity=Math.min(1,Math.abs(cv.v)/Math.max(1,VT[cv.t].maxF||35));
+      window.HUNTER_STEALTH.emit(kind,cv.x,cv.o.position.y+1,cv.z,
+        maximum*(.45+.55*velocity));
+    }
+  }else if(!cv&&!playerFall&&!playerEject&&!scopeActive&&
+    Math.hypot(P.x-playerStartX,P.z-playerStartZ)>.025){
+    window.HUNTER_STEALTH.emit(swimming?'swim':playerCrouched?'crouch':running?'run':'walk',
+      P.x,P.y+1,P.z);
+  }
+  stealthStepTimer=.24;
+}
+// Actualització del LOD de les palmeres a baixa freqüència (i també en vehicle).
+palmVisualTick-=dt;
+if(palmVisualTick<=0){
+  palmVisualTick=scopeActive?.10:.16;
+  if(PM.update)PM.update(P.x,P.z,!!scopeActive,palmsDisabled,currentSniperFocus());
+  updateShadowCasters();
+}
+// Un vehicle sota un hangar també ha de deixar veure l'interior.
+// Només s'amaga la coberta quan som realment per sota seu (no en sobrevolar-la).
+function viewInsideBuilding(b){
+  if(b===ib)return true;
+  if(!b.hangar||!cv||cv.destroyed)return false;
+  const y=VT[cv.t]?.m==='a'?(cv.alt??cv.o?.position?.y):(cv.o?.position?.y??cv.alt);
+  return Math.abs(cv.x-b.x)<b.w/2&&Math.abs(cv.z-b.z)<b.d/2&&
+    y!=null&&y>=b.fy-2&&y<b.fy+b.h+2;
+}
+worldVisualTick-=dt;
+if(worldVisualTick<=0){
+  worldVisualTick=.2;
+  updateDistanceVisibility();
+}
+updateDoors(dt);
+items.forEach(it=>{const dx=it.x-P.x,dz=it.z-P.z;if(dx*dx+dz*dz<ITEM_ANIM2){it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25}});
+if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-it.z;if(dx*dx+dz*dz<4.84&&Math.abs(P.y-it.y)<3){let mapMessage=null;
+  if(it.t==='arma')ammo+=16;
+  else if(it.t==='mapa'||it.t==='mapa_heli'||it.t==='mapa_tanc'){
+    mapMessage=revealMapPickup(it.t);
+    mini(); // la informació apareix de seguida, sense entrar a cap menú
+  }
+  else if(it.t==='franctirador'){inv.franctirador=1;sniperAmmo+=6}
+  else inv[it.t]=(inv[it.t]||0)+(it.t==='granada'?5:it.t==='bazooka'?3:1);
+  world.remove(it.o);items.splice(k,1);
+  msg=mapMessage||'Has trobat: '+IT[it.t].n+(it.t==='granada'?' ×5':it.t==='bazooka'?' ×3':it.t==='franctirador'?' +6 cartutxos':'');
+  msgT=3;snd('pick')}}
+msgT-=dt;if(parachuteVisual)parachuteVisual.position.set(P.x,P.y,P.z);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;
+// Strafe independent: gir visual de la cintura i les cames, no de P.hd.
+animPl(cv||scopeActive?0:f,dt,running&&f>.1,cv||scopeActive?0:strafe);
+// La física conserva P.y, sota l'aigua. Aixecam només el model per
+// deixar el pit vora la superfície quan s'ajau per nedar a crol.
+// La compensació desapareix en aigües somes i al sortir de l'aigua.
+if(!cv&&!scopeActive&&!playerFall&&!playerEject)
+  pl.position.y+=window.HUNTER_CHARACTERS.swimVisualLift(pl,surface,P.y);
+if(!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive){
+  // Contacte visual dels peus amb el triangle sota cada bota: a les
+  // baixades el centre del cos és més alt que la posició dels peus.
+  pl.updateMatrixWorld(true);
+  const boots=pl.userData.boots||[];
+  let closest=Infinity;
+  for(const boot of boots){
+    const p=boot.getWorldPosition(new THREE.Vector3());
+    closest=Math.min(closest,p.y-groundAt(p.x,p.z,P.y));
+  }
+  if(Number.isFinite(closest))pl.position.y-=Math.max(-.06,Math.min(.36,closest-.16));
+}
+ // L'animació de caminar va a 8.4 rad/s: un esquitx a cada suport de
+ // peu (creuament de fase PI). Sense esquitxos nedant ni en vehicles.
+ movementFx.playerStep({
+   phase:pl.userData.ph,x:P.x,z:P.z,heading:P.hd,
+   moving:!scopeActive&&(Math.abs(f)>.04||Math.abs(strafe)>.04),
+   swimming,inVehicle:!!cv,falling:!!playerFall||!!playerEject||!!ib,
+   surfaceAt:(x,z)=>wy(x,z,t),groundAt
+ });
+ if(movementFx.swimStroke({phase:pl.userData.ph,x:P.x,z:P.z,heading:P.hd,
+    swimming,crawling:(pl.userData.crawlBlend||0)>.55,
+    moving:Math.abs(f)>.1&&!cv&&!playerFall&&!playerEject,
+    surfaceAt:(x,z)=>wy(x,z,t)}))snd('swim',.65);
+if(!cv&&playerFall){
+  pl.position.y=playerFall.y;
+  if(playerFall.parachute){
+    // Amb la cúpula oberta, postura suspesa (sense cabrioles), braços
+    // aixecats agafant els tirants i una oscil·lació molt suau.
+    pl.rotation.x=0;
+    pl.rotation.x=-playerFall.leanF*.13;
+    pl.rotation.z=playerFall.leanS*.14+Math.sin(playerFall.t*1.8)*.045;
+    // La postura de braços i la visibilitat de l'equipament ja són
+    // exclusives de l'animació aèria (sense una segona capa contradictòria).
+  }else{
+    pl.rotation.x=(playerFall.spin||1)*playerFall.t*7.5;
+    pl.rotation.z=Math.sin(playerFall.t*8)*.45;
+  }
+}
+else if(!cv&&playerEject&&playerEject.t>=0){
+  const dur=playerEject.dur||.5,p=Math.max(0,Math.min(1,1-playerEject.t/dur)),u=pl.userData;
+  if(playerEject.kind==='flip'){
+    // Una sola volta completa. L'últim frame és exactament dret, sense correcció posterior.
+    const turn=p>=1?0:-Math.PI*2*p,waistLocal=2.05,waistScaled=waistLocal*pl.scale.y;
+    pl.rotation.x=turn;pl.rotation.z=0;
+    const waistOffset=new THREE.Vector3(0,waistScaled,0).applyQuaternion(pl.quaternion);
+    pl.position.x-=waistOffset.x;
+    pl.position.y+=waistScaled-waistOffset.y+Math.sin(Math.PI*p)*(playerEject.height||.68);
+    pl.position.z-=waistOffset.z;
+    const compact=1-Math.pow(p,8);
+    if(u.al)u.al.rotation.x=.58*compact;if(u.ar)u.ar.rotation.x=.58*compact;
+    if(u.ael)u.ael.rotation.x=.5*compact;if(u.aer)u.aer.rotation.x=.5*compact;
+    if(u.ll)u.ll.rotation.x=-.28*compact;if(u.lr)u.lr.rotation.x=-.28*compact;
+    if(u.lkl)u.lkl.rotation.x=-.5*compact;if(u.lkr)u.lkr.rotation.x=-.5*compact;
+  }else if(playerEject.kind==='blast'){
+    const airborne=Math.max(0,playerEject.height||0),wave=Math.sin(Math.PI*p);
+    pl.position.y+=airborne;
+    pl.rotation.x=-wave*1.05;
+    pl.rotation.z=(playerEject.roll||1)*wave*.95;
+    // Les extremitats les mou el ragdoll; el cos encara segueix
+    // la trajectòria simplificada existent (sense motors físics pesants).
+    if(playerBlastRagdoll)window.HUNTER_RAGDOLL.update(playerBlastRagdoll,dt,{
+      airborne:airborne>.12,grounded:airborne<=.12
+    });
+  }
+}
+V.forEach(v=>{
+  if(v===cv){place(v,t,dt,v.steerInput||0);return}
+  const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,
+    scopeVisual=scopeActive&&currentSniperFocus().contains(v.x,v.o.position.y+1.5,v.z,5),
+    interval=scopeVisual||d2<LOD_NEAR2?0:(d2<LOD_MID2 ? .1 : .45);
+  if(interval===0){place(v,t,dt,0);v.visualLodAcc=0}
+  else{v.visualLodAcc=(v.visualLodAcc||0)+dt;if(v.visualLodAcc>=interval){const step=v.visualLodAcc;v.visualLodAcc=0;place(v,t,step,0)}}
+});poseRider(cv,dt);
+// Les torretes dels blindats del jugador segueixen gradualment el vector
+// que triaria l'autoapuntat actual. El vehicle pot avançar/girar mentre
+// la torre conserva el seu propi rumb i l'elevació del canó.
+if(cv&&(cv.t==='tanc'||cv.t==='tanqueta')){
+    const gun=window.HUNTER_VEHICLES.turretShot(THREE,cv.o);
+  if(gun){
+    const hd=cv.hd,fx=-Math.sin(hd),fz=-Math.cos(hd),
+          range=cv.t==='tanc'?220:85,
+          heavy=cv.t==='tanc',
+          [ax,ay,az]=autoAimArmoredShot(
+            gun.origin.x,gun.origin.y,gun.origin.z,fx,fz,range,
+            heavy?'heavy':'light',heavy?85*HEAVY_SHOT_SPEED_FACTOR:135);
+    window.HUNTER_VEHICLES.aimTurret(THREE,cv.o,
+      new THREE.Vector3(ax,ay,az),dt);
+  }
+}
+// Restituïm només peces vives que la càmera havia ocultat, també en
+// canviar d'edifici. La física de parets i portes continua intacta.
+restoreCameraWalls();
+syncCameraVehicle();
+const scopeNow=scopeActive&&sniperEquipped&&!cv&&!playerFall&&!swimming;
+const fieldOfView=scopeNow?2*Math.atan(Math.tan(58*Math.PI/360)/8)*180/Math.PI:58;
+if(Math.abs(cam.fov-fieldOfView)>.001){cam.fov=fieldOfView;cam.updateProjectionMatrix()}
+if(scopeNow){
+  cameraBasement=null;
+  const fx=-Math.sin(scopeYaw),fz=-Math.cos(scopeYaw),vertical=Math.tan(scopePitch);
+  cam.position.set(P.x-fx*.12,P.y+1.76,P.z-fz*.12);
+  cam.lookAt(P.x+fx*160,P.y+1.76+vertical*160,P.z+fz*160);
+}else{
+  const T=cv||P,c=cv?VT[cv.t]:ib?{cd:6,ch:11}:{cd:10,ch:5},ty=cv?cv.o.position.y:P.y,
+    heading=cv?vehicleLook.heading(cv,dt,!!drag):P.hd,
+    w=cameraOffset.set(T.x+Math.sin(heading)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1),0,T.z+Math.cos(heading)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1));
+  // Mode soterrani també durant el PRIMER esglaó, no només quan
+  // el jugador ja ha baixat 2 m. La càmera no es pot quedar darrere
+  // d'un envà opac, ni pot perseguir l'altura exterior de la muntanya.
+  const b=activeBunker,local=b?.basement&&!cv?buildingLocalPoint(b,P.x,P.z):null,
+        inside=!!local&&Math.abs(local.x)<b.basement.halfX-.5&&
+        Math.abs(local.z)<b.basement.halfZ-.5;
+  const stair=b?.basement?.stair;
+  const descending=!!local&&Math.abs(local.x-stair.x)<stair.width/2+.45&&
+    local.z>=stair.zBottom-.5&&local.z<=stair.zTop+.4&&P.y<b.fy+.04;
+  const bunkerBelow=!!inside&&(P.y<b.fy-3.9||descending);
+  // El forjat ÉS el sostre del soterrani. No s'ha d'amagar:
+  // ara que la càmera és sempre a sota, es veu el plafó i no es
+  // produeix cap obstrucció; els llums queden ancorats al sostre real.
+  if(b?.basement)for(const slab of b.basement.upperSlabMeshes)slab.visible=true;
+  if(bunkerBelow){
+    // Distància normal i suavitzat dins el volum segur del soterrani.
+    // L'entrada es fixa sota el forjat: interpolar des de fora creuaria
+    // el sostre opac. La resta del recorregut no pot tornar-hi a passar.
+    const targetEye=bunkerEye.set(P.x,
+      Math.min(b.fy-1.0,Math.max(b.basement.floorY+1.6,P.y+1.65)),P.z);
+    const cameraDistance=Math.max(10.5,Math.min(17,13.5*zoom));
+    const cameraHeight=Math.max(b.basement.floorY+5.4,
+      Math.min(b.fy-1.55,P.y+7.2));
+    w.set(P.x+Math.sin(heading)*cameraDistance,cameraHeight,
+      P.z+Math.cos(heading)*cameraDistance);
+    // No deixam sortir la càmera del volum subterrani, perquè llavors
+    // el terreny exterior pot ocultar completament la vista.
+    const cl=buildingLocalPoint(b,w.x,w.z);
+    const clampedX=Math.max(-b.basement.halfX+1.3,
+      Math.min(b.basement.halfX-1.3,cl.x));
+    const clampedZ=Math.max(-b.basement.halfZ+1.3,
+      Math.min(b.basement.halfZ-1.3,cl.z));
+    if(clampedX!==cl.x||clampedZ!==cl.z){
+      const q=buildingWorldPoint(b,clampedX,clampedZ);
+      w.x=q.x;w.z=q.z;
+    }
+    if(cameraBasement!==b)cam.position.copy(w);
+    else cam.position.lerp(w,1-Math.exp(-7*dt));
+    const smoothLocal=buildingLocalPoint(b,cam.position.x,cam.position.z),
+      safe=buildingWorldPoint(b,
+        Math.max(-b.basement.halfX+1.3,Math.min(b.basement.halfX-1.3,smoothLocal.x)),
+        Math.max(-b.basement.halfZ+1.3,Math.min(b.basement.halfZ-1.3,smoothLocal.z)));
+    cam.position.set(safe.x,
+      Math.max(b.basement.floorY+5.4,Math.min(b.fy-1.55,cam.position.y)),safe.z);
+    // La càmera POT travessar els envans. Només ocultam les peces
+    // físiques interposades entre càmera i jugador, no les parets
+    // de tota la cambra ni les col·lisions del personatge.
+    hideCameraObstructions(b,targetEye,true);
+    b.basement.cameraInside=true;
+    cameraBasement=b;
+  }else{
+    if(b?.basement)b.basement.cameraInside=false;
+    w.y=Math.max(ty+c.ch*zoom*(cv?Math.sqrt(VS[cv.t]):1),hAt(w.x,w.z)+3,2.5);
+    // En sortir del soterrani cal passar directament al costat exterior
+    // del forjat. El suavitzat exterior es manté sempre damunt el terreny,
+    // inclòs l'arc entre dues posicions segures al voltant d'un turó.
+    if(cameraBasement)cam.position.copy(w);
+    else cam.position.lerp(w,1-Math.pow(.001,dt));
+    cam.position.y=Math.max(cam.position.y,hAt(cam.position.x,cam.position.z)+3,2.5);
+    cameraBasement=null;
+    if(ib&&!cv)hideCameraObstructions(ib,bunkerEye.set(P.x,P.y+1.65,P.z),false);
+  }
+  cam.lookAt(T.x-Math.sin(heading)*(bunkerBelow?3.5:8),
+    Math.min(bunkerBelow?b.fy-1.0:Infinity,ty+(bunkerBelow?2.0:2)),
+    T.z-Math.cos(heading)*(bunkerBelow?3.5:8));
+}
+if(playerEject&&playerEject.t<=0){
+  if(playerBlastRagdoll){
+    window.HUNTER_RAGDOLL.reset(playerBlastRagdoll);
+    playerBlastRagdoll=null;
+  }
+  playerEject=null;
+}
+updateBazookaReticle(dt);
+const previousCooldown=Math.max(0,fcd);
+fcd=Math.max(0,previousCooldown-dt);updateGrenadeCharge(dt);
+if(K.KeyF&&(!grenadeEquipped||cv)){
+  const overshoot=previousCooldown>0?Math.min(0,previousCooldown-dt):0;
+  fire();
+  // Conservam només la fracció del pas que travessa el cooldown actual.
+  // Aturats a zero no es guarden trets ni escurçam la primera espera.
+  if(fcd>0)fcd=Math.max(0,fcd+overshoot);
+}
+updEn(dt,simulationFrameActive);
+window.HUNTER_STEALTH_DEBUG.update(THREE,world,E,P);
+updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);
+updateOptionalSystems(dt,!!started&&!paused&&!over&&simulationFocused&&!document.hidden);
+uiTick+=dt;if(uiTick>.12){uiTick=0;const nv=cv?null:nearV();const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',(!cv&&cheats.fly)||(!!cv&&VT[cv.t]?.m==='a'));contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}const fireButton=document.getElementById('mainFireButton');
+if(fireButton){
+  const heliGrenade=cv?.t==='heli',
+        grenade=heliGrenade||!cv&&grenadeEquipped&&(inv.granada||0)>0,
+        cutters=!cv&&cisallaEquipped&&(inv.cisalla||0)>0,
+        knife=!cv&&(knifeEquipped||!grenade&&!cutters&&!bazookaEquipped&&!sniperEquipped&&ammo<=0),
+        weapon=cutters?'cisalla':grenade?'granada':knife?'ganivet':'normal';
+  if(fireButton.dataset.weapon!==weapon){
+    fireButton.dataset.weapon=weapon;
+    fireButton.innerHTML=cutters?ICON.cisalla:grenade?ICON.granada:knife?ICON.ganivet:'🎯';
+    const action=cutters?'Talla filferrada':grenade?'Llançar granada':knife?'Atacar amb ganivet':'Dispar';
+    fireButton.setAttribute('aria-label',action);
+    fireButton.title=heliGrenade?'Llançar granada de l’inventari':grenade?'Mantén premut per arribar més lluny':action;
+  }
+}
+updateActionButton(nv);if(pickerOpen)drawWeaponPicker();
+mini();ui.renderHUD({nearVehicle:nv});}}
+
+
+let last=performance.now();resetSimulationClock(last);
+(function loop(now){
+// DOM can repaint and accept cancel/retry between generation tasks. No world
+// simulation, RNG, LOD, fire, clock debt or partial-world render is permitted.
+if(generationPromise){last=now;simulationClock.reset(now);cinematicClock.reset(now);requestAnimationFrame(loop);return}
+const rawDt=Number.isFinite(now)&&now>=last?(now-last)/1000:0;
+last=Number.isFinite(now)&&now>=0?now:performance.now();
+const cpuStarted=performance.now(),victoryAtStart=victoryCinematic,
+      deathAtStart=deathCinematic,visible=simulationFocused&&!document.hidden,
+      gameplayActive=!!started&&!paused&&!over&&visible,
+      cinematicActive=!!started&&!paused&&visible&&
+        (!!victoryAtStart&&(victoryAtStart.active||victoryAtStart.finished)||!!deathAtStart?.active);
+// El pressupost de navegació és per fotograma, no es multiplica pels subpassos.
+enemyPathBudget=2;enemyNodeBudget=160;simulationFrameActive=true;
+let simulated;
+try{
+  simulated=simulationClock.advance(now,dt=>{
+    update(dt,elapsed+dt);
+    return !!started&&!paused&&!over&&simulationFocused&&!document.hidden;
+  },gameplayActive);
+}finally{simulationFrameActive=false}
+// També sense temps nou cal netejar controls, HUD i estat de càmera.
+if(!simulated.steps)update(0,elapsed);
+syncWeaponPicker();
+// Només avança la cinemàtica que ja existia a l'inici del fotograma.
+// El seu rellotge separat també admet 250 ms, en passos de fins a 1/60.
+cinematicClock.advance(now,dt=>{
+  if(victoryCinematic===victoryAtStart&&(victoryAtStart?.active||victoryAtStart?.finished))updateVictoryCinematic(dt);
+  if(deathCinematic===deathAtStart&&deathAtStart?.active)updateDeathCinematic(dt);
+  return !paused&&simulationFocused&&!document.hidden&&
+    (victoryCinematic===victoryAtStart&&(victoryAtStart?.active||victoryAtStart?.finished)||
+      deathCinematic===deathAtStart&&deathAtStart?.active);
+},cinematicActive);
+updateAudioFrame();
+renderCombatFeedback();
+renderStealthFeedback();
+const t=elapsed+(victoryCinematic?victoryCinematic.t:0);
+const simulationEnded=performance.now();
+if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
+  terrainStream.update(victoryCinematic?.active?cam.position.x:P.x,
+    victoryCinematic?.active?cam.position.z:P.z,visualQuality.shadows?2:1.2,cam,
+    victoryCinematic?.active?null:currentSniperFocus());const terrainEnded=performance.now();
+ // El món no queda congelat durant la repetició: les onades avancen
+ // lentament mentre la càmera i el cos es mouen a velocitat cinematogràfica.
+ waves(t+(deathCinematic?.active?deathCinematic.t*.18:0));
+sun.target.position.set(victoryCinematic?cam.position.x:P.x,0,
+  victoryCinematic?cam.position.z:P.z);
+sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();for(const k in renderCategories)renderCategories[k]=0;
+ if(deathVoidReady()){
+   const v=deathCinematic;v.voidCamera.aspect=cam.aspect;v.voidCamera.updateProjectionMatrix();
+   ren.render(v.voidScene,v.voidCamera);
+ }else if(deathCinematic?.underwaterActive){
+   // Mantenim la mateixa càmera i el mateix cos, però sense la superfície
+   // opaca del mar ni el cel exterior mentre el personatge s'enfonsa.
+   ren.render(deathCinematic.underwaterScene,cam);
+ }else ren.render(scene,cam);
+if(started&&!paused&&!over){
+  advanceTerrainTexture();
+  if(waterUpgradePending){water.queueResolutionUpgrade();waterUpgradePending=false}
+  water.stepResolutionUpgrade(2);
+}
+adaptivePerformance.sample({dt:rawDt,renderCpuMs:performance.now()-renderStarted,
+  updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,
+  active:!!started&&!paused&&!over,now,display:performanceStatsVisible});
+requestAnimationFrame(loop)})(last);
+
+
+
+
+;
