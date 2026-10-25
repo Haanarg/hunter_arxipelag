@@ -2853,7 +2853,10 @@ function stepV(v,f,tr,ud,dt,strafe=0){
 const c=VT[v.t],a=c.m==='a',water=c.m==='w'||c.m==='wl',land=c.m==='l',radius=vehicleRadius(v.t),
   shore=window.HUNTER_VEHICLE_DYNAMICS.shore;
 if(v.sunk){v.v=0;v.sideV=0;v.strafeV=0;if(cv===v)escapeSubmergedVehicle(v);return !v.destroyed}
-const depth=land?shore.depth(v.x,v.z,hAt,(x,z)=>wy(x,z,elapsed)):0,
+// A vehicle on the ferry's dry deck is not submerged just because
+// the sea floor is beneath its map coordinates.
+const onFerryDeck=land&&(v.carrier||ferryForVehicle(v,v.x,v.z,true)),
+  depth=land&&!onFerryDeck?shore.depth(v.x,v.z,hAt,(x,z)=>wy(x,z,elapsed)):-Infinity,
   flooded=land?shore.wetLand(v,depth,dt):null,
   input=window.HUNTER_VEHICLE_DYNAMICS.inputs(v,f,tr,dt);
 f=input.forward;tr=input.turn;
