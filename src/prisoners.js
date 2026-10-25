@@ -66,7 +66,7 @@ window.HUNTER_PRISONERS=Object.freeze({
     mesh(rig,joint,shirt,2.15,.72,1.2,0,1.33,0);
     mesh(rig,collar,mechanic?white:shirt,1,1,1,0,1.398,0);
     mesh(rig,cube,belt,.49,.068,.31,0,.834,0);
-    mesh(rig,joint,trousers,2.04,.96,1.24,0,.805,0);
+    mesh(rig,joint,trousers,2.04,.88,1.24,0,.805,0);
     // Head with a neck, ears, nose, eyes, eyebrows and distinct hairstyles.
     mesh(rig,collar,tone,.58,.9,.62,0,1.417,0);
     const face=mesh(rig,head,tone,1,.99,.93,0,1.57,0);
@@ -105,8 +105,8 @@ window.HUNTER_PRISONERS=Object.freeze({
      mesh(arm,joint,shirt,1,.94,1.0,0,-.045,0);
      mesh(arm,sleeve,shirt,1,1,1,0,-.20,0);
      mesh(arm,joint,tone,.65,.65,.65,0,-.375,0);
-     mesh(arm,forearm,tone,1,1,1,0,-.47,0);
-     mesh(arm,joint,tone,.69,.70,.73,0,-.606,0);
+     mesh(arm,forearm,tone,1,1,1,0,-.42,0);
+     mesh(arm,joint,tone,.69,.55,.73,0,-.515,0);
      arms.push(arm);
     }
     root.userData.civilian=true;root.userData.prisonerId=u.id;
@@ -119,7 +119,7 @@ window.HUNTER_PRISONERS=Object.freeze({
    // Keep the root at the world foot point: movement and projectile bounds share it.
    u.pose=seated?'seated':'standing';
    u.height=seated?(u.role==='mechanic'?1.115:1.0825)*u.modelScale:config.standingHeight;
-   u.radius=(seated?.76:.56)*u.modelScale;
+   u.radius=(u.cheering?.86:seated?.76:.56)*u.modelScale;
    if(!u.o)return;
    u.rig.position.y=seated?-.695:-.06;
    for(let i=0;i<u.legs.length;i++)u.legs[i].rotation.x=seated?Math.PI/2:0;
