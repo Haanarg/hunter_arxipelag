@@ -17,6 +17,7 @@
     "test:audio": "node tests/spatial-audio.cjs && node tests/phase12-independent.cjs",
     "test:exploration": "node tests/phase11-prisoners.cjs && node tests/phase11-radio.cjs && node tests/phase11-independent.cjs && node tests/phase11-camp-generation.cjs",
     "test:camp": "node tests/camp-redesign-independent.cjs && node tests/prison-camp-guarantee.cjs && node tests/prison-camp-guarantee-independent.cjs",
+    "test:shore": "node tests/vehicle-shore.cjs",
     "test:camp:stress": "node tests/prison-camp-guarantee.cjs --stress"
   }
 }
