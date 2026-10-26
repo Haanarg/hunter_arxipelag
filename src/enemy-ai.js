@@ -352,7 +352,11 @@ function enemyRemoteInterval(u,q,focus=null){
   const dx=q.x-u.x,dz=q.z-u.z,d2=dx*dx+dz*dz;
   return d2>1400*1400?.3:d2>620*620?.18:0;
 }
-function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathBudget=2;enemyNodeBudget=160}refreshVehicleGridIfCellsChanged();soldierCoordinationTick(dt);const enemyScopeFocus=scopeActive?currentSniperFocus():null;E.forEach(u=>{
+// Each enemy gets its own simulation interval. Carrying over a distant
+// patrol's accumulated time into the next enemy caused runaway movement
+// sweeps and major frame-time spikes under the semi-fixed clock.
+function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathBudget=2;enemyNodeBudget=160}refreshVehicleGridIfCellsChanged();soldierCoordinationTick(frameDt);const enemyScopeFocus=scopeActive?currentSniperFocus():null;E.forEach(u=>{
+  let dt=frameDt;
   if(u.t==='patrulla_marina'){
     if(performanceStatsVisible){
       const stamp=performance.now();updateMarinePatrol(u,dt);
