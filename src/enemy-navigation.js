@@ -57,6 +57,9 @@ function enemyBodiesClear(u,x,z,hd,dynamicCandidates=null){
 }
 // Sample both translation and rotation; a valid endpoint never permits a jump through a wall.
 function enemySweep(u,ax,az,bx,bz,fromHd,toHd,dynamic=true,route=false){
+  const sweepStamp=performanceStatsVisible?performance.now():0;
+  let sweepSamples=0;
+  try{
   const veh=enemyIsVehicle(u),angle=veh?wrapAngle(toHd-fromHd):0,
     distance=Math.hypot(bx-ax,bz-az),radius=enemyRouteRadius(u),
     n=Math.max(1,Math.ceil((distance+Math.abs(angle)*radius)/(route?1.2:.45)));
@@ -76,10 +79,18 @@ function enemySweep(u,ax,az,bx,bz,fromHd,toHd,dynamic=true,route=false){
   }:null;
   for(let i=0;i<=n;i++){
     const t=i/n,x=ax+(bx-ax)*t,z=az+(bz-az)*t,hd=fromHd+angle*t;
+    if(performanceStatsVisible)sweepSamples++;
     if(!enemySolidAt(u,x,z,hd,route,staticCandidates)||
        (dynamic&&!enemyBodiesClear(u,x,z,hd,dynamicCandidates)))return false;
   }
   return true;
+  }finally{
+    if(performanceStatsVisible){
+      perfHotspots.aiSweepMs+=performance.now()-sweepStamp;
+      perfHotspots.aiSweepChecks++;
+      perfHotspots.aiSweepSamples+=sweepSamples;
+    }
+  }
 }
 function enemyMoveClear(u,x,z,hd){return enemySolidAt(u,x,z,hd)&&enemyBodiesClear(u,x,z,hd)}
 function enemyReindex(u,oldX,oldZ){
