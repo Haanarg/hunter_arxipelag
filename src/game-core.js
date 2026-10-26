@@ -142,6 +142,8 @@ function advanceTerrainTexture(){
   highTerrainTexture=tex;
   for(const mat of awaitingTerrainMaterials){
     mat.map=tex;mat.flatShading=false;mat.needsUpdate=true;
+    const cutout=mat.userData?.hunterCutoutMaterial;
+    if(cutout){cutout.map=tex;cutout.flatShading=false;cutout.needsUpdate=true}
   }
   awaitingTerrainMaterials.length=0;
 }
