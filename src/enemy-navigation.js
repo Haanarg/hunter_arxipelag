@@ -15,8 +15,10 @@ const enemyRouteRadius=u=>{
 // de punts abans d'avançar uns centímetres. Cada moviment conserva
 // el seu propi sweep complet, i A* s'activa quan arriba l'obstacle.
 const ENEMY_DIRECT_LOOKAHEAD=28;
-const ENEMY_ASTAR_NEIGHBORS=Object.freeze([[1,0],[0,1],[-1,0],[0,-1],
-  [1,1],[-1,1],[-1,-1],[1,-1]].map(pair=>Object.freeze(pair)));
+// Costos constants, sense arrels quadrades durant l'expansió de l'A*.
+const ENEMY_ASTAR_NEIGHBORS=Object.freeze([[1,0,1],[0,1,1],[-1,0,1],[0,-1,1],
+  [1,1,Math.SQRT2],[-1,1,Math.SQRT2],[-1,-1,Math.SQRT2],
+  [1,-1,Math.SQRT2]].map(pair=>Object.freeze(pair)));
 let enemyPathBudget=2,enemyNodeBudget=160;
 const enemyGroundAt=(u,x,z)=>u.basement?u.gy:enemyIsVehicle(u)?hAt(x,z):groundAt(x,z,u.walkY??u.o?.position.y??-Infinity);
 function enemyWallBox(w){return{x:(w.x0+w.x1)/2,z:(w.z0+w.z1)/2,w:w.x1-w.x0,d:w.z1-w.z0,hd:0}}
@@ -34,7 +36,9 @@ function enemySweepTreeHit(x,z,r,cache){
     }
   }
   for(const t of cache.trees){
-    if(!(palmsDisabled&&t.p)&&Math.hypot(x-t.x,z-t.z)<t.r+r)return true;
+    if(palmsDisabled&&t.p)continue;
+    const dx=x-t.x,dz=z-t.z,limit=t.r+r;
+    if(dx*dx+dz*dz<limit*limit)return true;
   }
   return false;
 }
@@ -74,12 +78,9 @@ function enemyBodiesClear(u,x,z,hd,dynamicCandidates=null,sampledY=undefined){
   for(const v of dynamicCandidates?.enemies??enemyCandidatesAt(x,z,32)){
     if(v===u||v.destroyed||enemyIsVehicle(v))continue;
     const dx=x-v.x,dz=z-v.z,otherR=enemyBodyRadius(v);
-    if(!veh){
-      const contact=r+otherR+.3;
-      // La immensa majoria de soldats no són a distància de contacte.
-      // No consultam la seva altura fins que poden col·lidir de debò.
-      if(dx*dx+dz*dz>=contact*contact)continue;
-    }
+    // Radi exterior conservador: les col·lisions reals mantenen el test exacte.
+    const contact=veh?Math.hypot(box.w,box.d)*.5+otherR+.3:r+otherR+.3;
+    if(dx*dx+dz*dz>=contact*contact)continue;
     if(Math.abs((v.gy??enemyGroundAt(v,v.x,v.z))-y)>4)continue;
     if(veh?circleVehicleOverlap(v.x,v.z,otherR+.3,{...u,x,z,hd}):true)return false;
   }
@@ -154,15 +155,20 @@ function enemyFindPath(u,tx,tz){
     enemyNodeBudget--;count++;
     const n=pop();if(n.closed||nodes.get(key(n.ix,n.iz))!==n)continue;n.closed=true;if(n.h<best.h)best=n;
     if(n.h<step*1.2){best=n;break}
-    for(const [dx,dz] of ENEMY_ASTAR_NEIGHBORS){
-      const ix=n.ix+dx,iz=n.iz+dz,k=key(ix,iz),x=sx+ix*step,z=sz+iz*step,old=nodes.get(k),g=n.g+step*Math.hypot(dx,dz);
+    for(const [dx,dz,cost] of ENEMY_ASTAR_NEIGHBORS){
+      const ix=n.ix+dx,iz=n.iz+dz,k=key(ix,iz),x=sx+ix*step,z=sz+iz*step,old=nodes.get(k),g=n.g+step*cost;
       if(x<minX||x>maxX||z<minZ||z>maxZ||old?.closed||(old&&old.g<=g))continue;
       const hd=Math.atan2(n.x-x,n.z-z);
       if(!valid.has(k))valid.set(k,enemySolidAt(u,x,z,hd,true));
       if(!valid.get(k))continue;
-      const r=enemyRouteRadius(u),mx=(n.x+x)/2,mz=(n.z+z)/2,y=u.gy??enemyGroundAt(u,mx,mz);
-      if((!u.basement&&treeHit(mx,mz,r))||!u.basement&&enemyGroundAt(u,mx,mz)<-.8||
-         (!enemyIsVehicle(u)&&!enemySolidAt(u,mx,mz,hd,true))||
+      const r=enemyRouteRadius(u),mx=(n.x+x)/2,mz=(n.z+z)/2,
+        // Una única consulta del terreny real, també si gy és fix.
+        midGround=enemyGroundAt(u,mx,mz),y=u.gy??midGround,
+        routeVehicle=enemyIsVehicle(u);
+      // L'endpoint d'infanteria ja valida arbres dins enemySolidAt.
+      if((routeVehicle&&!u.basement&&treeHit(mx,mz,r))||
+         (!u.basement&&midGround<-.8)||
+         (!routeVehicle&&!enemySolidAt(u,mx,mz,hd,true,null,midGround))||
          wallCandidates(mx,mz,r+step).some(w=>!w.open&&w.playerBlock!==false&&w.y1>=y+.15&&w.y0<=y+4&&segmentAabbT(n.x,0,n.z,x,0,z,w.x0-r,w.x1+r,-1,1,w.z0-r,w.z1+r)!=null))continue;
       const h=heur(x,z),next={ix,iz,x,z,g,h,f:g+h,parent:n};nodes.set(k,next);push(next);
     }

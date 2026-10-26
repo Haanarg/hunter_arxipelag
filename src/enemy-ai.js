@@ -18,13 +18,17 @@ function reserveSoldierGoal(u,goal){
   bucket.add(u);return goal;
 }
 function soldierPositionPenalty(u,x,z){
-  let cost=0,checked=0;
+  let cost=0,checked=0,groundY;
   const cx=Math.floor(x/VEHICLE_CELL),cz=Math.floor(z/VEHICLE_CELL);
   outer:for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){
     for(const other of enemyGrid.get(vehicleCellKey(cx+dx,cz+dz))||[]){
       if(++checked>24)break outer;
-      if(other===u||other.t!=='soldat'||other.hp<=0||Math.abs(enemyGroundAt(other,other.x,other.z)-enemyGroundAt(u,x,z))>4)continue;
-      const d=Math.hypot(x-other.x,z-other.z);if(d<7)cost+=(7-d)*4;
+      if(other===u||other.t!=='soldat'||other.hp<=0)continue;
+      const dx=x-other.x,dz=z-other.z,d2=dx*dx+dz*dz;
+      if(d2>=49)continue;
+      if(groundY===undefined)groundY=enemyGroundAt(u,x,z);
+      if(Math.abs(enemyGroundAt(other,other.x,other.z)-groundY)>4)continue;
+      cost+=(7-Math.sqrt(d2))*4;
     }
   }
   checked=0;const rx=Math.floor(x/12),rz=Math.floor(z/12);
@@ -33,7 +37,8 @@ function soldierPositionPenalty(u,x,z){
       if(++checked>24)break outer;
       const goal=soldierReservations.get(other);
       if(other===u||!goal||goal.until<soldierCoordinationTime||other.hp<=0)continue;
-      const d=Math.hypot(x-goal.x,z-goal.z);if(d<8)cost+=(8-d)*10;
+      const dx=x-goal.x,dz=z-goal.z,d2=dx*dx+dz*dz;
+      if(d2<64)cost+=(8-Math.sqrt(d2))*10;
     }
   }
   return cost;
