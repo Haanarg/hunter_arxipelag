@@ -1,6 +1,7 @@
 // Patrulles navals: física, IA, armes i tripulació separades de la navegació terrestre.
 const MARINE_PATROL_MIN=5,MARINE_PATROL_MAX=10;
 const marineAngle=a=>Math.atan2(Math.sin(a),Math.cos(a));
+const MARINE_COURSE_OFFSETS=Object.freeze([0,.27,-.27,.55,-.55,.9,-.9,1.35,-1.35,Math.PI]);
 function createMarinePatrolVisual(boat){
   // Mateix buc i cabina oberta que la llanxa pilotable.
   const metal=0x313c3d,paint=0x596b57;
@@ -44,6 +45,7 @@ function marineTrafficClear(u,x,z,margin=23){
   return true;
 }
 function marinePickWaypoint(u){
+  u.marineCourse=null; // Un nou objectiu sempre invalida el rumb memoritzat.
   // Patrulla d'una badia a una altra; mai no triem rumbs terrestres.
   for(let i=0;i<28;i++){
     const a=R()*Math.PI*2,d=130+R()*390,
@@ -168,22 +170,37 @@ function updateMarinePatrol(u,dt){
     }
   }
   const wanted=Math.atan2(u.x-goalX,u.z-goalZ);
-  let best=wanted,bestScore=Infinity,open=false;
-  // Estudiem un ventall de rumbs sense girar instantàniament la llanxa.
-  for(const offset of [0,.27,-.27,.55,-.55,.9,-.9,1.35,-1.35,Math.PI]){
-    const hd=marineAngle(wanted+offset),fx=-Math.sin(hd),fz=-Math.cos(hd);
-    const safe=marineSeaClear(u.x+fx*36,u.z+fz*36,11)&&
-      marineSeaClear(u.x+fx*69,u.z+fz*69,11)&&
-      marineTrafficClear(u,u.x+fx*34,u.z+fz*34,17);
-    if(!safe)continue;
-    const score=Math.abs(marineAngle(hd-wanted))*.8+
-      Math.abs(marineAngle(hd-u.hd))*.55;
-    if(score<bestScore){bestScore=score;best=hd;open=true}
-  }
-  if(!open){
-    // Costa al davant: primer reduir marxa i descriure una corba ampla.
-    best=marineAngle(u.hd+u.orbitSign*1.25);
-    if(u.wt>2)u.wt=2;
+  let best=wanted,open=false;
+  const course=u.marineCourse;
+  // Lluny del jugador, el ventall de deu rumbs és el càlcul més car de
+  // la patrulla (molts mostrejos d'altura en mar obert). El reutilitzam
+  // només mentre el vaixell, l'objectiu i l'orientació pràcticament no
+  // han canviat; prop del combat es revisa a cada actualització.
+  u.marineCourseT=(u.marineCourseT||0)-dt;
+  const recalc=distance<=700||!course||!course.open||u.marineCourseT<=0||
+    Math.hypot(course.x-u.x,course.z-u.z)>18||
+    Math.hypot(course.goalX-goalX,course.goalZ-goalZ)>8||
+    Math.abs(marineAngle(course.hd-u.hd))>.28;
+  if(!recalc){best=course.best;open=course.open;}
+  else{
+    let bestScore=Infinity;
+    // Els mateixos deu candidats de navegació, sense canviar col·lisions.
+    for(const offset of MARINE_COURSE_OFFSETS){
+      const hd=marineAngle(wanted+offset),fx=-Math.sin(hd),fz=-Math.cos(hd);
+      const safe=marineSeaClear(u.x+fx*36,u.z+fz*36,11)&&
+        marineSeaClear(u.x+fx*69,u.z+fz*69,11)&&
+        marineTrafficClear(u,u.x+fx*34,u.z+fz*34,17);
+      if(!safe)continue;
+      const score=Math.abs(marineAngle(hd-wanted))*.8+
+        Math.abs(marineAngle(hd-u.hd))*.55;
+      if(score<bestScore){bestScore=score;best=hd;open=true}
+    }
+    if(!open){
+      best=marineAngle(u.hd+u.orbitSign*1.25);
+      if(u.wt>2)u.wt=2;
+    }
+    u.marineCourse={best,open,x:u.x,z:u.z,hd:u.hd,goalX,goalZ};
+    u.marineCourseT=distance>700?.36:0;
   }
   const steer=marineAngle(best-u.hd),
         maxYaw=u.speed>12?.27:.39,
@@ -199,6 +216,7 @@ function updateMarinePatrol(u,dt){
   }else{
     u.speed=Math.max(0,u.speed-13*dt);
     u.wt=Math.min(u.wt,.5);
+    u.marineCourse=null;
   }
   u.o.position.set(u.x,wy(u.x,u.z,elapsed)+.2,u.z);
   const wave=Math.sin(elapsed*2+u.x*.03+u.z*.024);
