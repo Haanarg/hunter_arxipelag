@@ -227,7 +227,7 @@ const batchStaticDecor=function* (){let checkpointUnits=0;
         mat.transparent?1:0,mat.side,mat.flatShading?1:0,mat.polygonOffset?1:0,mat.polygonOffsetFactor,mat.polygonOffsetUnits].join(':');
       const key=cx+','+cz+'|'+signature;
       let group=groups.get(key);
-      if(!group){group={cx,cz,mat,meshes:[]};groups.set(key,group)}
+      if(!group){group={cx,cz,mat,signature,meshes:[]};groups.set(key,group)}
       group.meshes.push(mesh);originals++;
     });
   }
@@ -262,8 +262,14 @@ const batchStaticDecor=function* (){let checkpointUnits=0;
       geom.setAttribute(attribute,new THREE.BufferAttribute(data,width));
     }
     geom.computeBoundingSphere();
-    const mat=group.mat.clone();
-    mat.color.setHex(0xffffff);mat.vertexColors=true;mat.needsUpdate=true;
+    // El mateix material per perfil en tots els sectors. Mateixes cares,
+    // colors i abast visual, però menys canvis d'estat de Three.js.
+    let mat=materialMap.get(group.signature);
+    if(!mat){
+      mat=group.mat.clone();mat.color.setHex(0xffffff);
+      mat.vertexColors=true;mat.needsUpdate=true;
+      materialMap.set(group.signature,mat);
+    }
     const mesh=new THREE.Mesh(geom,mat);
     mesh.name='hunter-static-decor-batch';
     mesh.position.set(x,0,z);mesh.castShadow=false;
@@ -284,7 +290,8 @@ const batchStaticDecor=function* (){let checkpointUnits=0;
   }
   for(const mat of materials){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};mat.dispose();}
   staticDecorRoots.length=0;
-  const result={originalMeshes:originals,batchedMeshes:batches,drawCallsSaved:originals-batches,vertices};
+  const result={originalMeshes:originals,batchedMeshes:batches,
+    drawCallsSaved:originals-batches,sharedMaterials:materialMap.size,vertices};
   window.HUNTER_STATIC_BATCH_STATS=result;
   return result;
 };
