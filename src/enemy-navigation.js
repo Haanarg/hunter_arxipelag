@@ -121,6 +121,7 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
   let target={x:tx,z:tz},hd=Math.atan2(u.x-tx,u.z-tz);
   u.navDirectT=(u.navDirectT||0)-dt;
   if(goalChanged||u.navDirectT<=0){
+    const directStarted=performanceStatsVisible?performance.now():0;
     const longDistance=Math.hypot(tx-u.x,tz-u.z),
       lookahead=Math.min(1,ENEMY_DIRECT_LOOKAHEAD/Math.max(.001,longDistance));
     // La comprovació predictiva és curta, però el sweep real de tryMove
@@ -128,10 +129,23 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
     u.navDirect=enemySweep(u,u.x,u.z,
       u.x+(tx-u.x)*lookahead,u.z+(tz-u.z)*lookahead,oldHd,hd,false,!veh);
     u.navDirectT=.45;
+    if(performanceStatsVisible){
+      perfHotspots.aiDirectMs+=performance.now()-directStarted;
+      perfHotspots.aiDirectChecks++;
+    }
   }
   const direct=u.navDirect;
   if(!direct){
-    if(!u.navPath?.length&&u.navRetry<=0&&enemyPathBudget>0){enemyPathBudget--;const path=enemyFindPath(u,tx,tz);if(path!==null){u.navPath=path;u.navRetry=1.2}}
+    if(!u.navPath?.length&&u.navRetry<=0&&enemyPathBudget>0){
+      enemyPathBudget--;
+      const pathStarted=performanceStatsVisible?performance.now():0;
+      const path=enemyFindPath(u,tx,tz);
+      if(performanceStatsVisible){
+        perfHotspots.aiPathMs+=performance.now()-pathStarted;
+        perfHotspots.aiPathChecks++;
+      }
+      if(path!==null){u.navPath=path;u.navRetry=1.2}
+    }
     while(u.navPath?.length&&Math.hypot(u.navPath[0].x-u.x,u.navPath[0].z-u.z)<.6)u.navPath.shift();
     if(u.navPath?.length)target=u.navPath[0];else{u.hd=oldHd;return}
     hd=Math.atan2(u.x-target.x,u.z-target.z);
