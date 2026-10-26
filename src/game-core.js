@@ -3787,6 +3787,8 @@ if(started&&!paused&&!over){
 }
 adaptivePerformance.sample({dt:rawDt,renderCpuMs:performance.now()-renderStarted,
   updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,
+  simulationSteps:simulated.steps,simulationMs:simulated.simulatedDt*1000,
+  droppedMs:simulated.droppedDt*1000,
   active:!!started&&!paused&&!over,now,display:performanceStatsVisible});
 requestAnimationFrame(loop)})(last);
 
