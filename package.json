@@ -10,7 +10,7 @@
     "test:timing": "node tests/simulation-clock.cjs && node tests/simulation-timing.cjs",
     "test:camera": "node tests/camera-controls.cjs",
     "test:mission": "node tests/mission-viability-validator.cjs && node tests/mission-viability.cjs",
-    "test:optimization": "node tests/shared-resources.cjs && node tests/optimization-ui-render-hooks.cjs && node tests/startup-cache.cjs && node tests/perf-no-visual-regressions.cjs && node tests/ai-cpu-optimization.cjs && node tests/enemy-route-probe-budget.cjs && node tests/enemy-sweep-candidate-cache.cjs",
+    "test:optimization": "node tests/shared-resources.cjs && node tests/optimization-ui-render-hooks.cjs && node tests/startup-cache.cjs && node tests/perf-no-visual-regressions.cjs && node tests/ai-cpu-optimization.cjs && node tests/enemy-route-probe-budget.cjs && node tests/enemy-sweep-candidate-cache.cjs && node tests/enemy-sweep-elevation-vegetation.cjs",
     "test:feedback": "node tests/combat-feedback.cjs && node tests/phase6-independent.cjs",
     "test:stealth": "node tests/stealth-perception.cjs && node tests/stealth-feedback.cjs && node tests/stealth-coordination.cjs && node tests/phase8-independent.cjs",
     "test:loading": "node tests/progressive-generation.cjs && node tests/phase10-independent.cjs",
