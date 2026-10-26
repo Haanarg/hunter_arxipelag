@@ -91,9 +91,13 @@ try {
   if(useBundle&&RUNTIME_BUNDLE_PATH){
     try{await loadClassic(RUNTIME_BUNDLE_PATH);runtimeMode='bundle'}
     catch(error){
-      if(error.runtimeExecution)throw error;
-      console.warn('Paquet runtime no disponible; recuperant scripts individuals',error);
-      await loadLegacy();
+      // Un paquet parcialment executat no és segur de carregar una segona
+      // vegada damunt els mateixos globals. Recarregam una pàgina neta.
+      const fallback=new URL(location.href);
+      fallback.searchParams.set('runtime','source');
+      console.warn('Error amb el runtime agrupat; recarregant els scripts originals',error);
+      location.replace(fallback.toString());
+      throw error;
     }
   }else await loadLegacy();
   window.HUNTER_RUNTIME_MODE=runtimeMode;
