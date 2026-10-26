@@ -7,10 +7,12 @@ window.HUNTER_PERFORMANCE=Object.freeze({
     let frames=0,frameAccum=0,lastDisplay=0,lastFps=0;
     const stats={
       fps:0,frameMs:0,renderCpuMs:0,updateCpuMs:0,terrainCpuMs:0,drawCalls:0,triangles:0,
+      simulationSteps:0,simulationMs:0,droppedMs:0,
       pixelRatio:ratio,maxPixelRatio:ratio,minPixelRatio:ratio,
       changes:0,active:false,mode:'fixed'
     };
-    function sample({dt,renderCpuMs=0,updateCpuMs=0,terrainCpuMs=0,active=true,now=0,display=false}){
+    function sample({dt,renderCpuMs=0,updateCpuMs=0,terrainCpuMs=0,
+      simulationSteps=0,simulationMs=0,droppedMs=0,active=true,now=0,display=false}){
       stats.active=!!active;
       const counts=renderer.info?.render;
       stats.drawCalls=counts?.calls||0;
@@ -18,6 +20,9 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       stats.renderCpuMs=renderCpuMs;
       stats.updateCpuMs=updateCpuMs;
       stats.terrainCpuMs=terrainCpuMs;
+      stats.simulationSteps=simulationSteps;
+      stats.simulationMs=simulationMs;
+      stats.droppedMs=droppedMs;
       if(!active){
         frames=0;frameAccum=0;lastFps=0;
         return stats;
@@ -33,6 +38,8 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       if(display&&element&&now-lastDisplay>=350){
         element.textContent='FPS '+Math.round(stats.fps||0)+
           ' · fotograma '+(stats.frameMs||0).toFixed(1)+' ms'+
+          '\nSim '+stats.simulationSteps+' passos · '+stats.simulationMs.toFixed(0)+
+          ' ms simulats · '+stats.droppedMs.toFixed(0)+' ms descartats'+
           '\nCPU joc '+stats.updateCpuMs.toFixed(1)+' ms · terreny '+stats.terrainCpuMs.toFixed(1)+' ms'+
           '\nCPU render '+stats.renderCpuMs.toFixed(1)+' ms · '+stats.drawCalls+' dibuixos'+
           '\n'+Math.round(stats.triangles/1000)+'k triangles · Resolució fixa ×'+ratio.toFixed(2)+
