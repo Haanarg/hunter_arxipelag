@@ -15,7 +15,9 @@ function setup(startFlags={shadowsDisabled:false,waterDisabled:false}){
   const controller=win.HUNTER_PERFORMANCE_AUDIT.create({
     windowObject:win,warmupMs:100,sampleMs:200,
     getState:()=>({seed:67,quality:'desktop',pixelRatio:1,
-      shadowsDisabled:shadows,waterDisabled:water}),
+      shadowsDisabled:shadows,waterDisabled:water,
+      stressPreset:{seed:2407759483,x:1208,z:-1594,scale:1},
+      vehicleFleet:{llanxa:{count:2,meshes:80,shadowCasters:60}}}),
     setShadowsDisabled:x=>{shadows=x;changes.push(['shadows',x])},
     setWaterDisabled:x=>{water=x;changes.push(['water',x])}
   });
@@ -25,7 +27,9 @@ function setup(startFlags={shadowsDisabled:false,waterDisabled:false}){
     sweepChecks:135,sweepSamples:426,aiUpdated:170,aiSkipped:490,
     groups:{edificis:600,vegetacio:800,enemics:500},
     shadowGroups:{jugador:3,vehicles:7},otherDetails:{BoxGeometry:12},shadowRedrawn:1,
-    shadowReason:'moviment gran',shadowCulprit:'jugador / braç',deferredFaunaCasters:2};
+    shadowReason:'moviment gran',shadowCulprit:'jugador / braç',deferredFaunaCasters:2,
+    vehicleTypes:{llanxa:8,camio:12},vehicleParts:{'llanxa / hull':4},
+    vehicleShadowTypes:{llanxa:2},boatMotionProxies:1};
   return {controller,frame,win,changes,flags:()=>({shadows,water}),nodes};
 }
 const s=setup();
@@ -46,6 +50,12 @@ assert.equal(s.controller.results[0].stats.shadowDrawCalls,10);
 assert.equal(s.controller.results[0].stats.otherDetails.BoxGeometry,12);
 assert.equal(s.controller.results[0].stats.shadowRedrawRate,1);
 assert.equal(s.controller.results[0].stats.deferredFaunaCasters,2);
+assert.equal(s.controller.results[0].stats.vehicleTypes.camio,12);
+assert.equal(s.controller.results[0].stats.vehicleParts['llanxa / hull'],4);
+assert.equal(s.controller.results[0].stats.vehicleShadowTypes.llanxa,2);
+assert.equal(s.controller.results[0].stats.p99FrameMs,100);
+assert.equal(s.win.HUNTER_PERF_AUDIT_RESULTS.stressPreset.seed,2407759483);
+assert.equal(s.win.HUNTER_PERF_AUDIT_RESULTS.vehicleFleet.llanxa.count,2);
 assert.equal(s.controller.results[0].stats.shadowReasons['moviment gran'],2);
 assert.equal(s.controller.results[0].stats.shadowCulprits['jugador / braç'],2);
 assert(s.changes.some(([key,value])=>key==='shadows'&&value===true));

@@ -1,5 +1,5 @@
-import {GAME_VERSION} from './version.mjs?v=0.5.104';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.5.104';
+import {GAME_VERSION} from './version.mjs?v=0.5.105';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.5.105';
 
 // La portada no carrega Three.js, WebGL, el món ni una llavor de fons.
 // Una imatge estàtica renderitzada amb la llavor 67 és suficient.
@@ -27,10 +27,19 @@ const badge = document.getElementById('versionBadge');
 if(badge)badge.textContent='v'+GAME_VERSION;
 
 const params = new URLSearchParams(location.search);
+const stressAuditRequested=params.get('perfAudit')==='1'&&params.get('stress')==='1';
+if(stressAuditRequested){
+  // La prova no depèn de la llavor aleatòria ni d'una elecció del menú.
+  seedRandom.checked=false;seedInput.value='2407759483';seedInput.disabled=true;
+  seedInput.title='Prova d’estrès: llavor 2407759483, X=1208, Z=-1594';
+  const smallMap=document.querySelector('input[name="mapSize"][value="1"]');
+  if(smallMap)smallMap.checked=true;
+}
 const validQualities = ['desktop','mobile','ultra'];
 const requested = params.get('quality');
 // Gràfics Alts per defecte també en dispositius tàctils.
-const initialQuality=validQualities.includes(requested)?requested:
+const initialQuality=stressAuditRequested?'desktop':
+  validQualities.includes(requested)?requested:
   params.get('low')==='1'?'mobile':'desktop';
 qualitySelect.value=initialQuality;
 qualitySelect.addEventListener('change',()=>{
@@ -85,7 +94,7 @@ const showLoading=(message)=>{
 };
 function loadGame(){
   if(window.HUNTER_READY)return Promise.resolve();
-  if(!bootPromise)bootPromise=import('./bootstrap.mjs?v=0.5.104').then(()=>{
+  if(!bootPromise)bootPromise=import('./bootstrap.mjs?v=0.5.105').then(()=>{
     if(!window.HUNTER_READY)throw new Error('El motor 3D no ha acabat de carregar');
   }).catch(error=>{bootPromise=null;throw error});
   return bootPromise;

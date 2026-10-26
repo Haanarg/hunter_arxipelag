@@ -1,15 +1,15 @@
-import * as compoundPaths from './compound-paths.mjs?v=0.5.104';
+import * as compoundPaths from './compound-paths.mjs?v=0.5.105';
 window.HUNTER_COMPOUND_PATHS=compoundPaths;
-import {runtimeLayouts,chooseCompoundLayout} from './compound-runtime-layouts.mjs?v=0.5.104';
-import * as compoundArchitecture from './compound-architecture.mjs?v=0.5.104';
+import {runtimeLayouts,chooseCompoundLayout} from './compound-runtime-layouts.mjs?v=0.5.105';
+import * as compoundArchitecture from './compound-architecture.mjs?v=0.5.105';
 window.HUNTER_RUNTIME_LAYOUTS=runtimeLayouts;window.HUNTER_CHOOSE_COMPOUND=chooseCompoundLayout;window.HUNTER_COMPOUND_ARCHITECTURE=compoundArchitecture;
 import {createCompoundStructures} from './compound-structures.mjs';
 window.HUNTER_COMPOUND_STRUCTURES=createCompoundStructures;
 import {runtimeScripts} from './runtime-scripts.mjs';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.5.104';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.5.105';
 import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
-import {GAME_VERSION} from './version.mjs?v=0.5.104';
+import {GAME_VERSION} from './version.mjs?v=0.5.105';
 import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs';
 window.HUNTER_CIVIL_C1A=createCivilianCarModel;
@@ -29,7 +29,9 @@ const params=new URLSearchParams(location.search);
 const requestedQuality=params.get('quality');
 const legacyLow=params.get('low')==='1';
 const validQualities=['desktop','mobile','ultra'];
-const quality=validQualities.includes(requestedQuality)?requestedQuality:
+const stressAuditRequested=params.get('perfAudit')==='1'&&params.get('stress')==='1';
+const quality=stressAuditRequested?'desktop':
+  validQualities.includes(requestedQuality)?requestedQuality:
   legacyLow?'mobile':'desktop';
 window.HUNTER_GRAPHICS_QUALITY=quality;
 window.HUNTER_FORCE_LOW_QUALITY=quality!=='desktop';
@@ -59,7 +61,7 @@ try {
   // Si les dades no es poden preparar, mantenim la geometria clàssica
   // de reserva per no impedir l'inici de la partida.
   try {
-    const {prepareHumveeD31Runtime}=await import('./humvee-d31-runtime.mjs?v=0.5.104');
+    const {prepareHumveeD31Runtime}=await import('./humvee-d31-runtime.mjs?v=0.5.105');
     window.HUNTER_HUMVEE_D31=await prepareHumveeD31Runtime(THREE,{vehicleScale:1.3});
     console.info('Humvee D3.1 procedural B · 175% carregat al joc',
       window.HUNTER_HUMVEE_D31.dimensions);

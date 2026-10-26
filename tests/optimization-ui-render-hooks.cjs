@@ -27,9 +27,11 @@ function segment(from,to){
  building.add(mesh);world.add(building);
  const B=[{o:building}],V=[],E=[],fa=[],items=[],PM={trunk:null},
   terrainStream=null,renderCategories={edificis:0,vehicles:0,altres:0};
- const shadowRenderCategories={},renderOtherDetails={};
+ const shadowRenderCategories={},renderOtherDetails={},
+  vehicleDrawTypes={},vehicleDrawParts={},vehicleShadowTypes={},vehicleFleet={};
  const context={world,pl,B,V,E,fa,items,PM,terrainStream,renderCategories,
-  shadowRenderCategories,renderOtherDetails,performanceStatsVisible:true,Map,WeakMap};
+  shadowRenderCategories,renderOtherDetails,vehicleDrawTypes,vehicleDrawParts,
+  vehicleShadowTypes,vehicleFleet,performanceStatsVisible:true,Map,WeakMap};
  vm.runInNewContext(code+';this.registerDrawCategories=registerDrawCategories;',context);
  context.registerDrawCategories();
  const initialHook=mesh.onBeforeRender;
@@ -43,9 +45,14 @@ function segment(from,to){
  mesh.onBeforeRender();
  assert.equal(renderCategories.edificis,2,'A mesh must count only once per draw');
  assert.equal(previousCalls,2,'Preserve the original animation callback');
- B.length=0;V.push({o:building});
+ B.length=0;V.push({o:building,t:'cotxe'});
  context.registerDrawCategories();
- mesh.onBeforeRender();
+ mesh.onBeforeRender();mesh.onBeforeShadow();
+ assert.equal(vehicleDrawTypes.cotxe,1,'Identify vehicle draw calls by model');
+ assert.equal(vehicleDrawParts['cotxe / test-window'],1,'Identify expensive named components');
+ assert.equal(vehicleShadowTypes.cotxe,1,'Count vehicle shadow draws separately');
+ assert.equal(vehicleFleet.cotxe.count,1);
+ assert.equal(vehicleFleet.cotxe.meshes,1);
  assert.equal(renderCategories.vehicles,1,'Existing callbacks must use updated category');
  assert.equal(renderCategories.edificis,2);
  context.performanceStatsVisible=false;context.registerDrawCategories();

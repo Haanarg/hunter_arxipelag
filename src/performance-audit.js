@@ -12,7 +12,8 @@
     if(!rows.length)return null;
     const avg=key=>rows.reduce((sum,r)=>sum+(r[key]||0),0)/rows.length;
     const sorted=rows.map(r=>r.frameMs).sort((a,b)=>a-b);
-    const groups={},shadowGroups={},otherDetails={},shadowReasons={},shadowCulprits={};
+    const groups={},shadowGroups={},otherDetails={},shadowReasons={},shadowCulprits={},
+      vehicleTypes={},vehicleParts={},vehicleShadowTypes={};
     const fold=(out,values)=>{
       for(const [key,value] of Object.entries(values||{}))
         out[key]=(out[key]||0)+value/rows.length;
@@ -21,6 +22,9 @@
       fold(groups,r.groups);
       fold(shadowGroups,r.shadowGroups);
       fold(otherDetails,r.otherDetails);
+      fold(vehicleTypes,r.vehicleTypes);
+      fold(vehicleParts,r.vehicleParts);
+      fold(vehicleShadowTypes,r.vehicleShadowTypes);
       if(r.shadowRedrawn&&r.shadowReason)
         shadowReasons[r.shadowReason]=(shadowReasons[r.shadowReason]||0)+1;
       if(r.shadowRedrawn&&r.shadowCulprit)
@@ -30,7 +34,11 @@
     const attributed=groupSum(groups)+groupSum(shadowGroups);
     return {
       frames:rows.length,fps:1000/avg('frameMs'),
-      frameMs:avg('frameMs'),p95FrameMs:sorted[Math.min(sorted.length-1,Math.ceil(sorted.length*.95)-1)],
+      frameMs:avg('frameMs'),
+      p95FrameMs:sorted[Math.min(sorted.length-1,Math.ceil(sorted.length*.95)-1)],
+      p99FrameMs:sorted[Math.min(sorted.length-1,Math.ceil(sorted.length*.99)-1)],
+      slowFrames25:rows.filter(r=>r.frameMs>25).length,
+      slowFrames50:rows.filter(r=>r.frameMs>50).length,
       updateCpuMs:avg('updateCpuMs'),renderCpuMs:avg('renderCpuMs'),
       postRenderCpuMs:avg('postRenderCpuMs'),terrainCpuMs:avg('terrainCpuMs'),
       drawCalls:avg('drawCalls'),triangles:avg('triangles'),
@@ -40,9 +48,11 @@
       simulationSteps:avg('simulationSteps'),
       shadowRedrawRate:avg('shadowRedrawn'),
       deferredFaunaCasters:avg('deferredFaunaCasters'),
+      boatMotionProxies:avg('boatMotionProxies'),
       shadowDrawCalls:groupSum(shadowGroups),
       unclassifiedDrawCalls:Math.max(0,avg('drawCalls')-attributed),
-      groups,shadowGroups,otherDetails,shadowReasons,shadowCulprits
+      groups,shadowGroups,otherDetails,shadowReasons,shadowCulprits,
+      vehicleTypes,vehicleParts,vehicleShadowTypes
     };
   }
   function create({getState,setShadowsDisabled,setWaterDisabled,windowObject=window,
@@ -99,6 +109,9 @@
         pixelRatio:original.pixelRatio,
         playerBatchStats:original.playerBatchStats||null,
         pathStats:original.pathStats||null,
+        stressPreset:original.stressPreset||null,
+        vehicleFleet:original.vehicleFleet||null,
+        auditPosition:origin,
         originalShadowsDisabled:original.shadowsDisabled,
         originalWaterDisabled:original.waterDisabled,phases:results,baseline,
         note:'Comparació de CPU i FPS: no és una mesura directa de GPU. La suma de crides per categoria pot no incloure totes les passades auxiliars.'};
@@ -106,6 +119,9 @@
       windowObject.HUNTER_PERF_AUDIT_RESULTS=report;
       const fmt=n=>Number.isFinite(n)?n.toFixed(1):'n/d';
       let message='Mateixa llavor i posició; opcions originals restaurades.\n';
+      if(original.stressPreset)
+        message+='ESTRÈS: llavor '+original.stressPreset.seed+
+          ', X '+fmt(original.stressPreset.x)+', Z '+fmt(original.stressPreset.z)+'\n';
       message+='Escena            FPS   render  joc    crides\n';
       for(const p of results){
         const s=p.stats;
@@ -138,6 +154,15 @@
       if(original.pathStats)
         message+='Camins: '+original.pathStats.chunks+' sectors\n';
       message+='Fauna amb ombra i refresc diferit: '+fmt(initial?.deferredFaunaCasters)+' malles\n';
+      message+='Vehicles: crides de dibuix per model (fase inicial):\n';
+      for(const [key,count] of Object.entries(initial?.vehicleTypes||{}).sort((a,b)=>b[1]-a[1]))
+        message+='  '+key+': '+fmt(count)+'\n';
+      message+='Peces de vehicles (les 15 més costoses):\n';
+      for(const [key,count] of Object.entries(initial?.vehicleParts||{}).sort((a,b)=>b[1]-a[1]).slice(0,15))
+        message+='  '+key+': '+fmt(count)+'\n';
+      message+='Ombres dels vehicles per model:\n';
+      for(const [key,count] of Object.entries(initial?.vehicleShadowTypes||{}).sort((a,b)=>b[1]-a[1]))
+        message+='  '+key+': '+fmt(count)+'\n';
       message+='Recalculades '+fmt((initial?.shadowRedrawRate||0)*100)+'% dels fotogrames; ';
       message+='sense classificació: '+fmt(initial?.unclassifiedDrawCalls)+' crides\n';
       message+='\nIA: '+fmt(byId['base-1']?.aiMs)+'ms; col·lisions '+fmt(byId['base-1']?.aiSweepMs)+'ms';

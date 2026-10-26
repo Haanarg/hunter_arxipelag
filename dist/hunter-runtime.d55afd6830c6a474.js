@@ -385,7 +385,8 @@ window.HUNTER_PERFORMANCE=Object.freeze({
     if(!rows.length)return null;
     const avg=key=>rows.reduce((sum,r)=>sum+(r[key]||0),0)/rows.length;
     const sorted=rows.map(r=>r.frameMs).sort((a,b)=>a-b);
-    const groups={},shadowGroups={},otherDetails={},shadowReasons={},shadowCulprits={};
+    const groups={},shadowGroups={},otherDetails={},shadowReasons={},shadowCulprits={},
+      vehicleTypes={},vehicleParts={},vehicleShadowTypes={};
     const fold=(out,values)=>{
       for(const [key,value] of Object.entries(values||{}))
         out[key]=(out[key]||0)+value/rows.length;
@@ -394,6 +395,9 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       fold(groups,r.groups);
       fold(shadowGroups,r.shadowGroups);
       fold(otherDetails,r.otherDetails);
+      fold(vehicleTypes,r.vehicleTypes);
+      fold(vehicleParts,r.vehicleParts);
+      fold(vehicleShadowTypes,r.vehicleShadowTypes);
       if(r.shadowRedrawn&&r.shadowReason)
         shadowReasons[r.shadowReason]=(shadowReasons[r.shadowReason]||0)+1;
       if(r.shadowRedrawn&&r.shadowCulprit)
@@ -403,7 +407,11 @@ window.HUNTER_PERFORMANCE=Object.freeze({
     const attributed=groupSum(groups)+groupSum(shadowGroups);
     return {
       frames:rows.length,fps:1000/avg('frameMs'),
-      frameMs:avg('frameMs'),p95FrameMs:sorted[Math.min(sorted.length-1,Math.ceil(sorted.length*.95)-1)],
+      frameMs:avg('frameMs'),
+      p95FrameMs:sorted[Math.min(sorted.length-1,Math.ceil(sorted.length*.95)-1)],
+      p99FrameMs:sorted[Math.min(sorted.length-1,Math.ceil(sorted.length*.99)-1)],
+      slowFrames25:rows.filter(r=>r.frameMs>25).length,
+      slowFrames50:rows.filter(r=>r.frameMs>50).length,
       updateCpuMs:avg('updateCpuMs'),renderCpuMs:avg('renderCpuMs'),
       postRenderCpuMs:avg('postRenderCpuMs'),terrainCpuMs:avg('terrainCpuMs'),
       drawCalls:avg('drawCalls'),triangles:avg('triangles'),
@@ -413,9 +421,11 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       simulationSteps:avg('simulationSteps'),
       shadowRedrawRate:avg('shadowRedrawn'),
       deferredFaunaCasters:avg('deferredFaunaCasters'),
+      boatMotionProxies:avg('boatMotionProxies'),
       shadowDrawCalls:groupSum(shadowGroups),
       unclassifiedDrawCalls:Math.max(0,avg('drawCalls')-attributed),
-      groups,shadowGroups,otherDetails,shadowReasons,shadowCulprits
+      groups,shadowGroups,otherDetails,shadowReasons,shadowCulprits,
+      vehicleTypes,vehicleParts,vehicleShadowTypes
     };
   }
   function create({getState,setShadowsDisabled,setWaterDisabled,windowObject=window,
@@ -472,6 +482,9 @@ window.HUNTER_PERFORMANCE=Object.freeze({
         pixelRatio:original.pixelRatio,
         playerBatchStats:original.playerBatchStats||null,
         pathStats:original.pathStats||null,
+        stressPreset:original.stressPreset||null,
+        vehicleFleet:original.vehicleFleet||null,
+        auditPosition:origin,
         originalShadowsDisabled:original.shadowsDisabled,
         originalWaterDisabled:original.waterDisabled,phases:results,baseline,
         note:'Comparació de CPU i FPS: no és una mesura directa de GPU. La suma de crides per categoria pot no incloure totes les passades auxiliars.'};
@@ -479,6 +492,9 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       windowObject.HUNTER_PERF_AUDIT_RESULTS=report;
       const fmt=n=>Number.isFinite(n)?n.toFixed(1):'n/d';
       let message='Mateixa llavor i posició; opcions originals restaurades.\n';
+      if(original.stressPreset)
+        message+='ESTRÈS: llavor '+original.stressPreset.seed+
+          ', X '+fmt(original.stressPreset.x)+', Z '+fmt(original.stressPreset.z)+'\n';
       message+='Escena            FPS   render  joc    crides\n';
       for(const p of results){
         const s=p.stats;
@@ -511,6 +527,15 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       if(original.pathStats)
         message+='Camins: '+original.pathStats.chunks+' sectors\n';
       message+='Fauna amb ombra i refresc diferit: '+fmt(initial?.deferredFaunaCasters)+' malles\n';
+      message+='Vehicles: crides de dibuix per model (fase inicial):\n';
+      for(const [key,count] of Object.entries(initial?.vehicleTypes||{}).sort((a,b)=>b[1]-a[1]))
+        message+='  '+key+': '+fmt(count)+'\n';
+      message+='Peces de vehicles (les 15 més costoses):\n';
+      for(const [key,count] of Object.entries(initial?.vehicleParts||{}).sort((a,b)=>b[1]-a[1]).slice(0,15))
+        message+='  '+key+': '+fmt(count)+'\n';
+      message+='Ombres dels vehicles per model:\n';
+      for(const [key,count] of Object.entries(initial?.vehicleShadowTypes||{}).sort((a,b)=>b[1]-a[1]))
+        message+='  '+key+': '+fmt(count)+'\n';
       message+='Recalculades '+fmt((initial?.shadowRedrawRate||0)*100)+'% dels fotogrames; ';
       message+='sense classificació: '+fmt(initial?.unclassifiedDrawCalls)+' crides\n';
       message+='\nIA: '+fmt(byId['base-1']?.aiMs)+'ms; col·lisions '+fmt(byId['base-1']?.aiSweepMs)+'ms';
@@ -12553,6 +12578,9 @@ const performanceDebugRequested=typeof location!=='undefined'&&
   new URLSearchParams(location.search||'').get('perf')==='1';
 const performanceAuditRequested=typeof location!=='undefined'&&
   new URLSearchParams(location.search||'').get('perfAudit')==='1';
+const stressAuditRequested=performanceAuditRequested&&
+  new URLSearchParams(location.search||'').get('stress')==='1';
+const STRESS_AUDIT_PRESET=Object.freeze({seed:2407759483,x:1208,z:-1594,scale:1});
 const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segments:visualQuality.waterSegments,initialSegments:Math.min(160,visualQuality.waterSegments),heightAt:hAt,config:window.HUNTER_WATER,reflections:visualQuality.waterReflections!==false,coastDetail:!!visualQuality.coastDetail,fogColor:scene.fog.color});
 let waterUpgradePending=false;
 const waterMat=water.material,waterUniforms=water.uniforms;
@@ -12593,7 +12621,8 @@ const shadowCache=window.HUNTER_SHADOW_CACHE.create({shadowMap:ren.shadowMap,
     return (kind||'element')+' / '+(node.name||node.geometry?.type||node.type||'pivot');
   }
 });
-let shadowPoseNodes=[];
+let shadowPoseNodes=[],shadowBoatNodes=[];
+const shadowBoatProxyCache=new WeakMap();
 shadowStats.cache=shadowCache.stats;
 let shadowLastX=Infinity,shadowLastZ=Infinity,shadowLastMs=-Infinity;
 window.HUNTER_SHADOW_STATS=shadowStats;
@@ -12605,7 +12634,7 @@ function updateShadowCasters(force=false){
   const range2=Math.pow(visualQuality.shadowDistance||225,2),
         dynamicPositions=new Map();
   let count=0,deferredFaunaCasters=0;
-  const poseNodes=new Set();
+  const poseNodes=new Set(),boatProxies=new Set();
   for(const entry of shadowCandidates){
     let q=entry.point;
     if(entry.owner){
@@ -12628,14 +12657,36 @@ function updateShadowCasters(force=false){
         }
         // Incloem pivots de mans, rodes i rotors, no sols la posició del vehicle.
         for(let o=entry.mesh;o;o=o.parent){
-          poseNodes.add(o);
-          shadowNodeOwners.set(o,entry.owner);
+          // L'oscil·lació de les ones canvia Y, pitch i roll del buc,
+          // però no representa navegació ni canvi de rumb. Conservam
+          // la detecció immediata de X, Z i yaw, i el refresc periòdic
+          // actualitza la inclinació i l'ombra completa del buc.
+          if(o===entry.owner&&shadowOwnerKinds.get(o)==='vehicle llanxa'){
+            let proxy=shadowBoatProxyCache.get(o);
+            if(!proxy){
+              proxy={
+                source:o,
+                position:{x:o.position.x,y:0,z:o.position.z},
+                rotation:{x:0,y:o.rotation.y,z:0},
+                scale:{x:1,y:1,z:1}
+              };
+              shadowBoatProxyCache.set(o,proxy);
+            }
+            boatProxies.add(proxy);
+            poseNodes.add(proxy);
+            shadowNodeOwners.set(proxy,o);
+          }else{
+            poseNodes.add(o);
+            shadowNodeOwners.set(o,entry.owner);
+          }
           if(o===entry.owner)break;
         }
       }
     }
   }
   shadowPoseNodes=[...poseNodes];
+  shadowBoatNodes=[...boatProxies];
+  shadowStats.boatMotionProxies=shadowBoatNodes.length;
   shadowStats.active=count;
   shadowStats.deferredFaunaCasters=deferredFaunaCasters;
   shadowStats.updates++;
@@ -12651,7 +12702,7 @@ function setShadowsDisabled(disabled){
     shadowCache.invalidate();
     updateShadowCasters(true);
   }else{
-    shadowPoseNodes=[];
+    shadowPoseNodes=[];shadowBoatNodes=[];
     for(const entry of shadowCandidates)entry.mesh.castShadow=false;
     shadowStats.active=0;shadowStats.deferredFaunaCasters=0;
   }
@@ -12671,7 +12722,7 @@ function* traverseGenerationSteps(root,visit,stage){
 function prepareShadowCasters(){return drainBuildSteps(prepareShadowCastersSteps())}
 function* prepareShadowCastersSteps(){
   shadowCandidates.length=0;
-  shadowPoseNodes=[];
+  shadowPoseNodes=[];shadowBoatNodes=[];
   shadowCache.invalidate();
   shadowLastX=Infinity;shadowLastZ=Infinity;shadowLastMs=-Infinity;
   shadowStats.candidates=0;shadowStats.active=0;shadowStats.excludedDetail=0;
@@ -13093,7 +13144,24 @@ if(seedSearchCancelEl)seedSearchCancelEl.onclick=()=>{
 // El fons del menú és un fitxer estàtic: ni llavors ni localStorage ni WebGL a la portada.
 seedRandomEl.onchange=()=>{seedInputEl.disabled=seedRandomEl.checked;if(!seedRandomEl.checked)seedInputEl.focus()};
 function readGameStartOptions(difficulty=DIF){
+  if(stressAuditRequested)return {difficulty,scale:STRESS_AUDIT_PRESET.scale,seed:STRESS_AUDIT_PRESET.seed};
   return {difficulty,scale:currentMapScale(),seed:seedRandomEl.checked?null:seedFromText(seedInputEl.value||'hunter')};
+}
+function applyStressAuditPosition(){
+  if(!stressAuditRequested)return;
+  // La posició només s'utilitza en la prova instrumentada; no afecta les
+  // llavors normals ni la distribució aleatòria del món.
+  const {x,z}=STRESS_AUDIT_PRESET;
+  P.x=x;P.z=z;P.y=Math.max(0,hAt(x,z));P.hd=Math.atan2(x,z);
+  pl.position.set(P.x,P.y,P.z);
+  pl.rotation.y=P.hd;
+  cv=null;resetCameraState();
+  cam.position.set(P.x+18,P.y+24,P.z+32);
+  cam.lookAt(P.x,P.y+2,P.z);
+  if(terrainStream)terrainStream.update(P.x,P.z,visualQuality.shadows?2:1.2,cam,null);
+  updateDistanceVisibility();
+  updateShadowCasters(true);
+  mini();
 }
 function applyGameStartOptions({difficulty=DIF,scale=MAP_SCALE,seed:inputSeed=requestedSeed}={}){
   DIF=+difficulty;MAP_SCALE=+scale===2?2:1;S=4800*MAP_SCALE;H=S/2;
@@ -13152,6 +13220,7 @@ function startGameProgressively(options=readGameStartOptions()){
       })();
       await buildProgressively({iterator,signal,schedule:options.schedule||window.HUNTER_GENERATION_SCHEDULE,onProgress:report});
       if(signal.aborted)throw generationAbortError();
+      applyStressAuditPosition();
       initAudio();started=1;paused=!simulationFocused||!!document.hidden;clearKeys();
       if(paused){ui.show('pause');audioPause()}
       window.HUNTER_GENERATION_STATE.status='ready';
@@ -14461,6 +14530,11 @@ let staticVisualBatches=[];
 const renderCategories={terreny:0,edificis:0,filferrades:0,vehicles:0,enemics:0,vegetacio:0,decoracio:0,objectes:0,fauna:0,jugador:0,mar:0,cel:0,efectes:0,altres:0};
 const shadowRenderCategories={};
 const renderOtherDetails={};
+const vehicleDrawTypes={},vehicleDrawParts={},vehicleShadowTypes={},vehicleFleet={};
+window.HUNTER_VEHICLE_DRAW_TYPES=vehicleDrawTypes;
+window.HUNTER_VEHICLE_DRAW_PARTS=vehicleDrawParts;
+window.HUNTER_VEHICLE_SHADOW_TYPES=vehicleShadowTypes;
+window.HUNTER_VEHICLE_FLEET=vehicleFleet;
 window.HUNTER_SHADOW_DRAW_GROUPS=shadowRenderCategories;
 window.HUNTER_DRAW_OTHER_DETAILS=renderOtherDetails;
 window.HUNTER_DRAW_CALL_GROUPS=renderCategories;
@@ -14468,10 +14542,24 @@ adaptivePerformance.stats.drawCategories=renderCategories;
 const registeredDrawHooks=new WeakMap();
 function registerDrawCategories(){const steps=registerDrawCategoriesSteps(false);while(!steps.next().done){}}
 function* registerDrawCategoriesSteps(progressive=true){
-  const tagged=new Map();
+  const tagged=new Map(),vehicleRoots=new Map();
+  for(const key in vehicleFleet)delete vehicleFleet[key];
+  const markVehicle=(root,type)=>{
+    if(!root)return;
+    vehicleRoots.set(root,type);
+    let stats=vehicleFleet[type];
+    if(!stats)stats=vehicleFleet[type]={count:0,meshes:0,shadowCasters:0};
+    stats.count++;
+    root.traverse(o=>{
+      if(o.isMesh){stats.meshes++;if(o.castShadow)stats.shadowCasters++}
+    });
+  };
   for(const b of B)tagged.set(b.o,'edificis');
-  for(const v of V)tagged.set(v.o,'vehicles');
-  for(const e of E)if(e.o)tagged.set(e.o,'enemics');
+  for(const v of V){tagged.set(v.o,'vehicles');markVehicle(v.o,v.t)}
+  for(const e of E)if(e.o){
+    tagged.set(e.o,'enemics');
+    if(['jeep','tanqueta','tanc','patrulla_marina'].includes(e.t))markVehicle(e.o,e.t);
+  }
   for(const f of fa)if(f.o)tagged.set(f.o,'fauna');
   for(const item of items)tagged.set(item.o,'objectes');
   if(PM.trunk)tagged.set(PM.trunk,'vegetacio');
@@ -14508,26 +14596,40 @@ function* registerDrawCategoriesSteps(progressive=true){
     // Subcategories estables de les malles que encara no tenen un propietari.
     const detail=label==='altres'?(mesh.parent?.name||mesh.name||
       mesh.geometry?.type||'malla sense nom'):'';
+    let vehicleType='';
+    for(let root=mesh;root;root=root.parent)
+      if(vehicleRoots.has(root)){vehicleType=vehicleRoots.get(root);break}
+    // La geometria identifica pneumàtics, rems, pales i detalls.
+    // Els batches estàtics tenen noms explícits per preservar la distinció.
+    const vehiclePart=vehicleType?(mesh.name||
+      mesh.parent?.name||mesh.geometry?.type||'malla sense nom'):'';
     const existing=registeredDrawHooks.get(mesh);
     if(existing){
       // The same mesh can change parent/category across world rebuilds.
       existing.label=label;existing.detail=detail;
+      existing.vehicleType=vehicleType;existing.vehiclePart=vehiclePart;
       mesh.onBeforeRender=existing.wrapper;
       mesh.onBeforeShadow=existing.shadowWrapper;
       return;
     }
     // Preserve any existing animation hook, wrapping each mesh only once.
     const previous=mesh.onBeforeRender,previousShadow=mesh.onBeforeShadow;
-    const entry={label,detail,previous,previousShadow};
+    const entry={label,detail,vehicleType,vehiclePart,previous,previousShadow};
     mesh.onBeforeRender=function(...args){
       renderCategories[entry.label]=(renderCategories[entry.label]||0)+1;
       if(entry.label==='altres')renderOtherDetails[entry.detail]=(renderOtherDetails[entry.detail]||0)+1;
+      if(entry.vehicleType){
+        vehicleDrawTypes[entry.vehicleType]=(vehicleDrawTypes[entry.vehicleType]||0)+1;
+        const key=entry.vehicleType+' / '+entry.vehiclePart;
+        vehicleDrawParts[key]=(vehicleDrawParts[key]||0)+1;
+      }
       if(previous)return previous.apply(this,args);
     };
     entry.wrapper=mesh.onBeforeRender;
     mesh.onBeforeShadow=function(...args){
       if(typeof shadowRenderCategories!=='undefined')
         shadowRenderCategories[entry.label]=(shadowRenderCategories[entry.label]||0)+1;
+      if(entry.vehicleType)vehicleShadowTypes[entry.vehicleType]=(vehicleShadowTypes[entry.vehicleType]||0)+1;
       if(previousShadow)return previousShadow.apply(this,args);
     };
     entry.shadowWrapper=mesh.onBeforeShadow;
@@ -16176,10 +16278,15 @@ mini();ui.renderHUD({nearVehicle:nv});}}
 
 if(performanceDebugRequested||performanceAuditRequested)setPerformanceStatsVisible(true);
 const performanceAudit=performanceAuditRequested?window.HUNTER_PERFORMANCE_AUDIT.create({
+  // La llavor d'estrès requereix més temps perquè el LOD s'estabilitzi.
+  warmupMs:stressAuditRequested?3500:1100,
+  sampleMs:stressAuditRequested?5000:3000,
   getState:()=>({seed,quality:qualityName,pixelRatio:ren.getPixelRatio(),
     shadowsDisabled,waterDisabled,
     playerBatchStats:pl.userData?.batchStats||null,
-    pathStats:world?.userData?.pathStats||null}),
+    pathStats:world?.userData?.pathStats||null,
+    stressPreset:stressAuditRequested?{...STRESS_AUDIT_PRESET}:null,
+    vehicleFleet:JSON.parse(JSON.stringify(vehicleFleet))}),
   setShadowsDisabled,setWaterDisabled
 }):null;
 let last=performance.now();resetSimulationClock(last);
@@ -16231,12 +16338,21 @@ if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
 sun.target.position.set(victoryCinematic?cam.position.x:P.x,0,
   victoryCinematic?cam.position.z:P.z);
 sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);
+for(const proxy of shadowBoatNodes){
+  const source=proxy.source;
+  proxy.position.x=source.position.x;
+  proxy.position.z=source.position.z;
+  proxy.rotation.y=source.rotation.y;
+}
 const shadowRedrawn=shadowCache.schedule({now:performance.now(),x:sun.target.position.x,z:sun.target.position.z,
   nodes:shadowPoseNodes,enabled:!!ren.shadowMap.enabled});
 const renderStarted=performance.now();
 for(const k in renderCategories)renderCategories[k]=0;
 for(const k in shadowRenderCategories)delete shadowRenderCategories[k];
 for(const k in renderOtherDetails)delete renderOtherDetails[k];
+for(const k in vehicleDrawTypes)delete vehicleDrawTypes[k];
+for(const k in vehicleDrawParts)delete vehicleDrawParts[k];
+for(const k in vehicleShadowTypes)delete vehicleShadowTypes[k];
  if(deathVoidReady()){
    const v=deathCinematic;v.voidCamera.aspect=cam.aspect;v.voidCamera.updateProjectionMatrix();
    ren.render(v.voidScene,v.voidCamera);
@@ -16263,8 +16379,12 @@ if(performanceAudit)performanceAudit.onFrame({
   sweepChecks:perfHotspots.aiSweepChecks,sweepSamples:perfHotspots.aiSweepSamples,
   aiUpdated:perfHotspots.aiUpdated,aiSkipped:perfHotspots.aiSkipped,
   groups:{...renderCategories},shadowGroups:{...shadowRenderCategories},
-  otherDetails:{...renderOtherDetails},shadowRedrawn:shadowRedrawn?1:0,
+  otherDetails:{...renderOtherDetails},
+  vehicleTypes:{...vehicleDrawTypes},vehicleParts:{...vehicleDrawParts},
+  vehicleShadowTypes:{...vehicleShadowTypes},
+  shadowRedrawn:shadowRedrawn?1:0,
   deferredFaunaCasters:shadowStats.deferredFaunaCasters,
+  boatMotionProxies:shadowStats.boatMotionProxies||0,
   shadowReason:shadowRedrawn?shadowCache.stats.lastReason:'',
   shadowCulprit:shadowRedrawn?shadowCache.stats.lastCulprit:''
 });
