@@ -1709,22 +1709,38 @@ window.HUNTER_VEHICLES=Object.freeze({
           wheel.userData.radius*=VS.cotxe_civil;
         g.userData.civilianModel='C1A';
         g.userData.civilianColor=appearance.color??0x4b9fd1;
-        // Fusionam només peces estàtiques, i no els vidres transparents:
-        // això conserva l'ordre de dibuix i permet moure les quatre rodes.
+        // Agrupació per shader i propietats de material, sense canviar
+        // els colors originals: s'emmagatzemen com atribut RGB per vèrtex.
+        // Les rodes animades i els vidres transparents no s'agrupen.
         const batches=new Map();
         for(const mesh of car.children.filter(o=>o.isMesh&&!o.material.transparent)){
+          const mat=mesh.material;
+          const colored=mat.isMeshStandardMaterial&&mat.color&&!mat.vertexColors&&
+            !mat.map&&!mat.normalMap&&!mat.alphaMap&&!mat.emissiveMap&&
+            !mat.roughnessMap&&!mat.metalnessMap&&mat.opacity===1;
+          const key=colored?[
+            'opaque-rgb',mat.roughness,mat.metalness,mat.flatShading,
+            mat.side,mat.depthTest,mat.depthWrite,mat.blending,
+            mesh.renderOrder,mesh.castShadow,mesh.receiveShadow
+          ].join(':'):mat;
+          let batch=batches.get(key);
+          if(!batch){
+            const mergedMat=colored?mat.clone():mat;
+            if(colored){mergedMat.color.setRGB(1,1,1);mergedMat.vertexColors=true;}
+            batch={pos:[],norm:[],rgb:[],material:mergedMat,colored};
+            batches.set(key,batch);
+          }
           mesh.updateMatrix();
           const transformed=mesh.geometry.clone();
           transformed.applyMatrix4(mesh.matrix);
           if(!transformed.getAttribute('normal'))transformed.computeVertexNormals();
           const flat=transformed.index?transformed.toNonIndexed():transformed;
-          const batch=batches.get(mesh.material)||{pos:[],norm:[],material:mesh.material};
           const vertices=flat.getAttribute('position'),normals=flat.getAttribute('normal');
           for(let i=0;i<vertices.count;i++){
             batch.pos.push(vertices.getX(i),vertices.getY(i),vertices.getZ(i));
             batch.norm.push(normals.getX(i),normals.getY(i),normals.getZ(i));
+            if(colored)batch.rgb.push(mat.color.r,mat.color.g,mat.color.b);
           }
-          batches.set(mesh.material,batch);
           car.remove(mesh);
           mesh.geometry.dispose();transformed.dispose();
           if(flat!==transformed)flat.dispose();
@@ -1734,6 +1750,7 @@ window.HUNTER_VEHICLES=Object.freeze({
           const geo=new THREE.BufferGeometry();
           geo.setAttribute('position',new THREE.Float32BufferAttribute(b.pos,3));
           geo.setAttribute('normal',new THREE.Float32BufferAttribute(b.norm,3));
+          if(b.colored)geo.setAttribute('color',new THREE.Float32BufferAttribute(b.rgb,3));
           const mesh=new THREE.Mesh(geo,b.material);
           mesh.name='civil-c1a-batch-'+count++;
           car.add(mesh);

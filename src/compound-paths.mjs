@@ -24,7 +24,7 @@ export function preparePaths(routes){
  return paths;
 }
 export function createPathNetwork(T,options){const steps=createPathNetworkSteps(T,options);let next;while(!(next=steps.next()).done){}return next.value}
-export function* createPathNetworkSteps(T,{routes,heightAt=()=>0,heightVersion=()=>0,step=1.5,parent=null}){
+export function* createPathNetworkSteps(T,{routes,heightAt=()=>0,heightVersion=()=>0,step=1.5,parent=null,chunkCells=128}){
  const paths=preparePaths(routes),group=new T.Group();group.name='compound-path-network';if(parent)parent.add(group);
  const bucketSize=24,buckets=new Map(),cells=new Set(),key=(x,z)=>x+','+z;
  for(const path of paths){path.rgb=new T.Color(path.color??0x8a795e);
@@ -44,9 +44,9 @@ export function* createPathNetworkSteps(T,{routes,heightAt=()=>0,heightVersion=(
   }
   const v={x,z,alpha,r:rgb.r,g:rgb.g,b:rgb.b};cache.set(k,v);return v;
  };
- // Sectors de 96 m (abans 48): menys crides de dibuix,
- // mateixos vèrtexs, materials, corbes i alçades de la xarxa.
- const chunks=new Map(),chunkCells=64;
+ // Sectors més grans: menys draw calls i exactament els mateixos triangles.
+ // chunkCells opcional manté les proves de la versió anterior reproduïbles.
+ const chunks=new Map();
  let processedCells=0;
  for(const cell of cells){if(processedCells++%128===0)yield {stage:'Ajustant camins al terreny',completed:processedCells-1,total:cells.size,unit:'cel·les'};const [x,z]=cell.split(',').map(Number),vs=[sample(x,z),sample(x,z+1),sample(x+1,z),sample(x+1,z+1)];if(vs.every(v=>v.alpha<.001))continue;
   const k=key(Math.floor(x/chunkCells),Math.floor(z/chunkCells));if(!chunks.has(k))chunks.set(k,{positions:[],colors:[]});const out=chunks.get(k);
@@ -57,13 +57,18 @@ export function* createPathNetworkSteps(T,{routes,heightAt=()=>0,heightVersion=(
  let processedChunks=0;
  for(const data of chunks.values()){
   const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(data.positions,3));geo.setAttribute('color',new T.Float32BufferAttribute(data.colors,4));geo.computeVertexNormals();geo.computeBoundingSphere();geo.boundingSphere.radius+=40;
-  const mesh=new T.Mesh(geo,material);mesh.receiveShadow=true;mesh.renderOrder=1;geo.computeBoundingBox();const bounds=geo.boundingBox,halfX=(bounds.min.x+bounds.max.x)*.5,halfZ=(bounds.min.z+bounds.max.z)*.5,
-    // En doblar el costat del sector, revisam també vores i centre per
-    // detectar canvis del LOD del terreny que no arriben a les cantonades.
-    revisionSites=[[bounds.min.x,bounds.min.z],[halfX,bounds.min.z],[bounds.max.x,bounds.min.z],
-      [bounds.min.x,halfZ],[halfX,halfZ],[bounds.max.x,halfZ],
-      [bounds.min.x,bounds.max.z],[halfX,bounds.max.z],[bounds.max.x,bounds.max.z]],
-    version=()=>revisionSites.map(([x,z])=>heightVersion(x,z)).join(',');let revision=version();
+  const mesh=new T.Mesh(geo,material);mesh.receiveShadow=true;mesh.renderOrder=1;geo.computeBoundingBox();const bounds=geo.boundingBox;
+  // Detectam canvis de LOD del terreny també a l'interior de les
+  // agrupacions grosses: mostres com a màxim cada 32 metres.
+  const axis=(min,max)=>{
+    const sites=[min];for(let x=min+32;x<max;x+=32)sites.push(x);
+    if(max>min)sites.push(max);return sites;
+  };
+  const revisionSites=[];
+  for(const x of axis(bounds.min.x,bounds.max.x))
+    for(const z of axis(bounds.min.z,bounds.max.z))revisionSites.push([x,z]);
+  const version=()=>revisionSites.map(([x,z])=>heightVersion(x,z)).join(',');
+  let revision=version();
   mesh.onBeforeRender=()=>{const next=version();if(next===revision)return;revision=next;const p=geo.attributes.position;
    for(let i=0;i<p.count;i++)p.setY(i,heightAt(p.getX(i),p.getZ(i))+.12);p.needsUpdate=true;geo.computeVertexNormals();geo.computeBoundingSphere();geo.boundingSphere.radius+=40;
   };group.add(mesh);
