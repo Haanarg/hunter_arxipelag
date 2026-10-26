@@ -42,6 +42,8 @@ window.HUNTER_PERFORMANCE=Object.freeze({
           ' · percepció '+stats.hotspots.aiSenseMs.toFixed(1)+' ms'+
           '\nIA tram '+stats.hotspots.aiDirectMs.toFixed(1)+' ('+stats.hotspots.aiDirectChecks+')'+
           ' · A* '+stats.hotspots.aiPathMs.toFixed(1)+' ('+stats.hotspots.aiPathChecks+') ms'+
+          '\nIA col·lisions '+stats.hotspots.aiSweepMs.toFixed(1)+' ms · '+
+          stats.hotspots.aiSweepChecks+' trajectes · '+stats.hotspots.aiSweepSamples+' mostres'+
           '\nIA actualitzats '+stats.hotspots.aiUpdated+' · espaiats '+stats.hotspots.aiSkipped:'');
         lastDisplay=now;
       }
