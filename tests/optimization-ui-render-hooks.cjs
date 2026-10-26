@@ -27,11 +27,14 @@ function segment(from,to){
  building.add(mesh);world.add(building);
  const B=[{o:building}],V=[],E=[],fa=[],items=[],PM={trunk:null},
   terrainStream=null,renderCategories={edificis:0,vehicles:0,altres:0};
- const context={world,pl,B,V,E,fa,items,PM,terrainStream,renderCategories,performanceStatsVisible:true,Map,WeakMap};
+ const shadowRenderCategories={},renderOtherDetails={};
+ const context={world,pl,B,V,E,fa,items,PM,terrainStream,renderCategories,
+  shadowRenderCategories,renderOtherDetails,performanceStatsVisible:true,Map,WeakMap};
  vm.runInNewContext(code+';this.registerDrawCategories=registerDrawCategories;',context);
  context.registerDrawCategories();
  const initialHook=mesh.onBeforeRender;
- mesh.onBeforeRender();
+ mesh.onBeforeRender();mesh.onBeforeShadow();
+ assert.equal(shadowRenderCategories.edificis,1);
  assert.equal(renderCategories.edificis,1);
  assert.equal(previousCalls,1);
  context.registerDrawCategories();
@@ -46,7 +49,8 @@ function segment(from,to){
  assert.equal(renderCategories.vehicles,1,'Existing callbacks must use updated category');
  assert.equal(renderCategories.edificis,2);
  context.performanceStatsVisible=false;context.registerDrawCategories();
- mesh.onBeforeRender();assert.equal(renderCategories.vehicles,1);
+ mesh.onBeforeShadow();mesh.onBeforeRender();assert.equal(renderCategories.vehicles,1);
+ assert.equal(shadowRenderCategories.vehicles,1,'Shadow hooks are removed when counters hidden');
  assert.equal(previousCalls,4);
  context.performanceStatsVisible=true;context.registerDrawCategories();
  assert.strictEqual(mesh.onBeforeRender,initialHook);

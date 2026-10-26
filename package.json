@@ -20,6 +20,7 @@
     "test:shore": "node tests/vehicle-shore.cjs",
     "test:windsurf": "node tests/windsurf-stance.cjs",
     "test:camp:stress": "node tests/prison-camp-guarantee.cjs --stress",
-    "test:perf-audit": "node tests/performance-audit.cjs"
+    "test:perf-audit": "node tests/performance-audit.cjs",
+    "test:shadow-cache": "node tests/shadow-cache.cjs"
   }
 }

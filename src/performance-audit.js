@@ -12,9 +12,18 @@
     if(!rows.length)return null;
     const avg=key=>rows.reduce((sum,r)=>sum+(r[key]||0),0)/rows.length;
     const sorted=rows.map(r=>r.frameMs).sort((a,b)=>a-b);
-    const groups={};
-    for(const r of rows)for(const [key,value] of Object.entries(r.groups||{}))
-      groups[key]=(groups[key]||0)+value/rows.length;
+    const groups={},shadowGroups={},otherDetails={};
+    const fold=(out,values)=>{
+      for(const [key,value] of Object.entries(values||{}))
+        out[key]=(out[key]||0)+value/rows.length;
+    };
+    for(const r of rows){
+      fold(groups,r.groups);
+      fold(shadowGroups,r.shadowGroups);
+      fold(otherDetails,r.otherDetails);
+    }
+    const groupSum=obj=>Object.values(obj).reduce((a,b)=>a+b,0);
+    const attributed=groupSum(groups)+groupSum(shadowGroups);
     return {
       frames:rows.length,fps:1000/avg('frameMs'),
       frameMs:avg('frameMs'),p95FrameMs:sorted[Math.min(sorted.length-1,Math.ceil(sorted.length*.95)-1)],
@@ -24,7 +33,10 @@
       aiMs:avg('aiMs'),aiNavMs:avg('aiNavMs'),aiSweepMs:avg('aiSweepMs'),
       sweepChecks:avg('sweepChecks'),sweepSamples:avg('sweepSamples'),
       aiUpdated:avg('aiUpdated'),aiSkipped:avg('aiSkipped'),
-      simulationSteps:avg('simulationSteps'),groups
+      simulationSteps:avg('simulationSteps'),
+      shadowRedrawRate:avg('shadowRedrawn'),shadowDrawCalls:groupSum(shadowGroups),
+      unclassifiedDrawCalls:Math.max(0,avg('drawCalls')-attributed),
+      groups,shadowGroups,otherDetails
     };
   }
   function create({getState,setShadowsDisabled,setWaterDisabled,windowObject=window,
@@ -94,9 +106,18 @@
       }
       if(baselines.length===2&&Math.abs(baselines[0].fps-baselines[1].fps)/Math.max(1,baseline.fps)>.15)
         message+='\nAvís: el rendiment normal ha variat més del 15%; comparació poc estable.\n';
-      const categories=Object.entries(byId['base-1']?.groups||{}).sort((a,b)=>b[1]-a[1]);
-      message+='\nCrides per categoria (normal inicial):\n';
+      const initial=byId['base-1'];
+      const categories=Object.entries(initial?.groups||{}).sort((a,b)=>b[1]-a[1]);
+      message+='\nCrides de dibuix principals (normal):\n';
       for(const [key,count] of categories)if(count>0)message+='  '+key+': '+fmt(count)+'\n';
+      message+='\nAltres: desglossament per pare/malla:\n';
+      for(const [key,count] of Object.entries(initial?.otherDetails||{}).sort((a,b)=>b[1]-a[1]).slice(0,20))
+        message+='  '+key+': '+fmt(count)+'\n';
+      message+='\nPassades d’ombres per categoria:\n';
+      for(const [key,count] of Object.entries(initial?.shadowGroups||{}).sort((a,b)=>b[1]-a[1]))
+        if(count>0)message+='  '+key+': '+fmt(count)+'\n';
+      message+='Recalculades '+fmt((initial?.shadowRedrawRate||0)*100)+'% dels fotogrames; ';
+      message+='sense classificació: '+fmt(initial?.unclassifiedDrawCalls)+' crides\n';
       message+='\nIA: '+fmt(byId['base-1']?.aiMs)+'ms; col·lisions '+fmt(byId['base-1']?.aiSweepMs)+'ms';
       display(message);
       copy.style.display='inline-block';

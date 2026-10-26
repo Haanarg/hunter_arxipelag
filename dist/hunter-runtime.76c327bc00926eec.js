@@ -385,9 +385,18 @@ window.HUNTER_PERFORMANCE=Object.freeze({
     if(!rows.length)return null;
     const avg=key=>rows.reduce((sum,r)=>sum+(r[key]||0),0)/rows.length;
     const sorted=rows.map(r=>r.frameMs).sort((a,b)=>a-b);
-    const groups={};
-    for(const r of rows)for(const [key,value] of Object.entries(r.groups||{}))
-      groups[key]=(groups[key]||0)+value/rows.length;
+    const groups={},shadowGroups={},otherDetails={};
+    const fold=(out,values)=>{
+      for(const [key,value] of Object.entries(values||{}))
+        out[key]=(out[key]||0)+value/rows.length;
+    };
+    for(const r of rows){
+      fold(groups,r.groups);
+      fold(shadowGroups,r.shadowGroups);
+      fold(otherDetails,r.otherDetails);
+    }
+    const groupSum=obj=>Object.values(obj).reduce((a,b)=>a+b,0);
+    const attributed=groupSum(groups)+groupSum(shadowGroups);
     return {
       frames:rows.length,fps:1000/avg('frameMs'),
       frameMs:avg('frameMs'),p95FrameMs:sorted[Math.min(sorted.length-1,Math.ceil(sorted.length*.95)-1)],
@@ -397,7 +406,10 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       aiMs:avg('aiMs'),aiNavMs:avg('aiNavMs'),aiSweepMs:avg('aiSweepMs'),
       sweepChecks:avg('sweepChecks'),sweepSamples:avg('sweepSamples'),
       aiUpdated:avg('aiUpdated'),aiSkipped:avg('aiSkipped'),
-      simulationSteps:avg('simulationSteps'),groups
+      simulationSteps:avg('simulationSteps'),
+      shadowRedrawRate:avg('shadowRedrawn'),shadowDrawCalls:groupSum(shadowGroups),
+      unclassifiedDrawCalls:Math.max(0,avg('drawCalls')-attributed),
+      groups,shadowGroups,otherDetails
     };
   }
   function create({getState,setShadowsDisabled,setWaterDisabled,windowObject=window,
@@ -467,9 +479,18 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       }
       if(baselines.length===2&&Math.abs(baselines[0].fps-baselines[1].fps)/Math.max(1,baseline.fps)>.15)
         message+='\nAvís: el rendiment normal ha variat més del 15%; comparació poc estable.\n';
-      const categories=Object.entries(byId['base-1']?.groups||{}).sort((a,b)=>b[1]-a[1]);
-      message+='\nCrides per categoria (normal inicial):\n';
+      const initial=byId['base-1'];
+      const categories=Object.entries(initial?.groups||{}).sort((a,b)=>b[1]-a[1]);
+      message+='\nCrides de dibuix principals (normal):\n';
       for(const [key,count] of categories)if(count>0)message+='  '+key+': '+fmt(count)+'\n';
+      message+='\nAltres: desglossament per pare/malla:\n';
+      for(const [key,count] of Object.entries(initial?.otherDetails||{}).sort((a,b)=>b[1]-a[1]).slice(0,20))
+        message+='  '+key+': '+fmt(count)+'\n';
+      message+='\nPassades d’ombres per categoria:\n';
+      for(const [key,count] of Object.entries(initial?.shadowGroups||{}).sort((a,b)=>b[1]-a[1]))
+        if(count>0)message+='  '+key+': '+fmt(count)+'\n';
+      message+='Recalculades '+fmt((initial?.shadowRedrawRate||0)*100)+'% dels fotogrames; ';
+      message+='sense classificació: '+fmt(initial?.unclassifiedDrawCalls)+' crides\n';
       message+='\nIA: '+fmt(byId['base-1']?.aiMs)+'ms; col·lisions '+fmt(byId['base-1']?.aiSweepMs)+'ms';
       display(message);
       copy.style.display='inline-block';
@@ -515,6 +536,79 @@ window.HUNTER_PERFORMANCE=Object.freeze({
 
 ;
 // END src/performance-audit.js
+// BEGIN src/shadow-cache.js
+// Reutilitza el mapa d'ombres si els objectes que el poden alterar no es mouen.
+// No modifica resolució, filtre, geometria ni quins objectes projecten ombra.
+window.HUNTER_SHADOW_CACHE=Object.freeze({
+  create({shadowMap,maxIdleMs=180,motionEpsilon=0.02}){
+    const state=new WeakMap();
+    let lastUpdate=-Infinity,lastX=NaN,lastZ=NaN,ready=false,trackedCount=-1;
+    const stats={redraws:0,reuses:0,motionRedraws:0,periodicRedraws:0,forcedRedraws:0,watched:0};
+    shadowMap.autoUpdate=false;
+    function invalidate(){
+      ready=false;trackedCount=-1;lastUpdate=-Infinity;
+      shadowMap.needsUpdate=true;
+    }
+    function capture(node){
+      const p=node.position,r=node.rotation,s=node.scale,q=node.quaternion;
+      if(!p||!r||!s)return;
+      let saved=state.get(node);
+      if(!saved){saved=new Float64Array(13);state.set(node,saved)}
+      saved[0]=p.x;saved[1]=p.y;saved[2]=p.z;
+      saved[3]=r.x;saved[4]=r.y;saved[5]=r.z;
+      saved[6]=s.x;saved[7]=s.y;saved[8]=s.z;
+      if(q){saved[9]=q.x;saved[10]=q.y;saved[11]=q.z;saved[12]=q.w}
+    }
+    function changed(node){
+      const p=node.position,r=node.rotation,s=node.scale,q=node.quaternion;
+      if(!p||!r||!s)return true;
+      const old=state.get(node);
+      if(!old)return true;
+      // Compare against the *last rendered* pose, not the preceding frame.
+      // Slow continuous movement must still invalidate the cached shadow.
+      return Math.abs(p.x-old[0])>motionEpsilon||
+        Math.abs(p.y-old[1])>motionEpsilon||
+        Math.abs(p.z-old[2])>motionEpsilon||
+        Math.abs(r.x-old[3])>motionEpsilon||
+        Math.abs(r.y-old[4])>motionEpsilon||
+        Math.abs(r.z-old[5])>motionEpsilon||
+        Math.abs(s.x-old[6])>motionEpsilon||
+        Math.abs(s.y-old[7])>motionEpsilon||
+        Math.abs(s.z-old[8])>motionEpsilon||
+        (q&&(Math.abs(q.x-old[9])>motionEpsilon||
+          Math.abs(q.y-old[10])>motionEpsilon||
+          Math.abs(q.z-old[11])>motionEpsilon||
+          Math.abs(q.w-old[12])>motionEpsilon));
+    }
+    function schedule({now,x,z,nodes=[],enabled=true,force=false}){
+      if(!enabled)return false;
+      const anchorMoved=!ready||Math.abs(x-lastX)>motionEpsilon||Math.abs(z-lastZ)>motionEpsilon;
+      let moving=anchorMoved||nodes.length!==trackedCount;
+      // Miram també les articulacions: un rotor pot girar sense moure el vehicle.
+      for(const node of nodes)if(changed(node))moving=true;
+      const forced=force||!ready||shadowMap.needsUpdate,
+            periodic=now-lastUpdate>=maxIdleMs,
+            redraw=forced||moving||periodic;
+      lastX=x;lastZ=z;trackedCount=nodes.length;
+      stats.watched=nodes.length;
+      if(!redraw){
+        stats.reuses++;
+        return false;
+      }
+      shadowMap.needsUpdate=true;
+      for(const node of nodes)capture(node);
+      lastUpdate=now;ready=true;stats.redraws++;
+      if(forced)stats.forcedRedraws++;
+      else if(moving)stats.motionRedraws++;
+      else stats.periodicRedraws++;
+      return true;
+    }
+    return {stats,schedule,invalidate};
+  }
+});
+
+;
+// END src/shadow-cache.js
 // BEGIN src/waves.js
 // One immutable wave model drives both CPU samples and the vertex shader.
 window.HUNTER_WAVES=(()=>{
@@ -12352,6 +12446,9 @@ if(waterSettingCheckbox)waterSettingCheckbox.addEventListener('change',()=>setWa
 // amb actualització ocasional i sense passejar l'arbre de l'escena.
 let shadowsDisabled=false;
 const shadowCandidates=[],shadowStats={candidates:0,active:0,excludedDetail:0,updates:0,playerCasters:0};
+const shadowCache=window.HUNTER_SHADOW_CACHE.create({shadowMap:ren.shadowMap});
+let shadowPoseNodes=[];
+shadowStats.cache=shadowCache.stats;
 let shadowLastX=Infinity,shadowLastZ=Infinity,shadowLastMs=-Infinity;
 window.HUNTER_SHADOW_STATS=shadowStats;
 function updateShadowCasters(force=false){
@@ -12362,6 +12459,7 @@ function updateShadowCasters(force=false){
   const range2=Math.pow(visualQuality.shadowDistance||225,2),
         dynamicPositions=new Map();
   let count=0;
+  const poseNodes=new Set();
   for(const entry of shadowCandidates){
     let q=entry.point;
     if(entry.owner){
@@ -12370,8 +12468,18 @@ function updateShadowCasters(force=false){
     }
     const dx=q.x-P.x,dz=q.z-P.z,near=dx*dx+dz*dz<range2;
     entry.mesh.castShadow=near;
-    if(near)count++;
+    if(near){
+      count++;
+      if(entry.owner){
+        // Incloem pivots de mans, rodes i rotors, no sols la posició del vehicle.
+        for(let o=entry.mesh;o;o=o.parent){
+          poseNodes.add(o);
+          if(o===entry.owner)break;
+        }
+      }
+    }
   }
+  shadowPoseNodes=[...poseNodes];
   shadowStats.active=count;shadowStats.updates++;
 }
 function setShadowsDisabled(disabled){
@@ -12382,9 +12490,10 @@ function setShadowsDisabled(disabled){
   ren.shadowMap.enabled=enabled;
   sun.castShadow=enabled;
   if(enabled){
-    ren.shadowMap.needsUpdate=true;
+    shadowCache.invalidate();
     updateShadowCasters(true);
   }else{
+    shadowPoseNodes=[];
     for(const entry of shadowCandidates)entry.mesh.castShadow=false;
     shadowStats.active=0;
   }
@@ -12404,6 +12513,8 @@ function* traverseGenerationSteps(root,visit,stage){
 function prepareShadowCasters(){return drainBuildSteps(prepareShadowCastersSteps())}
 function* prepareShadowCastersSteps(){
   shadowCandidates.length=0;
+  shadowPoseNodes=[];
+  shadowCache.invalidate();
   shadowLastX=Infinity;shadowLastZ=Infinity;shadowLastMs=-Infinity;
   shadowStats.candidates=0;shadowStats.active=0;shadowStats.excludedDetail=0;shadowStats.playerCasters=0;
   if(!visualQuality.shadows||!world)return;
@@ -14184,7 +14295,11 @@ const ENEMY_LOD_RANGES={
 window.HUNTER_ENEMY_LOD_STATS=enemyLodStats;
 window.HUNTER_VISIBILITY_STATS=visibilityStats;
 let staticVisualBatches=[];
-const renderCategories={terreny:0,edificis:0,filferrades:0,vehicles:0,enemics:0,vegetacio:0,decoracio:0,objectes:0,fauna:0,altres:0};
+const renderCategories={terreny:0,edificis:0,filferrades:0,vehicles:0,enemics:0,vegetacio:0,decoracio:0,objectes:0,fauna:0,jugador:0,mar:0,cel:0,efectes:0,altres:0};
+const shadowRenderCategories={};
+const renderOtherDetails={};
+window.HUNTER_SHADOW_DRAW_GROUPS=shadowRenderCategories;
+window.HUNTER_DRAW_OTHER_DETAILS=renderOtherDetails;
 window.HUNTER_DRAW_CALL_GROUPS=renderCategories;
 adaptivePerformance.stats.drawCategories=renderCategories;
 const registeredDrawHooks=new WeakMap();
@@ -14198,12 +14313,24 @@ function* registerDrawCategoriesSteps(progressive=true){
   for(const item of items)tagged.set(item.o,'objectes');
   if(PM.trunk)tagged.set(PM.trunk,'vegetacio');
   if(terrainStream?.mesh)tagged.set(terrainStream.mesh,'terreny');
-  tagged.set(pl,'altres');
+  tagged.set(pl,'jugador');
+  // El mar i el cel són fills directes de l'escena, no del món generat.
+  if(typeof water!=='undefined'){
+    if(water.mesh)tagged.set(water.mesh,'mar');
+    if(water.deep)tagged.set(water.deep,'mar');
+    if(water.shore)tagged.set(water.shore,'mar');
+  }
+  if(typeof sky!=='undefined')tagged.set(sky,'cel');
+  if(typeof sunM!=='undefined')tagged.set(sunM,'cel');
+  if(typeof rendering!=='undefined'&&rendering.glow)tagged.set(rendering.glow,'cel');
   function track(mesh){
     if(!mesh.isMesh)return;
     const installed=registeredDrawHooks.get(mesh);
     if(!performanceStatsVisible){
-      if(installed)mesh.onBeforeRender=installed.previous;
+      if(installed){
+        mesh.onBeforeRender=installed.previous;
+        mesh.onBeforeShadow=installed.previousShadow;
+      }
       return;
     }
     let label='altres';
@@ -14215,28 +14342,44 @@ function* registerDrawCategoriesSteps(progressive=true){
       while(root){if(tagged.has(root)){label=tagged.get(root);break}root=root.parent}
       if(label==='altres'&&(mesh.parent?.name==='hunter-bush-sectors'||mesh.parent?.name==='hunter-rock-sectors'))label='vegetacio';
     }
+    // Subcategories estables de les malles que encara no tenen un propietari.
+    const detail=label==='altres'?(mesh.parent?.name||mesh.name||
+      mesh.geometry?.type||'malla sense nom'):'';
     const existing=registeredDrawHooks.get(mesh);
     if(existing){
       // The same mesh can change parent/category across world rebuilds.
-      existing.label=label;
+      existing.label=label;existing.detail=detail;
       mesh.onBeforeRender=existing.wrapper;
+      mesh.onBeforeShadow=existing.shadowWrapper;
       return;
     }
     // Preserve any existing animation hook, wrapping each mesh only once.
-    const previous=mesh.onBeforeRender;
-    const entry={label,previous};
+    const previous=mesh.onBeforeRender,previousShadow=mesh.onBeforeShadow;
+    const entry={label,detail,previous,previousShadow};
     mesh.onBeforeRender=function(...args){
-      renderCategories[entry.label]++;
+      renderCategories[entry.label]=(renderCategories[entry.label]||0)+1;
+      if(entry.label==='altres')renderOtherDetails[entry.detail]=(renderOtherDetails[entry.detail]||0)+1;
       if(previous)return previous.apply(this,args);
     };
     entry.wrapper=mesh.onBeforeRender;
+    mesh.onBeforeShadow=function(...args){
+      if(typeof shadowRenderCategories!=='undefined')
+        shadowRenderCategories[entry.label]=(shadowRenderCategories[entry.label]||0)+1;
+      if(previousShadow)return previousShadow.apply(this,args);
+    };
+    entry.shadowWrapper=mesh.onBeforeShadow;
     registeredDrawHooks.set(mesh,entry);
   }
   if(progressive)yield* traverseGenerationSteps(world,track,'Preparant el render');
   else world.traverse(track);
   pl.traverse(track);
-  // Els objectes fora del món (mar, cel) compten al total del renderitzador
-  // però no necessiten etiquetes de geometria terrestre.
+  // Malles fora del món: mar, cel i efectes. No tornem a recórrer tot el món.
+  if(typeof scene!=='undefined'&&scene?.children)
+    for(const child of scene.children){
+      if(child===world||child===pl)continue;
+      if(progressive)yield* traverseGenerationSteps(child,track,'Classificant efectes');
+      else child.traverse(track);
+    }
 }
 function terrainConcealsBuilding(b,dist){
   // Oclusió conservadora només per a edificis força llunyans.
@@ -15922,7 +16065,13 @@ if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
  waves(t+(deathCinematic?.active?deathCinematic.t*.18:0));
 sun.target.position.set(victoryCinematic?cam.position.x:P.x,0,
   victoryCinematic?cam.position.z:P.z);
-sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();for(const k in renderCategories)renderCategories[k]=0;
+sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);
+const shadowRedrawn=shadowCache.schedule({now:performance.now(),x:sun.target.position.x,z:sun.target.position.z,
+  nodes:shadowPoseNodes,enabled:!!ren.shadowMap.enabled});
+const renderStarted=performance.now();
+for(const k in renderCategories)renderCategories[k]=0;
+for(const k in shadowRenderCategories)delete shadowRenderCategories[k];
+for(const k in renderOtherDetails)delete renderOtherDetails[k];
  if(deathVoidReady()){
    const v=deathCinematic;v.voidCamera.aspect=cam.aspect;v.voidCamera.updateProjectionMatrix();
    ren.render(v.voidScene,v.voidCamera);
@@ -15948,7 +16097,8 @@ if(performanceAudit)performanceAudit.onFrame({
   aiMs:perfHotspots.aiMs,aiNavMs:perfHotspots.aiNavMs,aiSweepMs:perfHotspots.aiSweepMs,
   sweepChecks:perfHotspots.aiSweepChecks,sweepSamples:perfHotspots.aiSweepSamples,
   aiUpdated:perfHotspots.aiUpdated,aiSkipped:perfHotspots.aiSkipped,
-  groups:{...renderCategories}
+  groups:{...renderCategories},shadowGroups:{...shadowRenderCategories},
+  otherDetails:{...renderOtherDetails},shadowRedrawn:shadowRedrawn?1:0
 });
 adaptivePerformance.sample({dt:rawDt,renderCpuMs:renderCompleted-renderStarted,
   postRenderCpuMs:postRenderCompleted-renderCompleted,

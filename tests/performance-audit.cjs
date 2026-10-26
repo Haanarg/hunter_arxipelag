@@ -23,7 +23,8 @@ function setup(startFlags={shadowsDisabled:false,waterDisabled:false}){
     postRenderCpuMs:1,updateCpuMs:16,terrainCpuMs:.1,drawCalls:2344,
     triangles:769000,simulationSteps:6,aiMs:15,aiNavMs:9.1,aiSweepMs:7.6,
     sweepChecks:135,sweepSamples:426,aiUpdated:170,aiSkipped:490,
-    groups:{edificis:600,vegetacio:800,enemics:500}};
+    groups:{edificis:600,vegetacio:800,enemics:500},
+    shadowGroups:{jugador:3,vehicles:7},otherDetails:{BoxGeometry:12},shadowRedrawn:1};
   return {controller,frame,win,changes,flags:()=>({shadows,water}),nodes};
 }
 const s=setup();
@@ -40,6 +41,9 @@ assert.equal(s.win.HUNTER_PERF_AUDIT_RESULTS.phases.length,5);
 assert.equal(s.win.HUNTER_PERF_AUDIT_RESULTS.phases[0].stats.fps,10);
 assert.equal(s.win.HUNTER_PERF_AUDIT_RESULTS.phases[0].stats.groups.vegetacio,800);
 assert.equal(s.controller.results[1].stats.drawCalls,2344);
+assert.equal(s.controller.results[0].stats.shadowDrawCalls,10);
+assert.equal(s.controller.results[0].stats.otherDetails.BoxGeometry,12);
+assert.equal(s.controller.results[0].stats.shadowRedrawRate,1);
 assert(s.changes.some(([key,value])=>key==='shadows'&&value===true));
 assert(s.changes.some(([key,value])=>key==='water'&&value===true));
 const stopped=setup();

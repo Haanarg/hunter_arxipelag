@@ -208,6 +208,9 @@ if(waterSettingCheckbox)waterSettingCheckbox.addEventListener('change',()=>setWa
 // amb actualització ocasional i sense passejar l'arbre de l'escena.
 let shadowsDisabled=false;
 const shadowCandidates=[],shadowStats={candidates:0,active:0,excludedDetail:0,updates:0,playerCasters:0};
+const shadowCache=window.HUNTER_SHADOW_CACHE.create({shadowMap:ren.shadowMap});
+let shadowPoseNodes=[];
+shadowStats.cache=shadowCache.stats;
 let shadowLastX=Infinity,shadowLastZ=Infinity,shadowLastMs=-Infinity;
 window.HUNTER_SHADOW_STATS=shadowStats;
 function updateShadowCasters(force=false){
@@ -218,6 +221,7 @@ function updateShadowCasters(force=false){
   const range2=Math.pow(visualQuality.shadowDistance||225,2),
         dynamicPositions=new Map();
   let count=0;
+  const poseNodes=new Set();
   for(const entry of shadowCandidates){
     let q=entry.point;
     if(entry.owner){
@@ -226,8 +230,18 @@ function updateShadowCasters(force=false){
     }
     const dx=q.x-P.x,dz=q.z-P.z,near=dx*dx+dz*dz<range2;
     entry.mesh.castShadow=near;
-    if(near)count++;
+    if(near){
+      count++;
+      if(entry.owner){
+        // Incloem pivots de mans, rodes i rotors, no sols la posició del vehicle.
+        for(let o=entry.mesh;o;o=o.parent){
+          poseNodes.add(o);
+          if(o===entry.owner)break;
+        }
+      }
+    }
   }
+  shadowPoseNodes=[...poseNodes];
   shadowStats.active=count;shadowStats.updates++;
 }
 function setShadowsDisabled(disabled){
@@ -238,9 +252,10 @@ function setShadowsDisabled(disabled){
   ren.shadowMap.enabled=enabled;
   sun.castShadow=enabled;
   if(enabled){
-    ren.shadowMap.needsUpdate=true;
+    shadowCache.invalidate();
     updateShadowCasters(true);
   }else{
+    shadowPoseNodes=[];
     for(const entry of shadowCandidates)entry.mesh.castShadow=false;
     shadowStats.active=0;
   }
@@ -260,6 +275,8 @@ function* traverseGenerationSteps(root,visit,stage){
 function prepareShadowCasters(){return drainBuildSteps(prepareShadowCastersSteps())}
 function* prepareShadowCastersSteps(){
   shadowCandidates.length=0;
+  shadowPoseNodes=[];
+  shadowCache.invalidate();
   shadowLastX=Infinity;shadowLastZ=Infinity;shadowLastMs=-Infinity;
   shadowStats.candidates=0;shadowStats.active=0;shadowStats.excludedDetail=0;shadowStats.playerCasters=0;
   if(!visualQuality.shadows||!world)return;
@@ -2040,7 +2057,11 @@ const ENEMY_LOD_RANGES={
 window.HUNTER_ENEMY_LOD_STATS=enemyLodStats;
 window.HUNTER_VISIBILITY_STATS=visibilityStats;
 let staticVisualBatches=[];
-const renderCategories={terreny:0,edificis:0,filferrades:0,vehicles:0,enemics:0,vegetacio:0,decoracio:0,objectes:0,fauna:0,altres:0};
+const renderCategories={terreny:0,edificis:0,filferrades:0,vehicles:0,enemics:0,vegetacio:0,decoracio:0,objectes:0,fauna:0,jugador:0,mar:0,cel:0,efectes:0,altres:0};
+const shadowRenderCategories={};
+const renderOtherDetails={};
+window.HUNTER_SHADOW_DRAW_GROUPS=shadowRenderCategories;
+window.HUNTER_DRAW_OTHER_DETAILS=renderOtherDetails;
 window.HUNTER_DRAW_CALL_GROUPS=renderCategories;
 adaptivePerformance.stats.drawCategories=renderCategories;
 const registeredDrawHooks=new WeakMap();
@@ -2054,12 +2075,24 @@ function* registerDrawCategoriesSteps(progressive=true){
   for(const item of items)tagged.set(item.o,'objectes');
   if(PM.trunk)tagged.set(PM.trunk,'vegetacio');
   if(terrainStream?.mesh)tagged.set(terrainStream.mesh,'terreny');
-  tagged.set(pl,'altres');
+  tagged.set(pl,'jugador');
+  // El mar i el cel són fills directes de l'escena, no del món generat.
+  if(typeof water!=='undefined'){
+    if(water.mesh)tagged.set(water.mesh,'mar');
+    if(water.deep)tagged.set(water.deep,'mar');
+    if(water.shore)tagged.set(water.shore,'mar');
+  }
+  if(typeof sky!=='undefined')tagged.set(sky,'cel');
+  if(typeof sunM!=='undefined')tagged.set(sunM,'cel');
+  if(typeof rendering!=='undefined'&&rendering.glow)tagged.set(rendering.glow,'cel');
   function track(mesh){
     if(!mesh.isMesh)return;
     const installed=registeredDrawHooks.get(mesh);
     if(!performanceStatsVisible){
-      if(installed)mesh.onBeforeRender=installed.previous;
+      if(installed){
+        mesh.onBeforeRender=installed.previous;
+        mesh.onBeforeShadow=installed.previousShadow;
+      }
       return;
     }
     let label='altres';
@@ -2071,28 +2104,44 @@ function* registerDrawCategoriesSteps(progressive=true){
       while(root){if(tagged.has(root)){label=tagged.get(root);break}root=root.parent}
       if(label==='altres'&&(mesh.parent?.name==='hunter-bush-sectors'||mesh.parent?.name==='hunter-rock-sectors'))label='vegetacio';
     }
+    // Subcategories estables de les malles que encara no tenen un propietari.
+    const detail=label==='altres'?(mesh.parent?.name||mesh.name||
+      mesh.geometry?.type||'malla sense nom'):'';
     const existing=registeredDrawHooks.get(mesh);
     if(existing){
       // The same mesh can change parent/category across world rebuilds.
-      existing.label=label;
+      existing.label=label;existing.detail=detail;
       mesh.onBeforeRender=existing.wrapper;
+      mesh.onBeforeShadow=existing.shadowWrapper;
       return;
     }
     // Preserve any existing animation hook, wrapping each mesh only once.
-    const previous=mesh.onBeforeRender;
-    const entry={label,previous};
+    const previous=mesh.onBeforeRender,previousShadow=mesh.onBeforeShadow;
+    const entry={label,detail,previous,previousShadow};
     mesh.onBeforeRender=function(...args){
-      renderCategories[entry.label]++;
+      renderCategories[entry.label]=(renderCategories[entry.label]||0)+1;
+      if(entry.label==='altres')renderOtherDetails[entry.detail]=(renderOtherDetails[entry.detail]||0)+1;
       if(previous)return previous.apply(this,args);
     };
     entry.wrapper=mesh.onBeforeRender;
+    mesh.onBeforeShadow=function(...args){
+      if(typeof shadowRenderCategories!=='undefined')
+        shadowRenderCategories[entry.label]=(shadowRenderCategories[entry.label]||0)+1;
+      if(previousShadow)return previousShadow.apply(this,args);
+    };
+    entry.shadowWrapper=mesh.onBeforeShadow;
     registeredDrawHooks.set(mesh,entry);
   }
   if(progressive)yield* traverseGenerationSteps(world,track,'Preparant el render');
   else world.traverse(track);
   pl.traverse(track);
-  // Els objectes fora del món (mar, cel) compten al total del renderitzador
-  // però no necessiten etiquetes de geometria terrestre.
+  // Malles fora del món: mar, cel i efectes. No tornem a recórrer tot el món.
+  if(typeof scene!=='undefined'&&scene?.children)
+    for(const child of scene.children){
+      if(child===world||child===pl)continue;
+      if(progressive)yield* traverseGenerationSteps(child,track,'Classificant efectes');
+      else child.traverse(track);
+    }
 }
 function terrainConcealsBuilding(b,dist){
   // Oclusió conservadora només per a edificis força llunyans.
@@ -3778,7 +3827,13 @@ if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
  waves(t+(deathCinematic?.active?deathCinematic.t*.18:0));
 sun.target.position.set(victoryCinematic?cam.position.x:P.x,0,
   victoryCinematic?cam.position.z:P.z);
-sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);const renderStarted=performance.now();for(const k in renderCategories)renderCategories[k]=0;
+sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);
+const shadowRedrawn=shadowCache.schedule({now:performance.now(),x:sun.target.position.x,z:sun.target.position.z,
+  nodes:shadowPoseNodes,enabled:!!ren.shadowMap.enabled});
+const renderStarted=performance.now();
+for(const k in renderCategories)renderCategories[k]=0;
+for(const k in shadowRenderCategories)delete shadowRenderCategories[k];
+for(const k in renderOtherDetails)delete renderOtherDetails[k];
  if(deathVoidReady()){
    const v=deathCinematic;v.voidCamera.aspect=cam.aspect;v.voidCamera.updateProjectionMatrix();
    ren.render(v.voidScene,v.voidCamera);
@@ -3804,7 +3859,8 @@ if(performanceAudit)performanceAudit.onFrame({
   aiMs:perfHotspots.aiMs,aiNavMs:perfHotspots.aiNavMs,aiSweepMs:perfHotspots.aiSweepMs,
   sweepChecks:perfHotspots.aiSweepChecks,sweepSamples:perfHotspots.aiSweepSamples,
   aiUpdated:perfHotspots.aiUpdated,aiSkipped:perfHotspots.aiSkipped,
-  groups:{...renderCategories}
+  groups:{...renderCategories},shadowGroups:{...shadowRenderCategories},
+  otherDetails:{...renderOtherDetails},shadowRedrawn:shadowRedrawn?1:0
 });
 adaptivePerformance.sample({dt:rawDt,renderCpuMs:renderCompleted-renderStarted,
   postRenderCpuMs:postRenderCompleted-renderCompleted,
