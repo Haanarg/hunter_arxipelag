@@ -363,13 +363,19 @@ function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathB
   const remoteInterval=enemyRemoteInterval(u,cv||P,enemyScopeFocus);
   if(remoteInterval){
     u.remoteAiAcc=(u.remoteAiAcc||0)+dt;
-    if(u.remoteAiAcc+1e-9<remoteInterval){
+    // Repartim la primera decisió entre diferents fotogrames. Sense
+    // aquest desfasament, centenars de patrullers desperten alhora
+    // i provoquen pics molt alts de navegació en mòbils.
+    const interval=u.remoteAiWarmed?remoteInterval:
+      remoteInterval*(.25+.75*(u.remoteAiPhase??.5));
+    if(u.remoteAiAcc+1e-9<interval){
       if(performanceStatsVisible)perfHotspots.aiSkipped++;
       return;
     }
-    dt=u.remoteAiAcc;u.remoteAiAcc=0;
-  }else if(u.remoteAiAcc){
-    dt+=u.remoteAiAcc;u.remoteAiAcc=0;
+    dt=u.remoteAiAcc;u.remoteAiAcc=0;u.remoteAiWarmed=true;
+  }else{
+    if(u.remoteAiAcc){dt+=u.remoteAiAcc;u.remoteAiAcc=0}
+    u.remoteAiWarmed=false;
   }
   if(performanceStatsVisible)perfHotspots.aiUpdated++;
   if(u.blastT>0){
@@ -737,7 +743,8 @@ g.userData.towerTurret=turret;
 bx(g,.42,.8,.42,0xe4d36f,0,10.78,0,'paint')}
 else{g=new THREE.Group();bx(g,1,1,.6,0x222222,0,.5,0);bx(g,1.3,1.6,.7,0xd4af37,0,1.8,0);bx(g,.8,.8,.8,0xf0c9a0,0,3,0);bx(g,.9,.5,.9,0xaa0000,0,3.6,0);g.scale.setScalar(1.2)}
 if(!seedSearchMode&&t!=='soldat'&&t!=='general')window.HUNTER_ENEMY_LOD.optimize(THREE,g,t);
-if(!seedSearchMode)world.add(g);const sensePhase=(E.length%10)*.01,u={t,x,z,gy,hd:rr(0,6.28),o:g,home:{x,z},cd:rr(0,1),alert:0,wt:0,tx:x,tz:z,senseT:sensePhase,canSee:false,defenseTarget:null,...c};
+if(!seedSearchMode)world.add(g);const sensePhase=(E.length%10)*.01,u={t,x,z,gy,hd:rr(0,6.28),o:g,home:{x,z},cd:rr(0,1),alert:0,wt:0,tx:x,tz:z,senseT:sensePhase,
+  remoteAiPhase:((E.length*37)%101)/101,canSee:false,defenseTarget:null,...c};
 if(options.elite){u.elite=true;u.hp=COMBAT_BALANCE.people.elite;u.dmg=COMBAT_BALANCE.weapons.eliteRifle;u.rng=85;u.rate=TANKETTE_FIRE_INTERVAL;u.sp=8;u.cd=.4+(E.length%4)*.14}
 if(t==='torre'){u.heavyCd=1.6+(E.length%5)*.4;u.heavyRate=4.2;u.heavyRange=95}
 E.push(u);
