@@ -40,6 +40,8 @@ window.HUNTER_PERFORMANCE=Object.freeze({
           ' · visual '+stats.hotspots.visibilityMs.toFixed(2)+' · sigil '+stats.hotspots.stealthMs.toFixed(2)+' ms'+
           '\nIA nav '+stats.hotspots.aiNavMs.toFixed(1)+' · mar '+stats.hotspots.aiMarineMs.toFixed(1)+
           ' · percepció '+stats.hotspots.aiSenseMs.toFixed(1)+' ms'+
+          '\nIA tram '+stats.hotspots.aiDirectMs.toFixed(1)+' ('+stats.hotspots.aiDirectChecks+')'+
+          ' · A* '+stats.hotspots.aiPathMs.toFixed(1)+' ('+stats.hotspots.aiPathChecks+') ms'+
           '\nIA actualitzats '+stats.hotspots.aiUpdated+' · espaiats '+stats.hotspots.aiSkipped:'');
         lastDisplay=now;
       }
