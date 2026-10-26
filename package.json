@@ -19,6 +19,7 @@
     "test:camp": "node tests/camp-redesign-independent.cjs && node tests/prison-camp-guarantee.cjs && node tests/prison-camp-guarantee-independent.cjs",
     "test:shore": "node tests/vehicle-shore.cjs",
     "test:windsurf": "node tests/windsurf-stance.cjs",
-    "test:camp:stress": "node tests/prison-camp-guarantee.cjs --stress"
+    "test:camp:stress": "node tests/prison-camp-guarantee.cjs --stress",
+    "test:perf-audit": "node tests/performance-audit.cjs"
   }
 }

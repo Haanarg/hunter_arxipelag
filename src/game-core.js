@@ -174,6 +174,8 @@ window.HUNTER_PERFORMANCE_STATS=adaptivePerformance.stats;
 adaptivePerformance.stats.hotspots=perfHotspots;
 const performanceDebugRequested=typeof location!=='undefined'&&
   new URLSearchParams(location.search||'').get('perf')==='1';
+const performanceAuditRequested=typeof location!=='undefined'&&
+  new URLSearchParams(location.search||'').get('perfAudit')==='1';
 const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segments:visualQuality.waterSegments,initialSegments:Math.min(160,visualQuality.waterSegments),heightAt:hAt,config:window.HUNTER_WATER,reflections:visualQuality.waterReflections!==false,coastDetail:!!visualQuality.coastDetail,fogColor:scene.fog.color});
 let waterUpgradePending=false;
 const waterMat=water.material,waterUniforms=water.uniforms;
@@ -3722,7 +3724,12 @@ updateActionButton(nv);if(pickerOpen)drawWeaponPicker();
 mini();ui.renderHUD({nearVehicle:nv});}}
 
 
-if(performanceDebugRequested)setPerformanceStatsVisible(true);
+if(performanceDebugRequested||performanceAuditRequested)setPerformanceStatsVisible(true);
+const performanceAudit=performanceAuditRequested?window.HUNTER_PERFORMANCE_AUDIT.create({
+  getState:()=>({seed,quality:qualityName,pixelRatio:ren.getPixelRatio(),
+    shadowsDisabled,waterDisabled}),
+  setShadowsDisabled,setWaterDisabled
+}):null;
 let last=performance.now();resetSimulationClock(last);
 (function loop(now){
 // DOM can repaint and accept cancel/retry between generation tasks. No world
@@ -3780,12 +3787,27 @@ sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.
    // opaca del mar ni el cel exterior mentre el personatge s'enfonsa.
    ren.render(deathCinematic.underwaterScene,cam);
  }else ren.render(scene,cam);
+const renderCompleted=performance.now();
 if(started&&!paused&&!over){
   advanceTerrainTexture();
   if(waterUpgradePending){water.queueResolutionUpgrade();waterUpgradePending=false}
   water.stepResolutionUpgrade(2);
 }
-adaptivePerformance.sample({dt:rawDt,renderCpuMs:performance.now()-renderStarted,
+const postRenderCompleted=performance.now();
+if(performanceAudit)performanceAudit.onFrame({
+  active:gameplayActive,frameMs:rawDt*1000,x:P.x,z:P.z,
+  updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,
+  renderCpuMs:renderCompleted-renderStarted,
+  postRenderCpuMs:postRenderCompleted-renderCompleted,
+  simulationSteps:simulated.steps,drawCalls:ren.info.render.calls,
+  triangles:ren.info.render.triangles,
+  aiMs:perfHotspots.aiMs,aiNavMs:perfHotspots.aiNavMs,aiSweepMs:perfHotspots.aiSweepMs,
+  sweepChecks:perfHotspots.aiSweepChecks,sweepSamples:perfHotspots.aiSweepSamples,
+  aiUpdated:perfHotspots.aiUpdated,aiSkipped:perfHotspots.aiSkipped,
+  groups:{...renderCategories}
+});
+adaptivePerformance.sample({dt:rawDt,renderCpuMs:renderCompleted-renderStarted,
+  postRenderCpuMs:postRenderCompleted-renderCompleted,
   updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,
   simulationSteps:simulated.steps,simulationMs:simulated.simulatedDt*1000,
   droppedMs:simulated.droppedDt*1000,

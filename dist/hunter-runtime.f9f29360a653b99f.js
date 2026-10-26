@@ -313,18 +313,19 @@ window.HUNTER_PERFORMANCE=Object.freeze({
     const ratio=Math.max(.65,maxPixelRatio);
     let frames=0,frameAccum=0,lastDisplay=0,lastFps=0;
     const stats={
-      fps:0,frameMs:0,renderCpuMs:0,updateCpuMs:0,terrainCpuMs:0,drawCalls:0,triangles:0,
+      fps:0,frameMs:0,renderCpuMs:0,postRenderCpuMs:0,updateCpuMs:0,terrainCpuMs:0,drawCalls:0,triangles:0,
       simulationSteps:0,simulationMs:0,droppedMs:0,
       pixelRatio:ratio,maxPixelRatio:ratio,minPixelRatio:ratio,
       changes:0,active:false,mode:'fixed'
     };
-    function sample({dt,renderCpuMs=0,updateCpuMs=0,terrainCpuMs=0,
+    function sample({dt,renderCpuMs=0,postRenderCpuMs=0,updateCpuMs=0,terrainCpuMs=0,
       simulationSteps=0,simulationMs=0,droppedMs=0,active=true,now=0,display=false}){
       stats.active=!!active;
       const counts=renderer.info?.render;
       stats.drawCalls=counts?.calls||0;
       stats.triangles=counts?.triangles||0;
       stats.renderCpuMs=renderCpuMs;
+      stats.postRenderCpuMs=postRenderCpuMs;
       stats.updateCpuMs=updateCpuMs;
       stats.terrainCpuMs=terrainCpuMs;
       stats.simulationSteps=simulationSteps;
@@ -348,7 +349,7 @@ window.HUNTER_PERFORMANCE=Object.freeze({
           '\nSim '+stats.simulationSteps+' passos · '+stats.simulationMs.toFixed(0)+
           ' ms simulats · '+stats.droppedMs.toFixed(0)+' ms descartats'+
           '\nCPU joc '+stats.updateCpuMs.toFixed(1)+' ms · terreny '+stats.terrainCpuMs.toFixed(1)+' ms'+
-          '\nCPU render '+stats.renderCpuMs.toFixed(1)+' ms · '+stats.drawCalls+' dibuixos'+
+          '\nCPU render '+stats.renderCpuMs.toFixed(1)+' ms · postrender '+stats.postRenderCpuMs.toFixed(1)+' ms · '+stats.drawCalls+' dibuixos'+
           '\n'+Math.round(stats.triangles/1000)+'k triangles · Resolució fixa ×'+ratio.toFixed(2)+
           (stats.hotspots?'\nCPU graella '+stats.hotspots.broadphaseMs.toFixed(2)+' · IA '+stats.hotspots.aiMs.toFixed(2)+
           ' · visual '+stats.hotspots.visibilityMs.toFixed(2)+' · sigil '+stats.hotspots.stealthMs.toFixed(2)+' ms'+
@@ -369,6 +370,151 @@ window.HUNTER_PERFORMANCE=Object.freeze({
 
 ;
 // END src/performance.js
+// BEGIN src/performance-audit.js
+// Auditoria A/B optativa: mai no canvia la qualitat de la partida normal.
+// Les comparacions són temps de CPU (no mesuren directament el temps de GPU).
+(function(){
+  const PHASES=[
+    {id:'base-1',name:'Normal (inici)',shadows:false,water:false},
+    {id:'no-shadows',name:'Sense ombres',shadows:true,water:false},
+    {id:'no-water',name:'Sense aigua',shadows:false,water:true},
+    {id:'no-both',name:'Sense ombres ni aigua',shadows:true,water:true},
+    {id:'base-2',name:'Normal (final)',shadows:false,water:false}
+  ];
+  function summary(rows){
+    if(!rows.length)return null;
+    const avg=key=>rows.reduce((sum,r)=>sum+(r[key]||0),0)/rows.length;
+    const sorted=rows.map(r=>r.frameMs).sort((a,b)=>a-b);
+    const groups={};
+    for(const r of rows)for(const [key,value] of Object.entries(r.groups||{}))
+      groups[key]=(groups[key]||0)+value/rows.length;
+    return {
+      frames:rows.length,fps:1000/avg('frameMs'),
+      frameMs:avg('frameMs'),p95FrameMs:sorted[Math.min(sorted.length-1,Math.ceil(sorted.length*.95)-1)],
+      updateCpuMs:avg('updateCpuMs'),renderCpuMs:avg('renderCpuMs'),
+      postRenderCpuMs:avg('postRenderCpuMs'),terrainCpuMs:avg('terrainCpuMs'),
+      drawCalls:avg('drawCalls'),triangles:avg('triangles'),
+      aiMs:avg('aiMs'),aiNavMs:avg('aiNavMs'),aiSweepMs:avg('aiSweepMs'),
+      sweepChecks:avg('sweepChecks'),sweepSamples:avg('sweepSamples'),
+      aiUpdated:avg('aiUpdated'),aiSkipped:avg('aiSkipped'),
+      simulationSteps:avg('simulationSteps'),groups
+    };
+  }
+  function create({getState,setShadowsDisabled,setWaterDisabled,windowObject=window,
+    warmupMs=1100,sampleMs=3000}){
+    let status='pending',index=0,phaseElapsed=0,rows=[],origin=null,
+      original=null,results=[],notice='',lastReport=null;
+    const doc=windowObject.document;
+    const panel=doc.createElement('section');
+    panel.id='perfAuditPanel';
+    panel.style.cssText='position:fixed;right:10px;top:8px;z-index:16;width:min(360px,calc(100vw - 20px));max-height:70vh;overflow:auto;box-sizing:border-box;padding:12px;border:1px solid #9ccba5;border-radius:9px;background:#102333ee;color:#f2fbef;font:12px/1.5 ui-monospace,monospace;box-shadow:0 2px 16px #0009';
+    const label=doc.createElement('div'),details=doc.createElement('pre');
+    label.style.cssText='font-weight:bold;margin-bottom:6px';
+    details.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:inherit';
+    const copy=doc.createElement('button');
+    copy.type='button';copy.textContent='Copia els resultats';
+    copy.style.cssText='display:none;margin-top:8px;padding:7px 10px;font:inherit;cursor:pointer';
+    copy.onclick=()=>{
+      const text=JSON.stringify(lastReport,null,2);
+      if(windowObject.navigator?.clipboard?.writeText)
+        windowObject.navigator.clipboard.writeText(text).then(()=>{copy.textContent='Copiat!'})
+          .catch(()=>{copy.textContent='Copia des de la consola: HUNTER_PERF_AUDIT_RESULTS'});
+      else copy.textContent='Copia des de la consola: HUNTER_PERF_AUDIT_RESULTS';
+    };
+    panel.append(label,details,copy);doc.body.append(panel);
+    function display(message){
+      label.textContent='Auditoria de rendiment · '+(status==='finished'?'finalitzada':status==='aborted'?'interrompuda':'en curs');
+      details.textContent=message;
+    }
+    display('Comença una partida i deixa el personatge quiet. Compararem la mateixa escena amb diverses opcions visuals.');
+    function apply(phase){
+      setShadowsDisabled(original.shadowsDisabled||phase.shadows);
+      setWaterDisabled(original.waterDisabled||phase.water);
+    }
+    function restore(){
+      if(!original)return;
+      setShadowsDisabled(original.shadowsDisabled);
+      setWaterDisabled(original.waterDisabled);
+    }
+    function abort(reason){
+      if(status==='finished'||status==='aborted')return;
+      status='aborted';notice=reason;restore();
+      display(reason+'\nLes opcions visuals originals estan restaurades.');
+      windowObject.HUNTER_PERF_AUDIT_RESULTS={status,reason,phases:results};
+    }
+    function finish(){
+      status='finished';restore();
+      const byId=Object.fromEntries(results.map(p=>[p.id,p.stats]));
+      const baselines=[byId['base-1'],byId['base-2']].filter(Boolean);
+      const baseline=baselines.length?{
+        fps:baselines.reduce((s,x)=>s+x.fps,0)/baselines.length,
+        frameMs:baselines.reduce((s,x)=>s+x.frameMs,0)/baselines.length
+      }:null;
+      const report={status,seed:original.seed,quality:original.quality,
+        pixelRatio:original.pixelRatio,originalShadowsDisabled:original.shadowsDisabled,
+        originalWaterDisabled:original.waterDisabled,phases:results,baseline,
+        note:'Comparació de CPU i FPS: no és una mesura directa de GPU. La suma de crides per categoria pot no incloure totes les passades auxiliars.'};
+      lastReport=report;
+      windowObject.HUNTER_PERF_AUDIT_RESULTS=report;
+      const fmt=n=>Number.isFinite(n)?n.toFixed(1):'n/d';
+      let message='Mateixa llavor i posició; opcions originals restaurades.\n';
+      message+='Escena            FPS   render  joc    crides\n';
+      for(const p of results){
+        const s=p.stats;
+        message+=p.name.padEnd(18).slice(0,18)+' '+
+          fmt(s?.fps).padStart(5)+' '+fmt(s?.renderCpuMs).padStart(6)+'ms '+
+          fmt(s?.updateCpuMs).padStart(5)+'ms '+fmt(s?.drawCalls).padStart(7)+'\n';
+      }
+      if(baselines.length===2&&Math.abs(baselines[0].fps-baselines[1].fps)/Math.max(1,baseline.fps)>.15)
+        message+='\nAvís: el rendiment normal ha variat més del 15%; comparació poc estable.\n';
+      const categories=Object.entries(byId['base-1']?.groups||{}).sort((a,b)=>b[1]-a[1]);
+      message+='\nCrides per categoria (normal inicial):\n';
+      for(const [key,count] of categories)if(count>0)message+='  '+key+': '+fmt(count)+'\n';
+      message+='\nIA: '+fmt(byId['base-1']?.aiMs)+'ms; col·lisions '+fmt(byId['base-1']?.aiSweepMs)+'ms';
+      display(message);
+      copy.style.display='inline-block';
+      windowObject.console.info('[HUNTER] Auditoria de rendiment',report);
+      windowObject.console.table(results.map(p=>({escena:p.name,fps:+p.stats.fps.toFixed(1),
+        renderMs:+p.stats.renderCpuMs.toFixed(1),jocMs:+p.stats.updateCpuMs.toFixed(1),
+        crides:Math.round(p.stats.drawCalls),iaMs:+p.stats.aiMs.toFixed(1)})));
+    }
+    function onFrame(frame){
+      if(status==='finished'||status==='aborted')return;
+      if(status==='pending'){
+        if(!frame.active)return;
+        original={...getState()};
+        origin={x:frame.x,z:frame.z};
+        status='running';index=0;phaseElapsed=0;rows=[];
+        apply(PHASES[index]);
+        display('Fase 1/5: Normal (inici)\nNo moguis el personatge fins a completar la prova.');
+        return;
+      }
+      if(!frame.active){abort('La partida s’ha pausat, ocultat o acabat.');return}
+      if(Math.hypot(frame.x-origin.x,frame.z-origin.z)>4){
+        abort('El personatge s’ha mogut més de 4 m: la comparació no és fiable.');return;
+      }
+      if(!(frame.frameMs>0&&frame.frameMs<=200))return;
+      phaseElapsed+=frame.frameMs;
+      if(phaseElapsed>warmupMs){
+        rows.push(frame);
+      }
+      if(phaseElapsed<warmupMs+sampleMs)return;
+      const phase=PHASES[index];
+      results.push({id:phase.id,name:phase.name,stats:summary(rows)});
+      index++;
+      if(index>=PHASES.length){finish();return}
+      phaseElapsed=0;rows=[];
+      apply(PHASES[index]);
+      display('Fase '+(index+1)+'/5: '+PHASES[index].name+
+        '\nMesuram render, joc, IA i dibuixos. No moguis el personatge.');
+    }
+    return {onFrame,abort,get status(){return status},get results(){return results}};
+  }
+  window.HUNTER_PERFORMANCE_AUDIT=Object.freeze({create,summary,PHASES});
+})();
+
+;
+// END src/performance-audit.js
 // BEGIN src/waves.js
 // One immutable wave model drives both CPU samples and the vertex shader.
 window.HUNTER_WAVES=(()=>{
@@ -12172,6 +12318,8 @@ window.HUNTER_PERFORMANCE_STATS=adaptivePerformance.stats;
 adaptivePerformance.stats.hotspots=perfHotspots;
 const performanceDebugRequested=typeof location!=='undefined'&&
   new URLSearchParams(location.search||'').get('perf')==='1';
+const performanceAuditRequested=typeof location!=='undefined'&&
+  new URLSearchParams(location.search||'').get('perfAudit')==='1';
 const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segments:visualQuality.waterSegments,initialSegments:Math.min(160,visualQuality.waterSegments),heightAt:hAt,config:window.HUNTER_WATER,reflections:visualQuality.waterReflections!==false,coastDetail:!!visualQuality.coastDetail,fogColor:scene.fog.color});
 let waterUpgradePending=false;
 const waterMat=water.material,waterUniforms=water.uniforms;
@@ -15720,7 +15868,12 @@ updateActionButton(nv);if(pickerOpen)drawWeaponPicker();
 mini();ui.renderHUD({nearVehicle:nv});}}
 
 
-if(performanceDebugRequested)setPerformanceStatsVisible(true);
+if(performanceDebugRequested||performanceAuditRequested)setPerformanceStatsVisible(true);
+const performanceAudit=performanceAuditRequested?window.HUNTER_PERFORMANCE_AUDIT.create({
+  getState:()=>({seed,quality:qualityName,pixelRatio:ren.getPixelRatio(),
+    shadowsDisabled,waterDisabled}),
+  setShadowsDisabled,setWaterDisabled
+}):null;
 let last=performance.now();resetSimulationClock(last);
 (function loop(now){
 // DOM can repaint and accept cancel/retry between generation tasks. No world
@@ -15778,12 +15931,27 @@ sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.
    // opaca del mar ni el cel exterior mentre el personatge s'enfonsa.
    ren.render(deathCinematic.underwaterScene,cam);
  }else ren.render(scene,cam);
+const renderCompleted=performance.now();
 if(started&&!paused&&!over){
   advanceTerrainTexture();
   if(waterUpgradePending){water.queueResolutionUpgrade();waterUpgradePending=false}
   water.stepResolutionUpgrade(2);
 }
-adaptivePerformance.sample({dt:rawDt,renderCpuMs:performance.now()-renderStarted,
+const postRenderCompleted=performance.now();
+if(performanceAudit)performanceAudit.onFrame({
+  active:gameplayActive,frameMs:rawDt*1000,x:P.x,z:P.z,
+  updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,
+  renderCpuMs:renderCompleted-renderStarted,
+  postRenderCpuMs:postRenderCompleted-renderCompleted,
+  simulationSteps:simulated.steps,drawCalls:ren.info.render.calls,
+  triangles:ren.info.render.triangles,
+  aiMs:perfHotspots.aiMs,aiNavMs:perfHotspots.aiNavMs,aiSweepMs:perfHotspots.aiSweepMs,
+  sweepChecks:perfHotspots.aiSweepChecks,sweepSamples:perfHotspots.aiSweepSamples,
+  aiUpdated:perfHotspots.aiUpdated,aiSkipped:perfHotspots.aiSkipped,
+  groups:{...renderCategories}
+});
+adaptivePerformance.sample({dt:rawDt,renderCpuMs:renderCompleted-renderStarted,
+  postRenderCpuMs:postRenderCompleted-renderCompleted,
   updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,
   simulationSteps:simulated.steps,simulationMs:simulated.simulatedDt*1000,
   droppedMs:simulated.droppedDt*1000,
