@@ -44,7 +44,9 @@ export function* createPathNetworkSteps(T,{routes,heightAt=()=>0,heightVersion=(
   }
   const v={x,z,alpha,r:rgb.r,g:rgb.g,b:rgb.b};cache.set(k,v);return v;
  };
- const chunks=new Map(),chunkCells=32;
+ // Sectors de 96 m (abans 48): menys crides de dibuix,
+ // mateixos vèrtexs, materials, corbes i alçades de la xarxa.
+ const chunks=new Map(),chunkCells=64;
  let processedCells=0;
  for(const cell of cells){if(processedCells++%128===0)yield {stage:'Ajustant camins al terreny',completed:processedCells-1,total:cells.size,unit:'cel·les'};const [x,z]=cell.split(',').map(Number),vs=[sample(x,z),sample(x,z+1),sample(x+1,z),sample(x+1,z+1)];if(vs.every(v=>v.alpha<.001))continue;
   const k=key(Math.floor(x/chunkCells),Math.floor(z/chunkCells));if(!chunks.has(k))chunks.set(k,{positions:[],colors:[]});const out=chunks.get(k);
@@ -55,13 +57,19 @@ export function* createPathNetworkSteps(T,{routes,heightAt=()=>0,heightVersion=(
  let processedChunks=0;
  for(const data of chunks.values()){
   const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(data.positions,3));geo.setAttribute('color',new T.Float32BufferAttribute(data.colors,4));geo.computeVertexNormals();geo.computeBoundingSphere();geo.boundingSphere.radius+=40;
-  const mesh=new T.Mesh(geo,material);mesh.receiveShadow=true;mesh.renderOrder=1;geo.computeBoundingBox();const bounds=geo.boundingBox,version=()=>[heightVersion(bounds.min.x,bounds.min.z),heightVersion(bounds.max.x,bounds.min.z),heightVersion(bounds.min.x,bounds.max.z),heightVersion(bounds.max.x,bounds.max.z)].join(',');let revision=version();
+  const mesh=new T.Mesh(geo,material);mesh.receiveShadow=true;mesh.renderOrder=1;geo.computeBoundingBox();const bounds=geo.boundingBox,halfX=(bounds.min.x+bounds.max.x)*.5,halfZ=(bounds.min.z+bounds.max.z)*.5,
+    // En doblar el costat del sector, revisam també vores i centre per
+    // detectar canvis del LOD del terreny que no arriben a les cantonades.
+    revisionSites=[[bounds.min.x,bounds.min.z],[halfX,bounds.min.z],[bounds.max.x,bounds.min.z],
+      [bounds.min.x,halfZ],[halfX,halfZ],[bounds.max.x,halfZ],
+      [bounds.min.x,bounds.max.z],[halfX,bounds.max.z],[bounds.max.x,bounds.max.z]],
+    version=()=>revisionSites.map(([x,z])=>heightVersion(x,z)).join(',');let revision=version();
   mesh.onBeforeRender=()=>{const next=version();if(next===revision)return;revision=next;const p=geo.attributes.position;
    for(let i=0;i<p.count;i++)p.setY(i,heightAt(p.getX(i),p.getZ(i))+.12);p.needsUpdate=true;geo.computeVertexNormals();geo.computeBoundingSphere();geo.boundingSphere.radius+=40;
   };group.add(mesh);
   yield {stage:'Malles dels camins',completed:++processedChunks,total:chunks.size,unit:'sectors'};
  }
  if(!chunks.size)material.dispose();
- group.userData.pathStats={routes:paths.length,chunks:chunks.size,triangles:[...chunks.values()].reduce((n,c)=>n+c.positions.length/9,0)};
+ group.userData.pathStats={routes:paths.length,chunks:chunks.size,chunkCells,triangles:[...chunks.values()].reduce((n,c)=>n+c.positions.length/9,0)};
  return group;
 }

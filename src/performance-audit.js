@@ -12,7 +12,7 @@
     if(!rows.length)return null;
     const avg=key=>rows.reduce((sum,r)=>sum+(r[key]||0),0)/rows.length;
     const sorted=rows.map(r=>r.frameMs).sort((a,b)=>a-b);
-    const groups={},shadowGroups={},otherDetails={};
+    const groups={},shadowGroups={},otherDetails={},shadowReasons={},shadowCulprits={};
     const fold=(out,values)=>{
       for(const [key,value] of Object.entries(values||{}))
         out[key]=(out[key]||0)+value/rows.length;
@@ -21,6 +21,10 @@
       fold(groups,r.groups);
       fold(shadowGroups,r.shadowGroups);
       fold(otherDetails,r.otherDetails);
+      if(r.shadowRedrawn&&r.shadowReason)
+        shadowReasons[r.shadowReason]=(shadowReasons[r.shadowReason]||0)+1;
+      if(r.shadowRedrawn&&r.shadowCulprit)
+        shadowCulprits[r.shadowCulprit]=(shadowCulprits[r.shadowCulprit]||0)+1;
     }
     const groupSum=obj=>Object.values(obj).reduce((a,b)=>a+b,0);
     const attributed=groupSum(groups)+groupSum(shadowGroups);
@@ -36,7 +40,7 @@
       simulationSteps:avg('simulationSteps'),
       shadowRedrawRate:avg('shadowRedrawn'),shadowDrawCalls:groupSum(shadowGroups),
       unclassifiedDrawCalls:Math.max(0,avg('drawCalls')-attributed),
-      groups,shadowGroups,otherDetails
+      groups,shadowGroups,otherDetails,shadowReasons,shadowCulprits
     };
   }
   function create({getState,setShadowsDisabled,setWaterDisabled,windowObject=window,
@@ -90,7 +94,10 @@
         frameMs:baselines.reduce((s,x)=>s+x.frameMs,0)/baselines.length
       }:null;
       const report={status,seed:original.seed,quality:original.quality,
-        pixelRatio:original.pixelRatio,originalShadowsDisabled:original.shadowsDisabled,
+        pixelRatio:original.pixelRatio,
+        playerBatchStats:original.playerBatchStats||null,
+        pathStats:original.pathStats||null,
+        originalShadowsDisabled:original.shadowsDisabled,
         originalWaterDisabled:original.waterDisabled,phases:results,baseline,
         note:'Comparació de CPU i FPS: no és una mesura directa de GPU. La suma de crides per categoria pot no incloure totes les passades auxiliars.'};
       lastReport=report;
@@ -116,6 +123,18 @@
       message+='\nPassades d’ombres per categoria:\n';
       for(const [key,count] of Object.entries(initial?.shadowGroups||{}).sort((a,b)=>b[1]-a[1]))
         if(count>0)message+='  '+key+': '+fmt(count)+'\n';
+      message+='\nCauses de refresc d’ombres:\n';
+      for(const [key,count] of Object.entries(initial?.shadowReasons||{}).sort((a,b)=>b[1]-a[1]))
+        message+='  '+key+': '+count+' fotogrames\n';
+      message+='Malles que activen refrescos:\n';
+      for(const [key,count] of Object.entries(initial?.shadowCulprits||{}).sort((a,b)=>b[1]-a[1]).slice(0,12))
+        message+='  '+key+': '+count+'\n';
+      if(original.playerBatchStats)
+        message+='Jugador: '+original.playerBatchStats.before+' → '+
+          original.playerBatchStats.after+' malles ('+
+          original.playerBatchStats.groups+' crides potencials eliminades)\n';
+      if(original.pathStats)
+        message+='Camins: '+original.pathStats.chunks+' sectors\n';
       message+='Recalculades '+fmt((initial?.shadowRedrawRate||0)*100)+'% dels fotogrames; ';
       message+='sense classificació: '+fmt(initial?.unclassifiedDrawCalls)+' crides\n';
       message+='\nIA: '+fmt(byId['base-1']?.aiMs)+'ms; col·lisions '+fmt(byId['base-1']?.aiSweepMs)+'ms';

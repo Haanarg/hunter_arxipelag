@@ -5,6 +5,7 @@ const assert=require('node:assert/strict');
  const paths=preparePaths(routes);assert.equal(paths[0].fadeStart,true);assert.equal(paths[1].fadeStart,false);assert.equal(paths[1].fadeEnd,true);
  const curve=smoothPath(routes[0].points,6);assert(curve.some(p=>p[0]>25&&p[0]<30&&p[1]>0&&p[1]<5),'rounded turn');
  let revision=0,lift=0;const heightAt=(x,z)=>.1*x+.05*z+lift,net=createPathNetwork(T,{routes,heightAt,heightVersion:()=>revision,step:1});
+ assert.equal(net.userData.pathStats.chunkCells,64,'larger static road batches');
  const occupied=new Set(),alphas=[];
  for(const m of net.children){assert.equal(m.material.depthWrite,false);assert(m.material.polygonOffset);const p=m.geometry.attributes.position,c=m.geometry.attributes.color;
   for(let i=0;i<p.count;i++){assert(Number.isFinite(p.getY(i)));assert(Math.abs(p.getY(i)-heightAt(p.getX(i),p.getZ(i))-.12)<1e-5);alphas.push(c.getW(i));if(p.getX(i)===0&&p.getZ(i)===0)assert.equal(c.getW(i),0,'free endpoint fades out')}

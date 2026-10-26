@@ -350,6 +350,9 @@ window.HUNTER_CHARACTERS=Object.freeze({
     player.rotation.order='YZX';
     u.swimChest=new THREE.Vector3();
     u.swimHead=new THREE.Vector3();
+    // Fusionam peces rígides germanes sense tocar les articulacions,
+    // els pivots de les armes ni les malles referenciades per l'animació.
+    u.batchStats=window.HUNTER_PLAYER_BATCH.optimize(THREE,player);
     return player;
   },
   // Posicionament visual independent de la física: el cap respira

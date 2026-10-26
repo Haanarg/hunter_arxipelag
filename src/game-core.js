@@ -208,7 +208,14 @@ if(waterSettingCheckbox)waterSettingCheckbox.addEventListener('change',()=>setWa
 // amb actualització ocasional i sense passejar l'arbre de l'escena.
 let shadowsDisabled=false;
 const shadowCandidates=[],shadowStats={candidates:0,active:0,excludedDetail:0,updates:0,playerCasters:0};
-const shadowCache=window.HUNTER_SHADOW_CACHE.create({shadowMap:ren.shadowMap});
+const shadowNodeOwners=new WeakMap(),shadowOwnerKinds=new WeakMap();
+const shadowCache=window.HUNTER_SHADOW_CACHE.create({shadowMap:ren.shadowMap,
+  labelNode:node=>{
+    const owner=shadowNodeOwners.get(node);
+    const kind=owner?shadowOwnerKinds.get(owner):null;
+    return (kind||'element')+' / '+(node.name||node.geometry?.type||node.type||'pivot');
+  }
+});
 let shadowPoseNodes=[];
 shadowStats.cache=shadowCache.stats;
 let shadowLastX=Infinity,shadowLastZ=Infinity,shadowLastMs=-Infinity;
@@ -236,6 +243,7 @@ function updateShadowCasters(force=false){
         // Incloem pivots de mans, rodes i rotors, no sols la posició del vehicle.
         for(let o=entry.mesh;o;o=o.parent){
           poseNodes.add(o);
+          shadowNodeOwners.set(o,entry.owner);
           if(o===entry.owner)break;
         }
       }
@@ -281,6 +289,10 @@ function* prepareShadowCastersSteps(){
   shadowStats.candidates=0;shadowStats.active=0;shadowStats.excludedDetail=0;shadowStats.playerCasters=0;
   if(!visualQuality.shadows||!world)return;
   const dynamicRoots=new Set([pl,...V.map(v=>v.o),...E.map(e=>e.o),...fa.map(f=>f.o)].filter(Boolean));
+  shadowOwnerKinds.set(pl,'jugador');
+  for(const v of V)if(v.o)shadowOwnerKinds.set(v.o,'vehicle '+v.t);
+  for(const e of E)if(e.o)shadowOwnerKinds.set(e.o,'enemic '+(e.t||'soldat'));
+  for(const f of fa)if(f.o)shadowOwnerKinds.set(f.o,'fauna');
   world.updateWorldMatrix(true,false);
   yield* traverseGenerationSteps(world,o=>o.updateWorldMatrix(false,false),'Matrius d’ombres');
   pl.updateMatrixWorld(true);
@@ -3776,7 +3788,9 @@ mini();ui.renderHUD({nearVehicle:nv});}}
 if(performanceDebugRequested||performanceAuditRequested)setPerformanceStatsVisible(true);
 const performanceAudit=performanceAuditRequested?window.HUNTER_PERFORMANCE_AUDIT.create({
   getState:()=>({seed,quality:qualityName,pixelRatio:ren.getPixelRatio(),
-    shadowsDisabled,waterDisabled}),
+    shadowsDisabled,waterDisabled,
+    playerBatchStats:pl.userData?.batchStats||null,
+    pathStats:world?.userData?.pathStats||null}),
   setShadowsDisabled,setWaterDisabled
 }):null;
 let last=performance.now();resetSimulationClock(last);
@@ -3860,7 +3874,9 @@ if(performanceAudit)performanceAudit.onFrame({
   sweepChecks:perfHotspots.aiSweepChecks,sweepSamples:perfHotspots.aiSweepSamples,
   aiUpdated:perfHotspots.aiUpdated,aiSkipped:perfHotspots.aiSkipped,
   groups:{...renderCategories},shadowGroups:{...shadowRenderCategories},
-  otherDetails:{...renderOtherDetails},shadowRedrawn:shadowRedrawn?1:0
+  otherDetails:{...renderOtherDetails},shadowRedrawn:shadowRedrawn?1:0,
+  shadowReason:shadowRedrawn?shadowCache.stats.lastReason:'',
+  shadowCulprit:shadowRedrawn?shadowCache.stats.lastCulprit:''
 });
 adaptivePerformance.sample({dt:rawDt,renderCpuMs:renderCompleted-renderStarted,
   postRenderCpuMs:postRenderCompleted-renderCompleted,

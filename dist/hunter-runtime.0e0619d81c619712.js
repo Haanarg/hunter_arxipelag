@@ -385,7 +385,7 @@ window.HUNTER_PERFORMANCE=Object.freeze({
     if(!rows.length)return null;
     const avg=key=>rows.reduce((sum,r)=>sum+(r[key]||0),0)/rows.length;
     const sorted=rows.map(r=>r.frameMs).sort((a,b)=>a-b);
-    const groups={},shadowGroups={},otherDetails={};
+    const groups={},shadowGroups={},otherDetails={},shadowReasons={},shadowCulprits={};
     const fold=(out,values)=>{
       for(const [key,value] of Object.entries(values||{}))
         out[key]=(out[key]||0)+value/rows.length;
@@ -394,6 +394,10 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       fold(groups,r.groups);
       fold(shadowGroups,r.shadowGroups);
       fold(otherDetails,r.otherDetails);
+      if(r.shadowRedrawn&&r.shadowReason)
+        shadowReasons[r.shadowReason]=(shadowReasons[r.shadowReason]||0)+1;
+      if(r.shadowRedrawn&&r.shadowCulprit)
+        shadowCulprits[r.shadowCulprit]=(shadowCulprits[r.shadowCulprit]||0)+1;
     }
     const groupSum=obj=>Object.values(obj).reduce((a,b)=>a+b,0);
     const attributed=groupSum(groups)+groupSum(shadowGroups);
@@ -409,7 +413,7 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       simulationSteps:avg('simulationSteps'),
       shadowRedrawRate:avg('shadowRedrawn'),shadowDrawCalls:groupSum(shadowGroups),
       unclassifiedDrawCalls:Math.max(0,avg('drawCalls')-attributed),
-      groups,shadowGroups,otherDetails
+      groups,shadowGroups,otherDetails,shadowReasons,shadowCulprits
     };
   }
   function create({getState,setShadowsDisabled,setWaterDisabled,windowObject=window,
@@ -463,7 +467,10 @@ window.HUNTER_PERFORMANCE=Object.freeze({
         frameMs:baselines.reduce((s,x)=>s+x.frameMs,0)/baselines.length
       }:null;
       const report={status,seed:original.seed,quality:original.quality,
-        pixelRatio:original.pixelRatio,originalShadowsDisabled:original.shadowsDisabled,
+        pixelRatio:original.pixelRatio,
+        playerBatchStats:original.playerBatchStats||null,
+        pathStats:original.pathStats||null,
+        originalShadowsDisabled:original.shadowsDisabled,
         originalWaterDisabled:original.waterDisabled,phases:results,baseline,
         note:'Comparació de CPU i FPS: no és una mesura directa de GPU. La suma de crides per categoria pot no incloure totes les passades auxiliars.'};
       lastReport=report;
@@ -489,6 +496,18 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       message+='\nPassades d’ombres per categoria:\n';
       for(const [key,count] of Object.entries(initial?.shadowGroups||{}).sort((a,b)=>b[1]-a[1]))
         if(count>0)message+='  '+key+': '+fmt(count)+'\n';
+      message+='\nCauses de refresc d’ombres:\n';
+      for(const [key,count] of Object.entries(initial?.shadowReasons||{}).sort((a,b)=>b[1]-a[1]))
+        message+='  '+key+': '+count+' fotogrames\n';
+      message+='Malles que activen refrescos:\n';
+      for(const [key,count] of Object.entries(initial?.shadowCulprits||{}).sort((a,b)=>b[1]-a[1]).slice(0,12))
+        message+='  '+key+': '+count+'\n';
+      if(original.playerBatchStats)
+        message+='Jugador: '+original.playerBatchStats.before+' → '+
+          original.playerBatchStats.after+' malles ('+
+          original.playerBatchStats.groups+' crides potencials eliminades)\n';
+      if(original.pathStats)
+        message+='Camins: '+original.pathStats.chunks+' sectors\n';
       message+='Recalculades '+fmt((initial?.shadowRedrawRate||0)*100)+'% dels fotogrames; ';
       message+='sense classificació: '+fmt(initial?.unclassifiedDrawCalls)+' crides\n';
       message+='\nIA: '+fmt(byId['base-1']?.aiMs)+'ms; col·lisions '+fmt(byId['base-1']?.aiSweepMs)+'ms';
@@ -537,69 +556,89 @@ window.HUNTER_PERFORMANCE=Object.freeze({
 ;
 // END src/performance-audit.js
 // BEGIN src/shadow-cache.js
-// Reutilitza el mapa d'ombres si els objectes que el poden alterar no es mouen.
-// No modifica resolució, filtre, geometria ni quins objectes projecten ombra.
+// Ombres coherents: memòria cau amb invalidació per moviment i diagnòstic.
+// La resolució, el filtre i les geometries no es modifiquen.
 window.HUNTER_SHADOW_CACHE=Object.freeze({
-  create({shadowMap,maxIdleMs=180,motionEpsilon=0.02}){
-    const state=new WeakMap();
-    let lastUpdate=-Infinity,lastX=NaN,lastZ=NaN,ready=false,trackedCount=-1;
-    const stats={redraws:0,reuses:0,motionRedraws:0,periodicRedraws:0,forcedRedraws:0,watched:0};
+  create({shadowMap,maxIdleMs=180,motionEpsilon=.02,majorMotion=.12,
+    minorRefreshMs=48,labelNode=node=>node.name||node.type||'pivot'}){
+    const lastPose=new WeakMap();
+    let ready=false,lastUpdate=-Infinity,lastX=NaN,lastZ=NaN,lastCount=-1;
+    const stats={redraws:0,reuses:0,motionRedraws:0,periodicRedraws:0,
+      forcedRedraws:0,motionDeferrals:0,watched:0,lastReason:'inici',
+      lastCulprit:'',reasons:{},culprits:{}};
     shadowMap.autoUpdate=false;
+    const counts=(map,key)=>{map[key]=(map[key]||0)+1};
     function invalidate(){
-      ready=false;trackedCount=-1;lastUpdate=-Infinity;
+      ready=false;lastCount=-1;lastUpdate=-Infinity;
       shadowMap.needsUpdate=true;
     }
     function capture(node){
       const p=node.position,r=node.rotation,s=node.scale,q=node.quaternion;
       if(!p||!r||!s)return;
-      let saved=state.get(node);
-      if(!saved){saved=new Float64Array(13);state.set(node,saved)}
+      let saved=lastPose.get(node);
+      if(!saved){saved=new Float64Array(13);lastPose.set(node,saved)}
       saved[0]=p.x;saved[1]=p.y;saved[2]=p.z;
       saved[3]=r.x;saved[4]=r.y;saved[5]=r.z;
       saved[6]=s.x;saved[7]=s.y;saved[8]=s.z;
       if(q){saved[9]=q.x;saved[10]=q.y;saved[11]=q.z;saved[12]=q.w}
     }
-    function changed(node){
+    function displacement(node){
       const p=node.position,r=node.rotation,s=node.scale,q=node.quaternion;
-      if(!p||!r||!s)return true;
-      const old=state.get(node);
-      if(!old)return true;
-      // Compare against the *last rendered* pose, not the preceding frame.
-      // Slow continuous movement must still invalidate the cached shadow.
-      return Math.abs(p.x-old[0])>motionEpsilon||
-        Math.abs(p.y-old[1])>motionEpsilon||
-        Math.abs(p.z-old[2])>motionEpsilon||
-        Math.abs(r.x-old[3])>motionEpsilon||
-        Math.abs(r.y-old[4])>motionEpsilon||
-        Math.abs(r.z-old[5])>motionEpsilon||
-        Math.abs(s.x-old[6])>motionEpsilon||
-        Math.abs(s.y-old[7])>motionEpsilon||
-        Math.abs(s.z-old[8])>motionEpsilon||
-        (q&&(Math.abs(q.x-old[9])>motionEpsilon||
-          Math.abs(q.y-old[10])>motionEpsilon||
-          Math.abs(q.z-old[11])>motionEpsilon||
-          Math.abs(q.w-old[12])>motionEpsilon));
+      if(!p||!r||!s)return Infinity;
+      const old=lastPose.get(node);
+      if(!old)return Infinity;
+      let magnitude=Math.max(
+        Math.abs(p.x-old[0]),Math.abs(p.y-old[1]),Math.abs(p.z-old[2]),
+        Math.abs(r.x-old[3]),Math.abs(r.y-old[4]),Math.abs(r.z-old[5]),
+        Math.abs(s.x-old[6]),Math.abs(s.y-old[7]),Math.abs(s.z-old[8]));
+      if(q)magnitude=Math.max(magnitude,Math.abs(q.x-old[9]),
+        Math.abs(q.y-old[10]),Math.abs(q.z-old[11]),Math.abs(q.w-old[12]));
+      return magnitude;
     }
     function schedule({now,x,z,nodes=[],enabled=true,force=false}){
       if(!enabled)return false;
-      const anchorMoved=!ready||Math.abs(x-lastX)>motionEpsilon||Math.abs(z-lastZ)>motionEpsilon;
-      let moving=anchorMoved||nodes.length!==trackedCount;
-      // Miram també les articulacions: un rotor pot girar sense moure el vehicle.
-      for(const node of nodes)if(changed(node))moving=true;
-      const forced=force||!ready||shadowMap.needsUpdate,
-            periodic=now-lastUpdate>=maxIdleMs,
-            redraw=forced||moving||periodic;
-      lastX=x;lastZ=z;trackedCount=nodes.length;
+      const forced=force||!ready||shadowMap.needsUpdate;
+      const anchorMoved=Math.abs(x-lastX)>motionEpsilon||
+        Math.abs(z-lastZ)>motionEpsilon;
+      const countChanged=nodes.length!==lastCount;
+      const periodic=now-lastUpdate>=maxIdleMs;
+      const elapsed=now-lastUpdate;
+      let biggest=0,culprit=null;
+      for(const node of nodes){
+        const amount=displacement(node);
+        if(amount>biggest){biggest=amount;culprit=node}
+      }
+      const moving=biggest>motionEpsilon,
+            major=biggest>=majorMotion,
+            delayMinor=moving&&!major&&!forced&&!anchorMoved&&!countChanged&&!periodic&&
+              elapsed<minorRefreshMs;
+      const reason=forced?'forçat':anchorMoved?'focus solar':
+        countChanged?'candidats':major?'moviment gran':
+        periodic?'refresc preventiu':moving&&!delayMinor?'moviment petit':'';
+      const redraw=!!reason;
       stats.watched=nodes.length;
       if(!redraw){
         stats.reuses++;
+        if(delayMinor)stats.motionDeferrals++;
         return false;
       }
       shadowMap.needsUpdate=true;
       for(const node of nodes)capture(node);
-      lastUpdate=now;ready=true;stats.redraws++;
+      lastX=x;lastZ=z;lastCount=nodes.length;
+      lastUpdate=now;ready=true;
+      stats.redraws++;stats.lastReason=reason;counts(stats.reasons,reason);
+      const culpritName=culprit&&(reason==='moviment gran'||reason==='moviment petit')?
+        String(labelNode(culprit)):'';
+      stats.lastCulprit=culpritName;
+      if(culpritName){
+        // Vocabulari acotat: no acumular centenars d'identificadors per
+        // a mapes grans. Conservam una entrada agregada de reserva.
+        const key=Object.hasOwn(stats.culprits,culpritName)||
+          Object.keys(stats.culprits).length<32?culpritName:'altres elements';
+        counts(stats.culprits,key);
+      }
       if(forced)stats.forcedRedraws++;
-      else if(moving)stats.motionRedraws++;
+      else if(major||moving||anchorMoved||countChanged)stats.motionRedraws++;
       else stats.periodicRedraws++;
       return true;
     }
@@ -3108,6 +3147,100 @@ window.HUNTER_PLAYER_MODEL=Object.freeze({
 
 ;
 // END src/player-model.js
+// BEGIN src/player-batching.js
+// Fusiona només malles rígides germanes; els pivots del rig no es modifiquen.
+window.HUNTER_PLAYER_BATCH=Object.freeze({
+  optimize(THREE,root){
+    const protectedObjects=new Set(),visited=new Set();
+    const protect=(value)=>{
+      if(!value||typeof value!=='object'||visited.has(value))return;
+      visited.add(value);
+      if(value.isObject3D){protectedObjects.add(value);return}
+      if(Array.isArray(value)){for(const item of value)protect(item);return}
+      // No entrar en materials, geometries, vectors o altres instàncies.
+      if(Object.getPrototypeOf(value)===Object.prototype)
+        for(const item of Object.values(value))protect(item);
+    };
+    root.traverse(node=>{protect(node.userData)});
+    const stats={before:0,after:0,mergedMeshes:0,batches:0,vertices:0,groups:0};
+    root.traverse(node=>{if(node.isMesh)stats.before++});
+    const parents=[];
+    root.traverse(node=>{if(node.children?.length)parents.push(node)});
+    for(const parent of parents){
+      // Material i opacitat idèntics, sense malles animades ni propietats
+      // especials: guanyam draw calls conservant normals, UV i silueta.
+      const buckets=new Map();
+      for(const m of parent.children){
+        if(!m.isMesh||m.isSkinnedMesh||m.isInstancedMesh||m.children.length||
+          !m.visible||m.name||protectedObjects.has(m)||
+          Object.keys(m.userData).length||Array.isArray(m.material)||
+          !m.geometry?.getAttribute?.('position')||
+          !m.geometry.getAttribute('normal')||m.geometry.morphAttributes?.position?.length||
+          m.material?.transparent||m.material?.map||m.material?.alphaMap||
+          m.material?.vertexColors||m.renderOrder!==0)continue;
+        // Només l'atribució simple: evitem materials amb atributs de vertex extra.
+        const attrs=Object.keys(m.geometry.attributes);
+        if(attrs.some(key=>!['position','normal','uv'].includes(key)))continue;
+        let list=buckets.get(m.material);
+        if(!list){list=[];buckets.set(m.material,list)}
+        list.push(m);
+      }
+      for(const [material,meshes] of buckets){
+        if(meshes.length<2)continue;
+        // Separar grups amb flags diferents evita canviar com projecten ombres.
+        const partitions=new Map();
+        for(const m of meshes){
+          const key=[m.castShadow,m.receiveShadow,m.frustumCulled,m.layers.mask].join(':');
+          if(!partitions.has(key))partitions.set(key,[]);
+          partitions.get(key).push(m);
+        }
+        for(const group of partitions.values()){
+          if(group.length<2)continue;
+          const transformed=[],counts=[];
+          let vertices=0;
+          for(const m of group){
+            m.updateMatrix();
+            const geo=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();
+            if(!geo.getAttribute('normal'))geo.computeVertexNormals();
+            geo.applyMatrix4(m.matrix);
+            const count=geo.getAttribute('position').count;
+            transformed.push(geo);counts.push(count);vertices+=count;
+          }
+          const positions=new Float32Array(vertices*3),normals=new Float32Array(vertices*3);
+          let offset=0;
+          for(let i=0;i<transformed.length;i++){
+            const geo=transformed[i],count=counts[i];
+            const pa=geo.getAttribute('position'),na=geo.getAttribute('normal');
+            for(let j=0;j<count;j++){
+              const at=3*(offset+j);
+              positions[at]=pa.getX(j);positions[at+1]=pa.getY(j);positions[at+2]=pa.getZ(j);
+              normals[at]=na.getX(j);normals[at+1]=na.getY(j);normals[at+2]=na.getZ(j);
+            }
+            offset+=count;
+            geo.dispose();
+          }
+          const geometry=new THREE.BufferGeometry();
+          geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+          geometry.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));
+          geometry.computeBoundingSphere();
+          const first=group[0],batch=new THREE.Mesh(geometry,material);
+          batch.castShadow=first.castShadow;batch.receiveShadow=first.receiveShadow;
+          batch.frustumCulled=first.frustumCulled;batch.layers.mask=first.layers.mask;
+          batch.name='hunter-player-rigid-batch';
+          for(const m of group)parent.remove(m);
+          parent.add(batch);
+          stats.mergedMeshes+=group.length;stats.batches++;stats.vertices+=vertices;
+        }
+      }
+    }
+    root.traverse(node=>{if(node.isMesh)stats.after++});
+    stats.groups=stats.before-stats.after;
+    return stats;
+  }
+});
+
+;
+// END src/player-batching.js
 // BEGIN src/bolt-cutters.js
 // Cisalla articulada compartida pel personatge i l'objecte del món.
 window.HUNTER_BOLT_CUTTERS=Object.freeze({
@@ -4781,6 +4914,9 @@ window.HUNTER_CHARACTERS=Object.freeze({
     player.rotation.order='YZX';
     u.swimChest=new THREE.Vector3();
     u.swimHead=new THREE.Vector3();
+    // Fusionam peces rígides germanes sense tocar les articulacions,
+    // els pivots de les armes ni les malles referenciades per l'animació.
+    u.batchStats=window.HUNTER_PLAYER_BATCH.optimize(THREE,player);
     return player;
   },
   // Posicionament visual independent de la física: el cap respira
@@ -12446,7 +12582,14 @@ if(waterSettingCheckbox)waterSettingCheckbox.addEventListener('change',()=>setWa
 // amb actualització ocasional i sense passejar l'arbre de l'escena.
 let shadowsDisabled=false;
 const shadowCandidates=[],shadowStats={candidates:0,active:0,excludedDetail:0,updates:0,playerCasters:0};
-const shadowCache=window.HUNTER_SHADOW_CACHE.create({shadowMap:ren.shadowMap});
+const shadowNodeOwners=new WeakMap(),shadowOwnerKinds=new WeakMap();
+const shadowCache=window.HUNTER_SHADOW_CACHE.create({shadowMap:ren.shadowMap,
+  labelNode:node=>{
+    const owner=shadowNodeOwners.get(node);
+    const kind=owner?shadowOwnerKinds.get(owner):null;
+    return (kind||'element')+' / '+(node.name||node.geometry?.type||node.type||'pivot');
+  }
+});
 let shadowPoseNodes=[];
 shadowStats.cache=shadowCache.stats;
 let shadowLastX=Infinity,shadowLastZ=Infinity,shadowLastMs=-Infinity;
@@ -12474,6 +12617,7 @@ function updateShadowCasters(force=false){
         // Incloem pivots de mans, rodes i rotors, no sols la posició del vehicle.
         for(let o=entry.mesh;o;o=o.parent){
           poseNodes.add(o);
+          shadowNodeOwners.set(o,entry.owner);
           if(o===entry.owner)break;
         }
       }
@@ -12519,6 +12663,10 @@ function* prepareShadowCastersSteps(){
   shadowStats.candidates=0;shadowStats.active=0;shadowStats.excludedDetail=0;shadowStats.playerCasters=0;
   if(!visualQuality.shadows||!world)return;
   const dynamicRoots=new Set([pl,...V.map(v=>v.o),...E.map(e=>e.o),...fa.map(f=>f.o)].filter(Boolean));
+  shadowOwnerKinds.set(pl,'jugador');
+  for(const v of V)if(v.o)shadowOwnerKinds.set(v.o,'vehicle '+v.t);
+  for(const e of E)if(e.o)shadowOwnerKinds.set(e.o,'enemic '+(e.t||'soldat'));
+  for(const f of fa)if(f.o)shadowOwnerKinds.set(f.o,'fauna');
   world.updateWorldMatrix(true,false);
   yield* traverseGenerationSteps(world,o=>o.updateWorldMatrix(false,false),'Matrius d’ombres');
   pl.updateMatrixWorld(true);
@@ -16014,7 +16162,9 @@ mini();ui.renderHUD({nearVehicle:nv});}}
 if(performanceDebugRequested||performanceAuditRequested)setPerformanceStatsVisible(true);
 const performanceAudit=performanceAuditRequested?window.HUNTER_PERFORMANCE_AUDIT.create({
   getState:()=>({seed,quality:qualityName,pixelRatio:ren.getPixelRatio(),
-    shadowsDisabled,waterDisabled}),
+    shadowsDisabled,waterDisabled,
+    playerBatchStats:pl.userData?.batchStats||null,
+    pathStats:world?.userData?.pathStats||null}),
   setShadowsDisabled,setWaterDisabled
 }):null;
 let last=performance.now();resetSimulationClock(last);
@@ -16098,7 +16248,9 @@ if(performanceAudit)performanceAudit.onFrame({
   sweepChecks:perfHotspots.aiSweepChecks,sweepSamples:perfHotspots.aiSweepSamples,
   aiUpdated:perfHotspots.aiUpdated,aiSkipped:perfHotspots.aiSkipped,
   groups:{...renderCategories},shadowGroups:{...shadowRenderCategories},
-  otherDetails:{...renderOtherDetails},shadowRedrawn:shadowRedrawn?1:0
+  otherDetails:{...renderOtherDetails},shadowRedrawn:shadowRedrawn?1:0,
+  shadowReason:shadowRedrawn?shadowCache.stats.lastReason:'',
+  shadowCulprit:shadowRedrawn?shadowCache.stats.lastCulprit:''
 });
 adaptivePerformance.sample({dt:rawDt,renderCpuMs:renderCompleted-renderStarted,
   postRenderCpuMs:postRenderCompleted-renderCompleted,
