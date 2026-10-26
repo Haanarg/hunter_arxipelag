@@ -54,9 +54,12 @@ assert(core.includes('aiMarineMs:0,aiNavMs:0,aiSenseMs:0'));
  assert.equal(run('testFar.remoteAiAcc>0'),true,'accumulate distant time');
  assert.equal(run('testFar.x'),1700,'no movement before scheduled step');
  run('for(let i=0;i<17;i++)updEn(1/60,true)');
- assert.equal(run('testFar.remoteAiAcc'),0,'consume all accumulated time at .3 seconds');
+ assert(run('testFar.remoteAiAcc>=0&&testFar.remoteAiAcc<.3'),
+   'phase-staggered AI retains the remaining partial interval');
  assert(run('testFar.x!==1700||testFar.z!==2000'),'remote patrols still move');
  run('P.x=1695;P.z=2000;updEn(1/60,true)');
  assert.equal(run('testFar.remoteAiAcc||0'),0,'immediate local activation');
+ assert(ai.includes('remoteAiPhase:((E.length*37)%101)/101'),
+   'each newly spawned distant enemy gets a deterministic update phase');
  console.log('PASS: combat safety, elapsed remote patrol time, marine course cache and live patrol');
 })().catch(e=>{console.error(e);process.exitCode=1});
