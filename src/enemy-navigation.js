@@ -11,6 +11,10 @@ const enemyRouteRadius=u=>{
   return u.navRadius;
 };
 // Ordre de veïns idèntic, però reutilitzam l'array als milers de nodes A*.
+// Un destí llunyà es comprova per trams: no cal mostrejar milers
+// de punts abans d'avançar uns centímetres. Cada moviment conserva
+// el seu propi sweep complet, i A* s'activa quan arriba l'obstacle.
+const ENEMY_DIRECT_LOOKAHEAD=28;
 const ENEMY_ASTAR_NEIGHBORS=Object.freeze([[1,0],[0,1],[-1,0],[0,-1],
   [1,1],[-1,1],[-1,-1],[1,-1]].map(pair=>Object.freeze(pair)));
 let enemyPathBudget=2,enemyNodeBudget=160;
@@ -18,7 +22,9 @@ const enemyGroundAt=(u,x,z)=>u.basement?u.gy:enemyIsVehicle(u)?hAt(x,z):groundAt
 function enemyWallBox(w){return{x:(w.x0+w.x1)/2,z:(w.z0+w.z1)/2,w:w.x1-w.x0,d:w.z1-w.z0,hd:0}}
 function enemySolidAt(u,x,z,hd,route=false){
   const veh=enemyIsVehicle(u),r=route?enemyRouteRadius(u):veh?enemyRouteRadius(u):enemyBodyRadius(u),y=u.gy??enemyGroundAt(u,x,z);
-  if(Math.abs(x)>H-r||Math.abs(z)>H-r||!u.basement&&(enemyGroundAt(u,x,z)<-.8||treeHit(x,z,r)))return false;
+  // Reutilitzam la cota calculada quan no hi ha altura de base fixa.
+  const terrainY=u.gy==null?y:!u.basement?enemyGroundAt(u,x,z):y;
+  if(Math.abs(x)>H-r||Math.abs(z)>H-r||!u.basement&&(terrainY<-.8||treeHit(x,z,r)))return false;
   const box=veh&&!route?vehicleBox(u,x,z,hd):null;
   if(box){box.w+=.4;box.d+=.4}
   for(const w of wallCandidates(x,z,r)){
@@ -114,7 +120,15 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
   if(goalChanged){u.navPath=[];u.navSearch=null;u.navGoal={x:tx,z:tz};u.navRetry=0}
   let target={x:tx,z:tz},hd=Math.atan2(u.x-tx,u.z-tz);
   u.navDirectT=(u.navDirectT||0)-dt;
-  if(goalChanged||u.navDirectT<=0){u.navDirect=enemySweep(u,u.x,u.z,tx,tz,oldHd,hd,false,!veh);u.navDirectT=.45}
+  if(goalChanged||u.navDirectT<=0){
+    const longDistance=Math.hypot(tx-u.x,tz-u.z),
+      lookahead=Math.min(1,ENEMY_DIRECT_LOOKAHEAD/Math.max(.001,longDistance));
+    // La comprovació predictiva és curta, però el sweep real de tryMove
+    // continua fent servir tota la petjada i les col·lisions dinàmiques.
+    u.navDirect=enemySweep(u,u.x,u.z,
+      u.x+(tx-u.x)*lookahead,u.z+(tz-u.z)*lookahead,oldHd,hd,false,!veh);
+    u.navDirectT=.45;
+  }
   const direct=u.navDirect;
   if(!direct){
     if(!u.navPath?.length&&u.navRetry<=0&&enemyPathBudget>0){enemyPathBudget--;const path=enemyFindPath(u,tx,tz);if(path!==null){u.navPath=path;u.navRetry=1.2}}
