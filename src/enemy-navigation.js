@@ -105,6 +105,8 @@ function enemyFindPath(u,tx,tz){
   };u.navSearch=advance;return advance();
 }
 function mvE(u,s,tx=u.tx,tz=u.tz){
+  const stamp=performanceStatsVisible?performance.now():0;
+  try{
   if(!(s>0)||!Number.isFinite(tx)||!Number.isFinite(tz))return;
   const oldHd=u.navHd??u.o.rotation.y,veh=enemyIsVehicle(u),dt=Math.min(.1,s/Math.max(.1,u.sp));
   u.navRetry=Math.max(0,(u.navRetry||0)-dt);
@@ -142,6 +144,9 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
       // pel simple fet d'haver trobat un arbre o un vehicle al camí.
       if(!u.interCompoundPatrol)u.wt=0
     }
+  }
+  }finally{
+    if(performanceStatsVisible)perfHotspots.aiNavMs+=performance.now()-stamp;
   }
 }
 // Resolve invalid generated placements before play, never teleport a moving enemy.
