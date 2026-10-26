@@ -1,0 +1,1175 @@
+// BEGIN src/minimap.js
+// Minimap i carta de navegació. Només presentació; no modifica simulació.
+// El terreny es pinta en una textura 2D independent del renderer WebGL.
+window.HUNTER_MINIMAP=Object.freeze({
+  create({THREE,canvas,worldSize,halfSize,heightAt,colorAt,getState}){
+    const ctx=canvas.getContext('2d');
+    if(!ctx)throw new Error('No es pot crear el context 2D del minimapa');
+    const width=canvas.width||170,height=canvas.height||170;
+    const sampleSize=Math.min(128,Math.max(64,width));
+    let background=null,ws=worldSize,hs=halfSize;
+    const stats={draws:0,backgroundBuilds:0,lastLandPixels:0,lastBuildMs:0};
+    const px=v=>(v+hs)/ws*width,pz=v=>(v+hs)/ws*height;
+    function buildBackground(){const steps=buildBackgroundSteps();while(!steps.next().done){}}
+    function* buildBackgroundSteps(){
+      const start=performance.now();
+      const bg=document.createElement('canvas');
+      bg.width=bg.height=sampleSize;
+      const c=bg.getContext('2d');
+      if(!c)throw new Error('No es pot crear el fons del minimapa');
+      const im=c.createImageData(sampleSize,sampleSize),data=im.data;
+      let land=0;
+      for(let j=0;j<sampleSize;j++)for(let i=0;i<sampleSize;i++){
+        if((j*sampleSize+i)%128===0)yield {stage:'Carta de navegació',completed:j*sampleSize+i,total:sampleSize*sampleSize,unit:'píxels'};
+        const x=((i+.5)/sampleSize-.5)*ws,z=((j+.5)/sampleSize-.5)*ws,
+              h=heightAt(x,z),k=colorAt(THREE,h).convertLinearToSRGB(),
+              p=(j*sampleSize+i)*4;
+        data[p]=Math.round(k.r*255);
+        data[p+1]=Math.round(k.g*255);
+        data[p+2]=Math.round(k.b*255);
+        data[p+3]=255;
+        if(h>0)land++;
+      }
+      c.putImageData(im,0,0);
+      background=bg;
+      stats.lastLandPixels=land;
+      stats.backgroundBuilds++;
+      stats.lastBuildMs=performance.now()-start;
+    }
+    function draw(){
+      const s=getState();
+      if(!s||!s.base||!s.current)return;
+      if(!background)buildBackground();
+      ctx.clearRect(0,0,width,height);
+      ctx.imageSmoothingEnabled=true;
+      ctx.drawImage(background,0,0,width,height);
+      const q=s.current;
+      ctx.fillStyle='#2c7bff';
+      ctx.fillRect(px(s.base.x)-3,pz(s.base.z)-3,6,6);
+      if(s.mapKnown&&s.hq){
+        ctx.fillStyle='#ff3030';
+        ctx.fillRect(px(s.hq.x)-3,pz(s.hq.z)-3,6,6);
+      }
+      ctx.fillStyle='#ffd23a';
+      for(const v of s.vehicles||[]){
+        const dx=v.x-q.x,dz=v.z-q.z;
+        if(v!==s.currentVehicle&&dx*dx+dz*dz<202500){
+          ctx.beginPath();ctx.arc(px(v.x),pz(v.z),2.5,0,Math.PI*2);ctx.fill();
+        }
+      }
+      ctx.fillStyle='#ff3030';
+      for(const u of s.enemies||[]){
+        const dx=u.x-q.x,dz=u.z-q.z;
+        if(dx*dx+dz*dz<25600){
+          ctx.beginPath();ctx.arc(px(u.x),pz(u.z),2,0,Math.PI*2);ctx.fill();
+        }
+      }
+      ctx.fillStyle='#c070ff';
+      for(const m of s.log||[])ctx.fillRect(px(m.x)-2,pz(m.z)-2,4,4);
+      for(const m of s.intel||[]){
+        if(m.ref?.destroyed)continue;
+        const x=m.ref?m.ref.x:m.x,z=m.ref?m.ref.z:m.z;
+        if(!Number.isFinite(x)||!Number.isFinite(z))continue;
+        ctx.save();
+        ctx.fillStyle=m.kind==='heli'?'#6ed6ff':'#ff9f43';
+        ctx.strokeStyle='#111';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.arc(px(x),pz(z),5,0,Math.PI*2);
+        ctx.fill();ctx.stroke();
+        ctx.fillStyle='#111';ctx.font='bold 9px system-ui';
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(m.kind==='heli'?'H':'T',px(x),pz(z)+.5);
+        ctx.restore();
+      }
+      // These opportunities enter the map only after an actual discovery.
+      for(const m of s.opportunities||[]){
+        if(!Number.isFinite(m.x)||!Number.isFinite(m.z))continue;
+        ctx.save();
+        ctx.fillStyle=m.state==='disabled'||m.state==='lost'?'#8a9697':
+          m.kind==='mechanic'?'#78e5ae':m.kind==='radio'?'#82d8e5':'#ffd17f';
+        ctx.strokeStyle='#14212b';ctx.lineWidth=1.3;
+        ctx.fillRect(px(m.x)-4,pz(m.z)-4,8,8);
+        ctx.strokeRect(px(m.x)-4,pz(m.z)-4,8,8);
+        ctx.fillStyle='#15232d';ctx.font='bold 7px system-ui';
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(m.kind==='mechanic'?'M':m.kind==='radio'?'R':'P',px(m.x),pz(m.z)+.5);
+        ctx.restore();
+      }
+      ctx.fillStyle='#fff';ctx.beginPath();
+      ctx.arc(px(q.x),pz(q.z),4,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.beginPath();
+      ctx.moveTo(px(q.x),pz(q.z));
+      ctx.lineTo(px(q.x)-Math.sin(q.hd||0)*12,pz(q.z)-Math.cos(q.hd||0)*12);
+      ctx.stroke();
+      stats.draws++;
+    }
+    function drawFull(target,waypoint){
+      draw();
+      const c=target.getContext('2d');
+      if(!c)return;
+      c.drawImage(canvas,0,0,target.width,target.height);
+      c.strokeStyle='#fff';c.lineWidth=2;c.strokeRect(1,1,target.width-2,target.height-2);
+      c.fillStyle='#fff';c.font='13px system-ui';
+      c.fillText('N',target.width/2-5,19);
+      c.fillText((ws/1000).toFixed(1).replace('.',',')+' × '+(ws/1000).toFixed(1).replace('.',',')+' km',14,target.height-16);
+      if(waypoint){
+        const x=(waypoint.x+hs)/ws*target.width,z=(waypoint.z+hs)/ws*target.height;
+        c.strokeStyle='#ffdb8f';c.beginPath();c.arc(x,z,8,0,Math.PI*2);c.stroke();
+      }
+    }
+    function reset(){background=null}
+    function setWorldSize(world,half){
+      if(world!==ws||half!==hs){ws=world;hs=half;reset()}
+    }
+    return Object.freeze({draw,drawFull,reset,setWorldSize,buildBackgroundSteps,stats})
+  }
+});
+
+;
+// END src/minimap.js
+// BEGIN src/ui.js
+// HUD i menús. Manté la presentació fora del bucle principal de simulació.
+window.HUNTER_UI=Object.freeze({
+  createCombatFeedback({element,hit,direction}){
+    const HIT_SECONDS=.18,DAMAGE_SECONDS=.72,
+      state={hitUntil:0,damageUntil:0,sourceX:null,sourceZ:null,
+        directionAngle:0,hitVisible:false,damageVisible:false};
+    function clear(){
+      state.hitUntil=0;state.damageUntil=0;state.sourceX=null;state.sourceZ=null;
+      state.directionAngle=0;state.hitVisible=false;state.damageVisible=false;
+      element.hidden=true;hit.hidden=true;direction.hidden=true;
+      hit.style.opacity='0';direction.style.opacity='0';
+    }
+    function confirmHit(now=performance.now()){
+      if(Number.isFinite(now))state.hitUntil=now+HIT_SECONDS*1000;
+    }
+    function damage(source,now=performance.now()){
+      if(!Number.isFinite(now))return;
+      state.damageUntil=now+DAMAGE_SECONDS*1000;
+      state.sourceX=Number.isFinite(source?.x)?source.x:null;
+      state.sourceZ=Number.isFinite(source?.z)?source.z:null;
+    }
+    function update({now=performance.now(),active,playerX,playerZ,forwardX,forwardZ}){
+      if(!active||!Number.isFinite(now)){clear();return}
+      const hitLeft=Math.max(0,(state.hitUntil-now)/1000),
+        damageLeft=Math.max(0,(state.damageUntil-now)/1000),
+        dx=state.sourceX===null?0:state.sourceX-playerX,
+        dz=state.sourceZ===null?0:state.sourceZ-playerZ,
+        validDirection=state.sourceX!==null&&state.sourceZ!==null&&
+          Math.hypot(dx,dz)>.1&&Math.hypot(forwardX,forwardZ)>.001;
+      state.hitVisible=hitLeft>0;
+      state.damageVisible=damageLeft>0&&validDirection;
+      if(state.damageVisible){
+        // Dalt = davant de la càmera; +90° = dreta de la pantalla.
+        state.directionAngle=Math.atan2(-dx*forwardZ+dz*forwardX,dx*forwardX+dz*forwardZ);
+        direction.style.transform='translate(-50%,-50%) rotate('+state.directionAngle+'rad)';
+      }
+      hit.hidden=!state.hitVisible;direction.hidden=!state.damageVisible;
+      hit.style.opacity=String(Math.min(1,hitLeft/HIT_SECONDS));
+      direction.style.opacity=String(.78*Math.min(1,damageLeft/DAMAGE_SECONDS));
+      element.hidden=!state.hitVisible&&!state.damageVisible;
+    }
+    clear();
+    return Object.freeze({state,confirmHit,damage,update,clear});
+  },
+  create({hud,panel,title,body,resumeButton,minimap,getState,actions}){
+    function renderHUD(context){
+      const s=getState(context),state=s.vehicle?s.vehicleTypes[s.vehicle.t].n:s.swimming?'Nedant':s.crouching?'Ajupit':s.inside?'Interior':'A peu',veh=s.vehicle,vehInfo=veh?'<br>🛡️ '+Math.max(0,veh.life??0)+'/'+(veh.maxLife??0)+(veh.t==='llanxa_coets'?' · 🚀 ∞':veh.rockets!=null?' · 🚀 '+veh.rockets:veh.t==='heli'?' · 💣 '+(s.inventory.granada||0)+' granades':''):'',weaponInfo=s.bazookaEquipped&&!veh?' · 🚀 Bazooka '+(s.inventory.bazooka||0)+' coets':s.grenadeEquipped&&!veh?' · 💣 Granades '+(s.inventory.granada||0):s.cisallaEquipped&&!veh?' · ✂ Cisalla':s.sniperEquipped&&!veh?' · 🔭 Rifle '+s.sniperAmmo+' cartutxos'+(s.scopeActive?' · Mira x8':''):'';
+      const html=`<b>HUNTER · ARXIPÈLAG</b><br>❤️ ${s.hp>0?Math.max(1,Math.ceil(s.hp)):0} · 🎯 ${s.ammo} · ☠ ${s.kills}<br>${state}${s.disguised?' · 🎭 Disfressat':''}${weaponInfo}${vehInfo}${s.optionalAction?'<br>E · '+s.optionalAction.label:s.nearVehicle&&!s.vehicle?'<br>Acció: puja a '+s.vehicleTypes[s.nearVehicle.t].n:''}${s.messageTime>0?'<br>'+s.message:''}${s.waypoint?'<br>Destinació: '+Math.round(Math.hypot(s.waypoint.x-s.player.x,s.waypoint.z-s.player.z))+' m':''}<br><span style="opacity:.72">Llavor ${s.seed>>>0} · X ${s.player.x|0} · Z ${s.player.z|0}</span>`;
+      if(hud.innerHTML!==html)hud.innerHTML=html;
+    }
+    let currentMode=null;
+    function hide(){panel.style.display='none';currentMode=null}
+    function show(mode){
+      currentMode=mode;panel.style.display='flex';
+      resumeButton.onclick=mode==='bombtimer'?()=>actions.open('inventory'):actions.resume;
+      title.textContent=mode==='bombtimer'?'Programar explosiu':mode==='map'?'Carta de navegació':mode==='inventory'?'Inventari':mode==='restart'?'Nova operació?':mode==='performance'?'Rendiment':'Operació en pausa';panel.querySelector('.card').classList.toggle('inventory-card',mode==='inventory');
+      if(mode==='inventory'){
+        const state=getState(),keys=['med','paracaigudes','cisalla','expl','granada','bazooka','franctirador','disf','arma'],present=keys.filter(k=>state.inventory[k]>0);
+        let selected=present[0]||null;
+        const renderInventory=(healed=0)=>{
+          const st=getState(),items=keys.filter(k=>st.inventory[k]>0),
+                life=Math.max(0,Math.min(20,st.hp>0?Math.ceil(st.hp):0));
+          body.innerHTML='<div class="inv-health" role="status" aria-live="polite">'+
+            '<div class="inv-health-line"><b>❤️ Vida '+life+' / 20</b>'+
+            (healed>0?'<strong class="inv-healed">+'+healed+' vida</strong>':'')+'</div>'+
+            '<div class="inv-health-track"><div class="inv-health-fill" style="width:'+(life/20*100)+'%"></div></div></div>'+
+            '<div class="inv-wrap"><section><div class="inv-grid" id="invGrid"></div></section><aside class="inv-detail" id="invDetail"></aside></div>';
+          const grid=document.getElementById('invGrid'),detail=document.getElementById('invDetail');
+          const slots=Math.max(15,Math.ceil(Math.max(1,items.length)/5)*5);
+          for(let i=0;i<slots;i++){
+            const id=items[i],el=document.createElement('button');el.className='inv-slot'+(id===selected?' selected':'');
+            if(id){const d=st.itemTypes[id];el.innerHTML='<span>'+d.icon+'</span><span class="inv-count">×'+st.inventory[id]+'</span>';el.title=d.n;el.onclick=()=>{selected=id;if(d.usable){const before=getState().hp,changed=actions.useItem(id);if(changed){renderHUD();if(id!=='expl'&&id!=='granada'&&id!=='bazooka'&&id!=='franctirador'&&id!=='mapa'&&id!=='mapa_heli'&&id!=='mapa_tanc')renderInventory(Math.max(0,Math.round(getState().hp-before)))}}else renderInventory()}}
+            else{el.disabled=true;el.setAttribute('aria-hidden','true')}
+            grid.appendChild(el)
+          }
+          if(!selected||!st.inventory[selected])selected=items[0]||null;
+          if(!selected){detail.innerHTML='<div class="inv-icon">🎒</div><h3>Inventari buit</h3><p>Explora edificis i assentaments per trobar equipament.</p>';return}
+          const d=st.itemTypes[selected];detail.innerHTML='<div class="inv-icon">'+d.icon+'</div><h3>'+d.n+'</h3><p>'+d.desc+'</p>';
+        };
+        renderInventory();
+      }else if(mode==='bombtimer'){
+        // El LED és la mateixa disposició 00:SS del model 3D. Només
+        // configuram els dos dígits dels segons, amb límit 00–59.
+        let seconds=3,confirmed=false;
+        const fromHelicopter=getState().vehicle?.t==='heli';
+        body.innerHTML='<div class="bomb-timer-config" role="group" aria-label="Temporitzador de l’explosiu">'+
+          '<p class="bomb-timer-hint">'+(fromHelicopter?
+            'L’explosiu caurà de l’obertura lateral del Huey. Selecciona el temps (00–59 s).':
+            'Selecciona els segons abans de la detonació (00–59).')+'</p>'+
+          '<div class="bomb-timer-casing"><div class="bomb-timer-led" role="timer" aria-label="Compte enrere configurat">'+
+          '<span class="bomb-timer-prefix">00:</span>'+
+          '<div class="bomb-timer-digit"><button id="bombTensUp" type="button" aria-label="Augmenta les desenes de segons">▲</button><span id="bombTens" aria-live="polite">0</span><button id="bombTensDown" type="button" aria-label="Redueix les desenes de segons">▼</button></div>'+
+          '<div class="bomb-timer-digit"><button id="bombOnesUp" type="button" aria-label="Augmenta les unitats de segons">▲</button><span id="bombOnes" aria-live="polite">3</span><button id="bombOnesDown" type="button" aria-label="Redueix les unitats de segons">▼</button></div>'+
+          '</div><div class="bomb-timer-wires" aria-hidden="true"><i></i><i></i><i></i></div></div>'+
+          '<p class="bomb-timer-warning">00 = detonació immediata'+(fromHelicopter?' en deixar-la anar.':' després de col·locar la bomba.')+'</p>'+
+          '<div class="bomb-timer-actions"><button id="bombTimerCancel" type="button">Cancel·lar</button><button id="bombTimerConfirm" type="button">'+(fromHelicopter?'Activar i deixar caure':'Activar i col·locar')+'</button></div></div>';
+        const tens=document.getElementById('bombTens'),ones=document.getElementById('bombOnes'),
+              confirm=document.getElementById('bombTimerConfirm');
+        const draw=()=>{tens.textContent=String(Math.floor(seconds/10));ones.textContent=String(seconds%10)};
+        draw();
+        const changeDigit=(place,step)=>{
+          const n=Math.floor(seconds/10),u=seconds%10;
+          seconds=place==='tens'?((n+step+6)%6)*10+u:
+            n*10+(u+step+10)%10;
+          draw();
+        };
+        document.getElementById('bombTensUp').onclick=()=>changeDigit('tens',1);
+        document.getElementById('bombTensDown').onclick=()=>changeDigit('tens',-1);
+        document.getElementById('bombOnesUp').onclick=()=>changeDigit('ones',1);
+        document.getElementById('bombOnesDown').onclick=()=>changeDigit('ones',-1);
+        document.getElementById('bombTimerCancel').onclick=()=>actions.open('inventory');
+        confirm.onclick=()=>{
+          if(confirmed)return;
+          confirmed=true;confirm.disabled=true;
+          if(!actions.placeExplosive(seconds)){
+            confirmed=false;confirm.disabled=false;
+          }
+        };
+      }else if(mode==='map'){
+        body.innerHTML='<canvas id="fullmap" width="510" height="510" aria-label="Mapa: toca per marcar una destinació"></canvas><p>Toca el mapa per marcar una destinació. Blau: base · Groc: vehicles · Vermell: enemics · Cian: helicòpters · Taronja: tancs. Descoberts: R ràdio · P presoners · M mecànic; gris indica desactivat.</p><button id="clearMark">Esborra marca</button>';
+        const map=document.getElementById('fullmap');minimap.drawFull(map,getState().waypoint);
+        map.onclick=e=>{const r=e.currentTarget.getBoundingClientRect(),s=getState();actions.setWaypoint({x:((e.clientX-r.left)/r.width-.5)*s.worldSize,z:((e.clientY-r.top)/r.height-.5)*s.worldSize});minimap.drawFull(map,getState().waypoint)};
+        document.getElementById('clearMark').onclick=()=>{actions.setWaypoint(null);minimap.drawFull(map,null)}
+      }else if(mode==='cheats'){
+        body.innerHTML='<p>Activa o desactiva cada avantatge per separat.</p>'+
+          '<div class="performance-options">'+
+          '<label><input id="cheatItems" type="checkbox"> Tots els objectes i munició infinits (també vehicles)</label>'+
+          '<label><input id="cheatInvisible" type="checkbox"> Invisible per als enemics</label>'+
+          '<label><input id="cheatImmune" type="checkbox"> Immune als atacs</label>'+
+          '<label><input id="cheatFly" type="checkbox"> Vol ràpid (H / J per pujar i baixar)</label>'+
+          '</div><button id="cheatsBack">← Pausa</button>';
+        for(const [id,key] of [['cheatItems','items'],['cheatInvisible','invisible'],['cheatImmune','immune'],['cheatFly','fly']]){
+          const input=document.getElementById(id);
+          input.checked=!!getState().cheats?.[key];
+          input.onchange=()=>actions.setCheat(key,input.checked);
+        }
+        document.getElementById('cheatsBack').onclick=()=>actions.open('pause');
+      }else if(mode==='performance'){
+        body.innerHTML='<p>Canvis immediats, sense regenerar el mapa.</p>'+
+          '<div class="performance-options">'+
+          '<label><input id="disablePalmsPause" type="checkbox"> Sense palmeres</label>'+
+          '<label><input id="disableWaterPause" type="checkbox"> Sense aigua</label>'+
+          '<label><input id="disableShadowsPause" type="checkbox"> Sense ombres</label>'+
+          '</div><label class="pause-stats-toggle"><input id="showPerfStatsOptions" type="checkbox"> Mostrar estadístiques de rendiment durant la partida</label>'+
+          '<label class="pause-stats-toggle"><input id="showStealthDebug" type="checkbox"> Cons de visió (F9)</label>'+
+          '<label><input id="showStealthNoise" type="checkbox"> Radis de soroll</label>'+
+          '<p style="font:12px/1.4 system-ui;opacity:.8">Verd: visió · vermell: radi dels sorolls i crits d’alerta.</p>'+
+          '<div id="performanceBreakdown" style="font:13px/1.5 monospace;white-space:pre-line;background:#0d1d30;border-radius:8px;padding:12px;margin-top:12px"></div>'+
+          '<button id="performanceRefresh">Actualitza diagnòstic</button><button id="performanceBack">← Pausa</button>';
+        for(const [id,key,callback] of [
+          ['disablePalmsPause','palmsDisabled',actions.setPalmsDisabled],
+          ['disableWaterPause','waterDisabled',actions.setWaterDisabled],
+          ['disableShadowsPause','shadowsDisabled',actions.setShadowsDisabled]
+        ]){
+          const input=document.getElementById(id);input.checked=getState()[key];
+          input.onchange=e=>callback(e.target.checked);
+        }
+        const refresh=()=>{
+          const s=getState(),perf=s.performance||{},draw=perf.drawCategories||{};
+          const rows=Object.entries(draw).sort((a,b)=>b[1]-a[1]);
+          document.getElementById('performanceBreakdown').textContent=
+            'FPS '+Math.round(perf.fps||0)+' · '+(perf.drawCalls||0)+' dibuixos totals'+
+            '\nCrides per categoria (escena principal, sense ombres):\n'+
+            rows.map(([name,count])=>name+': '+count).join('\n')+
+            '\nEnemics LOD: '+JSON.stringify(s.enemyLodStats||{})+
+            '\nObjectes ocults per distància: '+JSON.stringify(s.visibilityStats||{});
+        };
+        const statsToggle=document.getElementById('showPerfStatsOptions');
+        statsToggle.checked=!!getState().performanceStatsVisible;
+        statsToggle.onchange=()=>actions.setPerformanceStatsVisible(statsToggle.checked);
+        const stealthToggle=document.getElementById('showStealthDebug');
+        stealthToggle.checked=!!getState().stealthLayers?.sight;
+        stealthToggle.onchange=()=>actions.setStealthLayer('sight',stealthToggle.checked);
+        for(const [id,key] of [['showStealthNoise','noise']]){const el=document.getElementById(id);el.checked=!!getState().stealthLayers?.[key];el.onchange=()=>actions.setStealthLayer(key,el.checked)}
+        document.getElementById('performanceRefresh').onclick=refresh;
+        document.getElementById('performanceBack').onclick=()=>actions.open('pause');
+        refresh();
+      }else if(mode==='restart'){
+        body.innerHTML='<p>Perdràs el progrés. Dificultat de la nova partida:</p><button data-diff=".6">Fàcil</button><button data-diff="1">Normal</button><button data-diff="1.5">Difícil</button>';
+        body.querySelectorAll('[data-diff]').forEach(b=>b.onclick=()=>actions.restart(+b.dataset.diff))
+      }else{
+        body.innerHTML='<div class="pause-help" aria-label="Controls bàsics">'+
+          '<div><b>WASD / fletxes</b><span>Moviment i gir</span></div>'+
+          '<div><b>Maj. / joystick ↑</b><span>Córrer o nedar a crol</span></div>'+
+          '<div><b>X · AJUPIR</b><span>Sigil: menys velocitat, soroll i visibilitat</span></div>'+
+          '<div><b>Y / U · ◀ ▶</b><span>Desplaçament lateral, també nedant</span></div>'+
+          '<div><b>E · Acció</b><span>Acció propera, vehicle o motxilla</span></div>'+
+          '<div><b>F · Dispar</b><span>Arma, cisalla o granada (mantén per llançar lluny)</span></div>'+
+          '<div><b>T · Mira</b><span>Zoom del franctirador</span></div>'+
+          '<div><b>M</b><span>Mapa i destinació</span></div>'+
+          '<div><b>H / J</b><span>Helicòpter: pujar / baixar</span></div>'+
+          '<div><b>Arrossega / roda</b><span>Girar vista / ajustar càmera</span></div>'+
+          '</div>'+
+          '<p class="pause-note">Els mapes recollits s’activen sols. Gestiona l’equipament amb la motxilla.</p>'+
+          '<p class="pause-note">Senyals sobre soldats visibles: ? ambre · sospita; ! coral · contacte confirmat; ◇ blau · cerca o investigació. Desapareixen darrere la cobertura.</p>'+
+          '<label class="pause-stats-toggle"><input id="audioEnabledPause" type="checkbox"> So activat</label>'+
+          '<div class="pause-menu-actions">'+
+          '<button id="chetosMenu">Chetos</button>'+
+          '<button id="restartMenu">Nova partida</button>'+
+          '<button id="performanceMenu">⚙️ Rendiment</button>'+
+          '</div>';
+        document.getElementById('chetosMenu').onclick=()=>actions.open('cheats');
+        document.getElementById('restartMenu').onclick=()=>actions.open('restart');
+        document.getElementById('performanceMenu').onclick=()=>actions.open('performance');
+        const audioEnabled=document.getElementById('audioEnabledPause');
+        audioEnabled.checked=!getState().muted;
+        audioEnabled.onchange=()=>actions.setAudioMuted(!audioEnabled.checked);
+      }
+    }
+    resumeButton.onclick=actions.resume;
+    return Object.freeze({renderHUD,show,hide,isBombTimerOpen:()=>currentMode==='bombtimer'})
+  }
+});
+
+
+;
+// END src/ui.js
+// BEGIN src/seed-search.js
+// Catàleg i puntuació del cercador de llavors.
+// Els vehicles i objectes procedeixen dels catàlegs vius del joc.
+window.HUNTER_SEED_SEARCH=Object.freeze((()=>{
+  const compounds=Object.freeze({
+    base:'Base inicial',
+    hq:'HQ enemic',
+    avancada:'Avançada',
+    garatge:'Garatge / hangar',
+    heliport:'Heliport',
+    polvori:'Polvorí',
+    comunicacions:'Comunicacions',
+    port:'Port',
+    'prison-camp':'Camp de presoners'
+  });
+  const groups=Object.freeze({
+    vehicle:'Vehicles',
+    enemy:'Enemics',
+    item:'Objectes',
+    compound:'Compounds'
+  });
+  const categoryOptions=()=>Object.entries(groups).map(([value,label])=>({value,label}));
+  function typeOptions(category,vehicleTypes,itemTypes){
+    let entries=[];
+    if(category==='vehicle')entries=Object.entries(vehicleTypes||{}).map(([value,info])=>({value,label:info.n||value}));
+    else if(category==='enemy')entries=[{value:'patrulla_marina',label:'Patrulla marina'}];
+    else if(category==='item')entries=Object.entries(itemTypes||{}).map(([value,info])=>({value,label:info.n||value}));
+    else if(category==='compound')entries=Object.entries(compounds).map(([value,label])=>({value,label}));
+    return [{value:'*',label:category==='vehicle'?'Qualsevol vehicle':category==='enemy'?'Qualsevol enemic':category==='item'?'Qualsevol objecte':'Qualsevol compound'},...entries];
+  }
+  function findNearest({category,type,base,vehicles=[],enemies=[],items=[],compounds:sites=[]}){
+    if(!base||!Number.isFinite(base.x)||!Number.isFinite(base.z))return null;
+    const list=category==='vehicle'?vehicles:category==='enemy'?enemies:category==='item'?items:category==='compound'?sites:[];
+    let closest=null,count=0;
+    for(const entry of list){
+      if((type!=='*'&&entry.t!==type&&entry.type!==type)||
+         !Number.isFinite(entry.x)||!Number.isFinite(entry.z)||
+         entry.destroyed)continue;
+      const distance=Math.hypot(entry.x-base.x,entry.z-base.z);
+      count++;
+      if(!closest||distance<closest.distance){
+        closest={distance,x:entry.x,z:entry.z,type:entry.t||entry.type};
+      }
+    }
+    return closest?{...closest,count}:null;
+  }
+  const compare=(a,b)=>a.distance-b.distance||a.seed-b.seed;
+  return {compounds,categoryOptions,typeOptions,findNearest,compare};
+})());
+
+;
+// END src/seed-search.js
+// BEGIN src/explosive-visuals.js
+// Hunter: Arxipèlag — model visual compartit de l'explosiu plàstic.
+// Basat en la proposta 1 (RGB paral·lels) de la pàgina de proves.
+// Geometria decorativa: la temporització de la detonació és a combat.js.
+(function(){
+  'use strict';
+  const BLINK_HZ=5; // cinc parpelleigs complets per segon (100 ms encès / 100 ms apagat).
+  // Factor 2/3 respecte de cadascuna de les mides de la versió anterior.
+  const PICKUP_SCALE=2/3, PLANTED_SCALE=.82*PICKUP_SCALE;
+
+  function create(T,active=false,initialSeconds=3){
+    const root=new T.Group(),cache=new Map();
+    function material(color,metalness=.03,roughness=.78){
+      const key=color+':'+metalness+':'+roughness;
+      if(!cache.has(key))cache.set(key,new T.MeshStandardMaterial({
+        color,metalness,roughness,flatShading:true
+      }));
+      return cache.get(key);
+    }
+    const green=material(0x57674c),lightGreen=material(0x718263),
+          darkGreen=material(0x3e503e),metal=material(0x2b3335,.27,.54),
+          rim=material(0x171b1c,.12,.45),cap=material(0x171d1b,.19,.55),
+          red=material(0xe34033,.04,.4),lime=material(0x28cc64,.04,.4),
+          blue=material(0x267ee6,.04,.4),wireColors=[red,lime,blue];
+
+    function mesh(geometry,mat,parent=root){
+      const o=new T.Mesh(geometry,mat);
+      o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;
+    }
+    function box(w,h,d,mat,x=0,y=0,z=0){
+      const o=mesh(new T.BoxGeometry(w,h,d),mat);
+      o.position.set(x,y,z);return o;
+    }
+    function sphere(r,mat,x,y,z){
+      const o=mesh(new T.SphereGeometry(r,10,7),mat);
+      o.position.set(x,y,z);return o;
+    }
+    function roundBlock(w,h,d,r,mat,x=0,y=0,z=0){
+      const b=Math.min(.045,w*.05,h*.08,d*.05),s=new T.Shape(),
+            hw=w/2-r,hh=h/2-r;
+      s.moveTo(-hw,-h/2);s.lineTo(hw,-h/2);
+      s.quadraticCurveTo(w/2,-h/2,w/2,-hh);
+      s.lineTo(w/2,hh);s.quadraticCurveTo(w/2,h/2,hw,h/2);
+      s.lineTo(-hw,h/2);s.quadraticCurveTo(-w/2,h/2,-w/2,hh);
+      s.lineTo(-w/2,-hh);s.quadraticCurveTo(-w/2,-h/2,-hw,-h/2);
+      const geo=new T.ExtrudeGeometry(s,{
+        depth:d-2*b,bevelEnabled:true,bevelThickness:b,
+        bevelSize:b,bevelSegments:2,steps:1,curveSegments:3
+      });
+      geo.translate(0,0,-d/2+b);
+      const o=mesh(geo,mat);o.position.set(x,y,z);return o;
+    }
+
+    // Cos de la proposta 1: bloc compacte verd, corretges i cargols.
+    roundBlock(2.24,.82,1.44,.22,green);
+    roundBlock(2.16,.70,1.37,.18,lightGreen,0,.03,.04);
+    for(const x of[-.87,.87]){
+      box(.16,.73,.075,darkGreen,x,.06,-.731);
+      sphere(.055,material(0xa0a7a2,.56,.4),x,-.25,-.80);
+    }
+    for(const z of[-.41,.47])box(2.17,.064,.12,darkGreen,0,.44,z);
+    roundBlock(.48,.17,.30,.06,darkGreen,.71,.50,.18);
+
+    // Visor digital real amb textura pròpia (compte enrere només un cop col·locat).
+    const timerY=.09,timerZ=-.80,timerW=1.12,timerH=.46;
+    roundBlock(timerW+.18,timerH+.15,.155,.085,rim,0,timerY,timerZ);
+    box(timerW,timerH,.028,metal,0,timerY,timerZ-.095);
+    const canvas=document.createElement('canvas');
+    canvas.width=512;canvas.height=192;
+    const ctx=canvas.getContext('2d'),tex=new T.CanvasTexture(canvas);
+    tex.colorSpace=T.SRGBColorSpace;
+    const displayMat=new T.MeshStandardMaterial({
+      map:tex,emissive:active?0xff1008:0x28452c,
+      emissiveMap:tex,emissiveIntensity:active?.9:.2,
+      metalness:0,roughness:.25,side:T.DoubleSide
+    });
+    const face=mesh(new T.PlaneGeometry(timerW*.88,timerH*.79),displayMat);
+    face.position.set(0,timerY,timerZ-.114);
+    face.rotation.y=Math.PI;
+    const draw=(seconds,on)=>{
+      ctx.fillStyle=active?'#240605':'#101b1b';
+      ctx.fillRect(0,0,512,192);
+      ctx.lineWidth=6;ctx.strokeStyle=active?'#8d3029':'#3a5755';
+      ctx.strokeRect(7,7,498,178);
+      if(on){
+        const digits='00:'+String(active?seconds:3).padStart(2,'0');
+        ctx.fillStyle=active?'#ff4437':'#89c58f';
+        ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=active?18:8;
+        ctx.font='bold 106px monospace';
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(digits,256,101);ctx.shadowBlur=0;
+      }
+      tex.needsUpdate=true;
+    };
+
+    for(const side of[-1,1]){
+      sphere(.038,material(0xa0a49b,.42,.38),side*(timerW+.08)/2,
+        timerY+timerH*.37,timerZ-.105);
+      sphere(.04,material(active?0xff4e38:0x4b604f),side*(timerW+.07)/2,
+        timerY-timerH*.34,timerZ-.11);
+    }
+
+    // Nou feix RGB: 9 cables en arcs paral·lels (R/G/B repetits tres cops).
+    for(let i=0;i<9;i++){
+      const x=-.79+i*.195,c=i%3,h=.66+(i%3)*.045;
+      const points=[[x,.54,.41],[x-.025,h,.23],[x+.025,h+.06,-.05],
+                    [x,.59,-.27],[x,.54,-.35]];
+      const curve=new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p)));
+      mesh(new T.TubeGeometry(curve,32,.044,8,false),wireColors[c]);
+      for(const p of[points[0],points[points.length-1]]){
+        sphere(.065,cap,p[0],p[1]-.016,p[2]);
+        sphere(.034,wireColors[c],p[0],p[1]+.035,p[2]);
+      }
+    }
+    for(const z of[.38,-.31])box(1.82,.055,.065,metal,0,.54,z);
+
+    root.scale.setScalar(active?PLANTED_SCALE:PICKUP_SCALE);
+    root.userData.explosiveDisplay={active,draw,lastSecond:-1,lastOn:null,face};
+    update(root,active?initialSeconds:0);
+    return root;
+  }
+
+  function update(group,remaining){
+    const d=group?.userData?.explosiveDisplay;
+    if(!d)return;
+    if(!d.active){
+      if(d.lastOn!==true){d.draw(0,true);d.lastOn=true;}
+      return;
+    }
+    const t=Math.max(0,Math.min(59,Number.isFinite(remaining)?remaining:0));
+    const seconds=Math.ceil(t);
+    // El visor es manté llegible durant els comptes enrere llargs;
+    // només parpelleja quan queden tres segons o menys.
+    const blinkOn=t>3||Math.floor((3-t)*BLINK_HZ*2)%2===0;
+    if(seconds!==d.lastSecond||blinkOn!==d.lastOn){
+      d.draw(seconds,blinkOn);
+      d.lastSecond=seconds;
+      d.lastOn=blinkOn;
+    }
+  }
+
+  window.HUNTER_EXPLOSIVE_VISUALS={create,update,BLINK_HZ,PICKUP_SCALE,PLANTED_SCALE};
+})();
+
+;
+// END src/explosive-visuals.js
+// BEGIN src/stealth.js
+// Percepció compartida: els sons són esdeveniments de joc, no volum d'àudio.
+// Sense geometria ni WebAudio mentre el depurador no està activat.
+window.HUNTER_STEALTH=(()=>{
+  const CONFIG=Object.freeze({sightRange:85,sightHalfAngle:Math.PI*50/180,
+    sightVerticalAngle:Math.PI*33/180,searchSeconds:9,
+    investigateSeconds:11,closeRecognition:4,crouchVisibility:.58});
+  const RADII=Object.freeze({walk:7,run:25,crouch:2,swim:12,knife:3,cutters:3,
+    door:10,pistol:140,sniper:220,bazooka:250,rifle:160,explosion:300,
+    bicycle:5,motorbike:90,car:70,civilianCar:112,truck:130,tank:130,apc:120,
+    rowboat:5,windsurf:5,jetski:100,speedboat:120,ferry:125,
+    helicopter:250,collision:100,grenade:7,alert:65});
+  const events=[];let nextId=0;
+  const debug={sight:false,noise:false};
+  const enabled=()=>debug.sight||debug.hearing||debug.noise;
+  const setLayer=(key,value)=>{if(Object.hasOwn(debug,key))debug[key]=!!value};
+  const layers=()=>({...debug});
+  function emit(kind,x,y,z,radius=RADII[kind]||0){
+    if(!(radius>0)||!Number.isFinite(x)||!Number.isFinite(z))return null;
+    // Un motor o una ràfega no han de crear desenes d'esdeveniments/frame.
+    const old=events.findLast?.(e=>e.kind===kind&&e.age<.2&&
+      Math.hypot(x-e.x,z-e.z)<9);
+    if(old){old.id=++nextId;old.x=x;old.y=y;old.z=z;old.radius=radius;old.age=0;return old}
+    const e={id:++nextId,kind,x,y,z,radius,age:0};events.push(e);
+    if(events.length>36)events.splice(0,events.length-36);
+    return e;
+  }
+  function tick(dt){for(let i=events.length-1;i>=0;i--)
+    if((events[i].age+=dt)>.85)events.splice(i,1)}
+  function clear(){events.length=0}
+  function inView(heading,dx,dy,dz,range=CONFIG.sightRange){
+    const horizontal=Math.hypot(dx,dz),dist=Math.hypot(horizontal,dy);
+    if(dist>range||horizontal<.001)return false;
+    // El model avança cap a -Z, amb hd com a rotació mundial de Y.
+    const forward=(-Math.sin(heading)*dx-Math.cos(heading)*dz)/horizontal;
+    return forward>=Math.cos(CONFIG.sightHalfAngle)&&
+      Math.abs(Math.atan2(dy,horizontal))<=CONFIG.sightVerticalAngle;
+  }
+  function heardAt(x,y,z,lastId=0,attenuation=()=>1){
+    let choice=null,best=-Infinity;
+    for(const noise of events){
+      if(noise.id<=lastId)continue;
+      const d=Math.hypot(x-noise.x,z-noise.z);
+      if(d>noise.radius)continue;
+      const factor=attenuation(noise);
+      if(d>noise.radius*factor)continue;
+      const score=noise.radius*factor-d;
+      if(score>best){choice=noise;best=score}
+    }
+    return choice;
+  }
+  return Object.freeze({CONFIG,RADII,emit,tick,clear,inView,heardAt,
+    events:()=>events,enabled,layers,setLayer,setDebug:v=>{for(const key of Object.keys(debug))debug[key]=!!v}});
+})();
+
+;
+// END src/stealth.js
+// BEGIN src/stealth-feedback.js
+// Senyals de joc independents de F9: només es mostren després de validar visibilitat.
+window.HUNTER_STEALTH_FEEDBACK=Object.freeze({
+  create(T,{limit=24,maxChecks=48,maxDistance=100}={}){
+    const retain=window.HUNTER_RESOURCES.retain,geometries={},materials={},entries=[],
+      shapes={
+        suspicion:[-.2,.24,.02,0,.36,.02,0,.36,.02,.2,.24,.02,.2,.24,.02,.2,.08,.02,.2,.08,.02,0,-.06,.02,0,-.06,.02,0,-.19,.02,0,-.3,.02,0,-.34,.02],
+        contact:[0,.36,.02,0,-.15,.02,0,-.28,.02,0,-.35,.02],
+        search:[0,.35,.02,.27,0,.02,.27,0,.02,0,-.35,.02,0,-.35,.02,-.27,0,.02,-.27,0,.02,0,.35,.02]
+      },colors={suspicion:0xe7c47e,contact:0xe2937f,search:0x9dcbd2},
+      frustum=new T.Frustum(),projection=new T.Matrix4(),body=new T.Vector3(),marker=new T.Vector3(),
+      stats={visible:0,checks:0,allocated:0,limit,maxChecks,maxDistance};
+    let cursor=0,enemySource=null,enemyCount=-1,members=new Set();
+    // Reutilitzar les estructures evita generar brossa a cada dibuix.
+    const seen=new Set();
+    for(const mode of Object.keys(shapes)){
+      geometries[mode]=retain(new T.BufferGeometry());
+      geometries[mode].setAttribute('position',new T.Float32BufferAttribute(shapes[mode],3));
+      materials[mode]=retain(new T.LineBasicMaterial({color:colors[mode],depthTest:true,depthWrite:false,transparent:true,opacity:.88}));
+    }
+    const modeFor=u=>u.canSee?'contact':u.aiMode==='suspicious'?'suspicion':
+      u.aiMode==='search'||u.aiMode==='investigate'?'search':null;
+    function reset(){
+      for(const entry of entries){entry.mesh.visible=false;entry.mesh.removeFromParent();entry.unit=null;entry.mode=null}
+      cursor=0;stats.visible=0;stats.checks=0;
+      enemySource=null;enemyCount=-1;members.clear();
+    }
+    function update({world,camera,enemies,active,visible}){
+      if(!active||!world){reset();return}
+      camera.updateMatrixWorld(true);
+      projection.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);
+      frustum.setFromProjectionMatrix(projection);stats.checks=0;stats.visible=0;
+      if(enemySource!==enemies||enemyCount!==enemies.length){
+        members=new Set(enemies);enemySource=enemies;enemyCount=enemies.length;
+      }
+      seen.clear();
+      function show(u,entry=null){
+        if(stats.checks>=maxChecks||!u||seen.has(u))return false;
+        seen.add(u);stats.checks++;
+        const mode=modeFor(u);
+        if(u.t!=='soldat'||u.hp<=0||u.destroyed||!mode||!u.o?.parent)return false;
+        for(let node=u.o;node;node=node.parent)if(!node.visible)return false;
+        body.set(u.x,u.o.position.y+1.6,u.z);marker.set(u.x,u.o.position.y+3.9,u.z);
+        if(camera.position.distanceToSquared(body)>maxDistance*maxDistance||
+          !frustum.containsPoint(body)||!frustum.containsPoint(marker)||!visible(u,body,marker))return false;
+        if(!entry){
+          entry=entries.find(item=>!item.unit);
+          if(!entry){
+            if(entries.length>=limit)return false;
+            const mesh=new T.LineSegments(geometries[mode],materials[mode]);mesh.name='stealth-state-marker';
+            mesh.userData.noCastShadow=true;entries.push(entry={mesh,unit:null,mode:null});stats.allocated=entries.length;
+          }
+        }
+        entry.unit=u;entry.mode=mode;entry.mesh.geometry=geometries[mode];entry.mesh.material=materials[mode];
+        entry.mesh.position.copy(marker);entry.mesh.quaternion.copy(camera.quaternion);entry.mesh.visible=true;
+        if(entry.mesh.parent!==world)world.add(entry.mesh);
+        stats.visible++;return true;
+      }
+      // Els senyals ja visibles es tornen a validar CADA dibuix, sense memòria de LOS.
+      for(const entry of entries){
+        const u=entry.unit;entry.mesh.visible=false;
+        if(!u||!members.has(u)||!show(u,entry)){entry.unit=null;entry.mode=null}
+      }
+      for(let visited=0;visited<enemies.length&&stats.checks<maxChecks&&stats.visible<limit;visited++){
+        if(cursor>=enemies.length)cursor=0;show(enemies[cursor++]);
+      }
+    }
+    return Object.freeze({update,reset,stats,entries});
+  }
+});
+
+;
+// END src/stealth-feedback.js
+// BEGIN src/stealth-debug.js
+// Volums de percepció, només creats quan el jugador activa el depurador.
+window.HUNTER_STEALTH_DEBUG=(()=>{
+  let group=null,cone=null,materialSight=null,entries=new Map(),pulses=[];
+  const ring=(T,color,n=64)=>{const g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(new Float32Array(n*3),3));return new T.LineLoop(g,new T.LineBasicMaterial({color,depthWrite:false}))};
+  const trace=(line,x,z,r,hd=0,half=null)=>{const a=line.geometry.attributes.position,n=a.count;for(let i=0;i<n;i++){const t=half===null?i*2*Math.PI/n:i===0?null:-half+(i-1)*2*half/(n-2),px=x+(t===null?0:Math.sin(t-hd)*r),pz=z+(t===null?0:-Math.cos(t-hd)*r);a.setXYZ(i,px,Math.max(0,hAt(px,pz))+.25,pz)}a.needsUpdate=true;line.geometry.computeBoundingSphere()};
+  function create(THREE,world){
+    group=new THREE.Group();group.name='stealth-debug-volumes';world.add(group);
+    const cfg=window.HUNTER_STEALTH.CONFIG,vertices=[],r=cfg.sightRange,
+          horizontal=r*Math.cos(cfg.sightVerticalAngle),
+          vertical=r*Math.sin(cfg.sightVerticalAngle),segments=18;
+    // Con cònic truncat per un arc de 85 m: no excedeix la distància
+    // màxima de detecció als costats com faria ConeGeometry.
+    for(let i=0;i<segments;i++){
+      const a=-cfg.sightHalfAngle+cfg.sightHalfAngle*2*i/segments,
+            b=-cfg.sightHalfAngle+cfg.sightHalfAngle*2*(i+1)/segments,
+            ax=Math.sin(a)*horizontal,az=-Math.cos(a)*horizontal,
+            bx=Math.sin(b)*horizontal,bz=-Math.cos(b)*horizontal;
+      vertices.push(0,0,0,ax,vertical,az,bx,vertical,bz,
+        0,0,0,bx,-vertical,bz,ax,-vertical,az,
+        ax,vertical,az,ax,-vertical,az,bx,vertical,bz,
+        bx,vertical,bz,ax,-vertical,az,bx,-vertical,bz);
+    }
+    cone=new THREE.BufferGeometry();cone.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));cone.computeVertexNormals();
+    materialSight=new THREE.MeshBasicMaterial({color:0x49f28b,transparent:true,opacity:.19,
+      depthWrite:false,side:THREE.DoubleSide});
+  }
+  function reset(){
+    if(group?.parent)group.parent.remove(group);
+    for(const g of [cone])g?.dispose();
+    for(const v of entries.values()){v.sl.geometry.dispose();v.sl.material.dispose()}
+    for(const p of pulses){p.line.geometry.dispose();p.line.material.dispose()}
+    for(const m of [materialSight])m?.dispose();
+    group=cone=null;entries.clear();pulses=[];
+  }
+  function update(THREE,world,enemies,player){
+    const active=window.HUNTER_STEALTH.enabled();
+    if(!active){if(group)group.visible=false;return}
+    if(!group||group.parent!==world){reset();create(THREE,world)}
+    group.visible=true;
+    const layers=window.HUNTER_STEALTH.layers(),visible=new Set(),maxD=210;
+    for(const u of enemies){
+      if(u.t!=='soldat'||Math.hypot(u.x-player.x,u.z-player.z)>maxD)continue;
+      visible.add(u);
+      let v=entries.get(u);
+      if(!v){
+        const sight=new THREE.Mesh(cone,materialSight),sl=ring(THREE,0x49f28b,38);
+        sight.renderOrder=10;group.add(sight,sl);
+        v={sight,sl};entries.set(u,v);
+      }
+      v.sight.visible=v.sl.visible=layers.sight;
+      v.sight.position.set(u.x,u.o.position.y+2.2,u.z);
+      v.sight.rotation.y=u.hd;
+      if(layers.sight)trace(v.sl,u.x,u.z,window.HUNTER_STEALTH.CONFIG.sightRange*Math.cos(window.HUNTER_STEALTH.CONFIG.sightVerticalAngle),u.hd,window.HUNTER_STEALTH.CONFIG.sightHalfAngle);
+    }
+    for(const [u,v] of entries){
+      if(visible.has(u))continue;
+      group.remove(v.sight,v.sl);v.sl.geometry.dispose();v.sl.material.dispose();entries.delete(u);
+    }
+    const events=layers.noise?window.HUNTER_STEALTH.events().filter(e=>e.age<.85).slice(-8):[];
+    while(pulses.length<events.length){
+      const line=ring(THREE,0xff6556);group.add(line);pulses.push({line});
+    }
+    pulses.forEach(({line},i)=>{
+      const e=events[i];line.visible=!!e;
+      if(e){trace(line,e.x,e.z,e.radius)}
+    });
+  }
+  return Object.freeze({update,reset});
+})();
+
+;
+// END src/stealth-debug.js
+// BEGIN src/prisoners.js
+// Presoners civils: rescat opcional i reparació exclusivament al mecànic alliberat.
+// No consumeix R()/Math.random ni afegeix civils a la llista d'enemics.
+window.HUNTER_PRISONERS=Object.freeze({
+ create({THREE:T,heightAt=()=>0,canMove=()=>true,clearLine=()=>true,
+   notify=()=>{},sound=()=>{},vehicleRadius=()=>4,vehicleName=v=>v.t}={}){
+  const entities=[],resources=new Set();
+  let world=null,camp=null,rescuePoint=null,station=null,escapeRoute=[],mechanicRoute=[],
+    discovered=false,released=false,repair=null,lastContext=null,serial=0,cheerNotified=false;
+  const config=Object.freeze({discoverRange:80,rescueRange:6,personRange:9,
+    maxServiceRange:32,repairSeconds:6,walkSpeed:3.2,mechanicSpeed:2.8,
+    // Upright protagonist mesh (compact D head, 1.2 baked units × 2/3 scale).
+    standingHeight:2.84648});
+  const own=r=>(resources.add(r),r),alive=u=>!!u&&u.hp>0&&!u.destroyed;
+  const position=o=>({x:o.x,y:Number.isFinite(o.y)?o.y:
+    (o.t==='heli'||o.t==='heli_combat')&&Number.isFinite(o.alt)?o.alt:o.o?.position?.y??0,z:o.z});
+  const distance=(a,b)=>Math.hypot(a.x-b.x,(a.y??0)-(b.y??0),a.z-b.z);
+  const eye=(o,lift=1.5)=>{const p=position(o);p.y+=lift;return p};
+  function localPoint(p){
+   const angle=camp.angle||0,c=Math.round(Math.cos(angle)),s=Math.round(Math.sin(angle)),
+     x=Array.isArray(p)?p[0]:p.x,z=Array.isArray(p)?p[1]:p.z,
+     wx=camp.x+x*c-z*s,wz=camp.z+x*s+z*c;
+   return{x:wx,y:heightAt(wx,wz),z:wz};
+  }
+  function reset(){
+   for(const u of entities)u.o?.removeFromParent();
+   for(const resource of resources)resource.dispose?.();
+   resources.clear();entities.length=0;world=camp=rescuePoint=station=null;
+   escapeRoute=[];mechanicRoute=[];discovered=false;released=false;repair=null;lastContext=null;cheerNotified=false;serial++;
+  }
+  // Low-poly humans with anatomically shaped torsos, faces, clothing,
+  // articulated arms and proper shoes. All geometry is shared across NPCs.
+  function createModels(){
+   const cube=own(new T.BoxGeometry(1,1,1)),
+     head=own(new T.SphereGeometry(.18,12,10)),
+     joint=own(new T.SphereGeometry(.12,10,8)),
+     torso=own(new T.CylinderGeometry(.295,.245,.57,10)),
+     upperLeg=own(new T.CylinderGeometry(.12,.096,.37,9)),
+     lowerLeg=own(new T.CylinderGeometry(.10,.077,.35,9)),
+     sleeve=own(new T.CylinderGeometry(.105,.083,.36,9)),
+     forearm=own(new T.CylinderGeometry(.083,.066,.26,9)),
+     collar=own(new T.CylinderGeometry(.115,.14,.085,10)),
+     brim=own(new T.CylinderGeometry(.31,.34,.055,10)),
+     cap=own(new T.CylinderGeometry(.28,.29,.12,10)),
+     eye=own(new T.SphereGeometry(.035,8,6)),
+     nose=own(new T.ConeGeometry(.047,.12,7)),
+     hairCap=own(new T.SphereGeometry(.183,12,6,0,Math.PI*2,0,Math.PI*.46)),
+     mat=hex=>own(new T.MeshStandardMaterial({color:hex,roughness:.93,flatShading:true})),
+     skin=[mat(0xc59168),mat(0xa87354),mat(0xdbac7f),mat(0x976348),mat(0xc89370)],
+     shirts=[mat(0xb9aa87),mat(0x7a846b),mat(0x8c795e),mat(0x9b8f77)],
+     pants=[mat(0x655f51),mat(0x545746),mat(0x635747)],
+     overall=mat(0x3c6578),overallDark=mat(0x263f50),
+     boots=mat(0x333b38),straw=mat(0xb49b65),hair=mat(0x4c392f),
+     metal=mat(0xa8b3b1),belt=mat(0x514338),white=mat(0xd4cabb),eyes=mat(0x242a2a);
+   function mesh(parent,geometry,material,w,h,d,x,y,z){
+    const o=new T.Mesh(geometry,material);o.scale.set(w,h,d);o.position.set(x,y,z);
+    o.castShadow=true;parent.add(o);return o;
+   }
+   return u=>{
+    const root=new T.Group(),rig=new T.Group(),mechanic=u.role==='mechanic',
+      variant=Number((u.id||'').match(/\\d+/)?.[0]||0),shirt=mechanic?overall:shirts[variant%shirts.length],
+      trousers=mechanic?overallDark:pants[variant%pants.length],tone=skin[variant%skin.length];
+    root.name='hunter-prisoner-'+u.id;root.add(rig);u.rig=rig;
+    // Torso narrows to the waist; shoulders/neck and layered collar
+    // prevent the rectangular toy-like silhouette of the old model.
+    mesh(rig,torso,shirt,1,1,.92,0,1.085,0);
+    mesh(rig,joint,shirt,2.15,.72,1.2,0,1.33,0);
+    mesh(rig,collar,mechanic?white:shirt,1,1,1,0,1.398,0);
+    mesh(rig,cube,belt,.49,.068,.31,0,.834,0);
+    mesh(rig,joint,trousers,2.04,.88,1.24,0,.805,0);
+    // Head with a neck, ears, nose, eyes, eyebrows and distinct hairstyles.
+    mesh(rig,collar,tone,.58,.9,.62,0,1.417,0);
+    const face=mesh(rig,head,tone,1,.99,.93,0,1.57,0);
+    u.head=face;
+    for(const side of[-1,1]){
+     mesh(rig,joint,tone,.5,.66,.50,side*.18,1.57,0);
+     mesh(rig,eye,eyes,1,1,1,side*.065,1.585,-.167);
+     mesh(rig,cube,hair,.064,.022,.019,side*.067,1.638,-.165);
+    }
+    mesh(rig,nose,tone,.8,.7,.8,0,1.535,-.181);
+    if(mechanic){
+     mesh(rig,hairCap,hair,1,1,1,0,1.616,0);
+     // Work cap, peak, pockets and a wrench secured to the overalls.
+     mesh(rig,cap,overallDark,1,1,1,0,1.75,0);
+     mesh(rig,cube,overallDark,.23,.022,.18,0,1.70,-.25);
+     for(const side of[-1,1])mesh(rig,cube,overallDark,.12,.15,.017,side*.13,1.09,-.259);
+     mesh(rig,cube,metal,.052,.30,.052,.28,.83,-.02);
+     mesh(rig,cube,metal,.18,.052,.052,.28,.95,-.02);
+     mesh(rig,cube,white,.11,.13,.025,-.12,1.19,-.267);
+    }else{
+     mesh(rig,hairCap,hair,1,1,1,0,1.58,0);
+     mesh(rig,brim,straw,1,1,1,0,1.75,0);
+     mesh(rig,cube,straw,.42,.12,.32,0,1.69,0);
+     mesh(rig,cube,trousers,.18,.10,.07,0,1.255,-.231); // torn shirt opening
+    }
+    const legs=[],arms=[];
+    for(const side of[-1,1]){
+     const leg=new T.Group();leg.position.set(side*.14,.82,0);rig.add(leg);
+     mesh(leg,upperLeg,trousers,1,1,1,0,-.20,0);
+     mesh(leg,joint,trousers,.84,.78,.94,0,-.385,0);
+     mesh(leg,lowerLeg,trousers,1,1,1,0,-.51,0);
+     mesh(leg,cube,boots,.22,.16,.34,0,-.68,-.045);
+     mesh(leg,joint,boots,1.05,.62,1.32,0,-.685,-.105);
+     legs.push(leg);
+     const arm=new T.Group();arm.position.set(side*.34,1.30,0);rig.add(arm);
+     mesh(arm,joint,shirt,1,.94,1.0,0,-.045,0);
+     mesh(arm,sleeve,shirt,1,1,1,0,-.20,0);
+     mesh(arm,joint,tone,.65,.65,.65,0,-.375,0);
+     mesh(arm,forearm,tone,1,1,1,0,-.42,0);
+     mesh(arm,joint,tone,.69,.55,.73,0,-.515,0);
+     arms.push(arm);
+    }
+    root.userData.civilian=true;root.userData.prisonerId=u.id;
+    root.scale.setScalar(u.modelScale);
+    u.legs=legs;u.arms=arms;return root;
+   };
+  }
+  function pose(u,seated=false){
+   // The seat is the pelvis at ground level, with straight legs on the ground.
+   // Keep the root at the world foot point: movement and projectile bounds share it.
+   u.pose=seated?'seated':'standing';
+   u.height=seated?(u.role==='mechanic'?1.115:1.0825)*u.modelScale:config.standingHeight;
+   u.radius=(u.cheering?.92:seated?.76:.56)*u.modelScale;
+   if(!u.o)return;
+   u.rig.position.y=seated?-.695:-.06;
+   for(let i=0;i<u.legs.length;i++)u.legs[i].rotation.x=seated?Math.PI/2:0;
+   for(let i=0;i<u.arms.length;i++){
+    u.arms[i].rotation.x=seated?-.5:0;
+    u.arms[i].rotation.z=u.state==='captive'?(i?-1:1)*.22:0;
+   }
+   u.o.userData.pose=u.pose;
+  }
+  function configure({world:nextWorld,camp:nextCamp,logicalOnly=false}={}){
+   reset();world=nextWorld||null;camp=nextCamp||null;
+   if(!world||!camp?.layout)return;
+   rescuePoint=localPoint(camp.layout.rescuePoint||{x:0,z:8});
+   station=localPoint(camp.layout.mechanicStation||{x:33,z:16});
+   escapeRoute=(camp.layout.escapeRoute||[[0,8],[0,30],[0,62],[0,86]]).map(localPoint);
+   mechanicRoute=(camp.layout.mechanicRoute||[camp.layout.rescuePoint||{x:0,z:8},
+    camp.layout.mechanicStation||{x:33,z:16}]).map(localPoint);
+   const model=logicalOnly?null:createModels();
+   let mechanicAdded=false,farmerIndex=0;
+   for(const spec of camp.layout.prisoners||[]){
+    if(spec.role==='mechanic'&&mechanicAdded)continue;
+    const role=spec.role==='mechanic'?'mechanic':'farmer';if(role==='mechanic')mechanicAdded=true;
+    const p=localPoint(spec),u={t:'civilian',civilian:true,friendly:true,id:spec.id,
+      role,...p,hp:4,maxHp:4,radius:.55,height:config.standingHeight,state:'captive',
+      modelScale:config.standingHeight/(role==='mechanic'?1.75:1.7175),
+      captivePose:spec.pose||(role==='farmer'&&farmerIndex++%2===1?'seated':'standing'),
+      destroyed:false,path:[],waypoint:0,phase:0,blocked:0,following:false,followWarning:false,
+      cheering:false,cheerPhase:farmerIndex*.9,o:null};
+    if(model){u.o=model(u);u.o.position.set(u.x,u.y,u.z);u.o.visible=false;world.add(u.o)}
+    pose(u,u.captivePose==='seated');entities.push(u);
+   }
+  }
+  function mechanic(){return entities.find(u=>u.role==='mechanic'&&alive(u))||null}
+  function observer(ctx){return ctx?.vehicle||ctx?.player}
+  function visiblePoint(ctx,p,range){
+   const q=observer(ctx);
+   return !!q&&distance(position(q),p)<=range&&clearLine(eye(q),{x:p.x,y:p.y+1.2,z:p.z});
+  }
+  function danger(ctx,at=observer(ctx)){
+   if(!at)return true;
+   const p=position(at);
+   for(const u of ctx.enemies||[]){
+    if(!alive(u))continue;
+    const q=position(u),d=distance(p,q);
+    if(d>70)continue;
+    if((u.canSee||u.aiMode==='combat'&&d<32||d<7)&&clearLine(eye(u,2),eye(at)))return true;
+   }
+   return false;
+  }
+  const validContext=ctx=>!!ctx?.active&&!!ctx.player;
+  function serviceRange(v){return Math.min(config.maxServiceRange,Math.max(7,(vehicleRadius(v.t)||4)+5))}
+  function serviceVehicle(v,ctx,u,{requireDamage=true}={}){
+   if(ctx.canInteract===false)return false;
+   if(!alive(u)||u.state!=='ready'||!v||v.destroyed||v.sunk||v.waterIngress?.dead||!(ctx.vehicles||[]).includes(v))return false;
+   if(!Number.isFinite(v.life)||!Number.isFinite(v.maxLife)||v.maxLife<=0||v.life<=0)return false;
+   if(requireDamage&&v.life>=v.maxLife)return false;
+   if(Math.abs(v.v||0)>.35||Math.abs(v.strafeV||0)>.35||Math.abs(v.vy||0)>.35)return false;
+   const q=position(v),limit=serviceRange(v);
+   // Aircraft must be landed; a big hull does not permit repair from the air.
+   if(Math.abs(q.y-u.y)>3.8||Math.hypot(v.x-u.x,v.z-u.z)>limit)return false;
+   const p=position(observer(ctx));
+   if(ctx.vehicle&&ctx.vehicle!==v)return false;
+   if(!ctx.vehicle&&Math.hypot(p.x-u.x,p.z-u.z)>config.personRange)return false;
+   if(Math.abs(p.y-u.y)>3.8||!clearLine(eye(u),eye(v,1)))return false;
+   return !danger(ctx)&&!danger(ctx,u);
+  }
+  function repairTarget(ctx,u){
+   if(ctx.vehicle)return serviceVehicle(ctx.vehicle,ctx,u)?ctx.vehicle:null;
+   let target=null,best=Infinity;
+   for(const v of ctx.vehicles||[]){
+    if(!serviceVehicle(v,ctx,u))continue;
+    const d=Math.hypot(v.x-u.x,v.z-u.z);
+    if(d<best){best=d;target=v}
+   }
+   return target;
+  }
+  // Physical campaign goal: all six guards and four towers must be
+  // neutralised AND at least one segment of the INNER enclosure destroyed.
+  // The original E-on-a-specific-gate shortcut is intentionally removed.
+  function rescueStatus(ctx){
+   const troops=new Set([...(camp?.soldiers||[]),...(camp?.towers||[]),
+     ...(ctx?.enemies||[]).filter(u=>u.compound===camp?.id)]);
+   let guards=0,towers=0;
+   for(const u of troops){
+    if(!alive(u))continue;
+    if(u.t==='torre')towers++;
+    else if(u.t==='soldat')guards++;
+   }
+   const gaps=(camp?.prisonFenceSegments||[])
+     .filter(s=>s?.collider&&(s.collider.hp<=0||s.collider.open));
+   const gate=camp?.prisonGate;
+   // Compatibility with saved layouts that have a gate but no section index.
+   if(!camp?.prisonFenceSegments?.length&&gate?.colliders?.some(w=>w.hp<=0||w.open))
+    gaps.push({collider:gate.colliders[0],gate:true});
+   return{guards,towers,breach:gaps.length>0,gaps};
+  }
+  function routeThroughBreach(entry){
+   const w=entry.collider,wx=(w.ax+w.bx)*.5,wz=(w.az+w.bz)*.5,
+     c=Math.round(Math.cos(camp.angle||0)),s=Math.round(Math.sin(camp.angle||0)),
+     x=(wx-camp.x)*c+(wz-camp.z)*s,
+     z=-(wx-camp.x)*s+(wz-camp.z)*c,
+     side=x<0?-1:1;
+   let exit;
+   // Approach the hole perpendicularly and never use an intact section.
+   if(z<=-9.5)exit=[[x,z+3],[x,z-3.5],[side*26,-16],[side*26,30],[0,37]];
+   else if(Math.abs(x)>=19.5)exit=[[x-side*3,z],[x+side*3.5,z],[side*26,30],[0,37]];
+   else exit=[[x,z-3],[x,z+3.5],[x,32],[0,37]];
+   return exit.map(localPoint);
+  }
+  function releaseCaptives(ctx,status){
+   if(released||!status.breach||status.guards||status.towers||!entities.some(alive))return;
+   // Prefer a front/gate gap when there are several: fewer corners for
+   // unarmed NPCs and a clean approach to the single outer exit.
+   const best=status.gaps.slice().sort((a,b)=>{
+    const score=e=>{
+     const w=e.collider,cx=(w.ax+w.bx)*.5,cz=(w.az+w.bz)*.5,
+       dx=cx-camp.x,dz=cz-camp.z,
+       c=Math.round(Math.cos(camp.angle||0)),s=Math.round(Math.sin(camp.angle||0));
+     return Math.hypot(dx*c+dz*s,(-dx*s+dz*c)-24);
+    };
+    return score(a)-score(b);
+   })[0];
+   const exit=routeThroughBreach(best),farmersEnd=escapeRoute.slice(-2);
+   released=true;
+   let index=0;
+   for(const u of entities){
+    if(!alive(u))continue;
+    if(u.role==='mechanic'){
+     u.path=[...exit,...(camp.layout.mechanicAccess||[[33,36],[33,16]]).map(localPoint)];u.state='to-station';
+    }else{
+     // A small stagger avoids prisoners occupying exactly the same spot.
+     u.path=[...exit,...farmersEnd];u.state='evacuating';u.phase=index++*.7;
+    }
+    u.cheering=false;pose(u,false);u.waypoint=0;
+   }
+   discovered=true;
+   notify('Camp alliberat! Els presoners escapen per la bretxa; el mecànic va al taller.');
+   sound('pick',.5,rescuePoint);
+  }
+  function getAction(ctx=lastContext){
+   if(!validContext(ctx)||ctx.canInteract===false||!camp||!discovered||!released)return null;
+   const u=mechanic();if(!u||u.state!=='ready')return null;
+   if(repair){
+    if(!serviceVehicle(repair.vehicle,ctx,u,{requireDamage:false}))return null;
+    return{kind:'repair',label:'Reparant '+Math.floor(repair.progress/config.repairSeconds*100)+'% · cancel·lar',
+      icon:'🔧',target:repair.vehicle,serial};
+   }
+   const v=repairTarget(ctx,u);
+   if(v)return{kind:'repair',label:'Reparar '+vehicleName(v),icon:'🔧',target:v,serial};
+   if(!ctx.vehicle&&distance(position(ctx.player),position(u))<4&&clearLine(eye(ctx.player),eye(u)))
+    return{kind:'mechanicFollow',label:u.following?'Mecànic: espera aquí':'Mecànic: segueix-me',icon:'🔧',target:u,serial};
+   return null;
+  }
+  function stopRepair(message=null){
+   if(!repair)return;
+   repair=null;if(message)notify(message);
+  }
+  function interact(action,ctx=lastContext){
+   if(!validContext(ctx)||ctx.canInteract===false||!action||action.serial!==serial)return false;
+   const current=getAction(ctx);
+   if(!current||current.kind!==action.kind||current.target!==action.target)return false;
+   if(action.kind==='mechanicFollow'){
+    const u=action.target;u.following=!u.following;u.path=[];u.followWarning=false;
+    notify(u.following?'El mecànic et segueix a peu.':'El mecànic espera aquí.');return true;
+   }
+   if(repair){stopRepair('Reparació cancel·lada.');return true}
+   const u=mechanic(),v=action.target;
+   if(!serviceVehicle(v,ctx,u))return false;
+   u.following=false;u.path=[];
+   repair={vehicle:v,life:v.life,maxLife:v.maxLife,progress:0,x:v.x,z:v.z,
+     y:position(v).y,mechanic:u};
+   notify('El mecànic repara el vehicle. Mantén-lo aturat.');return true;
+  }
+  function follow(u,ctx){
+   if(!u.following||!alive(u)||u.state!=='ready')return;
+   // El jugador el guia caminant; el mecànic no embarca ni persegueix vehicles.
+   if(ctx.vehicle||distance(position(ctx.player),position(u))<=3){u.path=[];return}
+   const p=ctx.player,hd=p.hd||0,x=p.x+Math.sin(hd)*2.5,z=p.z+Math.cos(hd)*2.5;
+   u.path=[{x,y:heightAt(x,z),z}];u.waypoint=0;
+  }
+  function move(u,dt){
+   if(!alive(u)||!u.path.length||u.waypoint>=u.path.length)return;
+   const goal=u.path[u.waypoint],dx=goal.x-u.x,dz=goal.z-u.z,d=Math.hypot(dx,dz),
+     speed=u.role==='mechanic'?config.mechanicSpeed:config.walkSpeed;
+   if(d<.18){
+    u.waypoint++;
+    if(u.waypoint>=u.path.length){u.state=u.role==='mechanic'?'ready':'rescued';u.path=[];u.phase=0;return}
+    return;
+   }
+   const step=Math.min(d,speed*dt),next={x:u.x+dx/d*step,z:u.z+dz/d*step,y:u.y};
+   next.y=heightAt(next.x,next.z);
+   if(next.y<.05||!canMove(position(u),next,u.radius)){
+    u.blocked+=dt;
+    if(u.following&&u.blocked>1.5&&!u.followWarning){
+     u.followWarning=true;notify('El mecànic no pot passar. Guia’l per terra ferma.');
+    }
+    return;
+   }
+   u.blocked=0;u.followWarning=false;u.x=next.x;u.y=next.y;u.z=next.z;u.phase+=step*3.7;
+   if(u.o){u.o.position.set(u.x,u.y,u.z);u.o.rotation.y=Math.atan2(-dx,-dz)}
+  }
+  function animate(u,dt){
+   if(!u.o||!alive(u))return;
+   if(u.state==='captive'){
+    pose(u,u.captivePose==='seated');
+    if(u.cheering){
+     u.cheerPhase+=dt*5;
+     const wave=Math.sin(u.cheerPhase)*.26;
+     for(let i=0;i<u.arms.length;i++){
+      u.arms[i].rotation.z=(i?1:-1)*(2.05+wave*.5);
+      u.arms[i].rotation.x=Math.sin(u.cheerPhase*.7+i)*.19;
+     }
+     if(u.head)u.head.rotation.y=Math.sin(u.cheerPhase*.35)*.17;
+    }
+    return;
+   }
+   const walking=dt>0&&u.path.length>0&&u.blocked===0,
+     stride=walking?Math.sin(u.phase)*.58:0;
+   for(let i=0;i<u.legs.length;i++)u.legs[i].rotation.x=(i?-1:1)*stride;
+   for(let i=0;i<u.arms.length;i++){
+    u.arms[i].rotation.x=(i?1:-1)*stride*.65;
+    u.arms[i].rotation.z=0;
+   }
+   if(repair?.mechanic===u){u.arms[0].rotation.x=-1.1+Math.sin(repair.progress*14)*.18;u.arms[1].rotation.x=-.7}
+   else if(u.role==='mechanic'&&u.state==='ready'&&!u.following){
+    // Idle workshop behaviour: the rescued mechanic inspects his tools.
+    u.arms[0].rotation.x=-.45+Math.sin(u.phase)*.10;
+    u.arms[1].rotation.x=-.22;
+    u.phase+=dt*1.5;
+   }
+  }
+  function update(dt,ctx){
+   lastContext=ctx;
+   const view=observer(ctx),visualRange=Math.max(1,Number(ctx?.visualRange)||400);
+   for(const u of entities)if(u.o)
+    u.o.visible=!!view&&distance(position(view),position(u))<visualRange;
+   if(!validContext(ctx)){
+    stopRepair();return;
+   }
+   if(ctx.canInteract===false)stopRepair();
+   if(!camp)return;
+   if(!discovered&&visiblePoint(ctx,rescuePoint,config.discoverRange)){
+    discovered=true;notify('Camp de presoners: elimina els guàrdies i les torres; obre una bretxa a la tanca interior.');
+   }
+   const step=Math.max(0,Math.min(.25,Number.isFinite(dt)?dt:0));
+   // The wire mesh is transparent to the captives' perception. Looking at
+   // the rescuer makes them wave and call encouragement even while locked up.
+   let greeted=false;
+   for(const u of entities)if(alive(u)&&u.state==='captive'){
+    const p=position(observer(ctx));
+    u.cheering=distance(p,position(u))<32&&Math.abs(p.y-u.y)<8;
+    greeted ||= u.cheering;
+   }
+   if(greeted&&!cheerNotified){
+    cheerNotified=true;notify('Els presoners et veuen i t’animen: «Som aquí! Allibera’ns!»');
+   }
+   if(!released)releaseCaptives(ctx,rescueStatus(ctx));
+   for(const u of entities){follow(u,ctx);move(u,step);animate(u,step)}
+   if(repair){
+    const v=repair.vehicle,u=repair.mechanic,p=position(v),
+      changed=v.life!==repair.life||v.maxLife!==repair.maxLife||
+       Math.hypot(v.x-repair.x,v.z-repair.z)>.3||Math.abs(p.y-repair.y)>.3;
+    if(changed||!serviceVehicle(v,ctx,u)){
+     stopRepair('Reparació interrompuda.');return;
+    }
+    repair.progress+=step;
+    if(repair.progress>=config.repairSeconds){
+     v.life=v.maxLife;repair=null;notify('Vehicle reparat.');sound('pick',.55,position(u));
+    }
+   }
+  }
+  function hurt(u,amount){
+   if(!entities.includes(u)||!alive(u)||!Number.isFinite(amount)||amount<=0)return 0;
+   const damage=Math.min(u.hp,Math.max(1,Math.ceil(amount)));u.hp-=damage;
+   if(repair?.mechanic===u)stopRepair();
+   if(u.hp<=0){
+    u.hp=0;u.destroyed=true;u.state='dead';u.path=[];
+    if(u.o){u.o.rotation.x=-Math.PI/2;u.o.position.y=u.y+.22}
+    if(discovered&&u.role==='mechanic')notify('El mecànic ha mort. Ja no podrà reparar vehicles.');
+   }
+   return damage;
+  }
+  function markers(){
+   if(!discovered||!camp)return[];
+   const result=[],u=mechanic();
+   if(!released)result.push({kind:'prison',x:rescuePoint.x,z:rescuePoint.z,
+     label:entities.some(alive)?'Camp de presoners · destrueix defenses i tanca interior':'Camp de presoners buit',
+     state:entities.some(alive)?'captive':'lost'});
+   if(released&&u)result.push({kind:'mechanic',x:u.x,z:u.z,
+    label:u.state==='ready'?'Mecànic · reparacions':'Mecànic alliberat',state:u.following?'following':u.state});
+   return result;
+  }
+  function snapshot(){
+   const status=rescueStatus(lastContext);
+   return{configured:!!camp,discovered,released,
+    rescue:{guards:status.guards,towers:status.towers,breach:status.breach},
+    entities:entities.map(u=>({id:u.id,role:u.role,state:u.state,hp:u.hp,x:u.x,y:u.y,z:u.z,waypoint:u.waypoint,blocked:u.blocked,following:u.following,cheering:u.cheering})),
+    repair:repair?{vehicle:repair.vehicle.t,progress:repair.progress,duration:config.repairSeconds}:null};
+  }
+  return Object.freeze({configure,reset,update,getAction,interact,markers,hurt,snapshot,entities,config});
+ }
+});
+
+;
+// END src/prisoners.js
