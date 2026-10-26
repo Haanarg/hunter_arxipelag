@@ -3,7 +3,7 @@
 // Collision candidate caching must return the same result as querying every sample.
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'../src/enemy-navigation.js'),'utf8');
-const start=source.indexOf('function enemySolidAt('),end=source.indexOf('function enemyMoveClear(',start);
+const start=source.indexOf('function enemySweepTreeHit('),end=source.indexOf('function enemyMoveClear(',start);
 assert(start>=0&&end>start);
 const sample=source.slice(start,end);
 const walls=[
