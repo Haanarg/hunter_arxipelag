@@ -1637,8 +1637,22 @@ function fenceVehicleContact(w,box){
     t=d2>1e-9?Math.max(enter,Math.min(leave,((nose.x-a.x)*dx+(nose.z-a.z)*dz)/d2)):enter;
   return{x:w.ax+(w.bx-w.ax)*t,z:w.az+(w.bz-w.az)*t};
 }
-const obbAxes=b=>{const s=Math.sin(b.hd),c=Math.cos(b.hd);return[{x:c,z:-s},{x:s,z:c}]};
-const obbOverlap=(a,b)=>{const A=obbAxes(a),B=obbAxes(b),dx=b.x-a.x,dz=b.z-a.z,axes=[...A,...B];for(const ax of axes){const dist=Math.abs(dx*ax.x+dz*ax.z),ra=Math.abs(A[0].x*ax.x+A[0].z*ax.z)*a.w/2+Math.abs(A[1].x*ax.x+A[1].z*ax.z)*a.d/2,rb=Math.abs(B[0].x*ax.x+B[0].z*ax.z)*b.w/2+Math.abs(B[1].x*ax.x+B[1].z*ax.z)*b.d/2;if(dist>ra+rb)return false}return true};
+// SAT per quatre eixos, sense arrays ni objectes efímers per contacte.
+// Mateixos eixos, projeccions i comparació estricta de la versió anterior.
+const obbOverlap=(a,b)=>{
+  const as=Math.sin(a.hd),ac=Math.cos(a.hd),
+        bs=Math.sin(b.hd),bc=Math.cos(b.hd),
+        dx=b.x-a.x,dz=b.z-a.z,aw=a.w/2,ad=a.d/2,bw=b.w/2,bd=b.d/2;
+  for(let i=0;i<4;i++){
+    const x=i===0?ac:i===1?as:i===2?bc:bs,
+          z=i===0?-as:i===1?ac:i===2?-bs:bc,
+          dist=Math.abs(dx*x+dz*z),
+          ra=Math.abs(ac*x-as*z)*aw+Math.abs(as*x+ac*z)*ad,
+          rb=Math.abs(bc*x-bs*z)*bw+Math.abs(bs*x+bc*z)*bd;
+    if(dist>ra+rb)return false;
+  }
+  return true;
+};
 const circleVehicleOverlap=(x,z,r,v)=>{const b=vehicleBox(v),dx=x-b.x,dz=z-b.z,s=Math.sin(b.hd),c=Math.cos(b.hd),lx=dx*c-dz*s,lz=dx*s+dz*c,cx=Math.max(-b.w/2,Math.min(b.w/2,lx)),cz=Math.max(-b.d/2,Math.min(b.d/2,lz)),ex=lx-cx,ez=lz-cz;return ex*ex+ez*ez<r*r};
 const vehicleY=v=>v.alt!=null&&VT[vehicleHitType(v.t)]?.m==='a'?v.alt:(v.o?.position?.y??Math.max(0,hAt(v.x,v.z)));
 const vehicleHeightCompatible=(a,b)=>Math.abs(vehicleY(a)-vehicleY(b))<Math.max(2.2,Math.min(vehicleRadius(vehicleHitType(a.t)),vehicleRadius(vehicleHitType(b.t)))*.55);
