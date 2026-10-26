@@ -428,6 +428,44 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       vehicleTypes,vehicleParts,vehicleShadowTypes
     };
   }
+  // Versió compacta per compartir en xats: preserva les cinc fases i els
+  // comptadors diagnòstics; el JSON complet continua disponible per descarregar.
+  function shareReport(report){
+    const round=value=>typeof value==='number'&&Number.isFinite(value)
+      ?Math.round(value*100)/100:value;
+    const pick=(object,keys)=>Object.fromEntries(keys.filter(key=>object?.[key]!==undefined)
+      .map(key=>[key,round(object[key])]));
+    const ranked=(object,limit=Infinity)=>Object.fromEntries(Object.entries(object||{})
+      .filter(([,value])=>typeof value==='number'&&value!==0)
+      .sort((a,b)=>b[1]-a[1]).slice(0,limit)
+      .map(([key,value])=>[key,round(value)]));
+    const metrics=['frames','fps','frameMs','p95FrameMs','p99FrameMs',
+      'slowFrames25','slowFrames50','updateCpuMs','renderCpuMs','postRenderCpuMs',
+      'terrainCpuMs','drawCalls','triangles','aiMs','aiNavMs','aiSweepMs',
+      'sweepChecks','sweepSamples','aiUpdated','aiSkipped','simulationSteps',
+      'shadowRedrawRate','shadowDrawCalls','unclassifiedDrawCalls',
+      'deferredFaunaCasters','boatMotionProxies'];
+    return {
+      format:'hunter-perf-share-v1',status:report.status,seed:report.seed,
+      quality:report.quality,pixelRatio:report.pixelRatio,
+      auditPosition:report.auditPosition,stressPreset:report.stressPreset,
+      playerBatchStats:report.playerBatchStats,pathStats:report.pathStats,
+      vehicleFleet:Object.fromEntries(Object.entries(report.vehicleFleet||{})
+        .map(([type,vehicle])=>[type,pick(vehicle,
+          ['count','meshes','savedMeshes','originalMeshes','shadowCasters'])])),
+      phases:(report.phases||[]).map((phase,index)=>{
+        const s=phase.stats||{};
+        return {id:phase.id,name:phase.name,stats:{
+          ...pick(s,metrics),groups:ranked(s.groups),shadowGroups:ranked(s.shadowGroups),
+          shadowReasons:s.shadowReasons||{},shadowCulprits:s.shadowCulprits||{},
+          vehicleTypes:ranked(s.vehicleTypes),vehicleShadowTypes:ranked(s.vehicleShadowTypes),
+          ...(index===0?{vehicleParts:ranked(s.vehicleParts,15),
+            otherDetails:ranked(s.otherDetails,15)}:{})
+        }};
+      }),
+      baseline:report.baseline
+    };
+  }
   function create({getState,setShadowsDisabled,setWaterDisabled,windowObject=window,
     warmupMs=1100,sampleMs=3000}){
     let status='pending',index=0,phaseElapsed=0,rows=[],origin=null,
@@ -440,16 +478,68 @@ window.HUNTER_PERFORMANCE=Object.freeze({
     label.style.cssText='font-weight:bold;margin-bottom:6px';
     details.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:inherit';
     const copy=doc.createElement('button');
-    copy.type='button';copy.textContent='Copia els resultats';
-    copy.style.cssText='display:none;margin-top:8px;padding:7px 10px;font:inherit;cursor:pointer';
+    const copyFull=doc.createElement('button');
+    const download=doc.createElement('button');
+    for(const button of [copy,copyFull,download]){
+      button.type='button';
+      button.style.cssText='display:none;margin:8px 6px 0 0;padding:7px 10px;font:inherit;cursor:pointer';
+    }
+    copy.textContent='Copia resum (per al xat)';
+    copyFull.textContent='Copia JSON complet';
+    download.textContent='Descarrega JSON complet';
+    function copyText(text,button,message){
+      const fallback=()=>{
+        let area;
+        try{
+          area=doc.createElement('textarea');
+          area.value=text;
+          area.setAttribute('readonly','');
+          area.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';
+          doc.body.append(area);
+          area.select();
+          const success=!!doc.execCommand?.('copy');
+          button.textContent=success?message:'No s’ha pogut copiar: descarrega el JSON.';
+        }catch(error){
+          button.textContent='No s’ha pogut copiar: descarrega el JSON.';
+        }finally{area?.remove();}
+      };
+      try{
+        const clipboard=windowObject.navigator?.clipboard;
+        if(!clipboard?.writeText){fallback();return;}
+        Promise.resolve(clipboard.writeText(text))
+          .then(()=>{button.textContent=message;}).catch(fallback);
+      }catch(error){fallback();}
+    }
     copy.onclick=()=>{
-      const text=JSON.stringify(lastReport,null,2);
-      if(windowObject.navigator?.clipboard?.writeText)
-        windowObject.navigator.clipboard.writeText(text).then(()=>{copy.textContent='Copiat!'})
-          .catch(()=>{copy.textContent='Copia des de la consola: HUNTER_PERF_AUDIT_RESULTS'});
-      else copy.textContent='Copia des de la consola: HUNTER_PERF_AUDIT_RESULTS';
+      if(!lastReport)return;
+      const text=JSON.stringify(shareReport(lastReport));
+      copyText(text,copy,'Resum copiat ('+text.length+' caràcters)');
     };
-    panel.append(label,details,copy);doc.body.append(panel);
+    copyFull.onclick=()=>{
+      if(!lastReport)return;
+      const text=JSON.stringify(lastReport,null,2);
+      copyText(text,copyFull,'JSON complet copiat ('+text.length+' caràcters)');
+    };
+    download.onclick=()=>{
+      if(!lastReport)return;
+      let url;
+      try{
+        const text=JSON.stringify(lastReport,null,2);
+        url=windowObject.URL.createObjectURL(new windowObject.Blob([text],
+          {type:'application/json;charset=utf-8'}));
+        const link=doc.createElement('a');
+        link.href=url;
+        link.download='hunter-auditoria-'+lastReport.seed+'.json';
+        doc.body.append(link);link.click();link.remove();
+        download.textContent='JSON descarregat';
+      }catch(error){
+        download.textContent='No disponible: usa Copia JSON complet';
+      }finally{
+        if(url)windowObject.setTimeout(
+          ()=>windowObject.URL.revokeObjectURL(url),1000);
+      }
+    };
+    panel.append(label,details,copy,copyFull,download);doc.body.append(panel);
     function display(message){
       label.textContent='Auditoria de rendiment · '+(status==='finished'?'finalitzada':status==='aborted'?'interrompuda':'en curs');
       details.textContent=message;
@@ -546,7 +636,7 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       message+='sense classificació: '+fmt(initial?.unclassifiedDrawCalls)+' crides\n';
       message+='\nIA: '+fmt(byId['base-1']?.aiMs)+'ms; col·lisions '+fmt(byId['base-1']?.aiSweepMs)+'ms';
       display(message);
-      copy.style.display='inline-block';
+      for(const button of [copy,copyFull,download])button.style.display='inline-block';
       windowObject.console.info('[HUNTER] Auditoria de rendiment',report);
       windowObject.console.table(results.map(p=>({escena:p.name,fps:+p.stats.fps.toFixed(1),
         renderMs:+p.stats.renderCpuMs.toFixed(1),jocMs:+p.stats.updateCpuMs.toFixed(1),
@@ -584,7 +674,7 @@ window.HUNTER_PERFORMANCE=Object.freeze({
     }
     return {onFrame,abort,get status(){return status},get results(){return results}};
   }
-  window.HUNTER_PERFORMANCE_AUDIT=Object.freeze({create,summary,PHASES});
+  window.HUNTER_PERFORMANCE_AUDIT=Object.freeze({create,summary,shareReport,PHASES});
 })();
 
 ;

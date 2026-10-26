@@ -14,7 +14,7 @@ Els resultats exportats a `window.HUNTER_PERF_AUDIT_RESULTS` incorporen `stressP
 
 ## Com executar
 
-Obre el joc amb `?perfAudit=1&stress=1`, inicia una partida i no moguis el personatge fins que acabi l'auditoria. Copia el JSON complet amb el botó. Revisa `base-1`, `base-2`, `shadowRedrawRate`, `shadowCulprits`, `vehicleTypes` i `vehicleParts`.
+Obre el joc amb `?perfAudit=1&stress=1`, inicia una partida i no moguis el personatge fins que acabi l'auditoria. El botó **Copia resum (per al xat)** envia totes cinc fases i els diagnòstics principals en un JSON curt, sense camps repetits extensos. **Copia JSON complet** conserva totes les dades, però pot ser massa llarg per enganxar-lo en un xat. **Descarrega JSON complet** guarda el fitxer íntegre en format `.json`. Revisa `base-1`, `base-2`, `shadowRedrawRate`, `shadowCulprits`, `vehicleTypes` i `vehicleParts`.
 
 Si el punt inicial és impracticable en una llavor futura, no interpretis la comparació com a idèntica a la històrica; caldrà ajustar l'escenari.
 

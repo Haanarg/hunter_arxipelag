@@ -6,8 +6,16 @@ const vm=require('node:vm');
 function setup(startFlags={shadowsDisabled:false,waterDisabled:false}){
   const nodes=[];
   const document={body:{append(node){nodes.push(node)}},
-    createElement(tag){return {tag,style:{},append(...children){this.children=children},textContent:'',onclick:null}}};
-  const win={document,navigator:{clipboard:{writeText:async()=>{}}},
+    createElement(tag){return {tag,style:{},append(...children){this.children=children},
+      textContent:'',onclick:null,click(){this.clicked=true},remove(){this.removed=true},
+      select(){document.selected=this.value},setAttribute(){}}},execCommand(command){
+      document.command=command;return command==='copy';
+    }};
+  const copied=[];
+  const win={document,navigator:{clipboard:{writeText:async text=>{copied.push(text)}}},
+    Blob,URL:{createObjectURL(blob){win.downloaded=blob;return 'blob:report'},
+      revokeObjectURL(url){win.revoked=url}},
+    setTimeout(callback){callback()},
     console:{info(){},table(){}}};
   vm.runInNewContext(fs.readFileSync('src/performance-audit.js','utf8'),{window:win});
   let shadows=startFlags.shadowsDisabled,water=startFlags.waterDisabled;
@@ -30,7 +38,7 @@ function setup(startFlags={shadowsDisabled:false,waterDisabled:false}){
     shadowReason:'moviment gran',shadowCulprit:'jugador / braç',deferredFaunaCasters:2,
     vehicleTypes:{llanxa:8,camio:12},vehicleParts:{'llanxa / hull':4},
     vehicleShadowTypes:{llanxa:2},boatMotionProxies:1};
-  return {controller,frame,win,changes,flags:()=>({shadows,water}),nodes};
+  return {controller,frame,win,changes,flags:()=>({shadows,water}),nodes,copied};
 }
 const s=setup();
 assert.equal(s.controller.status,'pending');
@@ -72,3 +80,34 @@ for(let n=0;n<40&&disabled.controller.status==='running';n++)
 assert.equal(disabled.controller.status,'finished');
 assert.deepEqual(disabled.flags(),{shadows:true,water:true});
 console.log('OK: auditoria A/B, fases, estadístiques, cancel·lació i restauració');
+
+(async()=>{
+  const buttons=s.nodes[0].children.slice(2);
+  assert.equal(buttons.length,3);
+  assert.equal(buttons[0].textContent,'Copia resum (per al xat)');
+  buttons[0].onclick();
+  await new Promise(resolve=>setImmediate(resolve));
+  const shared=JSON.parse(s.copied.at(-1));
+  assert.equal(shared.format,'hunter-perf-share-v1');
+  assert.equal(shared.phases.length,5);
+  assert.equal(shared.phases[0].stats.aiNavMs,9.1);
+  assert.equal(shared.phases[0].stats.vehicleParts['llanxa / hull'],4);
+  assert.equal(shared.vehicleFleet.llanxa.count,2);
+  buttons[1].onclick();
+  await new Promise(resolve=>setImmediate(resolve));
+  const full=JSON.parse(s.copied.at(-1));
+  assert.equal(full.phases.length,5);
+  assert.equal(full.phases[4].stats.vehicleParts['llanxa / hull'],4);
+  assert(s.copied.at(-1).length>JSON.stringify(shared).length);
+  buttons[2].onclick();
+  assert.equal(s.win.downloaded.type,'application/json;charset=utf-8');
+  assert.equal(s.win.revoked,'blob:report');
+  assert.equal(JSON.parse(await s.win.downloaded.text()).phases.length,5);
+  s.win.navigator.clipboard.writeText=()=>Promise.reject(new Error('no permission'));
+  buttons[0].onclick();
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(JSON.parse(s.win.document.selected).phases.length,5);
+  assert.equal(s.win.document.command,'copy');
+  console.log('OK: còpia compacta i completa, descàrrega íntegra i fallback');
+})().catch(error=>{console.error(error);process.exitCode=1});
+
