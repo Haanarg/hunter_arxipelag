@@ -159,6 +159,8 @@ const adaptivePerformance=window.HUNTER_PERFORMANCE.create({
 });
 // El panell es mostra només quan l'usuari activa l'interruptor de pausa.
 let performanceStatsVisible=false;
+const perfHotspots={broadphaseMs:0,aiMs:0,visibilityMs:0,stealthMs:0};
+window.HUNTER_PERF_HOTSPOTS=perfHotspots;
 document.body.classList.remove('performance-stats-visible');
 function setPerformanceStatsVisible(enabled){
   performanceStatsVisible=!!enabled;
@@ -166,6 +168,8 @@ function setPerformanceStatsVisible(enabled){
   document.body.classList.toggle('performance-stats-visible',performanceStatsVisible);
 }
 window.HUNTER_PERFORMANCE_STATS=adaptivePerformance.stats;
+adaptivePerformance.stats.hotspots=perfHotspots;
+if(new URLSearchParams(location.search).get('perf')==='1')setPerformanceStatsVisible(true);
 const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segments:visualQuality.waterSegments,initialSegments:Math.min(160,visualQuality.waterSegments),heightAt:hAt,config:window.HUNTER_WATER,reflections:visualQuality.waterReflections!==false,coastDetail:!!visualQuality.coastDetail,fogColor:scene.fog.color});
 let waterUpgradePending=false;
 const waterMat=water.material,waterUniforms=water.uniforms;
@@ -1664,9 +1668,11 @@ const vehicleGridLastCell=new WeakMap();
 const gridCellOf=v=>vehicleCellKey(Math.floor(v.x/VEHICLE_CELL),Math.floor(v.z/VEHICLE_CELL));
 const addVehicleToGrid=(grid,v)=>{const key=vehicleCellKey(Math.floor(v.x/VEHICLE_CELL),Math.floor(v.z/VEHICLE_CELL)),bucket=grid.get(key);if(bucket)bucket.push(v);else grid.set(key,[v])};
 function rebuildVehicleGrid(){
+  const stamp=performanceStatsVisible?performance.now():0;
   vehicleGrid.clear();playerVehicleGrid.clear();enemyGrid.clear();vehicleGridVSource=V;vehicleGridESource=E;
   for(const v of V)if(!v.destroyed){addVehicleToGrid(vehicleGrid,v);addVehicleToGrid(playerVehicleGrid,v);vehicleGridLastCell.set(v,gridCellOf(v))}
   for(const u of E)if(!u.destroyed){addVehicleToGrid(enemyGrid,u);if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='patrulla_marina')addVehicleToGrid(vehicleGrid,u);vehicleGridLastCell.set(u,gridCellOf(u))}
+  if(performanceStatsVisible)perfHotspots.broadphaseMs+=performance.now()-stamp;
 }
 // Els vehicles han pogut desplaçar-se des de l'inici del pas. Només cal
 // reconstruir si algú realment ha travessat una cel·la de 64 metres.
@@ -2108,6 +2114,7 @@ function isInsideVisibleBuilding(b){
 }
 function currentSniperFocus(){return scopeActive?window.HUNTER_SCOPE_FOCUS.create(P.x,P.y+1.76,P.z,scopeYaw,scopePitch):null}
 function updateDistanceVisibility(){
+  const stamp=performanceStatsVisible?performance.now():0;
   const max=VISUAL_RANGES,focus=currentSniperFocus();
   for(const k of Object.keys(visibilityStats))visibilityStats[k]=0;
   for(const b of B){
@@ -2185,6 +2192,7 @@ function updateDistanceVisibility(){
       !!focus?.contains(compound.x,compound.antenna.position.y,compound.z,10);
     if(!compound.antenna.visible)visibilityStats.antennas++;
   }
+  if(performanceStatsVisible)perfHotspots.visibilityMs+=performance.now()-stamp;
 }
 function prepareVisibilitySystem(){return drainBuildSteps(prepareVisibilitySystemSteps())}
 function* prepareVisibilitySystemSteps(){
@@ -2661,9 +2669,11 @@ function stealthFeedbackVisible(u,body,marker){
   return clear(body)&&clear(marker);
 }
 function renderStealthFeedback(){
+  const stamp=performanceStatsVisible?performance.now():0;
   stealthVisibilityFrame++;
   stealthFeedback.update({world,camera:cam,enemies:E,active:!!started&&!paused&&!over&&simulationFocused&&!document.hidden,
     visible:stealthFeedbackVisible});
+  if(performanceStatsVisible)perfHotspots.stealthMs+=performance.now()-stamp;
 }
 const ui=window.HUNTER_UI.create({
   hud:document.getElementById('hud'),
@@ -3671,7 +3681,9 @@ if(K.KeyF&&(!grenadeEquipped||cv)){
   // Aturats a zero no es guarden trets ni escurçam la primera espera.
   if(fcd>0)fcd=Math.max(0,fcd+overshoot);
 }
+const enemyAiStamp=performanceStatsVisible?performance.now():0;
 updEn(dt,simulationFrameActive);
+if(performanceStatsVisible)perfHotspots.aiMs+=performance.now()-enemyAiStamp;
 window.HUNTER_STEALTH_DEBUG.update(THREE,world,E,P);
 updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);
 updateOptionalSystems(dt,!!started&&!paused&&!over&&simulationFocused&&!document.hidden);
@@ -3713,6 +3725,7 @@ let last=performance.now();resetSimulationClock(last);
 if(generationPromise){last=now;simulationClock.reset(now);cinematicClock.reset(now);requestAnimationFrame(loop);return}
 const rawDt=Number.isFinite(now)&&now>=last?(now-last)/1000:0;
 last=Number.isFinite(now)&&now>=0?now:performance.now();
+if(performanceStatsVisible)for(const key in perfHotspots)perfHotspots[key]=0;
 const cpuStarted=performance.now(),victoryAtStart=victoryCinematic,
       deathAtStart=deathCinematic,visible=simulationFocused&&!document.hidden,
       gameplayActive=!!started&&!paused&&!over&&visible,
