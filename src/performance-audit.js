@@ -38,7 +38,9 @@
       sweepChecks:avg('sweepChecks'),sweepSamples:avg('sweepSamples'),
       aiUpdated:avg('aiUpdated'),aiSkipped:avg('aiSkipped'),
       simulationSteps:avg('simulationSteps'),
-      shadowRedrawRate:avg('shadowRedrawn'),shadowDrawCalls:groupSum(shadowGroups),
+      shadowRedrawRate:avg('shadowRedrawn'),
+      deferredFaunaCasters:avg('deferredFaunaCasters'),
+      shadowDrawCalls:groupSum(shadowGroups),
       unclassifiedDrawCalls:Math.max(0,avg('drawCalls')-attributed),
       groups,shadowGroups,otherDetails,shadowReasons,shadowCulprits
     };
@@ -135,6 +137,7 @@
           original.playerBatchStats.groups+' crides potencials eliminades)\n';
       if(original.pathStats)
         message+='Camins: '+original.pathStats.chunks+' sectors\n';
+      message+='Fauna amb ombra i refresc diferit: '+fmt(initial?.deferredFaunaCasters)+' malles\n';
       message+='Recalculades '+fmt((initial?.shadowRedrawRate||0)*100)+'% dels fotogrames; ';
       message+='sense classificació: '+fmt(initial?.unclassifiedDrawCalls)+' crides\n';
       message+='\nIA: '+fmt(byId['base-1']?.aiMs)+'ms; col·lisions '+fmt(byId['base-1']?.aiSweepMs)+'ms';

@@ -411,7 +411,9 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       sweepChecks:avg('sweepChecks'),sweepSamples:avg('sweepSamples'),
       aiUpdated:avg('aiUpdated'),aiSkipped:avg('aiSkipped'),
       simulationSteps:avg('simulationSteps'),
-      shadowRedrawRate:avg('shadowRedrawn'),shadowDrawCalls:groupSum(shadowGroups),
+      shadowRedrawRate:avg('shadowRedrawn'),
+      deferredFaunaCasters:avg('deferredFaunaCasters'),
+      shadowDrawCalls:groupSum(shadowGroups),
       unclassifiedDrawCalls:Math.max(0,avg('drawCalls')-attributed),
       groups,shadowGroups,otherDetails,shadowReasons,shadowCulprits
     };
@@ -508,6 +510,7 @@ window.HUNTER_PERFORMANCE=Object.freeze({
           original.playerBatchStats.groups+' crides potencials eliminades)\n';
       if(original.pathStats)
         message+='Camins: '+original.pathStats.chunks+' sectors\n';
+      message+='Fauna amb ombra i refresc diferit: '+fmt(initial?.deferredFaunaCasters)+' malles\n';
       message+='Recalculades '+fmt((initial?.shadowRedrawRate||0)*100)+'% dels fotogrames; ';
       message+='sense classificació: '+fmt(initial?.unclassifiedDrawCalls)+' crides\n';
       message+='\nIA: '+fmt(byId['base-1']?.aiMs)+'ms; col·lisions '+fmt(byId['base-1']?.aiSweepMs)+'ms';
@@ -12581,7 +12584,7 @@ if(waterSettingCheckbox)waterSettingCheckbox.addEventListener('change',()=>setWa
 // Ombres de proximitat. Malles classificades una vegada per mapa,
 // amb actualització ocasional i sense passejar l'arbre de l'escena.
 let shadowsDisabled=false;
-const shadowCandidates=[],shadowStats={candidates:0,active:0,excludedDetail:0,updates:0,playerCasters:0};
+const shadowCandidates=[],shadowStats={candidates:0,active:0,excludedDetail:0,updates:0,playerCasters:0,deferredFaunaCasters:0};
 const shadowNodeOwners=new WeakMap(),shadowOwnerKinds=new WeakMap();
 const shadowCache=window.HUNTER_SHADOW_CACHE.create({shadowMap:ren.shadowMap,
   labelNode:node=>{
@@ -12601,7 +12604,7 @@ function updateShadowCasters(force=false){
   shadowLastX=P.x;shadowLastZ=P.z;shadowLastMs=now;
   const range2=Math.pow(visualQuality.shadowDistance||225,2),
         dynamicPositions=new Map();
-  let count=0;
+  let count=0,deferredFaunaCasters=0;
   const poseNodes=new Set();
   for(const entry of shadowCandidates){
     let q=entry.point;
@@ -12614,6 +12617,15 @@ function updateShadowCasters(force=false){
     if(near){
       count++;
       if(entry.owner){
+        // Gavines i taurons conserven castShadow, però el seu moviment
+        // continu no invalida tot el mapa cada fotograma. El mapa continua
+        // refrescant-se cada 180 ms (i quan es mouen jugadors/vehicles).
+        // Sense aquest filtre una sola gavina activava ~100 passades
+        // d'ombres a CADA fotograma encara que només en projectàs una.
+        if(shadowOwnerKinds.get(entry.owner)==='fauna'){
+          deferredFaunaCasters++;
+          continue;
+        }
         // Incloem pivots de mans, rodes i rotors, no sols la posició del vehicle.
         for(let o=entry.mesh;o;o=o.parent){
           poseNodes.add(o);
@@ -12624,7 +12636,9 @@ function updateShadowCasters(force=false){
     }
   }
   shadowPoseNodes=[...poseNodes];
-  shadowStats.active=count;shadowStats.updates++;
+  shadowStats.active=count;
+  shadowStats.deferredFaunaCasters=deferredFaunaCasters;
+  shadowStats.updates++;
 }
 function setShadowsDisabled(disabled){
   shadowsDisabled=!!disabled;
@@ -12639,7 +12653,7 @@ function setShadowsDisabled(disabled){
   }else{
     shadowPoseNodes=[];
     for(const entry of shadowCandidates)entry.mesh.castShadow=false;
-    shadowStats.active=0;
+    shadowStats.active=0;shadowStats.deferredFaunaCasters=0;
   }
   window.HUNTER_SHADOWS_DISABLED=shadowsDisabled;
   return shadowsDisabled;
@@ -12660,7 +12674,8 @@ function* prepareShadowCastersSteps(){
   shadowPoseNodes=[];
   shadowCache.invalidate();
   shadowLastX=Infinity;shadowLastZ=Infinity;shadowLastMs=-Infinity;
-  shadowStats.candidates=0;shadowStats.active=0;shadowStats.excludedDetail=0;shadowStats.playerCasters=0;
+  shadowStats.candidates=0;shadowStats.active=0;shadowStats.excludedDetail=0;
+  shadowStats.playerCasters=0;shadowStats.deferredFaunaCasters=0;
   if(!visualQuality.shadows||!world)return;
   const dynamicRoots=new Set([pl,...V.map(v=>v.o),...E.map(e=>e.o),...fa.map(f=>f.o)].filter(Boolean));
   shadowOwnerKinds.set(pl,'jugador');
@@ -16249,6 +16264,7 @@ if(performanceAudit)performanceAudit.onFrame({
   aiUpdated:perfHotspots.aiUpdated,aiSkipped:perfHotspots.aiSkipped,
   groups:{...renderCategories},shadowGroups:{...shadowRenderCategories},
   otherDetails:{...renderOtherDetails},shadowRedrawn:shadowRedrawn?1:0,
+  deferredFaunaCasters:shadowStats.deferredFaunaCasters,
   shadowReason:shadowRedrawn?shadowCache.stats.lastReason:'',
   shadowCulprit:shadowRedrawn?shadowCache.stats.lastCulprit:''
 });

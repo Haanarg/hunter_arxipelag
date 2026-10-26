@@ -25,7 +25,7 @@ function setup(startFlags={shadowsDisabled:false,waterDisabled:false}){
     sweepChecks:135,sweepSamples:426,aiUpdated:170,aiSkipped:490,
     groups:{edificis:600,vegetacio:800,enemics:500},
     shadowGroups:{jugador:3,vehicles:7},otherDetails:{BoxGeometry:12},shadowRedrawn:1,
-    shadowReason:'moviment gran',shadowCulprit:'jugador / braç'};
+    shadowReason:'moviment gran',shadowCulprit:'jugador / braç',deferredFaunaCasters:2};
   return {controller,frame,win,changes,flags:()=>({shadows,water}),nodes};
 }
 const s=setup();
@@ -45,6 +45,7 @@ assert.equal(s.controller.results[1].stats.drawCalls,2344);
 assert.equal(s.controller.results[0].stats.shadowDrawCalls,10);
 assert.equal(s.controller.results[0].stats.otherDetails.BoxGeometry,12);
 assert.equal(s.controller.results[0].stats.shadowRedrawRate,1);
+assert.equal(s.controller.results[0].stats.deferredFaunaCasters,2);
 assert.equal(s.controller.results[0].stats.shadowReasons['moviment gran'],2);
 assert.equal(s.controller.results[0].stats.shadowCulprits['jugador / braç'],2);
 assert(s.changes.some(([key,value])=>key==='shadows'&&value===true));
