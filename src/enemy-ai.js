@@ -339,8 +339,36 @@ function moveBlastedEnemy(u,dt){
   }
   if(u.x!==ox||u.z!==oz)enemyReindex(u,ox,oz);
 }
+// La IA llunyana sense contacte necessita menys decisions de navegació,
+// però conserva tot el temps transcorregut: mai no alentim la patrulla.
+// Un enemic que detecta, cerca o combat reprèn immediatament els passos normals.
+function enemyRemoteInterval(u,q){
+  if(u.t==='general'||u.t==='patrulla_marina'||u.basement||
+     u.blastT>0||u.canSee||u.alert>0||u.entryDoor||
+     (u.pursuitT||0)>0||(u.aiMode&&u.aiMode!=='patrol'))return 0;
+  const dx=q.x-u.x,dz=q.z-u.z,d2=dx*dx+dz*dz;
+  return d2>1400*1400?.3:d2>620*620?.18:0;
+}
 function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathBudget=2;enemyNodeBudget=160}refreshVehicleGridIfCellsChanged();soldierCoordinationTick(dt);E.forEach(u=>{
-  if(u.t==='patrulla_marina'){updateMarinePatrol(u,dt);return}
+  if(u.t==='patrulla_marina'){
+    if(performanceStatsVisible){
+      const stamp=performance.now();updateMarinePatrol(u,dt);
+      perfHotspots.aiMarineMs+=performance.now()-stamp;
+    }else updateMarinePatrol(u,dt);
+    return;
+  }
+  const remoteInterval=enemyRemoteInterval(u,cv||P);
+  if(remoteInterval){
+    u.remoteAiAcc=(u.remoteAiAcc||0)+dt;
+    if(u.remoteAiAcc+1e-9<remoteInterval){
+      if(performanceStatsVisible)perfHotspots.aiSkipped++;
+      return;
+    }
+    dt=u.remoteAiAcc;u.remoteAiAcc=0;
+  }else if(u.remoteAiAcc){
+    dt+=u.remoteAiAcc;u.remoteAiAcc=0;
+  }
+  if(performanceStatsVisible)perfHotspots.aiUpdated++;
   if(u.blastT>0){
     const imp=u.blastImpulse;u.blastT=Math.max(0,u.blastT-dt);
     if(imp){
@@ -377,6 +405,7 @@ function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathB
   // la línia visual. Això inicia la persecució, mai el tret a cegues.
   // Percepció desacoblada del moviment: ~10 Hz i desfasada entre enemics.
   u.senseT=(u.senseT??0)-dt;
+  const senseStamp=performanceStatsVisible&&u.senseT<=0?performance.now():0;
   if(u.senseT<=0){
     u.senseT+=ENEMY_SENSE_DT;
     const bunker=activeBunker,
@@ -439,6 +468,7 @@ function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathB
       u.defenseTarget=seen&&u.sp>0&&d>u.rng*.55?chooseDefense(u,q):null;
     }
   }
+  if(senseStamp)perfHotspots.aiSenseMs+=performance.now()-senseStamp;
 
    if(u.t==='soldat'&&(u.canSee||u.aiMode&&u.aiMode!=='patrol')){
     u.tacticT=Math.max(0,(u.tacticT||0)-dt);
