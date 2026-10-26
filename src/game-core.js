@@ -2146,11 +2146,18 @@ function* registerDrawCategoriesSteps(progressive=true){
     if(!root)return;
     vehicleRoots.set(root,type);
     let stats=vehicleFleet[type];
-    if(!stats)stats=vehicleFleet[type]={count:0,meshes:0,shadowCasters:0};
+    if(!stats)stats=vehicleFleet[type]={
+      count:0,meshes:0,shadowCasters:0,savedMeshes:0,originalMeshes:0
+    };
     stats.count++;
+    // Les fàbriques registren les peces eliminades per fusió, sense
+    // confondre-les amb les malles que no es veuen per distància.
+    stats.savedMeshes+=(root.userData?.vehicleBatchStats?.groups||0)+
+      (root.userData?.marineBatchStats?.groups||0);
     root.traverse(o=>{
       if(o.isMesh){stats.meshes++;if(o.castShadow)stats.shadowCasters++}
     });
+    stats.originalMeshes=stats.meshes+stats.savedMeshes;
   };
   for(const b of B)tagged.set(b.o,'edificis');
   for(const v of V){tagged.set(v.o,'vehicles');markVehicle(v.o,v.t)}

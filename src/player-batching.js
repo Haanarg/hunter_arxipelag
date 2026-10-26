@@ -1,14 +1,17 @@
 // Fusiona només malles rígides germanes; els pivots del rig no es modifiquen.
 window.HUNTER_PLAYER_BATCH=Object.freeze({
-  optimize(THREE,root){
+  optimize(THREE,root,{batchName='hunter-player-rigid-batch'}={}){
     const protectedObjects=new Set(),visited=new Set();
     const protect=(value)=>{
       if(!value||typeof value!=='object'||visited.has(value))return;
       visited.add(value);
       if(value.isObject3D){protectedObjects.add(value);return}
       if(Array.isArray(value)){for(const item of value)protect(item);return}
-      // No entrar en materials, geometries, vectors o altres instàncies.
-      if(Object.getPrototypeOf(value)===Object.prototype)
+      // Admetem també objectes plans de mòduls/realms diferents.
+      // No entram en materials, geometries, vectors o classes Three.js.
+      if(value.isMaterial||value.isBufferGeometry||value.isTexture)return;
+      const proto=Object.getPrototypeOf(value);
+      if(proto===null||(proto&&Object.getPrototypeOf(proto)===null))
         for(const item of Object.values(value))protect(item);
     };
     root.traverse(node=>{protect(node.userData)});
@@ -76,7 +79,7 @@ window.HUNTER_PLAYER_BATCH=Object.freeze({
           const first=group[0],batch=new THREE.Mesh(geometry,material);
           batch.castShadow=first.castShadow;batch.receiveShadow=first.receiveShadow;
           batch.frustumCulled=first.frustumCulled;batch.layers.mask=first.layers.mask;
-          batch.name='hunter-player-rigid-batch';
+          batch.name=batchName;
           for(const m of group)parent.remove(m);
           parent.add(batch);
           stats.mergedMeshes+=group.length;stats.batches++;stats.vertices+=vertices;

@@ -45,7 +45,8 @@ function segment(from,to){
  mesh.onBeforeRender();
  assert.equal(renderCategories.edificis,2,'A mesh must count only once per draw');
  assert.equal(previousCalls,2,'Preserve the original animation callback');
- B.length=0;V.push({o:building,t:'cotxe'});
+ B.length=0;building.userData={vehicleBatchStats:{groups:3}};
+ V.push({o:building,t:'cotxe'});
  context.registerDrawCategories();
  mesh.onBeforeRender();mesh.onBeforeShadow();
  assert.equal(vehicleDrawTypes.cotxe,1,'Identify vehicle draw calls by model');
@@ -53,6 +54,8 @@ function segment(from,to){
  assert.equal(vehicleShadowTypes.cotxe,1,'Count vehicle shadow draws separately');
  assert.equal(vehicleFleet.cotxe.count,1);
  assert.equal(vehicleFleet.cotxe.meshes,1);
+ assert.equal(vehicleFleet.cotxe.savedMeshes,3);
+ assert.equal(vehicleFleet.cotxe.originalMeshes,4);
  assert.equal(renderCategories.vehicles,1,'Existing callbacks must use updated category');
  assert.equal(renderCategories.edificis,2);
  context.performanceStatsVisible=false;context.registerDrawCategories();

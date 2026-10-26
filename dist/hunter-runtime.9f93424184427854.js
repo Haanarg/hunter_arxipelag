@@ -527,6 +527,12 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       if(original.pathStats)
         message+='Camins: '+original.pathStats.chunks+' sectors\n';
       message+='Fauna amb ombra i refresc diferit: '+fmt(initial?.deferredFaunaCasters)+' malles\n';
+      message+='Vehicles: malles eliminades per model (mapa complet):\n';
+      for(const [type,data] of Object.entries(original.vehicleFleet||{})
+        .filter(([,data])=>data.savedMeshes>0)
+        .sort((a,b)=>b[1].savedMeshes-a[1].savedMeshes).slice(0,12))
+        message+='  '+type+': '+data.originalMeshes+' → '+data.meshes+
+          ' ('+data.savedMeshes+' menys)\n';
       message+='Vehicles: crides de dibuix per model (fase inicial):\n';
       for(const [key,count] of Object.entries(initial?.vehicleTypes||{}).sort((a,b)=>b[1]-a[1]))
         message+='  '+key+': '+fmt(count)+'\n';
@@ -2274,6 +2280,15 @@ window.HUNTER_VEHICLES=Object.freeze({
         g.userData.rotorContactHeight=((t==='heli_combat'?3.22:3.82)+.05)*VS[t];
       }
       g.traverse(o=>{if(o.isMesh&&!o.userData.waterMask){o.castShadow=shadows;o.receiveShadow=shadows}});
+      // Fusionam només malles rígides germanes amb el mateix material.
+      // Els pivots animats (rodes, direcció, rems, rotor, vela i torretes),
+      // les malles referenciades i les transparències queden intactes.
+      // C1A: els 12 radis i els dos jocs de tapaboques/centres de
+      // cada roda passen a una malla per material, sense perdre cap radi.
+      const batchStats=window.HUNTER_PLAYER_BATCH.optimize(THREE,g,{
+        batchName:'hunter-vehicle-rigid-batch'
+      });
+      g.userData.vehicleBatchStats=batchStats;
       g.scale.setScalar(VS[t]);
       if(resources&&cacheKey){
         resources.retainModel(g);templates.set(cacheKey,g);
@@ -3178,15 +3193,18 @@ window.HUNTER_PLAYER_MODEL=Object.freeze({
 // BEGIN src/player-batching.js
 // Fusiona només malles rígides germanes; els pivots del rig no es modifiquen.
 window.HUNTER_PLAYER_BATCH=Object.freeze({
-  optimize(THREE,root){
+  optimize(THREE,root,{batchName='hunter-player-rigid-batch'}={}){
     const protectedObjects=new Set(),visited=new Set();
     const protect=(value)=>{
       if(!value||typeof value!=='object'||visited.has(value))return;
       visited.add(value);
       if(value.isObject3D){protectedObjects.add(value);return}
       if(Array.isArray(value)){for(const item of value)protect(item);return}
-      // No entrar en materials, geometries, vectors o altres instàncies.
-      if(Object.getPrototypeOf(value)===Object.prototype)
+      // Admetem també objectes plans de mòduls/realms diferents.
+      // No entram en materials, geometries, vectors o classes Three.js.
+      if(value.isMaterial||value.isBufferGeometry||value.isTexture)return;
+      const proto=Object.getPrototypeOf(value);
+      if(proto===null||(proto&&Object.getPrototypeOf(proto)===null))
         for(const item of Object.values(value))protect(item);
     };
     root.traverse(node=>{protect(node.userData)});
@@ -3254,7 +3272,7 @@ window.HUNTER_PLAYER_BATCH=Object.freeze({
           const first=group[0],batch=new THREE.Mesh(geometry,material);
           batch.castShadow=first.castShadow;batch.receiveShadow=first.receiveShadow;
           batch.frustumCulled=first.frustumCulled;batch.layers.mask=first.layers.mask;
-          batch.name='hunter-player-rigid-batch';
+          batch.name=batchName;
           for(const m of group)parent.remove(m);
           parent.add(batch);
           stats.mergedMeshes+=group.length;stats.batches++;stats.vertices+=vertices;
@@ -8453,6 +8471,12 @@ function createMarinePatrolVisual(boat){
   };
   const machineGun=createMount(-.8,false),rockets=createMount(.8,true);
   boat.userData.marineWeapons={machineGun,rockets};
+  // El buc ja s'ha optimitzat a la fàbrica. Ara fusionam peces rígides
+  // dels dos comandos i dels muntatges, sempre dins el mateix pivot,
+  // sense tocar braços, fusells, boques de foc ni rotacions de torretes.
+  boat.userData.marineBatchStats=window.HUNTER_PLAYER_BATCH.optimize(THREE,boat,{
+    batchName:'hunter-marine-rigid-batch'
+  });
 }
 function marineSeaClear(x,z,r=10){
   return Math.abs(x)<H-28&&Math.abs(z)<H-28&&
@@ -14548,11 +14572,18 @@ function* registerDrawCategoriesSteps(progressive=true){
     if(!root)return;
     vehicleRoots.set(root,type);
     let stats=vehicleFleet[type];
-    if(!stats)stats=vehicleFleet[type]={count:0,meshes:0,shadowCasters:0};
+    if(!stats)stats=vehicleFleet[type]={
+      count:0,meshes:0,shadowCasters:0,savedMeshes:0,originalMeshes:0
+    };
     stats.count++;
+    // Les fàbriques registren les peces eliminades per fusió, sense
+    // confondre-les amb les malles que no es veuen per distància.
+    stats.savedMeshes+=(root.userData?.vehicleBatchStats?.groups||0)+
+      (root.userData?.marineBatchStats?.groups||0);
     root.traverse(o=>{
       if(o.isMesh){stats.meshes++;if(o.castShadow)stats.shadowCasters++}
     });
+    stats.originalMeshes=stats.meshes+stats.savedMeshes;
   };
   for(const b of B)tagged.set(b.o,'edificis');
   for(const v of V){tagged.set(v.o,'vehicles');markVehicle(v.o,v.t)}

@@ -751,6 +751,15 @@ window.HUNTER_VEHICLES=Object.freeze({
         g.userData.rotorContactHeight=((t==='heli_combat'?3.22:3.82)+.05)*VS[t];
       }
       g.traverse(o=>{if(o.isMesh&&!o.userData.waterMask){o.castShadow=shadows;o.receiveShadow=shadows}});
+      // Fusionam només malles rígides germanes amb el mateix material.
+      // Els pivots animats (rodes, direcció, rems, rotor, vela i torretes),
+      // les malles referenciades i les transparències queden intactes.
+      // C1A: els 12 radis i els dos jocs de tapaboques/centres de
+      // cada roda passen a una malla per material, sense perdre cap radi.
+      const batchStats=window.HUNTER_PLAYER_BATCH.optimize(THREE,g,{
+        batchName:'hunter-vehicle-rigid-batch'
+      });
+      g.userData.vehicleBatchStats=batchStats;
       g.scale.setScalar(VS[t]);
       if(resources&&cacheKey){
         resources.retainModel(g);templates.set(cacheKey,g);

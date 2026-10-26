@@ -30,6 +30,12 @@ function createMarinePatrolVisual(boat){
   };
   const machineGun=createMount(-.8,false),rockets=createMount(.8,true);
   boat.userData.marineWeapons={machineGun,rockets};
+  // El buc ja s'ha optimitzat a la fàbrica. Ara fusionam peces rígides
+  // dels dos comandos i dels muntatges, sempre dins el mateix pivot,
+  // sense tocar braços, fusells, boques de foc ni rotacions de torretes.
+  boat.userData.marineBatchStats=window.HUNTER_PLAYER_BATCH.optimize(THREE,boat,{
+    batchName:'hunter-marine-rigid-batch'
+  });
 }
 function marineSeaClear(x,z,r=10){
   return Math.abs(x)<H-28&&Math.abs(z)<H-28&&

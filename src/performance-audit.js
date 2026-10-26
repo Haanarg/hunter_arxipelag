@@ -154,6 +154,12 @@
       if(original.pathStats)
         message+='Camins: '+original.pathStats.chunks+' sectors\n';
       message+='Fauna amb ombra i refresc diferit: '+fmt(initial?.deferredFaunaCasters)+' malles\n';
+      message+='Vehicles: malles eliminades per model (mapa complet):\n';
+      for(const [type,data] of Object.entries(original.vehicleFleet||{})
+        .filter(([,data])=>data.savedMeshes>0)
+        .sort((a,b)=>b[1].savedMeshes-a[1].savedMeshes).slice(0,12))
+        message+='  '+type+': '+data.originalMeshes+' → '+data.meshes+
+          ' ('+data.savedMeshes+' menys)\n';
       message+='Vehicles: crides de dibuix per model (fase inicial):\n';
       for(const [key,count] of Object.entries(initial?.vehicleTypes||{}).sort((a,b)=>b[1]-a[1]))
         message+='  '+key+': '+fmt(count)+'\n';
