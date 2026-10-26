@@ -1,7 +1,18 @@
 // Local navigation uses the live collision world. No navigation mesh survives a rebuild.
 const enemyIsVehicle=u=>u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='patrulla_marina';
 const enemyBodyRadius=u=>u.t==='torre'?2.4:1.05;
-const enemyRouteRadius=u=>enemyIsVehicle(u)?Math.hypot(vehicleBox(u).w,vehicleBox(u).d)/2+.3:enemyBodyRadius(u)+.15;
+// La planta del vehicle no canvia durant la partida: memoritzar-ne el radi
+// evita construir una caixa de col·lisió per cada node de l'A*.
+const enemyRouteRadius=u=>{
+  if(!enemyIsVehicle(u))return enemyBodyRadius(u)+.15;
+  if(u.navRadiusType===u.t&&Number.isFinite(u.navRadius))return u.navRadius;
+  const b=vehicleBox(u);
+  u.navRadius=Math.hypot(b.w,b.d)/2+.3;u.navRadiusType=u.t;
+  return u.navRadius;
+};
+// Ordre de veïns idèntic, però reutilitzam l'array als milers de nodes A*.
+const ENEMY_ASTAR_NEIGHBORS=Object.freeze([[1,0],[0,1],[-1,0],[0,-1],
+  [1,1],[-1,1],[-1,-1],[1,-1]].map(pair=>Object.freeze(pair)));
 let enemyPathBudget=2,enemyNodeBudget=160;
 const enemyGroundAt=(u,x,z)=>u.basement?u.gy:enemyIsVehicle(u)?hAt(x,z):groundAt(x,z,u.walkY??u.o?.position.y??-Infinity);
 function enemyWallBox(w){return{x:(w.x0+w.x1)/2,z:(w.z0+w.z1)/2,w:w.x1-w.x0,d:w.z1-w.z0,hd:0}}
@@ -75,7 +86,7 @@ function enemyFindPath(u,tx,tz){
     enemyNodeBudget--;count++;
     const n=pop();if(n.closed||nodes.get(key(n.ix,n.iz))!==n)continue;n.closed=true;if(n.h<best.h)best=n;
     if(n.h<step*1.2){best=n;break}
-    for(const [dx,dz] of [[1,0],[0,1],[-1,0],[0,-1],[1,1],[-1,1],[-1,-1],[1,-1]]){
+    for(const [dx,dz] of ENEMY_ASTAR_NEIGHBORS){
       const ix=n.ix+dx,iz=n.iz+dz,k=key(ix,iz),x=sx+ix*step,z=sz+iz*step,old=nodes.get(k),g=n.g+step*Math.hypot(dx,dz);
       if(x<minX||x>maxX||z<minZ||z>maxZ||old?.closed||(old&&old.g<=g))continue;
       const hd=Math.atan2(n.x-x,n.z-z);
