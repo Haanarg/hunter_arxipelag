@@ -35,7 +35,9 @@ window.HUNTER_PERFORMANCE=Object.freeze({
           ' · fotograma '+(stats.frameMs||0).toFixed(1)+' ms'+
           '\nCPU joc '+stats.updateCpuMs.toFixed(1)+' ms · terreny '+stats.terrainCpuMs.toFixed(1)+' ms'+
           '\nCPU render '+stats.renderCpuMs.toFixed(1)+' ms · '+stats.drawCalls+' dibuixos'+
-          '\n'+Math.round(stats.triangles/1000)+'k triangles · Resolució fixa ×'+ratio.toFixed(2);
+          '\n'+Math.round(stats.triangles/1000)+'k triangles · Resolució fixa ×'+ratio.toFixed(2)+
+          (stats.hotspots?'\nCPU graella '+stats.hotspots.broadphaseMs.toFixed(2)+' · IA '+stats.hotspots.aiMs.toFixed(2)+
+          ' · visual '+stats.hotspots.visibilityMs.toFixed(2)+' · sigil '+stats.hotspots.stealthMs.toFixed(2)+' ms':'');
         lastDisplay=now;
       }
       return stats;
