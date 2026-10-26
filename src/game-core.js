@@ -3882,6 +3882,8 @@ mini();ui.renderHUD({nearVehicle:nv});}}
 
 
 if(performanceDebugRequested||performanceAuditRequested)setPerformanceStatsVisible(true);
+const performanceGpuTimer=performanceAuditRequested?
+  window.HUNTER_PERFORMANCE_AUDIT.createGpuTimer(ren):null;
 const performanceAudit=performanceAuditRequested?window.HUNTER_PERFORMANCE_AUDIT.create({
   // La llavor d'estrès requereix més temps perquè el LOD s'estabilitzi.
   warmupMs:stressAuditRequested?3500:1100,
@@ -3892,13 +3894,14 @@ const performanceAudit=performanceAuditRequested?window.HUNTER_PERFORMANCE_AUDIT
     pathStats:world?.userData?.pathStats||null,
     stressPreset:stressAuditRequested?{...STRESS_AUDIT_PRESET}:null,
     vehicleFleet:JSON.parse(JSON.stringify(vehicleFleet))}),
-  setShadowsDisabled,setWaterDisabled
+  setShadowsDisabled,setWaterDisabled,gpuTimer:performanceGpuTimer
 }):null;
 let last=performance.now();resetSimulationClock(last);
 (function loop(now){
 // DOM can repaint and accept cancel/retry between generation tasks. No world
 // simulation, RNG, LOD, fire, clock debt or partial-world render is permitted.
 if(generationPromise){last=now;simulationClock.reset(now);cinematicClock.reset(now);requestAnimationFrame(loop);return}
+if(performanceGpuTimer)performanceGpuTimer.poll();
 const rawDt=Number.isFinite(now)&&now>=last?(now-last)/1000:0;
 last=Number.isFinite(now)&&now>=0?now:performance.now();
 if(performanceStatsVisible)for(const key in perfHotspots)perfHotspots[key]=0;
@@ -3952,6 +3955,8 @@ for(const proxy of shadowBoatNodes){
 const shadowRedrawn=shadowCache.schedule({now:performance.now(),x:sun.target.position.x,z:sun.target.position.z,
   nodes:shadowPoseNodes,enabled:!!ren.shadowMap.enabled});
 const renderStarted=performance.now();
+const gpuSample=performanceAudit?.status==='running'&&gameplayActive?
+  performanceGpuTimer?.begin():null;
 // Estadístiques de camins limitades al fotograma actual.
 const roadFrameStats=world?.userData?.pathRenderStats;
 if(roadFrameStats)for(const key in roadFrameStats)roadFrameStats[key]=0;
@@ -3969,6 +3974,7 @@ for(const k in vehicleShadowTypes)delete vehicleShadowTypes[k];
    // opaca del mar ni el cel exterior mentre el personatge s'enfonsa.
    ren.render(deathCinematic.underwaterScene,cam);
  }else ren.render(scene,cam);
+if(gpuSample)performanceGpuTimer.end(gpuSample);
 const renderCompleted=performance.now();
 if(started&&!paused&&!over){
   advanceTerrainTexture();
@@ -3977,7 +3983,7 @@ if(started&&!paused&&!over){
 }
 const postRenderCompleted=performance.now();
 if(performanceAudit)performanceAudit.onFrame({
-  active:gameplayActive,frameMs:rawDt*1000,x:P.x,z:P.z,
+  active:gameplayActive,frameMs:rawDt*1000,x:P.x,z:P.z,gpuSample,
   updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,
   renderCpuMs:renderCompleted-renderStarted,
   roadFastSkips:roadFrameStats?.fastSkips||0,

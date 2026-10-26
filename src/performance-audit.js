@@ -8,6 +8,79 @@
     {id:'no-both',name:'Sense ombres ni aigua',shadows:true,water:true},
     {id:'base-2',name:'Normal (final)',shadows:false,water:false}
   ];
+  // Asynchronous WebGL GPU timer (render pass only, not VSYNC/compositor).
+  // Never gl.finish; never read QUERY_RESULT before QUERY_RESULT_AVAILABLE.
+  function createGpuTimer(renderer){
+    let gl=null,ext=null,webgl2=false,active=null,state='unsupported';
+    const queue=[],limit=8;
+    let dropped=0,disjoint=0,completed=0;
+    try{
+      gl=renderer?.getContext?.();
+      if(gl?.getExtension){
+        webgl2=!!(gl.beginQuery&&gl.createQuery&&gl.getQueryParameter);
+        ext=gl.getExtension(webgl2?'EXT_disjoint_timer_query_webgl2':
+          'EXT_disjoint_timer_query');
+        if(ext)state='supported';
+      }
+    }catch(error){state='unavailable'}
+    const remove=query=>{
+      try{if(webgl2)gl.deleteQuery(query);else ext.deleteQueryEXT(query)}
+      catch(error){}
+    };
+    function dispose(){
+      if(active){
+        try{if(webgl2)gl.endQuery(ext.TIME_ELAPSED_EXT);
+          else ext.endQueryEXT(ext.TIME_ELAPSED_EXT)}catch(error){}
+        remove(active.query);active=null;
+      }
+      for(const entry of queue)remove(entry.query);
+      queue.length=0;
+    }
+    function poll(){
+      if(state!=='supported')return;
+      try{
+        if(gl.getParameter(ext.GPU_DISJOINT_EXT)){
+          disjoint+=queue.length;
+          for(const entry of queue)remove(entry.query);
+          queue.length=0;return;
+        }
+        while(queue.length){
+          const entry=queue[0];
+          const available=webgl2?gl.getQueryParameter(entry.query,gl.QUERY_RESULT_AVAILABLE):
+            ext.getQueryObjectEXT(entry.query,ext.QUERY_RESULT_AVAILABLE_EXT);
+          if(!available)break;
+          const nano=webgl2?gl.getQueryParameter(entry.query,gl.QUERY_RESULT):
+            ext.getQueryObjectEXT(entry.query,ext.QUERY_RESULT_EXT);
+          if(Number.isFinite(nano)&&nano>=0){entry.sample.ms=nano/1e6;completed++}
+          remove(entry.query);queue.shift();
+        }
+      }catch(error){state='error';dispose()}
+    }
+    function begin(){
+      if(state!=='supported'||active)return null;
+      if(queue.length>=limit){dropped++;return null}
+      try{
+        const query=webgl2?gl.createQuery():ext.createQueryEXT();
+        if(!query){dropped++;return null}
+        const sample={ms:null};
+        if(webgl2)gl.beginQuery(ext.TIME_ELAPSED_EXT,query);
+        else ext.beginQueryEXT(ext.TIME_ELAPSED_EXT,query);
+        active={query,sample};return sample;
+      }catch(error){state='error';dispose();return null}
+    }
+    function end(sample){
+      if(!active||active.sample!==sample)return;
+      const entry=active;active=null;
+      try{
+        if(webgl2)gl.endQuery(ext.TIME_ELAPSED_EXT);
+        else ext.endQueryEXT(ext.TIME_ELAPSED_EXT);
+        queue.push(entry);
+      }catch(error){remove(entry.query);state='error';dispose()}
+    }
+    return {begin,end,poll,dispose,get status(){return state},
+      get supported(){return state==='supported'},get dropped(){return dropped},
+      get disjoint(){return disjoint},get completed(){return completed}};
+  }
   function summary(rows){
     if(!rows.length)return null;
     const avg=key=>rows.reduce((sum,r)=>sum+(r[key]||0),0)/rows.length;
@@ -30,6 +103,44 @@
       if(r.shadowRedrawn&&r.shadowCulprit)
         shadowCulprits[r.shadowCulprit]=(shadowCulprits[r.shadowCulprit]||0)+1;
     }
+    // RAF intervals are measured BETWEEN callbacks: previous-frame CPU
+    // is relevant to diagnosing missed refresh opportunities.
+    const intervalBuckets={'~8.3ms':0,'~16.7ms':0,'~25ms':0,'~33.3ms':0,other:0};
+    const snapshots=[],gpuValues=[],slow33=[],regular=[];
+    const classify=ms=>{
+      for(const [name,center] of [['~8.3ms',8.333],['~16.7ms',16.667],
+        ['~25ms',25],['~33.3ms',33.333]])
+        if(Math.abs(ms-center)<=1.6)return name;
+      return 'other';
+    };
+    const cpu=frame=>frame?(frame.updateCpuMs||0)+(frame.terrainCpuMs||0)+
+      (frame.renderCpuMs||0)+(frame.postRenderCpuMs||0):null;
+    const compactFrame=frame=>frame?{
+      cpuMs:cpu(frame),updateCpuMs:frame.updateCpuMs||0,
+      terrainCpuMs:frame.terrainCpuMs||0,renderCpuMs:frame.renderCpuMs||0,
+      gpuMs:Number.isFinite(frame.gpuSample?.ms)?frame.gpuSample.ms:null,
+      aiMs:frame.aiMs||0,aiNavMs:frame.aiNavMs||0,
+      shadowRedrawn:!!frame.shadowRedrawn,drawCalls:frame.drawCalls||0,
+      simulationSteps:frame.simulationSteps||0
+    }:null;
+    for(let i=0;i<rows.length;i++){
+      const frame=rows[i],previous=rows[i-1]||null;
+      intervalBuckets[classify(frame.frameMs)]++;
+      if(Number.isFinite(frame.gpuSample?.ms))gpuValues.push(frame.gpuSample.ms);
+      if(Math.abs(frame.frameMs-33.333)<=1.6)slow33.push({frame,previous});
+      if(Math.abs(frame.frameMs-16.667)<=1.6)regular.push({frame,previous});
+      if(frame.frameMs>=24)
+        snapshots.push({intervalMs:frame.frameMs,previous:compactFrame(previous),
+          current:compactFrame(frame)});
+    }
+    snapshots.sort((a,b)=>b.intervalMs-a.intervalMs);
+    snapshots.length=Math.min(6,snapshots.length);
+    const prevMean=(items,key)=>{
+      const valid=items.filter(pair=>pair.previous);
+      return valid.length?valid.reduce((sum,pair)=>sum+(pair.previous[key]||0),0)/valid.length:null;
+    };
+    const gpuMean=gpuValues.length?
+      gpuValues.reduce((sum,value)=>sum+value,0)/gpuValues.length:null;
     const groupSum=obj=>Object.values(obj).reduce((a,b)=>a+b,0);
     const attributed=groupSum(groups)+groupSum(shadowGroups);
     return {
@@ -42,6 +153,17 @@
       frames24to25:rows.filter(r=>r.frameMs>=24&&r.frameMs<=25).length,
       slowFrames25:rows.filter(r=>r.frameMs>25).length,
       slowFrames50:rows.filter(r=>r.frameMs>50).length,
+      intervalBuckets,slow33Count:slow33.length,
+      slow33PrevRenderCpuMs:prevMean(slow33,'renderCpuMs'),
+      slow33PrevUpdateCpuMs:prevMean(slow33,'updateCpuMs'),
+      normal16PrevRenderCpuMs:prevMean(regular,'renderCpuMs'),
+      slow33PrevShadowRedrawRate:slow33.length?
+        slow33.filter(p=>p.previous?.shadowRedrawn).length/slow33.length:null,
+      slowFrameSamples:snapshots,
+      gpuSamples:gpuValues.length,gpuMs:gpuMean,
+      gpuP95Ms:gpuValues.length?
+        gpuValues.sort((a,b)=>a-b)[Math.ceil(gpuValues.length*.95)-1]:null,
+      gpuOverBudget:gpuValues.filter(value=>value>16.67).length,
       updateCpuMs:avg('updateCpuMs'),renderCpuMs:avg('renderCpuMs'),
       roadVersionCpuMs:avg('roadVersionCpuMs'),roadRefitCpuMs:avg('roadRefitCpuMs'),
       roadVersionChecks:avg('roadVersionChecks'),roadRefits:avg('roadRefits'),
@@ -79,6 +201,9 @@
       'terrainCpuMs','drawCalls','triangles','aiMs','aiNavMs','aiSweepMs',
       'sweepChecks','sweepSamples','aiUpdated','aiSkipped','simulationSteps',
       'shadowRedrawRate','shadowDrawCalls','unclassifiedDrawCalls',
+      'slow33Count','slow33PrevRenderCpuMs','slow33PrevUpdateCpuMs',
+      'normal16PrevRenderCpuMs','slow33PrevShadowRedrawRate',
+      'gpuSamples','gpuMs','gpuP95Ms','gpuOverBudget',
       'deferredFaunaCasters','boatMotionProxies'];
     return {
       format:'hunter-perf-share-v1',status:report.status,seed:report.seed,
@@ -91,18 +216,27 @@
       phases:(report.phases||[]).map((phase,index)=>{
         const s=phase.stats||{};
         return {id:phase.id,name:phase.name,stats:{
-          ...pick(s,metrics),groups:ranked(s.groups),shadowGroups:ranked(s.shadowGroups),
+          ...pick(s,metrics),intervalBuckets:s.intervalBuckets||{},
+          slowFrameSamples:(s.slowFrameSamples||[]).slice(0,4).map(entry=>({
+            intervalMs:round(entry.intervalMs),
+            previous:entry.previous?pick(entry.previous,
+              ['cpuMs','updateCpuMs','renderCpuMs','gpuMs','aiMs','shadowRedrawn','simulationSteps']):null,
+            current:entry.current?pick(entry.current,
+              ['cpuMs','updateCpuMs','renderCpuMs','gpuMs','aiMs','shadowRedrawn','simulationSteps']):null
+          })),
+          groups:ranked(s.groups),shadowGroups:ranked(s.shadowGroups),
           shadowReasons:s.shadowReasons||{},shadowCulprits:s.shadowCulprits||{},
           vehicleTypes:ranked(s.vehicleTypes),vehicleShadowTypes:ranked(s.vehicleShadowTypes),
           ...(index===0?{vehicleParts:ranked(s.vehicleParts,15),
             otherDetails:ranked(s.otherDetails,15)}:{})
         }};
       }),
-      baseline:report.baseline
+      baseline:report.baseline,gpuTimer:report.gpuTimer||null,
+      phaseComparisons:report.phaseComparisons||null
     };
   }
   function create({getState,setShadowsDisabled,setWaterDisabled,windowObject=window,
-    warmupMs=1100,sampleMs=3000}){
+    warmupMs=1100,sampleMs=3000,gpuTimer=null}){
     let status='pending',index=0,phaseElapsed=0,rows=[],origin=null,
       original=null,results=[],notice='',lastReport=null;
     const doc=windowObject.document;
@@ -203,6 +337,17 @@
         fps:baselines.reduce((s,x)=>s+x.fps,0)/baselines.length,
         frameMs:baselines.reduce((s,x)=>s+x.frameMs,0)/baselines.length
       }:null;
+      // Comparisons are correlations, not proof of individual system cost.
+      const relative={};
+      for(const id of ['no-shadows','no-water','no-both']){
+        if(byId[id]&&baseline){
+          relative[id]={fpsDelta:byId[id].fps-baseline.fps,
+            renderCpuDeltaMs:byId[id].renderCpuMs-
+              baselines.reduce((sum,s)=>sum+s.renderCpuMs,0)/baselines.length,
+            gpuDeltaMs:byId[id].gpuMs!=null&&baselines.every(s=>s.gpuMs!=null)?
+              byId[id].gpuMs-baselines.reduce((sum,s)=>sum+s.gpuMs,0)/baselines.length:null};
+        }
+      }
       const report={status,seed:original.seed,quality:original.quality,
         pixelRatio:original.pixelRatio,
         playerBatchStats:original.playerBatchStats||null,
@@ -212,7 +357,11 @@
         auditPosition:origin,
         originalShadowsDisabled:original.shadowsDisabled,
         originalWaterDisabled:original.waterDisabled,phases:results,baseline,
-        note:'Comparació de CPU i FPS: no és una mesura directa de GPU. La suma de crides per categoria pot no incloure totes les passades auxiliars.'};
+        gpuTimer:{status:gpuTimer?.status||'unavailable',
+          completed:gpuTimer?.completed||0,disjoint:gpuTimer?.disjoint||0,
+          dropped:gpuTimer?.dropped||0},
+        phaseComparisons:relative,
+        note:'Temps GPU, si disponible: passada WebGL sense VSYNC ni composició. Intervals RAF: temps ENTRE callbacks. Les comparacions no proven causalitat.'};
       lastReport=report;
       windowObject.HUNTER_PERF_AUDIT_RESULTS=report;
       const fmt=n=>Number.isFinite(n)?n.toFixed(1):'n/d';
@@ -230,6 +379,13 @@
       if(baselines.length===2&&Math.abs(baselines[0].fps-baselines[1].fps)/Math.max(1,baseline.fps)>.15)
         message+='\nAvís: el rendiment normal ha variat més del 15%; comparació poc estable.\n';
       const initial=byId['base-1'];
+      message+='\\nGPU WebGL: '+(gpuTimer?.status||'no disponible')+
+        ', mostres '+(gpuTimer?.completed||0)+'\\n';
+      message+='Intervals de refresc (normal): '+
+        JSON.stringify(initial?.intervalBuckets||{})+'\\n';
+      message+='Salts ~33 ms: '+(initial?.slow33Count||0)+
+        '; render CPU del fotograma anterior '+
+        fmt(initial?.slow33PrevRenderCpuMs)+' ms\\n';
       const categories=Object.entries(initial?.groups||{}).sort((a,b)=>b[1]-a[1]);
       message+='\nCrides de dibuix principals (normal):\n';
       for(const [key,count] of categories)if(count>0)message+='  '+key+': '+fmt(count)+'\n';
@@ -309,5 +465,5 @@
     }
     return {onFrame,abort,get status(){return status},get results(){return results}};
   }
-  window.HUNTER_PERFORMANCE_AUDIT=Object.freeze({create,summary,shareReport,PHASES});
+  window.HUNTER_PERFORMANCE_AUDIT=Object.freeze({create,summary,shareReport,createGpuTimer,PHASES});
 })();
