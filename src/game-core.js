@@ -169,7 +169,7 @@ function setPerformanceStatsVisible(enabled){
 }
 window.HUNTER_PERFORMANCE_STATS=adaptivePerformance.stats;
 adaptivePerformance.stats.hotspots=perfHotspots;
-if(new URLSearchParams(location.search).get('perf')==='1')setPerformanceStatsVisible(true);
+const performanceDebugRequested=new URLSearchParams(location.search).get('perf')==='1';
 const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segments:visualQuality.waterSegments,initialSegments:Math.min(160,visualQuality.waterSegments),heightAt:hAt,config:window.HUNTER_WATER,reflections:visualQuality.waterReflections!==false,coastDetail:!!visualQuality.coastDetail,fogColor:scene.fog.color});
 let waterUpgradePending=false;
 const waterMat=water.material,waterUniforms=water.uniforms;
@@ -3718,6 +3718,7 @@ updateActionButton(nv);if(pickerOpen)drawWeaponPicker();
 mini();ui.renderHUD({nearVehicle:nv});}}
 
 
+if(performanceDebugRequested)setPerformanceStatsVisible(true);
 let last=performance.now();resetSimulationClock(last);
 (function loop(now){
 // DOM can repaint and accept cancel/retry between generation tasks. No world
