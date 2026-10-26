@@ -1,0 +1,1123 @@
+// BEGIN src/water-jumps.js
+// Salts breus sobre ones per a motos aquàtiques i windsurf.
+ // Física relativa a la superfície ja mostrejada al render: sense
+ // tocar la navegació, el control ni el nivell de flotació dels altres bucs.
+window.HUNTER_WATER_JUMPS=Object.freeze({
+  update(v,dt,time,waterAt,maxSpeed){
+    if(v.t!=='moto_aquatica'&&v.t!=='windsurf')return {lift:0,pitch:0};
+    const jet=v.t==='moto_aquatica',
+          minSpeed=jet?18:12,
+          // Les dues taules aprofiten el mateix pendent d'ona que
+          // feia enlairar l'antiga moto aquàtica.
+          configRise=.14,
+          span=4.8,
+          state=v.waveJump||(v.waveJump={lift:0,vy:0,cooldown:0,airborne:false,jumps:0});
+    if(dt<=0)return {lift:state.lift,pitch:0};
+    const step=Math.min(dt,.08);
+    state.cooldown=Math.max(0,state.cooldown-step);
+    if(!state.airborne&&v.v>minSpeed&&state.cooldown<=0){
+      const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),
+            ahead=waterAt(v.x+fx*span,v.z+fz*span,time),
+            behind=waterAt(v.x-fx*span,v.z-fz*span,time),
+            rise=ahead-behind;
+      // És el pendent de l'ona frontal (no una oscil·lació aleatòria):
+      // només es pot enlairar quan la proa puja prou de pressa.
+      if(rise>configRise){
+        const speed=Math.min(1,Math.max(0,v.v/(maxSpeed||30)));
+        state.airborne=true;
+        // Windsurf: antic salt de moto. Moto: altura doble
+        // (velocitat inicial multiplicada per sqrt(2)).
+        const formerJetVy=2.55+speed*1.12+Math.min(.9,rise*.5);
+        state.vy=formerJetVy*(jet?Math.SQRT2:1);
+        state.lift=.01;
+        state.jumps++;
+      }
+    }
+    if(state.airborne){
+      const next=state.lift+state.vy*step-4.9*step*step;
+      state.vy-=9.8*step;
+      if(next<=0){
+        state.airborne=false;state.lift=0;state.vy=0;
+        state.cooldown=jet?.9:1.05;
+      }else state.lift=Math.min(jet?4.8:2.4,next);
+    }
+    const pitch=state.airborne
+      ?Math.max(-.22,Math.min(.26,state.vy*.045))
+      :0;
+    return {lift:state.lift,pitch};
+  }
+});
+
+;
+// END src/water-jumps.js
+// BEGIN src/movement-fx.js
+// Esteles i esquitxos agrupats en només quatre malles instanciades.
+// El sistema és visual i no consumeix mai el RNG de generació d'illes.
+window.HUNTER_MOVEMENT_FX=Object.freeze({
+ create(T,{scene,quality='desktop',waveModel,waterTime,waterBed}){
+   const settings={
+     // Enemics: distàncies LOD pròpies segons qualitat, sense més draw calls.
+     desktop:{wake:210,ripple:64,air:155,smoke:105,range:250,enemyRange:240,spacing:1},
+     mobile:{wake:110,ripple:40,air:86,smoke:64,range:185,enemyRange:160,spacing:1.35},
+     ultra:{wake:60,ripple:24,air:48,smoke:36,range:140,enemyRange:95,spacing:1.9}
+   }[quality]||{wake:210,ripple:64,air:155,smoke:105,range:250,enemyRange:200,spacing:1};
+   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),rand=Math.random,
+     dummy=new T.Object3D(),face=new T.Quaternion(),color=new T.Color();
+   const stats={
+     emitted:{wake:0,ripple:0,air:0,smoke:0},
+     active:{wake:0,ripple:0,air:0,smoke:0},
+     steps:0,droplets:0,landTrails:0,waterTrails:0,downwash:0,
+     drawMeshes:0,resets:0,quality
+   };
+   let waterVisible=true,previousFootBucket=null,previousSwimBucket=null;
+   const groups={};
+   function pool(name,capacity,flat){
+     const geometry=new T.PlaneGeometry(1,1);
+     if(flat)geometry.rotateX(-Math.PI/2);
+     const alpha=new T.InstancedBufferAttribute(new Float32Array(capacity),1),
+       tint=new T.InstancedBufferAttribute(new Float32Array(capacity*3),3),
+       seabed=new T.InstancedBufferAttribute(new Float32Array(capacity),1);
+     for(const attr of [alpha,tint,seabed])attr.setUsage(T.DynamicDrawUsage);
+     geometry.setAttribute('fxAlpha',alpha);
+     geometry.setAttribute('fxTint',tint);
+     geometry.setAttribute('fxBed',seabed);
+     const material=new T.ShaderMaterial({
+       uniforms:{time:waterTime},transparent:true,depthWrite:false,
+       side:T.DoubleSide,
+       vertexShader:[
+         'uniform float time;',
+         'attribute float fxAlpha,fxBed;',
+         'attribute vec3 fxTint;',
+         'varying vec2 uvFX;varying vec3 tintFX;varying float alphaFX;',
+         waveModel.glsl,
+         'void main(){',
+         '  vec4 p=instanceMatrix*vec4(position,1.);',
+         flat?'  p.y+=hunterWaveHeight(p.xz,time,fxBed);':'',
+         '  uvFX=uv;tintFX=fxTint;alphaFX=fxAlpha;',
+         '  gl_Position=projectionMatrix*modelViewMatrix*p;',
+         '}'
+       ].join('\n'),
+       fragmentShader:[
+         'varying vec2 uvFX;varying vec3 tintFX;varying float alphaFX;',
+         'void main(){',
+         '  vec2 q=(uvFX-.5)*2.;float dist=length(q);',
+         name==='ripple'
+           ?'  float shape=smoothstep(.38,.6,dist)*(1.-smoothstep(.76,.98,dist));'
+           :name==='wake'
+             ?'  float shape=pow(max(0.,1.-dist*dist),1.9)*(.76+.12*sin(q.x*19.)+.12*cos(q.y*17.));'
+             :'  float shape=pow(max(0.,1.-dist*dist),2.15);',
+         '  float a=clamp(shape*alphaFX,0.,.80);',
+         '  if(a<.008)discard;',
+         '  gl_FragColor=vec4(tintFX,a);',
+         '#include <tonemapping_fragment>',
+         '#include <colorspace_fragment>',
+         '}'
+       ].join('\n')
+     });
+     const mesh=new T.InstancedMesh(geometry,material,capacity);
+     mesh.name='hunter-motion-'+name;
+     mesh.renderOrder=flat?4:5;
+     mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
+     mesh.frustumCulled=false;mesh.count=0;mesh.visible=false;
+     scene.add(mesh);
+     groups[name]={mesh,geometry,material,alpha,tint,seabed,
+       flat,capacity,particles:[]};
+   }
+   pool('wake',settings.wake,true);
+   pool('ripple',settings.ripple,true);
+   pool('air',settings.air,false);
+   pool('smoke',settings.smoke,false);
+   function emit(kind,p){
+     if(!waterVisible&&(kind==='wake'||kind==='ripple'))return false;
+     const g=groups[kind];if(!g)return false;
+     const list=g.particles;
+     if(list.length>=g.capacity)list.shift();
+     color.setHex(p.color??0xffffff);
+     list.push({
+       x:p.x,z:p.z,y:p.y||0,vx:p.vx||0,vz:p.vz||0,vy:p.vy||0,
+       width:p.width??1,length:p.length??p.width??1,
+       heading:p.heading||0,bed:p.bed??(g.flat?waterBed(p.x,p.z):0),
+       age:0,life:p.life??1.2,alpha:p.alpha??.7,
+       growth:p.growth??1.4,gravity:p.gravity||0,ground:p.ground??-Infinity,
+       cr:color.r,cg:color.g,cb:color.b
+     });
+     stats.emitted[kind]++;return true;
+   }
+   function footstep(x,z,depth,side=1){
+     if(depth<.15||depth>2.15||!waterVisible)return false;
+     const bed=waterBed(x,z),power=clamp(depth/1.25,.3,1);
+     emit('ripple',{x,z,y:.12,bed,width:1.6+power*.7,
+       length:1.35+power*.6,life:1.04,alpha:.72,growth:1.9,color:0xdbf9fa});
+     const surface=waveModel.height(x,z,waterTime.value,bed);
+     for(let i=0;i<3;i++){
+       const angle=(i+.18*rand())*Math.PI*2/3+side*.75,
+         speed=1.3+power*2+rand()*.7;
+       emit('air',{x:x+Math.cos(angle)*.09,z:z+Math.sin(angle)*.09,
+         y:surface+.22,bed,
+         vx:Math.cos(angle)*speed*.44,vz:Math.sin(angle)*speed*.44,
+         vy:1.7+power*1.6+rand()*.5,gravity:8,
+         ground:surface+.02,
+         width:.08+power*.075,life:.6,
+         alpha:.94,growth:.45,color:0xcdf7ff});
+       stats.droplets++;
+     }
+     stats.steps++;return true;
+   }
+   function playerStep({phase,x,z,heading,moving,swimming,inVehicle,falling,surfaceAt,groundAt}){
+     const bucket=Math.floor(phase/Math.PI);
+     if(previousFootBucket===null){previousFootBucket=bucket;return false}
+     if(bucket===previousFootBucket)return false;
+     previousFootBucket=bucket;
+     if(!moving||swimming||inVehicle||falling)return false;
+     const side=bucket%2?1:-1,
+       px=x+Math.cos(heading)*side*.32-Math.sin(heading)*.24,
+       pz=z-Math.sin(heading)*side*.32-Math.cos(heading)*.24;
+     return footstep(px,pz,surfaceAt(px,pz)-groundAt(px,pz),side);
+   }
+   function swimStroke({phase,x,z,heading,swimming,crawling,moving,surfaceAt}){
+     const bucket=Math.floor((phase+Math.PI/2)/Math.PI);
+     if(!swimming||!crawling||!moving||!waterVisible){previousSwimBucket=null;return false}
+     if(previousSwimBucket===null){previousSwimBucket=bucket;return false}
+     if(bucket===previousSwimBucket)return false;
+     previousSwimBucket=bucket;
+     // Alternam braços: esquitx visible a banda i banda al llarg del crol.
+     const side=bucket%2?1:-1,rx=Math.cos(heading),rz=-Math.sin(heading),
+       fx=-Math.sin(heading),fz=-Math.cos(heading);
+     for(const s of [-1,1]){
+       const x0=x+rx*s*.72+fx*.45,z0=z+rz*s*.72+fz*.45,
+         surface=surfaceAt(x0,z0),bed=waterBed(x0,z0),power=s===side?1:.67;
+       emit('ripple',{x:x0,z:z0,y:.13,bed,width:1.35*power,length:1.75*power,
+         life:.75,alpha:.75,growth:1.9,color:0xd7f7ff});
+       for(let i=0;i<4;i++){
+         const spread=(i-1.5)*.32,speed=1.5+i*.23;
+         emit('air',{x:x0+spread*fx,z:z0+spread*fz,y:surface+.12,bed,
+           vx:rx*s*speed+fx*.55,vz:rz*s*speed+fz*.55,
+           vy:(2.2+i*.29)*power,gravity:9,ground:surface+.03,
+           width:.10+power*.045,life:.54,alpha:.9,growth:.28,color:0xd8f8ff});
+         stats.droplets++;
+       }
+     }
+     return true;
+   }
+   function boatTrail(v,speed,back,width){
+     const s=Math.sin(v.hd),c=Math.cos(v.hd),turn=clamp(v.yawRate||0,-2,2),
+       spread=width*(1+Math.min(.4,Math.abs(turn)*.2)),
+       lifetime=1.8+Math.min(1.7,speed/22);
+     for(const side of [-1,1]){
+       const x=v.x+s*back+side*c*spread,z=v.z+c*back-side*s*spread;
+       emit('wake',{x,z,y:.10,
+         vx:s*speed*.07+side*c*(.65+speed*.025),
+         vz:c*speed*.07-side*s*(.65+speed*.025),
+         heading:v.hd,width:.6+width*.28+speed*.02,
+         length:1.5+speed*.12,life:lifetime,
+         alpha:.68,growth:1.6,bed:waterBed(x,z),
+         color:side>0?0xc5eff2:0xe2f9fa});
+     }
+     if(speed>11){
+       const x=v.x+s*back,z=v.z+c*back;
+       emit('wake',{x,z,y:.10,vx:s*speed*.035,vz:c*speed*.035,
+         heading:v.hd,width:width*.7+1,length:2.3+speed*.14,
+         life:1.4,alpha:.52,growth:1.5,color:0xe8faf6});
+     }
+     stats.waterTrails++;
+   }
+   const landWidths={bici:.43,moto:.49,cotxe:1.08,camio:1.8,
+     tanc:2.15,tanqueta:1.55};
+   const waterWidths={barca_rems:.55,windsurf:.4,moto_aquatica:.65,
+     llanxa:1.65,llanxa_coets:1.85,hover:1.45,ferry:4.4};
+   const backs={barca_rems:1.5,windsurf:1.4,moto_aquatica:1.55,
+     llanxa:3.3,llanxa_coets:3.7,hover:2.3,ferry:7.5,
+     bici:1.1,moto:1.1,cotxe:2.05,camio:3.35,tanc:3.3,tanqueta:2.5};
+   function landTrail(v,speed,back,ground,type=v.t){
+     const s=Math.sin(v.hd),c=Math.cos(v.hd),width=landWidths[type]||1,
+       bike=type==='bici',heavy=['tanc','tanqueta','camio'].includes(type),
+       density=clamp((speed-3)/22,.16,.8)*(bike?.42:1);
+     for(const side of [-1,1]){
+       const x=v.x+s*back+side*c*width,z=v.z+c*back-side*s*width;
+       emit('air',{x,z,y:ground+.22,
+         vx:s*speed*.07+side*c*.52,vz:c*speed*.07-side*s*.52,
+         vy:.25,life:heavy?1.75:1.32,
+         width:.7+speed*.025+(heavy?.45:0),
+         color:heavy?0xada296:0xc4b39b,alpha:density,growth:2.1});
+     }
+     // Escapament: mai a la bicicleta, més dens en camions i blindats.
+     if(!bike){
+       const x=v.x+s*back,z=v.z+c*back;
+       emit('smoke',{x,z,y:ground+(heavy?1.65:.9),
+         vx:s*speed*.11,vz:c*speed*.11,vy:.42,
+         width:heavy?.7:.37,life:1.16+speed*.014,
+         color:heavy?0x666660:0x94908a,alpha:heavy?.48:.3,growth:1.65});
+     }
+     stats.landTrails++;
+   }
+   function rotorDownwash(v,dt,terrain,waterY){
+     const limit=v.t==='heli_combat'?15:13,
+       height=v.alt-Math.max(terrain,waterY),
+       intensity=clamp((limit-height)/limit,0,1);
+     if(intensity<=.01)return;
+     v.fxRotorAccum=(v.fxRotorAccum||0)+dt;
+     const delay=(quality==='desktop'?.10:.16)/Math.max(.35,intensity);
+     if(v.fxRotorAccum<delay)return;
+     v.fxRotorAccum%=delay;
+     const overSea=terrain<waterY-.3,count=quality==='ultra'?2:3;
+     for(let i=0;i<count;i++){
+       const angle=(i+rand()*.45)*Math.PI*2/count+v.hd,
+         radius=2+rand()*3.4,
+         x=v.x+Math.cos(angle)*radius,z=v.z+Math.sin(angle)*radius,
+         vx=Math.cos(angle)*(3+intensity*5),vz=Math.sin(angle)*(3+intensity*5);
+       if(overSea){
+         emit('wake',{x,z,y:.12,vx,vz,width:1.5+intensity*1.4,
+           length:1.7+intensity*1.5,life:.95,alpha:intensity*.49,
+           growth:1.7,color:0xe5f8ff});
+       }else{
+         emit('air',{x,z,y:terrain+.24,vx,vz,vy:.5+intensity*.5,
+           life:1.1+intensity*.65,width:1.7+intensity*1.7,
+           alpha:intensity*.36,color:0xb4a58d,growth:2.5});
+       }
+     }
+     stats.downwash++;
+   }
+   function vehicle(v,dt,{playerX,playerZ,playerVehicle=null,terrainAt,waterAt,enemy=false}){
+     if(v.destroyed||v.crashing||v.carrier)return;
+     // Jeep i patrullera comparteixen el model visual del cotxe i la llanxa.
+     const type=enemy?(v.t==='jeep'?'cotxe':
+       v.t==='patrulla_marina'?'llanxa':v.t):v.t;
+     const dx=v.x-playerX,dz=v.z-playerZ,
+       range=enemy?settings.enemyRange:settings.range,
+       near=dx*dx+dz*dz<range*range,
+       prevX=v.fxPrevX,prevZ=v.fxPrevZ;
+     // Sempre actualitzam la posició per evitar esteles gegants al
+     // tornar a entrar dins la distància visible.
+     v.fxPrevX=v.x;v.fxPrevZ=v.z;
+     const distance=prevX==null?0:Math.hypot(v.x-prevX,v.z-prevZ),
+       moved=distance<28?Math.min(distance,4):0,
+       // Els hostils no exposen velocitat 'v': feim servir el seu
+       // desplaçament real (així no hi ha fum si queden encallats).
+       speed=enemy?(dt>.0001&&distance<28?distance/dt:0):Math.abs(v.v||0);
+     if(!near){if(enemy)v.fxTrailDist=0;return}
+     const terrain=terrainAt(v.x,v.z),water=waterAt(v.x,v.z),
+       mode=window.HUNTER_VEHICLE_DYNAMICS.types[type]?.m;
+     if(mode==='a'){
+       if(v===playerVehicle||(enemy&&speed>.5))
+         rotorDownwash(v,dt,terrain,water);
+       return;
+     }
+     const watery=mode==='w'||(mode==='wl'&&water>terrain+.6);
+     if(watery&&!waterVisible)return;
+     if(speed<(watery?2.2:4)||moved<.04)return;
+     const spacing=(watery?2.8:2.1)*settings.spacing;
+     v.fxTrailDist=(v.fxTrailDist||0)+moved;
+     if(v.fxTrailDist<spacing)return;
+     v.fxTrailDist%=spacing;
+     const back=(backs[type]||2)*(enemy||v.v>=0?1:-1);
+     if(watery)boatTrail(v,speed,back,waterWidths[type]||1);
+     else landTrail(v,speed,back,terrain,type);
+   }
+   function damageSmoke(v,damage,y){
+     const dark=damage>.65?0x2b2b2c:0x696966,
+       width=.35+damage*.55;
+     for(let i=0;i<(damage>.65?2:1);i++)
+       emit('smoke',{x:v.x+(rand()-.5)*.9,
+         z:v.z+(rand()-.5)*.9,y:y+(rand()-.5)*.24,
+         vx:(rand()-.5)*1.2,vz:(rand()-.5)*1.2,
+         vy:1.1+damage*1.35,width,life:1.65+damage*.85,
+         alpha:.46+damage*.29,growth:2.5,color:dark});
+   }
+   function update(dt,camera){
+     if(camera)face.copy(camera.quaternion);
+     let draws=0;
+     for(const [kind,group] of Object.entries(groups)){
+       const live=group.particles,alphas=group.alpha.array,
+         colors=group.tint.array,beds=group.seabed.array;
+       let count=0;
+       for(let i=0;i<live.length;i++){
+         const p=live[i];p.age+=dt;
+         if(p.age>=p.life)continue;
+         const progress=p.age/p.life;
+         p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;
+         p.vy-=p.gravity*dt;
+         if(p.gravity&&p.y<p.ground)continue;
+         const size=1+p.growth*progress;
+         dummy.position.set(p.x,p.y,p.z);
+         if(group.flat)dummy.rotation.set(0,p.heading,0);
+         else dummy.quaternion.copy(face);
+         if(group.flat)dummy.scale.set(p.width*size,1,p.length*size);
+         else dummy.scale.set(p.width*size,p.length*size,1);
+         dummy.updateMatrix();
+         group.mesh.setMatrixAt(count,dummy.matrix);
+         alphas[count]=p.alpha*Math.pow(1-progress,1.25);
+         colors[count*3]=p.cr;colors[count*3+1]=p.cg;colors[count*3+2]=p.cb;
+         beds[count]=p.bed;live[count]=p;count++;
+       }
+       live.length=count;group.mesh.count=count;
+       group.mesh.visible=count>0&&(waterVisible||!group.flat);
+       stats.active[kind]=count;
+       if(count){
+         group.mesh.instanceMatrix.needsUpdate=true;
+         group.alpha.needsUpdate=true;group.tint.needsUpdate=true;
+         group.seabed.needsUpdate=true;
+         if(group.mesh.visible)draws++;
+       }
+     }
+     stats.drawMeshes=draws;
+   }
+   function setWaterVisible(value){
+     waterVisible=!!value;
+     for(const kind of ['wake','ripple'])
+       groups[kind].mesh.visible=waterVisible&&groups[kind].particles.length>0;
+   }
+   function reset(){
+     previousFootBucket=null;previousSwimBucket=null;
+     for(const [name,group] of Object.entries(groups)){
+       group.particles.length=0;group.mesh.count=0;group.mesh.visible=false;
+       stats.active[name]=0;
+     }
+     stats.drawMeshes=0;stats.resets++;
+   }
+   function dispose(){
+     for(const group of Object.values(groups)){
+       scene.remove(group.mesh);group.geometry.dispose();group.material.dispose();
+     }
+   }
+   return{stats,groups,emit,footstep,playerStep,swimStroke,vehicle,damageSmoke,update,
+     setWaterVisible,reset,dispose};
+ }
+});
+
+;
+// END src/movement-fx.js
+// BEGIN src/air-obstacles.js
+// Col·lisions 3D de l'antena i la parabòlica amb fuselatge i disc del rotor.
+// Sense afegir malles de Three.js ni noves crides de dibuix.
+(()=>{
+  const registry=world=>world.userData.airObstacles||(world.userData.airObstacles=[]);
+  function registerAntenna(world,root,spec,plinth){
+    const scale=spec.scale||1;
+    const entry={kind:'antenna',root,plinth,scale,
+      height:Math.max(spec.height,31*scale)};
+    registry(world).push(entry);return entry;
+  }
+  function registerSatellite(world,root,building,radius){
+    const entry={kind:'satellite',root,building,radius};
+    registry(world).push(entry);return entry;
+  }
+  const sq=x=>x*x;
+  function antennaHit(T,e,x,z,skidY,topY,rotorY,rotorR,bodyR){
+    const root=e.root,scale=e.scale,local=new T.Vector3(x,0,z);
+    root.worldToLocal(local);
+    const distance=Math.hypot(local.x,local.z),
+      base=root.position.y,top=base+e.height,
+      radiusAt=y=>{
+        const localY=(y-base)/scale;
+        if(localY<.9)return 4*scale*Math.SQRT2;
+        if(localY>29)return .35*scale;
+        return Math.max(.3,2.7-.065*localY)*scale*Math.SQRT2+.25;
+      };
+    // Rotor horitzontal: també pot colpejar la torre amb el fuselatge lluny.
+    if(rotorY>=base-.35&&rotorY<=top+.35&&
+       distance<=rotorR+radiusAt(rotorY)+.35)
+      return {y:rotorY,part:'torre'};
+    if(topY>=base&&skidY<=top){
+      const hitY=Math.max(base,Math.min(top,(skidY+topY)/2));
+      if(distance<=bodyR+radiusAt(hitY))
+        return {y:hitY,part:'torre'};
+    }
+    // Plat petit que sobresurt al lateral de l'antena.
+    const dish=new T.Vector3(0,18*scale,3*scale).applyMatrix4(root.matrixWorld),
+      dishR=2.2*scale,
+      horizontal=Math.hypot(x-dish.x,z-dish.z),
+      dy=Math.abs(rotorY-dish.y);
+    if(dy<=dishR+.3&&horizontal<=rotorR+
+      Math.sqrt(Math.max(0,sq(dishR+.3)-sq(dy))))
+      return {y:dish.y,part:'plat de l’antena'};
+    const bodyY=Math.max(skidY,Math.min(topY,dish.y));
+    if(sq(horizontal)+sq(bodyY-dish.y)<=sq(bodyR+dishR))
+      return {y:dish.y,part:'plat de l’antena'};
+    return null;
+  }
+  function satellitePoint(p,clearance,radius,rotation,T){
+    // Sòcol, pedestal i braços, fixats al sostre.
+    if(p.y>=-clearance-.2&&p.y<=6.2+clearance&&
+       Math.hypot(p.x,p.z)<=3.5+clearance)return true;
+    // Plat de 18 m orientat. Aproximació del paraboloide real:
+    // z=2.7*(r/R)^2, amb reforços de gruix ~1.3 m.
+    p.sub(new T.Vector3(0,6,0)).applyQuaternion(rotation);
+    const r=Math.hypot(p.x,p.y),radialGap=Math.max(0,r-radius),
+      surface=2.7*sq(Math.min(1,r/radius)),
+      depthGap=Math.max(0,Math.abs(p.z-surface)-.65);
+    if(sq(radialGap)+sq(depthGap)<=sq(clearance))return true;
+    // Trípode i focus de l'extrem de la parabòlica.
+    return r<=.48+clearance&&p.z>=5.6-clearance&&p.z<=7.9+clearance;
+  }
+  function satelliteHit(T,e,x,z,skidY,topY,rotorY,rotorR,bodyR){
+    const inverse=new T.Matrix4().copy(e.root.matrixWorld).invert(),
+      rotation=new T.Quaternion().setFromEuler(new T.Euler(-.62,.3,0)).invert(),
+      local=(a,b,c)=>new T.Vector3(a,b,c).applyMatrix4(inverse);
+    for(const y of [skidY+bodyR*.45,(skidY+topY)/2,topY-bodyR*.35]){
+      if(satellitePoint(local(x,y,z),bodyR,e.radius,rotation,T))
+        return {y,part:'parabòlica'};
+    }
+    // Rotor com a disc, amb el centre i dos anells de mostres.
+    if(satellitePoint(local(x,rotorY,z),.38,e.radius,rotation,T))
+      return {y:rotorY,part:'parabòlica'};
+    for(const factor of [.52,1]){
+      const r=rotorR*factor;
+      for(let n=0;n<24;n++){
+        const angle=n*Math.PI/12;
+        if(satellitePoint(local(x+Math.cos(angle)*r,rotorY,
+          z+Math.sin(angle)*r),.46,e.radius,rotation,T))
+          return {y:rotorY,part:'parabòlica'};
+      }
+    }
+    return null;
+  }
+  function hit(T,world,v,start,end,modelScale=1){
+    const obstacles=world?.userData?.airObstacles;
+    if(!obstacles?.length||v.destroyed||v.crashing)return null;
+    const skid=v.o?.userData?.skidContactHeight||0,
+      rotor=v.o?.userData?.rotorContactHeight||
+        (v.t==='heli_combat'?3.3:3.9)*modelScale,
+      topHeight=(v.t==='heli_combat'?3:3.45)*modelScale,
+      bodyR=(v.t==='heli_combat'?1.45:1.65)*modelScale,
+      rotorR=(v.t==='heli_combat'?6.75:7.4)*modelScale,
+      dx=end.x-start.x,dz=end.z-start.z,da=end.alt-start.alt,
+      steps=Math.max(1,Math.ceil(Math.hypot(dx,dz,da)/1.3));
+    for(const e of obstacles){
+      if(!e.root.parent)continue;
+      if(e.kind==='antenna'&&e.plinth?.hp<=0)continue;
+      if(e.kind==='satellite'&&(e.building?.rhp<=0||e.building?.rb))continue;
+      e.root.updateWorldMatrix(true,false);
+      const center=e.root.getWorldPosition(new T.Vector3()),
+        extent=e.kind==='antenna'?11:e.radius+9,
+        mx=(start.x+end.x)/2,mz=(start.z+end.z)/2;
+      if(Math.hypot(mx-center.x,mz-center.z)>
+        extent+rotorR+Math.hypot(dx,dz)/2+3)continue;
+      const lower=center.y-(e.kind==='satellite'?12:0),
+        upper=center.y+(e.kind==='antenna'?e.height:20);
+      if(Math.max(start.alt,end.alt)+rotor<lower-3||
+         Math.min(start.alt,end.alt)+skid>upper+bodyR+3)continue;
+      for(let k=0;k<=steps;k++){
+        const t=k/steps,x=start.x+dx*t,z=start.z+dz*t,
+          alt=start.alt+da*t,skidY=alt+skid,topY=alt+topHeight,
+          rotorY=alt+rotor,
+          struck=e.kind==='antenna'
+            ?antennaHit(T,e,x,z,skidY,topY,rotorY,rotorR,bodyR)
+            :satelliteHit(T,e,x,z,skidY,topY,rotorY,rotorR,bodyR);
+        if(struck)return {kind:e.kind,part:struck.part,x,z,alt,y:struck.y,
+          obstacle:e,t};
+      }
+    }
+    return null;
+  }
+  window.HUNTER_AIR_OBSTACLES=Object.freeze({registerAntenna,registerSatellite,hit});
+})();
+
+;
+// END src/air-obstacles.js
+// BEGIN src/joystick.js
+// Joystick tàctil analògic amb una prolongació superior integrada per córrer.
+window.HUNTER_JOYSTICK=Object.freeze({
+  create(root,{deadzone=.1,response=1.15,maxTravel=.36}={}){
+    const knob=root.querySelector('.joy-knob'),
+          state={x:0,y:0,active:false,id:null,running:false};
+    let runEnabled=false,lastPointer=null;
+    const reset=()=>{
+      state.x=state.y=0;state.active=false;state.id=null;state.running=false;
+      lastPointer=null;root.classList.remove('running');
+      knob.style.transform='translate(-50%,-50%)';
+    };
+    const move=e=>{
+      if(!state.active||e.pointerId!==state.id)return;
+      lastPointer={pointerId:e.pointerId,clientX:e.clientX,clientY:e.clientY};
+      const r=root.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,
+            max=r.width*maxTravel,rawX=e.clientX-cx,rawY=e.clientY-cy;
+      // Només es corre cap endavant, en arrossegar dins la prolongació
+      // situada FORA del perímetre superior del cercle del joystick.
+      const running=runEnabled&&rawY< -r.height/2&&Math.abs(rawX)<=r.width*.29;
+      state.running=running;root.classList.toggle('running',running);
+      if(running){
+        state.x=Math.max(-1,Math.min(1,rawX/max))*.72;
+        state.y=-1;
+        // El pom puja visualment a la zona de cursa però continua
+        // pertanyent al mateix joystick i al mateix pointer capturat.
+        const knobX=Math.max(-12,Math.min(12,rawX*.25));
+        knob.style.transform=`translate(calc(-50% + ${knobX}px),calc(-50% - ${r.height*.67}px))`;
+        return;
+      }
+      let dx=rawX,dy=rawY;
+      const distance=Math.hypot(dx,dy);
+      if(distance>max){dx*=max/distance;dy*=max/distance}
+      let x=dx/max,y=dy/max;
+      const mag=Math.hypot(x,y);
+      if(mag<deadzone)x=y=0;
+      else if(mag>0){
+        const scaled=Math.pow((mag-deadzone)/(1-deadzone),response);
+        x=x/mag*scaled;y=y/mag*scaled;
+      }
+      state.x=x;state.y=y;
+      knob.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
+    };
+    const setRunEnabled=enabled=>{
+      const next=!!enabled;
+      if(runEnabled===next)return;
+      runEnabled=next;root.classList.toggle('run-enabled',next);
+      if(state.active&&lastPointer)move(lastPointer);
+      else state.running=false;
+    };
+    root.addEventListener('pointerdown',e=>{
+      if(state.active)return;
+      e.preventDefault();state.active=true;state.id=e.pointerId;
+      root.setPointerCapture(e.pointerId);move(e);
+    });
+    root.addEventListener('pointermove',move);
+    for(const type of ['pointerup','pointercancel','lostpointercapture'])
+      root.addEventListener(type,e=>{if(state.active&&e.pointerId===state.id)reset()});
+    return {state,reset,setRunEnabled};
+  }
+});
+
+;
+// END src/joystick.js
+// BEGIN src/action-icons.js
+// Icones SVG lleugeres per al botó d'acció. Sense renders ni textures
+// addicionals: canvien només quan canvia el vehicle seleccionat.
+window.HUNTER_ACTION_ICONS=(()=>{
+  const ink='#1d2828',metal='#8b9fa1',steel='#c0cecf',glass='#a9dcec',
+        olive='#7c956b',dark='#424c45',wood='#bd9064',foam='#d9e2d8';
+  const svg=body=>'<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">'+body+'</svg>';
+  const wheels=(a,b,y=46,r=6)=>'<g fill="'+ink+'" stroke="'+steel+'" stroke-width="1.5"><circle cx="'+a+'" cy="'+y+'" r="'+r+'"/><circle cx="'+b+'" cy="'+y+'" r="'+r+'"/></g><g fill="'+metal+'"><circle cx="'+a+'" cy="'+y+'" r="2"/><circle cx="'+b+'" cy="'+y+'" r="2"/></g>';
+  const hull=(color=olive)=>'<path d="M4 37L57 37 50 50 14 50Z" fill="'+color+'" stroke="'+ink+'" stroke-width="2.5" stroke-linejoin="round"/>';
+  const rotor=(color=olive)=>'<path d="M11 29Q18 22 36 22L43 30 36 37 16 37Z" fill="'+color+'" stroke="'+ink+'" stroke-width="2.4"/><path d="M38 28L57 33 55 37 38 35" fill="'+metal+'" stroke="'+ink+'" stroke-width="2"/><path d="M3 17H61M32 17V22" stroke="'+steel+'" stroke-width="3" stroke-linecap="round"/>';
+  const boat=extra=>hull()+'<path d="M18 37L24 27H42L48 37Z" fill="'+steel+'" stroke="'+ink+'" stroke-width="2"/><path d="M26 29H39L43 35H23Z" fill="'+glass+'"/>'+extra;
+  const forms={
+    cotxe:svg('<path d="M8 41L13 31 23 27H43L54 35 57 42 55 47H8Z" fill="'+olive+'" stroke="'+ink+'" stroke-width="2.5"/><path d="M23 30H41L49 38H17Z" fill="'+glass+'"/>'+wheels(18,47)),
+    // Familiar civil C1A: icona pròpia, no la motxilla per defecte.
+    cotxe_civil:svg('<path d="M5 41L8 29L18 24H46L55 30L59 41L57 47H6Z" fill="'+olive+'" stroke="'+ink+'" stroke-width="2.5"/><path d="M19 27H45L51 35H12Z" fill="'+glass+'" stroke="'+ink+'" stroke-width="1.5"/><path d="M31 27V36M46 24V39" stroke="'+dark+'" stroke-width="2"/>'+wheels(17,48)),
+    camio:svg('<path d="M4 31H35V45H4Z" fill="'+olive+'" stroke="'+ink+'" stroke-width="2.5"/><path d="M36 32H48L59 40V45H36Z" fill="'+metal+'" stroke="'+ink+'" stroke-width="2.5"/><path d="M39 34H47L53 39H39Z" fill="'+glass+'"/>'+wheels(15,49)),
+    moto:svg('<path d="M14 42L28 31 39 35 47 42M27 31L40 31 48 28M30 30L25 25M33 30L36 43" fill="none" stroke="'+olive+'" stroke-width="5" stroke-linejoin="round"/><path d="M25 24H37M45 28H53" stroke="'+ink+'" stroke-width="3"/>'+wheels(15,49,45,8)),
+    bici:svg('<path d="M15 44L26 31 36 44 15 44 31 27M26 31L42 31 49 44M29 27H36M42 31L45 25H51" fill="none" stroke="'+steel+'" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>'+wheels(15,49,44,8)),
+    tanqueta:svg('<path d="M7 34L52 34 57 44 8 44Z" fill="'+olive+'" stroke="'+ink+'" stroke-width="2.5"/><path d="M19 34V28L30 24H42L48 34" fill="'+metal+'" stroke="'+ink+'" stroke-width="2"/><path d="M43 28L59 26" stroke="'+steel+'" stroke-width="3.5"/><rect x="6" y="41" width="50" height="10" rx="5" fill="'+ink+'"/><path d="M13 46H50" stroke="'+metal+'" stroke-width="3" stroke-dasharray="4 4"/>'),
+    tanc:svg('<path d="M8 35H53L58 46H7Z" fill="'+olive+'" stroke="'+ink+'" stroke-width="2.6"/><path d="M17 34L23 25H43L48 35" fill="'+dark+'" stroke="'+ink+'" stroke-width="2.4"/><path d="M38 28H62" stroke="'+steel+'" stroke-width="4" stroke-linecap="round"/><rect x="6" y="42" width="51" height="12" rx="6" fill="'+ink+'" stroke="'+metal+'" stroke-width="2"/><circle cx="16" cy="48" r="3" fill="'+steel+'"/><circle cx="31" cy="48" r="3" fill="'+steel+'"/><circle cx="46" cy="48" r="3" fill="'+steel+'"/>'),
+    heli:svg(rotor()+'<path d="M18 38H38M17 40L13 47H47L44 40M5 35L5 44H12" fill="none" stroke="'+steel+'" stroke-width="2.6"/><path d="M17 29H34L37 35H16Z" fill="'+glass+'" stroke="'+ink+'" stroke-width="1.3"/>'),
+    heli_combat:svg(rotor(dark)+'<path d="M13 37L7 46H49L45 37" fill="none" stroke="'+steel+'" stroke-width="2.6"/><path d="M21 29H35L38 34H20Z" fill="'+glass+'"/><path d="M4 35L18 40H39L52 36" stroke="'+olive+'" stroke-width="4" stroke-linecap="round"/><path d="M16 41V48M46 40V47" stroke="'+steel+'" stroke-width="3"/>'),
+    llanxa:svg(boat('<path d="M12 45H50" stroke="'+steel+'" stroke-width="2.5"/>')),
+    llanxa_coets:svg(boat('<path d="M32 27V19H49L53 24 49 29 32 29" fill="'+dark+'" stroke="'+ink+'" stroke-width="2"/><path d="M36 22H50M36 26H50" stroke="'+steel+'" stroke-width="2"/>')),
+    moto_aquatica:svg('<path d="M10 39H25L35 31H48L57 40 48 48H18L10 44Z" fill="'+olive+'" stroke="'+ink+'" stroke-width="2.4"/><path d="M31 31L28 24H44M39 25L43 32" stroke="'+steel+'" stroke-width="3" fill="none"/><path d="M5 52Q15 46 25 52T45 52T63 52" fill="none" stroke="'+glass+'" stroke-width="2.4"/>'),
+    hover:svg('<path d="M8 29L17 24H45L55 29 59 42 53 47H11L5 42Z" fill="'+olive+'" stroke="'+ink+'" stroke-width="2.5"/><path d="M18 27H44L49 36H13Z" fill="'+glass+'"/><path d="M8 45Q31 38 56 45V51H8Z" fill="'+dark+'" stroke="'+ink+'" stroke-width="2"/><circle cx="50" cy="19" r="8" fill="none" stroke="'+steel+'" stroke-width="3"/><path d="M50 13V25M44 19H56" stroke="'+steel+'" stroke-width="1.5"/>'),
+    ferry:svg('<path d="M3 39H61L51 51H13Z" fill="'+olive+'" stroke="'+ink+'" stroke-width="2.4"/><rect x="29" y="20" width="23" height="19" rx="1" fill="'+steel+'" stroke="'+ink+'" stroke-width="2"/><path d="M35 23V35M43 23V35M30 29H52" stroke="'+glass+'" stroke-width="4"/><path d="M4 36L17 33 26 39M42 17H51" fill="none" stroke="'+metal+'" stroke-width="3"/>'),
+    barca_rems:svg('<path d="M8 38H56L48 48H17Z" fill="'+wood+'" stroke="'+ink+'" stroke-width="2.5"/><path d="M15 39Q31 46 49 39" stroke="'+dark+'" stroke-width="2" fill="none"/><path d="M22 34L10 24M41 34L53 24" stroke="'+wood+'" stroke-width="3.5" stroke-linecap="round"/><path d="M6 21L14 28M50 28L58 21" stroke="'+steel+'" stroke-width="4" stroke-linecap="round"/><path d="M28 34H39" stroke="'+ink+'" stroke-width="4"/>'),
+    windsurf:svg('<path d="M7 49H57L52 52H14Z" fill="'+foam+'" stroke="'+ink+'" stroke-width="2"/><path d="M30 10L31 47H54Q37 27 30 10Z" fill="'+glass+'" stroke="'+ink+'" stroke-width="2.2"/><path d="M30 15V46M34 26L42 31" stroke="'+steel+'" stroke-width="2"/><path d="M11 55Q26 51 40 55T63 55" fill="none" stroke="'+glass+'" stroke-width="2.3"/>')
+  };
+  const backpack=svg('<path d="M20 21V14Q20 8 32 8Q44 8 44 14V21" fill="none" stroke="'+steel+'" stroke-width="4"/><path d="M17 19H47Q51 19 51 25V53Q51 57 47 57H17Q13 57 13 53V25Q13 19 17 19Z" fill="'+olive+'" stroke="'+ink+'" stroke-width="2.5"/><path d="M22 19V52M42 19V52" stroke="'+dark+'" stroke-width="3"/><rect x="20" y="32" width="24" height="17" rx="3" fill="'+wood+'" stroke="'+ink+'" stroke-width="2"/><path d="M29 32V38H35V32" fill="none" stroke="'+steel+'" stroke-width="2.5"/><path d="M13 28H9V48H13M51 28H55V48H51" fill="none" stroke="'+ink+'" stroke-width="3"/>');
+  return Object.freeze({
+    backpack,
+    vehicle:type=>forms[type]||backpack,
+    types:Object.freeze(Object.keys(forms))
+  });
+})();
+
+;
+// END src/action-icons.js
+// BEGIN src/player-model.js
+// Model tàctic aprovat: base compartida pel jugador, els conductors i els enemics.
+// Eix frontal -Z; la flexió anatòmica dels genolls és negativa en X.
+// La proposta D només s'aplica quan es demana explícitament: no canvia soldats ni general.
+const HUNTER_COMPACT_HEAD_D=Object.freeze({
+  headScale:Object.freeze([.74,.74,.71]),
+  neckScale:Object.freeze([.75,.66,.75]),
+  headY:3.26,visorDepth:.94,visorTilt:.05,capY:-.03
+});
+window.HUNTER_PLAYER_MODEL=Object.freeze({
+ headStyles:Object.freeze({compactD:HUNTER_COMPACT_HEAD_D}),
+ create(T,{unitScale=1,palette=window.HUNTER_PALETTE,headVariant=null,articulated=false}={}){
+ 
+ const p={chest:1.04,waist:.76,head:.44,arm:.27,leg:.35,pack:.66};
+ const g=new T.Group(),u=g.userData;u.boots=[];
+ const colors={green:0x3ee43a,lime:0x72f05a,dark:0x18271e,olive:0x46602d,skin:0xf0c9a0,black:0x162021};
+ const mats=new Map(),mat=(c)=>{if(!mats.has(c))mats.set(c,new T.MeshStandardMaterial({color:c,roughness:.9,metalness:0,flatShading:true}));return mats.get(c)};
+ function mesh(parent,geo,c,x=0,y=0,z=0){const m=new T.Mesh(geo,mat(c));m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;parent.add(m);return m}
+ const box=(pa,w,h,d,c,x,y,z)=>mesh(pa,new T.BoxGeometry(w,h,d),c,x,y,z);
+ const oval=(pa,xr,yr,zr,c,x,y,z,seg=10)=>{const m=mesh(pa,new T.SphereGeometry(1,seg,6),c,x,y,z);m.scale.set(xr,yr,zr);return m};
+ const segment=(pa,top,bottom,h,depth,c,x,y,z)=>{const m=mesh(pa,new T.CylinderGeometry(top,bottom,h,8),c,x,y,z);m.scale.z=depth;return m};
+ function torsoShape(width,waist,h,depth,c,y){
+  const a=width/2,b=waist/2,d=depth/2,k=.15;
+  const ring=w=>[[-w+k,-d], [w-k,-d],[w,-d+k],[w,d-k],[w-k,d],[-w+k,d],[-w,d-k],[-w,-d+k]];
+  const lo=ring(b),hi=ring(a),pts=[],indices=[];
+  for(const [x,z]of lo)pts.push(x,-h/2,z);for(const[x,z]of hi)pts.push(x,h/2,z);
+  for(let j=0;j<8;j++){const n=(j+1)%8;indices.push(j,n,n+8,j,n+8,j+8)}for(let j=1;j<7;j++){indices.push(0,j+1,j,8,8+j,8+j+1)}
+  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(pts,3));geo.setIndex(indices.reverse());geo.computeVertexNormals();return mesh(g,geo,c,0,y,0);
+ }
+ // Cames articulades; peu a y=0 i maluc a 1.72.
+ for(const side of[-1,1]){
+  const hip=new T.Group();hip.position.set(side*.265,1.73,0);g.add(hip);
+  segment(hip,p.leg*.58,p.leg*.48,.77,1.12,colors.green,0,-.37,0);
+  const knee=new T.Group();knee.position.y=-.75;hip.add(knee);
+  segment(knee,p.leg*.49,p.leg*.4,.68,1.12,colors.green,0,-.33,0);
+  box(knee,p.leg*.91,.28,.13,colors.olive,0,-.02,-p.leg*.55);
+  // Anatomical boot: narrow ankle, sloped instep, rounded toe and separate heel.
+  const boot=new T.Group();knee.add(boot);u.boots.push(boot);
+  const bootColor=0x202d28;
+  segment(boot,.14,.16,.31,1.1,bootColor,0,-.68,.025);
+  const outline=[[-.13,.16],[.13,.16],[.17,.02],[.18,-.27],[.12,-.36],[-.12,-.36],[-.18,-.27],[-.17,.02]];
+  const points=[],idx=[];
+  for(const level of[0,1])for(const[x,z]of outline){points.push(x,level?(-.77+(z>.0?.075:0)):-.89,z)}
+  for(let j=0;j<8;j++){let n=(j+1)%8;idx.push(j,n,n+8,j,n+8,j+8)}
+  for(let j=1;j<7;j++){idx.push(0,j+1,j,8,8+j,8+j+1)}
+  const bg=new T.BufferGeometry();bg.setAttribute('position',new T.Float32BufferAttribute(points,3));bg.setIndex(idx);bg.computeVertexNormals();
+  // Outline is clockwise when viewed from above: these faces point outward.
+  mesh(boot,bg,bootColor);
+  const soleShape=new T.Shape();outline.forEach(([x,z],j)=>j?soleShape.lineTo(x,-z):soleShape.moveTo(x,-z));soleShape.closePath();
+  const sole=mesh(boot,new T.ExtrudeGeometry(soleShape,{depth:.045,bevelEnabled:false}),0x121b17,0,-.92,0);sole.rotation.x=-Math.PI/2;
+  box(boot,.25,.055,.16,0x111914,0,-.925,.075);
+  for(let j=0;j<3;j++){const lace=box(boot,.16,.018,.024,0x87856d,0,-.74-j*.021,-.035-j*.055);lace.rotation.x=.3}
+  boot.children.forEach(o=>o.position.y+=.82);boot.position.y=-.82;
+  oval(knee,p.leg*.44,.13,p.leg*.46,colors.green,0,0,0,8);
+  u[side<0?'ll':'lr']=hip;u[side<0?'lkl':'lkr']=knee;
+ }
+ torsoShape(p.chest,p.waist,1.23,.61,colors.green,2.31);
+ const waistBelt=box(g,p.waist+.08,.15,.65,colors.dark,0,1.77,0),waistBuckle=box(g,.19,.13,.055,0xb1b48a,0,1.78,-.355);
+  torsoShape(p.chest+.05,p.waist+.06,.94,.76,0x314d27,2.35);
+  for(const x of[-.30,0,.30]){
+   box(g,.25,.34,.14,0x395333,x,2.12,-.44);
+   box(g,.26,.055,.155,colors.olive,x,2.29,-.445);
+  }
+  for(const y of[2.46,2.55])box(g,.70,.035,.04,0x708854,0,y,-.405);
+  for(const x of[-.34,.34])box(g,.18,.25,.16,colors.olive,x,2.87,-.26);
+  box(g,.26,.12,.025,colors.lime,.24,2.66,-.405);
+
+ // Motxilla diferenciada i tirants (vista posterior també renderitzada).
+ {box(g,p.pack,1.02,.38,colors.olive,0,2.31,.48);box(g,p.pack*.86,.32,.12,0x607b38,0,2.11,.72);box(g,p.pack+.02,.16,.41,0x607b38,0,2.87,.49)}
+ for(const x of[-.3,.3])box(g,.1,1.1,.09,colors.dark,x,2.33,.35);
+ // Braços amb espatlla i colze; postura neutra comuna.
+ for(const side of[-1,1]){
+  const shoulder=new T.Group();shoulder.position.set(side*.57,2.90,0);shoulder.rotation.z=side*.12;g.add(shoulder);
+  oval(shoulder,p.arm*.65,.22,p.arm*.65,colors.lime,0,-.11,0,8);
+  segment(shoulder,p.arm*.57,p.arm*.49,.567,1,colors.green,0,-.336,0);
+  const elbow=new T.Group();elbow.position.y=-.63;elbow.rotation.x=-.08;elbow.rotation.z=side*.04;shoulder.add(elbow);
+  segment(elbow,p.arm*.49,p.arm*.38,.525,1,colors.green,0,-.252,0);
+  oval(elbow,.13,.16,.135,colors.dark,0,-.62,-.025,8);
+  oval(elbow,p.arm*.45,.115,p.arm*.46,colors.green,0,0,0,8);
+  oval(elbow,.12,.14,.05,colors.olive,0,.01,.12,8);
+  u[side<0?'al':'ar']=shoulder;u[side<0?'ael':'aer']=elbow;
+ }
+ const neck=segment(g,.16,.18,.28,1,colors.skin,0,3.02,0);
+ const head=new T.Group();head.position.set(0,3.38,0);g.add(head);u.head=head;
+ oval(head,p.head*.78,p.head,p.head*.77,colors.skin,0,0,0,12);
+ // Petit nas, orelles, clatell: silhouettes lisibles sense textures.
+ oval(head,.075,.085,.10,colors.skin,0,-.03,-p.head*.77,8);
+ for(const side of[-1,1])oval(head,.07,.12,.065,colors.skin,side*p.head*.78,-.015,.02,8);
+ // Hair follows the skull below the cap, with an irregular tapered edge and exposed ears.
+ const hairColor=0x63432b;
+ const hp=[],hi=[],n=18;
+ for(let r=0;r<3;r++)for(let j=0;j<=n;j++){
+  const angle=-1.52+j/n*3.04;
+  const edge=-.09 + .045*Math.cos(angle*3+3) + (Math.abs(angle)>1.18?.095:0);
+  const y=r===0?.30:r===1?.12:edge;
+  const rad=Math.sqrt(Math.max(.01,1-(y/.45)**2));
+  hp.push(Math.sin(angle)*.356*rad,y,Math.cos(angle)*.35*rad+.012);
+ }
+ for(let r=0;r<2;r++)for(let j=0;j<n;j++){const a=r*(n+1)+j,b=a+n+1;hi.push(a,b,a+1,a+1,b,b+1)}
+ const hg=new T.BufferGeometry();hg.setAttribute('position',new T.Float32BufferAttribute(hp,3));hg.setIndex(hi);hg.computeVertexNormals();mesh(head,hg,hairColor);
+ for(const side of[-1,1]){
+  oval(head,.036,.105,.066,hairColor,side*.333,.105,-.024,8);
+ }
+ // Close-fitting cap; the edge hugs the skull and covers the hair roots.
+ const capSettings={y:.195,r:.334,h:.265,length:.40,drop:.035};
+ const c=capSettings;
+ const cap=mesh(head,new T.SphereGeometry(1,16,7,0,Math.PI*2,0,Math.PI/2),colors.green,0,c.y,0);cap.scale.set(c.r,c.h,c.r*.99);
+ // A rounded, slightly downturned bill, rather than a rectangular slab.
+ const vp=[],vi=[],steps=12;
+ for(let j=0;j<=steps;j++){
+  const t=-Math.PI/2+j/steps*Math.PI,x=Math.sin(t)*.305,z=-.205-Math.cos(t)*c.length;
+  const drop=c.drop*Math.cos(t);
+  vp.push(x,c.y-.014,-.16,x,c.y-.014-drop,z,x,c.y-.047-drop,z,x,c.y-.047,-.16);
+ }
+ for(let j=0;j<steps;j++)for(let k=0;k<4;k++){const a=j*4+k,b=(j+1)*4+k,n=(k+1)%4;vi.push(a,b,j*4+n,b,(j+1)*4+n,j*4+n)}
+ const vg=new T.BufferGeometry();vg.setAttribute('position',new T.Float32BufferAttribute(vp,3));vg.setIndex(vi);vg.computeVertexNormals();const bill=mesh(head,vg,colors.green);u.visor=bill;u.cap=cap;bill.material=new T.MeshStandardMaterial({color:colors.green,roughness:.9,flatShading:true,side:T.DoubleSide});
+ for(const side of[-1,1]){box(head,p.head*.61,.14,.06,colors.black,side*p.head*.37,.065,-p.head*.73);box(head,.04,.045,.28,colors.black,side*p.head*.72,.09,-p.head*.45)}
+ box(head,.09,.045,.06,colors.black,0,.08,-p.head*.8);
+ {box(head,.085,.2,.1,colors.black,.4,-.03,.02);box(head,.04,.04,.22,colors.black,.35,-.16,-.1)}
+ // La variant D modifica només les proporcions locals del coll i del cap.
+ // El rig del cos i les posicions d'espatlles, mans, genolls i malucs es mantenen.
+ if(headVariant==='compactD'){
+  const style=HUNTER_COMPACT_HEAD_D;
+  head.scale.set(...style.headScale);
+  head.position.y=style.headY;
+  neck.scale.set(...style.neckScale);
+  bill.scale.z=style.visorDepth;
+  bill.rotation.x=style.visorTilt;
+  cap.position.y+=style.capY;
+ }else if(headVariant!=null){
+  throw new RangeError('Variant de cap desconeguda: '+headVariant);
+ }
+ // Bake the requested unit size into geometry and pivots, keeping animation rotations intact.
+ g.traverse(o=>{if(o!==g)o.position.multiplyScalar(unitScale);if(o.isMesh)o.geometry.scale(unitScale,unitScale,unitScale)});
+ u.mats=[];
+ const swaps=new Map([[colors.green,palette.enemy.primary],[colors.lime,palette.enemy.general],
+  [0x314d27,palette.enemy.vest],[0x395333,palette.enemy.secondary],[colors.olive,palette.enemy.vest],
+  [0x607b38,palette.enemy.secondary],[0x708854,palette.enemy.secondary]]);
+ for(const [color,m]of mats)if(swaps.has(color))u.mats.push([m,color,swaps.get(color)]);
+ u.mats.push([bill.material,colors.green,palette.enemy.primary]);
+ u.headVariant=headVariant||'original';u.neck=neck;
+ u.profile='tactic-approved-long-visor';u.forwardAxis='-Z';u.kneeFlexionSign=-1;
+ u.hipHeight=1.73*unitScale;
+ if(articulated){
+  // Únicament el jugador a peu necessita articulació independent.
+  // Els riders i els enemics conserven la jerarquia original.
+  const lowerBody=new T.Group(),upperBody=new T.Group();
+  lowerBody.name='hunter-pelvis-and-legs';upperBody.name='hunter-upper-torso';
+  lowerBody.position.y=u.hipHeight;
+  upperBody.position.y=1.84*unitScale; // pivot sobre la cintura
+  const lowerParts=new Set([u.ll,u.lr,waistBelt,waistBuckle]);
+  for(const part of [...g.children]){
+    const pivot=lowerParts.has(part)?lowerBody:upperBody;
+    // Reparentar sense alterar les posicions de repòs globals del model.
+    part.position.y-=pivot.position.y;
+    pivot.add(part);
+  }
+  g.add(lowerBody,upperBody);
+  u.lowerBody=lowerBody;u.upperBody=upperBody;
+  u.upperBodyPivotHeight=upperBody.position.y;
+ }
+ return g;
+ }
+});
+
+;
+// END src/player-model.js
+// BEGIN src/bolt-cutters.js
+// Cisalla articulada compartida pel personatge i l'objecte del món.
+window.HUNTER_BOLT_CUTTERS=Object.freeze({
+ create(T){
+  const root=new T.Group();root.name='hunter-bolt-cutters';
+  const red=new T.MeshStandardMaterial({color:0xb83f38,roughness:.84}),
+    steel=new T.MeshStandardMaterial({color:0x98a8ac,roughness:.38,metalness:.68}),
+    edge=new T.MeshStandardMaterial({color:0xd2dcdf,roughness:.29,metalness:.78}),
+    dark=new T.MeshStandardMaterial({color:0x374247,roughness:.52,metalness:.43});
+  const arms=[];
+  for(const sign of [-1,1]){
+   const arm=new T.Group();root.add(arm);arms.push(arm);
+   const rod=(h,r,x,y,mat,angle=0)=>{
+    const mesh=new T.Mesh(new T.CylinderGeometry(r*.9,r,h,7),mat);
+    mesh.position.set(x,y,0);mesh.rotation.z=angle;arm.add(mesh);
+   };
+   rod(1.20,.105,sign*.17,-.68,red,sign*.12);
+   rod(.55,.068,sign*.074,.18,steel,-sign*.22);
+   const blade=new T.Mesh(new T.BoxGeometry(.09,.41,.15),edge);
+   blade.position.set(sign*.029,.55,-.02);blade.rotation.z=-sign*.16;arm.add(blade);
+   rod(.15,.13,sign*.15,-.21,dark);
+   arm.rotation.z=sign*.16;
+  }
+  for(const [z,r,mat] of [[0,.145,dark],[.11,.062,steel]]){
+   const pivot=new T.Mesh(new T.CylinderGeometry(r,r,.20,10),mat);
+   pivot.rotation.x=Math.PI/2;pivot.position.set(0,-.025,z);root.add(pivot);
+  }
+  root.userData.bladeArms=arms;return root;
+ },
+ pose(root,closing=0){
+  if(!root?.userData?.bladeArms)return;
+  const k=Math.max(0,Math.min(1,closing));
+  root.userData.bladeArms.forEach((a,i)=>{a.rotation.z=(i?1:-1)*(.16-.24*k)});
+ }
+});
+;
+// END src/bolt-cutters.js
+// BEGIN src/rider.js
+// Pilot visual per vehicles oberts. La física del vehicle continua al nucli.
+window.HUNTER_RIDER=Object.freeze({
+  create(THREE,{scene,box,material,scales,heightAt,shadows}){
+    const g=new THREE.Group(),torso=new THREE.Group();g.add(torso);
+    // El rider és el mateix protagonista: fa servir el cap D i el coll curt,
+    // sense canviar cap seient, escala del vehicle ni pivot de les extremitats.
+    const model=window.HUNTER_PLAYER_MODEL.create(THREE,{headVariant:'compactD'}),rig=model.userData;
+    const limbs=[],boots=rig.boots;
+    for(let i=0;i<2;i++){
+      const shoulder=i?rig.ar:rig.al,elbow=i?rig.aer:rig.ael;
+      const hip=i?rig.lr:rig.ll,knee=i?rig.lkr:rig.lkl;
+      for(const [part,len,slot]of[[shoulder,.63,i*2],[elbow,.62,i*2+1],[hip,.75,4+i*2],[knee,.82,5+i*2]]){
+        g.add(part);part.userData.restLength=len;part.rotation.set(0,0,0);limbs[slot]=part;
+      }
+      g.add(boots[i]);
+    }
+    // The torso origin is the seat/hip, as expected by the existing vehicle poses.
+    for(const part of [...model.children]){part.position.y-=rig.hipHeight;torso.add(part)}
+    // Pistola visual pròpia del rider; no reempram la del model ocult a peu.
+    // Mateixa geometria i retrocés que l'arma de la resta del joc.
+    const pistol=new THREE.Group();pistol.scale.setScalar(.92);g.add(pistol);
+    const pistolParts=createPlayerPistol(THREE,pistol);
+    pistol.visible=false;
+    g.userData={torso,limbs,boots,head:rig.head,neck:rig.neck,headVariant:rig.headVariant,
+      mats:rig.mats,profile:rig.profile,motion:0,shotTime:0,shotAge:10,shotBlend:0,
+      pistol,pistolParts,pistolAim:null};
+    g.visible=false;g.traverse(o=>{if(o.isMesh)o.castShadow=shadows});scene.add(g);
+    const down=new THREE.Vector3(0,-1,0),delta=new THREE.Vector3();
+    const limbBetween=(m,a,b)=>{
+      delta.copy(b).sub(a);const length=delta.length();m.position.copy(a);
+      m.scale.y=length/m.userData.restLength;
+      if(length>1e-6)m.quaternion.setFromUnitVectors(down,delta.multiplyScalar(1/length));
+    };
+    const vec=(x,y,z)=>new THREE.Vector3(x,y,z);
+    const shoulderAt=side=>vec(side*.57,1.17,0).applyQuaternion(torso.quaternion).add(torso.position);
+    const muzzleLocal=new THREE.Vector3(0,.183,-.84),
+          forward=new THREE.Vector3(0,0,-1);
+    // Animació superposada després de la postura de conducció: la mà
+    // esquerra continua al manillar, rem o botavara; la dreta apunta.
+    const aimOneHand=(v,dt)=>{
+      const u=g.userData;
+      u.shotTime=Math.max(0,u.shotTime-dt);
+      u.shotAge=Math.min(10,u.shotAge+dt);
+      const active=u.shotTime>0;
+      // Transicions suaus: el tret ja no força un gir instantani del tronc.
+      u.shotBlend+=(Number(active)-u.shotBlend)*(1-Math.exp(-(active?8:9)*dt));
+      if(!active&&u.shotBlend<.01){
+        pistol.visible=false;pistolParts.flash.visible=false;return;
+      }
+      pistol.visible=true;
+      const sc=v.t==='llanxa'?1.3:v.t==='llanxa_coets'?1.35:scales[v.t],
+            rowing=v.t==='barca_rems',
+            twist=v.t==='windsurf'?.055:.24;
+      // A la barca l'arma s'ha de veure a escala amb el remador.
+      pistol.scale.setScalar(rowing?.56:.92);
+      if(rowing){
+        // El remador només gira un poc les espatlles (uns 30°),
+        // sense retorçar el tronc ni passar de cop al perfil.
+        torso.rotation.y=Math.PI-.52*u.shotBlend;
+      }else torso.rotation.y+=twist*u.shotBlend;
+      const shoulder=shoulderAt(1),
+            forearm=limbs[3],
+            restingHand=new THREE.Vector3(0,-forearm.userData.restLength*forearm.scale.y,0)
+              .applyQuaternion(forearm.quaternion).add(forearm.position),
+            // El braç dret surt del rem amb una extensió curta cap a proa.
+            // Evitam que travessi el pit o arribi a l'altre costat del buc.
+            reach=rowing?vec(-.08*sc,-.26,-.48*sc):
+              v.t==='windsurf'?vec(.17*sc,-.14,-1.02*sc):
+              vec(.25*sc,-.29,-1.13*sc);
+      const target=shoulder.clone().add(reach),
+            hand=restingHand.lerp(target,u.shotBlend),
+            elbow=shoulder.clone().lerp(hand,.57);
+      elbow.y-=.12;elbow.x+=rowing?-.05*sc:.12*sc;
+      limbBetween(limbs[2],shoulder,elbow);limbBetween(limbs[3],elbow,hand);
+      // La mà esquerra solta el rem durant el gir de cintura i
+      // acompanya el tronc, sense estirar el braç a l'altre costat.
+      if(rowing&&u.shotBlend>.001){
+        const leftShoulder=shoulderAt(-1),
+              relax=vec(-.22*sc,-.70,-.24*sc).applyQuaternion(torso.quaternion),
+              leftHand=leftShoulder.clone().add(relax),
+              leftElbow=leftShoulder.clone().lerp(leftHand,.53);
+        leftElbow.y-=.12;
+        const oldHand=vec(0,-limbs[1].userData.restLength*limbs[1].scale.y,0)
+          .applyQuaternion(limbs[1].quaternion).add(limbs[1].position);
+        const oldElbow=limbs[1].position.clone();
+        // La mà esquerra continua pràcticament sobre el rem.
+        oldHand.lerp(leftHand,u.shotBlend*.2);oldElbow.lerp(leftElbow,u.shotBlend*.2);
+        limbBetween(limbs[0],leftShoulder,oldElbow);
+        limbBetween(limbs[1],oldElbow,oldHand);
+      }
+      const recoil=Math.exp(-u.shotAge*18)*(rowing ? .045 : .095);
+      pistol.position.copy(hand).add(vec(0,0,recoil));
+      // La pistola apunta a proa (-Z) quan el remador s'hi gira.
+      pistol.quaternion.identity();
+      if(u.pistolAim)pistol.quaternion.setFromUnitVectors(forward,u.pistolAim);
+      pistolParts.slide.position.z=recoil*.65;
+      pistolParts.flash.visible=u.shotAge<.055;
+    };
+    // Retorna el tret des de la boca REAL de la pistola, i orienta
+    // l'arma segons l'autoapuntat del sistema existent.
+    const firePistol=(v,autoAim)=>{
+      if(!v||!g.visible)return null;
+      const u=g.userData;u.shotTime=v.t==='barca_rems' ? .52 : .34;u.shotAge=0;
+      // No forçam shotBlend: l'animació del remador s'interpola en update().
+      if(v.t!=='barca_rems')u.shotBlend=Math.max(u.shotBlend,.82);
+      u.pistolAim=null;
+      aimOneHand(v,0);
+      g.updateWorldMatrix(true,true);
+      let origin=pistol.localToWorld(muzzleLocal.clone());
+      const initial=forward.clone().applyQuaternion(pistol.getWorldQuaternion(new THREE.Quaternion()));
+      const desired=autoAim(origin,initial);
+      if(desired){
+        const direction=new THREE.Vector3(...desired).normalize(),
+              localDirection=direction.clone()
+                .applyQuaternion(g.getWorldQuaternion(new THREE.Quaternion()).invert());
+        u.pistolAim=localDirection;
+        pistol.quaternion.setFromUnitVectors(forward,localDirection);
+        g.updateWorldMatrix(true,true);
+        origin=pistol.localToWorld(muzzleLocal.clone());
+      }
+      return {origin,direction:forward.clone().applyQuaternion(
+        pistol.getWorldQuaternion(new THREE.Quaternion())).normalize()};
+    };
+    const update=(v,dt)=>{
+      const car=!!v&&(v.t==='cotxe_civil'||v.t==='cotxe');
+      const open=!!v&&(car||['bici','moto','moto_aquatica','llanxa','llanxa_coets','barca_rems','windsurf'].includes(v.t));g.visible=open;
+      if(!open){g.userData.shotTime=0;g.userData.shotBlend=0;g.userData.pistolAim=null;pistol.visible=false;g.scale.setScalar(1);return}
+      const u=g.userData,sc=v.t==='llanxa'?1.3:v.t==='llanxa_coets'?1.35:scales[v.t],moving=Math.min(1,Math.abs(v.v)/1.8);u.motion+=(moving-u.motion)*(1-Math.exp(-12*dt));const motion=u.motion,phase=(v.t==='bici'||v.t==='barca_rems')?-(v.pedalPhase||0):(v.pedalPhase||0);
+      // En cotxes l'habitacle és més baix que el protagonista dret.
+      // Escalam el mateix model de jugador i preservam l'orientació
+      // tridimensional del xassís en girs i pendents.
+      const riderScale=car?.82:1;
+      g.scale.setScalar(riderScale);
+      g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);torso.rotation.set(0,0,0);boots.forEach(b=>b.rotation.set(0,0,0));
+
+      if(car){
+        // Seient esquerre, darrere del volant (C1A i cotxe utilitari).
+        // Posicions físiques convertides al sistema del rider escalat.
+        const civil=v.t==='cotxe_civil',
+              humvee=!civil&&v.o?.userData?.humveeModel==='D3.1',
+              // The Humvee cabin is forward-facing -Z and wider than the
+              // previous military car. Rider and wheel now share this seat.
+              seatX=(civil?-.613:humvee?-.84:-.72)*sc,
+              seatY=(civil?1.14:humvee?1.24:1.22)*sc,
+              seatZ=(civil?-.60:humvee?-.26:.42)*sc,
+              steeringX=seatX,
+              steeringY=(civil?1.66:humvee?1.60:1.91)*sc,
+              steeringZ=(civil?-.94:humvee?-.87:-.67)*sc,
+              invScale=1/riderScale;
+        torso.position.set(seatX*invScale,seatY*invScale,seatZ*invScale);
+        torso.rotation.x=-.05;
+        for(let i=0;i<2;i++){
+          const side=i?1:-1,
+                shoulder=shoulderAt(side),
+                hip=vec((seatX+side*.20*sc)*invScale,
+                  seatY*invScale,seatZ*invScale),
+                hand=vec((steeringX+side*.22*sc)*invScale,
+                  steeringY*invScale,steeringZ*invScale),
+                elbow=shoulder.clone().lerp(hand,.50),
+                foot=vec((seatX+side*.20*sc)*invScale,
+                  .87*sc*invScale,(civil?-1.31:humvee?-1.10:-.95)*sc*invScale),
+                knee=hip.clone().lerp(foot,.52);
+          elbow.y-=.10*sc*invScale;
+          knee.y+=.08*sc*invScale;knee.z+=.11*sc*invScale;
+          limbBetween(limbs[i*2],shoulder,elbow);
+          limbBetween(limbs[i*2+1],elbow,hand);
+          limbBetween(limbs[4+i*2],hip,knee);
+          limbBetween(limbs[5+i*2],knee,foot);
+          boots[i].position.copy(foot);
+          boots[i].rotation.x=-.2;
+        }
+        pistol.visible=false;
+        return;
+      }
+
+      if(v.t==='bici'||v.t==='moto'){
+        const seat=1.65*sc;torso.position.set(0,seat,.4*sc);torso.rotation.x=.15*motion;
+        for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.28,seat,.4*sc),shoulder=shoulderAt(side),hand=vec(side*.5*sc,1.96*sc,-sc),elbow=shoulder.clone().lerp(hand,.52);elbow.x+=side*.1;elbow.y-=.2;limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
+          const foot=vec(side*.55,0,.45*sc),worldFoot=foot.clone().applyQuaternion(g.quaternion).add(g.position);worldFoot.y=heightAt(worldFoot.x,worldFoot.z)+.14;const groundFoot=worldFoot.sub(g.position).applyQuaternion(g.quaternion.clone().invert());const pedal=v.t==='bici'?vec(side*.4*sc,(.75-side*Math.sin(phase)*.28)*sc,side*Math.cos(phase)*.28*sc):vec(side*.5*sc,.72*sc,.1*sc);foot.copy(groundFoot).lerp(pedal,motion);const knee=hip.clone().lerp(foot,.5);knee.z-=.5*motion;knee.x+=side*.12*(1-motion);limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot);boots[i].rotation.x=0}
+        aimOneHand(v,dt);return;
+      }
+
+      if(v.t==='moto_aquatica'){
+        const seat=.98*sc,lean=.18+.12*motion;torso.position.set(0,seat,.3*sc);torso.rotation.x=lean;
+        for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.25,seat,.3*sc),shoulder=shoulderAt(side),hand=vec(side*.38*sc,1.32*sc,-.58*sc),elbow=shoulder.clone().lerp(hand,.55);elbow.y-=.12;limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
+          const foot=vec(side*.38*sc,.48*sc,.58*sc),knee=hip.clone().lerp(foot,.5);knee.z-=.25;limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot);boots[i].rotation.x=.15}
+        aimOneHand(v,dt);return;
+      }
+
+      if(v.t==='barca_rems'){
+        const seat=v.o.userData.rowingSeat,seatY=seat.y*sc,seatZ=seat.z*sc;
+        const pull=(1-Math.cos(phase))*.5;
+        torso.position.set(0,seatY,seatZ);torso.rotation.set(-.06+.15*pull*motion,Math.PI,0);
+        v.o.updateWorldMatrix(true,true);g.updateWorldMatrix(true,false);
+        for(let i=0;i<2;i++){
+          const side=i?1:-1,boatSide=-side,
+                hip=vec(boatSide*.27,seatY,seatZ),
+                // Quan el remador mira a popa la seva dreta anatòmica
+                // és babord (-X). Cada mà agafa el rem del seu costat:
+                // el braç dret = limbs[2,3] = rem de babord (índex 0).
+                shoulder=shoulderAt(side);
+          const oar=v.o.userData.oars[1-i],
+                hand=g.worldToLocal(oar.localToWorld(oar.userData.grip.clone()));
+          const elbow=shoulder.clone().lerp(hand,.5);
+          elbow.x+=boatSide*.18;elbow.y-=.13;
+          limbBetween(limbs[i*2],shoulder,elbow);
+          limbBetween(limbs[i*2+1],elbow,hand);
+          const foot=vec(boatSide*.34,.2*sc,seatZ+.97*sc),
+                knee=vec(boatSide*.32,seatY-.05,seatZ+.52*sc);
+          limbBetween(limbs[4+i*2],hip,knee);
+          limbBetween(limbs[5+i*2],knee,foot);
+          boots[i].position.copy(foot);boots[i].rotation.set(0,Math.PI,0);
+        }
+        aimOneHand(v,dt);return;
+      }
+
+      if(v.t==='windsurf'){
+        // 7/8 mirrored relative to the old silhouette: surfer stands on
+        // starboard (+X) and faces across the board toward the mirrored
+        // sail on port (-X), with hips back and slightly bent knees.
+        // The rig pitches toward the bow; both hands follow actual points
+        // on the moving boom, not hand positions guessed in rider space.
+        const bodyX=.42*sc,hipY=1.38*sc,footY=.35*sc,
+              sail=v.o.userData.windsurfRig,
+              grips=v.o.userData.windsurfGrips||[],
+              lean=.17+Math.min(.07,Math.abs(v.v)/230);
+        torso.position.set(bodyX,hipY,.29*sc);
+        torso.rotation.set(lean,1.13,.08);
+        const hips=[vec(bodyX-.05*sc,hipY,.04*sc),
+                    vec(bodyX+.08*sc,hipY,.46*sc)];
+        // Crucial: anatomically correct shoulder index.
+        // i=0 -> left arm, i=1 -> right arm (firing arm).
+        v.o.updateWorldMatrix(true,true);
+        g.updateWorldMatrix(true,false);
+        const hands=grips.map(p=>g.worldToLocal(
+          (sail||v.o).localToWorld(p.clone())));
+        const feet=[vec(.66*sc,footY,.99*sc),
+                    vec(.72*sc,footY,-.63*sc)];
+        for(let i=0;i<2;i++){
+          const shoulder=shoulderAt(i?1:-1),hip=hips[i],
+                hand=hands[i]||vec(-.5*sc,2.6*sc,.5*sc),
+                foot=feet[i],
+                elbow=shoulder.clone().lerp(hand,.47),
+                knee=hip.clone().lerp(foot,.51);
+          // Bend the elbows down slightly, without forcing an
+          // impossible knee/elbow pose away from the true grip.
+          elbow.y-=.17*sc;
+          elbow.z+=i?.08*sc:-.055*sc;
+          limbBetween(limbs[i*2],shoulder,elbow);
+          limbBetween(limbs[i*2+1],elbow,hand);
+          knee.y+=.13*sc;knee.x-=.10*sc;
+          limbBetween(limbs[4+i*2],hip,knee);
+          limbBetween(limbs[5+i*2],knee,foot);
+          boots[i].position.copy(foot);
+          boots[i].rotation.set(-.12,1.13,0);
+        }
+        // Right hand releases only during the pistol animation; the
+        // left hand stays planted on the rig and the torso barely twists.
+        aimOneHand(v,dt);return;
+      }
+
+      if(v.t==='llanxa'||v.t==='llanxa_coets'){
+        // Les dues llanxes comparteixen ara la mateixa escala gran del casc,
+        // però cada rider conserva la mida que tenia abans del redisseny.
+        const riderSc=v.t==='llanxa'?1.3:1.35,
+              boatSc=scales[v.t]||1.95,
+              offY=1.45*(boatSc-riderSc),offZ=.55*(boatSc-riderSc),
+              seat=1.45*riderSc+offY,seatZ=.55*riderSc+offZ;
+        torso.position.set(0,seat,seatZ);torso.rotation.x=.04;
+        for(let i=0;i<2;i++){
+          const side=i?1:-1,
+                hip=vec(side*.28,seat,seatZ),
+                shoulder=shoulderAt(side),
+                hand=vec(side*.48*riderSc,seat+.7,-.7*riderSc+offZ),
+                elbow=shoulder.clone().lerp(hand,.52);
+          limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
+          const foot=vec(side*.42*riderSc,.92*riderSc+offY,-.35*riderSc+offZ),
+                knee=hip.clone().lerp(foot,.5);knee.y+=.18;
+          limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot)
+        }
+        aimOneHand(v,dt);return;
+      }
+
+      const seat=1.45*sc;torso.position.set(0,seat,.55*sc);torso.rotation.x=.04;
+      for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.28,seat,.55*sc),shoulder=shoulderAt(side),hand=vec(side*.48*sc,seat+.7,-.7*sc),elbow=shoulder.clone().lerp(hand,.52);limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
+        const foot=vec(side*.42*sc,.92*sc,-.35*sc),knee=hip.clone().lerp(foot,.5);knee.y+=.18;limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot)}
+      aimOneHand(v,dt);
+    };
+    const reset=()=>{g.visible=false;g.userData.motion=0;g.userData.shotTime=0;
+      g.userData.shotBlend=0;g.userData.pistolAim=null;pistol.visible=false};
+    return {object:g,update,reset,firePistol};
+  }
+});
+
+
+
+;
+// END src/rider.js
