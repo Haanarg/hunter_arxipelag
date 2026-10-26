@@ -20,14 +20,14 @@ const ENEMY_ASTAR_NEIGHBORS=Object.freeze([[1,0],[0,1],[-1,0],[0,-1],
 let enemyPathBudget=2,enemyNodeBudget=160;
 const enemyGroundAt=(u,x,z)=>u.basement?u.gy:enemyIsVehicle(u)?hAt(x,z):groundAt(x,z,u.walkY??u.o?.position.y??-Infinity);
 function enemyWallBox(w){return{x:(w.x0+w.x1)/2,z:(w.z0+w.z1)/2,w:w.x1-w.x0,d:w.z1-w.z0,hd:0}}
-function enemySolidAt(u,x,z,hd,route=false){
+function enemySolidAt(u,x,z,hd,route=false,staticCandidates=null){
   const veh=enemyIsVehicle(u),r=route?enemyRouteRadius(u):veh?enemyRouteRadius(u):enemyBodyRadius(u),y=u.gy??enemyGroundAt(u,x,z);
   // Reutilitzam la cota calculada quan no hi ha altura de base fixa.
   const terrainY=u.gy==null?y:!u.basement?enemyGroundAt(u,x,z):y;
   if(Math.abs(x)>H-r||Math.abs(z)>H-r||!u.basement&&(terrainY<-.8||treeHit(x,z,r)))return false;
   const box=veh&&!route?vehicleBox(u,x,z,hd):null;
   if(box){box.w+=.4;box.d+=.4}
-  for(const w of wallCandidates(x,z,r)){
+  for(const w of staticCandidates?.walls??wallCandidates(x,z,r)){
     if(w.open||w.playerBlock===false||w.y1<y+.15||w.y0>y+(veh?4:3.4))continue;
     if(box?obbOverlap(box,enemyWallBox(w)):x>w.x0-r&&x<w.x1+r&&z>w.z0-r&&z<w.z1+r)return false;
   }
@@ -35,21 +35,21 @@ function enemySolidAt(u,x,z,hd,route=false){
   // Abans només s'evitaven en la col·lisió final: la ruta els travessava.
   // La comprovació cara es fa només per calcular rutes d'infanteria.
   if(route&&!veh){
-    for(const v of vehicleCandidatesAt(x,z,r+22)){
+    for(const v of staticCandidates?.routeVehicles??vehicleCandidatesAt(x,z,r+22)){
       if(v===u||v.destroyed||Math.abs(vehicleY(v)-y)>5)continue;
       if(circleVehicleOverlap(x,z,r+.25,v))return false;
     }
   }
   return true;
 }
-function enemyBodiesClear(u,x,z,hd){
+function enemyBodiesClear(u,x,z,hd,dynamicCandidates=null){
   const veh=enemyIsVehicle(u),r=enemyBodyRadius(u),y=u.gy??enemyGroundAt(u,x,z),box=veh?vehicleBox(u,x,z,hd):null;
   if(box){box.w+=.5;box.d+=.5}
-  for(const v of vehicleCandidatesAt(x,z,48)){
+  for(const v of dynamicCandidates?.vehicles??vehicleCandidatesAt(x,z,48)){
     if(v===u||v.destroyed||Math.abs(vehicleY(v)-y)>5)continue;
     if(veh?obbOverlap(box,vehicleBox(v)):circleVehicleOverlap(x,z,r+.3,v))return false;
   }
-  for(const v of enemyCandidatesAt(x,z,32)){
+  for(const v of dynamicCandidates?.enemies??enemyCandidatesAt(x,z,32)){
     if(v===u||v.destroyed||enemyIsVehicle(v)||Math.abs((v.gy??enemyGroundAt(v,v.x,v.z))-y)>4)continue;
     if(veh?circleVehicleOverlap(v.x,v.z,enemyBodyRadius(v)+.3,{...u,x,z,hd}):Math.hypot(x-v.x,z-v.z)<r+enemyBodyRadius(v)+.3)return false;
   }
@@ -57,11 +57,27 @@ function enemyBodiesClear(u,x,z,hd){
 }
 // Sample both translation and rotation; a valid endpoint never permits a jump through a wall.
 function enemySweep(u,ax,az,bx,bz,fromHd,toHd,dynamic=true,route=false){
-  const angle=enemyIsVehicle(u)?wrapAngle(toHd-fromHd):0;
-  const n=Math.max(1,Math.ceil((Math.hypot(bx-ax,bz-az)+Math.abs(angle)*enemyRouteRadius(u))/(route?1.2:.45)));
+  const veh=enemyIsVehicle(u),angle=veh?wrapAngle(toHd-fromHd):0,
+    distance=Math.hypot(bx-ax,bz-az),radius=enemyRouteRadius(u),
+    n=Math.max(1,Math.ceil((distance+Math.abs(angle)*radius)/(route?1.2:.45)));
+  // Una sola consulta espacial pel tram complet, en lloc de fer-ne
+  // fins a sis per mostra. El radi cobreix TOTES les cel·les que
+  // consultaria cada punt (centre + mitja longitud + marge original).
+  // Les comprovacions exactes, inclosos arbres, murs i altres soldats,
+  // continuen funcionant a cada mostra, sense saltar cap col·lisió.
+  const cx=(ax+bx)*.5,cz=(az+bz)*.5,half=distance*.5,
+    solidRadius=route||veh?radius:enemyBodyRadius(u);
+  const staticCandidates={walls:wallCandidates(cx,cz,half+solidRadius)};
+  if(route&&!veh)
+    staticCandidates.routeVehicles=vehicleCandidatesAt(cx,cz,half+solidRadius+22);
+  const dynamicCandidates=dynamic?{
+    vehicles:vehicleCandidatesAt(cx,cz,half+48),
+    enemies:enemyCandidatesAt(cx,cz,half+32)
+  }:null;
   for(let i=0;i<=n;i++){
     const t=i/n,x=ax+(bx-ax)*t,z=az+(bz-az)*t,hd=fromHd+angle*t;
-    if(!enemySolidAt(u,x,z,hd,route)||(dynamic&&!enemyBodiesClear(u,x,z,hd)))return false;
+    if(!enemySolidAt(u,x,z,hd,route,staticCandidates)||
+       (dynamic&&!enemyBodiesClear(u,x,z,hd,dynamicCandidates)))return false;
   }
   return true;
 }
