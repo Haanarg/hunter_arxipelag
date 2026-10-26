@@ -29,6 +29,8 @@ for(const patch of [{canSee:true},{alert:1},{aiMode:'combat'},{aiMode:'search'},
 }
 for(const type of ['general','patrulla_marina'])
  assert.equal(remote({...unit,t:type},player),0,type+' retains its own loop');
+assert.equal(remote(unit,player,{contains:()=>true}),0,
+ 'distant sniper targets remain fully responsive');
 assert(ai.includes('dt=u.remoteAiAcc;u.remoteAiAcc=0'));
 assert(ai.includes('dt+=u.remoteAiAcc;u.remoteAiAcc=0'));
 assert(ai.includes('perfHotspots.aiSenseMs'));
