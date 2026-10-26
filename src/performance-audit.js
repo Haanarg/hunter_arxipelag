@@ -120,6 +120,7 @@
       terrainCpuMs:frame.terrainCpuMs||0,renderCpuMs:frame.renderCpuMs||0,
       gpuMs:Number.isFinite(frame.gpuSample?.ms)?frame.gpuSample.ms:null,
       aiMs:frame.aiMs||0,aiNavMs:frame.aiNavMs||0,
+      aiPathMs:frame.aiPathMs||0,aiPathDeferred:frame.aiPathDeferred||0,
       shadowRedrawn:!!frame.shadowRedrawn,drawCalls:frame.drawCalls||0,
       simulationSteps:frame.simulationSteps||0
     }:null;
@@ -171,6 +172,12 @@
       postRenderCpuMs:avg('postRenderCpuMs'),terrainCpuMs:avg('terrainCpuMs'),
       drawCalls:avg('drawCalls'),triangles:avg('triangles'),
       aiMs:avg('aiMs'),aiNavMs:avg('aiNavMs'),aiSweepMs:avg('aiSweepMs'),
+      aiMsP95:rows.map(r=>r.aiMs||0).sort((a,b)=>a-b)[Math.ceil(rows.length*.95)-1],
+      aiMsP99:rows.map(r=>r.aiMs||0).sort((a,b)=>a-b)[Math.ceil(rows.length*.99)-1],
+      aiNavMsP95:rows.map(r=>r.aiNavMs||0).sort((a,b)=>a-b)[Math.ceil(rows.length*.95)-1],
+      aiPathMs:avg('aiPathMs'),aiPathChecks:avg('aiPathChecks'),
+      aiPathDeferred:avg('aiPathDeferred'),aiPathNodes:avg('aiPathNodes'),
+      aiPassivePathNodes:avg('aiPassivePathNodes'),
       sweepChecks:avg('sweepChecks'),sweepSamples:avg('sweepSamples'),
       aiUpdated:avg('aiUpdated'),aiSkipped:avg('aiSkipped'),
       simulationSteps:avg('simulationSteps'),
@@ -199,6 +206,8 @@
       'updateCpuMs','renderCpuMs','roadVersionCpuMs','roadRefitCpuMs',
       'roadVersionChecks','roadRefits','roadFastSkips','postRenderCpuMs',
       'terrainCpuMs','drawCalls','triangles','aiMs','aiNavMs','aiSweepMs',
+      'aiMsP95','aiMsP99','aiNavMsP95','aiPathMs','aiPathChecks',
+      'aiPathDeferred','aiPathNodes','aiPassivePathNodes',
       'sweepChecks','sweepSamples','aiUpdated','aiSkipped','simulationSteps',
       'shadowRedrawRate','shadowDrawCalls','unclassifiedDrawCalls',
       'slow33Count','slow33PrevRenderCpuMs','slow33PrevUpdateCpuMs',
@@ -220,9 +229,9 @@
           slowFrameSamples:(s.slowFrameSamples||[]).slice(0,4).map(entry=>({
             intervalMs:round(entry.intervalMs),
             previous:entry.previous?pick(entry.previous,
-              ['cpuMs','updateCpuMs','renderCpuMs','gpuMs','aiMs','shadowRedrawn','simulationSteps']):null,
+              ['cpuMs','updateCpuMs','renderCpuMs','gpuMs','aiMs','aiPathMs','aiPathDeferred','shadowRedrawn','simulationSteps']):null,
             current:entry.current?pick(entry.current,
-              ['cpuMs','updateCpuMs','renderCpuMs','gpuMs','aiMs','shadowRedrawn','simulationSteps']):null
+              ['cpuMs','updateCpuMs','renderCpuMs','gpuMs','aiMs','aiPathMs','aiPathDeferred','shadowRedrawn','simulationSteps']):null
           })),
           groups:ranked(s.groups),shadowGroups:ranked(s.shadowGroups),
           shadowReasons:s.shadowReasons||{},shadowCulprits:s.shadowCulprits||{},

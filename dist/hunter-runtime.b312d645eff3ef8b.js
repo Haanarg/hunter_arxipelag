@@ -493,6 +493,7 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       terrainCpuMs:frame.terrainCpuMs||0,renderCpuMs:frame.renderCpuMs||0,
       gpuMs:Number.isFinite(frame.gpuSample?.ms)?frame.gpuSample.ms:null,
       aiMs:frame.aiMs||0,aiNavMs:frame.aiNavMs||0,
+      aiPathMs:frame.aiPathMs||0,aiPathDeferred:frame.aiPathDeferred||0,
       shadowRedrawn:!!frame.shadowRedrawn,drawCalls:frame.drawCalls||0,
       simulationSteps:frame.simulationSteps||0
     }:null;
@@ -544,6 +545,12 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       postRenderCpuMs:avg('postRenderCpuMs'),terrainCpuMs:avg('terrainCpuMs'),
       drawCalls:avg('drawCalls'),triangles:avg('triangles'),
       aiMs:avg('aiMs'),aiNavMs:avg('aiNavMs'),aiSweepMs:avg('aiSweepMs'),
+      aiMsP95:rows.map(r=>r.aiMs||0).sort((a,b)=>a-b)[Math.ceil(rows.length*.95)-1],
+      aiMsP99:rows.map(r=>r.aiMs||0).sort((a,b)=>a-b)[Math.ceil(rows.length*.99)-1],
+      aiNavMsP95:rows.map(r=>r.aiNavMs||0).sort((a,b)=>a-b)[Math.ceil(rows.length*.95)-1],
+      aiPathMs:avg('aiPathMs'),aiPathChecks:avg('aiPathChecks'),
+      aiPathDeferred:avg('aiPathDeferred'),aiPathNodes:avg('aiPathNodes'),
+      aiPassivePathNodes:avg('aiPassivePathNodes'),
       sweepChecks:avg('sweepChecks'),sweepSamples:avg('sweepSamples'),
       aiUpdated:avg('aiUpdated'),aiSkipped:avg('aiSkipped'),
       simulationSteps:avg('simulationSteps'),
@@ -572,6 +579,8 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       'updateCpuMs','renderCpuMs','roadVersionCpuMs','roadRefitCpuMs',
       'roadVersionChecks','roadRefits','roadFastSkips','postRenderCpuMs',
       'terrainCpuMs','drawCalls','triangles','aiMs','aiNavMs','aiSweepMs',
+      'aiMsP95','aiMsP99','aiNavMsP95','aiPathMs','aiPathChecks',
+      'aiPathDeferred','aiPathNodes','aiPassivePathNodes',
       'sweepChecks','sweepSamples','aiUpdated','aiSkipped','simulationSteps',
       'shadowRedrawRate','shadowDrawCalls','unclassifiedDrawCalls',
       'slow33Count','slow33PrevRenderCpuMs','slow33PrevUpdateCpuMs',
@@ -593,9 +602,9 @@ window.HUNTER_PERFORMANCE=Object.freeze({
           slowFrameSamples:(s.slowFrameSamples||[]).slice(0,4).map(entry=>({
             intervalMs:round(entry.intervalMs),
             previous:entry.previous?pick(entry.previous,
-              ['cpuMs','updateCpuMs','renderCpuMs','gpuMs','aiMs','shadowRedrawn','simulationSteps']):null,
+              ['cpuMs','updateCpuMs','renderCpuMs','gpuMs','aiMs','aiPathMs','aiPathDeferred','shadowRedrawn','simulationSteps']):null,
             current:entry.current?pick(entry.current,
-              ['cpuMs','updateCpuMs','renderCpuMs','gpuMs','aiMs','shadowRedrawn','simulationSteps']):null
+              ['cpuMs','updateCpuMs','renderCpuMs','gpuMs','aiMs','aiPathMs','aiPathDeferred','shadowRedrawn','simulationSteps']):null
           })),
           groups:ranked(s.groups),shadowGroups:ranked(s.shadowGroups),
           shadowReasons:s.shadowReasons||{},shadowCulprits:s.shadowCulprits||{},
@@ -8459,7 +8468,21 @@ const ENEMY_DIRECT_LOOKAHEAD=28;
 const ENEMY_ASTAR_NEIGHBORS=Object.freeze([[1,0,1],[0,1,1],[-1,0,1],[0,-1,1],
   [1,1,Math.SQRT2],[-1,1,Math.SQRT2],[-1,-1,Math.SQRT2],
   [1,-1,Math.SQRT2]].map(pair=>Object.freeze(pair)));
+// L'A* és incremental; els costos d'obstacles són desiguals per node.
+// Reservam capacitat per a les unitats que reaccionen al jugador.
 let enemyPathBudget=2,enemyNodeBudget=160;
+let enemyPassivePathBudget=1,enemyPassiveNodeBudget=48;
+const ENEMY_PATH_SLICE_MS=1.25,ENEMY_PASSIVE_PATH_SLICE_MS=.55;
+function resetEnemyPathFrameBudget(){
+  enemyPathBudget=2;enemyNodeBudget=160;
+  enemyPassivePathBudget=1;enemyPassiveNodeBudget=48;
+}
+function enemyPassiveRoute(u){
+  if(u.t==='general'||u.basement||u.blastT>0||u.canSee||u.alert>0||
+    u.entryDoor||(u.pursuitT||0)>0||(u.aiMode&&u.aiMode!=='patrol'))return false;
+  const q=cv||P,dx=u.x-q.x,dz=u.z-q.z;
+  return dx*dx+dz*dz>620*620;
+}
 const enemyGroundAt=(u,x,z)=>u.basement?u.gy:enemyIsVehicle(u)?hAt(x,z):groundAt(x,z,u.walkY??u.o?.position.y??-Infinity);
 function enemyWallBox(w){return{x:(w.x0+w.x1)/2,z:(w.z0+w.z1)/2,w:w.x1-w.x0,d:w.z1-w.z0,hd:0}}
 // La zona de vegetació no canvia durant un sweep. Reutilitzam els
@@ -8590,9 +8613,25 @@ function enemyFindPath(u,tx,tz){
   const start={ix:0,iz:0,x:sx,z:sz,g:0,f:heur(sx,sz),h:heur(sx,sz)};nodes.set('0,0',start);push(start);let best=start;
   let count=0;
   const advance=()=>{
+  const passive=enemyPassiveRoute(u),sliceStarted=performance.now(),
+    sliceLimit=passive?ENEMY_PASSIVE_PATH_SLICE_MS:ENEMY_PATH_SLICE_MS;
+  let progressed=0;
   while(heap.length&&count<1600){
-    if(enemyNodeBudget<=0)return null;
-    enemyNodeBudget--;count++;
+    // Una cerca costosa es pausa sense esborrar el heap ni l'objectiu.
+    // Després de cada bloc de vuit nodes es comprova el temps gastat.
+    if(enemyNodeBudget<=0||(passive&&enemyPassiveNodeBudget<=0)||
+      (progressed>0&&(progressed&7)===0&&
+       performance.now()-sliceStarted>=sliceLimit)){
+      if(performanceStatsVisible)perfHotspots.aiPathDeferred++;
+      return null;
+    }
+    enemyNodeBudget--;
+    if(passive)enemyPassiveNodeBudget--;
+    if(performanceStatsVisible){
+      perfHotspots.aiPathNodes++;
+      if(passive)perfHotspots.aiPassivePathNodes++;
+    }
+    count++;progressed++;
     const n=pop();if(n.closed||nodes.get(key(n.ix,n.iz))!==n)continue;n.closed=true;if(n.h<best.h)best=n;
     if(n.h<step*1.2){best=n;break}
     for(const [dx,dz,cost] of ENEMY_ASTAR_NEIGHBORS){
@@ -8644,8 +8683,10 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
   }
   const direct=u.navDirect;
   if(!direct){
-    if(!u.navPath?.length&&u.navRetry<=0&&enemyPathBudget>0){
+    if(!u.navPath?.length&&u.navRetry<=0&&enemyPathBudget>0&&
+      (!enemyPassiveRoute(u)||enemyPassivePathBudget>0)){
       enemyPathBudget--;
+      if(enemyPassiveRoute(u))enemyPassivePathBudget--;
       const pathStarted=performanceStatsVisible?performance.now():0;
       const path=enemyFindPath(u,tx,tz);
       if(performanceStatsVisible){
@@ -9322,7 +9363,7 @@ function enemyRemoteInterval(u,q,focus=null){
 // Each enemy gets its own simulation interval. Carrying over a distant
 // patrol's accumulated time into the next enemy caused runaway movement
 // sweeps and major frame-time spikes under the semi-fixed clock.
-function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathBudget=2;enemyNodeBudget=160}refreshVehicleGridIfCellsChanged();soldierCoordinationTick(frameDt);const enemyScopeFocus=scopeActive?currentSniperFocus():null;E.forEach(u=>{
+function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetEnemyPathFrameBudget();refreshVehicleGridIfCellsChanged();soldierCoordinationTick(frameDt);const enemyScopeFocus=scopeActive?currentSniperFocus():null;E.forEach(u=>{
   let dt=frameDt;
   if(u.t==='patrulla_marina'){
     if(performanceStatsVisible){
@@ -12876,7 +12917,8 @@ const adaptivePerformance=window.HUNTER_PERFORMANCE.create({
 let performanceStatsVisible=false;
 const perfHotspots={broadphaseMs:0,aiMs:0,visibilityMs:0,stealthMs:0,
   aiMarineMs:0,aiNavMs:0,aiSenseMs:0,aiDirectMs:0,aiPathMs:0,
-  aiDirectChecks:0,aiPathChecks:0,aiSweepMs:0,
+  aiDirectChecks:0,aiPathChecks:0,aiPathDeferred:0,
+  aiPathNodes:0,aiPassivePathNodes:0,aiSweepMs:0,
   aiSweepChecks:0,aiSweepSamples:0,aiUpdated:0,aiSkipped:0};
 window.HUNTER_PERF_HOTSPOTS=perfHotspots;
 document.body.classList.remove('performance-stats-visible');
@@ -16626,7 +16668,7 @@ const cpuStarted=performance.now(),victoryAtStart=victoryCinematic,
       cinematicActive=!!started&&!paused&&visible&&
         (!!victoryAtStart&&(victoryAtStart.active||victoryAtStart.finished)||!!deathAtStart?.active);
 // El pressupost de navegació és per fotograma, no es multiplica pels subpassos.
-enemyPathBudget=2;enemyNodeBudget=160;simulationFrameActive=true;
+resetEnemyPathFrameBudget();simulationFrameActive=true;
 let simulated;
 try{
   simulated=simulationClock.advance(now,dt=>{
@@ -16710,6 +16752,10 @@ if(performanceAudit)performanceAudit.onFrame({
   simulationSteps:simulated.steps,drawCalls:ren.info.render.calls,
   triangles:ren.info.render.triangles,
   aiMs:perfHotspots.aiMs,aiNavMs:perfHotspots.aiNavMs,aiSweepMs:perfHotspots.aiSweepMs,
+  aiPathMs:perfHotspots.aiPathMs,aiPathChecks:perfHotspots.aiPathChecks,
+  aiPathDeferred:perfHotspots.aiPathDeferred,
+  aiPathNodes:perfHotspots.aiPathNodes,
+  aiPassivePathNodes:perfHotspots.aiPassivePathNodes,
   sweepChecks:perfHotspots.aiSweepChecks,sweepSamples:perfHotspots.aiSweepSamples,
   aiUpdated:perfHotspots.aiUpdated,aiSkipped:perfHotspots.aiSkipped,
   groups:{...renderCategories},shadowGroups:{...shadowRenderCategories},

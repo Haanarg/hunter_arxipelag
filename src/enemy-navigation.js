@@ -19,7 +19,21 @@ const ENEMY_DIRECT_LOOKAHEAD=28;
 const ENEMY_ASTAR_NEIGHBORS=Object.freeze([[1,0,1],[0,1,1],[-1,0,1],[0,-1,1],
   [1,1,Math.SQRT2],[-1,1,Math.SQRT2],[-1,-1,Math.SQRT2],
   [1,-1,Math.SQRT2]].map(pair=>Object.freeze(pair)));
+// L'A* és incremental; els costos d'obstacles són desiguals per node.
+// Reservam capacitat per a les unitats que reaccionen al jugador.
 let enemyPathBudget=2,enemyNodeBudget=160;
+let enemyPassivePathBudget=1,enemyPassiveNodeBudget=48;
+const ENEMY_PATH_SLICE_MS=1.25,ENEMY_PASSIVE_PATH_SLICE_MS=.55;
+function resetEnemyPathFrameBudget(){
+  enemyPathBudget=2;enemyNodeBudget=160;
+  enemyPassivePathBudget=1;enemyPassiveNodeBudget=48;
+}
+function enemyPassiveRoute(u){
+  if(u.t==='general'||u.basement||u.blastT>0||u.canSee||u.alert>0||
+    u.entryDoor||(u.pursuitT||0)>0||(u.aiMode&&u.aiMode!=='patrol'))return false;
+  const q=cv||P,dx=u.x-q.x,dz=u.z-q.z;
+  return dx*dx+dz*dz>620*620;
+}
 const enemyGroundAt=(u,x,z)=>u.basement?u.gy:enemyIsVehicle(u)?hAt(x,z):groundAt(x,z,u.walkY??u.o?.position.y??-Infinity);
 function enemyWallBox(w){return{x:(w.x0+w.x1)/2,z:(w.z0+w.z1)/2,w:w.x1-w.x0,d:w.z1-w.z0,hd:0}}
 // La zona de vegetació no canvia durant un sweep. Reutilitzam els
@@ -150,9 +164,25 @@ function enemyFindPath(u,tx,tz){
   const start={ix:0,iz:0,x:sx,z:sz,g:0,f:heur(sx,sz),h:heur(sx,sz)};nodes.set('0,0',start);push(start);let best=start;
   let count=0;
   const advance=()=>{
+  const passive=enemyPassiveRoute(u),sliceStarted=performance.now(),
+    sliceLimit=passive?ENEMY_PASSIVE_PATH_SLICE_MS:ENEMY_PATH_SLICE_MS;
+  let progressed=0;
   while(heap.length&&count<1600){
-    if(enemyNodeBudget<=0)return null;
-    enemyNodeBudget--;count++;
+    // Una cerca costosa es pausa sense esborrar el heap ni l'objectiu.
+    // Després de cada bloc de vuit nodes es comprova el temps gastat.
+    if(enemyNodeBudget<=0||(passive&&enemyPassiveNodeBudget<=0)||
+      (progressed>0&&(progressed&7)===0&&
+       performance.now()-sliceStarted>=sliceLimit)){
+      if(performanceStatsVisible)perfHotspots.aiPathDeferred++;
+      return null;
+    }
+    enemyNodeBudget--;
+    if(passive)enemyPassiveNodeBudget--;
+    if(performanceStatsVisible){
+      perfHotspots.aiPathNodes++;
+      if(passive)perfHotspots.aiPassivePathNodes++;
+    }
+    count++;progressed++;
     const n=pop();if(n.closed||nodes.get(key(n.ix,n.iz))!==n)continue;n.closed=true;if(n.h<best.h)best=n;
     if(n.h<step*1.2){best=n;break}
     for(const [dx,dz,cost] of ENEMY_ASTAR_NEIGHBORS){
@@ -204,8 +234,10 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
   }
   const direct=u.navDirect;
   if(!direct){
-    if(!u.navPath?.length&&u.navRetry<=0&&enemyPathBudget>0){
+    if(!u.navPath?.length&&u.navRetry<=0&&enemyPathBudget>0&&
+      (!enemyPassiveRoute(u)||enemyPassivePathBudget>0)){
       enemyPathBudget--;
+      if(enemyPassiveRoute(u))enemyPassivePathBudget--;
       const pathStarted=performanceStatsVisible?performance.now():0;
       const path=enemyFindPath(u,tx,tz);
       if(performanceStatsVisible){

@@ -161,7 +161,8 @@ const adaptivePerformance=window.HUNTER_PERFORMANCE.create({
 let performanceStatsVisible=false;
 const perfHotspots={broadphaseMs:0,aiMs:0,visibilityMs:0,stealthMs:0,
   aiMarineMs:0,aiNavMs:0,aiSenseMs:0,aiDirectMs:0,aiPathMs:0,
-  aiDirectChecks:0,aiPathChecks:0,aiSweepMs:0,
+  aiDirectChecks:0,aiPathChecks:0,aiPathDeferred:0,
+  aiPathNodes:0,aiPassivePathNodes:0,aiSweepMs:0,
   aiSweepChecks:0,aiSweepSamples:0,aiUpdated:0,aiSkipped:0};
 window.HUNTER_PERF_HOTSPOTS=perfHotspots;
 document.body.classList.remove('performance-stats-visible');
@@ -3911,7 +3912,7 @@ const cpuStarted=performance.now(),victoryAtStart=victoryCinematic,
       cinematicActive=!!started&&!paused&&visible&&
         (!!victoryAtStart&&(victoryAtStart.active||victoryAtStart.finished)||!!deathAtStart?.active);
 // El pressupost de navegació és per fotograma, no es multiplica pels subpassos.
-enemyPathBudget=2;enemyNodeBudget=160;simulationFrameActive=true;
+resetEnemyPathFrameBudget();simulationFrameActive=true;
 let simulated;
 try{
   simulated=simulationClock.advance(now,dt=>{
@@ -3995,6 +3996,10 @@ if(performanceAudit)performanceAudit.onFrame({
   simulationSteps:simulated.steps,drawCalls:ren.info.render.calls,
   triangles:ren.info.render.triangles,
   aiMs:perfHotspots.aiMs,aiNavMs:perfHotspots.aiNavMs,aiSweepMs:perfHotspots.aiSweepMs,
+  aiPathMs:perfHotspots.aiPathMs,aiPathChecks:perfHotspots.aiPathChecks,
+  aiPathDeferred:perfHotspots.aiPathDeferred,
+  aiPathNodes:perfHotspots.aiPathNodes,
+  aiPassivePathNodes:perfHotspots.aiPassivePathNodes,
   sweepChecks:perfHotspots.aiSweepChecks,sweepSamples:perfHotspots.aiSweepSamples,
   aiUpdated:perfHotspots.aiUpdated,aiSkipped:perfHotspots.aiSkipped,
   groups:{...renderCategories},shadowGroups:{...shadowRenderCategories},
