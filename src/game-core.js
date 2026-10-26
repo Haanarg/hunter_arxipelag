@@ -2609,7 +2609,21 @@ function stealthFeedbackVisible(u,body,marker){
       let cached=stealthVehicleBounds.get(v);
       if(!cached){cached={frame:-1,box:new THREE.Box3()};stealthVehicleBounds.set(v,cached)}
       if(cached.frame!==stealthVisibilityFrame){
-        v.o.updateWorldMatrix(true,true);cached.box.setFromObject(v.o);cached.frame=stealthVisibilityFrame;
+        // Els vehicles aparcats no necessiten recalcular les caixes de totes
+        // les seves peces (rodes, cabina, carrosseria) a cada fotograma.
+        // Les peces animades i els vehicles en moviment sí que es revisen.
+        const moving=Math.abs(v.v||0)>.01||!!v.crashing||
+          (v.t==='heli'||v.t==='heli_combat')&&v===cv;
+        if(!cached.valid||moving||cached.object!==v.o||
+           cached.x!==v.o.position.x||cached.y!==v.o.position.y||
+           cached.z!==v.o.position.z||cached.hd!==v.o.rotation.y||
+           cached.rx!==v.o.rotation.x||cached.rz!==v.o.rotation.z){
+          v.o.updateWorldMatrix(true,true);cached.box.setFromObject(v.o);
+          cached.object=v.o;cached.valid=true;
+          cached.x=v.o.position.x;cached.y=v.o.position.y;cached.z=v.o.position.z;
+          cached.hd=v.o.rotation.y;cached.rx=v.o.rotation.x;cached.rz=v.o.rotation.z;
+        }
+        cached.frame=stealthVisibilityFrame;
       }
       const box=cached.box;
       if(box.isEmpty()){
