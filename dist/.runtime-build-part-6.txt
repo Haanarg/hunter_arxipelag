@@ -2371,7 +2371,8 @@ function setPerformanceStatsVisible(enabled){
 }
 window.HUNTER_PERFORMANCE_STATS=adaptivePerformance.stats;
 adaptivePerformance.stats.hotspots=perfHotspots;
-const performanceDebugRequested=new URLSearchParams(location.search).get('perf')==='1';
+const performanceDebugRequested=typeof location!=='undefined'&&
+  new URLSearchParams(location.search||'').get('perf')==='1';
 const water=window.HUNTER_WATER_SYSTEM.create(THREE,{scene,sunDir,size:S,segments:visualQuality.waterSegments,initialSegments:Math.min(160,visualQuality.waterSegments),heightAt:hAt,config:window.HUNTER_WATER,reflections:visualQuality.waterReflections!==false,coastDetail:!!visualQuality.coastDetail,fogColor:scene.fog.color});
 let waterUpgradePending=false;
 const waterMat=water.material,waterUniforms=water.uniforms;
