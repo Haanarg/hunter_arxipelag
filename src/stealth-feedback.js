@@ -10,6 +10,8 @@ window.HUNTER_STEALTH_FEEDBACK=Object.freeze({
       frustum=new T.Frustum(),projection=new T.Matrix4(),body=new T.Vector3(),marker=new T.Vector3(),
       stats={visible:0,checks:0,allocated:0,limit,maxChecks,maxDistance};
     let cursor=0,enemySource=null,enemyCount=-1,members=new Set();
+    // Reutilitzar les estructures evita generar brossa a cada dibuix.
+    const seen=new Set();
     for(const mode of Object.keys(shapes)){
       geometries[mode]=retain(new T.BufferGeometry());
       geometries[mode].setAttribute('position',new T.Float32BufferAttribute(shapes[mode],3));
@@ -30,7 +32,7 @@ window.HUNTER_STEALTH_FEEDBACK=Object.freeze({
       if(enemySource!==enemies||enemyCount!==enemies.length){
         members=new Set(enemies);enemySource=enemies;enemyCount=enemies.length;
       }
-      const seen=new Set();
+      seen.clear();
       function show(u,entry=null){
         if(stats.checks>=maxChecks||!u||seen.has(u))return false;
         seen.add(u);stats.checks++;
