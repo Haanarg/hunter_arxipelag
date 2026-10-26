@@ -33,9 +33,21 @@ window.HUNTER_TERRAIN=Object.freeze({
     // Un forat precís al terreny deixa el soterrani sota el búnquer buit:
     // no modificam hAt (ni l'orografia ni les rutes), i funciona amb tots
     // els nivells LOD sense vores esglaonades ni regenerar sectors.
-    if(cutouts.length){
+    // El material de retallada s'utilitza només als sectors que travessen
+    // el búnquer. La resta conserva el shader ordinari, sense discard.
+    const cutoutMaterial=cutouts.length?material.clone():null;
+    const cutoutBounds=cutouts.length?cutouts.map(cut=>{
+      const c=Math.cos(cut.angle),s=Math.sin(cut.angle);
+      return {x:cut.x,z:cut.z,
+        hx:Math.abs(c)*cut.halfWidth+Math.abs(s)*cut.halfDepth,
+        hz:Math.abs(s)*cut.halfWidth+Math.abs(c)*cut.halfDepth};
+    }):[];
+    if(cutoutMaterial){
       const cut=cutouts[0],c=Math.cos(cut.angle),s=Math.sin(cut.angle);
-      material.onBeforeCompile=shader=>{
+      // La textura HD s'actualitza després de generar el món; el material
+      // especial ha de rebre el mateix mapa sense tornar-lo a crear.
+      material.userData.hunterCutoutMaterial=cutoutMaterial;
+      cutoutMaterial.onBeforeCompile=shader=>{
         shader.uniforms.hunterCutout={value:new THREE.Vector4(cut.x,cut.z,c,s)};
         shader.uniforms.hunterCutoutSize={value:new THREE.Vector2(cut.halfWidth,cut.halfDepth)};
         shader.vertexShader='varying vec2 hunterTerrainXZ;\n'+shader.vertexShader.replace(
@@ -45,7 +57,7 @@ window.HUNTER_TERRAIN=Object.freeze({
           shader.fragmentShader.replace('#include <clipping_planes_fragment>',
             '#include <clipping_planes_fragment>\n vec2 hunterD=hunterTerrainXZ-hunterCutout.xy;\n vec2 hunterL=vec2(dot(hunterD,hunterCutout.zw),dot(hunterD,vec2(-hunterCutout.w,hunterCutout.z)));\n if(all(lessThan(abs(hunterL),hunterCutoutSize)))discard;');
       };
-      material.customProgramCacheKey=()=>`hunter-bunker-cutout-v1`;
+      cutoutMaterial.customProgramCacheKey=()=>`hunter-bunker-cutout-v2`;
     }
     const tileSize=800,side=Math.ceil(size/tileSize),cellSize=size/side,half=size/2;
     // Conservam la resolució propera per mantenir el contacte amb peus i
@@ -61,6 +73,9 @@ window.HUNTER_TERRAIN=Object.freeze({
     const palette=HUNTER_TERRAIN_PALETTE.map(([h,c])=>{
       const rgb=new THREE.Color(c);return {h,r:rgb.r,g:rgb.g,b:rgb.b};
     });
+    const tileUsesCutout=tile=>cutoutBounds.some(cut=>
+      Math.abs(tile.cx-cut.x)<=cellSize/2+cut.hx&&
+      Math.abs(tile.cz-cut.z)<=cellSize/2+cut.hz);
     const tiles=[];
     let disposed=false,job=null,lastPlayerX=startX,lastPlayerZ=startZ,
         settled=false,lastSettledX=Infinity,lastSettledZ=Infinity,lastFocusKey='';
@@ -166,7 +181,8 @@ window.HUNTER_TERRAIN=Object.freeze({
       const {tile,geometry,colors,level}=task;
       geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
       appendSkirts(geometry,levels[level]);
-      const mesh=new THREE.Mesh(geometry,material);
+      const mesh=new THREE.Mesh(geometry,
+        cutoutMaterial&&tileUsesCutout(tile)?cutoutMaterial:material);
       mesh.name='hunter-terrain-tile';
       mesh.position.set(tile.cx,0,tile.cz);
       mesh.userData.terrainTile=true;
@@ -302,14 +318,14 @@ window.HUNTER_TERRAIN=Object.freeze({
       disposed=true;
       if(job){job.geometry.dispose();job=null}
       for(const tile of tiles)if(tile.geometry){tile.geometry.dispose();tile.geometry=null}
-      root.clear();material.dispose();
+      root.clear();cutoutMaterial?.dispose();material.dispose();
     }
     initialComplete=true;
     return {mesh:root,update,dispose,visibleHeightAt,surfaceVersionAt,stats,tileSize:cellSize,get pending(){return !!job}};
     }finally{
       if(!initialComplete){
         for(const tile of tiles)if(tile.geometry)tile.geometry.dispose();
-        root.parent?.remove(root);root.clear();material.dispose();
+        root.parent?.remove(root);root.clear();cutoutMaterial?.dispose();material.dispose();
       }
     }
   },
