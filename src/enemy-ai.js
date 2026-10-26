@@ -342,14 +342,17 @@ function moveBlastedEnemy(u,dt){
 // La IA llunyana sense contacte necessita menys decisions de navegació,
 // però conserva tot el temps transcorregut: mai no alentim la patrulla.
 // Un enemic que detecta, cerca o combat reprèn immediatament els passos normals.
-function enemyRemoteInterval(u,q){
+function enemyRemoteInterval(u,q,focus=null){
   if(u.t==='general'||u.t==='patrulla_marina'||u.basement||
      u.blastT>0||u.canSee||u.alert>0||u.entryDoor||
      (u.pursuitT||0)>0||(u.aiMode&&u.aiMode!=='patrol'))return 0;
+  // El franctirador pot observar enemics a molta distància: un objectiu
+  // dins la mira conserva animació i moviment a la freqüència completa.
+  if(focus?.contains(u.x,u.o?.position?.y??0,u.z,3))return 0;
   const dx=q.x-u.x,dz=q.z-u.z,d2=dx*dx+dz*dz;
   return d2>1400*1400?.3:d2>620*620?.18:0;
 }
-function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathBudget=2;enemyNodeBudget=160}refreshVehicleGridIfCellsChanged();soldierCoordinationTick(dt);E.forEach(u=>{
+function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathBudget=2;enemyNodeBudget=160}refreshVehicleGridIfCellsChanged();soldierCoordinationTick(dt);const enemyScopeFocus=scopeActive?currentSniperFocus():null;E.forEach(u=>{
   if(u.t==='patrulla_marina'){
     if(performanceStatsVisible){
       const stamp=performance.now();updateMarinePatrol(u,dt);
@@ -357,7 +360,7 @@ function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathB
     }else updateMarinePatrol(u,dt);
     return;
   }
-  const remoteInterval=enemyRemoteInterval(u,cv||P);
+  const remoteInterval=enemyRemoteInterval(u,cv||P,enemyScopeFocus);
   if(remoteInterval){
     u.remoteAiAcc=(u.remoteAiAcc||0)+dt;
     if(u.remoteAiAcc+1e-9<remoteInterval){
