@@ -159,7 +159,8 @@ const adaptivePerformance=window.HUNTER_PERFORMANCE.create({
 });
 // El panell es mostra només quan l'usuari activa l'interruptor de pausa.
 let performanceStatsVisible=false;
-const perfHotspots={broadphaseMs:0,aiMs:0,visibilityMs:0,stealthMs:0};
+const perfHotspots={broadphaseMs:0,aiMs:0,visibilityMs:0,stealthMs:0,
+  aiMarineMs:0,aiNavMs:0,aiSenseMs:0,aiUpdated:0,aiSkipped:0};
 window.HUNTER_PERF_HOTSPOTS=perfHotspots;
 document.body.classList.remove('performance-stats-visible');
 function setPerformanceStatsVisible(enabled){
