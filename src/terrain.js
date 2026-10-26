@@ -77,7 +77,7 @@ window.HUNTER_TERRAIN=Object.freeze({
       Math.abs(tile.cx-cut.x)<=cellSize/2+cut.hx&&
       Math.abs(tile.cz-cut.z)<=cellSize/2+cut.hz);
     const tiles=[];
-    let disposed=false,job=null,lastPlayerX=startX,lastPlayerZ=startZ,
+    let surfaceRevision=0,disposed=false,job=null,lastPlayerX=startX,lastPlayerZ=startZ,
         settled=false,lastSettledX=Infinity,lastSettledZ=Infinity,lastFocusKey='';
     const stats={profile,initialTiles:0,visibleTiles:0,generatedTiles:0,upgradedTiles:0,processedVertices:0,totalTiles:side*side,
       lodLevels:[...levels],lodRanges:[...ranges],lodTiles:[0,0,0,0],terrainTriangles:0,terrainShadowTiles:0,
@@ -203,6 +203,8 @@ window.HUNTER_TERRAIN=Object.freeze({
       tile.mesh=mesh;tile.geometry=geometry;tile.level=level;
       if(level===0)stats.farTiles++;
       root.add(mesh);
+      // Una revisió global només canvia quan hi ha una malla LOD nova.
+      surfaceRevision++;
       stats.lodTiles=[0,0,0,0];
       stats.terrainTriangles=0;stats.terrainShadowTiles=0;
       for(const current of tiles)if(current.mesh){
@@ -321,7 +323,8 @@ window.HUNTER_TERRAIN=Object.freeze({
       root.clear();cutoutMaterial?.dispose();material.dispose();
     }
     initialComplete=true;
-    return {mesh:root,update,dispose,visibleHeightAt,surfaceVersionAt,stats,tileSize:cellSize,get pending(){return !!job}};
+    return {mesh:root,update,dispose,visibleHeightAt,surfaceVersionAt,stats,tileSize:cellSize,
+      get surfaceRevision(){return surfaceRevision},get pending(){return !!job}};
     }finally{
       if(!initialComplete){
         for(const tile of tiles)if(tile.geometry)tile.geometry.dispose();

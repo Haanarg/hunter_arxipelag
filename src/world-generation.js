@@ -1117,7 +1117,11 @@ yield {stage:'Patrulles terrestres',completed:1,total:1};
 yield* spawnMarinePatrolsSteps();
 markBuildStage('marinePatrols');
 yield {stage:'Patrulles navals',completed:1,total:1};
-P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);if(!seedSearchMode){for(const v of V){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};place(v,0,0,0);yield {stage:'Situant vehicles',completed:null,total:null};}updateTerminalRamps();yield* prepareEnemyNavigationSteps();}world.userData.paths=pathRoutes;if(!seedSearchMode){const roads=(yield* window.HUNTER_COMPOUND_PATHS.createPathNetworkSteps(THREE,{parent:world,routes:pathRoutes,heightAt:(x,z)=>Math.max(hAt(x,z),terrainStream?.visibleHeightAt(x,z)??-Infinity),heightVersion:(x,z)=>terrainStream?.surfaceVersionAt(x,z)??-1}));world.add(roads);world.userData.pathStats=roads.userData.pathStats;}const staticBatchStats=seedSearchMode?null:(yield* batchStaticDecor());if(!seedSearchMode&&visualQuality.shadows)yield* prepareShadowCastersSteps();else shadowCandidates.length=0;cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);
+P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);if(!seedSearchMode){for(const v of V){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};place(v,0,0,0);yield {stage:'Situant vehicles',completed:null,total:null};}updateTerminalRamps();yield* prepareEnemyNavigationSteps();}world.userData.paths=pathRoutes;if(!seedSearchMode){const roads=(yield* window.HUNTER_COMPOUND_PATHS.createPathNetworkSteps(THREE,{parent:world,routes:pathRoutes,heightAt:(x,z)=>Math.max(hAt(x,z),terrainStream?.visibleHeightAt(x,z)??-Infinity),heightVersion:(x,z)=>terrainStream?.surfaceVersionAt(x,z)??-1,
+  heightRevision:()=>terrainStream?.surfaceRevision??0,
+  measure:()=>performanceStatsVisible}));world.add(roads);
+  world.userData.pathStats=roads.userData.pathStats;
+  world.userData.pathRenderStats=roads.userData.pathRenderStats;}const staticBatchStats=seedSearchMode?null:(yield* batchStaticDecor());if(!seedSearchMode&&visualQuality.shadows)yield* prepareShadowCastersSteps();else shadowCandidates.length=0;cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);
 markBuildStage('finalizationAndBatching');
 yield {stage:'Comprovacions finals',completed:1,total:1};
 seedCompounds=compoundCenters.map(c=>({type:c.type,x:c.x,z:c.z}));

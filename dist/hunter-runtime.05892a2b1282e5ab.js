@@ -410,9 +410,15 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       frameMs:avg('frameMs'),
       p95FrameMs:sorted[Math.min(sorted.length-1,Math.ceil(sorted.length*.95)-1)],
       p99FrameMs:sorted[Math.min(sorted.length-1,Math.ceil(sorted.length*.99)-1)],
+      slowFrames20:rows.filter(r=>r.frameMs>20).length,
+      frames20to25:rows.filter(r=>r.frameMs>20&&r.frameMs<=25).length,
+      frames24to25:rows.filter(r=>r.frameMs>=24&&r.frameMs<=25).length,
       slowFrames25:rows.filter(r=>r.frameMs>25).length,
       slowFrames50:rows.filter(r=>r.frameMs>50).length,
       updateCpuMs:avg('updateCpuMs'),renderCpuMs:avg('renderCpuMs'),
+      roadVersionCpuMs:avg('roadVersionCpuMs'),roadRefitCpuMs:avg('roadRefitCpuMs'),
+      roadVersionChecks:avg('roadVersionChecks'),roadRefits:avg('roadRefits'),
+      roadFastSkips:avg('roadFastSkips'),
       postRenderCpuMs:avg('postRenderCpuMs'),terrainCpuMs:avg('terrainCpuMs'),
       drawCalls:avg('drawCalls'),triangles:avg('triangles'),
       aiMs:avg('aiMs'),aiNavMs:avg('aiNavMs'),aiSweepMs:avg('aiSweepMs'),
@@ -440,7 +446,9 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       .sort((a,b)=>b[1]-a[1]).slice(0,limit)
       .map(([key,value])=>[key,round(value)]));
     const metrics=['frames','fps','frameMs','p95FrameMs','p99FrameMs',
-      'slowFrames25','slowFrames50','updateCpuMs','renderCpuMs','postRenderCpuMs',
+      'slowFrames20','frames20to25','frames24to25','slowFrames25','slowFrames50',
+      'updateCpuMs','renderCpuMs','roadVersionCpuMs','roadRefitCpuMs',
+      'roadVersionChecks','roadRefits','roadFastSkips','postRenderCpuMs',
       'terrainCpuMs','drawCalls','triangles','aiMs','aiNavMs','aiSweepMs',
       'sweepChecks','sweepSamples','aiUpdated','aiSkipped','simulationSteps',
       'shadowRedrawRate','shadowDrawCalls','unclassifiedDrawCalls',
@@ -1180,7 +1188,7 @@ window.HUNTER_TERRAIN=Object.freeze({
       Math.abs(tile.cx-cut.x)<=cellSize/2+cut.hx&&
       Math.abs(tile.cz-cut.z)<=cellSize/2+cut.hz);
     const tiles=[];
-    let disposed=false,job=null,lastPlayerX=startX,lastPlayerZ=startZ,
+    let surfaceRevision=0,disposed=false,job=null,lastPlayerX=startX,lastPlayerZ=startZ,
         settled=false,lastSettledX=Infinity,lastSettledZ=Infinity,lastFocusKey='';
     const stats={profile,initialTiles:0,visibleTiles:0,generatedTiles:0,upgradedTiles:0,processedVertices:0,totalTiles:side*side,
       lodLevels:[...levels],lodRanges:[...ranges],lodTiles:[0,0,0,0],terrainTriangles:0,terrainShadowTiles:0,
@@ -1306,6 +1314,8 @@ window.HUNTER_TERRAIN=Object.freeze({
       tile.mesh=mesh;tile.geometry=geometry;tile.level=level;
       if(level===0)stats.farTiles++;
       root.add(mesh);
+      // Una revisió global només canvia quan hi ha una malla LOD nova.
+      surfaceRevision++;
       stats.lodTiles=[0,0,0,0];
       stats.terrainTriangles=0;stats.terrainShadowTiles=0;
       for(const current of tiles)if(current.mesh){
@@ -1424,7 +1434,8 @@ window.HUNTER_TERRAIN=Object.freeze({
       root.clear();cutoutMaterial?.dispose();material.dispose();
     }
     initialComplete=true;
-    return {mesh:root,update,dispose,visibleHeightAt,surfaceVersionAt,stats,tileSize:cellSize,get pending(){return !!job}};
+    return {mesh:root,update,dispose,visibleHeightAt,surfaceVersionAt,stats,tileSize:cellSize,
+      get surfaceRevision(){return surfaceRevision},get pending(){return !!job}};
     }finally{
       if(!initialComplete){
         for(const tile of tiles)if(tile.geometry)tile.geometry.dispose();
@@ -12414,7 +12425,11 @@ yield {stage:'Patrulles terrestres',completed:1,total:1};
 yield* spawnMarinePatrolsSteps();
 markBuildStage('marinePatrols');
 yield {stage:'Patrulles navals',completed:1,total:1};
-P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);if(!seedSearchMode){for(const v of V){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};place(v,0,0,0);yield {stage:'Situant vehicles',completed:null,total:null};}updateTerminalRamps();yield* prepareEnemyNavigationSteps();}world.userData.paths=pathRoutes;if(!seedSearchMode){const roads=(yield* window.HUNTER_COMPOUND_PATHS.createPathNetworkSteps(THREE,{parent:world,routes:pathRoutes,heightAt:(x,z)=>Math.max(hAt(x,z),terrainStream?.visibleHeightAt(x,z)??-Infinity),heightVersion:(x,z)=>terrainStream?.surfaceVersionAt(x,z)??-1}));world.add(roads);world.userData.pathStats=roads.userData.pathStats;}const staticBatchStats=seedSearchMode?null:(yield* batchStaticDecor());if(!seedSearchMode&&visualQuality.shadows)yield* prepareShadowCastersSteps();else shadowCandidates.length=0;cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);
+P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);if(!seedSearchMode){for(const v of V){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};place(v,0,0,0);yield {stage:'Situant vehicles',completed:null,total:null};}updateTerminalRamps();yield* prepareEnemyNavigationSteps();}world.userData.paths=pathRoutes;if(!seedSearchMode){const roads=(yield* window.HUNTER_COMPOUND_PATHS.createPathNetworkSteps(THREE,{parent:world,routes:pathRoutes,heightAt:(x,z)=>Math.max(hAt(x,z),terrainStream?.visibleHeightAt(x,z)??-Infinity),heightVersion:(x,z)=>terrainStream?.surfaceVersionAt(x,z)??-1,
+  heightRevision:()=>terrainStream?.surfaceRevision??0,
+  measure:()=>performanceStatsVisible}));world.add(roads);
+  world.userData.pathStats=roads.userData.pathStats;
+  world.userData.pathRenderStats=roads.userData.pathRenderStats;}const staticBatchStats=seedSearchMode?null:(yield* batchStaticDecor());if(!seedSearchMode&&visualQuality.shadows)yield* prepareShadowCastersSteps();else shadowCandidates.length=0;cam.position.set(P.x+28,P.y+30,P.z+45);cam.lookAt(P.x,P.y+2,P.z);
 markBuildStage('finalizationAndBatching');
 yield {stage:'Comprovacions finals',completed:1,total:1};
 seedCompounds=compoundCenters.map(c=>({type:c.type,x:c.x,z:c.z}));
@@ -16496,6 +16511,9 @@ for(const proxy of shadowBoatNodes){
 const shadowRedrawn=shadowCache.schedule({now:performance.now(),x:sun.target.position.x,z:sun.target.position.z,
   nodes:shadowPoseNodes,enabled:!!ren.shadowMap.enabled});
 const renderStarted=performance.now();
+// Estadístiques de camins limitades al fotograma actual.
+const roadFrameStats=world?.userData?.pathRenderStats;
+if(roadFrameStats)for(const key in roadFrameStats)roadFrameStats[key]=0;
 for(const k in renderCategories)renderCategories[k]=0;
 for(const k in shadowRenderCategories)delete shadowRenderCategories[k];
 for(const k in renderOtherDetails)delete renderOtherDetails[k];
@@ -16521,6 +16539,11 @@ if(performanceAudit)performanceAudit.onFrame({
   active:gameplayActive,frameMs:rawDt*1000,x:P.x,z:P.z,
   updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,
   renderCpuMs:renderCompleted-renderStarted,
+  roadFastSkips:roadFrameStats?.fastSkips||0,
+  roadVersionChecks:roadFrameStats?.versionChecks||0,
+  roadRefits:roadFrameStats?.refits||0,
+  roadVersionCpuMs:roadFrameStats?.versionCpuMs||0,
+  roadRefitCpuMs:roadFrameStats?.refitCpuMs||0,
   postRenderCpuMs:postRenderCompleted-renderCompleted,
   simulationSteps:simulated.steps,drawCalls:ren.info.render.calls,
   triangles:ren.info.render.triangles,

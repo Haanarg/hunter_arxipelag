@@ -3952,6 +3952,9 @@ for(const proxy of shadowBoatNodes){
 const shadowRedrawn=shadowCache.schedule({now:performance.now(),x:sun.target.position.x,z:sun.target.position.z,
   nodes:shadowPoseNodes,enabled:!!ren.shadowMap.enabled});
 const renderStarted=performance.now();
+// Estadístiques de camins limitades al fotograma actual.
+const roadFrameStats=world?.userData?.pathRenderStats;
+if(roadFrameStats)for(const key in roadFrameStats)roadFrameStats[key]=0;
 for(const k in renderCategories)renderCategories[k]=0;
 for(const k in shadowRenderCategories)delete shadowRenderCategories[k];
 for(const k in renderOtherDetails)delete renderOtherDetails[k];
@@ -3977,6 +3980,11 @@ if(performanceAudit)performanceAudit.onFrame({
   active:gameplayActive,frameMs:rawDt*1000,x:P.x,z:P.z,
   updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,
   renderCpuMs:renderCompleted-renderStarted,
+  roadFastSkips:roadFrameStats?.fastSkips||0,
+  roadVersionChecks:roadFrameStats?.versionChecks||0,
+  roadRefits:roadFrameStats?.refits||0,
+  roadVersionCpuMs:roadFrameStats?.versionCpuMs||0,
+  roadRefitCpuMs:roadFrameStats?.refitCpuMs||0,
   postRenderCpuMs:postRenderCompleted-renderCompleted,
   simulationSteps:simulated.steps,drawCalls:ren.info.render.calls,
   triangles:ren.info.render.triangles,

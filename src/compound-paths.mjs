@@ -24,8 +24,10 @@ export function preparePaths(routes){
  return paths;
 }
 export function createPathNetwork(T,options){const steps=createPathNetworkSteps(T,options);let next;while(!(next=steps.next()).done){}return next.value}
-export function* createPathNetworkSteps(T,{routes,heightAt=()=>0,heightVersion=()=>0,step=1.5,parent=null,chunkCells=128}){
+export function* createPathNetworkSteps(T,{routes,heightAt=()=>0,heightVersion=()=>0,step=1.5,parent=null,chunkCells=128,heightRevision=null,measure=()=>false}){
  const paths=preparePaths(routes),group=new T.Group();group.name='compound-path-network';if(parent)parent.add(group);
+ const roadRenderStats={fastSkips:0,versionChecks:0,refits:0,versionCpuMs:0,refitCpuMs:0};
+ group.userData.pathRenderStats=roadRenderStats;
  const bucketSize=24,buckets=new Map(),cells=new Set(),key=(x,z)=>x+','+z;
  for(const path of paths){path.rgb=new T.Color(path.color??0x8a795e);
   let processed=0;
@@ -68,9 +70,34 @@ export function* createPathNetworkSteps(T,{routes,heightAt=()=>0,heightVersion=(
   for(const x of axis(bounds.min.x,bounds.max.x))
     for(const z of axis(bounds.min.z,bounds.max.z))revisionSites.push([x,z]);
   const version=()=>revisionSites.map(([x,z])=>heightVersion(x,z)).join(',');
-  let revision=version();
-  mesh.onBeforeRender=()=>{const next=version();if(next===revision)return;revision=next;const p=geo.attributes.position;
-   for(let i=0;i<p.count;i++)p.setY(i,heightAt(p.getX(i),p.getZ(i))+.12);p.needsUpdate=true;geo.computeVertexNormals();geo.computeBoundingSphere();geo.boundingSphere.radius+=40;
+  let revision=version(),lastSurfaceRevision=heightRevision?.();
+  mesh.onBeforeRender=()=>{
+   // Si no ha canviat cap tile de terreny, no cal consultar ni una sola
+   // versió local ni construir la signatura de la graella de 32 metres.
+   const profiling=measure();
+   if(heightRevision){
+    const currentRevision=heightRevision();
+    if(currentRevision===lastSurfaceRevision){
+     if(profiling)roadRenderStats.fastSkips++;
+     return;
+    }
+    lastSurfaceRevision=currentRevision;
+   }
+   const checkStarted=profiling?performance.now():0,next=version();
+   if(profiling){
+    roadRenderStats.versionChecks++;
+    roadRenderStats.versionCpuMs+=performance.now()-checkStarted;
+   }
+   if(next===revision)return;
+   revision=next;
+   const refitStarted=profiling?performance.now():0,p=geo.attributes.position;
+   for(let i=0;i<p.count;i++)p.setY(i,heightAt(p.getX(i),p.getZ(i))+.12);
+   p.needsUpdate=true;geo.computeVertexNormals();
+   geo.computeBoundingSphere();geo.boundingSphere.radius+=40;
+   if(profiling){
+    roadRenderStats.refits++;
+    roadRenderStats.refitCpuMs+=performance.now()-refitStarted;
+   }
   };group.add(mesh);
   yield {stage:'Malles dels camins',completed:++processedChunks,total:chunks.size,unit:'sectors'};
  }
