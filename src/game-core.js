@@ -1642,11 +1642,26 @@ const vehicleY=v=>v.alt!=null&&VT[vehicleHitType(v.t)]?.m==='a'?v.alt:(v.o?.posi
 const vehicleHeightCompatible=(a,b)=>Math.abs(vehicleY(a)-vehicleY(b))<Math.max(2.2,Math.min(vehicleRadius(vehicleHitType(a.t)),vehicleRadius(vehicleHitType(b.t)))*.55);
 const VEHICLE_CELL=64,vehicleGrid=new Map(),playerVehicleGrid=new Map(),enemyGrid=new Map(),vehicleCellKey=(cx,cz)=>cx+','+cz;
 let vehicleGridVSource=null,vehicleGridESource=null;
+// Les posicions només serveixen per detectar canvis de sector dins del pas
+// de simulació. No canvien ni el radi ni la precisió de les col·lisions.
+const vehicleGridLastCell=new WeakMap();
+const gridCellOf=v=>vehicleCellKey(Math.floor(v.x/VEHICLE_CELL),Math.floor(v.z/VEHICLE_CELL));
 const addVehicleToGrid=(grid,v)=>{const key=vehicleCellKey(Math.floor(v.x/VEHICLE_CELL),Math.floor(v.z/VEHICLE_CELL)),bucket=grid.get(key);if(bucket)bucket.push(v);else grid.set(key,[v])};
 function rebuildVehicleGrid(){
   vehicleGrid.clear();playerVehicleGrid.clear();enemyGrid.clear();vehicleGridVSource=V;vehicleGridESource=E;
-  for(const v of V)if(!v.destroyed){addVehicleToGrid(vehicleGrid,v);addVehicleToGrid(playerVehicleGrid,v)}
-  for(const u of E)if(!u.destroyed){addVehicleToGrid(enemyGrid,u);if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='patrulla_marina')addVehicleToGrid(vehicleGrid,u)}
+  for(const v of V)if(!v.destroyed){addVehicleToGrid(vehicleGrid,v);addVehicleToGrid(playerVehicleGrid,v);vehicleGridLastCell.set(v,gridCellOf(v))}
+  for(const u of E)if(!u.destroyed){addVehicleToGrid(enemyGrid,u);if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='patrulla_marina')addVehicleToGrid(vehicleGrid,u);vehicleGridLastCell.set(u,gridCellOf(u))}
+}
+// Els vehicles han pogut desplaçar-se des de l'inici del pas. Només cal
+// reconstruir si algú realment ha travessat una cel·la de 64 metres.
+function refreshVehicleGridIfCellsChanged(){
+  if(vehicleGridVSource!==V||vehicleGridESource!==E){rebuildVehicleGrid();return}
+  for(const v of V)if(!v.destroyed&&vehicleGridLastCell.get(v)!==gridCellOf(v)){
+    rebuildVehicleGrid();return
+  }
+  for(const u of E)if(!u.destroyed&&vehicleGridLastCell.get(u)!==gridCellOf(u)){
+    rebuildVehicleGrid();return
+  }
 }
 function gridCandidatesAt(grid,x,z,r=24){
   const out=[],minX=Math.floor((x-r)/VEHICLE_CELL),maxX=Math.floor((x+r)/VEHICLE_CELL),
