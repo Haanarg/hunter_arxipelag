@@ -37,7 +37,10 @@ window.HUNTER_PERFORMANCE=Object.freeze({
           '\nCPU render '+stats.renderCpuMs.toFixed(1)+' ms · '+stats.drawCalls+' dibuixos'+
           '\n'+Math.round(stats.triangles/1000)+'k triangles · Resolució fixa ×'+ratio.toFixed(2)+
           (stats.hotspots?'\nCPU graella '+stats.hotspots.broadphaseMs.toFixed(2)+' · IA '+stats.hotspots.aiMs.toFixed(2)+
-          ' · visual '+stats.hotspots.visibilityMs.toFixed(2)+' · sigil '+stats.hotspots.stealthMs.toFixed(2)+' ms':'');
+          ' · visual '+stats.hotspots.visibilityMs.toFixed(2)+' · sigil '+stats.hotspots.stealthMs.toFixed(2)+' ms'+
+          '\nIA nav '+stats.hotspots.aiNavMs.toFixed(1)+' · mar '+stats.hotspots.aiMarineMs.toFixed(1)+
+          ' · percepció '+stats.hotspots.aiSenseMs.toFixed(1)+' ms'+
+          '\nIA actualitzats '+stats.hotspots.aiUpdated+' · espaiats '+stats.hotspots.aiSkipped:'');
         lastDisplay=now;
       }
       return stats;
