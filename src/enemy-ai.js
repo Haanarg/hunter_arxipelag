@@ -339,7 +339,7 @@ function moveBlastedEnemy(u,dt){
   }
   if(u.x!==ox||u.z!==oz)enemyReindex(u,ox,oz);
 }
-function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathBudget=2;enemyNodeBudget=160}rebuildVehicleGrid();soldierCoordinationTick(dt);E.forEach(u=>{
+function updEn(dt,preserveFrameBudget=false){if(!preserveFrameBudget){enemyPathBudget=2;enemyNodeBudget=160}refreshVehicleGridIfCellsChanged();soldierCoordinationTick(dt);E.forEach(u=>{
   if(u.t==='patrulla_marina'){updateMarinePatrol(u,dt);return}
   if(u.blastT>0){
     const imp=u.blastImpulse;u.blastT=Math.max(0,u.blastT-dt);
