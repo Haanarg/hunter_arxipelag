@@ -20,11 +20,31 @@ const ENEMY_ASTAR_NEIGHBORS=Object.freeze([[1,0],[0,1],[-1,0],[0,-1],
 let enemyPathBudget=2,enemyNodeBudget=160;
 const enemyGroundAt=(u,x,z)=>u.basement?u.gy:enemyIsVehicle(u)?hAt(x,z):groundAt(x,z,u.walkY??u.o?.position.y??-Infinity);
 function enemyWallBox(w){return{x:(w.x0+w.x1)/2,z:(w.z0+w.z1)/2,w:w.x1-w.x0,d:w.z1-w.z0,hd:0}}
-function enemySolidAt(u,x,z,hd,route=false,staticCandidates=null){
-  const veh=enemyIsVehicle(u),r=route?enemyRouteRadius(u):veh?enemyRouteRadius(u):enemyBodyRadius(u),y=u.gy??enemyGroundAt(u,x,z);
-  // Reutilitzam la cota calculada quan no hi ha altura de base fixa.
-  const terrainY=u.gy==null?y:!u.basement?enemyGroundAt(u,x,z):y;
-  if(Math.abs(x)>H-r||Math.abs(z)>H-r||!u.basement&&(terrainY<-.8||treeHit(x,z,r)))return false;
+// La zona de vegetació no canvia durant un sweep. Reutilitzam els
+// mateixos nou cubells mentre les mostres continuen dins la cel·la;
+// cap radi, palmera ni mostra de col·lisió no queda fora del test.
+function enemySweepTreeHit(x,z,r,cache){
+  if(!cache||typeof TG==='undefined')return treeHit(x,z,r);
+  const cx=Math.floor(x/16),cz=Math.floor(z/16);
+  if(cache.cx!==cx||cache.cz!==cz){
+    cache.cx=cx;cache.cz=cz;cache.trees.length=0;
+    for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){
+      const bucket=TG.get((cx+dx)+','+(cz+dz));
+      if(bucket)for(const t of bucket)cache.trees.push(t);
+    }
+  }
+  for(const t of cache.trees){
+    if(!(palmsDisabled&&t.p)&&Math.hypot(x-t.x,z-t.z)<t.r+r)return true;
+  }
+  return false;
+}
+function enemySolidAt(u,x,z,hd,route=false,staticCandidates=null,sampledGround=undefined){
+  const veh=enemyIsVehicle(u),r=route?enemyRouteRadius(u):veh?enemyRouteRadius(u):enemyBodyRadius(u),
+    y=u.gy??(sampledGround===undefined?enemyGroundAt(u,x,z):sampledGround);
+  const terrainY=u.gy==null?y:!u.basement?
+    (sampledGround===undefined?enemyGroundAt(u,x,z):sampledGround):y;
+  if(Math.abs(x)>H-r||Math.abs(z)>H-r||
+     !u.basement&&(terrainY<-.8||enemySweepTreeHit(x,z,r,staticCandidates?.treeCache)))return false;
   const box=veh&&!route?vehicleBox(u,x,z,hd):null;
   if(box){box.w+=.4;box.d+=.4}
   for(const w of staticCandidates?.walls??wallCandidates(x,z,r)){
@@ -42,16 +62,26 @@ function enemySolidAt(u,x,z,hd,route=false,staticCandidates=null){
   }
   return true;
 }
-function enemyBodiesClear(u,x,z,hd,dynamicCandidates=null){
-  const veh=enemyIsVehicle(u),r=enemyBodyRadius(u),y=u.gy??enemyGroundAt(u,x,z),box=veh?vehicleBox(u,x,z,hd):null;
+function enemyBodiesClear(u,x,z,hd,dynamicCandidates=null,sampledY=undefined){
+  const veh=enemyIsVehicle(u),r=enemyBodyRadius(u),
+    y=sampledY===undefined?(u.gy??enemyGroundAt(u,x,z)):sampledY,
+    box=veh?vehicleBox(u,x,z,hd):null;
   if(box){box.w+=.5;box.d+=.5}
   for(const v of dynamicCandidates?.vehicles??vehicleCandidatesAt(x,z,48)){
     if(v===u||v.destroyed||Math.abs(vehicleY(v)-y)>5)continue;
     if(veh?obbOverlap(box,vehicleBox(v)):circleVehicleOverlap(x,z,r+.3,v))return false;
   }
   for(const v of dynamicCandidates?.enemies??enemyCandidatesAt(x,z,32)){
-    if(v===u||v.destroyed||enemyIsVehicle(v)||Math.abs((v.gy??enemyGroundAt(v,v.x,v.z))-y)>4)continue;
-    if(veh?circleVehicleOverlap(v.x,v.z,enemyBodyRadius(v)+.3,{...u,x,z,hd}):Math.hypot(x-v.x,z-v.z)<r+enemyBodyRadius(v)+.3)return false;
+    if(v===u||v.destroyed||enemyIsVehicle(v))continue;
+    const dx=x-v.x,dz=z-v.z,otherR=enemyBodyRadius(v);
+    if(!veh){
+      const contact=r+otherR+.3;
+      // La immensa majoria de soldats no són a distància de contacte.
+      // No consultam la seva altura fins que poden col·lidir de debò.
+      if(dx*dx+dz*dz>=contact*contact)continue;
+    }
+    if(Math.abs((v.gy??enemyGroundAt(v,v.x,v.z))-y)>4)continue;
+    if(veh?circleVehicleOverlap(v.x,v.z,otherR+.3,{...u,x,z,hd}):true)return false;
   }
   return true;
 }
@@ -70,7 +100,8 @@ function enemySweep(u,ax,az,bx,bz,fromHd,toHd,dynamic=true,route=false){
   // continuen funcionant a cada mostra, sense saltar cap col·lisió.
   const cx=(ax+bx)*.5,cz=(az+bz)*.5,half=distance*.5,
     solidRadius=route||veh?radius:enemyBodyRadius(u);
-  const staticCandidates={walls:wallCandidates(cx,cz,half+solidRadius)};
+  const staticCandidates={walls:wallCandidates(cx,cz,half+solidRadius),
+    treeCache:{cx:NaN,cz:NaN,trees:[]}};
   if(route&&!veh)
     staticCandidates.routeVehicles=vehicleCandidatesAt(cx,cz,half+solidRadius+22);
   const dynamicCandidates=dynamic?{
@@ -80,8 +111,12 @@ function enemySweep(u,ax,az,bx,bz,fromHd,toHd,dynamic=true,route=false){
   for(let i=0;i<=n;i++){
     const t=i/n,x=ax+(bx-ax)*t,z=az+(bz-az)*t,hd=fromHd+angle*t;
     if(performanceStatsVisible)sweepSamples++;
-    if(!enemySolidAt(u,x,z,hd,route,staticCandidates)||
-       (dynamic&&!enemyBodiesClear(u,x,z,hd,dynamicCandidates)))return false;
+    // El càlcul de cota de terreny (escales, pisos, ports i LOD) és
+    // especialment car: es fa un cop per mostra, no dues vegades.
+    const ground=u.gy==null||!u.basement?enemyGroundAt(u,x,z):u.gy,
+      sampleY=u.gy??ground;
+    if(!enemySolidAt(u,x,z,hd,route,staticCandidates,ground)||
+       (dynamic&&!enemyBodiesClear(u,x,z,hd,dynamicCandidates,sampleY)))return false;
   }
   return true;
   }finally{
