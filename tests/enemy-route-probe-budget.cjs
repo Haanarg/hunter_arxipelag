@@ -18,7 +18,7 @@ const dep={
  enemySweep(...args){
    const [u,ax,az,bx,bz]=args,distance=Math.hypot(bx-ax,bz-az);
    if(args.length===9)calls.predictive.push(distance);else calls.real.push(distance);
-   if(wall.enabled&&ax<wall.x&&bx>=wall.x)return false;
+   if(wall.enabled&&args.length!==9&&ax<wall.x&&bx>=wall.x)return false;
    return true;
  },
  enemyFindPath:()=>[],
