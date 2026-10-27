@@ -18,5 +18,6 @@ assert.match(fx,/for\(const s of \[-1,1\]\)/);
 assert.match(fx,/previousSwimBucket=null;return false/);
 assert.match(core,/movementFx\.swimStroke\(/);
 assert.match(core,/snd\('swim',\.65\)/);
-assert.match(audio,/if\(t==='swim'\)/);
+assert.match(audio,/else if\(type==='swim'\)/);
+assert.match(audio,/swim:\{duration:/,'El so de natació continua configurat');
 console.log('OK: arc heli, flotació del crol i esquitxos i so sincronitzats');

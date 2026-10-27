@@ -22,6 +22,7 @@ const ctx={
   },
   stairLocal:(s,x,z)=>({along:(x-s.x)*s.nx+(z-s.z)*s.nz}),
   buildingCandidates:()=>[],upperFloorHeight:()=>null,
+  bunkerSubFloorAt:()=>null,solidRoofAt:()=>null,
   terminalRampHeight:()=>null,pedestrianFerry:()=>null,Math,Number
 };
 vm.createContext(ctx);

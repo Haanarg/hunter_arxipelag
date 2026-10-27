@@ -15,8 +15,8 @@ const {pathToFileURL}=require('node:url');
  const rider=fs.readFileSync(path.join(root,'src/rider.js'),'utf8');
  assert.ok(rider.includes('oars[1-i]'),
    'La mà dreta del remador ha de subjectar el rem de babord');
- assert.ok(rider.includes('torso.rotation.y=Math.PI-Math.PI/2*u.shotBlend'),
-   'La cintura gira 90 graus a la dreta, no 180');
+ assert.ok(rider.includes('torso.rotation.y=Math.PI-.52*u.shotBlend'),
+   'La cintura acompanya el tret uns 30 graus, sense gir brusc');
  // Exercim l'animació completa, el canó i la tornada a la remada.
  const palette={player:{},enemy:{primary:0x556644,general:0x778855,
    vest:0x445533,secondary:0x334422,skin:0xe0c0a0,dark:0x101a10,metal:0x444444}};
@@ -53,8 +53,8 @@ const {pathToFileURL}=require('node:url');
  assert.ok(shot,'Es pot disparar des de la barca');
  assert.ok(Math.abs(u.pistol.scale.x-.56)<1e-8,
    'La pistola a la barca ha de ser proporcional al remador');
- assert.ok(u.torso.rotation.y>Math.PI/2&&u.torso.rotation.y<Math.PI,
-   'El tors gira cap a la dreta sense superar els 90 graus');
+ assert.ok(Math.abs(u.torso.rotation.y-Math.PI)<.02,
+   'El tret no força un gir instantani de cintura: la transició és suau');
  const rightShoulder=new T.Vector3(.57,1.17,0)
    .applyQuaternion(u.torso.quaternion).add(u.torso.position);
  assert.ok(u.limbs[2].position.distanceTo(rightShoulder)<.001,
@@ -64,8 +64,9 @@ const {pathToFileURL}=require('node:url');
  assert.ok(shot.origin.z<u.torso.position.z-.25,
    'La pistola surt cap a proa des de la mà dreta amb el tors de perfil');
  for(let i=0;i<3;i++)ride.update(state,.05);
- assert.ok(Math.abs(u.torso.rotation.y-Math.PI/2)<.10,
-   'En disparar el tors queda de perfil a 90 graus');
+ assert.ok(u.shotBlend>.5&&u.torso.rotation.y<Math.PI-.25&&
+   u.torso.rotation.y>Math.PI-.54,
+   'En disparar el tors gira progressivament uns 30 graus');
  for(let i=0;i<35;i++)ride.update(state,.05);
  assert.ok(Math.abs(u.torso.rotation.y-Math.PI)<.03,
    'En acabar el tret el tors torna a mirar cap a popa per remar');

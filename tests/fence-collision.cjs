@@ -42,7 +42,7 @@ assert.equal(ctx.canBreak({t:'camio',v:8},true),false);
 assert.equal(ctx.canBreak({t:'camio',v:14},true),true);
 assert.equal(ctx.canBreak({t:'tanc',v:1},true),true);
 assert.ok(core.includes('if(vehicleCanBreakBarrier(v,barbed)){'),
- 'La col·lisió física real ha d'aplicar el nou llindar');
+ "La col·lisió física real ha d'aplicar el nou llindar");
 assert.ok(core.includes('if(speed>10){\n        collisionDamageVehicle(v,'),
  'Les roques no poden danyar el vehicle a poca velocitat');
 assert.ok(core.includes('if(!heavy&&speed<=10){'),

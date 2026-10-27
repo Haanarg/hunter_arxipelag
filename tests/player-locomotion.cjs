@@ -12,7 +12,7 @@ const {pathToFileURL}=require('node:url');
    create:()=>new THREE.Group(),pose:()=>{}
  }}};
  vm.createContext(ctx);
- for(const file of ['src/player-model.js','src/characters.js'])
+ for(const file of ['src/player-model.js','src/player-batching.js','src/characters.js'])
    vm.runInContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),ctx,{filename:file});
  const box=(g,w,h,d,color,x=0,y=0,z=0)=>{
    const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),

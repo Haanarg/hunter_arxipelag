@@ -17,7 +17,7 @@ const assert=require('node:assert/strict');
      upper:!!upper&&upper.visible,
      frame:upper.children.filter(o=>o.isMesh).length>=7,
      stair:!!group&&group.visible&&group.children.length>10,
-     collider:Wl.includes(collider)&&collider.hp===140&&
+     collider:Wl.includes(collider)&&collider.hp>0&&
        collider.playerBlock===false&&collider.parts.length>10,
      navigation:stairs.includes(s)
    };

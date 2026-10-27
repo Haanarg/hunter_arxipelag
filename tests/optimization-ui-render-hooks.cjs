@@ -59,7 +59,8 @@ function segment(from,to){
  assert.equal(renderCategories.vehicles,1,'Existing callbacks must use updated category');
  assert.equal(renderCategories.edificis,2);
  context.performanceStatsVisible=false;context.registerDrawCategories();
- mesh.onBeforeShadow();mesh.onBeforeRender();assert.equal(renderCategories.vehicles,1);
+ assert.equal(mesh.onBeforeShadow,undefined,'Disabled counters restore the prior shadow hook');
+ mesh.onBeforeShadow?.();mesh.onBeforeRender();assert.equal(renderCategories.vehicles,1);
  assert.equal(shadowRenderCategories.vehicles,1,'Shadow hooks are removed when counters hidden');
  assert.equal(previousCalls,4);
  context.performanceStatsVisible=true;context.registerDrawCategories();
