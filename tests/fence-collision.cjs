@@ -3,7 +3,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const core=fs.readFileSync(path.join(__dirname,'../src/game-core.js'),'utf8');
-const from=core.indexOf('function fenceVehicleContact('),to=core.indexOf('const obbAxes=',from);
+const from=core.indexOf('function fenceVehicleContact('),to=core.indexOf('const obbOverlap=',from);
 assert.ok(from>=0&&to>from,'No s’ha trobat la col·lisió precisa');
 const recoveryStart=core.indexOf('function vehicleRamThreshold(');
 const recoveryEnd=core.indexOf('function tankCanCrush(',recoveryStart);
