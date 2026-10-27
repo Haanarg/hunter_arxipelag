@@ -74,7 +74,7 @@ function deathFaceCamera(player,cameraPosition){
 // Desam la transformació local per restaurar-la després de la cinemàtica.
 function deathDropWeapon(v){
  const u=pl.userData;
- const weapon=pl.visible?[u.gun,u.knife,u.bazooka,u.grenade,u.sniper,u.cisalla]
+ const weapon=!cv?[u.gun,u.knife,u.bazooka,u.grenade,u.sniper,u.cisalla]
   .find(o=>o?.visible):null;
  if(!weapon)return;
  pl.updateMatrixWorld(true);
@@ -147,7 +147,10 @@ function deathReplayPose(v,dt=0){
  if(!m)return;
  // Reproduïm els mateixos ordres de magnitud que playerFall/playerEject,
  // però a velocitat cinematogràfica. Cap animació força l'angle final.
- const step=Math.min(.1,Math.max(0,dt))*.65;
+ // La bala es veu arribar cap als .6 s de repetició: fins a l'impacte
+ // ni el cos ni l'arma comencen a caure.
+ const step=v.cause.kind==='bullet'&&v.t<.56?0:
+   Math.min(.1,Math.max(0,dt))*.65;
  if(step){
   deathUpdateDroppedWeapon(v,step);
   const inWater=m.onWater&&m.centre.y<v.waterLevel+2.2;
