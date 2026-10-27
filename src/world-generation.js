@@ -200,7 +200,7 @@ function* buildSteps(){let checkpointUnits=0;resetOptionalSystems();resetSimulat
   if(world){scene.remove(world);yield* window.HUNTER_RESOURCES.disposeSteps(world)}
   world=new THREE.Group();scene.add(world);
 }
-world.userData={compounds:[],airObstacles:[]};B=[];stairs=[];piers=[];swimming=false;intelMarks=[];hqMapKnown=false;hqIntelStage=0;hqIntelSites=[];hqDiscardIndex=-1;knownVehicleSectors.heli.clear();knownVehicleSectors.tanc.clear();playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false;pl.userData.cisallaCut=0;sniperEquipped=false;sniperAmmo=0;setSniperScope(false);pl.userData.sniper.visible=false;pl.userData.bazooka.visible=false;pl.userData.grenade.visible=false;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;pl.userData.grenadePending=null;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];grenades=[];fx=[];logb=[];hp=window.HUNTER_COMBAT_BALANCE.player;ammo=16;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
+world.userData={compounds:[],airObstacles:[]};B=[];stairs=[];piers=[];swimming=false;intelMarks=[];hqMapKnown=false;hqIntelStage=0;hqIntelSites=[];hqDiscardIndex=-1;hqIntelEliminationOrder=[];hqIntelSectors.clear();hqIntelDiscarded.clear();knownVehicleSectors.heli.clear();knownVehicleSectors.tanc.clear();playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false;pl.userData.cisallaCut=0;sniperEquipped=false;sniperAmmo=0;setSniperScope(false);pl.userData.sniper.visible=false;pl.userData.bazooka.visible=false;pl.userData.grenade.visible=false;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;pl.userData.grenadePending=null;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];grenades=[];fx=[];logb=[];hp=window.HUNTER_COMBAT_BALANCE.player;ammo=16;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
 activeBunker=null;
 {const base=requestedSeed==null?Math.floor(Math.random()*0xffffffff)>>>0:requestedSeed>>>0;let tries=0;do{if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};seed=(base+Math.imul(tries++,0x9e3779b1))>>>0;genIslands();pa=(yield* landSteps(A,2000));pb=(yield* landSteps(Bi,2000))}while((!pa||!pb)&&tries<8);if(!pa||!pb)throw new Error('No s’ha pogut generar un mapa vàlid amb aquesta llavor')}
 markBuildStage('islandsAndBasePositions');
@@ -737,39 +737,74 @@ yield {stage:'Fons marí',completed:1,total:1};
 const vegetationMs=performance.now()-vegetationStarted;
 markBuildStage('vegetationAndFauna');
 yield {stage:'Vegetació i fauna',completed:1,total:1};HQ={x:hqCompound.buildings[0].x,z:hqCompound.buildings[0].z};
-// Three plausible HQ positions, determined by the seed without advancing R().
-// On large maps they lie in the three non-starting sectors, one of them real.
-// On small maps the two decoys coincide with other plausible military sites.
+// Small maps keep three HQ candidates. Large maps use nine: three grounded
+// locations in each non-starting quadrant, including the actual HQ.
+// No draws from the shared R() sequence: same world seed, same geography.
 const startingSector=mapSector(pa.x,pa.z),actualSector=mapSector(HQ.x,HQ.z);
-const militaryHQDecoys=sector=>world.userData.compounds
-  .filter(c=>c.id!=='hq'&&c.id!=='base'&&!c.layout?.friendly&&!c.layout?.civilian&&
-    sectorMatches(c.x,c.z,sector)&&Math.hypot(c.x-pa.x,c.z-pa.z)>500&&
-    Math.hypot(c.x-HQ.x,c.z-HQ.z)>460)
-  .sort((a,b)=>Math.hypot(b.x-pa.x,b.z-pa.z)-Math.hypot(a.x-pa.x,a.z-pa.z));
-const pickHQDecoy=(sector,other=[])=>{
-  const valid=p=>other.every(o=>Math.hypot(p.x-o.x,p.z-o.z)>450);
-  const sites=militaryHQDecoys(sector);
-  const candidate=sites.find(valid);
-  if(candidate)return{x:candidate.x,z:candidate.z};
-  const remote=islandsInSector(sector).filter(i=>Math.hypot(i.x-HQ.x,i.z-HQ.z)>480&&
-    Math.hypot(i.x-pa.x,i.z-pa.z)>500).sort((a,b)=>b.r-a.r).find(valid);
-  if(remote)return{x:remote.x,z:remote.z};
-  // Geographic last resort; candidates must remain away from the starting sector.
-  const fallbackS=sector==null?(actualSector+1)%4:sector;
-  return{x:(fallbackS&1?1:-1)*H*.53,z:(fallbackS&2?1:-1)*H*.53};
+const eligibleHQSites=sector=>{
+  const complexes=world.userData.compounds.filter(c=>c.id!=='hq'&&c.id!=='base'&&
+    !c.layout?.friendly&&!c.layout?.civilian&&sectorMatches(c.x,c.z,sector))
+    .map(c=>({x:c.x,z:c.z}));
+  const land=[];
+  for(const island of islandsInSector(sector).slice().sort((a,b)=>b.r-a.r)){
+    land.push({x:island.x,z:island.z});
+    if(Number.isFinite(island.peakX)&&Number.isFinite(island.peakZ))
+      land.push({x:island.peakX,z:island.peakZ});
+    for(const distance of [.28,.52,.72])for(let n=0;n<12;n++){
+      const angle=(n*2*Math.PI/12)+(seed%31)*.017,
+        x=island.x+Math.cos(angle)*island.r*distance,
+        z=island.z+Math.sin(angle)*island.r*distance;
+      land.push({x,z});
+    }
+  }
+  return [...complexes,...land].filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.z)&&
+    sectorMatches(p.x,p.z,sector)&&hAt(p.x,p.z)>1.2&&
+    Math.hypot(p.x-pa.x,p.z-pa.z)>240&&Math.hypot(p.x-HQ.x,p.z-HQ.z)>210);
 };
-const decoys=[];
+const pickHQDecoy=(sector,others=[])=>{
+  const pool=eligibleHQSites(sector);
+  // Prefer positions with the footprint of a military complex and large gaps
+  // between clues; relax gaps only when an unusual seed has little dry land.
+  for(const separation of [360,250,160,75]){
+    const q=pool.find(p=>others.every(other=>Math.hypot(p.x-other.x,p.z-other.z)>separation));
+    if(q)return{x:q.x,z:q.z};
+  }
+  return null;
+};
+const hqPositions=[];
 if(MAP_SCALE===2){
-  for(const sector of [0,1,2,3].filter(n=>n!==startingSector&&n!==actualSector))
-    decoys.push(pickHQDecoy(sector,decoys));
+  for(const sector of [0,1,2,3].filter(n=>n!==startingSector)){
+    const group=sector===actualSector?[{x:HQ.x,z:HQ.z,real:true}]:[];
+    while(group.length<3){
+      const q=pickHQDecoy(sector,[...hqPositions,...group]);
+      if(!q)throw new Error('No hi ha prou emplaçaments vàlids per als nou indicis del HQ');
+      group.push({...q,real:false});
+    }
+    hqPositions.push(...group);
+  }
 }else{
-  decoys.push(pickHQDecoy(null,decoys));
-  decoys.push(pickHQDecoy(null,decoys));
+  hqPositions.push({x:HQ.x,z:HQ.z,real:true});
+  for(let i=0;i<2;i++){
+    const q=pickHQDecoy(null,hqPositions);
+    if(!q)throw new Error('No hi ha prou emplaçaments vàlids per als indicis del HQ');
+    hqPositions.push({...q,real:false});
+  }
 }
-const hqPositions=[{x:HQ.x,z:HQ.z,real:true},...decoys.map(q=>({...q,real:false}))];
-const offset=seed%3;
-hqIntelSites=hqPositions.map((_,i)=>hqPositions[(i+offset)%3]);
+// Shuffle the clues and the elimination order independently of live AI RNG.
+// Exactly six distinct false locations are ruled out, never the true HQ.
+const clueRandom=mul((seed^0x5af17e32)>>>0);
+for(let i=hqPositions.length-1;i>0;i--){
+  const j=Math.floor(clueRandom()*(i+1));
+  [hqPositions[i],hqPositions[j]]=[hqPositions[j],hqPositions[i]];
+}
+hqIntelSites=hqPositions;
 hqDiscardIndex=hqIntelSites.findIndex(p=>!p.real);
+hqIntelEliminationOrder=hqIntelSites.map((p,i)=>p.real?-1:i).filter(i=>i>=0);
+for(let i=hqIntelEliminationOrder.length-1;i>0;i--){
+  const j=Math.floor(clueRandom()*(i+1));
+  [hqIntelEliminationOrder[i],hqIntelEliminationOrder[j]]=
+    [hqIntelEliminationOrder[j],hqIntelEliminationOrder[i]];
+}
 world.userData.hqIntelCandidates=hqIntelSites.map(p=>({x:p.x,z:p.z,real:p.real}));
 world.userData.hqSector=actualSector;
 const rb=B.slice(6);
