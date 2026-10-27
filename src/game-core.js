@@ -2914,7 +2914,17 @@ const ui=window.HUNTER_UI.create({
     setCheat
   }
 });
-mc.onclick=()=>started&&panel('map');
+// The minimap is a direct navigation-map control on mouse, touch and keyboard.
+// Stop event bubbling so the gesture never becomes a camera/game action.
+mc.addEventListener('click',e=>{
+  e.preventDefault();e.stopPropagation();
+  if(started&&!over&&!generationPromise)panel('map');
+});
+mc.addEventListener('keydown',e=>{
+  if((e.code!=='Enter'&&e.code!=='Space')||e.repeat)return;
+  e.preventDefault();e.stopPropagation();
+  mc.click();
+});
 function vehicleImpactFx(x,y,z){debris(x,y,z,0xffc14d,5,.16,5);puff(x,y,z,0x8a8478,.8)}
 function collisionDamageVehicle(v,dmg,impacts=1){
  if(v?.t==='tanc')return;
