@@ -812,9 +812,12 @@ const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.
 const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1),x=cx+Math.cos(a)*d,z=cz+Math.sin(a)*d;if(gl(x,z)&&!world.userData.compounds.some(c=>c.layout.civilian&&Math.hypot(x-c.x,z-c.z)<c.r))return mkEn(t,x,z)}return null};
 for(const i of islands){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};if(i===A||i===Bi||R()<.5)continue;const q=(yield* landSteps(i,60));if(!q)continue;for(let k=0;k<1+(R()<.4);k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};sp2('soldat',q.x,q.z,0,10);}if(R()<.25)sp2('torre',q.x,q.z,5,12)};
 for(const b of rb){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+  // Civilian houses were already resolved once each while building the
+  // settlement; the military random-loot loop must never add to them.
+  if(b.civilian)continue;
   const n=R()<.25?0:R()<.6?1:2;
   const pool=['arma','arma','med','expl','granada','granada','disf','mapa','bazooka','franctirador','paracaigudes']
-    .filter(t=>lootAllowed(t,b)&&(!b.civilian||['arma','med','disf'].includes(t)));
+    .filter(t=>lootAllowed(t,b));
   for(let k=0;k<n&&pool.length;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
     const kind=pool[Math.floor(R()*pool.length)];
     addIt(kind,b);
