@@ -1253,7 +1253,7 @@ const sectorQuota=[['tanc',2],['tanqueta',2],['heli',2],['heli_combat',1],
   ['llanxa_coets',2],['ferry',2],['moto_aquatica',4]];
 world.userData.quadrantPopulation=activeSectors.map(sector=>{
   const vehicles=Object.fromEntries(sectorQuota.map(([type])=>[type,countVehicles(type,sector)]));
-  const compounds=Object.fromEntries(['avancada','garatge','polvori','comunicacions','port','heliport',
+  const compounds=Object.fromEntries(['outpost','hangar','polvori','comunicacions','port','heliport',
     'ferry-terminal','hut-settlement','hut-settlement-small','hut-settlement-large']
     .map(type=>[type,world.userData.compounds.filter(c=>c.id===type&&sectorMatches(c.x,c.z,sector)).length]));
   return {sector:sector==null?mapSector(pa.x,pa.z):sector,vehicles,compounds,
