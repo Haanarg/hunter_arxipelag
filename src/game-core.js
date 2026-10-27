@@ -115,8 +115,14 @@ function hAt(x,z){
 const waveAmp=window.HUNTER_WAVES.amplitude;
 const wy=(x,z,t)=>water.surfaceHeight(x,z,t);
 const rr=(a,b)=>a+R()*(b-a);
+// Four independent geographic sectors in large worlds; small worlds have one shared pool.
+const mapSector=(x,z)=>(x>=0?1:0)+(z>=0?2:0);
+const sectorMatches=(x,z,sector)=>sector==null||mapSector(x,z)===sector;
 function genIslands(){R=mul(seed);const q=R()<.5?-1:1,q2=R()<.5?-1:1,extent=MAP_SCALE===1?1000:2200,baseMin=MAP_SCALE===1?500:1200,baseMax=MAP_SCALE===1?800:1800;
-A={x:-q*rr(baseMin,baseMax)*2,z:-q2*rr(baseMin,baseMax)*2,r:rr(520,680)};Bi={x:q*rr(baseMin,baseMax)*2,z:q2*rr(baseMin,baseMax)*2,r:rr(520,680)};
+A={x:-q*rr(baseMin,baseMax)*2,z:-q2*rr(baseMin,baseMax)*2,r:rr(520,680)};
+// On a large map, HQ can occupy any of the three sectors other than the start.
+const hqSectorChoice=MAP_SCALE===2?Math.floor(R()*3):2;
+Bi={x:(hqSectorChoice===0?-q:q)*rr(baseMin,baseMax)*2,z:(hqSectorChoice===1?-q2:q2)*rr(baseMin,baseMax)*2,r:rr(520,680)};
 islands=[A,Bi];const regular=22*MAP_SCALE*MAP_SCALE,large=2*MAP_SCALE*MAP_SCALE;
 for(let i=0;i<regular;i++)islands.push({x:rr(-extent,extent)*2,z:rr(-extent,extent)*2,r:rr(180,520)});
 for(let i=0;i<large;i++)islands.push({x:rr(-extent*.55,extent*.55)*2,z:rr(-extent*.55,extent*.55)*2,r:rr(800,1040)});
@@ -390,6 +396,8 @@ function* prepareShadowCastersSteps(){
 // terreny visual a src/terrain.js
 let stairs=[],piers=[];
 let Wl=[],Dr=[],items=[],inv={},msg='',msgT=0,HQ=null,ib=null;
+let hqIntelStage=0,hqIntelSites=[],hqDiscardIndex=-1;
+const knownVehicleSectors={heli:new Set(),tanc:new Set()};
 const WALL_CELL=64,wallGrid=new Map();let wallGridSource=null,wallGridCount=-1,wallQueryStamp=0;
 const wallCellKey=(cx,cz)=>cx+','+cz;
 function rebuildWallGrid(){
@@ -453,9 +461,9 @@ arma:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 19 H54 V50 H10 Z"
 };
 const IT={
 med:{n:'Farmaciola',c:0xf2f3de,s:[1.2,.8,.8],icon:ICON.med,desc:'Recupera 8 punts de vida.',usable:true},
-mapa:{n:'Mapa de l’HQ',c:0xffe27a,s:[1.6,.08,1.2],icon:ICON.mapa,desc:'En recollir-lo, revela immediatament la posició de l’HQ enemic.',usable:false},
-mapa_heli:{n:'Mapa d’helicòpters',c:0x9fd7ff,s:[1.6,.08,1.2],icon:ICON.mapa_heli,desc:'En recollir-lo, marca immediatament tots els helicòpters actius al mapa.',usable:false},
-mapa_tanc:{n:'Mapa de tancs',c:0xc6b06a,s:[1.6,.08,1.2],icon:ICON.mapa_tanc,desc:'En recollir-lo, marca immediatament tots els tancs actius al mapa.',usable:false},
+mapa:{n:'Mapa de l’HQ',c:0xffe27a,s:[1.6,.08,1.2],icon:ICON.mapa,desc:'Primer mapa: tres possibles HQ. Segon: en descarta un. Tercer: revela el HQ real.',usable:false},
+mapa_heli:{n:'Mapa d’helicòpters',c:0x9fd7ff,s:[1.6,.08,1.2],icon:ICON.mapa_heli,desc:'Revela els helicòpters del sector on es recull; conserva la informació d’altres sectors.',usable:false},
+mapa_tanc:{n:'Mapa de tancs',c:0xc6b06a,s:[1.6,.08,1.2],icon:ICON.mapa_tanc,desc:'Revela els tancs del sector on es recull; conserva la informació d’altres sectors.',usable:false},
 bazooka:{n:'Bazooka',c:0x58664a,s:[2.1,.45,.45],icon:ICON.bazooka,desc:'Llançacoets amb 3 coets per recollida. La retícula indica el punt d’apuntat i es torna verda si l’autoapuntat fixa un enemic.',usable:true},
 franctirador:{n:'Rifle de franctirador',c:0x647366,s:[2.7,.5,.42],icon:ICON.franctirador,desc:'Rifle de llarg abast. 6 cartutxos per recollida; elimina soldats d’un tret. Equipa’l i prem Mira / T per activar l’òptica x8.',usable:true},
 paracaigudes:{n:'Paracaigudes',c:0xcfaa74,s:[1.2,.9,.9],icon:ICON.paracaigudes,desc:'Es desplega automàticament en saltar d’un helicòpter en vol. Frena la caiguda i evita els danys de l’aterratge.',usable:false},
@@ -2074,7 +2082,7 @@ const barbedHQ=(cx,cz,hw=50,hd=46,gap=13,gateOffset=0)=>{
 const mc=document.getElementById('mm');
 const minimap=window.HUNTER_MINIMAP.create({
   THREE,canvas:mc,worldSize:S,halfSize:H,heightAt:hAt,colorAt:window.HUNTER_TERRAIN.colorAt,
-  getState:()=>({base:P.base,hq:HQ,mapKnown:hqMapKnown||!!inv.mapa,current:cv||P,currentVehicle:cv,vehicles:V,enemies:E,log:logb,intel:intelMarks,opportunities:optionalMapMarkers()})
+  getState:()=>({base:P.base,hq:HQ,mapKnown:hqMapKnown||!!inv.mapa,hqClues:hqIntelStage>0&&!hqMapKnown?hqIntelSites.map((p,i)=>({...p,discarded:hqIntelStage>=2&&i===hqDiscardIndex})):[],current:cv||P,currentVehicle:cv,vehicles:V,enemies:E,log:logb,intel:intelMarks,opportunities:optionalMapMarkers()})
 });
 window.HUNTER_MINIMAP_STATS=minimap.stats;
 const mini=()=>minimap.draw();
@@ -2681,13 +2689,13 @@ function grantAllWeapons(){
   ammo=Math.max(ammo,999);
   for(const key of ['med','bazooka','granada','cisalla','expl','franctirador','paracaigudes','disf'])inv[key]=Math.max(inv[key]||0,999);
   sniperAmmo=Math.max(sniperAmmo,999);
-  hqMapKnown=true;
+  hqMapKnown=true;hqIntelStage=3;
   for(const v of V)if(v.rockets!=null)v.rockets=Math.max(v.rockets,999);
 }
 function setCheat(key,enabled){
   if(!Object.hasOwn(cheats,key))return;
   cheats[key]=!!enabled;
-  if(key==='items'&&enabled){grantAllWeapons();revealMapPickup('mapa');revealMapPickup('mapa_heli');revealMapPickup('mapa_tanc')}
+  if(key==='items'&&enabled){grantAllWeapons();revealMapPickup('mapa_heli',true);revealMapPickup('mapa_tanc',true)}
   if(key==='fly'){cheatFlightY=enabled?P.y:null;if(enabled){cv=null;playerFall=null;playerEject=null;swimming=false}}
   if(key==='invisible'&&enabled)for(const u of E){u.canSee=false;u.canShoot=false;u.alert=0;u.recognition=0;u.pursuitT=0;if(u.t==='soldat'){u.aiMode='patrol';u.searchT=0}}
 }
@@ -2695,23 +2703,35 @@ function resume(){if(generationPromise)return;paused=false;simulationFocused=tru
 function panel(mode){if(generationPromise)return;setSniperScope(false);paused=true;updateOptionalSystems(0,false);resetSimulationClock();pickerOpen=false;picker.style.display='none';pickerToggle.style.display='none';clearKeys();audioPause();ui.show(mode)}
 // Les cartes revelen informació de forma immediata: no són objectes
 // d'inventari que s'hagin d'equipar ni obrir manualment.
-function revealMapPickup(kind){
+function revealMapPickup(kind,allSectors=false){
   if(kind==='mapa'){
+    if(hqMapKnown||hqIntelStage>=3)return 'El HQ enemic ja està localitzat.';
+    hqIntelStage++;
+    if(hqIntelStage===1)return 'Tres possibles emplaçaments del HQ marcats amb interrogants.';
+    if(hqIntelStage===2)return 'Un dels tres emplaçaments descartat: queden dos interrogants.';
     hqMapKnown=true;
-    return 'HQ enemic descobert al mapa!';
+    return 'Tercer mapa: HQ enemic localitzat amb exactitud!';
   }
   const isHeli=kind==='mapa_heli',isTank=kind==='mapa_tanc';
   if(!isHeli&&!isTank)return null;
-  const markKind=isHeli?'heli':'tanc',
-        targets=(isHeli?V.filter(v=>v.t==='heli'||v.t==='heli_combat'):
-          [...V.filter(v=>v.t==='tanc'),...E.filter(e=>e.t==='tanc')])
-          .filter(v=>!v.destroyed);
-  intelMarks=intelMarks.filter(m=>m.kind!==markKind);
+  const markKind=isHeli?'heli':'tanc',sector=MAP_SCALE===2&&!allSectors?mapSector(P.x,P.z):null,
+    targets=(isHeli?V.filter(v=>v.t==='heli'||v.t==='heli_combat'):
+      [...V.filter(v=>v.t==='tanc'),...E.filter(e=>e.t==='tanc')])
+      .filter(v=>!v.destroyed&&sectorMatches(v.x,v.z,sector));
+  if(sector==null){
+    knownVehicleSectors[markKind].clear();
+    for(let i=0;i<4;i++)knownVehicleSectors[markKind].add(i);
+    intelMarks=intelMarks.filter(m=>m.kind!==markKind);
+  }else{
+    knownVehicleSectors[markKind].add(sector);
+    intelMarks=intelMarks.filter(m=>m.kind!==markKind||!sectorMatches(m.ref?.x??m.x,m.ref?.z??m.z,sector));
+  }
   targets.forEach((v,i)=>intelMarks.push({
     kind:markKind,ref:v,
     label:(isHeli?(v.t==='heli_combat'?'Helicòpter de combat ':'Helicòpter '):'Tanc ')+(i+1)
   }));
-  return 'Mapa actualitzat: '+targets.length+' '+(isHeli?'helicòpters':'tancs')+' localitzats.';
+  return 'Mapa actualitzat: '+targets.length+' '+(isHeli?'helicòpters':'tancs')+
+    (sector===null?' localitzats.':' localitzats en aquest quadrant.');
 }
 function useInvItem(id){
   if(!inv[id])return false;
