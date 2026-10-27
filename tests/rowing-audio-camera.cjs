@@ -58,11 +58,11 @@ const {pathToFileURL}=require('node:url');
  const rightShoulder=new T.Vector3(.57,1.17,0)
    .applyQuaternion(u.torso.quaternion).add(u.torso.position);
  assert.ok(u.limbs[2].position.distanceTo(rightShoulder)<.001,
-   'L’espatlla del braç dret segueix el tors també girat a 90 graus');
+   'L’espatlla del braç dret segueix el tors durant el tret');
  assert.ok(shot.direction.dot(new T.Vector3(0,0,-1))>.98,
    'La pistola i el tret han d’apuntar a proa');
- assert.ok(shot.origin.z<u.torso.position.z-.25,
-   'La pistola surt cap a proa des de la mà dreta amb el tors de perfil');
+ assert.ok(shot.origin.z<0&&shot.origin.z>-3,
+   'La pistola dispara dins el buc i cap a proa mentre el remador gira suaument');
  for(let i=0;i<3;i++)ride.update(state,.05);
  assert.ok(u.shotBlend>.5&&u.torso.rotation.y<Math.PI-.25&&
    u.torso.rotation.y>Math.PI-.54,
