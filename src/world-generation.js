@@ -1,4 +1,4 @@
-const countVehicles=type=>{let count=0;for(const v of V)if(v.t===type)count++;return count};
+const countVehicles=(type,sector=null)=>{let count=0;for(const v of V)if(v.t===type&&sectorMatches(v.x,v.z,sector))count++;return count};
 // The planner does not draw from R(): normal play, progressive loading and seed
 // searches reserve the same camp before any optional coast/civil/military site.
 function prisonCampFootprint(layout){
@@ -200,12 +200,14 @@ function* buildSteps(){let checkpointUnits=0;resetOptionalSystems();resetSimulat
   if(world){scene.remove(world);yield* window.HUNTER_RESOURCES.disposeSteps(world)}
   world=new THREE.Group();scene.add(world);
 }
-world.userData={compounds:[],airObstacles:[]};B=[];stairs=[];piers=[];swimming=false;intelMarks=[];hqMapKnown=false;playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false;pl.userData.cisallaCut=0;sniperEquipped=false;sniperAmmo=0;setSniperScope(false);pl.userData.sniper.visible=false;pl.userData.bazooka.visible=false;pl.userData.grenade.visible=false;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;pl.userData.grenadePending=null;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];grenades=[];fx=[];logb=[];hp=window.HUNTER_COMBAT_BALANCE.player;ammo=16;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
+world.userData={compounds:[],airObstacles:[]};B=[];stairs=[];piers=[];swimming=false;intelMarks=[];hqMapKnown=false;hqIntelStage=0;hqIntelSites=[];hqDiscardIndex=-1;knownVehicleSectors.heli.clear();knownVehicleSectors.tanc.clear();playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false;pl.userData.cisallaCut=0;sniperEquipped=false;sniperAmmo=0;setSniperScope(false);pl.userData.sniper.visible=false;pl.userData.bazooka.visible=false;pl.userData.grenade.visible=false;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;pl.userData.grenadePending=null;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];grenades=[];fx=[];logb=[];hp=window.HUNTER_COMBAT_BALANCE.player;ammo=16;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
 activeBunker=null;
 {const base=requestedSeed==null?Math.floor(Math.random()*0xffffffff)>>>0:requestedSeed>>>0;let tries=0;do{if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};seed=(base+Math.imul(tries++,0x9e3779b1))>>>0;genIslands();pa=(yield* landSteps(A,2000));pb=(yield* landSteps(Bi,2000))}while((!pa||!pb)&&tries<8);if(!pa||!pb)throw new Error('No s’ha pogut generar un mapa vàlid amb aquesta llavor')}
 markBuildStage('islandsAndBasePositions');
 yield {stage:'Illes i emplaçaments inicials',completed:1,total:1};
 const cols=[0xd8b48a,0xc9a27a,0xb8c4c9,0xd9c9a0],compoundVehicles=[],heliportSites=[],staticDecorRoots=[],pathRoutes=[];
+const activeSectors=MAP_SCALE===2?[0,1,2,3]:[null];
+const islandsInSector=sector=>islands.filter(i=>sectorMatches(i.x,i.z,sector));
 
 // Camins, molls i decoració dels compounds: malles per sectors i material,
 // mantenint intactes les dades de física, construccions i saqueig.
@@ -567,14 +569,14 @@ const compound=function* (type,q){let checkpointUnits=0;
 };
 const usedPortIslands=new Set();
 const candidateIslands=islands.filter(i=>i!==A&&i!==Bi).slice().sort(()=>R()-.5),usedSpecialIslands=new Set();
-const reserveCompound=function* (type,min=180){let checkpointUnits=0;for(const i of candidateIslands){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};if(usedSpecialIslands.has(i))continue;for(let n=0;n<18;n++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const q=(yield* landSteps(i,850,1));if(q&&compoundSiteClear(type,q,min)){q.r=i.r;if((yield* compound(type,q))){usedSpecialIslands.add(i);return q}}}}return null};
-const forceReserve=function* (type,min){let checkpointUnits=0;
-  let q=(yield* reserveCompound(type,min))||(yield* reserveCompound(type,110));if(q)return q;
+const reserveCompound=function* (type,min=180,sector=null){let checkpointUnits=0;for(const i of candidateIslands.filter(i=>sectorMatches(i.x,i.z,sector))){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};if(usedSpecialIslands.has(i))continue;for(let n=0;n<18;n++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const q=(yield* landSteps(i,850,1));if(q&&sectorMatches(q.x,q.z,sector)&&compoundSiteClear(type,q,min)){q.r=i.r;if((yield* compound(type,q))){usedSpecialIslands.add(i);return q}}}}return null};
+const forceReserve=function* (type,min,sector=null){let checkpointUnits=0;
+  let q=(yield* reserveCompound(type,min,sector))||(yield* reserveCompound(type,110,sector));if(q)return q;
   // Fallback exhaustiu, però mai saltant-se la zona de seguretat.
-  for(const i of candidateIslands){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+  for(const i of candidateIslands.filter(i=>sectorMatches(i.x,i.z,sector))){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
     if(usedSpecialIslands.has(i))continue;
     for(let n=0;n<48;n++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
-      const c=(yield* landSteps(i,1800,1));if(!c||!compoundSiteClear(type,c,95))continue;
+      const c=(yield* landSteps(i,1800,1));if(!c||!sectorMatches(c.x,c.z,sector)||!compoundSiteClear(type,c,95))continue;
       c.r=i.r;if((yield* compound(type,c))){usedSpecialIslands.add(i);return c}
     }
   }
@@ -591,67 +593,102 @@ const initialDock=(yield* findCoastalLayoutSteps(dockLayout,{...A},function*(q){
 }));
 if(initialDock){const c=(yield* buildApprovedCompoundSteps(dockLayout,initialDock,civilOptions));registerCompound('civil-dock',initialDock);(yield* buildCoastRoadSteps(connection,compoundPath));world.userData.baseCoast.dockId=c.layoutId;world.userData.baseCoast.dock={x:c.x,z:c.z};}
 else world.userData.baseCoast={unavailable:true,reason:'No walkable coastal corridor for this base site'};
-for(const island of islands.filter(i=>i!==Bi).sort((a,b)=>b.r-a.r)){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
- if(terminalRecords.length>=2)break;
- const site=(yield* findCoastalLayoutSteps(terminalLayout,island,q=>compoundSiteClear('ferry-terminal',q)));if(!site)continue;
- const c=(yield* buildApprovedCompoundSteps(terminalLayout,site,civilOptions));c.islandIndex=islands.indexOf(island);terminalRecords.push(c);registerCompound('ferry-terminal',site);
+for(const sector of activeSectors){
+  let built=0;
+  for(const island of islandsInSector(sector).filter(i=>i!==Bi).sort((a,b)=>b.r-a.r)){
+    if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+    if(built>=2)break;
+    const site=(yield* findCoastalLayoutSteps(terminalLayout,island,q=>sectorMatches(q.x,q.z,sector)&&compoundSiteClear('ferry-terminal',q)));
+    if(!site)continue;
+    const c=(yield* buildApprovedCompoundSteps(terminalLayout,site,civilOptions));
+    c.islandIndex=islands.indexOf(island);terminalRecords.push(c);registerCompound('ferry-terminal',site);built++;
+  }
 }
-let villages=0,civilDocks=initialDock?1:0;
-for(const island of candidateIslands){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
- if(villages<2*MAP_SCALE){
-  const types=['hut-settlement-small','hut-settlement','hut-settlement-large'],chosen=types[Math.floor(R()*3)],l=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.id===chosen);
-  for(let tries=0;tries<6;tries++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const q=(yield* landSteps(island,250,1));if(!q||!compoundSiteClear(l.id,q))continue;const r=Math.max(...l.size)/2;if([-r,0,r].some(dx=>[-r,0,r].some(dz=>rawHAt(q.x+dx,q.z+dz)<.3)))continue;(yield* buildApprovedCompoundSteps(l,q,civilOptions));registerCompound(l.id,q);villages++;break;}
- }
- if(civilDocks<2*MAP_SCALE){const q=(yield* findCoastalLayoutSteps(dockLayout,island,q=>compoundSiteClear('civil-dock',q)));if(q){(yield* buildApprovedCompoundSteps(dockLayout,q,civilOptions));registerCompound('civil-dock',q);civilDocks++;}}
+for(const sector of activeSectors){
+  let villages=0,civilDocks=initialDock&&sectorMatches(initialDock.x,initialDock.z,sector)?1:0;
+  for(const island of candidateIslands.filter(i=>sectorMatches(i.x,i.z,sector))){
+    if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+    if(villages<2){
+      const types=['hut-settlement-small','hut-settlement','hut-settlement-large'],chosen=types[Math.floor(R()*3)],l=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.id===chosen);
+      for(let tries=0;tries<6;tries++){
+        if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+        const q=(yield* landSteps(island,250,1));if(!q||!sectorMatches(q.x,q.z,sector)||!compoundSiteClear(l.id,q))continue;
+        const r=Math.max(...l.size)/2;
+        if([-r,0,r].some(dx=>[-r,0,r].some(dz=>rawHAt(q.x+dx,q.z+dz)<.3)))continue;
+        (yield* buildApprovedCompoundSteps(l,q,civilOptions));registerCompound(l.id,q);villages++;break;
+      }
+    }
+    if(civilDocks<2){
+      const q=(yield* findCoastalLayoutSteps(dockLayout,island,p=>sectorMatches(p.x,p.z,sector)&&compoundSiteClear('civil-dock',p)));
+      if(q){(yield* buildApprovedCompoundSteps(dockLayout,q,civilOptions));registerCompound('civil-dock',q);civilDocks++;}
+    }
+    if(villages>=2&&civilDocks>=2)break;
+  }
 }
 markBuildStage('civilCompoundsAndCoast');
 yield {stage:'Poblats i costa',completed:1,total:1};
-(yield* forceReserve('garatge',190));
-(yield* forceReserve('avancada',180));
-(yield* forceReserve('polvori',190));
-(yield* forceReserve('comunicacions',190));
-const reserveHeliportFallback=function* (){let checkpointUnits=0;
-  const all=islands.filter(i=>i!==Bi).slice().sort(()=>R()-.5);
-  for(const i of all){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};for(let n=0;n<28;n++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const q=(yield* landSteps(i,1200,1));if(!q)continue;if(Math.hypot(q.x-pb.x,q.z-pb.z)<260||Math.hypot(q.x-pa.x,q.z-pa.z)<120)continue;if(!compoundSiteClear('heliport',q,120))continue;q.r=i.r;if((yield* compound('heliport',q)))return q}}
-  return null
+for(const sector of activeSectors){
+  (yield* forceReserve('garatge',190,sector));
+  (yield* forceReserve('avancada',180,sector));
+  (yield* forceReserve('polvori',190,sector));
+  (yield* forceReserve('comunicacions',190,sector));
+}
+const reserveHeliportFallback=function* (sector=null){let checkpointUnits=0;
+  const all=islands.filter(i=>i!==Bi&&sectorMatches(i.x,i.z,sector)).slice().sort(()=>R()-.5);
+  for(const i of all){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+    for(let n=0;n<28;n++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+      const q=(yield* landSteps(i,1200,1));if(!q||!sectorMatches(q.x,q.z,sector))continue;
+      if(Math.hypot(q.x-pb.x,q.z-pb.z)<260||Math.hypot(q.x-pa.x,q.z-pa.z)<120)continue;
+      if(!compoundSiteClear('heliport',q,120))continue;
+      q.r=i.r;if((yield* compound('heliport',q)))return q;
+    }
+  }
+  return null;
 };
-const heliportTarget=1+MAP_SCALE;
-let heliportsMade=0;for(let n=0;n<heliportTarget;n++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const q=(yield* forceReserve('heliport',n?160:210))||(yield* reserveHeliportFallback());if(q)heliportsMade++}
+let heliportsMade=0;
+for(const sector of activeSectors)for(let n=0;n<2;n++){
+  if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+  const q=(yield* forceReserve('heliport',n?160:210,sector))||(yield* reserveHeliportFallback(sector));
+  if(q)heliportsMade++;
+}
 markBuildStage('militaryCompounds');
 yield {stage:'Complexos militars',completed:1,total:1};
 let guaranteedPorts=0,fastPortCandidates=0,fastPortAccepted=0;
-// Les recerques antigues partien de punts aleatoris a terra i repetien
-// fins a 40*22 intents per illa. El traçat del port només necessita
-// una costa en la direcció dels eixos del layout: provam primer uns
-// ancoratges interiors estables, sense crides a R() ni models provisionals.
-// El validador original confirma cada ubicació i preserva l'espai d'aigua.
-for(const i of candidateIslands){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
-  if(guaranteedPorts>=2*MAP_SCALE)break;
-  if(usedSpecialIslands.has(i))continue;
-  const r=i.r*.24,anchors=[
-    [i.x,i.z],[i.x+r,i.z],[i.x-r,i.z],[i.x,i.z+r],[i.x,i.z-r]
-  ];
-  for(const [x,z] of anchors){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
-    fastPortCandidates++;
-    const site=(yield* findRedesignedPortSteps({x,z,r:i.r}));
-    if(!site||!compoundSiteClear('port',site,180))continue;
-    if((yield* compound('port',{...site,portPrepared:true}))){
-      usedPortIslands.add(i);guaranteedPorts++;fastPortAccepted++;break;
+for(const sector of activeSectors){
+  const pool=candidateIslands.filter(i=>sectorMatches(i.x,i.z,sector));
+  let made=0;
+  for(const i of pool){
+    if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+    if(made>=2)break;if(usedSpecialIslands.has(i))continue;
+    const r=i.r*.24,anchors=[[i.x,i.z],[i.x+r,i.z],[i.x-r,i.z],[i.x,i.z+r],[i.x,i.z-r]];
+    for(const [x,z] of anchors){
+      if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+      fastPortCandidates++;
+      const site=(yield* findRedesignedPortSteps({x,z,r:i.r}));
+      if(!site||!sectorMatches(site.x,site.z,sector)||!compoundSiteClear('port',site,180))continue;
+      if((yield* compound('port',{...site,portPrepared:true}))){
+        usedPortIslands.add(i);made++;guaranteedPorts++;fastPortAccepted++;break;
+      }
+    }
+  }
+  for(const i of pool){
+    if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+    if(made>=2)break;if(usedSpecialIslands.has(i)||usedPortIslands.has(i))continue;
+    for(let attempt=0;attempt<4;attempt++){
+      const q=(yield* findPortSite(i,6));
+      if(!q||!sectorMatches(q.x,q.z,sector)||!compoundSiteClear('port',q,180))continue;
+      if((yield* compound('port',q))){usedPortIslands.add(i);made++;guaranteedPorts++;break;}
+    }
+  }
+  if(made<2)for(const i of pool){
+    if(made>=2)break;
+    if(usedSpecialIslands.has(i)||usedPortIslands.has(i))continue;
+    const q=(yield* findPortSite(i,32));
+    if(q&&sectorMatches(q.x,q.z,sector)&&compoundSiteClear('port',q,110)&&(yield* compound('port',q))){
+      usedPortIslands.add(i);made++;guaranteedPorts++;
     }
   }
 }
-// Compatibilitat per a llavors geogràficament difícils: cerca restringida
-// en les illes encara lliures. Mai no recalculam les illes ja resoltes.
-for(const i of candidateIslands){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
-  if(guaranteedPorts>=2*MAP_SCALE)break;
-  if(usedSpecialIslands.has(i)||usedPortIslands.has(i))continue;
-  for(let attempt=0;attempt<4;attempt++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
-    const q=(yield* findPortSite(i,6));
-    if(!q||!compoundSiteClear('port',q,180))continue;
-    if((yield* compound('port',q))){usedPortIslands.add(i);guaranteedPorts++;break}
-  }
-}
-if(!guaranteedPorts){for(const i of candidateIslands){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};if(usedSpecialIslands.has(i))continue;const q=(yield* findPortSite(i,32));if(q&&compoundSiteClear('port',q,110)&&(yield* compound('port',q))){usedPortIslands.add(i);guaranteedPorts=1;break}}}
 buildCounters.guaranteedPorts=guaranteedPorts;
 buildCounters.fastPortCandidates=fastPortCandidates;
 buildCounters.fastPortAccepted=fastPortAccepted;
@@ -664,7 +701,18 @@ if(type==='port'){const pq=(yield* findPortSite(i,14));if(pq&&compoundSiteClear(
 if(i.r>520&&R()<.22){const type2=R()<.6?'garatge':'avancada';let q2=null;for(let n=0;n<14&&!q2;n++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const c=(yield* landSteps(i,800,1));if(c&&Math.hypot(c.x-q.x,c.z-q.z)>190&&compoundSiteClear(type2,c,150))q2=c}if(q2){q2.r=i.r;(yield* compound(type2,q2))}}};
 markBuildStage('remainingCompounds');
 yield {stage:'Assentaments',completed:1,total:1};
-let standalonePiers=0,targetPiers=(3+Math.floor(R()*3))*MAP_SCALE;for(const i of candidateIslands){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};if(standalonePiers>=targetPiers)break;if(usedPortIslands.has(i))continue;const q=(yield* findPortSite(i,12));if(!q||!compoundSiteClear('port',q,110)||compoundClear.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<80))continue;if((yield* makeStandalonePier(q)))standalonePiers++}
+let standalonePiers=0;
+for(const sector of activeSectors){
+  let made=0,target=3+Math.floor(R()*3);
+  for(const i of candidateIslands.filter(i=>sectorMatches(i.x,i.z,sector))){
+    if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+    if(made>=target)break;if(usedPortIslands.has(i))continue;
+    const q=(yield* findPortSite(i,12));
+    if(!q||!sectorMatches(q.x,q.z,sector)||!compoundSiteClear('port',q,110)||
+       compoundClear.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<80))continue;
+    if((yield* makeStandalonePier(q))){made++;standalonePiers++;}
+  }
+}
 markBuildStage('civilianPiers');
 yield {stage:'Molls',completed:1,total:1};
 if(seedSearchMode&&seedSearchCategoryEl.value==='compound'){
