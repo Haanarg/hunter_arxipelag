@@ -11,7 +11,7 @@ export const newWorldLayouts=[
   vehicles:[vehicle('barca_rems',-35,35),vehicle('windsurf',34,31),vehicle('bici',35,-40)],
   routes:[route('Camí costaner · 6 m',[[0,-60],[0,0],[-18,0],[-18,10]],6),route('Caseta',[[-30,-16],[-30,0],[0,0]]),route('Xarxes',[[30,-13],[30,0],[0,0]])],
   zones:[{label:'Descàrrega manual',x:29,z:0,w:16,d:10}],props:[['crate',-41,-22],['barrel',39,-20],['lamp',-26,5],['bench',24,2],['lifebuoy',-21,22]],
-  loot:[{kind:'farmaciola',x:-30,z:-24}],entrances:[[0,-60]],counts:'Barca de rems · windsurf · bicicleta · 2 casetes',
+  loot:[],entrances:[[0,-60]],counts:'Barca de rems · windsurf · bicicleta · 2 casetes',
   notes:'Embarcador sense guarnició fixa ni armament militar garantit. Passera de 5 m, capçal de 34 m i embarcacions als laterals, fora del pas. Pot ser una alternativa tranquil·la als ports militars; requereix aigua navegable al davant.'}),
  draft({id:'ferry-terminal',name:'Terminal de ferri',family:'civil',size:[180,190],subtitle:'Carril d’embarcament · cua lateral · passeig segregat',
   waterfront:{shore:18},piers:[{x:0,z:25,w:18,d:21},{x:-25,z:44,w:5,d:53}],
@@ -19,7 +19,7 @@ export const newWorldLayouts=[
   vehicles:[vehicle('ferry',0,62),vehicle('camio',0,-32),vehicle('cotxe',29,-9),vehicle('bici',-66,-4)],
   routes:[route('Accés rodat · 14 m',[[0,-95],[0,32]],14,'road'),route('Cua de reserva',[[29,-70],[29,3],[0,3]],9,'road'),route('Vianants · 5 m',[[-70,-95],[-70,-8],[-25,-8],[-25,68]],5),route('Càrrega',[[50,-22],[50,-11],[29,-11]],6)],
   zones:[{label:'Cua · 3 vehicles lleugers',x:29,z:-34,w:10,d:52},{label:'Evitar obstacles a la rampa',x:0,z:24,w:18,d:18}],
-  props:[['lamp',-13,9],['lamp',44,9],['bench',-63,-7],['bench',-41,-7],['crate',66,-35],['lifebuoy',-28,32]],loot:[{kind:'farmaciola',x:-48,z:-25}],entrances:[[0,-95],[-70,-95]],
+  props:[['lamp',-13,9],['lamp',44,9],['bench',-63,-7],['bench',-41,-7],['crate',66,-35],['lifebuoy',-28,32]],loot:[],entrances:[[0,-95],[-70,-95]],
   counts:'1 plaça de ferri · rampa de 18 m · carril de 14 m · pas de vianants de 5 m',
   notes:'El ferri es mostra amarrat amb la proa cap a mar. La terminal reserva espai per a una de les dues unitats del mapa; no n’afegeix una tercera. Cua i vianants separats. La integració haurà d’ajustar la rampa a la coberta i a l’onatge, i reservar 45 m de sortida lliure mar endins.'}),
  draft({id:'road-checkpoint',name:'Control de carretera',family:'military',friendly:false,size:[130,140],subtitle:'Pas de 10 m · inspecció lateral · escapada a peu',
@@ -35,7 +35,7 @@ export const newWorldLayouts=[
   buildings:[building('hut1','Cabana 1',-38,-35,16,14,5.2,{wood:true}),building('hut2','Cabana 2',0,-43,14,12,5.6,{wood:true}),building('hut3','Cabana 3',38,-32,18,14,5.2,{wood:true}),building('hut4','Cabana 4',-40,18,16,14,5.4,{wood:true}),building('hut5','Cabana 5',38,24,14,12,5.2,{wood:true}),building('store','Magatzem comunal',-8,42,18,14,6,{wood:true})],
   routes:[route('Entrada principal',[[0,-70],[18,-70],[18,0],[0,0]],5),route('Travessa',[[-70,0],[70,0]],5),route('Cabana nord-oest',[[-38,-27],[-38,0]]),route('Cabana nord',[[0,-36],[0,0]]),route('Cabana nord-est',[[38,-24],[38,0]]),route('Cabana sud-oest',[[-40,26],[-22,26],[-22,0]]),route('Cabana sud-est',[[38,31],[20,31],[20,0]]),route('Magatzem',[[-8,50],[-8,61],[20,61],[20,31]])],
   vehicles:[vehicle('bici',-21,-12),vehicle('moto',56,17)],zones:[{label:'Plaça · 22 × 20 m',x:0,z:5,w:22,d:20}],
-  props:[['well',0,5],['bench',-9,14],['bench',9,14],['crate',-12,41],['barrel',-51,18],['lamp',16,-9]],loot:[{kind:'farmaciola',x:-8,z:42}],entrances:[[18,-70],[-70,0],[70,0]],counts:'6 construccions de fusta · pou · 1 moto · 1 bicicleta',
+  props:[['well',0,5],['bench',-9,14],['bench',9,14],['crate',-12,41],['barrel',-51,18],['lamp',16,-9]],loot:[],entrances:[[18,-70],[-70,0],[70,0]],counts:'6 construccions de fusta · pou · 1 moto · 1 bicicleta',
   notes:'Conjunt civil sense soldats permanents ni personatges civils nous en aquesta fase. Cabanyes petites amb cobertes retirables, porxos i passos de 4–5 m. La plaça funciona com a referència visual i espai per orientar-se; els subministraments són modestos.'})
 ];
 const fence=(x,z,lateral=false)=>[[[-x,-z],[x,-z]],[[x,-z],[x,z]],[[x,z],[12,z]],[[-12,z],[-x,z]],...(lateral?[[[-x,z],[-x,28]],[[-x,12],[-x,-z]]]:[[[-x,z],[-x,-z]]])];
@@ -107,7 +107,7 @@ function settlement(id,title,count,radius,size){
  l.routes=[route('Pas principal',[[l.size[0]/2, -6],[16,-6],[16,17],[6,17]],4)];
  l.entrances=[[l.size[0]/2,-6]];
  l.props=[['well',-15,-14],['bench',-21,-14],['bench',-9,-14],['lamp',16,-19]];
- l.vehicles=[vehicle('bici',20,-14),vehicle('moto',29,-14)];l.loot=[{kind:'farmaciola',x,z}];
+ l.vehicles=[vehicle('bici',20,-14),vehicle('moto',29,-14)];l.loot=[];
  l.zones=[{label:'Plaça comuna',x:-15,z:-14,w:16,d:10}];
  l.subtitle=count+' habitatges i cabana comunal · distribució irregular';
  l.counts=count+' cabanes + 1 comunal · pou · moto i bicicleta';
