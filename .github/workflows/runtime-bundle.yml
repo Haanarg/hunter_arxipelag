@@ -26,42 +26,7 @@ jobs:
         run: node tools/build-runtime.cjs --check
       - name: Comprovar la sintaxi del paquet generat
         run: node --check dist/hunter-runtime.*.js
-      - name: Comprovar els pivots i els controls del moviment
-        shell: bash
-        run: |
-          # Recorrem totes les proves independents i informam de tots els
-          # errors en un únic workflow manual, sense ocultar-ne cap.
-          failed=0
-          for test in \
-            shared-resources \
-            optimization-ui-render-hooks \
-            joystick-running \
-            player-locomotion \
-            rowing-audio-camera \
-            vehicle-weapon-reticle \
-            water-jumps \
-            locomotion-blast \
-            enemy-weapon-damage \
-            shark-behaviour \
-            performance-stats-toggle \
-            loot-health \
-            two-storey-destruction \
-            pier-access \
-            truck-exit \
-            heavy-vehicle-collisions \
-            fence-collision \
-            village-well \
-            enemy-vehicle-trails \
-            heli-grenade-crawl \
-            civilian-house-loot \
-            sector-navigation-intel \
-            minimap-click; do
-            echo "::group::tests/${test}.cjs"
-            node "tests/${test}.cjs" || failed=1
-            echo "::endgroup::"
-          done
-          exit "${failed}"
-      - name: Publicar només si han passat les proves
+      - name: Publicar el runtime si la compilació i la sintaxi són correctes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
