@@ -1618,7 +1618,15 @@ function createItemVisual(t){const g=new THREE.Group(),metal=0x454b4e,dark=0x3d3
       [.18,1.15,.24]],buckles,.045);
   }
   else if(t==='cisalla'){const cutter=window.HUNTER_BOLT_CUTTERS.create(THREE);cutter.rotation.z=Math.PI/2;cutter.position.y=.66;cutter.scale.setScalar(1.12);g.add(cutter)}
-  else if(t==='granada'){for(const [x,z] of[[-.35,-.24],[0,-.24],[.35,-.24],[-.18,.22],[.18,.22]]){const body=new THREE.Mesh(new THREE.SphereGeometry(.17,8,6),M(0x4a5842,'metal'));body.scale.set(.88,1.08,.88);body.position.set(x,.42,z);g.add(body);bx(g,.07,.12,.07,0x252b27,x,.61,z,'metal')}}
+  else if(t==='granada'){
+    // Pickup de cinc granades més visible: conjunt x1,5 i formació més compacta.
+    for(const [x,z] of[[-.32,-.18],[0,-.18],[.32,-.18],[-.16,.18],[.16,.18]]){
+      const body=new THREE.Mesh(new THREE.SphereGeometry(.17,8,6),M(0x4a5842,'metal'));
+      body.scale.set(.88,1.08,.88);body.position.set(x,.42,z);g.add(body);
+      bx(g,.07,.12,.07,0x252b27,x,.61,z,'metal');
+    }
+    g.scale.setScalar(1.5);
+  }
   else if(t==='disf'){bx(g,.78,1.3,.16,0xb53232,0,.8,0,'paint');const l=bx(g,.7,.38,.16,0xb53232,-.62,1.18,0,'paint'),r=bx(g,.7,.38,.16,0xb53232,.62,1.18,0,'paint');l.rotation.z=-.55;r.rotation.z=.55;bx(g,.16,.18,.18,0xf1c7a1,0,1.44,0,'organic');bx(g,.08,1.05,.19,0x6f1f1f,0,.75,-.02,'paint')}
   else bx(g,...IT[t].s,IT[t].c,0,.4,0,'paint');
   return g}
