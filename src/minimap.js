@@ -121,6 +121,14 @@ window.HUNTER_MINIMAP=Object.freeze({
       const c=target.getContext('2d');
       if(!c)return;
       c.drawImage(canvas,0,0,target.width,target.height);
+      if(ws>4800){
+        c.save();
+        c.strokeStyle='rgba(255,255,255,.35)';c.lineWidth=1;
+        c.setLineDash([5,5]);c.beginPath();
+        c.moveTo(target.width/2,0);c.lineTo(target.width/2,target.height);
+        c.moveTo(0,target.height/2);c.lineTo(target.width,target.height/2);
+        c.stroke();c.restore();
+      }
       c.strokeStyle='#fff';c.lineWidth=2;c.strokeRect(1,1,target.width-2,target.height-2);
       c.fillStyle='#fff';c.font='13px system-ui';
       c.fillText('N',target.width/2-5,19);
