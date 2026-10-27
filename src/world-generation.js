@@ -736,7 +736,43 @@ yield {stage:'Fons marí',completed:1,total:1};
 (yield* vegetateSteps(pa));if(seedSearchMode)fa=[];else (yield* spawnFaunaSteps());
 const vegetationMs=performance.now()-vegetationStarted;
 markBuildStage('vegetationAndFauna');
-yield {stage:'Vegetació i fauna',completed:1,total:1};HQ={x:hqCompound.buildings[0].x,z:hqCompound.buildings[0].z};const rb=B.slice(6);
+yield {stage:'Vegetació i fauna',completed:1,total:1};HQ={x:hqCompound.buildings[0].x,z:hqCompound.buildings[0].z};
+// Three plausible HQ positions, determined by the seed without advancing R().
+// On large maps they lie in the three non-starting sectors, one of them real.
+// On small maps the two decoys coincide with other plausible military sites.
+const startingSector=mapSector(pa.x,pa.z),actualSector=mapSector(HQ.x,HQ.z);
+const militaryHQDecoys=sector=>world.userData.compounds
+  .filter(c=>c.id!=='hq'&&c.id!=='base'&&!c.layout?.friendly&&!c.layout?.civilian&&
+    sectorMatches(c.x,c.z,sector)&&Math.hypot(c.x-pa.x,c.z-pa.z)>500&&
+    Math.hypot(c.x-HQ.x,c.z-HQ.z)>460)
+  .sort((a,b)=>Math.hypot(b.x-pa.x,b.z-pa.z)-Math.hypot(a.x-pa.x,a.z-pa.z));
+const pickHQDecoy=(sector,other=[])=>{
+  const valid=p=>other.every(o=>Math.hypot(p.x-o.x,p.z-o.z)>450);
+  const sites=militaryHQDecoys(sector);
+  const candidate=sites.find(valid);
+  if(candidate)return{x:candidate.x,z:candidate.z};
+  const remote=islandsInSector(sector).filter(i=>Math.hypot(i.x-HQ.x,i.z-HQ.z)>480&&
+    Math.hypot(i.x-pa.x,i.z-pa.z)>500).sort((a,b)=>b.r-a.r).find(valid);
+  if(remote)return{x:remote.x,z:remote.z};
+  // Geographic last resort; candidates must remain away from the starting sector.
+  const fallbackS=sector==null?(actualSector+1)%4:sector;
+  return{x:(fallbackS&1?1:-1)*H*.53,z:(fallbackS&2?1:-1)*H*.53};
+};
+const decoys=[];
+if(MAP_SCALE===2){
+  for(const sector of [0,1,2,3].filter(n=>n!==startingSector&&n!==actualSector))
+    decoys.push(pickHQDecoy(sector,decoys));
+}else{
+  decoys.push(pickHQDecoy(null,decoys));
+  decoys.push(pickHQDecoy(null,decoys));
+}
+const hqPositions=[{x:HQ.x,z:HQ.z,real:true},...decoys.map(q=>({...q,real:false}))];
+const offset=seed%3;
+hqIntelSites=hqPositions.map((_,i)=>hqPositions[(i+offset)%3]);
+hqDiscardIndex=hqIntelSites.findIndex(p=>!p.real);
+world.userData.hqIntelCandidates=hqIntelSites.map(p=>({x:p.x,z:p.z,real:p.real}));
+world.userData.hqSector=actualSector;
+const rb=B.slice(6);
 const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2);
 const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1),x=cx+Math.cos(a)*d,z=cz+Math.sin(a)*d;if(gl(x,z)&&!world.userData.compounds.some(c=>c.layout.civilian&&Math.hypot(x-c.x,z-c.z)<c.r))return mkEn(t,x,z)}return null};
 for(const i of islands){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};if(i===A||i===Bi||R()<.5)continue;const q=(yield* landSteps(i,60));if(!q)continue;for(let k=0;k<1+(R()<.4);k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};sp2('soldat',q.x,q.z,0,10);}if(R()<.25)sp2('torre',q.x,q.z,5,12)};
@@ -761,8 +797,14 @@ if(!items.some(it=>it.t==='med'&&it.compound==='base')){
 const lootBuildings=t=>rb.filter(b=>!b.civilian&&lootAllowed(t,b));
 const sniperSites=lootBuildings('franctirador');
 addIt('franctirador',sniperSites[Math.floor(R()*sniperSites.length)]||B[2]);
-for(const [type,count]of[['mapa',2],['mapa_heli',1+MAP_SCALE],['mapa_tanc',1+MAP_SCALE]]){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
-  lootBuildings(type).sort(()=>R()-.5).slice(0,count).forEach(b=>addIt(type,b));
+// Each geographic sector contains enough HQ documents to complete all
+// three stages and its own tank/helicopter location charts.
+for(const sector of activeSectors){
+  for(const [type,count]of [['mapa',3],['mapa_heli',2],['mapa_tanc',2]]){
+    if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+    lootBuildings(type).filter(b=>sectorMatches(b.x,b.z,sector))
+      .sort(()=>R()-.5).slice(0,count).forEach(b=>addIt(type,b));
+  }
 }
 markBuildStage('enemiesAndLoot');
 yield {stage:'Guàrdies i equipament',completed:1,total:1};
