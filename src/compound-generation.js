@@ -263,8 +263,18 @@ function* buildApprovedCompoundSteps(layout,q,{pad,path,pier,prop,vehicles,rocke
       bunker?bunker.basement.floorY:record.buildings[0].fy+.3);
     if(bunker){record.general.basement=bunker;record.general.walkY=bunker.basement.floorY;}
   }
+  // Civilian houses never use guaranteed compound loot. Roll once per
+  // actual dwelling (not per settlement), with a strict one-item limit.
+  // Other civilian facilities, such as ticket offices, have no house loot.
+  if(layout.civilian)for(const house of record.buildings){
+    if(!house.civilianHut)continue;
+    const kind=rollCivilianHouseLoot(R);
+    if(!kind)continue;
+    const pickup=addIt(kind,house);
+    if(pickup)record.loot.push(items[items.length-1]);
+  }
   const lootKinds={'munició':'arma','farmaciola':'med','granades':'granada','cisalla':'cisalla','mapa':'mapa','mapa_heli':'mapa_heli','mapa_tanc':'mapa_tanc','explosius':'expl','bazooka':'bazooka','franctirador':'franctirador','disfressa':'disf','paracaigudes':'paracaigudes'};
-  for(const loot of layout.loot){
+  for(const loot of layout.civilian?[]:layout.loot){
     yield {stage:'Equipant '+layout.id,completed:null,total:null};
     if(loot.kind==='disfressa'&&R()>=.5)continue;
     const t=lootKinds[loot.kind];if(!IT[t])throw new Error('Unknown compound loot: '+loot.kind);
