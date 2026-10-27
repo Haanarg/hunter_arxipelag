@@ -12,10 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           persist-credentials: true
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
       - name: Install pinned build tools
@@ -27,27 +27,40 @@ jobs:
       - name: Comprovar la sintaxi del paquet generat
         run: node --check dist/hunter-runtime.*.js
       - name: Comprovar els pivots i els controls del moviment
+        shell: bash
         run: |
-          node tests/shared-resources.cjs
-          node tests/optimization-ui-render-hooks.cjs
-          node tests/joystick-running.cjs
-          node tests/player-locomotion.cjs
-          node tests/rowing-audio-camera.cjs
-          node tests/vehicle-weapon-reticle.cjs
-          node tests/water-jumps.cjs
-          node tests/locomotion-blast.cjs
-          node tests/enemy-weapon-damage.cjs
-          node tests/shark-behaviour.cjs
-          node tests/performance-stats-toggle.cjs
-          node tests/loot-health.cjs
-          node tests/two-storey-destruction.cjs
-          node tests/pier-access.cjs
-          node tests/truck-exit.cjs
-          node tests/heavy-vehicle-collisions.cjs
-          node tests/fence-collision.cjs
-          node tests/village-well.cjs
-          node tests/enemy-vehicle-trails.cjs
-          node tests/heli-grenade-crawl.cjs
+          # Recorrem totes les proves independents i informam de tots els
+          # errors en un únic workflow manual, sense ocultar-ne cap.
+          failed=0
+          for test in \
+            shared-resources \
+            optimization-ui-render-hooks \
+            joystick-running \
+            player-locomotion \
+            rowing-audio-camera \
+            vehicle-weapon-reticle \
+            water-jumps \
+            locomotion-blast \
+            enemy-weapon-damage \
+            shark-behaviour \
+            performance-stats-toggle \
+            loot-health \
+            two-storey-destruction \
+            pier-access \
+            truck-exit \
+            heavy-vehicle-collisions \
+            fence-collision \
+            village-well \
+            enemy-vehicle-trails \
+            heli-grenade-crawl \
+            civilian-house-loot \
+            sector-navigation-intel \
+            minimap-click; do
+            echo "::group::tests/${test}.cjs"
+            node "tests/${test}.cjs" || failed=1
+            echo "::endgroup::"
+          done
+          exit "${failed}"
       - name: Publicar només si han passat les proves
         run: |
           git config user.name "github-actions[bot]"
