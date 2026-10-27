@@ -396,7 +396,8 @@ function* prepareShadowCastersSteps(){
 // terreny visual a src/terrain.js
 let stairs=[],piers=[];
 let Wl=[],Dr=[],items=[],inv={},msg='',msgT=0,HQ=null,ib=null;
-let hqIntelStage=0,hqIntelSites=[],hqDiscardIndex=-1;
+let hqIntelStage=0,hqIntelSites=[],hqDiscardIndex=-1,hqIntelEliminationOrder=[];
+const hqIntelSectors=new Set(),hqIntelDiscarded=new Set();
 const knownVehicleSectors={heli:new Set(),tanc:new Set()};
 const WALL_CELL=64,wallGrid=new Map();let wallGridSource=null,wallGridCount=-1,wallQueryStamp=0;
 const wallCellKey=(cx,cz)=>cx+','+cz;
@@ -461,7 +462,7 @@ arma:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 19 H54 V50 H10 Z"
 };
 const IT={
 med:{n:'Farmaciola',c:0xf2f3de,s:[1.2,.8,.8],icon:ICON.med,desc:'Recupera 8 punts de vida.',usable:true},
-mapa:{n:'Mapa de l’HQ',c:0xffe27a,s:[1.6,.08,1.2],icon:ICON.mapa,desc:'Primer mapa: tres possibles HQ. Segon: en descarta un. Tercer: revela el HQ real.',usable:false},
+mapa:{n:'Mapa de l’HQ',c:0xffe27a,s:[1.6,.08,1.2],icon:ICON.mapa,desc:'Mapa petit: tres possibles HQ, descarta un i revela el real amb el tercer mapa. Mapa gran: nou indicis; cada quadrant diferent n’elimina tres, fins a trobar l’HQ amb el quart.',usable:false},
 mapa_heli:{n:'Mapa d’helicòpters',c:0x9fd7ff,s:[1.6,.08,1.2],icon:ICON.mapa_heli,desc:'Revela els helicòpters del sector on es recull; conserva la informació d’altres sectors.',usable:false},
 mapa_tanc:{n:'Mapa de tancs',c:0xc6b06a,s:[1.6,.08,1.2],icon:ICON.mapa_tanc,desc:'Revela els tancs del sector on es recull; conserva la informació d’altres sectors.',usable:false},
 bazooka:{n:'Bazooka',c:0x58664a,s:[2.1,.45,.45],icon:ICON.bazooka,desc:'Llançacoets amb 3 coets per recollida. La retícula indica el punt d’apuntat i es torna verda si l’autoapuntat fixa un enemic.',usable:true},
@@ -2082,7 +2083,7 @@ const barbedHQ=(cx,cz,hw=50,hd=46,gap=13,gateOffset=0)=>{
 const mc=document.getElementById('mm');
 const minimap=window.HUNTER_MINIMAP.create({
   THREE,canvas:mc,worldSize:S,halfSize:H,heightAt:hAt,colorAt:window.HUNTER_TERRAIN.colorAt,
-  getState:()=>({base:P.base,hq:HQ,mapKnown:hqMapKnown||!!inv.mapa,hqClues:hqIntelStage>0&&!hqMapKnown?hqIntelSites.map((p,i)=>({...p,discarded:hqIntelStage>=2&&i===hqDiscardIndex})):[],current:cv||P,currentVehicle:cv,vehicles:V,enemies:E,log:logb,intel:intelMarks,opportunities:optionalMapMarkers()})
+  getState:()=>({base:P.base,hq:HQ,mapKnown:hqMapKnown||!!inv.mapa,hqClues:hqIntelStage>0&&!hqMapKnown?hqIntelSites.map((p,i)=>({...p,discarded:MAP_SCALE===2?hqIntelDiscarded.has(i):hqIntelStage>=2&&i===hqDiscardIndex})):[],current:cv||P,currentVehicle:cv,vehicles:V,enemies:E,log:logb,intel:intelMarks,opportunities:optionalMapMarkers()})
 });
 window.HUNTER_MINIMAP_STATS=minimap.stats;
 const mini=()=>minimap.draw();
@@ -2689,7 +2690,7 @@ function grantAllWeapons(){
   ammo=Math.max(ammo,999);
   for(const key of ['med','bazooka','granada','cisalla','expl','franctirador','paracaigudes','disf'])inv[key]=Math.max(inv[key]||0,999);
   sniperAmmo=Math.max(sniperAmmo,999);
-  hqMapKnown=true;hqIntelStage=3;
+  hqMapKnown=true;hqIntelStage=MAP_SCALE===2?4:3;
   for(const v of V)if(v.rockets!=null)v.rockets=Math.max(v.rockets,999);
 }
 function setCheat(key,enabled){
@@ -2703,9 +2704,29 @@ function resume(){if(generationPromise)return;paused=false;simulationFocused=tru
 function panel(mode){if(generationPromise)return;setSniperScope(false);paused=true;updateOptionalSystems(0,false);resetSimulationClock();pickerOpen=false;picker.style.display='none';pickerToggle.style.display='none';clearKeys();audioPause();ui.show(mode)}
 // Les cartes revelen informació de forma immediata: no són objectes
 // d'inventari que s'hagin d'equipar ni obrir manualment.
-function revealMapPickup(kind,allSectors=false){
+function revealMapPickup(kind,allSectors=false,pickupSector=null){
   if(kind==='mapa'){
-    if(hqMapKnown||hqIntelStage>=3)return 'El HQ enemic ja està localitzat.';
+    if(hqMapKnown)return 'El HQ enemic ja està localitzat.';
+    if(MAP_SCALE===2){
+      // Each quadrant provides only one independent piece of HQ intelligence.
+      const sector=pickupSector??mapSector(P.x,P.z);
+      if(hqIntelSectors.has(sector))
+        return 'Aquest quadrant ja ha aportat informació sobre l’HQ. Cerca un mapa en un altre quadrant.';
+      hqIntelSectors.add(sector);
+      hqIntelStage=hqIntelSectors.size;
+      if(hqIntelStage===1)return 'Nou possibles emplaçaments de l’HQ marcats al mapa.';
+      if(hqIntelStage===2||hqIntelStage===3){
+        const from=(hqIntelStage-2)*3;
+        for(const index of hqIntelEliminationOrder.slice(from,from+3))
+          hqIntelDiscarded.add(index);
+        return 'Intel·ligència d’un quadrant nou: tres emplaçaments descartats. En queden '+
+          (9-hqIntelDiscarded.size)+' de possibles.';
+      }
+      hqMapKnown=true;
+      return 'Quart quadrant investigat: HQ enemic localitzat amb exactitud!';
+    }
+    // Small-map progression remains unchanged.
+    if(hqIntelStage>=3)return 'El HQ enemic ja està localitzat.';
     hqIntelStage++;
     if(hqIntelStage===1)return 'Tres possibles emplaçaments del HQ marcats amb interrogants.';
     if(hqIntelStage===2)return 'Un dels tres emplaçaments descartat: queden dos interrogants.';
@@ -3651,7 +3672,7 @@ items.forEach(it=>{const dx=it.x-P.x,dz=it.z-P.z;if(dx*dx+dz*dz<ITEM_ANIM2){it.o
 if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-it.z;if(dx*dx+dz*dz<4.84&&Math.abs(P.y-it.y)<3){let mapMessage=null;
   if(it.t==='arma')ammo+=16;
   else if(it.t==='mapa'||it.t==='mapa_heli'||it.t==='mapa_tanc'){
-    mapMessage=revealMapPickup(it.t);
+    mapMessage=revealMapPickup(it.t,false,MAP_SCALE===2?mapSector(it.x,it.z):null);
     mini(); // la informació apareix de seguida, sense entrar a cap menú
   }
   else if(it.t==='franctirador'){inv.franctirador=1;sniperAmmo+=6}
