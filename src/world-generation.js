@@ -832,13 +832,35 @@ if(!items.some(it=>it.t==='med'&&it.compound==='base')){
 const lootBuildings=t=>rb.filter(b=>!b.civilian&&lootAllowed(t,b));
 const sniperSites=lootBuildings('franctirador');
 addIt('franctirador',sniperSites[Math.floor(R()*sniperSites.length)]||B[2]);
-// Each geographic sector contains enough HQ documents to complete all
-// three stages and its own tank/helicopter location charts.
+// Large maps require at least one reachable HQ document in every quadrant.
+// Keep other map types distributed by sector, and respect the three-item
+// capacity of each building rather than discarding a failed placement.
 for(const sector of activeSectors){
-  for(const [type,count]of [['mapa',3],['mapa_heli',2],['mapa_tanc',2]]){
+  for(const [type,count] of [['mapa',3],['mapa_heli',2],['mapa_tanc',2]]){
     if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
-    lootBuildings(type).filter(b=>sectorMatches(b.x,b.z,sector))
-      .sort(()=>R()-.5).slice(0,count).forEach(b=>addIt(type,b));
+    const buildings=lootBuildings(type).filter(b=>sectorMatches(b.x,b.z,sector))
+      .sort(()=>R()-.5);
+    let placed=0;
+    for(const b of buildings){
+      if(placed>=count)break;
+      if(addIt(type,b))placed++;
+    }
+    // Some random seeds leave every military building full of earlier loot.
+    // A sector must still contain a map if its evidence is needed to solve HQ.
+    if(type==='mapa'&&MAP_SCALE===2&&!placed){
+      for(const b of B.filter(b=>!b.civilian&&!b.hangar&&lootAllowed(type,b)&&
+        sectorMatches(b.x,b.z,sector))){
+        if(addIt(type,b)){placed++;break;}
+      }
+      if(!placed)for(const island of islandsInSector(sector)){
+        if(placed)break;
+        for(let attempt=0;attempt<8;attempt++){
+          if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+          const q=(yield* landSteps(island,120,1));
+          if(q&&sectorMatches(q.x,q.z,sector)&&addItemAt('mapa',q.x,q.z)){placed++;break;}
+        }
+      }
+    }
   }
 }
 markBuildStage('enemiesAndLoot');
