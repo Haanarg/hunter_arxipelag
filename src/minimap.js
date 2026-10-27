@@ -49,6 +49,21 @@ window.HUNTER_MINIMAP=Object.freeze({
         ctx.fillStyle='#ff3030';
         ctx.fillRect(px(s.hq.x)-3,pz(s.hq.z)-3,6,6);
       }
+      // HQ intelligence is progressive: ? ? ? -> crossed-out ? -> exact HQ.
+      for(const clue of s.hqClues||[]){
+        const x=px(clue.x),z=pz(clue.z);
+        ctx.save();
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.font='bold 16px system-ui';ctx.lineWidth=3;
+        ctx.strokeStyle='#2a2320';ctx.fillStyle=clue.discarded?'#777':'#ffdd64';
+        ctx.strokeText('?',x,z);ctx.fillText('?',x,z);
+        if(clue.discarded){
+          ctx.beginPath();ctx.strokeStyle='#ec4343';ctx.lineWidth=2.5;
+          ctx.moveTo(x-7,z-9);ctx.lineTo(x+7,z+9);
+          ctx.moveTo(x+7,z-9);ctx.lineTo(x-7,z+9);ctx.stroke();
+        }
+        ctx.restore();
+      }
       ctx.fillStyle='#ffd23a';
       for(const v of s.vehicles||[]){
         const dx=v.x-q.x,dz=v.z-q.z;
