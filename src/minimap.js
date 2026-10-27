@@ -49,18 +49,21 @@ window.HUNTER_MINIMAP=Object.freeze({
         ctx.fillStyle='#ff3030';
         ctx.fillRect(px(s.hq.x)-3,pz(s.hq.z)-3,6,6);
       }
-      // HQ intelligence is progressive: ? ? ? -> crossed-out ? -> exact HQ.
-      for(const clue of s.hqClues||[]){
+      // Nine clues on large maps, three on small maps. Keep nine compact
+      // enough to remain distinguishable in the small HUD minimap.
+      const hqClues=s.hqClues||[],manyClues=hqClues.length>3;
+      for(const clue of hqClues){
         const x=px(clue.x),z=pz(clue.z);
         ctx.save();
         ctx.textAlign='center';ctx.textBaseline='middle';
-        ctx.font='bold 16px system-ui';ctx.lineWidth=3;
+        ctx.font='bold '+(manyClues?11:16)+'px system-ui';ctx.lineWidth=manyClues?2:3;
         ctx.strokeStyle='#2a2320';ctx.fillStyle=clue.discarded?'#777':'#ffdd64';
         ctx.strokeText('?',x,z);ctx.fillText('?',x,z);
         if(clue.discarded){
-          ctx.beginPath();ctx.strokeStyle='#ec4343';ctx.lineWidth=2.5;
-          ctx.moveTo(x-7,z-9);ctx.lineTo(x+7,z+9);
-          ctx.moveTo(x+7,z-9);ctx.lineTo(x-7,z+9);ctx.stroke();
+          const dx=manyClues?5:7,dz=manyClues?6:9;
+          ctx.beginPath();ctx.strokeStyle='#ec4343';ctx.lineWidth=manyClues?1.7:2.5;
+          ctx.moveTo(x-dx,z-dz);ctx.lineTo(x+dx,z+dz);
+          ctx.moveTo(x+dx,z-dz);ctx.lineTo(x-dx,z+dz);ctx.stroke();
         }
         ctx.restore();
       }
