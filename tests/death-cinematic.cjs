@@ -94,7 +94,7 @@ assert.ok(html.includes('.death-water-filter'),'Vel blau en CSS');
 (async()=>{
  const game=await require('./harness.cjs')();
  game.start('12345');game.frame();
- const started=game.run("(()=>{const previous=document.getElementById('hud').style.visibility||'';hurtP(999,true,{type:'bullet',x:P.x-8,y:P.y+2,z:P.z-10});return {active:deathCinematic?.active,over,hp,hidden:document.getElementById('hud').style.visibility,hasPlayer:!!deathCinematic?.voidPlayer,hasReaper:!!deathCinematic?.reaper?.group,hasEffect:!!deathCinematic?.replayEffect,previous}})()");
+ const started=game.run("(()=>{const previous=document.getElementById('hud').style.visibility||'';hurtP(999,true,{type:'bullet',x:P.x-8,y:P.y+2,z:P.z-10});return {active:deathCinematic?.active,over,hp,hidden:document.getElementById('hud').style.visibility,hasPlayer:!!deathCinematic?.voidPlayer,hasReaper:!!deathCinematic?.reaper?.group,hasEffect:!!deathCinematic?.replayEffect,hasDroppedWeapon:!!deathCinematic?.droppedWeapon,detachedWeapon:deathCinematic?.droppedWeapon?.object.parent===scene,previous}})()");
  assert.equal(started.active,true);
  assert.equal(started.over,1);
  assert.equal(started.hp,0);
@@ -102,8 +102,11 @@ assert.ok(html.includes('.death-water-filter'),'Vel blau en CSS');
  assert.equal(started.hasPlayer,true);
  assert.equal(started.hasReaper,true);
  assert.equal(started.hasEffect,true);
- const natural=game.run("({angle:pl.rotation.x,voidAngle:deathCinematic.voidPlayer.rotation.x,hasMotion:!!deathCinematic.motion})");
+ assert.equal(started.hasDroppedWeapon,true,'La persona deixa anar el seu equipament');
+ assert.equal(started.detachedWeapon,true,'El model ja no penja del braç');
+ const natural=game.run("({angle:pl.rotation.x,voidAngle:deathCinematic.voidPlayer.rotation.x,hasMotion:!!deathCinematic.motion,bulletSpeed:deathCinematic.motion.velocity.length()})");
  assert.equal(natural.hasMotion,true);
+ assert.equal(natural.bulletSpeed,0,'Un tret lleuger no propulsa el cos');
  assert.ok(Math.abs(natural.angle)<.1,
    'A la repetició el jugador conserva la rotació prèvia, no es posa bocaterrosa');
  assert.ok(Math.abs(natural.voidAngle+Math.PI/2)<.01,
@@ -115,15 +118,21 @@ assert.ok(html.includes('.death-water-filter'),'Vel blau en CSS');
  assert.equal(moved.phase,'replay');
  assert.ok(moved.delta>0,'La caiguda conserva impuls angular físic');
  for(let i=0;i<129;i++)game.run('updateDeathCinematic(.1)');
- const final=game.run("({phase:deathCinematic.phase,active:deathCinematic.active,button:deathCinematic.button.style.display,reaperZ:deathCinematic.reaper.group.position.z})");
+ const final=game.run("({phase:deathCinematic.phase,active:deathCinematic.active,button:deathCinematic.button.style.display,reaperZ:deathCinematic.reaper.group.position.z,weaponGrounded:deathCinematic.droppedWeapon?.grounded})");
  assert.equal(final.phase,'finished');
  assert.equal(final.button,'block');
  assert.equal(final.active,false);
+ assert.equal(final.weaponGrounded,true,'L equipament arriba al terra');
  assert.ok(final.reaperZ>-4);
- game.run('clearDeathCinematic()');
+ const restoredWeapon=game.run("(()=>{const d=deathCinematic.droppedWeapon;clearDeathCinematic();return d.object.parent===d.parent&&d.object.visible===d.visible})()");
+ assert.equal(restoredWeapon,true,'La neteja restaura el model i el pare original');
  assert.equal(game.run('deathCinematic'),null);
  assert.equal(game.el('hud').style.visibility||'',started.previous);
 
+ const staleBlast=game.run("(()=>{hp=20;over=0;playerEject={kind:'blast',vx:22,vy:14,vz:-13};startDeathCinematic({type:'bullet'});const speed=deathCinematic.motion.velocity.length();clearDeathCinematic();playerEject=null;return speed})()");
+ assert.equal(staleBlast,0,'Un tret no hereta la propulsio anterior');
+ const explosionSpeed=game.run("(()=>{hp=20;over=0;playerEject={kind:'blast',vx:18,vy:9,vz:0};startDeathCinematic({type:'explosion'});const speed=deathCinematic.motion.velocity.length();clearDeathCinematic();playerEject=null;return speed})()");
+ assert.ok(explosionSpeed>10,'Una explosio continua expulsant el personatge');
  const aquatic=game.run("(()=>{\n hp=20;over=0;cv=null;ib=null;swimming=true;\n P.y=wy(P.x,P.z,elapsed)-2.1;\n const originalParent=pl.parent;\n const started=startDeathCinematic({type:'bullet'});\n const v=deathCinematic;\n if(!started||!v?.onWater||!v.underwaterScene)return {started:false};\n // El harness simplifica querySelector; assignam estils independents.\n v.waterFilter={style:{}};v.shade={style:{}};\n v.replayLabel={style:{}};v.causeEl={style:{}};\n const shallow=v.underwaterScene.background.getHex();\n for(let i=0;i<30;i++)updateDeathCinematic(.1);\n const result={\n   started:true,active:v.underwaterActive,\n   parent:pl.parent===v.underwaterScene,\n   darkened:v.underwaterScene.background.getHex()!==shallow,\n   tint:parseFloat(v.waterFilter.style.opacity)>0,\n   cameraBelow:cam.position.y<v.waterLevel,\n   filtered:!!v.waterFilter\n };\n clearDeathCinematic();\n result.restored=pl.parent===originalParent;\n return result;\n})()");
  assert.equal(aquatic.started,true,'Les morts nedant han de tenir escena submarina');
  assert.equal(aquatic.active,true,'El blau comença quan la càmera se submergeix');
