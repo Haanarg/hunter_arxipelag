@@ -4,7 +4,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
  const {createTruckModel}=await import('../src/truck-model.mjs');
  const {createCivilianCarModel}=await import('../src/civilian-car-model.mjs');
  const window={HUNTER_TRUCK_CONCEPT:createTruckModel,HUNTER_CIVIL_C1A:createCivilianCarModel};
- for(const path of ['src/shared-resources.js','src/vehicles.js'])vm.runInNewContext(fs.readFileSync(path,'utf8'),{window,console,Math});
+ for(const path of ['src/shared-resources.js','src/player-batching.js','src/vehicles.js'])vm.runInNewContext(fs.readFileSync(path,'utf8'),{window,console,Math});
  const material=c=>new T.MeshStandardMaterial({color:c});
  const box=(parent,w,h,d,c,x=0,y=0,z=0)=>{const m=new T.Mesh(new T.BoxGeometry(w,h,d),material(c));m.position.set(x,y,z);parent.add(m);return m};
  const create=window.HUNTER_VEHICLES.createFactory(T,{box,material,shadows:false});
