@@ -117,7 +117,7 @@ window.HUNTER_UI=Object.freeze({
           }
         };
       }else if(mode==='map'){
-        body.innerHTML='<canvas id="fullmap" width="510" height="510" aria-label="Mapa: toca per marcar una destinació"></canvas><p>Toca el mapa per marcar una destinació. Blau: base · Groc: vehicles · Vermell: enemics · Cian: helicòpters · Taronja: tancs. Descoberts: R ràdio · P presoners · M mecànic; gris indica desactivat.</p><button id="clearMark">Esborra marca</button>';
+        body.innerHTML='<canvas id="fullmap" width="510" height="510" aria-label="Mapa: toca per marcar una destinació"></canvas><p>Toca el mapa per marcar una destinació. Blau: base · Groc: vehicles · Vermell: enemics/HQ confirmat · ?: possible HQ · ? ratllat: descartat · Cian: helicòpters · Taronja: tancs. Descoberts: R ràdio · P presoners · M mecànic; gris indica desactivat.</p><button id="clearMark">Esborra marca</button>';
         const map=document.getElementById('fullmap');minimap.drawFull(map,getState().waypoint);
         map.onclick=e=>{const r=e.currentTarget.getBoundingClientRect(),s=getState();actions.setWaypoint({x:((e.clientX-r.left)/r.width-.5)*s.worldSize,z:((e.clientY-r.top)/r.height-.5)*s.worldSize});minimap.drawFull(map,getState().waypoint)};
         document.getElementById('clearMark').onclick=()=>{actions.setWaypoint(null);minimap.drawFull(map,null)}
