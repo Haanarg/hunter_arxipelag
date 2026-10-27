@@ -1247,6 +1247,18 @@ yield {stage:'Patrulles terrestres',completed:1,total:1};
 // Mateix recompte i posicions per llavor al joc i al cercador de llavors.
 // El cercador desa coordenades sense crear models ni IA.
 yield* spawnMarinePatrolsSteps();
+// Auditable per-sector totals: if terrain prevents a quota from being met,
+// diagnostics retain the deficit rather than silently claiming success.
+const sectorQuota=[['tanc',2],['tanqueta',2],['heli',2],['heli_combat',1],
+  ['llanxa_coets',2],['ferry',2],['moto_aquatica',4]];
+world.userData.quadrantPopulation=activeSectors.map(sector=>{
+  const vehicles=Object.fromEntries(sectorQuota.map(([type])=>[type,countVehicles(type,sector)]));
+  const compounds=Object.fromEntries(['avancada','garatge','polvori','comunicacions','port','heliport',
+    'ferry-terminal','hut-settlement','hut-settlement-small','hut-settlement-large']
+    .map(type=>[type,world.userData.compounds.filter(c=>c.id===type&&sectorMatches(c.x,c.z,sector)).length]));
+  return {sector:sector==null?mapSector(pa.x,pa.z):sector,vehicles,compounds,
+    missing:sectorQuota.filter(([type,target])=>vehicles[type]<target).map(([type,target])=>({type,target,actual:vehicles[type]}))};
+});
 markBuildStage('marinePatrols');
 yield {stage:'Patrulles navals',completed:1,total:1};
 P.y=Math.max(0,hAt(P.x,P.z));pl.position.set(P.x,P.y,P.z);if(!seedSearchMode){for(const v of V){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};place(v,0,0,0);yield {stage:'Situant vehicles',completed:null,total:null};}updateTerminalRamps();yield* prepareEnemyNavigationSteps();}world.userData.paths=pathRoutes;if(!seedSearchMode){const roads=(yield* window.HUNTER_COMPOUND_PATHS.createPathNetworkSteps(THREE,{parent:world,routes:pathRoutes,heightAt:(x,z)=>Math.max(hAt(x,z),terrainStream?.visibleHeightAt(x,z)??-Infinity),heightVersion:(x,z)=>terrainStream?.surfaceVersionAt(x,z)??-1,
