@@ -64,7 +64,7 @@ function spawnMarinePatrols(){return drainBuildSteps(spawnMarinePatrolsSteps())}
 function* spawnMarinePatrolsSteps(){
   // Llocs deterministes per llavor: el cercador calcula el mateix mapa
   // sense haver de construir geometries, tripulació ni IA.
-  const count=MARINE_PATROL_MIN+Math.floor(R()*(MARINE_PATROL_MAX-MARINE_PATROL_MIN+1));
+  const count=(MARINE_PATROL_MIN+Math.floor(R()*(MARINE_PATROL_MAX-MARINE_PATROL_MIN+1)))*(MAP_SCALE===2?2:1);
   const starts=islands.slice().sort(()=>R()-.5),spots=[];
   const place=(x,z,hd)=>{
     if(!marineSeaClear(x,z,13)||
