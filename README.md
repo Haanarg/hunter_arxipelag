@@ -4,6 +4,12 @@ Joc 3D per al navegador inspirat en *Hunter* (Amiga). Comença a la teva base, e
 
 [Jugar](https://hunter.paradoxa.cat/) · [Fases fetes i pendents](PROGRESS.MD) · [Notes visuals](docs/VISUAL_MODERNIZATION.md)
 
+## Versió 0.6.0
+
+La 0.6.0 consolida el salt d'escala de l'arxipèlag: als mapes grans, els quatre quadrants generen els seus propis complexos i vehicles, i la investigació de l'HQ enemic avança amb documents de **quatre quadrants diferents** (9 → 6 → 3 possibles emplaçaments → HQ identificat). Els mapes de vehicles revelen la informació del sector on es recullen. També s'han ampliat les flotes marítimes, el control tàctil del mapa i els ajustos visuals i de botí.
+
+El joc executable és el **runtime JavaScript del navegador** indicat a `src/runtime-bundle.mjs`. Es genera amb `npm run build`, es valida amb `npm run check:build` i incorpora el número de versió per invalidar les memòries cau després de cada publicació. Els workflows de GitHub Actions continuen sent manuals.
+
 ## Executar en local
 
 Cal un navegador amb WebGL 2 i servir **tota la carpeta** per HTTP; `index.html` no és un fitxer autònom.
