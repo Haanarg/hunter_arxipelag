@@ -70,19 +70,57 @@ function deathFaceCamera(player,cameraPosition){
  head.rotation.y=Math.max(-1.48,Math.min(1.48,angle));
  head.rotation.x=-.06;
 }
+// Desenganxam l'arma real: cap còpia de malles ni materials.
+// Desam la transformació local per restaurar-la després de la cinemàtica.
+function deathDropWeapon(v){
+ const u=pl.userData;
+ const weapon=pl.visible?[u.gun,u.knife,u.bazooka,u.grenade,u.sniper,u.cisalla]
+  .find(o=>o?.visible):null;
+ if(!weapon)return;
+ pl.updateMatrixWorld(true);
+ const d={object:weapon,parent:weapon.parent,
+  position:weapon.position.clone(),quaternion:weapon.quaternion.clone(),
+  scale:weapon.scale.clone(),visible:weapon.visible,
+  flashVisible:u.pistolFlash?.visible??false,vy:0,grounded:false};
+ scene.attach(weapon);
+ if(u.pistolFlash)u.pistolFlash.visible=false;
+ v.droppedWeapon=d;
+}
+// L'arma cau independentment del cos; el contacte amb el terra
+// fa servir els extrems reals del model, també si és un rifle llarg.
+function deathUpdateDroppedWeapon(v,step){
+ const d=v.droppedWeapon;
+ if(!d||!step||d.grounded)return;
+ const weapon=d.object;
+ d.vy-=24*step;
+ weapon.position.y+=d.vy*step;
+ weapon.rotateX(step*1.15);
+ weapon.rotateZ(step*.65);
+ weapon.updateMatrixWorld(true);
+ const bounds=new THREE.Box3().setFromObject(weapon);
+ const ground=groundAt(weapon.position.x,weapon.position.z,weapon.position.y);
+ if(bounds.min.y<=ground+.04){
+  weapon.position.y+=ground+.04-bounds.min.y;
+  d.vy=0;d.grounded=true;
+ }
+}
 // La càmera lenta no imposa cap postura al jugador. Continuam el moviment
 // amb gravetat, inèrcia i contacte amb el terreny, com a la resta del joc.
 // La rotació és conseqüència de l'impuls i del contacte (cos rígid simplificat),
 // no d'una interpolació programada cap a la postura bocaterrosa de la Parca.
 function deathInitialMotion(v){
  const airborne=playerFall,blast=playerEject,
+       bullet=v.cause.kind==='bullet',
        speed=cv?Math.max(-60,Math.min(60,cv.v||0)):0,
        heading=cv?.hd??P.hd??0,
        push=v.cause.kind==='explosion'||v.cause.kind==='vehicleExplosion';
- const velocity=new THREE.Vector3(
-  airborne?.vx??blast?.vx??(-Math.sin(heading)*speed),
-  airborne?.vy??(blast?.kind==='blast'?blast.vy:0),
-  airborne?.vz??blast?.vz??(-Math.cos(heading)*speed));
+ // Un tret lleuger no hereta mai l'ejecció d'un vehicle o explosió.
+ const velocity=bullet?new THREE.Vector3(
+   airborne?.vx??0,Math.min(0,airborne?.vy??0),airborne?.vz??0):
+  new THREE.Vector3(
+   airborne?.vx??blast?.vx??(-Math.sin(heading)*speed),
+   airborne?.vy??(blast?.kind==='blast'?blast.vy:0),
+   airborne?.vz??blast?.vz??(-Math.cos(heading)*speed));
  // Si l'explosió fatal d'un vehicle no ha creat cap expulsió prèvia,
  // aplicam l'impuls des del focus de la deflagració, sense cap gir fix.
  if(push&&!airborne&&!blast){
@@ -91,10 +129,11 @@ function deathInitialMotion(v){
  }
  const kind=v.cause.kind;
  const torque=kind==='explosion'||kind==='vehicleExplosion'?2.2:
-   kind==='runover'?1.8:kind==='shark'?.9:kind==='fall'?.55:1.15;
+   kind==='runover'?1.8:kind==='shark'?.9:kind==='fall'?.55:
+   bullet?4.7:1.15;
  const angular=new THREE.Vector3(
   -v.direction.z*torque,0,v.direction.x*torque);
- if(airborne&&!airborne.parachute){
+ if(airborne&&!airborne.parachute&&!bullet){
   // Conservam la inèrcia angular que ja duia a la caiguda normal.
   angular.x+=(airborne.spin||1)*2.5;
  }
@@ -110,6 +149,7 @@ function deathReplayPose(v,dt=0){
  // però a velocitat cinematogràfica. Cap animació força l'angle final.
  const step=Math.min(.1,Math.max(0,dt))*.65;
  if(step){
+  deathUpdateDroppedWeapon(v,step);
   const inWater=m.onWater&&m.centre.y<v.waterLevel+2.2;
   m.velocity.y-=(inWater?7:24)*step;
   const drag=Math.exp(-(inWater?1.9:.2)*step);
@@ -126,7 +166,8 @@ function deathReplayPose(v,dt=0){
         support=.52+1.18*Math.abs(up.y);
   if(m.centre.y<surface+support){
    m.centre.y=surface+support;
-   if(m.velocity.y<0)m.velocity.y=Math.abs(m.velocity.y)<3?0:-m.velocity.y*.12;
+   if(m.velocity.y<0)m.velocity.y=v.cause.kind==='bullet'?0:
+     Math.abs(m.velocity.y)<3?0:-m.velocity.y*.12;
    const friction=Math.exp(-(inWater?5:3.7)*step);
    m.velocity.x*=friction;m.velocity.z*=friction;
    // El pes fa perdre l'equilibri al cos després del cop. L'eix
@@ -134,6 +175,9 @@ function deathReplayPose(v,dt=0){
    m.angular.x+=up.z*4.2*step;
    m.angular.z-=up.x*4.2*step;
    m.angular.multiplyScalar(Math.exp(-(inWater?2.8:1.5)*step));
+   // Tan aviat com el cos és ajagut, deixa de girar: cap tombarella.
+   if(v.cause.kind==='bullet'&&Math.abs(up.y)<.25)
+    m.angular.set(0,0,0);
   }else m.angular.multiplyScalar(Math.exp(-.14*step));
  }
  const up=new THREE.Vector3(0,1,0).applyQuaternion(m.orientation);
@@ -261,6 +305,7 @@ function deathUpdateUnderwater(v){
  // La transició comença quan la càmera queda per sota la superfície.
  if(!v.underwaterActive&&cam.position.y<=v.waterLevel-.2){
   v.underwaterScene.add(pl);
+  if(v.droppedWeapon)v.underwaterScene.attach(v.droppedWeapon.object);
   v.underwaterActive=true;
  }
  if(!v.underwaterActive)return;
@@ -359,7 +404,7 @@ function startDeathCinematic(cause=null){
   heading,bodyFocus,originX:P.x,originZ:P.z,initialY:P.y,floor,waterLevel,
   impactTime:info.kind==='fall' ? 3.01 : info.kind==='shark' ? .68 :
    info.kind==='runover' ? 2.9 : .62,
-  impactSoundPlayed:false,lastBell:-1,voidScene:null,reaper:null,replayEffect:null};
+  impactSoundPlayed:false,lastBell:-1,voidScene:null,reaper:null,replayEffect:null,droppedWeapon:null};
  deathCinematic=v;
  // Si era una explosió i el jugador ja havia sortit disparat en vida,
  // deixam una sola capa de ragdoll per a la repetició.
@@ -371,6 +416,7 @@ function startDeathCinematic(cause=null){
   blast:info.kind==='explosion'||info.kind==='vehicleExplosion',
   impulse:playerEject?.kind==='blast'?playerEject:null,
   seed:P.x*.41+P.z*.27});
+ deathDropWeapon(v);
  deathUi(true);endEl.style.display='none';
  // Conservam la postura i les velocitats del moment fatal. El cos no
  // s'ajau artificialment fins a l'escena separada de la Parca.
@@ -390,6 +436,16 @@ function clearDeathCinematic(){
  }
  if(v.reaper)for(const resource of v.reaper.owned)resource.dispose();
  if(v.ragdoll){window.HUNTER_RAGDOLL.reset(v.ragdoll);v.ragdoll=null}
+ if(v.droppedWeapon){
+  const d=v.droppedWeapon;
+  d.parent.add(d.object);
+  d.object.position.copy(d.position);
+  d.object.quaternion.copy(d.quaternion);
+  d.object.scale.copy(d.scale);
+  d.object.visible=d.visible;
+  if(pl.userData.pistolFlash)pl.userData.pistolFlash.visible=d.flashVisible;
+  v.droppedWeapon=null;
+ }
  // Retornam el jugador a l'escena real abans de restaurar la seva
  // posició; no deixam la referència a la cinemàtica submarina.
  if(v.underwaterActive)scene.add(pl);
