@@ -1627,11 +1627,20 @@ function createItemVisual(t){const g=new THREE.Group(),metal=0x454b4e,dark=0x3d3
 // decoració: els tancs continuen dins els hangars.
 const LOOT_MAPS=new Set(['mapa','mapa_heli','mapa_tanc']);
 const LOOT_WEAPONS=new Set(['bazooka','franctirador','granada','expl']);
+// Each civilian home gets one independent 25% roll, with 60/30/10
+// proportions conditional on finding an item.
+const CIVILIAN_HOUSE_LOOT=new Set(['med','arma','cisalla']);
+function rollCivilianHouseLoot(random){
+  if(random()>=.25)return null;
+  const chance=random();
+  return chance<.6?'med':chance<.9?'arma':'cisalla';
+}
 function itemInsideHangar(x,z){
   return B.some(b=>b.hangar&&Math.abs(x-b.x)<b.w/2&&Math.abs(z-b.z)<b.d/2);
 }
 function lootAllowed(t,b=null,x=null,z=null,compound=null){
   if(b?.hangar)return false;
+  if(b?.civilian&&!CIVILIAN_HOUSE_LOOT.has(t))return false;
   if(x!=null&&z!=null&&itemInsideHangar(x,z))return false;
   const complex=compound||b?.compound;
   if(complex==='polvori'&&LOOT_MAPS.has(t))return false;
@@ -1660,7 +1669,7 @@ function itemHeightInBuilding(b,x,z){
   return b.fy+(upstairs?b.storey:0)+1.3;
 }
 function canPlaceItem(t,b,compound){
-  if(b&&buildingItemCount(b)>=MAX_BUILDING_ITEMS)return false;
+  if(b&&buildingItemCount(b)>=(b.civilian?1:MAX_BUILDING_ITEMS))return false;
   // Una sola farmaciola a tota la base de sortida.
   if(t==='med'&&(compound==='base'||b?.compound==='base')&&
     items.some(it=>it.t==='med'&&it.compound==='base'))return false;
