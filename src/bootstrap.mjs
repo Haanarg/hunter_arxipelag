@@ -1,15 +1,15 @@
-import * as compoundPaths from './compound-paths.mjs?v=0.5.117';
+import * as compoundPaths from './compound-paths.mjs?v=0.5.118';
 window.HUNTER_COMPOUND_PATHS=compoundPaths;
-import {runtimeLayouts,chooseCompoundLayout} from './compound-runtime-layouts.mjs?v=0.5.117';
-import * as compoundArchitecture from './compound-architecture.mjs?v=0.5.117';
+import {runtimeLayouts,chooseCompoundLayout} from './compound-runtime-layouts.mjs?v=0.5.118';
+import * as compoundArchitecture from './compound-architecture.mjs?v=0.5.118';
 window.HUNTER_RUNTIME_LAYOUTS=runtimeLayouts;window.HUNTER_CHOOSE_COMPOUND=chooseCompoundLayout;window.HUNTER_COMPOUND_ARCHITECTURE=compoundArchitecture;
 import {createCompoundStructures} from './compound-structures.mjs';
 window.HUNTER_COMPOUND_STRUCTURES=createCompoundStructures;
 import {runtimeScripts} from './runtime-scripts.mjs';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.5.117';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.5.118';
 import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
-import {GAME_VERSION} from './version.mjs?v=0.5.117';
+import {GAME_VERSION} from './version.mjs?v=0.5.118';
 import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs';
 window.HUNTER_CIVIL_C1A=createCivilianCarModel;
@@ -61,7 +61,7 @@ try {
   // Si les dades no es poden preparar, mantenim la geometria clàssica
   // de reserva per no impedir l'inici de la partida.
   try {
-    const {prepareHumveeD31Runtime}=await import('./humvee-d31-runtime.mjs?v=0.5.117');
+    const {prepareHumveeD31Runtime}=await import('./humvee-d31-runtime.mjs?v=0.5.118');
     window.HUNTER_HUMVEE_D31=await prepareHumveeD31Runtime(THREE,{vehicleScale:1.3});
     console.info('Humvee D3.1 procedural B · 175% carregat al joc',
       window.HUNTER_HUMVEE_D31.dimensions);
