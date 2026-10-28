@@ -64,7 +64,7 @@ window.HUNTER_UI=Object.freeze({
       }else if(mode==='saves'){
         title.textContent='Operacions desades';actions.renderSaves(body,()=>currentMode==='saves');
       }else if(mode==='inventory'){
-        const state=getState(),keys=['med','paracaigudes','cisalla','expl','granada','bazooka','franctirador','disf','arma'],present=keys.filter(k=>state.inventory[k]>0);
+        const state=getState(),keys=['med','paracaigudes','cisalla','expl','granada','bazooka','franctirador','fusell_assalt','disf','arma'],present=keys.filter(k=>state.inventory[k]>0);
         let selected=present[0]||null;
         const renderInventory=(healed=0)=>{
           const st=getState(),items=keys.filter(k=>st.inventory[k]>0),

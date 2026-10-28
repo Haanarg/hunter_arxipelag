@@ -165,7 +165,8 @@ export function createCompoundConcept(layout){
  if(layout.spawn){const p=layout.spawn,model=window.HUNTER_CHARACTERS.createPlayer(T,{box});model.position.set(p.x,.25,p.z);root.add(model);tag('Inici',p.x,4,p.z);}
  for(const item of layout.loot){
   const group=new T.Group();group.position.set(item.x,.35,item.z);group.userData.previewLoot=item.kind;root.add(group);
-  if(item.kind==='franctirador'){const rifle=window.HUNTER_CHARACTERS.createSniperRifle?.(T);if(rifle){group.add(rifle)}else{box(group,3.4,.18,.22,0x364137,0,.8,0);box(group,1,.3,.3,0x62533b,-1,.7,0)}tag('Franctirador garantit',item.x,2,item.z);continue;}
+  if(item.kind==='fusell_assalt'){box(group,.35,.28,2.5,0x475a4b,0,.7,0);box(group,.18,.15,1.3,0x303736,0,.7,-1.5);box(group,.2,.4,.7,0x313b36,0,.44,.8);box(group,.25,.25,.9,0x79694d,0,.7,1.25);tag('Fusell d’assalt garantit',item.x,2,item.z);continue;}
+   if(item.kind==='franctirador'){const rifle=window.HUNTER_CHARACTERS.createSniperRifle?.(T);if(rifle){group.add(rifle)}else{box(group,3.4,.18,.22,0x364137,0,.8,0);box(group,1,.3,.3,0x62533b,-1,.7,0)}tag('Franctirador garantit',item.x,2,item.z);continue;}
   if(item.kind==='bazooka'){
     box(group,4,.2,1.6,0x786748,0,.45,0);for(const side of[-1,1])box(group,.2,.7,1.3,0x424e46,side*1.4,.1,0);
     const tube=cylinder(group,.22,2.65,0x58664a,0,1,0);tube.rotation.z=Math.PI/2;

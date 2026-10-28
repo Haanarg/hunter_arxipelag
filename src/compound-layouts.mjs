@@ -21,7 +21,7 @@ export const compoundLayouts=[
   patrol:[[-33,20],[-33,-29],[12,-29],[12,-8],[31,-8],[31,3],[0,3],[0,27],[-33,27],[-33,20]],
   zones:[{label:'Pati central',x:0,z:5,w:12,d:20}],
   props:[['sandbag',-14,36],['sandbag',14,39],['sandbag',34,-17],['crate',-23,-28],['crate',-19,-28],['barrel',-14,-28],['flag',6,-20],['lamp',-8,30],['lamp',30,-30]],
-  loot:[{kind:'munició',x:-21,z:-8},{kind:'granades',x:-15,z:-8}],tower:{x:26,z:-25},entrances:[[0,45],[-45,20]],counts:'1 moto · 4 soldats · 1 torre · munició i granades',
+  loot:[{kind:'munició',x:-21,z:-8},{kind:'granades',x:-15,z:-8},{kind:'fusell_assalt',x:-18,z:-10}],tower:{x:26,z:-25},entrances:[[0,45],[-45,20]],counts:'1 moto · 4 soldats · 1 torre · munició, granades i fusell d’assalt',
   notes:'La caserna i la guàrdia deixen un eix central lliure. La filferrada conserva dues obertures: la principal i una de lateral per infiltrar-se o escapar. La torre domina l’exterior i les patrulles tenen un circuit propi.'},
  {id:'port',name:'Port militar',subtitle:'Dos molls · tres amarradors · càrrega a terra',size:[110,120],
   buildings:[{id:'warehouse',label:'Magatzem',x:-28,z:-25,w:24,d:18,h:8},{id:'office',label:'Oficina',x:26,z:-26,w:16,d:16,h:7}],
