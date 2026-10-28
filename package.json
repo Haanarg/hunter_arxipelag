@@ -34,7 +34,8 @@
     "test:accounts": "node tests/accounts-cloud.mjs && node tests/cloudflare-backend.mjs && node tests/assisted-recovery.mjs && node tests/cloudflare-maintenance.mjs && node tools/build-worker.mjs && node tests/cloudflare-workerd.mjs",
     "test:journal": "node tests/journal-authority.mjs",
     "build:worker": "node tools/build-worker.mjs",
-    "generate:auth-schema": "node tools/generate-auth-schema.mjs"
+    "generate:auth-schema": "node tools/generate-auth-schema.mjs",
+    "deploy:cloudflare": "node tools/deploy-cloudflare.mjs"
   },
   "dependencies": {
     "better-auth": "1.7.14"

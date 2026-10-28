@@ -192,3 +192,7 @@ La resta de pendents (proves físiques, quotes/retenció, recuperació excepcion
 L’usuari informa que les migracions retornen versió 4 i ha desat origen i secret. El servidor encara retorna `configuration`, malgrat que les captures mostren els noms correctes. `/api/capabilities` ara enumera únicament els noms dels camps invàlids/absents a la versió activa, sense valors ni secrets, per identificar la causa. L’activació i prova d’un compte real continuen pendents.
 
 `AUTH_ORIGIN=https://hunter.paradoxa.cat` queda versionat a Wrangler per conservar-lo en desplegaments nous. `AUTH_SECRET` continua exclusivament a Cloudflare; cal que sigui un secret del Worker en execució, no només una variable de compilació.
+
+## Secret en execució amb el tauler bloquejat
+
+El servidor confirma que només falta `AUTH_SECRET`; D1, R2 i l’origen passen la comprovació. El tauler impedeix afegir variables per un missatge d’assets estàtics, malgrat que el domini executa el servidor. Es prepara `npm run deploy:cloudflare` per transferir el secret de compilació al secret en execució mitjançant `wrangler deploy --secrets-file`. Pendent que l’usuari canviï Deploy command a Cloudflare i executi un build de main; després cal comprovar capabilities, registre i primer administrador. Els altres pendents continuen vigents.

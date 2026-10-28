@@ -51,3 +51,11 @@ L’administrador ha de conservar els seus propis codis personals. Si tots els a
 ## Recursos reals preparats per l’usuari
 
 `wrangler.jsonc` incorpora D1 `hunter-accounts`, identificador `f4879e20-1085-4a51-b132-96cfad61cb90`, amb binding `DB` i directori de migracions, i R2 privat `hunter-saves` amb binding `SAVES`. No cal tornar a crear aquests recursos. Primer cal desplegar aquesta configuració amb el servidor: Cloudflare no permet aquests bindings si la versió activa només té assets estàtics. Després cal aplicar les migracions i configurar l’origen/secret reals. No s’ha escrit cap valor fictici per activar comptes.
+
+## Alternativa al tauler bloquejat per assets estàtics
+
+El domini executa el servidor però el tauler pot impedir afegir secrets amb el missatge que el Worker només té assets. S’ha preparat `npm run deploy:cloudflare` per usar el secret `AUTH_SECRET` ja desat a Settings > Build > Variables y secretos: crea un fitxer temporal fora dels assets amb permisos 0600 i executa Wrangler amb `deploy --secrets-file`, que adjunta el secret al Worker en execució. El fitxer s’elimina en acabar, també si falla Wrangler. El valor no s’escriu al repositori ni als arguments de la comanda.
+
+A Cloudflare, canviar **Settings > Build > Deploy command** a `npm run deploy:cloudflare`, desar i executar un build nou de main. Mantenir la comanda de previews separada. El secret de compilació continua sent la font utilitzada en els desplegaments de producció futurs: si es rota, actualitzar aquest secret, perquè tornar a desplegar amb el valor antic anul·laria la rotació. No publicar-lo al xat. Sense un secret vàlid, la comanda s’atura sense desplegar.
+
+Aquesta alternativa no explica la discrepància del tauler; evita dependre’n. La transferència real necessita l’execució del build amb el secret del compte de l’usuari.
