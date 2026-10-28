@@ -204,3 +204,13 @@ L’usuari informa que la sincronització ja funciona i autoritza començar el c
 Cal aplicar només `0005_coop_lobby.sql` i desplegar aquesta tanda per activar sales. Els comptes continuen funcionant sense aquesta migració. Proves D1/R2 i Worker natiu, regressions de comptes/desaments i documentació a [COOP_PHASE1.md](docs/COOP_PHASE1.md).
 
 Queda després d’aquesta fase: validació real de dos navegadors/Android i cost del polling; separar globals de moviment/dany/IA; protocol i transport en temps real; servidor autoritatiu i estat inicial; combat/objectius compartits, reconnexió i política d’amfitrió/pausa; desaments i estadístiques cooperatius. Queden també quotes/retenció i les altres fases generals pendents. Cap plugin o recurs Cloudflare nou.
+
+## Cooperatiu · fase 2 (v0.6.9)
+
+L’usuari confirma que ha aplicat la migració de sales i autoritza continuar/desplegar sense esperar una prova manual amb dos comptes. No es creen comptes de prova de producció.
+
+Implementades regles compartides de moviment horitzontal i vida, ja utilitzades pel joc individual; nucli independent de dos actors amb tick fix, validació d’intencions, context/seqüència, timeout i adaptador de geometria; preparació autenticada de sala amb comprovació de versions, revisió, participants i manifest idèntic. No és encara un servidor de missió en temps real ni permet jugar junts. No requereix una migració posterior a la 0005.
+
+Proves noves del nucli i manifest, Worker natiu amb dos comptes locals, comptes i desaments. Dues proves generals fallen igual al main anterior: cadència de pistola de simulation-timing i geometria inferior de tanqueta de smoke. No s’han modificat els asserts ni es declaren superades. [Detall](docs/COOP_PHASE2.md).
+
+Queda: adaptador del món real i extracció de gravetat/vehicles/IA; servidor de sessió i xarxa en temps real; combat/objectius/inventari compartits; reconnexió/pausa/amfitrió; desaments/estadístiques cooperatius; proves físiques i càrrega; corregir les dues fallades històriques. Les quotes/retenció i les altres fases generals continuen pendents.

@@ -80,7 +80,7 @@ function hurtP(d,fromEnemyWeapon=false,cause=null){
  const amount=wholeDamage(d);
  if(amount<=0)return;
  const before=hp;
- hp=Math.max(0,Math.ceil(hp)-amount);recordOperationMetric('damageTaken',before-hp);snd('hurt',.5);
+ hp=window.HUNTER_PLAYER_SIMULATION.damageHealth(hp,amount);recordOperationMetric('damageTaken',before-hp);snd('hurt',.5);
  if(hp<before)combatFeedback?.damage(cause);
  if(hp<=0)fin('HAS MORT',cause||{type:fromEnemyWeapon?'bullet':'impact'});
 }
@@ -260,7 +260,7 @@ function damageVehicle(v,dmg,impacts=1,shotClass='collision',source=null){
 // La física (velocitats, trajectòries i impulsos) continua emprant decimals.
 // Els nombres invàlids no afecten la vida.
 function wholeDamage(value){
- return Number.isFinite(value)&&value>0?Math.ceil(value):0
+ return window.HUNTER_PLAYER_SIMULATION.wholeDamage(value)
 }
 // Xocs amb criteris compartits: massa del receptor, massa de l'altre i velocitat relativa.
 // Els impactes ordinaris tenen un màxim de cinc punts de vida per contacte.

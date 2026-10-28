@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {Miniflare} from 'miniflare';
+import {GAME_VERSION} from '../src/version.mjs';
 import {applyMigrations} from './helpers/apply-d1.mjs';
 const mf=new Miniflare({modulesRoot:'/tmp',modules:[{type:'ESModule',path:'/tmp/hunter-worker.mjs'}],compatibilityDate:'2026-08-06',compatibilityFlags:['nodejs_compat'],d1Databases:['DB'],r2Buckets:['SAVES'],bindings:{AUTH_SECRET:'test-workerd-only-secret-12345678901234567890',AUTH_ORIGIN:'http://localhost'}});
 try{
@@ -35,8 +36,13 @@ try{
  await DB.prepare("UPDATE hunter_access SET status='approved' WHERE owner=?").bind(player.id).run();
  globalThis.coopTestOwner=player.id;
  response=await call('/api/coop/rooms','POST',{seed:67,mapScale:1,difficulty:1});assert.equal(response.status,200,await response.clone().text());
- const lobby=(await response.json()).room;
+ const lobby=(await response.json()).room,playerCookies=new Map(cookies);
  cookies.clear();for(const [k,v] of adminCookies)cookies.set(k,v);globalThis.coopTestOwner=user.id;
- response=await call('/api/coop/join','POST',{code:lobby.code});assert.equal(response.status,200,await response.clone().text());assert.equal((await response.json()).room.members.length,2);
- console.log('workerd: bundled production Worker, native D1, signup, manual approval, recovery codes, reset, session revocation, admin-assisted recovery, login and two-player cooperative lobby passed');
+ response=await call('/api/coop/join','POST',{code:lobby.code});assert.equal(response.status,200,await response.clone().text());let joined=(await response.json()).room;assert.equal(joined.members.length,2);
+ response=await call('/api/coop/ready','POST',{ready:true,revision:joined.revision});joined=(await response.json()).room;
+ cookies.clear();for(const [k,v] of playerCookies)cookies.set(k,v);globalThis.coopTestOwner=player.id;
+ response=await call('/api/coop/ready','POST',{ready:true,revision:joined.revision});joined=(await response.json()).room;
+ response=await call('/api/coop/prepare','POST',{revision:joined.revision,protocol:1,gameVersion:GAME_VERSION});assert.equal(response.status,200,await response.clone().text());
+ const manifest=(await response.json()).manifest;assert.equal(manifest.participants.length,2);assert.equal(manifest.playable,false);
+ console.log('workerd: bundled production Worker, native D1, signup, manual approval, recovery codes, reset, session revocation, admin-assisted recovery, login and two-player lobby and shared mission preparation passed');
 }finally{await mf.dispose();}

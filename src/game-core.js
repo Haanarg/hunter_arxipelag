@@ -3611,11 +3611,8 @@ else if(playerEject&&playerEject.t>0){
   // diagonal per mantenir la velocitat màxima d'un jugador a peu.
   // Dins l'aigua: braça normal, crol accelerat quan es manté la
   // prolongació superior i natació lateral amb els botons de strafe.
-  const length=Math.max(1,Math.hypot(f,strafe)),
-        ss=(swimming?(running?8.5:5):playerCrouched?4.5:running?19:12)*f*dt/length,
-        lateral=(swimming?(running?6.5:4.5):playerCrouched?3.8:9)*strafe*dt/length;
-  P.x=Math.max(-lim,Math.min(lim,P.x-Math.sin(P.hd)*ss+Math.cos(P.hd)*lateral));
-  P.z=Math.max(-lim,Math.min(lim,P.z-Math.cos(P.hd)*ss-Math.sin(P.hd)*lateral));
+  const moved=window.HUNTER_PLAYER_SIMULATION.moveOnFoot(P,{forward:f,strafe,run:!!running},dt,{limit:lim,swimming:!!swimming,crouched:!!playerCrouched});
+  P.x=moved.x;P.z=moved.z;
   if(!cheats.fly&&stairDropAt(P.x,P.z,P.y)){
     const below=groundAt(P.x,P.z,P.y);
     playerFall={kind:'shaft',y:P.y,vy:0,vx:0,vz:0,

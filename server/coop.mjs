@@ -1,3 +1,4 @@
+import {prepareCoopManifest} from './coop-protocol.mjs';
 import {limit} from './accounts.mjs';
 const DAY=86400000,ONLINE=45000;
 function fail(status,code,message){const e=new Error(message);Object.assign(e,{status,code});throw e;}
@@ -30,6 +31,10 @@ export async function coopAPI(request,env,user,url,readJSON,json){
   if(url.pathname==='/api/coop/current'&&request.method==='GET'){
     await env.DB.prepare('UPDATE hunter_coop_members SET last_seen=? WHERE owner=?').bind(now,owner).run();
     return current(env,owner,now,json);
+  }
+  if(url.pathname==='/api/coop/prepare'&&request.method==='POST'){
+    const body=await readJSON(request,4096),state=await current(env,owner,now,json).then(r=>r.json());
+    return json({manifest:prepareCoopManifest(state.room,body)});
   }
   if(url.pathname==='/api/coop/ready'&&request.method==='POST'){
     const body=await readJSON(request,4096);

@@ -36,7 +36,7 @@
     "build:worker": "node tools/build-worker.mjs",
     "generate:auth-schema": "node tools/generate-auth-schema.mjs",
     "deploy:cloudflare": "node tools/deploy-cloudflare.mjs",
-    "test:coop": "node tests/coop-lobby.mjs"
+    "test:coop": "node tests/player-simulation.mjs && node tests/coop-lobby.mjs"
   },
   "dependencies": {
     "better-auth": "1.7.14"

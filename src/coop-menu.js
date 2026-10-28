@@ -45,6 +45,7 @@ async function renderCoop(body,isCurrent){
     for(const member of room.members)add('p',member.name+(member.host?' · Amfitrió':'')+' · '+(!member.online?'Sense connexió recent':member.ready?'Preparat':'Esperant'),view);
     const mine=room.members.find(m=>m.id===owner);
     add('p',room.allReady?'Tots dos preparats. La simulació compartida arribarà en una fase posterior.':'Esperant dos jugadors preparats.',view);
+    if(room.allReady)button('Verificar preparació de la missió',async()=>{const result=await call('prepare',{revision:room.revision,protocol:1,gameVersion:window.HUNTER_VERSION});if(result&&active())status.textContent='Preparació verificada · protocol '+result.manifest.protocol+'. Encara falta la connexió en temps real per jugar junts.';},view);
     button(mine?.ready?'Encara no estic preparat':'Estic preparat',async()=>draw(await call('ready',{ready:!mine?.ready,revision:room.revision})),view);
     button('Actualitzar sala',async()=>draw(await call('current')),view);
     button(room.host===owner?'Tancar sala i sortir':'Sortir de la sala',async()=>draw(await call('leave',{})),view);

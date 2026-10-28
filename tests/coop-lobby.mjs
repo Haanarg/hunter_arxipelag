@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {Miniflare} from 'miniflare';
 import {applyMigrations} from './helpers/apply-d1.mjs';
 import worker from '../server/worker.mjs';
+import {GAME_VERSION} from '../src/version.mjs';
 const mf=new Miniflare({modules:true,script:'export default {fetch(){return new Response()}}',d1Databases:['DB'],r2Buckets:['SAVES'],compatibilityDate:'2026-08-06'});
 try{
  const DB=await mf.getD1Database('DB'),SAVES=await mf.getR2Bucket('SAVES');await applyMigrations(DB,{coop:true});
@@ -34,8 +35,15 @@ try{
  room=(await host.call('/api/coop/current').then(r=>r.json())).room;
  room=(await host.call('/api/coop/ready',{ready:true,revision:room.revision}).then(r=>r.json())).room;
  room=(await guest.call('/api/coop/ready',{ready:true,revision:room.revision}).then(r=>r.json())).room;assert.equal(room.allReady,true);
+ const prep={revision:room.revision,protocol:1,gameVersion:GAME_VERSION};
+ let prepared=await host.call('/api/coop/prepare',prep);assert.equal(prepared.status,200);const manifest=(await prepared.json()).manifest;
+ const other=(await guest.call('/api/coop/prepare',prep).then(r=>r.json())).manifest;assert.deepEqual(other,manifest);
+ assert.equal(manifest.participants.length,2);assert.equal(manifest.tickRate,30);assert.equal(manifest.playable,false);
+ assert.equal((await host.call('/api/coop/prepare',{...prep,gameVersion:'old'})).status,409);
+ assert.equal((await host.call('/api/coop/prepare',{...prep,revision:1})).status,409);
+
  await DB.prepare('UPDATE hunter_coop_members SET last_seen=? WHERE owner=?').bind(Date.now()-60000,guest.id).run();
- room=(await host.call('/api/coop/current').then(r=>r.json())).room;assert.equal(room.allReady,false,'offline participant not ready');
+ room=(await host.call('/api/coop/current').then(r=>r.json())).room;assert.equal(room.allReady,false,'offline participant not ready');assert.equal((await host.call('/api/coop/prepare',{revision:room.revision,protocol:1,gameVersion:GAME_VERSION})).status,409);
  await guest.call('/api/coop/current');
  await DB.prepare("UPDATE hunter_access SET status='suspended' WHERE owner=?").bind(guest.id).run();
  room=(await host.call('/api/coop/current').then(r=>r.json())).room;assert.equal(room.allReady,false);assert.equal((await guest.call('/api/coop/current')).status,403);
