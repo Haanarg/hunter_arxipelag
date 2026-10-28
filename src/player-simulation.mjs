@@ -63,9 +63,13 @@ function verticalPlayer(previous,input,context,{world,vertical,limit,time}){
   }
   return supported(candidate,s);
 }
-export function createPlayerSimulation({epoch,actors,limit,world={},vertical=null}){
+export function createPlayerSimulation({epoch,actors,limit,world={},vertical=null,checkpoint=null}){
+  if(checkpoint){
+    if(checkpoint.protocol!==COOP_PROTOCOL||checkpoint.epoch!==epoch||!Number.isSafeInteger(checkpoint.tick)||checkpoint.tick<0||!Array.isArray(checkpoint.players)||checkpoint.players.some(p=>!Number.isSafeInteger(p.acknowledged)||p.acknowledged<0))throw new RangeError('Invalid simulation checkpoint');
+    actors=checkpoint.players;
+  }
   if(typeof epoch!=='string'||!epoch||!finite(limit)||limit<=0||!Array.isArray(actors)||actors.length!==2||new Set(actors.map(a=>a.id)).size!==2)throw new RangeError('Invalid cooperative session');
-  const players=new Map();let tick=0;
+  const players=new Map();let tick=checkpoint?.tick??0;
   if(vertical){
     vertical={surfaceAt:vertical.surfaceAt,maxHealth:vertical.maxHealth??20};
     if(typeof vertical.surfaceAt!=='function'||!finite(vertical.maxHealth)||vertical.maxHealth<=0||!['locomotionAt','resolveBody','roofLanding'].every(k=>typeof world[k]==='function'))throw new RangeError('Vertical simulation requires trusted world and water');
@@ -75,8 +79,8 @@ export function createPlayerSimulation({epoch,actors,limit,world={},vertical=nul
     if(vertical&&(!finite(actor.y)||actor.hp>vertical.maxHealth))throw new RangeError('Invalid vertical actor');
     const fall=vertical?copyFall(actor.fall):null;
     if(fall&&fall.y!==actor.y)throw new RangeError('Inconsistent falling height');
-    const swimming=vertical&&!fall?waterSupport(locomotionSample(world,vertical,actor.x,actor.z,actor.y,0)).swimming:false;
-    players.set(actor.id,{id:actor.id,x:actor.x,z:actor.z,hd:actor.hd,hp:actor.hp,y:actor.y??0,...(vertical?{fall,swimming}:{}),received:0,acknowledged:0,lastInputTick:-Infinity,input:{forward:0,turn:0,strafe:0,run:false}});
+    const swimming=vertical&&!fall?waterSupport(locomotionSample(world,vertical,actor.x,actor.z,actor.y,tick/COOP_TICK_RATE)).swimming:false,ack=checkpoint?actor.acknowledged:0;
+    players.set(actor.id,{id:actor.id,x:actor.x,z:actor.z,hd:actor.hd,hp:actor.hp,y:actor.y??0,...(vertical?{fall,swimming}:{}),received:ack,acknowledged:ack,lastInputTick:-Infinity,input:{forward:0,turn:0,strafe:0,run:false}});
   }
   function accept(actorId,message){
     const p=players.get(actorId);
@@ -99,5 +103,5 @@ export function createPlayerSimulation({epoch,actors,limit,world={},vertical=nul
     for(const {p,candidate} of next){p.x=candidate.x;p.z=candidate.z;p.hd=candidate.hd;p.y=candidate.y??p.y;if(vertical){p.fall=candidate.fall;p.swimming=candidate.swimming;p.hp=candidate.hp;}p.acknowledged=p.received;}
     tick++;return snapshot();
   }
-  return Object.freeze({accept,step,snapshot,damage(actorId,amount){const p=players.get(actorId);if(!p)return false;p.hp=damageHealth(p.hp,amount);return true;}});
+  return Object.freeze({accept,step,snapshot,clearInputs(){for(const p of players.values()){p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};}},damage(actorId,amount){const p=players.get(actorId);if(!p)return false;p.hp=damageHealth(p.hp,amount);return true;}});
 }

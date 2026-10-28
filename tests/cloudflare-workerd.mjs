@@ -43,6 +43,6 @@ try{
  cookies.clear();for(const [k,v] of playerCookies)cookies.set(k,v);globalThis.coopTestOwner=player.id;
  response=await call('/api/coop/ready','POST',{ready:true,revision:joined.revision});joined=(await response.json()).room;
  response=await call('/api/coop/prepare','POST',{revision:joined.revision,protocol:1,gameVersion:GAME_VERSION});assert.equal(response.status,200,await response.clone().text());
- const manifest=(await response.json()).manifest;assert.equal(manifest.participants.length,2);assert.equal(manifest.playable,false);
+ const manifest=(await response.json()).manifest;assert.equal(manifest.participants.length,2);assert.equal(manifest.playable,true);
  console.log('workerd: bundled production Worker, native D1, signup, manual approval, recovery codes, reset, session revocation, admin-assisted recovery, login and two-player lobby and shared mission preparation passed');
 }finally{await mf.dispose();}

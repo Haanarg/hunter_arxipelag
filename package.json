@@ -42,7 +42,8 @@
     "test:vertical": "node tests/player-vertical.mjs && node tests/player-vertical-runtime.cjs && node tests/player-locomotion-simulation.mjs",
     "test:terrain": "node tests/canonical-terrain.mjs",
     "test:compounds": "node tests/compound-planning.mjs",
-    "test:buildings": "node tests/building-shell.mjs && node tests/coop-base-buildings.mjs"
+    "test:buildings": "node tests/building-shell.mjs && node tests/coop-base-buildings.mjs",
+    "test:play": "node tests/coop-mission.mjs && node tests/coop-play-client.mjs && node tests/coop-play-ui.mjs && node tests/coop-play-alarm.mjs && node tools/build-worker.mjs && node tests/coop-play-native.mjs"
   },
   "dependencies": {
     "better-auth": "1.7.14"

@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {createPlayConnection,playInput} from '../src/coop-play-connection.mjs';
+const sockets=[],timers=new Map(),events=[],statuses=[];let serial=0,time=0;
+class Socket{constructor(){this.readyState=0;this.sent=[];sockets.push(this);}send(s){this.sent.push(JSON.parse(s));}open(){this.readyState=1;this.onopen();}close(code=1000){this.readyState=3;this.onclose?.({code});}message(data){this.onmessage({data:JSON.stringify(data)});}}
+const idle={forward:0,turn:0,strafe:0,run:false,interact:false},channel=createPlayConnection({url:'wss://example.test/api/coop/socket?room=private',version:'test',getInput:()=>({...idle,forward:1,interact:true}),onMessage:e=>events.push(e),onStatus:s=>statuses.push(s),WebSocketImpl:Socket,setTimer:(fn,ms)=>{timers.set(++serial,{fn,ms});return serial;},clearTimer:id=>timers.delete(id),now:()=>time});
+const advance=ms=>{const e=[...timers].find(([,v])=>v.ms===ms);assert.ok(e);timers.delete(e[0]);time+=ms;e[1].fn();};
+channel.start();const first=sockets[0];first.open();assert.deepEqual(first.sent[0],{type:'hello',protocol:1,gameVersion:'test'});
+advance(50);assert.equal(first.sent.length,1,'no movement before server mission');
+const setup={type:'mission',self:'a',meta:{id:'mission'},geometry:{},state:{missionId:'mission',status:'running',phase:'relay',players:[{id:'a',acknowledged:7}]}};
+first.message(setup);advance(50);assert.equal(first.sent.at(-1).sequence,8);assert.equal(first.sent.at(-1).interact,true);assert.equal(first.sent.at(-1).input.forward,1);assert.equal(first.sent.at(-1).input.interact,undefined);
+first.message({type:'state',state:{...setup.state,status:'paused'}});const count=first.sent.length;advance(50);assert.equal(first.sent.length,count,'paused mission does not send movement');
+first.close(1006);assert.ok(statuses.includes('retrying'));advance(1000);const second=sockets[1];second.open();
+first.message({type:'ended',message:'stale'});assert.equal(events.at(-1).type,'state','old socket cannot erase new mission');
+second.message({...setup,state:{...setup.state,players:[{id:'a',acknowledged:10}]}});advance(50);assert.equal(second.sent.at(-1).sequence,11,'resume sequence follows authoritative checkpoint');
+channel.launch(12);assert.equal(second.sent.at(-1).revision,12);
+time+=40000;advance(20000);assert.equal(second.readyState,3,'unresponsive server is reconnected');advance(1000);sockets[2].open();sockets[2].close(4001);assert.equal(timers.size,0,'replacement cannot create reconnect duel');
+channel.start();sockets[3].open();channel.stop();assert.equal(timers.size,0);
+assert.deepEqual(playInput(new Set(['KeyW','KeyD','KeyU','ShiftLeft','KeyE'])),{forward:1,turn:-1,strafe:1,run:true,interact:true});
+assert.deepEqual(playInput(new Set(['KeyW','Space']),true),idle,'hidden page releases all controls');
+assert.deepEqual(playInput(new Set(['KeyW','KeyS','KeyA','KeyD'])),idle,'opposing controls cancel');
+console.log('play client: hello/version, no premature input, activation intent, pause, checkpoint sequence, stale sockets, reconnect/liveness, replacement, cleanup and keyboard/touch mapping passed');

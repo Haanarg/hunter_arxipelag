@@ -38,7 +38,7 @@ try{
  const prep={revision:room.revision,protocol:1,gameVersion:GAME_VERSION};
  let prepared=await host.call('/api/coop/prepare',prep);assert.equal(prepared.status,200);const manifest=(await prepared.json()).manifest;
  const other=(await guest.call('/api/coop/prepare',prep).then(r=>r.json())).manifest;assert.deepEqual(other,manifest);
- assert.equal(manifest.participants.length,2);assert.equal(manifest.tickRate,30);assert.equal(manifest.playable,false);
+ assert.equal(manifest.participants.length,2);assert.equal(manifest.tickRate,30);assert.equal(manifest.playable,true);
  assert.equal((await host.call('/api/coop/prepare',{...prep,gameVersion:'old'})).status,409);
  assert.equal((await host.call('/api/coop/prepare',{...prep,revision:1})).status,409);
 
