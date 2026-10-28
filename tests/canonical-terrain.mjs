@@ -53,6 +53,8 @@ try{
     const response=await mf.dispatchFetch('http://localhost/',{method:'POST',body:JSON.stringify({seed:67,mapScale})});assert.equal(response.status,200,await response.clone().text());
     const actual=await response.json(),expected=createCoopTerrain({seed:67,mapScale}),s=expected.snapshot();
     assert.equal(actual.snapshot.seed,s.seed);assert.equal(actual.snapshot.randomState,s.randomState);assert.equal(actual.snapshot.complete,false);assert.equal(actual.snapshot.islands.length,s.islands.length);
+    assert.equal(actual.snapshot.version,2);assert.equal(actual.snapshot.basePlan.layoutId,s.basePlan.layoutId);
+    for(const k of ['x','z','hw','hd','y','rot','c','s','blend'])assert.ok(Math.abs(actual.snapshot.basePlan.level[k]-s.basePlan.level[k])<1e-7,'native base pad '+k);
     let maxIslandDelta=0;
     for(let i=0;i<s.islands.length;i++)for(const k of ['x','z','r','peakX','peakZ'])maxIslandDelta=Math.max(maxIslandDelta,Math.abs(actual.snapshot.islands[i][k]-s.islands[i][k]));
     assert.ok(maxIslandDelta<1e-8,'native island max delta '+maxIslandDelta);

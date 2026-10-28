@@ -1,8 +1,7 @@
 // Approved compound layouts share one specification with the preview.
 // Quarter turns keep the existing axis-aligned wall collision representation exact.
 function compoundTransform(q,angle=0,mirror=1){
-  const c=Math.round(Math.cos(angle)),s=Math.round(Math.sin(angle));
-  return (x,z)=>[q.x+x*mirror*c-z*s,q.z+x*mirror*s+z*c];
+  return window.HUNTER_COMPOUND_PLANNING.compoundPoint(q,angle,mirror);
 }
 function findRedesignedPort(q){return drainBuildSteps(findRedesignedPortSteps(q))}
 function* findRedesignedPortSteps(q){
@@ -29,13 +28,12 @@ function* findRedesignedPortSteps(q){
 }
 function buildApprovedCompound(layout,q,options){return drainBuildSteps(buildApprovedCompoundSteps(layout,q,options))}
 function* buildApprovedCompoundSteps(layout,q,{pad,path,pier,prop,vehicles,rocketAssigned,heliportSites}){
-  const isPort=layout.id==='port',coastal=isPort||!!layout.waterfront,angle=layout.fixedOrientation?(q.angle||0):['base','hq'].includes(layout.id)?0:coastal?q.angle:Math.floor(R()*4)*Math.PI/2,mirror=1,tr=compoundTransform(q,angle,mirror),c=Math.round(Math.cos(angle)),s=Math.round(Math.sin(angle));
+  const plan=window.HUNTER_COMPOUND_PLANNING.planCompound(layout,q,{random:R,rawHeightAt:rawHAt}),
+    {isPort,coastal,angle,mirror,landDepth,center,height}=plan,tr=compoundTransform(q,angle,mirror),c=Math.round(Math.cos(angle)),s=Math.round(Math.sin(angle));
   const vector=(x,z)=>[x*c-z*s,x*s+z*c],rotatedHeading=hd=>hd*mirror-angle;
-  const record={id:layout.id,layoutId:layout.layoutId||layout.id,variant:layout.variant||1,layout,x:q.x,z:q.z,angle,mirror,r:Math.hypot(...layout.size)/2+20,buildings:[],vehicles:[],soldiers:[],loot:[],entrances:layout.entrances.map(p=>tr(...p)),patrol:layout.patrol.map(p=>tr(...p))};
+  const record={id:plan.id,layoutId:plan.layoutId,variant:plan.variant,layout,x:q.x,z:q.z,angle,mirror,r:plan.r,buildings:[],vehicles:[],soldiers:[],loot:[],entrances:plan.entrances,patrol:plan.patrol};
   world.userData.compounds.push(record);
-  const shore=layout.waterfront?.shore??8,landDepth=coastal?shore+layout.size[1]/2-5:layout.size[1]+8;
-  const center=tr(0,coastal?-layout.size[1]/2+landDepth/2:0),height=coastal?.86:q.h??rawHAt(q.x,q.z);
-  addLevelArea(...center,layout.size[0]+8,landDepth,height,angle,coastal?3:18);
+  const level=plan.level;addLevelArea(level.x,level.z,level.hw*2,level.hd*2,level.y,level.rot,level.blend);
   if(!layout.civilian){
     const pw=layout.size[0]-6,pd=coastal?landDepth-2:layout.size[1]-10;
     const bunkerSpec=layout.id==='hq'?layout.buildings.find(spec=>spec.bunker):null;
