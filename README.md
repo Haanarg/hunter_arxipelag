@@ -4,6 +4,12 @@ Joc 3D per al navegador inspirat en *Hunter* (Amiga). Comença a la teva base, e
 
 [Jugar](https://hunter.paradoxa.cat/) · [Fases fetes i pendents](PROGRESS.MD) · [Notes visuals](docs/VISUAL_MODERNIZATION.md)
 
+## Punteria enemiga unificada (v0.6.1)
+
+Soldats, general, torres, artillers dels cotxes, tanquetes, tancs i patrulleres utilitzen el mateix criteri de dificultat i distància. La desviació és transversal a la trajectòria i creix amb la distància, amb multiplicadors per arma; els explosius són menys precisos per permetre que fallin també fora del radi de l'explosió. Els PV, el dany, les cadències i els abasts no canvien.
+
+Referència teòrica per a un fusell a 80 m i una silueta immòbil de 1,2 × 1,8 m, sense obstacles: aproximadament 21% Fàcil, 50% Normal i 75% Difícil. Els encerts reals depenen també de la distància, del moviment, de les col·lisions i del temps de vol.
+
 ## Versió 0.6.0
 
 La 0.6.0 consolida el salt d'escala de l'arxipèlag: als mapes grans, els quatre quadrants generen els seus propis complexos i vehicles, i la investigació de l'HQ enemic avança amb documents de **quatre quadrants diferents** (9 → 6 → 3 possibles emplaçaments → HQ identificat). Els mapes de vehicles revelen la informació del sector on es recullen. També s'han ampliat les flotes marítimes, el control tàctil del mapa i els ajustos visuals i de botí.

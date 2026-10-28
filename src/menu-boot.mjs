@@ -1,5 +1,5 @@
-import {GAME_VERSION} from './version.mjs?v=0.6.0';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.0';
+import {GAME_VERSION} from './version.mjs?v=0.6.1';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.1';
 
 // La portada no carrega Three.js, WebGL, el món ni una llavor de fons.
 // Una imatge estàtica renderitzada amb la llavor 67 és suficient.
@@ -94,7 +94,7 @@ const showLoading=(message)=>{
 };
 function loadGame(){
   if(window.HUNTER_READY)return Promise.resolve();
-  if(!bootPromise)bootPromise=import('./bootstrap.mjs?v=0.6.0').then(()=>{
+  if(!bootPromise)bootPromise=import('./bootstrap.mjs?v=0.6.1').then(()=>{
     if(!window.HUNTER_READY)throw new Error('El motor 3D no ha acabat de carregar');
   }).catch(error=>{bootPromise=null;throw error});
   return bootPromise;
