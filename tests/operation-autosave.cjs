@@ -1,0 +1,30 @@
+const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
+const ctx=vm.createContext({window:{},performance:{now:()=>0}});
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/operation-autosave.js'),'utf8'),ctx);
+(async()=>{
+ let time=0,wall=0,safe=true,writes=0,release,error=null;
+ const coordinator=ctx.window.HUNTER_AUTOSAVE.create({time:()=>time,now:()=>wall,eligible:()=>safe,
+   capture:()=>({world:{time}}),write:async snapshot=>{writes++;if(error)throw error;if(release===true)await new Promise(r=>release=r);return snapshot;}});
+ const settle=async task=>{if(task)await task.catch(()=>{});await new Promise(setImmediate)};
+ coordinator.reset();await settle(coordinator.tick());assert.equal(writes,1);
+ time=59;wall=59000;assert.equal(coordinator.tick(),null);
+ time=60;wall=60000;await settle(coordinator.tick());assert.equal(writes,2);
+ coordinator.request('intel');coordinator.request('rescue');wall=63000;assert.equal(coordinator.tick(),null);
+ wall=70000;await settle(coordinator.tick());assert.equal(writes,3,'checkpoints coalesce with minimum gap');
+ time=61;wall=71000;safe=false;coordinator.request('background',{urgent:true});assert.equal(writes,3);
+ safe=true;wall=80000;await settle(coordinator.tick());assert.equal(writes,4,'unsafe transition defers rather than losing prior save');
+ time=62;release=true;await Promise.resolve();const writing=coordinator.request('background',{urgent:true});
+ assert.equal(writes,5);coordinator.request('background',{urgent:true});assert.equal(writes,5,'no overlapping writes');
+ release();await settle(writing);release=null;
+ coordinator.markSaved(time);coordinator.request('background',{urgent:true});assert.equal(writes,5,'paused duplicate does not replace backup');
+ coordinator.setEnabled(false);time=200;wall=200000;assert.equal(coordinator.tick(),null);assert.equal(writes,5);
+ coordinator.setEnabled(true);error={code:'CONFLICT'};await settle(coordinator.request('background',{urgent:true}));
+ assert.equal(coordinator.state().blocked,true);wall+=60000;assert.equal(coordinator.tick(),null);
+ error=null;coordinator.markSaved(time);time++;wall++;await settle(coordinator.request('background',{urgent:true}));assert.equal(writes,7);
+ error=new Error('quota');time++;wall++;await settle(coordinator.request('background',{urgent:true}));const failedWrites=writes;
+ wall+=1000;assert.equal(coordinator.tick(),null);assert.equal(writes,failedWrites);
+ error=null;wall+=30000;await settle(coordinator.tick());assert.equal(writes,failedWrites+1,'transient storage error retries after backoff');
+ coordinator.suspend();time+=60;wall+=60000;assert.equal(coordinator.tick(),null);
+ coordinator.reset({saved:time});assert.equal(coordinator.state().blocked,false);assert.equal(coordinator.tick(),null);
+ console.log('operation-autosave: periodic/checkpoints, background, unsafe transitions, coalescing, disabled state, conflict and quota backoff passed');
+})().catch(e=>{console.error(e);process.exitCode=1});

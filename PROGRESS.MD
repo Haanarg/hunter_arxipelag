@@ -1,16 +1,16 @@
 # HUNTER · ARXIPÈLAG — progrés de les millores
 
-Actualitzat: 2026-10-25. Aquest fitxer és el punt de represa del pla de catorze fases, ordenat inicialment per impacte. S’han completat i desplegat les fases **6, 8, 10 i 12**. L’usuari ha triat B + C de la fase 11: sabotatge de ràdio i camp de presoners amb camperols i un mecànic únic. La versió v0.5.84 està desplegada amb el camp redissenyat i exigeix un camp amb cinc presoners abans d’activar cada operació; A i la nit/espera continuen pendents. La resta continua pendent segons la taula. «Implementada» no equival a validació física en Android.
+Actualitzat: 2026-10-28 (estat general històric fins a v0.5.84; decisions i inici de fase 5 actualitzats). Aquest fitxer és el punt de represa del pla de catorze fases, ordenat inicialment per impacte. S’han completat i desplegat les fases **6, 8, 10 i 12**. L’usuari ha triat B + C de la fase 11: sabotatge de ràdio i camp de presoners amb camperols i un mecànic únic. La versió v0.5.84 està desplegada amb el camp redissenyat i exigeix un camp amb cinc presoners abans d’activar cada operació; A i la nit/espera continuen pendents. La resta continua pendent segons la taula. «Implementada» no equival a validació física en Android.
 
 ## Estat de les fases
 
 | Fase | Objectiu | Estat i evidència | Què queda |
 | --- | --- | --- | --- |
-| 1 | Missions completables | **Parcial.** Validador fora del runtime i regressions d'accés local; commit `79bdca3`. Matriu de 8 combinacions llavor/escala i cas complet 67/1 superats. [Detall](docs/MISSION_VIABILITY.md). | Rutes entre illes, accés als mapes, embarcament, sortida navegable, seqüència completa de victòria i més llavors. No s'ha demostrat viabilitat universal. |
+| 1 | Missions completables | **Tancada per decisió de l’usuari el 2026-10-28.** Validador fora del runtime i regressions d'accés local; commit `79bdca3`. Matriu de 8 combinacions llavor/escala i cas complet 67/1 superats. [Detall](docs/MISSION_VIABILITY.md). | Sense feina pendent en aquesta fase per decisió de l’usuari. Les proves històriques no equivalen a una demostració universal. |
 | 2 | Separar càmera i conducció; interiors segurs | **Implementada**, v0.5.76, commit `a982a9b`. Mirada lliure als vehicles i càmera restringida al soterrani; proves de 16 perfils i geometria. [Detall](docs/PHASE2_CAMERA.md). | Passada visual WebGL i Android físic. |
 | 3 | Simulació coherent amb FPS baixos | **Implementada**, v0.5.77, commit `404f246`. Subpassos de fins a 1/60 s, límit de 250 ms, rellotges de joc/cinemàtiques separats i proves de cadència/trajectòria. [Detall](docs/PHASE3_SIMULATION.md). | Mesura en dispositiu real; no és determinisme exacte ni una garantia d'FPS. |
 | 4 | Rendiment sostingut a Android | **Pendent**, ajornada en prioritzar 6 i 8. | Perfilar CPU/GPU, memòria i bateria durant partides llargues; optimitzar segons les mesures. |
-| 5 | Desar, suspendre i reprendre l'operació | **Pendent**, ajornada. | Format versionat de partida, restauració segura i proves de lifecycle. |
+| 5 | Desar, suspendre i reprendre l'operació | **En curs.** Desament local manual i automàtic, diverses operacions, restauració del món, menús i exportació/importació implementats en branca, v0.6.5. Format món/participants, còpia anterior i revisions. [Detall](docs/PHASE5_SAVES.md). | Validació nativa en navegador/Android i mida gran, transferència entre dispositius i desplegament de producció. Comptes/sincronització, estadístiques/historial i cooperatiu pendents. |
 | 6 | Combat llegible | **Implementada i desplegada**, v0.5.78, commit `f80705b`. Espurnes distintives d’ineficàcia, sang més visible als ferits, confirmació d’impacte real i direcció del dany. [Detall](docs/PHASE6_COMBAT.md). | Aspecte visual/GPU i Android físic pendents. |
 | 7 | Orientació i ritme de missió | **Pendent**, ajornada. | Guia d'intel/objectius i direcció útil del waypoint, sense revelar informació desconeguda. |
 | 8 | Sigil i IA llegibles | **Implementada i desplegada**, v0.5.79, commit `fc2a3c3`. Marcadors visibles de sospita/contacte/cerca, posicions de tir i flanc reservades i torns d’entrada. [Detall](docs/PHASE8_STEALTH.md). | Llegibilitat visual, GPU i Android físic pendents. |
@@ -125,3 +125,28 @@ La **v0.5.84 està desplegada**, amb el camp redissenyat, quatre torres, quatre 
 ## Límits coneguts de la base
 
 El harness usa geometria Three.js amb un renderitzador simulat: no certifica aspecte visual ni rendiment en GPU o Android. Es conserven discrepàncies antigues en proves aïllades (`compound-generation` a 12345/1, contextos de `vehicle-weapon-reticle` i `player-locomotion`, una expectativa literal de `rowing-audio-camera`, les distàncies LOD antigues de `terrain-stream` (reproduït també sobre `651884f`), `light-projectile-aim` (`autoAimDown`, reproduït també sobre la base intacta `9a1b87b`), i fixtures antics de `damage-consistency` (context sense `window`) i `combat-heli-rocket-boats` (regex de generació antiga)); no s'han eliminat per obtenir un resultat verd. Vegeu les notes de cada fase.
+
+
+## Decisions i inici de fase 5 — 2026-10-28
+
+- Fase 1 tancada expressament per l’usuari; les mencions anteriors de «parcial» són històriques.
+- Autoritzat començar desament local de diverses operacions, preparant comptes i cooperatiu futurs. Primera entrega de dades implementada i provada; integració al runtime pendent. Vegeu [PHASE5_SAVES.md](docs/PHASE5_SAVES.md).
+- Els canvis posteriors a v0.5.84 de la resta del joc no s’han reauditat en aquesta actualització.
+
+
+
+## Fase 5 — segona entrega, 2026-10-28
+
+Desament manual i restauració del món connectats als menús de portada i pausa, preparats en branca a v0.6.3, encara sense desplegar. Prova de món real generat i càrrega progressiva sobre el bundle final superada amb destrucció, inventari, intel, civils, ràdio, vehicle en vol, càrrega de ferri i C4. Limitacions i llista de pendents després de cada entrega a [PHASE5_SAVES.md](docs/PHASE5_SAVES.md). La validació visual real continua pendent; no es dona tota la fase 5 per tancada.
+
+
+## Fase 5 — autosave, 2026-10-28
+
+Entrega B implementada en branca, v0.6.4 preparada: autosave periòdic, checkpoints agrupats, intents en segon pla, errors visibles i control de concurrència amb desament manual. La còpia anterior continua disponible per recuperar. No garanteix capturar l’últim instant si Android mata el procés. Queda C exportació/importació (següent), comptes/sincronització, estadístiques/llavors i cooperatiu. Detall i validació a docs/PHASE5_SAVES.md.
+
+
+## Fase 5 — exportació/importació i pendents finals, 2026-10-28
+
+Entrega C implementada després de B, versió preparada 0.6.5: exportació de la darrera revisió desada i importació amb resum/confirmació, checksum SHA-256, límits de mida, esquema i compatibilitat. Cada importació crea una operació nova; conserva les existents i la partida activa. Roundtrip del món real generat i càrrega progressiva verificats sobre fonts i paquet final, a més de l’autosave i els errors de fitxer.
+
+**Queda per desenvolupar:** D comptes/sincronització; E estadístiques ampliades/historial de llavors; F centralització d’accions i autoritat de simulació; G cooperatiu jugable; migracions quan canviïn format/generador. **Queda per validar/publicar:** navegador i Android reals, mapa gran/més llavors, selector/descàrrega natius i transferència real de fitxers, integració i producció. Fase 5 oberta. Detall i llista després de cada entrega a [PHASE5_SAVES.md](docs/PHASE5_SAVES.md).

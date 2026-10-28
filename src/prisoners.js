@@ -419,6 +419,38 @@ window.HUNTER_PRISONERS=Object.freeze({
     entities:entities.map(u=>({id:u.id,role:u.role,state:u.state,hp:u.hp,x:u.x,y:u.y,z:u.z,waypoint:u.waypoint,blocked:u.blocked,following:u.following,cheering:u.cheering})),
     repair:repair?{vehicle:repair.vehicle.t,progress:repair.progress,duration:config.repairSeconds}:null};
   }
-  return Object.freeze({configure,reset,update,getAction,interact,markers,hurt,snapshot,entities,config});
+  function exportSave(){
+   return {discovered,released,cheerNotified,
+    entities:entities.map(u=>({id:u.id,state:u.state,hp:u.hp,x:u.x,y:u.y,z:u.z,
+      destroyed:u.destroyed,path:JSON.parse(JSON.stringify(u.path)),waypoint:u.waypoint,
+      phase:u.phase,blocked:u.blocked,following:u.following,followWarning:u.followWarning,
+      cheering:u.cheering,cheerPhase:u.cheerPhase,pose:u.pose,rotation:u.o?.rotation.y||0})),
+    repair:repair?{mechanicId:repair.mechanic.id,vehicleId:repair.vehicle.saveId,progress:repair.progress}:null};
+  }
+  function validateSave(data){
+   if(!data||typeof data.discovered!=='boolean'||typeof data.released!=='boolean'||
+     !Array.isArray(data.entities)||data.entities.length!==entities.length||
+     new Set(data.entities.map(u=>u.id)).size!==entities.length||data.entities.some(s=>
+      !entities.some(u=>u.id===s.id)||!['captive','evacuating','to-station','ready','rescued','dead'].includes(s.state)||
+      !['x','y','z','hp','waypoint','phase','blocked','rotation'].every(k=>Number.isFinite(s[k]))||
+      !Array.isArray(s.path)||s.path.some(p=>!['x','y','z'].every(k=>Number.isFinite(p[k])))))
+     throw new Error('Estat dels presoners invàlid.');
+  }
+  function importSave(data,vehicles=[]){
+   validateSave(data);discovered=data.discovered;released=data.released;cheerNotified=data.cheerNotified;repair=null;
+   for(const saved of data.entities){
+    const u=entities.find(u=>u.id===saved.id),{id,pose:savedPose,rotation,...state}=saved;
+    Object.assign(u,JSON.parse(JSON.stringify(state)));pose(u,savedPose==='seated');
+    if(u.o){u.o.position.set(u.x,u.y,u.z);u.o.rotation.y=rotation;
+     if(u.hp<=0){u.o.rotation.x=-Math.PI/2;u.o.position.y=u.y+.22;}}
+   }
+   // Repair is an ongoing action; preserve progress only with the original living mechanic and vehicle.
+   if(data.repair){
+    const u=entities.find(u=>u.id===data.repair.mechanicId),v=vehicles.find(v=>v.saveId===data.repair.vehicleId);
+    if(alive(u)&&v&&!v.destroyed&&Number.isFinite(data.repair.progress))
+      repair={mechanic:u,vehicle:v,progress:data.repair.progress,x:v.x,y:position(v).y,z:v.z,life:v.life,maxLife:v.maxLife};
+   }
+  }
+  return Object.freeze({configure,reset,update,getAction,interact,markers,hurt,snapshot,entities,config,exportSave,validateSave,importSave});
  }
 });

@@ -53,7 +53,7 @@ function rebuildIslandGrid(){
 }
 const islandCandidates=(x,z)=>islandGrid.get(islandCellKey(Math.floor(x/ISLAND_CELL),Math.floor(z/ISLAND_CELL)))||(islands||[]);
 const seedFromText=v=>{v=String(v??'').trim();if(/^-?\d+$/.test(v))return Number(BigInt(v)&0xffffffffn);let h=2166136261>>>0;for(let i=0;i<v.length;i++){h^=v.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0};
-const mul=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const mul=a=>{const next=()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};next.getState=()=>a>>>0;next.setState=value=>{a=value|0};return next};
 const hash=(x,y)=>{const h=Math.sin(x*127.1+y*311.7+seed*.001)*43758.5453;return h-Math.floor(h)};
 function vn(x,y){const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);
 return hash(ix,iy)*(1-u)*(1-v)+hash(ix+1,iy)*u*(1-v)+hash(ix,iy+1)*(1-u)*v+hash(ix+1,iy+1)*u*v}
@@ -779,10 +779,11 @@ function applyGameStartOptions({difficulty=DIF,scale=MAP_SCALE,seed:inputSeed=re
 // complete world. Production buttons and restart exclusively use the Promise.
 function startGameSynchronously(options=readGameStartOptions()){
   if(generationPromise||seedSearchRunning)throw new Error('Ja hi ha una generació en curs');
-  applyGameStartOptions(options);build();configureOptionalWorld();validateRequiredWorldFeatures();minimap.setWorldSize(S,H);minimap.reset();mini();
-  started=1;paused=false;iniEl.style.display='none';document.body.classList.add('game-started');initAudio();resetSimulationClock();
+  applyGameStartOptions(options);build();configureOptionalWorld();validateRequiredWorldFeatures();prepareOperationRegistry();if(options.restoreSnapshot)applyOperationSnapshot(options.restoreSnapshot);minimap.setWorldSize(S,H);minimap.reset();mini();
+  started=1;paused=!!options.restoreSnapshot;iniEl.style.display='none';document.body.classList.add('game-started');initAudio();if(paused){ui.show('pause');audioPause()}resetSimulationClock();
 }
 function discardGeneratedWorld(){
+  operationRegistry=null;activeOperation=null;
   resetOptionalSystems();
   if(terrainStream)terrainStream.dispose();terrainStream=null;
   if(world){scene.remove(world);window.HUNTER_RESOURCES.dispose(world)}world=null;
@@ -791,6 +792,8 @@ function discardGeneratedWorld(){
   waterUpgradePending=false;seedCompounds=[];elapsed=0;clearKeys();resetSimulationClock();
 }
 function startGameProgressively(options=readGameStartOptions()){
+  if(operationWritePromise)return waitOperationWrite().then(()=>startGameProgressively(options));
+  if(operationBusy&&!options.restoreSnapshot)return Promise.reject(new Error('Espera que acabi el desament.'));
   if(generationPromise)return generationPromise;
   if(seedSearchRunning)return Promise.reject(new Error('Espera que acabi la cerca de llavors'));
   const listeners=new Set(),signal={aborted:false,
@@ -822,14 +825,14 @@ function startGameProgressively(options=readGameStartOptions()){
       initAudio({unlockOnly:true});
       audioPause();
       const iterator=(function*(){
-        yield* buildSteps();configureOptionalWorld();validateRequiredWorldFeatures();
+        yield* buildSteps();configureOptionalWorld();validateRequiredWorldFeatures();prepareOperationRegistry();
         minimap.setWorldSize(S,H);minimap.reset();
         yield* minimap.buildBackgroundSteps();mini();
       })();
       await buildProgressively({iterator,signal,schedule:options.schedule||window.HUNTER_GENERATION_SCHEDULE,onProgress:report});
       if(signal.aborted)throw generationAbortError();
-      applyStressAuditPosition();
-      initAudio();started=1;paused=!simulationFocused||!!document.hidden;clearKeys();
+      if(options.restoreSnapshot)applyOperationSnapshot(options.restoreSnapshot);else applyStressAuditPosition();
+      initAudio();started=1;paused=!!options.restoreSnapshot||!simulationFocused||!!document.hidden;clearKeys();
       if(paused){ui.show('pause');audioPause()}
       window.HUNTER_GENERATION_STATE.status='ready';
       iniEl.style.display='none';document.body.classList.add('game-started');
@@ -1848,7 +1851,7 @@ function optionalCivilianCanMove(from,to,radius){
   return !vehicleCandidatesAt(to.x,to.z,24,true).some(v=>
     !v.destroyed&&Math.abs(vehicleY(v)-to.y)<3&&circleVehicleOverlap(to.x,to.z,radius,v));
 }
-const optionalNotify=text=>{msg=text;msgT=3};
+const optionalNotify=text=>{msg=text;msgT=3;requestOperationAutosave('world');};
 const prisonerSystem=window.HUNTER_PRISONERS.create({
   THREE,box:bx,material:M,heightAt:(x,z)=>hAt(x,z),canMove:optionalCivilianCanMove,
   clearLine:optionalLineClear,notify:optionalNotify,sound:snd,vehicleRadius,
@@ -2717,11 +2720,12 @@ function setCheat(key,enabled){
   if(key==='fly'){cheatFlightY=enabled?P.y:null;if(enabled){cv=null;playerFall=null;playerEject=null;swimming=false}}
   if(key==='invisible'&&enabled)for(const u of E){u.canSee=false;u.canShoot=false;u.alert=0;u.recognition=0;u.pursuitT=0;if(u.t==='soldat'){u.aiMode='patrol';u.searchT=0}}
 }
-function resume(){if(generationPromise)return;paused=false;simulationFocused=true;clearKeys();ui.hide();audioResume();resetSimulationClock()}
+function resume(){if(generationPromise||operationBusy)return;paused=false;simulationFocused=true;clearKeys();ui.hide();audioResume();resetSimulationClock()}
 function panel(mode){if(generationPromise)return;setSniperScope(false);paused=true;updateOptionalSystems(0,false);resetSimulationClock();pickerOpen=false;picker.style.display='none';pickerToggle.style.display='none';clearKeys();audioPause();ui.show(mode)}
 // Les cartes revelen informació de forma immediata: no són objectes
 // d'inventari que s'hagin d'equipar ni obrir manualment.
 function revealMapPickup(kind,allSectors=false,pickupSector=null){
+  requestOperationAutosave('intel');
   if(kind==='mapa'){
     if(hqMapKnown)return 'El HQ enemic ja està localitzat.';
     if(MAP_SCALE===2){
@@ -2905,12 +2909,14 @@ const ui=window.HUNTER_UI.create({
   resumeButton:document.getElementById('resumeButton'),
   minimap,
   getState:({nearVehicle=cv?null:nearV()}={})=>({
-    hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
+    autosave:operationAutosave?.state(),started:!!started,hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
     inventory:inv,itemTypes:IT,player:P,nearVehicle,optionalAction:getOptionalAction(),messageTime:msgT,message:msg,
     waypoint,worldSize:S,seed,mapScale:MAP_SCALE,hqIntel:{stage:hqIntelStage,investigated:hqIntelSectors.size,remaining:hqMapKnown?1:hqIntelSites.length-(MAP_SCALE===2?hqIntelDiscarded.size:(hqIntelStage>=2?1:0)),confirmed:hqMapKnown},palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,muted,cheats:{...cheats},stealthDebug:window.HUNTER_STEALTH.enabled(),stealthLayers:window.HUNTER_STEALTH.layers(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
   }),
   actions:{
-    resume,
+    resume:()=>{if(!started){ui.hide();return}if(!operationBusy)resume()},
+    renderSaves:renderOperations,
+    setAutosave:setOperationAutosave,
     open:mode=>panel(mode),
     setWaypoint:v=>waypoint=v,
     useItem:id=>useInvItem(id),
@@ -3704,7 +3710,7 @@ if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-i
   }
   else if(it.t==='franctirador'){inv.franctirador=1;sniperAmmo+=6}
   else inv[it.t]=(inv[it.t]||0)+(it.t==='granada'?5:it.t==='bazooka'?3:1);
-  world.remove(it.o);items.splice(k,1);
+  world.remove(it.o);items.splice(k,1);requestOperationAutosave('equipment');
   msg=mapMessage||'Has trobat: '+IT[it.t].n+(it.t==='granada'?' ×5':it.t==='bazooka'?' ×3':it.t==='franctirador'?' +6 cartutxos':'');
   msgT=3;snd('pick')}}
 msgT-=dt;if(parachuteVisual)parachuteVisual.position.set(P.x,P.y,P.z);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;
@@ -3991,6 +3997,7 @@ try{
 // També sense temps nou cal netejar controls, HUD i estat de càmera.
 if(!simulated.steps)update(0,elapsed);
 syncWeaponPicker();
+operationAutosave?.tick();
 // Només avança la cinemàtica que ja existia a l'inici del fotograma.
 // El seu rellotge separat també admet 250 ms, en passos de fins a 1/60.
 cinematicClock.advance(now,dt=>{
@@ -4090,3 +4097,7 @@ requestAnimationFrame(loop)})(last);
 
 
 
+
+document.getElementById('operationsOpen').onclick=openOperations;
+
+initializeOperationAutosave();

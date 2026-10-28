@@ -1,6 +1,7 @@
 {
   "devDependencies": {
-    "terser": "5.51.2"
+    "terser": "5.51.2",
+    "fake-indexeddb": "6.2.5"
   },
   "name": "hunter-arxipelag",
   "private": true,
@@ -26,6 +27,7 @@
     "test:shadow-fauna-cache": "node tests/shadow-fauna-cache.cjs",
     "test:shadow-boat-cache": "node tests/shadow-boat-cache.cjs",
     "test:stress-audit-config": "node tests/stress-audit-config.cjs",
-    "test:vehicle-batching": "node tests/vehicle-batching.cjs"
+    "test:vehicle-batching": "node tests/vehicle-batching.cjs",
+    "test:saves": "node tests/operation-save.mjs && node tests/operation-autosave.cjs && node tests/operation-files.mjs && node tests/operation-runtime.cjs"
   }
 }

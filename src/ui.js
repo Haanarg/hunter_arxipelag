@@ -52,9 +52,12 @@ window.HUNTER_UI=Object.freeze({
     function hide(){panel.style.display='none';currentMode=null}
     function show(mode){
       currentMode=mode;panel.style.display='flex';
+      resumeButton.style.display=mode==='saves'&&!getState().started?'none':'';
       resumeButton.onclick=mode==='bombtimer'?()=>actions.open('inventory'):actions.resume;
       title.textContent=mode==='bombtimer'?'Programar explosiu':mode==='map'?'Carta de navegació':mode==='inventory'?'Inventari':mode==='restart'?'Nova operació?':mode==='performance'?'Rendiment':'Operació en pausa';panel.querySelector('.card').classList.toggle('inventory-card',mode==='inventory');
-      if(mode==='inventory'){
+      if(mode==='saves'){
+        title.textContent='Operacions desades';actions.renderSaves(body,()=>currentMode==='saves');
+      }else if(mode==='inventory'){
         const state=getState(),keys=['med','paracaigudes','cisalla','expl','granada','bazooka','franctirador','disf','arma'],present=keys.filter(k=>state.inventory[k]>0);
         let selected=present[0]||null;
         const renderInventory=(healed=0)=>{
@@ -201,11 +204,18 @@ window.HUNTER_UI=Object.freeze({
           '<p class="pause-note">Els mapes recollits s’activen sols. Gestiona l’equipament amb la motxilla.</p>'+
           '<p class="pause-note">Senyals sobre soldats visibles: ? ambre · sospita; ! coral · contacte confirmat; ◇ blau · cerca o investigació. Desapareixen darrere la cobertura.</p>'+
           '<label class="pause-stats-toggle"><input id="audioEnabledPause" type="checkbox"> So activat</label>'+
+          '<label class="pause-stats-toggle"><input id="autosaveEnabledPause" type="checkbox"> Desament automàtic</label>'+
+          '<p id="operationAutosaveStatus" class="pause-note" role="status"></p>'+
           '<div class="pause-menu-actions">'+
+          '<button id="savesMenu">Desar / operacions</button>'+
           '<button id="chetosMenu">Chetos</button>'+
           '<button id="restartMenu">Nova partida</button>'+
           '<button id="performanceMenu">⚙️ Rendiment</button>'+
           '</div>';
+        const auto=document.getElementById('autosaveEnabledPause');auto.checked=!!getState().autosave?.enabled;
+        auto.onchange=()=>actions.setAutosave(auto.checked);
+        document.getElementById('operationAutosaveStatus').textContent=getState().autosave?.message||'';
+        document.getElementById('savesMenu').onclick=()=>actions.open('saves');
         document.getElementById('chetosMenu').onclick=()=>actions.open('cheats');
         document.getElementById('restartMenu').onclick=()=>actions.open('restart');
         document.getElementById('performanceMenu').onclick=()=>actions.open('performance');
