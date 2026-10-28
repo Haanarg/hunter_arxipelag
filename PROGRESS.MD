@@ -186,3 +186,7 @@ L’usuari ha creat D1 `hunter-accounts` (`f4879e20-1085-4a51-b132-96cfad61cb90`
 Pendent després d’integrar aquesta tanda a main: comprovar el desplegament de producció, aplicar les quatre migracions a D1, configurar `AUTH_ORIGIN` amb l’URL real i `AUTH_SECRET` directament a Cloudflare, i registrar/aprovar el primer administrador. Els comptes es mantenen deshabilitats fins que aquestes comprovacions passen. Cap secret es guarda al repositori. Les previews no s’han habilitat per operar comptes contra les dades de producció; calen recursos i variables separats abans de provar-hi comptes.
 
 La resta de pendents (proves físiques, quotes/retenció, recuperació excepcional d’administradors i cooperatiu) es manté segons la tanda v0.6.7 anterior.
+
+## Diagnòstic d’activació
+
+L’usuari informa que les migracions retornen versió 4 i ha desat origen i secret. El servidor encara retorna `configuration`, malgrat que les captures mostren els noms correctes. `/api/capabilities` ara enumera únicament els noms dels camps invàlids/absents a la versió activa, sense valors ni secrets, per identificar la causa. L’activació i prova d’un compte real continuen pendents.

@@ -10,6 +10,11 @@ try{
  for(const AUTH_ORIGIN of ['http://example.test','https://example.test/path','https://example.test/']){
   response=await worker.fetch(new Request('http://localhost/api/capabilities'),{...env,AUTH_ORIGIN},{});assert.equal((await response.json()).accounts,false,'reject invalid origin configuration');
  }
+ for(const key of ['DB','SAVES','AUTH_SECRET','AUTH_ORIGIN']){
+  const bad={...env};delete bad[key];
+  response=await worker.fetch(new Request('http://localhost/api/capabilities'),bad,{});
+  const body=await response.json();assert.deepEqual(body.issues,[key]);assert.ok(!JSON.stringify(body).includes(env.AUTH_SECRET),'never disclose secret');
+ }
  await applyMigrations(DB);response=await worker.fetch(new Request('http://localhost/api/capabilities'),env,{});assert.equal((await response.json()).accounts,true);
  await DB.prepare('INSERT INTO user(id,name,email,emailVerified,createdAt,updatedAt) VALUES(?,?,?,?,?,?)').bind('owner','owner','owner@hunter.invalid',0,Date.now(),Date.now()).run();
  for(const key of ['saves/00-orphan','saves/01-current','saves/02-previous','saves/03-orphan','saves/04-orphan','foreign/untouched'])await SAVES.put(key,'test');

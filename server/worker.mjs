@@ -94,7 +94,7 @@ export default {
     if(!url.pathname.startsWith('/api/'))return env.ASSETS.fetch(request);
     try{
       const readiness=await accountReadiness(env);
-      if(url.pathname==='/api/capabilities'&&request.method==='GET')return json({accounts:readiness.ready,reason:readiness.reason,recovery:'codes',approval:'manual',storage:'cloudflare'});
+      if(url.pathname==='/api/capabilities'&&request.method==='GET')return json({accounts:readiness.ready,reason:readiness.reason,issues:readiness.issues,recovery:'codes',approval:'manual',storage:'cloudflare'});
       if(!readiness.ready)failure(503,'NOT_CONFIGURED','Els comptes encara no estan activats. El desament local continua disponible.');
       if(['POST','PUT','DELETE','PATCH'].includes(request.method)&&request.headers.get('Origin')!==env.AUTH_ORIGIN)
         failure(403,'ORIGIN','Origen no admès.');

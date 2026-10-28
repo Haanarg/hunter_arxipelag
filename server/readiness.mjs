@@ -1,6 +1,7 @@
-import {authReady} from './auth.mjs';
+import {configurationIssues} from './auth.mjs';
 export async function accountReadiness(env){
-  if(!authReady(env))return {ready:false,reason:'configuration'};
+  const issues=configurationIssues(env);
+  if(issues.length)return {ready:false,reason:'configuration',issues};
   try{
     const table=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='hunter_schema'").first();
     if(!table)return {ready:false,reason:'migrations'};
