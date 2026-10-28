@@ -314,6 +314,20 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // aquesta espatlla, i no les coordenades del model sense escalar.
     // Escalam lleugerament el rifle perquè els canells arribin al gallet
     // i al guardamà sense forçar els colzes.
+    // Fusell d’assalt procedimental amb culata, carregador i canó.
+    const assault=new THREE.Group();
+    assault.position.set(.68,3.60-u.upperBodyPivotHeight,-1.06);
+    assault.scale.setScalar(.84);u.upperBody.add(assault);
+    box(assault,.26,.24,1.9,0x4c5c4b,0,0,-.18,'paint');
+    box(assault,.14,.14,1.15,0x303938,0,.02,-1.55,'metal');
+    box(assault,.29,.26,.72,0x856d4a,0,-.04,.96,'paint');
+    box(assault,.18,.4,.22,0x2c3530,0,-.25,.16,'metal');
+    box(assault,.21,.48,.46,0x303b35,0,-.39,-.37,'metal');
+    box(assault,.28,.14,.24,0x252f2c,0,.18,-.32,'metal');
+    const assaultRightGrip=new THREE.Object3D(),assaultLeftGrip=new THREE.Object3D();
+    assaultRightGrip.position.set(-.04,-.2,.25);assaultLeftGrip.position.set(-.36,-.2,-.52);
+    assault.add(assaultRightGrip,assaultLeftGrip);
+    assault.visible=false;u.assault=assault;u.assaultRightGrip=assaultRightGrip;u.assaultLeftGrip=assaultLeftGrip;
     const sniper=new THREE.Group();
     sniper.position.set(.68,3.60-u.upperBodyPivotHeight,-1.15);
     sniper.scale.setScalar(.82);
@@ -377,7 +391,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     return crawl*Math.max(0,surface+.22-physicalY-chestRel,
                             surface+.38-physicalY-headRel);
   },
-  animatePlayer(player,{forward,strafe=0,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false,running=false,crouching=false}){
+  animatePlayer(player,{forward,strafe=0,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,assaultRifleEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false,running=false,crouching=false}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),
           move=Math.min(1,Math.hypot(forward,strafe*.85)),dir=forward<-.02?-1:1;
     // Cintura i cames apunten 45° cap al desplaçament lateral; el tronc
@@ -412,7 +426,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     if(airborne||parachuting){
       // L'estat aeri és exclusiu: l'animació normal no pot reactivar
       // la pistola ni cap altra arma durant un descens amb paracaigudes.
-      for(const weapon of [u.gun,u.knife,u.bazooka,u.grenade,u.sniper,u.cisalla])
+      for(const weapon of [u.gun,u.knife,u.bazooka,u.grenade,u.sniper,u.assault,u.cisalla])
         if(weapon)weapon.visible=false;
       if(u.pistolFlash)u.pistolFlash.visible=false;
       u.pistolBlend=0;
@@ -445,7 +459,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
       const stroke=Math.sin(ph),recover=(1-Math.cos(ph))*.5,
             mix=(normal,fast)=>normal+(fast-normal)*crawl,
             sinOpp=-Math.sin(ph),flutter=Math.sin(ph*2);
-      u.gun.visible=false;u.knife.visible=false;u.bazooka.visible=false;u.grenade.visible=false;u.sniper.visible=false;u.cisalla.visible=false;
+      u.gun.visible=false;u.knife.visible=false;u.bazooka.visible=false;u.grenade.visible=false;u.sniper.visible=false;u.assault.visible=false;u.cisalla.visible=false;
       if(u.pistolFlash)u.pistolFlash.visible=false;
       u.pistolBlend=0;
       // Braça: postura habitual. Crol: cos gairebé horitzontal,
@@ -519,16 +533,16 @@ window.HUNTER_CHARACTERS=Object.freeze({
 
     const aiming=u.firePose>0&&!inVehicle,melee=u.meleePose>0&&!inVehicle,bazooka=!!bazookaEquipped&&!inVehicle,
           grenade=!!grenadeEquipped&&!inVehicle,cisalla=!!cisallaEquipped&&!inVehicle,
-          sniper=!!sniperEquipped&&!inVehicle,throwing=u.grenadeThrow>0&&!inVehicle;
-    u.bazooka.visible=bazooka;u.sniper.visible=sniper;u.grenade.visible=(grenade||throwing)&&!u.grenadeReleased;
+          sniper=!!sniperEquipped&&!inVehicle,assault=!!assaultRifleEquipped&&!inVehicle,throwing=u.grenadeThrow>0&&!inVehicle;
+    u.bazooka.visible=bazooka;u.sniper.visible=sniper;u.assault.visible=assault;u.grenade.visible=(grenade||throwing)&&!u.grenadeReleased;
     u.cisalla.visible=cisalla;
     window.HUNTER_BOLT_CUTTERS.pose(u.cisalla,
       cisalla&&u.cisallaCut>0?Math.sin(Math.PI*(1-u.cisallaCut/.46)):0);
-    u.gun.visible=!bazooka&&!sniper&&!grenade&&!cisalla&&!knifeEquipped&&!melee&&(ammo>0||aiming);
+    u.gun.visible=!bazooka&&!sniper&&!assault&&!grenade&&!cisalla&&!knifeEquipped&&!melee&&(ammo>0||aiming);
     // Deixem acabar el retrocés de l'última bala: mai es veuen
     // pistola i ganivet superposats durant la transició.
-    const knifeReady=!inVehicle&&!cisalla&&(knifeEquipped||ammo<=0&&!aiming&&u.pistolAimTime<=0);
-    u.knife.visible=!bazooka&&!sniper&&!grenade&&!cisalla&&(melee||knifeReady);
+    const knifeReady=!inVehicle&&!cisalla&&!assault&&(knifeEquipped||ammo<=0&&!aiming&&u.pistolAimTime<=0);
+    u.knife.visible=!bazooka&&!sniper&&!assault&&!grenade&&!cisalla&&(melee||knifeReady);
 
     if(cisalla){
       const squeeze=u.cisallaCut>0?Math.sin(Math.PI*(1-u.cisallaCut/.46)):0;
@@ -560,7 +574,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     }else if(bazooka){
       tx(u.ar,1.2);tz(u.ar,-.18);tx(u.aer,.72);
       tx(u.al,1.02);tz(u.al,.3);tx(u.ael,.88);
-    }else if(sniper){
+    }else if(sniper||assault){
       // La posició del rifle governa els canells, no al revés.
       // Conservam el mateix solver IK de la pistola a dues mans:
       // l'esquerra sosté la part davantera i la dreta prem el gallet.
@@ -570,9 +584,9 @@ window.HUNTER_CHARACTERS=Object.freeze({
       // localToWorld espera coordenades LOCALS del grip, no el seu
       // offset al rifle: començar per (0,0,0) evita aplicar-lo dues vegades.
       rig.right.set(0,0,0);
-      u.sniperRightGrip.localToWorld(rig.right);u.upperBody.worldToLocal(rig.right);
+      (sniper?u.sniperRightGrip:u.assaultRightGrip).localToWorld(rig.right);u.upperBody.worldToLocal(rig.right);
       rig.left.set(0,0,0);
-      u.sniperLeftGrip.localToWorld(rig.left);u.upperBody.worldToLocal(rig.left);
+      (sniper?u.sniperLeftGrip:u.assaultLeftGrip).localToWorld(rig.left);u.upperBody.worldToLocal(rig.left);
       aimPlayerPistolArm(u.ar,u.aer,rig.right,1,rig,handBlend);
       aimPlayerPistolArm(u.al,u.ael,rig.left,-1,rig,handBlend);
     }else if(u.knife.visible){
@@ -611,7 +625,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
 
     // L'animació es llança només amb un tret real de pistola (combat.js).
     // Retrocés mitjà: aprox. 10 cm de reculament local i 5.4 graus de pujada.
-    const pistolAllowed=!inVehicle&&!grenade&&!throwing&&!bazooka&&!sniper&&!cisalla&&!melee;
+    const pistolAllowed=!inVehicle&&!grenade&&!throwing&&!bazooka&&!sniper&&!assault&&!cisalla&&!melee;
     const targetBlend=pistolAllowed&&u.pistolAimTime>0?1:0;
     u.pistolBlend+=(targetBlend-u.pistolBlend)*(1-Math.exp(-18*dt));
     const blend=pistolAllowed?u.pistolBlend:0,rig=u.pistolRig;
@@ -623,7 +637,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // El rig de pistola hi superposa una presa a dues mans només durant el tir.
     // No sobrescriure la rotació de quaternion calculada per l'IK
     // del rifle: tornar y=0 aquí separava les mans de les dues preses.
-    if(!sniper){
+    if(!sniper&&!assault){
       u.ar.rotation.y=0;u.al.rotation.y=0;
       u.aer.rotation.y=0;u.ael.rotation.y=0;
     }
