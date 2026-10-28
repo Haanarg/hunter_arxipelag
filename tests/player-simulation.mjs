@@ -24,3 +24,6 @@ const collision=createPlayerSimulation({...options,world:{resolve:(old,candidate
 collision.accept('a',{...message,input:{forward:0,turn:0,strafe:-1,run:false}});collision.step();assert.equal(collision.snapshot().players[0].x,0,'world adapter constrains movement');
 const before=collision.snapshot();fail=true;assert.throws(()=>collision.step());assert.deepEqual(collision.snapshot(),before,'invalid world result cannot commit half a tick');
 console.log('player simulation: legacy movement parity, health, two actors, validated inputs, sequence/epoch/identity, timeout, fixed ticks, death, world constraints and atomic tick passed');
+
+const reverse=createPlayerSimulation(options);reverse.accept('a',{...message,input:{...message.input,forward:-1,run:true}});assert.equal(reverse.step().players[0].z,.4,'client cannot sprint backwards');
+const blockedRun=createPlayerSimulation({...options,world:{context:()=>({canRun:false})}});blockedRun.accept('a',{...message,input:{...message.input,run:true}});assert.equal(blockedRun.step().players[0].z,-.4,'world decides sprint permission');

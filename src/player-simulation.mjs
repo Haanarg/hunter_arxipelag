@@ -37,7 +37,7 @@ export function createPlayerSimulation({epoch,actors,limit,world={}}){
     for(const p of players.values()){
       const input=tick-p.lastInputTick<Math.ceil(COOP_TICK_RATE*.25)?p.input:{forward:0,turn:0,strafe:0,run:false},context=world.context?.({...p})||{};
       const previous={id:p.id,x:p.x,z:p.z,hd:p.hd,hp:p.hp},hd=p.hd+(p.hp>0?input.turn:0)/COOP_TICK_RATE*2.2;
-      let candidate=p.hp>0?moveOnFoot({...p,hd},input,1/COOP_TICK_RATE,{limit,...context}):{x:p.x,z:p.z,hd:p.hd};
+      let candidate=p.hp>0?moveOnFoot({...p,hd},{...input,run:input.run&&input.forward>.1&&!context.crouched&&context.canRun!==false},1/COOP_TICK_RATE,{...context,limit}):{x:p.x,z:p.z,hd:p.hd};
       if(world.resolve)candidate=world.resolve(previous,candidate);
       if(!candidate||![candidate.x,candidate.z,candidate.hd].every(finite)||Math.abs(candidate.x)>limit||Math.abs(candidate.z)>limit)throw new RangeError('Invalid world resolution');
       next.push({p,candidate});
