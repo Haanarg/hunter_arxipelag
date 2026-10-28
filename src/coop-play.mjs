@@ -1,7 +1,7 @@
 import {configuredAccounts} from './account-client.mjs';
-import {GAME_VERSION} from './version.mjs?v=0.6.25';
-import {createPlayConnection,playInput} from './coop-play-connection.mjs?v=0.6.25';
-import {createMissionView} from './coop-play-view.mjs?v=0.6.25';
+import {GAME_VERSION} from './version.mjs?v=0.6.28';
+import {createPlayConnection,playInput} from './coop-play-connection.mjs?v=0.6.28';
+import {createMissionView} from './coop-play-view.mjs?v=0.6.28';
 const $=id=>document.getElementById(id),message=$('message'),launch=$('launch'),connection=$('connection'),keys=new Set(),touch=new Map();
 let channel=null,room=null,view=null,meta=null,self=null,state=null,viewGeneration=0,pendingDoor=null,doorTimer=null;
 function clearDoor(){if(doorTimer!==null)clearTimeout(doorTimer);doorTimer=null;pendingDoor=null;}
@@ -22,10 +22,11 @@ function requestInventory(operation){if(pendingInventory)return;const bag=state?
 $('drop').onclick=()=>requestInventory('drop');$('disguise').onclick=()=>requestInventory('disguise');$('drop-item').onchange=drawHUD;
 function requestCombat(weapon){if(channel?.combat(weapon,crypto.randomUUID()))message.textContent='Ordre de combat enviada…';}
 $('shoot').onclick=()=>requestCombat('pistol');$('grenade').onclick=()=>requestCombat('grenade');
+function reviveTarget(requireMedkit=true){if(requireMedkit&&!(state?.inventories?.find(b=>b.actorId===self)?.medkits>0))return null;const me=state?.players.find(p=>p.id===self);if(!me||me.hp<=0||me.fall||me.swimming||state.status!=='running'||!['relay','extract'].includes(state.phase))return null;const down=state.rescue?.down.find(d=>d.actorId!==self),other=state.players.find(p=>p.id===down?.actorId);return down?.helpers?.includes(self)&&other&&!other.fall&&!other.swimming&&Math.hypot(me.x-other.x,me.z-other.z)<=3.2&&Math.abs(me.y-other.y)<2?down:null;}
 function atTerminal(){const p=state?.players.find(p=>p.id===self),slot=meta?.members.findIndex(m=>m.id===self),q=meta?.terminals[slot];return !!(p&&q&&state.status==='running'&&state.phase==='relay'&&p.hp>0&&!p.fall&&Math.hypot(p.x-q.x,p.z-q.z)<=3.2&&Math.abs(p.y-q.y)<2);}
-function contextDoor(){return atTerminal()?null:nearestDoor();}
-$('action').addEventListener('pointerdown',e=>{e.preventDefault();$('action').setPointerCapture(e.pointerId);if(contextDoor())requestDoor();else if(atTerminal()){touch.set(e.pointerId,'KeyE');$('action').classList.add('pressed');}});
-$('action').addEventListener('keydown',e=>{if(!['Enter','Space'].includes(e.code))return;e.preventDefault();e.stopPropagation?.();if(!e.repeat){if(contextDoor())requestDoor();else if(atTerminal())keys.add('KeyE');}});
+function contextDoor(){return reviveTarget()||atTerminal()?null:nearestDoor();}
+$('action').addEventListener('pointerdown',e=>{e.preventDefault();$('action').setPointerCapture(e.pointerId);if(contextDoor())requestDoor();else if(reviveTarget()||atTerminal()){touch.set(e.pointerId,'KeyE');$('action').classList.add('pressed');}});
+$('action').addEventListener('keydown',e=>{if(!['Enter','Space'].includes(e.code))return;e.preventDefault();e.stopPropagation?.();if(!e.repeat){if(contextDoor())requestDoor();else if(reviveTarget()||atTerminal())keys.add('KeyE');}});
 $('action').addEventListener('keyup',e=>{if(['Enter','Space'].includes(e.code)){e.preventDefault();e.stopPropagation?.();keys.delete('KeyE');}});
 for(const type of ['pointerup','pointercancel','lostpointercapture'])$('action').addEventListener(type,e=>{touch.delete(e.pointerId);$('action').classList.remove('pressed');});
 function clear(){keys.clear();touch.clear();document.querySelectorAll('[data-key]').forEach(b=>b.classList.remove('pressed'));$('action').classList.remove('pressed');}
@@ -34,8 +35,6 @@ addEventListener('keyup',e=>{keys.delete(e.code);if(['KeyE','Space'].includes(e.
 for(const button of document.querySelectorAll('[data-key]')){
   button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture(e.pointerId);touch.set(e.pointerId,button.dataset.key);button.classList.add('pressed');});
   const release=e=>{touch.delete(e.pointerId);if(![...touch.values()].includes(button.dataset.key))button.classList.remove('pressed');};
-  $('action').addEventListener('keydown',e=>{if(!['Enter','Space'].includes(e.code))return;e.preventDefault();e.stopPropagation?.();if(!e.repeat){if(contextDoor())requestDoor();else if(atTerminal())keys.add('KeyE');}});
-$('action').addEventListener('keyup',e=>{if(['Enter','Space'].includes(e.code)){e.preventDefault();e.stopPropagation?.();keys.delete('KeyE');}});
 for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,release);
 }
 function drawHUD(){
@@ -44,12 +43,14 @@ function drawHUD(){
   const slot=meta.members.findIndex(m=>m.id===self),mine=state.players.find(p=>p.id===self),target=state.phase==='relay'?meta.terminals[slot]:meta.extraction,
     distance=mine?Math.round(Math.hypot(mine.x-target.x,mine.z-target.z)):0;
   $('objective').textContent=state.phase==='won'?'MISSIÓ COMPLETADA · Relleu activat i equip extret!':state.phase==='failed'?'Missió finalitzada sense èxit. Podeu tornar-ho a provar.':state.status==='paused'?'Missió pausada · Esperant la connexió del company.':state.phase==='relay'?`Terminal ${slot+1} · ${distance} m · Activació simultània: ${Math.floor(state.hold/90*100)}%`:`Reuniu-vos al cercle verd · ${distance} m · Extracció: ${Math.floor(state.hold/60*100)}%`;
-  $('players').textContent=meta.members.map((m,i)=>`${i===0?'🔵':'🟡'} ${m.name}${m.id===self?' (tu)':''} · ${state.players.find(p=>p.id===m.id)?.hp??0}/20 PV`).join('   ·   ')+` · ${Math.ceil(state.remaining)} s`;
+  $('players').textContent=meta.members.map((m,i)=>`${i===0?'🔵':'🟡'} ${m.name}${m.id===self?' (tu)':''} · ${state.players.find(p=>p.id===m.id)?.hp??0}/20 PV${state.rescue?.down.find(d=>d.actorId===m.id)?' · FERIT':''}${state.rescue?.immune.some(d=>d.actorId===m.id&&state.tick<d.untilTick)?' · PROTEGIT':''}`).join('   ·   ')+` · ${Math.ceil(state.remaining)} s`;
+  const down=state.rescue?.down||[],mineDown=down.find(d=>d.actorId===self);
+  if(['relay','extract'].includes(state.phase)&&down.length&&state.status==='running')$('objective').textContent=mineDown?`Estàs ferit · El company té ${Math.ceil(mineDown.remaining)} s per reanimar-te.`:`Company ferit · ${Math.ceil(down[0].remaining)} s · ${state.inventories?.find(b=>b.actorId===self)?.medkits>0?'Acosta’t, queda’t quiet i mantén E':'Et cal una farmaciola'}: ${Math.floor(down[0].progress/90*100)}%`;
   launch.hidden=['relay','extract'].includes(state.phase);launch.textContent='Tornar a jugar (tots dos)';
-  const door=contextDoor(),terminal=atTerminal();$('action').disabled=!!pendingDoor||(!door&&!terminal);$('action').textContent=pendingDoor?'Enviant…':door?((state.doors||[]).find(d=>d.id===door.id)?.open?'🚪 Tancar · E':'🚪 Obrir · E'):terminal?'✋ Mantenir Activar · E':'✋ Acció · E';
-  $('action').setAttribute('aria-label',door?((state.doors||[]).find(d=>d.id===door.id)?.open?'Tancar porta':'Obrir porta'):terminal?'Mantenir per activar terminal':'Acció');
+  const door=contextDoor(),terminal=atTerminal(),reviving=reviveTarget(),needsMedkit=!reviving&&reviveTarget(false);$('action').disabled=!!pendingDoor||(!door&&!terminal&&!reviving);$('action').textContent=pendingDoor?'Enviant…':reviving?`✚ Reanimar · ${Math.floor(reviving.progress/90*100)}% · E`:door?((state.doors||[]).find(d=>d.id===door.id)?.open?'🚪 Tancar · E':'🚪 Obrir · E'):terminal?'✋ Mantenir Activar · E':needsMedkit?'✚ Cal una farmaciola':'✋ Acció · E';
+  $('action').setAttribute('aria-label',reviving?'Mantenir per reanimar el company':door?((state.doors||[]).find(d=>d.id===door.id)?.open?'Tancar porta':'Obrir porta'):terminal?'Mantenir per activar terminal':needsMedkit?'Cal una farmaciola per reanimar':'Acció');
   const bag=state.inventories?.find(i=>i.actorId===self),active=state.status==='running'&&['relay','extract'].includes(state.phase)&&mine?.hp>0&&!mine.fall;
-  $('inventory').textContent=bag?`El teu inventari · Bales: ${bag.bullets}/120 · Granades: ${bag.grenades}/8 · Disfressa: ${bag.disguise}${bag.disguised?' (posada)':''}`:'';
+  $('inventory').textContent=bag?`El teu inventari · Bales: ${bag.bullets}/120 · Granades: ${bag.grenades}/8 · Farmacioles: ${bag.medkits}/3 · Disfressa: ${bag.disguise}${bag.disguised?' (posada)':''}`:'';
   $('drop').disabled=!!pendingInventory||!active||!bag?.[$('drop-item').value];$('disguise').disabled=!!pendingInventory||!active||!bag?.disguise;$('disguise').textContent=bag?.disguised?'Treure disfressa · C':'Posar disfressa · C';
   $('shoot').disabled=!active||!bag?.bullets;$('grenade').disabled=!active||!bag?.grenades;const targets=state.combat?.targets||[];$('combat-status').textContent=`Guàrdies: ${targets.filter(t=>t.hp<=0).length}/${targets.length} · Sense foc amic`;
   view?.setState(state);
@@ -61,7 +62,7 @@ try{
   self=user.id;const result=await accounts.request('coop/current',{headers:{'X-Hunter-User':self}});room=result.room;
   if(!room||new URL(location.href).searchParams.get('room')!==room.id)throw Error('Obre la teva sala cooperativa des de la portada.');
   const url=new URL('/api/coop/socket',location.origin);url.protocol=url.protocol==='https:'?'wss:':'ws:';url.searchParams.set('room',room.id);
-  channel=createPlayConnection({url:url.href,version:GAME_VERSION,getInput:()=>{const input=playInput(new Set([...keys,...touch.values()]),document.hidden);if(!atTerminal())input.interact=false;return input;},
+  channel=createPlayConnection({url:url.href,version:GAME_VERSION,getInput:()=>{const input=playInput(new Set([...keys,...touch.values()]),document.hidden);if(!reviveTarget()&&!atTerminal())input.interact=false;return input;},
     onStatus:status=>{connection.textContent=({connecting:'Connectant…',open:'Connexió oberta',retrying:'Reconnectant…',replaced:'Connexió oberta en una altra pestanya',ended:'Connexió finalitzada. Torna a la sala.'}[status]||status);if(status!=='open'){clearInventory();$('shoot').disabled=true;$('grenade').disabled=true;$('drop').disabled=true;$('disguise').disabled=true;clear();clearDoor();$('action').disabled=true;}},
     onMessage:async data=>{
       if(data.type==='room'){

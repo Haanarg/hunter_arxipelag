@@ -1,4 +1,4 @@
-# Primera missió cooperativa jugable · v0.6.25
+# Primera missió cooperativa jugable · v0.6.28
 
 ## Què es pot jugar
 
@@ -65,9 +65,9 @@ Portes compartides amb E / Acció: proximitat, altura, pas ocupat, cooldown, ord
 
 ### Inventari personal · v0.6.22
 
-Cada jugador comença amb **24 bales, 2 granades i 1 disfressa**. El panell mostra només el teu inventari. **C / Posar disfressa** canvia el teu aspecte a verd; no altera el company. **La recollida és automàtica** en tocar un subministrament als terminals (marcadors +), sense botó; els paquets disponibles contenen 12 bales, 1 granada o 1 disfressa. Només el primer jugador que el toca i té capacitat rep el paquet. El servidor compara el primer contacte durant cada pas de simulació; si coincideixen exactament, resol l’empat segons l’ordre de la sala. No es recullen objectes a través de parets/portes tancades ni d’un altre pis. Capacitats: 120 bales, 8 granades i 1 disfressa. La disfressa es pot posar i treure sense consumir-la.
+Cada jugador comença amb **24 bales, 2 granades, 1 disfressa i 1 farmaciola**. El panell mostra només el teu inventari. **C / Posar disfressa** canvia el teu aspecte a verd; no altera el company. **La recollida és automàtica** en tocar un subministrament als terminals (marcadors +), sense botó; els paquets disponibles contenen 12 bales, 1 granada, 1 disfressa o 1 farmaciola. Només el primer jugador que el toca i té capacitat rep el paquet. El servidor compara el primer contacte durant cada pas de simulació; si coincideixen exactament, resol l’empat segons l’ordre de la sala. No es recullen objectes a través de parets/portes tancades ni d’un altre pis. Capacitats: 120 bales, 8 granades, 1 disfressa i 3 farmacioles. La disfressa es pot posar i treure sense consumir-la.
 
-**Deixar objectes:** tria 12 bales (o les que et queden), 1 granada o 1 disfressa al selector i prem **G / Deixar**. L’objecte queda als teus peus i el company el recull passant-hi per sobre. Qui l’ha deixat ha d’allunyar-se i tornar-hi si el vol recuperar; així no el recull immediatament. Deixar la disfressa també se la treu. Si l’inventari no té prou capacitat per al paquet sencer, l’objecte es manté a terra. Els objectes deixats i l’exclusió temporal del propietari també es desen al checkpoint. Hi ha un límit de 128 paquets deixats simultàniament.
+**Deixar objectes:** tria 12 bales (o les que et queden), 1 granada, 1 disfressa o 1 farmaciola al selector i prem **G / Deixar**. L’objecte queda als teus peus i el company el recull passant-hi per sobre. Qui l’ha deixat ha d’allunyar-se i tornar-hi si el vol recuperar; així no el recull immediatament. Deixar la disfressa també se la treu. Si l’inventari no té prou capacitat per al paquet sencer, l’objecte es manté a terra. Els objectes deixats i l’exclusió temporal del propietari també es desen al checkpoint. Hi ha un límit de 128 paquets deixats simultàniament.
 
 El servidor deriva el propietari de la sessió, comprova distància, alçada, capacitat i missió activa, i desa abans de confirmar. Inventaris, equipament i paquets recollits es recuperen en reconnectar i en reiniciar el Worker durant aquesta versió. Les ordres repetides no dupliquen objectes. No s’importa l’inventari de la partida individual.
 
@@ -84,8 +84,19 @@ El servidor deriva el propietari de la sessió, comprova distància, alçada, ca
 
 La disfressa redueix la detecció a 4 m. Atacar se la treu i alerta els guàrdies propers durant 6 s. Una paret o porta tancada serveix de cobertura. Els guàrdies que perden la visió deixen de disparar, esperen/cerquen durant 4 s i reprenen la patrulla; encara no persegueixen els jugadors fora del recorregut. Es poden eliminar amb pistola o granades. L’objectiu continua sent activar els terminals i extreure’s; matar-los no és obligatori.
 
-**Si un jugador arriba a 0 PV, la missió fracassa.** Podeu reiniciar-la quan tots dos confirmeu. Reanimació pendent. La pausa per desconnexió congela també patrulles i atacs, i el checkpoint conserva salut/memòria/cadència dels guàrdies.
+**Des de v0.6.28, 0 PV deixa el jugador ferit i permet reanimar-lo.** La missió fracassa si cauen tots dos o si s’esgoten els 30 segons de rescat. Podeu reiniciar-la quan tots dos confirmeu. La pausa per desconnexió congela també patrulles i atacs, i el checkpoint conserva salut/memòria/cadència dels guàrdies.
 
-**Límit actual:** percepció de 360° i patrulla bàsica. Pendents IA completa, persecució, visió direccional, reanimació, més armes i campanya completa. No hi ha foc amic ni autodany de granades. La campanya individual i el seu fusell d’assalt es conserven. Els checkpoints cooperatius temporals continuen sense migració entre versions ni desament permanent al compte.
+**Límit actual:** percepció de 360° i patrulla bàsica. Pendents IA completa, persecució, visió direccional, més armes i campanya completa. No hi ha foc amic ni autodany de granades. La campanya individual i el seu fusell d’assalt es conserven. Els checkpoints cooperatius temporals continuen sense migració entre versions ni desament permanent al compte.
 
 El botó contextual mostra 🚪 Obrir/Tancar quan hi ha una porta operable; al terminal propi mostra ✋ Mantenir Activar. Si coincideixen els dos contextos, té prioritat el terminal. Un sol toc d’E commuta una porta; mantenir E no l’alterna repetidament. També funciona amb el botó tàctil o Enter/espai quan té el focus. Les portes romanen en l’estat confirmat pel servidor fins que un jugador les torna a accionar.
+
+
+### Reanimar el company · v0.6.28
+
+Quan el company queda ferit, tens **30 segons de simulació** per ajudar-lo. Acosta-t’hi (menys de 3,2 m), al mateix nivell i sense parets/portes entre vosaltres. El botó E canvia a **✚ Reanimar**. Queda’t quiet i mantén E o el botó durant **3 segons seguits**. Rebre dany, moure’s, allunyar-se o deixar E reinicia l’ajuda. També pots mantenir Enter/espai sobre el botó amb el focus.
+
+El company torna amb **8 PV i 3 segons de protecció contra trets enemics**, **gastant una farmaciola de qui l’ajuda**. Cal tenir-la abans de començar i encara tenir-la en acabar; si interromps l’ajuda no se’n gasta cap. El ferit conserva l’inventari, però no pot moure’s ni fer accions. Els caiguts/nedadors han de quedar en una superfície accessible per poder rebre ajuda. Els terminals i l’extracció s’aturen mentre hi ha un ferit.
+
+Si cauen tots dos o s’acaba el temps, la missió fracassa. Desconnectar pausa el compte enrere i les granades/guàrdies; el progrés de reanimació es reinicia. El checkpoint conserva el compte enrere i la salut durant aquesta versió, inclòs després de reiniciar el Worker. La caducitat absoluta de la missió continua sent de 30 minuts de rellotge.
+
+**Farmacioles:** cada jugador en té una inicial i pot dur-ne fins a tres. També n’hi ha als terminals, recollibles automàticament en passar-hi per sobre. Pots triar «1 farmaciola» al selector de G / Deixar per passar-la al company. Sense farmaciola no es pot reanimar; el botó ho indica quan no hi ha una altra acció contextual. Les farmacioles del ferit no serveixen per autoreanimar-se.

@@ -103,5 +103,5 @@ export function createPlayerSimulation({epoch,actors,limit,world={},vertical=nul
     for(const {p,candidate} of next){p.x=candidate.x;p.z=candidate.z;p.hd=candidate.hd;p.y=candidate.y??p.y;if(vertical){p.fall=candidate.fall;p.swimming=candidate.swimming;p.hp=candidate.hp;}p.acknowledged=p.received;}
     tick++;return snapshot();
   }
-  return Object.freeze({accept,step,snapshot,clearInputs(){for(const p of players.values()){p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};}},damage(actorId,amount){const p=players.get(actorId);if(!p)return false;p.hp=damageHealth(p.hp,amount);return true;}});
+  return Object.freeze({accept,step,snapshot,revive(actorId,health){const p=players.get(actorId);if(!p||p.hp!==0||p.fall||p.swimming||!finite(health)||health<=0||health>(vertical?.maxHealth??20))return false;p.hp=health;p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};return true;},clearInputs(){for(const p of players.values()){p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};}},damage(actorId,amount){const p=players.get(actorId);if(!p)return false;p.hp=damageHealth(p.hp,amount);return true;}});
 }

@@ -1,8 +1,8 @@
 # HUNTER · ARXIPÈLAG — progrés de les millores
 
-## Estat actual · v0.6.25
+## Estat actual · v0.6.28
 
-**Publicació:** la versió del codi d’aquesta fase és v0.6.25. Integració a `main` i desplegament amb Cloudflare Builds; les comprovacions de producció es fan separadament de les proves locals.
+**Publicació:** la versió del codi d’aquesta fase és v0.6.28. Integració a `main` i desplegament amb Cloudflare Builds; les comprovacions de producció es fan separadament de les proves locals.
 
 **Primera missió cooperativa jugable: Relleu d’emergència**, per a dos comptes aprovats. Inici confirmat pels dos clients, moviment/col·lisions autoritatius, terminals simultanis, extracció/victòria, pausa per desconnexió i recuperació de checkpoint. Vista 3D provisional amb alternativa Canvas i controls tàctils. Des de v0.6.20, portes compartides (actualment E / Acció), col·lisions dinàmiques i estat persistent en reconnectar. [Instruccions, validació i límits](docs/COOP_PLAYABLE.md).
 
@@ -12,7 +12,9 @@ Des de v0.6.22, **recollida automàtica per contacte** (sense botó R), primer c
 
 Des de v0.6.23, **combat bàsic autoritatiu contra dues dianes opcionals**: X / Disparar davant teu i B / Granada, amb munició individual, cadència, impactes, trajectòria/detonació i dany amb obstacles. Efectes i vida de les dianes compartits en 3D/Canvas. Les dianes no són enemics amb IA; els dos terminals i l’extracció continuen sent l’objectiu de la missió.
 
-Des de v0.6.25, **F dispara i E és l’acció contextual (porta o terminal)**. Les dues dianes s’han convertit en guàrdies amb patrulla, alerta, atacs i dany als jugadors. La disfressa redueix la detecció de 18 a 4 m; atacar genera alerta. La vida dels dos jugadors és visible i perdre’n un fa fracassar la missió.
+Des de v0.6.25, **F dispara i E és l’acció contextual (porta o terminal)**. Les dues dianes s’han convertit en guàrdies amb patrulla, alerta, atacs i dany als jugadors. La disfressa redueix la detecció de 18 a 4 m; atacar genera alerta. La vida dels dos jugadors és visible; des de v0.6.28 es pot reanimar el company.
+
+Des de v0.6.28, **ferits i reanimació cooperativa**: 0 PV deixa el jugador a terra durant 30 s de simulació, i el company pot mantenir E durant 3 s a menys de 3,2 m, al mateix nivell i amb línia de visió, per recuperar-lo amb 8 PV, gastant una farmaciola de qui ajuda. La reanimació té prioritat sobre terminals/portes quan és accessible.
 
 L’usuari ha prioritzat la jugabilitat sobre l’estètica. Aquest és un mode reduït de base, no la campanya completa amb combat/vehicles. Els apartats antics que diuen «no jugable» descriuen l’estat de cada fase històrica. Els pendents generals i la fase 1 tancada per l’usuari es conserven.
 
@@ -401,3 +403,34 @@ Les bales i granades es poden recollir però encara no gastar: no s’ha present
 - Pendents: comprovació visual/física en GPU/Android, animació de fulles ordinàries/cooperatives, interacció autònoma de la IA individual amb portes tancades i els pendents cooperatius enumerats a la fase 16.
 
 Integració de main: es conserva la correcció de ràfegues seqüencials del fusell d’assalt publicada a v0.6.24 (PR #12), incloent cancel·lació en pauses/canvi d’arma i reinici de món. La fase de portes/guàrdies s’ha numerat v0.6.25.
+
+
+## Cooperatiu · fase 17 · Ferits i reanimació (v0.6.28)
+
+- Amb 0 PV, un actor queda ferit i immòbil, no dispara, no recull, no opera portes/inventari ni activa terminals. Conserva els objectes. Es treu la disfressa equipada. El compte enrere és de 900 ticks (30 s de simulació). Si cauen tots dos o s’exhaureix un compte enrere, la missió fracassa.
+- El company viu, sense caure ni nedar, manté E / Acció 90 ticks (3 s) a menys de 3,2 m i menys de 2 m de diferència d’alçada, quiet i amb línia de visió. Deixar la tecla, moure’s, allunyar-se, quedar bloquejat o rebre dany reinicia el progrés. Inputs caducats als 8 ticks no sostenen la reanimació. Cal tenir una farmaciola pròpia: completar l’ajuda en consumeix exactament una. Interrompre-la no en consumeix cap. Si es deixa o es perd la darrera farmaciola durant l’ajuda, el progrés es reinicia.
+- Retorn amb 8/20 PV i 90 ticks (3 s) de protecció contra trets de guàrdies. Es buiden els inputs previs de l’actor reanimat. Les caigudes continuen aplicant dany físic. No hi ha autoreanimació ni tractament de ferits per al mode individual.
+- El servidor calcula quins companys poden reanimar: el client usa aquesta autoritat per donar prioritat al context de reanimació. Una porta tancada entre tots dos deixa disponible el context de porta, sense bloquejar E intentant una reanimació impossible. Terminals i extracció no progressen mentre hi ha ferits.
+- Botó contextual ✚ Reanimar amb percentatge; vida i estat de ferit/protecció als dos jugadors; cos a terra i color distintiu a 3D/Canvas. Es mantenen F per disparar i E per les altres accions. Gestors duplicats del botó contextual corregits.
+- Checkpoint de ferits, compte enrere, progrés i protecció. La pausa congela el compte enrere però reinicia el progrés de l’ajuda. Es manté la caducitat absoluta de 30 minuts de la missió temporal i la manca de migració entre versions.
+- Validació: recuperació de 8 PV, impossibilitat de reanimar a distància/altre pis/a través de parets, interrupcions, input caducat, 30 s i doble ferit, protecció temporal i checkpoint. Error de desament reverteix salut/progrés abans d’anunciar el canvi. Proves d’interfície i dues sessions locals del Worker natiu amb ferit real causat per guàrdia, reinici del runtime i reanimació. GPU i Android físics pendents.
+
+### Què queda després d’aquesta fase
+
+1. IA ampliada: visió direccional, persecució i cerca amb navegació, coordinació i integració amb els enemics complets del joc individual.
+2. Armes/equipament: fusell d’assalt cooperatiu, selecció/recàrrega, botí de campanya i equilibri de reanimació/farmacioles.
+3. Vehicles, món complet, destrucció i objectius de campanya, preservant RNG.
+4. Desaments cooperatius permanents, migracions entre versions, estadístiques/historial i resum de missió.
+5. Prova física amb dos navegadors/comptes, GPU/Android, controls/rendiment/àudio/acabat; animació de portes i interacció autònoma de la IA individual amb portes tancades; incidències històriques de fixtures/escala 2 documentades.
+
+Integració de main: es conserva la supressió de torres i la correcció del fusell a la cinemàtica de mort, publicades a v0.6.26 (PR #13). La fase de reanimació s’ha numerat v0.6.28.
+
+
+### Farmacioles obligatòries per reanimar · decisió de l’usuari
+
+- Qui ajuda necessita una farmaciola del seu propi inventari. El company ferit conserva les seves i no se’n pot servir per autoreanimar-se. Completar l’ajuda consumeix una sola unitat, dins del mateix checkpoint que recupera els 8 PV; errors de persistència reverteixen salut i consum. Cancel·lar ajuda no gasta farmacioles.
+- Cada jugador comença amb 1 farmaciola; cada terminal té un paquet d’1 recollible per contacte. Capacitat de 3 per jugador, panell propi i selector G / Deixar per passar-ne una. Es conserva la recollida exclusiva del primer actor amb capacitat. Paquets blancs amb creu, representats en 3D/Canvas.
+- Sense farmaciola, el client no envia intenció de reanimar i el servidor tampoc accepta ajuda encara que es forci l’input. El botó indica que cal una farmaciola quan no hi ha una altra acció disponible; portes i terminals continuen funcionant. El servidor comprova de nou la reserva en completar l’ajuda.
+- Proves de consum únic només de l’ajudant, absència de farmacioles, cancel·lació, deixar-ne l’última mentre s’ajuda, recollida/traspàs/capacitat, esquema de transport, rollback/cold restore, interfície i dues sessions natives amb consum real.
+
+Integració de main: es conserva el con 3D compartit de pistola/fusell de v0.6.27 (PR #14); s’ha completat el context del test de ràfegues amb les noves constants de punteria. La fase de reanimació amb farmacioles s’ha numerat v0.6.28.

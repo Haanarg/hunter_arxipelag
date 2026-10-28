@@ -89,7 +89,7 @@ export class CoopRoomHub {
       await this.publish();if(this.mission){this.send(ws,this.mission.setup(a.actorId));await this.wake();}return;
     }
     if(body.type==='inventory'){
-      if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==6||!['drop','disguise'].includes(body.operation)||(body.operation==='drop'?!['bullets','grenades','disguise'].includes(body.target):typeof body.target!=='boolean')||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre d’inventari invàlida');return;}
+      if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==6||!['drop','disguise'].includes(body.operation)||(body.operation==='drop'?!['bullets','grenades','disguise','medkits'].includes(body.target):typeof body.target!=='boolean')||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre d’inventari invàlida');return;}
       if(!this.mission||body.epoch!==this.mission.meta.id){this.send(ws,{type:'action',commandId:body.commandId,ok:false,code:'NOT_ACTIVE'});return;}
       try{const result=this.mission.inventoryCommand(a.actorId,body);await this.save(this.record.nextAlarm);this.broadcastState();this.send(ws,{type:'action',...result});}
       catch(_){if(this.record)this.mission=restoreRelayMission(this.record,this.geometry);this.send(ws,{type:'action',commandId:body.commandId,ok:false,code:'SAVE_FAILED'});}return;

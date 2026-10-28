@@ -13,6 +13,7 @@ const ctx={
   ammo:12,assaultRifleEquipped:true,inv:{fusell_assalt:1},cv:null,
   swimming:false,over:0,paused:false,playerFall:null,playerEject:null,hp:8,
   pl:{userData:{}},P:{hd:0,x:0,y:0,z:0},playerCrouched:false,
+  SMALL_ARMS_AIM_CONE:.82,SMALL_ARMS_AIM_VERTICAL:Math.PI/2,
   COMBAT_BALANCE:{weapons:{pistol:1}},mW:{},SMALL_ARMS_SCALE:.7,
   msg:'',msgT:0,fcd:0,time:0,aims:0,
   autoAimWeaponShot(){this.aims++;return this.aims===1?[0,0,-1]:[.6,0,-.8]},

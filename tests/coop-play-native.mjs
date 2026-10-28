@@ -41,7 +41,7 @@ try{
  let phase='relay',indices=[0,0],sequences=[0,0],driverError=null;
  const door=ca.setup.meta.doors[0];assert.ok(door);
  const pawn=i=>ca.state.players.find(p=>p.id===(i?b.id:a.id));
- const sendIntent=(i,movement)=>{const p=pawn(i),c=i?cb:ca;sequences[i]=Math.max(sequences[i],p.acknowledged)+1;c.ws.send(JSON.stringify({type:'input',protocol:1,epoch:missionId,sequence:sequences[i],input:movement,interact:false}));};
+ const sendIntent=(i,movement,interact=false)=>{const p=pawn(i),c=i?cb:ca;sequences[i]=Math.max(sequences[i],p.acknowledged)+1;c.ws.send(JSON.stringify({type:'input',protocol:1,epoch:ca.setup.meta.id,sequence:sequences[i],input:movement,interact}));};
  async function moveTo(i,target){
    const t=setInterval(()=>{const p=pawn(i),dx=target.x-p.x,dz=target.z-p.z,d=Math.max(1,Math.hypot(dx,dz));sendIntent(i,{forward:-dz/d,turn:0,strafe:dx/d,run:true});},50);
    try{await wait(()=>Math.hypot(pawn(i).x-target.x,pawn(i).z-target.z)<.15,15000);}finally{clearInterval(t);sendIntent(i,{forward:0,turn:0,strafe:0,run:false});}
@@ -66,10 +66,10 @@ try{
  assert.equal((await operate(cb,'native-open-again',true)).code,'OPENED');await moveTo(0,{x:door.cx,z:door.cz+2.2});
  // Reach a target via verified navigation, rotate using input (no client hit claims), shoot three times.
  const route=ca.setup.meta.routes[0],target=ca.setup.meta.targets[0];await moveTo(0,route[0]);for(const p of route.slice(1))await moveTo(0,p);
- async function face(angle){const interval=setInterval(()=>{const error=Math.atan2(Math.sin(angle-pawn(0).hd),Math.cos(angle-pawn(0).hd));sendIntent(0,{forward:0,strafe:0,turn:Math.max(-1,Math.min(1,error*4)),run:false});},50);try{await wait(()=>Math.abs(Math.atan2(Math.sin(angle-pawn(0).hd),Math.cos(angle-pawn(0).hd)))<.015);}finally{clearInterval(interval);sendIntent(0,{forward:0,strafe:0,turn:0,run:false});}}
- await wait(()=>ca.state.combat.targets[0].state==='attack');assert.ok(ca.state.players.find(p=>p.id===a.id).hp<=20);const enemy=ca.state.combat.targets[0];await face(Math.atan2(-(enemy.x-pawn(0).x),-(enemy.z-pawn(0).z)));
+ async function face(i,angle){const interval=setInterval(()=>{const error=Math.atan2(Math.sin(angle-pawn(i).hd),Math.cos(angle-pawn(i).hd));sendIntent(i,{forward:0,strafe:0,turn:Math.max(-1,Math.min(1,error*4)),run:false});},50);try{await wait(()=>Math.abs(Math.atan2(Math.sin(angle-pawn(i).hd),Math.cos(angle-pawn(i).hd)))<.015);}finally{clearInterval(interval);sendIntent(i,{forward:0,strafe:0,turn:0,run:false});}}
+ await wait(()=>ca.state.combat.targets[0].state==='attack');assert.ok(ca.state.players.find(p=>p.id===a.id).hp<=20);const enemy=ca.state.combat.targets[0];await face(0,Math.atan2(-(enemy.x-pawn(0).x),-(enemy.z-pawn(0).z)));
  for(let n=0;n<3;n++){const commandId='native-hit-'+n,tick=ca.state.tick;ca.ws.send(JSON.stringify({type:'combat',protocol:1,epoch:missionId,weapon:'pistol',commandId}));const result=await wait(()=>ca.events.find(e=>e.commandId===commandId));assert.equal(result.code,'HIT');await wait(()=>cb.state.combat.targets.find(t=>t.id===target.id).hp===8-4*n);await wait(()=>ca.state.tick>=tick+11);}
- await face(0);for(const p of [...route].reverse())await moveTo(0,p);
+ await face(0,0);for(const p of [...route].reverse())await moveTo(0,p);
  timer=setInterval(()=>{try{
   const state=ca.state,meta=ca.setup.meta;if(!state||state.status!=='running')return;
   if(state.phase!==phase){phase=state.phase;indices=[0,0];}if(!['relay','extract'].includes(phase))return;
@@ -94,6 +94,15 @@ try{
  const closed=new Promise(resolve=>ca.ws.addEventListener('close',resolve,{once:true}));ca.ws.send(JSON.stringify({type:'input',protocol:1,epoch:missionId,sequence:999,input:{forward:0,turn:0,strafe:0,run:false,x:999},interact:true}));assert.equal((await closed).code,1008);
  ca=await a.connect(room.id);await wait(()=>ca.setup);launch(ca);launch(cb);
  await wait(()=>ca.setup.meta.id!==missionId&&ca.state.status==='running');
+ // Let a real guard down A, restart the runtime, then B reaches and revives A.
+ const rescueMissionId=ca.setup.meta.id,helpRoute=ca.setup.meta.routes[0];for(const p of helpRoute)await moveTo(0,p);
+ await wait(()=>ca.state.players.find(p=>p.id===a.id).hp===0,45000);const deadline=ca.state.rescue.down.find(d=>d.actorId===a.id).expiresAtTick;
+ assert.equal(ca.state.phase,'relay','one downed player does not end mission');
+ for(const ws of sockets)try{ws.close();}catch(_){}await mf.dispose();mf=new Miniflare(options);DB=await mf.getD1Database('DB');ca=await a.connect(room.id);cb=await b.connect(room.id);await wait(()=>ca.setup&&cb.setup&&ca.state.status==='running');assert.equal(ca.setup.meta.id,rescueMissionId);assert.equal(ca.state.rescue.down[0].expiresAtTick,deadline,'down timer survives native runtime restart');
+ for(const p of helpRoute)await moveTo(1,p);const liveGuard=ca.state.combat.targets[0];await face(1,Math.atan2(-(liveGuard.x-pawn(1).x),-(liveGuard.z-pawn(1).z)));
+ for(let n=0;n<3;n++){const commandId='rescue-guard-'+n,tick=ca.state.tick;cb.ws.send(JSON.stringify({type:'combat',protocol:1,epoch:rescueMissionId,weapon:'pistol',commandId}));const result=await wait(()=>cb.events.find(e=>e.commandId===commandId));assert.equal(result.code,'HIT');await wait(()=>ca.state.tick>=tick+14);}
+ const holding=setInterval(()=>sendIntent(1,{forward:0,turn:0,strafe:0,run:false},true),50);try{await wait(()=>ca.state.players.find(p=>p.id===a.id).hp===8,10000);}finally{clearInterval(holding);sendIntent(1,{forward:0,turn:0,strafe:0,run:false});}
+ await wait(()=>cb.state.players.find(p=>p.id===a.id).hp===8);assert.equal(cb.state.players.find(p=>p.id===a.id).hp,8);assert.equal(ca.state.rescue.down.length,0);assert.equal(ca.state.inventories.find(bag=>bag.actorId===b.id).medkits,0,'native revive consumes exactly one helper medkit');assert.equal(ca.state.inventories.find(bag=>bag.actorId===a.id).medkits,2,'patient keeps its own initial and collected kits');assert.ok(ca.state.rescue.immune.some(d=>d.actorId===a.id));
  const revoked=new Promise(resolve=>cb.ws.addEventListener('close',resolve,{once:true}));await DB.prepare("UPDATE hunter_access SET status='suspended' WHERE owner=?").bind(b.id).run();
  assert.equal((await revoked).code,4003,'active mission revokes suspended participant');await wait(()=>ca.state.status==='paused');
  const pauseTick=ca.state.tick;await new Promise(r=>setTimeout(r,300));assert.equal(ca.state.tick,pauseTick,'one player cannot continue after revocation');
