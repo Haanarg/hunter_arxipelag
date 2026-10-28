@@ -794,7 +794,7 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
     if(focus){focus.target=obj;focus.point={x:tx,y:ty,z:tz};focus.kind=kind}
   };
   for(const e of E){
-    if(e.destroyed||e.hp<=0||shotClass==='light'&&e.t==='torre'||
+    if(e.destroyed||e.hp<=0||
       shotClass==='attackCannon'&&['torre','tanqueta','tanc'].includes(e.t))continue;
     const priority=weaponTargetPriority(e,shotClass);
     if(priority>=3||priority>bestPriority)continue;
@@ -1114,7 +1114,9 @@ function fireAssaultBurstBullet(index){
   pl.userData.firePose=.26;
   const hd=P.hd,fx=-Math.sin(hd),fz=-Math.cos(hd),
         x=P.x+fx*1.1,y=P.y+1.6-(playerCrouched?.48:0),z=P.z+fz*1.1,
-        [ax,ay,az]=autoAimWeaponShot(x,y,z,fx,0,fz,85,.965,'light',null,130),
+        // La torre s'apunta a la caseta, fins i tot en angles de tir ascendents.
+        // L'angle vertical de ±90° no exclou les torres molt properes.
+        [ax,ay,az]=autoAimWeaponShot(x,y,z,fx,0,fz,85,.92,'light',null,130,Math.PI/2),
         spread=[-.012,0,.012][index],dx=ax-az*spread,dz=az+ax*spread,
         len=Math.hypot(dx,ay,dz)||1;
   // La diana es recalcula a cada bala i cada ràfega. Si l'enemic cau
@@ -1328,7 +1330,16 @@ function updPj(dt){
       if(kind==='wall'){if(!isMilitaryWall(target))dmgW(target,p.dmg)}
       else if(kind==='building'){if(!isMilitaryBuilding(target)){target.rhp-=p.dmg;if(target.rhp<=0)roofBreak(target)}}
       else if(kind==='tree'&&target?.p)dmgP(target,p.dmg);
-      else if(kind==='enemy'){if(target.t!=='torre'&&!(p.shotClass==='light'&&isArmoredVehicleType(target.t)))hurtE(target,p.dmg,p)}
+      else if(kind==='enemy'){
+        if(target.t==='torre'){
+          // Impactes lleugers del jugador a la CASETA: foc de supressió
+          // durant 2 s. Cada bala renova el termini; no resta PV a la torre.
+          if(p.own==='p'&&p.shotClass==='light')
+            target.suppressedUntil=elapsed+2;
+        }else if(!(p.shotClass==='light'&&isArmoredVehicleType(target.t))){
+          hurtE(target,p.dmg,p);
+        }
+      }
       else if(kind==='vehicle')damageVehicle(target,p.dmg,1,'light',p);
       else if(kind==='civilian'){
         if(prisonerSystem.hurt(target,p.dmg,p))spawnBulletImpact('blood',p.x,p.y,p.z,p);
