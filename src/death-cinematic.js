@@ -51,7 +51,7 @@ function deathPoseProne(player,centre,heading){
  if(u.lr)u.lr.rotation.set(-.09,0,.08);
  if(u.lkl)u.lkl.rotation.set(-.12,0,0);
  if(u.lkr)u.lkr.rotation.set(-.16,0,0);
- for(const weapon of [u.gun,u.knife,u.bazooka,u.grenade,u.sniper,u.cisalla])
+ for(const weapon of [u.gun,u.knife,u.bazooka,u.grenade,u.sniper,u.assault,u.cisalla])
   if(weapon)weapon.visible=false;
  if(u.pistolFlash)u.pistolFlash.visible=false;
  player.visible=true;
@@ -74,7 +74,7 @@ function deathFaceCamera(player,cameraPosition){
 // Desam la transformació local per restaurar-la després de la cinemàtica.
 function deathDropWeapon(v){
  const u=pl.userData;
- const weapon=!cv?[u.gun,u.knife,u.bazooka,u.grenade,u.sniper,u.cisalla]
+ const weapon=!cv?[u.gun,u.knife,u.bazooka,u.grenade,u.sniper,u.assault,u.cisalla]
   .find(o=>o?.visible):null;
  if(!weapon)return;
  pl.updateMatrixWorld(true);

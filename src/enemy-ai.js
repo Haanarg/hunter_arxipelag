@@ -542,16 +542,17 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
       }else if(d>u.rng*.72)mvE(u,u.sp*dt,q.x,q.z)
     }
     if(u.t==='torre'){
+      const suppressed=(u.suppressedUntil||0)>elapsed;
       const weapon=towerWeaponForTarget(cv);
       // Mai no fem servir projectils pesats contra una persona a peu.
       // El tipus de tir depèn de si el jugador pilota un vehicle.
-      if(weapon==='light'&&d<u.rng&&u.cd<=0){
+      if(!suppressed&&weapon==='light'&&d<u.rng&&u.cd<=0){
         u.cd=u.rate;
         const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY),
               fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
         shoot(u.x+fx*2.4-Math.cos(u.hd)*.72,eyeY,
           u.z+fz*2.4+Math.sin(u.hd)*.72,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE,u);
-      }else if(weapon==='heavy'&&d<u.heavyRange&&u.heavyCd<=0){
+      }else if(!suppressed&&weapon==='heavy'&&d<u.heavyRange&&u.heavyCd<=0){
         u.heavyCd=u.heavyRate;
         const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY-.2,rn,'towerHeavy'),
               fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
