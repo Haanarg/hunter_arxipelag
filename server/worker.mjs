@@ -1,3 +1,7 @@
+export {CoopRoomHub} from './coop-hub.mjs';
+import {readCoopRoom} from './coop.mjs';
+import {notifyCoopRoom} from './coop-hub.mjs';
+import {limit} from './accounts.mjs';
 import {coopAPI} from './coop.mjs';
 import {accountReadiness} from './readiness.mjs';
 import {runMaintenance} from './maintenance.mjs';
@@ -96,7 +100,7 @@ export default {
     if(!url.pathname.startsWith('/api/'))return env.ASSETS.fetch(request);
     try{
       const readiness=await accountReadiness(env);
-      if(url.pathname==='/api/capabilities'&&request.method==='GET')return json({accounts:readiness.ready,reason:readiness.reason,issues:readiness.issues,recovery:'codes',approval:'manual',storage:'cloudflare'});
+      if(url.pathname==='/api/capabilities'&&request.method==='GET')return json({accounts:readiness.ready,reason:readiness.reason,issues:readiness.issues,recovery:'codes',approval:'manual',storage:'cloudflare',coopRealtime:!!env.COOP_ROOMS});
       if(!readiness.ready)failure(503,'NOT_CONFIGURED','Els comptes encara no estan activats. El desament local continua disponible.');
       if(['POST','PUT','DELETE','PATCH'].includes(request.method)&&request.headers.get('Origin')!==env.AUTH_ORIGIN)
         failure(403,'ORIGIN','Origen no admès.');
@@ -127,7 +131,26 @@ export default {
       if(url.pathname.startsWith('/api/account/')||url.pathname.startsWith('/api/admin/'))return await accountAPI(request,env,session,url,readJSON,json);
       if(!session?.user)failure(401,'UNAUTHENTICATED','Inicia sessió.');
       if((await access(env,session.user.id)).status!=='approved')failure(403,'APPROVAL_REQUIRED','El compte encara no està aprovat per sincronitzar.');
-      return await privateAPI(request,env,session.user,url);
+      if(url.pathname==='/api/coop/socket'){
+        if(request.method!=='GET'||request.headers.get('Upgrade')?.toLowerCase()!=='websocket')failure(426,'UPGRADE','Cal una connexió WebSocket.');
+        if(request.headers.get('Origin')!==env.AUTH_ORIGIN)failure(403,'ORIGIN','Origen no admès.');
+        if(!env.COOP_ROOMS)failure(503,'REALTIME_NOT_READY','El canal en temps real encara no està activat.');
+        await limit(env,request,'coop-connect',10);
+        const room=await readCoopRoom(env,session.user.id);
+        if(!room||room.id!==url.searchParams.get('room'))failure(403,'FORBIDDEN','No pertanys a aquesta sala.');
+        const headers=new Headers({Upgrade:'websocket','X-Coop-Actor':session.user.id,'X-Coop-Session':session.session.id,
+          'X-Coop-Room':room.id,'X-Coop-Expiry':String(Math.min(new Date(session.session.expiresAt).getTime(),room.expiresAt))});
+        return await env.COOP_ROOMS.get(env.COOP_ROOMS.idFromName(room.id)).fetch(new Request('https://coop.internal/connect',{headers}));
+      }
+      const mutatesRoom=url.pathname.startsWith('/api/coop/')&&request.method==='POST';
+      const previousRoom=mutatesRoom&&env.COOP_ROOMS?await readCoopRoom(env,session.user.id):null;
+      const response=await privateAPI(request,env,session.user,url);
+      if(mutatesRoom&&response.ok&&env.COOP_ROOMS){
+        const result=await response.clone().json();
+        for(const id of new Set([previousRoom?.id,result.room?.id].filter(Boolean)))
+          ctx.waitUntil(notifyCoopRoom(env,id).catch(()=>console.error('No s’ha pogut notificar la sala.')));
+      }
+      return response;
     }catch(error){
       if(!error.status&&error.name!=='SaveError')console.error('Error del servei Hunter.');
       return json({code:error.code||'SERVER',message:error.status||error.name==='SaveError'?error.message:'No s’ha pogut completar l’operació.'},error.status||(error.name==='SaveError'?400:500));

@@ -38,5 +38,21 @@
   ],
   "vars": {
     "AUTH_ORIGIN": "https://hunter.paradoxa.cat"
-  }
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "COOP_ROOMS",
+        "class_name": "CoopRoomHub"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "coop-room-hub-v1",
+      "new_sqlite_classes": [
+        "CoopRoomHub"
+      ]
+    }
+  ]
 }

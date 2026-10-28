@@ -214,3 +214,11 @@ Implementades regles compartides de moviment horitzontal i vida, ja utilitzades 
 Proves noves del nucli i manifest, Worker natiu amb dos comptes locals, comptes i desaments. Dues proves generals fallen igual al main anterior: cadència de pistola de simulation-timing i geometria inferior de tanqueta de smoke. No s’han modificat els asserts ni es declaren superades. [Detall](docs/COOP_PHASE2.md).
 
 Queda: adaptador del món real i extracció de gravetat/vehicles/IA; servidor de sessió i xarxa en temps real; combat/objectius/inventari compartits; reconnexió/pausa/amfitrió; desaments/estadístiques cooperatius; proves físiques i càrrega; corregir les dues fallades històriques. Les quotes/retenció i les altres fases generals continuen pendents.
+
+## Cooperatiu · fase 3 (v0.6.10)
+
+Implementat canal WebSocket de sala amb Durable Object SQLite, notificació immediata de membres/preparació, cookies de sessió del mateix origen, validació d’origen/pertinença, revocació d’accés, límits, reconnexió, substitució d’una altra pestanya i alternativa HTTP. No és encara la transmissió de la simulació ni una missió cooperativa jugable. [Detall](docs/COOP_PHASE3.md).
+
+El desplegament incorpora `COOP_ROOMS` i una migració automàtica de Durable Objects. No cal SQL D1 posterior a la 0005, secrets nous ni plugins. Proves de dos comptes locals amb WebSockets reals i Durable Object/D1 natius, més regressions de comptes, desaments i sales. No es creen comptes de prova de producció. La prova física de dos navegadors es manté ajornada per decisió de l’usuari.
+
+Queda: adaptador del món real i extracció de gravetat/vehicles/IA; sessió/tick de missió persistent, compatibilitat dels dos clients, estat inicial i protocol de joc; moviment/combat/objectius compartits, predicció/interpolació, pausa/amfitrió i reconnexió de missió; desaments/estadístiques cooperatius; proves de dispositius, càrrega i consum; quotes/retenció i les dues fallades històriques de proves generals. La resta de les catorze fases es manté segons el pla.
