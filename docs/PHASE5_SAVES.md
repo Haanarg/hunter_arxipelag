@@ -91,3 +91,9 @@ Format `.hunter-save.json`, capçalera i versió de fitxer pròpies, payload ver
 6. **Manteniment del desament:** migracions explícites quan canviïn el format o el generador; ampliar cobertura de casos abans no validats.
 
 Les fases A, B i C tenen implementació en branca; les comprovacions natives pendents impedeixen donar tota la fase 5 per tancada. El pla general de catorze fases continua a `PROGRESS.MD`, amb la fase 1 tancada per l’usuari.
+
+## Continuació v0.6.6
+
+La v0.6.5 ja és a main. Comptes/sincronització, estadístiques i la primera extracció d’autoritat es preparen a la branca següent. Es fa servir Cloudflare D1 + R2 sense correu ni Supabase: aprovació manual i codis personals de recuperació. Vegeu [configuració, validació i pendents](ACCOUNTS_HISTORY_AUTHORITY.md). L’activació a Cloudflare i les proves natives continuen pendents.
+
+La tanda v0.6.7 afegeix recuperació assistida, neteja d’objectes orfes i comprovació de l’activació dels comptes. Les proves natives i l’activació de Cloudflare continuen pendents; vegeu el detall al document de comptes.

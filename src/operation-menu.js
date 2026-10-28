@@ -4,7 +4,8 @@ function persistOperation(snapshot){
   if(operationWritePromise)throw new Error('Ja hi ha un desament en curs.');
   const owner=operationRegistry;
   const task=getOperationStore().save(snapshot,{expectedRevision:snapshot.revision}).then(saved=>{
-    if(owner===operationRegistry)activeOperation=saved;return saved;
+    if(owner===operationRegistry)activeOperation=saved;
+    accountCloud?.enqueue(saved).catch(()=>{});return saved;
   });
   operationWritePromise=task;task.then(()=>{if(operationWritePromise===task)operationWritePromise=null},()=>{if(operationWritePromise===task)operationWritePromise=null});
   return task;
@@ -37,7 +38,7 @@ async function saveOperation({name,asNew=false,exit=false}={}){
     const saved=await persistOperation(snapshot);
     operationAutosave?.markSaved(saved.world.time);
     if(exit){
-      started=0;paused=false;audioPause();discardGeneratedWorld();operationRegistry=null;activeOperation=null;
+      await recordJournalNow();started=0;paused=false;audioPause();discardGeneratedWorld();operationRegistry=null;activeOperation=null;
       ui.hide();document.body.classList.remove('game-started');iniEl.style.display='flex';startMenuEl.style.display='flex';
     }
     return saved;
@@ -151,6 +152,10 @@ async function renderOperations(body,isCurrent=()=>true,notice=''){
       add('p','Llavor '+row.seed+' · '+(row.mapScale===2?'Gran':'Petit')+' · '+Math.floor(row.time/60)+' min · '+new Date(row.updatedAt).toLocaleString('ca-ES'),card);
       const compatible=row.generatorVersion===OPERATION_GENERATOR_VERSION;
       button('Exportar fitxer',()=>downloadOperationFile(row.operationId),card);
+      if(accountCloud&&window.HUNTER_ACCOUNT_SERVICE.status().approval==='approved'){
+        button('Pujar al núvol',async()=>{await accountCloud.push(row.operationId);status.textContent='Partida sincronitzada.';},card);
+        button('Pujar com a nova al núvol',async()=>{await accountCloud.push(row.operationId,{asNew:true});status.textContent='Còpia nova al núvol.';},card);
+      }
       if(!compatible)add('p','Necessita una versió compatible del generador.',card);
       function loadButton(text,previous){
         let confirmed=!started;

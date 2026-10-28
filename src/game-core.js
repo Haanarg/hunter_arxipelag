@@ -783,7 +783,7 @@ function startGameSynchronously(options=readGameStartOptions()){
   started=1;paused=!!options.restoreSnapshot;iniEl.style.display='none';document.body.classList.add('game-started');initAudio();if(paused){ui.show('pause');audioPause()}resetSimulationClock();
 }
 function discardGeneratedWorld(){
-  operationRegistry=null;activeOperation=null;
+  operationRegistry=null;activeOperation=null;operationRun=null;
   resetOptionalSystems();
   if(terrainStream)terrainStream.dispose();terrainStream=null;
   if(world){scene.remove(world);window.HUNTER_RESOURCES.dispose(world)}world=null;
@@ -1853,7 +1853,7 @@ function optionalCivilianCanMove(from,to,radius){
 }
 const optionalNotify=text=>{msg=text;msgT=3;requestOperationAutosave('world');};
 const prisonerSystem=window.HUNTER_PRISONERS.create({
-  THREE,box:bx,material:M,heightAt:(x,z)=>hAt(x,z),canMove:optionalCivilianCanMove,
+  THREE,box:bx,material:M,heightAt:(x,z)=>hAt(x,z),canMove:optionalCivilianCanMove,onRescue:count=>recordOperationMetric('rescues',count),
   clearLine:optionalLineClear,notify:optionalNotify,sound:snd,vehicleRadius,
   vehicleName:v=>VT[v.t]?.n||v.t
 });
@@ -1916,7 +1916,7 @@ function getOptionalAction(){
   if(prisonerAction?.kind==='mechanicFollow'&&nearV())return radioRelay.getAction(context);
   return prisonerAction||radioRelay.getAction(context);
 }
-function performOptionalAction(){
+function executePlayerOptionalAction(){
   const action=getOptionalAction();if(!action)return false;
   const context=optionalContext();
   return action.kind==='sabotage'?radioRelay.interact(action,context):prisonerSystem.interact(action,context);
@@ -2587,7 +2587,7 @@ function escapeSubmergedVehicle(v){
   cv=null;swimming=true;playerEject=null;
   msg='Vehicle enfonsat! Has sortit a l’aigua.';msgT=3;
 }
-function toggle(){if(playerFall||playerEject)return;resetCameraState();if(scopeActive)setSniperScope(false);if(cv){
+function executePlayerToggle(){if(playerFall||playerEject)return;resetCameraState();if(scopeActive)setSniperScope(false);if(cv){
 const leaving=cv,speed=Math.abs(leaving.v),isAir=VT[leaving.t].m==='a',
       platform=leaving.t==='ferry'?leaving:leaving.carrier||ferryForVehicle(leaving),
       platformLocal=platform?ferryLocal(platform,leaving.x,leaving.z):null,
@@ -2775,7 +2775,7 @@ function revealMapPickup(kind,allSectors=false,pickupSector=null){
   return 'Mapa actualitzat: '+targets.length+' '+(isHeli?'helicòpters':'tancs')+
     (sector===null?' localitzats.':' localitzats en aquest quadrant.');
 }
-function useInvItem(id){
+function executePlayerUseItem(id){
   if(!inv[id])return false;
   if(id==='med'){if(hp>=COMBAT_BALANCE.player){msg='Ja tens la vida al màxim.';msgT=2;return false}inv.med--;if(inv.med<=0)delete inv.med;hp=Math.min(COMBAT_BALANCE.player,Math.ceil(hp)+COMBAT_BALANCE.medkit);msg='Has usat una farmaciola.';msgT=2;snd('pick');return true}
   if(id==='expl'){
@@ -2916,6 +2916,8 @@ const ui=window.HUNTER_UI.create({
   actions:{
     resume:()=>{if(!started){ui.hide();return}if(!operationBusy)resume()},
     renderSaves:renderOperations,
+    renderAccount,
+    renderHistory:renderOperationHistory,
     setAutosave:setOperationAutosave,
     open:mode=>panel(mode),
     setWaypoint:v=>waypoint=v,
@@ -3710,7 +3712,7 @@ if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-i
   }
   else if(it.t==='franctirador'){inv.franctirador=1;sniperAmmo+=6}
   else inv[it.t]=(inv[it.t]||0)+(it.t==='granada'?5:it.t==='bazooka'?3:1);
-  world.remove(it.o);items.splice(k,1);requestOperationAutosave('equipment');
+  world.remove(it.o);items.splice(k,1);requestOperationAutosave('equipment');recordOperationMetric('pickups');
   msg=mapMessage||'Has trobat: '+IT[it.t].n+(it.t==='granada'?' ×5':it.t==='bazooka'?' ×3':it.t==='franctirador'?' +6 cartutxos':'');
   msgT=3;snd('pick')}}
 msgT-=dt;if(parachuteVisual)parachuteVisual.position.set(P.x,P.y,P.z);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;
@@ -3997,7 +3999,7 @@ try{
 // També sense temps nou cal netejar controls, HUD i estat de càmera.
 if(!simulated.steps)update(0,elapsed);
 syncWeaponPicker();
-operationAutosave?.tick();
+operationAutosave?.tick();cloudTick();journalTick();
 // Només avança la cinemàtica que ja existia a l'inici del fotograma.
 // El seu rellotge separat també admet 250 ms, en passos de fins a 1/60.
 cinematicClock.advance(now,dt=>{
@@ -4101,3 +4103,11 @@ requestAnimationFrame(loop)})(last);
 document.getElementById('operationsOpen').onclick=openOperations;
 
 initializeOperationAutosave();
+
+initializeAccounts();
+
+initializeOperationAuthority();
+document.getElementById('historyOpen').onclick=openHistoryPanel;
+addEventListener('pagehide',()=>{if(started)recordJournalNow()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&started)recordJournalNow()});
+window.HUNTER_COMMANDS=Object.freeze({dispatch:command=>operationAuthority.dispatch(command),context:()=>({version:1,actorId:'local',operationId:operationCommandEpoch})});

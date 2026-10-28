@@ -72,7 +72,7 @@ function clearBulletImpacts(){
 
 function setDis(v){disg=v;[...pl.userData.mats,...rider.userData.mats].forEach(([m,a,b])=>m.color.copy(vivid(v?b:a)))}
 let playerBlastRagdoll=null;
-function fin(m,cause=null){updateOptionalSystems(0,false);combatFeedback?.clear();if(m==='HAS MORT'&&startDeathCinematic(cause))return;setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+' · Obre Ⅱ / Esc per tornar a jugar';endEl.style.display='flex'}
+function fin(m,cause=null){if(m==='HAS MORT')finishOperationRun('death');updateOptionalSystems(0,false);combatFeedback?.clear();if(m==='HAS MORT'&&startDeathCinematic(cause))return;setSniperScope(false);over=1;Object.keys(K).forEach(k=>K[k]=0);endEl.textContent=m+' · Obre Ⅱ / Esc per tornar a jugar';endEl.style.display='flex'}
 // El dany no canvia amb la dificultat: només la dispersió del tir enemic.
 function enemyWeaponDamageScale(){return 1}
 function hurtP(d,fromEnemyWeapon=false,cause=null){
@@ -80,7 +80,7 @@ function hurtP(d,fromEnemyWeapon=false,cause=null){
  const amount=wholeDamage(d);
  if(amount<=0)return;
  const before=hp;
- hp=Math.max(0,Math.ceil(hp)-amount);snd('hurt',.5);
+ hp=Math.max(0,Math.ceil(hp)-amount);recordOperationMetric('damageTaken',before-hp);snd('hurt',.5);
  if(hp<before)combatFeedback?.damage(cause);
  if(hp<=0)fin('HAS MORT',cause||{type:fromEnemyWeapon?'bullet':'impact'});
 }
@@ -148,7 +148,7 @@ function killEnemy(u,killingShot=null){
   else if(u.t==='torre'){destroyTower(u);world.remove(u.o)}
   else if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='patrulla_marina')explodeEnemyVehicle(u);
   else world.remove(u.o);
-  if(u.t==='general'){updateOptionalSystems(0,false);combatFeedback?.clear();startVictoryCinematic(u,killingShot)}
+  if(u.t==='general'){finishOperationRun('victory');updateOptionalSystems(0,false);combatFeedback?.clear();startVictoryCinematic(u,killingShot)}
 }
 function hurtE(u,d,killingShot=null){
   const amount=wholeDamage(d);
@@ -472,7 +472,7 @@ function helicopterBombDoor(v){
  v.o.updateWorldMatrix(true,false);
  return v.o.localToWorld(new THREE.Vector3(1.96,2.02,.52));
 }
-function plant(seconds=3){
+function executePlayerPlant(seconds=3){
  // La configuració surt sempre del LED. La validació també protegeix
  // l'acció davant clics repetits, entrada invàlida o una partida acabada.
  if(over||cv&&cv.t!=='heli'||swimming||playerFall||
@@ -1104,7 +1104,7 @@ function cutBarbedWire(){
 }
 // La pistola personal és utilitzable només des dels vehicles oberts.
 const OPEN_RIDER_PISTOL=new Set(['bici','moto','moto_aquatica','barca_rems','windsurf','llanxa']);
-function fire(){if(cisallaEquipped&&!cv)return cutBarbedWire();if(knifeEquipped&&!cv)return melee();if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
+function executePlayerFire(){if(cisallaEquipped&&!cv)return cutBarbedWire();if(knifeEquipped&&!cv)return melee();if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
 if(c=='tanc'||c=='tanqueta'){
   // El projectil segueix el canó real mentre la torreta gira: no
   // s'alinea artificialment amb l'objectiu en prémer Dispar.

@@ -2,7 +2,7 @@
 // No consumeix R()/Math.random ni afegeix civils a la llista d'enemics.
 window.HUNTER_PRISONERS=Object.freeze({
  create({THREE:T,heightAt=()=>0,canMove=()=>true,clearLine=()=>true,
-   notify=()=>{},sound=()=>{},vehicleRadius=()=>4,vehicleName=v=>v.t}={}){
+   notify=()=>{},sound=()=>{},onRescue=()=>{},vehicleRadius=()=>4,vehicleName=v=>v.t}={}){
   const entities=[],resources=new Set();
   let world=null,camp=null,rescuePoint=null,station=null,escapeRoute=[],mechanicRoute=[],
     discovered=false,released=false,repair=null,lastContext=null,serial=0,cheerNotified=false;
@@ -256,6 +256,7 @@ window.HUNTER_PRISONERS=Object.freeze({
     u.cheering=false;pose(u,false);u.waypoint=0;
    }
    discovered=true;
+   onRescue(entities.filter(alive).length);
    notify('Camp alliberat! Els presoners escapen per la bretxa; el mecànic va al taller.');
    sound('pick',.5,rescuePoint);
   }
