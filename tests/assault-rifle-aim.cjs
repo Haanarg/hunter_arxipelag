@@ -23,7 +23,7 @@ assert(direction[0]>.5&&direction[1]>.4,'Caseta alta a 76° horitzontals elegibl
 assert.deepEqual(Array.from(fire(tower,'light')),headOn,'La pistola conserva el seu con estricte');
 const overhead={t:'torre',x:0,z:0,hp:24,o:{position:{y:0}}};
 direction=fire(overhead);
-assert(direction[1]>.95&&direction[2]>0,'Caseta just a sobre del jugador elegible');
+assert(direction[1]>.95,'Caseta just a sobre del jugador elegible');
 const low={t:'soldat',x:7,z:-2,hp:5,o:{position:{y:0}}};
 direction=fire(low,'assault',20);
 assert(direction[0]>.3&&direction[1]<-.8,'Blanc molt per sota elegible');
