@@ -2351,13 +2351,13 @@ for(const side of ['left','right']){
 }
 const clearKeys=()=>{
   resetCameraState();
-  cancelGrenadeCharge();Object.keys(K).forEach(k=>K[k]=0);
+  cancelGrenadeCharge();cancelAssaultBurst();Object.keys(K).forEach(k=>K[k]=0);
   joystick.reset();releaseStrafeButtons();
   document.querySelectorAll('[data-k]').forEach(b=>b.classList.remove('held'))
 };
 const quickWeapons=()=>['pistola','ganivet',...['fusell_assalt','franctirador','bazooka','granada','cisalla'].filter(k=>inv[k]>0)];
 const selectedWeapon=()=>knifeEquipped?'ganivet':assaultRifleEquipped?'fusell_assalt':sniperEquipped?'franctirador':bazookaEquipped?'bazooka':grenadeEquipped?'granada':cisallaEquipped?'cisalla':'pistola';
-function selectWeapon(k){if(!weaponPickerAvailable()||swimming||!quickWeapons().includes(k))return;cancelGrenadeCharge();setSniperScope(false);knifeEquipped=k==='ganivet';assaultRifleEquipped=k==='fusell_assalt';sniperEquipped=k==='franctirador';bazookaEquipped=k==='bazooka';grenadeEquipped=k==='granada';cisallaEquipped=k==='cisalla';msg=k+' equipat';msgT=1.5;drawWeaponPicker()}
+function selectWeapon(k){if(!weaponPickerAvailable()||swimming||!quickWeapons().includes(k))return;cancelGrenadeCharge();cancelAssaultBurst();setSniperScope(false);knifeEquipped=k==='ganivet';assaultRifleEquipped=k==='fusell_assalt';sniperEquipped=k==='franctirador';bazookaEquipped=k==='bazooka';grenadeEquipped=k==='granada';cisallaEquipped=k==='cisalla';msg=k+' equipat';msgT=1.5;drawWeaponPicker()}
 function cycleWeapon(n){const w=quickWeapons(),i=w.indexOf(selectedWeapon());selectWeapon(w[(i+n+w.length)%w.length])}
 const picker=document.createElement('div');picker.style.cssText='position:fixed;z-index:100;right:10px;bottom:258px;background:#203239ed;padding:8px;border-radius:10px;display:none;flex-direction:column;gap:5px;max-height:50vh;overflow:auto';document.body.appendChild(picker);
 const pickerToggle=document.createElement('button');pickerToggle.textContent='⚔ Armes';pickerToggle.style.cssText='position:fixed;z-index:99;right:10px;bottom:210px;padding:8px;color:white;background:#304b52;border-radius:9px';pickerToggle.style.display='none';document.body.appendChild(pickerToggle);
@@ -3777,7 +3777,7 @@ if(playerEject&&playerEject.t<=0){
 }
 updateBazookaReticle(dt);
 const previousCooldown=Math.max(0,fcd);
-fcd=Math.max(0,previousCooldown-dt);updateGrenadeCharge(dt);
+fcd=Math.max(0,previousCooldown-dt);updateGrenadeCharge(dt);updateAssaultBurst(dt);
 if(K.KeyF&&(!grenadeEquipped||cv)){
   const overshoot=previousCooldown>0?Math.min(0,previousCooldown-dt):0;
   fire();

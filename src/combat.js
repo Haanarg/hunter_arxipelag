@@ -1102,6 +1102,47 @@ function cutBarbedWire(){
  msg='Filferrada tallada silenciosament.';msgT=1.4;
  return true;
 }
+// Ràfega de tres bales, separades 75 ms. Cap temporitzador real:
+// els tres trets avancen amb el temps de simulació, sense saltar-se pauses.
+const ASSAULT_BURST_SPACING=.075;
+let assaultBurstRemaining=0,assaultBurstDelay=0;
+function cancelAssaultBurst(){assaultBurstRemaining=0;assaultBurstDelay=0;}
+function fireAssaultBurstBullet(index){
+  if(!assaultRifleEquipped||!inv.fusell_assalt||cv||swimming||over||paused||
+     playerFall||playerEject||hp<=0||ammo<=0)return false;
+  ammo--;
+  pl.userData.firePose=.26;
+  const hd=P.hd,fx=-Math.sin(hd),fz=-Math.cos(hd),
+        x=P.x+fx*1.1,y=P.y+1.6-(playerCrouched?.48:0),z=P.z+fz*1.1,
+        [ax,ay,az]=autoAimWeaponShot(x,y,z,fx,0,fz,85,.965,'light',null,130),
+        spread=[-.012,0,.012][index],dx=ax-az*spread,dz=az+ax*spread,
+        len=Math.hypot(dx,ay,dz)||1;
+  // La diana es recalcula a cada bala i cada ràfega. Si l'enemic cau
+  // mentrestant, la següent bala pot adquirir un altre blanc.
+  shoot(x,y,z,dx/len,ay/len,dz/len,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE);
+  return true;
+}
+function beginAssaultBurst(){
+  if(assaultBurstRemaining)return false;
+  if(ammo<3){msg='Fusell d’assalt: calen 3 cartutxos per ràfega.';msgT=1.5;return false}
+  if(!fireAssaultBurstBullet(0))return false;
+  assaultBurstRemaining=2;
+  assaultBurstDelay=ASSAULT_BURST_SPACING;
+  fcd=.34;
+  return true;
+}
+function updateAssaultBurst(dt){
+  if(!assaultBurstRemaining)return;
+  if(!assaultRifleEquipped||!inv.fusell_assalt||cv||swimming||over||paused||
+     playerFall||playerEject||hp<=0){cancelAssaultBurst();return}
+  assaultBurstDelay-=dt;
+  if(assaultBurstDelay>0)return;
+  // Un sol tret per tick: ni amb FPS baixos apareixen dues bales alhora.
+  if(!fireAssaultBurstBullet(3-assaultBurstRemaining)){cancelAssaultBurst();return}
+  assaultBurstRemaining--;
+  if(assaultBurstRemaining)assaultBurstDelay+=ASSAULT_BURST_SPACING;
+  else assaultBurstDelay=0;
+}
 // La pistola personal és utilitzable només des dels vehicles oberts.
 const OPEN_RIDER_PISTOL=new Set(['bici','moto','moto_aquatica','barca_rems','windsurf','llanxa']);
 function executePlayerFire(){if(cisallaEquipped&&!cv)return cutBarbedWire();if(knifeEquipped&&!cv)return melee();if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
@@ -1135,16 +1176,8 @@ else if(c&&OPEN_RIDER_PISTOL.has(c)){
   shoot(p.x,p.y,p.z,d.x,d.y,d.z,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE);
 }
 else if(!cv&&assaultRifleEquipped&&inv.fusell_assalt){
-  // Cada activació fa tres projectils. Amb F mantinguda, fcd repeteix ràfegues.
-  // L'autoapuntat es recalcula a cada ràfega i tria un altre enemic si el primer mor.
-  if(ammo<3){msg='Fusell d’assalt: calen 3 cartutxos per ràfega.';msgT=1.5;return}
-  ammo-=3;fcd=.34;pl.userData.firePose=.3;
-  const x=P.x+fx_*1.1,y=P.y+1.6-(playerCrouched?.48:0),z=P.z+fz*1.1,
-        [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,85,.965,'light',null,130);
-  for(const spread of[-.012,0,.012]){
-    const dx=ax-az*spread,dz=az+ax*spread,len=Math.hypot(dx,ay,dz)||1;
-    shoot(x,y,z,dx/len,ay/len,dz/len,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE);
-  }
+  // F mantinguda torna a iniciar la següent ràfega quan expira el cooldown.
+  if(!beginAssaultBurst())return;
 }
 else if(!cv&&sniperEquipped&&inv.franctirador){
   if(sniperAmmo<=0){msg='El rifle no té munició.';msgT=2;return}
