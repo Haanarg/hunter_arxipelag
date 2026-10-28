@@ -31,7 +31,7 @@ window.HUNTER_VEHICLES=Object.freeze({
     // Un objectiu pràcticament vertical no ha de fer girar la torre 180°.
     const yaw=Math.hypot(local.x,local.z)<1e-4
             ?pivot.rotation.y:Math.atan2(-local.x,-local.z),
-          elev=Math.max(-.42,Math.min(.43,Math.atan2(local.y,Math.hypot(local.x,local.z)))),
+          elev=Math.max(rig.turretMinPitch??-.42,Math.min(rig.turretMaxPitch??.43,Math.atan2(local.y,Math.hypot(local.x,local.z)))),
           step=Math.min(.08,Math.max(0,Number.isFinite(dt)?dt:0));
     const approach=(angle,target,key,maxSpeed,wrap)=>{
       const delta=wrap?Math.atan2(Math.sin(target-angle),Math.cos(target-angle)):target-angle;
@@ -292,6 +292,8 @@ window.HUNTER_VEHICLES=Object.freeze({
         const muzzle=new THREE.Object3D();muzzle.position.set(0,0,-4.35);elev.add(muzzle);
         g.userData.turretPivot=turret;g.userData.turretPitch=elev;
         g.userData.turretMuzzle=muzzle;g.userData.turretYawRate=1.40;
+        // El tanc pot apuntar a casetes altes i a objectius sota un turó.
+        g.userData.turretMinPitch=-.62;g.userData.turretMaxPitch=.72;
         for(const x of[-1.2,1.2])box(g,.64,.45,1.2,0x596343,x,2.24,2,'paint');
         for(const x of[-1.35,1.35])box(g,.42,.22,.42,0x2f332e,x,2.15,-2.45,'metal');
       }
