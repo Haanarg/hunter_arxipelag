@@ -364,6 +364,17 @@ function blastOccluded(x,y,z,tx,ty,tz,ignoreWall=null){
  }
  return false;
 }
+// La proximitat al tram real, no al centre de l'AABB de 6 m,
+// determina si l'ona expansiva arriba a la filferrada.
+function closestFenceBlastPoint(w,x,y,z){
+  const ax=w.ax??w.x0,az=w.az??w.z0,
+        bx=w.bx??w.x1,bz=w.bz??w.z1,
+        dx=bx-ax,dz=bz-az,len2=dx*dx+dz*dz,
+        t=len2>1e-8?Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/len2)):0,
+        nx=ax+dx*t,nz=az+dz*t,
+        ny=Math.min(w.y1,Math.max(w.y0,y));
+  return{x:nx,y:ny,z:nz,distance:Math.hypot(nx-x,ny-y,nz-z)};
+}
 function boom(x,y,z,r,dmg,own,source=null){
  window.HUNTER_STEALTH.emit('explosion',x,y,z);
  snd('boom',1,{x,y,z},source);
@@ -382,7 +393,8 @@ function boom(x,y,z,r,dmg,own,source=null){
  const pilotedAtStart=!!cv;
  for(const u of [...enemyCandidatesAt(x,z,r+vehicleRadius('llanxa')*.62+4)]){
   if(u.hp<=0||u.destroyed)continue;
-  const marine=u.t==='patrulla_marina',targetY=u.o.position.y+(marine?1.8:1.5),
+  const marine=u.t==='patrulla_marina',targetY=u.t==='torre'?enemyAimCenterY(u):
+    u.o.position.y+(marine?1.8:1.5),
     distance=Math.hypot(u.x-x,targetY-y,u.z-z),
     d=marine?Math.max(0,distance-vehicleRadius('llanxa')*.62):distance,
     dealt=explosionDamage(dmg,d,r);
@@ -431,10 +443,20 @@ function boom(x,y,z,r,dmg,own,source=null){
 
  }
  // Les estructures absorbeixen el dany, fins i tot quan tapen els ocupants.
- for(const w of wallCandidates(x,z,r)){
+ // Una explosió trenca el filferro complet del tram si el front d'ona
+ // l'assoleix: els 8 PV no han de deixar una barrera invisible o intacta
+ // quan el projectil hi detona just al costat. Altres murs mantenen PV.
+ for(const w of [...wallCandidates(x,z,r)]){
+  if(w.open||w.hp<=0)continue;
+  if(w.barbed){
+    const near=closestFenceBlastPoint(w,x,y,z);
+    if(near.distance<r&&!blastOccluded(x,y,z,near.x,near.y,near.z,w))
+      dmgW(w,w.hp);
+    continue;
+  }
   const dist=Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z),
     dealt=explosionDamage(dmg,dist,r);
-  if(dealt&&y<w.y1+3&&w.hp>0)dmgW(w,dealt);
+  if(dealt&&y<w.y1+3)dmgW(w,dealt);
  }
  for(const b of buildingCandidates(x,z,r)){
   // El sostre estructural del búnquer roman intacte encara que es destrueixin murs.
@@ -848,7 +870,7 @@ function bazookaFirstSolidHit(x,y,z,dx,dy,dz,range=BAZOOKA_AIM_RANGE,sourceVehic
     const marine=e.t==='patrulla_marina';
     consider(marine?marineHullSegmentT(x,y,z,tx,ty,tz,e):
       segmentSphereT(x,y,z,tx,ty,tz,e.x,
-        e.o.position.y+(e.t==='torre'?4.5:1.5),e.z,(e.r||1)+.6));
+        enemyAimCenterY(e),e.z,enemyAimHitRadius(e)));
   }
   for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){
     // El propi vehicle mai no intercepta l'origen del seu dispar.
@@ -998,7 +1020,7 @@ function sniperReticlePoint(focus,range=1000){
   for(const e of enemyCandidatesAt(mx,mz,reach+4)){
     if(e.hp<=0||e.destroyed)continue;
     consider(segmentSphereT(ox,oy,oz,tx,ty,tz,
-      e.x,e.o.position.y+(e.t==='torre'?4.5:1.5),e.z,(e.r||1)+.6));
+      e.x,enemyAimCenterY(e),e.z,enemyAimHitRadius(e)));
   }
   for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){
     if(v.destroyed)continue;
@@ -1203,8 +1225,8 @@ function updPj(dt){
       // quan només la proa o la popa intercepten el segment del coet.
       for(const u of enemyCandidatesAt(mx,mz,reach+vehicleRadius('llanxa')*.62+4)){
         const marine=u.t==='patrulla_marina',
-              cy=u.o.position.y+(u.t==='torre'?4.5:1.5),
-              radius=(u.r||1)+.6;
+              cy=enemyAimCenterY(u),
+              radius=enemyAimHitRadius(u);
         consider(marine?marineHullSegmentT(x0,y0,z0,x1,y1,z1,u):
           segmentSphereT(x0,y0,z0,x1,y1,z1,u.x,cy,u.z,radius),'enemy',u)
       }
