@@ -434,3 +434,20 @@ Integració de main: es conserva la supressió de torres i la correcció del fus
 - Proves de consum únic només de l’ajudant, absència de farmacioles, cancel·lació, deixar-ne l’última mentre s’ajuda, recollida/traspàs/capacitat, esquema de transport, rollback/cold restore, interfície i dues sessions natives amb consum real.
 
 Integració de main: es conserva el con 3D compartit de pistola/fusell de v0.6.27 (PR #14); s’ha completat el context del test de ràfegues amb les noves constants de punteria. La fase de reanimació amb farmacioles s’ha numerat v0.6.28.
+
+
+## Cooperatiu · fase 18 · Percepció direccional (v0.6.29)
+
+- Con frontal de 120° fins a 18 m. A menys de 2 m hi ha percepció també pel darrere, però continua exigint línia de visió i les comprovacions d’alçada/estat. Disfressa: abast de 4 m mentre no hi ha alarma. La direcció inicial segueix el tram de patrulla generat.
+- Trets i explosions alerten a menys de 35 m i fan girar el guàrdia cap a l’origen del soroll. No eliminen la cobertura ni l’avís d’un segon abans del primer tret.
+- Quan es perd la visió, el guàrdia explora amb girs al voltant de l’última posició vista o sentida durant 4 s. No consulta la posició oculta del jugador per apuntar. Després reprèn la patrulla. Encara no es desplaça perseguint ni cerca amb navegació.
+- Orientació i última posició coneguda es desen al checkpoint; pausa i restauració mantenen el comportament. Generador de missió temporal `relay:8`, sense migració de missions actives anteriors.
+- Proves específiques: con/límits/orientació, pas pel darrere, proximitat, soroll i avís, cobertura, disfressa, memòria sense seguiment ocult i restauració de la cerca. Fixtures de dany de guàrdies/reanimació ara indiquen explícitament cap on mira el guàrdia. `npm run test:play` complet superat, incloses dues sessions locals natives amb D1/SQLite, portes, victòria, reinici del Worker, ferit i reanimació consumint una farmaciola. Build i tres regressions del fusell individual superades. GPU/Android físics pendents.
+
+### Què queda després d’aquesta fase
+
+1. Persecució i cerca amb navegació, coordinació i integració amb la IA completa del joc individual.
+2. Fusell d’assalt cooperatiu, selecció/recàrrega, botí i equilibri de farmacioles/reanimació.
+3. Vehicles, món complet, destrucció i objectius de campanya, preservant RNG.
+4. Desaments cooperatius permanents, migracions, estadístiques/historial i resum de missió.
+5. Validació física amb dos comptes/navegadors, GPU/Android, controls/rendiment/àudio/acabat; animació de portes, portes per a la IA individual i incidències històriques de fixtures/escala 2.

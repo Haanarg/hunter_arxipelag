@@ -6,7 +6,7 @@ import {firstSupplyContact} from './coop-inventory.mjs';
 import {createRelayRescue,reviveReachable} from './coop-rescue.mjs';
 import {createRelayCombat,traceArena} from './coop-combat.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
-export const MISSION_VERSION='relay:7';
+export const MISSION_VERSION='relay:8';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 export function generateRelayMission(room){
   if(room.members.length!==2||!room.allReady)throw new Error('Calen dos jugadors preparats.');
@@ -33,7 +33,7 @@ export function generateRelayMission(room){
     difficulty:room.difficulty??1,timeLimitTicks:Math.round(27000/(room.difficulty??1)),createdAt:Date.now(),expiresAt:Math.min(room.expiresAt,Date.now()+30*60*1000),bounds,floor:pad.y,
     members:room.members.map(m=>({id:m.id,name:m.name})),terminals:[point(first),point(other)],routes:[route(first),route(other)],extraction:point(start)},
     actors=room.members.map((m,i)=>({id:m.id,...point(i?second:start),hd:0,hp:20}));
-  meta.targets=[first,other].map((p,i)=>{const q=parents.get(p);return {id:'target-'+i,...point(q),hp:12,ai:true,state:'patrol',patrol:[point(q),point(parents.get(q)||p)],patrolIndex:1,lastAttack:-90,seenTicks:0};});
+  meta.targets=[first,other].map((p,i)=>{const q=parents.get(p);return {id:'target-'+i,...point(q),hp:12,ai:true,heading:Math.atan2(-((parents.get(q)||p).x-q.x),-((parents.get(q)||p).z-q.z)),state:'patrol',patrol:[point(q),point(parents.get(q)||p)],patrolIndex:1,lastAttack:-90,seenTicks:0};});
   meta.supplies=[first,other].flatMap((p,i)=>['bullets','grenades','disguise','medkits'].map((item,j)=>({id:`supply-${i}-${j}`,item,amount:item==='bullets'?12:1,...point(p)})));
   meta.doors=foundation.baseStructures.walls.flatMap((w,wallIndex)=>w.door&&!w.locked&&!w.alwaysOpen?[{id:w.id,wallIndex,cx:w.cx,cz:w.cz,floor:w.y0+1}]:[]);
   return {geometry:world.snapshot(),record:{meta,phase:'relay',hold:0,status:'paused',checkpoint:{protocol:1,epoch:id,tick:0,players:actors.map(a=>({...a,acknowledged:0,fall:null,swimming:false}))},nextAlarm:Date.now()+100}};

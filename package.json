@@ -43,7 +43,7 @@
     "test:terrain": "node tests/canonical-terrain.mjs",
     "test:compounds": "node tests/compound-planning.mjs",
     "test:buildings": "node tests/building-shell.mjs && node tests/coop-base-buildings.mjs",
-    "test:play": "node tests/coop-rescue.mjs && node tests/coop-rescue-hub.mjs && node tests/coop-guards.mjs && node tests/coop-combat.mjs && node tests/coop-combat-view.mjs && node tests/coop-combat-hub.mjs && node tests/coop-inventory.mjs && node tests/coop-mission.mjs && node tests/coop-doors.mjs && node tests/coop-doors-hub.mjs && node tests/coop-play-client.mjs && node tests/coop-play-ui.mjs && node tests/coop-play-alarm.mjs && node tools/build-worker.mjs && node tests/coop-play-native.mjs",
+    "test:play": "node tests/coop-rescue.mjs && node tests/coop-rescue-hub.mjs && node tests/coop-guards.mjs && node tests/coop-guard-perception.mjs && node tests/coop-combat.mjs && node tests/coop-combat-view.mjs && node tests/coop-combat-hub.mjs && node tests/coop-inventory.mjs && node tests/coop-mission.mjs && node tests/coop-doors.mjs && node tests/coop-doors-hub.mjs && node tests/coop-play-client.mjs && node tests/coop-play-ui.mjs && node tests/coop-play-alarm.mjs && node tools/build-worker.mjs && node tests/coop-play-native.mjs",
     "test:context-doors": "node tests/context-doors.cjs",
     "test:doors": "node tests/context-doors.cjs && node tests/coop-doors.mjs && node tests/coop-doors-hub.mjs"
   },

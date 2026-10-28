@@ -20,10 +20,16 @@ export function traceArena(from,to,geometry,world){
   for(let i=0;i<=steps;i++){const t=i/steps;if(t>fraction)break;const p=at(from,to,t);if(p.y<world.heightAt(p.x,p.z)){fraction=t;break;}}
   return {fraction,point:at(from,to,fraction)};
 }
+// Heading follows the simulation: zero faces -Z. Close awareness still requires LOS.
+export function guardInView(guard,player){
+  const dx=player.x-guard.x,dz=player.z-guard.z,d=Math.hypot(dx,dz);
+  return d<=2||(-Math.sin(guard.heading||0)*dx-Math.cos(guard.heading||0)*dz)/d>=.5-1e-10;
+}
+const facePoint=(guard,p)=>Math.atan2(-(p.x-guard.x),-(p.z-guard.z));
 export function createRelayCombat({meta,record={},inventory,players,damagePlayer=()=>{},geometry,world,active}){
   const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);let sequence=record.sequence||0;
   const effect=(kind,tick,data)=>{effects.push({id:++sequence,kind,tick,...data});if(effects.length>64)effects.shift();};
-  function alarm(position,actorId,tick){for(const t of targets)if(t.ai&&t.hp>0&&Math.hypot(t.x-position.x,t.z-position.z)<35){t.alarmedUntil=tick+180;t.focus=actorId;t.lastSeenTick=tick;t.state='search';}}
+  function alarm(position,actorId,tick){for(const t of targets)if(t.ai&&t.hp>0&&Math.hypot(t.x-position.x,t.z-position.z)<35){t.alarmedUntil=tick+180;t.focus=actorId;t.lastSeenTick=tick;t.lastKnown={x:position.x,y:position.y,z:position.z};t.heading=facePoint(t,position);t.state='search';}}
   function command(actorId,message,tick){
     const cached=results.find(r=>r.actorId===actorId&&r.commandId===message.commandId);if(cached)return {...cached,duplicate:true};
     const p=players().find(p=>p.id===actorId),bag=inventory.get(actorId);let code='INVALID',ok=false;
@@ -61,11 +67,11 @@ export function createRelayCombat({meta,record={},inventory,players,damagePlayer
     }
     for(const t of targets)if(t.ai){
       if(t.hp<=0){t.state='dead';t.focus=null;continue;}
-      const eye={x:t.x,y:t.y+1.5,z:t.z},candidates=players().filter(p=>p.hp>0&&!p.fall&&!p.swimming).map(p=>({p,d:Math.hypot(p.x-t.x,p.y-t.y,p.z-t.z)})).filter(({p,d})=>d<((inventory.get(p.id)?.disguised&&tick>(t.alarmedUntil||0))?4:18)&&traceArena(eye,{x:p.x,y:p.y+1.5,z:p.z},geometry(),world()).fraction>=1).sort((a,b)=>a.d-b.d||a.p.id.localeCompare(b.p.id));
+      const eye={x:t.x,y:t.y+1.5,z:t.z},candidates=players().filter(p=>p.hp>0&&!p.fall&&!p.swimming).map(p=>({p,d:Math.hypot(p.x-t.x,p.y-t.y,p.z-t.z)})).filter(({p,d})=>d<((inventory.get(p.id)?.disguised&&tick>(t.alarmedUntil||0))?4:18)&&guardInView(t,p)&&traceArena(eye,{x:p.x,y:p.y+1.5,z:p.z},geometry(),world()).fraction>=1).sort((a,b)=>a.d-b.d||a.p.id.localeCompare(b.p.id));
       if(candidates.length){
-        const p=candidates[0].p;if(t.focus!==p.id)t.seenTicks=0;t.focus=p.id;t.lastSeenTick=tick;t.seenTicks=(t.seenTicks||0)+1;t.heading=Math.atan2(-(p.x-t.x),-(p.z-t.z));t.state=t.seenTicks<30?'alert':'attack';
+        const p=candidates[0].p;if(t.focus!==p.id)t.seenTicks=0;t.focus=p.id;t.lastSeenTick=tick;t.lastKnown={x:p.x,y:p.y,z:p.z};t.seenTicks=(t.seenTicks||0)+1;t.heading=Math.atan2(-(p.x-t.x),-(p.z-t.z));t.state=t.seenTicks<30?'alert':'attack';
         if(t.seenTicks>=30&&tick-(t.lastAttack||0)>=90){const amount=Math.max(1,Math.ceil(2*(meta.difficulty||1)));damagePlayer(p.id,amount);t.lastAttack=tick;effect('shot',tick,{enemy:true,actorId:t.id,from:eye,to:{x:p.x,y:p.y+1.5,z:p.z},hit:p.id});}
-      }else if(t.focus&&tick-(t.lastSeenTick??-Infinity)<120){t.state='search';t.seenTicks=0;}
+      }else if(t.focus&&tick-(t.lastSeenTick??-Infinity)<120){t.state='search';t.seenTicks=0;const center=t.lastKnown?facePoint(t,t.lastKnown):(t.heading||0);t.heading=center+Math.sin((tick-t.lastSeenTick)/120*Math.PI*2)*Math.PI/3;}
       else{
         t.state='patrol';t.focus=null;t.seenTicks=0;
         const path=t.patrol||[],goal=path[t.patrolIndex||0];if(!goal)continue;
