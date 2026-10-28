@@ -746,6 +746,17 @@ function weaponAimClear(x,y,z,tx,ty,tz,ignoreWall=null,ignoreBuilding=null,check
 // Bazuca: fins a 185 m, ±47° horitzontals i ±52° verticals.
 // Les torres altes i els objectius per sota de la mira són elegibles.
 const BAZOOKA_AIM_RANGE=185,BAZOOKA_AIM_CONE=.68,BAZOOKA_AIM_VERTICAL=.90;
+// Fusell d'assalt: con més generós a peu pla (±35°) i assistència
+// creixent fins a ±90° en projecció horitzontal per a blancs molt alts
+// o baixos. El con vertical real ja arriba a ±90°: el filtre de yaw
+// era el que descartava torres gairebé a sobre del jugador.
+const ASSAULT_AIM_CONE=.82,ASSAULT_AIM_VERTICAL=Math.PI/2;
+function assaultAimHorizontalCone(baseCone,pitchError){
+  const steep=Math.max(0,Math.min(1,(pitchError-.17)/(.98-.17))),
+        blend=steep*steep*(3-2*steep),
+        baseYaw=Math.acos(Math.max(-1,Math.min(1,baseCone)));
+  return Math.cos(baseYaw+(Math.PI/2-baseYaw)*blend);
+}
 // Punt d'intercepció per a patrulleres mòbils, amb la velocitat real de
 // cada arma: les bales ràpides també han d'arribar al centre del casc.
 function bazookaInterceptPoint(e,originX,originY,originZ,targetY,speed){
@@ -777,11 +788,19 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
     if(priority>bestPriority||!Number.isFinite(ty))return;
     const dx=tx-x,dy=ty-y,dz=tz-z,
           horizontal=Math.hypot(dx,dz),distance=Math.hypot(dx,dy,dz);
-    if(horizontal<.15||distance>range||forward<.001)return;
-    const alignment=(dx*fx+dz*fz)/(horizontal*forward);
-    if(alignment<cone)return;
+    if(distance<.15||distance>range||forward<.001)return;
     const pitchError=Math.abs(Math.atan2(dy,horizontal)-basePitch);
     if(pitchError>verticalCone)return;
+    const alignment=horizontal>=.001?
+      (dx*fx+dz*fz)/(horizontal*forward):1,
+          steepAssault=shotClass==='assault',
+          allowedCone=steepAssault?
+            assaultAimHorizontalCone(cone,pitchError):cone,
+          // Quan la torre queda pràcticament a la vertical del canó,
+          // el desplaçament d'1,1 m de la boca no ha de descartar-la
+          // per aparèixer un pèl al darrere en projecció horitzontal.
+          overhead=steepAssault&&horizontal<=1.6&&Math.abs(dy)>=horizontal*3;
+    if(!overhead&&alignment<allowedCone)return;
     // Les armes pesades no adquireixen dianes tapades pel relleu.
     if(!weaponAimClear(x,y,z,tx,ty,tz,ignoreWall,ignoreBuilding,heavy))return;
     // Dins una prioritat, apuntar primer al blanc més centrat i proper.
@@ -1114,9 +1133,11 @@ function fireAssaultBurstBullet(index){
   pl.userData.firePose=.26;
   const hd=P.hd,fx=-Math.sin(hd),fz=-Math.cos(hd),
         x=P.x+fx*1.1,y=P.y+1.6-(playerCrouched?.48:0),z=P.z+fz*1.1,
-        // La torre s'apunta a la caseta, fins i tot en angles de tir ascendents.
-        // L'angle vertical de ±90° no exclou les torres molt properes.
-        [ax,ay,az]=autoAimWeaponShot(x,y,z,fx,0,fz,85,.92,'light',null,130,Math.PI/2),
+        // Con 3D ampliat: torres per damunt i soldats a sota de l'horitzó.
+        // La classe 'assault' només defineix la punteria: el projectil
+        // disparat continua essent lleuger i no causa dany a les torres.
+        [ax,ay,az]=autoAimWeaponShot(x,y,z,fx,0,fz,85,
+          ASSAULT_AIM_CONE,'assault',null,130,ASSAULT_AIM_VERTICAL),
         spread=[-.012,0,.012][index],dx=ax-az*spread,dz=az+ax*spread,
         len=Math.hypot(dx,ay,dz)||1;
   // La diana es recalcula a cada bala i cada ràfega. Si l'enemic cau
