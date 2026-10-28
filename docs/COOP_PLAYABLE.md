@@ -62,3 +62,11 @@ No calen migracions SQL, secrets, plugins ni recursos Cloudflare nous. `coopPlay
 ## Actualització v0.6.20
 
 Portes compartides amb F / Porta: proximitat, altura, pas ocupat, cooldown, ordres idempotents, persistència i actualització de les col·lisions dels dos jugadors. Les vistes 3D i Canvas reflecteixen l’estat confirmat; no es modifica la física local per anticipació. Les proves natives recorren portes, completen la missió i recuperen l’obertura després de reiniciar workerd. La passada física de dos dispositius i l’animació de les fulles continuen pendents. Detall: [COOP_DOORS.md](COOP_DOORS.md).
+
+### Inventari personal · v0.6.21
+
+Cada jugador comença amb **24 bales, 2 granades i 1 disfressa**. El panell mostra només el teu inventari. **C / Posar disfressa** canvia el teu aspecte a verd; no altera el company. **R / Recollir** agafa un subministrament proper als terminals (marcadors +); els paquets disponibles contenen 12 bales, 1 granada o 1 disfressa. Només el primer jugador que recull un paquet el rep. Capacitats: 120 bales, 8 granades i 1 disfressa. La disfressa es pot posar i treure sense consumir-la.
+
+El servidor deriva el propietari de la sessió, comprova distància, alçada, capacitat i missió activa, i desa abans de confirmar. Inventaris, equipament i paquets recollits es recuperen en reconnectar i en reiniciar el Worker durant aquesta versió. Les ordres repetides no dupliquen objectes. No s’importa l’inventari de la partida individual.
+
+**Límit actual:** la missió reduïda encara no té trets, llançament de granades ni IA enemiga; les reserves estan preparades per integrar-hi el consum autoritatiu. La disfressa canvia l’aspecte, però encara no té efecte de sigil contra enemics. Els checkpoints temporals continuen sense migració entre versions ni desament permanent al compte.

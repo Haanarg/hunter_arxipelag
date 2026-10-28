@@ -38,6 +38,10 @@ try{
  ws.message({type:'state',state:opened});ws.message({type:'action',commandId:action.commandId,ok:true,code:'OPENED'});assert.match(elements.get('door').textContent,/Tancar/);assert.equal(elements.get('door').disabled,false);
  elements.get('door').onclick();const closing=ws.sent.at(-1);assert.equal(closing.open,false);ws.message({type:'action',commandId:closing.commandId,ok:false,code:'OCCUPIED'});assert.match(elements.get('message').textContent,/jugador al pas/);
  if(frames.size){const [id,fn]=[...frames][0];frames.delete(id);fn(performance.now()+16);}assert.ok(draws>10,'Canvas fallback draws actual world/players/objectives');
+ assert.match(elements.get('inventory').textContent,/Bales: 24/);
+ listeners.get('keydown')({code:'KeyC',repeat:false,preventDefault(){}});const equip=ws.sent.at(-1);assert.equal(equip.type,'inventory');assert.equal(equip.operation,'disguise');assert.equal(equip.target,true);assert.equal(elements.get('disguise').disabled,true);
+ ws.message({type:'action',commandId:equip.commandId,ok:true,code:'EQUIPPED'});
+ const stocked={...opened,players:opened.players.map((p,i)=>i===0?{...p,...mission.meta.supplies[0]}:p)};stocked.players[0].id='a';ws.message({type:'state',state:stocked});assert.equal(elements.get('pickup').disabled,false);elements.get('pickup').onclick();const take=ws.sent.at(-1);assert.equal(take.type,'inventory');assert.equal(take.operation,'pickup');assert.equal(take.target,mission.meta.supplies[0].id);ws.message({type:'action',commandId:take.commandId,ok:true,code:'PICKED_UP'});
  listeners.get('pagehide')();assert.equal(timers.size,0);assert.equal(frames.size,0,'navigation releases sockets, timers and renderer');
  const {createMissionView}=await import('../src/coop-play-view.mjs'),T=await import('../vendor/three-r186.module.mjs');let rendered=false,disposed=false;
  const threeView=await createMissionView(elements.get('view'),mission.meta,g.geometry,{three:T,makeRenderer:()=>({setPixelRatio(){},setClearColor(){},setSize(){},render(scene,camera){

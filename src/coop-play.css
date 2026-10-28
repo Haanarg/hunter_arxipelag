@@ -3,3 +3,5 @@
 #instructions.playing h1,#instructions.playing>p:first-of-type{display:none}@media(max-width:600px){main{padding-bottom:155px}#touch{position:fixed;left:0;right:0;bottom:0;background:#101c22f2;padding:8px max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom));z-index:5;border-top:1px solid #526b5a}}
 
 #touch .actions{display:grid;gap:6px}#door{font-size:.8rem;white-space:nowrap}
+
+#inventory-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0;font-size:.8rem}#inventory{flex:1 1 300px}#inventory-controls button{font-size:.8rem;padding:9px 12px}

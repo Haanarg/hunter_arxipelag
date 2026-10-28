@@ -3,7 +3,7 @@ import {createStaticWorldAdapter} from '../src/world-adapter.mjs';
 import {createCanonicalWater} from '../src/canonical-water.mjs';
 import {createPlayerSimulation,validatePlayerInput} from '../src/player-simulation.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
-export const MISSION_VERSION='relay:2';
+export const MISSION_VERSION='relay:3';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 export function generateRelayMission(room){
   if(room.members.length!==2||!room.allReady)throw new Error('Calen dos jugadors preparats.');
@@ -30,6 +30,7 @@ export function generateRelayMission(room){
     difficulty:room.difficulty??1,timeLimitTicks:Math.round(27000/(room.difficulty??1)),createdAt:Date.now(),expiresAt:Math.min(room.expiresAt,Date.now()+30*60*1000),bounds,floor:pad.y,
     members:room.members.map(m=>({id:m.id,name:m.name})),terminals:[point(first),point(other)],routes:[route(first),route(other)],extraction:point(start)},
     actors=room.members.map((m,i)=>({id:m.id,...point(i?second:start),hd:0,hp:20}));
+  meta.supplies=[first,other].flatMap((p,i)=>['bullets','grenades','disguise'].map((item,j)=>({id:`supply-${i}-${j}`,item,amount:item==='bullets'?12:1,...point(p)})));
   meta.doors=foundation.baseStructures.walls.flatMap((w,wallIndex)=>w.door&&!w.locked&&!w.alwaysOpen?[{id:w.id,wallIndex,cx:w.cx,cz:w.cz,floor:w.y0+1}]:[]);
   return {geometry:world.snapshot(),record:{meta,phase:'relay',hold:0,status:'paused',checkpoint:{protocol:1,epoch:id,tick:0,players:actors.map(a=>({...a,acknowledged:0,fall:null,swimming:false}))},nextAlarm:Date.now()+100}};
 }
@@ -44,8 +45,27 @@ export function restoreRelayMission(record,geometry){
     bounded={locomotionAt:(...args)=>world.locomotionAt(...args),roofLanding:(...args)=>world.roofLanding(...args),resolveBody(previous,candidate){const p=world.resolveBody(previous,{...candidate,x:clamp(candidate.x,b.x0,b.x1),z:clamp(candidate.z,b.z0,b.z1)});return {...p,x:clamp(p.x,b.x0,b.x1),z:clamp(p.z,b.z0,b.z1)};}},
     sim=createPlayerSimulation({epoch:meta.id,limit:world.limit,world:bounded,vertical:{surfaceAt:water.surfaceAt},checkpoint:record.checkpoint}),actions=new Map();
   let phase=record.phase,hold=record.hold,status=record.status,doorRevision=record.doorRevision??0;
+  const inventory=new Map(meta.members.map(m=>[m.id,structuredClone(record.inventories?.find(i=>i.actorId===m.id)||{actorId:m.id,bullets:24,grenades:2,disguise:1,disguised:false})])),claimed=new Set(record.claimedSupplies||[]),inventoryResults=structuredClone(record.inventoryResults||[]);
+  const inventories=()=>[...inventory.values()].map(i=>({...i}));
+  function inventoryCommand(actorId,message){
+    const cached=inventoryResults.find(r=>r.actorId===actorId&&r.commandId===message.commandId);if(cached)return {...cached,duplicate:true};
+    const actor=sim.snapshot().players.find(p=>p.id===actorId),bag=inventory.get(actorId);let code='INVALID',ok=false;
+    if(actor&&message.epoch===meta.id&&typeof message.commandId==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(message.commandId)){
+      if(status!=='running'||!['relay','extract'].includes(phase)||actor.hp<=0||actor.fall||Date.now()>=meta.expiresAt)code='NOT_ACTIVE';
+      else if(message.operation==='disguise'&&typeof message.target==='boolean'){
+        if(!bag.disguise)code='EMPTY';else{bag.disguised=message.target;ok=true;code='EQUIPPED';}
+      }else if(message.operation==='pickup'&&typeof message.target==='string'){
+        const supply=meta.supplies.find(s=>s.id===message.target);
+        if(!supply)code='UNKNOWN_SUPPLY';else if(claimed.has(supply.id))code='TAKEN';
+        else if(distance(actor,supply)>3.2||Math.abs(actor.y-supply.y)>=2)code='TOO_FAR';
+        else if(bag[supply.item]+supply.amount>({bullets:120,grenades:8,disguise:1})[supply.item])code='FULL';
+        else{bag[supply.item]+=supply.amount;claimed.add(supply.id);ok=true;code='PICKED_UP';}
+      }
+      const result={actorId,commandId:message.commandId,ok,code};inventoryResults.push(result);if(inventoryResults.length>64)inventoryResults.shift();return {...result};
+    }return {actorId,commandId:message.commandId,ok,code};
+  }
   const doors=()=>meta.doors.map(d=>({id:d.id,open:doorStates.get(d.id)??false}));
-  function snapshot(){return {...sim.snapshot(),missionId:meta.id,phase,hold,status,doorRevision,doors:doors(),remaining:Math.max(0,(meta.timeLimitTicks-sim.snapshot().tick)/30)};}
+  function snapshot(){return {...sim.snapshot(),missionId:meta.id,phase,hold,status,doorRevision,doors:doors(),inventories:inventories(),claimedSupplies:[...claimed],remaining:Math.max(0,(meta.timeLimitTicks-sim.snapshot().tick)/30)};}
   function doorCommand(actorId,message){
     const previous=results.find(r=>r.actorId===actorId&&r.commandId===message.commandId);if(previous)return {...previous,duplicate:true};
     let code='INVALID',ok=false;
@@ -83,7 +103,7 @@ export function restoreRelayMission(record,geometry){
     }else{hold=state.players.every(p=>near(p,meta.extraction))?hold+1:0;if(hold>=60){phase='won';hold=60;}}
     return snapshot();
   }
-  return {meta,geometry:canonical,accept,step,snapshot,doorCommand,setStatus(value){status=value;if(value!=='running'){actions.clear();sim.clearInputs();if(['relay','extract'].includes(phase))hold=0;}},
-    checkpoint(nextAlarm){return {meta:structuredClone(meta),phase,hold,status,checkpoint:sim.snapshot(),nextAlarm,doors:doors(),doorRevision,doorCooldowns:[...cooldowns].map(([actorId,tick])=>({actorId,tick})),commandResults:structuredClone(results)};},
+  return {meta,geometry:canonical,accept,step,snapshot,doorCommand,inventoryCommand,setStatus(value){status=value;if(value!=='running'){actions.clear();sim.clearInputs();if(['relay','extract'].includes(phase))hold=0;}},
+    checkpoint(nextAlarm){return {meta:structuredClone(meta),phase,hold,status,checkpoint:sim.snapshot(),nextAlarm,inventories:inventories(),claimedSupplies:[...claimed],inventoryResults:structuredClone(inventoryResults),doors:doors(),doorRevision,doorCooldowns:[...cooldowns].map(([actorId,tick])=>({actorId,tick})),commandResults:structuredClone(results)};},
     setup(self){return {type:'mission',self,meta:structuredClone(meta),geometry:world.snapshot(),state:snapshot()};}};
 }

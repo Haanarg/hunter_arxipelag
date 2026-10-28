@@ -1,8 +1,10 @@
 # HUNTER · ARXIPÈLAG — progrés de les millores
 
-## Estat actual · v0.6.20
+## Estat actual · v0.6.21
 
 **Primera missió cooperativa jugable: Relleu d’emergència**, per a dos comptes aprovats. Inici confirmat pels dos clients, moviment/col·lisions autoritatius, terminals simultanis, extracció/victòria, pausa per desconnexió i recuperació de checkpoint. Vista 3D provisional amb alternativa Canvas i controls tàctils. Des de v0.6.20, portes compartides amb F / Porta, col·lisions dinàmiques i estat persistent en reconnectar. [Instruccions, validació i límits](docs/COOP_PLAYABLE.md).
+
+Des de v0.6.21, cada jugador té **inventari independent** de bales, granades i disfressa, recollida exclusiva de paquets, capacitats, equipament de disfressa visible i persistència en reconnectar/reiniciar durant la mateixa versió. Ordres autoritzades per sessió, idempotència i desament abans de confirmar.
 
 L’usuari ha prioritzat la jugabilitat sobre l’estètica. Aquest és un mode reduït de base, no la campanya completa amb combat/vehicles. Els apartats antics que diuen «no jugable» descriuen l’estat de cada fase històrica. Els pendents generals i la fase 1 tancada per l’usuari es conserven.
 
@@ -302,3 +304,21 @@ Implementades ordres d’obrir/tancar portes a la missió reduïda, amb F o bot�
 Verificat sobre main v0.6.19, conservant el fusell d’assalt i els canvis recents. Proves natives amb dos comptes: obertura/remot rebutjat/pas ocupat/tancament/bloqueig/reobertura, terminals i victòria, reconnexió i reinici complet amb estat de portes recuperat. Proves d’errors de persistència sense publicació, validació del protocol i UI F/tàctil/representació 3D, més regressions de comptes/món/sales/desaments. La passada física WebGL/Android/dos dispositius continua pendent. No cal cap migració, plugin, secret o recurs Cloudflare nou.
 
 Queda: animació i millores visuals de portes, destrucció i resta d’interaccions; combat/inventari/IA i objectius de campanya compartits, vehicles/ferri/plataformes/presoners; perímetres i generador complet amb HQ/búnquer/hangars/altres compounds/vegetació/entitats; desaments cooperatius duradors/exportables i estadístiques/historial, versions/retenció/permisos; validació física, mesures de latència/CPU/GPU/memòria/consum/quotes i predicció/reconciliació; diagnòstic del mapa complet d’escala 2, les tres incidències històriques i recuperació excepcional d’administradors. El mode reduït continua jugable; les sessions temporals caduquen als 30 minuts i no es migren entre versions. Es mantenen els pendents generals i la fase 1 tancada per decisió de l’usuari.
+
+
+## Cooperatiu · fase 13 · Inventari personal (v0.6.21)
+
+- Implementat: inventaris separats per actor autenticat; 24 bales, 2 granades i 1 disfressa inicials. Capacitats 120/8/1. Subministraments als terminals amb un únic beneficiari, validació de proximitat/alçada, C/disfressa i R/recollir amb alternativa tàctil. Equipament visible als dos clients, reserves només pròpies al panell.
+- Persistència: checkpoint del Durable Object amb inventaris, paquets recollits i historial limitat de confirmacions. Errors de desament reverteixen el canvi abans de difondre’l. No hi ha migració de missions temporals entre versions.
+- Validació: proves d’independència, quantitats, capacitat, cursa de recollida, idempotència, pausa/alçada, còpies d’estat, rollback i restauració; interfície/teclat/botons i dues sessions locals al Worker natiu. Validació física amb dos comptes i Android pendent.
+
+### Què queda després d’aquesta fase
+
+1. Combat autoritatiu: disparar, consumir bales, granades amb trajectòria/explosió/dany, recàrrega i armes individuals (inclòs el fusell d’assalt de la partida individual).
+2. Enemics i IA compartida; efecte real de la disfressa sobre el sigil; ferits/reanimació i equilibri.
+3. Intercanvi d’objectes, equipament ampliat i botí de la campanya completa.
+4. Vehicles, món complet, destrucció i objectius de campanya; preservar el consum de RNG del generador complet.
+5. Desaments cooperatius permanents, migracions, estadístiques i historial de missions als comptes.
+6. Validació física amb dos navegadors/comptes, GPU i Android, rendiment/controls, estètica i errors històrics documentats de fixtures/escala 2.
+
+Les bales i granades es poden recollir però encara no gastar: no s’ha presentat aquesta fase com a combat implementat.

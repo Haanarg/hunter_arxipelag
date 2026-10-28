@@ -12,5 +12,10 @@ fail=true;await hub.webSocketMessage(sockets[0],JSON.stringify(request));assert.
 fail=false;await hub.webSocketMessage(sockets[0],JSON.stringify(request));assert.equal(sockets[0].messages.at(-1).code,'OPENED');assert.equal(sockets[1].messages.at(-1).state.doors.find(d=>d.id===door.id).open,true);assert.ok(alarm);
 hub=new CoopRoomHub(ctx,{});await hub.loading;hub.verify=async ws=>ws.deserializeAttachment();assert.equal(hub.mission.setup('b').geometry.walls[door.wallIndex].open,true,'cold start rebuilds saved door collision');
 await hub.webSocketMessage(sockets[0],JSON.stringify(request));assert.equal(sockets[0].messages.at(-1).duplicate,true);assert.equal(hub.mission.snapshot().doorRevision,1);
+const inventory={type:'inventory',protocol:1,epoch:g.record.meta.id,operation:'disguise',target:true,commandId:'durable-inventory'};
+fail=true;const before=sockets[1].messages.length;await hub.webSocketMessage(sockets[0],JSON.stringify(inventory));assert.equal(sockets[0].messages.at(-1).code,'SAVE_FAILED');assert.equal(hub.mission.snapshot().inventories[0].disguised,false);assert.equal(sockets[1].messages.length,before);
+fail=false;await hub.webSocketMessage(sockets[0],JSON.stringify(inventory));assert.equal(sockets[0].messages.at(-1).code,'EQUIPPED');
+hub=new CoopRoomHub(ctx,{});await hub.loading;hub.verify=async ws=>ws.deserializeAttachment();assert.equal(hub.mission.snapshot().inventories[0].disguised,true);await hub.webSocketMessage(sockets[0],JSON.stringify(inventory));assert.equal(sockets[0].messages.at(-1).duplicate,true);
 await hub.webSocketMessage(sockets[1],JSON.stringify({...request,commandId:'forged-coordinate',x:door.cx}));assert.equal(sockets[1].code,1008,'extra position field is rejected');
+await hub.webSocketMessage(sockets[0],JSON.stringify({...inventory,actorId:'b',commandId:'forged-owner'}));assert.equal(sockets[0].code,1008,'inventory cannot supply an actor identity');
 console.log('door transport: persistence-before-broadcast, rollback/retry, shared snapshot, cold restore/idempotency and closed command schema passed');

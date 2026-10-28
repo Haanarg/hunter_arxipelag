@@ -79,6 +79,12 @@ export class CoopRoomHub {
       await this.env.DB.prepare('UPDATE hunter_coop_members SET last_seen=? WHERE owner=? AND room=?').bind(now,a.actorId,a.roomId).run();
       await this.publish();if(this.mission){this.send(ws,this.mission.setup(a.actorId));await this.wake();}return;
     }
+    if(body.type==='inventory'){
+      if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==6||!['pickup','disguise'].includes(body.operation)||(body.operation==='pickup'?(typeof body.target!=='string'||body.target.length>64):typeof body.target!=='boolean')||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre d’inventari invàlida');return;}
+      if(!this.mission||body.epoch!==this.mission.meta.id){this.send(ws,{type:'action',commandId:body.commandId,ok:false,code:'NOT_ACTIVE'});return;}
+      try{const result=this.mission.inventoryCommand(a.actorId,body);await this.save(this.record.nextAlarm);this.broadcastState();this.send(ws,{type:'action',...result});}
+      catch(_){if(this.record)this.mission=restoreRelayMission(this.record,this.geometry);this.send(ws,{type:'action',commandId:body.commandId,ok:false,code:'SAVE_FAILED'});}return;
+    }
     if(body.type==='door'){
       if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==6||typeof body.doorId!=='string'||body.doorId.length>200||typeof body.open!=='boolean'||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre de porta invàlida');return;}
       if(!this.mission||body.epoch!==this.mission.meta.id){this.send(ws,{type:'action',commandId:body.commandId,ok:false,code:'NOT_ACTIVE'});return;}
