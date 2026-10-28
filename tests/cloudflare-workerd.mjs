@@ -23,5 +23,14 @@ try{
  response=await call('/api/account/recover','POST',{username:'workeruser',code:codes[0],newPassword:'new-workerd-password'});assert.equal(response.status,200,await response.clone().text());
  response=await call('/api/account/status');assert.equal(response.status,401);
  response=await call('/api/auth/sign-in/email','POST',{username:'workeruser',password:'new-workerd-password'});assert.equal(response.status,200,await response.clone().text());
- console.log('workerd: bundled production Worker, native D1, signup, manual approval, recovery codes, reset, session revocation and login passed');
+ const adminCookies=new Map(cookies);
+ response=await call('/api/auth/sign-up/email','POST',{username:'workerplayer',password:'player-password-123'});assert.equal(response.status,200);
+ const player=(await response.json()).user;
+ cookies.clear();for(const [k,v] of adminCookies)cookies.set(k,v);
+ response=await call('/api/admin/users/'+player.id+'/recovery','POST',{password:'new-workerd-password',confirmedIdentity:true});assert.equal(response.status,200,await response.clone().text());
+ const ticket=await response.json();
+ response=await call('/api/account/recover','POST',{username:'workerplayer',code:ticket.code,newPassword:'recovered-player-password'});assert.equal(response.status,200,await response.clone().text());
+ response=await call('/api/auth/sign-in/email','POST',{username:'workerplayer',password:'recovered-player-password'});assert.equal(response.status,200);
+ response=await call('/api/account/status');assert.equal((await response.json()).status,'pending');
+ console.log('workerd: bundled production Worker, native D1, signup, manual approval, recovery codes, reset, session revocation, admin-assisted recovery and login passed');
 }finally{await mf.dispose();}

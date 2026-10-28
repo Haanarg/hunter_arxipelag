@@ -1,6 +1,11 @@
 import {betterAuth} from 'better-auth';
 
-export function authReady(env){return !!(env.DB&&env.SAVES&&env.AUTH_SECRET?.length>=32&&env.AUTH_ORIGIN);}
+export function authReady(env){
+  if(!env.DB||!env.SAVES||typeof env.AUTH_SECRET!=='string'||env.AUTH_SECRET.length<32)return false;
+  try{const origin=new URL(env.AUTH_ORIGIN);
+    return origin.origin===env.AUTH_ORIGIN&&(origin.protocol==='https:'||origin.protocol==='http:'&&['localhost','127.0.0.1','[::1]'].includes(origin.hostname));
+  }catch(_){return false;}
+}
 export function createAuth(env){
   return betterAuth({database:env.DB,secret:env.AUTH_SECRET,baseURL:env.AUTH_ORIGIN,basePath:'/api/auth',
     trustedOrigins:[env.AUTH_ORIGIN],

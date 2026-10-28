@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {applyMigrations} from './helpers/apply-d1.mjs';
 import {Miniflare} from 'miniflare';
 import worker from '../server/worker.mjs';
 import {configuredAccounts} from '../src/account-client.mjs';
@@ -7,10 +7,7 @@ import {createOperation} from '../src/operation-save.mjs';
 const mf=new Miniflare({modules:true,script:"export default {fetch(){return new Response('bindings')}}",d1Databases:['DB'],r2Buckets:['SAVES'],compatibilityDate:'2026-08-06'});
 try{
  const DB=await mf.getD1Database('DB'),SAVES=await mf.getR2Bucket('SAVES');
- for(const file of ['0001_auth.sql','0002_game.sql','0003_approval_recovery.sql']){
-   const triggers=[],sql=(await readFile(new URL('../server/migrations/'+file,import.meta.url),'utf8')).replace(/^--.*$/gm,'').replace(/CREATE TRIGGER[\s\S]*?END;/gi,match=>{triggers.push(match);return 'TRIGGER_'+(triggers.length-1)+';';});
-   for(const statement of sql.split(';').map(s=>s.trim()).filter(Boolean)){const match=statement.match(/^TRIGGER_(\d+)$/);await DB.prepare(match?triggers[+match[1]]:statement).run();}
- }
+ await applyMigrations(DB);
  const env={DB,SAVES,AUTH_SECRET:'test-only-secret-not-deployed-0123456789-abcdef',AUTH_ORIGIN:'http://localhost',ASSETS:{fetch:async()=>new Response('static')}},ctx={waitUntil:p=>p.catch(()=>{})};
  function browser(ip){
    const cookies=new Map();

@@ -10,7 +10,7 @@ Actualitzat: 2026-10-28 (estat general històric fins a v0.5.84; decisions i ini
 | 2 | Separar càmera i conducció; interiors segurs | **Implementada**, v0.5.76, commit `a982a9b`. Mirada lliure als vehicles i càmera restringida al soterrani; proves de 16 perfils i geometria. [Detall](docs/PHASE2_CAMERA.md). | Passada visual WebGL i Android físic. |
 | 3 | Simulació coherent amb FPS baixos | **Implementada**, v0.5.77, commit `404f246`. Subpassos de fins a 1/60 s, límit de 250 ms, rellotges de joc/cinemàtiques separats i proves de cadència/trajectòria. [Detall](docs/PHASE3_SIMULATION.md). | Mesura en dispositiu real; no és determinisme exacte ni una garantia d'FPS. |
 | 4 | Rendiment sostingut a Android | **Pendent**, ajornada en prioritzar 6 i 8. | Perfilar CPU/GPU, memòria i bateria durant partides llargues; optimitzar segons les mesures. |
-| 5 | Desar, suspendre i reprendre l'operació | **En curs.** v0.6.5 integrada a main i desplegada. v0.6.6 preparada en branca: comptes Cloudflare amb aprovació manual i recuperació per codis, sincronització, estadístiques/llavors i autoritat local per a cinc accions. [Desaments](docs/PHASE5_SAVES.md), [comptes i pendents](docs/ACCOUNTS_HISTORY_AUTHORITY.md). | Activar D1/R2/secrets i validar producció; navegador/Android i mapes grans; transferència real entre dispositius; recuperació assistida sense codis; neteja R2; completar autoritat i cooperatiu. |
+| 5 | Desar, suspendre i reprendre l'operació | **En curs.** v0.6.5 integrada a main i desplegada. v0.6.7 preparada en branca: comptes Cloudflare amb aprovació manual i recuperació per codis, sincronització, estadístiques/llavors i autoritat local per a cinc accions. [Desaments](docs/PHASE5_SAVES.md), [comptes i pendents](docs/ACCOUNTS_HISTORY_AUTHORITY.md). | Activar D1/R2/secrets i validar producció; navegador/Android i mapes grans; transferència real entre dispositius; recuperació excepcional d’administradors; quotes i retenció; completar autoritat i cooperatiu. |
 | 6 | Combat llegible | **Implementada i desplegada**, v0.5.78, commit `f80705b`. Espurnes distintives d’ineficàcia, sang més visible als ferits, confirmació d’impacte real i direcció del dany. [Detall](docs/PHASE6_COMBAT.md). | Aspecte visual/GPU i Android físic pendents. |
 | 7 | Orientació i ritme de missió | **Pendent**, ajornada. | Guia d'intel/objectius i direcció útil del waypoint, sense revelar informació desconeguda. |
 | 8 | Sigil i IA llegibles | **Implementada i desplegada**, v0.5.79, commit `fc2a3c3`. Marcadors visibles de sospita/contacte/cerca, posicions de tir i flanc reservades i torns d’entrada. [Detall](docs/PHASE8_STEALTH.md). | Llegibilitat visual, GPU i Android físic pendents. |
@@ -160,3 +160,21 @@ La base v0.6.5 es va integrar a `main` amb `fea0c7c961991d9c632337d30097684954f3
 3. Autoritat: implementació local parcial per a cinc accions. Pendent extreure moviment/dany/IA i desenvolupar xarxa, sales i missions cooperatives.
 
 El detall de configuració, limitacions de recuperació i feina pendent és a [ACCOUNTS_HISTORY_AUTHORITY.md](docs/ACCOUNTS_HISTORY_AUTHORITY.md). La fase 5 continua oberta; la fase 1 es manté tancada per decisió de l’usuari.
+
+## Tanda v0.6.7 · recuperació assistida i manteniment
+
+Implementat després del PR #9 (la compilació Cloudflare de v0.6.6 ha acabat correctament):
+
+1. Recuperació assistida per a usuaris sense codis personals: verificació manual del titular, contrasenya actual de l’administrador, codi d’un sol ús de 30 minuts guardat com a hash, anul·lació de sessions/codis anteriors i auditoria. Exclou administradors i comptes suspesos.
+2. Neteja programada dels objectes orfes de R2 amb 24 hores de gràcia, protecció de la partida actual i anterior, cursor persistent i lloguer contra execucions simultànies. No elimina partides referenciades.
+3. Comprovació de configuració, migració 0004 i accés al bucket abans d’habilitar comptes. Sense correu ni plugins nous.
+
+Queda per desenvolupar o validar:
+
+- Activar D1/R2, variables i secret reals; aplicar les quatre migracions, configurar el primer administrador i verificar producció. Aquesta sessió no té accés de gestió al compte Cloudflare.
+- Proves natives WebGL/Android, mapes grans, transferència entre dispositius i mesura de CPU/cost del servei de comptes.
+- Quotes i política de retenció per a partides/historial; procediment excepcional del propietari si tots els administradors perden els codis.
+- Completar l’autoritat de moviment/dany/IA i separar globals; després xarxa, sales, permisos, reconnexió i missions cooperatives.
+- Les altres fases generals pendents continuen a la taula inicial; la fase 1 segueix tancada.
+
+Detall i instruccions d’activació: [ACCOUNTS_HISTORY_AUTHORITY.md](docs/ACCOUNTS_HISTORY_AUTHORITY.md).

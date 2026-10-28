@@ -22,6 +22,7 @@ export function createAccountService({fetcher=globalThis.fetch,configured=false,
     async changePassword(newPassword,currentPassword){await request('auth/change-password',{method:'POST',data:{newPassword,currentPassword}});},
     async recoveryCodes(password){const result=await request('account/recovery-codes',{method:'POST',data:{password}});recoveryCodes=result.codes.length;return result.codes;},
     async recover(username,code,newPassword){await request('account/recover',{method:'POST',data:{username,code,newPassword}});user=null;approval=null;notify();},
+    async issueRecovery(id,password,confirmedIdentity){return request('admin/users/'+encodeURIComponent(id)+'/recovery',{method:'POST',data:{password,confirmedIdentity}});},
     async users(){return request('admin/users');},
     async approve(id,status){return request('admin/users/'+encodeURIComponent(id),{method:'POST',data:{status}});},
     dispose(){}

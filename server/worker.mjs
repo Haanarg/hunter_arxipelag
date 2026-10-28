@@ -1,4 +1,6 @@
-import {authReady,createAuth} from './auth.mjs';
+import {accountReadiness} from './readiness.mjs';
+import {runMaintenance} from './maintenance.mjs';
+import {createAuth} from './auth.mjs';
 import {validateSnapshot} from '../src/operation-save.mjs';
 import {validateRun,mergeRun} from '../src/operation-journal.mjs';
 import {accountAPI,access,username,alias,password} from './accounts.mjs';
@@ -13,7 +15,9 @@ async function readJSON(request,max=MAX_SAVE){
   while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;
     if(size>max){await reader.cancel();failure(413,'TOO_LARGE','Les dades superen el límit.');}chunks.push(value);}
   const data=new Uint8Array(size);let offset=0;for(const chunk of chunks){data.set(chunk,offset);offset+=chunk.length;}
-  try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(data));}catch(_){failure(400,'INVALID','JSON invàlid.');}
+  try{const value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(data));
+    if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('object required');return value;
+  }catch(_){failure(400,'INVALID','JSON invàlid.');}
 }
 function revision(request){const value=request.headers.get('X-Hunter-Revision');if(value===null||!/^\d+$/.test(value)||!Number.isSafeInteger(+value))failure(400,'INVALID','Falta una revisió vàlida.');return +value;}
 function paging(url){const offset=Number(url.searchParams.get('offset')||0);if(!Number.isInteger(offset)||offset<0||offset>1000000)failure(400,'INVALID','Paginació invàlida.');return offset;}
@@ -81,12 +85,17 @@ async function privateAPI(request,env,user,url){
   failure(404,'NOT_FOUND','Ruta no disponible.');
 }
 export default {
+  async scheduled(controller,env,ctx){
+    if(!(await accountReadiness(env)).ready)return;
+    ctx.waitUntil(runMaintenance(env).catch(()=>{console.error('No s’ha pogut completar el manteniment Hunter.');}));
+  },
   async fetch(request,env,ctx){
     const url=new URL(request.url);
     if(!url.pathname.startsWith('/api/'))return env.ASSETS.fetch(request);
     try{
-      if(url.pathname==='/api/capabilities'&&request.method==='GET')return json({accounts:authReady(env),recovery:'codes',approval:'manual',storage:'cloudflare'});
-      if(!authReady(env))failure(503,'NOT_CONFIGURED','Els comptes encara no estan activats. El desament local continua disponible.');
+      const readiness=await accountReadiness(env);
+      if(url.pathname==='/api/capabilities'&&request.method==='GET')return json({accounts:readiness.ready,reason:readiness.reason,recovery:'codes',approval:'manual',storage:'cloudflare'});
+      if(!readiness.ready)failure(503,'NOT_CONFIGURED','Els comptes encara no estan activats. El desament local continua disponible.');
       if(['POST','PUT','DELETE','PATCH'].includes(request.method)&&request.headers.get('Origin')!==env.AUTH_ORIGIN)
         failure(403,'ORIGIN','Origen no admès.');
       const auth=createAuth(env,ctx);
@@ -105,8 +114,9 @@ export default {
         const response=await auth.handler(request);
         if(!response.ok)return response;
         const data=await response.clone().json().catch(()=>null);
+        if(path==='/change-password'&&data?.user?.id)await env.DB.prepare('DELETE FROM hunter_assisted_recovery WHERE owner=?').bind(data.user.id).run();
         if(data?.user){
-          const headers=new Headers(response.headers);headers.set('Cache-Control','no-store');
+          const headers=new Headers(response.headers);headers.set('Cache-Control','no-store');headers.delete('content-length');
           return new Response(JSON.stringify({user:{id:data.user.id,name:data.user.name}}),{status:response.status,headers});
         }
         return response;
