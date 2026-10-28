@@ -52,10 +52,12 @@ window.HUNTER_UI=Object.freeze({
     function hide(){panel.style.display='none';currentMode=null}
     function show(mode){
       currentMode=mode;panel.style.display='flex';
-      resumeButton.style.display=['saves','account','history'].includes(mode)&&!getState().started?'none':'';
+      resumeButton.style.display=['saves','account','history','coop'].includes(mode)&&!getState().started?'none':'';
       resumeButton.onclick=mode==='bombtimer'?()=>actions.open('inventory'):actions.resume;
       title.textContent=mode==='bombtimer'?'Programar explosiu':mode==='map'?'Carta de navegació':mode==='inventory'?'Inventari':mode==='restart'?'Nova operació?':mode==='performance'?'Rendiment':'Operació en pausa';panel.querySelector('.card').classList.toggle('inventory-card',mode==='inventory');
-      if(mode==='history'){
+      if(mode==='coop'){
+        title.textContent='Sala cooperativa';actions.renderCoop(body,()=>currentMode==='coop');
+      }else if(mode==='history'){
         title.textContent='Estadístiques i llavors';actions.renderHistory(body,()=>currentMode==='history');
       }else if(mode==='account'){
         title.textContent='Compte i núvol';actions.renderAccount(body,()=>currentMode==='account');

@@ -96,6 +96,7 @@ async function renderAccount(body,isCurrent,recover=false){
         }}catch(error){status.textContent=error.message;}
       }
       if(state.approval==='approved'){
+        button('Obrir sala cooperativa',openCoopPanel);
         button('Sincronitzar canvis locals pendents',async()=>{await accountCloud.retry();status.textContent='Sincronització comprovada.';});
         button('Sincronitzar historial d’aquest dispositiu',async()=>{if(started)await recordJournalNow();await accountCloud.syncHistory(getOperationJournal());status.textContent='Historial sincronitzat.';});
         add('h3','Partides al núvol');
