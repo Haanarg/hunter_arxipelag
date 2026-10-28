@@ -238,3 +238,13 @@ Implementades superfícies transitables compartides: graons/rampes, molls, pisos
 Proves amb referència independent congelada del main anterior, casos de transició entre nivells, 551 punts reals de superfícies de 67/1 i els 961 de terreny de la fase 4; dos actors en Node/workerd i regressions de comptes/sales/WebSockets/desaments. No cal cap migració ni configuració manual nova.
 
 Queda: gravetat/caigudes/paracaigudes i aigua/natació; ferri/plataformes/vehicles dinàmics i IA; actualització de col·lisions; món canònic i sessió al servidor, compatibilitat dels dos clients i separació del suport visual de l’estat físic; ordres/snapshots, combat/objectius/inventari compartits, predicció/interpolació; reconnexió/pausa/amfitrió i desaments/estadístiques; matriu de llavors/escala 2, proves físiques/càrrega, quotes/retenció i les dues fallades històriques. La missió conjunta encara no es pot iniciar (`playable:false`); els altres pendents generals continuen vigents.
+
+## Cooperatiu · fase 6 (v0.6.13)
+
+Extretes les regles de gravetat/caiguda lliure, control i inèrcia del paracaigudes, dany d’impacte, llindar de natació i suport aquàtic/interiors/búnquer. El joc individual ja les reutilitza. Detecció compartida d’aterratge sobre teulades, disponible també a l’adaptador estàtic. Es preserven les equacions existents; no canvien desaments ni geometria. [Detall](docs/COOP_PHASE6.md).
+
+Validació: 6.480 passos contra una referència independent del main anterior; dany, natació, soterrani i teulades; 120 passos pel runtime real, font i paquet; 80 recorreguts de teulades reals i execució en workerd natiu. Regressions de món, sales/WebSockets, dos actors i desaments. No cal configuració manual nova.
+
+Prova addicional: `water-jumps` passa; `player-locomotion` té un fixture aïllat incomplet (`knifeEquipped` absent), amb prova i mòduls carregats idèntics al main anterior. Queda pendent juntament amb les dues incidències generals ja registrades; no es declara superada.
+
+Queda: integrar les trajectòries/transicions al tick autoritatiu; onatge/natació canònics, expulsions per explosions i plataformes/ferri/vehicles/IA dinàmics; geometria mutable; món canònic i sessió persistent al servidor amb confirmació dels dos clients i separació del LOD visual; ordres/snapshots de joc, predicció/interpolació, combat/inventari/objectius/final compartits; reconnexió/pausa/amfitrió i desaments/estadístiques; més llavors/escala 2, proves físiques i càrrega/consum, quotes/retenció, recuperació excepcional d’administradors i les dues fallades històriques. La missió continua sense ser jugable (`playable:false`); les altres fases generals mantenen els seus pendents.

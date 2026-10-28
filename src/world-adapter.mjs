@@ -1,4 +1,5 @@
-import {walkingHeightAt} from './walk-surfaces.mjs';
+import {walkingHeightAt,solidRoofAt} from './walk-surfaces.mjs';
+import {sweptRoofLanding} from './player-vertical.mjs';
 import {rawTerrainAt,levelHeight,pushWalls,pushTree} from './world-physics.mjs';
 const finite=Number.isFinite,key=(x,z)=>x+','+z;
 function number(value){if(!finite(value)||Math.abs(value)>1000000)throw new RangeError('Invalid geometry coordinate');return value;}
@@ -63,6 +64,8 @@ export function createStaticWorldAdapter(source){
     stairs:data.stairs,piers:data.piers,buildings:grids.buildings.get(key(Math.floor(x/96),Math.floor(z/96)))||[],
     bunker:data.bunker,terminalRamps:data.terminalRamps},x,z,previous);}
   return Object.freeze({kind:'static-surfaces',limit:halfSize-2,heightAt,groundAt,resolveBody,
+    roofLanding(from,to){return sweptRoofLanding(from,to,{solidRoofAt,
+      buildingCandidates:(x,z)=>grids.buildings.get(key(Math.floor(x/96),Math.floor(z/96)))||[]});},
     // Static support only: no gravity, water motion or moving platforms yet.
     resolve(previous,candidate){const p=resolveBody(previous,candidate);p.y=groundAt(p.x,p.z,previous.y);return p;},
     snapshot:()=>structuredClone(data)});

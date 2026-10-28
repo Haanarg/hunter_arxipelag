@@ -35,6 +35,10 @@ const assert=require('node:assert/strict');
  for(const b of data.buildings.slice(0,80))for(const previous of [b.fy,b.fy+b.h+2])probes.push([b.x,b.z,previous]);
  if(data.bunker){const b=data.bunker;for(const previous of [b.fy,b.basement.floorY])probes.push([b.x,b.z,previous],[b.x+5,b.z+5,previous]);}
  for(const [x,z,previous] of probes)assert.equal(adapter.groundAt(x,z,previous),surfaceReference.groundAt(x,z,previous),'actual world surface parity');
+ const verticalReference=require('./fixtures/player-vertical-v0612.cjs'),roofWorld={solidRoofAt:surfaceReference.solidRoofAt,
+   buildingCandidates:(x,z)=>{g.context.probe={x,z};return g.run('buildingCandidates(probe.x,probe.z)');}};
+ const roofSweeps=data.buildings.slice(0,40).flatMap(b=>[0,b.w/2].map(dx=>({from:{x:b.x+dx,z:b.z,y:b.fy+b.h+30},to:{x:b.x+dx+2,z:b.z,y:b.fy-2}})));
+ for(const {from,to} of roofSweeps)assert.equal(adapter.roofLanding(from,to),verticalReference.roof(from,to,roofWorld),'real roof landing against independent legacy functions');
  const legacy={...data,format:1};const legacyAdapter=createStaticWorldAdapter(legacy);assert.equal(legacyAdapter.snapshot().format,2);assert.equal(legacyAdapter.snapshot().stairs.length,0,'format 1 retains terrain-only meaning');
  const roundtrip=adapter.snapshot();roundtrip.walls[0].open=!roundtrip.walls[0].open;assert.notEqual(roundtrip.walls[0].open,adapter.snapshot().walls[0].open,'snapshot isolation');
  assert.throws(()=>normalizeWorldGeometry({...data,stairs:[{...data.stairs[0],length:0}]}));
@@ -51,11 +55,12 @@ const assert=require('node:assert/strict');
  import {createPlayerSimulation} from './src/player-simulation.mjs';
  export default {async fetch(request){const body=await request.json(),world=createStaticWorldAdapter(body.geometry),sim=createPlayerSimulation({epoch:'native',actors:body.actors,limit:world.limit,world});
  for(const p of body.actors)sim.accept(p.id,{protocol:1,epoch:'native',sequence:1,input:{forward:1,turn:0,strafe:0,run:false}});
- return Response.json({heights:body.points.map(([x,z])=>world.heightAt(x,z)),state:sim.step()});}};`,resolveDir:require('node:path').resolve(__dirname,'..')},bundle:true,write:false,format:'esm',platform:'browser'});
+ return Response.json({heights:body.points.map(([x,z])=>world.heightAt(x,z)),roofs:body.roofSweeps.map(({from,to})=>world.roofLanding(from,to)),state:sim.step()});}};`,resolveDir:require('node:path').resolve(__dirname,'..')},bundle:true,write:false,format:'esm',platform:'browser'});
  const mf=new Miniflare({modules:true,script:compiled.outputFiles[0].text,compatibilityDate:'2026-08-06'});
- try{const points=[[original.x,original.z],[0,0],[-2400,2400]],response=await mf.dispatchFetch('http://localhost/',{method:'POST',body:JSON.stringify({geometry:data,actors,points})});
+ try{const points=[[original.x,original.z],[0,0],[-2400,2400]],response=await mf.dispatchFetch('http://localhost/',{method:'POST',body:JSON.stringify({geometry:data,actors,points,roofSweeps})});
  assert.equal(response.status,200,await response.clone().text());const native=await response.json();
  for(let i=0;i<points.length;i++)assert.ok(Math.abs(native.heights[i]-adapter.heightAt(...points[i]))<1e-9,'workerd physical terrain parity');
+ for(let i=0;i<roofSweeps.length;i++){const expected=adapter.roofLanding(roofSweeps[i].from,roofSweeps[i].to);if(expected===null)assert.equal(native.roofs[i],null);else assert.ok(Math.abs(native.roofs[i]-expected)<1e-9,'workerd roof sweep parity');}
  assert.equal(native.state.players.length,2);for(const p of native.state.players)assert.ok(Math.abs(p.y-adapter.groundAt(p.x,p.z,p.y))<1e-9);
  }finally{await mf.dispose();}
  console.log('world adapter: actual seed 67, '+checked+' terrain points, legacy platforms/walls/trees/palms and ' + probes.length + ' walking-surface probes, DTO roundtrip, validation/index limits, two-actor real-geometry simulation in Node and native workerd passed');

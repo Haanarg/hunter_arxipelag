@@ -2443,21 +2443,8 @@ function removeParachuteVisual(){if(parachuteVisual){world.remove(parachuteVisua
 // Detecta el primer sostre travessat durant la caiguda, també quan el
 // desplaçament horitzontal canvia de teulada dins d'un sol fotograma.
 function parachuteRoofLanding(x0,z0,y0,x1,z1,y1){
-  if(y1>=y0)return null;
-  const steps=Math.max(1,Math.ceil(Math.hypot(x1-x0,z1-z0)/.65)),
-        fall=y0-y1;
-  let hit=null;
-  for(let i=0;i<=steps;i++){
-    const q=i/steps,x=x0+(x1-x0)*q,z=z0+(z1-z0)*q,
-          candidateY=y0-fall*q;
-    for(const b of buildingCandidates(x,z)){
-      const roof=solidRoofAt(b,x,z);
-      if(!roof||y0<roof.top-.15||y1>roof.top+.05)continue;
-      // No aterrar abans que els peus arribin a la coberta.
-      if(candidateY>=roof.top-.08&&(!hit||roof.top>hit))hit=roof.top;
-    }
-  }
-  return hit;
+  return window.HUNTER_PLAYER_SIMULATION.sweptRoofLanding(
+    {x:x0,z:z0,y:y0},{x:x1,z:z1,y:y1},{buildingCandidates,solidRoofAt});
 }
 // Compartida per al salt voluntari i per a la destrucció de l'helicòpter.
 // La caiguda conserva l'altura i la inèrcia; el dany es calcula en aterrar.
@@ -3462,29 +3449,17 @@ else{P.hd+=tr*dt*2.2;if(cheats.fly){
   P.y=cheatFlightY;
 }else if(playerFall){
   const fall=playerFall,oldX=P.x,oldZ=P.z,oldY=fall.y;
-  fall.t+=dt;fall.vy-=fall.parachute?10*dt:24*dt;
-  if(fall.parachute){
-    fall.vy=Math.max(-4.8,fall.vy);
-    // Inclinació suau amb el joystick/tecles, conservant una mica d'inèrcia.
-    const desiredX=-Math.sin(P.hd)*f*2.8+Math.cos(P.hd)*strafe*2.2,
-          desiredZ=-Math.cos(P.hd)*f*2.8-Math.sin(P.hd)*strafe*2.2,
-          blend=1-Math.exp(-2.2*dt);
-    fall.vx+=(desiredX-fall.vx)*blend;fall.vz+=(desiredZ-fall.vz)*blend;
-    fall.leanF+=(f-fall.leanF)*blend;
-    fall.leanS+=(strafe-fall.leanS)*blend;
-  }else{fall.vx*=Math.exp(-.18*dt);fall.vz*=Math.exp(-.18*dt)}
-  P.x=Math.max(-lim,Math.min(lim,P.x+fall.vx*dt));
-  P.z=Math.max(-lim,Math.min(lim,P.z+fall.vz*dt));
-  fall.y+=fall.vy*dt;
+  const airborne=window.HUNTER_PLAYER_SIMULATION.stepAirborne(P,fall,{forward:f,strafe},dt,lim);
+  Object.assign(fall,airborne.fall);P.x=airborne.x;P.z=airborne.z;
   const water=wy(P.x,P.z,t),shaft=fall.kind==='shaft',
         roof=shaft?null:parachuteRoofLanding(oldX,oldZ,oldY,P.x,P.z,fall.y),
         landing=shaft?groundAt(P.x,P.z,fall.y):
           Math.max(hAt(P.x,P.z),water-1.4,roof??-Infinity);
   P.y=fall.y;
   if(fall.y<=landing&&(!shaft||oldY>=landing-.08)){
-    P.y=landing;const fallH=fall.startHeight,impact=Math.max(0,-fall.vy),
+    P.y=landing;const fallH=fall.startHeight,
       waterLanding=roof===null&&water>hAt(P.x,P.z)+1.5,
-      dmg=fall.parachute?0:wholeDamage(Math.min(COMBAT_BALANCE.player,Math.max(0,((fallH-4)*(waterLanding?.42:.9)+Math.max(0,impact-12)*(waterLanding?.45:.8))*.2)));
+      dmg=window.HUNTER_PLAYER_SIMULATION.fallLandingDamage(fall,{water:waterLanding,maxHealth:COMBAT_BALANCE.player});
     removeParachuteVisual();playerFall=null;
     if(dmg>0)hurtP(dmg,false,{type:'fall',x:P.x,y:P.y+8,z:P.z});
     if(!shaft){msg=dmg===0&&fallH>4?'Has aterrat amb seguretat.':waterLanding?'Has caigut a l’aigua.':'Has impactat contra el terra!';msgT=2.5;}
@@ -3544,7 +3519,9 @@ if(ib!==previousInterior)worldVisualTick=0;
 const floor=ib&&ib.kind!=='enemy_bunker'?Math.max(ib.fy+.3,groundAt(P.x,P.z,P.y)):groundAt(P.x,P.z,P.y),
       surface=wy(P.x,P.z,t),
       insideBasement=playerInsideBunkerBasement(P.x,P.z,P.y);
-swimming=!cheats.fly&&!cv&&!ib&&!insideBasement&&!playerFall&&floor<surface-2.1;
+const support=window.HUNTER_PLAYER_SIMULATION.waterSupport({floor,surface,
+  flight:!!cheats.fly,vehicle:!!cv,interior:!!ib,basement:!!insideBasement,falling:!!playerFall});
+swimming=support.swimming;
 if(swimming)playerCrouched=false;
 document.body.classList.toggle('player-swimming',canRun&&swimming);
 if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);
@@ -3554,7 +3531,7 @@ if(!playerFall&&!cheats.fly){
   // en baixar una pendent, perquè els punts del darrere són més alts.
   // Dins el búnquer, la superfície marina no és una superfície física:
   // el nivell del terra de l'habitació ha de guanyar sempre.
-  P.y=insideBasement?floor+.06:ib?floor:Math.max(floor+.06,surface-2.1);
+  P.y=support.y;
 }
 // Sons audibles per la IA: passos, braçades i motors. El volum de l'àudio
 // real no intervé en els radis, i no emetem res si el jugador està aturat.

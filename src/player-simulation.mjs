@@ -1,4 +1,5 @@
 // Shared, renderer-free rules. World geometry is supplied by a trusted adapter.
+export {stepAirborne,fallLandingDamage,waterSupport,sweptRoofLanding} from './player-vertical.mjs';
 export const COOP_PROTOCOL=1,COOP_TICK_RATE=30;
 const finite=Number.isFinite,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function wholeDamage(value){return finite(value)&&value>0?Math.ceil(value):0;}
