@@ -710,7 +710,7 @@ function weaponAimClear(x,y,z,tx,ty,tz,ignoreWall=null,ignoreBuilding=null,check
   // de mostres petites a cada tret de metralladora de l'helicòpter.
   const mx=(x+tx)/2,mz=(z+tz)/2,reach=Math.hypot(tx-x,tz-z)/2+3;
   for(const w of wallCandidates(mx,mz,reach)){
-    if(w===ignoreWall||w.owner===ignoreBuilding||w.open||w.barbed)continue;
+    if(w===ignoreWall||(ignoreBuilding&&w.owner===ignoreBuilding)||w.open||w.barbed)continue;
     const t=segmentAabbT(x,y,z,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);
     if(t!=null&&t<.98)return false;
   }
@@ -735,9 +735,8 @@ function weaponAimClear(x,y,z,tx,ty,tz,ignoreWall=null,ignoreBuilding=null,check
   }
   return true;
 }
-// Bazuca: adquisició de fins a 185 m i ±35° en horitzontal.
-// No limitam la diferència d'altura: torres i objectius elevats dins
-// d'aquest sector són elegibles i el míssil es corregeix també en Y.
+// Bazuca: fins a 185 m, ±47° horitzontals i ±52° verticals.
+// Les torres altes i els objectius per sota de la mira són elegibles.
 const BAZOOKA_AIM_RANGE=185,BAZOOKA_AIM_CONE=.68,BAZOOKA_AIM_VERTICAL=.90;
 // Punt d'intercepció per a patrulleres mòbils, amb la velocitat real de
 // cada arma: les bales ràpides també han d'arribar al centre del casc.
@@ -834,13 +833,13 @@ function combatBoatRocketAim(v,focus=null){
         x=v.x+fx*6,y=v.o.position.y+1.2,z=v.z+fz*6,
         base=Math.hypot(1,.015);
   return {x,y,z,direction:autoAimWeaponShot(x,y,z,
-    fx/base,.015/base,fz/base,105,.82,'heavy',focus,0,.8)};
+    fx/base,.015/base,fz/base,105,.82,'heavy',focus,68*HEAVY_SHOT_SPEED_FACTOR,.8)};
 }
 function combatHeliMissileAim(v,focus=null){
   const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),horizontal=Math.cos(HELI_MISSILE_ANGLE),
         x=v.x+fx*5,y=v.o.position.y+1,z=v.z+fz*5;
   return {x,y,z,direction:autoAimWeaponShot(x,y,z,fx*horizontal,-Math.sin(HELI_MISSILE_ANGLE),
-    fz*horizontal,HELI_MISSILE_RANGE,.70,'heavy',focus,0,.97)};
+    fz*horizontal,HELI_MISSILE_RANGE,.70,'heavy',focus,72*HEAVY_SHOT_SPEED_FACTOR,.97)};
 }
 // Retícula del bazooka: empra EXACTAMENT les coordenades i el con de
 // selecció d'autoapuntat del tret real. Blanca si apunta lliurement,
@@ -955,7 +954,7 @@ function updateBazookaReticle(dt){
       locked=!!focus.target;
     }else{
       const fx=-Math.sin(P.hd),fz=-Math.cos(P.hd),
-            ox=P.x+fx*1.35,oy=P.y+1.9,oz=P.z+fz*1.35,
+            ox=P.x+fx*1.35,oy=P.y+1.9-(playerCrouched?.48:0),oz=P.z+fz*1.35,
             base=Math.hypot(1,.01),focus={},
             direction=autoAimWeaponShot(ox,oy,oz,fx/base,.01/base,fz/base,
               BAZOOKA_AIM_RANGE,BAZOOKA_AIM_CONE,'heavy',focus,72*HEAVY_SHOT_SPEED_FACTOR,BAZOOKA_AIM_VERTICAL);
