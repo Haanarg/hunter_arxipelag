@@ -4,7 +4,7 @@ window.HUNTER_ENEMY_ACCURACY=(()=>{
   const profiles=Object.freeze({
     rifle:1,elite:.8,pistol:1.15,jeep:1.15,tower:1.1,
     tankette:1.4,tank:2.5,towerHeavy:2.2,bazooka:2.5,
-    marineMG:2.1,marineRocket:2
+    marineMG:2.1,marineRocket:2.4
   });
   const explosive=new Set(['tank','towerHeavy','bazooka','marineRocket']);
   const difficultyScale=difficulty=>{
