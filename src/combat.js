@@ -716,7 +716,7 @@ function weaponAimClear(x,y,z,tx,ty,tz,ignoreWall=null,ignoreBuilding=null,check
 // Bazuca: adquisició de fins a 185 m i ±35° en horitzontal.
 // No limitam la diferència d'altura: torres i objectius elevats dins
 // d'aquest sector són elegibles i el míssil es corregeix també en Y.
-const BAZOOKA_AIM_RANGE=185,BAZOOKA_AIM_CONE=.82;
+const BAZOOKA_AIM_RANGE=185,BAZOOKA_AIM_CONE=.68,BAZOOKA_AIM_VERTICAL=.90;
 // Punt d'intercepció per a patrulleres mòbils, amb la velocitat real de
 // cada arma: les bales ràpides també han d'arribar al centre del casc.
 function bazookaInterceptPoint(e,originX,originY,originZ,targetY,speed){
@@ -735,40 +735,70 @@ function bazookaInterceptPoint(e,originX,originY,originZ,targetY,speed){
 function marineHullTargetY(e){
  return (e.o?.position?.y??0)+.48*VS.llanxa;
 }
-function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus=null,projectileSpeed=0){
-  if(focus){focus.target=null;focus.point=null}
-  let bestPriority=Infinity,bestDist=range,chosen=null;
+// L'adquisició comprova el con horitzontal i el vertical per separat.
+// Com que la mira del jugador és horitzontal al tanc i picada a l'heli,
+// la vertical es compara amb el pendent ORIGINAL de cada arma.
+function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus=null,
+    projectileSpeed=0,verticalCone=Math.PI/2){
+  if(focus){focus.target=null;focus.point=null;focus.kind=null}
+  const heavy=shotClass==='heavy',forward=Math.hypot(fx,fz),
+        basePitch=Math.atan2(fy,forward);
+  let bestPriority=Infinity,bestScore=Infinity,chosen=null;
+  const consider=(obj,kind,priority,tx,ty,tz,ignoreWall=null,ignoreBuilding=null)=>{
+    if(priority>bestPriority||!Number.isFinite(ty))return;
+    const dx=tx-x,dy=ty-y,dz=tz-z,
+          horizontal=Math.hypot(dx,dz),distance=Math.hypot(dx,dy,dz);
+    if(horizontal<.15||distance>range||forward<.001)return;
+    const alignment=(dx*fx+dz*fz)/(horizontal*forward);
+    if(alignment<cone)return;
+    const pitchError=Math.abs(Math.atan2(dy,horizontal)-basePitch);
+    if(pitchError>verticalCone)return;
+    // Les armes pesades no adquireixen dianes tapades pel relleu.
+    if(!weaponAimClear(x,y,z,tx,ty,tz,ignoreWall,ignoreBuilding,heavy))return;
+    // Dins una prioritat, apuntar primer al blanc més centrat i proper.
+    const score=heavy?
+      Math.acos(Math.max(-1,Math.min(1,alignment)))*45+pitchError*23+distance*.08:
+      distance;
+    if(priority===bestPriority&&score>=bestScore)return;
+    bestPriority=priority;bestScore=score;
+    chosen=[dx/distance,dy/distance,dz/distance];
+    if(focus){focus.target=obj;focus.point={x:tx,y:ty,z:tz};focus.kind=kind}
+  };
   for(const e of E){
     if(e.destroyed||e.hp<=0||shotClass==='light'&&e.t==='torre')continue;
-    const priority=weaponTargetPriority(e);
+    const priority=weaponTargetPriority(e,shotClass);
     if(priority>=3||priority>bestPriority)continue;
-    const dx=e.x-x,dz=e.z-z,dist=Math.hypot(dx,dz),forward=Math.hypot(fx,fz);
-    if(Math.hypot(dx,dz)<=.15||(priority===bestPriority&&dist>=bestDist))continue;
     const modelY=e.o?.position?.y??(e.gy??0),
-          // El model pot tenir una cota desfasada respecte del terreny
-          // (sobretot en pendents i cims). No apuntis sota els peus,
-          // PERÒ tampoc a la superfície quan el general és al soterrani.
-          groundTarget=e.t==='soldat'||e.t==='general'||e.t==='jeep'||e.t==='tanqueta'||e.t==='tanc',
-          underground=!!e.basement&&
-            (e.gy??modelY)<e.basement.fy-3.9,
+          groundTarget=['soldat','general','jeep','tanqueta','tanc'].includes(e.t),
+          underground=!!e.basement&&(e.gy??modelY)<e.basement.fy-3.9,
           baseY=underground?(e.gy??modelY):
             groundTarget?Math.max(modelY,hAt(e.x,e.z),e.gy??-Infinity):modelY,
           ty=e.t==='patrulla_marina'?marineHullTargetY(e):
-            baseY+(e.t==='torre'?4.5:e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:1.5),
-          dy=ty-y,len=Math.hypot(dx,dy,dz);
-    if(len>range)continue;
-    // Triam la diana pel con HORITZONTAL. Un enemic que és al davant
-    // però molt més amunt/avall continua sent elegible; el vector
-    // final sí que incorpora tota la diferència vertical.
-    if(len<=.001||forward<.001||(dx*fx+dz*fz)/(dist*forward)<cone)continue;
-    if(!weaponAimClear(x,y,z,e.x,ty,e.z))continue;
-    const lead=projectileSpeed>0&&e.t==='patrulla_marina'
-      ?bazookaInterceptPoint(e,x,y,z,ty,projectileSpeed):{x:e.x,y:ty,z:e.z},
-          leadX=lead.x-x,leadY=lead.y-y,leadZ=lead.z-z,
-          length=Math.hypot(leadX,leadY,leadZ);
-    bestPriority=priority;bestDist=dist;
-    chosen=[leadX/length,leadY/length,leadZ/length];
-    if(focus){focus.target=e;focus.point={x:e.x,y:ty,z:e.z}}
+            baseY+(e.t==='torre'?TOWER_CABIN_CENTER_Y:
+              e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:1.5),
+          aim=projectileSpeed>0&&e.t==='patrulla_marina'?
+            bazookaInterceptPoint(e,x,y,z,ty,projectileSpeed):{x:e.x,y:ty,z:e.z};
+    consider(e,'enemy',priority,aim.x,aim.y,aim.z);
+  }
+  // Cap blanc militar visible dins el con? Les armes pesades
+  // poden buscar una bretxa a la filferrada, vehicles buits o edificis.
+  if(heavy&&!chosen){
+    const fallbackPriority=3;
+    for(const w of wallCandidates(x,z,range)){
+      if(!w.barbed||w.open||w.hp<=0)continue;
+      consider(w,'fence',fallbackPriority,w.cx??(w.x0+w.x1)/2,
+        Math.min(w.y1-.35,Math.max(w.y0+.6,(w.y0+w.y1)/2)),
+        w.cz??(w.z0+w.z1)/2,w);
+    }
+    for(const v of vehicleCandidatesAt(x,z,range,true)){
+      if(v.destroyed||v===cv)continue;
+      const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
+      consider(v,'vehicle',fallbackPriority,v.x,vy+Math.min(2.3,vehicleRadius(v.t)*.3),v.z);
+    }
+    for(const b of buildingCandidates(x,z,range)){
+      if(b.rb||b.rhp<=0)continue;
+      consider(b,'building',fallbackPriority,b.x,(b.fy??hAt(b.x,b.z))+b.h*.55,b.z,null,b);
+    }
   }
   return chosen||[fx,fy,fz];
 }
@@ -782,13 +812,13 @@ function combatBoatRocketAim(v,focus=null){
         x=v.x+fx*6,y=v.o.position.y+1.2,z=v.z+fz*6,
         base=Math.hypot(1,.015);
   return {x,y,z,direction:autoAimWeaponShot(x,y,z,
-    fx/base,.015/base,fz/base,105,.94,'heavy',focus)};
+    fx/base,.015/base,fz/base,105,.82,'heavy',focus,0,.8)};
 }
 function combatHeliMissileAim(v,focus=null){
   const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),horizontal=Math.cos(HELI_MISSILE_ANGLE),
         x=v.x+fx*5,y=v.o.position.y+1,z=v.z+fz*5;
   return {x,y,z,direction:autoAimWeaponShot(x,y,z,fx*horizontal,-Math.sin(HELI_MISSILE_ANGLE),
-    fz*horizontal,HELI_MISSILE_RANGE,.88,'heavy',focus)};
+    fz*horizontal,HELI_MISSILE_RANGE,.70,'heavy',focus,0,.97)};
 }
 // Retícula del bazooka: empra EXACTAMENT les coordenades i el con de
 // selecció d'autoapuntat del tret real. Blanca si apunta lliurement,
@@ -899,7 +929,7 @@ function updateBazookaReticle(dt){
             ox=P.x+fx*1.35,oy=P.y+1.9,oz=P.z+fz*1.35,
             base=Math.hypot(1,.01),focus={},
             direction=autoAimWeaponShot(ox,oy,oz,fx/base,.01/base,fz/base,
-              BAZOOKA_AIM_RANGE,BAZOOKA_AIM_CONE,'heavy',focus,72*HEAVY_SHOT_SPEED_FACTOR);
+              BAZOOKA_AIM_RANGE,BAZOOKA_AIM_CONE,'heavy',focus,72*HEAVY_SHOT_SPEED_FACTOR,BAZOOKA_AIM_VERTICAL);
       hit=focus.point||bazookaFirstSolidHit(ox,oy,oz,
         direction[0],direction[1],direction[2]);
       locked=!!focus.target;
@@ -928,8 +958,10 @@ function updateBazookaReticle(dt){
   bazookaReticleElement.style.top=(sy*100)+'%';
 }
 // Conservem el punt de sortida horitzontal del tanc i la tanqueta (0 graus).
-function autoAimArmoredShot(x,y,z,fx,fz,range,shotClass='heavy',projectileSpeed=0){
-  return autoAimWeaponShot(x,y,z,fx,0,fz,range,.97,shotClass,null,projectileSpeed);
+function autoAimArmoredShot(x,y,z,fx,fz,range,shotClass='heavy',projectileSpeed=0,focus=null){
+  const heavy=shotClass==='heavy';
+  return autoAimWeaponShot(x,y,z,fx,0,fz,range,heavy?.73:.97,
+    shotClass,focus,projectileSpeed,heavy?.68:Math.PI/2);
 }
 // Rifle: sortida REAL des de l'extrem del canó. En mode mira el model
 // invisible s'orienta com l'òptica; P.hd i el moviment no canvien.
@@ -1081,7 +1113,7 @@ else if(!cv&&sniperEquipped&&inv.franctirador){
   msg='Rifle: '+sniperAmmo+' cartutxos.';msgT=1.5;
 }
 else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}
-else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9-(playerCrouched?.48:0),z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,BAZOOKA_AIM_RANGE,BAZOOKA_AIM_CONE,'heavy',null,72*HEAVY_SHOT_SPEED_FACTOR);shoot(x,y,z,ax,ay,az,72,COMBAT_BALANCE.weapons.bazooka,18,'pb',mS,3);Pj[Pj.length-1].life=3.8;Pj[Pj.length-1].weapon='bazooka';msg='Bazooka: '+(inv.bazooka||0)+' coets restants.';msgT=2;setDis(false)}
+else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9-(playerCrouched?.48:0),z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,BAZOOKA_AIM_RANGE,BAZOOKA_AIM_CONE,'heavy',null,72*HEAVY_SHOT_SPEED_FACTOR,BAZOOKA_AIM_VERTICAL);shoot(x,y,z,ax,ay,az,72,COMBAT_BALANCE.weapons.bazooka,18,'pb',mS,3);Pj[Pj.length-1].life=3.8;Pj[Pj.length-1].weapon='bazooka';msg='Bazooka: '+(inv.bazooka||0)+' coets restants.';msgT=2;setDis(false)}
 else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5-(playerCrouched?.48:0),z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,75,.97,'light',null,130);shoot(x,y,z,ax,ay,az,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE)}
 else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}
 function segmentAabbT(x0,y0,z0,x1,y1,z1,minX,maxX,minY,maxY,minZ,maxZ){
