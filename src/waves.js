@@ -1,5 +1,7 @@
 // One immutable wave model drives both CPU samples and the vertex shader.
-window.HUNTER_WAVES=(()=>{
+// Bootstrap supplies the shared module; keep the legacy factory for standalone
+// model/preview pages which load this classic script without bootstrap.
+window.HUNTER_WAVES=window.HUNTER_CANONICAL_WATER?.waveModel||(()=>{
   const components=Object.freeze([
     Object.freeze({kind:'sin',x:.03,z:0,speed:1.2,amplitude:.9}),
     Object.freeze({kind:'cos',x:0,z:.04,speed:.9,amplitude:.9}),
