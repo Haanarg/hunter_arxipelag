@@ -35,6 +35,11 @@ assert.equal(ctx.radius(tower),2.05);
 ctx.E=[rifle,rocket,tank];assert.strictEqual(acquire().focus.target,rocket);
 ctx.E=[rifle,tank];assert.strictEqual(acquire().focus.target,rifle);
 ctx.E=[boat,rifle];assert.strictEqual(acquire().focus.target,boat);
+assert.strictEqual(acquire(.73,.97,'attackCannon').focus.target,boat,
+  'heli cannon prioritizes vulnerable naval patrols');
+ctx.E=[tower,rocket,rifle];
+assert.strictEqual(acquire(.73,.97,'attackCannon').focus.target,rocket,
+  'heli cannon prioritizes rocket soldiers but ignores armored watchtowers');
 ctx.E=[soldier(36,-42,{rocketSoldier:true})];
 assert.equal(acquire().focus.kind,'enemy','wide horizontal cone selects dangerous soldier');
 assert.equal(acquire(.97).focus.target,null,'old narrow cone misses angled enemy');
