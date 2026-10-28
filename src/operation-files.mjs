@@ -1,4 +1,4 @@
-import {validateSnapshot} from './operation-save.mjs?v=0.6.23';
+import {validateSnapshot} from './operation-save.mjs?v=0.6.25';
 
 export const SAVE_FILE_TYPE='hunter-arxipelag-operation';
 export const SAVE_FILE_VERSION=1;

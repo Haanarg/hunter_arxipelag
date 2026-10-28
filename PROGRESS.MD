@@ -1,16 +1,18 @@
 # HUNTER · ARXIPÈLAG — progrés de les millores
 
-## Estat actual · v0.6.23
+## Estat actual · v0.6.25
 
-**Publicació:** la versió del codi d’aquesta fase és v0.6.23. Integració a `main` i desplegament amb Cloudflare Builds; les comprovacions de producció es fan separadament de les proves locals.
+**Publicació:** la versió del codi d’aquesta fase és v0.6.25. Integració a `main` i desplegament amb Cloudflare Builds; les comprovacions de producció es fan separadament de les proves locals.
 
-**Primera missió cooperativa jugable: Relleu d’emergència**, per a dos comptes aprovats. Inici confirmat pels dos clients, moviment/col·lisions autoritatius, terminals simultanis, extracció/victòria, pausa per desconnexió i recuperació de checkpoint. Vista 3D provisional amb alternativa Canvas i controls tàctils. Des de v0.6.20, portes compartides amb F / Porta, col·lisions dinàmiques i estat persistent en reconnectar. [Instruccions, validació i límits](docs/COOP_PLAYABLE.md).
+**Primera missió cooperativa jugable: Relleu d’emergència**, per a dos comptes aprovats. Inici confirmat pels dos clients, moviment/col·lisions autoritatius, terminals simultanis, extracció/victòria, pausa per desconnexió i recuperació de checkpoint. Vista 3D provisional amb alternativa Canvas i controls tàctils. Des de v0.6.20, portes compartides (actualment E / Acció), col·lisions dinàmiques i estat persistent en reconnectar. [Instruccions, validació i límits](docs/COOP_PLAYABLE.md).
 
 Des de v0.6.21, cada jugador té **inventari independent** de bales, granades i disfressa, recollida exclusiva de paquets, capacitats, equipament de disfressa visible i persistència en reconnectar/reiniciar durant la mateixa versió. Ordres autoritzades per sessió, idempotència i desament abans de confirmar.
 
 Des de v0.6.22, **recollida automàtica per contacte** (sense botó R), primer contacte resolt pel servidor, i **G / Deixar** amb selector de bales, granada o disfressa per passar objectes al company. Els objectes deixats són compartits i persistents dins del checkpoint temporal.
 
 Des de v0.6.23, **combat bàsic autoritatiu contra dues dianes opcionals**: X / Disparar davant teu i B / Granada, amb munició individual, cadència, impactes, trajectòria/detonació i dany amb obstacles. Efectes i vida de les dianes compartits en 3D/Canvas. Les dianes no són enemics amb IA; els dos terminals i l’extracció continuen sent l’objectiu de la missió.
+
+Des de v0.6.25, **F dispara i E és l’acció contextual (porta o terminal)**. Les dues dianes s’han convertit en guàrdies amb patrulla, alerta, atacs i dany als jugadors. La disfressa redueix la detecció de 18 a 4 m; atacar genera alerta. La vida dels dos jugadors és visible i perdre’n un fa fracassar la missió.
 
 L’usuari ha prioritzat la jugabilitat sobre l’estètica. Aquest és un mode reduït de base, no la campanya completa amb combat/vehicles. Els apartats antics que diuen «no jugable» descriuen l’estat de cada fase històrica. Els pendents generals i la fase 1 tancada per l’usuari es conserven.
 
@@ -367,3 +369,35 @@ Les bales i granades es poden recollir però encara no gastar: no s’ha present
 ### Registre de publicació de la fase anterior
 
 **Publicació:** codi i proves v0.6.22 a `main` (commit `ce1a81c916e88fd462c6ab3b6641c4ef4bd47ce6`). Desplegament de producció confirmat amb èxit: [build cb293c90-e9a4-4465-96c3-0cf753b588f8](https://dash.cloudflare.com/e8c1784f0b4c91e60ee62af2e3dae4f3/workers/services/view/hunter-arxipelag/production/builds/cb293c90-e9a4-4465-96c3-0cf753b588f8), Version ID `23a738eb-7db8-4e36-9ee0-b503f413d369`. Versió pública i HTML cooperatiu verificats. El primer build (`393d617d-e19e-484f-8398-403ea6180a19`) havia fallat sense motiu a GitHub; el desplegament posterior ha reeixit, sense canvis de codi ni configuració. La causa del primer error no s’ha determinat.
+
+
+## Cooperatiu · fase 16 · Guàrdies, dany i controls (v0.6.25)
+
+- F / Disparar, com al joc individual; E / Acció contextual obre/tanca portes o activa el terminal. X ja no dispara. Textos, botons i proves de teclat actualitzats.
+- Dos guàrdies de 12 PV als recorreguts dels terminals. Patrullen a 2 m/s entre punts del trajecte verificat, amb col·lisions i suport de terra del servidor. Quan detecten algú s’aturen i l’apunten.
+- Percepció bàsica de 360° amb abast 18 m, línia de visió bloquejada per parets/portes/sostres/pisos. Disfressa: 4 m mentre no hi ha alarma. Disparar/llançar treu la disfressa i alerta guàrdies a menys de 35 m durant 6 s; explosions també alerten. El soroll pot alertar darrere una paret però no permet disparar-hi a través.
+- Un segon mínim d’alerta visible abans del tret, després mínim 90 ticks (3 s) entre atacs. Dany `ceil(2*dificultat)`, aplicat pel servidor a un jugador visible. Sense contacte durant 4 s: cerca estàtica i retorn a patrulla. No hi ha persecució ni cerca amb navegació fora del recorregut.
+- Guàrdies feribles amb pistola/granades; els eliminats no ataquen. Sense foc amic ni autodany de granades. Vida 0 d’un jugador finalitza la missió; el cop fatal es resol abans d’adjudicar activació/extracció. Reanimació encara pendent.
+- Vida dels dos jugadors al panell, colors d’alerta/atac i orientació dels guàrdies a la vista 3D; representació Canvas equivalent. Persistència d’estat de patrulla, salut, focus, memòria i cadència dins del checkpoint. Pausa també congela la IA.
+- Proves: percepció/cobertura, patrulla, disfressa/alarma, avís/cadència/dany, guàrdia eliminat, pausa, restauració, dany fatal abans de victòria i F/E sense conflicte. Regressions de missió/inventari/portes/combat i dues sessions locals natives. GPU/Android i dos comptes físics continuen pendents.
+
+### Què queda després d’aquesta fase
+
+1. Ferits i reanimació cooperativa, tractament de caigudes i retorn al joc; resum i equilibri de missió.
+2. IA ampliada: visió direccional, persecució/cerca amb navegació, coordinació i integració amb els enemics complets del joc individual.
+3. Més armes (inclòs fusell d’assalt), selecció/recàrrega, equipament i botí de campanya.
+4. Vehicles, món complet, destrucció i objectius de campanya, preservant RNG.
+5. Desaments cooperatius permanents, migracions, estadístiques i historial als comptes.
+6. Prova física amb dos navegadors/comptes, GPU/Android, controls/rendiment, àudio i acabat visual; errors històrics de fixtures/escala 2 documentats.
+
+
+## Portes contextuals als dos modes · v0.6.25
+
+- E / Acció obre i tanca portes. F es conserva per disparar. Un sol botó contextual al cooperatiu: icona de porta i Obrir/Tancar a prop d’una porta; mà per mantenir Activar al terminal propi. El terminal té prioritat si els dos contextos coincideixen. O i X no fan drecera de porta/tret.
+- Mode individual: les portes deixen d’obrir-se/tancar-se per proximitat. E i el botó d’acció amb icona SVG de porta alternen estat, que es conserva en allunyar-se. Búnquer i portes interiors també són manuals i mantenen la seva animació; la porta principal conserva els 10 s, iniciats per E, i acaba el moviment encara que el jugador marxi. Hangars permanentment oberts no mostren acció.
+- En un vehicle, E continua baixant-ne; a peu es prioritza una porta operable sobre vehicles propers i la resta d’accions. Sense porta, es mantenen les accions habituals i la motxilla. Col·lisions i alçada limiten la interacció; no es tanca sobre jugador, soldat o vehicle.
+- Desaments: `desiredOpen` es captura com a estat de paret; els desaments antics sense aquest camp recuperen la intenció a partir d’obertura/progrés. No es canvia ni la versió del generador ni l’esquema de desament. Les portes destruïdes continuen fora de les col·lisions.
+- Proves de món individual real amb teclat/tàctil/icona, proximitat, ocupació, animació del búnquer, estat nou/antic, canvi a icona de vehicle i desament/exportació/importació amb regeneració. Proves del botó cooperatiu amb terminals/portes, F només dispara i cap repetició de commutació en mantenir E.
+- Pendents: comprovació visual/física en GPU/Android, animació de fulles ordinàries/cooperatives, interacció autònoma de la IA individual amb portes tancades i els pendents cooperatius enumerats a la fase 16.
+
+Integració de main: es conserva la correcció de ràfegues seqüencials del fusell d’assalt publicada a v0.6.24 (PR #12), incloent cancel·lació en pauses/canvi d’arma i reinici de món. La fase de portes/guàrdies s’ha numerat v0.6.25.

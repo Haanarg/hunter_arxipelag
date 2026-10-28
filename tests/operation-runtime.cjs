@@ -2,7 +2,7 @@ const assert=require('node:assert/strict');
 (async()=>{
  const {indexedDB}=await import('fake-indexeddb');
  const g=await require('./harness.cjs')();g.context.indexedDB=indexedDB;g.start('67');
- g.run(`paused=true;elapsed=125;hp=13;ammo=7;inv={med:2,expl:1,bazooka:3};
+ g.run(`paused=true;elapsed=125;hp=13;ammo=7;globalThis.savedOpenDoor=Dr.find(d=>!d.locked&&!d.alwaysOpen&&!d.bunkerGate&&!d.bunkerInteriorDoor);savedOpenDoor.open=true;savedOpenDoor.desiredOpen=true;savedOpenDoor.m.visible=false;inv={med:2,expl:1,bazooka:3};
   const saveSoldier=E.find(u=>u.t==='soldat');hurtE(saveSoldier,100);
   const saveVehicle=V.find(v=>v.t==='heli');saveVehicle.alt=120;saveVehicle.v=14;cv=saveVehicle;P.x=cv.x;P.z=cv.z;P.y=120;
   const saveFerry=V.find(v=>v.t==='ferry'),saveCargo=V.find(v=>v.t==='camio');saveCargo.x=saveFerry.x;saveCargo.z=saveFerry.z;attachToFerry(saveCargo,saveFerry);place(saveCargo,elapsed,0,0);
@@ -45,7 +45,8 @@ const assert=require('node:assert/strict');
  assert.equal((await g.run('getOperationStore().list()')).length,2);
  g.context.importedOperationId=imported.operationId;
  await g.run('window.HUNTER_OPERATIONS.load(importedOperationId)');
- assert.equal(g.run('paused&&!!started'),true);
+ assert.equal(g.run('paused&&!!started'),true);g.run('updateDoors(.1)');
+ const doorRecord=JSON.parse(before).world.entities.structures.find(r=>r.kind==='walls'&&r.state.desiredOpen===true);g.context.restoredDoorId=doorRecord.id;assert.equal(g.run('operationRegistry.byId.get(restoredDoorId).open'),true,'manual open door survives file export/import and regenerated-world restore');
  g.run(`globalThis.afterSave=captureOperation('Prova completa')`);
  const beforeData=JSON.parse(before),afterData=JSON.parse(g.run('JSON.stringify(afterSave)'));
  assert.equal(afterData.world.time,125);assert.equal(afterData.participants.local.state.hp,13);

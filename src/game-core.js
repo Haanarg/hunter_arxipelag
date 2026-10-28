@@ -1425,46 +1425,45 @@ const {x,z,nx,nz,top,steps,tread,length,rise}=s;stairs.push(s);b.stair=s;
 if(!seedSearchMode)for(let i=0;i<steps;i++){const a=(i+.5)*tread,xx=x+nx*a,zz=z+nz*a,y=top-i*rise,base=Math.min(y-.16,hAt(xx,zz)-.15);buildingVisual.addStep(b.o,{alongAxis:!!nx,riseWidth:tread,height:y-b.fy,base:base-b.fy,x:xx-b.x,z:zz-b.z,color:i%2?0xa69982:0xb5a68e})}
 }
 function wallPush(){window.HUNTER_WORLD_PHYSICS.pushWalls(P,wallCandidates(P.x,P.z,.6))}
+function playerDoorLabel(d){return (d.desiredOpen??d.open)?'Tancar porta':'Obrir porta'}
+function nearestPlayerDoor(){
+  if(cv||playerFall||playerEject||swimming)return null;
+  let best=null,range=4.5;
+  for(const d of Dr){if(d.hp<=0||d.alwaysOpen||d.locked&&!d.bunkerGate||P.y+3.1<=d.y0||P.y+.15>=d.y1)continue;
+    const distance=Math.hypot(P.x-d.cx,P.z-d.cz);if(distance<range){best=d;range=distance;}}
+  return best;
+}
+function doorOccupied(d){
+  const inside=(x,y,z)=>x>d.x0-.8&&x<d.x1+.8&&z>d.z0-.8&&z<d.z1+.8&&y+3.1>d.y0&&y+.15<d.y1;
+  if(!cv&&inside(P.x,P.y,P.z))return true;
+  if(enemyCandidatesAt(d.cx,d.cz,6).some(u=>u.hp>0&&inside(u.x,u.gy??u.o?.position?.y??hAt(u.x,u.z),u.z)))return true;
+  return V.some(v=>!v.sunk&&Math.abs((v.o?.position?.y??hAt(v.x,v.z))-(d.y0+1))<5&&circleVehicleOverlap(d.cx,d.cz,.8,v));
+}
+function interactPlayerDoor(){
+  const d=nearestPlayerDoor();if(!d)return false;
+  const open=!(d.desiredOpen??d.open);
+  if(!open&&doorOccupied(d)){msg='Hi ha algú o un vehicle al pas de la porta.';msgT=2;return true;}
+  d.desiredOpen=open;
+  window.HUNTER_STEALTH.emit('door',d.cx,(d.y0??hAt(d.cx,d.cz))+1,d.cz);
+  if(!d.bunkerGate&&!d.bunkerInteriorDoor){d.open=open;if(d.m)d.m.visible=!open;}
+  msg=open?'Porta oberta.':'Porta tancada.';if(d.bunkerGate||d.bunkerInteriorDoor)msg=open?'Obrint porta…':'Tancant porta…';msgT=2;
+  updateActionButton(cv?null:nearV());return true;
+}
 function updateDoors(dt){
   for(const d of Dr){
-    if(d.bunkerInteriorDoor){
-      const nearPlayer=!cv&&P.y<d.owner.fy-2&&
-        Math.hypot(P.x-d.cx,P.z-d.cz)<5.6;
-      const nearSoldier=enemyCandidatesAt(d.cx,d.cz,5.7).some(u=>
-        (u.t==='soldat'||u.t==='general')&&u.hp>0&&
-        (u.gy??u.o?.position?.y??Infinity)<d.owner.fy-2&&
-        Math.hypot(u.x-d.cx,u.z-d.cz)<5.6);
-      const target=nearPlayer||nearSoldier;
-      d.openProgress=Math.max(0,Math.min(1,d.openProgress+
-        (target?dt/1.15:-dt/1.6)));
+    // Legacy saves have only open/openProgress. Initialise intent once, never by proximity.
+    if(d.desiredOpen==null)d.desiredOpen=!!d.alwaysOpen||!!d.open||(d.openProgress||0)>0;
+    if(d.alwaysOpen)d.desiredOpen=true;
+    if(d.bunkerInteriorDoor||d.bunkerGate){
+      if(!d.desiredOpen&&d.openProgress>0&&doorOccupied(d))d.desiredOpen=true;
+      const duration=d.bunkerGate?(d.openDuration||10):(d.desiredOpen?1.15:1.6);
+      d.openProgress=Math.max(0,Math.min(1,(d.openProgress||0)+(d.desiredOpen?dt/duration:-dt/duration)));
       const p=d.openProgress,ease=p*p*(3-2*p);
-      d.m.position.y=d.closedLocalY+(d.doorHeight+.55)*ease;
-      d.m.visible=p<.98;
-      d.open=p>.86;
-      continue;
+      if(d.bunkerGate){d.m.scale.y=Math.max(.025,1-ease);d.m.position.y=d.closedLocalY+d.doorHeight*ease*.5;d.open=p>=.999;}
+      else{d.m.position.y=d.closedLocalY+(d.doorHeight+.55)*ease;d.open=p>.86;}
+      d.m.visible=p<.999;continue;
     }
-    if(d.bunkerGate){
-      const dx=P.x-d.cx,dz=P.z-d.cz,front=dx*d.nx+dz*d.nz,side=Math.abs(dx*d.nz-dz*d.nx),
-            inFront=!cv&&front>=0&&front<=4.8&&side<=d.doorWidth/2+1.15;
-      if(inFront&&d.openProgress<1){
-        if(d.openProgress===0)window.HUNTER_STEALTH.emit('door',d.cx,(d.y0??hAt(d.cx,d.cz))+1,d.cz);
-        d.openProgress=Math.min(1,d.openProgress+dt/d.openDuration);
-        msg='Obrint porta del búnquer… '+Math.round(d.openProgress*100)+'%';msgT=.25
-      }
-      const p=d.openProgress,ease=p*p*(3-2*p);
-      d.m.scale.y=Math.max(.025,1-ease);
-      d.m.position.y=d.closedLocalY+d.doorHeight*ease*.5;
-      d.m.visible=p<.999;
-      d.open=p>=.999;
-      continue
-    }
-    const dx=P.x-d.cx,dz=P.z-d.cz,r=d.open?6:4.5,
-      soldierNear=!d.locked&&enemyCandidatesAt(d.cx,d.cz,4.7).some(u=>
-        (u.t==='soldat'||u.t==='general')&&Math.hypot(u.x-d.cx,u.z-d.cz)<4.5),
-      o=d.alwaysOpen||(!d.locked&&((!cv&&dx*dx+dz*dz<r*r)||soldierNear));
-    if(!d.open&&o&&!cv&&dx*dx+dz*dz<r*r)
-      window.HUNTER_STEALTH.emit('door',d.cx,(d.y0??hAt(d.cx,d.cz))+1,d.cz);
-    d.open=o;d.m.visible=!o
+    d.open=!!d.desiredOpen;if(d.m)d.m.visible=!d.open;
   }
 }
 function itemMapTexture(kind){const c=document.createElement('canvas');c.width=192;c.height=144;const q=c.getContext('2d');q.fillStyle=kind==='heli'?'#dceff4':kind==='tanc'?'#eadfb9':'#ead59b';q.fillRect(0,0,c.width,c.height);q.strokeStyle='#8f7b52';q.lineWidth=5;q.strokeRect(5,5,c.width-10,c.height-10);q.strokeStyle='#baa36b';q.lineWidth=2;for(let x=30;x<190;x+=32){q.beginPath();q.moveTo(x,7);q.lineTo(x,137);q.stroke()}for(let y=26;y<140;y+=28){q.beginPath();q.moveTo(7,y);q.lineTo(185,y);q.stroke()}
@@ -2376,7 +2375,7 @@ const act=c=>{if(generationPromise)return;if(ui?.isBombTimerOpen?.()){
     document.getElementById('bombTimerConfirm')?.click?.();return
   }
   return
-}if(/^Digit[1-7]$/.test(c)){selectWeapon(quickWeapons()[Number(c.slice(5))-1]);return}if(c==='KeyV'){cycleWeapon(1);return}if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv)toggle();else if(getOptionalAction())performOptionalAction();else if(nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){
+}if(/^Digit[1-7]$/.test(c)){selectWeapon(quickWeapons()[Number(c.slice(5))-1]);return}if(c==='KeyV'){cycleWeapon(1);return}if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv)toggle();else if(interactPlayerDoor()){}else if(getOptionalAction())performOptionalAction();else if(nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyG'){
   // The utility helicopter has two independent actions: F throws
   // grenades and G programmes a timed explosive for the side door.
   if(cv?.t==='heli'){
@@ -2394,13 +2393,13 @@ function updateActionButton(nearby){
   if(!button)return;
   // El mateix vehicle que retornaria nearV() a la tecla E.
   // En conduir, la icona continua identificant el vehicle del qual baixarem.
-  const optional=getOptionalAction();
-  const vehicle=cv||nearby||null,type=optional?'optional-'+optional.kind:vehicle?.t||'backpack',
+  const door=!cv?nearestPlayerDoor():null,optional=!cv&&!door?getOptionalAction():null;
+  const vehicle=cv||nearby||null,type=door?'door-'+((door.desiredOpen??door.open)?'close':'open'):optional?'optional-'+optional.kind:vehicle?.t||'backpack',
         name=vehicle?VT[vehicle.t]?.n||vehicle.t:null,
-        title=optional?optional.label:cv?'Baixar de '+name:nearby?'Pujar a '+name:'Obrir inventari';
+        title=door?playerDoorLabel(door):optional?optional.label:cv?'Baixar de '+name:nearby?'Pujar a '+name:'Obrir inventari';
   if(button.dataset.vehicle!==type){
     button.dataset.vehicle=type;
-    button.innerHTML=optional?optional.icon||'✋':vehicle?window.HUNTER_ACTION_ICONS.vehicle(type):window.HUNTER_ACTION_ICONS.backpack;
+    button.innerHTML=door?window.HUNTER_ACTION_ICONS.door:optional?optional.icon||'✋':vehicle?window.HUNTER_ACTION_ICONS.vehicle(type):window.HUNTER_ACTION_ICONS.backpack;
   }
   if(button.title!==title){
     button.title=title;
@@ -2537,6 +2536,9 @@ for(const b of document.querySelectorAll('[data-k]')){
   for(const v of ['pointercancel','lostpointercapture'])
     b.addEventListener(v,()=>{if(c==='KeyF')cancelGrenadeCharge();K[c]=0;b.classList.remove('held')});
 }
+document.getElementById('mainActionButton')?.addEventListener('keydown',e=>{
+  if(!['Enter','Space'].includes(e.code))return;e.preventDefault();e.stopPropagation();if(!e.repeat)act('KeyE');
+});
 // The utility-helicopter C4 action is also accessible by tabbing to its
 // touch control and pressing Enter/Space. It shares the same G handler.
 document.getElementById('heliBombButton')?.addEventListener('keydown',e=>{
@@ -2803,7 +2805,7 @@ const ui=window.HUNTER_UI.create({
   minimap,
   getState:({nearVehicle=cv?null:nearV()}={})=>({
     autosave:operationAutosave?.state(),started:!!started,hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
-    inventory:inv,itemTypes:IT,player:P,nearVehicle,optionalAction:getOptionalAction(),messageTime:msgT,message:msg,
+    inventory:inv,itemTypes:IT,player:P,nearVehicle,optionalAction:!cv&&nearestPlayerDoor()?{kind:'door',label:playerDoorLabel(nearestPlayerDoor()),icon:window.HUNTER_ACTION_ICONS.door}:getOptionalAction(),messageTime:msgT,message:msg,
     waypoint,worldSize:S,seed,mapScale:MAP_SCALE,hqIntel:{stage:hqIntelStage,investigated:hqIntelSectors.size,remaining:hqMapKnown?1:hqIntelSites.length-(MAP_SCALE===2?hqIntelDiscarded.size:(hqIntelStage>=2?1:0)),confirmed:hqMapKnown},palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,muted,cheats:{...cheats},stealthDebug:window.HUNTER_STEALTH.enabled(),stealthLayers:window.HUNTER_STEALTH.layers(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
   }),
   actions:{

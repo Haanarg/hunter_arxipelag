@@ -20,9 +20,10 @@ export function traceArena(from,to,geometry,world){
   for(let i=0;i<=steps;i++){const t=i/steps;if(t>fraction)break;const p=at(from,to,t);if(p.y<world.heightAt(p.x,p.z)){fraction=t;break;}}
   return {fraction,point:at(from,to,fraction)};
 }
-export function createRelayCombat({meta,record={},inventory,players,geometry,world,active}){
+export function createRelayCombat({meta,record={},inventory,players,damagePlayer=()=>{},geometry,world,active}){
   const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);let sequence=record.sequence||0;
   const effect=(kind,tick,data)=>{effects.push({id:++sequence,kind,tick,...data});if(effects.length>64)effects.shift();};
+  function alarm(position,actorId,tick){for(const t of targets)if(t.ai&&t.hp>0&&Math.hypot(t.x-position.x,t.z-position.z)<35){t.alarmedUntil=tick+180;t.focus=actorId;t.lastSeenTick=tick;t.state='search';}}
   function command(actorId,message,tick){
     const cached=results.find(r=>r.actorId===actorId&&r.commandId===message.commandId);if(cached)return {...cached,duplicate:true};
     const p=players().find(p=>p.id===actorId),bag=inventory.get(actorId);let code='INVALID',ok=false;
@@ -40,12 +41,13 @@ export function createRelayCombat({meta,record={},inventory,players,geometry,wor
         }else{
           bag.grenades--;grenades.push({id:'grenade-'+(++sequence),actorId,...from,vx:dx*14,vz:dz*14,vy:8,explodeAt:tick+60});code='THROWN';
         }
-        bag.disguised=false;cooldowns.set(key,tick);ok=true;
+        alarm(p,actorId,tick);bag.disguised=false;cooldowns.set(key,tick);ok=true;
       }
       const result={kind:'combat',actorId,commandId:message.commandId,ok,code};results.push(result);if(results.length>128)results.shift();return {...result};
     }return {kind:'combat',actorId,commandId:message.commandId,ok,code};
   }
   function step(tick){
+    if(!active())return;
     for(let i=grenades.length-1;i>=0;i--){
       const g=grenades[i],from={x:g.x,y:g.y,z:g.z};g.vy-=18/30;
       const candidate={x:g.x+g.vx/30,y:g.y+g.vy/30,z:g.z+g.vz/30},trace=traceArena(from,candidate,geometry(),world());
@@ -54,7 +56,23 @@ export function createRelayCombat({meta,record={},inventory,players,geometry,wor
       if(tick>=g.explodeAt){
         const center={x:g.x,y:g.y+.08,z:g.z},hits=[];
         for(const t of targets)if(t.hp>0){const aim={x:t.x,y:t.y+1.5,z:t.z},d=Math.hypot(aim.x-center.x,aim.y-center.y,aim.z-center.z);if(d<8&&traceArena(center,aim,geometry(),world()).fraction>=1){const damage=Math.ceil(16*(1-d/8));t.hp=Math.max(0,t.hp-damage);hits.push(t.id);}}
-        effect('explosion',tick,{actorId:g.actorId,at:center,radius:8,hits});grenades.splice(i,1);
+        alarm(center,g.actorId,tick);effect('explosion',tick,{actorId:g.actorId,at:center,radius:8,hits});grenades.splice(i,1);
+      }
+    }
+    for(const t of targets)if(t.ai){
+      if(t.hp<=0){t.state='dead';t.focus=null;continue;}
+      const eye={x:t.x,y:t.y+1.5,z:t.z},candidates=players().filter(p=>p.hp>0&&!p.fall&&!p.swimming).map(p=>({p,d:Math.hypot(p.x-t.x,p.y-t.y,p.z-t.z)})).filter(({p,d})=>d<((inventory.get(p.id)?.disguised&&tick>(t.alarmedUntil||0))?4:18)&&traceArena(eye,{x:p.x,y:p.y+1.5,z:p.z},geometry(),world()).fraction>=1).sort((a,b)=>a.d-b.d||a.p.id.localeCompare(b.p.id));
+      if(candidates.length){
+        const p=candidates[0].p;if(t.focus!==p.id)t.seenTicks=0;t.focus=p.id;t.lastSeenTick=tick;t.seenTicks=(t.seenTicks||0)+1;t.heading=Math.atan2(-(p.x-t.x),-(p.z-t.z));t.state=t.seenTicks<30?'alert':'attack';
+        if(t.seenTicks>=30&&tick-(t.lastAttack||0)>=90){const amount=Math.max(1,Math.ceil(2*(meta.difficulty||1)));damagePlayer(p.id,amount);t.lastAttack=tick;effect('shot',tick,{enemy:true,actorId:t.id,from:eye,to:{x:p.x,y:p.y+1.5,z:p.z},hit:p.id});}
+      }else if(t.focus&&tick-(t.lastSeenTick??-Infinity)<120){t.state='search';t.seenTicks=0;}
+      else{
+        t.state='patrol';t.focus=null;t.seenTicks=0;
+        const path=t.patrol||[],goal=path[t.patrolIndex||0];if(!goal)continue;
+        const dx=goal.x-t.x,dz=goal.z-t.z,d=Math.hypot(dx,dz);if(d<.15)t.patrolIndex=((t.patrolIndex||0)+1)%path.length;
+        else{const next={x:t.x+dx/d*Math.min(d,2/30),z:t.z+dz/d*Math.min(d,2/30),y:t.y,hd:t.heading||0},resolved=world().resolveBody(t,next),support=world().locomotionAt(next.x,next.z,t.y);t.heading=Math.atan2(-dx,-dz);
+          if(Math.hypot(resolved.x-next.x,resolved.z-next.z)<1e-5&&Math.abs(support.floor-t.y)<.5){t.x=next.x;t.z=next.z;t.y=support.floor+.06;}else t.patrolIndex=((t.patrolIndex||0)+1)%path.length;
+        }
       }
     }
     for(let i=effects.length-1;i>=0;i--)if(tick-effects[i].tick>(effects[i].kind==='shot'?9:24))effects.splice(i,1);

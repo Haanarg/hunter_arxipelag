@@ -1,6 +1,6 @@
 # Portes compartides · v0.6.20
 
-La missió Relleu d’emergència permet obrir i tancar les portes dels edificis amb **F** o el botó **Porta**. El botó s’activa quan hi ha una porta operable a prop i mostra Obrir/Tancar segons el darrer estat del servidor. Mantenir F no provoca alternances repetides. E / Activar continua reservat als terminals.
+Actualització v0.6.25: E / Acció contextual obre o tanca portes, i F dispara. La icona de porta i el text Obrir/Tancar substitueixen Activar quan hi ha una porta operable; el terminal propi té prioritat si coincideixen els contextos. Les portes mantenen l’estat fins a una altra acció explícita, i mantenir E no les alterna repetidament. El protocol de porta descrit a continuació es conserva.
 
 ## Autoritat i física
 
@@ -26,10 +26,10 @@ S’ha afegit revalidació explícita del cache HTTP de la pàgina cooperativa i
 
 - Nucli: proximitat i altura, tercer actor rebutjat, obertura i pas real, tancament compartit, obertura ocupada, cooldown, pausa, historial acotat i restauració idempotent.
 - Transport: una fallada de persistència no publica l’obertura; el reintent funciona; el reinici aplica l’estat guardat a la col·lisió; coordenades afegides a la comanda provoquen rebuig del protocol.
-- Client/UI: comanda explícita, bloqueig mentre està pendent, F sense repeticions per mantenir premut, botó tàctil, missatge de pas ocupat i visibilitat de la porta en una escena Three.js real amb renderer substitut.
+- Client/UI: comanda explícita, bloqueig mentre està pendent, E sense repeticions per mantenir premut, botó tàctil, missatge de pas ocupat i visibilitat de la porta en una escena Three.js real amb renderer substitut.
 - Workerd natiu amb dos comptes locals: ordre remota rebutjada; obertura visible a l’altre client; tancament ocupat rebutjat; tancament segur i bloqueig físic de l’actor dins; reobertura i sortida; terminals/extracció/victòria; reinici del runtime amb obertura i revisió recuperades; reintent idempotent i revocació d’accés.
 - Regressions de comptes, món, preparació de sala i desaments individuals, inclòs el paquet del navegador. Els fitxers del fusell d’assalt de main v0.6.19 es conserven.
 
-No s’ha fet una passada física de dos dispositius o GPU real; no es declara resolt el diagnòstic del mapa complet d’escala 2 ni les tres incidències històriques. Les portes canvien de visibilitat immediatament, sense animació de fulla. Destrucció, combat, inventari, IA, vehicles, campanya completa i desaments cooperatius duradors continuen pendents segons [PROGRESS.MD](../PROGRESS.MD).
+No s’ha fet una passada física de dos dispositius o GPU real; no es declara resolt el diagnòstic del mapa complet d’escala 2 ni les tres incidències històriques. Les portes canvien de visibilitat immediatament, sense animació de fulla. Combat, inventari i IA bàsica s’han afegit en fases posteriors; destrucció, vehicles, campanya completa i desaments cooperatius duradors continuen pendents segons [PROGRESS.MD](../PROGRESS.MD).
 
 No cal cap migració SQL, secret, recurs Cloudflare o plugin nou. Es manté el desplegament existent. Els checkpoints pilot continuen temporals i no es migren entre versions; no canvien els desaments individuals.

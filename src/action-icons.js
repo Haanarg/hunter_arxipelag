@@ -30,6 +30,7 @@ window.HUNTER_ACTION_ICONS=(()=>{
   const backpack=svg('<path d="M20 21V14Q20 8 32 8Q44 8 44 14V21" fill="none" stroke="'+steel+'" stroke-width="4"/><path d="M17 19H47Q51 19 51 25V53Q51 57 47 57H17Q13 57 13 53V25Q13 19 17 19Z" fill="'+olive+'" stroke="'+ink+'" stroke-width="2.5"/><path d="M22 19V52M42 19V52" stroke="'+dark+'" stroke-width="3"/><rect x="20" y="32" width="24" height="17" rx="3" fill="'+wood+'" stroke="'+ink+'" stroke-width="2"/><path d="M29 32V38H35V32" fill="none" stroke="'+steel+'" stroke-width="2.5"/><path d="M13 28H9V48H13M51 28H55V48H51" fill="none" stroke="'+ink+'" stroke-width="3"/>');
   return Object.freeze({
     backpack,
+    door:svg('<path d="M12 57V7H51V57M7 57H57" fill="none" stroke="'+steel+'" stroke-width="4"/><path d="M17 54V12L43 17V54Z" fill="'+wood+'" stroke="'+ink+'" stroke-width="2.5"/><circle cx="36" cy="36" r="2.8" fill="'+metal+'"/>'),
     vehicle:type=>forms[type]||backpack,
     types:Object.freeze(Object.keys(forms))
   });

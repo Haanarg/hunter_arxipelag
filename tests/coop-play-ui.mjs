@@ -11,6 +11,7 @@ class Element{
  replaceChildren(...nodes){this.children=nodes;nodes.forEach(n=>n.parentNode=this);}
  remove(){if(this.parentNode)this.parentNode.children=this.parentNode.children.filter(n=>n!==this);this.parentNode=null;}
  setPointerCapture(){}
+ setAttribute(k,v){this[k]=v;}
  getContext(type){if(type==='2d')return context;throw Error('Force Canvas fallback in DOM test');}
 }
 const html=readFileSync(new URL('../coop.html',import.meta.url),'utf8');for(const [,id] of html.matchAll(/id="([^"]+)"/g))elements.set(id,new Element());
@@ -26,24 +27,25 @@ try{
  ws.message({type:'room',room});assert.equal(elements.get('launch').disabled,false);elements.get('launch').onclick();assert.equal(ws.sent.at(-1).type,'launch');assert.equal(ws.sent.at(-1).revision,4);
  mission.setStatus('running');ws.message(mission.setup('a'));await new Promise(setImmediate);await new Promise(setImmediate);
  assert.match(elements.get('objective').textContent,/Terminal 1/);assert.match(elements.get('players').textContent,/Primer \(tu\)/);
- listeners.get('keydown')({code:'KeyW',preventDefault(){}});buttons.find(b=>b.dataset.key==='KeyE').fire('pointerdown',{pointerId:7});
+ ws.message({type:'state',state:{...mission.snapshot(),players:mission.snapshot().players.map((p,i)=>i===0?{...p,...mission.meta.terminals[0]}:p)}});assert.match(elements.get('action').textContent,/Activar/);
+ listeners.get('keydown')({code:'KeyW',preventDefault(){}});elements.get('action').fire('pointerdown',{pointerId:7});
  const advanceInput=()=>{const entry=[...timers].find(([,v])=>v.ms===50);assert.ok(entry);timers.delete(entry[0]);entry[1].fn();};advanceInput();
  assert.equal(ws.sent.at(-1).input.forward,1);assert.equal(ws.sent.at(-1).interact,true,'touch activation reaches protocol');
  listeners.get('blur')();advanceInput();assert.equal(ws.sent.at(-1).input.forward,0);assert.equal(ws.sent.at(-1).interact,false);
  const door=mission.meta.doors[0],near=mission.snapshot();near.players[0]={...near.players[0],x:door.cx,z:door.cz+2,y:door.floor+.06};
- ws.message({type:'state',state:near});assert.equal(elements.get('door').disabled,false);assert.match(elements.get('door').textContent,/Obrir/);
- listeners.get('keydown')({code:'KeyF',repeat:false,preventDefault(){}});const action=ws.sent.at(-1);assert.equal(action.type,'door');assert.equal(action.open,true);assert.equal(elements.get('door').disabled,true);
- listeners.get('keydown')({code:'KeyF',repeat:true,preventDefault(){}});assert.equal(ws.sent.at(-1),action,'held key does not toggle repeatedly');
+ ws.message({type:'state',state:near});assert.equal(elements.get('action').disabled,false);assert.match(elements.get('action').textContent,/Obrir/);
+ listeners.get('keydown')({code:'KeyE',repeat:false,preventDefault(){}});const action=ws.sent.at(-1);assert.equal(action.type,'door');assert.equal(action.open,true);assert.equal(elements.get('action').disabled,true);
+ listeners.get('keydown')({code:'KeyE',repeat:true,preventDefault(){}});assert.equal(ws.sent.at(-1),action,'held key does not toggle repeatedly');
  const opened={...near,doorRevision:1,doors:near.doors.map(d=>d.id===door.id?{...d,open:true}:d)};
- ws.message({type:'state',state:opened});ws.message({type:'action',commandId:action.commandId,ok:true,code:'OPENED'});assert.match(elements.get('door').textContent,/Tancar/);assert.equal(elements.get('door').disabled,false);
- elements.get('door').onclick();const closing=ws.sent.at(-1);assert.equal(closing.open,false);ws.message({type:'action',commandId:closing.commandId,ok:false,code:'OCCUPIED'});assert.match(elements.get('message').textContent,/jugador al pas/);
+ ws.message({type:'state',state:opened});ws.message({type:'action',commandId:action.commandId,ok:true,code:'OPENED'});assert.match(elements.get('action').textContent,/Tancar/);assert.equal(elements.get('action').disabled,false);
+ elements.get('action').fire('pointerdown',{pointerId:8});elements.get('action').fire('pointerup',{pointerId:8});const closing=ws.sent.at(-1);assert.equal(closing.open,false);ws.message({type:'action',commandId:closing.commandId,ok:false,code:'OCCUPIED'});assert.match(elements.get('message').textContent,/jugador al pas/);
  if(frames.size){const [id,fn]=[...frames][0];frames.delete(id);fn(performance.now()+16);}assert.ok(draws>10,'Canvas fallback draws actual world/players/objectives');
  assert.match(elements.get('inventory').textContent,/Bales: 24/);
  listeners.get('keydown')({code:'KeyC',repeat:false,preventDefault(){}});const equip=ws.sent.at(-1);assert.equal(equip.type,'inventory');assert.equal(equip.operation,'disguise');assert.equal(equip.target,true);assert.equal(elements.get('disguise').disabled,true);
  ws.message({type:'action',commandId:equip.commandId,ok:true,code:'EQUIPPED'});
  elements.get('drop-item').value='grenades';elements.get('drop-item').onchange();assert.equal(elements.get('drop').disabled,false);elements.get('drop').onclick();const dropped=ws.sent.at(-1);assert.equal(dropped.type,'inventory');assert.equal(dropped.operation,'drop');assert.equal(dropped.target,'grenades');assert.equal(elements.get('drop').disabled,true);ws.message({type:'action',commandId:dropped.commandId,ok:true,code:'DROPPED'});
  assert.equal(elements.has('pickup'),false,'no manual pickup control');const count=ws.sent.length;listeners.get('keydown')({code:'KeyR',repeat:false,preventDefault(){}});assert.equal(ws.sent.length,count,'R does not request a pickup');
- assert.equal(elements.get('shoot').disabled,false);listeners.get('keydown')({code:'KeyX',repeat:false,preventDefault(){}});const shot=ws.sent.at(-1);assert.equal(shot.type,'combat');assert.equal(shot.weapon,'pistol');listeners.get('keydown')({code:'KeyX',repeat:true,preventDefault(){}});assert.equal(ws.sent.at(-1),shot,'pistol does not auto-repeat');ws.message({type:'action',kind:'combat',commandId:shot.commandId,ok:true,code:'HIT'});assert.match(elements.get('message').textContent,/Impacte/);elements.get('grenade').onclick();assert.equal(ws.sent.at(-1).weapon,'grenade');
+ assert.equal(elements.get('shoot').disabled,false);listeners.get('keydown')({code:'KeyF',repeat:false,preventDefault(){}});const shot=ws.sent.at(-1);assert.equal(shot.type,'combat');assert.equal(shot.weapon,'pistol');assert.notEqual(shot.type,'door','F is exclusively shooting');assert.match(elements.get('action').textContent,/E/);const beforeX=ws.sent.length;listeners.get('keydown')({code:'KeyX',repeat:false,preventDefault(){}});assert.equal(ws.sent.length,beforeX,'old X binding is removed');listeners.get('keydown')({code:'KeyF',repeat:true,preventDefault(){}});assert.equal(ws.sent.at(-1),shot,'pistol does not auto-repeat');ws.message({type:'action',kind:'combat',commandId:shot.commandId,ok:true,code:'HIT'});assert.match(elements.get('message').textContent,/Impacte/);elements.get('grenade').onclick();assert.equal(ws.sent.at(-1).weapon,'grenade');
  listeners.get('pagehide')();assert.equal(timers.size,0);assert.equal(frames.size,0,'navigation releases sockets, timers and renderer');
  const {createMissionView}=await import('../src/coop-play-view.mjs'),T=await import('../vendor/three-r186.module.mjs');let rendered=false,disposed=false,expectSupply=true;
  const threeView=await createMissionView(elements.get('view'),mission.meta,g.geometry,{three:T,makeRenderer:()=>({setPixelRatio(){},setClearColor(){},setSize(){},render(scene,camera){

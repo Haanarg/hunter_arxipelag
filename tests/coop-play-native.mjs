@@ -67,7 +67,7 @@ try{
  // Reach a target via verified navigation, rotate using input (no client hit claims), shoot three times.
  const route=ca.setup.meta.routes[0],target=ca.setup.meta.targets[0];await moveTo(0,route[0]);for(const p of route.slice(1))await moveTo(0,p);
  async function face(angle){const interval=setInterval(()=>{const error=Math.atan2(Math.sin(angle-pawn(0).hd),Math.cos(angle-pawn(0).hd));sendIntent(0,{forward:0,strafe:0,turn:Math.max(-1,Math.min(1,error*4)),run:false});},50);try{await wait(()=>Math.abs(Math.atan2(Math.sin(angle-pawn(0).hd),Math.cos(angle-pawn(0).hd)))<.015);}finally{clearInterval(interval);sendIntent(0,{forward:0,strafe:0,turn:0,run:false});}}
- await face(Math.atan2(-(target.x-pawn(0).x),-(target.z-pawn(0).z)));
+ await wait(()=>ca.state.combat.targets[0].state==='attack');assert.ok(ca.state.players.find(p=>p.id===a.id).hp<=20);const enemy=ca.state.combat.targets[0];await face(Math.atan2(-(enemy.x-pawn(0).x),-(enemy.z-pawn(0).z)));
  for(let n=0;n<3;n++){const commandId='native-hit-'+n,tick=ca.state.tick;ca.ws.send(JSON.stringify({type:'combat',protocol:1,epoch:missionId,weapon:'pistol',commandId}));const result=await wait(()=>ca.events.find(e=>e.commandId===commandId));assert.equal(result.code,'HIT');await wait(()=>cb.state.combat.targets.find(t=>t.id===target.id).hp===8-4*n);await wait(()=>ca.state.tick>=tick+11);}
  await face(0);for(const p of [...route].reverse())await moveTo(0,p);
  timer=setInterval(()=>{try{

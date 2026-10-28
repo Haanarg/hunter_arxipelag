@@ -7,13 +7,13 @@ export function createCombatView(T,scene){
     for(const id of objects.keys())if(!live.has(id))remove(id);
     for(const r of rows){let o=objects.get(r.key);
       if(!o){
-        if(r.kind==='target'){o=new T.Group();const body=new T.Mesh(new T.BoxGeometry(1.6,3,1.6),new T.MeshStandardMaterial({color:0xc83e42}));body.position.y=1.5;o.add(body);const bar=new T.Mesh(new T.BoxGeometry(2,.2,.2),new T.MeshBasicMaterial({color:0x95fa86}));bar.position.y=3.5;o.add(bar);o.userData.targetId=r.id;}
+        if(r.kind==='target'){o=new T.Group();const body=new T.Mesh(new T.BoxGeometry(1.6,3,1.6),new T.MeshStandardMaterial({color:0xc83e42}));body.position.y=1.5;o.add(body);const bar=new T.Mesh(new T.BoxGeometry(2,.2,.2),new T.MeshBasicMaterial({color:0x95fa86}));bar.position.y=3.5;o.add(bar);o.userData.targetId=r.id;if(r.ai){const arrow=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(0,1.5,0),new T.Vector3(0,1.5,-2)]),new T.LineBasicMaterial({color:0xffd6a1}));o.add(arrow);}}
         else if(r.kind==='grenade'){o=new T.Mesh(new T.SphereGeometry(.65,8,6),new T.MeshStandardMaterial({color:0xa5ba53}));o.userData.grenadeId=r.id;}
         else if(r.kind==='shot'){o=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(r.from.x,r.from.y,r.from.z),new T.Vector3(r.to.x,r.to.y,r.to.z)]),new T.LineBasicMaterial({color:r.hit?0xff6855:0xffe18a}));}
         else{o=new T.Mesh(new T.SphereGeometry(1,16,8),new T.MeshBasicMaterial({color:0xff9a32,transparent:true,opacity:.35,wireframe:true}));}
         objects.set(r.key,o);scene.add(o);
       }
-      if(r.kind==='target'){o.position.set(r.x,r.y,r.z);o.visible=r.hp>0;o.children[1].scale.x=Math.max(0,r.hp/12);}
+      if(r.kind==='target'){o.position.set(r.x,r.y,r.z);o.visible=r.hp>0;o.children[1].scale.x=Math.max(0,r.hp/12);if(r.ai){o.rotation.y=r.heading||0;o.children[0].material.color.setHex(r.state==='attack'?0xff3535:r.state==='alert'||r.state==='search'?0xe4a347:0xa85e50);}}
       else if(r.kind==='grenade')o.position.set(r.x,r.y,r.z);
       else if(r.kind==='explosion'){o.position.set(r.at.x,r.at.y,r.at.z);o.scale.setScalar(Math.max(.3,r.radius*Math.min(1,(tick-r.tick+1)/12)));o.material.opacity=Math.max(0,.45*(1-(tick-r.tick)/25));}
     }

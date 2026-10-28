@@ -169,6 +169,7 @@ function applyOperationSnapshot(snapshot){
       if(entity.owner?.door===entity)entity.owner.door=null;
     }
     if(record.kind==='walls'&&entity.door&&record.active&&entity.m){
+      if(!Object.hasOwn(record.state,'desiredOpen'))entity.desiredOpen=!!entity.alwaysOpen||!!entity.open||(entity.openProgress||0)>0;
       if(entity.bunkerGate||entity.bunkerInteriorDoor){
         const progress=entity.openProgress||0,ease=progress*progress*(3-2*progress);
         if(entity.bunkerGate){entity.m.scale.y=Math.max(.025,1-ease);entity.m.position.y=entity.closedLocalY+entity.doorHeight*ease*.5;}

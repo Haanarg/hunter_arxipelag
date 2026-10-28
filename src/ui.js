@@ -200,7 +200,7 @@ window.HUNTER_UI=Object.freeze({
           '<div><b>Maj. / joystick ↑</b><span>Córrer o nedar a crol</span></div>'+
           '<div><b>X · AJUPIR</b><span>Sigil: menys velocitat, soroll i visibilitat</span></div>'+
           '<div><b>Y / U · ◀ ▶</b><span>Desplaçament lateral, també nedant</span></div>'+
-          '<div><b>E · Acció</b><span>Acció propera, vehicle o motxilla</span></div>'+
+          '<div><b>E · Acció</b><span>Porta, acció propera, vehicle o motxilla</span></div>'+
           '<div><b>F · Dispar</b><span>Arma, cisalla o granada (mantén per llançar lluny)</span></div>'+
           '<div><b>T · Mira</b><span>Zoom del franctirador</span></div>'+
           '<div><b>M</b><span>Mapa i destinació</span></div>'+

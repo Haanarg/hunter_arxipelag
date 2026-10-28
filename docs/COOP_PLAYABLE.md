@@ -1,4 +1,4 @@
-# Primera missió cooperativa jugable · v0.6.20
+# Primera missió cooperativa jugable · v0.6.25
 
 ## Què es pot jugar
 
@@ -26,13 +26,13 @@ Si la sala s’obre des d’una partida individual iniciada, la missió s’obre
 ## Servidor i persistència
 
 - El Durable Object de la sala ja executa la missió. El servidor genera i guarda la geometria canònica; el client només rep dades de representació i envia intencions. No envia posicions, vida o victòries.
-- S’escullen punts inicials i terminals fora dels edificis, sobre la terrassa construïda, amb recorreguts connectats i comprovació de col·lisions. L’àrea d’operació queda limitada. Les portes es poden obrir i tancar amb F / Porta. Els objectius mantenen recorreguts accessibles sense exigir que s’obri cap edifici.
+- S’escullen punts inicials i terminals fora dels edificis, sobre la terrassa construïda, amb recorreguts connectats i comprovació de col·lisions. L’àrea d’operació queda limitada. Les portes es poden obrir i tancar amb E / Acció. Els objectius mantenen recorreguts accessibles sense exigir que s’obri cap edifici.
 - Tres passos fixos de simulació de 1/30 s per lot, amb un objectiu d’enviament d’estat cada 100 ms. El client envia intencions a 20 Hz i interpola la representació. No hi ha predicció local ni una garantia de latència/FPS; els retards del servei poden alentir la simulació.
 - Les portes es validen contra la posició i altura autoritatives. El servidor impedeix tancaments sobre els dos actors, limita la freqüència i conserva els últims 32 resultats de comanda per evitar repeticions. El nou estat es desa abans d’actualitzar els dos clients; en una fallada es restaura el checkpoint.
 - Geometria canònica guardada una vegada, amb estats de portes aplicats en restaurar, i checkpoint del tick, posicions, vida, seqüències reconegudes i objectiu abans de publicar cada lot. La prova de recuperació reinicia completament workerd i reutilitza el mateix D1 i emmagatzematge de Durable Objects.
 - Els alarms duplicats no apliquen un altre lot abans del següent venciment. Una fallada de persistència restaura l’últim checkpoint i no publica el resultat no desat; programa una recuperació. Referència de la plataforma: [Alarms de Durable Objects](https://developers.cloudflare.com/durable-objects/api/alarms/).
 - Quan falta un jugador, la missió es pausa i es buiden les intencions. Tornar a entrar amb el mateix compte i versió permet reprendre-la. Sortir de la sala, canviar-ne la revisió o participants finalitza la sessió de missió corresponent.
-- La dificultat només modifica el temps disponible en aquesta missió: 25 minuts en fàcil, 15 en normal i 10 en difícil. La sessió temporal caduca als 30 minuts de rellotge o quan caduca la sala, si és abans.
+- La dificultat modifica el temps disponible i, des de v0.6.25, el dany dels guàrdies: 25 minuts en fàcil, 15 en normal i 10 en difícil. La sessió temporal caduca als 30 minuts de rellotge o quan caduca la sala, si és abans.
 - Els checkpoints d’aquesta primera missió són temporals: no són desaments cooperatius exportables ni estadístiques de compte. No es garanteix la represa entre versions publicades; un canvi de versió elimina el checkpoint temporal incompatible. Els desaments individuals no canvien.
 
 ## Accés i límits
@@ -61,7 +61,7 @@ No calen migracions SQL, secrets, plugins ni recursos Cloudflare nous. `coopPlay
 
 ## Actualització v0.6.20
 
-Portes compartides amb F / Porta: proximitat, altura, pas ocupat, cooldown, ordres idempotents, persistència i actualització de les col·lisions dels dos jugadors. Les vistes 3D i Canvas reflecteixen l’estat confirmat; no es modifica la física local per anticipació. Les proves natives recorren portes, completen la missió i recuperen l’obertura després de reiniciar workerd. La passada física de dos dispositius i l’animació de les fulles continuen pendents. Detall: [COOP_DOORS.md](COOP_DOORS.md).
+Portes compartides amb E / Acció: proximitat, altura, pas ocupat, cooldown, ordres idempotents, persistència i actualització de les col·lisions dels dos jugadors. Les vistes 3D i Canvas reflecteixen l’estat confirmat; no es modifica la física local per anticipació. Les proves natives recorren portes, completen la missió i recuperen l’obertura després de reiniciar workerd. La passada física de dos dispositius i l’animació de les fulles continuen pendents. Detall: [COOP_DOORS.md](COOP_DOORS.md).
 
 ### Inventari personal · v0.6.22
 
@@ -73,9 +73,19 @@ El servidor deriva el propietari de la sessió, comprova distància, alçada, ca
 
 ### Combat d’entrenament · v0.6.23
 
-- **X / Disparar**: pistola en la direcció on mires; gira amb A/D per apuntar. Un tret per pulsació, 1 bala, abast 70 m i cadència màxima de 3 trets/s. Les dianes vermelles opcionals tenen 12 punts de vida (3 impactes de pistola). El panell n’indica el recompte destruït.
+- **F / Disparar**: pistola en la direcció on mires; gira amb A/D per apuntar. Un tret per pulsació, 1 bala, abast 70 m i cadència màxima de 3 trets/s. Les dianes vermelles opcionals tenen 12 punts de vida (3 impactes de pistola). El panell n’indica el recompte destruït.
 - **B / Granada**: llançament frontal, gravetat i col·lisions. La granada s’atura contra els obstacles, sense rebot, i detona al cap de 2 segons de simulació. Radi 8 m i dany decreixent; les parets, portes tancades, sostres i pisos bloquegen els impactes/explosions. Munició individual.
 - Botons equivalents per a pantalla tàctil. Trets, granades, explosions i vida de les dianes són compartits. Disparar o llançar una granada treu la disfressa. **Sense foc amic ni autodany** en aquest mode d’entrenament.
 - Si falta un jugador, la pausa també atura les granades i els fusibles. En reconnectar o reiniciar el Worker, el checkpoint recupera els projectils en vol durant aquesta versió. En acabar la missió es retiren els projectils restants.
 
-**Límit actual:** combat contra dianes estàtiques opcionals. Encara no hi ha enemics amb IA, dany als jugadors per combat, reanimació, armes seleccionables, recàrrega ni efecte de sigil de la disfressa. La campanya individual i el seu fusell d’assalt es conserven. Els checkpoints cooperatius temporals continuen sense migració entre versions ni desament permanent al compte.
+### Guàrdies i supervivència · v0.6.25
+
+**F dispara; E obre/tanca portes o activa el terminal propi. X ja no dispara.** Els dos antics objectius d’entrenament són ara guàrdies de 12 PV: patrullen un tram de camí i detecten jugadors visibles fins a 18 m. El color ambre avisa de l’alerta; el vermell indica atac. Després d’un segon d’alerta disparen amb un interval mínim de 3 s. La vida dels dos jugadors apareix al panell.
+
+La disfressa redueix la detecció a 4 m. Atacar se la treu i alerta els guàrdies propers durant 6 s. Una paret o porta tancada serveix de cobertura. Els guàrdies que perden la visió deixen de disparar, esperen/cerquen durant 4 s i reprenen la patrulla; encara no persegueixen els jugadors fora del recorregut. Es poden eliminar amb pistola o granades. L’objectiu continua sent activar els terminals i extreure’s; matar-los no és obligatori.
+
+**Si un jugador arriba a 0 PV, la missió fracassa.** Podeu reiniciar-la quan tots dos confirmeu. Reanimació pendent. La pausa per desconnexió congela també patrulles i atacs, i el checkpoint conserva salut/memòria/cadència dels guàrdies.
+
+**Límit actual:** percepció de 360° i patrulla bàsica. Pendents IA completa, persecució, visió direccional, reanimació, més armes i campanya completa. No hi ha foc amic ni autodany de granades. La campanya individual i el seu fusell d’assalt es conserven. Els checkpoints cooperatius temporals continuen sense migració entre versions ni desament permanent al compte.
+
+El botó contextual mostra 🚪 Obrir/Tancar quan hi ha una porta operable; al terminal propi mostra ✋ Mantenir Activar. Si coincideixen els dos contextos, té prioritat el terminal. Un sol toc d’E commuta una porta; mantenir E no l’alterna repetidament. També funciona amb el botó tàctil o Enter/espai quan té el focus. Les portes romanen en l’estat confirmat pel servidor fins que un jugador les torna a accionar.
