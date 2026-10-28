@@ -10,7 +10,7 @@ Actualitzat: 2026-10-28 (estat general històric fins a v0.5.84; decisions i ini
 | 2 | Separar càmera i conducció; interiors segurs | **Implementada**, v0.5.76, commit `a982a9b`. Mirada lliure als vehicles i càmera restringida al soterrani; proves de 16 perfils i geometria. [Detall](docs/PHASE2_CAMERA.md). | Passada visual WebGL i Android físic. |
 | 3 | Simulació coherent amb FPS baixos | **Implementada**, v0.5.77, commit `404f246`. Subpassos de fins a 1/60 s, límit de 250 ms, rellotges de joc/cinemàtiques separats i proves de cadència/trajectòria. [Detall](docs/PHASE3_SIMULATION.md). | Mesura en dispositiu real; no és determinisme exacte ni una garantia d'FPS. |
 | 4 | Rendiment sostingut a Android | **Pendent**, ajornada en prioritzar 6 i 8. | Perfilar CPU/GPU, memòria i bateria durant partides llargues; optimitzar segons les mesures. |
-| 5 | Desar, suspendre i reprendre l'operació | **En curs.** Primera entrega tècnica: format versionat amb món/participants separats i repositori IndexedDB multioperació, còpia anterior i revisions. [Detall](docs/PHASE5_SAVES.md). | Adaptadors d’estat real, IDs al generador, restauració completa, menús i proves de lifecycle. Encara no hi ha desament jugable. |
+| 5 | Desar, suspendre i reprendre l'operació | **En curs.** Desament local manual, diverses operacions, restauració del món i menús implementats en branca, v0.6.3. Format món/participants, còpia anterior i revisions. [Detall](docs/PHASE5_SAVES.md). | Validació visual en navegador/Android i mida gran, desplegament, autosave/segon pla i exportació/importació. Comptes, estadístiques/historial i cooperatiu en entregues posteriors. |
 | 6 | Combat llegible | **Implementada i desplegada**, v0.5.78, commit `f80705b`. Espurnes distintives d’ineficàcia, sang més visible als ferits, confirmació d’impacte real i direcció del dany. [Detall](docs/PHASE6_COMBAT.md). | Aspecte visual/GPU i Android físic pendents. |
 | 7 | Orientació i ritme de missió | **Pendent**, ajornada. | Guia d'intel/objectius i direcció útil del waypoint, sense revelar informació desconeguda. |
 | 8 | Sigil i IA llegibles | **Implementada i desplegada**, v0.5.79, commit `fc2a3c3`. Marcadors visibles de sospita/contacte/cerca, posicions de tir i flanc reservades i torns d’entrada. [Detall](docs/PHASE8_STEALTH.md). | Llegibilitat visual, GPU i Android físic pendents. |
@@ -133,3 +133,8 @@ El harness usa geometria Three.js amb un renderitzador simulat: no certifica asp
 - Autoritzat començar desament local de diverses operacions, preparant comptes i cooperatiu futurs. Primera entrega de dades implementada i provada; integració al runtime pendent. Vegeu [PHASE5_SAVES.md](docs/PHASE5_SAVES.md).
 - Els canvis posteriors a v0.5.84 de la resta del joc no s’han reauditat en aquesta actualització.
 
+
+
+## Fase 5 — segona entrega, 2026-10-28
+
+Desament manual i restauració del món connectats als menús de portada i pausa, preparats en branca a v0.6.3, encara sense desplegar. Prova de món real generat i càrrega progressiva sobre el bundle final superada amb destrucció, inventari, intel, civils, ràdio, vehicle en vol, càrrega de ferri i C4. Limitacions i llista de pendents després de cada entrega a [PHASE5_SAVES.md](docs/PHASE5_SAVES.md). La validació visual real continua pendent; no es dona tota la fase 5 per tancada.

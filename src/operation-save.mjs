@@ -7,8 +7,12 @@ export class SaveError extends Error {
 }
 const fail = (code, message) => { throw new SaveError(code, message); };
 const id = value => typeof value === 'string' && /^[a-zA-Z0-9:_-]{1,160}$/.test(value);
-const object = value => value !== null && typeof value === 'object' && !Array.isArray(value) &&
-  (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null);
+const object = value => {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === null || (Object.getPrototypeOf(prototype) === null &&
+    Object.prototype.toString.call(value) === '[object Object]');
+};
 const uint = n => Number.isSafeInteger(n) && n >= 0;
 function plain(value, depth = 0, seen = new Set()) {
   if (depth > 40) fail('INVALID', 'Dades massa profundes');
@@ -174,7 +178,7 @@ export function createOperationStore({indexedDB = globalThis.indexedDB, name = '
           rows.push({operationId: s.operationId, name: s.name, revision: s.revision,
             updatedAt: s.updatedAt, createdAt: s.createdAt, seed: s.world.seed, mapScale: s.world.mapScale,
             gameVersion: s.gameVersion, generatorVersion: s.world.generatorVersion,
-            time: s.world.time, participantCount: Object.keys(s.participants).length});
+            time: s.world.time, participantCount: Object.keys(s.participants).length, hasPrevious: !!cursor.value.previous});
           cursor.continue();
         } catch (e) { abort(e); }
       };

@@ -215,6 +215,27 @@ window.HUNTER_RADIO_RELAY=Object.freeze({
       disabledReason:r.disabledReason,discovered:r.discovered,sourceId:r.source.layoutId||r.source.id,
       receiverId:r.receiver?.layoutId||r.receiver?.id||null,reports:r.reports,dispatches:r.dispatches,
       lastReport:r.lastReport?{...r.lastReport}:null}))}}
-    return Object.freeze({configure,reset,update,getAction,interact,warn,markers,snapshot});
+    function exportSave(){return {time,relays:relays.map(r=>({id:r.id,operational:r.operational,
+      disabledReason:r.disabledReason,discovered:r.discovered,lastWarn:Number.isFinite(r.lastWarn)?r.lastWarn:null,
+      reports:r.reports,dispatches:r.dispatches,lastReport:r.lastReport?{...r.lastReport}:null})),
+      leases:[...leases].map(([unit,lease])=>({enemyId:unit.saveId,until:lease.until,destination:{...lease.destination}}))};}
+    function validateSave(data,byId){
+      if(!data||!Number.isFinite(data.time)||!Array.isArray(data.relays)||data.relays.length!==relays.length||
+        new Set(data.relays.map(r=>r.id)).size!==relays.length||data.relays.some(r=>
+          !relays.some(u=>u.id===r.id)||typeof r.operational!=='boolean'||typeof r.discovered!=='boolean')||
+        !Array.isArray(data.leases)||data.leases.some(l=>!byId.has(l.enemyId)||!Number.isFinite(l.until)||!finite(l.destination)))
+        throw new Error('Estat dels relés de ràdio invàlid.');
+    }
+    function importSave(data,byId){
+      validateSave(data,byId);time=data.time;leases.clear();
+      for(const saved of data.relays){
+        const relay=relays.find(r=>r.id===saved.id);
+        if(!saved.operational)disable(relay,saved.disabledReason);
+        Object.assign(relay,saved,{lastWarn:saved.lastWarn===null?-Infinity:saved.lastWarn});
+        if(relay.collider.hp<=0&&relay.o)relay.o.visible=false;
+      }
+      for(const saved of data.leases){const unit=byId.get(saved.enemyId);if(alive(unit))leases.set(unit,{until:saved.until,destination:{...saved.destination}});}
+    }
+    return Object.freeze({configure,reset,update,getAction,interact,warn,markers,snapshot,exportSave,validateSave,importSave});
   }
 });
