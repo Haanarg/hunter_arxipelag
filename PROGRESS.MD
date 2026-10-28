@@ -2,7 +2,7 @@
 
 ## Estat actual · v0.6.22
 
-**Publicació:** codi i proves v0.6.22 publicats a `main` (commit `ce1a81c916e88fd462c6ab3b6641c4ef4bd47ce6`). El primer desplegament de Cloudflare ha fallat sense detalls a GitHub: [build 393d617d-e19e-484f-8398-403ea6180a19](https://dash.cloudflare.com/e8c1784f0b4c91e60ee62af2e3dae4f3/workers/services/view/hunter-arxipelag/production/builds/393d617d-e19e-484f-8398-403ea6180a19). Cal confirmar el desplegament i la versió pública abans de donar aquesta publicació per acabada; si torna a fallar, consultar el log de Cloudflare.
+**Publicació:** codi i proves v0.6.22 a `main` (commit `ce1a81c916e88fd462c6ab3b6641c4ef4bd47ce6`). Desplegament de producció confirmat amb èxit: [build cb293c90-e9a4-4465-96c3-0cf753b588f8](https://dash.cloudflare.com/e8c1784f0b4c91e60ee62af2e3dae4f3/workers/services/view/hunter-arxipelag/production/builds/cb293c90-e9a4-4465-96c3-0cf753b588f8), Version ID `23a738eb-7db8-4e36-9ee0-b503f413d369`. Versió pública i HTML cooperatiu verificats. El primer build (`393d617d-e19e-484f-8398-403ea6180a19`) havia fallat sense motiu a GitHub; el desplegament posterior ha reeixit, sense canvis de codi ni configuració. La causa del primer error no s’ha determinat.
 
 **Primera missió cooperativa jugable: Relleu d’emergència**, per a dos comptes aprovats. Inici confirmat pels dos clients, moviment/col·lisions autoritatius, terminals simultanis, extracció/victòria, pausa per desconnexió i recuperació de checkpoint. Vista 3D provisional amb alternativa Canvas i controls tàctils. Des de v0.6.20, portes compartides amb F / Porta, col·lisions dinàmiques i estat persistent en reconnectar. [Instruccions, validació i límits](docs/COOP_PLAYABLE.md).
 
