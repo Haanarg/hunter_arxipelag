@@ -35,6 +35,17 @@ const assert=require('node:assert/strict');
  for(const b of data.buildings.slice(0,80))for(const previous of [b.fy,b.fy+b.h+2])probes.push([b.x,b.z,previous]);
  if(data.bunker){const b=data.bunker;for(const previous of [b.fy,b.basement.floorY])probes.push([b.x,b.z,previous],[b.x+5,b.z+5,previous]);}
  for(const [x,z,previous] of probes)assert.equal(adapter.groundAt(x,z,previous),surfaceReference.groundAt(x,z,previous),'actual world surface parity');
+ const locomotionProbes=probes.filter(p=>Number.isFinite(p[2]));
+ const locomotionReference=require('./fixtures/locomotion-v0613.cjs')({activeBunker:data.bunker,
+  buildingCandidates:(x,z)=>{g.context.probe={x,z};return g.run('buildingCandidates(probe.x,probe.z)');},
+  buildingLocalPoint:(b,x,z)=>{const c=Math.cos(b.angle||0),s=Math.sin(b.angle||0),dx=x-b.x,dz=z-b.z;return {x:dx*c+dz*s,z:-dx*s+dz*c};},
+  solidRoofAt:surfaceReference.solidRoofAt,stairContains:surfaceReference.stairContains,
+  groundAt:surfaceReference.groundAt,bunkerSubFloorAt:surfaceReference.bunkerSubFloorAt,hAt:adapter.heightAt});
+ if(data.bunker){const b=data.bunker;for(const y of [b.fy+.22,b.fy-4,b.basement.floorY+.06])for(const dx of [0,5,b.basement.halfX-1])locomotionProbes.push([b.x+dx,b.z,y]);}
+ for(const [x,z,y] of locomotionProbes){
+  const expected=locomotionReference(x,z,y);
+  assert.deepEqual(adapter.locomotionAt(x,z,y),expected,'real world interior, basement, shaft and floor match original runtime');
+ }
  const verticalReference=require('./fixtures/player-vertical-v0612.cjs'),roofWorld={solidRoofAt:surfaceReference.solidRoofAt,
    buildingCandidates:(x,z)=>{g.context.probe={x,z};return g.run('buildingCandidates(probe.x,probe.z)');}};
  const roofSweeps=data.buildings.slice(0,40).flatMap(b=>[0,b.w/2].map(dx=>({from:{x:b.x+dx,z:b.z,y:b.fy+b.h+30},to:{x:b.x+dx+2,z:b.z,y:b.fy-2}})));
@@ -50,18 +61,31 @@ const assert=require('node:assert/strict');
   for(const actor of actors)assert.equal(engine.accept(actor.id,{protocol:1,epoch:'real-world:67',sequence,input:{forward:1,turn:0,strafe:0,run:false}}),true);
   const state=engine.step();for(const p of state.players)assert.equal(p.y,adapter.groundAt(p.x,p.z,p.y),'two actors use physical walking height');
  }
+ const verticalActors=actors.map((a,i)=>{const y=adapter.groundAt(a.x,a.z,a.y)+40;return {...a,y,fall:{kind:'air',y,vy:0,vx:0,vz:0,t:0,leanF:0,leanS:0,startHeight:40,parachute:!!i}};});
+ const verticalEngine=createPlayerSimulation({epoch:'vertical-native',actors:verticalActors,limit:adapter.limit,world:adapter,vertical:{surfaceAt:()=>0}});
+ for(let k=0;k<420;k++)verticalEngine.step();
+ const verticalState=verticalEngine.snapshot();for(const p of verticalState.players)assert.equal(p.fall,null,'real geometry descents land');
+ assert.equal(verticalState.players[1].hp,20,'real geometry parachute protects second actor');
  const {build}=await import('esbuild'),{Miniflare}=await import('miniflare');
  const compiled=await build({stdin:{contents:`import {createStaticWorldAdapter} from './src/world-adapter.mjs';
  import {createPlayerSimulation} from './src/player-simulation.mjs';
  export default {async fetch(request){const body=await request.json(),world=createStaticWorldAdapter(body.geometry),sim=createPlayerSimulation({epoch:'native',actors:body.actors,limit:world.limit,world});
  for(const p of body.actors)sim.accept(p.id,{protocol:1,epoch:'native',sequence:1,input:{forward:1,turn:0,strafe:0,run:false}});
- return Response.json({heights:body.points.map(([x,z])=>world.heightAt(x,z)),roofs:body.roofSweeps.map(({from,to})=>world.roofLanding(from,to)),state:sim.step()});}};`,resolveDir:require('node:path').resolve(__dirname,'..')},bundle:true,write:false,format:'esm',platform:'browser'});
+ const vertical=createPlayerSimulation({epoch:'vertical-native',actors:body.verticalActors,limit:world.limit,world,vertical:{surfaceAt:()=>0}});
+ for(let k=0;k<420;k++)vertical.step();
+ const swimmers=createPlayerSimulation({epoch:'sea',actors:[{id:'a',x:0,z:0,y:-2.1,hd:0,hp:20},{id:'b',x:10,z:0,y:-2.1,hd:0,hp:20}],limit:100,
+  world:{locomotionAt:()=>({floor:-30,terrain:-30,interior:false,basement:false,drop:false}),resolveBody:(p,c)=>({...c,y:p.y}),roofLanding:()=>null},vertical:{surfaceAt:()=>0}});
+ for(let k=1;k<=60;k++){for(const id of ['a','b'])swimmers.accept(id,{protocol:1,epoch:'sea',sequence:k,input:{forward:1,turn:0,strafe:0,run:id==='a'}});swimmers.step();}
+ return Response.json({heights:body.points.map(([x,z])=>world.heightAt(x,z)),roofs:body.roofSweeps.map(({from,to})=>world.roofLanding(from,to)),vertical:vertical.snapshot(),swimmers:swimmers.snapshot(),state:sim.step()});}};`,resolveDir:require('node:path').resolve(__dirname,'..')},bundle:true,write:false,format:'esm',platform:'browser'});
  const mf=new Miniflare({modules:true,script:compiled.outputFiles[0].text,compatibilityDate:'2026-08-06'});
- try{const points=[[original.x,original.z],[0,0],[-2400,2400]],response=await mf.dispatchFetch('http://localhost/',{method:'POST',body:JSON.stringify({geometry:data,actors,points,roofSweeps})});
+ try{const points=[[original.x,original.z],[0,0],[-2400,2400]],response=await mf.dispatchFetch('http://localhost/',{method:'POST',body:JSON.stringify({geometry:data,actors,points,roofSweeps,verticalActors})});
  assert.equal(response.status,200,await response.clone().text());const native=await response.json();
  for(let i=0;i<points.length;i++)assert.ok(Math.abs(native.heights[i]-adapter.heightAt(...points[i]))<1e-9,'workerd physical terrain parity');
  for(let i=0;i<roofSweeps.length;i++){const expected=adapter.roofLanding(roofSweeps[i].from,roofSweeps[i].to);if(expected===null)assert.equal(native.roofs[i],null);else assert.ok(Math.abs(native.roofs[i]-expected)<1e-9,'workerd roof sweep parity');}
+ assert.equal(native.vertical.tick,420);
+ for(let i=0;i<2;i++){const p=native.vertical.players[i],expected=verticalState.players[i];for(const k of ['x','z','y','hd','hp'])assert.ok(Math.abs(p[k]-expected[k])<1e-9,'native vertical actor '+k);assert.equal(p.fall,null);assert.equal(p.swimming,expected.swimming);}
+ for(let i=0;i<2;i++){const p=native.swimmers.players[i];assert.equal(p.swimming,true);assert.equal(p.y,-2.1);assert.equal(p.hp,20);assert.ok(Math.abs(p.z-[-17,-10][i])<1e-9,'native swimming/crawl speed');assert.equal(p.acknowledged,60);}
  assert.equal(native.state.players.length,2);for(const p of native.state.players)assert.ok(Math.abs(p.y-adapter.groundAt(p.x,p.z,p.y))<1e-9);
  }finally{await mf.dispose();}
- console.log('world adapter: actual seed 67, '+checked+' terrain points, legacy platforms/walls/trees/palms and ' + probes.length + ' walking-surface probes, DTO roundtrip, validation/index limits, two-actor real-geometry simulation in Node and native workerd passed');
+ console.log('world adapter: actual seed 67, '+checked+' terrain points, legacy platforms/walls/trees/palms, ' + probes.length + ' walking-surface and '+locomotionProbes.length+' locomotion probes, DTO roundtrip, validation/index limits, two-actor horizontal/vertical real-geometry simulation in Node and native workerd passed');
 })().catch(e=>{console.error(e);process.exitCode=1});

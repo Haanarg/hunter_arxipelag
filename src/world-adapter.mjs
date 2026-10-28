@@ -1,4 +1,4 @@
-import {walkingHeightAt,solidRoofAt} from './walk-surfaces.mjs';
+import {walkingHeightAt,solidRoofAt,buildingLocalPoint,bunkerFloorAt,stairContains} from './walk-surfaces.mjs';
 import {sweptRoofLanding} from './player-vertical.mjs';
 import {rawTerrainAt,levelHeight,pushWalls,pushTree} from './world-physics.mjs';
 const finite=Number.isFinite,key=(x,z)=>x+','+z;
@@ -10,7 +10,7 @@ function normalizeStair(s){
   if(out.length<=0||out.width<=0||Math.abs(Math.hypot(out.nx,out.nz)-1)>1e-6)throw new RangeError('Invalid stair');
   if(!s.ramp&&(!Number.isInteger(s.steps)||s.steps<1||s.tread<=0||s.rise<0))throw new RangeError('Invalid stair treads');
   return {...out,ramp:!!s.ramp,internal:!!s.internal,owner:{rb:!!s.owner?.rb},
-    ...(s.ramp?pick(s,['bottom']):pick(s,['steps','tread','rise']))};
+    destroyed:!!s.destroyed,...(s.ramp?pick(s,['bottom']):pick(s,['steps','tread','rise']))};
 }
 function normalizeBuilding(b){
   const out=pick(b,['x','z','w','d','h','fy']);if(out.w<=0||out.d<=0)throw new RangeError('Invalid building');
@@ -63,7 +63,22 @@ export function createStaticWorldAdapter(source){
   function groundAt(x,z,previous=-Infinity,visible=null){return walkingHeightAt({physical:heightAt(x,z),visible,
     stairs:data.stairs,piers:data.piers,buildings:grids.buildings.get(key(Math.floor(x/96),Math.floor(z/96)))||[],
     bunker:data.bunker,terminalRamps:data.terminalRamps},x,z,previous);}
-  return Object.freeze({kind:'static-surfaces',limit:halfSize-2,heightAt,groundAt,resolveBody,
+  function locomotionAt(x,z,y){
+    number(x);number(z);number(y);
+    const candidates=grids.buildings.get(key(Math.floor(x/96),Math.floor(z/96)))||[],b=data.bunker,
+      q=b?buildingLocalPoint(b,x,z):null,
+      basement=!!(b&&y<b.fy-2&&Math.abs(q.x)<b.basement.halfX-.45&&Math.abs(q.z)<b.basement.halfZ-.45),
+      interior=candidates.find(b=>Math.abs(x-b.x)<b.w/2&&Math.abs(z-b.z)<b.d/2&&y<(solidRoofAt(b,x,z)?.bottom??b.fy+b.h+.1));
+    const interiorBunker=interior&&b&&['x','z','w','d','fy'].every(k=>interior[k]===b[k]),
+      physical=groundAt(x,z,y),floor=interior&&!interiorBunker?Math.max(interior.fy+.3,physical):physical;
+    let drop=false;
+    if(b&&y>b.fy-1){const st=b.basement.stair;
+      drop=Math.abs(q.x-st.x)<st.width/2&&q.z>Math.min(st.zTop,st.zBottom)&&q.z<Math.max(st.zTop,st.zBottom)&&y-bunkerFloorAt(b,x,z,y)>.7;
+    }
+    if(!drop)drop=candidates.some(b=>b.upperFloor&&!b.rb&&b.interiorStair&&!b.interiorStair.destroyed&&y>=b.fy+b.storey+.15-.6&&stairContains(b.interiorStair,x,z)&&y-physical>.7);
+    return {floor,terrain:heightAt(x,z),interior:!!interior,basement,drop};
+  }
+  return Object.freeze({kind:'static-surfaces',limit:halfSize-2,heightAt,groundAt,resolveBody,locomotionAt,
     roofLanding(from,to){return sweptRoofLanding(from,to,{solidRoofAt,
       buildingCandidates:(x,z)=>grids.buildings.get(key(Math.floor(x/96),Math.floor(z/96)))||[]});},
     // Static support only: no gravity, water motion or moving platforms yet.
