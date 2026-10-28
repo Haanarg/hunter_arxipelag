@@ -1,14 +1,41 @@
-let operationStore=null,operationMenuSerial=0;
+let operationStore=null,operationMenuSerial=0,operationWritePromise=null,operationAutosave=null;
+function waitOperationWrite(){return operationWritePromise?operationWritePromise.catch(()=>{}):Promise.resolve()}
+function persistOperation(snapshot){
+  if(operationWritePromise)throw new Error('Ja hi ha un desament en curs.');
+  const owner=operationRegistry;
+  const task=getOperationStore().save(snapshot,{expectedRevision:snapshot.revision}).then(saved=>{
+    if(owner===operationRegistry)activeOperation=saved;return saved;
+  });
+  operationWritePromise=task;task.then(()=>{if(operationWritePromise===task)operationWritePromise=null},()=>{if(operationWritePromise===task)operationWritePromise=null});
+  return task;
+}
+function requestOperationAutosave(reason,options){return operationAutosave?.request(reason,options)}
+function setOperationAutosave(enabled){
+  operationAutosave?.setEnabled(enabled);try{localStorage.setItem('hunter.autosave.enabled',String(!!enabled))}catch(_){}
+}
+function initializeOperationAutosave(){
+  operationAutosave=window.HUNTER_AUTOSAVE.create({time:()=>elapsed,
+    eligible:()=>!!started&&!over&&!generationPromise&&!seedSearchMode&&!operationBusy&&!operationWritePromise&&!!operationRegistry&&!playerFall&&!playerEject&&!grenades.length&&!pl.userData.grenadePending,
+    capture:()=>captureOperation(),write:persistOperation,status:text=>{
+      const el=document.getElementById('operationAutosaveStatus');if(el)el.textContent=text;
+      if(text.startsWith('No s’ha')||text.startsWith('Una altra')){msg=text;msgT=6;}
+    }});
+  try{operationAutosave.setEnabled(localStorage.getItem('hunter.autosave.enabled')!=='false')}catch(_){}
+  const background=()=>{if(started&&!over)requestOperationAutosave('background',{urgent:true})};
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)background()});
+  addEventListener('pagehide',background);addEventListener('blur',background);
+}
 function getOperationStore(){return operationStore||(operationStore=window.HUNTER_SAVES.createOperationStore())}
 async function saveOperation({name,asNew=false,exit=false}={}){
   if(operationBusy)throw new Error('Hi ha una operació de desament en curs.');
   if(!paused)panel('pause');
   operationBusy=true;
   try{
+    await waitOperationWrite();
     const snapshot=captureOperation(name);
     if(asNew){snapshot.operationId=window.HUNTER_SAVES.newOperationId();snapshot.revision=0;snapshot.createdAt=snapshot.updatedAt=Date.now();}
-    const saved=await getOperationStore().save(snapshot,{expectedRevision:snapshot.revision});
-    activeOperation=saved;
+    const saved=await persistOperation(snapshot);
+    operationAutosave?.markSaved(saved.world.time);
     if(exit){
       started=0;paused=false;audioPause();discardGeneratedWorld();operationRegistry=null;activeOperation=null;
       ui.hide();document.body.classList.remove('game-started');iniEl.style.display='flex';startMenuEl.style.display='flex';
@@ -20,6 +47,7 @@ async function loadOperation(operationId,{previous=false}={}){
   if(operationBusy||generationPromise||seedSearchRunning)throw new Error('Espera que acabi l’operació en curs.');
   operationBusy=true;
   try{
+    await waitOperationWrite();
     const store=getOperationStore(),current=await store.load(operationId,{generatorVersion:OPERATION_GENERATOR_VERSION});
     if(!current)throw new Error('No s’ha trobat aquesta operació.');
     const snapshot=previous?await store.load(operationId,{previous:true,generatorVersion:OPERATION_GENERATOR_VERSION}):current;
@@ -78,7 +106,7 @@ async function renderOperations(body,isCurrent=()=>true){
       const remove=button('Eliminar',async()=>{
         if(!confirmDelete){confirmDelete=true;remove.textContent='Confirma eliminar';return;}
         await getOperationStore().remove(row.operationId,{expectedRevision:row.revision});
-        if(activeOperation?.operationId===row.operationId)activeOperation=null;
+        if(activeOperation?.operationId===row.operationId){activeOperation=null;operationAutosave?.suspend();}
         if(isCurrent())renderOperations(body,isCurrent);
       },card);
     }

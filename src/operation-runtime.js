@@ -26,7 +26,7 @@ function prepareOperationRegistry(){
     for(let i=0;i<token.length;i++){fingerprint^=token.charCodeAt(i);fingerprint=Math.imul(fingerprint,16777619)}
   });
   operationRegistry={groups,byId,fingerprint:(fingerprint>>>0).toString(16)};
-  activeOperation=null;
+  activeOperation=null;operationAutosave?.reset();
 }
 function operationRecord(kind,entity){
   const record={id:entity.saveId,kind,...operationScalars(entity),transform:operationTransform(entity.o||entity.m)};
@@ -50,7 +50,7 @@ function captureOperation(name){
   if(playerFall||playerEject||grenades.length||pl.userData.grenadePending)throw new Error('Espera que acabi la caiguda o el llançament abans de desar.');
   const api=window.HUNTER_SAVES;
   const snapshot=activeOperation?operationClone(activeOperation):api.createOperation({
-    name:name||'Operació '+(seed>>>0),gameVersion:window.HUNTER_VERSION||'0.6.3',
+    name:name||'Operació '+(seed>>>0),gameVersion:window.HUNTER_VERSION||'0.6.4',
     generatorVersion:OPERATION_GENERATOR_VERSION,seed:seed>>>0,mapScale:MAP_SCALE});
   if(name)snapshot.name=name.trim();
   snapshot.world.time=elapsed;
@@ -196,5 +196,5 @@ function applyOperationSnapshot(snapshot){
   ib=cv?null:buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2&&P.y<(solidRoofAt(b,P.x,P.z)?.bottom??b.fy+b.h+.1))||null;
   updateDistanceVisibility();
   if(ib)hideCameraObstructions(ib,{x:P.x,y:P.y+1.65,z:P.z},!!ib.basement&&P.y<ib.fy-1);
-  activeOperation=operationClone(snapshot);paused=true;audioPause();mini();resetSimulationClock();
+  activeOperation=operationClone(snapshot);operationAutosave?.reset({saved:snapshot.world.time});paused=true;audioPause();mini();resetSimulationClock();
 }

@@ -49,3 +49,16 @@ Comandes: `npm run test:saves`; `HUNTER_TEST_BUNDLE=1 node tests/operation-runti
 | G. Cooperatiu jugable | Futur | Sales, amfitrió/servidor, sincronització, latència, reconnexió, regles de mort/entrada/sortida i objectius compartits |
 
 La fase 1 del pla general està tancada per decisió expressa de l’usuari. La resta del pla general continua a `PROGRESS.MD`; aquesta entrega no reaudita altres fases.
+
+
+## Fase B — desament automàtic i segon pla (2026-10-28)
+
+Implementat a la versió preparada 0.6.4: primer desament d’una operació nova, interval de 60 segons de simulació, checkpoints agrupats després de recollides/intel·ligència i canvis de ràdio/presoners/mecànic, i intents immediats a visibilitychange, blur i pagehide. L’autosave no pausa la partida. El menú de pausa permet desactivar-lo i conserva aquesta preferència al navegador.
+
+Els checkpoints es retarden tres segons i es limita la freqüència ordinària a una escriptura cada deu segons. Si hi ha una caiguda/ejecció o una granada en curs, s’ajorna el nou desament i es conserva l’últim complet. Les escriptures automàtiques i manuals se serialitzen; no es pot canviar de món mentre s’escriu. Els errors es mostren, tenen espera abans de reintentar i no eliminen la còpia anterior. Un conflicte amb una altra pestanya atura els reintents fins que es carrega o es desa com a nova.
+
+Un tancament forçat del sistema pot impedir acabar l’últim intent en segon pla: la recuperació fiable és la darrera transacció completada, amb opció de triar la còpia anterior. No s’instal·len gestors beforeunload ni diàlegs que impedeixin tancar la pàgina. No s’avança la simulació mentre l’usuari és fora. La validació física en Android continua pendent.
+
+Proves del coordinador: interval, agrupació, segon pla, transicions insegures, exclusió d’escriptures simultànies, desactivació, conflicte, espera després d’error i reinici. La prova del món real verifica també el checkpoint pagehide i que desactivar-lo impedeix una nova revisió.
+
+Pendents en acabar B: validació real i desplegament, C exportació/importació, D comptes/sincronització, E estadístiques/historial, F preparació addicional del cooperatiu i G cooperatiu jugable.

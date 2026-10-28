@@ -204,12 +204,17 @@ window.HUNTER_UI=Object.freeze({
           '<p class="pause-note">Els mapes recollits s’activen sols. Gestiona l’equipament amb la motxilla.</p>'+
           '<p class="pause-note">Senyals sobre soldats visibles: ? ambre · sospita; ! coral · contacte confirmat; ◇ blau · cerca o investigació. Desapareixen darrere la cobertura.</p>'+
           '<label class="pause-stats-toggle"><input id="audioEnabledPause" type="checkbox"> So activat</label>'+
+          '<label class="pause-stats-toggle"><input id="autosaveEnabledPause" type="checkbox"> Desament automàtic</label>'+
+          '<p id="operationAutosaveStatus" class="pause-note" role="status"></p>'+
           '<div class="pause-menu-actions">'+
           '<button id="savesMenu">Desar / operacions</button>'+
           '<button id="chetosMenu">Chetos</button>'+
           '<button id="restartMenu">Nova partida</button>'+
           '<button id="performanceMenu">⚙️ Rendiment</button>'+
           '</div>';
+        const auto=document.getElementById('autosaveEnabledPause');auto.checked=!!getState().autosave?.enabled;
+        auto.onchange=()=>actions.setAutosave(auto.checked);
+        document.getElementById('operationAutosaveStatus').textContent=getState().autosave?.message||'';
         document.getElementById('savesMenu').onclick=()=>actions.open('saves');
         document.getElementById('chetosMenu').onclick=()=>actions.open('cheats');
         document.getElementById('restartMenu').onclick=()=>actions.open('restart');

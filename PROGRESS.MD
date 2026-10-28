@@ -138,3 +138,8 @@ El harness usa geometria Three.js amb un renderitzador simulat: no certifica asp
 ## Fase 5 — segona entrega, 2026-10-28
 
 Desament manual i restauració del món connectats als menús de portada i pausa, preparats en branca a v0.6.3, encara sense desplegar. Prova de món real generat i càrrega progressiva sobre el bundle final superada amb destrucció, inventari, intel, civils, ràdio, vehicle en vol, càrrega de ferri i C4. Limitacions i llista de pendents després de cada entrega a [PHASE5_SAVES.md](docs/PHASE5_SAVES.md). La validació visual real continua pendent; no es dona tota la fase 5 per tancada.
+
+
+## Fase 5 — autosave, 2026-10-28
+
+Entrega B implementada en branca, v0.6.4 preparada: autosave periòdic, checkpoints agrupats, intents en segon pla, errors visibles i control de concurrència amb desament manual. La còpia anterior continua disponible per recuperar. No garanteix capturar l’últim instant si Android mata el procés. Queda C exportació/importació (següent), comptes/sincronització, estadístiques/llavors i cooperatiu. Detall i validació a docs/PHASE5_SAVES.md.
