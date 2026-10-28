@@ -71,7 +71,7 @@ export class CoopRoomHub {
       return;
     }
     if(body.type==='combat'){
-      if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==5||typeof body.epoch!=='string'||body.epoch.length>64||!['pistol','grenade'].includes(body.weapon)||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre de combat invàlida');return;}
+      if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==5||typeof body.epoch!=='string'||body.epoch.length>64||!['pistol','assault','grenade'].includes(body.weapon)||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre de combat invàlida');return;}
       if(now-(a.combatWindow||0)>=1000){a.combatWindow=now;a.combatCount=0;}a.combatCount=(a.combatCount||0)+1;ws.serializeAttachment(a);
       if(a.combatCount>12){ws.close(1008,'Massa ordres de combat');return;}
       if(!await this.verify(ws)){ws.close(4003,'Accés finalitzat');return;}
@@ -80,7 +80,7 @@ export class CoopRoomHub {
       catch(_){if(this.record)this.mission=restoreRelayMission(this.record,this.geometry);this.send(ws,{type:'action',kind:'combat',commandId:body.commandId,ok:false,code:'SAVE_FAILED'});}return;
     }
     if(now-a.window>=60000){a.window=now;a.count=0;}a.count++;ws.serializeAttachment(a);
-    if(a.count>20){ws.close(1008,'Massa missatges');return;}
+    if(a.count>120){ws.close(1008,'Massa missatges');return;}
     if(!await this.verify(ws,true)){ws.close(4003,'Accés finalitzat');return;}
     if(body.type==='hello'&&Object.keys(body).length===3){
       if(body.gameVersion!==GAME_VERSION){this.send(ws,{type:'error',message:'Cal recarregar la pàgina per actualitzar el joc.'});ws.close(4005,'Versió incompatible');return;}
@@ -89,10 +89,16 @@ export class CoopRoomHub {
       await this.publish();if(this.mission){this.send(ws,this.mission.setup(a.actorId));await this.wake();}return;
     }
     if(body.type==='inventory'){
-      if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==6||!['drop','disguise'].includes(body.operation)||(body.operation==='drop'?!['bullets','grenades','disguise','medkits'].includes(body.target):typeof body.target!=='boolean')||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre d’inventari invàlida');return;}
+      if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==6||!['drop','disguise','weapon'].includes(body.operation)||(body.operation==='drop'?!['bullets','grenades','disguise','medkits','assault'].includes(body.target):body.operation==='weapon'?!['pistol','assault'].includes(body.target):typeof body.target!=='boolean')||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre d’inventari invàlida');return;}
       if(!this.mission||body.epoch!==this.mission.meta.id){this.send(ws,{type:'action',commandId:body.commandId,ok:false,code:'NOT_ACTIVE'});return;}
       try{const result=this.mission.inventoryCommand(a.actorId,body);await this.save(this.record.nextAlarm);this.broadcastState();this.send(ws,{type:'action',...result});}
       catch(_){if(this.record)this.mission=restoreRelayMission(this.record,this.geometry);this.send(ws,{type:'action',commandId:body.commandId,ok:false,code:'SAVE_FAILED'});}return;
+    }
+    if(body.type==='vehicle'){
+      if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==6||typeof body.epoch!=='string'||body.epoch.length>64||typeof body.vehicleId!=='string'||body.vehicleId.length>64||!['enter','exit'].includes(body.operation)||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre de vehicle invàlida');return;}
+      if(!this.mission||body.epoch!==this.mission.meta.id){this.send(ws,{type:'action',kind:'vehicle',commandId:body.commandId,ok:false,code:'NOT_ACTIVE'});return;}
+      try{const result=this.mission.vehicleCommand(a.actorId,body);await this.save(this.record.nextAlarm);this.broadcastState();this.send(ws,{type:'action',...result});}
+      catch(_){if(this.record)this.mission=restoreRelayMission(this.record,this.geometry);this.send(ws,{type:'action',kind:'vehicle',commandId:body.commandId,ok:false,code:'SAVE_FAILED'});}return;
     }
     if(body.type==='door'){
       if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==6||typeof body.doorId!=='string'||body.doorId.length>200||typeof body.open!=='boolean'||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre de porta invàlida');return;}

@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {createRelayCombat} from '../server/coop-combat.mjs';
+const p={id:'a',x:0,y:.06,z:0,hd:0,hp:20},bag={bullets:5,grenades:1,assault:1,weapon:'assault'},inventory=new Map([['a',bag]]);
+let seated=false,active=true;
+const options={meta:{id:'arms',targets:[{id:'front',x:0,y:0,z:-8,hp:12},{id:'side',x:-8,y:0,z:0,hp:12}]},inventory,players:()=>[p],canAttack:()=>!seated,geometry:()=>({walls:[]}),world:()=>({heightAt:()=>0}),active:()=>active};
+let c=createRelayCombat(options),message={epoch:'arms',weapon:'assault',commandId:'burst'};
+assert.equal(c.command('a',message,0).code,'BURST');assert.equal(bag.bullets,4);assert.equal(c.snapshot().targets[0].hp,8);
+assert.equal(c.command('a',message,0).duplicate,true);assert.equal(bag.bullets,4);
+c.step(1);assert.equal(bag.bullets,4);p.hd=Math.PI/2;c.step(2);assert.equal(bag.bullets,3);assert.equal(c.snapshot().targets[1].hp,8,'next bullet aims from current heading');
+const record=c.checkpoint();c=createRelayCombat({...options,record});c.step(3);c.step(4);assert.equal(bag.bullets,3);c.step(5);assert.equal(bag.bullets,2);assert.equal(c.snapshot().targets[1].hp,4);c.step(6);assert.equal(bag.bullets,2,'exactly three bullets per burst');
+assert.equal(c.command('a',{...message,commandId:'early'},10).code,'COOLDOWN');
+assert.equal(c.command('a',{...message,commandId:'next'},18).ok,true);c.pause();c.step(20);assert.equal(bag.bullets,1,'pause cancels pending bullets');
+assert.equal(c.command('a',{...message,commandId:'last'},36).ok,true);c.step(38);assert.equal(bag.bullets,0,'partial burst cannot make ammo negative');
+bag.bullets=5;assert.equal(c.command('a',{...message,commandId:'switch'},54).ok,true);bag.weapon='pistol';c.step(56);assert.equal(bag.bullets,4,'switching cancels burst');
+assert.equal(c.command('a',{...message,commandId:'wrong'},72).code,'NOT_EQUIPPED');
+bag.weapon='assault';c.command('a',{...message,commandId:'seat'},72);seated=true;c.step(74);assert.equal(bag.bullets,3);assert.equal(c.command('a',{...message,commandId:'seated'},90).code,'NOT_ACTIVE');
+seated=false;bag.assault=0;assert.equal(c.command('a',{...message,commandId:'unowned'},90).code,'NOT_EQUIPPED');
+console.log('coop weapons: sequential burst, per-bullet ammo/current aim, partial burst, cooldown, idempotency, checkpoint, pause/switch/seat cancellation and ownership passed');

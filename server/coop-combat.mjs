@@ -26,24 +26,30 @@ export function guardInView(guard,player){
   return d<=2||(-Math.sin(guard.heading||0)*dx-Math.cos(guard.heading||0)*dz)/d>=.5-1e-10;
 }
 const facePoint=(guard,p)=>Math.atan2(-(p.x-guard.x),-(p.z-guard.z));
-export function createRelayCombat({meta,record={},inventory,players,damagePlayer=()=>{},geometry,world,active}){
-  const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);let sequence=record.sequence||0;
+export function createRelayCombat({meta,record={},inventory,players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active}){
+  const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);const bursts=structuredClone(record.bursts||[]);let sequence=record.sequence||0;
   const effect=(kind,tick,data)=>{effects.push({id:++sequence,kind,tick,...data});if(effects.length>64)effects.shift();};
   function alarm(position,actorId,tick){for(const t of targets)if(t.ai&&t.hp>0&&Math.hypot(t.x-position.x,t.z-position.z)<35){t.alarmedUntil=tick+180;t.focus=actorId;t.lastSeenTick=tick;t.lastKnown={x:position.x,y:position.y,z:position.z};t.heading=facePoint(t,position);t.state='search';}}
+  function fire(actorId,p,bag,tick){
+    const from={x:p.x,y:p.y+1.5,z:p.z},dx=-Math.sin(p.hd),dz=-Math.cos(p.hd);
+          const to={x:from.x+dx*70,y:from.y,z:from.z+dz*70},trace=traceArena(from,to,geometry(),world());let first=trace.fraction,hit=null;
+          for(const t of targets)if(t.hp>0){const f=segmentBox(from,to,targetBox(t));if(f!==null&&f<first){first=f;hit=t;}}
+          bag.bullets--;if(hit)hit.hp=Math.max(0,hit.hp-4);effect('shot',tick,{actorId,from,to:at(from,to,first),hit:hit?.id||null});return hit?'HIT':'FIRED';
+  }
+  function cancel(actorId){for(let i=bursts.length-1;i>=0;i--)if(bursts[i].actorId===actorId)bursts.splice(i,1);}
   function command(actorId,message,tick){
     const cached=results.find(r=>r.actorId===actorId&&r.commandId===message.commandId);if(cached)return {...cached,duplicate:true};
     const p=players().find(p=>p.id===actorId),bag=inventory.get(actorId);let code='INVALID',ok=false;
-    if(p&&message.epoch===meta.id&&typeof message.commandId==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(message.commandId)&&['pistol','grenade'].includes(message.weapon)){
-      const key=actorId+':'+message.weapon;
-      if(!active()||p.hp<=0||p.fall||p.swimming)code='NOT_ACTIVE';
-      else if(tick-(cooldowns.get(key)??-Infinity)<(message.weapon==='pistol'?10:30))code='COOLDOWN';
-      else if(!(message.weapon==='pistol'?bag.bullets:bag.grenades))code='EMPTY';
+    if(p&&message.epoch===meta.id&&typeof message.commandId==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(message.commandId)&&['pistol','assault','grenade'].includes(message.weapon)){
+      const key=actorId+':'+(message.weapon==='grenade'?'grenade':'pistol');
+      if(!active()||p.hp<=0||p.fall||p.swimming||!canAttack(actorId))code='NOT_ACTIVE';
+      else if(message.weapon!=='grenade'&&((bag.weapon||'pistol')!==message.weapon||(message.weapon==='assault'&&!bag.assault)))code='NOT_EQUIPPED';
+      else if(tick-(cooldowns.get(key)??-Infinity)<(message.weapon==='pistol'?10:message.weapon==='assault'?18:30))code='COOLDOWN';
+      else if(!(message.weapon!=='grenade'?bag.bullets:bag.grenades))code='EMPTY';
       else{
         const from={x:p.x,y:p.y+1.5,z:p.z},dx=-Math.sin(p.hd),dz=-Math.cos(p.hd);
-        if(message.weapon==='pistol'){
-          const to={x:from.x+dx*70,y:from.y,z:from.z+dz*70},trace=traceArena(from,to,geometry(),world());let first=trace.fraction,hit=null;
-          for(const t of targets)if(t.hp>0){const f=segmentBox(from,to,targetBox(t));if(f!==null&&f<first){first=f;hit=t;}}
-          bag.bullets--;if(hit)hit.hp=Math.max(0,hit.hp-4);effect('shot',tick,{actorId,from,to:at(from,to,first),hit:hit?.id||null});code=hit?'HIT':'FIRED';
+        if(message.weapon!=='grenade'){
+          code=fire(actorId,p,bag,tick);if(message.weapon==='assault'){bursts.push({actorId,startTick:tick,next:1});code='BURST';}
         }else{
           bag.grenades--;grenades.push({id:'grenade-'+(++sequence),actorId,...from,vx:dx*14,vz:dz*14,vy:8,explodeAt:tick+60});code='THROWN';
         }
@@ -54,6 +60,10 @@ export function createRelayCombat({meta,record={},inventory,players,damagePlayer
   }
   function step(tick){
     if(!active())return;
+    for(let i=bursts.length-1;i>=0;i--){const burst=bursts[i],p=players().find(p=>p.id===burst.actorId),bag=inventory.get(burst.actorId);
+      if(!p||p.hp<=0||p.fall||p.swimming||!canAttack(p.id)||!bag?.assault||bag.weapon!=='assault'||!bag.bullets){bursts.splice(i,1);continue;}
+      if(tick>=burst.startTick+Math.round(burst.next*2.25)){fire(p.id,p,bag,tick);alarm(p,p.id,tick);bag.disguised=false;burst.next++;if(burst.next>=3)bursts.splice(i,1);}
+    }
     for(let i=grenades.length-1;i>=0;i--){
       const g=grenades[i],from={x:g.x,y:g.y,z:g.z};g.vy-=18/30;
       const candidate={x:g.x+g.vx/30,y:g.y+g.vy/30,z:g.z+g.vz/30},trace=traceArena(from,candidate,geometry(),world());
@@ -83,5 +93,5 @@ export function createRelayCombat({meta,record={},inventory,players,damagePlayer
     }
     for(let i=effects.length-1;i>=0;i--)if(tick-effects[i].tick>(effects[i].kind==='shot'?9:24))effects.splice(i,1);
   }
-  return {command,step,finish(){grenades.length=0;effects.length=0;},snapshot(){return structuredClone({targets,grenades,effects});},checkpoint(){return structuredClone({targets,grenades,effects,results,cooldowns:[...cooldowns],sequence});}};
+  return {command,step,cancel,pause(){bursts.length=0;},finish(){bursts.length=0;grenades.length=0;effects.length=0;},snapshot(){return structuredClone({targets,grenades,effects});},checkpoint(){return structuredClone({targets,grenades,effects,results,cooldowns:[...cooldowns],bursts,sequence});}};
 }

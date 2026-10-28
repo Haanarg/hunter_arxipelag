@@ -47,6 +47,20 @@ try{
    try{await wait(()=>Math.hypot(pawn(i).x-target.x,pawn(i).z-target.z)<.15,15000);}finally{clearInterval(t);sendIntent(i,{forward:0,turn:0,strafe:0,run:false});}
  }
  async function operate(c,commandId,open){c.ws.send(JSON.stringify({type:'door',protocol:1,epoch:missionId,doorId:door.id,open,commandId}));return wait(()=>c.events.find(e=>e.type==='action'&&e.commandId===commandId));}
+ // The authenticated transport assigns seats; passenger input cannot move the jeep.
+ const jeep=ca.state.vehicles[0],spawn=[{...pawn(0)},{...pawn(1)}];
+ await moveTo(0,{x:jeep.x-2.2,z:jeep.z});await moveTo(1,{x:jeep.x+2.2,z:jeep.z});
+ async function vehicle(c,operation,commandId){c.ws.send(JSON.stringify({type:'vehicle',protocol:1,epoch:missionId,vehicleId:jeep.id,operation,commandId}));return wait(()=>c.events.find(e=>e.commandId===commandId));}
+ assert.equal((await vehicle(ca,'enter','native-driver')).code,'ENTERED');assert.equal((await vehicle(cb,'enter','native-passenger')).code,'ENTERED');await wait(()=>cb.state.vehicles[0].seats[1]===b.id);
+ const parked={...ca.state.vehicles[0]};sendIntent(1,{forward:1,turn:1,strafe:1,run:true});await new Promise(r=>setTimeout(r,400));assert.equal(ca.state.vehicles[0].z,parked.z,'passenger cannot drive over WebSocket');
+ const driving=setInterval(()=>sendIntent(0,{forward:1,turn:0,strafe:0,run:false}),50);try{await wait(()=>Math.hypot(ca.state.vehicles[0].x-parked.x,ca.state.vehicles[0].z-parked.z)>.25);}finally{clearInterval(driving);sendIntent(0,{forward:0,turn:0,strafe:0,run:false});}
+ await wait(()=>Math.abs(ca.state.vehicles[0].speed)<.01);assert.equal(ca.state.players[0].z,ca.state.players[1].z,'passenger travels with driver');
+ assert.equal((await vehicle(cb,'exit','native-passenger-exit')).code,'EXITED');assert.equal((await vehicle(ca,'exit','native-driver-exit')).code,'EXITED');
+ await moveTo(0,spawn[0]);await moveTo(1,spawn[1]);
+ // Select the assault rifle and validate three server-timed bullets on both clients.
+ ca.ws.send(JSON.stringify({type:'inventory',protocol:1,epoch:missionId,operation:'weapon',target:'assault',commandId:'native-select-assault'}));await wait(()=>ca.events.find(e=>e.commandId==='native-select-assault'&&e.ok));
+ const ammoBefore=ca.state.inventories.find(i=>i.actorId===a.id).bullets;ca.ws.send(JSON.stringify({type:'combat',protocol:1,epoch:missionId,weapon:'assault',commandId:'native-burst'}));await wait(()=>ca.events.find(e=>e.commandId==='native-burst'&&e.code==='BURST'));await wait(()=>cb.state.inventories.find(i=>i.actorId===a.id).bullets===ammoBefore-3);
+ ca.ws.send(JSON.stringify({type:'inventory',protocol:1,epoch:missionId,operation:'weapon',target:'pistol',commandId:'native-select-pistol'}));await wait(()=>ca.events.find(e=>e.commandId==='native-select-pistol'&&e.ok));
  const origin={x:pawn(0).x,z:pawn(0).z};
  ca.ws.send(JSON.stringify({type:'inventory',protocol:1,epoch:missionId,operation:'drop',target:'grenades',commandId:'native-drop'}));
  await wait(()=>ca.events.find(e=>e.commandId==='native-drop'&&e.ok));await wait(()=>cb.state.supplies.some(s=>s.id==='drop-1'));
@@ -86,7 +100,7 @@ try{
  // test endpoint is used to restore the mission or award victory.
  for(const ws of sockets)try{ws.close();}catch(_){}await mf.dispose();mf=new Miniflare(options);DB=await mf.getD1Database('DB');
  ca=await a.connect(room.id);cb=await b.connect(room.id);await wait(()=>ca.setup&&cb.setup);
- assert.equal(ca.state.inventories.find(i=>i.actorId===a.id).bullets,32,'spent bullets and pickup survive runtime restart');assert.equal(ca.state.inventories.find(i=>i.actorId===b.id).bullets,36);
+ assert.equal(ca.state.inventories.find(i=>i.actorId===a.id).bullets,29,'spent bullets and pickup survive runtime restart');assert.equal(ca.state.inventories.find(i=>i.actorId===b.id).bullets,36);
  assert.equal(ca.state.combat.targets[0].hp,0,'shared target destruction survives runtime restart');assert.equal(ca.state.inventories.find(i=>i.actorId===a.id).grenades,2);assert.equal(ca.state.inventories.find(i=>i.actorId===b.id).grenades,3,'thrown/transferred grenade and automatic pickups survive restart');
  assert.equal(ca.state.inventories.find(i=>i.actorId===a.id).disguised,false,'shooting removes disguise and survives runtime restart');assert.equal(ca.setup.meta.id,missionId);assert.equal(ca.state.phase,'won');assert.equal(ca.state.tick,tick,'checkpoint survives complete runtime restart');assert.equal(ca.state.doorRevision,3);assert.equal(ca.setup.geometry.walls[door.wallIndex].open,true,'open door collision survives runtime restart');
  cb.ws.send(JSON.stringify({type:'door',protocol:1,epoch:missionId,doorId:door.id,open:true,commandId:'native-open-again'}));await wait(()=>cb.events.find(e=>e.type==='action'&&e.commandId==='native-open-again'&&e.duplicate));assert.equal(cb.state.doorRevision,3);
@@ -106,5 +120,5 @@ try{
  const revoked=new Promise(resolve=>cb.ws.addEventListener('close',resolve,{once:true}));await DB.prepare("UPDATE hunter_access SET status='suspended' WHERE owner=?").bind(b.id).run();
  assert.equal((await revoked).code,4003,'active mission revokes suspended participant');await wait(()=>ca.state.status==='paused');
  const pauseTick=ca.state.tick;await new Promise(r=>setTimeout(r,300));assert.equal(ca.state.tick,pauseTick,'one player cannot continue after revocation');
- console.log('playable coop: native authenticated two-account launch votes, movement through server geometry, doors/proximity/occupied passage/collision/persistence, both terminals, extraction/victory, disconnect pause/resume, durable runtime restart and position-forgery rejection passed');
+ console.log('playable coop: native authenticated two-account launch votes, selected assault burst/ammo, two-seat jeep/passenger/driver/exit, movement through server geometry, doors/proximity/occupied passage/collision/persistence, both terminals, extraction/victory, disconnect pause/resume, durable runtime restart and position-forgery rejection passed');
 }finally{if(timer)clearInterval(timer);for(const ws of sockets)try{ws.close();}catch(_){}await mf.dispose();await rm(directory,{recursive:true,force:true});}

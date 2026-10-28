@@ -63,7 +63,7 @@ function verticalPlayer(previous,input,context,{world,vertical,limit,time}){
   }
   return supported(candidate,s);
 }
-export function createPlayerSimulation({epoch,actors,limit,world={},vertical=null,checkpoint=null}){
+export function createPlayerSimulation({epoch,actors,limit,world={},vertical=null,checkpoint=null,movement=null}){
   if(checkpoint){
     if(checkpoint.protocol!==COOP_PROTOCOL||checkpoint.epoch!==epoch||!Number.isSafeInteger(checkpoint.tick)||checkpoint.tick<0||!Array.isArray(checkpoint.players)||checkpoint.players.some(p=>!Number.isSafeInteger(p.acknowledged)||p.acknowledged<0))throw new RangeError('Invalid simulation checkpoint');
     actors=checkpoint.players;
@@ -93,7 +93,7 @@ export function createPlayerSimulation({epoch,actors,limit,world={},vertical=nul
     for(const p of players.values()){
       const input=tick-p.lastInputTick<Math.ceil(COOP_TICK_RATE*.25)?p.input:{forward:0,turn:0,strafe:0,run:false},
         previous={id:p.id,x:p.x,z:p.z,y:p.y,hd:p.hd,hp:p.hp,...(vertical?{fall:copyFall(p.fall)}:{})},context=world.context?.({...previous,fall:vertical?copyFall(p.fall):undefined})||{},hd=p.hd+(p.hp>0?input.turn:0)/COOP_TICK_RATE*2.2;
-      let candidate=vertical?verticalPlayer(previous,input,context,{world,vertical,limit,time:(tick+1)/COOP_TICK_RATE}):p.hp>0?moveOnFoot({...p,hd},{...input,run:input.run&&input.forward>.1&&!context.crouched&&context.canRun!==false},1/COOP_TICK_RATE,{...context,limit}):{x:p.x,z:p.z,hd:p.hd};
+      let candidate=movement?.({...previous},input)??(vertical?verticalPlayer(previous,input,context,{world,vertical,limit,time:(tick+1)/COOP_TICK_RATE}):p.hp>0?moveOnFoot({...p,hd},{...input,run:input.run&&input.forward>.1&&!context.crouched&&context.canRun!==false},1/COOP_TICK_RATE,{...context,limit}):{x:p.x,z:p.z,hd:p.hd});
       if(!vertical&&world.resolve)candidate=world.resolve(previous,candidate);
       if(!candidate||candidate.y!==undefined&&!finite(candidate.y)||![candidate.x,candidate.z,candidate.hd].every(finite)||Math.abs(candidate.x)>limit||Math.abs(candidate.z)>limit)throw new RangeError('Invalid world resolution');
       if(vertical){candidate.fall=copyFall(candidate.fall);if(!finite(candidate.hp)||candidate.hp<0||candidate.hp>p.hp||typeof candidate.swimming!=='boolean'||candidate.fall&&candidate.fall.y!==candidate.y)throw new RangeError('Invalid vertical resolution');}
@@ -103,5 +103,5 @@ export function createPlayerSimulation({epoch,actors,limit,world={},vertical=nul
     for(const {p,candidate} of next){p.x=candidate.x;p.z=candidate.z;p.hd=candidate.hd;p.y=candidate.y??p.y;if(vertical){p.fall=candidate.fall;p.swimming=candidate.swimming;p.hp=candidate.hp;}p.acknowledged=p.received;}
     tick++;return snapshot();
   }
-  return Object.freeze({accept,step,snapshot,revive(actorId,health){const p=players.get(actorId);if(!p||p.hp!==0||p.fall||p.swimming||!finite(health)||health<=0||health>(vertical?.maxHealth??20))return false;p.hp=health;p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};return true;},clearInputs(){for(const p of players.values()){p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};}},damage(actorId,amount){const p=players.get(actorId);if(!p)return false;p.hp=damageHealth(p.hp,amount);return true;}});
+  return Object.freeze({accept,step,snapshot,place(actorId,point){const p=players.get(actorId);if(!p||![point.x,point.y,point.z,point.hd].every(finite)||Math.abs(point.x)>limit||Math.abs(point.z)>limit)return false;p.x=point.x;p.y=point.y;p.z=point.z;p.hd=point.hd;p.fall=null;p.swimming=false;p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};return true;},revive(actorId,health){const p=players.get(actorId);if(!p||p.hp!==0||p.fall||p.swimming||!finite(health)||health<=0||health>(vertical?.maxHealth??20))return false;p.hp=health;p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};return true;},clearInputs(){for(const p of players.values()){p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};}},damage(actorId,amount){const p=players.get(actorId);if(!p)return false;p.hp=damageHealth(p.hp,amount);return true;}});
 }

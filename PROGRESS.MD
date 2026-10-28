@@ -451,3 +451,23 @@ Integració de main: es conserva el con 3D compartit de pistola/fusell de v0.6.2
 3. Vehicles, món complet, destrucció i objectius de campanya, preservant RNG.
 4. Desaments cooperatius permanents, migracions, estadístiques/historial i resum de missió.
 5. Validació física amb dos comptes/navegadors, GPU/Android, controls/rendiment/àudio/acabat; animació de portes, portes per a la IA individual i incidències històriques de fixtures/escala 2.
+
+
+## Cooperatiu · fase 19 · Armes seleccionables i transport compartit (v0.6.30)
+
+- Cada actor té pistola i un fusell d’assalt propis. Selector i tecles 1/2, F per disparar l’arma seleccionada. Ràfegues de tres trets a ticks 0/2/5, cadascun amb cost de bala i orientació actual; reserva compartida entre armes però separada entre jugadors. Sense prou munició només surten els trets disponibles. Selecció/propietat/cadència/impactes autoritatius; ordres repetides no gasten de nou. Es pot deixar el fusell amb G i passar-lo per contacte exclusiu. Seleccionar/deixar l’arma, pujar a un vehicle, quedar ferit i pausar cancel·la ràfegues pendents.
+- Un jeep de dues places es genera en una cel·la exterior accessible, amb espai físic verificat. E puja/baixa: primer conductor, després passatger. El servidor assigna seients, accepta només inputs del conductor i mou els dos actors conjuntament. W/S accelera/frena/endarrere, A/D gira; Y/U/córrer no alteren la física del vehicle.
+- Límit 14 m/s endavant, 6 enrere, acceleració/frenada 8 m/s². Col·lisions d’amplada amb parets/portes i terra exterior pla, sense salts ni travessa de límits. Entrada/sortida amb comprovació del camí complet: no hi ha teletransport a través de parets. Baixada només aturat i amb lloc lliure; portes no poden tancar-se sobre el jeep. Inputs caducats i pausa l’aturen. Inputs en pausa rebutjats.
+- Ocupants vulnerables als guàrdies, sense escut del vehicle. Un ferit deixa el seient i atura el jeep. Cal baixar per disparar, gestionar/recollir equipament, reanimar o completar objectius. Inventaris i farmacioles continuen sent personals; reanimar continua consumint exactament una farmaciola de qui ajuda.
+- Snapshot i checkpoint de vehicle/seients/velocitat, arma seleccionada i ràfegues pendents. Persistència abans d’anunciar accions; errors reverteixen seients, posició i munició. Les entrades de conducció no sobreviuen al reinici. Esquemes tancats i identitat de connexió, sense acceptar actor, seient o coordenades del client. Pressupost d’ordres discretes ampliat a 120/minut per incloure selecció, portes i vehicles; límits d’inputs/combat conservats.
+- Model procedural de jeep a Three i mapa Canvas, botó contextual E amb pujar/baixar, ocupació i velocitat al panell. Sense dependències ni recursos Cloudflare nous. Generador `relay:9`: missions temporals anteriors requereixen reinici.
+- Proves específiques de ràfega/munició/retarget/cancel·lació/propietat, conducció i passatger, entrades caducades, sortides bloquejades, parets, pausa, ferits, checkpoint, rollback i esquemes, interfície i geometria Three sense GPU. `npm run test:play` complet superat: dues sessions locals natives amb selecció i tres bales de ràfega, conductor/passatger al jeep, baixada, portes, victòria, reinici del Worker i reanimació consumint una farmaciola. Física vertical (6.480 passos i runtime), simulació de jugadors, build i tres regressions del fusell individual superades. Validació física/GPU/Android pendent.
+
+### Què queda després d’aquesta fase
+
+1. Armes: carregadors/recàrrega, més arsenal, equipament i botí de campanya, equilibri de munició/farmacioles.
+2. Vehicles: física completa i terrenys variats, salut/destrucció/combustible, armes muntades, blindats, barques i helicòpters; col·lisions/dany amb actors i IA.
+3. Persecució/cerca amb navegació, coordinació i integració amb la IA completa individual.
+4. Món complet, destrucció i objectius de campanya, preservant RNG i vehicles/contingut del joc individual.
+5. Desaments cooperatius permanents, migracions, estadístiques/historial i resum de missió.
+6. Validació física amb dos comptes/navegadors, GPU/Android, controls/rendiment/àudio/acabat; animació de portes, portes per a la IA individual i incidències històriques de fixtures/escala 2.

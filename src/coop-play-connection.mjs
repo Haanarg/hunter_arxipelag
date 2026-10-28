@@ -38,6 +38,7 @@ export function createPlayConnection({url,version,getInput,onMessage,onStatus=()
   return {start(){if(!stopped)return;stopped=false;connect();},launch(revision){return send({type:'launch',protocol:1,gameVersion:version,revision});},
     combat(weapon,commandId){if(!epoch||state?.status!=='running'||!['relay','extract'].includes(state.phase))return false;return send({type:'combat',protocol:1,epoch,weapon,commandId});},
     inventory(operation,target,commandId){if(!epoch||state?.status!=='running'||!['relay','extract'].includes(state.phase))return false;return send({type:'inventory',protocol:1,epoch,operation,target,commandId});},
+    vehicle(vehicleId,operation,commandId){if(!epoch||state?.status!=='running'||!['relay','extract'].includes(state.phase))return false;return send({type:'vehicle',protocol:1,epoch,vehicleId,operation,commandId});},
     door(doorId,open,commandId){if(!epoch||state?.status!=='running'||!['relay','extract'].includes(state.phase))return false;return send({type:'door',protocol:1,epoch,doorId,open,commandId});},
     stop(){stopped=true;generation++;clear();try{ws?.close(1000,'Sortida de missió');}catch(_){}ws=null;}};
 }
