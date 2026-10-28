@@ -131,22 +131,18 @@ function soldierWarnNeighbors(witness,target,targetY){
   // Radio supplements a real witnessed contact; the local shout always remains.
   radioRelay.warn(witness,target,targetY,{enemies:E,active:!!started&&!paused&&!over});
 }
-// Punteria per dificultat. DIF=1.5 conserva exactament la dispersió antiga.
-// Normal (1) falla més i Fàcil (.6) encara més, sense alterar el dany ni la IA.
-function enemyAimSpread(){
-  const difficulty=Math.max(.6,Math.min(1.5,DIF));
-  return difficulty>=1 ? 1+(1.5-difficulty)*2.4 : 2.2+(1-difficulty)*5.5;
-}
-function enemyShotDirection(u,target,targetY,eyeY,roll=rn){
-  const spread=enemyAimSpread();
-  // Els canons explosius han de poder errar també fora del radi d'explosió.
-  const explosiveBoost=u.spl?1+Math.min(1,u.spl/8)*(spread-1)*.5:1;
-  const horizontal=1.5*spread*explosiveBoost,
-        vertical=.85*(spread-1),
-        dx=target.x-u.x+roll(-horizontal,horizontal),
-         dy=targetY+(!cv&&playerCrouched?1.25:1.5)-eyeY+(vertical>0?roll(-vertical,vertical):0),
-        dz=target.z-u.z+roll(-horizontal,horizontal),
-        length=Math.hypot(dx,dy,dz);
+// La mateixa escala de punteria per a soldats, vehicles i patrulleres.
+function enemyAimSpread(){return window.HUNTER_ENEMY_ACCURACY.difficultyScale(DIF)}
+function enemyShotDirection(u,target,targetY,eyeY,roll=rn,weapon=null){
+  const aimX=target.x-u.x,
+        aimY=targetY+(!cv&&playerCrouched?1.25:1.5)-eyeY,
+        aimZ=target.z-u.z,
+        profile=weapon||(u.rocketSoldier?'bazooka':u.elite?'elite':
+          u.t==='general'?'pistol':u.t==='torre'?'tower':
+          u.spl?'tank':'rifle'),
+        offset=window.HUNTER_ENEMY_ACCURACY.sample(DIF,profile,aimX,aimY,aimZ,roll),
+        dx=aimX+offset.x,dy=aimY+offset.y,dz=aimZ+offset.z,
+        length=Math.max(.001,Math.hypot(dx,dy,dz));
   return [dx/length,dy/length,dz/length];
 }
 
@@ -308,9 +304,10 @@ function enemyCarRifleShot(u,target,targetY){
   u.o.position.set(u.x,(u.gy??enemyGroundAt(u,u.x,u.z))+.05,u.z);
   u.o.rotation.y=u.navHd??u.hd;
   u.o.updateMatrixWorld(true);
-  const spread=enemyAimSpread(),horizontal=1.5*spread,vertical=.85*(spread-1),
-         aim=new THREE.Vector3(target.x+rn(-horizontal,horizontal),
-           targetY+(!cv&&playerCrouched?1.25:1.5)+(vertical?rn(-vertical,vertical):0),target.z+rn(-horizontal,horizontal));
+  const aimY=targetY+(!cv&&playerCrouched?1.25:1.5),
+        offset=window.HUNTER_ENEMY_ACCURACY.sample(DIF,'jeep',
+          target.x-u.x,aimY-(u.o.position.y+1.5),target.z-u.z,rn),
+        aim=new THREE.Vector3(target.x+offset.x,aimY+offset.y,target.z+offset.z);
   u.o.worldToLocal(aim);
   const dx=aim.x-crew.mount.position.x,dy=aim.y-crew.mount.position.y,
         dz=aim.z-crew.mount.position.z;
@@ -556,7 +553,7 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
           u.z+fz*2.4+Math.sin(u.hd)*.72,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE,u);
       }else if(weapon==='heavy'&&d<u.heavyRange&&u.heavyCd<=0){
         u.heavyCd=u.heavyRate;
-        const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY-.2),
+        const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY-.2,rn,'towerHeavy'),
               fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
         shoot(u.x+fx*2.4+Math.cos(u.hd)*.72,eyeY-.2,
           u.z+fz*2.4-Math.sin(u.hd)*.72,ax,ay,az,76,COMBAT_BALANCE.weapons.towerHeavy,7,'e',mS,1.8,u);
@@ -611,18 +608,18 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
   if((u.t==='tanc'||u.t==='tanqueta')&&u.o.userData.turretPivot){
     let desired=new THREE.Vector3(-Math.sin(u.hd),0,-Math.cos(u.hd));
     if(u.canSee){
-      if(!u.armoredAimSpread){
-        const spread=enemyAimSpread(),
-              boost=u.spl?1+Math.min(1,u.spl/8)*(spread-1)*.5:1,
-              horizontal=1.5*spread*boost,
-              vertical=.85*(spread-1);
-        u.armoredAimSpread={x:rn(-horizontal,horizontal),
-          y:vertical?rn(-vertical,vertical):0,z:rn(-horizontal,horizontal)};
+      const gun=window.HUNTER_VEHICLES.turretShot(THREE,u.o);
+      if(gun){
+        const aimX=q.x-gun.origin.x,
+              aimY=py+(!cv&&playerCrouched?1.25:1.5)-gun.origin.y,
+              aimZ=q.z-gun.origin.z;
+        // Mantenim l'error estable mentre la torreta s'orienta.
+        if(!u.armoredAimSpread)
+          u.armoredAimSpread=window.HUNTER_ENEMY_ACCURACY.sample(
+            DIF,u.t==='tanc'?'tank':'tankette',aimX,aimY,aimZ,rn);
+        const offset=u.armoredAimSpread;
+        desired.set(aimX+offset.x,aimY+offset.y,aimZ+offset.z);
       }
-      const offset=u.armoredAimSpread,
-            gun=window.HUNTER_VEHICLES.turretShot(THREE,u.o);
-       if(gun)desired.set(q.x+offset.x-gun.origin.x,
-         py+(!cv&&playerCrouched?1.25:1.5)+offset.y-gun.origin.y,q.z+offset.z-gun.origin.z);
     }else u.armoredAimSpread=null;
     const aligned=window.HUNTER_VEHICLES.aimTurret(THREE,u.o,desired,dt);
     if(u.canSee&&d<u.rng&&u.cd<=0&&aligned){
