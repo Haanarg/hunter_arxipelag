@@ -86,8 +86,7 @@ function terminalRampState(r){
 }
 function terminalRampHeight(x,z){
  for(const c of world?.userData.compounds||[]){if(!c.loadingRamp)continue;const s=terminalRampState(c.loadingRamp);if(!s)continue;
-  const dx=x-s.x,dz=z-s.z,t=(dx*s.ux+dz*s.uz)/s.length,side=dx*s.uz-dz*s.ux;
-  if(t>=0&&t<=1&&Math.abs(side)<=5)return s.startY+(s.endY-s.startY)*t;
+  const h=window.HUNTER_WALK_SURFACES.terminalRampSurfaceHeight(s,x,z);if(h!==null)return h;
  }return null;
 }
 function updateTerminalRamps(){for(const c of world?.userData.compounds||[]){const r=c.loadingRamp;if(!r)continue;const s=terminalRampState(r);r.mesh.visible=!!s;if(!s)continue;

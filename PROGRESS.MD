@@ -230,3 +230,11 @@ Implementada una extracció parcial de la física del món: relleu, platges/prof
 Proves: món real 67/1, 961 punts i col·lisions contra una referència congelada del main anterior, ronda JSON i límits, dos actors contra la geometria real en Node i workerd natiu. Regressions de comptes/sala/WebSockets/desaments i paquet del navegador superades. No cal cap migració o configuració manual nova.
 
 Queda: escales/interiors/teulades/molls/aigua, gravetat i vehicles/IA dinàmics; món canònic i sessió de missió al servidor; ordres/snapshots en temps real, combat/objectius compartits i predicció/interpolació; reconnexió/pausa/amfitrió, desaments/estadístiques cooperatius; més llavors/mapa gran, proves físiques i càrrega, quotes/retenció i les dues fallades històriques. La missió conjunta encara no s’inicia (`playable:false`). La resta del pla general continua vigent.
+
+## Cooperatiu · fase 5 (v0.6.12)
+
+Implementades superfícies transitables compartides: graons/rampes, molls, pisos girats, teulades, búnquer i projecció de passarel·la de terminal. El runtime individual reutilitza les regles preservant els controls d’altura anterior, el suport visual i els càlculs dinàmics existents. L’adaptador estàtic incorpora groundAt i índex d’edificis; geometria format 2 amb lectura compatible de format 1. No canvia el format dels desaments. [Detall](docs/COOP_PHASE5.md).
+
+Proves amb referència independent congelada del main anterior, casos de transició entre nivells, 551 punts reals de superfícies de 67/1 i els 961 de terreny de la fase 4; dos actors en Node/workerd i regressions de comptes/sales/WebSockets/desaments. No cal cap migració ni configuració manual nova.
+
+Queda: gravetat/caigudes/paracaigudes i aigua/natació; ferri/plataformes/vehicles dinàmics i IA; actualització de col·lisions; món canònic i sessió al servidor, compatibilitat dels dos clients i separació del suport visual de l’estat físic; ordres/snapshots, combat/objectius/inventari compartits, predicció/interpolació; reconnexió/pausa/amfitrió i desaments/estadístiques; matriu de llavors/escala 2, proves físiques/càrrega, quotes/retenció i les dues fallades històriques. La missió conjunta encara no es pot iniciar (`playable:false`); els altres pendents generals continuen vigents.

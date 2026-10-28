@@ -1,13 +1,7 @@
 // Walkable upper floors use the actor's previous elevation; never teleport a ground-floor actor upstairs.
-function buildingLocalPoint(b,x,z){const c=Math.cos(b.angle||0),s=Math.sin(b.angle||0),dx=x-b.x,dz=z-b.z;return{x:dx*c+dz*s,z:-dx*s+dz*c}}
-function buildingWorldPoint(b,x,z){const c=Math.cos(b.angle||0),s=Math.sin(b.angle||0);return{x:b.x+x*c-z*s,z:b.z+x*s+z*c}}
-function upperFloorHeight(b,x,z,previous=-Infinity){
- if(!b.upperFloor||b.rb)return null;
- const p=buildingLocalPoint(b,x,z),a=b.interiorStair,level=b.fy+b.storey+.15;
- if(Math.abs(p.x)>b.localW/2-.35||Math.abs(p.z)>b.localD/2-.35)return null;
- if(stairContains(a,x,z))return null;
- return previous>=level-.75?level:null;
-}
+function buildingLocalPoint(b,x,z){return window.HUNTER_WALK_SURFACES.buildingLocalPoint(b,x,z)}
+function buildingWorldPoint(b,x,z){return window.HUNTER_WALK_SURFACES.buildingWorldPoint(b,x,z)}
+function upperFloorHeight(b,x,z,previous=-Infinity){return window.HUNTER_WALK_SURFACES.upperFloorHeight(b,x,z,previous)}
 function decorateRuntimeBuilding(b,spec){
  const box=(g,w,h,d,c,x=0,y=0,z=0,profile='paint')=>bx(g,w,h,d,c,x,y,z,profile),rod=(g,a,v,r,c)=>{
   const start=new THREE.Vector3(...a),end=new THREE.Vector3(...v),delta=end.clone().sub(start),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),6),M(c,'paint'));m.position.copy(start.add(end).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());g.add(m);return m;
