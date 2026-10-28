@@ -18,3 +18,16 @@
 
 /assets/*
   Cache-Control: public, max-age=86400
+
+# Keep the cooperative HTML and its controls in sync with versioned modules.
+/coop
+  Cache-Control: public, max-age=0, must-revalidate
+
+/coop/
+  Cache-Control: public, max-age=0, must-revalidate
+
+/coop.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/src/*.css
+  Cache-Control: public, max-age=0, must-revalidate

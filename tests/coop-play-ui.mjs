@@ -30,13 +30,20 @@ try{
  const advanceInput=()=>{const entry=[...timers].find(([,v])=>v.ms===50);assert.ok(entry);timers.delete(entry[0]);entry[1].fn();};advanceInput();
  assert.equal(ws.sent.at(-1).input.forward,1);assert.equal(ws.sent.at(-1).interact,true,'touch activation reaches protocol');
  listeners.get('blur')();advanceInput();assert.equal(ws.sent.at(-1).input.forward,0);assert.equal(ws.sent.at(-1).interact,false);
+ const door=mission.meta.doors[0],near=mission.snapshot();near.players[0]={...near.players[0],x:door.cx,z:door.cz+2,y:door.floor+.06};
+ ws.message({type:'state',state:near});assert.equal(elements.get('door').disabled,false);assert.match(elements.get('door').textContent,/Obrir/);
+ listeners.get('keydown')({code:'KeyF',repeat:false,preventDefault(){}});const action=ws.sent.at(-1);assert.equal(action.type,'door');assert.equal(action.open,true);assert.equal(elements.get('door').disabled,true);
+ listeners.get('keydown')({code:'KeyF',repeat:true,preventDefault(){}});assert.equal(ws.sent.at(-1),action,'held key does not toggle repeatedly');
+ const opened={...near,doorRevision:1,doors:near.doors.map(d=>d.id===door.id?{...d,open:true}:d)};
+ ws.message({type:'state',state:opened});ws.message({type:'action',commandId:action.commandId,ok:true,code:'OPENED'});assert.match(elements.get('door').textContent,/Tancar/);assert.equal(elements.get('door').disabled,false);
+ elements.get('door').onclick();const closing=ws.sent.at(-1);assert.equal(closing.open,false);ws.message({type:'action',commandId:closing.commandId,ok:false,code:'OCCUPIED'});assert.match(elements.get('message').textContent,/jugador al pas/);
  if(frames.size){const [id,fn]=[...frames][0];frames.delete(id);fn(performance.now()+16);}assert.ok(draws>10,'Canvas fallback draws actual world/players/objectives');
  listeners.get('pagehide')();assert.equal(timers.size,0);assert.equal(frames.size,0,'navigation releases sockets, timers and renderer');
  const {createMissionView}=await import('../src/coop-play-view.mjs'),T=await import('../vendor/three-r186.module.mjs');let rendered=false,disposed=false;
  const threeView=await createMissionView(elements.get('view'),mission.meta,g.geometry,{three:T,makeRenderer:()=>({setPixelRatio(){},setClearColor(){},setSize(){},render(scene,camera){
    rendered=true;scene.updateMatrixWorld();camera.updateMatrixWorld();assert.ok(camera.isOrthographicCamera);assert.ok(camera.projectionMatrix.elements.every(Number.isFinite));
-   let meshes=0;scene.traverse(o=>{assert.ok(o.matrixWorld.elements.every(Number.isFinite));if(o.isMesh){meshes++;const a=o.geometry.getAttribute('position');assert.ok([...a.array].every(Number.isFinite));}});assert.ok(meshes>10,'actual Three scene includes physical world, players and objectives');
+   let meshes=0,openDoor=false;scene.traverse(o=>{assert.ok(o.matrixWorld.elements.every(Number.isFinite));if(o.isMesh){meshes++;const a=o.geometry.getAttribute('position');assert.ok([...a.array].every(Number.isFinite));}if(o.userData.doorId===door.id){openDoor=true;assert.equal(o.visible,false,'3D open door reflects server state');}});assert.ok(meshes>10,'actual Three scene includes physical world, players and objectives');assert.equal(openDoor,true);
  },dispose(){disposed=true;}})});
- threeView.setState(mission.snapshot());const [frame,render]=[...frames][0];frames.delete(frame);render(performance.now()+32);assert.equal(rendered,true);threeView.destroy();assert.equal(disposed,true);assert.equal(frames.size,0);
+ threeView.setState(opened);const [frame,render]=[...frames][0];frames.delete(frame);render(performance.now()+32);assert.equal(rendered,true);threeView.destroy();assert.equal(disposed,true);assert.equal(frames.size,0);
  console.log('play UI: authenticated page entry, room/launch, player-specific objective, keyboard/touch activation, blur release, Canvas world render and navigation cleanup passed');
 }finally{console.error=error;for(const [k,v] of saved)if(v===undefined)delete globalThis[k];else globalThis[k]=v;}

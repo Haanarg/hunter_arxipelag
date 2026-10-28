@@ -1,8 +1,8 @@
 # HUNTER · ARXIPÈLAG — progrés de les millores
 
-## Estat actual · v0.6.18
+## Estat actual · v0.6.20
 
-**Primera missió cooperativa jugable: Relleu d’emergència**, per a dos comptes aprovats. Inici confirmat pels dos clients, moviment/col·lisions autoritatius, terminals simultanis, extracció/victòria, pausa per desconnexió i recuperació de checkpoint. Vista 3D provisional amb alternativa Canvas i controls tàctils. [Instruccions, validació i límits](docs/COOP_PLAYABLE.md).
+**Primera missió cooperativa jugable: Relleu d’emergència**, per a dos comptes aprovats. Inici confirmat pels dos clients, moviment/col·lisions autoritatius, terminals simultanis, extracció/victòria, pausa per desconnexió i recuperació de checkpoint. Vista 3D provisional amb alternativa Canvas i controls tàctils. Des de v0.6.20, portes compartides amb F / Porta, col·lisions dinàmiques i estat persistent en reconnectar. [Instruccions, validació i límits](docs/COOP_PLAYABLE.md).
 
 L’usuari ha prioritzat la jugabilitat sobre l’estètica. Aquest és un mode reduït de base, no la campanya completa amb combat/vehicles. Els apartats antics que diuen «no jugable» descriuen l’estat de cada fase històrica. Els pendents generals i la fase 1 tancada per l’usuari es conserven.
 
@@ -294,3 +294,11 @@ Implementada la missió reduïda Relleu d’emergència: dos jugadors confirmen 
 Validació completa amb dos comptes locals i serveis natius D1/DO/WebSockets: moviment, confirmació doble, terminals, extracció/victòria, pausa/reconnexió, reinici de workerd i recuperació, falsificació de posicions i suspensió durant la missió. Proves de sis llavors/dues escales, checkpoints/alarms/fallades, pantalla/controls i escena Three.js sense GPU, més regressions de comptes/món/sales/desaments. La passada visual GPU i les proves físiques Android/dos dispositius continuen pendents; no es creen comptes de prova en producció. No cal configuració manual nova.
 
 Queda: validació física i mesures de latència/CPU/GPU/memòria/consum/quotes; millorar representació i predicció/reconciliació; portes/destrucció/perímetres i generador complet amb HQ/altres compounds/vegetació/entitats; combat/inventari/IA/vehicles/ferri/plataformes/presoners/objectius de campanya; desaments cooperatius duradors/exportables, estadístiques/historial, versions/retenció i política de pausa/permisos; diagnòstic del mapa complet d’escala 2, les tres incidències històriques i recuperació excepcional d’administradors. Els altres pendents generals segueixen vigents. Els checkpoints pilot caduquen als 30 minuts i no es migren entre versions; els desaments individuals es conserven.
+
+## Cooperatiu · fase 12: portes compartides (v0.6.20)
+
+Implementades ordres d’obrir/tancar portes a la missió reduïda, amb F o botó tàctil. El servidor valida sessió, proximitat, altura, estat de missió i pas desocupat; actualitza l’adaptador físic, desa l’estat i després el comunica als dos jugadors. Revisió de portes, cooldown i historial acotat d’ordres idempotents, restaurats amb el checkpoint. Vistes 3D/Canvas actualitzades sense recrear tota l’escena. [Detall](docs/COOP_DOORS.md).
+
+Verificat sobre main v0.6.19, conservant el fusell d’assalt i els canvis recents. Proves natives amb dos comptes: obertura/remot rebutjat/pas ocupat/tancament/bloqueig/reobertura, terminals i victòria, reconnexió i reinici complet amb estat de portes recuperat. Proves d’errors de persistència sense publicació, validació del protocol i UI F/tàctil/representació 3D, més regressions de comptes/món/sales/desaments. La passada física WebGL/Android/dos dispositius continua pendent. No cal cap migració, plugin, secret o recurs Cloudflare nou.
+
+Queda: animació i millores visuals de portes, destrucció i resta d’interaccions; combat/inventari/IA i objectius de campanya compartits, vehicles/ferri/plataformes/presoners; perímetres i generador complet amb HQ/búnquer/hangars/altres compounds/vegetació/entitats; desaments cooperatius duradors/exportables i estadístiques/historial, versions/retenció/permisos; validació física, mesures de latència/CPU/GPU/memòria/consum/quotes i predicció/reconciliació; diagnòstic del mapa complet d’escala 2, les tres incidències històriques i recuperació excepcional d’administradors. El mode reduït continua jugable; les sessions temporals caduquen als 30 minuts i no es migren entre versions. Es mantenen els pendents generals i la fase 1 tancada per decisió de l’usuari.

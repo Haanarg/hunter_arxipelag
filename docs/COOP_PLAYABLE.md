@@ -1,4 +1,4 @@
-# Primera missió cooperativa jugable · v0.6.18
+# Primera missió cooperativa jugable · v0.6.20
 
 ## Què es pot jugar
 
@@ -6,7 +6,7 @@
 
 L’usuari ha prioritzat que sigui jugable encara que l’estètica quedi provisional. Aquesta versió utilitza una vista 3D senzilla, dos personatges de colors, murs, terminals i recorreguts orientatius. Si WebGL no es pot crear, s’ofereix un mapa Canvas 2D amb els mateixos controls i la mateixa sessió. El joc individual conserva el seu món i la seva interfície.
 
-No és encara la campanya Hunter completa en cooperatiu: combat, IA, vehicles, inventari i objectius de la campanya continuen pendents. La missió reduïda té un generador propi `relay:1`; no es presenta la geometria parcial del món general com si fos una campanya completa.
+No és encara la campanya Hunter completa en cooperatiu: combat, IA, vehicles, inventari i objectius de la campanya continuen pendents. La missió reduïda té un generador propi `relay:2`; no es presenta la geometria parcial del món general com si fos una campanya completa.
 
 ## Com jugar
 
@@ -17,6 +17,8 @@ No és encara la campanya Hunter completa en cooperatiu: combat, IA, vehicles, i
 5. El jugador blau va al terminal 1 i el groc al 2. Tots dos mantenen **E**, **espai** o **Activar** al seu terminal durant tres segons simultanis.
 6. Després es reuneixen al cercle verd. Dos segons junts completen l’extracció i la victòria.
 
+**F** o el botó **Porta** obre o tanca la porta propera; el botó indica l’acció disponible. No es pot tancar si hi ha un jugador al pas.
+
 W/S o fletxes amunt/avall per avançar/retrocedir; A/D o fletxes esquerra/dreta per girar; Y/U per al moviment lateral; Majúscules per córrer. La pantalla inclou botons tàctils de mantenir premut. Perdre el focus allibera els controls.
 
 Si la sala s’obre des d’una partida individual iniciada, la missió s’obre en una altra pestanya i la partida individual queda en pausa. Només es manté una connexió de sala per compte: una altra pestanya del mateix compte pot substituir la connexió activa.
@@ -24,9 +26,10 @@ Si la sala s’obre des d’una partida individual iniciada, la missió s’obre
 ## Servidor i persistència
 
 - El Durable Object de la sala ja executa la missió. El servidor genera i guarda la geometria canònica; el client només rep dades de representació i envia intencions. No envia posicions, vida o victòries.
-- S’escullen punts inicials i terminals fora dels edificis, sobre la terrassa construïda, amb recorreguts connectats i comprovació de col·lisions. L’àrea d’operació queda limitada. Les portes continuen tancades: els objectius estan en recorreguts accessibles sense obrir-les.
+- S’escullen punts inicials i terminals fora dels edificis, sobre la terrassa construïda, amb recorreguts connectats i comprovació de col·lisions. L’àrea d’operació queda limitada. Les portes es poden obrir i tancar amb F / Porta. Els objectius mantenen recorreguts accessibles sense exigir que s’obri cap edifici.
 - Tres passos fixos de simulació de 1/30 s per lot, amb un objectiu d’enviament d’estat cada 100 ms. El client envia intencions a 20 Hz i interpola la representació. No hi ha predicció local ni una garantia de latència/FPS; els retards del servei poden alentir la simulació.
-- Geometria guardada una vegada i checkpoint del tick, posicions, vida, seqüències reconegudes i objectiu abans de publicar cada lot. La prova de recuperació reinicia completament workerd i reutilitza el mateix D1 i emmagatzematge de Durable Objects.
+- Les portes es validen contra la posició i altura autoritatives. El servidor impedeix tancaments sobre els dos actors, limita la freqüència i conserva els últims 32 resultats de comanda per evitar repeticions. El nou estat es desa abans d’actualitzar els dos clients; en una fallada es restaura el checkpoint.
+- Geometria canònica guardada una vegada, amb estats de portes aplicats en restaurar, i checkpoint del tick, posicions, vida, seqüències reconegudes i objectiu abans de publicar cada lot. La prova de recuperació reinicia completament workerd i reutilitza el mateix D1 i emmagatzematge de Durable Objects.
 - Els alarms duplicats no apliquen un altre lot abans del següent venciment. Una fallada de persistència restaura l’últim checkpoint i no publica el resultat no desat; programa una recuperació. Referència de la plataforma: [Alarms de Durable Objects](https://developers.cloudflare.com/durable-objects/api/alarms/).
 - Quan falta un jugador, la missió es pausa i es buiden les intencions. Tornar a entrar amb el mateix compte i versió permet reprendre-la. Sortir de la sala, canviar-ne la revisió o participants finalitza la sessió de missió corresponent.
 - La dificultat només modifica el temps disponible en aquesta missió: 25 minuts en fàcil, 15 en normal i 10 en difícil. La sessió temporal caduca als 30 minuts de rellotge o quan caduca la sala, si és abans.
@@ -51,7 +54,11 @@ No calen migracions SQL, secrets, plugins ni recursos Cloudflare nous. `coopPlay
 ## Què queda
 
 1. Passada real amb dos navegadors/dispositius i Android; qualitat visual, llegibilitat, ergonomia tàctil, latència, CPU/memòria i consum/quotes sota càrrega. Afegir predicció/reconciliació si les mesures ho requereixen.
-2. Portes i destrucció compartides, perímetres i resta de la base, HQ/búnquer/hangars i altres compounds; món complet, vegetació, entitats i coherència amb el render.
+2. Animació de portes i destrucció compartida, perímetres i resta de la base, HQ/búnquer/hangars i altres compounds; món complet, vegetació, entitats i coherència amb el render.
 3. Combat, inventari, IA, vehicles, ferri/plataformes, presoners i objectius de campanya compartits.
 4. Desaments cooperatius duradors/exportables, estadístiques i historial, política de versions/retenció, pausa i permisos més amplis; recuperació excepcional d’administradors.
 5. Diagnòstic de generació completa d’escala 2 i les incidències històriques de proves, més les altres fases generals del pla original.
+
+## Actualització v0.6.20
+
+Portes compartides amb F / Porta: proximitat, altura, pas ocupat, cooldown, ordres idempotents, persistència i actualització de les col·lisions dels dos jugadors. Les vistes 3D i Canvas reflecteixen l’estat confirmat; no es modifica la física local per anticipació. Les proves natives recorren portes, completen la missió i recuperen l’obertura després de reiniciar workerd. La passada física de dos dispositius i l’animació de les fulles continuen pendents. Detall: [COOP_DOORS.md](COOP_DOORS.md).

@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {CoopRoomHub} from '../server/coop-hub.mjs';
+import {generateRelayMission} from '../server/coop-mission.mjs';
+import {GAME_VERSION} from '../src/version.mjs';
+const room={id:'hub-door',revision:4,seed:67,mapScale:1,allReady:true,expiresAt:Date.now()+86400000,members:[{id:'a',name:'A'},{id:'b',name:'B'}]},g=generateRelayMission(room),door=g.record.meta.doors[0];
+g.record.status='running';Object.assign(g.record.checkpoint.players[0],{x:door.cx,z:door.cz+2,y:door.floor+.06});
+let fail=false,alarm=null;const store=new Map([['world',g.geometry],['mission',g.record]]),sockets=room.members.map(m=>({readyState:1,messages:[],attachment:{actorId:m.id,gameClient:true,gameVersion:GAME_VERSION,window:Date.now(),count:0},deserializeAttachment(){return {...this.attachment};},serializeAttachment(v){this.attachment={...v};},send(s){this.messages.push(JSON.parse(s));},close(code){this.code=code;this.readyState=3;}}));
+const ctx={getWebSockets:()=>sockets,blockConcurrencyWhile:fn=>fn(),storage:{async get(k){return structuredClone(store.get(k));},async put(k,v){if(fail)throw Error('Persistence unavailable');store.set(k,structuredClone(v));},async setAlarm(v){alarm=v;},async delete(keys){for(const k of keys)store.delete(k);},async deleteAlarm(){alarm=null;}}};
+let hub=new CoopRoomHub(ctx,{});await hub.loading;hub.verify=async ws=>ws.deserializeAttachment();
+const request={type:'door',protocol:1,epoch:g.record.meta.id,doorId:door.id,open:true,commandId:'durable-door'};
+fail=true;await hub.webSocketMessage(sockets[0],JSON.stringify(request));assert.equal(sockets[0].messages.at(-1).code,'SAVE_FAILED');assert.equal(hub.mission.snapshot().doorRevision,0);assert.equal(hub.mission.setup('a').geometry.walls[door.wallIndex].open,false);assert.equal(sockets[1].messages.length,0,'unpersisted opening is never broadcast');
+fail=false;await hub.webSocketMessage(sockets[0],JSON.stringify(request));assert.equal(sockets[0].messages.at(-1).code,'OPENED');assert.equal(sockets[1].messages.at(-1).state.doors.find(d=>d.id===door.id).open,true);assert.ok(alarm);
+hub=new CoopRoomHub(ctx,{});await hub.loading;hub.verify=async ws=>ws.deserializeAttachment();assert.equal(hub.mission.setup('b').geometry.walls[door.wallIndex].open,true,'cold start rebuilds saved door collision');
+await hub.webSocketMessage(sockets[0],JSON.stringify(request));assert.equal(sockets[0].messages.at(-1).duplicate,true);assert.equal(hub.mission.snapshot().doorRevision,1);
+await hub.webSocketMessage(sockets[1],JSON.stringify({...request,commandId:'forged-coordinate',x:door.cx}));assert.equal(sockets[1].code,1008,'extra position field is rejected');
+console.log('door transport: persistence-before-broadcast, rollback/retry, shared snapshot, cold restore/idempotency and closed command schema passed');

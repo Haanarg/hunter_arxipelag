@@ -3,7 +3,7 @@ import {createStaticWorldAdapter} from '../src/world-adapter.mjs';
 import {createCanonicalWater} from '../src/canonical-water.mjs';
 import {createPlayerSimulation,validatePlayerInput} from '../src/player-simulation.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
-export const MISSION_VERSION='relay:1';
+export const MISSION_VERSION='relay:2';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 export function generateRelayMission(room){
   if(room.members.length!==2||!room.allReady)throw new Error('Calen dos jugadors preparats.');
@@ -30,15 +30,45 @@ export function generateRelayMission(room){
     difficulty:room.difficulty??1,timeLimitTicks:Math.round(27000/(room.difficulty??1)),createdAt:Date.now(),expiresAt:Math.min(room.expiresAt,Date.now()+30*60*1000),bounds,floor:pad.y,
     members:room.members.map(m=>({id:m.id,name:m.name})),terminals:[point(first),point(other)],routes:[route(first),route(other)],extraction:point(start)},
     actors=room.members.map((m,i)=>({id:m.id,...point(i?second:start),hd:0,hp:20}));
+  meta.doors=foundation.baseStructures.walls.flatMap((w,wallIndex)=>w.door&&!w.locked&&!w.alwaysOpen?[{id:w.id,wallIndex,cx:w.cx,cz:w.cz,floor:w.y0+1}]:[]);
   return {geometry:world.snapshot(),record:{meta,phase:'relay',hold:0,status:'paused',checkpoint:{protocol:1,epoch:id,tick:0,players:actors.map(a=>({...a,acknowledged:0,fall:null,swimming:false}))},nextAlarm:Date.now()+100}};
 }
 export function restoreRelayMission(record,geometry){
   if(record?.meta?.generator!==MISSION_VERSION||record.meta.gameVersion!==GAME_VERSION)throw new Error('La missió és d’una versió anterior. Torneu a iniciar-la.');
-  const meta=structuredClone(record.meta),world=createStaticWorldAdapter(geometry),water=createCanonicalWater(world.heightAt),b=meta.bounds,
-    bounded={...world,resolveBody(previous,candidate){const p=world.resolveBody(previous,{...candidate,x:clamp(candidate.x,b.x0,b.x1),z:clamp(candidate.z,b.z0,b.z1)});return {...p,x:clamp(p.x,b.x0,b.x1),z:clamp(p.z,b.z0,b.z1)};}},
+  const meta=structuredClone(record.meta),canonical=structuredClone(geometry),physical=structuredClone(geometry),b=meta.bounds,
+    doorStates=new Map((record.doors||meta.doors.map(d=>({id:d.id,open:false}))).map(d=>[d.id,!!d.open])),
+    cooldowns=new Map((record.doorCooldowns||[]).map(c=>[c.actorId,c.tick])),results=structuredClone(record.commandResults||[]);
+  for(const d of meta.doors)physical.walls[d.wallIndex].open=doorStates.get(d.id)??false;
+  let world=createStaticWorldAdapter(physical);
+  const water=createCanonicalWater((x,z)=>world.heightAt(x,z)),
+    bounded={locomotionAt:(...args)=>world.locomotionAt(...args),roofLanding:(...args)=>world.roofLanding(...args),resolveBody(previous,candidate){const p=world.resolveBody(previous,{...candidate,x:clamp(candidate.x,b.x0,b.x1),z:clamp(candidate.z,b.z0,b.z1)});return {...p,x:clamp(p.x,b.x0,b.x1),z:clamp(p.z,b.z0,b.z1)};}},
     sim=createPlayerSimulation({epoch:meta.id,limit:world.limit,world:bounded,vertical:{surfaceAt:water.surfaceAt},checkpoint:record.checkpoint}),actions=new Map();
-  let phase=record.phase,hold=record.hold,status=record.status;
-  function snapshot(){return {...sim.snapshot(),missionId:meta.id,phase,hold,status,remaining:Math.max(0,(meta.timeLimitTicks-sim.snapshot().tick)/30)};}
+  let phase=record.phase,hold=record.hold,status=record.status,doorRevision=record.doorRevision??0;
+  const doors=()=>meta.doors.map(d=>({id:d.id,open:doorStates.get(d.id)??false}));
+  function snapshot(){return {...sim.snapshot(),missionId:meta.id,phase,hold,status,doorRevision,doors:doors(),remaining:Math.max(0,(meta.timeLimitTicks-sim.snapshot().tick)/30)};}
+  function doorCommand(actorId,message){
+    const previous=results.find(r=>r.actorId===actorId&&r.commandId===message.commandId);if(previous)return {...previous,duplicate:true};
+    let code='INVALID',ok=false;
+    const state=sim.snapshot(),actor=state.players.find(p=>p.id===actorId),door=meta.doors.find(d=>d.id===message.doorId);
+    if(actor&&message.epoch===meta.id&&typeof message.commandId==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(message.commandId)&&typeof message.open==='boolean'){
+      if(status!=='running'||!['relay','extract'].includes(phase)||actor.hp<=0||actor.fall||Date.now()>=meta.expiresAt)code='NOT_ACTIVE';
+      else if(!door)code='UNKNOWN_DOOR';
+      else if(Math.hypot(actor.x-door.cx,actor.z-door.cz)>4.5||Math.abs(actor.y-door.floor)>2)code='TOO_FAR';
+      else if(doorStates.get(door.id)===message.open){ok=true;code='UNCHANGED';}
+      else if(state.tick-(cooldowns.get(actorId)??-Infinity)<18)code='COOLDOWN';
+      else{
+        const wall=physical.walls[door.wallIndex],occupied=!message.open&&state.players.some(p=>p.x>wall.x0-.8&&p.x<wall.x1+.8&&p.z>wall.z0-.8&&p.z<wall.z1+.8&&p.y+3.1>wall.y0&&p.y+.15<wall.y1);
+        if(occupied)code='OCCUPIED';
+        else{
+          const updated={...physical,walls:physical.walls.map((w,i)=>i===door.wallIndex?{...w,open:message.open}:w)},next=createStaticWorldAdapter(updated);
+          physical.walls=updated.walls;world=next;doorStates.set(door.id,message.open);cooldowns.set(actorId,state.tick);doorRevision++;ok=true;code=message.open?'OPENED':'CLOSED';
+        }
+      }
+    }
+    const result={actorId,commandId:message.commandId,doorId:message.doorId,ok,code,revision:doorRevision};
+    if(actor&&typeof message.commandId==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(message.commandId)){results.push(result);if(results.length>32)results.shift();}
+    return {...result};
+  }
   function accept(id,message){
     if(!['relay','extract'].includes(phase)||message.epoch!==meta.id||typeof message.interact!=='boolean'||!validatePlayerInput(message.input)||!sim.accept(id,message))return false;
     actions.set(id,{interact:message.interact,tick:sim.snapshot().tick});return true;
@@ -53,7 +83,7 @@ export function restoreRelayMission(record,geometry){
     }else{hold=state.players.every(p=>near(p,meta.extraction))?hold+1:0;if(hold>=60){phase='won';hold=60;}}
     return snapshot();
   }
-  return {meta,geometry,accept,step,snapshot,setStatus(value){status=value;if(value!=='running'){actions.clear();sim.clearInputs();if(['relay','extract'].includes(phase))hold=0;}},
-    checkpoint(nextAlarm){return {meta,phase,hold,status,checkpoint:sim.snapshot(),nextAlarm};},
-    setup(self){return {type:'mission',self,meta,geometry,state:snapshot()};}};
+  return {meta,geometry:canonical,accept,step,snapshot,doorCommand,setStatus(value){status=value;if(value!=='running'){actions.clear();sim.clearInputs();if(['relay','extract'].includes(phase))hold=0;}},
+    checkpoint(nextAlarm){return {meta:structuredClone(meta),phase,hold,status,checkpoint:sim.snapshot(),nextAlarm,doors:doors(),doorRevision,doorCooldowns:[...cooldowns].map(([actorId,tick])=>({actorId,tick})),commandResults:structuredClone(results)};},
+    setup(self){return {type:'mission',self,meta:structuredClone(meta),geometry:world.snapshot(),state:snapshot()};}};
 }

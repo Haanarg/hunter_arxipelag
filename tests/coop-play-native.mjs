@@ -31,6 +31,24 @@ try{
  const missionId=ca.setup.meta.id;cb.ws.close(1000,'Test reconnect');await wait(()=>ca.state.status==='paused');
  cb=await b.connect(room.id);await wait(()=>cb.setup);assert.equal(cb.setup.meta.id,missionId);await wait(()=>ca.state.status==='running');
  let phase='relay',indices=[0,0],sequences=[0,0],driverError=null;
+ const door=ca.setup.meta.doors[0];assert.ok(door);
+ const pawn=i=>ca.state.players.find(p=>p.id===(i?b.id:a.id));
+ const sendIntent=(i,movement)=>{const p=pawn(i),c=i?cb:ca;sequences[i]=Math.max(sequences[i],p.acknowledged)+1;c.ws.send(JSON.stringify({type:'input',protocol:1,epoch:missionId,sequence:sequences[i],input:movement,interact:false}));};
+ async function moveTo(i,target){
+   const t=setInterval(()=>{const p=pawn(i),dx=target.x-p.x,dz=target.z-p.z,d=Math.max(1,Math.hypot(dx,dz));sendIntent(i,{forward:-dz/d,turn:0,strafe:dx/d,run:true});},50);
+   try{await wait(()=>Math.hypot(pawn(i).x-target.x,pawn(i).z-target.z)<.15,15000);}finally{clearInterval(t);sendIntent(i,{forward:0,turn:0,strafe:0,run:false});}
+ }
+ async function operate(c,commandId,open){c.ws.send(JSON.stringify({type:'door',protocol:1,epoch:missionId,doorId:door.id,open,commandId}));return wait(()=>c.events.find(e=>e.type==='action'&&e.commandId===commandId));}
+ assert.equal((await operate(cb,'native-remote',true)).code,'TOO_FAR');
+ await moveTo(0,{x:door.cx,z:door.cz+2.2});assert.equal((await operate(ca,'native-open',true)).code,'OPENED');
+ await wait(()=>cb.state.doors.find(d=>d.id===door.id)?.open===true);
+ ca.ws.send(JSON.stringify({type:'door',protocol:1,epoch:missionId,doorId:door.id,open:false,commandId:'native-open'}));await wait(()=>ca.events.find(e=>e.type==='action'&&e.commandId==='native-open'&&e.duplicate));assert.equal(ca.state.doorRevision,1);
+ await moveTo(0,{x:door.cx,z:door.cz});await moveTo(1,{x:door.cx,z:door.cz+2.2});
+ assert.equal((await operate(cb,'native-occupied',false)).code,'OCCUPIED');
+ await moveTo(0,{x:door.cx,z:door.cz-2.2});assert.equal((await operate(cb,'native-close',false)).code,'CLOSED');
+ const pushing=setInterval(()=>sendIntent(0,{forward:-1,turn:0,strafe:0,run:false}),50);await new Promise(r=>setTimeout(r,1000));clearInterval(pushing);sendIntent(0,{forward:0,turn:0,strafe:0,run:false});
+ assert.ok(pawn(0).z<door.cz-.7,'closed door blocks the actor inside');
+ assert.equal((await operate(cb,'native-open-again',true)).code,'OPENED');await moveTo(0,{x:door.cx,z:door.cz+2.2});
  timer=setInterval(()=>{try{
   const state=ca.state,meta=ca.setup.meta;if(!state||state.status!=='running')return;
   if(state.phase!==phase){phase=state.phase;indices=[0,0];}if(!['relay','extract'].includes(phase))return;
@@ -47,7 +65,8 @@ try{
  // test endpoint is used to restore the mission or award victory.
  for(const ws of sockets)try{ws.close();}catch(_){}await mf.dispose();mf=new Miniflare(options);DB=await mf.getD1Database('DB');
  ca=await a.connect(room.id);cb=await b.connect(room.id);await wait(()=>ca.setup&&cb.setup);
- assert.equal(ca.setup.meta.id,missionId);assert.equal(ca.state.phase,'won');assert.equal(ca.state.tick,tick,'checkpoint survives complete runtime restart');
+ assert.equal(ca.setup.meta.id,missionId);assert.equal(ca.state.phase,'won');assert.equal(ca.state.tick,tick,'checkpoint survives complete runtime restart');assert.equal(ca.state.doorRevision,3);assert.equal(ca.setup.geometry.walls[door.wallIndex].open,true,'open door collision survives runtime restart');
+ cb.ws.send(JSON.stringify({type:'door',protocol:1,epoch:missionId,doorId:door.id,open:true,commandId:'native-open-again'}));await wait(()=>cb.events.find(e=>e.type==='action'&&e.commandId==='native-open-again'&&e.duplicate));assert.equal(cb.state.doorRevision,3);
  // Position claims are rejected even for an authenticated participant.
  const closed=new Promise(resolve=>ca.ws.addEventListener('close',resolve,{once:true}));ca.ws.send(JSON.stringify({type:'input',protocol:1,epoch:missionId,sequence:999,input:{forward:0,turn:0,strafe:0,run:false,x:999},interact:true}));assert.equal((await closed).code,1008);
  ca=await a.connect(room.id);await wait(()=>ca.setup);launch(ca);launch(cb);
@@ -55,5 +74,5 @@ try{
  const revoked=new Promise(resolve=>cb.ws.addEventListener('close',resolve,{once:true}));await DB.prepare("UPDATE hunter_access SET status='suspended' WHERE owner=?").bind(b.id).run();
  assert.equal((await revoked).code,4003,'active mission revokes suspended participant');await wait(()=>ca.state.status==='paused');
  const pauseTick=ca.state.tick;await new Promise(r=>setTimeout(r,300));assert.equal(ca.state.tick,pauseTick,'one player cannot continue after revocation');
- console.log('playable coop: native authenticated two-account launch votes, movement through server geometry, both terminals, extraction/victory, disconnect pause/resume, durable runtime restart and position-forgery rejection passed');
+ console.log('playable coop: native authenticated two-account launch votes, movement through server geometry, doors/proximity/occupied passage/collision/persistence, both terminals, extraction/victory, disconnect pause/resume, durable runtime restart and position-forgery rejection passed');
 }finally{if(timer)clearInterval(timer);for(const ws of sockets)try{ws.close();}catch(_){}await mf.dispose();await rm(directory,{recursive:true,force:true});}

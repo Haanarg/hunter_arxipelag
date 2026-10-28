@@ -20,7 +20,7 @@ export function createPlayConnection({url,version,getInput,onMessage,onStatus=()
       if(!valid())return;
       try{
         if(typeof e.data!=='string'||e.data.length>1000000)throw Error();const data=JSON.parse(e.data);
-        if(!['room','mission','state','waiting','error','ended'].includes(data.type))throw Error();lastMessage=now();
+        if(!['room','mission','state','waiting','error','ended','action'].includes(data.type))throw Error();lastMessage=now();
         if(data.type==='mission'){
           if(!data.meta?.id||!data.geometry||!Array.isArray(data.state?.players)||!data.state.players.some(p=>p.id===data.self))throw Error();
           if(epoch!==data.meta.id)sequence=0;epoch=data.meta.id;state=data.state;
@@ -36,6 +36,7 @@ export function createPlayConnection({url,version,getInput,onMessage,onStatus=()
   }
   function schedule(){if(stopped)return;onStatus('retrying');retry=setTimer(connect,Math.min(10000,1000*2**Math.min(attempt++,4)));}
   return {start(){if(!stopped)return;stopped=false;connect();},launch(revision){return send({type:'launch',protocol:1,gameVersion:version,revision});},
+    door(doorId,open,commandId){if(!epoch||state?.status!=='running'||!['relay','extract'].includes(state.phase))return false;return send({type:'door',protocol:1,epoch,doorId,open,commandId});},
     stop(){stopped=true;generation++;clear();try{ws?.close(1000,'Sortida de missió');}catch(_){}ws=null;}};
 }
 export function playInput(keys,hidden=false){

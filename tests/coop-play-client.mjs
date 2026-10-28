@@ -13,6 +13,9 @@ first.close(1006);assert.ok(statuses.includes('retrying'));advance(1000);const s
 first.message({type:'ended',message:'stale'});assert.equal(events.at(-1).type,'state','old socket cannot erase new mission');
 second.message({...setup,state:{...setup.state,players:[{id:'a',acknowledged:10}]}});advance(50);assert.equal(second.sent.at(-1).sequence,11,'resume sequence follows authoritative checkpoint');
 channel.launch(12);assert.equal(second.sent.at(-1).revision,12);
+assert.equal(channel.door('door-id',true,'command-1'),true);assert.deepEqual(second.sent.at(-1),{type:'door',protocol:1,epoch:'mission',doorId:'door-id',open:true,commandId:'command-1'});
+second.message({type:'action',commandId:'command-1',ok:true,code:'OPENED'});assert.equal(events.at(-1).code,'OPENED');
+second.message({type:'state',state:{...setup.state,status:'paused'}});assert.equal(channel.door('door-id',false,'command-2'),false,'no door action while paused');
 time+=40000;advance(20000);assert.equal(second.readyState,3,'unresponsive server is reconnected');advance(1000);sockets[2].open();sockets[2].close(4001);assert.equal(timers.size,0,'replacement cannot create reconnect duel');
 channel.start();sockets[3].open();channel.stop();assert.equal(timers.size,0);
 assert.deepEqual(playInput(new Set(['KeyW','KeyD','KeyU','ShiftLeft','KeyE'])),{forward:1,turn:-1,strafe:1,run:true,interact:true});
