@@ -746,12 +746,11 @@ function weaponAimClear(x,y,z,tx,ty,tz,ignoreWall=null,ignoreBuilding=null,check
 // Bazuca: fins a 185 m, ±47° horitzontals i ±52° verticals.
 // Les torres altes i els objectius per sota de la mira són elegibles.
 const BAZOOKA_AIM_RANGE=185,BAZOOKA_AIM_CONE=.68,BAZOOKA_AIM_VERTICAL=.90;
-// Fusell d'assalt: con més generós a peu pla (±35°) i assistència
-// creixent fins a ±90° en projecció horitzontal per a blancs molt alts
-// o baixos. El con vertical real ja arriba a ±90°: el filtre de yaw
-// era el que descartava torres gairebé a sobre del jugador.
-const ASSAULT_AIM_CONE=.82,ASSAULT_AIM_VERTICAL=Math.PI/2;
-function assaultAimHorizontalCone(baseCone,pitchError){
+// Pistola i fusell d'assalt comparteixen el con d'autoapuntat 3D:
+// aproximadament ±35° a peu pla i fins a ±90° horitzontals en blancs
+// molt més alts o baixos. L'obertura vertical és de ±90°.
+const SMALL_ARMS_AIM_CONE=.82,SMALL_ARMS_AIM_VERTICAL=Math.PI/2;
+function smallArmsAimHorizontalCone(baseCone,pitchError){
   const steep=Math.max(0,Math.min(1,(pitchError-.17)/(.98-.17))),
         blend=steep*steep*(3-2*steep),
         baseYaw=Math.acos(Math.max(-1,Math.min(1,baseCone)));
@@ -793,13 +792,13 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
     if(pitchError>verticalCone)return;
     const alignment=horizontal>=.001?
       (dx*fx+dz*fz)/(horizontal*forward):1,
-          steepAssault=shotClass==='assault',
-          allowedCone=steepAssault?
-            assaultAimHorizontalCone(cone,pitchError):cone,
+          wideSmallArms=shotClass==='assault'||shotClass==='pistol',
+          allowedCone=wideSmallArms?
+            smallArmsAimHorizontalCone(cone,pitchError):cone,
           // Quan la torre queda pràcticament a la vertical del canó,
           // el desplaçament d'1,1 m de la boca no ha de descartar-la
           // per aparèixer un pèl al darrere en projecció horitzontal.
-          overhead=steepAssault&&horizontal<=1.6&&Math.abs(dy)>=horizontal*3;
+          overhead=wideSmallArms&&horizontal<=1.6&&Math.abs(dy)>=horizontal*3;
     if(!overhead&&alignment<allowedCone)return;
     // Les armes pesades no adquireixen dianes tapades pel relleu.
     if(!weaponAimClear(x,y,z,tx,ty,tz,ignoreWall,ignoreBuilding,heavy))return;
@@ -1137,7 +1136,7 @@ function fireAssaultBurstBullet(index){
         // La classe 'assault' només defineix la punteria: el projectil
         // disparat continua essent lleuger i no causa dany a les torres.
         [ax,ay,az]=autoAimWeaponShot(x,y,z,fx,0,fz,85,
-          ASSAULT_AIM_CONE,'assault',null,130,ASSAULT_AIM_VERTICAL),
+          SMALL_ARMS_AIM_CONE,'assault',null,130,SMALL_ARMS_AIM_VERTICAL),
         spread=[-.012,0,.012][index],dx=ax-az*spread,dz=az+ax*spread,
         len=Math.hypot(dx,ay,dz)||1;
   // La diana es recalcula a cada bala i cada ràfega. Si l'enemic cau
@@ -1192,7 +1191,8 @@ else if(c&&OPEN_RIDER_PISTOL.has(c)){
   if(ammo<=0)return;
   const shot=riderSystem.firePistol(cv,(origin,direction)=>
     autoAimWeaponShot(origin.x,origin.y,origin.z,
-      direction.x,direction.y,direction.z,75,.97,'light',null,130));
+      direction.x,direction.y,direction.z,75,
+      SMALL_ARMS_AIM_CONE,'pistol',null,130,SMALL_ARMS_AIM_VERTICAL));
   if(!shot)return;
   ammo--;fcd=.22;
   const p=shot.origin,d=shot.direction;
@@ -1219,7 +1219,7 @@ else if(!cv&&sniperEquipped&&inv.franctirador){
 }
 else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}
 else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9-(playerCrouched?.48:0),z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,BAZOOKA_AIM_RANGE,BAZOOKA_AIM_CONE,'heavy',null,72*HEAVY_SHOT_SPEED_FACTOR,BAZOOKA_AIM_VERTICAL);shoot(x,y,z,ax,ay,az,72,COMBAT_BALANCE.weapons.bazooka,18,'pb',mS,3);Pj[Pj.length-1].life=3.8;Pj[Pj.length-1].weapon='bazooka';msg='Bazooka: '+(inv.bazooka||0)+' coets restants.';msgT=2;setDis(false)}
-else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5-(playerCrouched?.48:0),z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,75,.97,'light',null,130);shoot(x,y,z,ax,ay,az,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE)}
+else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5-(playerCrouched?.48:0),z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,75,SMALL_ARMS_AIM_CONE,'pistol',null,130,SMALL_ARMS_AIM_VERTICAL);shoot(x,y,z,ax,ay,az,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE)}
 else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}
 function segmentAabbT(x0,y0,z0,x1,y1,z1,minX,maxX,minY,maxY,minZ,maxZ){
   let lo=0,hi=1;
