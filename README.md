@@ -4,6 +4,15 @@ Joc 3D per al navegador inspirat en *Hunter* (Amiga). Comença a la teva base, e
 
 [Jugar](https://hunter.paradoxa.cat/) · [Fases fetes i pendents](PROGRESS.MD) · [Notes visuals](docs/VISUAL_MODERNIZATION.md)
 
+## Millores de combat (v0.6.2)
+
+- **Torres de vigilància:** l'autoapuntat, la col·lisió de projectils i la referència d'explosió situen el blanc a la caseta (aprox. 9,15 m sobre la base), no al mig de les potes.
+- **Prioritat d'objectius:** per als projectils pesants, torres, patrulleres i soldats amb bazuca; després altres soldats i després vehicles enemics. Sense objectius militars visibles dins el con, es poden seleccionar filferrades, vehicles buits i edificis.
+- **Angles d'autoapuntat:** bazuca ±47° horitzontal / ±52° vertical; tanc ±43° / ±39° (torreta amb més elevació); míssils de l'helicòpter ±46° / ±56° respecte a la trajectòria picada. El canó lleuger de l'helicòpter prioritza amenaces vulnerables i no fixa estructures immunes.
+- **Explosius i filferrades:** la detonació calcula la distància real al tram, inclosos els extrems; si l'ona arriba sense cobertura, destrueix completament el tram de 8 PV i en retira la col·lisió. L'altura i les cobertures continuen comptant.
+
+Proves específiques: \`node tests/heavy-targeting.cjs\` i \`node tests/explosive-fence.cjs\` (només sota demanda; el workflow de compilació no executa regressions).
+
 ## Punteria enemiga unificada (v0.6.1)
 
 Soldats, general, torres, artillers dels cotxes, tanquetes, tancs i patrulleres utilitzen el mateix criteri de dificultat i distància. La desviació és transversal a la trajectòria i creix amb la distància, amb multiplicadors per arma; els explosius són menys precisos per permetre que fallin també fora del radi de l'explosió. Els PV, el dany, les cadències i els abasts no canvien.
