@@ -682,6 +682,14 @@ function launchGrenade(pending){
 // i soldats amb bazuca; després altres soldats i finalment blindats/cotxes.
 // Les armes lleugeres mantenen l'ordre antic.
 function weaponTargetPriority(enemy,shotClass='light'){
+  if(shotClass==='attackCannon'){
+    // La metralladora/canó lleuger de l'heli només segueix enemics
+    // vulnerables: els míssils pesants s'encarreguen de torres i blindats.
+    if(enemy.t==='patrulla_marina'||enemy.rocketSoldier)return 0;
+    if(enemy.t==='soldat'||enemy.t==='general')return 1;
+    if(enemy.t==='jeep')return 2;
+    return 3;
+  }
   if(shotClass==='heavy'){
     if(enemy.t==='torre'||enemy.t==='patrulla_marina'||enemy.rocketSoldier)return 0;
     if(enemy.t==='soldat'||enemy.t==='general')return 1;
@@ -786,7 +794,8 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
     if(focus){focus.target=obj;focus.point={x:tx,y:ty,z:tz};focus.kind=kind}
   };
   for(const e of E){
-    if(e.destroyed||e.hp<=0||shotClass==='light'&&e.t==='torre')continue;
+    if(e.destroyed||e.hp<=0||shotClass==='light'&&e.t==='torre'||
+      shotClass==='attackCannon'&&['torre','tanqueta','tanc'].includes(e.t))continue;
     const priority=weaponTargetPriority(e,shotClass);
     if(priority>=3||priority>bestPriority)continue;
     const modelY=e.o?.position?.y??(e.gy??0),
@@ -1110,7 +1119,7 @@ if(c=='tanc'||c=='tanqueta'){
   }
 }
 else if(c==='heli'){throwHelicopterGrenade();return}
-else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*4.1*VS.heli_combat,y=cv.o.position.y+.15,z=cv.z+fz*4.1*VS.heli_combat;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,130,.91,'light',null,145);fcd=.12;shoot(x,y,z,ax,ay,az,145,COMBAT_BALANCE.weapons.attackCannon,0,'p',mB,.85)}
+else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*4.1*VS.heli_combat,y=cv.o.position.y+.15,z=cv.z+fz*4.1*VS.heli_combat;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,130,.73,'attackCannon',null,145,.97);fcd=.12;shoot(x,y,z,ax,ay,az,145,COMBAT_BALANCE.weapons.attackCannon,0,'p',mB,.85)}
 
 else if(c=='llanxa_coets'){secondaryWeapon();return}
 else if(c&&OPEN_RIDER_PISTOL.has(c)){
