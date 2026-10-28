@@ -1,41 +1,43 @@
-import * as compoundPlanning from './compound-planning.mjs?v=0.6.16';
+import * as buildingShell from './building-shell.mjs?v=0.6.17';
+window.HUNTER_BUILDING_SHELL=buildingShell;
+import * as compoundPlanning from './compound-planning.mjs?v=0.6.17';
 window.HUNTER_COMPOUND_PLANNING=compoundPlanning;
-import * as worldGeneration from './world-generation-core.mjs?v=0.6.16';
-import * as canonicalWater from './canonical-water.mjs?v=0.6.16';
+import * as worldGeneration from './world-generation-core.mjs?v=0.6.17';
+import * as canonicalWater from './canonical-water.mjs?v=0.6.17';
 window.HUNTER_WORLD_GENERATION=worldGeneration;window.HUNTER_CANONICAL_WATER=canonicalWater;
-import * as walkSurfaces from './walk-surfaces.mjs?v=0.6.16';
+import * as walkSurfaces from './walk-surfaces.mjs?v=0.6.17';
 window.HUNTER_WALK_SURFACES=walkSurfaces;
-import * as worldPhysics from './world-physics.mjs?v=0.6.16';
-import * as worldAdapter from './world-adapter.mjs?v=0.6.16';
+import * as worldPhysics from './world-physics.mjs?v=0.6.17';
+import * as worldAdapter from './world-adapter.mjs?v=0.6.17';
 window.HUNTER_WORLD_PHYSICS=worldPhysics;window.HUNTER_WORLD_ADAPTER=worldAdapter;
-import {createCoopConnection} from './coop-connection.mjs?v=0.6.16';
+import {createCoopConnection} from './coop-connection.mjs?v=0.6.17';
 window.HUNTER_COOP_CONNECTION=createCoopConnection;
-import * as playerSimulation from './player-simulation.mjs?v=0.6.16';
+import * as playerSimulation from './player-simulation.mjs?v=0.6.17';
 window.HUNTER_PLAYER_SIMULATION=playerSimulation;
-import * as operationJournal from './operation-journal.mjs?v=0.6.16';
+import * as operationJournal from './operation-journal.mjs?v=0.6.17';
 window.HUNTER_JOURNAL=operationJournal;
-import {accountConfig} from './account-config.mjs?v=0.6.16';
-import {configuredAccounts,createAccountService} from './account-client.mjs?v=0.6.16';
-import * as cloudFactory from './operation-cloud.mjs?v=0.6.16';
+import {accountConfig} from './account-config.mjs?v=0.6.17';
+import {configuredAccounts,createAccountService} from './account-client.mjs?v=0.6.17';
+import * as cloudFactory from './operation-cloud.mjs?v=0.6.17';
 window.HUNTER_CLOUD_FACTORY=cloudFactory;
 try{window.HUNTER_ACCOUNT_SERVICE=await configuredAccounts(accountConfig,{notify:()=>window.HUNTER_AUTH_CHANGED?.()});}
 catch(_){window.HUNTER_ACCOUNT_SERVICE=createAccountService();console.warn('Els comptes no estan disponibles; el desament local continua actiu.');}
-import * as operationFiles from './operation-files.mjs?v=0.6.16';
+import * as operationFiles from './operation-files.mjs?v=0.6.17';
 window.HUNTER_SAVE_FILES=operationFiles;
-import * as operationSaves from './operation-save.mjs?v=0.6.16';
+import * as operationSaves from './operation-save.mjs?v=0.6.17';
 window.HUNTER_SAVES=operationSaves;
-import * as compoundPaths from './compound-paths.mjs?v=0.6.16';
+import * as compoundPaths from './compound-paths.mjs?v=0.6.17';
 window.HUNTER_COMPOUND_PATHS=compoundPaths;
-import {runtimeLayouts,chooseCompoundLayout} from './compound-runtime-layouts.mjs?v=0.6.16';
-import * as compoundArchitecture from './compound-architecture.mjs?v=0.6.16';
+import {runtimeLayouts,chooseCompoundLayout} from './compound-runtime-layouts.mjs?v=0.6.17';
+import * as compoundArchitecture from './compound-architecture.mjs?v=0.6.17';
 window.HUNTER_RUNTIME_LAYOUTS=runtimeLayouts;window.HUNTER_CHOOSE_COMPOUND=chooseCompoundLayout;window.HUNTER_COMPOUND_ARCHITECTURE=compoundArchitecture;
 import {createCompoundStructures} from './compound-structures.mjs';
 window.HUNTER_COMPOUND_STRUCTURES=createCompoundStructures;
 import {runtimeScripts} from './runtime-scripts.mjs';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.16';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.17';
 import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
-import {GAME_VERSION} from './version.mjs?v=0.6.16';
+import {GAME_VERSION} from './version.mjs?v=0.6.17';
 import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs';
 window.HUNTER_CIVIL_C1A=createCivilianCarModel;
@@ -87,7 +89,7 @@ try {
   // Si les dades no es poden preparar, mantenim la geometria clàssica
   // de reserva per no impedir l'inici de la partida.
   try {
-    const {prepareHumveeD31Runtime}=await import('./humvee-d31-runtime.mjs?v=0.6.16');
+    const {prepareHumveeD31Runtime}=await import('./humvee-d31-runtime.mjs?v=0.6.17');
     window.HUNTER_HUMVEE_D31=await prepareHumveeD31Runtime(THREE,{vehicleScale:1.3});
     console.info('Humvee D3.1 procedural B · 175% carregat al joc',
       window.HUNTER_HUMVEE_D31.dimensions);

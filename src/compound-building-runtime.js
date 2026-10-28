@@ -26,8 +26,7 @@ function decorateRuntimeBuilding(b,spec){
   // Únicament dades navegables: escala física i planta superior, sense Three.js.
   if(b.floors===2){
     b.upperFloor=true;
-    const width=2.8,run=Math.min(b.d-3,b.storey*1.05),
-          x=b.x+b.w/2-width/2-.7,z=b.z-b.d/2+2.4;
+    const {width,run,x,z}=window.HUNTER_BUILDING_SHELL.upperStair(b);
     registerStair(width,run,x,z);
   }
   return;
@@ -49,7 +48,7 @@ function decorateRuntimeBuilding(b,spec){
  }
  if(b.floors===2){
   b.upperFloor=window.HUNTER_COMPOUND_ARCHITECTURE.decorateUpper(THREE,{b:{...spec,h:b.h},storey:b.storey,shell,box,rod,roofs});
-  const width=2.8,run=Math.min(b.d-3,b.storey*1.05),x=b.x+b.w/2-width/2-.7,z=b.z-b.d/2+2.4;
+  const {width,run,x,z}=window.HUNTER_BUILDING_SHELL.upperStair(b);
   registerStair(width,run,x,z,b.upperFloor.userData.stairGroup);
   for(const z of[-b.d/2,b.d/2])box(b.roof,b.w+.6,1,.35,0x647c72,0,b.h+1.7,z);
   for(const x of[-b.w/2,b.w/2])box(b.roof,.35,1,b.d+.6,0x647c72,x,b.h+1.7,0);

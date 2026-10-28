@@ -19,10 +19,10 @@ assert.throws(()=>compoundPoint({x:NaN,z:0}));
 assert.throws(()=>planCompound({...runtimeLayouts[0],size:[0,10]},{x:0,z:0},{random:()=>0,rawHeightAt:()=>1}));
 for(const mapScale of [1,2]){
  const foundation=generateTerrainFoundation({seed:67,mapScale}),random=createWorldRandom(foundation.randomState),layout=chooseCompoundLayout('base',random),expected=reference(layout,foundation.baseCandidate,random,()=>foundation.baseCandidate.h),terrain=createCoopTerrain({seed:67,mapScale});
- assert.deepEqual(terrain.snapshot().basePlan,expected);assert.equal(terrain.snapshot().version,2);
+ assert.deepEqual(terrain.snapshot().basePlan,expected);assert.equal(terrain.snapshot().version,3);
  assert.equal(terrain.snapshot().randomState,foundation.randomState,'state remains before base construction, not a false continuation cursor');
  assert.equal(terrain.world.heightAt(expected.center[0],expected.center[1]),expected.height,'base pad changes physical terrain');
- assert.equal(terrain.world.snapshot().buildings.length,0,'a placement plan is not a constructed building');
+ assert.equal(terrain.world.snapshot().buildings.length,expected.buildings.length,'base shells are constructed separately from their placement plan');
  assert.equal(terrain.complete,false);assert.equal(terrain.playable,false);
  const g=await require('./harness.cjs')();g.context.testScale=mapScale;
  g.run("applyGameStartOptions({seed:67,scale:testScale});globalThis.compoundTestSteps=buildSteps();let checkpoint;do{checkpoint=compoundTestSteps.next();if(checkpoint.done)throw Error('Missing initial compounds checkpoint');}while(checkpoint.value.stage!=='Base i quarter general');");

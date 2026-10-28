@@ -53,7 +53,15 @@ try{
     const response=await mf.dispatchFetch('http://localhost/',{method:'POST',body:JSON.stringify({seed:67,mapScale})});assert.equal(response.status,200,await response.clone().text());
     const actual=await response.json(),expected=createCoopTerrain({seed:67,mapScale}),s=expected.snapshot();
     assert.equal(actual.snapshot.seed,s.seed);assert.equal(actual.snapshot.randomState,s.randomState);assert.equal(actual.snapshot.complete,false);assert.equal(actual.snapshot.islands.length,s.islands.length);
-    assert.equal(actual.snapshot.version,2);assert.equal(actual.snapshot.basePlan.layoutId,s.basePlan.layoutId);
+    assert.equal(actual.snapshot.version,3);assert.equal(actual.snapshot.basePlan.layoutId,s.basePlan.layoutId);
+    for(const type of ['buildings','walls','stairs']){
+      assert.equal(actual.snapshot.baseStructures[type].length,s.baseStructures[type].length,'native base '+type+' count');
+      for(let i=0;i<s.baseStructures[type].length;i++){
+        const native=actual.snapshot.baseStructures[type][i],node=s.baseStructures[type][i];assert.equal(native.id,node.id);
+        for(const k of ['x','z','fy','x0','x1','z0','z1','y0','y1','top','rise','length'])if(typeof node[k]==='number')assert.ok(Math.abs(native[k]-node[k])<1e-7,'native base '+type+' '+k);
+        if(type==='walls')assert.equal(native.open,node.open);
+      }
+    }
     for(const k of ['x','z','hw','hd','y','rot','c','s','blend'])assert.ok(Math.abs(actual.snapshot.basePlan.level[k]-s.basePlan.level[k])<1e-7,'native base pad '+k);
     let maxIslandDelta=0;
     for(let i=0;i<s.islands.length;i++)for(const k of ['x','z','r','peakX','peakZ'])maxIslandDelta=Math.max(maxIslandDelta,Math.abs(actual.snapshot.islands[i][k]-s.islands[i][k]));
