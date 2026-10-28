@@ -1,7 +1,7 @@
 import {configuredAccounts} from './account-client.mjs';
-import {GAME_VERSION} from './version.mjs?v=0.6.22';
-import {createPlayConnection,playInput} from './coop-play-connection.mjs?v=0.6.22';
-import {createMissionView} from './coop-play-view.mjs?v=0.6.22';
+import {GAME_VERSION} from './version.mjs?v=0.6.23';
+import {createPlayConnection,playInput} from './coop-play-connection.mjs?v=0.6.23';
+import {createMissionView} from './coop-play-view.mjs?v=0.6.23';
 const $=id=>document.getElementById(id),message=$('message'),launch=$('launch'),connection=$('connection'),keys=new Set(),touch=new Map();
 let channel=null,room=null,view=null,meta=null,self=null,state=null,viewGeneration=0,pendingDoor=null,doorTimer=null;
 function clearDoor(){if(doorTimer!==null)clearTimeout(doorTimer);doorTimer=null;pendingDoor=null;}
@@ -20,8 +20,10 @@ let pendingInventory=null,inventoryTimer=null;
 function clearInventory(){clearTimeout(inventoryTimer);pendingInventory=null;}
 function requestInventory(operation){if(pendingInventory)return;const bag=state?.inventories?.find(i=>i.actorId===self);if(!bag)return;const id=crypto.randomUUID();if(channel?.inventory(operation,operation==='drop'?$('drop-item').value:!bag.disguised,id)){pendingInventory=id;inventoryTimer=setTimeout(()=>{clearInventory();message.textContent='Sense confirmació de l’inventari. Torna-ho a provar.';drawHUD();},5000);drawHUD();}}
 $('drop').onclick=()=>requestInventory('drop');$('disguise').onclick=()=>requestInventory('disguise');$('drop-item').onchange=drawHUD;
+function requestCombat(weapon){if(channel?.combat(weapon,crypto.randomUUID()))message.textContent='Ordre de combat enviada…';}
+$('shoot').onclick=()=>requestCombat('pistol');$('grenade').onclick=()=>requestCombat('grenade');
 function clear(){keys.clear();touch.clear();document.querySelectorAll('[data-key]').forEach(b=>b.classList.remove('pressed'));}
-addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||['SELECT','INPUT','TEXTAREA'].includes(e.target?.tagName))return;if(['KeyG','KeyC'].includes(e.code)){e.preventDefault();if(!e.repeat)requestInventory(e.code==='KeyG'?'drop':'disguise');return;}if(e.code==='KeyF'){e.preventDefault();if(!e.repeat)requestDoor();return;}if(['KeyW','KeyS','KeyA','KeyD','KeyY','KeyU','KeyE','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ShiftLeft','ShiftRight','Space'].includes(e.code)){e.preventDefault();keys.add(e.code);}});
+addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||['SELECT','INPUT','TEXTAREA'].includes(e.target?.tagName))return;if(['KeyX','KeyB'].includes(e.code)){e.preventDefault();if(!e.repeat)requestCombat(e.code==='KeyX'?'pistol':'grenade');return;}if(['KeyG','KeyC'].includes(e.code)){e.preventDefault();if(!e.repeat)requestInventory(e.code==='KeyG'?'drop':'disguise');return;}if(e.code==='KeyF'){e.preventDefault();if(!e.repeat)requestDoor();return;}if(['KeyW','KeyS','KeyA','KeyD','KeyY','KeyU','KeyE','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ShiftLeft','ShiftRight','Space'].includes(e.code)){e.preventDefault();keys.add(e.code);}});
 addEventListener('keyup',e=>keys.delete(e.code));addEventListener('blur',clear);document.addEventListener('visibilitychange',()=>{if(document.hidden)clear();});
 for(const button of document.querySelectorAll('[data-key]')){
   button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture(e.pointerId);touch.set(e.pointerId,button.dataset.key);button.classList.add('pressed');});
@@ -40,6 +42,7 @@ function drawHUD(){
   const bag=state.inventories?.find(i=>i.actorId===self),active=state.status==='running'&&['relay','extract'].includes(state.phase)&&mine?.hp>0&&!mine.fall;
   $('inventory').textContent=bag?`El teu inventari · Bales: ${bag.bullets}/120 · Granades: ${bag.grenades}/8 · Disfressa: ${bag.disguise}${bag.disguised?' (posada)':''}`:'';
   $('drop').disabled=!!pendingInventory||!active||!bag?.[$('drop-item').value];$('disguise').disabled=!!pendingInventory||!active||!bag?.disguise;$('disguise').textContent=bag?.disguised?'Treure disfressa · C':'Posar disfressa · C';
+  $('shoot').disabled=!active||!bag?.bullets;$('grenade').disabled=!active||!bag?.grenades;const targets=state.combat?.targets||[];$('combat-status').textContent=`Dianes opcionals: ${targets.filter(t=>t.hp<=0).length}/${targets.length} · Sense foc amic`;
   view?.setState(state);
 }
 launch.onclick=()=>{if(room&&channel?.launch(room.revision))message.textContent='Esperant la confirmació dels dos jugadors…';else message.textContent='Espera que s’obri la connexió.';};
@@ -50,7 +53,7 @@ try{
   if(!room||new URL(location.href).searchParams.get('room')!==room.id)throw Error('Obre la teva sala cooperativa des de la portada.');
   const url=new URL('/api/coop/socket',location.origin);url.protocol=url.protocol==='https:'?'wss:':'ws:';url.searchParams.set('room',room.id);
   channel=createPlayConnection({url:url.href,version:GAME_VERSION,getInput:()=>playInput(new Set([...keys,...touch.values()]),document.hidden),
-    onStatus:status=>{connection.textContent=({connecting:'Connectant…',open:'Connexió oberta',retrying:'Reconnectant…',replaced:'Connexió oberta en una altra pestanya',ended:'Connexió finalitzada. Torna a la sala.'}[status]||status);if(status!=='open'){clearInventory();$('drop').disabled=true;$('disguise').disabled=true;clear();clearDoor();$('door').disabled=true;}},
+    onStatus:status=>{connection.textContent=({connecting:'Connectant…',open:'Connexió oberta',retrying:'Reconnectant…',replaced:'Connexió oberta en una altra pestanya',ended:'Connexió finalitzada. Torna a la sala.'}[status]||status);if(status!=='open'){clearInventory();$('shoot').disabled=true;$('grenade').disabled=true;$('drop').disabled=true;$('disguise').disabled=true;clear();clearDoor();$('door').disabled=true;}},
     onMessage:async data=>{
       if(data.type==='room'){
         room=data.room;launch.disabled=!room?.allReady;
@@ -61,8 +64,8 @@ try{
         clearInventory();clearDoor();const token=++viewGeneration;meta=data.meta;state=data.state;view?.destroy();view=null;drawHUD();message.textContent='Tu ets el jugador '+(meta.members.findIndex(m=>m.id===self)+1)+'. Segueix el recorregut del teu color.';
         const next=await createMissionView($('view'),meta,data.geometry);if(token!==viewGeneration){next.destroy();return;}view=next;drawHUD();
       }else if(data.type==='state'&&data.state?.missionId===meta?.id){state=data.state;drawHUD();}
-      else if(data.type==='action'){if(pendingInventory===data.commandId){clearInventory();message.textContent=({DROPPED:'Objecte deixat a terra. El company el pot recollir passant-hi per sobre.',GROUND_FULL:'Hi ha massa objectes a terra.',EQUIPPED:'Disfressa actualitzada.',TAKEN:'Aquest subministrament ja s’ha recollit.',FULL:'Inventari ple per a aquest objecte.',EMPTY:'No tens aquest objecte.',TOO_FAR:'Acosta’t al subministrament.',NOT_ACTIVE:'La missió ha d’estar en marxa.',SAVE_FAILED:'No s’ha pogut desar el canvi. Torna-ho a provar.'}[data.code]||'Ordre d’inventari confirmada.');drawHUD();return;}if(pendingDoor===data.commandId)clearDoor();message.textContent=data.duplicate?'Ordre ja confirmada. Estat actual sincronitzat.':({OPENED:'Porta oberta.',CLOSED:'Porta tancada.',UNCHANGED:'La porta ja és en aquest estat.',OCCUPIED:'Hi ha un jugador al pas. Allunyeu-vos abans de tancar.',TOO_FAR:'Acosta’t a la porta.',COOLDOWN:'Espera un moment abans de tornar a moure la porta.',NOT_ACTIVE:'La missió ha d’estar en marxa.',SAVE_FAILED:'No s’ha pogut desar el canvi. Torna-ho a provar.'}[data.code]||'No s’ha pogut moure la porta.');drawHUD();}
-      else if(['waiting','error','ended'].includes(data.type)){message.textContent=data.message;if(data.type==='ended'){clearInventory();$('drop').disabled=true;$('disguise').disabled=true;clear();clearDoor();$('door').disabled=true;state=null;meta=null;viewGeneration++;view?.destroy();view=null;launch.hidden=false;}}
+      else if(data.type==='action'){if(data.kind==='combat'){message.textContent=data.duplicate?'Ordre de combat ja confirmada.':({HIT:'Impacte confirmat!',FIRED:'Tret efectuat.',THROWN:'Granada llançada.',EMPTY:'No tens munició per a aquesta arma.',COOLDOWN:'Espera abans de tornar a atacar.',NOT_ACTIVE:'La missió ha d’estar en marxa i el jugador a terra.',SAVE_FAILED:'No s’ha pogut desar l’atac. Torna-ho a provar.'}[data.code]||'Ordre de combat rebutjada.');drawHUD();return;}if(pendingInventory===data.commandId){clearInventory();message.textContent=({DROPPED:'Objecte deixat a terra. El company el pot recollir passant-hi per sobre.',GROUND_FULL:'Hi ha massa objectes a terra.',EQUIPPED:'Disfressa actualitzada.',TAKEN:'Aquest subministrament ja s’ha recollit.',FULL:'Inventari ple per a aquest objecte.',EMPTY:'No tens aquest objecte.',TOO_FAR:'Acosta’t al subministrament.',NOT_ACTIVE:'La missió ha d’estar en marxa.',SAVE_FAILED:'No s’ha pogut desar el canvi. Torna-ho a provar.'}[data.code]||'Ordre d’inventari confirmada.');drawHUD();return;}if(pendingDoor===data.commandId)clearDoor();message.textContent=data.duplicate?'Ordre ja confirmada. Estat actual sincronitzat.':({OPENED:'Porta oberta.',CLOSED:'Porta tancada.',UNCHANGED:'La porta ja és en aquest estat.',OCCUPIED:'Hi ha un jugador al pas. Allunyeu-vos abans de tancar.',TOO_FAR:'Acosta’t a la porta.',COOLDOWN:'Espera un moment abans de tornar a moure la porta.',NOT_ACTIVE:'La missió ha d’estar en marxa.',SAVE_FAILED:'No s’ha pogut desar el canvi. Torna-ho a provar.'}[data.code]||'No s’ha pogut moure la porta.');drawHUD();}
+      else if(['waiting','error','ended'].includes(data.type)){message.textContent=data.message;if(data.type==='ended'){clearInventory();$('shoot').disabled=true;$('grenade').disabled=true;$('drop').disabled=true;$('disguise').disabled=true;clear();clearDoor();$('door').disabled=true;state=null;meta=null;viewGeneration++;view?.destroy();view=null;launch.hidden=false;}}
     }});
   channel.start();
 }catch(e){message.textContent=e.message;connection.textContent='No s’ha pogut obrir la missió';}

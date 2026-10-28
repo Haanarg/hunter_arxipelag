@@ -3,8 +3,9 @@ import {createStaticWorldAdapter} from '../src/world-adapter.mjs';
 import {createCanonicalWater} from '../src/canonical-water.mjs';
 import {createPlayerSimulation,validatePlayerInput} from '../src/player-simulation.mjs';
 import {firstSupplyContact} from './coop-inventory.mjs';
+import {createRelayCombat} from './coop-combat.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
-export const MISSION_VERSION='relay:4';
+export const MISSION_VERSION='relay:5';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 export function generateRelayMission(room){
   if(room.members.length!==2||!room.allReady)throw new Error('Calen dos jugadors preparats.');
@@ -31,6 +32,7 @@ export function generateRelayMission(room){
     difficulty:room.difficulty??1,timeLimitTicks:Math.round(27000/(room.difficulty??1)),createdAt:Date.now(),expiresAt:Math.min(room.expiresAt,Date.now()+30*60*1000),bounds,floor:pad.y,
     members:room.members.map(m=>({id:m.id,name:m.name})),terminals:[point(first),point(other)],routes:[route(first),route(other)],extraction:point(start)},
     actors=room.members.map((m,i)=>({id:m.id,...point(i?second:start),hd:0,hp:20}));
+  meta.targets=[first,other].map((p,i)=>{const q=parents.get(p);return {id:'target-'+i,...point(q),hp:12};});
   meta.supplies=[first,other].flatMap((p,i)=>['bullets','grenades','disguise'].map((item,j)=>({id:`supply-${i}-${j}`,item,amount:item==='bullets'?12:1,...point(p)})));
   meta.doors=foundation.baseStructures.walls.flatMap((w,wallIndex)=>w.door&&!w.locked&&!w.alwaysOpen?[{id:w.id,wallIndex,cx:w.cx,cz:w.cz,floor:w.y0+1}]:[]);
   return {geometry:world.snapshot(),record:{meta,phase:'relay',hold:0,status:'paused',checkpoint:{protocol:1,epoch:id,tick:0,players:actors.map(a=>({...a,acknowledged:0,fall:null,swimming:false}))},nextAlarm:Date.now()+100}};
@@ -67,8 +69,9 @@ export function restoreRelayMission(record,geometry){
       const result={actorId,commandId:message.commandId,ok,code};inventoryResults.push(result);if(inventoryResults.length>64)inventoryResults.shift();return {...result};
     }return {actorId,commandId:message.commandId,ok,code};
   }
+  const combat=createRelayCombat({meta,record:record.combat,inventory,players:()=>sim.snapshot().players,geometry:()=>physical,world:()=>world,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt});
   const doors=()=>meta.doors.map(d=>({id:d.id,open:doorStates.get(d.id)??false}));
-  function snapshot(){return {...sim.snapshot(),missionId:meta.id,phase,hold,status,doorRevision,doors:doors(),inventories:inventories(),supplies:supplies(),claimedSupplies:[...claimed],remaining:Math.max(0,(meta.timeLimitTicks-sim.snapshot().tick)/30)};}
+  function snapshot(){return {...sim.snapshot(),combat:combat.snapshot(),missionId:meta.id,phase,hold,status,doorRevision,doors:doors(),inventories:inventories(),supplies:supplies(),claimedSupplies:[...claimed],remaining:Math.max(0,(meta.timeLimitTicks-sim.snapshot().tick)/30)};}
   function doorCommand(actorId,message){
     const previous=results.find(r=>r.actorId===actorId&&r.commandId===message.commandId);if(previous)return {...previous,duplicate:true};
     let code='INVALID',ok=false;
@@ -99,7 +102,7 @@ export function restoreRelayMission(record,geometry){
   function step(){
     if(status!=='running'||!['relay','extract'].includes(phase))return snapshot();
     const before=sim.snapshot(),state=sim.step(),near=(p,q)=>p.hp>0&&!p.fall&&distance(p,q)<=3.2&&Math.abs(p.y-q.y)<2;
-    if(state.players.some(p=>p.hp<=0)||state.tick>=meta.timeLimitTicks){phase='failed';hold=0;return snapshot();}
+    if(state.players.some(p=>p.hp<=0)||state.tick>=meta.timeLimitTicks){phase='failed';hold=0;combat.finish();return snapshot();}
     // All contacts in a tick compete by first intersection time; exact ties use roster order.
     for(const supply of supplies()){
       if(supply.blockedOwner){const owner=state.players.find(p=>p.id===supply.blockedOwner);if(!owner||distance(owner,supply)>1.8||Math.abs(owner.y-supply.y)>2){delete loose.get(supply.id).blockedOwner;delete supply.blockedOwner;}}
@@ -114,13 +117,15 @@ export function restoreRelayMission(record,geometry){
       }).sort((a,b)=>a.t-b.t||a.index-b.index);
       if(candidates.length){inventory.get(candidates[0].p.id)[supply.item]+=supply.amount;if(loose.has(supply.id))loose.delete(supply.id);else claimed.add(supply.id);}
     }
+    combat.step(state.tick);
     if(phase==='relay'){
       const both=meta.members.every((m,i)=>{const p=state.players.find(p=>p.id===m.id),a=actions.get(m.id);return a?.interact&&state.tick-a.tick<=8&&near(p,meta.terminals[i]);});
       hold=both?hold+1:0;if(hold>=90){phase='extract';hold=0;}
     }else{hold=state.players.every(p=>near(p,meta.extraction))?hold+1:0;if(hold>=60){phase='won';hold=60;}}
+    if(phase==='won')combat.finish();
     return snapshot();
   }
-  return {meta,geometry:canonical,accept,step,snapshot,doorCommand,inventoryCommand,setStatus(value){status=value;if(value!=='running'){actions.clear();sim.clearInputs();if(['relay','extract'].includes(phase))hold=0;}},
-    checkpoint(nextAlarm){return {meta:structuredClone(meta),phase,hold,status,checkpoint:sim.snapshot(),nextAlarm,inventories:inventories(),droppedSupplies:[...loose.values()].map(s=>({...s})),dropSequence,claimedSupplies:[...claimed],inventoryResults:structuredClone(inventoryResults),doors:doors(),doorRevision,doorCooldowns:[...cooldowns].map(([actorId,tick])=>({actorId,tick})),commandResults:structuredClone(results)};},
+  return {meta,geometry:canonical,accept,step,snapshot,doorCommand,inventoryCommand,combatCommand(actorId,message){return combat.command(actorId,message,sim.snapshot().tick);},setStatus(value){status=value;if(value!=='running'){actions.clear();sim.clearInputs();if(['relay','extract'].includes(phase))hold=0;}},
+    checkpoint(nextAlarm){return {meta:structuredClone(meta),phase,hold,status,checkpoint:sim.snapshot(),combat:combat.checkpoint(),nextAlarm,inventories:inventories(),droppedSupplies:[...loose.values()].map(s=>({...s})),dropSequence,claimedSupplies:[...claimed],inventoryResults:structuredClone(inventoryResults),doors:doors(),doorRevision,doorCooldowns:[...cooldowns].map(([actorId,tick])=>({actorId,tick})),commandResults:structuredClone(results)};},
     setup(self){return {type:'mission',self,meta:structuredClone(meta),geometry:world.snapshot(),state:snapshot()};}};
 }

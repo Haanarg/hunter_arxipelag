@@ -71,4 +71,11 @@ Cada jugador comença amb **24 bales, 2 granades i 1 disfressa**. El panell most
 
 El servidor deriva el propietari de la sessió, comprova distància, alçada, capacitat i missió activa, i desa abans de confirmar. Inventaris, equipament i paquets recollits es recuperen en reconnectar i en reiniciar el Worker durant aquesta versió. Les ordres repetides no dupliquen objectes. No s’importa l’inventari de la partida individual.
 
-**Límit actual:** la missió reduïda encara no té trets, llançament de granades ni IA enemiga; les reserves estan preparades per integrar-hi el consum autoritatiu. La disfressa canvia l’aspecte, però encara no té efecte de sigil contra enemics. Els checkpoints temporals continuen sense migració entre versions ni desament permanent al compte.
+### Combat d’entrenament · v0.6.23
+
+- **X / Disparar**: pistola en la direcció on mires; gira amb A/D per apuntar. Un tret per pulsació, 1 bala, abast 70 m i cadència màxima de 3 trets/s. Les dianes vermelles opcionals tenen 12 punts de vida (3 impactes de pistola). El panell n’indica el recompte destruït.
+- **B / Granada**: llançament frontal, gravetat i col·lisions. La granada s’atura contra els obstacles, sense rebot, i detona al cap de 2 segons de simulació. Radi 8 m i dany decreixent; les parets, portes tancades, sostres i pisos bloquegen els impactes/explosions. Munició individual.
+- Botons equivalents per a pantalla tàctil. Trets, granades, explosions i vida de les dianes són compartits. Disparar o llançar una granada treu la disfressa. **Sense foc amic ni autodany** en aquest mode d’entrenament.
+- Si falta un jugador, la pausa també atura les granades i els fusibles. En reconnectar o reiniciar el Worker, el checkpoint recupera els projectils en vol durant aquesta versió. En acabar la missió es retiren els projectils restants.
+
+**Límit actual:** combat contra dianes estàtiques opcionals. Encara no hi ha enemics amb IA, dany als jugadors per combat, reanimació, armes seleccionables, recàrrega ni efecte de sigil de la disfressa. La campanya individual i el seu fusell d’assalt es conserven. Els checkpoints cooperatius temporals continuen sense migració entre versions ni desament permanent al compte.

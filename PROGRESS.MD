@@ -1,14 +1,16 @@
 # HUNTER · ARXIPÈLAG — progrés de les millores
 
-## Estat actual · v0.6.22
+## Estat actual · v0.6.23
 
-**Publicació:** codi i proves v0.6.22 a `main` (commit `ce1a81c916e88fd462c6ab3b6641c4ef4bd47ce6`). Desplegament de producció confirmat amb èxit: [build cb293c90-e9a4-4465-96c3-0cf753b588f8](https://dash.cloudflare.com/e8c1784f0b4c91e60ee62af2e3dae4f3/workers/services/view/hunter-arxipelag/production/builds/cb293c90-e9a4-4465-96c3-0cf753b588f8), Version ID `23a738eb-7db8-4e36-9ee0-b503f413d369`. Versió pública i HTML cooperatiu verificats. El primer build (`393d617d-e19e-484f-8398-403ea6180a19`) havia fallat sense motiu a GitHub; el desplegament posterior ha reeixit, sense canvis de codi ni configuració. La causa del primer error no s’ha determinat.
+**Publicació:** la versió del codi d’aquesta fase és v0.6.23. Integració a `main` i desplegament amb Cloudflare Builds; les comprovacions de producció es fan separadament de les proves locals.
 
 **Primera missió cooperativa jugable: Relleu d’emergència**, per a dos comptes aprovats. Inici confirmat pels dos clients, moviment/col·lisions autoritatius, terminals simultanis, extracció/victòria, pausa per desconnexió i recuperació de checkpoint. Vista 3D provisional amb alternativa Canvas i controls tàctils. Des de v0.6.20, portes compartides amb F / Porta, col·lisions dinàmiques i estat persistent en reconnectar. [Instruccions, validació i límits](docs/COOP_PLAYABLE.md).
 
 Des de v0.6.21, cada jugador té **inventari independent** de bales, granades i disfressa, recollida exclusiva de paquets, capacitats, equipament de disfressa visible i persistència en reconnectar/reiniciar durant la mateixa versió. Ordres autoritzades per sessió, idempotència i desament abans de confirmar.
 
 Des de v0.6.22, **recollida automàtica per contacte** (sense botó R), primer contacte resolt pel servidor, i **G / Deixar** amb selector de bales, granada o disfressa per passar objectes al company. Els objectes deixats són compartits i persistents dins del checkpoint temporal.
+
+Des de v0.6.23, **combat bàsic autoritatiu contra dues dianes opcionals**: X / Disparar davant teu i B / Granada, amb munició individual, cadència, impactes, trajectòria/detonació i dany amb obstacles. Efectes i vida de les dianes compartits en 3D/Canvas. Les dianes no són enemics amb IA; els dos terminals i l’extracció continuen sent l’objectiu de la missió.
 
 L’usuari ha prioritzat la jugabilitat sobre l’estètica. Aquest és un mode reduït de base, no la campanya completa amb combat/vehicles. Els apartats antics que diuen «no jugable» descriuen l’estat de cada fase històrica. Els pendents generals i la fase 1 tancada per l’usuari es conserven.
 
@@ -343,3 +345,25 @@ Les bales i granades es poden recollir però encara no gastar: no s’ha present
 4. Vehicles, món complet, destrucció i objectius de campanya, preservant la seqüència RNG completa.
 5. Desaments cooperatius permanents, migracions entre versions, estadístiques i historial als comptes.
 6. Prova física de dos comptes/navegadors, GPU/Android, rendiment, controls/estètica i errors històrics de fixtures/escala 2 documentats.
+
+
+## Cooperatiu · fase 15 · Combat bàsic compartit (v0.6.23)
+
+- Pistola amb X / Disparar: un tret per pulsació, rumb actual del jugador, abast 70 m, 4 punts de dany i separació mínima de 10 ticks (1/3 s). Consumeix una bala pròpia. Dianes vermelles opcionals amb 12 punts de vida; no alteren l’objectiu de relleu.
+- B / Granada: consumeix una granada pròpia, impuls frontal amb gravetat i col·lisió amb terreny, parets, portes, sostres i pisos. La col·lisió frena el llançament (sense rebot). Detona als 60 ticks (2 s de simulació); radi 8 m, dany decreixent i bloquejat per obstacles. Separació mínima de 30 ticks entre llançaments.
+- Sense foc amic ni autodany en aquest mode d’entrenament. Disparar/llançar treu la disfressa. No hi ha enemics, armes seleccionables, recàrrega ni efecte real del sigil encara.
+- Esquema de combat tancat: sessió determina l’actor, rumb/posició i resultats són del servidor, no s’accepten danys/coordenades del client. Límit separat de 12 ordres/s, cadència per ticks, historial limitat de 128 confirmacions; desament abans de difondre, rollback en error.
+- Checkpoint de dianes, granades en vol, fusibles, cadència i confirmacions. Una pausa atura trajectòria i fusible; en acabar la missió es retiren les granades/efectes restants. No hi ha migració de missions temporals entre versions.
+- Render 3D/Canvas de dianes/vida, trets, granades i explosions; botons tàctils. Proves de consum individual, cadència, duplicats, obstacles/alçada, detonació/dany, persistència/rollback, controls i dues sessions locals del Worker. La validació visual GPU, so i Android físic continua pendent.
+
+### Què queda després d’aquesta fase
+
+1. IA enemiga autoritativa compartida: moviment/percepció/atacs, dany als jugadors, sigil amb efecte real de la disfressa i ferits/reanimació. Les dianes actuals són d’entrenament.
+2. Equipament i armes de la campanya (inclòs fusell d’assalt), selecció/recàrrega, inventari ampliat, balanç i tractament de foc amic si es decideix activar-lo.
+3. Vehicles, món complet, destrucció d’edificis i objectius de campanya, preservant la seqüència RNG completa.
+4. Desaments cooperatius permanents, migracions, estadístiques/historial als comptes.
+5. Prova física amb dos comptes/navegadors, GPU/Android, àudio, controls/rendiment/acabat visual i errors històrics de fixtures/escala 2 documentats.
+
+### Registre de publicació de la fase anterior
+
+**Publicació:** codi i proves v0.6.22 a `main` (commit `ce1a81c916e88fd462c6ab3b6641c4ef4bd47ce6`). Desplegament de producció confirmat amb èxit: [build cb293c90-e9a4-4465-96c3-0cf753b588f8](https://dash.cloudflare.com/e8c1784f0b4c91e60ee62af2e3dae4f3/workers/services/view/hunter-arxipelag/production/builds/cb293c90-e9a4-4465-96c3-0cf753b588f8), Version ID `23a738eb-7db8-4e36-9ee0-b503f413d369`. Versió pública i HTML cooperatiu verificats. El primer build (`393d617d-e19e-484f-8398-403ea6180a19`) havia fallat sense motiu a GitHub; el desplegament posterior ha reeixit, sense canvis de codi ni configuració. La causa del primer error no s’ha determinat.

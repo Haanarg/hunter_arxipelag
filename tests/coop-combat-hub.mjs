@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {CoopRoomHub} from '../server/coop-hub.mjs';
+import {generateRelayMission} from '../server/coop-mission.mjs';
+import {GAME_VERSION} from '../src/version.mjs';
+const g=generateRelayMission({id:'combat-hub',revision:1,seed:67,mapScale:1,allReady:true,expiresAt:Date.now()+86400000,members:[{id:'a',name:'A'},{id:'b',name:'B'}]});g.record.status='running';
+let fail=false;const store=new Map([['world',g.geometry],['mission',g.record]]),sockets=['a','b'].map(actorId=>({readyState:1,messages:[],attachment:{actorId,gameClient:true,gameVersion:GAME_VERSION},deserializeAttachment(){return {...this.attachment};},serializeAttachment(v){this.attachment={...v};},send(s){this.messages.push(JSON.parse(s));},close(code){this.code=code;this.readyState=3;}})),ctx={getWebSockets:()=>sockets,blockConcurrencyWhile:fn=>fn(),storage:{async get(k){return structuredClone(store.get(k));},async put(k,v){if(fail)throw Error('Save failed');store.set(k,structuredClone(v));},async setAlarm(){},async delete(){},async deleteAlarm(){}}};
+let hub=new CoopRoomHub(ctx,{});await hub.loading;hub.verify=async ws=>ws.deserializeAttachment();
+const shot={type:'combat',protocol:1,epoch:g.record.meta.id,weapon:'pistol',commandId:'shot-1'};
+fail=true;await hub.webSocketMessage(sockets[0],JSON.stringify(shot));assert.equal(sockets[0].messages.at(-1).code,'SAVE_FAILED');assert.equal(hub.mission.snapshot().inventories[0].bullets,24);assert.equal(hub.mission.snapshot().combat.effects.length,0);assert.equal(sockets[1].messages.length,0);
+fail=false;await hub.webSocketMessage(sockets[0],JSON.stringify(shot));assert.equal(sockets[0].messages.at(-1).ok,true);assert.equal(sockets[1].messages.at(-1).state.inventories[0].bullets,23);assert.equal(sockets[1].messages.at(-1).state.combat.effects.length,1);
+hub=new CoopRoomHub(ctx,{});await hub.loading;hub.verify=async ws=>ws.deserializeAttachment();await hub.webSocketMessage(sockets[0],JSON.stringify(shot));assert.equal(sockets[0].messages.at(-1).duplicate,true);assert.equal(hub.mission.snapshot().inventories[0].bullets,23);
+const grenade={...shot,weapon:'grenade',commandId:'grenade-1'};await hub.webSocketMessage(sockets[0],JSON.stringify(grenade));assert.equal(hub.mission.snapshot().combat.grenades.length,1);hub=new CoopRoomHub(ctx,{});await hub.loading;hub.verify=async ws=>ws.deserializeAttachment();assert.equal(hub.mission.snapshot().combat.grenades.length,1,'in-flight projectile survives DO cold restore');
+await hub.webSocketMessage(sockets[1],JSON.stringify({...shot,damage:100}));assert.equal(sockets[1].code,1008,'forged damage is rejected');
+for(let i=0;i<12&&sockets[0].readyState===1;i++)await hub.webSocketMessage(sockets[0],JSON.stringify({...shot,commandId:'spam-'+i}));assert.equal(sockets[0].code,1008,'combat transport has a separate bounded rate');
+console.log('combat hub: authenticated closed schema, persistence before broadcast, rollback/retry, shared effects, cold restore, duplicate handling and rate limit passed');

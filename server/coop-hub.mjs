@@ -70,6 +70,15 @@ export class CoopRoomHub {
       if(this.mission&&body.epoch===this.mission.meta.id)this.mission.accept(a.actorId,body);
       return;
     }
+    if(body.type==='combat'){
+      if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==5||typeof body.epoch!=='string'||body.epoch.length>64||!['pistol','grenade'].includes(body.weapon)||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre de combat invàlida');return;}
+      if(now-(a.combatWindow||0)>=1000){a.combatWindow=now;a.combatCount=0;}a.combatCount=(a.combatCount||0)+1;ws.serializeAttachment(a);
+      if(a.combatCount>12){ws.close(1008,'Massa ordres de combat');return;}
+      if(!await this.verify(ws)){ws.close(4003,'Accés finalitzat');return;}
+      if(!this.mission||body.epoch!==this.mission.meta.id){this.send(ws,{type:'action',kind:'combat',commandId:body.commandId,ok:false,code:'NOT_ACTIVE'});return;}
+      try{const result=this.mission.combatCommand(a.actorId,body);await this.save(this.record.nextAlarm);this.broadcastState();this.send(ws,{type:'action',...result});}
+      catch(_){if(this.record)this.mission=restoreRelayMission(this.record,this.geometry);this.send(ws,{type:'action',kind:'combat',commandId:body.commandId,ok:false,code:'SAVE_FAILED'});}return;
+    }
     if(now-a.window>=60000){a.window=now;a.count=0;}a.count++;ws.serializeAttachment(a);
     if(a.count>20){ws.close(1008,'Massa missatges');return;}
     if(!await this.verify(ws,true)){ws.close(4003,'Accés finalitzat');return;}
