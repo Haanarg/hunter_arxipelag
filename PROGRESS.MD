@@ -196,3 +196,11 @@ L’usuari informa que les migracions retornen versió 4 i ha desat origen i sec
 ## Secret en execució amb el tauler bloquejat
 
 El servidor confirma que només falta `AUTH_SECRET`; D1, R2 i l’origen passen la comprovació. El tauler impedeix afegir variables per un missatge d’assets estàtics, malgrat que el domini executa el servidor. Es prepara `npm run deploy:cloudflare` per transferir el secret de compilació al secret en execució mitjançant `wrangler deploy --secrets-file`. Pendent que l’usuari canviï Deploy command a Cloudflare i executi un build de main; després cal comprovar capabilities, registre i primer administrador. Els altres pendents continuen vigents.
+
+## Cooperatiu · fase 1 (v0.6.8)
+
+L’usuari informa que la sincronització ja funciona i autoritza començar el cooperatiu. Implementades sales privades de dos comptes aprovats, invitació aleatòria, llavor/mida/dificultat compartides, preparació, presència recent, revisions, sortida i tancament. Concurrència protegida per restriccions i transaccions D1. Interfície des de la portada i Compte / núvol; no s’ofereix iniciar una missió conjunta encara.
+
+Cal aplicar només `0005_coop_lobby.sql` i desplegar aquesta tanda per activar sales. Els comptes continuen funcionant sense aquesta migració. Proves D1/R2 i Worker natiu, regressions de comptes/desaments i documentació a [COOP_PHASE1.md](docs/COOP_PHASE1.md).
+
+Queda després d’aquesta fase: validació real de dos navegadors/Android i cost del polling; separar globals de moviment/dany/IA; protocol i transport en temps real; servidor autoritatiu i estat inicial; combat/objectius compartits, reconnexió i política d’amfitrió/pausa; desaments i estadístiques cooperatius. Queden també quotes/retenció i les altres fases generals pendents. Cap plugin o recurs Cloudflare nou.

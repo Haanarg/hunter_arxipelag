@@ -1,3 +1,4 @@
+import {coopAPI} from './coop.mjs';
 import {accountReadiness} from './readiness.mjs';
 import {runMaintenance} from './maintenance.mjs';
 import {createAuth} from './auth.mjs';
@@ -25,6 +26,7 @@ function objectKey(owner,id){return 'saves/'+owner+'/'+id+'/'+crypto.randomUUID(
 async function privateAPI(request,env,user,url){
   const owner=user.id;
   if(request.headers.get('X-Hunter-User')!==owner)failure(403,'ACCOUNT_CHANGED','El compte ha canviat.');
+  if(url.pathname.startsWith('/api/coop/'))return coopAPI(request,env,user,url,readJSON,json);
   const match=url.pathname.match(/^\/api\/saves(?:\/([^/]+))?$/);
   if(match){
     const id=match[1]?decodeURIComponent(match[1]):null;

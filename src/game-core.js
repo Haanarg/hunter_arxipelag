@@ -2917,6 +2917,7 @@ const ui=window.HUNTER_UI.create({
     resume:()=>{if(!started){ui.hide();return}if(!operationBusy)resume()},
     renderSaves:renderOperations,
     renderAccount,
+    renderCoop,
     renderHistory:renderOperationHistory,
     setAutosave:setOperationAutosave,
     open:mode=>panel(mode),
@@ -4111,3 +4112,5 @@ document.getElementById('historyOpen').onclick=openHistoryPanel;
 addEventListener('pagehide',()=>{if(started)recordJournalNow()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&started)recordJournalNow()});
 window.HUNTER_COMMANDS=Object.freeze({dispatch:command=>operationAuthority.dispatch(command),context:()=>({version:1,actorId:'local',operationId:operationCommandEpoch})});
+
+document.getElementById('coopOpen').onclick=openCoopPanel;
