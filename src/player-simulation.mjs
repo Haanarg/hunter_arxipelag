@@ -23,27 +23,27 @@ export function createPlayerSimulation({epoch,actors,limit,world={}}){
   if(typeof epoch!=='string'||!epoch||!finite(limit)||limit<=0||!Array.isArray(actors)||actors.length!==2||new Set(actors.map(a=>a.id)).size!==2)throw new RangeError('Invalid cooperative session');
   const players=new Map();let tick=0;
   for(const actor of actors){
-    if(typeof actor.id!=='string'||!actor.id||![actor.x,actor.z,actor.hd,actor.hp].every(finite)||actor.hp<0||Math.abs(actor.x)>limit||Math.abs(actor.z)>limit)throw new RangeError('Invalid actor');
-    players.set(actor.id,{...actor,received:0,acknowledged:0,lastInputTick:-Infinity,input:{forward:0,turn:0,strafe:0,run:false}});
+    if(typeof actor.id!=='string'||!actor.id||![actor.x,actor.z,actor.hd,actor.hp].every(finite)||actor.hp<0||actor.y!==undefined&&!finite(actor.y)||Math.abs(actor.x)>limit||Math.abs(actor.z)>limit)throw new RangeError('Invalid actor');
+    players.set(actor.id,{...actor,y:actor.y??0,received:0,acknowledged:0,lastInputTick:-Infinity,input:{forward:0,turn:0,strafe:0,run:false}});
   }
   function accept(actorId,message){
     const p=players.get(actorId);
     if(!p||!message||message.protocol!==COOP_PROTOCOL||message.epoch!==epoch||!Number.isSafeInteger(message.sequence)||message.sequence<=p.received||!validatePlayerInput(message.input))return false;
     p.received=message.sequence;p.lastInputTick=tick;p.input={...message.input};return true;
   }
-  function snapshot(){return {protocol:COOP_PROTOCOL,epoch,tick,players:[...players.values()].map(p=>({id:p.id,x:p.x,z:p.z,hd:p.hd,hp:p.hp,acknowledged:p.acknowledged}))};}
+  function snapshot(){return {protocol:COOP_PROTOCOL,epoch,tick,players:[...players.values()].map(p=>({id:p.id,x:p.x,z:p.z,y:p.y,hd:p.hd,hp:p.hp,acknowledged:p.acknowledged}))};}
   function step(){
     const next=[];
     for(const p of players.values()){
       const input=tick-p.lastInputTick<Math.ceil(COOP_TICK_RATE*.25)?p.input:{forward:0,turn:0,strafe:0,run:false},context=world.context?.({...p})||{};
-      const previous={id:p.id,x:p.x,z:p.z,hd:p.hd,hp:p.hp},hd=p.hd+(p.hp>0?input.turn:0)/COOP_TICK_RATE*2.2;
+      const previous={id:p.id,x:p.x,z:p.z,y:p.y,hd:p.hd,hp:p.hp},hd=p.hd+(p.hp>0?input.turn:0)/COOP_TICK_RATE*2.2;
       let candidate=p.hp>0?moveOnFoot({...p,hd},{...input,run:input.run&&input.forward>.1&&!context.crouched&&context.canRun!==false},1/COOP_TICK_RATE,{...context,limit}):{x:p.x,z:p.z,hd:p.hd};
       if(world.resolve)candidate=world.resolve(previous,candidate);
-      if(!candidate||![candidate.x,candidate.z,candidate.hd].every(finite)||Math.abs(candidate.x)>limit||Math.abs(candidate.z)>limit)throw new RangeError('Invalid world resolution');
+      if(!candidate||candidate.y!==undefined&&!finite(candidate.y)||![candidate.x,candidate.z,candidate.hd].every(finite)||Math.abs(candidate.x)>limit||Math.abs(candidate.z)>limit)throw new RangeError('Invalid world resolution');
       next.push({p,candidate});
     }
     // A failed world adapter cannot partially commit one actor's movement.
-    for(const {p,candidate} of next){p.x=candidate.x;p.z=candidate.z;p.hd=candidate.hd;p.acknowledged=p.received;}
+    for(const {p,candidate} of next){p.x=candidate.x;p.z=candidate.z;p.hd=candidate.hd;p.y=candidate.y??p.y;p.acknowledged=p.received;}
     tick++;return snapshot();
   }
   return Object.freeze({accept,step,snapshot,damage(actorId,amount){const p=players.get(actorId);if(!p)return false;p.hp=damageHealth(p.hp,amount);return true;}});

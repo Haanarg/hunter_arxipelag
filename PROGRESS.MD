@@ -222,3 +222,11 @@ Implementat canal WebSocket de sala amb Durable Object SQLite, notificació imme
 El desplegament incorpora `COOP_ROOMS` i una migració automàtica de Durable Objects. No cal SQL D1 posterior a la 0005, secrets nous ni plugins. Proves de dos comptes locals amb WebSockets reals i Durable Object/D1 natius, més regressions de comptes, desaments i sales. No es creen comptes de prova de producció. La prova física de dos navegadors es manté ajornada per decisió de l’usuari.
 
 Queda: adaptador del món real i extracció de gravetat/vehicles/IA; sessió/tick de missió persistent, compatibilitat dels dos clients, estat inicial i protocol de joc; moviment/combat/objectius compartits, predicció/interpolació, pausa/amfitrió i reconnexió de missió; desaments/estadístiques cooperatius; proves de dispositius, càrrega i consum; quotes/retenció i les dues fallades històriques de proves generals. La resta de les catorze fases es manté segons el pla.
+
+## Cooperatiu · fase 4 (v0.6.11)
+
+Implementada una extracció parcial de la física del món: relleu, platges/profunditat, anivellaments i resposta de murs/arbres/roques/palmeres sense renderitzador ni jugador global. El joc individual reutilitza aquestes regles. Captura de geometria sota demanda, validació i índexs espacials, còpies independents i altura al nucli de dos actors. No s’accepta geometria de clients com a autoritat. [Detall i límits](docs/COOP_PHASE4.md).
+
+Proves: món real 67/1, 961 punts i col·lisions contra una referència congelada del main anterior, ronda JSON i límits, dos actors contra la geometria real en Node i workerd natiu. Regressions de comptes/sala/WebSockets/desaments i paquet del navegador superades. No cal cap migració o configuració manual nova.
+
+Queda: escales/interiors/teulades/molls/aigua, gravetat i vehicles/IA dinàmics; món canònic i sessió de missió al servidor; ordres/snapshots en temps real, combat/objectius compartits i predicció/interpolació; reconnexió/pausa/amfitrió, desaments/estadístiques cooperatius; més llavors/mapa gran, proves físiques i càrrega, quotes/retenció i les dues fallades històriques. La missió conjunta encara no s’inicia (`playable:false`). La resta del pla general continua vigent.

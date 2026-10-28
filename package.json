@@ -37,7 +37,8 @@
     "generate:auth-schema": "node tools/generate-auth-schema.mjs",
     "deploy:cloudflare": "node tools/deploy-cloudflare.mjs",
     "test:coop": "node tests/player-simulation.mjs && node tests/coop-lobby.mjs",
-    "test:realtime": "node tests/coop-connection.mjs && node tools/build-worker.mjs && node tests/coop-realtime.mjs"
+    "test:realtime": "node tests/coop-connection.mjs && node tools/build-worker.mjs && node tests/coop-realtime.mjs",
+    "test:world": "node tests/world-adapter.cjs"
   },
   "dependencies": {
     "better-auth": "1.7.14"

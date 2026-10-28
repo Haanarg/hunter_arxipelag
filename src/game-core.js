@@ -59,27 +59,8 @@ function vn(x,y){const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,u=fx*fx
 return hash(ix,iy)*(1-u)*(1-v)+hash(ix+1,iy)*u*(1-v)+hash(ix,iy+1)*(1-u)*v+hash(ix+1,iy+1)*u*v}
 const fbm=(x,y)=>vn(x,y)*.5+vn(x*2,y*2)*.25+vn(x*4,y*4)*.125+vn(x*8,y*8)*.0625;
 const clamp01=v=>Math.max(0,Math.min(1,v)),smooth01=t=>t*t*(3-2*t);
-function islandReliefAt(x,z,list){
-  let m=-1,dom=null;
-  for(const i of list){const q=1-Math.hypot(x-i.x,z-i.z)/i.r;if(q>m){m=q;dom=i}}
-  let h=(m-.25+.6*(fbm(x/520,z/520)-.47))*45;
-  if(dom&&h>0){
-    // La costa es manté gairebé intacta; el relleu addicional entra progressivament cap a l'interior.
-    const interior=smooth01(clamp01((m-.30)/.48));
-    if(interior>0){
-      const mid=(fbm(x/155+13,z/155-9)-.46875)*12*interior;
-      const pd=Math.hypot(x-dom.peakX,z-dom.peakZ)/(dom.r*.72),
-            peak=smooth01(clamp01(1-pd)),
-            sizeGain=Math.max(.72,Math.min(1.22,dom.r/620));
-      h=h*(1+.24*interior)+mid+peak*9*sizeGain*interior
-    }
-  }
-  return h
-}
-function rawHAt(x,z){let h=islandReliefAt(x,z,islandCandidates(x,z));const e=Math.max(Math.abs(x),Math.abs(z));
-if(e>H-120)h=Math.min(h,-4-(e-(H-120))*.05);
-if(h>=-1.5)return h;
-const depth=-h-1.5;return -1.5-Math.min(72,depth*depth*2.8+depth*.8)}
+function islandReliefAt(x,z,list){return window.HUNTER_WORLD_PHYSICS.reliefAt(x,z,list,seed)}
+function rawHAt(x,z){return window.HUNTER_WORLD_PHYSICS.rawTerrainAt(x,z,islandCandidates(x,z),seed,H)}
 // Evitem recórrer TOTES les plataformes de TOTS els compounds en cada
 // consulta d'altura. L'ordre d'inserció dels candidates és l'original:
 // solapaments, altures, llavors i col·lisions continuen idèntics.
@@ -100,17 +81,8 @@ const addLevelArea=(x,z,w,d,y,rot=0,blend=12)=>{
   }
 };
 function hAt(x,z){
-  let h=rawHAt(x,z);
-  const candidates=terrainLevelGrid.get(levelCellKey(
-    Math.floor(x/LEVEL_CELL),Math.floor(z/LEVEL_CELL)));
-  if(!candidates)return h;
-  for(const m of candidates){
-    const dx=x-m.x,dz=z-m.z,lx=dx*m.c+dz*m.s,lz=-dx*m.s+dz*m.c,
-          ox=Math.max(0,Math.abs(lx)-m.hw),oz=Math.max(0,Math.abs(lz)-m.hd),
-          out=Math.hypot(ox,oz);
-    if(out<m.blend){const k=out<=0?1:1-smooth01(out/m.blend);h=h+(m.y-h)*k}
-  }
-  return h;
+  const h=rawHAt(x,z),candidates=terrainLevelGrid.get(levelCellKey(Math.floor(x/LEVEL_CELL),Math.floor(z/LEVEL_CELL)));
+  return candidates?window.HUNTER_WORLD_PHYSICS.levelHeight(h,x,z,candidates):h;
 }
 const waveAmp=window.HUNTER_WAVES.amplitude;
 const wy=(x,z,t)=>water.surfaceHeight(x,z,t);
@@ -932,41 +904,12 @@ function treeHit(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=
 // Col·lisió del jugador amb la silueta REAL del tronc corbat, no només
 // amb el cercle de l'arrel. La mateixa corba sinusoïdal s'usa a vegetation.js;
 // la rotació i l'escala provenen de la mateixa palmera determinista.
-function palmPush(t,r0){
-  const height=6.2*t.s,reach=t.r+r0+1.65*t.s;
-  if(P.y>t.y+height+.6||P.y+4.2<t.y)return;
-  if(Math.abs(P.x-t.x)>reach||Math.abs(P.z-t.z)>reach)return;
-  const yawCos=Math.cos(t.yaw),yawSin=Math.sin(t.yaw);
-  let overlap=0,nx=0,nz=0;
-  // El model a peu fa prop de quatre metres: comprovam tot el cos,
-  // incloent espatlles i cap, sense crear malles de col·lisió addicionals.
-  for(const offset of [.3,1,1.7,2.4,3.1,3.8]){
-    const y=P.y+offset;
-    if(y<t.y||y>t.y+height)continue;
-    const q=(y-t.y)/height;
-    const bend=height*.25*Math.sin(Math.PI*q);
-    const trunkX=t.x+bend*yawCos,trunkZ=t.z-bend*yawSin;
-    const dx=P.x-trunkX,dz=P.z-trunkZ,d=Math.hypot(dx,dz);
-    const bodyRadius=offset>3.1 ? r0*.75 : r0;
-    const radius=bodyRadius+t.r*(1-.43*q)+.04*t.s;
-    if(d<radius&&radius-d>overlap){
-      overlap=radius-d;
-      if(d>.0001){nx=dx/d;nz=dz/d}
-      else {nx=Math.cos(P.hd);nz=-Math.sin(P.hd)}
-    }
-  }
-  if(overlap>0){P.x+=nx*overlap;P.z+=nz*overlap}
-}
+function palmPush(t,r0){window.HUNTER_WORLD_PHYSICS.pushPalm(P,t,r0)}
 function treePush(){
   const r0=.5,cx=Math.floor(P.x/16),cz=Math.floor(P.z/16);
   for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){
     const L=TG.get((cx+a)+','+(cz+b));if(!L)continue;
-    for(const t of L){
-      if(t.p){if(!palmsDisabled)palmPush(t,r0);continue}
-      if(t.rock&&(P.y>t.topY+.6||P.y+1.5<t.bottomY))continue;
-      const dx=P.x-t.x,dz=P.z-t.z,d=Math.hypot(dx,dz),m=t.r+r0;
-      if(d<m&&d>.001){P.x=t.x+dx/d*m;P.z=t.z+dz/d*m}
-    }
+    for(const t of L)window.HUNTER_WORLD_PHYSICS.pushTree(P,t,palmsDisabled,r0);
   }
 }
 function nearbyRock(x,z,r=0,baseY=-Infinity,topY=Infinity){
@@ -1529,8 +1472,7 @@ const tread=.75;let steps=1;for(;steps<80;steps++){const end=steps*tread;if(top-
 const length=steps*tread,bottom=hAt(x+nx*length,z+nz*length),rise=Math.max(0,(top-bottom)/steps),s={x,z,nx,nz,top,steps,tread,length,rise,width:4.2};stairs.push(s);b.stair=s;
 if(!seedSearchMode)for(let i=0;i<steps;i++){const a=(i+.5)*tread,xx=x+nx*a,zz=z+nz*a,y=top-i*rise,base=Math.min(y-.16,hAt(xx,zz)-.15);buildingVisual.addStep(b.o,{alongAxis:!!nx,riseWidth:tread,height:y-b.fy,base:base-b.fy,x:xx-b.x,z:zz-b.z,color:i%2?0xa69982:0xb5a68e})}
 }
-function wallPush(){const r=.6;for(const w of wallCandidates(P.x,P.z,r)){if(w.playerBlock===false||w.y0>P.y+3.1||w.y1<P.y+.15)continue;if(w.towerLegOwner&&(P.y+1.5<w.y0||P.y>w.y1))continue;if(!w.open&&P.x>w.x0-r&&P.x<w.x1+r&&P.z>w.z0-r&&P.z<w.z1+r){const a=[P.x-(w.x0-r),w.x1+r-P.x,P.z-(w.z0-r),w.z1+r-P.z],i=a.indexOf(Math.min(...a));
-if(i==0)P.x=w.x0-r;else if(i==1)P.x=w.x1+r;else if(i==2)P.z=w.z0-r;else P.z=w.z1+r}}}
+function wallPush(){window.HUNTER_WORLD_PHYSICS.pushWalls(P,wallCandidates(P.x,P.z,.6))}
 function updateDoors(dt){
   for(const d of Dr){
     if(d.bunkerInteriorDoor){
