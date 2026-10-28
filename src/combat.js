@@ -1134,6 +1134,18 @@ else if(c&&OPEN_RIDER_PISTOL.has(c)){
   const p=shot.origin,d=shot.direction;
   shoot(p.x,p.y,p.z,d.x,d.y,d.z,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE);
 }
+else if(!cv&&assaultRifleEquipped&&inv.fusell_assalt){
+  // Cada activació fa tres projectils. Amb F mantinguda, fcd repeteix ràfegues.
+  // L'autoapuntat es recalcula a cada ràfega i tria un altre enemic si el primer mor.
+  if(ammo<3){msg='Fusell d’assalt: calen 3 cartutxos per ràfega.';msgT=1.5;return}
+  ammo-=3;fcd=.34;pl.userData.firePose=.3;
+  const x=P.x+fx_*1.1,y=P.y+1.6-(playerCrouched?.48:0),z=P.z+fz*1.1,
+        [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,85,.965,'light',null,130);
+  for(const spread of[-.012,0,.012]){
+    const dx=ax-az*spread,dz=az+ax*spread,len=Math.hypot(dx,ay,dz)||1;
+    shoot(x,y,z,dx/len,ay/len,dz/len,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE);
+  }
+}
 else if(!cv&&sniperEquipped&&inv.franctirador){
   if(sniperAmmo<=0){msg='El rifle no té munició.';msgT=2;return}
   sniperAmmo--;fcd=1.05;pl.userData.firePose=.42;
