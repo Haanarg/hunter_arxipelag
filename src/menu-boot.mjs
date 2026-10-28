@@ -1,5 +1,5 @@
-import {GAME_VERSION} from './version.mjs?v=0.6.5';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.5';
+import {GAME_VERSION} from './version.mjs?v=0.6.6';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.6';
 
 // La portada no carrega Three.js, WebGL, el món ni una llavor de fons.
 // Una imatge estàtica renderitzada amb la llavor 67 és suficient.
@@ -94,7 +94,7 @@ const showLoading=(message)=>{
 };
 function loadGame(){
   if(window.HUNTER_READY)return Promise.resolve();
-  if(!bootPromise)bootPromise=import('./bootstrap.mjs?v=0.6.5').then(()=>{
+  if(!bootPromise)bootPromise=import('./bootstrap.mjs?v=0.6.6').then(()=>{
     if(!window.HUNTER_READY)throw new Error('El motor 3D no ha acabat de carregar');
   }).catch(error=>{bootPromise=null;throw error});
   return bootPromise;
@@ -155,7 +155,11 @@ function intercept(button,message){
 }
 for(const button of menu.querySelectorAll('button[data-d]'))
   intercept(button,'Carregant el motor 3D…');
+intercept(document.getElementById('historyOpen'),'Carregant l’historial…');
+intercept(document.getElementById('accountOpen'),'Carregant el compte…');
 intercept(document.getElementById('operationsOpen'),'Carregant les operacions…');
 intercept(document.getElementById('seedSearchOpen'),'Carregant el cercador de llavors…');
 // Per a proves i generació automàtica de captures; el menú normal és diferit.
 if(params.get('eager')==='1')loadGame().catch(error=>console.error('Error en mode eager',error));
+
+

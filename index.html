@@ -200,7 +200,7 @@ body.sniper-scoped #joystick{cursor:crosshair}
   #gamepanel .pause-help b,#gamepanel .pause-help span{font-size:11px}
   #gamepanel .pause-note{margin:8px 0 6px}
 }
-</style></head><body>
+</style><style>#startMenu{max-height:90dvh;overflow-y:auto;padding:16px 0;box-sizing:border-box}.account-input{display:block;padding:10px;margin:8px 0;width:min(300px,75vw);box-sizing:border-box}</style></head><body>
 <div id="bazookaReticle" aria-hidden="true"><span class="aim-label">OBJECTIU</span></div><div id="sniperScope" aria-hidden="true"><span class="scope-h"></span><span class="scope-v"></span><span class="scope-label">MIRA x8 · T per sortir</span></div><div id="combatFeedback" hidden aria-hidden="true"><span id="hitConfirm" hidden><i></i><i></i><i></i><i></i></span><span id="damageDirection" hidden></span></div><div id="hud"></div><div id="perfStats" aria-label="Estadístiques de rendiment"></div><canvas id="mm" width="170" height="170" role="button" tabindex="0" aria-label="Obrir el mapa gran" title="Toca o fes clic per obrir el mapa gran"></canvas>
 <button id="strafeLeft" class="strafe-btn" type="button" aria-label="Desplaçar lateralment a l'esquerra" aria-pressed="false" title="Strafe esquerra · Y">◀</button>
 <div id="joystick" role="application" aria-label="Joystick de moviment: arrossega cap amunt per córrer o nedar a crol; amb la mira activa, controla el punt de vista"><div class="joy-run-zone" aria-hidden="true"><span class="run-arrow">▲</span><span class="run-label">CÓRRER</span><span class="swim-label">CROL</span></div><div class="joy-knob"></div></div>
@@ -219,6 +219,8 @@ body.sniper-scoped #joystick{cursor:crosshair}
 <div id="mapSizeBox"><b>Mida:</b><label><input type="radio" name="mapSize" value="1" checked> Petit · 4,8 km</label><label><input type="radio" name="mapSize" value="2"> Gran · 9,6 km</label></div>
 </div>
 <div id="qualityBox"><label for="graphicsQuality"><b>Gràfics:</b><select id="graphicsQuality" aria-label="Qualitat dels gràfics"><option value="desktop" selected>Alts</option><option value="mobile">Reduïts · mòbil</option><option value="ultra">Mínims · sense reflexos</option></select></label><button id="performanceMenuOpen" type="button" aria-label="Opcions de rendiment" title="Opcions de rendiment">⚙️</button></div>
+<button id="historyOpen" type="button">Estadístiques / llavors</button>
+<button id="accountOpen" type="button">Compte / núvol</button>
 <button id="operationsOpen" type="button">Continuar / operacions desades</button>
 <button id="seedSearchOpen" type="button">🔎 Cerca</button>
 <p id="startLoading" role="status" aria-live="polite" style="display:none;margin:0;font-size:14px;background:#071724b8;padding:9px 14px;border-radius:8px">Carregant...</p>
@@ -248,5 +250,5 @@ body.sniper-scoped #joystick{cursor:crosshair}
 <div class="seed-search-actions"><button id="seedSearchRun" type="button">Buscar</button><button id="seedSearchCancel" type="button" disabled>Cancel·la</button><button id="seedSearchBack" type="button">← Tornar</button></div>
 <div id="seedSearchStatus" class="seed-search-status" role="status">Tria una categoria i un tipus per començar.</div><div id="seedSearchResults" class="seed-results" aria-live="polite"></div></div></div>
 <div id="gamepanel" role="dialog" aria-modal="true" aria-labelledby="panelTitle"><div class="card"><button id="resumeButton" class="panel-close" aria-label="Tanca">×</button><h2 id="panelTitle"></h2><div id="panelBody"></div></div></div>
-<script type="module" src="src/menu-boot.mjs?v=0.6.5"></script></body></html>
+<script type="module" src="src/menu-boot.mjs?v=0.6.6"></script></body></html>
 

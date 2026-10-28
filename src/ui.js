@@ -52,10 +52,14 @@ window.HUNTER_UI=Object.freeze({
     function hide(){panel.style.display='none';currentMode=null}
     function show(mode){
       currentMode=mode;panel.style.display='flex';
-      resumeButton.style.display=mode==='saves'&&!getState().started?'none':'';
+      resumeButton.style.display=['saves','account','history'].includes(mode)&&!getState().started?'none':'';
       resumeButton.onclick=mode==='bombtimer'?()=>actions.open('inventory'):actions.resume;
       title.textContent=mode==='bombtimer'?'Programar explosiu':mode==='map'?'Carta de navegació':mode==='inventory'?'Inventari':mode==='restart'?'Nova operació?':mode==='performance'?'Rendiment':'Operació en pausa';panel.querySelector('.card').classList.toggle('inventory-card',mode==='inventory');
-      if(mode==='saves'){
+      if(mode==='history'){
+        title.textContent='Estadístiques i llavors';actions.renderHistory(body,()=>currentMode==='history');
+      }else if(mode==='account'){
+        title.textContent='Compte i núvol';actions.renderAccount(body,()=>currentMode==='account');
+      }else if(mode==='saves'){
         title.textContent='Operacions desades';actions.renderSaves(body,()=>currentMode==='saves');
       }else if(mode==='inventory'){
         const state=getState(),keys=['med','paracaigudes','cisalla','expl','granada','bazooka','franctirador','disf','arma'],present=keys.filter(k=>state.inventory[k]>0);
@@ -201,13 +205,15 @@ window.HUNTER_UI=Object.freeze({
           '<div><b>H / J</b><span>Helicòpter: pujar / baixar</span></div>'+
           '<div><b>Arrossega / roda</b><span>Girar vista / ajustar càmera</span></div>'+
           '</div>'+
-          '<p class="pause-note">Els mapes recollits s’activen sols. Gestiona l’equipament amb la motxilla.</p>'+
-          '<p class="pause-note">Senyals sobre soldats visibles: ? ambre · sospita; ! coral · contacte confirmat; ◇ blau · cerca o investigació. Desapareixen darrere la cobertura.</p>'+
+          '<p class="pause-note">Els mapes s’activen sols. Equipament: motxilla.</p>'+
+          '<p class="pause-note">? ambre: sospita · ! coral: contacte · ◇ blau: cerca. Ocults darrere la cobertura.</p>'+
           '<label class="pause-stats-toggle"><input id="audioEnabledPause" type="checkbox"> So activat</label>'+
           '<label class="pause-stats-toggle"><input id="autosaveEnabledPause" type="checkbox"> Desament automàtic</label>'+
           '<p id="operationAutosaveStatus" class="pause-note" role="status"></p>'+
           '<div class="pause-menu-actions">'+
-          '<button id="savesMenu">Desar / operacions</button>'+
+          '<button id="historyMenu">Historial</button>'+
+          '<button id="accountMenu">Compte / núvol</button>'+
+          '<button id="savesMenu">Desar</button>'+
           '<button id="chetosMenu">Chetos</button>'+
           '<button id="restartMenu">Nova partida</button>'+
           '<button id="performanceMenu">⚙️ Rendiment</button>'+
@@ -215,6 +221,8 @@ window.HUNTER_UI=Object.freeze({
         const auto=document.getElementById('autosaveEnabledPause');auto.checked=!!getState().autosave?.enabled;
         auto.onchange=()=>actions.setAutosave(auto.checked);
         document.getElementById('operationAutosaveStatus').textContent=getState().autosave?.message||'';
+        document.getElementById('historyMenu').onclick=()=>actions.open('history');
+        document.getElementById('accountMenu').onclick=()=>actions.open('account');
         document.getElementById('savesMenu').onclick=()=>actions.open('saves');
         document.getElementById('chetosMenu').onclick=()=>actions.open('cheats');
         document.getElementById('restartMenu').onclick=()=>actions.open('restart');
@@ -225,7 +233,7 @@ window.HUNTER_UI=Object.freeze({
       }
     }
     resumeButton.onclick=actions.resume;
-    return Object.freeze({renderHUD,show,hide,isBombTimerOpen:()=>currentMode==='bombtimer'})
+    return Object.freeze({renderHUD,show,hide,isAccountOpen:()=>currentMode==='account',isBombTimerOpen:()=>currentMode==='bombtimer'})
   }
 });
 

@@ -1,7 +1,9 @@
 {
   "devDependencies": {
-    "terser": "5.51.2",
-    "fake-indexeddb": "6.2.5"
+    "esbuild": "0.28.2",
+    "fake-indexeddb": "6.2.5",
+    "miniflare": "4.20260730.0",
+    "terser": "5.51.2"
   },
   "name": "hunter-arxipelag",
   "private": true,
@@ -28,6 +30,13 @@
     "test:shadow-boat-cache": "node tests/shadow-boat-cache.cjs",
     "test:stress-audit-config": "node tests/stress-audit-config.cjs",
     "test:vehicle-batching": "node tests/vehicle-batching.cjs",
-    "test:saves": "node tests/operation-save.mjs && node tests/operation-autosave.cjs && node tests/operation-files.mjs && node tests/operation-runtime.cjs"
+    "test:saves": "node tests/operation-save.mjs && node tests/operation-autosave.cjs && node tests/operation-files.mjs && node tests/operation-runtime.cjs",
+    "test:accounts": "node tests/accounts-cloud.mjs && node tests/cloudflare-backend.mjs && node tools/build-worker.mjs && node tests/cloudflare-workerd.mjs",
+    "test:journal": "node tests/journal-authority.mjs",
+    "build:worker": "node tools/build-worker.mjs",
+    "generate:auth-schema": "node tools/generate-auth-schema.mjs"
+  },
+  "dependencies": {
+    "better-auth": "1.7.14"
   }
 }

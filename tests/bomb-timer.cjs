@@ -12,7 +12,7 @@ assert.match(ui,/bombTensDown/);
 assert.match(ui,/bombOnesUp/);
 assert.match(ui,/bombOnesDown/);
 assert.match(ui,/actions\.placeExplosive\(seconds\)/);
-assert.match(combat,/function plant\(seconds=3\)/);
+assert.match(combat,/function executePlayerPlant\(seconds=3\)/);
 assert.match(combat,/seconds===0/);
 assert.match(explosive,/Math\.min\(59,/);
 assert.match(core,/panel\('bombtimer'\)/);
