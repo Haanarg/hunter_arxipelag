@@ -656,33 +656,60 @@ function launchGrenade(pending){
   o.position.set(x,y,z);world.add(o);
   grenades.push({x,y,z,vx,vy,vz,t,o,sx:x,sy:y,sz:z});
 }
-// Prioritat compartida: 0 soldats/general, 1 vehicles enemics, 2 torres.
-// Elements de l'escenari i vehicles abandonats no competeixen per l'autoapuntat.
-function weaponTargetPriority(enemy){
+// Les armes pesades prioritzen riscos immediats: torres, patrulleres
+// i soldats amb bazuca; després altres soldats i finalment blindats/cotxes.
+// Les armes lleugeres mantenen l'ordre antic.
+function weaponTargetPriority(enemy,shotClass='light'){
+  if(shotClass==='heavy'){
+    if(enemy.t==='torre'||enemy.t==='patrulla_marina'||enemy.rocketSoldier)return 0;
+    if(enemy.t==='soldat'||enemy.t==='general')return 1;
+    if(enemy.t==='jeep'||enemy.t==='tanqueta'||enemy.t==='tanc')return 2;
+    return 3;
+  }
   if(enemy.t==='soldat'||enemy.t==='general')return 0;
   if(enemy.t==='jeep'||enemy.t==='tanqueta'||enemy.t==='tanc'||enemy.t==='patrulla_marina')return 1;
   if(enemy.t==='torre')return 2;
   return 3;
 }
+// La caseta es troba al voltant de y=9,15, no al mig de les potes.
+// Un sol punt de referència evita discrepàncies entre punteria,
+// col·lisió dels projectils, retícula i dany d'explosió.
+const TOWER_CABIN_CENTER_Y=9.15,TOWER_CABIN_RADIUS=2.05;
+function enemyAimCenterY(e){
+  return (e.o?.position?.y??e.gy??0)+(e.t==='torre'?TOWER_CABIN_CENTER_Y:1.5);
+}
+function enemyAimHitRadius(e){
+  return e.t==='torre'?TOWER_CABIN_RADIUS:(e.r||1)+.6;
+}
 // Les bales lleugeres travessen la filferrada. Només els obstacles
 // sòlids bloquegen l'apuntat assistit.
-function weaponAimClear(x,y,z,tx,ty,tz){
+function weaponAimClear(x,y,z,tx,ty,tz,ignoreWall=null,ignoreBuilding=null,checkTerrain=false){
   // Una sola consulta als índexs espacials per candidat. Evitem centenars
   // de mostres petites a cada tret de metralladora de l'helicòpter.
   const mx=(x+tx)/2,mz=(z+tz)/2,reach=Math.hypot(tx-x,tz-z)/2+3;
   for(const w of wallCandidates(mx,mz,reach)){
-    if(w.open||w.barbed)continue;
+    if(w===ignoreWall||w.owner===ignoreBuilding||w.open||w.barbed)continue;
     const t=segmentAabbT(x,y,z,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);
     if(t!=null&&t<.98)return false;
   }
   for(const b of buildingCandidates(mx,mz,reach)){
-    if(b.rhp<=0)continue;
+    if(b===ignoreBuilding||b.rhp<=0)continue;
     const t=b.hangar
       ?hangarRoofSegmentT(x,y,z,tx,ty,tz,b)
       :segmentAabbT(x,y,z,tx,ty,tz,
         b.x-b.w/2-.6,b.x+b.w/2+.6,b.fy+b.h-.4,b.fy+b.h+1.4,
         b.z-b.d/2-.6,b.z+b.d/2+.6);
     if(t!=null&&t<.98)return false;
+  }
+  if(checkTerrain){
+    // Només per a les armes pesades: una muntanya no pot convertir-se en
+    // una diana "visible". Mostreig limitat per protegir els FPS.
+    const dx=tx-x,dy=ty-y,dz=tz-z,distance=Math.hypot(dx,dy,dz),
+          steps=Math.min(20,Math.max(3,Math.ceil(distance/10)));
+    for(let i=1;i<steps;i++){
+      const t=i/steps,px=x+dx*t,py=y+dy*t,pz=z+dz*t;
+      if(py<bunkerProjectileSurface(px,pz,py)+.12)return false;
+    }
   }
   return true;
 }
