@@ -918,14 +918,21 @@ function updateBazookaReticle(dt){
         // Sense obstacle, el punt d'apuntat és la projecció a distància.
         const aimPoint=hit||{x:o.x+d.x*160,y:o.y+d.y*160,z:o.z+d.z*160};
         bazookaReticleWorld.set(aimPoint.x,aimPoint.y,aimPoint.z);
-        // Només color verd si el canó intercepta de debò l'enemic.
-        // Un objectiu proper al con, però fora de l'impacte, no és fixat.
-        autoAimWeaponShot(o.x,o.y,o.z,d.x,d.y,d.z,220,.999,
-          'heavy',focus);
+        // La retícula usa la mateixa cerca i prioritat que la torreta,
+        // però només es torna verda quan el tret REAL ja coincideix
+        // amb la diana. Evitam prometre un impacte abans d'alinear-la.
+        const faceX=-Math.sin(cv.hd),faceZ=-Math.cos(cv.hd);
+        autoAimArmoredShot(o.x,o.y,o.z,faceX,faceZ,220,
+          'heavy',85*HEAVY_SHOT_SPEED_FACTOR,focus);
         const target=focus.point,enemy=focus.target;
-        locked=!!(hit&&target&&enemy&&
-          Math.hypot(hit.x-target.x,hit.y-target.y,hit.z-target.z)<
-            (enemy.r||2)+1.5);
+        if(hit&&target&&enemy){
+          if(focus.kind==='building')
+            locked=Math.abs(hit.x-enemy.x)<=enemy.w/2+1.2&&
+              Math.abs(hit.z-enemy.z)<=enemy.d/2+1.2;
+          else locked=Math.hypot(hit.x-target.x,hit.y-target.y,hit.z-target.z)<
+            (focus.kind==='fence'?3.4:focus.kind==='vehicle'?
+              vehicleRadius(enemy.t)*.7+1.5:enemyAimHitRadius(enemy)+1.5);
+        }
       }
     }else if(mode==='boat'){
       const focus={},shot=combatBoatRocketAim(cv,focus),d=shot.direction;
