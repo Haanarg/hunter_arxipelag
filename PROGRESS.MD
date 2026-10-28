@@ -190,3 +190,5 @@ La resta de pendents (proves físiques, quotes/retenció, recuperació excepcion
 ## Diagnòstic d’activació
 
 L’usuari informa que les migracions retornen versió 4 i ha desat origen i secret. El servidor encara retorna `configuration`, malgrat que les captures mostren els noms correctes. `/api/capabilities` ara enumera únicament els noms dels camps invàlids/absents a la versió activa, sense valors ni secrets, per identificar la causa. L’activació i prova d’un compte real continuen pendents.
+
+`AUTH_ORIGIN=https://hunter.paradoxa.cat` queda versionat a Wrangler per conservar-lo en desplegaments nous. `AUTH_SECRET` continua exclusivament a Cloudflare; cal que sigui un secret del Worker en execució, no només una variable de compilació.

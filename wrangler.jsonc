@@ -35,5 +35,8 @@
       "binding": "SAVES",
       "bucket_name": "hunter-saves"
     }
-  ]
+  ],
+  "vars": {
+    "AUTH_ORIGIN": "https://hunter.paradoxa.cat"
+  }
 }
