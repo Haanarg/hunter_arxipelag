@@ -21,5 +21,19 @@
     "crons": [
       "17 4 * * *"
     ]
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "hunter-accounts",
+      "database_id": "f4879e20-1085-4a51-b132-96cfad61cb90",
+      "migrations_dir": "server/migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "SAVES",
+      "bucket_name": "hunter-saves"
+    }
+  ]
 }

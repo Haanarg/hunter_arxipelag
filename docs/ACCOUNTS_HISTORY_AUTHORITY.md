@@ -47,3 +47,7 @@ Pendents: activar i validar recursos reals de Cloudflare; passada WebGL/Android 
 - Proves noves amb D1/R2 natius: verificació i contrasenya de l’administrador, restriccions de destinatari, caducitat/substitució/reutilització del codi, revocació de sessions i codis personals, auditoria, emissor suspès, protecció de versions actual/antiga, període de gràcia, cursor, concurrència i represa després d’error. El Worker empaquetat també prova la recuperació assistida dins de workerd.
 
 L’administrador ha de conservar els seus propis codis personals. Si tots els administradors perden l’accés, la recuperació requereix el propietari del compte Cloudflare i un procediment fora del joc; no hi ha cap porta de recuperació pública. L’activació real, les proves en dispositius i el desenvolupament cooperatiu continuen pendents.
+
+## Recursos reals preparats per l’usuari
+
+`wrangler.jsonc` incorpora D1 `hunter-accounts`, identificador `f4879e20-1085-4a51-b132-96cfad61cb90`, amb binding `DB` i directori de migracions, i R2 privat `hunter-saves` amb binding `SAVES`. No cal tornar a crear aquests recursos. Primer cal desplegar aquesta configuració amb el servidor: Cloudflare no permet aquests bindings si la versió activa només té assets estàtics. Després cal aplicar les migracions i configurar l’origen/secret reals. No s’ha escrit cap valor fictici per activar comptes.

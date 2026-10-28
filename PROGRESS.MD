@@ -178,3 +178,11 @@ Queda per desenvolupar o validar:
 - Les altres fases generals pendents continuen a la taula inicial; la fase 1 segueix tancada.
 
 Detall i instruccions d’activació: [ACCOUNTS_HISTORY_AUTHORITY.md](docs/ACCOUNTS_HISTORY_AUTHORITY.md).
+
+## Activació manual de Cloudflare · recursos vinculats
+
+L’usuari ha creat D1 `hunter-accounts` (`f4879e20-1085-4a51-b132-96cfad61cb90`) i R2 privat `hunter-saves`. La configuració versionada ja inclou `DB`, `SAVES` i `migrations_dir`, així com l’entrada de servidor `server/worker.mjs`, `nodejs_compat` i el binding d’assets `ASSETS`. Això permet desplegar un Worker amb servidor en lloc d’un Worker exclusivament estàtic.
+
+Pendent després d’integrar aquesta tanda a main: comprovar el desplegament de producció, aplicar les quatre migracions a D1, configurar `AUTH_ORIGIN` amb l’URL real i `AUTH_SECRET` directament a Cloudflare, i registrar/aprovar el primer administrador. Els comptes es mantenen deshabilitats fins que aquestes comprovacions passen. Cap secret es guarda al repositori. Les previews no s’han habilitat per operar comptes contra les dades de producció; calen recursos i variables separats abans de provar-hi comptes.
+
+La resta de pendents (proves físiques, quotes/retenció, recuperació excepcional d’administradors i cooperatiu) es manté segons la tanda v0.6.7 anterior.
