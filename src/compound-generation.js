@@ -271,7 +271,7 @@ function* buildApprovedCompoundSteps(layout,q,{pad,path,pier,prop,vehicles,rocke
     const pickup=addIt(kind,house);
     if(pickup)record.loot.push(items[items.length-1]);
   }
-  const lootKinds={'munició':'arma','farmaciola':'med','granades':'granada','cisalla':'cisalla','mapa':'mapa','mapa_heli':'mapa_heli','mapa_tanc':'mapa_tanc','explosius':'expl','bazooka':'bazooka','franctirador':'franctirador','disfressa':'disf','paracaigudes':'paracaigudes'};
+  const lootKinds={'munició':'arma','farmaciola':'med','granades':'granada','cisalla':'cisalla','mapa':'mapa','mapa_heli':'mapa_heli','mapa_tanc':'mapa_tanc','explosius':'expl','bazooka':'bazooka','franctirador':'franctirador','fusell_assalt':'fusell_assalt','disfressa':'disf','paracaigudes':'paracaigudes'};
   for(const loot of layout.civilian?[]:layout.loot){
     yield {stage:'Equipant '+layout.id,completed:null,total:null};
     if(loot.kind==='disfressa'&&R()>=.5)continue;
