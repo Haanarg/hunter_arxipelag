@@ -1,6 +1,6 @@
 # Fase 5 — operacions desades i preparació del cooperatiu
 
-Actualitzat: 2026-10-28. Implementació preparada a la branca `codex/phase5-operation-storage`, versió **0.6.3**, PR #8. Encara no s’ha integrat a `main` ni desplegat al joc públic.
+Actualitzat: 2026-10-28. Implementació preparada a la branca `codex/phase5-operation-storage`, versió **0.6.5**, PR #8. Encara no s’ha integrat a `main` ni desplegat al joc públic.
 
 ## Fase A — desament local manual: implementat, validació visual pendent
 
@@ -24,7 +24,7 @@ No es desen projectils, partícules, fragments ni posicions exactes dels cadàve
 
 Es conserva l’estat de `R`, el generador del món. Les decisions futures que utilitzen `Math.random` poden variar; no s’afirma una reproducció determinista exacta de la simulació.
 
-Els desaments pertanyen a l’origen, navegador i dispositiu actuals. Esborrar les dades del navegador els elimina. Encara no hi ha autosave ni còpia externa.
+Els desaments pertanyen a l’origen, navegador i dispositiu actuals. Esborrar les dades del navegador els elimina. Hi ha autosave i exportació/importació de fitxers; encara no hi ha sincronització al núvol.
 
 ## Validació efectuada
 
@@ -41,8 +41,8 @@ Comandes: `npm run test:saves`; `HUNTER_TEST_BUNDLE=1 node tests/operation-runti
 | Entrega | Estat | Què queda |
 |---|---|---|
 | A. Desament local manual i diverses operacions | Implementada en branca | Revisió visual i funcional en navegador i Android, ampliar llavors/mida gran i desplegament |
-| B. Autosave i recuperació | Pendent | Desament periòdic i després d’accions importants, segon pla, tancament inesperat i recuperació segura |
-| C. Exportar/importar | Pendent | Fitxer de còpia, validació, límits i importació sense sobreescriptura silenciosa |
+| B. Autosave i recuperació | Implementada en branca | Validació en navegador i Android físic; després d’un tancament forçat es recupera la darrera transacció completada |
+| C. Exportar/importar | Implementada en branca | Validació del selector/descàrrega natius, transferència real entre dispositius i navegadors |
 | D. Comptes i sincronització | Pendent | Autenticació amb recuperació, servidor, permisos per usuari, revisions entre dispositius i conflictes sense pèrdua |
 | E. Estadístiques i llavors | Pendent | Historial independent de les partides eliminades, darreres llavors amb mida/versió/resultat, estadístiques per operació i totals; ara només es desen temps i baixes bàsics |
 | F. Preparació addicional del cooperatiu | Parcial | Format món/participants, IDs i seients ja preparats. Falta centralitzar/validar accions del joc, separar l’autoritat de simulació i suportar diversos jugadors reals |
@@ -62,3 +62,32 @@ Un tancament forçat del sistema pot impedir acabar l’últim intent en segon p
 Proves del coordinador: interval, agrupació, segon pla, transicions insegures, exclusió d’escriptures simultànies, desactivació, conflicte, espera després d’error i reinici. La prova del món real verifica també el checkpoint pagehide i que desactivar-lo impedeix una nova revisió.
 
 Pendents en acabar B: validació real i desplegament, C exportació/importació, D comptes/sincronització, E estadístiques/historial, F preparació addicional del cooperatiu i G cooperatiu jugable.
+
+
+## Fase C — exportació/importació (2026-10-28)
+
+Implementada a la versió preparada 0.6.5. A «Operacions desades», cada partida té «Exportar fitxer». La descàrrega és la darrera revisió desada, no els canvis encara sense desar. Es pot exportar una operació incompatible amb el generador actual per conservar-la com a còpia externa.
+
+El selector d’importació accepta fitxers JSON de partida. Abans de confirmar es mostra nom, llavor, mida i temps jugat. Sempre s’importa **com a operació nova**, amb un identificador nou i revisió pròpia: no reemplaça cap partida existent ni canvia la partida en curs. Les dades de compte importades no s’associen a cap identitat local.
+
+Format `.hunter-save.json`, capçalera i versió de fitxer pròpies, payload versionat i comprovació SHA-256. Límit de 17 MiB per fitxer i 16 MiB per payload de partida. Es comproven mida abans de llegir el fitxer, JSON, versió, integritat, esquema i compatibilitat amb l’adaptador. Les referències i la identitat de les entitats es tornen a comprovar contra el món reconstruït abans d’aplicar-les. El checksum comprova integritat; no és una signatura ni un sistema antitrampes. No hi ha migració automàtica entre generadors incompatibles.
+
+### Validació final de B + C
+
+- Repositori IndexedDB simulat: transaccions, revisions, còpia anterior, quota i conflictes.
+- Coordinador d’autosave: primer desament, interval, checkpoints, segon pla, transicions insegures, exclusió de concurrència, desactivació i reintents.
+- Fitxers: roundtrip UTF-8 i BOM, capçalera/versió, checksum incorrecte, JSON invàlid, límit de mida abans i després de lectura i propietats de prototip rebutjades.
+- Món real generat 67/petit: desar → exportar → importar com a nova → càrrega progressiva → captura i comparació de l’estat, incloent destructibles, baixes, recollides, ràdio, presoners, inventari, helicòpter en vol, càrrega sobre ferri, inundació i C4. Fitxers amb checksum incorrecte, adaptador incompatible o referències de model no admeses es rebutgen sense afegir operacions. S’ha comprovat que l’original i la partida activa no es modifiquen en importar. També checkpoint pagehide i preferència d’autosave desactivada. Proves executades sobre fonts i paquet final.
+- Rellotge, menú de pausa, ràdio, sintaxi i build/check superats. La discrepància històrica de ruta del mecànic documentada més amunt no s’ha alterat.
+- Encara no s’han comprovat selector de fitxers, descàrrega, IndexedDB natiu, GPU, mida gran ni Android físic. El desplegament de prova d’autosave 0.6.4 ha superat Cloudflare; l’estat de 0.6.5 es comprova després del commit final.
+
+### Què queda per desenvolupar en acabar aquesta tasca
+
+1. **Validació i publicació:** navegador real i Android; més llavors i mapa gran; transferència real de fitxers entre dispositius; integrar i publicar a producció quan correspongui.
+2. **D — Comptes i sincronització:** registre/inici de sessió i recuperació, servei d’autenticació, dades al servidor, permisos, gestió de desconnexions i conflictes entre dispositius sense sobreescriptura silenciosa.
+3. **E — Estadístiques i llavors:** totals i estadístiques detallades per operació; historial persistent independent dels desaments eliminats; darreres llavors amb mida, versió i resultat. Ara només es conserven temps i baixes bàsics dins cada desament.
+4. **F — Preparació addicional del cooperatiu:** centralitzar les accions, validar-les en una autoritat de simulació i retirar les dependències que pressuposen un jugador únic. Format, IDs i seients ja preparats.
+5. **G — Cooperatiu jugable:** sales, amfitrió/servidor, transport de xarxa, sincronització, latència, reconnexió, participants i objectius compartits.
+6. **Manteniment del desament:** migracions explícites quan canviïn el format o el generador; ampliar cobertura de casos abans no validats.
+
+Les fases A, B i C tenen implementació en branca; les comprovacions natives pendents impedeixen donar tota la fase 5 per tancada. El pla general de catorze fases continua a `PROGRESS.MD`, amb la fase 1 tancada per l’usuari.

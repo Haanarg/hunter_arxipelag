@@ -28,6 +28,6 @@
     "test:shadow-boat-cache": "node tests/shadow-boat-cache.cjs",
     "test:stress-audit-config": "node tests/stress-audit-config.cjs",
     "test:vehicle-batching": "node tests/vehicle-batching.cjs",
-    "test:saves": "node tests/operation-save.mjs && node tests/operation-autosave.cjs && node tests/operation-runtime.cjs"
+    "test:saves": "node tests/operation-save.mjs && node tests/operation-autosave.cjs && node tests/operation-files.mjs && node tests/operation-runtime.cjs"
   }
 }

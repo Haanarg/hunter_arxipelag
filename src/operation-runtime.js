@@ -50,7 +50,7 @@ function captureOperation(name){
   if(playerFall||playerEject||grenades.length||pl.userData.grenadePending)throw new Error('Espera que acabi la caiguda o el llançament abans de desar.');
   const api=window.HUNTER_SAVES;
   const snapshot=activeOperation?operationClone(activeOperation):api.createOperation({
-    name:name||'Operació '+(seed>>>0),gameVersion:window.HUNTER_VERSION||'0.6.4',
+    name:name||'Operació '+(seed>>>0),gameVersion:window.HUNTER_VERSION||'0.6.5',
     generatorVersion:OPERATION_GENERATOR_VERSION,seed:seed>>>0,mapScale:MAP_SCALE});
   if(name)snapshot.name=name.trim();
   snapshot.world.time=elapsed;
@@ -90,9 +90,18 @@ function validateOperationRuntime(snapshot,matchWorld=false){
     !Array.isArray(p.state.view.quaternion)||p.state.view.quaternion.length!==4||!p.state.view.quaternion.every(Number.isFinite)||
     !Number.isFinite(p.state.view.zoom)||!Number.isFinite(p.state.cooldown)||p.state.cooldown<0)
     throw new Error('Dades de jugador o intel·ligència invàlides.');
+  const collectionKinds={vehicles:['vehicles'],enemies:['enemies'],civilians:[],structures:['walls','buildings','palms','fauna'],items:['items'],explosives:['bomb']};
+  for(const [collection,entries]of Object.entries(snapshot.world.entities)){
+    if(!collectionKinds[collection]||!Array.isArray(entries)||entries.some(e=>!collectionKinds[collection].includes(e.kind)))
+      throw new Error('Col·lecció d’entitats incompatible.');
+  }
   const records=Object.values(snapshot.world.entities).flat(),seen=new Set();
   for(const record of records){
-    if(!record.state||!record.kind||!Array.isArray(record.infinite))throw new Error('Estat d’entitat incomplet.');
+    if(!record.state||Array.isArray(record.state)||!record.kind||!Array.isArray(record.infinite)||
+      Object.values(record.state).some(value=>value!==null&&!['number','string','boolean'].includes(typeof value)))
+      throw new Error('Estat d’entitat incomplet.');
+    if(record.kind==='vehicles'&&!Object.hasOwn(VT,record.state.t)||record.kind==='enemies'&&!Object.hasOwn(EC,record.state.t)||record.kind==='items'&&!Object.hasOwn(IT,record.state.t))
+      throw new Error('Tipus d’entitat desconegut.');
     if(record.infinite.some(pair=>!Array.isArray(pair)||pair.length!==2||typeof pair[0]!=='string'||![1,-1].includes(pair[1])||['x','y','z','life','alt','hd'].includes(pair[0])||pair[0]==='hp'&&record.kind!=='walls'))
       throw new Error('Valor numèric d’entitat invàlid.');
     if(['vehicles','enemies','items','walls','fauna'].includes(record.kind)&&typeof record.active!=='boolean')throw new Error('Presència d’entitat invàlida.');
@@ -107,6 +116,13 @@ function validateOperationRuntime(snapshot,matchWorld=false){
     if(matchWorld){
       const expected=operationRegistry.groups[record.kind];
       if(!expected||!operationRegistry.byId.has(record.id)||!expected.includes(operationRegistry.byId.get(record.id)))throw new Error('El món generat no correspon al desament.');
+      const entity=operationRegistry.byId.get(record.id);
+      if(entity.t!==record.state.t||entity.kind!==record.state.kind)throw new Error('La identitat d’una entitat ha canviat.');
+      for(const key of [...Object.keys(record.state),...record.infinite.map(pair=>pair[0])]){
+        const clearingPath=operationNested.includes(key)&&record.state[key]===null;
+        if(entity[key]!==null&&typeof entity[key]==='object'&&!clearingPath)
+          throw new Error('El desament intenta substituir una referència del món.');
+      }
       seen.add(record.id);
     }
   }
