@@ -1,10 +1,12 @@
 # HUNTER · ARXIPÈLAG — progrés de les millores
 
-## Estat actual · v0.6.21
+## Estat actual · v0.6.22
 
 **Primera missió cooperativa jugable: Relleu d’emergència**, per a dos comptes aprovats. Inici confirmat pels dos clients, moviment/col·lisions autoritatius, terminals simultanis, extracció/victòria, pausa per desconnexió i recuperació de checkpoint. Vista 3D provisional amb alternativa Canvas i controls tàctils. Des de v0.6.20, portes compartides amb F / Porta, col·lisions dinàmiques i estat persistent en reconnectar. [Instruccions, validació i límits](docs/COOP_PLAYABLE.md).
 
 Des de v0.6.21, cada jugador té **inventari independent** de bales, granades i disfressa, recollida exclusiva de paquets, capacitats, equipament de disfressa visible i persistència en reconnectar/reiniciar durant la mateixa versió. Ordres autoritzades per sessió, idempotència i desament abans de confirmar.
+
+Des de v0.6.22, **recollida automàtica per contacte** (sense botó R), primer contacte resolt pel servidor, i **G / Deixar** amb selector de bales, granada o disfressa per passar objectes al company. Els objectes deixats són compartits i persistents dins del checkpoint temporal.
 
 L’usuari ha prioritzat la jugabilitat sobre l’estètica. Aquest és un mode reduït de base, no la campanya completa amb combat/vehicles. Els apartats antics que diuen «no jugable» descriuen l’estat de cada fase històrica. Els pendents generals i la fase 1 tancada per l’usuari es conserven.
 
@@ -322,3 +324,20 @@ Queda: animació i millores visuals de portes, destrucció i resta d’interacci
 6. Validació física amb dos navegadors/comptes, GPU i Android, rendiment/controls, estètica i errors històrics documentats de fixtures/escala 2.
 
 Les bales i granades es poden recollir però encara no gastar: no s’ha presentat aquesta fase com a combat implementat.
+
+
+## Cooperatiu · fase 14 · Recollida automàtica i objectes deixats (v0.6.22)
+
+- Recollida automàtica a cada tick, amb contacte escombrat del trajecte i primer contacte entre els dos actors. Empat exacte resolt per ordre estable de sala; un únic beneficiari. Capacitat del paquet sencer, alçada, salut, caiguda/aigua i col·lisions amb parets/portes validades pel servidor. Recollida sense missatge de client ni botó.
+- G / Deixar i selector: 12 bales (o les restants), 1 granada o 1 disfressa. Descompta només el propietari autenticat, posa el paquet als seus peus i treu la disfressa si estava equipada. El propietari no el pot recuperar fins que s’allunya; el company el pot recollir immediatament.
+- Objectes dinàmics visibles en 3D i Canvas, checkpoint de paquets/seqüència/exclusió del propietari, idempotència limitada a l’historial de 64 ordres, límit de 128 paquets simultanis. Desament abans de confirmar/difondre i rollback en error. No es migren checkpoints temporals entre versions.
+- Proves: contacte automàtic i ràpid, competició/empat, capacitat, alçada/paret, transferència amb conservació de quantitats, deixar disfressa equipada, sortir/tornar, pausa, idempotència, rollback, restauració, controls de selecció/botó i dues sessions natives locals. GPU i Android físic pendents.
+
+### Què queda després d’aquesta fase
+
+1. Combat autoritatiu: trets, consum de munició, granades i explosions/dany; armes individuals inclòs fusell d’assalt.
+2. IA enemiga compartida, sigil/disfressa amb efecte real, ferits/reanimació i equilibri.
+3. Ampliar l’equipament i el botí a la campanya completa; quantitats personalitzades en deixar objectes si cal. El traspàs bàsic per deixar/recollir ja està implementat.
+4. Vehicles, món complet, destrucció i objectius de campanya, preservant la seqüència RNG completa.
+5. Desaments cooperatius permanents, migracions entre versions, estadístiques i historial als comptes.
+6. Prova física de dos comptes/navegadors, GPU/Android, rendiment, controls/estètica i errors històrics de fixtures/escala 2 documentats.

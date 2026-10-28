@@ -2,8 +2,9 @@ import {createCoopTerrain} from './coop-terrain.mjs';
 import {createStaticWorldAdapter} from '../src/world-adapter.mjs';
 import {createCanonicalWater} from '../src/canonical-water.mjs';
 import {createPlayerSimulation,validatePlayerInput} from '../src/player-simulation.mjs';
+import {firstSupplyContact} from './coop-inventory.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
-export const MISSION_VERSION='relay:3';
+export const MISSION_VERSION='relay:4';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 export function generateRelayMission(room){
   if(room.members.length!==2||!room.allReady)throw new Error('Calen dos jugadors preparats.');
@@ -46,26 +47,28 @@ export function restoreRelayMission(record,geometry){
     sim=createPlayerSimulation({epoch:meta.id,limit:world.limit,world:bounded,vertical:{surfaceAt:water.surfaceAt},checkpoint:record.checkpoint}),actions=new Map();
   let phase=record.phase,hold=record.hold,status=record.status,doorRevision=record.doorRevision??0;
   const inventory=new Map(meta.members.map(m=>[m.id,structuredClone(record.inventories?.find(i=>i.actorId===m.id)||{actorId:m.id,bullets:24,grenades:2,disguise:1,disguised:false})])),claimed=new Set(record.claimedSupplies||[]),inventoryResults=structuredClone(record.inventoryResults||[]);
+  const loose=new Map((record.droppedSupplies||[]).map(s=>[s.id,structuredClone(s)]));let dropSequence=record.dropSequence||0;
+  const capacities={bullets:120,grenades:8,disguise:1};
+  const supplies=()=>[...meta.supplies.filter(s=>!claimed.has(s.id)),...loose.values()].map(s=>({...s}));
   const inventories=()=>[...inventory.values()].map(i=>({...i}));
   function inventoryCommand(actorId,message){
     const cached=inventoryResults.find(r=>r.actorId===actorId&&r.commandId===message.commandId);if(cached)return {...cached,duplicate:true};
     const actor=sim.snapshot().players.find(p=>p.id===actorId),bag=inventory.get(actorId);let code='INVALID',ok=false;
     if(actor&&message.epoch===meta.id&&typeof message.commandId==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(message.commandId)){
-      if(status!=='running'||!['relay','extract'].includes(phase)||actor.hp<=0||actor.fall||Date.now()>=meta.expiresAt)code='NOT_ACTIVE';
+      if(status!=='running'||!['relay','extract'].includes(phase)||actor.hp<=0||actor.fall||actor.swimming||Date.now()>=meta.expiresAt)code='NOT_ACTIVE';
       else if(message.operation==='disguise'&&typeof message.target==='boolean'){
         if(!bag.disguise)code='EMPTY';else{bag.disguised=message.target;ok=true;code='EQUIPPED';}
-      }else if(message.operation==='pickup'&&typeof message.target==='string'){
-        const supply=meta.supplies.find(s=>s.id===message.target);
-        if(!supply)code='UNKNOWN_SUPPLY';else if(claimed.has(supply.id))code='TAKEN';
-        else if(distance(actor,supply)>3.2||Math.abs(actor.y-supply.y)>=2)code='TOO_FAR';
-        else if(bag[supply.item]+supply.amount>({bullets:120,grenades:8,disguise:1})[supply.item])code='FULL';
-        else{bag[supply.item]+=supply.amount;claimed.add(supply.id);ok=true;code='PICKED_UP';}
+      }else if(message.operation==='drop'&&Object.hasOwn(capacities,message.target)){
+        const item=message.target,amount=Math.min(bag[item],item==='bullets'?12:1);
+        if(!amount)code='EMPTY';else if(loose.size>=128)code='GROUND_FULL';
+        else{const supply={id:`drop-${++dropSequence}`,item,amount,x:actor.x,y:actor.y,z:actor.z,blockedOwner:actorId};loose.set(supply.id,supply);bag[item]-=amount;if(item==='disguise')bag.disguised=false;ok=true;code='DROPPED';}
       }
+
       const result={actorId,commandId:message.commandId,ok,code};inventoryResults.push(result);if(inventoryResults.length>64)inventoryResults.shift();return {...result};
     }return {actorId,commandId:message.commandId,ok,code};
   }
   const doors=()=>meta.doors.map(d=>({id:d.id,open:doorStates.get(d.id)??false}));
-  function snapshot(){return {...sim.snapshot(),missionId:meta.id,phase,hold,status,doorRevision,doors:doors(),inventories:inventories(),claimedSupplies:[...claimed],remaining:Math.max(0,(meta.timeLimitTicks-sim.snapshot().tick)/30)};}
+  function snapshot(){return {...sim.snapshot(),missionId:meta.id,phase,hold,status,doorRevision,doors:doors(),inventories:inventories(),supplies:supplies(),claimedSupplies:[...claimed],remaining:Math.max(0,(meta.timeLimitTicks-sim.snapshot().tick)/30)};}
   function doorCommand(actorId,message){
     const previous=results.find(r=>r.actorId===actorId&&r.commandId===message.commandId);if(previous)return {...previous,duplicate:true};
     let code='INVALID',ok=false;
@@ -95,8 +98,22 @@ export function restoreRelayMission(record,geometry){
   }
   function step(){
     if(status!=='running'||!['relay','extract'].includes(phase))return snapshot();
-    const state=sim.step(),near=(p,q)=>p.hp>0&&!p.fall&&distance(p,q)<=3.2&&Math.abs(p.y-q.y)<2;
+    const before=sim.snapshot(),state=sim.step(),near=(p,q)=>p.hp>0&&!p.fall&&distance(p,q)<=3.2&&Math.abs(p.y-q.y)<2;
     if(state.players.some(p=>p.hp<=0)||state.tick>=meta.timeLimitTicks){phase='failed';hold=0;return snapshot();}
+    // All contacts in a tick compete by first intersection time; exact ties use roster order.
+    for(const supply of supplies()){
+      if(supply.blockedOwner){const owner=state.players.find(p=>p.id===supply.blockedOwner);if(!owner||distance(owner,supply)>1.8||Math.abs(owner.y-supply.y)>2){delete loose.get(supply.id).blockedOwner;delete supply.blockedOwner;}}
+      const candidates=state.players.flatMap((p,index)=>{
+        const bag=inventory.get(p.id);if(p.hp<=0||p.fall||p.swimming||p.id===supply.blockedOwner||bag[supply.item]+supply.amount>capacities[supply.item])return [];
+        const previous=before.players.find(a=>a.id===p.id),t=firstSupplyContact(previous,p,supply);if(t===null)return [];
+        const contact={...p,x:previous.x+(p.x-previous.x)*t,z:previous.z+(p.z-previous.z)*t,y:previous.y+(p.y-previous.y)*t};
+        // Body sweep blocks collecting through a closed door or thin wall.
+        let from=contact;const count=Math.max(1,Math.ceil(distance(contact,supply)/.25));
+        for(let k=1;k<=count;k++){const q={...contact,x:contact.x+(supply.x-contact.x)*k/count,z:contact.z+(supply.z-contact.z)*k/count},resolved=world.resolveBody(from,q);if(distance(q,resolved)>1e-5)return [];from=q;}
+        return [{p,index,t}];
+      }).sort((a,b)=>a.t-b.t||a.index-b.index);
+      if(candidates.length){inventory.get(candidates[0].p.id)[supply.item]+=supply.amount;if(loose.has(supply.id))loose.delete(supply.id);else claimed.add(supply.id);}
+    }
     if(phase==='relay'){
       const both=meta.members.every((m,i)=>{const p=state.players.find(p=>p.id===m.id),a=actions.get(m.id);return a?.interact&&state.tick-a.tick<=8&&near(p,meta.terminals[i]);});
       hold=both?hold+1:0;if(hold>=90){phase='extract';hold=0;}
@@ -104,6 +121,6 @@ export function restoreRelayMission(record,geometry){
     return snapshot();
   }
   return {meta,geometry:canonical,accept,step,snapshot,doorCommand,inventoryCommand,setStatus(value){status=value;if(value!=='running'){actions.clear();sim.clearInputs();if(['relay','extract'].includes(phase))hold=0;}},
-    checkpoint(nextAlarm){return {meta:structuredClone(meta),phase,hold,status,checkpoint:sim.snapshot(),nextAlarm,inventories:inventories(),claimedSupplies:[...claimed],inventoryResults:structuredClone(inventoryResults),doors:doors(),doorRevision,doorCooldowns:[...cooldowns].map(([actorId,tick])=>({actorId,tick})),commandResults:structuredClone(results)};},
+    checkpoint(nextAlarm){return {meta:structuredClone(meta),phase,hold,status,checkpoint:sim.snapshot(),nextAlarm,inventories:inventories(),droppedSupplies:[...loose.values()].map(s=>({...s})),dropSequence,claimedSupplies:[...claimed],inventoryResults:structuredClone(inventoryResults),doors:doors(),doorRevision,doorCooldowns:[...cooldowns].map(([actorId,tick])=>({actorId,tick})),commandResults:structuredClone(results)};},
     setup(self){return {type:'mission',self,meta:structuredClone(meta),geometry:world.snapshot(),state:snapshot()};}};
 }

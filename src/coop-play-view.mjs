@@ -26,7 +26,9 @@ export async function createMissionView(container,meta,geometry,{three=null,make
     line([{x:b.x0,z:b.z0},{x:b.x1,z:b.z0},{x:b.x1,z:b.z1},{x:b.x0,z:b.z1},{x:b.x0,z:b.z0}],0xffdfa0,.65);
     meta.routes.forEach((route,i)=>line(route.map(p=>({...p,y:meta.floor+.12})),colors[i],.3));
     meta.terminals.forEach((p,i)=>{box(2.5,2.5,2.5,p.x,p.y+1.2,p.z,colors[i]);box(1.8,.15,1.8,p.x,p.y+2.5,p.z,0xe9fff3);});
-    const supplies=new Map((meta.supplies||[]).map(s=>[s.id,box(1.2,1.2,1.2,s.x,s.y+.6,s.z,s.item==='bullets'?0xe4e7cc:s.item==='grenades'?0xd26e43:0x62965a)]));
+    const supplies=new Map();
+    function updateSupplies(items){const live=new Set(items.map(s=>s.id));for(const [id,mesh] of supplies)if(!live.has(id)){scene.remove(mesh);mesh.geometry.dispose();mesh.material.dispose();supplies.delete(id);}for(const s of items)if(!supplies.has(s.id)){const mesh=box(1.2,1.2,1.2,s.x,s.y+.6,s.z,s.item==='bullets'?0xe4e7cc:s.item==='grenades'?0xd26e43:0x62965a);mesh.userData.supplyId=s.id;supplies.set(s.id,mesh);}}
+    updateSupplies(meta.supplies||[]);
     const ring=new T.Mesh(new T.TorusGeometry(3,.18,8,32),new T.MeshBasicMaterial({color:0x99ff9b}));ring.rotation.x=-Math.PI/2;ring.position.set(meta.extraction.x,meta.extraction.y+.1,meta.extraction.z);scene.add(ring);
     const pawns=meta.members.map((m,i)=>{
       const group=new T.Group(),body=new T.Mesh(new T.CapsuleGeometry(.65,1.3,4,8),new T.MeshStandardMaterial({color:colors[i]}));body.position.y=1.3;group.add(body);
@@ -35,7 +37,7 @@ export async function createMissionView(container,meta,geometry,{three=null,make
     let initialized=false;
     resize=()=>{const w=container.clientWidth,h=container.clientHeight,aspect=w/Math.max(1,h),half=Math.max((b.z1-b.z0)*.7,(b.x1-b.x0)/aspect*.6,40);camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;camera.updateProjectionMatrix();renderer.setSize(w,h,false);};
     draw=dt=>{
-      if(state){for(const [id,mesh] of supplies)mesh.visible=!state.claimedSupplies?.includes(id);for(const door of state.doors||[]){const mesh=doorMeshes.get(door.id);if(mesh)mesh.visible=!door.open;}for(let i=0;i<2;i++){const p=state.players.find(p=>p.id===meta.members[i].id),pawn=pawns[i];if(!p)continue;
+      if(state){updateSupplies(state.supplies||(meta.supplies||[]).filter(s=>!state.claimedSupplies?.includes(s.id)));for(const door of state.doors||[]){const mesh=doorMeshes.get(door.id);if(mesh)mesh.visible=!door.open;}for(let i=0;i<2;i++){const p=state.players.find(p=>p.id===meta.members[i].id),pawn=pawns[i];if(!p)continue;
         if(!initialized)pawn.position.set(p.x,p.y,p.z);else pawn.position.lerp(new T.Vector3(p.x,p.y,p.z),1-Math.exp(-dt/65));pawn.rotation.y=p.hd;pawn.children[0].material.color.setHex(state.inventories?.find(b=>b.actorId===p.id)?.disguised?0x567346:colors[i]);
       }initialized=true;ring.material.color.setHex(state.phase==='won'?0xffe98c:0x99ff9b);}
       renderer.render(scene,camera);
@@ -52,7 +54,7 @@ export async function createMissionView(container,meta,geometry,{three=null,make
       for(const [index,wall] of geometry.walls.entries())if(!(open.get(doorByWall.get(index))??wall.open)){ctx.fillStyle=doorByWall.has(index)?'#795c39':wall.playerBlock===false?'#bbb998':'#c2c7b7';ctx.fillRect(x(wall.x0),z(wall.z0),Math.max(1,(wall.x1-wall.x0)*scale),Math.max(1,(wall.z1-wall.z0)*scale));}
       meta.routes.forEach((path,i)=>{ctx.beginPath();path.forEach((p,j)=>j?ctx.lineTo(x(p.x),z(p.z)):ctx.moveTo(x(p.x),z(p.z)));ctx.strokeStyle=css[i];ctx.globalAlpha=.3;ctx.lineWidth=2;ctx.stroke();ctx.globalAlpha=1;});
       const circle=(p,r,color,label)=>{ctx.beginPath();ctx.arc(x(p.x),z(p.z),r*scale,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();if(label){ctx.fillStyle='#132327';ctx.font='bold '+Math.max(12,2*scale)+'px system-ui';ctx.textAlign='center';ctx.fillText(label,x(p.x),z(p.z)+scale*.7);}};
-      for(const s of meta.supplies||[])if(!state?.claimedSupplies?.includes(s.id))circle(s,.7,'#e4e7cc','+');
+      for(const s of state?.supplies||(meta.supplies||[]).filter(s=>!state?.claimedSupplies?.includes(s.id)))circle(s,.7,'#e4e7cc','+');
       circle(meta.extraction,3,'#a2efa2','E');meta.terminals.forEach((p,i)=>circle(p,2,css[i],String(i+1)));
       if(state)state.players.forEach(p=>{const i=meta.members.findIndex(m=>m.id===p.id);circle(p,1,state.inventories?.find(b=>b.actorId===p.id)?.disguised?'#567346':css[i]);ctx.beginPath();ctx.moveTo(x(p.x),z(p.z));ctx.lineTo(x(p.x-Math.sin(p.hd)*3),z(p.z-Math.cos(p.hd)*3));ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();});
     };

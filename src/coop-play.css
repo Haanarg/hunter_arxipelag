@@ -5,3 +5,5 @@
 #touch .actions{display:grid;gap:6px}#door{font-size:.8rem;white-space:nowrap}
 
 #inventory-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0;font-size:.8rem}#inventory{flex:1 1 300px}#inventory-controls button{font-size:.8rem;padding:9px 12px}
+
+#drop-item{font:inherit;color:inherit;background:#2a454b;border:1px solid #648176;border-radius:8px;padding:9px;max-width:160px}#drop-item:focus-visible{outline:3px solid #e8bd61;outline-offset:3px}

@@ -34,7 +34,7 @@ try{
  assert.equal(cb.state.inventories.find(i=>i.actorId===b.id).disguised,false);
  const missionId=ca.setup.meta.id;cb.ws.close(1000,'Test reconnect');await wait(()=>ca.state.status==='paused');
  cb=await b.connect(room.id);await wait(()=>cb.setup);assert.equal(cb.setup.meta.id,missionId);await wait(()=>ca.state.status==='running');
- let phase='relay',indices=[0,0],sequences=[0,0],driverError=null;const picked=new Set();
+ let phase='relay',indices=[0,0],sequences=[0,0],driverError=null;
  const door=ca.setup.meta.doors[0];assert.ok(door);
  const pawn=i=>ca.state.players.find(p=>p.id===(i?b.id:a.id));
  const sendIntent=(i,movement)=>{const p=pawn(i),c=i?cb:ca;sequences[i]=Math.max(sequences[i],p.acknowledged)+1;c.ws.send(JSON.stringify({type:'input',protocol:1,epoch:missionId,sequence:sequences[i],input:movement,interact:false}));};
@@ -43,6 +43,13 @@ try{
    try{await wait(()=>Math.hypot(pawn(i).x-target.x,pawn(i).z-target.z)<.15,15000);}finally{clearInterval(t);sendIntent(i,{forward:0,turn:0,strafe:0,run:false});}
  }
  async function operate(c,commandId,open){c.ws.send(JSON.stringify({type:'door',protocol:1,epoch:missionId,doorId:door.id,open,commandId}));return wait(()=>c.events.find(e=>e.type==='action'&&e.commandId===commandId));}
+ const origin={x:pawn(0).x,z:pawn(0).z};
+ ca.ws.send(JSON.stringify({type:'inventory',protocol:1,epoch:missionId,operation:'drop',target:'grenades',commandId:'native-drop'}));
+ await wait(()=>ca.events.find(e=>e.commandId==='native-drop'&&e.ok));await wait(()=>cb.state.supplies.some(s=>s.id==='drop-1'));
+ assert.equal(ca.state.inventories.find(i=>i.actorId===a.id).grenades,1,'drop subtracts only owner');
+ ca.ws.send(JSON.stringify({type:'inventory',protocol:1,epoch:missionId,operation:'drop',target:'grenades',commandId:'native-drop'}));await wait(()=>ca.events.find(e=>e.commandId==='native-drop'&&e.duplicate));
+ await moveTo(1,origin);await wait(()=>ca.state.inventories.find(i=>i.actorId===b.id).grenades===3);assert.equal(ca.state.supplies.some(s=>s.id==='drop-1'),false);
+ await moveTo(1,{x:origin.x+4,z:origin.z});
  assert.equal((await operate(cb,'native-remote',true)).code,'TOO_FAR');
  await moveTo(0,{x:door.cx,z:door.cz+2.2});assert.equal((await operate(ca,'native-open',true)).code,'OPENED');
  await wait(()=>cb.state.doors.find(d=>d.id===door.id)?.open===true);
@@ -59,7 +66,6 @@ try{
   for(let i=0;i<2;i++){
    const c=i?cb:ca,p=state.players.find(p=>p.id===(i?b.id:a.id)),path=phase==='relay'?meta.routes[i]:[...meta.routes[i]].reverse(),dist=q=>Math.hypot(p.x-q.x,p.z-q.z);
    while(indices[i]<path.length-1&&dist(path[indices[i]])<.3)indices[i]++;
-   if(phase==='relay'&&!picked.has(i)&&dist(meta.terminals[i])<2){picked.add(i);c.ws.send(JSON.stringify({type:'inventory',protocol:1,epoch:missionId,operation:'pickup',target:meta.supplies.find(s=>s.item==='bullets'&&Math.hypot(s.x-meta.terminals[i].x,s.z-meta.terminals[i].z)<1).id,commandId:'native-pickup-'+i}));}
    const target=path[indices[i]],dx=target.x-p.x,dz=target.z-p.z,d=Math.max(1,Math.hypot(dx,dz));sequences[i]=Math.max(sequences[i],p.acknowledged)+1;
    c.ws.send(JSON.stringify({type:'input',protocol:1,epoch:meta.id,sequence:sequences[i],input:{forward:-dz/d,turn:0,strafe:dx/d,run:true},interact:dist(meta.terminals[i])<3}));
   }
@@ -70,7 +76,8 @@ try{
  // test endpoint is used to restore the mission or award victory.
  for(const ws of sockets)try{ws.close();}catch(_){}await mf.dispose();mf=new Miniflare(options);DB=await mf.getD1Database('DB');
  ca=await a.connect(room.id);cb=await b.connect(room.id);await wait(()=>ca.setup&&cb.setup);
- for(const id of [a.id,b.id])assert.equal(ca.state.inventories.find(i=>i.actorId===id).bullets,36,'independent pickups survive runtime restart');
+ for(const id of [a.id,b.id])assert.equal(ca.state.inventories.find(i=>i.actorId===id).bullets,36,'automatic pickups survive runtime restart');
+ assert.equal(ca.state.inventories.find(i=>i.actorId===a.id).grenades,2);assert.equal(ca.state.inventories.find(i=>i.actorId===b.id).grenades,4,'transferred grenade and automatic pickups survive restart');
  assert.equal(ca.state.inventories.find(i=>i.actorId===a.id).disguised,true,'inventory survives runtime restart');assert.equal(ca.setup.meta.id,missionId);assert.equal(ca.state.phase,'won');assert.equal(ca.state.tick,tick,'checkpoint survives complete runtime restart');assert.equal(ca.state.doorRevision,3);assert.equal(ca.setup.geometry.walls[door.wallIndex].open,true,'open door collision survives runtime restart');
  cb.ws.send(JSON.stringify({type:'door',protocol:1,epoch:missionId,doorId:door.id,open:true,commandId:'native-open-again'}));await wait(()=>cb.events.find(e=>e.type==='action'&&e.commandId==='native-open-again'&&e.duplicate));assert.equal(cb.state.doorRevision,3);
  // Position claims are rejected even for an authenticated participant.
