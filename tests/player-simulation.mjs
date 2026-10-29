@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import {moveOnFoot,damageHealth,createPlayerSimulation} from '../src/player-simulation.mjs';
+import {moveOnFoot,damageHealth,createPlayerSimulation,PLAYER_MAX_HEALTH} from '../src/player-simulation.mjs';
+assert.equal(PLAYER_MAX_HEALTH,25);
 const clamp=(v,l)=>Math.max(-l,Math.min(l,v));
 // Independent copy of the previous runtime equations, across its actual modes.
 for(const swimming of [false,true])for(const crouched of [false,true])for(const run of [false,true])for(const forward of [-1,0,.4,1])for(const strafe of [-1,0,.7,1])for(const hd of [-3,0,1.4]){
@@ -9,7 +10,7 @@ for(const swimming of [false,true])for(const crouched of [false,true])for(const 
 }
 for(const damage of [NaN,Infinity,-1,0,.1,1,3.5,100])assert.equal(damageHealth(8.5,damage),Number.isFinite(damage)&&damage>0?Math.max(0,9-Math.ceil(damage)):8.5);
 assert.equal(damageHealth(8,5,{immune:true}),8);
-const actors=[{id:'a',x:0,z:0,hd:0,hp:20},{id:'b',x:0,z:0,hd:Math.PI,hp:20}],options={epoch:'epoch:1',actors,limit:100};
+const actors=[{id:'a',x:0,z:0,hd:0,hp:PLAYER_MAX_HEALTH},{id:'b',x:0,z:0,hd:Math.PI,hp:PLAYER_MAX_HEALTH}],options={epoch:'epoch:1',actors,limit:100};
 const engine=createPlayerSimulation(options),message={protocol:1,epoch:'epoch:1',sequence:1,input:{forward:1,turn:0,strafe:0,run:false}};
 assert.equal(engine.accept('outsider',message),false);assert.equal(engine.accept('a',{...message,epoch:'old'}),false);
 assert.equal(engine.accept('a',{...message,input:{...message.input,forward:NaN}}),false);
