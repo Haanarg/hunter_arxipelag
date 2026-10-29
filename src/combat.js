@@ -9,17 +9,27 @@ const bulletImpactMaterials={
   blood:[0x87262a,0xab3535].map(color=>new THREE.MeshBasicMaterial({color,transparent:true,opacity:.86,depthWrite:false})),
   wound:[0xb52b35,0xd84942].map(color=>new THREE.MeshBasicMaterial({color,transparent:true,opacity:.9,depthWrite:false})),
   spark:[0xffdb83,0xffa23d].map(color=>new THREE.MeshBasicMaterial({color,transparent:true,opacity:.94,depthWrite:false})),
-  ricochet:[0xd8f3ff,0x7ec9ed].map(color=>new THREE.MeshBasicMaterial({color,transparent:true,opacity:.96,depthWrite:false}))
+  ricochet:[0xd8f3ff,0x7ec9ed].map(color=>new THREE.MeshBasicMaterial({color,transparent:true,opacity:.96,depthWrite:false})),
+  glass:[0xb5eaff,0x6cb7dc].map(color=>new THREE.MeshBasicMaterial({color,transparent:true,opacity:.78,depthWrite:false}))
 };
 let combatFeedback=null;
 function confirmCombatDamage(source,before,after){
   if(Number.isFinite(before)&&Number.isFinite(after)&&after<before&&
     (source?.own==='p'||source?.own==='pb'||source?.own==='b'))combatFeedback?.confirmHit();
 }
+function shatterWindow(w,index,point,p){
+  if(!w.windowPanes?.[index])return false;
+  const broken=w.brokenWindows||(w.brokenWindows=new Set());
+  if(broken.has(index))return false;
+  broken.add(index);if(w.glassMeshes?.[index])w.glassMeshes[index].visible=false;
+  snd('glassBreak',.8,point,w.glassMeshes?.[index]||w);
+  spawnBulletImpact('glass',point.x,point.y,point.z,p);
+  return true;
+}
 function projectileImpactImmune(kind,target,p){
   if(!(p.dmg>0))return false;
   const light=!p.spl;
-  if(kind==='wall')return target.towerLegOwner
+  if(kind==='wall')return target.woodenDoor?false:target.towerLegOwner
     ?light||target.towerLegOwner.hp===Infinity
     :light&&isMilitaryWall(target)||target.hp===Infinity;
   if(kind==='building')return light&&isMilitaryBuilding(target)||target.rhp===Infinity;
@@ -30,7 +40,7 @@ function projectileImpactImmune(kind,target,p){
 }
 function spawnBulletImpact(type,x,y,z,p){
   if(!world||!bulletImpactMaterials[type])return;
-  const wound=type==='wound',blood=type==='blood'||wound,ricochet=type==='ricochet',
+  const wound=type==='wound',blood=type==='blood'||wound,ricochet=type==='ricochet'||type==='glass',
         count=wound?9:blood?5:ricochet?10:7,
         length=Math.max(.001,Math.hypot(p.vx,p.vy,p.vz)),
         backX=-p.vx/length,backY=-p.vy/length,backZ=-p.vz/length;
@@ -477,7 +487,7 @@ function executePlayerPlant(seconds=3){
 }
 // La filferrada és permeable a la vista i al foc lleuger, però segueix
 // impedint els atacs cos a cos quan ignoreBarbed=false.
-function sight(x,z,tx,tz,y,ignoreBarbed=true){const d=Math.hypot(tx-x,tz-z),n=Math.max(1,Math.ceil(d/1.5));for(let k=1;k<n;k++){const xx=x+(tx-x)*k/n,zz=z+(tz-z)*k/n;if(wallCandidates(xx,zz).some(w=>!w.open&&(!ignoreBarbed||!w.barbed)&&y>w.y0&&y<w.y1&&xx>w.x0&&xx<w.x1&&zz>w.z0&&zz<w.z1))return false}return true}
+function sight(x,z,tx,tz,y,ignoreBarbed=true,targetY=y){const from={x,y,z},to={x:tx,y:targetY,z:tz},reach=Math.hypot(tx-x,tz-z)/2+3;for(const w of wallCandidates((x+tx)/2,(z+tz)/2,reach)){if(w.open||ignoreBarbed&&w.barbed)continue;if(window.HUNTER_BUILDING_SHELL.wallShotHit(from,to,w)!=null)return false}return true}
 function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=pl.userData.knifeAttackDuration||.38;window.HUNTER_STEALTH.emit('knife',P.x,P.y+1,P.z);const hit=window.HUNTER_SHARED_WEAPONS.meleeTarget(P,E,u=>sight(P.x,P.z,u.x,u.z,P.y+1.2,false));if(hit)hurtE(hit,COMBAT_BALANCE.weapons.knife,{weapon:'knife',own:'p',sx:P.x,sy:P.y+1.35,sz:P.z,x:hit.x,y:hit.o.position.y+1.35,z:hit.z});snd('hurt',hit?.45:.18);setDis(false);return true}
 function secondaryWeapon(){
   if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd),d45=Math.SQRT1_2;
@@ -663,7 +673,7 @@ function weaponAimClear(x,y,z,tx,ty,tz,ignoreWall=null,ignoreBuilding=null,check
   const mx=(x+tx)/2,mz=(z+tz)/2,reach=Math.hypot(tx-x,tz-z)/2+3;
   for(const w of wallCandidates(mx,mz,reach)){
     if(w===ignoreWall||(ignoreBuilding&&w.owner===ignoreBuilding)||w.open||w.barbed)continue;
-    const t=segmentAabbT(x,y,z,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);
+    const t=window.HUNTER_BUILDING_SHELL.wallShotHit({x,y,z},{x:tx,y:ty,z:tz},w);
     if(t!=null&&t<.98)return false;
   }
   for(const b of buildingCandidates(mx,mz,reach)){
@@ -939,8 +949,7 @@ function sniperReticlePoint(focus,range=1000){
   let bestT=1;
   const consider=t=>{if(t!=null&&t>0&&t<bestT)bestT=t};
   for(const w of wallCandidates(mx,mz,reach)){
-    if(!w.open&&!w.barbed)consider(segmentAabbT(ox,oy,oz,tx,ty,tz,
-      w.x0,w.x1,w.y0,w.y1,w.z0,w.z1));
+    if(!w.open&&!w.barbed)consider(window.HUNTER_BUILDING_SHELL.wallShotHit({x:ox,y:oy,z:oz},{x:tx,y:ty,z:tz},w));
   }
   for(const b of buildingCandidates(mx,mz,reach)){
     if(b.rhp<=0)continue;
@@ -1149,12 +1158,15 @@ function updPj(dt){
           mx=(x0+x1)/2,mz=(z0+z1)/2,reach=horiz/2;
     p.life=flight.life;
 
-    // Parets i teulades: intersecció contínua de segment amb AABB.
+    // A window is a real ballistic aperture even while its glass is intact.
+    const windowHits=[];
     for(const w of wallCandidates(mx,mz,reach+1)){
       // Bales de pistola, rifle, soldats, cotxes i tanquetes: passen.
       // Míssils, coets i canons explosius continuen colpejant el filferro.
       if(w.open||(w.barbed&&p.shotClass==='light'))continue;
-      consider(segmentAabbT(x0,y0,z0,x1,y1,z1,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1),'wall',w)
+      const crossing=window.HUNTER_BUILDING_SHELL.windowCrossing(from,to,w);
+      if(crossing){if(p.shotClass==='light')windowHits.push({wall:w,...crossing});continue}
+      consider(window.HUNTER_BUILDING_SHELL.wallShotHit(from,to,w),'wall',w)
     }
     for(const b of buildingCandidates(mx,mz,reach+1)){
       if(b.rhp<=0)continue;
@@ -1207,7 +1219,9 @@ function updPj(dt){
       if(tree&&y<Math.max(hAt(x,z),0)+(tree.p?6.5:1.5)){consider(t,'tree',tree);break}
     }
 
-    const {hit,kind,target,point}=flight.finish();p.x=point.x;p.y=point.y;p.z=point.z;p.o.position.set(p.x,p.y,p.z);
+    const {hit,kind,target,point}=flight.finish();
+    if(p.shotClass==='light')for(const pane of windowHits)if(pane.t<=flight.fraction+1e-6)shatterWindow(pane.wall,pane.index,pane.point,p);
+    p.x=point.x;p.y=point.y;p.z=point.z;p.o.position.set(p.x,p.y,p.z);
     if(!hit)continue;
 
     const ineffective=projectileImpactImmune(kind,target,p);
@@ -1218,7 +1232,7 @@ function updPj(dt){
       const solid=kind==='wall'||kind==='building'||kind==='vehicle'||kind==='enemy';
       if(ineffective)spawnBulletImpact('ricochet',p.x,p.y,p.z,p);
       else if(solid&&!(kind==='enemy'&&(target.t==='soldat'||target.t==='general')))spawnBulletImpact('spark',p.x,p.y,p.z,p);
-      if(kind==='wall'){if(!isMilitaryWall(target))dmgW(target,p.dmg)}
+      if(kind==='wall'){if(!isMilitaryWall(target)||target.woodenDoor)dmgW(target,p.dmg)}
       else if(kind==='building'){if(!isMilitaryBuilding(target)){target.rhp-=p.dmg;if(target.rhp<=0)roofBreak(target)}}
       else if(kind==='tree'&&target?.p)dmgP(target,p.dmg);
       else if(kind==='enemy'){
