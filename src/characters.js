@@ -316,7 +316,9 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // i al guardamà sense forçar els colzes.
     // Fusell d’assalt procedimental amb culata, carregador i canó.
     const assault=new THREE.Group();
-    assault.position.set(.68,3.60-u.upperBodyPivotHeight,-1.06);
+    // Culata al costat de l'espatlla dreta, però prou a prop del tronc
+    // perquè el braç esquerre pugui arribar REALMENT al guardamans.
+    assault.position.set(.53,3.52-u.upperBodyPivotHeight,-.76);
     assault.scale.setScalar(.84);u.upperBody.add(assault);
     box(assault,.26,.24,1.9,0x4c5c4b,0,0,-.18,'paint');
     box(assault,.14,.14,1.15,0x303938,0,.02,-1.55,'metal');
@@ -325,9 +327,18 @@ window.HUNTER_CHARACTERS=Object.freeze({
     box(assault,.21,.48,.46,0x303b35,0,-.39,-.37,'metal');
     box(assault,.28,.14,.24,0x252f2c,0,.18,-.32,'metal');
     const assaultRightGrip=new THREE.Object3D(),assaultLeftGrip=new THREE.Object3D();
-    assaultRightGrip.position.set(-.04,-.2,.25);assaultLeftGrip.position.set(-.36,-.2,-.52);
-    assault.add(assaultRightGrip,assaultLeftGrip);
-    assault.visible=false;u.assault=assault;u.assaultRightGrip=assaultRightGrip;u.assaultLeftGrip=assaultLeftGrip;
+    assaultRightGrip.position.set(-.04,-.2,.25);
+    // Mà esquerra sota el guardamans, per davant del gallet. El punt queda
+    // dins del radi anatòmic dels dos segments del braç articulat.
+    assaultLeftGrip.position.set(-.42,-.23,-.43);
+    // Extrem real del tub: centre z=-1.55, longitud 1.15 -> boca a -2.125.
+    // Un petit marge deixa les bales fora de la cara frontal del canó.
+    const assaultMuzzle=new THREE.Object3D();
+    assaultMuzzle.name='hunter-assault-muzzle';
+    assaultMuzzle.position.set(0,.02,-2.14);
+    assault.add(assaultRightGrip,assaultLeftGrip,assaultMuzzle);
+    assault.visible=false;u.assault=assault;u.assaultMuzzle=assaultMuzzle;
+    u.assaultRightGrip=assaultRightGrip;u.assaultLeftGrip=assaultLeftGrip;
     const sniper=new THREE.Group();
     sniper.position.set(.68,3.60-u.upperBodyPivotHeight,-1.15);
     sniper.scale.setScalar(.82);
@@ -519,7 +530,10 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // front, també durant les transicions d'entrada i sortida de cursa.
     tx(u.head,-u.upperBody.rotation.x,k);
     u.head.rotation.y+=(-u.upperBody.rotation.y-u.head.rotation.y)*k;
-    u.head.rotation.z+=(0-u.head.rotation.z)*k;
+    // Quan s'espatlla el fusell d'assalt a la dreta, el cap s'hi acosta
+    // amb una inclinació lateral de 10°. Tornada gradual a neutre.
+    const assaultHeadTilt=assaultRifleEquipped&&!inVehicle?-Math.PI/18:0;
+    u.head.rotation.z+=(assaultHeadTilt-u.head.rotation.z)*k;
     player.rotation.x+=(0-player.rotation.x)*k;
     const walk=Math.sin(ph)*move*dir,walk2=Math.cos(ph)*move;
     const hip=(.62+.50*run)*(1-.6*crouch)*walk,
@@ -534,6 +548,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
     const aiming=u.firePose>0&&!inVehicle,melee=u.meleePose>0&&!inVehicle,bazooka=!!bazookaEquipped&&!inVehicle,
           grenade=!!grenadeEquipped&&!inVehicle,cisalla=!!cisallaEquipped&&!inVehicle,
           sniper=!!sniperEquipped&&!inVehicle,assault=!!assaultRifleEquipped&&!inVehicle,throwing=u.grenadeThrow>0&&!inVehicle;
+    // El tors es tira endavant en córrer. Compensam aquest pitch del
+    // fusell per mantenir el canó alineat amb el rumb horitzontal real
+    // del tret; les dues mans segueixen els grips després del canvi.
+    if(assault){u.assault.rotation.x=-u.upperBody.rotation.x;
+      u.assault.rotation.y=-u.upperBody.rotation.y;}
     u.bazooka.visible=bazooka;u.sniper.visible=sniper;u.assault.visible=assault;u.grenade.visible=(grenade||throwing)&&!u.grenadeReleased;
     u.cisalla.visible=cisalla;
     window.HUNTER_BOLT_CUTTERS.pose(u.cisalla,
