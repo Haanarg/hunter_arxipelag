@@ -1,4 +1,5 @@
 import {buildingVisual} from './building-visual-core.mjs';
+import {windowLayout} from './building-shell.mjs';
 import {materialProfiles} from './material-profiles.mjs';
 import {decorateTimber,decorateUpper} from './compound-architecture.mjs';
 import {createFenceVisual} from './fence-visual-core.mjs';
@@ -9,7 +10,7 @@ export function createBuildingView(T,scene,geometry,doors){
  const box=(group,w,h,d,c,x=0,y=0,z=0,profile='paint')=>{const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),material(c,profile));mesh.position.set(x,y,z);mesh.castShadow=mesh.receiveShadow=true;group.add(mesh);return mesh;};
  const cylinder=(group,r,h,c,x,y,z)=>{const mesh=new T.Mesh(new T.CylinderGeometry(r,r,h,10),material(c,'metal'));mesh.position.set(x,y,z);group.add(mesh);return mesh;};
  const rod=(group,a,b,r,c)=>{const start=new T.Vector3(...a),end=new T.Vector3(...b),delta=end.clone().sub(start),mesh=new T.Mesh(new T.CylinderGeometry(r,r,delta.length(),6),material(c,'metal'));mesh.position.copy(start.add(end).multiplyScalar(.5));mesh.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),delta.normalize());group.add(mesh);return mesh;};
- const factory=buildingVisual.create(T,{material,materialProfile:name=>materialProfiles[name]||materialProfiles.organic,box}),info=[],byId=new Map(),wallMeshes=[],doorMeshes=new Map(),roofMeshes=[],stairMeshes=[];
+ const factory=buildingVisual.create(T,{material,materialProfile:name=>materialProfiles[name]||materialProfiles.organic,box,windowLayout}),info=[],byId=new Map(),wallMeshes=[],doorMeshes=new Map(),windowMeshes=new Map(),roofMeshes=[],stairMeshes=[];
  for(const [index,b] of (geometry.buildings||[]).entries()){
   const local={w:b.localW||b.w,d:b.localD||b.d,h:b.h},shell=(b.hangar?factory.createHangarShell:factory.createShell)({width:local.w,depth:local.d,height:b.h,wallColor:b.wood?0x96714b:b.hangar?0xbab99d:0xc9b98d,roofColor:b.hangar?0xb7c1b4:0x79584e}),members=[shell.roof];let upper=null,ribs=[];
   if(b.roof?.scale)shell.roof.scale.set(b.roof.scale.x,1,b.roof.scale.z);
@@ -26,7 +27,7 @@ export function createBuildingView(T,scene,geometry,doors){
   else if(w.barbed){const ax=w.ax??w.x0,az=w.az??w.z0,bx=w.bx??w.x1,bz=w.bz??w.z1,n=Math.max(1,Math.ceil(Math.hypot(bx-ax,bz-az)/6));for(let i=0;i<n;i++)group.add(fence(ax+(bx-ax)*i/n,az+(bz-az)*i/n,ax+(bx-ax)*(i+1)/n,az+(bz-az)*(i+1)/n));}
   else{
    group.position.set((w.x0+w.x1)/2,bottom,(w.z0+w.z1)/2);
-   if(w.windows&&owner){factory.addWindowedWall(group,{lx:0,lz:0,sx:width,sz:depth,height,material:owner.shell.walls});group.userData.originalWindows=true;}
+   if(w.windows&&owner){const parts=factory.addWindowedWall(group,{lx:0,lz:0,sx:width,sz:depth,height,material:owner.shell.walls});for(const glass of parts)if(glass.userData.windowPane!==undefined)windowMeshes.set(index+':'+glass.userData.windowPane,glass);group.userData.originalWindows=true;}
    else box(group,width,height,depth,id?0x704829:owner?.b.wood?0x96714b:w.playerBlock===false?0x8e9588:0xc9b98d,0,height/2,0,id?'paint':'masonry');
   }
   group.userData.wallIndex=index;if(!group.userData.internalStairProxy)group.visible=!w.open;scene.add(group);wallMeshes.push(group);if(id){doorMeshes.set(id,group);group.userData.doorId=id;}
@@ -36,7 +37,7 @@ export function createBuildingView(T,scene,geometry,doors){
   else for(let i=0;i<stair.steps;i++)box(group,stair.width,.25,stair.tread,0x817968,0,stair.top-i*stair.rise-.125,(i+.5)*stair.tread,'masonry');
   scene.add(group);group.visible=!stair.destroyed;stairMeshes.push({mesh:group,buildingIndex:stair.internal?owner?.index:-1});
  }
- return {wallMeshes,doorMeshes,roofMeshes,stairMeshes,update(state,self){const actor=state.players.find(p=>p.id===self);for(const entry of info){const {b,index,shell,upper,ribs}=entry,broken=b.rb||(state.removedRoofs||[]).includes(index),inside=actor&&Math.abs(actor.x-b.x)<b.w/2&&Math.abs(actor.z-b.z)<b.d/2&&actor.y<b.fy+b.h;
+ return {wallMeshes,doorMeshes,roofMeshes,stairMeshes,update(state,self){const brokenWindows=new Set(state.brokenWindows||[]);for(const [id,glass] of windowMeshes)glass.visible=!brokenWindows.has(id);const actor=state.players.find(p=>p.id===self);for(const entry of info){const {b,index,shell,upper,ribs}=entry,broken=b.rb||(state.removedRoofs||[]).includes(index),inside=actor&&Math.abs(actor.x-b.x)<b.w/2&&Math.abs(actor.z-b.z)<b.d/2&&actor.y<b.fy+b.h;
    shell.roof.visible=!broken&&!inside;if(upper)upper.visible=!broken&&(!inside||actor.y>=b.fy+b.storey-.2);if(upper?.userData.stairGroup)upper.userData.stairGroup.visible=!broken;
    for(const rib of ribs){const point=shell.group.localToWorld(new T.Vector3(rib.mesh.position.x,0,rib.mesh.position.z));rib.mesh.visible=!(state.removedWalls||[]).some(i=>{const w=geometry.walls[i];return w?.buildingId===b.id&&point.x>=w.x0-.2&&point.x<=w.x1+.2&&point.z>=w.z0-.2&&point.z<=w.z1+.2;});}
   }}};
