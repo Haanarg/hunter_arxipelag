@@ -35,6 +35,18 @@ export function windowCrossing(from,to,wall){
  }
  return best;
 }
+// Convert a rendered pane's position back to its authoritative pane index.
+// Rotated façades (notably 180°) can reverse the mesh order.
+export function windowPaneIndexAt(wall,alongCoordinate){
+ const panes=wall?.windowPanes||[];if(!panes.length)return -1;
+ const axis=panes[0].axis==='z'?'x':'z';
+ let best=-1,error=Infinity;
+ for(let i=0;i<panes.length;i++){
+  const distance=Math.abs(panes[i][axis]-alongCoordinate);
+  if(distance<error){best=i;error=distance;}
+ }
+ return best;
+}
 export function wallShotHit(from,to,wall){
  if(wall.open)return null;
  const hit=segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,wall.x0,wall.x1,wall.y0,wall.y1,wall.z0,wall.z1);
