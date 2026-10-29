@@ -16,7 +16,7 @@ export function doorFlankLayout(span,openingWidth){
 export function windowLayout(sx,sz,height){
  const alongX=sx>=sz,L=alongX?sx:sz,count=L>=14?2:1;
  return {alongX,width:Math.min(2.7,L/(count*2.65)),
-  bottom:Math.min(2.35,Math.max(1.75,height*.32)),
+  bottom:Math.min(1.5,Math.max(1.15,height*.19)),
   height:Math.min(2.15,Math.max(1.75,height*.31)),
   centers:count===2?[-L*.255,L*.255]:[0]};
 }
