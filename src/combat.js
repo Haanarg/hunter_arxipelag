@@ -237,7 +237,7 @@ function explodeVehicle(v){
 // els ocupants fins al moment que el vehicle explota.
 // Projectils explosius: 50% més ràpids i meitat de mida visual.
 const COMBAT_BALANCE=window.HUNTER_COMBAT_BALANCE;
-const HEAVY_SHOT_SPEED_FACTOR=1.17,HEAVY_SHOT_DAMAGE_FACTOR=1,HEAVY_SHOT_VISUAL_SCALE=.5;
+const HEAVY_SHOT_SPEED_FACTOR=window.HUNTER_SHARED_WEAPONS.HEAVY_SPEED_FACTOR,HEAVY_SHOT_DAMAGE_FACTOR=1,HEAVY_SHOT_VISUAL_SCALE=.5;
 const shotClassFromSplash=spl=>spl>0?'heavy':'light';
 const isMilitaryBuilding=b=>!!b&&!b.civilian&&(!!b.compound||b.kind==='enemy_bunker');
 const isMilitaryWall=w=>!!w?.towerLegOwner||isMilitaryBuilding(w?.owner);
@@ -493,7 +493,7 @@ function executePlayerPlant(seconds=3){
 // La filferrada és permeable a la vista i al foc lleuger, però segueix
 // impedint els atacs cos a cos quan ignoreBarbed=false.
 function sight(x,z,tx,tz,y,ignoreBarbed=true){const d=Math.hypot(tx-x,tz-z),n=Math.max(1,Math.ceil(d/1.5));for(let k=1;k<n;k++){const xx=x+(tx-x)*k/n,zz=z+(tz-z)*k/n;if(wallCandidates(xx,zz).some(w=>!w.open&&(!ignoreBarbed||!w.barbed)&&y>w.y0&&y<w.y1&&xx>w.x0&&xx<w.x1&&zz>w.z0&&zz<w.z1))return false}return true}
-function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=pl.userData.knifeAttackDuration||.38;window.HUNTER_STEALTH.emit('knife',P.x,P.y+1,P.z);const fx_=-Math.sin(P.hd),fz=-Math.cos(P.hd);let hit=null,best=2.6;for(const u of E){if(u.t!=='soldat'&&u.t!=='general')continue;const dx=u.x-P.x,dz=u.z-P.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx_+dz*fz)/d>.35&&sight(P.x,P.z,u.x,u.z,P.y+1.2,false)){best=d;hit=u}}if(hit)hurtE(hit,COMBAT_BALANCE.weapons.knife,{weapon:'knife',own:'p',sx:P.x,sy:P.y+1.35,sz:P.z,x:hit.x,y:hit.o.position.y+1.35,z:hit.z});snd('hurt',hit?.45:.18);setDis(false);return true}
+function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=pl.userData.knifeAttackDuration||.38;window.HUNTER_STEALTH.emit('knife',P.x,P.y+1,P.z);const hit=window.HUNTER_SHARED_WEAPONS.meleeTarget(P,E,u=>sight(P.x,P.z,u.x,u.z,P.y+1.2,false));if(hit)hurtE(hit,COMBAT_BALANCE.weapons.knife,{weapon:'knife',own:'p',sx:P.x,sy:P.y+1.35,sz:P.z,x:hit.x,y:hit.o.position.y+1.35,z:hit.z});snd('hurt',hit?.45:.18);setDis(false);return true}
 function secondaryWeapon(){
   if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd),d45=Math.SQRT1_2;
   if(cv.t==='heli_combat'){if(cheats.items)cv.rockets=Math.max(cv.rockets||0,999);if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,COMBAT_BALANCE.weapons.heliMissile,10,'p',mS,2.4);Pj[Pj.length-1].life=3.3;msg='Míssils: '+cv.rockets;msgT=1;return true}
@@ -508,10 +508,7 @@ function secondaryWeapon(){
 const GRENADE_CHARGE_SECONDS=1.4,GRENADE_MIN_SPEED=3.5,GRENADE_MAX_SPEED=33;
 let grenadeCharge=null,grenadeAimVisual=null;
 function grenadeLaunchParams(power=0,origin=P,hd=P.hd){
-  const ratio=Math.max(0,Math.min(1,power)),speed=GRENADE_MIN_SPEED+(GRENADE_MAX_SPEED-GRENADE_MIN_SPEED)*ratio,
-        fx=-Math.sin(hd),fz=-Math.cos(hd);
-  return {x:origin.x+fx*.85,y:origin.y+2.05,z:origin.z+fz*.85,
-          vx:fx*speed,vy:12,vz:fz*speed,t:2.4};
+  return window.HUNTER_SHARED_WEAPONS.grenadeLaunch(power,origin,hd);
 }
 function bunkerProjectileSurface(x,z,y,water=false){
   const floor=bunkerSubFloorAt(x,z,y);
@@ -717,7 +714,7 @@ function weaponAimClear(x,y,z,tx,ty,tz,ignoreWall=null,ignoreBuilding=null,check
 // Bazuca: fins a 185 m; el con normal és ±47° horitzontals i ±52°
 // verticals. A més, la direcció FINAL té un límit estricte de ±60°
 // horitzontals (arc total 120°), fins i tot si es relaxa el selector.
-const BAZOOKA_AIM_RANGE=185,BAZOOKA_AIM_CONE=.68,BAZOOKA_AIM_VERTICAL=.90;
+const BAZOOKA_AIM_RANGE=window.HUNTER_SHARED_WEAPONS.weaponCatalog.bazooka.range,BAZOOKA_AIM_CONE=window.HUNTER_SHARED_WEAPONS.weaponCatalog.bazooka.cone,BAZOOKA_AIM_VERTICAL=window.HUNTER_SHARED_WEAPONS.weaponCatalog.bazooka.vertical;
 // Pistola i fusell d'assalt comparteixen el con d'autoapuntat 3D:
 // aproximadament ±35° a peu pla i fins a ±90° horitzontals en blancs
 // molt més alts o baixos. L'obertura vertical és de ±90°.
@@ -1021,19 +1018,7 @@ function sniperShotVector(muzzle,target,focus){
 function cutBarbedWire(){
  if(!cisallaEquipped||!inv.cisalla||cv||swimming||playerFall||playerEject||over||fcd>0)
    return false;
- const reach=2.75,fx=-Math.sin(P.hd),fz=-Math.cos(P.hd);
- let target=null,closest=Infinity;
- for(const w of wallCandidates(P.x,P.z,reach+1)){
-   if(!w.barbed||w.open||w.hp<=0||P.y+1.1<w.y0||P.y+1.1>w.y1)continue;
-   const x=Math.max(w.x0,Math.min(w.x1,P.x)),
-     z=Math.max(w.z0,Math.min(w.z1,P.z)),
-     nx=x-P.x,nz=z-P.z,
-     near=Math.hypot(nx,nz),
-     facing=near>.08?(nx*fx+nz*fz)/near:
-       ((w.cx-P.x)*fx+(w.cz-P.z)*fz)/Math.max(.01,Math.hypot(w.cx-P.x,w.cz-P.z));
-   if(near>reach||facing<.3)continue;
-   if(near<closest){closest=near;target=w}
- }
+ const target=window.HUNTER_SHARED_WEAPONS.nearestWire(P,wallCandidates(P.x,P.z,3.75));
  if(!target){
    fcd=.28;msg='Acosta’t a una filferrada i mira-la per tallar-la.';msgT=1.6;
    return false;
@@ -1094,7 +1079,7 @@ function updateAssaultBurst(dt){
  window.HUNTER_SHARED_COMBAT.stepBurst(assaultBurst,dt,allowed,fireAssaultBurstBullet);
 }
 // La pistola personal és utilitzable només des dels vehicles oberts.
-const OPEN_RIDER_PISTOL=new Set(['bici','moto','moto_aquatica','barca_rems','windsurf','llanxa']);
+const OPEN_RIDER_PISTOL=new Set(window.HUNTER_SHARED_WEAPONS.openRiderTypes);
 function executePlayerFire(){if(cisallaEquipped&&!cv)return cutBarbedWire();if(knifeEquipped&&!cv)return melee();if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
 if(c=='tanc'||c=='tanqueta'){
   // El projectil segueix el canó real mentre la torreta gira: no

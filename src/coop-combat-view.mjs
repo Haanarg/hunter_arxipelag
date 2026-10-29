@@ -10,7 +10,7 @@ export function createCombatView(T,scene){
     for(const r of rows){let o=objects.get(r.key);
       if(!o){
         if(r.kind==='target'){o=new T.Group();const body=playerModel.create(T,{unitScale:.85});o.add(body);const bar=new T.Mesh(new T.BoxGeometry(2,.2,.2),new T.MeshBasicMaterial({color:0x95fa86}));bar.position.y=3.5;o.add(bar);o.userData.targetId=r.id;if(r.ai){const arrow=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(0,1.5,0),new T.Vector3(0,1.5,-2)]),new T.LineBasicMaterial({color:0xffd6a1}));o.add(arrow);}}
-        else if(r.kind==='bullet'){o=new T.Mesh(projectileGeometry.light.clone(),new T.MeshBasicMaterial({color:0xffffff}));o.userData.projectileId=r.id;}
+        else if(r.kind==='bullet'){o=new T.Mesh((r.splash?projectileGeometry.heavy:projectileGeometry.light).clone(),new T.MeshBasicMaterial({color:0xffffff}));o.userData.projectileId=r.id;}
         else if(r.kind==='impact'){o=new T.Mesh(new T.SphereGeometry(.2,6,4),new T.MeshBasicMaterial({color:r.hit?0xff6855:0xffe4aa}));o.position.set(r.at.x,r.at.y,r.at.z);}
         else if(r.kind==='grenade'){o=new T.Mesh(new T.SphereGeometry(.65,8,6),new T.MeshStandardMaterial({color:0xa5ba53}));o.userData.grenadeId=r.id;}
         else if(r.kind==='shot'){o=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(r.from.x,r.from.y,r.from.z),new T.Vector3(r.to.x,r.to.y,r.to.z)]),new T.LineBasicMaterial({color:r.hit?0xff6855:0xffe18a}));}

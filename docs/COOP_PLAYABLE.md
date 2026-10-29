@@ -1,4 +1,4 @@
-# Missió cooperativa jugable · v0.6.38
+# Missió cooperativa jugable · v0.6.40
 
 ## Què es pot jugar
 
@@ -6,7 +6,7 @@
 
 L’usuari ha prioritzat que sigui jugable encara que l’estètica quedi provisional. Aquesta versió utilitza una vista 3D senzilla, dos personatges de colors, murs, terminals i recorreguts orientatius. Si WebGL no es pot crear, s’ofereix un mapa Canvas 2D amb els mateixos controls i la mateixa sessió. El joc individual conserva el seu món i la seva interfície.
 
-No és encara la campanya Hunter completa en cooperatiu. Hi ha armes, inventaris personals, reanimació, guàrdies i un jeep compartit dins del recinte. La campanya completa continua pendent. Generador temporal actual: `relay:14`; cal iniciar una missió nova després d’actualitzar els dos clients. Les seccions amb versions anteriors conserven l’històric.
+No és encara la campanya Hunter completa en cooperatiu. Hi ha armes, inventaris personals, reanimació, guàrdies i un jeep compartit dins del recinte. La campanya completa continua pendent. Generador temporal actual: `relay:15`; cal iniciar una missió nova després d’actualitzar els dos clients. Les seccions amb versions anteriors conserven l’històric.
 
 ## Com jugar
 
@@ -151,3 +151,18 @@ Generador temporal `relay:14`: recarregueu tots dos clients i inicieu una missi�
 El jeep té **5 PV**, com el cotxe militar individual. El panell mostra la vida mentre s’hi viatja. Bales i granades poden destruir-lo; el casc protegeix els ocupants dels impactes directes fins que explota. La destrucció atura el vehicle, allibera els dos seients, retira el model i fa 4–6 PV de dany a cadascun dels ocupants. No es pot tornar a pujar a un vehicle destruït. Les explosions d’un vehicle també poden fer mal als jugadors a peu i a altres vehicles propers, respectant la cobertura. Les granades pròpies poden ferir qui les llança; conserven la protecció directa del company.
 
 Els trets a vehicles buits poden fer-los esclatar. Les bales no travessen el jeep per tocar un soldat que hi hagi darrere. Vida/destrucció es conserven en reconnexions i reinicis; una explosió no es repeteix en restaurar. Inicieu una missió nova (`relay:14`). Encara no hi ha armes muntades, atropellaments ni xocs destructius, ni impuls físic d’ejecció/ferralla original.
+
+
+## Camp de proves · v0.6.40
+
+A la pàgina cooperativa, trieu **Camp de proves · totes les armes i vehicles**. Tots dos participants heu de prémer **Aplicar / reiniciar modalitat** amb la mateixa selecció. Es pot canviar des del relleu; no es reinicia la missió fins als dos vots. Repetir-ho crea un camp nou amb la flota, les dianes i els inventaris reposats. No és una ampliació de la campanya ni un canvi als desaments individuals.
+
+El camp té terra, una bassa navegable i espai de vol, sense enemics que disparin. A l’esquerra hi ha cotxe militar/Humvee, cotxe civil, bici, moto, camió, tanqueta, tanc, hovercraft i els dos helicòpters. A la dreta, llanxa, llanxa de coets, moto aquàtica, barca de rems, windsurf i ferri. Són les 16 famílies, amb els models/escales originals. El jeep reduït del relleu es conserva.
+
+Cada jugador rep armes i reserves pròpies: pistola, fusell d’assalt, franctirador, bazuca, ganivet, cisalla, granades i C4. Escolliu l’arma al selector i premeu **F**; **B** llança granades. El C4 seleccionat es col·loca amb F i esclata als 5 s. La cisalla talla el tram de filferrada del camp en mirar-lo de prop. Es poden deixar armes i munició amb G i passar-les per contacte. El zoom del mapa segueix el jugador; el botó ×8 ajuda a examinar objectius, però encara no és el visor en primera persona del mode individual.
+
+**E** puja/baixa; cal aturar-se i, als helicòpters, aterrar. Es pot pujar a una embarcació nedant. **W/S** condueix, **A/D** gira, **Y/U** desplaça lateralment hover i helicòpters. **Re Pàg / Av Pàg** o els botons de vol pugen/baixen. La primera plaça condueix; els monoplaça no admeten passatger. Inputs caducats o desconnexió aturen els controls.
+
+El conductor dispara amb F el canó del tanc/tanqueta, el canó de l’helicòpter de combat, els coets navals o la pistola dels vehicles oberts. **V / Míssil** és l’arma secundària de l’helicòpter de combat (12 míssils per aparell al camp). El Huey deixa llançar granades amb B; si s’hi puja amb C4 seleccionat, F en deixa caure una càrrega. El passatger no dispara. La munició de mà és personal; els míssils pertanyen al vehicle.
+
+**Límits coneguts:** disponibilitat i prova funcional de totes les famílies; encara no és paritat completa amb el motor individual. Resten contactes OBB/entre vehicles, atropellaments, transport sobre el ferri i obstacles/accidents aeris complets, destrucció d’edificis i filferrades per explosions, animacions de conductor/armes, canons/torretes orientats amb boca exacta, visor real, càrrega variable de granades i temporitzador editable del C4. Granades del camp: potència mitjana fixa; C4: 5 s. La validació GPU/Android i dos navegadors físics continua pendent.

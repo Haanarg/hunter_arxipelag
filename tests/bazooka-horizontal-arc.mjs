@@ -42,5 +42,6 @@ const a=combat.indexOf('else if(!cv&&bazookaEquipped&&inv.bazooka)');
 const fire=combat.slice(a,combat.indexOf('else if(!cv&&ammo>0',a));
 assert(reticle.includes('window.HUNTER_SHARED_AIMING.limitBazookaHorizontalAim('),'Reticle uses final yaw limit');
 assert(fire.includes('window.HUNTER_SHARED_AIMING.limitBazookaHorizontalAim('),'Actual projectile uses final yaw limit');
-assert(combat.includes('BAZOOKA_AIM_CONE=.68'),'Normal target selection not widened');
+const {weaponCatalog}=await import('../src/weapon-catalog.mjs');assert.equal(weaponCatalog.bazooka.cone,.68,'Normal target selection not widened');assert(combat.includes('BAZOOKA_AIM_CONE=window.HUNTER_SHARED_WEAPONS.weaponCatalog.bazooka.cone'));
 console.log('PASS bazooka: '+count+' yaw/pitch samples, 120° hard cap, retained elevation, reticle and projectile');
+

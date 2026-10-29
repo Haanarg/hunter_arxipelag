@@ -18,7 +18,7 @@ export function createPlayConnection({url,version,getInput,onMessage,onStatus=()
     }
   });
   const send=channel.send;
-  return {start:channel.start,launch(revision){return send({type:'launch',protocol:1,gameVersion:version,revision});},
+  return {start:channel.start,launch(revision,mode='relay'){return send({...(mode==='proving'?{mode}:{}),type:'launch',protocol:1,gameVersion:version,revision});},
     combat(weapon,commandId){if(!epoch||state?.status!=='running'||!['relay','extract'].includes(state.phase))return false;return send({type:'combat',protocol:1,epoch,weapon,commandId});},
     inventory(operation,target,commandId){if(!epoch||state?.status!=='running'||!['relay','extract'].includes(state.phase))return false;return send({type:'inventory',protocol:1,epoch,operation,target,commandId});},
     vehicle(vehicleId,operation,commandId){if(!epoch||state?.status!=='running'||!['relay','extract'].includes(state.phase))return false;return send({type:'vehicle',protocol:1,epoch,vehicleId,operation,commandId});},
@@ -27,6 +27,6 @@ export function createPlayConnection({url,version,getInput,onMessage,onStatus=()
 }
 export function playInput(keys,hidden=false){
   const has=(...values)=>!hidden&&values.some(k=>keys.has(k));
-  return {forward:Number(has('KeyW','ArrowUp'))-Number(has('KeyS','ArrowDown')),turn:Number(has('KeyA','ArrowLeft'))-Number(has('KeyD','ArrowRight')),
+  return {...(has('PageUp','PageDown')?{climb:Number(has('PageUp'))-Number(has('PageDown'))}:{}),forward:Number(has('KeyW','ArrowUp'))-Number(has('KeyS','ArrowDown')),turn:Number(has('KeyA','ArrowLeft'))-Number(has('KeyD','ArrowRight')),
     strafe:Number(has('KeyU'))-Number(has('KeyY')),run:has('ShiftLeft','ShiftRight'),interact:has('KeyE','Space')};
 }

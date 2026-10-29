@@ -123,3 +123,13 @@ if(water){
 
 return sideV;
 }
+
+// Original helicopter lift integration; terrain/roof contacts remain adapters.
+export function stepHelicopterLift(v,ud,dt,landedAltitude){
+ const c=vehicleDynamics.types[v.t],targetVz=ud*(c.climb||24);
+ v.verticalV=vehicleDynamics.smooth(v.verticalV||0,targetVz,c.liftResponse||2.5,dt);
+ if(Math.abs(ud)<.01)v.verticalV*=Math.exp(-1.5*dt);
+ const previousAlt=v.alt;
+ v.alt=Math.max(landedAltitude,Math.min(150,v.alt+v.verticalV*dt));
+ return previousAlt;
+}

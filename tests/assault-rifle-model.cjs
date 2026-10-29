@@ -39,3 +39,4 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
  assert.equal(u.assault.visible,false,'hidden after unequip');
  console.log('PASS assault rifle: true muzzle, both hands, head 10deg, running and crouch');
 })().catch(error=>{console.error(error);process.exitCode=1});
+

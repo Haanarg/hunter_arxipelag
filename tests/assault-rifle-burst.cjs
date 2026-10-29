@@ -28,7 +28,9 @@ const ctx={window:{HUNTER_SHARED_COMBAT:shared},
 };
 // Evitam dependre del binding 'this' dins de la funció de punteria.
 ctx.autoAimWeaponShot=()=>{ctx.aims++;return ctx.aims===1?[0,0,-1]:[.6,0,-.8]};
-vm.runInNewContext(src.slice(begin,end)+
+const helperStart=src.indexOf('function assaultMuzzleWorld()'),helperEnd=begin;
+assert(helperStart>=0&&helperEnd>helperStart);
+vm.runInNewContext(src.slice(helperStart,helperEnd)+src.slice(begin,end)+
   '\n globalThis.burst={beginAssaultBurst,updateAssaultBurst,cancelAssaultBurst};',ctx);
 assert(ctx.burst.beginAssaultBurst());
 assert.equal(shots.length,1,'La primera bala és immediata');
@@ -61,3 +63,4 @@ assert.equal(shots.length,4);
 console.log('OK: fusell d’assalt, tres trets seqüencials, consum, retarget i cancel·lació');
 
 })().catch(error=>{console.error(error);process.exitCode=1});
+

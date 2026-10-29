@@ -1,0 +1,15 @@
+import {createHash} from 'node:crypto';
+import * as T from '../../vendor/three-r186.module.mjs';
+import {playerBatching} from '../../src/player-batching-core.mjs';
+import {createTruckModel} from '../../src/truck-model.mjs';
+import {createCivilianCarModel} from '../../src/civilian-car-model.mjs';
+import {prepareHumveeD31Runtime} from '../../src/humvee-d31-runtime.mjs';
+export async function modelTraces(models){
+ const humvee=await prepareHumveeD31Runtime(T),material=(color)=>new T.MeshStandardMaterial({color}),box=(g,w,h,d,c,x,y,z)=>{const m=new T.Mesh(new T.BoxGeometry(w,h,d),material(c));m.position.set(x,y,z);g.add(m);return m;};
+ const services={box,material,shadows:false,humvee,truck:createTruckModel,civilianCar:createCivilianCarModel,batching:playerBatching};
+ const create=models.createFactory(T,services),traces={};
+ for(const t of Object.keys(models.scales)){
+  const model=create(t);model.updateMatrixWorld(true);const hash=createHash('sha256'),push=a=>hash.update(JSON.stringify(a));
+  model.traverse(o=>{push([o.type,o.position.toArray(),o.rotation.toArray(),o.scale.toArray()]);if(o.geometry){for(const key of Object.keys(o.geometry.attributes).sort())push([key,...o.geometry.attributes[key].array]);if(o.geometry.index)push([...o.geometry.index.array]);}if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])push([m.type,m.color?.getHex(),m.vertexColors,m.transparent,m.opacity]);});traces[t]=hash.digest('hex');
+ }return traces;
+}

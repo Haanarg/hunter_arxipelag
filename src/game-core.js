@@ -3203,11 +3203,7 @@ if(ok){
   handleVehicleImpacts(v,dt,oldX,oldZ);if(v.destroyed)return false;if(v.t==='tanc'||v.t==='tanqueta'||v.t==='camio')crush(nx,nz,(v.t==='tanc'?3.2:v.t==='camio'?2.6:2.4)*VS[v.t])
 }else{v.v*=Math.exp(-12*dt);v.sideV*=Math.exp(-10*dt);v.strafeV*=Math.exp(-12*dt)}
 if(a){
-  const g2=Math.max(0,groundAt(v.x,v.z)),targetVz=ud*(c.climb||24);
-  v.verticalV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.verticalV||0,targetVz,c.liftResponse||2.5,dt);
-  if(Math.abs(ud)<.01)v.verticalV*=Math.exp(-1.5*dt);
-  const previousAlt=v.alt;
-  v.alt=Math.max(helicopterLandedAltitude(v,g2),Math.min(150,v.alt+v.verticalV*dt));
+  const g2=Math.max(0,groundAt(v.x,v.z)),previousAlt=window.HUNTER_SHARED_VEHICLES.stepHelicopterLift(v,ud,dt,helicopterLandedAltitude(v,g2));
   if(!deckCarrier){
     const terrainHit=helicopterEnvironmentContact(v,
       {x:v.x,z:v.z,alt:previousAlt},{x:v.x,z:v.z,alt:v.alt});

@@ -1,3 +1,4 @@
+import {combatCommands,personalWeapons,inventoryCaps} from '../src/weapon-catalog.mjs';
 import {readCoopRoom} from './coop.mjs';
 import {generateRelayMission,restoreRelayMission} from './coop-mission.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
@@ -71,7 +72,7 @@ export class CoopRoomHub {
       return;
     }
     if(body.type==='combat'){
-      if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==5||typeof body.epoch!=='string'||body.epoch.length>64||!['pistol','assault','grenade'].includes(body.weapon)||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre de combat invàlida');return;}
+      if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==5||typeof body.epoch!=='string'||body.epoch.length>64||!combatCommands.includes(body.weapon)||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre de combat invàlida');return;}
       if(now-(a.combatWindow||0)>=1000){a.combatWindow=now;a.combatCount=0;}a.combatCount=(a.combatCount||0)+1;ws.serializeAttachment(a);
       if(a.combatCount>12){ws.close(1008,'Massa ordres de combat');return;}
       if(!await this.verify(ws)){ws.close(4003,'Accés finalitzat');return;}
@@ -89,7 +90,7 @@ export class CoopRoomHub {
       await this.publish();if(this.mission){this.send(ws,this.mission.setup(a.actorId));await this.wake();}return;
     }
     if(body.type==='inventory'){
-      if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==6||!['drop','disguise','weapon'].includes(body.operation)||(body.operation==='drop'?!['bullets','grenades','disguise','medkits','assault'].includes(body.target):body.operation==='weapon'?!['pistol','assault'].includes(body.target):typeof body.target!=='boolean')||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre d’inventari invàlida');return;}
+      if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==6||!['drop','disguise','weapon'].includes(body.operation)||(body.operation==='drop'?!Object.hasOwn(inventoryCaps,body.target):body.operation==='weapon'?!personalWeapons.includes(body.target):typeof body.target!=='boolean')||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre d’inventari invàlida');return;}
       if(!this.mission||body.epoch!==this.mission.meta.id){this.send(ws,{type:'action',commandId:body.commandId,ok:false,code:'NOT_ACTIVE'});return;}
       try{const result=this.mission.inventoryCommand(a.actorId,body);await this.save(this.record.nextAlarm);this.broadcastState();this.send(ws,{type:'action',...result});}
       catch(_){if(this.record)this.mission=restoreRelayMission(this.record,this.geometry);this.send(ws,{type:'action',commandId:body.commandId,ok:false,code:'SAVE_FAILED'});}return;
@@ -108,7 +109,7 @@ export class CoopRoomHub {
       }catch(_){if(this.record)this.mission=restoreRelayMission(this.record,this.geometry);this.send(ws,{type:'action',commandId:body.commandId,ok:false,code:'SAVE_FAILED'});}
       return;
     }
-    if(body.type==='launch'&&Object.keys(body).length===4&&a.gameClient&&body.gameVersion===GAME_VERSION){await this.launch(ws,body);return;}
+    if(body.type==='launch'&&[4,5].includes(Object.keys(body).length)&&Object.keys(body).every(k=>['type','protocol','gameVersion','revision','mode'].includes(k))&&(body.mode===undefined||['relay','proving'].includes(body.mode))&&a.gameClient&&body.gameVersion===GAME_VERSION){await this.launch(ws,body);return;}
     if(body.type!=='heartbeat'||Object.keys(body).length!==2){ws.close(1008,'Missatge invàlid');return;}
     await this.env.DB.prepare('UPDATE hunter_coop_members SET last_seen=? WHERE owner=? AND room=?').bind(now,a.actorId,a.roomId).run();
     await this.publish();if(this.mission)await this.wake();
@@ -140,15 +141,15 @@ export class CoopRoomHub {
   }
   async wake(){if(this.mission){await this.save(Date.now()+100);}}
   async launch(ws,body){
-    const a=ws.deserializeAttachment(),room=await readCoopRoom(this.env,a.actorId);
+    const a=ws.deserializeAttachment(),room=await readCoopRoom(this.env,a.actorId),mode=body.mode||'relay';
     if(!room||!room.allReady||body.revision!==room.revision){this.send(ws,{type:'error',message:'Calen dos jugadors preparats i una sala actualitzada.'});return;}
-    if(this.mission&&this.matches(room)&&['relay','extract'].includes(this.mission.snapshot().phase)){this.send(ws,this.mission.setup(a.actorId));await this.wake();return;}
-    this.votes.set(a.actorId,room.revision);
+    if(mode!=='proving'&&this.mission&&this.matches(room)&&(this.mission.meta.mode||'relay')===mode&&['relay','extract'].includes(this.mission.snapshot().phase)){this.send(ws,this.mission.setup(a.actorId));await this.wake();return;}
+    this.votes.set(a.actorId,room.revision+':'+mode);
     const games=this.games();
-    if(!room.members.every(m=>this.votes.get(m.id)===room.revision&&games.some(s=>s.deserializeAttachment().actorId===m.id))){this.send(ws,{type:'waiting',message:'Esperant que el company també premi Iniciar missió.'});return;}
+    if(!room.members.every(m=>this.votes.get(m.id)===room.revision+':'+mode&&games.some(s=>s.deserializeAttachment().actorId===m.id))){this.send(ws,{type:'waiting',message:'Esperant que el company també premi Iniciar missió.'});return;}
     for(const client of games)if(!await this.verify(client,true)){client.close(4003,'Accés finalitzat');return;}
     try{
-      const generated=generateRelayMission(room),mission=restoreRelayMission(generated.record,generated.geometry);
+      const generated=generateRelayMission(room,{mode}),mission=restoreRelayMission(generated.record,generated.geometry);
       await this.ctx.storage.transaction(async storage=>{await storage.put('world',generated.geometry);await storage.put('mission',generated.record);});
       this.mission=mission;this.geometry=generated.geometry;this.record=generated.record;this.checkedAt=0;this.votes.clear();
       for(const client of games)this.send(client,mission.setup(client.deserializeAttachment().actorId));await this.wake();

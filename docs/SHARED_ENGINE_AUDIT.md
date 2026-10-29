@@ -1,4 +1,4 @@
-# Reutilització del motor individual · v0.6.38
+# Reutilització del motor individual · v0.6.40
 
 Criteri: les regles i els models tenen una única implementació. Els adaptadors de navegador i servidor només aporten estat, geometria, autoritat, presentació i serveis. No es converteix tot el joc individual en un Worker: DOM, Three, àudio, càmera i comptes continuen fora de la simulació compartida.
 
@@ -95,3 +95,12 @@ El pilot manté l’avís d’un segon, el mínim de tres segons entre trets i e
 ## Casc i destrucció de vehicles · v0.6.38
 
 La salut, blindatge, dany enter, contacte del projectil i distància d’explosió al casc provenen ara de `combat-rules.mjs`: `vehicleDamage`, `isArmoredVehicleType`, `vehicleHullSegmentT`, `vehicleHullDistance`, `VEHICLE_DESTRUCTION`. `damageVehicle` i `updPj` individuals hi deleguen; els adaptadors conserven cheats, feedback, geometria i efectes. El servidor aporta seients, persistència i autoritat, amb 5 PV del perfil `cotxe`; només el radi s’adapta a l’escala reduïda del model. S’ha retirat la invulnerabilitat del jeep del pilot. Encadenament d’explosions, protecció del casc i dany dels ocupants són autoritatius; les dades de destrucció i la regla de bicicleta no explosiva conserven els criteris individuals. La representació de ferralla, impulsos d’ejecció i xocs/atropellaments completa encara no s’ha extret.
+
+
+## Arsenal i flota de proves · v0.6.40
+
+`vehicle-model-core.mjs` extreu tota la fàbrica original, amb dependències de serveis injectades; `vehicles.js` queda com a pont del navegador. `vehicle-specs.mjs` comparteix escales, radis, caixes i coberta del ferri. `player-batching-core.mjs` extreu l’agrupació original; el pont antic no duplica l’algorisme. Les 16 geometries, transformacions i materials coincideixen amb hashes congelats de la fàbrica individual v0.6.39. Les dues fàbriques aprovades de cotxe civil i camió, i el Humvee B, es reutilitzen.
+
+`weapon-catalog.mjs` centralitza els paràmetres de l’arsenal i famílies muntades, reaprofitant `combatBalance` i el selector de punteria. Les equacions de llançament de granada, elecció de blanc de ganivet i tall de filferrada s’extreuen i es criden també des de l’individual; la integració de vol/impacte/explosió continua al nucli compartit anterior. El pilot de relleu conserva les dades d’entrenament.
+
+`stepHelicopterLift` s’extreu del bloc original i l’usa també `stepV`. L’adaptador del camp usa `inputs`, `advanceVehicle`, `shore.depth/wetLand/clearance/boatContact`, aigua canònica i el lift compartit. El camp és deliberadament una zona de proves amb contactes limitats: no es declara completa l’extracció de `stepV`, les col·lisions OBB, impactes entre vehicles o transport al ferri. L’origen/animació de les armes muntades i el visor original encara s’han d’integrar. No s’ha eliminat el codi individual que encara és l’única implementació d’aquestes funcions.

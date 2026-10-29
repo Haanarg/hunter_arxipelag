@@ -35,9 +35,6 @@ try{
  ca.ws.send(JSON.stringify({type:'combat',protocol:1,epoch:ca.setup.meta.id,weapon:'pistol',commandId:'native-shot'}));
  await wait(()=>ca.events.find(e=>e.commandId==='native-shot'&&e.ok));await wait(()=>cb.state.inventories.find(i=>i.actorId===a.id).bullets===23);assert.equal(cb.state.inventories.find(i=>i.actorId===b.id).bullets,24);assert.equal(cb.state.inventories.find(i=>i.actorId===a.id).disguised,false);
  ca.ws.send(JSON.stringify({type:'combat',protocol:1,epoch:ca.setup.meta.id,weapon:'pistol',commandId:'native-shot'}));await wait(()=>ca.events.find(e=>e.commandId==='native-shot'&&e.duplicate));
- cb.ws.send(JSON.stringify({type:'combat',protocol:1,epoch:ca.setup.meta.id,weapon:'grenade',commandId:'native-grenade'}));await wait(()=>ca.state.combat.grenades.length===1);
- const missionId=ca.setup.meta.id;cb.ws.close(1000,'Test reconnect');await wait(()=>ca.state.status==='paused');const pausedGrenade=structuredClone(ca.state.combat.grenades);await new Promise(r=>setTimeout(r,250));assert.deepEqual(ca.state.combat.grenades,pausedGrenade,'grenade fuse/trajectory pause with disconnected teammate');
- cb=await b.connect(room.id);await wait(()=>cb.setup);assert.equal(cb.setup.meta.id,missionId);await wait(()=>ca.state.status==='running');await wait(()=>ca.state.combat.effects.some(e=>e.kind==='explosion'));assert.equal(ca.state.combat.grenades.length,0);
  let phase='relay',indices=[0,0],sequences=[0,0],driverError=null;
  const door=ca.setup.meta.doors[0];assert.ok(door);
  const pawn=i=>ca.state.players.find(p=>p.id===(i?b.id:a.id));
@@ -47,6 +44,10 @@ try{
    try{await wait(()=>Math.hypot(pawn(i).x-target.x,pawn(i).z-target.z)<.15,15000);}finally{clearInterval(t);sendIntent(i,{forward:0,turn:0,strafe:0,run:false});}
  }
  async function operate(c,commandId,open){c.ws.send(JSON.stringify({type:'door',protocol:1,epoch:missionId,doorId:door.id,open,commandId}));return wait(()=>c.events.find(e=>e.type==='action'&&e.commandId===commandId));}
+ const awayFromJeep=ca.state.vehicles[0],thrower=pawn(1);await face(1,Math.atan2(-(thrower.x-awayFromJeep.x),-(thrower.z-awayFromJeep.z)));
+ cb.ws.send(JSON.stringify({type:'combat',protocol:1,epoch:ca.setup.meta.id,weapon:'grenade',commandId:'native-grenade'}));await wait(()=>ca.state.combat.grenades.length===1);
+ const missionId=ca.setup.meta.id;cb.ws.close(1000,'Test reconnect');await wait(()=>ca.state.status==='paused');const pausedGrenade=structuredClone(ca.state.combat.grenades);await new Promise(r=>setTimeout(r,250));assert.deepEqual(ca.state.combat.grenades,pausedGrenade,'grenade fuse/trajectory pause with disconnected teammate');
+ cb=await b.connect(room.id);await wait(()=>cb.setup);assert.equal(cb.setup.meta.id,missionId);await wait(()=>ca.state.status==='running');await wait(()=>ca.state.combat.effects.some(e=>e.kind==='explosion'));assert.equal(ca.state.combat.grenades.length,0);await face(1,0);
  // The authenticated transport assigns seats; passenger input cannot move the jeep.
  const jeep=ca.state.vehicles[0],spawn=[{...pawn(0)},{...pawn(1)}];
  await moveTo(0,{x:jeep.x-2.2,z:jeep.z});await moveTo(1,{x:jeep.x+2.2,z:jeep.z});
@@ -117,8 +118,17 @@ try{
  for(let n=0;n<3;n++){const commandId='rescue-guard-'+n,tick=ca.state.tick;cb.ws.send(JSON.stringify({type:'combat',protocol:1,epoch:rescueMissionId,weapon:'pistol',commandId}));const result=await wait(()=>cb.events.find(e=>e.commandId===commandId));assert.equal(result.code,'FIRED');await wait(()=>ca.state.tick>=tick+14);}
  const holding=setInterval(()=>sendIntent(1,{forward:0,turn:0,strafe:0,run:false},true),50);try{await wait(()=>ca.state.players.find(p=>p.id===a.id).hp===8,10000);}finally{clearInterval(holding);sendIntent(1,{forward:0,turn:0,strafe:0,run:false});}
  await wait(()=>cb.state.players.find(p=>p.id===a.id).hp===8);assert.equal(cb.state.players.find(p=>p.id===a.id).hp,8);assert.equal(ca.state.rescue.down.length,0);assert.equal(ca.state.inventories.find(bag=>bag.actorId===b.id).medkits,0,'native revive consumes exactly one helper medkit');assert.equal(ca.state.inventories.find(bag=>bag.actorId===a.id).medkits,2,'patient keeps its own initial and collected kits');assert.ok(ca.state.rescue.immune.some(d=>d.actorId===a.id));
+ // Switch both authenticated sessions into the complete arsenal/fleet range.
+ const oldRangeId=ca.setup.meta.id;
+ for(const client of [ca,cb])client.ws.send(JSON.stringify({type:'launch',protocol:1,gameVersion:GAME_VERSION,revision:room.revision,mode:'proving'}));
+ await wait(()=>ca.setup.meta.id!==oldRangeId&&cb.setup.meta.id===ca.setup.meta.id&&ca.state.status==='running');
+ assert.equal(ca.setup.meta.mode,'proving');assert.equal(ca.state.vehicles.length,16);assert.equal(ca.state.inventories.find(bag=>bag.actorId===a.id).bazooka,12);
+ const rangeEpoch=ca.setup.meta.id;
+ ca.ws.send(JSON.stringify({type:'inventory',protocol:1,epoch:rangeEpoch,operation:'weapon',target:'sniper',commandId:'native-sniper-equip'}));await wait(()=>ca.events.find(e=>e.commandId==='native-sniper-equip'&&e.ok));
+ ca.ws.send(JSON.stringify({type:'combat',protocol:1,epoch:rangeEpoch,weapon:'sniper',commandId:'native-sniper-fire'}));await wait(()=>ca.events.find(e=>e.commandId==='native-sniper-fire'&&e.code==='FIRED'));
+ await wait(()=>cb.state.inventories.find(bag=>bag.actorId===a.id).sniperAmmo===39);assert.equal(cb.state.inventories.find(bag=>bag.actorId===b.id).sniperAmmo,40);
  const revoked=new Promise(resolve=>cb.ws.addEventListener('close',resolve,{once:true}));await DB.prepare("UPDATE hunter_access SET status='suspended' WHERE owner=?").bind(b.id).run();
  assert.equal((await revoked).code,4003,'active mission revokes suspended participant');await wait(()=>ca.state.status==='paused');
  const pauseTick=ca.state.tick;await new Promise(r=>setTimeout(r,300));assert.equal(ca.state.tick,pauseTick,'one player cannot continue after revocation');
- console.log('playable coop: native authenticated two-account launch votes, selected assault burst/ammo, two-seat jeep/passenger/driver/exit, movement through server geometry, doors/proximity/occupied passage/collision/persistence, both terminals, extraction/victory, disconnect pause/resume, durable runtime restart and position-forgery rejection passed');
+ console.log('playable coop: native authenticated two-account launch votes, selected assault burst/ammo, two-seat jeep/passenger/driver/exit, movement through server geometry, doors/proximity/occupied passage/collision/persistence, both terminals, extraction/victory, disconnect pause/resume, durable runtime restart and position-forgery rejection, voted 16-vehicle proving ground and independently owned sniper ammo passed');
 }finally{if(timer)clearInterval(timer);for(const ws of sockets)try{ws.close();}catch(_){}await mf.dispose();await rm(directory,{recursive:true,force:true});}

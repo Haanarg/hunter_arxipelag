@@ -18,7 +18,7 @@ export function moveOnFoot(state,input,dt,{limit,swimming=false,crouched=false}=
     z:clamp(state.z-Math.cos(state.hd)*ss-Math.sin(state.hd)*lateral,-limit,limit),hd:state.hd};
 }
 export function validatePlayerInput(input){
-  return !!input&&typeof input==='object'&&!Array.isArray(input)&&Object.keys(input).length===4&&
+  return !!input&&typeof input==='object'&&!Array.isArray(input)&&[4,5].includes(Object.keys(input).length)&&Object.keys(input).every(k=>['forward','turn','strafe','run','climb'].includes(k))&&(!Object.hasOwn(input,'climb')||finite(input.climb)&&Math.abs(input.climb)<=1)&&
     ['forward','turn','strafe'].every(k=>finite(input[k])&&Math.abs(input[k])<=1)&&typeof input.run==='boolean';
 }
 function copyFall(fall){

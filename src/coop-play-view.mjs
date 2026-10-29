@@ -1,12 +1,13 @@
+import {createStaticWorldAdapter} from './world-adapter.mjs';
 import {playerModel} from './player-model-core.mjs';
-import {createVehicleView} from './coop-vehicle-view.mjs?v=0.6.38';
-import {createCombatView} from './coop-combat-view.mjs?v=0.6.38';
+import {createVehicleView} from './coop-vehicle-view.mjs?v=0.6.40';
+import {createCombatView} from './coop-combat-view.mjs?v=0.6.40';
 const colors=[0x5fc5ff,0xffc85f],css=['#5fc5ff','#ffc85f'];
-export async function createMissionView(container,meta,geometry,{three=null,makeRenderer=null}={}){
+export async function createMissionView(container,meta,geometry,{three=null,makeRenderer=null,self=null}={}){
   const doorByWall=new Map((meta.doors||[]).map(d=>[d.wallIndex,d.id]));
   const b=meta.bounds,cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2;
   const canvas=document.createElement('canvas');let displayed=canvas;container.replaceChildren(canvas);
-  let state=null,last=performance.now(),destroyed=false,draw=()=>{},dispose=()=>{},resize=()=>{};
+  let zoom=1,state=null,last=performance.now(),destroyed=false,draw=()=>{},dispose=()=>{},resize=()=>{};
   try{
     const T=three||await import('../vendor/three-r186.module.mjs'),renderer=makeRenderer?makeRenderer({canvas}):new T.WebGLRenderer({canvas,antialias:true});
     renderer.setPixelRatio(Math.min(2,devicePixelRatio||1));renderer.setClearColor(0x273b32);
@@ -14,10 +15,13 @@ export async function createMissionView(container,meta,geometry,{three=null,make
     camera.position.set(cx,meta.floor+110,cz+75);camera.lookAt(cx,meta.floor,cz);scene.add(new T.AmbientLight(0xffffff,2));
     const light=new T.DirectionalLight(0xffedcd,3);light.position.set(cx-40,100,cz+30);scene.add(light);
     const box=(w,h,d,x,y,z,color)=>{const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),new T.MeshStandardMaterial({color,roughness:1}));mesh.position.set(x,y,z);scene.add(mesh);return mesh;};
-    box(b.x1-b.x0,.3,b.z1-b.z0,cx,meta.floor-.16,cz,0x607b50);
-    const doorMeshes=new Map();
+    if(meta.mode==='proving'){
+      const terrain=createStaticWorldAdapter(geometry),geo=new T.PlaneGeometry(b.x1-b.x0,b.z1-b.z0,64,36);geo.rotateX(-Math.PI/2);const positions=geo.getAttribute('position');for(let i=0;i<positions.count;i++){const x=positions.getX(i)+cx,z=positions.getZ(i)+cz;positions.setXYZ(i,x,terrain.heightAt(x,z),z);}geo.computeVertexNormals();scene.add(new T.Mesh(geo,new T.MeshStandardMaterial({color:0x69884d,flatShading:true})));
+      box(300,.1,360,320,0,0,0x318ab9);
+    }else box(b.x1-b.x0,.3,b.z1-b.z0,cx,meta.floor-.16,cz,0x607b50);
+    const doorMeshes=new Map(),wallMeshes=[];
     geometry.walls.forEach((wall,index)=>{const id=doorByWall.get(index),mesh=box(Math.max(.1,wall.x1-wall.x0),Math.max(.1,wall.y1-wall.y0),Math.max(.1,wall.z1-wall.z0),(wall.x0+wall.x1)/2,(wall.y0+wall.y1)/2,(wall.z0+wall.z1)/2,id?0x795c39:wall.playerBlock===false?0xb4b5a3:0xa0a795);
-      mesh.visible=!wall.open;if(id){doorMeshes.set(id,mesh);mesh.userData.doorId=id;}
+      wallMeshes.push(mesh);mesh.visible=!wall.open;if(id){doorMeshes.set(id,mesh);mesh.userData.doorId=id;}
     });
     for(const s of geometry.stairs){
       const height=s.ramp?(s.top+s.bottom)/2:s.top-(s.steps-1)*s.rise/2,
@@ -40,11 +44,12 @@ export async function createMissionView(container,meta,geometry,{three=null,make
     dispose=()=>{scene.traverse(o=>{o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();});renderer.dispose();};
     const combatView=createCombatView(T,scene),vehicleView=await createVehicleView(T,scene);
     let initialized=false;
-    resize=()=>{const w=container.clientWidth,h=container.clientHeight,aspect=w/Math.max(1,h),half=Math.max((b.z1-b.z0)*.7,(b.x1-b.x0)/aspect*.6,40);camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;camera.updateProjectionMatrix();renderer.setSize(w,h,false);};
+    resize=()=>{const w=container.clientWidth,h=container.clientHeight,aspect=w/Math.max(1,h),half=Math.max((b.z1-b.z0)*.7,(b.x1-b.x0)/aspect*.6,40);camera.left=-half*aspect/zoom;camera.right=half*aspect/zoom;camera.top=half/zoom;camera.bottom=-half/zoom;camera.updateProjectionMatrix();renderer.setSize(w,h,false);};
     draw=dt=>{
-      if(state){vehicleView.update(state.vehicles);combatView.update(state.combat,state.tick);updateSupplies(state.supplies||(meta.supplies||[]).filter(s=>!state.claimedSupplies?.includes(s.id)));for(const door of state.doors||[]){const mesh=doorMeshes.get(door.id);if(mesh)mesh.visible=!door.open;}for(let i=0;i<2;i++){const p=state.players.find(p=>p.id===meta.members[i].id),pawn=pawns[i];if(!p)continue;const vehicle=state.vehicles?.find(v=>v.seats.includes(p.id)),side=vehicle?(vehicle.seats[0]===p.id?-.5:.5):0,px=p.x+Math.cos(p.hd)*side,pz=p.z-Math.sin(p.hd)*side;
+      if(state){for(const index of state.removedWalls||[])if(wallMeshes[index])wallMeshes[index].visible=false;vehicleView.update(state.vehicles,dt/1000);combatView.update(state.combat,state.tick);updateSupplies(state.supplies||(meta.supplies||[]).filter(s=>!state.claimedSupplies?.includes(s.id)));for(const door of state.doors||[]){const mesh=doorMeshes.get(door.id);if(mesh)mesh.visible=!door.open;}for(let i=0;i<2;i++){const p=state.players.find(p=>p.id===meta.members[i].id),pawn=pawns[i];if(!p)continue;const vehicle=state.vehicles?.find(v=>v.seats.includes(p.id)),side=vehicle?(vehicle.seats[0]===p.id?-.5:.5):0,px=p.x+Math.cos(p.hd)*side,pz=p.z-Math.sin(p.hd)*side;
         if(!initialized)pawn.position.set(px,p.y,pz);else pawn.position.lerp(new T.Vector3(px,p.y,pz),1-Math.exp(-dt/65));pawn.rotation.y=p.hd;pawn.children[0].rotation.z=p.hp<=0?Math.PI/2:0;pawn.children[0].position.y=p.hp<=0?.5:0;const body=pawn.children[0],tint=p.hp<=0?0xf07860:state.inventories?.find(b=>b.actorId===p.id)?.disguised?0x567346:colors[i];for(const [material] of body.userData.mats)material.color.setHex(tint);body.traverse(o=>{if(o.material?.emissive)o.material.emissive.setHex(state.rescue?.immune.some(d=>d.actorId===p.id&&state.tick<d.untilTick)?0x285a76:0);});
       }initialized=true;ring.material.color.setHex(state.phase==='won'?0xffe98c:0x99ff9b);}
+      const focus=zoom>1&&state?.players.find(p=>p.id===self);if(focus){camera.position.set(focus.x,focus.y+110,focus.z+75);camera.lookAt(focus.x,focus.y,focus.z);}else{camera.position.set(cx,meta.floor+110,cz+75);camera.lookAt(cx,meta.floor,cz);}
       renderer.render(scene,camera);
     };
     dispose=()=>{vehicleView.destroy();combatView.destroy();scene.traverse(o=>{o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();});renderer.dispose();};
@@ -53,23 +58,24 @@ export async function createMissionView(container,meta,geometry,{three=null,make
     const flat=document.createElement('canvas');displayed=flat;container.replaceChildren(flat);const ctx=flat.getContext('2d');
     resize=()=>{flat.width=Math.max(1,container.clientWidth)*Math.min(2,devicePixelRatio||1);flat.height=Math.max(1,container.clientHeight)*Math.min(2,devicePixelRatio||1);};
     draw=()=>{
-      if(!ctx)return;const w=flat.width,h=flat.height,scale=Math.min(w/(b.x1-b.x0+10),h/(b.z1-b.z0+10)),x=v=>w/2+(v-cx)*scale,z=v=>h/2+(v-cz)*scale;
+      if(!ctx)return;const w=flat.width,h=flat.height,scale=zoom*Math.min(w/(b.x1-b.x0+10),h/(b.z1-b.z0+10)),focus=zoom>1&&state?.players.find(p=>p.id===self),x=v=>w/2+(v-(focus?.x??cx))*scale,z=v=>h/2+(v-(focus?.z??cz))*scale;
       ctx.fillStyle='#314f3e';ctx.fillRect(0,0,w,h);ctx.fillStyle='#70835b';ctx.fillRect(x(b.x0),z(b.z0),(b.x1-b.x0)*scale,(b.z1-b.z0)*scale);
+      if(meta.mode==='proving'){ctx.fillStyle='#318ab9';ctx.fillRect(x(170),z(b.z0),(b.x1-170)*scale,(b.z1-b.z0)*scale);}
       const open=new Map((state?.doors||[]).map(d=>[d.id,d.open]));
-      for(const [index,wall] of geometry.walls.entries())if(!(open.get(doorByWall.get(index))??wall.open)){ctx.fillStyle=doorByWall.has(index)?'#795c39':wall.playerBlock===false?'#bbb998':'#c2c7b7';ctx.fillRect(x(wall.x0),z(wall.z0),Math.max(1,(wall.x1-wall.x0)*scale),Math.max(1,(wall.z1-wall.z0)*scale));}
+      for(const [index,wall] of geometry.walls.entries())if(!(state?.removedWalls||[]).includes(index)&&!(open.get(doorByWall.get(index))??wall.open)){ctx.fillStyle=doorByWall.has(index)?'#795c39':wall.playerBlock===false?'#bbb998':'#c2c7b7';ctx.fillRect(x(wall.x0),z(wall.z0),Math.max(1,(wall.x1-wall.x0)*scale),Math.max(1,(wall.z1-wall.z0)*scale));}
       meta.routes.forEach((path,i)=>{ctx.beginPath();path.forEach((p,j)=>j?ctx.lineTo(x(p.x),z(p.z)):ctx.moveTo(x(p.x),z(p.z)));ctx.strokeStyle=css[i];ctx.globalAlpha=.3;ctx.lineWidth=2;ctx.stroke();ctx.globalAlpha=1;});
       const circle=(p,r,color,label)=>{ctx.beginPath();ctx.arc(x(p.x),z(p.z),r*scale,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();if(label){ctx.fillStyle='#132327';ctx.font='bold '+Math.max(12,2*scale)+'px system-ui';ctx.textAlign='center';ctx.fillText(label,x(p.x),z(p.z)+scale*.7);}};
       for(const s of state?.supplies||(meta.supplies||[]).filter(s=>!state?.claimedSupplies?.includes(s.id)))circle(s,.7,s.item==='medkits'?'#f5f4e8':'#e4e7cc',s.item==='medkits'?'✚':'+');
       circle(meta.extraction,3,'#a2efa2','E');meta.terminals.forEach((p,i)=>circle(p,2,css[i],String(i+1)));
-      for(const v of state?.vehicles||[]){if(v.destroyed)continue;ctx.save();ctx.translate(x(v.x),z(v.z));ctx.rotate(-v.hd);ctx.fillStyle='#819966';ctx.fillRect(-.9*scale,-1.6*scale,1.8*scale,3.2*scale);ctx.fillStyle='#d6e2c8';ctx.fillRect(-.7*scale,-1.1*scale,1.4*scale,.3*scale);ctx.restore();}
+      for(const v of state?.vehicles||[]){if(v.destroyed)continue;ctx.save();ctx.translate(x(v.x),z(v.z));ctx.rotate(-v.hd);ctx.fillStyle='#819966';ctx.fillRect(-.9*scale,-1.6*scale,1.8*scale,3.2*scale);ctx.fillStyle='#d6e2c8';ctx.fillRect(-.7*scale,-1.1*scale,1.4*scale,.3*scale);ctx.restore();if(meta.mode==='proving'){ctx.fillStyle='#fff';ctx.font='11px system-ui';ctx.fillText(v.t,x(v.x),z(v.z)-5);}}
       for(const t of state?.combat?.targets||[])if(t.hp>0)circle(t,1.2,t.state==='attack'?'#ff3535':t.state==='alert'||t.state==='search'?'#e4a347':'#a85e50',t.state==='attack'?'!':String(t.hp));
       for(const bullet of state?.combat?.projectiles||[])circle(bullet,.25,'#ffffff');
       for(const g of state?.combat?.grenades||[])circle(g,.7,'#becd62','!');
-      for(const e of state?.combat?.effects||[]){if(e.kind==='shot'){ctx.beginPath();ctx.moveTo(x(e.from.x),z(e.from.z));ctx.lineTo(x(e.to.x),z(e.to.z));ctx.strokeStyle=e.hit?'#ff6855':'#ffe18a';ctx.lineWidth=2;ctx.stroke();}else if(e.kind==='impact'){circle(e.at,.4,e.hit?'#ff6855':'#ffe4aa');}else{ctx.globalAlpha=.3;circle(e.at,Math.max(.3,e.radius*Math.min(1,(state.tick-e.tick+1)/12)),'#ff9a32');ctx.globalAlpha=1;}}
+      for(const e of state?.combat?.effects||[]){if(e.kind==='shot'){ctx.beginPath();ctx.moveTo(x(e.from.x),z(e.from.z));ctx.lineTo(x(e.to.x),z(e.to.z));ctx.strokeStyle=e.hit?'#ff6855':'#ffe18a';ctx.lineWidth=2;ctx.stroke();}else if(e.kind==='impact'){circle(e.at,.4,e.hit?'#ff6855':'#ffe4aa');}else if(e.kind==='explosion'){ctx.globalAlpha=.3;circle(e.at,Math.max(.3,e.radius*Math.min(1,(state.tick-e.tick+1)/12)),'#ff9a32');ctx.globalAlpha=1;}}
       if(state)state.players.forEach(p=>{const i=meta.members.findIndex(m=>m.id===p.id);circle(p,1,p.hp<=0?'#f07860':state.inventories?.find(b=>b.actorId===p.id)?.disguised?'#567346':css[i],p.hp<=0?'✚':null);ctx.beginPath();ctx.moveTo(x(p.x),z(p.z));ctx.lineTo(x(p.x-Math.sin(p.hd)*3),z(p.z-Math.cos(p.hd)*3));ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();});
     };
   }
   resize();const observer=new ResizeObserver(resize);observer.observe(container);let frame;
   function loop(now){if(destroyed)return;draw(Math.min(100,now-last));last=now;frame=requestAnimationFrame(loop);}frame=requestAnimationFrame(loop);
-  return {setState(value){state=value;},destroy(){destroyed=true;cancelAnimationFrame(frame);observer.disconnect();dispose();if(displayed.parentNode===container)displayed.remove();}};
+  return {setZoom(value){zoom=Math.max(1,Math.min(8,value));resize();},setState(value){state=value;},destroy(){destroyed=true;cancelAnimationFrame(frame);observer.disconnect();dispose();if(displayed.parentNode===container)displayed.remove();}};
 }

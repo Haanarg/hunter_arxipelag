@@ -576,3 +576,25 @@ Integració de main: es conserva el con 3D compartit de pistola/fusell de v0.6.2
 4. Equipament, animacions, àudio, món i campanya complets preservant RNG.
 5. Desaments cooperatius permanents, migracions, estadístiques/historial i resum de missió.
 6. Dos navegadors físics, GPU/Android, controls/rendiment/acabat; animació de portes i portes autònomes de la IA individual.
+
+
+## Cooperatiu · fase 25 · Tot l’arsenal i les 16 famílies al camp de proves (v0.6.40)
+
+- Nova modalitat **Camp de proves**, separada del relleu, amb terra, bassa i espai aeri. Canviar/reiniciar exigeix dos vots de la mateixa modalitat, autenticats i persistits. Restableix inventaris/dianes/flota; no altera desaments individuals. Sense comptes de producció afegits ni recursos nous.
+- Les 16 famílies disponibles: bici, moto, cotxe militar/Humvee, cotxe civil, camió, tanqueta, tanc, hovercraft, helicòpter normal i de combat, llanxa, llanxa de coets, moto aquàtica, barca de rems, windsurf i ferri. Mateixa fàbrica original extreta a `vehicle-model-core.mjs`, escales/radis/caixes a `vehicle-specs.mjs` i batching original compartit. Els 16 hashes de geometria/transformacions/materials coincideixen amb el codi individual publicat v0.6.39. Cotxe civil C1A, camió A4.3 i Humvee B originals.
+- Conducció dels 16 perfils amb `inputs`/`advanceVehicle`; costa, profunditat i inundació des del mòdul original. Lift d’helicòpter extret a `stepHelicopterLift` i usat també per `stepV`. Re/Av Pàg i botons de vol; Y/U lateral per hover/heli. Validació d’input accepta només el camp opcional `climb` finit [-1,1], ignorat a peu. Seients/vida/destrucció/munició de vehicle persistits, passatger sense controls, aterratge abans de baixar i embarcament nedant per a les embarcacions. No es declara complet el contacte avançat del motor individual.
+- Armes seleccionables: pistola, fusell d’assalt, franctirador, bazuca, ganivet, cisalla i C4; granades amb B. Inventaris/munició propis, deixar i recollir per contacte. C4 de 5 s, granada de potència mitjana fixa al camp; zoom tàctic ×8 (no el visor individual en primera persona). `weapon-catalog.mjs` deriva el dany de `combatBalance`, comparteix paràmetres i extreu llançament de granada, selecció de ganivet i cisalla també utilitzats per l’individual.
+- Armament muntat connectat: canons de tanc/tanqueta, canó i míssil secundari de l’heli de combat, coets navals, pistola dels vehicles oberts, granades/C4 des de Huey. Consum personal o de míssils del vehicle segons correspongui; passatger sense foc. Autoapuntat/vol/primera col·lisió/explosió compartits, límit final de 120° del bazuca conservat.
+- Filferrada de prova tallable amb la regla individual, cobertura i col·lisió actualitzades al servidor; índexs retirats persistits. Explosius que toquen terra es recolzen sobre la superfície, evitant quedar enterrats i perdre el dany per autooclusió. El test natiu llança la seva granada lluny del jeep abans de provar-ne l’embarcament: ja no pressuposa que l’explosió enterrada sigui inofensiva.
+- Preservada la millora paral·lela v0.6.39: boca real del fusell, dues mans i inclinació del cap. El fixture aïllat de ràfegues incorpora el helper real del canó; el test del bazuca consulta el con compartit sense exigir un literal duplicat.
+- Validació: cada tipus puja/condueix/restaura, embarcacions/aigua i helicòpters/vol, models Three finits i retirada; armes/equipament, munició independent, dany, ràfega, C4, cisalla i muntades; 3.840 passos de conducció congelats, hashes dels 16 models originals, regressions individuals d’armes i costa. Suite cooperativa d’unitats/integració superada i prova nativa amb D1/SQLite DO/WebSocket i dues sessions autenticades: relleu, jeep, armes, portes, victòria, pausa/reconnexió, reinici, rescat, canvi votat al camp amb 16 vehicles i franctirador/munició personal. GPU/Android físics no verificats.
+- Generador temporal `relay:15`; cal missió nova i clients actualitzats. Cap dependència nova. El camp no amplia encara la campanya a tot l’arxipèlag.
+
+### Què queda després d’aquesta fase
+
+1. Completar paritat de vehicles: OBB, impactes entre vehicles/atropellaments, suports/transport sobre ferri, obstacles i accidents aeris, impulsos d’ejecció i efectes originals.
+2. Integrar boques/torretes i animacions d’armes/conductors, visor individual real, càrrega variable de granada i temporitzador editable del C4. Les famílies ja són funcionals al camp, amb aquests límits explícits.
+3. Destrucció d’edificis/filferrades per explosions, torres/supressió, civils i efectes originals, preservant cobertura i RNG.
+4. IA individual compartida completa (navegació/persecució/estats/cadències), equipament/àudio/món/objectius i campanya sencera.
+5. Desaments cooperatius permanents, migracions, estadístiques/historial i resum de missió.
+6. Proves amb dos navegadors físics i GPU/Android, rendiment/controls/acabat i portes autònomes de la IA.
