@@ -10,6 +10,7 @@ window.HUNTER_COOP_WORLD=Object.freeze({capture:captureCoopWorldGeometry,
   create:()=>window.HUNTER_WORLD_ADAPTER.createStaticWorldAdapter(captureCoopWorldGeometry())});
 
 // Native multiplayer is a session of the original runtime, never another view.
+const NATIVE_VEHICLE_POSE_KEYS=['x','y','z','hd','v','alt','verticalV','sideV','strafeV','driveInput','steerInput','yawRate'];
 let nativeCoopSession=null;
 function nativeCoopInput(){
  if(!nativeCoopSession||nativeCoopSession.preparing||paused||document.hidden)return {forward:0,turn:0,strafe:0,run:false,interact:false};
@@ -75,10 +76,43 @@ function nativeCoopCommand(type,payload={}){
 }
 function updateNativeCoop(dt){
  const s=nativeCoopSession;if(!s)return;updateStrafeControls();joystick.setRunEnabled(!cv&&!paused);if(s.preparing||!s.state){updatePlayerHUD(.13);return;}
- const state=s.state,actor=state.players.find(p=>p.id===s.self);if(!actor)return;
- const projecting=s.projectedState!==state,input=nativeCoopInput(),presented=s.prediction?.advance(dt,input,!paused&&!document.hidden&&state.status==='running')||actor;elapsed=state.tick/30;Object.assign(P,{x:presented.x,y:presented.y,z:presented.z,hd:presented.hd});hp=actor.hp;kills=state.combat.targets.filter(e=>e.hp<=0).length;swimming=!!presented.swimming;playerFall=presented.fall;ib=buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2&&P.y<b.fy+b.h)||null;
- const bag=state.inventories.find(i=>i.actorId===s.self);if(bag){if(grenadeEquipped&&!bag.grenades){cancelGrenadeCharge();grenadeEquipped=false;}ammo=bag.bullets;sniperAmmo=bag.sniperAmmo;inv={};for(const [key,id] of Object.entries({grenades:'granada',disguise:'disf',medkits:'med',assault:'fusell_assalt',sniper:'franctirador',bazooka:'bazooka',cutters:'cisalla',c4:'expl'}))if(bag[key])inv[id]=bag[key];bazookaEquipped=!grenadeEquipped&&bag.weapon==='bazooka';sniperEquipped=!grenadeEquipped&&bag.weapon==='sniper';assaultRifleEquipped=!grenadeEquipped&&bag.weapon==='assault';cisallaEquipped=!grenadeEquipped&&bag.weapon==='cutters';knifeEquipped=!grenadeEquipped&&bag.weapon==='knife';if(disg!==bag.disguised)setDis(bag.disguised);}
- cv=null;for(const row of state.vehicles){const v=s.vehicles.get(row.id);if(!v)continue;if(projecting)Object.assign(v,row);const predictedVehicle=s.prediction?.vehicle();if(predictedVehicle?.id===row.id)for(const key of ['x','y','z','hd','v','alt','verticalV','sideV','strafeV','driveInput','steerInput','yawRate'])if(predictedVehicle[key]!==undefined)v[key]=predictedVehicle[key];if(row.destroyed)v.o.visible=false;if(row.seats.includes(s.self)){cv=v;v.o.visible=!row.destroyed;}if(projecting&&!v.o.visible)v.o.position.set(row.x,row.y,row.z);if(projecting&&v.o.userData.turretPivot)v.o.userData.turretPivot.rotation.y=row.turretYaw||0;if(projecting&&v.o.userData.turretPitch)v.o.userData.turretPitch.rotation.x=row.turretPitch||0;}
+ const state=s.state,projecting=s.projectedState!==state,
+       actor=projecting?state.players.find(p=>p.id===s.self):s.projectedActor;
+ if(!actor)return;
+ if(projecting){s.projectedActor=actor;hp=actor.hp;kills=state.combat.targets.reduce((count,e)=>count+(e.hp<=0),0);}
+ const input=nativeCoopInput(),
+       presented=s.prediction?.advance(dt,input,!paused&&!document.hidden&&state.status==='running')||actor;
+ elapsed=state.tick/30;
+ P.x=presented.x;P.y=presented.y;P.z=presented.z;P.hd=presented.hd;
+ swimming=!!presented.swimming;playerFall=presented.fall;
+ ib=buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2&&P.y<b.fy+b.h)||null;
+ // Inventari, vida i recomptes autoritatius són immutables entre snapshots.
+ const bag=projecting?state.inventories.find(i=>i.actorId===s.self):null;
+ if(bag&&bag!==s.appliedBag){s.appliedBag=bag;if(grenadeEquipped&&!bag.grenades){cancelGrenadeCharge();grenadeEquipped=false;}ammo=bag.bullets;sniperAmmo=bag.sniperAmmo;inv={};for(const [key,id] of Object.entries({grenades:'granada',disguise:'disf',medkits:'med',assault:'fusell_assalt',sniper:'franctirador',bazooka:'bazooka',cutters:'cisalla',c4:'expl'}))if(bag[key])inv[id]=bag[key];bazookaEquipped=!grenadeEquipped&&bag.weapon==='bazooka';sniperEquipped=!grenadeEquipped&&bag.weapon==='sniper';assaultRifleEquipped=!grenadeEquipped&&bag.weapon==='assault';cisallaEquipped=!grenadeEquipped&&bag.weapon==='cutters';knifeEquipped=!grenadeEquipped&&bag.weapon==='knife';if(disg!==bag.disguised)setDis(bag.disguised);}
+ if(projecting){
+   // Els deltes conserven la mateixa referència per a les entitats intactes.
+   // No copiam centenars de vehicles quan només se n'ha mogut un.
+   s.appliedVehicleRows??=new Map();
+   cv=null;
+   for(const row of state.vehicles){
+     const v=s.vehicles.get(row.id);if(!v)continue;
+     if(s.appliedVehicleRows.get(row.id)!==row){
+       Object.assign(v,row);
+       if(!v.o.visible)v.o.position.set(row.x,row.y,row.z);
+       if(v.o.userData.turretPivot)v.o.userData.turretPivot.rotation.y=row.turretYaw||0;
+       if(v.o.userData.turretPitch)v.o.userData.turretPitch.rotation.x=row.turretPitch||0;
+       s.appliedVehicleRows.set(row.id,row);
+     }
+     if(row.destroyed)v.o.visible=false;
+     if(row.seats.includes(s.self)){cv=v;v.o.visible=!row.destroyed;}
+   }
+ }
+ // La predicció només modifica cada fotograma el vehicle que condueix
+ // l'actor local; la resta espera dades noves del servidor.
+ const predictedVehicle=s.prediction?.vehicle();
+ if(cv&&!cv.destroyed&&predictedVehicle?.id===cv.saveId)
+   for(const key of NATIVE_VEHICLE_POSE_KEYS)
+     if(predictedVehicle[key]!==undefined)cv[key]=predictedVehicle[key];
  updateVehicleVisualLod(elapsed,dt,{skipHidden:true});
  if(cv||swimming)playerCrouched=false;if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;animPl(cv?0:input.forward,dt,input.run,input.strafe);poseRider(cv,dt);
  for(const other of state.players)if(other.id!==s.self){let model=s.remotes.get(other.id);if(!model){model=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});model.position.set(other.x,other.y,other.z);model.userData.nativeRider=window.HUNTER_RIDER.create(THREE,{scene,box:bx,material:M,scales:VS,heightAt:hAt,shadows:visualQuality.shadows});scene.add(model);s.remotes.set(other.id,model);}const oldX=model.position.x,oldZ=model.position.z;model.position.lerp(new THREE.Vector3(other.x,other.y,other.z),1-Math.exp(-18*dt));model.rotation.y=other.hd;const vehicleRow=state.vehicles.find(v=>v.seats.includes(other.id)),remoteVehicle=vehicleRow?s.vehicles.get(vehicleRow.id):null;model.visible=!remoteVehicle;model.userData.nativeRider.update(remoteVehicle,dt);const speed=Math.hypot(model.position.x-oldX,model.position.z-oldZ)/Math.max(.001,dt);window.HUNTER_CHARACTERS.animatePlayer(model,{forward:Math.min(1,speed/6),dt,swimming:other.swimming,crouching:!!other.crouched,inVehicle:!!remoteVehicle,ammo:1,running:speed>7});}
