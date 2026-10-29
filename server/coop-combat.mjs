@@ -1,5 +1,5 @@
 import {turretSpecs,stepVehicleTurret,vehicleGunPose} from '../src/vehicle-turret-core.mjs';
-import {weaponCatalog,combatCommands,mountedWeapons,grenadeLaunch,meleeTarget} from '../src/weapon-catalog.mjs';
+import {weaponCatalog,combatCommands,mountedWeapons,grenadeLaunch,vehicleGrenadeLaunch,meleeTarget} from '../src/weapon-catalog.mjs';
 import {limitBazookaHorizontalAim} from '../src/aiming-core.mjs';
 import {enemyAccuracy} from '../src/enemy-accuracy-core.mjs';
 import {createWorldRandom} from '../src/world-generation-core.mjs';
@@ -88,9 +88,9 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     const cached=results.find(r=>r.actorId===actorId&&r.commandId===message.commandId);if(cached)return {...cached,duplicate:true};
     const p=players().find(p=>p.id===actorId),bag=inventory.get(actorId);let code='INVALID',ok=false;
     if(p&&message.epoch===meta.id&&typeof message.commandId==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(message.commandId)&&combatCommands.includes(message.weapon)){
-      const vehicle=vehicles.mounted(actorId),weapon=vehicle?(message.weapon==='secondary'&&vehicle.t==='heli_combat'?'heliMissile':['grenade','c4'].includes(message.weapon)&&vehicle.t==='heli'?message.weapon:mountedWeapons[vehicle.t]):message.weapon;
+      const vehicle=vehicles.mounted(actorId),weapon=vehicle?(message.weapon==='grenade'?(vehicle.t==='heli_combat'?null:'grenade'):message.weapon==='secondary'&&vehicle.t==='heli_combat'?'heliMissile':message.weapon==='c4'&&vehicle.t==='heli'?'c4':mountedWeapons[vehicle.t]):message.weapon;
       const profile=weaponCatalog[weapon],ammoSource=profile?.ammo==='rockets'?vehicle:bag,key=actorId+':'+(weapon==='assault'?'pistol':weapon),cooldown=meta.mode!=='proving'&&['pistol','assault','grenade'].includes(weapon)?({pistol:10,assault:18,grenade:30}[weapon]):Math.ceil((profile?.cooldown||1)*30);
-      if(!active()||p.hp<=0||p.fall||p.swimming&&!vehicle||!canAttack(actorId)||!profile||vehicle&&vehicle.seats[0]!==actorId)code='NOT_ACTIVE';
+      if(!active()||p.hp<=0||p.fall||p.swimming&&!vehicle||!canAttack(actorId)||!profile||vehicle&&(weapon==='grenade'? !vehicle.seats.includes(actorId):vehicle.seats[0]!==actorId))code='NOT_ACTIVE';
       else if(!vehicle&&!['grenade'].includes(weapon)&&((bag.weapon||'pistol')!==weapon||profile.item&&!bag[profile.item]))code='NOT_EQUIPPED';
       else if(tick-(cooldowns.get(key)??-Infinity)<cooldown)code='COOLDOWN';
       else if(profile.ammo&&!(ammoSource?.[profile.ammo]>0)||weapon==='assault'&&bag.bullets<3)code='EMPTY';
@@ -102,7 +102,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
           code=cutWire(p)?'CUT':'NO_WIRE';
         }else if(weapon==='grenade'||weapon==='c4'){
           bag[profile.ammo]--;
-          const launched=weapon==='c4'?{x:p.x-Math.sin(p.hd)*1.35,y:p.y+.24,z:p.z-Math.cos(p.hd)*1.35,vx:0,vy:0,vz:0}:meta.mode==='proving'?grenadeLaunch(.5,p,p.hd):{x:p.x,y:p.y+1.5,z:p.z,vx:-Math.sin(p.hd)*14,vz:-Math.cos(p.hd)*14,vy:8};
+          const launched=weapon==='c4'?{x:p.x-Math.sin(p.hd)*1.35,y:p.y+.24,z:p.z-Math.cos(p.hd)*1.35,vx:0,vy:0,vz:0}:vehicle?vehicleGrenadeLaunch(vehicle,vehicle.y):meta.mode==='proving'?grenadeLaunch(.5,p,p.hd):{x:p.x,y:p.y+1.5,z:p.z,vx:-Math.sin(p.hd)*14,vz:-Math.cos(p.hd)*14,vy:8};
           grenades.push({id:weapon+'-'+(++sequence),actorId,...launched,weapon,explodeAt:tick+(weapon==='c4'?150:meta.mode==='proving'?72:60)});code=weapon==='c4'?'PLANTED':'THROWN';
         }else if(weapon==='assault'){
           const burst={actorId,remaining:0,delay:0};beginBurst(burst,bag.bullets,()=>{fire(actorId,p,bag,tick);return true;});bursts.push(burst);code='BURST';
