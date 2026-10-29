@@ -11,6 +11,9 @@ import {validatePlayerInput} from '../src/player-simulation.mjs';
 export class CoopRoomHub {
   constructor(ctx,env){
     this.ctx=ctx;this.env=env;this.stateBaselines=new WeakMap();this.queue=Promise.resolve();this.votes=new Map();this.mission=null;this.record=null;this.geometry=null;this.checkedAt=0;this.nativeVotes=new Map();this.nativeUpload=null;
+    // Rate limits per connexió en memòria efímera (també si el DO hiberna).
+    // L'attachment continua reservat a la identitat i a la verificació.
+    this.inputRates=new WeakMap();this.combatRates=new WeakMap();
     this.loading=ctx.blockConcurrencyWhile(async()=>{
       const record=await readCoopCheckpoint(ctx.storage);
       if(record){
@@ -22,6 +25,14 @@ export class CoopRoomHub {
     });
   }
   serial(fn){const task=this.queue.then(()=>this.loading).then(fn);this.queue=task.catch(()=>{});return task;}
+  rateAllowed(table,ws,now,max){
+    let entry=table.get(ws);
+    if(!entry||now-entry.since>=1000||now<entry.since){
+      entry={since:now,count:0};table.set(ws,entry);
+    }
+    entry.count++;
+    return entry.count<=max;
+  }
   fetch(request){return this.serial(()=>this.fetchInner(request));}
   webSocketMessage(ws,message){return this.serial(()=>this.messageInner(ws,message));}
   webSocketClose(ws,code,reason){return this.serial(()=>this.closeInner(ws,code,reason));}
@@ -71,16 +82,14 @@ export class CoopRoomHub {
     if(message.length>1024){ws.close(1008,'Missatge massa gran');return;}
     if(body.type==='input'){
       if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==6||typeof body.interact!=='boolean'||!validatePlayerInput(body.input)||!Number.isSafeInteger(body.sequence)||body.sequence<1){ws.close(1008,'Entrada invàlida');return;}
-      if(now-(a.inputWindow||0)>=1000){a.inputWindow=now;a.inputs=0;}a.inputs=(a.inputs||0)+1;
-      if(a.inputs>45){ws.close(1008,'Massa entrades');return;}ws.serializeAttachment(a);
+      if(!this.rateAllowed(this.inputRates,ws,now,45)){ws.close(1008,'Massa entrades');return;}
       if(!await this.verify(ws)){ws.close(4003,'Accés finalitzat');return;}
       if(this.mission&&body.epoch===this.mission.meta.id)this.mission.accept(a.actorId,body);
       return;
     }
     if(body.type==='combat'){
       if(!a.gameClient||a.gameVersion!==GAME_VERSION||![5,6].includes(Object.keys(body).length)||Object.keys(body).some(k=>!['type','protocol','epoch','weapon','commandId','power','seconds'].includes(k))||(body.seconds!==undefined&&(body.weapon!=='c4'||!Number.isInteger(body.seconds)||body.seconds<0||body.seconds>59))||(body.power!==undefined&&(body.weapon!=='grenade'||!Number.isFinite(body.power)||body.power<0||body.power>1))||typeof body.epoch!=='string'||body.epoch.length>64||!combatCommands.includes(body.weapon)||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre de combat invàlida');return;}
-      if(now-(a.combatWindow||0)>=1000){a.combatWindow=now;a.combatCount=0;}a.combatCount=(a.combatCount||0)+1;ws.serializeAttachment(a);
-      if(a.combatCount>12){ws.close(1008,'Massa ordres de combat');return;}
+      if(!this.rateAllowed(this.combatRates,ws,now,12)){ws.close(1008,'Massa ordres de combat');return;}
       if(!await this.verify(ws)){ws.close(4003,'Accés finalitzat');return;}
       if(!this.mission||body.epoch!==this.mission.meta.id){this.send(ws,{type:'action',kind:'combat',commandId:body.commandId,ok:false,code:'NOT_ACTIVE'});return;}
       try{const result=this.mission.combatCommand(a.actorId,body);await this.save(this.record.nextAlarm);this.broadcastState();this.send(ws,{type:'action',...result});}
