@@ -743,7 +743,7 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
   // Les finestres de la planta alta no queden a l'alçada del canó
   // quan disparam des del carrer. Si no hi ha enemics seleccionats,
   // les armes lleugeres poden adquirir directament un vidre intacte.
-  if(!selector.hasTarget&&shotClass!=='heavy'&&shotClass!=='attackCannon'){
+  if(!selector.hasTarget&&!cv&&['pistol','assault','light'].includes(shotClass)){
     for(const w of wallCandidates(x,z,Math.min(range,90))){
       if(!w.upperFloorWindow||w.open||!w.windowPanes)continue;
       for(let i=0;i<w.windowPanes.length;i++){
