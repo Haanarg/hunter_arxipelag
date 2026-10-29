@@ -84,3 +84,24 @@ La desconnexió conserva la pausa de sala i l'estat persistent existents. La mig
 ## Límit d'aquest canvi
 
 La 0.6.50 substitueix l'entrada del client separat per la sessió dins del runtime original. Es comparteixen controls, HUD i càmera, i el servidor consumeix el món original verificat pels dos participants. La IA completa, els sistemes opcionals i la prova amb dos dispositius encara resten pendents; l'estat precís es descriu a COOP_NATIVE_RUNTIME.md.
+
+## Pla de rendiment cooperatiu (29-10-2026)
+
+**Objectiu:** fer viable la partida nativa de dos jugadors aprofitant el motor individual, sense inventar un segon renderitzador ni degradar les simulacions físiques. Distingir sempre **FPS i temps de fotograma al client** de **latència de transport i de la simulació autoritativa**. Una millora gràfica no garanteix eliminar el retard dels controls.
+
+### Prioritats, per ordre
+
+1. **LOD visual únic dels vehicles (primer canvi).** Reutilitzar la mateixa política de `place()` del mode individual al cooperatiu: pilot local i vehicles propers cada fotograma; distància mitjana cada 0,1 s; llunyans cada 0,45 s. No recalcular rodes/erugues/rotors i alçades de centenars de vehicles a cada fotograma remot. Separar l'aplicació de l'estat del servidor de la presentació. Respectar la destrucció: els vehicles destruïts mai no reapareixen pel LOD. El servidor continua autoritzant moviment, col·lisions i dany.
+2. **Aplicació incremental dels estats rebuts.** Evitar copiar i reprocessar totes les entitats a cada subpas local si el `tick` autoritatiu no ha canviat. Reutilitzar maps per ID, minimitzar cerques `find()`, `Set` temporals i altres assignacions per fotograma. Conservar animacions contínues, càmera, HUD i l'estat que pot canviar localment. **Pendent.**
+3. **Cost visual compartit.** Perfilar i ajustar ombres, animació d'erugues/rodes, vegetació i efectes de lluny amb pressupostos, llindars suaus i reutilització de recursos. Evitar invisibilitzar elements propers o modificar la física per optimitzar gràfics. Validar les mateixes llavors i els dos modes. **Pendent.**
+4. **Suavització temporal cooperativa.** Interpolar company i vehicles remots entre snapshots amb buffer curt i límit d'extrapolació; predicció local del jugador/vehicle conduït amb reconciliació davant l'autoritat, mantenint l'historial de seqüències. No extrapolar impactes, dany, recollides ni accions autoritatives. **Pendent.**
+5. **Transport i servidor.** Mesurar mida/freqüència dels snapshots, temps de simulació i persistència al Durable Object, RTT i retard del tick. Explorar deltes d'estat, empaquetat i ritmes diferenciats per entitat; revisar broadcasts de l'estat complet i la cadència actual de tres ticks de 1/30 s per alarma d'uns 100 ms. Comparar abans de canviar protocols per no perdre fiabilitat de reconnexió. **Pendent.**
+
+### Comprovació obligatòria
+
+- Mesurar FPS, CPU de simulació, render i p95/p99 de fotogrames, draw calls, memòria i **nombre de crides a `place()` per distància** en escenaris normal i de càrrega alta.
+- Mesurar per separat RTT, snapshots per segon, bytes per segon, temps del tick del servidor, temps de desament i retard visible dels actors.
+- Provar el mode individual, els dos clients natius, un vehicle local, un altre proper, un llunyà, un destruït i l'entrada/sortida de vehicles; provar vehicles terrestres, marítims i aeris i la mira.
+- Diferenciar **prova automatitzada**, **prova visual amb GPU/dos dispositius** i **desplegament a Cloudflare**. Els benchmarks del mode individual no demostren per si sols menys latència de xarxa.
+
+El primer punt es desenvolupa al runtime original i el seu resultat concret es documenta també a [COOP_NATIVE_RUNTIME.md](COOP_NATIVE_RUNTIME.md).
