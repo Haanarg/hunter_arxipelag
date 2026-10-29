@@ -82,12 +82,12 @@ const assert=require('node:assert/strict');
  const driven=game.run(`(()=>{
  const s=nativeCoopSession;
  s.prediction={advance(){return s.state.players[0]},vehicle(){return {
-   id:s.state.vehicles[0].id,x:12345,z:456,hd:1,v:2}}};
+   id:s.state.vehicles[0].id,x:s.state.vehicles[0].x+2,z:s.state.vehicles[0].z,hd:1,v:2}}};
  s.state=visualInterpolationDriver;updateNativeCoop(.05);
  return {cvId:cv?.saveId,x:cv?.x,localX:P.x};
  })()`);
  assert.equal(driven.cvId,car.id);
- assert.equal(driven.x,12345,'Predicció del pilot local té prioritat');
+ assert.equal(driven.x,car.x+20,'Predicció del pilot local té prioritat');
  assert.equal(driven.localX,a.x,'El jugador propi no es desplaça pel buffer');
  console.log('native coop original runtime: remote actor/vehicle interpolation, passenger and driver priority passed');
 })().catch(e=>{console.error(e);process.exitCode=1});
