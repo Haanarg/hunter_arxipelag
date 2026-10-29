@@ -43,9 +43,14 @@ export function guardInView(guard,player){
   return d<=2||inView(guard.heading||0,dx,0,dz,Infinity,{sightHalfAngle:Math.PI/3+1e-10,sightVerticalAngle:Math.PI/2});
 }
 const facePoint=(guard,p)=>Math.atan2(-(p.x-guard.x),-(p.z-guard.z));
-export function createRelayCombat({meta,record={},inventory,players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false,blastWire=()=>{},blastStructures=()=>{},damagePalm=()=>false,blastPalms=()=>{},breakWindow=()=>false,damageWall=()=>false}){
+export function createRelayCombat({meta,record={},inventory,players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false,blastWire=()=>{},blastStructures=()=>{},damagePalm=()=>false,blastPalms=()=>{},breakWindow=()=>false,damageWall=()=>false,windowAvailable=()=>true}){
   const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);const bursts=structuredClone(record.bursts||[]),projectiles=structuredClone(record.projectiles||[]);let sequence=record.sequence||0;
   const random=createWorldRandom(record.randomState??(((meta.seed||0)^0x7269666c)>>>0)),roll=(a,b)=>a+random()*(b-a);
+  // Compute the upper-window target list once; the full archipelago can have
+  // thousands of walls. Destruction is checked against live state below.
+  const upperPanes=geometry().walls.flatMap((wall,wallIndex)=>
+    wall.upperFloorWindow&&wall.windowPanes?.length?
+      wall.windowPanes.map((pane,paneIndex)=>({wall,wallIndex,pane,paneIndex})):[]);
   const effect=(kind,tick,data)=>{effects.push({id:++sequence,kind,tick,...data});if(effects.length>64)effects.shift();};
   function alarm(position,actorId,tick){for(const t of targets)if(t.ai&&t.hp>0&&Math.hypot(t.x-position.x,t.z-position.z)<35){t.alarmedUntil=tick+180;t.focus=actorId;t.lastSeenTick=tick;t.lastKnown={x:position.x,y:position.y,z:position.z};t.heading=facePoint(t,position);t.state='search';}}
   function damageVehicle(v,amount,shotClass,tick,queue){
@@ -87,6 +92,16 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
       isClear:(x,y,z,tx,ty,tz)=>traceArena({x,y,z},{x:tx,y:ty,z:tz},geometry(),world()).fraction>=1});
     for(const t of targets)if(t.hp>0)aim.consider(t,'enemy',weaponTargetPriority({...t,t:t.t||'soldat'},heavy?'heavy':weapon),t.x,t.y+1.5,t.z);
     for(const v of vehicles.live())if(v!==vehicle&&!v.seats.some(Boolean))aim.consider(v,'vehicle',3,v.x,v.y+1,v.z);
+    // Without a visible enemy, aim light weapons at intact upper-floor
+    // glass. The same physics trace checks the aperture, in both directions.
+    if(!aim.hasTarget&&!vehicle&&!heavy&&['pistol','assault','sniper'].includes(weapon)){
+      for(const {wall,wallIndex,pane,paneIndex} of upperPanes){
+        if(wall.open||!windowAvailable(wallIndex,paneIndex))continue;
+        const wx=pane.x-from.x,wz=pane.z-from.z;
+        if(wx*wx+wz*wz>70*70||wx*dx+wz*dz<Math.hypot(wx,wz)*.95)continue;
+        aim.consider(wall,'window',4,pane.x,(pane.y0+pane.y1)/2,pane.z);
+      }
+    }
     let direction=aim.direction();if(weapon==='bazooka')direction=limitBazookaHorizontalAim(direction,dx,dz);
     return {direction,focus};
   }
