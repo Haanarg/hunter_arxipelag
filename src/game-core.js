@@ -2124,7 +2124,9 @@ function updateDistanceVisibility(){
     if(!e.o)continue;
     const dx=e.x-P.x,dz=e.z-P.z,d2=dx*dx+dz*dz,
           scopeDetailed=!!focus?.contains(e.x,e.o.position.y+(e.t==='torre'?8:2),e.z,e.t==='torre'?3:1.5),
-          visible=d2<max.enemies*max.enemies||scopeDetailed;
+          visible=e.hp>0&&!e.destroyed&&(d2<max.enemies*max.enemies||scopeDetailed);
+    // La presentació incremental del cooperatiu no ha d'haver
+    // d'ocultar morts a cada fotograma: el LOD respecta l'estat vital.
     e.o.visible=visible;
     if(!visible){window.HUNTER_ENEMY_LOD.setLevel(e.o,'far');visibilityStats.enemies++;enemyLodStats.hidden++;continue}
     const d=Math.sqrt(d2),old=e.o.userData.enemyLOD,
