@@ -11,7 +11,7 @@
     "build": "node tools/build-runtime.cjs",
     "check:build": "node tools/build-runtime.cjs --check",
     "test:timing": "node tests/simulation-clock.cjs && node tests/simulation-timing.cjs",
-    "test:camera": "node tests/camera-controls.cjs",
+    "test:camera": "node tests/camera-controls.cjs && node tests/hangar-camera-visibility.cjs",
     "test:mission": "node tests/mission-viability-validator.cjs && node tests/mission-viability.cjs",
     "test:optimization": "node tests/shared-resources.cjs && node tests/optimization-ui-render-hooks.cjs && node tests/startup-cache.cjs && node tests/perf-no-visual-regressions.cjs && node tests/ai-cpu-optimization.cjs && node tests/ai-delta-isolation.cjs && node tests/enemy-route-probe-budget.cjs && node tests/enemy-sweep-candidate-cache.cjs && node tests/enemy-sweep-elevation-vegetation.cjs && node tests/player-batching.cjs && node tests/shadow-cache.cjs && node tests/compound-paths.cjs && node tests/shadow-fauna-cache.cjs && node tests/shadow-boat-cache.cjs && node tests/stress-audit-config.cjs && node tests/vehicle-batching.cjs",
     "test:feedback": "node tests/combat-feedback.cjs && node tests/phase6-independent.cjs",
