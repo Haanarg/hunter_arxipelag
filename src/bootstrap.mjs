@@ -14,7 +14,7 @@ import * as sharedAiming from './aiming-core.mjs?v=0.6.42';
 window.HUNTER_SHARED_AIMING=sharedAiming;
 import * as sharedModels from './player-model-core.mjs';
 window.HUNTER_SHARED_MODELS=sharedModels;
-import * as sharedCombat from './combat-rules.mjs';
+import * as sharedCombat from './combat-rules.mjs?v=0.6.42';
 import * as sharedVehicles from './vehicle-dynamics-core.mjs';
 window.HUNTER_SHARED_COMBAT=sharedCombat;window.HUNTER_SHARED_VEHICLES=sharedVehicles;
 import * as buildingShell from './building-shell.mjs?v=0.6.42';
