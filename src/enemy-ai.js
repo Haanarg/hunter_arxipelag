@@ -151,7 +151,7 @@ function soldierClearShot(u,x,z,y,target,targetY){
         reach=Math.hypot(tx-x,tz-z)/2+3,mx=(x+tx)/2,mz=(z+tz)/2;
   for(const w of wallCandidates(mx,mz,reach)){
     if(w.open||w.barbed)continue;
-    const t=segmentAabbT(x,y,z,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);
+    const t=window.HUNTER_BUILDING_SHELL.wallShotHit({x,y,z},{x:tx,y:ty,z:tz},w);
     if(t!=null&&t<.97)return false;
   }
   for(const b of buildingCandidates(mx,mz,reach)){
@@ -434,7 +434,7 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
        seen=!cheats.invisible&&!over&&!acrossFloor&&d<det&&
          (sameBasement&&u.t==='general'
            ?soldierClearShot(u,u.x,u.z,eyeY,q,py)
-           :sight(u.x,u.z,q.x,q.z,eyeY));
+           :sight(u.x,u.z,q.x,q.z,eyeY,true,py+1.5));
     if(u.t==='soldat'){
        const raw=!cheats.invisible&&!!(cv? !over&&d<115&&
          STEALTH.inView(u.hd,dx,py+1.5-eyeY,dz,115)&&
