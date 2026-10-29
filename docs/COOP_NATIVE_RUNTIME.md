@@ -1,5 +1,17 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
+## Optimització iniciada el 29-10-2026 · LOD compartit de vehicles
+
+Pla i prioritats acordades: [COOP_REBUILD.md](COOP_REBUILD.md#pla-de-rendiment-cooperatiu-29-10-2026). **Primera fase implementada al codi, validació de rendiment real pendent**.
+
+- `src/game-core.js` extrau el planificador visual de `place()` en `updateVehicleVisualLod(t,dt)`. Les dues modalitats criden **exactament la mateixa funció**: el joc individual a `update()`, el cooperatiu natiu a `updateNativeCoop()`. No s'ha modificat el control autoritatiu del servidor.
+- Cadència idèntica a l'individual: vehicle propi i vehicles a menys de 500 m **cada fotograma**; distància mitjana (500–1.200 m) **cada 0,1 s**; llunyans **cada 0,45 s**. La mira de franctirador manté el detall del vehicle enfocat. No es calculen `place()` ni animacions de vehicles destruïts.
+- `src/coop-world-runtime.js` continua llegint posicions, HP, seients i torretes autoritatius, però ja no crida `place()` indiscriminadament per tots els vehicles en cada fotograma; la presentació de transformacions passa pel LOD comú. La física, col·lisions, dany i dades del servidor no s'hi redueixen.
+- Prova de regressió afegida: `tests/native-coop-vehicle-visual-lod.cjs`, registrada a `npm run test:play`. Comprova 20 passos en individual i cooperatiu, quatre franges de comportament (vehicle propi, proper, intermedi, llunyà) i un destruït. **La prova s'ha escrit, però no s'ha executat en un checkout Node**.
+- Fonts i paquet de navegador actualitzats a la branca `main` i coherència estàtica per verificar. **No hi ha encara comparativa d'FPS/CPU en GPU, prova real amb dos clients ni desplegament de Cloudflare verificat.** Per tant no s'atribueix una millora numèrica d'FPS o latència.
+
+**Següent bloc:** aplicar snapshots incrementals només quan canviï el tick, reduir assignacions i cerques repetides; després interpolació de remots/predicció local i optimització de xarxa, mantenint la prova amb dos jugadors.
+
 ## Continuació 0.6.52 · percepció i combat dels soldats originals
 
 El primer bloc de la IA original passa a `enemy-perception-core.mjs`, utilitzat pel mode individual i pel servidor: configuració de visió i sons, con horitzontal/vertical, reconeixement, efectes d'ajupir-se/disfressar-se, consciència perifèrica de l'elit al soterrani, perfils de punteria i imprecisió del rastre sonor. S'han comparat 11.880 casos amb les fórmules conservades de la 0.6.51. L'animació d'infanteria també és una funció original compartida entre les dues presentacions.
