@@ -5,6 +5,7 @@ const assert=require('node:assert/strict');
 const {pathToFileURL}=require('node:url');
 (async()=>{
  const T=await import(pathToFileURL(path.join(__dirname,'../vendor/three-r186.module.mjs')).href);
+ const sharedAiming=await import(pathToFileURL(path.join(__dirname,'../src/aiming-core.mjs')).href);
  const src=fs.readFileSync(path.join(__dirname,'../src/combat.js'),'utf8');
  const helper=src.slice(src.indexOf('function combatBoatRocketAim('),
     src.indexOf('// Retícula del bazooka:',src.indexOf('function combatBoatRocketAim(')));
@@ -15,7 +16,7 @@ const {pathToFileURL}=require('node:url');
  const ui={style:{display:'none'},classList:{locked:false,toggle(name,val){this.locked=val}}};
  const gun={origin:new T.Vector3(0,2,0),direction:new T.Vector3(0,0,-1)};
  const ctx={
-   THREE:T,window:{HUNTER_VEHICLES:{turretShot:()=>gun}},bazookaReticleElement:ui,
+   THREE:T,window:{HUNTER_VEHICLES:{turretShot:()=>gun},HUNTER_SHARED_AIMING:sharedAiming},bazookaReticleElement:ui,
    bazookaReticleWorld:new T.Vector3(),bazookaReticleScreen:new T.Vector3(),
    bazookaReticleTimer:0,bazookaReticleHasHit:false,bazookaReticleMode:null,
    started:true,paused:false,over:false,playerFall:null,swimming:false,playerCrouched:false,
