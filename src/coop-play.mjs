@@ -1,10 +1,10 @@
-import {weaponCatalog,personalWeapons,mountedWeapons} from './weapon-catalog.mjs?v=0.6.46';
+import {weaponCatalog,personalWeapons,mountedWeapons} from './weapon-catalog.mjs?v=0.6.47';
 import {vehicleDynamics} from './vehicle-dynamics-core.mjs';
-import {combatBalance} from './combat-rules.mjs?v=0.6.46';
+import {combatBalance} from './combat-rules.mjs?v=0.6.47';
 import {configuredAccounts} from './account-client.mjs';
-import {GAME_VERSION} from './version.mjs?v=0.6.46';
-import {createPlayConnection,playInput} from './coop-play-connection.mjs?v=0.6.46&visual=6';
-import {createMissionView} from './coop-play-view.mjs?v=0.6.46&visual=6';
+import {GAME_VERSION} from './version.mjs?v=0.6.47';
+import {createPlayConnection,playInput} from './coop-play-connection.mjs?v=0.6.47&visual=6';
+import {createMissionView} from './coop-play-view.mjs?v=0.6.47&visual=6';
 const $=id=>document.getElementById(id),message=$('message'),launch=$('launch'),connection=$('connection'),keys=new Set(),touch=new Map();
 let channel=null,room=null,view=null,meta=null,self=null,state=null,viewGeneration=0,pendingDoor=null,doorTimer=null;
 function clearDoor(){if(doorTimer!==null)clearTimeout(doorTimer);doorTimer=null;pendingDoor=null;}
