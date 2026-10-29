@@ -1,9 +1,9 @@
-import {buildingVisual} from './building-visual-core.mjs?v=0.6.48';
-import {windowLayout,windowPaneIndexAt} from './building-shell.mjs?v=0.6.48';
+import {buildingVisual} from './building-visual-core.mjs?v=0.6.49';
+import {windowLayout,windowPaneIndexAt} from './building-shell.mjs?v=0.6.49';
 import {materialProfiles} from './material-profiles.mjs';
 import {decorateTimber,decorateUpper} from './compound-architecture.mjs';
 import {createFenceVisual} from './fence-visual-core.mjs';
-import {createStaticWorldAdapter} from './world-adapter.mjs?v=0.6.48';
+import {createStaticWorldAdapter} from './world-adapter.mjs?v=0.6.49';
 // Original visual factories; authoritative wall/roof indices remain untouched.
 export function createBuildingView(T,scene,geometry,doors){
  const materialCache=new Map(),material=(color,profile='organic')=>{const key=color+':'+profile;if(!materialCache.has(key)){const c=new T.Color(color),h={};c.getHSL(h,T.SRGBColorSpace);c.setHSL(h.h,Math.min(1,h.s*1.5),h.l,T.SRGBColorSpace);materialCache.set(key,new T.MeshStandardMaterial({color:c,flatShading:true,...(materialProfiles[profile]||materialProfiles.organic)}));}return materialCache.get(key);};
