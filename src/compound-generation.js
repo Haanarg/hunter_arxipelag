@@ -128,7 +128,7 @@ function* buildApprovedCompoundSteps(layout,q,{pad,path,pier,prop,vehicles,rocke
       // els projectils lleugers no poden degradar-ne l'estructura.
       w.owner=b;
       const corners=[[w.x0,w.z0],[w.x0,w.z1],[w.x1,w.z0],[w.x1,w.z1]].map(p=>point(...p));
-      w.x0=Math.min(...corners.map(p=>p[0]));w.x1=Math.max(...corners.map(p=>p[0]));w.z0=Math.min(...corners.map(p=>p[1]));w.z1=Math.max(...corners.map(p=>p[1]));[w.cx,w.cz]=point(w.cx,w.cz);if(w.nx!=null)[w.nx,w.nz]=buildingVector(w.nx,w.nz);
+      w.x0=Math.min(...corners.map(p=>p[0]));w.x1=Math.max(...corners.map(p=>p[0]));w.z0=Math.min(...corners.map(p=>p[1]));w.z1=Math.max(...corners.map(p=>p[1]));if(w.windowPanes)for(const pane of w.windowPanes){[pane.x,pane.z]=point(pane.x,pane.z);if(bs)pane.axis=pane.axis==='x'?'z':'x'}[w.cx,w.cz]=point(w.cx,w.cz);if(w.nx!=null)[w.nx,w.nz]=buildingVector(w.nx,w.nz);
     }
     for(const a of stairs.slice(firstStair)){[a.x,a.z]=point(a.x,a.z);[a.nx,a.nz]=buildingVector(a.nx,a.nz)}
     if(bs){[b.w,b.d]=[b.d,b.w];[b.hw,b.hd]=[b.hd,b.hw]}
