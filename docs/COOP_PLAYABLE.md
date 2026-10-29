@@ -180,3 +180,14 @@ Pausa/reconnexió conserven orientació i inèrcia. Cal camp nou (`relay:16`) i 
 Les explosions de granades, C4, projectils pesats i vehicles trenquen els trams de filferrada que assoleixen, respectant els murs de cobertura. El càlcul de proximitat al tram real s’ha extret del mode individual a `combat-rules.mjs` i és compartit pels dos modes. El servidor actualitza les col·lisions i comunica `removedWalls` a les dues vistes; els checkpoints conserven la bretxa després de reconnectar o restaurar. Les bales lleugeres continuen travessant el filferro sense destruir-lo.
 
 Validació: proves de granada/C4 a l’extrem del tram, cobertura sòlida, fora d’abast, pausa i restauració; regressions d’arsenal, combat i destrucció de vehicles. Encara pendents: destrucció d’edificis, xocs/atropellaments, campanya i proves físiques de dos dispositius.
+
+
+## Edificis destructibles compartits · relay:17
+
+Els murs i sostres cooperatius conserven els punts de vida de les peces originals. Les explosions de granades, C4, armes pesades i vehicles apliquen les mateixes fórmules del mode individual, extretes a `combat-rules.mjs`: dany per proximitat/altura i ensorrament en perdre tres unitats de suport. Les bales lleugeres continuen sense destruir estructures militars. El sostre del búnquer manté la protecció original.
+
+Destruir un brancal elimina tota l’obertura (porta, brancals i llinda). Una porta destruïda no es pot tornar a tancar ni apareix com a acció contextual. En ensorrar un edifici desapareixen sostre, forjat i escala interior, amb actualització de les col·lisions i de la vista 3D. El dany parcial i les destruccions es guarden al checkpoint. Els efectes originals de pols i runa encara són pendents.
+
+El camp de proves incorpora un edifici de dues plantes a x=55, z=60. Recarregueu tots dos clients i inicieu un camp nou: `relay:17` invalida els checkpoints temporals anteriors. La campanya completa i els xocs/atropellaments encara són pendents.
+
+Validació local: proves de dany acumulat i restauració, ensorrament, escala/sostre sense col·lisions residuals, destrucció atòmica d’entrada, immunitat de bales lleugeres, suports i protecció del búnquer. Regressions de missió, portes, arsenal, combat, vehicles, reanimació, projectils, inventari, apuntat i armes. Interfície Canvas/Three.js amb renderer substitut, flota i torretes originals també passen; no és validació GPU ni dos dispositius físics. Les proves del hub de sales no s’han pogut executar perquè l’entorn local no té `better-auth`. Paquet del navegador regenerat i verificat.

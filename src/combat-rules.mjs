@@ -102,3 +102,18 @@ export function closestFenceBlastPoint(w,x,y,z){
         ny=Math.min(w.y1,Math.max(w.y0,y));
   return{x:nx,y:ny,z:nz,distance:Math.hypot(nx-x,ny-y,nz-z)};
 }
+
+// Structural blast rules from the individual game, shared with the server.
+export function wallBlastDamage(w,x,y,z,r,dmg){
+ if(w.open||w.hp<=0||!Number.isFinite(w.hp)||y>=w.y1+3)return 0;
+ return explosionDamage(dmg,Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z),r);
+}
+export function roofBlastDamage(b,x,z,r,dmg){
+ if(b.kind==='enemy_bunker'||b.rhp<=0||b.rb)return 0;
+ return explosionDamage(dmg,Math.hypot(b.x-x,b.z-z),r+b.w/2);
+}
+export function countDestroyedSupport(b,w){
+ if(!b||b.rb||b.hangar||b.kind==='enemy_bunker'||!w?.supportWeight)return false;
+ if(!w.supportCounted){w.supportCounted=true;b.destroyedWallSupport=(b.destroyedWallSupport||0)+w.supportWeight;}
+ return b.destroyedWallSupport>=3;
+}

@@ -4,7 +4,7 @@ import {combatBalance} from './combat-rules.mjs?v=0.6.43';
 import {configuredAccounts} from './account-client.mjs';
 import {GAME_VERSION} from './version.mjs?v=0.6.43';
 import {createPlayConnection,playInput} from './coop-play-connection.mjs?v=0.6.43';
-import {createMissionView} from './coop-play-view.mjs?v=0.6.43';
+import {createMissionView} from './coop-play-view.mjs?v=0.6.43&structures=2';
 const $=id=>document.getElementById(id),message=$('message'),launch=$('launch'),connection=$('connection'),keys=new Set(),touch=new Map();
 let channel=null,room=null,view=null,meta=null,self=null,state=null,viewGeneration=0,pendingDoor=null,doorTimer=null;
 function clearDoor(){if(doorTimer!==null)clearTimeout(doorTimer);doorTimer=null;pendingDoor=null;}
@@ -17,7 +17,7 @@ function requestVehicle(){const v=contextVehicle();if(!v||pendingVehicle)return;
 function nearestDoor(){
   if(!meta||state?.status!=='running'||!['relay','extract'].includes(state.phase))return null;
   const p=state.players.find(p=>p.id===self);if(!p||p.hp<=0||p.fall||mounted())return null;
-  return (meta.doors||[]).filter(d=>Math.hypot(p.x-d.cx,p.z-d.cz)<=4.5&&Math.abs(p.y-d.floor)<=2).sort((a,b)=>Math.hypot(p.x-a.cx,p.z-a.cz)-Math.hypot(p.x-b.cx,p.z-b.cz))[0]||null;
+  return (meta.doors||[]).filter(d=>!state.doors?.find(s=>s.id===d.id)?.destroyed&&Math.hypot(p.x-d.cx,p.z-d.cz)<=4.5&&Math.abs(p.y-d.floor)<=2).sort((a,b)=>Math.hypot(p.x-a.cx,p.z-a.cz)-Math.hypot(p.x-b.cx,p.z-b.cz))[0]||null;
 }
 function requestDoor(){
   const door=contextDoor();if(!door||pendingDoor)return;

@@ -6608,14 +6608,13 @@ function boom(x,y,z,r,dmg,own,source=null){
       dmgW(w,w.hp);
     continue;
   }
-  const dist=Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z),
-    dealt=explosionDamage(dmg,dist,r);
-  if(dealt&&y<w.y1+3)dmgW(w,dealt);
+  const dealt=window.HUNTER_SHARED_COMBAT.wallBlastDamage(w,x,y,z,r,dmg);
+  if(dealt)dmgW(w,dealt);
  }
  for(const b of buildingCandidates(x,z,r)){
   // El sostre estructural del búnquer roman intacte encara que es destrueixin murs.
   if(b.kind==='enemy_bunker'||b.rhp<=0)continue;
-  const dealt=explosionDamage(dmg,Math.hypot(b.x-x,b.z-z),r+b.w/2);
+  const dealt=window.HUNTER_SHARED_COMBAT.roofBlastDamage(b,x,z,r,dmg);
   if(dealt){b.rhp-=dealt;if(b.rhp<=0)roofBreak(b)}
  }
 }
@@ -13842,12 +13841,7 @@ PM=vegetationMeshes.palms;
 window.HUNTER_VEGETATION_STATS={...PM.stats,rockFields:rockFieldStats}}
 function fr(x,z){let a=1e9,b=-1e9;for(const[i,j]of[[0,0],[9,9],[-9,9],[9,-9],[-9,-9],[9,0],[-9,0],[0,9],[0,-9]]){const h=hAt(x+i,z+j);a=Math.min(a,h);b=Math.max(b,h)}return b-a}
 function checkRoofSupport(b,w){
-  if(!b||b.rb||b.hangar||b.kind==='enemy_bunker'||!w||!w.supportWeight)return;
-  if(!w.supportCounted){
-    w.supportCounted=true;
-    b.destroyedWallSupport=(b.destroyedWallSupport||0)+w.supportWeight;
-  }
-  if(b.destroyedWallSupport>=3)roofBreak(b)
+ if(window.HUNTER_SHARED_COMBAT.countDestroyedSupport(b,w))roofBreak(b);
 }
 function demolishCivilianHut(b){
  if(!b?.civilianHut||b.hutCollapsed)return;

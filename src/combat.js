@@ -436,14 +436,13 @@ function boom(x,y,z,r,dmg,own,source=null){
       dmgW(w,w.hp);
     continue;
   }
-  const dist=Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z),
-    dealt=explosionDamage(dmg,dist,r);
-  if(dealt&&y<w.y1+3)dmgW(w,dealt);
+  const dealt=window.HUNTER_SHARED_COMBAT.wallBlastDamage(w,x,y,z,r,dmg);
+  if(dealt)dmgW(w,dealt);
  }
  for(const b of buildingCandidates(x,z,r)){
   // El sostre estructural del búnquer roman intacte encara que es destrueixin murs.
   if(b.kind==='enemy_bunker'||b.rhp<=0)continue;
-  const dealt=explosionDamage(dmg,Math.hypot(b.x-x,b.z-z),r+b.w/2);
+  const dealt=window.HUNTER_SHARED_COMBAT.roofBlastDamage(b,x,z,r,dmg);
   if(dealt){b.rhp-=dealt;if(b.rhp<=0)roofBreak(b)}
  }
 }

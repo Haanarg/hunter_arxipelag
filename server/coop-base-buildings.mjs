@@ -15,7 +15,7 @@ export function buildBaseShells(basePlan,world,random){
     if(b.upperFloor){
       const a=upperStair(b),stair={x:a.x,z:a.z,nx:0,nz:1,top:fy+b.storey+.15,bottom:fy+.3,length:a.run,width:a.width,ramp:true,internal:true,owner:{rb:false},destroyed:false};
       b.interiorStair=stair;ownedStairs.push(stair);
-      ownedWalls.push({x0:a.x-a.width/2,x1:a.x+a.width/2,z0:a.z,z1:a.z+a.run,y0:fy+.2,y1:fy+b.storey+.25,open:false,playerBlock:false});
+      ownedWalls.push({x0:a.x-a.width/2,x1:a.x+a.width/2,z0:a.z,z1:a.z+a.run,y0:fy+.2,y1:fy+b.storey+.25,open:false,playerBlock:false,internalStair:true});
     }
     for(const w of ownedWalls){
       const corners=[[w.x0,w.z0],[w.x0,w.z1],[w.x1,w.z0],[w.x1,w.z1]].map(p=>point(...p));
@@ -25,7 +25,7 @@ export function buildBaseShells(basePlan,world,random){
     for(const a of ownedStairs){[a.x,a.z]=point(a.x,a.z);[a.nx,a.nz]=[a.nx*c-a.nz*s,a.nx*s+a.nz*c];}
     if(s)[b.w,b.d]=[b.d,b.w];
     b.id='base/'+basePlan.layoutId+'/'+spec.id;
-    ownedWalls.forEach((w,i)=>{w.id=b.id+'/wall/'+i;w.buildingId=b.id;});
+    ownedWalls.forEach((w,i)=>{w.id=b.id+'/wall/'+i;w.buildingId=b.id;if(w.assemblyIndices)w.assemblyIds=w.assemblyIndices.map(j=>b.id+'/wall/'+j);});
     ownedStairs.forEach((a,i)=>{a.id=b.id+'/stair/'+i;a.buildingId=b.id;});
     walls.push(...ownedWalls);stairs.push(...ownedStairs);buildings.push(b);
   }

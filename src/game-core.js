@@ -1011,12 +1011,7 @@ PM=vegetationMeshes.palms;
 window.HUNTER_VEGETATION_STATS={...PM.stats,rockFields:rockFieldStats}}
 function fr(x,z){let a=1e9,b=-1e9;for(const[i,j]of[[0,0],[9,9],[-9,9],[9,-9],[-9,-9],[9,0],[-9,0],[0,9],[0,-9]]){const h=hAt(x+i,z+j);a=Math.min(a,h);b=Math.max(b,h)}return b-a}
 function checkRoofSupport(b,w){
-  if(!b||b.rb||b.hangar||b.kind==='enemy_bunker'||!w||!w.supportWeight)return;
-  if(!w.supportCounted){
-    w.supportCounted=true;
-    b.destroyedWallSupport=(b.destroyedWallSupport||0)+w.supportWeight;
-  }
-  if(b.destroyedWallSupport>=3)roofBreak(b)
+ if(window.HUNTER_SHARED_COMBAT.countDestroyedSupport(b,w))roofBreak(b);
 }
 function demolishCivilianHut(b){
  if(!b?.civilianHut||b.hutCollapsed)return;

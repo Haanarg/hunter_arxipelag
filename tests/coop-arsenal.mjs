@@ -34,7 +34,7 @@ for(const v of g.record.meta.vehicles){
  const answer=mission.combatCommand('a',{epoch,weapon:'grenade',commandId:'passenger-'+v.t});
  assert.equal(answer.code,'THROWN',v.t+' passenger grenade');
  assert.equal(mission.snapshot().inventories[0].grenades,inventory-1);
- assert.equal(mission.snapshot().inventories[1].grenades,2,'partner supplies preserved');
+ assert.equal(mission.snapshot().inventories[1].grenades,r.inventories[1].grenades,'partner supplies preserved');
  const thrown=mission.snapshot().combat.grenades[0],expected=vehicleGrenadeLaunch(r.meta.vehicles[0],v.y);
  for(const k of ['x','y','z','vx','vy','vz','t'])assert.ok(Math.abs(thrown[k]-expected[k])<1e-9,v.t+' matching vehicle launch '+k);
 }

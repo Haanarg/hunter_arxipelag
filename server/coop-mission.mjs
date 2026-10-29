@@ -4,13 +4,13 @@ import {createCoopTerrain} from './coop-terrain.mjs';
 import {createStaticWorldAdapter} from '../src/world-adapter.mjs';
 import {createCanonicalWater} from '../src/canonical-water.mjs';
 import {createPlayerSimulation,validatePlayerInput} from '../src/player-simulation.mjs';
-import {combatBalance,closestFenceBlastPoint} from '../src/combat-rules.mjs';
+import {combatBalance,closestFenceBlastPoint,wallBlastDamage,roofBlastDamage,countDestroyedSupport} from '../src/combat-rules.mjs';
 import {firstSupplyContact} from './coop-inventory.mjs';
 import {createRelayVehicles,vehicleClear} from './coop-vehicles.mjs';
 import {createRelayRescue,reviveReachable} from './coop-rescue.mjs';
 import {createRelayCombat,traceArena} from './coop-combat.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
-export const MISSION_VERSION='relay:16';
+export const MISSION_VERSION='relay:17';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 export function generateRelayMission(room,{mode='relay'}={}){
   if(room.members.length!==2||!room.allReady)throw new Error('Calen dos jugadors preparats.');
@@ -43,7 +43,7 @@ export function generateRelayMission(room,{mode='relay'}={}){
   meta.targets=[first,other].map((p,i)=>{const q=parents.get(p);return {id:'target-'+i,...point(q),hp:12,ai:true,heading:Math.atan2(-((parents.get(q)||p).x-q.x),-((parents.get(q)||p).z-q.z)),state:'patrol',patrol:[point(q),point(parents.get(q)||p)],patrolIndex:1,lastAttack:-90,seenTicks:0};});
   meta.supplies=[first,other].flatMap((p,i)=>['bullets','grenades','disguise','medkits'].map((item,j)=>({id:`supply-${i}-${j}`,item,amount:item==='bullets'?12:1,...point(p)})));
   meta.doors=foundation.baseStructures.walls.flatMap((w,wallIndex)=>w.door&&!w.locked&&!w.alwaysOpen?[{id:w.id,wallIndex,cx:w.cx,cz:w.cz,floor:w.y0+1}]:[]);
-  const generated={geometry:world.snapshot(),record:{meta,phase:'relay',hold:0,status:'paused',checkpoint:{protocol:1,epoch:id,tick:0,players:actors.map(a=>({...a,acknowledged:0,fall:null,swimming:false}))},nextAlarm:Date.now()+100}};
+  const generated={geometry:{...world.snapshot(),...structuredClone(foundation.baseStructures)},record:{meta,phase:'relay',hold:0,status:'paused',checkpoint:{protocol:1,epoch:id,tick:0,players:actors.map(a=>({...a,acknowledged:0,fall:null,swimming:false}))},nextAlarm:Date.now()+100}};
   return mode==='proving'?configureProvingGround(generated):generated;
 }
 export function restoreRelayMission(record,geometry){
@@ -53,7 +53,35 @@ export function restoreRelayMission(record,geometry){
     cooldowns=new Map((record.doorCooldowns||[]).map(c=>[c.actorId,c.tick])),results=structuredClone(record.commandResults||[]);
   for(const d of meta.doors)physical.walls[d.wallIndex].open=doorStates.get(d.id)??false;
   const removedWalls=new Set(record.removedWalls||[]);for(const i of removedWalls)if(physical.walls[i])physical.walls[i].open=true;
+  const wallHealth=new Map(record.wallHealth||[]),roofHealth=new Map(record.roofHealth||[]),removedRoofs=new Set(record.removedRoofs||[]);
+  for(const [i,hp] of wallHealth)if(physical.walls[i])physical.walls[i].hp=hp;
+  for(const [i,hp] of roofHealth)if(physical.buildings[i])physical.buildings[i].rhp=hp;
+  function collapseRoof(index){const building=physical.buildings[index];building.rb=true;building.rhp=0;removedRoofs.add(index);roofHealth.set(index,0);
+    if(building.interiorStair)building.interiorStair.destroyed=true;
+    physical.walls.forEach((wall,i)=>{if(wall.internalStair&&wall.buildingId===building.id){wall.open=true;wall.hp=0;removedWalls.add(i);wallHealth.set(i,0);}});
+    for(const stair of physical.stairs)if(stair.internal&&stair.buildingId===building.id)stair.destroyed=true;
+  }
+  for(const i of removedRoofs)if(physical.buildings[i])collapseRoof(i);
+  // Reconstruct support counters from confirmed destroyed walls after restoring.
+  physical.walls.forEach((wall,i)=>{if(removedWalls.has(i)){wall.hp=0;const index=physical.buildings.findIndex(b=>b.id&&b.id===wall.buildingId);if(index>=0&&countDestroyedSupport(physical.buildings[index],wall))collapseRoof(index);}});
   let world=createStaticWorldAdapter(physical);
+  function blastStructures(center,damage,radius){
+    let changed=false;
+    for(const [index,wall] of physical.walls.entries()){
+      if(wall.barbed)continue;
+      const dealt=wallBlastDamage(wall,center.x,center.y,center.z,radius,damage);if(!dealt)continue;
+      wall.hp=Math.max(0,Math.ceil(wall.hp)-dealt);wallHealth.set(index,wall.hp);if(wall.hp>0)continue;
+      const assembly=wall.assemblyIds?physical.walls.flatMap((w,i)=>wall.assemblyIds.includes(w.id)?[i]:[]):[index];
+      for(const i of assembly){if(removedWalls.has(i))continue;const part=physical.walls[i];part.hp=0;part.open=true;part.playerBlock=false;removedWalls.add(i);wallHealth.set(i,0);
+        const owner=physical.buildings.findIndex(b=>b.id&&b.id===part.buildingId);if(owner>=0&&countDestroyedSupport(physical.buildings[owner],part))collapseRoof(owner);
+      }changed=true;
+    }
+    for(const [index,building] of physical.buildings.entries()){
+      const dealt=roofBlastDamage(building,center.x,center.z,radius,damage);if(!dealt)continue;
+      building.rhp=Math.max(0,building.rhp-dealt);roofHealth.set(index,building.rhp);if(building.rhp<=0){collapseRoof(index);changed=true;}
+    }
+    if(changed)world=createStaticWorldAdapter(physical);
+  }
   function cutWire(p){const wall=nearestWire(p,physical.walls);if(!wall)return false;wall.open=true;wall.hp=0;removedWalls.add(physical.walls.indexOf(wall));world=createStaticWorldAdapter(physical);return true;}
   function blastWire(center,damage,radius){
     // Evaluate all candidates against the same geometry before opening any gaps.
@@ -96,10 +124,10 @@ export function restoreRelayMission(record,geometry){
   }
   const vehicles=createRelayVehicles({meta,record:record.vehicles,world:()=>world,water,players:()=>sim.snapshot().players,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt,onBoard:id=>{inventory.get(id).disguised=false;combat.cancel(id);actions.delete(id);}});
   const rescue=createRelayRescue(record.rescue);
-  const combat=createRelayCombat({meta,record:record.combat,vehicles,cutWire,blastWire,canAttack:()=>true,inventory,players:()=>sim.snapshot().players,damagePlayer:(id,amount)=>rescue.canDamage(id,sim.snapshot().tick)?sim.damage(id,amount):false,geometry:()=>physical,world:()=>world,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt});
-  const doors=()=>meta.doors.map(d=>({id:d.id,open:doorStates.get(d.id)??false}));
+  const combat=createRelayCombat({meta,record:record.combat,vehicles,cutWire,blastWire,blastStructures,canAttack:()=>true,inventory,players:()=>sim.snapshot().players,damagePlayer:(id,amount)=>rescue.canDamage(id,sim.snapshot().tick)?sim.damage(id,amount):false,geometry:()=>physical,world:()=>world,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt});
+  const doors=()=>meta.doors.map(d=>({id:d.id,open:removedWalls.has(d.wallIndex)||(doorStates.get(d.id)??false),destroyed:removedWalls.has(d.wallIndex)}));
   const reviveLine=(a,b)=>!vehicles.mounted(a.id)&&!vehicles.mounted(b.id)&&traceArena({x:a.x,y:a.y+1.5,z:a.z},{x:b.x,y:b.y+.75,z:b.z},physical,world).fraction>=1;
-  function snapshot(){const state=sim.snapshot(),help=rescue.snapshot(state.tick);help.down=help.down.map(d=>({...d,helpers:state.players.filter(p=>reviveReachable(p,state.players.find(p=>p.id===d.actorId),reviveLine)).map(p=>p.id)}));return {...state,removedWalls:[...removedWalls],vehicles:vehicles.snapshot(),rescue:help,combat:combat.snapshot(),missionId:meta.id,phase,hold,status,doorRevision,doors:doors(),inventories:inventories(),supplies:supplies(),claimedSupplies:[...claimed],remaining:Math.max(0,(meta.timeLimitTicks-state.tick)/30)};}
+  function snapshot(){const state=sim.snapshot(),help=rescue.snapshot(state.tick);help.down=help.down.map(d=>({...d,helpers:state.players.filter(p=>reviveReachable(p,state.players.find(p=>p.id===d.actorId),reviveLine)).map(p=>p.id)}));return {...state,removedWalls:[...removedWalls],removedRoofs:[...removedRoofs],vehicles:vehicles.snapshot(),rescue:help,combat:combat.snapshot(),missionId:meta.id,phase,hold,status,doorRevision,doors:doors(),inventories:inventories(),supplies:supplies(),claimedSupplies:[...claimed],remaining:Math.max(0,(meta.timeLimitTicks-state.tick)/30)};}
 
   function doorCommand(actorId,message){
     const previous=results.find(r=>r.actorId===actorId&&r.commandId===message.commandId);if(previous)return {...previous,duplicate:true};
@@ -108,6 +136,7 @@ export function restoreRelayMission(record,geometry){
     if(actor&&message.epoch===meta.id&&typeof message.commandId==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(message.commandId)&&typeof message.open==='boolean'){
       if(status!=='running'||!['relay','extract'].includes(phase)||actor.hp<=0||actor.fall||vehicles.mounted(actorId)||Date.now()>=meta.expiresAt)code='NOT_ACTIVE';
       else if(!door)code='UNKNOWN_DOOR';
+      else if(removedWalls.has(door.wallIndex))code='DESTROYED';
       else if(Math.hypot(actor.x-door.cx,actor.z-door.cz)>4.5||Math.abs(actor.y-door.floor)>2)code='TOO_FAR';
       else if(doorStates.get(door.id)===message.open){ok=true;code='UNCHANGED';}
       else if(state.tick-(cooldowns.get(actorId)??-Infinity)<18)code='COOLDOWN';
@@ -162,6 +191,6 @@ export function restoreRelayMission(record,geometry){
     return snapshot();
   }
   return {meta,geometry:canonical,accept,step,snapshot,vehicleCommand(actorId,message){const r=vehicles.command(actorId,message);if(r.exit){sim.place(actorId,r.exit);delete r.exit;}else if(r.ok&&r.code==='ENTERED'&&!r.duplicate){const p=sim.snapshot().players.find(p=>p.id===actorId);sim.place(actorId,vehicles.position(p));}return r;},doorCommand,inventoryCommand,combatCommand(actorId,message){return combat.command(actorId,message,sim.snapshot().tick);},setStatus(value){status=value;if(value!=='running'){actions.clear();sim.clearInputs();vehicles.pause();combat.pause();rescue.pause();if(['relay','extract'].includes(phase))hold=0;}},
-    checkpoint(nextAlarm){return {meta:structuredClone(meta),removedWalls:[...removedWalls],phase,hold,status,checkpoint:sim.snapshot(),rescue:rescue.checkpoint(),vehicles:vehicles.checkpoint(),combat:combat.checkpoint(),nextAlarm,inventories:inventories(),droppedSupplies:[...loose.values()].map(s=>({...s})),dropSequence,claimedSupplies:[...claimed],inventoryResults:structuredClone(inventoryResults),doors:doors(),doorRevision,doorCooldowns:[...cooldowns].map(([actorId,tick])=>({actorId,tick})),commandResults:structuredClone(results)};},
-    setup(self){return {type:'mission',self,meta:structuredClone(meta),geometry:world.snapshot(),state:snapshot()};}};
+    checkpoint(nextAlarm){return {meta:structuredClone(meta),wallHealth:[...wallHealth],roofHealth:[...roofHealth],removedWalls:[...removedWalls],removedRoofs:[...removedRoofs],phase,hold,status,checkpoint:sim.snapshot(),rescue:rescue.checkpoint(),vehicles:vehicles.checkpoint(),combat:combat.checkpoint(),nextAlarm,inventories:inventories(),droppedSupplies:[...loose.values()].map(s=>({...s})),dropSequence,claimedSupplies:[...claimed],inventoryResults:structuredClone(inventoryResults),doors:doors(),doorRevision,doorCooldowns:[...cooldowns].map(([actorId,tick])=>({actorId,tick})),commandResults:structuredClone(results)};},
+    setup(self){return {type:'mission',self,meta:structuredClone(meta),geometry:structuredClone(physical),state:snapshot()};}};
 }

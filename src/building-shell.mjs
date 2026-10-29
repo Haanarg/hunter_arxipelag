@@ -39,15 +39,18 @@ export function planBuildingShell(w,d,h,opt={},random){
 }
 export function shellColliders(x,z,fy,w,d,h,opt={},random){
   if(![x,z,fy].every(Number.isFinite))throw new RangeError('Invalid building position');
-  const plan=planBuildingShell(w,d,h,opt,random),walls=[];
+  const plan=planBuildingShell(w,d,h,opt,random),walls=[],segmentWalls=[];
   for(const s of plan.segments){
+    const start=walls.length;
     const box={x0:x+s.lx-s.sx/2,x1:x+s.lx+s.sx/2,z0:z+s.lz-s.sz/2,z1:z+s.lz+s.sz/2,cx:x+s.lx,cz:z+s.lz,rammable:true};
     if(s.door){
       const dh=Math.min(opt.doorHeight||4.4,Math.max(3.8,plan.wallH-.65)),normal=[[0,1],[0,-1],[1,0],[-1,0]][plan.ds];
       walls.push({...box,y0:fy-1,y1:fy+dh,hp:opt.civilianHut?4:8,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,nx:normal[0],nz:normal[1],doorWidth:plan.dw,doorHeight:dh});
       if(plan.wallH-dh>.05)walls.push({...box,y0:fy+dh,y1:fy+plan.wallH,hp:plan.wallHp,door:false,open:false,playerBlock:false,rammable:false});
     }else walls.push({...box,y0:fy+s.level-(s.level?0:1),y1:fy+s.level+(s.hangarPost?Math.max(3.1,h*.3):plan.wallH),hp:s.hangarPost?16:plan.wallHp,door:false,open:false,...(s.hangarPost?{}:{supportSide:s.supportSide,supportWeight:s.supportWeight})});
+    segmentWalls.push(Array.from({length:walls.length-start},(_,i)=>start+i));
   }
+  for(const assembly of plan.assemblies){const indices=assembly.flatMap(i=>segmentWalls[i]);for(const i of indices)walls[i].assemblyIndices=indices;}
   return {plan,walls};
 }
 export function exteriorStair(b,side,heightAt){

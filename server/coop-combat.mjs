@@ -17,7 +17,7 @@ export function traceArena(from,to,geometry,world,{ignoreBarbed=false}={}){
   // The base shells use axis-aligned world footprints, including rotated variants.
   for(const b of geometry.buildings||[]){
     if(!b.rb&&b.rhp>0){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.h-.12,y1:b.fy+b.h+.12});if(t!==null){fraction=Math.min(fraction,t);hit=true;}}
-    if(b.upperFloor){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.storey-.12,y1:b.fy+b.storey+.12});if(t!==null){fraction=Math.min(fraction,t);hit=true;}}
+    if(b.upperFloor&&!b.rb){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.storey-.12,y1:b.fy+b.storey+.12});if(t!==null){fraction=Math.min(fraction,t);hit=true;}}
   }
   const length=Math.hypot(to.x-from.x,to.y-from.y,to.z-from.z),steps=Math.max(1,Math.ceil(length/.2));
   for(let i=0;i<=steps;i++){const t=i/steps;if(t>fraction)break;const p=at(from,to,t);if(p.y<world.heightAt(p.x,p.z)){fraction=t;hit=true;break;}}
@@ -29,7 +29,7 @@ export function guardInView(guard,player){
   return d<=2||inView(guard.heading||0,dx,0,dz,Infinity,{sightHalfAngle:Math.PI/3+1e-10,sightVerticalAngle:Math.PI/2});
 }
 const facePoint=(guard,p)=>Math.atan2(-(p.x-guard.x),-(p.z-guard.z));
-export function createRelayCombat({meta,record={},inventory,players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false,blastWire=()=>{}}){
+export function createRelayCombat({meta,record={},inventory,players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false,blastWire=()=>{},blastStructures=()=>{}}){
   const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);const bursts=structuredClone(record.bursts||[]),projectiles=structuredClone(record.projectiles||[]);let sequence=record.sequence||0;
   const random=createWorldRandom(record.randomState??(((meta.seed||0)^0x7269666c)>>>0)),roll=(a,b)=>a+random()*(b-a);
   const effect=(kind,tick,data)=>{effects.push({id:++sequence,kind,tick,...data});if(effects.length>64)effects.shift();};
@@ -62,6 +62,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
         if(damage&&visible({x:v.x,y:v.y+1,z:v.z}))damageVehicle(v,damage,'heavy',tick,queue);
       }
       blastWire(center,blast.damage,blast.radius);
+      blastStructures(center,blast.damage,blast.radius);
       alarm(center,blast.actorId,tick);effect('explosion',tick,{actorId:blast.actorId,at:center,radius:blast.radius,hits});
     }
   }
