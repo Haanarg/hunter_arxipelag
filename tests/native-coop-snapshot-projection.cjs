@@ -74,5 +74,11 @@ const assert=require('node:assert/strict');
     return {a,b,enemy};
   })()`);
   assert.deepEqual(writes,{a:0,b:0,enemy:0},'Cap segona projecció en el següent fotograma');
-  console.log('OK coop incremental: 20 fotogrames sense reprojectar; només el vehicle canviat i caches remotes estables');
+  const deadEnemyHidden=game.run(`(()=>{
+    const e=E.find(e=>e.hp>0&&e.o);if(!e)return false;
+    P.x=e.x;P.z=e.z;e.hp=0;e.o.visible=true;
+    updateDistanceVisibility();return !e.o.visible;
+  })()`);
+  assert(deadEnemyHidden,'El LOD compartit no pot ressuscitar enemics morts');
+  console.log('OK coop incremental: snapshots, caches remotes, animació i LOD sense morts visibles');
 })().catch(error=>{console.error(error);process.exitCode=1});
