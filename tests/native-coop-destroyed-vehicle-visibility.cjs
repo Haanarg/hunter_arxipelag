@@ -13,10 +13,8 @@ const assert=require('node:assert/strict');
  const room={id:'wreck-visibility',revision:1,seed:67,mapScale:1,difficulty:1,
    allReady:true,expiresAt:Date.now()+86400000,
    members:[{id:'a',name:'A'},{id:'b',name:'B'}]};
- const mission=restoreRelayMission(
-   generateNativeMission(room,payload,await nativeFingerprint(JSON.stringify(payload))).record,
-   payload.geometry
- );
+ const generated=generateNativeMission(room,payload,await nativeFingerprint(JSON.stringify(payload))),
+       mission=restoreRelayMission(generated.record,generated.geometry);
  mission.setStatus('running');
  const state=mission.snapshot();
  assert(state.vehicles.length>=2,'Calen dos vehicles per distingir destrosses i vehicles vius');
