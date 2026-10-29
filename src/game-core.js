@@ -820,8 +820,14 @@ document.getElementById('generationCancel').onclick=()=>window.HUNTER_CANCEL_STA
 document.querySelectorAll('#ini button[data-d]').forEach(b=>b.onclick=()=>startGameProgressively(readGameStartOptions(+b.dataset.d)));
 // animacions de destrucció
 const DB=[],WA=[],HR=[],dgeo=new THREE.BoxGeometry(1,1,1),dmc={},dmat=c=>dmc[c]||(dmc[c]=M(c));
-function debris(x,y,z,col,n,sz,sp){for(let i=0;i<n;i++){const m=new THREE.Mesh(dgeo,dmat(col)),d=window.HUNTER_DEBRIS_CORE.createDebrisParticle(x,y,z,sz,sp,rn);m.scale.set(d.scale.x,d.scale.y,d.scale.z);m.position.set(d.position.x,d.position.y,d.position.z);m.rotation.set(d.rotation.x,d.rotation.y,d.rotation.z);world.add(m);
-DB.push({...d,m,s0:m.scale.clone()})}
+function debris(x,y,z,col,n,sz,sp,shape=null){for(let i=0;i<n;i++){const m=new THREE.Mesh(dgeo,dmat(col)),d=window.HUNTER_DEBRIS_CORE.createDebrisParticle(x,y,z,sz,sp,rn);m.scale.set(d.scale.x,d.scale.y,d.scale.z);m.position.set(d.position.x,d.position.y,d.position.z);m.rotation.set(d.rotation.x,d.rotation.y,d.rotation.z);
+if(shape==='timberBeam'){
+  // Bigues de coberta, no blocs de runa: secció prima i llargada variable.
+  const thickness=rn(.12,.22);m.scale.set(thickness,thickness,rn(2.3,4.5));
+  m.rotation.set(rn(-.7,.7),rn(-Math.PI,Math.PI),rn(-.7,.7));
+  d.ry=rn(-5,5);d.rz=rn(-5,5);
+}
+world.add(m);DB.push({...d,m,s0:m.scale.clone()})}
 while(DB.length>160)world.remove(DB.shift().m)}
 function vehicleDebris(v,baseY){
   if(!v?.o)return;
@@ -873,7 +879,14 @@ if(b.hangar&&b.roof?.userData?.hangarRoof){
   for(let i=0;i<10;i++)debris(b.x+rn(-b.w/2,b.w/2),b.fy+rn(1,b.w*.45),b.z+rn(-b.d/2,b.d/2),col,1,.75,6);
 }else{
   b.roof.visible=false;
-  for(let i=0;i<20;i++)debris(b.x+rn(-b.w/2,b.w/2),y,b.z+rn(-b.d/2,b.d/2),col,1,1.3,9);
+  if(b.wood||b.civilianHut){
+    // La fusta del sostre té bigues marrons fins i tot en complexos aliats
+    // (on el color administratiu de la coberta pot ser blau).
+    const timberColors=[0x69533a,0x887044,0x6d5637,0xa08a57];
+    for(let i=0;i<20;i++)debris(b.x+rn(-b.w/2,b.w/2),y,b.z+rn(-b.d/2,b.d/2),timberColors[i%timberColors.length],1,1.3,9,'timberBeam');
+  }else{
+    for(let i=0;i<20;i++)debris(b.x+rn(-b.w/2,b.w/2),y,b.z+rn(-b.d/2,b.d/2),col,1,1.3,9);
+  }
   for(let i=0;i<8;i++)puff(b.x+rn(-b.w/2,b.w/2),y,b.z+rn(-b.d/2,b.d/2),0xc9b48a,4.5)
 }
 snd('boom',.4,{x:b.x,y,z:b.z},b)}
