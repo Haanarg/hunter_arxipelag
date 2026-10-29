@@ -51,14 +51,15 @@ export function createStaticWorldAdapter(source){
   for(const i of data.islands)insert(grids.islands,i,512,i.x-i.r*2,i.x+i.r*2,i.z-i.r*2,i.z+i.r*2);
   for(const m of data.levels){const reach=Math.hypot(m.hw,m.hd)+m.blend;insert(grids.levels,m,256,m.x-reach,m.x+reach,m.z-reach,m.z+reach);}
   for(const w of data.walls)insert(grids.walls,w,64,w.x0,w.x1,w.z0,w.z1);
-  const staticTrees=data.trees.slice();let generatedVegetation=null;
+  const staticTrees=data.trees.slice(),palmHealth=new Map();let generatedVegetation=null;
   if(data.vegetation){
     generatedVegetation=vegetationCache.get(source.vegetation);
     if(!generatedVegetation){generatedVegetation=vegetationLayout({halfSize,islands:data.islands,heightAt,seed:data.seed,random:createWorldRandom(data.vegetation.randomState),spawn:data.vegetation.spawn,buildings:data.buildings,stairs:data.stairs,compounds:data.vegetation.compounds});vegetationCache.set(source.vegetation,generatedVegetation);}
     if(data.trees.length+generatedVegetation.trees.length>200000)throw new RangeError('Too many vegetation colliders');
     data.trees.push(...generatedVegetation.trees);
   }
-  for(const t of data.trees)insert(grids.trees,t,16,t.x,t.x,t.z,t.z);
+  const palmIds=new Map();let palmIndex=0;for(const t of data.trees){if(t.p)palmIds.set(t,palmIndex++);insert(grids.trees,t,16,t.x,t.x,t.z,t.z);}
+  const alive=t=>!t.p||(palmHealth.get(palmIds.get(t))??8)>0;
   for(const b of data.buildings)insert(grids.buildings,b,96,b.x-b.w/2,b.x+b.w/2,b.z-b.d/2,b.z+b.d/2);
   function heightAt(x,z){
     number(x);number(z);const list=grids.islands.get(key(Math.floor(x/512),Math.floor(z/512)))||data.islands;
@@ -72,13 +73,13 @@ export function createStaticWorldAdapter(source){
     if(locomotionAt(x,z,y).basement)return null;
     const cx=Math.floor(x/16),cz=Math.floor(z/16),ground=Math.max(heightAt(x,z),0);
     for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)for(const t of grids.trees.get(key(cx+a,cz+b))||[])
-      if(t.alive!==false&&Math.hypot(x-t.x,z-t.z)<t.r+radius&&y<ground+(t.p?6.5:1.5))return t;
+      if(alive(t)&&Math.hypot(x-t.x,z-t.z)<t.r+radius&&y<ground+(t.p?6.5:1.5))return t;
     return null;
   }
   function resolveBody(previous,candidate){
     const p={x:number(candidate.x),z:number(candidate.z),hd:number(candidate.hd),y:number(previous.y)};
     pushWalls(p,wallsAt(p.x,p.z));const x=Math.floor(p.x/16),z=Math.floor(p.z/16);
-    for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)for(const t of grids.trees.get(key(x+a,z+b))||[])pushTree(p,t,false);
+    for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)for(const t of grids.trees.get(key(x+a,z+b))||[]){if(alive(t))pushTree(p,t,false);}
     return p;
   }
   function groundAt(x,z,previous=-Infinity,visible=null){return walkingHeightAt({physical:heightAt(x,z),visible,
@@ -100,6 +101,8 @@ export function createStaticWorldAdapter(source){
     return {floor,terrain:heightAt(x,z),interior:!!interior,basement,drop};
   }
   return Object.freeze({vegetation:generatedVegetation,kind:'static-surfaces',limit:halfSize-2,heightAt,groundAt,resolveBody,locomotionAt,vegetationAt,
+    palmId:t=>palmIds.get(t),palms:()=>[...palmIds.keys()],
+    setPalmHealth(entries){palmHealth.clear();for(const [i,hp] of entries)palmHealth.set(i,hp);},
     roofLanding(from,to){return sweptRoofLanding(from,to,{solidRoofAt,
       buildingCandidates:(x,z)=>grids.buildings.get(key(Math.floor(x/96),Math.floor(z/96)))||[]});},
     // Static support only: no gravity, water motion or moving platforms yet.

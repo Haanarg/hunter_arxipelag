@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import * as T from '../vendor/three-r186.module.mjs';
+import {createPalmDestructionView} from '../src/coop-palm-view.mjs';
+const scene=new T.Scene(),geometry=new T.BoxGeometry(1,6,1),material=new T.MeshBasicMaterial(),source=new T.InstancedMesh(geometry,material,1);
+source.setMatrixAt(0,new T.Matrix4().makeTranslation(2,3,4));scene.add(source);
+const ref={chunk:{trunk:source,primary:[],secondary:[]},trunkIndex:0,variant:0,index:0};let removed=0;
+const visual={palms:{variantMap:[ref],remove(){removed++;}}},layout={palms:[{x:2,y:0,z:4,yaw:0}]};
+const view=createPalmDestructionView(T,scene,visual,layout);view.update([],0);view.update([[0,0]],.3);
+assert.equal(removed,1);assert.equal(scene.children.length,2);assert.notDeepEqual(scene.children[1].matrix.elements,source.matrix.elements);
+view.update([[0,0]],.7);assert.equal(scene.children.length,1);assert.equal(removed,1);
+createPalmDestructionView(T,scene,visual,layout).update([[0,0]],0);assert.equal(scene.children.length,1,'reconnect removes tree without replaying fall');
+console.log('coop palm view: shared instance geometry, fall, cleanup, duplicate and reconnect passed');

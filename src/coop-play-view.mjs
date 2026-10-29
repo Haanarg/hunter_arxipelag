@@ -1,3 +1,4 @@
+import {createPalmDestructionView} from './coop-palm-view.mjs';
 import {createBuildingView} from './coop-building-view.mjs?v=0.6.48';
 import {vegetationVisual} from './vegetation-visual-core.mjs';
 import {materialProfiles} from './material-profiles.mjs';
@@ -13,7 +14,7 @@ export async function createMissionView(container,meta,geometry,{three=null,make
   const doorByWall=new Map((meta.doors||[]).map(d=>[d.wallIndex,d.id]));
   const b=meta.bounds,cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2;
   const canvas=document.createElement('canvas');let displayed=canvas;container.replaceChildren(canvas);
-  let vegetationView=null,terrainAdapter=null;let zoom=1,state=null,last=performance.now(),destroyed=false,draw=()=>{},dispose=()=>{},resize=()=>{};
+  let palmDestruction=null,vegetationView=null,terrainAdapter=null;let zoom=1,state=null,last=performance.now(),destroyed=false,draw=()=>{},dispose=()=>{},resize=()=>{};
   try{
     const T=three||await import('../vendor/three-r186.module.mjs'),renderer=makeRenderer?makeRenderer({canvas}):new T.WebGLRenderer({canvas,antialias:true});
     renderer.setPixelRatio(Math.min(2,devicePixelRatio||1));renderer.setClearColor(0x273b32);
@@ -37,7 +38,7 @@ export async function createMissionView(container,meta,geometry,{three=null,make
     if(geometry.bunker){const bunker=geometry.bunker,st=bunker.basement.stair,run=Math.abs(st.zTop-st.zBottom);box(bunker.basement.halfX*2,.26,bunker.basement.halfZ*2,bunker.x,bunker.basement.floorY-.13,bunker.z,0x434c49);for(let i=0;i<15;i++)box(st.width,.21,run/15+.035,bunker.x+st.x,bunker.fy+.22-(i+1)*9.37/15-.1,bunker.z+st.zTop+(i+.5)*(st.zBottom-st.zTop)/15,0x8b9289);}
     const landmarkMeshes=[],structures=createCompoundStructures(),part=(group,w,h,d,color,x=0,y=0,z=0)=>{const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),new T.MeshStandardMaterial({color,roughness:.8}));mesh.position.set(x,y,z);group.add(mesh);return mesh;};
     for(const compound of meta.compounds||[])for(const landmark of compound.landmarks||[]){let mesh;if(landmark.kind==='tower')mesh=createTowerModel(T,{box:part});else if(landmark.kind==='antenna')mesh=structures.antenna(landmark.spec);else if(landmark.kind==='satellite'){mesh=structures.satellite(landmark.spec.radius);mesh.scale.setScalar(landmark.spec.scale||1);}else{mesh=new T.Group();part(mesh,landmark.size,.08,landmark.size,0x566958);for(const x of [-4,4])part(mesh,1,.1,12,0xe6e3cf,x,.09,0);part(mesh,8,.1,1,0xe6e3cf,0,.09,0);}mesh.position.set(landmark.x,landmark.y,landmark.z);mesh.rotation.y=-compound.angle;mesh.userData.landmarkKind=landmark.kind;scene.add(mesh);landmarkMeshes.push({mesh,...landmark});}
-    if(terrainAdapter?.vegetation){const layout=terrainAdapter.vegetation,random=createWorldRandom(layout.randomState),visual=vegetationVisual.create(T,{materialProfile:name=>materialProfiles[name]||materialProfiles.organic,random:(a,b)=>a+random()*(b-a)});vegetationView=visual.build({world:scene,palms:layout.palms,bushes:layout.bushes,rocks:layout.rocks,playerX:meta.extraction.x,playerZ:meta.extraction.z,lowQuality:false,lodProfile:'desktop'});scene.userData.vegetationStats=vegetationView.palms.stats;}
+    if(terrainAdapter?.vegetation){const layout=terrainAdapter.vegetation,random=createWorldRandom(layout.randomState),visual=vegetationVisual.create(T,{materialProfile:name=>materialProfiles[name]||materialProfiles.organic,random:(a,b)=>a+random()*(b-a)});vegetationView=visual.build({world:scene,palms:layout.palms,bushes:layout.bushes,rocks:layout.rocks,playerX:meta.extraction.x,playerZ:meta.extraction.z,lowQuality:false,lodProfile:'desktop'});scene.userData.vegetationStats=vegetationView.palms.stats;palmDestruction=createPalmDestructionView(T,scene,vegetationView,layout);}
     const buildingView=createBuildingView(T,scene,geometry,doorByWall),{doorMeshes,wallMeshes,roofMeshes,stairMeshes}=buildingView;
     const line=(points,color,opacity=1)=>{const material=new T.LineBasicMaterial({color,transparent:opacity<1,opacity}),mesh=new T.Line(new T.BufferGeometry().setFromPoints(points.map(p=>new T.Vector3(p.x,p.y??meta.floor+.15,p.z))),material);scene.add(mesh);return mesh;};
     line([{x:b.x0,z:b.z0},{x:b.x1,z:b.z0},{x:b.x1,z:b.z1},{x:b.x0,z:b.z1},{x:b.x0,z:b.z0}],0xffdfa0,.65);
@@ -61,6 +62,7 @@ export async function createMissionView(container,meta,geometry,{three=null,make
         if(!initialized)pawn.position.set(px,p.y,pz);else pawn.position.lerp(new T.Vector3(px,p.y,pz),1-Math.exp(-dt/65));pawn.rotation.y=p.hd;pawn.children[0].rotation.z=p.hp<=0?Math.PI/2:0;pawn.children[0].position.y=p.hp<=0?.5:0;const body=pawn.children[0],tint=p.hp<=0?0xf07860:state.inventories?.find(b=>b.actorId===p.id)?.disguised?0x567346:colors[i];for(const [material] of body.userData.mats)material.color.setHex(tint);body.traverse(o=>{if(o.material?.emissive)o.material.emissive.setHex(state.rescue?.immune.some(d=>d.actorId===p.id&&state.tick<d.untilTick)?0x285a76:0);});
       }initialized=true;ring.material.color.setHex(state.phase==='won'?0xffe98c:0x99ff9b);}
       const focus=zoom>1&&state?.players.find(p=>p.id===self);if(focus){camera.position.set(focus.x,focus.y+110,focus.z+75);camera.lookAt(focus.x,focus.y,focus.z);}else{camera.position.set(cx,meta.floor+110,cz+75);camera.lookAt(cx,meta.floor,cz);}
+      palmDestruction?.update(state?.palmHealth,dt/1000);
       const vegetationFocus=state?.players.find(p=>p.id===self)||meta.extraction;vegetationView?.palms.update(vegetationFocus.x,vegetationFocus.z);
       renderer.render(scene,camera);
     };
