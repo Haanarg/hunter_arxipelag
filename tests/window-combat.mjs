@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {windowLayout,shellColliders,windowCrossing,wallShotHit} from '../src/building-shell.mjs';
+import {traceArena} from '../server/coop-combat.mjs';
+const layout=windowLayout(18,.8,8);
+assert.equal(layout.centers.length,2,'wide walls have two windows');
+assert.ok(layout.bottom<=1.5,'the aperture must include the player's upper body');
+const generated=shellColliders(0,0,0,18,14,8,{doorSide:0},()=>.5),walls=generated.walls;
+const windowWall=walls.find(w=>w.windowPanes?.length);
+assert.ok(windowWall,'physical wall carries window apertures');
+const pane=windowWall.windowPanes[0],normal=pane.axis,along=normal==='x'?'z':'x',midY=(pane.y0+pane.y1)/2;
+const point=(out,y=midY,lateral=0)=>({x:pane.x+(normal==='x'?out:lateral),y,z:pane.z+(normal==='z'?out:lateral)});
+const from=point(-5),to=point(5);
+assert.equal(wallShotHit(from,to,windowWall),null,'shot enters window');
+assert.equal(wallShotHit(to,from,windowWall),null,'shot exits window');
+assert.equal(windowCrossing(from,to,windowWall)?.index,0);
+assert.ok(wallShotHit(point(-5,pane.y0-.4),point(5,pane.y0-.4),windowWall)!==null,'sill stays solid');
+assert.ok(wallShotHit(point(-5,pane.y1+.3),point(5,pane.y1+.3),windowWall)!==null,'lintel stays solid');
+assert.ok(wallShotHit(point(-5,midY,pane.width),point(5,midY,pane.width),windowWall)!==null,'wall beside pane stays solid');
+const glassGeometry={walls:[windowWall],buildings:[]},world={heightAt:()=>-100,locomotionAt:()=>({basement:true,floor:-100})};
+const straight=traceArena(from,to,glassGeometry,world,{collectWindows:true});
+assert.equal(straight.hit,false,'server accepts shot from outside to inside');
+assert.deepEqual(straight.windowCrossings.map(w=>w.index),[0]);
+assert.equal(traceArena(to,from,glassGeometry,world).hit,false,'server accepts reverse shot');
+assert.equal(traceArena(point(-5,pane.y0-.4),point(5,pane.y0-.4),glassGeometry,world).hit,true,'server stops shot against sill');
+const door=walls.find(w=>w.woodenDoor);assert.ok(door,'normal house has a wooden door');
+assert.equal(door.hp,10,'five 2-point hits destroy a wooden door');
+assert.equal(Math.ceil(door.hp/2),5);
+const bunker=shellColliders(0,0,0,18,14,8,{doorSide:0,bunker:true},()=>.5);
+assert.ok(!bunker.walls.some(w=>w.woodenDoor),'bunker gates remain reinforced');
+assert.ok(!bunker.walls.some(w=>w.windowPanes),'bunkers have no accidental windows');
+for(const [name,src] of [['solo',readFileSync(new URL('../src/combat.js',import.meta.url),'utf8')],['coop',readFileSync(new URL('../server/coop-combat.mjs',import.meta.url),'utf8')]]){
+ assert.match(src,/wallShotHit/,name+' uses shared apertures');
+ assert.match(src,/windowCrossing/,name+' detects glass intersections');
+}
+console.log('Window ballistics: two-way firing, real sill/lintel/frames, server glass events and five-hit wooden doors passed');
