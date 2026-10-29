@@ -1,4 +1,5 @@
 // Local physical shell and render instructions. No meshes, globals or actor.
+import {segmentAabbT} from './combat-rules.mjs';
 // Normal building doors are taller than wide. Bunker/hangar openings have
 // their own explicit geometry and must not inherit these dimensions.
 export const STANDARD_BUILDING_DOOR=Object.freeze({width:2.8,height:5.2});
@@ -9,6 +10,37 @@ export function doorFlankLayout(span,openingWidth){
      openingWidth<=0||span<=openingWidth)throw new RangeError('Invalid door opening');
   const panelWidth=(span-openingWidth)/2;
   return {panelWidth,panelOffset:openingWidth/2+panelWidth/2};
+}
+// The same deterministic aperture dimensions are used by the renderer, the
+// individual ballistics and the cooperative server (no texture raycasts).
+export function windowLayout(sx,sz,height){
+ const alongX=sx>=sz,L=alongX?sx:sz,count=L>=14?2:1;
+ return {alongX,width:Math.min(2.7,L/(count*2.65)),
+  bottom:Math.min(2.35,Math.max(1.75,height*.32)),
+  height:Math.min(2.15,Math.max(1.75,height*.31)),
+  centers:count===2?[-L*.255,L*.255]:[0]};
+}
+export function windowCrossing(from,to,wall){
+ if(wall.open||!wall.windowPanes?.length)return null;
+ let best=null;
+ for(let index=0;index<wall.windowPanes.length;index++){
+  const pane=wall.windowPanes[index],axis=pane.axis,denom=to[axis]-from[axis];
+  if(Math.abs(denom)<1e-8)continue;
+  const t=(pane[axis]-from[axis])/denom;
+  if(t<0||t>1)continue;
+  const y=from.y+(to.y-from.y)*t,other=axis==='x'?'z':'x',along=from[other]+(to[other]-from[other])*t;
+  if(y<pane.y0||y>pane.y1||Math.abs(along-pane[other])>pane.width/2)continue;
+  if(!best||t<best.t)best={index,t,point:{x:from.x+(to.x-from.x)*t,y,z:from.z+(to.z-from.z)*t}};
+ }
+ return best;
+}
+export function wallShotHit(from,to,wall){
+ if(wall.open)return null;
+ const hit=segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,wall.x0,wall.x1,wall.y0,wall.y1,wall.z0,wall.z1);
+ if(hit===null)return null;
+ // The aperture spans the wall thickness, so intact glass permits sight;
+ // projectiles shatter glass but keep travelling on that same tick.
+ return windowCrossing(from,to,wall)?null:hit;
 }
 export function planBuildingShell(w,d,h,opt={},random){
   if(![w,d,h].every(v=>Number.isFinite(v)&&v>0)||typeof random!=='function')throw new RangeError('Invalid building shell');
