@@ -1,11 +1,13 @@
 #!/usr/bin/env node
+(async()=>{
+const testSharedCombat=await import('../src/combat-rules.mjs'),testSharedVehicles=await import('../src/vehicle-dynamics-core.mjs');
 // La resistència i la inèrcia d'envestida han de dependre del vehicle.
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.join(__dirname,'..');
 const core=fs.readFileSync(path.join(root,'src/game-core.js'),'utf8');
 const dynamics=fs.readFileSync(path.join(root,'src/vehicle-dynamics.js'),'utf8');
-const ctx={window:{},Math};
+const ctx={window:{HUNTER_SHARED_COMBAT:testSharedCombat,HUNTER_SHARED_VEHICLES:testSharedVehicles},Math};
 vm.createContext(ctx);vm.runInContext(dynamics,ctx);
 assert.equal(ctx.window.HUNTER_VEHICLE_DYNAMICS.types.camio.life,10,'El camió ha de tenir 10 PV');
 const start=core.indexOf('function ramSpeedFactor('),end=core.indexOf('function killShark(',start);
@@ -22,3 +24,5 @@ assert.ok(!ctx.crush({t:'tanc',v:20},{t:'tanc'},5,5),'No ha de travessar altres 
 assert.ok(core.includes("if(!heavy)v.v*=.9"),'Les palmeres no han de frenar camions ni tancs');
 assert.ok(core.includes("if(!heavy)collisionDamageVehicle"),'Les palmeres no han de llevar PV al camió');
 console.log('OK vehicles pesants: 10 PV, inèrcia i envestida');
+
+})().catch(error=>{console.error(error);process.exitCode=1});

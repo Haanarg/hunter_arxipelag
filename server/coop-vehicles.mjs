@@ -1,3 +1,4 @@
+import {vehicleDynamics,advanceVehicle} from '../src/vehicle-dynamics-core.mjs';
 // Trusted two-seat transport on the relay pad. No client coordinates or seat claims.
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),validId=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(id);
 export function vehicleClear(position,world,bounds,previous=position){
@@ -24,12 +25,12 @@ export function createRelayVehicles({meta,record={},world,players,active,onBoard
    if(!active()||p.hp<=0||p.fall||p.swimming)code='NOT_ACTIVE';
    else if(!v)code='UNKNOWN_VEHICLE';
    else if(msg.operation==='exit'){
-    if(!v.seats.includes(actorId))code='NOT_SEATED';else if(Math.abs(v.speed)>.2)code='MOVING';else if(!(exit=exitPoint(v,p)))code='EXIT_BLOCKED';
-    else{v.seats[v.seats.indexOf(actorId)]=null;v.speed=0;inputs.delete(actorId);ok=true;code='EXITED';}
+    if(!v.seats.includes(actorId))code='NOT_SEATED';else if(Math.abs(v.v)>.2)code='MOVING';else if(!(exit=exitPoint(v,p)))code='EXIT_BLOCKED';
+    else{v.seats[v.seats.indexOf(actorId)]=null;v.v=0;inputs.delete(actorId);ok=true;code='EXITED';}
    }else if(mounted(actorId))code='ALREADY_SEATED';
    else if(distance(p,v)>3.5||Math.abs(p.y-v.y)>1.2)code='TOO_FAR';
    else if(!walkClear(p,v))code='BLOCKED';
-   else if(Math.abs(v.speed)>.2)code='MOVING';else if(v.seats.every(Boolean))code='FULL';
+   else if(Math.abs(v.v)>.2)code='MOVING';else if(v.seats.every(Boolean))code='FULL';
    else{v.seats[v.seats.indexOf(null)]=actorId;inputs.delete(actorId);onBoard(actorId);ok=true;code='ENTERED';}
    const result={kind:'vehicle',actorId,commandId:msg.commandId,ok,code};results.push(result);if(results.length>64)results.shift();return {...result,...(exit?{exit}:{} )};
   }return {kind:'vehicle',actorId,commandId:msg.commandId,ok,code};
@@ -37,13 +38,13 @@ export function createRelayVehicles({meta,record={},world,players,active,onBoard
  function step(tick){if(!active())return;
   for(const v of vehicles){
    // A downed occupant is released at the already validated vehicle centre.
-   for(let seat=0;seat<2;seat++)if(v.seats[seat]&&players().find(p=>p.id===v.seats[seat])?.hp<=0){inputs.delete(v.seats[seat]);v.seats[seat]=null;v.speed=0;}
+   for(let seat=0;seat<2;seat++)if(v.seats[seat]&&players().find(p=>p.id===v.seats[seat])?.hp<=0){inputs.delete(v.seats[seat]);v.seats[seat]=null;v.v=0;}
    const driver=v.seats[0],entry=inputs.get(driver),input=driver&&entry&&tick-entry.tick<=8?entry.input:{forward:0,turn:0};
-   const target=input.forward*(input.forward<0?6:14),delta=Math.max(-8/30,Math.min(8/30,target-v.speed));v.speed+=delta;
-   if(!driver||!entry||tick-entry.tick>8){v.speed=0;continue;}
-   const hd=v.hd+input.turn*1.25/30*Math.min(1,Math.abs(v.speed)/3)*(v.speed<0?-1:1),next={...v,hd,x:v.x-Math.sin(hd)*v.speed/30,z:v.z-Math.cos(hd)*v.speed/30};
-   if(vehicleClear(next,world(),meta.bounds,v)){v.x=next.x;v.z=next.z;v.hd=hd;}else v.speed=0;
+   if(!driver||!entry||tick-entry.tick>8){v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;continue;}
+   const control=vehicleDynamics.inputs(v,input.forward,input.turn,1/30),side=advanceVehicle(v,control.forward,control.turn,1/30),hd=v.hd;
+   const next={...v,hd,x:v.x+(-Math.sin(hd)*v.v+Math.cos(hd)*side)/30,z:v.z+(-Math.cos(hd)*v.v-Math.sin(hd)*side)/30};
+   if(vehicleClear(next,world(),meta.bounds,v)){v.x=next.x;v.z=next.z;v.hd=hd;}else{v.v=0;}
   }
  }
- return {mounted,position,command,step,accept(id,input,tick){if(mounted(id))inputs.set(id,{input:{...input},tick});},pause(){inputs.clear();for(const v of vehicles)v.speed=0;},snapshot(){return structuredClone(vehicles);},checkpoint(){return structuredClone({vehicles,results});}};
+ return {mounted,position,command,step,accept(id,input,tick){if(mounted(id))inputs.set(id,{input:{...input},tick});},pause(){inputs.clear();for(const v of vehicles){v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;}},snapshot(){return structuredClone(vehicles);},checkpoint(){return structuredClone({vehicles,results});}};
 }

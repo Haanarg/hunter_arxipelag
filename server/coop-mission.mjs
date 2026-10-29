@@ -7,7 +7,7 @@ import {createRelayVehicles,vehicleClear} from './coop-vehicles.mjs';
 import {createRelayRescue,reviveReachable} from './coop-rescue.mjs';
 import {createRelayCombat,traceArena} from './coop-combat.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
-export const MISSION_VERSION='relay:9';
+export const MISSION_VERSION='relay:10';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 export function generateRelayMission(room){
   if(room.members.length!==2||!room.allReady)throw new Error('Calen dos jugadors preparats.');
@@ -36,7 +36,7 @@ export function generateRelayMission(room){
     actors=room.members.map((m,i)=>({id:m.id,...point(i?second:start),hd:0,hp:20}));
   const parking=reachable.filter(p=>distance(p,start)>6&&distance(p,start)<20&&actors.every(a=>distance(a,p)>4)&&vehicleClear(p,world,bounds)).sort((a,b)=>distance(a,start)-distance(b,start))[0];
   if(!parking)throw new Error('No hi ha aparcament segur per al jeep. Prova una altra llavor.');
-  meta.vehicles=[{id:'jeep-1',kind:'jeep',...point(parking),hd:0,speed:0,seats:[null,null]}];
+  meta.vehicles=[{id:'jeep-1',kind:'jeep',t:'cotxe',...point(parking),hd:0,v:0,seats:[null,null]}];
   meta.targets=[first,other].map((p,i)=>{const q=parents.get(p);return {id:'target-'+i,...point(q),hp:12,ai:true,heading:Math.atan2(-((parents.get(q)||p).x-q.x),-((parents.get(q)||p).z-q.z)),state:'patrol',patrol:[point(q),point(parents.get(q)||p)],patrolIndex:1,lastAttack:-90,seenTicks:0};});
   meta.supplies=[first,other].flatMap((p,i)=>['bullets','grenades','disguise','medkits'].map((item,j)=>({id:`supply-${i}-${j}`,item,amount:item==='bullets'?12:1,...point(p)})));
   meta.doors=foundation.baseStructures.walls.flatMap((w,wallIndex)=>w.door&&!w.locked&&!w.alwaysOpen?[{id:w.id,wallIndex,cx:w.cx,cz:w.cz,floor:w.y0+1}]:[]);

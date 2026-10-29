@@ -54,7 +54,7 @@ try{
  assert.equal((await vehicle(ca,'enter','native-driver')).code,'ENTERED');assert.equal((await vehicle(cb,'enter','native-passenger')).code,'ENTERED');await wait(()=>cb.state.vehicles[0].seats[1]===b.id);
  const parked={...ca.state.vehicles[0]};sendIntent(1,{forward:1,turn:1,strafe:1,run:true});await new Promise(r=>setTimeout(r,400));assert.equal(ca.state.vehicles[0].z,parked.z,'passenger cannot drive over WebSocket');
  const driving=setInterval(()=>sendIntent(0,{forward:1,turn:0,strafe:0,run:false}),50);try{await wait(()=>Math.hypot(ca.state.vehicles[0].x-parked.x,ca.state.vehicles[0].z-parked.z)>.25);}finally{clearInterval(driving);sendIntent(0,{forward:0,turn:0,strafe:0,run:false});}
- await wait(()=>Math.abs(ca.state.vehicles[0].speed)<.01);assert.equal(ca.state.players[0].z,ca.state.players[1].z,'passenger travels with driver');
+ await wait(()=>Math.abs(ca.state.vehicles[0].v)<.01);assert.equal(ca.state.players[0].z,ca.state.players[1].z,'passenger travels with driver');
  assert.equal((await vehicle(cb,'exit','native-passenger-exit')).code,'EXITED');assert.equal((await vehicle(ca,'exit','native-driver-exit')).code,'EXITED');
  await moveTo(0,spawn[0]);await moveTo(1,spawn[1]);
  // Select the assault rifle and validate three server-timed bullets on both clients.

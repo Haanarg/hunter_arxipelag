@@ -264,12 +264,7 @@ function wholeDamage(value){
 }
 // Xocs amb criteris compartits: massa del receptor, massa de l'altre i velocitat relativa.
 // Els impactes ordinaris tenen un màxim de cinc punts de vida per contacte.
-function impactDamage(relativeSpeed,receiverMass=1,strikerMass=1){
- // Els cops entre vehicles fins a 10 són maniobres, no impactes destructius.
- if(!(relativeSpeed>10))return 0;
- const ratio=Math.sqrt(Math.max(.2,strikerMass)/Math.max(.2,receiverMass));
- return Math.max(1,Math.min(5,Math.ceil((relativeSpeed-10)*ratio/6)));
-}
+function impactDamage(...args){return window.HUNTER_SHARED_COMBAT.impactDamage(...args)}
 function impactVehicle(v,dmg){
  if(!v||v.destroyed||v.t==='tanc'||dmg<=0)return;
  const amount=Math.min(5,wholeDamage(dmg));
@@ -280,13 +275,7 @@ function impactVehicle(v,dmg){
 
 // Mateix atropellament per a soldats i jugador: velocitat i massa sense
 // límit artificial per als vehicles pesants; 10 PV és el màxim global.
-const RUNOVER_MIN_SPEED=6,RUNOVER_MAX_DAMAGE=10;
-function runoverDamage(speed,mass=1){
- if(!(speed>RUNOVER_MIN_SPEED))return 0;
- return Math.min(RUNOVER_MAX_DAMAGE,Math.max(1,Math.ceil(
-  (speed-RUNOVER_MIN_SPEED)*Math.max(.2,mass)*RUNOVER_MAX_DAMAGE/(23*2.2)
- )));
-}
+function runoverDamage(...args){return window.HUNTER_SHARED_COMBAT.runoverDamage(...args)}
 // Consulta tot el moviment del vehicle, també quan travessa una diana
 // entre dos fotogrames. El radi és el mateix que per a l'impacte puntual.
 function runoverSweepHit(x0,z0,x1,z1,tx,tz,radius){
@@ -335,7 +324,7 @@ function blastImpulseAt(x,z,px,pz,r,falloff){
   return {vx:dir.x*speed,vz:dir.z*speed,vy:(9+13*falloff)*scale};
 }
 // Explosions: dany complet al centre, mínim d'un punt a la vora.
-function explosionDamage(dmg,distance,r){return distance>=r?0:Math.max(1,Math.ceil(dmg*(1-distance/r)))}
+function explosionDamage(...args){return window.HUNTER_SHARED_COMBAT.explosionDamage(...args)}
 // Les parets, portes, forjats, teulades i relleu fan de cobertura real.
 // Especialment: una càrrega a la superfície no pot matar el general al soterrani.
 function blastOccluded(x,y,z,tx,ty,tz,ignoreWall=null){
@@ -531,7 +520,7 @@ function bunkerProjectileSurface(x,z,y,water=false){
 function grenadeImpactTrajectory(power=0,origin=P,hd=P.hd,flight=null){
   const g={...(flight||grenadeLaunchParams(power,origin,hd))},points=[{x:g.x,y:g.y,z:g.z}],dt=1/40;
   for(let i=0;i<96;i++){
-    const x0=g.x,y0=g.y,z0=g.z,x1=x0+g.vx*dt,y1=y0+(g.vy-24*dt)*dt,z1=z0+g.vz*dt,
+    const next=window.HUNTER_SHARED_COMBAT.ballisticStep(g,dt),x0=g.x,y0=g.y,z0=g.z,x1=next.x,y1=next.y,z1=next.z,
           mx=(x0+x1)/2,mz=(z0+z1)/2,reach=Math.hypot(x1-x0,z1-z0)/2+.5;
     let hitT=null;
     for(const w of wallCandidates(mx,mz,reach)){
@@ -547,7 +536,7 @@ function grenadeImpactTrajectory(power=0,origin=P,hd=P.hd,flight=null){
     }
     const fraction=hitT==null?1:hitT;
     g.x=x0+(x1-x0)*fraction;g.y=y0+(y1-y0)*fraction;g.z=z0+(z1-z0)*fraction;
-    g.vy-=24*dt;g.t-=dt;
+    g.vy=next.vy;g.t-=dt;
     const surface=bunkerProjectileSurface(g.x,g.z,g.y,true);
     if(hitT!=null||g.t<=0||g.y<=surface){
       g.y=Math.max(g.y,surface);points.push({x:g.x,y:g.y,z:g.z});break;
@@ -1122,9 +1111,8 @@ function cutBarbedWire(){
 }
 // Ràfega de tres bales, separades 75 ms. Cap temporitzador real:
 // els tres trets avancen amb el temps de simulació, sense saltar-se pauses.
-const ASSAULT_BURST_SPACING=.075;
-let assaultBurstRemaining=0,assaultBurstDelay=0;
-function cancelAssaultBurst(){assaultBurstRemaining=0;assaultBurstDelay=0;}
+const assaultBurst={remaining:0,delay:0};
+function cancelAssaultBurst(){window.HUNTER_SHARED_COMBAT.cancelBurst(assaultBurst)}
 function fireAssaultBurstBullet(index){
   if(!assaultRifleEquipped||!inv.fusell_assalt||cv||swimming||over||paused||
      playerFall||playerEject||hp<=0||ammo<=0)return false;
@@ -1145,25 +1133,14 @@ function fireAssaultBurstBullet(index){
   return true;
 }
 function beginAssaultBurst(){
-  if(assaultBurstRemaining)return false;
-  if(ammo<3){msg='Fusell d’assalt: calen 3 cartutxos per ràfega.';msgT=1.5;return false}
-  if(!fireAssaultBurstBullet(0))return false;
-  assaultBurstRemaining=2;
-  assaultBurstDelay=ASSAULT_BURST_SPACING;
-  fcd=.34;
-  return true;
+ if(assaultBurst.remaining)return false;
+ if(ammo<3){msg='Fusell d’assalt: calen 3 cartutxos per ràfega.';msgT=1.5;return false}
+ if(!window.HUNTER_SHARED_COMBAT.beginBurst(assaultBurst,ammo,fireAssaultBurstBullet))return false;
+ fcd=.34;return true;
 }
 function updateAssaultBurst(dt){
-  if(!assaultBurstRemaining)return;
-  if(!assaultRifleEquipped||!inv.fusell_assalt||cv||swimming||over||paused||
-     playerFall||playerEject||hp<=0){cancelAssaultBurst();return}
-  assaultBurstDelay-=dt;
-  if(assaultBurstDelay>0)return;
-  // Un sol tret per tick: ni amb FPS baixos apareixen dues bales alhora.
-  if(!fireAssaultBurstBullet(3-assaultBurstRemaining)){cancelAssaultBurst();return}
-  assaultBurstRemaining--;
-  if(assaultBurstRemaining)assaultBurstDelay+=ASSAULT_BURST_SPACING;
-  else assaultBurstDelay=0;
+ const allowed=assaultRifleEquipped&&inv.fusell_assalt&&!cv&&!swimming&&!over&&!paused&&!playerFall&&!playerEject&&hp>0;
+ window.HUNTER_SHARED_COMBAT.stepBurst(assaultBurst,dt,allowed,fireAssaultBurstBullet);
 }
 // La pistola personal és utilitzable només des dels vehicles oberts.
 const OPEN_RIDER_PISTOL=new Set(['bici','moto','moto_aquatica','barca_rems','windsurf','llanxa']);
@@ -1221,22 +1198,8 @@ else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}
 else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9-(playerCrouched?.48:0),z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,BAZOOKA_AIM_RANGE,BAZOOKA_AIM_CONE,'heavy',null,72*HEAVY_SHOT_SPEED_FACTOR,BAZOOKA_AIM_VERTICAL);shoot(x,y,z,ax,ay,az,72,COMBAT_BALANCE.weapons.bazooka,18,'pb',mS,3);Pj[Pj.length-1].life=3.8;Pj[Pj.length-1].weapon='bazooka';msg='Bazooka: '+(inv.bazooka||0)+' coets restants.';msgT=2;setDis(false)}
 else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5-(playerCrouched?.48:0),z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,75,SMALL_ARMS_AIM_CONE,'pistol',null,130,SMALL_ARMS_AIM_VERTICAL);shoot(x,y,z,ax,ay,az,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE)}
 else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}
-function segmentAabbT(x0,y0,z0,x1,y1,z1,minX,maxX,minY,maxY,minZ,maxZ){
-  let lo=0,hi=1;
-  const clip=(p,d,mn,mx)=>{
-    if(Math.abs(d)<1e-9)return p>=mn&&p<=mx;
-    let a=(mn-p)/d,b=(mx-p)/d;if(a>b){const q=a;a=b;b=q}
-    lo=Math.max(lo,a);hi=Math.min(hi,b);return lo<=hi
-  };
-  return clip(x0,x1-x0,minX,maxX)&&clip(y0,y1-y0,minY,maxY)&&clip(z0,z1-z0,minZ,maxZ)&&hi>=0&&lo<=1?Math.max(0,lo):null
-}
-function segmentSphereT(x0,y0,z0,x1,y1,z1,cx,cy,cz,r){
-  const dx=x1-x0,dy=y1-y0,dz=z1-z0,mx=x0-cx,my=y0-cy,mz=z0-cz,
-        a=dx*dx+dy*dy+dz*dz,c=mx*mx+my*my+mz*mz-r*r;
-  if(c<=0)return 0;if(a<1e-12)return null;
-  const b=2*(mx*dx+my*dy+mz*dz),disc=b*b-4*a*c;if(disc<0)return null;
-  const t=(-b-Math.sqrt(disc))/(2*a);return t>=0&&t<=1?t:null
-}
+function segmentAabbT(...args){return window.HUNTER_SHARED_COMBAT.segmentAabbT(...args)}
+function segmentSphereT(...args){return window.HUNTER_SHARED_COMBAT.segmentSphereT(...args)}
 // La patrullera no és una esfera de deu metres: només comptam el buc
 // allargat i la cabina, alineats amb el seu rumb. Això evita que una
 // bala que passa clarament per damunt provoqui dany fictici.
@@ -1382,7 +1345,7 @@ function updPj(dt){
 }
 function updFx(dt){
 const pending=pl.userData.grenadePending;if(pending){pending.t-=dt;if(pending.t<=0){launchGrenade(pending);pl.userData.grenadeReleased=true;pl.userData.grenadePending=null}}
-for(let i=grenades.length-1;i>=0;i--){const g=grenades[i],x0=g.x,y0=g.y,z0=g.z;g.t-=dt;g.vy-=24*dt;const x1=x0+g.vx*dt,y1=y0+g.vy*dt,z1=z0+g.vz*dt,mx=(x0+x1)/2,mz=(z0+z1)/2,reach=Math.hypot(x1-x0,z1-z0)/2+.5;let hitT=null;
+for(let i=grenades.length-1;i>=0;i--){const g=grenades[i],next=window.HUNTER_SHARED_COMBAT.ballisticStep(g,dt),x0=g.x,y0=g.y,z0=g.z;g.t-=dt;g.vy=next.vy;const x1=next.x,y1=next.y,z1=next.z,mx=(x0+x1)/2,mz=(z0+z1)/2,reach=Math.hypot(x1-x0,z1-z0)/2+.5;let hitT=null;
   for(const w of wallCandidates(mx,mz,reach))if(!w.open){const q=segmentAabbT(x0,y0,z0,x1,y1,z1,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);if(q!=null&&(hitT==null||q<hitT))hitT=q}
   for(const b of buildingCandidates(mx,mz,reach)){const q=b.hangar?hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b):segmentAabbT(x0,y0,z0,x1,y1,z1,b.x-b.w/2,b.x+b.w/2,b.fy+b.h-.35,b.fy+b.h+.8,b.z-b.d/2,b.z+b.d/2);if(q!=null&&(hitT==null||q<hitT))hitT=q}
   const q=hitT==null?1:hitT;g.x=x0+(x1-x0)*q;g.y=y0+(y1-y0)*q;g.z=z0+(z1-z0)*q;g.o.position.set(g.x,g.y,g.z);g.o.rotation.x+=dt*8;g.o.rotation.z+=dt*5;

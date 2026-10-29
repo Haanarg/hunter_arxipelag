@@ -3096,34 +3096,8 @@ if(land){
 // Strafe sense girar: només hovercraft i els dos helicòpters.
 // Conservar la deriva natural existent (sideV) i afegir-hi una velocitat
 // lateral independent amb acceleració i frenada suaus.
-const maxStrafe=v.t==='hover'?12:(a?(c.strafeMax||17):0),
-      targetStrafe=maxStrafe*Math.max(-1,Math.min(1,strafe));
-v.strafeV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.strafeV||0,targetStrafe,6.5,dt);
-if(Math.abs(targetStrafe)<.01&&Math.abs(v.strafeV)<.02)v.strafeV=0;
+const sideV=window.HUNTER_SHARED_VEHICLES.advanceVehicle(v,f,tr,dt,strafe,{drag:flooded?.drag||0});
 if(a&&v.carrier&&ud>.12){detachFromFerry(v);v.verticalV=Math.max(v.verticalV||0,3)}
-v.v+=f*c.a*dt;
-const dragBase=c.dr*(water?1.08:land?.86:1),coastBoost=Math.abs(f)<.03?(water?1.18:land?1.04:.82):1;
-v.v*=Math.max(0,1-dragBase*coastBoost*dt);
-if(land&&flooded.drag>0)v.v*=Math.exp(-flooded.drag*dt);
-v.v=Math.max(-(c.maxR||12),Math.min(c.maxF||40,v.v));
-
-let steerScale=1;
-if(land){const speed=Math.abs(v.v),fade=c.steerFade??.4;steerScale=(.35+.65*Math.min(1,speed/9))*(1-fade*Math.min(1,speed/(c.maxF||35))*.55)}
-else if(water){const speed=Math.abs(v.v),min=c.waterSteerMin??.2;steerScale=min+(1-min)*Math.min(1,speed/10)}
-const targetYaw=tr*c.tu*steerScale*(a?1:(v.v<0?-1:1));
-v.yawRate=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.yawRate||0,targetYaw,c.yawResponse||4,dt);
-v.hd+=v.yawRate*dt;
-
-let sideV=0;
-if(water){
-  const drift=(c.waterDrift||0)*v.v*v.yawRate;
-  v.sideV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.sideV||0,drift,2.2,dt);
-  sideV=v.sideV;
-}else if(land){
-  const grip=c.landGrip??.9,slip=(1-grip)*v.v*v.yawRate*.42;
-  v.sideV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.sideV||0,slip,5+grip*5,dt);
-  sideV=v.sideV;
-}else v.sideV=window.HUNTER_VEHICLE_DYNAMICS.smooth(v.sideV||0,0,4,dt);
 
 const oldX=v.x,oldZ=v.z,
       fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),sx=Math.cos(v.hd),sz=-Math.sin(v.hd);

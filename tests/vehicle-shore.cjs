@@ -1,8 +1,10 @@
+(async()=>{
+const testSharedCombat=await import('../src/combat-rules.mjs'),testSharedVehicles=await import('../src/vehicle-dynamics-core.mjs');
 'use strict';
 // CPU-only shoreline regressions: real movement function, no browser or WebGL.
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
-const root=path.resolve(__dirname,'..'),win={};
+const root=path.resolve(__dirname,'..'),win={HUNTER_SHARED_COMBAT:testSharedCombat,HUNTER_SHARED_VEHICLES:testSharedVehicles};
 vm.runInNewContext(fs.readFileSync(path.join(root,'src/vehicle-dynamics.js'),'utf8'),
  {window:win,Math});
 const dynamics=win.HUNTER_VEHICLE_DYNAMICS,shore=dynamics.shore;
@@ -65,3 +67,5 @@ assert(!deck.waterIngress.dead,'dry ferry deck does not stall truck motor');
 assert(core.includes('onFerryDeck=land&&(v.carrier||ferryForVehicle'),
  'stepV accounts for ferry cargo before checking immersion');
 console.log('PASS shoreline: flooding, splash, automatic swimming escape, hull contact, reversing, jet ski, ferry and hovercraft');
+
+})().catch(error=>{console.error(error);process.exitCode=1});

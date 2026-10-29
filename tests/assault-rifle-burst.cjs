@@ -1,3 +1,5 @@
+(async()=>{
+const shared=await import('../src/combat-rules.mjs');
 'use strict';
 // Ràfegues del fusell: comprova la seqüència real, sense arrencar el WebGL.
 const assert=require('node:assert/strict');
@@ -9,7 +11,7 @@ const end=src.indexOf('// La pistola personal és utilitzable',begin);
 assert(begin>=0&&end>begin,'El controlador de ràfega existeix');
 assert(src.includes('if(!beginAssaultBurst())return;'),'La lògica de dispar inicia la ràfega');
 const shots=[];
-const ctx={
+const ctx={window:{HUNTER_SHARED_COMBAT:shared},
   ammo:12,assaultRifleEquipped:true,inv:{fusell_assalt:1},cv:null,
   swimming:false,over:0,paused:false,playerFall:null,playerEject:null,hp:8,
   pl:{userData:{}},P:{hd:0,x:0,y:0,z:0},playerCrouched:false,
@@ -48,3 +50,5 @@ ctx.ammo=2;
 assert.equal(ctx.burst.beginAssaultBurst(),false,'No s’inicia una ràfega amb menys de tres bales');
 assert.equal(shots.length,4);
 console.log('OK: fusell d’assalt, tres trets seqüencials, consum, retarget i cancel·lació');
+
+})().catch(error=>{console.error(error);process.exitCode=1});

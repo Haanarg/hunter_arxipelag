@@ -471,3 +471,25 @@ Integració de main: es conserva el con 3D compartit de pistola/fusell de v0.6.2
 4. Món complet, destrucció i objectius de campanya, preservant RNG i vehicles/contingut del joc individual.
 5. Desaments cooperatius permanents, migracions, estadístiques/historial i resum de missió.
 6. Validació física amb dos comptes/navegadors, GPU/Android, controls/rendiment/àudio/acabat; animació de portes, portes per a la IA individual i incidències històriques de fixtures/escala 2.
+
+
+## Cooperatiu · fase 20 · Auditoria i motor compartit (v0.6.31)
+
+- Reorientació demanada per l’usuari: revisar tot el cooperatiu, reutilitzar el motor individual i retirar codi redundant abans d’ampliar funcions. Auditoria per subsistema, adaptadors i pendents a `docs/SHARED_ENGINE_AUDIT.md`.
+- Extrets `combat-rules.mjs` i `vehicle-dynamics-core.mjs` del codi individual: balanç/perfils, acceleració/arrossegament/gir/deriva, ràfegues, explosions/impactes/atropellaments, segment/caixa i segment/esfera, con de visió i pas balístic. Els dos modes els criden. Les primitives també serveixen la recollida per contacte del servidor i la previsualització de granades individual.
+- Eliminat el controlador de conducció lineal cooperatiu; usa el mateix perfil `cotxe` i el mateix estat `v`, sense duplicar-lo en `speed`. Conducció amb inèrcia original (màxim 38/14 m/s), conservant seients, límits, contactes del recinte i inputs autoritatius.
+- Eliminada la temporització independent de ràfegues. Controlador únic de 75 ms, cancel·lació i mínim de tres bales; ticks 0/3/5 a 30 Hz. Fórmules compartides de salut/dany; perfil de dany del relleu conservat com a dades explícites (4/16), no una segona fórmula.
+- Paleta i fàbrica tàctica extretes a `palette-core.mjs` i `player-model-core.mjs`. Jugadors/guàrdies del cooperatiu deixen d’usar càpsules/caixes alternatives. Eliminat el model de jeep alternatiu: mateix Humvee D3.1 procedural B que l’individual, amb instàncies pròpies disposables i escala del recinte. Sense duplicar assets.
+- `coop-socket.mjs` unifica generacions, reintents, heartbeat i neteja de les connexions. Es conserven adaptadors de missatges, liveness, seqüències i validació per a sala/missió. Els antics fitxers clàssics de física de vehicles, paleta i persones són ponts curts, no còpies del motor.
+- Retirat abans de publicar el prototip local de jeep de 60 PV, multiplicador de dany i destrucció propis. Cal connectar les regles individuals abans d’afegir salut/destrucció, armes muntades o altres vehicles. No s’ha eliminat cap funció que ja fos a producció.
+- Validació: 3.840 passos de conducció congelats en els 16 perfils, controlador de ràfega individual i cooperatiu, fórmules i balística; `test:play` complet amb dues sessions natives (armes/jeep/portes/victòria/reconnexió/reanimació); portes en font i bundle, sigil/percepció/coordinació, costa/vehicles pesants/retícules i regressions del fusell individual. Fixtures aïllats actualitzats per injectar els mòduls compartits; la prova de retícula recupera els helpers reals i l’estat que li faltaven. Geometria Three sense GPU; dispositius físics pendents.
+- Compte, autoritat, seients, pausa, reanimació/farmacioles, missió de relleu i persistència són responsabilitats cooperatives que es conserven. Generador temporal `relay:10`, sense migració de checkpoints anteriors. Sense dependències ni recursos Cloudflare nous.
+
+### Què queda després d’aquesta fase
+
+1. Reutilització: extracció del recorregut complet de projectils/autoapuntat, navegació/màquina d’estats de la IA i contactes complets de vehicles (OBB, terreny, ferri, aigua i aire). Primitives i dinàmica ja compartides; la integració completa encara no ho és.
+2. Reutilitzar les fàbriques restants d’equipament, animacions, efectes i àudio. Persones i Humvee ja comparteixen els models originals.
+3. Armes/equipament restants i salut/destrucció/combustible/blindatge/armes muntades/altres vehicles a partir del motor individual, sense tornar-los a implementar en paral·lel.
+4. Món complet i objectius de campanya, preservant RNG i contingut individual.
+5. Desaments cooperatius permanents, migracions, estadístiques/historial i resum de missió.
+6. Proves físiques amb dos comptes/navegadors, GPU/Android, controls/rendiment/àudio/acabat; animació de portes, portes per a IA individual i incidències històriques de fixtures/escala 2.

@@ -1,7 +1,7 @@
 import {configuredAccounts} from './account-client.mjs';
-import {GAME_VERSION} from './version.mjs?v=0.6.30';
-import {createPlayConnection,playInput} from './coop-play-connection.mjs?v=0.6.30';
-import {createMissionView} from './coop-play-view.mjs?v=0.6.30';
+import {GAME_VERSION} from './version.mjs?v=0.6.31';
+import {createPlayConnection,playInput} from './coop-play-connection.mjs?v=0.6.31';
+import {createMissionView} from './coop-play-view.mjs?v=0.6.31';
 const $=id=>document.getElementById(id),message=$('message'),launch=$('launch'),connection=$('connection'),keys=new Set(),touch=new Map();
 let channel=null,room=null,view=null,meta=null,self=null,state=null,viewGeneration=0,pendingDoor=null,doorTimer=null;
 function clearDoor(){if(doorTimer!==null)clearTimeout(doorTimer);doorTimer=null;pendingDoor=null;}
@@ -61,7 +61,7 @@ function drawHUD(){
   $('inventory').textContent=bag?`El teu inventari · Bales: ${bag.bullets}/120 · Granades: ${bag.grenades}/8 · Farmacioles: ${bag.medkits}/3 · Disfressa: ${bag.disguise}${bag.disguised?' (posada)':''}`:'';
   $('weapon').disabled=!!pendingInventory||!active;$('weapon').value=bag?.weapon||'pistol';$('weapon').querySelector?.('option[value=assault]')?.toggleAttribute('disabled',!bag?.assault);
   $('drop').disabled=!!pendingInventory||!active||!bag?.[$('drop-item').value];$('disguise').disabled=!!pendingInventory||!active||!bag?.disguise;$('disguise').textContent=bag?.disguised?'Treure disfressa · C':'Posar disfressa · C';
-  $('shoot').disabled=!active||!bag?.bullets;$('grenade').disabled=!active||!bag?.grenades;const targets=state.combat?.targets||[];$('combat-status').textContent=`Guàrdies: ${targets.filter(t=>t.hp<=0).length}/${targets.length} · Sense foc amic${mounted()?` · Jeep: ${mounted().seats[0]===self?'conductor':'passatger'} · ${Math.round(Math.abs(mounted().speed)*3.6)} km/h`:''}`;
+  $('shoot').disabled=!active||!bag?.bullets;$('grenade').disabled=!active||!bag?.grenades;const targets=state.combat?.targets||[];$('combat-status').textContent=`Guàrdies: ${targets.filter(t=>t.hp<=0).length}/${targets.length} · Sense foc amic${mounted()?` · Jeep: ${mounted().seats[0]===self?'conductor':'passatger'} · ${Math.round(Math.abs(mounted().v)*3.6)} km/h`:''}`;
   view?.setState(state);
 }
 launch.onclick=()=>{if(room&&channel?.launch(room.revision))message.textContent='Esperant la confirmació dels dos jugadors…';else message.textContent='Espera que s’obri la connexió.';};

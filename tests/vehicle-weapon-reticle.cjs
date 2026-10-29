@@ -18,10 +18,10 @@ const {pathToFileURL}=require('node:url');
    THREE:T,window:{HUNTER_VEHICLES:{turretShot:()=>gun}},bazookaReticleElement:ui,
    bazookaReticleWorld:new T.Vector3(),bazookaReticleScreen:new T.Vector3(),
    bazookaReticleTimer:0,bazookaReticleHasHit:false,bazookaReticleMode:null,
-   started:true,paused:false,over:false,playerFall:null,swimming:false,
+   started:true,paused:false,over:false,playerFall:null,swimming:false,playerCrouched:false,
    bazookaEquipped:false,inv:{bazooka:2},P:{x:0,y:0,z:0,hd:0},cv:null,
    VS:{heli_combat:1.82},HEAVY_SHOT_SPEED_FACTOR:1,
-   BAZOOKA_AIM_RANGE:185,BAZOOKA_AIM_CONE:.82,
+   BAZOOKA_AIM_RANGE:185,BAZOOKA_AIM_CONE:.68,BAZOOKA_AIM_VERTICAL:.90,
    HELI_MISSILE_RANGE:210,HELI_MISSILE_ANGLE:Math.PI*25/180,
    cam:new T.PerspectiveCamera(58,1,0.1,500),
    // L'objectiu simulat està sempre a 25 m i dins del camp de visió.
@@ -34,7 +34,9 @@ const {pathToFileURL}=require('node:url');
  };
  ctx.cam.position.set(0,3,10);ctx.cam.lookAt(0,0,-25);
  vm.createContext(ctx);
- vm.runInContext(helper+fn,ctx);
+ const armored=src.slice(src.indexOf('function autoAimArmoredShot('),src.indexOf('// Rifle: sortida REAL',src.indexOf('function autoAimArmoredShot(')));
+ const radius=src.slice(src.indexOf('function enemyAimHitRadius('),src.indexOf('// Les bales lleugeres',src.indexOf('function enemyAimHitRadius(')));
+ vm.runInContext(helper+armored+radius+fn,ctx);
  const refresh=()=>vm.runInContext('updateBazookaReticle(.1)',ctx);
  ctx.cv={t:'tanc',o:new T.Group()};
  refresh();
@@ -98,7 +100,7 @@ const {pathToFileURL}=require('node:url');
  ctx.cv=null;ctx.bazookaEquipped=true;refresh();
  assert.equal(ctx.bazookaReticleMode,'bazooka','Bazuca conserva la seva retícula');
  assert.equal(ctx.calls.at(-1).range,185,'Bazuca: abast ampliat també a la retícula');
- assert.equal(ctx.calls.at(-1).cone,.82,'Bazuca: con ampliat també a la retícula');
+ assert.equal(ctx.calls.at(-1).cone,.68,'Bazuca: la retícula respecta el con configurat');
  ctx.bazookaEquipped=false;refresh();
  assert.equal(ui.style.display,'none','Sense armes compatibles la retícula desapareix');
  assert.ok(src.includes('const shot=combatHeliMissileAim(cv),d=shot.direction'),

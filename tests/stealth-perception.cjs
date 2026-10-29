@@ -1,10 +1,12 @@
 #!/usr/bin/env node
+(async()=>{
+const testSharedCombat=await import('../src/combat-rules.mjs'),testSharedVehicles=await import('../src/vehicle-dynamics-core.mjs');
 // Prova local lleugera: no genera illes ni consumeix minuts de GitHub Actions.
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const path=require('node:path');
-const context=vm.createContext({window:{},Math});
+const context=vm.createContext({window:{HUNTER_SHARED_COMBAT:testSharedCombat,HUNTER_SHARED_VEHICLES:testSharedVehicles},Math});
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/stealth.js'),'utf8'),context);
 const s=context.window.HUNTER_STEALTH;
 const near=(a,b,epsilon=.001)=>Math.abs(a-b)<epsilon;
@@ -31,3 +33,5 @@ s.tick(.9);assert.equal(s.heardAt(10,1,-5),null,'Els sorolls caduquen');
 s.clear();assert.equal(s.events().length,0,'Reiniciar partida neteja sorolls');
 s.setDebug(true);assert(s.enabled());s.setDebug(false);assert(!s.enabled());
 console.log('OK: percepció 3D, sorolls, ajupiment i interruptor de depuració');
+
+})().catch(error=>{console.error(error);process.exitCode=1});

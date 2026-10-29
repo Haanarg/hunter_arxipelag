@@ -1,5 +1,6 @@
-import {createVehicleView} from './coop-vehicle-view.mjs?v=0.6.30';
-import {createCombatView} from './coop-combat-view.mjs?v=0.6.30';
+import {playerModel} from './player-model-core.mjs?v=0.6.31';
+import {createVehicleView} from './coop-vehicle-view.mjs?v=0.6.31';
+import {createCombatView} from './coop-combat-view.mjs?v=0.6.31';
 const colors=[0x5fc5ff,0xffc85f],css=['#5fc5ff','#ffc85f'];
 export async function createMissionView(container,meta,geometry,{three=null,makeRenderer=null}={}){
   const doorByWall=new Map((meta.doors||[]).map(d=>[d.wallIndex,d.id]));
@@ -33,15 +34,16 @@ export async function createMissionView(container,meta,geometry,{three=null,make
     updateSupplies(meta.supplies||[]);
     const ring=new T.Mesh(new T.TorusGeometry(3,.18,8,32),new T.MeshBasicMaterial({color:0x99ff9b}));ring.rotation.x=-Math.PI/2;ring.position.set(meta.extraction.x,meta.extraction.y+.1,meta.extraction.z);scene.add(ring);
     const pawns=meta.members.map((m,i)=>{
-      const group=new T.Group(),body=new T.Mesh(new T.CapsuleGeometry(.65,1.3,4,8),new T.MeshStandardMaterial({color:colors[i]}));body.position.y=1.3;group.add(body);
+      const group=new T.Group(),body=playerModel.create(T,{unitScale:.85});body.position.y=0;group.add(body);
       const arrow=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(0,1.4,0),new T.Vector3(0,1.4,-2.5)]),new T.LineBasicMaterial({color:0xffffff}));group.add(arrow);group.userData.actorId=m.id;scene.add(group);return group;
     });
-    const combatView=createCombatView(T,scene),vehicleView=createVehicleView(T,scene);
+    dispose=()=>{scene.traverse(o=>{o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();});renderer.dispose();};
+    const combatView=createCombatView(T,scene),vehicleView=await createVehicleView(T,scene);
     let initialized=false;
     resize=()=>{const w=container.clientWidth,h=container.clientHeight,aspect=w/Math.max(1,h),half=Math.max((b.z1-b.z0)*.7,(b.x1-b.x0)/aspect*.6,40);camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;camera.updateProjectionMatrix();renderer.setSize(w,h,false);};
     draw=dt=>{
       if(state){vehicleView.update(state.vehicles);combatView.update(state.combat,state.tick);updateSupplies(state.supplies||(meta.supplies||[]).filter(s=>!state.claimedSupplies?.includes(s.id)));for(const door of state.doors||[]){const mesh=doorMeshes.get(door.id);if(mesh)mesh.visible=!door.open;}for(let i=0;i<2;i++){const p=state.players.find(p=>p.id===meta.members[i].id),pawn=pawns[i];if(!p)continue;const vehicle=state.vehicles?.find(v=>v.seats.includes(p.id)),side=vehicle?(vehicle.seats[0]===p.id?-.5:.5):0,px=p.x+Math.cos(p.hd)*side,pz=p.z-Math.sin(p.hd)*side;
-        if(!initialized)pawn.position.set(px,p.y,pz);else pawn.position.lerp(new T.Vector3(px,p.y,pz),1-Math.exp(-dt/65));pawn.rotation.y=p.hd;pawn.children[0].rotation.z=p.hp<=0?Math.PI/2:0;pawn.children[0].position.y=p.hp<=0?.5:1.3;pawn.children[0].material.emissive.setHex(state.rescue?.immune.some(d=>d.actorId===p.id&&state.tick<d.untilTick)?0x285a76:0);pawn.children[0].material.color.setHex(p.hp<=0?0xf07860:state.inventories?.find(b=>b.actorId===p.id)?.disguised?0x567346:colors[i]);
+        if(!initialized)pawn.position.set(px,p.y,pz);else pawn.position.lerp(new T.Vector3(px,p.y,pz),1-Math.exp(-dt/65));pawn.rotation.y=p.hd;pawn.children[0].rotation.z=p.hp<=0?Math.PI/2:0;pawn.children[0].position.y=p.hp<=0?.5:0;const body=pawn.children[0],tint=p.hp<=0?0xf07860:state.inventories?.find(b=>b.actorId===p.id)?.disguised?0x567346:colors[i];for(const [material] of body.userData.mats)material.color.setHex(tint);body.traverse(o=>{if(o.material?.emissive)o.material.emissive.setHex(state.rescue?.immune.some(d=>d.actorId===p.id&&state.tick<d.untilTick)?0x285a76:0);});
       }initialized=true;ring.material.color.setHex(state.phase==='won'?0xffe98c:0x99ff9b);}
       renderer.render(scene,camera);
     };

@@ -27,14 +27,7 @@ window.HUNTER_STEALTH=(()=>{
   function tick(dt){for(let i=events.length-1;i>=0;i--)
     if((events[i].age+=dt)>.85)events.splice(i,1)}
   function clear(){events.length=0}
-  function inView(heading,dx,dy,dz,range=CONFIG.sightRange){
-    const horizontal=Math.hypot(dx,dz),dist=Math.hypot(horizontal,dy);
-    if(dist>range||horizontal<.001)return false;
-    // El model avança cap a -Z, amb hd com a rotació mundial de Y.
-    const forward=(-Math.sin(heading)*dx-Math.cos(heading)*dz)/horizontal;
-    return forward>=Math.cos(CONFIG.sightHalfAngle)&&
-      Math.abs(Math.atan2(dy,horizontal))<=CONFIG.sightVerticalAngle;
-  }
+  function inView(heading,dx,dy,dz,range=CONFIG.sightRange){return window.HUNTER_SHARED_COMBAT.inView(heading,dx,dy,dz,range,CONFIG)}
   function heardAt(x,y,z,lastId=0,attenuation=()=>1){
     let choice=null,best=-Infinity;
     for(const noise of events){

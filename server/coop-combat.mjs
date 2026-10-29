@@ -1,12 +1,8 @@
+import {damageHealth} from '../src/player-simulation.mjs';
+import {beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,segmentAabbT,inView,ballisticStep} from '../src/combat-rules.mjs';
 // Authoritative combat for the reduced relay arena. No client positions or hits.
 const at=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
-export function segmentBox(from,to,box){
-  let near=0,far=1;
-  for(const k of ['x','y','z']){const delta=to[k]-from[k],lo=box[k+'0'],hi=box[k+'1'];
-    if(Math.abs(delta)<1e-10){if(from[k]<lo||from[k]>hi)return null;continue;}
-    const a=(lo-from[k])/delta,b=(hi-from[k])/delta;near=Math.max(near,Math.min(a,b));far=Math.min(far,Math.max(a,b));if(near>far)return null;
-  }return near;
-}
+export function segmentBox(from,to,box){return segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,box.x0,box.x1,box.y0,box.y1,box.z0,box.z1);}
 function targetBox(t){return {x0:t.x-.8,x1:t.x+.8,z0:t.z-.8,z1:t.z+.8,y0:t.y,y1:t.y+3};}
 export function traceArena(from,to,geometry,world){
   let fraction=1;
@@ -23,7 +19,7 @@ export function traceArena(from,to,geometry,world){
 // Heading follows the simulation: zero faces -Z. Close awareness still requires LOS.
 export function guardInView(guard,player){
   const dx=player.x-guard.x,dz=player.z-guard.z,d=Math.hypot(dx,dz);
-  return d<=2||(-Math.sin(guard.heading||0)*dx-Math.cos(guard.heading||0)*dz)/d>=.5-1e-10;
+  return d<=2||inView(guard.heading||0,dx,0,dz,Infinity,{sightHalfAngle:Math.PI/3+1e-10,sightVerticalAngle:Math.PI/2});
 }
 const facePoint=(guard,p)=>Math.atan2(-(p.x-guard.x),-(p.z-guard.z));
 export function createRelayCombat({meta,record={},inventory,players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active}){
@@ -34,7 +30,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     const from={x:p.x,y:p.y+1.5,z:p.z},dx=-Math.sin(p.hd),dz=-Math.cos(p.hd);
           const to={x:from.x+dx*70,y:from.y,z:from.z+dz*70},trace=traceArena(from,to,geometry(),world());let first=trace.fraction,hit=null;
           for(const t of targets)if(t.hp>0){const f=segmentBox(from,to,targetBox(t));if(f!==null&&f<first){first=f;hit=t;}}
-          bag.bullets--;if(hit)hit.hp=Math.max(0,hit.hp-4);effect('shot',tick,{actorId,from,to:at(from,to,first),hit:hit?.id||null});return hit?'HIT':'FIRED';
+          bag.bullets--;if(hit)hit.hp=damageHealth(hit.hp,combatBalance.weapons.pistol);effect('shot',tick,{actorId,from,to:at(from,to,first),hit:hit?.id||null});return hit?'HIT':'FIRED';
   }
   function cancel(actorId){for(let i=bursts.length-1;i>=0;i--)if(bursts[i].actorId===actorId)bursts.splice(i,1);}
   function command(actorId,message,tick){
@@ -45,11 +41,11 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
       if(!active()||p.hp<=0||p.fall||p.swimming||!canAttack(actorId))code='NOT_ACTIVE';
       else if(message.weapon!=='grenade'&&((bag.weapon||'pistol')!==message.weapon||(message.weapon==='assault'&&!bag.assault)))code='NOT_EQUIPPED';
       else if(tick-(cooldowns.get(key)??-Infinity)<(message.weapon==='pistol'?10:message.weapon==='assault'?18:30))code='COOLDOWN';
-      else if(!(message.weapon!=='grenade'?bag.bullets:bag.grenades))code='EMPTY';
+      else if(!(message.weapon!=='grenade'?bag.bullets:bag.grenades)||(message.weapon==='assault'&&bag.bullets<3))code='EMPTY';
       else{
         const from={x:p.x,y:p.y+1.5,z:p.z},dx=-Math.sin(p.hd),dz=-Math.cos(p.hd);
         if(message.weapon!=='grenade'){
-          code=fire(actorId,p,bag,tick);if(message.weapon==='assault'){bursts.push({actorId,startTick:tick,next:1});code='BURST';}
+          if(message.weapon==='assault'){const burst={actorId,remaining:0,delay:0};beginBurst(burst,bag.bullets,()=>{fire(actorId,p,bag,tick);return true;});bursts.push(burst);code='BURST';}else code=fire(actorId,p,bag,tick);
         }else{
           bag.grenades--;grenades.push({id:'grenade-'+(++sequence),actorId,...from,vx:dx*14,vz:dz*14,vy:8,explodeAt:tick+60});code='THROWN';
         }
@@ -62,16 +58,16 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     if(!active())return;
     for(let i=bursts.length-1;i>=0;i--){const burst=bursts[i],p=players().find(p=>p.id===burst.actorId),bag=inventory.get(burst.actorId);
       if(!p||p.hp<=0||p.fall||p.swimming||!canAttack(p.id)||!bag?.assault||bag.weapon!=='assault'||!bag.bullets){bursts.splice(i,1);continue;}
-      if(tick>=burst.startTick+Math.round(burst.next*2.25)){fire(p.id,p,bag,tick);alarm(p,p.id,tick);bag.disguised=false;burst.next++;if(burst.next>=3)bursts.splice(i,1);}
+      stepBurst(burst,1/30,true,()=>{if(!bag.bullets)return false;fire(p.id,p,bag,tick);alarm(p,p.id,tick);bag.disguised=false;return true;});if(!burst.remaining)bursts.splice(i,1);
     }
     for(let i=grenades.length-1;i>=0;i--){
-      const g=grenades[i],from={x:g.x,y:g.y,z:g.z};g.vy-=18/30;
-      const candidate={x:g.x+g.vx/30,y:g.y+g.vy/30,z:g.z+g.vz/30},trace=traceArena(from,candidate,geometry(),world());
+      const g=grenades[i],from={x:g.x,y:g.y,z:g.z},next=ballisticStep(g,1/30,18);g.vy=next.vy;
+      const candidate={x:next.x,y:next.y,z:next.z},trace=traceArena(from,candidate,geometry(),world());
       if(trace.fraction<1){g.vx=0;g.vz=0;g.vy=0;Object.assign(g,at(from,candidate,Math.max(0,trace.fraction-.01)));}else Object.assign(g,candidate);
       // Impact stops the throw; its fuse keeps counting in simulation time.
       if(tick>=g.explodeAt){
         const center={x:g.x,y:g.y+.08,z:g.z},hits=[];
-        for(const t of targets)if(t.hp>0){const aim={x:t.x,y:t.y+1.5,z:t.z},d=Math.hypot(aim.x-center.x,aim.y-center.y,aim.z-center.z);if(d<8&&traceArena(center,aim,geometry(),world()).fraction>=1){const damage=Math.ceil(16*(1-d/8));t.hp=Math.max(0,t.hp-damage);hits.push(t.id);}}
+        for(const t of targets)if(t.hp>0){const aim={x:t.x,y:t.y+1.5,z:t.z},d=Math.hypot(aim.x-center.x,aim.y-center.y,aim.z-center.z);if(d<8&&traceArena(center,aim,geometry(),world()).fraction>=1){const damage=explosionDamage(combatBalance.weapons.grenade,d,8);t.hp=damageHealth(t.hp,damage);hits.push(t.id);}}
         alarm(center,g.actorId,tick);effect('explosion',tick,{actorId:g.actorId,at:center,radius:8,hits});grenades.splice(i,1);
       }
     }
@@ -80,7 +76,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
       const eye={x:t.x,y:t.y+1.5,z:t.z},candidates=players().filter(p=>p.hp>0&&!p.fall&&!p.swimming).map(p=>({p,d:Math.hypot(p.x-t.x,p.y-t.y,p.z-t.z)})).filter(({p,d})=>d<((inventory.get(p.id)?.disguised&&tick>(t.alarmedUntil||0))?4:18)&&guardInView(t,p)&&traceArena(eye,{x:p.x,y:p.y+1.5,z:p.z},geometry(),world()).fraction>=1).sort((a,b)=>a.d-b.d||a.p.id.localeCompare(b.p.id));
       if(candidates.length){
         const p=candidates[0].p;if(t.focus!==p.id)t.seenTicks=0;t.focus=p.id;t.lastSeenTick=tick;t.lastKnown={x:p.x,y:p.y,z:p.z};t.seenTicks=(t.seenTicks||0)+1;t.heading=Math.atan2(-(p.x-t.x),-(p.z-t.z));t.state=t.seenTicks<30?'alert':'attack';
-        if(t.seenTicks>=30&&tick-(t.lastAttack||0)>=90){const amount=Math.max(1,Math.ceil(2*(meta.difficulty||1)));damagePlayer(p.id,amount);t.lastAttack=tick;effect('shot',tick,{enemy:true,actorId:t.id,from:eye,to:{x:p.x,y:p.y+1.5,z:p.z},hit:p.id});}
+        if(t.seenTicks>=30&&tick-(t.lastAttack||0)>=90){const amount=Math.max(1,Math.ceil(combatBalance.weapons.rifle*(meta.difficulty||1)));damagePlayer(p.id,amount);t.lastAttack=tick;effect('shot',tick,{enemy:true,actorId:t.id,from:eye,to:{x:p.x,y:p.y+1.5,z:p.z},hit:p.id});}
       }else if(t.focus&&tick-(t.lastSeenTick??-Infinity)<120){t.state='search';t.seenTicks=0;const center=t.lastKnown?facePoint(t,t.lastKnown):(t.heading||0);t.heading=center+Math.sin((tick-t.lastSeenTick)/120*Math.PI*2)*Math.PI/3;}
       else{
         t.state='patrol';t.focus=null;t.seenTicks=0;
