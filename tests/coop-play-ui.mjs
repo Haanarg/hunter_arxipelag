@@ -26,7 +26,7 @@ try{
  await import('../src/coop-play.mjs?test-ui');assert.equal(sockets.length,1);const ws=sockets[0];assert.ok(ws.url.startsWith('wss://hunter.test/api/coop/socket?room='));ws.open();assert.equal(ws.sent[0].type,'hello');
  ws.message({type:'room',room});assert.equal(elements.get('launch').disabled,false);elements.get('launch').onclick();assert.equal(ws.sent.at(-1).type,'launch');assert.equal(ws.sent.at(-1).revision,4);
  mission.setStatus('running');ws.message(mission.setup('a'));await new Promise(setImmediate);await new Promise(setImmediate);
- assert.match(elements.get('objective').textContent,/Terminal 1/);assert.match(elements.get('players').textContent,/Primer \(tu\)/);
+ assert.match(elements.get('objective').textContent,/Terminal 1/);assert.match(elements.get('players').textContent,/Primer \(tu\)/);assert.equal((elements.get('players').textContent.match(/25 PV/g)||[]).length,2,'both player health labels reflect maximum health');
  ws.message({type:'state',state:{...mission.snapshot(),players:mission.snapshot().players.map((p,i)=>i===0?{...p,...mission.meta.terminals[0]}:p)}});assert.match(elements.get('action').textContent,/Activar/);
  listeners.get('keydown')({code:'KeyW',preventDefault(){}});elements.get('action').fire('pointerdown',{pointerId:7});
  const advanceInput=()=>{const entry=[...timers].find(([,v])=>v.ms===50);assert.ok(entry);timers.delete(entry[0]);entry[1].fn();};advanceInput();
