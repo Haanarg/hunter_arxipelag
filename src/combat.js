@@ -1048,6 +1048,18 @@ function cutBarbedWire(){
  msg='Filferrada tallada silenciosament.';msgT=1.4;
  return true;
 }
+// Origen de cada bala: boca REAL del canó, transformada des del rig
+// articulat (inclou escala, animació, agachament i gir del jugador).
+// No forçam P.y: la posició visual ja incorpora les cames i el sòl.
+function assaultMuzzleWorld(){
+  const u=pl.userData,muzzle=u.assaultMuzzle;
+  if(!u.assault||!muzzle)throw new Error('Falta el pivot del canó del fusell d\'assalt');
+  u.assault.rotation.x=-u.upperBody.rotation.x;
+  u.assault.rotation.y=-u.upperBody.rotation.y;
+  pl.position.x=P.x;pl.position.z=P.z;pl.rotation.y=P.hd;
+  pl.updateMatrixWorld(true);
+  return muzzle.getWorldPosition(new THREE.Vector3());
+}
 // Ràfega de tres bales, separades 75 ms. Cap temporitzador real:
 // els tres trets avancen amb el temps de simulació, sense saltar-se pauses.
 const assaultBurst={remaining:0,delay:0};
@@ -1057,8 +1069,8 @@ function fireAssaultBurstBullet(index){
      playerFall||playerEject||hp<=0||ammo<=0)return false;
   ammo--;
   pl.userData.firePose=.26;
-  const hd=P.hd,fx=-Math.sin(hd),fz=-Math.cos(hd),
-        x=P.x+fx*1.1,y=P.y+1.6-(playerCrouched?.48:0),z=P.z+fz*1.1,
+  const muzzle=assaultMuzzleWorld(),hd=P.hd,fx=-Math.sin(hd),fz=-Math.cos(hd),
+        x=muzzle.x,y=muzzle.y,z=muzzle.z,
         // Con 3D ampliat: torres per damunt i soldats a sota de l'horitzó.
         // La classe 'assault' només defineix la punteria: el projectil
         // disparat continua essent lleuger i no causa dany a les torres.
