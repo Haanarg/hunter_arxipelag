@@ -1165,7 +1165,7 @@ function updPj(dt){
       // Míssils, coets i canons explosius continuen colpejant el filferro.
       if(w.open||(w.barbed&&p.shotClass==='light'))continue;
       const crossing=window.HUNTER_BUILDING_SHELL.windowCrossing(from,to,w);
-      if(crossing){if(p.shotClass==='light')windowHits.push({wall:w,...crossing});continue}
+      if(crossing){windowHits.push({wall:w,...crossing});continue}
       consider(window.HUNTER_BUILDING_SHELL.wallShotHit(from,to,w),'wall',w)
     }
     for(const b of buildingCandidates(mx,mz,reach+1)){
@@ -1220,7 +1220,7 @@ function updPj(dt){
     }
 
     const {hit,kind,target,point}=flight.finish();
-    if(p.shotClass==='light')for(const pane of windowHits)if(pane.t<=flight.fraction+1e-6)shatterWindow(pane.wall,pane.index,pane.point,p);
+    for(const pane of windowHits)if(pane.t<=flight.fraction+1e-6)shatterWindow(pane.wall,pane.index,pane.point,p);
     p.x=point.x;p.y=point.y;p.z=point.z;p.o.position.set(p.x,p.y,p.z);
     if(!hit)continue;
 
