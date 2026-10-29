@@ -2,6 +2,7 @@ import {createPathNetwork,smoothPath} from './compound-paths.mjs';
 import {decorateTimber,decorateUpper} from './compound-architecture.mjs';
 import {refineCompoundLayout} from './compound-layout-rules.mjs';
 import {createCompoundStructures} from './compound-structures.mjs';
+import {STANDARD_BUILDING_DOOR,doorFlankLayout} from './building-shell.mjs';
 import * as T from '../vendor/three-r186.module.mjs';
 export function createCompoundConcept(layout){
  layout=refineCompoundLayout(layout);
@@ -88,9 +89,23 @@ export function createCompoundConcept(layout){
          for(const mesh of [...facade.children])if(mesh.material?.color?.getHex()===0x3e7185){facade.remove(mesh);mesh.geometry.dispose()}
        }
      }}
-     const door=layout.throughBuildings?.includes(b.id)?12:4;wall(-(b.w+door)/4,b.d/2,(b.w-door)/2,.45,storey);wall((b.w+door)/4,b.d/2,(b.w-door)/2,.45,storey);
+     // Same door width, side panels and lintel as the physical game shell.
+     // The bunker and wide drive-through passages keep their own openings.
+     const through=layout.throughBuildings?.includes(b.id),
+           door=b.bunker?4:through?12:STANDARD_BUILDING_DOOR.width,
+           doorHeight=b.bunker?4.4:through?4.4:STANDARD_BUILDING_DOOR.height,
+           {panelWidth,panelOffset}=doorFlankLayout(b.w,door);
+     for(const sign of [-1,1])wall(sign*panelOffset,b.d/2,panelWidth,.45,storey);
      if(b.floors===2){const facade=new T.Group();facade.position.y=storey;g.add(facade);building.addWindowedWall(facade,{lx:0,lz:b.d/2,sx:b.w,sz:.45,height:storey,material:shell.walls})}
-     building.addWall(g,{lx:0,lz:b.d/2,sx:door,sz:.45,height:storey-4.4,material:shell.walls,y:4.4+(storey-4.4)/2});
+     if(!b.bunker&&!through){
+       building.addDoor(g,{lx:0,lz:b.d/2,sx:door,sz:.45,height:storey,
+         wallMaterial:shell.walls,doorMaterial:shell.doors,doorHeight});
+     }else{
+       // Preserve the bunker gate and the visually open drive-through.
+       const dh=Math.min(doorHeight,Math.max(3.8,storey-.65)),lintelH=storey-dh;
+       if(lintelH>.05)building.addWall(g,{lx:0,lz:b.d/2,sx:door,sz:.45,
+         height:lintelH,material:shell.walls,y:dh+lintelH/2});
+     }
      if(b.bunker){
        // Batter all four exterior walls inward, keeping the full base footprint.
        // Interior partitions and the vertical entrance portal are built afterwards.

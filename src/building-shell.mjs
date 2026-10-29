@@ -1,4 +1,15 @@
 // Local physical shell and render instructions. No meshes, globals or actor.
+// Normal building doors are taller than wide. Bunker/hangar openings have
+// their own explicit geometry and must not inherit these dimensions.
+export const STANDARD_BUILDING_DOOR=Object.freeze({width:2.8,height:5.2});
+// A single calculation for both jambs; matches the door collider and visual
+// aperture exactly, including doors on the shorter side of a building.
+export function doorFlankLayout(span,openingWidth){
+  if(!Number.isFinite(span)||!Number.isFinite(openingWidth)||
+     openingWidth<=0||span<=openingWidth)throw new RangeError('Invalid door opening');
+  const panelWidth=(span-openingWidth)/2;
+  return {panelWidth,panelOffset:openingWidth/2+panelWidth/2};
+}
 export function planBuildingShell(w,d,h,opt={},random){
   if(![w,d,h].every(v=>Number.isFinite(v)&&v>0)||typeof random!=='function')throw new RangeError('Invalid building shell');
   const t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(random()*4):opt.doorSide,
@@ -14,7 +25,7 @@ export function planBuildingShell(w,d,h,opt={},random){
   }else{
     [[0,d/2-t/2,w,t,0],[0,-d/2+t/2,w,t,0],[w/2-t/2,0,t,d-2*t,1],[-w/2+t/2,0,t,d-2*t,1]].forEach(([cx,cz,sx,sz,ax],k)=>{
       if(k!==ds){seg(cx,cz,sx,sz,false,!opt.bunker&&!opt.solidWalls,k,1);return;}
-      const L=ax?sz:sx,sl=(L-dw)/2,off=dw/2+sl/2,assembly=[];
+      const L=ax?sz:sx,{panelWidth:sl,panelOffset:off}=doorFlankLayout(L,dw),assembly=[];
       for(const q of [-1,1])assembly.push(ax?seg(cx,cz+q*off,sx,sl,false,false,k,.5):seg(cx+q*off,cz,sl,sz,false,false,k,.5));
       assembly.push(ax?seg(cx,cz,sx,dw,true):seg(cx,cz,dw,sz,true));assemblies.push(assembly);
     });

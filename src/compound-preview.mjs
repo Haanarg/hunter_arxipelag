@@ -7,7 +7,7 @@ const params=new URLSearchParams(location.search),requested=Number(params.get('f
 let compoundLayouts=phase===4?newWorldLayouts:phase===3?phase3Layouts:phase===2?phase2Layouts:integratedLayouts.filter(l=>!l.phase);
 document.querySelector('.badge').textContent='Fase '+phase+(phase===4?' · dissenys per revisar':' · revisió visual');
 for(const n of[1,2,3,4])document.getElementById('phase'+n).setAttribute('aria-current',phase===n?'page':'false');
-import {createCompoundConcept} from './compound-concepts.mjs?rev=20261014c';
+import {createCompoundConcept} from './compound-concepts.mjs?rev=20261029doors';
 const canvas=document.getElementById('scene'),container=canvas.parentElement;
 const renderer=new T.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;
 renderer.shadowMap.enabled=!matchMedia('(pointer:coarse)').matches;renderer.shadowMap.type=T.PCFSoftShadowMap;
