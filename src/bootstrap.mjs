@@ -4,7 +4,7 @@ window.HUNTER_CREATE_NATIVE_PREDICTION=createNativePrediction;
 window.HUNTER_CREATE_NATIVE_INTERPOLATION=createNativeCoopInterpolation;
 import * as enemyPerception from './enemy-perception-core.mjs';
 window.HUNTER_ENEMY_PERCEPTION=enemyPerception;
-import {createNativeCoopConnection} from './native-coop-connection.mjs?v=0.6.53';
+import {createNativeCoopConnection} from './native-coop-connection.mjs?v=0.6.53&net=2';
 window.HUNTER_NATIVE_COOP_TRANSPORT=createNativeCoopConnection;
 import * as debrisCore from './debris-core.mjs';
 window.HUNTER_DEBRIS_CORE=debrisCore;
@@ -71,7 +71,7 @@ window.HUNTER_RUNTIME_LAYOUTS=runtimeLayouts;window.HUNTER_CHOOSE_COMPOUND=choos
 import {createCompoundStructures} from './compound-structures.mjs';
 window.HUNTER_COMPOUND_STRUCTURES=createCompoundStructures;
 import {runtimeScripts} from './runtime-scripts.mjs';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.53&visual=7';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.53&visual=8';
 import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
 import {GAME_VERSION} from './version.mjs?v=0.6.53';
