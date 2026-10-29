@@ -1,5 +1,18 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
+## Continuació 30-10-2026 · buffer temporal de remots
+
+**Fase 4 del pla de rendiment: codi implementat; GPU i dos dispositius pendents.** Es conserva el renderer/escena/càmera del mode individual.
+
+- `src/native-coop-interpolation.mjs`: buffer de dos snapshots successius amb ticks del servidor (30 Hz), cursor entre l'anterior i el darrer, sense extrapolació més enllà del darrer estat. Només s'emmagatzemen trajectòries de vehicles amb posició/rumb nous. Distàncies incompatibles (més de 24 m entre snapshots) es mostren immediatament; snapshots separats més de 12 ticks, canvis de missió o pausa reinicien la trajectòria. Les rotacions recorren l'angle menor.
+- `src/coop-world-runtime.js`: el company reutilitza el model Three.js original i un vector de destí que ara s'actualitza des del cursor temporal, sense aplicar-li a sobre suavitzat exponencial. Els vehicles remots visibles interpolen x/y/z/rumbo i altitud; el seu LOD manté el cost visual contingut. El **pilot local** continua prioritzant la seva predicció i reconciliació; un passatger local, en canvi, segueix el vehicle remot. Canvis de seient, morts, reanimacions i teletransport es projecten sense barrejar dues poses incompatibles.
+- Els esdeveniments de combat, portes, destrucció, inventaris i col·lisions **no** s'interpolen; continuen sota l'autoritat del servidor. La presentació interpolada no s'envia de tornada a la xarxa.
+- `src/bootstrap.mjs` i `tests/harness.cjs` carreguen la mateixa implementació pura; es renoven els paràmetres de memòria cau de l'entrada per servir el nou mòdul i runtime compilat. Es manté el número de versió 0.6.53.
+- `tests/native-coop-interpolation.mjs` valida càlcul pur, jitter/absència d'extrapolació, 374 vehicles, discontinuïtats, pauses i seients; `tests/native-coop-interpolation-runtime.cjs` és la regressió amb el món original per a company, vehicle i passatger/pilot. Inscrites a `npm run test:play`.
+
+**Evidència:** prova de càlcul aïllada completa i prova d'integració aïllada amb la funció `updateNativeCoop()` real superades. **No s'han executat** les suites Node completes ni una comparativa visual a dos dispositius, i no s'ha verificat la publicació a Cloudflare. No es pot afirmar encara que el lag s'hagi eliminat.
+
+
 ## Optimització visual compartida · 30-10-2026
 
 S'ha aplicat una passada segura sobre el **motor original** que beneficia el mode individual i la sessió nativa cooperativa:
