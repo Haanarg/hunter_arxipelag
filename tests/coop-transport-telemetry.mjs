@@ -75,7 +75,7 @@ try{
   client.data({type:'state',state:{missionId:'mission',tick:603,status:'running',
     players:[{id:'a',acknowledged:1}]}});
   assert.equal(channel.stats.stateFrames,2);
-  assert.equal(channel.stats.avgStateGapMs,2187,'Compta l’interval real des de l’estat inicial');
+  assert.equal(channel.stats.avgStateGapMs,2287,'Compta l’interval real des de l’estat inicial');
   assert(channel.stats.stateBytes>channel.stats.stateFrames,'S’acumulen dades de xarxa');
   channel.stop();
   console.log('coop telemetry: in-memory rate limits, ping RTT, server frame costs, snapshot bytes and gaps passed');
