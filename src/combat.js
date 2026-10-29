@@ -740,6 +740,19 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
     if(shotClass!=='heavy'&&['soldat','general'].includes(e.t))
       consider(e,'enemy',priority,aim.x,baseY+2.35,aim.z);
   }
+  // Les finestres de la planta alta no queden a l'alçada del canó
+  // quan disparam des del carrer. Si no hi ha enemics seleccionats,
+  // les armes lleugeres poden adquirir directament un vidre intacte.
+  if(!selector.hasTarget&&shotClass!=='heavy'&&shotClass!=='attackCannon'){
+    for(const w of wallCandidates(x,z,Math.min(range,90))){
+      if(!w.upperFloorWindow||w.open||!w.windowPanes)continue;
+      for(let i=0;i<w.windowPanes.length;i++){
+        if(w.brokenWindows?.has(i))continue;
+        const pane=w.windowPanes[i];
+        consider(w,'window',3,pane.x,(pane.y0+pane.y1)/2,pane.z);
+      }
+    }
+  }
   // Cap blanc militar visible dins el con? Les armes pesades
   // poden buscar una bretxa a la filferrada, vehicles buits o edificis.
   if(shotClass==='heavy'&&!selector.hasTarget){
