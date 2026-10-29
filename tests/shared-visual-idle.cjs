@@ -93,4 +93,31 @@ veg(0,0,false,false,null);
 assert.equal(chunk.lod,1,'Sense moure el jugador, sortir de la mira restaura el LOD mitjà');
 assert(chunk.midCrown.visible&&!chunk.primary[0].visible,
   'Les malles detallades es deixen de dibuixar immediatament');
-console.log('OK visuals compartits: vehicles aparcats, erugues immòbils, invalidació i LOD de palmeres');
+// La selecció de castShadow es recalcula ocasionalment; els vectors de
+// transformacions mundials dels mateixos propietaris es reutilitzen.
+const shadowSource=between(core,'function updateShadowCasters(force=false){',
+  'function setShadowsDisabled(disabled){');
+let vectors=0,worldReads=0;
+class ShadowVec{
+  constructor(x=0,y=0,z=0){vectors++;Object.assign(this,{x,y,z});}
+  set(x,y,z){Object.assign(this,{x,y,z});return this;}
+}
+const owner={parent:null,getWorldPosition(out){worldReads++;return out.set(20,0,20);}},
+  candidate=()=>({isMesh:true,parent:owner,castShadow:false});
+const shadowEntries=[{mesh:candidate(),owner,point:null},{mesh:candidate(),owner,point:null}];
+const shadowStats={updates:0},shadowEnv={
+  visualQuality:{shadows:true,shadowDistance:225},shadowsDisabled:false,
+  P:{x:0,z:0},performance:{now(){return 4000;}},
+  shadowLastX:Infinity,shadowLastZ:Infinity,shadowLastMs:-Infinity,
+  shadowCandidates:shadowEntries,shadowOwnerPositionCache:new WeakMap(),
+  shadowBoatProxyCache:new WeakMap(),shadowNodeOwners:new WeakMap(),
+  shadowOwnerKinds:new WeakMap(),shadowStats,shadowPoseNodes:[],shadowBoatNodes:[],
+  THREE:{Vector3:ShadowVec}
+};
+const updateShadows=new Function('env','with(env){'+shadowSource+';return updateShadowCasters;}')(shadowEnv);
+updateShadows(true);
+updateShadows(true);
+assert.equal(worldReads,2,'Dos refrescs consulten la posició del propietari un cop cadascun');
+assert.equal(vectors,1,'Els dos refrescs i les dues malles comparteixen un sol vector');
+assert(shadowEntries.every(e=>e.mesh.castShadow),'Les ombres visibles continuen actives');
+console.log('OK visuals compartits: vehicles aparcats, erugues immòbils, invalidació i LOD de palmeres i vectors d’ombres');
