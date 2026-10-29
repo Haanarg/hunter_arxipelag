@@ -177,6 +177,14 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
       const result={kind:'combat',actorId,commandId:message.commandId,ok,code};results.push(result);if(results.length>128)results.shift();return {...result};
     }return {kind:'combat',actorId,commandId:message.commandId,ok,code};
   }
+  function hold(actorId,tick){
+    const player=players().find(p=>p.id===actorId);if(!player||player.hp<=0||player.fall||!active())return;
+    const bag=inventory.get(actorId),vehicle=vehicles.mounted(actorId),weapon=vehicle?(vehicle.t==='heli'?'grenade':mountedWeapons[vehicle.t]):bag?.weapon||'pistol',profile=weaponCatalog[weapon];
+    if(vehicle&&vehicle.seats[0]!==actorId&&weapon!=='grenade')return;
+    if(!profile||profile.ammo&&!((profile.ammo==='rockets'?vehicle:bag)?.[profile.ammo]>0)||weapon==='assault'&&bag.bullets<3)return;
+    const key=actorId+':'+(weapon==='assault'?'pistol':weapon);if(tick-(cooldowns.get(key)??-Infinity)<Math.ceil(profile.cooldown*30))return;
+    return command(actorId,{epoch:meta.id,commandId:'held-'+tick,weapon:vehicle&&vehicle.t!=='heli'?'pistol':weapon},tick);
+  }
   function step(tick){
     if(!active())return;
     for(let i=bursts.length-1;i>=0;i--){const burst=bursts[i],p=players().find(p=>p.id===burst.actorId),bag=inventory.get(burst.actorId);
@@ -248,5 +256,5 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
       target.hp=damageHealth(target.hp,runoverDamage(speed,profile.mass||1));v.ramUntilTick=tick+11;v.v*=.86;alarm(v,v.seats[0],tick,'collision');effect('impact',tick,{actorId:v.seats[0],at:eye,hit:target.id});break;
     }
   }
-  return {command,step,cancel,impactVehicle,runover,pause(){bursts.length=0;},finish(){projectiles.length=0;bursts.length=0;grenades.length=0;effects.length=0;},snapshot(){return structuredClone({targets,grenades,projectiles,effects});},checkpoint(){return structuredClone({targets,grenades,effects,results,cooldowns:[...cooldowns],bursts,projectiles,randomState:random.getState(),sequence});}};
+  return {command,hold,step,cancel,impactVehicle,runover,hasDeadGeneral:()=>targets.some(t=>t.t==='general'&&t.hp<=0),pause(){bursts.length=0;},finish(){projectiles.length=0;bursts.length=0;grenades.length=0;effects.length=0;},snapshot(){return structuredClone({targets,grenades,projectiles,effects});},checkpoint(){return structuredClone({targets,grenades,effects,results,cooldowns:[...cooldowns],bursts,projectiles,randomState:random.getState(),sequence});}};
 }

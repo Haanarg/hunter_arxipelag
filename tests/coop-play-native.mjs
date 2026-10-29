@@ -82,7 +82,7 @@ try{
  // Reach a target via verified navigation, rotate using input (no client hit claims), shoot three times.
  const route=ca.setup.meta.routes[0],target=ca.setup.meta.targets[0];await moveTo(0,route[0]);for(const p of route.slice(1))await moveTo(0,p);
  async function face(i,angle){const interval=setInterval(()=>{const error=Math.atan2(Math.sin(angle-pawn(i).hd),Math.cos(angle-pawn(i).hd));sendIntent(i,{forward:0,strafe:0,turn:Math.max(-1,Math.min(1,error*4)),run:false});},50);try{await wait(()=>Math.abs(Math.atan2(Math.sin(angle-pawn(i).hd),Math.cos(angle-pawn(i).hd)))<.015);}finally{clearInterval(interval);sendIntent(i,{forward:0,strafe:0,turn:0,run:false});}}
- await wait(()=>ca.state.combat.targets[0].state==='attack');assert.ok(ca.state.players.find(p=>p.id===a.id).hp<=20);const enemy=ca.state.combat.targets[0];await face(0,Math.atan2(-(enemy.x-pawn(0).x),-(enemy.z-pawn(0).z)));
+ await wait(()=>ca.state.combat.targets[0].state==='attack');await wait(()=>ca.state.players.find(p=>p.id===a.id).hp<25);assert.ok(ca.state.players.find(p=>p.id===a.id).hp<25,'wait for an actual guard projectile hit, not merely the attack state');const enemy=ca.state.combat.targets[0];await face(0,Math.atan2(-(enemy.x-pawn(0).x),-(enemy.z-pawn(0).z)));
  for(let n=0;n<3;n++){const commandId='native-hit-'+n,tick=ca.state.tick;ca.ws.send(JSON.stringify({type:'combat',protocol:1,epoch:missionId,weapon:'pistol',commandId}));const result=await wait(()=>ca.events.find(e=>e.commandId===commandId));assert.equal(result.code,'FIRED');await wait(()=>cb.state.combat.targets.find(t=>t.id===target.id).hp===8-4*n);await wait(()=>ca.state.tick>=tick+11);}
  await face(0,0);for(const p of [...route].reverse())await moveTo(0,p);
  timer=setInterval(()=>{try{

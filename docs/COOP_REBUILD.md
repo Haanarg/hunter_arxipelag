@@ -105,3 +105,10 @@ La 0.6.50 substitueix l'entrada del client separat per la sessió dins del runti
 - Diferenciar **prova automatitzada**, **prova visual amb GPU/dos dispositius** i **desplegament a Cloudflare**. Els benchmarks del mode individual no demostren per si sols menys latència de xarxa.
 
 El primer punt es desenvolupa al runtime original i el seu resultat concret es documenta també a [COOP_NATIVE_RUNTIME.md](COOP_NATIVE_RUNTIME.md).
+
+## Estat d'aquest pla a la 0.6.53
+
+La continuació de rendiment integra el LOD compartit dels vehicles i la visibilitat per distància; afegeix predicció/reconciliació de locomoció i dels 16 vehicles, entrada de dispar mantingut al servidor, deltes d'estat, menys snapshots descartats, calendari sense deriva de feina i metadades persistides una sola vegada. La fixture de 30 difusions redueix el volum d'estat un 90,6%; les proves de reconstrucció, física compartida, munició i reconnexió passen. Vegeu [mesures i límits](COOP_NATIVE_RUNTIME.md).
+
+Continuen pendents l'aplicació encara més selectiva de les entitats canviades al client, el buffer temporal dels actors remots, els pressupostos d'ombres/efectes i les mesures GPU/FPS/p95/p99, RTT i retard percebut en dos dispositius físics i producció. Les mesures locals de bytes i les proves de paritat no substitueixen aquesta acceptació.
+

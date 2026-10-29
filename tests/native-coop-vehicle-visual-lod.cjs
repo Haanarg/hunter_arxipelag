@@ -17,7 +17,7 @@ const createGame=require('./harness.cjs');
    const [pilot,near,medium,far,wreck]=vehicles;
    P.x=0;P.z=0;P.y=10;P.hd=Math.PI;
    for(const v of vehicles){
-     v.testVisualCalls=[];v.visualLodAcc=0;v.destroyed=false;
+     v.testVisualCalls=[];v.visualLodAcc=0;v.destroyed=false;v.o.visible=true;
      v.v=0;v.hd=Math.PI;v.x=0;v.z=0;
    }
    near.x=30;medium.x=700;far.x=1600;wreck.x=35;wreck.destroyed=true;
@@ -63,3 +63,4 @@ const createGame=require('./harness.cjs');
  assert.equal(result.soloSteer,0,'La direcció visual local no canvia');
  console.log('OK LOD compartit: 20/20 propers, 9-10/20 mitjans, 2/20 llunyans i 0/20 destruïts en ambdós modes');
 })().catch(error=>{console.error(error);process.exitCode=1});
+

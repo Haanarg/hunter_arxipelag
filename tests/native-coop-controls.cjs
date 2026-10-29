@@ -16,7 +16,7 @@ const assert=require('node:assert/strict');
  bag.grenades=0;g.run("selectNativeCoopWeapon('granada');updateNativeCoop(0)");assert.equal(g.run('grenadeEquipped'),false,'last confirmed grenade restores authority-selected weapon');
  bag.weapon='assault';bag.assault=1;g.run('updateNativeCoop(0);K.KeyF=1');
  for(let tick=0;tick<60;tick++){state.tick=tick;g.run('updateNativeCoop(0)');}
- assert.deepEqual(shots.map(s=>s.tick),[0,11,22,33,44,55],'held fire follows shared assault cooldown, rounded to server ticks');
+ assert.deepEqual(shots.map(s=>s.tick),[0],'held fire sends one immediate command rather than a separate request per shot');assert.equal(g.run('nativeCoopInput().fire'),true,'ongoing fire is included in regular player input');
  const count=shots.length;g.run('paused=true');state.tick=100;g.run('updateNativeCoop(0)');assert.equal(shots.length,count,'pause sends no fire');
  const input=g.run('nativeCoopInput()');assert.equal(input.forward,0);assert.equal(input.interact,false);
  g.run(`paused=false;cv={t:'heli_combat'};`);assert.equal(g.run('nativeCoopFireWeapon()'),'attackCannon');g.run(`cv={t:'heli'};`);assert.equal(g.run('nativeCoopFireWeapon()'),'grenade');g.run(`cv={t:'camio'};`);assert.equal(g.run("nativeCoopCommand('fire')"),false,'closed unarmed vehicles do not send pistol fire');

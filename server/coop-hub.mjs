@@ -1,3 +1,4 @@
+import {diffCoopState} from '../src/coop-state-delta.mjs';
 import {writeCoopCheckpoint,readCoopCheckpoint} from './coop-checkpoint.mjs';
 import {generateNativeMission,nativeFingerprint} from './coop-native.mjs';
 import {combatCommands,personalWeapons,inventoryCaps} from '../src/weapon-catalog.mjs';
@@ -9,7 +10,7 @@ import {validatePlayerInput} from '../src/player-simulation.mjs';
 // Private lobby and reduced authoritative two-player relay mission.
 export class CoopRoomHub {
   constructor(ctx,env){
-    this.ctx=ctx;this.env=env;this.queue=Promise.resolve();this.votes=new Map();this.mission=null;this.record=null;this.geometry=null;this.checkedAt=0;this.nativeVotes=new Map();this.nativeUpload=null;
+    this.ctx=ctx;this.env=env;this.stateBaselines=new WeakMap();this.queue=Promise.resolve();this.votes=new Map();this.mission=null;this.record=null;this.geometry=null;this.checkedAt=0;this.nativeVotes=new Map();this.nativeUpload=null;
     this.loading=ctx.blockConcurrencyWhile(async()=>{
       const record=await readCoopCheckpoint(ctx.storage);
       if(record){
@@ -34,7 +35,7 @@ export class CoopRoomHub {
     if(!row||Number(row.expiresAt)<=Date.now())return null;
     return a;
   }
-  send(ws,data){try{ws.send(JSON.stringify(data));return true;}catch(_){try{ws.close(1011,'Connexió interrompuda');}catch(_){}return false;}}
+  send(ws,data){try{ws.send(JSON.stringify(data));if(data.type==='native-mission')this.stateBaselines.set(ws,{revision:0,state:data.state});return true;}catch(_){try{ws.close(1011,'Connexió interrompuda');}catch(_){}return false;}}
   async publish(){
     for(const ws of this.ctx.getWebSockets()){
       if(ws.readyState!==1)continue;
@@ -170,7 +171,16 @@ export class CoopRoomHub {
   }
   games(){return this.ctx.getWebSockets().filter(ws=>ws.readyState===1&&ws.deserializeAttachment()?.gameClient&&ws.deserializeAttachment()?.gameVersion===GAME_VERSION);}
   matches(room){return room&&room.id===this.mission.meta.roomId&&room.revision===this.mission.meta.revision&&room.members.length===2&&this.mission.meta.members.every(m=>room.members.some(r=>r.id===m.id));}
-  broadcastState(){if(this.mission)for(const ws of this.games())this.send(ws,{type:'state',state:this.mission.snapshot()});}
+  broadcastState(){
+    if(!this.mission)return;const state=this.mission.snapshot(),diffs=new Map();
+    for(const ws of this.games()){
+      if(this.mission.meta.mode!=='native'){this.send(ws,{type:'state',state});continue;}
+      const baseline=this.stateBaselines.get(ws);
+      if(!baseline||baseline.state.missionId!==state.missionId){this.send(ws,{type:'native-mission',self:ws.deserializeAttachment().actorId,meta:this.mission.meta,state,stateRevision:0});continue;}
+      let delta=diffs.get(baseline.state);if(delta===undefined){delta=diffCoopState(baseline.state,state);diffs.set(baseline.state,delta);}if(!delta)continue;
+      const revision=baseline.revision+1;if(this.send(ws,{type:'state-delta',missionId:state.missionId,baseRevision:baseline.revision,revision,delta}))this.stateBaselines.set(ws,{revision,state});
+    }
+  }
   async abort(message){
     const clients=this.games();await this.ctx.storage.delete(['mission','world']);await this.ctx.storage.deleteAlarm();
     this.mission=null;this.record=null;this.geometry=null;this.votes.clear();this.nativeVotes.clear();this.nativeUpload=null;
@@ -179,7 +189,7 @@ export class CoopRoomHub {
   async save(nextAlarm){
     const record=this.mission.checkpoint(nextAlarm);if(record.meta.mode==='native')await this.ctx.storage.transaction(storage=>writeCoopCheckpoint(storage,record));else await this.ctx.storage.put('mission',record);this.record=record;await this.ctx.storage.setAlarm(nextAlarm);
   }
-  async wake(){if(this.mission){await this.save(Date.now()+100);}}
+  async wake(){if(this.mission){if(this.record?.status==='running'){await this.ctx.storage.setAlarm(Math.max(Date.now()+1,this.record.nextAlarm));return;}await this.save(Date.now()+1);}}
   async launch(ws,body){
     const a=ws.deserializeAttachment(),room=await readCoopRoom(this.env,a.actorId),mode=body.mode||'relay';
     if(!room||!room.allReady||body.revision!==room.revision){this.send(ws,{type:'error',message:'Calen dos jugadors preparats i una sala actualitzada.'});return;}
@@ -190,7 +200,7 @@ export class CoopRoomHub {
     for(const client of games)if(!await this.verify(client,true)){client.close(4003,'Accés finalitzat');return;}
     try{
       const generated=generateRelayMission(room,{mode}),mission=restoreRelayMission(generated.record,generated.geometry);
-      await this.ctx.storage.transaction(async storage=>{await storage.put('world',generated.geometry);await writeCoopCheckpoint(storage,generated.record);const obsolete=[...Array(upload.total).keys()].map(i=>'native-prepare:'+i).concat('native-upload');for(let i=0;i<obsolete.length;i+=128)await storage.delete(obsolete.slice(i,i+128));});
+      await this.ctx.storage.transaction(async storage=>{await storage.put('world',generated.geometry);await writeCoopCheckpoint(storage,generated.record);const upload=await storage.get('native-upload');if(upload){const obsolete=[...Array(upload.total).keys()].map(i=>'native-prepare:'+i).concat('native-upload');for(let i=0;i<obsolete.length;i+=128)await storage.delete(obsolete.slice(i,i+128));}});
       this.mission=mission;this.geometry=generated.geometry;this.record=generated.record;this.checkedAt=0;this.nativeVotes=new Map();this.nativeUpload=null;this.votes.clear();
       for(const client of games)this.send(client,mission.setup(client.deserializeAttachment().actorId));await this.wake();
     }catch(e){for(const client of games)this.send(client,{type:'error',message:e.message||'No s’ha pogut iniciar la missió.'});}
@@ -209,11 +219,11 @@ export class CoopRoomHub {
     }
     const live=this.games(),both=members.every(m=>live.some(ws=>ws.deserializeAttachment().actorId===m.id));
     try{
-      const phase=this.mission.snapshot().phase;
+      const phase=this.mission.progress?this.mission.progress().phase:this.mission.snapshot().phase;
       this.mission.setStatus(both&&['relay','extract'].includes(phase)?'running':both?'finished':'paused');
-      if(both)for(let i=0;i<3;i++)this.mission.step();
-      const running=both&&['relay','extract'].includes(this.mission.snapshot().phase);
-      await this.save(running?Date.now()+100:this.mission.meta.expiresAt);this.broadcastState();
+      if(both)for(let i=0;i<3;i++)this.mission.step(false);
+      const running=both&&['relay','extract'].includes(this.mission.progress?this.mission.progress().phase:this.mission.snapshot().phase);
+      await this.save(running?Math.max(Date.now()+1,this.record.nextAlarm+100):this.mission.meta.expiresAt);this.broadcastState();
     }catch(e){
       // Never broadcast a partially persisted result. Resume from the last commit.
       if(this.record)this.mission=restoreRelayMission(this.record,this.geometry);throw e;

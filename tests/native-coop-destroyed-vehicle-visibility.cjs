@@ -50,5 +50,16 @@ const assert=require('node:assert/strict');
  assert(!frames.brokenVisible,'El LOD no ha de restaurar una carcassa destruïda');
  assert(frames.samples.every(s=>!s.intactDestroyed&&s.intactVisible)&&frames.intactVisible,
    'Els altres vehicles propers han de continuar visibles');
+ const culling=game.run(`(()=>{
+   const row=nativeCoopSession.state.vehicles[1],vehicle=nativeCoopSession.vehicles.get(row.id),
+     target=nativeCoopSession.state.combat.targets.find(t=>t.hp>0),enemy=nativeCoopSession.enemies.get(target.id);
+   row.x=P.x+5000;row.z=P.z+5000;target.x=P.x+5000;target.z=P.z+5000;
+   nativeCoopSession.projectedState=null;worldVisualTick=0;updateNativeCoop(.01);
+   let placements=0;const original=place;place=(v,...args)=>{if(v===vehicle)placements++;return original(v,...args)};
+   for(let i=0;i<10;i++)updateNativeCoop(.01);place=original;
+   return {vehicleVisible:vehicle.o.visible,enemyVisible:enemy.o.visible,placements};
+ })()`);
+ assert.equal(culling.vehicleVisible,false,'network updates respect original vehicle distance culling');assert.equal(culling.enemyVisible,false,'network updates respect original enemy distance culling');assert.equal(culling.placements,0,'hidden vehicles skip expensive render placement');
  console.log('OK multijugador: els vehicles destruïts no parpellegen al LOD ni en actualitzar la sessió');
 })().catch(error=>{console.error(error);process.exitCode=1});
+

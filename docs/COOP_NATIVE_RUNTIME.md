@@ -1,5 +1,4 @@
 # Integració del cooperatiu al runtime original · 0.6.50
-
 ## Optimització iniciada el 29-10-2026 · LOD compartit de vehicles
 
 Pla i prioritats acordades: [COOP_REBUILD.md](COOP_REBUILD.md#pla-de-rendiment-cooperatiu-29-10-2026). **Primera fase implementada al codi, validació de rendiment real pendent**.
@@ -11,6 +10,32 @@ Pla i prioritats acordades: [COOP_REBUILD.md](COOP_REBUILD.md#pla-de-rendiment-c
 - Fonts i paquet de navegador actualitzats a la branca `main` i coherència estàtica per verificar. **No hi ha encara comparativa d'FPS/CPU en GPU, prova real amb dos clients ni desplegament de Cloudflare verificat.** Per tant no s'atribueix una millora numèrica d'FPS o latència.
 
 **Següent bloc:** aplicar snapshots incrementals només quan canviï el tick, reduir assignacions i cerques repetides; després interpolació de remots/predicció local i optimització de xarxa, mantenint la prova amb dos jugadors.
+
+
+## Continuació 0.6.53 · prioritat al retard i al rendiment
+
+S'han corregit diversos costos estructurals del camí natiu:
+
+- **Xarxa:** estat complet en entrar/reconnectar i diferències sense pèrdua després. Les entitats immòbils, inventaris i dades estàtiques no es tornen a enviar. Cada connexió té revisions pròpies; si falta una base, es reconnecta per recuperar un estat complet. Això també resol diverses ordres dins d'un mateix tick. El servidor construeix un sol snapshot per difusió i comparteix el càlcul de diferències quan les bases coincideixen.
+- **Simulació:** la següent alarma es calcula sobre el termini anterior, sense sumar-hi cada vegada el temps de CPU i desament. Els tres subpassos no generen snapshots de presentació descartats. Els heartbeats no reinicien el calendari d'una missió que ja està corrent.
+- **Persistència:** metadades immutables del món desades una sola vegada per missió, separades de l'estat dinàmic. Es manté la transacció abans de difondre estat o confirmar ordres; no s'ha canviat per un desament eventual que pugui perdre impactes confirmats. Es llegeixen també els formats anteriors.
+- **Resposta local:** predicció del moviment a peu i de la conducció dels 16 tipus de vehicle amb les funcions pures compartides. Les regles de moviment/contacte de vehicles s'han extret sense reescriure-les. En rebre autoritat es descarten entrades reconegudes i es reprodueixen les pendents; la finestra està limitada a 12 passos (400 ms). Els passatgers no prediuen la direcció. Davant una col·lisió que podria destruir un obstacle, la predicció s'atura i espera l'autoritat. Danys, recollides, inventari i destrucció no es decideixen localment.
+- **Dispar mantingut:** viatja amb l'entrada habitual i el servidor manté la cadència. Només es conserva una ordre immediata inicial per als tocs curts; no hi ha una transacció/petició addicional per cada tret d'una ràfega continuada.
+- **Client:** les actualitzacions de xarxa respecten l'ocultació per distància del motor original. Ja no fan reaparèixer tots els vehicles i enemics llunyans entre passades LOD. Els vehicles ocults eviten el càlcul visual de col·locació i els enemics ocults eviten animació; les portes es consulten per identificador indexat.
+
+### Mesura reproduïble
+
+`native-coop-performance.cjs`, món original de llavor 67, 30 difusions (3 segons de simulació):
+
+| Mesura | Abans / referència | Després |
+| --- | ---: | ---: |
+| Dades d'estat serialitzades | 3.429.573 bytes | 322.277 bytes |
+| Reducció de dades durant la prova | — | 90,6% |
+| Estat complet d'un checkpoint repetit | 200.055 bytes | 123.627 bytes escrits, sense repetir metadades |
+
+La prova reconstrueix exactament l'estat JSON i compara la simulació amb i sense snapshots descartables. Una prova de calendari injecta 50 ms de feina per difusió i conserva 30 ticks/s. Hi ha proves de predicció abans de rebre resposta, reconeixement/reproducció d'entrades, pausa, límit de deriva i paritat de sis passos dels 16 vehicles; i regressions de visibilitat, munició/cadència i transport.
+
+Aquests números són de fixtures locals; **no són una mesura de ping ni una garantia d'FPS de producció**. Cal provar aquesta versió a les connexions/dispositius que patien el retard. La predicció pot corregir la posició en arribar l'autoritat, especialment en xocs destructius o connexions amb més de 400 ms sense estat. La paritat pendent de campanya continua oberta, però la prioritat passa a validar el rendiment real abans de continuar afegint sistemes.
 
 ## Continuació 0.6.52 · percepció i combat dels soldats originals
 

@@ -3189,11 +3189,11 @@ v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.r
 // Única cadència de presentació dels vehicles: usada tant per la
 // simulació individual com pels snapshots del cooperatiu natiu. La
 // simulació/autoritat del vehicle NO es retarda amb aquest LOD visual.
-function updateVehicleVisualLod(t,dt){
+function updateVehicleVisualLod(t,dt,{skipHidden=false}={}){
   const scopeVisual=scopeActive?currentSniperFocus():null;
   for(const v of V){
     // Ni el LOD ni les animacions poden ressuscitar una carcassa.
-    if(v.destroyed)continue;
+    if(v.destroyed||skipHidden&&!v.o.visible&&v!==cv)continue;
     if(v===cv){
       place(v,t,dt,v.steerInput||0);
       v.visualLodAcc=0;
@@ -3847,4 +3847,5 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&started)re
 window.HUNTER_COMMANDS=Object.freeze({dispatch:command=>operationAuthority.dispatch(command),context:()=>({version:1,actorId:'local',operationId:operationCommandEpoch})});
 
 document.getElementById('coopOpen').onclick=openCoopPanel;
+
 
