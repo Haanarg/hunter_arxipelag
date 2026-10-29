@@ -1,4 +1,17 @@
 # Integració del cooperatiu al runtime original · 0.6.50
+
+## Continuació del rendiment 29-10-2026 · projecció incremental
+
+El client ja podia rebre snapshots de diferències i només processava part dels efectes un cop per estat. Aquesta intervenció completa la separació entre **recepció autoritativa** i **presentació per fotograma** sense introduir un segon motor.
+
+- `src/coop-world-runtime.js`: HP, recompte de baixes i inventari es recalculen només amb un estat autoritatiu nou; un inventari que conserva la mateixa referència als deltes no es reconstrueix.
+- Vehicles i enemics: `appliedVehicleRows` i `appliedEnemyRows` reaprofiten les referències dels registres no modificats. Les posicions, paràmetres de torreta i metadades d'una entitat intacta no es tornen a assignar. La predicció local del vehicle conduït i el LOD comú continuen cada fotograma.
+- Company: es reutilitzen el model, el vector Three.js de destinació i la relació de seient calculada en rebre el snapshot. Interpolació i animació del company continuen amb el temps de cada fotograma, sense crear un vector ni cercar el seient a cada pas.
+- Efectes i món compartit: mapes de projectils i granades, explosions, portes, parets, vidres, cobertes, palmeres i botí només es reconcilien quan la col·lecció corresponent canvia. Les portes mantenen l'animació de cada fotograma.
+- `src/game-core.js`: el LOD d'enemics compartit amb l'individual respecta `hp<=0` i destrucció; ja no es poden mostrar de nou soldats morts entre snapshots.
+- Prova `tests/native-coop-snapshot-projection.cjs` afegida a `npm run test:play`: repetició sense estat nou, estat amb un únic vehicle canviat, referències intactes de models i inventari, i invisibilitat dels enemics morts.
+
+**Comprovació feta:** sintaxi de les fonts, prova estructural de deltes amb 374 vehicles/377 enemics i prova aïllada de la funció real `updateNativeCoop`: 20 fotogrames sense reassignacions autoritatives, un sol vehicle actualitzat amb el següent estat i animació contínua dels soldats/companya. El bundle compilat s'ha actualitzat amb les fonts corresponents. **Pendent** executar la suite completa de Node en un checkout, perfilar CPU/FPS amb GPU, provar dos dispositius reals i verificar el desplegament Cloudflare. No es dona cap percentatge especulatiu de reducció de lag.
 ## Optimització iniciada el 29-10-2026 · LOD compartit de vehicles
 
 Pla i prioritats acordades: [COOP_REBUILD.md](COOP_REBUILD.md#pla-de-rendiment-cooperatiu-29-10-2026). **Primera fase implementada al codi, validació de rendiment real pendent**.
