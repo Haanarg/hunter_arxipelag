@@ -29,7 +29,7 @@ export function guardInView(guard,player){
   return d<=2||inView(guard.heading||0,dx,0,dz,Infinity,{sightHalfAngle:Math.PI/3+1e-10,sightVerticalAngle:Math.PI/2});
 }
 const facePoint=(guard,p)=>Math.atan2(-(p.x-guard.x),-(p.z-guard.z));
-export function createRelayCombat({meta,record={},inventory,players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false}){
+export function createRelayCombat({meta,record={},inventory,players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false,blastWire=()=>{}}){
   const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);const bursts=structuredClone(record.bursts||[]),projectiles=structuredClone(record.projectiles||[]);let sequence=record.sequence||0;
   const random=createWorldRandom(record.randomState??(((meta.seed||0)^0x7269666c)>>>0)),roll=(a,b)=>a+random()*(b-a);
   const effect=(kind,tick,data)=>{effects.push({id:++sequence,kind,tick,...data});if(effects.length>64)effects.shift();};
@@ -61,6 +61,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
         const damage=explosionDamage(blast.damage,vehicles.blastDistance(v,center),blast.radius);
         if(damage&&visible({x:v.x,y:v.y+1,z:v.z}))damageVehicle(v,damage,'heavy',tick,queue);
       }
+      blastWire(center,blast.damage,blast.radius);
       alarm(center,blast.actorId,tick);effect('explosion',tick,{actorId:blast.actorId,at:center,radius:blast.radius,hits});
     }
   }

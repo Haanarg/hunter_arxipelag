@@ -173,3 +173,10 @@ El conductor dispara amb F el canó del tanc/tanqueta, el canó de l’helicòpt
 Al camp nou, el tanc i la tanqueta ja giren i eleven el canó amb el controlador individual. Els trets surten de la **boca real** i segueixen el canó, també conduint. Feu que el xassís miri aproximadament el blanc i doneu temps a la torreta perquè s’hi orienti. Prémer F abans que hagi acabat de girar pot fer fallar el tret: disparar no recol·loca instantàniament la torre.
 
 Pausa/reconnexió conserven orientació i inèrcia. Cal camp nou (`relay:16`) i dos clients actualitzats. Això completa la boca/orientació dels dos blindats; les d’helicòpters, embarcacions i armes personals, així com les altres limitacions de contacte/animació del camp, continuen pendents.
+
+
+## Destrucció compartida de filferrades
+
+Les explosions de granades, C4, projectils pesats i vehicles trenquen els trams de filferrada que assoleixen, respectant els murs de cobertura. El càlcul de proximitat al tram real s’ha extret del mode individual a `combat-rules.mjs` i és compartit pels dos modes. El servidor actualitza les col·lisions i comunica `removedWalls` a les dues vistes; els checkpoints conserven la bretxa després de reconnectar o restaurar. Les bales lleugeres continuen travessant el filferro sense destruir-lo.
+
+Validació: proves de granada/C4 a l’extrem del tram, cobertura sòlida, fora d’abast, pausa i restauració; regressions d’arsenal, combat i destrucció de vehicles. Encara pendents: destrucció d’edificis, xocs/atropellaments, campanya i proves físiques de dos dispositius.

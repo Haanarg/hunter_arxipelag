@@ -4,7 +4,7 @@ import {createCoopTerrain} from './coop-terrain.mjs';
 import {createStaticWorldAdapter} from '../src/world-adapter.mjs';
 import {createCanonicalWater} from '../src/canonical-water.mjs';
 import {createPlayerSimulation,validatePlayerInput} from '../src/player-simulation.mjs';
-import {combatBalance} from '../src/combat-rules.mjs';
+import {combatBalance,closestFenceBlastPoint} from '../src/combat-rules.mjs';
 import {firstSupplyContact} from './coop-inventory.mjs';
 import {createRelayVehicles,vehicleClear} from './coop-vehicles.mjs';
 import {createRelayRescue,reviveReachable} from './coop-rescue.mjs';
@@ -55,6 +55,18 @@ export function restoreRelayMission(record,geometry){
   const removedWalls=new Set(record.removedWalls||[]);for(const i of removedWalls)if(physical.walls[i])physical.walls[i].open=true;
   let world=createStaticWorldAdapter(physical);
   function cutWire(p){const wall=nearestWire(p,physical.walls);if(!wall)return false;wall.open=true;wall.hp=0;removedWalls.add(physical.walls.indexOf(wall));world=createStaticWorldAdapter(physical);return true;}
+  function blastWire(center,damage,radius){
+    // Evaluate all candidates against the same geometry before opening any gaps.
+    const destroyed=[];
+    for(const [index,wall] of physical.walls.entries())if(wall.barbed&&!wall.open){
+      const point=closestFenceBlastPoint(wall,center.x,center.y,center.z);
+      if(point.distance>=radius||damage<=0)continue;
+      if(traceArena(center,point,physical,world,{ignoreBarbed:true}).fraction<1)continue;
+      destroyed.push(index);
+    }
+    for(const index of destroyed){physical.walls[index].open=true;physical.walls[index].hp=0;removedWalls.add(index);}
+    if(destroyed.length)world=createStaticWorldAdapter(physical);
+  }
   const water=createCanonicalWater((x,z)=>world.heightAt(x,z)),
     bounded={locomotionAt:(...args)=>world.locomotionAt(...args),roofLanding:(...args)=>world.roofLanding(...args),resolveBody(previous,candidate){const p=world.resolveBody(previous,{...candidate,x:clamp(candidate.x,b.x0,b.x1),z:clamp(candidate.z,b.z0,b.z1)});return {...p,x:clamp(p.x,b.x0,b.x1),z:clamp(p.z,b.z0,b.z1)};}},
     sim=createPlayerSimulation({epoch:meta.id,limit:world.limit,world:bounded,vertical:{surfaceAt:water.surfaceAt,maxHealth:combatBalance.player},checkpoint:record.checkpoint,movement:actor=>vehicles.position(actor)}),actions=new Map();
@@ -84,7 +96,7 @@ export function restoreRelayMission(record,geometry){
   }
   const vehicles=createRelayVehicles({meta,record:record.vehicles,world:()=>world,water,players:()=>sim.snapshot().players,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt,onBoard:id=>{inventory.get(id).disguised=false;combat.cancel(id);actions.delete(id);}});
   const rescue=createRelayRescue(record.rescue);
-  const combat=createRelayCombat({meta,record:record.combat,vehicles,cutWire,canAttack:()=>true,inventory,players:()=>sim.snapshot().players,damagePlayer:(id,amount)=>rescue.canDamage(id,sim.snapshot().tick)?sim.damage(id,amount):false,geometry:()=>physical,world:()=>world,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt});
+  const combat=createRelayCombat({meta,record:record.combat,vehicles,cutWire,blastWire,canAttack:()=>true,inventory,players:()=>sim.snapshot().players,damagePlayer:(id,amount)=>rescue.canDamage(id,sim.snapshot().tick)?sim.damage(id,amount):false,geometry:()=>physical,world:()=>world,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt});
   const doors=()=>meta.doors.map(d=>({id:d.id,open:doorStates.get(d.id)??false}));
   const reviveLine=(a,b)=>!vehicles.mounted(a.id)&&!vehicles.mounted(b.id)&&traceArena({x:a.x,y:a.y+1.5,z:a.z},{x:b.x,y:b.y+.75,z:b.z},physical,world).fraction>=1;
   function snapshot(){const state=sim.snapshot(),help=rescue.snapshot(state.tick);help.down=help.down.map(d=>({...d,helpers:state.players.filter(p=>reviveReachable(p,state.players.find(p=>p.id===d.actorId),reviveLine)).map(p=>p.id)}));return {...state,removedWalls:[...removedWalls],vehicles:vehicles.snapshot(),rescue:help,combat:combat.snapshot(),missionId:meta.id,phase,hold,status,doorRevision,doors:doors(),inventories:inventories(),supplies:supplies(),claimedSupplies:[...claimed],remaining:Math.max(0,(meta.timeLimitTicks-state.tick)/30)};}

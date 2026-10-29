@@ -356,15 +356,7 @@ function blastOccluded(x,y,z,tx,ty,tz,ignoreWall=null){
 }
 // La proximitat al tram real, no al centre de l'AABB de 6 m,
 // determina si l'ona expansiva arriba a la filferrada.
-function closestFenceBlastPoint(w,x,y,z){
-  const ax=w.ax??w.x0,az=w.az??w.z0,
-        bx=w.bx??w.x1,bz=w.bz??w.z1,
-        dx=bx-ax,dz=bz-az,len2=dx*dx+dz*dz,
-        t=len2>1e-8?Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/len2)):0,
-        nx=ax+dx*t,nz=az+dz*t,
-        ny=Math.min(w.y1,Math.max(w.y0,y));
-  return{x:nx,y:ny,z:nz,distance:Math.hypot(nx-x,ny-y,nz-z)};
-}
+function closestFenceBlastPoint(...args){return window.HUNTER_SHARED_COMBAT.closestFenceBlastPoint(...args)}
 function boom(x,y,z,r,dmg,own,source=null){
  window.HUNTER_STEALTH.emit('explosion',x,y,z);
  snd('boom',1,{x,y,z},source);

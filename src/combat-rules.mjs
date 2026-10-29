@@ -91,3 +91,14 @@ export function vehicleHullDistance(vehicle,baseY,radius,x,y,z){
 export function vehicleHullSegmentT(from,to,vehicle,baseY,radius){
  return segmentSphereT(from.x,from.y,from.z,to.x,to.y,to.z,vehicle.x,baseY+1,vehicle.z,radius);
 }
+
+// Shared original single-player fence segment proximity.
+export function closestFenceBlastPoint(w,x,y,z){
+  const ax=w.ax??w.x0,az=w.az??w.z0,
+        bx=w.bx??w.x1,bz=w.bz??w.z1,
+        dx=bx-ax,dz=bz-az,len2=dx*dx+dz*dz,
+        t=len2>1e-8?Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/len2)):0,
+        nx=ax+dx*t,nz=az+dz*t,
+        ny=Math.min(w.y1,Math.max(w.y0,y));
+  return{x:nx,y:ny,z:nz,distance:Math.hypot(nx-x,ny-y,nz-z)};
+}
