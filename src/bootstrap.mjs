@@ -1,3 +1,5 @@
+import * as vehicleEnvironment from './vehicle-environment-core.mjs';
+window.HUNTER_VEHICLE_ENVIRONMENT=vehicleEnvironment;
 import * as fenceVisual from './fence-visual-core.mjs';
 window.HUNTER_FENCE_VISUAL=fenceVisual;
 import * as vegetationLayout from './vegetation-layout.mjs';

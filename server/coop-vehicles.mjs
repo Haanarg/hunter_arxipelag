@@ -1,3 +1,4 @@
+import {palmImpact,rockImpact} from '../src/vehicle-environment-core.mjs';
 import {firstVehicleContact,vehicleContactDamage} from './coop-vehicle-contacts.mjs';
 import {stepRangeVehicle} from './coop-vehicle-motion.mjs';
 import {vehicleDamage,combatBalance,tankCanCrush,barrierRam,vehicleHullDistance,vehicleHullSegmentT} from '../src/combat-rules.mjs';
@@ -11,7 +12,7 @@ export function vehicleClear(position,world,bounds,previous=position){
     if(distance(q,resolved)>1e-5||support.interior||support.drop||Math.abs(support.floor-position.y)>.25)return false;
   }return true;
 }
-export function createRelayVehicles({meta,record={},world,water,players,active,onBoard=()=>{},geometry=()=>({walls:[]}),onImpact=()=>{},onTravel=()=>{},onBarrier=()=>false}){
+export function createRelayVehicles({meta,record={},world,water,players,active,onBoard=()=>{},geometry=()=>({walls:[]}),onImpact=()=>{},onTravel=()=>{},onBarrier=()=>false,onPalm=()=>false}){
  const vehicles=structuredClone(record.vehicles||meta.vehicles||[]),results=structuredClone(record.results||[]),inputs=new Map();
  for(const v of vehicles)v.life??=combatBalance.vehicles[v.t]??1;
  const mounted=id=>vehicles.find(v=>!v.destroyed&&v.seats.includes(id));
@@ -60,22 +61,36 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
    }
    from.travelSpeed=Math.abs(v.v);
    const desired={...(attempted||v)},probe={...desired,v:v.v||from.v};
-   let hit=firstVehicleContact(probe,from,vehicles,geometry(),['proving','world'].includes(meta.mode));
+   let hit=firstVehicleContact(probe,from,vehicles,geometry(),['proving','world'].includes(meta.mode),world());
    // Each successful iteration removes a confirmed obstacle. No network input can select one.
-   while(hit?.kind==='wall'&&vehicleDynamics.types[v.t].m==='l'){
+   while(hit&&(hit.kind==='palm'||hit.kind==='wall'&&vehicleDynamics.types[v.t].m==='l')){
+     if(hit.kind==='palm'){
+       const response=hit.crush?{destroy:true,damage:0,speedFactor:1,bump:.06,cooldown:.08}:palmImpact(v.t,Math.abs(probe.v),vehicleDynamics.types[v.t].mass||1);
+       if(!response.destroy||tick<(v.environmentUntilTick||0)&&!hit.crush)break;
+       if(!onPalm(hit.target))break;
+       v.environmentUntilTick=tick+Math.ceil(response.cooldown*30);v.v=probe.v*response.speedFactor;probe.v=v.v;v.bump=response.bump;
+       Object.assign(v,{x:hit.point.x,y:hit.point.y,z:hit.point.z,hd:hit.point.hd});
+       if(response.damage)onImpact(v.id,response.damage,tick);
+       if(v.destroyed)break;
+       hit=firstVehicleContact(probe,from,vehicles,geometry(),['proving','world'].includes(meta.mode),world());continue;
+     }
      const ram=barrierRam(probe,hit.target,Math.max(0,((v.barrierUntilTick||0)-tick)/30));
      if(!ram||!onBarrier(hit.target))break;
      v.barrierUntilTick=tick+Math.ceil(ram.cooldown*30);v.v=probe.v*ram.speedFactor;probe.v=v.v;v.bump=ram.bump;
      Object.assign(v,hit.safe);
      if(ram.damage)onImpact(v.id,ram.damage,tick);
      if(v.destroyed)break;
-     hit=firstVehicleContact(probe,from,vehicles,geometry(),['proving','world'].includes(meta.mode));
+     hit=firstVehicleContact(probe,from,vehicles,geometry(),['proving','world'].includes(meta.mode),world());
    }
    if(v.destroyed)continue;
    if(!hit&&(!attempted||vehicleClear(desired,world(),meta.bounds,from)))Object.assign(v,{x:desired.x,y:desired.y,z:desired.z,hd:desired.hd});
    if(hit){
      const incoming=Math.max(Math.abs(from.v),Math.abs(v.v));Object.assign(v,hit.safe);
-     if(hit.kind==='vehicle'){
+     if(hit.kind==='rock'||hit.kind==='palm'){
+       const response=hit.kind==='rock'?rockImpact(incoming,vehicleDynamics.types[v.t].mass||1):palmImpact(v.t,Math.min(incoming,10),vehicleDynamics.types[v.t].mass||1);
+       v.v*=response.speedFactor;v.sideV=0;v.strafeV=0;v.bump=response.bump;
+       if(tick>=(v.environmentUntilTick||0)){v.environmentUntilTick=tick+Math.ceil(response.cooldown*30);if(response.damage)onImpact(v.id,response.damage,tick);}
+     }else if(hit.kind==='vehicle'){
        const other=hit.target,d=vehicleContactDamage({...v,v:from.v||v.v},other);
        if(tankCanCrush(v,other,vehicleDynamics.types[v.t].mass||1,vehicleDynamics.types[other.t].mass||1)){
          onImpact(other.id,other.life,tick);v.v*=.99;

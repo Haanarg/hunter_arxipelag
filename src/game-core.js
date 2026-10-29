@@ -2735,15 +2735,13 @@ function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
   // Les roques emergides, també a la costa, aturen vehicles marítims i
   // terrestres; els helicòpters només hi xoquen si volen prou baixos.
   if(speed>=2.5&&v.envCd<=0){
-    const baseY=c.m==='a'?(v.alt??0)-1:
-      (c.m==='w'||c.m==='wl')?-1.4:hAt(v.x,v.z),
-      topY=c.m==='a'?(v.alt??0)+2:baseY+Math.max(2,(VS[v.t]||1)*2.2),
+    const {baseY,topY}=window.HUNTER_VEHICLE_ENVIRONMENT.rockVerticalBand(c.m,hAt(v.x,v.z),v.alt??0,VS[v.t]||1),
       rock=nearbyRock(v.x,v.z,radius*.48,baseY,topY);
     if(rock){
       // Fins i tot a poc a poc, la roca és sòlida; però només els
       // impactes ràpids treuen vida al vehicle.
       if(speed>10){
-        collisionDamageVehicle(v,Math.min(5,Math.max(1,Math.ceil(speed/(9*Math.sqrt(c.mass||1))))),1);
+        collisionDamageVehicle(v,window.HUNTER_VEHICLE_ENVIRONMENT.rockImpact(speed,c.mass||1).damage,1);
         vehicleImpactFx(rock.x,Math.max(0,hAt(rock.x,rock.z))+.8,rock.z);
       }
       if(v.destroyed)return;
@@ -2751,7 +2749,7 @@ function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
         clear=rock.r+radius*.48+.08;
       if(dist>.01){v.x=rock.x+dx/dist*clear;v.z=rock.z+dz/dist*clear}
       else{v.x=oldX;v.z=oldZ}
-      v.v*=-.12;v.bump=.22;v.envCd=.32;
+      const response=window.HUNTER_VEHICLE_ENVIRONMENT.rockImpact(speed,c.mass||1);v.v*=response.speedFactor;v.bump=response.bump;v.envCd=response.cooldown;
       msg='Impacte amb roca!';msgT=1;return;
     }
   }
@@ -2780,17 +2778,17 @@ function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
   if(v.envCd>0)return;
   const t=treeAt(v.x,v.z,radius*.48);if(!t)return;
   if(t.p&&t.alive){
-    const heavy=v.t==='tanc'||v.t==='camio';
-    if(!heavy&&speed<=10){
+    const response=window.HUNTER_VEHICLE_ENVIRONMENT.palmImpact(v.t,speed,c.mass||1);
+    if(!response.destroy){
       // Una maniobra a poca velocitat topa amb la palmera, sense
       // fer-la caure ni perdre PV. Els pesants conserven la força.
-      v.x=oldX;v.z=oldZ;v.v*=.12;v.bump=.12;v.envCd=.15;return;
+      v.x=oldX;v.z=oldZ;v.v*=response.speedFactor;v.bump=response.bump;v.envCd=response.cooldown;return;
     }
     killPalm(t);
-    if(!heavy)collisionDamageVehicle(v,Math.min(3,Math.max(1,Math.ceil(speed/(18*Math.sqrt(c.mass||1))))),1);
+    if(response.damage)collisionDamageVehicle(v,response.damage,1);
     if(v.destroyed)return;
-    if(!heavy)v.v*=.9;
-    v.bump=heavy?.06:.18;v.envCd=heavy?.08:.28;
+    v.v*=response.speedFactor;
+    v.bump=response.bump;v.envCd=response.cooldown;
     msg='Has tombat una palmera.';msgT=1;return;
   }
   // Les roques ja s'han resolt abans, també per a les embarcacions.
@@ -3038,7 +3036,7 @@ if(ok){
   if(land){
     const f2=ferryForVehicle(v,v.x,v.z,true);if(f2)attachToFerry(v,f2);else if(v.carrier)detachFromFerry(v)
   }
-  handleVehicleImpacts(v,dt,oldX,oldZ);if(v.destroyed)return false;if(v.t==='tanc'||v.t==='tanqueta'||v.t==='camio')crush(nx,nz,(v.t==='tanc'?3.2:v.t==='camio'?2.6:2.4)*VS[v.t])
+  handleVehicleImpacts(v,dt,oldX,oldZ);if(v.destroyed)return false;if(v.t==='tanc'||v.t==='tanqueta'||v.t==='camio')crush(nx,nz,window.HUNTER_VEHICLE_ENVIRONMENT.palmCrushRadius(v.t,VS[v.t]))
 }else{v.v*=Math.exp(-12*dt);v.sideV*=Math.exp(-10*dt);v.strafeV*=Math.exp(-12*dt)}
 if(a){
   const g2=Math.max(0,groundAt(v.x,v.z)),previousAlt=window.HUNTER_SHARED_VEHICLES.stepHelicopterLift(v,ud,dt,helicopterLandedAltitude(v,g2));
