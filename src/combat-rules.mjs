@@ -117,3 +117,37 @@ export function countDestroyedSupport(b,w){
  if(!w.supportCounted){w.supportCounted=true;b.destroyedWallSupport=(b.destroyedWallSupport||0)+w.supportWeight;}
  return b.destroyedWallSupport>=3;
 }
+
+// Original SAT and swept runover/relative-velocity rules, shared by both modes.
+export function obbOverlap(a,b){
+  const as=Math.sin(a.hd),ac=Math.cos(a.hd),
+        bs=Math.sin(b.hd),bc=Math.cos(b.hd),
+        dx=b.x-a.x,dz=b.z-a.z,aw=a.w/2,ad=a.d/2,bw=b.w/2,bd=b.d/2;
+  for(let i=0;i<4;i++){
+    const x=i===0?ac:i===1?as:i===2?bc:bs,
+          z=i===0?-as:i===1?ac:i===2?-bs:bc,
+          dist=Math.abs(dx*x+dz*z),
+          ra=Math.abs(ac*x-as*z)*aw+Math.abs(as*x+ac*z)*ad,
+          rb=Math.abs(bc*x-bs*z)*bw+Math.abs(bs*x+bc*z)*bd;
+    if(dist>ra+rb)return false;
+  }
+  return true;
+}
+export function relativeVehicleImpactSpeed(a,b){
+ const ah=a.hd||0,bh=b.navHd??b.hd??0,
+  av=a.v??a.impactSpeed??0,bv=b.v??b.impactSpeed??0;
+ return Math.hypot(-Math.sin(ah)*av+Math.sin(bh)*bv,
+  -Math.cos(ah)*av+Math.cos(bh)*bv);
+}
+export function runoverSweepHit(x0,z0,x1,z1,tx,tz,radius){
+ const dx=x1-x0,dz=z1-z0,lengthSq=dx*dx+dz*dz;
+ const t=lengthSq>1e-8?Math.max(0,Math.min(1,
+  ((tx-x0)*dx+(tz-z0)*dz)/lengthSq)):0;
+ const px=x0+dx*t,pz=z0+dz*t;
+ return (tx-px)**2+(tz-pz)**2<radius*radius;
+}
+
+
+export function tankCanCrush(v,other,ownMass,otherMass){
+  return v.t==='tanc'&&Math.abs(v.v)>1&&ownMass>otherMass&&other.t!=='ferry';
+}

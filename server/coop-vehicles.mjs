@@ -1,5 +1,6 @@
+import {firstVehicleContact,vehicleContactDamage} from './coop-vehicle-contacts.mjs';
 import {stepRangeVehicle} from './coop-vehicle-motion.mjs';
-import {vehicleDamage,combatBalance,vehicleHullDistance,vehicleHullSegmentT} from '../src/combat-rules.mjs';
+import {vehicleDamage,combatBalance,tankCanCrush,vehicleHullDistance,vehicleHullSegmentT} from '../src/combat-rules.mjs';
 import {vehicleDynamics,advanceVehicle} from '../src/vehicle-dynamics-core.mjs';
 // Trusted two-seat transport on the relay pad. No client coordinates or seat claims.
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),validId=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(id);
@@ -10,7 +11,7 @@ export function vehicleClear(position,world,bounds,previous=position){
     if(distance(q,resolved)>1e-5||support.interior||support.drop||Math.abs(support.floor-position.y)>.25)return false;
   }return true;
 }
-export function createRelayVehicles({meta,record={},world,water,players,active,onBoard=()=>{}}){
+export function createRelayVehicles({meta,record={},world,water,players,active,onBoard=()=>{},geometry=()=>({walls:[]}),onImpact=()=>{},onTravel=()=>{}}){
  const vehicles=structuredClone(record.vehicles||meta.vehicles||[]),results=structuredClone(record.results||[]),inputs=new Map();
  for(const v of vehicles)v.life??=combatBalance.vehicles[v.t]??1;
  const mounted=id=>vehicles.find(v=>!v.destroyed&&v.seats.includes(id));
@@ -49,10 +50,28 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
    for(let seat=0;seat<v.seats.length;seat++)if(v.seats[seat]&&players().find(p=>p.id===v.seats[seat])?.hp<=0){inputs.delete(v.seats[seat]);v.seats[seat]=null;v.v=0;}
    const driver=v.seats[0],entry=inputs.get(driver),input=driver&&entry&&tick-entry.tick<=8?entry.input:{forward:0,turn:0};
    if(!driver||!entry||tick-entry.tick>8){v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;v.verticalV=0;continue;}
-   if(meta.mode==='proving'){stepRangeVehicle(v,input,1/30,tick,world(),water,meta.bounds);continue;}
+   const from={x:v.x,y:v.y,z:v.z,hd:v.hd,v:v.v};let attempted=null;
+   if(meta.mode==='proving')stepRangeVehicle(v,input,1/30,tick,world(),water,meta.bounds);
+   else{
    const control=vehicleDynamics.inputs(v,input.forward,input.turn,1/30),side=advanceVehicle(v,control.forward,control.turn,1/30),hd=v.hd;
    const next={...v,hd,x:v.x+(-Math.sin(hd)*v.v+Math.cos(hd)*side)/30,z:v.z+(-Math.cos(hd)*v.v-Math.sin(hd)*side)/30};
+   attempted=next;
    if(vehicleClear(next,world(),meta.bounds,v)){v.x=next.x;v.z=next.z;v.hd=hd;}else{v.v=0;}
+   }
+   from.travelSpeed=Math.abs(v.v);
+   const hit=firstVehicleContact(attempted||v,from,vehicles,geometry(),meta.mode==='proving');
+   if(hit){
+     const incoming=Math.max(Math.abs(from.v),Math.abs(v.v));Object.assign(v,hit.safe);
+     if(hit.kind==='vehicle'){
+       const other=hit.target,d=vehicleContactDamage({...v,v:from.v||v.v},other);
+       if(tankCanCrush(v,other,vehicleDynamics.types[v.t].mass||1,vehicleDynamics.types[other.t].mass||1)){
+         onImpact(other.id,other.life,tick);v.v*=.99;
+       }else{v.v*=.3;v.sideV=0;v.strafeV=0;
+       if(tick>=(v.contactUntilTick||0)&&tick>=(other.contactUntilTick||0)&&d.relative>10){v.contactUntilTick=other.contactUntilTick=tick+6;onImpact(v.id,d.own,tick);onImpact(other.id,d.other,tick);}
+       }
+     }else{v.v=0;v.sideV=0;v.strafeV=0;if(incoming>10&&tick>=(v.contactUntilTick||0)){v.contactUntilTick=tick+6;if(v.t!=='tanc')onImpact(v.id,Math.min(5,Math.max(1,Math.ceil((incoming-10)/6))),tick);}}
+   }
+   if(!v.destroyed)onTravel(v,from,tick);
   }
  }
  function damage(id,amount,shotClass='light'){

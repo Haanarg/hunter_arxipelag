@@ -191,3 +191,16 @@ Destruir un brancal elimina tota l’obertura (porta, brancals i llinda). Una po
 El camp de proves incorpora un edifici de dues plantes a x=55, z=60. Recarregueu tots dos clients i inicieu un camp nou: `relay:17` invalida els checkpoints temporals anteriors. La campanya completa i els xocs/atropellaments encara són pendents.
 
 Validació local: proves de dany acumulat i restauració, ensorrament, escala/sostre sense col·lisions residuals, destrucció atòmica d’entrada, immunitat de bales lleugeres, suports i protecció del búnquer. Regressions de missió, portes, arsenal, combat, vehicles, reanimació, projectils, inventari, apuntat i armes. Interfície Canvas/Three.js amb renderer substitut, flota i torretes originals també passen; no és validació GPU ni dos dispositius físics. Les proves del hub de sales no s’han pogut executar perquè l’entorn local no té `better-auth`. Paquet del navegador regenerat i verificat.
+
+
+## Xocs i atropellaments · relay:18
+
+El servidor comprova el recorregut i la rotació del vehicle amb les caixes orientades originals (SAT), evitant travessar murs prims o altres vehicles. Es reutilitzen `obbOverlap`, `relativeVehicleImpactSpeed`, `impactDamage`, `runoverSweepHit`, `runoverDamage` i `tankCanCrush`, extrets del motor individual i consumits també pel joc individual. El relleu conserva la caixa del jeep reduït; el camp de proves usa les dimensions originals.
+
+Els xocs ràpids fan dany segons velocitat relativa i masses, amb la immunitat original del tanc al dany directe de contacte. El tanc pot aixafar vehicles més lleugers. Les destruccions passen pel mateix sistema de dany, ocupants alliberats i explosions en cadena ja existent; les bicicletes continuen sense explotar. Un cooldown compartit evita repetir el dany immediat del mateix contacte.
+
+Els vehicles terrestres/hover poden atropellar soldats/dianes durant tot el trajecte del pas de simulació. S’apliquen el llindar, el dany i la pausa de 0,35 s originals. No s’afegeix dany directe d’atropellament al company. Els estats i cooldowns són autoritatius i es desen al checkpoint. Pausa o inputs caducats aturen la conducció.
+
+Recarregueu tots dos clients i inicieu una missió/camp nou (`relay:18`). Pendents: embestida destructiva de murs/filferrades, transport sobre ferri, accidents aeris complets amb sostres/rotors, impulsos/ferralla originals i campanya completa. Les col·lisions amb murs ara bloquegen també al camp de proves.
+
+Validació: proves de mur prim a alta velocitat, separació per altura, mur obert, SAT, contacte entre vehicles, dany de les dues carrosseries, immunitat/aixafament del tanc, atropellament entre ticks, cooldown, absència de foc amic, bicicleta destruïda sense explosió, pausa i checkpoint. Passen 18 suites locals de lògica/interfície/flota/torretes i regressió; Three.js amb renderer substitut, sense validació GPU ni dos dispositius físics. Paquet del navegador regenerat i verificat. Les proves del hub continuen pendents de la dependència local `better-auth`.

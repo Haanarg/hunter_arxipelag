@@ -14,7 +14,7 @@ import * as sharedAiming from './aiming-core.mjs?v=0.6.43';
 window.HUNTER_SHARED_AIMING=sharedAiming;
 import * as sharedModels from './player-model-core.mjs';
 window.HUNTER_SHARED_MODELS=sharedModels;
-import * as sharedCombat from './combat-rules.mjs?v=0.6.43&structures=2';
+import * as sharedCombat from './combat-rules.mjs?v=0.6.43&contacts=3';
 import * as sharedVehicles from './vehicle-dynamics-core.mjs';
 window.HUNTER_SHARED_COMBAT=sharedCombat;window.HUNTER_SHARED_VEHICLES=sharedVehicles;
 import * as buildingShell from './building-shell.mjs?v=0.6.43';
@@ -53,7 +53,7 @@ window.HUNTER_RUNTIME_LAYOUTS=runtimeLayouts;window.HUNTER_CHOOSE_COMPOUND=choos
 import {createCompoundStructures} from './compound-structures.mjs';
 window.HUNTER_COMPOUND_STRUCTURES=createCompoundStructures;
 import {runtimeScripts} from './runtime-scripts.mjs';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.43';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.43&contacts=3';
 import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
 import {GAME_VERSION} from './version.mjs?v=0.6.43';

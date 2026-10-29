@@ -1,4 +1,6 @@
 import {turretSpecs,stepVehicleTurret,vehicleGunPose} from '../src/vehicle-turret-core.mjs';
+import {vehicleDynamics} from '../src/vehicle-dynamics-core.mjs';
+import {vehicleSpecs} from '../src/vehicle-specs.mjs';
 import {weaponCatalog,combatCommands,mountedWeapons,grenadeLaunch,vehicleGrenadeLaunch,meleeTarget} from '../src/weapon-catalog.mjs';
 import {limitBazookaHorizontalAim} from '../src/aiming-core.mjs';
 import {enemyAccuracy} from '../src/enemy-accuracy-core.mjs';
@@ -6,7 +8,7 @@ import {createWorldRandom} from '../src/world-generation-core.mjs';
 import {launchProjectile,projectileStep,SMALL_ARMS_PROJECTILE_SPEED} from '../src/projectile-core.mjs';
 import {createAimSelector,weaponTargetPriority,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL,SMALL_ARMS_RANGE} from '../src/aiming-core.mjs';
 import {damageHealth} from '../src/player-simulation.mjs';
-import {VEHICLE_DESTRUCTION,beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,segmentAabbT,segmentSphereT,inView,ballisticStep} from '../src/combat-rules.mjs';
+import {runoverDamage,runoverSweepHit,VEHICLE_DESTRUCTION,beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,segmentAabbT,segmentSphereT,inView,ballisticStep} from '../src/combat-rules.mjs';
 // Authoritative combat for the reduced relay arena. No client positions or hits.
 const at=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
 export function segmentBox(from,to,box){return segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,box.x0,box.x1,box.y0,box.y1,box.z0,box.z1);}
@@ -164,5 +166,16 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     }
     for(let i=effects.length-1;i>=0;i--)if(tick-effects[i].tick>(effects[i].kind==='shot'?9:24))effects.splice(i,1);
   }
-  return {command,step,cancel,pause(){bursts.length=0;},finish(){projectiles.length=0;bursts.length=0;grenades.length=0;effects.length=0;},snapshot(){return structuredClone({targets,grenades,projectiles,effects});},checkpoint(){return structuredClone({targets,grenades,effects,results,cooldowns:[...cooldowns],bursts,projectiles,randomState:random.getState(),sequence});}};
+  function impactVehicle(id,amount,tick){const v=vehicles.live().find(v=>v.id===id);if(!v||amount<=0)return;const queue=[];damageVehicle(v,amount,'heavy',tick,queue);for(const blast of queue)explode(blast,tick);}
+  function runover(v,from,tick){
+    const profile=vehicleDynamics.types[v.t],speed=from.travelSpeed??Math.abs(v.v);
+    if(!['l','wl'].includes(profile.m)||speed<=6||tick<(v.ramUntilTick||0))return;
+    const radius=meta.mode==='proving'?vehicleSpecs.radii[v.t]*vehicleSpecs.scales[v.t]*.68+1.2*.45:1.6*.68+.45;
+    for(const target of targets)if((!target.t||target.t==='soldat')&&target.hp>0&&Math.abs(v.y-target.y)<3&&runoverSweepHit(from.x,from.z,v.x,v.z,target.x,target.z,radius)){
+      const eye={x:target.x,y:target.y+1,z:target.z};
+      if(traceArena({x:from.x,y:from.y+1,z:from.z},eye,geometry(),world()).fraction<1)continue;
+      target.hp=damageHealth(target.hp,runoverDamage(speed,profile.mass||1));v.ramUntilTick=tick+11;v.v*=.86;alarm(v,v.seats[0],tick);effect('impact',tick,{actorId:v.seats[0],at:eye,hit:target.id});break;
+    }
+  }
+  return {command,step,cancel,impactVehicle,runover,pause(){bursts.length=0;},finish(){projectiles.length=0;bursts.length=0;grenades.length=0;effects.length=0;},snapshot(){return structuredClone({targets,grenades,projectiles,effects});},checkpoint(){return structuredClone({targets,grenades,effects,results,cooldowns:[...cooldowns],bursts,projectiles,randomState:random.getState(),sequence});}};
 }

@@ -6451,13 +6451,7 @@ function impactVehicle(v,dmg){
 function runoverDamage(...args){return window.HUNTER_SHARED_COMBAT.runoverDamage(...args)}
 // Consulta tot el moviment del vehicle, també quan travessa una diana
 // entre dos fotogrames. El radi és el mateix que per a l'impacte puntual.
-function runoverSweepHit(x0,z0,x1,z1,tx,tz,radius){
- const dx=x1-x0,dz=z1-z0,lengthSq=dx*dx+dz*dz;
- const t=lengthSq>1e-8?Math.max(0,Math.min(1,
-  ((tx-x0)*dx+(tz-z0)*dz)/lengthSq)):0;
- const px=x0+dx*t,pz=z0+dz*t;
- return (tx-px)**2+(tz-pz)**2<radius*radius;
-}
+function runoverSweepHit(...args){return window.HUNTER_SHARED_COMBAT.runoverSweepHit(...args)}
 
 function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc,audioSource=null){
   const shotClass=shotClassFromSplash(spl),speed=sp*(shotClass==='heavy'?HEAVY_SHOT_SPEED_FACTOR:1),
@@ -14475,20 +14469,7 @@ function fenceVehicleContact(w,box){
 }
 // SAT per quatre eixos, sense arrays ni objectes efímers per contacte.
 // Mateixos eixos, projeccions i comparació estricta de la versió anterior.
-const obbOverlap=(a,b)=>{
-  const as=Math.sin(a.hd),ac=Math.cos(a.hd),
-        bs=Math.sin(b.hd),bc=Math.cos(b.hd),
-        dx=b.x-a.x,dz=b.z-a.z,aw=a.w/2,ad=a.d/2,bw=b.w/2,bd=b.d/2;
-  for(let i=0;i<4;i++){
-    const x=i===0?ac:i===1?as:i===2?bc:bs,
-          z=i===0?-as:i===1?ac:i===2?-bs:bc,
-          dist=Math.abs(dx*x+dz*z),
-          ra=Math.abs(ac*x-as*z)*aw+Math.abs(as*x+ac*z)*ad,
-          rb=Math.abs(bc*x-bs*z)*bw+Math.abs(bs*x+bc*z)*bd;
-    if(dist>ra+rb)return false;
-  }
-  return true;
-};
+const obbOverlap=(...args)=>window.HUNTER_SHARED_COMBAT.obbOverlap(...args);
 const circleVehicleOverlap=(x,z,r,v)=>{const b=vehicleBox(v),dx=x-b.x,dz=z-b.z,s=Math.sin(b.hd),c=Math.cos(b.hd),lx=dx*c-dz*s,lz=dx*s+dz*c,cx=Math.max(-b.w/2,Math.min(b.w/2,lx)),cz=Math.max(-b.d/2,Math.min(b.d/2,lz)),ex=lx-cx,ez=lz-cz;return ex*ex+ez*ez<r*r};
 const vehicleY=v=>v.alt!=null&&VT[vehicleHitType(v.t)]?.m==='a'?v.alt:(v.o?.position?.y??Math.max(0,hAt(v.x,v.z)));
 const vehicleHeightCompatible=(a,b)=>Math.abs(vehicleY(a)-vehicleY(b))<Math.max(2.2,Math.min(vehicleRadius(vehicleHitType(a.t)),vehicleRadius(vehicleHitType(b.t)))*.55);
@@ -15669,12 +15650,7 @@ function collisionDamageVehicle(v,dmg,impacts=1){
  if(v?.t==='tanc')return;
  impactVehicle(v,impacts>1?impacts:dmg);
 }
-function relativeVehicleImpactSpeed(a,b){
- const ah=a.hd||0,bh=b.navHd??b.hd??0,
-  av=a.v??a.impactSpeed??0,bv=b.v??b.impactSpeed??0;
- return Math.hypot(-Math.sin(ah)*av+Math.sin(bh)*bv,
-  -Math.cos(ah)*av+Math.cos(bh)*bv);
-}
+function relativeVehicleImpactSpeed(...args){return window.HUNTER_SHARED_COMBAT.relativeVehicleImpactSpeed(...args)}
 function ramSpeedFactor(type,barbed){
   if(type==='tanc')return .995;
   if(type==='camio'&&barbed)return 1;
@@ -15694,9 +15670,7 @@ function vehicleCanBreakBarrier(v,barbed){
 function mayRamWhileRecovering(type,barbed,cooldown){
   return cooldown<=0||type==='tanc'||(type==='camio'&&barbed);
 }
-function tankCanCrush(v,other,ownMass,otherMass){
-  return v.t==='tanc'&&Math.abs(v.v)>1&&ownMass>otherMass&&other.t!=='ferry';
-}
+function tankCanCrush(...args){return window.HUNTER_SHARED_COMBAT.tankCanCrush(...args)}
 function killShark(f){
   if(f.dead)return;
   window.HUNTER_SHARKS.kill(f);

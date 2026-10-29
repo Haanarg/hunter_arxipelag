@@ -279,13 +279,7 @@ function impactVehicle(v,dmg){
 function runoverDamage(...args){return window.HUNTER_SHARED_COMBAT.runoverDamage(...args)}
 // Consulta tot el moviment del vehicle, també quan travessa una diana
 // entre dos fotogrames. El radi és el mateix que per a l'impacte puntual.
-function runoverSweepHit(x0,z0,x1,z1,tx,tz,radius){
- const dx=x1-x0,dz=z1-z0,lengthSq=dx*dx+dz*dz;
- const t=lengthSq>1e-8?Math.max(0,Math.min(1,
-  ((tx-x0)*dx+(tz-z0)*dz)/lengthSq)):0;
- const px=x0+dx*t,pz=z0+dz*t;
- return (tx-px)**2+(tz-pz)**2<radius*radius;
-}
+function runoverSweepHit(...args){return window.HUNTER_SHARED_COMBAT.runoverSweepHit(...args)}
 
 function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc,audioSource=null){
   const shotClass=shotClassFromSplash(spl),speed=sp*(shotClass==='heavy'?HEAVY_SHOT_SPEED_FACTOR:1),
