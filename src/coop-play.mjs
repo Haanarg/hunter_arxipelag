@@ -1,10 +1,10 @@
-import {weaponCatalog,personalWeapons,mountedWeapons} from './weapon-catalog.mjs?v=0.6.44';
+import {weaponCatalog,personalWeapons,mountedWeapons} from './weapon-catalog.mjs?v=0.6.45';
 import {vehicleDynamics} from './vehicle-dynamics-core.mjs';
-import {combatBalance} from './combat-rules.mjs?v=0.6.44';
+import {combatBalance} from './combat-rules.mjs?v=0.6.45';
 import {configuredAccounts} from './account-client.mjs';
-import {GAME_VERSION} from './version.mjs?v=0.6.44';
-import {createPlayConnection,playInput} from './coop-play-connection.mjs?v=0.6.44&world=5';
-import {createMissionView} from './coop-play-view.mjs?v=0.6.44&world=5';
+import {GAME_VERSION} from './version.mjs?v=0.6.45';
+import {createPlayConnection,playInput} from './coop-play-connection.mjs?v=0.6.45&world=5';
+import {createMissionView} from './coop-play-view.mjs?v=0.6.45&world=5';
 const $=id=>document.getElementById(id),message=$('message'),launch=$('launch'),connection=$('connection'),keys=new Set(),touch=new Map();
 let channel=null,room=null,view=null,meta=null,self=null,state=null,viewGeneration=0,pendingDoor=null,doorTimer=null;
 function clearDoor(){if(doorTimer!==null)clearTimeout(doorTimer);doorTimer=null;pendingDoor=null;}
