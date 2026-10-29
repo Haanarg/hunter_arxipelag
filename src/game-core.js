@@ -194,6 +194,8 @@ const shadowCache=window.HUNTER_SHADOW_CACHE.create({shadowMap:ren.shadowMap,
 });
 let shadowPoseNodes=[],shadowBoatNodes=[];
 const shadowBoatProxyCache=new WeakMap();
+// Un vector per propietari dinàmic, reutilitzat en cada selecció d'ombres.
+const shadowOwnerPositionCache=new WeakMap();
 shadowStats.cache=shadowCache.stats;
 let shadowLastX=Infinity,shadowLastZ=Infinity,shadowLastMs=-Infinity;
 window.HUNTER_SHADOW_STATS=shadowStats;
@@ -210,7 +212,11 @@ function updateShadowCasters(force=false){
     let q=entry.point;
     if(entry.owner){
       q=dynamicPositions.get(entry.owner);
-      if(!q){q=entry.owner.getWorldPosition(new THREE.Vector3());dynamicPositions.set(entry.owner,q)}
+      if(!q){
+        q=shadowOwnerPositionCache.get(entry.owner);
+        if(!q){q=new THREE.Vector3();shadowOwnerPositionCache.set(entry.owner,q)}
+        entry.owner.getWorldPosition(q);dynamicPositions.set(entry.owner,q);
+      }
     }
     const dx=q.x-P.x,dz=q.z-P.z,near=dx*dx+dz*dz<range2;
     entry.mesh.castShadow=near;
