@@ -3,7 +3,7 @@
 // Construcció visual d'edificis. Col·lisions, portes, destrucció i navegació romanen al nucli.
 window.HUNTER_BUILDINGS??=Object.freeze({
   create(THREE,{material,materialProfile,box,windowLayout}){
-    const layoutFn=windowLayout||window.HUNTER_BUILDING_SHELL?.windowLayout||((sx,sz,height)=>{const alongX=sx>=sz,L=alongX?sx:sz,count=L>=14?2:1;return {alongX,width:Math.min(2.7,L/(count*2.65)),bottom:Math.min(1.5,Math.max(1.15,height*.19)),height:Math.min(2.15,Math.max(1.75,height*.31)),centers:count===2?[-L*.255,L*.255]:[0]};});
+    const layoutFn=windowLayout||window.HUNTER_BUILDING_SHELL?.windowLayout||((sx,sz,height)=>{const alongX=sx>=sz,L=alongX?sx:sz,count=L>=14?2:1;return {alongX,width:Math.min(2.7,L/(count*2.65)),bottom:Math.min(1.35,Math.max(1.1,height*.185)),height:Math.min(2.15,Math.max(1.75,height*.31)),centers:count===2?[-L*.255,L*.255]:[0]};});
     const wallMaterial=color=>new THREE.MeshStandardMaterial({color,flatShading:true,transparent:true,...materialProfile('masonry')});
     const doorMaterial=()=>new THREE.MeshStandardMaterial({color:0x704829,flatShading:true,transparent:true,...materialProfile('paint')});
     const addWall=(group,{lx,lz,sx,sz,height,material:mat,y=height/2})=>{
