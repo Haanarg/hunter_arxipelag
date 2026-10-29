@@ -143,7 +143,7 @@ export class CoopRoomHub {
   }
 
   setupClient(actorId){
-    if(this.mission.meta.mode==='native')return {type:'native-mission',self:actorId,meta:structuredClone(this.mission.meta),state:this.mission.snapshot()};return this.mission.setup(actorId);
+    if(this.mission.meta.mode==='native')return {type:'native-mission',self:actorId,meta:structuredClone(this.mission.meta),state:this.mission.snapshot(),telemetry:1};return this.mission.setup(actorId);
   }
   nativeRoom(actorId){return readCoopRoom(this.env,actorId);}
   async nativeMessage(ws,body){
@@ -197,7 +197,7 @@ export class CoopRoomHub {
     for(const ws of this.games()){
       if(this.mission.meta.mode!=='native'){this.send(ws,{type:'state',state});continue;}
       const baseline=this.stateBaselines.get(ws);
-      if(!baseline||baseline.state.missionId!==state.missionId){this.send(ws,{type:'native-mission',self:ws.deserializeAttachment().actorId,meta:this.mission.meta,state,stateRevision:0});continue;}
+      if(!baseline||baseline.state.missionId!==state.missionId){this.send(ws,{type:'native-mission',self:ws.deserializeAttachment().actorId,meta:this.mission.meta,state,stateRevision:0,telemetry:1});continue;}
       let delta=diffs.get(baseline.state);if(delta===undefined){delta=diffCoopState(baseline.state,state);diffs.set(baseline.state,delta);}if(!delta)continue;
       const revision=baseline.revision+1;if(this.send(ws,{type:'state-delta',missionId:state.missionId,baseRevision:baseline.revision,revision,delta}))this.stateBaselines.set(ws,{revision,state});
     }
