@@ -1,15 +1,17 @@
 import {createCoopSocket} from './coop-socket.mjs';
-import {GAME_VERSION} from './version.mjs?v=0.6.50';
+import {GAME_VERSION} from './version.mjs?v=0.6.51';
 // Transport adapter for the original runtime. No scene, renderer or controls.
-export function createNativeCoopConnection({room,getInput,onRoom,onMission,onState,onStatus,onError,WebSocketImpl=globalThis.WebSocket,origin=globalThis.location?.origin,setInputTimer=setInterval,clearInputTimer=clearInterval,setTimer=setTimeout,clearTimer=clearTimeout}){
+export function createNativeCoopConnection({room,getInput,onRoom,onMission,onState,onStatus,onError,onAction,now=Date.now,WebSocketImpl=globalThis.WebSocket,origin=globalThis.location?.origin,setInputTimer=setInterval,clearInputTimer=clearInterval,setTimer=setTimeout,clearTimer=clearTimeout}){
  const url=new URL('/api/coop/socket',origin);url.protocol=url.protocol==='https:'?'wss:':'ws:';url.searchParams.set('room',room.id);
- let epoch=null,state=null,timer=null,sequence=0,prepared=null,readyRoom=false,published=false;
+ let epoch=null,state=null,timer=null,sequence=0,prepared=null,readyRoom=false,published=false,lastMessage=0;
  const socket=createCoopSocket({url:url.href,WebSocketImpl,setTimer,clearTimer,maxPayload:1000000,onStatus,onDisconnect(){clearInputTimer(timer);timer=null;state=null;readyRoom=false;published=false;},
-  fatal:{4001:'replaced',4003:'ended',4004:'ended',4005:'version'},onOpen({send}){send({type:'hello',protocol:1,gameVersion:GAME_VERSION});timer=setInputTimer(()=>{if(epoch&&state?.status==='running')send({type:'input',protocol:1,epoch,sequence:++sequence,...(()=>{const {interact=false,...input}=getInput();return {input,interact};})()});},50);},
-  onBeat({send}){send({type:'heartbeat',protocol:1});},onData(data){
+  fatal:{1008:'ended',4001:'replaced',4003:'ended',4004:'ended',4005:'version'},onOpen({send}){lastMessage=now();send({type:'hello',protocol:1,gameVersion:GAME_VERSION});timer=setInputTimer(()=>{if(epoch&&state?.status==='running')send({type:'input',protocol:1,epoch,sequence:++sequence,...(()=>{const {interact=false,...input}=getInput();return {input,interact};})()});},50);},
+  onBeat({send,close}){if(now()-lastMessage>30000){close(1011,'Sense resposta');return false;}send({type:'heartbeat',protocol:1});},onData(data){
+   if(!['room','native-mission','state','action','waiting','error','ended'].includes(data.type))throw Error('Resposta invàlida');lastMessage=now();
    if(data.type==='room'){readyRoom=!!data.room?.allReady&&data.room.revision===room.revision;onRoom?.(data.room);if(readyRoom&&prepared&&!published)publish(prepared);}
-   else if(data.type==='native-mission'){epoch=data.meta.id;state=data.state;sequence=Math.max(sequence,state.players.find(p=>p.id===data.self)?.acknowledged||0);onMission(data);}
-   else if(data.type==='state'&&data.state.missionId===epoch){state=data.state;onState(data.state);}
+   else if(data.type==='native-mission'){if(!data.meta?.id||!Array.isArray(data.state?.players)||!data.state.players.some(p=>p.id===data.self))throw Error('Missió invàlida');if(epoch!==data.meta.id)sequence=0;epoch=data.meta.id;state=data.state;sequence=Math.max(sequence,state.players.find(p=>p.id===data.self)?.acknowledged||0);onMission(data);}
+   else if(data.type==='state'&&data.state?.missionId===epoch){state=data.state;onState(data.state);}
+   else if(data.type==='action'){onAction?.(data);}
    else if(data.type==='error'||data.type==='ended'){if(data.type==='ended'){state=null;epoch=null;}onError?.(data.message);}
   }});
  function publish(p){

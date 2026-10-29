@@ -1,5 +1,16 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
+## Continuació 0.6.51 · estabilització i validació autenticada
+
+- La selecció nativa d'armes des de l'inventari i el selector ràpid comparteix la mateixa funció. Canviar d'arma cancel·la la càrrega de granada i la mira. Una granada seleccionada no manté les banderes visuals del rifle anterior; gastar l'última restaura l'arma confirmada pel servidor.
+- El dispar mantingut usa la cadència del catàleg compartit i ticks autoritatius, inclosos els perfils de tanc, tanqueta i helicòpter. S'eviten ordres de pistola en vehicles tancats sense arma.
+- El transport natiu recupera el detector de connexions silencioses del client anterior: si no arriba cap resposta durant més de 30 segons, el següent heartbeat tanca el socket i activa el reintent. La mateixa missió conserva la seqüència d'entrada; una missió nova la reinicia. Els tancaments de protocol 1008 són definitius.
+- Els rebutjos d'accions habituals (vehicle en marxa, ple, sortida bloquejada, falta de munició) arriben al missatge original del HUD. La sortida elimina projectils/granades/remots i neteja tecles i càrregues pendents. Una arrencada fallida retorna al menú amb la simulació pausada.
+- Nova prova `native-coop-authenticated.mjs`: dos comptes aprovats, D1, WebSocket i Durable Object reals dins de Miniflare/workerd; món original de més d'1 MB per fragments, general/flota, identitats, moviment, inventari, pausa/reconnexió i restauració en fred. Ha passat amb el Worker compilat de la 0.6.51.
+- També han passat les proves natives d'arrencada, controls, transport, reconnexió, món i presentació; la simulació individual de 10–120 FPS amb pauses/jitter; i la coherència del paquet generat.
+
+Aquesta validació autenticada és local i sense renderitzat GPU. No acredita dos dispositius físics ni el desplegament de producció. Els pendents de paritat detallats més avall continuen oberts.
+
 ## Canvi real d'entrada i presentació
 
 La sala del menú original inicia `HUNTER_NATIVE_COOP.start`. `coop.html` redirigeix al mateix `index.html` i carrega el mateix motor; ja no és la pantalla de joc del client ortogràfic. El nou adaptador de xarxa no construeix cap escena, renderer, càmera, HUD o comandament.
@@ -41,3 +52,4 @@ La integració de pantalla, món i sessió és implementada, però la campanya c
 - Cal una prova real amb dos dispositius, incloent interiors i soterrani, i comprovar el desplegament del Worker i dels assets de la mateixa versió.
 
 Aquesta és la primera integració jugable dins del motor original. No s'ha de presentar com la reconstrucció completa sol·licitada fins que s'hagin tancat aquests punts.
+

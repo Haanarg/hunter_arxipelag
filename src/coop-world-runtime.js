@@ -31,27 +31,40 @@ function captureNativeCoopWorld(){
 async function startNativeCoop(room){
  if(nativeCoopSession)throw Error('Ja hi ha una sessió cooperativa.');
  if(started&&!over){try{await saveOperation();}catch(error){msg=error.message;msgT=20;ui.show('coop');throw error;}}
- const session=nativeCoopSession={preparing:true,room,state:null,meta:null,self:null,remotes:new Map(),lastFire:0,seenEffects:new Set(),projectiles:new Map(),grenades:new Map()};
+ const session=nativeCoopSession={preparing:true,room,state:null,meta:null,self:null,remotes:new Map(),nextFireTick:0,seenEffects:new Set(),projectiles:new Map(),grenades:new Map()};
  try{
   await startGameProgressively({seed:room.seed,scale:room.mapScale,difficulty:room.difficulty,nativeSession:true});
   const payload=captureNativeCoopWorld(),text=JSON.stringify(payload),hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));session.fingerprint=[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join('');
   session.walls=Wl.slice();session.buildings=B.slice();session.palms=PL.slice();session.vehicles=new Map(V.map(v=>[v.saveId,v]));session.enemies=new Map(E.map(e=>[e.saveId,e]));session.items=new Map(items.map(it=>[it.saveId,it]));
   session.channel=window.HUNTER_NATIVE_COOP_TRANSPORT({room,getInput:nativeCoopInput,
    onStatus(status){if(status!=='open'&&session.state)session.state={...session.state,status:'paused'};const labels={connecting:'Connectant…',retrying:'Reconnectant…',replaced:'Sessió oberta en una altra pestanya.',ended:'Sessió finalitzada.',version:'Cal recarregar el joc.'};msg=status==='open'?'Preparant el mateix món amb el company…':labels[status]||'Connexió interrompuda.';msgT=8;},
+   onAction(result){if(result.ok===false){const labels={EMPTY:'No tens munició.',NOT_EQUIPPED:'Cal equipar aquesta arma.',TOO_FAR:'Acosta’t més al vehicle o a la porta.',FULL:'El vehicle és ple.',MOVING:'Atura el vehicle abans de pujar o baixar.',EXIT_BLOCKED:'No hi ha espai per baixar.',BLOCKED:'Hi ha un obstacle al pas.'};if(labels[result.code]){msg=labels[result.code];msgT=3;}}},
    onRoom(){},onError(error){msg=error||'La sessió s’ha interromput.';msgT=12;session.preparing=true;},
    onMission(data){if(data.meta.fingerprint!==session.fingerprint){session.preparing=true;msg='El món de la sala no coincideix. Recarregueu tots dos.';msgT=30;return;}session.meta=data.meta;session.self=data.self;session.state=data.state;session.seenEffects=new Set(data.state.combat.effects.map(e=>e.id));session.preparing=false;paused=false;ui.hide();resetCameraState();},
    onState(state){session.state=state;}});
   session.channel.start();session.channel.prepare({payload,fingerprint:session.fingerprint,host:room.members.find(m=>m.host)?.id===window.HUNTER_ACCOUNT_SERVICE.status().user?.id||room.host===window.HUNTER_ACCOUNT_SERVICE.status().user?.id});
   msg='Esperant el company al món original…';msgT=30;
- }catch(error){session.channel?.stop();nativeCoopSession=null;msg=error.message;msgT=20;ui.show('coop');throw error;}
+ }catch(error){stopNativeCoop();paused=true;msg=error.message;msgT=20;ui.show('coop');throw error;}
+}
+function nativeCoopFireWeapon(){
+ return cv?(cv.t==='heli'?'grenade':window.HUNTER_SHARED_WEAPONS.mountedWeapons[cv.t]):grenadeEquipped?'grenade':bazookaEquipped?'bazooka':sniperEquipped?'sniper':assaultRifleEquipped?'assault':cisallaEquipped?'cutters':knifeEquipped?'knife':'pistol';
+}
+function selectNativeCoopWeapon(id){
+ const weapons={pistola:'pistol',arma:'pistol',ganivet:'knife',fusell_assalt:'assault',franctirador:'sniper',bazooka:'bazooka',cisalla:'cutters',granada:'grenade'},weapon=weapons[id];
+ if(!weapon||!nativeCoopSession?.state||cv||swimming||hp<=0||(!['pistol','knife'].includes(weapon)&&!inv[id]))return false;
+ const sent=weapon==='grenade'||nativeCoopSession.channel.inventory('weapon',weapon);
+ if(!sent)return false;
+ cancelGrenadeCharge();cancelAssaultBurst();setSniperScope(false);grenadeEquipped=weapon==='grenade';
+ if(grenadeEquipped){bazookaEquipped=sniperEquipped=assaultRifleEquipped=cisallaEquipped=knifeEquipped=false;}
+ drawWeaponPicker();return true;
 }
 function nativeCoopCommand(type,payload={}){
  const s=nativeCoopSession;if(!s?.state||s.state.status!=='running'||paused&&!['item','plant'].includes(type))return false;
- if(type==='fire')return s.channel.combat(cv?(cv.t==='heli'?'grenade':'pistol'):grenadeEquipped?'grenade':bazookaEquipped?'bazooka':sniperEquipped?'sniper':assaultRifleEquipped?'assault':cisallaEquipped?'cutters':knifeEquipped?'knife':'pistol');
+ if(type==='fire'){const weapon=nativeCoopFireWeapon();return weapon?s.channel.combat(cv&&cv.t!=='heli'?'pistol':weapon):false;}
  if(type==='vehicle'){const v=cv||nearV();return v?s.channel.vehicle(v.saveId,cv?'exit':'enter'):false;}
  if(type==='item'){
   const map={arma:'pistol',fusell_assalt:'assault',franctirador:'sniper',bazooka:'bazooka',cisalla:'cutters',ganivet:'knife',granada:'grenade'};
-  if(map[payload.id]){if(payload.id==='granada'){grenadeEquipped=true;resume();return true;}grenadeEquipped=false;const sent=s.channel.inventory('weapon',map[payload.id]);if(sent)resume();return sent;}
+  if(map[payload.id]){const sent=selectNativeCoopWeapon(payload.id);if(sent)resume();return sent;}
   if(payload.id==='expl'){panel('bombtimer');return true;}
   if(payload.id==='med')return s.channel.inventory('use','medkits');
   if(payload.id==='disf')return s.channel.inventory('disguise',!disg);
@@ -64,7 +77,7 @@ function updateNativeCoop(dt){
  const s=nativeCoopSession;if(!s)return;updateStrafeControls();joystick.setRunEnabled(!cv&&!paused);if(s.preparing||!s.state){updatePlayerHUD(.13);return;}
  const state=s.state,actor=state.players.find(p=>p.id===s.self);if(!actor)return;
  const input=nativeCoopInput();elapsed=state.tick/30;Object.assign(P,{x:actor.x,y:actor.y,z:actor.z,hd:actor.hd});hp=actor.hp;kills=state.combat.targets.filter(e=>e.hp<=0).length;swimming=!!actor.swimming;playerFall=actor.fall;ib=buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2&&P.y<b.fy+b.h)||null;
- const bag=state.inventories.find(i=>i.actorId===s.self);if(bag){ammo=bag.bullets;sniperAmmo=bag.sniperAmmo;inv={};for(const [key,id] of Object.entries({grenades:'granada',disguise:'disf',medkits:'med',assault:'fusell_assalt',sniper:'franctirador',bazooka:'bazooka',cutters:'cisalla',c4:'expl'}))if(bag[key])inv[id]=bag[key];bazookaEquipped=bag.weapon==='bazooka';sniperEquipped=bag.weapon==='sniper';assaultRifleEquipped=bag.weapon==='assault';cisallaEquipped=bag.weapon==='cutters';knifeEquipped=bag.weapon==='knife';if(disg!==bag.disguised)setDis(bag.disguised);}
+ const bag=state.inventories.find(i=>i.actorId===s.self);if(bag){if(grenadeEquipped&&!bag.grenades){cancelGrenadeCharge();grenadeEquipped=false;}ammo=bag.bullets;sniperAmmo=bag.sniperAmmo;inv={};for(const [key,id] of Object.entries({grenades:'granada',disguise:'disf',medkits:'med',assault:'fusell_assalt',sniper:'franctirador',bazooka:'bazooka',cutters:'cisalla',c4:'expl'}))if(bag[key])inv[id]=bag[key];bazookaEquipped=!grenadeEquipped&&bag.weapon==='bazooka';sniperEquipped=!grenadeEquipped&&bag.weapon==='sniper';assaultRifleEquipped=!grenadeEquipped&&bag.weapon==='assault';cisallaEquipped=!grenadeEquipped&&bag.weapon==='cutters';knifeEquipped=!grenadeEquipped&&bag.weapon==='knife';if(disg!==bag.disguised)setDis(bag.disguised);}
  cv=null;for(const row of state.vehicles){const v=s.vehicles.get(row.id);if(!v)continue;Object.assign(v,row);v.o.visible=!row.destroyed;if(row.seats.includes(s.self))cv=v;place(v,elapsed,dt,0);if(v.o.userData.turretPivot)v.o.userData.turretPivot.rotation.y=row.turretYaw||0;if(v.o.userData.turretPitch)v.o.userData.turretPitch.rotation.x=row.turretPitch||0;}
  if(cv||swimming)playerCrouched=false;if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;animPl(cv?0:input.forward,dt,input.run,input.strafe);poseRider(cv,dt);
  for(const other of state.players)if(other.id!==s.self){let model=s.remotes.get(other.id);if(!model){model=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});model.position.set(other.x,other.y,other.z);model.userData.nativeRider=window.HUNTER_RIDER.create(THREE,{scene,box:bx,material:M,scales:VS,heightAt:hAt,shadows:visualQuality.shadows});scene.add(model);s.remotes.set(other.id,model);}const oldX=model.position.x,oldZ=model.position.z;model.position.lerp(new THREE.Vector3(other.x,other.y,other.z),1-Math.exp(-18*dt));model.rotation.y=other.hd;const vehicleRow=state.vehicles.find(v=>v.seats.includes(other.id)),remoteVehicle=vehicleRow?s.vehicles.get(vehicleRow.id):null;model.visible=!remoteVehicle;model.userData.nativeRider.update(remoteVehicle,dt);const speed=Math.hypot(model.position.x-oldX,model.position.z-oldZ)/Math.max(.001,dt);window.HUNTER_CHARACTERS.animatePlayer(model,{forward:Math.min(1,speed/6),dt,swimming:other.swimming,crouching:!!other.crouched,inVehicle:!!remoteVehicle,ammo:1,running:speed>7});}
@@ -80,11 +93,11 @@ function updateNativeCoop(dt){
  for(const i of state.removedRoofs||[]){const b=s.buildings[i];if(b&&!b.rb)roofBreak(b);}
  for(const [i,health] of state.palmHealth||[]){const palm=s.palms[i];if(palm){palm.hp=health;if(health<=0&&palm.alive)killPalm(palm);}}
  for(const id of state.claimedSupplies){const item=s.items.get(id);if(item){world.remove(item.o);items=items.filter(it=>it!==item);s.items.delete(id);}}
- if(!paused&&state.status==='running'&&K.KeyF&&elapsed>=s.lastFire){nativeCoopCommand('fire');s.lastFire=elapsed+.15;}
+ if(!paused&&state.status==='running'&&K.KeyF&&state.tick>=(s.nextFireTick??0)){const profile=window.HUNTER_SHARED_WEAPONS.weaponCatalog[nativeCoopFireWeapon()];if(profile&&nativeCoopCommand('fire'))s.nextFireTick=state.tick+Math.ceil(profile.cooldown*30);}
  if(scopeActive){scopeYaw+=((K.KeyA?1:0)-(K.KeyD?1:0)-joystick.state.x)*dt*.38;scopePitch=Math.max(-.65,Math.min(.65,scopePitch+((K.KeyW?1:0)-(K.KeyS?1:0)-joystick.state.y)*dt*.30));}
  updateDoors(dt);palmVisualTick-=dt;if(palmVisualTick<=0){palmVisualTick=scopeActive?.10:.16;PM.update?.(P.x,P.z,!!scopeActive,palmsDisabled,currentSniperFocus());updateShadowCasters();}worldVisualTick-=dt;if(worldVisualTick<=0){worldVisualTick=.2;updateDistanceVisibility();}updatePlayerCamera(dt);updateBazookaReticle(dt);updateGrenadeCharge(dt);updatePlayerHUD(dt);updDeb(dt);updFx(dt);if(state.phase==='won'&&!victoryCinematic){const general=[...s.enemies.values()].find(e=>e.t==='general');if(general)startVictoryCinematic(general);}if(state.status==='paused'){msg='Sessió pausada · esperant el company.';msgT=1;}msgT=Math.max(0,msgT-dt);
 }
 window.HUNTER_NATIVE_COOP=Object.freeze({start:startNativeCoop,active:()=>!!nativeCoopSession});
 
 function nativeReviveAction(){const s=nativeCoopSession;if(!s?.state||cv||!inv.med)return null;const other=s.state.players.find(p=>p.id!==s.self&&p.hp<=0&&Math.hypot(P.x-p.x,P.z-p.z)<=3.2&&Math.abs(P.y-p.y)<2);return other?{kind:'revive',label:'Mantén E per reanimar el company',icon:'✋'}:null;}
-function stopNativeCoop(){const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();for(const model of s.remotes.values()){if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;}
+function stopNativeCoop(){const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();cancelGrenadeCharge();for(const key of Object.keys(K))K[key]=0;for(const mesh of s.projectiles.values())world?.remove(mesh);for(const mesh of s.grenades.values()){world?.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);}s.projectiles.clear();s.grenades.clear();for(const model of s.remotes.values()){if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;}
