@@ -38,7 +38,7 @@ export function normalizeWorldGeometry(source){
   return {...(vegetation?{vegetation}:{}),format:2,...normalizeSurfaces(source),generatorVersion:source.generatorVersion,seed:source.seed,mapScale:source.mapScale,
     islands:rows(source.islands,1000).map(i=>{const row=pick(i,['x','z','r','peakX','peakZ']);if(row.r<=0)throw new RangeError('Invalid island');return row;}),
     levels:rows(source.levels,10000).map(i=>{const row=pick(i,['x','z','hw','hd','y','c','s','blend']);if(row.hw<0||row.hd<0||row.blend<=0)throw new RangeError('Invalid level');return row;}),
-    walls:rows(source.walls,100000).map(w=>{const row=pick(w,['x0','x1','z0','z1','y0','y1']);if(row.x0>row.x1||row.z0>row.z1||row.y0>row.y1)throw new RangeError('Invalid wall');return {...row,open:!!w.open,playerBlock:w.playerBlock!==false,towerLegOwner:!!w.towerLegOwner,woodenDoor:!!w.woodenDoor,hp:Number.isFinite(w.hp)?w.hp:12,door:!!w.door,windows:!!w.windows,...(Array.isArray(w.windowPanes)?{windowPanes:w.windowPanes.map(p=>pick(p,['axis','x','z','width','y0','y1']))}:{})};}),
+    walls:rows(source.walls,100000).map(w=>{const row=pick(w,['x0','x1','z0','z1','y0','y1']);if(row.x0>row.x1||row.z0>row.z1||row.y0>row.y1)throw new RangeError('Invalid wall');return {...row,open:!!w.open,playerBlock:w.playerBlock!==false,towerLegOwner:!!w.towerLegOwner,woodenDoor:!!w.woodenDoor,hp:Number.isFinite(w.hp)?w.hp:12,door:!!w.door,windows:!!w.windows,...(Array.isArray(w.windowPanes)?{windowPanes:w.windowPanes.map(p=>{if(!['x','z'].includes(p.axis))throw new RangeError('Invalid window axis');return {axis:p.axis,...pick(p,['x','z','width','y0','y1'])};})}:{})};}),
     trees:rows(source.trees,200000).map(t=>{const row=pick(t,['x','z','r']);if(row.r<0)throw new RangeError('Invalid tree');return {...row,p:!!t.p,rock:!!t.rock,...(t.p?pick(t,['y','s','yaw']):{}),...(t.rock?pick(t,['topY','bottomY']):{})};})};
 }
 export function createStaticWorldAdapter(source){
@@ -66,6 +66,15 @@ export function createStaticWorldAdapter(source){
     return levels?levelHeight(h,x,z,levels):h;
   }
   function wallsAt(x,z){const seen=new Set(),out=[];for(let a=Math.floor((x-.6)/64);a<=Math.floor((x+.6)/64);a++)for(let b=Math.floor((z-.6)/64);b<=Math.floor((z+.6)/64);b++)for(const w of grids.walls.get(key(a,b))||[])if(!seen.has(w)){seen.add(w);out.push(w);}return out;}
+  // Same radial footprint, projectile margin and height limits as solo treeAt.
+  // Keep the lookup local: the large world has thousands of forest colliders.
+  function vegetationAt(x,y,z,radius=.5){
+    if(locomotionAt(x,z,y).basement)return null;
+    const cx=Math.floor(x/16),cz=Math.floor(z/16),ground=Math.max(heightAt(x,z),0);
+    for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)for(const t of grids.trees.get(key(cx+a,cz+b))||[])
+      if(t.alive!==false&&Math.hypot(x-t.x,z-t.z)<t.r+radius&&y<ground+(t.p?6.5:1.5))return t;
+    return null;
+  }
   function resolveBody(previous,candidate){
     const p={x:number(candidate.x),z:number(candidate.z),hd:number(candidate.hd),y:number(previous.y)};
     pushWalls(p,wallsAt(p.x,p.z));const x=Math.floor(p.x/16),z=Math.floor(p.z/16);
@@ -90,7 +99,7 @@ export function createStaticWorldAdapter(source){
     if(!drop)drop=candidates.some(b=>b.upperFloor&&!b.rb&&b.interiorStair&&!b.interiorStair.destroyed&&y>=b.fy+b.storey+.15-.6&&stairContains(b.interiorStair,x,z)&&y-physical>.7);
     return {floor,terrain:heightAt(x,z),interior:!!interior,basement,drop};
   }
-  return Object.freeze({vegetation:generatedVegetation,kind:'static-surfaces',limit:halfSize-2,heightAt,groundAt,resolveBody,locomotionAt,
+  return Object.freeze({vegetation:generatedVegetation,kind:'static-surfaces',limit:halfSize-2,heightAt,groundAt,resolveBody,locomotionAt,vegetationAt,
     roofLanding(from,to){return sweptRoofLanding(from,to,{solidRoofAt,
       buildingCandidates:(x,z)=>grids.buildings.get(key(Math.floor(x/96),Math.floor(z/96)))||[]});},
     // Static support only: no gravity, water motion or moving platforms yet.

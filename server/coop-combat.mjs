@@ -19,15 +19,22 @@ export function traceArena(from,to,geometry,world,{ignoreBarbed=false,collectWin
   for(const [index,w] of geometry.walls.entries())if(!w.open&&!(ignoreBarbed&&w.barbed)){
     const crossing=windowCrossing(from,to,w);
     if(crossing){if(collectWindows)windowCrossings.push({wallIndex:index,...crossing});continue;}
-    const t=wallShotHit(from,to,w);if(t!==null&&t<fraction){fraction=t;hit=true;wallIndex=index;}
+    const t=wallShotHit(from,to,w);if(t!==null&&t<=fraction){fraction=t;hit=true;wallIndex=index;}
   }
   // The base shells use axis-aligned world footprints, including rotated variants.
   for(const b of geometry.buildings||[]){
-    if(!b.rb&&b.rhp>0){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.h-.12,y1:b.fy+b.h+.12});if(t!==null&&t<fraction){fraction=t;hit=true;wallIndex=null;}}
-    if(b.upperFloor&&!b.rb){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.storey-.12,y1:b.fy+b.storey+.12});if(t!==null&&t<fraction){fraction=t;hit=true;wallIndex=null;}}
+    if(!b.rb&&b.rhp>0){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.h-.12,y1:b.fy+b.h+.12});if(t!==null&&t<=fraction){fraction=t;hit=true;wallIndex=null;}}
+    if(b.upperFloor&&!b.rb){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.storey-.12,y1:b.fy+b.storey+.12});if(t!==null&&t<=fraction){fraction=t;hit=true;wallIndex=null;}}
   }
   const length=Math.hypot(to.x-from.x,to.y-from.y,to.z-from.z),steps=Math.max(1,Math.ceil(length/.2));
   for(let i=0;i<=steps;i++){const t=i/steps;if(t>fraction)break;const p=at(from,to,t);if(p.y<(world.locomotionAt?.(p.x,p.z,p.y)?.basement?world.locomotionAt(p.x,p.z,p.y).floor:world.heightAt(p.x,p.z))){fraction=t;hit=true;wallIndex=null;break;}}
+  // Reuse solo vegetation footprints and height limits through the indexed world.
+  // Sample at least as densely as solo projectiles (1.15 m); the terrain pass
+  // already uses .2 m steps, which also catches narrow trunks along fast shots.
+  if(world.vegetationAt)for(let i=0;i<=steps;i++){
+    const t=i/steps;if(t>=fraction)break;const p=at(from,to,t);
+    if(world.vegetationAt(p.x,p.y,p.z)){fraction=t;hit=true;wallIndex=null;break;}
+  }
   return {fraction,point:at(from,to,fraction),hit,wallIndex,windowCrossings};
 }
 // Heading follows the simulation: zero faces -Z. Close awareness still requires LOS.
