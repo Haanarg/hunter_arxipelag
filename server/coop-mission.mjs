@@ -4,6 +4,7 @@ import {createCoopTerrain} from './coop-terrain.mjs';
 import {createStaticWorldAdapter} from '../src/world-adapter.mjs';
 import {createCanonicalWater} from '../src/canonical-water.mjs';
 import {createPlayerSimulation,validatePlayerInput} from '../src/player-simulation.mjs';
+import {combatBalance} from '../src/combat-rules.mjs';
 import {firstSupplyContact} from './coop-inventory.mjs';
 import {createRelayVehicles,vehicleClear} from './coop-vehicles.mjs';
 import {createRelayRescue,reviveReachable} from './coop-rescue.mjs';
@@ -35,7 +36,7 @@ export function generateRelayMission(room,{mode='relay'}={}){
   const point=p=>({x:p.x,z:p.z,y:p.y}),route=p=>{const path=[];while(p){path.unshift(point(p));p=parents.get(p);}return path;},id=crypto.randomUUID(),meta={version:1,generator:MISSION_VERSION,gameVersion:GAME_VERSION,id,roomId:room.id,revision:room.revision,seed:room.seed,mapScale:room.mapScale,
     difficulty:room.difficulty??1,timeLimitTicks:Math.round(27000/(room.difficulty??1)),createdAt:Date.now(),expiresAt:Math.min(room.expiresAt,Date.now()+30*60*1000),bounds,floor:pad.y,
     members:room.members.map(m=>({id:m.id,name:m.name})),terminals:[point(first),point(other)],routes:[route(first),route(other)],extraction:point(start)},
-    actors=room.members.map((m,i)=>({id:m.id,...point(i?second:start),hd:0,hp:20}));
+    actors=room.members.map((m,i)=>({id:m.id,...point(i?second:start),hd:0,hp:combatBalance.player}));
   const parking=reachable.filter(p=>distance(p,start)>6&&distance(p,start)<20&&actors.every(a=>distance(a,p)>4)&&vehicleClear(p,world,bounds)).sort((a,b)=>distance(a,start)-distance(b,start))[0];
   if(!parking)throw new Error('No hi ha aparcament segur per al jeep. Prova una altra llavor.');
   meta.vehicles=[{id:'jeep-1',kind:'jeep',t:'cotxe',...point(parking),hd:0,v:0,seats:[null,null]}];
@@ -56,7 +57,7 @@ export function restoreRelayMission(record,geometry){
   function cutWire(p){const wall=nearestWire(p,physical.walls);if(!wall)return false;wall.open=true;wall.hp=0;removedWalls.add(physical.walls.indexOf(wall));world=createStaticWorldAdapter(physical);return true;}
   const water=createCanonicalWater((x,z)=>world.heightAt(x,z)),
     bounded={locomotionAt:(...args)=>world.locomotionAt(...args),roofLanding:(...args)=>world.roofLanding(...args),resolveBody(previous,candidate){const p=world.resolveBody(previous,{...candidate,x:clamp(candidate.x,b.x0,b.x1),z:clamp(candidate.z,b.z0,b.z1)});return {...p,x:clamp(p.x,b.x0,b.x1),z:clamp(p.z,b.z0,b.z1)};}},
-    sim=createPlayerSimulation({epoch:meta.id,limit:world.limit,world:bounded,vertical:{surfaceAt:water.surfaceAt},checkpoint:record.checkpoint,movement:actor=>vehicles.position(actor)}),actions=new Map();
+    sim=createPlayerSimulation({epoch:meta.id,limit:world.limit,world:bounded,vertical:{surfaceAt:water.surfaceAt,maxHealth:combatBalance.player},checkpoint:record.checkpoint,movement:actor=>vehicles.position(actor)}),actions=new Map();
   let phase=record.phase,hold=record.hold,status=record.status,doorRevision=record.doorRevision??0;
   const inventory=new Map(meta.members.map(m=>[m.id,{actorId:m.id,bullets:24,grenades:2,disguise:1,medkits:1,assault:1,sniper:0,sniperAmmo:0,bazooka:0,c4:0,cutters:0,weapon:'pistol',disguised:false,...structuredClone(record.inventories?.find(i=>i.actorId===m.id)||{})}])),claimed=new Set(record.claimedSupplies||[]),inventoryResults=structuredClone(record.inventoryResults||[]);
   const loose=new Map((record.droppedSupplies||[]).map(s=>[s.id,structuredClone(s)]));let dropSequence=record.dropSequence||0;
