@@ -27,7 +27,7 @@ for(const v of g.record.meta.vehicles){
  assert.ok(Object.values(launch).every(Number.isFinite),v.t+' finite grenade trajectory');
  assert.ok(launch.y>v.y+2,v.t+' clears the rider/roof');
  const r=structuredClone(g.record);r.status='running';r.meta.targets=[];
- r.meta.vehicles=[{...v,seats:['b','a'],v:6,strafeV:1}];
+ r.meta.vehicles=[{...v,seats:v.seats.length>1?['b','a']:['a'],v:6,strafeV:1}];
  Object.assign(r.checkpoint.players[0],{x:v.x,y:v.y,z:v.z});
  Object.assign(r.checkpoint.players[1],{x:v.x,y:v.y,z:v.z});
  const mission=restoreRelayMission(r,g.geometry),epoch=mission.meta.id,inventory=mission.snapshot().inventories[0].grenades;
