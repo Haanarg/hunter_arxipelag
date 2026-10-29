@@ -13,11 +13,12 @@ const assert=require('node:assert/strict');
  assert.equal(g.run('sniperEquipped'),false);assert.equal(g.run("selectNativeCoopWeapon('unknown')"),false);
  g.run('beginGrenadeCharge()');assert.equal(g.run('!!grenadeCharge'),true);
  assert.equal(g.run("selectNativeCoopWeapon('pistola')"),true);assert.equal(g.run('grenadeCharge'),null,'switching weapons cancels an unreleased throw');assert.deepEqual(inventory.at(-1),['weapon','pistol']);
- bag.grenades=0;g.run("selectNativeCoopWeapon('granada');updateNativeCoop(0)");assert.equal(g.run('grenadeEquipped'),false,'last confirmed grenade restores authority-selected weapon');
- bag.weapon='assault';bag.assault=1;g.run('updateNativeCoop(0);K.KeyF=1');
- for(let tick=0;tick<60;tick++){state.tick=tick;g.run('updateNativeCoop(0)');}
+ bag.grenades=0;g.run("selectNativeCoopWeapon('granada');nativeCoopSession.state={...nativeCoopSession.state,inventories:nativeCoopSession.state.inventories.map(i=>i.actorId==='a'?{...i,grenades:0}:i)};updateNativeCoop(0)");assert.equal(g.run('grenadeEquipped'),false,'last confirmed grenade restores authority-selected weapon');
+ bag.weapon='assault';bag.assault=1;
+ g.run("nativeCoopSession.state={...nativeCoopSession.state,inventories:nativeCoopSession.state.inventories.map(i=>i.actorId==='a'?{...i,weapon:'assault',assault:1}:i)};updateNativeCoop(0);K.KeyF=1");
+ for(let tick=0;tick<60;tick++){state.tick=tick;g.run('nativeCoopSession.state={...nativeCoopSession.state,tick:controlState.tick};updateNativeCoop(0)');}
  assert.deepEqual(shots.map(s=>s.tick),[0],'held fire sends one immediate command rather than a separate request per shot');assert.equal(g.run('nativeCoopInput().fire'),true,'ongoing fire is included in regular player input');
- const count=shots.length;g.run('paused=true');state.tick=100;g.run('updateNativeCoop(0)');assert.equal(shots.length,count,'pause sends no fire');
+ const count=shots.length;g.run('paused=true');state.tick=100;g.run('nativeCoopSession.state={...nativeCoopSession.state,tick:controlState.tick};updateNativeCoop(0)');assert.equal(shots.length,count,'pause sends no fire');
  const input=g.run('nativeCoopInput()');assert.equal(input.forward,0);assert.equal(input.interact,false);
  g.run(`paused=false;cv={t:'heli_combat'};`);assert.equal(g.run('nativeCoopFireWeapon()'),'attackCannon');g.run(`cv={t:'heli'};`);assert.equal(g.run('nativeCoopFireWeapon()'),'grenade');g.run(`cv={t:'camio'};`);assert.equal(g.run("nativeCoopCommand('fire')"),false,'closed unarmed vehicles do not send pistol fire');
  const cleanup=g.run(`(()=>{const projectile=new THREE.Mesh(gLight,mW),grenade=createGrenadeModel();world.add(projectile,grenade);nativeCoopSession.projectiles.set('p',projectile);nativeCoopSession.grenades.set('g',grenade);stopNativeCoop();return {projectile:!!projectile.parent,grenade:!!grenade.parent,key:K.KeyF};})()`);
