@@ -2,6 +2,27 @@
 export const SMALL_ARMS_AIM_CONE=.82,SMALL_ARMS_AIM_VERTICAL=Math.PI/2;
 export const SMALL_ARMS_RANGE=Object.freeze({pistol:75,assault:85});
 
+// El bazuca mai no pot girar un coet més de 60° a esquerra/dreta,
+// encara que un futur autoapuntat ampliï el con per seguir blancs alts.
+// La comprovació és a la direcció FINAL, no només al filtre de candidats.
+export const BAZOOKA_MAX_HORIZONTAL_YAW=Math.PI/3;
+export function limitBazookaHorizontalAim(direction,fx,fz,focus=null){
+  const [dx,dy,dz]=direction,forwardLength=Math.hypot(fx,fz),
+        horizontalLength=Math.hypot(dx,dz);
+  if(forwardLength<1e-8||horizontalLength<1e-8)return direction;
+  const ux=fx/forwardLength,uz=fz/forwardLength,
+        yaw=Math.atan2(ux*dz-uz*dx,ux*dx+uz*dz);
+  if(Math.abs(yaw)<=BAZOOKA_MAX_HORIZONTAL_YAW+1e-12)return direction;
+  const angle=Math.sign(yaw)*BAZOOKA_MAX_HORIZONTAL_YAW,
+        c=Math.cos(angle),s=Math.sin(angle);
+  // Un vector retallat ja no garanteix impactar al blanc adquirit:
+  // la retícula no s'ha de posar verda si el coet s'ha desviat del blanc.
+  if(focus){focus.target=null;focus.point=null;focus.kind=null}
+  return [horizontalLength*(ux*c-uz*s),dy,
+          horizontalLength*(ux*s+uz*c)];
+}
+
+
 export function weaponTargetPriority(enemy,shotClass='light'){
   if(shotClass==='attackCannon'){
     // La metralladora/canó lleuger de l'heli només segueix enemics
