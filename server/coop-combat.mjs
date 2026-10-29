@@ -50,7 +50,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
   // thousands of walls. Destruction is checked against live state below.
   const upperPanes=geometry().walls.flatMap((wall,wallIndex)=>
     wall.upperFloorWindow&&wall.windowPanes?.length?
-      wall.windowPanes.map((pane,paneIndex)=>({wall,wallIndex,pane,paneIndex})):[]);
+      wall.windowPanes.map((pane,paneIndex)=>({wallIndex,paneIndex})):[]);
   const effect=(kind,tick,data)=>{effects.push({id:++sequence,kind,tick,...data});if(effects.length>64)effects.shift();};
   function alarm(position,actorId,tick){for(const t of targets)if(t.ai&&t.hp>0&&Math.hypot(t.x-position.x,t.z-position.z)<35){t.alarmedUntil=tick+180;t.focus=actorId;t.lastSeenTick=tick;t.lastKnown={x:position.x,y:position.y,z:position.z};t.heading=facePoint(t,position);t.state='search';}}
   function damageVehicle(v,amount,shotClass,tick,queue){
@@ -95,8 +95,9 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     // Without a visible enemy, aim light weapons at intact upper-floor
     // glass. The same physics trace checks the aperture, in both directions.
     if(!aim.hasTarget&&!vehicle&&!heavy&&['pistol','assault','sniper'].includes(weapon)){
-      for(const {wall,wallIndex,pane,paneIndex} of upperPanes){
-        if(wall.open||!windowAvailable(wallIndex,paneIndex))continue;
+      for(const {wallIndex,paneIndex} of upperPanes){
+        const wall=geometry().walls[wallIndex],pane=wall?.windowPanes?.[paneIndex];
+        if(!pane||wall.open||!windowAvailable(wallIndex,paneIndex))continue;
         const wx=pane.x-from.x,wz=pane.z-from.z;
         if(wx*wx+wz*wz>70*70||wx*dx+wz*dz<Math.hypot(wx,wz)*.95)continue;
         aim.consider(wall,'window',4,pane.x,(pane.y0+pane.y1)/2,pane.z);
