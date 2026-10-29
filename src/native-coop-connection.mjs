@@ -1,5 +1,5 @@
 import {applyCoopDelta} from './coop-state-delta.mjs';
-import {createCoopSocket} from './coop-socket.mjs';
+import {createCoopSocket} from './coop-socket.mjs?net=2';
 import {GAME_VERSION} from './version.mjs?v=0.6.53';
 // Transport adapter for the original runtime. No scene, renderer or controls.
 export function createNativeCoopConnection({room,getInput,onRoom,onMission,onState,onStatus,onError,onAction,onInput,now=Date.now,WebSocketImpl=globalThis.WebSocket,origin=globalThis.location?.origin,setInputTimer=setInterval,clearInputTimer=clearInterval,setTimer=setTimeout,clearTimer=clearTimeout}){
