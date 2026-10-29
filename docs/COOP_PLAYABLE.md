@@ -1,4 +1,4 @@
-# Missió cooperativa jugable · v0.6.31
+# Missió cooperativa jugable · v0.6.33
 
 ## Què es pot jugar
 
@@ -6,7 +6,7 @@
 
 L’usuari ha prioritzat que sigui jugable encara que l’estètica quedi provisional. Aquesta versió utilitza una vista 3D senzilla, dos personatges de colors, murs, terminals i recorreguts orientatius. Si WebGL no es pot crear, s’ofereix un mapa Canvas 2D amb els mateixos controls i la mateixa sessió. El joc individual conserva el seu món i la seva interfície.
 
-No és encara la campanya Hunter completa en cooperatiu. Hi ha armes, inventaris personals, reanimació, guàrdies i un jeep compartit dins del recinte. La campanya completa continua pendent. Generador temporal actual: `relay:10`; cal iniciar una missió nova després d’actualitzar els dos clients. Les seccions amb versions anteriors conserven l’històric.
+No és encara la campanya Hunter completa en cooperatiu. Hi ha armes, inventaris personals, reanimació, guàrdies i un jeep compartit dins del recinte. La campanya completa continua pendent. Generador temporal actual: `relay:11`; cal iniciar una missió nova després d’actualitzar els dos clients. Les seccions amb versions anteriors conserven l’històric.
 
 ## Com jugar
 
@@ -122,3 +122,9 @@ Conducció horitzontal, perfils de vehicles, controlador de ràfegues, primitive
 El jeep deixa de tenir l’acceleració lineal pròpia: usa el perfil `cotxe` original, amb inèrcia i arrossegament (màxim 38 m/s endavant, 14 enrere). Deixeu W/S per reduir la velocitat i atureu-lo abans de baixar. La ràfega requereix tres bales com la individual i usa el mateix temporitzador de 75 ms (ticks 0/3/5 a 30 Hz). Es manté el perfil de dany de la missió reduïda, separat com a dades.
 
 La salut/destrucció especial de 60 PV que s’estava preparant no es publica: s’ha retirat perquè repetia regles del joc individual. La seva integració futura partirà del motor compartit. Auditoria completa i treball pendent a [SHARED_ENGINE_AUDIT.md](SHARED_ENGINE_AUDIT.md).
+
+## Autoapuntat compartit · v0.6.33
+
+F utilitza ara la selecció 3D del mode individual: pistola fins a 75 m i fusell fins a 85 m, amb el mateix con i ampliació per blancs alts o baixos. Cada bala d’una ràfega busca de nou un blanc viu. Només s’adquireixen dianes dins del con/abast i visibles per al servidor, i el raig continua aturant-se al primer obstacle físic. Sense diana, es dispara en la direcció del jugador. No hi ha foc amic ni cap ordre de client per fixar un blanc.
+
+Els controls no canvien: F dispara, 1/2 tria arma, E fa l’acció contextual i G deixa equipament. La missió continua usant hitscan per a les bales; el recorregut complet de projectils encara s’ha d’integrar. Generador temporal `relay:11`: recarregueu els dos clients i inicieu una missió nova. Es conserven les portes estretes/altes de v0.6.32 i el búnquer.

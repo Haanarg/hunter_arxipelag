@@ -493,3 +493,23 @@ Integració de main: es conserva el con 3D compartit de pistola/fusell de v0.6.2
 4. Món complet i objectius de campanya, preservant RNG i contingut individual.
 5. Desaments cooperatius permanents, migracions, estadístiques/historial i resum de missió.
 6. Proves físiques amb dos comptes/navegadors, GPU/Android, controls/rendiment/àudio/acabat; animació de portes, portes per a IA individual i incidències històriques de fixtures/escala 2.
+
+
+## Cooperatiu · fase 21 · Autoapuntat compartit (v0.6.33)
+
+- `aiming-core.mjs` extreu del mode individual la selecció de blancs: prioritats per classe d’arma, con horitzontal/vertical, ampliació de pistola/fusell per blancs alts/baixos, excepció sobre el canó, puntuació/desempat, focus i intercepció de patrulleres. El navegador conserva només enumeració d’entitats, punts del model i consulta geomètrica; les fórmules es retiren de `combat.js` i es criden al nucli compartit.
+- El cooperatiu deixa d’utilitzar només el raig horitzontal sense assistència: usa el mateix selector 3D, rang de pistola 75 m i fusell 85 m. Cada bala consulta l’estat viu i recalcula el blanc. El primer impacte del raig encara el resol la geometria autoritativa: no travessa parets/portes, pisos/sostres ni terreny. Es conserven el balanç del relleu, inventaris personals, ràfegues, cancel·lació i absència de foc amic.
+- No s’accepta cap blanc, punt de mira, vector, posició ni dany del client. Missatges amb camps de punteria afegits es rebutgen a l’esquema autenticat. Repetir una ordre no gasta bales de nou i la persistència conserva resultats/impactes.
+- Imports del nucli unificats per URL perquè no es carreguin dues instàncies amb/sense query a una mateixa pàgina. Es mantenen revalidació dels mòduls i versió exacta. Generador temporal `relay:11`; missió nova amb tots dos clients actualitzats. Sense dependències ni recursos Cloudflare nous.
+- Proves: 512 casos congelats del selector individual, comparant vector, blanc, focus i punt abans/després; con, prioritat, alçades, abast, ocultació i intercepció. Proves cooperatives de raig 3D, parets, sostres/pisos, terreny, retarget i idempotència; regressions del fusell, supressió, retícules i portes de v0.6.32. Auditoria ampliada a `docs/SHARED_ENGINE_AUDIT.md`.
+- Verificació completada: `test:play` superat amb dues sessions locals natives, armes/jeep, portes, victòria, reconnexió, persistència i reanimació amb consum d’una farmaciola. Traces del selector, regressions del fusell/supressió/retícules, portes proporcionades i portes contextuals en bundle superades. GPU/Android físics continuen pendents.
+- Integració: es conserven íntegrament les proporcions de portes publicades a v0.6.32 (PR #15), incloent envans/marcs i búnquer sense canvis. La versió de la nova fase és v0.6.33.
+
+### Què queda després d’aquesta fase
+
+1. Reutilitzar el recorregut complet dels projectils i la integració amb armes/retícules; la selecció d’objectius ja és compartida, però el pilot encara usa hitscan.
+2. Extreure navegació/persecució i màquina d’estats de la IA individual. Visió i models ja compartits.
+3. Compartir contactes avançats de vehicles (OBB, terrenys, ferri, aigua i aire), i després integrar salut/destrucció/blindatge/armes muntades a partir de les regles individuals.
+4. Reutilitzar equipament, animacions, efectes i àudio restants; ampliar arsenal, món i campanya preservant RNG.
+5. Desaments cooperatius permanents, migracions, estadístiques/historial i resum de missió.
+6. Dos comptes/navegadors físics, GPU/Android, controls/rendiment/àudio/acabat; animació de portes, portes per a IA individual i incidències històriques de fixtures/escala 2.

@@ -1,3 +1,4 @@
+import {createAimSelector,weaponTargetPriority,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL,SMALL_ARMS_RANGE} from '../src/aiming-core.mjs';
 import {damageHealth} from '../src/player-simulation.mjs';
 import {beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,segmentAabbT,inView,ballisticStep} from '../src/combat-rules.mjs';
 // Authoritative combat for the reduced relay arena. No client positions or hits.
@@ -27,11 +28,15 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
   const effect=(kind,tick,data)=>{effects.push({id:++sequence,kind,tick,...data});if(effects.length>64)effects.shift();};
   function alarm(position,actorId,tick){for(const t of targets)if(t.ai&&t.hp>0&&Math.hypot(t.x-position.x,t.z-position.z)<35){t.alarmedUntil=tick+180;t.focus=actorId;t.lastSeenTick=tick;t.lastKnown={x:position.x,y:position.y,z:position.z};t.heading=facePoint(t,position);t.state='search';}}
   function fire(actorId,p,bag,tick){
-    const from={x:p.x,y:p.y+1.5,z:p.z},dx=-Math.sin(p.hd),dz=-Math.cos(p.hd);
-          const to={x:from.x+dx*70,y:from.y,z:from.z+dz*70},trace=traceArena(from,to,geometry(),world());let first=trace.fraction,hit=null;
-          for(const t of targets)if(t.hp>0){const f=segmentBox(from,to,targetBox(t));if(f!==null&&f<first){first=f;hit=t;}}
-          bag.bullets--;if(hit)hit.hp=damageHealth(hit.hp,combatBalance.weapons.pistol);effect('shot',tick,{actorId,from,to:at(from,to,first),hit:hit?.id||null});return hit?'HIT':'FIRED';
+    const from={x:p.x,y:p.y+1.5,z:p.z},dx=-Math.sin(p.hd),dz=-Math.cos(p.hd),weapon=bag.weapon||'pistol',range=SMALL_ARMS_RANGE[weapon]||75,focus={};
+    const aim=createAimSelector({origin:from,direction:[dx,0,dz],range,cone:SMALL_ARMS_AIM_CONE,shotClass:weapon,focus,verticalCone:SMALL_ARMS_AIM_VERTICAL,
+      isClear:(x,y,z,tx,ty,tz)=>traceArena({x,y,z},{x:tx,y:ty,z:tz},geometry(),world()).fraction>=1});
+    for(const t of targets)if(t.hp>0)aim.consider(t,'enemy',weaponTargetPriority({...t,t:t.t||'soldat'},weapon),t.x,t.y+1.5,t.z);
+    const [ax,ay,az]=aim.direction(),to={x:from.x+ax*range,y:from.y+ay*range,z:from.z+az*range},trace=traceArena(from,to,geometry(),world());let first=trace.fraction,hit=null;
+    for(const t of targets)if(t.hp>0){const f=segmentBox(from,to,targetBox(t));if(f!==null&&f<first){first=f;hit=t;}}
+    bag.bullets--;if(hit)hit.hp=damageHealth(hit.hp,combatBalance.weapons.pistol);effect('shot',tick,{actorId,from,to:at(from,to,first),hit:hit?.id||null,aimedAt:focus.target?.id||null});return hit?'HIT':'FIRED';
   }
+
   function cancel(actorId){for(let i=bursts.length-1;i>=0;i--)if(bursts[i].actorId===actorId)bursts.splice(i,1);}
   function command(actorId,message,tick){
     const cached=results.find(r=>r.actorId===actorId&&r.commandId===message.commandId);if(cached)return {...cached,duplicate:true};

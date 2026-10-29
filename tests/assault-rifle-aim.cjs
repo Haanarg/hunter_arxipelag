@@ -1,3 +1,5 @@
+(async()=>{
+const sharedAiming=await import('../src/aiming-core.mjs');
 'use strict';
 // Pistola i fusell comparteixen el perfil 3D sense alterar la resta d'armes.
 const assert=require('node:assert/strict');
@@ -6,7 +8,7 @@ const src=fs.readFileSync('src/combat.js','utf8');
 const begin=src.indexOf('// Les armes pesades prioritzen riscos immediats:'),
       end=src.indexOf('// La retícula i el míssil de l\'helicòpter',begin);
 assert(begin>=0&&end>begin,'Funcions de punteria localitzades');
-const ctx={E:[],VS:{llanxa:1},wallCandidates:()=>[],buildingCandidates:()=>[],hAt:()=>0};
+const ctx={window:{HUNTER_SHARED_AIMING:sharedAiming},E:[],VS:{llanxa:1},wallCandidates:()=>[],buildingCandidates:()=>[],hAt:()=>0};
 vm.runInNewContext(src.slice(begin,end)+
   '\n globalThis.aim={autoAimWeaponShot,enemyAimCenterY,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL};',ctx);
 const aim=ctx.aim;
@@ -36,9 +38,11 @@ for(const kind of ['assault','pistol']){
 assert.deepEqual(fire(tower,'light'),forward,'Altres armes: punteria original');
 assert(src.includes("SMALL_ARMS_AIM_CONE,'pistol',null,130,SMALL_ARMS_AIM_VERTICAL)"),
   'Pistola a peu amb el con compartit');
-assert(src.includes("direction.x,direction.y,direction.z,75,\n      SMALL_ARMS_AIM_CONE,'pistol'"),
+assert(src.includes("direction.x,direction.y,direction.z,SMALL_ARMS_RANGE.pistol,\n      SMALL_ARMS_AIM_CONE,'pistol'"),
   'Pistola des de vehicles oberts amb el mateix con');
 assert(src.includes("SMALL_ARMS_AIM_CONE,'assault',null,130,SMALL_ARMS_AIM_VERTICAL"),
   'Fusell amb el con compartit');
 assert(src.includes("target.suppressedUntil=elapsed+2"),'Foc de supressió intacte');
 console.log('OK: con d\'autoapuntat compartit, pistola a peu/vehicle, fusell, casetes i blancs baixos');
+
+})().catch(error=>{console.error(error);process.exitCode=1});

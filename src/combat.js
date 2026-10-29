@@ -670,26 +670,7 @@ function launchGrenade(pending){
 // Les armes pesades prioritzen riscos immediats: torres, patrulleres
 // i soldats amb bazuca; després altres soldats i finalment blindats/cotxes.
 // Les armes lleugeres mantenen l'ordre antic.
-function weaponTargetPriority(enemy,shotClass='light'){
-  if(shotClass==='attackCannon'){
-    // La metralladora/canó lleuger de l'heli només segueix enemics
-    // vulnerables: els míssils pesants s'encarreguen de torres i blindats.
-    if(enemy.t==='patrulla_marina'||enemy.rocketSoldier)return 0;
-    if(enemy.t==='soldat'||enemy.t==='general')return 1;
-    if(enemy.t==='jeep')return 2;
-    return 3;
-  }
-  if(shotClass==='heavy'){
-    if(enemy.t==='torre'||enemy.t==='patrulla_marina'||enemy.rocketSoldier)return 0;
-    if(enemy.t==='soldat'||enemy.t==='general')return 1;
-    if(enemy.t==='jeep'||enemy.t==='tanqueta'||enemy.t==='tanc')return 2;
-    return 3;
-  }
-  if(enemy.t==='soldat'||enemy.t==='general')return 0;
-  if(enemy.t==='jeep'||enemy.t==='tanqueta'||enemy.t==='tanc'||enemy.t==='patrulla_marina')return 1;
-  if(enemy.t==='torre')return 2;
-  return 3;
-}
+function weaponTargetPriority(...args){return window.HUNTER_SHARED_AIMING.weaponTargetPriority(...args)}
 // La caseta es troba al voltant de y=9,15, no al mig de les potes.
 // Un sol punt de referència evita discrepàncies entre punteria,
 // col·lisió dels projectils, retícula i dany d'explosió.
@@ -738,26 +719,10 @@ const BAZOOKA_AIM_RANGE=185,BAZOOKA_AIM_CONE=.68,BAZOOKA_AIM_VERTICAL=.90;
 // Pistola i fusell d'assalt comparteixen el con d'autoapuntat 3D:
 // aproximadament ±35° a peu pla i fins a ±90° horitzontals en blancs
 // molt més alts o baixos. L'obertura vertical és de ±90°.
-const SMALL_ARMS_AIM_CONE=.82,SMALL_ARMS_AIM_VERTICAL=Math.PI/2;
-function smallArmsAimHorizontalCone(baseCone,pitchError){
-  const steep=Math.max(0,Math.min(1,(pitchError-.17)/(.98-.17))),
-        blend=steep*steep*(3-2*steep),
-        baseYaw=Math.acos(Math.max(-1,Math.min(1,baseCone)));
-  return Math.cos(baseYaw+(Math.PI/2-baseYaw)*blend);
-}
+const {SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL,SMALL_ARMS_RANGE}=window.HUNTER_SHARED_AIMING;
 // Punt d'intercepció per a patrulleres mòbils, amb la velocitat real de
 // cada arma: les bales ràpides també han d'arribar al centre del casc.
-function bazookaInterceptPoint(e,originX,originY,originZ,targetY,speed){
-  const vx=-Math.sin(e.hd)*(e.speed||0),vz=-Math.cos(e.hd)*(e.speed||0),
-        dx=e.x-originX,dy=targetY-originY,dz=e.z-originZ,
-        a=vx*vx+vz*vz-speed*speed,b=2*(dx*vx+dz*vz),
-        c=dx*dx+dy*dy+dz*dz,disc=b*b-4*a*c;
-  if(disc<0||Math.abs(a)<.00001)return {x:e.x,y:targetY,z:e.z};
-  const roots=[(-b-Math.sqrt(disc))/(2*a),(-b+Math.sqrt(disc))/(2*a)],
-        time=Math.min(...roots.filter(t=>t>0));
-  if(!Number.isFinite(time)||time>3.7)return {x:e.x,y:targetY,z:e.z};
-  return {x:e.x+vx*time,y:targetY,z:e.z+vz*time};
-}
+function bazookaInterceptPoint(...args){return window.HUNTER_SHARED_AIMING.bazookaInterceptPoint(...args)}
 // Alçada del centre del CASC, no de la coberta ni de les armes de bord.
 // El model de la llanxa s'escala uniformement des del seu origen flotant.
 function marineHullTargetY(e){
@@ -768,43 +733,12 @@ function marineHullTargetY(e){
 // la vertical es compara amb el pendent ORIGINAL de cada arma.
 function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus=null,
     projectileSpeed=0,verticalCone=Math.PI/2){
-  if(focus){focus.target=null;focus.point=null;focus.kind=null}
-  const heavy=shotClass==='heavy',forward=Math.hypot(fx,fz),
-        basePitch=Math.atan2(fy,forward);
-  let bestPriority=Infinity,bestScore=Infinity,chosen=null;
-  const consider=(obj,kind,priority,tx,ty,tz,ignoreWall=null,ignoreBuilding=null)=>{
-    if(priority>bestPriority||!Number.isFinite(ty))return;
-    const dx=tx-x,dy=ty-y,dz=tz-z,
-          horizontal=Math.hypot(dx,dz),distance=Math.hypot(dx,dy,dz);
-    if(distance<.15||distance>range||forward<.001)return;
-    const pitchError=Math.abs(Math.atan2(dy,horizontal)-basePitch);
-    if(pitchError>verticalCone)return;
-    const alignment=horizontal>=.001?
-      (dx*fx+dz*fz)/(horizontal*forward):1,
-          wideSmallArms=shotClass==='assault'||shotClass==='pistol',
-          allowedCone=wideSmallArms?
-            smallArmsAimHorizontalCone(cone,pitchError):cone,
-          // Quan la torre queda pràcticament a la vertical del canó,
-          // el desplaçament d'1,1 m de la boca no ha de descartar-la
-          // per aparèixer un pèl al darrere en projecció horitzontal.
-          overhead=wideSmallArms&&horizontal<=1.6&&Math.abs(dy)>=horizontal*3;
-    if(!overhead&&alignment<allowedCone)return;
-    // Les armes pesades no adquireixen dianes tapades pel relleu.
-    if(!weaponAimClear(x,y,z,tx,ty,tz,ignoreWall,ignoreBuilding,heavy))return;
-    // Dins una prioritat, apuntar primer al blanc més centrat i proper.
-    const score=heavy?
-      Math.acos(Math.max(-1,Math.min(1,alignment)))*45+pitchError*23+distance*.08:
-      distance;
-    if(priority===bestPriority&&score>=bestScore)return;
-    bestPriority=priority;bestScore=score;
-    chosen=[dx/distance,dy/distance,dz/distance];
-    if(focus){focus.target=obj;focus.point={x:tx,y:ty,z:tz};focus.kind=kind}
-  };
+  const selector=window.HUNTER_SHARED_AIMING.createAimSelector({origin:{x,y,z},direction:[fx,fy,fz],range,cone,shotClass,focus,verticalCone,isClear:weaponAimClear}),{consider}=selector;
   for(const e of E){
     if(e.destroyed||e.hp<=0||
       shotClass==='attackCannon'&&['torre','tanqueta','tanc'].includes(e.t))continue;
     const priority=weaponTargetPriority(e,shotClass);
-    if(priority>=3||priority>bestPriority)continue;
+    if(priority>=3||priority>selector.priority)continue;
     const modelY=e.o?.position?.y??(e.gy??0),
           groundTarget=['soldat','general','jeep','tanqueta','tanc'].includes(e.t),
           underground=!!e.basement&&(e.gy??modelY)<e.basement.fy-3.9,
@@ -819,7 +753,7 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
   }
   // Cap blanc militar visible dins el con? Les armes pesades
   // poden buscar una bretxa a la filferrada, vehicles buits o edificis.
-  if(heavy&&!chosen){
+  if(shotClass==='heavy'&&!selector.hasTarget){
     const fallbackPriority=3;
     for(const w of wallCandidates(x,z,range)){
       if(!w.barbed||w.open||w.hp<=0)continue;
@@ -837,7 +771,7 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
       consider(b,'building',fallbackPriority,b.x,(b.fy??hAt(b.x,b.z))+b.h*.55,b.z,null,b);
     }
   }
-  return chosen||[fx,fy,fz];
+  return selector.direction();
 }
 // La retícula i el míssil de l'helicòpter comparteixen la mateixa
 // trajectòria menys picada, el mateix abast i el mateix autoapuntat.
@@ -1123,7 +1057,7 @@ function fireAssaultBurstBullet(index){
         // Con 3D ampliat: torres per damunt i soldats a sota de l'horitzó.
         // La classe 'assault' només defineix la punteria: el projectil
         // disparat continua essent lleuger i no causa dany a les torres.
-        [ax,ay,az]=autoAimWeaponShot(x,y,z,fx,0,fz,85,
+        [ax,ay,az]=autoAimWeaponShot(x,y,z,fx,0,fz,SMALL_ARMS_RANGE.assault,
           SMALL_ARMS_AIM_CONE,'assault',null,130,SMALL_ARMS_AIM_VERTICAL),
         spread=[-.012,0,.012][index],dx=ax-az*spread,dz=az+ax*spread,
         len=Math.hypot(dx,ay,dz)||1;
@@ -1168,7 +1102,7 @@ else if(c&&OPEN_RIDER_PISTOL.has(c)){
   if(ammo<=0)return;
   const shot=riderSystem.firePistol(cv,(origin,direction)=>
     autoAimWeaponShot(origin.x,origin.y,origin.z,
-      direction.x,direction.y,direction.z,75,
+      direction.x,direction.y,direction.z,SMALL_ARMS_RANGE.pistol,
       SMALL_ARMS_AIM_CONE,'pistol',null,130,SMALL_ARMS_AIM_VERTICAL));
   if(!shot)return;
   ammo--;fcd=.22;
@@ -1196,7 +1130,7 @@ else if(!cv&&sniperEquipped&&inv.franctirador){
 }
 else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}
 else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9-(playerCrouched?.48:0),z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,BAZOOKA_AIM_RANGE,BAZOOKA_AIM_CONE,'heavy',null,72*HEAVY_SHOT_SPEED_FACTOR,BAZOOKA_AIM_VERTICAL);shoot(x,y,z,ax,ay,az,72,COMBAT_BALANCE.weapons.bazooka,18,'pb',mS,3);Pj[Pj.length-1].life=3.8;Pj[Pj.length-1].weapon='bazooka';msg='Bazooka: '+(inv.bazooka||0)+' coets restants.';msgT=2;setDis(false)}
-else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5-(playerCrouched?.48:0),z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,75,SMALL_ARMS_AIM_CONE,'pistol',null,130,SMALL_ARMS_AIM_VERTICAL);shoot(x,y,z,ax,ay,az,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE)}
+else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5-(playerCrouched?.48:0),z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,SMALL_ARMS_RANGE.pistol,SMALL_ARMS_AIM_CONE,'pistol',null,130,SMALL_ARMS_AIM_VERTICAL);shoot(x,y,z,ax,ay,az,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE)}
 else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}
 function segmentAabbT(...args){return window.HUNTER_SHARED_COMBAT.segmentAabbT(...args)}
 function segmentSphereT(...args){return window.HUNTER_SHARED_COMBAT.segmentSphereT(...args)}

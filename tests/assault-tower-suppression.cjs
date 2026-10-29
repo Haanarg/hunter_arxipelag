@@ -1,3 +1,5 @@
+(async()=>{
+const sharedAiming=await import('../src/aiming-core.mjs');
 'use strict';
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -8,7 +10,7 @@ const death=fs.readFileSync('src/death-cinematic.js','utf8');
 function between(text,a,b){const start=text.indexOf(a),end=text.indexOf(b,start+a.length);assert(start>=0&&end>start,'Bloc de codi existent');return text.slice(start,end)}
 const aim=between(combat,'// Les armes pesades prioritzen riscos immediats:','// La retícula i el míssil de l\'helicòpter');
 const tower={t:'torre',x:2,z:-5,hp:24,o:{position:{y:0}}};
-const ctx={E:[tower],VS:{llanxa:1},wallCandidates:()=>[],buildingCandidates:()=>[],hAt:()=>0};
+const ctx={window:{HUNTER_SHARED_AIMING:sharedAiming},E:[tower],VS:{llanxa:1},wallCandidates:()=>[],buildingCandidates:()=>[],hAt:()=>0};
 vm.runInNewContext(aim+'\n globalThis.aim={autoAimWeaponShot,enemyAimCenterY};',ctx);
 const targetY=ctx.aim.enemyAimCenterY(tower);
 assert.equal(targetY,9.15,'L’autoapuntat fixa el centre de la caseta, no les potes');
@@ -37,3 +39,5 @@ assert.equal(v.droppedWeapon.object,rifle,'El fusell real queda desenganxat del 
 assert.equal(v.droppedWeapon.parent,origParent,'Se’n conserva el pare per restaurar-lo');
 assert.equal(rifle.parent,scene,'La cinemàtica el mou a l’escena');
 console.log('OK: autoapuntat vertical, supressió renovable, caiguda del fusell');
+
+})().catch(error=>{console.error(error);process.exitCode=1});

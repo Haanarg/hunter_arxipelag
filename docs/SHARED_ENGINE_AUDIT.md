@@ -1,4 +1,4 @@
-# Reutilització del motor individual · v0.6.31
+# Reutilització del motor individual · v0.6.33
 
 Criteri: les regles i els models tenen una única implementació. Els adaptadors de navegador i servidor només aporten estat, geometria, autoritat, presentació i serveis. No es converteix tot el joc individual en un Worker: DOM, Three, àudio, càmera i comptes continuen fora de la simulació compartida.
 
@@ -37,7 +37,7 @@ Criteri: les regles i els models tenen una única implementació. Els adaptadors
 
 ## Revisions pendents abans d’ampliar la campanya
 
-1. Extreure la selecció de blancs, autoapuntat i recorregut complet dels projectils. Ara comparteixen primitives i integració, però la pistola cooperativa continua essent hitscan i no és encara tot `updPj`.
+1. Extreure el recorregut complet dels projectils i integrar-lo amb armes/retícules. Selecció de blancs, autoapuntat, prioritats, primitives i integració ja són compartits; la pistola cooperativa continua essent hitscan i no és encara tot `updPj`.
 2. Extreure navegació, persecució i màquina d’estats de la IA individual. El con i els models ja es comparteixen; la patrulla reduïda del relleu encara és específica.
 3. Compartir els contactes complets de vehicles amb formes orientades, terrenys, ferri, aigua i aire. Després integrar salut/destrucció/armes muntades a partir de les regles individuals.
 4. Reutilitzar les fàbriques d’equipament, animacions, efectes i àudio que encara falten al pilot. Els models de persones i Humvee ja estan unificats.
@@ -54,3 +54,15 @@ El prototip local de jeep de 60 PV, multiplicador de dany propi i destrucció es
 - Worker amb dues sessions locals: armes, conducció, passatger, sortides, portes, objectius, reconnexió, checkpoint i reanimació amb consum d’una farmaciola.
 
 No substitueix la prova amb dos dispositius físics, WebGL real i Android. Els checkpoints temporals anteriors no es migren: generador `relay:10`, clients actualitzats i missió nova.
+
+## Segona extracció · autoapuntat compartit (v0.6.33)
+
+`src/aiming-core.mjs` extreu la selecció real de `autoAimWeaponShot`: prioritats segons classe d’arma, con horitzontal/vertical, obertura per blancs alts/baixos, excepció de blancs sobre el canó, puntuació i desempat, resultat/focus i intercepció de patrulleres mòbils. El navegador només enumera enemics/geometria i aporta `weaponAimClear`; el servidor enumera les seves dianes i aporta la seva traça física. La selecció ja no té una versió alternativa al cooperatiu.
+
+La pistola i el fusell cooperatius adquireixen blancs amb el mateix con 3D del mode individual i abasts de 75/85 m. El servidor comprova després el primer impacte físic del raig; seleccionar una diana no permet saltar-se parets, portes, pisos, sostres ni terreny. Els actors, orientació i dianes provenen de l’estat autoritatiu. El client no pot enviar ni blanc, ni punt de mira, ni vector de tret. La ràfega continua recalculant blanc per a cada bala, amb la munició i cancel·lació compartides.
+
+512 casos congelats abans d’extreure el codi conserven exactament selecció, vector, focus i punt d’apuntat del mode individual. Hi ha casos de totes cinc classes d’arma, prioritats, terreny/ocultació simulats, fallback d’armes pesades, altures i patrulleres mòbils. Proves cooperatives amb contacte físic, blancs alts/baixos, murs, sostres/pisos, terreny, abast, retarget després d’eliminar una diana i idempotència.
+
+La primera revisió pendent de l’apartat anterior queda reduïda al **recorregut complet dels projectils** i la seva integració amb armes/retícules: la selecció, el con i la prioritat ja estan compartits. El pilot encara resol la bala per hitscan; no s’afirma que s’hagi migrat tot `updPj`. IA completa, contactes avançats dels vehicles i la resta de fàbriques continuen pendents.
+
+Els imports del nucli compartit usen un únic URL per mòdul, sense instanciar una còpia amb query i una altra sense query a la mateixa pàgina. Es conserva la revalidació de `/src/*.mjs` i la comprovació exacta de versió.
