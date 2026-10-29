@@ -78,5 +78,20 @@ try{
   assert.equal(channel.stats.avgStateGapMs,2287,'Compta l’interval real des de l’estat inicial');
   assert(channel.stats.stateBytes>channel.stats.stateFrames,'S’acumulen dades de xarxa');
   channel.stop();
-  console.log('coop telemetry: in-memory rate limits, ping RTT, server frame costs, snapshot bytes and gaps passed');
+  // Un frontend nou no pot enviar sondes a un Worker antic: en aquell
+  // protocol els paquets desconeguts provocarien un tancament 1008.
+  const oldWorkerClient=createNativeCoopConnection({room:{id:'room',revision:1},
+    origin:'https://hunter.test',WebSocketImpl:Socket,now:()=>now,
+    getInput:()=>({forward:0,turn:0,strafe:0,run:false}),
+    onRoom(){},onMission(){},onState(){},onStatus(){},onError(){},
+    setInputTimer:fn=>(inputTick=fn,1),clearInputTimer(){},
+    setTimer:()=>1,clearTimer(){}});
+  oldWorkerClient.start();const legacy=sockets.at(-1);legacy.open();
+  legacy.data({type:'native-mission',self:'a',meta:{id:'old-worker'},
+    state:{missionId:'old-worker',tick:1,status:'running',players:[{id:'a',acknowledged:0}]}});
+  now+=3000;inputTick();
+  assert.equal(legacy.sent.filter(m=>m.type==='latency-ping').length,0,
+    'El client no envia sondes fins que el servidor en confirma el suport');
+  oldWorkerClient.stop();
+  console.log('coop telemetry: input limits, RTT, frame costs, state bytes and mixed-worker compatibility passed');
 }finally{Date.now=originalNow}
