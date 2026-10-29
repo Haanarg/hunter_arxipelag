@@ -1,3 +1,6 @@
+import {vegetationLayout} from './vegetation-layout.mjs';
+import {createWorldRandom} from './world-generation-core.mjs';
+const vegetationCache=new WeakMap();
 import {walkingHeightAt,solidRoofAt,buildingLocalPoint,bunkerFloorAt,stairContains} from './walk-surfaces.mjs';
 import {sweptRoofLanding} from './player-vertical.mjs';
 import {rawTerrainAt,levelHeight,pushWalls,pushTree} from './world-physics.mjs';
@@ -30,7 +33,9 @@ function normalizeSurfaces(source){
 }
 export function normalizeWorldGeometry(source){
   if(!source||![1,2].includes(source.format)||source.generatorVersion!=='world:0.6.2'||!Number.isInteger(source.seed)||source.seed<0||source.seed>4294967295||![1,2].includes(source.mapScale))throw new RangeError('Invalid world geometry');
-  return {format:2,...normalizeSurfaces(source),generatorVersion:source.generatorVersion,seed:source.seed,mapScale:source.mapScale,
+  let vegetation=null;
+  if(source.vegetation){const v=source.vegetation;if(v.version!==1||!Number.isInteger(v.randomState)||v.randomState<0||v.randomState>4294967295)throw new RangeError('Invalid vegetation recipe');vegetation={version:1,randomState:v.randomState,spawn:pick(v.spawn,['x','z']),compounds:rows(v.compounds,1000).map(c=>pick(c,['x','z','r']))};}
+  return {...(vegetation?{vegetation}:{}),format:2,...normalizeSurfaces(source),generatorVersion:source.generatorVersion,seed:source.seed,mapScale:source.mapScale,
     islands:rows(source.islands,1000).map(i=>{const row=pick(i,['x','z','r','peakX','peakZ']);if(row.r<=0)throw new RangeError('Invalid island');return row;}),
     levels:rows(source.levels,10000).map(i=>{const row=pick(i,['x','z','hw','hd','y','c','s','blend']);if(row.hw<0||row.hd<0||row.blend<=0)throw new RangeError('Invalid level');return row;}),
     walls:rows(source.walls,100000).map(w=>{const row=pick(w,['x0','x1','z0','z1','y0','y1']);if(row.x0>row.x1||row.z0>row.z1||row.y0>row.y1)throw new RangeError('Invalid wall');return {...row,open:!!w.open,playerBlock:w.playerBlock!==false,towerLegOwner:!!w.towerLegOwner};}),
@@ -46,6 +51,13 @@ export function createStaticWorldAdapter(source){
   for(const i of data.islands)insert(grids.islands,i,512,i.x-i.r*2,i.x+i.r*2,i.z-i.r*2,i.z+i.r*2);
   for(const m of data.levels){const reach=Math.hypot(m.hw,m.hd)+m.blend;insert(grids.levels,m,256,m.x-reach,m.x+reach,m.z-reach,m.z+reach);}
   for(const w of data.walls)insert(grids.walls,w,64,w.x0,w.x1,w.z0,w.z1);
+  const staticTrees=data.trees.slice();let generatedVegetation=null;
+  if(data.vegetation){
+    generatedVegetation=vegetationCache.get(source.vegetation);
+    if(!generatedVegetation){generatedVegetation=vegetationLayout({halfSize,islands:data.islands,heightAt,seed:data.seed,random:createWorldRandom(data.vegetation.randomState),spawn:data.vegetation.spawn,buildings:data.buildings,stairs:data.stairs,compounds:data.vegetation.compounds});vegetationCache.set(source.vegetation,generatedVegetation);}
+    if(data.trees.length+generatedVegetation.trees.length>200000)throw new RangeError('Too many vegetation colliders');
+    data.trees.push(...generatedVegetation.trees);
+  }
   for(const t of data.trees)insert(grids.trees,t,16,t.x,t.x,t.z,t.z);
   for(const b of data.buildings)insert(grids.buildings,b,96,b.x-b.w/2,b.x+b.w/2,b.z-b.d/2,b.z+b.d/2);
   function heightAt(x,z){
@@ -78,10 +90,10 @@ export function createStaticWorldAdapter(source){
     if(!drop)drop=candidates.some(b=>b.upperFloor&&!b.rb&&b.interiorStair&&!b.interiorStair.destroyed&&y>=b.fy+b.storey+.15-.6&&stairContains(b.interiorStair,x,z)&&y-physical>.7);
     return {floor,terrain:heightAt(x,z),interior:!!interior,basement,drop};
   }
-  return Object.freeze({kind:'static-surfaces',limit:halfSize-2,heightAt,groundAt,resolveBody,locomotionAt,
+  return Object.freeze({vegetation:generatedVegetation,kind:'static-surfaces',limit:halfSize-2,heightAt,groundAt,resolveBody,locomotionAt,
     roofLanding(from,to){return sweptRoofLanding(from,to,{solidRoofAt,
       buildingCandidates:(x,z)=>grids.buildings.get(key(Math.floor(x/96),Math.floor(z/96)))||[]});},
     // Static support only: no gravity, water motion or moving platforms yet.
     resolve(previous,candidate){const p=resolveBody(previous,candidate);p.y=groundAt(p.x,p.z,previous.y);return p;},
-    snapshot:()=>structuredClone(data)});
+    snapshot:()=>structuredClone({...data,trees:staticTrees})});
 }

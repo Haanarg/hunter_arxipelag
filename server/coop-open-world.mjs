@@ -47,7 +47,8 @@ export function configureOpenWorld(generated){
   if(layout.satellite){const b=shells.buildings[layout.buildings.findIndex(b=>b.id===layout.satellite.buildingId)];if(b)row.landmarks.push({kind:'satellite',x:b.x,y:b.fy+b.h+1.2,z:b.z,spec:layout.satellite,buildingIndex:geometry.buildings.indexOf(b)});}
   if(layout.helipad){const [x,z]=tr(layout.helipad.x,layout.helipad.z);row.landmarks.push({kind:'helipad',x,y:plan.height+.04,z,size:layout.helipad.size});}
   for(const [number,segments] of [layout.fence||[],layout.prisonerFence||[]].entries())for(const [j,[a,b]] of segments.entries()){
-   const [ax,az]=tr(...a),[bx,bz]=tr(...b);geometry.walls.push({id:id+'/fence/'+number+'/'+j,x0:Math.min(ax,bx)-.15,x1:Math.max(ax,bx)+.15,z0:Math.min(az,bz)-.15,z1:Math.max(az,bz)+.15,y0:plan.height,y1:plan.height+3.5,ax,az,bx,bz,barbed:true,rammable:true,hp:8,open:false});
+   const [sx,sz]=tr(...a),[ex,ez]=tr(...b),n=Math.ceil(Math.hypot(ex-sx,ez-sz)/6);
+   for(let k=0;k<n;k++){const ax=sx+(ex-sx)*k/n,az=sz+(ez-sz)*k/n,bx=sx+(ex-sx)*(k+1)/n,bz=sz+(ez-sz)*(k+1)/n;geometry.walls.push({id:id+'/fence/'+number+'/'+j+'/'+k,x0:Math.min(ax,bx)-.24,x1:Math.max(ax,bx)+.24,z0:Math.min(az,bz)-.24,z1:Math.max(az,bz)+.24,y0:Math.max(0,Math.min(world.heightAt(ax,az),world.heightAt(bx,bz))),y1:Math.max(0,world.heightAt(ax,az),world.heightAt(bx,bz))+5,ax,az,bx,bz,barbed:true,rammable:true,hp:8,open:false});}
   }
   for(const b of shells.buildings)if(b.kind==='enemy_bunker')addCoopBunker(b,foundation.seed,geometry);
   const piers=layout.piers||(type==='port'?[{x:0,z:7,w:102,d:10},{x:-24,z:27.5,w:6,d:41},{x:24,z:27.5,w:6,d:41}]:[]);
@@ -75,5 +76,6 @@ export function configureOpenWorld(generated){
  record.checkpoint.players.forEach((p,i)=>Object.assign(p,points[i],{hp:combatBalance.player,swimming:false,fall:null}));
  // Equipment remains personal; base supplies/vehicles come from the approved layout.
  record.inventories=meta.members.map(m=>({actorId:m.id,bullets:48,grenades:2,disguise:1,medkits:1,assault:1,sniper:0,sniperAmmo:0,bazooka:0,c4:0,cutters:1,weapon:'pistol',disguised:false}));
+ geometry.vegetation={version:1,randomState:random.getState(),spawn:{x:points[0].x,z:points[0].z},compounds:compounds.map(c=>({x:c.x,z:c.z,r:c.r}))};
  generated.geometry=geometry;return generated;
 }

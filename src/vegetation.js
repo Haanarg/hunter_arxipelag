@@ -1,5 +1,7 @@
+// Shared factory: usable by classic previews and ES module adapters.
+(function(window){
 // Construcció visual de vegetació instanciada. Col·lisions i destrucció continuen al nucli.
-window.HUNTER_VEGETATION=Object.freeze({
+window.HUNTER_VEGETATION??=Object.freeze({
   create(THREE,{materialProfile,random}){
     const dum=new THREE.Object3D();
     // La punta de les tres malles de tronc és a la mateixa alçada.
@@ -456,3 +458,5 @@ window.HUNTER_VEGETATION=Object.freeze({
     return {geometry,build,buildSteps};
   }
 });
+
+})(globalThis.window||globalThis);

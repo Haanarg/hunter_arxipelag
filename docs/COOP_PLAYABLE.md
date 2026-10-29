@@ -1,4 +1,4 @@
-# Cooperatiu · v0.6.44
+# Cooperatiu · v0.6.45
 
 ## Què es pot jugar
 
@@ -260,3 +260,34 @@ Encara no és la campanya individual completa en cooperatiu: falten l’objectiu
 - Comparació amb la generació real individual de les quatre variants de base: portes, llindes, murs i escales. Harness actualitzat per carregar el model compartit de torres.
 - 22 suites locals de lògica/interfície/regressió passen. Paquet del navegador regenerat, verificat i analitzat sintàcticament. Les mostres de configuració es mantenen sota el límit actual d’1 MB del canal del client.
 - **Pendents**: execució nativa del hub/Worker (l’entorn local no té `better-auth`), desplegament Cloudflare, GPU/Android i dos dispositius físics; rendiment/latència/quotes sota ús real. Les mesures locals de generació no acrediten rendiment del Worker ni del navegador real.
+
+
+## Paritat visual i vegetació compartida · v0.6.45 · relay:21
+
+### Codi compartit en tots dos sentits
+
+La distribució original s’ha extret de `vegetateSteps` a `vegetation-layout.mjs`: mateix mostreig, probabilitats, variació de palmeres, exclusió de complexos/escales/spawn, camps de roca i consum del generador aleatori. El mode individual també utilitza aquest mòdul; manté els registres TG/PL i la progressió del RNG, incloent la cerca de llavors. Un ajust del generador beneficia els dos modes.
+
+Models de palmeres, arbustos i roques, instanciació, materials, colors, copes inclinades i LOD provenen de la mateixa fàbrica. `vegetation-visual-core.mjs`, `building-visual-core.mjs` i `material-profiles.mjs` adapten les fàbriques originals, que continuen carregables com a scripts clàssics per no trencar les previews. El bosc cooperatiu usa el perfil desktop original; el LOD segueix la posició del jugador.
+
+El cooperatiu aporta la descripció compacta `geometry.vegetation`: estat inicial de RNG, spawn i reserves dels complexos, sobre el terreny i les estructures canòniques. Servidor i clients reconstrueixen les mateixes files i col·lisions amb el generador compartit. Els checkpoints i missatges no dupliquen milers de registres d’arbres. La recepta està validada i la generació es conserva en una memòria cau feble durant la vida del món; obrir una porta no torna a generar el bosc. **Aquesta representació encara no substitueix el format de desament individual**; és una peça reutilitzable per a una integració posterior.
+
+### Canvis visibles
+
+- Palmeres, arbustos i roques originals al món obert, amb instanciació i els tres nivells de detall de les palmeres. Les roques inclouen els grups i distribucions de costa/cims originals.
+- Finestres i perfils PBR originals, cobertes arquejades dels hangars, cabanes de dos aiguavessos amb relleu de branques, forjats amb buit i escales interiors originals.
+- Cobertes opaques a l’exterior; en entrar-hi, s’oculten per veure el personatge. Els forjats s’oculten segons la planta. La destrucció confirmada segueix tenint prioritat i no reapareixen peces en sortir de l’edifici.
+- Filferrades amb la geometria original de pals, fils, diagonals i espines, compartida també amb el joc individual via `fence-visual-core.mjs`. El món obert divideix els perímetres en trams de fins a sis metres, amb alçades derivades del terreny i bretxes per tram.
+- Neteja de geometries/instàncies en canviar de missió o passar a Canvas després d’una fallada de representació.
+
+Recarregueu tots dos clients i inicieu un món nou. Generador temporal `relay:21`, sense migració dels checkpoints de versions anteriors.
+
+### Validació i límits
+
+S’ha executat el generador individual anterior (commit 29df8d6) sobre una configuració de referència i comparat amb el compartit. La prova conserva un SHA-256 del resultat: posicions, variants/tons, files de col·lisió, camps de roques i estat de RNG coincideixen. La mateixa configuració produeix 296 palmeres, 153 arbustos i 82 roques amb estat final 416447023.
+
+En les dues mides, servidor, còpia JSON del client i snapshot generen la mateixa vegetació; hi ha col·lisió amb el tronc, es respecten els espais reservats i els missatges continuen sota el límit actual d’1 MB del client. Per a la llavor 67 les mostres locals tenen 3422/12011 palmeres, 1956/6545 arbustos i 1213/4359 roques (normal/gran); són recompte de contingut, no mesures de rendiment del navegador.
+
+Passen 27 suites locals, incloent les proves individuals de copes, roques, batching i destrucció de dues plantes; l’escena Three.js cooperativa comprova instàncies, finestres, cobertes de cabana/hangar, filferrades i buffers finits. El renderer de prova és substituït: encara cal inspecció GPU/Android i amb dos dispositius reals. Paquet del navegador regenerat i verificat.
+
+La vegetació és estàtica en cooperatiu en aquesta fase: les col·lisions del personatge es reprodueixen des de la recepta; encara no s’ha connectat el dany/tombament de palmeres ni tota la interacció dels vehicles amb vegetació/roques. També continuen pendents l’aigua/il·luminació i altres detalls visuals, la IA completa, presoners, general i la validació nativa del hub/Worker i del desplegament.

@@ -1,24 +1,29 @@
+import {createBuildingView} from './coop-building-view.mjs';
+import {vegetationVisual} from './vegetation-visual-core.mjs';
+import {materialProfiles} from './material-profiles.mjs';
+import {createWorldRandom} from './world-generation-core.mjs';
 import {createTowerModel} from './tower-model.mjs';
 import {createCompoundStructures} from './compound-structures.mjs';
-import {createStaticWorldAdapter} from './world-adapter.mjs';
+import {createStaticWorldAdapter} from './world-adapter.mjs?v=0.6.45';
 import {playerModel} from './player-model-core.mjs';
-import {createVehicleView} from './coop-vehicle-view.mjs?v=0.6.44';
-import {createCombatView} from './coop-combat-view.mjs?v=0.6.44';
+import {createVehicleView} from './coop-vehicle-view.mjs?v=0.6.45';
+import {createCombatView} from './coop-combat-view.mjs?v=0.6.45';
 const colors=[0x5fc5ff,0xffc85f],css=['#5fc5ff','#ffc85f'];
 export async function createMissionView(container,meta,geometry,{three=null,makeRenderer=null,self=null}={}){
   const doorByWall=new Map((meta.doors||[]).map(d=>[d.wallIndex,d.id]));
   const b=meta.bounds,cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2;
   const canvas=document.createElement('canvas');let displayed=canvas;container.replaceChildren(canvas);
-  let zoom=1,state=null,last=performance.now(),destroyed=false,draw=()=>{},dispose=()=>{},resize=()=>{};
+  let vegetationView=null,terrainAdapter=null;let zoom=1,state=null,last=performance.now(),destroyed=false,draw=()=>{},dispose=()=>{},resize=()=>{};
   try{
     const T=three||await import('../vendor/three-r186.module.mjs'),renderer=makeRenderer?makeRenderer({canvas}):new T.WebGLRenderer({canvas,antialias:true});
     renderer.setPixelRatio(Math.min(2,devicePixelRatio||1));renderer.setClearColor(0x273b32);
     const scene=new T.Scene(),camera=new T.OrthographicCamera(-70,70,60,-60,.1,20000);
+    dispose=()=>{scene.traverse(o=>{if(o.isInstancedMesh)o.dispose?.();o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();});renderer.dispose();};
     camera.position.set(cx,meta.floor+110,cz+75);camera.lookAt(cx,meta.floor,cz);scene.add(new T.AmbientLight(0xffffff,2));
     const light=new T.DirectionalLight(0xffedcd,3);light.position.set(cx-40,100,cz+30);scene.add(light);
     const box=(w,h,d,x,y,z,color)=>{const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),new T.MeshStandardMaterial({color,roughness:1}));mesh.position.set(x,y,z);scene.add(mesh);return mesh;};
     if(meta.mode==='world'){
-      const terrain=createStaticWorldAdapter(geometry),segments=192*geometry.mapScale,geo=new T.PlaneGeometry(b.x1-b.x0,b.z1-b.z0,segments,segments);geo.rotateX(-Math.PI/2);
+      const terrain=terrainAdapter=createStaticWorldAdapter(geometry),segments=192*geometry.mapScale,geo=new T.PlaneGeometry(b.x1-b.x0,b.z1-b.z0,segments,segments);geo.rotateX(-Math.PI/2);
       const positions=geo.getAttribute('position'),colors=new Float32Array(positions.count*3),col=new T.Color();
       for(let i=0;i<positions.count;i++){const x=positions.getX(i)+cx,z=positions.getZ(i)+cz,y=terrain.heightAt(x,z);positions.setXYZ(i,x,y,z);col.setHex(y<-.5?0x436d6b:y<2?0xc8b986:y>24?0x6c8652:0x638849);colors.set([col.r,col.g,col.b],i*3);}
       if(geometry.bunker){const bunker=geometry.bunker,indices=[];for(let i=0;i<geo.index.count;i+=3){const a=geo.index.getX(i),bb=geo.index.getX(i+1),c=geo.index.getX(i+2),x=(positions.getX(a)+positions.getX(bb)+positions.getX(c))/3,z=(positions.getZ(a)+positions.getZ(bb)+positions.getZ(c))/3;if(Math.abs(x-bunker.x)<bunker.basement.halfX&&Math.abs(z-bunker.z)<bunker.basement.halfZ)continue;indices.push(a,bb,c);}geo.setIndex(indices);}
@@ -32,23 +37,8 @@ export async function createMissionView(container,meta,geometry,{three=null,make
     if(geometry.bunker){const bunker=geometry.bunker,st=bunker.basement.stair,run=Math.abs(st.zTop-st.zBottom);box(bunker.basement.halfX*2,.26,bunker.basement.halfZ*2,bunker.x,bunker.basement.floorY-.13,bunker.z,0x434c49);for(let i=0;i<15;i++)box(st.width,.21,run/15+.035,bunker.x+st.x,bunker.fy+.22-(i+1)*9.37/15-.1,bunker.z+st.zTop+(i+.5)*(st.zBottom-st.zTop)/15,0x8b9289);}
     const landmarkMeshes=[],structures=createCompoundStructures(),part=(group,w,h,d,color,x=0,y=0,z=0)=>{const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),new T.MeshStandardMaterial({color,roughness:.8}));mesh.position.set(x,y,z);group.add(mesh);return mesh;};
     for(const compound of meta.compounds||[])for(const landmark of compound.landmarks||[]){let mesh;if(landmark.kind==='tower')mesh=createTowerModel(T,{box:part});else if(landmark.kind==='antenna')mesh=structures.antenna(landmark.spec);else if(landmark.kind==='satellite'){mesh=structures.satellite(landmark.spec.radius);mesh.scale.setScalar(landmark.spec.scale||1);}else{mesh=new T.Group();part(mesh,landmark.size,.08,landmark.size,0x566958);for(const x of [-4,4])part(mesh,1,.1,12,0xe6e3cf,x,.09,0);part(mesh,8,.1,1,0xe6e3cf,0,.09,0);}mesh.position.set(landmark.x,landmark.y,landmark.z);mesh.rotation.y=-compound.angle;mesh.userData.landmarkKind=landmark.kind;scene.add(mesh);landmarkMeshes.push({mesh,...landmark});}
-    const doorMeshes=new Map(),wallMeshes=[],roofMeshes=[],stairMeshes=[];
-    geometry.walls.forEach((wall,index)=>{const id=doorByWall.get(index),mesh=box(Math.max(.1,wall.x1-wall.x0),Math.max(.1,wall.y1-wall.y0),Math.max(.1,wall.z1-wall.z0),(wall.x0+wall.x1)/2,(wall.y0+wall.y1)/2,(wall.z0+wall.z1)/2,id?0x795c39:wall.playerBlock===false?0xb4b5a3:0xa0a795);
-      wallMeshes.push(mesh);mesh.visible=!wall.open;if(id){doorMeshes.set(id,mesh);mesh.userData.doorId=id;}
-    });
-    for(const building of geometry.buildings||[]){
-      const roof=box(building.w,.24,building.d,building.x,building.fy+building.h,building.z,0x858b7c);
-      roof.material.transparent=true;roof.material.opacity=.28;roof.material.depthWrite=false;
-      const meshes=[roof];if(building.upperFloor){const floor=box(building.w,.24,building.d,building.x,building.fy+building.storey,building.z,0x9c9986);floor.material.transparent=true;floor.material.opacity=.25;floor.material.depthWrite=false;meshes.push(floor);}
-      roofMeshes.push(meshes);for(const mesh of meshes)mesh.visible=!building.rb;
-    }
-    for(const s of geometry.stairs){
-      const height=s.ramp?(s.top+s.bottom)/2:s.top-(s.steps-1)*s.rise/2,
-        mesh=box(s.width,.16,s.length,s.x+s.nx*s.length/2,height,s.z+s.nz*s.length/2,0xa99870);
-      mesh.rotation.y=Math.atan2(s.nx,s.nz);
-      if(s.ramp)mesh.rotation.x=Math.atan2(s.top-s.bottom,s.length);
-      mesh.visible=!s.destroyed;stairMeshes.push({mesh,buildingIndex:s.internal?(geometry.buildings||[]).findIndex(b=>b.id===s.buildingId):-1});
-    }
+    if(terrainAdapter?.vegetation){const layout=terrainAdapter.vegetation,random=createWorldRandom(layout.randomState),visual=vegetationVisual.create(T,{materialProfile:name=>materialProfiles[name]||materialProfiles.organic,random:(a,b)=>a+random()*(b-a)});vegetationView=visual.build({world:scene,palms:layout.palms,bushes:layout.bushes,rocks:layout.rocks,playerX:meta.extraction.x,playerZ:meta.extraction.z,lowQuality:false,lodProfile:'desktop'});scene.userData.vegetationStats=vegetationView.palms.stats;}
+    const buildingView=createBuildingView(T,scene,geometry,doorByWall),{doorMeshes,wallMeshes,roofMeshes,stairMeshes}=buildingView;
     const line=(points,color,opacity=1)=>{const material=new T.LineBasicMaterial({color,transparent:opacity<1,opacity}),mesh=new T.Line(new T.BufferGeometry().setFromPoints(points.map(p=>new T.Vector3(p.x,p.y??meta.floor+.15,p.z))),material);scene.add(mesh);return mesh;};
     line([{x:b.x0,z:b.z0},{x:b.x1,z:b.z0},{x:b.x1,z:b.z1},{x:b.x0,z:b.z1},{x:b.x0,z:b.z0}],0xffdfa0,.65);
     for(const c of meta.compounds||[])for(const route of c.routes||[])line(route.points.map(([x,z])=>({x,y:c.height+.12,z})),0xb3a78a,.65);
@@ -62,19 +52,21 @@ export async function createMissionView(container,meta,geometry,{three=null,make
       const group=new T.Group(),body=playerModel.create(T,{unitScale:.85});body.position.y=0;group.add(body);
       const arrow=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(0,1.4,0),new T.Vector3(0,1.4,-2.5)]),new T.LineBasicMaterial({color:0xffffff}));group.add(arrow);group.userData.actorId=m.id;scene.add(group);return group;
     });
-    dispose=()=>{scene.traverse(o=>{o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();});renderer.dispose();};
+    dispose=()=>{scene.traverse(o=>{if(o.isInstancedMesh)o.dispose?.();o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();});renderer.dispose();};
     const combatView=createCombatView(T,scene),vehicleView=await createVehicleView(T,scene);
     let initialized=false;
     resize=()=>{const w=container.clientWidth,h=container.clientHeight,aspect=w/Math.max(1,h),half=Math.max((b.z1-b.z0)*.7,(b.x1-b.x0)/aspect*.6,40);camera.left=-half*aspect/zoom;camera.right=half*aspect/zoom;camera.top=half/zoom;camera.bottom=-half/zoom;camera.updateProjectionMatrix();renderer.setSize(w,h,false);};
     draw=dt=>{
-      if(state){for(const landmark of landmarkMeshes)if((state.removedWalls||[]).includes(landmark.wallIndex)||(state.removedRoofs||[]).includes(landmark.buildingIndex))landmark.mesh.visible=false;for(const index of state.removedRoofs||[]){for(const mesh of roofMeshes[index]||[])mesh.visible=false;for(const stair of stairMeshes)if(stair.buildingIndex===index)stair.mesh.visible=false;}for(const index of state.removedWalls||[])if(wallMeshes[index])wallMeshes[index].visible=false;vehicleView.update(state.vehicles,dt/1000);combatView.update(state.combat,state.tick);updateSupplies(state.supplies||(meta.supplies||[]).filter(s=>!state.claimedSupplies?.includes(s.id)));for(const door of state.doors||[]){const mesh=doorMeshes.get(door.id);if(mesh)mesh.visible=!door.open&&!door.destroyed;}for(let i=0;i<2;i++){const p=state.players.find(p=>p.id===meta.members[i].id),pawn=pawns[i];if(!p)continue;const vehicle=state.vehicles?.find(v=>v.seats.includes(p.id)),side=vehicle?(vehicle.seats[0]===p.id?-.5:.5):0,px=p.x+Math.cos(p.hd)*side,pz=p.z-Math.sin(p.hd)*side;
+      if(state){buildingView.update(state,self);for(const landmark of landmarkMeshes)if((state.removedWalls||[]).includes(landmark.wallIndex)||(state.removedRoofs||[]).includes(landmark.buildingIndex))landmark.mesh.visible=false;for(const index of state.removedRoofs||[]){for(const mesh of roofMeshes[index]||[])mesh.visible=false;for(const stair of stairMeshes)if(stair.buildingIndex===index)stair.mesh.visible=false;}for(const index of state.removedWalls||[])if(wallMeshes[index])wallMeshes[index].visible=false;vehicleView.update(state.vehicles,dt/1000);combatView.update(state.combat,state.tick);updateSupplies(state.supplies||(meta.supplies||[]).filter(s=>!state.claimedSupplies?.includes(s.id)));for(const door of state.doors||[]){const mesh=doorMeshes.get(door.id);if(mesh)mesh.visible=!door.open&&!door.destroyed;}for(let i=0;i<2;i++){const p=state.players.find(p=>p.id===meta.members[i].id),pawn=pawns[i];if(!p)continue;const vehicle=state.vehicles?.find(v=>v.seats.includes(p.id)),side=vehicle?(vehicle.seats[0]===p.id?-.5:.5):0,px=p.x+Math.cos(p.hd)*side,pz=p.z-Math.sin(p.hd)*side;
         if(!initialized)pawn.position.set(px,p.y,pz);else pawn.position.lerp(new T.Vector3(px,p.y,pz),1-Math.exp(-dt/65));pawn.rotation.y=p.hd;pawn.children[0].rotation.z=p.hp<=0?Math.PI/2:0;pawn.children[0].position.y=p.hp<=0?.5:0;const body=pawn.children[0],tint=p.hp<=0?0xf07860:state.inventories?.find(b=>b.actorId===p.id)?.disguised?0x567346:colors[i];for(const [material] of body.userData.mats)material.color.setHex(tint);body.traverse(o=>{if(o.material?.emissive)o.material.emissive.setHex(state.rescue?.immune.some(d=>d.actorId===p.id&&state.tick<d.untilTick)?0x285a76:0);});
       }initialized=true;ring.material.color.setHex(state.phase==='won'?0xffe98c:0x99ff9b);}
       const focus=zoom>1&&state?.players.find(p=>p.id===self);if(focus){camera.position.set(focus.x,focus.y+110,focus.z+75);camera.lookAt(focus.x,focus.y,focus.z);}else{camera.position.set(cx,meta.floor+110,cz+75);camera.lookAt(cx,meta.floor,cz);}
+      const vegetationFocus=state?.players.find(p=>p.id===self)||meta.extraction;vegetationView?.palms.update(vegetationFocus.x,vegetationFocus.z);
       renderer.render(scene,camera);
     };
-    dispose=()=>{vehicleView.destroy();combatView.destroy();scene.traverse(o=>{o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();});renderer.dispose();};
+    dispose=()=>{vehicleView.destroy();combatView.destroy();scene.traverse(o=>{if(o.isInstancedMesh)o.dispose?.();o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();});renderer.dispose();};
   }catch(_){
+    dispose();dispose=()=>{};
     // A Canvas map keeps the same mission playable on devices without WebGL.
     const flat=document.createElement('canvas');displayed=flat;container.replaceChildren(flat);const ctx=flat.getContext('2d');
     let worldMap=null;if(meta.mode==='world'){worldMap=document.createElement('canvas');worldMap.width=worldMap.height=128;const mapCtx=worldMap.getContext('2d'),terrain=createStaticWorldAdapter(geometry);for(let row=0;row<128;row++)for(let col=0;col<128;col++){const y=terrain.heightAt(b.x0+(col+.5)*(b.x1-b.x0)/128,b.z0+(row+.5)*(b.z1-b.z0)/128);mapCtx.fillStyle=y<0?'#318ab9':y<2?'#c8b986':'#6c8751';mapCtx.fillRect(col,row,1,1);}}

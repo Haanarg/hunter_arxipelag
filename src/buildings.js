@@ -1,5 +1,7 @@
+// Shared factory: usable by classic previews and ES module adapters.
+(function(window){
 // Construcció visual d'edificis. Col·lisions, portes, destrucció i navegació romanen al nucli.
-window.HUNTER_BUILDINGS=Object.freeze({
+window.HUNTER_BUILDINGS??=Object.freeze({
   create(THREE,{material,materialProfile,box}){
     const wallMaterial=color=>new THREE.MeshStandardMaterial({color,flatShading:true,transparent:true,...materialProfile('masonry')});
     const doorMaterial=()=>new THREE.MeshStandardMaterial({color:0x704829,flatShading:true,transparent:true,...materialProfile('paint')});
@@ -262,3 +264,5 @@ window.HUNTER_BUILDINGS=Object.freeze({
     return {createShell,createHangarShell,addWall,addDoor,addWindowedWall,addRamp,addStep,createFlag};
   }
 });
+
+})(globalThis.window||globalThis);
