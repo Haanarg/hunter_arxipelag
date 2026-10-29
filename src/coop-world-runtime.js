@@ -185,16 +185,37 @@ function updateNativeCoop(dt){
  for(const e of s.nativeAnimatedEnemies||[])
    if(e.o.visible)animateEnemyInfantry(e,e.nativeMoving,dt);
  if(projecting){
+ if(s.appliedProjectiles!==state.combat.projectiles){
+ s.appliedProjectiles=state.combat.projectiles;
  const liveProjectiles=new Set();for(const row of state.combat.projectiles){liveProjectiles.add(row.id);let mesh=s.projectiles.get(row.id);if(!mesh){mesh=new THREE.Mesh(row.splash?gHeavy:gLight,row.splash?mS:mW);mesh.scale.setScalar(row.splash?1:SMALL_ARMS_SCALE);world.add(mesh);s.projectiles.set(row.id,mesh);}mesh.position.set(row.x,row.y,row.z);const direction=new THREE.Vector3(row.vx,row.vy,row.vz);if(direction.lengthSq())mesh.quaternion.setFromUnitVectors(heavyForward,direction.normalize());}for(const [id,mesh] of s.projectiles)if(!liveProjectiles.has(id)){world.remove(mesh);s.projectiles.delete(id);}
+ }
+ if(s.appliedGrenades!==state.combat.grenades){
+ s.appliedGrenades=state.combat.grenades;
  const liveGrenades=new Set();for(const row of state.combat.grenades){liveGrenades.add(row.id);let mesh=s.grenades.get(row.id);if(!mesh){mesh=row.weapon==='c4'?window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true):createGrenadeModel();world.add(mesh);s.grenades.set(row.id,mesh);}mesh.position.set(row.x,row.y,row.z);}for(const [id,mesh] of s.grenades)if(!liveGrenades.has(id)){world.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);s.grenades.delete(id);}
+ }
+ if(s.appliedEffects!==state.combat.effects){
+ s.appliedEffects=state.combat.effects;
  for(const effect of state.combat.effects)if(!s.seenEffects.has(effect.id)){s.seenEffects.add(effect.id);if(effect.kind==='explosion')presentExplosion(effect.at.x,effect.at.y,effect.at.z,effect.radius);else if(effect.kind==='impact')spawnBulletImpact(effect.hit?'blood':'spark',effect.at.x,effect.at.y,effect.at.z,{vx:0,vy:0,vz:1});else if(effect.kind==='glass'&&s.walls[effect.wallIndex])shatterWindow(s.walls[effect.wallIndex],effect.paneIndex,effect.at,null);else if(effect.kind==='shot')snd('shot',.7,effect.from);}
  if(s.seenEffects.size>256){const current=new Set(state.combat.effects.map(e=>e.id));s.seenEffects=current;}
+ }
+ if(s.appliedRemovedWalls!==state.removedWalls){s.appliedRemovedWalls=state.removedWalls;
  for(const i of state.removedWalls||[]){const w=s.walls[i];if(w){w.open=true;w.hp=0;for(const mesh of w.parts||[w.m])if(mesh)mesh.visible=false;}}
+ }
+ if(s.appliedDoors!==state.doors){s.appliedDoors=state.doors;
  s.doors??=new Map(Dr.map(d=>[d.saveId,d]));for(const row of state.doors){const d=s.doors.get(row.id);if(d){d.desiredOpen=row.open;d.open=row.open;if(d.m)d.m.visible=!row.open&&!row.destroyed;}}
+ }
+ if(s.appliedBrokenWindows!==state.brokenWindows){s.appliedBrokenWindows=state.brokenWindows;
  for(const id of state.brokenWindows||[]){const [index,pane]=id.split(':').map(Number),wall=s.walls[index];if(wall){wall.brokenWindows??=new Set();wall.brokenWindows.add(pane);if(wall.glassMeshes?.[pane])wall.glassMeshes[pane].visible=false;}}
+ }
+ if(s.appliedRemovedRoofs!==state.removedRoofs){s.appliedRemovedRoofs=state.removedRoofs;
  for(const i of state.removedRoofs||[]){const b=s.buildings[i];if(b&&!b.rb)roofBreak(b);}
+ }
+ if(s.appliedPalmHealth!==state.palmHealth){s.appliedPalmHealth=state.palmHealth;
  for(const [i,health] of state.palmHealth||[]){const palm=s.palms[i];if(palm){palm.hp=health;if(health<=0&&palm.alive)killPalm(palm);}}
- for(const id of state.claimedSupplies){const item=s.items.get(id);if(item){world.remove(item.o);items=items.filter(it=>it!==item);s.items.delete(id);}}
+ }
+ if(s.appliedClaimedSupplies!==state.claimedSupplies){s.appliedClaimedSupplies=state.claimedSupplies;
+ for(const id of state.claimedSupplies||[]){const item=s.items.get(id);if(item){world.remove(item.o);items=items.filter(it=>it!==item);s.items.delete(id);}}
+ }
  s.projectedState=state;}
  const heldFire=!paused&&state.status==='running'&&!!K.KeyF;if(heldFire&&!s.fireHeld)nativeCoopCommand('fire');s.fireHeld=heldFire;
  if(scopeActive){scopeYaw+=((K.KeyA?1:0)-(K.KeyD?1:0)-joystick.state.x)*dt*.38;scopePitch=Math.max(-.65,Math.min(.65,scopePitch+((K.KeyW?1:0)-(K.KeyS?1:0)-joystick.state.y)*dt*.30));}
