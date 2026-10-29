@@ -1,7 +1,10 @@
 // Minimap i carta de navegació. Només presentació; no modifica simulació.
-// El terreny es pinta en una textura 2D independent del renderer WebGL.
+// La carta és una instantània de l'orografia natural, independent del
+// terreny físic aplanat sota els complexos. El mapa gran reutilitza
+// exactament la mateixa imatge; les marques descobertes s'hi superposen.
 window.HUNTER_MINIMAP=Object.freeze({
-  create({THREE,canvas,worldSize,halfSize,heightAt,colorAt,getState}){
+  create({THREE,canvas,worldSize,halfSize,baseHeightAt,colorAt,getState}){
+    if(typeof baseHeightAt!=='function')throw new TypeError('El minimapa necessita el relleu natural sense aplanaments');
     const ctx=canvas.getContext('2d');
     if(!ctx)throw new Error('No es pot crear el context 2D del minimapa');
     const width=canvas.width||170,height=canvas.height||170;
@@ -11,6 +14,9 @@ window.HUNTER_MINIMAP=Object.freeze({
     const px=v=>(v+hs)/ws*width,pz=v=>(v+hs)/ws*height;
     function buildBackground(){const steps=buildBackgroundSteps();while(!steps.next().done){}}
     function* buildBackgroundSteps(){
+      // Una única instantània per llavor/mida: mai no mostregem el món
+      // jugable amb les plataformes, ni la regenerem quan canvia un collider.
+      if(background)return;
       const start=performance.now();
       const bg=document.createElement('canvas');
       bg.width=bg.height=sampleSize;
@@ -21,7 +27,7 @@ window.HUNTER_MINIMAP=Object.freeze({
       for(let j=0;j<sampleSize;j++)for(let i=0;i<sampleSize;i++){
         if((j*sampleSize+i)%128===0)yield {stage:'Carta de navegació',completed:j*sampleSize+i,total:sampleSize*sampleSize,unit:'píxels'};
         const x=((i+.5)/sampleSize-.5)*ws,z=((j+.5)/sampleSize-.5)*ws,
-              h=heightAt(x,z),k=colorAt(THREE,h).convertLinearToSRGB(),
+              h=baseHeightAt(x,z),k=colorAt(THREE,h).convertLinearToSRGB(),
               p=(j*sampleSize+i)*4;
         data[p]=Math.round(k.r*255);
         data[p+1]=Math.round(k.g*255);

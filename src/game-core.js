@@ -1985,10 +1985,15 @@ const barbedHQ=(cx,cz,hw=50,hd=46,gap=13,gateOffset=0)=>{
   compoundClear.push({x:cx,z:cz,r:Math.hypot(hw,hd)*1.02});
 };
 // construir món
+// Carta natural: rawHAt exclou TOTS els anivellaments de terrainLevels.
+// Es mostreja una vegada quan les illes ja són definitives (incloent-hi
+// les illes de suport que es poden crear durant la generació).
+// Les plataformes dels complexos continuen existint en hAt per a física
+// i gràfics 3D, però no poden revelar l'HQ al minimapa ni al mapa gran.
 // minimapa
 const mc=document.getElementById('mm');
 const minimap=window.HUNTER_MINIMAP.create({
-  THREE,canvas:mc,worldSize:S,halfSize:H,heightAt:hAt,colorAt:window.HUNTER_TERRAIN.colorAt,
+  THREE,canvas:mc,worldSize:S,halfSize:H,baseHeightAt:rawHAt,colorAt:window.HUNTER_TERRAIN.colorAt,
   getState:()=>({base:P.base,hq:HQ,mapKnown:hqMapKnown||!!inv.mapa,hqClues:hqIntelStage>0&&!hqMapKnown?hqIntelSites.map((p,i)=>({...p,discarded:MAP_SCALE===2?hqIntelDiscarded.has(i):hqIntelStage>=2&&i===hqDiscardIndex})):[],current:cv||P,currentVehicle:cv,vehicles:V,enemies:E,log:logb,intel:intelMarks,opportunities:optionalMapMarkers()})
 });
 window.HUNTER_MINIMAP_STATS=minimap.stats;
