@@ -115,7 +115,49 @@ function updateNativeCoop(dt){
      if(predictedVehicle[key]!==undefined)cv[key]=predictedVehicle[key];
  updateVehicleVisualLod(elapsed,dt,{skipHidden:true});
  if(cv||swimming)playerCrouched=false;if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;animPl(cv?0:input.forward,dt,input.run,input.strafe);poseRider(cv,dt);
- for(const other of state.players)if(other.id!==s.self){let model=s.remotes.get(other.id);if(!model){model=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});model.position.set(other.x,other.y,other.z);model.userData.nativeRider=window.HUNTER_RIDER.create(THREE,{scene,box:bx,material:M,scales:VS,heightAt:hAt,shadows:visualQuality.shadows});scene.add(model);s.remotes.set(other.id,model);}const oldX=model.position.x,oldZ=model.position.z;model.position.lerp(new THREE.Vector3(other.x,other.y,other.z),1-Math.exp(-18*dt));model.rotation.y=other.hd;const vehicleRow=state.vehicles.find(v=>v.seats.includes(other.id)),remoteVehicle=vehicleRow?s.vehicles.get(vehicleRow.id):null;model.visible=!remoteVehicle;model.userData.nativeRider.update(remoteVehicle,dt);const speed=Math.hypot(model.position.x-oldX,model.position.z-oldZ)/Math.max(.001,dt);window.HUNTER_CHARACTERS.animatePlayer(model,{forward:Math.min(1,speed/6),dt,swimming:other.swimming,crouching:!!other.crouched,inVehicle:!!remoteVehicle,ammo:1,running:speed>7});}
+ if(projecting){
+   // Les referències als seients i als actors remots només es resolen
+   // en rebre un snapshot; la interpolació continua a cada fotograma.
+   s.nativeRemoteViews??=new Map();
+   s.nativeSeatOwners??=new Map();
+   s.nativeSeatOwners.clear();
+   for(const row of state.vehicles)
+     for(const playerId of row.seats||[])
+       if(playerId)s.nativeSeatOwners.set(playerId,s.vehicles.get(row.id)||null);
+   for(const other of state.players){
+     if(other.id===s.self)continue;
+     let view=s.nativeRemoteViews.get(other.id);
+     if(!view){
+       let model=s.remotes.get(other.id);
+       if(!model){
+         model=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});
+         model.position.set(other.x,other.y,other.z);
+         model.userData.nativeRider=window.HUNTER_RIDER.create(THREE,{
+           scene,box:bx,material:M,scales:VS,heightAt:hAt,shadows:visualQuality.shadows
+         });
+         scene.add(model);s.remotes.set(other.id,model);
+       }
+       view={model,target:new THREE.Vector3(),actor:null,vehicle:null};
+       s.nativeRemoteViews.set(other.id,view);
+     }
+     view.actor=other;
+     view.target.set(other.x,other.y,other.z);
+     view.vehicle=s.nativeSeatOwners.get(other.id)||null;
+   }
+ }
+ for(const view of s.nativeRemoteViews?.values()||[]){
+   const {model,target,actor:other,vehicle:remoteVehicle}=view;
+   const oldX=model.position.x,oldZ=model.position.z;
+   model.position.lerp(target,1-Math.exp(-18*dt));
+   model.rotation.y=other.hd;
+   model.visible=!remoteVehicle;
+   model.userData.nativeRider.update(remoteVehicle,dt);
+   const speed=Math.hypot(model.position.x-oldX,model.position.z-oldZ)/Math.max(.001,dt);
+   window.HUNTER_CHARACTERS.animatePlayer(model,{
+     forward:Math.min(1,speed/6),dt,swimming:other.swimming,
+     crouching:!!other.crouched,inVehicle:!!remoteVehicle,ammo:1,running:speed>7
+   });
+ }
 
  for(const row of state.combat.targets){const e=s.enemies.get(row.id);if(e){if(e.nativeVisualTick!==state.tick){e.nativeMoving=Math.hypot(row.x-e.x,row.z-e.z)>.001;e.nativeVisualTick=state.tick;}e.x=row.x;e.z=row.z;e.hp=row.hp;e.hd=row.heading||0;e.canSee=!!row.canSee;e.aiMode=row.state==='attack'?'combat':row.state;if(projecting){e.o.position.set(row.x,row.y,row.z);e.o.rotation.y=e.hd;}if(row.hp<=0)e.o.visible=false;if(e.hp>0&&e.o.visible)animateEnemyInfantry(e,e.nativeMoving,dt);}}
  if(projecting){
