@@ -1,5 +1,18 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
+## Optimització visual compartida · 30-10-2026
+
+S'ha aplicat una passada segura sobre el **motor original** que beneficia el mode individual i la sessió nativa cooperativa:
+
+- **Vehicles aparcats:** `place()` deixa de recalcular terreny, inclinació i peces visuals en cada fotograma si el vehicle és terrestre, no és el vehicle del jugador, està completament aturat i conserva la mateixa pose. Canvi de coordenades, rumb, estat físic, correcció externa de mesh o reactivació de la marxa n'invalida la memòria cau. Els vehicles aquàtics, aeris, amb impactes i immersió mantenen les actualitzacions originals.
+- **Erugues de tanc:** els esglaons no s'actualitzen quan la fase no ha avançat; tornen a animar-se amb el moviment o un gir del tanc.
+- **Palmeres:** a `src/vegetation.js`, la desactivació de la mira de franctirador (o un canvi del mode de palmeres) força el recàlcul LOD encara que el jugador no camini 45 metres, evitant que les malles detallades quedin actives de manera innecessària.
+- **Ombres:** la selecció periòdica de projectors reutilitza un vector de posició mundial per propietari dinàmic. No es redueixen el radi, la freqüència de refresc o la resolució de l'ombra; només s'eviten al·locacions repetides.
+- **Regressió:** `tests/shared-visual-idle.cjs` (a `test:optimization`) empra les funcions reals de producció i comprova 120 fotogrames aparcats, reactivació després d'un canvi, erugues, LOD en sortir de la mira i ombres. Les comprovacions aïllades han passat; execució completa Node, GPU, dos jugadors i desplegament Cloudflare encara sense verificar.
+
+Això és una **optimització de CPU i de triangles potencials**, no un nou sistema de xarxa. Les xifres de FPS/latència només es podran donar després d'una comparativa en el navegador real.
+
+
 ## Continuació del rendiment 29-10-2026 · projecció incremental
 
 El client ja podia rebre snapshots de diferències i només processava part dels efectes un cop per estat. Aquesta intervenció completa la separació entre **recepció autoritativa** i **presentació per fotograma** sense introduir un segon motor.
