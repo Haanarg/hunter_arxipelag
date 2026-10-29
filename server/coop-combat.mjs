@@ -1,6 +1,7 @@
 import {turretSpecs,stepVehicleTurret,vehicleGunPose} from '../src/vehicle-turret-core.mjs';
 import {vehicleDynamics} from '../src/vehicle-dynamics-core.mjs';
 import {vehicleSpecs} from '../src/vehicle-specs.mjs';
+import {windowCrossing,wallShotHit} from '../src/building-shell.mjs';
 import {weaponCatalog,combatCommands,mountedWeapons,grenadeLaunch,vehicleGrenadeLaunch,meleeTarget} from '../src/weapon-catalog.mjs';
 import {limitBazookaHorizontalAim} from '../src/aiming-core.mjs';
 import {enemyAccuracy} from '../src/enemy-accuracy-core.mjs';
@@ -13,17 +14,21 @@ import {runoverDamage,runoverSweepHit,VEHICLE_DESTRUCTION,beginBurst,stepBurst,r
 const at=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
 export function segmentBox(from,to,box){return segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,box.x0,box.x1,box.y0,box.y1,box.z0,box.z1);}
 function targetBox(t){return {x0:t.x-.8,x1:t.x+.8,z0:t.z-.8,z1:t.z+.8,y0:t.y,y1:t.y+3};}
-export function traceArena(from,to,geometry,world,{ignoreBarbed=false}={}){
-  let fraction=1,hit=false;
-  for(const w of geometry.walls)if(!w.open&&!(ignoreBarbed&&w.barbed)){const t=segmentBox(from,to,w);if(t!==null){fraction=Math.min(fraction,t);hit=true;}}
+export function traceArena(from,to,geometry,world,{ignoreBarbed=false,collectWindows=false}={}){
+  let fraction=1,hit=false,wallIndex=null;const windowCrossings=[];
+  for(const [index,w] of geometry.walls.entries())if(!w.open&&!(ignoreBarbed&&w.barbed)){
+    const crossing=windowCrossing(from,to,w);
+    if(crossing){if(collectWindows)windowCrossings.push({wallIndex:index,...crossing});continue;}
+    const t=wallShotHit(from,to,w);if(t!==null&&t<fraction){fraction=t;hit=true;wallIndex=index;}
+  }
   // The base shells use axis-aligned world footprints, including rotated variants.
   for(const b of geometry.buildings||[]){
-    if(!b.rb&&b.rhp>0){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.h-.12,y1:b.fy+b.h+.12});if(t!==null){fraction=Math.min(fraction,t);hit=true;}}
-    if(b.upperFloor&&!b.rb){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.storey-.12,y1:b.fy+b.storey+.12});if(t!==null){fraction=Math.min(fraction,t);hit=true;}}
+    if(!b.rb&&b.rhp>0){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.h-.12,y1:b.fy+b.h+.12});if(t!==null&&t<fraction){fraction=t;hit=true;wallIndex=null;}}
+    if(b.upperFloor&&!b.rb){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.storey-.12,y1:b.fy+b.storey+.12});if(t!==null&&t<fraction){fraction=t;hit=true;wallIndex=null;}}
   }
   const length=Math.hypot(to.x-from.x,to.y-from.y,to.z-from.z),steps=Math.max(1,Math.ceil(length/.2));
-  for(let i=0;i<=steps;i++){const t=i/steps;if(t>fraction)break;const p=at(from,to,t);if(p.y<(world.locomotionAt?.(p.x,p.z,p.y)?.basement?world.locomotionAt(p.x,p.z,p.y).floor:world.heightAt(p.x,p.z))){fraction=t;hit=true;break;}}
-  return {fraction,point:at(from,to,fraction),hit};
+  for(let i=0;i<=steps;i++){const t=i/steps;if(t>fraction)break;const p=at(from,to,t);if(p.y<(world.locomotionAt?.(p.x,p.z,p.y)?.basement?world.locomotionAt(p.x,p.z,p.y).floor:world.heightAt(p.x,p.z))){fraction=t;hit=true;wallIndex=null;break;}}
+  return {fraction,point:at(from,to,fraction),hit,wallIndex,windowCrossings};
 }
 // Heading follows the simulation: zero faces -Z. Close awareness still requires LOS.
 export function guardInView(guard,player){
@@ -31,7 +36,7 @@ export function guardInView(guard,player){
   return d<=2||inView(guard.heading||0,dx,0,dz,Infinity,{sightHalfAngle:Math.PI/3+1e-10,sightVerticalAngle:Math.PI/2});
 }
 const facePoint=(guard,p)=>Math.atan2(-(p.x-guard.x),-(p.z-guard.z));
-export function createRelayCombat({meta,record={},inventory,players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false,blastWire=()=>{},blastStructures=()=>{}}){
+export function createRelayCombat({meta,record={},inventory,players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false,blastWire=()=>{},blastStructures=()=>{},breakWindow=()=>false,damageWall=()=>false}){
   const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);const bursts=structuredClone(record.bursts||[]),projectiles=structuredClone(record.projectiles||[]);let sequence=record.sequence||0;
   const random=createWorldRandom(record.randomState??(((meta.seed||0)^0x7269666c)>>>0)),roll=(a,b)=>a+random()*(b-a);
   const effect=(kind,tick,data)=>{effects.push({id:++sequence,kind,tick,...data});if(effects.length>64)effects.shift();};
@@ -128,13 +133,14 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
       stepVehicleTurret(vehicle,aimed.direction,1/30);
     }
     for(let i=projectiles.length-1;i>=0;i--){
-      const p=projectiles[i],flight=projectileStep(p,1/30),trace=traceArena(flight.from,flight.to,geometry(),world(),{ignoreBarbed:!p.splash});
+      const p=projectiles[i],flight=projectileStep(p,1/30),trace=traceArena(flight.from,flight.to,geometry(),world(),{ignoreBarbed:!p.splash,collectWindows:!p.splash});
       if(trace.hit)flight.consider(trace.fraction,'world',null);
       for(const v of vehicles.live())if(v.id!==p.sourceVehicle)flight.consider(vehicles.contact(flight.from,flight.to,v),'vehicle',v);
       if(p.enemy){for(const actor of players())if(actor.hp>0&&!vehicles.mounted(actor.id))flight.consider(segmentSphereT(flight.from.x,flight.from.y,flight.from.z,flight.to.x,flight.to.y,flight.to.z,actor.x,actor.y+1.5,actor.z,1.2),'player',actor);}
       else for(const t of targets)if(t.hp>0)flight.consider(segmentBox(flight.from,flight.to,targetBox(t)),'enemy',t);
       const result=flight.finish();p.life=flight.life;Object.assign(p,result.point);
-      if(result.hit){if(p.splash){if(result.kind!=='expire')explode({at:{...result.point},damage:p.dmg,radius:p.splash,actorId:p.actorId,ownerOnly:true},tick);projectiles.splice(i,1);continue;}let applied=true;if(result.kind==='vehicle'){const queue=[];applied=damageVehicle(result.target,p.dmg,'light',tick,queue);for(const blast of queue)explode(blast,tick);}else if(result.kind==='enemy')result.target.hp=damageHealth(result.target.hp,p.dmg);else if(result.kind==='player')applied=damagePlayer(result.target.id,p.dmg)!==false;
+      if(!p.splash)for(const pane of trace.windowCrossings)if(pane.t<=flight.fraction+1e-6&&breakWindow(pane.wallIndex,pane.index)){effect('glass',tick,{actorId:p.actorId,at:pane.point,wallIndex:pane.wallIndex,paneIndex:pane.index});}
+      if(result.hit){if(p.splash){if(result.kind!=='expire')explode({at:{...result.point},damage:p.dmg,radius:p.splash,actorId:p.actorId,ownerOnly:true},tick);projectiles.splice(i,1);continue;}let applied=true;if(result.kind==='vehicle'){const queue=[];applied=damageVehicle(result.target,p.dmg,'light',tick,queue);for(const blast of queue)explode(blast,tick);}else if(result.kind==='enemy')result.target.hp=damageHealth(result.target.hp,p.dmg);else if(result.kind==='player')applied=damagePlayer(result.target.id,p.dmg)!==false;else if(result.kind==='world'&&trace.wallIndex!=null&&Math.hypot(result.point.x-trace.point.x,result.point.y-trace.point.y,result.point.z-trace.point.z)<.01)applied=damageWall(trace.wallIndex,p.dmg);
         if(result.kind!=='expire')effect('impact',tick,{actorId:p.actorId,at:{...result.point},hit:applied&&['enemy','player','vehicle'].includes(result.kind)?result.target.id:null});projectiles.splice(i,1);
       }
     }
