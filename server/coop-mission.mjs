@@ -11,7 +11,7 @@ import {createRelayVehicles,vehicleClear} from './coop-vehicles.mjs';
 import {createRelayRescue,reviveReachable} from './coop-rescue.mjs';
 import {createRelayCombat,traceArena} from './coop-combat.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
-export const MISSION_VERSION='relay:21';
+export const MISSION_VERSION='relay:22';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 export function generateRelayMission(room,{mode='relay'}={}){
   if(room.members.length!==2||!room.allReady)throw new Error('Calen dos jugadors preparats.');
@@ -133,7 +133,7 @@ export function restoreRelayMission(record,geometry){
   let phase=record.phase,hold=record.hold,status=record.status,doorRevision=record.doorRevision??0;
   const inventory=new Map(meta.members.map(m=>[m.id,{actorId:m.id,bullets:24,grenades:2,disguise:1,medkits:1,assault:1,sniper:0,sniperAmmo:0,bazooka:0,c4:0,cutters:0,weapon:'pistol',disguised:false,...structuredClone(record.inventories?.find(i=>i.actorId===m.id)||{})}])),claimed=new Set(record.claimedSupplies||[]),inventoryResults=structuredClone(record.inventoryResults||[]);
   const loose=new Map((record.droppedSupplies||[]).map(s=>[s.id,structuredClone(s)]));let dropSequence=record.dropSequence||0;
-  const capacities=inventoryCaps;
+  const capacities=meta.mode==='native'?Object.fromEntries(Object.keys(inventoryCaps).map(k=>[k,1000000])):inventoryCaps;
   const supplies=()=>[...meta.supplies.filter(s=>!claimed.has(s.id)),...loose.values()].map(s=>({...s}));
   const inventories=()=>[...inventory.values()].map(i=>({...i}));
   function inventoryCommand(actorId,message){
@@ -142,6 +142,7 @@ export function restoreRelayMission(record,geometry){
     if(actor&&message.epoch===meta.id&&typeof message.commandId==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(message.commandId)){
       if(status!=='running'||!['relay','extract'].includes(phase)||actor.hp<=0||actor.fall||actor.swimming||Date.now()>=meta.expiresAt)code='NOT_ACTIVE';
       else if(vehicles.mounted(actorId))code='SEATED';
+      else if(message.operation==='use'&&message.target==='medkits'){if(!bag.medkits||!sim.heal(actorId,combatBalance.medkit))code='EMPTY';else{bag.medkits--;ok=true;code='HEALED';}}
       else if(message.operation==='weapon'&&personalWeapons.includes(message.target)){if(!['pistol','knife'].includes(message.target)&&!bag[message.target])code='EMPTY';else{bag.weapon=message.target;combat.cancel(actorId);ok=true;code='SELECTED';}}
       else if(message.operation==='disguise'&&typeof message.target==='boolean'){
         if(!bag.disguise)code='EMPTY';else{bag.disguised=message.target;ok=true;code='EQUIPPED';}
@@ -206,7 +207,7 @@ export function restoreRelayMission(record,geometry){
         for(let k=1;k<=count;k++){const q={...contact,x:contact.x+(supply.x-contact.x)*k/count,z:contact.z+(supply.z-contact.z)*k/count},resolved=world.resolveBody(from,q);if(distance(q,resolved)>1e-5)return [];from=q;}
         return [{p,index,t}];
       }).sort((a,b)=>a.t-b.t||a.index-b.index);
-      if(candidates.length){inventory.get(candidates[0].p.id)[supply.item]+=supply.amount;if(loose.has(supply.id))loose.delete(supply.id);else claimed.add(supply.id);}
+      if(candidates.length){inventory.get(candidates[0].p.id)[supply.item]+=supply.amount;if(meta.mode==='native'&&supply.item==='sniper')inventory.get(candidates[0].p.id).sniperAmmo+=6;if(loose.has(supply.id))loose.delete(supply.id);else claimed.add(supply.id);}
     }
     combat.step(state.tick);state.players=sim.snapshot().players;
     const helping=rescue.step({before:before.players,players:state.players,tick:state.tick,actions,
@@ -214,7 +215,8 @@ export function restoreRelayMission(record,geometry){
       hasMedkit:id=>inventory.get(id)?.medkits>0,revive:(id,health,helper)=>{const bag=inventory.get(helper);if(!bag||!(bag.medkits>0)||!sim.revive(id,health))return false;bag.medkits--;return true;},onDown:id=>{inventory.get(id).disguised=false;actions.delete(id);}});
     if(helping.hadDown){hold=0;if(helping.revivedId)actions.delete(helping.revivedId);if(helping.failed){phase='failed';combat.finish();}return snapshot();}
 
-    if(['proving','world'].includes(meta.mode))return snapshot();
+    if(meta.mode==='native'&&combat.snapshot().targets.some(t=>t.t==='general'&&t.hp<=0)){phase='won';combat.finish();return snapshot();}
+    if(['proving','world','native'].includes(meta.mode))return snapshot();
     if(phase==='relay'){
       const both=meta.members.every((m,i)=>{const p=state.players.find(p=>p.id===m.id),a=actions.get(m.id);return a?.interact&&state.tick-a.tick<=8&&near(p,meta.terminals[i]);});
       hold=both?hold+1:0;if(hold>=90){phase='extract';hold=0;}

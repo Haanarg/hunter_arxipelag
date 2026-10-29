@@ -19,7 +19,7 @@ export function moveOnFoot(state,input,dt,{limit,swimming=false,crouched=false}=
     z:clamp(state.z-Math.cos(state.hd)*ss-Math.sin(state.hd)*lateral,-limit,limit),hd:state.hd};
 }
 export function validatePlayerInput(input){
-  return !!input&&typeof input==='object'&&!Array.isArray(input)&&[4,5].includes(Object.keys(input).length)&&Object.keys(input).every(k=>['forward','turn','strafe','run','climb'].includes(k))&&(!Object.hasOwn(input,'climb')||finite(input.climb)&&Math.abs(input.climb)<=1)&&
+  return !!input&&typeof input==='object'&&!Array.isArray(input)&&[4,5,6].includes(Object.keys(input).length)&&Object.keys(input).every(k=>['forward','turn','strafe','run','climb','crouch'].includes(k))&&(!Object.hasOwn(input,'crouch')||typeof input.crouch==='boolean')&&(!Object.hasOwn(input,'climb')||finite(input.climb)&&Math.abs(input.climb)<=1)&&
     ['forward','turn','strafe'].every(k=>finite(input[k])&&Math.abs(input[k])<=1)&&typeof input.run==='boolean';
 }
 function copyFall(fall){
@@ -86,14 +86,14 @@ export function createPlayerSimulation({epoch,actors,limit,world={},vertical=nul
   function accept(actorId,message){
     const p=players.get(actorId);
     if(!p||!message||message.protocol!==COOP_PROTOCOL||message.epoch!==epoch||!Number.isSafeInteger(message.sequence)||message.sequence<=p.received||!validatePlayerInput(message.input))return false;
-    p.received=message.sequence;p.lastInputTick=tick;p.input={...message.input};return true;
+    if(message.input.crouch!==undefined)p.crouched=!!message.input.crouch;p.received=message.sequence;p.lastInputTick=tick;p.input={...message.input};return true;
   }
-  function snapshot(){return {protocol:COOP_PROTOCOL,epoch,tick,players:[...players.values()].map(p=>({id:p.id,x:p.x,z:p.z,y:p.y,hd:p.hd,hp:p.hp,acknowledged:p.acknowledged,...(vertical?{swimming:p.swimming,fall:copyFall(p.fall)}:{})}))};}
+  function snapshot(){return {protocol:COOP_PROTOCOL,epoch,tick,players:[...players.values()].map(p=>({id:p.id,x:p.x,z:p.z,y:p.y,hd:p.hd,hp:p.hp,acknowledged:p.acknowledged,...(typeof p.crouched==='boolean'?{crouched:p.crouched}:{}),...(vertical?{swimming:p.swimming,fall:copyFall(p.fall)}:{})}))};}
   function step(){
     const next=[];
     for(const p of players.values()){
       const input=tick-p.lastInputTick<Math.ceil(COOP_TICK_RATE*.25)?p.input:{forward:0,turn:0,strafe:0,run:false},
-        previous={id:p.id,x:p.x,z:p.z,y:p.y,hd:p.hd,hp:p.hp,...(vertical?{fall:copyFall(p.fall)}:{})},context=world.context?.({...previous,fall:vertical?copyFall(p.fall):undefined})||{},hd=p.hd+(p.hp>0?input.turn:0)/COOP_TICK_RATE*2.2;
+        previous={id:p.id,x:p.x,z:p.z,y:p.y,hd:p.hd,hp:p.hp,...(vertical?{fall:copyFall(p.fall)}:{})},context={...(world.context?.({...previous,fall:vertical?copyFall(p.fall):undefined})||{}),...(input.crouch!==undefined?{crouched:!!input.crouch&&!previous.swimming&&!previous.fall}:{})},hd=p.hd+(p.hp>0?input.turn:0)/COOP_TICK_RATE*2.2;
       let candidate=movement?.({...previous},input)??(vertical?verticalPlayer(previous,input,context,{world,vertical,limit,time:(tick+1)/COOP_TICK_RATE}):p.hp>0?moveOnFoot({...p,hd},{...input,run:input.run&&input.forward>.1&&!context.crouched&&context.canRun!==false},1/COOP_TICK_RATE,{...context,limit}):{x:p.x,z:p.z,hd:p.hd});
       if(!vertical&&world.resolve)candidate=world.resolve(previous,candidate);
       if(!candidate||candidate.y!==undefined&&!finite(candidate.y)||![candidate.x,candidate.z,candidate.hd].every(finite)||Math.abs(candidate.x)>limit||Math.abs(candidate.z)>limit)throw new RangeError('Invalid world resolution');
@@ -104,5 +104,5 @@ export function createPlayerSimulation({epoch,actors,limit,world={},vertical=nul
     for(const {p,candidate} of next){p.x=candidate.x;p.z=candidate.z;p.hd=candidate.hd;p.y=candidate.y??p.y;if(vertical){p.fall=candidate.fall;p.swimming=candidate.swimming;p.hp=candidate.hp;}p.acknowledged=p.received;}
     tick++;return snapshot();
   }
-  return Object.freeze({accept,step,snapshot,place(actorId,point){const p=players.get(actorId);if(!p||![point.x,point.y,point.z,point.hd].every(finite)||Math.abs(point.x)>limit||Math.abs(point.z)>limit)return false;p.x=point.x;p.y=point.y;p.z=point.z;p.hd=point.hd;p.fall=null;p.swimming=false;p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};return true;},revive(actorId,health){const p=players.get(actorId);if(!p||p.hp!==0||p.fall||p.swimming||!finite(health)||health<=0||health>(vertical?.maxHealth??PLAYER_MAX_HEALTH))return false;p.hp=health;p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};return true;},clearInputs(){for(const p of players.values()){p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};}},damage(actorId,amount){const p=players.get(actorId);if(!p)return false;p.hp=damageHealth(p.hp,amount);return true;}});
+  return Object.freeze({accept,step,snapshot,heal(actorId,amount){const p=players.get(actorId),max=vertical?.maxHealth??PLAYER_MAX_HEALTH;if(!p||p.hp<=0||p.hp>=max||!finite(amount)||amount<=0)return false;p.hp=Math.min(max,p.hp+Math.ceil(amount));return true;},place(actorId,point){const p=players.get(actorId);if(!p||![point.x,point.y,point.z,point.hd].every(finite)||Math.abs(point.x)>limit||Math.abs(point.z)>limit)return false;p.x=point.x;p.y=point.y;p.z=point.z;p.hd=point.hd;p.fall=null;p.swimming=false;p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};return true;},revive(actorId,health){const p=players.get(actorId);if(!p||p.hp!==0||p.fall||p.swimming||!finite(health)||health<=0||health>(vertical?.maxHealth??PLAYER_MAX_HEALTH))return false;p.hp=health;p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};return true;},clearInputs(){for(const p of players.values()){p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};}},damage(actorId,amount){const p=players.get(actorId);if(!p)return false;p.hp=damageHealth(p.hp,amount);return true;}});
 }

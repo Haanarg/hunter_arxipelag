@@ -1,5 +1,7 @@
+import {writeCoopCheckpoint,readCoopCheckpoint} from './coop-checkpoint.mjs';
+import {generateNativeMission,nativeFingerprint} from './coop-native.mjs';
 import {combatCommands,personalWeapons,inventoryCaps} from '../src/weapon-catalog.mjs';
-import {readCoopRoom} from './coop.mjs';
+import {readCoopRoom} from './coop-room-state.mjs';
 import {generateRelayMission,restoreRelayMission,MISSION_VERSION} from './coop-mission.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
 import {validatePlayerInput} from '../src/player-simulation.mjs';
@@ -7,12 +9,13 @@ import {validatePlayerInput} from '../src/player-simulation.mjs';
 // Private lobby and reduced authoritative two-player relay mission.
 export class CoopRoomHub {
   constructor(ctx,env){
-    this.ctx=ctx;this.env=env;this.queue=Promise.resolve();this.votes=new Map();this.mission=null;this.record=null;this.geometry=null;this.checkedAt=0;
+    this.ctx=ctx;this.env=env;this.queue=Promise.resolve();this.votes=new Map();this.mission=null;this.record=null;this.geometry=null;this.checkedAt=0;this.nativeVotes=new Map();this.nativeUpload=null;
     this.loading=ctx.blockConcurrencyWhile(async()=>{
-      const record=await ctx.storage.get('mission');
+      const record=await readCoopCheckpoint(ctx.storage);
       if(record){
         if(record.meta.generator===MISSION_VERSION&&record.meta.gameVersion===GAME_VERSION&&record.meta.expiresAt>Date.now()){
-          this.geometry=await ctx.storage.get('world');this.mission=restoreRelayMission(record,this.geometry);this.record=record;
+          this.geometry=await ctx.storage.get('world');if(this.geometry?.nativeChunks){let text='';for(let i=0;i<this.geometry.nativeChunks;i++)text+=await ctx.storage.get('native-world:'+i);this.geometry=JSON.parse(text);}
+          this.mission=restoreRelayMission(record,this.geometry);this.record=record;
         }else{await ctx.storage.delete(['mission','world']);await ctx.storage.deleteAlarm();}
       }
     });
@@ -60,9 +63,11 @@ export class CoopRoomHub {
   async messageInner(ws,message){
     if(ws.readyState!==1)return;
     let body;
-    try{if(typeof message!=='string'||message.length>1024)throw Error();body=JSON.parse(message);if(!body||Array.isArray(body)||body.protocol!==1)throw Error();}
+    try{if(typeof message!=='string'||message.length>65000)throw Error();body=JSON.parse(message);if(!body||Array.isArray(body)||body.protocol!==1)throw Error();}
     catch(_){ws.close(1008,'Missatge invàlid');return;}
     const a=ws.deserializeAttachment(),now=Date.now();if(!a){ws.close(4003,'Accés finalitzat');return;}
+    if(body.type==='native-world'||body.type==='native-ready'){try{await this.nativeMessage(ws,body);}catch(error){this.send(ws,{type:'error',message:error.message||'No s’ha pogut preparar el món original.'});}return;}
+    if(message.length>1024){ws.close(1008,'Missatge massa gran');return;}
     if(body.type==='input'){
       if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==6||typeof body.interact!=='boolean'||!validatePlayerInput(body.input)||!Number.isSafeInteger(body.sequence)||body.sequence<1){ws.close(1008,'Entrada invàlida');return;}
       if(now-(a.inputWindow||0)>=1000){a.inputWindow=now;a.inputs=0;}a.inputs=(a.inputs||0)+1;
@@ -72,7 +77,7 @@ export class CoopRoomHub {
       return;
     }
     if(body.type==='combat'){
-      if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==5||typeof body.epoch!=='string'||body.epoch.length>64||!combatCommands.includes(body.weapon)||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre de combat invàlida');return;}
+      if(!a.gameClient||a.gameVersion!==GAME_VERSION||![5,6].includes(Object.keys(body).length)||Object.keys(body).some(k=>!['type','protocol','epoch','weapon','commandId','power','seconds'].includes(k))||(body.seconds!==undefined&&(body.weapon!=='c4'||!Number.isInteger(body.seconds)||body.seconds<0||body.seconds>59))||(body.power!==undefined&&(body.weapon!=='grenade'||!Number.isFinite(body.power)||body.power<0||body.power>1))||typeof body.epoch!=='string'||body.epoch.length>64||!combatCommands.includes(body.weapon)||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre de combat invàlida');return;}
       if(now-(a.combatWindow||0)>=1000){a.combatWindow=now;a.combatCount=0;}a.combatCount=(a.combatCount||0)+1;ws.serializeAttachment(a);
       if(a.combatCount>12){ws.close(1008,'Massa ordres de combat');return;}
       if(!await this.verify(ws)){ws.close(4003,'Accés finalitzat');return;}
@@ -87,10 +92,10 @@ export class CoopRoomHub {
       if(body.gameVersion!==GAME_VERSION){this.send(ws,{type:'error',message:'Cal recarregar la pàgina per actualitzar el joc.'});ws.close(4005,'Versió incompatible');return;}
       this.votes.delete(a.actorId);const attachment=ws.deserializeAttachment();attachment.gameClient=true;attachment.gameVersion=GAME_VERSION;ws.serializeAttachment(attachment);
       await this.env.DB.prepare('UPDATE hunter_coop_members SET last_seen=? WHERE owner=? AND room=?').bind(now,a.actorId,a.roomId).run();
-      await this.publish();if(this.mission){this.send(ws,this.mission.setup(a.actorId));await this.wake();}return;
+      await this.publish();if(this.mission){this.send(ws,this.setupClient(a.actorId));await this.wake();}return;
     }
     if(body.type==='inventory'){
-      if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==6||!['drop','disguise','weapon'].includes(body.operation)||(body.operation==='drop'?!Object.hasOwn(inventoryCaps,body.target):body.operation==='weapon'?!personalWeapons.includes(body.target):typeof body.target!=='boolean')||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre d’inventari invàlida');return;}
+      if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==6||!['drop','disguise','weapon','use'].includes(body.operation)||(body.operation==='use'?body.target!=='medkits':body.operation==='drop'?!Object.hasOwn(inventoryCaps,body.target):body.operation==='weapon'?!personalWeapons.includes(body.target):typeof body.target!=='boolean')||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre d’inventari invàlida');return;}
       if(!this.mission||body.epoch!==this.mission.meta.id){this.send(ws,{type:'action',commandId:body.commandId,ok:false,code:'NOT_ACTIVE'});return;}
       try{const result=this.mission.inventoryCommand(a.actorId,body);await this.save(this.record.nextAlarm);this.broadcastState();this.send(ws,{type:'action',...result});}
       catch(_){if(this.record)this.mission=restoreRelayMission(this.record,this.geometry);this.send(ws,{type:'action',commandId:body.commandId,ok:false,code:'SAVE_FAILED'});}return;
@@ -115,6 +120,41 @@ export class CoopRoomHub {
     await this.publish();if(this.mission)await this.wake();
   }
 
+  setupClient(actorId){
+    if(this.mission.meta.mode==='native')return {type:'native-mission',self:actorId,meta:structuredClone(this.mission.meta),state:this.mission.snapshot()};return this.mission.setup(actorId);
+  }
+  nativeRoom(actorId){return readCoopRoom(this.env,actorId);}
+  async nativeMessage(ws,body){
+    const a=await this.verify(ws);if(!a?.gameClient||a.gameVersion!==GAME_VERSION){ws.close(4003,'Sessió invàlida');return;}
+    const now=Date.now();if(now-(a.nativeWindow||0)>60000){a.nativeWindow=now;a.nativeCount=0;}a.nativeCount=(a.nativeCount||0)+1;ws.serializeAttachment(a);if(a.nativeCount>400){ws.close(1008,'Massa dades de món');return;}
+    const room=await this.nativeRoom(a.actorId);
+    if(!room?.allReady||room.revision!==body.revision||!(/^[a-f0-9]{64}$/).test(body.fingerprint)){this.send(ws,{type:'error',message:'La sala o el món han canviat.'});return;}
+    const keys=Object.keys(body),allowed=body.type==='native-world'?['type','protocol','revision','fingerprint','index','total','chunk']:['type','protocol','revision','fingerprint'];
+    if(keys.length!==allowed.length||keys.some(k=>!allowed.includes(k))){ws.close(1008,'Ordre de món invàlida');return;}
+    const key=room.id+':'+room.revision;
+    if(body.type==='native-world'){
+      if(room.host!==a.actorId||!Number.isInteger(body.index)||!Number.isInteger(body.total)||body.total<1||body.total>192||body.index<0||body.index>=body.total||typeof body.chunk!=='string'||body.chunk.length>45000){ws.close(1008,'Món invàlid');return;}
+      if(this.mission?.meta.mode==='native'&&this.matches(room)&&this.mission.meta.fingerprint===body.fingerprint)return;
+
+      const previous=await this.ctx.storage.get('native-upload');
+      const upload=body.index===0?{key,fingerprint:body.fingerprint,total:body.total,received:0,expiresAt:Date.now()+300000}:previous;
+      if(!upload||upload.key!==key||upload.fingerprint!==body.fingerprint||upload.total!==body.total||body.index!==upload.received||upload.expiresAt<Date.now()){this.send(ws,{type:'error',message:'Cal tornar a preparar el món.'});return;}
+      upload.received++;await this.ctx.storage.transaction(async storage=>{await storage.put('native-prepare:'+body.index,body.chunk);await storage.put('native-upload',upload);});return;
+    }
+    a.nativeKey=key;a.nativeFingerprint=body.fingerprint;ws.serializeAttachment(a);
+    if(!room.members.every(m=>this.games().some(client=>{const member=client.deserializeAttachment();return member.actorId===m.id&&member.nativeKey===key;})))return;
+    if(!room.members.every(m=>this.games().some(client=>{const member=client.deserializeAttachment();return member.actorId===m.id&&member.nativeKey===key&&member.nativeFingerprint===body.fingerprint;}))){this.send(ws,{type:'error',message:'Els mons generats no coincideixen. Recarregueu tots dos.'});return;}
+
+    if(this.mission?.meta.mode==='native'&&this.matches(room)&&this.mission.meta.fingerprint===body.fingerprint){this.send(ws,this.setupClient(a.actorId));await this.wake();return;}
+    const upload=await this.ctx.storage.get('native-upload');if(!upload||upload.key!==key||upload.received!==upload.total||upload.expiresAt<Date.now()){this.send(ws,{type:'error',message:'Esperant el món de l’amfitrió.'});return;}
+    let text='';for(let i=0;i<upload.total;i++)text+=await this.ctx.storage.get('native-prepare:'+i);
+    if(await nativeFingerprint(text)!==body.fingerprint)throw Error('Identitat del món invàlida');
+    const generated=generateNativeMission(room,JSON.parse(text),body.fingerprint),mission=restoreRelayMission(generated.record,generated.geometry),worldText=JSON.stringify(generated.geometry),chunks=[];
+    for(let i=0;i<worldText.length;i+=45000)chunks.push(worldText.slice(i,i+45000));
+    await this.ctx.storage.transaction(async storage=>{for(let i=0;i<chunks.length;i++)await storage.put('native-world:'+i,chunks[i]);await storage.put('world',{nativeChunks:chunks.length});await writeCoopCheckpoint(storage,generated.record);const obsolete=[...Array(upload.total).keys()].map(i=>'native-prepare:'+i).concat('native-upload');for(let i=0;i<obsolete.length;i+=128)await storage.delete(obsolete.slice(i,i+128));});
+    this.mission=mission;this.record=generated.record;this.geometry=generated.geometry;this.nativeUpload=null;
+    for(const client of this.games())this.send(client,this.setupClient(client.deserializeAttachment().actorId));await this.wake();
+  }
   async closeInner(ws,code,reason){
     const a=ws.deserializeAttachment();if(a)this.votes.delete(a.actorId);
     if(a&&!this.ctx.getWebSockets().some(other=>other!==ws&&other.readyState===1&&other.deserializeAttachment()?.actorId===a.actorId))
@@ -133,25 +173,25 @@ export class CoopRoomHub {
   broadcastState(){if(this.mission)for(const ws of this.games())this.send(ws,{type:'state',state:this.mission.snapshot()});}
   async abort(message){
     const clients=this.games();await this.ctx.storage.delete(['mission','world']);await this.ctx.storage.deleteAlarm();
-    this.mission=null;this.record=null;this.geometry=null;this.votes.clear();
+    this.mission=null;this.record=null;this.geometry=null;this.votes.clear();this.nativeVotes.clear();this.nativeUpload=null;
     for(const ws of clients)this.send(ws,{type:'ended',message});
   }
   async save(nextAlarm){
-    const record=this.mission.checkpoint(nextAlarm);await this.ctx.storage.put('mission',record);this.record=record;await this.ctx.storage.setAlarm(nextAlarm);
+    const record=this.mission.checkpoint(nextAlarm);if(record.meta.mode==='native')await this.ctx.storage.transaction(storage=>writeCoopCheckpoint(storage,record));else await this.ctx.storage.put('mission',record);this.record=record;await this.ctx.storage.setAlarm(nextAlarm);
   }
   async wake(){if(this.mission){await this.save(Date.now()+100);}}
   async launch(ws,body){
     const a=ws.deserializeAttachment(),room=await readCoopRoom(this.env,a.actorId),mode=body.mode||'relay';
     if(!room||!room.allReady||body.revision!==room.revision){this.send(ws,{type:'error',message:'Calen dos jugadors preparats i una sala actualitzada.'});return;}
-    if(mode==='relay'&&this.mission&&this.matches(room)&&(this.mission.meta.mode||'relay')===mode&&['relay','extract'].includes(this.mission.snapshot().phase)){this.send(ws,this.mission.setup(a.actorId));await this.wake();return;}
+    if(mode==='relay'&&this.mission&&this.matches(room)&&(this.mission.meta.mode||'relay')===mode&&['relay','extract'].includes(this.mission.snapshot().phase)){this.send(ws,this.setupClient(a.actorId));await this.wake();return;}
     this.votes.set(a.actorId,room.revision+':'+mode);
     const games=this.games();
     if(!room.members.every(m=>this.votes.get(m.id)===room.revision+':'+mode&&games.some(s=>s.deserializeAttachment().actorId===m.id))){this.send(ws,{type:'waiting',message:'Esperant que el company també premi Iniciar missió.'});return;}
     for(const client of games)if(!await this.verify(client,true)){client.close(4003,'Accés finalitzat');return;}
     try{
       const generated=generateRelayMission(room,{mode}),mission=restoreRelayMission(generated.record,generated.geometry);
-      await this.ctx.storage.transaction(async storage=>{await storage.put('world',generated.geometry);await storage.put('mission',generated.record);});
-      this.mission=mission;this.geometry=generated.geometry;this.record=generated.record;this.checkedAt=0;this.votes.clear();
+      await this.ctx.storage.transaction(async storage=>{await storage.put('world',generated.geometry);await writeCoopCheckpoint(storage,generated.record);const obsolete=[...Array(upload.total).keys()].map(i=>'native-prepare:'+i).concat('native-upload');for(let i=0;i<obsolete.length;i+=128)await storage.delete(obsolete.slice(i,i+128));});
+      this.mission=mission;this.geometry=generated.geometry;this.record=generated.record;this.checkedAt=0;this.nativeVotes=new Map();this.nativeUpload=null;this.votes.clear();
       for(const client of games)this.send(client,mission.setup(client.deserializeAttachment().actorId));await this.wake();
     }catch(e){for(const client of games)this.send(client,{type:'error',message:e.message||'No s’ha pogut iniciar la missió.'});}
   }

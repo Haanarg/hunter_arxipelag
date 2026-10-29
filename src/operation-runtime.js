@@ -45,6 +45,7 @@ function operationRecord(kind,entity){
   return record;
 }
 function captureOperation(name){
+  if(nativeCoopSession)throw Error('La sessió cooperativa es conserva al servidor.');
   if(!started||over||generationPromise||seedSearchMode||!operationRegistry)throw new Error('No hi ha una operació activa per desar.');
   // Transitional player poses contain live animation references. Wait until a stable simulation state.
   if(playerFall||playerEject||grenades.length||pl.userData.grenadePending)throw new Error('Espera que acabi la caiguda o el llançament abans de desar.');

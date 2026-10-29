@@ -6,7 +6,7 @@ async function renderCoop(body,isCurrent){
   const epoch=++coopPanelEpoch,active=()=>isCurrent()&&epoch===coopPanelEpoch;
   body.replaceChildren();
   const add=(tag,text,parent=body)=>{const el=document.createElement(tag);el.textContent=text;parent.appendChild(el);return el;};
-  add('p','Sala privada per a dos jugadors. Primera missió: activar dos terminals alhora i reunir-se a la zona d’extracció.');
+  add('p','Sala privada per jugar plegats al món original de Hunter: Arxipèlag. Mateixa pantalla, controls i càmera darrere del personatge.');
   const status=add('p','Comprovant el compte…');status.setAttribute('role','status');
   const accounts=window.HUNTER_ACCOUNT_SERVICE;
   const button=(label,action,parent=body)=>{const el=add('button',label,parent);el.type='button';el.onclick=async()=>{
@@ -44,7 +44,7 @@ async function renderCoop(body,isCurrent){
       button('Entrar a la sala',async()=>draw(await call('join',{code:code.value})),view);
       return;
     }
-    if(!connection&&window.HUNTER_COOP_CONNECTION&&!document.hidden){
+    if(!nativeCoopSession&&!connection&&window.HUNTER_COOP_CONNECTION&&!document.hidden){
       const socketURL=new URL('/api/coop/socket',location.origin);socketURL.protocol=socketURL.protocol==='https:'?'wss:':'ws:';socketURL.searchParams.set('room',room.id);
       const expectedRoom=room.id;
       connection=window.HUNTER_COOP_CONNECTION({url:socketURL.href,isActive:()=>active()&&!document.hidden&&accounts.status().user?.id===owner,
@@ -58,10 +58,11 @@ async function renderCoop(body,isCurrent){
     for(const member of room.members)add('p',member.name+(member.host?' · Amfitrió':'')+' · '+(!member.online?'Sense connexió recent':member.ready?'Preparat':'Esperant'),view);
     const mine=room.members.find(m=>m.id===owner);
     add('p',room.allReady?'Tots dos preparats. Obriu la missió i confirmeu l’inici cadascú.':'Esperant dos jugadors preparats.',view);
-    if(room.allReady){const link=add('a','▶ Entrar a la missió cooperativa (tots dos)',view);link.href='/coop.html?room='+encodeURIComponent(room.id);link.style.display='block';link.style.padding='16px';if(started){link.target='_blank';link.rel='noopener';add('p','La partida individual queda en pausa en aquesta pestanya.',view);}}
+    if(nativeCoopSession)button('▶ Reprendre el joc',()=>resume(),view);
+    else if(room.allReady)button('▶ Jugar junts al món original',async()=>{++coopPanelEpoch;connection?.stop();coopRoomConnection=null;await window.HUNTER_NATIVE_COOP.start(room);},view);
     button(mine?.ready?'Encara no estic preparat':'Estic preparat',async()=>draw(await call('ready',{ready:!mine?.ready,revision:room.revision})),view);
     button('Actualitzar sala',async()=>draw(await call('current')),view);
-    button(room.host===owner?'Tancar sala i sortir':'Sortir de la sala',async()=>draw(await call('leave',{})),view);
+    button(room.host===owner?'Tancar sala i sortir':'Sortir de la sala',async()=>{const result=await call('leave',{});if(nativeCoopSession){stopNativeCoop();location.assign('/');}else draw(result);},view);
   }
   try{draw(await call('current'));}catch(e){if(active())status.textContent=e.message;}
   async function poll(){

@@ -10,7 +10,7 @@ function persistOperation(snapshot){
   operationWritePromise=task;task.then(()=>{if(operationWritePromise===task)operationWritePromise=null},()=>{if(operationWritePromise===task)operationWritePromise=null});
   return task;
 }
-function requestOperationAutosave(reason,options){return operationAutosave?.request(reason,options)}
+function requestOperationAutosave(reason,options){if(nativeCoopSession)return false;return operationAutosave?.request(reason,options)}
 function setOperationAutosave(enabled){
   operationAutosave?.setEnabled(enabled);try{localStorage.setItem('hunter.autosave.enabled',String(!!enabled))}catch(_){}
 }

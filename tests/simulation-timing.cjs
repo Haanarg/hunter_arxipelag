@@ -41,7 +41,7 @@ profiles.push({name:'stalls',deltas:[1000/60,1000/60,100,1000/60,250,1000/60,33]
       if(type){const o=mkV(type);cv={t:type,x:0,z:0,hd:0,v:0,sideV:0,strafeV:0,verticalV:0,
         steerInput:0,driveInput:0,yawRate:0,alt:VT[type].m==='a'?50:10,o,
         life:VT[type].life,maxLife:VT[type].life,rockets:1000};V=[cv];world.add(o);place(cv,0,0,0)}
-      rebuildVehicleGrid();resetCameraState();resetSimulationClock();
+      prepareOperationRegistry();rebuildVehicleGrid();resetCameraState();resetSimulationClock();
       window.HUNTER_STEALTH.clear();timingShots.length=0;timingBooms.length=0;timingLaunches.length=0;
       timingProjectile=null;timingExpireAt=null;
     };
@@ -92,7 +92,7 @@ profiles.push({name:'stalls',deltas:[1000/60,1000/60,100,1000/60,250,1000/60,33]
     close(run('timingBooms[0].t'),1.25,1/60+1e-7,profile.name+' grenade fuse expires within one substep');
 
     fixture();run(`globalThis.timingGate={bunkerGate:true,cx:0,cz:-3,nx:0,nz:1,doorWidth:4,
-      y0:10,doorHeight:4.4,openProgress:0,openDuration:10,closedLocalY:2.2,m:new THREE.Object3D()};Dr=[timingGate]`);
+      y0:10,doorHeight:4.4,desiredOpen:true,openProgress:0,openDuration:10,closedLocalY:2.2,m:new THREE.Object3D()};Dr=[timingGate]`);
     advance(profile,5);close(run('timingGate.openProgress'),.5,1e-7,profile.name+' gate opens halfway in five seconds');
     advance(profile,5);assert(run('timingGate.open'),profile.name+' gate opens fully in ten seconds');
 

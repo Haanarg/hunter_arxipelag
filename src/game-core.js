@@ -748,6 +748,7 @@ function discardGeneratedWorld(){
   waterUpgradePending=false;seedCompounds=[];elapsed=0;clearKeys();resetSimulationClock();
 }
 function startGameProgressively(options=readGameStartOptions()){
+  if(nativeCoopSession&&!options.nativeSession)stopNativeCoop();
   if(operationWritePromise)return waitOperationWrite().then(()=>startGameProgressively(options));
   if(operationBusy&&!options.restoreSnapshot)return Promise.reject(new Error('Espera que acabi el desament.'));
   if(generationPromise)return generationPromise;
@@ -1383,6 +1384,7 @@ function doorOccupied(d){
   return V.some(v=>!v.sunk&&Math.abs((v.o?.position?.y??hAt(v.x,v.z))-(d.y0+1))<5&&circleVehicleOverlap(d.cx,d.cz,.8,v));
 }
 function interactPlayerDoor(){
+  if(nativeCoopSession){const d=nearestPlayerDoor();return d?nativeCoopSession.channel?.door(d.saveId,!(d.desiredOpen??d.open)):false;}
   const d=nearestPlayerDoor();if(!d)return false;
   const open=!(d.desiredOpen??d.open);
   if(!open&&doorOccupied(d)){msg='Hi ha algú o un vehicle al pas de la porta.';msgT=2;return true;}
@@ -1716,6 +1718,7 @@ function updateOptionalSystems(dt,active){
   prisonerSystem.update(dt,context);radioRelay.update(dt,context);
 }
 function getOptionalAction(){
+  if(nativeCoopSession)return nativeReviveAction();
   const context=optionalContext();
   if(!context.active||!context.canInteract||cv)return null;
   const prisonerAction=prisonerSystem.getAction(context);
@@ -2206,7 +2209,7 @@ const clearKeys=()=>{
 };
 const quickWeapons=()=>['pistola','ganivet',...['fusell_assalt','franctirador','bazooka','granada','cisalla'].filter(k=>inv[k]>0)];
 const selectedWeapon=()=>knifeEquipped?'ganivet':assaultRifleEquipped?'fusell_assalt':sniperEquipped?'franctirador':bazookaEquipped?'bazooka':grenadeEquipped?'granada':cisallaEquipped?'cisalla':'pistola';
-function selectWeapon(k){if(!weaponPickerAvailable()||swimming||!quickWeapons().includes(k))return;cancelGrenadeCharge();cancelAssaultBurst();setSniperScope(false);knifeEquipped=k==='ganivet';assaultRifleEquipped=k==='fusell_assalt';sniperEquipped=k==='franctirador';bazookaEquipped=k==='bazooka';grenadeEquipped=k==='granada';cisallaEquipped=k==='cisalla';msg=k+' equipat';msgT=1.5;drawWeaponPicker()}
+function selectWeapon(k){if(nativeCoopSession){if(k==='granada'){grenadeEquipped=true;return;}grenadeEquipped=false;const map={pistola:'pistol',ganivet:'knife',fusell_assalt:'assault',franctirador:'sniper',bazooka:'bazooka',cisalla:'cutters'};if(map[k])nativeCoopSession.channel?.inventory('weapon',map[k]);return;}if(!weaponPickerAvailable()||swimming||!quickWeapons().includes(k))return;cancelGrenadeCharge();cancelAssaultBurst();setSniperScope(false);knifeEquipped=k==='ganivet';assaultRifleEquipped=k==='fusell_assalt';sniperEquipped=k==='franctirador';bazookaEquipped=k==='bazooka';grenadeEquipped=k==='granada';cisallaEquipped=k==='cisalla';msg=k+' equipat';msgT=1.5;drawWeaponPicker()}
 function cycleWeapon(n){const w=quickWeapons(),i=w.indexOf(selectedWeapon());selectWeapon(w[(i+n+w.length)%w.length])}
 const picker=document.createElement('div');picker.style.cssText='position:fixed;z-index:100;right:10px;bottom:258px;background:#203239ed;padding:8px;border-radius:10px;display:none;flex-direction:column;gap:5px;max-height:50vh;overflow:auto';document.body.appendChild(picker);
 const pickerToggle=document.createElement('button');pickerToggle.textContent='⚔ Armes';pickerToggle.style.cssText='position:fixed;z-index:99;right:10px;bottom:210px;padding:8px;color:white;background:#304b52;border-radius:9px';pickerToggle.style.display='none';document.body.appendChild(pickerToggle);
@@ -2236,7 +2239,7 @@ const act=c=>{if(generationPromise)return;if(ui?.isBombTimerOpen?.()){
   }
   if(!secondaryWeapon()&&inv.expl&&!cv&&
      !swimming&&!playerFall&&!playerEject)panel('bombtimer');
-}if(c==='KeyC'){if(inv.disf)setDis(!disg);else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
+}if(c==='KeyC'){if(inv.disf){if(nativeCoopSession)nativeCoopSession.channel.inventory('disguise',!disg);else setDis(!disg);}else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
 const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.sunk||v.waterIngress?.dead||v.reentryLockUntil>elapsed)continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
 function updateActionButton(nearby){
   const button=document.getElementById('mainActionButton');
@@ -2654,7 +2657,7 @@ const ui=window.HUNTER_UI.create({
   resumeButton:document.getElementById('resumeButton'),
   minimap,
   getState:({nearVehicle=cv?null:nearV()}={})=>({
-    autosave:operationAutosave?.state(),started:!!started,hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
+    coop:nativeCoopSession?.state?{health:nativeCoopSession.state.players.find(p=>p.id!==nativeCoopSession.self)?.hp,status:nativeCoopSession.state.status}:null,autosave:operationAutosave?.state(),started:!!started,hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
     inventory:inv,itemTypes:IT,player:P,nearVehicle,optionalAction:!cv&&nearestPlayerDoor()?{kind:'door',label:playerDoorLabel(nearestPlayerDoor()),icon:window.HUNTER_ACTION_ICONS.door}:getOptionalAction(),messageTime:msgT,message:msg,
     waypoint,worldSize:S,seed,mapScale:MAP_SCALE,hqIntel:{stage:hqIntelStage,investigated:hqIntelSectors.size,remaining:hqMapKnown?1:hqIntelSites.length-(MAP_SCALE===2?hqIntelDiscarded.size:(hqIntelStage>=2?1:0)),confirmed:hqMapKnown},palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,muted,cheats:{...cheats},stealthDebug:window.HUNTER_STEALTH.enabled(),stealthLayers:window.HUNTER_STEALTH.layers(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
   }),
@@ -3181,7 +3184,133 @@ function hideCameraObstructions(owner,eye,basement){
     if(basement)owner.basement.cameraHiddenWalls.push(wall.m);
   }
 }
+function readPlayerControls(strafeEnabled,canRun){
+const jf=-joystick.state.y,jtr=-joystick.state.x,
+      f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),
+      tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),
+      strafe=strafeEnabled?Math.max(-1,Math.min(1,
+        (K.KeyU?1:0)-(K.KeyY?1:0)+(strafePointers.right!==null?1:0)-(strafePointers.left!==null?1:0))):0,
+      ud=(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0);
+const running=canRun&&!playerCrouched&&f>.1&&(joystick.state.running||K.ShiftLeft||K.ShiftRight);
+return {f,tr,strafe,ud,running};
+}
+function updatePlayerCamera(dt){
+// Restituïm només peces vives que la càmera havia ocultat, també en
+// canviar d'edifici. La física de parets i portes continua intacta.
+restoreCameraWalls();
+syncCameraVehicle();
+const scopeNow=scopeActive&&sniperEquipped&&!cv&&!playerFall&&!swimming;
+const fieldOfView=scopeNow?2*Math.atan(Math.tan(58*Math.PI/360)/8)*180/Math.PI:58;
+if(Math.abs(cam.fov-fieldOfView)>.001){cam.fov=fieldOfView;cam.updateProjectionMatrix()}
+if(scopeNow){
+  cameraBasement=null;
+  const fx=-Math.sin(scopeYaw),fz=-Math.cos(scopeYaw),vertical=Math.tan(scopePitch);
+  cam.position.set(P.x-fx*.12,P.y+1.76,P.z-fz*.12);
+  cam.lookAt(P.x+fx*160,P.y+1.76+vertical*160,P.z+fz*160);
+}else{
+  const T=cv||P,c=cv?VT[cv.t]:ib?{cd:6,ch:11}:{cd:10,ch:5},ty=cv?cv.o.position.y:P.y,
+    heading=cv?vehicleLook.heading(cv,dt,!!drag):P.hd,
+    w=cameraOffset.set(T.x+Math.sin(heading)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1),0,T.z+Math.cos(heading)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1));
+  // Mode soterrani també durant el PRIMER esglaó, no només quan
+  // el jugador ja ha baixat 2 m. La càmera no es pot quedar darrere
+  // d'un envà opac, ni pot perseguir l'altura exterior de la muntanya.
+  const b=activeBunker,local=b?.basement&&!cv?buildingLocalPoint(b,P.x,P.z):null,
+        inside=!!local&&Math.abs(local.x)<b.basement.halfX-.5&&
+        Math.abs(local.z)<b.basement.halfZ-.5;
+  const stair=b?.basement?.stair;
+  const descending=!!local&&Math.abs(local.x-stair.x)<stair.width/2+.45&&
+    local.z>=Math.min(stair.zTop,stair.zBottom)-.5&&
+    local.z<=Math.max(stair.zTop,stair.zBottom)+.5&&P.y<b.fy+.18;
+  const bunkerBelow=!!inside&&(P.y<b.fy-3.9||descending);
+  // El forjat ÉS el sostre del soterrani. No s'ha d'amagar:
+  // ara que la càmera és sempre a sota, es veu el plafó i no es
+  // produeix cap obstrucció; els llums queden ancorats al sostre real.
+  if(b?.basement)for(const slab of b.basement.upperSlabMeshes)slab.visible=true;
+  if(bunkerBelow){
+    // Distància normal i suavitzat dins el volum segur del soterrani.
+    // L'entrada es fixa sota el forjat: interpolar des de fora creuaria
+    // el sostre opac. La resta del recorregut no pot tornar-hi a passar.
+    const targetEye=bunkerEye.set(P.x,
+      Math.min(b.fy-1.0,Math.max(b.basement.floorY+1.6,P.y+1.65)),P.z);
+    const cameraDistance=Math.max(8.8,Math.min(14,11.5*zoom));
+    const cameraHeight=Math.max(b.basement.floorY+4.5,
+      Math.min(b.fy-1.45,P.y+5.4));
+    w.set(P.x+Math.sin(heading)*cameraDistance,cameraHeight,
+      P.z+Math.cos(heading)*cameraDistance);
+    // No deixam sortir la càmera del volum subterrani, perquè llavors
+    // el terreny exterior pot ocultar completament la vista.
+    const cl=buildingLocalPoint(b,w.x,w.z);
+    const clampedX=Math.max(-b.basement.halfX+1.3,
+      Math.min(b.basement.halfX-1.3,cl.x));
+    const clampedZ=Math.max(-b.basement.halfZ+1.3,
+      Math.min(b.basement.halfZ-1.3,cl.z));
+    if(clampedX!==cl.x||clampedZ!==cl.z){
+      const q=buildingWorldPoint(b,clampedX,clampedZ);
+      w.x=q.x;w.z=q.z;
+    }
+    if(cameraBasement!==b)cam.position.copy(w);
+    else cam.position.lerp(w,1-Math.exp(-7*dt));
+    const smoothLocal=buildingLocalPoint(b,cam.position.x,cam.position.z),
+      safe=buildingWorldPoint(b,
+        Math.max(-b.basement.halfX+1.3,Math.min(b.basement.halfX-1.3,smoothLocal.x)),
+        Math.max(-b.basement.halfZ+1.3,Math.min(b.basement.halfZ-1.3,smoothLocal.z)));
+    cam.position.set(safe.x,
+      Math.max(b.basement.floorY+4.5,Math.min(b.fy-1.45,cam.position.y)),safe.z);
+    // La càmera POT travessar els envans. Només ocultam les peces
+    // físiques interposades entre càmera i jugador, no les parets
+    // de tota la cambra ni les col·lisions del personatge.
+    hideCameraObstructions(b,targetEye,true);
+    b.basement.cameraInside=true;
+    cameraBasement=b;
+  }else{
+    if(b?.basement)b.basement.cameraInside=false;
+    w.y=Math.max(ty+c.ch*zoom*(cv?Math.sqrt(VS[cv.t]):1),hAt(w.x,w.z)+3,2.5);
+    // En sortir del soterrani cal passar directament al costat exterior
+    // del forjat. El suavitzat exterior es manté sempre damunt el terreny,
+    // inclòs l'arc entre dues posicions segures al voltant d'un turó.
+    if(cameraBasement)cam.position.copy(w);
+    else cam.position.lerp(w,1-Math.pow(.001,dt));
+    cam.position.y=Math.max(cam.position.y,hAt(cam.position.x,cam.position.z)+3,2.5);
+    cameraBasement=null;
+    if(ib&&!cv)hideCameraObstructions(ib,bunkerEye.set(P.x,P.y+1.65,P.z),false);
+  }
+  cam.lookAt(T.x-Math.sin(heading)*(bunkerBelow?3.5:8),
+    Math.min(bunkerBelow?b.fy-1.0:Infinity,ty+(bunkerBelow?2.0:2)),
+    T.z-Math.cos(heading)*(bunkerBelow?3.5:8));
+}
+}
+function updatePlayerHUD(dt){
+uiTick+=dt;if(uiTick>.12){uiTick=0;const nv=cv?null:nearV();const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',(!cv&&cheats.fly)||(!!cv&&VT[cv.t]?.m==='a'));contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('heli-bomb-active',cv?.t==='heli');contextButtons.classList.toggle('vehicle-grenade-active',!!cv&&cv.t!=='heli_combat'&&cv.t!=='heli');const grenadeVehicleButton=document.getElementById('vehicleGrenadeButton');if(grenadeVehicleButton){const count=inv.granada||0;grenadeVehicleButton.dataset.count=String(count);grenadeVehicleButton.title=count?'Llançar granada des del vehicle · B ('+count+' restants)':'No tens granades · B';grenadeVehicleButton.setAttribute('aria-label',grenadeVehicleButton.title)}contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}
+const heliBombButton=document.getElementById('heliBombButton');
+if(heliBombButton){
+  const count=inv.expl||0,available=count>0;
+  heliBombButton.dataset.count=String(count);
+  heliBombButton.setAttribute('aria-disabled',String(!available));
+  const title=available?'Programar i deixar caure C4 ('+count+' disponibles) · G':'No tens explosius C4 · G';
+  if(heliBombButton.title!==title){
+    heliBombButton.title=title;
+    heliBombButton.setAttribute('aria-label',title);
+  }
+}
+const fireButton=document.getElementById('mainFireButton');
+if(fireButton){
+  const heliGrenade=cv?.t==='heli',
+        grenade=heliGrenade||!cv&&grenadeEquipped&&(inv.granada||0)>0,
+        cutters=!cv&&cisallaEquipped&&(inv.cisalla||0)>0,
+        knife=!cv&&(knifeEquipped||!grenade&&!cutters&&!bazookaEquipped&&!sniperEquipped&&!assaultRifleEquipped&&ammo<=0),
+        weapon=cutters?'cisalla':grenade?'granada':knife?'ganivet':'normal';
+  if(fireButton.dataset.weapon!==weapon){
+    fireButton.dataset.weapon=weapon;
+    fireButton.innerHTML=cutters?ICON.cisalla:grenade?ICON.granada:knife?ICON.ganivet:'🎯';
+    const action=cutters?'Talla filferrada':grenade?'Llançar granada':knife?'Atacar amb ganivet':'Dispar';
+    fireButton.setAttribute('aria-label',action);
+    fireButton.title=heliGrenade?'Llançar granada de l’inventari':grenade?'Mantén premut per arribar més lluny':action;
+  }
+}
+updateActionButton(nv);if(pickerOpen)drawWeaponPicker();
+mini();ui.renderHUD({nearVehicle:nv});}}
 function update(dt,t){
+if(nativeCoopSession){updateNativeCoop(dt);return;}
 syncCameraVehicle();
 if(activeBunker?.basement?.lights?.length){
   const basement=activeBunker.basement;
@@ -3209,13 +3338,7 @@ if(!(dt>0))return;
 rebuildVehicleGrid();elapsed+=dt;
 window.HUNTER_STEALTH.tick(dt);
 const playerStartX=P.x,playerStartZ=P.z;
-const jf=-joystick.state.y,jtr=-joystick.state.x,
-      f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),
-      tr=Math.max(-1,Math.min(1,(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)+jtr)),
-      strafe=strafeEnabled?Math.max(-1,Math.min(1,
-        (K.KeyU?1:0)-(K.KeyY?1:0)+(strafePointers.right!==null?1:0)-(strafePointers.left!==null?1:0))):0,
-      ud=(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),lim=H-2;
-const running=canRun&&!playerCrouched&&f>.1&&(joystick.state.running||K.ShiftLeft||K.ShiftRight);
+const {f,tr,strafe,ud,running}=readPlayerControls(strafeEnabled,canRun),lim=H-2;
 // El córrer fa passes de bota a ritme viu, però no quan nedam.
 if(running&&!swimming&&!playerFall&&!playerEject&&f>.2){
   runStepTimer-=dt;
@@ -3484,89 +3607,7 @@ if(cv&&(cv.t==='tanc'||cv.t==='tanqueta')){
       new THREE.Vector3(ax,ay,az),dt);
   }
 }
-// Restituïm només peces vives que la càmera havia ocultat, també en
-// canviar d'edifici. La física de parets i portes continua intacta.
-restoreCameraWalls();
-syncCameraVehicle();
-const scopeNow=scopeActive&&sniperEquipped&&!cv&&!playerFall&&!swimming;
-const fieldOfView=scopeNow?2*Math.atan(Math.tan(58*Math.PI/360)/8)*180/Math.PI:58;
-if(Math.abs(cam.fov-fieldOfView)>.001){cam.fov=fieldOfView;cam.updateProjectionMatrix()}
-if(scopeNow){
-  cameraBasement=null;
-  const fx=-Math.sin(scopeYaw),fz=-Math.cos(scopeYaw),vertical=Math.tan(scopePitch);
-  cam.position.set(P.x-fx*.12,P.y+1.76,P.z-fz*.12);
-  cam.lookAt(P.x+fx*160,P.y+1.76+vertical*160,P.z+fz*160);
-}else{
-  const T=cv||P,c=cv?VT[cv.t]:ib?{cd:6,ch:11}:{cd:10,ch:5},ty=cv?cv.o.position.y:P.y,
-    heading=cv?vehicleLook.heading(cv,dt,!!drag):P.hd,
-    w=cameraOffset.set(T.x+Math.sin(heading)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1),0,T.z+Math.cos(heading)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1));
-  // Mode soterrani també durant el PRIMER esglaó, no només quan
-  // el jugador ja ha baixat 2 m. La càmera no es pot quedar darrere
-  // d'un envà opac, ni pot perseguir l'altura exterior de la muntanya.
-  const b=activeBunker,local=b?.basement&&!cv?buildingLocalPoint(b,P.x,P.z):null,
-        inside=!!local&&Math.abs(local.x)<b.basement.halfX-.5&&
-        Math.abs(local.z)<b.basement.halfZ-.5;
-  const stair=b?.basement?.stair;
-  const descending=!!local&&Math.abs(local.x-stair.x)<stair.width/2+.45&&
-    local.z>=Math.min(stair.zTop,stair.zBottom)-.5&&
-    local.z<=Math.max(stair.zTop,stair.zBottom)+.5&&P.y<b.fy+.18;
-  const bunkerBelow=!!inside&&(P.y<b.fy-3.9||descending);
-  // El forjat ÉS el sostre del soterrani. No s'ha d'amagar:
-  // ara que la càmera és sempre a sota, es veu el plafó i no es
-  // produeix cap obstrucció; els llums queden ancorats al sostre real.
-  if(b?.basement)for(const slab of b.basement.upperSlabMeshes)slab.visible=true;
-  if(bunkerBelow){
-    // Distància normal i suavitzat dins el volum segur del soterrani.
-    // L'entrada es fixa sota el forjat: interpolar des de fora creuaria
-    // el sostre opac. La resta del recorregut no pot tornar-hi a passar.
-    const targetEye=bunkerEye.set(P.x,
-      Math.min(b.fy-1.0,Math.max(b.basement.floorY+1.6,P.y+1.65)),P.z);
-    const cameraDistance=Math.max(8.8,Math.min(14,11.5*zoom));
-    const cameraHeight=Math.max(b.basement.floorY+4.5,
-      Math.min(b.fy-1.45,P.y+5.4));
-    w.set(P.x+Math.sin(heading)*cameraDistance,cameraHeight,
-      P.z+Math.cos(heading)*cameraDistance);
-    // No deixam sortir la càmera del volum subterrani, perquè llavors
-    // el terreny exterior pot ocultar completament la vista.
-    const cl=buildingLocalPoint(b,w.x,w.z);
-    const clampedX=Math.max(-b.basement.halfX+1.3,
-      Math.min(b.basement.halfX-1.3,cl.x));
-    const clampedZ=Math.max(-b.basement.halfZ+1.3,
-      Math.min(b.basement.halfZ-1.3,cl.z));
-    if(clampedX!==cl.x||clampedZ!==cl.z){
-      const q=buildingWorldPoint(b,clampedX,clampedZ);
-      w.x=q.x;w.z=q.z;
-    }
-    if(cameraBasement!==b)cam.position.copy(w);
-    else cam.position.lerp(w,1-Math.exp(-7*dt));
-    const smoothLocal=buildingLocalPoint(b,cam.position.x,cam.position.z),
-      safe=buildingWorldPoint(b,
-        Math.max(-b.basement.halfX+1.3,Math.min(b.basement.halfX-1.3,smoothLocal.x)),
-        Math.max(-b.basement.halfZ+1.3,Math.min(b.basement.halfZ-1.3,smoothLocal.z)));
-    cam.position.set(safe.x,
-      Math.max(b.basement.floorY+4.5,Math.min(b.fy-1.45,cam.position.y)),safe.z);
-    // La càmera POT travessar els envans. Només ocultam les peces
-    // físiques interposades entre càmera i jugador, no les parets
-    // de tota la cambra ni les col·lisions del personatge.
-    hideCameraObstructions(b,targetEye,true);
-    b.basement.cameraInside=true;
-    cameraBasement=b;
-  }else{
-    if(b?.basement)b.basement.cameraInside=false;
-    w.y=Math.max(ty+c.ch*zoom*(cv?Math.sqrt(VS[cv.t]):1),hAt(w.x,w.z)+3,2.5);
-    // En sortir del soterrani cal passar directament al costat exterior
-    // del forjat. El suavitzat exterior es manté sempre damunt el terreny,
-    // inclòs l'arc entre dues posicions segures al voltant d'un turó.
-    if(cameraBasement)cam.position.copy(w);
-    else cam.position.lerp(w,1-Math.pow(.001,dt));
-    cam.position.y=Math.max(cam.position.y,hAt(cam.position.x,cam.position.z)+3,2.5);
-    cameraBasement=null;
-    if(ib&&!cv)hideCameraObstructions(ib,bunkerEye.set(P.x,P.y+1.65,P.z),false);
-  }
-  cam.lookAt(T.x-Math.sin(heading)*(bunkerBelow?3.5:8),
-    Math.min(bunkerBelow?b.fy-1.0:Infinity,ty+(bunkerBelow?2.0:2)),
-    T.z-Math.cos(heading)*(bunkerBelow?3.5:8));
-}
+updatePlayerCamera(dt);
 if(playerEject&&playerEject.t<=0){
   if(playerBlastRagdoll){
     window.HUNTER_RAGDOLL.reset(playerBlastRagdoll);
@@ -3590,35 +3631,8 @@ if(performanceStatsVisible)perfHotspots.aiMs+=performance.now()-enemyAiStamp;
 window.HUNTER_STEALTH_DEBUG.update(THREE,world,E,P);
 updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);
 updateOptionalSystems(dt,!!started&&!paused&&!over&&simulationFocused&&!document.hidden);
-uiTick+=dt;if(uiTick>.12){uiTick=0;const nv=cv?null:nearV();const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',(!cv&&cheats.fly)||(!!cv&&VT[cv.t]?.m==='a'));contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('heli-bomb-active',cv?.t==='heli');contextButtons.classList.toggle('vehicle-grenade-active',!!cv&&cv.t!=='heli_combat'&&cv.t!=='heli');const grenadeVehicleButton=document.getElementById('vehicleGrenadeButton');if(grenadeVehicleButton){const count=inv.granada||0;grenadeVehicleButton.dataset.count=String(count);grenadeVehicleButton.title=count?'Llançar granada des del vehicle · B ('+count+' restants)':'No tens granades · B';grenadeVehicleButton.setAttribute('aria-label',grenadeVehicleButton.title)}contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}
-const heliBombButton=document.getElementById('heliBombButton');
-if(heliBombButton){
-  const count=inv.expl||0,available=count>0;
-  heliBombButton.dataset.count=String(count);
-  heliBombButton.setAttribute('aria-disabled',String(!available));
-  const title=available?'Programar i deixar caure C4 ('+count+' disponibles) · G':'No tens explosius C4 · G';
-  if(heliBombButton.title!==title){
-    heliBombButton.title=title;
-    heliBombButton.setAttribute('aria-label',title);
-  }
-}
-const fireButton=document.getElementById('mainFireButton');
-if(fireButton){
-  const heliGrenade=cv?.t==='heli',
-        grenade=heliGrenade||!cv&&grenadeEquipped&&(inv.granada||0)>0,
-        cutters=!cv&&cisallaEquipped&&(inv.cisalla||0)>0,
-        knife=!cv&&(knifeEquipped||!grenade&&!cutters&&!bazookaEquipped&&!sniperEquipped&&!assaultRifleEquipped&&ammo<=0),
-        weapon=cutters?'cisalla':grenade?'granada':knife?'ganivet':'normal';
-  if(fireButton.dataset.weapon!==weapon){
-    fireButton.dataset.weapon=weapon;
-    fireButton.innerHTML=cutters?ICON.cisalla:grenade?ICON.granada:knife?ICON.ganivet:'🎯';
-    const action=cutters?'Talla filferrada':grenade?'Llançar granada':knife?'Atacar amb ganivet':'Dispar';
-    fireButton.setAttribute('aria-label',action);
-    fireButton.title=heliGrenade?'Llançar granada de l’inventari':grenade?'Mantén premut per arribar més lluny':action;
-  }
-}
-updateActionButton(nv);if(pickerOpen)drawWeaponPicker();
-mini();ui.renderHUD({nearVehicle:nv});}}
+updatePlayerHUD(dt);}
+
 
 
 if(performanceDebugRequested||performanceAuditRequested)setPerformanceStatsVisible(true);
@@ -3662,7 +3676,7 @@ try{
 // També sense temps nou cal netejar controls, HUD i estat de càmera.
 if(!simulated.steps)update(0,elapsed);
 syncWeaponPicker();
-operationAutosave?.tick();cloudTick();journalTick();
+if(!nativeCoopSession){operationAutosave?.tick();cloudTick();journalTick();}
 // Només avança la cinemàtica que ja existia a l'inici del fotograma.
 // El seu rellotge separat també admet 250 ms, en passos de fins a 1/60.
 cinematicClock.advance(now,dt=>{

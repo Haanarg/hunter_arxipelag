@@ -1,4 +1,10 @@
-> **Estat del client: prototip tècnic separat.** La prova real amb dos jugadors ha confirmat que aquesta interfície, càmera i generació alternativa no compleixen l'objectiu d'adaptar el joc individual. La direcció de desenvolupament queda substituïda per [la reconstrucció sobre el runtime original](COOP_REBUILD.md). Les funcionalitats i proves descrites a continuació són l'historial del prototip, no una certificació de paritat amb el joc original.
+## Estat actual · 0.6.50
+
+L'entrada cooperativa inicia ara una sessió dins del runtime original: mateix canvas, controls, HUD i càmera en perspectiva. L'enllaç antic redirigeix a aquesta entrada. Vegeu [la implementació, validació i límits pendents](COOP_NATIVE_RUNTIME.md): la IA completa i els sistemes opcionals encara no tenen paritat. No és una declaració de reconstrucció acabada.
+
+## Historial del prototip fins a 0.6.49
+
+> **Estat històric fins a 0.6.49: prototip tècnic separat.** La prova real amb dos jugadors ha confirmat que aquesta interfície, càmera i generació alternativa no compleixen l'objectiu d'adaptar el joc individual. La direcció de desenvolupament queda substituïda per [la reconstrucció sobre el runtime original](COOP_REBUILD.md). Les funcionalitats i proves descrites a continuació són l'historial del prototip, no una certificació de paritat amb el joc original.
 
 # Cooperatiu · v0.6.45
 

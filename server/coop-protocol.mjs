@@ -7,5 +7,5 @@ export function prepareCoopManifest(room,body){
   if(!room.allReady)fail('NOT_READY','Calen dos participants aprovats, connectats i preparats.');
   return {protocol:COOP_PROTOCOL,gameVersion:GAME_VERSION,generatorVersion:'world:0.6.2',
     epoch:room.id+':'+room.revision,roomId:room.id,revision:room.revision,seed:room.seed,mapScale:room.mapScale,difficulty:room.difficulty,
-    tickRate:COOP_TICK_RATE,participants:room.members.map((m,slot)=>({actorId:m.id,slot})),phase:'prepared',playable:true,missionType:'relay-training',entry:'/coop.html?room='+encodeURIComponent(room.id)};
+    tickRate:COOP_TICK_RATE,participants:room.members.map((m,slot)=>({actorId:m.id,slot})),phase:'prepared',playable:true,missionType:'native-campaign',entry:'/index.html?eager=1&coop='+encodeURIComponent(room.id)};
 }

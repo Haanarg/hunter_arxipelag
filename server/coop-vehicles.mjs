@@ -1,3 +1,4 @@
+import {vehicleSpecs} from '../src/vehicle-specs.mjs';
 import {palmImpact,rockImpact} from '../src/vehicle-environment-core.mjs';
 import {firstVehicleContact,vehicleContactDamage} from './coop-vehicle-contacts.mjs';
 import {stepRangeVehicle} from './coop-vehicle-motion.mjs';
@@ -19,25 +20,25 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
  function position(actor){const v=mounted(actor.id);return v?{x:v.x,y:v.y,z:v.z,hd:v.hd,hp:actor.hp,fall:null,swimming:false}:null;}
  function walkClear(from,to){let previous=from;const steps=Math.max(1,Math.ceil(distance(from,to)/.2));for(let i=1;i<=steps;i++){const q={...to,x:from.x+(to.x-from.x)*i/steps,z:from.z+(to.z-from.z)*i/steps},resolved=world().resolveBody(previous,q);if(distance(q,resolved)>1e-5)return false;previous=q;}return true;}
  function exitPoint(v,actor){for(const side of [1,-1])for(const back of [0,2.8,-2.8]){
-   const offset=['proving','world'].includes(meta.mode)?Math.max(2.6,(v.hullRadius||0)+1):2.6;
+   const offset=['proving','world','native'].includes(meta.mode)?Math.max(2.6,(v.hullRadius||0)+1):2.6;
    const q={...actor,x:v.x+Math.cos(v.hd)*side*offset-Math.sin(v.hd)*back,z:v.z-Math.sin(v.hd)*side*offset-Math.cos(v.hd)*back,y:v.y};
    if(q.x<meta.bounds.x0||q.x>meta.bounds.x1||q.z<meta.bounds.z0||q.z>meta.bounds.z1||players().some(p=>p.id!==actor.id&&!mounted(p.id)&&distance(p,q)<1.6))continue;
-   if(['proving','world'].includes(meta.mode)&&vehicleDynamics.types[v.t].m==='a'&&v.y>Math.max(0,world().heightAt(v.x,v.z))+1.5)continue;
-   if(['proving','world'].includes(meta.mode)&&world().heightAt(q.x,q.z)<-.5){return {...q,y:water.surfaceAt(q.x,q.z,0)+.1};}
+   if(['proving','world','native'].includes(meta.mode)&&vehicleDynamics.types[v.t].m==='a'&&v.y>Math.max(0,world().heightAt(v.x,v.z))+1.5)continue;
+   if(['proving','world','native'].includes(meta.mode)&&world().heightAt(q.x,q.z)<-.5){return {...q,y:water.surfaceAt(q.x,q.z,0)+.1};}
    const r=world().resolveBody(q,q),s=world().locomotionAt(q.x,q.z,q.y);if(distance(q,r)<1e-5&&walkClear(v,q)&&!s.interior&&!s.drop&&Math.abs(s.floor-q.y)<.25)return {...q,y:s.floor+.06};
  }return null;}
  function command(actorId,msg){
   const cached=results.find(r=>r.actorId===actorId&&r.commandId===msg.commandId);if(cached)return {...cached,duplicate:true};
   const p=players().find(p=>p.id===actorId),v=vehicles.find(v=>v.id===msg.vehicleId);let code='INVALID',ok=false,exit=null;
   if(p&&msg.epoch===meta.id&&validId(msg.commandId)&&['enter','exit'].includes(msg.operation)){
-   if(!active()||p.hp<=0||p.fall||p.swimming&&!(['proving','world'].includes(meta.mode)&&['w','wl'].includes(vehicleDynamics.types[v?.t]?.m)))code='NOT_ACTIVE';
+   if(!active()||p.hp<=0||p.fall||p.swimming&&!(['proving','world','native'].includes(meta.mode)&&['w','wl'].includes(vehicleDynamics.types[v?.t]?.m)))code='NOT_ACTIVE';
    else if(!v)code='UNKNOWN_VEHICLE';
    else if(v.destroyed)code='DESTROYED';
    else if(msg.operation==='exit'){
     if(!v.seats.includes(actorId))code='NOT_SEATED';else if(Math.abs(v.v)>.2)code='MOVING';else if(!(exit=exitPoint(v,p)))code='EXIT_BLOCKED';
     else{v.seats[v.seats.indexOf(actorId)]=null;v.v=0;inputs.delete(actorId);ok=true;code='EXITED';}
    }else if(mounted(actorId))code='ALREADY_SEATED';
-   else if(distance(p,v)>3.5||Math.abs(p.y-v.y)>(['proving','world'].includes(meta.mode)?5:1.2))code='TOO_FAR';
+   else if(distance(p,v)>(meta.mode==='native'?(vehicleSpecs.radii[v.t]||0)+5:3.5)||Math.abs(p.y-v.y)>(['proving','world','native'].includes(meta.mode)?5:1.2))code='TOO_FAR';
    else if(!walkClear(p,v))code='BLOCKED';
    else if(Math.abs(v.v)>.2)code='MOVING';else if(v.seats.every(Boolean))code='FULL';
    else{v.seats[v.seats.indexOf(null)]=actorId;inputs.delete(actorId);onBoard(actorId);ok=true;code='ENTERED';}
@@ -52,7 +53,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
    const driver=v.seats[0],entry=inputs.get(driver),input=driver&&entry&&tick-entry.tick<=8?entry.input:{forward:0,turn:0};
    if(!driver||!entry||tick-entry.tick>8){v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;v.verticalV=0;continue;}
    const from={x:v.x,y:v.y,z:v.z,hd:v.hd,v:v.v};let attempted=null;
-   if(['proving','world'].includes(meta.mode))stepRangeVehicle(v,input,1/30,tick,world(),water,meta.bounds);
+   if(['proving','world','native'].includes(meta.mode))stepRangeVehicle(v,input,1/30,tick,world(),water,meta.bounds);
    else{
    const control=vehicleDynamics.inputs(v,input.forward,input.turn,1/30),side=advanceVehicle(v,control.forward,control.turn,1/30),hd=v.hd;
    const next={...v,hd,x:v.x+(-Math.sin(hd)*v.v+Math.cos(hd)*side)/30,z:v.z+(-Math.cos(hd)*v.v-Math.sin(hd)*side)/30};
@@ -61,7 +62,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
    }
    from.travelSpeed=Math.abs(v.v);
    const desired={...(attempted||v)},probe={...desired,v:v.v||from.v};
-   let hit=firstVehicleContact(probe,from,vehicles,geometry(),['proving','world'].includes(meta.mode),world());
+   let hit=firstVehicleContact(probe,from,vehicles,geometry(),['proving','world','native'].includes(meta.mode),world());
    // Each successful iteration removes a confirmed obstacle. No network input can select one.
    while(hit&&(hit.kind==='palm'||hit.kind==='wall'&&vehicleDynamics.types[v.t].m==='l')){
      if(hit.kind==='palm'){
@@ -72,7 +73,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
        Object.assign(v,{x:hit.point.x,y:hit.point.y,z:hit.point.z,hd:hit.point.hd});
        if(response.damage)onImpact(v.id,response.damage,tick);
        if(v.destroyed)break;
-       hit=firstVehicleContact(probe,from,vehicles,geometry(),['proving','world'].includes(meta.mode),world());continue;
+       hit=firstVehicleContact(probe,from,vehicles,geometry(),['proving','world','native'].includes(meta.mode),world());continue;
      }
      const ram=barrierRam(probe,hit.target,Math.max(0,((v.barrierUntilTick||0)-tick)/30));
      if(!ram||!onBarrier(hit.target))break;
@@ -80,7 +81,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
      Object.assign(v,hit.safe);
      if(ram.damage)onImpact(v.id,ram.damage,tick);
      if(v.destroyed)break;
-     hit=firstVehicleContact(probe,from,vehicles,geometry(),['proving','world'].includes(meta.mode),world());
+     hit=firstVehicleContact(probe,from,vehicles,geometry(),['proving','world','native'].includes(meta.mode),world());
    }
    if(v.destroyed)continue;
    if(!hit&&(!attempted||vehicleClear(desired,world(),meta.bounds,from)))Object.assign(v,{x:desired.x,y:desired.y,z:desired.z,hd:desired.hd});

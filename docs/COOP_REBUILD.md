@@ -1,6 +1,6 @@
 # Reconstrucció del multijugador sobre el joc original
 
-Estat: replantejament motivat per la petició de l'usuari del 29-10-2026. Implementació del nou client pendent. Aquest document substitueix la direcció de desenvolupament del client cooperatiu separat. No descriu una funcionalitat ja acabada.
+Estat: replantejament motivat per la petició de l'usuari del 29-10-2026. Primera integració al runtime original implementada a la 0.6.50; paritat completa pendent. Vegeu [estat i límits actuals](COOP_NATIVE_RUNTIME.md). Aquest document substitueix la direcció de desenvolupament del client cooperatiu separat. No descriu una funcionalitat ja acabada.
 
 ## Objectiu
 
@@ -83,4 +83,4 @@ La desconnexió conserva la pausa de sala i l'estat persistent existents. La mig
 
 ## Límit d'aquest canvi
 
-Aquest canvi fixa el diagnòstic, l'arquitectura i els criteris de substitució. El client jugable existent continua essent el prototip separat fins que s'implementin les etapes anteriors. No s'ha presentat cap canvi de CSS o de càmera del prototip com si fos la reconstrucció.
+La 0.6.50 substitueix l'entrada del client separat per la sessió dins del runtime original. Es comparteixen controls, HUD i càmera, i el servidor consumeix el món original verificat pels dos participants. La IA completa, els sistemes opcionals i la prova amb dos dispositius encara resten pendents; l'estat precís es descriu a COOP_NATIVE_RUNTIME.md.

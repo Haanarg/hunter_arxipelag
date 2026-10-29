@@ -361,7 +361,7 @@ function blastOccluded(x,y,z,tx,ty,tz,ignoreWall=null){
 // La proximitat al tram real, no al centre de l'AABB de 6 m,
 // determina si l'ona expansiva arriba a la filferrada.
 function closestFenceBlastPoint(...args){return window.HUNTER_SHARED_COMBAT.closestFenceBlastPoint(...args)}
-function boom(x,y,z,r,dmg,own,source=null){
+function presentExplosion(x,y,z,r,source=null){
  window.HUNTER_STEALTH.emit('explosion',x,y,z);
  snd('boom',1,{x,y,z},source);
  // L'ona expansiva és un front anular subtil, no una esfera
@@ -374,6 +374,9 @@ function boom(x,y,z,r,dmg,own,source=null){
        }));
  o.rotation.x=-Math.PI/2;
  o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6,opacity});
+}
+function boom(x,y,z,r,dmg,own,source=null){
+ presentExplosion(x,y,z,r,source);
  // El casc protegeix el pilot mentre encara és dins. Si el vehicle
  // esclata dins aquest càlcul, no el feim rebre també un impacte directe.
  const pilotedAtStart=!!cv;
@@ -489,7 +492,7 @@ function executePlayerPlant(seconds=3){
 // impedint els atacs cos a cos quan ignoreBarbed=false.
 function sight(x,z,tx,tz,y,ignoreBarbed=true,targetY=y){const from={x,y,z},to={x:tx,y:targetY,z:tz},reach=Math.hypot(tx-x,tz-z)/2+3;for(const w of wallCandidates((x+tx)/2,(z+tz)/2,reach)){if(w.open||ignoreBarbed&&w.barbed)continue;if(window.HUNTER_BUILDING_SHELL.wallShotHit(from,to,w)!=null)return false}return true}
 function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=pl.userData.knifeAttackDuration||.38;window.HUNTER_STEALTH.emit('knife',P.x,P.y+1,P.z);const hit=window.HUNTER_SHARED_WEAPONS.meleeTarget(P,E,u=>sight(P.x,P.z,u.x,u.z,P.y+1.2,false));if(hit)hurtE(hit,COMBAT_BALANCE.weapons.knife,{weapon:'knife',own:'p',sx:P.x,sy:P.y+1.35,sz:P.z,x:hit.x,y:hit.o.position.y+1.35,z:hit.z});snd('hurt',hit?.45:.18);setDis(false);return true}
-function secondaryWeapon(){
+function secondaryWeapon(){if(nativeCoopSession)return nativeCoopSession.channel?.combat('secondary');
   if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd),d45=Math.SQRT1_2;
   if(cv.t==='heli_combat'){if(cheats.items)cv.rockets=Math.max(cv.rockets||0,999);if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,COMBAT_BALANCE.weapons.heliMissile,10,'p',mS,2.4);Pj[Pj.length-1].life=3.3;msg='Míssils: '+cv.rockets;msgT=1;return true}
   if(cv.t==='llanxa_coets'){/* Munició infinita. */fcd=.9;
@@ -618,7 +621,7 @@ function updateGrenadeCharge(dt){
 function vehicleGrenadeFlight(v){
   return window.HUNTER_SHARED_WEAPONS.vehicleGrenadeLaunch(v,v.o?.position.y??v.y);
 }
-function throwVehicleGrenade(){
+function throwVehicleGrenade(){if(nativeCoopSession)return nativeCoopSession.channel?.combat('grenade');
   if(!cv||cv.t==='heli_combat'||over||paused||playerFall||playerEject||fcd>0)return false;
   if(!inv.granada){msg='No tens granades a l’inventari.';msgT=2;return false}
   const flight=vehicleGrenadeFlight(cv);
@@ -629,7 +632,7 @@ function throwVehicleGrenade(){
   return true;
 }
 function throwHelicopterGrenade(){return cv?.t==='heli'&&throwVehicleGrenade()}
-function throwGrenade(power=0){
+function throwGrenade(power=0){if(nativeCoopSession)return nativeCoopSession.channel?.combat('grenade',power);
   if(over||cv||swimming||fcd>0||!grenadeEquipped||!inv.granada)return false;
   // Fixem el llançament quan s'allibera el botó perquè la predicció i
   // el punt de caiguda no canviïn durant l'animació de llançament.
@@ -642,12 +645,15 @@ function throwGrenade(power=0){
   msg='Granades: '+(inv.granada||0);msgT=1.5;
   return true;
 }
-function launchGrenade(pending){
-  const flight=pending.flight||grenadeLaunchParams(),{x,y,z,vx,vy,vz,t}=flight,
-        o=new THREE.Group(),
+function createGrenadeModel(){
+  const o=new THREE.Group(),
         body=new THREE.Mesh(new THREE.SphereGeometry(.18,8,6),new THREE.MeshStandardMaterial({color:0x46513f,roughness:.82,metalness:.08}));
   body.scale.set(.88,1.08,.88);o.add(body);
   const cap=new THREE.Mesh(new THREE.BoxGeometry(.08,.13,.08),new THREE.MeshStandardMaterial({color:0x252b27,roughness:.7,metalness:.25}));cap.position.y=.18;o.add(cap);
+return o;}
+function launchGrenade(pending){
+  const flight=pending.flight||grenadeLaunchParams(),{x,y,z,vx,vy,vz,t}=flight,
+        o=createGrenadeModel();
   o.position.set(x,y,z);world.add(o);
   grenades.push({x,y,z,vx,vy,vz,t,o,sx:x,sy:y,sz:z});
 }

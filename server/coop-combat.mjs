@@ -110,7 +110,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     const profile=weaponCatalog[weapon],vehicle=vehicles.mounted(actorId),gun=vehicle&&vehicleGunPose(vehicle),
       from=gun?.origin||{x:p.x,y:p.y+(vehicle?2:weapon==='bazooka'?1.9:1.5),z:p.z};
     const aimed=aimWeapon(p,vehicle,weapon,from),focus=aimed.focus,direction=gun?.direction||aimed.direction;
-    const id='bullet-'+(++sequence),dmg=!['proving','world'].includes(meta.mode)&&['pistol','assault'].includes(weapon)?combatBalance.weapons.pistol:profile.damage;
+    const id='bullet-'+(++sequence),dmg=!['proving','world','native'].includes(meta.mode)&&['pistol','assault'].includes(weapon)?combatBalance.weapons.pistol:profile.damage;
     projectiles.push({...launchProjectile(from,direction,profile.speed,{id,actorId,weapon,dmg,splash:profile.splash||0,sourceVehicle:vehicle?.id,aimedAt:focus.target?.id||null}),life:profile.life});
     if(profile.ammo){const source=vehicle&&profile.ammo==='rockets'?vehicle:bag;source[profile.ammo]--;}
     effect('shot',tick,{actorId,from,to:{x:from.x+direction[0],y:from.y+direction[1],z:from.z+direction[2]},hit:null,aimedAt:focus.target?.id||null});return 'FIRED';
@@ -122,9 +122,9 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     const p=players().find(p=>p.id===actorId),bag=inventory.get(actorId);let code='INVALID',ok=false;
     if(p&&message.epoch===meta.id&&typeof message.commandId==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(message.commandId)&&combatCommands.includes(message.weapon)){
       const vehicle=vehicles.mounted(actorId),weapon=vehicle?(message.weapon==='grenade'?(vehicle.t==='heli_combat'?null:'grenade'):message.weapon==='secondary'&&vehicle.t==='heli_combat'?'heliMissile':message.weapon==='c4'&&vehicle.t==='heli'?'c4':mountedWeapons[vehicle.t]):message.weapon;
-      const profile=weaponCatalog[weapon],ammoSource=profile?.ammo==='rockets'?vehicle:bag,key=actorId+':'+(weapon==='assault'?'pistol':weapon),cooldown=!['proving','world'].includes(meta.mode)&&['pistol','assault','grenade'].includes(weapon)?({pistol:10,assault:18,grenade:30}[weapon]):Math.ceil((profile?.cooldown||1)*30);
+      const profile=weaponCatalog[weapon],ammoSource=profile?.ammo==='rockets'?vehicle:bag,key=actorId+':'+(weapon==='assault'?'pistol':weapon),cooldown=!['proving','world','native'].includes(meta.mode)&&['pistol','assault','grenade'].includes(weapon)?({pistol:10,assault:18,grenade:30}[weapon]):Math.ceil((profile?.cooldown||1)*30);
       if(!active()||p.hp<=0||p.fall||p.swimming&&!vehicle||!canAttack(actorId)||!profile||vehicle&&(weapon==='grenade'? !vehicle.seats.includes(actorId):vehicle.seats[0]!==actorId))code='NOT_ACTIVE';
-      else if(!vehicle&&!['grenade'].includes(weapon)&&((bag.weapon||'pistol')!==weapon||profile.item&&!bag[profile.item]))code='NOT_EQUIPPED';
+      else if(!vehicle&&!['grenade',...(meta.mode==='native'?['c4']:[])].includes(weapon)&&((bag.weapon||'pistol')!==weapon||profile.item&&!bag[profile.item]))code='NOT_EQUIPPED';
       else if(tick-(cooldowns.get(key)??-Infinity)<cooldown)code='COOLDOWN';
       else if(profile.ammo&&!(ammoSource?.[profile.ammo]>0)||weapon==='assault'&&bag.bullets<3)code='EMPTY';
       else{
@@ -135,8 +135,8 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
           code=cutWire(p)?'CUT':'NO_WIRE';
         }else if(weapon==='grenade'||weapon==='c4'){
           bag[profile.ammo]--;
-          const launched=weapon==='c4'?{x:p.x-Math.sin(p.hd)*1.35,y:p.y+.24,z:p.z-Math.cos(p.hd)*1.35,vx:0,vy:0,vz:0}:vehicle?vehicleGrenadeLaunch(vehicle,vehicle.y):['proving','world'].includes(meta.mode)?grenadeLaunch(.5,p,p.hd):{x:p.x,y:p.y+1.5,z:p.z,vx:-Math.sin(p.hd)*14,vz:-Math.cos(p.hd)*14,vy:8};
-          grenades.push({id:weapon+'-'+(++sequence),actorId,...launched,weapon,explodeAt:tick+(weapon==='c4'?150:['proving','world'].includes(meta.mode)?72:60)});code=weapon==='c4'?'PLANTED':'THROWN';
+          const launched=weapon==='c4'?{x:p.x-Math.sin(p.hd)*1.35,y:p.y+.24,z:p.z-Math.cos(p.hd)*1.35,vx:0,vy:0,vz:0}:vehicle?vehicleGrenadeLaunch(vehicle,vehicle.y):['proving','world','native'].includes(meta.mode)?grenadeLaunch(message.power??.5,p,p.hd):{x:p.x,y:p.y+1.5,z:p.z,vx:-Math.sin(p.hd)*14,vz:-Math.cos(p.hd)*14,vy:8};
+          grenades.push({id:weapon+'-'+(++sequence),actorId,...launched,weapon,explodeAt:tick+(weapon==='c4'?(message.seconds??5)*30:['proving','world','native'].includes(meta.mode)?72:60)});code=weapon==='c4'?'PLANTED':'THROWN';
         }else if(weapon==='assault'){
           const burst={actorId,remaining:0,delay:0};beginBurst(burst,bag.bullets,()=>{fire(actorId,p,bag,tick);return true;});bursts.push(burst);code='BURST';
         }else code=fire(actorId,p,bag,tick,weapon);
@@ -169,12 +169,12 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
       }
     }
     for(let i=grenades.length-1;i>=0;i--){
-      const g=grenades[i],from={x:g.x,y:g.y,z:g.z},next=g.weapon==='c4'&&g.landed?{...g}:ballisticStep(g,1/30,g.weapon==='c4'||['proving','world'].includes(meta.mode)?24:18);g.vy=next.vy;
+      const g=grenades[i],from={x:g.x,y:g.y,z:g.z},next=g.weapon==='c4'&&g.landed?{...g}:ballisticStep(g,1/30,g.weapon==='c4'||['proving','world','native'].includes(meta.mode)?24:18);g.vy=next.vy;
       const candidate={x:next.x,y:next.y,z:next.z},trace=traceArena(from,candidate,geometry(),world());
       if(trace.fraction<1){g.landed=true;g.vx=0;g.vz=0;g.vy=0;Object.assign(g,at(from,candidate,Math.max(0,trace.fraction-.01)));g.y=Math.max(g.y,Math.max(0,world().heightAt(g.x,g.z))+(g.weapon==='c4'?.24:.16));}else Object.assign(g,candidate);
       // Impact stops the throw; its fuse keeps counting in simulation time.
       if(tick>=g.explodeAt){
-        explode({at:{x:g.x,y:g.y+.08,z:g.z},damage:g.weapon==='c4'?weaponCatalog.c4.damage:['proving','world'].includes(meta.mode)?weaponCatalog.grenade.damage:combatBalance.weapons.grenade,radius:g.weapon==='c4'?weaponCatalog.c4.splash:['proving','world'].includes(meta.mode)?weaponCatalog.grenade.splash:8,actorId:g.actorId,ownerOnly:true},tick);grenades.splice(i,1);
+        explode({at:{x:g.x,y:g.y+.08,z:g.z},damage:g.weapon==='c4'?weaponCatalog.c4.damage:['proving','world','native'].includes(meta.mode)?weaponCatalog.grenade.damage:combatBalance.weapons.grenade,radius:g.weapon==='c4'?weaponCatalog.c4.splash:['proving','world','native'].includes(meta.mode)?weaponCatalog.grenade.splash:8,actorId:g.actorId,ownerOnly:true},tick);grenades.splice(i,1);
       }
     }
     for(const t of targets)if(t.ai){
@@ -208,7 +208,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
   function runover(v,from,tick){
     const profile=vehicleDynamics.types[v.t],speed=from.travelSpeed??Math.abs(v.v);
     if(!['l','wl'].includes(profile.m)||speed<=6||tick<(v.ramUntilTick||0))return;
-    const radius=['proving','world'].includes(meta.mode)?vehicleSpecs.radii[v.t]*vehicleSpecs.scales[v.t]*.68+1.2*.45:1.6*.68+.45;
+    const radius=['proving','world','native'].includes(meta.mode)?vehicleSpecs.radii[v.t]*vehicleSpecs.scales[v.t]*.68+1.2*.45:1.6*.68+.45;
     for(const target of targets)if((!target.t||target.t==='soldat')&&target.hp>0&&Math.abs(v.y-target.y)<3&&runoverSweepHit(from.x,from.z,v.x,v.z,target.x,target.z,radius)){
       const eye={x:target.x,y:target.y+1,z:target.z};
       if(traceArena({x:from.x,y:from.y+1,z:from.z},eye,geometry(),world()).fraction<1)continue;

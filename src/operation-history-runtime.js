@@ -15,8 +15,9 @@ async function recordJournalNow(){
   try{await getOperationJournal().record(row);journalError='';}catch(error){journalError='No s’ha pogut actualitzar l’historial; les partides desades es conserven.';}
 }
 function finishOperationRun(outcome){if(operationRun?.outcome==='active'){operationRun.outcome=outcome;recordJournalNow();}}
-function journalTick(){if(started&&!paused&&!over&&performance.now()>=journalNextAt){journalNextAt=performance.now()+10000;recordJournalNow();}}
+function journalTick(){if(nativeCoopSession)return;if(started&&!paused&&!over&&performance.now()>=journalNextAt){journalNextAt=performance.now()+10000;recordJournalNow();}}
 function playerCommand(type,payload={}){
+  if(nativeCoopSession)return nativeCoopCommand(type,payload);
   if(!operationAuthority||!operationRun)return false;
   const result=operationAuthority.dispatch({version:1,id:'local:'+ ++commandSequence,actorId:'local',operationId:operationCommandEpoch,type,payload});
   return result.ok?result.value:false;

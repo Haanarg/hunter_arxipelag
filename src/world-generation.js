@@ -1017,14 +1017,14 @@ const beachedWaterSpot=function* (island,t){let checkpointUnits=0;
            Math.abs(x)<H-r-5&&Math.abs(z)<H-r-5&&
            !V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+4)&&
            !B.some(b=>Math.abs(x-b.x)<b.hw+r+3&&Math.abs(z-b.z)<b.hd+r+3)){
-          return {x,z,hd:Math.atan2(ux,uz)+rn(-.18,.18)};
+          return {x,z,hd:Math.atan2(ux,uz)+(window.HUNTER_WORLD_PHYSICS.hashAt(x,z,seed)*.36-.18)};
         }
       }
       if(h<-1.25&&h>-3.15){
         const clear=Math.abs(x)<H-r-5&&Math.abs(z)<H-r-5&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+4)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r+3&&Math.abs(z-b.z)<b.hd+r+3);
         if(clear){
           // Proa aproximadament cap a terra: aparença de vehicle encallat/varat a la riba.
-          const hd=Math.atan2(ux,uz)+rn(-.18,.18);
+          const hd=Math.atan2(ux,uz)+(window.HUNTER_WORLD_PHYSICS.hashAt(x,z,seed)*.36-.18);
           return{x,z,hd};
         }
       }
