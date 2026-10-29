@@ -4,7 +4,7 @@ import {windowLayout,shellColliders,windowCrossing,wallShotHit} from '../src/bui
 import {traceArena} from '../server/coop-combat.mjs';
 const layout=windowLayout(18,.8,8);
 assert.equal(layout.centers.length,2,'wide walls have two windows');
-assert.ok(layout.bottom<=1.5,'the aperture must include the player's upper body');
+assert.ok(layout.bottom<=1.5,'the aperture must include the upper body of the player');
 const generated=shellColliders(0,0,0,18,14,8,{doorSide:0},()=>.5),walls=generated.walls;
 const windowWall=walls.find(w=>w.windowPanes?.length);
 assert.ok(windowWall,'physical wall carries window apertures');
