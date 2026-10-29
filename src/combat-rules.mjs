@@ -1,4 +1,4 @@
-import {wholeDamage,PLAYER_MAX_HEALTH} from './player-simulation.mjs';
+import {wholeDamage,PLAYER_MAX_HEALTH} from './player-simulation.mjs?v=0.6.42';
 // Escala única de resistència i armes per a tots els bàndols.
 export const combatBalance=Object.freeze({
  player:PLAYER_MAX_HEALTH,medkit:8,
