@@ -3,6 +3,7 @@ import {segmentAabbT} from './combat-rules.mjs';
 // Normal building doors are taller than wide. Bunker/hangar openings have
 // their own explicit geometry and must not inherit these dimensions.
 export const STANDARD_BUILDING_DOOR=Object.freeze({width:2.8,height:5.2});
+export const WOODEN_DOOR_HP=5;
 // A single calculation for both jambs; matches the door collider and visual
 // aperture exactly, including doors on the shorter side of a building.
 export function doorFlankLayout(span,openingWidth){
@@ -77,7 +78,7 @@ export function shellColliders(x,z,fy,w,d,h,opt={},random){
     const box={x0:x+s.lx-s.sx/2,x1:x+s.lx+s.sx/2,z0:z+s.lz-s.sz/2,z1:z+s.lz+s.sz/2,cx:x+s.lx,cz:z+s.lz,rammable:true};
     if(s.door){
       const dh=Math.min(opt.doorHeight||4.4,Math.max(3.8,plan.wallH-.65)),normal=[[0,1],[0,-1],[1,0],[-1,0]][plan.ds];
-      walls.push({...box,y0:fy-1,y1:fy+dh,hp:10,woodenDoor:!opt.bunker&&!opt.hangar&&!opt.workshop,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,nx:normal[0],nz:normal[1],doorWidth:plan.dw,doorHeight:dh});
+      walls.push({...box,y0:fy-1,y1:fy+dh,hp:!opt.bunker&&!opt.hangar&&!opt.workshop?WOODEN_DOOR_HP:10,woodenDoor:!opt.bunker&&!opt.hangar&&!opt.workshop,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,nx:normal[0],nz:normal[1],doorWidth:plan.dw,doorHeight:dh});
       if(plan.wallH-dh>.05)walls.push({...box,y0:fy+dh,y1:fy+plan.wallH,hp:plan.wallHp,door:false,open:false,playerBlock:false,rammable:false});
     }else{
       const layout=s.windows?windowLayout(s.sx,s.sz,plan.wallH):null;
