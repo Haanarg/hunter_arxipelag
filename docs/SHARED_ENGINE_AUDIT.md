@@ -1,4 +1,4 @@
-# Reutilització del motor individual · v0.6.37
+# Reutilització del motor individual · v0.6.38
 
 Criteri: les regles i els models tenen una única implementació. Els adaptadors de navegador i servidor només aporten estat, geometria, autoritat, presentació i serveis. No es converteix tot el joc individual en un Worker: DOM, Three, àudio, càmera i comptes continuen fora de la simulació compartida.
 
@@ -39,7 +39,7 @@ Criteri: les regles i els models tenen una única implementació. Els adaptadors
 
 1. Reutilitzar la màquina d’estats/cadència de campanya i completar la integració amb totes les armes/entitats del món. Els trets de jugadors i guàrdies del relleu ja comparteixen vol i la punteria enemiga també és compartida. Selecció, vol, primitives, primer contacte i models de projectils ja són compartits; les armes dels jugadors del relleu ja no són hitscan.
 2. Extreure navegació, persecució i màquina d’estats de la IA individual. El con i els models ja es comparteixen; la patrulla reduïda del relleu encara és específica.
-3. Compartir els contactes complets de vehicles amb formes orientades, terrenys, ferri, aigua i aire. Després integrar salut/destrucció/armes muntades a partir de les regles individuals.
+3. Compartir els contactes complets de vehicles amb formes orientades, terrenys, ferri, aigua i aire. Salut/casc/destrucció ja compartits; resten altres vehicles, armes muntades i efectes/impulsos originals.
 4. Reutilitzar les fàbriques d’equipament, animacions, efectes i àudio que encara falten al pilot. Els models de persones i Humvee ja estan unificats.
 5. Ampliar món/objectius i desament permanent sense crear un segon generador o format de campanya.
 
@@ -79,7 +79,7 @@ Snapshot/checkpoint de posició, velocitat, vida i identificador de cada bala. L
 
 Validació del runtime individual real (font i bundle), cobertures, impactes i caducitat; proves de primer contacte i empats, retard de dany, porta en moviment, blanc que s’aparta, pausa, restauració, repetició d’ordres i rollback d’un impacte. La integració amb civils, edificis, blindatge, filferrades, altres armes i la IA completa continua aportada per l’adaptador individual i pendent al món cooperatiu.
 
-## Quarta extracció · trets dels guàrdies (v0.6.37)
+## Quarta extracció · trets dels guàrdies (v0.6.38)
 
 `enemy-accuracy-core.mjs` extreu l’escala de punteria individual: perfils d’arma, dificultat, distància, error transversal/vertical i vector normalitzat. `enemy-accuracy.js` queda com a pont curt. El mode individual i el servidor utilitzen la mateixa funció; es preserven els percentatges teòrics i l’ordre de mostreig.
 
@@ -90,3 +90,8 @@ El servidor reutilitza `createWorldRandom` amb un estat de combat separat del ge
 El pilot manté l’avís d’un segon, el mínim de tres segons entre trets i el seu dany escalat per dificultat. Són dades d’equilibri de la missió reduïda; encara no s’han substituït per tota la màquina d’estats/cadència de cada enemic de campanya. Això queda pendent amb navegació, persecució i resta d’armes/entitats, sense una nova implementació paral·lela de física o punteria.
 
 198 casos congelats abans d’extreure el codi conserven desviació, vectors mostrejats i probabilitat teòrica. Proves estadístiques originals i casos de vol, evasió, cobertura nova, actor que intercepta, checkpoint i rollback de RNG/trajectòria. Proves de rescat adaptades a l’instant de l’impacte real, incloent interrupció de l’ajuda i dany fatal abans d’adjudicar extracció.
+
+
+## Casc i destrucció de vehicles · v0.6.38
+
+La salut, blindatge, dany enter, contacte del projectil i distància d’explosió al casc provenen ara de `combat-rules.mjs`: `vehicleDamage`, `isArmoredVehicleType`, `vehicleHullSegmentT`, `vehicleHullDistance`, `VEHICLE_DESTRUCTION`. `damageVehicle` i `updPj` individuals hi deleguen; els adaptadors conserven cheats, feedback, geometria i efectes. El servidor aporta seients, persistència i autoritat, amb 5 PV del perfil `cotxe`; només el radi s’adapta a l’escala reduïda del model. S’ha retirat la invulnerabilitat del jeep del pilot. Encadenament d’explosions, protecció del casc i dany dels ocupants són autoritatius; les dades de destrucció i la regla de bicicleta no explosiva conserven els criteris individuals. La representació de ferralla, impulsos d’ejecció i xocs/atropellaments completa encara no s’ha extret.

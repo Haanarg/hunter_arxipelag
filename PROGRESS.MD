@@ -555,3 +555,24 @@ Integració de main: es conserva el con 3D compartit de pistola/fusell de v0.6.2
 4. Equipament, animacions i àudio restants; arsenal, món i campanya complets preservant RNG.
 5. Desaments cooperatius permanents, migracions, estadístiques/historial i resum de missió.
 6. Dos comptes/navegadors físics, GPU/Android, controls/rendiment/acabat; animació de portes, portes per a IA individual i incidències històriques de fixtures/escala 2.
+
+
+## Cooperatiu · fase 24 · Casc, salut i destrucció de vehicles compartits (v0.6.38)
+
+- `vehicleDamage`, `isArmoredVehicleType`, `vehicleHullDistance`, `vehicleHullSegmentT` i les dades `VEHICLE_DESTRUCTION` s’extreuen de `combat.js` a `combat-rules.mjs`. El mode individual delega les mateixes operacions al nucli: arrodoniment enter, perfil de vida, immunitat dels blindats als trets lleugers, casc esfèric i distància d’explosió al casc. No hi ha un segon balanç de vehicles.
+- El Humvee reduït té els 5 PV originals de `cotxe`, amb radi de contacte de 1,6 m adaptat al model cooperatiu de 3,2 m. Bales de tots dos bàndols consulten el casc dins la mateixa arbitració contínua de primer impacte, amb parets i altres dianes. El casc protegeix els ocupants; l’autoapuntat ofereix vehicles buits com a objectiu secundari.
+- Granades i explosions de vehicles apliquen el falloff compartit i cobertura. Un vehicle destruït s’atura, allibera tots els seients i desapareix de les vistes 3D/Canvas; ja no es pot abordar ni bloqueja el tancament de portes. Les explosions poden encadenar vehicles una sola vegada. La bicicleta conserva la regla individual de destrucció sense explosió (regla comprovada, encara no s’afegeix una bicicleta al pilot).
+- En explotar, els ocupants reben el dany individual de 4–6 PV, sense rebre també l’explosió directa del propi vehicle. La tirada usa l’RNG autoritatiu ja persistit. La destrucció és ambiental i pot ferir els jugadors a peu; les granades personals conserven el dany propi sense foc amic directe. Les farmacioles/reanimació continuen resoltes pel sistema existent.
+- Estat de vida/destrucció/seients, posició, HP dels ocupants, RNG i efectes es restauren junts. Tests de fallada de persistència confirmen rollback íntegre, cap broadcast prematur, reintent idèntic, cold restore i absència d’explosions repetides. Es conserva el registre de vehicle destruït al checkpoint per no ressuscitar-lo.
+- Validació específica: matriu dels 16 tipus individuals, classes de dany, blindatge, bales en vol, casc/ocupants, destrucció única, cadena, cobertura, pausa i bicicleta; regressió dins el runtime individual real, cheats i vida per defecte; vistes Three i retirada del model destruït. El test de vol de dianes aïlla el jeep perquè ara és una cobertura real. Sense validació GPU/Android física.
+- `npm run test:play` complet superat amb dues sessions locals natives (D1, SQLite Durable Object i WebSocket), armes/jeep/portes, extracció, reconnexió i rescat amb farmaciola. Runtime individual font i bundle, construcció i proves específiques de destrucció superats.
+- Generador temporal `relay:14`: cal missió nova i clients actualitzats. Sense dependències ni recursos Cloudflare nous. No s’han inventat física d’ejecció, runover o destrucció d’edificis alternatives: s’integraran des del motor individual.
+
+### Què queda després d’aquesta fase
+
+1. Reutilitzar navegació/persecució i màquina d’estats/cadències de la IA individual.
+2. Integrar la resta d’armes i explosius, salut/destrucció d’edificis i filferrades, torres, civils i efectes originals.
+3. Compartir contactes avançats de vehicles (OBB, xocs/atropellaments, terrenys, ferri, aigua i aire), altres vehicles i armes muntades. Impulsos d’ejecció, ferralla/fum i àudio originals encara pendents; el casc i dany de vehicles ja són compartits.
+4. Equipament, animacions, àudio, món i campanya complets preservant RNG.
+5. Desaments cooperatius permanents, migracions, estadístiques/historial i resum de missió.
+6. Dos navegadors físics, GPU/Android, controls/rendiment/acabat; animació de portes i portes autònomes de la IA individual.

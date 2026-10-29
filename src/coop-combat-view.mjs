@@ -5,7 +5,7 @@ export function createCombatView(T,scene){
   const objects=new Map(),projectileGeometry=createProjectileGeometry(T);
   function remove(id){const o=objects.get(id);if(!o)return;scene.remove(o);o.traverse(n=>{n.geometry?.dispose();n.material?.dispose();});objects.delete(id);}
   function update(combat,tick){
-    const rows=[...(combat?.targets||[]).map(t=>({key:'target:'+t.id,kind:'target',...t})),...(combat?.projectiles||[]).map(p=>({key:p.id,kind:'bullet',...p})),...(combat?.grenades||[]).map(g=>({key:g.id,kind:'grenade',...g})),...(combat?.effects||[]).map(e=>({key:'effect:'+e.id,...e}))],live=new Set(rows.map(r=>r.key));
+    const rows=[...(combat?.targets||[]).map(t=>({key:'target:'+t.id,kind:'target',...t})),...(combat?.projectiles||[]).map(p=>({key:p.id,kind:'bullet',...p})),...(combat?.grenades||[]).map(g=>({key:g.id,kind:'grenade',...g})),...(combat?.effects||[]).filter(e=>e.kind!=='vehicle-destroyed').map(e=>({key:'effect:'+e.id,...e}))],live=new Set(rows.map(r=>r.key));
     for(const id of objects.keys())if(!live.has(id))remove(id);
     for(const r of rows){let o=objects.get(r.key);
       if(!o){

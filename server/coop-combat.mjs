@@ -3,7 +3,7 @@ import {createWorldRandom} from '../src/world-generation-core.mjs';
 import {launchProjectile,projectileStep,SMALL_ARMS_PROJECTILE_SPEED} from '../src/projectile-core.mjs';
 import {createAimSelector,weaponTargetPriority,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL,SMALL_ARMS_RANGE} from '../src/aiming-core.mjs';
 import {damageHealth} from '../src/player-simulation.mjs';
-import {beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,segmentAabbT,segmentSphereT,inView,ballisticStep} from '../src/combat-rules.mjs';
+import {VEHICLE_DESTRUCTION,beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,segmentAabbT,segmentSphereT,inView,ballisticStep} from '../src/combat-rules.mjs';
 // Authoritative combat for the reduced relay arena. No client positions or hits.
 const at=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
 export function segmentBox(from,to,box){return segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,box.x0,box.x1,box.y0,box.y1,box.z0,box.z1);}
@@ -26,16 +26,47 @@ export function guardInView(guard,player){
   return d<=2||inView(guard.heading||0,dx,0,dz,Infinity,{sightHalfAngle:Math.PI/3+1e-10,sightVerticalAngle:Math.PI/2});
 }
 const facePoint=(guard,p)=>Math.atan2(-(p.x-guard.x),-(p.z-guard.z));
-export function createRelayCombat({meta,record={},inventory,players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active}){
+export function createRelayCombat({meta,record={},inventory,players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null}}){
   const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);const bursts=structuredClone(record.bursts||[]),projectiles=structuredClone(record.projectiles||[]);let sequence=record.sequence||0;
   const random=createWorldRandom(record.randomState??(((meta.seed||0)^0x7269666c)>>>0)),roll=(a,b)=>a+random()*(b-a);
   const effect=(kind,tick,data)=>{effects.push({id:++sequence,kind,tick,...data});if(effects.length>64)effects.shift();};
   function alarm(position,actorId,tick){for(const t of targets)if(t.ai&&t.hp>0&&Math.hypot(t.x-position.x,t.z-position.z)<35){t.alarmedUntil=tick+180;t.focus=actorId;t.lastSeenTick=tick;t.lastKnown={x:position.x,y:position.y,z:position.z};t.heading=facePoint(t,position);t.state='search';}}
+  function damageVehicle(v,amount,shotClass,tick,queue){
+    const destroyed=vehicles.damage(v.id,amount,shotClass);
+    if(!destroyed)return false;
+    if(!destroyed.destroyed)return true;
+    effect('vehicle-destroyed',tick,{vehicleId:v.id,at:destroyed.at,explosive:destroyed.explosive});
+    if(destroyed.explosive){
+      for(const id of destroyed.occupants)damagePlayer(id,Math.ceil(roll(VEHICLE_DESTRUCTION.occupantMin,VEHICLE_DESTRUCTION.occupantMax)));
+      queue.push({skipPlayers:destroyed.occupants,at:destroyed.at,damage:VEHICLE_DESTRUCTION.damage,radius:VEHICLE_DESTRUCTION.radius,actorId:v.id});
+    }
+    return true;
+  }
+  function explode(first,tick){
+    const queue=[first];
+    while(queue.length){
+      const blast=queue.shift(),center=blast.at,hits=[],protectedPlayers=new Set(players().filter(p=>vehicles.mounted(p.id)).map(p=>p.id));
+      const visible=aim=>traceArena(center,aim,geometry(),world()).fraction>=1;
+      for(const t of targets)if(t.hp>0){const aim={x:t.x,y:t.y+1.5,z:t.z},d=Math.hypot(aim.x-center.x,aim.y-center.y,aim.z-center.z),damage=explosionDamage(blast.damage,d,blast.radius);if(damage&&visible(aim)){t.hp=damageHealth(t.hp,damage);hits.push(t.id);}}
+      // The hull protects occupants; personal grenades retain no team damage.
+      for(const p of players())if(p.hp>0&&!protectedPlayers.has(p.id)&&!blast.skipPlayers?.includes(p.id)&&(!blast.ownerOnly||p.id===blast.actorId)){
+        const aim={x:p.x,y:p.y+1,z:p.z},damage=explosionDamage(blast.damage,Math.hypot(aim.x-center.x,aim.y-center.y,aim.z-center.z),blast.radius);
+        if(damage&&visible(aim)&&damagePlayer(p.id,damage)!==false)hits.push(p.id);
+      }
+      // Snapshot candidates before destruction, so a chain cannot mutate iteration.
+      for(const v of [...vehicles.live()]){
+        const damage=explosionDamage(blast.damage,vehicles.blastDistance(v,center),blast.radius);
+        if(damage&&visible({x:v.x,y:v.y+1,z:v.z}))damageVehicle(v,damage,'heavy',tick,queue);
+      }
+      alarm(center,blast.actorId,tick);effect('explosion',tick,{actorId:blast.actorId,at:center,radius:blast.radius,hits});
+    }
+  }
   function fire(actorId,p,bag,tick){
     const from={x:p.x,y:p.y+1.5,z:p.z},dx=-Math.sin(p.hd),dz=-Math.cos(p.hd),weapon=bag.weapon||'pistol',range=SMALL_ARMS_RANGE[weapon]||75,focus={};
     const aim=createAimSelector({origin:from,direction:[dx,0,dz],range,cone:SMALL_ARMS_AIM_CONE,shotClass:weapon,focus,verticalCone:SMALL_ARMS_AIM_VERTICAL,
       isClear:(x,y,z,tx,ty,tz)=>traceArena({x,y,z},{x:tx,y:ty,z:tz},geometry(),world()).fraction>=1});
     for(const t of targets)if(t.hp>0)aim.consider(t,'enemy',weaponTargetPriority({...t,t:t.t||'soldat'},weapon),t.x,t.y+1.5,t.z);
+    for(const v of vehicles.live())if(!v.seats.some(Boolean))aim.consider(v,'vehicle',3,v.x,v.y+1,v.z);
     const direction=aim.direction(),id='bullet-'+(++sequence);
     projectiles.push(launchProjectile(from,direction,SMALL_ARMS_PROJECTILE_SPEED,{id,actorId,dmg:combatBalance.weapons.pistol,aimedAt:focus.target?.id||null}));
     bag.bullets--;effect('shot',tick,{actorId,from,to:{x:from.x+direction[0],y:from.y+direction[1],z:from.z+direction[2]},hit:null,aimedAt:focus.target?.id||null});return 'FIRED';
@@ -72,11 +103,12 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     for(let i=projectiles.length-1;i>=0;i--){
       const p=projectiles[i],flight=projectileStep(p,1/30),trace=traceArena(flight.from,flight.to,geometry(),world());
       if(trace.hit)flight.consider(trace.fraction,'world',null);
-      if(p.enemy){for(const actor of players())if(actor.hp>0)flight.consider(segmentSphereT(flight.from.x,flight.from.y,flight.from.z,flight.to.x,flight.to.y,flight.to.z,actor.x,actor.y+1.5,actor.z,1.2),'player',actor);}
+      for(const v of vehicles.live())flight.consider(vehicles.contact(flight.from,flight.to,v),'vehicle',v);
+      if(p.enemy){for(const actor of players())if(actor.hp>0&&!vehicles.mounted(actor.id))flight.consider(segmentSphereT(flight.from.x,flight.from.y,flight.from.z,flight.to.x,flight.to.y,flight.to.z,actor.x,actor.y+1.5,actor.z,1.2),'player',actor);}
       else for(const t of targets)if(t.hp>0)flight.consider(segmentBox(flight.from,flight.to,targetBox(t)),'enemy',t);
       const result=flight.finish();p.life=flight.life;Object.assign(p,result.point);
-      if(result.hit){let applied=true;if(result.kind==='enemy')result.target.hp=damageHealth(result.target.hp,p.dmg);else if(result.kind==='player')applied=damagePlayer(result.target.id,p.dmg)!==false;
-        if(result.kind!=='expire')effect('impact',tick,{actorId:p.actorId,at:{...result.point},hit:applied&&['enemy','player'].includes(result.kind)?result.target.id:null});projectiles.splice(i,1);
+      if(result.hit){let applied=true;if(result.kind==='vehicle'){const queue=[];applied=damageVehicle(result.target,p.dmg,'light',tick,queue);for(const blast of queue)explode(blast,tick);}else if(result.kind==='enemy')result.target.hp=damageHealth(result.target.hp,p.dmg);else if(result.kind==='player')applied=damagePlayer(result.target.id,p.dmg)!==false;
+        if(result.kind!=='expire')effect('impact',tick,{actorId:p.actorId,at:{...result.point},hit:applied&&['enemy','player','vehicle'].includes(result.kind)?result.target.id:null});projectiles.splice(i,1);
       }
     }
     for(let i=grenades.length-1;i>=0;i--){
@@ -85,9 +117,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
       if(trace.fraction<1){g.vx=0;g.vz=0;g.vy=0;Object.assign(g,at(from,candidate,Math.max(0,trace.fraction-.01)));}else Object.assign(g,candidate);
       // Impact stops the throw; its fuse keeps counting in simulation time.
       if(tick>=g.explodeAt){
-        const center={x:g.x,y:g.y+.08,z:g.z},hits=[];
-        for(const t of targets)if(t.hp>0){const aim={x:t.x,y:t.y+1.5,z:t.z},d=Math.hypot(aim.x-center.x,aim.y-center.y,aim.z-center.z);if(d<8&&traceArena(center,aim,geometry(),world()).fraction>=1){const damage=explosionDamage(combatBalance.weapons.grenade,d,8);t.hp=damageHealth(t.hp,damage);hits.push(t.id);}}
-        alarm(center,g.actorId,tick);effect('explosion',tick,{actorId:g.actorId,at:center,radius:8,hits});grenades.splice(i,1);
+        explode({at:{x:g.x,y:g.y+.08,z:g.z},damage:combatBalance.weapons.grenade,radius:8,actorId:g.actorId,ownerOnly:true},tick);grenades.splice(i,1);
       }
     }
     for(const t of targets)if(t.ai){

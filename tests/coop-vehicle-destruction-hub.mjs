@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {CoopRoomHub} from '../server/coop-hub.mjs';
+import {generateRelayMission,restoreRelayMission} from '../server/coop-mission.mjs';
+import {launchProjectile} from '../src/projectile-core.mjs';
+import {GAME_VERSION} from '../src/version.mjs';
+const g=generateRelayMission({id:'vehicle-destruction',revision:1,seed:67,mapScale:1,allReady:true,expiresAt:Date.now()+86400000,members:[{id:'a',name:'A'},{id:'b',name:'B'}]});
+g.record.status='running';g.record.meta.targets=[];g.record.meta.supplies=[];
+const v=g.record.meta.vehicles[0];v.seats=['a','b'];v.life=1;g.record.checkpoint.players.forEach(p=>Object.assign(p,{x:v.x,y:v.y,z:v.z}));
+g.record.combat={projectiles:[launchProjectile({x:v.x,y:v.y+1,z:v.z-2},[0,0,1],70,{id:'fatal',actorId:'guard',enemy:true,dmg:2})]};
+let fail=false;const values=new Map([['world',g.geometry],['mission',g.record]]),messages=[],sockets=['a','b'].map(actorId=>({readyState:1,deserializeAttachment:()=>({actorId,gameClient:true,gameVersion:GAME_VERSION}),send:s=>messages.push(JSON.parse(s))})),ctx={blockConcurrencyWhile:fn=>fn(),getWebSockets:()=>sockets,storage:{async get(k){return structuredClone(values.get(k));},async put(k,value){if(fail)throw Error('Failed destruction save');values.set(k,structuredClone(value));},async setAlarm(){},async deleteAlarm(){}}};
+let hub=new CoopRoomHub(ctx,{});await hub.loading;const before=hub.mission.snapshot(),expected=restoreRelayMission(g.record,g.geometry);for(let i=0;i<3;i++)expected.step();const predicted=expected.snapshot();
+assert.equal(predicted.vehicles[0].destroyed,true);assert.deepEqual(predicted.vehicles[0].seats,[null,null]);assert.ok(predicted.players.every(p=>p.hp>=14&&p.hp<=16));
+hub.record.nextAlarm=Date.now()-1;hub.checkedAt=Date.now();fail=true;await assert.rejects(()=>hub.alarm(),/destruction save/);assert.deepEqual(hub.mission.snapshot(),before,'failed persistence refunds vehicle, seats, occupants, projectile and RNG');assert.equal(messages.length,0);
+fail=false;hub.record.nextAlarm=Date.now()-1;hub.checkedAt=Date.now();await hub.alarm();assert.deepEqual(hub.mission.snapshot(),predicted,'retry reproduces destruction and occupant rolls');
+hub=new CoopRoomHub(ctx,{});await hub.loading;assert.deepEqual(hub.mission.snapshot(),predicted,'cold restore keeps destroyed hull and empty seats');for(let i=0;i<3;i++)hub.mission.step();assert.deepEqual(hub.mission.snapshot().players.map(p=>p.hp),predicted.players.map(p=>p.hp),'restored wreck cannot explode twice');
+console.log('vehicle destruction hub: atomic life/seats/HP/RNG rollback, no premature broadcast, identical retry, cold restore and no repeat blast passed');

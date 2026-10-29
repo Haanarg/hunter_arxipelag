@@ -7,7 +7,7 @@ import {createRelayVehicles,vehicleClear} from './coop-vehicles.mjs';
 import {createRelayRescue,reviveReachable} from './coop-rescue.mjs';
 import {createRelayCombat,traceArena} from './coop-combat.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
-export const MISSION_VERSION='relay:13';
+export const MISSION_VERSION='relay:14';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 export function generateRelayMission(room){
   if(room.members.length!==2||!room.allReady)throw new Error('Calen dos jugadors preparats.');
@@ -78,7 +78,7 @@ export function restoreRelayMission(record,geometry){
   }
   const vehicles=createRelayVehicles({meta,record:record.vehicles,world:()=>world,players:()=>sim.snapshot().players,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt,onBoard:id=>{inventory.get(id).disguised=false;combat.cancel(id);actions.delete(id);}});
   const rescue=createRelayRescue(record.rescue);
-  const combat=createRelayCombat({meta,record:record.combat,canAttack:id=>!vehicles.mounted(id),inventory,players:()=>sim.snapshot().players,damagePlayer:(id,amount)=>rescue.canDamage(id,sim.snapshot().tick)?sim.damage(id,amount):false,geometry:()=>physical,world:()=>world,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt});
+  const combat=createRelayCombat({meta,record:record.combat,vehicles,canAttack:id=>!vehicles.mounted(id),inventory,players:()=>sim.snapshot().players,damagePlayer:(id,amount)=>rescue.canDamage(id,sim.snapshot().tick)?sim.damage(id,amount):false,geometry:()=>physical,world:()=>world,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt});
   const doors=()=>meta.doors.map(d=>({id:d.id,open:doorStates.get(d.id)??false}));
   const reviveLine=(a,b)=>!vehicles.mounted(a.id)&&!vehicles.mounted(b.id)&&traceArena({x:a.x,y:a.y+1.5,z:a.z},{x:b.x,y:b.y+.75,z:b.z},physical,world).fraction>=1;
   function snapshot(){const state=sim.snapshot(),help=rescue.snapshot(state.tick);help.down=help.down.map(d=>({...d,helpers:state.players.filter(p=>reviveReachable(p,state.players.find(p=>p.id===d.actorId),reviveLine)).map(p=>p.id)}));return {...state,vehicles:vehicles.snapshot(),rescue:help,combat:combat.snapshot(),missionId:meta.id,phase,hold,status,doorRevision,doors:doors(),inventories:inventories(),supplies:supplies(),claimedSupplies:[...claimed],remaining:Math.max(0,(meta.timeLimitTicks-state.tick)/30)};}
@@ -94,7 +94,7 @@ export function restoreRelayMission(record,geometry){
       else if(doorStates.get(door.id)===message.open){ok=true;code='UNCHANGED';}
       else if(state.tick-(cooldowns.get(actorId)??-Infinity)<18)code='COOLDOWN';
       else{
-        const wall=physical.walls[door.wallIndex],occupied=!message.open&&(vehicles.snapshot().some(v=>v.x>wall.x0-1.8&&v.x<wall.x1+1.8&&v.z>wall.z0-1.8&&v.z<wall.z1+1.8&&v.y+2>wall.y0&&v.y<wall.y1)||state.players.some(p=>p.x>wall.x0-.8&&p.x<wall.x1+.8&&p.z>wall.z0-.8&&p.z<wall.z1+.8&&p.y+3.1>wall.y0&&p.y+.15<wall.y1));
+        const wall=physical.walls[door.wallIndex],occupied=!message.open&&(vehicles.live().some(v=>v.x>wall.x0-1.8&&v.x<wall.x1+1.8&&v.z>wall.z0-1.8&&v.z<wall.z1+1.8&&v.y+2>wall.y0&&v.y<wall.y1)||state.players.some(p=>p.x>wall.x0-.8&&p.x<wall.x1+.8&&p.z>wall.z0-.8&&p.z<wall.z1+.8&&p.y+3.1>wall.y0&&p.y+.15<wall.y1));
         if(occupied)code='OCCUPIED';
         else{
           const updated={...physical,walls:physical.walls.map((w,i)=>i===door.wallIndex?{...w,open:message.open}:w)},next=createStaticWorldAdapter(updated);

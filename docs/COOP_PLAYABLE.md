@@ -1,4 +1,4 @@
-# Missió cooperativa jugable · v0.6.37
+# Missió cooperativa jugable · v0.6.38
 
 ## Què es pot jugar
 
@@ -6,7 +6,7 @@
 
 L’usuari ha prioritzat que sigui jugable encara que l’estètica quedi provisional. Aquesta versió utilitza una vista 3D senzilla, dos personatges de colors, murs, terminals i recorreguts orientatius. Si WebGL no es pot crear, s’ofereix un mapa Canvas 2D amb els mateixos controls i la mateixa sessió. El joc individual conserva el seu món i la seva interfície.
 
-No és encara la campanya Hunter completa en cooperatiu. Hi ha armes, inventaris personals, reanimació, guàrdies i un jeep compartit dins del recinte. La campanya completa continua pendent. Generador temporal actual: `relay:13`; cal iniciar una missió nova després d’actualitzar els dos clients. Les seccions amb versions anteriors conserven l’històric.
+No és encara la campanya Hunter completa en cooperatiu. Hi ha armes, inventaris personals, reanimació, guàrdies i un jeep compartit dins del recinte. La campanya completa continua pendent. Generador temporal actual: `relay:14`; cal iniciar una missió nova després d’actualitzar els dos clients. Les seccions amb versions anteriors conserven l’històric.
 
 ## Com jugar
 
@@ -137,10 +137,17 @@ Es mostren les bales blanques originals i l’impacte separat. La pausa congela 
 
 Generador temporal `relay:12`: cal recarregar els dos clients i iniciar una missió nova. Es conserven les portes de v0.6.32 i el búnquer.
 
-## Bales dels guàrdies i punteria compartida · v0.6.37
+## Bales dels guàrdies i punteria compartida · v0.6.38
 
 Els trets dels guàrdies també viatgen: fusell a **70 m/s**, amb l’error per dificultat/distància del mode individual. Després de l’avís d’un segon surt la bala, però el dany només arriba si el trajecte toca un jugador. Podeu esquivar-la o posar una cobertura pel mig; no és guiada. Es conserva el mínim de 3 s entre trets del pilot.
 
 El servidor guarda la tirada de punteria i la trajectòria: reconnectar o reintentar un desament no canvia la bala. Un company que entri al seu trajecte pot rebre el tret. Les bales pròpies continuen sense fer foc amic. Les regles de farmacioles, ferits i protecció després de reanimar es conserven, i es comproven en el moment de l’impacte.
 
-Generador temporal `relay:13`: recarregueu tots dos clients i inicieu una missió nova. La IA completa, navegació/persecució, altres armes i la campanya encara són pendents.
+Generador temporal `relay:14`: recarregueu tots dos clients i inicieu una missió nova. La IA completa, navegació/persecució, altres armes i la campanya encara són pendents.
+
+
+## Vida del jeep i destrucció · v0.6.38
+
+El jeep té **5 PV**, com el cotxe militar individual. El panell mostra la vida mentre s’hi viatja. Bales i granades poden destruir-lo; el casc protegeix els ocupants dels impactes directes fins que explota. La destrucció atura el vehicle, allibera els dos seients, retira el model i fa 4–6 PV de dany a cadascun dels ocupants. No es pot tornar a pujar a un vehicle destruït. Les explosions d’un vehicle també poden fer mal als jugadors a peu i a altres vehicles propers, respectant la cobertura. Les granades pròpies poden ferir qui les llança; conserven la protecció directa del company.
+
+Els trets a vehicles buits poden fer-los esclatar. Les bales no travessen el jeep per tocar un soldat que hi hagi darrere. Vida/destrucció es conserven en reconnexions i reinicis; una explosió no es repeteix en restaurar. Inicieu una missió nova (`relay:14`). Encara no hi ha armes muntades, atropellaments ni xocs destructius, ni impuls físic d’ejecció/ferralla original.

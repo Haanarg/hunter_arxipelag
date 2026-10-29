@@ -1,12 +1,12 @@
 import {configuredAccounts} from './account-client.mjs';
-import {GAME_VERSION} from './version.mjs?v=0.6.37';
-import {createPlayConnection,playInput} from './coop-play-connection.mjs?v=0.6.37';
-import {createMissionView} from './coop-play-view.mjs?v=0.6.37';
+import {GAME_VERSION} from './version.mjs?v=0.6.38';
+import {createPlayConnection,playInput} from './coop-play-connection.mjs?v=0.6.38';
+import {createMissionView} from './coop-play-view.mjs?v=0.6.38';
 const $=id=>document.getElementById(id),message=$('message'),launch=$('launch'),connection=$('connection'),keys=new Set(),touch=new Map();
 let channel=null,room=null,view=null,meta=null,self=null,state=null,viewGeneration=0,pendingDoor=null,doorTimer=null;
 function clearDoor(){if(doorTimer!==null)clearTimeout(doorTimer);doorTimer=null;pendingDoor=null;}
 function mounted(){return state?.vehicles?.find(v=>v.seats.includes(self));}
-function nearbyVehicle(){const p=state?.players.find(p=>p.id===self);if(!p||p.hp<=0||p.fall||p.swimming||state.status!=='running'||!['relay','extract'].includes(state.phase))return null;return mounted()||(state.vehicles||[]).filter(v=>Math.hypot(p.x-v.x,p.z-v.z)<=3.5&&Math.abs(p.y-v.y)<=1.2&&v.seats.some(s=>!s)).sort((a,b)=>Math.hypot(p.x-a.x,p.z-a.z)-Math.hypot(p.x-b.x,p.z-b.z))[0]||null;}
+function nearbyVehicle(){const p=state?.players.find(p=>p.id===self);if(!p||p.hp<=0||p.fall||p.swimming||state.status!=='running'||!['relay','extract'].includes(state.phase))return null;return mounted()||(state.vehicles||[]).filter(v=>!v.destroyed&&Math.hypot(p.x-v.x,p.z-v.z)<=3.5&&Math.abs(p.y-v.y)<=1.2&&v.seats.some(s=>!s)).sort((a,b)=>Math.hypot(p.x-a.x,p.z-a.z)-Math.hypot(p.x-b.x,p.z-b.z))[0]||null;}
 let pendingVehicle=null,vehicleTimer=null;
 function clearVehicle(){clearTimeout(vehicleTimer);pendingVehicle=null;}
 function contextVehicle(){const p=state?.players.find(p=>p.id===self);if(!p||p.hp<=0||p.fall||state.status!=='running'||!['relay','extract'].includes(state.phase))return null;return mounted()||(!reviveTarget()&&!atTerminal()&&!nearestDoor()?nearbyVehicle():null);}
@@ -52,6 +52,7 @@ function drawHUD(){
     distance=mine?Math.round(Math.hypot(mine.x-target.x,mine.z-target.z)):0;
   $('objective').textContent=state.phase==='won'?'MISSIÓ COMPLETADA · Relleu activat i equip extret!':state.phase==='failed'?'Missió finalitzada sense èxit. Podeu tornar-ho a provar.':state.status==='paused'?'Missió pausada · Esperant la connexió del company.':state.phase==='relay'?`Terminal ${slot+1} · ${distance} m · Activació simultània: ${Math.floor(state.hold/90*100)}%`:`Reuniu-vos al cercle verd · ${distance} m · Extracció: ${Math.floor(state.hold/60*100)}%`;
   $('players').textContent=meta.members.map((m,i)=>`${i===0?'🔵':'🟡'} ${m.name}${m.id===self?' (tu)':''} · ${state.players.find(p=>p.id===m.id)?.hp??0}/20 PV${state.rescue?.down.find(d=>d.actorId===m.id)?' · FERIT':''}${state.rescue?.immune.some(d=>d.actorId===m.id&&state.tick<d.untilTick)?' · PROTEGIT':''}`).join('   ·   ')+` · ${Math.ceil(state.remaining)} s`;
+  const riding=mounted();if(riding)$('players').textContent+=` · Jeep ${riding.life}/5 PV`;
   const down=state.rescue?.down||[],mineDown=down.find(d=>d.actorId===self);
   if(['relay','extract'].includes(state.phase)&&down.length&&state.status==='running')$('objective').textContent=mineDown?`Estàs ferit · El company té ${Math.ceil(mineDown.remaining)} s per reanimar-te.`:`Company ferit · ${Math.ceil(down[0].remaining)} s · ${state.inventories?.find(b=>b.actorId===self)?.medkits>0?'Acosta’t, queda’t quiet i mantén E':'Et cal una farmaciola'}: ${Math.floor(down[0].progress/90*100)}%`;
   launch.hidden=['relay','extract'].includes(state.phase);launch.textContent='Tornar a jugar (tots dos)';

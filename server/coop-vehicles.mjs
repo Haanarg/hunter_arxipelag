@@ -1,3 +1,4 @@
+import {vehicleDamage,combatBalance,vehicleHullDistance,vehicleHullSegmentT} from '../src/combat-rules.mjs';
 import {vehicleDynamics,advanceVehicle} from '../src/vehicle-dynamics-core.mjs';
 // Trusted two-seat transport on the relay pad. No client coordinates or seat claims.
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),validId=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(id);
@@ -10,7 +11,8 @@ export function vehicleClear(position,world,bounds,previous=position){
 }
 export function createRelayVehicles({meta,record={},world,players,active,onBoard=()=>{}}){
  const vehicles=structuredClone(record.vehicles||meta.vehicles||[]),results=structuredClone(record.results||[]),inputs=new Map();
- const mounted=id=>vehicles.find(v=>v.seats.includes(id));
+ for(const v of vehicles)v.life??=combatBalance.vehicles[v.t]??1;
+ const mounted=id=>vehicles.find(v=>!v.destroyed&&v.seats.includes(id));
  function position(actor){const v=mounted(actor.id);return v?{x:v.x,y:v.y,z:v.z,hd:v.hd,hp:actor.hp,fall:null,swimming:false}:null;}
  function walkClear(from,to){let previous=from;const steps=Math.max(1,Math.ceil(distance(from,to)/.2));for(let i=1;i<=steps;i++){const q={...to,x:from.x+(to.x-from.x)*i/steps,z:from.z+(to.z-from.z)*i/steps},resolved=world().resolveBody(previous,q);if(distance(q,resolved)>1e-5)return false;previous=q;}return true;}
  function exitPoint(v,actor){for(const side of [1,-1])for(const back of [0,2.8,-2.8]){
@@ -24,6 +26,7 @@ export function createRelayVehicles({meta,record={},world,players,active,onBoard
   if(p&&msg.epoch===meta.id&&validId(msg.commandId)&&['enter','exit'].includes(msg.operation)){
    if(!active()||p.hp<=0||p.fall||p.swimming)code='NOT_ACTIVE';
    else if(!v)code='UNKNOWN_VEHICLE';
+   else if(v.destroyed)code='DESTROYED';
    else if(msg.operation==='exit'){
     if(!v.seats.includes(actorId))code='NOT_SEATED';else if(Math.abs(v.v)>.2)code='MOVING';else if(!(exit=exitPoint(v,p)))code='EXIT_BLOCKED';
     else{v.seats[v.seats.indexOf(actorId)]=null;v.v=0;inputs.delete(actorId);ok=true;code='EXITED';}
@@ -37,6 +40,7 @@ export function createRelayVehicles({meta,record={},world,players,active,onBoard
  }
  function step(tick){if(!active())return;
   for(const v of vehicles){
+   if(v.destroyed)continue;
    // A downed occupant is released at the already validated vehicle centre.
    for(let seat=0;seat<2;seat++)if(v.seats[seat]&&players().find(p=>p.id===v.seats[seat])?.hp<=0){inputs.delete(v.seats[seat]);v.seats[seat]=null;v.v=0;}
    const driver=v.seats[0],entry=inputs.get(driver),input=driver&&entry&&tick-entry.tick<=8?entry.input:{forward:0,turn:0};
@@ -46,5 +50,17 @@ export function createRelayVehicles({meta,record={},world,players,active,onBoard
    if(vehicleClear(next,world(),meta.bounds,v)){v.x=next.x;v.z=next.z;v.hd=hd;}else{v.v=0;}
   }
  }
- return {mounted,position,command,step,accept(id,input,tick){if(mounted(id))inputs.set(id,{input:{...input},tick});},pause(){inputs.clear();for(const v of vehicles){v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;}},snapshot(){return structuredClone(vehicles);},checkpoint(){return structuredClone({vehicles,results});}};
+ function damage(id,amount,shotClass='light'){
+  const v=vehicles.find(v=>v.id===id);if(!v)return null;
+  const result=vehicleDamage(v,amount,1,shotClass,combatBalance.vehicles[v.t]??1);
+  if(!result.damaged)return null;v.life=result.life;
+  if(!result.destroyed)return {id:v.id,destroyed:false};
+  const occupants=v.seats.filter(Boolean);v.destroyed=true;v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;
+  for(const id of occupants)inputs.delete(id);v.seats.fill(null);
+  return {id:v.id,destroyed:true,explosive:v.t!=='bici',occupants,at:{x:v.x,y:v.y+1,z:v.z}};
+ }
+ const live=()=>vehicles.filter(v=>!v.destroyed);
+ // Existing individual sphere contact/hull falloff, adapted to the 3.2 m relay model.
+ const hullRadius=v=>v.hullRadius??1.6;
+ return {mounted,position,command,step,damage,live,contact:(from,to,v)=>vehicleHullSegmentT(from,to,v,v.y,hullRadius(v)),blastDistance:(v,at)=>vehicleHullDistance(v,v.y,hullRadius(v),at.x,at.y,at.z),accept(id,input,tick){if(mounted(id))inputs.set(id,{input:{...input},tick});},pause(){inputs.clear();for(const v of vehicles){v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;}},snapshot(){return structuredClone(vehicles);},checkpoint(){return structuredClone({vehicles,results});}};
 }

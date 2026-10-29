@@ -1,3 +1,4 @@
+import {wholeDamage} from './player-simulation.mjs';
 // Escala única de resistència i armes per a tots els bàndols.
 export const combatBalance=Object.freeze({
  player:20,medkit:8,
@@ -70,4 +71,23 @@ export function inView(heading,dx,dy,dz,range,CONFIG){
 export function ballisticStep(body,dt,gravity=24){
  const vy=body.vy-gravity*dt;
  return {x:body.x+body.vx*dt,y:body.y+vy*dt,z:body.z+body.vz*dt,vy};
+}
+
+// Vehicle health and hull rules extracted from individual combat. Geometry adapters
+// supply the existing collision radius (the relay's Humvee uses its reduced scale).
+export const VEHICLE_DESTRUCTION=Object.freeze({damage:10,radius:8,occupantMin:4,occupantMax:6});
+export const isArmoredVehicleType=t=>t==='tanqueta'||t==='tanc';
+export function vehicleDamage(vehicle,damage,impacts=1,shotClass='collision',fallbackLife=1){
+ const before=vehicle.life??fallbackLife;
+ if(vehicle.destroyed||shotClass==='light'&&isArmoredVehicleType(vehicle.t))return {life:before,damaged:false,destroyed:false};
+ const amount=shotClass==='collision'?Math.max(1,wholeDamage(impacts)):wholeDamage(damage);
+ if(!amount)return {life:before,damaged:false,destroyed:false};
+ const life=Math.max(0,Math.ceil(before)-amount);
+ return {life,damaged:life<before,destroyed:life<=0};
+}
+export function vehicleHullDistance(vehicle,baseY,radius,x,y,z){
+ return Math.max(0,Math.hypot(vehicle.x-x,baseY+1-y,vehicle.z-z)-radius);
+}
+export function vehicleHullSegmentT(from,to,vehicle,baseY,radius){
+ return segmentSphereT(from.x,from.y,from.z,to.x,to.y,to.z,vehicle.x,baseY+1,vehicle.z,radius);
 }
