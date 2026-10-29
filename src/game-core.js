@@ -3186,6 +3186,35 @@ if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.
 // Direcció visual a l'eix davant (-Z): independent del rodament en X.
 window.HUNTER_VEHICLES.animateSteering(o,v.t,tr,dt);
 v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0):(v.pedalPhase||0),sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*sweep;r.rotation.z=-side*(.12+dip);r.rotation.x=.06*Math.sin(rowPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})}
+// Única cadència de presentació dels vehicles: usada tant per la
+// simulació individual com pels snapshots del cooperatiu natiu. La
+// simulació/autoritat del vehicle NO es retarda amb aquest LOD visual.
+function updateVehicleVisualLod(t,dt){
+  const scopeVisual=scopeActive?currentSniperFocus():null;
+  for(const v of V){
+    // Ni el LOD ni les animacions poden ressuscitar una carcassa.
+    if(v.destroyed)continue;
+    if(v===cv){
+      place(v,t,dt,v.steerInput||0);
+      v.visualLodAcc=0;
+      continue;
+    }
+    const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,
+      focus=!!scopeVisual?.contains(v.x,v.o.position.y+1.5,v.z,5),
+      interval=focus||d2<LOD_NEAR2?0:(d2<LOD_MID2?.1:.45);
+    if(interval===0){
+      place(v,t,dt,0);
+      v.visualLodAcc=0;
+    }else{
+      v.visualLodAcc=(v.visualLodAcc||0)+dt;
+      if(v.visualLodAcc>=interval){
+        const step=v.visualLodAcc;
+        v.visualLodAcc=0;
+        place(v,t,step,0);
+      }
+    }
+  }
+}
 let runStepTimer=0,stealthStepTimer=0;
 const cameraOffset=new THREE.Vector3(),bunkerEye=new THREE.Vector3();
 function hideCameraObstructions(owner,eye,basement){
@@ -3618,14 +3647,7 @@ else if(!cv&&playerEject&&playerEject.t>=0){
     });
   }
 }
-V.forEach(v=>{
-  if(v===cv){place(v,t,dt,v.steerInput||0);return}
-  const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,
-    scopeVisual=scopeActive&&currentSniperFocus().contains(v.x,v.o.position.y+1.5,v.z,5),
-    interval=scopeVisual||d2<LOD_NEAR2?0:(d2<LOD_MID2 ? .1 : .45);
-  if(interval===0){place(v,t,dt,0);v.visualLodAcc=0}
-  else{v.visualLodAcc=(v.visualLodAcc||0)+dt;if(v.visualLodAcc>=interval){const step=v.visualLodAcc;v.visualLodAcc=0;place(v,t,step,0)}}
-});poseRider(cv,dt);
+updateVehicleVisualLod(t,dt);poseRider(cv,dt);
 // Les torretes dels blindats del jugador segueixen gradualment el vector
 // que triaria l'autoapuntat actual. El vehicle pot avançar/girar mentre
 // la torre conserva el seu propi rumb i l'elevació del canó.
