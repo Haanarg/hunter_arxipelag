@@ -26,6 +26,22 @@ export function grenadeLaunch(power=0,origin,heading){
  const ratio=Math.max(0,Math.min(1,power)),speed=3.5+(33-3.5)*ratio,fx=-Math.sin(heading),fz=-Math.cos(heading);
  return {x:origin.x+fx*.85,y:origin.y+2.05,z:origin.z+fz*.85,vx:fx*speed,vy:12,vz:fz*speed,t:2.4};
 }
+// Shared vehicle grenade muzzle: outside the hull, above the roof/deck,
+// with the vehicle's current forward and lateral velocity carried into flight.
+// The attack helicopter never carries throwable grenades.
+export function vehicleGrenadeLaunch(vehicle,baseY=vehicle?.y){
+ if(!vehicle||vehicle.t==='heli_combat')return null;
+ const heading=vehicle.hd,forwardX=-Math.sin(heading),forwardZ=-Math.cos(heading),
+  rightX=Math.cos(heading),rightZ=-Math.sin(heading),utility=vehicle.t==='heli';
+ const radius=vehicle.hullRadius??({ferry:15.5,tanc:5.6,tanqueta:4.5,camio:4.8,heli:2.5}[vehicle.t]??({llanxa:8.25,llanxa_coets:8.6,barca_rems:3.25,hover:4.8,cotxe:3.8,cotxe_civil:3.35}[vehicle.t]??1.6));
+ const side=utility?2.5:vehicle.t==='ferry'?16:Math.min(9.5,Math.max(1.35,radius+.7)),
+  front=utility?1.5:1.1,lift=utility?2.4:vehicle.t==='ferry'?3.6:['tanc','tanqueta','camio'].includes(vehicle.t)?3.6:2.55,
+  forward=(vehicle.v||0)*.9+(utility?7:9),lateral=(vehicle.strafeV||0)+(utility?4.5:6);
+ return {x:vehicle.x+forwardX*front+rightX*side,y:baseY+lift,
+  z:vehicle.z+forwardZ*front+rightZ*side,
+  vx:forwardX*forward+rightX*lateral,vy:utility?5:10,
+  vz:forwardZ*forward+rightZ*lateral,t:2.4};
+}
 export function meleeTarget(origin,targets,clear){
  const fx=-Math.sin(origin.hd),fz=-Math.cos(origin.hd);let hit=null,best=2.6;
  for(const u of targets){if(u.t!=='soldat'&&u.t!=='general')continue;const dx=u.x-origin.x,dz=u.z-origin.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx+dz*fz)/d>.35&&clear(u)){best=d;hit=u;}}
