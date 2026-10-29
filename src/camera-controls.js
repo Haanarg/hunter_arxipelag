@@ -23,6 +23,32 @@ window.HUNTER_CAMERA_CONTROLS=Object.freeze({
       }
     };
   },
+  // Manté visible el vehicle mentre travessa la boca d'un hangar.
+  // Comprova tota la línia de visió, no només si el centre és a dins:
+  // la càmera pot romandre sota la volta quan el vehicle ja n'ha sortit.
+  hangarBlocksSight(building,camera,target,vehicle){
+    if(!building?.hangar||!camera||!target||!vehicle)return false;
+    const halfX=building.w/2+.2,halfZ=building.d/2+.2,
+          bottom=building.fy-2,top=building.fy+building.h+2;
+    if(vehicle.y<bottom||vehicle.y>=top)return false;
+    if(Math.abs(vehicle.x-building.x)<halfX&&Math.abs(vehicle.z-building.z)<halfZ)return true;
+    // Segment 3D amb el volum de la coberta. Ni sobrevols ni façanes
+    // llunyanes han de fer desaparèixer un hangar sense oclusió.
+    let near=0,far=1;
+    for(const [a,min,max] of [
+      ['x',building.x-halfX,building.x+halfX],
+      ['z',building.z-halfZ,building.z+halfZ],
+      ['y',bottom,top]
+    ]){
+      const delta=target[a]-camera[a];
+      if(Math.abs(delta)<1e-8){if(camera[a]<min||camera[a]>max)return false;continue}
+      const t0=(min-camera[a])/delta,t1=(max-camera[a])/delta;
+      near=Math.max(near,Math.min(t0,t1));
+      far=Math.min(far,Math.max(t0,t1));
+      if(far<near)return false;
+    }
+    return far>=near&&far>0&&near<1;
+  },
   createOcclusion(){
     const hidden=[];
     return {
