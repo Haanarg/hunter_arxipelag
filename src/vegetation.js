@@ -368,7 +368,7 @@ window.HUNTER_VEGETATION??=Object.freeze({
       }[profile]||{bush:1010,rock:1600};
       stats.bushSectors=bushGroup.sectors.length;
       stats.rockSectors=rockGroup.sectors.length;
-      let lastX=Infinity,lastZ=Infinity;
+      let lastX=Infinity,lastZ=Infinity,lastFocus=false,lastSkipPalms=false;
       const tierFor=(d,previous)=>{
         if(previous==null)return d<distances[0]?0:d<distances[1]?1:d<distances[2]?2:3;
         let tier=previous;
@@ -378,8 +378,13 @@ window.HUNTER_VEGETATION??=Object.freeze({
         return tier;
       };
       function update(x,z,force=false,skipPalms=false,focus=null){
-        if(!force&&Math.abs(x-lastX)<45&&Math.abs(z-lastZ)<45)return;
-        lastX=x;lastZ=z;
+        // La mira modifica el LOD sense desplaçar el jugador. En sortir-ne
+        // cal recuperar les malles normals encara que continuem quiets.
+        // Igualment, l'activació/desactivació de palmeres invalida la vista.
+        const focused=!!focus;
+        if(!force&&focused===lastFocus&&skipPalms===lastSkipPalms&&
+           Math.abs(x-lastX)<45&&Math.abs(z-lastZ)<45)return;
+        lastX=x;lastZ=z;lastFocus=focused;lastSkipPalms=skipPalms;
         // Frustum culling sobre cada InstancedMesh i clip per distància.
         const distToSector=c=>Math.hypot(
           Math.max(0,Math.abs(c.x-x)-CHUNK/2),
