@@ -55,7 +55,7 @@ try{
     setInputTimer:fn=>(inputTick=fn,1),clearInputTimer(){},
     setTimer:()=>1,clearTimer(){}});
   channel.start();const client=sockets[0];client.open();
-  client.data({type:'native-mission',self:'a',meta:{id:'mission'},
+  client.data({type:'native-mission',self:'a',meta:{id:'mission'},telemetry:1,
     state:{missionId:'mission',tick:600,status:'running',players:[{id:'a',acknowledged:0}]}});
   now+=2100;inputTick();
   const outbound=client.sent.find(msg=>msg.type==='latency-ping');
