@@ -13,7 +13,8 @@ export class CoopRoomHub {
     this.ctx=ctx;this.env=env;this.stateBaselines=new WeakMap();this.queue=Promise.resolve();this.votes=new Map();this.mission=null;this.record=null;this.geometry=null;this.checkedAt=0;this.nativeVotes=new Map();this.nativeUpload=null;
     // Rate limits per connexió en memòria efímera (també si el DO hiberna).
     // L'attachment continua reservat a la identitat i a la verificació.
-    this.inputRates=new WeakMap();this.combatRates=new WeakMap();
+    this.inputRates=new WeakMap();this.combatRates=new WeakMap();this.pingRates=new WeakMap();
+    this.frameMetrics={tickMs:0,saveMs:0,broadcastMs:0,tick:0};
     this.loading=ctx.blockConcurrencyWhile(async()=>{
       const record=await readCoopCheckpoint(ctx.storage);
       if(record){
@@ -94,6 +95,17 @@ export class CoopRoomHub {
       if(!this.mission||body.epoch!==this.mission.meta.id){this.send(ws,{type:'action',kind:'combat',commandId:body.commandId,ok:false,code:'NOT_ACTIVE'});return;}
       try{const result=this.mission.combatCommand(a.actorId,body);await this.save(this.record.nextAlarm);this.broadcastState();this.send(ws,{type:'action',...result});}
       catch(_){if(this.record)this.mission=restoreRelayMission(this.record,this.geometry);this.send(ws,{type:'action',kind:'combat',commandId:body.commandId,ok:false,code:'SAVE_FAILED'});}return;
+    }
+    if(body.type==='latency-ping'){
+      const valid=Object.keys(body).length===5&&a.gameClient&&a.gameVersion===GAME_VERSION&&
+        body.epoch===this.mission?.meta.id&&Number.isSafeInteger(body.nonce)&&body.nonce>=1&&
+        Number.isSafeInteger(body.clientTime)&&body.clientTime>=0;
+      if(!valid){ws.close(1008,'Sonda invàlida');return;}
+      if(!this.rateAllowed(this.pingRates,ws,now,2)){ws.close(1008,'Massa sondes');return;}
+      if(!await this.verify(ws)){ws.close(4003,'Accés finalitzat');return;}
+      this.send(ws,{type:'latency-pong',nonce:body.nonce,clientTime:body.clientTime,
+        server:{...this.frameMetrics}});
+      return;
     }
     if(now-a.window>=60000){a.window=now;a.count=0;}a.count++;ws.serializeAttachment(a);
     if(a.count>120){ws.close(1008,'Massa missatges');return;}
@@ -228,11 +240,20 @@ export class CoopRoomHub {
     }
     const live=this.games(),both=members.every(m=>live.some(ws=>ws.deserializeAttachment().actorId===m.id));
     try{
+      const sampleStart=Date.now();
       const phase=this.mission.progress?this.mission.progress().phase:this.mission.snapshot().phase;
       this.mission.setStatus(both&&['relay','extract'].includes(phase)?'running':both?'finished':'paused');
       if(both)for(let i=0;i<3;i++)this.mission.step(false);
       const running=both&&['relay','extract'].includes(this.mission.progress?this.mission.progress().phase:this.mission.snapshot().phase);
-      await this.save(running?Math.max(Date.now()+1,this.record.nextAlarm+100):this.mission.meta.expiresAt);this.broadcastState();
+      const afterTick=Date.now();
+      await this.save(running?Math.max(Date.now()+1,this.record.nextAlarm+100):this.mission.meta.expiresAt);
+      const afterSave=Date.now();
+      this.broadcastState();
+      const afterBroadcast=Date.now();
+      this.frameMetrics={tickMs:Math.max(0,afterTick-sampleStart),
+        saveMs:Math.max(0,afterSave-afterTick),
+        broadcastMs:Math.max(0,afterBroadcast-afterSave),
+        tick:this.mission.snapshot().tick};
     }catch(e){
       // Never broadcast a partially persisted result. Resume from the last commit.
       if(this.record)this.mission=restoreRelayMission(this.record,this.geometry);throw e;
