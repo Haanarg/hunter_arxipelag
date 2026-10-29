@@ -1,12 +1,14 @@
 # HUNTER · ARXIPÈLAG — progrés de les millores
 
-## Estat actual · v0.6.51
+## Estat actual · v0.6.52
 
 El multijugador es desenvolupa dins del runtime original des de la 0.6.50, amb pantalla, càmera de tercera persona, HUD i controls originals. El client separat és un prototip històric i no és la direcció del producte. Vegeu [reconstrucció](docs/COOP_REBUILD.md) i [integració, validacions i pendents](docs/COOP_NATIVE_RUNTIME.md).
 
 La 0.6.51 estabilitza selecció d'armes/granades, cadència compartida, reconnexió de sockets sense resposta, missatges d'accions i neteja de sessió. Ha passat una nova prova amb dos comptes autenticats sobre workerd/Miniflare i el món original complet, amb pausa/reconnexió i restauració en fred. També passen les regressions natives i la simulació individual. No equival a una prova visual en dos dispositius ni a desplegament verificat.
 
-**Pendents:** IA original completa, presoners/mecànic i altres sistemes opcionals, paritat fina de vehicles/inventari, predicció/reconciliació i acceptació visual amb dos dispositius. La migració no està acabada.
+La 0.6.52 comparteix les regles originals de percepció i reconeixement, sons/alertes i perfils de combat dels soldats. Conserva elit, bazuques i rutes de patrulla del món original; les observacions són independents per actor i persistents. Les proves de paritat (11.880 casos), sigil individual, món gran i Worker autenticat passen. [Detall i límits](docs/COOP_NATIVE_RUNTIME.md).
+
+**Pendents:** navegació tàctica i resta de la IA original, presoners/mecànic i altres sistemes opcionals, paritat fina de vehicles/inventari, predicció/reconciliació i acceptació visual amb dos dispositius. La migració no està acabada.
 
 ## Estat històric del prototip · v0.6.28
 

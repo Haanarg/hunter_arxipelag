@@ -9,6 +9,12 @@ export function generateNativeMission(room,payload,fingerprint){
  if(!spawn||!['x','y','z','hd'].every(k=>Number.isFinite(spawn[k])))throw Error('Inici de jugador invàlid.');
  for(const [key,max] of [['vehicles',500],['targets',2000],['supplies',5000]])if(!Array.isArray(payload[key])||payload[key].length>max||payload[key].some(v=>typeof v.id!=='string'||v.id.length>160||!['x','y','z'].every(k=>Number.isFinite(v[k]))))throw Error('Entitats invàlides.');
  if(payload.vehicles.some(v=>!vehicleDynamics.types[v.t]))throw Error('Vehicle desconegut.');
+ for(const target of payload.targets)if(target.t==='soldat'){
+  for(const [key,min,max] of [['sp',0,30],['rate',.1,10],['dmg',0,100]])if(target[key]!==undefined&&(!Number.isFinite(target[key])||target[key]<min||target[key]>max))throw Error('Perfil de soldat invàlid.');
+  if(['elite','rocketSoldier','guard'].some(key=>target[key]!==undefined&&typeof target[key]!=='boolean')||target.sensePhaseTicks!==undefined&&(!Number.isInteger(target.sensePhaseTicks)||target.sensePhaseTicks<0||target.sensePhaseTicks>3))throw Error('Percepció de soldat invàlida.');
+  if(target.patrol!==undefined&&(!Array.isArray(target.patrol)||target.patrol.length>512||target.patrol.some(point=>!['x','y','z'].every(key=>Number.isFinite(point[key])))))throw Error('Patrulla de soldat invàlida.');
+ }
+
  let second=null;for(let r=3;r<12&&!second;r+=2)for(let i=0;i<16;i++){const q={...spawn,x:spawn.x+Math.cos(i*Math.PI/8)*r,z:spawn.z+Math.sin(i*Math.PI/8)*r},p=world.resolve(q,q);if(Math.hypot(q.x-p.x,q.z-p.z)<1e-5&&Math.abs(p.y-spawn.y)<1){second={...q,y:p.y};break;}}
  if(!second)throw Error('No hi ha espai per al company.');
  const id=crypto.randomUUID(),meta={version:1,generator:MISSION_VERSION,gameVersion:GAME_VERSION,id,roomId:room.id,revision:room.revision,seed:geometry.seed,mapScale:room.mapScale,difficulty:room.difficulty,mode:'native',fingerprint,

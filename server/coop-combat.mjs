@@ -1,4 +1,6 @@
 import {turretSpecs,stepVehicleTurret,vehicleGunPose} from '../src/vehicle-turret-core.mjs';
+import {SOLDIER,RADII,soldierAccuracyProfile} from '../src/enemy-perception-core.mjs';
+import {senseNativeSoldier,hearNativeSoldier} from './native-soldier-perception.mjs';
 import {vehicleDynamics} from '../src/vehicle-dynamics-core.mjs';
 import {vehicleSpecs} from '../src/vehicle-specs.mjs';
 import {windowCrossing,wallShotHit} from '../src/building-shell.mjs';
@@ -10,7 +12,7 @@ import {launchProjectile,projectileStep,SMALL_ARMS_PROJECTILE_SPEED} from '../sr
 import {createAimSelector,weaponTargetPriority,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL,SMALL_ARMS_RANGE} from '../src/aiming-core.mjs';
 import {damageHealth} from '../src/player-simulation.mjs';
 import {runoverDamage,runoverSweepHit,VEHICLE_DESTRUCTION,beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,segmentAabbT,segmentSphereT,inView,ballisticStep} from '../src/combat-rules.mjs';
-// Authoritative combat for the reduced relay arena. No client positions or hits.
+// Authoritative combat; native sessions adapt original rules over the canonical world.
 const at=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
 export function segmentBox(from,to,box){return segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,box.x0,box.x1,box.y0,box.y1,box.z0,box.z1);}
 function targetBox(t){return {x0:t.x-.8,x1:t.x+.8,z0:t.z-.8,z1:t.z+.8,y0:t.y,y1:t.y+3};}
@@ -52,7 +54,37 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     wall.upperFloorWindow&&wall.windowPanes?.length?
       wall.windowPanes.map((pane,paneIndex)=>({wallIndex,paneIndex})):[]);
   const effect=(kind,tick,data)=>{effects.push({id:++sequence,kind,tick,...data});if(effects.length>64)effects.shift();};
-  function alarm(position,actorId,tick){for(const t of targets)if(t.ai&&t.hp>0&&Math.hypot(t.x-position.x,t.z-position.z)<35){t.alarmedUntil=tick+180;t.focus=actorId;t.lastSeenTick=tick;t.lastKnown={x:position.x,y:position.y,z:position.z};t.heading=facePoint(t,position);t.state='search';}}
+  function alarm(position,actorId,tick,kind='pistol'){
+    const native=meta.mode==='native',noise=native?{...position,id:++sequence,kind,radius:RADII[kind]??RADII.pistol}:null;
+    for(const t of targets)if(t.ai&&t.hp>0){
+      if(native&&t.t==='soldat'){hearNativeSoldier(t,noise,tick);continue;}
+      if(Math.hypot(t.x-position.x,t.z-position.z)<35){t.alarmedUntil=tick+180;t.focus=actorId;t.lastSeenTick=tick;t.lastKnown={x:position.x,y:position.y,z:position.z};t.heading=facePoint(t,position);t.state='search';}
+    }
+  }
+  function nativeSoldierAim(unit,actor,{vehicle=vehicles.mounted(actor.id),crouched=!!actor.crouched&&!vehicle}={}){
+    const eye={x:unit.x,y:unit.y+2.2,z:unit.z};
+    for(const height of crouched?[1.25]:vehicle?[1.5]:[1.5,2.35]){
+      const aim={x:actor.x,y:actor.y+height,z:actor.z};
+      if(traceArena(eye,aim,geometry(),world(),{ignoreBarbed:true,ignoreVegetation:true}).fraction<.97)continue;
+      if(vehicles.live().some(v=>{if(v===vehicle||v.id===vehicle?.id||v.destroyed)return false;const r=(vehicleSpecs.radii[v.t]||0)*.55,t=segmentSphereT(eye.x,eye.y,eye.z,aim.x,aim.y,aim.z,v.x,v.y+Math.min(1.7,r*.6),v.z,r);return t!==null&&t<.97;}))continue;
+      return aim;
+    }return null;
+  }
+  function nativeSoldierStep(unit,tick){
+    const contact=senseNativeSoldier(unit,{players:players(),inventory,mounted:id=>vehicles.mounted(id),world:world(),visibleAim:nativeSoldierAim,tick});
+    if(!contact)return unit.state!=='patrol';
+    const {actor,acquired}=contact;unit.heading=facePoint(unit,actor);
+    if(acquired){unit.nextAttackTick=tick;alarm({x:unit.x,y:unit.y+2,z:unit.z},unit.id,tick,'alert');}
+    if(Math.hypot(actor.x-unit.x,actor.z-unit.z)>SOLDIER.fireRange||tick<(unit.nextAttackTick??0))return true;
+    const aim=nativeSoldierAim(unit,actor);if(!aim)return true;
+    const rocket=!!unit.rocketSoldier,profile=soldierAccuracyProfile(unit),eye={x:unit.x,y:unit.y+2.2,z:unit.z},
+      direction=enemyAccuracy.direction(meta.difficulty||1,profile,aim.x-unit.x,aim.y-eye.y,aim.z-unit.z,roll),
+      origin=rocket?{x:unit.x-Math.sin(unit.heading)*1.65+Math.cos(unit.heading)*.44,y:eye.y+.65,z:unit.z-Math.cos(unit.heading)*1.65-Math.sin(unit.heading)*.44}:eye,
+      id='enemy-bullet-'+(++sequence);
+    projectiles.push(launchProjectile(origin,direction,rocket?76:70,{id,actorId:unit.id,enemy:true,weapon:rocket?'bazooka':profile,dmg:rocket?weaponCatalog.bazooka.damage:unit.dmg??combatBalance.weapons.rifle,splash:rocket?8:0}));
+    unit.nextAttackTick=tick+Math.ceil((unit.rate??(unit.elite?.16:rocket?3.4:1.1))*30);unit.lastAttack=tick;
+    effect('shot',tick,{enemy:true,actorId:unit.id,from:origin,to:aim,hit:null});return true;
+  }
   function damageVehicle(v,amount,shotClass,tick,queue){
     const destroyed=vehicles.damage(v.id,amount,shotClass);
     if(!destroyed)return false;
@@ -83,7 +115,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
       blastWire(center,blast.damage,blast.radius);
       blastStructures(center,blast.damage,blast.radius);
       blastPalms(center,blast.damage,blast.radius);
-      alarm(center,blast.actorId,tick);effect('explosion',tick,{actorId:blast.actorId,at:center,radius:blast.radius,hits});
+      alarm(center,blast.actorId,tick,'explosion');effect('explosion',tick,{actorId:blast.actorId,at:center,radius:blast.radius,hits});
     }
   }
   function aimWeapon(p,vehicle,weapon,from){
@@ -140,7 +172,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
         }else if(weapon==='assault'){
           const burst={actorId,remaining:0,delay:0};beginBurst(burst,bag.bullets,()=>{fire(actorId,p,bag,tick);return true;});bursts.push(burst);code='BURST';
         }else code=fire(actorId,p,bag,tick,weapon);
-        alarm(p,actorId,tick);bag.disguised=false;cooldowns.set(key,tick);ok=true;
+        if(meta.mode!=='native'||!['grenade','c4'].includes(weapon))alarm(p,actorId,tick,['knife','cutters'].includes(weapon)?weapon:profile.splash?'bazooka':!vehicle&&weapon==='sniper'?'sniper':vehicle?'rifle':'pistol');bag.disguised=false;cooldowns.set(key,tick);ok=true;
       }
       const result={kind:'combat',actorId,commandId:message.commandId,ok,code};results.push(result);if(results.length>128)results.shift();return {...result};
     }return {kind:'combat',actorId,commandId:message.commandId,ok,code};
@@ -149,7 +181,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     if(!active())return;
     for(let i=bursts.length-1;i>=0;i--){const burst=bursts[i],p=players().find(p=>p.id===burst.actorId),bag=inventory.get(burst.actorId);
       if(!p||p.hp<=0||p.fall||p.swimming||!canAttack(p.id)||!bag?.assault||bag.weapon!=='assault'||!bag.bullets){bursts.splice(i,1);continue;}
-      stepBurst(burst,1/30,true,()=>{if(!bag.bullets)return false;fire(p.id,p,bag,tick);alarm(p,p.id,tick);bag.disguised=false;return true;});if(!burst.remaining)bursts.splice(i,1);
+      stepBurst(burst,1/30,true,()=>{if(!bag.bullets)return false;fire(p.id,p,bag,tick);alarm(p,p.id,tick,'pistol');bag.disguised=false;return true;});if(!burst.remaining)bursts.splice(i,1);
     }
     for(const vehicle of vehicles.live())if(turretSpecs[vehicle.t]&&vehicle.seats[0]){
       const p=players().find(p=>p.id===vehicle.seats[0]);if(!p||p.hp<=0)continue;
@@ -164,7 +196,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
       else for(const t of targets)if(t.hp>0)flight.consider(segmentBox(flight.from,flight.to,targetBox(t)),'enemy',t);
       const result=flight.finish();p.life=flight.life;Object.assign(p,result.point);
       for(const pane of trace.windowCrossings)if(pane.t<=flight.fraction+1e-6&&breakWindow(pane.wallIndex,pane.index)){effect('glass',tick,{actorId:p.actorId,at:pane.point,wallIndex:pane.wallIndex,paneIndex:pane.index});}
-      if(result.hit){if(p.splash){if(result.kind!=='expire')explode({at:{...result.point},damage:p.dmg,radius:p.splash,actorId:p.actorId,ownerOnly:true},tick);projectiles.splice(i,1);continue;}let applied=true;if(result.kind==='vehicle'){const queue=[];applied=damageVehicle(result.target,p.dmg,'light',tick,queue);for(const blast of queue)explode(blast,tick);}else if(result.kind==='enemy')result.target.hp=damageHealth(result.target.hp,p.dmg);else if(result.kind==='player')applied=damagePlayer(result.target.id,p.dmg)!==false;else if(result.kind==='world'&&trace.tree?.p)applied=damagePalm(trace.tree,p.dmg);else if(result.kind==='world'&&trace.wallIndex!=null&&Math.hypot(result.point.x-trace.point.x,result.point.y-trace.point.y,result.point.z-trace.point.z)<.01)applied=damageWall(trace.wallIndex,p.dmg);
+      if(result.hit){if(p.splash){if(result.kind!=='expire')explode({at:{...result.point},damage:p.dmg,radius:p.splash,actorId:p.actorId,ownerOnly:!p.enemy},tick);projectiles.splice(i,1);continue;}let applied=true;if(result.kind==='vehicle'){const queue=[];applied=damageVehicle(result.target,p.dmg,'light',tick,queue);for(const blast of queue)explode(blast,tick);}else if(result.kind==='enemy')result.target.hp=damageHealth(result.target.hp,p.dmg);else if(result.kind==='player')applied=damagePlayer(result.target.id,p.dmg)!==false;else if(result.kind==='world'&&trace.tree?.p)applied=damagePalm(trace.tree,p.dmg);else if(result.kind==='world'&&trace.wallIndex!=null&&Math.hypot(result.point.x-trace.point.x,result.point.y-trace.point.y,result.point.z-trace.point.z)<.01)applied=damageWall(trace.wallIndex,p.dmg);
         if(result.kind!=='expire')effect('impact',tick,{actorId:p.actorId,at:{...result.point},hit:applied&&['enemy','player','vehicle'].includes(result.kind)?result.target.id:null});projectiles.splice(i,1);
       }
     }
@@ -179,7 +211,8 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     }
     for(const t of targets)if(t.ai){
       if(t.hp<=0){t.state='dead';t.focus=null;continue;}
-      const eye={x:t.x,y:t.y+2.2,z:t.z},candidates=players().filter(p=>p.hp>0&&!p.fall&&!p.swimming)
+      const nativeSoldier=meta.mode==='native'&&t.t==='soldat';if(nativeSoldier&&nativeSoldierStep(t,tick))continue;
+      const eye={x:t.x,y:t.y+2.2,z:t.z},candidates=(nativeSoldier?[]:players()).filter(p=>p.hp>0&&!p.fall&&!p.swimming)
         .map(p=>({p,d:Math.hypot(p.x-t.x,p.y-t.y,p.z-t.z)}))
         .filter(({p,d})=>d<((inventory.get(p.id)?.disguised&&tick>(t.alarmedUntil||0))?4:18)&&guardInView(t,p))
         .map(({p,d})=>{
@@ -197,7 +230,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
         t.state='patrol';t.focus=null;t.seenTicks=0;
         const path=t.patrol||[],goal=path[t.patrolIndex||0];if(!goal)continue;
         const dx=goal.x-t.x,dz=goal.z-t.z,d=Math.hypot(dx,dz);if(d<.15)t.patrolIndex=((t.patrolIndex||0)+1)%path.length;
-        else{const next={x:t.x+dx/d*Math.min(d,2/30),z:t.z+dz/d*Math.min(d,2/30),y:t.y,hd:t.heading||0},resolved=world().resolveBody(t,next),support=world().locomotionAt(next.x,next.z,t.y);t.heading=Math.atan2(-dx,-dz);
+        else{const next={x:t.x+dx/d*Math.min(d,(nativeSoldier?(t.sp??7)*(t.guard?.35:.5):2)/30),z:t.z+dz/d*Math.min(d,(nativeSoldier?(t.sp??7)*(t.guard?.35:.5):2)/30),y:t.y,hd:t.heading||0},resolved=world().resolveBody(t,next),support=world().locomotionAt(next.x,next.z,t.y);t.heading=Math.atan2(-dx,-dz);
           if(Math.hypot(resolved.x-next.x,resolved.z-next.z)<1e-5&&Math.abs(support.floor-t.y)<.5){t.x=next.x;t.z=next.z;t.y=support.floor+.06;}else t.patrolIndex=((t.patrolIndex||0)+1)%path.length;
         }
       }
@@ -212,7 +245,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     for(const target of targets)if((!target.t||target.t==='soldat')&&target.hp>0&&Math.abs(v.y-target.y)<3&&runoverSweepHit(from.x,from.z,v.x,v.z,target.x,target.z,radius)){
       const eye={x:target.x,y:target.y+1,z:target.z};
       if(traceArena({x:from.x,y:from.y+1,z:from.z},eye,geometry(),world()).fraction<1)continue;
-      target.hp=damageHealth(target.hp,runoverDamage(speed,profile.mass||1));v.ramUntilTick=tick+11;v.v*=.86;alarm(v,v.seats[0],tick);effect('impact',tick,{actorId:v.seats[0],at:eye,hit:target.id});break;
+      target.hp=damageHealth(target.hp,runoverDamage(speed,profile.mass||1));v.ramUntilTick=tick+11;v.v*=.86;alarm(v,v.seats[0],tick,'collision');effect('impact',tick,{actorId:v.seats[0],at:eye,hit:target.id});break;
     }
   }
   return {command,step,cancel,impactVehicle,runover,pause(){bursts.length=0;},finish(){projectiles.length=0;bursts.length=0;grenades.length=0;effects.length=0;},snapshot(){return structuredClone({targets,grenades,projectiles,effects});},checkpoint(){return structuredClone({targets,grenades,effects,results,cooldowns:[...cooldowns],bursts,projectiles,randomState:random.getState(),sequence});}};

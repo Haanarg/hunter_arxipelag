@@ -1,14 +1,8 @@
 // Percepció compartida: els sons són esdeveniments de joc, no volum d'àudio.
 // Sense geometria ni WebAudio mentre el depurador no està activat.
 window.HUNTER_STEALTH=(()=>{
-  const CONFIG=Object.freeze({sightRange:85,sightHalfAngle:Math.PI*50/180,
-    sightVerticalAngle:Math.PI*33/180,searchSeconds:9,
-    investigateSeconds:11,closeRecognition:4,crouchVisibility:.58});
-  const RADII=Object.freeze({walk:7,run:25,crouch:2,swim:12,knife:3,cutters:3,
-    door:10,pistol:140,sniper:220,bazooka:250,rifle:160,explosion:300,
-    bicycle:5,motorbike:90,car:70,civilianCar:112,truck:130,tank:130,apc:120,
-    rowboat:5,windsurf:5,jetski:100,speedboat:120,ferry:125,
-    helicopter:250,collision:100,grenade:7,alert:65});
+  const CONFIG=window.HUNTER_ENEMY_PERCEPTION.CONFIG;
+  const RADII=window.HUNTER_ENEMY_PERCEPTION.RADII;
   const events=[];let nextId=0;
   const debug={sight:false,noise:false};
   const enabled=()=>debug.sight||debug.hearing||debug.noise;

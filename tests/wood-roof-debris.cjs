@@ -27,13 +27,15 @@ const assert=require('node:assert/strict');
  assert.equal(result.otherBroken,1);
  assert.equal(result.wooden.length,20);
  assert.equal(result.standard.length,20);
- const colors=new Set([0x69533a,0x887044,0x6d5637,0xa08a57]);
+ const colors=new Set(game.run('[0x69533a,0x887044,0x6d5637,0xa08a57].map(c=>M(c).color.getHex())'));
  assert(result.wooden.every(p=>colors.has(p.color)));
  assert.equal(new Set(result.wooden.map(p=>p.color)).size,4);
  assert(result.wooden.every(p=>p.width>=.12&&p.width<=.22&&p.height===p.width));
  assert(result.wooden.every(p=>p.length>=2.3&&p.length<=4.5&&p.length>p.width*10));
  assert(result.wooden.every(p=>Number.isFinite(p.ry)&&Number.isFinite(p.rz)));
- assert(result.standard.every(p=>p.color===0x2c5fc0));
+ const standardColor=game.run('M(0x2c5fc0).color.getHex()');
+ assert(result.standard.every(p=>p.color===standardColor));
  assert(result.standard.some(p=>p.length<2.3));
  console.log('OK sostres de fusta: bigues marrons llargues i primes; altres cobertes intactes');
 })().catch(e=>{console.error(e);process.exitCode=1});
+

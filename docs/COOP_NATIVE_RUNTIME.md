@@ -1,5 +1,17 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
+## Continuació 0.6.52 · percepció i combat dels soldats originals
+
+El primer bloc de la IA original passa a `enemy-perception-core.mjs`, utilitzat pel mode individual i pel servidor: configuració de visió i sons, con horitzontal/vertical, reconeixement, efectes d'ajupir-se/disfressar-se, consciència perifèrica de l'elit al soterrani, perfils de punteria i imprecisió del rastre sonor. S'han comparat 11.880 casos amb les fórmules conservades de la 0.6.51. L'animació d'infanteria també és una funció original compartida entre les dues presentacions.
+
+El cooperatiu natiu guarda una observació separada de cada actor; reconèixer el primer no reconeix el company. La percepció funciona a 10 Hz amb el desfasament original de cada guàrdia. Les traçades existents del món compartit bloquegen murs, pisos i vehicles estacionats; el vehicle objectiu no es bloqueja a si mateix. Les finestres continuen utilitzant la geometria compartida.
+
+L'exportació del món conserva les rutes de patrulla, velocitats, cadències, elit i soldats amb bazuca originals. El servidor valida aquests camps i conserva observacions, objectiu, memòria i temporitzadors al checkpoint. El tret utilitza la cadència i el dany originals, amb la mateixa escala de punteria segons dificultat; els coets enemics poden danyar tots dos jugadors. Els sons d'armes/explosions i els crits locals utilitzen els radis originals i una posició recordada, sense donar visió a través dels murs.
+
+Proves superades: paritat de fórmules; dos actors, cobertures, vehicles, disfressa, ajupiment i soterrani; cadència de fusell/elit/bazuca i explosions enemigues; checkpoint; sigil/coordinació individuals; món natiu normal amb dos generadors i món gran de llavor 0 amb 374 vehicles/377 enemics; entrada/presentació natives i Worker amb dos comptes autenticats, reconnexió i restauració en fred. El paquet inclou també els canvis paral·lels de sostres i càmera dels hangars.
+
+**Límit d'aquesta fase:** la percepció/combat dels soldats avança, però no s'ha traslladat encara la navegació tàctica original (persecució, reculada, flancs, entrada per portes i cues), ni les patrulles de vehicles, torres, lògica completa del general i sistemes opcionals. Les rutes de patrulla es conserven, però el moviment del servidor encara utilitza l'adaptador de col·lisions existent. Aquesta fase no acredita la paritat completa de la IA, dues GPU/dispositius ni desplegament verificat.
+
 ## Continuació 0.6.51 · estabilització i validació autenticada
 
 - La selecció nativa d'armes des de l'inventari i el selector ràpid comparteix la mateixa funció. Canviar d'arma cancel·la la càrrega de granada i la mira. Una granada seleccionada no manté les banderes visuals del rifle anterior; gastar l'última restaura l'arma confirmada pel servidor.

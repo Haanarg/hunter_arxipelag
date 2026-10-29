@@ -1,5 +1,5 @@
-const ENEMY_SENSE_DT=.1;
-const SOLDIER_MEMORY=9,SOLDIER_RETREAT=9,SOLDIER_IDEAL=17,SOLDIER_FIRE_RANGE=125;
+const ENEMY_SENSE_DT=window.HUNTER_ENEMY_PERCEPTION.SOLDIER.senseSeconds;
+const {memorySeconds:SOLDIER_MEMORY,retreat:SOLDIER_RETREAT,ideal:SOLDIER_IDEAL,fireRange:SOLDIER_FIRE_RANGE}=window.HUNTER_ENEMY_PERCEPTION.SOLDIER;
 const STEALTH=window.HUNTER_STEALTH;
 const soldierReservations=new Map(),soldierReservationGrid=new Map(),soldierDoorQueues=new Map();
 let soldierCoordinationTime=0;
@@ -83,23 +83,13 @@ function soldierKnownBuilding(target,targetY){
 function soldierVisualContact(u,target,targetY,d){
   const eyeY=u.o.position.y+2.2,
         crouched=!!playerCrouched&&!cv,
-        range=STEALTH.CONFIG.sightRange*(u.elite?1.30:1)*
-          (crouched?STEALTH.CONFIG.crouchVisibility:1)*
-          ((disg&&!cv)?0.35:1),
         targetEye=targetY+(crouched?1.25:1.5),
         // No podem fer servir hAt() sota terra: retornaria l'altura
         // de la muntanya i faria invisibles els objectius a 30 metres.
         sameBasement=!!u.basement&&targetY<u.basement.fy-3.9&&
           eyeY<u.basement.fy-3.9;
-  const dx=target.x-u.x,dz=target.z-u.z,
-        facing=(-Math.sin(u.hd)*dx-Math.cos(u.hd)*dz)/Math.max(.01,d),
-        // L'elit té un camp visual més ample als passadissos il·luminats,
-        // però les parets continuen tallant completament la visió.
-        eliteAwareness=u.elite&&sameBasement&&
-          (d<7||facing>Math.cos(80*Math.PI/180))&&
-          Math.abs(targetEye-eyeY)<8;
-  if(over||d>range||!(eliteAwareness||
-    STEALTH.inView(u.hd,dx,targetEye-eyeY,dz,range)))return false;
+  if(over||!window.HUNTER_ENEMY_PERCEPTION.soldierView({x:u.x,y:u.o.position.y,z:u.z,heading:u.hd,elite:u.elite},
+    {x:target.x,y:targetY,z:target.z},{crouched,disguised:disg&&!cv,sameBasement}))return false;
   if(soldierVisibleShotHeight(u,u.x,u.z,eyeY,target,targetY-(crouched?.25:0))===null)return false;
   // A diferència de sight(), el pendent també tapa un enemic al darrere
   // d'una cresta (sense fer raycasts de geometria per cada soldat).
@@ -138,7 +128,7 @@ function enemyShotDirection(u,target,targetY,eyeY,roll=rn,weapon=null){
         aimHeight=(!cv&&playerCrouched)?1.25:(soldierVisibleShotHeight(u,u.x,u.z,eyeY,target,targetY)??1.5),
         aimY=targetY+aimHeight-eyeY,
         aimZ=target.z-u.z,
-        profile=weapon||(u.rocketSoldier?'bazooka':u.elite?'elite':
+        profile=weapon||(u.t==='soldat'?window.HUNTER_ENEMY_PERCEPTION.soldierAccuracyProfile(u):
           u.t==='general'?'pistol':u.t==='torre'?'tower':
           u.spl?'tank':'rifle'),
         direction=window.HUNTER_ENEMY_ACCURACY.direction(DIF,profile,aimX,aimY,aimZ,roll);
@@ -451,8 +441,7 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
          !acrossFloor&&soldierVisualContact(u,q,py,d));
        // La silueta ajupida tarda més a ser reconeguda i només és
        // detectable de prop. Veure-la breument genera sospita, no foc.
-       u.recognition=Math.max(0,Math.min(1.5,(u.recognition||0)+
-         (raw?ENEMY_SENSE_DT*(d<12?4:((playerCrouched&&!cv)?0.9:2)):-ENEMY_SENSE_DT*3)));
+       u.recognition=window.HUNTER_ENEMY_PERCEPTION.recognizeSoldier(u.recognition,raw,d,playerCrouched&&!cv,ENEMY_SENSE_DT);
        const confirmed=raw&&u.recognition>=.45;
        const acquired=confirmed&&!u.canSee;
        u.canSee=confirmed;
@@ -478,10 +467,8 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
            }
            // El soroll no revela la posició ACTUAL del jugador; només
            // deixa un rastre de posició que pot tenir una petita imprecisió.
-           const uncertainty=noise.kind==='alert'?0:noise.radius>=100?4:1.5;
-           u.lastSeenX=noise.x+Math.sin(u.x+noise.id)*uncertainty;
-           u.lastSeenZ=noise.z+Math.cos(u.z+noise.id)*uncertainty;
-           u.lastSeenY=noise.y;
+           const heard=window.HUNTER_ENEMY_PERCEPTION.heardPosition(u,noise);
+           u.lastSeenX=heard.x;u.lastSeenZ=heard.z;u.lastSeenY=heard.y;
          }
        }
       u.defenseTarget=null;
@@ -651,9 +638,12 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
       for(const wheel of u.o.userData.wheels||[])wheel.rotation.x-=signedDistance/(wheel.userData.radius||.65);
     }
   }
-  if(u.o.userData.legs){
+  animateEnemyInfantry(u,Math.hypot(u.x-oldX,u.z-oldZ)>.001,dt);
+})}
+function animateEnemyInfantry(u,moving,dt){
+  if(!u.o.userData.legs)return;
     const a=u.o.userData;u.phase=(u.phase||0)+dt*u.sp;
-    const moving=Math.hypot(u.x-oldX,u.z-oldZ)>.001,swing=moving?Math.sin(u.phase)*.45:0;
+    const swing=moving?Math.sin(u.phase)*.45:0;
     if(a.knees&&a.enemyLOD==='full')window.HUNTER_CHARACTERS.animateSoldier(u.o,{phase:u.phase,moving,aim:!!u.canSee,dt});
     else if(a.knees&&a.enemyLOD==='mid'){
       u.visualAnimT=(u.visualAnimT||0)+dt;
@@ -664,8 +654,7 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
     const aim=!!u.canSee;
     a.arms.forEach((arm,i)=>arm.rotation.x+=((aim?(u.rocketSoldier?(i?1.2:1.04):1.45):(i?swing:-swing)*.5)-arm.rotation.x)*(1-Math.exp(-12*dt)))
     }
-  }
-})}
+}
 function updDead(dt){
   for(let i=DEAD.length-1;i>=0;i--){
     const u=DEAD[i],pose=u.deadPose||(u.deadPose={yaw:0,roll:u.deadSide*1.4,
