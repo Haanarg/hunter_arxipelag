@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {buildBaseShells} from '../server/coop-base-buildings.mjs';
 import {windowLayout,windowCrossing,wallShotHit,windowPaneIndexAt} from '../src/building-shell.mjs';
 import {traceArena} from '../server/coop-combat.mjs';
+import {createAimSelector} from '../src/aiming-core.mjs';
 
 const world={heightAt:()=>-100,locomotionAt:()=>({basement:false,floor:-100})};
 let checks=0,reversed=0;
@@ -44,6 +45,20 @@ for(const angle of [0,Math.PI/2,Math.PI,3*Math.PI/2]){
   assert.equal(reverse.windowCrossings.length,1,'reverse direction also shatters the same pane');
   assert.equal(forward.windowCrossings[0].index,0,'glass IDs identify the correct physical pane');
   assert.equal(traceArena(ray(3,pane.y0-.35),ray(-3,pane.y0-.35),geometry,world).hit,true,'sill still blocks low shots');
+  // An on-foot player can aim upward at upstairs glass using the existing
+  // aim selector; the bullet crosses the SAME physical pane it selected.
+  const muzzle=ray(24,1.5),heading=[normal==='x'?-side:0,0,normal==='z'?-side:0],focus={},
+   selector=createAimSelector({origin:muzzle,direction:heading,range:70,cone:.97,
+      shotClass:'pistol',focus,verticalCone:Math.PI/2,
+      isClear:(x,y,z,tx,ty,tz)=>traceArena({x,y,z},{x:tx,y:ty,z:tz},geometry,world).fraction>=1});
+  selector.consider(wall,'window',4,pane.x,y,pane.z);
+  assert.equal(selector.hasTarget,true,'pistol can acquire the upper-floor glass');
+  const direction=selector.direction(),distance=Math.hypot(pane.x-muzzle.x,y-muzzle.y,pane.z-muzzle.z);
+  assert.ok(direction[1]>.1,'gun points upwards from the street');
+  const trajectory={x:muzzle.x+direction[0]*(distance+2),y:muzzle.y+direction[1]*(distance+2),
+    z:muzzle.z+direction[2]*(distance+2)};
+  const flight=traceArena(muzzle,trajectory,geometry,world,{collectWindows:true});
+  assert.ok(flight.windowCrossings.some(q=>q.wallIndex===shells.walls.indexOf(wall)&&q.index===0),'bullet actually intersects the upstairs pane');
   checks++;
  }
 }
