@@ -3,12 +3,15 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {vehicleDynamics,advanceVehicle} from '../src/vehicle-dynamics-core.mjs';
 import * as combat from '../src/combat-rules.mjs';
+import {PLAYER_MAX_HEALTH} from '../src/player-simulation.mjs';
 const traces=JSON.parse(readFileSync(new URL('./fixtures/vehicle-drive-traces.json',import.meta.url)));
 for(const type of Object.keys(traces)){
  const v={t:type,v:0,hd:.2},samples=[];
  for(let n=0;n<240;n++){const dt=[1/30,1/60,.05][n%3],f=n<80?1:n<130?0:-.7,tr=n%80<40?.6:-.8,input=vehicleDynamics.inputs(v,f,tr,dt);advanceVehicle(v,input.forward,input.turn,dt,.4,{drag:.15});samples.push([v.v,v.hd,v.sideV,v.strafeV,v.yawRate,v.driveInput,v.steerInput].map(x=>Math.round(x*1e9)));}
  assert.equal(createHash('sha256').update(JSON.stringify(samples)).digest('hex'),traces[type],type+': frozen individual trace must remain unchanged');
 }
+assert.equal(combat.combatBalance.player,PLAYER_MAX_HEALTH);
+assert.equal(PLAYER_MAX_HEALTH,25);
 assert.equal(combat.impactDamage(10),0);assert.equal(combat.impactDamage(16),1);assert.equal(combat.impactDamage(100),5);assert.equal(combat.runoverDamage(6),0);assert.equal(combat.runoverDamage(100,5),10);assert.equal(combat.explosionDamage(10,4,8),5);assert.equal(combat.explosionDamage(10,8,8),0);
 assert.equal(combat.segmentAabbT(0,1,0,10,1,0,4,6,0,2,-1,1),.4);assert.equal(combat.segmentAabbT(0,3,0,10,3,0,4,6,0,2,-1,1),null);
 const state={remaining:0,delay:0},shots=[];let now=0;assert.equal(combat.beginBurst(state,2,()=>true),false);assert.equal(combat.beginBurst(state,3,i=>(shots.push([now,i]),true)),true);for(let i=0;i<5;i++){now++;combat.stepBurst(state,1/30,true,i=>(shots.push([now,i]),true));}assert.deepEqual(shots,[[0,0],[3,1],[5,2]]);assert.equal(state.remaining,0);
