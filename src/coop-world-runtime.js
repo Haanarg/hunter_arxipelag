@@ -159,7 +159,31 @@ function updateNativeCoop(dt){
    });
  }
 
- for(const row of state.combat.targets){const e=s.enemies.get(row.id);if(e){if(e.nativeVisualTick!==state.tick){e.nativeMoving=Math.hypot(row.x-e.x,row.z-e.z)>.001;e.nativeVisualTick=state.tick;}e.x=row.x;e.z=row.z;e.hp=row.hp;e.hd=row.heading||0;e.canSee=!!row.canSee;e.aiMode=row.state==='attack'?'combat':row.state;if(projecting){e.o.position.set(row.x,row.y,row.z);e.o.rotation.y=e.hd;}if(row.hp<=0)e.o.visible=false;if(e.hp>0&&e.o.visible)animateEnemyInfantry(e,e.nativeMoving,dt);}}
+ if(projecting){
+   s.appliedEnemyRows??=new Map();
+   s.nativeAnimatedEnemies??=[];
+   s.nativeAnimatedEnemies.length=0;
+   for(const row of state.combat.targets){
+     const e=s.enemies.get(row.id);if(!e)continue;
+     if(s.appliedEnemyRows.get(row.id)!==row){
+       // El canvi de moviment és una propietat visual, no una segona IA.
+       e.nativeMoving=Math.hypot(row.x-e.x,row.z-e.z)>.001;
+       e.x=row.x;e.z=row.z;e.hp=row.hp;e.hd=row.heading||0;
+       e.canSee=!!row.canSee;
+       e.aiMode=row.state==='attack'?'combat':row.state;
+       e.o.position.set(row.x,row.y,row.z);
+       e.o.rotation.y=e.hd;
+       s.appliedEnemyRows.set(row.id,row);
+     }else e.nativeMoving=false;
+     e.nativeVisualTick=state.tick;
+     if(row.hp<=0)e.o.visible=false;
+     else s.nativeAnimatedEnemies.push(e);
+   }
+ }
+ // En canvi, l'animació d'infanteria original sí que necessita el dt
+ // de cada fotograma, incloses les pauses entre dos snapshots rebuts.
+ for(const e of s.nativeAnimatedEnemies||[])
+   if(e.o.visible)animateEnemyInfantry(e,e.nativeMoving,dt);
  if(projecting){
  const liveProjectiles=new Set();for(const row of state.combat.projectiles){liveProjectiles.add(row.id);let mesh=s.projectiles.get(row.id);if(!mesh){mesh=new THREE.Mesh(row.splash?gHeavy:gLight,row.splash?mS:mW);mesh.scale.setScalar(row.splash?1:SMALL_ARMS_SCALE);world.add(mesh);s.projectiles.set(row.id,mesh);}mesh.position.set(row.x,row.y,row.z);const direction=new THREE.Vector3(row.vx,row.vy,row.vz);if(direction.lengthSq())mesh.quaternion.setFromUnitVectors(heavyForward,direction.normalize());}for(const [id,mesh] of s.projectiles)if(!liveProjectiles.has(id)){world.remove(mesh);s.projectiles.delete(id);}
  const liveGrenades=new Set();for(const row of state.combat.grenades){liveGrenades.add(row.id);let mesh=s.grenades.get(row.id);if(!mesh){mesh=row.weapon==='c4'?window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true):createGrenadeModel();world.add(mesh);s.grenades.set(row.id,mesh);}mesh.position.set(row.x,row.y,row.z);}for(const [id,mesh] of s.grenades)if(!liveGrenades.has(id)){world.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);s.grenades.delete(id);}
