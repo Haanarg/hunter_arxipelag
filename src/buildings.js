@@ -3,7 +3,7 @@
 // Construcció visual d'edificis. Col·lisions, portes, destrucció i navegació romanen al nucli.
 window.HUNTER_BUILDINGS??=Object.freeze({
   create(THREE,{material,materialProfile,box,windowLayout}){
-    const layoutFn=windowLayout||window.HUNTER_BUILDING_SHELL?.windowLayout||((sx,sz,height)=>{const alongX=sx>=sz,L=alongX?sx:sz,count=L>=14?2:1;return {alongX,width:Math.min(2.7,L/(count*2.65)),bottom:Math.min(1.35,Math.max(1.1,height*.185)),height:Math.min(2.15,Math.max(1.75,height*.31)),centers:count===2?[-L*.255,L*.255]:[0]};});
+    const layoutFn=windowLayout||window.HUNTER_BUILDING_SHELL?.windowLayout||((sx,sz,height)=>{const alongX=sx>=sz,L=alongX?sx:sz,count=L>=14?2:1;return {alongX,width:Math.min(2.7,L/(count*2.65)),bottom:Math.min(2.15,Math.max(1.65,height*.25)),height:Math.min(2.15,Math.max(1.75,height*.31)),centers:count===2?[-L*.255,L*.255]:[0]};});
     const wallMaterial=color=>new THREE.MeshStandardMaterial({color,flatShading:true,transparent:true,...materialProfile('masonry')});
     const doorMaterial=()=>new THREE.MeshStandardMaterial({color:0x704829,flatShading:true,transparent:true,...materialProfile('paint')});
     const addWall=(group,{lx,lz,sx,sz,height,material:mat,y=height/2})=>{
@@ -41,9 +41,9 @@ window.HUNTER_BUILDINGS??=Object.freeze({
       for(const g of buffers)g.dispose();
       return combined;
     };
-    // Porta visual: més estreta i alta, amb llinda real a sobre.
-    const addDoor=(group,{lx,lz,sx,sz,height,wallMaterial,doorMaterial,doorHeight=4.4})=>{
-      const h=Math.min(doorHeight,Math.max(3.8,height-.65));
+    // Porta d'alçada proporcionada al personatge, amb llinda real a sobre.
+    const addDoor=(group,{lx,lz,sx,sz,height,wallMaterial,doorMaterial,doorHeight=3.8})=>{
+      const h=Math.min(doorHeight,Math.max(2.8,height-.65));
       const door=addWall(group,{lx,lz,sx,sz,height:h,material:doorMaterial,y:h/2});
       const lintelHeight=Math.max(0,height-h);
       const lintel=lintelHeight>.05?addWall(group,{
