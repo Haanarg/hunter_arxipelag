@@ -26,6 +26,12 @@ approx(smoother.movingVehicles(.5)[0].pose.x,3,'Posició del vehicle remot al mi
 assert.equal(smoother.movingVehicles(.5).length,1,'Només un vehicle ha canviat');
 assert(Math.abs(Math.abs(smoother.actor('b',.5).hd)-Math.PI)<.03,'Rumb pel camí angular curt');
 approx(smoother.movingVehicles(.5)[0].pose.alt,2,'Altitud nova sense valor antic');
+const sameTickState=state(3,[player('a',0),player('b',9,0,-Math.PI*179/180)],
+ [vehicle('car',6,0,-Math.PI*179/180,2)],'running','same');
+sameTickState.inventories=[{actorId:'a',weapon:'pistol'}];
+smoother.receive(sameTickState,'a');
+approx(smoother.advance(0),.5,'Una acció dins del mateix tick conserva el cursor visual');
+approx(smoother.actor('b',.5).x,4.5,'No reinicia el company amb un snapshot del mateix tick');
 approx(smoother.advance(.05),1,'Arribada al snapshot més recent');
 approx(smoother.actor('b',1).x,9,'Arribada al final');
 smoother.advance(.5);
