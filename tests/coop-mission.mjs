@@ -4,6 +4,8 @@ const room=seed=>({id:'test-room',revision:4,seed,mapScale:1,difficulty:1,allRea
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 for(const [seed,mapScale] of [[0,1],[1,1],[3,1],[4,1],[67,1],[4294967295,1],[67,2]]){
  const generated=generateRelayMission({...room(seed),mapScale}),mission=restoreRelayMission(generated.record,generated.geometry);mission.setStatus('running');
+ assert.deepEqual(generated.record.checkpoint.players.map(p=>p.hp),[25,25],'both cooperative actors spawn with 25 health');
+ assert.deepEqual(mission.snapshot().players.map(p=>p.hp),[25,25],'the authoritative checkpoint retains 25 health');
  let sequence=0,phase='relay',indices=[0,0],resumed=false;
  for(let k=0;k<4000&&mission.snapshot().phase!=='won';k++){
   const state=mission.snapshot();if(state.phase!==phase){phase=state.phase;indices=[0,0];}
