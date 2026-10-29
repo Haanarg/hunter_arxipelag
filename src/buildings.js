@@ -55,6 +55,7 @@ window.HUNTER_BUILDINGS=Object.freeze({
     const batchWindowWall=(group,parts)=>{
       const byMat=new Map();
       for(const mesh of parts){
+        if(mesh.userData.windowPane!==undefined)continue;
         if(!byMat.has(mesh.material))byMat.set(mesh.material,[]);
         byMat.get(mesh.material).push(mesh);
       }
@@ -86,7 +87,7 @@ window.HUNTER_BUILDINGS=Object.freeze({
         for(const geo of geos)geo.dispose();
         group.add(result);batched.push(result);
       }
-      return batched;
+      return [...batched,...parts.filter(mesh=>mesh.userData.windowPane!==undefined)];
     };
 
     // Façana amb obertures de finestra reals. La paret es construeix al voltant
@@ -141,6 +142,8 @@ window.HUNTER_BUILDINGS=Object.freeze({
           bottom+winH/2,
           alongX?lz-faceOffset:wz
         );
+        glass.userData.windowPane=parts.filter(p=>p.userData.windowPane!==undefined).length;
+        glass.name='hunter-breakable-window';
         group.add(glass);parts.push(glass);
 
         const addFrame=(center,span,horizontal,offset)=>{
