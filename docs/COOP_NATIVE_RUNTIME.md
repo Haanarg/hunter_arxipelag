@@ -1,5 +1,17 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
+## Transport i diagnòstic del servidor · 30-10-2026
+
+La fase 5 aporta una reducció de feina del Durable Object i instrumentació de la ruta de xarxa, sense relaxar la persistència autoritativa.
+
+- **Control ràpid:** `server/coop-hub.mjs` compta els paquets de moviment i combat en `WeakMap` per socket. S'eliminen les serialitzacions d'attachments de cada control (20/s/jugador habitualment), mantenint la verificació cada segon, els límits de 45 controls/s i 12 ordres de combat/s, i el tancament de connexions que els superen. En hibernar el DO es perd el comptador efímer, que es reinicia en el següent paquet; no es perd la identitat autenticada.
+- **Costos del servidor:** després del batch de tres subpassos (30 ticks/s), `frameMetrics` conserva la durada observada de simulació, guardat del checkpoint i enviament del delta, més el tick del checkpoint ja desat. No es genera un snapshot addicional només per recollir mètriques. Continua sent obligatori desar les accions abans de confirmar-les; els números són durades de paret, no CPU pur.
+- **Sondes de xarxa:** el servidor anuncia `telemetry:1` amb `native-mission`. Només si rep aquest anunci el client envia una sonda `latency-ping` cada ~2 s. El servidor valida sessió i identificador, limita a 2 sondes/s i retorna `latency-pong` amb el temps de simulació/guardat/difusió. Així, un client nou no envia un missatge desconegut a un Worker antic durant desplegaments no atòmics.
+- **Diagnòstic al client:** `window.HUNTER_COOP_NETWORK_STATS` conté `rttMs`, `rttJitterMs`, `serverTickMs`, `serverSaveMs`, `serverBroadcastMs`, `serverTick`, `stateFrames`, `stateBytes` (estimació barata basada en longitud de la cadena WebSocket, no bytes UTF-8 exactes), `avgStateGapMs` i `maxStateGapMs`. Es buida en abandonar la sessió. No altera els controls ni els missatges de partida.
+- **Regressió:** `tests/coop-transport-telemetry.mjs` registrada a `test:play`. Prova el límit de 45/segon i la recuperació de finestra, l'absència de crides persistents per entrada, validació de sondes, RTT, intervals i compatibilitat amb Worker antic. L'execució aïllada de les funcions reals ha passat.
+
+**Verificació pendent:** bateria Node completa, dos clients navegador/Android, rendiment real Cloudflare Durable Objects (especialment temps de `storage.transaction()` i RTT), validació de desplegament. La millora teòrica de 40 serialitzacions d'attachments/s per dos jugadors no és una mesura d'FPS ni de latència d'internet.
+
 ## Continuació 30-10-2026 · buffer temporal de remots
 
 **Fase 4 del pla de rendiment: codi implementat; GPU i dos dispositius pendents.** Es conserva el renderer/escena/càmera del mode individual.
