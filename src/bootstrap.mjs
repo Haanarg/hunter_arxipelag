@@ -2,7 +2,7 @@ import * as projectileModel from './projectile-model.mjs';
 window.HUNTER_PROJECTILE_MODEL=projectileModel;
 import * as sharedProjectiles from './projectile-core.mjs';
 window.HUNTER_SHARED_PROJECTILES=sharedProjectiles;
-import * as sharedAiming from './aiming-core.mjs';
+import * as sharedAiming from './aiming-core.mjs?v=0.6.36';
 window.HUNTER_SHARED_AIMING=sharedAiming;
 import * as sharedModels from './player-model-core.mjs';
 window.HUNTER_SHARED_MODELS=sharedModels;
