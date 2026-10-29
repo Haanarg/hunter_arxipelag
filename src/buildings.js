@@ -93,13 +93,8 @@ window.HUNTER_BUILDINGS=Object.freeze({
     // Façana amb obertures de finestra reals. La paret es construeix al voltant
     // dels buits; el vidre queda lleugerament endins de la cara exterior.
     const addWindowedWall=(group,{lx,lz,sx,sz,height,material:mat})=>{
-      const alongX=sx>=sz,L=alongX?sx:sz,T=alongX?sz:sx;
-      const count=L>=14?2:1;
-      const winW=Math.min(2.7,L/(count*2.65));
-      const winH=Math.min(2.15,Math.max(1.75,height*.31));
-      const bottom=Math.min(2.35,Math.max(1.75,height*.32));
-      const top=bottom+winH;
-      const centers=count===2?[-L*.255,L*.255]:[0];
+      const {alongX,width:winW,height:winH,bottom,centers}=window.HUNTER_BUILDING_SHELL.windowLayout(sx,sz,height),
+            L=alongX?sx:sz,T=alongX?sz:sx,top=bottom+winH;
       const parts=[];
 
       const piece=(center,len,y,h)=>{
