@@ -1,6 +1,6 @@
 import {weaponCatalog,personalWeapons,mountedWeapons} from './weapon-catalog.mjs';
 import {vehicleDynamics} from './vehicle-dynamics-core.mjs';
-import {combatBalance} from './combat-rules.mjs';
+import {combatBalance} from './combat-rules.mjs?v=0.6.42';
 import {configuredAccounts} from './account-client.mjs';
 import {GAME_VERSION} from './version.mjs?v=0.6.42';
 import {createPlayConnection,playInput} from './coop-play-connection.mjs?v=0.6.42';
