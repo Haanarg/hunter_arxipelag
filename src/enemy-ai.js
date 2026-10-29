@@ -140,10 +140,8 @@ function enemyShotDirection(u,target,targetY,eyeY,roll=rn,weapon=null){
         profile=weapon||(u.rocketSoldier?'bazooka':u.elite?'elite':
           u.t==='general'?'pistol':u.t==='torre'?'tower':
           u.spl?'tank':'rifle'),
-        offset=window.HUNTER_ENEMY_ACCURACY.sample(DIF,profile,aimX,aimY,aimZ,roll),
-        dx=aimX+offset.x,dy=aimY+offset.y,dz=aimZ+offset.z,
-        length=Math.max(.001,Math.hypot(dx,dy,dz));
-  return [dx/length,dy/length,dz/length];
+        direction=window.HUNTER_ENEMY_ACCURACY.direction(DIF,profile,aimX,aimY,aimZ,roll);
+  return direction;
 }
 
 // El contacte visual i la possibilitat de disparar no són el mateix.

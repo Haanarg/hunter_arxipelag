@@ -1,8 +1,10 @@
 #!/usr/bin/env node
+(async()=>{
+const sharedAccuracy=await import('../src/enemy-accuracy-core.mjs');
 'use strict';
 // Proves estadístiques del model compartit: no depenen del motor ni de WebGL.
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-const ctx={window:{}};
+const ctx={window:{HUNTER_SHARED_ACCURACY:sharedAccuracy}};
 vm.runInNewContext(fs.readFileSync('src/enemy-accuracy.js','utf8'),ctx);
 const a=ctx.window.HUNTER_ENEMY_ACCURACY;
 const near=(actual,expected,tolerance=.00001)=>
@@ -37,10 +39,12 @@ for(const d of [.6,1,1.5]){
 }
 const enemy=fs.readFileSync('src/enemy-ai.js','utf8'),
       marine=fs.readFileSync('src/marine-patrol.js','utf8');
-assert(enemy.includes('HUNTER_ENEMY_ACCURACY.sample(DIF,profile'));
+assert(enemy.includes('HUNTER_ENEMY_ACCURACY.direction(DIF,profile'));
 assert(enemy.includes("HUNTER_ENEMY_ACCURACY.sample(DIF,'jeep'"));
 assert(enemy.includes("u.t==='tanc'?'tank':'tankette'"));
 assert(enemy.includes("eyeY-.2,rn,'towerHeavy'"));
 assert(marine.includes("heavy?'marineRocket':'marineMG'"));
 assert(!marine.includes('DIF<=.6?'),'Les patrulleres no han de tenir una escala pròpia');
 console.log('OK: punteria unificada per dificultat, distància, tipus d’arma i enemic');
+
+})().catch(error=>{console.error(error);process.exitCode=1});

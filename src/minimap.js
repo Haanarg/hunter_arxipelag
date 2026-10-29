@@ -154,3 +154,4 @@ window.HUNTER_MINIMAP=Object.freeze({
     return Object.freeze({draw,drawFull,reset,setWorldSize,buildBackgroundSteps,stats})
   }
 });
+

@@ -1,4 +1,4 @@
-# Reutilització del motor individual · v0.6.34
+# Reutilització del motor individual · v0.6.37
 
 Criteri: les regles i els models tenen una única implementació. Els adaptadors de navegador i servidor només aporten estat, geometria, autoritat, presentació i serveis. No es converteix tot el joc individual en un Worker: DOM, Three, àudio, càmera i comptes continuen fora de la simulació compartida.
 
@@ -37,7 +37,7 @@ Criteri: les regles i els models tenen una única implementació. Els adaptadors
 
 ## Revisions pendents abans d’ampliar la campanya
 
-1. Connectar la IA del relleu al vol compartit i completar la integració amb totes les armes/entitats del món. Selecció, vol, primitives, primer contacte i models de projectils ja són compartits; les armes dels jugadors del relleu ja no són hitscan.
+1. Reutilitzar la màquina d’estats/cadència de campanya i completar la integració amb totes les armes/entitats del món. Els trets de jugadors i guàrdies del relleu ja comparteixen vol i la punteria enemiga també és compartida. Selecció, vol, primitives, primer contacte i models de projectils ja són compartits; les armes dels jugadors del relleu ja no són hitscan.
 2. Extreure navegació, persecució i màquina d’estats de la IA individual. El con i els models ja es comparteixen; la patrulla reduïda del relleu encara és específica.
 3. Compartir els contactes complets de vehicles amb formes orientades, terrenys, ferri, aigua i aire. Després integrar salut/destrucció/armes muntades a partir de les regles individuals.
 4. Reutilitzar les fàbriques d’equipament, animacions, efectes i àudio que encara falten al pilot. Els models de persones i Humvee ja estan unificats.
@@ -78,3 +78,15 @@ La pistola i el fusell **dels jugadors** del relleu deixen de ser hitscan: 130 m
 Snapshot/checkpoint de posició, velocitat, vida i identificador de cada bala. La pausa congela les que ja han sortit i cancel·la només les bales pendents de la ràfega; canviar d’arma tampoc esborra una bala en vol. Fi de missió retira tots els projectils. Error de persistència reverteix tant dany com trajectòria abans de difondre estat. La confirmació `FIRED` anuncia el tret, no un impacte futur. No es poden enviar col·lisions, trajectòries o dany des del client.
 
 Validació del runtime individual real (font i bundle), cobertures, impactes i caducitat; proves de primer contacte i empats, retard de dany, porta en moviment, blanc que s’aparta, pausa, restauració, repetició d’ordres i rollback d’un impacte. La integració amb civils, edificis, blindatge, filferrades, altres armes i la IA completa continua aportada per l’adaptador individual i pendent al món cooperatiu.
+
+## Quarta extracció · trets dels guàrdies (v0.6.37)
+
+`enemy-accuracy-core.mjs` extreu l’escala de punteria individual: perfils d’arma, dificultat, distància, error transversal/vertical i vector normalitzat. `enemy-accuracy.js` queda com a pont curt. El mode individual i el servidor utilitzen la mateixa funció; es preserven els percentatges teòrics i l’ordre de mostreig.
+
+Els guàrdies del relleu ja no resten salut en decidir disparar. Creen una bala amb `projectile-core.mjs`, a 70 m/s i 2,2 s de vida, com el fusell de soldat individual. L’error del perfil `rifle` s’aplica en sortir; el trajecte no segueix el jugador. La bala consulta cobertures i la primera esfera corporal d’un actor viu (radi 1,2, centre a +1,5 m, com el jugador individual dret). Un altre jugador que entri al trajecte pot rebre-la. Les bales dels guàrdies no fan foc amic als altres guàrdies; les dels jugadors continuen sense fer mal als companys.
+
+El servidor reutilitza `createWorldRandom` amb un estat de combat separat del generador del mapa, guardat al checkpoint. No s’usa `Math.random()` per resoldre un tret autoritatiu. Error de persistència retorna també l’estat aleatori i la cadència: reintentar produeix la mateixa bala, no una nova tirada. Pausa, reinici i reconnexió conserven el vol.
+
+El pilot manté l’avís d’un segon, el mínim de tres segons entre trets i el seu dany escalat per dificultat. Són dades d’equilibri de la missió reduïda; encara no s’han substituït per tota la màquina d’estats/cadència de cada enemic de campanya. Això queda pendent amb navegació, persecució i resta d’armes/entitats, sense una nova implementació paral·lela de física o punteria.
+
+198 casos congelats abans d’extreure el codi conserven desviació, vectors mostrejats i probabilitat teòrica. Proves estadístiques originals i casos de vol, evasió, cobertura nova, actor que intercepta, checkpoint i rollback de RNG/trajectòria. Proves de rescat adaptades a l’instant de l’impacte real, incloent interrupció de l’ajuda i dany fatal abans d’adjudicar extracció.

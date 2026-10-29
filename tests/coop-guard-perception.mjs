@@ -17,10 +17,10 @@ function setup({wall=false,disguised=false}={}){
 let f=setup();for(let t=1;t<=60;t++)f.combat.step(t);assert.equal(f.actor.hp,20,'unheard actor behind is not detected');assert.equal(f.combat.snapshot().targets[0].focus,null);
 f.combat.command('a',{epoch:'vision',commandId:'behind-shot',weapon:'pistol'},60);
 assert.ok(Math.abs(Math.abs(f.combat.snapshot().targets[0].heading)-Math.PI)<1e-8,'sound turns guard towards source');
-for(let t=61;t<90;t++)f.combat.step(t);assert.equal(f.actor.hp,20,'sound cannot bypass warning');f.combat.step(90);assert.equal(f.actor.hp,18);
-f.actor.z=-8;f.combat.step(91);assert.equal(f.combat.snapshot().targets[0].state,'search','escaping behind breaks visual contact');assert.equal(f.combat.snapshot().targets[0].lastKnown.z,8,'search remembers last sight, not hidden live position');
-const record=f.combat.checkpoint(),restored=createRelayCombat({...f.options,record});for(let t=92;t<=105;t++){f.combat.step(t);restored.step(t);}assert.deepEqual(restored.snapshot(),f.combat.snapshot(),'search scan and remembered source survive checkpoint');
+for(let t=61;t<90;t++)f.combat.step(t);assert.equal(f.actor.hp,20,'sound cannot bypass warning');f.combat.step(90);assert.equal(f.actor.hp,20);for(let t=91;t<=93;t++)f.combat.step(t);assert.equal(f.actor.hp,18);
+f.actor.z=-8;f.combat.step(94);assert.equal(f.combat.snapshot().targets[0].state,'search','escaping behind breaks visual contact');assert.equal(f.combat.snapshot().targets[0].lastKnown.z,8,'search remembers last sight, not hidden live position');
+const record=f.combat.checkpoint(),restored=createRelayCombat({...f.options,record});for(let t=95;t<=108;t++){f.combat.step(t);restored.step(t);}assert.deepEqual(restored.snapshot(),f.combat.snapshot(),'search scan and remembered source survive checkpoint');
 f=setup({wall:true});f.combat.command('a',{epoch:'vision',commandId:'covered-noise',weapon:'pistol'},1);for(let t=2;t<=120;t++)f.combat.step(t);assert.equal(f.actor.hp,20,'hearing behind wall never allows blind attack');assert.equal(f.combat.snapshot().targets[0].lastKnown.z,8);assert.equal(f.combat.snapshot().targets[0].state,'search');f.combat.step(121);assert.equal(f.combat.snapshot().targets[0].state,'patrol');
 f=setup({disguised:true});f.actor.z=-8;for(let t=1;t<=60;t++)f.combat.step(t);assert.equal(f.actor.hp,20,'frontal disguised actor outside four metres stays hidden');
-f=setup();f.actor.z=1.5;for(let t=1;t<=30;t++)f.combat.step(t);assert.equal(f.actor.hp,18,'close awareness detects nearby actor behind');
+f=setup();f.actor.z=1.5;for(let t=1;t<=31;t++)f.combat.step(t);assert.equal(f.actor.hp,18,'close awareness detects nearby actor behind');
 console.log('guard perception: directional cone/boundary/heading, close awareness, hearing/warning, cover, last-known search, disguise and checkpoint passed');

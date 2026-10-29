@@ -88,5 +88,6 @@ assert.deepEqual(pixel(built[1],0,0),[0,255,0,255],
 assert.throws(()=>context.window.HUNTER_MINIMAP.create({
  THREE:{},canvas:main,worldSize:4800,halfSize:2400,
  colorAt:()=>({}),getState:()=>({})
-}),TypeError,'No fallback to levelled heightAt is allowed');
+}),error=>error?.name==='TypeError','No fallback to levelled heightAt is allowed');
 console.log('PASS: natural map bitmap, no flattened HQ squares, dynamic overlays, support islands and resets');
+

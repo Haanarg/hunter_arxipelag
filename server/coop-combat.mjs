@@ -1,7 +1,9 @@
+import {enemyAccuracy} from '../src/enemy-accuracy-core.mjs';
+import {createWorldRandom} from '../src/world-generation-core.mjs';
 import {launchProjectile,projectileStep,SMALL_ARMS_PROJECTILE_SPEED} from '../src/projectile-core.mjs';
 import {createAimSelector,weaponTargetPriority,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL,SMALL_ARMS_RANGE} from '../src/aiming-core.mjs';
 import {damageHealth} from '../src/player-simulation.mjs';
-import {beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,segmentAabbT,inView,ballisticStep} from '../src/combat-rules.mjs';
+import {beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,segmentAabbT,segmentSphereT,inView,ballisticStep} from '../src/combat-rules.mjs';
 // Authoritative combat for the reduced relay arena. No client positions or hits.
 const at=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
 export function segmentBox(from,to,box){return segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,box.x0,box.x1,box.y0,box.y1,box.z0,box.z1);}
@@ -26,6 +28,7 @@ export function guardInView(guard,player){
 const facePoint=(guard,p)=>Math.atan2(-(p.x-guard.x),-(p.z-guard.z));
 export function createRelayCombat({meta,record={},inventory,players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active}){
   const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);const bursts=structuredClone(record.bursts||[]),projectiles=structuredClone(record.projectiles||[]);let sequence=record.sequence||0;
+  const random=createWorldRandom(record.randomState??(((meta.seed||0)^0x7269666c)>>>0)),roll=(a,b)=>a+random()*(b-a);
   const effect=(kind,tick,data)=>{effects.push({id:++sequence,kind,tick,...data});if(effects.length>64)effects.shift();};
   function alarm(position,actorId,tick){for(const t of targets)if(t.ai&&t.hp>0&&Math.hypot(t.x-position.x,t.z-position.z)<35){t.alarmedUntil=tick+180;t.focus=actorId;t.lastSeenTick=tick;t.lastKnown={x:position.x,y:position.y,z:position.z};t.heading=facePoint(t,position);t.state='search';}}
   function fire(actorId,p,bag,tick){
@@ -69,10 +72,11 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     for(let i=projectiles.length-1;i>=0;i--){
       const p=projectiles[i],flight=projectileStep(p,1/30),trace=traceArena(flight.from,flight.to,geometry(),world());
       if(trace.hit)flight.consider(trace.fraction,'world',null);
-      for(const t of targets)if(t.hp>0)flight.consider(segmentBox(flight.from,flight.to,targetBox(t)),'enemy',t);
+      if(p.enemy){for(const actor of players())if(actor.hp>0)flight.consider(segmentSphereT(flight.from.x,flight.from.y,flight.from.z,flight.to.x,flight.to.y,flight.to.z,actor.x,actor.y+1.5,actor.z,1.2),'player',actor);}
+      else for(const t of targets)if(t.hp>0)flight.consider(segmentBox(flight.from,flight.to,targetBox(t)),'enemy',t);
       const result=flight.finish();p.life=flight.life;Object.assign(p,result.point);
-      if(result.hit){if(result.kind==='enemy')result.target.hp=damageHealth(result.target.hp,p.dmg);
-        if(result.kind!=='expire')effect('impact',tick,{actorId:p.actorId,at:{...result.point},hit:result.kind==='enemy'?result.target.id:null});projectiles.splice(i,1);
+      if(result.hit){let applied=true;if(result.kind==='enemy')result.target.hp=damageHealth(result.target.hp,p.dmg);else if(result.kind==='player')applied=damagePlayer(result.target.id,p.dmg)!==false;
+        if(result.kind!=='expire')effect('impact',tick,{actorId:p.actorId,at:{...result.point},hit:applied&&['enemy','player'].includes(result.kind)?result.target.id:null});projectiles.splice(i,1);
       }
     }
     for(let i=grenades.length-1;i>=0;i--){
@@ -91,7 +95,8 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
       const eye={x:t.x,y:t.y+1.5,z:t.z},candidates=players().filter(p=>p.hp>0&&!p.fall&&!p.swimming).map(p=>({p,d:Math.hypot(p.x-t.x,p.y-t.y,p.z-t.z)})).filter(({p,d})=>d<((inventory.get(p.id)?.disguised&&tick>(t.alarmedUntil||0))?4:18)&&guardInView(t,p)&&traceArena(eye,{x:p.x,y:p.y+1.5,z:p.z},geometry(),world()).fraction>=1).sort((a,b)=>a.d-b.d||a.p.id.localeCompare(b.p.id));
       if(candidates.length){
         const p=candidates[0].p;if(t.focus!==p.id)t.seenTicks=0;t.focus=p.id;t.lastSeenTick=tick;t.lastKnown={x:p.x,y:p.y,z:p.z};t.seenTicks=(t.seenTicks||0)+1;t.heading=Math.atan2(-(p.x-t.x),-(p.z-t.z));t.state=t.seenTicks<30?'alert':'attack';
-        if(t.seenTicks>=30&&tick-(t.lastAttack||0)>=90){const amount=Math.max(1,Math.ceil(combatBalance.weapons.rifle*(meta.difficulty||1)));damagePlayer(p.id,amount);t.lastAttack=tick;effect('shot',tick,{enemy:true,actorId:t.id,from:eye,to:{x:p.x,y:p.y+1.5,z:p.z},hit:p.id});}
+        if(t.seenTicks>=30&&tick-(t.lastAttack||0)>=90){const amount=Math.max(1,Math.ceil(combatBalance.weapons.rifle*(meta.difficulty||1)));const direction=enemyAccuracy.direction(meta.difficulty||1,'rifle',p.x-t.x,p.y+1.5-eye.y,p.z-t.z,roll),id='enemy-bullet-'+(++sequence);
+          projectiles.push(launchProjectile(eye,direction,70,{id,actorId:t.id,enemy:true,dmg:amount}));t.lastAttack=tick;effect('shot',tick,{enemy:true,actorId:t.id,from:eye,to:{x:eye.x+direction[0],y:eye.y+direction[1],z:eye.z+direction[2]},hit:null});}
       }else if(t.focus&&tick-(t.lastSeenTick??-Infinity)<120){t.state='search';t.seenTicks=0;const center=t.lastKnown?facePoint(t,t.lastKnown):(t.heading||0);t.heading=center+Math.sin((tick-t.lastSeenTick)/120*Math.PI*2)*Math.PI/3;}
       else{
         t.state='patrol';t.focus=null;t.seenTicks=0;
@@ -104,5 +109,5 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     }
     for(let i=effects.length-1;i>=0;i--)if(tick-effects[i].tick>(effects[i].kind==='shot'?9:24))effects.splice(i,1);
   }
-  return {command,step,cancel,pause(){bursts.length=0;},finish(){projectiles.length=0;bursts.length=0;grenades.length=0;effects.length=0;},snapshot(){return structuredClone({targets,grenades,projectiles,effects});},checkpoint(){return structuredClone({targets,grenades,effects,results,cooldowns:[...cooldowns],bursts,projectiles,sequence});}};
+  return {command,step,cancel,pause(){bursts.length=0;},finish(){projectiles.length=0;bursts.length=0;grenades.length=0;effects.length=0;},snapshot(){return structuredClone({targets,grenades,projectiles,effects});},checkpoint(){return structuredClone({targets,grenades,effects,results,cooldowns:[...cooldowns],bursts,projectiles,randomState:random.getState(),sequence});}};
 }

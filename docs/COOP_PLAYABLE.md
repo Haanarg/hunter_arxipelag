@@ -1,4 +1,4 @@
-# Missió cooperativa jugable · v0.6.34
+# Missió cooperativa jugable · v0.6.37
 
 ## Què es pot jugar
 
@@ -6,7 +6,7 @@
 
 L’usuari ha prioritzat que sigui jugable encara que l’estètica quedi provisional. Aquesta versió utilitza una vista 3D senzilla, dos personatges de colors, murs, terminals i recorreguts orientatius. Si WebGL no es pot crear, s’ofereix un mapa Canvas 2D amb els mateixos controls i la mateixa sessió. El joc individual conserva el seu món i la seva interfície.
 
-No és encara la campanya Hunter completa en cooperatiu. Hi ha armes, inventaris personals, reanimació, guàrdies i un jeep compartit dins del recinte. La campanya completa continua pendent. Generador temporal actual: `relay:12`; cal iniciar una missió nova després d’actualitzar els dos clients. Les seccions amb versions anteriors conserven l’històric.
+No és encara la campanya Hunter completa en cooperatiu. Hi ha armes, inventaris personals, reanimació, guàrdies i un jeep compartit dins del recinte. La campanya completa continua pendent. Generador temporal actual: `relay:13`; cal iniciar una missió nova després d’actualitzar els dos clients. Les seccions amb versions anteriors conserven l’històric.
 
 ## Com jugar
 
@@ -136,3 +136,11 @@ La pistola i el fusell dels jugadors creen bales a **130 m/s**, amb **2,2 segons
 Es mostren les bales blanques originals i l’impacte separat. La pausa congela el vol i el checkpoint el conserva. Canviar d’arma cancel·la la resta de la ràfega però no fa desaparèixer bales que ja han sortit. No canvien F, E, 1/2 ni G, ni la regla de farmacioles per reanimar. Els trets dels guàrdies encara usen el sistema instantani del pilot; la seva migració al mateix nucli queda pendent amb la IA.
 
 Generador temporal `relay:12`: cal recarregar els dos clients i iniciar una missió nova. Es conserven les portes de v0.6.32 i el búnquer.
+
+## Bales dels guàrdies i punteria compartida · v0.6.37
+
+Els trets dels guàrdies també viatgen: fusell a **70 m/s**, amb l’error per dificultat/distància del mode individual. Després de l’avís d’un segon surt la bala, però el dany només arriba si el trajecte toca un jugador. Podeu esquivar-la o posar una cobertura pel mig; no és guiada. Es conserva el mínim de 3 s entre trets del pilot.
+
+El servidor guarda la tirada de punteria i la trajectòria: reconnectar o reintentar un desament no canvia la bala. Un company que entri al seu trajecte pot rebre el tret. Les bales pròpies continuen sense fer foc amic. Les regles de farmacioles, ferits i protecció després de reanimar es conserven, i es comproven en el moment de l’impacte.
+
+Generador temporal `relay:13`: recarregueu tots dos clients i inicieu una missió nova. La IA completa, navegació/persecució, altres armes i la campanya encara són pendents.

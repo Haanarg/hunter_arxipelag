@@ -534,3 +534,24 @@ Integració de main: es conserva el con 3D compartit de pistola/fusell de v0.6.2
 4. Equipament, animacions, efectes i àudio restants; arsenal, món i campanya complets preservant RNG.
 5. Desaments cooperatius permanents, migracions, estadístiques/historial i resum de missió.
 6. Dos comptes/navegadors físics, GPU/Android, controls/rendiment/àudio/acabat; animació de portes, portes per a IA individual i incidències històriques de fixtures/escala 2.
+
+
+## Cooperatiu · fase 23 · Guàrdies amb vol i punteria compartits (v0.6.37)
+
+- `enemy-accuracy-core.mjs` extreu l’escala individual de punteria: perfils, dificultat, distància, error transversal/vertical i direcció normalitzada. `enemy-accuracy.js` passa a ser un pont; `enemyShotDirection` delega el càlcul al mateix nucli que el servidor. No hi ha una altra fórmula de precisió cooperativa.
+- Els guàrdies del relleu ja no apliquen dany instantani: llancen bales al mateix `projectile-core.mjs`, a 70 m/s i vida de 2,2 s com el fusell de soldat individual. La bala manté el vector mostrejat i pot fallar si el jugador es mou. Consulta cobertures i el primer actor viu físicament interceptat, amb esfera dreta de radi 1,2 i centre +1,5 m com a l’individual.
+- Generador aleatori de combat reutilitzat de `createWorldRandom`, separat de l’RNG del mapa. Estat guardat amb cadència, bales i vida; rollback d’un tret reverteix també la tirada. Reintentar/reconnectar no altera la precisió ni duplica el tret. No s’usa `Math.random` per a punteria autoritativa.
+- Es manté el balanç del pilot: avís mínim d’un segon, interval mínim de tres segons i dany per dificultat. La màquina d’estats i totes les cadències de campanya es reutilitzaran amb la IA completa. Les bales dels jugadors continuen sense foc amic; les dels guàrdies poden tocar el company que entri al trajecte, però no altres guàrdies.
+- Ferits/reanimació i protecció temporal es resolen a l’impacte, sense consumir farmacioles per un tret o per interrompre l’ajuda. Cal una farmaciola de qui ajuda i completar els tres segons per gastar-la. Els tests de rescat ja no pressuposen un tret instantani; el cop fatal continua resolent-se abans de l’extracció.
+- Validació: 198 casos congelats de punteria individual i proves estadístiques originals; vol i retard, evasió, cobertura canviant, primer actor, checkpoint, RNG determinista, rollback/reintent/cold restore, ferits i protecció. Runtime de projectils i portes contextuals en bundle, punteria/sigil/coordinació i regressions d’armes conservats. GPU/Android físics pendents.
+- `test:play` complet superat amb dues sessions locals natives: bales dels dos bàndols, armes, jeep, portes, victòria, pausa/reconnexió, reinici del Worker i reanimació amb consum d’una farmaciola. Proves estadístiques originals, RNG/rollback, runtime de projectils i portes en bundle superades.
+- Generador temporal `relay:13`, amb missió nova i clients actualitzats. Sense dependències ni recursos Cloudflare nous. Auditoria i instruccions actualitzades.
+
+### Què queda després d’aquesta fase
+
+1. Reutilitzar navegació/persecució i màquina d’estats/cadències de la IA individual. Visió, punteria, vol i models ja compartits.
+2. Completar integració d’altres armes, blindatge, edificis, civils i efectes de combat amb les regles individuals.
+3. Compartir contactes avançats de vehicles (OBB, terrenys, ferri, aigua i aire) i integrar salut/destrucció/blindatge/armes muntades a partir del motor individual.
+4. Equipament, animacions i àudio restants; arsenal, món i campanya complets preservant RNG.
+5. Desaments cooperatius permanents, migracions, estadístiques/historial i resum de missió.
+6. Dos comptes/navegadors físics, GPU/Android, controls/rendiment/acabat; animació de portes, portes per a IA individual i incidències històriques de fixtures/escala 2.

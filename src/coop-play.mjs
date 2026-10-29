@@ -1,7 +1,7 @@
 import {configuredAccounts} from './account-client.mjs';
-import {GAME_VERSION} from './version.mjs?v=0.6.34';
-import {createPlayConnection,playInput} from './coop-play-connection.mjs?v=0.6.34';
-import {createMissionView} from './coop-play-view.mjs?v=0.6.34';
+import {GAME_VERSION} from './version.mjs?v=0.6.37';
+import {createPlayConnection,playInput} from './coop-play-connection.mjs?v=0.6.37';
+import {createMissionView} from './coop-play-view.mjs?v=0.6.37';
 const $=id=>document.getElementById(id),message=$('message'),launch=$('launch'),connection=$('connection'),keys=new Set(),touch=new Map();
 let channel=null,room=null,view=null,meta=null,self=null,state=null,viewGeneration=0,pendingDoor=null,doorTimer=null;
 function clearDoor(){if(doorTimer!==null)clearTimeout(doorTimer);doorTimer=null;pendingDoor=null;}

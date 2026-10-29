@@ -3946,3 +3946,4 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&started)re
 window.HUNTER_COMMANDS=Object.freeze({dispatch:command=>operationAuthority.dispatch(command),context:()=>({version:1,actorId:'local',operationId:operationCommandEpoch})});
 
 document.getElementById('coopOpen').onclick=openCoopPanel;
+

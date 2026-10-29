@@ -1,6 +1,6 @@
 import {playerModel} from './player-model-core.mjs';
-import {createVehicleView} from './coop-vehicle-view.mjs?v=0.6.34';
-import {createCombatView} from './coop-combat-view.mjs?v=0.6.34';
+import {createVehicleView} from './coop-vehicle-view.mjs?v=0.6.37';
+import {createCombatView} from './coop-combat-view.mjs?v=0.6.37';
 const colors=[0x5fc5ff,0xffc85f],css=['#5fc5ff','#ffc85f'];
 export async function createMissionView(container,meta,geometry,{three=null,makeRenderer=null}={}){
   const doorByWall=new Map((meta.doors||[]).map(d=>[d.wallIndex,d.id]));
