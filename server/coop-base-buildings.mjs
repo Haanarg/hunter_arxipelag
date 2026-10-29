@@ -20,6 +20,12 @@ export function buildBaseShells(basePlan,world,random,{special=false}={}){
     for(const w of ownedWalls){
       const corners=[[w.x0,w.z0],[w.x0,w.z1],[w.x1,w.z0],[w.x1,w.z1]].map(p=>point(...p));
       w.x0=Math.min(...corners.map(p=>p[0]));w.x1=Math.max(...corners.map(p=>p[0]));w.z0=Math.min(...corners.map(p=>p[1]));w.z1=Math.max(...corners.map(p=>p[1]));
+      // Each pane belongs to this wall: rotate the aperture coordinates as well
+      // as the collision box, otherwise the server aims at a phantom window.
+      if(w.windowPanes)for(const pane of w.windowPanes){
+        [pane.x,pane.z]=point(pane.x,pane.z);
+        if(s)pane.axis=pane.axis==='x'?'z':'x';
+      }
       if(w.cx!==undefined)[w.cx,w.cz]=point(w.cx,w.cz);if(w.nx!==undefined)[w.nx,w.nz]=[w.nx*c-w.nz*s,w.nx*s+w.nz*c];
     }
     for(const a of ownedStairs){[a.x,a.z]=point(a.x,a.z);[a.nx,a.nz]=[a.nx*c-a.nz*s,a.nx*s+a.nz*c];}
