@@ -1134,18 +1134,7 @@ function addBunkerBasement(b){
     b.foundation.material?.dispose();
     b.foundation=null;
   }
-  const random=mul((seed^Math.imul(Math.round(b.x),73856093)^Math.imul(Math.round(b.z),19349663)^0x6e7b32e1)>>>0);
-  const variant=Math.floor(random()*4),floorY=b.fy-9.15,
-        // Prop del doble de superfície útil: cambres i passadís més amples
-        // sense engrandir el volum exterior de la fortificació.
-        halfX=27.0,halfZ=23.0,stairSide=(variant&1)?-1:1,
-        divisions=[-7.0+(variant%2)*1.3,6.4+Math.floor(variant/2)*1.3],
-        westDoors=[-15+(variant%2)*.7,0+Math.floor(variant/2)*.7,15-(variant%2)],
-        // Allunyam l'envà del final de l'escala: més de 8 m de replà
-        // per poder girar i veure la sala quan s'arriba a baix.
-        eastDivider=-stairSide*7,
-        stairX=(variant&2)?14.6:10.8,
-        stairTop=stairSide*13.6,stairBottom=stairSide*1.3;
+  const {variant,floorY,halfX,halfZ,stairSide,divisions,westDoors,eastDivider,stairX,stairTop,stairBottom}=window.HUNTER_WORLD_GENERATION.bunkerBasementPlan(seed,b);
   b.basement={variant,floorY,halfX,halfZ,upperSlabMeshes:[],lights:[],
     cameraHiddenWalls:[],lightsOn:false,doors:[],
     stair:{x:stairX,zTop:stairTop,zBottom:stairBottom,width:3.3},

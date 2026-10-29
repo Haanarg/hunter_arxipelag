@@ -47,3 +47,11 @@ export function generateTerrainFoundation({seed:requestedSeed,mapScale}){
   }
   throw new Error('No valid initial terrain for this seed');
 }
+
+// Original seed-local bunker layout; independent of the global generation RNG.
+export function bunkerBasementPlan(seed,b){
+ const random=createWorldRandom((seed^Math.imul(Math.round(b.x),73856093)^Math.imul(Math.round(b.z),19349663)^0x6e7b32e1)>>>0),variant=Math.floor(random()*4),stairSide=(variant&1)?-1:1;
+ return {variant,floorY:b.fy-9.15,halfX:27,halfZ:23,stairSide,
+ divisions:[-7+(variant%2)*1.3,6.4+Math.floor(variant/2)*1.3],westDoors:[-15+(variant%2)*.7,Math.floor(variant/2)*.7,15-(variant%2)],eastDivider:-stairSide*7,
+ stairX:(variant&2)?14.6:10.8,stairTop:stairSide*13.6,stairBottom:stairSide*1.3};
+}

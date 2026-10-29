@@ -1,3 +1,4 @@
+import {configureOpenWorld} from './coop-open-world.mjs';
 import {configureProvingGround} from './coop-proving-ground.mjs';
 import {personalWeapons,inventoryCaps,nearestWire} from '../src/weapon-catalog.mjs';
 import {createCoopTerrain} from './coop-terrain.mjs';
@@ -10,7 +11,7 @@ import {createRelayVehicles,vehicleClear} from './coop-vehicles.mjs';
 import {createRelayRescue,reviveReachable} from './coop-rescue.mjs';
 import {createRelayCombat,traceArena} from './coop-combat.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
-export const MISSION_VERSION='relay:19';
+export const MISSION_VERSION='relay:20';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 export function generateRelayMission(room,{mode='relay'}={}){
   if(room.members.length!==2||!room.allReady)throw new Error('Calen dos jugadors preparats.');
@@ -44,7 +45,7 @@ export function generateRelayMission(room,{mode='relay'}={}){
   meta.supplies=[first,other].flatMap((p,i)=>['bullets','grenades','disguise','medkits'].map((item,j)=>({id:`supply-${i}-${j}`,item,amount:item==='bullets'?12:1,...point(p)})));
   meta.doors=foundation.baseStructures.walls.flatMap((w,wallIndex)=>w.door&&!w.locked&&!w.alwaysOpen?[{id:w.id,wallIndex,cx:w.cx,cz:w.cz,floor:w.y0+1}]:[]);
   const generated={geometry:{...world.snapshot(),...structuredClone(foundation.baseStructures)},record:{meta,phase:'relay',hold:0,status:'paused',checkpoint:{protocol:1,epoch:id,tick:0,players:actors.map(a=>({...a,acknowledged:0,fall:null,swimming:false}))},nextAlarm:Date.now()+100}};
-  return mode==='proving'?configureProvingGround(generated):generated;
+  return mode==='world'?configureOpenWorld(generated):mode==='proving'?configureProvingGround(generated):generated;
 }
 export function restoreRelayMission(record,geometry){
   if(record?.meta?.generator!==MISSION_VERSION||record.meta.gameVersion!==GAME_VERSION)throw new Error('La missió és d’una versió anterior. Torneu a iniciar-la.');
@@ -188,7 +189,7 @@ export function restoreRelayMission(record,geometry){
       hasMedkit:id=>inventory.get(id)?.medkits>0,revive:(id,health,helper)=>{const bag=inventory.get(helper);if(!bag||!(bag.medkits>0)||!sim.revive(id,health))return false;bag.medkits--;return true;},onDown:id=>{inventory.get(id).disguised=false;actions.delete(id);}});
     if(helping.hadDown){hold=0;if(helping.revivedId)actions.delete(helping.revivedId);if(helping.failed){phase='failed';combat.finish();}return snapshot();}
 
-    if(meta.mode==='proving')return snapshot();
+    if(['proving','world'].includes(meta.mode))return snapshot();
     if(phase==='relay'){
       const both=meta.members.every((m,i)=>{const p=state.players.find(p=>p.id===m.id),a=actions.get(m.id);return a?.interact&&state.tick-a.tick<=8&&near(p,meta.terminals[i]);});
       hold=both?hold+1:0;if(hold>=90){phase='extract';hold=0;}

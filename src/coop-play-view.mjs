@@ -1,7 +1,9 @@
+import {createTowerModel} from './tower-model.mjs';
+import {createCompoundStructures} from './compound-structures.mjs';
 import {createStaticWorldAdapter} from './world-adapter.mjs';
 import {playerModel} from './player-model-core.mjs';
-import {createVehicleView} from './coop-vehicle-view.mjs?v=0.6.43';
-import {createCombatView} from './coop-combat-view.mjs?v=0.6.43';
+import {createVehicleView} from './coop-vehicle-view.mjs?v=0.6.44';
+import {createCombatView} from './coop-combat-view.mjs?v=0.6.44';
 const colors=[0x5fc5ff,0xffc85f],css=['#5fc5ff','#ffc85f'];
 export async function createMissionView(container,meta,geometry,{three=null,makeRenderer=null,self=null}={}){
   const doorByWall=new Map((meta.doors||[]).map(d=>[d.wallIndex,d.id]));
@@ -11,14 +13,25 @@ export async function createMissionView(container,meta,geometry,{three=null,make
   try{
     const T=three||await import('../vendor/three-r186.module.mjs'),renderer=makeRenderer?makeRenderer({canvas}):new T.WebGLRenderer({canvas,antialias:true});
     renderer.setPixelRatio(Math.min(2,devicePixelRatio||1));renderer.setClearColor(0x273b32);
-    const scene=new T.Scene(),camera=new T.OrthographicCamera(-70,70,60,-60,.1,500);
+    const scene=new T.Scene(),camera=new T.OrthographicCamera(-70,70,60,-60,.1,20000);
     camera.position.set(cx,meta.floor+110,cz+75);camera.lookAt(cx,meta.floor,cz);scene.add(new T.AmbientLight(0xffffff,2));
     const light=new T.DirectionalLight(0xffedcd,3);light.position.set(cx-40,100,cz+30);scene.add(light);
     const box=(w,h,d,x,y,z,color)=>{const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),new T.MeshStandardMaterial({color,roughness:1}));mesh.position.set(x,y,z);scene.add(mesh);return mesh;};
-    if(meta.mode==='proving'){
+    if(meta.mode==='world'){
+      const terrain=createStaticWorldAdapter(geometry),segments=192*geometry.mapScale,geo=new T.PlaneGeometry(b.x1-b.x0,b.z1-b.z0,segments,segments);geo.rotateX(-Math.PI/2);
+      const positions=geo.getAttribute('position'),colors=new Float32Array(positions.count*3),col=new T.Color();
+      for(let i=0;i<positions.count;i++){const x=positions.getX(i)+cx,z=positions.getZ(i)+cz,y=terrain.heightAt(x,z);positions.setXYZ(i,x,y,z);col.setHex(y<-.5?0x436d6b:y<2?0xc8b986:y>24?0x6c8652:0x638849);colors.set([col.r,col.g,col.b],i*3);}
+      if(geometry.bunker){const bunker=geometry.bunker,indices=[];for(let i=0;i<geo.index.count;i+=3){const a=geo.index.getX(i),bb=geo.index.getX(i+1),c=geo.index.getX(i+2),x=(positions.getX(a)+positions.getX(bb)+positions.getX(c))/3,z=(positions.getZ(a)+positions.getZ(bb)+positions.getZ(c))/3;if(Math.abs(x-bunker.x)<bunker.basement.halfX&&Math.abs(z-bunker.z)<bunker.basement.halfZ)continue;indices.push(a,bb,c);}geo.setIndex(indices);}
+      geo.setAttribute('color',new T.BufferAttribute(colors,3));geo.computeVertexNormals();const mesh=new T.Mesh(geo,new T.MeshStandardMaterial({vertexColors:true,flatShading:true}));mesh.userData.worldTerrain=true;scene.add(mesh);
+      const waterGeo=geo.clone(),waterPositions=waterGeo.getAttribute('position');for(let i=0;i<waterPositions.count;i++)waterPositions.setY(i,-.02);scene.add(new T.Mesh(waterGeo,new T.MeshBasicMaterial({color:0x318ab9})));
+    }else if(meta.mode==='proving'){
       const terrain=createStaticWorldAdapter(geometry),geo=new T.PlaneGeometry(b.x1-b.x0,b.z1-b.z0,64,36);geo.rotateX(-Math.PI/2);const positions=geo.getAttribute('position');for(let i=0;i<positions.count;i++){const x=positions.getX(i)+cx,z=positions.getZ(i)+cz;positions.setXYZ(i,x,terrain.heightAt(x,z),z);}geo.computeVertexNormals();scene.add(new T.Mesh(geo,new T.MeshStandardMaterial({color:0x69884d,flatShading:true})));
       box(300,.1,360,320,0,0,0x318ab9);
     }else box(b.x1-b.x0,.3,b.z1-b.z0,cx,meta.floor-.16,cz,0x607b50);
+    for(const pier of geometry.piers||[]){const mesh=box(pier.width,.24,pier.length,pier.x+pier.ux*pier.length/2,pier.y-.12,pier.z+pier.uz*pier.length/2,0x99846b);mesh.rotation.y=Math.atan2(pier.ux,pier.uz);}
+    if(geometry.bunker){const bunker=geometry.bunker,st=bunker.basement.stair,run=Math.abs(st.zTop-st.zBottom);box(bunker.basement.halfX*2,.26,bunker.basement.halfZ*2,bunker.x,bunker.basement.floorY-.13,bunker.z,0x434c49);for(let i=0;i<15;i++)box(st.width,.21,run/15+.035,bunker.x+st.x,bunker.fy+.22-(i+1)*9.37/15-.1,bunker.z+st.zTop+(i+.5)*(st.zBottom-st.zTop)/15,0x8b9289);}
+    const landmarkMeshes=[],structures=createCompoundStructures(),part=(group,w,h,d,color,x=0,y=0,z=0)=>{const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),new T.MeshStandardMaterial({color,roughness:.8}));mesh.position.set(x,y,z);group.add(mesh);return mesh;};
+    for(const compound of meta.compounds||[])for(const landmark of compound.landmarks||[]){let mesh;if(landmark.kind==='tower')mesh=createTowerModel(T,{box:part});else if(landmark.kind==='antenna')mesh=structures.antenna(landmark.spec);else if(landmark.kind==='satellite'){mesh=structures.satellite(landmark.spec.radius);mesh.scale.setScalar(landmark.spec.scale||1);}else{mesh=new T.Group();part(mesh,landmark.size,.08,landmark.size,0x566958);for(const x of [-4,4])part(mesh,1,.1,12,0xe6e3cf,x,.09,0);part(mesh,8,.1,1,0xe6e3cf,0,.09,0);}mesh.position.set(landmark.x,landmark.y,landmark.z);mesh.rotation.y=-compound.angle;mesh.userData.landmarkKind=landmark.kind;scene.add(mesh);landmarkMeshes.push({mesh,...landmark});}
     const doorMeshes=new Map(),wallMeshes=[],roofMeshes=[],stairMeshes=[];
     geometry.walls.forEach((wall,index)=>{const id=doorByWall.get(index),mesh=box(Math.max(.1,wall.x1-wall.x0),Math.max(.1,wall.y1-wall.y0),Math.max(.1,wall.z1-wall.z0),(wall.x0+wall.x1)/2,(wall.y0+wall.y1)/2,(wall.z0+wall.z1)/2,id?0x795c39:wall.playerBlock===false?0xb4b5a3:0xa0a795);
       wallMeshes.push(mesh);mesh.visible=!wall.open;if(id){doorMeshes.set(id,mesh);mesh.userData.doorId=id;}
@@ -38,6 +51,7 @@ export async function createMissionView(container,meta,geometry,{three=null,make
     }
     const line=(points,color,opacity=1)=>{const material=new T.LineBasicMaterial({color,transparent:opacity<1,opacity}),mesh=new T.Line(new T.BufferGeometry().setFromPoints(points.map(p=>new T.Vector3(p.x,p.y??meta.floor+.15,p.z))),material);scene.add(mesh);return mesh;};
     line([{x:b.x0,z:b.z0},{x:b.x1,z:b.z0},{x:b.x1,z:b.z1},{x:b.x0,z:b.z1},{x:b.x0,z:b.z0}],0xffdfa0,.65);
+    for(const c of meta.compounds||[])for(const route of c.routes||[])line(route.points.map(([x,z])=>({x,y:c.height+.12,z})),0xb3a78a,.65);
     meta.routes.forEach((route,i)=>line(route.map(p=>({...p,y:meta.floor+.12})),colors[i],.3));
     meta.terminals.forEach((p,i)=>{box(2.5,2.5,2.5,p.x,p.y+1.2,p.z,colors[i]);box(1.8,.15,1.8,p.x,p.y+2.5,p.z,0xe9fff3);});
     const supplies=new Map();
@@ -53,7 +67,7 @@ export async function createMissionView(container,meta,geometry,{three=null,make
     let initialized=false;
     resize=()=>{const w=container.clientWidth,h=container.clientHeight,aspect=w/Math.max(1,h),half=Math.max((b.z1-b.z0)*.7,(b.x1-b.x0)/aspect*.6,40);camera.left=-half*aspect/zoom;camera.right=half*aspect/zoom;camera.top=half/zoom;camera.bottom=-half/zoom;camera.updateProjectionMatrix();renderer.setSize(w,h,false);};
     draw=dt=>{
-      if(state){for(const index of state.removedRoofs||[]){for(const mesh of roofMeshes[index]||[])mesh.visible=false;for(const stair of stairMeshes)if(stair.buildingIndex===index)stair.mesh.visible=false;}for(const index of state.removedWalls||[])if(wallMeshes[index])wallMeshes[index].visible=false;vehicleView.update(state.vehicles,dt/1000);combatView.update(state.combat,state.tick);updateSupplies(state.supplies||(meta.supplies||[]).filter(s=>!state.claimedSupplies?.includes(s.id)));for(const door of state.doors||[]){const mesh=doorMeshes.get(door.id);if(mesh)mesh.visible=!door.open&&!door.destroyed;}for(let i=0;i<2;i++){const p=state.players.find(p=>p.id===meta.members[i].id),pawn=pawns[i];if(!p)continue;const vehicle=state.vehicles?.find(v=>v.seats.includes(p.id)),side=vehicle?(vehicle.seats[0]===p.id?-.5:.5):0,px=p.x+Math.cos(p.hd)*side,pz=p.z-Math.sin(p.hd)*side;
+      if(state){for(const landmark of landmarkMeshes)if((state.removedWalls||[]).includes(landmark.wallIndex)||(state.removedRoofs||[]).includes(landmark.buildingIndex))landmark.mesh.visible=false;for(const index of state.removedRoofs||[]){for(const mesh of roofMeshes[index]||[])mesh.visible=false;for(const stair of stairMeshes)if(stair.buildingIndex===index)stair.mesh.visible=false;}for(const index of state.removedWalls||[])if(wallMeshes[index])wallMeshes[index].visible=false;vehicleView.update(state.vehicles,dt/1000);combatView.update(state.combat,state.tick);updateSupplies(state.supplies||(meta.supplies||[]).filter(s=>!state.claimedSupplies?.includes(s.id)));for(const door of state.doors||[]){const mesh=doorMeshes.get(door.id);if(mesh)mesh.visible=!door.open&&!door.destroyed;}for(let i=0;i<2;i++){const p=state.players.find(p=>p.id===meta.members[i].id),pawn=pawns[i];if(!p)continue;const vehicle=state.vehicles?.find(v=>v.seats.includes(p.id)),side=vehicle?(vehicle.seats[0]===p.id?-.5:.5):0,px=p.x+Math.cos(p.hd)*side,pz=p.z-Math.sin(p.hd)*side;
         if(!initialized)pawn.position.set(px,p.y,pz);else pawn.position.lerp(new T.Vector3(px,p.y,pz),1-Math.exp(-dt/65));pawn.rotation.y=p.hd;pawn.children[0].rotation.z=p.hp<=0?Math.PI/2:0;pawn.children[0].position.y=p.hp<=0?.5:0;const body=pawn.children[0],tint=p.hp<=0?0xf07860:state.inventories?.find(b=>b.actorId===p.id)?.disguised?0x567346:colors[i];for(const [material] of body.userData.mats)material.color.setHex(tint);body.traverse(o=>{if(o.material?.emissive)o.material.emissive.setHex(state.rescue?.immune.some(d=>d.actorId===p.id&&state.tick<d.untilTick)?0x285a76:0);});
       }initialized=true;ring.material.color.setHex(state.phase==='won'?0xffe98c:0x99ff9b);}
       const focus=zoom>1&&state?.players.find(p=>p.id===self);if(focus){camera.position.set(focus.x,focus.y+110,focus.z+75);camera.lookAt(focus.x,focus.y,focus.z);}else{camera.position.set(cx,meta.floor+110,cz+75);camera.lookAt(cx,meta.floor,cz);}
@@ -63,10 +77,12 @@ export async function createMissionView(container,meta,geometry,{three=null,make
   }catch(_){
     // A Canvas map keeps the same mission playable on devices without WebGL.
     const flat=document.createElement('canvas');displayed=flat;container.replaceChildren(flat);const ctx=flat.getContext('2d');
+    let worldMap=null;if(meta.mode==='world'){worldMap=document.createElement('canvas');worldMap.width=worldMap.height=128;const mapCtx=worldMap.getContext('2d'),terrain=createStaticWorldAdapter(geometry);for(let row=0;row<128;row++)for(let col=0;col<128;col++){const y=terrain.heightAt(b.x0+(col+.5)*(b.x1-b.x0)/128,b.z0+(row+.5)*(b.z1-b.z0)/128);mapCtx.fillStyle=y<0?'#318ab9':y<2?'#c8b986':'#6c8751';mapCtx.fillRect(col,row,1,1);}}
     resize=()=>{flat.width=Math.max(1,container.clientWidth)*Math.min(2,devicePixelRatio||1);flat.height=Math.max(1,container.clientHeight)*Math.min(2,devicePixelRatio||1);};
     draw=()=>{
       if(!ctx)return;const w=flat.width,h=flat.height,scale=zoom*Math.min(w/(b.x1-b.x0+10),h/(b.z1-b.z0+10)),focus=zoom>1&&state?.players.find(p=>p.id===self),x=v=>w/2+(v-(focus?.x??cx))*scale,z=v=>h/2+(v-(focus?.z??cz))*scale;
-      ctx.fillStyle='#314f3e';ctx.fillRect(0,0,w,h);ctx.fillStyle='#70835b';ctx.fillRect(x(b.x0),z(b.z0),(b.x1-b.x0)*scale,(b.z1-b.z0)*scale);
+      ctx.fillStyle=meta.mode==='world'?'#318ab9':'#314f3e';ctx.fillRect(0,0,w,h);if(meta.mode!=='world'){ctx.fillStyle='#70835b';ctx.fillRect(x(b.x0),z(b.z0),(b.x1-b.x0)*scale,(b.z1-b.z0)*scale);}
+      if(meta.mode==='world'){if(worldMap)ctx.drawImage(worldMap,x(b.x0),z(b.z0),(b.x1-b.x0)*scale,(b.z1-b.z0)*scale);for(const c of meta.compounds||[]){ctx.fillStyle='#d7d8be';ctx.fillRect(x(c.x)-3,z(c.z)-3,6,6);ctx.font='11px system-ui';ctx.fillText(c.name,x(c.x)+5,z(c.z));}}
       if(meta.mode==='proving'){ctx.fillStyle='#318ab9';ctx.fillRect(x(170),z(b.z0),(b.x1-170)*scale,(b.z1-b.z0)*scale);}
       const open=new Map((state?.doors||[]).map(d=>[d.id,d.open]));
       for(const [index,wall] of geometry.walls.entries())if(!(state?.removedWalls||[]).includes(index)&&!(open.get(doorByWall.get(index))??wall.open)){ctx.fillStyle=doorByWall.has(index)?'#795c39':wall.playerBlock===false?'#bbb998':'#c2c7b7';ctx.fillRect(x(wall.x0),z(wall.z0),Math.max(1,(wall.x1-wall.x0)*scale),Math.max(1,(wall.z1-wall.z0)*scale));}
@@ -84,5 +100,5 @@ export async function createMissionView(container,meta,geometry,{three=null,make
   }
   resize();const observer=new ResizeObserver(resize);observer.observe(container);let frame;
   function loop(now){if(destroyed)return;draw(Math.min(100,now-last));last=now;frame=requestAnimationFrame(loop);}frame=requestAnimationFrame(loop);
-  return {setZoom(value){zoom=Math.max(1,Math.min(8,value));resize();},setState(value){state=value;},destroy(){destroyed=true;cancelAnimationFrame(frame);observer.disconnect();dispose();if(displayed.parentNode===container)displayed.remove();}};
+  return {setZoom(value){zoom=Math.max(1,Math.min(meta.mode==='world'?64:8,value));resize();},setState(value){state=value;},destroy(){destroyed=true;cancelAnimationFrame(frame);observer.disconnect();dispose();if(displayed.parentNode===container)displayed.remove();}};
 }

@@ -18,7 +18,7 @@ export function createPlayConnection({url,version,getInput,onMessage,onStatus=()
     }
   });
   const send=channel.send;
-  return {start:channel.start,launch(revision,mode='relay'){return send({...(mode==='proving'?{mode}:{}),type:'launch',protocol:1,gameVersion:version,revision});},
+  return {start:channel.start,launch(revision,mode='relay'){return send({...(['proving','world'].includes(mode)?{mode}:{}),type:'launch',protocol:1,gameVersion:version,revision});},
     combat(weapon,commandId){if(!epoch||state?.status!=='running'||!['relay','extract'].includes(state.phase))return false;return send({type:'combat',protocol:1,epoch,weapon,commandId});},
     inventory(operation,target,commandId){if(!epoch||state?.status!=='running'||!['relay','extract'].includes(state.phase))return false;return send({type:'inventory',protocol:1,epoch,operation,target,commandId});},
     vehicle(vehicleId,operation,commandId){if(!epoch||state?.status!=='running'||!['relay','extract'].includes(state.phase))return false;return send({type:'vehicle',protocol:1,epoch,vehicleId,operation,commandId});},

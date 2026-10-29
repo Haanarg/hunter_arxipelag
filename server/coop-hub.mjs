@@ -1,6 +1,6 @@
 import {combatCommands,personalWeapons,inventoryCaps} from '../src/weapon-catalog.mjs';
 import {readCoopRoom} from './coop.mjs';
-import {generateRelayMission,restoreRelayMission} from './coop-mission.mjs';
+import {generateRelayMission,restoreRelayMission,MISSION_VERSION} from './coop-mission.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
 import {validatePlayerInput} from '../src/player-simulation.mjs';
 
@@ -11,7 +11,7 @@ export class CoopRoomHub {
     this.loading=ctx.blockConcurrencyWhile(async()=>{
       const record=await ctx.storage.get('mission');
       if(record){
-        if(record.meta.gameVersion===GAME_VERSION&&record.meta.expiresAt>Date.now()){
+        if(record.meta.generator===MISSION_VERSION&&record.meta.gameVersion===GAME_VERSION&&record.meta.expiresAt>Date.now()){
           this.geometry=await ctx.storage.get('world');this.mission=restoreRelayMission(record,this.geometry);this.record=record;
         }else{await ctx.storage.delete(['mission','world']);await ctx.storage.deleteAlarm();}
       }
@@ -109,7 +109,7 @@ export class CoopRoomHub {
       }catch(_){if(this.record)this.mission=restoreRelayMission(this.record,this.geometry);this.send(ws,{type:'action',commandId:body.commandId,ok:false,code:'SAVE_FAILED'});}
       return;
     }
-    if(body.type==='launch'&&[4,5].includes(Object.keys(body).length)&&Object.keys(body).every(k=>['type','protocol','gameVersion','revision','mode'].includes(k))&&(body.mode===undefined||['relay','proving'].includes(body.mode))&&a.gameClient&&body.gameVersion===GAME_VERSION){await this.launch(ws,body);return;}
+    if(body.type==='launch'&&[4,5].includes(Object.keys(body).length)&&Object.keys(body).every(k=>['type','protocol','gameVersion','revision','mode'].includes(k))&&(body.mode===undefined||['relay','proving','world'].includes(body.mode))&&a.gameClient&&body.gameVersion===GAME_VERSION){await this.launch(ws,body);return;}
     if(body.type!=='heartbeat'||Object.keys(body).length!==2){ws.close(1008,'Missatge invàlid');return;}
     await this.env.DB.prepare('UPDATE hunter_coop_members SET last_seen=? WHERE owner=? AND room=?').bind(now,a.actorId,a.roomId).run();
     await this.publish();if(this.mission)await this.wake();
@@ -143,7 +143,7 @@ export class CoopRoomHub {
   async launch(ws,body){
     const a=ws.deserializeAttachment(),room=await readCoopRoom(this.env,a.actorId),mode=body.mode||'relay';
     if(!room||!room.allReady||body.revision!==room.revision){this.send(ws,{type:'error',message:'Calen dos jugadors preparats i una sala actualitzada.'});return;}
-    if(mode!=='proving'&&this.mission&&this.matches(room)&&(this.mission.meta.mode||'relay')===mode&&['relay','extract'].includes(this.mission.snapshot().phase)){this.send(ws,this.mission.setup(a.actorId));await this.wake();return;}
+    if(mode==='relay'&&this.mission&&this.matches(room)&&(this.mission.meta.mode||'relay')===mode&&['relay','extract'].includes(this.mission.snapshot().phase)){this.send(ws,this.mission.setup(a.actorId));await this.wake();return;}
     this.votes.set(a.actorId,room.revision+':'+mode);
     const games=this.games();
     if(!room.members.every(m=>this.votes.get(m.id)===room.revision+':'+mode&&games.some(s=>s.deserializeAttachment().actorId===m.id))){this.send(ws,{type:'waiting',message:'Esperant que el company també premi Iniciar missió.'});return;}

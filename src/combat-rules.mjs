@@ -105,7 +105,7 @@ export function closestFenceBlastPoint(w,x,y,z){
 
 // Structural blast rules from the individual game, shared with the server.
 export function wallBlastDamage(w,x,y,z,r,dmg){
- if(w.open||w.hp<=0||!Number.isFinite(w.hp)||y>=w.y1+3)return 0;
+ if(w.indestructible||w.open||w.hp<=0||!Number.isFinite(w.hp)||y>=w.y1+3)return 0;
  return explosionDamage(dmg,Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z),r);
 }
 export function roofBlastDamage(b,x,z,r,dmg){

@@ -1,4 +1,4 @@
-# Missió cooperativa jugable · v0.6.41
+# Cooperatiu · v0.6.44
 
 ## Què es pot jugar
 
@@ -6,7 +6,9 @@
 
 L’usuari ha prioritzat que sigui jugable encara que l’estètica quedi provisional. Aquesta versió utilitza una vista 3D senzilla, dos personatges de colors, murs, terminals i recorreguts orientatius. Si WebGL no es pot crear, s’ofereix un mapa Canvas 2D amb els mateixos controls i la mateixa sessió. El joc individual conserva el seu món i la seva interfície.
 
-No és encara la campanya Hunter completa en cooperatiu. Hi ha armes, inventaris personals, reanimació, guàrdies i un jeep compartit dins del recinte. La campanya completa continua pendent. Generador temporal actual: `relay:16`; cal iniciar una missió nova després d’actualitzar els dos clients. Les seccions amb versions anteriors conserven l’històric.
+No és encara la campanya Hunter completa en cooperatiu. Hi ha armes, inventaris personals, reanimació, guàrdies i un jeep compartit dins del recinte. La campanya completa continua pendent. Generador temporal actual: `relay:20`; cal iniciar una missió nova després d’actualitzar els dos clients. Les seccions amb versions anteriors conserven l’històric.
+
+També hi ha la modalitat **Món obert · exploració de l’arxipèlag**, amb el terreny complet i les famílies de complexos dels dissenys individuals. És exploració/combat compartit, encara sense victòria de campanya ni rescat de presoners. Vegeu l’actualització v0.6.44 al final.
 
 ## Com jugar
 
@@ -51,7 +53,7 @@ No calen migracions SQL, secrets, plugins ni recursos Cloudflare nous. `coopPlay
 - Regressions de comptes, recuperació, emmagatzematge, món, sales i desaments individuals, inclòs el paquet del navegador. Les tres incidències històriques i el diagnòstic del mapa complet d’escala 2 segueixen pendents. El mapa complet no es genera durant aquesta missió reduïda.
 - Compilació del Worker i execució amb workerd natiu; compatibilitat local 2026-08-06, producció 2026-10-19. El dry-run local de Wrangler no s’ha executat perquè la versió no era a la memòria cau offline; el desplegament real de Cloudflare és la comprovació de publicació.
 
-## Què queda
+## Què quedava en el pilot inicial
 
 1. Passada real amb dos navegadors/dispositius i Android; qualitat visual, llegibilitat, ergonomia tàctil, latència, CPU/memòria i consum/quotes sota càrrega. Afegir predicció/reconciliació si les mesures ho requereixen.
 2. Animació de portes i destrucció compartida, perímetres i resta de la base, HQ/búnquer/hangars i altres compounds; món complet, vegetació, entitats i coherència amb el render.
@@ -224,3 +226,37 @@ Validació: prova específica dels llindars endavant/enrere, recuperació, excep
 - Paritat visual i de maneig: animacions de conductors/armes, boques i orientació de les armes restants, visor real, càrrega de granada/C4 editable, efectes de runa i impulsos.
 - Desaments cooperatius duradors/exportables, historial i política de versions.
 - Prova real de dos navegadors/dispositius, Android, latència, rendiment i quotes del servidor; executar les proves de hub quan es disposi de `better-auth`.
+
+
+## Món obert i complexos · v0.6.44 · relay:20
+
+### Ús
+
+A la pàgina cooperativa trieu **Món obert · exploració de l’arxipèlag**. Tots dos participants heu de seleccionar-la i prémer **Aplicar / reiniciar modalitat**. Repetir els dos vots genera un món nou; la reconnexió normal conserva el món i el checkpoint de la versió actual. Cal recarregar els dos clients després d’actualitzar: `relay:20` descarta checkpoints temporals incompatibles sense impedir l’obertura de la sala.
+
+Es pot recórrer tot el mapa, a peu, nedant o amb els vehicles. No hi ha terminals obligatoris ni extracció de relleu. Es manté la sessió temporal de 30 minuts. E fa l’acció contextual, F dispara, B llança granades i Re Pàg / Av Pàg controlen els helicòpters. El zoom segueix el jugador i arriba a 64; a zoom baix es pot veure l’arxipèlag. El panell mostra coordenades i el complex més proper.
+
+### Codi reutilitzat i geometria
+
+- Illes i relleu complets amb `generateTerrainFoundation`, `createIslandLayout`, `rawTerrainAt`, nivells i adaptador físic originals. Dues mides de mapa.
+- Famílies i variants dels `runtimeLayouts`, selecció amb `chooseCompoundLayout`, transformacions amb `compoundPoint`/`planCompound`, murs/portes/llindes/escales amb `shellColliders` i les funcions compartides. La base usa ara les dimensions de porta `STANDARD_BUILDING_DOOR`, també al relleu.
+- 17 complexos en mida normal i 20 en mida gran: base, HQ, camp de presoners garantit, hangar, avançada, port militar, heliport, polvorí, comunicacions, moll civil, terminal de ferri i les tres famílies de poblats; més avançades/polvorins addicionals. Els emplaçaments són deterministes i validen reserva/separació/terra o costa. **No s’afirma paritat de posicions amb la mateixa llavor individual**: la seqüència completa de construcció individual encara no està extreta; es comparteixen terreny, dissenys i primitives.
+- Edificis especials, dues filferrades del camp, molls físics i accessos, torres estàtiques, antenes i parabòliques. El model de torre s’ha extret d’`mkEn` a `tower-model.mjs` per usar-lo als dos modes; antenes/parabòliques usen `createCompoundStructures`.
+- Búnquer amb sala superior i soterrani: mateixa variant derivada de llavor/lloc amb `bunkerBasementPlan`, escales, envans, portes elevables representades provisionalment com la resta de portes, llindes i forjat amb obertura. Es reutilitzen `bunkerFloorAt` i l’adaptador físic. El traçat cooperatiu ja distingeix el terra del soterrani del terreny superficial. Mobiliari, llums i seguiment de càmera del búnquer encara pendents de paritat visual.
+- Vehicles, soldats i subministraments parteixen de les coordenades dels dissenys. La flota de les llavors provades té 31/34 vehicles, incloent embarcacions, ferri i helicòpter normal o de combat segons variant. Es comprova la fondària sota tota la planta de les embarcacions. Armes, munició, granades, farmacioles, disfressa, cisalla i C4 són recollibles amb el sistema autoritatiu existent; els franctiradors tenen munició separada.
+- Conducció, aigua, vol, combat, reanimació, destrucció, xocs i embestides reutilitzen el mateix camí que el camp de proves. Geometria i col·lisions canòniques del servidor; els clients només envien intencions. No hi ha migracions, bindings ni dependències de servidor noves.
+
+### Representació i límits
+
+La vista mostra el relleu de l’arxipèlag, mar, complexos, molls i els models compartits de vehicles/personatges/torres/antenes. Retalla el terreny i l’aigua al volum del soterrani i dibuixa terra i graons. Si falla WebGL hi ha mapa Canvas amb altures canòniques mostrejades i noms dels complexos.
+
+Encara no és la campanya individual completa en cooperatiu: falten l’objectiu del general i la victòria, els presoners/mecànic actius i la seva porta condicionada, defenses de torres amb IA, navegació/persecució avançada, ferri amb vehicles a coberta, fauna/vegetació i paritat visual detallada dels edificis/efectes. Els soldats conserven la IA del pilot. Les torres col·locades són estàtiques. Els subministraments de mapes/intel·ligència i paracaigudes encara no s’han integrat. La col·locació de ports/molls utilitza comprovacions pròpies de la modalitat sobre les dades originals; falta la paritat completa de rampes costaneres i trajectes de ferri.
+
+### Validació
+
+- 14 combinacions: llavors 0, 1, 3, 4, 67, 4294967295 i 2407759483, en les dues mides. Totes les famílies de complexos, identitats úniques, punts inicials lliures, dades finites, embarcacions/helicòpters, subministraments, búnquer, límits complets, pauses i checkpoints. Generació determinista repetida.
+- Moviment autoritatiu fora de la zona antiga i ascens d’helicòpter en món obert. Traç de projectil al soterrani sense falsa col·lisió amb el terreny superficial.
+- Entrada real del client simulat: vots amb `mode:world`, missió sense terminals, HUD/zoom/neteja; escenes Three.js del món amb geometries finites i terreny/torres/antenes, renderer substitut i Canvas alternatiu.
+- Comparació amb la generació real individual de les quatre variants de base: portes, llindes, murs i escales. Harness actualitzat per carregar el model compartit de torres.
+- 22 suites locals de lògica/interfície/regressió passen. Paquet del navegador regenerat, verificat i analitzat sintàcticament. Les mostres de configuració es mantenen sota el límit actual d’1 MB del canal del client.
+- **Pendents**: execució nativa del hub/Worker (l’entorn local no té `better-auth`), desplegament Cloudflare, GPU/Android i dos dispositius físics; rendiment/latència/quotes sota ús real. Les mesures locals de generació no acrediten rendiment del Worker ni del navegador real.
