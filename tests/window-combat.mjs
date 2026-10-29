@@ -24,13 +24,15 @@ assert.deepEqual(straight.windowCrossings.map(w=>w.index),[0]);
 assert.equal(traceArena(to,from,glassGeometry,world).hit,false,'server accepts reverse shot');
 assert.equal(traceArena(point(-5,pane.y0-.4),point(5,pane.y0-.4),glassGeometry,world).hit,true,'server stops shot against sill');
 const door=walls.find(w=>w.woodenDoor);assert.ok(door,'normal house has a wooden door');
-assert.equal(door.hp,10,'five 2-point hits destroy a wooden door');
-assert.equal(Math.ceil(door.hp/2),5);
+assert.equal(door.hp,5,'wooden doors have five hit points in coop');
+assert.equal(Math.ceil(door.hp/1),5,'five single-damage hits are sufficient');
+assert.equal(Math.ceil(door.hp/2),3,'three 2-point hits are sufficient');
 const bunker=shellColliders(0,0,0,18,14,8,{doorSide:0,bunker:true},()=>.5);
 assert.ok(!bunker.walls.some(w=>w.woodenDoor),'bunker gates remain reinforced');
+assert.ok(bunker.walls.find(w=>w.door).hp>door.hp,'bunker gates retain reinforced health');
 assert.ok(!bunker.walls.some(w=>w.windowPanes),'bunkers have no accidental windows');
 for(const [name,src] of [['solo',readFileSync(new URL('../src/combat.js',import.meta.url),'utf8')],['coop',readFileSync(new URL('../server/coop-combat.mjs',import.meta.url),'utf8')]]){
  assert.match(src,/wallShotHit/,name+' uses shared apertures');
  assert.match(src,/windowCrossing/,name+' detects glass intersections');
 }
-console.log('Window ballistics: two-way firing, real sill/lintel/frames, server glass events and five-hit wooden doors passed');
+console.log('Window ballistics: two-way firing, real sill/lintel/frames, server glass events and five-HP wooden doors passed');
