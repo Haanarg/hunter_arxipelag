@@ -1,6 +1,6 @@
 import {firstVehicleContact,vehicleContactDamage} from './coop-vehicle-contacts.mjs';
 import {stepRangeVehicle} from './coop-vehicle-motion.mjs';
-import {vehicleDamage,combatBalance,tankCanCrush,vehicleHullDistance,vehicleHullSegmentT} from '../src/combat-rules.mjs';
+import {vehicleDamage,combatBalance,tankCanCrush,barrierRam,vehicleHullDistance,vehicleHullSegmentT} from '../src/combat-rules.mjs';
 import {vehicleDynamics,advanceVehicle} from '../src/vehicle-dynamics-core.mjs';
 // Trusted two-seat transport on the relay pad. No client coordinates or seat claims.
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),validId=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(id);
@@ -11,7 +11,7 @@ export function vehicleClear(position,world,bounds,previous=position){
     if(distance(q,resolved)>1e-5||support.interior||support.drop||Math.abs(support.floor-position.y)>.25)return false;
   }return true;
 }
-export function createRelayVehicles({meta,record={},world,water,players,active,onBoard=()=>{},geometry=()=>({walls:[]}),onImpact=()=>{},onTravel=()=>{}}){
+export function createRelayVehicles({meta,record={},world,water,players,active,onBoard=()=>{},geometry=()=>({walls:[]}),onImpact=()=>{},onTravel=()=>{},onBarrier=()=>false}){
  const vehicles=structuredClone(record.vehicles||meta.vehicles||[]),results=structuredClone(record.results||[]),inputs=new Map();
  for(const v of vehicles)v.life??=combatBalance.vehicles[v.t]??1;
  const mounted=id=>vehicles.find(v=>!v.destroyed&&v.seats.includes(id));
@@ -59,7 +59,20 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
    if(vehicleClear(next,world(),meta.bounds,v)){v.x=next.x;v.z=next.z;v.hd=hd;}else{v.v=0;}
    }
    from.travelSpeed=Math.abs(v.v);
-   const hit=firstVehicleContact(attempted||v,from,vehicles,geometry(),meta.mode==='proving');
+   const desired={...(attempted||v)},probe={...desired,v:v.v||from.v};
+   let hit=firstVehicleContact(probe,from,vehicles,geometry(),meta.mode==='proving');
+   // Each successful iteration removes a confirmed obstacle. No network input can select one.
+   while(hit?.kind==='wall'&&vehicleDynamics.types[v.t].m==='l'){
+     const ram=barrierRam(probe,hit.target,Math.max(0,((v.barrierUntilTick||0)-tick)/30));
+     if(!ram||!onBarrier(hit.target))break;
+     v.barrierUntilTick=tick+Math.ceil(ram.cooldown*30);v.v=probe.v*ram.speedFactor;probe.v=v.v;v.bump=ram.bump;
+     Object.assign(v,hit.safe);
+     if(ram.damage)onImpact(v.id,ram.damage,tick);
+     if(v.destroyed)break;
+     hit=firstVehicleContact(probe,from,vehicles,geometry(),meta.mode==='proving');
+   }
+   if(v.destroyed)continue;
+   if(!hit&&(!attempted||vehicleClear(desired,world(),meta.bounds,from)))Object.assign(v,{x:desired.x,y:desired.y,z:desired.z,hd:desired.hd});
    if(hit){
      const incoming=Math.max(Math.abs(from.v),Math.abs(v.v));Object.assign(v,hit.safe);
      if(hit.kind==='vehicle'){

@@ -151,3 +151,53 @@ export function runoverSweepHit(x0,z0,x1,z1,tx,tz,radius){
 export function tankCanCrush(v,other,ownMass,otherMass){
   return v.t==='tanc'&&Math.abs(v.v)>1&&ownMass>otherMass&&other.t!=='ferry';
 }
+
+export function ramSpeedFactor(type,barbed){
+  if(type==='tanc')return .995;
+  if(type==='camio'&&barbed)return 1;
+  return barbed?.72:.55;
+}
+// Llindars d'embestida: una maniobra lenta no pot fer esclatar una moto
+// ni destruir un tram de tanca. En marxa enrere cal encara més impuls.
+// El tanc conserva l'excepció de força a qualsevol velocitat.
+export function vehicleRamThreshold(v,barbed){
+  if(v.t==='tanc')return 0;
+  const base=v.t==='camio'&&barbed?12:barbed?16:22;
+  return base+(v.v<0?5:0);
+}
+export function vehicleCanBreakBarrier(v,barbed){
+  return v.t==='tanc'||Math.abs(v.v)>vehicleRamThreshold(v,barbed);
+}
+export function mayRamWhileRecovering(type,barbed,cooldown){
+  return cooldown<=0||type==='tanc'||(type==='camio'&&barbed);
+}
+// Original barrier outcomes, without renderer or mutable world references.
+export function barrierRam(v,wall,cooldown=0){
+ const barbed=!!wall.barbed;
+ if((!wall.rammable&&!barbed)||wall.open||!Number.isFinite(wall.hp)||wall.hp<=0||!mayRamWhileRecovering(v.t,barbed,cooldown)||!vehicleCanBreakBarrier(v,barbed))return null;
+ const heavy=v.t==='tanc'||v.t==='camio'&&barbed;
+ return {speedFactor:ramSpeedFactor(v.t,barbed),damage:heavy?0:barbed?2:3,bump:heavy?.06:barbed?.14:.2,cooldown:heavy?.08:.28};
+}
+
+export function fenceVehicleContact(w,box){
+  if(!w.barbed||!Number.isFinite(w.ax)||!Number.isFinite(w.bx))return null;
+  const s=Math.sin(box.hd),c=Math.cos(box.hd),
+        local=(x,z)=>{const dx=x-box.x,dz=z-box.z;return{x:dx*c-dz*s,z:dx*s+dz*c}},
+        a=local(w.ax,w.az),b=local(w.bx,w.bz),
+        dx=b.x-a.x,dz=b.z-a.z,hw=box.w/2+.3,hd=box.d/2+.3,
+        p=[-dx,dx,-dz,dz],q=[a.x+hw,hw-a.x,a.z+hd,hd-a.z];
+  let enter=0,leave=1;
+  for(let i=0;i<4;i++){
+    if(Math.abs(p[i])<1e-9){if(q[i]<0)return null;continue}
+    const t=q[i]/p[i];
+    if(p[i]<0)enter=Math.max(enter,t);else leave=Math.min(leave,t);
+    if(enter>leave)return null;
+  }
+  // Els fragments apareixen al punt tocat pel frontal i no al centre del tram.
+  const travel=box.v?.v<0?-1:1,nose=local(
+    box.x-Math.sin(box.hd)*travel*box.d/2,
+    box.z-Math.cos(box.hd)*travel*box.d/2),
+    d2=dx*dx+dz*dz,
+    t=d2>1e-9?Math.max(enter,Math.min(leave,((nose.x-a.x)*dx+(nose.z-a.z)*dz)/d2)):enter;
+  return{x:w.ax+(w.bx-w.ax)*t,z:w.az+(w.bz-w.az)*t};
+}

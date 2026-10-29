@@ -204,3 +204,23 @@ Els vehicles terrestres/hover poden atropellar soldats/dianes durant tot el traj
 Recarregueu tots dos clients i inicieu una missió/camp nou (`relay:18`). Pendents: embestida destructiva de murs/filferrades, transport sobre ferri, accidents aeris complets amb sostres/rotors, impulsos/ferralla originals i campanya completa. Les col·lisions amb murs ara bloquegen també al camp de proves.
 
 Validació: proves de mur prim a alta velocitat, separació per altura, mur obert, SAT, contacte entre vehicles, dany de les dues carrosseries, immunitat/aixafament del tanc, atropellament entre ticks, cooldown, absència de foc amic, bicicleta destruïda sense explosió, pausa i checkpoint. Passen 18 suites locals de lògica/interfície/flota/torretes i regressió; Three.js amb renderer substitut, sense validació GPU ni dos dispositius físics. Paquet del navegador regenerat i verificat. Les proves del hub continuen pendents de la dependència local `better-auth`.
+
+
+## Embestida de murs i filferrades · relay:19
+
+Vehicles terrestres poden obrir bretxes per contacte autoritatiu. Els llindars, la penalització de marxa enrere, la recuperació, la pèrdua de velocitat i el cost de carrosseria provenen del mode individual, extrets a `combat-rules.mjs` i consumits pels dos modes. També es comparteix el contacte amb el segment real de filferrada, evitant els falsos impactes de l’AABB ampla.
+
+Valors originals: més de 16 m/s per filferrades i 22 m/s per murs; en marxa enrere, 5 m/s més. Camió contra filferro: més de 12 m/s, sense perdre vida ni velocitat. Tanc: excepció de força, sense cost de carrosseria i factor de velocitat 0,995. Altres vehicles perden 2 PV en filferro o 3 PV en murs, i conserven respectivament el 72% o 55% de velocitat. No es destrueixen peces marcades com a no embestibles.
+
+Es reutilitza la destrucció estructural existent per eliminar de manera atòmica portes, brancals i llindes, comptar suports i actualitzar col·lisions, vista i checkpoint. Una embestida pot destruir també un vehicle fràgil; les bicicletes mantenen la destrucció sense explosió. Pausa i caducitat d’inputs conserven el comportament anterior. Cal recarregar tots dos clients i iniciar una missió/camp nou (`relay:19`).
+
+Validació: prova específica dels llindars endavant/enrere, recuperació, excepcions de tanc/camió, filferro diagonal, mur no embestible, bretxes de mur/filferro, costos de vida, impacte letal, restauració i obertura atòmica real de l’edifici de proves. Passen també 18 suites de regressió. Paquet del navegador regenerat i verificat; servidor de sales, GPU i dos dispositius físics continuen sense nova validació.
+
+### Pendent principal després d’aquest bloc
+
+- Campanya completa: generació del món/complexos, objectius i entitats compartides; el relleu/camp continuen sent els escenaris jugables.
+- IA amb navegació, persecució i coordinació; presoners, rescat i mecànic.
+- Ferri amb vehicles a coberta, accidents aeris complets i altres contactes de l’entorn.
+- Paritat visual i de maneig: animacions de conductors/armes, boques i orientació de les armes restants, visor real, càrrega de granada/C4 editable, efectes de runa i impulsos.
+- Desaments cooperatius duradors/exportables, historial i política de versions.
+- Prova real de dos navegadors/dispositius, Android, latència, rendiment i quotes del servidor; executar les proves de hub quan es disposi de `better-auth`.

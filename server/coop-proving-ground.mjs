@@ -6,7 +6,7 @@ import {createStaticWorldAdapter} from '../src/world-adapter.mjs';
 // Deterministic test range, separate from the relay/campaign's world generation.
 export function configureProvingGround(generated){
  const {record,geometry}=generated,meta=record.meta;
- Object.assign(geometry,{levels:[{x:0,z:0,hw:170,hd:190,y:2,c:1,s:0,blend:20},{x:330,z:0,hw:160,hd:190,y:-15,c:1,s:0,blend:20}],walls:[{x0:-10,x1:10,z0:40,z1:40.2,y0:2,y1:5,cx:0,cz:40.1,barbed:true,hp:4}],trees:[],stairs:[],buildings:[],piers:[],terminalRamps:[]});
+ Object.assign(geometry,{levels:[{x:0,z:0,hw:170,hd:190,y:2,c:1,s:0,blend:20},{x:330,z:0,hw:160,hd:190,y:-15,c:1,s:0,blend:20}],walls:[{x0:-10,x1:10,z0:40,z1:40.2,y0:2,y1:5,cx:0,cz:40.1,barbed:true,rammable:true,ax:-10,az:40.1,bx:10,bz:40.1,hp:4}],trees:[],stairs:[],buildings:[],piers:[],terminalRamps:[]});
  const sample=buildBaseShells({layoutId:'range',buildings:[{id:'demolition',x:55,z:60,w:16,d:16,h:7,floors:2,angle:0,warehouse:true}]},createStaticWorldAdapter(geometry),()=>.5);
  geometry.walls.push(...sample.walls);geometry.buildings=sample.buildings;geometry.stairs=sample.stairs;
  const world=createStaticWorldAdapter(geometry);

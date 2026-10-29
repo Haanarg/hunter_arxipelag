@@ -14445,28 +14445,7 @@ const vehicleHitType=t=>t==='jeep'?'cotxe':t==='patrulla_marina'?'llanxa':t;
 const vehicleBox=(v,x=v.x,z=v.z,hd=v.hd)=>{const t=vehicleHitType(v.t),hb=VHB[t]||[vehicleRadius(t)*1.25,vehicleRadius(t)*1.6],sc=VS[t]||1;return{x,z,hd,w:hb[0]*sc,d:hb[1]*sc,v}};
 // Contacte entre el segment real de filferrada i la planta rectangular del vehicle.
 // El radi de cerca només serveix per obtenir candidats, mai per confirmar l'impacte.
-function fenceVehicleContact(w,box){
-  if(!w.barbed||!Number.isFinite(w.ax)||!Number.isFinite(w.bx))return null;
-  const s=Math.sin(box.hd),c=Math.cos(box.hd),
-        local=(x,z)=>{const dx=x-box.x,dz=z-box.z;return{x:dx*c-dz*s,z:dx*s+dz*c}},
-        a=local(w.ax,w.az),b=local(w.bx,w.bz),
-        dx=b.x-a.x,dz=b.z-a.z,hw=box.w/2+.3,hd=box.d/2+.3,
-        p=[-dx,dx,-dz,dz],q=[a.x+hw,hw-a.x,a.z+hd,hd-a.z];
-  let enter=0,leave=1;
-  for(let i=0;i<4;i++){
-    if(Math.abs(p[i])<1e-9){if(q[i]<0)return null;continue}
-    const t=q[i]/p[i];
-    if(p[i]<0)enter=Math.max(enter,t);else leave=Math.min(leave,t);
-    if(enter>leave)return null;
-  }
-  // Els fragments apareixen al punt tocat pel frontal i no al centre del tram.
-  const travel=box.v?.v<0?-1:1,nose=local(
-    box.x-Math.sin(box.hd)*travel*box.d/2,
-    box.z-Math.cos(box.hd)*travel*box.d/2),
-    d2=dx*dx+dz*dz,
-    t=d2>1e-9?Math.max(enter,Math.min(leave,((nose.x-a.x)*dx+(nose.z-a.z)*dz)/d2)):enter;
-  return{x:w.ax+(w.bx-w.ax)*t,z:w.az+(w.bz-w.az)*t};
-}
+function fenceVehicleContact(...args){return window.HUNTER_SHARED_COMBAT.fenceVehicleContact(...args)}
 // SAT per quatre eixos, sense arrays ni objectes efímers per contacte.
 // Mateixos eixos, projeccions i comparació estricta de la versió anterior.
 const obbOverlap=(...args)=>window.HUNTER_SHARED_COMBAT.obbOverlap(...args);
@@ -15651,25 +15630,10 @@ function collisionDamageVehicle(v,dmg,impacts=1){
  impactVehicle(v,impacts>1?impacts:dmg);
 }
 function relativeVehicleImpactSpeed(...args){return window.HUNTER_SHARED_COMBAT.relativeVehicleImpactSpeed(...args)}
-function ramSpeedFactor(type,barbed){
-  if(type==='tanc')return .995;
-  if(type==='camio'&&barbed)return 1;
-  return barbed?.72:.55;
-}
-// Llindars d'embestida: una maniobra lenta no pot fer esclatar una moto
-// ni destruir un tram de tanca. En marxa enrere cal encara més impuls.
-// El tanc conserva l'excepció de força a qualsevol velocitat.
-function vehicleRamThreshold(v,barbed){
-  if(v.t==='tanc')return 0;
-  const base=v.t==='camio'&&barbed?12:barbed?16:22;
-  return base+(v.v<0?5:0);
-}
-function vehicleCanBreakBarrier(v,barbed){
-  return v.t==='tanc'||Math.abs(v.v)>vehicleRamThreshold(v,barbed);
-}
-function mayRamWhileRecovering(type,barbed,cooldown){
-  return cooldown<=0||type==='tanc'||(type==='camio'&&barbed);
-}
+function ramSpeedFactor(...args){return window.HUNTER_SHARED_COMBAT.ramSpeedFactor(...args)}
+function vehicleRamThreshold(...args){return window.HUNTER_SHARED_COMBAT.vehicleRamThreshold(...args)}
+function vehicleCanBreakBarrier(...args){return window.HUNTER_SHARED_COMBAT.vehicleCanBreakBarrier(...args)}
+function mayRamWhileRecovering(...args){return window.HUNTER_SHARED_COMBAT.mayRamWhileRecovering(...args)}
 function tankCanCrush(...args){return window.HUNTER_SHARED_COMBAT.tankCanCrush(...args)}
 function killShark(f){
   if(f.dead)return;
@@ -15955,15 +15919,16 @@ if((!a||v.alt-g<16)&&!deckCarrier){const footprint=vehicleBox(v,nx,nz,v.hd);for(
   if(w.rammable&&land&&mayRamWhileRecovering(v.t,!!w.barbed,v.envCd)){
     const barbed=!!w.barbed,tank=v.t==='tanc',
           truckFence=v.t==='camio'&&barbed;
-    if(vehicleCanBreakBarrier(v,barbed)){
+    const ram=window.HUNTER_SHARED_COMBAT.barrierRam(v,w,v.envCd);
+    if(ram){
       dmgW(w,w.hp);
-      if(!tank&&!truckFence)collisionDamageVehicle(v,0,barbed?2:3);
+      if(ram.damage)collisionDamageVehicle(v,0,ram.damage);
       const hitX=touch?.x??w.cx,hitZ=touch?.z??w.cz;
       vehicleImpactFx(hitX,Math.max(0,hAt(hitX,hitZ))+1.1,hitZ);
       if(v.destroyed)return false;
-      v.v*=ramSpeedFactor(v.t,barbed);
-      v.bump=(tank||truckFence)?.06:barbed?.14:.2;
-      v.envCd=(tank||truckFence)?.08:.28;
+      v.v*=ram.speedFactor;
+      v.bump=ram.bump;
+      v.envCd=ram.cooldown;
       if(!Wl.includes(w)){msg=barbed?'Has trencat la filferrada!':'Has travessat una paret!';msgT=1;continue}
     }
   }

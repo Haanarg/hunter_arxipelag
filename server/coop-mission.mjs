@@ -10,7 +10,7 @@ import {createRelayVehicles,vehicleClear} from './coop-vehicles.mjs';
 import {createRelayRescue,reviveReachable} from './coop-rescue.mjs';
 import {createRelayCombat,traceArena} from './coop-combat.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
-export const MISSION_VERSION='relay:18';
+export const MISSION_VERSION='relay:19';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 export function generateRelayMission(room,{mode='relay'}={}){
   if(room.members.length!==2||!room.allReady)throw new Error('Calen dos jugadors preparats.');
@@ -65,16 +65,22 @@ export function restoreRelayMission(record,geometry){
   // Reconstruct support counters from confirmed destroyed walls after restoring.
   physical.walls.forEach((wall,i)=>{if(removedWalls.has(i)){wall.hp=0;const index=physical.buildings.findIndex(b=>b.id&&b.id===wall.buildingId);if(index>=0&&countDestroyedSupport(physical.buildings[index],wall))collapseRoof(index);}});
   let world=createStaticWorldAdapter(physical);
+  function destroyWall(index){
+    const wall=physical.walls[index];if(!wall||removedWalls.has(index))return false;
+    const assembly=wall.assemblyIds?physical.walls.flatMap((w,i)=>wall.assemblyIds.includes(w.id)?[i]:[]):[index];
+      for(const i of assembly){if(removedWalls.has(i))continue;const part=physical.walls[i];part.hp=0;part.open=true;part.playerBlock=false;removedWalls.add(i);wallHealth.set(i,0);
+        const owner=physical.buildings.findIndex(b=>b.id&&b.id===part.buildingId);if(owner>=0&&countDestroyedSupport(physical.buildings[owner],part))collapseRoof(owner);
+      }
+    return true;
+  }
+  function ramWall(wall){const index=physical.walls.indexOf(wall);if(index<0||!destroyWall(index))return false;world=createStaticWorldAdapter(physical);return true;}
   function blastStructures(center,damage,radius){
     let changed=false;
     for(const [index,wall] of physical.walls.entries()){
       if(wall.barbed)continue;
       const dealt=wallBlastDamage(wall,center.x,center.y,center.z,radius,damage);if(!dealt)continue;
       wall.hp=Math.max(0,Math.ceil(wall.hp)-dealt);wallHealth.set(index,wall.hp);if(wall.hp>0)continue;
-      const assembly=wall.assemblyIds?physical.walls.flatMap((w,i)=>wall.assemblyIds.includes(w.id)?[i]:[]):[index];
-      for(const i of assembly){if(removedWalls.has(i))continue;const part=physical.walls[i];part.hp=0;part.open=true;part.playerBlock=false;removedWalls.add(i);wallHealth.set(i,0);
-        const owner=physical.buildings.findIndex(b=>b.id&&b.id===part.buildingId);if(owner>=0&&countDestroyedSupport(physical.buildings[owner],part))collapseRoof(owner);
-      }changed=true;
+      changed=destroyWall(index)||changed;
     }
     for(const [index,building] of physical.buildings.entries()){
       const dealt=roofBlastDamage(building,center.x,center.z,radius,damage);if(!dealt)continue;
@@ -122,7 +128,7 @@ export function restoreRelayMission(record,geometry){
       const result={actorId,commandId:message.commandId,ok,code};inventoryResults.push(result);if(inventoryResults.length>64)inventoryResults.shift();return {...result};
     }return {actorId,commandId:message.commandId,ok,code};
   }
-  const vehicles=createRelayVehicles({geometry:()=>physical,onImpact:(id,amount,tick)=>combat.impactVehicle(id,amount,tick),onTravel:(v,from,tick)=>combat.runover(v,from,tick),meta,record:record.vehicles,world:()=>world,water,players:()=>sim.snapshot().players,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt,onBoard:id=>{inventory.get(id).disguised=false;combat.cancel(id);actions.delete(id);}});
+  const vehicles=createRelayVehicles({onBarrier:ramWall,geometry:()=>physical,onImpact:(id,amount,tick)=>combat.impactVehicle(id,amount,tick),onTravel:(v,from,tick)=>combat.runover(v,from,tick),meta,record:record.vehicles,world:()=>world,water,players:()=>sim.snapshot().players,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt,onBoard:id=>{inventory.get(id).disguised=false;combat.cancel(id);actions.delete(id);}});
   const rescue=createRelayRescue(record.rescue);
   const combat=createRelayCombat({meta,record:record.combat,vehicles,cutWire,blastWire,blastStructures,canAttack:()=>true,inventory,players:()=>sim.snapshot().players,damagePlayer:(id,amount)=>rescue.canDamage(id,sim.snapshot().tick)?sim.damage(id,amount):false,geometry:()=>physical,world:()=>world,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt});
   const doors=()=>meta.doors.map(d=>({id:d.id,open:removedWalls.has(d.wallIndex)||(doorStates.get(d.id)??false),destroyed:removedWalls.has(d.wallIndex)}));
