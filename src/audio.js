@@ -10,6 +10,8 @@ const AUDIO_SOUNDS=Object.freeze({
  swim:{duration:.24,frequency:1100,gain:.32},
  pick:{duration:.2,gain:.15},
  alert:{duration:.38,frequency:1250,gain:.32,range:70,throttle:.8,priority:2},
+ glassBreak:{duration:.43,filter:'highpass',frequency:1650,gain:.46,range:105,priority:2},
+ woodBreak:{duration:.34,filter:'lowpass',frequency:900,gain:.48,range:100,priority:2},
  replayShot:{duration:.24,frequency:750,gain:.31,fade:2.4,rate:.55},
  replayCannon:{duration:.42,frequency:340,gain:.44,fade:2.4,rate:.55}
 });
@@ -104,6 +106,12 @@ function audioBuffer(type){
   }else if(type==='pick'){
    phase+=Math.PI*2*(t<.08?660:990)/AC.sampleRate;
    samples[i]=Math.sin(phase)*Math.pow(.001/.15,p);
+  }else if(type==='glassBreak'){
+   const crack=p<.035?(1-p/.035):0,shards=Math.pow(1-p,1.7);
+   samples[i]=(n*.65+Math.sin(t*11700)*.35)*(.45*shards+crack*.75);
+  }else if(type==='woodBreak'){
+   const crack=p<.075?1-p/.075:0;
+   low=.87*low+.13*n;samples[i]=(low*.6+n*.4)*(.8*crack+.45*Math.pow(1-p,2));
   }else if(type==='alert'){
    // Dos accents breus i aspres; diferent del cop de bota i de la recollida.
    phase+=Math.PI*2*(t<.18?310:420)/AC.sampleRate;
