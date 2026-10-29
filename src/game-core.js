@@ -447,19 +447,7 @@ let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=window.HUNTER_COMBAT_BALANC
 // Ojiva compartida per tots els projectils pesats. Eix longitudinal -Z:
 // culata cilíndrica a +Z i punta cònica a -Z, com els canons del joc.
 // Geometria única reutilitzada, sense crear malles noves per cada tir.
-const gHeavy=new THREE.LatheGeometry([
-  new THREE.Vector2(0,-.46),new THREE.Vector2(.19,-.46),
-  new THREE.Vector2(.24,-.42),new THREE.Vector2(.24,-.34),
-  new THREE.Vector2(.18,-.33),new THREE.Vector2(.18,.12),
-  new THREE.Vector2(.22,.15),new THREE.Vector2(.19,.23),
-  new THREE.Vector2(.12,.36),new THREE.Vector2(0,.48)
-],12);
-gHeavy.rotateX(-Math.PI/2);
-const heavyForward=new THREE.Vector3(0,0,-1);
-// Bales lleugeres: petits cilindres allargats, amb l'eix longitudinal -Z.
-// Comparteixen geometria i cada projectil s'orienta segons la trajectòria.
-const gLight=new THREE.CylinderGeometry(.105,.105,.78,8);
-gLight.rotateX(-Math.PI/2);
+const {light:gLight,heavy:gHeavy,forward:heavyForward}=window.HUNTER_PROJECTILE_MODEL.createProjectileGeometry(THREE);
 // Anell pla, mai un volum transparent que amagui els murs del món.
 const endEl=document.getElementById('end'),blastRingG=new THREE.RingGeometry(.91,1.08,48),
 mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial({color:0xff7a1a}),mE=new THREE.MeshBasicMaterial({color:0xff4040}),

@@ -1,3 +1,4 @@
+import {launchProjectile,projectileStep,SMALL_ARMS_PROJECTILE_SPEED} from '../src/projectile-core.mjs';
 import {createAimSelector,weaponTargetPriority,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL,SMALL_ARMS_RANGE} from '../src/aiming-core.mjs';
 import {damageHealth} from '../src/player-simulation.mjs';
 import {beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,segmentAabbT,inView,ballisticStep} from '../src/combat-rules.mjs';
@@ -6,16 +7,16 @@ const at=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
 export function segmentBox(from,to,box){return segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,box.x0,box.x1,box.y0,box.y1,box.z0,box.z1);}
 function targetBox(t){return {x0:t.x-.8,x1:t.x+.8,z0:t.z-.8,z1:t.z+.8,y0:t.y,y1:t.y+3};}
 export function traceArena(from,to,geometry,world){
-  let fraction=1;
-  for(const w of geometry.walls)if(!w.open){const t=segmentBox(from,to,w);if(t!==null)fraction=Math.min(fraction,t);}
+  let fraction=1,hit=false;
+  for(const w of geometry.walls)if(!w.open){const t=segmentBox(from,to,w);if(t!==null){fraction=Math.min(fraction,t);hit=true;}}
   // The base shells use axis-aligned world footprints, including rotated variants.
   for(const b of geometry.buildings||[]){
-    if(!b.rb&&b.rhp>0){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.h-.12,y1:b.fy+b.h+.12});if(t!==null)fraction=Math.min(fraction,t);}
-    if(b.upperFloor){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.storey-.12,y1:b.fy+b.storey+.12});if(t!==null)fraction=Math.min(fraction,t);}
+    if(!b.rb&&b.rhp>0){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.h-.12,y1:b.fy+b.h+.12});if(t!==null){fraction=Math.min(fraction,t);hit=true;}}
+    if(b.upperFloor){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.storey-.12,y1:b.fy+b.storey+.12});if(t!==null){fraction=Math.min(fraction,t);hit=true;}}
   }
   const length=Math.hypot(to.x-from.x,to.y-from.y,to.z-from.z),steps=Math.max(1,Math.ceil(length/.2));
-  for(let i=0;i<=steps;i++){const t=i/steps;if(t>fraction)break;const p=at(from,to,t);if(p.y<world.heightAt(p.x,p.z)){fraction=t;break;}}
-  return {fraction,point:at(from,to,fraction)};
+  for(let i=0;i<=steps;i++){const t=i/steps;if(t>fraction)break;const p=at(from,to,t);if(p.y<world.heightAt(p.x,p.z)){fraction=t;hit=true;break;}}
+  return {fraction,point:at(from,to,fraction),hit};
 }
 // Heading follows the simulation: zero faces -Z. Close awareness still requires LOS.
 export function guardInView(guard,player){
@@ -24,7 +25,7 @@ export function guardInView(guard,player){
 }
 const facePoint=(guard,p)=>Math.atan2(-(p.x-guard.x),-(p.z-guard.z));
 export function createRelayCombat({meta,record={},inventory,players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active}){
-  const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);const bursts=structuredClone(record.bursts||[]);let sequence=record.sequence||0;
+  const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);const bursts=structuredClone(record.bursts||[]),projectiles=structuredClone(record.projectiles||[]);let sequence=record.sequence||0;
   const effect=(kind,tick,data)=>{effects.push({id:++sequence,kind,tick,...data});if(effects.length>64)effects.shift();};
   function alarm(position,actorId,tick){for(const t of targets)if(t.ai&&t.hp>0&&Math.hypot(t.x-position.x,t.z-position.z)<35){t.alarmedUntil=tick+180;t.focus=actorId;t.lastSeenTick=tick;t.lastKnown={x:position.x,y:position.y,z:position.z};t.heading=facePoint(t,position);t.state='search';}}
   function fire(actorId,p,bag,tick){
@@ -32,9 +33,9 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     const aim=createAimSelector({origin:from,direction:[dx,0,dz],range,cone:SMALL_ARMS_AIM_CONE,shotClass:weapon,focus,verticalCone:SMALL_ARMS_AIM_VERTICAL,
       isClear:(x,y,z,tx,ty,tz)=>traceArena({x,y,z},{x:tx,y:ty,z:tz},geometry(),world()).fraction>=1});
     for(const t of targets)if(t.hp>0)aim.consider(t,'enemy',weaponTargetPriority({...t,t:t.t||'soldat'},weapon),t.x,t.y+1.5,t.z);
-    const [ax,ay,az]=aim.direction(),to={x:from.x+ax*range,y:from.y+ay*range,z:from.z+az*range},trace=traceArena(from,to,geometry(),world());let first=trace.fraction,hit=null;
-    for(const t of targets)if(t.hp>0){const f=segmentBox(from,to,targetBox(t));if(f!==null&&f<first){first=f;hit=t;}}
-    bag.bullets--;if(hit)hit.hp=damageHealth(hit.hp,combatBalance.weapons.pistol);effect('shot',tick,{actorId,from,to:at(from,to,first),hit:hit?.id||null,aimedAt:focus.target?.id||null});return hit?'HIT':'FIRED';
+    const direction=aim.direction(),id='bullet-'+(++sequence);
+    projectiles.push(launchProjectile(from,direction,SMALL_ARMS_PROJECTILE_SPEED,{id,actorId,dmg:combatBalance.weapons.pistol,aimedAt:focus.target?.id||null}));
+    bag.bullets--;effect('shot',tick,{actorId,from,to:{x:from.x+direction[0],y:from.y+direction[1],z:from.z+direction[2]},hit:null,aimedAt:focus.target?.id||null});return 'FIRED';
   }
 
   function cancel(actorId){for(let i=bursts.length-1;i>=0;i--)if(bursts[i].actorId===actorId)bursts.splice(i,1);}
@@ -65,6 +66,15 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
       if(!p||p.hp<=0||p.fall||p.swimming||!canAttack(p.id)||!bag?.assault||bag.weapon!=='assault'||!bag.bullets){bursts.splice(i,1);continue;}
       stepBurst(burst,1/30,true,()=>{if(!bag.bullets)return false;fire(p.id,p,bag,tick);alarm(p,p.id,tick);bag.disguised=false;return true;});if(!burst.remaining)bursts.splice(i,1);
     }
+    for(let i=projectiles.length-1;i>=0;i--){
+      const p=projectiles[i],flight=projectileStep(p,1/30),trace=traceArena(flight.from,flight.to,geometry(),world());
+      if(trace.hit)flight.consider(trace.fraction,'world',null);
+      for(const t of targets)if(t.hp>0)flight.consider(segmentBox(flight.from,flight.to,targetBox(t)),'enemy',t);
+      const result=flight.finish();p.life=flight.life;Object.assign(p,result.point);
+      if(result.hit){if(result.kind==='enemy')result.target.hp=damageHealth(result.target.hp,p.dmg);
+        if(result.kind!=='expire')effect('impact',tick,{actorId:p.actorId,at:{...result.point},hit:result.kind==='enemy'?result.target.id:null});projectiles.splice(i,1);
+      }
+    }
     for(let i=grenades.length-1;i>=0;i--){
       const g=grenades[i],from={x:g.x,y:g.y,z:g.z},next=ballisticStep(g,1/30,18);g.vy=next.vy;
       const candidate={x:next.x,y:next.y,z:next.z},trace=traceArena(from,candidate,geometry(),world());
@@ -94,5 +104,5 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     }
     for(let i=effects.length-1;i>=0;i--)if(tick-effects[i].tick>(effects[i].kind==='shot'?9:24))effects.splice(i,1);
   }
-  return {command,step,cancel,pause(){bursts.length=0;},finish(){bursts.length=0;grenades.length=0;effects.length=0;},snapshot(){return structuredClone({targets,grenades,effects});},checkpoint(){return structuredClone({targets,grenades,effects,results,cooldowns:[...cooldowns],bursts,sequence});}};
+  return {command,step,cancel,pause(){bursts.length=0;},finish(){projectiles.length=0;bursts.length=0;grenades.length=0;effects.length=0;},snapshot(){return structuredClone({targets,grenades,projectiles,effects});},checkpoint(){return structuredClone({targets,grenades,effects,results,cooldowns:[...cooldowns],bursts,projectiles,sequence});}};
 }

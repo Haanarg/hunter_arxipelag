@@ -1,4 +1,4 @@
-# Reutilització del motor individual · v0.6.33
+# Reutilització del motor individual · v0.6.34
 
 Criteri: les regles i els models tenen una única implementació. Els adaptadors de navegador i servidor només aporten estat, geometria, autoritat, presentació i serveis. No es converteix tot el joc individual en un Worker: DOM, Three, àudio, càmera i comptes continuen fora de la simulació compartida.
 
@@ -37,7 +37,7 @@ Criteri: les regles i els models tenen una única implementació. Els adaptadors
 
 ## Revisions pendents abans d’ampliar la campanya
 
-1. Extreure el recorregut complet dels projectils i integrar-lo amb armes/retícules. Selecció de blancs, autoapuntat, prioritats, primitives i integració ja són compartits; la pistola cooperativa continua essent hitscan i no és encara tot `updPj`.
+1. Connectar la IA del relleu al vol compartit i completar la integració amb totes les armes/entitats del món. Selecció, vol, primitives, primer contacte i models de projectils ja són compartits; les armes dels jugadors del relleu ja no són hitscan.
 2. Extreure navegació, persecució i màquina d’estats de la IA individual. El con i els models ja es comparteixen; la patrulla reduïda del relleu encara és específica.
 3. Compartir els contactes complets de vehicles amb formes orientades, terrenys, ferri, aigua i aire. Després integrar salut/destrucció/armes muntades a partir de les regles individuals.
 4. Reutilitzar les fàbriques d’equipament, animacions, efectes i àudio que encara falten al pilot. Els models de persones i Humvee ja estan unificats.
@@ -66,3 +66,15 @@ La pistola i el fusell cooperatius adquireixen blancs amb el mateix con 3D del m
 La primera revisió pendent de l’apartat anterior queda reduïda al **recorregut complet dels projectils** i la seva integració amb armes/retícules: la selecció, el con i la prioritat ja estan compartits. El pilot encara resol la bala per hitscan; no s’afirma que s’hagi migrat tot `updPj`. IA completa, contactes avançats dels vehicles i la resta de fàbriques continuen pendents.
 
 Els imports del nucli compartit usen un únic URL per mòdul, sense instanciar una còpia amb query i una altra sense query a la mateixa pàgina. Es conserva la revalidació de `/src/*.mjs` i la comprovació exacta de versió.
+
+## Tercera extracció · vol de projectils (v0.6.34)
+
+`src/projectile-core.mjs` extreu l’avanç que feia `updPj`, la vida restant i l’arbitratge del primer contacte continu del segment. El constructor de trajectòria també és compartit. Es conserva la política individual: un contacte anterior al final del pas guanya a la caducitat; els empats conserven l’ordre de consulta. El navegador conserva les consultes espacials i l’aplicació de dany/efectes a les seves entitats; el servidor aporta geometria i dianes autoritatives.
+
+La pistola i el fusell **dels jugadors** del relleu deixen de ser hitscan: 130 m/s i vida de 2,2 s, com la bala lleugera individual. L’autoapuntat es calcula en sortir la bala; després manté el vector, sense seguir un blanc que es mogui. El dany s’aplica en arribar al primer contacte físic, amb la geometria actual d’aquell tick. Una porta que es tanca després de disparar pot interceptar-la. L’abast de selecció de 75/85 m no és una caducitat artificial de la bala: un tret sense assistència pot continuar volant fins a contacte o caducitat, com a l’individual.
+
+`src/projectile-model.mjs` comparteix les geometries originals de bala cilíndrica i projectil pesat. Es retira la seva definició local de `game-core.js`; el cooperatiu reutilitza la bala blanca i projecta l’impacte separat del tret, a Three i Canvas. Els tirs de guàrdies del pilot encara són instantanis: queden pendents de connectar a aquest mateix nucli, juntament amb els seus criteris complets de punteria/IA. No es presenta aquesta fase com tota la integració de combat del món individual.
+
+Snapshot/checkpoint de posició, velocitat, vida i identificador de cada bala. La pausa congela les que ja han sortit i cancel·la només les bales pendents de la ràfega; canviar d’arma tampoc esborra una bala en vol. Fi de missió retira tots els projectils. Error de persistència reverteix tant dany com trajectòria abans de difondre estat. La confirmació `FIRED` anuncia el tret, no un impacte futur. No es poden enviar col·lisions, trajectòries o dany des del client.
+
+Validació del runtime individual real (font i bundle), cobertures, impactes i caducitat; proves de primer contacte i empats, retard de dany, porta en moviment, blanc que s’aparta, pausa, restauració, repetició d’ordres i rollback d’un impacte. La integració amb civils, edificis, blindatge, filferrades, altres armes i la IA completa continua aportada per l’adaptador individual i pendent al món cooperatiu.

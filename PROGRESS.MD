@@ -513,3 +513,24 @@ Integració de main: es conserva el con 3D compartit de pistola/fusell de v0.6.2
 4. Reutilitzar equipament, animacions, efectes i àudio restants; ampliar arsenal, món i campanya preservant RNG.
 5. Desaments cooperatius permanents, migracions, estadístiques/historial i resum de missió.
 6. Dos comptes/navegadors físics, GPU/Android, controls/rendiment/àudio/acabat; animació de portes, portes per a IA individual i incidències històriques de fixtures/escala 2.
+
+
+## Cooperatiu · fase 22 · Vol de bales compartit (v0.6.34)
+
+- `projectile-core.mjs` extreu de `updPj` l’avanç, vida i resolució del primer contacte continu del segment, amb l’ordre de desempat/caducitat original. Constructor de trajectòria compartit. L’individual usa el mateix nucli, conservant les consultes espacials, entitats, dany, efectes i armes originals.
+- Pistola i fusell dels jugadors cooperatius deixen de resoldre impactes instantanis. Bales a 130 m/s i vida de 2,2 s, amb posició/velocitat pròpies. Selecció al tret i trajectòria recta sense homing; el blanc pot moure’s abans de rebre-la. Es comprova el primer contacte amb la geometria actual de cada tick, incloent portes que canvien mentre la bala vola, sostres/pisos i terreny. L’abast d’adquisició de 75/85 m no talla artificialment el vol.
+- Munició descomptada una vegada en sortir cada bala. `FIRED` confirma el tret i l’impacte arriba després; repetir ordre o restaurar checkpoint no torna a disparar ni gastar. El client no envia vectors, col·lisions ni dany. Es conserven inventaris personals, ràfegues i absència de foc amic.
+- Checkpoint de projectils actius amb trajectòria, vida, identificador i dany. Pausa congela les bales ja disparades i cancel·la només trets pendents. Fi de missió neteja el vol. Rollback d’un impacte reverteix dany i trajectòria abans de difondre estat; reintent aplica un sol impacte.
+- `projectile-model.mjs` extreu les geometries originals de bala lleugera i projectil pesat. El cooperatiu reutilitza la bala cilíndrica blanca i mostra impactes separats a Three/Canvas. Sense crear una altra fàbrica alternativa.
+- `test:play` complet superat amb dues sessions locals natives: armes/ràfegues i impactes diferits, jeep, portes, activació/victòria, pausa/reconnexió, reinici del Worker i reanimació consumint una farmaciola. Runtime individual i portes contextuals també validats en bundle. GPU/Android físics pendents.
+- Aquesta fase migra els trets dels jugadors. Els guàrdies del pilot encara fan dany instantani i es connectaran al mateix nucli en la següent integració de combat/IA. No es declara complet tot el món ni el combat individual al servidor.
+- Validació: runtime individual real en font/bundle, retard de dany, cobertures, caducitat, primer contacte/empats, portes després del tret, blanc que s’aparta, pausa/checkpoint, idempotència, rollback/reintent/cold restore i geometria Three. Regles de punteria, fusell, torres, retícules i portes de v0.6.32 conservades. Generador temporal `relay:12`; missió nova amb clients actualitzats. Sense dependències ni recursos Cloudflare nous.
+
+### Què queda després d’aquesta fase
+
+1. Connectar els trets dels guàrdies al mateix nucli de vol i reutilitzar la punteria/cadència de la IA individual. Ampliar integració d’altres armes, blindatge, edificis, civils i efectes de combat.
+2. Extreure navegació/persecució i màquina d’estats de la IA individual; visió, autoapuntat i models ja són compartits.
+3. Compartir contactes avançats de vehicles (OBB, terrenys, ferri, aigua i aire) i després integrar salut/destrucció/blindatge/armes muntades a partir de les regles individuals.
+4. Equipament, animacions, efectes i àudio restants; arsenal, món i campanya complets preservant RNG.
+5. Desaments cooperatius permanents, migracions, estadístiques/historial i resum de missió.
+6. Dos comptes/navegadors físics, GPU/Android, controls/rendiment/àudio/acabat; animació de portes, portes per a IA individual i incidències històriques de fixtures/escala 2.

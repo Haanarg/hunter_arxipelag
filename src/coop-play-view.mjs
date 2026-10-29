@@ -1,6 +1,6 @@
 import {playerModel} from './player-model-core.mjs';
-import {createVehicleView} from './coop-vehicle-view.mjs?v=0.6.33';
-import {createCombatView} from './coop-combat-view.mjs?v=0.6.33';
+import {createVehicleView} from './coop-vehicle-view.mjs?v=0.6.34';
+import {createCombatView} from './coop-combat-view.mjs?v=0.6.34';
 const colors=[0x5fc5ff,0xffc85f],css=['#5fc5ff','#ffc85f'];
 export async function createMissionView(container,meta,geometry,{three=null,makeRenderer=null}={}){
   const doorByWall=new Map((meta.doors||[]).map(d=>[d.wallIndex,d.id]));
@@ -63,8 +63,9 @@ export async function createMissionView(container,meta,geometry,{three=null,make
       circle(meta.extraction,3,'#a2efa2','E');meta.terminals.forEach((p,i)=>circle(p,2,css[i],String(i+1)));
       for(const v of state?.vehicles||[]){ctx.save();ctx.translate(x(v.x),z(v.z));ctx.rotate(-v.hd);ctx.fillStyle='#819966';ctx.fillRect(-.9*scale,-1.6*scale,1.8*scale,3.2*scale);ctx.fillStyle='#d6e2c8';ctx.fillRect(-.7*scale,-1.1*scale,1.4*scale,.3*scale);ctx.restore();}
       for(const t of state?.combat?.targets||[])if(t.hp>0)circle(t,1.2,t.state==='attack'?'#ff3535':t.state==='alert'||t.state==='search'?'#e4a347':'#a85e50',t.state==='attack'?'!':String(t.hp));
+      for(const bullet of state?.combat?.projectiles||[])circle(bullet,.25,'#ffffff');
       for(const g of state?.combat?.grenades||[])circle(g,.7,'#becd62','!');
-      for(const e of state?.combat?.effects||[]){if(e.kind==='shot'){ctx.beginPath();ctx.moveTo(x(e.from.x),z(e.from.z));ctx.lineTo(x(e.to.x),z(e.to.z));ctx.strokeStyle=e.hit?'#ff6855':'#ffe18a';ctx.lineWidth=2;ctx.stroke();}else{ctx.globalAlpha=.3;circle(e.at,Math.max(.3,e.radius*Math.min(1,(state.tick-e.tick+1)/12)),'#ff9a32');ctx.globalAlpha=1;}}
+      for(const e of state?.combat?.effects||[]){if(e.kind==='shot'){ctx.beginPath();ctx.moveTo(x(e.from.x),z(e.from.z));ctx.lineTo(x(e.to.x),z(e.to.z));ctx.strokeStyle=e.hit?'#ff6855':'#ffe18a';ctx.lineWidth=2;ctx.stroke();}else if(e.kind==='impact'){circle(e.at,.4,e.hit?'#ff6855':'#ffe4aa');}else{ctx.globalAlpha=.3;circle(e.at,Math.max(.3,e.radius*Math.min(1,(state.tick-e.tick+1)/12)),'#ff9a32');ctx.globalAlpha=1;}}
       if(state)state.players.forEach(p=>{const i=meta.members.findIndex(m=>m.id===p.id);circle(p,1,p.hp<=0?'#f07860':state.inventories?.find(b=>b.actorId===p.id)?.disguised?'#567346':css[i],p.hp<=0?'✚':null);ctx.beginPath();ctx.moveTo(x(p.x),z(p.z));ctx.lineTo(x(p.x-Math.sin(p.hd)*3),z(p.z-Math.cos(p.hd)*3));ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();});
     };
   }

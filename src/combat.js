@@ -304,7 +304,7 @@ function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc,audioSource=null){
   if(heading.lengthSq()>1e-12)
     o.quaternion.setFromUnitVectors(heavyForward,heading.normalize());
   o.position.set(x,y,z);world.add(o);
-  Pj.push({x,y,z,sx:x,sy:y,sz:z,vx:dx*speed,vy:dy*speed,vz:dz*speed,dmg:power,spl,shotClass,own,life:2.2,o})
+  Pj.push(window.HUNTER_SHARED_PROJECTILES.launchProjectile({x,y,z},[dx,dy,dz],speed,{dmg:power,spl,shotClass,own,o}))
 }
 // Distància d'una explosió al CASC, no al centre del vehicle.
 // Els coets impacten sobre l'esfera de col·lisió; en helicòpters grans
@@ -992,7 +992,7 @@ function sniperReticlePoint(focus,range=1000){
   let prev=0;
   for(let k=1;k<=samples;k++){
     const t=k/samples;
-    if(t>=bestT)break;
+    if(t>=flight.fraction)break;
     if(surfaceDifference(t)<0){
       let lo=prev,hi=t;
       for(let j=0;j<9;j++){
@@ -1167,13 +1167,10 @@ function hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b){
 }
 function updPj(dt){
   for(let i=Pj.length-1;i>=0;i--){
-    const p=Pj[i],x0=p.x,y0=p.y,z0=p.z,x1=x0+p.vx*dt,y1=y0+p.vy*dt,z1=z0+p.vz*dt,
-          sx=x1-x0,sy=y1-y0,sz=z1-z0,horiz=Math.hypot(sx,sz),
+    const p=Pj[i],flight=window.HUNTER_SHARED_PROJECTILES.projectileStep(p,dt),{from,to,delta,consider}=flight,
+          x0=from.x,y0=from.y,z0=from.z,x1=to.x,y1=to.y,z1=to.z,sx=delta.x,sy=delta.y,sz=delta.z,horiz=Math.hypot(sx,sz),
           mx=(x0+x1)/2,mz=(z0+z1)/2,reach=horiz/2;
-    p.life-=dt;
-    let bestT=p.life<=0?1:Infinity,kind=p.life<=0?'expire':null,target=null;
-
-    const consider=(t,k,o)=>{if(t!=null&&t>=0&&t<=1&&t<bestT){bestT=t;kind=k;target=o}};
+    p.life=flight.life;
 
     // Parets i teulades: intersecció contínua de segment amb AABB.
     for(const w of wallCandidates(mx,mz,reach+1)){
@@ -1221,7 +1218,7 @@ function updPj(dt){
     // Terreny i arbres continuen mostrejats a una densitat equivalent a l'antic substep.
     const sampleN=Math.max(1,Math.ceil(Math.hypot(sx,sy,sz)/1.15));
     for(let k=1;k<=sampleN;k++){
-      const t=k/sampleN;if(t>=bestT)break;
+      const t=k/sampleN;if(t>=flight.fraction)break;
       const x=x0+sx*t,y=y0+sy*t,z=z0+sz*t,ground=bunkerProjectileSurface(x,z,y)+.04;
       if(y<ground){consider(t,'terrain',null);break}
       // Les palmeres exteriors no bloquegen bales que viatgen sota
@@ -1233,8 +1230,7 @@ function updPj(dt){
       if(tree&&y<Math.max(hAt(x,z),0)+(tree.p?6.5:1.5)){consider(t,'tree',tree);break}
     }
 
-    const hit=bestT!==Infinity;
-    const t=hit?bestT:1;p.x=x0+sx*t;p.y=y0+sy*t;p.z=z0+sz*t;p.o.position.set(p.x,p.y,p.z);
+    const {hit,kind,target,point}=flight.finish();p.x=point.x;p.y=point.y;p.z=point.z;p.o.position.set(p.x,p.y,p.z);
     if(!hit)continue;
 
     const ineffective=projectileImpactImmune(kind,target,p);
