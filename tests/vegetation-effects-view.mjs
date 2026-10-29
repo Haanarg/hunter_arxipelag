@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import * as T from '../vendor/three-r186.module.mjs';
+import {palmFallFrame} from '../src/debris-core.mjs';
+import {createVegetationEffectsView} from '../src/vegetation-effects-view.mjs';
+const scene=new T.Scene(),effects=createVegetationEffectsView(T,scene,{heightAt:()=>2,random:(a,b)=>(a+b)/2,maxParticles:24,maxDust:3});
+const frame=palmFallFrame({x:10,z:20,s:2,yaw:Math.PI/2},.9,()=>2);
+assert.equal(frame.angle,-1.5);assert.equal(frame.leaves.y,2.6);assert.ok(Math.abs(frame.leaves.x-10)<1e-10);assert.ok(Math.abs(frame.leaves.z-7.2)<1e-10);
+for(let i=0;i<20;i++)effects.emit(frame);assert.deepEqual(effects.stats,{particles:24,dust:3});assert.equal(scene.children.length,27);
+const material=scene.children[0].material,geometry=scene.children[0].geometry;let materialsDisposed=0,geometriesDisposed=0;material.addEventListener('dispose',()=>materialsDisposed++);geometry.addEventListener('dispose',()=>geometriesDisposed++);
+for(let i=0;i<150;i++)effects.update(1/60);assert.deepEqual(effects.stats,{particles:0,dust:0});assert.equal(scene.children.length,0);
+effects.emit(frame);effects.destroy();effects.destroy();effects.emit(frame);effects.update(1);assert.equal(scene.children.length,0);assert.equal(materialsDisposed,1);assert.equal(geometriesDisposed,1);
+console.log('vegetation effects: native impact placement, bounded particles, physics, expiry and idempotent disposal passed');

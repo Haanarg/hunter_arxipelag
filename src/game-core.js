@@ -550,7 +550,7 @@ fxContext.enemy=true;
 for(const u of E)if(ENEMY_TRAIL_TYPES.has(u.t))
   movementFx.vehicle(u,dt,fxContext);
 movementFx.update(dt,cam);
- PT.forEach(p=>{if(p.life>0){p.life-=dt;if(p.rise)p.m.position.y+=p.rise*dt;p.m.scale.setScalar(p.s*(1+(1-p.life/p.max)*1.15));p.m.material.opacity=Math.max(0,p.life/p.max)*.8;if(p.life<=0){p.m.visible=false;p.rise=0}}});
+ PT.forEach(p=>{if(p.life>0){p.life-=dt;if(p.rise)p.m.position.y+=p.rise*dt;const frame=window.HUNTER_DEBRIS_CORE.dustFrame(p.life,p.max,p.s);p.m.scale.setScalar(frame.scale);p.m.material.opacity=frame.opacity;if(p.life<=0){p.m.visible=false;p.rise=0}}});
 if(seaAudio&&audioCanPlay()){const coastal=Math.max(.25,1-Math.max(0,hAt(P.x,P.z))/22),
       // La barca de rems, com el windsurf, només fa fregadís d'aigua.
       waterVolume=cv&&(cv.t==='windsurf'||cv.t==='barca_rems')
@@ -819,8 +819,8 @@ document.getElementById('generationCancel').onclick=()=>window.HUNTER_CANCEL_STA
 document.querySelectorAll('#ini button[data-d]').forEach(b=>b.onclick=()=>startGameProgressively(readGameStartOptions(+b.dataset.d)));
 // animacions de destrucció
 const DB=[],WA=[],HR=[],dgeo=new THREE.BoxGeometry(1,1,1),dmc={},dmat=c=>dmc[c]||(dmc[c]=M(c));
-function debris(x,y,z,col,n,sz,sp){for(let i=0;i<n;i++){const m=new THREE.Mesh(dgeo,dmat(col)),s=rn(.4,1)*sz;m.scale.set(s,s*rn(.5,1.2),s);m.position.set(x+rn(-1,1),y,z+rn(-1,1));m.rotation.set(rn(0,3),rn(0,3),0);world.add(m);
-DB.push({m,s0:m.scale.clone(),vx:rn(-sp,sp),vy:rn(sp*.4,sp*1.3),vz:rn(-sp,sp),rx:rn(-6,6),life:rn(1.2,2)})}
+function debris(x,y,z,col,n,sz,sp){for(let i=0;i<n;i++){const m=new THREE.Mesh(dgeo,dmat(col)),d=window.HUNTER_DEBRIS_CORE.createDebrisParticle(x,y,z,sz,sp,rn);m.scale.set(d.scale.x,d.scale.y,d.scale.z);m.position.set(d.position.x,d.position.y,d.position.z);m.rotation.set(d.rotation.x,d.rotation.y,d.rotation.z);world.add(m);
+DB.push({...d,m,s0:m.scale.clone()})}
 while(DB.length>160)world.remove(DB.shift().m)}
 function vehicleDebris(v,baseY){
   if(!v?.o)return;
@@ -876,9 +876,7 @@ if(b.hangar&&b.roof?.userData?.hangarRoof){
   for(let i=0;i<8;i++)puff(b.x+rn(-b.w/2,b.w/2),y,b.z+rn(-b.d/2,b.d/2),0xc9b48a,4.5)
 }
 snd('boom',.4,{x:b.x,y,z:b.z},b)}
-function updDeb(dt){for(let i=DB.length-1;i>=0;i--){const d=DB[i],m=d.m;d.vy-=28*dt;m.position.x+=d.vx*dt;m.position.y+=d.vy*dt;m.position.z+=d.vz*dt;m.rotation.x+=d.rx*dt;m.rotation.y+=(d.ry||0)*dt;m.rotation.z+=(d.rz||0)*dt;
-const g=Math.max(0,hAt(m.position.x,m.position.z))+.2;if(m.position.y<g){m.position.y=g;d.vy*=-.3;d.vx*=.6;d.vz*=.6;d.rx*=d.truckPiece?.38:.82;if(d.ry)d.ry*=d.truckPiece?.38:.82;if(d.rz)d.rz*=d.truckPiece?.38:.82}
-d.life-=dt;const fade=d.vehiclePart?.55:.4,k=Math.max(0,Math.min(1,d.life/fade));m.scale.set(d.s0.x*k,d.s0.y*k,d.s0.z*k);if(d.life<=0){world.remove(m);DB.splice(i,1)}}
+function updDeb(dt){for(let i=DB.length-1;i>=0;i--){const d=DB[i],m=d.m,k=window.HUNTER_DEBRIS_CORE.stepDebrisParticle(d,m.position,m.rotation,dt,hAt);m.scale.set(d.s0.x*k,d.s0.y*k,d.s0.z*k);if(d.life<=0){world.remove(m);DB.splice(i,1)}}
 for(let i=WA.length-1;i>=0;i--){const a=WA[i];a.t-=dt;const s=Math.max(0,a.t/.5);a.m.scale.y=s;a.m.position.y=a.h/2*s;if(a.t<=0){world.remove(a.m);WA.splice(i,1)}}
 for(let i=HR.length-1;i>=0;i--){const a=HR[i],m=a.m;a.t+=dt;const p=Math.min(1,a.t/a.dur),e=p*p*(3-2*p);m.rotation.z=a.baseRz+a.dir*e*.62;m.rotation.x=a.baseRx+Math.sin(p*Math.PI)*.08;m.position.y=a.baseY-e*8.5;if(p>.35&&Math.random()<.35)puff(a.x+rn(-a.w/2,a.w/2),Math.max(.4,m.parent.position.y+m.position.y+rn(0,3)),a.z+rn(-a.d/2,a.d/2),0x7c7772,2.4);if(p>=1){m.visible=false;if(m.parent)m.parent.remove(m);HR.splice(i,1)}}
 updFA(dt)}
@@ -961,9 +959,9 @@ function killPalm(t){if(!t.alive)return;t.alive=false;const a=TG.get(t.k);if(a){
 if(PM.remove)PM.remove(t.i,ZM);
 const y=new THREE.Group(),g=new THREE.Group();y.position.set(t.x,t.y,t.z);y.rotation.y=t.yaw;y.scale.setScalar(t.s);y.add(g);
 [[PG.t,0x8a6a3a],[PG.c,0x4fa03a],[PG.c2,0x6fbf3a]].forEach(([ge,c])=>g.add(new THREE.Mesh(ge,dmat(c))));world.add(y);FA.push({y,g,t:0,s:t.s,x:t.x,z:t.z,yaw:t.yaw})}
-function updFA(dt){for(let i=FA.length-1;i>=0;i--){const a=FA[i];a.t+=dt;const k=Math.min(1,a.t/.9);a.g.rotation.z=-k*k*1.5;
-if(k>=1){const c=Math.cos(a.yaw),s=Math.sin(a.yaw),lx=a.x+c*6.4*a.s,lz=a.z-s*6.4*a.s,ly=Math.max(hAt(lx,lz),0)+.6;
-debris(lx,ly,lz,0x4fa03a,8,1,5);debris(a.x+c*3*a.s,ly,a.z-s*3*a.s,0x8a6a3a,4,.7,3);puff(lx,ly,lz,0xc9b48a,3);world.remove(a.y);FA.splice(i,1)}}}
+function updFA(dt){for(let i=FA.length-1;i>=0;i--){const a=FA[i];a.t+=dt;const frame=window.HUNTER_DEBRIS_CORE.palmFallFrame(a,a.t,hAt);a.g.rotation.z=frame.angle;
+if(frame.progress>=1){for(const d of [frame.leaves,frame.wood])debris(d.x,d.y,d.z,d.color,d.count,d.size,d.speed);const p=frame.dust;puff(p.x,p.y,p.z,p.color,p.size);world.remove(a.y);FA.splice(i,1)}}}
+
 function vegetate(pa){return drainBuildSteps(vegetateSteps(pa))}
 function* vegetateSteps(pa){TG.clear();PL.length=0;FA.length=0;
 const layout=yield* window.HUNTER_VEGETATION_LAYOUT.vegetationLayoutSteps({halfSize:H,islands,heightAt:hAt,seed,random:R,spawn:pa,buildings:B,stairs,compounds:compoundClear}),{palms:pm,bushes:bu,rocks:rk,rockFieldStats}=layout;

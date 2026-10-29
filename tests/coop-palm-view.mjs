@@ -7,6 +7,7 @@ const ref={chunk:{trunk:source,primary:[],secondary:[]},trunkIndex:0,variant:0,i
 const visual={palms:{variantMap:[ref],remove(){removed++;}}},layout={palms:[{x:2,y:0,z:4,yaw:0}]};
 const view=createPalmDestructionView(T,scene,visual,layout);view.update([],0);view.update([[0,0]],.3);
 assert.equal(removed,1);assert.equal(scene.children.length,2);assert.notDeepEqual(scene.children[1].matrix.elements,source.matrix.elements);
-view.update([[0,0]],.7);assert.equal(scene.children.length,1);assert.equal(removed,1);
+view.update([[0,0]],.7);assert.deepEqual(view.stats,{particles:12,dust:1,falls:0});assert.equal(removed,1);view.update([[0,0]],2.1);assert.equal(scene.children.length,1);view.destroy();view.destroy();view.update([[1,0]],1);assert.equal(scene.children.length,1);
 createPalmDestructionView(T,scene,visual,layout).update([[0,0]],0);assert.equal(scene.children.length,1,'reconnect removes tree without replaying fall');
 console.log('coop palm view: shared instance geometry, fall, cleanup, duplicate and reconnect passed');
+const stress=createPalmDestructionView(T,scene,{palms:{variantMap:Array(100).fill(ref),remove(){}}},{palms:Array(100).fill(layout.palms[0])},{maxFalls:2});stress.update([],0);stress.update(Array.from({length:100},(_,i)=>[i,0]),.1);assert.equal(stress.stats.falls,2);assert.equal(scene.children.length,3);stress.destroy();assert.equal(scene.children.length,1,'leaving during falls removes temporary meshes');

@@ -19,7 +19,7 @@ export async function createMissionView(container,meta,geometry,{three=null,make
     const T=three||await import('../vendor/three-r186.module.mjs'),renderer=makeRenderer?makeRenderer({canvas}):new T.WebGLRenderer({canvas,antialias:true});
     renderer.setPixelRatio(Math.min(2,devicePixelRatio||1));renderer.setClearColor(0x273b32);
     const scene=new T.Scene(),camera=new T.OrthographicCamera(-70,70,60,-60,.1,20000);
-    dispose=()=>{scene.traverse(o=>{if(o.isInstancedMesh)o.dispose?.();o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();});renderer.dispose();};
+    dispose=()=>{palmDestruction?.destroy();scene.traverse(o=>{if(o.isInstancedMesh)o.dispose?.();o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();});renderer.dispose();};
     camera.position.set(cx,meta.floor+110,cz+75);camera.lookAt(cx,meta.floor,cz);scene.add(new T.AmbientLight(0xffffff,2));
     const light=new T.DirectionalLight(0xffedcd,3);light.position.set(cx-40,100,cz+30);scene.add(light);
     const box=(w,h,d,x,y,z,color)=>{const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),new T.MeshStandardMaterial({color,roughness:1}));mesh.position.set(x,y,z);scene.add(mesh);return mesh;};
@@ -38,7 +38,7 @@ export async function createMissionView(container,meta,geometry,{three=null,make
     if(geometry.bunker){const bunker=geometry.bunker,st=bunker.basement.stair,run=Math.abs(st.zTop-st.zBottom);box(bunker.basement.halfX*2,.26,bunker.basement.halfZ*2,bunker.x,bunker.basement.floorY-.13,bunker.z,0x434c49);for(let i=0;i<15;i++)box(st.width,.21,run/15+.035,bunker.x+st.x,bunker.fy+.22-(i+1)*9.37/15-.1,bunker.z+st.zTop+(i+.5)*(st.zBottom-st.zTop)/15,0x8b9289);}
     const landmarkMeshes=[],structures=createCompoundStructures(),part=(group,w,h,d,color,x=0,y=0,z=0)=>{const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),new T.MeshStandardMaterial({color,roughness:.8}));mesh.position.set(x,y,z);group.add(mesh);return mesh;};
     for(const compound of meta.compounds||[])for(const landmark of compound.landmarks||[]){let mesh;if(landmark.kind==='tower')mesh=createTowerModel(T,{box:part});else if(landmark.kind==='antenna')mesh=structures.antenna(landmark.spec);else if(landmark.kind==='satellite'){mesh=structures.satellite(landmark.spec.radius);mesh.scale.setScalar(landmark.spec.scale||1);}else{mesh=new T.Group();part(mesh,landmark.size,.08,landmark.size,0x566958);for(const x of [-4,4])part(mesh,1,.1,12,0xe6e3cf,x,.09,0);part(mesh,8,.1,1,0xe6e3cf,0,.09,0);}mesh.position.set(landmark.x,landmark.y,landmark.z);mesh.rotation.y=-compound.angle;mesh.userData.landmarkKind=landmark.kind;scene.add(mesh);landmarkMeshes.push({mesh,...landmark});}
-    if(terrainAdapter?.vegetation){const layout=terrainAdapter.vegetation,random=createWorldRandom(layout.randomState),visual=vegetationVisual.create(T,{materialProfile:name=>materialProfiles[name]||materialProfiles.organic,random:(a,b)=>a+random()*(b-a)});vegetationView=visual.build({world:scene,palms:layout.palms,bushes:layout.bushes,rocks:layout.rocks,playerX:meta.extraction.x,playerZ:meta.extraction.z,lowQuality:false,lodProfile:'desktop'});scene.userData.vegetationStats=vegetationView.palms.stats;palmDestruction=createPalmDestructionView(T,scene,vegetationView,layout);}
+    if(terrainAdapter?.vegetation){const layout=terrainAdapter.vegetation,random=createWorldRandom(layout.randomState),visual=vegetationVisual.create(T,{materialProfile:name=>materialProfiles[name]||materialProfiles.organic,random:(a,b)=>a+random()*(b-a)});vegetationView=visual.build({world:scene,palms:layout.palms,bushes:layout.bushes,rocks:layout.rocks,playerX:meta.extraction.x,playerZ:meta.extraction.z,lowQuality:false,lodProfile:'desktop'});scene.userData.vegetationStats=vegetationView.palms.stats;palmDestruction=createPalmDestructionView(T,scene,vegetationView,layout,{heightAt:terrainAdapter.heightAt});}
     const buildingView=createBuildingView(T,scene,geometry,doorByWall),{doorMeshes,wallMeshes,roofMeshes,stairMeshes}=buildingView;
     const line=(points,color,opacity=1)=>{const material=new T.LineBasicMaterial({color,transparent:opacity<1,opacity}),mesh=new T.Line(new T.BufferGeometry().setFromPoints(points.map(p=>new T.Vector3(p.x,p.y??meta.floor+.15,p.z))),material);scene.add(mesh);return mesh;};
     line([{x:b.x0,z:b.z0},{x:b.x1,z:b.z0},{x:b.x1,z:b.z1},{x:b.x0,z:b.z1},{x:b.x0,z:b.z0}],0xffdfa0,.65);
@@ -53,7 +53,7 @@ export async function createMissionView(container,meta,geometry,{three=null,make
       const group=new T.Group(),body=playerModel.create(T,{unitScale:.85});body.position.y=0;group.add(body);
       const arrow=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(0,1.4,0),new T.Vector3(0,1.4,-2.5)]),new T.LineBasicMaterial({color:0xffffff}));group.add(arrow);group.userData.actorId=m.id;scene.add(group);return group;
     });
-    dispose=()=>{scene.traverse(o=>{if(o.isInstancedMesh)o.dispose?.();o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();});renderer.dispose();};
+    dispose=()=>{palmDestruction?.destroy();scene.traverse(o=>{if(o.isInstancedMesh)o.dispose?.();o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();});renderer.dispose();};
     const combatView=createCombatView(T,scene),vehicleView=await createVehicleView(T,scene);
     let initialized=false;
     resize=()=>{const w=container.clientWidth,h=container.clientHeight,aspect=w/Math.max(1,h),half=Math.max((b.z1-b.z0)*.7,(b.x1-b.x0)/aspect*.6,40);camera.left=-half*aspect/zoom;camera.right=half*aspect/zoom;camera.top=half/zoom;camera.bottom=-half/zoom;camera.updateProjectionMatrix();renderer.setSize(w,h,false);};
@@ -66,7 +66,7 @@ export async function createMissionView(container,meta,geometry,{three=null,make
       const vegetationFocus=state?.players.find(p=>p.id===self)||meta.extraction;vegetationView?.palms.update(vegetationFocus.x,vegetationFocus.z);
       renderer.render(scene,camera);
     };
-    dispose=()=>{vehicleView.destroy();combatView.destroy();scene.traverse(o=>{if(o.isInstancedMesh)o.dispose?.();o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();});renderer.dispose();};
+    dispose=()=>{palmDestruction?.destroy();vehicleView.destroy();combatView.destroy();scene.traverse(o=>{if(o.isInstancedMesh)o.dispose?.();o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();});renderer.dispose();};
   }catch(_){
     dispose();dispose=()=>{};
     // A Canvas map keeps the same mission playable on devices without WebGL.

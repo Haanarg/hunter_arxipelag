@@ -1,3 +1,5 @@
+import * as debrisCore from './debris-core.mjs';
+window.HUNTER_DEBRIS_CORE=debrisCore;
 import * as vehicleEnvironment from './vehicle-environment-core.mjs';
 window.HUNTER_VEHICLE_ENVIRONMENT=vehicleEnvironment;
 import * as fenceVisual from './fence-visual-core.mjs';
