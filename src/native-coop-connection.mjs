@@ -4,7 +4,7 @@ import {GAME_VERSION} from './version.mjs?v=0.6.53';
 // Transport adapter for the original runtime. No scene, renderer or controls.
 export function createNativeCoopConnection({room,getInput,onRoom,onMission,onState,onStatus,onError,onAction,onInput,now=Date.now,WebSocketImpl=globalThis.WebSocket,origin=globalThis.location?.origin,setInputTimer=setInterval,clearInputTimer=clearInterval,setTimer=setTimeout,clearTimer=clearTimeout}){
  const url=new URL('/api/coop/socket',origin);url.protocol=url.protocol==='https:'?'wss:':'ws:';url.searchParams.set('room',room.id);
- let epoch=null,state=null,stateRevision=0,timer=null,sequence=0,prepared=null,readyRoom=false,published=false,lastMessage=0,lastPing=0,pingSequence=0;
+ let epoch=null,state=null,stateRevision=0,timer=null,sequence=0,prepared=null,readyRoom=false,published=false,lastMessage=0,lastPing=0,pingSequence=0,canProbe=false;
  const stats={rttMs:null,rttJitterMs:0,serverTickMs:null,serverSaveMs:null,
    serverBroadcastMs:null,serverTick:null,stateFrames:0,stateBytes:0,
    avgStateGapMs:null,maxStateGapMs:0,lastStateAt:null};
@@ -17,9 +17,9 @@ export function createNativeCoopConnection({room,getInput,onRoom,onMission,onSta
    }
    stats.lastStateAt=stamp;
  }
- const socket=createCoopSocket({url:url.href,WebSocketImpl,setTimer,clearTimer,maxPayload:1000000,onStatus,onDisconnect(){clearInputTimer(timer);timer=null;state=null;readyRoom=false;published=false;},
+ const socket=createCoopSocket({url:url.href,WebSocketImpl,setTimer,clearTimer,maxPayload:1000000,onStatus,onDisconnect(){clearInputTimer(timer);timer=null;state=null;readyRoom=false;published=false;canProbe=false;},
   fatal:{1008:'ended',4001:'replaced',4003:'ended',4004:'ended',4005:'version'},onOpen({send}){lastMessage=now();lastPing=lastMessage;send({type:'hello',protocol:1,gameVersion:GAME_VERSION});timer=setInputTimer(()=>{if(epoch&&state?.status==='running'){
-    const stamp=now();if(stamp-lastPing>=2000){
+    const stamp=now();if(canProbe&&stamp-lastPing>=2000){
       lastPing=stamp;send({type:'latency-ping',protocol:1,epoch,nonce:++pingSequence,clientTime:stamp});
     }
     const message={type:'input',protocol:1,epoch,sequence:++sequence,...(()=>{const {interact=false,...input}=getInput();return {input,interact};})()};
@@ -40,7 +40,7 @@ export function createNativeCoopConnection({room,getInput,onRoom,onMission,onSta
      return;
    }
    if(data.type==='room'){readyRoom=!!data.room?.allReady&&data.room.revision===room.revision;onRoom?.(data.room);if(readyRoom&&prepared&&!published)publish(prepared);}
-   else if(data.type==='native-mission'){if(!data.meta?.id||!Array.isArray(data.state?.players)||!data.state.players.some(p=>p.id===data.self))throw Error('Missió invàlida');if(epoch!==data.meta.id)sequence=0;epoch=data.meta.id;state=data.state;stateRevision=data.stateRevision??0;sequence=Math.max(sequence,state.players.find(p=>p.id===data.self)?.acknowledged||0);noteState(bytes);onMission(data);}
+   else if(data.type==='native-mission'){if(!data.meta?.id||!Array.isArray(data.state?.players)||!data.state.players.some(p=>p.id===data.self))throw Error('Missió invàlida');if(epoch!==data.meta.id)sequence=0;epoch=data.meta.id;state=data.state;stateRevision=data.stateRevision??0;canProbe=data.telemetry===1;sequence=Math.max(sequence,state.players.find(p=>p.id===data.self)?.acknowledged||0);noteState(bytes);onMission(data);}
    else if(data.type==='state'&&data.state?.missionId===epoch){state=data.state;noteState(bytes);onState(data.state);}
    else if(data.type==='state-delta'&&data.missionId===epoch){if(data.baseRevision!==stateRevision||data.revision!==stateRevision+1)throw Error('Cal resincronitzar');state=applyCoopDelta(state,data.delta);stateRevision=data.revision;noteState(bytes);onState(state);}
    else if(data.type==='action'){onAction?.(data);}
