@@ -735,6 +735,10 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
           aim=projectileSpeed>0&&e.t==='patrulla_marina'?
             bazookaInterceptPoint(e,x,y,z,ty,projectileSpeed):{x:e.x,y:ty,z:e.z};
     consider(e,'enemy',priority,aim.x,aim.y,aim.z);
+    // Quan l'ampit tapa el centre del cos, també podem apuntar a la
+    // part superior del soldat. El mateix raycast comprova que sigui visible.
+    if(shotClass!=='heavy'&&['soldat','general'].includes(e.t))
+      consider(e,'enemy',priority,aim.x,baseY+2.35,aim.z);
   }
   // Cap blanc militar visible dins el con? Les armes pesades
   // poden buscar una bretxa a la filferrada, vehicles buits o edificis.
