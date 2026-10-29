@@ -32,8 +32,35 @@ export async function createMissionView(container,meta,geometry,{three=null,make
     if(geometry.bunker){const bunker=geometry.bunker,st=bunker.basement.stair,run=Math.abs(st.zTop-st.zBottom);box(bunker.basement.halfX*2,.26,bunker.basement.halfZ*2,bunker.x,bunker.basement.floorY-.13,bunker.z,0x434c49);for(let i=0;i<15;i++)box(st.width,.21,run/15+.035,bunker.x+st.x,bunker.fy+.22-(i+1)*9.37/15-.1,bunker.z+st.zTop+(i+.5)*(st.zBottom-st.zTop)/15,0x8b9289);}
     const landmarkMeshes=[],structures=createCompoundStructures(),part=(group,w,h,d,color,x=0,y=0,z=0)=>{const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),new T.MeshStandardMaterial({color,roughness:.8}));mesh.position.set(x,y,z);group.add(mesh);return mesh;};
     for(const compound of meta.compounds||[])for(const landmark of compound.landmarks||[]){let mesh;if(landmark.kind==='tower')mesh=createTowerModel(T,{box:part});else if(landmark.kind==='antenna')mesh=structures.antenna(landmark.spec);else if(landmark.kind==='satellite'){mesh=structures.satellite(landmark.spec.radius);mesh.scale.setScalar(landmark.spec.scale||1);}else{mesh=new T.Group();part(mesh,landmark.size,.08,landmark.size,0x566958);for(const x of [-4,4])part(mesh,1,.1,12,0xe6e3cf,x,.09,0);part(mesh,8,.1,1,0xe6e3cf,0,.09,0);}mesh.position.set(landmark.x,landmark.y,landmark.z);mesh.rotation.y=-compound.angle;mesh.userData.landmarkKind=landmark.kind;scene.add(mesh);landmarkMeshes.push({mesh,...landmark});}
-    const doorMeshes=new Map(),wallMeshes=[],roofMeshes=[],stairMeshes=[];
-    geometry.walls.forEach((wall,index)=>{const id=doorByWall.get(index),mesh=box(Math.max(.1,wall.x1-wall.x0),Math.max(.1,wall.y1-wall.y0),Math.max(.1,wall.z1-wall.z0),(wall.x0+wall.x1)/2,(wall.y0+wall.y1)/2,(wall.z0+wall.z1)/2,id?0x795c39:wall.playerBlock===false?0xb4b5a3:0xa0a795);
+    const doorMeshes=new Map(),windowMeshes=new Map(),wallMeshes=[],roofMeshes=[],stairMeshes=[];
+    geometry.walls.forEach((wall,index)=>{
+      const id=doorByWall.get(index),color=id?0x795c39:wall.playerBlock===false?0xb4b5a3:0xa0a795;
+      let mesh;
+      if(wall.windowPanes?.length){
+        const facade=new T.Group(),panes=[...wall.windowPanes].map((p,i)=>({p,i})),
+          normal=panes[0].p.axis,along=normal==='x'?'z':'x',
+          start=wall[along+'0'],end=wall[along+'1'],thickness=Math.max(.08,wall[normal+'1']-wall[normal+'0']),
+          middle=(wall[normal+'0']+wall[normal+'1'])/2;
+        const add=(lo,hi,ya,yb,c,transparent=false)=>{
+          if(hi-lo<=.03||yb-ya<=.03)return null;
+          const geometry=new T.BoxGeometry(normal==='x'?thickness:hi-lo,yb-ya,normal==='z'?thickness:hi-lo),
+            material=new T.MeshStandardMaterial({color:c,roughness:transparent?.18:.85,transparent,opacity:transparent?.55:1,depthWrite:!transparent}),
+            part=new T.Mesh(geometry,material);
+          part.position.set(normal==='x'?middle:(lo+hi)/2,(ya+yb)/2,normal==='z'?middle:(lo+hi)/2);
+          facade.add(part);return part;
+        };
+        const low=Math.min(...panes.map(e=>e.p.y0)),high=Math.max(...panes.map(e=>e.p.y1));
+        add(start,end,wall.y0,low,color);add(start,end,high,wall.y1,color);
+        let cursor=start;
+        for(const {p,i} of panes.sort((a,b)=>a.p[along]-b.p[along])){
+          const left=p[along]-p.width/2,right=p[along]+p.width/2;
+          add(cursor,left,low,high,color);
+          const glass=add(left,right,p.y0,p.y1,0x6cabbe,true);
+          if(glass){glass.userData.windowPaneId=index+':'+i;windowMeshes.set(index+':'+i,glass);}
+          cursor=right;
+        }
+        add(cursor,end,low,high,color);mesh=facade;scene.add(facade);
+      }else mesh=box(Math.max(.1,wall.x1-wall.x0),Math.max(.1,wall.y1-wall.y0),Math.max(.1,wall.z1-wall.z0),(wall.x0+wall.x1)/2,(wall.y0+wall.y1)/2,(wall.z0+wall.z1)/2,color);
       wallMeshes.push(mesh);mesh.visible=!wall.open;if(id){doorMeshes.set(id,mesh);mesh.userData.doorId=id;}
     });
     for(const building of geometry.buildings||[]){
@@ -67,7 +94,7 @@ export async function createMissionView(container,meta,geometry,{three=null,make
     let initialized=false;
     resize=()=>{const w=container.clientWidth,h=container.clientHeight,aspect=w/Math.max(1,h),half=Math.max((b.z1-b.z0)*.7,(b.x1-b.x0)/aspect*.6,40);camera.left=-half*aspect/zoom;camera.right=half*aspect/zoom;camera.top=half/zoom;camera.bottom=-half/zoom;camera.updateProjectionMatrix();renderer.setSize(w,h,false);};
     draw=dt=>{
-      if(state){for(const landmark of landmarkMeshes)if((state.removedWalls||[]).includes(landmark.wallIndex)||(state.removedRoofs||[]).includes(landmark.buildingIndex))landmark.mesh.visible=false;for(const index of state.removedRoofs||[]){for(const mesh of roofMeshes[index]||[])mesh.visible=false;for(const stair of stairMeshes)if(stair.buildingIndex===index)stair.mesh.visible=false;}for(const index of state.removedWalls||[])if(wallMeshes[index])wallMeshes[index].visible=false;vehicleView.update(state.vehicles,dt/1000);combatView.update(state.combat,state.tick);updateSupplies(state.supplies||(meta.supplies||[]).filter(s=>!state.claimedSupplies?.includes(s.id)));for(const door of state.doors||[]){const mesh=doorMeshes.get(door.id);if(mesh)mesh.visible=!door.open&&!door.destroyed;}for(let i=0;i<2;i++){const p=state.players.find(p=>p.id===meta.members[i].id),pawn=pawns[i];if(!p)continue;const vehicle=state.vehicles?.find(v=>v.seats.includes(p.id)),side=vehicle?(vehicle.seats[0]===p.id?-.5:.5):0,px=p.x+Math.cos(p.hd)*side,pz=p.z-Math.sin(p.hd)*side;
+      if(state){for(const landmark of landmarkMeshes)if((state.removedWalls||[]).includes(landmark.wallIndex)||(state.removedRoofs||[]).includes(landmark.buildingIndex))landmark.mesh.visible=false;for(const index of state.removedRoofs||[]){for(const mesh of roofMeshes[index]||[])mesh.visible=false;for(const stair of stairMeshes)if(stair.buildingIndex===index)stair.mesh.visible=false;}for(const index of state.removedWalls||[])if(wallMeshes[index])wallMeshes[index].visible=false;const broken=new Set(state.brokenWindows||[]);for(const [id,glass] of windowMeshes)glass.visible=!broken.has(id);vehicleView.update(state.vehicles,dt/1000);combatView.update(state.combat,state.tick);updateSupplies(state.supplies||(meta.supplies||[]).filter(s=>!state.claimedSupplies?.includes(s.id)));for(const door of state.doors||[]){const mesh=doorMeshes.get(door.id);if(mesh)mesh.visible=!door.open&&!door.destroyed;}for(let i=0;i<2;i++){const p=state.players.find(p=>p.id===meta.members[i].id),pawn=pawns[i];if(!p)continue;const vehicle=state.vehicles?.find(v=>v.seats.includes(p.id)),side=vehicle?(vehicle.seats[0]===p.id?-.5:.5):0,px=p.x+Math.cos(p.hd)*side,pz=p.z-Math.sin(p.hd)*side;
         if(!initialized)pawn.position.set(px,p.y,pz);else pawn.position.lerp(new T.Vector3(px,p.y,pz),1-Math.exp(-dt/65));pawn.rotation.y=p.hd;pawn.children[0].rotation.z=p.hp<=0?Math.PI/2:0;pawn.children[0].position.y=p.hp<=0?.5:0;const body=pawn.children[0],tint=p.hp<=0?0xf07860:state.inventories?.find(b=>b.actorId===p.id)?.disguised?0x567346:colors[i];for(const [material] of body.userData.mats)material.color.setHex(tint);body.traverse(o=>{if(o.material?.emissive)o.material.emissive.setHex(state.rescue?.immune.some(d=>d.actorId===p.id&&state.tick<d.untilTick)?0x285a76:0);});
       }initialized=true;ring.material.color.setHex(state.phase==='won'?0xffe98c:0x99ff9b);}
       const focus=zoom>1&&state?.players.find(p=>p.id===self);if(focus){camera.position.set(focus.x,focus.y+110,focus.z+75);camera.lookAt(focus.x,focus.y,focus.z);}else{camera.position.set(cx,meta.floor+110,cz+75);camera.lookAt(cx,meta.floor,cz);}
