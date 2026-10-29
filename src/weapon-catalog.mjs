@@ -1,5 +1,5 @@
 import {combatBalance} from './combat-rules.mjs';
-import {SMALL_ARMS_RANGE,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL} from './aiming-core.mjs';
+import {ARMORED_AIM,SMALL_ARMS_RANGE,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL} from './aiming-core.mjs';
 // Original individual weapon parameters; presentation and authority stay in adapters.
 export const HEAVY_SPEED_FACTOR=1.17;
 export const weaponCatalog=Object.freeze(Object.fromEntries(Object.entries({
@@ -11,8 +11,8 @@ export const weaponCatalog=Object.freeze(Object.fromEntries(Object.entries({
  cutters:{name:'Cisalla',item:'cutters',cooldown:.52},
  grenade:{name:'Granada',ammo:'grenades',damage:combatBalance.weapons.grenade,splash:16,cooldown:.7},
  c4:{name:'C4',ammo:'c4',damage:48,splash:combatBalance.weapons.c4,cooldown:1},
- tank:{name:'Canó del tanc',speed:85*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.tank,splash:8,range:220,cone:.68,vertical:.9,cooldown:.9,life:4.4},
- tankette:{name:'Canó de la tanqueta',speed:135,damage:combatBalance.weapons.tankette,range:85,cone:SMALL_ARMS_AIM_CONE,vertical:SMALL_ARMS_AIM_VERTICAL,cooldown:.16,life:2.2},
+ tank:{name:'Canó del tanc',speed:85*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.tank,splash:8,range:220,cone:ARMORED_AIM.heavy.cone,vertical:ARMORED_AIM.heavy.vertical,cooldown:.9,life:4.4},
+ tankette:{name:'Canó de la tanqueta',speed:135,damage:combatBalance.weapons.tankette,range:85,cone:ARMORED_AIM.light.cone,vertical:ARMORED_AIM.light.vertical,cooldown:.16,life:2.2},
  attackCannon:{name:'Canó de l’helicòpter',speed:145,damage:combatBalance.weapons.attackCannon,range:130,cone:.73,vertical:.97,cooldown:.12,life:2.2},
  heliMissile:{name:'Míssil',ammo:'rockets',speed:72*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.heliMissile,splash:10,range:185,cone:.68,vertical:.9,cooldown:.75,life:3.3},
  boatRocket:{name:'Coet naval',speed:68*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.boatRocket,splash:11,range:185,cone:.68,vertical:.9,cooldown:.9,life:2.2}

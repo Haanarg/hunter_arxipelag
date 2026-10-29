@@ -1,4 +1,4 @@
-# Reutilització del motor individual · v0.6.40
+# Reutilització del motor individual · v0.6.41
 
 Criteri: les regles i els models tenen una única implementació. Els adaptadors de navegador i servidor només aporten estat, geometria, autoritat, presentació i serveis. No es converteix tot el joc individual en un Worker: DOM, Three, àudio, càmera i comptes continuen fora de la simulació compartida.
 
@@ -104,3 +104,10 @@ La salut, blindatge, dany enter, contacte del projectil i distància d’explosi
 `weapon-catalog.mjs` centralitza els paràmetres de l’arsenal i famílies muntades, reaprofitant `combatBalance` i el selector de punteria. Les equacions de llançament de granada, elecció de blanc de ganivet i tall de filferrada s’extreuen i es criden també des de l’individual; la integració de vol/impacte/explosió continua al nucli compartit anterior. El pilot de relleu conserva les dades d’entrenament.
 
 `stepHelicopterLift` s’extreu del bloc original i l’usa també `stepV`. L’adaptador del camp usa `inputs`, `advanceVehicle`, `shore.depth/wetLand/clearance/boatContact`, aigua canònica i el lift compartit. El camp és deliberadament una zona de proves amb contactes limitats: no es declara completa l’extracció de `stepV`, les col·lisions OBB, impactes entre vehicles o transport al ferri. L’origen/animació de les armes muntades i el visor original encara s’han d’integrar. No s’ha eliminat el codi individual que encara és l’única implementació d’aquestes funcions.
+
+
+## Torretes i boques de blindats · v0.6.41
+
+`vehicle-turret-core.mjs` és ara la font del controlador original de `vehicleModels.aimTurret`: interpolació amb inèrcia, velocitat angular, camí curt, límits i alineació. Els pivots i boca del model també llegeixen les coordenades compartides; no s’ha fet un model cooperatiu alternatiu. `vehicleGunPose` reconstrueix numèricament el mateix transform sense Three al Worker, sobre el xassís Y del camp. Les pendents/roll del món complet resten a l’adaptador individual.
+
+El servidor segueix el mateix selector de blancs a cada tick i persisteix angles i velocitats. La vista aplica els angles del servidor; F usa la boca i el vector real, no la direcció desitjada. `ARMORED_AIM` a `aiming-core.mjs` comparteix els cons originals amb el wrapper individual i substitueix els paràmetres provisionals del camp. 1.200 passos congelats de la fàbrica anterior, 1.200 comparacions servidor/Three i els 16 hashes de models proven paritat; proves de vol/impacte, moviment, pausa, checkpoint i rollback cobreixen l’adaptador.

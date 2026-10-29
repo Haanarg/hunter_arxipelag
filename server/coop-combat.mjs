@@ -1,3 +1,4 @@
+import {turretSpecs,stepVehicleTurret,vehicleGunPose} from '../src/vehicle-turret-core.mjs';
 import {weaponCatalog,combatCommands,mountedWeapons,grenadeLaunch,meleeTarget} from '../src/weapon-catalog.mjs';
 import {limitBazookaHorizontalAim} from '../src/aiming-core.mjs';
 import {enemyAccuracy} from '../src/enemy-accuracy-core.mjs';
@@ -63,14 +64,19 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
       alarm(center,blast.actorId,tick);effect('explosion',tick,{actorId:blast.actorId,at:center,radius:blast.radius,hits});
     }
   }
-  function fire(actorId,p,bag,tick,weapon=bag.weapon||'pistol'){
-    const profile=weaponCatalog[weapon],vehicle=vehicles.mounted(actorId),hd=vehicle?.hd??p.hd;
-    const from={x:p.x,y:p.y+(vehicle?2:weapon==='bazooka'?1.9:1.5),z:p.z},dx=-Math.sin(hd),dz=-Math.cos(hd),range=profile.range,focus={},heavy=!!profile.splash;
+  function aimWeapon(p,vehicle,weapon,from){
+    const profile=weaponCatalog[weapon],hd=vehicle?.hd??p.hd,dx=-Math.sin(hd),dz=-Math.cos(hd),range=profile.range,focus={},heavy=!!profile.splash;
     const aim=createAimSelector({origin:from,direction:[dx,0,dz],range,cone:profile.cone,shotClass:heavy?'heavy':weapon,focus,verticalCone:profile.vertical,
       isClear:(x,y,z,tx,ty,tz)=>traceArena({x,y,z},{x:tx,y:ty,z:tz},geometry(),world()).fraction>=1});
     for(const t of targets)if(t.hp>0)aim.consider(t,'enemy',weaponTargetPriority({...t,t:t.t||'soldat'},heavy?'heavy':weapon),t.x,t.y+1.5,t.z);
     for(const v of vehicles.live())if(v!==vehicle&&!v.seats.some(Boolean))aim.consider(v,'vehicle',3,v.x,v.y+1,v.z);
     let direction=aim.direction();if(weapon==='bazooka')direction=limitBazookaHorizontalAim(direction,dx,dz);
+    return {direction,focus};
+  }
+  function fire(actorId,p,bag,tick,weapon=bag.weapon||'pistol'){
+    const profile=weaponCatalog[weapon],vehicle=vehicles.mounted(actorId),gun=vehicle&&vehicleGunPose(vehicle),
+      from=gun?.origin||{x:p.x,y:p.y+(vehicle?2:weapon==='bazooka'?1.9:1.5),z:p.z};
+    const aimed=aimWeapon(p,vehicle,weapon,from),focus=aimed.focus,direction=gun?.direction||aimed.direction;
     const id='bullet-'+(++sequence),dmg=meta.mode!=='proving'&&['pistol','assault'].includes(weapon)?combatBalance.weapons.pistol:profile.damage;
     projectiles.push({...launchProjectile(from,direction,profile.speed,{id,actorId,weapon,dmg,splash:profile.splash||0,sourceVehicle:vehicle?.id,aimedAt:focus.target?.id||null}),life:profile.life});
     if(profile.ammo){const source=vehicle&&profile.ammo==='rockets'?vehicle:bag;source[profile.ammo]--;}
@@ -111,6 +117,11 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     for(let i=bursts.length-1;i>=0;i--){const burst=bursts[i],p=players().find(p=>p.id===burst.actorId),bag=inventory.get(burst.actorId);
       if(!p||p.hp<=0||p.fall||p.swimming||!canAttack(p.id)||!bag?.assault||bag.weapon!=='assault'||!bag.bullets){bursts.splice(i,1);continue;}
       stepBurst(burst,1/30,true,()=>{if(!bag.bullets)return false;fire(p.id,p,bag,tick);alarm(p,p.id,tick);bag.disguised=false;return true;});if(!burst.remaining)bursts.splice(i,1);
+    }
+    for(const vehicle of vehicles.live())if(turretSpecs[vehicle.t]&&vehicle.seats[0]){
+      const p=players().find(p=>p.id===vehicle.seats[0]);if(!p||p.hp<=0)continue;
+      const weapon=mountedWeapons[vehicle.t],gun=vehicleGunPose(vehicle),aimed=aimWeapon(p,vehicle,weapon,gun.origin);
+      stepVehicleTurret(vehicle,aimed.direction,1/30);
     }
     for(let i=projectiles.length-1;i>=0;i--){
       const p=projectiles[i],flight=projectileStep(p,1/30),trace=traceArena(flight.from,flight.to,geometry(),world(),{ignoreBarbed:!p.splash});

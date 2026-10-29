@@ -939,9 +939,8 @@ function updateBazookaReticle(dt){
 }
 // Conservem el punt de sortida horitzontal del tanc i la tanqueta (0 graus).
 function autoAimArmoredShot(x,y,z,fx,fz,range,shotClass='heavy',projectileSpeed=0,focus=null){
-  const heavy=shotClass==='heavy';
-  return autoAimWeaponShot(x,y,z,fx,0,fz,range,heavy?.73:.97,
-    shotClass,focus,projectileSpeed,heavy?.68:Math.PI/2);
+  const profile=window.HUNTER_SHARED_AIMING.ARMORED_AIM[shotClass==='heavy'?'heavy':'light'];
+  return autoAimWeaponShot(x,y,z,fx,0,fz,range,profile.cone,shotClass,focus,projectileSpeed,profile.vertical);
 }
 // Rifle: sortida REAL des de l'extrem del canó. En mode mira el model
 // invisible s'orienta com l'òptica; P.hd i el moviment no canvien.

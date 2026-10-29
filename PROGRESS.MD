@@ -598,3 +598,24 @@ Integració de main: es conserva el con 3D compartit de pistola/fusell de v0.6.2
 4. IA individual compartida completa (navegació/persecució/estats/cadències), equipament/àudio/món/objectius i campanya sencera.
 5. Desaments cooperatius permanents, migracions, estadístiques/historial i resum de missió.
 6. Proves amb dos navegadors físics i GPU/Android, rendiment/controls/acabat i portes autònomes de la IA.
+
+
+## Cooperatiu · fase 26 · Torretes i boques reals de tanc/tanqueta (v0.6.41)
+
+- `vehicle-turret-core.mjs` extreu el controlador original de gir/elevació amb inèrcia, camí angular curt, límits, velocitats i llindar d’alineació. `vehicleModels.aimTurret` individual delega en aquest nucli: no hi ha un segon controlador cooperatiu.
+- Coordenades de pivot, elevació i boca originals compartides amb la fàbrica de tanc/tanqueta. `vehicleGunPose` calcula la mateixa jerarquia Y(xassís) × Y(torreta) × X(canó), amb l’escala original. El servidor i el model renderitzat coincideixen; no canvia la geometria individual.
+- La torre apunta a 30 Hz al blanc del selector compartit i es mou mentre es condueix. F dispara des de la boca i amb l’orientació efectiva actual del canó: no força la direcció cap al blanc en disparar. Si encara no s’hi ha alineat, el tret pot fallar. La vista mostra els angles autoritatius; les bales ja no surten del centre del vehicle.
+- `ARMORED_AIM` extreu els cons individuals realment emprats: pesat .73 / vertical .68; lleuger .97 / vertical π/2. Tant `autoAimArmoredShot` individual com el catàleg cooperatiu hi deleguen. Es retiren les dades provisionals divergents dels blindats del camp.
+- Angles i velocitats angulars queden al mateix checkpoint de vehicle/vol/munició. Pausa congela el gir; reconnexió/reinici el restaura sense tornar la torre a zero. La fallada d’un desament reverteix també les velocitats angulars i no emet estat prematur; reintent i cold restore idèntics.
+- Validació: 1.200 passos congelats del controlador i boques de la fàbrica individual anterior; 1.200 comparacions numèriques addicionals de servidor/Three amb xassís girant, elevació i dt variable; trets reals, dany a blanc descentrat, absència de snap al disparar, pausa/restore i rollback. Els 16 hashes originals de geometria/materials continuen iguals. Regressions de retícula, arsenal i flota superades. Sense validació GPU/Android física.
+- `npm run test:play` complet superat, incloent dues sessions autenticades locals amb D1/SQLite DO/WebSocket: relleu, armes/jeep/portes, extracció, pausa/reconnexió, reinici, rescat amb farmaciola i camp de proves amb 16 vehicles.
+- Generador temporal `relay:16`, clients actualitzats i camp nou. Sense dependències, migracions ni recursos Cloudflare nous.
+
+### Què queda després d’aquesta fase
+
+1. Boques/orientacions i animacions de la resta d’armes muntades i personals, visor individual real, càrrega variable de granada i temporitzador editable del C4. Tanc/tanqueta ja comparteixen controlador i boca real.
+2. Paritat de física de vehicles: OBB, xocs/atropellaments, suports i transport sobre ferri, obstacles/accidents aeris, impulsos d’ejecció/ferralla/efectes originals. El camp continua amb contacte limitat i xassís de blindat sobre terra pla.
+3. Destrucció d’edificis/filferrades per explosions, torres/supressió, civils i efectes originals, preservant cobertura i RNG.
+4. IA individual compartida completa (navegació/persecució/estats/cadències), equipament/àudio/món/objectius i campanya sencera.
+5. Desaments cooperatius permanents, migracions, estadístiques/historial i resum de missió.
+6. Dos navegadors físics, GPU/Android, rendiment/controls/acabat i portes autònomes de la IA.

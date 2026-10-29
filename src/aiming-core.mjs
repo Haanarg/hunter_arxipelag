@@ -99,3 +99,7 @@ export function createAimSelector({origin,direction,range,cone=.97,shotClass='li
   };
  return Object.freeze({consider,get priority(){return bestPriority;},get hasTarget(){return !!chosen;},direction(){return chosen||[fx,fy,fz];}});
 }
+
+
+// Existing armored auto-aim envelopes, shared by individual and cooperative adapters.
+export const ARMORED_AIM=Object.freeze({heavy:Object.freeze({cone:.73,vertical:.68}),light:Object.freeze({cone:.97,vertical:Math.PI/2})});

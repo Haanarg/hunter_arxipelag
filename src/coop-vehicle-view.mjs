@@ -15,7 +15,7 @@ export async function createVehicleView(T,scene){
     model.traverse(o=>{if(o.geometry)o.geometry=o.geometry.clone();if(o.material)o.material=Array.isArray(o.material)?o.material.map(m=>m.clone()):o.material.clone();});
     if(!v.modelScale)model.scale.setScalar(3.2/humvee.dimensions.length);group.add(model);meshes.set(v.id,group);scene.add(group);
    }group.position.set(v.x,v.y,v.z);group.rotation.y=v.hd;
-   const model=group.children[0];vehicleModels.animateSteering(model,v.t,v.steerInput||0,dt);
+   const model=group.children[0];if(model.userData.turretPivot)model.userData.turretPivot.rotation.y=v.turretYaw||0;if(model.userData.turretPitch)model.userData.turretPitch.rotation.x=v.turretPitch||0;vehicleModels.animateSteering(model,v.t,v.steerInput||0,dt);
    for(const wheel of model.userData.wheels||[])wheel.rotation.x-=(v.v||0)*dt/Math.max(.1,wheel.userData.radius||.5);
    if(model.userData.rotor)model.userData.rotor.rotation.y+=dt*30;
   }

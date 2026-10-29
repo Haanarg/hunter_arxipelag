@@ -1,4 +1,4 @@
-# Missió cooperativa jugable · v0.6.40
+# Missió cooperativa jugable · v0.6.41
 
 ## Què es pot jugar
 
@@ -6,7 +6,7 @@
 
 L’usuari ha prioritzat que sigui jugable encara que l’estètica quedi provisional. Aquesta versió utilitza una vista 3D senzilla, dos personatges de colors, murs, terminals i recorreguts orientatius. Si WebGL no es pot crear, s’ofereix un mapa Canvas 2D amb els mateixos controls i la mateixa sessió. El joc individual conserva el seu món i la seva interfície.
 
-No és encara la campanya Hunter completa en cooperatiu. Hi ha armes, inventaris personals, reanimació, guàrdies i un jeep compartit dins del recinte. La campanya completa continua pendent. Generador temporal actual: `relay:15`; cal iniciar una missió nova després d’actualitzar els dos clients. Les seccions amb versions anteriors conserven l’històric.
+No és encara la campanya Hunter completa en cooperatiu. Hi ha armes, inventaris personals, reanimació, guàrdies i un jeep compartit dins del recinte. La campanya completa continua pendent. Generador temporal actual: `relay:16`; cal iniciar una missió nova després d’actualitzar els dos clients. Les seccions amb versions anteriors conserven l’històric.
 
 ## Com jugar
 
@@ -166,3 +166,10 @@ Cada jugador rep armes i reserves pròpies: pistola, fusell d’assalt, franctir
 El conductor dispara amb F el canó del tanc/tanqueta, el canó de l’helicòpter de combat, els coets navals o la pistola dels vehicles oberts. **V / Míssil** és l’arma secundària de l’helicòpter de combat (12 míssils per aparell al camp). El Huey deixa llançar granades amb B; si s’hi puja amb C4 seleccionat, F en deixa caure una càrrega. El passatger no dispara. La munició de mà és personal; els míssils pertanyen al vehicle.
 
 **Límits coneguts:** disponibilitat i prova funcional de totes les famílies; encara no és paritat completa amb el motor individual. Resten contactes OBB/entre vehicles, atropellaments, transport sobre el ferri i obstacles/accidents aeris complets, destrucció d’edificis i filferrades per explosions, animacions de conductor/armes, canons/torretes orientats amb boca exacta, visor real, càrrega variable de granades i temporitzador editable del C4. Granades del camp: potència mitjana fixa; C4: 5 s. La validació GPU/Android i dos navegadors físics continua pendent.
+
+
+## Torretes de blindats · v0.6.41
+
+Al camp nou, el tanc i la tanqueta ja giren i eleven el canó amb el controlador individual. Els trets surten de la **boca real** i segueixen el canó, també conduint. Feu que el xassís miri aproximadament el blanc i doneu temps a la torreta perquè s’hi orienti. Prémer F abans que hagi acabat de girar pot fer fallar el tret: disparar no recol·loca instantàniament la torre.
+
+Pausa/reconnexió conserven orientació i inèrcia. Cal camp nou (`relay:16`) i dos clients actualitzats. Això completa la boca/orientació dels dos blindats; les d’helicòpters, embarcacions i armes personals, així com les altres limitacions de contacte/animació del camp, continuen pendents.

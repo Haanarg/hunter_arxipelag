@@ -1,3 +1,4 @@
+import {turretSpecs,advanceTurret} from './vehicle-turret-core.mjs';
 import {vehicleSpecs} from './vehicle-specs.mjs';
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 export const vehicleModels=Object.freeze({
@@ -21,24 +22,8 @@ export const vehicleModels=Object.freeze({
     model.updateWorldMatrix(true,false);
     const local=worldDirection.clone().normalize().applyQuaternion(
       model.getWorldQuaternion(new THREE.Quaternion()).invert());
-    // Un objectiu pràcticament vertical no ha de fer girar la torre 180°.
-    const yaw=Math.hypot(local.x,local.z)<1e-4
-            ?pivot.rotation.y:Math.atan2(-local.x,-local.z),
-          elev=Math.max(rig.turretMinPitch??-.42,Math.min(rig.turretMaxPitch??.43,Math.atan2(local.y,Math.hypot(local.x,local.z)))),
-          step=Math.min(.08,Math.max(0,Number.isFinite(dt)?dt:0));
-    const approach=(angle,target,key,maxSpeed,wrap)=>{
-      const delta=wrap?Math.atan2(Math.sin(target-angle),Math.cos(target-angle)):target-angle;
-      const desired=Math.max(-maxSpeed,Math.min(maxSpeed,delta*3.8));
-      let velocity=rig[key]||0;
-      velocity+=(desired-velocity)*(1-Math.exp(-8*step));
-      const move=velocity*step;
-      if(Math.abs(move)>=Math.abs(delta)){rig[key]=0;return angle+delta}
-      rig[key]=velocity;return angle+move;
-    };
-    pivot.rotation.y=approach(pivot.rotation.y,yaw,'turretYawSpeed',rig.turretYawRate||1.55,true);
-    pitch.rotation.x=approach(pitch.rotation.x,elev,'turretPitchSpeed',.85,false);
-    const yawError=Math.atan2(Math.sin(yaw-pivot.rotation.y),Math.cos(yaw-pivot.rotation.y));
-    return Math.abs(yawError)<.085&&Math.abs(elev-pitch.rotation.x)<.085;
+    const result=advanceTurret(rig,pivot.rotation.y,pitch.rotation.x,local,dt);
+    pivot.rotation.y=result.yaw;pitch.rotation.x=result.pitch;return result.aligned;
   },
   // L'origen i l'orientació dels projectils són els del canó visible.
   turretShot(THREE,model){
@@ -241,16 +226,16 @@ export const vehicleModels=Object.freeze({
         const nose=box(g,2.48,.72,1.15,0x727c50,0,1.62,-1.65,'paint');
         nose.rotation.x=-.18;
         for(const x of[-1.05,1.05])box(g,.32,.18,.18,0xffe0a0,x,1.48,-2.24,'paint');
-        const turret=new THREE.Group();turret.position.set(0,2.22,-.15);g.add(turret);
+        const turret=new THREE.Group();turret.position.set(...turretSpecs.tanqueta.pivot);g.add(turret);
         // La base rectangular queda fixa al xassís; només gira la corona cilíndrica.
         box(g,2.08,.58,1.7,0x727c50,0,2.02,-.15,'paint');
         round(turret,.68,.32,0x586543,0,.18,0,'y','paint');
-        const elev=new THREE.Group();elev.position.set(0,.26,-.5);turret.add(elev);
+        const elev=new THREE.Group();elev.position.set(...turretSpecs.tanqueta.pitch);turret.add(elev);
         rod(elev,[0,0,0],[0,0,-2.4],.1,metal);
         box(elev,.3,.24,.5,metal,0,0,-2.27,'metal');
-        const muzzle=new THREE.Object3D();muzzle.position.set(0,0,-2.4);elev.add(muzzle);
+        const muzzle=new THREE.Object3D();muzzle.position.set(...turretSpecs.tanqueta.muzzle);elev.add(muzzle);
         g.userData.turretPivot=turret;g.userData.turretPitch=elev;
-        g.userData.turretMuzzle=muzzle;g.userData.turretYawRate=2.05;
+        g.userData.turretMuzzle=muzzle;g.userData.turretYawRate=turretSpecs.tanqueta.turretYawRate;
       }
       if(t==='tanc'){
         const trackSide=x=>{
@@ -274,19 +259,19 @@ export const vehicleModels=Object.freeze({
         box(g,3.75,1.15,5.9,0x667348,0,1.5,0,'paint');
         const front=box(g,3.65,.72,1.55,0x727c50,0,1.95,-2.05,'paint');front.rotation.x=-.28;
         for(const x of[-1.45,1.45])box(g,.22,.52,4.9,0x56623f,x,1.88,.15,'paint');
-        const turret=new THREE.Group();turret.position.set(0,2.54,.1);g.add(turret);
+        const turret=new THREE.Group();turret.position.set(...turretSpecs.tanc.pivot);g.add(turret);
         round(turret,1.62,.82,0x78845b,0,0,0,'y','paint');
         box(turret,2.2,.26,1.65,0x6d7950,0,.38,0,'paint');
         round(turret,.62,.2,metal,.45,.54,.3);
         rod(turret,[-1,.16,.9],[-1,2.66,.9],.025,metal);
-        const elev=new THREE.Group();elev.position.set(0,.08,-1.1);turret.add(elev);
+        const elev=new THREE.Group();elev.position.set(...turretSpecs.tanc.pitch);turret.add(elev);
         rod(elev,[0,0,0],[0,0,-4.35],.2,metal);
         box(elev,.66,.4,.68,metal,0,0,-4.08,'metal');
-        const muzzle=new THREE.Object3D();muzzle.position.set(0,0,-4.35);elev.add(muzzle);
+        const muzzle=new THREE.Object3D();muzzle.position.set(...turretSpecs.tanc.muzzle);elev.add(muzzle);
         g.userData.turretPivot=turret;g.userData.turretPitch=elev;
-        g.userData.turretMuzzle=muzzle;g.userData.turretYawRate=1.40;
+        g.userData.turretMuzzle=muzzle;g.userData.turretYawRate=turretSpecs.tanc.turretYawRate;
         // El tanc pot apuntar a casetes altes i a objectius sota un turó.
-        g.userData.turretMinPitch=-.62;g.userData.turretMaxPitch=.72;
+        g.userData.turretMinPitch=turretSpecs.tanc.turretMinPitch;g.userData.turretMaxPitch=turretSpecs.tanc.turretMaxPitch;
         for(const x of[-1.2,1.2])box(g,.64,.45,1.2,0x596343,x,2.24,2,'paint');
         for(const x of[-1.35,1.35])box(g,.42,.22,.42,0x2f332e,x,2.15,-2.45,'metal');
       }
