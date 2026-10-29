@@ -1,9 +1,9 @@
-import {buildingVisual} from './building-visual-core.mjs?v=0.6.48';
-import {windowLayout} from './building-shell.mjs?v=0.6.48';
+import {buildingVisual} from './building-visual-core.mjs?v=0.6.49';
+import {windowLayout,windowPaneIndexAt} from './building-shell.mjs?v=0.6.49';
 import {materialProfiles} from './material-profiles.mjs';
 import {decorateTimber,decorateUpper} from './compound-architecture.mjs';
 import {createFenceVisual} from './fence-visual-core.mjs';
-import {createStaticWorldAdapter} from './world-adapter.mjs?v=0.6.48';
+import {createStaticWorldAdapter} from './world-adapter.mjs?v=0.6.49';
 // Original visual factories; authoritative wall/roof indices remain untouched.
 export function createBuildingView(T,scene,geometry,doors){
  const materialCache=new Map(),material=(color,profile='organic')=>{const key=color+':'+profile;if(!materialCache.has(key)){const c=new T.Color(color),h={};c.getHSL(h,T.SRGBColorSpace);c.setHSL(h.h,Math.min(1,h.s*1.5),h.l,T.SRGBColorSpace);materialCache.set(key,new T.MeshStandardMaterial({color:c,flatShading:true,...(materialProfiles[profile]||materialProfiles.organic)}));}return materialCache.get(key);};
@@ -27,7 +27,7 @@ export function createBuildingView(T,scene,geometry,doors){
   else if(w.barbed){const ax=w.ax??w.x0,az=w.az??w.z0,bx=w.bx??w.x1,bz=w.bz??w.z1,n=Math.max(1,Math.ceil(Math.hypot(bx-ax,bz-az)/6));for(let i=0;i<n;i++)group.add(fence(ax+(bx-ax)*i/n,az+(bz-az)*i/n,ax+(bx-ax)*(i+1)/n,az+(bz-az)*(i+1)/n));}
   else{
    group.position.set((w.x0+w.x1)/2,bottom,(w.z0+w.z1)/2);
-   if(w.windows&&owner){const parts=factory.addWindowedWall(group,{lx:0,lz:0,sx:width,sz:depth,height,material:owner.shell.walls});for(const glass of parts)if(glass.userData.windowPane!==undefined)windowMeshes.set(index+':'+glass.userData.windowPane,glass);group.userData.originalWindows=true;}
+   if(w.windows&&owner){const parts=factory.addWindowedWall(group,{lx:0,lz:0,sx:width,sz:depth,height,material:owner.shell.walls});for(const glass of parts)if(glass.userData.windowPane!==undefined){const axis=w.windowPanes?.[0]?.axis==='x'?'z':'x',coordinate=group.position[axis]+glass.position[axis],paneIndex=windowPaneIndexAt(w,coordinate);if(paneIndex>=0)windowMeshes.set(index+':'+paneIndex,glass);}group.userData.originalWindows=true;}
    else box(group,width,height,depth,id?0x704829:owner?.b.wood?0x96714b:w.playerBlock===false?0x8e9588:0xc9b98d,0,height/2,0,id?'paint':'masonry');
   }
   group.userData.wallIndex=index;if(!group.userData.internalStairProxy)group.visible=!w.open;scene.add(group);wallMeshes.push(group);if(id){doorMeshes.set(id,group);group.userData.doorId=id;}
