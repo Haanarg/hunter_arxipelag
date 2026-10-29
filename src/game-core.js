@@ -2065,9 +2065,12 @@ function isInsideVisibleBuilding(b){
   }
   if(b===ib)return true;
   if(!b.hangar||!cv||cv.destroyed)return false;
-  const y=VT[cv.t]?.m==='a'?(cv.alt??cv.o?.position?.y):(cv.o?.position?.y??cv.alt);
-  return Math.abs(cv.x-b.x)<b.w/2&&Math.abs(cv.z-b.z)<b.d/2&&
-    y!=null&&y>=b.fy-2&&y<b.fy+b.h+2;
+  const y=VT[cv.t]?.m==='a'?(cv.alt??cv.o?.position?.y):(cv.o?.position?.y??cv.alt),
+        heading=cv.hd+vehicleLook.offset;
+  return y!=null&&window.HUNTER_CAMERA_CONTROLS.hangarBlocksSight(b,cam.position,{
+    x:cv.x-Math.sin(heading)*8,y:(cv.o?.position?.y??y)+2,
+    z:cv.z-Math.cos(heading)*8
+  },{x:cv.x,y,z:cv.z});
 }
 function currentSniperFocus(){return scopeActive?window.HUNTER_SCOPE_FOCUS.create(P.x,P.y+1.76,P.z,scopeYaw,scopePitch):null}
 function updateDistanceVisibility(){
@@ -3290,6 +3293,20 @@ if(scopeNow){
   cam.lookAt(T.x-Math.sin(heading)*(bunkerBelow?3.5:8),
     Math.min(bunkerBelow?b.fy-1.0:Infinity,ty+(bunkerBelow?2.0:2)),
     T.z-Math.cos(heading)*(bunkerBelow?3.5:8));
+  if(cv){
+    // Es recalcula a cada fotograma: el LOD (.2 s) és massa lent
+    // quan el vehicle surt del hangar i la càmera encara hi és dins.
+    const sight={x:cv.x-Math.sin(heading)*8,y:ty+2,z:cv.z-Math.cos(heading)*8},
+          vehicle={x:cv.x,y:VT[cv.t]?.m==='a'?(cv.alt??ty):ty,z:cv.z};
+    for(const hangar of B){
+      if(!hangar.hangar||!hangar.o.visible||hangar.rb)continue;
+      const obstructs=window.HUNTER_CAMERA_CONTROLS.hangarBlocksSight(hangar,cam.position,sight,vehicle);
+      hangar.roof.visible=hangar.rhp>0&&!obstructs;
+      // La paret posterior semicircular NO pertany a roof: cal ocultar
+      // només les parets realment interposades entre vehicle i càmera.
+      if(obstructs)hideCameraObstructions(hangar,bunkerEye.set(cv.x,ty+2,cv.z),false);
+    }
+  }
 }
 }
 function updatePlayerHUD(dt){
@@ -3492,9 +3509,12 @@ if(palmVisualTick<=0){
 function viewInsideBuilding(b){
   if(b===ib)return true;
   if(!b.hangar||!cv||cv.destroyed)return false;
-  const y=VT[cv.t]?.m==='a'?(cv.alt??cv.o?.position?.y):(cv.o?.position?.y??cv.alt);
-  return Math.abs(cv.x-b.x)<b.w/2&&Math.abs(cv.z-b.z)<b.d/2&&
-    y!=null&&y>=b.fy-2&&y<b.fy+b.h+2;
+  const y=VT[cv.t]?.m==='a'?(cv.alt??cv.o?.position?.y):(cv.o?.position?.y??cv.alt),
+        heading=cv.hd+vehicleLook.offset;
+  return y!=null&&window.HUNTER_CAMERA_CONTROLS.hangarBlocksSight(b,cam.position,{
+    x:cv.x-Math.sin(heading)*8,y:(cv.o?.position?.y??y)+2,
+    z:cv.z-Math.cos(heading)*8
+  },{x:cv.x,y,z:cv.z});
 }
 worldVisualTick-=dt;
 if(worldVisualTick<=0){
