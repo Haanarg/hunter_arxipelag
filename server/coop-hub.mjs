@@ -253,7 +253,7 @@ export class CoopRoomHub {
       this.frameMetrics={tickMs:Math.max(0,afterTick-sampleStart),
         saveMs:Math.max(0,afterSave-afterTick),
         broadcastMs:Math.max(0,afterBroadcast-afterSave),
-        tick:this.mission.snapshot().tick};
+        tick:this.record?.checkpoint?.tick??0};
     }catch(e){
       // Never broadcast a partially persisted result. Resume from the last commit.
       if(this.record)this.mission=restoreRelayMission(this.record,this.geometry);throw e;
