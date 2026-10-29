@@ -162,10 +162,15 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     }
     for(const t of targets)if(t.ai){
       if(t.hp<=0){t.state='dead';t.focus=null;continue;}
-      const eye={x:t.x,y:t.y+1.5,z:t.z},candidates=players().filter(p=>p.hp>0&&!p.fall&&!p.swimming).map(p=>({p,d:Math.hypot(p.x-t.x,p.y-t.y,p.z-t.z)})).filter(({p,d})=>d<((inventory.get(p.id)?.disguised&&tick>(t.alarmedUntil||0))?4:18)&&guardInView(t,p)&&traceArena(eye,{x:p.x,y:p.y+1.5,z:p.z},geometry(),world()).fraction>=1).sort((a,b)=>a.d-b.d||a.p.id.localeCompare(b.p.id));
+      const eye={x:t.x,y:t.y+2.2,z:t.z},candidates=players().filter(p=>p.hp>0&&!p.fall&&!p.swimming).map(p=>{
+        const chest={x:p.x,y:p.y+1.5,z:p.z},head={x:p.x,y:p.y+2.35,z:p.z},
+          aim=traceArena(eye,chest,geometry(),world()).fraction>=1?chest:
+            traceArena(eye,head,geometry(),world()).fraction>=1?head:null;
+        return {p,aim,d:Math.hypot(p.x-t.x,p.y-t.y,p.z-t.z)};
+       }).filter(({p,aim,d})=>!!aim&&d<((inventory.get(p.id)?.disguised&&tick>(t.alarmedUntil||0))?4:18)&&guardInView(t,p)).sort((a,b)=>a.d-b.d||a.p.id.localeCompare(b.p.id));
       if(candidates.length){
-        const p=candidates[0].p;if(t.focus!==p.id)t.seenTicks=0;t.focus=p.id;t.lastSeenTick=tick;t.lastKnown={x:p.x,y:p.y,z:p.z};t.seenTicks=(t.seenTicks||0)+1;t.heading=Math.atan2(-(p.x-t.x),-(p.z-t.z));t.state=t.seenTicks<30?'alert':'attack';
-        if(t.seenTicks>=30&&tick-(t.lastAttack||0)>=90){const amount=Math.max(1,Math.ceil(combatBalance.weapons.rifle*(meta.difficulty||1)));const direction=enemyAccuracy.direction(meta.difficulty||1,'rifle',p.x-t.x,p.y+1.5-eye.y,p.z-t.z,roll),id='enemy-bullet-'+(++sequence);
+        const {p,aim}=candidates[0];if(t.focus!==p.id)t.seenTicks=0;t.focus=p.id;t.lastSeenTick=tick;t.lastKnown={x:p.x,y:p.y,z:p.z};t.seenTicks=(t.seenTicks||0)+1;t.heading=Math.atan2(-(p.x-t.x),-(p.z-t.z));t.state=t.seenTicks<30?'alert':'attack';
+        if(t.seenTicks>=30&&tick-(t.lastAttack||0)>=90){const amount=Math.max(1,Math.ceil(combatBalance.weapons.rifle*(meta.difficulty||1)));const direction=enemyAccuracy.direction(meta.difficulty||1,'rifle',aim.x-t.x,aim.y-eye.y,aim.z-t.z,roll),id='enemy-bullet-'+(++sequence);
           projectiles.push(launchProjectile(eye,direction,70,{id,actorId:t.id,enemy:true,dmg:amount}));t.lastAttack=tick;effect('shot',tick,{enemy:true,actorId:t.id,from:eye,to:{x:eye.x+direction[0],y:eye.y+direction[1],z:eye.z+direction[2]},hit:null});}
       }else if(t.focus&&tick-(t.lastSeenTick??-Infinity)<120){t.state='search';t.seenTicks=0;const center=t.lastKnown?facePoint(t,t.lastKnown):(t.heading||0);t.heading=center+Math.sin((tick-t.lastSeenTick)/120*Math.PI*2)*Math.PI/3;}
       else{
