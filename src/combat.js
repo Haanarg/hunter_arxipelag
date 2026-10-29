@@ -536,11 +536,10 @@ function grenadeImpactTrajectory(power=0,origin=P,hd=P.hd,flight=null){
   const end=points[points.length-1];
   return {points,landing:{x:end.x,z:end.z,y:bunkerProjectileSurface(end.x,end.z,end.y,true)+.05}};
 }
-// Només la cinta visual comença per sobre del cap, deixant espai amb
-// el jugador. No retallam la simulació: el cercle continua marcant la
-// caiguda real, fins i tot si la granada impacta abans de sortir del cos.
+// Començam just davant i sobre el cap, sense que la cinta travessi la cara.
+// La simulació es manté intacta i el cercle marca la caiguda real.
 function grenadeAimStartIndex(points,origin=P){
-  const minHeight=origin.y+3.55,minimumGap=1.45;
+  const minHeight=origin.y+2.2,minimumGap=.8;
   return points.findIndex((p,i)=>i>0&&p.y>=minHeight&&
     Math.hypot(p.x-origin.x,p.z-origin.z)>=minimumGap);
 }
@@ -566,8 +565,8 @@ function releaseGrenadeCharge(){
   return throwGrenade(power);
 }
 function updateGrenadeCharge(dt){
-  const heliAim=cv?.t==='heli'&&!over&&!paused&&(inv.granada||0)>0;
-  if(!grenadeCharge&&!heliAim){if(grenadeAimVisual)cancelGrenadeCharge();return}
+  const vehicleAim=!!cv&&cv.t!=='heli_combat'&&!over&&!paused&&(inv.granada||0)>0;
+  if(!grenadeCharge&&!vehicleAim){if(grenadeAimVisual)cancelGrenadeCharge();return}
   if(grenadeCharge&&(!grenadeEquipped||!inv.granada||cv||swimming||playerFall||paused||over)){cancelGrenadeCharge();return}
   if(grenadeCharge)grenadeCharge.elapsed=Math.min(GRENADE_CHARGE_SECONDS,grenadeCharge.elapsed+dt);
   // Actualitzar només a 25 Hz per mantenir baix el cost de les interseccions.
@@ -575,7 +574,7 @@ function updateGrenadeCharge(dt){
   state.visualTimer=(state.visualTimer??0)-dt;
   if(state.visualTimer>0)return;
   state.visualTimer=.04;
-  const aim=heliAim?grenadeImpactTrajectory(0,P,P.hd,helicopterGrenadeFlight(cv)):
+  const aim=vehicleAim?grenadeImpactTrajectory(0,P,P.hd,vehicleGrenadeFlight(cv)):
     grenadeImpactTrajectory(grenadeCharge.elapsed/GRENADE_CHARGE_SECONDS);
   if(!grenadeAimVisual){
     // Cinta de triangles d'uns 25 cm: una línia WebGL simple d'1 px
@@ -598,7 +597,7 @@ function updateGrenadeCharge(dt){
     world.add(line,circle,fill);grenadeAimVisual={line,circle,fill};
   }
   const a=grenadeAimVisual,attr=a.line.geometry.attributes.position,
-        start=heliAim?0:grenadeAimStartIndex(aim.points),visiblePoints=start<0?[]:aim.points.slice(start);
+        start=vehicleAim?0:grenadeAimStartIndex(aim.points),visiblePoints=start<0?[]:aim.points.slice(start);
   for(let i=0;i<visiblePoints.length;i++){
     const p=visiblePoints[i],before=visiblePoints[Math.max(0,i-1)],
           after=visiblePoints[Math.min(visiblePoints.length-1,i+1)],
@@ -611,30 +610,22 @@ function updateGrenadeCharge(dt){
   a.circle.position.set(aim.landing.x,aim.landing.y+.035,aim.landing.z);
   a.fill.position.set(aim.landing.x,aim.landing.y+.02,aim.landing.z);
 }
-// Les granades de l'helicòpter utilitari provenen de l'inventari,
- // sense requerir que el jugador les tengui equipades. Surten per la
- // porta lateral i conserven la inèrcia de l'aparell.
-function helicopterGrenadeFlight(v){
-  const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),
-        rightX=Math.cos(v.hd),rightZ=-Math.sin(v.hd),
-        forward=(v.v||0)*.9+7,side=(v.strafeV||0)+4.5;
-  return {x:v.x+fx*1.5+rightX*2.5,y:v.o.position.y+2.4,
-    z:v.z+fz*1.5+rightZ*2.5,vx:fx*forward+rightX*side,vy:5,
-    vz:fz*forward+rightZ*side,t:2.4};
+// Granades des de qualsevol vehicle excepte l'helicòpter de combat.
+// La geometria de llançament és compartida amb el servidor cooperatiu.
+function vehicleGrenadeFlight(v){
+  return window.HUNTER_SHARED_WEAPONS.vehicleGrenadeLaunch(v,v.o?.position.y??v.y);
 }
-function throwHelicopterGrenade(){
-  if(!cv||cv.t!=='heli'||over||paused||fcd>0)return false;
-  if(!inv.granada){
-    msg='No tens granades a l’inventari.';msgT=2;fcd=.35;return false;
-  }
-  const flight=helicopterGrenadeFlight(cv);
-  inv.granada--;
-  if(inv.granada<=0){delete inv.granada;grenadeEquipped=false}
-  fcd=.7;setDis(false);
-  launchGrenade({flight});
+function throwVehicleGrenade(){
+  if(!cv||cv.t==='heli_combat'||over||paused||playerFall||playerEject||fcd>0)return false;
+  if(!inv.granada){msg='No tens granades a l’inventari.';msgT=2;return false}
+  const flight=vehicleGrenadeFlight(cv);
+  if(!flight)return false;
+  inv.granada--;if(inv.granada<=0){delete inv.granada;grenadeEquipped=false}
+  fcd=.7;setDis(false);launchGrenade({flight});
   msg='Granades: '+(inv.granada||0);msgT=1.5;
   return true;
 }
+function throwHelicopterGrenade(){return cv?.t==='heli'&&throwVehicleGrenade()}
 function throwGrenade(power=0){
   if(over||cv||swimming||fcd>0||!grenadeEquipped||!inv.granada)return false;
   // Fixem el llançament quan s'allibera el botó perquè la predicció i
