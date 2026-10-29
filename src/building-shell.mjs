@@ -35,6 +35,18 @@ export function windowCrossing(from,to,wall){
  }
  return best;
 }
+// Convert a rendered pane's position back to its authoritative pane index.
+// Rotated façades (notably 180°) can reverse the mesh order.
+export function windowPaneIndexAt(wall,alongCoordinate){
+ const panes=wall?.windowPanes||[];if(!panes.length)return -1;
+ const axis=panes[0].axis==='z'?'x':'z';
+ let best=-1,error=Infinity;
+ for(let i=0;i<panes.length;i++){
+  const distance=Math.abs(panes[i][axis]-alongCoordinate);
+  if(distance<error){best=i;error=distance;}
+ }
+ return best;
+}
 export function wallShotHit(from,to,wall){
  if(wall.open)return null;
  const hit=segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,wall.x0,wall.x1,wall.y0,wall.y1,wall.z0,wall.z1);
@@ -82,7 +94,7 @@ export function shellColliders(x,z,fy,w,d,h,opt={},random){
       if(plan.wallH-dh>.05)walls.push({...box,y0:fy+dh,y1:fy+plan.wallH,hp:plan.wallHp,door:false,open:false,playerBlock:false,rammable:false});
     }else{
       const layout=s.windows?windowLayout(s.sx,s.sz,plan.wallH):null;
-      walls.push({...box,y0:fy+s.level-(s.level?0:1),y1:fy+s.level+(s.hangarPost?Math.max(3.1,h*.3):plan.wallH),hp:s.hangarPost?16:plan.wallHp,door:false,open:false,windows:!!s.windows,...(layout?{windowPanes:layout.centers.map(c=>({axis:layout.alongX?'z':'x',x:x+s.lx+(layout.alongX?c:0),z:z+s.lz+(layout.alongX?0:c),y0:fy+s.level+layout.bottom+.09,y1:fy+s.level+layout.bottom+layout.height-.09,width:layout.width-.18}))}:{}),...(s.hangarPost?{}:{supportSide:s.supportSide,supportWeight:s.supportWeight})});
+      walls.push({...box,y0:fy+s.level-(s.level?0:1),y1:fy+s.level+(s.hangarPost?Math.max(3.1,h*.3):plan.wallH),hp:s.hangarPost?16:plan.wallHp,door:false,open:false,windows:!!s.windows,upperFloorWindow:!!s.windows&&s.level>0,...(layout?{windowPanes:layout.centers.map(c=>({axis:layout.alongX?'z':'x',x:x+s.lx+(layout.alongX?c:0),z:z+s.lz+(layout.alongX?0:c),y0:fy+s.level+layout.bottom+.09,y1:fy+s.level+layout.bottom+layout.height-.09,width:layout.width-.18}))}:{}),...(s.hangarPost?{}:{supportSide:s.supportSide,supportWeight:s.supportWeight})});
     }
     segmentWalls.push(Array.from({length:walls.length-start},(_,i)=>start+i));
   }
