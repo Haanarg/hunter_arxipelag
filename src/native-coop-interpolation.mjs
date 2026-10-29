@@ -38,17 +38,21 @@ export function createNativeCoopInterpolation(){
  }
  function receive(state,localId){
   if(!state||!Number.isInteger(state.tick)){reset();return}
-  const hasPrevious=current&&current.missionId===state.missionId&&
-    current.status==='running'&&state.status==='running'&&
-    state.tick>current.tick&&state.tick-current.tick<=MAX_GAP_TICKS&&
-    localId===self;
-  if(!hasPrevious){
+  const sameMission=current&&current.missionId===state.missionId&&
+    current.status==='running'&&state.status==='running'&&localId===self;
+  const newer=!!sameMission&&state.tick>current.tick&&
+    state.tick-current.tick<=MAX_GAP_TICKS;
+  // Inventari, porta o seient poden canviar dins del mateix tick.
+  // No reiniciem el rellotge visual quan ja hi ha dues poses compatibles.
+  const sameTick=!!sameMission&&state.tick===current.tick&&!!previous;
+  if(!newer&&!sameTick){
    if(current)stats.resets++;
    previous=null;current=state;self=localId;cursor=state.tick;
    vehiclePairs=[];players.clear();stats.activeVehicles=0;stats.receives++;
    return;
   }
-  previous=current;current=state;self=localId;
+  if(newer)previous=current;
+  current=state;self=localId;
   // En un salt de xarxa no acumulem un retard il·limitat.
   if(cursor<previous.tick-2)cursor=previous.tick;
   const oldVehicles=new Map(previous.vehicles.map(row=>[row.id,row]));
