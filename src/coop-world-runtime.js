@@ -116,15 +116,17 @@ function updateNativeCoop(dt){
  // de retard: cap extrapolació de física o dany. L'actor/vehicle local
  // continua utilitzant la predicció i reconciliació originals.
  const remoteAlpha=s.interpolation?.advance(dt,!paused&&!document.hidden&&state.status==='running')??1;
+ const predictedVehicle=s.prediction?.vehicle();
  for(const pair of s.interpolation?.movingVehicles(remoteAlpha)||[]){
    const v=s.vehicles.get(pair.id);
-   if(!v||v===cv||v.destroyed||!v.o.visible)continue;
+   // Un passatger local segueix el vehicle remot, però el conductor
+   // local manté la seva predicció sense interferència visual.
+   if(!v||v.destroyed||!v.o.visible||predictedVehicle?.id===pair.id)continue;
    v.x=pair.pose.x;v.y=pair.pose.y;v.z=pair.pose.z;v.hd=pair.pose.hd;
    if(pair.pose.alt!==undefined)v.alt=pair.pose.alt;
  }
  // La predicció només modifica cada fotograma el vehicle que condueix
  // l'actor local; la resta espera dades noves del servidor.
- const predictedVehicle=s.prediction?.vehicle();
  if(cv&&!cv.destroyed&&predictedVehicle?.id===cv.saveId)
    for(const key of NATIVE_VEHICLE_POSE_KEYS)
      if(predictedVehicle[key]!==undefined)cv[key]=predictedVehicle[key];
