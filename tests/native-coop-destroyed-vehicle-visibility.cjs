@@ -53,8 +53,13 @@ const assert=require('node:assert/strict');
  const culling=game.run(`(()=>{
    const row=nativeCoopSession.state.vehicles[1],vehicle=nativeCoopSession.vehicles.get(row.id),
      target=nativeCoopSession.state.combat.targets.find(t=>t.hp>0),enemy=nativeCoopSession.enemies.get(target.id);
-   row.x=P.x+5000;row.z=P.z+5000;target.x=P.x+5000;target.z=P.z+5000;
-   nativeCoopSession.projectedState=null;worldVisualTick=0;updateNativeCoop(.01);
+   // Els estats de xarxa són immutables: el delta substitueix només
+   // els registres de les dues entitats que han canviat.
+   nativeCoopSession.state={...nativeCoopSession.state,
+     vehicles:nativeCoopSession.state.vehicles.map(v=>v.id===row.id?{...v,x:P.x+5000,z:P.z+5000}:v),
+     combat:{...nativeCoopSession.state.combat,
+       targets:nativeCoopSession.state.combat.targets.map(e=>e.id===target.id?{...e,x:P.x+5000,z:P.z+5000}:e)}};
+   worldVisualTick=0;updateNativeCoop(.01);
    let placements=0;const original=place;place=(v,...args)=>{if(v===vehicle)placements++;return original(v,...args)};
    for(let i=0;i<10;i++)updateNativeCoop(.01);place=original;
    return {vehicleVisible:vehicle.o.visible,enemyVisible:enemy.o.visible,placements};
