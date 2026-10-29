@@ -43,7 +43,7 @@ export function guardInView(guard,player){
   return d<=2||inView(guard.heading||0,dx,0,dz,Infinity,{sightHalfAngle:Math.PI/3+1e-10,sightVerticalAngle:Math.PI/2});
 }
 const facePoint=(guard,p)=>Math.atan2(-(p.x-guard.x),-(p.z-guard.z));
-export function createRelayCombat({meta,record={},inventory,players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false,blastWire=()=>{},blastStructures=()=>{},breakWindow=()=>false,damageWall=()=>false}){
+export function createRelayCombat({meta,record={},inventory,players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false,blastWire=()=>{},blastStructures=()=>{},breakWindow=()=>false,damageWall=()=>false,windowAvailable=()=>true}){
   const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);const bursts=structuredClone(record.bursts||[]),projectiles=structuredClone(record.projectiles||[]);let sequence=record.sequence||0;
   const random=createWorldRandom(record.randomState??(((meta.seed||0)^0x7269666c)>>>0)),roll=(a,b)=>a+random()*(b-a);
   const effect=(kind,tick,data)=>{effects.push({id:++sequence,kind,tick,...data});if(effects.length>64)effects.shift();};
@@ -86,6 +86,19 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
       isClear:(x,y,z,tx,ty,tz)=>traceArena({x,y,z},{x:tx,y:ty,z:tz},geometry(),world()).fraction>=1});
     for(const t of targets)if(t.hp>0)aim.consider(t,'enemy',weaponTargetPriority({...t,t:t.t||'soldat'},heavy?'heavy':weapon),t.x,t.y+1.5,t.z);
     for(const v of vehicles.live())if(v!==vehicle&&!v.seats.some(Boolean))aim.consider(v,'vehicle',3,v.x,v.y+1,v.z);
+    // Without a visible enemy, aim light weapons at intact upper-floor
+    // glass. The same physics trace checks the aperture, in both directions.
+    if(!aim.hasTarget&&!heavy){
+      const walls=geometry().walls;
+      for(let wi=0;wi<walls.length;wi++){
+        const wall=walls[wi];if(!wall.upperFloorWindow||wall.open||!wall.windowPanes)continue;
+        for(let pi=0;pi<wall.windowPanes.length;pi++){
+          if(!windowAvailable(wi,pi))continue;
+          const pane=wall.windowPanes[pi];
+          aim.consider(wall,'window',4,pane.x,(pane.y0+pane.y1)/2,pane.z);
+        }
+      }
+    }
     let direction=aim.direction();if(weapon==='bazooka')direction=limitBazookaHorizontalAim(direction,dx,dz);
     return {direction,focus};
   }
