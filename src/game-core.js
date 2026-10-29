@@ -2113,8 +2113,10 @@ function updateDistanceVisibility(){
   }
   for(const v of V){
     const dx=v.x-P.x,dz=v.z-P.z;
-    v.o.visible=v===cv||dx*dx+dz*dz<max.vehicles*max.vehicles||
-      !!focus?.contains(v.x,v.o.position.y+1.5,v.z,5);
+    // La destrucció té prioritat sobre el LOD: a multijugador el
+    // servidor amaga el vehicle, i aquesta passada no el pot ressuscitar.
+    v.o.visible=!v.destroyed&&(v===cv||dx*dx+dz*dz<max.vehicles*max.vehicles||
+      !!focus?.contains(v.x,v.o.position.y+1.5,v.z,5));
     if(!v.o.visible)visibilityStats.vehicles++;
   }
   for(const key in enemyLodStats)enemyLodStats[key]=0;
