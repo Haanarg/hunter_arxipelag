@@ -1,3 +1,5 @@
+> **Estat del client: prototip tècnic separat.** La prova real amb dos jugadors ha confirmat que aquesta interfície, càmera i generació alternativa no compleixen l'objectiu d'adaptar el joc individual. La direcció de desenvolupament queda substituïda per [la reconstrucció sobre el runtime original](COOP_REBUILD.md). Les funcionalitats i proves descrites a continuació són l'historial del prototip, no una certificació de paritat amb el joc original.
+
 # Cooperatiu · v0.6.45
 
 ## Què es pot jugar
