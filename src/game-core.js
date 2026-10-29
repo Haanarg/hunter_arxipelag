@@ -1037,7 +1037,7 @@ function dmgW(w,d){
  if(w.hp>0)return;
  // Destrucció atòmica de tota l'obertura: cap porta o llinda invisible
  // pot conservar la col·lisió després de caure un dels dos brancals.
- const members=w.doorAssembly||[w];
+ const members=w.woodenDoor?[w]:(w.doorAssembly||[w]);
  for(const piece of members){
   if(!piece||piece.destroyedWall)continue;
   piece.destroyedWall=true;piece.hp=0;piece.open=true;piece.playerBlock=false;
@@ -1048,7 +1048,7 @@ function dmgW(w,d){
   if(piece.stairStructure)destroyInteriorStair(piece.stairStructure.owner);
   checkRoofSupport(piece.owner,piece);
  }
- snd('boom',.3,{x:w.cx??(w.x0+w.x1)/2,y:(w.y0+w.y1)/2,z:w.cz??(w.z0+w.z1)/2},w);
+ snd(w.woodenDoor?'woodBreak':'boom',w.woodenDoor?.72:.3,{x:w.cx??(w.x0+w.x1)/2,y:(w.y0+w.y1)/2,z:w.cz??(w.z0+w.z1)/2},w);
 }
 function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=seedSearchMode
   ?{group:new THREE.Group(),walls:null,doors:null,roof:new THREE.Group()}
