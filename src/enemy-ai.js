@@ -100,7 +100,7 @@ function soldierVisualContact(u,target,targetY,d){
           Math.abs(targetEye-eyeY)<8;
   if(over||d>range||!(eliteAwareness||
     STEALTH.inView(u.hd,dx,targetEye-eyeY,dz,range)))return false;
-  if(!soldierClearShot(u,u.x,u.z,eyeY,target,targetY-(crouched?.25:0)))return false;
+  if(soldierVisibleShotHeight(u,u.x,u.z,eyeY,target,targetY-(crouched?.25:0))===null)return false;
   // A diferència de sight(), el pendent també tapa un enemic al darrere
   // d'una cresta (sense fer raycasts de geometria per cada soldat).
   if(!sameBasement){
@@ -135,7 +135,8 @@ function soldierWarnNeighbors(witness,target,targetY){
 function enemyAimSpread(){return window.HUNTER_ENEMY_ACCURACY.difficultyScale(DIF)}
 function enemyShotDirection(u,target,targetY,eyeY,roll=rn,weapon=null){
   const aimX=target.x-u.x,
-        aimY=targetY+(!cv&&playerCrouched?1.25:1.5)-eyeY,
+        aimHeight=(!cv&&playerCrouched)?1.25:(soldierVisibleShotHeight(u,u.x,u.z,eyeY,target,targetY)??1.5),
+        aimY=targetY+aimHeight-eyeY,
         aimZ=target.z-u.z,
         profile=weapon||(u.rocketSoldier?'bazooka':u.elite?'elite':
           u.t==='general'?'pistol':u.t==='torre'?'tower':
@@ -146,8 +147,8 @@ function enemyShotDirection(u,target,targetY,eyeY,roll=rn,weapon=null){
 
 // El contacte visual i la possibilitat de disparar no són el mateix.
 // Les parets i els vehicles aparcats obliguen el soldat a canviar d'angle.
-function soldierClearShot(u,x,z,y,target,targetY){
-  const tx=target.x,tz=target.z,ty=targetY+1.5,
+function soldierClearShot(u,x,z,y,target,targetY,aimHeight=1.5){
+  const tx=target.x,tz=target.z,ty=targetY+aimHeight,
         reach=Math.hypot(tx-x,tz-z)/2+3,mx=(x+tx)/2,mz=(z+tz)/2;
   for(const w of wallCandidates(mx,mz,reach)){
     if(w.open||w.barbed)continue;
@@ -169,6 +170,13 @@ function soldierClearShot(u,x,z,y,target,targetY){
     if(t!=null&&t<.97)return false;
   }
   return true;
+}
+// A raised sill can cover the chest but leave the upper body visible.
+// Never see or shoot through opaque wall parts: both rays use wallShotHit.
+function soldierVisibleShotHeight(u,x,z,y,target,targetY){
+  if(soldierClearShot(u,x,z,y,target,targetY))return 1.5;
+  if(!playerCrouched&&!cv&&soldierClearShot(u,x,z,y,target,targetY,2.35))return 2.35;
+  return null;
 }
 function soldierFlankPosition(u,target,targetY){
   const dx=target.x-u.x,dz=target.z-u.z,d=Math.max(1,Math.hypot(dx,dz)),
@@ -434,7 +442,8 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
        seen=!cheats.invisible&&!over&&!acrossFloor&&d<det&&
          (sameBasement&&u.t==='general'
            ?soldierClearShot(u,u.x,u.z,eyeY,q,py)
-           :sight(u.x,u.z,q.x,q.z,eyeY,true,py+1.5));
+           :(sight(u.x,u.z,q.x,q.z,eyeY,true,py+1.5)||
+           (!cv&&!playerCrouched&&sight(u.x,u.z,q.x,q.z,eyeY,true,py+2.35))));
     if(u.t==='soldat'){
        const raw=!cheats.invisible&&!!(cv? !over&&d<115&&
          STEALTH.inView(u.hd,dx,py+1.5-eyeY,dz,115)&&
@@ -447,8 +456,8 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
        const confirmed=raw&&u.recognition>=.45;
        const acquired=confirmed&&!u.canSee;
        u.canSee=confirmed;
-       u.canShoot=confirmed&&soldierClearShot(u,u.x,u.z,eyeY,q,
-         py-(!cv&&playerCrouched?.25:0));
+       u.canShoot=confirmed&&soldierVisibleShotHeight(u,u.x,u.z,eyeY,q,
+         py-(!cv&&playerCrouched?.25:0))!==null;
        if(confirmed){
          u.lastSeenX=q.x;u.lastSeenZ=q.z;u.lastSeenY=py;
          u.pursuitT=SOLDIER_MEMORY;u.aiMode='combat';
@@ -526,7 +535,7 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
     }
     // Independentment de la direcció de la fugida, mira el jugador.
     u.hd=Math.atan2(u.x-q.x,u.z-q.z);
-    if(d<u.rng&&u.cd<=0&&soldierClearShot(u,u.x,u.z,eyeY,q,py)){
+    if(d<u.rng&&u.cd<=0&&soldierVisibleShotHeight(u,u.x,u.z,eyeY,q,py)!==null){
       u.cd=u.rate;
       const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY);
       shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE,u);
