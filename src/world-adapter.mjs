@@ -33,7 +33,7 @@ export function normalizeWorldGeometry(source){
   return {format:2,...normalizeSurfaces(source),generatorVersion:source.generatorVersion,seed:source.seed,mapScale:source.mapScale,
     islands:rows(source.islands,1000).map(i=>{const row=pick(i,['x','z','r','peakX','peakZ']);if(row.r<=0)throw new RangeError('Invalid island');return row;}),
     levels:rows(source.levels,10000).map(i=>{const row=pick(i,['x','z','hw','hd','y','c','s','blend']);if(row.hw<0||row.hd<0||row.blend<=0)throw new RangeError('Invalid level');return row;}),
-    walls:rows(source.walls,100000).map(w=>{const row=pick(w,['x0','x1','z0','z1','y0','y1']);if(row.x0>row.x1||row.z0>row.z1||row.y0>row.y1)throw new RangeError('Invalid wall');return {...row,open:!!w.open,playerBlock:w.playerBlock!==false,towerLegOwner:!!w.towerLegOwner};}),
+    walls:rows(source.walls,100000).map(w=>{const row=pick(w,['x0','x1','z0','z1','y0','y1']);if(row.x0>row.x1||row.z0>row.z1||row.y0>row.y1)throw new RangeError('Invalid wall');return {...row,open:!!w.open,playerBlock:w.playerBlock!==false,towerLegOwner:!!w.towerLegOwner,woodenDoor:!!w.woodenDoor,hp:Number.isFinite(w.hp)?w.hp:12,door:!!w.door,...(Array.isArray(w.windowPanes)?{windowPanes:w.windowPanes.map(p=>pick(p,['axis','x','z','width','y0','y1']))}:{})};}),
     trees:rows(source.trees,200000).map(t=>{const row=pick(t,['x','z','r']);if(row.r<0)throw new RangeError('Invalid tree');return {...row,p:!!t.p,rock:!!t.rock,...(t.p?pick(t,['y','s','yaw']):{}),...(t.rock?pick(t,['topY','bottomY']):{})};})};
 }
 export function createStaticWorldAdapter(source){
