@@ -1,9 +1,10 @@
 import {weaponCatalog,personalWeapons,mountedWeapons} from './weapon-catalog.mjs';
 import {vehicleDynamics} from './vehicle-dynamics-core.mjs';
+import {combatBalance} from './combat-rules.mjs';
 import {configuredAccounts} from './account-client.mjs';
-import {GAME_VERSION} from './version.mjs?v=0.6.41';
-import {createPlayConnection,playInput} from './coop-play-connection.mjs?v=0.6.41';
-import {createMissionView} from './coop-play-view.mjs?v=0.6.41';
+import {GAME_VERSION} from './version.mjs?v=0.6.42';
+import {createPlayConnection,playInput} from './coop-play-connection.mjs?v=0.6.42';
+import {createMissionView} from './coop-play-view.mjs?v=0.6.42';
 const $=id=>document.getElementById(id),message=$('message'),launch=$('launch'),connection=$('connection'),keys=new Set(),touch=new Map();
 let channel=null,room=null,view=null,meta=null,self=null,state=null,viewGeneration=0,pendingDoor=null,doorTimer=null;
 function clearDoor(){if(doorTimer!==null)clearTimeout(doorTimer);doorTimer=null;pendingDoor=null;}
@@ -55,7 +56,7 @@ function drawHUD(){
   const slot=meta.members.findIndex(m=>m.id===self),mine=state.players.find(p=>p.id===self),target=state.phase==='relay'?meta.terminals[slot]:meta.extraction,
     distance=mine?Math.round(Math.hypot(mine.x-target.x,mine.z-target.z)):0;
   $('objective').textContent=state.phase==='won'?'MISSIÓ COMPLETADA · Relleu activat i equip extret!':state.phase==='failed'?'Missió finalitzada sense èxit. Podeu tornar-ho a provar.':state.status==='paused'?'Missió pausada · Esperant la connexió del company.':state.phase==='relay'?`Terminal ${slot+1} · ${distance} m · Activació simultània: ${Math.floor(state.hold/90*100)}%`:`Reuniu-vos al cercle verd · ${distance} m · Extracció: ${Math.floor(state.hold/60*100)}%`;
-  $('players').textContent=meta.members.map((m,i)=>`${i===0?'🔵':'🟡'} ${m.name}${m.id===self?' (tu)':''} · ${state.players.find(p=>p.id===m.id)?.hp??0}/20 PV${state.rescue?.down.find(d=>d.actorId===m.id)?' · FERIT':''}${state.rescue?.immune.some(d=>d.actorId===m.id&&state.tick<d.untilTick)?' · PROTEGIT':''}`).join('   ·   ')+` · ${Math.ceil(state.remaining)} s`;
+  $('players').textContent=meta.members.map((m,i)=>`${i===0?'🔵':'🟡'} ${m.name}${m.id===self?' (tu)':''} · ${state.players.find(p=>p.id===m.id)?.hp??0}/${combatBalance.player} PV${state.rescue?.down.find(d=>d.actorId===m.id)?' · FERIT':''}${state.rescue?.immune.some(d=>d.actorId===m.id&&state.tick<d.untilTick)?' · PROTEGIT':''}`).join('   ·   ')+` · ${Math.ceil(state.remaining)} s`;
   const riding=mounted();if(riding)$('players').textContent+=` · ${vehicleDynamics.types[riding.t]?.n||riding.t} ${riding.life}/${vehicleDynamics.types[riding.t]?.life||5} PV`;
   if(meta.mode==='proving'&&state.status==='running'&&state.phase==='relay')$('objective').textContent='CAMP DE PROVES · Flota a l’esquerra, embarcacions a la dreta; dianes al sud. E: vehicle · F: dispar · V: míssil · Re/Av Pàg: vol';
   const down=state.rescue?.down||[],mineDown=down.find(d=>d.actorId===self);
