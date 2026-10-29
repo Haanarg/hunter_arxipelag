@@ -12,7 +12,7 @@ export function createCoopSocket({url,onData,onStatus=()=>{},onOpen=()=>{},onDis
   ws.onopen=()=>{if(!valid()){try{ws.close();}catch(_){}return;}attempt=0;onStatus('open');onOpen({valid,send});
    function beat(){if(!valid())return;if(!isActive()){stop();return;}if(onBeat({send,close:(code,reason)=>ws.close(code,reason)})===false)return;heartbeat=setTimer(beat,20000);}heartbeat=setTimer(beat,20000);
   };
-  ws.onmessage=e=>{if(!valid()||!isActive())return;try{if(typeof e.data!=='string'||e.data.length>maxPayload)throw Error();onData(JSON.parse(e.data));}catch(_){try{ws.close(1002,'Protocol invàlid');}catch(_){} }};
+  ws.onmessage=e=>{if(!valid()||!isActive())return;try{if(typeof e.data!=='string'||e.data.length>maxPayload)throw Error();onData(JSON.parse(e.data),e.data.length);}catch(_){try{ws.close(1002,'Protocol invàlid');}catch(_){} }};
   ws.onerror=()=>{};
   ws.onclose=e=>{if(!valid())return;socket=null;clear();onDisconnect();if(Object.hasOwn(fatal,e.code)){stopped=true;onStatus(fatal[e.code]);return;}schedule();};
  }
