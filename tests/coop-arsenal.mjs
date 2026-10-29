@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {generateRelayMission,restoreRelayMission} from '../server/coop-mission.mjs';
-import {personalWeapons,mountedWeapons,weaponCatalog} from '../src/weapon-catalog.mjs';
+import {personalWeapons,mountedWeapons,weaponCatalog,vehicleGrenadeLaunch} from '../src/weapon-catalog.mjs';
 const room={id:'arsenal',revision:1,seed:67,mapScale:1,allReady:true,expiresAt:Date.now()+86400000,members:[{id:'a',name:'A'},{id:'b',name:'B'}]},g=generateRelayMission(room,{mode:'proving'});
 function fixture(weapon){const r=structuredClone(g.record);r.status='running';r.meta.vehicles=[];r.meta.targets=[{id:'dummy',t:'soldat',x:0,y:2.06,z:weapon==='knife'?-1.5:-8,hp:40}];r.checkpoint.players[1].x=100;return restoreRelayMission(r,g.geometry);}
 for(const weapon of personalWeapons.filter(w=>w!=='cutters')){
@@ -19,6 +19,29 @@ for(const [type,weapon] of Object.entries(mountedWeapons)){
  const before=m.snapshot().inventories[0].bullets;assert.equal(m.combatCommand('a',{epoch,weapon:'pistol',commandId:'mounted'}).code,'FIRED',type+' gun');assert.equal(m.snapshot().combat.projectiles[0].weapon,weapon);assert.equal(m.snapshot().inventories[0].bullets,before-(weapon==='pistol'?1:0));
  if(type==='heli_combat'){assert.equal(m.combatCommand('a',{epoch,weapon:'secondary',commandId:'missile'}).code,'FIRED');assert.equal(m.snapshot().vehicles[0].rockets,11);}
 }
+// Check every real vehicle family including passengers, hull clearance and server authority.
+for(const v of g.record.meta.vehicles){
+ const launch=vehicleGrenadeLaunch(v,v.y);
+ assert.equal(!!launch,v.t!=='heli_combat',v.t+' grenade availability');
+ if(!launch)continue;
+ assert.ok(Object.values(launch).every(Number.isFinite),v.t+' finite grenade trajectory');
+ assert.ok(launch.y>v.y+2,v.t+' clears the rider/roof');
+ const r=structuredClone(g.record);r.status='running';r.meta.targets=[];
+ r.meta.vehicles=[{...v,seats:['b','a'],v:6,strafeV:1}];
+ Object.assign(r.checkpoint.players[0],{x:v.x,y:v.y,z:v.z});
+ Object.assign(r.checkpoint.players[1],{x:v.x,y:v.y,z:v.z});
+ const mission=restoreRelayMission(r,g.geometry),epoch=mission.meta.id,inventory=mission.snapshot().inventories[0].grenades;
+ const answer=mission.combatCommand('a',{epoch,weapon:'grenade',commandId:'passenger-'+v.t});
+ assert.equal(answer.code,'THROWN',v.t+' passenger grenade');
+ assert.equal(mission.snapshot().inventories[0].grenades,inventory-1);
+ assert.equal(mission.snapshot().inventories[1].grenades,r.inventories?.[1]?.grenades??2,'partner supplies preserved');
+ const thrown=mission.snapshot().combat.grenades[0],expected=vehicleGrenadeLaunch(r.meta.vehicles[0],v.y);
+ for(const k of ['x','y','z','vx','vy','vz','t'])assert.ok(Math.abs(thrown[k]-expected[k])<1e-9,v.t+' matching vehicle launch '+k);
+}
+{const v=g.record.meta.vehicles.find(v=>v.t==='heli_combat'),r=structuredClone(g.record);r.status='running';r.meta.targets=[];r.meta.vehicles=[{...v,seats:['a','b']}];
+ const mission=restoreRelayMission(r,g.geometry),epoch=mission.meta.id,before=mission.snapshot().inventories[0].grenades;
+ assert.equal(mission.combatCommand('a',{epoch,weapon:'grenade',commandId:'no-attack-heli-grenade'}).ok,false);
+ assert.equal(mission.snapshot().inventories[0].grenades,before,'combat helicopter cannot consume grenades');}
 console.log('all personal weapons/tools and all mounted weapon families: equip, independent ammo, damage, burst, C4 fuse, wire cutting, restore, heavy shells and helicopter missile passed');
 
 const wireShot=structuredClone(g.record);wireShot.status='running';wireShot.meta.vehicles=[];wireShot.meta.targets=[{id:'behind-wire',t:'soldat',x:0,y:2.06,z:50,hp:40}];Object.assign(wireShot.checkpoint.players[0],{x:0,z:38,hd:Math.PI});m=restoreRelayMission(wireShot,g.geometry);m.combatCommand('a',{epoch:m.meta.id,weapon:'pistol',commandId:'through-wire'});for(let i=0;i<5;i++)m.step();assert.equal(m.snapshot().combat.targets[0].hp,38,'individual light bullets cross barbed wire');
