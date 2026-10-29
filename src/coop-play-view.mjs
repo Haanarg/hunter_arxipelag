@@ -1,14 +1,14 @@
 import {createPalmDestructionView} from './coop-palm-view.mjs';
-import {createBuildingView} from './coop-building-view.mjs?v=0.6.48';
+import {createBuildingView} from './coop-building-view.mjs?v=0.6.49';
 import {vegetationVisual} from './vegetation-visual-core.mjs';
 import {materialProfiles} from './material-profiles.mjs';
 import {createWorldRandom} from './world-generation-core.mjs';
 import {createTowerModel} from './tower-model.mjs';
 import {createCompoundStructures} from './compound-structures.mjs';
-import {createStaticWorldAdapter} from './world-adapter.mjs?v=0.6.48';
+import {createStaticWorldAdapter} from './world-adapter.mjs?v=0.6.49';
 import {playerModel} from './player-model-core.mjs';
-import {createVehicleView} from './coop-vehicle-view.mjs?v=0.6.48';
-import {createCombatView} from './coop-combat-view.mjs?v=0.6.48';
+import {createVehicleView} from './coop-vehicle-view.mjs?v=0.6.49';
+import {createCombatView} from './coop-combat-view.mjs?v=0.6.49';
 const colors=[0x5fc5ff,0xffc85f],css=['#5fc5ff','#ffc85f'];
 export async function createMissionView(container,meta,geometry,{three=null,makeRenderer=null,self=null}={}){
   const doorByWall=new Map((meta.doors||[]).map(d=>[d.wallIndex,d.id]));
