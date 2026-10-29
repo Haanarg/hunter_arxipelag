@@ -2,7 +2,8 @@
 (function(window){
 // Construcció visual d'edificis. Col·lisions, portes, destrucció i navegació romanen al nucli.
 window.HUNTER_BUILDINGS??=Object.freeze({
-  create(THREE,{material,materialProfile,box}){
+  create(THREE,{material,materialProfile,box,windowLayout}){
+    const layoutFn=windowLayout||window.HUNTER_BUILDING_SHELL?.windowLayout||((sx,sz,height)=>{const alongX=sx>=sz,L=alongX?sx:sz,count=L>=14?2:1;return {alongX,width:Math.min(2.7,L/(count*2.65)),bottom:Math.min(1.5,Math.max(1.15,height*.19)),height:Math.min(2.15,Math.max(1.75,height*.31)),centers:count===2?[-L*.255,L*.255]:[0]};});
     const wallMaterial=color=>new THREE.MeshStandardMaterial({color,flatShading:true,transparent:true,...materialProfile('masonry')});
     const doorMaterial=()=>new THREE.MeshStandardMaterial({color:0x704829,flatShading:true,transparent:true,...materialProfile('paint')});
     const addWall=(group,{lx,lz,sx,sz,height,material:mat,y=height/2})=>{
@@ -57,6 +58,7 @@ window.HUNTER_BUILDINGS??=Object.freeze({
     const batchWindowWall=(group,parts)=>{
       const byMat=new Map();
       for(const mesh of parts){
+        if(mesh.userData.windowPane!==undefined)continue;
         if(!byMat.has(mesh.material))byMat.set(mesh.material,[]);
         byMat.get(mesh.material).push(mesh);
       }
@@ -88,19 +90,14 @@ window.HUNTER_BUILDINGS??=Object.freeze({
         for(const geo of geos)geo.dispose();
         group.add(result);batched.push(result);
       }
-      return batched;
+      return [...batched,...parts.filter(mesh=>mesh.userData.windowPane!==undefined)];
     };
 
     // Façana amb obertures de finestra reals. La paret es construeix al voltant
     // dels buits; el vidre queda lleugerament endins de la cara exterior.
     const addWindowedWall=(group,{lx,lz,sx,sz,height,material:mat})=>{
-      const alongX=sx>=sz,L=alongX?sx:sz,T=alongX?sz:sx;
-      const count=L>=14?2:1;
-      const winW=Math.min(2.7,L/(count*2.65));
-      const winH=Math.min(2.15,Math.max(1.75,height*.31));
-      const bottom=Math.min(2.35,Math.max(1.75,height*.32));
-      const top=bottom+winH;
-      const centers=count===2?[-L*.255,L*.255]:[0];
+      const {alongX,width:winW,height:winH,bottom,centers}=layoutFn(sx,sz,height),
+            L=alongX?sx:sz,T=alongX?sz:sx,top=bottom+winH;
       const parts=[];
 
       const piece=(center,len,y,h)=>{
@@ -143,7 +140,8 @@ window.HUNTER_BUILDINGS??=Object.freeze({
           bottom+winH/2,
           alongX?lz-faceOffset:wz
         );
-        group.add(glass);parts.push(glass);
+        glass.userData.windowPane=parts.filter(p=>p.userData.windowPane!==undefined).length;
+        glass.name='hunter-breakable-window';group.add(glass);parts.push(glass);
 
         const addFrame=(center,span,horizontal,offset)=>{
           const m=new THREE.Mesh(
