@@ -50,6 +50,24 @@ for(const button of document.querySelectorAll('[data-key]')){
   const release=e=>{touch.delete(e.pointerId);if(![...touch.values()].includes(button.dataset.key))button.classList.remove('pressed');};
 for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,release);
 }
+// Audio procedural curt: el servidor confirma el trencament i tots dos
+// navegadors reben el mateix esdeveniment, sense fitxers externs.
+let glassAudio=null,glassNoise=null,lastGlassEffectId=0;
+function playGlassBreak(){
+ const AC=globalThis.AudioContext||globalThis.webkitAudioContext;if(!AC)return;
+ try{
+  glassAudio??=new AC();if(glassAudio.state==='suspended')glassAudio.resume?.();
+  if(!glassNoise){const n=Math.floor(glassAudio.sampleRate*.32);glassNoise=glassAudio.createBuffer(1,n,glassAudio.sampleRate);const a=glassNoise.getChannelData(0);let seed=713;
+   for(let i=0;i<n;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const t=i/n;a[i]=((seed/2147483648)-1)*(t<.07?1-t/.085:.45*Math.pow(1-t,1.8));}}
+  const src=glassAudio.createBufferSource(),filter=glassAudio.createBiquadFilter(),gain=glassAudio.createGain();
+  src.buffer=glassNoise;filter.type='highpass';filter.frequency.value=1550;gain.gain.value=.15;
+  src.connect(filter);filter.connect(gain);gain.connect(glassAudio.destination);src.start();
+ }catch(_){/* Audio is optional when the browser blocks autoplay. */}
+}
+function checkGlassEffects(next){
+ const effects=(next?.combat?.effects||[]).filter(e=>e.kind==='glass');
+ for(const e of effects)if(e.id>lastGlassEffectId){lastGlassEffectId=e.id;playGlassBreak();}
+}
 function drawHUD(){
   if(!state||!meta)return;
   if(['relay','extract'].includes(state.phase))$('instructions').classList.add('playing');else $('instructions').classList.remove('playing');
@@ -90,9 +108,9 @@ try{
         else if(!meta)message.textContent=room.allReady?'Tots dos preparats. Cadascú ha de prémer Iniciar missió.':'Torneu a la sala i marqueu-vos tots dos com a preparats.';
       }else if(data.type==='mission'){
         if(data.self!==self){channel.stop();message.textContent='Identitat de missió incorrecta.';return;}
-        clearVehicle();clearInventory();clearDoor();const token=++viewGeneration;meta=data.meta;state=data.state;$('mission-mode').value=meta.mode||'relay';$('world-help').hidden=meta.mode!=='world';view?.destroy();view=null;drawHUD();message.textContent=meta.mode==='world'?'Món obert preparat. Explora les illes i els complexos amb el company.':'Tu ets el jugador '+(meta.members.findIndex(m=>m.id===self)+1)+'. Segueix el recorregut del teu color.';
+        clearVehicle();clearInventory();clearDoor();lastGlassEffectId=Math.max(0,...(data.state?.combat?.effects||[]).map(e=>e.id||0));const token=++viewGeneration;meta=data.meta;state=data.state;$('mission-mode').value=meta.mode||'relay';$('world-help').hidden=meta.mode!=='world';view?.destroy();view=null;drawHUD();message.textContent=meta.mode==='world'?'Món obert preparat. Explora les illes i els complexos amb el company.':'Tu ets el jugador '+(meta.members.findIndex(m=>m.id===self)+1)+'. Segueix el recorregut del teu color.';
         $('mode-title').textContent=meta.mode==='world'?'MÓN OBERT · COOPERATIU':'RELLEU D’EMERGÈNCIA · COOPERATIU';const next=await createMissionView($('view'),meta,data.geometry,{self});if(token!==viewGeneration){next.destroy();return;}view=next;scoped=false;$('map-zoom').max=meta.mode==='world'?'64':'8';$('map-zoom').value=meta.mode==='world'?'32':meta.mode==='proving'?'3':'1';view.setZoom?.(Number($('map-zoom').value));drawHUD();
-      }else if(data.type==='state'&&data.state?.missionId===meta?.id){state=data.state;drawHUD();}
+      }else if(data.type==='state'&&data.state?.missionId===meta?.id){checkGlassEffects(data.state);state=data.state;drawHUD();}
       else if(data.type==='action'){if(data.kind==='vehicle'){clearVehicle();message.textContent=({ENTERED:'Has pujat al jeep.',EXITED:'Has baixat del jeep.',MOVING:'Atura el jeep abans de pujar o baixar.',EXIT_BLOCKED:'No hi ha espai per baixar.',BLOCKED:'Hi ha un obstacle entre tu i el jeep.',FULL:'El jeep està ple.',TOO_FAR:'Acosta’t al jeep.',SAVE_FAILED:'No s’ha pogut desar el canvi del vehicle.'}[data.code]||'Ordre de vehicle rebutjada.');drawHUD();return;}if(data.kind==='combat'){message.textContent=data.duplicate?'Ordre de combat ja confirmada.':({BURST:'Ràfega iniciada.',NOT_EQUIPPED:'Selecciona una arma que tinguis.',FIRED:'Tret efectuat.',THROWN:'Granada llançada.',EMPTY:'No tens munició per a aquesta arma.',COOLDOWN:'Espera abans de tornar a atacar.',NOT_ACTIVE:'La missió ha d’estar en marxa i el jugador a terra.',SAVE_FAILED:'No s’ha pogut desar l’atac. Torna-ho a provar.'}[data.code]||'Ordre de combat rebutjada.');drawHUD();return;}if(pendingInventory===data.commandId){clearInventory();message.textContent=({SELECTED:'Arma seleccionada.',SEATED:'Baixa del vehicle per gestionar l’equipament.',DROPPED:'Objecte deixat a terra. El company el pot recollir passant-hi per sobre.',GROUND_FULL:'Hi ha massa objectes a terra.',EQUIPPED:'Disfressa actualitzada.',TAKEN:'Aquest subministrament ja s’ha recollit.',FULL:'Inventari ple per a aquest objecte.',EMPTY:'No tens aquest objecte.',TOO_FAR:'Acosta’t al subministrament.',NOT_ACTIVE:'La missió ha d’estar en marxa.',SAVE_FAILED:'No s’ha pogut desar el canvi. Torna-ho a provar.'}[data.code]||'Ordre d’inventari confirmada.');drawHUD();return;}if(pendingDoor===data.commandId)clearDoor();message.textContent=data.duplicate?'Ordre ja confirmada. Estat actual sincronitzat.':({OPENED:'Porta oberta.',CLOSED:'Porta tancada.',UNCHANGED:'La porta ja és en aquest estat.',OCCUPIED:'Hi ha un jugador al pas. Allunyeu-vos abans de tancar.',TOO_FAR:'Acosta’t a la porta.',COOLDOWN:'Espera un moment abans de tornar a moure la porta.',NOT_ACTIVE:'La missió ha d’estar en marxa.',SAVE_FAILED:'No s’ha pogut desar el canvi. Torna-ho a provar.'}[data.code]||'No s’ha pogut moure la porta.');drawHUD();}
       else if(['waiting','error','ended'].includes(data.type)){message.textContent=data.message;if(data.type==='ended'){clearVehicle();clearInventory();$('weapon').disabled=true;$('shoot').disabled=true;$('grenade').disabled=true;$('drop').disabled=true;$('disguise').disabled=true;clear();clearDoor();$('action').disabled=true;state=null;meta=null;viewGeneration++;view?.destroy();view=null;launch.hidden=false;}}
     }});
