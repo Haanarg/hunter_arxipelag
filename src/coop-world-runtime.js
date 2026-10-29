@@ -79,7 +79,12 @@ function updateNativeCoop(dt){
  const state=s.state,projecting=s.projectedState!==state,
        actor=projecting?state.players.find(p=>p.id===s.self):s.projectedActor;
  if(!actor)return;
- if(projecting){s.projectedActor=actor;hp=actor.hp;kills=state.combat.targets.reduce((count,e)=>count+(e.hp<=0),0);}
+ if(projecting){
+   s.interpolation??=window.HUNTER_CREATE_NATIVE_INTERPOLATION?.();
+   s.interpolation?.receive(state,s.self);
+   s.projectedActor=actor;hp=actor.hp;
+   kills=state.combat.targets.reduce((count,e)=>count+(e.hp<=0),0);
+ }
  const input=nativeCoopInput(),
        presented=s.prediction?.advance(dt,input,!paused&&!document.hidden&&state.status==='running')||actor;
  elapsed=state.tick/30;
@@ -106,6 +111,16 @@ function updateNativeCoop(dt){
      if(row.destroyed)v.o.visible=false;
      if(row.seats.includes(s.self)){cv=v;v.o.visible=!row.destroyed;}
    }
+ }
+ // Les posicions remotes es presenten amb un interval de snapshot
+ // de retard: cap extrapolació de física o dany. L'actor/vehicle local
+ // continua utilitzant la predicció i reconciliació originals.
+ const remoteAlpha=s.interpolation?.advance(dt,!paused&&!document.hidden&&state.status==='running')??1;
+ for(const pair of s.interpolation?.movingVehicles(remoteAlpha)||[]){
+   const v=s.vehicles.get(pair.id);
+   if(!v||v===cv||v.destroyed||!v.o.visible)continue;
+   v.x=pair.pose.x;v.y=pair.pose.y;v.z=pair.pose.z;v.hd=pair.pose.hd;
+   if(pair.pose.alt!==undefined)v.alt=pair.pose.alt;
  }
  // La predicció només modifica cada fotograma el vehicle que condueix
  // l'actor local; la resta espera dades noves del servidor.
@@ -147,9 +162,15 @@ function updateNativeCoop(dt){
  }
  for(const view of s.nativeRemoteViews?.values()||[]){
    const {model,target,actor:other,vehicle:remoteVehicle}=view;
-   const oldX=model.position.x,oldZ=model.position.z;
-   model.position.lerp(target,1-Math.exp(-18*dt));
-   model.rotation.y=other.hd;
+   const oldX=model.position.x,oldZ=model.position.z,
+         interpolated=s.interpolation?.actor(other.id,remoteAlpha);
+   if(interpolated)target.set(interpolated.x,interpolated.y,interpolated.z);
+   else target.set(other.x,other.y,other.z);
+   // No fem una segona interpolació exponencial: afegiria més retard.
+   // La pose ja està temporitzada pels ticks i no supera el darrer estat.
+   if(s.interpolation)model.position.copy(target);
+   else model.position.lerp(target,1-Math.exp(-18*dt));
+   model.rotation.y=interpolated?.hd??other.hd;
    model.visible=!remoteVehicle;
    model.userData.nativeRider.update(remoteVehicle,dt);
    const speed=Math.hypot(model.position.x-oldX,model.position.z-oldZ)/Math.max(.001,dt);
