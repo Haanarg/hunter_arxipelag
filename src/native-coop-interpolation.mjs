@@ -194,7 +194,10 @@ export function createNativeCoopInterpolation(){
    const targetTick=current.tick-delayTicks,
      error=targetTick-renderTick;
    // Ajust suau de la velocitat del rellotge (mai recula la pose).
-   const rate=Math.max(.72,Math.min(1.08,1+error*.12));
+   // Després d'un tall de 300–800 ms recuperam el retard en uns quants
+   // fotogrames (fins a 2,5x), però animateTrack continua limitant el
+   // desplaçament visual físicament plausible de cada actor o vehicle.
+   const rate=Math.max(.72,Math.min(2.5,1+error*.17));
    renderTick=Math.min(current.tick+MAX_FORECAST_SECONDS*RATE,
      renderTick+step*RATE*rate);
    let buffered=false,forecasted=false,clamped=false,pruned=false;
