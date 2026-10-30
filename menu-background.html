@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Paisatge animat · Hunter: Arxipèlag</title>
+<style>
+  html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#173e57}
+  #vista{position:fixed;inset:0;overflow:hidden;background:linear-gradient(125deg,#0c2339,#22627a 58%,#d88d6d)}
+  #vista canvas{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity .35s ease}
+  #vista.ready canvas{opacity:1}
+</style>
+</head>
+<body>
+<div id="vista" aria-hidden="true"></div>
+<!-- Iframe aïllat: els scripts clàssics del paisatge no comparteixen
+     const ni globals amb el runtime de la partida/cooperatiu. -->
+<script type="module" src="src/menu-motor-preview.mjs"></script>
+</body>
+</html>
