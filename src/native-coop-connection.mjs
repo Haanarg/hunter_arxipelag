@@ -18,6 +18,18 @@ export function createNativeCoopConnection({room,getInput,onRoom,onMission,onSta
    }
    stats.lastStateAt=stamp;
  }
+ // Mostreig d'un de cada 16 deltes; no serialitza estats sencers.
+ // Les mides són caràcters JSON aproximats i no bytes UTF-8.
+ function profileDelta(delta,chars){
+   if(stats.stateFrames%16!==0||!delta?.p)return;
+   const p=stats.deltaProfile;
+   p.samples++;
+   p.averageChars+=((chars||0)-p.averageChars)/p.samples;
+   for(const [key,patch] of Object.entries(delta.p)){
+     if(!Object.hasOwn(p.bySection,key))p.bySection[key]=0;
+     p.bySection[key]+=(JSON.stringify(patch)||'').length;
+   }
+ }
  const socket=createCoopSocket({url:url.href,WebSocketImpl,setTimer,clearTimer,maxPayload:1000000,onStatus,onDisconnect(){clearInputTimer(timer);timer=null;state=null;readyRoom=false;published=false;canProbe=false;},
   fatal:{1008:'ended',4001:'replaced',4003:'ended',4004:'ended',4005:'version'},onOpen({send}){lastMessage=now();lastPing=lastMessage;send({type:'hello',protocol:1,gameVersion:GAME_VERSION});timer=setInputTimer(()=>{if(epoch&&state?.status==='running'){
     const stamp=now();if(canProbe&&stamp-lastPing>=2000){
