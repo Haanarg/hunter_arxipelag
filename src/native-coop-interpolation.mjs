@@ -47,6 +47,11 @@ function velocity(before,after,seconds,maxSpeed){
 // Cada trajectòria conserva snapshots autoritatius identificats pel tick del
 // servidor. El rellotge de render és COMÚ a tots els remots; el pilot local
 // no passa mai per aquest buffer.
+// Els enemics tenen 'heading' en lloc del 'hd' de jugadors/vehicles.
+const enemyPose=row=>({
+ x:row.x,y:finite(row.y)?row.y:0,z:row.z,
+ hd:finite(row.heading)?row.heading:(finite(row.hd)?row.hd:0)
+});
 function makeTrack(before,after,dt,maxSpeed,previousTick,currentTick){
  const from=poseOf(before),to=poseOf(after);
  return {frames:[{tick:previousTick,pose:from},{tick:currentTick,pose:to}],
@@ -121,17 +126,18 @@ function animateTrack(track,step,tick){
  return mode;
 }
 export function createNativeCoopInterpolation(){
- let current=null,self=null,vehicles=new Map(),players=new Map(),vehicleOutput=[],receiveGeneration=0;
+ let current=null,self=null,vehicles=new Map(),players=new Map(),
+   enemies=new Map(),vehicleOutput=[],receiveGeneration=0;
  let elapsed=0,lastArrival=null,renderTick=null,jitterSeconds=0,delayTicks=BASE_DELAY_SECONDS*RATE;
  const stats={samples:0,receives:0,teleports:0,resets:0,activeVehicles:0,
    clampedFrames:0,forecastFrames:0,activePlayers:0,
    longGapReceives:0,maxTickGap:0,gapResets:0,
    bufferDelayMs:BASE_DELAY_SECONDS*1000,activeFrames:0,interpolatedFrames:0,
    extrapolatedFrames:0,bufferUnderruns:0,
-   speedLimitedFrames:0,maxRenderErrorM:0,staleReceives:0};
- function clearTracks(){vehicles.clear();players.clear();vehicleOutput=[];
+   speedLimitedFrames:0,maxRenderErrorM:0,staleReceives:0,activeEnemies:0};
+ function clearTracks(){vehicles.clear();players.clear();enemies.clear();vehicleOutput=[];
    renderTick=null;lastArrival=null;jitterSeconds=0;delayTicks=BASE_DELAY_SECONDS*RATE;
-   stats.activeVehicles=0;stats.activePlayers=0;stats.bufferDelayMs=150;}
+   stats.activeVehicles=0;stats.activePlayers=0;stats.activeEnemies=0;stats.bufferDelayMs=150;}
  function reset(){current=null;self=null;clearTracks();stats.resets++;}
  function receive(state,localId){
    if(!state||!Number.isInteger(state.tick)){reset();return;}
@@ -214,8 +220,38 @@ export function createNativeCoopInterpolation(){
    }
    for(const [id,track] of players)
      if(track.receivedAt!==generation)players.delete(id);
-   if(renderTick===null&&(players.size||vehicles.size))renderTick=old.tick;
+   // Els soldats són molts però la majoria són quiets: només mantenim
+   // trajectòries per als que canvien de posició/orientació. Cap animació
+   // de física, hitbox o IA no fa servir aquesta pose visual.
+   const oldTargets=old.combat?.targets||[],
+     currentTargets=state.combat?.targets||[];
+   let oldEnemyRows=null;
+   for(let i=0;i<currentTargets.length;i++){
+     const row=currentTargets[i],id=row.id,previous=oldTargets[i],
+       before=previous?.id===id?previous:
+         (oldEnemyRows??=new Map(oldTargets.map(e=>[e.id,e]))).get(id),
+       track=enemies.get(id);
+     if(row.hp<=0||!before||before.hp<=0){
+       enemies.delete(id);continue;
+     }
+     const a=enemyPose(before),b=enemyPose(row);
+     if(!safe(a,b,dt,15)){
+       if(poseChanged(a,b))stats.teleports++;
+       enemies.delete(id);continue;
+     }
+     const changed=poseChanged(a,b);
+     if(changed){
+       if(track)updateTrack(track,a,b,dt,15,old.tick,state.tick,true);
+       else enemies.set(id,makeTrack(a,b,dt,15,old.tick,state.tick));
+     }else if(track&&newer)updateTrack(track,a,b,dt,15,old.tick,state.tick,false);
+     const live=enemies.get(id);
+     if(live)live.receivedAt=generation;
+   }
+   for(const [id,track] of enemies)
+     if(track.receivedAt!==generation)enemies.delete(id);
+   if(renderTick===null&&(players.size||vehicles.size||enemies.size))renderTick=old.tick;
    stats.activeVehicles=vehicles.size;stats.activePlayers=players.size;
+   stats.activeEnemies=enemies.size;
    vehicleOutput=[...vehicles].map(([id,track])=>({id,pose:track.pose}));
    stats.receives++;
  }
@@ -264,17 +300,34 @@ export function createNativeCoopInterpolation(){
        Math.abs(wrapAngle(track.pose.hd-track.to.hd))<.012)
        players.delete(id);
    }
+   for(const [id,track] of enemies){
+     track.age+=step;
+     const mode=animateTrack(track,step,renderTick);
+     speedLimited ||= track.speedLimited;
+     stats.maxRenderErrorM=Math.max(stats.maxRenderErrorM,track.renderErrorM);
+     if(mode==='interpolated')buffered=true;
+     if(mode==='extrapolated'||mode==='clamped')forecasted=true;
+     if(mode==='clamped')clamped=true;
+     if((track.stillTicks>=6||track.age>.22)&&
+       track.speed.x===0&&track.speed.y===0&&track.speed.z===0&&
+       distance(track.pose,track.to)<SETTLE_METRES&&
+       Math.abs(wrapAngle(track.pose.hd-track.to.hd))<.012)
+       enemies.delete(id);
+   }
    if(pruned)vehicleOutput=[...vehicles].map(([id,track])=>({id,pose:track.pose}));
    if(speedLimited)stats.speedLimitedFrames++;
    if(buffered)stats.interpolatedFrames++;
    if(forecasted){stats.forecastFrames++;stats.extrapolatedFrames++;stats.bufferUnderruns++;}
    if(clamped)stats.clampedFrames++;
    stats.activeVehicles=vehicles.size;stats.activePlayers=players.size;
-   if(!vehicles.size&&!players.size)renderTick=null;
+   stats.activeEnemies=enemies.size;
+   if(!vehicles.size&&!players.size&&!enemies.size)renderTick=null;
    return 1;
  }
  function actor(id){const track=players.get(id);if(!track)return null;
    stats.samples++;return track.pose;}
+ function enemy(id){const track=enemies.get(id);if(!track)return null;
+   stats.samples++;return track.pose;}
  function movingVehicles(){stats.samples+=vehicleOutput.length;return vehicleOutput;}
- return {receive,advance,actor,movingVehicles,reset,stats};
+ return {receive,advance,actor,enemy,movingVehicles,reset,stats};
 }
