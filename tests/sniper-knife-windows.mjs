@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {createRequire} from 'node:module';
 import {shellColliders,knifeWindowHit} from '../src/building-shell.mjs';
-import {createRelayCombat} from '../server/coop-combat.mjs';
 
 const geom=shellColliders(0,-3,0,18,14,8,{doorSide:0},()=>.5);
 const wall=geom.walls.find(w=>w.windowPanes?.length&&w.z0<0);
@@ -28,8 +26,8 @@ assert.equal(knifeWindowHit({...towards,hd:towards.hd+Math.PI},geom.walls),null,
 const tooFar={...towards,[normal]:pane[normal]+sign*6};
 assert.equal(knifeWindowHit(tooFar,geom.walls),null,'knife has short reach');
 const upstairs=shellColliders(0,-3,0,18,14,16,{doorSide:0,floors:2},()=>.5);
-assert.equal(knifeWindowHit(towards,upstairs.walls)?.wall.upperFloorWindow,true,
- false,'cannot strike high upstairs windows from ground level');
+assert.equal(knifeWindowHit(towards,upstairs.walls)?.wall.upperFloorWindow,false,
+ 'at ground level only ground-floor glass is reachable');
 
 const src=readFileSync(new URL('../src/combat.js',import.meta.url),'utf8');
 const scope=src.slice(src.indexOf('function sniperReticlePoint('),src.indexOf('function sniperShotVector('));
