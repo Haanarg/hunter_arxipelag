@@ -36,7 +36,7 @@ export async function coopAPI(request,env,user,url,readJSON,json){
   }
   if(url.pathname==='/api/coop/join'&&request.method==='POST'){
     await limit(env,request,'coop-join',8);const body=await readJSON(request,4096),code=typeof body.code==='string'?body.code.trim().replace(/[-\s]/g,'').toUpperCase():'';
-    if(!!(/^[A-HJ-NP-Z2-9]{4}$/.test(code)||/^[A-F0-9]{20}$/.test(code)))fail(400,'INVALID','Codi de sala invàlid.');
+    if(!(/^[A-HJ-NP-Z2-9]{4}$/.test(code)||/^[A-F0-9]{20}$/.test(code)))fail(400,'INVALID','Codi de sala invàlid.');
     let row;
     try{row=await env.DB.prepare(`INSERT INTO hunter_coop_members(owner,room,slot,last_seen)
       SELECT ?,id,1,? FROM hunter_coop_rooms WHERE code=? AND host<>? AND expires_at>? RETURNING owner`).bind(owner,now,code,owner,now).first();}
