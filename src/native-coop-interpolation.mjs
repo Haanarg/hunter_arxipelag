@@ -30,21 +30,27 @@ function velocity(before,after,seconds,maxSpeed){
 }
 function makeTrack(before,after,dt,maxSpeed){
  const from=poseOf(before),to=poseOf(after);
- return {from,to,pose:{...from},speed:velocity(from,to,dt,maxSpeed),age:0};
+ return {from,to,pose:{...from},speed:velocity(from,to,dt,maxSpeed),maxSpeed,age:0};
 }
 function updateTrack(track,before,after,dt,maxSpeed){
  track.from=poseOf(before);track.to=poseOf(after);
  track.speed=velocity(track.from,track.to,dt,maxSpeed);
- track.age=0;
+ track.maxSpeed=maxSpeed;track.age=0;
  // No modificam track.pose aquí: el fotograma anterior és l'ancoratge
  // visual continu, fins i tot si el paquet arriba abans d'acabar l'interval.
 }
 function animateTrack(track,dt){
  const t=1-Math.exp(-dt/SMOOTH_SECONDS),p=track.pose,q=track.to,s=track.speed;
  const ahead=Math.min(MAX_FORECAST_SECONDS,track.age);
- p.x=lerp(p.x,q.x+s.x*ahead,t);
- p.y=lerp(p.y,q.y+s.y*ahead,t);
- p.z=lerp(p.z,q.z+s.z*ahead,t);
+ let dx=(q.x+s.x*ahead-p.x)*t,dy=(q.y+s.y*ahead-p.y)*t,
+     dz=(q.z+s.z*ahead-p.z)*t;
+ // Una correcció després d'un paquet tardà no pot convertir-se en
+ // un salt de desenes de metres entre dos fotogrames de 60 FPS.
+ const move=Math.hypot(dx,dy,dz),limit=track.maxSpeed*1.25*dt;
+ if(move>limit&&limit>0){
+   const scale=limit/move;dx*=scale;dy*=scale;dz*=scale;
+ }
+ p.x+=dx;p.y+=dy;p.z+=dz;
  p.hd=angle(p.hd,q.hd+s.hd*ahead,t);
  if(finite(q.alt))p.alt=lerp(finite(p.alt)?p.alt:q.alt,q.alt+s.alt*ahead,t);
  
