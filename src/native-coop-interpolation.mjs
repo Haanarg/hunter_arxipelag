@@ -2,7 +2,9 @@
 // la física, els impactes, els inventaris ni la predicció del pilot local.
 // Les arribades de snapshots són irregulars: cal preservar la pose presentada
 // en rebre un estat, no reiniciar la interpolació al punt de partida vell.
-const RATE=30,MAX_GAP_TICKS=12,TELEPORT_METRES=24;
+// Entre paquets normals hi ha ~3 ticks; amb Wi-Fi irregular s'han
+// observat 23 ticks (~774 ms). No confondre un tall breu amb un teleport.
+const RATE=30,MAX_GAP_TICKS=60,TELEPORT_METRES=24,MAX_RECOVERY_METRES=90;
 const SMOOTH_SECONDS=.068,MAX_FORECAST_SECONDS=.12,SETTLE_METRES=.012;
 const finite=n=>typeof n==='number'&&Number.isFinite(n);
 const poseOf=o=>({x:o.x,y:finite(o.y)?o.y:0,z:o.z,
@@ -17,8 +19,18 @@ const sameSeat=(vehicles,id)=>{
  for(const v of vehicles||[])if(v.seats?.includes(id))return v.id;
  return null;
 };
-function safe(before,after){return !!before&&!!after&&finite(before.x)&&
- finite(before.z)&&finite(after.x)&&finite(after.z)&&distance(before,after)<=TELEPORT_METRES;}
+function safe(before,after,seconds,maxSpeed){
+ if(!before||!after||!finite(before.x)||!finite(before.z)||
+    !finite(after.x)||!finite(after.z))return false;
+ // Després d'un paquet tardà un helicòpter pot haver avançat 40–50 m
+ // legítimament. La tolerància creix amb el temps i la velocitat real,
+ // però queda acotada per no interpolar grans teletransports.
+ const reportedSpeed=Math.max(Math.abs(before.v||0),Math.abs(after.v||0));
+ const travelSpeed=maxSpeed===15?15:Math.min(maxSpeed,reportedSpeed*1.6);
+ const allowed=Math.min(MAX_RECOVERY_METRES,
+   Math.max(TELEPORT_METRES,4+seconds*travelSpeed*1.35));
+ return distance(before,after)<=allowed;
+}
 function velocity(before,after,seconds,maxSpeed){
  const inv=1/Math.max(1/RATE,seconds);
  let vx=(after.x-before.x)*inv,vy=(after.y-before.y)*inv,
@@ -58,15 +70,22 @@ function animateTrack(track,dt){
 export function createNativeCoopInterpolation(){
  let current=null,self=null,vehicles=new Map(),players=new Map(),vehicleOutput=[];
  const stats={samples:0,receives:0,teleports:0,resets:0,activeVehicles:0,
-  clampedFrames:0,forecastFrames:0,activePlayers:0};
+  clampedFrames:0,forecastFrames:0,activePlayers:0,
+  longGapReceives:0,maxTickGap:0,gapResets:0};
  function reset(){current=null;self=null;vehicles.clear();players.clear();vehicleOutput=[];
   stats.activeVehicles=0;stats.activePlayers=0;stats.resets++;}
  function receive(state,localId){
   if(!state||!Number.isInteger(state.tick)){reset();return}
   const old=current,same=old&&old.missionId===state.missionId&&
    old.status==='running'&&state.status==='running'&&self===localId;
-  const newer=!!same&&state.tick>old.tick&&state.tick-old.tick<=MAX_GAP_TICKS;
-  const sameTick=!!same&&state.tick===old.tick;
+  const tickGap=same?state.tick-old.tick:0;
+  if(tickGap>0){
+   stats.maxTickGap=Math.max(stats.maxTickGap,tickGap);
+   if(tickGap>12)stats.longGapReceives++;
+   if(tickGap>MAX_GAP_TICKS)stats.gapResets++;
+  }
+  const newer=!!same&&tickGap>0&&tickGap<=MAX_GAP_TICKS;
+  const sameTick=!!same&&tickGap===0;
   if(!newer&&!sameTick){
    if(old)stats.resets++;
    current=state;self=localId;vehicles.clear();players.clear();vehicleOutput=[];
@@ -80,7 +99,7 @@ export function createNativeCoopInterpolation(){
   const liveVehicles=new Set();
   for(const row of state.vehicles){
    const before=oldVehicles.get(row.id),id=row.id,track=vehicles.get(id);
-   if(row.destroyed||before?.destroyed||!safe(before,row)){
+   if(row.destroyed||before?.destroyed||!safe(before,row,dt,80)){
     if(before&&poseChanged(before,row))stats.teleports++;
     vehicles.delete(id);continue;
    }
@@ -101,8 +120,8 @@ export function createNativeCoopInterpolation(){
    const before=oldPlayers.get(row.id),id=row.id,track=players.get(id);
    const compatible=!!before&&before.hp>0&&row.hp>0&&
     sameSeat(old.vehicles,id)===sameSeat(state.vehicles,id);
-   if(!compatible||!safe(before,row)){
-    if(before&&poseChanged(before,row)&&!safe(before,row))stats.teleports++;
+   if(!compatible||!safe(before,row,dt,15)){
+    if(before&&poseChanged(before,row)&&!safe(before,row,dt,15))stats.teleports++;
     players.delete(id);continue;
    }
    if(poseChanged(before,row)){
