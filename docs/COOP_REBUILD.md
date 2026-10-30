@@ -1,5 +1,16 @@
 # Reconstrucció del multijugador sobre el joc original
 
+## Vuitena optimització — estabilitzar l'ordre i les transicions (0.6.59)
+
+Primer bloc implementat sense prova física amb dos jugadors:
+
+- **Sincronització robusta:** descartar un snapshot de la mateixa missió quan el tick és anterior a l'últim acceptat, sense fer recular els remots. Afegit `staleReceives` a `remoteInterpolation`.
+- **Seients:** considerar el número de seient juntament amb l'ID del vehicle; el pas de pilot a passatger del mateix vehicle no ha de barrejar dues animacions incompatibles.
+- **Cost de recepció:** reutilitzar l'ordre d'entitats que manté habitualment el protocol de deltes; només construir un índex de reserva si hi ha un desplaçament a l'array. Marcar per generació les trajectòries gràfiques encara existents per no recrear `Set` de fins a 374 vehicles a cada estat.
+- **Cobertura:** regressions de paquet fora d'ordre, canvis de seient, reordenació de flota i jugadors, eliminació de vehicles i fixtures de jitter 10 Hz/60 FPS. Els tests de càlcul han passat en entorn aïllat.
+
+Manté el servidor autoritatiu, la predicció local i la persistència transaccional. **No equival a haver comprovat visualment el multiplayer amb dos clients ni el desplegament**; executar CI i contrastar mètriques de producció abans de donar la fase per tancada.
+
 ## Setena optimització — reducció de CPU/GC sense canviar el protocol (0.6.58)
 
 S'ha implementat una millora preventiva sense necessitat de prova física amb dos clients, pendent de confirmació visual:
