@@ -246,11 +246,16 @@ function updateNativeCoopFrame(dt){
  for(const e of s.nativeAnimatedEnemies||[]){
    if(!e.o.visible)continue;
    const pose=s.interpolation?.enemy?.(e.nativeCoopId);
+   let walking=e.nativeMoving;
    if(pose){
+     const beforeX=e.o.position.x,beforeZ=e.o.position.z;
      e.o.position.set(pose.x,pose.y,pose.z);
      e.o.rotation.y=pose.hd;
+     // Les cames segueixen el moviment visible, no si la darrera
+     // actualització de xarxa ha canviat formalment el registre.
+     walking=Math.hypot(pose.x-beforeX,pose.z-beforeZ)>Math.max(.001,dt*.12);
    }
-   animateEnemyInfantry(e,e.nativeMoving,dt);
+   animateEnemyInfantry(e,walking,dt);
  }
  if(projecting){
  if(s.appliedProjectiles!==state.combat.projectiles){
