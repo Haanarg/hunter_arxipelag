@@ -47,7 +47,7 @@ export class CoopRoomHub {
     if(!row||Number(row.expiresAt)<=Date.now())return null;
     return a;
   }
-  send(ws,data){try{ws.send(JSON.stringify(data));if(data.type==='native-mission')this.stateBaselines.set(ws,{revision:0,state:data.state});return true;}catch(_){try{ws.close(1011,'Connexió interrompuda');}catch(_){}return false;}}
+  send(ws,data,serialized=null){try{ws.send(serialized??JSON.stringify(data));if(data.type==='native-mission')this.stateBaselines.set(ws,{revision:0,state:data.state});return true;}catch(_){try{ws.close(1011,'Connexió interrompuda');}catch(_){}return false;}}
   async publish(){
     for(const ws of this.ctx.getWebSockets()){
       if(ws.readyState!==1)continue;
@@ -193,13 +193,30 @@ export class CoopRoomHub {
   games(){return this.ctx.getWebSockets().filter(ws=>ws.readyState===1&&ws.deserializeAttachment()?.gameClient&&ws.deserializeAttachment()?.gameVersion===GAME_VERSION);}
   matches(room){return room&&room.id===this.mission.meta.roomId&&room.revision===this.mission.meta.revision&&room.members.length===2&&this.mission.meta.members.every(m=>room.members.some(r=>r.id===m.id));}
   broadcastState(){
-    if(!this.mission)return;const state=this.mission.snapshot(),diffs=new Map();
+    if(!this.mission)return;
+    const state=this.mission.snapshot(),diffs=new Map(),messages=new Map();
     for(const ws of this.games()){
       if(this.mission.meta.mode!=='native'){this.send(ws,{type:'state',state});continue;}
       const baseline=this.stateBaselines.get(ws);
       if(!baseline||baseline.state.missionId!==state.missionId){this.send(ws,{type:'native-mission',self:ws.deserializeAttachment().actorId,meta:this.mission.meta,state,stateRevision:0,telemetry:1});continue;}
-      let delta=diffs.get(baseline.state);if(delta===undefined){delta=diffCoopState(baseline.state,state);diffs.set(baseline.state,delta);}if(!delta)continue;
-      const revision=baseline.revision+1;if(this.send(ws,{type:'state-delta',missionId:state.missionId,baseRevision:baseline.revision,revision,delta}))this.stateBaselines.set(ws,{revision,state});
+      let delta=diffs.get(baseline.state);
+      if(delta===undefined){delta=diffCoopState(baseline.state,state);diffs.set(baseline.state,delta);}
+      if(!delta)continue;
+      // Els dos clients solen compartir baseline i revisió. Codificar una
+      // vegada el mateix JSON redueix CPU/GC al Durable Object de 10 Hz.
+      // Les revisions divergents, p. ex. després d'un error d'enviament,
+      // reben missatges diferents, sempre amb la seva pròpia base.
+      let versions=messages.get(baseline.state);
+      if(!versions){versions=new Map();messages.set(baseline.state,versions);}
+      let packet=versions.get(baseline.revision);
+      if(!packet){
+        const revision=baseline.revision+1;
+        const body={type:'state-delta',missionId:state.missionId,baseRevision:baseline.revision,revision,delta};
+        packet={body,serialized:JSON.stringify(body)};
+        versions.set(baseline.revision,packet);
+      }
+      if(this.send(ws,packet.body,packet.serialized))
+        this.stateBaselines.set(ws,{revision:packet.body.revision,state});
     }
   }
   async abort(message){
