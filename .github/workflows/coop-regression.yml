@@ -6,6 +6,9 @@ on:
     paths:
       - 'src/native-coop-interpolation.mjs'
       - 'src/native-coop-connection.mjs'
+      - 'src/version.mjs'
+      - 'src/runtime-bundle.mjs'
+      - 'dist/hunter-runtime.*.js'
       - 'src/coop-state-delta.mjs'
       - 'src/coop-world-runtime.js'
       - 'tests/native-coop-interpolation.mjs'
