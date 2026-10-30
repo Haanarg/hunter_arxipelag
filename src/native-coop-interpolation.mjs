@@ -106,7 +106,8 @@ function animateTrack(track,step,tick){
  let dx=q.x-p.x,dy=q.y-p.y,dz=q.z-p.z;
  // Correccions tardanes a velocitat plausible, sense grans salts.
  const moved=Math.hypot(dx,dy,dz),limit=track.maxSpeed*1.5*step;
- if(moved>limit&&limit>0){
+ track.renderErrorM=moved;track.speedLimited=moved>limit&&limit>0;
+ if(track.speedLimited){
    const ratio=limit/moved;dx*=ratio;dy*=ratio;dz*=ratio;
  }
  if(step>0){p.x+=dx;p.y+=dy;p.z+=dz;
@@ -123,7 +124,8 @@ export function createNativeCoopInterpolation(){
    clampedFrames:0,forecastFrames:0,activePlayers:0,
    longGapReceives:0,maxTickGap:0,gapResets:0,
    bufferDelayMs:BASE_DELAY_SECONDS*1000,activeFrames:0,interpolatedFrames:0,
-   extrapolatedFrames:0,bufferUnderruns:0};
+   extrapolatedFrames:0,bufferUnderruns:0,
+   speedLimitedFrames:0,maxRenderErrorM:0};
  function clearTracks(){vehicles.clear();players.clear();vehicleOutput=[];
    renderTick=null;lastArrival=null;jitterSeconds=0;delayTicks=BASE_DELAY_SECONDS*RATE;
    stats.activeVehicles=0;stats.activePlayers=0;stats.bufferDelayMs=150;}
@@ -212,10 +214,13 @@ export function createNativeCoopInterpolation(){
    const rate=Math.max(.72,Math.min(2.5,1+error*.17));
    renderTick=Math.min(current.tick+MAX_FORECAST_SECONDS*RATE,
      renderTick+step*RATE*rate);
-   let buffered=false,forecasted=false,clamped=false,pruned=false;
+   let buffered=false,forecasted=false,clamped=false,pruned=false,
+     speedLimited=false;
    for(const [id,track] of vehicles){
      track.age+=step;
      const mode=animateTrack(track,step,renderTick);
+     speedLimited ||= track.speedLimited;
+     stats.maxRenderErrorM=Math.max(stats.maxRenderErrorM,track.renderErrorM);
      if(mode==='interpolated')buffered=true;
      if(mode==='extrapolated'||mode==='clamped')forecasted=true;
      if(mode==='clamped')clamped=true;
@@ -229,6 +234,8 @@ export function createNativeCoopInterpolation(){
    for(const [id,track] of players){
      track.age+=step;
      const mode=animateTrack(track,step,renderTick);
+     speedLimited ||= track.speedLimited;
+     stats.maxRenderErrorM=Math.max(stats.maxRenderErrorM,track.renderErrorM);
      if(mode==='interpolated')buffered=true;
      if(mode==='extrapolated'||mode==='clamped')forecasted=true;
      if(mode==='clamped')clamped=true;
@@ -239,6 +246,7 @@ export function createNativeCoopInterpolation(){
        players.delete(id);
    }
    if(pruned)vehicleOutput=[...vehicles].map(([id,track])=>({id,pose:track.pose}));
+   if(speedLimited)stats.speedLimitedFrames++;
    if(buffered)stats.interpolatedFrames++;
    if(forecasted){stats.forecastFrames++;stats.extrapolatedFrames++;stats.bufferUnderruns++;}
    if(clamped)stats.clampedFrames++;
