@@ -1,6 +1,16 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
 
+## 0.6.59 · estabilitat de snapshots i menys feina per recepció (31-10-2026)
+
+**Correccions:** el buffer ignora estats de la mateixa missió amb un tick inferior a l'últim rebut (`staleReceives`) sense reiniciar la pose gràfica. El canvi de seient, fins i tot si continua essent el mateix vehicle, reinicia la trajectòria a peu del jugador remot: el seient es compara per identificador de vehicle **i índex**. Les transicions de conductor a passatger continuen sota l'autoritat del servidor i s'han inclòs a les regressions.
+
+**CPU/GC:** el client comprova primer els vehicles i jugadors de l'estat anterior al mateix índex. Només quan un identificador no coincideix crea un `Map` de reserva per aquella recepció. Els `Set` temporals de vehicles i jugadors presents s'han substituït per un marcador de generació guardat exclusivament a les trajectòries gràfiques actives. El cost de comparar la flota completa continua existint perquè els vehicles poden moure's, però desapareixen aquestes assignacions redundants en un flux estable. Les dades autoritatives no es modifiquen.
+
+**Regressions afegides:** estat antic rebut després d'un de més nou, canvi de seient dins el mateix vehicle, reordenació de la flota i de jugadors, retirada d'un vehicle que s'estava interpolant, i les fixtures existents amb 374 vehicles i jitter de xarxa. Proves pures executades després del canvi; cal continuar comprovant la CI amb la versió completa.
+
+**Telemetria:** `remoteInterpolation.staleReceives` complementa `resets` i `gapResets`. Si augmenta a la prova amb dos clients, investigar ordre d'arribada i reconstrucció de deltes; amb el transport WebSocket seqüencial actual s'espera normalment 0. **Pendent:** dos dispositius, suavitat i desplegament Cloudflare de la 0.6.59.
+
 ## Optimitzacions preventives 0.6.58 (sense prova de dos clients)
 
 **Render de remots:** `src/native-coop-interpolation.mjs` ara reutilitza un objecte de destinació per trajectòria en lloc d'instanciar un objecte de pose i un contenidor per cada vehicle/jugador i fotograma. Cerca l'interval entre snapshots de més recent a més antic, perquè el cursor normalment es troba prop del final. Manté el cursor per ticks de servidor, la predicció local separada i el límit de previsió de 120 ms. Dues proves pures d'interpolació, inclosa una amb 374 vehicles, han passat en executar el codi amb les fixtures del repositori.
