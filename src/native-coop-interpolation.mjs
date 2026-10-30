@@ -1,100 +1,141 @@
-// Presentació remota del cooperatiu natiu. Només visual: mai física ni autoritat.
-// Un interval de snapshot de retard dóna temps a interpolar entre dos estats reals.
+// Suavització visual dels actors i vehicles remots: sense alterar el servidor,
+// la física, els impactes, els inventaris ni la predicció del pilot local.
+// Les arribades de snapshots són irregulars: cal preservar la pose presentada
+// en rebre un estat, no reiniciar la interpolació al punt de partida vell.
 const RATE=30,MAX_GAP_TICKS=12,TELEPORT_METRES=24;
+const SMOOTH_SECONDS=.068,MAX_FORECAST_SECONDS=.12,SETTLE_METRES=.012;
 const finite=n=>typeof n==='number'&&Number.isFinite(n);
-const poseOf=o=>({
- x:o.x,y:finite(o.y)?o.y:0,z:o.z,hd:finite(o.hd)?o.hd:0,
- ...(finite(o.alt)?{alt:o.alt}:{})
-});
+const poseOf=o=>({x:o.x,y:finite(o.y)?o.y:0,z:o.z,
+ hd:finite(o.hd)?o.hd:0,...(finite(o.alt)?{alt:o.alt}:{})});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z,(a.y||0)-(b.y||0));
-const angle=(a,b,t)=>{
- let diff=(b-a+Math.PI)%(Math.PI*2);
- if(diff<0)diff+=Math.PI*2;
- return a+(diff-Math.PI)*t;
-};
+const wrapAngle=a=>Math.atan2(Math.sin(a),Math.cos(a));
+const angle=(a,b,t)=>a+wrapAngle(b-a)*t;
 const lerp=(a,b,t)=>a+(b-a)*t;
-function interpolate(before,after,alpha,out){
- out.x=lerp(before.x,after.x,alpha);
- out.y=lerp(before.y,after.y,alpha);
- out.z=lerp(before.z,after.z,alpha);
- out.hd=angle(before.hd,after.hd,alpha);
- if(finite(after.alt))out.alt=finite(before.alt)?lerp(before.alt,after.alt,alpha):after.alt;
- return out;
-}
-const poseChanged=(a,b)=>a.x!==b.x||a.z!==b.z||a.y!==b.y||a.hd!==b.hd||a.alt!==b.alt;
-const safe=(a,b)=>a&&b&&finite(a.x)&&finite(a.z)&&finite(b.x)&&finite(b.z)&&
-  distance(a,b)<=TELEPORT_METRES;
-const occupied=(vehicles,id)=>{
- for(const vehicle of vehicles||[])
-  if(vehicle.seats?.includes(id))return vehicle.id;
+const poseChanged=(a,b)=>a.x!==b.x||a.y!==b.y||a.z!==b.z||
+ a.hd!==b.hd||a.alt!==b.alt;
+const sameSeat=(vehicles,id)=>{
+ for(const v of vehicles||[])if(v.seats?.includes(id))return v.id;
  return null;
 };
+function safe(before,after){return !!before&&!!after&&finite(before.x)&&
+ finite(before.z)&&finite(after.x)&&finite(after.z)&&distance(before,after)<=TELEPORT_METRES;}
+function velocity(before,after,seconds,maxSpeed){
+ const inv=1/Math.max(1/RATE,seconds);
+ let vx=(after.x-before.x)*inv,vy=(after.y-before.y)*inv,
+     vz=(after.z-before.z)*inv;
+ const speed=Math.hypot(vx,vy,vz);
+ if(speed>maxSpeed){const ratio=maxSpeed/speed;vx*=ratio;vy*=ratio;vz*=ratio}
+ return {x:vx,y:vy,z:vz,hd:Math.max(-4.5,Math.min(4.5,wrapAngle(after.hd-before.hd)*inv)),
+  alt:finite(after.alt)&&finite(before.alt)?Math.max(-35,Math.min(35,(after.alt-before.alt)*inv)):0};
+}
+function makeTrack(before,after,dt,maxSpeed){
+ const from=poseOf(before),to=poseOf(after);
+ return {from,to,pose:{...from},speed:velocity(from,to,dt,maxSpeed),age:0};
+}
+function updateTrack(track,before,after,dt,maxSpeed){
+ track.from=poseOf(before);track.to=poseOf(after);
+ track.speed=velocity(track.from,track.to,dt,maxSpeed);
+ track.age=0;
+ // No modificam track.pose aquí: el fotograma anterior és l'ancoratge
+ // visual continu, fins i tot si el paquet arriba abans d'acabar l'interval.
+}
+function animateTrack(track,dt,forecast){
+ const t=1-Math.exp(-dt/SMOOTH_SECONDS),p=track.pose,q=track.to,s=track.speed;
+ const ahead=Math.min(MAX_FORECAST_SECONDS,track.age);
+ p.x=lerp(p.x,q.x+s.x*ahead,t);
+ p.y=lerp(p.y,q.y+s.y*ahead,t);
+ p.z=lerp(p.z,q.z+s.z*ahead,t);
+ p.hd=angle(p.hd,q.hd+s.hd*ahead,t);
+ if(finite(q.alt))p.alt=lerp(finite(p.alt)?p.alt:q.alt,q.alt+s.alt*ahead,t);
+ if(forecast&&ahead>0)forecast();
+}
 export function createNativeCoopInterpolation(){
- let previous=null,current=null,cursor=null,self=null,vehiclePairs=[],players=new Map();
- const stats={samples:0,receives:0,teleports:0,resets:0,activeVehicles:0,clampedFrames:0};
- function reset(){
-  previous=null;current=null;cursor=null;self=null;vehiclePairs=[];players.clear();
-  stats.activeVehicles=0;stats.resets++;
- }
+ let current=null,self=null,vehicles=new Map(),players=new Map();
+ const stats={samples:0,receives:0,teleports:0,resets:0,activeVehicles:0,
+  clampedFrames:0,forecastFrames:0,activePlayers:0};
+ function reset(){current=null;self=null;vehicles.clear();players.clear();
+  stats.activeVehicles=0;stats.activePlayers=0;stats.resets++;}
  function receive(state,localId){
   if(!state||!Number.isInteger(state.tick)){reset();return}
-  const sameMission=current&&current.missionId===state.missionId&&
-    current.status==='running'&&state.status==='running'&&localId===self;
-  const newer=!!sameMission&&state.tick>current.tick&&
-    state.tick-current.tick<=MAX_GAP_TICKS;
-  // Inventari, porta o seient poden canviar dins del mateix tick.
-  // No reiniciem el rellotge visual quan ja hi ha dues poses compatibles.
-  const sameTick=!!sameMission&&state.tick===current.tick&&!!previous;
+  const old=current,same=old&&old.missionId===state.missionId&&
+   old.status==='running'&&state.status==='running'&&self===localId;
+  const newer=!!same&&state.tick>old.tick&&state.tick-old.tick<=MAX_GAP_TICKS;
+  const sameTick=!!same&&state.tick===old.tick;
   if(!newer&&!sameTick){
-   if(current)stats.resets++;
-   previous=null;current=state;self=localId;cursor=state.tick;
-   vehiclePairs=[];players.clear();stats.activeVehicles=0;stats.receives++;
-   return;
+   if(old)stats.resets++;
+   current=state;self=localId;vehicles.clear();players.clear();
+   stats.activeVehicles=0;stats.activePlayers=0;stats.receives++;return;
   }
-  if(newer)previous=current;
   current=state;self=localId;
-  // En un salt de xarxa no acumulem un retard il·limitat.
-  if(cursor<previous.tick-2)cursor=previous.tick;
-  const oldVehicles=new Map(previous.vehicles.map(row=>[row.id,row]));
-  vehiclePairs=[];
+  // Dues actualitzacions al mateix tick només modifiquen el que és nou;
+  // les trajectòries visuals no perden els fotogrames ja presentats.
+  const dt=Math.max(1/RATE,(state.tick-old.tick)/RATE);
+  const oldVehicles=new Map(old.vehicles.map(row=>[row.id,row]));
+  const liveVehicles=new Set();
   for(const row of state.vehicles){
-   const before=oldVehicles.get(row.id);
-   if(row.destroyed||!before||before.destroyed||!poseChanged(before,row))continue;
-   const valid=safe(before,row);
-   if(!valid){stats.teleports++;continue}
-   vehiclePairs.push({id:row.id,from:poseOf(before),to:poseOf(row),pose:poseOf(before)});
+   const before=oldVehicles.get(row.id),id=row.id,track=vehicles.get(id);
+   if(row.destroyed||before?.destroyed||!safe(before,row)){
+    if(before&&poseChanged(before,row))stats.teleports++;
+    vehicles.delete(id);continue;
+   }
+   if(poseChanged(before,row)){
+    if(track)updateTrack(track,before,row,dt,80);
+    else vehicles.set(id,makeTrack(before,row,dt,80));
+   }else if(track&&newer){
+    // Frenada: eliminar la predicció, però completar suaument la correcció.
+    track.to=poseOf(row);track.speed={x:0,y:0,z:0,hd:0,alt:0};track.age=0;
+   }
+   liveVehicles.add(id);
   }
-  const oldPlayers=new Map(previous.players.map(p=>[p.id,p]));
-  players.clear();
-  for(const player of state.players){
-   if(player.id===self)continue;
-   const before=oldPlayers.get(player.id);
-   const compatible=before&&before.hp>0&&player.hp>0&&
-     occupied(previous.vehicles,player.id)===occupied(state.vehicles,player.id);
-   if(compatible&&safe(before,player))
-     players.set(player.id,{from:poseOf(before),to:poseOf(player),pose:poseOf(before)});
-   else if(before&&!safe(before,player))stats.teleports++;
+  for(const id of vehicles.keys())if(!liveVehicles.has(id))vehicles.delete(id);
+  const oldPlayers=new Map(old.players.map(p=>[p.id,p]));
+  const livePlayers=new Set();
+  for(const row of state.players){
+   if(row.id===localId)continue;
+   const before=oldPlayers.get(row.id),id=row.id,track=players.get(id);
+   const compatible=!!before&&before.hp>0&&row.hp>0&&
+    sameSeat(old.vehicles,id)===sameSeat(state.vehicles,id);
+   if(!compatible||!safe(before,row)){
+    if(before&&poseChanged(before,row)&&!safe(before,row))stats.teleports++;
+    players.delete(id);continue;
+   }
+   if(poseChanged(before,row)){
+    if(track)updateTrack(track,before,row,dt,15);
+    else players.set(id,makeTrack(before,row,dt,15));
+   }else if(track&&newer){
+    track.to=poseOf(row);track.speed={x:0,y:0,z:0,hd:0,alt:0};track.age=0;
+   }
+   livePlayers.add(id);
   }
-  stats.activeVehicles=vehiclePairs.length;stats.receives++;
+  for(const id of players.keys())if(!livePlayers.has(id))players.delete(id);
+  stats.activeVehicles=vehicles.size;stats.activePlayers=players.size;
+  stats.receives++;
  }
  function advance(dt,running=true){
-  if(!current)return 1;
-  if(running&&previous){
-   cursor=Math.min(current.tick,cursor+Math.max(0,Math.min(.1,dt))*RATE);
-   if(cursor>=current.tick)stats.clampedFrames++;
+  if(!current||!running)return 1;
+  const step=Math.max(0,Math.min(.1,dt));
+  let forecasted=false;
+  for(const track of vehicles.values()){
+   track.age+=step;animateTrack(track,step,()=>{forecasted=true});
   }
-  return previous?Math.max(0,Math.min(1,(cursor-previous.tick)/(current.tick-previous.tick))):1;
+  for(const track of players.values()){
+   track.age+=step;animateTrack(track,step,()=>{forecasted=true});
+  }
+  if(forecasted)stats.forecastFrames++;
+  // La previsió visual no pot créixer més de 120 ms sense paquets nous:
+  // quan s'esgota, els objectes s'aturen en lloc d'escapar-se del servidor.
+  if([...vehicles.values(),...players.values()].some(t=>t.age>MAX_FORECAST_SECONDS))
+   stats.clampedFrames++;
+  return 1;
  }
- function actor(id,alpha=1){
-  const pair=players.get(id);
-  if(!pair)return null;
-  stats.samples++;
-  return interpolate(pair.from,pair.to,alpha,pair.pose);
+ function actor(id){
+  const track=players.get(id);
+  if(!track)return null;
+  stats.samples++;return track.pose;
  }
- function movingVehicles(alpha=1){
-  for(const pair of vehiclePairs)interpolate(pair.from,pair.to,alpha,pair.pose);
-  stats.samples+=vehiclePairs.length;
-  return vehiclePairs;
+ function movingVehicles(){
+  stats.samples+=vehicles.size;
+  return [...vehicles].map(([id,track])=>({id,pose:track.pose}));
  }
  return {receive,advance,actor,movingVehicles,reset,stats};
 }
