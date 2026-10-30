@@ -225,10 +225,15 @@ function updateNativeCoopFrame(dt){
        e.x=row.x;e.z=row.z;e.hp=row.hp;e.hd=row.heading||0;
        e.canSee=!!row.canSee;
        e.aiMode=row.state==='attack'?'combat':row.state;
-       e.o.position.set(row.x,row.y,row.z);
-       e.o.rotation.y=e.hd;
+       // El model manté la pose temporal si aquest enemic es mou.
+       // L'estat lògic e.x/e.z continua essent autoritatiu.
+       if(!s.interpolation?.enemy?.(row.id)){
+         e.o.position.set(row.x,row.y,row.z);
+         e.o.rotation.y=e.hd;
+       }
        s.appliedEnemyRows.set(row.id,row);
      }else e.nativeMoving=false;
+     e.nativeCoopId=row.id;
      e.nativeVisualTick=state.tick;
      if(row.hp<=0)e.o.visible=false;
      else s.nativeAnimatedEnemies.push(e);
@@ -236,8 +241,15 @@ function updateNativeCoopFrame(dt){
  }
  // En canvi, l'animació d'infanteria original sí que necessita el dt
  // de cada fotograma, incloses les pauses entre dos snapshots rebuts.
- for(const e of s.nativeAnimatedEnemies||[])
-   if(e.o.visible)animateEnemyInfantry(e,e.nativeMoving,dt);
+ for(const e of s.nativeAnimatedEnemies||[]){
+   if(!e.o.visible)continue;
+   const pose=s.interpolation?.enemy?.(e.nativeCoopId);
+   if(pose){
+     e.o.position.set(pose.x,pose.y,pose.z);
+     e.o.rotation.y=pose.hd;
+   }
+   animateEnemyInfantry(e,e.nativeMoving,dt);
+ }
  if(projecting){
  if(s.appliedProjectiles!==state.combat.projectiles){
  s.appliedProjectiles=state.combat.projectiles;
