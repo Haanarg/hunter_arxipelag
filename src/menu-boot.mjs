@@ -1,8 +1,9 @@
+import './menu-main-integration.mjs';
 import {GAME_VERSION} from './version.mjs?v=0.6.53';
 import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.53&visual=8';
 
-// La portada no carrega Three.js, WebGL, el món ni una llavor de fons.
-// Una imatge estàtica renderitzada amb la llavor 67 és suficient.
+// La portada reutilitza els controls reals i un renderitzat Three.js independent.
+// El canvas del fons s'allibera abans d'arrencar el motor de la partida.
 window.HUNTER_MENU_READY = true;
 const menu = document.getElementById('ini');
 const loadingLabel = document.getElementById('startLoading');
@@ -94,9 +95,13 @@ const showLoading=(message)=>{
 };
 function loadGame(){
   if(window.HUNTER_READY)return Promise.resolve();
-  if(!bootPromise)bootPromise=import('./bootstrap.mjs?v=0.6.53&visual=8').then(()=>{
+  if(!bootPromise){
+    window.HUNTER_MENU_BACKGROUND_STOPPED=true;
+    window.dispatchEvent(new Event('hunter:menu-background-stop'));
+    bootPromise=import('./bootstrap.mjs?v=0.6.53&visual=8').then(()=>{
     if(!window.HUNTER_READY)throw new Error('El motor 3D no ha acabat de carregar');
   }).catch(error=>{bootPromise=null;throw error});
+  }
   return bootPromise;
 }
 // A delayed import can outlive transient user activation. Unlock an empty
