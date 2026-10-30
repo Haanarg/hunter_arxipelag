@@ -14,6 +14,8 @@
 
 **Estat implementat a 0.6.56:** primer buffer per ticks i visualització amb rellotge remot compartit al client, extrapolació comptabilitzada correctament, tests de regressió afegits i versió/cache actualitzats. Cal executar les proves Node i amb dos usuaris, perfilar el resultat real i revisar el volum d'estats abans de considerar aquesta fase tancada. El servidor i la predicció local no s'han modificat en aquesta fase.
 
+**Continuació 0.6.57 sense prova de dos clients:** perfil mostrejat de deltes (`fullStateFrames`, `deltaFrames` i `deltaProfile.bySection`) per prioritzar possibles reduccions de payload; simulador determinista de 10 Hz/60 FPS amb jitter normal i accentuat; regressions automàtiques de servidor/client i integració amb el motor original mitjançant GitHub Actions. El workflow de la versió actual ha acabat amb èxit. No s'han alterat la persistència, l'autoritat del Worker ni la freqüència de ticks. **La prova visual i el desplegament a Cloudflare continuen pendents.**
+
 **Criteris de prova, no garanties:** RTT/jitter mantenir o millorar; ritme d'estats estable (10 Hz inicialment; 20 Hz només si càrrega/transport ho permeten), cap teleport fals; extrapolacions genuïnes <10% dels fotogrames amb objectes actius en condicions normals; intervals de recepció normalment <150 ms. La dada `serverTickMs=0` no equival a cost nul: el temps de CPU del Durable Object requereix profiling separat. No pujar la freqüència del servidor fins a demostrar que el buffer funciona.
 
 
