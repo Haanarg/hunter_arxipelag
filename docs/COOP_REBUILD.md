@@ -1,5 +1,20 @@
 # Reconstrucció del multijugador sobre el joc original
 
+## Sisena optimització — buffer temporal adaptatiu de remots (31-10-2026)
+
+**Prova real 3 (abans del canvi):** RTT 46,37 ms, jitter 12,31 ms, snapshots cada 99,84 ms de mitjana, màxim 190 ms; `stateFrames=1222`, `stateBytes=10658437` (~8,72 KB/estat), `maxTickGap=777`, `longGapReceives=2`, `gapResets=2`, `teleports=1`, `clampedFrames=92`, `forecastFrames=9273`, `samples=12738`. `activePlayers=0` i `activeVehicles=0` són comptadors instantanis i no permeten deduir quantes entitats s'han animat durant tota la partida. Els comptadors d'interpolació són acumulats, no FPS; la xifra antiga de 72,8% de `forecastFrames/samples` **no és una taxa real d'extrapolació**, perquè el comptador antic augmentava sempre que una trajectòria estava activa.
+
+**Ordre de treball:**
+
+1. Introduir una línia temporal d'instants autoritatius per tick del servidor per als actors i vehicles remots (petit buffer de snapshots, retard visual inicial de 150–200 ms, adaptació acotada segons irregularitat de recepció). Només interpolar entre poses compatibles. Preservar la pose visual ja representada en una recepció.
+2. Reservar extrapolació per quan el cursor realment superi el darrer tick disponible, acotant-la a 120 ms; quan no hi ha dades, evitar salts en arribar la correcció. No aplicar aquest retard ni extrapolació al personatge o conductor local, que conserven la predicció/reconciliació; no afectar combat, dany, col·lisions, inventari ni portes autoritatius.
+3. Detectar discontinuïtats de missió, pauses, salts de ticks de més de 2 segons, teleport físic, destrucció, mort/reanimació i canvis de seient: reinicialitzar la trajectòria d'aquella entitat o buffer sense animar una posició incompatible.
+4. Millorar diagnòstic: `bufferDelayMs`, `interpolatedFrames`, `extrapolatedFrames`, `bufferUnderruns`, `clampedFrames` i `maxTickGap`; comptar previsions només si realment hi ha extrapolació. Diferenciar interval d'arribada, salt de ticks i reset de missió.
+5. Fer regressions pures (10–20 Hz, jitter, pausa de 190/346/774 ms, angles ±π, 374 vehicles, canvis de seient, pilot local), integració amb runtime natiu i dues sessions reals. Mesurar separat suavitat visual, latència percebuda i CPU; revisar si es poden eliminar camps duplicats dels ~8,72 KB/estat sense perdre consistència de deltes ni persistència.
+
+**Criteris de prova, no garanties:** RTT/jitter mantenir o millorar; ritme d'estats estable (10 Hz inicialment; 20 Hz només si càrrega/transport ho permeten), cap teleport fals; extrapolacions genuïnes <10% dels fotogrames amb objectes actius en condicions normals; intervals de recepció normalment <150 ms. La dada `serverTickMs=0` no equival a cost nul: el temps de CPU del Durable Object requereix profiling separat. No pujar la freqüència del servidor fins a demostrar que el buffer funciona.
+
+
 Estat: replantejament motivat per la petició de l'usuari del 29-10-2026. Primera integració al runtime original implementada a la 0.6.50; paritat completa pendent. Vegeu [estat i límits actuals](COOP_NATIVE_RUNTIME.md). Aquest document substitueix la direcció de desenvolupament del client cooperatiu separat. No descriu una funcionalitat ja acabada.
 
 ## Objectiu
