@@ -1,5 +1,18 @@
 # Reconstrucció del multijugador sobre el joc original
 
+## Desena optimització — soldats visuals i actualització selectiva sense Actions (0.6.61)
+
+**Canvis implementats a `main`:**
+- Interpolació gràfica dels soldats vius que canvien de posició o orientació (`src/native-coop-interpolation.mjs`), amb el mateix rellotge remot que el company i els vehicles, i sense moure les coordenades de lògica d'IA ni alterar danys/impactes. Els soldats estàtics conserven la referència del delta i no creen trajectòria; en morir, teletransportar-se o aturar-se s'alliberen els tracks. El moviment visual controla també l'animació de les cames del soldat.
+- Per a arrays de `id` / `actorId` **sense canvi d'ordre**, `applyCoopDelta` aplica els patches en una sola passada sense indexar-los amb `Map` ni construir un array d'identificadors. Les files intactes conserven la mateixa referència. Si canvia l'ordre es manté la ruta original amb indexació.
+- `src/native-coop-prediction.mjs`: model d'aigua canònic reutilitzat fins que canvia el món; només actualitzar la salut de les palmeres si el delta n'ha canviat la referència. Les regles de moviment i col·lisions dels 16 vehicles continuen intactes.
+- `src/coop-world-runtime.js`: reutilitzar conjunts d'identificadors i vector 3D de projectils i granades en lloc de recrear-los amb cada snapshot.
+- `src/native-coop-connection.mjs`: `clientFrame` amb mostres, interval mitjà/màxim i comptadors de frames >33 ms/>50 ms. Es mesura al navegador, no al Worker, i es descarten salts de pestanya de més de 250 ms.
+
+**Validació disponible sense Actions:** `npm run test:coop:offline` i `npm run test:coop:integration` (guia a [COOP_OFFLINE_VALIDATION.md](COOP_OFFLINE_VALIDATION.md)). S'han afegit regressions de 377 enemics, sincronització visual dins el motor i caché de predicció. Les suites pures s'han comprovat amb JavaScript aïllat; les suites completes Node/GPU encara no s'han executat aquí. No atribuir FPS ni ping reals a aquestes millores.
+
+**Actions:** `.github/workflows/coop-regression.yml` és manual-only per no gastar quota; no es faran execucions automàtiques després de `push`. Versió 0.6.61 i bundle identificat per hash. Desplegament Cloudflare i sessió de dos navegadors pendents.
+
 ## Novena optimització — reutilitzar la codificació de WebSocket (0.6.60)
 
 - El servidor comparteix el JSON d'un delta entre els dos WebSockets **només si la baseline i la revisió coincideixen**. S'elimina una serialització redundant habitual per broadcast, sense compartir revisions ni canviar el protocol, el model de física o el checkpoint.
