@@ -497,7 +497,21 @@ function executePlayerPlant(seconds=3){
 // La filferrada és permeable a la vista i al foc lleuger, però segueix
 // impedint els atacs cos a cos quan ignoreBarbed=false.
 function sight(x,z,tx,tz,y,ignoreBarbed=true,targetY=y){const from={x,y,z},to={x:tx,y:targetY,z:tz},reach=Math.hypot(tx-x,tz-z)/2+3;for(const w of wallCandidates((x+tx)/2,(z+tz)/2,reach)){if(w.open||ignoreBarbed&&w.barbed)continue;if(window.HUNTER_BUILDING_SHELL.wallShotHit(from,to,w)!=null)return false}return true}
-function melee(){if(cv||swimming||fcd>0)return false;fcd=.52;pl.userData.meleePose=pl.userData.knifeAttackDuration||.38;window.HUNTER_STEALTH.emit('knife',P.x,P.y+1,P.z);const hit=window.HUNTER_SHARED_WEAPONS.meleeTarget(P,E,u=>sight(P.x,P.z,u.x,u.z,P.y+1.2,false));if(hit)hurtE(hit,COMBAT_BALANCE.weapons.knife,{weapon:'knife',own:'p',sx:P.x,sy:P.y+1.35,sz:P.z,x:hit.x,y:hit.o.position.y+1.35,z:hit.z});snd('hurt',hit?.45:.18);setDis(false);return true}
+function melee(){
+ if(cv||swimming||fcd>0)return false;
+ fcd=.52;pl.userData.meleePose=pl.userData.knifeAttackDuration||.38;
+ window.HUNTER_STEALTH.emit('knife',P.x,P.y+1,P.z);
+ const pane=window.HUNTER_BUILDING_SHELL.knifeWindowHit(
+   P,wallCandidates(P.x-Math.sin(P.hd)*1.4,P.z-Math.cos(P.hd)*1.4,3),
+   2.8,(_i,index,wall)=>!wall.brokenWindows?.has(index));
+ if(pane)shatterWindow(pane.wall,pane.paneIndex,pane.point,null);
+ const hit=window.HUNTER_SHARED_WEAPONS.meleeTarget(P,E,
+   u=>sight(P.x,P.z,u.x,u.z,P.y+1.2,false));
+ if(hit)hurtE(hit,COMBAT_BALANCE.weapons.knife,
+   {weapon:'knife',own:'p',sx:P.x,sy:P.y+1.35,sz:P.z,
+    x:hit.x,y:hit.o.position.y+1.35,z:hit.z});
+ snd('hurt',hit?.45:.18);setDis(false);return true;
+}
 function secondaryWeapon(){if(nativeCoopSession)return nativeCoopSession.channel?.combat('secondary');
   if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd),d45=Math.SQRT1_2;
   if(cv.t==='heli_combat'){if(cheats.items)cv.rockets=Math.max(cv.rockets||0,999);if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,COMBAT_BALANCE.weapons.heliMissile,10,'p',mS,2.4);Pj[Pj.length-1].life=3.3;msg='Míssils: '+cv.rockets;msgT=1;return true}
@@ -1007,7 +1021,7 @@ function sniperReticlePoint(focus,range=1000){
   let prev=0;
   for(let k=1;k<=samples;k++){
     const t=k/samples;
-    if(t>=flight.fraction)break;
+    if(t>=bestT)break;
     if(surfaceDifference(t)<0){
       let lo=prev,hi=t;
       for(let j=0;j<9;j++){
