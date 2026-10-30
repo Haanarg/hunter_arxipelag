@@ -48,8 +48,8 @@ function setStatus(message,error=false){status.textContent=message;status.classL
 toggle.addEventListener('click',()=>{
   active=!active;toggle.setAttribute('aria-pressed',String(active));
   toggle.textContent=active?'Mar animat':'Mar aturat';
-  if(!active){cancelAnimationFrame(raf);raf=0;setStatus('Aigua congelada · prova amb el motor del joc.');}
-  else{lastFrame=0;startLoop();setStatus('Paisatge del motor · mar animat a 30 FPS.');}
+  if(!active){cancelAnimationFrame(raf);raf=0;setStatus(selectedScene.name+' · llavor '+selectedScene.seed+' · mar aturat.');}
+  else{lastFrame=0;startLoop();setStatus(selectedScene.name+' · llavor '+selectedScene.seed+' · mar animat a 30 FPS.');}
 });
 document.addEventListener('visibilitychange',()=>{
   visible=!document.hidden;
@@ -127,15 +127,23 @@ async function init(){
     // Model de palmeres instanciades original, amb la mateixa variació per exemplar.
     // Mostres lleugeres en els vessants d'una illa real del generador de llavors.
     const palms=[],bushes=[],rocks=[];
-    let randomState=92638;
+    // Franges més poblades al voltant de la base i del litoral,
+    // amb malles instanciades del mateix joc i sense modificar les partides.
+    let randomState=(foundation.seed^92638)>>>0;
     const rnd=()=>{randomState=(Math.imul(randomState,1664525)+1013904223)>>>0;return randomState/4294967296};
     const random=(a,b)=>a+rnd()*(b-a);
-    for(let i=0;i<185;i++){
-      const a=rnd()*Math.PI*2,r=homeIsland.r*(.38+rnd()*.43);
-      const x=homeIsland.x+Math.cos(a)*r,z=homeIsland.z+Math.sin(a)*r,y=heightAt(x,z);
-      if(y<3||y>24||Math.abs(x-targetX)<base.plan.level.hw+32&&
-        Math.abs(z-targetZ)<base.plan.level.hd+32)continue;
-      palms.push([x,y,z,1.1+rnd()*1.9,rnd()*Math.PI*2,Math.floor(rnd()*3)-1,(rnd()-.5)*.2]);
+    for(let i=0;i<500;i++){
+      const nearby=i<350,a=rnd()*Math.PI*2;
+      const r=nearby?105+rnd()*360:homeIsland.r*(.32+rnd()*.58);
+      const originX=nearby?targetX:homeIsland.x;
+      const originZ=nearby?targetZ:homeIsland.z;
+      const x=originX+Math.cos(a)*r,z=originZ+Math.sin(a)*r;
+      const y=heightAt(x,z);
+      if(y<2||y>38||(
+        Math.abs(x-targetX)<base.plan.level.hw+25&&
+        Math.abs(z-targetZ)<base.plan.level.hd+25))continue;
+      palms.push([x,y-.3,z,1.1+rnd()*1.7,rnd()*Math.PI*2,
+        Math.floor(rnd()*3)-1,(rnd()-.5)*.2]);
     }
     const plantFactory=window.HUNTER_VEGETATION.create(THREE,{
       materialProfile:p=>window.HUNTER_MATERIALS[p]||window.HUNTER_MATERIALS.organic,
@@ -162,7 +170,7 @@ async function init(){
     water.update(0);
     renderer.render(scene,camera);
     stage.classList.add('ready');
-    setStatus(active?'Base inicial i vehicles · mar animat a 30 FPS.':'Base inicial i vehicles · fons estàtic.');
+    setStatus(selectedScene.name+' · llavor '+seed+' · '+(active?'mar animat a 30 FPS.':'mar aturat.'));
     startLoop();
   }catch(error){
     console.error('Prova del fons 3D',error);
