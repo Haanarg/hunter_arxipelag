@@ -24,17 +24,23 @@ jobs:
       - name: Sintaxi dels mòduls modificats
         run: |
           node --check src/native-coop-interpolation.mjs
+          node --check src/native-coop-prediction.mjs
+          node --check src/coop-world-runtime.js
           node --check src/native-coop-connection.mjs
           node --check tests/native-coop-interpolation.mjs
       - name: Regressions de xarxa del COOP
         run: |
           node tests/native-coop-interpolation.mjs
+          node tests/native-coop-enemy-interpolation.mjs
+          node tests/native-coop-prediction-cache.mjs
           node tests/native-coop-network-jitter.mjs
           node tests/native-coop-delta-transport.mjs
           node tests/coop-state-delta.mjs
           node tests/coop-broadcast-encoding.mjs
           node tests/coop-transport-telemetry.mjs
       - name: Integracio amb motor original (càmera, passatger i pilot)
-        run: node tests/native-coop-interpolation-runtime.cjs
+        run: |
+          node tests/native-coop-interpolation-runtime.cjs
+          node tests/native-coop-enemy-runtime.cjs
       - name: Comprovar paquet del runtime
         run: node tools/build-runtime.cjs --check
