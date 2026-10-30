@@ -1,6 +1,6 @@
 import './menu-main-integration.mjs?background=isolate1';
 import {GAME_VERSION} from './version.mjs?v=0.6.53';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.53&visual=8&glassfix=1';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.53&visual=8&glassfix=2';
 
 // La portada reutilitza els controls reals i un renderitzat Three.js independent.
 // El canvas del fons s'allibera abans d'arrencar el motor de la partida.
