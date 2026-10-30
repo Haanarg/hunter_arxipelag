@@ -1,5 +1,5 @@
 import {createNativePrediction} from './native-coop-prediction.mjs';
-import {createNativeCoopInterpolation} from './native-coop-interpolation.mjs';
+import {createNativeCoopInterpolation} from './native-coop-interpolation.mjs?smooth=2';
 window.HUNTER_CREATE_NATIVE_PREDICTION=createNativePrediction;
 window.HUNTER_CREATE_NATIVE_INTERPOLATION=createNativeCoopInterpolation;
 import * as enemyPerception from './enemy-perception-core.mjs';
