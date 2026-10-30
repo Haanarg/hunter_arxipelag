@@ -71,7 +71,7 @@ window.HUNTER_RUNTIME_LAYOUTS=runtimeLayouts;window.HUNTER_CHOOSE_COMPOUND=choos
 import {createCompoundStructures} from './compound-structures.mjs';
 window.HUNTER_COMPOUND_STRUCTURES=createCompoundStructures;
 import {runtimeScripts} from './runtime-scripts.mjs';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.53&visual=8';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.53&visual=8&glassfix=1';
 import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
 import {GAME_VERSION} from './version.mjs?v=0.6.53';
