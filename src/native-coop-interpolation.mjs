@@ -117,19 +117,28 @@ export function createNativeCoopInterpolation(){
  function advance(dt,running=true){
   if(!current||!running)return 1;
   const step=Math.max(0,Math.min(.1,dt));
-  let forecasted=false,clamped=false;
-  for(const track of vehicles.values()){
+  let forecasted=false,clamped=false,pruned=false;
+  const stationary=track=>track.age>.22&&
+   track.speed.x===0&&track.speed.y===0&&track.speed.z===0&&
+   track.speed.hd===0&&track.speed.alt===0&&
+   distance(track.pose,track.to)<SETTLE_METRES&&
+   Math.abs(wrapAngle(track.pose.hd-track.to.hd))<.012;
+  for(const [id,track] of vehicles){
    track.age+=step;
    if(track.age>MAX_FORECAST_SECONDS)clamped=true;
    if(track.age>0)forecasted=true;
    animateTrack(track,step);
+   if(stationary(track)){vehicles.delete(id);pruned=true}
   }
-  for(const track of players.values()){
+  for(const [id,track] of players){
    track.age+=step;
    if(track.age>MAX_FORECAST_SECONDS)clamped=true;
    if(track.age>0)forecasted=true;
    animateTrack(track,step);
+   if(stationary(track))players.delete(id);
   }
+  if(pruned)vehicleOutput=[...vehicles].map(([id,track])=>({id,pose:track.pose}));
+  stats.activeVehicles=vehicles.size;stats.activePlayers=players.size;
   if(forecasted)stats.forecastFrames++;
   // Després de 120 ms sense dades la velocitat extrapolada queda limitada.
   if(clamped)stats.clampedFrames++;
