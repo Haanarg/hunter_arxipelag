@@ -12,6 +12,26 @@ const make=(tick,b=0,vehicle=0,options={})=>({
 });
 const close=(x,y,label,epsilon=.08)=>assert(Math.abs(x-y)<=epsilon,
  label+': '+x+' vs '+y);
+// La taxa d'extrapolació ha de comptar NOMÉS el cursor fora de la finestra
+// autoritativa, no cada frame que té una trajectòria activa.
+const buffered=createNativeCoopInterpolation();
+buffered.receive(make(0),'a');
+buffered.receive(make(3,.9,4),'a');
+buffered.advance(1/60);
+assert.equal(buffered.stats.forecastFrames,0,
+ 'Interpolar entre dos ticks no és predir el futur');
+assert.equal(buffered.stats.extrapolatedFrames,0);
+assert(buffered.stats.interpolatedFrames>0,
+ 'La finestra de ticks s’utilitza per interpolar');
+assert.equal(buffered.stats.bufferDelayMs,150,'Retard inicial de 150 ms');
+buffered.advance(.08);
+buffered.receive(make(6,1.8,8),'a');
+assert(buffered.stats.bufferDelayMs>150&&buffered.stats.bufferDelayMs<=200,
+ 'Jitter d’arribada fa adaptar el buffer dins 150–200 ms');
+buffered.advance(.19);
+buffered.receive(make(12,3.6,16),'a');
+assert.equal(buffered.stats.gapResets,0,'190 ms de separació no reinicien el buffer');
+
 const stream=createNativeCoopInterpolation();
 stream.receive(make(0), 'a');
 assert.equal(stream.actor('b'),null,'Al primer estat no s’inventa cap desplaçament');
@@ -137,4 +157,4 @@ idle.receive(make(6,.6,2),'a');
 for(let i=0;i<40;i++)idle.advance(1/60);
 assert.equal(idle.stats.activeVehicles,0,'Vehicle aturat: sense trajectòria persistent');
 assert.equal(idle.stats.activePlayers,0,'Company aturat: sense trajectòria persistent');
-console.log('native coop interpolation: jitter 346/774ms, no 23-tick resets, bounded recovery, transitions and 374 vehicles passed');
+console.log('native coop interpolation: adaptive 150-200ms buffer, true forecast counters, jitter 190/346/774ms, bounded recovery, transitions and 374 vehicles passed');
