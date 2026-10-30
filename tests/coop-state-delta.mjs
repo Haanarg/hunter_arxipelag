@@ -12,4 +12,31 @@ for(let tick=1;tick<=200;tick++){
  const delta=wire(diffCoopState(state,next));client=applyCoopDelta(client,delta);assert.deepEqual(client,wire(next),'lossless delta at '+tick);assert.equal(JSON.stringify(state),previous,'encoding never mutates baseline');state=next;
 }
 assert.equal(diffCoopState(state,structuredClone(state)),null);
+// Fins a 374 vehicles + 377 soldats: modificacions petites sense enviar
+// totes les entitats. Inclou claus de JavaScript que poden ser heretades.
+const vehicles=Array.from({length:374},(_,i)=>({
+ id:'car-'+i,x:i*3,z:i,hd:0,meta:{seats:[null,null],destroyed:false}
+}));
+const guards=Array.from({length:377},(_,i)=>({
+ id:'guard-'+i,hp:25,x:i,y:1,z:i*2
+}));
+const dense={tick:300,vehicles,combat:{targets:guards}};
+const changed=wire(dense);
+changed.tick=303;
+changed.vehicles[187].x+=5;
+changed.combat.targets[208].hp-=7;
+const compact=diffCoopState(dense,changed);
+assert.deepEqual(applyCoopDelta(wire(dense),wire(compact)),changed);
+assert(JSON.stringify(compact).length<500,'Canvis petits no envien centenars de files');
+const special={actors:[{id:'toString',hp:25},{id:'constructor',hp:25}]};
+const specialNext=wire(special);specialNext.actors[0].hp=24;
+assert.deepEqual(applyCoopDelta(wire(special),wire(diffCoopState(special,specialNext))),specialNext,
+ 'Els identificadors heretats no es confonen amb patches');
+const reordered={actors:[{id:'constructor',hp:25},{id:'toString',hp:25}]};
+assert.deepEqual(applyCoopDelta(wire(special),wire(diffCoopState(special,reordered))),reordered,
+ 'Reordenar identificadors sense patches conserva els valors');
+const duplicated={actors:[{id:'same',hp:1},{id:'same',hp:2}]};
+const duplicatedNext=wire(duplicated);duplicatedNext.actors[1].hp=3;
+assert.deepEqual(applyCoopDelta(wire(duplicated),wire(diffCoopState(duplicated,duplicatedNext))),duplicatedNext,
+ 'La llista amb IDs duplicats utilitza la substitució segura');
 console.log('state deltas: 200 frames, entity insert/remove/reorder, nested updates/deletions, vehicle seats/destruction and immutable baselines passed');
