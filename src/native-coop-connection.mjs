@@ -1,4 +1,4 @@
-import {applyCoopDelta} from './coop-state-delta.mjs';
+import {applyCoopDelta} from './coop-state-delta.mjs?delta=3';
 import {createCoopSocket} from './coop-socket.mjs?net=2';
 import {GAME_VERSION} from './version.mjs?v=0.6.57';
 // Transport adapter for the original runtime. No scene, renderer or controls.
