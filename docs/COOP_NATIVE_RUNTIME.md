@@ -1,5 +1,20 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
+## Dades del segon test real i recuperació de talls > 400 ms · 0.6.55
+
+Segona telemetria rebuda (mateix context cooperatiu): RTT 67,17 ms, jitter 17,60 ms, interval mitjà entre estats 108,40 ms, **màxim 774 ms**, 662 missatges de contingut d'estat i 6.046.228 caràcters acumulats (~9,1 KB per missatge); `remoteInterpolation.clampedFrames=958`, `forecastFrames=9664`, `resets=3`, `teleports=0`, `activePlayers=0`, `activeVehicles=0` a l'instant de la captura. Els dos zeros d'entitats actives poden ser normals si estan aturades; els comptadors de fotogrames són acumulatius i no constitueixen ni FPS ni un nombre de talls de connexió. L'alt valor de `maxStateGapMs` no identifica tot sol si el retard s'ha produït al client, a la xarxa o al servidor.
+
+**Fallada trobada al codi anterior:** `src/native-coop-interpolation.mjs` reiniciava tot el buffer si dos snapshots estaven separats per més de `MAX_GAP_TICKS=12` (400 ms a 30 Hz). Una pausa de 774 ms pot equivaldre a uns 23 ticks i provocar un salt immediat en tornar a rebre dades. A més, la comprovació fixa de 24 metres no acceptava trajectòries legítimes d'helicòpters ràpids durant un tall llarg.
+
+**Correcció específica:** tolerar fins a 60 ticks de separació sota la mateixa missió i estat actiu, preservant la pose gràfica ja presentada; la seguretat contra teleports continua aplicant un límit de distància físicament plausible, ara depenent del temps transcorregut i de la velocitat informada pel vehicle, acotat a un màxim de 90 metres (i conservant el llindar mínim de 24 m). Es continuen mostrant immediatament els grans teletransports, canvis de seient, mort i pausa; un tall de més de 2 segons reinicia per evitar prediccions a partir de dades massa antigues. La previsió sense paquets nous continua limitada a 120 ms i no canvia cap regla del servidor.
+
+**Instrumentació addicional:** `remoteInterpolation.maxTickGap`, `longGapReceives` (>12 ticks) i `gapResets` (>60 ticks). Es compararan aquests camps amb `maxStateGapMs`: una pausa temporal alta amb molts ticks avançats suggereix actualitzacions retardades/pèrdues al transport; si els ticks gairebé no avancen, convé inspeccionar la cadència del Durable Object.
+
+**Important sobre els tres temps de servidor a zero:** segons la documentació oficial de Cloudflare Workers, `Date.now()` i `performance.now()` només avancen en producció després d'una operació I/O; els càlculs de CPU purs poden marcar 0 ms. **No** hem de concloure que `serverTickMs=0` significa una simulació gratuïta; per al CPU de producció cal profiling de Workers/Durable Objects. Font: https://developers.cloudflare.com/workers/runtime-apis/performance/.
+
+S'ha afegit la regressió de **23 ticks / 774 ms** i un helicòpter que es desplaça més de 24 m entre dos snapshots a `tests/native-coop-interpolation.mjs`. Prova pura aïllada superada. Bundle del runtime individual/cooperatiu recompilat amb les fonts actuals i versió 0.6.55; la importació de l'interpolador i el bootstrap es carreguen amb `smooth=3`. **No verificat encara:** bateria completa Node, Cloudflare ni dos navegadors físics després del canvi.
+
+
 ## Correcció de salts de company i vehicles · 0.6.54 (30-10-2026)
 
 Una prova de dos jugadors ha indicat càmera fluida però salts de company i vehicles. Mètriques rebudes: RTT 69,1 ms, jitter 28,8 ms, snapshots cada 104,35 ms de mitjana, màxim observat 346 ms. Les mesures de servidor en 0 ms no demostren cost zero (resolució temporal insuficient).
