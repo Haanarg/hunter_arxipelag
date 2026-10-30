@@ -3,7 +3,7 @@ import {SOLDIER,RADII,soldierAccuracyProfile} from '../src/enemy-perception-core
 import {senseNativeSoldier,hearNativeSoldier} from './native-soldier-perception.mjs';
 import {vehicleDynamics} from '../src/vehicle-dynamics-core.mjs';
 import {vehicleSpecs} from '../src/vehicle-specs.mjs';
-import {windowCrossing,wallShotHit} from '../src/building-shell.mjs';
+import {windowCrossing,wallShotHit,knifeWindowHit} from '../src/building-shell.mjs';
 import {weaponCatalog,combatCommands,mountedWeapons,grenadeLaunch,vehicleGrenadeLaunch,meleeTarget} from '../src/weapon-catalog.mjs';
 import {limitBazookaHorizontalAim} from '../src/aiming-core.mjs';
 import {enemyAccuracy} from '../src/enemy-accuracy-core.mjs';
@@ -162,7 +162,15 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
       else{
         if(weapon==='knife'){
           const hit=meleeTarget(p,targets.filter(t=>t.hp>0).map(t=>({...t,t:t.t||'soldat'})),t=>traceArena({x:p.x,y:p.y+1.2,z:p.z},{x:t.x,y:t.y+1.2,z:t.z},geometry(),world()).fraction>=1);
-          if(hit){const target=targets.find(t=>t.id===hit.id);target.hp=damageHealth(target.hp,profile.damage);effect('impact',tick,{actorId,at:{x:hit.x,y:hit.y+1.2,z:hit.z},hit:hit.id});}code='SWUNG';
+          if(hit){const target=targets.find(t=>t.id===hit.id);target.hp=damageHealth(target.hp,profile.damage);effect('impact',tick,{actorId,at:{x:hit.x,y:hit.y+1.2,z:hit.z},hit:hit.id});}
+          // Trencament autoritatiu: un ganivet només arriba als vidres
+          // propers, del davant i sense murs intermedis.
+          const pane=knifeWindowHit(p,geometry().walls,2.8,
+            (wallIndex,paneIndex)=>windowAvailable(wallIndex,paneIndex));
+          if(pane&&breakWindow(pane.wallIndex,pane.paneIndex))
+            effect('glass',tick,{actorId,at:pane.point,
+              wallIndex:pane.wallIndex,paneIndex:pane.paneIndex});
+          code='SWUNG';
         }else if(weapon==='cutters'){
           code=cutWire(p)?'CUT':'NO_WIRE';
         }else if(weapon==='grenade'||weapon==='c4'){
