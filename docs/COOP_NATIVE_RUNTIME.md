@@ -1,5 +1,18 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
+## Correcció de salts de company i vehicles · 0.6.54 (30-10-2026)
+
+Una prova de dos jugadors ha indicat càmera fluida però salts de company i vehicles. Mètriques rebudes: RTT 69,1 ms, jitter 28,8 ms, snapshots cada 104,35 ms de mitjana, màxim observat 346 ms. Les mesures de servidor en 0 ms no demostren cost zero (resolució temporal insuficient).
+
+Causa del client: l'interpolador anterior s'aturava quan arribava al darrer tick disponible (~100 ms). Durant una pausa de 346 ms deixava d'animar la trajectòria, i el nou snapshot podia provocar una correcció brusca.
+
+Correcció a `src/native-coop-interpolation.mjs`: cada entitat remota conserva la seva darrera pose visual, encara que rebi una correcció de xarxa. El destí es persegueix amb suavitzat independent de FPS (~68 ms), amb una breu previsió visual de velocitat limitada a 120 ms i un màxim de desplaçament per fotograma. No es canvia la física, la posició autoritativa, el pilot local, ni la lògica de combat. Teletransports, canvis de seient, morts, reanimacions i pausa continuen essent immediats. Les trajectòries immòbils es retiren; la llista visual de vehicles no es reconstrueix per fotograma.
+
+El diagnòstic `window.HUNTER_COOP_NETWORK_STATS.remoteInterpolation` afegeix estadístiques `forecastFrames`, `clampedFrames`, `teleports`, `activeVehicles` i `activePlayers`. El paquet s'ha regenerat sobre la versió concurrent 0.6.54 conservant els canvis d'altres funcionalitats, i s'han invalidat les importacions de memòria cau (`smooth=2`).
+
+Les regressions `tests/native-coop-interpolation.mjs` (interrupcions de 346 ms, continuïtat de la pose, previsió acotada, teleports, 374 vehicles) i `tests/native-coop-interpolation-runtime.cjs` (presentació dins el motor original) s'han actualitzat. La prova aïllada de l'interpolador ha passat. La bateria completa Node, dos clients reals i desplegament Cloudflare encara s'han de verificar. La previsió acotada no elimina tots els efectes d'una interrupció de xarxa llarga.
+
+
 ## Transport i diagnòstic del servidor · 30-10-2026
 
 La fase 5 aporta una reducció de feina del Durable Object i instrumentació de la ruta de xarxa, sense relaxar la persistència autoritativa.
