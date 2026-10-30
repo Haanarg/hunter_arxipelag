@@ -73,6 +73,9 @@ const assert=require('node:assert/strict');
  game.context.visualInterpolationPassenger=moved;
  const passenger=game.run(`(()=>{
  nativeCoopSession.state=visualInterpolationPassenger;updateNativeCoop(.05);
+ // El buffer retarda la nova posició entre 150–200 ms: una sola
+ // recepció no obliga el passatger a aparèixer al destí autoritatiu.
+ updateNativeCoop(.1);
  return {cvId:cv?.saveId,x:cv?.x};
  })()`);
  assert.equal(passenger.cvId,car.id,'El seient local continua reconegut');
