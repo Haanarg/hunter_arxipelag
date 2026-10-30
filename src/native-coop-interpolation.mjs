@@ -47,7 +47,7 @@ function velocity(before,after,seconds,maxSpeed){
 function makeTrack(before,after,dt,maxSpeed,previousTick,currentTick){
  const from=poseOf(before),to=poseOf(after);
  return {frames:[{tick:previousTick,pose:from},{tick:currentTick,pose:to}],
-   to,pose:{...from},speed:velocity(from,to,dt,maxSpeed),
+   to,pose:{...from},target:{...from},speed:velocity(from,to,dt,maxSpeed),
    maxSpeed,age:0,stillTicks:0};
 }
 function updateTrack(track,before,after,dt,maxSpeed,previousTick,currentTick,changed){
@@ -66,34 +66,45 @@ function updateTrack(track,before,after,dt,maxSpeed,previousTick,currentTick,cha
  track.age=0;
  // track.pose no es toca: la recepció no pot provocar un salt visual.
 }
-function interpolatePose(a,b,t){
- return {x:lerp(a.x,b.x,t),y:lerp(a.y,b.y,t),z:lerp(a.z,b.z,t),
-   hd:angle(a.hd,b.hd,t),
-   ...(finite(b.alt)?{alt:lerp(finite(a.alt)?a.alt:b.alt,b.alt,t)}:{})};
+// El render de 60 FPS reutilitza el mateix objectiu per trajectòria:
+ // zero objectes temporals per entitat i fotograma (important quan
+ // hi ha desenes de vehicles en moviment).
+function writeTarget(dst,src){
+ dst.x=src.x;dst.y=src.y;dst.z=src.z;dst.hd=src.hd;
+ if(finite(src.alt))dst.alt=src.alt;
+ else if('alt' in dst)delete dst.alt;
 }
 function sampleTrack(track,tick){
- const frames=track.frames,first=frames[0],last=frames[frames.length-1];
- if(tick<=first.tick)return {target:first.pose,mode:'waiting'};
- for(let i=1;i<frames.length;i++){
-   if(tick<=frames[i].tick){
-     const before=frames[i-1],after=frames[i],
-       alpha=Math.max(0,Math.min(1,(tick-before.tick)/(after.tick-before.tick||1)));
-     return {target:interpolatePose(before.pose,after.pose,alpha),mode:'interpolated'};
+ const frames=track.frames,first=frames[0],last=frames[frames.length-1],
+   dst=track.target;
+ if(tick<=first.tick){writeTarget(dst,first.pose);return 'waiting';}
+ // Cercam des del final: el cursor sol ser a 1–2 snapshots del darrer.
+ for(let i=frames.length-1;i>0;i--){
+   const before=frames[i-1],after=frames[i];
+   if(tick<before.tick)continue;
+   if(tick<=after.tick){
+     const t=Math.max(0,Math.min(1,
+       (tick-before.tick)/(after.tick-before.tick||1))),
+       a=before.pose,b=after.pose;
+     dst.x=lerp(a.x,b.x,t);dst.y=lerp(a.y,b.y,t);
+     dst.z=lerp(a.z,b.z,t);dst.hd=angle(a.hd,b.hd,t);
+     if(finite(b.alt))dst.alt=lerp(finite(a.alt)?a.alt:b.alt,b.alt,t);
+     else if('alt' in dst)delete dst.alt;
+     return 'interpolated';
    }
  }
- // Extrapolació només si el rellotge ja ha superat el tick autoritatiu.
  const unbounded=Math.max(0,(tick-last.tick)/RATE),
    ahead=Math.min(MAX_FORECAST_SECONDS,unbounded),s=track.speed,q=last.pose;
- return {target:{x:q.x+s.x*ahead,y:q.y+s.y*ahead,z:q.z+s.z*ahead,
-   hd:q.hd+s.hd*ahead,...(finite(q.alt)?{alt:q.alt+s.alt*ahead}:{})},
-   mode:unbounded>=MAX_FORECAST_SECONDS-1e-6?'clamped':'extrapolated'};
+ dst.x=q.x+s.x*ahead;dst.y=q.y+s.y*ahead;dst.z=q.z+s.z*ahead;
+ dst.hd=q.hd+s.hd*ahead;
+ if(finite(q.alt))dst.alt=q.alt+s.alt*ahead;
+ else if('alt' in dst)delete dst.alt;
+ return unbounded>=MAX_FORECAST_SECONDS-1e-6?'clamped':'extrapolated';
 }
 function animateTrack(track,step,tick){
- const sample=sampleTrack(track,tick),q=sample.target,p=track.pose;
+ const mode=sampleTrack(track,tick),q=track.target,p=track.pose;
  let dx=q.x-p.x,dy=q.y-p.y,dz=q.z-p.z;
- // Absorbeix correccions tardanes a velocitat plausible, no amb un salt
- // de desenes de metres. El destí és la interpolació temporal, no
- // l'últim snapshot (que faria avançar els remots a batzegades).
+ // Correccions tardanes a velocitat plausible, sense grans salts.
  const moved=Math.hypot(dx,dy,dz),limit=track.maxSpeed*1.5*step;
  if(moved>limit&&limit>0){
    const ratio=limit/moved;dx*=ratio;dy*=ratio;dz*=ratio;
@@ -103,7 +114,7 @@ function animateTrack(track,step,tick){
    p.hd=angle(p.hd,q.hd,angular);
    if(finite(q.alt))p.alt=lerp(finite(p.alt)?p.alt:q.alt,q.alt,angular);
  }
- return sample.mode;
+ return mode;
 }
 export function createNativeCoopInterpolation(){
  let current=null,self=null,vehicles=new Map(),players=new Map(),vehicleOutput=[];
