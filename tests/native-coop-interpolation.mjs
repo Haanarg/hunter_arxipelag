@@ -137,4 +137,4 @@ idle.receive(make(6,.6,2),'a');
 for(let i=0;i<40;i++)idle.advance(1/60);
 assert.equal(idle.stats.activeVehicles,0,'Vehicle aturat: sense trajectòria persistent');
 assert.equal(idle.stats.activePlayers,0,'Company aturat: sense trajectòria persistent');
-console.log('native coop interpolation: jitter 346ms, continuous visual pose, capped forecast, transitions, rotation and 374 vehicles passed');
+console.log('native coop interpolation: jitter 346/774ms, no 23-tick resets, bounded recovery, transitions and 374 vehicles passed');
