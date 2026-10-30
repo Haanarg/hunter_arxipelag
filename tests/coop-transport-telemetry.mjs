@@ -77,6 +77,17 @@ try{
   assert.equal(channel.stats.stateFrames,2);
   assert.equal(channel.stats.avgStateGapMs,2287,'Compta l’interval real des de l’estat inicial');
   assert(channel.stats.stateBytes>channel.stats.stateFrames,'S’acumulen dades de xarxa');
+  // Perfil lleuger: cada 16è estat analitza només les seccions modificades.
+  for(let revision=1;revision<=14;revision++){
+    now+=100;
+    client.data({type:'state-delta',missionId:'mission',
+      baseRevision:revision-1,revision,
+      delta:{p:{tick:{v:603+revision}}}});
+  }
+  assert.equal(channel.stats.fullStateFrames,2,'Es diferencien estats complets');
+  assert.equal(channel.stats.deltaFrames,14,'Es compten deltes, no tot com a snapshot complet');
+  assert.equal(channel.stats.deltaProfile.samples,1,'Mostreig cada 16 paquets');
+  assert(channel.stats.deltaProfile.bySection.tick>0,'El perfil compta la secció tick');
   channel.stop();
   // Un frontend nou no pot enviar sondes a un Worker antic: en aquell
   // protocol els paquets desconeguts provocarien un tancament 1008.
