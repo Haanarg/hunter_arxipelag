@@ -1,15 +1,39 @@
 // Lossless state updates: unchanged entities and static world data stay at the client.
 const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
+// Valida els identificadors i crea un únic índex de la base antiga.
+function indexUniqueRows(before,after,key){
+ if(!before.length||!after.length)return null;
+ const old=new Map();
+ for(const row of before){
+  const id=row?.[key];
+  if(typeof id!=='string'||old.has(id))return null;
+  old.set(id,row);
+ }
+ const seen=new Set();
+ for(const row of after){
+  const id=row?.[key];
+  if(typeof id!=='string'||seen.has(id))return null;
+  seen.add(id);
+ }
+ return old;
+}
 export function diffCoopState(before,after){
  if(before===after)return null;
  if(before===null||after===null||typeof before!=='object'||typeof after!=='object'||Array.isArray(before)!==Array.isArray(after))return {v:after};
  if(Array.isArray(after)){
-  const key=['id','actorId'].find(k=>after.length&&before.length&&[before,after].every(rows=>rows.every(r=>r&&typeof r==='object'&&typeof r[k]==='string')&&new Set(rows.map(r=>r[k])).size===rows.length));
-  if(key){
-   const old=new Map(before.map(row=>[row[key],row])),patches=Object.create(null);let changed=false;
-   for(const row of after){const patch=diffCoopState(old.get(row[key]),row);if(patch){patches[row[key]]=patch;changed=true;}}
-   const order=after.map(row=>row[key]),sameOrder=before.length===after.length&&before.every((row,i)=>row[key]===order[i]);
-   return changed||!sameOrder?{k:key,p:patches,...(!sameOrder?{o:order}:{})}:null;
+  const byId=indexUniqueRows(before,after,'id');
+  const key=byId?'id':'actorId',old=byId||indexUniqueRows(before,after,'actorId');
+  if(old){
+   const patches=Object.create(null);let changed=false,
+     sameOrder=before.length===after.length;
+   for(let i=0;i<after.length;i++){
+    const row=after[i],id=row[key],patch=diffCoopState(old.get(id),row);
+    if(patch){patches[id]=patch;changed=true;}
+    if(sameOrder&&before[i][key]!==id)sameOrder=false;
+   }
+   if(!changed&&sameOrder)return null;
+   if(sameOrder)return {k:key,p:patches};
+   return {k:key,p:patches,o:after.map(row=>row[key])};
   }
   if(before.length===after.length&&before.every((row,i)=>diffCoopState(row,after[i])===null))return null;
   return {v:after};
