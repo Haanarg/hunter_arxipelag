@@ -17,7 +17,10 @@ const lerp=(a,b,t)=>a+(b-a)*t;
 const poseChanged=(a,b)=>a.x!==b.x||a.y!==b.y||a.z!==b.z||
  a.hd!==b.hd||a.alt!==b.alt;
 const sameSeat=(vehicles,id)=>{
- for(const v of vehicles||[])if(v.seats?.includes(id))return v.id;
+ for(const v of vehicles||[]){
+  const seat=v.seats?.indexOf(id)??-1;
+  if(seat>=0)return v.id+':'+seat;
+ }
  return null;
 };
 function safe(before,after,seconds,maxSpeed){
@@ -125,7 +128,7 @@ export function createNativeCoopInterpolation(){
    longGapReceives:0,maxTickGap:0,gapResets:0,
    bufferDelayMs:BASE_DELAY_SECONDS*1000,activeFrames:0,interpolatedFrames:0,
    extrapolatedFrames:0,bufferUnderruns:0,
-   speedLimitedFrames:0,maxRenderErrorM:0};
+   speedLimitedFrames:0,maxRenderErrorM:0,staleReceives:0};
  function clearTracks(){vehicles.clear();players.clear();vehicleOutput=[];
    renderTick=null;lastArrival=null;jitterSeconds=0;delayTicks=BASE_DELAY_SECONDS*RATE;
    stats.activeVehicles=0;stats.activePlayers=0;stats.bufferDelayMs=150;}
@@ -140,6 +143,8 @@ export function createNativeCoopInterpolation(){
      if(tickGap>12)stats.longGapReceives++;
      if(tickGap>MAX_GAP_TICKS)stats.gapResets++;
    }
+   // Un estat endarrerit de la mateixa missió mai no pot reiniciar la pose.
+   if(same&&tickGap<0){stats.staleReceives++;return;}
    const newer=!!same&&tickGap>0&&tickGap<=MAX_GAP_TICKS;
    const sameTick=!!same&&tickGap===0;
    if(!newer&&!sameTick){
