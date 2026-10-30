@@ -65,28 +65,40 @@ async function init(){
     const heightAt=base.heightAt;
     const homeIsland=foundation.islands[0];
     const targetX=foundation.baseCandidate.x,targetZ=foundation.baseCandidate.z;
-    const targetY=base.plan.height+9;
-    // Pla general en 3/4, elevat i allunyat. Prioritzam el costat amb mar
-    // i evitam situar la càmera fora del quadrat de joc.
-    const cameraDistance=innerWidth<innerHeight?510:690;
-    const cameraElevation=innerWidth<innerHeight?310:395;
-    const angles=[Math.PI/4,3*Math.PI/4,5*Math.PI/4,7*Math.PI/4];
-    const views=angles.map((yaw,index)=>{
-      const x=targetX+Math.cos(yaw)*cameraDistance;
-      const z=targetZ+Math.sin(yaw)*cameraDistance;
-      const nearX=targetX+(x-targetX)*.65,nearZ=targetZ+(z-targetZ)*.65;
-      const waterHere=heightAt(x,z)<-2?20:0;
-      const waterAhead=heightAt(nearX,nearZ)<-2?8:0;
-      const outside=Math.max(0,Math.abs(x)-(halfSize-140))+
-        Math.max(0,Math.abs(z)-(halfSize-140));
-      return {yaw,index,score:waterHere+waterAhead-outside*.2};
-    });
-    views.sort((a,b)=>b.score-a.score||a.index-b.index);
-    const cameraYaw=views[0].yaw;
-    const cameraX=targetX+Math.cos(cameraYaw)*cameraDistance;
-    const cameraZ=targetZ+Math.sin(cameraYaw)*cameraDistance;
-    const cameraBaseY=Math.max(targetY+cameraElevation,heightAt(cameraX,cameraZ)+320);
+    const targetY=base.plan.height+4;
+    // Enquadrament 3/4 més proper i centrat al pati real de la base.
+    // No basta allunyar la càmera de la vora: també hem d'evitar que
+    // miri cap al límit del quadrat del món, sobretot en horitzontal.
     const cameraTarget=new THREE.Vector3(targetX,targetY,targetZ);
+    let cameraX,cameraZ,cameraBaseY;
+    const chooseMenuCamera=()=>{
+      const portrait=innerWidth<innerHeight;
+      const distance=portrait?430:590;
+      const elevation=portrait?270:340;
+      const inwardLength=Math.hypot(targetX,targetZ)||1;
+      const horizonDistance=1500,edgeMargin=470,cameraMargin=330;
+      const angles=[Math.PI/4,3*Math.PI/4,5*Math.PI/4,7*Math.PI/4];
+      const candidates=angles.map((yaw,index)=>{
+        const dx=Math.cos(yaw),dz=Math.sin(yaw);
+        const x=targetX+dx*distance,z=targetZ+dz*distance;
+        // Punt que queda darrere la base, dins el camp visual.
+        const aheadX=targetX-dx*horizonDistance;
+        const aheadZ=targetZ-dz*horizonDistance;
+        const edgeRisk=Math.max(0,Math.abs(aheadX)-(halfSize-edgeMargin))+
+          Math.max(0,Math.abs(aheadZ)-(halfSize-edgeMargin));
+        const cameraRisk=Math.max(0,Math.abs(x)-(halfSize-cameraMargin))+
+          Math.max(0,Math.abs(z)-(halfSize-cameraMargin));
+        const inward=(-dx*(-targetX)-dz*(-targetZ))/inwardLength;
+        const seaBonus=heightAt(x,z)<-2?8:0;
+        return {index,yaw,x,z,score:inward*35+seaBonus-edgeRisk-cameraRisk};
+      });
+      candidates.sort((a,b)=>b.score-a.score||a.index-b.index);
+      const chosen=candidates[0];
+      cameraX=chosen.x;cameraZ=chosen.z;
+      cameraBaseY=Math.max(targetY+elevation,
+        heightAt(cameraX,cameraZ)+elevation*.85);
+    };
+    chooseMenuCamera();
     const visual={...window.HUNTER_VISUAL_CONFIG.mobile,
       pixelRatio:Math.min(1,window.devicePixelRatio||1),
       shadows:false,exposure:1.06,viewDistance:9500};
@@ -138,6 +150,12 @@ async function init(){
     vegetation=plants.palms;
     terrain.update(targetX,targetZ,3,camera);
     const resize=()=>{
+      // Reenquadra també en girar el telèfon, sense descentrar la base.
+      chooseMenuCamera();
+      camera.position.set(cameraX,cameraBaseY,cameraZ);
+      camera.lookAt(cameraTarget);
+      rendering.sunMesh.position.copy(camera.position).addScaledVector(rendering.sunDir,1800);
+      rendering.glow.position.copy(rendering.sunMesh.position);
       renderer.setSize(innerWidth,innerHeight);
       camera.aspect=Math.max(.15,innerWidth/Math.max(1,innerHeight));
       camera.updateProjectionMatrix();
