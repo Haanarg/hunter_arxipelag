@@ -68,7 +68,8 @@ export async function drawMenuBase(T,scene,base){
     box
   });
   for(const spec of layout.buildings){
-    const shell=facades.createShell({width:spec.w,depth:spec.d,height:spec.h,
+    const totalHeight=spec.h*(spec.floors||1);
+    const shell=facades.createShell({width:spec.w,depth:spec.d,height:totalHeight,
       wallColor:spec.workshop?0x90968d:0xc9b98d,roofColor:0x2c5fc0});
     const {group:g,walls,doors}=shell;
     const [x,z]=tr(spec.x,spec.z);
@@ -88,10 +89,17 @@ export async function drawMenuBase(T,scene,base){
     }
     facades.addDoor(g,{lx:0,lz:spec.d/2,sx:entranceWidth,sz:.49,
       height:spec.h,wallMaterial:walls,doorMaterial:doors});
+    if(spec.floors===2){
+      // La variant de dues plantes conserva la façana i finestres superiors.
+      const upper=new T.Group();upper.position.y=spec.h;g.add(upper);
+      facades.addWindowedWall(upper,{lx:0,lz:-spec.d/2,sx:spec.w,sz:.46,height:spec.h,material:walls});
+      facades.addWindowedWall(upper,{lx:0,lz:spec.d/2,sx:spec.w,sz:.46,height:spec.h,material:walls});
+      for(const side of [-1,1])facades.addWindowedWall(upper,{lx:side*spec.w/2,lz:0,sx:.46,sz:spec.d,height:spec.h,material:walls});
+    }
     if(spec.id==='clinic'){
       const red=material(0xf4eeee);
       const cross=material(0xd54440);
-      const sign=new T.Group();sign.position.set(0,spec.h+.99,0);g.add(sign);
+      const sign=new T.Group();sign.position.set(0,totalHeight+.99,0);g.add(sign);
       const panel=new T.Mesh(new T.BoxGeometry(4,.08,2.9),red);
       panel.rotation.x=-Math.PI/2;sign.add(panel);
       box(sign,2.3,.1,.48,0xd54440,0,.09,0);
