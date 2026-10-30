@@ -1,6 +1,18 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
 
+## Optimitzacions preventives 0.6.58 (sense prova de dos clients)
+
+**Render de remots:** `src/native-coop-interpolation.mjs` ara reutilitza un objecte de destinació per trajectòria en lloc d'instanciar un objecte de pose i un contenidor per cada vehicle/jugador i fotograma. Cerca l'interval entre snapshots de més recent a més antic, perquè el cursor normalment es troba prop del final. Manté el cursor per ticks de servidor, la predicció local separada i el límit de previsió de 120 ms. Dues proves pures d'interpolació, inclosa una amb 374 vehicles, han passat en executar el codi amb les fixtures del repositori.
+
+**Deltes autoritatius:** `src/coop-state-delta.mjs` construeix una sola vegada l'índex per identificadors de cada llista, sense repetir les validacions i les assignacions de Sets/Maps de la implementació anterior. La representació JSON del delta de prova és idèntica i la reconstrucció és sense pèrdues. S'ha corregit també la consulta de patches amb IDs com `constructor` o `toString`, que no pot heretar una funció del prototip de l'objecte. La CI incorpora `tests/coop-state-delta.mjs`, amb fixture de 374 vehicles i 377 soldats, reordenació, eliminació i IDs especials.
+
+**Diagnòstic visual addicional:** `remoteInterpolation.speedLimitedFrames` compta frames en què s'ha acotat un desplaçament de correcció; `maxRenderErrorM` compta el major error en metres entre pose presentada i destí temporal. Són indicadors visuals, no errors de física o del servidor.
+
+**Benchmarks sintètics en un motor JavaScript**, només per orientar la prioritat: 374 vehicles, 594 passos de render: 455 ms abans i 390 ms després; comparació de snapshots de 374 vehicles i 377 enemics, 140 iteracions: 454 ms abans i 391 ms després. No són FPS, càrrega GPU o resultats Cloudflare; no permeten garantir una millora concreta en dispositius reals.
+
+**Estat:** codi pujat a `main` i versió 0.6.58 amb claus de caché renovades. Les suites pures s'han executat aïlladament; comprovar la CI per a la validació completa. Encara falta verificar la publicació a Cloudflare i la prova amb dos navegadors.
+
 ## Ampliació 0.6.57: diagnòstic de xarxa i comprovació automàtica
 
 Aquesta fase conserva el buffer de 150–200 ms i els límits de predicció ja documentats. S'ha afegit un perfil lleuger dels deltes a `src/native-coop-connection.mjs`: `fullStateFrames`, `deltaFrames` i `deltaProfile` (`samples`, `averageChars`, `bySection`). S'analitza aproximadament 1 de cada 16 missatges, sense afectar el protocol ni la simulació. Les mides són caràcters JSON aproximats, no bytes de xarxa.
