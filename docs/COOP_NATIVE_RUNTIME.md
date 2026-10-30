@@ -1,6 +1,14 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
 
+## 0.6.60 · codificació compartida dels deltes al servidor
+
+A `server/coop-hub.mjs` el Durable Object conserva el `diffCoopState` compartit, i ara conserva **dins de cada `broadcastState()`** el JSON ja serialitzat quan els dos sockets tenen la mateixa baseline i el mateix número de revisió. Evita una segona passada de `JSON.stringify` sense canviar el format del missatge, la cadència del tick (30 Hz), la freqüència de distribució (~10 Hz), els identificadors dels clients, el càlcul dels danys ni la persistència. Si els clients han divergit en la seva revisió, es codifiquen deltes independents; cada baseline només s'avança quan s'envia correctament el missatge.
+
+La nova regressió `tests/coop-broadcast-encoding.mjs` valida una única serialització quan tots dos parteixen de la mateixa referència, revisions diferents per actualitzacions al mateix tick, error de xarxa en un sol socket i recuperació a partir de la baseline individual. S'ha incorporat al workflow COOP, que també s'executa davant canvis de `server/coop-hub.mjs`.
+
+**Validació:** el test nou ha passat en una execució aïllada del codi de servidor amb les seves dependències de delta. Les execucions de GitHub Actions de la fase 0.6.60 han fallat **abans d'assignar cap runner** (`runner_id=0`, cap pas executat); no és possible donar per superada la CI. Continua pendent verificar la suite Node completa i els dos navegadors reals. El bundle publicat al repositori té capçalera 0.6.60 i hash de contingut. No s'ha verificat el desplegament Cloudflare.
+
 ## 0.6.59 · estabilitat de snapshots i menys feina per recepció (31-10-2026)
 
 **Correccions:** el buffer ignora estats de la mateixa missió amb un tick inferior a l'últim rebut (`staleReceives`) sense reiniciar la pose gràfica. El canvi de seient, fins i tot si continua essent el mateix vehicle, reinicia la trajectòria a peu del jugador remot: el seient es compara per identificador de vehicle **i índex**. Les transicions de conductor a passatger continuen sota l'autoritat del servidor i s'han inclòs a les regressions.
