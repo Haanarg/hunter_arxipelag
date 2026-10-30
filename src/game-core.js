@@ -467,7 +467,7 @@ const EC={
  jeep:{hp:COMBAT_BALANCE.vehicles.cotxe,sp:22,rng:75,rate:1.1,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:3.9},
  tanqueta:{hp:COMBAT_BALANCE.vehicles.tanqueta,sp:13,rng:42,rate:TANKETTE_FIRE_INTERVAL,dmg:COMBAT_BALANCE.weapons.tankette,spl:0,r:4.5},
  tanc:{hp:COMBAT_BALANCE.vehicles.tanc,sp:8,rng:100,rate:2.5,dmg:COMBAT_BALANCE.weapons.tank,spl:7,r:6.8},
- torre:{hp:24,sp:0,rng:112.5,rate:.7,dmg:COMBAT_BALANCE.weapons.towerLight,spl:0,r:3},
+ torre:{hp:COMBAT_BALANCE.weapons.bazooka,sp:0,rng:112.5,rate:.7,dmg:COMBAT_BALANCE.weapons.towerLight,spl:0,r:3},
  patrulla_marina:{hp:COMBAT_BALANCE.vehicles.llanxa,sp:20,rng:245,rate:.4,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:7.5},
  general:{hp:COMBAT_BALANCE.people.general,sp:1.45,rng:35,rate:.9,dmg:COMBAT_BALANCE.weapons.pistol,spl:0,r:2}
 };
