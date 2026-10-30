@@ -27,6 +27,13 @@ changed.vehicles[187].x+=5;
 changed.combat.targets[208].hp-=7;
 const compact=diffCoopState(dense,changed);
 assert.deepEqual(applyCoopDelta(wire(dense),wire(compact)),changed);
+const reused=applyCoopDelta(dense,compact);
+assert.strictEqual(reused.vehicles[0],dense.vehicles[0],
+ 'Vehicle intacte reutilitza la mateixa referència sense Map intermedi');
+assert.notStrictEqual(reused.vehicles[187],dense.vehicles[187],
+ 'Vehicle modificat crea una referència independent');
+assert.strictEqual(reused.combat.targets[0],dense.combat.targets[0],
+ 'Soldat intacte tampoc no es reconstrueix en cada delta');
 assert(JSON.stringify(compact).length<500,'Canvis petits no envien centenars de files');
 const special={actors:[{id:'toString',hp:25},{id:'constructor',hp:25}]};
 const specialNext=wire(special);specialNext.actors[0].hp=24;
