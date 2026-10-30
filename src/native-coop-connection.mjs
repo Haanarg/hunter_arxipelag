@@ -7,7 +7,8 @@ export function createNativeCoopConnection({room,getInput,onRoom,onMission,onSta
  let epoch=null,state=null,stateRevision=0,timer=null,sequence=0,prepared=null,readyRoom=false,published=false,lastMessage=0,lastPing=0,pingSequence=0,canProbe=false;
  const stats={rttMs:null,rttJitterMs:0,serverTickMs:null,serverSaveMs:null,
    serverBroadcastMs:null,serverTick:null,stateFrames:0,stateBytes:0,
-   avgStateGapMs:null,maxStateGapMs:0,lastStateAt:null};
+   avgStateGapMs:null,maxStateGapMs:0,lastStateAt:null,
+   fullStateFrames:0,deltaFrames:0,deltaProfile:{samples:0,averageChars:0,bySection:{}}};
  function noteState(bytes){
    const stamp=now();stats.stateFrames++;stats.stateBytes+=bytes||0;
    if(stats.lastStateAt!=null){
