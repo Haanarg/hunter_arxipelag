@@ -1,5 +1,5 @@
 import {createNativePrediction} from './native-coop-prediction.mjs';
-import {createNativeCoopInterpolation} from './native-coop-interpolation.mjs?smooth=2';
+import {createNativeCoopInterpolation} from './native-coop-interpolation.mjs?smooth=3';
 window.HUNTER_CREATE_NATIVE_PREDICTION=createNativePrediction;
 window.HUNTER_CREATE_NATIVE_INTERPOLATION=createNativeCoopInterpolation;
 import * as enemyPerception from './enemy-perception-core.mjs';
@@ -71,7 +71,7 @@ window.HUNTER_RUNTIME_LAYOUTS=runtimeLayouts;window.HUNTER_CHOOSE_COMPOUND=choos
 import {createCompoundStructures} from './compound-structures.mjs';
 window.HUNTER_COMPOUND_STRUCTURES=createCompoundStructures;
 import {runtimeScripts} from './runtime-scripts.mjs';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.55&visual=8&glassfix=2&smooth=2';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.55&visual=8&glassfix=2&smooth=3';
 import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
 import {GAME_VERSION} from './version.mjs?v=0.6.55';
