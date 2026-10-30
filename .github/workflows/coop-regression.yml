@@ -1,0 +1,49 @@
+name: Cooperatiu - regressions de xarxa i interpolacio
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/native-coop-interpolation.mjs'
+      - 'src/native-coop-connection.mjs'
+      - 'src/coop-state-delta.mjs'
+      - 'src/coop-world-runtime.js'
+      - 'tests/native-coop-interpolation.mjs'
+      - 'tests/native-coop-interpolation-runtime.cjs'
+      - 'tests/native-coop-network-jitter.mjs'
+      - 'tests/coop-transport-telemetry.mjs'
+      - '.github/workflows/coop-regression.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coop-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coop-network:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instal·lar dependències
+        run: npm ci --ignore-scripts
+      - name: Sintaxi dels mòduls modificats
+        run: |
+          node --check src/native-coop-interpolation.mjs
+          node --check src/native-coop-connection.mjs
+          node --check tests/native-coop-interpolation.mjs
+      - name: Regressions de xarxa del COOP
+        run: |
+          node tests/native-coop-interpolation.mjs
+          node tests/native-coop-network-jitter.mjs
+          node tests/native-coop-delta-transport.mjs
+          node tests/coop-transport-telemetry.mjs
+      - name: Integracio amb motor original (càmera, passatger i pilot)
+        run: node tests/native-coop-interpolation-runtime.cjs
+      - name: Comprovar paquet del runtime
+        run: node tools/build-runtime.cjs --check
