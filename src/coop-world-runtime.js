@@ -12,6 +12,19 @@ window.HUNTER_COOP_WORLD=Object.freeze({capture:captureCoopWorldGeometry,
 // Native multiplayer is a session of the original runtime, never another view.
 const NATIVE_VEHICLE_POSE_KEYS=['x','y','z','hd','v','alt','verticalV','sideV','strafeV','driveInput','steerInput','yawRate'];
 let nativeCoopSession=null;
+// Els efectes visuals i la predicció no poden aturar el bucle de joc
+// ni el canal de snapshots del cooperatiu.
+function reportNativeCoopVisualError(error,part){
+ const s=nativeCoopSession;
+ if(!s)return;
+ s.visualErrors=(s.visualErrors||0)+1;
+ s.lastVisualError=String(error?.message||error);
+ if(s.channel?.stats){
+   s.channel.stats.visualErrors=s.visualErrors;
+   s.channel.stats.lastVisualError=s.lastVisualError;
+ }
+ if(s.visualErrors<=5)console.error('Cooperatiu: error visual a '+part,error);
+}
 function nativeCoopInput(){
  if(!nativeCoopSession||nativeCoopSession.preparing||paused||document.hidden)return {forward:0,turn:0,strafe:0,run:false,interact:false};
  const controls=readPlayerControls(updateStrafeControls(),!cv&&!paused&&!scopeActive),{f:forward,tr:turn,strafe,ud:climb,running:run}=controls;
@@ -41,8 +54,13 @@ async function startNativeCoop(room){
    onStatus(status){if(status!=='open'&&session.state)session.state={...session.state,status:'paused'};const labels={connecting:'Connectant…',retrying:'Reconnectant…',replaced:'Sessió oberta en una altra pestanya.',ended:'Sessió finalitzada.',version:'Cal recarregar el joc.'};msg=status==='open'?'Preparant el mateix món amb el company…':labels[status]||'Connexió interrompuda.';msgT=8;},
    onAction(result){if(result.ok===false){const labels={EMPTY:'No tens munició.',NOT_EQUIPPED:'Cal equipar aquesta arma.',TOO_FAR:'Acosta’t més al vehicle o a la porta.',FULL:'El vehicle és ple.',MOVING:'Atura el vehicle abans de pujar o baixar.',EXIT_BLOCKED:'No hi ha espai per baixar.',BLOCKED:'Hi ha un obstacle al pas.'};if(labels[result.code]){msg=labels[result.code];msgT=3;}}},
    onRoom(){},onError(error){msg=error||'La sessió s’ha interromput.';msgT=12;session.preparing=true;},
-   onMission(data){if(data.meta.fingerprint!==session.fingerprint){session.preparing=true;msg='El món de la sala no coincideix. Recarregueu tots dos.';msgT=30;return;}session.meta=data.meta;session.self=data.self;session.state=data.state;session.prediction?.receive(data.state,data.self);session.seenEffects=new Set(data.state.combat.effects.map(e=>e.id));session.preparing=false;paused=false;ui.hide();resetCameraState();},
-   onState(state){session.state=state;session.prediction?.receive(state,session.self);}});
+   onMission(data){if(data.meta.fingerprint!==session.fingerprint){session.preparing=true;msg='El món de la sala no coincideix. Recarregueu tots dos.';msgT=30;return;}session.meta=data.meta;session.self=data.self;session.state=data.state;try{session.prediction?.receive(data.state,data.self);}
+     catch(error){reportNativeCoopVisualError(error,'predicció inicial');session.prediction=null;}
+     session.seenEffects=new Set(data.state.combat.effects.map(e=>e.id));session.preparing=false;paused=false;ui.hide();resetCameraState();},
+   onState(state){session.state=state;
+      try{session.prediction?.receive(state,session.self);}
+      catch(error){reportNativeCoopVisualError(error,'predicció de snapshot');session.prediction=null;}
+    }});
   // Disponible per al diagnòstic sense mostrar dades de xarxa als menús normals.
   window.HUNTER_COOP_NETWORK_STATS=session.channel.stats;
   session.channel.start();session.channel.prepare({payload,fingerprint:session.fingerprint,host:room.members.find(m=>m.host)?.id===window.HUNTER_ACCOUNT_SERVICE.status().user?.id||room.host===window.HUNTER_ACCOUNT_SERVICE.status().user?.id});
@@ -77,6 +95,12 @@ function nativeCoopCommand(type,payload={}){
  if(type==='plant')return (!cv||cv.t==='heli')&&s.channel.combat('c4',undefined,payload.seconds);return false;
 }
 function updateNativeCoop(dt){
+ // Una fallada puntual de material/partícules no ha d'aturar per sempre el
+ // requestAnimationFrame del guest: el servidor continua rebent inputs.
+ try{updateNativeCoopFrame(dt);}
+ catch(error){reportNativeCoopVisualError(error,'actualització del fotograma');}
+}
+function updateNativeCoopFrame(dt){
  const s=nativeCoopSession;if(!s)return;updateStrafeControls();joystick.setRunEnabled(!cv&&!paused);if(s.preparing||!s.state){updatePlayerHUD(.13);return;}
  const state=s.state,projecting=s.projectedState!==state,
        actor=projecting?state.players.find(p=>p.id===s.self):s.projectedActor;
@@ -220,7 +244,19 @@ function updateNativeCoop(dt){
  }
  if(s.appliedEffects!==state.combat.effects){
  s.appliedEffects=state.combat.effects;
- for(const effect of state.combat.effects)if(!s.seenEffects.has(effect.id)){s.seenEffects.add(effect.id);if(effect.kind==='explosion')presentExplosion(effect.at.x,effect.at.y,effect.at.z,effect.radius);else if(effect.kind==='impact')spawnBulletImpact(effect.hit?'blood':'spark',effect.at.x,effect.at.y,effect.at.z,{vx:0,vy:0,vz:1});else if(effect.kind==='glass'&&s.walls[effect.wallIndex])shatterWindow(s.walls[effect.wallIndex],effect.paneIndex,effect.at,null);else if(effect.kind==='shot')snd('shot',.7,effect.from);}
+ for(const effect of state.combat.effects)if(!s.seenEffects.has(effect.id)){
+   // Es marca abans de dibuixar: si falla una partícula no repetim la fallada
+   // cada fotograma. L'estat autoritatiu brokenWindows s'aplica igualment.
+   s.seenEffects.add(effect.id);
+   try{
+     if(effect.kind==='explosion')presentExplosion(effect.at.x,effect.at.y,effect.at.z,effect.radius);
+     else if(effect.kind==='impact')spawnBulletImpact(effect.hit?'blood':'spark',
+       effect.at.x,effect.at.y,effect.at.z,{vx:0,vy:0,vz:1});
+     else if(effect.kind==='glass'&&s.walls[effect.wallIndex])
+       shatterWindow(s.walls[effect.wallIndex],effect.paneIndex,effect.at,null);
+     else if(effect.kind==='shot')snd('shot',.7,effect.from);
+   }catch(error){reportNativeCoopVisualError(error,'efecte '+effect.kind);}
+ }
  if(s.seenEffects.size>256){const current=new Set(state.combat.effects.map(e=>e.id));s.seenEffects=current;}
  }
  if(s.appliedRemovedWalls!==state.removedWalls){s.appliedRemovedWalls=state.removedWalls;
