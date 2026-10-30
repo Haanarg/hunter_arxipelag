@@ -19,7 +19,9 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#112e45;col
 .topbar{align-self:stretch;display:flex;justify-content:space-between;align-items:center;gap:10px;max-width:1000px;width:100%;margin:0 auto;flex:none}
 .preview-tag{font:700 10px/1.2 system-ui;letter-spacing:.13em;color:#fff4d2;background:#0d2535b9;border:1px solid #efce8166;border-radius:99px;padding:6px 9px}
 .top-tools{display:flex;gap:8px;align-items:center}
-.top-tools button,.top-tools a{font:700 11px system-ui;letter-spacing:.02em;color:white;background:#10252fbd;border:1px solid #ddc89877;border-radius:6px;padding:8px 11px;text-decoration:none;cursor:pointer}
+.top-tools button,.top-tools a,.top-tools select{font:700 11px system-ui;letter-spacing:.02em;color:white;background:#10252fdf;border:1px solid #ddc89877;border-radius:6px;padding:8px 9px;text-decoration:none;cursor:pointer}
+#scenePicker{width:min(24vw,173px);max-width:173px;color:#fff1cf;background:#142e36e8}
+#scenePicker option{background:#142e36;color:#fff1cf}
 .top-tools button[aria-pressed="true"]{color:#2b2510;background:#e7b45e;border-color:#ffe5a5}
 #brand{margin:clamp(6px,2vh,26px) 0 0;width:min(760px,86vw);max-height:clamp(98px,29dvh,250px);min-height:0;display:flex;justify-content:center;align-items:center;flex:none}
 #brand img{display:block;width:100%;max-height:inherit;object-fit:contain;filter:drop-shadow(0 4px 8px #000a)}
@@ -48,7 +50,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#112e45;col
 #setup .setup-controls .button{min-height:44px;font-size:clamp(11px,2vw,15px)}
 #status{font-size:11px;color:#eee1c3;margin-top:2px;min-height:16px}
 #status.error{color:#ffd3b7}
-@media (max-width:570px){.topbar{gap:5px}.preview-tag{font-size:9px}.top-tools button,.top-tools a{padding:7px 6px;font-size:10px}#brand{width:min(94vw,550px);max-height:22dvh}.button{gap:6px;padding:8px 6px}.button.small{padding:5px 3px}.menu{gap:8px;margin-bottom:4px}#intro{max-width:92vw}}
+@media (max-width:570px){.topbar{gap:5px;justify-content:flex-end}.preview-tag{display:none}.top-tools{width:100%;justify-content:space-between}.top-tools button,.top-tools a,.top-tools select{padding:7px 6px;font-size:10px}#scenePicker{width:43%;max-width:180px}#brand{width:min(94vw,550px);max-height:22dvh}.button{gap:6px;padding:8px 6px}.button.small{padding:5px 3px}.menu{gap:8px;margin-bottom:4px}#intro{max-width:92vw}}
 @media(max-height:710px){#brand{max-height:19dvh;margin-top:0}#intro{font-size:11px;line-height:1.2;margin-top:2px}#tagline{margin:1px 0}.button.primary{min-height:53px;font-size:21px}.button.dark{min-height:42px}.button.small{min-height:31px}.menu{gap:6px}.grow{min-height:5px}#setup{max-height:60dvh}}
 @media(max-height:490px){#brand{max-height:16dvh;width:min(48vw,480px)}#intro{display:none}.topbar{position:relative}.button.primary{min-height:40px;font-size:17px}.button.dark{min-height:34px}.menu{gap:4px}.button.small{min-height:29px}.grow{min-height:1px}}
 </style>
@@ -57,8 +59,17 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#112e45;col
 <div id="vista" aria-hidden="true"></div><div id="shade"></div>
 <main id="app">
  <header class="topbar">
-  <span class="preview-tag">PROVA · FONS DEL MOTOR 3D</span>
-  <div class="top-tools"><button id="toggleAnimation" type="button" aria-pressed="true">Mar animat</button><a href="index.html">Joc actual</a></div>
+  <span class="preview-tag">PROVA · FONS 3D</span>
+  <div class="top-tools">
+    <select id="scenePicker" aria-label="Comparar quatre fons i llavors">
+      <option value="1">1 · Equilibrat (94)</option>
+      <option value="2">2 · Més mar (148)</option>
+      <option value="3">3 · Palmeres (230)</option>
+      <option value="4">4 · Illes (175)</option>
+    </select>
+    <button id="toggleAnimation" type="button" aria-pressed="true">Mar animat</button>
+    <a href="index.html">Joc actual</a>
+  </div>
  </header>
  <h1 id="brand"><img src="assets/hunter-logo.webp" alt="Hunter: Arxipèlag" width="1100" height="367"></h1>
  <p id="tagline">CAÇA. EXPLORA. SOBREVIU.</p>
@@ -77,7 +88,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#112e45;col
   <div class="row"><label for="graphics">Gràfics</label><select id="graphics"><option selected>Alts</option><option>Reduïts</option><option>Mínims</option></select></div>
   <div class="setup-controls"><button class="button dark" id="back" type="button">← TORNAR</button><a class="button primary" href="index.html" title="Aquesta prova no substitueix el menú jugable">JOC ACTUAL ▶</a></div>
  </section>
- <p id="status" role="status" aria-live="polite">Fons estàtic mentre es prepara el paisatge 3D…</p>
+ <p id="status" role="status" aria-live="polite">Preparant l'escenari del motor 3D…</p>
 </main>
 <script type="module" src="src/menu-motor-preview.mjs"></script>
 </body></html>
