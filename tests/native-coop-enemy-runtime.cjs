@@ -30,6 +30,7 @@ const assert=require('node:assert/strict');
  game.context.coopEnemyId=target.id;
  const before=game.run(`(()=>{
   const e=nativeCoopSession.enemies.get(coopEnemyId);
+  e.o.visible=true; // Mantenim el soldat visible durant aquesta regressió gràfica.
   return {logicalX:e.x,visualX:e.o.position.x};
  })()`);
  assert(before,'El soldat existeix al món gràfic');
