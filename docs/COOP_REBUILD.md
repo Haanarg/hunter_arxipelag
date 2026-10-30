@@ -146,3 +146,11 @@ Per poder diagnosticar el coll d'ampolla, el servidor mesura el temps de la simu
 La funció **es negocia**: el servidor nou anuncia `telemetry:1` en el missatge inicial de missió i, sense aquest camp, el client nou no envia sondes. Això protegeix actualitzacions de Cloudflare no simultànies i permet reprendre sessions amb un Worker antic sense tancar la connexió per protocol desconegut. Els missatges estan validats i limitats a 2 sondes/segon per connexió. S'ha afegit `tests/coop-transport-telemetry.mjs` a `npm run test:play`. La prova aïllada cobreix 45 controls admesos sense escriptures, 46è rebutjat, RTT, mètriques del servidor i compatibilitat sense anunci.
 
 **Encara pendent:** mesures reals de RTT, p95/p99 de frame, volum de trànsit, temps de `storage.transaction()` a Cloudflare, dos navegadors amb latència real i comprovació del desplegament. Les sondes no són una garantia de millora quantificada ni s'han de confondre amb la latència d'aplicació de cada ordre.
+
+### Ajust correctiu de la interpolació després d'una prova amb dos jugadors (30-10-2026, v0.6.54)
+
+S'ha observat càmera local fluida però company i vehicles remots a batzegades. La mostra té RTT ~69 ms, jitter ~29 ms, estat cada ~104 ms i interval màxim de 346 ms. L'interpolador anterior deixava la presentació quieta després dels ~100 ms del darrer tram, i tornava a corregir en rebre el següent snapshot.
+
+La correcció de `src/native-coop-interpolation.mjs` preserva la darrera pose dibuixada, reacciona als estats nous sense saltar al punt d'inici del tram anterior, i continua moviment breument en una previsió **exclusivament visual** limitada a 120 ms. Les correccions tenen límit de moviment per fotograma i es mantenen els reinicis obligatoris per teletransport, mort, reanimació, canvi de seient, pausa o missió. No es toca la predicció del pilot local ni la física del servidor. Es retiren trajectòries immòbils i s'eviten reconstruccions de llistes cada fotograma. Les noves mètriques `remoteInterpolation` estan exposades a la consola juntament amb les de transport.
+
+Prova pura superada amb pauses de 346 ms, moviments/girs, esdeveniments i 374 vehicles; regressió del motor original actualitzada. **Pendent:** desplegament verificat, suite Node completa i nova prova comparativa amb dos navegadors.
