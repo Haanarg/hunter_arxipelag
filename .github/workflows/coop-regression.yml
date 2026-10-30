@@ -14,6 +14,7 @@ on:
       - 'tests/native-coop-interpolation.mjs'
       - 'tests/native-coop-interpolation-runtime.cjs'
       - 'tests/native-coop-network-jitter.mjs'
+      - 'tests/coop-state-delta.mjs'
       - 'tests/coop-transport-telemetry.mjs'
       - '.github/workflows/coop-regression.yml'
 
@@ -45,6 +46,7 @@ jobs:
           node tests/native-coop-interpolation.mjs
           node tests/native-coop-network-jitter.mjs
           node tests/native-coop-delta-transport.mjs
+          node tests/coop-state-delta.mjs
           node tests/coop-transport-telemetry.mjs
       - name: Integracio amb motor original (càmera, passatger i pilot)
         run: node tests/native-coop-interpolation-runtime.cjs
