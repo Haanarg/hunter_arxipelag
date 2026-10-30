@@ -105,7 +105,7 @@ function loadGame(){
       background.hidden=true;
     }
     window.dispatchEvent(new Event('hunter:menu-background-stop'));
-    bootPromise=import('./bootstrap.mjs?v=0.6.53&visual=8').then(()=>{
+    bootPromise=import('./bootstrap.mjs?v=0.6.53&visual=8&glassfix=1').then(()=>{
     if(!window.HUNTER_READY)throw new Error('El motor 3D no ha acabat de carregar');
   }).catch(error=>{bootPromise=null;throw error});
   }
