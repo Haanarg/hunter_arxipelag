@@ -104,7 +104,9 @@ function updateNativeCoop(dt){
  catch(error){reportNativeCoopVisualError(error,'actualització del fotograma');}
 }
 function updateNativeCoopFrame(dt){
- const s=nativeCoopSession;if(!s)return;updateStrafeControls();joystick.setRunEnabled(!cv&&!paused);if(s.preparing||!s.state){updatePlayerHUD(.13);return;}
+ const s=nativeCoopSession;if(!s)return;
+ s.channel?.noteFrame?.(!paused&&!document.hidden);
+ updateStrafeControls();joystick.setRunEnabled(!cv&&!paused);if(s.preparing||!s.state){updatePlayerHUD(.13);return;}
  const state=s.state,projecting=s.projectedState!==state,
        actor=projecting?state.players.find(p=>p.id===s.self):s.projectedActor;
  if(!actor)return;
