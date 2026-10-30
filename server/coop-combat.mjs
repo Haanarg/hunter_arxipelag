@@ -139,7 +139,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     return {direction,focus};
   }
   function fire(actorId,p,bag,tick,weapon=bag.weapon||'pistol'){
-    const profile=weaponCatalog[weapon],vehicle=vehicles.mounted(actorId),gun=vehicle&&vehicleGunPose(vehicle),
+    const profile=weaponCatalog[weapon],vehicle=vehicles.mounted(actorId),gun=vehicle&&vehicle.seats[0]===actorId&&vehicleGunPose(vehicle),
       from=gun?.origin||{x:p.x,y:p.y+(vehicle?2:weapon==='bazooka'?1.9:1.5),z:p.z};
     const aimed=aimWeapon(p,vehicle,weapon,from),focus=aimed.focus,direction=gun?.direction||aimed.direction;
     const id='bullet-'+(++sequence),dmg=!['proving','world','native'].includes(meta.mode)&&['pistol','assault'].includes(weapon)?combatBalance.weapons.pistol:profile.damage;
@@ -153,10 +153,11 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     const cached=results.find(r=>r.actorId===actorId&&r.commandId===message.commandId);if(cached)return {...cached,duplicate:true};
     const p=players().find(p=>p.id===actorId),bag=inventory.get(actorId);let code='INVALID',ok=false;
     if(p&&message.epoch===meta.id&&typeof message.commandId==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(message.commandId)&&combatCommands.includes(message.weapon)){
-      const vehicle=vehicles.mounted(actorId),weapon=vehicle?(message.weapon==='grenade'?(vehicle.t==='heli_combat'?null:'grenade'):message.weapon==='secondary'&&vehicle.t==='heli_combat'?'heliMissile':message.weapon==='c4'&&vehicle.t==='heli'?'c4':mountedWeapons[vehicle.t]):message.weapon;
+      const vehicle=vehicles.mounted(actorId),passenger=!!vehicle&&vehicle.seats[0]!==actorId,
+        weapon=passenger?message.weapon:vehicle?(message.weapon==='grenade'?(vehicle.t==='heli_combat'?null:'grenade'):message.weapon==='secondary'&&vehicle.t==='heli_combat'?'heliMissile':message.weapon==='c4'&&vehicle.t==='heli'?'c4':mountedWeapons[vehicle.t]):message.weapon;
       const profile=weaponCatalog[weapon],ammoSource=profile?.ammo==='rockets'?vehicle:bag,key=actorId+':'+(weapon==='assault'?'pistol':weapon),cooldown=!['proving','world','native'].includes(meta.mode)&&['pistol','assault','grenade'].includes(weapon)?({pistol:10,assault:18,grenade:30}[weapon]):Math.ceil((profile?.cooldown||1)*30);
-      if(!active()||p.hp<=0||p.fall||p.swimming&&!vehicle||!canAttack(actorId)||!profile||vehicle&&(weapon==='grenade'? !vehicle.seats.includes(actorId):vehicle.seats[0]!==actorId))code='NOT_ACTIVE';
-      else if(!vehicle&&!['grenade',...(meta.mode==='native'?['c4']:[])].includes(weapon)&&((bag.weapon||'pistol')!==weapon||profile.item&&!bag[profile.item]))code='NOT_EQUIPPED';
+      if(!active()||p.hp<=0||p.fall||p.swimming&&!vehicle||!canAttack(actorId)||!profile||vehicle&&!passenger&&(weapon==='grenade'? !vehicle.seats.includes(actorId):vehicle.seats[0]!==actorId))code='NOT_ACTIVE';
+      else if((!vehicle||passenger)&&!['grenade',...(meta.mode==='native'?['c4']:[])].includes(weapon)&&((bag.weapon||'pistol')!==weapon||profile.item&&!bag[profile.item]))code='NOT_EQUIPPED';
       else if(tick-(cooldowns.get(key)??-Infinity)<cooldown)code='COOLDOWN';
       else if(profile.ammo&&!(ammoSource?.[profile.ammo]>0)||weapon==='assault'&&bag.bullets<3)code='EMPTY';
       else{
