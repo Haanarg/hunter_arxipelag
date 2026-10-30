@@ -35,6 +35,27 @@ export function windowCrossing(from,to,wall){
  }
  return best;
 }
+// Atac de ganivet: un segment curt davant del cos a l'alçada de les
+// finestres de la planta baixa. El primer mur sòlid impedeix trencar
+// vidres a través de parets; no modifica la detecció de projectils.
+export function knifeWindowHit(origin,walls,reach=2.8,isIntact=()=>true){
+ const heading=origin.hd||0,fx=-Math.sin(heading),fz=-Math.cos(heading);
+ const from={x:origin.x,y:origin.y+2.35,z:origin.z},
+       to={x:from.x+fx*reach,y:from.y,z:from.z+fz*reach};
+ let best=null,block=1;
+ for(let wallIndex=0;wallIndex<walls.length;wallIndex++){
+   const wall=walls[wallIndex];
+   if(!wall||wall.open)continue;
+   if(wall.x0>Math.max(from.x,to.x)||wall.x1<Math.min(from.x,to.x)||
+      wall.z0>Math.max(from.z,to.z)||wall.z1<Math.min(from.z,to.z))continue;
+   const t=wallShotHit(from,to,wall);
+   if(t!==null&&t<block)block=t;
+   const pane=windowCrossing(from,to,wall);
+   if(pane&&isIntact(wallIndex,pane.index,wall)&&
+      (!best||pane.t<best.t))best={wall,wallIndex,paneIndex:pane.index,point:pane.point,t:pane.t};
+ }
+ return best&&best.t<=block+1e-6?best:null;
+}
 // Convert a rendered pane's position back to its authoritative pane index.
 // Rotated façades (notably 180°) can reverse the mesh order.
 export function windowPaneIndexAt(wall,alongCoordinate){
