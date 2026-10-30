@@ -1,13 +1,14 @@
 // Prova aïllada: reutilitza la geometria, el cel, el mar i les palmeres del joc.
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {generateTerrainFoundation} from './world-generation-core.mjs';
+import {prepareMenuBase,drawMenuBase} from './menu-base-scene.mjs';
 import {rawTerrainAt} from './world-physics.mjs';
 
 const stage=document.getElementById('vista');
 const status=document.getElementById('status');
 const toggle=document.getElementById('toggleAnimation');
 const prefersReducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
-let active=!prefersReducedMotion,rendering=null,water=null,terrain=null,vegetation=null,raf=0;
+let active=!prefersReducedMotion,rendering=null,water=null,terrain=null,vegetation=null,baseScene=null,raf=0;
 let lastFrame=0,startTime=0,visible=!document.hidden;
 toggle.setAttribute('aria-pressed',String(active));
 toggle.textContent=active?'Mar animat':'Mar aturat';
@@ -52,7 +53,7 @@ async function init(){
     // Només els mateixos sistemes visuals que consumeix el runtime original;
     // no es crea cap partida, IA, vehicle, inventari ni servei en xarxa.
     for(const path of ['visual-config.js','materials-config.js','water-config.js',
-      'rendering.js','waves.js','water.js','terrain.js','vegetation.js']){
+      'rendering.js','waves.js','water.js','terrain.js','vegetation.js','buildings.js']){
       await loadClassic('./src/'+path);
     }
     if(!window.WebGLRenderingContext)throw new Error('WebGL no disponible');
@@ -60,13 +61,15 @@ async function init(){
     // Mateix emplaçament inicial que tria el generador del joc,
     // no el centre geogràfic de l'illa ni un punt aleatori de la costa.
     const foundation=generateTerrainFoundation({seed,mapScale});
-    const heightAt=(x,z)=>rawTerrainAt(x,z,foundation.islands,foundation.seed,halfSize);
+    const base=prepareMenuBase(foundation);
+    const heightAt=base.heightAt;
     const homeIsland=foundation.islands[0];
     const targetX=foundation.baseCandidate.x,targetZ=foundation.baseCandidate.z;
-    const targetY=foundation.baseCandidate.h+8;
+    const targetY=base.plan.height+9;
     // Pla general en 3/4, elevat i allunyat. Prioritzam el costat amb mar
     // i evitam situar la càmera fora del quadrat de joc.
-    const cameraDistance=900,cameraElevation=600;
+    const cameraDistance=innerWidth<innerHeight?510:690;
+    const cameraElevation=innerWidth<innerHeight?310:395;
     const angles=[Math.PI/4,3*Math.PI/4,5*Math.PI/4,7*Math.PI/4];
     const views=angles.map((yaw,index)=>{
       const x=targetX+Math.cos(yaw)*cameraDistance;
@@ -110,6 +113,8 @@ async function init(){
       heightAt,config:window.HUNTER_WATER,reflections:true,coastDetail:false
     });
     water.updateSeabed();
+    // Edificis i vehicles de la base inicial: geometries originals sense IA.
+    baseScene=await drawMenuBase(THREE,scene,base);
 
     // Model de palmeres instanciades original, amb la mateixa variació per exemplar.
     // Mostres lleugeres en els vessants d'una illa real del generador de llavors.
@@ -120,7 +125,8 @@ async function init(){
     for(let i=0;i<185;i++){
       const a=rnd()*Math.PI*2,r=homeIsland.r*(.38+rnd()*.43);
       const x=homeIsland.x+Math.cos(a)*r,z=homeIsland.z+Math.sin(a)*r,y=heightAt(x,z);
-      if(y<3||y>24)continue;
+      if(y<3||y>24||Math.abs(x-targetX)<base.plan.level.hw+32&&
+        Math.abs(z-targetZ)<base.plan.level.hd+32)continue;
       palms.push([x,y,z,1.1+rnd()*1.9,rnd()*Math.PI*2,Math.floor(rnd()*3)-1,(rnd()-.5)*.2]);
     }
     const plantFactory=window.HUNTER_VEGETATION.create(THREE,{
@@ -142,7 +148,7 @@ async function init(){
     water.update(0);
     renderer.render(scene,camera);
     stage.classList.add('ready');
-    setStatus(active?'Motor del joc · mar animat a 30 FPS.':'Motor del joc · fons estàtic.');
+    setStatus(active?'Base inicial i vehicles · mar animat a 30 FPS.':'Base inicial i vehicles · fons estàtic.');
     startLoop();
   }catch(error){
     console.error('Prova del fons 3D',error);
