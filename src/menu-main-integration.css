@@ -1,0 +1,129 @@
+/* Portada cinematogràfica integrada: manté els IDs i els gestors de l'original. */
+#ini{
+  isolation:isolate;
+  background:linear-gradient(125deg,#0c2339,#22627a 58%,#d88d6d)!important;
+  gap:0!important;
+  padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right))
+    max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))!important;
+}
+#menuWorldVista{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+#menuWorldVista canvas{position:absolute;inset:0;width:100%;height:100%;opacity:0;
+  transition:opacity .35s ease;display:block}
+#menuWorldVista.ready canvas{opacity:1}
+#ini::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:1;
+  background:
+    radial-gradient(ellipse at 50% -8%,
+      rgba(255,210,150,.14) 0%,rgba(255,210,150,.06) 20%,
+      rgba(255,210,150,0) 42%),
+    linear-gradient(180deg,rgba(120,175,205,.18) 0%,
+      rgba(120,175,205,.08) 14%,rgba(5,18,30,.08) 32%,
+      rgba(5,18,30,.16) 48%,rgba(5,18,30,.50) 72%,
+      rgba(5,14,18,.80) 100%);
+}
+#ini>#startMenu,#ini>.seed-search{position:relative;z-index:2}
+#ini #versionBadge{z-index:3}
+#ini #startMenu{
+  display:flex;flex-direction:column;justify-content:flex-start;align-items:center;
+  gap:0;width:min(740px,100%);max-height:calc(100dvh - 28px);
+  overflow:auto;scrollbar-width:thin;margin:auto;padding:clamp(8px,2vh,22px) 4px;
+  box-sizing:border-box;
+}
+#ini #brandTitle{margin:0;line-height:0;flex:none;width:min(760px,90vw)}
+#ini #brandTitle img{display:block;width:100%;height:auto;max-height:clamp(96px,25dvh,225px);
+  object-fit:contain;filter:drop-shadow(0 4px 8px #000a)}
+#hunterTagline{
+  margin:clamp(4px,.7vh,9px) 0 0;line-height:1.3;
+  font:900 clamp(12px,2.65vw,20px)/1.3 system-ui;
+  letter-spacing:clamp(.04em,.32vw,.16em);color:#fff2d3;
+  text-shadow:0 2px 8px #000;flex:none;
+}
+#ini .hunter-intro{
+  margin:8px auto 0;max-width:560px;font:500 clamp(11px,2.1vw,16px)/1.4 system-ui;
+  color:#fff2dc;text-shadow:0 2px 6px #000,0 0 15px #000c;
+  text-align:center;flex:none;
+}
+#ini [hidden]{display:none!important}
+#ini .hunter-home-actions{
+  display:grid;gap:9px;width:100%;max-width:740px;
+  margin-top:clamp(16px,8dvh,105px);margin-bottom:clamp(4px,2vh,22px);flex:none;
+}
+#ini .hunter-action-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;width:100%}
+#ini .hunter-action-row-minor{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#ini .hunter-action{
+  font:900 clamp(13px,2.5vw,19px)/1.15 system-ui;
+  letter-spacing:.02em;text-align:center;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  min-width:0;min-height:50px;width:100%;padding:10px 10px;cursor:pointer;
+  border-radius:8px;border:2px solid #ae935d;text-decoration:none;
+  box-shadow:0 4px 0 #11100bd9,0 10px 20px #0008,inset 0 1px #ffe8b18a;
+  text-shadow:0 1px 2px #000b;
+  transition:filter .14s ease,transform .14s ease;
+}
+#ini .hunter-action:hover,#ini .hunter-action:focus-visible{filter:brightness(1.13);
+  outline:2px solid #fff1be;outline-offset:3px}
+#ini .hunter-action:active{transform:translateY(2px)}
+#ini .hunter-action-primary{
+  color:#241a08;font-size:clamp(20px,4.5vw,32px);min-height:clamp(60px,9dvh,86px);
+  border:3px ridge #ffe5a0;
+  background:linear-gradient(165deg,#fff5b4 0%,#dfb66e 18%,#a77229 45%,#edc378 75%,#8b561d 100%);
+  text-shadow:0 1px #ffe7ac7d;
+  box-shadow:inset 0 0 0 2px #593b1f,0 5px 0 #533819,0 12px 20px #0009;
+}
+#ini .hunter-action-dark{
+  color:#f8dea0;background:linear-gradient(150deg,#3e4137,#1a211e 46%,#2a2923 75%,#101619);
+  border-color:#b6a072;
+}
+#ini .hunter-action-small{
+  font-size:clamp(10px,1.9vw,13px);min-height:38px;letter-spacing:.01em;
+  color:#ead5a5;background:linear-gradient(#353b36,#101d22);border-color:#867451;
+  box-shadow:0 2px 0 #11100bdd;
+}
+#ini .hunter-submenu{
+  width:min(610px,100%);max-height:none;overflow:visible;margin:clamp(10px,3vh,24px) 0;
+  background:linear-gradient(160deg,#102d2fe8,#101d21e8);
+  border:1px solid #d6b777b8;border-radius:10px;padding:clamp(12px,2vw,20px);
+  box-shadow:0 10px 40px #000b;display:flex;flex-direction:column;align-items:center;gap:13px;
+}
+#ini .hunter-submenu h2{
+  color:#f6d696;font:800 clamp(17px,3vw,24px)/1.25 system-ui;
+  margin:0;letter-spacing:.06em;
+}
+#ini .hunter-submenu .hunter-field-label{margin:3px 0 -6px;font-size:12px;opacity:.84}
+#ini #difficultyButtons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%}
+#ini #difficultyButtons .hunter-action{min-width:0;font-size:clamp(12px,2vw,16px);min-height:44px}
+#ini .hunter-submenu #seedBox{width:100%;box-sizing:border-box;padding:10px}
+#ini .hunter-submenu #seedInput{max-width:100%}
+#ini #mapSizeBox{gap:8px;justify-content:center}
+#ini .hunter-setup-buttons{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#ini #hunterOptions #qualityBox{width:100%;display:flex;justify-content:space-between;
+  flex-wrap:wrap;gap:8px}
+#ini #hunterOptions #performanceMenuOpen{width:auto;min-width:132px}
+#ini #seedSearchOpen{position:static!important;left:auto!important;bottom:auto!important;z-index:auto}
+#ini .seed-search{background:linear-gradient(160deg,#102d2ff5,#101d21ee);
+  border:1px solid #d6b777b8;box-shadow:0 10px 40px #000b;
+  max-height:min(88dvh,780px);scrollbar-width:thin}
+@media (max-width:640px), (max-height:760px){
+  #ini #startMenu{width:100%;max-height:none;overflow:visible;
+    margin-block:auto;padding:8px 0}
+  #ini #brandTitle{width:min(100%,640px)}
+  #ini #brandTitle img{max-height:min(18dvh,140px)}
+  #ini .hunter-home-actions{margin-top:clamp(12px,5dvh,56px)}
+}
+@media (max-width:570px){
+  #ini .hunter-action{padding:8px 5px}
+  #ini .hunter-action-small{font-size:10px;min-height:36px}
+  #ini .hunter-action-row{gap:7px}
+  #ini .hunter-submenu{padding:12px 9px}
+  #ini .hunter-intro{max-width:92vw}
+}
+@media (max-height:620px){
+  #ini #brandTitle img{max-height:16dvh}
+  #ini .hunter-intro{font-size:11px;line-height:1.2;margin-top:3px}
+  #ini #hunterTagline{margin-top:2px}
+  #ini .hunter-home-actions{margin-top:10px;gap:5px}
+  #ini .hunter-action-row{gap:5px}
+  #ini .hunter-action-primary{min-height:42px;font-size:18px}
+  #ini .hunter-action-dark{min-height:36px;font-size:13px}
+  #ini .hunter-action-small{min-height:30px}
+}
