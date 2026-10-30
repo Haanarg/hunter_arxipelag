@@ -12,30 +12,33 @@ const scenes=Object.freeze([
 const selectedId=new URLSearchParams(location.search).get('scene');
 const selectedScene=scenes.find(v=>v.id===selectedId)||scenes[1];
 const scenePicker=document.getElementById('scenePicker');
-scenePicker.value=selectedScene.id;
-scenePicker.addEventListener('change',()=>{
-  const url=new URL(location.href);
-  url.searchParams.set('scene',scenePicker.value);
-  location.assign(url.toString());
-});
-const stage=document.getElementById('vista');
+if(scenePicker){
+  scenePicker.value=selectedScene.id;
+  scenePicker.addEventListener('change',()=>{
+    const url=new URL(location.href);
+    url.searchParams.set('scene',scenePicker.value);
+    location.assign(url.toString());
+  });
+}
+const stage=document.getElementById('vista')||document.getElementById('menuWorldVista');
 const status=document.getElementById('status');
 const toggle=document.getElementById('toggleAnimation');
 const prefersReducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let active=!prefersReducedMotion,rendering=null,water=null,terrain=null,vegetation=null,baseScene=null,raf=0;
 let lastFrame=0,startTime=0,visible=!document.hidden;
-toggle.setAttribute('aria-pressed',String(active));
-toggle.textContent=active?'Mar animat':'Mar aturat';
+let stopped=Boolean(window.HUNTER_MENU_BACKGROUND_STOPPED);
+toggle?.setAttribute('aria-pressed',String(active));
+if(toggle)toggle.textContent=active?'Mar animat':'Mar aturat';
 
-document.getElementById('newGame').addEventListener('click',()=>{
+document.getElementById('newGame')?.addEventListener('click',()=>{
   document.getElementById('home').hidden=true;
   document.getElementById('setup').hidden=false;
 });
-document.getElementById('back').addEventListener('click',()=>{
+document.getElementById('back')?.addEventListener('click',()=>{
   document.getElementById('setup').hidden=true;
   document.getElementById('home').hidden=false;
 });
-document.getElementById('seed').addEventListener('input',e=>{
+document.getElementById('seed')?.addEventListener('input',e=>{
   e.currentTarget.value=e.currentTarget.value.replace(/[^0-9]/g,'').slice(0,10);
 });
 const loadClassic=(path)=>new Promise((resolve,reject)=>{
@@ -44,8 +47,12 @@ const loadClassic=(path)=>new Promise((resolve,reject)=>{
   document.head.append(script);
 });
 function paused(){return !active||!visible;}
-function setStatus(message,error=false){status.textContent=message;status.classList.toggle('error',error);}
-toggle.addEventListener('click',()=>{
+function setStatus(message,error=false){
+  if(!status)return;
+  status.textContent=message;
+  status.classList.toggle('error',error);
+}
+toggle?.addEventListener('click',()=>{
   active=!active;toggle.setAttribute('aria-pressed',String(active));
   toggle.textContent=active?'Mar animat':'Mar aturat';
   if(!active){cancelAnimationFrame(raf);raf=0;setStatus(selectedScene.name+' · llavor '+selectedScene.seed+' · mar aturat.');}
@@ -56,19 +63,27 @@ document.addEventListener('visibilitychange',()=>{
   if(!visible){cancelAnimationFrame(raf);raf=0;}
   else{lastFrame=0;startLoop();}
 });
-window.addEventListener('pagehide',()=>{
+function stopBackground(){
+  if(stopped)return;
+  stopped=true;
   cancelAnimationFrame(raf);raf=0;
   water?.dispose();terrain?.dispose();
   rendering?.renderer?.dispose();
-},{once:true});
+  rendering?.renderer?.domElement?.remove();
+  rendering=null;
+}
+window.addEventListener('hunter:menu-background-stop',stopBackground);
+window.addEventListener('pagehide',stopBackground,{once:true});
 
 async function init(){
+  if(!stage||stopped)return;
   try{
     // Només els mateixos sistemes visuals que consumeix el runtime original;
     // no es crea cap partida, IA, vehicle, inventari ni servei en xarxa.
     for(const path of ['visual-config.js','materials-config.js','water-config.js',
       'rendering.js','waves.js','water.js','terrain.js','vegetation.js','buildings.js']){
       await loadClassic('./src/'+path);
+      if(stopped)return; // bootstrap pot arrencar mentre es prepara la portada.
     }
     if(!window.WebGLRenderingContext)throw new Error('WebGL no disponible');
     const seed=selectedScene.seed,mapScale=1,size=4800,halfSize=size/2;
@@ -129,6 +144,7 @@ async function init(){
     water.updateSeabed();
     // Edificis i vehicles de la base inicial: geometries originals sense IA.
     baseScene=await drawMenuBase(THREE,scene,base);
+    if(stopped)return;
 
     // Model de palmeres instanciades original, amb la mateixa variació per exemplar.
     // Mostres lleugeres en els vessants d'una illa real del generador de llavors.
@@ -175,21 +191,22 @@ async function init(){
     startTime=performance.now();
     water.update(0);
     renderer.render(scene,camera);
+    if(stopped)return;
     stage.classList.add('ready');
     setStatus(selectedScene.name+' · llavor '+seed+' · '+(active?'mar animat a 30 FPS.':'mar aturat.'));
     startLoop();
   }catch(error){
     console.error('Prova del fons 3D',error);
     setStatus('No s’ha pogut activar el motor 3D. Es manté el fons estàtic.',true);
-    toggle.disabled=true;
+    if(toggle)toggle.disabled=true;
     water?.dispose();terrain?.dispose();rendering?.renderer?.dispose();
   }
 }
 function startLoop(){
-  if(raf||!rendering||paused())return;
+  if(raf||stopped||!rendering||paused())return;
   const frame=now=>{
     raf=0;
-    if(paused()||!rendering)return;
+    if(stopped||paused()||!rendering)return;
     // 30 FPS màxim; seguim el fotograma del navegador en lloc d'un timer.
     if(now-lastFrame>=1000/30){
       lastFrame=now;
