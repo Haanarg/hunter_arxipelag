@@ -10,7 +10,7 @@ const scenes=Object.freeze([
   {id:'4',seed:175,yaw:225,name:'Panoràmica d’illes'}
 ]);
 const selectedId=new URLSearchParams(location.search).get('scene');
-const selectedScene=scenes.find(v=>v.id===selectedId)||scenes[0];
+const selectedScene=scenes.find(v=>v.id===selectedId)||scenes[1];
 const scenePicker=document.getElementById('scenePicker');
 scenePicker.value=selectedScene.id;
 scenePicker.addEventListener('change',()=>{
@@ -97,9 +97,12 @@ async function init(){
     chooseMenuCamera();
     const visual={...window.HUNTER_VISUAL_CONFIG.mobile,
       pixelRatio:Math.min(1,window.devicePixelRatio||1),
-      shadows:false,exposure:1.06,viewDistance:9500};
+      shadows:false,exposure:1.10,viewDistance:9500};
     rendering=window.HUNTER_RENDERING.create(THREE,visual);
     const {scene,camera,renderer}=rendering;
+    // Color de reserva equivalent al zenit, per evitar taques fosques
+    // si algun píxel no arriba a quedar cobert per la cúpula del cel.
+    scene.background=new THREE.Color(0x5147b8);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1));
     renderer.setSize(innerWidth,innerHeight);
     renderer.domElement.setAttribute('aria-hidden','true');
