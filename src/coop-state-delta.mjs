@@ -45,7 +45,18 @@ export function diffCoopState(before,after){
 }
 export function applyCoopDelta(before,delta){
  if(!delta)return before;if(own(delta,'v'))return delta.v;
- if(delta.k){const old=new Map(before.map(row=>[row[delta.k],row])),order=delta.o||before.map(row=>row[delta.k]);return order.map(id=>applyCoopDelta(old.get(id),own(delta.p,id)?delta.p[id]:null));}
+ if(delta.k){
+  // Cas habitual: l'ordre dels identificadors no ha canviat. Podem
+  // aplicar el patch directament per posició, sense Map ni array d'IDs.
+  // Les files no modificades conserven la referència original.
+  if(!delta.o)return before.map(row=>{
+   const id=row[delta.k];
+   return applyCoopDelta(row,own(delta.p,id)?delta.p[id]:null);
+  });
+  // Només els canvis reals d'ordre necessiten indexar la base anterior.
+  const old=new Map(before.map(row=>[row[delta.k],row]));
+  return delta.o.map(id=>applyCoopDelta(old.get(id),own(delta.p,id)?delta.p[id]:null));
+ }
  const result={...before};for(const key of delta.r||[])delete result[key];
  for(const [key,patch] of Object.entries(delta.p))Object.defineProperty(result,key,{value:applyCoopDelta(before?.[key],patch),enumerable:true,writable:true,configurable:true});
  return result;
