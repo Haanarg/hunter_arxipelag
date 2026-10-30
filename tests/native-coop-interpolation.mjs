@@ -97,6 +97,10 @@ assert(delayed.movingVehicles()[0].pose.x>airBefore,
  'L’helicòpter recupera el moviment suaument');
 assert(delayed.movingVehicles()[0].pose.x-airBefore<2.1,
  'La recuperació de 774 ms no aplica un salt visual en un frame a 60 FPS');
+assert(delayed.stats.speedLimitedFrames>0,
+ 'La recuperació de l’helicòpter ha de registrar la limitació de velocitat visual');
+assert(delayed.stats.maxRenderErrorM>0,
+ 'Es mesura l’error de la pose visual respecte del destí temporal');
 delayed.receive(fast(120,100),'a');
 assert.equal(delayed.stats.gapResets,1,'Una desconnexió de més de dos segons sí reinicia el buffer');
 assert.equal(delayed.movingVehicles().length,0,'No es prediuen trajectòries a partir de dades molt antigues');
