@@ -7,19 +7,26 @@ import {createCanonicalWater} from './canonical-water.mjs';
 // Only local locomotion is predicted. Damage, pickups, combat and world mutations
 // remain authoritative. Reconciliation replays unacknowledged shared-rule steps.
 export function createNativePrediction(geometry){
- let world=null,physical=null,vehicle=null,vehicleTick=0,modeKey=null,worldKey=null,sim=null,state=null,self=null,sequence=0,history=[],accumulator=0,enabled=false;
+ let world=null,physical=null,water=null,lastPalmHealth=null,vehicle=null,vehicleTick=0,modeKey=null,worldKey=null,sim=null,state=null,self=null,sequence=0,history=[],accumulator=0,enabled=false;
  function rebuild(next){
-  const key=JSON.stringify([next.doorRevision,next.removedWalls,next.removedRoofs]);if(world&&key===worldKey){world.setPalmHealth(next.palmHealth||[]);return;}
+  const key=JSON.stringify([next.doorRevision,next.removedWalls,next.removedRoofs]);if(world&&key===worldKey){
+   // Els deltes conserven la referència dels camps no modificats.
+   if(lastPalmHealth!==next.palmHealth){world.setPalmHealth(next.palmHealth||[]);lastPalmHealth=next.palmHealth;}
+   return;
+  }
   physical=structuredClone(geometry);const walls=new Map(physical.walls.map(w=>[w.id,w]));
   for(const index of next.removedWalls||[])if(physical.walls[index])physical.walls[index].open=true;
   for(const door of next.doors||[]){const wall=walls.get(door.id);if(wall)wall.open=!!door.open||!!door.destroyed;}
   for(const index of next.removedRoofs||[])if(physical.buildings[index])Object.assign(physical.buildings[index],{rb:true,rhp:0});
-  world=createStaticWorldAdapter(physical);world.setPalmHealth(next.palmHealth||[]);worldKey=key;
+  world=createStaticWorldAdapter(physical);
+  water=createCanonicalWater(world.heightAt);
+  world.setPalmHealth(next.palmHealth||[]);lastPalmHealth=next.palmHealth;
+  worldKey=key;
  }
- function resetSimulation(next){const water=createCanonicalWater(world.heightAt);sim=createPlayerSimulation({epoch:next.missionId,limit:world.limit,world,vertical:{surfaceAt:water.surfaceAt},checkpoint:{protocol:1,epoch:next.missionId,tick:next.tick,players:next.players}});}
+ function resetSimulation(next){sim=createPlayerSimulation({epoch:next.missionId,limit:world.limit,world,vertical:{surfaceAt:water.surfaceAt},checkpoint:{protocol:1,epoch:next.missionId,tick:next.tick,players:next.players}});}
  function step(input){
   if(vehicle){
-   const from={...vehicle},water=createCanonicalWater(world.heightAt),size=vehicleSpecs.hitboxes[vehicle.t],radius=Math.hypot(...size)*vehicleSpecs.scales[vehicle.t]/2;
+   const from={...vehicle},size=vehicleSpecs.hitboxes[vehicle.t],radius=Math.hypot(...size)*vehicleSpecs.scales[vehicle.t]/2;
    stepRangeVehicle(vehicle,input,1/30,++vehicleTick,world,water,{x0:-world.limit,x1:world.limit,z0:-world.limit,z1:world.limit});
    const reach=radius+Math.hypot(vehicle.x-from.x,vehicle.z-from.z)+2,cx=(from.x+vehicle.x)/2,cz=(from.z+vehicle.z)/2,
     walls=physical.walls.filter(w=>w.x0<=cx+reach&&w.x1>=cx-reach&&w.z0<=cz+reach&&w.z1>=cz-reach),
