@@ -1,6 +1,20 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
 
+## 0.6.61 · moviment visual dels soldats, cachés i observabilitat local
+
+**Soldats en moviment:** s'ha afegit `enemies` a l'interpolador visual. Només es creen tracks per enemics vius que canvien de pose; el codi de deltes preserva referències dels 377 soldats immòbils i el camí ràpid no calcula dues poses per cadascun. Els soldats comparteixen el buffer temporal 150–200 ms amb company i vehicles, previsió limitada a 120 ms i recuperació sense salt quan arriba un snapshot tardà. L'escena `src/coop-world-runtime.js` aplica la pose només a `e.o` (malla), conservant `e.x/e.z` i `hp` autoritatius. L'animació de les cames segueix ara el desplaçament real dibuixat entre fotogrames. Morts i teleports alliberen immediatament la trajectòria. Nou camp `remoteInterpolation.activeEnemies`.
+
+**Aplicació de deltes:** per `delta.k` sense `delta.o`, `applyCoopDelta()` reconstrueix directament la llista en ordre amb `before.map`; omet un `Map` i un array temporal d'identificadors per recepció. Les entitats que no han canviat mantenen la identitat d'objecte. Quan hi ha reordenació, es continua emprant un índex per ID. S'ha afegit una regressió de referències i passen les proves pures de reconstrucció sense pèrdua.
+
+**Predicció:** `createCanonicalWater(world.heightAt)` és reutilitzable per tots els subpassos del mateix món, i no es torna a instanciar als 30 Hz. `world.setPalmHealth()` només s'executa quan el delta modifica les dades de salut de les palmeres, o quan canvia la geometria. La prova instrumentada `tests/native-coop-prediction-cache.mjs` comprova reús i invalidació correcta. No s'han canviat les regles de física ni la predicció de cap tipus de vehicle.
+
+**Render i diagnòstic:** projectils i granades reutilitzen els `Set` de IDs; es reutilitza el vector de direcció de projectils. `clientFrame` registra intervals entre frames del navegador, `averageGapMs`, `maxGapMs`, `over33Ms`, `over50Ms` i nombre de mostres. No equival a mesurar el temps de CPU del Worker ni FPS de GPU; no compta pauses/desenfocaments superiors a 250 ms.
+
+**Proves:** `tests/native-coop-enemy-interpolation.mjs` ha passat amb 377 soldats, 2 en moviment, morts, teleports, reordenacions, estat immòbil i referències de deltes; també les suites pures de jitter, interpolació de vehicles i deltes i comprovacions aïllades del caché de predicció/telemetria. S'ha creat `tests/native-coop-enemy-runtime.cjs` per verificar visualment amb el motor original. **Encara no s'ha executat tota la bateria Node ni validat un navegador amb GPU.** Detall de les ordres a [COOP_OFFLINE_VALIDATION.md](COOP_OFFLINE_VALIDATION.md).
+
+**Infraestructura:** la versió passa a 0.6.61 i s'ha actualitzat el bundle/manifest amb hash de contingut. El workflow `coop-regression.yml` té exclusivament disparador manual; no es consumeixen Actions en fer `push`. Cloudflare Pages, Worker i DO no s'han verificat ni desplegat des d'aquest entorn.
+
 ## 0.6.60 · codificació compartida dels deltes al servidor
 
 A `server/coop-hub.mjs` el Durable Object conserva el `diffCoopState` compartit, i ara conserva **dins de cada `broadcastState()`** el JSON ja serialitzat quan els dos sockets tenen la mateixa baseline i el mateix número de revisió. Evita una segona passada de `JSON.stringify` sense canviar el format del missatge, la cadència del tick (30 Hz), la freqüència de distribució (~10 Hz), els identificadors dels clients, el càlcul dels danys ni la persistència. Si els clients han divergit en la seva revisió, es codifiquen deltes independents; cada baseline només s'avança quan s'envia correctament el missatge.
