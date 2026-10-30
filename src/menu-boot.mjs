@@ -1,4 +1,4 @@
-import './menu-main-integration.mjs';
+import './menu-main-integration.mjs?background=isolate1';
 import {GAME_VERSION} from './version.mjs?v=0.6.53';
 import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.53&visual=8';
 
@@ -97,6 +97,13 @@ function loadGame(){
   if(window.HUNTER_READY)return Promise.resolve();
   if(!bootPromise){
     window.HUNTER_MENU_BACKGROUND_STOPPED=true;
+    // Alliberam completament l'iframe i el seu context WebGL abans
+    // d'importar el runtime. També impedeix feina de fons durant el coop.
+    const background=document.getElementById('menuWorldVista');
+    if(background){
+      background.replaceChildren();
+      background.hidden=true;
+    }
     window.dispatchEvent(new Event('hunter:menu-background-stop'));
     bootPromise=import('./bootstrap.mjs?v=0.6.53&visual=8').then(()=>{
     if(!window.HUNTER_READY)throw new Error('El motor 3D no ha acabat de carregar');
