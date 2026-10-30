@@ -111,7 +111,7 @@ export function createNativeCoopInterpolation(){
  const stats={samples:0,receives:0,teleports:0,resets:0,activeVehicles:0,
    clampedFrames:0,forecastFrames:0,activePlayers:0,
    longGapReceives:0,maxTickGap:0,gapResets:0,
-   bufferDelayMs:BASE_DELAY_SECONDS*1000,interpolatedFrames:0,
+   bufferDelayMs:BASE_DELAY_SECONDS*1000,activeFrames:0,interpolatedFrames:0,
    extrapolatedFrames:0,bufferUnderruns:0};
  function clearTracks(){vehicles.clear();players.clear();vehicleOutput=[];
    renderTick=null;lastArrival=null;jitterSeconds=0;delayTicks=BASE_DELAY_SECONDS*RATE;
@@ -191,6 +191,7 @@ export function createNativeCoopInterpolation(){
    if(!current||!running)return 1;
    const step=Math.max(0,Math.min(.1,dt));elapsed+=step;
    if(renderTick===null)return 1;
+   stats.activeFrames++;
    const targetTick=current.tick-delayTicks,
      error=targetTick-renderTick;
    // Ajust suau de la velocitat del rellotge (mai recula la pose).
