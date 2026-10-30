@@ -253,11 +253,29 @@ function updateNativeCoopFrame(dt){
  if(projecting){
  if(s.appliedProjectiles!==state.combat.projectiles){
  s.appliedProjectiles=state.combat.projectiles;
- const liveProjectiles=new Set();for(const row of state.combat.projectiles){liveProjectiles.add(row.id);let mesh=s.projectiles.get(row.id);if(!mesh){mesh=new THREE.Mesh(row.splash?gHeavy:gLight,row.splash?mS:mW);mesh.scale.setScalar(row.splash?1:SMALL_ARMS_SCALE);world.add(mesh);s.projectiles.set(row.id,mesh);}mesh.position.set(row.x,row.y,row.z);const direction=new THREE.Vector3(row.vx,row.vy,row.vz);if(direction.lengthSq())mesh.quaternion.setFromUnitVectors(heavyForward,direction.normalize());}for(const [id,mesh] of s.projectiles)if(!liveProjectiles.has(id)){world.remove(mesh);s.projectiles.delete(id);}
+ // Evitam Sets i vectors temporals per cada impacte o estat rebut.
+ s.nativeProjectileIds??=new Set();s.nativeProjectileIds.clear();
+ s.nativeProjectileDirection??=new THREE.Vector3();
+ for(const row of state.combat.projectiles){
+   s.nativeProjectileIds.add(row.id);
+   let mesh=s.projectiles.get(row.id);
+   if(!mesh){mesh=new THREE.Mesh(row.splash?gHeavy:gLight,row.splash?mS:mW);mesh.scale.setScalar(row.splash?1:SMALL_ARMS_SCALE);world.add(mesh);s.projectiles.set(row.id,mesh);}
+   mesh.position.set(row.x,row.y,row.z);
+   const direction=s.nativeProjectileDirection.set(row.vx,row.vy,row.vz);
+   if(direction.lengthSq())mesh.quaternion.setFromUnitVectors(heavyForward,direction.normalize());
+ }
+ for(const [id,mesh] of s.projectiles)if(!s.nativeProjectileIds.has(id)){world.remove(mesh);s.projectiles.delete(id);}
  }
  if(s.appliedGrenades!==state.combat.grenades){
  s.appliedGrenades=state.combat.grenades;
- const liveGrenades=new Set();for(const row of state.combat.grenades){liveGrenades.add(row.id);let mesh=s.grenades.get(row.id);if(!mesh){mesh=row.weapon==='c4'?window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true):createGrenadeModel();world.add(mesh);s.grenades.set(row.id,mesh);}mesh.position.set(row.x,row.y,row.z);}for(const [id,mesh] of s.grenades)if(!liveGrenades.has(id)){world.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);s.grenades.delete(id);}
+ s.nativeGrenadeIds??=new Set();s.nativeGrenadeIds.clear();
+ for(const row of state.combat.grenades){
+   s.nativeGrenadeIds.add(row.id);
+   let mesh=s.grenades.get(row.id);
+   if(!mesh){mesh=row.weapon==='c4'?window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true):createGrenadeModel();world.add(mesh);s.grenades.set(row.id,mesh);}
+   mesh.position.set(row.x,row.y,row.z);
+ }
+ for(const [id,mesh] of s.grenades)if(!s.nativeGrenadeIds.has(id)){world.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);s.grenades.delete(id);}
  }
  if(s.appliedEffects!==state.combat.effects){
  s.appliedEffects=state.combat.effects;
