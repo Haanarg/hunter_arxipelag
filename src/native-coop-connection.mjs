@@ -4,11 +4,29 @@ import {GAME_VERSION} from './version.mjs?v=0.6.60';
 // Transport adapter for the original runtime. No scene, renderer or controls.
 export function createNativeCoopConnection({room,getInput,onRoom,onMission,onState,onStatus,onError,onAction,onInput,now=Date.now,WebSocketImpl=globalThis.WebSocket,origin=globalThis.location?.origin,setInputTimer=setInterval,clearInputTimer=clearInterval,setTimer=setTimeout,clearTimer=clearTimeout}){
  const url=new URL('/api/coop/socket',origin);url.protocol=url.protocol==='https:'?'wss:':'ws:';url.searchParams.set('room',room.id);
- let epoch=null,state=null,stateRevision=0,timer=null,sequence=0,prepared=null,readyRoom=false,published=false,lastMessage=0,lastPing=0,pingSequence=0,canProbe=false;
+ let epoch=null,state=null,stateRevision=0,timer=null,sequence=0,prepared=null,readyRoom=false,published=false,lastMessage=0,lastPing=0,pingSequence=0,canProbe=false,lastFrameAt=null;
  const stats={rttMs:null,rttJitterMs:0,serverTickMs:null,serverSaveMs:null,
    serverBroadcastMs:null,serverTick:null,stateFrames:0,stateBytes:0,
    avgStateGapMs:null,maxStateGapMs:0,lastStateAt:null,
-   fullStateFrames:0,deltaFrames:0,deltaProfile:{samples:0,averageChars:0,bySection:Object.create(null)}};
+   fullStateFrames:0,deltaFrames:0,deltaProfile:{samples:0,averageChars:0,bySection:Object.create(null)},
+   clientFrame:{samples:0,averageGapMs:null,maxGapMs:0,over33Ms:0,over50Ms:0}};
+ // Mesura la regularitat del fotograma al navegador, no el temps de
+ // CPU del Worker. Exclou canvis de pestanya i pauses >250 ms.
+ function noteFrame(active=true){
+   if(!active){lastFrameAt=null;return;}
+   const stamp=now();
+   if(lastFrameAt!==null){
+     const ms=stamp-lastFrameAt;
+     if(ms>=0&&ms<=250){
+       const f=stats.clientFrame;f.samples++;
+       f.averageGapMs=f.averageGapMs===null?ms:f.averageGapMs*.95+ms*.05;
+       f.maxGapMs=Math.max(f.maxGapMs,ms);
+       if(ms>33.34)f.over33Ms++;
+       if(ms>50)f.over50Ms++;
+     }
+   }
+   lastFrameAt=stamp;
+ }
  function noteState(bytes){
    const stamp=now();stats.stateFrames++;stats.stateBytes+=bytes||0;
    if(stats.lastStateAt!=null){
@@ -65,5 +83,5 @@ export function createNativeCoopConnection({room,getInput,onRoom,onMission,onSta
   socket.send({type:'native-ready',protocol:1,revision:room.revision,fingerprint:p.fingerprint});
  }
  function command(type,extra){if(!epoch||state?.status!=='running')return false;return socket.send({type,protocol:1,epoch,commandId:crypto.randomUUID(),...extra});}
- return {start:socket.start,stop:socket.stop,stats,prepare(p){prepared=p;if(readyRoom)publish(p);},combat:(weapon,power,seconds)=>command('combat',{weapon,...(weapon==='grenade'&&Number.isFinite(power)?{power}:{} ),...(weapon==='c4'&&Number.isInteger(seconds)?{seconds}:{})}),vehicle:(vehicleId,operation)=>command('vehicle',{vehicleId,operation}),door:(doorId,open)=>command('door',{doorId,open}),inventory:(operation,target)=>command('inventory',{operation,target})};
+ return {start:socket.start,stop:socket.stop,stats,noteFrame,prepare(p){prepared=p;if(readyRoom)publish(p);},combat:(weapon,power,seconds)=>command('combat',{weapon,...(weapon==='grenade'&&Number.isFinite(power)?{power}:{} ),...(weapon==='c4'&&Number.isInteger(seconds)?{seconds}:{})}),vehicle:(vehicleId,operation)=>command('vehicle',{vehicleId,operation}),door:(doorId,open)=>command('door',{doorId,open}),inventory:(operation,target)=>command('inventory',{operation,target})};
 }
