@@ -86,7 +86,7 @@ function sampleTrack(track,tick){
    ahead=Math.min(MAX_FORECAST_SECONDS,unbounded),s=track.speed,q=last.pose;
  return {target:{x:q.x+s.x*ahead,y:q.y+s.y*ahead,z:q.z+s.z*ahead,
    hd:q.hd+s.hd*ahead,...(finite(q.alt)?{alt:q.alt+s.alt*ahead}:{})},
-   mode:unbounded>MAX_FORECAST_SECONDS?'clamped':'extrapolated'};
+   mode:unbounded>=MAX_FORECAST_SECONDS-1e-6?'clamped':'extrapolated'};
 }
 function animateTrack(track,step,tick){
  const sample=sampleTrack(track,tick),q=sample.target,p=track.pose;
