@@ -68,11 +68,14 @@ async function startNativeCoop(room){
  }catch(error){stopNativeCoop();paused=true;msg=error.message;msgT=20;ui.show('coop');throw error;}
 }
 function nativeCoopFireWeapon(){
+ const row=cv&&nativeCoopSession?.appliedVehicleRows?.get(cv.saveId);
+ const passenger=!!row&&row.seats?.[0]!==nativeCoopSession.self;
+ if(passenger)return grenadeEquipped?'grenade':bazookaEquipped?'bazooka':sniperEquipped?'sniper':assaultRifleEquipped?'assault':cisallaEquipped?'cutters':knifeEquipped?'knife':'pistol';
  return cv?(cv.t==='heli'?'grenade':window.HUNTER_SHARED_WEAPONS.mountedWeapons[cv.t]):grenadeEquipped?'grenade':bazookaEquipped?'bazooka':sniperEquipped?'sniper':assaultRifleEquipped?'assault':cisallaEquipped?'cutters':knifeEquipped?'knife':'pistol';
 }
 function selectNativeCoopWeapon(id){
  const weapons={pistola:'pistol',arma:'pistol',ganivet:'knife',fusell_assalt:'assault',franctirador:'sniper',bazooka:'bazooka',cisalla:'cutters',granada:'grenade'},weapon=weapons[id];
- if(!weapon||!nativeCoopSession?.state||cv||swimming||hp<=0||(!['pistol','knife'].includes(weapon)&&!inv[id]))return false;
+ if(!weapon||!nativeCoopSession?.state||(cv&&nativeCoopSession.appliedVehicleRows?.get(cv.saveId)?.seats?.[0]===nativeCoopSession.self)||swimming||hp<=0||(!['pistol','knife'].includes(weapon)&&!inv[id]))return false;
  const sent=weapon==='grenade'||nativeCoopSession.channel.inventory('weapon',weapon);
  if(!sent)return false;
  cancelGrenadeCharge();cancelAssaultBurst();setSniperScope(false);grenadeEquipped=weapon==='grenade';
@@ -81,7 +84,7 @@ function selectNativeCoopWeapon(id){
 }
 function nativeCoopCommand(type,payload={}){
  const s=nativeCoopSession;if(!s?.state||s.state.status!=='running'||paused&&!['item','plant'].includes(type))return false;
- if(type==='fire'){const weapon=nativeCoopFireWeapon();return weapon?s.channel.combat(cv&&cv.t!=='heli'?'pistol':weapon):false;}
+ if(type==='fire'){const weapon=nativeCoopFireWeapon();return weapon?s.channel.combat(weapon):false;}
  if(type==='vehicle'){const v=cv||nearV();return v?s.channel.vehicle(v.saveId,cv?'exit':'enter'):false;}
  if(type==='item'){
   const map={arma:'pistol',fusell_assalt:'assault',franctirador:'sniper',bazooka:'bazooka',cisalla:'cutters',ganivet:'knife',granada:'grenade'};
