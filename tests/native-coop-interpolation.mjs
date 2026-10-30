@@ -97,4 +97,15 @@ stress.advance(.016);
 assert.strictEqual(stress.movingVehicles(),firstVehicleList,
  'No es creen llistes de trajectòries a cada fotograma');
 assert.equal(stress.actor('a'),null,'El jugador local mai no és interpolat');
+// Quan el servidor confirma que el company i el vehicle estan aturats,
+ // desapareixen les trajectòries després de completar la correcció:
+ // sense feina per fotograma per als objectes immòbils.
+const idle=createNativeCoopInterpolation();
+idle.receive(make(0),'a');
+idle.receive(make(3,.6,2),'a');
+idle.advance(.08);
+idle.receive(make(6,.6,2),'a');
+for(let i=0;i<40;i++)idle.advance(1/60);
+assert.equal(idle.stats.activeVehicles,0,'Vehicle aturat: sense trajectòria persistent');
+assert.equal(idle.stats.activePlayers,0,'Company aturat: sense trajectòria persistent');
 console.log('native coop interpolation: jitter 346ms, continuous visual pose, capped forecast, transitions, rotation and 374 vehicles passed');
