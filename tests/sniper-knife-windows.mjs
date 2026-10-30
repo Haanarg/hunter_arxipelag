@@ -33,6 +33,25 @@ const src=readFileSync(new URL('../src/combat.js',import.meta.url),'utf8');
 const scope=src.slice(src.indexOf('function sniperReticlePoint('),src.indexOf('function sniperShotVector('));
 assert.ok(scope.includes('if(t>=bestT)break;'),'sniper range sampling uses the valid local hit bound');
 assert.ok(!scope.includes('flight.fraction'),'zoom shot must not access a projectile that does not exist');
+// Executam el traçat real, amb la mira activa, sense cap flight preexistent.
+const scopedWorld={
+ P:{x:0,y:0,z:0},scopeYaw:0,
+ wallCandidates:()=>[],buildingCandidates:()=>[],
+ enemyCandidatesAt:()=>[],vehicleCandidatesAt:()=>[],
+ bunkerProjectileSurface:()=>-100,
+ THREE:{Vector3:class{constructor(x,y,z){this.x=x;this.y=y;this.z=z}}},
+ window:{HUNTER_BUILDING_SHELL:{wallShotHit:()=>null}}
+};
+const {runInNewContext}=await import('node:vm');
+const focusPoint=runInNewContext(scope+';sniperReticlePoint({dx:0,dy:0,dz:-1},120)',scopedWorld);
+assert.ok(Number.isFinite(focusPoint.z)&&focusPoint.z<-100,
+ 'a scoped sniper shot computes its target without throwing');
+scopedWorld.wallCandidates=()=>[{}];
+scopedWorld.window.HUNTER_BUILDING_SHELL.wallShotHit=()=>.25;
+const blocked=runInNewContext(scope+';sniperReticlePoint({dx:0,dy:0,dz:-1},120)',scopedWorld);
+assert.ok(blocked.z>-40&&blocked.z<-20,
+ 'the first obstacle limits the bullet even when the scope ray is longer');
+
 const server=readFileSync(new URL('../server/coop-combat.mjs',import.meta.url),'utf8');
 assert.ok(server.includes('knifeWindowHit(p,geometry().walls,2.8'),'server uses same knife collision');
 assert.ok(server.includes("effect('glass',tick,{actorId,at:pane.point"),'server broadcasts the broken pane');
