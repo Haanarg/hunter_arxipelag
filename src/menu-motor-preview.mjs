@@ -1,6 +1,6 @@
 // Prova aïllada: reutilitza la geometria, el cel, el mar i les palmeres del joc.
 import * as THREE from '../vendor/three-r186.module.mjs';
-import {createIslandLayout} from './world-generation-core.mjs';
+import {generateTerrainFoundation} from './world-generation-core.mjs';
 import {rawTerrainAt} from './world-physics.mjs';
 
 const stage=document.getElementById('vista');
@@ -57,20 +57,33 @@ async function init(){
     }
     if(!window.WebGLRenderingContext)throw new Error('WebGL no disponible');
     const seed=67,mapScale=1,size=4800,halfSize=size/2;
-    const layout=createIslandLayout(seed,mapScale);
-    const heightAt=(x,z)=>rawTerrainAt(x,z,layout.islands,seed,halfSize);
-    const focus=layout.base;
-    // Situa la càmera davant de la costa real, no sobre una imatge pre-renderitzada.
-    const choices=Array.from({length:24},(_,i)=>{
-      const a=i*Math.PI*2/24,r=focus.r*.98;
-      const x=focus.x+Math.cos(a)*r,z=focus.z+Math.sin(a)*r;
-      const h=heightAt(x,z);
-      return {x,z,a,score:h+Math.max(0,heightAt(x+Math.cos(a)*75,z+Math.sin(a)*75))*.15+
-        (Math.max(Math.abs(x),Math.abs(z))>halfSize-80?150:0)};
+    // Mateix emplaçament inicial que tria el generador del joc,
+    // no el centre geogràfic de l'illa ni un punt aleatori de la costa.
+    const foundation=generateTerrainFoundation({seed,mapScale});
+    const heightAt=(x,z)=>rawTerrainAt(x,z,foundation.islands,foundation.seed,halfSize);
+    const homeIsland=foundation.islands[0];
+    const targetX=foundation.baseCandidate.x,targetZ=foundation.baseCandidate.z;
+    const targetY=foundation.baseCandidate.h+8;
+    // Pla general en 3/4, elevat i allunyat. Prioritzam el costat amb mar
+    // i evitam situar la càmera fora del quadrat de joc.
+    const cameraDistance=900,cameraElevation=600;
+    const angles=[Math.PI/4,3*Math.PI/4,5*Math.PI/4,7*Math.PI/4];
+    const views=angles.map((yaw,index)=>{
+      const x=targetX+Math.cos(yaw)*cameraDistance;
+      const z=targetZ+Math.sin(yaw)*cameraDistance;
+      const nearX=targetX+(x-targetX)*.65,nearZ=targetZ+(z-targetZ)*.65;
+      const waterHere=heightAt(x,z)<-2?20:0;
+      const waterAhead=heightAt(nearX,nearZ)<-2?8:0;
+      const outside=Math.max(0,Math.abs(x)-(halfSize-140))+
+        Math.max(0,Math.abs(z)-(halfSize-140));
+      return {yaw,index,score:waterHere+waterAhead-outside*.2};
     });
-    choices.sort((a,b)=>a.score-b.score);
-    const coast=choices[0];
-    const cameraX=coast.x,cameraZ=coast.z;
+    views.sort((a,b)=>b.score-a.score||a.index-b.index);
+    const cameraYaw=views[0].yaw;
+    const cameraX=targetX+Math.cos(cameraYaw)*cameraDistance;
+    const cameraZ=targetZ+Math.sin(cameraYaw)*cameraDistance;
+    const cameraBaseY=Math.max(targetY+cameraElevation,heightAt(cameraX,cameraZ)+320);
+    const cameraTarget=new THREE.Vector3(targetX,targetY,targetZ);
     const visual={...window.HUNTER_VISUAL_CONFIG.mobile,
       pixelRatio:Math.min(1,window.devicePixelRatio||1),
       shadows:false,exposure:1.06,viewDistance:9500};
@@ -80,9 +93,8 @@ async function init(){
     renderer.setSize(innerWidth,innerHeight);
     renderer.domElement.setAttribute('aria-hidden','true');
     stage.append(renderer.domElement);
-    camera.position.set(cameraX,Math.max(26,heightAt(cameraX,cameraZ)+18),cameraZ);
-    const lookAt=new THREE.Vector3(focus.peakX,27,focus.peakZ);
-    camera.lookAt(lookAt);
+    camera.position.set(cameraX,cameraBaseY,cameraZ);
+    camera.lookAt(cameraTarget);
     // La cúpula i el sol són els mateixos de src/rendering.js.
     rendering.sunMesh.position.copy(camera.position).addScaledVector(rendering.sunDir,1800);
     rendering.glow.position.copy(rendering.sunMesh.position);
@@ -91,7 +103,7 @@ async function init(){
     });
     terrain=window.HUNTER_TERRAIN.create(THREE,{
       size,segments:64,heightAt,material:terrainMaterial,
-      startX:cameraX,startZ:cameraZ,quality:'mobile',shadows:false,parent:scene
+      startX:targetX,startZ:targetZ,quality:'mobile',shadows:false,parent:scene
     });
     water=window.HUNTER_WATER_SYSTEM.create(THREE,{
       scene,sunDir:rendering.sunDir,size,segments:160,initialSegments:160,
@@ -106,8 +118,8 @@ async function init(){
     const rnd=()=>{randomState=(Math.imul(randomState,1664525)+1013904223)>>>0;return randomState/4294967296};
     const random=(a,b)=>a+rnd()*(b-a);
     for(let i=0;i<185;i++){
-      const a=rnd()*Math.PI*2,r=focus.r*(.38+rnd()*.43);
-      const x=focus.x+Math.cos(a)*r,z=focus.z+Math.sin(a)*r,y=heightAt(x,z);
+      const a=rnd()*Math.PI*2,r=homeIsland.r*(.38+rnd()*.43);
+      const x=homeIsland.x+Math.cos(a)*r,z=homeIsland.z+Math.sin(a)*r,y=heightAt(x,z);
       if(y<3||y>24)continue;
       palms.push([x,y,z,1.1+rnd()*1.9,rnd()*Math.PI*2,Math.floor(rnd()*3)-1,(rnd()-.5)*.2]);
     }
@@ -116,9 +128,9 @@ async function init(){
       random
     });
     const plants=plantFactory.build({world:scene,palms,bushes,rocks,
-      playerX:cameraX,playerZ:cameraZ,lowQuality:true,lodProfile:'mobile'});
+      playerX:targetX,playerZ:targetZ,lowQuality:true,lodProfile:'mobile'});
     vegetation=plants.palms;
-    terrain.update(cameraX,cameraZ,3,camera);
+    terrain.update(targetX,targetZ,3,camera);
     const resize=()=>{
       renderer.setSize(innerWidth,innerHeight);
       camera.aspect=Math.max(.15,innerWidth/Math.max(1,innerHeight));
@@ -150,9 +162,12 @@ function startLoop(){
       const t=(now-startTime)/1000;
       water.update(t);
       const c=rendering.camera;
-      c.position.y+=Math.sin(t*.19)*.009;
-      terrain.update(c.position.x,c.position.z,1,c);
-      vegetation?.update(c.position.x,c.position.z);
+      // Oscil·lació molt subtil, sense deriva acumulativa ni perdre el focus.
+      c.position.set(cameraX+Math.sin(t*.06)*4,
+        cameraBaseY+Math.sin(t*.19)*1.1,cameraZ+Math.cos(t*.06)*4);
+      c.lookAt(cameraTarget);
+      terrain.update(targetX,targetZ,1,c);
+      vegetation?.update(targetX,targetZ);
       rendering.renderer.render(rendering.scene,c);
     }
     raf=requestAnimationFrame(frame);
