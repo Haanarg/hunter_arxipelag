@@ -42,8 +42,14 @@ function spawnBulletImpact(type,x,y,z,p){
   if(!world||!bulletImpactMaterials[type])return;
   const wound=type==='wound',blood=type==='blood'||wound,ricochet=type==='ricochet'||type==='glass',
         count=wound?9:blood?5:ricochet?10:7,
-        length=Math.max(.001,Math.hypot(p.vx,p.vy,p.vz)),
-        backX=-p.vx/length,backY=-p.vy/length,backZ=-p.vz/length;
+        // El servidor del cooperatiu anuncia vidres trencats sense un
+        // projectil visual local. En aquest cas conservam els fragments
+        // amb una direcció de reserva i evitam accedir a p.vx sobre null.
+        vx=Number.isFinite(p?.vx)?p.vx:0,
+        vy=Number.isFinite(p?.vy)?p.vy:0,
+        vz=Number.isFinite(p?.vz)?p.vz:1,
+        length=Math.max(.001,Math.hypot(vx,vy,vz)),
+        backX=-vx/length,backY=-vy/length,backZ=-vz/length;
   for(let n=0;n<count&&bulletImpacts.length<BULLET_IMPACT_LIMIT;n++){
     const mats=bulletImpactMaterials[type],
           geometry=blood?bulletBloodGeometry:ricochet?bulletRicochetGeometry:bulletSparkGeometry,
