@@ -185,6 +185,23 @@ stress.advance(.016);
 assert.strictEqual(stress.movingVehicles(),firstVehicleList,
  'No es creen llistes de trajectòries a cada fotograma');
 assert.equal(stress.actor('a'),null,'El jugador local mai no és interpolat');
+// El camí ràpid per índex conserva la correspondència d'ID quan el
+// servidor reordena llistes. El Map de reserva només es construeix en
+// els índexs realment desplaçats.
+stress.receive({missionId:'m',tick:6,status:'running',
+ players:[p('b',1.2),p('a',0)],
+ vehicles:fleet.map((row,i)=>i%20===0?{...row,x:row.x+5}:row).reverse()},'a');
+assert.equal(stress.stats.activeVehicles,19,
+ 'Reordenar la flota no ha de descartar cap trajectòria vàlida');
+assert(stress.actor('b'),'Reordenar els jugadors conserva la interpolació');
+stress.receive({missionId:'m',tick:9,status:'running',
+ players:[p('a',0),p('b',1.8)],
+ vehicles:fleet.filter(v=>v.id!=='v0')},'a');
+assert.equal(stress.stats.activeVehicles,18,
+ 'Eliminar un vehicle retira només la seva trajectòria');
+assert(!stress.movingVehicles().some(row=>row.id==='v0'),
+ 'La llista gràfica no conserva un vehicle eliminat');
+
 // Quan el servidor confirma que el company i el vehicle estan aturats,
  // desapareixen les trajectòries després de completar la correcció:
  // sense feina per fotograma per als objectes immòbils.
