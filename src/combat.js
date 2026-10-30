@@ -427,11 +427,22 @@ function boom(x,y,z,r,dmg,own,source=null){
   const d=Math.hypot(P.x-x,P.y+1-y,P.z-z),dealt=explosionDamage(dmg,d,r);
   if(dealt&&!blastOccluded(x,y,z,P.x,P.y+1,P.z)){
    const impulse=blastImpulseAt(x,z,P.x,P.z,r,1-d/r);
-   if(!playerFall){const flight=Math.max(1.5,.55+impulse.vy/8);
-    playerEject={kind:'blast',...impulse,t:flight,dur:flight,height:0,roll:rn(-1,1)<0?-1:1};
-    if(playerBlastRagdoll)window.HUNTER_RAGDOLL.reset(playerBlastRagdoll);
-    playerBlastRagdoll=window.HUNTER_RAGDOLL.make(pl,{
-      blast:true,impulse,seed:P.x*.41+P.z*.27});
+   if(!playerFall){
+    const flight=Math.max(1.5,.55+impulse.vy/8);
+    if(playerEject?.kind==='blast'&&playerEject.t>0){
+      // Una segona ona expansiva modifica la trajectòria actual, però
+      // no reinicia l'altura, la rotació ni l'animació del ragdoll.
+      playerEject.vx+=impulse.vx;
+      playerEject.vz+=impulse.vz;
+      playerEject.vy=Math.max(playerEject.vy,0)+impulse.vy;
+      playerEject.t=Math.max(playerEject.t,flight);
+      playerEject.dur=Math.max(playerEject.dur,playerEject.t);
+    }else{
+      playerEject={kind:'blast',...impulse,t:flight,dur:flight,height:0,roll:rn(-1,1)<0?-1:1};
+      if(playerBlastRagdoll)window.HUNTER_RAGDOLL.reset(playerBlastRagdoll);
+      playerBlastRagdoll=window.HUNTER_RAGDOLL.make(pl,{
+        blast:true,impulse,seed:P.x*.41+P.z*.27});
+    }
    }
    hurtP(dealt,own==='e',{type:'explosion',x,y,z});
   }
@@ -498,7 +509,7 @@ function executePlayerPlant(seconds=3){
 // impedint els atacs cos a cos quan ignoreBarbed=false.
 function sight(x,z,tx,tz,y,ignoreBarbed=true,targetY=y){const from={x,y,z},to={x:tx,y:targetY,z:tz},reach=Math.hypot(tx-x,tz-z)/2+3;for(const w of wallCandidates((x+tx)/2,(z+tz)/2,reach)){if(w.open||ignoreBarbed&&w.barbed)continue;if(window.HUNTER_BUILDING_SHELL.wallShotHit(from,to,w)!=null)return false}return true}
 function melee(){
- if(cv||swimming||fcd>0)return false;
+ if(playerEject||playerFall||cv||swimming||fcd>0)return false;
  fcd=.52;pl.userData.meleePose=pl.userData.knifeAttackDuration||.38;
  window.HUNTER_STEALTH.emit('knife',P.x,P.y+1,P.z);
  const pane=window.HUNTER_BUILDING_SHELL.knifeWindowHit(
@@ -512,7 +523,7 @@ function melee(){
     x:hit.x,y:hit.o.position.y+1.35,z:hit.z});
  snd('hurt',hit?.45:.18);setDis(false);return true;
 }
-function secondaryWeapon(){if(nativeCoopSession)return nativeCoopSession.channel?.combat('secondary');
+function secondaryWeapon(){if(playerEject||playerFall)return false;if(nativeCoopSession)return nativeCoopSession.channel?.combat('secondary');
   if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd),d45=Math.SQRT1_2;
   if(cv.t==='heli_combat'){if(cheats.items)cv.rockets=Math.max(cv.rockets||0,999);if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,COMBAT_BALANCE.weapons.heliMissile,10,'p',mS,2.4);Pj[Pj.length-1].life=3.3;msg='Míssils: '+cv.rockets;msgT=1;return true}
   if(cv.t==='llanxa_coets'){/* Munició infinita. */fcd=.9;
@@ -569,7 +580,7 @@ function grenadeAimStartIndex(points,origin=P){
   return points.findIndex((p,i)=>i>0&&p.y>=minHeight&&
     Math.hypot(p.x-origin.x,p.z-origin.z)>=minimumGap);
 }
-function beginGrenadeCharge(){
+function beginGrenadeCharge(){if(playerEject||playerFall)return false;
   if(grenadeCharge||over||paused||cv||swimming||playerFall||fcd>0||!grenadeEquipped||!inv.granada)return false;
   grenadeCharge={elapsed:0};
   return true;
@@ -652,7 +663,7 @@ function throwVehicleGrenade(){if(nativeCoopSession)return nativeCoopSession.cha
   return true;
 }
 function throwHelicopterGrenade(){return cv?.t==='heli'&&throwVehicleGrenade()}
-function throwGrenade(power=0){if(nativeCoopSession)return nativeCoopSession.channel?.combat('grenade',power);
+function throwGrenade(power=0){if(playerEject||playerFall)return false;if(nativeCoopSession)return nativeCoopSession.channel?.combat('grenade',power);
   if(over||cv||swimming||fcd>0||!grenadeEquipped||!inv.granada)return false;
   // Fixem el llançament quan s'allibera el botó perquè la predicció i
   // el punt de caiguda no canviïn durant l'animació de llançament.
@@ -1107,7 +1118,7 @@ function updateAssaultBurst(dt){
 }
 // La pistola personal és utilitzable només des dels vehicles oberts.
 const OPEN_RIDER_PISTOL=new Set(window.HUNTER_SHARED_WEAPONS.openRiderTypes);
-function executePlayerFire(){if(cisallaEquipped&&!cv)return cutBarbedWire();if(knifeEquipped&&!cv)return melee();if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
+function executePlayerFire(){if(playerEject||playerFall)return false;if(cisallaEquipped&&!cv)return cutBarbedWire();if(knifeEquipped&&!cv)return melee();if(over||swimming||fcd>0)return;const c=cv&&cv.t,hd=cv?cv.hd:P.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd);
 if(c=='tanc'||c=='tanqueta'){
   // El projectil segueix el canó real mentre la torreta gira: no
   // s'alinea artificialment amb l'objectiu en prémer Dispar.
