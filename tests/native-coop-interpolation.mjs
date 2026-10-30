@@ -47,6 +47,35 @@ close(stream.movingVehicles()[0].pose.x,beforeVehicleReceipt,
 stream.advance(1/60);
 assert(stream.actor('b').x>beforeReceipt,'La correcció tardana s’absorbeix progressivament');
 
+// Quan el servidor no pot fer cap enviament durant 774 ms,
+// passen 23 ticks. Abans aquest interval reiniciava TOTS els remots.
+const delayed=createNativeCoopInterpolation();
+const fast=(tick,x)=>({
+ ...make(tick,x/10,x),
+ vehicles:[{...v('air',x),t:'heli_combat',v:60}]
+});
+delayed.receive(fast(0,0),'a');
+delayed.receive(fast(3,10),'a');
+delayed.advance(.10);
+const airBefore=delayed.movingVehicles()[0].pose.x;
+const playerBefore=delayed.actor('b').x;
+delayed.receive(fast(26,55),'a');
+assert.equal(delayed.stats.maxTickGap,23,'Es registra el tall de 23 ticks');
+assert.equal(delayed.stats.longGapReceives,1,'Tall > 400 ms registrat, sense reiniciar');
+assert.equal(delayed.stats.gapResets,0,'Un tall de 774 ms no es confon amb reconnexió');
+assert.equal(delayed.stats.activeVehicles,1,'L’helicòpter ràpid no es tracta com a teletransport');
+assert.equal(delayed.stats.activePlayers,1,'El company conserva la interpolació');
+close(delayed.movingVehicles()[0].pose.x,airBefore,
+ 'La recepció tardana conserva la darrera pose visible de l’helicòpter',1e-9);
+close(delayed.actor('b').x,playerBefore,
+ 'La recepció tardana conserva la darrera pose visible del company',1e-9);
+delayed.advance(1/60);
+assert(delayed.movingVehicles()[0].pose.x>airBefore,
+ 'L’helicòpter recupera el moviment suaument');
+delayed.receive(fast(120,100),'a');
+assert.equal(delayed.stats.gapResets,1,'Una desconnexió de més de dos segons sí reinicia el buffer');
+assert.equal(delayed.movingVehicles().length,0,'No es prediuen trajectòries a partir de dades molt antigues');
+
 // El gir prop de +/- PI ha de seguir el camí curt sense gir complet.
 const turns=createNativeCoopInterpolation();
 turns.receive(make(0,0,0,{heading:Math.PI*179/180,playerHeading:Math.PI*179/180}),'a');
