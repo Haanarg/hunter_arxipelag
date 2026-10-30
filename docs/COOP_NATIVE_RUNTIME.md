@@ -1,5 +1,15 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
+
+## Ampliació 0.6.57: diagnòstic de xarxa i comprovació automàtica
+
+Aquesta fase conserva el buffer de 150–200 ms i els límits de predicció ja documentats. S'ha afegit un perfil lleuger dels deltes a `src/native-coop-connection.mjs`: `fullStateFrames`, `deltaFrames` i `deltaProfile` (`samples`, `averageChars`, `bySection`). S'analitza aproximadament 1 de cada 16 missatges, sense afectar el protocol ni la simulació. Les mides són caràcters JSON aproximats, no bytes de xarxa.
+
+La prova `tests/native-coop-network-jitter.mjs` simula 10 Hz de snapshots i 60 FPS de render durant vuit segons amb dos patrons de jitter. Verifica absència de salts en recepció, reversions, límits de velocitat visual i proporció d'extrapolació. Una regressió separada comprova els comptadors del perfil. La CI `.github/workflows/coop-regression.yml` s'executa després de canvis de sincronització i inclou integració amb el runtime original i verificació del bundle.
+
+Per a la prova real: recopilar `window.HUNTER_COOP_NETWORK_STATS` de tots dos clients, sobretot `remoteInterpolation.activeFrames`, `extrapolatedFrames`, `bufferDelayMs`, `maxTickGap`, `fullStateFrames`, `deltaFrames` i `deltaProfile`. Fer recorreguts a peu, conducció i passatger. **Pendent:** prova presencial, desplegament Cloudflare, GPU i profiling de CPU; cap millora visual real no està certificada.
+
+
 ## Tercera telemetria real i inici del buffer adaptatiu · 31-10-2026
 
 La prova posterior a 0.6.55 redueix el RTT a 46,37 ms (abans 67,17), jitter a 12,31 ms (abans 17,60), interval mitjà d'estats a 99,84 ms (abans 108,40) i màxim a 190 ms (abans 774). Hi ha 1.222 estats i 10.658.437 bytes totals (8,72 KB/estat), un teleport, 2 recepcions llargues, 2 reinicis per discontinuïtat i un salt màxim de 777 ticks a investigar. Els valors `activePlayers=0`/`activeVehicles=0` només descriuen la captura. **Important:** `forecastFrames=9273` entre `samples=12738` no demostra una extrapolació del 72,8%: la implementació anterior compta cada frame amb qualsevol trajectòria activa com a «forecast», incloent interpolacions ordinàries. Cal corregir els comptadors abans d'interpretar-los.
