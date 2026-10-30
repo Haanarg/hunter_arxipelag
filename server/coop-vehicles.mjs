@@ -35,8 +35,8 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
    else if(!v)code='UNKNOWN_VEHICLE';
    else if(v.destroyed)code='DESTROYED';
    else if(msg.operation==='exit'){
-    if(!v.seats.includes(actorId))code='NOT_SEATED';else if(Math.abs(v.v)>.2)code='MOVING';else if(!(exit=exitPoint(v,p)))code='EXIT_BLOCKED';
-    else{v.seats[v.seats.indexOf(actorId)]=null;v.v=0;inputs.delete(actorId);ok=true;code='EXITED';}
+    if(!v.seats.includes(actorId))code='NOT_SEATED';else if(!(exit=exitPoint(v,p)))code='EXIT_BLOCKED';
+    else{v.seats[v.seats.indexOf(actorId)]=null;inputs.delete(actorId);ok=true;code='EXITED';}
    }else if(mounted(actorId))code='ALREADY_SEATED';
    else if(distance(p,v)>(meta.mode==='native'?(vehicleSpecs.radii[v.t]||0)+5:3.5)||Math.abs(p.y-v.y)>(['proving','world','native'].includes(meta.mode)?5:1.2))code='TOO_FAR';
    else if(!walkClear(p,v))code='BLOCKED';
