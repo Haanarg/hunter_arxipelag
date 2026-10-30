@@ -1,5 +1,14 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
+## Tercera telemetria real i inici del buffer adaptatiu · 31-10-2026
+
+La prova posterior a 0.6.55 redueix el RTT a 46,37 ms (abans 67,17), jitter a 12,31 ms (abans 17,60), interval mitjà d'estats a 99,84 ms (abans 108,40) i màxim a 190 ms (abans 774). Hi ha 1.222 estats i 10.658.437 bytes totals (8,72 KB/estat), un teleport, 2 recepcions llargues, 2 reinicis per discontinuïtat i un salt màxim de 777 ticks a investigar. Els valors `activePlayers=0`/`activeVehicles=0` només descriuen la captura. **Important:** `forecastFrames=9273` entre `samples=12738` no demostra una extrapolació del 72,8%: la implementació anterior compta cada frame amb qualsevol trajectòria activa com a «forecast», incloent interpolacions ordinàries. Cal corregir els comptadors abans d'interpretar-los.
+
+**Pla de treball i acceptació:** veure [sisena optimització al pla COOP_REBUILD](COOP_REBUILD.md#sisena-optimitzacio--buffer-temporal-adaptatiu-de-remots-31-10-2026). Buffer per tick de 150–200 ms ajustat a irregularitat, extrapolació excepcional <=120 ms, protecció de canvis d'estat i retorn de proves reals amb dos navegadors. Els canvis del client no han de tocar l'autoritat del servidor ni la predicció del pilot local. Revisar la mida de deltes només després de separar cost de xarxa de cost de renderitzat.
+
+**Estat:** documentat; implementació i tests de la nova fase en curs. No s'ha demostrat encara una millora visual ni s'ha verificat el desplegament.
+
+
 ## Dades del segon test real i recuperació de talls > 400 ms · 0.6.55
 
 Segona telemetria rebuda (mateix context cooperatiu): RTT 67,17 ms, jitter 17,60 ms, interval mitjà entre estats 108,40 ms, **màxim 774 ms**, 662 missatges de contingut d'estat i 6.046.228 caràcters acumulats (~9,1 KB per missatge); `remoteInterpolation.clampedFrames=958`, `forecastFrames=9664`, `resets=3`, `teleports=0`, `activePlayers=0`, `activeVehicles=0` a l'instant de la captura. Els dos zeros d'entitats actives poden ser normals si estan aturades; els comptadors de fotogrames són acumulatius i no constitueixen ni FPS ni un nombre de talls de connexió. L'alt valor de `maxStateGapMs` no identifica tot sol si el retard s'ha produït al client, a la xarxa o al servidor.
