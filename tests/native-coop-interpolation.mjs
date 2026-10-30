@@ -140,6 +140,36 @@ assert.equal(transitions.actor('b'),null,'Represa amb buffer net');
 transitions.receive(make(27,1008,508,{mission:'another'}),'a');
 assert.equal(transitions.actor('b'),null,'Nova missió amb buffer net');
 
+// Un paquet fora d'ordre no pot esborrar el buffer ni fer tornar enrere
+// les poses. La revisió de la sala es valida a la capa de transport.
+const reorderedPackets=createNativeCoopInterpolation();
+reorderedPackets.receive(make(0),'a');
+reorderedPackets.receive(make(3,.6,2),'a');
+reorderedPackets.advance(.05);
+const beforeStale=reorderedPackets.actor('b').x;
+const oldReceives=reorderedPackets.stats.receives;
+reorderedPackets.receive(make(2,.2,1),'a');
+assert.equal(reorderedPackets.stats.staleReceives,1,
+ 'Es comptabilitza un snapshot antic rebut a la mateixa missió');
+assert.equal(reorderedPackets.stats.receives,oldReceives,
+ 'El snapshot antic no es publica com a estat nou');
+close(reorderedPackets.actor('b').x,beforeStale,
+ 'El paquet fora d’ordre no desplaça el company',1e-9);
+reorderedPackets.receive(make(6,1.2,4),'a');
+assert.equal(reorderedPackets.stats.activePlayers,1,
+ 'La trajectòria continua després del paquet antic');
+
+// Passar de conductor a passatger al MATEIX vehicle també canvia
+// l'ancoratge visual del personatge i no s'ha d'interpolar a peu.
+const seatChange=createNativeCoopInterpolation();
+seatChange.receive(make(0,0,0,{seats:['b',null]}),'a');
+seatChange.receive(make(3,.5,2,{seats:['b',null]}),'a');
+seatChange.advance(.05);
+assert(seatChange.actor('b'),'El pilot remot té trajectòria abans del canvi');
+seatChange.receive(make(6,1,4,{seats:[null,'b']}),'a');
+assert.equal(seatChange.actor('b'),null,
+ 'El canvi de seient dins del vehicle es presenta immediatament');
+
 // Tots dos modes comparteixen el món, però només es calculen trajectòries
 // pels vehicles realment actualitzats (19/374 en aquest cas).
 const fleet=Array.from({length:374},(_,i)=>v('v'+i,i*3));
