@@ -1,5 +1,16 @@
 # Reconstrucció del multijugador sobre el joc original
 
+## Setena optimització — reducció de CPU/GC sense canviar el protocol (0.6.58)
+
+S'ha implementat una millora preventiva sense necessitat de prova física amb dos clients, pendent de confirmació visual:
+
+- **Render de remots:** reaprofitament dels objectes de pose temporal de cadascuna de les trajectòries de company i vehicles. Cap objecte nou per entitat/fotograma a `sampleTrack`, cerca dels snapshots més recents primer. Mantenim el retard adaptatiu 150–200 ms, els teleports instantanis, les correccions acotades i el pilot local fora del buffer.
+- **Comparació d'estats:** reducció del nombre d'iteracions, Sets i Maps en arrays amb IDs (`src/coop-state-delta.mjs`). El delta JSON i el resultat de reconstrucció es conserven. La consulta d'IDs especials és segura davant propietats heretades.
+- **Observabilitat:** `speedLimitedFrames` i `maxRenderErrorM` al diagnòstic d'interpolació. Juntament amb `deltaProfile` i `extrapolatedFrames / activeFrames`, permeten distingir problema de sincronització, correcció visual i cost del trànsit.
+- **Regressions:** s'ha afegit la suite `tests/coop-state-delta.mjs` a la CI, amb estrès de 374 vehicles, 377 enemics, reordenaments, eliminacions i identificadors especials.
+
+Dues mesures sintètiques orientatives al mateix motor JavaScript: 455→390 ms en 594 passos de render amb 374 vehicles; 454→391 ms per 140 comparacions de grans estats. **No equivalen a FPS reals ni validació de Cloudflare.** Les proves pures passen; verificació completa de la CI, despliegament i dos navegadors reals pendents. El Worker continua sent autoritatiu, amb la mateixa cadència de ticks i persistència.
+
 ## Sisena optimització — buffer temporal adaptatiu de remots (31-10-2026)
 
 **Prova real 3 (abans del canvi):** RTT 46,37 ms, jitter 12,31 ms, snapshots cada 99,84 ms de mitjana, màxim 190 ms; `stateFrames=1222`, `stateBytes=10658437` (~8,72 KB/estat), `maxTickGap=777`, `longGapReceives=2`, `gapResets=2`, `teleports=1`, `clampedFrames=92`, `forecastFrames=9273`, `samples=12738`. `activePlayers=0` i `activeVehicles=0` són comptadors instantanis i no permeten deduir quantes entitats s'han animat durant tota la partida. Els comptadors d'interpolació són acumulats, no FPS; la xifra antiga de 72,8% de `forecastFrames/samples` **no és una taxa real d'extrapolació**, perquè el comptador antic augmentava sempre que una trajectòria estava activa.
