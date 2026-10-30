@@ -16,6 +16,14 @@ const frame=(tick,mutate=()=>{})=>{
 };
 const near=(value,expected,epsilon=.001)=>assert(Math.abs(value-expected)<=epsilon,
  `Valor ${value} fora de ${expected} ± ${epsilon}`);
+// Igual que els deltes reals, els registres estàtics mantenen identitat.
+const retained=createNativeCoopInterpolation();
+const retainedStart=frame(0);
+retained.receive(retainedStart,'a');
+retained.receive({...retainedStart,tick:3,
+ combat:{targets:[...retainedStart.combat.targets]}},'a');
+assert.equal(retained.stats.activeEnemies,0,
+ 'Cap trajectòria si els 377 registres conserven la referència');
 const system=createNativeCoopInterpolation();
 system.receive(frame(0),'a');
 assert.equal(system.stats.activeEnemies,0,'Els soldats inicials no es mouen');
