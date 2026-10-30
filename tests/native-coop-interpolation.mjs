@@ -56,6 +56,9 @@ const afterGap=stream.actor('b').x;
 assert(afterGap>at100ms,'El company no es congela en superar 100 ms');
 for(let i=0;i<4;i++)stream.advance(.09);
 assert(stream.stats.clampedFrames>0,'La previsió queda limitada durant un tall llarg');
+assert(stream.stats.bufferUnderruns>0,'Els talls reals de buffer es registren');
+assert.equal(stream.stats.extrapolatedFrames,stream.stats.forecastFrames,
+ 'Cap frame interpolat no es classifica com a previsió');
 const beforeReceipt=stream.actor('b').x;
 stream.receive(make(12,3.6,16), 'a');
 close(stream.actor('b').x,beforeReceipt,
@@ -92,6 +95,8 @@ close(delayed.actor('b').x,playerBefore,
 delayed.advance(1/60);
 assert(delayed.movingVehicles()[0].pose.x>airBefore,
  'L’helicòpter recupera el moviment suaument');
+assert(delayed.movingVehicles()[0].pose.x-airBefore<2.1,
+ 'La recuperació de 774 ms no aplica un salt visual en un frame a 60 FPS');
 delayed.receive(fast(120,100),'a');
 assert.equal(delayed.stats.gapResets,1,'Una desconnexió de més de dos segons sí reinicia el buffer');
 assert.equal(delayed.movingVehicles().length,0,'No es prediuen trajectòries a partir de dades molt antigues');
