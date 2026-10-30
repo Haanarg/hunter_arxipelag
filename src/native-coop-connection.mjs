@@ -8,7 +8,7 @@ export function createNativeCoopConnection({room,getInput,onRoom,onMission,onSta
  const stats={rttMs:null,rttJitterMs:0,serverTickMs:null,serverSaveMs:null,
    serverBroadcastMs:null,serverTick:null,stateFrames:0,stateBytes:0,
    avgStateGapMs:null,maxStateGapMs:0,lastStateAt:null,
-   fullStateFrames:0,deltaFrames:0,deltaProfile:{samples:0,averageChars:0,bySection:{}}};
+   fullStateFrames:0,deltaFrames:0,deltaProfile:{samples:0,averageChars:0,bySection:Object.create(null)}};
  function noteState(bytes){
    const stamp=now();stats.stateFrames++;stats.stateBytes+=bytes||0;
    if(stats.lastStateAt!=null){
@@ -53,9 +53,9 @@ export function createNativeCoopConnection({room,getInput,onRoom,onMission,onSta
      return;
    }
    if(data.type==='room'){readyRoom=!!data.room?.allReady&&data.room.revision===room.revision;onRoom?.(data.room);if(readyRoom&&prepared&&!published)publish(prepared);}
-   else if(data.type==='native-mission'){if(!data.meta?.id||!Array.isArray(data.state?.players)||!data.state.players.some(p=>p.id===data.self))throw Error('Missió invàlida');if(epoch!==data.meta.id)sequence=0;epoch=data.meta.id;state=data.state;stateRevision=data.stateRevision??0;canProbe=data.telemetry===1;sequence=Math.max(sequence,state.players.find(p=>p.id===data.self)?.acknowledged||0);noteState(bytes);onMission(data);}
-   else if(data.type==='state'&&data.state?.missionId===epoch){state=data.state;noteState(bytes);onState(data.state);}
-   else if(data.type==='state-delta'&&data.missionId===epoch){if(data.baseRevision!==stateRevision||data.revision!==stateRevision+1)throw Error('Cal resincronitzar');state=applyCoopDelta(state,data.delta);stateRevision=data.revision;noteState(bytes);onState(state);}
+   else if(data.type==='native-mission'){if(!data.meta?.id||!Array.isArray(data.state?.players)||!data.state.players.some(p=>p.id===data.self))throw Error('Missió invàlida');if(epoch!==data.meta.id)sequence=0;epoch=data.meta.id;state=data.state;stateRevision=data.stateRevision??0;canProbe=data.telemetry===1;stats.fullStateFrames++;sequence=Math.max(sequence,state.players.find(p=>p.id===data.self)?.acknowledged||0);noteState(bytes);onMission(data);}
+   else if(data.type==='state'&&data.state?.missionId===epoch){state=data.state;stats.fullStateFrames++;noteState(bytes);onState(data.state);}
+   else if(data.type==='state-delta'&&data.missionId===epoch){if(data.baseRevision!==stateRevision||data.revision!==stateRevision+1)throw Error('Cal resincronitzar');state=applyCoopDelta(state,data.delta);stateRevision=data.revision;stats.deltaFrames++;noteState(bytes);profileDelta(data.delta,bytes);onState(state);}
    else if(data.type==='action'){onAction?.(data);}
    else if(data.type==='error'||data.type==='ended'){if(data.type==='ended'){state=null;epoch=null;}onError?.(data.message);}
   }});
