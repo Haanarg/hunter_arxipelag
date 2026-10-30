@@ -12,6 +12,15 @@ if(root&&menu){
   world.id='menuWorldVista';
   world.setAttribute('aria-hidden','true');
   root.prepend(world);
+  // Document independent: terrain.js declara constants globals que el joc
+  // torna a declarar en carregar el bundle. Mai els executam al mateix window.
+  const background=document.createElement('iframe');
+  background.src='menu-background.html';
+  background.title='Paisatge 3D animat de l’arxipèlag';
+  background.tabIndex=-1;
+  background.setAttribute('aria-hidden','true');
+  background.loading='eager';
+  world.append(background);
 
   const logo=existing('brandTitle');
   const description=logo.nextElementSibling;
