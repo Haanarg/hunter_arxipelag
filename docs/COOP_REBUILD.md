@@ -1,5 +1,12 @@
 # Reconstrucció del multijugador sobre el joc original
 
+## Novena optimització — reutilitzar la codificació de WebSocket (0.6.60)
+
+- El servidor comparteix el JSON d'un delta entre els dos WebSockets **només si la baseline i la revisió coincideixen**. S'elimina una serialització redundant habitual per broadcast, sense compartir revisions ni canviar el protocol, el model de física o el checkpoint.
+- L'enviament continua sent per socket i només s'actualitza la seva baseline si l'enviament ha tingut èxit. Davant d'una fallada temporal de només un jugador, la revisió de l'altre no retrocedeix.
+- Nova regressió `tests/coop-broadcast-encoding.mjs` incorporada a `.github/workflows/coop-regression.yml`. Ha passat en execució aïllada amb les dependències de delta. Les primeres execucions GitHub Actions posteriors a aquest canvi han fallat sense runner assignat ni passos iniciats, de manera que no es poden presentar com a validació completa.
+- Versió del client i servidor 0.6.60. Verificar que la publicació de Cloudflare (Pages + Worker) coincideix abans de provar amb dos jugadors; pendent la suite Node completa i la millora perceptiva real.
+
 ## Vuitena optimització — estabilitzar l'ordre i les transicions (0.6.59)
 
 Primer bloc implementat sense prova física amb dos jugadors:
