@@ -28,7 +28,7 @@ buffered.advance(.08);
 buffered.receive(make(6,1.8,8),'a');
 assert(buffered.stats.bufferDelayMs>150&&buffered.stats.bufferDelayMs<=200,
  'Jitter d’arribada fa adaptar el buffer dins 150–200 ms');
-buffered.advance(.19);
+buffered.advance(.095);buffered.advance(.095);
 buffered.receive(make(12,3.6,16),'a');
 assert.equal(buffered.stats.gapResets,0,'190 ms de separació no reinicien el buffer');
 
