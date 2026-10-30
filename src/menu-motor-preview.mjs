@@ -2,8 +2,22 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {generateTerrainFoundation} from './world-generation-core.mjs';
 import {prepareMenuBase,drawMenuBase} from './menu-base-scene.mjs';
-import {rawTerrainAt} from './world-physics.mjs';
 
+const scenes=Object.freeze([
+  {id:'1',seed:94,yaw:45,name:'Equilibrat'},
+  {id:'2',seed:148,yaw:135,name:'Més mar'},
+  {id:'3',seed:230,yaw:45,name:'Més palmeres'},
+  {id:'4',seed:175,yaw:225,name:'Panoràmica d’illes'}
+]);
+const selectedId=new URLSearchParams(location.search).get('scene');
+const selectedScene=scenes.find(v=>v.id===selectedId)||scenes[0];
+const scenePicker=document.getElementById('scenePicker');
+scenePicker.value=selectedScene.id;
+scenePicker.addEventListener('change',()=>{
+  const url=new URL(location.href);
+  url.searchParams.set('scene',scenePicker.value);
+  location.assign(url.toString());
+});
 const stage=document.getElementById('vista');
 const status=document.getElementById('status');
 const toggle=document.getElementById('toggleAnimation');
@@ -57,7 +71,7 @@ async function init(){
       await loadClassic('./src/'+path);
     }
     if(!window.WebGLRenderingContext)throw new Error('WebGL no disponible');
-    const seed=67,mapScale=1,size=4800,halfSize=size/2;
+    const seed=selectedScene.seed,mapScale=1,size=4800,halfSize=size/2;
     // Mateix emplaçament inicial que tria el generador del joc,
     // no el centre geogràfic de l'illa ni un punt aleatori de la costa.
     const foundation=generateTerrainFoundation({seed,mapScale});
@@ -66,35 +80,17 @@ async function init(){
     const homeIsland=foundation.islands[0];
     const targetX=foundation.baseCandidate.x,targetZ=foundation.baseCandidate.z;
     const targetY=base.plan.height+4;
-    // Enquadrament 3/4 més proper i centrat al pati real de la base.
-    // No basta allunyar la càmera de la vora: també hem d'evitar que
-    // miri cap al límit del quadrat del món, sobretot en horitzontal.
+    // Vista 3/4 més pròxima, escollida per a cada llavor perquè s'hi
+    // vegi aigua i vegetació sense apuntar cap al límit del món.
     const cameraTarget=new THREE.Vector3(targetX,targetY,targetZ);
+    const cameraYaw=selectedScene.yaw*Math.PI/180;
     let cameraX,cameraZ,cameraBaseY;
     const chooseMenuCamera=()=>{
       const portrait=innerWidth<innerHeight;
-      const distance=portrait?430:590;
-      const elevation=portrait?270:340;
-      const inwardLength=Math.hypot(targetX,targetZ)||1;
-      const horizonDistance=1500,edgeMargin=470,cameraMargin=330;
-      const angles=[Math.PI/4,3*Math.PI/4,5*Math.PI/4,7*Math.PI/4];
-      const candidates=angles.map((yaw,index)=>{
-        const dx=Math.cos(yaw),dz=Math.sin(yaw);
-        const x=targetX+dx*distance,z=targetZ+dz*distance;
-        // Punt que queda darrere la base, dins el camp visual.
-        const aheadX=targetX-dx*horizonDistance;
-        const aheadZ=targetZ-dz*horizonDistance;
-        const edgeRisk=Math.max(0,Math.abs(aheadX)-(halfSize-edgeMargin))+
-          Math.max(0,Math.abs(aheadZ)-(halfSize-edgeMargin));
-        const cameraRisk=Math.max(0,Math.abs(x)-(halfSize-cameraMargin))+
-          Math.max(0,Math.abs(z)-(halfSize-cameraMargin));
-        const inward=(-dx*(-targetX)-dz*(-targetZ))/inwardLength;
-        const seaBonus=heightAt(x,z)<-2?8:0;
-        return {index,yaw,x,z,score:inward*35+seaBonus-edgeRisk-cameraRisk};
-      });
-      candidates.sort((a,b)=>b.score-a.score||a.index-b.index);
-      const chosen=candidates[0];
-      cameraX=chosen.x;cameraZ=chosen.z;
+      const distance=portrait?375:520;
+      const elevation=portrait?235:300;
+      cameraX=targetX+Math.cos(cameraYaw)*distance;
+      cameraZ=targetZ+Math.sin(cameraYaw)*distance;
       cameraBaseY=Math.max(targetY+elevation,
         heightAt(cameraX,cameraZ)+elevation*.85);
     };
