@@ -5,7 +5,7 @@ import {prepareMenuBase,drawMenuBase} from './menu-base-scene.mjs';
 
 const scenes=Object.freeze([
   {id:'1',seed:94,yaw:45,name:'Equilibrat'},
-  {id:'2',seed:148,yaw:135,name:'Més mar'},
+  {id:'2',seed:148,yaw:135,name:'Més mar',southShift:90},
   {id:'3',seed:230,yaw:45,name:'Més palmeres'},
   {id:'4',seed:175,yaw:225,name:'Panoràmica d’illes'}
 ]);
@@ -80,9 +80,12 @@ async function init(){
     const homeIsland=foundation.islands[0];
     const targetX=foundation.baseCandidate.x,targetZ=foundation.baseCandidate.z;
     const targetY=base.plan.height+4;
-    // Vista 3/4 més pròxima, escollida per a cada llavor perquè s'hi
-    // vegi aigua i vegetació sense apuntar cap al límit del món.
-    const cameraTarget=new THREE.Vector3(targetX,targetY,targetZ);
+    // La llavor 148 trasllada la càmera cap al sud (+Z).
+    // Enquadram també una mica al sud-oest per fer pujar la base a la
+    // pantalla sense descentrar-la horitzontalment en mòbils estrets.
+    const southShift=selectedScene.southShift||0;
+    const cameraTarget=new THREE.Vector3(
+      targetX-southShift*.73,targetY,targetZ+southShift);
     const cameraYaw=selectedScene.yaw*Math.PI/180;
     let cameraX,cameraZ,cameraBaseY;
     const chooseMenuCamera=()=>{
@@ -90,7 +93,7 @@ async function init(){
       const distance=portrait?375:520;
       const elevation=portrait?235:300;
       cameraX=targetX+Math.cos(cameraYaw)*distance;
-      cameraZ=targetZ+Math.sin(cameraYaw)*distance;
+      cameraZ=targetZ+Math.sin(cameraYaw)*distance+southShift;
       cameraBaseY=Math.max(targetY+elevation,
         heightAt(cameraX,cameraZ)+elevation*.85);
     };
