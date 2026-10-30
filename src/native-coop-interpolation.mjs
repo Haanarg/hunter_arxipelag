@@ -39,7 +39,7 @@ function updateTrack(track,before,after,dt,maxSpeed){
  // No modificam track.pose aquí: el fotograma anterior és l'ancoratge
  // visual continu, fins i tot si el paquet arriba abans d'acabar l'interval.
 }
-function animateTrack(track,dt,forecast){
+function animateTrack(track,dt){
  const t=1-Math.exp(-dt/SMOOTH_SECONDS),p=track.pose,q=track.to,s=track.speed;
  const ahead=Math.min(MAX_FORECAST_SECONDS,track.age);
  p.x=lerp(p.x,q.x+s.x*ahead,t);
@@ -47,13 +47,13 @@ function animateTrack(track,dt,forecast){
  p.z=lerp(p.z,q.z+s.z*ahead,t);
  p.hd=angle(p.hd,q.hd+s.hd*ahead,t);
  if(finite(q.alt))p.alt=lerp(finite(p.alt)?p.alt:q.alt,q.alt+s.alt*ahead,t);
- if(forecast&&ahead>0)forecast();
+ 
 }
 export function createNativeCoopInterpolation(){
- let current=null,self=null,vehicles=new Map(),players=new Map();
+ let current=null,self=null,vehicles=new Map(),players=new Map(),vehicleOutput=[];
  const stats={samples:0,receives:0,teleports:0,resets:0,activeVehicles:0,
   clampedFrames:0,forecastFrames:0,activePlayers:0};
- function reset(){current=null;self=null;vehicles.clear();players.clear();
+ function reset(){current=null;self=null;vehicles.clear();players.clear();vehicleOutput=[];
   stats.activeVehicles=0;stats.activePlayers=0;stats.resets++;}
  function receive(state,localId){
   if(!state||!Number.isInteger(state.tick)){reset();return}
@@ -63,7 +63,7 @@ export function createNativeCoopInterpolation(){
   const sameTick=!!same&&state.tick===old.tick;
   if(!newer&&!sameTick){
    if(old)stats.resets++;
-   current=state;self=localId;vehicles.clear();players.clear();
+   current=state;self=localId;vehicles.clear();players.clear();vehicleOutput=[];
    stats.activeVehicles=0;stats.activePlayers=0;stats.receives++;return;
   }
   current=state;self=localId;
@@ -109,23 +109,30 @@ export function createNativeCoopInterpolation(){
   }
   for(const id of players.keys())if(!livePlayers.has(id))players.delete(id);
   stats.activeVehicles=vehicles.size;stats.activePlayers=players.size;
+  // Només reconstruir la llista de render quan entra un estat nou,
+  // mai en el bucle de 60 FPS.
+  vehicleOutput=[...vehicles].map(([id,track])=>({id,pose:track.pose}));
   stats.receives++;
  }
  function advance(dt,running=true){
   if(!current||!running)return 1;
   const step=Math.max(0,Math.min(.1,dt));
-  let forecasted=false;
+  let forecasted=false,clamped=false;
   for(const track of vehicles.values()){
-   track.age+=step;animateTrack(track,step,()=>{forecasted=true});
+   track.age+=step;
+   if(track.age>MAX_FORECAST_SECONDS)clamped=true;
+   if(track.age>0)forecasted=true;
+   animateTrack(track,step);
   }
   for(const track of players.values()){
-   track.age+=step;animateTrack(track,step,()=>{forecasted=true});
+   track.age+=step;
+   if(track.age>MAX_FORECAST_SECONDS)clamped=true;
+   if(track.age>0)forecasted=true;
+   animateTrack(track,step);
   }
   if(forecasted)stats.forecastFrames++;
-  // La previsió visual no pot créixer més de 120 ms sense paquets nous:
-  // quan s'esgota, els objectes s'aturen en lloc d'escapar-se del servidor.
-  if([...vehicles.values(),...players.values()].some(t=>t.age>MAX_FORECAST_SECONDS))
-   stats.clampedFrames++;
+  // Després de 120 ms sense dades la velocitat extrapolada queda limitada.
+  if(clamped)stats.clampedFrames++;
   return 1;
  }
  function actor(id){
@@ -134,8 +141,8 @@ export function createNativeCoopInterpolation(){
   stats.samples++;return track.pose;
  }
  function movingVehicles(){
-  stats.samples+=vehicles.size;
-  return [...vehicles].map(([id,track])=>({id,pose:track.pose}));
+  stats.samples+=vehicleOutput.length;
+  return vehicleOutput;
  }
  return {receive,advance,actor,movingVehicles,reset,stats};
 }
