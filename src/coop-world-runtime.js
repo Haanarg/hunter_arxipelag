@@ -110,6 +110,8 @@ function updateNativeCoopFrame(dt){
  if(!actor)return;
  if(projecting){
    s.interpolation??=window.HUNTER_CREATE_NATIVE_INTERPOLATION?.();
+   if(s.channel?.stats&&s.interpolation&&!s.channel.stats.remoteInterpolation)
+     s.channel.stats.remoteInterpolation=s.interpolation.stats;
    s.interpolation?.receive(state,s.self);
    s.projectedActor=actor;hp=actor.hp;
    kills=state.combat.targets.reduce((count,e)=>count+(e.hp<=0),0);
