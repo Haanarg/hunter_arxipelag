@@ -12,6 +12,8 @@
 4. Millorar diagnòstic: `bufferDelayMs`, `interpolatedFrames`, `extrapolatedFrames`, `bufferUnderruns`, `clampedFrames` i `maxTickGap`; comptar previsions només si realment hi ha extrapolació. Diferenciar interval d'arribada, salt de ticks i reset de missió.
 5. Fer regressions pures (10–20 Hz, jitter, pausa de 190/346/774 ms, angles ±π, 374 vehicles, canvis de seient, pilot local), integració amb runtime natiu i dues sessions reals. Mesurar separat suavitat visual, latència percebuda i CPU; revisar si es poden eliminar camps duplicats dels ~8,72 KB/estat sense perdre consistència de deltes ni persistència.
 
+**Estat implementat a 0.6.56:** primer buffer per ticks i visualització amb rellotge remot compartit al client, extrapolació comptabilitzada correctament, tests de regressió afegits i versió/cache actualitzats. Cal executar les proves Node i amb dos usuaris, perfilar el resultat real i revisar el volum d'estats abans de considerar aquesta fase tancada. El servidor i la predicció local no s'han modificat en aquesta fase.
+
 **Criteris de prova, no garanties:** RTT/jitter mantenir o millorar; ritme d'estats estable (10 Hz inicialment; 20 Hz només si càrrega/transport ho permeten), cap teleport fals; extrapolacions genuïnes <10% dels fotogrames amb objectes actius en condicions normals; intervals de recepció normalment <150 ms. La dada `serverTickMs=0` no equival a cost nul: el temps de CPU del Durable Object requereix profiling separat. No pujar la freqüència del servidor fins a demostrar que el buffer funciona.
 
 
