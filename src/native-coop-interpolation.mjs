@@ -234,6 +234,9 @@ export function createNativeCoopInterpolation(){
      if(row.hp<=0||!before||before.hp<=0){
        enemies.delete(id);continue;
      }
+     // Els deltes preserven la referència de soldats intactes: el cas
+     // habitual no necessita crear dues poses ni efectuar cap càlcul.
+     if(before===row&&!track)continue;
      const a=enemyPose(before),b=enemyPose(row);
      if(!safe(a,b,dt,15)){
        if(poseChanged(a,b))stats.teleports++;
