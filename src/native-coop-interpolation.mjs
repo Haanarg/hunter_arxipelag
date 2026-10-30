@@ -204,7 +204,8 @@ export function createNativeCoopInterpolation(){
      if(mode==='interpolated')buffered=true;
      if(mode==='extrapolated'||mode==='clamped')forecasted=true;
      if(mode==='clamped')clamped=true;
-     if(track.stillTicks>=6&&track.age>=0&&
+     if((track.stillTicks>=6||track.age>.22)&&
+       track.speed.x===0&&track.speed.y===0&&track.speed.z===0&&
        distance(track.pose,track.to)<SETTLE_METRES&&
        Math.abs(wrapAngle(track.pose.hd-track.to.hd))<.012){
        vehicles.delete(id);pruned=true;
@@ -216,7 +217,8 @@ export function createNativeCoopInterpolation(){
      if(mode==='interpolated')buffered=true;
      if(mode==='extrapolated'||mode==='clamped')forecasted=true;
      if(mode==='clamped')clamped=true;
-     if(track.stillTicks>=6&&
+     if((track.stillTicks>=6||track.age>.22)&&
+       track.speed.x===0&&track.speed.y===0&&track.speed.z===0&&
        distance(track.pose,track.to)<SETTLE_METRES&&
        Math.abs(wrapAngle(track.pose.hd-track.to.hd))<.012)
        players.delete(id);
