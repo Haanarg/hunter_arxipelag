@@ -88,6 +88,21 @@ try{
   assert.equal(channel.stats.deltaFrames,14,'Es compten deltes, no tot com a snapshot complet');
   assert.equal(channel.stats.deltaProfile.samples,1,'Mostreig cada 16 paquets');
   assert(channel.stats.deltaProfile.bySection.tick>0,'El perfil compta la secció tick');
+  // Mostreig de ritme real del render: no depèn de dt clamped del joc.
+  channel.noteFrame();
+  now+=16;channel.noteFrame();
+  now+=40;channel.noteFrame();
+  now+=60;channel.noteFrame();
+  assert.equal(channel.stats.clientFrame.samples,3);
+  assert.equal(channel.stats.clientFrame.maxGapMs,60);
+  assert.equal(channel.stats.clientFrame.over33Ms,2);
+  assert.equal(channel.stats.clientFrame.over50Ms,1);
+  channel.noteFrame(false);now+=3000;channel.noteFrame();
+  assert.equal(channel.stats.clientFrame.samples,3,
+   'Canviar de pestanya no compta com a frame de 3 segons');
+  now+=16;channel.noteFrame();
+  assert.equal(channel.stats.clientFrame.samples,4);
+
   channel.stop();
   // Un frontend nou no pot enviar sondes a un Worker antic: en aquell
   // protocol els paquets desconeguts provocarien un tancament 1008.
