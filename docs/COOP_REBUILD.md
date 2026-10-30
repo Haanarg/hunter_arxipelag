@@ -154,3 +154,13 @@ S'ha observat càmera local fluida però company i vehicles remots a batzegades.
 La correcció de `src/native-coop-interpolation.mjs` preserva la darrera pose dibuixada, reacciona als estats nous sense saltar al punt d'inici del tram anterior, i continua moviment breument en una previsió **exclusivament visual** limitada a 120 ms. Les correccions tenen límit de moviment per fotograma i es mantenen els reinicis obligatoris per teletransport, mort, reanimació, canvi de seient, pausa o missió. No es toca la predicció del pilot local ni la física del servidor. Es retiren trajectòries immòbils i s'eviten reconstruccions de llistes cada fotograma. Les noves mètriques `remoteInterpolation` estan exposades a la consola juntament amb les de transport.
 
 Prova pura superada amb pauses de 346 ms, moviments/girs, esdeveniments i 374 vehicles; regressió del motor original actualitzada. **Pendent:** desplegament verificat, suite Node completa i nova prova comparativa amb dos navegadors.
+
+### Ajust de la recuperació de xarxa segons la segona telemetria (v0.6.55)
+
+La segona prova real ha mesurat RTT ~67 ms, jitter ~18 ms, snapshots cada ~108 ms però un tall màxim de **774 ms**. S'han comptat 958 fotogrames amb previsió visual limitada i 3 reinicis acumulats de l'interpolador; no són necessàriament tres desconnexions.
+
+S'ha corregit una regla que reiniciava les trajectòries si la separació temporal de snapshots superava **12 ticks (400 ms)**. El nou buffer conserva la pose dibuixada per separacions de fins a 60 ticks i determina si un vehicle ha fet un salt real segons temps i velocitat (màxim 90 m de tolerància en les recuperacions). Continuen les excepcions per grans teleports, morts, canvis de seient, pausa i altres discontinuïtats, i la previsió sense autoritat resta limitada a 120 ms. La prova de 23 ticks amb helicòpter ràpid supera ara la verificació aïllada.
+
+S'han afegit els comptadors `remoteInterpolation.maxTickGap`, `longGapReceives` i `gapResets` per comparar talls en temps real amb ticks del servidor. Els temps de CPU a zero no són concloents perquè Cloudflare congela `Date.now()/performance.now()` durant càlculs sense I/O (documentació oficial de performance Workers); per mesurar CPU cal perfilat de producció.
+
+El canvi s'ha incorporat al paquet 0.6.55, mantenint canvis recents del mode individual. Pendent revisió a dos navegadors reals després de desplegar, suite Node completa i mesura de la regularitat del Durable Object.
