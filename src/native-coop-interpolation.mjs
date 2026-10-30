@@ -121,7 +121,7 @@ function animateTrack(track,step,tick){
  return mode;
 }
 export function createNativeCoopInterpolation(){
- let current=null,self=null,vehicles=new Map(),players=new Map(),vehicleOutput=[];
+ let current=null,self=null,vehicles=new Map(),players=new Map(),vehicleOutput=[],receiveGeneration=0;
  let elapsed=0,lastArrival=null,renderTick=null,jitterSeconds=0,delayTicks=BASE_DELAY_SECONDS*RATE;
  const stats={samples:0,receives:0,teleports:0,resets:0,activeVehicles:0,
    clampedFrames:0,forecastFrames:0,activePlayers:0,
@@ -165,10 +165,18 @@ export function createNativeCoopInterpolation(){
    }
    current=state;self=localId;
    const dt=Math.max(1/RATE,tickGap/RATE);
-   const oldVehicles=new Map(old.vehicles.map(row=>[row.id,row]));
-   const liveVehicles=new Set();
-   for(const row of state.vehicles){
-     const before=oldVehicles.get(row.id),id=row.id,track=vehicles.get(id);
+   // Els deltes mantenen normalment l'ordre original de les entitats.
+   // Comparar primer pel mateix índex evita indexar 374 vehicles amb un
+   // Map nou a cada snapshot de 100 ms. Si hi ha reordenació, usem un
+   // índex de reserva construït una sola vegada per recepció.
+   const generation=++receiveGeneration;
+   let oldVehicles=null,oldPlayers=null;
+   for(let i=0;i<state.vehicles.length;i++){
+     const row=state.vehicles[i],id=row.id,
+       previous=old.vehicles[i],
+       before=previous?.id===id?previous:
+         (oldVehicles??=new Map(old.vehicles.map(v=>[v.id,v]))).get(id),
+       track=vehicles.get(id);
      if(row.destroyed||before?.destroyed||!safe(before,row,dt,80)){
        if(before&&poseChanged(before,row)&&!row.destroyed)stats.teleports++;
        vehicles.delete(id);continue;
@@ -178,14 +186,18 @@ export function createNativeCoopInterpolation(){
        if(track)updateTrack(track,before,row,dt,80,old.tick,state.tick,true);
        else vehicles.set(id,makeTrack(before,row,dt,80,old.tick,state.tick));
      }else if(track&&newer)updateTrack(track,before,row,dt,80,old.tick,state.tick,false);
-     liveVehicles.add(id);
+     const live=vehicles.get(id);
+     if(live)live.receivedAt=generation;
    }
-   for(const id of vehicles.keys())if(!liveVehicles.has(id))vehicles.delete(id);
-   const oldPlayers=new Map(old.players.map(p=>[p.id,p]));
-   const livePlayers=new Set();
-   for(const row of state.players){
-     if(row.id===localId)continue;
-     const before=oldPlayers.get(row.id),id=row.id,track=players.get(id);
+   // Recol·lecta només els tracks actius que no han aparegut al nou estat.
+   for(const [id,track] of vehicles)
+     if(track.receivedAt!==generation)vehicles.delete(id);
+   for(let i=0;i<state.players.length;i++){
+     const row=state.players[i];if(row.id===localId)continue;
+     const id=row.id,previous=old.players[i],
+       before=previous?.id===id?previous:
+         (oldPlayers??=new Map(old.players.map(p=>[p.id,p]))).get(id),
+       track=players.get(id);
      const compatible=!!before&&before.hp>0&&row.hp>0&&
        sameSeat(old.vehicles,id)===sameSeat(state.vehicles,id);
      if(!compatible||!safe(before,row,dt,15)){
@@ -197,9 +209,11 @@ export function createNativeCoopInterpolation(){
        if(track)updateTrack(track,before,row,dt,15,old.tick,state.tick,true);
        else players.set(id,makeTrack(before,row,dt,15,old.tick,state.tick));
      }else if(track&&newer)updateTrack(track,before,row,dt,15,old.tick,state.tick,false);
-     livePlayers.add(id);
+     const live=players.get(id);
+     if(live)live.receivedAt=generation;
    }
-   for(const id of players.keys())if(!livePlayers.has(id))players.delete(id);
+   for(const [id,track] of players)
+     if(track.receivedAt!==generation)players.delete(id);
    if(renderTick===null&&(players.size||vehicles.size))renderTick=old.tick;
    stats.activeVehicles=vehicles.size;stats.activePlayers=players.size;
    vehicleOutput=[...vehicles].map(([id,track])=>({id,pose:track.pose}));
