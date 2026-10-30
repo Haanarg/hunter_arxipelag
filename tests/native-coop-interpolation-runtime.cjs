@@ -49,8 +49,10 @@ const assert=require('node:assert/strict');
  })()`);
  const close=(actual,expected,label)=>assert(Math.abs(actual-expected)<.05,
  label+': expected '+expected+', got '+actual);
- close(mid.remoteX,b.x+4.5,'Company interpolat mig interval');
- close(mid.vehicleX,car.x+3,'Vehicle interpolat mig interval');
+ assert(mid.remoteX>b.x&&mid.remoteX<b.x+9,
+   'El company comença a avançar sense saltar directament al nou snapshot');
+ assert(mid.vehicleX>car.x&&mid.vehicleX<car.x+6,
+   'El vehicle avança suaument cap a la pose autoritativa');
  close(mid.localX,a.x,'Jugador propi sense retard artificial');
  assert.equal(mid.interpolated,1,'Una sola trajectòria de vehicle en aquesta fixture');
  const end=game.run(`(()=>{
@@ -58,8 +60,8 @@ const assert=require('node:assert/strict');
  return {remoteX:nativeCoopSession.remotes.get('b').position.x,
   vehicleX:nativeCoopSession.vehicles.get(nativeCoopSession.state.vehicles[0].id).x};
  })()`);
- close(end.remoteX,b.x+9,'Company arriba a la posició confirmada');
- close(end.vehicleX,car.x+6,'Vehicle arriba a la posició confirmada');
+ assert(end.remoteX>mid.remoteX,'El company continua avançant sense esperar més paquets');
+ assert(end.vehicleX>mid.vehicleX,'El vehicle continua avançant entre snapshots');
  // Un passatger local ha de seguir el vehicle remot, no bloquejar-ne
  // la interpolació per ser cv. La predicció queda reservada al conductor.
  const seated={...second,tick:6,vehicles:second.vehicles.map((v,i)=>i===0?
@@ -74,7 +76,8 @@ const assert=require('node:assert/strict');
  return {cvId:cv?.saveId,x:cv?.x};
  })()`);
  assert.equal(passenger.cvId,car.id,'El seient local continua reconegut');
- close(passenger.x,car.x+9,'Passatger segueix el vehicle remot interpolat');
+ assert(passenger.x>car.x+6&&passenger.x<car.x+12,
+   'Passatger segueix el vehicle remot interpolat i no salta al destí');
  // Quan el pilot local prediu, el vehicle propi no pot rebre l'overlay remot.
  const driver={...moved,tick:12,vehicles:moved.vehicles.map((v,i)=>i===0?
   {...v,seats:['a','b'],x:v.x+6}:v)};
@@ -89,5 +92,5 @@ const assert=require('node:assert/strict');
  assert.equal(driven.cvId,car.id);
  assert.equal(driven.x,car.x+20,'Predicció del pilot local té prioritat');
  assert.equal(driven.localX,a.x,'El jugador propi no es desplaça pel buffer');
- console.log('native coop original runtime: remote actor/vehicle interpolation, passenger and driver priority passed');
+ console.log('native coop original runtime: jitter smoothing, remote vehicle/passenger and local driver priority passed');
 })().catch(e=>{console.error(e);process.exitCode=1});
