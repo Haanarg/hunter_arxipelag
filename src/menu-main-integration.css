@@ -7,6 +7,7 @@
     max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))!important;
 }
 #menuWorldVista{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+#menuWorldVista iframe{position:absolute;inset:0;display:block;width:100%;height:100%;border:0;pointer-events:none;background:transparent}
 #menuWorldVista canvas{position:absolute;inset:0;width:100%;height:100%;opacity:0;
   transition:opacity .35s ease;display:block}
 #menuWorldVista.ready canvas{opacity:1}
