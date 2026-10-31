@@ -22,6 +22,9 @@ npm run test:coop:integration
 
 **Estat de verificació aquí:** els tests purs d'interpolació (incloses 377 entitats), jitter i deltes, més el test instrumentat del caché de predicció i els nous comptadors de fotograma, han passat en execucions JavaScript aïllades. No s'ha executat aquesta bateria completa de Node 22 ni les proves amb motor GPU en aquesta sessió. La sintaxi de les fonts principals es va comprovar aïlladament. Cal evitar declarar els tests integrats com a superats fins a executar-los.
 
+
+**Comprovació del runtime 0.6.61:** s'ha reconstruït el paquet clàssic `dist/hunter-runtime.4ead270bcf958f1c.js` incorporant el contingut **exacte** de `src/coop-world-runtime.js` (inclosa la interpolació visual de soldats, les cames i les optimitzacions de projectils). S'ha verificat el hash FNV64, la correspondència exacta del mòdul dins el paquet i la sintaxi de tot el script agrupat. No s'ha executat l'ordre completa `node tools/build-runtime.cjs --check` ni una prova de navegador amb GPU.
+
 ## Diagnòstic quan hi hagi dos navegadors
 
 Copiar a cada participant el contingut de:
