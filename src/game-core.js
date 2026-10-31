@@ -2482,6 +2482,10 @@ function grantAllWeapons(){
 }
 function setCheat(key,enabled){
   if(!Object.hasOwn(cheats,key))return;
+  if(nativeCoopSession){
+    if(nativeCoopSession.room?.host!==nativeCoopSession.self)return false;
+    return nativeCoopSession.channel?.cheat?.(key,!!enabled)??false;
+  }
   cheats[key]=!!enabled;
   if(key==='items'&&enabled){grantAllWeapons();revealMapPickup('mapa_heli',true);revealMapPickup('mapa_tanc',true)}
   if(key==='fly'){cheatFlightY=enabled?P.y:null;if(enabled){cv=null;playerFall=null;playerEject=null;swimming=false}}
@@ -2683,9 +2687,9 @@ const ui=window.HUNTER_UI.create({
   resumeButton:document.getElementById('resumeButton'),
   minimap,
   getState:({nearVehicle=cv?null:nearV()}={})=>({
-    coop:nativeCoopSession?.state?{health:nativeCoopSession.state.players.find(p=>p.id!==nativeCoopSession.self)?.hp,status:nativeCoopSession.state.status}:null,autosave:operationAutosave?.state(),started:!!started,hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
+    coop:nativeCoopSession?.state?{health:nativeCoopSession.state.players.find(p=>p.id!==nativeCoopSession.self)?.hp,status:nativeCoopSession.state.status,host:nativeCoopSession.room?.host===nativeCoopSession.self}:null,autosave:operationAutosave?.state(),started:!!started,hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
     inventory:inv,itemTypes:IT,player:P,nearVehicle,optionalAction:!cv&&nearestPlayerDoor()?{kind:'door',label:playerDoorLabel(nearestPlayerDoor()),icon:window.HUNTER_ACTION_ICONS.door}:getOptionalAction(),messageTime:msgT,message:msg,
-    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,hqIntel:{stage:hqIntelStage,investigated:hqIntelSectors.size,remaining:hqMapKnown?1:hqIntelSites.length-(MAP_SCALE===2?hqIntelDiscarded.size:(hqIntelStage>=2?1:0)),confirmed:hqMapKnown},palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,muted,cheats:{...cheats},stealthDebug:window.HUNTER_STEALTH.enabled(),stealthLayers:window.HUNTER_STEALTH.layers(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
+    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,hqIntel:{stage:hqIntelStage,investigated:hqIntelSectors.size,remaining:hqMapKnown?1:hqIntelSites.length-(MAP_SCALE===2?hqIntelDiscarded.size:(hqIntelStage>=2?1:0)),confirmed:hqMapKnown},palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,muted,cheats:nativeCoopSession?.state?.cheats||{...cheats},stealthDebug:window.HUNTER_STEALTH.enabled(),stealthLayers:window.HUNTER_STEALTH.layers(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
   }),
   actions:{
     resume:()=>{if(!started){ui.hide();return}if(!operationBusy)resume()},
