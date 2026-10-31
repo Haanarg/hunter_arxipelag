@@ -167,6 +167,59 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       from:origin,to:aim,hit:null});
     return true;
   }
+  // El general conserva la resposta de la partida individual: 60 m de
+  // detecció, trets de pistola i reculada només dins del soterrani.
+  function stepNativeGeneral(unit,tick){
+    if(meta.mode!=='native'||unit.t!=='general')return false;
+    if(tick>=(unit.nextSenseTick||0)){
+      unit.nextSenseTick=tick+3;
+      const eye={x:unit.x,y:unit.y+2.2,z:unit.z},
+        level=world().locomotionAt(unit.x,unit.z,unit.y);
+      const contacts=visiblePlayers().filter(p=>p.hp>0&&!p.fall)
+        .flatMap(p=>{
+          const other=world().locomotionAt(p.x,p.z,p.y);
+          if(Math.hypot(p.x-unit.x,p.z-unit.z)>60||
+             !!level.basement!==!!other.basement||
+             level.basement&&Math.abs(p.y-unit.y)>4.4)return [];
+          const aim={x:p.x,y:p.y+1.5,z:p.z};
+          if(traceArena(eye,aim,geometry(),world(),{ignoreBarbed:true,ignoreVegetation:true,wallCandidates:traceWallCandidates(eye,aim)}).fraction<.999)return [];
+          return [{p,aim,d:Math.hypot(p.x-unit.x,p.z-unit.z)}];
+        }).sort((a,b)=>a.d-b.d||a.p.id.localeCompare(b.p.id));
+      const contact=contacts.find(c=>c.p.id===unit.focus)||contacts[0];
+      unit.focus=contact?.p.id||null;
+      unit.canSee=!!contact;unit.state=contact?'attack':'patrol';
+      unit.generalAim=contact?.aim||null;
+    }
+    if(!unit.canSee)return true;
+    const actor=visiblePlayers().find(p=>p.id===unit.focus&&p.hp>0);
+    if(!actor)return true;
+    unit.heading=facePoint(unit,actor);
+    const d=Math.hypot(actor.x-unit.x,actor.z-unit.z);
+    if(d<36&&d>.1&&unit.sp>0&&tick%3===0){
+      const old={x:unit.x,y:unit.y,z:unit.z,hd:unit.heading},
+        candidate={x:unit.x+(unit.x-actor.x)/d*unit.sp*.1,
+          z:unit.z+(unit.z-actor.z)/d*unit.sp*.1,y:unit.y,hd:unit.heading},
+        support=world().locomotionAt(candidate.x,candidate.z,unit.y),
+        resolved=world().resolveBody(old,candidate);
+      if((!world().locomotionAt(unit.x,unit.z,unit.y).basement||support.basement)&&
+         Math.abs(resolved.x-candidate.x)<.08&&Math.abs(resolved.z-candidate.z)<.08&&
+         Math.abs(support.floor-unit.y)<.9){
+        unit.x=candidate.x;unit.z=candidate.z;unit.y=support.floor+.06;
+      }
+    }
+    if(d>(unit.rng||60)||tick<(unit.nextAttackTick||0))return true;
+    const eye={x:unit.x,y:unit.y+2.2,z:unit.z},
+      aim={x:actor.x,y:actor.y+1.5,z:actor.z};
+    if(traceArena(eye,aim,geometry(),world(),{ignoreBarbed:true,ignoreVegetation:true,wallCandidates:traceWallCandidates(eye,aim)}).fraction<.999)return true;
+    const direction=enemyAccuracy.direction(meta.difficulty||1,'pistol',
+      aim.x-eye.x,aim.y-eye.y,aim.z-eye.z,roll),
+      id='general-shot-'+(++sequence);
+    projectiles.push(launchProjectile(eye,direction,70,
+      {id,actorId:unit.id,enemy:true,weapon:'pistol',dmg:unit.dmg??combatBalance.weapons.pistol}));
+    unit.nextAttackTick=tick+Math.ceil((unit.rate||.8)*30);
+    effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,weapon:'pistol',from:eye,to:aim,hit:null});
+    return true;
+  }
   function nativeSoldierStep(unit,tick){
     const contact=senseNativeSoldier(unit,{players:visiblePlayers(),inventory,mounted:id=>vehicles.mounted(id),world:world(),visibleAim:nativeSoldierAim,tick});
     if(!contact)return unit.state!=='patrol';
@@ -468,6 +521,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       if(t.hp<=0){t.state='dead';t.focus=null;continue;}
       if(stepNativePatrolVehicle(t,tick))continue;
       if(stepNativeTower(t,tick))continue;
+      if(stepNativeGeneral(t,tick))continue;
       const nativeSoldier=meta.mode==='native'&&t.t==='soldat';
       if(nativeSoldier){
         nativeSoldierStep(t,tick);
