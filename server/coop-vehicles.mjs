@@ -19,14 +19,41 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
  const mounted=id=>vehicles.find(v=>!v.destroyed&&v.seats.includes(id));
  function position(actor){const v=mounted(actor.id);return v?{x:v.x,y:v.y,z:v.z,hd:v.hd,hp:actor.hp,fall:null,swimming:false}:null;}
  function walkClear(from,to){let previous=from;const steps=Math.max(1,Math.ceil(distance(from,to)/.2));for(let i=1;i<=steps;i++){const q={...to,x:from.x+(to.x-from.x)*i/steps,z:from.z+(to.z-from.z)*i/steps},resolved=world().resolveBody(previous,q);if(distance(q,resolved)>1e-5)return false;previous=q;}return true;}
- function exitPoint(v,actor){for(const side of [1,-1])for(const back of [0,2.8,-2.8]){
-   const offset=['proving','world','native'].includes(meta.mode)?Math.max(2.6,(vehicleSpecs.hitboxes[v.t]?.[0]||2)*vehicleSpecs.scales[v.t]/2+1.8):2.6;
-   const q={...actor,x:v.x+Math.cos(v.hd)*side*offset-Math.sin(v.hd)*back,z:v.z-Math.sin(v.hd)*side*offset-Math.cos(v.hd)*back,y:v.y};
-   if(q.x<meta.bounds.x0||q.x>meta.bounds.x1||q.z<meta.bounds.z0||q.z>meta.bounds.z1||players().some(p=>p.id!==actor.id&&!mounted(p.id)&&distance(p,q)<1.6))continue;
-   if(['proving','world','native'].includes(meta.mode)&&vehicleDynamics.types[v.t].m==='a'&&v.y>Math.max(0,world().heightAt(v.x,v.z))+1.5)continue;
-   if(['proving','world','native'].includes(meta.mode)&&world().heightAt(q.x,q.z)<-.5){return {...q,y:water.surfaceAt(q.x,q.z,0)+.1};}
-   const r=world().resolveBody(q,q),s=world().locomotionAt(q.x,q.z,q.y);if(distance(q,r)<1e-5&&walkClear(v,q)&&!s.interior&&!s.drop&&Math.abs(s.floor-q.y)<.25)return {...q,y:s.floor+.06};
- }return null;}
+ function exitPoint(v,actor){
+   // Sortida segura: comprovar el lloc exterior al casc, no un recorregut
+   // artificial des del CENTRE del vehicle, que travessa el seu propi volum.
+   const scale=vehicleSpecs.scales[v.t]||1,box=vehicleSpecs.hitboxes[v.t]||[2,4],
+     halfWidth=box[0]*scale/2,halfLength=box[1]*scale/2,
+     native=meta.mode==='native',waterType=['w','wl'].includes(vehicleDynamics.types[v.t].m);
+   for(const side of [1,-1])for(const back of [0,-1.7,1.7,-3.4,3.4]){
+     const offset=(native?halfWidth+1.65:Math.max(2.6,halfWidth+1)),
+       q={...actor,
+         x:v.x+Math.cos(v.hd)*side*offset-Math.sin(v.hd)*back,
+         z:v.z-Math.sin(v.hd)*side*offset-Math.cos(v.hd)*back,
+         y:v.y};
+     if(q.x<meta.bounds.x0+1||q.x>meta.bounds.x1-1||
+        q.z<meta.bounds.z0+1||q.z>meta.bounds.z1-1||
+        players().some(p=>p.id!==actor.id&&!mounted(p.id)&&distance(p,q)<1.6))continue;
+     if(['proving','world','native'].includes(meta.mode)&&
+       vehicleDynamics.types[v.t].m==='a'&&v.y>Math.max(0,world().heightAt(v.x,v.z))+1.5)continue;
+     const support=world().locomotionAt(q.x,q.z,q.y),ground=world().heightAt(q.x,q.z);
+     if(ground<-.5&&!support.interior&&support.floor<-.5){
+       if(waterType||native)return {...q,y:water.surfaceAt(q.x,q.z,0)+.1};
+       continue;
+     }
+     if(support.drop||support.interior||Math.abs(support.floor-q.y)>Math.max(2.5,halfWidth))continue;
+     const target={...q,y:support.floor+.06},
+       resolved=world().resolveBody(target,target);
+     if(distance(resolved,target)>1e-5)continue;
+     // La zona al costat del vehicle és lliure; mai fer walkClear(v,q),
+     // perquè travessaria una paret quan el cotxe és aparcat arran d'ella.
+     if(vehicles.some(other=>other!==v&&!other.destroyed&&
+         Math.abs(other.y-target.y)<3&&
+         distance(other,target)<Math.max(1.6,(vehicleSpecs.hitboxes[other.t]?.[0]||2)*(vehicleSpecs.scales[other.t]||1)/2+.75)))continue;
+     return target;
+   }
+   return null;
+ }
  function command(actorId,msg){
   const cached=results.find(r=>r.actorId===actorId&&r.commandId===msg.commandId);if(cached)return {...cached,duplicate:true};
   const p=players().find(p=>p.id===actorId),v=vehicles.find(v=>v.id===msg.vehicleId);let code='INVALID',ok=false,exit=null;
