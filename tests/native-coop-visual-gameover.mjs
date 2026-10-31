@@ -25,9 +25,9 @@ const document={
  body:{appendChild(node){panels.push(node);}}
 };
 let stopped=0,closed=0;
-const show=new Function('document','scopeActive','setSniperScope','cancelGrenadeCharge','stopNativeCoop','ui',
+const show=new Function('document','scopeActive','setSniperScope','cancelGrenadeCharge','stopNativeCoop','ui','paused',
  runtime.slice(start,end)+'\nreturn showNativeCoopGameOver;')(
- document,false,()=>{},()=>{},()=>{stopped++},{show:()=>{closed++}});
+ document,false,()=>{},()=>{},()=>{stopped++},{show:()=>{closed++}},false);
 const session={};
 show(session,{phase:'relay',players:[{hp:0},{hp:25}]});
 assert.equal(panels.length,0,'Downed player can still be revived');
