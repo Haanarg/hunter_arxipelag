@@ -10,7 +10,7 @@
   "scripts": {
     "build": "node tools/build-runtime.cjs",
     "check:build": "node tools/build-runtime.cjs --check",
-    "test:coop:offline": "node tests/native-coop-interpolation.mjs && node tests/native-coop-network-jitter.mjs && node tests/native-coop-enemy-interpolation.mjs && node tests/native-coop-prediction-cache.mjs && node tests/native-coop-vehicle-candidates.mjs && node tests/native-coop-wall-candidates.mjs && node tests/coop-state-delta.mjs && node tests/native-coop-delta-transport.mjs && node tests/coop-broadcast-encoding.mjs && node tests/coop-transport-telemetry.mjs && node tools/build-runtime.cjs --check",
+    "test:coop:offline": "node tests/native-coop-interpolation.mjs && node tests/native-coop-network-jitter.mjs && node tests/native-coop-local-presentation.mjs && node tests/native-coop-subtick.mjs && node tests/native-coop-enemy-interpolation.mjs && node tests/native-coop-prediction-cache.mjs && node tests/native-coop-vehicle-candidates.mjs && node tests/native-coop-wall-candidates.mjs && node tests/coop-state-delta.mjs && node tests/native-coop-delta-transport.mjs && node tests/coop-broadcast-encoding.mjs && node tests/coop-transport-telemetry.mjs && node tools/build-runtime.cjs --check",
     "test:coop:integration": "node tests/native-coop-prediction.cjs && node tests/native-coop-interpolation-runtime.cjs && node tests/native-coop-enemy-runtime.cjs && node tests/native-coop-snapshot-projection.cjs && node tests/native-coop-vehicle-visual-lod.cjs",
     "test:timing": "node tests/simulation-clock.cjs && node tests/simulation-timing.cjs",
     "test:camera": "node tests/camera-controls.cjs && node tests/hangar-camera-visibility.cjs",
