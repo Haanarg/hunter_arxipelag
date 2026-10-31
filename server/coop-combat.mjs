@@ -45,7 +45,7 @@ export function guardInView(guard,player){
   return d<=2||inView(guard.heading||0,dx,0,dz,Infinity,{sightHalfAngle:Math.PI/3+1e-10,sightVerticalAngle:Math.PI/2});
 }
 const facePoint=(guard,p)=>Math.atan2(-(p.x-guard.x),-(p.z-guard.z));
-export function createRelayCombat({meta,record={},inventory,players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false,blastWire=()=>{},blastStructures=()=>{},damagePalm=()=>false,blastPalms=()=>{},breakWindow=()=>false,damageWall=()=>false,windowAvailable=()=>true}){
+export function createRelayCombat({meta,record={},inventory,players,visiblePlayers=players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false,blastWire=()=>{},blastStructures=()=>{},damagePalm=()=>false,blastPalms=()=>{},breakWindow=()=>false,damageWall=()=>false,windowAvailable=()=>true}){
   const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);const bursts=structuredClone(record.bursts||[]),projectiles=structuredClone(record.projectiles||[]);let sequence=record.sequence||0;
   const random=createWorldRandom(record.randomState??(((meta.seed||0)^0x7269666c)>>>0)),roll=(a,b)=>a+random()*(b-a);
   // Compute the upper-window target list once; the full archipelago can have
@@ -55,6 +55,8 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
       wall.windowPanes.map((pane,paneIndex)=>({wallIndex,paneIndex})):[]);
   const effect=(kind,tick,data)=>{effects.push({id:++sequence,kind,tick,...data});if(effects.length>64)effects.shift();};
   function alarm(position,actorId,tick,kind='pistol'){
+    // Els dos jugadors són invisibles també per a alertes acústiques.
+    if(!visiblePlayers().length&&players().some(p=>p.id===actorId))return;
     const native=meta.mode==='native',noise=native?{...position,id:++sequence,kind,radius:RADII[kind]??RADII.pistol}:null;
     for(const t of targets)if(t.ai&&t.hp>0){
       if(native&&t.t==='soldat'){hearNativeSoldier(t,noise,tick);continue;}
@@ -71,7 +73,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     }return null;
   }
   function nativeSoldierStep(unit,tick){
-    const contact=senseNativeSoldier(unit,{players:players(),inventory,mounted:id=>vehicles.mounted(id),world:world(),visibleAim:nativeSoldierAim,tick});
+    const contact=senseNativeSoldier(unit,{players:visiblePlayers(),inventory,mounted:id=>vehicles.mounted(id),world:world(),visibleAim:nativeSoldierAim,tick});
     if(!contact)return unit.state!=='patrol';
     const {actor,acquired}=contact;unit.heading=facePoint(unit,actor);
     if(acquired){unit.nextAttackTick=tick;alarm({x:unit.x,y:unit.y+2,z:unit.z},unit.id,tick,'alert');}
@@ -239,7 +241,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     for(const t of targets)if(t.ai){
       if(t.hp<=0){t.state='dead';t.focus=null;continue;}
       const nativeSoldier=meta.mode==='native'&&t.t==='soldat';if(nativeSoldier&&nativeSoldierStep(t,tick))continue;
-      const eye={x:t.x,y:t.y+2.2,z:t.z},candidates=(nativeSoldier?[]:players()).filter(p=>p.hp>0&&!p.fall&&!p.swimming)
+      const eye={x:t.x,y:t.y+2.2,z:t.z},candidates=(nativeSoldier?[]:visiblePlayers()).filter(p=>p.hp>0&&!p.fall&&!p.swimming)
         .map(p=>({p,d:Math.hypot(p.x-t.x,p.y-t.y,p.z-t.z)}))
         .filter(({p,d})=>d<((inventory.get(p.id)?.disguised&&tick>(t.alarmedUntil||0))?4:18)&&guardInView(t,p))
         .map(({p,d})=>{
