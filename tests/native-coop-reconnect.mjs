@@ -19,5 +19,15 @@ advance(20000);advance(20000);assert.equal(first.readyState,3,'silent open conne
 advance(1000);const second=sockets[1];second.open();second.data({type:'room',room});assert.equal(second.sent.filter(m=>m.type==='native-world').length,1,'reconnect can resubmit preparation');setup(second,'epoch',15);for(const fn of inputs.values())fn();assert.equal(second.sent.at(-1).sequence,16);
 setup(first,'stale',0);assert.equal(missions,2,'stale socket cannot replace resumed mission');
 setup(second,'new-epoch',0);for(const fn of inputs.values())fn();assert.equal(second.sent.at(-1).sequence,1,'different mission resets input sequence');
-second.close(1008);assert.equal(timers.size,0,'protocol rejection cannot cause an endless reconnect loop');assert.equal(inputs.size,0);assert.equal(statuses.at(-1),'ended');channel.stop();
+// Botó «Reconnectar»: reset explícit de la connexió conservant la
+// preparació del món, el nom de la missió i l'ACK del servidor.
+assert.equal(channel.isOpen(),true);
+channel.reconnect();
+assert.equal(channel.isOpen(),false);
+assert.equal(second.readyState,3);
+const third=sockets[2];third.open();third.data({type:'room',room});
+assert.equal(third.sent.filter(m=>m.type==='native-world').length,1,'manual reconnect resubmits world preparation');
+setup(third,'new-epoch',4);for(const fn of inputs.values())fn();
+assert.equal(third.sent.at(-1).sequence,5,'manual reconnect continues from authoritative ACK');
+third.close(1008);assert.equal(timers.size,0,'protocol rejection cannot cause an endless reconnect loop');assert.equal(inputs.size,0);assert.equal(statuses.at(-1),'ended');channel.stop();
 console.log('native reconnect: silent socket recovery, action feedback, preparation replay, sequence continuity/reset, stale socket isolation and fatal cleanup passed');
