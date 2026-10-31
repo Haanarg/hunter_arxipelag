@@ -1,9 +1,11 @@
 import {createNativePrediction} from './native-coop-prediction.mjs?local=0.6.66';
 import {createNativeCoopInterpolation} from './native-coop-interpolation.mjs?smooth=13';
 import {createNativeCoopProjectileVisual} from './native-coop-projectile-visual.mjs?shots=4';
+import {createNativeCoopGrenadeVisual} from './native-coop-grenade-visual.mjs?ballistic=1';
 window.HUNTER_CREATE_NATIVE_PREDICTION=createNativePrediction;
 window.HUNTER_CREATE_NATIVE_INTERPOLATION=createNativeCoopInterpolation;
 window.HUNTER_CREATE_NATIVE_COOP_PROJECTILE_VISUAL=createNativeCoopProjectileVisual;
+window.HUNTER_CREATE_NATIVE_COOP_GRENADE_VISUAL=createNativeCoopGrenadeVisual;
 import * as enemyPerception from './enemy-perception-core.mjs';
 window.HUNTER_ENEMY_PERCEPTION=enemyPerception;
 import {createNativeCoopConnection} from './native-coop-connection.mjs?v=0.6.66&net=2';
