@@ -73,6 +73,7 @@ async function startNativeCoop(room){
  const session=nativeCoopSession={preparing:true,room,state:null,meta:null,self:null,remotes:new Map(),fireHeld:false,seenEffects:new Set(),projectiles:new Map(),grenades:new Map()};
  movementFx.reset();
  session.projectileVisual=window.HUNTER_CREATE_NATIVE_COOP_PROJECTILE_VISUAL?.();
+ session.grenadeVisual=window.HUNTER_CREATE_NATIVE_COOP_GRENADE_VISUAL?.();
  session.previousCheats={...cheats};
  try{
   await startGameProgressively({seed:room.seed,scale:room.mapScale,difficulty:room.difficulty,nativeSession:true});
@@ -412,18 +413,35 @@ function updateNativeCoopFrame(dt){
      if(mesh){world.remove(mesh);s.projectiles.delete(id);}
    });
  if(projecting){
- if(s.appliedGrenades!==state.combat.grenades){
- s.appliedGrenades=state.combat.grenades;
- s.nativeGrenadeIds??=new Set();s.nativeGrenadeIds.clear();
- for(const row of state.combat.grenades){
-   s.nativeGrenadeIds.add(row.id);
-   let mesh=s.grenades.get(row.id);
-   if(!mesh){mesh=row.weapon==='c4'?window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true):createGrenadeModel();world.add(mesh);s.grenades.set(row.id,mesh);}
-   mesh.position.set(row.x,row.y,row.z);
+ if(projecting)s.grenadeVisual?.receive(state.combat.grenades);
+ s.grenadeVisual?.advance(
+   !paused&&!document.hidden&&state.status==='running'?dt:0,
+   (id,pose,row)=>{
+     let mesh=s.grenades.get(id);
+     if(!mesh){
+       mesh=row.weapon==='c4'?
+         window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true):createGrenadeModel();
+       world.add(mesh);s.grenades.set(id,mesh);
+     }
+     mesh.position.set(pose.x,pose.y,pose.z);
+   });
+ // Fallback for a source-mode bootstrap without the optional module.
+ if(!s.grenadeVisual&&projecting){
+   s.nativeGrenadeIds??=new Set();s.nativeGrenadeIds.clear();
+   for(const row of state.combat.grenades){
+     s.nativeGrenadeIds.add(row.id);
+     let mesh=s.grenades.get(row.id);
+     if(!mesh){mesh=row.weapon==='c4'?window.HUNTER_EXPLOSIVE_VISUALS.create(THREE,true):createGrenadeModel();world.add(mesh);s.grenades.set(row.id,mesh);}
+     mesh.position.set(row.x,row.y,row.z);
+   }
  }
- for(const [id,mesh] of s.grenades)if(!s.nativeGrenadeIds.has(id)){world.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);s.grenades.delete(id);}
+ if(projecting){
+   const alive=s.grenadeVisual?null:new Set(state.combat.grenades.map(g=>g.id));
+   for(const [id,mesh] of s.grenades)if(!(s.grenadeVisual?s.grenadeVisual.has(id):alive.has(id))){
+     world.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);s.grenades.delete(id);
+   }
  }
- if(s.appliedEffects!==state.combat.effects){
+  if(s.appliedEffects!==state.combat.effects){
  s.appliedEffects=state.combat.effects;
  for(const effect of state.combat.effects)if(!s.seenEffects.has(effect.id)){
    // Es marca abans de dibuixar: si falla una partícula no repetim la fallada
@@ -515,4 +533,4 @@ window.HUNTER_NATIVE_COOP=Object.freeze({start:startNativeCoop,active:()=>!!nati
 
 
 function nativeReviveAction(){const s=nativeCoopSession;if(!s?.state||cv||hp<=0||swimming||playerFall||!inv.med)return null;const other=s.state.players.find(p=>p.id!==s.self&&p.hp<=0&&Math.hypot(P.x-p.x,P.z-p.z)<=3.2&&Math.abs(P.y-p.y)<2);return other?{kind:'revive',label:'Mantén E per reanimar el company',icon:'✋'}:null;}
-function stopNativeCoop(){document.getElementById('hunter-coop-game-over')?.remove();const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();cancelGrenadeCharge();for(const key of Object.keys(K))K[key]=0;for(const mesh of s.projectiles.values())world?.remove(mesh);for(const mesh of s.grenades.values()){world?.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);}s.projectiles.clear();s.grenades.clear();s.projectileVisual?.reset();movementFx.reset();if(s.previousCheats)Object.assign(cheats,s.previousCheats);for(const model of s.remotes.values()){if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;window.HUNTER_COOP_NETWORK_STATS=null;}
+function stopNativeCoop(){document.getElementById('hunter-coop-game-over')?.remove();const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();cancelGrenadeCharge();for(const key of Object.keys(K))K[key]=0;for(const mesh of s.projectiles.values())world?.remove(mesh);for(const mesh of s.grenades.values()){world?.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);}s.projectiles.clear();s.grenades.clear();s.projectileVisual?.reset();s.grenadeVisual?.reset();movementFx.reset();if(s.previousCheats)Object.assign(cheats,s.previousCheats);for(const model of s.remotes.values()){if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;window.HUNTER_COOP_NETWORK_STATS=null;}
