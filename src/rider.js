@@ -121,7 +121,10 @@ window.HUNTER_RIDER=Object.freeze({
       return {origin,direction:forward.clone().applyQuaternion(
         pistol.getWorldQuaternion(new THREE.Quaternion())).normalize()};
     };
-    const update=(v,dt)=>{
+    const update=(v,dt,seatIndex=null)=>{
+      // null = partida individual: conserva exactament la postura existent.
+      // 0/1 = seient autoritatiu COOP (pilot esquerra, passatger dreta).
+      const passenger=seatIndex===1,coopSeat=seatIndex===0||passenger;
       const car=!!v&&(v.t==='cotxe_civil'||v.t==='cotxe');
       const open=!!v&&(car||['bici','moto','moto_aquatica','llanxa','llanxa_coets','barca_rems','windsurf'].includes(v.t));g.visible=open;
       if(!open){g.userData.shotTime=0;g.userData.shotBlend=0;g.userData.pistolAim=null;pistol.visible=false;g.scale.setScalar(1);return}
@@ -140,7 +143,7 @@ window.HUNTER_RIDER=Object.freeze({
               humvee=!civil&&v.o?.userData?.humveeModel==='D3.1',
               // The Humvee cabin is forward-facing -Z and wider than the
               // previous military car. Rider and wheel now share this seat.
-              seatX=(civil?-.613:humvee?-.84:-.72)*sc,
+              seatX=(civil?.613:humvee?.84:.72)*sc*(passenger?1:-1),
               seatY=(civil?1.14:humvee?1.24:1.22)*sc,
               seatZ=(civil?-.60:humvee?-.26:.42)*sc,
               steeringX=seatX,
@@ -154,8 +157,11 @@ window.HUNTER_RIDER=Object.freeze({
                 shoulder=shoulderAt(side),
                 hip=vec((seatX+side*.20*sc)*invScale,
                   seatY*invScale,seatZ*invScale),
-                hand=vec((steeringX+side*.22*sc)*invScale,
-                  steeringY*invScale,steeringZ*invScale),
+                hand=passenger?
+                  vec((seatX+side*.23*sc)*invScale,
+                    (seatY+.16*sc)*invScale,(seatZ-.32*sc)*invScale):
+                  vec((steeringX+side*.22*sc)*invScale,
+                    steeringY*invScale,steeringZ*invScale),
                 elbow=shoulder.clone().lerp(hand,.50),
                 foot=vec((seatX+side*.20*sc)*invScale,
                   .87*sc*invScale,(civil?-1.31:humvee?-1.10:-.95)*sc*invScale),
@@ -267,16 +273,22 @@ window.HUNTER_RIDER=Object.freeze({
         const riderSc=v.t==='llanxa'?1.3:1.35,
               boatSc=scales[v.t]||1.95,
               offY=1.45*(boatSc-riderSc),offZ=.55*(boatSc-riderSc),
-              seat=1.45*riderSc+offY,seatZ=.55*riderSc+offZ;
-        torso.position.set(0,seat,seatZ);torso.rotation.x=.04;
+              seat=1.45*riderSc+offY,seatZ=.55*riderSc+offZ,
+              // L'habitacle té dos llocs paral·lels, amb el mateix
+              // banc, escala i orientació del buc original. El pilot
+              // del mode individual es manté al centre.
+              seatX=coopSeat?(passenger?1:-1)*.58*boatSc:0;
+        torso.position.set(seatX,seat,seatZ);torso.rotation.x=.04;
         for(let i=0;i<2;i++){
           const side=i?1:-1,
-                hip=vec(side*.28,seat,seatZ),
+                hip=vec(seatX+side*.28,seat,seatZ),
                 shoulder=shoulderAt(side),
-                hand=vec(side*.48*riderSc,seat+.7,-.7*riderSc+offZ),
+                hand=passenger?
+                  vec(seatX+side*.32*riderSc,seat+.16,seatZ-.42*riderSc):
+                  vec(seatX+side*.48*riderSc,seat+.7,-.7*riderSc+offZ),
                 elbow=shoulder.clone().lerp(hand,.52);
           limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
-          const foot=vec(side*.42*riderSc,.92*riderSc+offY,-.35*riderSc+offZ),
+          const foot=vec(seatX+side*.42*riderSc,.92*riderSc+offY,-.35*riderSc+offZ),
                 knee=hip.clone().lerp(foot,.5);knee.y+=.18;
           limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot)
         }
