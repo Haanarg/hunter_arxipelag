@@ -16,7 +16,10 @@ export function stepRangeVehicle(v,input,dt,tick,world,water,bounds){
   if(contact.blocked){const dx=nx-v.x,dz=nz-v.z;let lo=0,hi=1;for(let i=0;i<9;i++){const m=(lo+hi)/2,clear=shore.clearance(v,v.x+dx*m,v.z+dz*m,footprint,world.heightAt,waterAt);if(clear>=contact.limit)lo=m;else hi=m;}nx=v.x+dx*lo;nz=v.z+dz*lo;v.v*=-.055;}
  }
  if(nx>bounds.x0+2&&nx<bounds.x1-2&&nz>bounds.z0+2&&nz<bounds.z1-2){v.x=nx;v.z=nz;}else{v.v=0;v.sideV=0;v.strafeV=0;}
- const ground=world.heightAt(v.x,v.z),surface=waterAt(v.x,v.z);
+ // Els molls i les passarel·les són superfícies sòlides, també en COOP.
+ const terrain=world.heightAt(v.x,v.z);
+ const deck=c.m==='l'||c.m==='wl'?world.groundAt?.(v.x,v.z,v.y):undefined;
+ const ground=Number.isFinite(deck)?Math.max(terrain,deck):terrain,surface=waterAt(v.x,v.z);
  if(air){v.alt??=v.y;stepHelicopterLift(v,input.climb||0,dt,Math.max(0,ground)+.06);if(v.verticalV<0&&v.alt<=Math.max(0,ground)+.061)v.verticalV=0;v.y=v.alt;}
  else if(c.m==='w')v.y=surface;
  else if(c.m==='wl')v.y=Math.max(ground,surface)+.6;
