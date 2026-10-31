@@ -1737,7 +1737,7 @@ function updateOptionalSystems(dt,active){
   prisonerSystem.update(dt,context);radioRelay.update(dt,context);
 }
 function getOptionalAction(){
-  if(nativeCoopSession)return nativeReviveAction();
+  if(nativeCoopSession)return nativeReviveAction()||nativeCoopOptionalAction();
   const context=optionalContext();
   if(!context.active||!context.canInteract||cv)return null;
   const prisonerAction=prisonerSystem.getAction(context);
@@ -1746,6 +1746,7 @@ function getOptionalAction(){
   return prisonerAction||radioRelay.getAction(context);
 }
 function executePlayerOptionalAction(){
+  if(nativeCoopSession)return nativeCoopCommand('optional');
   const action=getOptionalAction();if(!action)return false;
   const context=optionalContext();
   return action.kind==='sabotage'?radioRelay.interact(action,context):prisonerSystem.interact(action,context);
@@ -2254,7 +2255,7 @@ const act=c=>{if(generationPromise)return;if(ui?.isBombTimerOpen?.()){
     document.getElementById('bombTimerConfirm')?.click?.();return
   }
   return
-}if(/^Digit[1-7]$/.test(c)){selectWeapon(quickWeapons()[Number(c.slice(5))-1]);return}if(c==='KeyV'){cycleWeapon(1);return}if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv)toggle();else if(interactPlayerDoor()){}else if(getOptionalAction())performOptionalAction();else if(nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyB'){if(cv)throwVehicleGrenade();return}if(c==='KeyG'){
+}if(/^Digit[1-7]$/.test(c)){selectWeapon(quickWeapons()[Number(c.slice(5))-1]);return}if(c==='KeyV'){cycleWeapon(1);return}if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv)toggle();else if(interactPlayerDoor()){}else if(getOptionalAction())executePlayerOptionalAction();else if(nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyB'){if(cv)throwVehicleGrenade();return}if(c==='KeyG'){
   // The utility helicopter has two independent actions: F throws
   // grenades and G programmes a timed explosive for the side door.
   if(cv?.t==='heli'){
