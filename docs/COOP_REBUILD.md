@@ -1,5 +1,22 @@
 # Reconstrucció del multijugador sobre el joc original
 
+## 0.6.65 · trets en moviment, salts de fins a 148 m i bales que no apareixen
+
+**Prova en partida real de la 0.6.64:** el jitter del jugador ja havia desaparegut, i la pistola animava i disparava correctament quan el jugador estava quiet. Tanmateix, mentre corria, els projectils podien néixer darrere del jugador, saltar grans distàncies o desaparèixer. Telemetria: `receives=89, visualFrames=136, localMuzzleStarts=13, corrections=117, maxCorrectionM=148,66m`.
+
+**Causa concreta:** el projectil es creava visualment a la boca de l'arma però a la recepció següent `src/native-coop-projectile-visual.mjs` el reancorava al `row.x/y/z` actual del Worker: `offset=prior-row`; a cada frame reduïa aquest offset amb una exponencial de .095 s. A velocitats de 130 m/s, la fila de servidor ja és 13 m més endavant després de 100 ms. Aquest desfasament de temps creava acceleracions artificials, especialment mentre la càmera local ja predeia el moviment. Una bala que naixia i impactava entre dues transmissions ni tan sols apareixia a `projectiles[]`. No era un problema de GPU ni de l'animació del jugador.
+
+**Correcció aplicada:**
+- `server/coop-combat.mjs` identifica cada efecte `shot` amb el `projectileId` exacte i `weapon`. El servidor segueix decidint la física i els impactes.
+- `src/native-coop-projectile-visual.mjs`: ara tracta les bales com a trajectòries de velocitat constant *ancorades al seu origen visual*, i conserva el mateix temps de vida i pose entre snapshots. Les noves files autoritatives **no teletransporten ni acceleren les malles**. Les discrepàncies físiques calculades amb `tick` s'accepten només quan són inferiors a 1,5 m; les grans es compten a `rejectedCorrections` i no generen cap salt.
+- Els `shot` nous del jugador a peu comencen a la boca de la pistola de la **pose local actual**, no al centre històric del servidor. Les bales passen a mostrar-se de manera contínua a cada frame (incloent-hi 240 FPS).
+- Si un tret ha estat confirmat però ha impactat abans del snapshot següent, el client dibuixa una traça de màxim 105 ms només gràfica a partir de l'esdeveniment de tret. Aquestes traces **no generen dany ni creen projectils físics**.
+- `src/coop-world-runtime.js` crea/actualitza/retira les malles a través del nou sistema, sense tornar a escriure `mesh.position` directament amb les coordenades de cada estat. La ruta del jugador i la càmera 0.6.63 no s'ha tocat.
+- Estadístiques `window.HUNTER_COOP_NETWORK_STATS.projectileVisual`: `localMuzzleStarts, shortLivedShots, rejectedCorrections, maxServerDeviationM, corrections, maxCorrectionM, visualFrames, active`.
+- `tests/native-coop-projectile-visual.mjs` superat aïlladament: jugador corrent, 240 Hz, fila física 13 m per davant, rebase de 100 ms sense salt, discrepància de més de 100 m, tret de vida curta, no duplicar efectes, deltes de referència i reconeixement de reconnect. `tests/native-coop-interpolation-runtime.cjs` incorpora prova de progressió gràfica al motor original, però encara no s'ha executat la suite Node completa.
+
+**Pendent:** desplegar coherentment navegador i Worker 0.6.65 i provar amb dos jugadors. Les correccions grans rebutjades són una protecció gràfica, no prova que la física del servidor sigui perfecta. Prioritzar reproducció real abans de noves optimitzacions.
+
 ## Correcció del jitter i origen dels trets en COOP (0.6.64)
 
 **Problema reportat després de la 0.6.63:** el jugador i la càmera ja es mouen completament fluids, però les bales encara surten aparentment de darrere del personatge i es desplacen a sotracs.
