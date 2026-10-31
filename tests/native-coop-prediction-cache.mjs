@@ -9,16 +9,23 @@ const source=readFileSync(new URL('../src/native-coop-prediction.mjs',import.met
  .replace(/^import[^\n]*\n/gm,'')
  .replace('export function createNativePrediction','function createNativePrediction');
 const calls={worlds:0,palms:0,waters:0,steps:0,indices:0,queries:0,wallIndices:0,wallQueries:0};
+let firstBounds=null;
 let currentWater=null;
 const factory=new Function('stepRangeVehicle','firstVehicleContact','vehicleSpecs',
  'createPlayerSimulation','createStaticWorldAdapter','createCanonicalWater','createNativeVehicleCandidateIndex','createNativeWallCandidateIndex','structuredClone',
  source+'\nreturn createNativePrediction;')(
- (vehicle,input,dt,tick,world,water)=>{
+ (vehicle,input,dt,tick,world,water,bounds)=>{
+  if(firstBounds)assert.strictEqual(bounds,firstBounds,'El límit del món es reutilitza als subpassos');
+  else firstBounds=bounds;
   calls.steps++;
   assert.strictEqual(water,currentWater,'El vehicle utilitza l’aigua del món vigent');
   vehicle.x+=dt*(input.forward||0);
  },
- ()=>null,
+ (vehicle,from)=>{
+  assert.deepEqual(Object.keys(from).sort(),['hd','x','y','z'],
+   'El sweep de col·lisió només necessita els quatre camps de pose');
+  return null;
+ },
  {hitboxes:{cotxe:[2,4]},scales:{cotxe:1}},
  ({checkpoint})=>({snapshot:()=>({players:checkpoint.players}),accept(){},step(){}}),
  ()=>{calls.worlds++;return {limit:10000,heightAt:()=>0,
