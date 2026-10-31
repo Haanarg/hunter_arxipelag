@@ -237,16 +237,17 @@ export function createNativeCoopInterpolation(){
      // Els deltes preserven la referència de soldats intactes: el cas
      // habitual no necessita crear dues poses ni efectuar cap càlcul.
      if(before===row&&!track)continue;
-     const a=enemyPose(before),b=enemyPose(row);
-     if(!safe(a,b,dt,15)){
+     const a=enemyPose(before),b=enemyPose(row),
+       maxSpeed=['jeep','tanqueta','tanc','patrulla_marina'].includes(row.t)?30:15;
+     if(!safe(a,b,dt,maxSpeed)){
        if(poseChanged(a,b))stats.teleports++;
        enemies.delete(id);continue;
      }
      const changed=poseChanged(a,b);
      if(changed){
-       if(track)updateTrack(track,a,b,dt,15,old.tick,state.tick,true);
-       else enemies.set(id,makeTrack(a,b,dt,15,old.tick,state.tick));
-     }else if(track&&newer)updateTrack(track,a,b,dt,15,old.tick,state.tick,false);
+       if(track)updateTrack(track,a,b,dt,maxSpeed,old.tick,state.tick,true);
+       else enemies.set(id,makeTrack(a,b,dt,maxSpeed,old.tick,state.tick));
+     }else if(track&&newer)updateTrack(track,a,b,dt,maxSpeed,old.tick,state.tick,false);
      const live=enemies.get(id);
      if(live)live.receivedAt=generation;
    }
