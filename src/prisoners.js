@@ -452,6 +452,36 @@ window.HUNTER_PRISONERS=Object.freeze({
       repair={mechanic:u,vehicle:v,progress:data.repair.progress,x:v.x,y:position(v).y,z:v.z,life:v.life,maxLife:v.maxLife};
    }
   }
-  return Object.freeze({configure,reset,update,getAction,interact,markers,hurt,snapshot,entities,config,exportSave,validateSave,importSave});
+  // El COOP usa els MATEIXOS cinc models i animacions del mode individual.
+  // El servidor decideix la posició, la vida, la fugida i la reparació:
+  // aquí només es projecta una còpia gràfica, sense IA local.
+  function applyCoopState(shared,dt,viewer){
+    if(!shared)return;
+    discovered=!!shared.discovered;released=!!shared.released;
+    const mechanicUnit=mechanic();
+    repair=shared.repair&&mechanicUnit?
+      {mechanic:mechanicUnit,progress:shared.repair.progress}:null;
+    for(const row of shared.entities||[]){
+      const u=entities.find(u=>u.id===row.id);if(!u)continue;
+      const prior={x:u.x,z:u.z,state:u.state};
+      u.x=row.x;u.y=row.y;u.z=row.z;u.hp=row.hp;u.state=row.state;
+      u.following=!!row.following;u.phase=row.phase||0;u.cheering=false;
+      // No es crida update(): tornaria a alliberar i moure presoners.
+      if(row.state!==prior.state)pose(u,row.state==='captive'&&row.pose==='seated');
+      u.path=[];
+      if(!u.o)continue;
+      u.o.position.set(u.x,u.y+(u.hp<=0?.22:0),u.z);
+      u.o.visible=!!viewer&&Math.hypot(viewer.x-u.x,viewer.z-u.z)<400;
+      if(u.hp<=0){u.o.rotation.x=-Math.PI/2;continue;}
+      u.o.rotation.x=0;
+      const dx=u.x-prior.x,dz=u.z-prior.z;
+      if(Math.hypot(dx,dz)>.002)u.o.rotation.y=Math.atan2(-dx,-dz);
+      // Reutilitzam l'animació original, sense avançar la posició.
+      if(Math.hypot(dx,dz)>.002){u.path=[{x:u.x+dx,z:u.z+dz}];u.blocked=0;}
+      animate(u,Math.min(.12,Math.max(0,dt)));
+      u.path=[];
+    }
+  }
+  return Object.freeze({configure,reset,update,applyCoopState,getAction,interact,markers,hurt,snapshot,entities,config,exportSave,validateSave,importSave});
  }
 });
