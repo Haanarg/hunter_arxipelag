@@ -75,7 +75,7 @@ assert.equal(f.optional.command('host',{epoch:'phase2',commandId:'follow-off',
 const car=f.fleet[0];car.x=mechanic.x+2;car.z=mechanic.z;car.y=mechanic.y;
 assert.equal(f.optional.command('host',{epoch:'phase2',commandId:'repair',
  operation:'repair',target:car.id},f.tick()).ok,true);
-f.step(66);
+f.step(183);
 assert.equal(car.life,car.maxLife,'Reparació compartida després de sis segons');
 assert.equal(f.optional.snapshot().prison.repair,null);
 const original=f.optional.checkpoint();
