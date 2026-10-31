@@ -166,6 +166,7 @@ export function createNativeOptionals({meta,record={},world,geometry,players,veh
     ok=true;code='SABOTAGED';emit('radio-disabled',tick,{relayId:r.id});}
   }else if(message.operation==='follow'){
    if(!u||u.state!=='ready'||!released)code='NOT_READY';
+   else if(message.target!==u.id)code='UNKNOWN_TARGET';
    else if(distance(actor,u)>=4||!canSee(
      {x:actor.x,y:actor.y+1.5,z:actor.z},{x:u.x,y:u.y+1.5,z:u.z}))
      code='TOO_FAR';
@@ -173,7 +174,8 @@ export function createNativeOptionals({meta,record={},world,geometry,players,veh
     ok=true;code=u.following?'FOLLOWING':'WAITING';}
   }else if(message.operation==='repair'){
    const v=vehicles.live().find(v=>v.id===message.target);
-   if(repair&&repair.actorId===actorId){repair=null;ok=true;code='REPAIR_CANCELLED';}
+   if(repair&&repair.actorId===actorId&&repair.vehicleId===message.target){repair=null;ok=true;code='REPAIR_CANCELLED';}
+   else if(repair)code='BUSY';
    else if(!u||u.state!=='ready'||!released)code='NOT_READY';
    else if(!readyRepair(actor,u,v))code='TOO_FAR';
    else{
