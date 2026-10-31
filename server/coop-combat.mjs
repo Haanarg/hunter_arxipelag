@@ -86,7 +86,7 @@ export function guardInView(guard,player){
   return d<=2||inView(guard.heading||0,dx,0,dz,Infinity,{sightHalfAngle:Math.PI/3+1e-10,sightVerticalAngle:Math.PI/2});
 }
 const facePoint=(guard,p)=>Math.atan2(-(p.x-guard.x),-(p.z-guard.z));
-export function createRelayCombat({meta,record={},inventory,players,visiblePlayers=players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false,blastWire=()=>{},blastStructures=()=>{},damagePalm=()=>false,blastPalms=()=>{},breakWindow=()=>false,damageWall=()=>false,windowAvailable=()=>true,waterSurface=()=>0,openEnemyDoor=()=>false}){
+export function createRelayCombat({meta,record={},inventory,players,visiblePlayers=players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false,blastWire=()=>{},blastStructures=()=>{},damagePalm=()=>false,blastPalms=()=>{},breakWindow=()=>false,damageWall=()=>false,windowAvailable=()=>true,waterSurface=()=>0,openEnemyDoor=()=>false,onEnemyAlert=()=>{},civilianTargets=()=>[],damageCivilian=()=>false}){
   const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);const bursts=structuredClone(record.bursts||[]),projectiles=structuredClone(record.projectiles||[]);let sequence=record.sequence||0;
   const random=createWorldRandom(record.randomState??(((meta.seed||0)^0x7269666c)>>>0)),roll=(a,b)=>a+random()*(b-a);
   // Compute the upper-window target list once; the full archipelago can have
@@ -224,7 +224,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     const contact=senseNativeSoldier(unit,{players:visiblePlayers(),inventory,mounted:id=>vehicles.mounted(id),world:world(),visibleAim:nativeSoldierAim,tick});
     if(!contact)return unit.state!=='patrol';
     const {actor,acquired}=contact;unit.heading=facePoint(unit,actor);
-    if(acquired){unit.nextAttackTick=tick;alarm({x:unit.x,y:unit.y+2,z:unit.z},unit.id,tick,'alert');}
+    if(acquired){unit.nextAttackTick=tick;alarm({x:unit.x,y:unit.y+2,z:unit.z},unit.id,tick,'alert');onEnemyAlert(unit,actor,tick,targets);}
     if(Math.hypot(actor.x-unit.x,actor.z-unit.z)>SOLDIER.fireRange||tick<(unit.nextAttackTick??0))return true;
     const aim=nativeSoldierAim(unit,actor);if(!aim)return true;
     const rocket=!!unit.rocketSoldier,profile=soldierAccuracyProfile(unit),eye={x:unit.x,y:unit.y+2.2,z:unit.z},
@@ -349,6 +349,10 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       const blast=queue.shift(),center=blast.at,hits=[],protectedPlayers=new Set(players().filter(p=>vehicles.mounted(p.id)).map(p=>p.id));
       const visible=aim=>traceArena(center,aim,geometry(),world()).fraction>=1;
       for(const t of targets)if(t.hp>0){const aim={x:t.x,y:t.y+(t.t==='torre'?9.4:1.5),z:t.z},d=Math.hypot(aim.x-center.x,aim.y-center.y,aim.z-center.z),damage=explosionDamage(blast.damage,d,blast.radius);if(damage&&visible(aim)){t.hp=damageHealth(t.hp,damage);hits.push(t.id);}}
+      for(const u of civilianTargets())if(u.hp>0){
+        const aim={x:u.x,y:u.y+1,z:u.z},damage=explosionDamage(blast.damage,Math.hypot(aim.x-center.x,aim.y-center.y,aim.z-center.z),blast.radius);
+        if(damage&&visible(aim))damageCivilian(u.id,damage,tick);
+      }
       // The hull protects occupants; personal grenades retain no team damage.
       for(const p of players())if(p.hp>0&&!protectedPlayers.has(p.id)&&!blast.skipPlayers?.includes(p.id)&&(!blast.ownerOnly||p.id===blast.actorId)){
         const aim={x:p.x,y:p.y+1,z:p.z},damage=explosionDamage(blast.damage,Math.hypot(aim.x-center.x,aim.y-center.y,aim.z-center.z),blast.radius);
@@ -493,6 +497,8 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       for(const v of vehicles.live())if(v.id!==p.sourceVehicle)flight.consider(vehicles.contact(flight.from,flight.to,v),'vehicle',v);
       if(p.enemy){for(const actor of players())if(actor.hp>0&&!vehicles.mounted(actor.id))flight.consider(segmentSphereT(flight.from.x,flight.from.y,flight.from.z,flight.to.x,flight.to.y,flight.to.z,actor.x,actor.y+1.5,actor.z,1.2),'player',actor);}
       else for(const t of targets)if(t.hp>0)flight.consider(segmentBox(flight.from,flight.to,targetBox(t)),'enemy',t);
+      if(!p.enemy)for(const u of civilianTargets())if(u.hp>0)
+        flight.consider(segmentSphereT(flight.from.x,flight.from.y,flight.from.z,flight.to.x,flight.to.y,flight.to.z,u.x,u.y+1.1,u.z,.55),'civilian',u);
       const result=flight.finish();p.life=flight.life;Object.assign(p,result.point);
       for(const pane of trace.windowCrossings)if(pane.t<=flight.fraction+1e-6&&breakWindow(pane.wallIndex,pane.index)){effect('glass',tick,{actorId:p.actorId,at:pane.point,wallIndex:pane.wallIndex,paneIndex:pane.index});}
       if(result.hit){if(p.splash){if(result.kind!=='expire')explode({at:{...result.point},damage:p.dmg,radius:p.splash,actorId:p.actorId,ownerOnly:!p.enemy},tick);projectiles.splice(i,1);continue;}let applied=true;if(result.kind==='vehicle'){const queue=[];applied=damageVehicle(result.target,p.dmg,'light',tick,queue);for(const blast of queue)explode(blast,tick);}else if(result.kind==='enemy'){
@@ -504,7 +510,8 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
           }else if(!(p.enemy||p.splash)&&['jeep','tanqueta','tanc','patrulla_marina'].includes(result.target.t)){
             // La metralla lleugera no destrueix el blindatge hostil.
           }else result.target.hp=damageHealth(result.target.hp,p.dmg);
-        }else if(result.kind==='player')applied=damagePlayer(result.target.id,p.dmg)!==false;else if(result.kind==='world'&&trace.tree?.p)applied=damagePalm(trace.tree,p.dmg);else if(result.kind==='world'&&trace.wallIndex!=null&&Math.hypot(result.point.x-trace.point.x,result.point.y-trace.point.y,result.point.z-trace.point.z)<.01)applied=damageWall(trace.wallIndex,p.dmg);
+        }else if(result.kind==='player')applied=damagePlayer(result.target.id,p.dmg)!==false;
+        else if(result.kind==='civilian')applied=damageCivilian(result.target.id,p.dmg,tick)>0;else if(result.kind==='world'&&trace.tree?.p)applied=damagePalm(trace.tree,p.dmg);else if(result.kind==='world'&&trace.wallIndex!=null&&Math.hypot(result.point.x-trace.point.x,result.point.y-trace.point.y,result.point.z-trace.point.z)<.01)applied=damageWall(trace.wallIndex,p.dmg);
         if(result.kind!=='expire')effect('impact',tick,{actorId:p.actorId,at:{...result.point},hit:applied&&['enemy','player','vehicle'].includes(result.kind)?result.target.id:null});projectiles.splice(i,1);
       }
     }
@@ -565,7 +572,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       target.hp=damageHealth(target.hp,runoverDamage(speed,profile.mass||1));v.ramUntilTick=tick+11;v.v*=.86;alarm(v,v.seats[0],tick,'collision');effect('impact',tick,{actorId:v.seats[0],at:eye,hit:target.id});break;
     }
   }
-  return {command,hold,step,cancel,impactVehicle,runover,hasDeadGeneral:()=>targets.some(t=>t.t==='general'&&t.hp<=0),pause(){bursts.length=0;},finish(){projectiles.length=0;bursts.length=0;grenades.length=0;effects.length=0;},snapshot(){
+  return {command,hold,step,cancel,impactVehicle,runover,liveTargets:()=>targets,hasDeadGeneral:()=>targets.some(t=>t.t==='general'&&t.hp<=0),pause(){bursts.length=0;},finish(){projectiles.length=0;bursts.length=0;grenades.length=0;effects.length=0;},snapshot(){
     // Les rutes A*, els nodes temporals i els objectius de moviment només
     // són útils per al Worker. No els enviam a tots dos navegadors a 10 Hz.
     // El checkpoint, en canvi, conserva les rutes per reprendre l'operació.
