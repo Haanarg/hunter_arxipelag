@@ -85,7 +85,9 @@ export function stepMarinePatrol(t,{
 export function stepLandPatrol(t,{dt,world,random}){
  if(!(dt>0))return;
  const path=t.patrol||[];
- let goal=path[t.patrolIndex??0];
+ let goal=path.length?path[t.patrolIndex??0]:
+   (Number.isFinite(t.tx)&&Number.isFinite(t.tz)&&t.wt>0?
+     {x:t.tx,z:t.tz}:null);
  if(!goal||Math.hypot(goal.x-t.x,goal.z-t.z)<4.5||t.wt<=-30){
   if(path.length){
    t.patrolIndex=((t.patrolIndex??-1)+1)%path.length;
