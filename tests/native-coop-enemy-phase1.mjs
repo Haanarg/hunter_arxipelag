@@ -71,4 +71,48 @@ for(let tick=750;tick<840;tick++)
 assert(Math.hypot(unit.x-seen.x,unit.z-seen.z)>1,
   'Recupera la patrulla quan acaba la recerca');
 
+
+// El general comparteix el sentit de defensa i la fugida al soterrani.
+{
+ const actor={id:'p',x:0,y:-20,z:-18,hp:50,hd:0},
+   inv=new Map([['p',{weapon:'pistol',bullets:50,disguised:false}]]),
+   world={heightAt:()=>-100,
+     locomotionAt:(x,z,y)=>({floor:y< -10?-20:0,terrain:0,basement:y< -10}),
+     resolveBody:(a,b)=>b},
+   meta={id:'general-test',mode:'native',seed:67,difficulty:1,
+     targets:[{id:'general',t:'general',x:0,y:-20,z:0,hp:8,heading:0,
+       ai:true,rate:.8,rng:60,sp:2,dmg:2}]};
+ const combat=createRelayCombat({meta,inventory:inv,players:()=>[actor],
+   visiblePlayers:()=>[actor],world:()=>world,
+   geometry:()=>({walls:[],buildings:[]}),
+   vehicles:{live:()=>[],mounted:()=>null,contact:()=>null},
+   active:()=>true,damagePlayer:()=>true});
+ let shots=0;
+ for(let tick=1;tick<=30;tick++){
+   combat.step(tick);
+   shots+=combat.snapshot().effects.filter(e=>
+     e.tick===tick&&e.actorId==='general'&&e.kind==='shot').length;
+ }
+ assert(shots>0,'El general del soterrani torna el foc');
+ assert(combat.snapshot().targets[0].z>0,'El general recula sense abandonar el nivell');
+}
+
+// Si una porta practicable és l'obstacle del corredor, el servidor
+// pot obrir-la. Després de reconstruir la geometria el soldat avança.
+{
+ let closed=true,requests=0;
+ const world={locomotionAt:()=>({floor:0,terrain:0,basement:false}),
+   resolveBody(from,to){
+     return closed&&Math.abs(to.x)<4&&to.z< -1&&to.z> -3?{...from}:{...to};
+   }};
+ const unit={id:'door-guard',t:'soldat',x:0,y:0,z:0,hp:10,heading:0,
+   state:'search',canSee:false,lastKnown:{x:0,z:-9},sp:7,patrol:[]};
+ for(let tick=0;tick<120;tick++)
+   stepNativeSoldierNavigation(unit,{tick,world,players:[],requestDoor(){
+     requests++;closed=false;return true;
+   }});
+ assert(requests>0&&!closed,'El soldat sol·licita obrir la porta');
+ assert(unit.z< -4,'Travessa la porta després del canvi autoritatiu');
+}
+
 console.log('COOP IA fase 1: torre, armes lleugera/pesada, supressió 2 s, cerca, obstacle i retorn a patrulla OK');
