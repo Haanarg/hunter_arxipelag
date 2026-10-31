@@ -4,7 +4,12 @@ import {vehicleSpecs} from './vehicle-specs.mjs';
 // and lift equations belong to the original shared vehicle dynamics.
 export function stepRangeVehicle(v,input,dt,tick,world,water,bounds){
  const c=vehicleDynamics.types[v.t],land=c.m==='l',air=c.m==='a',shore=vehicleDynamics.shore,waterAt=(x,z)=>water.surfaceAt(x,z,tick/30);
- const flooded=land?shore.wetLand(v,shore.depth(v.x,v.z,world.heightAt,waterAt),dt):null;
+ // Un vehicle damunt un moll no està submergit per l'aigua de sota.
+ const supportHeight=(x,z)=>{
+  const terrain=world.heightAt(x,z),deck=land?world.groundAt?.(x,z,v.y):undefined;
+  return Number.isFinite(deck)?Math.max(terrain,deck):terrain;
+ };
+ const flooded=land?shore.wetLand(v,shore.depth(v.x,v.z,supportHeight,waterAt),dt):null;
  if(v.sunk){v.v=0;return;}
  const control=vehicleDynamics.inputs(v,input.forward,input.turn,dt),forward=flooded?.disabled?0:control.forward*(flooded?.engine??1),side=advanceVehicle(v,forward,control.turn,dt,input.strafe||0,{drag:flooded?.drag||0})+v.strafeV;
  const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),sx=Math.cos(v.hd),sz=-Math.sin(v.hd);
