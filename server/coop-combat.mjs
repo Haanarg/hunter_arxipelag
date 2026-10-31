@@ -12,20 +12,45 @@ import {launchProjectile,projectileStep,SMALL_ARMS_PROJECTILE_SPEED} from '../sr
 import {createAimSelector,weaponTargetPriority,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL,SMALL_ARMS_RANGE} from '../src/aiming-core.mjs';
 import {damageHealth} from '../src/player-simulation.mjs';
 import {runoverDamage,runoverSweepHit,VEHICLE_DESTRUCTION,beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,segmentAabbT,segmentSphereT,inView,ballisticStep} from '../src/combat-rules.mjs';
+// Índex immutable per posició: les portes poden obrir-se i destruir-se,
+// però els seus volums no canvien de cel·la. Els índexs de les parets continuen
+// essent els originals per als vidres i els efectes sincronitzats.
+export function createTraceWallIndex(walls,cell=96){
+ const grid=new Map(),large=[],key=(x,z)=>x+','+z;
+ for(let i=0;i<walls.length;i++){
+  const w=walls[i],xa=Math.floor(w.x0/cell),xb=Math.floor(w.x1/cell),
+   za=Math.floor(w.z0/cell),zb=Math.floor(w.z1/cell);
+  if((xb-xa+1)*(zb-za+1)>64){large.push(i);continue;}
+  for(let x=xa;x<=xb;x++)for(let z=za;z<=zb;z++){
+   const k=key(x,z),bucket=grid.get(k);
+   if(bucket)bucket.push(i);else grid.set(k,[i]);
+  }
+ }
+ return (from,to)=>{
+  const xa=Math.floor(Math.min(from.x,to.x)/cell),xb=Math.floor(Math.max(from.x,to.x)/cell),
+   za=Math.floor(Math.min(from.z,to.z)/cell),zb=Math.floor(Math.max(from.z,to.z)/cell);
+  if(!Number.isFinite(xa+xb+za+zb)||(xb-xa+1)*(zb-za+1)>64)return null;
+  const seen=new Set(large);
+  for(let x=xa;x<=xb;x++)for(let z=za;z<=zb;z++){
+   for(const i of grid.get(key(x,z))||[])seen.add(i);
+  }
+  return [...seen].sort((a,b)=>a-b);
+ };
+}
 // Authoritative combat; native sessions adapt original rules over the canonical world.
 const at=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
 export function segmentBox(from,to,box){return segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,box.x0,box.x1,box.y0,box.y1,box.z0,box.z1);}
 function targetBox(t){return {x0:t.x-.8,x1:t.x+.8,z0:t.z-.8,z1:t.z+.8,y0:t.y,y1:t.y+3};}
-export function traceArena(from,to,geometry,world,{ignoreBarbed=false,collectWindows=false,ignoreVegetation=false}={}){
+export function traceArena(from,to,geometry,world,{ignoreBarbed=false,collectWindows=false,ignoreVegetation=false,wallCandidates=null}={}){
   let fraction=1,hit=false,wallIndex=null,tree=null;const windowCrossings=[];
   // Descart ràpid de geometria fora del tram. Imprescindible per la
   // cadència alta de la tanqueta, sense perdre cap intersecció exacta.
   const minX=Math.min(from.x,to.x),maxX=Math.max(from.x,to.x),minY=Math.min(from.y,to.y),maxY=Math.max(from.y,to.y),minZ=Math.min(from.z,to.z),maxZ=Math.max(from.z,to.z);
-  for(const [index,w] of geometry.walls.entries())if(!w.open&&!(ignoreBarbed&&w.barbed)&&w.x1>=minX&&w.x0<=maxX&&w.z1>=minZ&&w.z0<=maxZ&&w.y1>=minY&&w.y0<=maxY){
+  for(const index of wallCandidates??geometry.walls.keys()){const w=geometry.walls[index];if(!w.open&&!(ignoreBarbed&&w.barbed)&&w.x1>=minX&&w.x0<=maxX&&w.z1>=minZ&&w.z0<=maxZ&&w.y1>=minY&&w.y0<=maxY){
     const crossing=windowCrossing(from,to,w);
     if(crossing){if(collectWindows)windowCrossings.push({wallIndex:index,...crossing});continue;}
     const t=wallShotHit(from,to,w);if(t!==null&&t<=fraction){fraction=t;hit=true;wallIndex=index;}
-  }
+  }}
   // The base shells use axis-aligned world footprints, including rotated variants.
   for(const b of geometry.buildings||[]){
     if(b.x+b.w/2<minX||b.x-b.w/2>maxX||b.z+b.d/2<minZ||b.z-b.d/2>maxZ||b.fy>maxY||b.fy+b.h<minY)continue;
@@ -54,6 +79,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
   const random=createWorldRandom(record.randomState??(((meta.seed||0)^0x7269666c)>>>0)),roll=(a,b)=>a+random()*(b-a);
   // Compute the upper-window target list once; the full archipelago can have
   // thousands of walls. Destruction is checked against live state below.
+  const traceWallCandidates=createTraceWallIndex(geometry().walls);
   const upperPanes=geometry().walls.flatMap((wall,wallIndex)=>
     wall.upperFloorWindow&&wall.windowPanes?.length?
       wall.windowPanes.map((pane,paneIndex)=>({wallIndex,paneIndex})):[]);
@@ -224,7 +250,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       stepVehicleTurret(vehicle,aimed.direction,3/30);
     }
     for(let i=projectiles.length-1;i>=0;i--){
-      const p=projectiles[i],flight=projectileStep(p,1/30),trace=traceArena(flight.from,flight.to,geometry(),world(),{ignoreBarbed:!p.splash,collectWindows:true});
+      const p=projectiles[i],flight=projectileStep(p,1/30),trace=traceArena(flight.from,flight.to,geometry(),world(),{ignoreBarbed:!p.splash,collectWindows:true,wallCandidates:traceWallCandidates(flight.from,flight.to)});
       if(trace.hit)flight.consider(trace.fraction,'world',null);
       for(const v of vehicles.live())if(v.id!==p.sourceVehicle)flight.consider(vehicles.contact(flight.from,flight.to,v),'vehicle',v);
       if(p.enemy){for(const actor of players())if(actor.hp>0&&!vehicles.mounted(actor.id))flight.consider(segmentSphereT(flight.from.x,flight.from.y,flight.from.z,flight.to.x,flight.to.y,flight.to.z,actor.x,actor.y+1.5,actor.z,1.2),'player',actor);}
