@@ -113,6 +113,14 @@ function nativeCoopProjectileMuzzle(weapon){
  else if(weapon==='sniper'){parent=u.sniperMuzzle;point=[0,0,0];}
  else return null;
  if(!parent)return null;
+ // El primer tret pot arribar quan l'animació de la pistola encara
+ // és al canell. Fins que acaba d'alçar-la, mantenim el punt físic
+ // del mode individual: .7 m davant i a l'altura del canó.
+ if(weapon==='pistol'&&(u.pistolBlend||0)<.65){
+   return {x:P.x-Math.sin(P.hd)*.7,
+     y:P.y+1.5-(playerCrouched?.48:0),
+     z:P.z-Math.cos(P.hd)*.7};
+ }
  pl.updateMatrixWorld(true);
  const p=parent.localToWorld(new THREE.Vector3(...point));
  return {x:p.x,y:p.y,z:p.z};
@@ -326,7 +334,16 @@ function updateNativeCoopFrame(dt){
        effect.at.x,effect.at.y,effect.at.z,{vx:0,vy:0,vz:1});
      else if(effect.kind==='glass'&&s.walls[effect.wallIndex])
        shatterWindow(s.walls[effect.wallIndex],effect.paneIndex,effect.at,null);
-     else if(effect.kind==='shot')snd('shot',.7,effect.from);
+     else if(effect.kind==='shot'){
+        snd('shot',.7,effect.from);
+        if(effect.actorId===s.self&&!cv){
+          pl.userData.firePose=.32;
+          if(s.appliedBag?.weapon==='pistol'){
+            pl.userData.pistolAimTime=.32;
+            pl.userData.pistolShotAge=0;
+          }
+        }
+      }
    }catch(error){reportNativeCoopVisualError(error,'efecte '+effect.kind);}
  }
  if(s.seenEffects.size>256){const current=new Set(state.combat.effects.map(e=>e.id));s.seenEffects=current;}
