@@ -105,7 +105,14 @@ async function renderCoop(body,isCurrent){
   try{draw(await call('current'));}catch(e){if(active())status.textContent=e.message;}
   async function poll(){
     if(!active()&&!waitingAsGuest){connection?.stop();connection=null;return;}
-    if(document.hidden){connection?.stop();connection=null;drawn='';}
+    // Si el convidat ja és Preparat, conserva la subscripció també
+    // fora del menú: en tornar d'una pestanya oculta recupera el socket
+    // i pot rebre l'ordre d'inici pendent del HOST.
+    if(document.hidden&&!waitingAsGuest){
+      connection?.stop();connection=null;drawn='';
+    }
+    if(waitingAsGuest&&!active()&&!document.hidden&&connection&&!connection.isOpen())
+      connection.start();
     if(room&&!document.hidden&&!connection?.isOpen()&&active()){
       try{const result=await call('current');draw(result);if(result?.room)launchIfSignalled(result.room);}
       catch(e){if(active())status.textContent=e.message;}
