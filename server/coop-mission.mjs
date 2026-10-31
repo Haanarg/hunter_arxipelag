@@ -310,7 +310,12 @@ export function restoreRelayMission(record,geometry){
          exitImpulses.set(actorId,{vx:forward*carry+Math.cos(old.hd)*lateral*(old.t==='camio'?8:1.4),
             vz:depth*carry-Math.sin(old.hd)*lateral*(old.t==='camio'?8:1.4),ticks:15});
        }
-       sim.place(actorId,r.exit);delete r.exit;}else if(r.ok&&r.code==='ENTERED'&&!r.duplicate){exitImpulses.delete(actorId);const p=sim.snapshot().players.find(p=>p.id===actorId);sim.place(actorId,vehicles.position(p));}return r;},doorCommand,inventoryCommand,cheatCommand,
+       if(r.exit.fall){
+         // El servidor, no el navegador, inicia la caiguda 3D validada.
+         sim.eject(actorId,r.exit,r.exit.fall);
+         delete r.exit;
+       }else{sim.place(actorId,r.exit);delete r.exit;}
+       }else if(r.ok&&r.code==='ENTERED'&&!r.duplicate){exitImpulses.delete(actorId);const p=sim.snapshot().players.find(p=>p.id===actorId);sim.place(actorId,vehicles.position(p));}return r;},doorCommand,inventoryCommand,cheatCommand,
     optionalCommand(actorId,message){return optionals.command(actorId,message,sim.snapshot().tick);},
     combatCommand(actorId,message){return combat.command(actorId,message,sim.snapshot().tick);},setStatus(value){status=value;if(value!=='running'){actions.clear();sim.clearInputs();vehicles.pause();combat.pause();rescue.pause();if(['relay','extract'].includes(phase))hold=0;}},
     checkpoint(nextAlarm){return {meta:structuredClone(meta),exitImpulses:[...exitImpulses].map(([id,impulse])=>[id,{...impulse}]),wallHealth:[...wallHealth],roofHealth:[...roofHealth],removedWalls:[...removedWalls],removedRoofs:[...removedRoofs],brokenWindows:[...brokenWindows],palmHealth:[...palmHealth],phase,hold,status,checkpoint:sim.snapshot(),rescue:rescue.checkpoint(),vehicles:vehicles.checkpoint(),combat:combat.checkpoint(),...(meta.mode==='native'&&meta.optional?{optionals:optionals.checkpoint()}:{}),nextAlarm,cheats:{...cheats},inventories:inventories(),droppedSupplies:[...loose.values()].map(s=>({...s})),dropSequence,claimedSupplies:[...claimed],inventoryResults:structuredClone(inventoryResults),doors:doors(),doorRevision,doorCooldowns:[...cooldowns].map(([actorId,tick])=>({actorId,tick})),commandResults:structuredClone(results)};},
