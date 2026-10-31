@@ -118,7 +118,7 @@ export function createNativePrediction(geometry){
     fleetUnchanged=same&&state.vehicles===next.vehicles;
   self=id;state=next;rebuild(next);
   const seat=next.vehicles.find(v=>v.seats.includes(id)),driver=seat?.seats[0]===id,
-    nextMode=seat?(driver?seat.id:'passenger:'+seat.id):'foot';
+    nextMode=(seat?(driver?seat.id:'passenger:'+seat.id):'foot')+(next.cheats?.fly?':fly':'');
   vehicle=driver?structuredClone(seat):null;vehicleTick=next.tick;
   // Només el conductor fa comprovacions de col·lisió predictives.
   // Reutilitzar l'índex si el delta no ha canviat cap vehicle.
