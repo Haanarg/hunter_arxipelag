@@ -54,6 +54,52 @@ function nativeCoopInput(){
  const flying=!cv&&nativeCoopSession.state?.cheats?.fly;
  return {forward:scopeActive?0:forward,turn:scopeActive?0:turn,strafe:scopeActive?0:strafe,interact:!!K.KeyE&&!!nativeReviveAction(),run:!!run,crouch:!!playerCrouched,fire:!!K.KeyF&&(!grenadeEquipped||!!cv),...(flying?{climb:(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0)}:cv&&VT[cv.t].m==='a'?{climb}:{})};
 }
+// La fase 2 hereta el camp, els cinc NPC i els relés que JA ha generat
+// el joc individual. No consumeix cap tirada aleatòria suplementària.
+function captureNativeCoopOptionals(){
+ const camp=world?.userData?.prisonCamp,
+       groups=world?.userData?.compounds||[],
+       transform=p=>{
+         const [x,z]=Array.isArray(p)?p:[p.x,p.z],
+           angle=camp?.angle||0,c=Math.round(Math.cos(angle)),sn=Math.round(Math.sin(angle)),
+           wx=(camp?.x||0)+x*c-z*sn,wz=(camp?.z||0)+x*sn+z*c;
+         return {x:wx,y:hAt(wx,wz),z:wz};
+       },
+       units=prisonerSystem.entities,
+       layouts=camp?.layout,
+       relays=radioRelay.snapshot().relays;
+ if(!camp||!layouts||units.length!==5)throw Error('Falten presoners a la missió original.');
+ const prisonFenceIndexes=(camp.prisonFenceSegments||[])
+   .map(entry=>Wl.indexOf(entry.collider)).filter(i=>i>=0);
+ if(!prisonFenceIndexes.length)
+   for(const w of camp.prisonGate?.colliders||[]){const i=Wl.indexOf(w);if(i>=0)prisonFenceIndexes.push(i);}
+ const escape=(layouts.escapeRoute||[[0,8],[0,30],[0,62],[0,86]]).map(transform),
+       mechanicAccess=(layouts.mechanicAccess||[[33,36],[33,16]]).map(transform);
+ const sourceIds=new Map(groups.filter(c=>c.id==='comunicacions')
+   .map(c=>[c.layoutId||c.id,c]));
+ const hq=groups.find(c=>c.id==='hq'&&!c.layout?.friendly&&!c.layout?.civilian);
+ return {
+   prison:{id:camp.id||'prison-camp',x:camp.x,z:camp.z,angle:camp.angle||0,
+     rescuePoint:transform(layouts.rescuePoint||{x:0,z:8}),
+     mechanicStation:transform(layouts.mechanicStation||{x:33,z:16}),
+     guardIds:[...(camp.soldiers||[]),...(camp.towers||[])].map(u=>u.saveId),
+     fenceIndexes:prisonFenceIndexes,
+     farmerEscape:escape,mechanicAccess,
+     entities:units.map(u=>({id:u.id,role:u.role,x:u.x,y:u.y,z:u.z,
+       hp:u.hp,state:u.state,pose:u.captivePose||'standing'}))},
+   radio:relays.map(relay=>{
+     const source=sourceIds.get(relay.sourceId)||groups.find(c=>c.id==='comunicacions'&&
+       Math.hypot(c.x-relay.x,c.z-relay.z)<180),
+       collider=Wl.findIndex(w=>w.owner?.kind==='radio-relay'&&
+         Math.hypot((w.cx??(w.x0+w.x1)/2)-relay.x,
+           (w.cz??(w.z0+w.z1)/2)-relay.z)<1);
+     return {id:relay.id,x:relay.x,y:relay.y,z:relay.z,
+       colliderIndex:collider,sourceIds:(source?.soldiers||[]).map(u=>u.saveId),
+       hqDefenders:(hq?.soldiers||[]).filter(u=>!u.elite&&!u.basement)
+         .slice(0,4).map(u=>u.saveId)};
+   })
+ };
+}
 function captureNativeCoopWorld(){
  const geometry=captureCoopWorldGeometry(),baseWalls=geometry.walls;
  geometry.walls=Wl.map((w,i)=>({...baseWalls[i],id:w.saveId,buildingId:w.owner?.saveId,hp:Number.isFinite(w.hp)?w.hp:1e9,rammable:!!w.rammable,barbed:!!w.barbed,locked:!!w.locked&&!w.bunkerGate,alwaysOpen:!!w.alwaysOpen,...Object.fromEntries(['ax','az','bx','bz','supportSide','supportWeight','woodenDoor','upperFloorWindow'].filter(k=>w[k]!=null).map(k=>[k,w[k]]))}));
@@ -63,7 +109,8 @@ function captureNativeCoopWorld(){
  const itemMap={arma:['bullets',16],granada:['grenades',5],disf:['disguise',1],med:['medkits',1],fusell_assalt:['assault',1],franctirador:['sniper',1],bazooka:['bazooka',3],cisalla:['cutters',1],expl:['c4',1]};
  const payload={requestedSeed:requestedSeed>>>0,geometry,spawn:{...P},vehicles:V.map(v=>({id:v.saveId,t:v.t,...point(v),hd:v.hd,v:0,life:v.life??VT[v.t].life,rockets:v.rockets})),
   targets:E.map(e=>({id:e.saveId,t:e.t,...point(e),hp:e.hp,heading:e.hd||0,ai:['soldat','general','torre','jeep','tanqueta','tanc','patrulla_marina'].includes(e.t),state:'patrol',patrol:(e.patrol?.length?e.patrol:[]).map(p=>({x:p.x,y:e.o.position.y,z:p.z})),home:{x:e.home?.x??e.x,z:e.home?.z??e.z},tx:e.tx??e.x,tz:e.tz??e.z,patrolIndex:e.pi??0,wt:e.wt??0,speed:e.speed??e.sp??0,yawRate:e.yawRate??0,orbitSign:e.orbitSign??1,heading:e.navHd??e.hd??0,guard:!!e.guard,sp:e.sp,rate:e.rate,dmg:e.dmg,elite:!!e.elite,rocketSoldier:!!e.rocketSoldier,sensePhaseTicks:Math.ceil((e.senseT||0)*30),seenTicks:0,lastAttack:-90})),
-  supplies:items.filter(it=>itemMap[it.t]).map(it=>({id:it.saveId,item:itemMap[it.t][0],amount:itemMap[it.t][1],...point(it)}))};
+  supplies:items.filter(it=>itemMap[it.t]).map(it=>({id:it.saveId,item:itemMap[it.t][0],amount:itemMap[it.t][1],...point(it)})),
+  optional:captureNativeCoopOptionals()};
  return JSON.parse(JSON.stringify(payload,(_,value)=>typeof value==='number'&&Number.isFinite(value)?Math.round(value*1e6)/1e6:value));
 }
 async function startNativeCoop(room){
