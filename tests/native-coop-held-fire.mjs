@@ -11,6 +11,8 @@ for(let tick=1;tick<=60;tick++){
 }
 const lastShot=combat.snapshot().effects.find(e=>e.kind==='shot'&&e.tick===57);
 assert(lastShot,'El darrer tret conserva efecte autoritatiu');
+assert.match(lastShot.projectileId,/^bullet-[0-9]+$/,'El tret confirmat identifica la bala fins i tot si desapareix abans del següent snapshot');
+assert.equal(lastShot.weapon,'pistol');
 assert(Math.abs(lastShot.from.x)<1e-9);
 assert(Math.abs(lastShot.from.y-1.5)<1e-9);
 assert(Math.abs(lastShot.from.z+.7)<1e-9,
