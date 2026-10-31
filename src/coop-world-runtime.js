@@ -128,11 +128,11 @@ async function startNativeCoop(room){
   session.walls=Wl.slice();session.buildings=B.slice();session.palms=PL.slice();session.vehicles=new Map(V.map(v=>[v.saveId,v]));session.enemies=new Map(E.map(e=>[e.saveId,e]));session.items=new Map(items.map(it=>[it.saveId,it]));
   session.channel=window.HUNTER_NATIVE_COOP_TRANSPORT({room,getInput:nativeCoopInput,onInput:message=>session.prediction?.sent(message.sequence),
    onStatus(status){session.connectionStatus=status;if(status!=='open'&&session.state)session.state={...session.state,status:'paused'};const labels={connecting:'Connectant…',retrying:'Reconnectant…',replaced:'Sessió oberta en una altra pestanya.',ended:'Sessió finalitzada.',version:'Cal recarregar el joc.'};msg=status==='open'?'Preparant el mateix món amb el company…':labels[status]||'Connexió interrompuda.';msgT=8;},
-   onAction(result){if(result.ok===false){const labels={HOST_ONLY:'Només el HOST pot activar els trucs.',NOT_ACTIVE:'La sessió no permet aquesta acció.',EMPTY:'No tens munició.',NOT_EQUIPPED:'Cal equipar aquesta arma.',TOO_FAR:'Acosta’t més al vehicle o a la porta.',FULL:'El vehicle és ple.',MOVING:'Atura el vehicle abans de pujar o baixar.',EXIT_BLOCKED:'No hi ha espai per baixar.',BLOCKED:'Hi ha un obstacle al pas.',SAVE_FAILED:'El servidor no ha pogut guardar l’acció. Torna-ho a provar.'};if(labels[result.code]){msg=labels[result.code];msgT=3;}}},
+   onAction(result){if(result.ok===false){const labels={HOST_ONLY:'Només el HOST pot activar els trucs.',NOT_ACTIVE:'La sessió no permet aquesta acció.',EMPTY:'No tens munició.',NOT_EQUIPPED:'Cal equipar aquesta arma.',TOO_FAR:'Acosta’t més al vehicle o a la porta.',FULL:'El vehicle és ple.',MOVING:'Atura el vehicle abans de pujar o baixar.',EXIT_BLOCKED:'No hi ha espai per baixar.',BLOCKED:'Hi ha un obstacle al pas.',NOT_READY:'El mecànic encara no està preparat.',DISABLED:'Aquest relé ja està desactivat.',SAVE_FAILED:'El servidor no ha pogut guardar l’acció. Torna-ho a provar.'};if(labels[result.code]){msg=labels[result.code];msgT=3;}}},
    onRoom(){},onError(error){msg=error||'La sessió s’ha interromput.';msgT=12;session.preparing=true;},
    onMission(data){if(data.meta.fingerprint!==session.fingerprint){session.preparing=true;msg='El món de la sala no coincideix. Recarregueu tots dos.';msgT=30;return;}session.meta=data.meta;session.self=data.self;session.state=data.state;try{session.prediction?.receive(data.state,data.self);}
      catch(error){reportNativeCoopVisualError(error,'predicció inicial');session.prediction=null;}
-     session.seenEffects=new Set(data.state.combat.effects.map(e=>e.id));session.projectileVisual?.prime(data.state.combat.effects);session.preparing=false;paused=false;ui.hide();resetCameraState();},
+     session.seenEffects=new Set(data.state.combat.effects.map(e=>e.id));session.seenOptionalEvents=new Set((data.state.optionals?.events||[]).map(e=>e.id));session.projectileVisual?.prime(data.state.combat.effects);session.preparing=false;paused=false;ui.hide();resetCameraState();},
    onState(state){session.state=state;
       try{session.prediction?.receive(state,session.self);}
       catch(error){reportNativeCoopVisualError(error,'predicció de snapshot');session.prediction=null;}
@@ -194,7 +194,11 @@ function nativeCoopCommand(type,payload={}){
   if(payload.id==='disf')return s.channel.inventory('disguise',!disg);
   return false;
  }
- if(type==='optional')return !!nativeReviveAction();
+ if(type==='optional'){
+  if(nativeReviveAction())return true; // Mantinguda E: el tick del servidor reanima.
+  const action=nativeCoopOptionalAction();if(!action)return false;
+  return s.channel.optional(action.kind==='mechanicFollow'?'follow':action.kind,action.target);
+ }
  if(type==='plant')return (!cv||cv.t==='heli')&&s.channel.combat('c4',undefined,payload.seconds);return false;
 }
 // La boca REAL de l'arma, com al joc individual. Únicament per
@@ -251,6 +255,24 @@ function updateNativeCoopFrame(dt){
        presented=s.prediction?.advance(dt,input,!paused&&!document.hidden&&state.status==='running')||actor;
  elapsed=state.tick/30;
  P.x=presented.x;P.y=presented.y;P.z=presented.z;P.hd=presented.hd;
+ if(state.optionals){
+   prisonerSystem.applyCoopState(state.optionals.prison,dt,P);
+   radioRelay.applyCoopState(state.optionals.radio,P);
+   if(projecting){
+     s.seenOptionalEvents??=new Set();
+     for(const event of state.optionals.events||[]){
+       if(s.seenOptionalEvents.has(event.id))continue;
+       s.seenOptionalEvents.add(event.id);
+       const labels={'prison-rescue':'Camp alliberat! Els presoners fugen i el mecànic va al taller.',
+         'repair-complete':'Vehicle reparat.','repair-cancelled':'Reparació interrompuda.',
+         'radio-disabled':'Relé de ràdio desactivat.','radio-warning':'La ràdio ha mobilitzat soldats de l’HQ.',
+         'civilian-death':'Un presoner ha mort.'};
+       if(labels[event.kind]){msg=labels[event.kind];msgT=4;}
+     }
+     if(s.seenOptionalEvents.size>40)
+       s.seenOptionalEvents=new Set((state.optionals.events||[]).map(e=>e.id));
+   }
+ }
  if(projecting){
   const down=state.rescue?.down?.find(d=>d.actorId===s.self);
   if(hp<=0&&down){msg='Has caigut! El company et pot reanimar amb una farmaciola ('+Math.ceil(down.remaining)+' s).';msgT=1.5;}
@@ -611,5 +633,39 @@ window.HUNTER_NATIVE_COOP=Object.freeze({start:startNativeCoop,active:()=>!!nati
  }});
 
 
+// Mateixa prioritat i icones E que el joc individual, però les dades
+// d'acció provenen de l'estat del Worker, mai del gestor local dels NPC.
+function nativeCoopOptionalAction(){
+ const s=nativeCoopSession,optional=s?.state?.optionals;
+ if(!optional||!s?.self||hp<=0||swimming||playerFall||cv||paused||s.gameOver)return null;
+ const prison=optional.prison,mechanic=prison?.entities?.find(u=>
+   u.role==='mechanic'&&u.hp>0&&u.state==='ready');
+ if(mechanic&&prison.released&&Math.hypot(P.x-mechanic.x,P.z-mechanic.z)<9&&
+    Math.abs(P.y-mechanic.y)<3.8){
+  const repair=prison.repair,vehicles=s.state.vehicles||[];
+  if(repair){
+   if(repair.vehicleId&&vehicles.some(v=>v.id===repair.vehicleId))
+    return {kind:'repair',target:repair.vehicleId,
+      label:'Reparant '+Math.floor(repair.progress/6*100)+'% · cancel·lar',icon:'🔧'};
+  }else{
+   const target=vehicles.filter(v=>!v.destroyed&&!v.sunk&&
+      v.life>0&&v.life<(v.maxLife??COMBAT_BALANCE.vehicles[v.t]??v.life)&&
+      Math.abs(v.v||0)<=.35&&Math.abs(v.y-mechanic.y)<3.8&&
+      Math.hypot(v.x-mechanic.x,v.z-mechanic.z)<Math.min(32,
+        Math.max(7,vehicleRadius(v.t)+5)))
+     .sort((a,b)=>Math.hypot(a.x-mechanic.x,a.z-mechanic.z)-
+       Math.hypot(b.x-mechanic.x,b.z-mechanic.z))[0];
+   if(target)return {kind:'repair',target:target.id,
+     label:'Reparar '+(VT[target.t]?.n||target.t),icon:'🔧'};
+  }
+  if(Math.hypot(P.x-mechanic.x,P.z-mechanic.z)<4)
+   return {kind:'mechanicFollow',target:mechanic.id,
+     label:mechanic.following?'Mecànic: espera aquí':'Mecànic: segueix-me',icon:'🔧'};
+ }
+ const radio=optional.radio?.find(r=>r.operational&&
+   Math.hypot(P.x-r.x,P.z-r.z)<2.9&&Math.abs(P.y-r.y)<2);
+ return radio?{kind:'sabotage',target:radio.id,
+   label:'Sabotejar el relé de ràdio',icon:'📡'}:null;
+}
 function nativeReviveAction(){const s=nativeCoopSession;if(!s?.state||cv||hp<=0||swimming||playerFall||!inv.med)return null;const other=s.state.players.find(p=>p.id!==s.self&&p.hp<=0&&Math.hypot(P.x-p.x,P.z-p.z)<=3.2&&Math.abs(P.y-p.y)<2);return other?{kind:'revive',label:'Mantén E per reanimar el company',icon:'✋'}:null;}
 function stopNativeCoop(){document.getElementById('hunter-coop-game-over')?.remove();const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();cancelGrenadeCharge();for(const key of Object.keys(K))K[key]=0;for(const mesh of s.projectiles.values())world?.remove(mesh);for(const mesh of s.grenades.values()){world?.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);}s.projectiles.clear();s.grenades.clear();s.projectileVisual?.reset();s.grenadeVisual?.reset();movementFx.reset();if(s.previousCheats)Object.assign(cheats,s.previousCheats);for(const model of s.remotes.values()){if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;window.HUNTER_COOP_NETWORK_STATS=null;}
