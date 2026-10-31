@@ -1,5 +1,5 @@
 import {stepRangeVehicle} from './coop-vehicle-motion-core.mjs';
-import {firstVehicleContact} from './coop-vehicle-contacts-core.mjs';
+import {firstVehicleContact,resolveCoopPlayerVehicleContact} from './coop-vehicle-contacts-core.mjs';
 import {vehicleSpecs} from './vehicle-specs.mjs';
 import {createPlayerSimulation} from './player-simulation.mjs';
 import {createStaticWorldAdapter} from './world-adapter.mjs';
@@ -16,7 +16,7 @@ export function createNativePrediction(geometry){
  presentation.stats.subtickFrames=0;
  const radiusByType=Object.fromEntries(Object.entries(vehicleSpecs.hitboxes).map(([type,size])=>
   [type,Math.hypot(...size)*vehicleSpecs.scales[type]/2]));
- let world=null,physical=null,water=null,vehicleBounds=null,lastPalmHealth=null,vehicleCandidates=null,wallCandidates=null,vehicle=null,vehicleTick=0,modeKey=null,worldKey=null,sim=null,state=null,self=null,sequence=0,history=[],accumulator=0,enabled=false;
+ let world=null,playerWorld=null,physical=null,water=null,vehicleBounds=null,lastPalmHealth=null,vehicleCandidates=null,wallCandidates=null,vehicle=null,vehicleTick=0,modeKey=null,worldKey=null,sim=null,state=null,self=null,sequence=0,history=[],accumulator=0,enabled=false;
  let preview=null,lastInput=null;
  const sameControl=(a,b)=>!!a&&!!b&&
   ['forward','turn','strafe','climb'].every(k=>
@@ -34,6 +34,7 @@ export function createNativePrediction(geometry){
   for(const door of next.doors||[]){const wall=walls.get(door.id);if(wall)wall.open=!!door.open||!!door.destroyed;}
   for(const index of next.removedRoofs||[])if(physical.buildings[index])Object.assign(physical.buildings[index],{rb:true,rhp:0});
   world=createStaticWorldAdapter(physical);
+  playerWorld={...world,resolveBody:(previous,candidate)=>resolveCoopPlayerVehicleContact(previous,world.resolveBody(previous,candidate),state?.vehicles,previous.id)};
   vehicleBounds={x0:-world.limit,x1:world.limit,z0:-world.limit,z1:world.limit};
   wallCandidates=createNativeWallCandidateIndex(physical.walls);
   water=createCanonicalWater(world.heightAt);
@@ -41,7 +42,7 @@ export function createNativePrediction(geometry){
   worldKey=key;
  }
  function resetSimulation(next){sim=createPlayerSimulation({
-   epoch:next.missionId,limit:world.limit,world,
+   epoch:next.missionId,limit:world.limit,world:playerWorld,
    vertical:{surfaceAt:water.surfaceAt},
    checkpoint:{protocol:1,epoch:next.missionId,tick:next.tick,players:next.players},
    immune:()=>!!next.cheats?.immune,
@@ -91,7 +92,7 @@ export function createNativePrediction(geometry){
     next=future;
    }else{
     const snap=sim.snapshot(),probe=createPlayerSimulation({epoch:state.missionId,
-      limit:world.limit,world,vertical:{surfaceAt:water.surfaceAt},
+      limit:world.limit,world:playerWorld,vertical:{surfaceAt:water.surfaceAt},
       immune:()=>!!state.cheats?.immune,
       movement:(actor,input)=>state.cheats?.fly?
         moveCoopCheatFly(actor,input,{limit:world.limit,heightAt:(x,z)=>world.heightAt(x,z)}):null,
