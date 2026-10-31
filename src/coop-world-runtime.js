@@ -110,7 +110,11 @@ function captureNativeCoopWorld(){
  const payload={requestedSeed:requestedSeed>>>0,geometry,spawn:{...P},vehicles:V.map(v=>({id:v.saveId,t:v.t,...point(v),hd:v.hd,v:0,life:v.life??VT[v.t].life,rockets:v.rockets})),
   targets:E.map(e=>({id:e.saveId,t:e.t,...point(e),hp:e.hp,heading:e.hd||0,ai:['soldat','general','torre','jeep','tanqueta','tanc','patrulla_marina'].includes(e.t),state:'patrol',patrol:(e.patrol?.length?e.patrol:[]).map(p=>({x:p.x,y:e.o.position.y,z:p.z})),home:{x:e.home?.x??e.x,z:e.home?.z??e.z},tx:e.tx??e.x,tz:e.tz??e.z,patrolIndex:e.pi??0,wt:e.wt??0,speed:e.speed??e.sp??0,yawRate:e.yawRate??0,orbitSign:e.orbitSign??1,heading:e.navHd??e.hd??0,guard:!!e.guard,sp:e.sp,rate:e.rate,dmg:e.dmg,elite:!!e.elite,rocketSoldier:!!e.rocketSoldier,sensePhaseTicks:Math.ceil((e.senseT||0)*30),seenTicks:0,lastAttack:-90})),
   supplies:items.filter(it=>itemMap[it.t]).map(it=>({id:it.saveId,item:itemMap[it.t][0],amount:itemMap[it.t][1],...point(it)})),
-  optional:captureNativeCoopOptionals()};
+  optional:captureNativeCoopOptionals(),
+  sharks:fa.filter(f=>f.k==='s').map((f,i)=>({
+    id:'shark-'+i,x:f.x,z:f.z,cx:f.cx,cz:f.cz,r:f.r,
+    a:f.a,sp:f.sp,biteCd:0,sharkMode:'patrol',phase:i%6
+  }))};
  return JSON.parse(JSON.stringify(payload,(_,value)=>typeof value==='number'&&Number.isFinite(value)?Math.round(value*1e6)/1e6:value));
 }
 async function startNativeCoop(room){
