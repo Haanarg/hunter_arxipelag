@@ -169,7 +169,9 @@ window.HUNTER_RIDER=Object.freeze({
           boots[i].position.copy(foot);
           boots[i].rotation.x=-.2;
         }
-        pistol.visible=false;
+        // També els conductors de cotxe han de mostrar el gest real
+        // de treure la pistola en disparar (local i company COOP).
+        aimOneHand(v,dt);
         return;
       }
 
