@@ -5,10 +5,11 @@ import {createPlayerSimulation} from './player-simulation.mjs';
 import {createStaticWorldAdapter} from './world-adapter.mjs';
 import {createCanonicalWater} from './canonical-water.mjs';
 import {createNativeVehicleCandidateIndex} from './native-coop-vehicle-candidates.mjs';
+import {createNativeWallCandidateIndex} from './native-coop-wall-candidates.mjs';
 // Only local locomotion is predicted. Damage, pickups, combat and world mutations
 // remain authoritative. Reconciliation replays unacknowledged shared-rule steps.
 export function createNativePrediction(geometry){
- let world=null,physical=null,water=null,lastPalmHealth=null,vehicleCandidates=null,vehicle=null,vehicleTick=0,modeKey=null,worldKey=null,sim=null,state=null,self=null,sequence=0,history=[],accumulator=0,enabled=false;
+ let world=null,physical=null,water=null,lastPalmHealth=null,vehicleCandidates=null,wallCandidates=null,vehicle=null,vehicleTick=0,modeKey=null,worldKey=null,sim=null,state=null,self=null,sequence=0,history=[],accumulator=0,enabled=false;
  function rebuild(next){
   const key=JSON.stringify([next.doorRevision,next.removedWalls,next.removedRoofs]);if(world&&key===worldKey){
    // Els deltes conserven la referència dels camps no modificats.
@@ -20,6 +21,7 @@ export function createNativePrediction(geometry){
   for(const door of next.doors||[]){const wall=walls.get(door.id);if(wall)wall.open=!!door.open||!!door.destroyed;}
   for(const index of next.removedRoofs||[])if(physical.buildings[index])Object.assign(physical.buildings[index],{rb:true,rhp:0});
   world=createStaticWorldAdapter(physical);
+  wallCandidates=createNativeWallCandidateIndex(physical.walls);
   water=createCanonicalWater(world.heightAt);
   world.setPalmHealth(next.palmHealth||[]);lastPalmHealth=next.palmHealth;
   worldKey=key;
@@ -30,7 +32,7 @@ export function createNativePrediction(geometry){
    const from={...vehicle},size=vehicleSpecs.hitboxes[vehicle.t],radius=Math.hypot(...size)*vehicleSpecs.scales[vehicle.t]/2;
    stepRangeVehicle(vehicle,input,1/30,++vehicleTick,world,water,{x0:-world.limit,x1:world.limit,z0:-world.limit,z1:world.limit});
    const reach=radius+Math.hypot(vehicle.x-from.x,vehicle.z-from.z)+2,cx=(from.x+vehicle.x)/2,cz=(from.z+vehicle.z)/2,
-    walls=physical.walls.filter(w=>w.x0<=cx+reach&&w.x1>=cx-reach&&w.z0<=cz+reach&&w.z1>=cz-reach),
+    walls=wallCandidates.nearby(cx,cz,reach),
     others=vehicleCandidates.nearby(cx,cz,reach),
     hit=firstVehicleContact(vehicle,from,others,{walls},true,world);
    if(hit){Object.assign(vehicle,hit.safe);vehicle.v=vehicle.sideV=vehicle.strafeV=0;}
