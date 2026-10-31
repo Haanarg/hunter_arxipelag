@@ -62,7 +62,7 @@ function captureNativeCoopWorld(){
  const point=v=>({x:v.x,y:v.y??v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),z:v.z});
  const itemMap={arma:['bullets',16],granada:['grenades',5],disf:['disguise',1],med:['medkits',1],fusell_assalt:['assault',1],franctirador:['sniper',1],bazooka:['bazooka',3],cisalla:['cutters',1],expl:['c4',1]};
  const payload={requestedSeed:requestedSeed>>>0,geometry,spawn:{...P},vehicles:V.map(v=>({id:v.saveId,t:v.t,...point(v),hd:v.hd,v:0,life:v.life??VT[v.t].life,rockets:v.rockets})),
-  targets:E.map(e=>({id:e.saveId,t:e.t,...point(e),hp:e.hp,heading:e.hd||0,ai:['soldat','general','jeep','tanqueta','tanc','patrulla_marina'].includes(e.t),state:'patrol',patrol:(e.patrol?.length?e.patrol:['jeep','tanqueta','tanc','patrulla_marina'].includes(e.t)?[]:[point(e)]).map(p=>({x:p.x,y:e.o.position.y,z:p.z})),home:{x:e.home?.x??e.x,z:e.home?.z??e.z},tx:e.tx??e.x,tz:e.tz??e.z,patrolIndex:e.pi??0,wt:e.wt??0,speed:e.speed??e.sp??0,yawRate:e.yawRate??0,orbitSign:e.orbitSign??1,heading:e.navHd??e.hd??0,guard:!!e.guard,sp:e.sp,rate:e.rate,dmg:e.dmg,elite:!!e.elite,rocketSoldier:!!e.rocketSoldier,sensePhaseTicks:Math.ceil((e.senseT||0)*30),seenTicks:0,lastAttack:-90})),
+  targets:E.map(e=>({id:e.saveId,t:e.t,...point(e),hp:e.hp,heading:e.hd||0,ai:['soldat','general','torre','jeep','tanqueta','tanc','patrulla_marina'].includes(e.t),state:'patrol',patrol:(e.patrol?.length?e.patrol:['jeep','tanqueta','tanc','patrulla_marina'].includes(e.t)?[]:[point(e)]).map(p=>({x:p.x,y:e.o.position.y,z:p.z})),home:{x:e.home?.x??e.x,z:e.home?.z??e.z},tx:e.tx??e.x,tz:e.tz??e.z,patrolIndex:e.pi??0,wt:e.wt??0,speed:e.speed??e.sp??0,yawRate:e.yawRate??0,orbitSign:e.orbitSign??1,heading:e.navHd??e.hd??0,guard:!!e.guard,sp:e.sp,rate:e.rate,dmg:e.dmg,elite:!!e.elite,rocketSoldier:!!e.rocketSoldier,sensePhaseTicks:Math.ceil((e.senseT||0)*30),seenTicks:0,lastAttack:-90})),
   supplies:items.filter(it=>itemMap[it.t]).map(it=>({id:it.saveId,item:itemMap[it.t][0],amount:itemMap[it.t][1],...point(it)}))};
  return JSON.parse(JSON.stringify(payload,(_,value)=>typeof value==='number'&&Number.isFinite(value)?Math.round(value*1e6)/1e6:value));
 }
@@ -364,7 +364,8 @@ function updateNativeCoopFrame(dt){
        // L'estat lògic e.x/e.z continua essent autoritatiu.
        if(!s.interpolation?.enemy?.(row.id)){
          e.o.position.set(row.x,row.y,row.z);
-         e.o.rotation.y=e.hd;
+         if(e.t==='torre'&&e.o.userData.towerTurret)e.o.userData.towerTurret.rotation.y=e.hd;
+       else e.o.rotation.y=e.hd;
        }
        s.appliedEnemyRows.set(row.id,row);
      }else e.nativeMoving=false;
@@ -383,7 +384,8 @@ function updateNativeCoopFrame(dt){
    if(pose){
      const beforeX=e.o.position.x,beforeZ=e.o.position.z;
      e.o.position.set(pose.x,pose.y,pose.z);
-     e.o.rotation.y=pose.hd;
+     if(e.t==='torre'&&e.o.userData.towerTurret)e.o.userData.towerTurret.rotation.y=pose.hd;
+     else e.o.rotation.y=pose.hd;
      // Les cames segueixen el moviment visible, no si la darrera
      // actualització de xarxa ha canviat formalment el registre.
      walking=Math.hypot(pose.x-beforeX,pose.z-beforeZ)>Math.max(.001,dt*.12);
