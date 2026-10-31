@@ -73,7 +73,7 @@ async function renderCoop(body,isCurrent){
         isActive:()=>!document.hidden&&accounts.status().user?.id===owner&&
           !nativeCoopSession&&(active()||waitingAsGuest),
         onRoom:result=>{
-          if(result.room?.id===expectedRoom)launchIfSignalled(result.room);
+          if(result.room?.id===expectedRoom&&result.room.phase==='starting')launchIfSignalled(result.room);
           if(active()&&(!result.room||result.room.id===expectedRoom))draw(result);
         },
         onStatus:state=>{if(active())channel.textContent=({open:'Sala connectada en temps real',connecting:'Connectant la sala…',retrying:'Reconnectant… Actualització periòdica disponible.',replaced:'Connexió oberta en una altra pestanya.',unauthorized:'La connexió de sala ha finalitzat.',closed:''}[state]||'');}
@@ -85,7 +85,16 @@ async function renderCoop(body,isCurrent){
     for(const member of room.members)add('p',member.name+(member.host?' · Amfitrió':'')+' · '+(!member.online?'Sense connexió recent':member.ready?'Preparat':'Esperant'),view);
     const mine=room.members.find(m=>m.id===owner);
     const guest=room.members.find(member=>!member.host);
-    if(nativeCoopSession)button('▶ Reprendre el joc',()=>resume(),view);
+    if(nativeCoopSession){
+      const offline=!window.HUNTER_NATIVE_COOP.connected()||nativeCoopSession.preparing;
+      if(room.host!==owner&&offline){
+        add('p','Has perdut la connexió amb la partida. La sala i el món es conserven.',view);
+        button('↻ Reconnectar a la partida',()=>{
+          window.HUNTER_NATIVE_COOP.reconnect();
+          resume();
+        },view);
+      }else button('▶ Reprendre el joc',()=>resume(),view);
+    }
     else if(room.host===owner){
       add('p',guest?.ready?'El convidat està preparat. Pots començar la partida.':
         'Esperant que el convidat confirmi que està preparat.',view);
@@ -94,10 +103,22 @@ async function renderCoop(body,isCurrent){
         if(started?.room){draw(started);await launchIfSignalled(started.room);}
       },view);
     }else{
-      add('p',mine?.ready?'Preparat. Esperant que el HOST comenci la partida.':
-        'Confirma que estàs preparat. El HOST us farà entrar a tots dos.',view);
-      button(mine?.ready?'Encara no estic preparat':'Estic preparat',
-        async()=>draw(await call('ready',{ready:!mine?.ready,revision:room.revision})),view);
+      if(room.phase==='playing'){
+        add('p','Hi ha una partida COOP iniciada. Pots tornar a entrar sense demanar al HOST que la comenci de nou.',view);
+        button('↻ Reconnectar a la partida',async()=>{
+          let next=room;
+          if(!mine?.ready){
+            const updated=await call('ready',{ready:true,revision:room.revision});
+            if(updated?.room)next={...updated.room,phase:'playing'};
+          }
+          if(next){room=next;await launchIfSignalled(next);}
+        },view);
+      }else{
+        add('p',mine?.ready?'Preparat. Esperant que el HOST comenci la partida.':
+          'Confirma que estàs preparat. El HOST us farà entrar a tots dos.',view);
+        button(mine?.ready?'Encara no estic preparat':'Estic preparat',
+          async()=>draw(await call('ready',{ready:!mine?.ready,revision:room.revision})),view);
+      }
     }
     button('Actualitzar sala',async()=>draw(await call('current')),view);
     button(room.host===owner?'Tancar sala i sortir':'Sortir de la sala',async()=>{const result=await call('leave',{});if(nativeCoopSession){stopNativeCoop();location.assign('/');}else draw(result);},view);
@@ -114,7 +135,7 @@ async function renderCoop(body,isCurrent){
     if(waitingAsGuest&&!active()&&!document.hidden&&connection&&!connection.isOpen())
       connection.start();
     if(room&&!document.hidden&&!connection?.isOpen()&&active()){
-      try{const result=await call('current');draw(result);if(result?.room)launchIfSignalled(result.room);}
+      try{const result=await call('current');draw(result);if(result?.room?.phase==='starting')launchIfSignalled(result.room);}
       catch(e){if(active())status.textContent=e.message;}
     }
     if(active())setTimeout(poll,5000);
