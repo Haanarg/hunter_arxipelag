@@ -22,4 +22,13 @@ for(let i=32;i<50;i++){input(m,i);m.step();}assert.equal(m.inventoryCommand('b',
 // Enemy fire interrupts a rescue; revive immunity blocks it temporarily.
 r=fixture();Object.assign(r.checkpoint.players[1],{hp:20});r.rescue={down:[{actorId:'a',expiresAtTick:901,progress:89,helperId:'b'}]};r.meta.targets=[{id:'guard',...p,z:p.z-5,hp:12,ai:true,heading:Math.PI,focus:'b',seenTicks:30,lastAttack:-90}];r.combat={targets:r.meta.targets,projectiles:[launchProjectile({x:p.x,y:p.y+1.5,z:p.z-2.5},[0,0,1],70,{id:'interrupt',actorId:'guard',enemy:true,dmg:2})]};m=restoreRelayMission(r,g.geometry);input(m,1);m.step();assert.equal(m.snapshot().players[1].hp,18);assert.equal(m.snapshot().rescue.down[0].progress,0,'damage interrupts before revive completes');
 r=fixture();r.rescue={down:[{actorId:'a',expiresAtTick:901,progress:89,helperId:'b'}]};m=restoreRelayMission(r,g.geometry);input(m,1);m.step();r=m.checkpoint(0);r.meta.targets=[{id:'guard',...p,z:p.z-5,hp:12,ai:true,heading:Math.PI,focus:'a',seenTicks:30,lastAttack:-90}];r.combat.targets=r.meta.targets;r.checkpoint.players[1].x+=40;m=restoreRelayMission(r,g.geometry);m.step();assert.equal(m.snapshot().players[0].hp,8,'newly revived player is protected');for(let i=0;i<96;i++)m.step();assert.ok(m.snapshot().players[0].hp<8,'protection expires in simulation time');
+// El jugador abatut continua enviant ACKs sense recuperar mobilitat.
+const downMission=restoreRelayMission(fixture(),g.geometry);
+const downAccepted=downMission.accept('a',{protocol:1,epoch:downMission.meta.id,sequence:1,
+ input:{forward:1,turn:1,strafe:0,run:true},interact:false});
+assert.equal(downAccepted,true,'downed client input is acknowledged, not rejected');
+downMission.step();
+const downActor=downMission.snapshot().players.find(p=>p.id==='a');
+assert.equal(downActor.hp,0);
+assert.equal(downActor.acknowledged,1,'downed input does not stall network acknowledgement');
 console.log('rescue: 30s down timer, 3s hold, 8HP revive, pause/checkpoint, release/movement/damage interrupts, range/height/cover, temporary immunity, bleed-out and double-down passed');
