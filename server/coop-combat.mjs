@@ -13,7 +13,7 @@ import {createWorldRandom} from '../src/world-generation-core.mjs';
 import {launchProjectile,projectileStep,SMALL_ARMS_PROJECTILE_SPEED} from '../src/projectile-core.mjs';
 import {createAimSelector,weaponTargetPriority,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL,SMALL_ARMS_RANGE} from '../src/aiming-core.mjs';
 import {damageHealth} from '../src/player-simulation.mjs';
-import {runoverDamage,runoverSweepHit,VEHICLE_DESTRUCTION,beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,segmentAabbT,segmentSphereT,inView,ballisticStep} from '../src/combat-rules.mjs';
+import {runoverDamage,runoverSweepHit,VEHICLE_DESTRUCTION,beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,towerExplosionAim,segmentAabbT,segmentSphereT,inView,ballisticStep} from '../src/combat-rules.mjs';
 // Índex immutable per posició: les portes poden obrir-se i destruir-se,
 // però els seus volums no canvien de cel·la. Els índexs de les parets continuen
 // essent els originals per als vidres i els efectes sincronitzats.
@@ -348,7 +348,24 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     while(queue.length){
       const blast=queue.shift(),center=blast.at,hits=[],protectedPlayers=new Set(players().filter(p=>vehicles.mounted(p.id)).map(p=>p.id));
       const visible=aim=>traceArena(center,aim,geometry(),world()).fraction>=1;
-      for(const t of targets)if(t.hp>0){const aim={x:t.x,y:t.y+(t.t==='torre'?9.4:1.5),z:t.z},d=Math.hypot(aim.x-center.x,aim.y-center.y,aim.z-center.z),damage=explosionDamage(blast.damage,d,blast.radius);if(damage&&visible(aim)){t.hp=damageHealth(t.hp,damage);hits.push(t.id);}}
+      for(const t of targets)if(t.hp>0){
+        const aim=t.t==='torre'?towerExplosionAim(t,center):
+          {x:t.x,y:t.y+1.5,z:t.z},
+          d=Math.hypot(aim.x-center.x,aim.y-center.y,aim.z-center.z),
+          damage=explosionDamage(blast.damage,d,blast.radius);
+        if(!damage)continue;
+        // El raycast del C4 ha d'ignorar els quatre suports de la
+        // mateixa torre, però no altres edificis ni el terreny.
+        const towerLegs=t.t==='torre'?geometry().walls.flatMap((w,i)=>
+          w.towerLegOwner&&Math.hypot((w.x0+w.x1)/2-t.x,
+            (w.z0+w.z1)/2-t.z)<4?[i]:[]):[];
+        const trace=towerLegs.length?traceArena(center,aim,geometry(),world(),
+          {wallCandidates:(traceWallCandidates(center,aim)??geometry().walls.map((_,i)=>i))
+            .filter(i=>!towerLegs.includes(i))}):null;
+        if((trace?trace.fraction>=1:visible(aim))){
+          t.hp=damageHealth(t.hp,damage);hits.push(t.id);
+        }
+      }
       for(const u of civilianTargets())if(u.hp>0){
         const aim={x:u.x,y:u.y+1,z:u.z},damage=explosionDamage(blast.damage,Math.hypot(aim.x-center.x,aim.y-center.y,aim.z-center.z),blast.radius);
         if(damage&&visible(aim))damageCivilian(u.id,damage,tick);
