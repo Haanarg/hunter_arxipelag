@@ -63,6 +63,8 @@ async function startNativeCoop(room){
     }});
   // Disponible per al diagnòstic sense mostrar dades de xarxa als menús normals.
   window.HUNTER_COOP_NETWORK_STATS=session.channel.stats;
+  if(session.prediction?.stats)
+    session.channel.stats.localPrediction=session.prediction.stats;
   session.channel.start();session.channel.prepare({payload,fingerprint:session.fingerprint,host:room.members.find(m=>m.host)?.id===window.HUNTER_ACCOUNT_SERVICE.status().user?.id||room.host===window.HUNTER_ACCOUNT_SERVICE.status().user?.id});
   msg='Esperant el company al món original…';msgT=30;
  }catch(error){stopNativeCoop();paused=true;msg=error.message;msgT=20;ui.show('coop');throw error;}
@@ -160,9 +162,13 @@ function updateNativeCoopFrame(dt){
  }
  // La predicció només modifica cada fotograma el vehicle que condueix
  // l'actor local; la resta espera dades noves del servidor.
- if(cv&&!cv.destroyed&&predictedVehicle?.id===cv.saveId)
+ if(cv&&!cv.destroyed&&predictedVehicle?.id===cv.saveId){
    for(const key of NATIVE_VEHICLE_POSE_KEYS)
      if(predictedVehicle[key]!==undefined)cv[key]=predictedVehicle[key];
+   // La càmera, el pilot i el vehicle comparteixen la correcció visual;
+   // el simulador de col·lisions continua utilitzant el vehicle cru.
+   cv.x=presented.x;cv.y=presented.y;cv.z=presented.z;cv.hd=presented.hd;
+ }
  updateVehicleVisualLod(elapsed,dt,{skipHidden:true});
  if(cv||swimming)playerCrouched=false;if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;animPl(cv?0:input.forward,dt,input.run,input.strafe);poseRider(cv,dt);
  if(projecting){
