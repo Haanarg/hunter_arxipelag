@@ -14,6 +14,10 @@ export function createNativePrediction(geometry){
  const radiusByType=Object.fromEntries(Object.entries(vehicleSpecs.hitboxes).map(([type,size])=>
   [type,Math.hypot(...size)*vehicleSpecs.scales[type]/2]));
  let world=null,physical=null,water=null,vehicleBounds=null,lastPalmHealth=null,vehicleCandidates=null,wallCandidates=null,vehicle=null,vehicleTick=0,modeKey=null,worldKey=null,sim=null,state=null,self=null,sequence=0,history=[],accumulator=0,enabled=false;
+ let preview=null,lastInput=null;
+ const controlKeys=['forward','turn','strafe','run','climb','crouch','fire'];
+ const sameControl=(a,b)=>!!a&&!!b&&controlKeys.every(k=>a[k]===b[k]);
+ const angle=a=>Math.atan2(Math.sin(a),Math.cos(a));
  function rebuild(next){
   const key=JSON.stringify([next.doorRevision,next.removedWalls,next.removedRoofs]);if(world&&key===worldKey){
    // Els deltes conserven la referència dels camps no modificats.
@@ -32,19 +36,65 @@ export function createNativePrediction(geometry){
   worldKey=key;
  }
  function resetSimulation(next){sim=createPlayerSimulation({epoch:next.missionId,limit:world.limit,world,vertical:{surfaceAt:water.surfaceAt},checkpoint:{protocol:1,epoch:next.missionId,tick:next.tick,players:next.players}});}
+ // Única física de vehicle compartida per al pas real i per al
+ // pas visual temporal. La projecció temporal usa una CÒPIA i mai
+ // altera el vehicle físic que verifica les col·lisions.
+ function vehicleStep(target,input,tick){
+  const from={x:target.x,y:target.y,z:target.z,hd:target.hd},
+   radius=radiusByType[target.t];
+  stepRangeVehicle(target,input,1/30,tick,world,water,vehicleBounds);
+  const reach=radius+Math.hypot(target.x-from.x,target.z-from.z)+2,
+   cx=(from.x+target.x)/2,cz=(from.z+target.z)/2,
+   walls=wallCandidates.nearby(cx,cz,reach),
+   others=vehicleCandidates.nearby(cx,cz,reach),
+   hit=firstVehicleContact(target,from,others,{walls},true,world);
+  if(hit){Object.assign(target,hit.safe);target.v=target.sideV=target.strafeV=0;}
+ }
  function step(input){
-  if(vehicle){
-   const from={x:vehicle.x,y:vehicle.y,z:vehicle.z,hd:vehicle.hd},
-    radius=radiusByType[vehicle.t];
-   stepRangeVehicle(vehicle,input,1/30,++vehicleTick,world,water,vehicleBounds);
-   const reach=radius+Math.hypot(vehicle.x-from.x,vehicle.z-from.z)+2,cx=(from.x+vehicle.x)/2,cz=(from.z+vehicle.z)/2,
-    walls=wallCandidates.nearby(cx,cz,reach),
-    others=vehicleCandidates.nearby(cx,cz,reach),
-    hit=firstVehicleContact(vehicle,from,others,{walls},true,world);
-   if(hit){Object.assign(vehicle,hit.safe);vehicle.v=vehicle.sideV=vehicle.strafeV=0;}
-   return;
+  preview=null;
+  if(vehicle){vehicleStep(vehicle,input,++vehicleTick);return;}
+  const snapshot=sim.snapshot(),actor=snapshot.players.find(p=>p.id===self);
+  sim.accept(self,{protocol:1,epoch:state.missionId,sequence:actor.acknowledged+1,input});
+  sim.step();
+ }
+ function rawPose(){
+  const actor=sim.snapshot().players.find(p=>p.id===self);
+  return vehicle?{...actor,x:vehicle.x,y:vehicle.y,z:vehicle.z,hd:vehicle.hd,
+    fall:null,swimming:false}:actor;
+ }
+ // El render pot anar a 240 FPS, però la física avança a 30 Hz.
+ // Calculam el següent pas una sola vegada per tick/input sobre una
+ // còpia de l'estat, i el dibuixam entre dos ticks sense retard addicional.
+ // El pas REAL segueix essent únicament el que executa step().
+ function visualPose(input){
+  const current=rawPose(),alpha=Math.max(0,Math.min(1,accumulator*30));
+  if(!enabled||alpha<=0||!input)return current;
+  const tick=vehicle?vehicleTick:sim.snapshot().tick;
+  if(!preview||preview.tick!==tick||!sameControl(preview.input,input)){
+   const {interact,...movement}=input;
+   let next;
+   if(vehicle){
+    const future={...vehicle};
+    vehicleStep(future,movement,vehicleTick+1);
+    next=future;
+   }else{
+    const snap=sim.snapshot(),probe=createPlayerSimulation({epoch:state.missionId,
+      limit:world.limit,world,vertical:{surfaceAt:water.surfaceAt},
+      checkpoint:{protocol:1,epoch:state.missionId,tick:snap.tick,players:snap.players}});
+    const actor=snap.players.find(p=>p.id===self);
+    probe.accept(self,{protocol:1,epoch:state.missionId,
+      sequence:actor.acknowledged+1,input:movement});
+    next=probe.step().players.find(p=>p.id===self);
+   }
+   preview={tick,input:movement,next};
   }
-  const snapshot=sim.snapshot(),actor=snapshot.players.find(p=>p.id===self);sim.accept(self,{protocol:1,epoch:state.missionId,sequence:actor.acknowledged+1,input});sim.step();}
+  const target=preview.next;
+  return {...current,
+   x:current.x+(target.x-current.x)*alpha,
+   y:current.y+(target.y-current.y)*alpha,
+   z:current.z+(target.z-current.z)*alpha,
+   hd:current.hd+angle(target.hd-current.hd)*alpha};
+ }
  function receive(next,id){
   const actor=next.players.find(p=>p.id===id);if(!actor)return;
   const same=state?.missionId===next.missionId,
@@ -66,22 +116,17 @@ export function createNativePrediction(geometry){
   // El temps fraccionari local és independent del ritme dels paquets de
   // 10 Hz. Descartar-lo a cada estat canviava la cadència dels passos.
   if(!continuous)accumulator=0;
-  modeKey=nextMode;resetSimulation(next);
+  modeKey=nextMode;resetSimulation(next);preview=null;
   for(const frame of history)step(frame.input);
-  const synced=sim.snapshot().players.find(p=>p.id===self);
-  const corrected=vehicle?
-   {...synced,x:vehicle.x,y:vehicle.y,z:vehicle.z,hd:vehicle.hd}:
-   synced;
-  presentation.reconcile(corrected,{continuous,driving:!!vehicle});
+  presentation.reconcile(visualPose(lastInput),{continuous,driving:!!vehicle});
  }
  return {receive,sent(value){sequence=value;},advance(dt,input,active=true){
   if(!state||!sim)return null;
   if(enabled&&active){accumulator+=Math.min(.1,Math.max(0,dt));while(accumulator>=1/30&&history.length<12){const {interact,...movement}=input;step(movement);history.push({sequence,input:movement});accumulator-=1/30;}}
   else accumulator=0;
-  const actor=sim.snapshot().players.find(p=>p.id===self),
-    raw=vehicle?{...actor,x:vehicle.x,y:vehicle.y,z:vehicle.z,
-      hd:vehicle.hd,fall:null,swimming:false}:actor;
-  return presentation.present(raw,dt,active&&state.status==='running');
+  lastInput=input;
+  const visual=visualPose(input);
+  return presentation.present(visual,dt,active&&state.status==='running');
  },vehicle:()=>vehicle,pending:()=>history.length,
  stats:presentation.stats};
 }
