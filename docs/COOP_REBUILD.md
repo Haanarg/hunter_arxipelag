@@ -1,5 +1,23 @@
 # Reconstrucció del multijugador sobre el joc original
 
+## Correcció del jitter i origen dels trets en COOP (0.6.64)
+
+**Problema reportat després de la 0.6.63:** el jugador i la càmera ja es mouen completament fluids, però les bales encara surten aparentment de darrere del personatge i es desplacen a sotracs.
+
+**Causa comprovada al codi:** `src/coop-world-runtime.js` assignava `mesh.position.set(row.x,row.y,row.z)` només quan canviava `state.combat.projectiles`. Amb snapshots de ~10 Hz, les malles quedaven immòbils entre paquets. A més, `server/coop-combat.mjs` disparava a peu amb `from={x:p.x,y:p.y+1.5,z:p.z}`, diferent de la pistola del joc individual que neix ~0,7 m davant del cos.
+
+**Implementació concreta:**
+- `src/native-coop-projectile-visual.mjs`: cada fila de projectil es projecta només gràficament amb velocitat `vx/vy/vz` a cada frame, amb un màxim de 180 ms sense estat nou; les correccions entre snapshots es distribueixen gradualment i es preserva la continuïtat en recepció, sense alterar les dades originals, danys ni col·lisions.
+- Les noves bales pròpies de pistola, fusell d'assalt i franctirador s'inicien visualment al punt de boca del rig del jugador, **quan l'origen és pròxim i la direcció és compatible**; quan la pistola encara és al canell, el punt s'obté amb el mateix avançament de .7 m del mode individual. Les bales alienes, distants o que viatgen enrere no s'enganxen a la pistola pròpia.
+- `server/coop-combat.mjs`: el tret físic de pistola a peu comença 0,7 m davant del jugador; fusell d'assalt/sniper/bazuca també empren un avançament proporcional. Els vehicles conserven els seus canons i muntatges, i els punts del servidor continuen essent els únics que determinen impactes.
+- `src/coop-world-runtime.js`: activació de l'animació de tir/reculada de la pistola pròpia quan arriba un efecte `shot`; les malles s'actualitzen cada fotograma, es destrueixen quan el servidor les retira i es netegen en tancar la sessió.
+- Telemetria nova: `window.HUNTER_COOP_NETWORK_STATS.projectileVisual`, amb `visualFrames`, `active`, `localMuzzleStarts`, `corrections` i `maxCorrectionM`.
+- Test nou `tests/native-coop-projectile-visual.mjs` comprovat en JS aïllat: la bala apareix a la boca de pistola, avança a 240 Hz, no salta en rebre un nou estat, manté referències de delta i té extrapolació limitada; `tests/native-coop-held-fire.mjs` comprova també el nou origen físic del servidor (pendent de suite Node 22 completa).
+
+**Important:** la generació i els impactes encara depenen de l'estat autoritatiu rebut. No es creen bales de dany local ni es falsegen impactes per amagar latència. La primera aparició pot tenir el retard del primer paquet; la fluïdesa **després d'aparèixer** ja no depèn de 10 Hz. Cap canvi de freqüència de simulació, de WebSockets ni del Worker fora de l'origen del tret.
+
+Versió 0.6.64 amb bundle regenerat i workflow manual-only (cap Action iniciada). Sense verificació d'una partida amb dos dispositius ni desplegament Cloudflare confirmat.
+
 ## Correcció específica del jitter de moviment local (0.6.63)
 
 **Prova real rebuda:** RTT 32,4 ms, jitter RTT 16,4 ms; 752 estats cada 99,17 ms de mitjana, màxim 196 ms; 15.414 intervals de fotograma locals amb mitjana 4,15 ms (~240 FPS) i només 6 intervals >33 ms. El company/vehicles disposen de buffer visual de 200 ms, sense extrapolacions ni desbordaments en aquesta mostra. L'usuari observa tremolor constant de tota la imatge quan es mou, i fluïdesa si ningú no es mou.
