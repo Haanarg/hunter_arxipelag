@@ -124,6 +124,10 @@ function nativeCoopCommand(type,payload={}){
 // a la primera posició gràfica del projectil confirmat.
 function nativeCoopProjectileMuzzle(weapon){
  if(cv||!pl?.userData)return null;
+ if(weapon==='sniper'&&scopeActive){
+   const p=sniperMuzzleWorld(scopeYaw,scopePitch);
+   return {x:p.x,y:p.y,z:p.z};
+ }
  const u=pl.userData;
  let parent,point;
  if(weapon==='pistol'){parent=u.gun;point=[0,.183,-.84];}
