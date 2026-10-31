@@ -43,6 +43,7 @@ const at=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
 export function segmentBox(from,to,box){return segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,box.x0,box.x1,box.y0,box.y1,box.z0,box.z1);}
 function targetBox(t){
  const type=t.t==='jeep'?'cotxe':t.t==='patrulla_marina'?'llanxa':t.t;
+ if(type==='torre')return {x0:t.x-1.85,x1:t.x+1.85,z0:t.z-1.85,z1:t.z+1.85,y0:t.y+8.05,y1:t.y+10.5};
  if(['cotxe','llanxa','tanqueta','tanc'].includes(type)){
   const radius=(vehicleSpecs.radii[type]||2)*(vehicleSpecs.scales[type]||1)*.66;
   const hullHeight=type==='llanxa'?3:type==='cotxe'?3.1:4.2;
@@ -111,6 +112,59 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       if(vehicles.live().some(v=>{if(v===vehicle||v.id===vehicle?.id||v.destroyed)return false;const r=(vehicleSpecs.radii[v.t]||0)*.55,t=segmentSphereT(eye.x,eye.y,eye.z,aim.x,aim.y,aim.z,v.x,v.y+Math.min(1.7,r*.6),v.z,r);return t!==null&&t<.97;}))continue;
       return aim;
     }return null;
+  }
+  // Fidelitat amb les torres del joc individual: detecció des de la
+  // caseta (9,4 m), arma lleugera contra persones i coet contra vehicles.
+  // Cada impacte d'arma lleugera atura els trets durant 2 s autoritatius.
+  function stepNativeTower(unit,tick){
+    if(meta.mode!=='native'||unit.t!=='torre')return false;
+    if(tick>=(unit.nextSenseTick||0)){
+      unit.nextSenseTick=tick+3;
+      const eye={x:unit.x,y:unit.y+9.4,z:unit.z};
+      const contacts=visiblePlayers().filter(p=>p.hp>0&&!p.fall&&!p.swimming).flatMap(p=>{
+        const vehicle=vehicles.mounted(p.id),disguised=!!inventory.get(p.id)?.disguised&&!vehicle,
+          d=Math.hypot(p.x-unit.x,p.z-unit.z),range=disguised&&tick>(unit.alarmedUntil||0)?20:unit.rng||112.5;
+        if(d>range)return [];
+        const heights=!!p.crouched&&!vehicle?[1.25]:[1.5,2.35];
+        for(const h of heights){
+          const aim={x:p.x,y:p.y+h,z:p.z};
+          if(traceArena(eye,aim,geometry(),world(),{ignoreVegetation:true,ignoreBarbed:true,wallCandidates:traceWallCandidates(eye,aim)}).fraction>=.999)
+            return [{p,vehicle,aim,d}];
+        }
+        return [];
+      }).sort((a,b)=>a.d-b.d||a.p.id.localeCompare(b.p.id));
+      const chosen=contacts.find(c=>c.p.id===unit.focus)||contacts[0];
+      unit.focus=chosen?.p.id||null;
+      unit.canSee=!!chosen;
+      unit.state=chosen?'attack':'patrol';
+      unit.towerAim=chosen?.aim||null;
+      if(chosen)unit.heading=facePoint(unit,chosen.p);
+    }
+    if(!unit.canSee||tick<(unit.suppressedUntilTick||0))return true;
+    const actor=visiblePlayers().find(p=>p.id===unit.focus&&p.hp>0);
+    if(!actor)return true;
+    const vehicle=vehicles.mounted(actor.id),heavy=!!vehicle,
+      rate=heavy?Math.ceil((unit.heavyRate||4.2)*30):Math.ceil((unit.rate||.7)*30),
+      next=heavy?'nextHeavyTick':'nextAttackTick',limit=heavy?(unit.heavyRange||95):(unit.rng||112.5);
+    if(tick<(unit[next]||0)||Math.hypot(actor.x-unit.x,actor.z-unit.z)>limit)return true;
+    const eye={x:unit.x,y:unit.y+9.4,z:unit.z},
+      aim={x:actor.x,y:actor.y+(actor.crouched&&!vehicle?1.25:1.5),z:actor.z};
+    if(traceArena(eye,aim,geometry(),world(),{ignoreVegetation:true,ignoreBarbed:true,wallCandidates:traceWallCandidates(eye,aim)}).fraction<.999)return true;
+    const fx=-Math.sin(unit.heading),fz=-Math.cos(unit.heading),
+      rightX=Math.cos(unit.heading),rightZ=-Math.sin(unit.heading),
+      origin={x:unit.x+fx*2.4+rightX*(heavy?.72:-.72),y:eye.y-(heavy?.2:0),
+        z:unit.z+fz*2.4+rightZ*(heavy?.72:-.72)},
+      direction=enemyAccuracy.direction(meta.difficulty||1,heavy?'towerHeavy':'tower',
+        aim.x-origin.x,aim.y-origin.y,aim.z-origin.z,roll),
+      id='tower-bullet-'+(++sequence),weapon=heavy?'bazooka':'rifle';
+    projectiles.push(launchProjectile(origin,direction,heavy?76:70,{
+      id,actorId:unit.id,enemy:true,weapon,
+      dmg:heavy?combatBalance.weapons.towerHeavy:(unit.dmg??combatBalance.weapons.towerLight),
+      splash:heavy?7:0}));
+    unit[next]=tick+rate;unit.lastAttack=tick;
+    effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,weapon,
+      from:origin,to:aim,hit:null});
+    return true;
   }
   function nativeSoldierStep(unit,tick){
     const contact=senseNativeSoldier(unit,{players:visiblePlayers(),inventory,mounted:id=>vehicles.mounted(id),world:world(),visibleAim:nativeSoldierAim,tick});
@@ -240,7 +294,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     while(queue.length){
       const blast=queue.shift(),center=blast.at,hits=[],protectedPlayers=new Set(players().filter(p=>vehicles.mounted(p.id)).map(p=>p.id));
       const visible=aim=>traceArena(center,aim,geometry(),world()).fraction>=1;
-      for(const t of targets)if(t.hp>0){const aim={x:t.x,y:t.y+1.5,z:t.z},d=Math.hypot(aim.x-center.x,aim.y-center.y,aim.z-center.z),damage=explosionDamage(blast.damage,d,blast.radius);if(damage&&visible(aim)){t.hp=damageHealth(t.hp,damage);hits.push(t.id);}}
+      for(const t of targets)if(t.hp>0){const aim={x:t.x,y:t.y+(t.t==='torre'?9.4:1.5),z:t.z},d=Math.hypot(aim.x-center.x,aim.y-center.y,aim.z-center.z),damage=explosionDamage(blast.damage,d,blast.radius);if(damage&&visible(aim)){t.hp=damageHealth(t.hp,damage);hits.push(t.id);}}
       // The hull protects occupants; personal grenades retain no team damage.
       for(const p of players())if(p.hp>0&&!protectedPlayers.has(p.id)&&!blast.skipPlayers?.includes(p.id)&&(!blast.ownerOnly||p.id===blast.actorId)){
         const aim={x:p.x,y:p.y+1,z:p.z},damage=explosionDamage(blast.damage,Math.hypot(aim.x-center.x,aim.y-center.y,aim.z-center.z),blast.radius);
@@ -261,7 +315,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     const profile=weaponCatalog[weapon],hd=vehicle?.hd??p.hd,dx=-Math.sin(hd),dz=-Math.cos(hd),range=profile.range,focus={},heavy=!!profile.splash;
     const aim=createAimSelector({origin:from,direction:[dx,0,dz],range,cone:profile.cone,shotClass:heavy?'heavy':weapon,focus,verticalCone:profile.vertical,
       isClear:(x,y,z,tx,ty,tz)=>traceArena({x,y,z},{x:tx,y:ty,z:tz},geometry(),world()).fraction>=1});
-    for(const t of targets)if(t.hp>0)aim.consider(t,'enemy',weaponTargetPriority({...t,t:t.t||'soldat'},heavy?'heavy':weapon),t.x,t.y+1.5,t.z);
+    for(const t of targets)if(t.hp>0)aim.consider(t,'enemy',weaponTargetPriority({...t,t:t.t||'soldat'},heavy?'heavy':weapon),t.x,t.y+(t.t==='torre'?9.4:1.5),t.z);
     for(const v of vehicles.live())if(v!==vehicle&&!v.seats.some(Boolean))aim.consider(v,'vehicle',3,v.x,v.y+1,v.z);
     // Without a visible enemy, aim light weapons at intact upper-floor
     // glass. The same physics trace checks the aperture, in both directions.
@@ -387,7 +441,16 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       else for(const t of targets)if(t.hp>0)flight.consider(segmentBox(flight.from,flight.to,targetBox(t)),'enemy',t);
       const result=flight.finish();p.life=flight.life;Object.assign(p,result.point);
       for(const pane of trace.windowCrossings)if(pane.t<=flight.fraction+1e-6&&breakWindow(pane.wallIndex,pane.index)){effect('glass',tick,{actorId:p.actorId,at:pane.point,wallIndex:pane.wallIndex,paneIndex:pane.index});}
-      if(result.hit){if(p.splash){if(result.kind!=='expire')explode({at:{...result.point},damage:p.dmg,radius:p.splash,actorId:p.actorId,ownerOnly:!p.enemy},tick);projectiles.splice(i,1);continue;}let applied=true;if(result.kind==='vehicle'){const queue=[];applied=damageVehicle(result.target,p.dmg,'light',tick,queue);for(const blast of queue)explode(blast,tick);}else if(result.kind==='enemy')result.target.hp=damageHealth(result.target.hp,p.dmg);else if(result.kind==='player')applied=damagePlayer(result.target.id,p.dmg)!==false;else if(result.kind==='world'&&trace.tree?.p)applied=damagePalm(trace.tree,p.dmg);else if(result.kind==='world'&&trace.wallIndex!=null&&Math.hypot(result.point.x-trace.point.x,result.point.y-trace.point.y,result.point.z-trace.point.z)<.01)applied=damageWall(trace.wallIndex,p.dmg);
+      if(result.hit){if(p.splash){if(result.kind!=='expire')explode({at:{...result.point},damage:p.dmg,radius:p.splash,actorId:p.actorId,ownerOnly:!p.enemy},tick);projectiles.splice(i,1);continue;}let applied=true;if(result.kind==='vehicle'){const queue=[];applied=damageVehicle(result.target,p.dmg,'light',tick,queue);for(const blast of queue)explode(blast,tick);}else if(result.kind==='enemy'){
+          if(result.target.t==='torre'){
+            if(!p.enemy&&!p.splash){
+              result.target.suppressedUntilTick=tick+60;
+              effect('suppression',tick,{actorId:p.actorId,targetId:result.target.id,at:{...result.point}});
+            }
+          }else if(!(p.enemy||p.splash)&&['jeep','tanqueta','tanc','patrulla_marina'].includes(result.target.t)){
+            // La metralla lleugera no destrueix el blindatge hostil.
+          }else result.target.hp=damageHealth(result.target.hp,p.dmg);
+        }else if(result.kind==='player')applied=damagePlayer(result.target.id,p.dmg)!==false;else if(result.kind==='world'&&trace.tree?.p)applied=damagePalm(trace.tree,p.dmg);else if(result.kind==='world'&&trace.wallIndex!=null&&Math.hypot(result.point.x-trace.point.x,result.point.y-trace.point.y,result.point.z-trace.point.z)<.01)applied=damageWall(trace.wallIndex,p.dmg);
         if(result.kind!=='expire')effect('impact',tick,{actorId:p.actorId,at:{...result.point},hit:applied&&['enemy','player','vehicle'].includes(result.kind)?result.target.id:null});projectiles.splice(i,1);
       }
     }
@@ -403,6 +466,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     for(const t of targets)if(t.ai){
       if(t.hp<=0){t.state='dead';t.focus=null;continue;}
       if(stepNativePatrolVehicle(t,tick))continue;
+      if(stepNativeTower(t,tick))continue;
       const nativeSoldier=meta.mode==='native'&&t.t==='soldat';if(nativeSoldier&&nativeSoldierStep(t,tick))continue;
       const eye={x:t.x,y:t.y+2.2,z:t.z},candidates=(nativeSoldier?[]:visiblePlayers()).filter(p=>p.hp>0&&!p.fall&&!p.swimming)
         .map(p=>({p,d:Math.hypot(p.x-t.x,p.y-t.y,p.z-t.z)}))
