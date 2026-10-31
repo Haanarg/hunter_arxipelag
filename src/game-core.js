@@ -2288,7 +2288,7 @@ function updateActionButton(nearby){
 }
 // Cúpula del paracaigudes amb vuit cordes, visible mentre es descendeix.
 let parachuteVisual=null;
-function createParachuteVisual(){
+function makeParachuteVisual(){
   const g=new THREE.Group();
   const canopy=new THREE.Mesh(new THREE.SphereGeometry(3.45,16,7,0,Math.PI*2,0,Math.PI/2),
     new THREE.MeshStandardMaterial({color:0xe5d7b0,side:THREE.DoubleSide,roughness:.88,flatShading:true}));
@@ -2299,8 +2299,9 @@ function createParachuteVisual(){
   const lines=new THREE.BufferGeometry();
   lines.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
   g.add(new THREE.LineSegments(lines,new THREE.LineBasicMaterial({color:0xe9eee5})));
-  world.add(g);return g;
+  return g;
 }
+function createParachuteVisual(){const g=makeParachuteVisual();world.add(g);return g;}
 function removeParachuteVisual(){if(parachuteVisual){world.remove(parachuteVisual);parachuteVisual=null}}
 // Detecta el primer sostre travessat durant la caiguda, també quan el
 // desplaçament horitzontal canvia de teulada dins d'un sol fotograma.
