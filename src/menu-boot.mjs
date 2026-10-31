@@ -1,6 +1,6 @@
 import './menu-main-integration.mjs?background=isolate1';
-import {GAME_VERSION} from './version.mjs?v=0.6.62';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.62&visual=8&glassfix=2&smooth=9';
+import {GAME_VERSION} from './version.mjs?v=0.6.63';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.63&visual=8&glassfix=2&smooth=10';
 
 // La portada reutilitza els controls reals i un renderitzat Three.js independent.
 // El canvas del fons s'allibera abans d'arrencar el motor de la partida.
@@ -105,7 +105,7 @@ function loadGame(){
       background.hidden=true;
     }
     window.dispatchEvent(new Event('hunter:menu-background-stop'));
-    bootPromise=import('./bootstrap.mjs?v=0.6.62&visual=8&glassfix=2&smooth=9').then(()=>{
+    bootPromise=import('./bootstrap.mjs?v=0.6.63&visual=8&glassfix=2&smooth=10').then(()=>{
     if(!window.HUNTER_READY)throw new Error('El motor 3D no ha acabat de carregar');
   }).catch(error=>{bootPromise=null;throw error});
   }
