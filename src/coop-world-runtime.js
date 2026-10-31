@@ -28,7 +28,8 @@ function reportNativeCoopVisualError(error,part){
 function nativeCoopInput(){
  if(!nativeCoopSession||nativeCoopSession.preparing||paused||document.hidden)return {forward:0,turn:0,strafe:0,run:false,interact:false};
  const controls=readPlayerControls(updateStrafeControls(),!cv&&!paused&&!scopeActive),{f:forward,tr:turn,strafe,ud:climb,running:run}=controls;
- return {forward:scopeActive?0:forward,turn:scopeActive?0:turn,strafe:scopeActive?0:strafe,interact:!!K.KeyE&&!!nativeReviveAction(),run:!!run,crouch:!!playerCrouched,fire:!!K.KeyF&&(!grenadeEquipped||!!cv),...(cv&&VT[cv.t].m==='a'?{climb}: {})};
+ const flying=!cv&&nativeCoopSession.state?.cheats?.fly;
+ return {forward:scopeActive?0:forward,turn:scopeActive?0:turn,strafe:scopeActive?0:strafe,interact:!!K.KeyE&&!!nativeReviveAction(),run:!!run,crouch:!!playerCrouched,fire:!!K.KeyF&&(!grenadeEquipped||!!cv),...(flying?{climb:(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0)}:cv&&VT[cv.t].m==='a'?{climb}:{})};
 }
 function captureNativeCoopWorld(){
  const geometry=captureCoopWorldGeometry(),baseWalls=geometry.walls;
