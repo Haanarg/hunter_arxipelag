@@ -33,6 +33,8 @@ jobs:
           node tests/native-coop-interpolation.mjs
           node tests/native-coop-enemy-interpolation.mjs
           node tests/native-coop-prediction-cache.mjs
+          node tests/native-coop-vehicle-candidates.mjs
+          node tests/native-coop-wall-candidates.mjs
           node tests/native-coop-network-jitter.mjs
           node tests/native-coop-delta-transport.mjs
           node tests/coop-state-delta.mjs
