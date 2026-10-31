@@ -136,7 +136,7 @@ function updateNativeCoop(dt){
 function updateNativeCoopFrame(dt){
  const s=nativeCoopSession;if(!s)return;
  s.channel?.noteFrame?.(!paused&&!document.hidden);
- updateStrafeControls();joystick.setRunEnabled(!cv&&!paused);if(s.preparing||!s.state){updatePlayerHUD(.13);return;}
+ updateStrafeControls();joystick.setRunEnabled(!cv&&!paused&&hp>0);if(s.preparing||!s.state){updatePlayerHUD(.13);return;}
  const state=s.state,projecting=s.projectedState!==state,
        actor=projecting?state.players.find(p=>p.id===s.self):s.projectedActor;
  if(!actor)return;
@@ -158,6 +158,7 @@ function updateNativeCoopFrame(dt){
   if(hp<=0&&down){msg='Has caigut! El company et pot reanimar amb una farmaciola ('+Math.ceil(down.remaining)+' s).';msgT=1.5;}
   else if(s.wasDown&&hp>0){msg='T’han reanimat!';msgT=3;}
   s.wasDown=hp<=0;
+  if(hp>0&&!!K.KeyE){const helping=state.rescue?.down?.find(d=>d.helperId===s.self);if(helping){msg='Reanimant el company… '+Math.min(100,Math.round(helping.progress/90*100))+'%';msgT=1.5;}}
  }
  swimming=!!presented.swimming;playerFall=presented.fall;
  ib=buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2&&P.y<b.fy+b.h)||null;
@@ -207,7 +208,8 @@ function updateNativeCoopFrame(dt){
  }
  refreshVehicleGridIfCellsChanged();
  updateVehicleVisualLod(elapsed,dt,{skipHidden:true});
- if(cv||swimming)playerCrouched=false;if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;animPl(cv?0:input.forward,dt,input.run,input.strafe);poseRider(cv,dt);
+ if(cv||swimming)playerCrouched=false;if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;animPl(hp<=0?0:cv?0:input.forward,dt,input.run&&hp>0,input.strafe);poseRider(cv,dt);
+ pl.rotation.z=hp<=0&&!cv?-Math.PI/2:0;if(hp<=0&&!cv)pl.position.y+=.5;
  if(projecting){
    // Les referències als seients i als actors remots només es resolen
    // en rebre un snapshot; la interpolació continua a cada fotograma.
@@ -250,6 +252,8 @@ function updateNativeCoopFrame(dt){
    if(s.interpolation)model.position.copy(target);
    else model.position.lerp(target,1-Math.exp(-18*dt));
    model.rotation.y=interpolated?.hd??other.hd;
+   model.rotation.z=other.hp<=0&&!remoteVehicle?-Math.PI/2:0;
+   if(other.hp<=0&&!remoteVehicle)model.position.y+=.5;
    model.visible=!remoteVehicle;
    model.userData.nativeRider.update(remoteVehicle,dt);
    const speed=Math.hypot(model.position.x-oldX,model.position.z-oldZ)/Math.max(.001,dt);
@@ -414,11 +418,11 @@ function updateNativeCoopFrame(dt){
  for(const id of state.claimedSupplies||[]){const item=s.items.get(id);if(item){world.remove(item.o);items=items.filter(it=>it!==item);s.items.delete(id);}}
  }
  s.projectedState=state;}
- const heldFire=!paused&&state.status==='running'&&!!K.KeyF;if(heldFire&&!s.fireHeld)nativeCoopCommand('fire');s.fireHeld=heldFire;
+ const heldFire=hp>0&&!paused&&state.status==='running'&&!!K.KeyF;if(heldFire&&!s.fireHeld)nativeCoopCommand('fire');s.fireHeld=heldFire;
  if(scopeActive){scopeYaw+=((K.KeyA?1:0)-(K.KeyD?1:0)-joystick.state.x)*dt*.38;scopePitch=Math.max(-.65,Math.min(.65,scopePitch+((K.KeyW?1:0)-(K.KeyS?1:0)-joystick.state.y)*dt*.30));}
  updateDoors(dt);palmVisualTick-=dt;if(palmVisualTick<=0){palmVisualTick=scopeActive?.10:.16;PM.update?.(P.x,P.z,!!scopeActive,palmsDisabled,currentSniperFocus());updateShadowCasters();}worldVisualTick-=dt;if(worldVisualTick<=0){worldVisualTick=.2;updateDistanceVisibility();}updatePlayerCamera(dt);updateBazookaReticle(dt);updateGrenadeCharge(dt);updatePlayerHUD(dt);updDeb(dt);updFx(dt);if(state.phase==='won'&&!victoryCinematic){const general=[...s.enemies.values()].find(e=>e.t==='general');if(general)startVictoryCinematic(general);}if(state.status==='paused'){msg='Sessió pausada · esperant el company.';msgT=1;}msgT=Math.max(0,msgT-dt);
 }
 window.HUNTER_NATIVE_COOP=Object.freeze({start:startNativeCoop,active:()=>!!nativeCoopSession});
 
-function nativeReviveAction(){const s=nativeCoopSession;if(!s?.state||cv||!inv.med)return null;const other=s.state.players.find(p=>p.id!==s.self&&p.hp<=0&&Math.hypot(P.x-p.x,P.z-p.z)<=3.2&&Math.abs(P.y-p.y)<2);return other?{kind:'revive',label:'Mantén E per reanimar el company',icon:'✋'}:null;}
+function nativeReviveAction(){const s=nativeCoopSession;if(!s?.state||cv||hp<=0||swimming||playerFall||!inv.med)return null;const other=s.state.players.find(p=>p.id!==s.self&&p.hp<=0&&Math.hypot(P.x-p.x,P.z-p.z)<=3.2&&Math.abs(P.y-p.y)<2);return other?{kind:'revive',label:'Mantén E per reanimar el company',icon:'✋'}:null;}
 function stopNativeCoop(){const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();cancelGrenadeCharge();for(const key of Object.keys(K))K[key]=0;for(const mesh of s.projectiles.values())world?.remove(mesh);for(const mesh of s.grenades.values()){world?.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);}s.projectiles.clear();s.grenades.clear();s.projectileVisual?.reset();if(s.previousCheats)Object.assign(cheats,s.previousCheats);for(const model of s.remotes.values()){if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;window.HUNTER_COOP_NETWORK_STATS=null;}
