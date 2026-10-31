@@ -28,3 +28,10 @@ console.log('player simulation: legacy movement parity, health, two actors, vali
 
 const reverse=createPlayerSimulation(options);reverse.accept('a',{...message,input:{...message.input,forward:-1,run:true}});assert.equal(reverse.step().players[0].z,.4,'client cannot sprint backwards');
 const blockedRun=createPlayerSimulation({...options,world:{context:()=>({canRun:false})}});blockedRun.accept('a',{...message,input:{...message.input,run:true}});assert.equal(blockedRun.step().players[0].z,-.4,'world decides sprint permission');
+
+const immunePlayers=createPlayerSimulation({...options,immune:()=>true});
+assert.equal(immunePlayers.damage('a',10),false,
+ 'COOP immune prevents authoritative damage on both identities');
+assert.equal(immunePlayers.damage('b',15),false);
+assert.equal(immunePlayers.snapshot().players[0].hp,PLAYER_MAX_HEALTH);
+assert.equal(immunePlayers.snapshot().players[1].hp,PLAYER_MAX_HEALTH);
