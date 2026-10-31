@@ -1,5 +1,19 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
+## 0.6.75 · Fase 2: presoners, mecànic i comunicacions sincronitzades
+
+**La fase 2 reutilitza els sistemes individuals existents en lloc de crear nous personatges o pantalles.** Els cinc models de `src/prisoners.js` (quatre camperols i un mecànic), les consoles de `src/radio-relay.js` i les seves animacions originals continuen sent les visuals del navegador. El servidor decideix el resultat; els dos jugadors només reben una projecció comuna de l'estat.
+
+- Captura de l'arxipèlag individual: el camp, la posició dels cinc civils, les defenses reals, els índexs de la **tanca interior** (no de la perimetral), les rutes originals de fugida i de taller, les consoles, els guàrdies de comunicacions i els defensors de l'HQ es transmeten com a dades canòniques validades.
+- `server/coop-optionals.mjs` i `server/coop-mission.mjs`: el camp s'allibera únicament quan han mort tots els guàrdies i torres assignats i hi ha almenys una bretxa confirmada a la tanca interior. Els quatre camperols fugen per la bretxa; el mecànic va al taller. La lògica i l'estat sobreviuen a checkpoints i reconnexions. Els presoners són vulnerables a bales perdudes i explosions.
+- Accions originals amb **E** i botó tàctil: parlar amb el mecànic alliberat per seguir/esperar; reparar vehicles danyats i aturats durant 6 s; cancel·lar/interrompre reparacions; sabotejar els relés de ràdio. Cada ordre es valida amb posició i estat reals al Durable Object, es registra de manera idempotent, es persisteix i es comparteix a tots dos clients.
+- Ràdio: guàrdies testimonis que alerten una consola operativa poden mobilitzar defensors de l'HQ. Una consola sabotejada o destruïda deixa de transmetre, sense desfer avisos anteriors.
+- `src/game-core.js`: s'ha corregit també la tecla E del **joc individual**, que cridava un nom de funció erroni per a accions opcionals. Les interfícies i models segueixen sent els originals.
+- Regressió `tests/native-coop-optionals.mjs`: defensa/bretxa, rescat de cinc civils, evasió, seguiment i reparació del mecànic, sabotatge/avisos HQ, dany a civils i recuperació de checkpoints. Comprovada amb una execució JavaScript aïllada.
+
+**Pendent de validació conjunta:** una missió amb HOST i GUEST en dos navegadors i una revisió visual dels camins (especialment passos estrets). No s'ha executat aquí la suite Node/CI completa ni verificat desplegament simultani de Pages i Worker. La versió 0.6.75 no pretén completar les fases 3 i posteriors (paracaigudes, fauna, mapes/intel·ligència i totes les accions especials).
+
+
 ## 0.6.74 · IA COOP: torres, persecució, flanqueig i general
 
 **Implementació de la primera fase de paritat d'enemics sobre el servidor autoritatiu, mantenint el món i els models individuals.**
