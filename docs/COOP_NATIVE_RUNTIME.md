@@ -1,6 +1,16 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
 
+## 0.6.64 · bales COOP suaus, boca real de pistola i posició autoritativa coherent
+
+La 0.6.63 va eliminar el jitter del moviment de jugador/càmera en una prova real. La regressió següent era el projectil: la implementació anterior només assignava `mesh.position` a cada nou snapshot (~10 Hz), produint un moviment a esglaons encara que el client renderitzàs a 240 FPS. El servidor creava les bales de pistola des del tors (`p.x,p.y+1.5,p.z`) mentre el joc individual les genera .7 m cap endavant.
+
+A `src/native-coop-projectile-visual.mjs`, les trajectòries visuals de cada bala segueixen `row.x/y/z + row.vx/vy/vz * age` en cada fotograma, amb correcció exponencial quan arriba un nou estat i previsió limitada a .18 s. Les files del servidor no es modifiquen. Les bales es retiren en deixar d'existir en el snapshot: la geometria de col·lisió, el dany i els impactes continuen íntegrament autoritatius.
+
+L'origen gràfic de la bala local (pistola/fusell/sniper, només sense vehicle) es calcula a partir del `pl.userData.gun` i els pivots `assaultMuzzle`/`sniperMuzzle` del mateix model 3D; el primer tret de pistola, abans que la mà completi la punteria, utilitza el desplaçament frontal .7 m del mode individual. `server/coop-combat.mjs` ara fa sortir el projectil físic de pistola .7 m cap endavant, en lloc del centre del jugador. L'animació de dispar/reculada també s'activa amb els efectes `shot` rebuts, i es continuen utilitzant els punts propis de les armes muntades.
+
+`window.HUNTER_COOP_NETWORK_STATS.projectileVisual` ofereix els camps `receives,active,visualFrames,localMuzzleStarts,corrections,maxCorrectionM`. `tests/native-coop-projectile-visual.mjs` ha passat aïlladament (punta del canó, moviment a 240 Hz, continuïtat amb noves recepcions, reutilització de registres, desaparició i extrapolació limitada); `tests/native-coop-held-fire.mjs` inclou asserció nova de l'origen de la pistola i queda pendent d'execució amb Node 22. **Encara no es pot donar per validat en dos navegadors ni desplegat a Cloudflare.**
+
 ## 0.6.63 · càmera local sense sacsejades de rebase ni salts de tick
 
 La mostra real mostra RTT 32,4 ms, 10 Hz regulars, interval màxim de recepció 196 ms i 15.414 frames locals amb 4,15 ms de mitjana (~240 Hz). El buffer remot presenta 13.174 frames interpolats sobre 13.204 d'actius, cap extrapolació ni underrun, però l'usuari veu tota la imatge tremolar quan es mou el jugador. Això apunta al camí **local** de predicció/visualització, no al renderer ni a l'amplada de banda.
