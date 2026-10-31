@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {createNativeLocalPresentation} from '../src/native-coop-local-presentation.mjs';
 
 // Instrumentam el mòdul real: els models falsos només compten quantes
 // vegades es creen superfícies d'aigua i s'actualitza salut de palmeres.
@@ -12,7 +13,7 @@ const calls={worlds:0,palms:0,waters:0,steps:0,indices:0,queries:0,wallIndices:0
 let firstBounds=null,lastWorld=null;
 let currentWater=null;
 const factory=new Function('stepRangeVehicle','firstVehicleContact','vehicleSpecs',
- 'createPlayerSimulation','createStaticWorldAdapter','createCanonicalWater','createNativeVehicleCandidateIndex','createNativeWallCandidateIndex','structuredClone',
+ 'createPlayerSimulation','createStaticWorldAdapter','createCanonicalWater','createNativeVehicleCandidateIndex','createNativeWallCandidateIndex','createNativeLocalPresentation','structuredClone',
  source+'\nreturn createNativePrediction;')(
  (vehicle,input,dt,tick,world,water,bounds)=>{
   if(world!==lastWorld){lastWorld=world;firstBounds=bounds;}
@@ -33,6 +34,7 @@ const factory=new Function('stepRangeVehicle','firstVehicleContact','vehicleSpec
  ()=>{calls.waters++;return currentWater={surfaceAt:()=>0}},
  vehicles=>{calls.indices++;return {nearby(cx,cz,reach){calls.queries++;return vehicles.filter(v=>Math.hypot(v.x-cx,v.z-cz)<=reach+Math.hypot(2,4)/2);}}},
  walls=>{calls.wallIndices++;return {nearby(cx,cz,reach){calls.wallQueries++;return walls.filter(w=>w.x0<=cx+reach&&w.x1>=cx-reach&&w.z0<=cz+reach&&w.z1>=cz-reach);}}},
+ createNativeLocalPresentation,
  structuredClone
 );
 const state={missionId:'m',tick:0,phase:'relay',status:'running',
@@ -72,4 +74,14 @@ assert.equal(calls.indices,2,'Passatger no genera índex de conducció');
 const pedestrian=factory({walls:[],buildings:[]});
 pedestrian.receive({...state,vehicles:state.vehicles.map(v=>({...v,seats:[null,null]}))},'a');
 assert.equal(calls.indices,2,'Jugador a peu tampoc no indexa la flota');
-console.log('native coop prediction cache: water reuse, palm deltas and geometry invalidation passed');
+// Recepcions a ~10 Hz no descarten la fracció de moviment d'una
+// pantalla a 240 FPS. S'hauria de produir un subpas després de
+// dos intervals de 1/60s, encara que s'hagi rebut un nou snapshot.
+const continuous=factory({walls:[],buildings:[]});
+continuous.receive(state,'a');continuous.sent(1);
+continuous.advance(1/60,{forward:1,turn:0,strafe:0});
+continuous.receive({...state,tick:3},'a');
+continuous.advance(1/60,{forward:1,turn:0,strafe:0});
+assert.equal(continuous.pending(),1,
+ 'No s’ha de perdre temps fraccionari en rebre un estat del mateix moviment');
+console.log('native coop prediction cache: water, palm deltas, geometry invalidation, 30Hz accumulator passed');
