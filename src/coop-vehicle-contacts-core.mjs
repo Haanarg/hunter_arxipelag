@@ -26,3 +26,31 @@ export function firstVehicleContact(v,from,others,geometry,proving=true,world=nu
  }return null;
 }
 export function vehicleContactDamage(v,other){const rel=relativeVehicleImpactSpeed(v,other),a=vehicleDynamics.types[v.t].mass||1,b=vehicleDynamics.types[other.t].mass||1;return {relative:rel,own:v.t==='tanc'?0:impactDamage(rel,a,b),other:other.t==='tanc'?0:impactDamage(rel,b,a)};}
+
+// Col·lisió de les persones a peu amb els mateixos volums dels vehicles
+// que empra la simulació de conducció. No s'aplica a ocupants.
+export function resolveCoopPlayerVehicleContact(previous,candidate,vehicles,actorId,radius=.65){
+ let x=candidate.x,z=candidate.z;
+ for(const v of vehicles||[]){
+  if(v.destroyed||v.seats?.includes(actorId))continue;
+  const scale=vehicleSpecs.scales[v.t]||1,box=vehicleSpecs.hitboxes[v.t];
+  if(!box||Math.abs((previous.y??0)-v.y)>Math.max(2.8,scale*2.2))continue;
+  const hw=box[0]*scale/2,hd=box[1]*scale/2;
+  if(Math.abs(x-v.x)>hw+hd+radius||Math.abs(z-v.z)>hw+hd+radius)continue;
+  const c=Math.cos(v.hd),sn=Math.sin(v.hd),dx=x-v.x,dz=z-v.z;
+  let lx=dx*c-dz*sn,lz=dx*sn+dz*c;
+  const px=Math.max(-hw,Math.min(hw,lx)),pz=Math.max(-hd,Math.min(hd,lz));
+  let ex=lx-px,ez=lz-pz,dist=Math.hypot(ex,ez);
+  if(dist>=radius)continue;
+  if(dist<1e-7){
+   const edgeX=hw-Math.abs(lx),edgeZ=hd-Math.abs(lz);
+   if(edgeX<edgeZ)lx=(lx<0?-1:1)*(hw+radius);
+   else lz=(lz<0?-1:1)*(hd+radius);
+  }else{
+   lx+=(ex/dist)*(radius-dist);
+   lz+=(ez/dist)*(radius-dist);
+  }
+  x=v.x+lx*c+lz*sn;z=v.z-lx*sn+lz*c;
+ }
+ return {...candidate,x,z};
+}
