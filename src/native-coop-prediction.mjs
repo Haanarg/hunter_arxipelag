@@ -39,11 +39,17 @@ export function createNativePrediction(geometry){
   const snapshot=sim.snapshot(),actor=snapshot.players.find(p=>p.id===self);sim.accept(self,{protocol:1,epoch:state.missionId,sequence:actor.acknowledged+1,input});sim.step();}
  function receive(next,id){
   const actor=next.players.find(p=>p.id===id);if(!actor)return;
-  const same=state?.missionId===next.missionId;self=id;state=next;rebuild(next);
-  // Un índex per snapshot autoritatiu substitueix 30 recorreguts/s
-  // de la flota completa durant predicció i replay del pilot local.
-  vehicleCandidates=createNativeVehicleCandidateIndex(next.vehicles);
-  const seat=next.vehicles.find(v=>v.seats.includes(id)),driver=seat?.seats[0]===id,nextMode=seat?(driver?seat.id:'passenger:'+seat.id):'foot';vehicle=driver?structuredClone(seat):null;vehicleTick=next.tick;
+  const same=state?.missionId===next.missionId,
+    fleetUnchanged=same&&state.vehicles===next.vehicles;
+  self=id;state=next;rebuild(next);
+  const seat=next.vehicles.find(v=>v.seats.includes(id)),driver=seat?.seats[0]===id,
+    nextMode=seat?(driver?seat.id:'passenger:'+seat.id):'foot';
+  vehicle=driver?structuredClone(seat):null;vehicleTick=next.tick;
+  // Només el conductor fa comprovacions de col·lisió predictives.
+  // Reutilitzar l'índex si el delta no ha canviat cap vehicle.
+  vehicleCandidates=driver?
+    (fleetUnchanged&&vehicleCandidates?vehicleCandidates:
+     createNativeVehicleCandidateIndex(next.vehicles)):null;
   enabled=next.status==='running'&&['relay','extract'].includes(next.phase)&&actor.hp>0&&(!seat||driver);
   history=same&&enabled&&modeKey===nextMode?history.filter(frame=>frame.sequence>actor.acknowledged):[];sequence=same?Math.max(sequence,actor.acknowledged):actor.acknowledged;accumulator=0;modeKey=nextMode;resetSimulation(next);
   for(const frame of history)step(frame.input);
