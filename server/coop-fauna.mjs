@@ -12,7 +12,7 @@ export function createNativeFauna({meta,record={},players,world,vehicles,damageP
    const nearest=swimmers.filter(p=>Math.hypot(p.x-shark.x,p.z-shark.z)<SHARED_SHARKS.LOSE)
      .sort((a,b)=>Math.hypot(a.x-shark.x,a.z-shark.z)-Math.hypot(b.x-shark.x,b.z-shark.z))[0];
    // A més de 145 m cap nedador no cal simular a 30 Hz.
-   if(!nearest&&tick%6!==shark.phase%6)continue;
+   if(!nearest&&tick%6!==(shark.phase??0)%6)continue;
    const dt=nearest?1/30:.2,
     outcome=SHARED_SHARKS.update(shark,dt,nearest||null,(x,z)=>world().heightAt(x,z));
    if(outcome.bite&&nearest?.hp>0&&!vehicles.mounted(nearest.id)){
