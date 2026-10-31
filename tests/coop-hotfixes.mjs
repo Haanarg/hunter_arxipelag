@@ -1,0 +1,41 @@
+import assert from 'node:assert/strict';
+import {resolveCoopPlayerVehicleContact} from '../src/coop-vehicle-contacts-core.mjs';
+import {stepRangeVehicle} from '../src/coop-vehicle-motion-core.mjs';
+import {createRelayVehicles} from '../server/coop-vehicles.mjs';
+
+const car={id:'car',t:'cotxe',x:0,y:0,z:0,hd:0,v:0,seats:[null,null],life:10};
+const actor={id:'a',x:6,y:0,z:0,hd:0,hp:25,fall:null,swimming:false};
+const world={
+ heightAt:()=>0,groundAt:()=>0,
+ resolveBody:(previous,candidate)=>({...candidate,y:previous.y}),
+ locomotionAt:()=>({floor:0,terrain:0,interior:false,drop:false}),
+ vegetationNear:()=>[]
+};
+const water={surfaceAt:()=>0};
+const meta={id:'native-fixes',mode:'native',bounds:{x0:-100,x1:100,z0:-100,z1:100},vehicles:[car]};
+const vehicles=createRelayVehicles({meta,world:()=>world,water,players:()=>[actor],active:()=>true,geometry:()=>({walls:[]})});
+const command=(operation,commandId)=>vehicles.command('a',{epoch:meta.id,vehicleId:'car',operation,commandId});
+assert.equal(command('enter','enter-first').code,'ENTERED');
+assert.equal(command('exit','exit-first').code,'EXITED');
+actor.x=4.5;
+assert.equal(command('enter','enter-again').code,'ENTERED','vehicle remains enterable after a first exit');
+const hull=vehicles.live()[0];
+hull.v=8;
+const leaving=command('exit','exit-moving');
+assert.equal(leaving.code,'EXITED','moving vehicles permit exit in native co-op');
+vehicles.step(1);
+assert.ok(vehicles.live()[0].v>0,'unoccupied vehicle must retain inertia after exit');
+
+const resolved=resolveCoopPlayerVehicleContact(
+ {id:'pedestrian',x:6,y:0,z:0},{x:0,y:0,z:0,hd:0},[car],'pedestrian');
+assert.ok(Math.hypot(resolved.x,resolved.z)>2.5,'pedestrians cannot occupy a vehicle hitbox');
+const seated=resolveCoopPlayerVehicleContact(
+ {id:'a',x:0,y:0,z:0},{x:0,y:0,z:0,hd:0},[{...car,seats:['a',null]}],'a');
+assert.equal(seated.x,0,'vehicle occupants are exempt from their own hitbox');
+
+const docked={...car,x:0,z:0,y:3,v:0,seats:[null,null]};
+const pier={...world,heightAt:()=>-2,groundAt:()=>3};
+stepRangeVehicle(docked,{forward:0,turn:0,strafe:0},1/30,1,pier,water,meta.bounds);
+assert.ok(docked.y>=3,'pier deck keeps the vehicle above submerged terrain');
+assert.ok(!docked.waterIngress?.dead,'a vehicle on a pier must not sink');
+console.log('COOP regressions: vehicle hitboxes, reboarding, moving exits, inertia and pier support passed');
