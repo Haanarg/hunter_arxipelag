@@ -1,6 +1,20 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
 
+## 0.6.62 · broadphase espacial local de vehicles i murs
+
+Abans d'aquesta versió `createNativePrediction.step` filtrava **tots** els `state.vehicles` i `physical.walls` a cada subpas de 30 Hz o en reexecutar els inputs pendents després d'un snapshot. La càmera local era fluida, però aquest cost continuava essent potencialment alt en un món gran.
+
+A `src/native-coop-vehicle-candidates.mjs`, cada vehicle del snapshot està assignat a una cel·la espacial de 128 m. La consulta de col·lisió inclou una regió ampliada pel màxim radi de les hitboxes i fa el mateix test final `Math.hypot` i ordenació per índex original que abans. Quan es manté la referència de flota entre deltes, la memòria cau es reutilitza; si el jugador és passatger o va a peu, no es construeix l'índex. `tests/native-coop-vehicle-candidates.mjs` comprova 374 vehicles de 16 tipus, 2.125 consultes, vores de cel·les, i casos de radi extens i reordenació.
+
+A `src/native-coop-wall-candidates.mjs`, els murs s'indexen per AABB a 128 m. Els murs enormes s'emmagatzemen fora del grid, però continuen entrant a les consultes. La resposta conserva exactament l'ordre de la llista antiga. Es reconstrueix només quan canvien els murs/portes/teulades i es refà el món local. `tests/native-coop-wall-candidates.mjs` comprova 1.352 murs i 2.725 consultes, també murs molt llargs i coordenades negatives.
+
+La predicció també reutilitza els límits de món, el radi del vehicle i només copia l'antiga pose `{x,y,z,hd}` necessària per a `firstVehicleContact`, en comptes del vehicle sencer. `tests/native-coop-prediction-cache.mjs` comprova l'índex de flota, els murs, l'aigua, les palmeres, el canvi de geometria i els rols de pilot, passatger i vianant.
+
+Mesura local sintètica de 4.500 consultes espacials sobre distribució uniforme (374 vehicles, 1.350 murs): filtre anterior 300/332 ms (vehicles/murs) i filtre indexat 7/8 ms. No inclou construir índexs ni executar la simulació completa; és exclusivament una comparació del cost del filtre de candidats.
+
+**Validació i límits:** tests pures de candidats i prova instrumentada de caché executats i aprovats en entorn JavaScript aïllat. No s'han executat la bateria Node 22 completa ni proves d'FPS/RTT en dos navegadors. No s'ha tocat `firstVehicleContact`, la simulació autoritativa del Worker, la persistència ni el protocol de xarxa. El workflow COOP continua només manual per manca de quota d'Actions; publicació a Cloudflare no verificada.
+
 ## 0.6.61 · moviment visual dels soldats, cachés i observabilitat local
 
 **Soldats en moviment:** s'ha afegit `enemies` a l'interpolador visual. Només es creen tracks per enemics vius que canvien de pose; el codi de deltes preserva referències dels 377 soldats immòbils i el camí ràpid no calcula dues poses per cadascun. Els soldats comparteixen el buffer temporal 150–200 ms amb company i vehicles, previsió limitada a 120 ms i recuperació sense salt quan arriba un snapshot tardà. L'escena `src/coop-world-runtime.js` aplica la pose només a `e.o` (malla), conservant `e.x/e.z` i `hp` autoritatius. L'animació de les cames segueix ara el desplaçament real dibuixat entre fotogrames. Morts i teleports alliberen immediatament la trajectòria. Nou camp `remoteInterpolation.activeEnemies`.
