@@ -13,6 +13,7 @@ import {createRelayRescue,reviveReachable} from './coop-rescue.mjs';
 import {createRelayCombat,traceArena} from './coop-combat.mjs';
 import {createNativeOptionals} from './coop-optionals.mjs';
 import {createNativeFauna} from './coop-fauna.mjs';
+import {createCoopIntel} from '../src/coop-intel-core.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
 import {COOP_CHEAT_KEYS,normalizeCoopCheats,grantCoopCheatItems,moveCoopCheatFly} from '../src/coop-cheats.mjs';
 export const MISSION_VERSION='relay:22';
@@ -155,6 +156,7 @@ export function restoreRelayMission(record,geometry){
       movement:(actor,input)=>vehicles.position(actor)||carryExitMomentum(actor,input)||
         (cheats.fly?moveCoopCheatFly(actor,input,{limit:world.limit,heightAt:(x,z)=>world.heightAt(x,z)}):null)}),actions=new Map();
   let phase=record.phase,hold=record.hold,status=record.status,doorRevision=record.doorRevision??0;
+  const intel=createCoopIntel({meta,record:record.intel});
   const inventory=new Map(meta.members.map(m=>[m.id,{actorId:m.id,bullets:24,grenades:2,disguise:1,medkits:1,assault:1,sniper:0,sniperAmmo:0,bazooka:0,c4:0,cutters:0,parachute:0,weapon:'pistol',disguised:false,...structuredClone(record.inventories?.find(i=>i.actorId===m.id)||{})}])),claimed=new Set(record.claimedSupplies||[]),inventoryResults=structuredClone(record.inventoryResults||[]);
   const loose=new Map((record.droppedSupplies||[]).map(s=>[s.id,structuredClone(s)]));let dropSequence=record.dropSequence||0;
   const capacities=meta.mode==='native'?Object.fromEntries(Object.keys(inventoryCaps).map(k=>[k,1000000])):inventoryCaps;
@@ -162,6 +164,7 @@ export function restoreRelayMission(record,geometry){
   const inventories=()=>[...inventory.values()].map(i=>({...i}));
   function refillCheats(){
     if(!cheats.items)return;
+    if(meta.mode==='native'&&meta.intel&&!intel.snapshot()?.confirmed)intel.revealAll();
     for(const bag of inventory.values())grantCoopCheatItems(bag);
     for(const vehicle of vehicles.live())
       if(Number.isFinite(vehicle.rockets))vehicle.rockets=Math.max(9999,vehicle.rockets);
@@ -239,7 +242,7 @@ export function restoreRelayMission(record,geometry){
       rescue.canDamage(id,sim.snapshot().tick)?sim.damage(id,amount):false,geometry:()=>physical,world:()=>world,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt});
   const doors=()=>meta.doors.map(d=>({id:d.id,open:removedWalls.has(d.wallIndex)||(doorStates.get(d.id)??false),destroyed:removedWalls.has(d.wallIndex)}));
   const reviveLine=(a,b)=>!vehicles.mounted(a.id)&&!vehicles.mounted(b.id)&&traceArena({x:a.x,y:a.y+1.5,z:a.z},{x:b.x,y:b.y+.75,z:b.z},physical,world).fraction>=1;
-  function snapshot(){const state=sim.snapshot(),help=rescue.snapshot(state.tick);help.down=help.down.map(d=>({...d,helpers:state.players.filter(p=>reviveReachable(p,state.players.find(p=>p.id===d.actorId),reviveLine)).map(p=>p.id)}));return {...state,removedWalls:[...removedWalls],removedRoofs:[...removedRoofs],brokenWindows:[...brokenWindows],palmHealth:[...palmHealth],vehicles:vehicles.snapshot(),rescue:help,combat:combat.snapshot(),...(meta.mode==='native'&&meta.optional?{optionals:optionals.snapshot()}:{}),...(meta.mode==='native'&&meta.sharks?{fauna:fauna.snapshot()}:{}),missionId:meta.id,phase,hold,status,doorRevision,doors:doors(),inventories:inventories(),supplies:supplies(),claimedSupplies:[...claimed],cheats:{...cheats},remaining:Math.max(0,(meta.timeLimitTicks-state.tick)/30)};}
+  function snapshot(){const state=sim.snapshot(),help=rescue.snapshot(state.tick);help.down=help.down.map(d=>({...d,helpers:state.players.filter(p=>reviveReachable(p,state.players.find(p=>p.id===d.actorId),reviveLine)).map(p=>p.id)}));return {...state,removedWalls:[...removedWalls],removedRoofs:[...removedRoofs],brokenWindows:[...brokenWindows],palmHealth:[...palmHealth],vehicles:vehicles.snapshot(),rescue:help,combat:combat.snapshot(),...(meta.mode==='native'&&meta.optional?{optionals:optionals.snapshot()}:{}),...(meta.mode==='native'&&meta.sharks?{fauna:fauna.snapshot()}:{}),...(meta.mode==='native'&&meta.intel?{intel:intel.snapshot()}:{}),missionId:meta.id,phase,hold,status,doorRevision,doors:doors(),inventories:inventories(),supplies:supplies(),claimedSupplies:[...claimed],cheats:{...cheats},remaining:Math.max(0,(meta.timeLimitTicks-state.tick)/30)};}
 
   function doorCommand(actorId,message){
     const previous=results.find(r=>r.actorId===actorId&&r.commandId===message.commandId);if(previous)return {...previous,duplicate:true};
@@ -281,7 +284,9 @@ export function restoreRelayMission(record,geometry){
     for(const supply of supplies()){
       if(supply.blockedOwner){const owner=state.players.find(p=>p.id===supply.blockedOwner);if(!owner||distance(owner,supply)>1.8||Math.abs(owner.y-supply.y)>2){delete loose.get(supply.id).blockedOwner;delete supply.blockedOwner;}}
       const candidates=state.players.flatMap((p,index)=>{
-        const bag=inventory.get(p.id);if(p.hp<=0||p.fall||p.swimming||vehicles.mounted(p.id)||p.id===supply.blockedOwner||bag[supply.item]+supply.amount>capacities[supply.item])return [];
+        const bag=inventory.get(p.id);if(p.hp<=0||p.fall||p.swimming||vehicles.mounted(p.id)||p.id===supply.blockedOwner||
+          !['mapa','mapa_heli','mapa_tanc'].includes(supply.item)&&
+          bag[supply.item]+supply.amount>capacities[supply.item])return [];
         const previous=before.players.find(a=>a.id===p.id),t=firstSupplyContact(previous,p,supply);if(t===null)return [];
         const contact={...p,x:previous.x+(p.x-previous.x)*t,z:previous.z+(p.z-previous.z)*t,y:previous.y+(p.y-previous.y)*t};
         // Body sweep blocks collecting through a closed door or thin wall.
@@ -289,7 +294,9 @@ export function restoreRelayMission(record,geometry){
         for(let k=1;k<=count;k++){const q={...contact,x:contact.x+(supply.x-contact.x)*k/count,z:contact.z+(supply.z-contact.z)*k/count},resolved=world.resolveBody(from,q);if(distance(q,resolved)>1e-5)return [];from=q;}
         return [{p,index,t}];
       }).sort((a,b)=>a.t-b.t||a.index-b.index);
-      if(candidates.length){inventory.get(candidates[0].p.id)[supply.item]+=supply.amount;if(meta.mode==='native'&&supply.item==='sniper')inventory.get(candidates[0].p.id).sniperAmmo+=6;if(loose.has(supply.id))loose.delete(supply.id);else claimed.add(supply.id);}
+      if(candidates.length){if(meta.mode==='native'&&['mapa','mapa_heli','mapa_tanc'].includes(supply.item))intel.pickup(supply.item,supply.x,supply.z);
+        else inventory.get(candidates[0].p.id)[supply.item]+=supply.amount;
+        if(meta.mode==='native'&&supply.item==='sniper')inventory.get(candidates[0].p.id).sniperAmmo+=6;if(loose.has(supply.id))loose.delete(supply.id);else claimed.add(supply.id);}
     }
     if(meta.mode==='native')for(const player of state.players){const action=actions.get(player.id);if(action?.fire&&state.tick-action.tick<=8)combat.hold(player.id,state.tick);}
     combat.step(state.tick);refillCheats();state.players=sim.snapshot().players;
@@ -324,6 +331,6 @@ export function restoreRelayMission(record,geometry){
        }else if(r.ok&&r.code==='ENTERED'&&!r.duplicate){exitImpulses.delete(actorId);const p=sim.snapshot().players.find(p=>p.id===actorId);sim.place(actorId,vehicles.position(p));}return r;},doorCommand,inventoryCommand,cheatCommand,
     optionalCommand(actorId,message){return optionals.command(actorId,message,sim.snapshot().tick);},
     combatCommand(actorId,message){return combat.command(actorId,message,sim.snapshot().tick);},setStatus(value){status=value;if(value!=='running'){actions.clear();sim.clearInputs();vehicles.pause();combat.pause();rescue.pause();if(['relay','extract'].includes(phase))hold=0;}},
-    checkpoint(nextAlarm){return {meta:structuredClone(meta),exitImpulses:[...exitImpulses].map(([id,impulse])=>[id,{...impulse}]),wallHealth:[...wallHealth],roofHealth:[...roofHealth],removedWalls:[...removedWalls],removedRoofs:[...removedRoofs],brokenWindows:[...brokenWindows],palmHealth:[...palmHealth],phase,hold,status,checkpoint:sim.snapshot(),rescue:rescue.checkpoint(),vehicles:vehicles.checkpoint(),combat:combat.checkpoint(),...(meta.mode==='native'&&meta.optional?{optionals:optionals.checkpoint()}:{}),...(meta.mode==='native'&&meta.sharks?{fauna:fauna.checkpoint()}:{}),nextAlarm,cheats:{...cheats},inventories:inventories(),droppedSupplies:[...loose.values()].map(s=>({...s})),dropSequence,claimedSupplies:[...claimed],inventoryResults:structuredClone(inventoryResults),doors:doors(),doorRevision,doorCooldowns:[...cooldowns].map(([actorId,tick])=>({actorId,tick})),commandResults:structuredClone(results)};},
+    checkpoint(nextAlarm){return {meta:structuredClone(meta),exitImpulses:[...exitImpulses].map(([id,impulse])=>[id,{...impulse}]),wallHealth:[...wallHealth],roofHealth:[...roofHealth],removedWalls:[...removedWalls],removedRoofs:[...removedRoofs],brokenWindows:[...brokenWindows],palmHealth:[...palmHealth],phase,hold,status,checkpoint:sim.snapshot(),rescue:rescue.checkpoint(),vehicles:vehicles.checkpoint(),combat:combat.checkpoint(),...(meta.mode==='native'&&meta.optional?{optionals:optionals.checkpoint()}:{}),...(meta.mode==='native'&&meta.sharks?{fauna:fauna.checkpoint()}:{}),...(meta.mode==='native'&&meta.intel?{intel:intel.checkpoint()}:{}),nextAlarm,cheats:{...cheats},inventories:inventories(),droppedSupplies:[...loose.values()].map(s=>({...s})),dropSequence,claimedSupplies:[...claimed],inventoryResults:structuredClone(inventoryResults),doors:doors(),doorRevision,doorCooldowns:[...cooldowns].map(([actorId,tick])=>({actorId,tick})),commandResults:structuredClone(results)};},
     setup(self){return {type:'mission',self,meta:structuredClone(meta),geometry:structuredClone(physical),state:snapshot()};}};
 }
