@@ -236,6 +236,22 @@ window.HUNTER_RADIO_RELAY=Object.freeze({
       }
       for(const saved of data.leases){const unit=byId.get(saved.enemyId);if(alive(unit))leases.set(unit,{until:saved.until,destination:{...saved.destination}});}
     }
-    return Object.freeze({configure,reset,update,getAction,interact,warn,markers,snapshot,exportSave,validateSave,importSave});
+    // Mateixes consoles i testimonis de llum del mode individual,
+    // actualitzats exclusivament amb la confirmació del Worker COOP.
+    function applyCoopState(shared,viewer){
+      if(!Array.isArray(shared))return;
+      for(const row of shared){
+        const relay=relays.find(r=>r.id===row.id);if(!relay)continue;
+        relay.operational=!!row.operational;
+        relay.discovered=!!row.discovered;
+        relay.disabledReason=row.disabledReason||null;
+        relay.reports=row.reports||0;relay.dispatches=row.dispatches||0;
+        if(relay.cutVisual)relay.cutVisual.visible=!relay.operational;
+        if(relay.lamp)relay.lamp.material.color.setHex(relay.operational?0x58d8a1:0x7a302b);
+        if(relay.o)relay.o.visible=!!viewer&&
+          Math.hypot(viewer.x-relay.x,viewer.z-relay.z)<400;
+      }
+    }
+    return Object.freeze({configure,reset,update,applyCoopState,getAction,interact,warn,markers,snapshot,exportSave,validateSave,importSave});
   }
 });
