@@ -47,6 +47,13 @@ window.HUNTER_UI=Object.freeze({
       const s=getState(context),state=s.vehicle?s.vehicleTypes[s.vehicle.t].n:s.swimming?'Nedant':s.crouching?'Ajupit':s.inside?'Interior':'A peu',veh=s.vehicle,vehInfo=veh?'<br>🛡️ '+Math.max(0,veh.life??0)+'/'+(veh.maxLife??0)+(veh.t==='llanxa_coets'?' · 🚀 ∞':veh.rockets!=null?' · 🚀 '+veh.rockets:veh.t!=='heli_combat'?' · 💣 '+(s.inventory.granada||0)+' granades · B':''):'',weaponInfo=s.bazookaEquipped&&!veh?' · 🚀 Bazooka '+(s.inventory.bazooka||0)+' coets':s.grenadeEquipped&&!veh?' · 💣 Granades '+(s.inventory.granada||0):s.cisallaEquipped&&!veh?' · ✂ Cisalla':s.sniperEquipped&&!veh?' · 🔭 Rifle '+s.sniperAmmo+' cartutxos'+(s.scopeActive?' · Mira x8':''):'';
       const html=`<b>HUNTER · ARXIPÈLAG</b><br>❤️ ${s.hp>0?Math.max(1,Math.ceil(s.hp)):0} · 🎯 ${s.ammo} · ☠ ${s.kills}<br>${state}${s.coop?'<br>✚ Company: '+Math.max(0,s.coop.health||0)+' PV · '+(s.coop.status==='running'?'Connectats':'Pausa de sala'):''}${s.disguised?' · 🎭 Disfressat':''}${weaponInfo}${vehInfo}${s.optionalAction?'<br>E · '+s.optionalAction.label:s.nearVehicle&&!s.vehicle?'<br>Acció: puja a '+s.vehicleTypes[s.nearVehicle.t].n:''}${s.messageTime>0?'<br>'+s.message:''}${s.waypoint?'<br>Destinació: '+Math.round(Math.hypot(s.waypoint.x-s.player.x,s.waypoint.z-s.player.z))+' m':''}<br><span style="opacity:.72">Llavor ${s.seed>>>0} · X ${s.player.x|0} · Z ${s.player.z|0}</span>`;
       if(hud.innerHTML!==html)hud.innerHTML=html;
+      if(currentMode==='cheats'&&s.coop){
+        for(const [id,key] of [['cheatItems','items'],['cheatInvisible','invisible'],
+          ['cheatImmune','immune'],['cheatFly','fly']]){
+          const checkbox=document.getElementById(id);
+          if(checkbox){checkbox.checked=!!s.cheats?.[key];checkbox.disabled=!s.coop.host;}
+        }
+      }
     }
     let currentMode=null;
     function hide(){panel.style.display='none';currentMode=null}
@@ -138,7 +145,8 @@ window.HUNTER_UI=Object.freeze({
         map.onclick=e=>{const r=e.currentTarget.getBoundingClientRect(),s=getState();actions.setWaypoint({x:((e.clientX-r.left)/r.width-.5)*s.worldSize,z:((e.clientY-r.top)/r.height-.5)*s.worldSize});minimap.drawFull(map,getState().waypoint)};
         document.getElementById('clearMark').onclick=()=>{actions.setWaypoint(null);minimap.drawFull(map,null)}
       }else if(mode==='cheats'){
-        body.innerHTML='<p>Activa o desactiva cada avantatge per separat.</p>'+
+        const coop=getState().coop;
+        body.innerHTML='<p>'+(coop?(coop.host?'Els trucs s’apliquen als dos jugadors.':'Només el HOST pot modificar els trucs compartits.'):'Activa o desactiva cada avantatge per separat.')+'</p>'+
           '<div class="performance-options">'+
           '<label><input id="cheatItems" type="checkbox"> Tots els objectes i munició infinits (també vehicles)</label>'+
           '<label><input id="cheatInvisible" type="checkbox"> Invisible per als enemics</label>'+
@@ -148,7 +156,11 @@ window.HUNTER_UI=Object.freeze({
         for(const [id,key] of [['cheatItems','items'],['cheatInvisible','invisible'],['cheatImmune','immune'],['cheatFly','fly']]){
           const input=document.getElementById(id);
           input.checked=!!getState().cheats?.[key];
-          input.onchange=()=>actions.setCheat(key,input.checked);
+          input.disabled=!!coop&&!coop.host;
+          input.onchange=()=>{
+            if(actions.setCheat(key,input.checked)===false)
+              input.checked=!!getState().cheats?.[key];
+          };
         }
         document.getElementById('cheatsBack').onclick=()=>actions.open('pause');
       }else if(mode==='performance'){
