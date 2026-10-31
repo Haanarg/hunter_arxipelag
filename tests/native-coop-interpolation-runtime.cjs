@@ -98,5 +98,24 @@ const assert=require('node:assert/strict');
  assert.equal(driven.x,car.x+20,'Predicció del pilot local té prioritat');
  assert.equal(driven.localX,car.x+20,
    'La càmera del pilot acompanya la predicció visual del vehicle, no el buffer remot');
- console.log('native coop original runtime: jitter smoothing, remote vehicle/passenger and local driver priority passed');
+ // Amb la simulació física de 30 Hz i una GPU a 120 Hz, les bales
+ // han de progressar cada frame fins i tot si no arriba cap snapshot.
+ const projectile=game.run(`(()=>{
+ const s=nativeCoopSession;
+ s.projectileVisual=window.HUNTER_CREATE_NATIVE_COOP_PROJECTILE_VISUAL();
+ s.state={...s.state,tick:s.state.tick+3,
+  combat:{...s.state.combat,projectiles:[{
+   id:'visual-regression',actorId:'b',weapon:'pistol',
+   x:42,y:2,z:15,vx:130,vy:0,vz:0,splash:0}]}};
+ updateNativeCoop(1/120);
+ const first=s.projectiles.get('visual-regression')?.position.x;
+ updateNativeCoop(1/120);
+ const second=s.projectiles.get('visual-regression')?.position.x;
+ return {first,second,visualFrames:s.projectileVisual.stats.visualFrames};
+ })()`);
+ assert(Number.isFinite(projectile.first),'Projectil de prova creat al motor original');
+ assert(projectile.second>projectile.first+.5,
+  'La bala progressa a 120 Hz sense una nova fila de servidor');
+ assert(projectile.visualFrames>=2);
+ console.log('native coop original runtime: camera, vehicles and per-frame projectiles passed');
 })().catch(e=>{console.error(e);process.exitCode=1});
