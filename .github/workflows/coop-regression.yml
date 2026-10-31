@@ -31,6 +31,8 @@ jobs:
       - name: Regressions de xarxa del COOP
         run: |
           node tests/native-coop-interpolation.mjs
+          node tests/native-coop-local-presentation.mjs
+          node tests/native-coop-subtick.mjs
           node tests/native-coop-enemy-interpolation.mjs
           node tests/native-coop-prediction-cache.mjs
           node tests/native-coop-vehicle-candidates.mjs
