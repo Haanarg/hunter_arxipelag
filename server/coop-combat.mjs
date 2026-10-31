@@ -140,7 +140,17 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
   }
   function fire(actorId,p,bag,tick,weapon=bag.weapon||'pistol'){
     const profile=weaponCatalog[weapon],vehicle=vehicles.mounted(actorId),gun=vehicle&&vehicle.seats[0]===actorId&&vehicleGunPose(vehicle),
-      from=gun?.origin||{x:p.x,y:p.y+(vehicle?2:weapon==='bazooka'?1.9:1.5),z:p.z};
+      // El mateix avançament de la boca del canó que en mode individual.
+      // Només quan es va a peu: els vehicles conserven els seus punts
+      // de sortida i les seves regles de muntatge.
+      muzzleReach=weapon==='pistol'?.7:weapon==='assault'?1.45:
+        weapon==='sniper'?2.1:weapon==='bazooka'?1.35:0,
+      muzzleHeading=p.hd||0,
+      from=gun?.origin||{
+        x:p.x+(vehicle?0:-Math.sin(muzzleHeading)*muzzleReach),
+        y:p.y+(vehicle?2:weapon==='bazooka'?1.9:1.5),
+        z:p.z+(vehicle?0:-Math.cos(muzzleHeading)*muzzleReach)
+      };
     const aimed=aimWeapon(p,vehicle,weapon,from),focus=aimed.focus,direction=gun?.direction||aimed.direction;
     const id='bullet-'+(++sequence),dmg=!['proving','world','native'].includes(meta.mode)&&['pistol','assault'].includes(weapon)?combatBalance.weapons.pistol:profile.damage;
     projectiles.push({...launchProjectile(from,direction,profile.speed,{id,actorId,weapon,dmg,splash:profile.splash||0,sourceVehicle:vehicle?.id,aimedAt:focus.target?.id||null}),life:profile.life});
