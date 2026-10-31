@@ -1,5 +1,27 @@
 # Reconstrucció del multijugador sobre el joc original
 
+## Correcció específica del jitter de moviment local (0.6.63)
+
+**Prova real rebuda:** RTT 32,4 ms, jitter RTT 16,4 ms; 752 estats cada 99,17 ms de mitjana, màxim 196 ms; 15.414 intervals de fotograma locals amb mitjana 4,15 ms (~240 FPS) i només 6 intervals >33 ms. El company/vehicles disposen de buffer visual de 200 ms, sense extrapolacions ni desbordaments en aquesta mostra. L'usuari observa tremolor constant de tota la imatge quan es mou, i fluïdesa si ningú no es mou.
+
+**Dues causes plausibles i observables al codi (no confondre amb GPU o amplada de banda):**
+1. `src/native-coop-prediction.mjs` reiniciava `accumulator=0` cada vegada que arribava un estat del mateix moviment (aprox. 10 cops/s), perdent temps de simulació fraccionari.
+2. El client presentava directament la pose de la física local de **30 Hz** a un renderer que pot estar actualitzant-se a **~240 FPS**, de manera que posició de jugador/càmera i pilot només canviaven cada 33 ms. A més, cada recepció d'estat reconstruïa la física autoritativa i podia fer retrocedir lleugerament la pose de la càmera.
+
+**Canvis a la 0.6.63:**
+- Conservar el fraccional de `accumulator` en tots els rebases compatibles de la mateixa missió, jugador i seient; reiniciar-lo únicament quan canvia la modalitat/identitat o la sessió deixa de ser predictible.
+- `src/native-coop-local-presentation.mjs`: capa gràfica exclusiva del jugador/pilot propi. En rebre un snapshot, el model físic conserva la correcció exacta, però la càmera acumula un petit offset visual que decau independentment dels FPS, sense invertir el moviment durant correccions persistents. Teleports, canvi de vehicle/rol, mort i pausa continuen essent immediats.
+- `src/native-coop-prediction.mjs`: per presentar moviments *entre* dos ticks, calcular la següent pose temporal amb les **mateixes funcions de simulació sobre una còpia descartable** i interpolar posició/angle segons el fraccional del tick. Només recalcular-la si canvien tick o controls rellevants. Aquesta anticipació **no modifica** el simulador físic, col·lisions, inputs de xarxa, autoritat ni danys. Els moviments ja no tenen un màxim visual de 30 FPS.
+- `src/coop-world-runtime.js`: càmera del pilot i malla del vehicle utilitzen la mateixa pose gràfica `presented`; `prediction.vehicle()` continua exposant la pose física per als càlculs. Nou diagnòstic `window.HUNTER_COOP_NETWORK_STATS.localPrediction`: correccions, salts físics, error visual, `subtickBuilds` i `subtickFrames`.
+
+**Regressions pures comprovades en un entorn JavaScript aïllat:**
+- `tests/native-coop-local-presentation.mjs`: correccions repetides a 10 Hz durant cinc segons en pantalles de 60, 144 i 240 FPS; cap reversió visible amb velocitat constant, resposta de control immediata, transició angular ±π, teleports i pausa.
+- `tests/native-coop-subtick.mjs`: a 240 FPS, jugador a peu i vehicle recorren la mateixa distància física a 30 Hz, mentre que la pose visual avança pràcticament a cada fotograma; canvi de control a mig tick i rebase de snapshot sense salt visual.
+- `tests/native-coop-prediction-cache.mjs`: el temps fraccionari es conserva entre snapshots compatibles, a més dels tests de cachés anteriors.
+- **Limitació:** no s'ha executat la suite Node completa ni s'ha validat la correcció a dos dispositius. La prova amb el motor original `tests/native-coop-interpolation-runtime.cjs` s'ha actualitzat per exigir que la càmera segueixi la mateixa pose que el vehicle del pilot.
+
+**Punt de control següent:** desplegar de forma coherent client i Worker a 0.6.63, repetir la partida amb dos jugadors i compartir `localPrediction`, `clientFrame`, `remoteInterpolation` i si persisteix el tremolor. Si `subtickBuilds` s'acosta a `subtickFrames` quan s'usa joystick, cal perfilar el cost de recalcular el pas gràfic i ajustar el llindar dels inputs. La concentració del 97% dels bytes de deltes a `combat` és un problema potencial de trànsit diferent i no justifica alterar-lo per arreglar aquesta sacsejada.
+
 ## Onzena optimització — índexs espacials a la predicció del conductor (0.6.62)
 
 **Problema observat al codi:** el pilot local executa la seva física i possibles replays a 30 Hz. Cada subpas recorria la flota completa de vehicles (p. ex. 374) amb un `Math.hypot` i recalculava dimensions, i també filtrava tots els murs de la geometria. El cost creixia amb la mida del mapa, encara que el vehicle estigués lluny de gairebé tots els objectes.
