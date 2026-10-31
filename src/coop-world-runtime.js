@@ -189,7 +189,15 @@ function updateNativeCoopFrame(dt){
    for(const row of state.vehicles){
      const v=s.vehicles.get(row.id);if(!v)continue;
      if(s.appliedVehicleRows.get(row.id)!==row){
+       const previous=s.appliedVehicleRows.get(row.id);
        Object.assign(v,row);
+       if(row.destroyed&&!previous?.destroyed&&s.projectedState){
+         // Mateixa fragmentació de les malles que al mode individual,
+         // sense tornar a aplicar danys: el Worker ja és l'autoritat.
+         v.o.position.set(row.x,row.y,row.z);v.o.rotation.y=row.hd;
+         if(v.t==='bici'){v.o.rotation.z=Math.PI*.43;}
+         else vehicleDebris(v,row.y);
+       }
        if(!v.o.visible)v.o.position.set(row.x,row.y,row.z);
        if(v.o.userData.turretPivot)v.o.userData.turretPivot.rotation.y=row.turretYaw||0;
        if(v.o.userData.turretPitch)v.o.userData.turretPitch.rotation.x=row.turretPitch||0;
@@ -416,7 +424,15 @@ function updateNativeCoopFrame(dt){
  if(s.seenEffects.size>256){const current=new Set(state.combat.effects.map(e=>e.id));s.seenEffects=current;}
  }
  if(s.appliedRemovedWalls!==state.removedWalls){s.appliedRemovedWalls=state.removedWalls;
- for(const i of state.removedWalls||[]){const w=s.walls[i];if(w){w.open=true;w.hp=0;for(const mesh of w.parts||[w.m])if(mesh)mesh.visible=false;}}
+ s.removedWallsShown??=new Set();
+  for(const i of state.removedWalls||[]){
+    if(s.removedWallsShown.has(i))continue;
+    s.removedWallsShown.add(i);
+    const w=s.walls[i];if(!w)continue;
+    w.open=true;w.hp=0;w.playerBlock=false;w.destroyedWall=true;
+    if(s.projectedState)wallBreak(w);
+    else for(const mesh of w.parts||[w.m])if(mesh)mesh.visible=false;
+  }
  }
  if(s.appliedDoors!==state.doors){s.appliedDoors=state.doors;
  s.doors??=new Map(Dr.map(d=>[d.saveId,d]));for(const row of state.doors){const d=s.doors.get(row.id);if(d){d.desiredOpen=row.open;d.open=row.open;if(d.m)d.m.visible=!row.open&&!row.destroyed;}}
