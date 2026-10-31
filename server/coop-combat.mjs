@@ -83,7 +83,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
       id='enemy-bullet-'+(++sequence);
     projectiles.push(launchProjectile(origin,direction,rocket?76:70,{id,actorId:unit.id,enemy:true,weapon:rocket?'bazooka':profile,dmg:rocket?weaponCatalog.bazooka.damage:unit.dmg??combatBalance.weapons.rifle,splash:rocket?8:0}));
     unit.nextAttackTick=tick+Math.ceil((unit.rate??(unit.elite?.16:rocket?3.4:1.1))*30);unit.lastAttack=tick;
-    effect('shot',tick,{enemy:true,actorId:unit.id,from:origin,to:aim,hit:null});return true;
+    effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,weapon:rocket?'bazooka':'rifle',from:origin,to:aim,hit:null});return true;
   }
   function damageVehicle(v,amount,shotClass,tick,queue){
     const destroyed=vehicles.damage(v.id,amount,shotClass);
@@ -155,7 +155,7 @@ export function createRelayCombat({meta,record={},inventory,players,canAttack=()
     const id='bullet-'+(++sequence),dmg=!['proving','world','native'].includes(meta.mode)&&['pistol','assault'].includes(weapon)?combatBalance.weapons.pistol:profile.damage;
     projectiles.push({...launchProjectile(from,direction,profile.speed,{id,actorId,weapon,dmg,splash:profile.splash||0,sourceVehicle:vehicle?.id,aimedAt:focus.target?.id||null}),life:profile.life});
     if(profile.ammo){const source=vehicle&&profile.ammo==='rockets'?vehicle:bag;source[profile.ammo]--;}
-    effect('shot',tick,{actorId,from,to:{x:from.x+direction[0],y:from.y+direction[1],z:from.z+direction[2]},hit:null,aimedAt:focus.target?.id||null});return 'FIRED';
+    effect('shot',tick,{actorId,projectileId:id,weapon,from,to:{x:from.x+direction[0],y:from.y+direction[1],z:from.z+direction[2]},hit:null,aimedAt:focus.target?.id||null});return 'FIRED';
   }
 
   function cancel(actorId){for(let i=bursts.length-1;i>=0;i--)if(bursts[i].actorId===actorId)bursts.splice(i,1);}
