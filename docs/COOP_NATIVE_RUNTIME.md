@@ -1,6 +1,23 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
 
+## 0.6.63 · càmera local sense sacsejades de rebase ni salts de tick
+
+La mostra real mostra RTT 32,4 ms, 10 Hz regulars, interval màxim de recepció 196 ms i 15.414 frames locals amb 4,15 ms de mitjana (~240 Hz). El buffer remot presenta 13.174 frames interpolats sobre 13.204 d'actius, cap extrapolació ni underrun, però l'usuari veu tota la imatge tremolar quan es mou el jugador. Això apunta al camí **local** de predicció/visualització, no al renderer ni a l'amplada de banda.
+
+**Origen al codi:** `createNativePrediction.receive()` reconstruïa la simulació amb cada estat, descartant `accumulator` fins i tot en snapshots compatibles. La presentació `advance()` només retornava la pose física que canvia cada 1/30 s; el motor la dibuixava directament cada fotograma, sense suavització sub-tick. Les diferències de predicció es transferien immediatament a la càmera.
+
+**Canvi focalitzat:**
+- `src/native-coop-prediction.mjs` manté el temps acumulat fraccionari en rebases compatibles; els canvis de missió/rol i les pauses el continuen reiniciant.
+- Per a cada tick/input, calcula una sola vegada una *previsualització del següent pas de física*, amb el mateix `createPlayerSimulation()` per al jugador a peu i el mateix `stepRangeVehicle()` + comprovació de contacte per al pilot, però sobre còpies temporals. A cada render es combina la pose actual i la prevista amb la fracció de tick. No s'introdueix un segon simulador autoritatiu, no es modifica el vehicle físic i no s'envien ordres addicionals.
+- `src/native-coop-local-presentation.mjs` absorbeix petites correccions de snapshots i canvis sobtats de controls sense saltar la càmera. Utilitza un offset temporal amb mitja vida de 160 ms, límit d'error de 3 m a peu o 12 m conduint, i permet salts reals de teletransport/rol.
+- `src/coop-world-runtime.js`: la pose gràfica del pilot també s'aplica a la malla del vehicle, i `P`/càmera comparteixen la trajectòria. El vehicle físic guardat per `createNativePrediction` no se sobreescriu.
+- `window.HUNTER_COOP_NETWORK_STATS.localPrediction`: `corrections`, `smoothedCorrections`, `hardSnaps`, `maxCorrectionM`, `maxCorrectionDegrees`, `visualErrorM`, `smoothedFrames`, `subtickBuilds`, `subtickFrames`.
+
+**Regressions aïllades aprovades:** `tests/native-coop-local-presentation.mjs` (10 Hz persistents en 60/144/240 FPS, girs i teleports), `tests/native-coop-subtick.mjs` (240 FPS, a peu i conduint, control a mig tick i rebase), `tests/native-coop-prediction-cache.mjs` (no perdre 1/60 s en rebre un snapshot), més les suites de deltes/interpolador existents de les fases anteriors. `tests/native-coop-interpolation-runtime.cjs` comprova la coherència entre càmera i vehicle del pilot.
+
+**Advertiment:** les comprovacions executades són proves pures/instrumentades en JS, no és una prova real de dos navegadors ni la suite Node 22/GPU. No s'han modificat el Worker, l'IA, el buffer d'altres jugadors ni la cadència dels estats de xarxa. Cal desplegar client/Worker coherentment a 0.6.63 i reproduir la partida.
+
 ## 0.6.62 · broadphase espacial local de vehicles i murs
 
 Abans d'aquesta versió `createNativePrediction.step` filtrava **tots** els `state.vehicles` i `physical.walls` a cada subpas de 30 Hz o en reexecutar els inputs pendents després d'un snapshot. La càmera local era fluida, però aquest cost continuava essent potencialment alt en un món gran.
