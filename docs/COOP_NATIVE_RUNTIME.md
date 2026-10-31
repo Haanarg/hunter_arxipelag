@@ -1,5 +1,18 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
+## 0.6.74 · IA COOP: torres, persecució, flanqueig i general
+
+**Implementació de la primera fase de paritat d'enemics sobre el servidor autoritatiu, mantenint el món i els models individuals.**
+
+- `src/coop-world-runtime.js`: torres actives a la captura de l'arxipèlag, canó de caseta orientable sense fer girar les potes, patrulles sense punts ficticis (els sentinelles sense ruta poden voltar al voltant de casa).
+- `server/coop-combat.mjs`: torres detecten els dos jugadors des de la cabina a ~9,4 m, metralladora lleugera contra vianants i arma explosiva contra vehicles, cadències independents i supressió de **60 ticks = 2 s** que es renova amb impactes lleugers. El dany lleuger suprimeix, no redueix la vida de la torre; els explosius sí es processen. L'autoapuntat prioritza la caseta alta. El general detecta a 60 m, dispara i recula dins el nivell subterrani sense sortir travessant parets.
+- `src/native-soldier-navigation.mjs`: el servidor reutilitza distàncies tàctiques individuals de reculada (9 m) i posició de foc (~17 m), consulta col·lisions i nivells amb el world adapter canònic, cerca l'última posició observada, patrulla, evita obstacles amb A* limitat (180 expansions, replans cada 42 ticks) i tracta d'obrir portes transitables. La IA es calcula per soldats repartits cada tres ticks; la càmera i interpolació continuen fluides independentment.
+- `server/coop-mission.mjs`: les portes que obren soldats esdevenen estat autoritatiu compartit amb els dos clients, sense obrir portes bloquejades.
+- Regressions: `tests/native-coop-enemy-phase1.mjs` (torres, canons, supressió, retorn de foc, general, navegació al voltant de murs, obrir porta i reprendre patrulla) i `tests/native-soldier-ai.mjs` adaptat als guàrdies que es mouen.
+
+**Validació disponible:** simulacions del codi real de combat i navegació executades en JavaScript aïllat, incloses les assertions de la regressió de soldats existent i la nova prova de fase 1. No s'ha pogut executar Node 22/CI completa, la GPU, el Worker Cloudflare ni una sessió HOST/GUEST amb dos dispositius. La navegació tàctica encara no garanteix paritat completa amb les cues coordinades de portes, escales entre pisos, formacions i totes les decisions individuals; calen proves de camp en edificis.
+
+
 
 ## 0.6.65 · bales ancorades a l'origen i traces dels trets breus
 
