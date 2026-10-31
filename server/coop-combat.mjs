@@ -18,13 +18,17 @@ export function segmentBox(from,to,box){return segmentAabbT(from.x,from.y,from.z
 function targetBox(t){return {x0:t.x-.8,x1:t.x+.8,z0:t.z-.8,z1:t.z+.8,y0:t.y,y1:t.y+3};}
 export function traceArena(from,to,geometry,world,{ignoreBarbed=false,collectWindows=false,ignoreVegetation=false}={}){
   let fraction=1,hit=false,wallIndex=null,tree=null;const windowCrossings=[];
-  for(const [index,w] of geometry.walls.entries())if(!w.open&&!(ignoreBarbed&&w.barbed)){
+  // Descart ràpid de geometria fora del tram. Imprescindible per la
+  // cadència alta de la tanqueta, sense perdre cap intersecció exacta.
+  const minX=Math.min(from.x,to.x),maxX=Math.max(from.x,to.x),minY=Math.min(from.y,to.y),maxY=Math.max(from.y,to.y),minZ=Math.min(from.z,to.z),maxZ=Math.max(from.z,to.z);
+  for(const [index,w] of geometry.walls.entries())if(!w.open&&!(ignoreBarbed&&w.barbed)&&w.x1>=minX&&w.x0<=maxX&&w.z1>=minZ&&w.z0<=maxZ&&w.y1>=minY&&w.y0<=maxY){
     const crossing=windowCrossing(from,to,w);
     if(crossing){if(collectWindows)windowCrossings.push({wallIndex:index,...crossing});continue;}
     const t=wallShotHit(from,to,w);if(t!==null&&t<=fraction){fraction=t;hit=true;wallIndex=index;}
   }
   // The base shells use axis-aligned world footprints, including rotated variants.
   for(const b of geometry.buildings||[]){
+    if(b.x+b.w/2<minX||b.x-b.w/2>maxX||b.z+b.d/2<minZ||b.z-b.d/2>maxZ||b.fy>maxY||b.fy+b.h<minY)continue;
     if(!b.rb&&b.rhp>0){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.h-.12,y1:b.fy+b.h+.12});if(t!==null&&t<=fraction){fraction=t;hit=true;wallIndex=null;}}
     if(b.upperFloor&&!b.rb){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.storey-.12,y1:b.fy+b.storey+.12});if(t!==null&&t<=fraction){fraction=t;hit=true;wallIndex=null;}}
   }
@@ -212,10 +216,12 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       if(!p||p.hp<=0||p.fall||p.swimming||!canAttack(p.id)||!bag?.assault||bag.weapon!=='assault'||!bag.bullets){bursts.splice(i,1);continue;}
       stepBurst(burst,1/30,true,()=>{if(!bag.bullets)return false;fire(p.id,p,bag,tick);alarm(p,p.id,tick,'pistol');bag.disguised=false;return true;});if(!burst.remaining)bursts.splice(i,1);
     }
-    for(const vehicle of vehicles.live())if(turretSpecs[vehicle.t]&&vehicle.seats[0]){
+    // L'autoapuntat no necessita 30 recerques LOS/s per vehicle: el canó
+    // comparteix l'actualització física a 10 Hz, i els trets continuen a 30 Hz.
+    if(tick%3===0)for(const vehicle of vehicles.live())if(turretSpecs[vehicle.t]&&vehicle.seats[0]){
       const p=players().find(p=>p.id===vehicle.seats[0]);if(!p||p.hp<=0)continue;
       const weapon=mountedWeapons[vehicle.t],gun=vehicleGunPose(vehicle),aimed=aimWeapon(p,vehicle,weapon,gun.origin);
-      stepVehicleTurret(vehicle,aimed.direction,1/30);
+      stepVehicleTurret(vehicle,aimed.direction,3/30);
     }
     for(let i=projectiles.length-1;i>=0;i--){
       const p=projectiles[i],flight=projectileStep(p,1/30),trace=traceArena(flight.from,flight.to,geometry(),world(),{ignoreBarbed:!p.splash,collectWindows:true});
