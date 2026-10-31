@@ -32,6 +32,7 @@ jobs:
         run: |
           node tests/native-coop-interpolation.mjs
           node tests/native-coop-local-presentation.mjs
+          node tests/native-coop-projectile-visual.mjs
           node tests/native-coop-subtick.mjs
           node tests/native-coop-enemy-interpolation.mjs
           node tests/native-coop-prediction-cache.mjs
