@@ -47,6 +47,7 @@ async function startNativeCoop(room){
  if(nativeCoopSession)throw Error('Ja hi ha una sessió cooperativa.');
  if(started&&!over){try{await saveOperation();}catch(error){msg=error.message;msgT=20;ui.show('coop');throw error;}}
  const session=nativeCoopSession={preparing:true,room,state:null,meta:null,self:null,remotes:new Map(),fireHeld:false,seenEffects:new Set(),projectiles:new Map(),grenades:new Map()};
+ movementFx.reset();
  session.projectileVisual=window.HUNTER_CREATE_NATIVE_COOP_PROJECTILE_VISUAL?.();
  session.previousCheats={...cheats};
  try{
@@ -240,8 +241,19 @@ function updateNativeCoopFrame(dt){
  }
  refreshVehicleGridIfCellsChanged();
  updateVehicleVisualLod(elapsed,dt,{skipHidden:true});
+ // Exactament els mateixos rastres instanciats del mode individual:
+ // la física i el snapshot ja han actualitzat la posició de cada vehicle.
+ const fxContext={playerX:P.x,playerZ:P.z,playerVehicle:cv,
+   terrainAt:hAt,waterAt:(x,z)=>wy(x,z,elapsed)};
+ for(const v of V)if(!v.destroyed)movementFx.vehicle(v,dt,fxContext);
+ movementFx.update(dt,cam);
  if(cv||swimming)playerCrouched=false;if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;animPl(hp<=0?0:cv?0:input.forward,dt,input.run&&hp>0,input.strafe);poseRider(cv,dt);
  pl.rotation.z=hp<=0&&!cv?-Math.PI/2:0;if(hp<=0&&!cv)pl.position.y+=.5;
+ // El crol inclina el model i enfonsa el pit si només es pren P.y.
+ // La mateixa elevació VISUAL del mode individual preserva la física.
+ if(swimming&&!cv&&hp>0)
+   pl.position.y+=window.HUNTER_CHARACTERS.swimVisualLift(
+     pl,wy(P.x,P.z,elapsed),P.y);
  if(projecting){
    // Les referències als seients i als actors remots només es resolen
    // en rebre un snapshot; la interpolació continua a cada fotograma.
@@ -298,6 +310,9 @@ function updateNativeCoopFrame(dt){
      bazookaEquipped:weapon==='bazooka',sniperEquipped:weapon==='sniper',
      assaultRifleEquipped:weapon==='assault',grenadeEquipped:weapon==='grenade'
    });
+   if(other.swimming&&other.hp>0&&!remoteVehicle)
+     model.position.y+=window.HUNTER_CHARACTERS.swimVisualLift(
+       model,wy(target.x,target.z,elapsed),target.y);
  }
 
  if(projecting){
@@ -465,4 +480,4 @@ function updateNativeCoopFrame(dt){
 window.HUNTER_NATIVE_COOP=Object.freeze({start:startNativeCoop,active:()=>!!nativeCoopSession});
 
 function nativeReviveAction(){const s=nativeCoopSession;if(!s?.state||cv||hp<=0||swimming||playerFall||!inv.med)return null;const other=s.state.players.find(p=>p.id!==s.self&&p.hp<=0&&Math.hypot(P.x-p.x,P.z-p.z)<=3.2&&Math.abs(P.y-p.y)<2);return other?{kind:'revive',label:'Mantén E per reanimar el company',icon:'✋'}:null;}
-function stopNativeCoop(){const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();cancelGrenadeCharge();for(const key of Object.keys(K))K[key]=0;for(const mesh of s.projectiles.values())world?.remove(mesh);for(const mesh of s.grenades.values()){world?.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);}s.projectiles.clear();s.grenades.clear();s.projectileVisual?.reset();if(s.previousCheats)Object.assign(cheats,s.previousCheats);for(const model of s.remotes.values()){if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;window.HUNTER_COOP_NETWORK_STATS=null;}
+function stopNativeCoop(){const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();cancelGrenadeCharge();for(const key of Object.keys(K))K[key]=0;for(const mesh of s.projectiles.values())world?.remove(mesh);for(const mesh of s.grenades.values()){world?.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);}s.projectiles.clear();s.grenades.clear();s.projectileVisual?.reset();movementFx.reset();if(s.previousCheats)Object.assign(cheats,s.previousCheats);for(const model of s.remotes.values()){if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;window.HUNTER_COOP_NETWORK_STATS=null;}
