@@ -56,12 +56,44 @@ export class CoopRoomHub {
       const room=await readCoopRoom(this.env,a.actorId);
       if(!room||room.id!==a.roomId){if(this.mission)await this.abort('La sala s’ha tancat.');this.send(ws,{type:'room',room:null});ws.close(4004,'Sala tancada');continue;}
       if(this.mission&&!this.matches(room))await this.abort('La sala ha canviat. Cal tornar a preparar la missió.');
-      this.send(ws,{type:'room',room});
+      // Inici validat i persistit al DO: també es lliura al convidat
+      // si reconnecta després d'haver premut Preparat.
+      const pending=await this.ctx.storage.get('native-start');
+      if(pending&&(!room.allReady||pending.id!==room.id||
+          pending.revision!==room.revision||pending.expiresAt<Date.now()))
+        await this.ctx.storage.delete('native-start');
+      const starting=pending&&room.allReady&&pending.id===room.id&&
+        pending.revision===room.revision&&pending.expiresAt>Date.now();
+      const playing=this.mission?.meta.mode==='native'&&this.matches(room);
+      this.send(ws,{type:'room',room:{...room,phase:playing?'playing':starting?'starting':'lobby'}});
     }
   }
   async fetchInner(request){
     const path=new URL(request.url).pathname;
     if(path==='/notify'&&request.method==='POST'){await this.publish();return new Response(null,{status:204});}
+    if(path==='/start'&&request.method==='POST'){
+      const owner=request.headers.get('X-Coop-Actor'),
+        revision=Number(request.headers.get('X-Coop-Revision'));
+      const room=owner&&await readCoopRoom(this.env,owner);
+      const reply=(status,code,message)=>new Response(JSON.stringify({code,message}),{
+        status,headers:{'Content-Type':'application/json'}});
+      if(!room||room.host!==owner)return reply(403,'HOST_ONLY','Només el HOST pot iniciar la partida.');
+      if(!Number.isSafeInteger(revision)||revision!==room.revision)
+        return reply(409,'ROOM_CHANGED','La sala ha canviat.');
+      if(room.members.length!==2||!room.members.find(m=>!m.host)?.ready)
+        return reply(409,'GUEST_NOT_READY','El GUEST encara no està preparat.');
+      // El botó «Començar» confirma implícitament l'estat del HOST.
+      await this.env.DB.prepare('UPDATE hunter_coop_members SET ready=1,last_seen=? WHERE owner=? AND room=?')
+        .bind(Date.now(),owner,room.id).run();
+      const fresh=await readCoopRoom(this.env,owner);
+      if(!fresh?.allReady)return reply(409,'GUEST_NOT_READY','Calen dos jugadors preparats i connectats.');
+      await this.ctx.storage.put('native-start',{
+        id:room.id,revision:room.revision,expiresAt:Date.now()+5*60*1000
+      });
+      await this.publish();
+      return new Response(JSON.stringify({room:{...fresh,phase:'starting'}}),{
+        headers:{'Content-Type':'application/json'}});
+    }
     if(path!=='/connect'||request.headers.get('Upgrade')?.toLowerCase()!=='websocket')return new Response('Not found',{status:404});
     const a={actorId:request.headers.get('X-Coop-Actor'),sessionId:request.headers.get('X-Coop-Session'),roomId:request.headers.get('X-Coop-Room'),expiresAt:Number(request.headers.get('X-Coop-Expiry')),window:Date.now(),count:0};
     // Headers come only from the authenticated Worker, but recheck against D1.
