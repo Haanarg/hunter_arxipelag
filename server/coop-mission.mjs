@@ -191,7 +191,7 @@ export function restoreRelayMission(record,geometry){
       const result={actorId,commandId:message.commandId,ok,code};inventoryResults.push(result);if(inventoryResults.length>64)inventoryResults.shift();return {...result};
     }return {actorId,commandId:message.commandId,ok,code};
   }
-  const vehicles=createRelayVehicles({onBarrier:ramWall,onPalm:tree=>damagePalm(tree,8),geometry:()=>physical,onImpact:(id,amount,tick)=>combat.impactVehicle(id,amount,tick),onTravel:(v,from,tick)=>combat.runover(v,from,tick),meta,record:record.vehicles,world:()=>world,water,players:()=>sim.snapshot().players,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt,onBoard:id=>{inventory.get(id).disguised=false;combat.cancel(id);actions.delete(id);}});
+  const vehicles=createRelayVehicles({onBarrier:ramWall,onPalm:tree=>damagePalm(tree,8),geometry:()=>physical,onImpact:(id,amount,tick)=>combat.impactVehicle(id,amount,tick),onTravel:(v,from,tick)=>combat.runover(v,from,tick),meta,record:record.vehicles,world:()=>world,water,players:()=>sim.snapshot().players,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt,hasParachute:id=>(inventory.get(id)?.parachute||0)>0,onBoard:id=>{inventory.get(id).disguised=false;combat.cancel(id);actions.delete(id);}});
   const rescue=createRelayRescue(record.rescue);
   const optionals=createNativeOptionals({meta,record:record.optionals,
     world:()=>world,geometry:()=>physical,players:()=>sim.snapshot().players,vehicles,
