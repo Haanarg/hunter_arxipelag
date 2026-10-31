@@ -359,6 +359,28 @@ function updateNativeCoopFrame(dt){
    f.wl.rotation.z=Math.sin(elapsed*8+f.cx)*.5;
    f.wr.rotation.z=-f.wl.rotation.z;
  }
+ // La cartografia és la mateixa del mode individual; el Worker
+ // confirma quan HOST o GUEST recull un mapa i tots dos reben els sectors.
+ if(state.intel&&s.appliedIntelRevision!==state.intel.revision){
+   const intel=state.intel;
+   s.appliedIntelRevision=intel.revision;
+   hqIntelStage=intel.stage;hqMapKnown=!!intel.confirmed;
+   hqIntelSectors.clear();
+   for(let i=0;i<intel.investigated;i++)hqIntelSectors.add(i);
+   hqIntelDiscarded.clear();for(const i of intel.discarded)hqIntelDiscarded.add(i);
+   if(intel.candidates.length)hqIntelSites=intel.candidates.map(p=>({...p}));
+   for(const [kind,key] of [['heli','heliSectors'],['tanc','tankSectors']]){
+     knownVehicleSectors[kind].clear();
+     for(const i of intel[key]||[])knownVehicleSectors[kind].add(i);
+   }
+   intelMarks=(intel.knownVehicles||[]).map((row,i)=>{
+     const ref=s.vehicles.get(row.id)||s.enemies.get(row.id);
+     return ref?{kind:['heli','heli_combat'].includes(row.t)?'heli':'tanc',
+       ref,label:(['heli','heli_combat'].includes(row.t)?'Helicòpter ':'Tanc ')+(i+1)}:null;
+   }).filter(Boolean);
+   if(intel.revision>0&&intel.description){msg=intel.description;msgT=4;}
+   mini();
+ }
  if(projecting)rebuildVehicleGrid(); // Reindexa també els vehicles en COOP.
  // Les posicions remotes es presenten amb un interval de snapshot
  // de retard: cap extrapolació de física o dany. L'actor/vehicle local
