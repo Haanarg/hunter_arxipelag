@@ -191,7 +191,32 @@ export function restoreRelayMission(record,geometry){
   }
   const vehicles=createRelayVehicles({onBarrier:ramWall,onPalm:tree=>damagePalm(tree,8),geometry:()=>physical,onImpact:(id,amount,tick)=>combat.impactVehicle(id,amount,tick),onTravel:(v,from,tick)=>combat.runover(v,from,tick),meta,record:record.vehicles,world:()=>world,water,players:()=>sim.snapshot().players,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt,onBoard:id=>{inventory.get(id).disguised=false;combat.cancel(id);actions.delete(id);}});
   const rescue=createRelayRescue(record.rescue);
-  const combat=createRelayCombat({meta,record:record.combat,vehicles,waterSurface:(x,z,time)=>water.surfaceAt(x,z,time),cutWire,blastWire,blastStructures,damagePalm,blastPalms,breakWindow,damageWall,windowAvailable:(index,paneIndex)=>!brokenWindows.has(index+':'+paneIndex),
+  // Un soldat pot obrir una porta de fusta practicable si el camí
+  // al darrer contacte passa pel seu llindar; tots dos jugadors veuen
+  // la mateixa porta oberta. Cap porta bloquejada no s'obre sola.
+  function enemyOpenDoor(unit,goal){
+    if(meta.mode!=='native'||!goal)return false;
+    const dx=goal.x-unit.x,dz=goal.z-unit.z,len2=dx*dx+dz*dz;
+    if(len2<.01)return false;
+    const choice=meta.doors.filter(d=>!doorStates.get(d.id)&&!removedWalls.has(d.wallIndex))
+      .map(d=>{
+        const distance=Math.hypot(unit.x-d.cx,unit.z-d.cz),
+          projection=Math.max(0,Math.min(1,((d.cx-unit.x)*dx+(d.cz-unit.z)*dz)/len2)),
+          corridor=Math.hypot(unit.x+dx*projection-d.cx,unit.z+dz*projection-d.cz);
+        return {d,distance,corridor,projection};
+      })
+      .filter(c=>c.distance<4.6&&c.corridor<1.75&&c.projection<.85)
+      .sort((a,b)=>a.distance-b.distance)[0];
+    if(!choice)return false;
+    const d=choice.d,wall=physical.walls[d.wallIndex];
+    if(!wall||wall.locked||wall.alwaysOpen||wall.open)return false;
+    // Un jugador que passa pel llindar impedeix que la IA li tanqui
+    // la porta, però obrir-la no suposa cap perill de col·lisió.
+    physical.walls[d.wallIndex]={...wall,open:true};
+    doorStates.set(d.id,true);world=buildWorld();doorRevision++;
+    return true;
+  }
+  const combat=createRelayCombat({openEnemyDoor:enemyOpenDoor,meta,record:record.combat,vehicles,waterSurface:(x,z,time)=>water.surfaceAt(x,z,time),cutWire,blastWire,blastStructures,damagePalm,blastPalms,breakWindow,damageWall,windowAvailable:(index,paneIndex)=>!brokenWindows.has(index+':'+paneIndex),
     canAttack:()=>true,inventory,players:()=>sim.snapshot().players,
     visiblePlayers:()=>cheats.invisible?[]:sim.snapshot().players,
     damagePlayer:(id,amount)=>cheats.immune?false:
