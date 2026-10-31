@@ -330,6 +330,10 @@ function updateNativeCoopFrame(dt){
      const index=Number(row.id.slice(6)),f=s.sharkViews[index];
      if(!f||!Number.isFinite(row.x)||!Number.isFinite(row.z))continue;
      f.x=row.x;f.z=row.z;f.dead=!!row.dead;
+     if(!f.nativeCoopInitialized){
+       f.o.position.set(row.x,wy(row.x,row.z,elapsed)-.18,row.z);
+       f.nativeCoopInitialized=true;
+     }
      f.o.position.x+=(row.x-f.o.position.x)*alpha;
      f.o.position.z+=(row.z-f.o.position.z)*alpha;
      f.o.position.y=wy(f.o.position.x,f.o.position.z,elapsed)-.18;
