@@ -127,6 +127,103 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     unit.nextAttackTick=tick+Math.ceil((unit.rate??(unit.elite?.16:rocket?3.4:1.1))*30);unit.lastAttack=tick;
     effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,weapon:rocket?'bazooka':'rifle',from:origin,to:aim,hit:null});return true;
   }
+  // La mateixa navegació del joc individual, sense simular IA als clients.
+  // A 10 Hz manté el Worker lleuger; la interpolació visual suavitza la pose.
+  function stepNativePatrolVehicle(unit,tick){
+    const marine=unit.t==='patrulla_marina',land=['jeep','tanqueta','tanc'].includes(unit.t);
+    if(!marine&&!land)return false;
+    if(meta.mode!=='native')return false;
+    if(unit.patrolPhase===undefined)
+      unit.patrolPhase=[...unit.id].reduce((n,c)=>n+c.charCodeAt(0),0)%3;
+    if(tick%3!==unit.patrolPhase)return true;
+    const dt=.1,terrain=(x,z)=>world().heightAt(x,z),
+      searchRadius=marine?470:unit.t==='jeep'?80:110,
+      eye={x:unit.x,y:unit.y+(marine?3:2.35),z:unit.z},
+      potential=visiblePlayers().filter(p=>p.hp>0&&!p.fall)
+        .map(p=>({p,d:Math.hypot(p.x-unit.x,p.z-unit.z)}))
+        .filter(c=>c.d<searchRadius).sort((a,b)=>a.d-b.d||a.p.id.localeCompare(b.p.id));
+    let target=null;
+    if(tick>=(unit.nextPatrolSenseTick||0)){
+      unit.nextPatrolSenseTick=tick+(marine?9:6);
+      for(const {p} of potential){
+        const aim={x:p.x,y:p.y+(vehicles.mounted(p.id)?2:1.5),z:p.z};
+        if(traceArena(eye,aim,geometry(),world(),{
+          ignoreBarbed:true,wallCandidates:traceWallCandidates(eye,aim)
+        }).fraction>=.995){
+          target=p.id;break;
+        }
+      }
+      unit.patrolFocus=target;
+    }
+    const current=potential.find(c=>c.p.id===unit.patrolFocus);
+    const hostile=current?.p||null;
+    if(marine){
+      const clearTraffic=(x,z,margin)=>{
+        for(const v of vehicles.live()){
+          if(Math.hypot(v.x-x,v.z-z)<margin+(vehicleSpecs.radii[v.t]||2)*.55)
+            return false;
+        }
+        for(const other of targets)if(other!==unit&&other.hp>0&&
+          other.t==='patrulla_marina'&&Math.hypot(other.x-x,other.z-z)<margin+7)
+          return false;
+        return true;
+      };
+      stepMarinePatrol(unit,{dt,heightAt:terrain,
+        waterAt:(x,z)=>waterSurface(x,z,tick/30),
+        limit:Math.min(Math.abs(meta.bounds.x1),Math.abs(meta.bounds.z1)),
+        random,trafficClear:clearTraffic,target:hostile});
+    }else{
+      stepLandPatrol(unit,{dt,world:world(),random});
+      // Els blindats terrestres segueixen els seus waypoints originals.
+    }
+    unit.state=hostile?'attack':'patrol';
+    if(!hostile)return true;
+    const d=Math.hypot(hostile.x-unit.x,hostile.z-unit.z);
+    const cooldown=marine?(unit.rocketCd??0):(unit.nextAttackTick??0);
+    if(marine){
+      const aiming={x:hostile.x,y:hostile.y+(vehicles.mounted(hostile.id)?2:1.5),z:hostile.z};
+      const origin={x:unit.x+Math.cos(unit.heading)*.8-Math.sin(unit.heading)*1.1,
+        y:unit.y+2.25,z:unit.z-Math.sin(unit.heading)*.8-Math.cos(unit.heading)*1.1};
+      if(d<170&&tick>=(unit.nextMgTick??0)){
+        const dir=enemyAccuracy.direction(meta.difficulty||1,'marineMG',
+          aiming.x-origin.x,aiming.y-origin.y,aiming.z-origin.z,roll),
+          id='marine-mg-'+(++sequence);
+        projectiles.push(launchProjectile(origin,dir,125,{id,actorId:unit.id,
+          enemy:true,weapon:'rifle',dmg:combatBalance.weapons.rifle,life:2.7}));
+        unit.nextMgTick=tick+Math.ceil(.28*30);
+        effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,weapon:'rifle',from:origin,to:aiming});
+      }
+      if(d<245&&tick>=(unit.nextRocketTick??0)){
+        const rocketOrigin={x:unit.x-Math.cos(unit.heading)*.8-Math.sin(unit.heading)*1.1,
+          y:unit.y+2.25,z:unit.z+Math.sin(unit.heading)*.8-Math.cos(unit.heading)*1.1},
+          dir=enemyAccuracy.direction(meta.difficulty||1,'marineRocket',
+            aiming.x-rocketOrigin.x,aiming.y-rocketOrigin.y,aiming.z-rocketOrigin.z,roll),
+          id='marine-rocket-'+(++sequence);
+        projectiles.push({...launchProjectile(rocketOrigin,dir,75,{
+          id,actorId:unit.id,enemy:true,weapon:'bazooka',
+          dmg:combatBalance.weapons.boatRocket||weaponCatalog.bazooka.damage,
+          splash:8}),life:Math.max(2.2,d/75+.75)});
+        unit.nextRocketTick=tick+Math.ceil(roll(4.4,6.2)*30);
+        effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,weapon:'bazooka',from:rocketOrigin,to:aiming});
+      }
+    }else if(d<(unit.t==='jeep'?75:105)&&tick>=cooldown){
+      const weapon=unit.t==='jeep'?'jeep':unit.t==='tanqueta'?'tankette':'tank';
+      const origin={x:unit.x+Math.cos(unit.heading)*1.46-Math.sin(unit.heading)*1.1,
+        y:unit.y+(unit.t==='jeep'?2.25:2.8),
+        z:unit.z-Math.sin(unit.heading)*1.46-Math.cos(unit.heading)*1.1};
+      const aiming={x:hostile.x,y:hostile.y+1.5,z:hostile.z},
+        direction=enemyAccuracy.direction(meta.difficulty||1,weapon,
+          aiming.x-origin.x,aiming.y-origin.y,aiming.z-origin.z,roll),
+        id='patrol-shot-'+(++sequence),heavy=unit.t==='tanc';
+      projectiles.push({...launchProjectile(origin,direction,heavy?75:70,{
+        id,actorId:unit.id,enemy:true,weapon:heavy?'bazooka':'rifle',
+        dmg:unit.dmg||combatBalance.weapons.rifle,splash:heavy?8:0}),life:heavy?3.7:2.5});
+      unit.nextAttackTick=tick+Math.ceil((unit.rate||1.1)*30);
+      effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,
+        weapon:heavy?'bazooka':'rifle',from:origin,to:aiming});
+    }
+    return true;
+  }
   function damageVehicle(v,amount,shotClass,tick,queue){
     const destroyed=vehicles.damage(v.id,amount,shotClass);
     if(!destroyed)return false;
@@ -305,6 +402,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     }
     for(const t of targets)if(t.ai){
       if(t.hp<=0){t.state='dead';t.focus=null;continue;}
+      if(stepNativePatrolVehicle(t,tick))continue;
       const nativeSoldier=meta.mode==='native'&&t.t==='soldat';if(nativeSoldier&&nativeSoldierStep(t,tick))continue;
       const eye={x:t.x,y:t.y+2.2,z:t.z},candidates=(nativeSoldier?[]:visiblePlayers()).filter(p=>p.hp>0&&!p.fall&&!p.swimming)
         .map(p=>({p,d:Math.hypot(p.x-t.x,p.y-t.y,p.z-t.z)}))
