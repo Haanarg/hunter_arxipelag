@@ -1,5 +1,20 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
+## 0.6.76 · Fase 3 i C4 sota les torres (individual + COOP)
+
+**Correcció compartida del C4:** el radi i el dany estaven intercanviats al catàleg cooperatiu. El C4 individual detona amb **20 punts de dany i radi esfèric 3-D de 48 m**, mentre que el COOP anterior feia 48 punts de dany amb radi 20 m. Ara coincideixen. La caseta de les torres estava a ~9,4 m d'alçada; una explosió sota la torre podia fallar perquè el raycast considerava els seus pilars un mur. `src/combat-rules.mjs` aporta `towerExplosionAim` per provar la base estructural (2,2 m) quan l'explosió és propera i inferior a la caseta. Tant `src/combat.js` (individual) com `server/coop-combat.mjs` (COOP) continuen comprovant el terreny i els altres murs però no bloquegen l'ona amb els **pilars de la mateixa torre**. No s'ha augmentat el radi lateral individual.
+
+**Paracaigudes:** captura de l'objecte original, inventari individual per actor (també amb trucs de l'HOST), sortida d'helicòpters en alt al servidor amb inèrcia i caiguda de `src/player-vertical.mjs`; el paracaigudes redueix el descens a 4,8 m/s i evita danys de caiguda en aterrar. El model original de la cúpula ara pot visualitzar-se simultàniament en HOST i GUEST. Els helicòpters abandonats pel pilot descendeixen i entren al flux autoritatiu original de destrucció de vehicles. Les sortides fora dels límits del mapa són rebutjades.
+
+**Fauna:** les gavines recuperen les animacions visuals individuals al COOP; els taurons surten dels mateixos punts que al món generat originalment. El Worker aplica `src/shark-motion-core.mjs`, extret fidelment de la IA del mode individual (persecució, mossegada, passada i gir en forma de 8), contra qualsevol dels dos nedadors; una mossegada fa 3 punts de dany sense duplicar-se als clients. Estat i temps dels taurons es guarden als checkpoints. Fora de proximitat es redueix la freqüència de càlcul.
+
+**Intel·ligència i mapes:** els tres tipus originals (`mapa`, `mapa_heli`, `mapa_tanc`) es recullen automàticament al món natiu. El Worker desa la progressió i els quadrants investigats, descarta els falsos emplaçaments de l'HQ com al joc individual i sincronitza els sectors d'helicòpters i tancs amb el mapa i minimapa originals de tots dos jugadors. El truc d'objectes revela els sectors compartits. La lectura és idempotent perquè el servidor adjudica una sola recollida.
+
+**Regressió:** `tests/native-coop-phase3.mjs` valida el càlcul C4/torre, la física del paracaigudes, les mossegades dels taurons i els mapes compartits; està afegit a `test:play`. S'han executat proves JavaScript aïllades dels càlculs de torre, mossegades, restauració de fauna i progressió de mapes; no la suite completa de Node/CI ni la partida amb dues màquines.
+
+**Pendent de validació conjunta:** com es mostren les cúpules, les mossegades i els mapes a HOST/GUEST, la col·lisió de les torres en terrenys inclinats i la migració amb Worker i Pages actualitzats. La fase 3 de paritat d'interaccions especials encara pot requerir revisió dels comportaments del ferri i altres detalls.
+
+
 ## 0.6.75 · Fase 2: presoners, mecànic i comunicacions sincronitzades
 
 **La fase 2 reutilitza els sistemes individuals existents en lloc de crear nous personatges o pantalles.** Els cinc models de `src/prisoners.js` (quatre camperols i un mecànic), les consoles de `src/radio-relay.js` i les seves animacions originals continuen sent les visuals del navegador. El servidor decideix el resultat; els dos jugadors només reben una projecció comuna de l'estat.
