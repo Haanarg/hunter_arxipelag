@@ -99,7 +99,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
    if(v.crashing&&!v.seats[0]&&['heli','heli_combat'].includes(v.t)){
      const floor=Math.max(0,world().heightAt(v.x,v.z));
      v.crashVy=(v.crashVy||0)-24/30;
-     v.y=Math.max(floor+.85,v.y+v.crashVy/30);
+     v.y=Math.max(floor+.85,v.y+v.crashVy/30);v.alt=v.y;
      if(v.y<=floor+.85){
        v.crashing=false;v.v=0;
        // El mateix flux de destrucció i explosió que la resta de vehicles:
