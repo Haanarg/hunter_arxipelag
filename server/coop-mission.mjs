@@ -131,7 +131,7 @@ export function restoreRelayMission(record,geometry){
     if(destroyed.length)world=buildWorld();
   }
   // Inèrcia de l'actor quan salta d'un vehicle en marxa (15 ticks).
-  const exitImpulses=new Map();
+  const exitImpulses=new Map(record.exitImpulses||[]);
   function carryExitMomentum(actor,input){
     const impulse=exitImpulses.get(actor.id);
     if(!impulse||actor.hp<=0||actor.fall){exitImpulses.delete(actor.id);return null;}
@@ -273,7 +273,7 @@ export function restoreRelayMission(record,geometry){
          exitImpulses.set(actorId,{vx:forward*carry+Math.cos(old.hd)*lateral*(old.t==='camio'?8:1.4),
             vz:depth*carry-Math.sin(old.hd)*lateral*(old.t==='camio'?8:1.4),ticks:15});
        }
-       sim.place(actorId,r.exit);delete r.exit;}else if(r.ok&&r.code==='ENTERED'&&!r.duplicate){const p=sim.snapshot().players.find(p=>p.id===actorId);sim.place(actorId,vehicles.position(p));}return r;},doorCommand,inventoryCommand,cheatCommand,combatCommand(actorId,message){return combat.command(actorId,message,sim.snapshot().tick);},setStatus(value){status=value;if(value!=='running'){actions.clear();sim.clearInputs();vehicles.pause();combat.pause();rescue.pause();if(['relay','extract'].includes(phase))hold=0;}},
-    checkpoint(nextAlarm){return {meta:structuredClone(meta),wallHealth:[...wallHealth],roofHealth:[...roofHealth],removedWalls:[...removedWalls],removedRoofs:[...removedRoofs],brokenWindows:[...brokenWindows],palmHealth:[...palmHealth],phase,hold,status,checkpoint:sim.snapshot(),rescue:rescue.checkpoint(),vehicles:vehicles.checkpoint(),combat:combat.checkpoint(),nextAlarm,cheats:{...cheats},inventories:inventories(),droppedSupplies:[...loose.values()].map(s=>({...s})),dropSequence,claimedSupplies:[...claimed],inventoryResults:structuredClone(inventoryResults),doors:doors(),doorRevision,doorCooldowns:[...cooldowns].map(([actorId,tick])=>({actorId,tick})),commandResults:structuredClone(results)};},
+       sim.place(actorId,r.exit);delete r.exit;}else if(r.ok&&r.code==='ENTERED'&&!r.duplicate){exitImpulses.delete(actorId);const p=sim.snapshot().players.find(p=>p.id===actorId);sim.place(actorId,vehicles.position(p));}return r;},doorCommand,inventoryCommand,cheatCommand,combatCommand(actorId,message){return combat.command(actorId,message,sim.snapshot().tick);},setStatus(value){status=value;if(value!=='running'){actions.clear();sim.clearInputs();vehicles.pause();combat.pause();rescue.pause();if(['relay','extract'].includes(phase))hold=0;}},
+    checkpoint(nextAlarm){return {meta:structuredClone(meta),exitImpulses:[...exitImpulses].map(([id,impulse])=>[id,{...impulse}]),wallHealth:[...wallHealth],roofHealth:[...roofHealth],removedWalls:[...removedWalls],removedRoofs:[...removedRoofs],brokenWindows:[...brokenWindows],palmHealth:[...palmHealth],phase,hold,status,checkpoint:sim.snapshot(),rescue:rescue.checkpoint(),vehicles:vehicles.checkpoint(),combat:combat.checkpoint(),nextAlarm,cheats:{...cheats},inventories:inventories(),droppedSupplies:[...loose.values()].map(s=>({...s})),dropSequence,claimedSupplies:[...claimed],inventoryResults:structuredClone(inventoryResults),doors:doors(),doorRevision,doorCooldowns:[...cooldowns].map(([actorId,tick])=>({actorId,tick})),commandResults:structuredClone(results)};},
     setup(self){return {type:'mission',self,meta:structuredClone(meta),geometry:structuredClone(physical),state:snapshot()};}};
 }
