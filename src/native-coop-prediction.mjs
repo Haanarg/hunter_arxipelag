@@ -9,7 +9,9 @@ import {createNativeWallCandidateIndex} from './native-coop-wall-candidates.mjs'
 // Only local locomotion is predicted. Damage, pickups, combat and world mutations
 // remain authoritative. Reconciliation replays unacknowledged shared-rule steps.
 export function createNativePrediction(geometry){
- let world=null,physical=null,water=null,lastPalmHealth=null,vehicleCandidates=null,wallCandidates=null,vehicle=null,vehicleTick=0,modeKey=null,worldKey=null,sim=null,state=null,self=null,sequence=0,history=[],accumulator=0,enabled=false;
+ const radiusByType=Object.fromEntries(Object.entries(vehicleSpecs.hitboxes).map(([type,size])=>
+  [type,Math.hypot(...size)*vehicleSpecs.scales[type]/2]));
+ let world=null,physical=null,water=null,vehicleBounds=null,lastPalmHealth=null,vehicleCandidates=null,wallCandidates=null,vehicle=null,vehicleTick=0,modeKey=null,worldKey=null,sim=null,state=null,self=null,sequence=0,history=[],accumulator=0,enabled=false;
  function rebuild(next){
   const key=JSON.stringify([next.doorRevision,next.removedWalls,next.removedRoofs]);if(world&&key===worldKey){
    // Els deltes conserven la referència dels camps no modificats.
@@ -21,6 +23,7 @@ export function createNativePrediction(geometry){
   for(const door of next.doors||[]){const wall=walls.get(door.id);if(wall)wall.open=!!door.open||!!door.destroyed;}
   for(const index of next.removedRoofs||[])if(physical.buildings[index])Object.assign(physical.buildings[index],{rb:true,rhp:0});
   world=createStaticWorldAdapter(physical);
+  vehicleBounds={x0:-world.limit,x1:world.limit,z0:-world.limit,z1:world.limit};
   wallCandidates=createNativeWallCandidateIndex(physical.walls);
   water=createCanonicalWater(world.heightAt);
   world.setPalmHealth(next.palmHealth||[]);lastPalmHealth=next.palmHealth;
@@ -29,8 +32,9 @@ export function createNativePrediction(geometry){
  function resetSimulation(next){sim=createPlayerSimulation({epoch:next.missionId,limit:world.limit,world,vertical:{surfaceAt:water.surfaceAt},checkpoint:{protocol:1,epoch:next.missionId,tick:next.tick,players:next.players}});}
  function step(input){
   if(vehicle){
-   const from={...vehicle},size=vehicleSpecs.hitboxes[vehicle.t],radius=Math.hypot(...size)*vehicleSpecs.scales[vehicle.t]/2;
-   stepRangeVehicle(vehicle,input,1/30,++vehicleTick,world,water,{x0:-world.limit,x1:world.limit,z0:-world.limit,z1:world.limit});
+   const from={x:vehicle.x,y:vehicle.y,z:vehicle.z,hd:vehicle.hd},
+    radius=radiusByType[vehicle.t];
+   stepRangeVehicle(vehicle,input,1/30,++vehicleTick,world,water,vehicleBounds);
    const reach=radius+Math.hypot(vehicle.x-from.x,vehicle.z-from.z)+2,cx=(from.x+vehicle.x)/2,cz=(from.z+vehicle.z)/2,
     walls=wallCandidates.nearby(cx,cz,reach),
     others=vehicleCandidates.nearby(cx,cz,reach),
