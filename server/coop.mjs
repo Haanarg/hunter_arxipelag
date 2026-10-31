@@ -52,6 +52,27 @@ export async function coopAPI(request,env,user,url,readJSON,json){
     const body=await readJSON(request,4096),state=await current(env,owner,now,json).then(r=>r.json());
     return json({manifest:prepareCoopManifest(state.room,body)});
   }
+  // L'inici natiu pertany únicament al HOST. El Durable Object comprova
+  // de nou l'autoria i l'estat preparat del GUEST abans de publicar
+  // l'ordre de començar a totes dues connexions.
+  if(url.pathname==='/api/coop/start'&&request.method==='POST'){
+    const body=await readJSON(request,1024);
+    if(!Number.isSafeInteger(body.revision)||body.revision<1)
+      fail(400,'INVALID','Revisió de sala invàlida.');
+    const room=await readCoopRoom(env,owner,now);
+    if(!room||room.host!==owner)fail(403,'HOST_ONLY','Només l’amfitrió pot començar la partida.');
+    if(room.revision!==body.revision)fail(409,'ROOM_CHANGED','La sala ha canviat. Actualitza-la.');
+    if(room.members.length!==2||!room.members.find(m=>!m.host)?.ready)
+      fail(409,'GUEST_NOT_READY','Cal esperar que el convidat estigui preparat i connectat.');
+    if(!env.COOP_ROOMS)fail(503,'REALTIME_NOT_READY','El servidor cooperatiu no està disponible.');
+    const id=env.COOP_ROOMS.idFromName(room.id);
+    const response=await env.COOP_ROOMS.get(id).fetch(new Request('https://coop.internal/start',{
+      method:'POST',headers:{'X-Coop-Actor':owner,'X-Coop-Revision':String(body.revision)}
+    }));
+    const result=await response.json();
+    if(!response.ok)fail(response.status,result.code||'START_FAILED',result.message||'No s’ha pogut iniciar la partida.');
+    return json(result);
+  }
   if(url.pathname==='/api/coop/ready'&&request.method==='POST'){
     const body=await readJSON(request,4096);
     if(typeof body.ready!=='boolean'||!Number.isSafeInteger(body.revision)||body.revision<1)fail(400,'INVALID','Estat de preparació invàlid.');
