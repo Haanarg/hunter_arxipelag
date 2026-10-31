@@ -35,7 +35,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
    else if(!v)code='UNKNOWN_VEHICLE';
    else if(v.destroyed)code='DESTROYED';
    else if(msg.operation==='exit'){
-    if(!v.seats.includes(actorId))code='NOT_SEATED';else if(!(exit=exitPoint(v,p)))code='EXIT_BLOCKED';
+    if(!v.seats.includes(actorId))code='NOT_SEATED';else if(meta.mode!=='native'&&Math.abs(v.v)>.2)code='MOVING';else if(!(exit=exitPoint(v,p)))code='EXIT_BLOCKED';
     else{v.seats[v.seats.indexOf(actorId)]=null;inputs.delete(actorId);ok=true;code='EXITED';}
    }else if(mounted(actorId))code='ALREADY_SEATED';
    else if(distance(p,v)>(meta.mode==='native'?(vehicleSpecs.radii[v.t]||0)*(vehicleSpecs.scales[v.t]||1)+5:3.5)||Math.abs(p.y-v.y)>(['proving','world','native'].includes(meta.mode)?5:1.2))code='TOO_FAR';
@@ -52,7 +52,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
    for(let seat=0;seat<v.seats.length;seat++)if(v.seats[seat]&&players().find(p=>p.id===v.seats[seat])?.hp<=0){inputs.delete(v.seats[seat]);v.seats[seat]=null;v.v=0;}
    const driver=v.seats[0],entry=inputs.get(driver),input=driver&&entry&&tick-entry.tick<=8?entry.input:{forward:0,turn:0,strafe:0,climb:0};
    // Sense conductor, la inèrcia es dissipa amb la física compartida; no frenam en sec.
-   if((!driver||!entry||tick-entry.tick>8)&&Math.abs(v.v)<.2&&Math.abs(v.sideV||0)<.2&&Math.abs(v.strafeV||0)<.2){v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;v.verticalV=0;continue;}
+   if((!driver||!entry||tick-entry.tick>8)&&(meta.mode!=='native'||Math.abs(v.v)<.2&&Math.abs(v.sideV||0)<.2&&Math.abs(v.strafeV||0)<.2)){v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;v.verticalV=0;continue;}
    const from={x:v.x,y:v.y,z:v.z,hd:v.hd,v:v.v};let attempted=null;
    if(['proving','world','native'].includes(meta.mode))stepRangeVehicle(v,input,1/30,tick,world(),water,meta.bounds);
    else{
