@@ -48,13 +48,14 @@ async function startNativeCoop(room){
  if(started&&!over){try{await saveOperation();}catch(error){msg=error.message;msgT=20;ui.show('coop');throw error;}}
  const session=nativeCoopSession={preparing:true,room,state:null,meta:null,self:null,remotes:new Map(),fireHeld:false,seenEffects:new Set(),projectiles:new Map(),grenades:new Map()};
  session.projectileVisual=window.HUNTER_CREATE_NATIVE_COOP_PROJECTILE_VISUAL?.();
+ session.previousCheats={...cheats};
  try{
   await startGameProgressively({seed:room.seed,scale:room.mapScale,difficulty:room.difficulty,nativeSession:true});
   const payload=captureNativeCoopWorld();session.prediction=window.HUNTER_CREATE_NATIVE_PREDICTION?.(payload.geometry);const text=JSON.stringify(payload),hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));session.fingerprint=[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join('');
   session.walls=Wl.slice();session.buildings=B.slice();session.palms=PL.slice();session.vehicles=new Map(V.map(v=>[v.saveId,v]));session.enemies=new Map(E.map(e=>[e.saveId,e]));session.items=new Map(items.map(it=>[it.saveId,it]));
   session.channel=window.HUNTER_NATIVE_COOP_TRANSPORT({room,getInput:nativeCoopInput,onInput:message=>session.prediction?.sent(message.sequence),
    onStatus(status){if(status!=='open'&&session.state)session.state={...session.state,status:'paused'};const labels={connecting:'Connectant…',retrying:'Reconnectant…',replaced:'Sessió oberta en una altra pestanya.',ended:'Sessió finalitzada.',version:'Cal recarregar el joc.'};msg=status==='open'?'Preparant el mateix món amb el company…':labels[status]||'Connexió interrompuda.';msgT=8;},
-   onAction(result){if(result.ok===false){const labels={EMPTY:'No tens munició.',NOT_EQUIPPED:'Cal equipar aquesta arma.',TOO_FAR:'Acosta’t més al vehicle o a la porta.',FULL:'El vehicle és ple.',MOVING:'Atura el vehicle abans de pujar o baixar.',EXIT_BLOCKED:'No hi ha espai per baixar.',BLOCKED:'Hi ha un obstacle al pas.'};if(labels[result.code]){msg=labels[result.code];msgT=3;}}},
+   onAction(result){if(result.ok===false){const labels={HOST_ONLY:'Només el HOST pot activar els trucs.',NOT_ACTIVE:'La sessió no permet aquesta acció.',EMPTY:'No tens munició.',NOT_EQUIPPED:'Cal equipar aquesta arma.',TOO_FAR:'Acosta’t més al vehicle o a la porta.',FULL:'El vehicle és ple.',MOVING:'Atura el vehicle abans de pujar o baixar.',EXIT_BLOCKED:'No hi ha espai per baixar.',BLOCKED:'Hi ha un obstacle al pas.'};if(labels[result.code]){msg=labels[result.code];msgT=3;}}},
    onRoom(){},onError(error){msg=error||'La sessió s’ha interromput.';msgT=12;session.preparing=true;},
    onMission(data){if(data.meta.fingerprint!==session.fingerprint){session.preparing=true;msg='El món de la sala no coincideix. Recarregueu tots dos.';msgT=30;return;}session.meta=data.meta;session.self=data.self;session.state=data.state;try{session.prediction?.receive(data.state,data.self);}
      catch(error){reportNativeCoopVisualError(error,'predicció inicial');session.prediction=null;}
@@ -140,6 +141,7 @@ function updateNativeCoopFrame(dt){
        actor=projecting?state.players.find(p=>p.id===s.self):s.projectedActor;
  if(!actor)return;
  if(projecting){
+   for(const key of Object.keys(cheats))cheats[key]=!!state.cheats?.[key];
    s.interpolation??=window.HUNTER_CREATE_NATIVE_INTERPOLATION?.();
    if(s.channel?.stats&&s.interpolation&&!s.channel.stats.remoteInterpolation)
      s.channel.stats.remoteInterpolation=s.interpolation.stats;
@@ -401,4 +403,4 @@ function updateNativeCoopFrame(dt){
 window.HUNTER_NATIVE_COOP=Object.freeze({start:startNativeCoop,active:()=>!!nativeCoopSession});
 
 function nativeReviveAction(){const s=nativeCoopSession;if(!s?.state||cv||!inv.med)return null;const other=s.state.players.find(p=>p.id!==s.self&&p.hp<=0&&Math.hypot(P.x-p.x,P.z-p.z)<=3.2&&Math.abs(P.y-p.y)<2);return other?{kind:'revive',label:'Mantén E per reanimar el company',icon:'✋'}:null;}
-function stopNativeCoop(){const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();cancelGrenadeCharge();for(const key of Object.keys(K))K[key]=0;for(const mesh of s.projectiles.values())world?.remove(mesh);for(const mesh of s.grenades.values()){world?.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);}s.projectiles.clear();s.grenades.clear();s.projectileVisual?.reset();for(const model of s.remotes.values()){if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;window.HUNTER_COOP_NETWORK_STATS=null;}
+function stopNativeCoop(){const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();cancelGrenadeCharge();for(const key of Object.keys(K))K[key]=0;for(const mesh of s.projectiles.values())world?.remove(mesh);for(const mesh of s.grenades.values()){world?.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);}s.projectiles.clear();s.grenades.clear();s.projectileVisual?.reset();if(s.previousCheats)Object.assign(cheats,s.previousCheats);for(const model of s.remotes.values()){if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;window.HUNTER_COOP_NETWORK_STATS=null;}
