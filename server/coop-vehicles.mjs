@@ -99,9 +99,10 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
      v.crashVy=(v.crashVy||0)-24/30;
      v.y=Math.max(floor+.85,v.y+v.crashVy/30);
      if(v.y<=floor+.85){
-       v.crashing=false;v.v=0;v.life=0;v.destroyed=true;
-       for(const id of v.seats.filter(Boolean))inputs.delete(id);
-       v.seats.fill(null);
+       v.crashing=false;v.v=0;
+       // El mateix flux de destrucció i explosió que la resta de vehicles:
+       // notificació visual, dany als ocupants i retirada de seients.
+       onImpact(v.id,Math.max(1,v.life),tick);
      }
      continue;
    }
