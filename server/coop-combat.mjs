@@ -2,6 +2,7 @@ import {turretSpecs,stepVehicleTurret,vehicleGunPose} from '../src/vehicle-turre
 import {SOLDIER,RADII,soldierAccuracyProfile} from '../src/enemy-perception-core.mjs';
 import {senseNativeSoldier,hearNativeSoldier} from './native-soldier-perception.mjs';
 import {vehicleDynamics} from '../src/vehicle-dynamics-core.mjs';
+import {stepLandPatrol,stepMarinePatrol} from '../src/patrol-motion-core.mjs';
 import {vehicleSpecs} from '../src/vehicle-specs.mjs';
 import {windowCrossing,wallShotHit,knifeWindowHit} from '../src/building-shell.mjs';
 import {weaponCatalog,combatCommands,mountedWeapons,grenadeLaunch,vehicleGrenadeLaunch,meleeTarget} from '../src/weapon-catalog.mjs';
@@ -40,7 +41,16 @@ export function createTraceWallIndex(walls,cell=96){
 // Authoritative combat; native sessions adapt original rules over the canonical world.
 const at=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
 export function segmentBox(from,to,box){return segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,box.x0,box.x1,box.y0,box.y1,box.z0,box.z1);}
-function targetBox(t){return {x0:t.x-.8,x1:t.x+.8,z0:t.z-.8,z1:t.z+.8,y0:t.y,y1:t.y+3};}
+function targetBox(t){
+ const type=t.t==='jeep'?'cotxe':t.t==='patrulla_marina'?'llanxa':t.t;
+ if(['cotxe','llanxa','tanqueta','tanc'].includes(type)){
+  const radius=(vehicleSpecs.radii[type]||2)*(vehicleSpecs.scales[type]||1)*.66;
+  const hullHeight=type==='llanxa'?3:type==='cotxe'?3.1:4.2;
+  return {x0:t.x-radius,x1:t.x+radius,z0:t.z-radius,z1:t.z+radius,
+   y0:t.y-.4,y1:t.y+hullHeight};
+ }
+ return {x0:t.x-.8,x1:t.x+.8,z0:t.z-.8,z1:t.z+.8,y0:t.y,y1:t.y+3};
+}
 export function traceArena(from,to,geometry,world,{ignoreBarbed=false,collectWindows=false,ignoreVegetation=false,wallCandidates=null}={}){
   let fraction=1,hit=false,wallIndex=null,tree=null;const windowCrossings=[];
   // Descart ràpid de geometria fora del tram. Imprescindible per la
@@ -74,7 +84,7 @@ export function guardInView(guard,player){
   return d<=2||inView(guard.heading||0,dx,0,dz,Infinity,{sightHalfAngle:Math.PI/3+1e-10,sightVerticalAngle:Math.PI/2});
 }
 const facePoint=(guard,p)=>Math.atan2(-(p.x-guard.x),-(p.z-guard.z));
-export function createRelayCombat({meta,record={},inventory,players,visiblePlayers=players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false,blastWire=()=>{},blastStructures=()=>{},damagePalm=()=>false,blastPalms=()=>{},breakWindow=()=>false,damageWall=()=>false,windowAvailable=()=>true}){
+export function createRelayCombat({meta,record={},inventory,players,visiblePlayers=players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false,blastWire=()=>{},blastStructures=()=>{},damagePalm=()=>false,blastPalms=()=>{},breakWindow=()=>false,damageWall=()=>false,windowAvailable=()=>true,waterSurface=()=>0}){
   const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);const bursts=structuredClone(record.bursts||[]),projectiles=structuredClone(record.projectiles||[]);let sequence=record.sequence||0;
   const random=createWorldRandom(record.randomState??(((meta.seed||0)^0x7269666c)>>>0)),roll=(a,b)=>a+random()*(b-a);
   // Compute the upper-window target list once; the full archipelago can have
