@@ -46,6 +46,7 @@ async function startNativeCoop(room){
  if(nativeCoopSession)throw Error('Ja hi ha una sessió cooperativa.');
  if(started&&!over){try{await saveOperation();}catch(error){msg=error.message;msgT=20;ui.show('coop');throw error;}}
  const session=nativeCoopSession={preparing:true,room,state:null,meta:null,self:null,remotes:new Map(),fireHeld:false,seenEffects:new Set(),projectiles:new Map(),grenades:new Map()};
+ session.projectileVisual=window.HUNTER_CREATE_NATIVE_COOP_PROJECTILE_VISUAL?.();
  try{
   await startGameProgressively({seed:room.seed,scale:room.mapScale,difficulty:room.difficulty,nativeSession:true});
   const payload=captureNativeCoopWorld();session.prediction=window.HUNTER_CREATE_NATIVE_PREDICTION?.(payload.geometry);const text=JSON.stringify(payload),hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));session.fingerprint=[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join('');
@@ -65,6 +66,8 @@ async function startNativeCoop(room){
   window.HUNTER_COOP_NETWORK_STATS=session.channel.stats;
   if(session.prediction?.stats)
     session.channel.stats.localPrediction=session.prediction.stats;
+  if(session.projectileVisual?.stats)
+    session.channel.stats.projectileVisual=session.projectileVisual.stats;
   session.channel.start();session.channel.prepare({payload,fingerprint:session.fingerprint,host:room.members.find(m=>m.host)?.id===window.HUNTER_ACCOUNT_SERVICE.status().user?.id||room.host===window.HUNTER_ACCOUNT_SERVICE.status().user?.id});
   msg='Esperant el company al món original…';msgT=30;
  }catch(error){stopNativeCoop();paused=true;msg=error.message;msgT=20;ui.show('coop');throw error;}
@@ -98,6 +101,21 @@ function nativeCoopCommand(type,payload={}){
  }
  if(type==='optional')return !!nativeReviveAction();
  if(type==='plant')return (!cv||cv.t==='heli')&&s.channel.combat('c4',undefined,payload.seconds);return false;
+}
+// La boca REAL de l'arma, com al joc individual. Únicament per
+// a la primera posició gràfica del projectil confirmat.
+function nativeCoopProjectileMuzzle(weapon){
+ if(cv||!pl?.userData)return null;
+ const u=pl.userData;
+ let parent,point;
+ if(weapon==='pistol'){parent=u.gun;point=[0,.183,-.84];}
+ else if(weapon==='assault'){parent=u.assaultMuzzle;point=[0,0,0];}
+ else if(weapon==='sniper'){parent=u.sniperMuzzle;point=[0,0,0];}
+ else return null;
+ if(!parent)return null;
+ pl.updateMatrixWorld(true);
+ const p=parent.localToWorld(new THREE.Vector3(...point));
+ return {x:p.x,y:p.y,z:p.z};
 }
 function updateNativeCoop(dt){
  // Una fallada puntual de material/partícules no ha d'aturar per sempre el
@@ -278,7 +296,13 @@ function updateNativeCoopFrame(dt){
    if(direction.lengthSq())mesh.quaternion.setFromUnitVectors(heavyForward,direction.normalize());
  }
  for(const [id,mesh] of s.projectiles)if(!s.nativeProjectileIds.has(id)){world.remove(mesh);s.projectiles.delete(id);}
+ s.projectileVisual?.receive(state.combat.projectiles,s.self,nativeCoopProjectileMuzzle);
  }
+ // Un tret balístic no pot quedar congelat entre paquets de 10 Hz:
+ // es mou a cada frame; la física i els impactes segueixen al Worker.
+ s.projectileVisual?.advance(!paused&&!document.hidden&&state.status==='running'?dt:0,
+   (id,pose)=>{const mesh=s.projectiles.get(id);
+     if(mesh)mesh.position.set(pose.x,pose.y,pose.z);});
  if(s.appliedGrenades!==state.combat.grenades){
  s.appliedGrenades=state.combat.grenades;
  s.nativeGrenadeIds??=new Set();s.nativeGrenadeIds.clear();
@@ -333,4 +357,4 @@ function updateNativeCoopFrame(dt){
 window.HUNTER_NATIVE_COOP=Object.freeze({start:startNativeCoop,active:()=>!!nativeCoopSession});
 
 function nativeReviveAction(){const s=nativeCoopSession;if(!s?.state||cv||!inv.med)return null;const other=s.state.players.find(p=>p.id!==s.self&&p.hp<=0&&Math.hypot(P.x-p.x,P.z-p.z)<=3.2&&Math.abs(P.y-p.y)<2);return other?{kind:'revive',label:'Mantén E per reanimar el company',icon:'✋'}:null;}
-function stopNativeCoop(){const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();cancelGrenadeCharge();for(const key of Object.keys(K))K[key]=0;for(const mesh of s.projectiles.values())world?.remove(mesh);for(const mesh of s.grenades.values()){world?.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);}s.projectiles.clear();s.grenades.clear();for(const model of s.remotes.values()){if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;window.HUNTER_COOP_NETWORK_STATS=null;}
+function stopNativeCoop(){const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();cancelGrenadeCharge();for(const key of Object.keys(K))K[key]=0;for(const mesh of s.projectiles.values())world?.remove(mesh);for(const mesh of s.grenades.values()){world?.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);}s.projectiles.clear();s.grenades.clear();s.projectileVisual?.reset();for(const model of s.remotes.values()){if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;window.HUNTER_COOP_NETWORK_STATS=null;}
