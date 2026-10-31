@@ -170,7 +170,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     let direction=aim.direction();if(weapon==='bazooka')direction=limitBazookaHorizontalAim(direction,dx,dz);
     return {direction,focus};
   }
-  function fire(actorId,p,bag,tick,weapon=bag.weapon||'pistol'){
+  function fire(actorId,p,bag,tick,weapon=bag.weapon||'pistol',requestedAim=null){
     const profile=weaponCatalog[weapon],vehicle=vehicles.mounted(actorId),gun=vehicle&&vehicle.seats[0]===actorId&&vehicleGunPose(vehicle),
       // El mateix avançament de la boca del canó que en mode individual.
       // Només quan es va a peu: els vehicles conserven els seus punts
@@ -183,7 +183,23 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         y:p.y+(vehicle?2:weapon==='bazooka'?1.9:1.5),
         z:p.z+(vehicle?0:-Math.cos(muzzleHeading)*muzzleReach)
       };
-    const aimed=aimWeapon(p,vehicle,weapon,from),focus=aimed.focus,direction=gun?.direction||aimed.direction;
+    const aimed=aimWeapon(p,vehicle,weapon,from),focus=aimed.focus;
+     let direction=gun?.direction||aimed.direction;
+     // El bazuca i el franctirador han de disparar exactament a la mira
+     // local, NO a un blanc diferent escollit al servidor.
+     if(!vehicle&&meta.mode==='native'&&requestedAim&&['bazooka','sniper'].includes(weapon)){
+       const dx=requestedAim.x-from.x,dy=requestedAim.y-from.y,dz=requestedAim.z-from.z,
+         distance=Math.hypot(dx,dy,dz),horizontal=Math.hypot(dx,dz);
+       if(distance>.5&&distance<=profile.range+12&&horizontal>.05){
+         const candidate=[dx/distance,dy/distance,dz/distance],
+           forward=[-Math.sin(p.hd),-Math.cos(p.hd)],
+           alignment=(dx*forward[0]+dz*forward[1])/horizontal;
+         // La limitació de 120° del bazuca també es valida al servidor.
+         if(weapon==='sniper'||alignment>=Math.cos(Math.PI/3)-.001){
+           direction=candidate;focus.target=null;focus.point=null;
+         }
+       }
+     }
     const id='bullet-'+(++sequence),dmg=!['proving','world','native'].includes(meta.mode)&&['pistol','assault'].includes(weapon)?combatBalance.weapons.pistol:profile.damage;
     projectiles.push({...launchProjectile(from,direction,profile.speed,{id,actorId,weapon,dmg,splash:profile.splash||0,sourceVehicle:vehicle?.id,aimedAt:focus.target?.id||null}),life:profile.life});
     if(profile.ammo){const source=vehicle&&profile.ammo==='rockets'?vehicle:bag;source[profile.ammo]--;}
@@ -222,7 +238,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
           grenades.push({id:weapon+'-'+(++sequence),actorId,...launched,weapon,explodeAt:tick+(weapon==='c4'?(message.seconds??5)*30:['proving','world','native'].includes(meta.mode)?72:60)});code=weapon==='c4'?'PLANTED':'THROWN';
         }else if(weapon==='assault'){
           const burst={actorId,remaining:0,delay:0};beginBurst(burst,bag.bullets,()=>{fire(actorId,p,bag,tick);return true;});bursts.push(burst);code='BURST';
-        }else code=fire(actorId,p,bag,tick,weapon);
+        }else code=fire(actorId,p,bag,tick,weapon,message.aim);
         if(meta.mode!=='native'||!['grenade','c4'].includes(weapon))alarm(p,actorId,tick,['knife','cutters'].includes(weapon)?weapon:profile.splash?'bazooka':!vehicle&&weapon==='sniper'?'sniper':vehicle?'rifle':'pistol');bag.disguised=false;cooldowns.set(key,tick);ok=true;
       }
       const result={kind:'combat',actorId,commandId:message.commandId,ok,code};results.push(result);if(results.length>128)results.shift();return {...result};
@@ -232,7 +248,8 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     const player=players().find(p=>p.id===actorId);if(!player||player.hp<=0||player.fall||!active())return;
     const bag=inventory.get(actorId),vehicle=vehicles.mounted(actorId),weapon=vehicle?(vehicle.t==='heli'?'grenade':mountedWeapons[vehicle.t]):bag?.weapon||'pistol',profile=weaponCatalog[weapon];
     if(vehicle&&vehicle.seats[0]!==actorId&&weapon!=='grenade')return;
-    if(!profile||profile.ammo&&!((profile.ammo==='rockets'?vehicle:bag)?.[profile.ammo]>0)||weapon==='assault'&&bag.bullets<3)return;
+    if(weapon==='sniper'||weapon==='bazooka')return; // Els trets de precisió requereixen la mira de cada clic.
+     if(!profile||profile.ammo&&!((profile.ammo==='rockets'?vehicle:bag)?.[profile.ammo]>0)||weapon==='assault'&&bag.bullets<3)return;
     const key=actorId+':'+(weapon==='assault'?'pistol':weapon);if(tick-(cooldowns.get(key)??-Infinity)<Math.ceil(profile.cooldown*30))return;
     return command(actorId,{epoch:meta.id,commandId:'held-'+tick,weapon:vehicle&&vehicle.t!=='heli'?'pistol':weapon},tick);
   }
