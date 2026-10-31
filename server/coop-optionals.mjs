@@ -14,7 +14,7 @@ export function createNativeOptionals({meta,record={},world,geometry,players,veh
  const spec=meta.optional;
  if(meta.mode!=='native'||!spec?.prison)return {
   snapshot:()=>null,checkpoint:()=>null,step(){},command:()=>({ok:false,code:'NOT_ACTIVE'}),
-  warn(){return 0},damage(){return 0}
+  warn(){return 0},damage(){return 0},civilians:()=>[]
  };
  const camp=spec.prison,
   units=(record.prison?.entities||camp.entities).map(u=>({...u,
@@ -23,7 +23,7 @@ export function createNativeOptionals({meta,record={},world,geometry,players,veh
     discovered:!!r.discovered,reports:r.reports||0,dispatches:r.dispatches||0,
     lastWarnTick:r.lastWarnTick??-100000})),
   results=[...(record.results||[])];
- let knownTargets=[];
+ let knownTargets=meta.targets||[];
  let discovered=!!record.prison?.discovered,released=!!record.prison?.released,
   repair=record.prison?.repair?{...record.prison.repair}:null,
   followOwner=record.prison?.followOwner||null,events=[...(record.events||[])];
@@ -206,5 +206,5 @@ export function createNativeOptionals({meta,record={},world,geometry,players,veh
  function checkpoint(){return {prison:{discovered,released,followOwner,repair,
     entities:units.map(u=>({...u,path:u.path.map(point)}))},radio:radio.map(r=>({...r})),
     events:events.slice(),results:results.slice()};}
- return {snapshot,checkpoint,step,command,warn,damage};
+ return {snapshot,checkpoint,step,command,warn,damage,civilians:()=>units};
 }
