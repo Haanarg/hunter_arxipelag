@@ -2,7 +2,7 @@ let coopPanelEpoch=0,coopRoomConnection=null;
 function openCoopPanel(){if(operationBusy||generationPromise)return;if(started)panel('coop');else ui.show('coop');}
 async function renderCoop(body,isCurrent){
   coopRoomConnection?.stop();coopRoomConnection=null;
-  let connection=null;
+  let connection=null,launching=false,waitingAsGuest=false;
   const epoch=++coopPanelEpoch,active=()=>isCurrent()&&epoch===coopPanelEpoch;
   body.replaceChildren();
   const add=(tag,text,parent=body)=>{const el=document.createElement(tag);el.textContent=text;parent.appendChild(el);return el;};
@@ -20,6 +20,22 @@ async function renderCoop(body,isCurrent){
     status.textContent='Cal iniciar sessió amb un compte aprovat.';button('Obrir compte',openAccountPanel);return;
   }
   const owner=user.id,channel=add('p',''),view=add('div','');let room=null,requestEpoch=0,drawn='';
+  // Només el HOST prem Començar. El GUEST preparat rep el senyal
+  // automàticament, fins i tot si ha tornat a la portada.
+  async function launchIfSignalled(next){
+    if(launching||nativeCoopSession||!next||next.id!==room?.id||
+       !['starting','playing'].includes(next.phase)||!next.allReady||
+       !next.members?.find(m=>m.id===owner)?.ready)return;
+    launching=true;waitingAsGuest=false;
+    ++coopPanelEpoch;connection?.stop();connection=null;coopRoomConnection=null;
+    try{await window.HUNTER_NATIVE_COOP.start(next);}
+    catch(error){
+      launching=false;
+      // Deixam visible l'error; l'usuari pot tornar a obrir la sala.
+      console.error('No s’ha pogut entrar al COOP iniciat pel HOST',error);
+      if(!started){ui.show('coop');}else{paused=true;ui.show('pause');}
+    }
+  }
   async function call(path,data){
     if(accounts.status().user?.id!==owner)throw new Error('El compte ha canviat. Torna a obrir la sala.');
     const ticket=++requestEpoch;const result=await accounts.request('coop/'+path,{method:data===undefined?'GET':'POST',data,headers:{'X-Hunter-User':owner}});
@@ -31,7 +47,13 @@ async function renderCoop(body,isCurrent){
   function draw(result){
     if(!active()||!result)return;
     if(room&&result.room?.id===room.id&&result.room.revision<room.revision)return;
+    // /current consulta D1: no ha de rebaixar la fase de
+    // llançament que ja ens ha comunicat el Durable Object.
+    if(room&&result.room?.id===room.id&&room.phase!=='lobby'&&result.room.phase==='lobby')
+      result={...result,room:{...result.room,phase:room.phase}};
     room=result.room;status.textContent='';
+    waitingAsGuest=!!room&&room.host!==owner&&
+      !!room.members.find(m=>m.id===owner)?.ready;
     const signature=JSON.stringify(room);if(signature===drawn)return;drawn=signature;view.replaceChildren();
     if(!room){
       connection?.stop();connection=null;channel.textContent='';
@@ -47,8 +69,13 @@ async function renderCoop(body,isCurrent){
     if(!nativeCoopSession&&!connection&&window.HUNTER_COOP_CONNECTION&&!document.hidden){
       const socketURL=new URL('/api/coop/socket',location.origin);socketURL.protocol=socketURL.protocol==='https:'?'wss:':'ws:';socketURL.searchParams.set('room',room.id);
       const expectedRoom=room.id;
-      connection=window.HUNTER_COOP_CONNECTION({url:socketURL.href,isActive:()=>active()&&!document.hidden&&accounts.status().user?.id===owner,
-        onRoom:result=>{if(active()&&(!result.room||result.room.id===expectedRoom))draw(result);},
+      connection=window.HUNTER_COOP_CONNECTION({url:socketURL.href,
+        isActive:()=>!document.hidden&&accounts.status().user?.id===owner&&
+          !nativeCoopSession&&(active()||waitingAsGuest),
+        onRoom:result=>{
+          if(result.room?.id===expectedRoom)launchIfSignalled(result.room);
+          if(active()&&(!result.room||result.room.id===expectedRoom))draw(result);
+        },
         onStatus:state=>{if(active())channel.textContent=({open:'Sala connectada en temps real',connecting:'Connectant la sala…',retrying:'Reconnectant… Actualització periòdica disponible.',replaced:'Connexió oberta en una altra pestanya.',unauthorized:'La connexió de sala ha finalitzat.',closed:''}[state]||'');}
       });coopRoomConnection=connection;connection.start();
     }
@@ -57,18 +84,32 @@ async function renderCoop(body,isCurrent){
     add('p','La sala caduca al cap de 24 hores. Tancar aquest menú conserva la plaça.',view);
     for(const member of room.members)add('p',member.name+(member.host?' · Amfitrió':'')+' · '+(!member.online?'Sense connexió recent':member.ready?'Preparat':'Esperant'),view);
     const mine=room.members.find(m=>m.id===owner);
-    add('p',room.allReady?'Tots dos preparats. Obriu la missió i confirmeu l’inici cadascú.':'Esperant dos jugadors preparats.',view);
+    const guest=room.members.find(member=>!member.host);
     if(nativeCoopSession)button('▶ Reprendre el joc',()=>resume(),view);
-    else if(room.allReady)button('▶ Jugar junts al món original',async()=>{++coopPanelEpoch;connection?.stop();coopRoomConnection=null;await window.HUNTER_NATIVE_COOP.start(room);},view);
-    button(mine?.ready?'Encara no estic preparat':'Estic preparat',async()=>draw(await call('ready',{ready:!mine?.ready,revision:room.revision})),view);
+    else if(room.host===owner){
+      add('p',guest?.ready?'El convidat està preparat. Pots començar la partida.':
+        'Esperant que el convidat confirmi que està preparat.',view);
+      if(guest?.ready)button('▶ Començar la partida per a tots dos',async()=>{
+        const started=await call('start',{revision:room.revision});
+        if(started?.room){draw(started);await launchIfSignalled(started.room);}
+      },view);
+    }else{
+      add('p',mine?.ready?'Preparat. Esperant que el HOST comenci la partida.':
+        'Confirma que estàs preparat. El HOST us farà entrar a tots dos.',view);
+      button(mine?.ready?'Encara no estic preparat':'Estic preparat',
+        async()=>draw(await call('ready',{ready:!mine?.ready,revision:room.revision})),view);
+    }
     button('Actualitzar sala',async()=>draw(await call('current')),view);
     button(room.host===owner?'Tancar sala i sortir':'Sortir de la sala',async()=>{const result=await call('leave',{});if(nativeCoopSession){stopNativeCoop();location.assign('/');}else draw(result);},view);
   }
   try{draw(await call('current'));}catch(e){if(active())status.textContent=e.message;}
   async function poll(){
-    if(!active()){connection?.stop();connection=null;return;}
+    if(!active()&&!waitingAsGuest){connection?.stop();connection=null;return;}
     if(document.hidden){connection?.stop();connection=null;drawn='';}
-    if(room&&!document.hidden&&!connection?.isOpen()){try{draw(await call('current'));}catch(e){if(active())status.textContent=e.message;}}
+    if(room&&!document.hidden&&!connection?.isOpen()&&active()){
+      try{const result=await call('current');draw(result);if(result?.room)launchIfSignalled(result.room);}
+      catch(e){if(active())status.textContent=e.message;}
+    }
     if(active())setTimeout(poll,5000);
   }
   if(active())setTimeout(poll,5000);
