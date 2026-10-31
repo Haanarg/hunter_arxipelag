@@ -13,6 +13,9 @@
 
 **Proves:** `tests/native-coop-enemy-interpolation.mjs` ha passat amb 377 soldats, 2 en moviment, morts, teleports, reordenacions, estat immòbil i referències de deltes; també les suites pures de jitter, interpolació de vehicles i deltes i comprovacions aïllades del caché de predicció/telemetria. S'ha creat `tests/native-coop-enemy-runtime.cjs` per verificar visualment amb el motor original. **Encara no s'ha executat tota la bateria Node ni validat un navegador amb GPU.** Detall de les ordres a [COOP_OFFLINE_VALIDATION.md](COOP_OFFLINE_VALIDATION.md).
 
+
+**Comprovació del runtime 0.6.61:** s'ha reconstruït el paquet clàssic `dist/hunter-runtime.4ead270bcf958f1c.js` incorporant el contingut **exacte** de `src/coop-world-runtime.js` (inclosa la interpolació visual de soldats, les cames i les optimitzacions de projectils). S'ha verificat el hash FNV64, la correspondència exacta del mòdul dins el paquet i la sintaxi de tot el script agrupat. No s'ha executat l'ordre completa `node tools/build-runtime.cjs --check` ni una prova de navegador amb GPU.
+
 **Infraestructura:** la versió passa a 0.6.61 i s'ha actualitzat el bundle/manifest amb hash de contingut. El workflow `coop-regression.yml` té exclusivament disparador manual; no es consumeixen Actions en fer `push`. Cloudflare Pages, Worker i DO no s'han verificat ni desplegat des d'aquest entorn.
 
 ## 0.6.60 · codificació compartida dels deltes al servidor
