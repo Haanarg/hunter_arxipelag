@@ -27,6 +27,20 @@ assert.equal(leaving.code,'EXITED','moving vehicles permit exit in native co-op'
 vehicles.step(1);
 assert.ok(vehicles.live()[0].v>0,'unoccupied vehicle must retain inertia after exit');
 
+// Regressió: el centre d'un vehicle pot quedar arran d'una paret.
+// Les sortides han de validar el punt exterior, no travessar el mur
+// des del centre de la caixa.
+const wallWorld={...world,resolveBody:(previous,candidate)=>
+  previous.x<1&&candidate.x>1?{...previous}:{...candidate}};
+const nearWall=createRelayVehicles({
+ meta:{...meta,vehicles:[{...car,seats:['a',null]}]},
+ world:()=>wallWorld,water,players:()=>[{...actor,x:0,z:0}],
+ active:()=>true,geometry:()=>({walls:[]})
+});
+assert.equal(nearWall.command('a',{epoch:meta.id,vehicleId:'car',
+ operation:'exit',commandId:'first-press'}).code,'EXITED',
+ 'guest exits on the first press even next to a wall');
+
 const resolved=resolveCoopPlayerVehicleContact(
  {id:'pedestrian',x:6,y:0,z:0},{x:0,y:0,z:0,hd:0},[car],'pedestrian');
 assert.ok(Math.hypot(resolved.x,resolved.z)>2.5,'pedestrians cannot occupy a vehicle hitbox');
