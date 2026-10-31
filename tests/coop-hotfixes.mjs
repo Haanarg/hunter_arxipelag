@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {resolveCoopPlayerVehicleContact} from '../src/coop-vehicle-contacts-core.mjs';
 import {stepRangeVehicle} from '../src/coop-vehicle-motion-core.mjs';
 import {createRelayVehicles} from '../server/coop-vehicles.mjs';
+import {traceArena,createTraceWallIndex} from '../server/coop-combat.mjs';
 
 const car={id:'car',t:'cotxe',x:0,y:0,z:0,hd:0,v:0,seats:[null,null],life:10};
 const actor={id:'a',x:6,y:0,z:0,hd:0,hp:25,fall:null,swimming:false};
@@ -38,4 +39,24 @@ const pier={...world,heightAt:()=>-2,groundAt:()=>3};
 stepRangeVehicle(docked,{forward:0,turn:0,strafe:0},1/30,1,pier,water,meta.bounds);
 assert.ok(docked.y>=3,'pier deck keeps the vehicle above submerged terrain');
 assert.ok(!docked.waterIngress?.dead,'a vehicle on a pier must not sink');
+// Indexar parets no pot alterar fraccions d'impacte ni identificadors de vidre.
+const walls=[
+ {x0:-2,x1:2,z0:-4.2,z1:-3.8,y0:0,y1:6,open:false},
+ {x0:200,x1:202,z0:90,z1:110,y0:0,y1:8,open:false}
+];
+const ground={heightAt:()=>-20};
+const geometry={walls,buildings:[]},index=createTraceWallIndex(walls);
+for(const [from,to] of [
+ [{x:0,y:2,z:0},{x:0,y:2,z:-8}],
+ [{x:20,y:2,z:0},{x:20,y:2,z:-8}],
+ [{x:201,y:2,z:120},{x:201,y:2,z:80}],
+ [{x:1,y:2,z:-5},{x:1,y:2,z:3}]
+]){
+ const options={collectWindows:true,ignoreBarbed:true};
+ assert.deepEqual(
+  traceArena(from,to,geometry,ground,{...options,wallCandidates:index(from,to)}),
+  traceArena(from,to,geometry,ground,options),
+  'spatial index must preserve exact projectile contact and wall ID');
+}
 console.log('COOP regressions: vehicle hitboxes, reboarding, moving exits, inertia and pier support passed');
+
