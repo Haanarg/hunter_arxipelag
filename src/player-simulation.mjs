@@ -104,5 +104,16 @@ export function createPlayerSimulation({epoch,actors,limit,world={},vertical=nul
     for(const {p,candidate} of next){p.x=candidate.x;p.z=candidate.z;p.hd=candidate.hd;p.y=candidate.y??p.y;if(vertical){p.fall=candidate.fall;p.swimming=candidate.swimming;p.hp=candidate.hp;}p.acknowledged=p.received;}
     tick++;return snapshot();
   }
-  return Object.freeze({accept,step,snapshot,heal(actorId,amount){const p=players.get(actorId),max=vertical?.maxHealth??PLAYER_MAX_HEALTH;if(!p||p.hp<=0||p.hp>=max||!finite(amount)||amount<=0)return false;p.hp=Math.min(max,p.hp+Math.ceil(amount));return true;},place(actorId,point){const p=players.get(actorId);if(!p||![point.x,point.y,point.z,point.hd].every(finite)||Math.abs(point.x)>limit||Math.abs(point.z)>limit)return false;p.x=point.x;p.y=point.y;p.z=point.z;p.hd=point.hd;p.fall=null;p.swimming=false;p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};return true;},revive(actorId,health){const p=players.get(actorId);if(!p||p.hp!==0||p.fall||p.swimming||!finite(health)||health<=0||health>(vertical?.maxHealth??PLAYER_MAX_HEALTH))return false;p.hp=health;p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};return true;},clearInputs(){for(const p of players.values()){p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};}},damage(actorId,amount){const p=players.get(actorId);if(!p||immune?.(actorId)===true)return false;p.hp=damageHealth(p.hp,amount);return true;}});
+  return Object.freeze({accept,step,snapshot,heal(actorId,amount){const p=players.get(actorId),max=vertical?.maxHealth??PLAYER_MAX_HEALTH;if(!p||p.hp<=0||p.hp>=max||!finite(amount)||amount<=0)return false;p.hp=Math.min(max,p.hp+Math.ceil(amount));return true;},eject(actorId,point,fall){
+    const p=players.get(actorId);
+    if(!vertical||!p||p.hp<=0||
+      ![point.x,point.y,point.z,point.hd].every(finite)||
+      Math.abs(point.x)>limit||Math.abs(point.z)>limit)return false;
+    const copied=copyFall(fall);
+    if(!copied||copied.y!==point.y||copied.kind!=='air')return false;
+    p.x=point.x;p.y=point.y;p.z=point.z;p.hd=point.hd;
+    p.fall=copied;p.swimming=false;p.lastInputTick=-Infinity;
+    p.input={forward:0,turn:0,strafe:0,run:false};
+    return true;
+   },place(actorId,point){const p=players.get(actorId);if(!p||![point.x,point.y,point.z,point.hd].every(finite)||Math.abs(point.x)>limit||Math.abs(point.z)>limit)return false;p.x=point.x;p.y=point.y;p.z=point.z;p.hd=point.hd;p.fall=null;p.swimming=false;p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};return true;},revive(actorId,health){const p=players.get(actorId);if(!p||p.hp!==0||p.fall||p.swimming||!finite(health)||health<=0||health>(vertical?.maxHealth??PLAYER_MAX_HEALTH))return false;p.hp=health;p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};return true;},clearInputs(){for(const p of players.values()){p.lastInputTick=-Infinity;p.input={forward:0,turn:0,strafe:0,run:false};}},damage(actorId,amount){const p=players.get(actorId);if(!p||immune?.(actorId)===true)return false;p.hp=damageHealth(p.hp,amount);return true;}});
 }
