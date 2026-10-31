@@ -98,6 +98,28 @@ const assert=require('node:assert/strict');
  assert.equal(driven.x,car.x+20,'Predicció del pilot local té prioritat');
  assert.equal(driven.localX,car.x+20,
    'La càmera del pilot acompanya la predicció visual del vehicle, no el buffer remot');
+ // El GUEST veu l'animació de l'arma del HOST (i a l'inrevés).
+ // Un efecte shot actua sobre el mateix model remot que interpolem.
+ const remoteShot=game.run(`(()=>{
+  const s=nativeCoopSession,other=s.state.players.find(p=>p.id==='b');
+  s.state={...s.state,tick:s.state.tick+3,
+    inventories:[...s.state.inventories.filter(b=>b.actorId!=='b'),
+      {...s.state.inventories.find(b=>b.actorId==='b'),weapon:'assault',assault:1}],
+    vehicles:s.state.vehicles.map(v=>({...v,seats:v.seats.map(id=>id==='b'?null:id)})),
+    combat:{...s.state.combat,effects:[{
+      id:87431,kind:'shot',tick:s.state.tick+3,actorId:'b',
+      weapon:'assault',projectileId:'r-assault',from:{x:other.x,y:other.y+1.5,z:other.z}
+    }]}};
+  updateNativeCoop(1/60);updateNativeCoop(1/60);
+  const remote=s.remotes.get('b'),u=remote.userData;
+  return {weapon:u.nativeShotWeapon,age:u.nativeShotAge,
+    firePose:u.firePose,equipped:u.assault.visible,
+    recoil:u.assault.position.z-u.assault.userData.nativeRestZ};
+ })()`);
+ assert.equal(remoteShot.weapon,'assault');
+ assert(remoteShot.age>0&&remoteShot.age<.1);
+ assert(remoteShot.equipped,'El fusell equipat del company és visible');
+ assert(remoteShot.recoil>0,'El fusell del company presenta retrocés');
  // Amb la simulació física de 30 Hz i una GPU a 120 Hz, les bales
  // han de progressar cada frame fins i tot si no arriba cap snapshot.
  const projectile=game.run(`(()=>{
