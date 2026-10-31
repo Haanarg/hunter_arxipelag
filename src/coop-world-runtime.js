@@ -136,7 +136,7 @@ async function startNativeCoop(room){
    onRoom(){},onError(error){msg=error||'La sessió s’ha interromput.';msgT=12;session.preparing=true;},
    onMission(data){if(data.meta.fingerprint!==session.fingerprint){session.preparing=true;msg='El món de la sala no coincideix. Recarregueu tots dos.';msgT=30;return;}session.meta=data.meta;session.self=data.self;session.state=data.state;try{session.prediction?.receive(data.state,data.self);}
      catch(error){reportNativeCoopVisualError(error,'predicció inicial');session.prediction=null;}
-     session.seenEffects=new Set(data.state.combat.effects.map(e=>e.id));session.seenOptionalEvents=new Set((data.state.optionals?.events||[]).map(e=>e.id));session.projectileVisual?.prime(data.state.combat.effects);session.preparing=false;paused=false;ui.hide();resetCameraState();},
+     session.seenEffects=new Set(data.state.combat.effects.map(e=>e.id));session.seenOptionalEvents=new Set((data.state.optionals?.events||[]).map(e=>e.id));session.seenSharkBites=new Set((data.state.fauna?.events||[]).map(e=>e.id));session.projectileVisual?.prime(data.state.combat.effects);session.preparing=false;paused=false;ui.hide();resetCameraState();},
    onState(state){session.state=state;
       try{session.prediction?.receive(state,session.self);}
       catch(error){reportNativeCoopVisualError(error,'predicció de snapshot');session.prediction=null;}
@@ -318,6 +318,44 @@ function updateNativeCoopFrame(dt){
      if(row.destroyed)v.o.visible=false;
      if(row.seats.includes(s.self)){cv=v;v.o.visible=!row.destroyed;}
    }
+ }
+ // El mateix conjunt de malles de gavines i taurons del món individual.
+ // No executam update() dels taurons localment: podria mossegar dos cops.
+ if(state.fauna){
+   s.sharkViews??=fa.filter(f=>f.k==='s');
+   const alpha=1-Math.exp(-Math.max(0,dt)*13);
+   for(const row of state.fauna.sharks||[]){
+     const index=Number(row.id.slice(6)),f=s.sharkViews[index];
+     if(!f||!Number.isFinite(row.x)||!Number.isFinite(row.z))continue;
+     f.x=row.x;f.z=row.z;f.dead=!!row.dead;
+     f.o.position.x+=(row.x-f.o.position.x)*alpha;
+     f.o.position.z+=(row.z-f.o.position.z)*alpha;
+     f.o.position.y=wy(f.o.position.x,f.o.position.z,elapsed)-.18;
+     f.o.rotation.y=row.hd;
+   }
+   if(projecting){
+     s.seenSharkBites??=new Set((state.fauna.events||[]).map(e=>e.id));
+     for(const event of state.fauna.events||[]){
+       if(s.seenSharkBites.has(event.id))continue;
+       s.seenSharkBites.add(event.id);
+       if(event.kind==='shark-bite'&&event.actorId===s.self){
+         msg='Un tauró et mossega!';msgT=1.8;
+       }
+     }
+     if(s.seenSharkBites.size>36)s.seenSharkBites=
+       new Set((state.fauna.events||[]).map(e=>e.id));
+   }
+ }
+ // Gavines: animació original purament visual, sense decisions de combat.
+ for(const f of fa)if(f.k==='g'&&f.o){
+   f.a+=f.sp*dt;
+   f.x=f.cx+Math.cos(f.a)*f.r;f.z=f.cz+Math.sin(f.a)*f.r;
+   const flyY=Math.max(f.y+Math.sin(elapsed+f.cx)*2,
+     Math.max(0,hAt(f.x,f.z))+10);
+   f.o.position.set(f.x,flyY,f.z);
+   f.o.rotation.y=Math.PI-f.a;
+   f.wl.rotation.z=Math.sin(elapsed*8+f.cx)*.5;
+   f.wr.rotation.z=-f.wl.rotation.z;
  }
  if(projecting)rebuildVehicleGrid(); // Reindexa també els vehicles en COOP.
  // Les posicions remotes es presenten amb un interval de snapshot
