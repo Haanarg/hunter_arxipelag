@@ -272,7 +272,12 @@ function updateNativeCoopFrame(dt){
  const fxContext={playerX:P.x,playerZ:P.z,playerVehicle:cv,
    terrainAt:hAt,waterAt:(x,z)=>wy(x,z,elapsed)};
  for(const v of V)if(!v.destroyed)movementFx.vehicle(v,dt,fxContext);
- if(cv||swimming)playerCrouched=false;if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;animPl(hp<=0?0:cv?0:input.forward,dt,input.run&&hp>0,input.strafe);poseRider(cv,dt);
+ if(cv||swimming)playerCrouched=false;if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;animPl(hp<=0?0:cv?0:input.forward,dt,input.run&&hp>0,input.strafe);
+ // El seient és sempre el que ha assignat el servidor, no el rol HOST/GUEST.
+ // Si el convidat condueix, continua assegut al lloc esquerre.
+ const mySeats=cv&&s.appliedVehicleRows?.get(cv.saveId)?.seats,
+       mySeat=mySeats?.indexOf(s.self)??-1;
+ poseRider(cv,dt,mySeat>=0?mySeat:null);
  pl.rotation.z=hp<=0&&!cv?-Math.PI/2:0;if(hp<=0&&!cv)pl.position.y+=.5;
  // El crol inclina el model i enfonsa el pit si només es pren P.y.
  // La mateixa elevació VISUAL del mode individual preserva la física.
@@ -324,7 +329,9 @@ function updateNativeCoopFrame(dt){
    model.rotation.z=other.hp<=0&&!remoteVehicle?-Math.PI/2:0;
    if(other.hp<=0&&!remoteVehicle)model.position.y+=.5;
    model.visible=!remoteVehicle;
-   model.userData.nativeRider.update(remoteVehicle,dt);
+   const remoteSeats=remoteVehicle&&s.appliedVehicleRows?.get(remoteVehicle.saveId)?.seats,
+         remoteSeat=remoteSeats?.indexOf(other.id)??-1;
+   model.userData.nativeRider.update(remoteVehicle,dt,remoteSeat>=0?remoteSeat:null);
    const speed=Math.hypot(model.position.x-oldX,model.position.z-oldZ)/Math.max(.001,dt);
    const remoteBag=s.remoteLoadouts?.get(other.id),u=model.userData,
      weapon=u.nativeShotRemaining>0?u.nativeShotWeapon:remoteBag?.weapon||'pistol';
