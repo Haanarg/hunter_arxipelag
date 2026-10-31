@@ -79,6 +79,11 @@ export function stepNativeSoldierNavigation(unit,{tick,world,players,requestDoor
    goal=path[i];
    if(dist(unit,goal)<1.65){unit.patrolIndex=(i+1)%path.length;goal=path[unit.patrolIndex];}
   }else{
+   // La primera guàrdia conserva el sector de visió durant el reconeixement
+   // inicial (~1 s). Si no, el primer pas aleatori gira el sentinella i
+   // pot impedir que detecti un vehicle clarament al davant.
+   if(unit.roamReadyTick===undefined)unit.roamReadyTick=tick+30;
+   if(!unit.roamGoal&&tick<unit.roamReadyTick)return true;
    if(!unit.roamGoal||dist(unit,unit.roamGoal)<2||tick>(unit.roamUntil||0)){
     const home=unit.home||unit,angle=((tick*.047+unit.id.length)*2.3999632297)%(Math.PI*2);
     unit.roamGoal={x:home.x+Math.cos(angle)*(unit.guard?6:13),
