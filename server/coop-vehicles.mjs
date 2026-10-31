@@ -13,13 +13,28 @@ export function vehicleClear(position,world,bounds,previous=position){
     if(distance(q,resolved)>1e-5||support.interior||support.drop||Math.abs(support.floor-position.y)>.25)return false;
   }return true;
 }
-export function createRelayVehicles({meta,record={},world,water,players,active,onBoard=()=>{},geometry=()=>({walls:[]}),onImpact=()=>{},onTravel=()=>{},onBarrier=()=>false,onPalm=()=>false}){
+export function createRelayVehicles({meta,record={},world,water,players,active,onBoard=()=>{},geometry=()=>({walls:[]}),onImpact=()=>{},onTravel=()=>{},onBarrier=()=>false,onPalm=()=>false,hasParachute=()=>false}){
  const vehicles=structuredClone(record.vehicles||meta.vehicles||[]),results=structuredClone(record.results||[]),inputs=new Map();
  for(const v of vehicles)v.life??=combatBalance.vehicles[v.t]??1;
  const mounted=id=>vehicles.find(v=>!v.destroyed&&v.seats.includes(id));
  function position(actor){const v=mounted(actor.id);return v?{x:v.x,y:v.y,z:v.z,hd:v.hd,hp:actor.hp,fall:null,swimming:false}:null;}
  function walkClear(from,to){let previous=from;const steps=Math.max(1,Math.ceil(distance(from,to)/.2));for(let i=1;i<=steps;i++){const q={...to,x:from.x+(to.x-from.x)*i/steps,z:from.z+(to.z-from.z)*i/steps},resolved=world().resolveBody(previous,q);if(distance(q,resolved)>1e-5)return false;previous=q;}return true;}
  function exitPoint(v,actor){
+   // Com al mode individual: sortir d'un helicòpter alt inicia caiguda,
+   // conservant la velocitat i desplegant el paracaigudes de l'inventari.
+   const aircraft=vehicleDynamics.types[v.t]?.m==='a',
+     ground=Math.max(0,world().heightAt(v.x,v.z));
+   if(meta.mode==='native'&&aircraft&&v.y-ground>4){
+     const side=actor.id===v.seats[0]?-1:1,
+       x=v.x+Math.cos(v.hd)*side*1.8,
+       z=v.z-Math.sin(v.hd)*side*1.8,hd=v.hd,
+       fx=-Math.sin(hd),fz=-Math.cos(hd);
+     return {x,y:v.y,z,hd,fall:{kind:'air',y:v.y,vy:0,
+       vx:fx*(v.v||0)*.82+Math.cos(hd)*side*2.5,
+       vz:fz*(v.v||0)*.82-Math.sin(hd)*side*2.5,
+       startHeight:v.y-ground,t:0,leanF:0,leanS:0,
+       parachute:!!hasParachute(actor.id)}};
+   }
    // Sortida segura: comprovar el lloc exterior al casc, no un recorregut
    // artificial des del CENTRE del vehicle, que travessa el seu propi volum.
    const scale=vehicleSpecs.scales[v.t]||1,box=vehicleSpecs.hitboxes[v.t]||[2,4],
@@ -63,7 +78,9 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
    else if(v.destroyed)code='DESTROYED';
    else if(msg.operation==='exit'){
     if(!v.seats.includes(actorId))code='NOT_SEATED';else if(meta.mode!=='native'&&Math.abs(v.v)>.2)code='MOVING';else if(!(exit=exitPoint(v,p)))code='EXIT_BLOCKED';
-    else{v.seats[v.seats.indexOf(actorId)]=null;inputs.delete(actorId);ok=true;code='EXITED';}
+    else{const driver=v.seats[0]===actorId;v.seats[v.seats.indexOf(actorId)]=null;inputs.delete(actorId);
+      if(exit.fall&&driver)v.crashing=true;
+      ok=true;code='EXITED';}
    }else if(mounted(actorId))code='ALREADY_SEATED';
    else if(distance(p,v)>(meta.mode==='native'?(vehicleSpecs.radii[v.t]||0)*(vehicleSpecs.scales[v.t]||1)+5:3.5)||Math.abs(p.y-v.y)>(['proving','world','native'].includes(meta.mode)?5:1.2))code='TOO_FAR';
    else if(!walkClear(p,v))code='BLOCKED';
@@ -75,6 +92,19 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
  function step(tick){if(!active())return;
   for(const v of vehicles){
    if(v.destroyed)continue;
+   // L'helicòpter sense pilot perd sustentació, com al joc individual.
+   // No introduïm cap simulador alternatiu: només gravetat autoritativa.
+   if(v.crashing&&!v.seats[0]&&['heli','heli_combat'].includes(v.t)){
+     const floor=Math.max(0,world().heightAt(v.x,v.z));
+     v.crashVy=(v.crashVy||0)-24/30;
+     v.y=Math.max(floor+.85,v.y+v.crashVy/30);
+     if(v.y<=floor+.85){
+       v.crashing=false;v.v=0;v.life=0;v.destroyed=true;
+       for(const id of v.seats.filter(Boolean))inputs.delete(id);
+       v.seats.fill(null);
+     }
+     continue;
+   }
    // A downed occupant is released at the already validated vehicle centre.
    for(let seat=0;seat<v.seats.length;seat++)if(v.seats[seat]&&players().find(p=>p.id===v.seats[seat])?.hp<=0){inputs.delete(v.seats[seat]);v.seats[seat]=null;v.v=0;}
    const driver=v.seats[0],entry=inputs.get(driver),input=driver&&entry&&tick-entry.tick<=8?entry.input:{forward:0,turn:0,strafe:0,climb:0};
