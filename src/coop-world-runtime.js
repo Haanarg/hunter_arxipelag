@@ -281,6 +281,10 @@ function updateNativeCoopFrame(dt){
   if(hp>0&&!!K.KeyE){const helping=state.rescue?.down?.find(d=>d.helperId===s.self);if(helping){msg='Reanimant el company… '+Math.min(100,Math.round(helping.progress/90*100))+'%';msgT=1.5;}}
  }
  swimming=!!presented.swimming;playerFall=presented.fall;
+ if(playerFall?.parachute&&hp>0){
+   if(!parachuteVisual)parachuteVisual=createParachuteVisual();
+   parachuteVisual.position.set(P.x,P.y,P.z);
+ }else if(parachuteVisual)removeParachuteVisual();
  ib=buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2&&P.y<b.fy+b.h)||null;
  // Inventari, vida i recomptes autoritatius són immutables entre snapshots.
  const bag=projecting?state.inventories.find(i=>i.actorId===s.self):null;
@@ -398,6 +402,14 @@ function updateNativeCoopFrame(dt){
    model.rotation.z=other.hp<=0&&!remoteVehicle?-Math.PI/2:0;
    if(other.hp<=0&&!remoteVehicle)model.position.y+=.5;
    model.visible=!remoteVehicle;
+   if(other.fall?.parachute&&other.hp>0&&!remoteVehicle){
+     let canopy=model.userData.nativeParachute;
+     if(!canopy){canopy=makeParachuteVisual();world.add(canopy);model.userData.nativeParachute=canopy;}
+     canopy.position.copy(model.position);canopy.visible=true;
+   }else if(model.userData.nativeParachute){
+     world.remove(model.userData.nativeParachute);
+     model.userData.nativeParachute=null;
+   }
    const remoteSeats=remoteVehicle&&s.appliedVehicleRows?.get(remoteVehicle.saveId)?.seats,
          remoteSeat=remoteSeats?.indexOf(other.id)??-1;
    model.userData.nativeRider.update(remoteVehicle,dt,remoteSeat>=0?remoteSeat:null);
@@ -668,4 +680,4 @@ function nativeCoopOptionalAction(){
    label:'Sabotejar el relé de ràdio',icon:'📡'}:null;
 }
 function nativeReviveAction(){const s=nativeCoopSession;if(!s?.state||cv||hp<=0||swimming||playerFall||!inv.med)return null;const other=s.state.players.find(p=>p.id!==s.self&&p.hp<=0&&Math.hypot(P.x-p.x,P.z-p.z)<=3.2&&Math.abs(P.y-p.y)<2);return other?{kind:'revive',label:'Mantén E per reanimar el company',icon:'✋'}:null;}
-function stopNativeCoop(){document.getElementById('hunter-coop-game-over')?.remove();const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();cancelGrenadeCharge();for(const key of Object.keys(K))K[key]=0;for(const mesh of s.projectiles.values())world?.remove(mesh);for(const mesh of s.grenades.values()){world?.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);}s.projectiles.clear();s.grenades.clear();s.projectileVisual?.reset();s.grenadeVisual?.reset();movementFx.reset();if(s.previousCheats)Object.assign(cheats,s.previousCheats);for(const model of s.remotes.values()){if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;window.HUNTER_COOP_NETWORK_STATS=null;}
+function stopNativeCoop(){document.getElementById('hunter-coop-game-over')?.remove();const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();cancelGrenadeCharge();for(const key of Object.keys(K))K[key]=0;for(const mesh of s.projectiles.values())world?.remove(mesh);for(const mesh of s.grenades.values()){world?.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);}s.projectiles.clear();s.grenades.clear();removeParachuteVisual();s.projectileVisual?.reset();s.grenadeVisual?.reset();movementFx.reset();if(s.previousCheats)Object.assign(cheats,s.previousCheats);for(const model of s.remotes.values()){if(model.userData.nativeParachute){world.remove(model.userData.nativeParachute);model.userData.nativeParachute=null;}if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;window.HUNTER_COOP_NETWORK_STATS=null;}
