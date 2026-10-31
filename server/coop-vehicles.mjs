@@ -29,6 +29,8 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
        x=v.x+Math.cos(v.hd)*side*1.8,
        z=v.z-Math.sin(v.hd)*side*1.8,hd=v.hd,
        fx=-Math.sin(hd),fz=-Math.cos(hd);
+     if(x<meta.bounds.x0+1||x>meta.bounds.x1-1||
+        z<meta.bounds.z0+1||z>meta.bounds.z1-1)return null;
      return {x,y:v.y,z,hd,fall:{kind:'air',y:v.y,vy:0,
        vx:fx*(v.v||0)*.82+Math.cos(hd)*side*2.5,
        vz:fz*(v.v||0)*.82-Math.sin(hd)*side*2.5,
