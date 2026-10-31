@@ -202,6 +202,7 @@ function updateNativeCoopFrame(dt){
    // en rebre un snapshot; la interpolació continua a cada fotograma.
    s.nativeRemoteViews??=new Map();
    s.nativeSeatOwners??=new Map();
+   s.remoteLoadouts=new Map(state.inventories.map(bag=>[bag.actorId,bag]));
    s.nativeSeatOwners.clear();
    for(const row of state.vehicles)
      for(const playerId of row.seats||[])
@@ -241,9 +242,14 @@ function updateNativeCoopFrame(dt){
    model.visible=!remoteVehicle;
    model.userData.nativeRider.update(remoteVehicle,dt);
    const speed=Math.hypot(model.position.x-oldX,model.position.z-oldZ)/Math.max(.001,dt);
+   const remoteBag=s.remoteLoadouts?.get(other.id),u=model.userData,
+     weapon=u.nativeShotRemaining>0?u.nativeShotWeapon:remoteBag?.weapon||'pistol';
    window.HUNTER_CHARACTERS.animatePlayer(model,{
      forward:Math.min(1,speed/6),dt,swimming:other.swimming,
-     crouching:!!other.crouched,inVehicle:!!remoteVehicle,ammo:1,running:speed>7
+     crouching:!!other.crouched,inVehicle:!!remoteVehicle,
+     ammo:remoteBag?.bullets??1,running:speed>7,
+     bazookaEquipped:weapon==='bazooka',sniperEquipped:weapon==='sniper',
+     assaultRifleEquipped:weapon==='assault',grenadeEquipped:weapon==='grenade'
    });
  }
 
@@ -346,9 +352,21 @@ function updateNativeCoopFrame(dt){
         snd('shot',.7,effect.from);
         if(effect.actorId===s.self&&!cv){
           pl.userData.firePose=.32;
-          if(s.appliedBag?.weapon==='pistol'){
-            pl.userData.pistolAimTime=.32;
-            pl.userData.pistolShotAge=0;
+          if(effect.weapon==='pistol'){
+            pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;
+          }
+        }else if(effect.actorId!==s.self&&!effect.enemy){
+          const model=s.remotes.get(effect.actorId),u=model?.userData;
+          if(u){
+            const vehicle=s.nativeRemoteViews?.get(effect.actorId)?.vehicle;
+            u.nativeShotWeapon=effect.weapon||'pistol';
+            u.nativeShotAge=0;u.nativeShotRemaining=.38;
+            u.firePose=effect.weapon==='sniper'||effect.weapon==='bazooka'?.42:.32;
+            if(effect.weapon==='pistol'&&!vehicle){
+              u.pistolAimTime=.32;u.pistolShotAge=0;
+            }
+            if(vehicle&&effect.weapon==='pistol')
+              u.nativeRider?.firePistol?.(vehicle,()=>null);
           }
         }
       }
