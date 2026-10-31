@@ -1,4 +1,4 @@
-import {createNativePrediction} from './native-coop-prediction.mjs';
+import {createNativePrediction} from './native-coop-prediction.mjs?local=0.6.61';
 import {createNativeCoopInterpolation} from './native-coop-interpolation.mjs?smooth=8';
 window.HUNTER_CREATE_NATIVE_PREDICTION=createNativePrediction;
 window.HUNTER_CREATE_NATIVE_INTERPOLATION=createNativeCoopInterpolation;
