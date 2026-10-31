@@ -305,9 +305,9 @@ La inicialització de l'angle d'algunes embarcacions utilitzava Math.random. Ara
 
 Les proves són de Node/Three i dels adaptadors de transport. No equivalen a haver provat aquesta versió amb dos navegadors autenticats ni amb GPU Android. La suite extensa `camera-controls.cjs` ha estat interrompuda pel límit de memòria del contenidor; la prova específica de les dues càmeres natives i la de timing han passat. No s'ha verificat el desplegament.
 
-## Paritat encara pendent: no declarar el mode acabat
+## Paritat pendent registrada a la versió 0.6.50 (històric; contrastar amb 0.6.74)
 
-La integració de pantalla, món i sessió és implementada, però la campanya cooperativa encara no té paritat completa:
+En la **0.6.50**, la integració de pantalla, món i sessió ja era implementada però faltava paritat. La llista següent és un registre històric, no l'estat de la 0.6.74: diverses funcions (patrulles, torres, predicció i passatgers) s'han implementat posteriorment, tot i que encara s'han de validar en partida real:
 
 - La simulació autoritativa reutilitza el combat/guàrdies existents del cooperatiu. Falta traslladar-hi la IA completa original: persecució, navegació, patrulles terrestres i marines, torres i supressió, elit i totes les prioritats.
 - Presoners, mecànic, ràdio, fauna amb interaccions i altres sistemes opcionals encara necessiten estat i accions compartits. No s'han duplicat dins d'un segon client.
