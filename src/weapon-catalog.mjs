@@ -10,7 +10,7 @@ export const weaponCatalog=Object.freeze(Object.fromEntries(Object.entries({
  knife:{name:'Ganivet',damage:combatBalance.weapons.knife,cooldown:.52},
  cutters:{name:'Cisalla',item:'cutters',cooldown:.52},
  grenade:{name:'Granada',ammo:'grenades',damage:combatBalance.weapons.grenade,splash:16,cooldown:.7},
- c4:{name:'C4',ammo:'c4',damage:48,splash:combatBalance.weapons.c4,cooldown:1},
+ c4:{name:'C4',ammo:'c4',damage:combatBalance.weapons.c4,splash:48,cooldown:1},
  tank:{name:'Canó del tanc',speed:85*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.tank,splash:8,range:220,cone:ARMORED_AIM.heavy.cone,vertical:ARMORED_AIM.heavy.vertical,cooldown:.9,life:4.4},
  tankette:{name:'Canó de la tanqueta',speed:135,damage:combatBalance.weapons.tankette,range:85,cone:ARMORED_AIM.light.cone,vertical:ARMORED_AIM.light.vertical,cooldown:.16,life:2.2},
  attackCannon:{name:'Canó de l’helicòpter',speed:145,damage:combatBalance.weapons.attackCannon,range:130,cone:.73,vertical:.97,cooldown:.12,life:2.2},
