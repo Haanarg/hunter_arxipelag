@@ -99,7 +99,12 @@ export function createNativeCoopProjectileVisual(){
     t=trackFor(row,row,false,false);
     tracks.set(row.id,t);
    }
-   if(t.row===row)continue;
+   if(t.row===row){
+    // La primera fila també és una mostra autoritativa: comparar amb
+    // aquest tick ja a la recepció següent.
+    if(!t.serverRow){t.serverRow=row;t.serverTick=finite(tick)?tick:null;}
+    continue;
+   }
    if(t.serverRow&&Number.isFinite(t.serverTick)&&Number.isFinite(tick)&&
        tick>=t.serverTick){
     const seconds=(tick-t.serverTick)/30,p=t.serverRow;
