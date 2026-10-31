@@ -60,7 +60,7 @@ export function createNativeLocalPresentation(){
     movement=Math.hypot(dx,dy,dz);
   if(movement>.000001&&factor<1){
    const opposed=((offset.x*dx+offset.y*dy+offset.z*dz)/movement)*(1-factor);
-   const maxAgainst=movement*.4;
+   const maxAgainst=movement*.9;
    if(opposed>maxAgainst)
      factor=1-maxAgainst/Math.max(1e-9,(offset.x*dx+offset.y*dy+offset.z*dz)/movement);
   }
