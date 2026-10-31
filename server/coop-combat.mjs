@@ -565,5 +565,16 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       target.hp=damageHealth(target.hp,runoverDamage(speed,profile.mass||1));v.ramUntilTick=tick+11;v.v*=.86;alarm(v,v.seats[0],tick,'collision');effect('impact',tick,{actorId:v.seats[0],at:eye,hit:target.id});break;
     }
   }
-  return {command,hold,step,cancel,impactVehicle,runover,hasDeadGeneral:()=>targets.some(t=>t.t==='general'&&t.hp<=0),pause(){bursts.length=0;},finish(){projectiles.length=0;bursts.length=0;grenades.length=0;effects.length=0;},snapshot(){return structuredClone({targets,grenades,projectiles,effects});},checkpoint(){return structuredClone({targets,grenades,effects,results,cooldowns:[...cooldowns],bursts,projectiles,randomState:random.getState(),sequence});}};
+  return {command,hold,step,cancel,impactVehicle,runover,hasDeadGeneral:()=>targets.some(t=>t.t==='general'&&t.hp<=0),pause(){bursts.length=0;},finish(){projectiles.length=0;bursts.length=0;grenades.length=0;effects.length=0;},snapshot(){
+    // Les rutes A*, els nodes temporals i els objectius de moviment només
+    // són útils per al Worker. No els enviam a tots dos navegadors a 10 Hz.
+    // El checkpoint, en canvi, conserva les rutes per reprendre l'operació.
+    const visibleTargets=targets.map(t=>{
+      const {navRoute,navDestination,navReplanTick,navPhase,roamGoal,
+        roamReadyTick,roamUntil,tacticGoal,tacticUntil,tacticSide,
+        towerAim,generalAim,...publicTarget}=t;
+      return publicTarget;
+    });
+    return structuredClone({targets:visibleTargets,grenades,projectiles,effects});
+   },checkpoint(){return structuredClone({targets,grenades,effects,results,cooldowns:[...cooldowns],bursts,projectiles,randomState:random.getState(),sequence});}};
 }
