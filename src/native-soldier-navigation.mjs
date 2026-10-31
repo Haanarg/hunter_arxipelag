@@ -120,8 +120,10 @@ export function stepNativeSoldierNavigation(unit,{tick,world,players,requestDoor
  if(tick>=(unit.navReplanTick||0)){
   // Quan un portal practicable tapa l'entrada, un soldat pot obrir-lo.
   // És una acció autoritativa; el client només reprodueix el nou estat.
-  if(requestDoor(unit,goal)&&attempt(direction)){
-   unit.heading=actor?face(unit,actor):face(unit,goal);return true;
+  if(requestDoor(unit,goal)){
+   // La col·lisió física s'ha reconstruït; aquesta instància 'world'
+   // és anterior a l'obertura. Deixam que el tick següent la consulti.
+   unit.navRoute=[];unit.navReplanTick=tick+3;return true;
   }
   unit.navRoute=planAround(world,unit,goal);
   unit.navReplanTick=tick+REPLAN_TICKS;
