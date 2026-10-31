@@ -6,6 +6,8 @@ window.HUNTER_CREATE_NATIVE_PREDICTION=createNativePrediction;
 window.HUNTER_CREATE_NATIVE_INTERPOLATION=createNativeCoopInterpolation;
 window.HUNTER_CREATE_NATIVE_COOP_PROJECTILE_VISUAL=createNativeCoopProjectileVisual;
 window.HUNTER_CREATE_NATIVE_COOP_GRENADE_VISUAL=createNativeCoopGrenadeVisual;
+import {SHARED_SHARKS} from './shark-motion-core.mjs?v=0.6.76';
+window.HUNTER_SHARED_SHARKS=SHARED_SHARKS;
 import * as enemyPerception from './enemy-perception-core.mjs';
 window.HUNTER_ENEMY_PERCEPTION=enemyPerception;
 import {createNativeCoopConnection} from './native-coop-connection.mjs?v=0.6.75&net=2';
