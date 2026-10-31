@@ -6,9 +6,11 @@ import {createStaticWorldAdapter} from './world-adapter.mjs';
 import {createCanonicalWater} from './canonical-water.mjs';
 import {createNativeVehicleCandidateIndex} from './native-coop-vehicle-candidates.mjs';
 import {createNativeWallCandidateIndex} from './native-coop-wall-candidates.mjs';
+import {createNativeLocalPresentation} from './native-coop-local-presentation.mjs';
 // Only local locomotion is predicted. Damage, pickups, combat and world mutations
 // remain authoritative. Reconciliation replays unacknowledged shared-rule steps.
 export function createNativePrediction(geometry){
+ const presentation=createNativeLocalPresentation();
  const radiusByType=Object.fromEntries(Object.entries(vehicleSpecs.hitboxes).map(([type,size])=>
   [type,Math.hypot(...size)*vehicleSpecs.scales[type]/2]));
  let world=null,physical=null,water=null,vehicleBounds=null,lastPalmHealth=null,vehicleCandidates=null,wallCandidates=null,vehicle=null,vehicleTick=0,modeKey=null,worldKey=null,sim=null,state=null,self=null,sequence=0,history=[],accumulator=0,enabled=false;
@@ -56,14 +58,30 @@ export function createNativePrediction(geometry){
   vehicleCandidates=driver?
     (fleetUnchanged&&vehicleCandidates?vehicleCandidates:
      createNativeVehicleCandidateIndex(next.vehicles)):null;
-  enabled=next.status==='running'&&['relay','extract'].includes(next.phase)&&actor.hp>0&&(!seat||driver);
-  history=same&&enabled&&modeKey===nextMode?history.filter(frame=>frame.sequence>actor.acknowledged):[];sequence=same?Math.max(sequence,actor.acknowledged):actor.acknowledged;accumulator=0;modeKey=nextMode;resetSimulation(next);
+  const nextEnabled=next.status==='running'&&['relay','extract'].includes(next.phase)&&actor.hp>0&&(!seat||driver),
+    continuous=same&&enabled&&nextEnabled&&modeKey===nextMode;
+  enabled=nextEnabled;
+  history=continuous?history.filter(frame=>frame.sequence>actor.acknowledged):[];
+  sequence=same?Math.max(sequence,actor.acknowledged):actor.acknowledged;
+  // El temps fraccionari local és independent del ritme dels paquets de
+  // 10 Hz. Descartar-lo a cada estat canviava la cadència dels passos.
+  if(!continuous)accumulator=0;
+  modeKey=nextMode;resetSimulation(next);
   for(const frame of history)step(frame.input);
+  const synced=sim.snapshot().players.find(p=>p.id===self);
+  const corrected=vehicle?
+   {...synced,x:vehicle.x,y:vehicle.y,z:vehicle.z,hd:vehicle.hd}:
+   synced;
+  presentation.reconcile(corrected,{continuous,driving:!!vehicle});
  }
  return {receive,sent(value){sequence=value;},advance(dt,input,active=true){
   if(!state||!sim)return null;
   if(enabled&&active){accumulator+=Math.min(.1,Math.max(0,dt));while(accumulator>=1/30&&history.length<12){const {interact,...movement}=input;step(movement);history.push({sequence,input:movement});accumulator-=1/30;}}
   else accumulator=0;
-  const actor=sim.snapshot().players.find(p=>p.id===self);return vehicle?{...actor,x:vehicle.x,y:vehicle.y,z:vehicle.z,hd:vehicle.hd,fall:null,swimming:false}:actor;
- },vehicle:()=>vehicle,pending:()=>history.length};
+  const actor=sim.snapshot().players.find(p=>p.id===self),
+    raw=vehicle?{...actor,x:vehicle.x,y:vehicle.y,z:vehicle.z,
+      hd:vehicle.hd,fall:null,swimming:false}:actor;
+  return presentation.present(raw,dt,active&&state.status==='running');
+ },vehicle:()=>vehicle,pending:()=>history.length,
+ stats:presentation.stats};
 }
