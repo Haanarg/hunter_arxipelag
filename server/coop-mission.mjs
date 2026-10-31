@@ -191,7 +191,7 @@ export function restoreRelayMission(record,geometry){
   }
   const vehicles=createRelayVehicles({onBarrier:ramWall,onPalm:tree=>damagePalm(tree,8),geometry:()=>physical,onImpact:(id,amount,tick)=>combat.impactVehicle(id,amount,tick),onTravel:(v,from,tick)=>combat.runover(v,from,tick),meta,record:record.vehicles,world:()=>world,water,players:()=>sim.snapshot().players,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt,onBoard:id=>{inventory.get(id).disguised=false;combat.cancel(id);actions.delete(id);}});
   const rescue=createRelayRescue(record.rescue);
-  const combat=createRelayCombat({meta,record:record.combat,vehicles,cutWire,blastWire,blastStructures,damagePalm,blastPalms,breakWindow,damageWall,windowAvailable:(index,paneIndex)=>!brokenWindows.has(index+':'+paneIndex),
+  const combat=createRelayCombat({meta,record:record.combat,vehicles,waterSurface:(x,z,time)=>water.surfaceAt(x,z,time),cutWire,blastWire,blastStructures,damagePalm,blastPalms,breakWindow,damageWall,windowAvailable:(index,paneIndex)=>!brokenWindows.has(index+':'+paneIndex),
     canAttack:()=>true,inventory,players:()=>sim.snapshot().players,
     visiblePlayers:()=>cheats.invisible?[]:sim.snapshot().players,
     damagePlayer:(id,amount)=>cheats.immune?false:
