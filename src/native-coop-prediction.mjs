@@ -15,8 +15,10 @@ export function createNativePrediction(geometry){
   [type,Math.hypot(...size)*vehicleSpecs.scales[type]/2]));
  let world=null,physical=null,water=null,vehicleBounds=null,lastPalmHealth=null,vehicleCandidates=null,wallCandidates=null,vehicle=null,vehicleTick=0,modeKey=null,worldKey=null,sim=null,state=null,self=null,sequence=0,history=[],accumulator=0,enabled=false;
  let preview=null,lastInput=null;
- const controlKeys=['forward','turn','strafe','run','climb','crouch','fire'];
- const sameControl=(a,b)=>!!a&&!!b&&controlKeys.every(k=>a[k]===b[k]);
+ const sameControl=(a,b)=>!!a&&!!b&&
+  ['forward','turn','strafe','climb'].every(k=>
+    Math.abs((a[k]||0)-(b[k]||0))<.015)&&
+  a.run===b.run&&a.crouch===b.crouch;
  const angle=a=>Math.atan2(Math.sin(a),Math.cos(a));
  function rebuild(next){
   const key=JSON.stringify([next.doorRevision,next.removedWalls,next.removedRoofs]);if(world&&key===worldKey){
@@ -124,8 +126,15 @@ export function createNativePrediction(geometry){
   if(!state||!sim)return null;
   if(enabled&&active){accumulator+=Math.min(.1,Math.max(0,dt));while(accumulator>=1/30&&history.length<12){const {interact,...movement}=input;step(movement);history.push({sequence,input:movement});accumulator-=1/30;}}
   else accumulator=0;
+  // Una tecla canviada a mig tick invalida el pas futur.
+  // Conservam la càmera fins a la nova trajectòria per no produir un
+  // salt quan deixam d'accelerar o canviam de direcció.
+  const changedInput=preview&&preview.tick===(vehicle?vehicleTick:sim.snapshot().tick)&&
+    !sameControl(preview.input,input);
   lastInput=input;
   const visual=visualPose(input);
+  if(changedInput&&enabled&&active)
+    presentation.reconcile(visual,{continuous:true,driving:!!vehicle});
   return presentation.present(visual,dt,active&&state.status==='running');
  },vehicle:()=>vehicle,pending:()=>history.length,
  stats:presentation.stats};
