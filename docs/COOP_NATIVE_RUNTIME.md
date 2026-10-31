@@ -1,6 +1,22 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
 
+## 0.6.65 · bales ancorades a l'origen i traces dels trets breus
+
+La prova amb dos navegadors de 0.6.64 demostra que el jugador és fluid, però les bales encara saltaven, de vegades sortien a l'esquena si el jugador corria, i ocasionalment no apareixien. Telemetria real dels projectils: 89 recepcions, 136 fotogrames visuals, 13 orígens de boca, 117 correccions i màxim de 148,663 m.
+
+**Error:** el càlcul antic `row + velocity * age + (prior-row) * exp(-age/.095)` barrejava el rellotge de la trajectòria local i la posició rebuda d'un servidor que ja havia avançat diversos ticks. Cada recepció tornava a accelerar la bala artificialment cap al servidor. També s'esborraven les malles tan aviat com `projectiles[]` ja no contenia la bala, encara que l'efecte `shot` confirmàs un tret recent.
+
+**Implementació 0.6.65:**
+- Cada efecte `shot` del Worker conté `projectileId` i `weapon`. L'efecte i el projectil es poden relacionar fins i tot quan la bala ja ha impactat abans del paquet de 10 Hz.
+- `src/native-coop-projectile-visual.mjs` conserva `origin`, `vx/vy/vz` i `life` visuals; l'origen del jugador és la boca **actual** del model local, mai l'antiga posició de servidor. La bala avança amb `origin + velocity*life` sense offsets exponencials. La recepció d'una nova fila no pot alterar de cop la trajectòria. Les desviacions de servidor es comparen amb el temps entre `tick` i, si són molt grans, es registren i s'ignoren gràficament (no s'ignora mai l'autoritat d'impacte).
+- Quan el dispar `shot` ja no té fila de projectil (una paret o enemic proper), s'afegeix una traça purament visual de fins a 105 ms. Deduplicació per `effect.id`, priming dels efectes previs a la connexió, retirada en expirar, i neteja quan el servidor retira una bala normal.
+- `src/coop-world-runtime.js` passa `state.combat.effects` i `state.tick` al projector, i crea/retira malles gràfiques per identificador; ja no escriu la coordenada de `row` a cada snapshot.
+- Diagnòstic `projectileVisual`: `shortLivedShots` (traces d'impacte precoç), `rejectedCorrections` i `maxServerDeviationM` (anomalies d'estat), i camps anteriors `receives`, `active`, `visualFrames`, `localMuzzleStarts`, `corrections`, `maxCorrectionM`.
+- Prova instrumentada `tests/native-coop-projectile-visual.mjs` superada (jugador corrent, 13 m entre frames de servidor, 240 FPS, desviacions superiors a 100 m sense salt, traces de curta durada, reconnect i identitat dels deltes); prova d'integració addicional a `tests/native-coop-interpolation-runtime.cjs`, pendent de Node/renderer.
+
+No s'ha tocat la predicció/càmera fluida de 0.6.63, els impactes físics ni el tick de simulació. El navegador i el Worker han d'usar tots dos la v0.6.65; falta validar-ne el desplegament i el comportament amb dos dispositius.
+
 ## 0.6.64 · bales COOP suaus, boca real de pistola i posició autoritativa coherent
 
 La 0.6.63 va eliminar el jitter del moviment de jugador/càmera en una prova real. La regressió següent era el projectil: la implementació anterior només assignava `mesh.position` a cada nou snapshot (~10 Hz), produint un moviment a esglaons encara que el client renderitzàs a 240 FPS. El servidor creava les bales de pistola des del tors (`p.x,p.y+1.5,p.z`) mentre el joc individual les genera .7 m cap endavant.
