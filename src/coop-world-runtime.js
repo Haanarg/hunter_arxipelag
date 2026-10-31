@@ -10,6 +10,29 @@ window.HUNTER_COOP_WORLD=Object.freeze({capture:captureCoopWorldGeometry,
   create:()=>window.HUNTER_WORLD_ADAPTER.createStaticWorldAdapter(captureCoopWorldGeometry())});
 
 // Native multiplayer is a session of the original runtime, never another view.
+// La derrota és autoritativa i idèntica als dos navegadors.
+// A 0 HP el jugador encara pot ser reanimat; la mort és definitiva
+// quan el Worker passa la missió a la fase «failed».
+function showNativeCoopGameOver(session,state){
+ if(state.phase!=='failed'||session.gameOver)return;
+ session.gameOver=true;
+ if(scopeActive)setSniperScope(false);
+ cancelGrenadeCharge();
+ const overlay=document.createElement('div');
+ overlay.id='hunter-coop-game-over';
+ overlay.style.cssText='position:fixed;inset:0;z-index:20000;background:#080c10e8;color:#f7f2ea;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center;padding:24px;font-family:system-ui,sans-serif';
+ const heading=document.createElement('h1');heading.textContent='GAME OVER';
+ heading.style.cssText='font-size:clamp(48px,11vw,120px);letter-spacing:.12em;color:#e7685e;text-shadow:0 5px 32px #000;margin:0';
+ const reason=document.createElement('p');
+ reason.textContent=state.players.some(p=>p.hp<=0)?'Un membre de l’equip ha mort. La missió ha acabat per a tots dos.':'La missió ha fracassat per a tots dos.';
+ reason.style.cssText='font-size:clamp(18px,2.6vw,26px);max-width:640px;margin:0';
+ const button=document.createElement('button');
+ button.type='button';button.textContent='Tornar a la sala';
+ button.style.cssText='padding:14px 28px;border-radius:10px;background:#355468;color:white;border:1px solid #82a0b7;font-size:18px;cursor:pointer';
+ button.onclick=()=>{stopNativeCoop();paused=true;ui.show('coop');};
+ overlay.append(heading,reason,button);document.body.appendChild(overlay);
+}
+
 const NATIVE_VEHICLE_POSE_KEYS=['x','y','z','hd','v','alt','verticalV','sideV','strafeV','driveInput','steerInput','yawRate'];
 let nativeCoopSession=null;
 // Els efectes visuals i la predicció no poden aturar el bucle de joc
@@ -26,7 +49,7 @@ function reportNativeCoopVisualError(error,part){
  if(s.visualErrors<=5)console.error('Cooperatiu: error visual a '+part,error);
 }
 function nativeCoopInput(){
- if(!nativeCoopSession||nativeCoopSession.preparing||paused||document.hidden)return {forward:0,turn:0,strafe:0,run:false,interact:false};
+ if(!nativeCoopSession||nativeCoopSession.preparing||nativeCoopSession.gameOver||paused||document.hidden)return {forward:0,turn:0,strafe:0,run:false,interact:false};
  const controls=readPlayerControls(updateStrafeControls(),!cv&&!paused&&!scopeActive),{f:forward,tr:turn,strafe,ud:climb,running:run}=controls;
  const flying=!cv&&nativeCoopSession.state?.cheats?.fly;
  return {forward:scopeActive?0:forward,turn:scopeActive?0:turn,strafe:scopeActive?0:strafe,interact:!!K.KeyE&&!!nativeReviveAction(),run:!!run,crouch:!!playerCrouched,fire:!!K.KeyF&&(!grenadeEquipped||!!cv),...(flying?{climb:(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0)}:cv&&VT[cv.t].m==='a'?{climb}:{})};
@@ -46,6 +69,7 @@ function captureNativeCoopWorld(){
 async function startNativeCoop(room){
  if(nativeCoopSession)throw Error('Ja hi ha una sessió cooperativa.');
  if(started&&!over){try{await saveOperation();}catch(error){msg=error.message;msgT=20;ui.show('coop');throw error;}}
+ document.getElementById('hunter-coop-game-over')?.remove();
  const session=nativeCoopSession={preparing:true,room,state:null,meta:null,self:null,remotes:new Map(),fireHeld:false,seenEffects:new Set(),projectiles:new Map(),grenades:new Map()};
  movementFx.reset();
  session.projectileVisual=window.HUNTER_CREATE_NATIVE_COOP_PROJECTILE_VISUAL?.();
@@ -165,6 +189,7 @@ function updateNativeCoopFrame(dt){
  const state=s.state,projecting=s.projectedState!==state,
        actor=projecting?state.players.find(p=>p.id===s.self):s.projectedActor;
  if(!actor)return;
+ if(projecting)showNativeCoopGameOver(s,state);
  if(projecting){
    for(const key of Object.keys(cheats))cheats[key]=!!state.cheats?.[key];
    s.interpolation??=window.HUNTER_CREATE_NATIVE_INTERPOLATION?.();
@@ -480,4 +505,4 @@ function updateNativeCoopFrame(dt){
 window.HUNTER_NATIVE_COOP=Object.freeze({start:startNativeCoop,active:()=>!!nativeCoopSession});
 
 function nativeReviveAction(){const s=nativeCoopSession;if(!s?.state||cv||hp<=0||swimming||playerFall||!inv.med)return null;const other=s.state.players.find(p=>p.id!==s.self&&p.hp<=0&&Math.hypot(P.x-p.x,P.z-p.z)<=3.2&&Math.abs(P.y-p.y)<2);return other?{kind:'revive',label:'Mantén E per reanimar el company',icon:'✋'}:null;}
-function stopNativeCoop(){const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();cancelGrenadeCharge();for(const key of Object.keys(K))K[key]=0;for(const mesh of s.projectiles.values())world?.remove(mesh);for(const mesh of s.grenades.values()){world?.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);}s.projectiles.clear();s.grenades.clear();s.projectileVisual?.reset();movementFx.reset();if(s.previousCheats)Object.assign(cheats,s.previousCheats);for(const model of s.remotes.values()){if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;window.HUNTER_COOP_NETWORK_STATS=null;}
+function stopNativeCoop(){document.getElementById('hunter-coop-game-over')?.remove();const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();cancelGrenadeCharge();for(const key of Object.keys(K))K[key]=0;for(const mesh of s.projectiles.values())world?.remove(mesh);for(const mesh of s.grenades.values()){world?.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);}s.projectiles.clear();s.grenades.clear();s.projectileVisual?.reset();movementFx.reset();if(s.previousCheats)Object.assign(cheats,s.previousCheats);for(const model of s.remotes.values()){if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;window.HUNTER_COOP_NETWORK_STATS=null;}
