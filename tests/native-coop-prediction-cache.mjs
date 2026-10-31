@@ -28,7 +28,7 @@ const factory=new Function('stepRangeVehicle','firstVehicleContact','vehicleSpec
   return null;
  },
  {hitboxes:{cotxe:[2,4]},scales:{cotxe:1}},
- ({checkpoint})=>({snapshot:()=>({players:checkpoint.players}),accept(){},step(){}}),
+ ({checkpoint})=>({snapshot:()=>({tick:checkpoint.tick,players:checkpoint.players}),accept(){},step(){return {tick:checkpoint.tick+1,players:checkpoint.players};}}),
  ()=>{calls.worlds++;return {limit:10000,heightAt:()=>0,
   setPalmHealth(){calls.palms++}};},
  ()=>{calls.waters++;return currentWater={surfaceAt:()=>0}},
