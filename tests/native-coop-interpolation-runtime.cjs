@@ -87,13 +87,16 @@ const assert=require('node:assert/strict');
  game.context.visualInterpolationDriver=driver;
  const driven=game.run(`(()=>{
  const s=nativeCoopSession;
- s.prediction={advance(){return s.state.players[0]},vehicle(){return {
+ s.prediction={advance(){return {...s.state.players[0],
+   x:s.state.vehicles[0].x+2,y:s.state.vehicles[0].y,
+   z:s.state.vehicles[0].z,hd:1};},vehicle(){return {
    id:s.state.vehicles[0].id,x:s.state.vehicles[0].x+2,z:s.state.vehicles[0].z,hd:1,v:2}}};
  s.state=visualInterpolationDriver;updateNativeCoop(.05);
  return {cvId:cv?.saveId,x:cv?.x,localX:P.x};
  })()`);
  assert.equal(driven.cvId,car.id);
  assert.equal(driven.x,car.x+20,'Predicció del pilot local té prioritat');
- assert.equal(driven.localX,a.x,'El jugador propi no es desplaça pel buffer');
+ assert.equal(driven.localX,car.x+20,
+   'La càmera del pilot acompanya la predicció visual del vehicle, no el buffer remot');
  console.log('native coop original runtime: jitter smoothing, remote vehicle/passenger and local driver priority passed');
 })().catch(e=>{console.error(e);process.exitCode=1});
