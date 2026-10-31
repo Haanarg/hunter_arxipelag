@@ -470,14 +470,23 @@ window.HUNTER_PRISONERS=Object.freeze({
       if(row.state!==prior.state)pose(u,row.state==='captive'&&row.pose==='seated');
       u.path=[];
       if(!u.o)continue;
-      u.o.position.set(u.x,u.y+(u.hp<=0?.22:0),u.z);
+      const beforeX=u.o.position.x,beforeZ=u.o.position.z;
+      if(u.hp<=0)u.o.position.set(u.x,u.y+.22,u.z);
+      else{
+        // Els presoners s'animen a 60–240 FPS encara que els paquets
+        // autoritatius arribin només ~10 cops per segon.
+        const smooth=1-Math.exp(-Math.max(0,dt)*15);
+        u.o.position.set(beforeX+(u.x-beforeX)*smooth,
+          u.o.position.y+(u.y-u.o.position.y)*smooth,
+          beforeZ+(u.z-beforeZ)*smooth);
+      }
       u.o.visible=!!viewer&&Math.hypot(viewer.x-u.x,viewer.z-u.z)<400;
       if(u.hp<=0){u.o.rotation.x=-Math.PI/2;continue;}
       u.o.rotation.x=0;
-      const dx=u.x-prior.x,dz=u.z-prior.z;
-      if(Math.hypot(dx,dz)>.002)u.o.rotation.y=Math.atan2(-dx,-dz);
-      // Reutilitzam l'animació original, sense avançar la posició.
-      if(Math.hypot(dx,dz)>.002){u.path=[{x:u.x+dx,z:u.z+dz}];u.blocked=0;}
+      const dx=u.o.position.x-beforeX,dz=u.o.position.z-beforeZ;
+      if(Math.hypot(dx,dz)>.0005)u.o.rotation.y=Math.atan2(-dx,-dz);
+      // Reutilitzam l'animació original, sense avançar la física.
+      if(Math.hypot(dx,dz)>.0005){u.path=[{x:u.x+dx,z:u.z+dz}];u.blocked=0;}
       animate(u,Math.min(.12,Math.max(0,dt)));
       u.path=[];
     }
