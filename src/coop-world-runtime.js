@@ -55,7 +55,7 @@ async function startNativeCoop(room){
   session.walls=Wl.slice();session.buildings=B.slice();session.palms=PL.slice();session.vehicles=new Map(V.map(v=>[v.saveId,v]));session.enemies=new Map(E.map(e=>[e.saveId,e]));session.items=new Map(items.map(it=>[it.saveId,it]));
   session.channel=window.HUNTER_NATIVE_COOP_TRANSPORT({room,getInput:nativeCoopInput,onInput:message=>session.prediction?.sent(message.sequence),
    onStatus(status){if(status!=='open'&&session.state)session.state={...session.state,status:'paused'};const labels={connecting:'Connectant…',retrying:'Reconnectant…',replaced:'Sessió oberta en una altra pestanya.',ended:'Sessió finalitzada.',version:'Cal recarregar el joc.'};msg=status==='open'?'Preparant el mateix món amb el company…':labels[status]||'Connexió interrompuda.';msgT=8;},
-   onAction(result){if(result.ok===false){const labels={HOST_ONLY:'Només el HOST pot activar els trucs.',NOT_ACTIVE:'La sessió no permet aquesta acció.',EMPTY:'No tens munició.',NOT_EQUIPPED:'Cal equipar aquesta arma.',TOO_FAR:'Acosta’t més al vehicle o a la porta.',FULL:'El vehicle és ple.',MOVING:'Atura el vehicle abans de pujar o baixar.',EXIT_BLOCKED:'No hi ha espai per baixar.',BLOCKED:'Hi ha un obstacle al pas.'};if(labels[result.code]){msg=labels[result.code];msgT=3;}}},
+   onAction(result){if(result.ok===false){const labels={HOST_ONLY:'Només el HOST pot activar els trucs.',NOT_ACTIVE:'La sessió no permet aquesta acció.',EMPTY:'No tens munició.',NOT_EQUIPPED:'Cal equipar aquesta arma.',TOO_FAR:'Acosta’t més al vehicle o a la porta.',FULL:'El vehicle és ple.',MOVING:'Atura el vehicle abans de pujar o baixar.',EXIT_BLOCKED:'No hi ha espai per baixar.',BLOCKED:'Hi ha un obstacle al pas.',SAVE_FAILED:'El servidor no ha pogut guardar l’acció. Torna-ho a provar.'};if(labels[result.code]){msg=labels[result.code];msgT=3;}}},
    onRoom(){},onError(error){msg=error||'La sessió s’ha interromput.';msgT=12;session.preparing=true;},
    onMission(data){if(data.meta.fingerprint!==session.fingerprint){session.preparing=true;msg='El món de la sala no coincideix. Recarregueu tots dos.';msgT=30;return;}session.meta=data.meta;session.self=data.self;session.state=data.state;try{session.prediction?.receive(data.state,data.self);}
      catch(error){reportNativeCoopVisualError(error,'predicció inicial');session.prediction=null;}
@@ -91,7 +91,23 @@ function selectNativeCoopWeapon(id){
 }
 function nativeCoopCommand(type,payload={}){
  const s=nativeCoopSession;if(!s?.state||s.state.status!=='running'||paused&&!['item','plant'].includes(type))return false;
- if(type==='fire'){const weapon=nativeCoopFireWeapon();return weapon?s.channel.combat(weapon):false;}
+ if(type==='fire'){
+   const weapon=nativeCoopFireWeapon();if(!weapon)return false;
+   let aim=null;
+   if(!cv&&weapon==='bazooka'){
+     // La retícula original és la font de veritat, inclosos els edificis.
+     updateBazookaReticle(.1);
+     if(bazookaReticleMode==='bazooka'&&bazookaReticleHasHit)
+       aim={x:bazookaReticleWorld.x,y:bazookaReticleWorld.y,z:bazookaReticleWorld.z};
+   }else if(!cv&&weapon==='sniper'&&scopeActive){
+     const focus=currentSniperFocus();
+     if(focus){const point=sniperReticlePoint(focus);aim={x:point.x,y:point.y,z:point.z};}
+   }
+   if(weapon==='sniper'&&sniperAmmo<=0){msg='El rifle no té cartutxos.';msgT=3;return false;}
+   const sent=s.channel.combat(weapon,undefined,undefined,aim);
+   if(sent&&weapon==='sniper'){pl.userData.firePose=.42;msg='Rifle: dispar confirmant…';msgT=1;}
+   return sent;
+  }
  if(type==='vehicle'){const v=cv||nearV();return v?s.channel.vehicle(v.saveId,cv?'exit':'enter'):false;}
  if(type==='item'){
   const map={arma:'pistol',fusell_assalt:'assault',franctirador:'sniper',bazooka:'bazooka',cisalla:'cutters',ganivet:'knife',granada:'grenade'};
