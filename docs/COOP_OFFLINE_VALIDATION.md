@@ -1,10 +1,10 @@
-# Validació del COOP sense GitHub Actions · 0.6.61
+# Validació del COOP sense GitHub Actions · 0.6.62
 
 ## Context
 
 Per manca de quota d'Actions, `.github/workflows/coop-regression.yml` ha deixat de tenir el disparador automàtic `push`. Queda només `workflow_dispatch` (manual i optatiu). Els altres workflows del repositori també estan configurats com a manuals; no s'ha intentat executar-ne cap en aquesta fase.
 
-Els commits de la 0.6.61 es poden crear i revisar a GitHub sense executar Actions. **Això no és un desplegament**: Cloudflare Pages i el Worker/Durable Object continuen necessitant publicació i comprovació de la versió. El client i el Worker han d'usar la mateixa versió perquè el `hello.gameVersion` és verificat pel servidor.
+Els commits de la 0.6.62 es poden crear i revisar a GitHub sense executar Actions. **Això no és un desplegament**: Cloudflare Pages i el Worker/Durable Object continuen necessitant publicació i comprovació de la versió. El client i el Worker han d'usar la mateixa versió perquè el `hello.gameVersion` és verificat pel servidor.
 
 ## Proves locals reproduïbles (Node 22)
 
@@ -23,7 +23,19 @@ npm run test:coop:integration
 **Estat de verificació aquí:** els tests purs d'interpolació (incloses 377 entitats), jitter i deltes, més el test instrumentat del caché de predicció i els nous comptadors de fotograma, han passat en execucions JavaScript aïllades. No s'ha executat aquesta bateria completa de Node 22 ni les proves amb motor GPU en aquesta sessió. La sintaxi de les fonts principals es va comprovar aïlladament. Cal evitar declarar els tests integrats com a superats fins a executar-los.
 
 
-**Comprovació del runtime 0.6.61:** s'ha reconstruït el paquet clàssic `dist/hunter-runtime.4ead270bcf958f1c.js` incorporant el contingut **exacte** de `src/coop-world-runtime.js` (inclosa la interpolació visual de soldats, les cames i les optimitzacions de projectils). S'ha verificat el hash FNV64, la correspondència exacta del mòdul dins el paquet i la sintaxi de tot el script agrupat. No s'ha executat l'ordre completa `node tools/build-runtime.cjs --check` ni una prova de navegador amb GPU.
+**Comprovació del runtime 0.6.62:** s'ha reconstruït el paquet clàssic `dist/hunter-runtime.ce312b5387f91a47.js` incorporant el contingut **exacte** de `src/coop-world-runtime.js` (inclosa la interpolació visual de soldats, les cames i les optimitzacions de projectils). S'ha verificat el hash FNV64, la correspondència exacta del mòdul dins el paquet i la sintaxi de tot el script agrupat. No s'ha executat l'ordre completa `node tools/build-runtime.cjs --check` ni una prova de navegador amb GPU.
+
+## Optimització de col·lisions 0.6.62
+
+La prova local `npm run test:coop:offline` també executa:
+
+- `tests/native-coop-vehicle-candidates.mjs`: equivalència exacta de candidats i ordre davant 2.125 consultes espacials, 374 vehicles i els 16 tipus de vehicle.
+- `tests/native-coop-wall-candidates.mjs`: equivalència exacta amb el filtre de tots els murs, amb 2.725 consultes, 1.352 murs, parets gegants i coordenades negatives.
+- `tests/native-coop-prediction-cache.mjs`: indexació un cop per snapshot de flota, reús en deltes sense canvis, invalidació en canviar geometria i absència de treball extra en passatgers o vianants.
+
+S'han executat les proves pures de selecció espacial i la prova instrumentada del caché en un entorn JavaScript aïllat. La prova completa de predicció amb 16 vehicles dins el motor `tests/native-coop-prediction.cjs` encara necessita execució Node 22.
+
+El paquet agrupat `dist/hunter-runtime.ce312b5387f91a47.js` correspon a la versió 0.6.62; els índexs nous són mòduls carregats per `src/bootstrap.mjs` i `src/native-coop-prediction.mjs`, no part d'aquest paquet clàssic.
 
 ## Diagnòstic quan hi hagi dos navegadors
 
@@ -43,7 +55,7 @@ Provar a peu, en vehicle, conductor/passatge i desplaçament a prop de soldats. 
 
 ## Pendents que requereixen mesures o paritat
 
-1. Confirmar el desplegament conjunt client + Worker de la 0.6.61.
+1. Confirmar el desplegament conjunt client + Worker de la 0.6.62.
 2. Comparar fluïdesa, taxa d'extrapolació i volum amb dos jugadors.
 3. Investigar seccions dominants de `deltaProfile.bySection` abans de canviar l'estructura dels paquets.
 4. Decidir si pujar snapshots de ~10 Hz fins a ~20 Hz només quan la CPU del Worker, la persistència i la xarxa ho permetin.
