@@ -153,6 +153,12 @@ function updateNativeCoopFrame(dt){
        presented=s.prediction?.advance(dt,input,!paused&&!document.hidden&&state.status==='running')||actor;
  elapsed=state.tick/30;
  P.x=presented.x;P.y=presented.y;P.z=presented.z;P.hd=presented.hd;
+ if(projecting){
+  const down=state.rescue?.down?.find(d=>d.actorId===s.self);
+  if(hp<=0&&down){msg='Has caigut! El company et pot reanimar amb una farmaciola ('+Math.ceil(down.remaining)+' s).';msgT=1.5;}
+  else if(s.wasDown&&hp>0){msg='T’han reanimat!';msgT=3;}
+  s.wasDown=hp<=0;
+ }
  swimming=!!presented.swimming;playerFall=presented.fall;
  ib=buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2&&P.y<b.fy+b.h)||null;
  // Inventari, vida i recomptes autoritatius són immutables entre snapshots.
@@ -176,6 +182,7 @@ function updateNativeCoopFrame(dt){
      if(row.seats.includes(s.self)){cv=v;v.o.visible=!row.destroyed;}
    }
  }
+ if(projecting)rebuildVehicleGrid(); // Reindexa també els vehicles en COOP.
  // Les posicions remotes es presenten amb un interval de snapshot
  // de retard: cap extrapolació de física o dany. L'actor/vehicle local
  // continua utilitzant la predicció i reconciliació originals.
@@ -198,6 +205,7 @@ function updateNativeCoopFrame(dt){
    // el simulador de col·lisions continua utilitzant el vehicle cru.
    cv.x=presented.x;cv.y=presented.y;cv.z=presented.z;cv.hd=presented.hd;
  }
+ refreshVehicleGridIfCellsChanged();
  updateVehicleVisualLod(elapsed,dt,{skipHidden:true});
  if(cv||swimming)playerCrouched=false;if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;animPl(cv?0:input.forward,dt,input.run,input.strafe);poseRider(cv,dt);
  if(projecting){
