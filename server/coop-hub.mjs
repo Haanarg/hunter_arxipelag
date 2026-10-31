@@ -88,7 +88,7 @@ export class CoopRoomHub {
       const fresh=await readCoopRoom(this.env,owner);
       if(!fresh?.allReady)return reply(409,'GUEST_NOT_READY','Calen dos jugadors preparats i connectats.');
       await this.ctx.storage.put('native-start',{
-        id:room.id,revision:room.revision,expiresAt:Date.now()+5*60*1000
+        id:room.id,revision:room.revision,expiresAt:Math.min(room.expiresAt,Date.now()+20*60*1000)
       });
       await this.publish();
       return new Response(JSON.stringify({room:{...fresh,phase:'starting'}}),{
