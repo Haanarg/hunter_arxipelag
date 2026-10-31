@@ -185,6 +185,12 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       };
     const aimed=aimWeapon(p,vehicle,weapon,from),focus=aimed.focus;
      let direction=gun?.direction||aimed.direction;
+     if(!vehicle&&meta.mode==='native'&&requestedAim&&weapon==='bazooka'){
+       // Si la petició és fora de con o de rang, mantenir el tret recte,
+       // mai el blanc lateral seleccionat com a alternativa al servidor.
+       direction=[-Math.sin(p.hd),0,-Math.cos(p.hd)];
+       focus.target=null;focus.point=null;
+     }
      // El bazuca i el franctirador han de disparar exactament a la mira
      // local, NO a un blanc diferent escollit al servidor.
      if(!vehicle&&meta.mode==='native'&&requestedAim&&['bazooka','sniper'].includes(weapon)){
