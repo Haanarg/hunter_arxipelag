@@ -338,12 +338,12 @@ function blastImpulseAt(x,z,px,pz,r,falloff){
 function explosionDamage(...args){return window.HUNTER_SHARED_COMBAT.explosionDamage(...args)}
 // Les parets, portes, forjats, teulades i relleu fan de cobertura real.
 // Especialment: una càrrega a la superfície no pot matar el general al soterrani.
-function blastOccluded(x,y,z,tx,ty,tz,ignoreWall=null){
+function blastOccluded(x,y,z,tx,ty,tz,ignoreWall=null,ignoreTower=null){
  const dx=tx-x,dy=ty-y,dz=tz-z,length=Math.hypot(dx,dy,dz);
  if(length<.15)return false;
  const mx=(x+tx)/2,mz=(z+tz)/2,search=Math.hypot(dx,dz)/2+2;
  for(const w of wallCandidates(mx,mz,search)){
-  if(w===ignoreWall||w.open||w.barbed||w.hp<=0)continue;
+  if(w===ignoreWall||(ignoreTower&&w.towerLegOwner===ignoreTower)||w.open||w.barbed||w.hp<=0)continue;
   // L'origen pot estar encastat dins un obstacle just quan detona.
   if(x>w.x0+.03&&x<w.x1-.03&&y>w.y0+.03&&y<w.y1-.03&&z>w.z0+.03&&z<w.z1-.03)continue;
   const t=segmentAabbT(x,y,z,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);
@@ -388,12 +388,16 @@ function boom(x,y,z,r,dmg,own,source=null){
  const pilotedAtStart=!!cv;
  for(const u of [...enemyCandidatesAt(x,z,r+vehicleRadius('llanxa')*.62+4)]){
   if(u.hp<=0||u.destroyed)continue;
-  const marine=u.t==='patrulla_marina',targetY=u.t==='torre'?enemyAimCenterY(u):
-    u.o.position.y+(marine?1.8:1.5),
+  const marine=u.t==='patrulla_marina',
+    towerAim=u.t==='torre'?window.HUNTER_SHARED_COMBAT.towerExplosionAim(
+      u,{x,y,z},u.o.position.y):null,
+    targetY=towerAim?.y??u.o.position.y+(marine?1.8:1.5),
     distance=Math.hypot(u.x-x,targetY-y,u.z-z),
     d=marine?Math.max(0,distance-vehicleRadius('llanxa')*.62):distance,
     dealt=explosionDamage(dmg,d,r);
-  if(!dealt||blastOccluded(x,y,z,u.x,targetY,u.z))continue;
+  // L'ona arriba als pilars abans de la caseta. Els propis pilars no
+  // bloquegen el C4, però qualsevol altra paret o terreny sí.
+  if(!dealt||blastOccluded(x,y,z,u.x,targetY,u.z,null,towerAim?u:null))continue;
   if(u.t==='soldat'||u.t==='general'){
    u.blastImpulse=blastImpulseAt(x,z,u.x,u.z,r,1-d/r);
    if(u.hp>dealt){u.blastT=Math.max(u.blastT||0,.55+u.blastImpulse.vy/8);u.blastTotal=u.blastT}
