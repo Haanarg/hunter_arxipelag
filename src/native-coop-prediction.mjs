@@ -11,6 +11,8 @@ import {createNativeLocalPresentation} from './native-coop-local-presentation.mj
 // remain authoritative. Reconciliation replays unacknowledged shared-rule steps.
 export function createNativePrediction(geometry){
  const presentation=createNativeLocalPresentation();
+ presentation.stats.subtickBuilds=0;
+ presentation.stats.subtickFrames=0;
  const radiusByType=Object.fromEntries(Object.entries(vehicleSpecs.hitboxes).map(([type,size])=>
   [type,Math.hypot(...size)*vehicleSpecs.scales[type]/2]));
  let world=null,physical=null,water=null,vehicleBounds=null,lastPalmHealth=null,vehicleCandidates=null,wallCandidates=null,vehicle=null,vehicleTick=0,modeKey=null,worldKey=null,sim=null,state=null,self=null,sequence=0,history=[],accumulator=0,enabled=false;
@@ -89,8 +91,10 @@ export function createNativePrediction(geometry){
     next=probe.step().players.find(p=>p.id===self);
    }
    preview={tick,input:movement,next};
+   presentation.stats.subtickBuilds++;
   }
   const target=preview.next;
+  presentation.stats.subtickFrames++;
   return {...current,
    x:current.x+(target.x-current.x)*alpha,
    y:current.y+(target.y-current.y)*alpha,
