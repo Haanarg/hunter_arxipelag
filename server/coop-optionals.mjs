@@ -23,6 +23,7 @@ export function createNativeOptionals({meta,record={},world,geometry,players,veh
     discovered:!!r.discovered,reports:r.reports||0,dispatches:r.dispatches||0,
     lastWarnTick:r.lastWarnTick??-100000})),
   results=[...(record.results||[])];
+ let knownTargets=[];
  let discovered=!!record.prison?.discovered,released=!!record.prison?.released,
   repair=record.prison?.repair?{...record.prison.repair}:null,
   followOwner=record.prison?.followOwner||null,events=[...(record.events||[])];
@@ -90,6 +91,7 @@ export function createNativeOptionals({meta,record={},world,geometry,players,veh
    canSee({x:u.x,y:u.y+1.5,z:u.z},{x:v.x,y:v.y+1,z:v.z});
  }
  function step(tick,targets,actors){
+  knownTargets=targets;
   if(!active())return;
   if(tick%3===0){
    if(!discovered&&actors.some(p=>p.hp>0&&
@@ -193,7 +195,7 @@ export function createNativeOptionals({meta,record={},world,geometry,players,veh
   return dealt;
  }
  function snapshot(){
-  return {prison:{discovered,released,rescue:status([]),
+  return {prison:{discovered,released,rescue:(()=>{const st=status(knownTargets);return {guards:st.guards,towers:st.towers,breach:st.breach};})(),
     entities:units.map(u=>({id:u.id,role:u.role,state:u.state,hp:u.hp,x:u.x,y:u.y,z:u.z,
       phase:u.phase,following:u.following,pose:u.pose})),repair:repair?
       {vehicleId:repair.vehicleId,progress:repair.progress,duration:6}:null},
