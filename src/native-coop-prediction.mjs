@@ -4,10 +4,11 @@ import {vehicleSpecs} from './vehicle-specs.mjs';
 import {createPlayerSimulation} from './player-simulation.mjs';
 import {createStaticWorldAdapter} from './world-adapter.mjs';
 import {createCanonicalWater} from './canonical-water.mjs';
+import {createNativeVehicleCandidateIndex} from './native-coop-vehicle-candidates.mjs';
 // Only local locomotion is predicted. Damage, pickups, combat and world mutations
 // remain authoritative. Reconciliation replays unacknowledged shared-rule steps.
 export function createNativePrediction(geometry){
- let world=null,physical=null,water=null,lastPalmHealth=null,vehicle=null,vehicleTick=0,modeKey=null,worldKey=null,sim=null,state=null,self=null,sequence=0,history=[],accumulator=0,enabled=false;
+ let world=null,physical=null,water=null,lastPalmHealth=null,vehicleCandidates=null,vehicle=null,vehicleTick=0,modeKey=null,worldKey=null,sim=null,state=null,self=null,sequence=0,history=[],accumulator=0,enabled=false;
  function rebuild(next){
   const key=JSON.stringify([next.doorRevision,next.removedWalls,next.removedRoofs]);if(world&&key===worldKey){
    // Els deltes conserven la referència dels camps no modificats.
@@ -30,7 +31,7 @@ export function createNativePrediction(geometry){
    stepRangeVehicle(vehicle,input,1/30,++vehicleTick,world,water,{x0:-world.limit,x1:world.limit,z0:-world.limit,z1:world.limit});
    const reach=radius+Math.hypot(vehicle.x-from.x,vehicle.z-from.z)+2,cx=(from.x+vehicle.x)/2,cz=(from.z+vehicle.z)/2,
     walls=physical.walls.filter(w=>w.x0<=cx+reach&&w.x1>=cx-reach&&w.z0<=cz+reach&&w.z1>=cz-reach),
-    others=state.vehicles.filter(v=>Math.hypot(v.x-cx,v.z-cz)<=reach+Math.hypot(...vehicleSpecs.hitboxes[v.t])*vehicleSpecs.scales[v.t]/2),
+    others=vehicleCandidates.nearby(cx,cz,reach),
     hit=firstVehicleContact(vehicle,from,others,{walls},true,world);
    if(hit){Object.assign(vehicle,hit.safe);vehicle.v=vehicle.sideV=vehicle.strafeV=0;}
    return;
@@ -39,6 +40,9 @@ export function createNativePrediction(geometry){
  function receive(next,id){
   const actor=next.players.find(p=>p.id===id);if(!actor)return;
   const same=state?.missionId===next.missionId;self=id;state=next;rebuild(next);
+  // Un índex per snapshot autoritatiu substitueix 30 recorreguts/s
+  // de la flota completa durant predicció i replay del pilot local.
+  vehicleCandidates=createNativeVehicleCandidateIndex(next.vehicles);
   const seat=next.vehicles.find(v=>v.seats.includes(id)),driver=seat?.seats[0]===id,nextMode=seat?(driver?seat.id:'passenger:'+seat.id):'foot';vehicle=driver?structuredClone(seat):null;vehicleTick=next.tick;
   enabled=next.status==='running'&&['relay','extract'].includes(next.phase)&&actor.hp>0&&(!seat||driver);
   history=same&&enabled&&modeKey===nextMode?history.filter(frame=>frame.sequence>actor.acknowledged):[];sequence=same?Math.max(sequence,actor.acknowledged):actor.acknowledged;accumulator=0;modeKey=nextMode;resetSimulation(next);
