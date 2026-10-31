@@ -415,6 +415,9 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.firePose=Math.max(0,(u.firePose||0)-dt);u.meleePose=Math.max(0,(u.meleePose||0)-dt);u.grenadeThrow=Math.max(0,(u.grenadeThrow||0)-dt);
     u.cisallaCut=Math.max(0,(u.cisallaCut||0)-dt);
     u.pistolAimTime=Math.max(0,(u.pistolAimTime||0)-dt);u.pistolShotAge=Math.min(10,(u.pistolShotAge??10)+dt);
+    // Animacions dels trets del company; no intervenen en la física.
+    u.nativeShotAge=Math.min(10,(u.nativeShotAge??10)+dt);
+    u.nativeShotRemaining=Math.max(0,(u.nativeShotRemaining||0)-dt);
     if(grenadeEquipped&&u.grenadeThrow<=0)u.grenadeReleased=false;u.breath=(u.breath||0)+dt*1.7;
     // Transició suau de caminar a córrer: cadència i posicions diferents,
     // no només la velocitat de desplaçament.
@@ -553,6 +556,14 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // del tret; les dues mans segueixen els grips després del canvi.
     if(assault){u.assault.rotation.x=-u.upperBody.rotation.x;
       u.assault.rotation.y=-u.upperBody.rotation.y;}
+    // Retrocés visual dels fusells i de la bazuca del jugador remot.
+    for(const [weapon,group] of [['assault',u.assault],['sniper',u.sniper],['bazooka',u.bazooka]]){
+      if(!group)continue;
+      group.userData.nativeRestZ??=group.position.z;
+      const recoil=u.nativeShotWeapon===weapon&&u.nativeShotAge<.26?
+        Math.sin(Math.PI*u.nativeShotAge/.26)*.11:0;
+      group.position.z=group.userData.nativeRestZ+recoil;
+    }
     u.bazooka.visible=bazooka;u.sniper.visible=sniper;u.assault.visible=assault;u.grenade.visible=(grenade||throwing)&&!u.grenadeReleased;
     u.cisalla.visible=cisalla;
     window.HUNTER_BOLT_CUTTERS.pose(u.cisalla,
