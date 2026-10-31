@@ -13,7 +13,7 @@ export class CoopRoomHub {
     this.ctx=ctx;this.env=env;this.stateBaselines=new WeakMap();this.queue=Promise.resolve();this.votes=new Map();this.mission=null;this.record=null;this.geometry=null;this.checkedAt=0;this.nativeVotes=new Map();this.nativeUpload=null;
     // Rate limits per connexió en memòria efímera (també si el DO hiberna).
     // L'attachment continua reservat a la identitat i a la verificació.
-    this.inputRates=new WeakMap();this.combatRates=new WeakMap();this.pingRates=new WeakMap();
+    this.inputRates=new WeakMap();this.combatRates=new WeakMap();this.cheatRates=new WeakMap();this.pingRates=new WeakMap();
     this.frameMetrics={tickMs:0,saveMs:0,broadcastMs:0,tick:0};
     this.loading=ctx.blockConcurrencyWhile(async()=>{
       const record=await readCoopCheckpoint(ctx.storage);
@@ -153,6 +153,32 @@ export class CoopRoomHub {
       if(!this.mission||body.epoch!==this.mission.meta.id){this.send(ws,{type:'action',commandId:body.commandId,ok:false,code:'NOT_ACTIVE'});return;}
       try{const result=this.mission.inventoryCommand(a.actorId,body);await this.save(this.record.nextAlarm);this.broadcastState();this.send(ws,{type:'action',...result});}
       catch(_){if(this.record)this.mission=restoreRelayMission(this.record,this.geometry);this.send(ws,{type:'action',commandId:body.commandId,ok:false,code:'SAVE_FAILED'});}return;
+    }
+    if(body.type==='cheat'){
+      const valid=a.gameClient&&a.gameVersion===GAME_VERSION&&
+        Object.keys(body).length===6&&
+        Object.keys(body).every(k=>['type','protocol','epoch','commandId','cheat','enabled'].includes(k))&&
+        typeof body.epoch==='string'&&body.epoch.length<=64&&
+        typeof body.commandId==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)&&
+        ['items','invisible','immune','fly'].includes(body.cheat)&&typeof body.enabled==='boolean';
+      if(!valid){ws.close(1008,'Ordre de truc invàlida');return;}
+      if(!this.rateAllowed(this.cheatRates,ws,now,8)){ws.close(1008,'Massa canvis de trucs');return;}
+      const room=await readCoopRoom(this.env,a.actorId);
+      if(!room||room.host!==a.actorId){
+        this.send(ws,{type:'action',kind:'cheat',commandId:body.commandId,ok:false,code:'HOST_ONLY'});return;
+      }
+      if(!this.mission||this.mission.meta.mode!=='native'||body.epoch!==this.mission.meta.id){
+        this.send(ws,{type:'action',kind:'cheat',commandId:body.commandId,ok:false,code:'NOT_ACTIVE'});return;
+      }
+      try{
+        const result=this.mission.cheatCommand(a.actorId,body.cheat,body.enabled);
+        if(result.ok){await this.save(this.record.nextAlarm);this.broadcastState();}
+        this.send(ws,{type:'action',kind:'cheat',commandId:body.commandId,...result});
+      }catch(_){
+        if(this.record)this.mission=restoreRelayMission(this.record,this.geometry);
+        this.send(ws,{type:'action',kind:'cheat',commandId:body.commandId,ok:false,code:'SAVE_FAILED'});
+      }
+      return;
     }
     if(body.type==='vehicle'){
       if(!a.gameClient||a.gameVersion!==GAME_VERSION||Object.keys(body).length!==6||typeof body.epoch!=='string'||body.epoch.length>64||typeof body.vehicleId!=='string'||body.vehicleId.length>64||!['enter','exit'].includes(body.operation)||typeof body.commandId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(body.commandId)){ws.close(1008,'Ordre de vehicle invàlida');return;}
