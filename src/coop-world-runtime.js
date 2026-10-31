@@ -346,7 +346,17 @@ function updateNativeCoopFrame(dt){
    // cada fotograma. L'estat autoritatiu brokenWindows s'aplica igualment.
    s.seenEffects.add(effect.id);
    try{
-     if(effect.kind==='explosion')presentExplosion(effect.at.x,effect.at.y,effect.at.z,effect.radius);
+     if(effect.kind==='vehicle-destroyed'){
+        // El servidor confirma la destrucció abans d'eliminar el model.
+        // Pot arribar una explosió separada al mateix tick: evitar doblar-la.
+        const hasBlast=state.combat.effects.some(other=>other.kind==='explosion'&&
+          Math.hypot(other.at.x-effect.at.x,other.at.y-effect.at.y,other.at.z-effect.at.z)<2.5&&
+          Math.abs((other.tick??0)-(effect.tick??0))<=1);
+        if(effect.explosive&&!hasBlast){
+          presentExplosion(effect.at.x,effect.at.y,effect.at.z,8);
+        }
+      }
+      else if(effect.kind==='explosion')presentExplosion(effect.at.x,effect.at.y,effect.at.z,effect.radius);
      else if(effect.kind==='impact')spawnBulletImpact(effect.hit?'blood':'spark',
        effect.at.x,effect.at.y,effect.at.z,{vx:0,vy:0,vz:1});
      else if(effect.kind==='glass'&&s.walls[effect.wallIndex])
