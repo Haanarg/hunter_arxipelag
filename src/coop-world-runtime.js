@@ -79,7 +79,7 @@ async function startNativeCoop(room){
   const payload=captureNativeCoopWorld();session.prediction=window.HUNTER_CREATE_NATIVE_PREDICTION?.(payload.geometry);const text=JSON.stringify(payload),hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));session.fingerprint=[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join('');
   session.walls=Wl.slice();session.buildings=B.slice();session.palms=PL.slice();session.vehicles=new Map(V.map(v=>[v.saveId,v]));session.enemies=new Map(E.map(e=>[e.saveId,e]));session.items=new Map(items.map(it=>[it.saveId,it]));
   session.channel=window.HUNTER_NATIVE_COOP_TRANSPORT({room,getInput:nativeCoopInput,onInput:message=>session.prediction?.sent(message.sequence),
-   onStatus(status){if(status!=='open'&&session.state)session.state={...session.state,status:'paused'};const labels={connecting:'Connectant…',retrying:'Reconnectant…',replaced:'Sessió oberta en una altra pestanya.',ended:'Sessió finalitzada.',version:'Cal recarregar el joc.'};msg=status==='open'?'Preparant el mateix món amb el company…':labels[status]||'Connexió interrompuda.';msgT=8;},
+   onStatus(status){session.connectionStatus=status;if(status!=='open'&&session.state)session.state={...session.state,status:'paused'};const labels={connecting:'Connectant…',retrying:'Reconnectant…',replaced:'Sessió oberta en una altra pestanya.',ended:'Sessió finalitzada.',version:'Cal recarregar el joc.'};msg=status==='open'?'Preparant el mateix món amb el company…':labels[status]||'Connexió interrompuda.';msgT=8;},
    onAction(result){if(result.ok===false){const labels={HOST_ONLY:'Només el HOST pot activar els trucs.',NOT_ACTIVE:'La sessió no permet aquesta acció.',EMPTY:'No tens munició.',NOT_EQUIPPED:'Cal equipar aquesta arma.',TOO_FAR:'Acosta’t més al vehicle o a la porta.',FULL:'El vehicle és ple.',MOVING:'Atura el vehicle abans de pujar o baixar.',EXIT_BLOCKED:'No hi ha espai per baixar.',BLOCKED:'Hi ha un obstacle al pas.',SAVE_FAILED:'El servidor no ha pogut guardar l’acció. Torna-ho a provar.'};if(labels[result.code]){msg=labels[result.code];msgT=3;}}},
    onRoom(){},onError(error){msg=error||'La sessió s’ha interromput.';msgT=12;session.preparing=true;},
    onMission(data){if(data.meta.fingerprint!==session.fingerprint){session.preparing=true;msg='El món de la sala no coincideix. Recarregueu tots dos.';msgT=30;return;}session.meta=data.meta;session.self=data.self;session.state=data.state;try{session.prediction?.receive(data.state,data.self);}
@@ -502,7 +502,17 @@ function updateNativeCoopFrame(dt){
  if(scopeActive){scopeYaw+=((K.KeyA?1:0)-(K.KeyD?1:0)-joystick.state.x)*dt*.38;scopePitch=Math.max(-.65,Math.min(.65,scopePitch+((K.KeyW?1:0)-(K.KeyS?1:0)-joystick.state.y)*dt*.30));}
  updateDoors(dt);palmVisualTick-=dt;if(palmVisualTick<=0){palmVisualTick=scopeActive?.10:.16;PM.update?.(P.x,P.z,!!scopeActive,palmsDisabled,currentSniperFocus());updateShadowCasters();}worldVisualTick-=dt;if(worldVisualTick<=0){worldVisualTick=.2;updateDistanceVisibility();}updatePlayerCamera(dt);updateBazookaReticle(dt);updateGrenadeCharge(dt);updatePlayerHUD(dt);updDeb(dt);updFx(dt);if(state.phase==='won'&&!victoryCinematic){const general=[...s.enemies.values()].find(e=>e.t==='general');if(general)startVictoryCinematic(general);}if(state.status==='paused'){msg='Sessió pausada · esperant el company.';msgT=1;}msgT=Math.max(0,msgT-dt);
 }
-window.HUNTER_NATIVE_COOP=Object.freeze({start:startNativeCoop,active:()=>!!nativeCoopSession});
+window.HUNTER_NATIVE_COOP=Object.freeze({start:startNativeCoop,active:()=>!!nativeCoopSession,
+ connected:()=>!!nativeCoopSession?.channel?.isOpen?.(),
+ reconnect:()=>{
+   const session=nativeCoopSession;
+   if(!session||session.gameOver)return false;
+   session.connectionStatus='connecting';
+   session.preparing=true;
+   session.channel?.reconnect?.();
+   return true;
+ }});
+
 
 function nativeReviveAction(){const s=nativeCoopSession;if(!s?.state||cv||hp<=0||swimming||playerFall||!inv.med)return null;const other=s.state.players.find(p=>p.id!==s.self&&p.hp<=0&&Math.hypot(P.x-p.x,P.z-p.z)<=3.2&&Math.abs(P.y-p.y)<2);return other?{kind:'revive',label:'Mantén E per reanimar el company',icon:'✋'}:null;}
 function stopNativeCoop(){document.getElementById('hunter-coop-game-over')?.remove();const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();cancelGrenadeCharge();for(const key of Object.keys(K))K[key]=0;for(const mesh of s.projectiles.values())world?.remove(mesh);for(const mesh of s.grenades.values()){world?.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);}s.projectiles.clear();s.grenades.clear();s.projectileVisual?.reset();movementFx.reset();if(s.previousCheats)Object.assign(cheats,s.previousCheats);for(const model of s.remotes.values()){if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;window.HUNTER_COOP_NETWORK_STATS=null;}
