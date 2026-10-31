@@ -2395,6 +2395,9 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyF'&&started&&!paused&&!over&&grenadeEquipped&&!cv){
     beginGrenadeCharge();K.KeyF=0;return;
   }
+  if(e.code==='KeyF'&&nativeCoopSession&&scopeActive&&sniperEquipped&&started&&!paused&&!over){
+    nativeCoopCommand('fire');nativeCoopSession.fireHeld=true;
+  }
   act(e.code);if(started&&!paused&&!over)K[e.code]=1;
 });
 addEventListener('keyup',e=>{if(e.code==='KeyF')releaseGrenadeCharge();K[e.code]=0});
@@ -2404,6 +2407,11 @@ for(const b of document.querySelectorAll('[data-k]')){
     e.preventDefault();b.setPointerCapture(e.pointerId);
     if(c==='KeyF'&&started&&!paused&&!over&&grenadeEquipped&&!cv){
       beginGrenadeCharge();K.KeyF=0;b.classList.add('held');return;
+    }
+    if(c==='KeyF'&&nativeCoopSession&&scopeActive&&sniperEquipped&&started&&!paused&&!over){
+      // La mira en zoom consumeix l'event del botó directament: un clic,
+      // un tret, també si el pointerup arriba abans del següent fotograma.
+      nativeCoopCommand('fire');nativeCoopSession.fireHeld=true;
     }
     act(c);
     if(started&&!paused&&!over){K[c]=1;b.classList.add('held')}
