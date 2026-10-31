@@ -7,6 +7,7 @@ import {createCanonicalWater} from './canonical-water.mjs';
 import {createNativeVehicleCandidateIndex} from './native-coop-vehicle-candidates.mjs';
 import {createNativeWallCandidateIndex} from './native-coop-wall-candidates.mjs';
 import {createNativeLocalPresentation} from './native-coop-local-presentation.mjs';
+import {moveCoopCheatFly} from './coop-cheats.mjs';
 // Only local locomotion is predicted. Damage, pickups, combat and world mutations
 // remain authoritative. Reconciliation replays unacknowledged shared-rule steps.
 export function createNativePrediction(geometry){
@@ -39,7 +40,14 @@ export function createNativePrediction(geometry){
   world.setPalmHealth(next.palmHealth||[]);lastPalmHealth=next.palmHealth;
   worldKey=key;
  }
- function resetSimulation(next){sim=createPlayerSimulation({epoch:next.missionId,limit:world.limit,world,vertical:{surfaceAt:water.surfaceAt},checkpoint:{protocol:1,epoch:next.missionId,tick:next.tick,players:next.players}});}
+ function resetSimulation(next){sim=createPlayerSimulation({
+   epoch:next.missionId,limit:world.limit,world,
+   vertical:{surfaceAt:water.surfaceAt},
+   checkpoint:{protocol:1,epoch:next.missionId,tick:next.tick,players:next.players},
+   immune:()=>!!next.cheats?.immune,
+   movement:(actor,input)=>next.cheats?.fly?
+     moveCoopCheatFly(actor,input,{limit:world.limit,heightAt:(x,z)=>world.heightAt(x,z)}):null
+  });}
  // Única física de vehicle compartida per al pas real i per al
  // pas visual temporal. La projecció temporal usa una CÒPIA i mai
  // altera el vehicle físic que verifica les col·lisions.
@@ -84,6 +92,9 @@ export function createNativePrediction(geometry){
    }else{
     const snap=sim.snapshot(),probe=createPlayerSimulation({epoch:state.missionId,
       limit:world.limit,world,vertical:{surfaceAt:water.surfaceAt},
+      immune:()=>!!state.cheats?.immune,
+      movement:(actor,input)=>state.cheats?.fly?
+        moveCoopCheatFly(actor,input,{limit:world.limit,heightAt:(x,z)=>world.heightAt(x,z)}):null,
       checkpoint:{protocol:1,epoch:state.missionId,tick:snap.tick,players:snap.players}});
     const actor=snap.players.find(p=>p.id===self);
     probe.accept(self,{protocol:1,epoch:state.missionId,
