@@ -57,7 +57,7 @@ async function startNativeCoop(room){
    onRoom(){},onError(error){msg=error||'La sessió s’ha interromput.';msgT=12;session.preparing=true;},
    onMission(data){if(data.meta.fingerprint!==session.fingerprint){session.preparing=true;msg='El món de la sala no coincideix. Recarregueu tots dos.';msgT=30;return;}session.meta=data.meta;session.self=data.self;session.state=data.state;try{session.prediction?.receive(data.state,data.self);}
      catch(error){reportNativeCoopVisualError(error,'predicció inicial');session.prediction=null;}
-     session.seenEffects=new Set(data.state.combat.effects.map(e=>e.id));session.preparing=false;paused=false;ui.hide();resetCameraState();},
+     session.seenEffects=new Set(data.state.combat.effects.map(e=>e.id));session.projectileVisual?.prime(data.state.combat.effects);session.preparing=false;paused=false;ui.hide();resetCameraState();},
    onState(state){session.state=state;
       try{session.prediction?.receive(state,session.self);}
       catch(error){reportNativeCoopVisualError(error,'predicció de snapshot');session.prediction=null;}
@@ -290,27 +290,35 @@ function updateNativeCoopFrame(dt){
    animateEnemyInfantry(e,walking,dt);
  }
  if(projecting){
- if(s.appliedProjectiles!==state.combat.projectiles){
- s.appliedProjectiles=state.combat.projectiles;
- // Evitam Sets i vectors temporals per cada impacte o estat rebut.
- s.nativeProjectileIds??=new Set();s.nativeProjectileIds.clear();
+   s.projectileVisual?.receive(state.combat.projectiles,s.self,
+     nativeCoopProjectileMuzzle,state.combat.effects,state.tick);
+   // Els trets curts confirmats es poden visualitzar encara que el
+   // projectil hagi desaparegut de la fila autoritativa.
+   for(const [id,mesh] of s.projectiles)
+     if(!s.projectileVisual?.has(id)){
+       world.remove(mesh);s.projectiles.delete(id);
+     }
+ }
  s.nativeProjectileDirection??=new THREE.Vector3();
- for(const row of state.combat.projectiles){
-   s.nativeProjectileIds.add(row.id);
-   let mesh=s.projectiles.get(row.id);
-   if(!mesh){mesh=new THREE.Mesh(row.splash?gHeavy:gLight,row.splash?mS:mW);mesh.scale.setScalar(row.splash?1:SMALL_ARMS_SCALE);world.add(mesh);s.projectiles.set(row.id,mesh);}
-   mesh.position.set(row.x,row.y,row.z);
-   const direction=s.nativeProjectileDirection.set(row.vx,row.vy,row.vz);
-   if(direction.lengthSq())mesh.quaternion.setFromUnitVectors(heavyForward,direction.normalize());
- }
- for(const [id,mesh] of s.projectiles)if(!s.nativeProjectileIds.has(id)){world.remove(mesh);s.projectiles.delete(id);}
- s.projectileVisual?.receive(state.combat.projectiles,s.self,nativeCoopProjectileMuzzle);
- }
- // Un tret balístic no pot quedar congelat entre paquets de 10 Hz:
- // es mou a cada frame; la física i els impactes segueixen al Worker.
- s.projectileVisual?.advance(!paused&&!document.hidden&&state.status==='running'?dt:0,
-   (id,pose)=>{const mesh=s.projectiles.get(id);
-     if(mesh)mesh.position.set(pose.x,pose.y,pose.z);});
+ s.projectileVisual?.advance(
+   !paused&&!document.hidden&&state.status==='running'?dt:0,
+   (id,pose,row)=>{
+     let mesh=s.projectiles.get(id);
+     if(!mesh){
+       const heavy=!!row.splash;
+       mesh=new THREE.Mesh(heavy?gHeavy:gLight,heavy?mS:mW);
+       mesh.scale.setScalar(heavy?1:SMALL_ARMS_SCALE);
+       world.add(mesh);s.projectiles.set(id,mesh);
+       const dir=s.nativeProjectileDirection.set(row.vx,row.vy,row.vz);
+       if(dir.lengthSq())mesh.quaternion.setFromUnitVectors(
+         heavyForward,dir.normalize());
+     }
+     mesh.position.set(pose.x,pose.y,pose.z);
+   },
+   id=>{const mesh=s.projectiles.get(id);
+     if(mesh){world.remove(mesh);s.projectiles.delete(id);}
+   });
+ if(projecting){
  if(s.appliedGrenades!==state.combat.grenades){
  s.appliedGrenades=state.combat.grenades;
  s.nativeGrenadeIds??=new Set();s.nativeGrenadeIds.clear();
