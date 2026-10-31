@@ -99,6 +99,10 @@ function nativeCoopCommand(type,payload={}){
      updateBazookaReticle(.1);
      if(bazookaReticleMode==='bazooka'&&bazookaReticleHasHit)
        aim={x:bazookaReticleWorld.x,y:bazookaReticleWorld.y,z:bazookaReticleWorld.z};
+     else{
+       const fx=-Math.sin(P.hd),fz=-Math.cos(P.hd);
+       aim={x:P.x+fx*150,y:P.y+1.9,z:P.z+fz*150};
+     }
    }else if(!cv&&weapon==='sniper'&&scopeActive){
      const focus=currentSniperFocus();
      if(focus){const point=sniperReticlePoint(focus);aim={x:point.x,y:point.y,z:point.z};}
