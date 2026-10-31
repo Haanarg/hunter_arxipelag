@@ -1,5 +1,20 @@
 # Reconstrucció del multijugador sobre el joc original
 
+## Onzena optimització — índexs espacials a la predicció del conductor (0.6.62)
+
+**Problema observat al codi:** el pilot local executa la seva física i possibles replays a 30 Hz. Cada subpas recorria la flota completa de vehicles (p. ex. 374) amb un `Math.hypot` i recalculava dimensions, i també filtrava tots els murs de la geometria. El cost creixia amb la mida del mapa, encara que el vehicle estigués lluny de gairebé tots els objectes.
+
+**Solució implementada sense modificar l'autoritat:**
+- `src/native-coop-vehicle-candidates.mjs`: índex espacial de centres de vehicle en cel·les de 128 m, amb radi màxim conservador i filtre final de distància **idèntic** al que hi havia. Retorna els candidats amb el mateix ordre original; no es pot canviar quin vehicle bloqueja abans. Es crea només per al conductor i es reutilitza quan el següent snapshot conserva la mateixa referència de la flota.
+- `src/native-coop-wall-candidates.mjs`: índex dels AABB de murs, construït només quan es reconstrueix la geometria. Els murs molt extensos es mantenen en un conjunt de reserva. Davant de consultes de radi enorme es recorre la llista completa, conservant exactament la condició i l'ordre anteriors.
+- `src/native-coop-prediction.mjs`: els dos índexs alimenten `firstVehicleContact` (sense tocar aquesta funció ni les col·lisions). Reutilitza límits del mapa, radi per tipus de vehicle i una pose anterior compacta `x/y/z/hd`, en lloc de copiar tots els camps del vehicle cada 1/30 s.
+
+**Regressions pures executades:** `tests/native-coop-vehicle-candidates.mjs`: 16 tipus, 374 vehicles i 2.125 consultes; `tests/native-coop-wall-candidates.mjs`: 1.352 murs, murs extensos i 2.725 consultes. Comparacions exactes de llistes i ordre amb el filtratge anterior. `tests/native-coop-prediction-cache.mjs` valida caché, recompilació en canviar geometria i absència d'índex en vianants/passatge.
+
+**Benchmarks sintètics orientatius** amb 900 consultes repetides 5 vegades, 374 vehicles i 1.350 murs: filtratge de vehicles 300 ms anterior / 7 ms indexat, murs 332 ms anterior / 8 ms indexat, amb el mateix recompte de candidats. No inclou el cost de construir els índexs, altra física, GPU, xarxa o Cloudflare; no es pot inferir que els FPS o la latència millorin en aquesta proporció.
+
+**Desplegament:** codi i versió 0.6.62 al repositori `main`, runtime amb hash nou i cachés renovades. GitHub Actions continua només manual; Cloudflare i dos navegadors encara no verificats. Cal executar les suites Node completes quan sigui possible i fer una prova en partida per mesurar l'efecte real.
+
 ## Desena optimització — soldats visuals i actualització selectiva sense Actions (0.6.61)
 
 **Canvis implementats a `main`:**
