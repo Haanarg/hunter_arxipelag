@@ -33,6 +33,15 @@ export function segmentAabbT(x0,y0,z0,x1,y1,z1,minX,maxX,minY,maxY,minZ,maxZ){
 }
 
 export function explosionDamage(dmg,distance,r){return distance>=r?0:Math.max(1,Math.ceil(dmg*(1-distance/r)))}
+// A blast underneath a watchtower reaches its load-bearing legs before
+// reaching the cabin. Never require a clear ray through the tower's own
+// supports to its elevated gun box. Range remains a spherical 3-D distance.
+export function towerExplosionAim(tower,origin,baseY=tower.y??0){
+ const horizontal=Math.hypot(tower.x-origin.x,tower.z-origin.z);
+ return {x:tower.x,y:horizontal<=5&&origin.y<baseY+8?
+     baseY+2.2:baseY+9.4,z:tower.z};
+}
+
 const RUNOVER_MIN_SPEED=6,RUNOVER_MAX_DAMAGE=10;
 
 export const ASSAULT_BURST_SPACING=.075;
