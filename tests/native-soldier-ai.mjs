@@ -13,7 +13,9 @@ function setup({elite=false,rocket=false,difficulty=1,basement=false}={}){
 let f=setup();f.step(6);assert.equal(f.shots.length,0,'original recognition warning precedes fire');let guard=f.step();assert.equal(f.shots.length,1);assert.equal(guard.focus,'a','original sight sees standing player at 60 metres');assert.equal(guard.observations.b.recognition,0,'hidden partner has independent recognition');
 f.actors[0].hp=0;f.actors[1].z=-60;f.step(3);assert.equal(f.shots.length,1,'recognition cannot transfer to another player');assert.equal(f.combat.snapshot().targets[0].observations.b.confirmed,false);f.step(6);assert.equal(f.combat.snapshot().targets[0].focus,'b');
 f=setup();f.actors[0].crouched=true;f.step(40);assert.equal(f.shots.length,0,'crouch reduces original sight range');f=setup();f.inventory.get('a').disguised=true;f.step(40);assert.equal(f.shots.length,0,'disguise uses original visibility multiplier');
-f.fleet.push({id:'occupied',t:'cotxe',x:0,y:0,z:-100,seats:['a']});f.actors[0].z=-100;f.actors[0].crouched=true;f.step(9);assert.equal(f.shots.length,1,'vehicle negates disguise/crouch with original 115m sight');
+// La nova navegació patrulla activament: el cas de percepció en vehicle
+// ha de començar amb una guàrdia fresca, no la que ha voltat 40 ticks.
+f=setup();f.fleet.push({id:'occupied',t:'cotxe',x:0,y:0,z:-100,seats:['a']});f.actors[0].z=-100;f.actors[0].crouched=true;f.step(9);assert.equal(f.shots.length,1,'vehicle negates disguise/crouch with original 115m sight');
 f=setup();f.fleet.push({id:'cover',t:'cotxe',x:0,y:0,z:-20,seats:[]});f.step(12);assert.equal(f.shots.length,0,'parked vehicle blocks soldier line of sight');
 f=setup({elite:true,basement:true});f.actors[0].x=Math.sin(70*Math.PI/180)*20;f.actors[0].z=-Math.cos(70*Math.PI/180)*20;f.step(9);assert.ok(f.shots.length>0,'original elite peripheral awareness works on same basement level');
 f=setup({elite:true,basement:true});f.actors[0].y=0;f.step(15);assert.equal(f.shots.length,0,'basement soldiers cannot acquire player on another level');
