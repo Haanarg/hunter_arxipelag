@@ -272,7 +272,6 @@ function updateNativeCoopFrame(dt){
  const fxContext={playerX:P.x,playerZ:P.z,playerVehicle:cv,
    terrainAt:hAt,waterAt:(x,z)=>wy(x,z,elapsed)};
  for(const v of V)if(!v.destroyed)movementFx.vehicle(v,dt,fxContext);
- movementFx.update(dt,cam);
  if(cv||swimming)playerCrouched=false;if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;animPl(hp<=0?0:cv?0:input.forward,dt,input.run&&hp>0,input.strafe);poseRider(cv,dt);
  pl.rotation.z=hp<=0&&!cv?-Math.PI/2:0;if(hp<=0&&!cv)pl.position.y+=.5;
  // El crol inclina el model i enfonsa el pit si només es pren P.y.
@@ -351,6 +350,7 @@ function updateNativeCoopFrame(dt){
        // El canvi de moviment és una propietat visual, no una segona IA.
        e.nativeMoving=Math.hypot(row.x-e.x,row.z-e.z)>.001;
        e.x=row.x;e.z=row.z;e.hp=row.hp;e.hd=row.heading||0;
+       e.nativePatrolFocus=row.patrolFocus||null;e.nativePatrolSpeed=row.speed||0;
        e.canSee=!!row.canSee;
        e.aiMode=row.state==='attack'?'combat':row.state;
        // El model manté la pose temporal si aquest enemic es mou.
@@ -382,7 +382,30 @@ function updateNativeCoopFrame(dt){
      walking=Math.hypot(pose.x-beforeX,pose.z-beforeZ)>Math.max(.001,dt*.12);
    }
    animateEnemyInfantry(e,walking,dt);
+   // Les patrulleres hereten el balanceig i les armes articulades del
+   // mateix model individual, però mai no disparen des del client.
+   if(e.t==='patrulla_marina'){
+     const target=s.state?.players.find(p=>p.id===e.nativePatrolFocus&&p.hp>0);
+     const weapons=e.o.userData.marineWeapons;
+     if(target&&weapons){
+       const aim=new THREE.Vector3(target.x,target.y+1.6,target.z);
+       marineAimGun(e,weapons.machineGun,aim,dt);
+       marineAimGun(e,weapons.rockets,aim,dt);
+     }
+     const roll=Math.sin(elapsed*2+e.o.position.x*.03+e.o.position.z*.024);
+     e.o.rotation.x=roll*.028;e.o.rotation.z=-(e.nativePatrolSpeed||0)*.0015+roll*.024;
+   }
+   if(ENEMY_TRAIL_TYPES.has(e.t)){
+     // Mostreig de la pose suau del vaixell/jeep, no de l'últim paquet
+     // de 10 Hz. El rastre manté memòria entre fotogrames.
+     const trail=e.nativeFxRow??={t:e.t,x:e.o.position.x,z:e.o.position.z,
+       hd:e.o.rotation.y,v:0,destroyed:false};
+     trail.x=e.o.position.x;trail.z=e.o.position.z;trail.hd=e.o.rotation.y;
+     trail.destroyed=e.hp<=0;
+     movementFx.vehicle(trail,dt,{...fxContext,enemy:true});
+   }
  }
+ movementFx.update(dt,cam);
  if(projecting){
    s.projectileVisual?.receive(state.combat.projectiles,s.self,
      nativeCoopProjectileMuzzle,state.combat.effects,state.tick);
