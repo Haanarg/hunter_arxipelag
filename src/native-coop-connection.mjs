@@ -83,5 +83,8 @@ export function createNativeCoopConnection({room,getInput,onRoom,onMission,onSta
   socket.send({type:'native-ready',protocol:1,revision:room.revision,fingerprint:p.fingerprint});
  }
  function command(type,extra){if(!epoch||state?.status!=='running')return false;return socket.send({type,protocol:1,epoch,commandId:crypto.randomUUID(),...extra});}
- return {start:socket.start,stop:socket.stop,stats,noteFrame,prepare(p){prepared=p;if(readyRoom)publish(p);},combat:(weapon,power,seconds,aim)=>command('combat',{weapon,...(weapon==='grenade'&&Number.isFinite(power)?{power}:{} ),...(weapon==='c4'&&Number.isInteger(seconds)?{seconds}:{}),...(['bazooka','sniper'].includes(weapon)&&aim&&[aim.x,aim.y,aim.z].every(Number.isFinite)?{aim:{x:aim.x,y:aim.y,z:aim.z}}:{})}),vehicle:(vehicleId,operation)=>command('vehicle',{vehicleId,operation}),door:(doorId,open)=>command('door',{doorId,open}),inventory:(operation,target)=>command('inventory',{operation,target}),cheat:(cheat,enabled)=>command('cheat',{cheat,enabled})};
+ return {start:socket.start,stop:socket.stop,stats,noteFrame,
+   isOpen:socket.isOpen,
+   reconnect(){socket.stop();readyRoom=false;published=false;socket.start();},
+   prepare(p){prepared=p;if(readyRoom)publish(p);},combat:(weapon,power,seconds,aim)=>command('combat',{weapon,...(weapon==='grenade'&&Number.isFinite(power)?{power}:{} ),...(weapon==='c4'&&Number.isInteger(seconds)?{seconds}:{}),...(['bazooka','sniper'].includes(weapon)&&aim&&[aim.x,aim.y,aim.z].every(Number.isFinite)?{aim:{x:aim.x,y:aim.y,z:aim.z}}:{})}),vehicle:(vehicleId,operation)=>command('vehicle',{vehicleId,operation}),door:(doorId,open)=>command('door',{doorId,open}),inventory:(operation,target)=>command('inventory',{operation,target}),cheat:(cheat,enabled)=>command('cheat',{cheat,enabled})};
 }
