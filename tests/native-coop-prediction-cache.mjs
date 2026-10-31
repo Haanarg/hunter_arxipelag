@@ -8,10 +8,10 @@ import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../src/native-coop-prediction.mjs',import.meta.url),'utf8')
  .replace(/^import[^\n]*\n/gm,'')
  .replace('export function createNativePrediction','function createNativePrediction');
-const calls={worlds:0,palms:0,waters:0,steps:0,indices:0,queries:0};
+const calls={worlds:0,palms:0,waters:0,steps:0,indices:0,queries:0,wallIndices:0,wallQueries:0};
 let currentWater=null;
 const factory=new Function('stepRangeVehicle','firstVehicleContact','vehicleSpecs',
- 'createPlayerSimulation','createStaticWorldAdapter','createCanonicalWater','createNativeVehicleCandidateIndex','structuredClone',
+ 'createPlayerSimulation','createStaticWorldAdapter','createCanonicalWater','createNativeVehicleCandidateIndex','createNativeWallCandidateIndex','structuredClone',
  source+'\nreturn createNativePrediction;')(
  (vehicle,input,dt,tick,world,water)=>{
   calls.steps++;
@@ -25,6 +25,7 @@ const factory=new Function('stepRangeVehicle','firstVehicleContact','vehicleSpec
   setPalmHealth(){calls.palms++}};},
  ()=>{calls.waters++;return currentWater={surfaceAt:()=>0}},
  vehicles=>{calls.indices++;return {nearby(cx,cz,reach){calls.queries++;return vehicles.filter(v=>Math.hypot(v.x-cx,v.z-cz)<=reach+Math.hypot(2,4)/2);}}},
+ walls=>{calls.wallIndices++;return {nearby(cx,cz,reach){calls.wallQueries++;return walls.filter(w=>w.x0<=cx+reach&&w.x1>=cx-reach&&w.z0<=cz+reach&&w.z1>=cz-reach);}}},
  structuredClone
 );
 const state={missionId:'m',tick:0,phase:'relay',status:'running',
@@ -43,6 +44,8 @@ assert.equal(calls.waters,1,'No crear aigua per cada subpas');
 assert.equal(calls.steps,2);
 assert.equal(calls.indices,1,'Un índex de vehicles per snapshot, no per pas');
 assert.equal(calls.queries,2,'Les consultes de col·lisió reutilitzen l’índex');
+assert.equal(calls.wallIndices,1,'Un índex de murs per geometria');
+assert.equal(calls.wallQueries,2,'Cada subpas només consulta els murs propers');
 prediction.receive({...state,tick:3},'a');
 assert.equal(calls.indices,1,'Delta sense canvis de flota reutilitza l’índex');
 assert.equal(calls.palms,1,'No aplicar palma intacta en cada delta');
@@ -50,6 +53,7 @@ prediction.receive({...state,tick:6,palmHealth:[[0,20]]},'a');
 assert.equal(calls.indices,1,'Només canviar palmeres no reindexa la flota');
 assert.equal(calls.palms,2,'Salut modificada aplica estat nou');
 prediction.receive({...state,tick:9,doorRevision:1},'a');
+assert.equal(calls.wallIndices,2,'Canvi de geometria invalida l’índex de murs');
 assert.deepEqual([calls.worlds,calls.waters],[2,2],
  'Canvi de geometria obliga a refer superfície canònica');
 assert.equal(calls.indices,1,'Canvi de murs no reindexa vehicles no modificats');
