@@ -166,6 +166,8 @@ function applyOperationSnapshot(snapshot){
     }
     if(record.kind==='vehicles')entity.carrier=record.carrierId?operationRegistry.byId.get(record.carrierId):null;
     if(record.kind==='walls'&&!record.active){
+      if(entity.civicFurniture)collapseCivicProp(entity,false);
+      if(entity.porchSupports)collapsePorch(entity.owner,false);
       for(const mesh of [entity.m,...(entity.parts||[]),...(entity.timberTrim||[])])if(mesh)mesh.visible=false;
       if(entity.owner?.door===entity)entity.owner.door=null;
     }
