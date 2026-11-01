@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Quatre propostes arcade d'explosions 3D de granades i C4 per a Hunter: Arxipèlag. Transparències, formes i partícules comparables en Three.js.">
+<title>Hunter: Arxipèlag · 4 explosions arcade</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1117;--panel:#17232b;--border:#394953;--muted:#a6bac1;--bright:#fff1d7;--accent:#ffb752}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:#edf4f2;font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input,a{font:inherit}button{cursor:pointer}button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #ffd082;outline-offset:3px}
+#fxCanvas{position:fixed;inset:0;width:100vw;height:100vh;display:block;pointer-events:none;z-index:0}
+.shell{position:relative;z-index:1;min-height:100vh;padding:18px clamp(10px,2.5vw,36px) 25px;pointer-events:none}
+.shell>*{pointer-events:auto}
+header{display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:14px;margin-bottom:17px}
+.eyebrow{font-size:10px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
+h1{font-size:clamp(25px,3.4vw,44px);line-height:1.05;letter-spacing:-.042em;margin:8px 0 10px}
+h1 em{font-style:normal;color:var(--accent)}
+.intro{color:#bbcbd0;max-width:820px;line-height:1.65;margin:0;font-size:13px}
+.nav{display:flex;gap:7px;flex-wrap:wrap}
+.nav a{border:1px solid #53646c;color:#e6eeee;text-decoration:none;padding:9px 11px;border-radius:8px;background:#1d2a33;font-size:12px;font-weight:700}
+.nav a:hover{background:#304552}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 280px;align-items:start;gap:15px}
+.topline{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:0 2px 10px}
+.topline strong{font-size:11px;letter-spacing:.14em;color:#bfd0d6}
+.topline small{color:#8fa3aa}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(290px,39vh));gap:12px}
+.card{position:relative;overflow:hidden;border:1px solid #51616b90;border-radius:15px;min-width:0;background:linear-gradient(180deg,#5d86941a 10%,#0b111612 60%,#08101573 100%);cursor:grab;touch-action:pan-y;box-shadow:inset 0 1px #c7e8f021}
+.card.dragging{cursor:grabbing}
+.card:before{content:"";pointer-events:none;position:absolute;inset:0;background:linear-gradient(180deg,#101a26a3,transparent 28%,transparent 54%,#101923b8);z-index:0}
+.titlebar{position:absolute;left:13px;top:13px;z-index:2;display:flex;align-items:start;gap:9px;pointer-events:none}
+.num{display:grid;place-items:center;background:#ffb852;color:#21180e;border-radius:7px;width:27px;height:27px;flex:none;font-size:12px;font-weight:900}
+.titlebar h2{margin:0;font-size:15px;line-height:1.25;letter-spacing:-.02em}
+.titlebar p{margin:3px 0 0;font-size:11px;color:#e3e8e0}
+.alpha{position:absolute;right:11px;top:13px;z-index:2;font:800 10px ui-monospace,monospace;color:#ffdfaa;border:1px solid #f6c98077;background:#182127b8;border-radius:6px;padding:5px 8px}
+.footerbar{position:absolute;bottom:12px;left:12px;right:12px;z-index:2;display:flex;align-items:end;justify-content:space-between;gap:9px}
+.detail{max-width:75%;font-size:11px;color:#e2ebe7;text-shadow:0 1px 2px #0008}
+.detail span{display:block;color:#ffd59b;font:800 10px ui-monospace,monospace;margin-top:3px}
+.replay{flex:none;border:1px solid #ffc470;background:#ffc470;color:#27190e;border-radius:8px;padding:8px 11px;font-size:12px;font-weight:900;box-shadow:0 3px 13px #0005}
+.replay:hover,.primary:hover{background:#ffe0a4}
+.panel{border:1px solid #3f515b;background:#15232cd9;border-radius:14px;box-shadow:0 9px 26px #0004;overflow:hidden}
+.panelhead{padding:17px 17px 13px;border-bottom:1px solid #30454e}
+.panelhead h2{margin:0 0 4px;font-size:19px;letter-spacing:-.025em}
+.panelhead p{margin:0;color:var(--muted);font-size:12px}
+.section{padding:15px 16px;border-bottom:1px solid #30454e;display:grid;gap:10px}
+.section:last-child{border-bottom:0}
+.caption{font-size:10px;text-transform:uppercase;letter-spacing:.12em;font-weight:900;color:#b9cbd2}
+.segment{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.segment button,.neutral{padding:10px 8px;background:#263943;color:#e6f1ef;border:1px solid #506772;border-radius:8px;font-size:12px;font-weight:800}
+.segment button[aria-pressed=true]{background:#ffc16c;color:#21170d;border-color:#ffc16c}
+.primary{padding:11px 10px;background:#ffc16c;color:#241709;border:1px solid #ffc16c;border-radius:9px;font-size:13px;font-weight:900}
+.neutral:hover{background:#354b57}
+.row{display:flex;gap:8px;align-items:center}
+.row > button{flex:1}
+.slider{display:grid;gap:7px}
+.slider label{display:flex;justify-content:space-between;align-items:center;gap:8px;color:#ccdbe0;font-size:12px;font-weight:700}
+output{font:800 12px ui-monospace,Consolas,monospace;color:#ffd18c}
+input[type=range]{width:100%;accent-color:#ffc16c;cursor:pointer}
+.range{display:flex;justify-content:space-between;color:#8197a0;font-size:10px;margin-top:-6px}
+.check{display:flex;align-items:start;gap:9px;cursor:pointer;color:#cbdbe0;font-size:12px}
+.check input{accent-color:#ffc16c;width:16px;height:16px;flex:none;margin:1px 0 0}
+.legend{display:grid;gap:7px;font-size:11px;color:#b8c9cb}
+.legend b{color:#fff1d7}
+.legend .swatches{display:flex;gap:5px}
+.swatches i{display:block;width:23px;height:15px;border-radius:4px;border:1px solid #ffffff36}
+.note{margin:0;font-size:11px;color:#92aab1;line-height:1.5}
+#warning{display:none;margin-top:12px;padding:11px;background:#443025;border:1px solid #d9a56c;color:#ffdfa6;border-radius:8px}
+.bottom{font-size:11px;color:#91a8ae;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:13px}
+.bottom b{color:#e9c38c}
+@media(max-width:1080px){.main{grid-template-columns:1fr}.panel{display:grid;grid-template-columns:190px 1fr 1fr}.panelhead{border-bottom:0}.section{border-bottom:0;border-left:1px solid #30454e}.grid{grid-template-rows:repeat(2,minmax(290px,40vh))}}
+@media(max-width:740px){.shell{padding:14px 10px 22px}.grid{grid-template-columns:1fr;grid-template-rows:repeat(4,360px)}.panel{display:block}.panelhead{border-bottom:1px solid #30454e}.section{border-left:0;border-bottom:1px solid #30454e}.intro{font-size:12px}.alpha{font-size:9px}.grid{gap:10px}.nav a{font-size:11px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<canvas id="fxCanvas" aria-hidden="true"></canvas>
+<div class="shell">
+<header>
+ <div>
+  <div class="eyebrow">Hunter: Arxipèlag / Laboratori FX / Propostes arcade</div>
+  <h1>Quatre maneres de <em>fer-ho explotar.</em></h1>
+  <p class="intro">Comparació en Three.js de quatre estils arcade originals, amb la mateixa perspectiva i el mateix terreny. Canvien la <strong>transparència</strong>, la <strong>silueta</strong> i la <strong>quantitat i trajectòria de les partícules</strong>. Pots alternar entre granada i C4 sense tocar el dany real del joc.</p>
+ </div>
+ <nav class="nav" aria-label="Navegació">
+  <a href="explosions-proves.html">← Explosions anteriors</a>
+  <a href="proves.html">Models 3D</a>
+  <a href="index.html">Jugar</a>
+ </nav>
+</header>
+<main class="main">
+ <section aria-label="Comparador dels quatre estils">
+  <div class="topline"><strong>PROPOSTES EN TEMPS REAL</strong><small>Arrossega cada escena per girar la càmera · Roda per fer zoom</small></div>
+  <div class="grid">
+   <article class="card" data-style="0"><div class="titlebar"><span class="num">01</span><div><h2>Pop geomètric</h2><p>Puntes anguloses · impacte immediat</p></div></div><span class="alpha">OPACITAT 95%</span><div class="footerbar"><div class="detail">Foc en poliedres durs, punxes i poca boira<span id="stat0">FOC / PUNTES / ESPURNES</span></div><button class="replay" type="button" data-replay="0">↻ Detonar</button></div></article>
+   <article class="card" data-style="1"><div class="titlebar"><span class="num">02</span><div><h2>Bombolles de foc</h2><p>Volums arrodonits · capes translúcides</p></div></div><span class="alpha">OPACITAT 72%</span><div class="footerbar"><div class="detail">Nucli globular que s'infla i es dissol<span id="stat1">ESFERES / FUM / BRILLO</span></div><button class="replay" type="button" data-replay="1">↻ Detonar</button></div></article>
+   <article class="card" data-style="2"><div class="titlebar"><span class="num">03</span><div><h2>Ona energètica</h2><p>Esferes transparents · anells expansius</p></div></div><span class="alpha">OPACITAT 40%</span><div class="footerbar"><div class="detail">L'explosió creix com una ona lluminosa<span id="stat2">ONES / ANELLS / FRAGMENTS</span></div><button class="replay" type="button" data-replay="2">↻ Detonar</button></div></article>
+   <article class="card" data-style="3"><div class="titlebar"><span class="num">04</span><div><h2>Pluja de fragments</h2><p>Flama petita · metralla i traçadores</p></div></div><span class="alpha">OPACITAT 80%</span><div class="footerbar"><div class="detail">Espurnes radials, trossos i pols baixa<span id="stat3">ESPURNES / METRALLA / POLS</span></div><button class="replay" type="button" data-replay="3">↻ Detonar</button></div></article>
+  </div>
+  <div id="warning" role="alert"></div>
+  <div class="bottom"><span><b>Només visual:</b> no modifica la física, els radis de dany ni el cooperatiu.</span><span>4 escenes · 1 renderer · partícules instanciades</span></div>
+ </section>
+ <aside class="panel" aria-label="Controls de les explosions">
+  <div class="panelhead"><h2>Laboratori arcade</h2><p>Compara les quatre explosions a la vegada.</p></div>
+  <div class="section">
+   <span class="caption">Què explota?</span>
+   <div class="segment"><button id="grenade" type="button" aria-pressed="true">Granada</button><button id="c4" type="button" aria-pressed="false">C4</button></div>
+   <p class="note" id="modeDetail">Granada: esclat compacte, ràpid, amb poca durada.</p>
+   <button class="primary" type="button" id="fireAll">✹ Detonar les quatre</button>
+   <div class="row"><button class="neutral" type="button" id="pause">⏸ Pausa</button><button class="neutral" type="button" id="half">½ Càmera lenta</button></div>
+   <label class="check"><input type="checkbox" id="repeat" checked> Repetició automàtica sincronitzada</label>
+  </div>
+  <div class="section">
+   <span class="caption">Experimenta amb el resultat</span>
+   <div class="slider"><label for="opacity">Transparència global <output id="opacityVal">100%</output></label><input type="range" id="opacity" min="20" max="140" value="100" step="5"><div class="range"><span>Més translúcid</span><span>Més opac</span></div></div>
+   <div class="slider"><label for="density">Partícules <output id="densityVal">100%</output></label><input type="range" id="density" min="30" max="140" value="100" step="10"><div class="range"><span>Rendiment</span><span>Més denses</span></div></div>
+   <label class="check"><input type="checkbox" id="dust" checked> Mostrar pols i fum residual</label>
+   <button class="neutral" type="button" id="reset">Restablir paràmetres</button>
+  </div>
+  <div class="section">
+   <span class="caption">Llegenda de formes i opacitats</span>
+   <div class="legend"><div><b>01 · Pop:</b> poliedres opacs, cons radials.</div><div><b>02 · Bombolles:</b> esferes semitransparents, masses de fum.</div><div><b>03 · Ona:</b> esferes fines, anells i fragments visibles a través del foc.</div><div><b>04 · Fragments:</b> tetràedres, traces llargues i espurnes.</div></div>
+   <div class="swatches" aria-label="Paleta càlida"><i style="background:#fff8b1"></i><i style="background:#ffe44e"></i><i style="background:#ffb02f"></i><i style="background:#ff6726"></i><i style="background:#e64736"></i><i style="background:#62616b"></i></div>
+   <p class="note">El C4 té més escala, expansió vertical, segona pulsació i fum més persistent. Aquestes diferències són només visuals.</p>
+  </div>
+ </aside>
+</main>
+</div>
+<script type="module">
+import * as THREE from './vendor/three-r186.module.mjs';
+
+const $=id=>document.getElementById(id);
+const canvas=$('fxCanvas');
+let renderer;
+try{
+ renderer=new THREE.WebGLRenderer({canvas,antialias:innerWidth>700,alpha:false,powerPreference:'high-performance'});
+}catch(error){$('warning').style.display='block';$('warning').textContent='No s’ha pogut activar WebGL: '+error.message;throw error}
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<700?1.25:1.6));
+renderer.autoClear=false;
+const FOV=52,UP=new THREE.Vector3(0,1,0);
+const PI=Math.PI,TAU=PI*2;
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const smooth=q=>q*q*(3-2*q);
+const pseudoSeed=(seed)=>{let s=seed>>>0;return()=>{s=(s+0x6d2b79f5)>>>0;let t=s;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;}};
+const rand=(r,a,b)=>a+(b-a)*r();
+const material=(color,opacity=1)=>new THREE.MeshLambertMaterial({color,transparent:opacity<1,opacity,depthWrite:opacity>=1,roughness:1});
+const geo={
+ ball:new THREE.SphereGeometry(1,12,9),
+ smooth:new THREE.SphereGeometry(1,20,15),
+ ico:new THREE.IcosahedronGeometry(1,0),
+ tetra:new THREE.TetrahedronGeometry(1),
+ spike:new THREE.ConeGeometry(.19,1.25,5),
+ streak:new THREE.ConeGeometry(.075,1.25,4),
+ dust:new THREE.DodecahedronGeometry(1,0),
+ ring:new THREE.RingGeometry(.93,1,64),
+ plane:new THREE.PlaneGeometry(90,90),
+ cube:new THREE.BoxGeometry(1,1,1),
+ shell:new THREE.SphereGeometry(1,28,20)
+};
+const styles=[
+ {id:0,alpha:.95,fire:48,smoke:16,dust:24,sparks:36,shards:22,rays:26},
+ {id:1,alpha:.72,fire:63,smoke:38,dust:34,sparks:40,shards:12,rays:0},
+ {id:2,alpha:.40,fire:25,smoke:17,dust:30,sparks:56,shards:32,rays:0},
+ {id:3,alpha:.80,fire:26,smoke:18,dust:38,sparks:118,shards:78,rays:0}
+];
+const colors={
+ fire:[0xfff0a0,0xffe146,0xffb22a,0xff7527,0xe94632],
+ smoke:[0x6b6870,0x777079,0x8d7e75,0x555961],
+ dust:[0xc8ad85,0xad9980,0xe0bc88],
+ sparks:[0xffef8e,0xffa629,0xff6035,0xffe868],
+ shards:[0x413f45,0x6b5b4e,0x9b7056,0x897b69],
+ rays:[0xffb229,0xff5c27,0xffdb54]
+};
+let mode='grenade',opacityMult=1,density=1,showDust=true,paused=false,slow=false,autoplay=true,clock=0,lastTime=0;
+const cards=Array.from(document.querySelectorAll('.card'));
+function cube(scene,x,y,z,w,h,d,color,matOverride){
+ const o=new THREE.Mesh(geo.cube,matOverride||material(color));
+ o.position.set(x,y,z);o.scale.set(w,h,d);scene.add(o);return o;
+}
+function environment(scene){
+ scene.background=new THREE.Color(0x88b4c8);
+ scene.fog=new THREE.Fog(0x88b4c8,28,75);
+ scene.add(new THREE.HemisphereLight(0xeaf4ed,0x73705a,2.1));
+ const sun=new THREE.DirectionalLight(0xffe8b9,2.1);sun.position.set(-9,18,12);scene.add(sun);
+ const ground=new THREE.Mesh(geo.plane,new THREE.MeshLambertMaterial({color:0xb2a480,side:THREE.DoubleSide}));
+ ground.rotation.x=-PI/2;ground.position.y=-.04;scene.add(ground);
+ // Vegetació i roques escasses: exactament iguals a cada proposta.
+ for(let i=0;i<17;i++){
+  const angle=i*2.4,r=rand(pseudoSeed(9427+i),9,24);
+  let x=Math.cos(angle)*r,z=Math.sin(angle)*r-3;
+  if(Math.abs(x)<4&&Math.abs(z)<5)continue;
+  let rock=new THREE.Mesh(geo.ico,material(i%3===0?0x8b8573:0x958d74));
+  rock.position.set(x,.2,z);rock.scale.set(.25+i%3*.15,.15+i%2*.12,.3+i%3*.13);scene.add(rock);
+ }
+ // Palets i edificis esquemàtics que donen una referència d'escala.
+ cube(scene,-6.1,1.25,-7.5,5,2.5,3.4,0x8c806c);
+ cube(scene,-6.1,2.65,-7.5,5.4,.35,3.8,0x5d5748);
+ cube(scene,-5.0,.55,3.6,1.3,1.1,1.3,0x96734e);
+ cube(scene,-6.5,.35,2.9,.9,.7,.9,0xa57e50);
+ const tx=6,tz=-5;
+ for(const dx of [-1,1])for(const dz of [-1,1])cube(scene,tx+dx*1.03,2.25,tz+dz*1.03,.23,4.5,.23,0x6c624f);
+ cube(scene,tx,4.55,tz,2.65,.25,2.65,0x786b56);
+ cube(scene,tx,5.85,tz,3.1,.28,3.1,0x69604c);
+ for(const dx of [-1,1])for(const dz of [-1,1])cube(scene,tx+dx*1.05,5.23,tz+dz*1.05,.13,1.2,.13,0x5a5549);
+ // Silueta de jugador propera al punt d'explosió per a escala visual.
+ const olive=0x506247;cube(scene,-4.65,1.23,3.05,.67,.98,.38,olive);
+ cube(scene,-4.65,.48,3.02,.25,.94,.26,0x4c5347).position.x-=.2;
+ cube(scene,-4.23,.48,3.02,.25,.94,.26,0x4c5347);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.29,9,7),material(0xb88c67));
+ head.position.set(-4.65,1.95,3.05);scene.add(head);
+ cube(scene,-5.12,1.18,3.05,.23,.8,.26,olive).rotation.z=-.25;
+ cube(scene,-4.18,1.18,3.05,.23,.8,.26,olive).rotation.z=.3;
+}
+const actor=[];
+function makePool(scene,kind,style){
+ const n=Math.ceil(style[kind]*1.4);
+ const shapes={
+  fire:style.id===0?geo.ico:style.id===1?geo.ball:style.id===2?geo.smooth:geo.tetra,
+  smoke:style.id===0?geo.dust:style.id===1?geo.ball:style.id===2?geo.smooth:geo.ico,
+  dust:geo.dust,
+  sparks:style.id===3?geo.streak:geo.tetra,
+  shards:geo.tetra,
+  rays:geo.spike
+ };
+ let blend=(kind==='sparks'||kind==='rays')?THREE.AdditiveBlending:THREE.NormalBlending;
+ const mat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:1,depthWrite:false,blending:blend,side:THREE.DoubleSide});
+ const mesh=new THREE.InstancedMesh(shapes[kind],mat,Math.max(1,n));
+ mesh.frustumCulled=false;
+ mesh.count=0;mesh.renderOrder=kind==='smoke'?6:kind==='fire'?7:kind==='sparks'?9:kind==='dust'?8:5;
+ scene.add(mesh);
+ return {kind,mesh,mat,max:n,items:[]};
+}
+function makeActor(style,card){
+ const scene=new THREE.Scene();environment(scene);
+ const cam=new THREE.PerspectiveCamera(FOV,1,.05,90);
+ const pools={};
+ for(const kind of ['fire','smoke','dust','sparks','shards','rays'])if(style[kind])pools[kind]=makePool(scene,kind,style);
+ const flash=new THREE.Mesh(geo.smooth,new THREE.MeshBasicMaterial({color:0xfff3bd,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+ scene.add(flash);
+ const shell=new THREE.Mesh(geo.shell,new THREE.MeshBasicMaterial({color:style.id===2?0xffe47a:0xffa34c,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));
+ scene.add(shell);
+ const ringMat=new THREE.MeshBasicMaterial({color:style.id===2?0xfff4a6:0xe8cb9d,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false});
+ const ring=new THREE.Mesh(geo.ring,ringMat);ring.rotation.x=-PI/2;ring.position.y=.13;scene.add(ring);
+ const ringTwo=new THREE.Mesh(geo.ring,ringMat.clone());ringTwo.rotation.x=-PI/2;ringTwo.position.y=.16;scene.add(ringTwo);
+ const glow=new THREE.PointLight(0xff8a2b,0,15);glow.position.set(0,1.4,0);scene.add(glow);
+ return {style,card,scene,cam,pools,flash,shell,ring,ringTwo,glow,start:0,seed:0,yaw:-.12,pitch:.33,zoom:1};
+}
+for(let i=0;i<4;i++)actor.push(makeActor(styles[i],cards[i]));
+function duration(){return mode==='c4'?4.5:3.15}
+function blastSize(){return mode==='c4'?1.66:1}
+function buildParticles(a){
+ const s=a.style,big=mode==='c4',size=blastSize(),rng=pseudoSeed((a.seed*16807+(big?9127:1223)+a.style.id*8767)>>>0);
+ for(const [kind,p] of Object.entries(a.pools)){
+  const n=Math.min(p.max,Math.round(a.style[kind]*density*(big?1.18:1)));
+  p.mesh.count=n;p.items.length=0;p.mesh.visible=true;
+  for(let i=0;i<n;i++){
+   const az=rand(rng,0,TAU),el=kind==='dust'?rand(rng,0,.21):rand(rng,.04,1.23);
+   const dir=new THREE.Vector3(Math.cos(az)*Math.cos(el),Math.sin(el),Math.sin(az)*Math.cos(el));
+   const speed=kind==='smoke'?rand(rng,.55,2.1):kind==='fire'?rand(rng,1.6,4.2):kind==='dust'?rand(rng,2.7,5.0):kind==='sparks'?rand(rng,5,10):kind==='shards'?rand(rng,3,8):rand(rng,3,5);
+   const range=kind==='smoke'?.38:kind==='dust'?.5:.23;
+   const pos=new THREE.Vector3(rand(rng,-range,range),kind==='dust'?rand(rng,.13,.35):rand(rng,.55,1.4),rand(rng,-range,range));
+   const scale=kind==='fire'?rand(rng,.32,.68):kind==='smoke'?rand(rng,.33,.73):kind==='dust'?rand(rng,.18,.43):kind==='sparks'?rand(rng,.035,.10):kind==='shards'?rand(rng,.09,.27):rand(rng,.20,.50);
+   const born=kind==='smoke'?rand(rng,.20,.62):kind==='dust'?rand(rng,.07,.23):kind==='shards'?rand(rng,.025,.18):rand(rng,0,.19);
+   const lifetime=(kind==='fire'?rand(rng,.43,.85):kind==='smoke'?rand(rng,1.55,2.65):kind==='dust'?rand(rng,.65,1.3):kind==='sparks'?rand(rng,.34,1.1):kind==='shards'?rand(rng,.75,1.55):rand(rng,.37,.7))*(big?1.32:1);
+   const palette=colors[kind];
+   p.mesh.setColorAt(i,new THREE.Color(palette[Math.floor(rng()*palette.length)]));
+   p.items.push({dir,pos,scale:scale*size*(kind==='smoke'&&a.style.id===1?1.25:1),speed:speed*size,born,lifetime,seed:rng()*10,az,el});
+  }
+  if(p.mesh.instanceColor)p.mesh.instanceColor.needsUpdate=true;
+ }
+}
+let explosionCount=0;
+function fire(i){const a=actor[i];a.start=clock;a.seed=(++explosionCount)+761;a.card.dataset.phase='start';buildParticles(a)}
+function fireAll(){const seed=++explosionCount;for(const a of actor){a.start=clock;a.seed=seed;buildParticles(a)}}
+function switchMode(next){
+ mode=next;$('grenade').setAttribute('aria-pressed',String(next==='grenade'));$('c4').setAttribute('aria-pressed',String(next==='c4'));
+ $('modeDetail').textContent=next==='grenade'?'Granada: esclat compacte, ràpid, amb poca durada.':'C4: explosió més gran i alta, doble pulsació i fum persistent.';
+ fireAll();
+}
+const dummy=new THREE.Object3D();
+const zero=()=>dummy.scale.set(.00001,.00001,.00001);
+function drawPool(a,p,t){
+ const big=mode==='c4',kind=p.kind,style=a.style.id;
+ if(!showDust&&(kind==='dust'||kind==='smoke')){p.mesh.visible=false;return}
+ p.mesh.visible=true;
+ const lifeScale=big?1.15:1;
+ const baseAlpha=kind==='fire'?a.style.alpha:kind==='smoke'?(style===1?.47:.31):kind==='dust'?.52:kind==='sparks'?.98:kind==='shards'?.86:.9;
+ const finalAlpha=clamp(baseAlpha*opacityMult,0,1);
+ p.mat.opacity=finalAlpha*(kind==='fire'?Math.max(.06,1-Math.max(0,t-.55*lifeScale)/(.7*lifeScale)):kind==='smoke'?Math.max(.03,1-Math.max(0,t-1.7*lifeScale)/(1.45*lifeScale)):kind==='dust'?Math.max(.06,1-Math.max(0,t-.64)/(1.1*lifeScale)):1);
+ for(let i=0;i<p.mesh.count;i++){
+  const v=p.items[i],age=t-v.born,q=clamp(age/v.lifetime,0,1);
+  if(age<0||age>=v.lifetime){
+   dummy.position.set(0,-100,0);zero();dummy.quaternion.identity();dummy.updateMatrix();p.mesh.setMatrixAt(i,dummy.matrix);continue;
+  }
+  const drift=kind==='smoke'?.5:kind==='fire'?.47:kind==='dust'?.71:1;
+  const move=age*v.speed*drift;
+  const vec=v.dir;
+  let px=v.pos.x+vec.x*move,py=v.pos.y+vec.y*move,pz=v.pos.z+vec.z*move;
+  if(kind==='shards'||kind==='sparks'){py-=4.2*age*age;}
+  else if(kind==='dust'){py=.15+v.pos.y*.3+age*.22;}
+  else if(kind==='smoke'){py+=.45*age*age;}
+  else if(kind==='fire'&&style===1){py+=Math.sin(v.seed+age*7)*.24;}
+  if(kind==='fire'&&style===2){px+=Math.sin(v.seed+age*5)*.21;pz+=Math.cos(v.seed+age*5)*.21;}
+  py=Math.max(kind==='dust'?.08:.03,py);
+  dummy.position.set(px,py,pz);
+  let sc=v.scale;
+  if(kind==='fire')sc*=style===1?(0.35+1.9*Math.sin(q*PI*.86)):(.3+1.4*Math.sin(q*PI));
+  else if(kind==='smoke')sc*=.36+q*(style===1?3.3:2.5);
+  else if(kind==='dust')sc*=.6+q*1.9;
+  else if(kind==='shards')sc*=Math.max(.05,1-q*.55);
+  else if(kind==='sparks')sc*=Math.max(.12,1-q);
+  else sc*=.3+1.4*Math.sin(q*PI);
+  if(kind==='sparks'&&style===3){dummy.scale.set(sc*.42,sc*8,sc*.42);dummy.quaternion.setFromUnitVectors(UP,vec);}
+  else if(kind==='rays'){dummy.scale.set(sc*.58,sc*4.8,sc*.58);dummy.quaternion.setFromUnitVectors(UP,vec);}
+  else{dummy.scale.setScalar(Math.max(.001,sc));dummy.rotation.set(v.seed+age*.7,v.az+age*.5,v.el+age*.9);dummy.quaternion.setFromEuler(dummy.rotation);}
+  dummy.updateMatrix();
+  p.mesh.setMatrixAt(i,dummy.matrix);
+ }
+ p.mesh.instanceMatrix.needsUpdate=true;
+}
+function paint(a){
+ const t=clock-a.start,big=mode==='c4',size=blastSize(),style=a.style.id;
+ for(const p of Object.values(a.pools))drawPool(a,p,t);
+ const flashT=clamp(t/(big?.23:.17),0,1);
+ a.flash.visible=t>=0&&flashT<1;
+ a.flash.scale.setScalar(size*(.1+flashT*2.5));
+ a.flash.position.set(0,1.0*size,0);
+ a.flash.material.opacity=Math.max(0,(1-flashT)*.86)*opacityMult;
+ const waveTime=big?1.2:.9;
+ const u=clamp((t-.085)/waveTime,0,1);
+ const wave=style===2?3.7:style===1?2.4:style===0?1.6:1.85;
+ a.shell.visible=u<1&&t>.085;
+ a.shell.position.set(0,size*1.0,0);
+ a.shell.scale.setScalar((.24+u*wave)*size);
+ a.shell.material.opacity=clamp((style===2?.26:style===1?.12:.065)*opacityMult*(1-u),0,.5);
+ const ringQ=clamp((t-.09)/(big?1.05:.7),0,1);
+ a.ring.visible=t>.09&&ringQ<1;
+ a.ring.scale.setScalar((.4+ringQ*(style===2?5.0:4.0))*size);
+ a.ring.material.opacity=clamp((style===2?.76:style===0?.43:.34)*opacityMult*(1-ringQ),0,1);
+ // El C4 té un segon front expansiu que no es confon amb el primer.
+ const delayed=t-(big?.35:.15),q2=clamp(delayed/(big?1.13:.58),0,1);
+ a.ringTwo.visible=delayed>0&&q2<1;
+ a.ringTwo.scale.setScalar((.25+q2*(style===2?4.7:3.7))*size);
+ a.ringTwo.material.opacity=clamp((style===2?.47:.22)*opacityMult*(1-q2),0,1);
+ a.glow.intensity=t>0&&t<.46?Math.sin((t/.46)*PI)*8*size:0;
+ const stage=t<.16?'FLAIX':t<.78*size?'EXPANSIÓ':t<duration()-.65?'FUM I PARTÍCULES':'DISSIPAT';
+ const stat=$('stat'+style);if(stat&&stat.textContent!==stage)stat.textContent=stage;
+}
+function layoutCamera(a,w,h){
+ const base=mode==='c4'?20.4:16.6;
+ const dist=base*a.zoom;
+ const target=new THREE.Vector3(0,mode==='c4'?2.4:1.6,-.8);
+ a.cam.position.set(Math.sin(a.yaw)*Math.cos(a.pitch)*dist,
+ target.y+Math.sin(a.pitch)*dist,
+ Math.cos(a.yaw)*Math.cos(a.pitch)*dist);
+ a.cam.lookAt(target);a.cam.aspect=w/h;a.cam.updateProjectionMatrix();
+}
+let width=0,height=0;
+function resize(){
+ width=innerWidth;height=innerHeight;
+ renderer.setSize(width,height,false);
+}
+addEventListener('resize',resize);resize();
+function animate(now){
+ requestAnimationFrame(animate);
+ const dt=clamp((now-(lastTime||now))/1000,0,.06);lastTime=now;
+ if(!paused){
+  clock+=dt*(slow?.5:1);
+  for(let i=0;i<actor.length;i++){
+   const a=actor[i];if(autoplay&&clock-a.start>duration()+.52)fire(i);
+   if(a.card.getBoundingClientRect().bottom>0&&a.card.getBoundingClientRect().top<height)paint(a);
+  }
+ }
+ renderer.setScissorTest(false);renderer.setViewport(0,0,width,height);
+ renderer.setClearColor(0x0b1117,1);renderer.clear();
+ renderer.setScissorTest(true);
+ for(const a of actor){
+  const b=a.card.getBoundingClientRect(),left=Math.max(0,Math.floor(b.left)),right=Math.min(width,Math.ceil(b.right)),
+  top=Math.max(0,Math.floor(b.top)),bottom=Math.min(height,Math.ceil(b.bottom));
+  if(right-left<4||bottom-top<4)continue;
+  const w=right-left,h=bottom-top;
+  layoutCamera(a,w,h);
+  renderer.setViewport(left,height-bottom,w,h);renderer.setScissor(left,height-bottom,w,h);
+  renderer.render(a.scene,a.cam);
+ }
+ renderer.setScissorTest(false);
+}
+$('grenade').addEventListener('click',()=>switchMode('grenade'));
+$('c4').addEventListener('click',()=>switchMode('c4'));
+$('fireAll').addEventListener('click',fireAll);
+document.querySelectorAll('[data-replay]').forEach(button=>button.addEventListener('click',()=>fire(Number(button.dataset.replay))));
+$('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'▶ Reprendre':'⏸ Pausa';$('pause').setAttribute('aria-pressed',String(paused))});
+$('half').addEventListener('click',()=>{slow=!slow;$('half').textContent=slow?'1× Velocitat':'½ Càmera lenta';$('half').setAttribute('aria-pressed',String(slow))});
+$('repeat').addEventListener('change',e=>autoplay=e.target.checked);
+$('opacity').addEventListener('input',e=>{opacityMult=Number(e.target.value)/100;$('opacityVal').textContent=e.target.value+'%'});
+$('density').addEventListener('input',e=>{density=Number(e.target.value)/100;$('densityVal').textContent=e.target.value+'%';fireAll()});
+$('dust').addEventListener('change',e=>showDust=e.target.checked);
+$('reset').addEventListener('click',()=>{
+ opacityMult=1;density=1;showDust=true;paused=false;slow=false;autoplay=true;
+ $('opacity').value=100;$('opacityVal').textContent='100%';
+ $('density').value=100;$('densityVal').textContent='100%';
+ $('dust').checked=true;$('repeat').checked=true;
+ $('pause').textContent='⏸ Pausa';$('half').textContent='½ Càmera lenta';
+ switchMode('grenade');
+});
+actor.forEach(a=>{
+ let dragging=false,x=0,y=0;
+ a.card.addEventListener('pointerdown',e=>{
+  if(e.target.closest('button'))return;
+  dragging=true;x=e.clientX;y=e.clientY;a.card.classList.add('dragging');a.card.setPointerCapture(e.pointerId);
+ });
+ a.card.addEventListener('pointermove',e=>{
+  if(!dragging)return;
+  a.yaw-=(e.clientX-x)*.007;
+  a.pitch=clamp(a.pitch+(e.clientY-y)*.004,.07,1.12);
+  x=e.clientX;y=e.clientY;
+ });
+ for(const type of ['pointerup','pointercancel','lostpointercapture'])a.card.addEventListener(type,()=>{dragging=false;a.card.classList.remove('dragging')});
+ a.card.addEventListener('wheel',e=>{e.preventDefault();a.zoom=clamp(a.zoom+e.deltaY*.002,.7,1.6)},{passive:false});
+});
+document.addEventListener('keydown',e=>{
+ if(e.code==='Space'&&!e.repeat&&!['BUTTON','INPUT','TEXTAREA'].includes(document.activeElement?.tagName)){
+  e.preventDefault();fireAll();
+ }
+});
+fireAll();
+if(matchMedia('(prefers-reduced-motion: reduce)').matches){autoplay=false;$('repeat').checked=false;paused=true;$('pause').textContent='▶ Reprendre';}
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
