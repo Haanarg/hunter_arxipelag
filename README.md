@@ -273,6 +273,7 @@ Laboratoris conservats per a iteracions visuals:
 - [Dispar a dues mans](dispar-proves.html).
 - [Explosius](explosius-proves.html).
 - [Explosions procedurals · quatre escales](explosions-proves.html): comparació B (puntes radials) i C (8–12 volums quasi esfèrics de colors superposats), sis paletes càlides, radi visual fix ×2, densitat i llavors ajustables; no modifica els efectes del joc.
+- [Quatre explosions arcade · granada i C4](explosions-arcade-proves.html): comparativa visual Three.js de poliedres, bombolles, ona translúcida i metralla, amb opacitat, densitat, càmera lenta i reproducció ajustables; no modifica el joc.
 - [Complexos, fases 1–3 integrades](compounds-preview.html).
 - [Fase 4: recintes nous, variants i base–costa](compounds-preview.html?fase=4): 32 dissenys (40 escenes amb V1): tres mides de poblat i variants militars V1/V2/V3/V4 integrades al generador; controls de carretera ajornats. [Criteris i distribucions](docs/COMPOUNDS_PHASE4.md).
 
