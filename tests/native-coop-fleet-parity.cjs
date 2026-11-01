@@ -6,6 +6,7 @@ const assert=require('node:assert/strict');
 (async()=>{
  const createGame=require('./harness.cjs');
  const {generateNativeMission}=await import('../server/coop-native.mjs');
+ const {restoreRelayMission}=await import('../server/coop-mission.mjs');
  const {vehicleDynamics}=await import('../src/vehicle-dynamics-core.mjs');
  const {vehicleModels}=await import('../src/vehicle-model-core.mjs');
  const {vehicleSeatCount}=await import('../src/vehicle-specs.mjs');
@@ -48,6 +49,21 @@ const assert=require('node:assert/strict');
    const hover=generated.record.meta.vehicles.find(v=>v.t==='hover');
    assert.ok(hover&&hover.seats.length===2,
      'L’hovercraft D ha de permetre conduir i portar passatger');
+   // Pujada de dos actors reals a la mateixa cabina: pilot i passatger.
+   const boarding=structuredClone(generated.record);
+   boarding.status='running';boarding.meta.targets=[];
+   boarding.meta.vehicles=[structuredClone(hover)];
+   for(const player of boarding.checkpoint.players)
+     Object.assign(player,{x:hover.x,y:hover.y,z:hover.z,swimming:false,fall:null});
+   const mission=restoreRelayMission(boarding,generated.geometry),epoch=mission.meta.id;
+   assert.equal(mission.vehicleCommand('a',{epoch,vehicleId:hover.id,
+     operation:'enter',commandId:'hover-pilot'}).code,'ENTERED');
+   assert.equal(mission.vehicleCommand('b',{epoch,vehicleId:hover.id,
+     operation:'enter',commandId:'hover-passenger'}).code,'ENTERED');
+   assert.deepEqual(mission.snapshot().vehicles[0].seats,['a','b'],
+     'Pilot i passatger han de ser presents als dos seients autoritatius');
+   const bicycle=generated.record.meta.vehicles.find(v=>v.t==='bici');
+   assert.ok(bicycle&&bicycle.seats.length===1,'Bicicleta d’una sola plaça');
    console.log('Flota COOP = individual, mapa '+(scale===1?'petit':'gran')+
      ': 16 tipus, '+host.vehicles.length+' vehicles, hovercraft per sector='+
      sectors.map(s=>count(host.vehicles,s)).join(','));
