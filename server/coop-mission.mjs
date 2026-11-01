@@ -8,6 +8,7 @@ import {createPlayerSimulation,validatePlayerInput,damageHealth} from '../src/pl
 import {combatBalance,explosionDamage,closestFenceBlastPoint,wallBlastDamage,roofBlastDamage,countDestroyedSupport} from '../src/combat-rules.mjs';
 import {firstSupplyContact} from './coop-inventory.mjs';
 import {createRelayVehicles,vehicleClear} from './coop-vehicles.mjs';
+import {ferryLocal,ferryWorld,ferrySurfaceY,ferryPedestrianAt} from '../src/ferry-deck-core.mjs';
 import {resolveCoopPlayerVehicleContact} from '../src/coop-vehicle-contacts-core.mjs';
 import {createRelayRescue,reviveReachable} from './coop-rescue.mjs';
 import {createRelayCombat,traceArena} from './coop-combat.mjs';
@@ -148,8 +149,14 @@ export function restoreRelayMission(record,geometry){
     if(--impulse.ticks<=0)exitImpulses.delete(actor.id);
     return {...next,y:support.floor+.06,hp:actor.hp,swimming:false,fall:null};
   }
+  let vehicleBridge=null;
   const water=createCanonicalWater((x,z)=>world.heightAt(x,z)),
-    bounded={locomotionAt:(...args)=>world.locomotionAt(...args),roofLanding:(...args)=>world.roofLanding(...args),resolveBody(previous,candidate){const p=world.resolveBody(previous,{...candidate,x:clamp(candidate.x,b.x0,b.x1),z:clamp(candidate.z,b.z0,b.z1)}),hit=resolveCoopPlayerVehicleContact(previous,p,vehicles.live(),previous.id);return {...hit,x:clamp(hit.x,b.x0,b.x1),z:clamp(hit.z,b.z0,b.z1)};}},
+    bounded={locomotionAt(x,z,y){
+      const base=world.locomotionAt(x,z,y),
+        deck=meta.mode==='native'?vehicleBridge?.ferryDeckAt(x,z,y):null;
+      return deck?{...base,floor:Math.max(base.floor,deck.y),
+        interior:false,basement:false,drop:false}:base;
+    },roofLanding:(...args)=>world.roofLanding(...args),resolveBody(previous,candidate){const p=world.resolveBody(previous,{...candidate,x:clamp(candidate.x,b.x0,b.x1),z:clamp(candidate.z,b.z0,b.z1)}),hit=resolveCoopPlayerVehicleContact(previous,p,vehicles.live(),previous.id);return {...hit,x:clamp(hit.x,b.x0,b.x1),z:clamp(hit.z,b.z0,b.z1)};}},
     sim=createPlayerSimulation({epoch:meta.id,limit:world.limit,world:bounded,
       vertical:{surfaceAt:water.surfaceAt,maxHealth:combatBalance.player},
       checkpoint:record.checkpoint,immune:()=>cheats.immune,
@@ -196,6 +203,7 @@ export function restoreRelayMission(record,geometry){
     }return {actorId,commandId:message.commandId,ok,code};
   }
   const vehicles=createRelayVehicles({onBarrier:ramWall,onPalm:tree=>damagePalm(tree,8),geometry:()=>physical,onImpact:(id,amount,tick)=>combat.impactVehicle(id,amount,tick),onTravel:(v,from,tick)=>combat.runover(v,from,tick),meta,record:record.vehicles,world:()=>world,water,players:()=>sim.snapshot().players,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt,hasParachute:id=>(inventory.get(id)?.parachute||0)>0,onBoard:id=>{inventory.get(id).disguised=false;combat.cancel(id);actions.delete(id);}});
+  vehicleBridge=vehicles;
   const rescue=createRelayRescue(record.rescue);
   const fauna=createNativeFauna({meta,record:record.fauna,
     players:()=>sim.snapshot().players,world:()=>world,vehicles,
@@ -278,7 +286,20 @@ export function restoreRelayMission(record,geometry){
     const result=()=>snapshotResult?snapshot():undefined;
     if(status!=='running'||!['relay','extract'].includes(phase))return result();
     refillCheats();
-    const before=sim.snapshot();vehicles.step(before.tick+1);const state=sim.step(),near=(p,q)=>p.hp>0&&!p.fall&&!vehicles.mounted(p.id)&&distance(p,q)<=3.2&&Math.abs(p.y-q.y)<2;
+    const before=sim.snapshot(),ferries=meta.mode==='native'?
+      vehicles.snapshot().filter(v=>v.t==='ferry'&&!v.destroyed):[];
+    vehicles.step(before.tick+1);
+    if(meta.mode==='native')for(const p of before.players){
+      if(p.fall||p.swimming||vehicles.mounted(p.id))continue;
+      const previous=ferries.find(f=>ferryPedestrianAt(f,p.x,p.z,p.y));
+      if(!previous)continue;
+      const deck=ferryPedestrianAt(previous,p.x,p.z,p.y),
+        next=vehicles.live().find(f=>f.id===previous.id);
+      if(!deck||!next)continue;
+      const local=ferryLocal(previous,p.x,p.z),point=ferryWorld(next,local.x,local.z);
+      sim.carry(p.id,{...point,y:ferrySurfaceY(next,local.z)+(p.y-deck.y)});
+    }
+    const state=sim.step(),near=(p,q)=>p.hp>0&&!p.fall&&!vehicles.mounted(p.id)&&distance(p,q)<=3.2&&Math.abs(p.y-q.y)<2;
     if(state.tick>=meta.timeLimitTicks){phase='failed';hold=0;combat.finish();return result();}
     // All contacts in a tick compete by first intersection time; exact ties use roster order.
     for(const supply of supplies()){
