@@ -383,7 +383,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       blastWire(center,blast.damage,blast.radius);
       blastStructures(center,blast.damage,blast.radius);
       blastPalms(center,blast.damage,blast.radius);
-      alarm(center,blast.actorId,tick,'explosion');effect('explosion',tick,{actorId:blast.actorId,at:center,radius:blast.radius,hits});
+      alarm(center,blast.actorId,tick,'explosion');effect('explosion',tick,{actorId:blast.actorId,at:center,radius:blast.radius,weapon:blast.weapon||null,hits});
     }
   }
   function aimWeapon(p,vehicle,weapon,from){
@@ -538,7 +538,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       if(trace.fraction<1){g.landed=true;g.vx=0;g.vz=0;g.vy=0;Object.assign(g,at(from,candidate,Math.max(0,trace.fraction-.01)));g.y=Math.max(g.y,Math.max(0,world().heightAt(g.x,g.z))+(g.weapon==='c4'?.24:.16));}else Object.assign(g,candidate);
       // Impact stops the throw; its fuse keeps counting in simulation time.
       if(tick>=g.explodeAt){
-        explode({at:{x:g.x,y:g.y+.08,z:g.z},damage:g.weapon==='c4'?weaponCatalog.c4.damage:['proving','world','native'].includes(meta.mode)?weaponCatalog.grenade.damage:combatBalance.weapons.grenade,radius:g.weapon==='c4'?weaponCatalog.c4.splash:['proving','world','native'].includes(meta.mode)?weaponCatalog.grenade.splash:8,actorId:g.actorId,ownerOnly:true},tick);grenades.splice(i,1);
+        explode({at:{x:g.x,y:g.y+.08,z:g.z},damage:g.weapon==='c4'?weaponCatalog.c4.damage:['proving','world','native'].includes(meta.mode)?weaponCatalog.grenade.damage:combatBalance.weapons.grenade,radius:g.weapon==='c4'?weaponCatalog.c4.splash:['proving','world','native'].includes(meta.mode)?weaponCatalog.grenade.splash:8,actorId:g.actorId,weapon:g.weapon,ownerOnly:true},tick);grenades.splice(i,1);
       }
     }
     for(const t of targets)if(t.ai){
