@@ -372,6 +372,18 @@ function closestFenceBlastPoint(...args){return window.HUNTER_SHARED_COMBAT.clos
 function presentExplosion(x,y,z,r,source=null){
  window.HUNTER_STEALTH.emit('explosion',x,y,z);
  snd('boom',1,{x,y,z},source);
+ // La granada i el C4 comparteixen el model arcade 03. La resta
+ // d'explosions conserven l'anell actual; no canviam dany ni radis.
+ const kind=source?.weapon;
+ if((kind==='grenade'||kind==='c4')&&window.HUNTER_CREATE_ARCADE_BLAST_FX){
+   if(!window.HUNTER_ARCADE_BLAST_FX||window.HUNTER_ARCADE_BLAST_FX.scene!==world){
+     window.HUNTER_ARCADE_BLAST_FX?.dispose();
+     window.HUNTER_ARCADE_BLAST_FX=window.HUNTER_CREATE_ARCADE_BLAST_FX(THREE,world,{
+       quality:window.HUNTER_GRAPHICS_QUALITY==='mobile'?'mobile':'desktop'
+     });
+   }
+   if(window.HUNTER_ARCADE_BLAST_FX.emit(x,y,z,kind))return;
+ }
  // L'ona expansiva és un front anular subtil, no una esfera
  // quasi opaca. L'efecte NO escriu profunditat: murs i portes que
  // resisteixen l'explosió sempre continuen visibles, també en interiors.
@@ -510,7 +522,7 @@ function executePlayerPlant(seconds=3){
  o.position.set(x,y,z);world.add(o);
  if(seconds===0){
   // 00 és una detonació immediata, fins i tot en ple vol.
-  boom(x,y,z,48,COMBAT_BALANCE.weapons.c4,'b');
+  boom(x,y,z,48,COMBAT_BALANCE.weapons.c4,'b',{weapon:'c4'});
   world.remove(o);
  }else bombs.push({x,y,z,t:seconds,o,falling:airborne,vy:0,landed:!airborne});
  msg=seconds===0?'Bomba detonada!':airborne?
@@ -1367,7 +1379,7 @@ for(let i=bombs.length-1;i>=0;i--){
  if(b.t>0)window.HUNTER_EXPLOSIVE_VISUALS.update(b.o,b.t);
  if(b.t<=0){
    // S'usa la posició actual, mai la de sortida de l'helicòpter.
-   boom(b.x,b.y,b.z,48,COMBAT_BALANCE.weapons.c4,'b');
+   boom(b.x,b.y,b.z,48,COMBAT_BALANCE.weapons.c4,'b',{weapon:'c4'});
    world.remove(b.o);bombs.splice(i,1);
  }
 }
@@ -1380,6 +1392,7 @@ for(let i=fx.length-1;i>=0;i--){
   world.remove(f.o);f.o.material.dispose();fx.splice(i,1);
  }
 }
+window.HUNTER_ARCADE_BLAST_FX?.update(dt);
 updateBulletImpacts(dt);
 }
 
