@@ -29,7 +29,9 @@ function shatterWindow(w,index,point,p){
 function projectileImpactImmune(kind,target,p){
   if(!(p.dmg>0))return false;
   const light=!p.spl;
-  if(kind==='wall')return target.woodenDoor?false:target.towerLegOwner
+  if(kind==='wall')return target.civicFurniture
+    ?target.civicFurniture==='well'&&light
+    :target.woodenDoor?false:target.towerLegOwner
     ?light||target.towerLegOwner.hp===Infinity
     :light&&isMilitaryWall(target)||target.hp===Infinity;
   if(kind==='building')return light&&isMilitaryBuilding(target)||target.rhp===Infinity;
@@ -456,6 +458,7 @@ function boom(x,y,z,r,dmg,own,source=null){
  // Una explosió trenca el filferro complet del tram si el front d'ona
  // l'assoleix: els 8 PV no han de deixar una barrera invisible o intacta
  // quan el projectil hi detona just al costat. Altres murs mantenen PV.
+ const civicBlasts=new Map();
  for(const w of [...wallCandidates(x,z,r)]){
   if(w.open||w.hp<=0)continue;
   if(w.barbed){
@@ -465,8 +468,14 @@ function boom(x,y,z,r,dmg,own,source=null){
     continue;
   }
   const dealt=window.HUNTER_SHARED_COMBAT.wallBlastDamage(w,x,y,z,r,dmg);
-  if(dealt)dmgW(w,dealt);
+  if(!dealt)continue;
+  if(w.civicFurniture){
+   const old=civicBlasts.get(w.civicGroup);
+   if(!old||dealt>old.dealt)civicBlasts.set(w.civicGroup,{w,dealt});
+  }else dmgW(w,dealt);
  }
+ // Evita multiplicar el dany de la mateixa explosió pels dotze trams.
+ for(const {w,dealt} of civicBlasts.values())dmgW(w,dealt,'heavy');
  for(const b of buildingCandidates(x,z,r)){
   // El sostre estructural del búnquer roman intacte encara que es destrueixin murs.
   if(b.kind==='enemy_bunker'||b.rhp<=0)continue;
@@ -1290,7 +1299,7 @@ function updPj(dt){
       const solid=kind==='wall'||kind==='building'||kind==='vehicle'||kind==='enemy';
       if(ineffective)spawnBulletImpact('ricochet',p.x,p.y,p.z,p);
       else if(solid&&!(kind==='enemy'&&(target.t==='soldat'||target.t==='general')))spawnBulletImpact('spark',p.x,p.y,p.z,p);
-      if(kind==='wall'){if(!isMilitaryWall(target)||target.woodenDoor)dmgW(target,p.dmg)}
+      if(kind==='wall'){if(!isMilitaryWall(target)||target.woodenDoor)dmgW(target,p.dmg,p.shotClass||'light')}
       else if(kind==='building'){if(!isMilitaryBuilding(target)){target.rhp-=p.dmg;if(target.rhp<=0)roofBreak(target)}}
       else if(kind==='tree'&&target?.p)dmgP(target,p.dmg);
       else if(kind==='enemy'){
