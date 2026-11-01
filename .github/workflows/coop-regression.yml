@@ -25,6 +25,9 @@ jobs:
         run: |
           node --check src/native-coop-interpolation.mjs
           node --check src/native-coop-prediction.mjs
+          node --check src/ferry-deck-core.mjs
+          node --check server/coop-vehicles.mjs
+          node --check server/coop-mission.mjs
           node --check src/coop-world-runtime.js
           node --check src/native-coop-connection.mjs
           node --check tests/native-coop-interpolation.mjs
@@ -39,6 +42,7 @@ jobs:
           node tests/native-coop-subtick.mjs
           node tests/native-coop-enemy-interpolation.mjs
           node tests/native-coop-prediction-cache.mjs
+          node tests/native-coop-phase4.mjs
           node tests/native-coop-vehicle-candidates.mjs
           node tests/native-coop-wall-candidates.mjs
           node tests/native-coop-network-jitter.mjs
