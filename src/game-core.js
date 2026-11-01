@@ -852,7 +852,8 @@ function vehicleDebris(v,baseY){
   for(let i=0;i<(heavy?7:5);i++)puff(v.x+rn(-2,2),baseY+rn(.5,2.2),v.z+rn(-2,2),i%2?0x3b3b38:0x787064,rn(1.6,3.2));
   while(DB.length>240){const d=DB.shift();if(d?.m)world.remove(d.m)}
 }
-function wallBreak(w){for(const trim of w.timberTrim||[])trim.visible=false;
+function wallBreak(w){if(w.porchSupports)collapsePorch(w.owner);
+for(const trim of w.timberTrim||[])trim.visible=false;
 const h=w.y1-w.y0-1,parts=w.parts&&w.parts.length?w.parts:[w.m],base=parts[0],col=w.barbed?0x4a4f52:(base?.material?.color?.getHex?.()??0x8d9389),cx=(w.x0+w.x1)/2,cz=(w.z0+w.z1)/2;
 // Els brancals, la porta i la llinda són un sol conjunt estructural.
 // Les peces d'una obertura s'oculten alhora, sense marcs residuals.
@@ -1017,7 +1018,49 @@ function demolishCivilianHut(b){
  }
  roofBreak(b);
 }
-function dmgW(w,d){
+function collapsePorch(b,effects=true){
+ if(!b?.porchParts?.length||b.porchDestroyed)return;
+ b.porchDestroyed=true;
+ for(const part of b.porchParts)part.visible=false;
+ if(effects){
+  for(let i=0;i<7;i++)debris(b.x+rn(-2.8,2.8),b.fy+rn(1.2,4.8),
+    b.z+b.d/2+rn(.5,3),0x806447,1,.55,7,'timberBeam');
+  puff(b.x,b.fy+1.3,b.z+b.d/2+2,0xb5a389,3.6);
+ }
+}
+function collapseCivicProp(w,effects=true){
+ const civic=w?.civicObject;
+ if(!civic||civic.broken)return false;
+ civic.broken=true;
+ for(const member of civic.walls){
+  member.hp=0;member.open=true;member.destroyedWall=true;member.playerBlock=false;
+  const i=Wl.indexOf(member);if(i>=0)Wl.splice(i,1);
+ }
+ if(civic.rubbleWall)civic.rubbleWall.open=false;
+ for(const child of civic.intact)child.visible=false;
+ if(civic.rubble)civic.rubble.visible=true;
+ wallGridCount=-1;
+ if(effects){
+  const wood=civic.kind==='bench';
+  for(let i=0;i<(wood?8:14);i++)
+   debris(civic.x+rn(-1.3,1.3),civic.y+rn(.5,1.4),
+     civic.z+rn(-1.2,1.2),wood?0x806447:0x868879,1,wood?.4:.55,wood?6:8);
+  for(let i=0;i<3;i++)puff(civic.x,civic.y+1,civic.z,wood?0x9b8a68:0x9a978a,2.2);
+  snd(wood?'woodBreak':'boom',wood?.72:.34,{x:civic.x,y:civic.y+1,z:civic.z},civic);
+ }
+ return true;
+}
+function dmgW(w,d,shotClass='heavy'){
+ if(w.civicRubble)return;
+ if(w.civicFurniture){
+  if(w.civicFurniture==='well'&&shotClass==='light')return;
+  const civic=w.civicObject,amount=wholeDamage(d);
+  if(!civic||civic.broken||!amount)return;
+  const hp=Math.max(0,Math.ceil(w.hp)-amount);
+  for(const member of civic.walls)member.hp=hp;
+  if(hp===0)collapseCivicProp(w);
+  return;
+ }
  if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}
  const amount=wholeDamage(d);
  if(!amount||!Number.isFinite(w.hp)||w.hp<=0)return;
