@@ -131,7 +131,7 @@ export function createHovercraftConcept(THREE,variant=0){
   rear(0,.10,.72,1,trim);rear(.90,1,.72,1,trim);
   rear(.10,.90,.72,.92,glass,'rear');
   rear(0,1,.92,1,roof);
-  box(halfTop*2+.12,.063,rz-fw+.12,0,topY+.025,(fw+rz)/2,roof);
+  const canopyRoof=box(halfTop*2+.12,.063,rz-fw+.12,0,topY+.025,(fw+rz)/2,roof);
 
   // L'habitacle és real: seients, seients amb respatller, terres, consoles i controls.
   // Totes les peces queden entre les finestres, amb els dos passatgers costat a costat.
@@ -274,7 +274,7 @@ export function createHovercraftConcept(THREE,variant=0){
   for(const side of [-1,1]){
     box(.18,.075,.09,side*.83,1.28,-2.81,dark);
   }
-  root.userData={concept:c,rotors,windowPanes,cockpitSeats,skirtFilamentsRemoved:true,animate(time){
+  root.userData={concept:c,rotors,windowPanes,cockpitSeats,canopyRoof,skirtFilamentsRemoved:true,animate(time){
     for(let i=0;i<rotors.length;i++)rotors[i].rotation.z=time*19*(i%2? -1:1);
   }};
   return root;
