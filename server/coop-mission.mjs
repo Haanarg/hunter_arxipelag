@@ -61,6 +61,10 @@ export function restoreRelayMission(record,geometry){
     cooldowns=new Map((record.doorCooldowns||[]).map(c=>[c.actorId,c.tick])),results=structuredClone(record.commandResults||[]);
   for(const d of meta.doors)physical.walls[d.wallIndex].open=doorStates.get(d.id)??false;
   const removedWalls=new Set(record.removedWalls||[]);for(const i of removedWalls)if(physical.walls[i])physical.walls[i].open=true;
+  // La roca que substitueix el pou ha de persistir després de reconnectar.
+  for(const wall of physical.walls)if(wall.civicRubble&&
+    physical.walls.some((w,i)=>removedWalls.has(i)&&w.civicFurniture==='well'&&w.civicGroup===wall.civicGroup))
+    wall.open=false;
   const wallHealth=new Map(record.wallHealth||[]),roofHealth=new Map(record.roofHealth||[]),removedRoofs=new Set(record.removedRoofs||[]),brokenWindows=new Set(record.brokenWindows||[]);
   for(const [i,hp] of wallHealth)if(physical.walls[i])physical.walls[i].hp=hp;
   for(const [i,hp] of roofHealth)if(physical.buildings[i])physical.buildings[i].rhp=hp;
@@ -89,10 +93,14 @@ export function restoreRelayMission(record,geometry){
 
   function destroyWall(index){
     const wall=physical.walls[index];if(!wall||removedWalls.has(index))return false;
-    const assembly=wall.woodenDoor?[index]:wall.assemblyIds?physical.walls.flatMap((w,i)=>wall.assemblyIds.includes(w.id)?[i]:[]):[index];
+    const assembly=wall.civicFurniture
+      ?physical.walls.flatMap((w,i)=>w.civicFurniture===wall.civicFurniture&&w.civicGroup===wall.civicGroup?[i]:[])
+      :wall.woodenDoor?[index]:wall.assemblyIds?physical.walls.flatMap((w,i)=>wall.assemblyIds.includes(w.id)?[i]:[]):[index];
       for(const i of assembly){if(removedWalls.has(i))continue;const part=physical.walls[i];part.hp=0;part.open=true;part.playerBlock=false;removedWalls.add(i);wallHealth.set(i,0);
         const owner=physical.buildings.findIndex(b=>b.id&&b.id===part.buildingId);if(owner>=0&&countDestroyedSupport(physical.buildings[owner],part))collapseRoof(owner);
       }
+    if(wall.civicFurniture==='well')for(const rubble of physical.walls)
+      if(rubble.civicRubble&&rubble.civicGroup===wall.civicGroup)rubble.open=false;
     return true;
   }
   function breakWindow(index,paneIndex){
@@ -102,19 +110,37 @@ export function restoreRelayMission(record,geometry){
   }
   function damageWall(index,damage){
     const w=physical.walls[index],radioPanel=meta.optional?.radio?.some(r=>r.colliderIndex===index);
-    if(!w||!(w.woodenDoor||radioPanel)||w.open||removedWalls.has(index)||!(damage>0))return false;
+    if(!w||!(w.woodenDoor||radioPanel||w.civicFurniture==='bench')||w.open||removedWalls.has(index)||!(damage>0))return false;
     w.hp=Math.max(0,Math.ceil(w.hp)-Math.ceil(damage));wallHealth.set(index,w.hp);
+    if(w.civicFurniture)for(const [i,part] of physical.walls.entries())
+      if(part!==w&&part.civicGroup===w.civicGroup&&part.civicFurniture===w.civicFurniture){
+        part.hp=w.hp;wallHealth.set(i,w.hp);
+      }
     if(w.hp===0){destroyWall(index);world=buildWorld();}
     return true;
   }
   function ramWall(wall){const index=physical.walls.indexOf(wall);if(index<0||!destroyWall(index))return false;world=buildWorld();return true;}
   function blastStructures(center,damage,radius){
     let changed=false;
+    const civicHits=new Map();
     for(const [index,wall] of physical.walls.entries()){
       if(wall.barbed)continue;
       const dealt=wallBlastDamage(wall,center.x,center.y,center.z,radius,damage);if(!dealt)continue;
+      if(wall.civicFurniture){
+        const old=civicHits.get(wall.civicGroup);
+        if(!old||dealt>old.damage)civicHits.set(wall.civicGroup,{index,damage:dealt});
+        continue;
+      }
       wall.hp=Math.max(0,Math.ceil(wall.hp)-dealt);wallHealth.set(index,wall.hp);if(wall.hp>0)continue;
       changed=destroyWall(index)||changed;
+    }
+    for(const {index,damage:dealt} of civicHits.values()){
+      const wall=physical.walls[index],hp=Math.max(0,Math.ceil(wall.hp)-dealt);
+      for(const [i,part] of physical.walls.entries())
+        if(part.civicFurniture===wall.civicFurniture&&part.civicGroup===wall.civicGroup){
+          part.hp=hp;wallHealth.set(i,hp);
+        }
+      if(hp===0)changed=destroyWall(index)||changed;
     }
     for(const [index,building] of physical.buildings.entries()){
       const dealt=roofBlastDamage(building,center.x,center.z,radius,damage);if(!dealt)continue;
