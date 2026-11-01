@@ -30,10 +30,11 @@ export function decorateTimber(T,{b,shell,box,rod,cylinder,roofs}){const g=shell
          const mesh=box(g,.08,b.h-.4,.08,0x654f39,side*(b.w/2+.06),b.h/2,z);
          sideRibs.push({mesh,side,z});
        }
-       box(g,6,.25,3.6,0x9f835e,0,.28,b.d/2+1.8);
-       for(const x of[-2.7,2.7])cylinder(g,.10,4.5,0x67523a,x,2.5,b.d/2+3.2);
-       const porch=box(g,6.6,.18,4.2,0x79613f,0,4.8,b.d/2+1.7);roofs.push(porch);
-       return {sideRibs};
+       const porchParts=[box(g,6,.25,3.6,0x9f835e,0,.28,b.d/2+1.8)];
+       for(const x of[-2.7,2.7])porchParts.push(cylinder(g,.10,4.5,0x67523a,x,2.5,b.d/2+3.2));
+       const porch=box(g,6.6,.18,4.2,0x79613f,0,4.8,b.d/2+1.7);
+       porchParts.push(porch);roofs.push(porch);
+       return {sideRibs,porchParts};
      
 }
 export function decorateUpper(T,{b,storey,shell,box,rod,roofs}){const g=shell.group;
