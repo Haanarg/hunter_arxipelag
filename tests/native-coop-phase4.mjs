@@ -37,7 +37,7 @@ const fleet=createRelayVehicles({meta:{id:'session',mode:'native',
 fleet.accept('host',{forward:1,turn:0,strafe:0,climb:0},0);
 for(let tick=1;tick<=8;tick++)fleet.step(tick);
 const [vessel,vehicle]=fleet.snapshot();
-assert(Math.hypot(vessel.x,vessel.z)>.01,'El ferri ha d'avançar');
+assert(Math.hypot(vessel.x,vessel.z)>.01,"El ferri ha d'avançar");
 assert.equal(vehicle.carrierId,ferry.id);
 const relative=ferryLocal(vessel,vehicle.x,vehicle.z);
 assert(Math.abs(relative.x-q.x)<.01&&Math.abs(relative.z-q.z)<.01,
