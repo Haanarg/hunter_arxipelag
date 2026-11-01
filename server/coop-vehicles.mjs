@@ -54,6 +54,25 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
      }
      return null;
    }
+   if(meta.mode==='native'&&v.carrierId){
+     // En abandonar un vehicle carregat, sortir damunt del ferri en lloc
+     // de consultar el fons de la mar com si fos un moll estàtic.
+     const f=vehicles.find(a=>a.id===v.carrierId&&!a.destroyed),
+       scale=vehicleSpecs.scales[v.t]||1,
+       half=(vehicleSpecs.hitboxes[v.t]?.[0]||2)*scale/2;
+     if(f)for(const side of [1,-1])for(const back of [0,-2,2]){
+       const lateral=half+1.35,
+         x=v.x+Math.cos(v.hd)*side*lateral-Math.sin(v.hd)*back,
+         z=v.z-Math.sin(v.hd)*side*lateral-Math.cos(v.hd)*back,
+         deck=ferryPedestrianAt(f,x,z,ferrySurfaceY(f,ferryLocal(f,x,z).z));
+       if(!deck||x<meta.bounds.x0+1||x>meta.bounds.x1-1||
+         z<meta.bounds.z0+1||z>meta.bounds.z1-1||
+         players().some(p=>p.id!==actor.id&&!mounted(p.id)&&
+           Math.hypot(p.x-x,p.z-z)<1.6))continue;
+       return {x,y:deck.y+.12,z,hd:v.hd};
+     }
+     return null;
+   }
    // Com al mode individual: sortir d'un helicòpter alt inicia caiguda,
    // conservant la velocitat i desplegant el paracaigudes de l'inventari.
    const aircraft=vehicleDynamics.types[v.t]?.m==='a',
