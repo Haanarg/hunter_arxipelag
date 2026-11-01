@@ -326,15 +326,19 @@ const compoundProp=(kind,x,z,rot=0)=>{
   // Wells are annular, leaving the visual hollow centre unblocked.
   // Benches use one narrow rotated footprint, not an oversized circle.
   const y=Math.max(.05,hAt(x,z)),
+    civic=(kind==='bench'||kind==='well')
+      ?{kind,x,y,z,id:'civic:'+Wl.length,walls:[],rubbleWall:null,visual:null,intact:[],rubble:null,broken:false}:null,
     collide=(cx,cz,w,d,height)=>{
       const cs=Math.cos(rot),sn=Math.sin(rot),
         px=x+cx*cs+cz*sn,pz=z-cx*sn+cz*cs,
         hw=(Math.abs(cs)*w+Math.abs(sn)*d)/2,
         hd=(Math.abs(sn)*w+Math.abs(cs)*d)/2;
-      Wl.push({x0:px-hw,x1:px+hw,z0:pz-hd,z1:pz+hd,
+      const wall={x0:px-hw,x1:px+hw,z0:pz-hd,z1:pz+hd,
         cx:px,cz:pz,y0:y-.12,y1:y+height,
-        hp:Infinity,open:false,door:false,rammable:false,
-        civicFurniture:kind});
+        hp:kind==='bench'?5:kind==='well'?24:Infinity,
+        open:false,door:false,rammable:false,
+        civicFurniture:kind,civicGroup:civic?.id,civicObject:civic};
+      Wl.push(wall);if(civic)civic.walls.push(wall);
       wallGridCount=-1;
     };
   if(kind==='bench')collide(0,0,3.95,1.12,1.2);
@@ -347,6 +351,13 @@ const compoundProp=(kind,x,z,rot=0)=>{
         Math.abs(Math.sin(t))*.63+.32,
         Math.abs(Math.cos(t))*.63+.32,1.85);
     }
+  }
+  if(kind==='well'){
+    // Un únic volum rocós roman després de la destrucció del brocal.
+    const rubble={x0:x-1.18,x1:x+1.18,z0:z-1.18,z1:z+1.18,
+      cx:x,cz:z,y0:y-.12,y1:y+.95,hp:Infinity,open:true,door:false,
+      rammable:false,civicRubble:true,civicGroup:civic.id,civicObject:civic};
+    Wl.push(rubble);civic.rubbleWall=rubble;wallGridCount=-1;
   }
   if(seedSearchMode)return null;
   const g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;
@@ -364,7 +375,28 @@ const compoundProp=(kind,x,z,rot=0)=>{
   else if(kind==='lamp'){bx(g,.14,4.2,.14,0x454b4f,0,2.1,0,'metal');bx(g,.7,.22,.45,0xe7d68a,0,4.15,0,'paint')}
   else if(kind==='generator'){bx(g,7,.4,4.5,0x6d7369,0,.2,0,'metal');bx(g,5,2.5,3,0x57694f,0,1.65,0,'metal');for(let k=-2;k<=2;k++)bx(g,.12,1.6,.06,0x29383a,k*.55,1.75,1.53,'metal');bx(g,.25,3,.25,0x41484b,1.5,3.05,-.7,'metal')}
   else if(kind==='net'){for(const xx of[-1.2,1.2])bx(g,.12,2.1,.12,0x4d5356,xx,1.05,0,'metal');for(let yy=.45;yy<2;yy+=.42)bx(g,2.5,.035,.035,0x5b6062,0,yy,0,'metal');for(let xx=-1.05;xx<=1.05;xx+=.42)bx(g,.035,1.65,.035,0x5b6062,xx,1.2,0,'metal')}
-  world.add(g);staticDecorRoots.push(g);return g
+  if(civic){
+    civic.visual=g;civic.intact=[...g.children];
+    if(kind==='well'){
+      const rubble=new THREE.Group(),
+        stone=M(0x777b6e,'masonry'),dark=M(0x555c53,'masonry');
+      // Pedres baixes i irregulars: ni brocal ni pou sencer fantasma.
+      for(let i=0;i<11;i++){
+        const theta=i*2.399963229728653,
+          distance=.12+Math.sqrt((i+.4)/11)*.99,
+          radius=i===0?1.12:.35+(i%4)*.065;
+        const rock=new THREE.Mesh(new THREE.IcosahedronGeometry(radius,0),i%3?stone:dark);
+        rock.position.set(Math.cos(theta)*distance,.22+(i%3)*.06,Math.sin(theta)*distance);
+        rock.scale.set(1.15+(i%3)*.16,.68+(i%2)*.21,.85+(i%4)*.1);
+        rock.rotation.set(i*.19,theta,i*.27);rubble.add(rock);
+      }
+      rubble.visible=false;g.add(rubble);civic.rubble=rubble;
+    }
+  }
+  world.add(g);
+  // Bancs i pous han de mantenir malles individuals i destructibles.
+  if(!civic)staticDecorRoots.push(g);
+  return g
 };
 const compoundPad=(x,z,w,d,c=0x77736c)=>{
   if(seedSearchMode){compoundClear.push({x,z,r:Math.hypot(w,d)*.55});return {rotation:{y:0}}}
