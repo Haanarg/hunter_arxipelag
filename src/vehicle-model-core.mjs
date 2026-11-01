@@ -675,6 +675,8 @@ export const vehicleModels=Object.freeze({
         g.userData.fan=hover.userData.rotors[0];
         g.userData.hovercraftModel='D-model-3';
         g.userData.hovercraftSeats=hover.userData.cockpitSeats;
+        g.userData.hovercraftSeatPositions=hover.userData.seatStations.map(p=>new THREE.Vector3(p.x*1.28,p.y,p.z*1.20));
+        g.userData.hovercraftSteeringPosition=new THREE.Vector3(hover.userData.steeringStation.x*1.28,hover.userData.steeringStation.y,hover.userData.steeringStation.z*1.20);
         g.userData.hovercraftWindows=hover.userData.windowPanes;
       }
       if(t==='heli'||t==='heli_combat'){
