@@ -12,13 +12,13 @@ export function createBuildingView(T,scene,geometry,doors){
  const rod=(group,a,b,r,c)=>{const start=new T.Vector3(...a),end=new T.Vector3(...b),delta=end.clone().sub(start),mesh=new T.Mesh(new T.CylinderGeometry(r,r,delta.length(),6),material(c,'metal'));mesh.position.copy(start.add(end).multiplyScalar(.5));mesh.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),delta.normalize());group.add(mesh);return mesh;};
  const factory=buildingVisual.create(T,{material,materialProfile:name=>materialProfiles[name]||materialProfiles.organic,box,windowLayout}),info=[],byId=new Map(),wallMeshes=[],doorMeshes=new Map(),windowMeshes=new Map(),roofMeshes=[],stairMeshes=[];
  for(const [index,b] of (geometry.buildings||[]).entries()){
-  const local={w:b.localW||b.w,d:b.localD||b.d,h:b.h},shell=(b.hangar?factory.createHangarShell:factory.createShell)({width:local.w,depth:local.d,height:b.h,wallColor:b.wood?0x96714b:b.hangar?0xbab99d:0xc9b98d,roofColor:b.hangar?0xb7c1b4:0x79584e}),members=[shell.roof];let upper=null,ribs=[];
+  const local={w:b.localW||b.w,d:b.localD||b.d,h:b.h},shell=(b.hangar?factory.createHangarShell:factory.createShell)({width:local.w,depth:local.d,height:b.h,wallColor:b.wood?0x96714b:b.hangar?0xbab99d:0xc9b98d,roofColor:b.hangar?0xb7c1b4:0x79584e}),members=[shell.roof];let upper=null,ribs=[],porchParts=[];
   if(b.roof?.scale)shell.roof.scale.set(b.roof.scale.x,1,b.roof.scale.z);
-  if(b.wood)ribs=decorateTimber(T,{b:local,shell,box,rod,cylinder,roofs:[]}).sideRibs;
+  if(b.wood){const timber=decorateTimber(T,{b:local,shell,box,rod,cylinder,roofs:[]});ribs=timber.sideRibs;porchParts=timber.porchParts;}
   if(b.upperFloor){upper=decorateUpper(T,{b:local,storey:b.storey,shell,box,rod,roofs:[]});members.push(upper,upper.userData.stairGroup);}
   if(b.kind==='enemy_bunker'&&shell.foundation){shell.group.remove(shell.foundation);shell.foundation.geometry.dispose();}
   shell.group.position.set(b.x,b.fy,b.z);shell.group.rotation.y=-(b.angle||0);shell.group.userData.buildingId=b.id;shell.roof.userData.originalRoof=true;shell.roof.userData.roofKind=b.wood?'timber':b.hangar?'hangar':'flat';shell.group.updateMatrixWorld(true);scene.add(shell.group);
-  const entry={b,index,shell,members,upper,ribs};info.push(entry);byId.set(b.id,entry);roofMeshes.push(members);
+  const entry={b,index,shell,members,upper,ribs,porchParts};info.push(entry);byId.set(b.id,entry);roofMeshes.push(members);
  }
  let terrain=null;const fence=createFenceVisual(T,{heightAt:(x,z)=>{terrain??=createStaticWorldAdapter(geometry);return terrain.heightAt(x,z);}});
  geometry.walls.forEach((w,index)=>{
@@ -37,7 +37,9 @@ export function createBuildingView(T,scene,geometry,doors){
   else for(let i=0;i<stair.steps;i++)box(group,stair.width,.25,stair.tread,0x817968,0,stair.top-i*stair.rise-.125,(i+.5)*stair.tread,'masonry');
   scene.add(group);group.visible=!stair.destroyed;stairMeshes.push({mesh:group,buildingIndex:stair.internal?owner?.index:-1});
  }
- return {wallMeshes,doorMeshes,roofMeshes,stairMeshes,update(state,self){const brokenWindows=new Set(state.brokenWindows||[]);for(const [id,glass] of windowMeshes)glass.visible=!brokenWindows.has(id);const actor=state.players.find(p=>p.id===self);for(const entry of info){const {b,index,shell,upper,ribs}=entry,broken=b.rb||(state.removedRoofs||[]).includes(index),inside=actor&&Math.abs(actor.x-b.x)<b.w/2&&Math.abs(actor.z-b.z)<b.d/2&&actor.y<b.fy+b.h;
+ return {wallMeshes,doorMeshes,roofMeshes,stairMeshes,update(state,self){const brokenWindows=new Set(state.brokenWindows||[]);for(const [id,glass] of windowMeshes)glass.visible=!brokenWindows.has(id);const actor=state.players.find(p=>p.id===self);for(const entry of info){const {b,index,shell,upper,ribs,porchParts}=entry,broken=b.rb||(state.removedRoofs||[]).includes(index),inside=actor&&Math.abs(actor.x-b.x)<b.w/2&&Math.abs(actor.z-b.z)<b.d/2&&actor.y<b.fy+b.h;
+   const damagedFront=(state.removedWalls||[]).some(i=>{const w=geometry.walls[i];return w?.buildingId===b.id&&w.porchSupports;});
+   for(const part of porchParts)part.visible=!broken&&!damagedFront;
    shell.roof.visible=!broken&&!inside;if(upper)upper.visible=!broken&&(!inside||actor.y>=b.fy+b.storey-.2);if(upper?.userData.stairGroup)upper.userData.stairGroup.visible=!broken;
    for(const rib of ribs){const point=shell.group.localToWorld(new T.Vector3(rib.mesh.position.x,0,rib.mesh.position.z));rib.mesh.visible=!(state.removedWalls||[]).some(i=>{const w=geometry.walls[i];return w?.buildingId===b.id&&point.x>=w.x0-.2&&point.x<=w.x1+.2&&point.z>=w.z0-.2&&point.z<=w.z1+.2;});}
   }}};
