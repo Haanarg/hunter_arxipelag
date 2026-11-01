@@ -8,6 +8,7 @@ import {createNativeVehicleCandidateIndex} from './native-coop-vehicle-candidate
 import {createNativeWallCandidateIndex} from './native-coop-wall-candidates.mjs';
 import {createNativeLocalPresentation} from './native-coop-local-presentation.mjs';
 import {moveCoopCheatFly} from './coop-cheats.mjs';
+import {ferryPedestrianAt} from './ferry-deck-core.mjs';
 // Only local locomotion is predicted. Damage, pickups, combat and world mutations
 // remain authoritative. Reconciliation replays unacknowledged shared-rule steps.
 export function createNativePrediction(geometry){
@@ -34,7 +35,15 @@ export function createNativePrediction(geometry){
   for(const door of next.doors||[]){const wall=walls.get(door.id);if(wall)wall.open=!!door.open||!!door.destroyed;}
   for(const index of next.removedRoofs||[])if(physical.buildings[index])Object.assign(physical.buildings[index],{rb:true,rhp:0});
   world=createStaticWorldAdapter(physical);
-  playerWorld={...world,resolveBody:(previous,candidate)=>resolveCoopPlayerVehicleContact(previous,world.resolveBody(previous,candidate),state?.vehicles,previous.id)};
+  playerWorld={...world,locomotionAt(x,z,y){
+     const base=world.locomotionAt(x,z,y);
+     for(const f of state?.vehicles||[])if(f.t==='ferry'){
+       const deck=ferryPedestrianAt(f,x,z,y);
+       if(deck)return {...base,floor:Math.max(base.floor,deck.y),
+         interior:false,basement:false,drop:false};
+     }
+     return base;
+   },resolveBody:(previous,candidate)=>resolveCoopPlayerVehicleContact(previous,world.resolveBody(previous,candidate),state?.vehicles,previous.id)};
   vehicleBounds={x0:-world.limit,x1:world.limit,z0:-world.limit,z1:world.limit};
   wallCandidates=createNativeWallCandidateIndex(physical.walls);
   water=createCanonicalWater(world.heightAt);
