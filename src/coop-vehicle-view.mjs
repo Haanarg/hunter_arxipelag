@@ -1,5 +1,5 @@
 import {prepareHumveeD31Runtime} from './humvee-d31-runtime.mjs';
-import {vehicleModels} from './vehicle-model-core.mjs';
+import {vehicleModels} from './vehicle-model-core.mjs?v=0.6.80';
 import {playerBatching} from './player-batching-core.mjs';
 import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs';
