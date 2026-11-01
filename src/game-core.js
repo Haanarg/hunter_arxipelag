@@ -1019,10 +1019,11 @@ function demolishCivilianHut(b){
  roofBreak(b);
 }
 function collapsePorch(b,effects=true){
- if(!b?.porchParts?.length||b.porchDestroyed)return;
+ if(!b?.porchParts?.length)return;
+ const alreadyDestroyed=!!b.porchDestroyed;
  b.porchDestroyed=true;
  for(const part of b.porchParts)part.visible=false;
- if(effects){
+ if(effects&&!alreadyDestroyed){
   for(let i=0;i<7;i++)debris(b.x+rn(-2.8,2.8),b.fy+rn(1.2,4.8),
     b.z+b.d/2+rn(.5,3),0x806447,1,.55,7,'timberBeam');
   puff(b.x,b.fy+1.3,b.z+b.d/2+2,0xb5a389,3.6);
