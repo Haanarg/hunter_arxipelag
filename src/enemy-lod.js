@@ -137,6 +137,10 @@ function attachEnemyFlag(T,model,type){
     base=jeep?2.50:1.83,height=jeep?1.67:1.73;
   root.name='hunter-enemy-red-flag';
   root.position.set(x,0,z);
+  // El morro de tots dos vehicles apunta cap a -Z. El drap s'estén
+  // cap a +X dins el seu model local: girar el suport -90° el fa
+  // projectar-se cap a +Z (la part POSTERIOR), mai cap al lateral.
+  root.rotation.y=-Math.PI/2;
   const metal=new T.MeshStandardMaterial({color:0x11191b,metalness:.58,roughness:.49}),
         clothMaterial=new T.MeshStandardMaterial({
           color:0xc82a27,roughness:.92,metalness:0,side:T.DoubleSide

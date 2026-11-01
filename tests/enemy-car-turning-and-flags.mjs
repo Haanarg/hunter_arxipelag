@@ -105,7 +105,18 @@ for(const type of ['jeep','tanqueta']){
     arm.geometry.parameters.radiusTop<.04,'Màstil i suport negres i prims');
   assert.equal(mast.material.color.getHex(),0x11191b);
   assert.equal(cloth.material.color.getHex(),0xc82a27);
-  assert.ok(cloth.geometry.getAttribute('position').count>=12,
+  // La proa del jeep i de la tanqueta és -Z. La tela ha d'anar a +Z,
+  // sense continuar sobresortint cap al lateral del vehicle.
+  root.updateMatrixWorld(true);
+  const mastAt=mast.getWorldPosition(new THREE.Vector3()),
+    clothGeometry=cloth.geometry.getAttribute('position'),
+    outerWorld=cloth.localToWorld(new THREE.Vector3(
+      clothGeometry.getX(4),clothGeometry.getY(4),clothGeometry.getZ(4)));
+  assert.ok(outerWorld.z>mastAt.z+.6,
+    'La bandera de '+type+' s’ha d’orientar cap al darrere (+Z)');
+  assert.ok(Math.abs(outerWorld.x-mastAt.x)<.15,
+    'La bandera de '+type+' no pot apuntar cap al lateral');
+  assert.ok(clothGeometry.count>=12,
     'La bandera té una superfície deformada que penja');
   for(const level of ['mid','far','full']){
     window.HUNTER_ENEMY_LOD.setLevel(root,level);

@@ -30,5 +30,5 @@ for(const id of ['hunterNewGame','hunterBackFromSetup','hunterOpenOptions',
  'hunterSetupOptions','hunterBackFromOptions'])
  assert.ok(js.includes("find('"+id+"').addEventListener("),'Navegació conservada: '+id);
 assert.ok(boot.includes('menu-main-integration.mjs?menu=direct-html-v1'));
-assert.ok(html.includes('menu-boot.mjs?v=0.6.82&visual=8&glassfix=2&smooth=13&menu=direct-html-v1'));
+assert.ok(html.includes('menu-boot.mjs?v=0.6.83&visual=8&glassfix=2&smooth=13&menu=direct-html-v1'));
 console.log('PASS: menú nou des del primer HTML, cap títol/subtítol o botons antics');
