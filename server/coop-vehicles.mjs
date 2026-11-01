@@ -4,6 +4,8 @@ import {firstVehicleContact,vehicleContactDamage} from './coop-vehicle-contacts.
 import {stepRangeVehicle} from './coop-vehicle-motion.mjs';
 import {vehicleDamage,combatBalance,tankCanCrush,barrierRam,vehicleHullDistance,vehicleHullSegmentT} from '../src/combat-rules.mjs';
 import {vehicleDynamics,advanceVehicle} from '../src/vehicle-dynamics-core.mjs';
+import {ferryLocal,ferryWorld,ferrySurfaceY,ferryPedestrianAt,
+  ferryForVehicle,ferryCarriedPose} from '../src/ferry-deck-core.mjs';
 // Trusted two-seat transport on the relay pad. No client coordinates or seat claims.
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),validId=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(id);
 export function vehicleClear(position,world,bounds,previous=position){
@@ -17,9 +19,41 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
  const vehicles=structuredClone(record.vehicles||meta.vehicles||[]),results=structuredClone(record.results||[]),inputs=new Map();
  for(const v of vehicles)v.life??=combatBalance.vehicles[v.t]??1;
  const mounted=id=>vehicles.find(v=>!v.destroyed&&v.seats.includes(id));
+ const ferryFor=v=>ferryForVehicle(v,vehicles);
+ const clearCarrier=v=>{delete v.carrierId;delete v.carrierLX;
+  delete v.carrierLZ;delete v.carrierHD;};
+ function attachCarrier(v,f){
+  const q=ferryLocal(f,v.x,v.z);
+  v.carrierId=f.id;v.carrierLX=q.x;v.carrierLZ=q.z;
+  v.carrierHD=Math.atan2(Math.sin(v.hd-f.hd),Math.cos(v.hd-f.hd));
+ }
+ function onFerry(v,f){
+  return !!f&&Math.abs(v.y-ferrySurfaceY(f,ferryLocal(f,v.x,v.z).z))<3.1;
+ }
+ function vehicleWorld(v){
+  const base=world();
+  return {...base,groundAt(x,z,previous){
+   const ground=base.groundAt?.(x,z,previous)??base.heightAt(x,z);
+   if(vehicleDynamics.types[v.t]?.m!=='l')return ground;
+   const f=ferryForVehicle(v,vehicles,x,z,true);
+   return f?Math.max(ground,ferrySurfaceY(f,ferryLocal(f,x,z).z)):ground;
+  }};
+ }
  function position(actor){const v=mounted(actor.id);return v?{x:v.x,y:v.y,z:v.z,hd:v.hd,hp:actor.hp,fall:null,swimming:false}:null;}
  function walkClear(from,to){let previous=from;const steps=Math.max(1,Math.ceil(distance(from,to)/.2));for(let i=1;i<=steps;i++){const q={...to,x:from.x+(to.x-from.x)*i/steps,z:from.z+(to.z-from.z)*i/steps},resolved=world().resolveBody(previous,q);if(distance(q,resolved)>1e-5)return false;previous=q;}return true;}
  function exitPoint(v,actor){
+   if(meta.mode==='native'&&v.t==='ferry'){
+     // Desembarcar sobre la coberta; no fer caure el jugador a la mar.
+     for(const [lx,lz] of [[-4,-5],[4,-5],[-4,6],[4,6]]){
+       const at=ferryWorld(v,lx,lz),y=ferrySurfaceY(v,lz)+.12;
+       if(at.x<meta.bounds.x0+1||at.x>meta.bounds.x1-1||
+          at.z<meta.bounds.z0+1||at.z>meta.bounds.z1-1||
+          players().some(p=>p.id!==actor.id&&!mounted(p.id)&&
+            distance(p,at)<1.7))continue;
+       return {...at,y,hd:v.hd};
+     }
+     return null;
+   }
    // Com al mode individual: sortir d'un helicòpter alt inicia caiguda,
    // conservant la velocitat i desplegant el paracaigudes de l'inventari.
    const aircraft=vehicleDynamics.types[v.t]?.m==='a',
@@ -92,8 +126,20 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
   }return {kind:'vehicle',actorId,commandId:msg.commandId,ok,code};
  }
  function step(tick){if(!active())return;
+  if(meta.mode==='native')for(const v of vehicles){
+   if(v.destroyed||vehicleDynamics.types[v.t]?.m!=='l')continue;
+   const f=v.carrierId?vehicles.find(a=>a.id===v.carrierId&&!a.destroyed):ferryFor(v);
+   if(!f){clearCarrier(v);continue;}
+   if(!v.carrierId&&onFerry(v,f))attachCarrier(v,f);
+  }
   for(const v of vehicles){
    if(v.destroyed)continue;
+   const carrier=v.carrierId&&vehicles.find(a=>a.id===v.carrierId&&!a.destroyed),
+     driverEntry=inputs.get(v.seats[0]),driving=!!(v.seats[0]&&
+       driverEntry&&tick-driverEntry.tick<=8);
+   if(v.carrierId&&!carrier)clearCarrier(v);
+   if(carrier&&!driving){v.v=0;v.sideV=0;v.strafeV=0;continue;}
+   if(carrier&&driving)Object.assign(v,ferryCarriedPose(v,carrier));
    // L'helicòpter sense pilot perd sustentació, com al joc individual.
    // No introduïm cap simulador alternatiu: només gravetat autoritativa.
    if(v.crashing&&!v.seats[0]&&['heli','heli_combat'].includes(v.t)){
@@ -114,7 +160,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
    // Sense conductor, la inèrcia es dissipa amb la física compartida; no frenam en sec.
    if((!driver||!entry||tick-entry.tick>8)&&(meta.mode!=='native'||Math.abs(v.v)<.2&&Math.abs(v.sideV||0)<.2&&Math.abs(v.strafeV||0)<.2)){v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;v.verticalV=0;continue;}
    const from={x:v.x,y:v.y,z:v.z,hd:v.hd,v:v.v};let attempted=null;
-   if(['proving','world','native'].includes(meta.mode))stepRangeVehicle(v,input,1/30,tick,world(),water,meta.bounds);
+   if(['proving','world','native'].includes(meta.mode))stepRangeVehicle(v,input,1/30,tick,meta.mode==='native'?vehicleWorld(v):world(),water,meta.bounds);
    else{
    const control=vehicleDynamics.inputs(v,input.forward,input.turn,1/30),side=advanceVehicle(v,control.forward,control.turn,1/30),hd=v.hd;
    const next={...v,hd,x:v.x+(-Math.sin(hd)*v.v+Math.cos(hd)*side)/30,z:v.z+(-Math.cos(hd)*v.v-Math.sin(hd)*side)/30};
@@ -161,7 +207,23 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
        }
      }else{v.v=0;v.sideV=0;v.strafeV=0;if(incoming>10&&tick>=(v.contactUntilTick||0)){v.contactUntilTick=tick+6;if(v.t!=='tanc')onImpact(v.id,Math.min(5,Math.max(1,Math.ceil((incoming-10)/6))),tick);}}
    }
-   if(!v.destroyed)onTravel(v,from,tick);
+   if(!v.destroyed){
+     if(meta.mode==='native'&&vehicleDynamics.types[v.t]?.m==='l'){
+       const f=ferryFor(v);
+       if(f&&onFerry(v,f))attachCarrier(v,f);
+       else if(v.carrierId)clearCarrier(v);
+     }
+     onTravel(v,from,tick);
+   }
+  }
+  // Un vehicle aparcat segueix la transformació del ferri, no el client.
+  if(meta.mode==='native')for(const v of vehicles){
+   if(v.destroyed||!v.carrierId)continue;
+   const f=vehicles.find(a=>a.id===v.carrierId&&!a.destroyed);
+   if(!f){clearCarrier(v);continue;}
+   const entry=inputs.get(v.seats[0]);
+   if(v.seats[0]&&entry&&tick-entry.tick<=8)continue;
+   Object.assign(v,ferryCarriedPose(v,f));
   }
  }
  function damage(id,amount,shotClass='light'){
@@ -169,12 +231,18 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
   const result=vehicleDamage(v,amount,1,shotClass,combatBalance.vehicles[v.t]??1);
   if(!result.damaged)return null;v.life=result.life;
   if(!result.destroyed)return {id:v.id,destroyed:false};
-  const occupants=v.seats.filter(Boolean);v.destroyed=true;v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;
+  const occupants=v.seats.filter(Boolean);v.destroyed=true;clearCarrier(v);v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;
   for(const id of occupants)inputs.delete(id);v.seats.fill(null);
   return {id:v.id,destroyed:true,explosive:v.t!=='bici',occupants,at:{x:v.x,y:v.y+1,z:v.z}};
  }
  const live=()=>vehicles.filter(v=>!v.destroyed);
  // Existing individual sphere contact/hull falloff, adapted to the 3.2 m relay model.
  const hullRadius=v=>v.hullRadius??Math.max(1.6,(vehicleSpecs.radii[v.t]||1.6)*(vehicleSpecs.scales[v.t]||1)*.7);
- return {mounted,position,command,step,damage,live,contact:(from,to,v)=>vehicleHullSegmentT(from,to,v,v.y,hullRadius(v)),blastDistance:(v,at)=>vehicleHullDistance(v,v.y,hullRadius(v),at.x,at.y,at.z),accept(id,input,tick){if(mounted(id))inputs.set(id,{input:{...input},tick});},pause(){inputs.clear();for(const v of vehicles){v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;}},snapshot(){return structuredClone(vehicles);},checkpoint(){return structuredClone({vehicles,results});}};
+ return {mounted,position,command,step,damage,live,contact:(from,to,v)=>vehicleHullSegmentT(from,to,v,v.y,hullRadius(v)),blastDistance:(v,at)=>vehicleHullDistance(v,v.y,hullRadius(v),at.x,at.y,at.z),accept(id,input,tick){if(mounted(id))inputs.set(id,{input:{...input},tick});},pause(){inputs.clear();for(const v of vehicles){v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;}},ferryDeckAt(x,z,previousY){
+   for(const f of vehicles)if(!f.destroyed&&f.t==='ferry'){
+     const result=ferryPedestrianAt(f,x,z,previousY);
+     if(result)return result;
+   }
+   return null;
+  },snapshot(){return structuredClone(vehicles);},checkpoint(){return structuredClone({vehicles,results});}};
 }
