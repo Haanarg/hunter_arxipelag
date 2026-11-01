@@ -51,7 +51,7 @@ assert.equal(scene.children.length,0,'scene is restored and materials released')
 const combat=load('src/combat.js');
 assert.match(combat,/HUNTER_ARCADE_BLAST_FX\.emit\(x,y,z,kind\)/);
 assert.match(combat,/HUNTER_ARCADE_BLAST_FX\?\.update\(dt\)/);
-assert.match(combat,/boom\(b\.x,b\.y,b\.z,48,COMBAT_BALANCE\.weapons\.c4,'b',\{weapon:'c4'\}\)/);
+assert.match(combat,/boom\(b\.x,b\.y,b\.z,48,COMBAT_BALANCE\.weapons\.c4,'b',null,'c4'\)/);
 const coop=load('src/coop-world-runtime.js');
 assert.match(coop,/presentExplosion\(effect\.at\.x,effect\.at\.y,effect\.at\.z,effect\.radius,\{weapon:effect\.weapon\}\)/);
 const server=load('server/coop-combat.mjs');
