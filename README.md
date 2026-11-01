@@ -4,6 +4,13 @@ Joc 3D per al navegador inspirat en *Hunter* (Amiga). Comença a la teva base, e
 
 [Jugar](https://hunter.paradoxa.cat/) · [Fases fetes i pendents](PROGRESS.MD) · [Notes visuals](docs/VISUAL_MODERNIZATION.md)
 
+## Explosions arcade · model 03 (v0.6.79)
+
+- **Granades i C4, individual i cooperatiu natiu:** mateix motor visual Three.js `src/arcade-blast-fx.mjs`, basat en la proposta 3 «Ona energètica» de [la comparativa de quatre estils](explosions-arcade-proves.html). Nucli esfèric translúcid, dos fronts anulars, foc, pols, fum, fragments i espurnes 3D.
+- **C4:** esclat visual més gran i alt, segona pulsació retardada i fum més persistent. El radi de dany, la física, la destrucció i l'atribució de dany **no canvien**. Les explosions de coets i vehicles mantenen l'efecte anterior.
+- **Xarxa:** el servidor cooperatiu envia `weapon: 'grenade'|'c4'` a l'esdeveniment d'explosió; cada client genera localment el mateix tipus d'efecte, sense transmetre partícules. El gestor recicla fins a vuit grups i redueix les partícules en qualitat mòbil.
+- **Proves:** `node tests/arcade-blast-fx.mjs` (motor visual, agrupació, transparència i cicle de vida) i els casos existents de granades/C4 del servidor. La comparativa continua separada del joc.
+
 ## Millores de combat (v0.6.2)
 
 - **Torres de vigilància:** l'autoapuntat, la col·lisió de projectils i la referència d'explosió situen el blanc a la caseta (aprox. 9,15 m sobre la base), no al mig de les potes.
