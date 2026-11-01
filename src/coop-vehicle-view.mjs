@@ -18,6 +18,7 @@ export async function createVehicleView(T,scene){
    const model=group.children[0];if(model.userData.turretPivot)model.userData.turretPivot.rotation.y=v.turretYaw||0;if(model.userData.turretPitch)model.userData.turretPitch.rotation.x=v.turretPitch||0;vehicleModels.animateSteering(model,v.t,v.steerInput||0,dt);
    for(const wheel of model.userData.wheels||[])wheel.rotation.x-=(v.v||0)*dt/Math.max(.1,wheel.userData.radius||.5);
    if(model.userData.rotor)model.userData.rotor.rotation.y+=dt*30;
+   if(model.userData.fan)model.userData.fan.rotation.z+=dt*35;
   }
  },destroy(){for(const id of [...meshes.keys()])remove(id);}};
 }
