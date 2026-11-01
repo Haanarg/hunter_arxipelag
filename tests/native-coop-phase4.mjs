@@ -3,6 +3,7 @@ import {vehicleSpecs} from '../src/vehicle-specs.mjs';
 import {ferryLocal,ferryWorld,ferrySurfaceY,ferryPedestrianAt,
   ferryForVehicle,ferryCarriedPose} from '../src/ferry-deck-core.mjs';
 import {createRelayVehicles} from '../server/coop-vehicles.mjs';
+import {createPlayerSimulation} from '../src/player-simulation.mjs';
 import {resolveCoopPlayerVehicleContact} from '../src/coop-vehicle-contacts-core.mjs';
 
 const ferry={id:'f-1',t:'ferry',x:0,y:0,z:0,hd:.4,v:0,
@@ -43,4 +44,19 @@ const relative=ferryLocal(vessel,vehicle.x,vehicle.z);
 assert(Math.abs(relative.x-q.x)<.01&&Math.abs(relative.z-q.z)<.01,
  'El vehicle aparcat no ha de quedar flotant al punt inicial');
 assert.equal(vehicle.y,ferrySurfaceY(vessel,q.z)+.06);
+// El vaixell pot desplaçar caminants sense perdre els inputs nous.
+const walkWorld={...world,locomotionAt:()=>({floor:2.2,terrain:-12,
+ interior:false,basement:false,drop:false}),roofLanding:()=>null};
+const sim=createPlayerSimulation({epoch:'deck',limit:200,
+ actors:[{id:'a',x:0,y:2.2,z:0,hd:0,hp:25},
+         {id:'b',x:8,y:2.2,z:0,hd:0,hp:25}],
+ world:walkWorld,vertical:{surfaceAt:()=>0}});
+const command={protocol:1,epoch:'deck',sequence:1,
+ input:{forward:1,turn:0,strafe:0,run:false}};
+assert.equal(sim.accept('a',command),true);
+assert.equal(sim.carry('a',{x:2,y:2.2,z:3}),true);
+const step=sim.step().players.find(p=>p.id==='a');
+assert.equal(step.acknowledged,1,'El ferri no esborra les comandes reconegudes');
+assert.equal(step.x,2);
+assert(step.z<3,'El jugador pot caminar al mateix tick que es mou el ferri');
 console.log('Fase 4 COOP: ferri, coberta i transport autoritatiu OK');
