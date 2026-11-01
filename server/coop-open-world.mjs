@@ -67,10 +67,89 @@ export function configureOpenWorld(generated){
  // Reserve the mandatory camp before optional sites, as in individual generation.
  add('prison-camp');for(const type of [...new Set(runtimeLayouts.map(l=>l.id))].filter(t=>!['base','hq','prison-camp'].includes(t)))add(type);
  for(let i=0;i<meta.mapScale*3;i++)add(i%2?'outpost':'polvori');
+
+ // Quota de hovercrafts del cooperatiu: 2 al mapa petit i 2 a CADA quadrant
+ // del mapa gran (o el doble de la flota preexistent si ja n'hi havia més).
+ // No consumim el RNG del món: els mateixos seeds continuen generant la mateixa
+ // vegetació, els mateixos complexos i la mateixa distribució d'altres vehicles.
+ const hoverSector=(x,z)=>(x>=0?1:0)+(z>=0?2:0);
+ const hoverSectors=meta.mapScale===2?[0,1,2,3]:[null];
+ const hoverRadius=vehicleSpecs.radii.hover*vehicleSpecs.scales.hover;
+ const hoverCount=sector=>vehicles.filter(v=>v.t==='hover'&&
+   (sector===null||hoverSector(v.x,v.z)===sector)).length;
+ const safeHover=(x,z,sector)=>{
+   if(Math.abs(x)>half-hoverRadius-140||Math.abs(z)>half-hoverRadius-140)return false;
+   if(sector!==null&&(hoverSector(x,z)!==sector||
+      Math.abs(x)<hoverRadius+8||Math.abs(z)<hoverRadius+8))return false;
+   // La cabina i l'hèlix queden sobre aigua profunda a totes les cantonades.
+   for(const [dx,dz] of [[0,0],[-3.2,-4.5],[3.2,-4.5],[-3.2,4.5],[3.2,4.5]])
+     if(raw(x+dx,z+dz)>-2.15)return false;
+   if(vehicles.some(v=>Math.hypot(v.x-x,v.z-z)<hoverRadius+
+      (vehicleSpecs.radii[v.t]||4)*(vehicleSpecs.scales[v.t]||1)+5))return false;
+   // Evitam passar per sobre dels embarcadors i les rampes del ferri.
+   for(const p of geometry.piers){
+     const dx=x-p.x,dz=z-p.z,
+       along=dx*p.ux+dz*p.uz,across=dx*p.px+dz*p.pz;
+     if(along>-hoverRadius-3&&along<p.length+hoverRadius+3&&
+        Math.abs(across)<p.width/2+hoverRadius+3)return false;
+   }
+   return true;
+ };
+ function hoverSpot(sector){
+   const current=vehicles.filter(v=>v.t==='hover'&&
+     (sector===null||hoverSector(v.x,v.z)===sector));
+   for(const old of current)for(const distance of [20,34,51,78,105]){
+     for(let k=0;k<16;k++){
+       const a=(old.hd||0)+k*Math.PI/8+distance*.012,
+         x=old.x+Math.cos(a)*distance,z=old.z+Math.sin(a)*distance;
+       if(safeHover(x,z,sector))return {x,z,hd:old.hd};
+     }
+   }
+   const inSector=foundation.islands.filter(i=>
+     sector===null||hoverSector(i.x,i.z)===sector);
+   for(const island of inSector){
+     for(let k=0;k<32;k++){
+       const a=(k*13%32)*Math.PI/16+(foundation.seed%37)*.013,
+         ux=Math.cos(a),uz=Math.sin(a),step=Math.max(12,island.r*.045);
+       let seenShore=false;
+       for(let d=Math.max(24,island.r*.48);d<island.r*1.55;d+=step){
+         const x=island.x+ux*d,z=island.z+uz*d;
+         if(raw(x,z)>0){seenShore=true;continue}
+         if(seenShore&&safeHover(x,z,sector))
+           return {x,z,hd:Math.atan2(island.x-x,island.z-z)};
+       }
+     }
+   }
+   // Reserva quan no hi ha prou cales lliures: aigua oberta del quadrant.
+   for(let k=0;k<320;k++){
+     const a=Math.sin(k*12.9898+(foundation.seed%100000)*.01)*43758.5453,
+       b=Math.sin(k*78.233+(foundation.seed%100000)*.017)*13675.413,
+       fx=a-Math.floor(a),fz=b-Math.floor(b),extent=half-200,
+       x=sector===null?(fx*2-1)*extent:(sector%2?1:-1)*(hoverRadius+25+fx*(extent-hoverRadius-25)),
+       z=sector===null?(fz*2-1)*extent:(sector&2?1:-1)*(hoverRadius+25+fz*(extent-hoverRadius-25));
+     if(safeHover(x,z,sector))return {x,z,hd:(k*2.39996)%(Math.PI*2)};
+   }
+   return null;
+ }
+ const hovercraftPopulation=[];
+ for(const sector of hoverSectors){
+   const original=hoverCount(sector),target=Math.max(2,original*2);
+   let attempts=0;
+   while(hoverCount(sector)<target&&attempts++<target*12){
+     const spot=hoverSpot(sector);if(!spot)break;
+     vehicles.push({id:'world-hover-'+(sector??'small')+'-'+hoverCount(sector),
+       t:'hover',kind:'hover',x:spot.x,y:0,z:spot.z,alt:0,
+       hd:spot.hd,v:0,life:vehicleDynamics.types.hover.life,
+       seats:[null,null],rockets:12,modelScale:1,
+       hullRadius:vehicleSpecs.radii.hover*vehicleSpecs.scales.hover*.62});
+   }
+   hovercraftPopulation.push({sector,baseline:original,target,actual:hoverCount(sector)});
+ }
  const world=createStaticWorldAdapter(geometry),basePlan=geometry.levels[0];
  // Validate two connected exterior spawn points on the friendly foundation.
  const points=[];for(let x=base.x-45;x<=base.x+45&&points.length<2;x+=4)for(let z=base.z-40;z<=base.z+40&&points.length<2;z+=4){const p={x,y:world.heightAt(x,z)+.06,z,hd:0},s=world.locomotionAt(x,z,p.y),resolved=world.resolveBody(p,p);if(!s.interior&&Math.hypot(resolved.x-x,resolved.z-z)<1e-5&&(!points.length||Math.hypot(points[0].x-x,points[0].z-z)>=4))points.push(p);}
  if(points.length!==2)throw Error('La base no té dos punts inicials segurs');
+ meta.hovercraftPopulation=hovercraftPopulation;
  Object.assign(meta,{seed:foundation.seed,mode:'world',bounds:{x0:-half+3,x1:half-3,z0:-half+3,z1:half-3},floor:basePlan.y,compounds,vehicles,targets,supplies,terminals:[],routes:[],extraction:points[0],timeLimitTicks:54000,
  doors:geometry.walls.flatMap((w,wallIndex)=>w.door&&!w.alwaysOpen?[{id:w.id,wallIndex,cx:w.cx,cz:w.cz,floor:w.y0+1}]:[])});
  record.checkpoint.players.forEach((p,i)=>Object.assign(p,points[i],{hp:combatBalance.player,swimming:false,fall:null}));
