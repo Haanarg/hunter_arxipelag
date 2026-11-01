@@ -126,13 +126,13 @@ window.HUNTER_RIDER=Object.freeze({
       // 0/1 = seient autoritatiu COOP (pilot esquerra, passatger dreta).
       const passenger=seatIndex===1,coopSeat=seatIndex===0||passenger;
       const car=!!v&&(v.t==='cotxe_civil'||v.t==='cotxe');
-      const open=!!v&&(car||['bici','moto','moto_aquatica','llanxa','llanxa_coets','barca_rems','windsurf'].includes(v.t));g.visible=open;
+      const open=!!v&&(car||['bici','moto','moto_aquatica','llanxa','llanxa_coets','barca_rems','windsurf','hover'].includes(v.t));g.visible=open;
       if(!open){g.userData.shotTime=0;g.userData.shotBlend=0;g.userData.pistolAim=null;pistol.visible=false;g.scale.setScalar(1);return}
       const u=g.userData,sc=v.t==='llanxa'?1.3:v.t==='llanxa_coets'?1.35:scales[v.t],moving=Math.min(1,Math.abs(v.v)/1.8);u.motion+=(moving-u.motion)*(1-Math.exp(-12*dt));const motion=u.motion,phase=(v.t==='bici'||v.t==='barca_rems')?-(v.pedalPhase||0):(v.pedalPhase||0);
       // En cotxes l'habitacle és més baix que el protagonista dret.
       // Escalam el mateix model de jugador i preservam l'orientació
       // tridimensional del xassís en girs i pendents.
-      const riderScale=car?.82:1;
+      const riderScale=car?.82:v.t==='hover'?.63:1;
       g.scale.setScalar(riderScale);
       g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);torso.rotation.set(0,0,0);boots.forEach(b=>b.rotation.set(0,0,0));
 
@@ -177,6 +177,50 @@ window.HUNTER_RIDER=Object.freeze({
         }
         // També els conductors de cotxe han de mostrar el gest real
         // de treure la pistola en disparar (local i company COOP).
+        aimOneHand(v,dt);
+        return;
+      }
+
+      if(v.t==='hover'){
+        // La variant D té una cabina amb dos seients de veritat, no una
+        // figura damunt del sostre. Les posicions són les del model 3D.
+        // El mode individual utilitza el seient del pilot (esquerre).
+        // En COOP, el servidor assigna 0=pilot i 1=passatger.
+        const positions=v.o.userData.hovercraftSeatPositions,
+              station=positions?.[passenger?1:0],
+              helm=v.o.userData.hovercraftSteeringPosition,
+              seatX=(station?.x??(passenger?.30:-.30))*sc,
+              seatY=(station?.y??1.58)*sc,
+              seatZ=(station?.z??-1.08)*sc,
+              invScale=1/riderScale;
+        torso.position.set(seatX*invScale,seatY*invScale,seatZ*invScale);
+        torso.rotation.x=-.07;
+        for(let i=0;i<2;i++){
+          const side=i?1:-1,
+                hip=vec((seatX+side*.145*sc)*invScale,
+                  seatY*invScale,seatZ*invScale),
+                shoulder=shoulderAt(side),
+                hand=passenger?
+                  vec((seatX+side*.18*sc)*invScale,
+                    (seatY+.13*sc)*invScale,(seatZ-.16*sc)*invScale):
+                  vec(((helm?.x??-.30)+side*.105)*sc*invScale,
+                    ((helm?.y??1.88)+.012)*sc*invScale,
+                    (helm?.z??-1.98)*sc*invScale),
+                elbow=shoulder.clone().lerp(hand,.55),
+                foot=vec((seatX+side*.16*sc)*invScale,
+                  1.42*sc*invScale,(seatZ-.36*sc)*invScale),
+                knee=hip.clone().lerp(foot,.52);
+          elbow.y-=.07*sc*invScale;
+          knee.y+=.12*sc*invScale;
+          limbBetween(limbs[i*2],shoulder,elbow);
+          limbBetween(limbs[i*2+1],elbow,hand);
+          limbBetween(limbs[4+i*2],hip,knee);
+          limbBetween(limbs[5+i*2],knee,foot);
+          boots[i].position.copy(foot);
+          boots[i].rotation.x=-.13;
+        }
+        // Disparar des del seient conserva la mà esquerra al comandament
+        // en les animacions del mode individual i del company remot.
         aimOneHand(v,dt);
         return;
       }
