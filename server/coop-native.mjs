@@ -1,5 +1,6 @@
 import {createStaticWorldAdapter} from '../src/world-adapter.mjs';
 import {vehicleDynamics} from '../src/vehicle-dynamics-core.mjs';
+import {vehicleSeatCount} from '../src/vehicle-specs.mjs';
 import {MISSION_VERSION} from './coop-mission.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
 export async function nativeFingerprint(text){return [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(x=>x.toString(16).padStart(2,'0')).join('');}
@@ -64,7 +65,7 @@ export function generateNativeMission(room,payload,fingerprint){
  if(!second)throw Error('No hi ha espai per al company.');
  const id=crypto.randomUUID(),meta={version:1,generator:MISSION_VERSION,gameVersion:GAME_VERSION,id,roomId:room.id,revision:room.revision,seed:geometry.seed,mapScale:room.mapScale,difficulty:room.difficulty,mode:'native',fingerprint,
   createdAt:Date.now(),expiresAt:room.expiresAt,timeLimitTicks:Math.max(30,Math.floor((room.expiresAt-Date.now())/1000)*30),bounds:{x0:-world.limit,x1:world.limit,z0:-world.limit,z1:world.limit},floor:spawn.y,members:room.members.map(m=>({id:m.id,name:m.name})),terminals:[],extraction:spawn,
-  vehicles:payload.vehicles.map(v=>({...v,seats:[null,null]})),targets:payload.targets,supplies:payload.supplies,
+  vehicles:payload.vehicles.map(v=>({...v,seats:Array(vehicleSeatCount(v.t)).fill(null)})),targets:payload.targets,supplies:payload.supplies,
   ...(payload.optional?{optional:payload.optional}:{}),
   ...(payload.sharks?{sharks:payload.sharks}:{}),
   ...(payload.intel?{intel:payload.intel}:{}),
