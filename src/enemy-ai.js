@@ -572,7 +572,7 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
     // de 68 m. No li avancem el waypoint abans d'arribar-hi:
     // això la feia tallar pel búnquer i acabar encallada a les cantonades.
     // Marge de 30 s sobre el temps previst del tram per recuperar bloquejos.
-    if((hqPatrolVehicle?(u.pi<0||waypointDistance<5||u.wt< -30):
+    if((hqPatrolVehicle?(u.pi<0||waypointDistance<(u.t==='jeep'?9.5:5)||u.wt< -30):
         (u.wt<=0||waypointDistance<2))){
       if(u.patrol&&u.patrol.length){
         u.pi=((u.pi==null?-1:u.pi)+1)%u.patrol.length;u.tx=u.patrol[u.pi].x;u.tz=u.patrol[u.pi].z;u.wt=hqPatrolVehicle?Math.max(2.5,Math.hypot(u.tx-u.x,u.tz-u.z)/Math.max(1,u.sp*.35)):u.guard?2.5:8
@@ -724,8 +724,8 @@ if(seedSearchMode){
 }
 else if(t=='soldat'||t=='general'){g=window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M,general:t==='general',elite:!!options.elite})}
 else if(t==='patrulla_marina'){g=mkV('llanxa');createMarinePatrolVisual(g)}
-else if(t=='jeep'){g=mkV('cotxe');attachEnemyCarCrew(g);bx(g,.2,2,.2,0xff2020,0,3.4,0)}
-else if(t=='tanqueta'){g=mkV('tanqueta');bx(g,.18,1.7,.18,0xff2020,0,3.2,.4)}
+else if(t=='jeep'){g=mkV('cotxe');attachEnemyCarCrew(g)}
+else if(t=='tanqueta'){g=mkV('tanqueta')}
 else if(t=='tanc'){g=mkV('tanc');bx(g,.2,2,.2,0xff2020,0,4,0)}
 else if(t=='torre'){g=window.HUNTER_TOWER_MODEL.createTowerModel(THREE,{box:bx})}
 else{g=new THREE.Group();bx(g,1,1,.6,0x222222,0,.5,0);bx(g,1.3,1.6,.7,0xd4af37,0,1.8,0);bx(g,.8,.8,.8,0xf0c9a0,0,3,0);bx(g,.9,.5,.9,0xaa0000,0,3.6,0);g.scale.setScalar(1.2)}

@@ -1,3 +1,4 @@
+import {enemyCarArcStep} from './enemy-car-steering.mjs';
 // Navmeshes compactes del COOP. Reutilitza els punts, radis, rumbs,
 // velocitats, intervals i ventall de navegació de l'IA individual
 // (src/enemy-ai.js i src/marine-patrol.js). Sense Three.js ni RNG extern.
@@ -88,7 +89,7 @@ export function stepLandPatrol(t,{dt,world,random}){
  let goal=path.length?path[t.patrolIndex??0]:
    (Number.isFinite(t.tx)&&Number.isFinite(t.tz)&&t.wt>0?
      {x:t.tx,z:t.tz}:null);
- if(!goal||Math.hypot(goal.x-t.x,goal.z-t.z)<4.5||t.wt<=-30){
+ if(!goal||Math.hypot(goal.x-t.x,goal.z-t.z)<(t.t==='jeep'?9.5:4.5)||t.wt<=-30){
   if(path.length){
    t.patrolIndex=((t.patrolIndex??-1)+1)%path.length;
    goal=path[t.patrolIndex];
@@ -102,14 +103,22 @@ export function stepLandPatrol(t,{dt,world,random}){
  t.wt=(t.wt??0)-dt;
  const dx=t.tx-t.x,dz=t.tz-t.z,d=Math.hypot(dx,dz);
  if(d<.25)return;
- t.heading=Math.atan2(-dx,-dz);
- const step=Math.min(d,(t.sp||22)*.35*dt),
-   candidate={...t,x:t.x+dx/d*step,z:t.z+dz/d*step,y:t.y};
+ const targetHeading=Math.atan2(-dx,-dz),
+   step=Math.min(d,(t.sp||22)*.35*dt);
+ // COOP natiu: mateix model de gir que al joc individual. No canviar
+ // el rumb d'un jeep estacionari: l'arc només existeix si es desplaça.
+ const arc=t.t==='jeep'?enemyCarArcStep({
+   x:t.x,z:t.z,heading:t.heading||0,targetHeading,distance:step
+ }):null;
+ const candidate={...t,x:arc?.x??t.x+dx/d*step,
+   z:arc?.z??t.z+dz/d*step,y:t.y,
+   hd:arc?.heading??targetHeading};
  const resolved=world.resolveBody(t,candidate),
    support=world.locomotionAt(candidate.x,candidate.z,t.y);
  if(Math.hypot(resolved.x-candidate.x,resolved.z-candidate.z)<.005&&
     Math.abs(support.floor-t.y)<1.3&&support.terrain>-.5&&
     !support.interior&&!support.drop){
   t.x=candidate.x;t.z=candidate.z;t.y=support.floor+.06;
+  t.heading=candidate.hd;
  }else{t.wt=Math.min(t.wt,0);t.patrolIndex=((t.patrolIndex??0)+1)%Math.max(1,path.length);}
 }

@@ -224,8 +224,16 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
       lookahead=Math.min(1,ENEMY_DIRECT_LOOKAHEAD/Math.max(.001,longDistance));
     // La comprovació predictiva és curta, però el sweep real de tryMove
     // continua fent servir tota la petjada i les col·lisions dinàmiques.
+    // La predicció d'espai lliure tampoc no pot girar el jeep sobre el lloc:
+    // usa el primer tram realista de la corba, no una rotació en sec.
+    const preview=u.t==='jeep'?window.HUNTER_ENEMY_CAR_STEERING.enemyCarArcStep({
+      x:u.x,z:u.z,heading:oldHd,targetHeading:hd,
+      distance:Math.min(10,longDistance)
+    }):null;
     u.navDirect=enemySweep(u,u.x,u.z,
-      u.x+(tx-u.x)*lookahead,u.z+(tz-u.z)*lookahead,oldHd,hd,false,!veh);
+      preview?.x??u.x+(tx-u.x)*lookahead,
+      preview?.z??u.z+(tz-u.z)*lookahead,
+      oldHd,preview?.heading??hd,false,!veh);
     u.navDirectT=.45;
     if(performanceStatsVisible){
       perfHotspots.aiDirectMs+=performance.now()-directStarted;
@@ -252,11 +260,22 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
   }else{u.navPath=[];u.navSearch=null}
   const distance=Math.min(s,Math.hypot(target.x-u.x,target.z-u.z));
   const tryMove=(angle,length=distance,reverse=false)=>{
-    // Vehicles turn at a bounded rate; reversing provides room to turn at corners.
-    const nextHd=veh?(reverse?oldHd:oldHd+Math.max(-dt*1.5,Math.min(dt*1.5,wrapAngle(angle-oldHd)))):angle;
+    // El jeep (amb rodes) ha de recórrer un arc per girar.
+    // Les erugues de tancs/tanquetes conserven el gir en espai reduït.
+    const car=u.t==='jeep',error=wrapAngle(angle-oldHd);
+    const carTravel=car?length*(reverse?1:Math.max(.58,1-Math.abs(error)*.16)):0;
+    const arc=car?window.HUNTER_ENEMY_CAR_STEERING.enemyCarArcStep({
+      x:u.x,z:u.z,heading:oldHd,targetHeading:angle,distance:carTravel,reverse
+    }):null;
+    const nextHd=car?arc.heading:veh?(reverse?oldHd:
+      oldHd+Math.max(-dt*1.5,Math.min(dt*1.5,error))):angle;
     const moveHd=veh?nextHd+(reverse?Math.PI:0):angle;
-    const travel=veh&&!reverse?length*Math.max(0,1-Math.abs(wrapAngle(angle-nextHd))*2):length;
-    const nx=u.x-Math.sin(moveHd)*travel,nz=u.z-Math.cos(moveHd)*travel;
+    const travel=car?arc.distance:veh&&!reverse?
+      length*Math.max(0,1-Math.abs(wrapAngle(angle-nextHd))*2):length;
+    const nx=car?arc.x:u.x-Math.sin(moveHd)*travel,
+          nz=car?arc.z:u.z-Math.cos(moveHd)*travel;
+    // Sweep amb petjada orientada durant tot l'arc. La diferència respecte
+    // de la corda és negligible als passos petits i no travessa obstacles.
     if(!enemySweep(u,u.x,u.z,nx,nz,oldHd,nextHd))return false;
     const ox=u.x,oz=u.z;u.x=nx;u.z=nz;if(!veh)u.walkY=enemyGroundAt(u,nx,nz);u.hd=nextHd;u.navHd=nextHd;enemyReindex(u,ox,oz);return true;
   };
@@ -266,7 +285,7 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
   for(const angle of [.45,.9,1.35])if(tryMove(hd+side*angle)||tryMove(hd-side*angle))return;
   u.hd=oldHd;u.navBlocked=(u.navBlocked||0)+dt;
   if(u.navBlocked>.6){
-    if(tryMove(oldHd+Math.PI,distance*.5,true)){u.navPath=[];u.navSearch=null;u.navRetry=0}
+    if(tryMove(u.t==='jeep'?oldHd+side*1.2:oldHd+Math.PI,distance*.5,true)){u.navPath=[];u.navSearch=null;u.navRetry=0}
     if(u.navBlocked>1.5){u.navPath=[];u.navRetry=0;u.avoidSide=-side;u.navBlocked=0;
       // Les rutes entre complexos no poden abandonar un tram llarg
       // pel simple fet d'haver trobat un arbre o un vehicle al camí.

@@ -128,6 +128,48 @@ function proxy(T,type,level){
   proxyCache.set(key,geo);
   return geo;
 }
+// Distintiu visible a qualsevol distància: la bandera queda fora del grup
+// que es substitueix pel LOD. El jeep i la tanqueta NO porten cap barra vermella.
+function attachEnemyFlag(T,model,type){
+  if(type!=='jeep'&&type!=='tanqueta')return;
+  const root=new T.Group(),jeep=type==='jeep',
+    x=jeep?-1.14:-1.05,z=jeep?1.42:1.04,
+    base=jeep?2.50:1.83,height=jeep?1.67:1.73;
+  root.name='hunter-enemy-red-flag';
+  root.position.set(x,0,z);
+  const metal=new T.MeshStandardMaterial({color:0x11191b,metalness:.58,roughness:.49}),
+        clothMaterial=new T.MeshStandardMaterial({
+          color:0xc82a27,roughness:.92,metalness:0,side:T.DoubleSide
+        });
+  const pole=new T.Mesh(new T.CylinderGeometry(.027,.033,height,8),metal);
+  pole.name='hunter-enemy-flag-mast';pole.position.y=base+height*.5;
+  const arm=new T.Mesh(new T.CylinderGeometry(.018,.018,.78,7),metal);
+  arm.name='hunter-enemy-flag-arm';
+  arm.position.set(.39,base+height-.055,0);arm.rotation.z=Math.PI/2;
+  // Tela penjada, arrugada i amb la vora inferior inclinada.
+  // La barra horitzontal és NEGRA i prima: el vermell només és la roba.
+  const points=[],indices=[],segments=4;
+  for(let row=0;row<3;row++)for(let col=0;col<=segments;col++){
+    const a=col/segments,b=row/2;
+    points.push(.055+.71*a,base+height-.10-b*(.70+.11*a),
+      Math.sin(a*Math.PI*1.5+b*1.1)*.075);
+  }
+  for(let row=0;row<2;row++)for(let col=0;col<segments;col++){
+    const a=row*(segments+1)+col,b=a+1,c=a+segments+1,d=c+1;
+    indices.push(a,c,b,b,c,d);
+  }
+  const geometry=new T.BufferGeometry();
+  geometry.setAttribute('position',new T.Float32BufferAttribute(points,3));
+  geometry.setIndex(indices);geometry.computeVertexNormals();
+  const cloth=new T.Mesh(geometry,clothMaterial);
+  cloth.name='hunter-enemy-hanging-red-flag';
+  for(const item of [pole,arm,cloth]){
+    item.castShadow=false;item.receiveShadow=false;
+    item.userData.noCastShadow=true;root.add(item);
+  }
+  model.add(root);
+  model.userData.enemyFlag=root;
+}
 function optimize(T,model,type){
   // La metralladora i les plaques del soldat d'elit no poden compartir
   // la geometria fusionada en memòria amb els soldats normals.
@@ -154,6 +196,7 @@ function optimize(T,model,type){
   mid.castShadow=far.castShadow=mid.receiveShadow=far.receiveShadow=false;
   mid.visible=far.visible=false;
   model.add(mid,far);
+  attachEnemyFlag(T,model,type);
   model.userData.enemyFullRoot=full;
   model.userData.enemyMidMesh=mid;
   model.userData.enemyFarMesh=far;

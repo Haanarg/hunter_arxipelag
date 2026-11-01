@@ -541,6 +541,26 @@ function updateNativeCoopFrame(dt){
      // actualització de xarxa ha canviat formalment el registre.
      walking=Math.hypot(pose.x-beforeX,pose.z-beforeZ)>Math.max(.001,dt*.12);
    }
+   if(e.t==='jeep'&&e.o.userData.steeringPivots){
+     // Les rodes reflecteixen les corbes reals INTERPOLADES del servidor:
+     // ni el gir ni el gir de les rodes inventen moviment al client.
+     const carPose=e.nativeCarWheelPose??={
+       x:e.o.position.x,z:e.o.position.z,hd:e.o.rotation.y
+     };
+     const dx=e.o.position.x-carPose.x,dz=e.o.position.z-carPose.z,
+       traveled=Math.hypot(dx,dz),
+       angle=Math.atan2(Math.sin(e.o.rotation.y-carPose.hd),
+         Math.cos(e.o.rotation.y-carPose.hd)),
+       steering=traveled>.003&&dt>.0001?
+         Math.max(-1,Math.min(1,angle/(1.6*dt))):0;
+     window.HUNTER_VEHICLES.animateSteering(e.o,'cotxe',steering,dt);
+     if(traveled>.003){
+       const signed=dx*(-Math.sin(e.o.rotation.y))+dz*(-Math.cos(e.o.rotation.y));
+       for(const wheel of e.o.userData.wheels||[])
+         wheel.rotation.x-=signed/(wheel.userData.radius||.65);
+     }
+     carPose.x=e.o.position.x;carPose.z=e.o.position.z;carPose.hd=e.o.rotation.y;
+   }
    animateEnemyInfantry(e,walking,dt);
    // Les patrulleres hereten el balanceig i les armes articulades del
    // mateix model individual, però mai no disparen des del client.

@@ -102,7 +102,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     const native=meta.mode==='native',noise=native?{...position,id:++sequence,kind,radius:RADII[kind]??RADII.pistol}:null;
     for(const t of targets)if(t.ai&&t.hp>0){
       if(native&&t.t==='soldat'){hearNativeSoldier(t,noise,tick);continue;}
-      if(Math.hypot(t.x-position.x,t.z-position.z)<35){t.alarmedUntil=tick+180;t.focus=actorId;t.lastSeenTick=tick;t.lastKnown={x:position.x,y:position.y,z:position.z};t.heading=facePoint(t,position);t.state='search';}
+      if(Math.hypot(t.x-position.x,t.z-position.z)<35){t.alarmedUntil=tick+180;t.focus=actorId;t.lastSeenTick=tick;t.lastKnown={x:position.x,y:position.y,z:position.z};if(t.t!=='jeep')t.heading=facePoint(t,position);t.state='search';}
     }
   }
   function nativeSoldierAim(unit,actor,{vehicle=vehicles.mounted(actor.id),crouched=!!actor.crouched&&!vehicle}={}){
