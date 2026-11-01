@@ -1,3 +1,5 @@
+import {createArcadeBlastFX} from './arcade-blast-fx.mjs?v=0.6.79';
+window.HUNTER_CREATE_ARCADE_BLAST_FX=createArcadeBlastFX;
 import {createNativePrediction} from './native-coop-prediction.mjs?local=0.6.78';
 import {createNativeCoopInterpolation} from './native-coop-interpolation.mjs?smooth=14';
 import {createNativeCoopProjectileVisual} from './native-coop-projectile-visual.mjs?shots=4';
