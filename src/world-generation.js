@@ -335,7 +335,7 @@ const compoundProp=(kind,x,z,rot=0)=>{
         hd=(Math.abs(sn)*w+Math.abs(cs)*d)/2;
       const wall={x0:px-hw,x1:px+hw,z0:pz-hd,z1:pz+hd,
         cx:px,cz:pz,y0:y-.12,y1:y+height,
-        hp:kind==='bench'?5:kind==='well'?24:Infinity,
+        hp:kind==='bench'?5:kind==='well'?8:Infinity,
         open:false,door:false,rammable:false,
         civicFurniture:kind,civicGroup:civic?.id,civicObject:civic};
       Wl.push(wall);if(civic)civic.walls.push(wall);
