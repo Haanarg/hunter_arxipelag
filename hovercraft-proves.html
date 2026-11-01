@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Quatre propostes d'hovercraft militar en Three.js inspirades en dues fotografies: cabines blindades, faldons inflables i una o dues hèlixs.">
-<title>Hunter: Arxipèlag · Hovercraft · 4 propostes Three.js</title>
+<meta name="description" content="Iteració del model 3 d'hovercraft en quatre estils Three.js: una sola hèlix, cabina buida amb seients, vidres translúcids i faldó llis.">
+<title>Hunter: Arxipèlag · Hovercraft model 3 · 4 variants</title>
 <style>
 :root{color-scheme:dark;--bg:#101e23;--ink:#eff4ed;--accent:#d8e5b5;--soft:#bacdc5}
 *{box-sizing:border-box}
@@ -48,8 +48,8 @@ footer strong{color:#e1efce}
 <header>
  <div>
   <span class="eyebrow">Hunter: Arxipèlag · Taller de vehicles</span>
-  <h1>Hovercraft · Quatre propostes</h1>
-  <p>Comparació en Three.js a la mateixa escala: faldó de goma, proa en falca, cabina blindada amb vidres, coberta i ventiladors reals amb animació. A, B i C tenen <strong>una sola hèlix</strong>; D és una alternativa de dues hèlixs. Inspirats en les dues fotografies de referència.</p>
+  <h1>Hovercraft · Model 3 · Quatre variants</h1>
+  <p>Iteració del <strong>model 3 (Reconeixement)</strong>, a la mateixa escala i amb quatre estils nous. Tots tenen <strong>una sola hèlix</strong>, <strong>vidres transparents amb obertures reals</strong>, dos seients i comandaments dins la cabina, i un <strong>flotador net sense filaments laterals</strong>. Prova l'opció «Veure interior» per aixecar-ne visualment el sostre.</p>
  </div>
  <nav aria-label="Navegació">
   <a href="proves.html" class="btn">← Pàgina de proves</a>
@@ -69,43 +69,44 @@ footer strong{color:#e1efce}
  <div class="toggles">
   <button type="button" id="spin" aria-pressed="false">↻ Gir automàtic</button>
   <button type="button" id="fan" class="active" aria-pressed="true">▶ Hèlixs animades</button>
+  <button type="button" id="interior" aria-pressed="false">◫ Veure interior (sense sostre)</button>
   <button type="button" id="reset">Restablir</button>
  </div>
 </section>
 <div class="notice" role="status" id="notice">No s'ha pogut inicialitzar Three.js. Comprova la compatibilitat del navegador amb WebGL.</div>
-<section id="grid" aria-label="Quatre models d'hovercraft en Three.js">
- <article class="card" data-index="0" tabindex="0" aria-label="Hovercraft A, falca blindada; arrossega per girar">
-  <span class="tag">A · MODERN</span><span class="stat">1 HÈLIX · CARENADA</span>
-  <div class="info"><strong>Falca blindada</strong><small>Perfil molt baix i afuat; turbina posterior integrada en el blindatge. Inspirat en la primera fotografia.</small></div>
+<section id="grid" aria-label="Quatre iteracions del model 3 d'hovercraft en Three.js">
+ <article class="card" data-index="0" tabindex="0" aria-label="Hovercraft A, reconeixement refinat; arrossega per girar">
+  <span class="tag">A · RECONEIXEMENT</span><span class="stat">1 HÈLIX · PERFIL ORIGINAL</span>
+  <div class="info"><strong>Reconeixement refinat</strong><small>El model 3 original, amb la coberta baixa i oberta, l'hèlix de gàbia lleugera i la cabina visible.</small></div>
  </article>
- <article class="card" data-index="1" tabindex="0" aria-label="Hovercraft B, assalt fluvial; arrossega per girar">
-  <span class="tag">B · FLUVIAL</span><span class="stat">1 HÈLIX · GÀBIA</span>
-  <div class="info"><strong>Assalt fluvial</strong><small>Cabina angular alta, flotador inflable molt marcat, baranes i gran hèlix en gàbia. Inspirat en la segona fotografia.</small></div>
+ <article class="card" data-index="1" tabindex="0" aria-label="Hovercraft B, patrulla fluvial; arrossega per girar">
+  <span class="tag">B · PATRULLA</span><span class="stat">1 HÈLIX · BLINDATGE</span>
+  <div class="info"><strong>Patrulla fluvial</strong><small>Cabina més alta, defenses de proa, protecció lateral i un petit projector de patrulla.</small></div>
  </article>
- <article class="card" data-index="2" tabindex="0" aria-label="Hovercraft C, reconeixement; arrossega per girar">
-  <span class="tag">C · LLEUGER</span><span class="stat">1 HÈLIX · OBERTA</span>
-  <div class="info"><strong>Reconeixement</strong><small>Parabrisa més baix, coberta oberta i única hèlix gran; silueta àgil amb antena i equip de bord.</small></div>
+ <article class="card" data-index="2" tabindex="0" aria-label="Hovercraft C, interceptor; arrossega per girar">
+  <span class="tag">C · INTERCEPTOR</span><span class="stat">1 HÈLIX · ALETES</span>
+  <div class="info"><strong>Interceptor</strong><small>Proa agressiva, preses d'aire al capó, sostre més baix i aletes aerodinàmiques a popa.</small></div>
  </article>
- <article class="card" data-index="3" tabindex="0" aria-label="Hovercraft D, transport pesant; arrossega per girar">
-  <span class="tag">D · PESANT</span><span class="stat">2 HÈLIXS · CARENADES</span>
-  <div class="info"><strong>Transport pesant</strong><small>Flotador ample, protecció lateral reforçada i dos propulsors més petits al darrere.</small></div>
+ <article class="card" data-index="3" tabindex="0" aria-label="Hovercraft D, comandament; arrossega per girar">
+  <span class="tag">D · COMANDAMENT</span><span class="stat">1 HÈLIX · PANORÀMIC</span>
+  <div class="info"><strong>Comandament</strong><small>Cabina alta amb més visibilitat, dues antenes, equipament de navegació i radiocomunicació.</small></div>
  </article>
 </section>
 <footer>
- <span><strong>Controls:</strong> arrossega cada model per girar-lo · roda del ratolí per ampliar · fletxes esquerra/dreta amb la targeta seleccionada. Les vistes es sincronitzen.</span>
+ <span><strong>Controls:</strong> arrossega per girar · roda per ampliar · «Veure interior» retira temporalment el sostre de totes les variants · fletxes esquerra/dreta per girar la targeta seleccionada.</span>
  <span><strong>Només previsualitzacions:</strong> el model de l'hovercraft del joc encara no s'ha modificat.</span>
 </footer>
 </main>
 <script type="module">
 import * as THREE from './vendor/three-r186.module.mjs';
-import {hovercraftConcepts,createHovercraftConcept} from './src/hovercraft-concepts.mjs';
+import {hovercraftConcepts,createHovercraftConcept} from './src/hovercraft-concepts.mjs?v=model3-cockpit-2';
 const canvas=document.getElementById('canvas');
 const cards=[...document.querySelectorAll('.card')];
 const views={
  quarter:[8.8,5.2,-10.5],side:[12,3.5,0],front:[0,3.3,-12],
  rear:[3,4.1,12],top:[.05,13,-.05]
 };
-let renderer=null,scene,cameras=[],models=[],view='quarter',spinning=false,fanOn=!matchMedia('(prefers-reduced-motion: reduce)').matches;
+let renderer=null,scene,cameras=[],models=[],view='quarter',spinning=false,cutaway=false,fanOn=!matchMedia('(prefers-reduced-motion: reduce)').matches;
 let angles=[0,0,0,0],zooms=[1,1,1,1],fanTime=0,lastFrame=0;
 function init(){
  renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'high-performance'});
@@ -149,6 +150,7 @@ function draw(now=0){
   camera.position.copy(target).add(direction);camera.lookAt(target);
   camera.aspect=(r-l)/(b-t);camera.updateProjectionMatrix();
   const m=models[i];m.visible=true;m.rotation.y=angles[i];m.userData.animate(fanTime);
+  if(m.userData.canopyRoof)m.userData.canopyRoof.visible=!cutaway;
   renderer.setViewport(l,vh-b,r-l,b-t);renderer.setScissor(l,vh-b,r-l,b-t);
   renderer.render(scene,camera);
   m.visible=false;
@@ -169,8 +171,16 @@ function updateFan(){
  btn.textContent=fanOn?'▶ Hèlixs animades':'⏸ Hèlixs aturades';
 }
 document.getElementById('fan').addEventListener('click',()=>{fanOn=!fanOn;updateFan()});
+document.getElementById('interior').addEventListener('click',ev=>{
+ cutaway=!cutaway;
+ const button=ev.currentTarget;
+ button.classList.toggle('active',cutaway);
+ button.setAttribute('aria-pressed',String(cutaway));
+ button.textContent=cutaway?'◫ Restablir sostre':'◫ Veure interior (sense sostre)';
+});
 document.getElementById('reset').addEventListener('click',()=>{
  angles=[0,0,0,0];zooms=[1,1,1,1];view='quarter';spinning=false;
+ if(cutaway)document.getElementById('interior').click();
  document.getElementById('spin').classList.remove('active');document.getElementById('spin').setAttribute('aria-pressed','false');
  document.querySelector('[data-view="quarter"]').click();
 });
