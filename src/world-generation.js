@@ -1182,6 +1182,43 @@ for(const sector of activeSectors){
   (yield* ensureDistributedCount('heli_combat',1,sector));
   (yield* ensureDistributedCount('tanqueta',2,sector));
 }
+// Doblam els hovercrafts que s'havien generat inicialment per sector.
+// Petit: un únic conjunt; gran: quota independent en cadascun dels 4 quadrants.
+// Preservam els exemplars anteriors i afegim els nous sense solapaments.
+const hoverQuotaTargets=new Map();
+const extraHoverSpot=function* (sector){
+  const type='hover',r=vehicleRadius(type);
+  const nearHovers=V.filter(v=>v.t===type&&sectorMatches(v.x,v.z,sector));
+  // Primer cercam aigua propera als hovercrafts existents: accessible, no al mig de la mar.
+  for(const old of nearHovers)for(const radius of [21,32,46,65,90,120]){
+    for(let k=0;k<16;k++){
+      if((++checkpointUnits%64)===0)yield {stage:'Distribuint hovercrafts',completed:null,total:null};
+      const a=(old.hd||0)+k*Math.PI/8+radius*.013,
+        x=old.x+Math.cos(a)*radius,z=old.z+Math.sin(a)*radius;
+      if(!sectorMatches(x,z,sector)||Math.abs(x)>H-r-10||Math.abs(z)>H-r-10||
+         hAt(x,z)>-2||hAt(x+3,z)>-1.2||hAt(x-3,z)>-1.2||
+         hAt(x,z+4)>-1.2||hAt(x,z-4)>-1.2||
+         B.some(b=>Math.abs(b.x-x)<b.hw+r+2&&Math.abs(b.z-z)<b.hd+r+2)||
+         V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+5))continue;
+      return {x,z,hd:(old.hd||0)};
+    }
+  }
+  // Reserva: candidat costaner normal del generador si cap zona propera és segura.
+  return yield* waterVehicleSpot(type,sector);
+};
+for(const sector of activeSectors){
+  const original=countVehicles('hover',sector),target=Math.max(2,original*2);
+  hoverQuotaTargets.set(sector,target);
+  let retries=0;
+  while(countVehicles('hover',sector)<target&&retries++<Math.max(16,target*8)){
+    if((++checkpointUnits%64)===0)yield {stage:'Distribuint hovercrafts',completed:null,total:null};
+    const q=(yield* extraHoverSpot(sector));
+    if(!q)break;
+    add('hover',q.x,q.z,q.hd,{coastal:true,guaranteed:true});
+  }
+}
+markBuildStage('hovercraftQuotas');
+yield {stage:'Hovercrafts distribuïts',completed:1,total:1};
 for(const i of islands){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};if(i!==A&&R()<.65){const t=['cotxe','moto','bici'][Math.floor(R()*3)];for(let tries=0;tries<12;tries++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const q=(yield* landSteps(i,80));if(q&&clearVehicle(t,q.x,q.z)){add(t,q.x,q.z,rr(0,6.28));break}}}};
 
 markBuildStage('guaranteedVehicles');
@@ -1342,14 +1379,15 @@ yield* spawnMarinePatrolsSteps();
 // Auditable per-sector totals: if terrain prevents a quota from being met,
 // diagnostics retain the deficit rather than silently claiming success.
 const sectorQuota=[['tanc',2],['tanqueta',2],['heli',2],['heli_combat',1],
-  ['llanxa_coets',2],['ferry',2],['moto_aquatica',4]];
+  ['llanxa_coets',2],['ferry',2],['moto_aquatica',4],['hover',2]];
 world.userData.quadrantPopulation=activeSectors.map(sector=>{
   const vehicles=Object.fromEntries(sectorQuota.map(([type])=>[type,countVehicles(type,sector)]));
   const compounds=Object.fromEntries(['outpost','hangar','polvori','comunicacions','port','heliport',
     'ferry-terminal','hut-settlement','hut-settlement-small','hut-settlement-large']
     .map(type=>[type,world.userData.compounds.filter(c=>c.id===type&&sectorMatches(c.x,c.z,sector)).length]));
+  const quotas=sectorQuota.map(([type,target])=>[type,type==='hover'?(hoverQuotaTargets.get(sector)??target):target]);
   return {sector:sector==null?mapSector(pa.x,pa.z):sector,vehicles,compounds,
-    missing:sectorQuota.filter(([type,target])=>vehicles[type]<target).map(([type,target])=>({type,target,actual:vehicles[type]}))};
+    missing:quotas.filter(([type,target])=>vehicles[type]<target).map(([type,target])=>({type,target,actual:vehicles[type]}))};
 });
 markBuildStage('marinePatrols');
 yield {stage:'Patrulles navals',completed:1,total:1};
