@@ -274,7 +274,10 @@ export function createHovercraftConcept(THREE,variant=0){
   for(const side of [-1,1]){
     box(.18,.075,.09,side*.83,1.28,-2.81,dark);
   }
-  root.userData={concept:c,rotors,windowPanes,cockpitSeats,canopyRoof,skirtFilamentsRemoved:true,animate(time){
+  root.userData={concept:c,rotors,windowPanes,cockpitSeats,canopyRoof,
+    seatStations:[new THREE.Vector3(-.235,baseY+.20,-.90),new THREE.Vector3(.235,baseY+.20,-.90)],
+    steeringStation:new THREE.Vector3(-.235,baseY+.50,-1.65),
+    skirtFilamentsRemoved:true,animate(time){
     for(let i=0;i<rotors.length;i++)rotors[i].rotation.z=time*19*(i%2? -1:1);
   }};
   return root;
