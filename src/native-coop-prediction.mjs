@@ -8,7 +8,7 @@ import {createNativeVehicleCandidateIndex} from './native-coop-vehicle-candidate
 import {createNativeWallCandidateIndex} from './native-coop-wall-candidates.mjs';
 import {createNativeLocalPresentation} from './native-coop-local-presentation.mjs';
 import {moveCoopCheatFly} from './coop-cheats.mjs';
-import {ferryPedestrianAt} from './ferry-deck-core.mjs';
+import {ferryPedestrianAt,ferryForVehicle,ferryLocal,ferrySurfaceY} from './ferry-deck-core.mjs';
 // Only local locomotion is predicted. Damage, pickups, combat and world mutations
 // remain authoritative. Reconciliation replays unacknowledged shared-rule steps.
 export function createNativePrediction(geometry){
@@ -64,7 +64,13 @@ export function createNativePrediction(geometry){
  function vehicleStep(target,input,tick){
   const from={x:target.x,y:target.y,z:target.z,hd:target.hd},
    radius=radiusByType[target.t];
-  stepRangeVehicle(target,input,1/30,tick,world,water,vehicleBounds);
+  // La física sobre el ferri usa l'altura de la coberta en tots dos clients.
+   const dynamicWorld={...world,groundAt(x,z,previous){
+     const ground=world.groundAt?.(x,z,previous)??world.heightAt(x,z);
+     const ferry=ferryForVehicle(target,state?.vehicles||[],x,z,true);
+     return ferry?Math.max(ground,ferrySurfaceY(ferry,ferryLocal(ferry,x,z).z)):ground;
+   }};
+   stepRangeVehicle(target,input,1/30,tick,dynamicWorld,water,vehicleBounds);
   const reach=radius+Math.hypot(target.x-from.x,target.z-from.z)+2,
    cx=(from.x+target.x)/2,cz=(from.z+target.z)/2,
    walls=wallCandidates.nearby(cx,cz,reach),
