@@ -12,6 +12,7 @@ const assert=require('node:assert/strict');
        quaternion:new THREE.Quaternion(),userData:{}}});
    const inspect=t=>{
      const vehicle=make(t);
+     if(t==='hover')vehicle.o=mkV('hover');
      const capture=(seat)=>{
        riderSystem.update(vehicle,.016,seat);
        const root=riderSystem.object,torso=root.userData.torso,
@@ -24,7 +25,7 @@ const assert=require('node:assert/strict');
      return {solo,driver,passenger};
    };
    const result=Object.fromEntries(['llanxa','llanxa_coets',
-     'cotxe_civil','cotxe'].map(t=>[t,inspect(t)]));
+     'cotxe_civil','cotxe','hover'].map(t=>[t,inspect(t)]));
    riderSystem.reset();
    return result;
  })()`);
@@ -33,7 +34,7 @@ const assert=require('node:assert/strict');
    assert(driver.visible&&passenger.visible,type+': tots dos riders visibles');
    assert(driver.x<0&&passenger.x>0,
      type+': el pilot seu a l\'esquerra i el passatger a la dreta');
-   assert(passenger.x-driver.x>1.25,
+   assert(passenger.x-driver.x>(type==='hover'?.65:1.25),
      type+': les figures no es poden superposar');
    assert(Math.abs(driver.y-passenger.y)<.001&&
      Math.abs(driver.z-passenger.z)<.001,
@@ -43,8 +44,12 @@ const assert=require('node:assert/strict');
    assert(passenger.hands.every(v=>Number.isFinite(v.x)&&Number.isFinite(v.y)),
      type+': els braços del passatger tenen una postura vàlida');
  }
+ assert(positions.hover.solo.visible&&positions.hover.solo.x<0,
+   'L’hovercraft individual mostra el pilot al seient esquerre');
+ assert(positions.hover.driver.x<0&&positions.hover.passenger.x>0,
+   'L’hovercraft COOP mostra pilot i passatger costat a costat');
  assert(Math.abs(positions.llanxa.solo.x)<.01&&
    Math.abs(positions.llanxa_coets.solo.x)<.01,
    'El pilot individual de la llanxa conserva el seient central');
- console.log('Riders COOP: llanxes + cotxes, pilot i passatger en seients paral·lels OK');
+ console.log('Riders COOP: llanxes + cotxes + hovercraft D, pilot i passatger en seients paral·lels OK');
 })().catch(e=>{console.error(e);process.exitCode=1});
