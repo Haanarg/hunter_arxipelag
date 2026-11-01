@@ -1,5 +1,6 @@
 import {turretSpecs,advanceTurret} from './vehicle-turret-core.mjs';
 import {vehicleSpecs} from './vehicle-specs.mjs';
+import {createHovercraftConcept,hovercraftConcepts} from './hovercraft-concepts.mjs';
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 export const vehicleModels=Object.freeze({
   ...vehicleSpecs,
@@ -662,7 +663,20 @@ export const vehicleModels=Object.freeze({
         for(const z of[-24.5,24.5])for(const x of[-10,-5,0,5,10])box(g,2.2,.08,.28,0xf1e9c5,x,2.32,z,'paint');
         g.userData.ferryDeck=true;
       }
-      if(t==='hover'){box(g,5,.85,8,rubber,0,.55,0,'rubber');for(const x of[-2.35,2.35])for(let z=-3.5;z<4;z+=.65)box(g,.2,.7,.48,0x394145,x,.5,z,'rubber');box(g,4.45,.85,6.7,0xcf9e4f,0,1.38,-.2,'paint');box(g,2.75,1.12,2.9,glass,0,2.2,-.92,'glass');box(g,2.98,.22,3.2,0xcda75f,0,2.82,-.92,'paint');for(const x of[-2.05,2.05])box(g,.18,.3,6.7,0xa97835,x,1.25,-.2,'paint');for(const x of[-1.1,1.1])box(g,.42,.22,.16,0xffe09a,x,1.45,-3.55,'paint');const duct=new THREE.Mesh(new THREE.TorusGeometry(1.55,.2,8,20),material(metal,'metal'));duct.position.set(0,2.9,3);g.add(duct);const fan=new THREE.Group();fan.position.copy(duct.position);for(let i=0;i<4;i++){const blade=box(fan,.2,2.8,.12,rubber,0,0,0,'rubber');blade.rotation.z=i*Math.PI/4}g.add(fan);g.userData.fan=fan;round(g,.28,.3,0x7b8588,0,2.9,3,'z','metal');for(const x of[-1.7,1.7]){box(g,.15,2.05,1,0xbe8c43,x,2.68,3.5,'paint');rod(g,[x,1.7,2.65],[x,3.65,3.2],.07,metal)}box(g,1.4,.18,.8,0x5b4939,0,1.88,1.45,'paint')}
+      if(t==='hover'){
+        // Variant D «Comandament» validada a hovercraft-proves.html.
+        // Font única per a mode individual i cooperatiu (tots dos usen createFactory).
+        const hover=createHovercraftConcept(THREE,hovercraftConcepts[3]);
+        // El prototip original és més compacte que el collider existent.
+        // Ajustam només el dibuix per mantenir la mida de col·lisió i el pilotatge.
+        hover.scale.set(1.28,1,1.20);
+        g.add(hover);
+        // Conservam el contracte antic d'animació del ventilador.
+        g.userData.fan=hover.userData.rotors[0];
+        g.userData.hovercraftModel='D-model-3';
+        g.userData.hovercraftSeats=hover.userData.cockpitSeats;
+        g.userData.hovercraftWindows=hover.userData.windowPanes;
+      }
       if(t==='heli'||t==='heli_combat'){
         const combat=t==='heli_combat',bodyCol=combat?0x59634f:0x647768;
         if(!combat){
