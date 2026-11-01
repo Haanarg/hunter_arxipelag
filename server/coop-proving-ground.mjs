@@ -1,6 +1,6 @@
 import {buildBaseShells} from './coop-base-buildings.mjs';
 import {vehicleDynamics} from '../src/vehicle-dynamics-core.mjs';
-import {vehicleSpecs} from '../src/vehicle-specs.mjs';
+import {vehicleSpecs,vehicleSeatCount} from '../src/vehicle-specs.mjs';
 import {inventoryCaps} from '../src/weapon-catalog.mjs';
 import {createStaticWorldAdapter} from '../src/world-adapter.mjs';
 // Deterministic test range, separate from the relay/campaign's world generation.
@@ -13,7 +13,7 @@ export function configureProvingGround(generated){
  Object.assign(meta,{mode:'proving',floor:2,bounds:{x0:-165,x1:470,z0:-180,z1:180},doors:geometry.walls.flatMap((wall,wallIndex)=>wall.door?[{id:wall.id,wallIndex,cx:wall.cx,cz:wall.cz,floor:wall.y0+1}]:[]),targets:[],supplies:[],routes:[[],[]],terminals:[{x:-140,y:2.06,z:150},{x:-120,y:2.06,z:150}],extraction:{x:0,y:2.06,z:140},timeLimitTicks:54000});
  meta.vehicles=Object.entries(vehicleDynamics.types).map(([t,profile],i)=>{
   const water=profile.m==='w',landIndex=Object.keys(vehicleDynamics.types).filter(k=>vehicleDynamics.types[k].m!=='w').indexOf(t),seaIndex=Object.keys(vehicleDynamics.types).filter(k=>vehicleDynamics.types[k].m==='w').indexOf(t),x=water?260+(seaIndex%2)*110:-110+(landIndex%5)*52,z=water?-110+Math.floor(seaIndex/2)*100:-110+Math.floor(landIndex/5)*65;
-  return {id:'test-'+t,kind:t,t,x,z,y:water?0:world.heightAt(x,z)+.06,alt:water?0:world.heightAt(x,z)+.06,hd:0,v:0,life:profile.life,seats:Array(['bici','moto','windsurf','moto_aquatica'].includes(t)?1:2).fill(null),rockets:12,modelScale:1,hullRadius:vehicleSpecs.radii[t]*vehicleSpecs.scales[t]*.62};
+  return {id:'test-'+t,kind:t,t,x,z,y:water?0:world.heightAt(x,z)+.06,alt:water?0:world.heightAt(x,z)+.06,hd:0,v:0,life:profile.life,seats:Array(vehicleSeatCount(t)).fill(null),rockets:12,modelScale:1,hullRadius:vehicleSpecs.radii[t]*vehicleSpecs.scales[t]*.62};
  });
  meta.targets=Array.from({length:8},(_,i)=>({id:'range-'+i,t:'soldat',x:-130+i*35,y:2.06,z:120,hp:40,ai:false}));
  record.checkpoint.players.forEach((p,i)=>Object.assign(p,{x:i*4,y:2.06,z:0,hd:0,hp:20,swimming:false,fall:null}));
