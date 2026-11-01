@@ -1,5 +1,14 @@
 # Integració del cooperatiu al runtime original · 0.6.50
 
+## 0.6.77 · Fase 4: ferri i coberta compartida
+
+S'han extret les regles geomètriques del ferri individual a `src/ferry-deck-core.mjs`, independents de Three.js: coordenades locals, altures de coberta, rampes i cabina. El Worker les reutilitza per transportar vehicles terrestres aparcats amb els offsets del ferri i impedir que el casc expulsi caminants que són damunt de coberta. Sortir del ferri al COOP ara tria un punt practicable sobre coberta, en lloc de llançar els jugadors a l'aigua.
+
+El servidor disposa d'un suport vertical dinàmic per a vianants i desplaça els actors amb el vaixell sense esborrar els controls ni els ACK. El predictor del navegador utilitza la mateixa superfície de coberta. El joc individual manté les regles originals; el nou mòdul compartit queda també exposat al runtime.
+
+Regressió: `tests/native-coop-phase4.mjs`, inclosa a `test:play`. Pendent de validar amb dos navegadors reals la fluïdesa, cotxes a la rampa, la cabina i l'embarcament/desembarcament. És una implementació parcial de la fase 4, no es considera completada la paritat de tots els vehicles.
+
+
 ## 0.6.76 · Fase 3 i C4 sota les torres (individual + COOP)
 
 **Correcció compartida del C4:** el radi i el dany estaven intercanviats al catàleg cooperatiu. El C4 individual detona amb **20 punts de dany i radi esfèric 3-D de 48 m**, mentre que el COOP anterior feia 48 punts de dany amb radi 20 m. Ara coincideixen. La caseta de les torres estava a ~9,4 m d'alçada; una explosió sota la torre podia fallar perquè el raycast considerava els seus pilars un mur. `src/combat-rules.mjs` aporta `towerExplosionAim` per provar la base estructural (2,2 m) quan l'explosió és propera i inferior a la caseta. Tant `src/combat.js` (individual) com `server/coop-combat.mjs` (COOP) continuen comprovant el terreny i els altres murs però no bloquegen l'ona amb els **pilars de la mateixa torre**. No s'ha augmentat el radi lateral individual.
