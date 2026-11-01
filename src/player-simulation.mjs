@@ -104,7 +104,15 @@ export function createPlayerSimulation({epoch,actors,limit,world={},vertical=nul
     for(const {p,candidate} of next){p.x=candidate.x;p.z=candidate.z;p.hd=candidate.hd;p.y=candidate.y??p.y;if(vertical){p.fall=candidate.fall;p.swimming=candidate.swimming;p.hp=candidate.hp;}p.acknowledged=p.received;}
     tick++;return snapshot();
   }
-  return Object.freeze({accept,step,snapshot,heal(actorId,amount){const p=players.get(actorId),max=vertical?.maxHealth??PLAYER_MAX_HEALTH;if(!p||p.hp<=0||p.hp>=max||!finite(amount)||amount<=0)return false;p.hp=Math.min(max,p.hp+Math.ceil(amount));return true;},eject(actorId,point,fall){
+  return Object.freeze({accept,step,snapshot,
+ // Un suport mòbil desplaça el jugador sense esborrar controls/ACK.
+ carry(actorId,point){
+  const p=players.get(actorId);
+  if(!vertical||!p||p.fall||p.swimming||
+      ![point.x,point.y,point.z].every(finite)||
+      Math.abs(point.x)>limit||Math.abs(point.z)>limit)return false;
+  p.x=point.x;p.y=point.y;p.z=point.z;return true;
+ },heal(actorId,amount){const p=players.get(actorId),max=vertical?.maxHealth??PLAYER_MAX_HEALTH;if(!p||p.hp<=0||p.hp>=max||!finite(amount)||amount<=0)return false;p.hp=Math.min(max,p.hp+Math.ceil(amount));return true;},eject(actorId,point,fall){
     const p=players.get(actorId);
     if(!vertical||!p||p.hp<=0||
       ![point.x,point.y,point.z,point.hd].every(finite)||
