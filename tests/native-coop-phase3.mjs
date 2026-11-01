@@ -40,6 +40,8 @@ assert.equal(towerExplosionAim(tower,{x:15,y:.32,z:0}).y,9.4,
  combat.step(1);
  assert.equal(combat.snapshot().targets[0].hp,0,
    'El C4 col·locat sota una torre destrueix la caseta tot i els propis pilars');
+ assert.equal(combat.snapshot().effects.find(e=>e.kind==='explosion')?.weapon,'c4',
+   'La detonació autoritativa identifica el model visual C4 als dos clients');
 }
 
 // La física compartida ja limita la velocitat de descens a -4.8 m/s.
