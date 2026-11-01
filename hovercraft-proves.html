@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Quatre propostes d'hovercraft militar en Three.js inspirades en dues fotografies: cabines blindades, faldons inflables i una o dues hèlixs.">
+<title>Hunter: Arxipèlag · Hovercraft · 4 propostes Three.js</title>
+<style>
+:root{color-scheme:dark;--bg:#101e23;--ink:#eff4ed;--accent:#d8e5b5;--soft:#bacdc5}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+#canvas{position:fixed;inset:0;width:100%;height:100%;display:block;pointer-events:none}
+main{position:relative;z-index:1;min-height:100vh;padding:17px clamp(11px,2.3vw,28px) 20px;pointer-events:none}
+main>*{pointer-events:auto}
+header{display:flex;justify-content:space-between;flex-wrap:wrap;align-items:flex-start;gap:13px;margin-bottom:13px}
+.eyebrow{color:#d6e5a8;text-transform:uppercase;font-size:11px;font-weight:850;letter-spacing:.13em}
+h1{font-size:clamp(23px,3vw,36px);letter-spacing:-.035em;line-height:1.12;margin:5px 0 7px}
+header p{color:#c0d0ca;max-width:760px;font-size:12px;margin:0}
+nav{display:flex;gap:7px;flex-wrap:wrap}
+button,a.btn{border:1px solid #719288;border-radius:8px;background:#243b3d;color:#eaf4e9;padding:8px 11px;text-decoration:none;font:700 12px system-ui;cursor:pointer}
+button:hover,a.btn:hover{background:#35514b}
+button.active{background:var(--accent);color:#1a3027;border-color:var(--accent)}
+button:focus-visible,a.btn:focus-visible,.card:focus-visible{outline:2px solid white;outline-offset:3px}
+.toolbar{display:flex;justify-content:space-between;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:11px}
+.views,.toggles{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.toolbar-label{color:#b9cfc6;font-weight:750;font-size:11px;margin-right:2px}
+#grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(290px,1fr));gap:12px;height:calc(100vh - 197px);min-height:630px}
+.card{position:relative;overflow:hidden;min-width:0;border:1px solid #8ca19b88;border-radius:14px;background:radial-gradient(ellipse at 49% 37%,#6b9ba856,transparent 65%),linear-gradient(#344a50,#102830);cursor:grab;touch-action:pan-y;box-shadow:inset 0 1px #ffffff2b}
+.card.dragging{cursor:grabbing}
+.card:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,#172b3035 0,transparent 28%,transparent 58%,#07171b65)}
+.tag,.stat{position:absolute;z-index:2;top:11px;padding:6px 9px;background:#102a2bea;border:1px solid #a1c0a47a;border-radius:7px;font-weight:800;font-size:11px}
+.tag{left:11px}.stat{right:11px;color:#d8ebd2}
+.info{position:absolute;bottom:10px;left:10px;right:10px;z-index:2;background:#10262be9;border:1px solid #79978c55;border-radius:9px;padding:10px 13px;pointer-events:none}
+.info strong{font-size:15px;display:block}.info small{display:block;margin-top:2px;color:#c4d8d0;font-size:11px;line-height:1.4}
+footer{font-size:11px;color:#b0c7be;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:11px 2px}
+footer strong{color:#e1efce}
+.notice{display:none;background:#344036;border:1px solid #dcc78a;padding:13px;border-radius:9px;margin-bottom:12px}
+.no-webgl .notice{display:block}.no-webgl #canvas{display:none}
+.no-webgl .card{cursor:default}
+.no-webgl .card:before{content:"Visualització 3D no disponible";display:grid;place-items:center;position:absolute;inset:15% 10%;color:#f4f4d7;font-weight:700}
+@media(max-width:950px){#grid{height:auto;min-height:0;grid-template-rows:repeat(2,360px)}}
+@media(max-width:660px){main{padding:12px}#grid{grid-template-columns:1fr;grid-template-rows:repeat(4,350px)}nav{justify-content:flex-start}.stat{font-size:10px}}
+</style>
+</head>
+<body>
+<canvas id="canvas" aria-hidden="true"></canvas>
+<main>
+<header>
+ <div>
+  <span class="eyebrow">Hunter: Arxipèlag · Taller de vehicles</span>
+  <h1>Hovercraft · Quatre propostes</h1>
+  <p>Comparació en Three.js a la mateixa escala: faldó de goma, proa en falca, cabina blindada amb vidres, coberta i ventiladors reals amb animació. A, B i C tenen <strong>una sola hèlix</strong>; D és una alternativa de dues hèlixs. Inspirats en les dues fotografies de referència.</p>
+ </div>
+ <nav aria-label="Navegació">
+  <a href="proves.html" class="btn">← Pàgina de proves</a>
+  <a href="vehicle-mides-proves.html" class="btn">📏 Mides dels vehicles</a>
+  <a href="index.html" class="btn">Jugar ↗</a>
+ </nav>
+</header>
+<section class="toolbar" aria-label="Controls comuns">
+ <div class="views" role="group" aria-label="Punt de vista">
+  <span class="toolbar-label">Càmera</span>
+  <button type="button" data-view="quarter" class="active" aria-pressed="true">3/4 proa</button>
+  <button type="button" data-view="side" aria-pressed="false">Perfil</button>
+  <button type="button" data-view="front" aria-pressed="false">Proa</button>
+  <button type="button" data-view="rear" aria-pressed="false">Popa / hèlixs</button>
+  <button type="button" data-view="top" aria-pressed="false">Zenital</button>
+ </div>
+ <div class="toggles">
+  <button type="button" id="spin" aria-pressed="false">↻ Gir automàtic</button>
+  <button type="button" id="fan" class="active" aria-pressed="true">▶ Hèlixs animades</button>
+  <button type="button" id="reset">Restablir</button>
+ </div>
+</section>
+<div class="notice" role="status" id="notice">No s'ha pogut inicialitzar Three.js. Comprova la compatibilitat del navegador amb WebGL.</div>
+<section id="grid" aria-label="Quatre models d'hovercraft en Three.js">
+ <article class="card" data-index="0" tabindex="0" aria-label="Hovercraft A, falca blindada; arrossega per girar">
+  <span class="tag">A · MODERN</span><span class="stat">1 HÈLIX · CARENADA</span>
+  <div class="info"><strong>Falca blindada</strong><small>Perfil molt baix i afuat; turbina posterior integrada en el blindatge. Inspirat en la primera fotografia.</small></div>
+ </article>
+ <article class="card" data-index="1" tabindex="0" aria-label="Hovercraft B, assalt fluvial; arrossega per girar">
+  <span class="tag">B · FLUVIAL</span><span class="stat">1 HÈLIX · GÀBIA</span>
+  <div class="info"><strong>Assalt fluvial</strong><small>Cabina angular alta, flotador inflable molt marcat, baranes i gran hèlix en gàbia. Inspirat en la segona fotografia.</small></div>
+ </article>
+ <article class="card" data-index="2" tabindex="0" aria-label="Hovercraft C, reconeixement; arrossega per girar">
+  <span class="tag">C · LLEUGER</span><span class="stat">1 HÈLIX · OBERTA</span>
+  <div class="info"><strong>Reconeixement</strong><small>Parabrisa més baix, coberta oberta i única hèlix gran; silueta àgil amb antena i equip de bord.</small></div>
+ </article>
+ <article class="card" data-index="3" tabindex="0" aria-label="Hovercraft D, transport pesant; arrossega per girar">
+  <span class="tag">D · PESANT</span><span class="stat">2 HÈLIXS · CARENADES</span>
+  <div class="info"><strong>Transport pesant</strong><small>Flotador ample, protecció lateral reforçada i dos propulsors més petits al darrere.</small></div>
+ </article>
+</section>
+<footer>
+ <span><strong>Controls:</strong> arrossega cada model per girar-lo · roda del ratolí per ampliar · fletxes esquerra/dreta amb la targeta seleccionada. Les vistes es sincronitzen.</span>
+ <span><strong>Només previsualitzacions:</strong> el model de l'hovercraft del joc encara no s'ha modificat.</span>
+</footer>
+</main>
+<script type="module">
+import * as THREE from './vendor/three-r186.module.mjs';
+import {hovercraftConcepts,createHovercraftConcept} from './src/hovercraft-concepts.mjs';
+const canvas=document.getElementById('canvas');
+const cards=[...document.querySelectorAll('.card')];
+const views={
+ quarter:[8.8,5.2,-10.5],side:[12,3.5,0],front:[0,3.3,-12],
+ rear:[3,4.1,12],top:[.05,13,-.05]
+};
+let renderer=null,scene,cameras=[],models=[],view='quarter',spinning=false,fanOn=!matchMedia('(prefers-reduced-motion: reduce)').matches;
+let angles=[0,0,0,0],zooms=[1,1,1,1],fanTime=0,lastFrame=0;
+function init(){
+ renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'high-performance'});
+ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+ renderer.outputColorSpace=THREE.SRGBColorSpace;
+ renderer.setClearColor(0x15303b,0);
+ scene=new THREE.Scene();
+ scene.add(new THREE.HemisphereLight(0xe4f3eb,0x35544c,2.15));
+ const sun=new THREE.DirectionalLight(0xffebc9,2.9);sun.position.set(-8,11,-9);scene.add(sun);
+ const fill=new THREE.DirectionalLight(0xadd5de,1.1);fill.position.set(7,6,8);scene.add(fill);
+ const sea=new THREE.Mesh(new THREE.PlaneGeometry(55,55),new THREE.MeshStandardMaterial({color:0x456f75,roughness:.94,metalness:.12}));
+ sea.rotation.x=-Math.PI/2;sea.position.y=.025;scene.add(sea);
+ const shade=new THREE.Mesh(new THREE.CircleGeometry(3.38,64),new THREE.MeshBasicMaterial({color:0x173d42,transparent:true,opacity:.43,depthWrite:false}));
+ shade.rotation.x=-Math.PI/2;shade.scale.y=.67;shade.position.y=.036;scene.add(shade);
+ for(let i=0;i<3;i++){
+  const ring=new THREE.Mesh(new THREE.RingGeometry(3.0+i*.44,3.035+i*.44,72),new THREE.MeshBasicMaterial({color:0x9bc8ba,transparent:true,opacity:.19-i*.035,side:THREE.DoubleSide,depthWrite:false}));
+  ring.rotation.x=-Math.PI/2;ring.position.y=.040+i*.001;ring.scale.y=.74;scene.add(ring);
+ }
+ models=hovercraftConcepts.map((concept,i)=>{
+  const m=createHovercraftConcept(THREE,concept);m.visible=false;scene.add(m);return m;
+ });
+ cameras=cards.map(()=>new THREE.PerspectiveCamera(36,1,.1,100));
+ renderer.setAnimationLoop(draw);
+}
+function draw(now=0){
+ if(!renderer)return;
+ const dt=Math.min((now-lastFrame)/1000||0,.05);lastFrame=now;
+ if(fanOn)fanTime+=dt;
+ if(spinning)angles=angles.map(a=>a+dt*.28);
+ const vw=window.innerWidth,vh=window.innerHeight,dpr=renderer.getPixelRatio();
+ if(canvas.width!==Math.round(vw*dpr)||canvas.height!==Math.round(vh*dpr))renderer.setSize(vw,vh,false);
+ renderer.setScissorTest(false);renderer.setViewport(0,0,vw,vh);renderer.clear(true,true,true);
+ renderer.setScissorTest(true);
+ for(let i=0;i<cards.length;i++){
+  const rect=cards[i].getBoundingClientRect();
+  const l=Math.max(0,Math.floor(rect.left)),r=Math.min(vw,Math.ceil(rect.right)),
+        t=Math.max(0,Math.floor(rect.top)),b=Math.min(vh,Math.ceil(rect.bottom));
+  if(l>=r||t>=b)continue;
+  const camera=cameras[i],target=new THREE.Vector3(0,1.46,.05);
+  const direction=new THREE.Vector3(...views[view]).normalize().multiplyScalar(12.8*zooms[i]);
+  camera.position.copy(target).add(direction);camera.lookAt(target);
+  camera.aspect=(r-l)/(b-t);camera.updateProjectionMatrix();
+  const m=models[i];m.visible=true;m.rotation.y=angles[i];m.userData.animate(fanTime);
+  renderer.setViewport(l,vh-b,r-l,b-t);renderer.setScissor(l,vh-b,r-l,b-t);
+  renderer.render(scene,camera);
+  m.visible=false;
+ }
+ renderer.setScissorTest(false);
+}
+document.querySelectorAll('[data-view]').forEach(btn=>btn.addEventListener('click',()=>{
+ view=btn.dataset.view;angles=[0,0,0,0];
+ document.querySelectorAll('[data-view]').forEach(other=>{
+  const active=other===btn;other.classList.toggle('active',active);other.setAttribute('aria-pressed',String(active));
+ });
+}));
+document.getElementById('spin').addEventListener('click',ev=>{
+ spinning=!spinning;ev.currentTarget.classList.toggle('active',spinning);ev.currentTarget.setAttribute('aria-pressed',String(spinning));
+});
+function updateFan(){
+ const btn=document.getElementById('fan');btn.classList.toggle('active',fanOn);btn.setAttribute('aria-pressed',String(fanOn));
+ btn.textContent=fanOn?'▶ Hèlixs animades':'⏸ Hèlixs aturades';
+}
+document.getElementById('fan').addEventListener('click',()=>{fanOn=!fanOn;updateFan()});
+document.getElementById('reset').addEventListener('click',()=>{
+ angles=[0,0,0,0];zooms=[1,1,1,1];view='quarter';spinning=false;
+ document.getElementById('spin').classList.remove('active');document.getElementById('spin').setAttribute('aria-pressed','false');
+ document.querySelector('[data-view="quarter"]').click();
+});
+cards.forEach((card,i)=>{
+ let pointer=null,downX=0,start=0;
+ card.addEventListener('pointerdown',e=>{
+  if(e.button!==0)return;
+  pointer=e.pointerId;downX=e.clientX;start=angles[i];card.setPointerCapture(e.pointerId);card.classList.add('dragging');
+ });
+ card.addEventListener('pointermove',e=>{
+  if(e.pointerId===pointer)angles[i]=start+(e.clientX-downX)*.011;
+ });
+ const stop=e=>{if(e.pointerId===pointer){pointer=null;card.classList.remove('dragging')}};
+ card.addEventListener('pointerup',stop);card.addEventListener('pointercancel',stop);
+ card.addEventListener('wheel',e=>{
+  e.preventDefault();zooms[i]=Math.max(.68,Math.min(1.85,zooms[i]*(e.deltaY>0?1.09:.92)));
+ },{passive:false});
+ card.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();angles[i]+=(e.key==='ArrowLeft'?-1:1)*.18}
+ });
+});
+updateFan();
+try{init()}catch(error){
+ console.error('Error a la comparativa d’hovercraft',error);
+ document.body.classList.add('no-webgl');
+ document.getElementById('notice').textContent='No s’han pogut inicialitzar els models Three.js: '+(error?.message||String(error));
+}
+</script>
+</body>
+</html>
