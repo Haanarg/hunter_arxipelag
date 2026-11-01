@@ -1,6 +1,6 @@
 import {turretSpecs,advanceTurret} from './vehicle-turret-core.mjs';
 import {vehicleSpecs} from './vehicle-specs.mjs';
-import {createHovercraftConcept,hovercraftConcepts} from './hovercraft-concepts.mjs';
+import {createHovercraftConcept,hovercraftConcepts} from './hovercraft-concepts.mjs?v=0.6.80';
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 export const vehicleModels=Object.freeze({
   ...vehicleSpecs,
