@@ -2,7 +2,7 @@ import {palmCrushRadius,rockVerticalBand} from './vehicle-environment-core.mjs';
 import {fenceVehicleContact,obbOverlap,relativeVehicleImpactSpeed,impactDamage} from './combat-rules.mjs';
 import {vehicleSpecs} from './vehicle-specs.mjs';
 import {vehicleDynamics} from './vehicle-dynamics-core.mjs';
-import {ferryPedestrianAt,ferryForVehicle,ferryCabinBox} from './ferry-deck-core.mjs';
+import {ferryPedestrianAt,ferryForVehicle,ferryCabinBox,ferrySurfaceY,ferryLocal} from './ferry-deck-core.mjs';
 export function contactBox(v,proving=true){const size=vehicleSpecs.hitboxes[v.t],scale=vehicleSpecs.scales[v.t];return {x:v.x,z:v.z,hd:v.hd,w:proving?size[0]*scale:1.8,d:proving?size[1]*scale:3.2};}
 function top(v,proving){return v.y+(proving?(vehicleDynamics.types[v.t].m==='a'?7:['tanc','camio'].includes(v.t)?5.6:4.2)*(vehicleSpecs.scales[v.t]||1):3);}
 // Sweep translation and rotation, so fast vehicles cannot jump a thin wall.
@@ -13,7 +13,8 @@ export function firstVehicleContact(v,from,others,geometry,proving=true,world=nu
   const t=i/steps,p={...v,x:from.x+(v.x-from.x)*t,y:from.y+(v.y-from.y)*t,z:from.z+(v.z-from.z)*t,hd:from.hd+angle*t},footprint=contactBox(p,proving);
   for(const wall of geometry.walls)if(!wall.open&&wall.playerBlock!==false&&wall.y1>p.y-.5&&wall.y0<top(p,proving)&&(wall.barbed&&Number.isFinite(wall.ax)&&Number.isFinite(wall.bx)?fenceVehicleContact(wall,{...footprint,v:p}):obbOverlap(footprint,{x:(wall.x0+wall.x1)/2,z:(wall.z0+wall.z1)/2,hd:0,w:Math.max(.05,wall.x1-wall.x0),d:Math.max(.05,wall.z1-wall.z0)})))return {kind:'wall',target:wall,safe};
   const ferry=ferryForVehicle(p,others,p.x,p.z,true);
-  if(ferry&&obbOverlap(footprint,ferryCabinBox(ferry)))
+  if(ferry&&Math.abs(p.y-ferrySurfaceY(ferry,ferryLocal(ferry,p.x,p.z).z))<5&&
+     obbOverlap(footprint,ferryCabinBox(ferry)))
     return {kind:'wall',target:{rammable:false},safe};
   for(const other of others)if(other.id!==v.id&&!other.destroyed&&
     !(other.t==='ferry'&&ferry?.id===other.id)&&
