@@ -26,6 +26,14 @@ assert.equal(model.userData.concept.style,'command');
 assert.equal(model.userData.rotors.length,1);
 assert.strictEqual(fan,model.userData.rotors[0]);
 assert.equal(model.userData.cockpitSeats.length,2);
+const seats=vehicle.userData.hovercraftSeatPositions;
+assert.equal(seats.length,2);
+assert.ok(seats[0].x<0&&seats[1].x>0,'Pilot esquerre i passatger dret');
+assert.ok(Math.abs(seats[0].y-seats[1].y)<1e-9&&Math.abs(seats[0].z-seats[1].z)<1e-9,
+  'Els dos seients comparteixen alçada i fila');
+assert.ok(seats[1].x-seats[0].x>.55,'Els ocupants no se superposen');
+assert.ok(vehicle.userData.hovercraftSteeringPosition.z<seats[0].z,
+  'Els comandaments han d’estar davant del pilot');
 assert.equal(model.userData.windowPanes.length,7);
 assert.equal(model.userData.skirtFilamentsRemoved,true);
 const all=new Set();vehicle.traverse(item=>all.add(item));
