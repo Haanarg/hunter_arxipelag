@@ -28,7 +28,7 @@ import * as weapons from './weapon-catalog.mjs?v=0.6.80';
 window.HUNTER_SHARED_WEAPONS=weapons;
 import * as sharedBatching from './player-batching-core.mjs';
 window.HUNTER_SHARED_BATCHING=sharedBatching;
-import * as vehicleModels from './vehicle-model-core.mjs';
+import * as vehicleModels from './vehicle-model-core.mjs?v=0.6.80';
 window.HUNTER_SHARED_VEHICLE_MODELS=vehicleModels;
 import * as sharedAccuracy from './enemy-accuracy-core.mjs';
 window.HUNTER_SHARED_ACCURACY=sharedAccuracy;
