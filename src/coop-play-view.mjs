@@ -7,7 +7,7 @@ import {createTowerModel} from './tower-model.mjs';
 import {createCompoundStructures} from './compound-structures.mjs';
 import {createStaticWorldAdapter} from './world-adapter.mjs?v=0.6.49';
 import {playerModel} from './player-model-core.mjs';
-import {createVehicleView} from './coop-vehicle-view.mjs?v=0.6.80';
+import {createVehicleView} from './coop-vehicle-view.mjs?v=0.6.81';
 import {createCombatView} from './coop-combat-view.mjs?v=0.6.49';
 const colors=[0x5fc5ff,0xffc85f],css=['#5fc5ff','#ffc85f'];
 export async function createMissionView(container,meta,geometry,{three=null,makeRenderer=null,self=null}={}){
