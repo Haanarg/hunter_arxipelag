@@ -6,7 +6,7 @@ import {createStaticWorldAdapter} from '../src/world-adapter.mjs';
 import {buildBaseShells} from './coop-base-buildings.mjs';
 import {addCoopBunker} from './coop-bunker.mjs';
 import {vehicleDynamics} from '../src/vehicle-dynamics-core.mjs';
-import {vehicleSpecs} from '../src/vehicle-specs.mjs';
+import {vehicleSpecs,vehicleSeatCount} from '../src/vehicle-specs.mjs';
 import {combatBalance} from '../src/combat-rules.mjs';
 
 export function configureOpenWorld(generated){
@@ -55,7 +55,7 @@ export function configureOpenWorld(generated){
   for(const p of piers){const a=tr(p.x,p.z-p.d/2),b=tr(p.x,p.z+p.d/2),length=p.d,ux=(b[0]-a[0])/length,uz=(b[1]-a[1])/length;geometry.piers.push({x:a[0],z:a[1],ux,uz,px:uz,pz:-ux,length,width:p.w,y:1.2});}
   for(const spec of layout.vehicles||[]){const profile=vehicleDynamics.types[spec.t];if(!profile)continue;const [x,z]=tr(spec.x,spec.z),w=createStaticWorldAdapter(geometry),water=profile.m==='w',y=water?0:w.heightAt(x,z)+.06;
    if(water&&raw(x,z)>-1)continue;
-   vehicles.push({id:id+'/vehicle/'+vehicles.length,t:spec.t,kind:spec.t,x,y,z,alt:y,hd:spec.hd-plan.angle,v:0,life:profile.life,seats:Array(['bici','moto','windsurf','moto_aquatica'].includes(spec.t)?1:2).fill(null),rockets:12,modelScale:1,hullRadius:vehicleSpecs.radii[spec.t]*vehicleSpecs.scales[spec.t]*.62});
+   vehicles.push({id:id+'/vehicle/'+vehicles.length,t:spec.t,kind:spec.t,x,y,z,alt:y,hd:spec.hd-plan.angle,v:0,life:profile.life,seats:Array(vehicleSeatCount(spec.t)).fill(null),rockets:12,modelScale:1,hullRadius:vehicleSpecs.radii[spec.t]*vehicleSpecs.scales[spec.t]*.62});
   }
   if(!layout.friendly&&!layout.civilian&&type!=='base')for(const [i,position] of (layout.soldiers||[]).entries()){
    const [x,z]=tr(...position);targets.push({id:id+'/guard/'+i,t:'soldat',x,y:plan.height+.3,z,hp:4,ai:true,heading:0,patrol:plan.patrol.map(([x,z])=>({x,y:plan.height+.3,z})),patrolIndex:i%Math.max(1,plan.patrol.length),lastAttack:-90,seenTicks:0});
