@@ -1,4 +1,4 @@
-import './menu-main-integration.mjs?background=isolate1';
+import './menu-main-integration.mjs?menu=direct-html-v1';
 import {GAME_VERSION} from './version.mjs?v=0.6.81';
 import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.81&visual=8&glassfix=2&smooth=13';
 
