@@ -1,22 +1,28 @@
 // Models conceptuals d'hovercraft per a la pàgina de proves. Cap vehicle del joc és substituït.
 // Proa: -Z; popa: +Z. Mateixa escala nominal per comparar les quatre alternatives.
+// Iteració del model 3 («Reconeixement»): una hèlix, flotador net i cabina oberta a la vista.
+// Les quatre versions mantenen la mateixa escala i un interior idèntic de dues places.
 export const hovercraftConcepts=Object.freeze([
-  {id:'A',name:'Falca blindada',subtitle:'Perfil baix · 1 hèlix',detail:'Proa afuada, cabina integrada i turbina carenada. Basat en la silueta de la primera fotografia.',paint:0x71816a,trim:0x35463c,skirt:0x1a2020,roof:0x7d8d74,height:0.92,front:-1.88,rear:.38,windshield:.72,fan:'duct',radius:.83,armor:1.0,rails:false},
-  {id:'B',name:'Assalt fluvial',subtitle:'Cabina alta · 1 hèlix',detail:'Parabrisa frontal gran, faldó inflable molt visible, defenses i hèlix única protegida per una gàbia.',paint:0x526b50,trim:0x303f34,skirt:0x181e1c,roof:0x627b5d,height:1.12,front:-1.96,rear:.45,windshield:1,fan:'cage',radius:1.00,armor:.85,rails:true},
-  {id:'C',name:'Reconeixement',subtitle:'Lleuger · 1 hèlix',detail:'Cabina compacta i baixa, coberta posterior oberta, una gran hèlix visible i antenes de reconeixement.',paint:0x849078,trim:0x3d4e42,skirt:0x22282a,roof:0x9da58d,height:.72,front:-1.84,rear:-.27,windshield:.62,fan:'open',radius:.96,armor:.58,rails:true},
-  {id:'D',name:'Transport pesant',subtitle:'Blindat · 2 hèlixs',detail:'Cabina ampla, reforços laterals i dues hèlixs posteriors compactes: contrast amb els tres monomotors.',paint:0x566258,trim:0x333e3b,skirt:0x191d1e,roof:0x717f70,height:.96,front:-1.94,rear:.48,windshield:.8,fan:'twin',radius:.65,armor:1.28,rails:false}
+  {id:'A',name:'Reconeixement refinat',subtitle:'Model 3 · perfil original',detail:'Cabina baixa, una sola hèlix descoberta i coberta posterior oberta. El model 3 original, netejat i amb interior.',paint:0x849078,trim:0x3d4e42,skirt:0x22282a,roof:0x9da58d,height:.72,front:-1.84,rear:-.27,windshield:.80,fan:'open',radius:.96,armor:.58,rails:true,style:'recon'},
+  {id:'B',name:'Patrulla fluvial',subtitle:'Model 3 · reforçat',detail:'Cabina una mica més alta, defensa de proa i proteccions baixes. Manté l’hèlix única i el flotador llis.',paint:0x63775d,trim:0x344a3c,skirt:0x1b2323,roof:0x89947c,height:.83,front:-1.89,rear:-.17,windshield:.88,fan:'open',radius:.96,armor:.67,rails:true,style:'patrol'},
+  {id:'C',name:'Interceptor',subtitle:'Model 3 · esportiu',detail:'Teca baixa i afuada, preses d’aire i aletes de popa. Una sola hèlix amb gàbia lleugera.',paint:0x899582,trim:0x384941,skirt:0x23292b,roof:0xa4ad97,height:.66,front:-1.96,rear:-.32,windshield:.76,fan:'open',radius:.98,armor:.56,rails:false,style:'interceptor'},
+  {id:'D',name:'Comandament',subtitle:'Model 3 · panoràmic',detail:'Vidres grans, cabina elevada i equipament de comunicacions a la coberta. Manté una sola hèlix.',paint:0x718572,trim:0x40564a,skirt:0x20272a,roof:0x9aaa91,height:.91,front:-1.78,rear:-.05,windshield:.92,fan:'open',radius:.96,armor:.68,rails:true,style:'command'}
 ]);
 
 export function createHovercraftConcept(THREE,variant=0){
   const c=typeof variant==='number'?hovercraftConcepts[variant]:variant;
   if(!c)throw new Error('Variant d’hovercraft desconeguda');
-  const root=new THREE.Group(),parts=new THREE.Group(),rotors=[];
+  const root=new THREE.Group(),parts=new THREE.Group(),rotors=[],windowPanes=[],cockpitSeats=[];
   root.add(parts);
   const mat=(color,metalness=.16,roughness=.75)=>new THREE.MeshStandardMaterial({color,metalness,roughness,side:THREE.DoubleSide});
   const paint=mat(c.paint,.26,.62),roof=mat(c.roof,.22,.68),trim=mat(c.trim,.34,.62),
-    skirt=mat(c.skirt,.05,.95),rubber=mat(0x11171a,.02,.9),seam=mat(0x2c3435,.1,.94),
+    skirt=mat(c.skirt,.05,.95),
     deck=mat(0x34483e,.24,.82),silver=mat(0x9baba4,.65,.3),
-    dark=mat(0x182626,.15,.6),glass=new THREE.MeshPhysicalMaterial({color:0x4d8692,metalness:.05,roughness:.19,transparent:true,opacity:.78,side:THREE.DoubleSide,depthWrite:false}),
+    dark=mat(0x182626,.15,.6),
+    // Tint suau: la transparència serveix de debò perquè ara NO hi ha plaques opaques darrere.
+    glass=new THREE.MeshPhysicalMaterial({color:0xa7dbe1,metalness:0,roughness:.12,transparent:true,opacity:.27,side:THREE.DoubleSide,depthWrite:false}),
+    upholstery=mat(0x364941,.06,.91),seatTrim=mat(0x9faa92,.10,.78),
+    instruments=mat(0x253b3c,.1,.78),screen=mat(0x7dc7bd,.05,.42),
     light=mat(0xe7e6ba,.1,.37),orange=mat(0xd6a536,.1,.45);
   const mesh=(geo,m,parent=parts)=>{const o=new THREE.Mesh(geo,m);parent.add(o);return o};
   function box(w,h,d,x,y,z,m,parent=parts){const o=mesh(new THREE.BoxGeometry(w,h,d),m,parent);o.position.set(x,y,z);return o}
@@ -60,10 +66,7 @@ export function createHovercraftConcept(THREE,variant=0){
   for(const side of [-1,1]){
     beam([side*.60,.73,-2.99],[side*1.49,.88,-2.41],.085,trim);
     beam([side*1.49,.88,-2.41],[side*1.55,.89,2.66],.092,trim);
-    for(let i=0;i<13;i++){
-      const z=-2.46+i*.41,w=1.58+(z>2.25?-(z-2.25)*.3:0);
-      beam([side*(w-.04),.40,z],[side*(w-.04),.19,z+.13],.026,seam,5);
-    }
+    // Flotador continu i llis: sense barres ni filaments penjants.
   }
   // Coberta i passamans sobre la plataforma rígida.
   box(2.47,.10,3.82,0,1.32,.64,deck);
@@ -74,7 +77,8 @@ export function createHovercraftConcept(THREE,variant=0){
       box(.40,.027,.055,side*1.40,1.32,z,silver);
     }
   }
-  // Volum de cabina facetat: la superfície frontal inclinada és part de la silueta, no un bloc cúbic.
+  // Cabina REALMENT buida: retallem les parets per crear obertures; no superposem vidres
+  // a una caixa sòlida (el defecte de la primera comparativa).
   const baseY=1.38,topY=baseY+c.height,fw=c.front,rz=c.rear,
     frontBottom=-2.50,backBottom=rz+.30,halfBottom=1.10*c.armor,halfTop=.94*c.armor;
   const v=[
@@ -83,30 +87,81 @@ export function createHovercraftConcept(THREE,variant=0){
     [-halfTop,topY,fw],[halfTop,topY,fw],
     [halfTop,topY,rz],[-halfTop,topY,rz]
   ];
-  const faceList=[[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7],[0,3,2,1]];
-  for(const ids of faceList)quad(ids.map(i=>v[i]),ids[4]===undefined?paint:roof);
-  box(halfTop*2+.14,.065,rz-fw+.14,0,topY+.015,(fw+rz)/2,roof);
-  // Parabrisa angular amb muntant central i marcs de vidre.
-  const w=.76*halfTop,lowY=baseY+c.height*.31,highY=topY-.16,
-    lowZ=frontBottom+(fw-frontBottom)*.28,highZ=fw-.014;
-  for(const side of [-1,1]){
-    const xa=side<0?-w:0,xb=side<0?0:w;
-    quad([[xa,lowY,lowZ],[xb,lowY,lowZ],[xb,highY,highZ],[xa,highY,highZ]],glass);
-    beam([xa,lowY,lowZ-.014],[xa,highY,highZ-.014],.025,dark);
-    beam([xa,highY,highZ-.018],[xb,highY,highZ-.018],.027,dark);
-    beam([xa,lowY,lowZ-.018],[xb,lowY,lowZ-.018],.023,dark);
-    // Finestres trapezoïdals laterals al costat del conductor.
-    const sx=side*(halfBottom*.96),tx=side*(halfTop*.98);
-    quad([[sx,baseY+.38,frontBottom*.59+rz*.41],[sx,baseY+.40,rz-.04],
-          [tx,topY-.21,rz-.09],[tx,topY-.20,fw+.30]],glass);
-    box(.045,.19,.30,side*(halfBottom+.06),baseY+.45,fw+.45,trim);
-    // Placa amb punts de rematada del blindatge lateral.
-    box(.044,.32,.75,side*(halfBottom+.015),baseY+.27,.45,paint);
-    for(const z of [-1.30,-.95,-.60,.1,.45,.8]){
-      ball(.021,side*(halfBottom+.04),baseY+.36,z,silver);
+  const mix=(a,b,t)=>a.map((n,i)=>n+(b[i]-n)*t);
+  // Paret quad: u va d'esquerra a dreta i t de terra a sostre.
+  // Cada panell és parcial: les finestres ocupen forats físics al blindatge.
+  function wallPanel(corners){
+    const [bl,br,tr,tl]=corners;
+    const at=(u,t)=>mix(mix(bl,br,u),mix(tl,tr,u),t);
+    return (u0,u1,t0,t1,m,windowType=null)=>{
+      const o=quad([at(u0,t0),at(u1,t0),at(u1,t1),at(u0,t1)],m);
+      if(windowType){o.userData.windowPane=windowType;windowPanes.push(o)}
+      return o;
+    };
+  }
+  function windowedWall(corners,position){
+    const panel=wallPanel(corners);
+    // Plaques opaques només a la part BAIXA i al marc superior.
+    panel(0,1,0,.31,paint);
+    panel(0,1,.91,1,roof);
+    if(position==='front'){
+      panel(0,.065,.31,.91,trim);
+      panel(.935,1,.31,.91,trim);
+      panel(.478,.522,.31,.91,trim);
+      panel(.065,.478,.345,.885,glass,'front');
+      panel(.522,.935,.345,.885,glass,'front');
+      panel(.065,.935,.31,.345,trim);
+      panel(.065,.935,.885,.91,trim);
+    }else{
+      panel(0,.095,.31,.91,trim);
+      panel(.915,1,.31,.91,trim);
+      panel(.505,.552,.31,.91,trim);
+      panel(.095,.505,.35,.88,glass,'side');
+      panel(.552,.915,.35,.88,glass,'side');
+      panel(.095,.915,.31,.35,trim);
+      panel(.095,.915,.88,.91,trim);
     }
   }
-  beam([0,lowY,lowZ-.03],[0,highY,highZ-.03],.036,trim);
+  windowedWall([v[0],v[1],v[5],v[4]],'front');
+  windowedWall([v[1],v[2],v[6],v[5]],'side');
+  windowedWall([v[3],v[0],v[4],v[7]],'side');
+  // Mampara de popa de la cabina (parcial); la coberta continua oberta.
+  const rear=wallPanel([v[2],v[3],v[7],v[6]]);
+  rear(0,1,0,.72,paint);
+  rear(0,.10,.72,1,trim);rear(.90,1,.72,1,trim);
+  rear(.10,.90,.72,.92,glass,'rear');
+  rear(0,1,.92,1,roof);
+  box(halfTop*2+.12,.063,rz-fw+.12,0,topY+.025,(fw+rz)/2,roof);
+
+  // L'habitacle és real: seients, seients amb respatller, terres, consoles i controls.
+  // Totes les peces queden entre les finestres, amb els dos passatgers costat a costat.
+  box(halfBottom*1.75,.065,1.77,0,baseY+.035,-1.22,instruments);
+  for(const x of [-.235,.235]){
+    const seat=new THREE.Group();parts.add(seat);cockpitSeats.push(seat);
+    box(.33,.12,.43,x,baseY+.20,-.90,upholstery,seat);
+    box(.33,.34,.09,x,baseY+.39,-.68,upholstery,seat);
+    box(.30,.04,.30,x,baseY+.275,-.91,seatTrim,seat);
+    for(const dx of [-.11,.11])box(.035,.11,.035,x+dx,baseY+.105,-.91,dark,seat);
+    box(.26,.075,.065,x,baseY+.57,-.67,seatTrim,seat);
+  }
+  box(halfBottom*1.67,.21,.35,0,baseY+.27,-1.88,dark);
+  box(halfBottom*1.45,.065,.22,0,baseY+.40,-1.83,instruments);
+  for(const x of [-.38,-.20,-.03,.14,.31]){
+    box(.085,.033,.02,x,baseY+.47,-1.82,x<0?screen:silver);
+  }
+  // Manillar a la banda esquerra i palanca de potència central.
+  beam([-.235,baseY+.35,-1.55],[-.235,baseY+.49,-1.65],.019,silver);
+  const steering=mesh(new THREE.TorusGeometry(.115,.018,8,20),dark);
+  steering.position.set(-.235,baseY+.50,-1.65);
+  beam([0,baseY+.28,-1.28],[0,baseY+.55,-1.40],.019,silver);
+  ball(.04,0,baseY+.55,-1.40,trim);
+  box(.33,.23,.29,.38,baseY+.10,-1.49,upholstery);
+  // Marcs discrets dels laterals: de metall, no barres al flotador.
+  for(const side of [-1,1]){
+    const xb=side*halfBottom,xt=side*halfTop;
+    beam([xb,baseY,frontBottom],[xt,topY,fw],.038,trim);
+    beam([xt,topY,fw],[xt,topY,rz],.038,trim);
+  }
   // Capó, llums de proa, dos retrovisors i escotilles.
   box(1.35,.11,.47,0,1.40,-2.73,paint);
   for(const side of [-1,1]){
@@ -131,19 +186,45 @@ export function createHovercraftConcept(THREE,variant=0){
     for(const z of [-2.48,2.66])ball(.09,side*1.24,1.20,z,silver);
   }
   box(1.02,.075,.19,0,1.31,2.80,trim);
-  if(c.id==='C'){
-    // Banquetes de la coberta oberta i prestatges de reconeixement.
-    box(1.60,.14,.51,0,1.48,.57,paint);
-    for(const side of [-1,1])box(.22,.35,.67,side*.85,1.61,.64,trim);
-    box(.60,.32,.43,.01,1.52,1.13,trim);
-  }else if(c.id==='D'){
+  // Coberta posterior comuna del model 3: oberta, amb banqueta compacta.
+  box(1.60,.14,.51,0,1.48,.57,paint);
+  for(const side of [-1,1])box(.22,.35,.67,side*.85,1.61,.64,trim);
+  box(.60,.32,.43,.01,1.52,1.13,trim);
+  // Quatre estils de la mateixa barca, sense alterar l'interior ni la motorització.
+  if(c.style==='patrol'){
+    // Defensa frontal reforçada, falques laterals i projector de patrulla.
+    beam([-.94,1.29,-3.01],[.94,1.29,-3.01],.10,dark,10);
     for(const side of [-1,1]){
-      box(.24,.48,1.57,side*1.20,1.52,.66,paint);
-      for(let k=0;k<3;k++)box(.025,.12,.19,side*1.35,1.52,.15+k*.4,dark);
+      box(.15,.29,1.08,side*1.25,1.46,-.53,paint);
+      box(.09,.22,.68,side*1.29,1.60,-.49,trim);
     }
+    const searchlight=mesh(new THREE.CylinderGeometry(.16,.17,.21,14),dark);
+    searchlight.rotation.x=Math.PI/2;searchlight.position.set(.31,topY+.19,rz-.19);
+    ball(.125,.31,topY+.19,rz-.305,light);
+    box(.19,.13,.17,.31,topY+.08,rz-.19,trim);
+  }else if(c.style==='interceptor'){
+    // Capó nervat i dues aletes aerodinàmiques a la coberta de popa.
+    for(const x of [-.54,-.32,-.10,.12,.34,.56])
+      box(.045,.065,.80,x,1.43,-2.48,trim);
+    for(const side of [-1,1]){
+      const fin=quad([[side*1.22,1.40,.69],[side*1.26,1.43,2.04],
+        [side*1.17,1.95,1.91],[side*1.09,1.70,.84]],paint);
+      fin.userData.styleFin=true;
+      beam([side*1.26,1.43,2.04],[side*1.17,1.95,1.91],.025,trim);
+    }
+  }else if(c.style==='command'){
+    // Equip de comandament i electrònica; vidres més grans per la cabina elevada.
+    box(.56,.12,.47,0,topY+.09,rz-.02,trim);
+    box(.44,.055,.31,0,topY+.16,rz-.02,silver);
+    for(const side of [-1,1]){
+      beam([side*.66,topY+.05,rz-.06],[side*.85,topY+.64,rz+.07],.025,trim);
+      ball(.04,side*.85,topY+.64,rz+.07,orange);
+    }
+    box(.50,.32,.35,.70,1.56,1.36,trim);
+    for(let i=0;i<4;i++)box(.07,.018,.20,.48+i*.14,1.73,1.36,silver);
   }else{
-    box(.98,.37,.52,0,1.51,1.25,paint);
-    box(.87,.08,.38,0,1.73,1.25,trim);
+    // Versió refinada: només les escotilles i la banqueta originals.
+    box(.38,.075,.29,0,1.77,.82,roof);
   }
   function buildFan(x,y,z,r,style){
     const supportZ=z-.05;
@@ -184,18 +265,8 @@ export function createHovercraftConcept(THREE,variant=0){
     const cap=ball(.17,x,y,guardZ-.015,trim);
     cap.scale.z=.48;
   }
-  if(c.fan==='twin'){
-    buildFan(-.70,2.52,2.31,c.radius,'duct');
-    buildFan(.70,2.52,2.31,c.radius,'duct');
-    box(1.35,.26,.55,0,1.65,2.45,paint);
-  }else{
-    buildFan(0,c.id==='B'?2.68:c.id==='C'?2.48:2.57,2.28,c.radius,c.fan);
-    if(c.id==='A'){
-      for(const side of [-1,1]){
-        box(.24,.38,.75,side*.99,1.52,2.25,paint);
-      }
-    }
-  }
+  // Totes les variants són monomotor, tal com el model 3.
+  buildFan(0,c.style==='command'?2.60:2.48,2.28,c.radius,'open');
   // Antena, llum taronja i detalls de maniobra.
   beam([-.42,topY+.03,rz-.23],[-.48,topY+1.13,rz-.33],.019,dark);
   ball(.044,-.48,topY+1.13,rz-.33,silver);
@@ -203,7 +274,7 @@ export function createHovercraftConcept(THREE,variant=0){
   for(const side of [-1,1]){
     box(.18,.075,.09,side*.83,1.28,-2.81,dark);
   }
-  root.userData={concept:c,rotors,animate(time){
+  root.userData={concept:c,rotors,windowPanes,cockpitSeats,skirtFilamentsRemoved:true,animate(time){
     for(let i=0;i<rotors.length;i++)rotors[i].rotation.z=time*19*(i%2? -1:1);
   }};
   return root;
