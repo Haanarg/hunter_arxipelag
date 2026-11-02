@@ -74,6 +74,11 @@ const fleetApi={
     if(v.enemyCrew[seat]||seat===1&&!v.enemyCrew[0])return false;
     v.enemyCrew[seat]=uid;return true;
   },
+  enemyPromote(id,driverId,passengerId){
+    const v=fleet.find(v=>v.id===id);
+    if(v?.enemyCrew?.[0]!==driverId||v.enemyCrew[1]!==passengerId)return false;
+    v.enemyCrew[0]=passengerId;v.enemyCrew[1]=null;return true;
+  },
   enemyRelease(uid){
     for(const v of fleet)if(v.enemyCrew?.includes(uid)){
       v.enemyCrew[v.enemyCrew.indexOf(uid)]=null;return true;
