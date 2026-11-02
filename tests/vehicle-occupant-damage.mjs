@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {createVehicleOccupantDamageState,resolveVehicleShot,markOccupantDead,selectReplacementDriver} from '../src/vehicle-occupant-damage-core.mjs';
+const s=createVehicleOccupantDamageState('cotxe',['driver','passenger']);
+const shot={type:'cotxe',state:s,glassHit:{t:.2},occupantHit:{t:.3,seatId:'driver'},bodyHit:{t:.8},damage:2};
+assert.equal(resolveVehicleShot(shot).kind,'glass');
+assert.equal(resolveVehicleShot(shot).kind,'occupant');
+assert.equal(resolveVehicleShot({...shot,glassHit:null,occupantHit:null}).kind,'vehicle');
+markOccupantDead(s,'driver');
+assert.equal(selectReplacementDriver(s,'driver',['passenger']),'passenger');
+assert.equal(resolveVehicleShot({...shot,glassHit:null}).kind,'vehicle');
+const open=createVehicleOccupantDamageState('llanxa',['driver']);
+assert.equal(resolveVehicleShot({type:'llanxa',state:open,occupantHit:{t:.3,seatId:'driver'},damage:2}).kind,'occupant');
+console.log('vehicle occupant damage rules: ok');
