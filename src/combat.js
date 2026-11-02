@@ -26,6 +26,37 @@ function shatterWindow(w,index,point,p){
   spawnBulletImpact('glass',point.x,point.y,point.z,p);
   return true;
 }
+function shatterVehicleWindow(v,seat,point,p,silent=false){
+  if(!v?.o)return false;
+  // L'estat de joc pot arribar abans de l'efecte al coop: el model
+  // necessita una marca pròpia per no repetir fragments ni sons.
+  const core=window.HUNTER_VEHICLE_OCCUPANT_DAMAGE;
+  core.breakVehicleSeatWindow(v,seat);
+  const done=v.o.userData.shatteredVehicleSeats??=
+    new Set();
+  if(done.has(seat))return false;
+  done.add(seat);
+  // Amagam només el panell translúcid més pròxim al seient afectat.
+  // La malla és individual per vehicle: mai no mutam materials compartits.
+  v.o.updateMatrixWorld(true);
+  const center=core.vehicleSeatWorld(v,seat,v.o.position.y);
+  let pane=null,best=Infinity;
+  const pos=new THREE.Vector3();
+  v.o.traverse(mesh=>{
+    if(!mesh.isMesh||!mesh.visible)return;
+    const mats=Array.isArray(mesh.material)?mesh.material:[mesh.material];
+    if(!mats.some(mat=>mat?.transparent&&mat.opacity<.9))return;
+    mesh.getWorldPosition(pos);
+    const d=Math.hypot(pos.x-center.x,pos.y-center.y,pos.z-center.z);
+    if(d<best){best=d;pane=mesh;}
+  });
+  if(pane&&best<7)pane.visible=false;
+  if(!silent){
+    snd('glassBreak',.8,point,v.o);
+    spawnBulletImpact('glass',point.x,point.y,point.z,p);
+  }
+  return true;
+}
 function projectileImpactImmune(kind,target,p){
   if(!(p.dmg>0))return false;
   const light=!p.spl;
@@ -1435,10 +1466,7 @@ function updPj(dt){
       }
       else if(kind==='vehicle-glass'){
         const v=target.vehicle;
-        if(window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.breakVehicleSeatWindow(v,target.seat)){
-          snd('glassBreak',.8,{x:p.x,y:p.y,z:p.z},v.o);
-          spawnBulletImpact('glass',p.x,p.y,p.z,p);
-        }
+        shatterVehicleWindow(v,target.seat,{x:p.x,y:p.y,z:p.z},p);
       }
       else if(kind==='vehicle-occupant'){
         const victim=target.target;
