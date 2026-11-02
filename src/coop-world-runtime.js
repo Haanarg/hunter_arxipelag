@@ -305,6 +305,10 @@ function updateNativeCoopFrame(dt){
      if(s.appliedVehicleRows.get(row.id)!==row){
        const previous=s.appliedVehicleRows.get(row.id);
        Object.assign(v,row);
+       for(const seat of row.brokenVehicleWindows||[]){
+         const q=window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.vehicleSeatWorld(v,seat,row.y);
+         shatterVehicleWindow(v,seat,q,null,true);
+       }
        if(row.destroyed&&!previous?.destroyed&&s.projectedState){
          // Mateixa fragmentació de les malles que al mode individual,
          // sense tornar a aplicar danys: el Worker ja és l'autoritat.
@@ -687,9 +691,7 @@ function updateNativeCoopFrame(dt){
      else if(effect.kind==='vehicle-glass'){
        const v=s.vehicles.get(effect.vehicleId);
        if(v){
-         window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.breakVehicleSeatWindow(v,effect.seat);
-         snd('glassBreak',.8,effect.at,v.o);
-         spawnBulletImpact('glass',effect.at.x,effect.at.y,effect.at.z,null);
+         shatterVehicleWindow(v,effect.seat,effect.at,null);
        }
      }
      else if(effect.kind==='shot'){
