@@ -91,9 +91,17 @@ export function createAimSelector({origin,direction,range,cone=.97,shotClass='li
    const angularError=Math.acos(dot);
    // Evita prioritzar sistemàticament el soldat lateral sobre el cotxe
    // que ocupa el centre, i evita el salt d'un enemic a 5 m sobre un altre centrat.
-   if(angularError>bestScore+1e-7||
-     (Math.abs(angularError-bestScore)<1e-7&&distance>=bestDistance))return;
-   bestPriority=priority;bestScore=angularError;bestDistance=distance;
+   // Els coets, bazuca, míssils i canons pesants preserven EXACTAMENT
+   // les seves prioritats i el balanç anterior; només armes lleugeres
+   // canvien dinàmicament al blanc més centrat.
+   const score=heavy?
+     Math.acos(Math.max(-1,Math.min(1,alignment)))*45+pitchError*23+distance*.08:
+     angularError;
+   if(heavy){
+     if(priority>bestPriority||priority===bestPriority&&score>=bestScore)return;
+   }else if(score>bestScore+1e-7||
+     (Math.abs(score-bestScore)<1e-7&&distance>=bestDistance))return;
+   bestPriority=priority;bestScore=score;bestDistance=distance;
    chosen=[dx/distance,dy/distance,dz/distance];
    if(focus){focus.target=obj;focus.point={x:tx,y:ty,z:tz};focus.kind=kind}
  };
