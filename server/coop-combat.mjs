@@ -100,8 +100,6 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
   const effect=(kind,tick,data)=>{effects.push({id:++sequence,kind,tick,...data});if(effects.length>64)effects.shift();};
   const enemyVehicles=createEnemyVehicleController({
     meta,vehicles,targets,players:visiblePlayers,world,
-    visible:(from,to)=>traceArena(from,to,geometry(),world(),
-      {ignoreVegetation:true}).fraction>=.999,
     navigate:(unit,tick)=>stepNativeSoldierNavigation(unit,{
       tick,world:world(),players:[],requestDoor:openEnemyDoor}),
     firePassenger:(unit,v,tick)=>{
@@ -250,10 +248,11 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     return true;
   }
   function nativeSoldierStep(unit,tick){
+    if(enemyVehicles.tryAcquire(unit,tick))return true;
     const contact=senseNativeSoldier(unit,{players:visiblePlayers(),inventory,mounted:id=>vehicles.mounted(id),world:world(),visibleAim:nativeSoldierAim,tick});
     if(!contact)return unit.state!=='patrol';
     const {actor,acquired}=contact;unit.heading=facePoint(unit,actor);
-    if(acquired){unit.nextAttackTick=tick;alarm({x:unit.x,y:unit.y+2,z:unit.z},unit.id,tick,'alert');onEnemyAlert(unit,actor,tick,targets);if(enemyVehicles.acquire(unit,actor,tick))return true;}
+    if(acquired){unit.nextAttackTick=tick;alarm({x:unit.x,y:unit.y+2,z:unit.z},unit.id,tick,'alert');onEnemyAlert(unit,actor,tick,targets);}
     if(Math.hypot(actor.x-unit.x,actor.z-unit.z)>SOLDIER.fireRange||tick<(unit.nextAttackTick??0))return true;
     const aim=nativeSoldierAim(unit,actor);if(!aim)return true;
     const rocket=!!unit.rocketSoldier,profile=soldierAccuracyProfile(unit),eye={x:unit.x,y:unit.y+2.2,z:unit.z},
@@ -425,6 +424,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       // Un soldat embarcat es representa i s'adquireix al seient.
       const carrier=t.enemyVehicleId&&vehicles.live().find(v=>v.id===t.enemyVehicleId),
         point=carrier?vehicleSeatWorld(carrier,t.enemySeat||0,carrier.y):null;
+      if(carrier&&['tanc','tanqueta'].includes(carrier.t))continue;
       aim.consider(t,'enemy',weaponTargetPriority({...t,t:t.t||'soldat'},heavy?'heavy':weapon),
         point?.x??t.x,point?.y??(t.y+(t.t==='torre'?9.4:1.5)),point?.z??t.z);
     }
