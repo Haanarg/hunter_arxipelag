@@ -3765,6 +3765,7 @@ if(playerEject&&playerEject.t<=0){
   playerEject=null;
 }
 updateBazookaReticle(dt);
+updateLightAimReticle(dt);
 const previousCooldown=Math.max(0,fcd);
 fcd=Math.max(0,previousCooldown-dt);updateGrenadeCharge(dt);updateAssaultBurst(dt);
 if(K.KeyF&&(!grenadeEquipped||cv)){
