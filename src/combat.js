@@ -261,8 +261,8 @@ function explodeVehicle(v){
   if(v.o){vehicleDebris(v,yy);world.remove(v.o)}
   boom(v.x,yy+1,v.z,destruction.damage,destruction.radius,'p',{skipPlayer:wasPilot});
 }
-// Tots els vehicles perden vides amb els impactes; el casc protegeix
-// els ocupants fins al moment que el vehicle explota.
+// Carrosseria i ocupants són objectius independents. Primer s'ha de trencar
+// el vidre del seient per poder ferir la persona asseguda.
 // Projectils explosius: 50% més ràpids i meitat de mida visual.
 const COMBAT_BALANCE=window.HUNTER_COMBAT_BALANCE;
 const HEAVY_SHOT_SPEED_FACTOR=window.HUNTER_SHARED_WEAPONS.HEAVY_SPEED_FACTOR,HEAVY_SHOT_DAMAGE_FACTOR=1,HEAVY_SHOT_VISUAL_SCALE=.5;
@@ -792,10 +792,11 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
     projectileSpeed=0,verticalCone=Math.PI/2){
   const selector=window.HUNTER_SHARED_AIMING.createAimSelector({origin:{x,y,z},direction:[fx,fy,fz],range,cone,shotClass,focus,verticalCone,isClear:weaponAimClear}),{consider}=selector;
   for(const e of E){
+    if(e.enemyVehicleClaim&&['riding','waiting'].includes(e.enemyVehicleClaim.phase))continue;
     if(e.destroyed||e.hp<=0||
       shotClass==='attackCannon'&&['torre','tanqueta','tanc'].includes(e.t))continue;
     const priority=weaponTargetPriority(e,shotClass);
-    if(priority>=3||priority>selector.priority)continue;
+    if(priority>=3||shotClass==='heavy'&&priority>selector.priority)continue;
     const modelY=e.o?.position?.y??(e.gy??0),
           groundTarget=['soldat','general','jeep','tanqueta','tanc'].includes(e.t),
           underground=!!e.basement&&(e.gy??modelY)<e.basement.fy-3.9,
@@ -811,6 +812,13 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
     // part superior del soldat. El mateix raycast comprova que sigui visible.
     if(shotClass!=='heavy'&&['soldat','general'].includes(e.t))
       consider(e,'enemy',priority,aim.x,baseY+2.35,aim.z);
+  }
+  // Els vehicles neutrals competeixen amb els soldats, segons l'angle
+  // respecte del centre de la mirada i només amb armes lleugeres.
+  if(shotClass!=='heavy')for(const v of vehicleCandidatesAt(x,z,range,true)){
+    if(v.destroyed||v===cv)continue;
+    const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
+    consider(v,'vehicle',1,v.x,vy+Math.min(2.3,vehicleRadius(v.t)*.3),v.z);
   }
   // Les finestres de la planta alta no queden a l'alçada del canó
   // quan disparam des del carrer. Si no hi ha enemics seleccionats,
@@ -1279,6 +1287,7 @@ function updPj(dt){
       // També cercam els centres de llanxes situats a cel·les veïnes
       // quan només la proa o la popa intercepten el segment del coet.
       for(const u of enemyCandidatesAt(mx,mz,reach+vehicleRadius('llanxa')*.62+4)){
+        if(u.enemyVehicleClaim&&['riding','waiting'].includes(u.enemyVehicleClaim.phase))continue;
         const marine=u.t==='patrulla_marina',
               cy=enemyAimCenterY(u),
               radius=enemyAimHitRadius(u);
@@ -1288,8 +1297,15 @@ function updPj(dt){
     }
     for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){
       if((p.own==='p'||p.own==='pb')&&v===cv)continue;
-      const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),rr=vehicleRadius(v.t)*.62;
-      consider(window.HUNTER_SHARED_COMBAT.vehicleHullSegmentT({x:x0,y:y0,z:z0},{x:x1,y:y1,z:z1},v,vy,rr),'vehicle',v)
+      const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),rr=vehicleRadius(v.t)*.62,
+        people=p.own==='e'&&v===cv?[P,null]:
+          p.own==='e'?[null,null]:(v.enemyCrew||[]),
+        seatHit=!p.spl?window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.vehicleSeatProjectileContact(
+          from,to,v,people,{baseY:vy}):null;
+      // Un impacte a la cabina és al vidre / ocupant abans que al casc.
+      if(seatHit)consider(seatHit.t,seatHit.kind,{vehicle:v,...seatHit});
+      else consider(window.HUNTER_SHARED_COMBAT.vehicleHullSegmentT(
+        from,to,v,vy,rr),'vehicle',v);
     }
     if(p.own==='e'&&!cv)consider(segmentSphereT(x0,y0,z0,x1,y1,z1,P.x,P.y+(playerCrouched?1.25:1.5),P.z,playerCrouched?1.05:1.2),'player',P);
 
@@ -1333,6 +1349,20 @@ function updPj(dt){
         }else if(!(p.shotClass==='light'&&isArmoredVehicleType(target.t))){
           hurtE(target,p.dmg,p);
         }
+      }
+      else if(kind==='vehicle-glass'){
+        const v=target.vehicle;
+        if(window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.breakVehicleSeatWindow(v,target.seat)){
+          snd('glassBreak',.8,{x:p.x,y:p.y,z:p.z},v.o);
+          spawnBulletImpact('glass',p.x,p.y,p.z,p);
+        }
+      }
+      else if(kind==='vehicle-occupant'){
+        const victim=target.target;
+        if(victim===P){
+          const before=hp;hurtP(p.dmg,true,{type:'bullet',x:p.sx,y:p.sy,z:p.sz});
+          if(hp<before)spawnBulletImpact('blood',p.x,p.y,p.z,p);
+        }else if(victim?.hp>0)hurtE(victim,p.dmg,p);
       }
       else if(kind==='vehicle')damageVehicle(target,p.dmg,1,'light',p);
       else if(kind==='civilian'){
