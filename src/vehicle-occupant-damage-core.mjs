@@ -35,3 +35,58 @@ export function selectReplacementDriver(state,driverSeatId='driver',otherSeatIds
  if(state.occupants[driverSeatId]?.alive)return null;
  return otherSeatIds.find(id=>state.occupants[id]?.alive)??null;
 }
+
+// Seat-sized glass zones are cheap analytic volumes (no mesh raycasts).
+// Only the window on the actually intersected seat is shattered.
+const COVERED=new Set(['cotxe','cotxe_civil','camio','heli','heli_combat']);
+export function vehicleSeatWorld(v,seat=0,baseY=v.y??0){
+ const scale=({camio:1.8125,cotxe:1.3,cotxe_civil:1.2,heli:1.75,heli_combat:1.82})[v.t]||1;
+ const lx=(seat===0?-1:1)*(v.t==='camio'?.62:.72)*scale;
+ const lz=(v.t==='camio'?-.62:-.43)*scale;
+ const ly=(v.t==='camio'?1.7:1.48)*scale;
+ const heading=v.hd??v.heading??0;
+ return {x:v.x+Math.cos(heading)*lx+Math.sin(heading)*lz,
+         y:baseY+ly,z:v.z-Math.sin(heading)*lx+Math.cos(heading)*lz};
+}
+export function segmentSeatSphere(from,to,center,radius){
+ const dx=to.x-from.x,dy=to.y-from.y,dz=to.z-from.z;
+ const ox=from.x-center.x,oy=from.y-center.y,oz=from.z-center.z;
+ const a=dx*dx+dy*dy+dz*dz;
+ if(a<=1e-12)return null;
+ const b=ox*dx+oy*dy+oz*dz,c=ox*ox+oy*oy+oz*oz-radius*radius;
+ const disc=b*b-a*c;if(disc<0)return null;
+ const root=Math.sqrt(disc),t0=(-b-root)/a,t1=(-b+root)/a;
+ return t0>=0&&t0<=1?t0:t1>=0&&t1<=1?t1:null;
+}
+// The hull is only hit if no seat volume lies on the trajectory. This
+// prevents an intentionally oversized hull proxy from shielding occupants.
+// Return a candidate; the caller must compare against world/terrain hits.
+export function vehicleSeatProjectileContact(from,to,v,crew=[],{baseY=v.y??0}={}){
+ if(!v||v.destroyed||v.sunk)return null;
+ const windowed=COVERED.has(v.t);
+ const glass=new Set(v.brokenVehicleWindows||[]);
+ let closest=null;
+ for(let seat=0;seat<Math.max(crew.length,windowed?2:0);seat++){
+   const member=crew[seat];
+   const target=member&&member.hp!==0&&member.hp!==null&&member.alive!==false?member:null;
+   if(!target&&!windowed)continue;
+   const point=vehicleSeatWorld(v,seat,baseY);
+   const tOccupant=target?segmentSeatSphere(from,to,point,v.t==='camio'?1.0:.82):null;
+   const tGlass=windowed&&!glass.has(seat)?
+     segmentSeatSphere(from,to,point,v.t==='camio'?1.27:1.08):null;
+   // Never let an occupant behind intact glass absorb the same bullet.
+   const candidate=tGlass!=null&&
+       (tOccupant==null||tGlass<=tOccupant+1e-6)?
+     {kind:'vehicle-glass',seat,target:null,t:tGlass,point}:
+     tOccupant!=null?{kind:'vehicle-occupant',seat,target,t:tOccupant,point}:null;
+   if(candidate&&(!closest||candidate.t<closest.t))closest=candidate;
+ }
+ return closest;
+}
+export function breakVehicleSeatWindow(v,seat){
+ if(!Number.isInteger(seat)||seat<0||seat>1||!COVERED.has(v?.t))return false;
+ v.brokenVehicleWindows??=[];
+ if(v.brokenVehicleWindows.includes(seat))return false;
+ v.brokenVehicleWindows.push(seat);return true;
+}
+export const vehicleGlassHasCover=type=>COVERED.has(type);
