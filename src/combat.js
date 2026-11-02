@@ -833,11 +833,14 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
     projectileSpeed=0,verticalCone=Math.PI/2){
   const selector=window.HUNTER_SHARED_AIMING.createAimSelector({origin:{x,y,z},direction:[fx,fy,fz],range,cone,shotClass,focus,verticalCone,isClear:weaponAimClear}),{consider}=selector;
   for(const e of E){
-    if(e.enemyVehicleClaim&&['riding','waiting'].includes(e.enemyVehicleClaim.phase)){
-      const v=e.enemyVehicleClaim.vehicle;
-      if(v&&!v.destroyed){
-        const point=window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.vehicleSeatWorld(
-          v,e.enemyVehicleClaim.seat,v.o?.position?.y??hAt(v.x,v.z));
+    const seated=e.nativeBoardedVehicle||
+      (e.enemyVehicleClaim&&['riding','waiting'].includes(e.enemyVehicleClaim.phase)
+        ?e.enemyVehicleClaim.vehicle:null);
+    if(seated){
+      if(!seated.destroyed){
+        const seat=e.nativeBoardedVehicle?e.nativeEnemySeat||0:e.enemyVehicleClaim.seat,
+          point=window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.vehicleSeatWorld(
+            seated,seat,seated.o?.position?.y??hAt(seated.x,seated.z));
         consider(e,'enemy',weaponTargetPriority(e,shotClass),point.x,point.y,point.z);
       }
       continue;
