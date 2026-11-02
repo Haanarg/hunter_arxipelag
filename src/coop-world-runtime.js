@@ -526,8 +526,9 @@ function updateNativeCoopFrame(dt){
          e.o.position.set(pose.x*sc,pose.y*sc,pose.z*sc);
          e.o.rotation.set(0,0,0);
          e.nativeBoardedVehicle=boarded;
+         e.nativeEnemySeat=row.enemySeat||0;
        }else if(e.nativeBoardedVehicle){
-         world.add(e.o);e.o.scale.setScalar(1);e.nativeBoardedVehicle=null;
+         world.add(e.o);e.o.scale.setScalar(1);e.nativeBoardedVehicle=null;e.nativeEnemySeat=null;
        }
        // El model manté la pose temporal si aquest enemic es mou.
        // L'estat lògic e.x/e.z continua essent autoritatiu.
