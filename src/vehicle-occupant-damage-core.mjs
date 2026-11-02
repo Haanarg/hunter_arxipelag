@@ -41,9 +41,9 @@ export function selectReplacementDriver(state,driverSeatId='driver',otherSeatIds
 const COVERED=new Set(['cotxe','cotxe_civil','camio','heli','heli_combat']);
 export function vehicleSeatWorld(v,seat=0,baseY=v.y??0){
  const scale=({camio:1.8125,cotxe:1.3,cotxe_civil:1.2,heli:1.75,heli_combat:1.82})[v.t]||1;
- const lx=(seat===0?-1:1)*(v.t==='camio'?.62:.72)*scale;
- const lz=(v.t==='camio'?-.62:-.43)*scale;
- const ly=(v.t==='camio'?1.7:1.48)*scale;
+ const lx=v.t==='moto'?0:(seat===0?-1:1)*(v.t==='camio'?.62:.72)*scale;
+ const lz=(v.t==='moto'?.4:v.t==='camio'?-.62:-.43)*scale;
+ const ly=(v.t==='moto'?1.75:v.t==='camio'?1.7:1.48)*scale;
  const heading=v.hd??v.heading??0;
  return {x:v.x+Math.cos(heading)*lx+Math.sin(heading)*lz,
          y:baseY+ly,z:v.z-Math.sin(heading)*lx+Math.cos(heading)*lz};
@@ -63,6 +63,8 @@ export function segmentSeatSphere(from,to,center,radius){
 // Return a candidate; the caller must compare against world/terrain hits.
 export function vehicleSeatProjectileContact(from,to,v,crew=[],{baseY=v.y??0}={}){
  if(!v||v.destroyed||v.sunk)return null;
+ // Tripulacions protegides dins dels blindats: cap bala lleugera travessa el casc.
+ if(v.t==='tanc'||v.t==='tanqueta')return null;
  const windowed=COVERED.has(v.t);
  const glass=new Set(v.brokenVehicleWindows||[]);
  let closest=null;
