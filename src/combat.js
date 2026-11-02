@@ -39,7 +39,11 @@ function shatterVehicleWindow(v,seat,point,p,silent=false){
   // Amagam només el panell translúcid més pròxim al seient afectat.
   // La malla és individual per vehicle: mai no mutam materials compartits.
   v.o.updateMatrixWorld(true);
-  const center=core.vehicleSeatWorld(v,seat,v.o.position.y);
+  // Al reconnectar, el snapshot pot haver avançat abans que el model
+  // renderitzat: localitzam el panell sobre la pose visual actual.
+  const modelPose={...v,x:v.o.position.x,z:v.o.position.z,
+    hd:v.o.rotation.y},
+    center=core.vehicleSeatWorld(modelPose,seat,v.o.position.y);
   let pane=null,best=Infinity;
   const pos=new THREE.Vector3();
   v.o.traverse(mesh=>{
