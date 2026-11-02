@@ -841,7 +841,7 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
       (e.enemyVehicleClaim&&['riding','waiting'].includes(e.enemyVehicleClaim.phase)
         ?e.enemyVehicleClaim.vehicle:null);
     if(seated){
-      if(!seated.destroyed){
+      if(!seated.destroyed&&!['tanc','tanqueta'].includes(seated.t)){
         const seat=e.nativeBoardedVehicle?e.nativeEnemySeat||0:e.enemyVehicleClaim.seat,
           point=window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.vehicleSeatWorld(
             seated,seat,seated.o?.position?.y??hAt(seated.x,seated.z));
