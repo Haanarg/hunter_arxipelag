@@ -13,8 +13,9 @@ export const REQUISITION=Object.freeze({
   retrySeconds:3
 });
 export function requisitionChance(difficulty=1,fleeing=false){
-  const base=clamp(.26+(Number(difficulty)-1)*.28,.08,.65);
-  return fleeing?Math.min(.9,base+.38):base;
+  const level=Number(difficulty);
+  const base=level<.8?.25:level<1.25?.50:.75;
+  return fleeing?Math.min(.95,base+.20):base;
 }
 // Detectam fugida real: el jugador es mou de pressa i s'allunya del soldat.
 // La memòria curta impedeix canvis constants per frenades o girs.
