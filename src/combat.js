@@ -148,9 +148,19 @@ function explodeEnemyVehicle(u){
 }
 function killEnemy(u,killingShot=null){
   if(u.enemyVehicleClaim){
-    const claim=u.enemyVehicleClaim,partner=claim.seat===0?claim.vehicle.enemyCrew?.[1]:null;
+    const claim=u.enemyVehicleClaim,vehicle=claim.vehicle,
+      partner=claim.seat===0?vehicle.enemyCrew?.[1]:null;
     enemyVehicleRelease(u,false);
-    if(partner&&partner.hp>0)enemyVehicleRelease(partner);
+    if(partner?.hp>0&&partner.enemyVehicleClaim?.phase==='riding'&&
+       vehicle&&!vehicle.destroyed){
+      vehicle.enemyCrew??=[null,null];
+      vehicle.enemyCrew[0]=partner;vehicle.enemyCrew[1]=null;
+      partner.enemyVehicleClaim.seat=0;
+      partner.enemyVehicleClaim.phase='riding';
+      const pose=enemyRequisition.seatVisual(vehicle.t,0),sc=VS[vehicle.t]||1;
+      partner.o.position.set(pose.x*sc,pose.y*sc,pose.z*sc);
+      partner.o.rotation.set(0,0,0);
+    }else if(partner&&partner.hp>0)enemyVehicleRelease(partner);
   }
   const i=E.indexOf(u);if(i<0)return;E.splice(i,1);kills++;
   if(u.t==='soldat'||u.t==='general'){window.HUNTER_ENEMY_LOD.setLevel(u.o,'full');u.deadT=0;
@@ -792,7 +802,15 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
     projectileSpeed=0,verticalCone=Math.PI/2){
   const selector=window.HUNTER_SHARED_AIMING.createAimSelector({origin:{x,y,z},direction:[fx,fy,fz],range,cone,shotClass,focus,verticalCone,isClear:weaponAimClear}),{consider}=selector;
   for(const e of E){
-    if(e.enemyVehicleClaim&&['riding','waiting'].includes(e.enemyVehicleClaim.phase))continue;
+    if(e.enemyVehicleClaim&&['riding','waiting'].includes(e.enemyVehicleClaim.phase)){
+      const v=e.enemyVehicleClaim.vehicle;
+      if(v&&!v.destroyed){
+        const point=window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.vehicleSeatWorld(
+          v,e.enemyVehicleClaim.seat,v.o?.position?.y??hAt(v.x,v.z));
+        consider(e,'enemy',weaponTargetPriority(e,shotClass),point.x,point.y,point.z);
+      }
+      continue;
+    }
     if(e.destroyed||e.hp<=0||
       shotClass==='attackCannon'&&['torre','tanqueta','tanc'].includes(e.t))continue;
     const priority=weaponTargetPriority(e,shotClass);
@@ -1299,7 +1317,7 @@ function updPj(dt){
       if((p.own==='p'||p.own==='pb')&&v===cv)continue;
       const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),rr=vehicleRadius(v.t)*.62,
         people=p.own==='e'&&v===cv?[P,null]:
-          p.own==='e'?[null,null]:(v.enemyCrew||[]),
+          p.own==='e'?[null,null]:(v.enemyCrew||[]).map(u=>u?.enemyVehicleClaim&&['riding','waiting'].includes(u.enemyVehicleClaim.phase)?u:null),
         seatHit=!p.spl?window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.vehicleSeatProjectileContact(
           from,to,v,people,{baseY:vy}):null;
       // Un impacte a la cabina és al vidre / ocupant abans que al casc.
