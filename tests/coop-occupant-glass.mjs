@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
 import {createRelayCombat} from '../server/coop-combat.mjs';
+import {segmentSphereT} from '../src/combat-rules.mjs';
 const car={id:'car-1',t:'cotxe',x:0,y:0,z:-12,hd:0,seats:[null,null],
   enemyCrew:['soldier-1',null],life:5,destroyed:false};
 const enemy={id:'soldier-1',t:'soldat',x:car.x,y:car.y,z:car.z,hp:4,
   enemyVehicleId:car.id,enemySeat:0,ai:false};
 const meta={id:'glass-coop-fixture',mode:'native',seed:67,difficulty:1,targets:[enemy]};
-const player={id:'host',x:0,y:0,z:0,hd:0,hp:25};
+const player={id:'host',x:0,y:0,z:0,hd:.08,hp:25};
 const inventory=new Map([['host',{weapon:'pistol',bullets:20,grenades:0,disguised:false}]]);
 let vehicleDamageCalls=0;
-const vehicles={live:()=>[car],mounted:()=>null,contact:()=>.1,
+const vehicles={live:()=>[car],mounted:()=>null,
+  contact:(from,to,v)=>segmentSphereT(from.x,from.y,from.z,to.x,to.y,to.z,v.x,v.y+1.5,v.z,2.5),
   damage:()=>{vehicleDamageCalls++;return {destroyed:false}},enemyRelease:()=>true};
 const combat=createRelayCombat({meta,inventory,players:()=>[player],vehicles,
   active:()=>true,geometry:()=>({walls:[],buildings:[]}),
