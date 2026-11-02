@@ -549,7 +549,8 @@ function updateNativeCoopFrame(dt){
  // de cada fotograma, incloses les pauses entre dos snapshots rebuts.
  for(const e of s.nativeAnimatedEnemies||[]){
    if(e.nativeBoardedVehicle){
-     e.o.visible=e.hp>0&&!e.nativeBoardedVehicle.destroyed&&e.nativeBoardedVehicle.o.visible;
+     e.o.visible=e.hp>0&&!e.nativeBoardedVehicle.destroyed&&e.nativeBoardedVehicle.o.visible&&
+        !window.HUNTER_ENEMY_REQUISITION.seatVisual(e.nativeBoardedVehicle.t,e.nativeEnemySeat||0).hidden;
      continue;
    }
    if(!e.o.visible)continue;
