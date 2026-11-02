@@ -1,10 +1,10 @@
 import {candidateVehicles,requisitionChance,requisitionRoll,vehicleSeatPosition,
-  pursuitInput,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
+  pursuitInput,observeFleeing,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
 
 // L'estat viu al soldat i a enemyCrew del vehicle; ambdós es desaran
 // als checkpoints autoritatius del Worker. Sense clients alternatius.
 export function createEnemyVehicleController({meta,vehicles,targets,players,
-  visible=(a,b)=>true,navigate=()=>{},firePassenger=()=>{},world=()=>null}){
+  navigate=()=>{},firePassenger=()=>{},world=()=>null}){
  const enabled=meta.mode==='native';
  const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
  function release(unit,tick){
@@ -32,26 +32,44 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
     unit.lastSeenTick=tick;unit.investigateUntil=tick+240;
     unit.navRoute=null;unit.navDestination=null;}
  }
- function acquire(unit,actor,tick){
+ function acquire(unit,actor,tick,{fleeing=false}={}){
   if(!enabled||!unit||unit.hp<=0||unit.t!=='soldat'||unit.enemyRequisition||
-     unit.elite||unit.rocketSoldier||unit.basement||!actor)return false;
-  if(requisitionRoll(unit.id,meta.seed)>requisitionChance(meta.difficulty))return false;
+     unit.elite||unit.rocketSoldier||unit.basement||!actor||
+     distance(unit,actor)>(fleeing?REQUISITION.fleeingNoticeRadius:REQUISITION.noticeRadius))return false;
+  if(requisitionRoll(unit.id,meta.seed)>=requisitionChance(meta.difficulty,fleeing))return false;
   const choices=candidateVehicles(unit,vehicles.live(),{
-   visible:(soldier,v)=>Math.abs(soldier.y-v.y)<4&&visible(
-     {x:soldier.x,y:soldier.y+2,z:soldier.z},
-     {x:v.x,y:v.y+1.6,z:v.z})
+   range:fleeing?REQUISITION.fleeingSearchRadius:REQUISITION.searchRadius
   });
   for(const c of choices){
    if(!vehicles.enemyReserve(c.vehicle.id,unit.id,c.seat))continue;
    unit.enemyRequisition={vehicleId:c.vehicle.id,seat:c.seat,
      phase:'approach',until:tick+480,waitUntil:0,
-     lastContact:tick,goal:{x:actor.x,y:actor.y,z:actor.z}};
+     lastContact:tick,fleeUntil:fleeing?tick+Math.ceil(REQUISITION.fleeingMemorySeconds*30):0,
+     goal:{x:actor.x,y:actor.y,z:actor.z}};
    unit.state='search';unit.focus=null;unit.canSee=false;
    unit.lastKnown=vehicleSeatPosition(c.vehicle,c.seat);
    unit.navRoute=null;unit.navDestination=null;
    return true;
   }
   return false;
+ }
+ function tryAcquire(unit,tick){
+  if(!enabled||!unit||unit.hp<=0||unit.t!=='soldat'||unit.enemyRequisition||
+     unit.elite||unit.rocketSoldier||unit.basement)return false;
+  // Mateixa cadència de 10 Hz que la IA de navegació: evita un cost per frame.
+  if(tick%3!==((unit.navPhase??=[...unit.id].reduce((n,c)=>n+c.charCodeAt(0),0)%3)))return false;
+  const nearby=players().filter(p=>p.hp>0&&!p.fall&&!p.swimming)
+    .map(p=>({p,d:distance(unit,p)}))
+    .sort((a,b)=>a.d-b.d);
+  const actor=nearby[0]?.p;if(!actor)return false;
+  const tracking=unit.enemyFleeTracking??={};
+  const fleeing=observeFleeing(unit,actor,tick/30,tracking);
+  const justFled=fleeing&&!unit.enemyRequisitionWasFleeing;
+  unit.enemyRequisitionWasFleeing=fleeing;
+  if(nearby[0].d>(fleeing?REQUISITION.fleeingNoticeRadius:REQUISITION.noticeRadius)||
+     tick<(unit.enemyRequisitionNextTry||0)&&!justFled)return false;
+  unit.enemyRequisitionNextTry=tick+Math.ceil(REQUISITION.retrySeconds*30);
+  return acquire(unit,actor,tick,{fleeing});
  }
  function step(unit,tick){
   if(!enabled||!unit.enemyRequisition)return false;
@@ -90,9 +108,12 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
   }
   let actor=null,best=Infinity;
   for(const p of players())if(p.hp>0&&!p.fall&&!p.swimming){
-   const d=distance(v,p);if(d>REQUISITION.maxChaseDistance)continue;
-   if(d<best&&visible({x:v.x,y:v.y+2,z:v.z},
-       {x:p.x,y:p.y+1.6,z:p.z})){actor=p;best=d;}
+   const d=distance(v,p);
+   const tracking=s.fleeTracking??={};
+   const fleeing=observeFleeing(v,p,tick/30,tracking);
+   if(fleeing)s.fleeUntil=tick+Math.ceil(REQUISITION.fleeingMemorySeconds*30);
+   if(d>(tick<(s.fleeUntil||0)?REQUISITION.fleeingChaseDistance:REQUISITION.maxChaseDistance))continue;
+   if(d<best){actor=p;best=d;}
   }
   if(actor){
    s.goal={x:actor.x,y:actor.y,z:actor.z};s.lastContact=tick;
@@ -104,5 +125,5 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
   vehicles.enemyAccept(v.id,unit.id,input,tick);
   return true;
  }
- return{acquire,step,release};
+ return{acquire,tryAcquire,step,release};
 }
