@@ -1,4 +1,4 @@
-import {vehicleSpecs} from '../src/vehicle-specs.mjs';
+import {vehicleSpecs,vehicleSeatCount} from '../src/vehicle-specs.mjs';
 import {palmImpact,rockImpact} from '../src/vehicle-environment-core.mjs';
 import {firstVehicleContact,vehicleContactDamage} from './coop-vehicle-contacts.mjs';
 import {stepRangeVehicle} from './coop-vehicle-motion.mjs';
@@ -23,7 +23,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
  function enemyReserve(vehicleId,unitId,seat){
   if(meta.mode!=='native'||seat!==0&&seat!==1)return false;
   const v=vehicles.find(v=>v.id===vehicleId);
-  if(!v||v.destroyed||v.sunk||v.seats.some(Boolean)||Math.abs(v.v||0)>1.5)return false;
+  if(!v||seat>=vehicleSeatCount(v.t)||v.destroyed||v.sunk||v.seats.some(Boolean)||Math.abs(v.v||0)>1.5)return false;
   v.enemyCrew??=[null,null];
   if(v.enemyCrew[seat]||seat===1&&!v.enemyCrew[0])return false;
   if(vehicles.some(x=>x.enemyCrew?.includes(unitId)))return false;
