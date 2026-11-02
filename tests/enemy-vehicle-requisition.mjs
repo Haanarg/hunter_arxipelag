@@ -1,13 +1,25 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {candidateVehicles,requisitionChance,requisitionRoll,vehicleSeatPosition,
-  pursuitInput,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
+  pursuitInput,observeFleeing,seatVisual,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
 import {createEnemyVehicleController} from '../server/enemy-vehicle-controller.mjs';
 const source=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 assert.ok(requisitionChance(.6)<requisitionChance(1));
 assert.ok(requisitionChance(1)<requisitionChance(1.5));
 assert.ok(requisitionChance(.6)>.05&&requisitionChance(1.5)<.7);
+assert.ok(requisitionChance(1,true)>requisitionChance(1));
+assert.ok(requisitionChance(1.5,true)<=.9);
+const observer={x:0,z:0},runner={id:'player',x:25,z:0},track={};
+assert.equal(observeFleeing(observer,runner,0,track),false);
+runner.x=26.5;
+assert.equal(observeFleeing(observer,runner,.1,track),true,
+  'Una fugida radial activa la reacció reforçada');
+runner.x=26.3;
+assert.equal(observeFleeing(observer,runner,.2,track),true,
+  'La fugida recent es conserva durant un interval breu');
+assert.equal(observeFleeing(observer,runner,4,track),false,
+  'La bonificació no dura indefinidament');
 assert.equal(requisitionRoll('soldier-1',67),requisitionRoll('soldier-1',67));
 assert.notEqual(requisitionRoll('soldier-1',67),requisitionRoll('soldier-2',67));
 const neutral=(id,t,x,z)=>({id,t,x,z,y:1,v:0,hd:0,seats:[null,null]});
@@ -20,7 +32,24 @@ cars[1].seats[0]='host';
 assert.ok(!candidateVehicles({x:0,z:0},cars)[0]?.vehicle.seats.some(Boolean),
   'No es poden requisar vehicles de jugadors');
 cars[1].seats[0]=null;
-assert.equal(candidateVehicles({x:0,z:0},cars,{visible:()=>false}).length,0);
+assert.equal(candidateVehicles({x:0,z:0},cars,{visible:()=>false}).length,3,
+  'La requisició no depèn de la línia de visió');
+assert.equal(candidateVehicles({x:0,z:0},[neutral('far','tanc',65,0)]).length,0);
+assert.equal(candidateVehicles({x:0,z:0},[neutral('far','tanc',65,0)],
+  {range:REQUISITION.fleeingSearchRadius}).length,1);
+for(const type of ['tanc','tanqueta','moto']){
+  const v=neutral(type,type,8,0);
+  assert.equal(candidateVehicles({x:0,z:0},[v]).length,1,
+    type+' ha de ser requisable');
+  assert.ok(vehicleSeatPosition(v,0).x!==v.x);
+}
+const motorcycle=neutral('bike','moto',3,0);
+motorcycle.enemyCrew=['enemy-1',null];
+assert.equal(candidateVehicles({x:0,z:0},[motorcycle]).length,0,
+  'La moto no pot admetre copilot');
+assert.ok(seatVisual('tanc',0).hidden&&seatVisual('tanqueta',0).hidden,
+  'Els soldats dels blindats estan protegits dins del vehicle');
+assert.equal(seatVisual('moto',0).x,0);
 assert.ok(pursuitInput(cars[0],{x:-25,z:-30}).turn>0,
   'El conductor segueix la direcció del jugador');
 assert.ok(pursuitInput(cars[0],{x:0,z:-80},{passenger:false}).forward>.5,
@@ -90,6 +119,7 @@ assert.equal(buddy.enemyRequisition.seat,1);
 for(let tick=300;tick<390;tick+=3)for(const unit of roster)control.step(unit,tick);
 assert.equal(buddy.enemyVehicleId,first.id);
 assert.ok(shots>0,'El copilot pot disparar quan el vehicle persegueix el jugador');
+actors[0].x=10000; // fora del radi: l'ocultació visual per si sola no atura el vehicle
 visible=false;
 for(let tick=390;tick<850;tick+=3)for(const unit of roster)control.step(unit,tick);
 assert.ok(roster.every(u=>!u.enemyRequisition),
@@ -101,10 +131,10 @@ const solo=source('src/enemy-ai.js'),
   coop=source('server/coop-combat.mjs'),
   vehicles=source('server/coop-vehicles.mjs'),
   client=source('src/coop-world-runtime.js');
-assert.ok(solo.includes('enemyVehicleReserve(u)')&&
+assert.ok(solo.includes('enemyVehicleReserve(u,{fleeing})')&&
   solo.includes('stepV(v,input.forward,input.turn,0,Math.min(dt,.1))')&&
   solo.includes("if(u.t==='soldat'&&u.enemyVehicleClaim"));
-assert.ok(coop.includes('enemyVehicles.acquire(unit,actor,tick)')&&
+assert.ok(coop.includes('enemyVehicles.tryAcquire(unit,tick)')&&
   coop.includes('enemyVehicles.step(t,tick)')&&
   coop.includes("if(meta.mode==='native'&&v.enemyCrew?.[0])"));
 assert.ok(vehicles.includes('enemyReserve,enemyRelease,enemyAccept')&&
@@ -113,4 +143,4 @@ assert.ok(vehicles.includes('enemyReserve,enemyRelease,enemyAccept')&&
 assert.ok(client.includes('e.nativeBoardedVehicle=boarded'));
 assert.ok(source('src/operation-runtime.js').includes(
   "if(kind==='enemies'&&entity.enemyVehicleClaim)"));
-console.log('OK: dificultat escalable, massa, visibilitat, seients, copilot, atropellament, COOP, persecucions il·limitades i pèrdua de contacte');
+console.log('OK: fugida, distància sense LOS, tancs, tanquetes, motos, seients, copilot, persecució il·limitada i pèrdua de contacte');
