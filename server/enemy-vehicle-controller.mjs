@@ -17,6 +17,8 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
        vehicles.enemyPromote(v.id,unit.id,partner.id)){
       partner.enemyRequisition.seat=0;
       partner.enemyRequisition.phase='riding';
+      partner.enemyRequisition.goal=state.goal;
+      partner.enemyRequisition.lastContact=state.lastContact;
       partner.enemySeat=0;
     }else if(partner&&partner!==unit)release(partner,tick);
   }
