@@ -142,7 +142,7 @@ assert.ok(solo.includes('enemyVehicleReserve(u,{fleeing})')&&
 assert.ok(coop.includes('enemyVehicles.tryAcquire(unit,tick)')&&
   coop.includes('enemyVehicles.step(t,tick)')&&
   coop.includes("if(meta.mode==='native'&&v.enemyCrew?.[0])"));
-assert.ok(vehicles.includes('enemyReserve,enemyRelease,enemyAccept')&&
+assert.ok(vehicles.includes('enemyReserve,enemyRelease,enemyPromote,enemyAccept')&&
   vehicles.includes("code='ENEMY_OCCUPIED'")&&
   vehicles.includes('stepRangeVehicle(v,input'));
 assert.ok(client.includes('e.nativeBoardedVehicle=boarded'));
