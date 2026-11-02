@@ -351,21 +351,20 @@ function enemyVehicleRelease(u,leave=true){
     u.x=exit.x;u.z=exit.z;u.gy=hAt(u.x,u.z);
     u.lastSeenX??=u.x;u.lastSeenZ??=u.z;
   }
-  u.o.scale.setScalar(1);
+  u.o.scale.setScalar(1);u.o.visible=true;
   u.o.position.set(u.x,u.gy??hAt(u.x,u.z),u.z);
   u.hd=v?.hd??u.hd;u.aiMode='search';u.searchT=Math.max(u.searchT||0,5);
   if(v?.enemyCrew&&!v.enemyCrew.some(Boolean)){
     v.enemyCrew=null;v.v*=.4;
   }
 }
-function enemyVehicleReserve(u){
-  if(u.enemyVehicleClaim||u.elite||u.rocketSoldier||u.basement||!u.canSee)return false;
+function enemyVehicleReserve(u,{fleeing=false}={}){
+  if(u.enemyVehicleClaim||u.elite||u.rocketSoldier||u.basement)return false;
   const id=u.saveId??('soldat:'+Math.round(u.home?.x??u.x)+':'+Math.round(u.home?.z??u.z));
-  if(enemyRequisition.requisitionRoll(id,seed)>enemyRequisition.requisitionChance(DIF))return false;
-  const choices=enemyRequisition.candidateVehicles(u,vehicleCandidatesAt(u.x,u.z,42,true).filter(v=>v!==cv),{
-    visible:(soldier,v)=>Math.abs((v.o?.position?.y??hAt(v.x,v.z))-(soldier.gy??hAt(soldier.x,soldier.z)))<4&&
-      sight(soldier.x,soldier.z,v.x,v.z,soldier.o.position.y+1.5,true,(v.o?.position?.y??hAt(v.x,v.z))+2)
-  });
+  if(enemyRequisition.requisitionRoll(id,seed)>=enemyRequisition.requisitionChance(DIF,fleeing))return false;
+  const range=fleeing?enemyRequisition.REQUISITION.fleeingSearchRadius:enemyRequisition.REQUISITION.searchRadius;
+  const choices=enemyRequisition.candidateVehicles(
+    u,vehicleCandidatesAt(u.x,u.z,range+7,true).filter(v=>v!==cv),{range});
   const pick=choices[0];if(!pick)return false;
   const v=pick.vehicle;
   v.enemyCrew??=[null,null];
@@ -397,14 +396,17 @@ function enemyVehicleBoardingTick(u,dt){
     c.waitUntil=elapsed+enemyRequisition.REQUISITION.passengerWaitSeconds;
     v.o.add(u.o);
     const pose=enemyRequisition.seatVisual(v.t,c.seat),sc=VS[v.t]||1;
-    u.o.scale.setScalar(pose.scale);
+    u.o.scale.setScalar(pose.scale);u.o.visible=!pose.hidden;
     u.o.position.set(pose.x*sc,pose.y*sc,pose.z*sc);
     u.o.rotation.set(0,0,0);
   }
   const target=cv||P,py=cv?cv.o.position.y:P.y;
+  const fleeing=enemyRequisition.observeFleeing(
+    v,target,elapsed,u.enemyFleeTracking??={});
   const spotted=!cheats.invisible&&!over&&
-    Math.hypot(target.x-v.x,target.z-v.z)<155&&
-    sight(v.x,v.z,target.x,target.z,(v.o?.position?.y??hAt(v.x,v.z))+2,true,py+1.5);
+    Math.hypot(target.x-v.x,target.z-v.z)<
+      (fleeing?enemyRequisition.REQUISITION.fleeingChaseDistance:
+        enemyRequisition.REQUISITION.maxChaseDistance);
   if(spotted){u.lastSeenX=target.x;u.lastSeenZ=target.z;u.lastSeenY=py;c.lastContact=elapsed;}
   u.x=v.x;u.z=v.z;u.gy=v.o?.position?.y??hAt(v.x,v.z);
   if(c.seat!==0){
@@ -546,6 +548,19 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
            :(sight(u.x,u.z,q.x,q.z,eyeY,true,py+1.5)||
            (!cv&&!playerCrouched&&sight(u.x,u.z,q.x,q.z,eyeY,true,py+2.35))));
     if(u.t==='soldat'){
+       // Requisició per distància: no requereix con visual ni línia de tir.
+       if(!nativeCoopSession&&!cheats.invisible&&!over&&!u.enemyVehicleClaim){
+         const fleeing=enemyRequisition.observeFleeing(
+           u,q,elapsed,u.enemyFleeTracking??={});
+         const justFled=fleeing&&!u.enemyRequisitionWasFleeing;
+         u.enemyRequisitionWasFleeing=fleeing;
+         const notice=fleeing?enemyRequisition.REQUISITION.fleeingNoticeRadius:
+           enemyRequisition.REQUISITION.noticeRadius;
+         if(d<=notice&&(justFled||elapsed>=(u.enemyRequisitionNextTry||0))){
+           u.enemyRequisitionNextTry=elapsed+enemyRequisition.REQUISITION.retrySeconds;
+           enemyVehicleReserve(u,{fleeing});
+         }
+       }
        const raw=!cheats.invisible&&!!(cv? !over&&d<115&&
          STEALTH.inView(u.hd,dx,py+1.5-eyeY,dz,115)&&
          soldierClearShot(u,u.x,u.z,eyeY,q,py):
@@ -562,7 +577,7 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
          u.lastSeenX=q.x;u.lastSeenZ=q.z;u.lastSeenY=py;
          u.pursuitT=SOLDIER_MEMORY;u.aiMode='combat';
          u.searchT=SOLDIER_MEMORY+d/Math.max(1,u.sp);
-         if(acquired){u.cd=0;soldierWarnNeighbors(u,q,py);if(!nativeCoopSession)enemyVehicleReserve(u)}
+         if(acquired){u.cd=0;soldierWarnNeighbors(u,q,py)}
        }else{
          if(u.aiMode==='combat')u.aiMode='search';
          if(raw&&u.aiMode!=='search'){
