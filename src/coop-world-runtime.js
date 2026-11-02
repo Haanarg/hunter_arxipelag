@@ -684,6 +684,14 @@ function updateNativeCoopFrame(dt){
        effect.at.x,effect.at.y,effect.at.z,{vx:0,vy:0,vz:1});
      else if(effect.kind==='glass'&&s.walls[effect.wallIndex])
        shatterWindow(s.walls[effect.wallIndex],effect.paneIndex,effect.at,null);
+     else if(effect.kind==='vehicle-glass'){
+       const v=s.vehicles.get(effect.vehicleId);
+       if(v){
+         window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.breakVehicleSeatWindow(v,effect.seat);
+         snd('glassBreak',.8,effect.at,v.o);
+         spawnBulletImpact('glass',effect.at.x,effect.at.y,effect.at.z,null);
+       }
+     }
      else if(effect.kind==='shot'){
         snd('shot',.7,effect.from);
         if(effect.actorId===s.self&&!cv){
@@ -743,7 +751,7 @@ function updateNativeCoopFrame(dt){
  s.projectedState=state;}
  const heldFire=hp>0&&!paused&&state.status==='running'&&!!K.KeyF;if(heldFire&&!s.fireHeld)nativeCoopCommand('fire');s.fireHeld=heldFire;
  if(scopeActive){scopeYaw+=((K.KeyA?1:0)-(K.KeyD?1:0)-joystick.state.x)*dt*.38;scopePitch=Math.max(-.65,Math.min(.65,scopePitch+((K.KeyW?1:0)-(K.KeyS?1:0)-joystick.state.y)*dt*.30));}
- updateDoors(dt);palmVisualTick-=dt;if(palmVisualTick<=0){palmVisualTick=scopeActive?.10:.16;PM.update?.(P.x,P.z,!!scopeActive,palmsDisabled,currentSniperFocus());updateShadowCasters();}worldVisualTick-=dt;if(worldVisualTick<=0){worldVisualTick=.2;updateDistanceVisibility();}updatePlayerCamera(dt);updateBazookaReticle(dt);updateGrenadeCharge(dt);updatePlayerHUD(dt);updDeb(dt);updFx(dt);if(state.phase==='won'&&!victoryCinematic){const general=[...s.enemies.values()].find(e=>e.t==='general');if(general)startVictoryCinematic(general);}if(state.status==='paused'){msg='Sessió pausada · esperant el company.';msgT=1;}msgT=Math.max(0,msgT-dt);
+ updateDoors(dt);palmVisualTick-=dt;if(palmVisualTick<=0){palmVisualTick=scopeActive?.10:.16;PM.update?.(P.x,P.z,!!scopeActive,palmsDisabled,currentSniperFocus());updateShadowCasters();}worldVisualTick-=dt;if(worldVisualTick<=0){worldVisualTick=.2;updateDistanceVisibility();}updatePlayerCamera(dt);updateBazookaReticle(dt);updateLightAimReticle(dt);updateGrenadeCharge(dt);updatePlayerHUD(dt);updDeb(dt);updFx(dt);if(state.phase==='won'&&!victoryCinematic){const general=[...s.enemies.values()].find(e=>e.t==='general');if(general)startVictoryCinematic(general);}if(state.status==='paused'){msg='Sessió pausada · esperant el company.';msgT=1;}msgT=Math.max(0,msgT-dt);
 }
 window.HUNTER_NATIVE_COOP=Object.freeze({start:startNativeCoop,active:()=>!!nativeCoopSession,
  connected:()=>!!nativeCoopSession?.channel?.isOpen?.(),
