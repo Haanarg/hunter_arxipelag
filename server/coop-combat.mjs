@@ -6,6 +6,7 @@ import {stepLandPatrol,stepMarinePatrol} from '../src/patrol-motion-core.mjs';
 import {stepNativeSoldierNavigation} from '../src/native-soldier-navigation.mjs';
 import {createEnemyVehicleController} from './enemy-vehicle-controller.mjs';
 import {vehicleSpecs} from '../src/vehicle-specs.mjs';
+import {vehicleSeatProjectileContact,breakVehicleSeatWindow,vehicleSeatWorld} from '../src/vehicle-occupant-damage-core.mjs';
 import {windowCrossing,wallShotHit,knifeWindowHit} from '../src/building-shell.mjs';
 import {weaponCatalog,combatCommands,mountedWeapons,grenadeLaunch,vehicleGrenadeLaunch,meleeTarget} from '../src/weapon-catalog.mjs';
 import {limitBazookaHorizontalAim} from '../src/aiming-core.mjs';
@@ -420,8 +421,16 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     const profile=weaponCatalog[weapon],hd=vehicle?.hd??p.hd,dx=-Math.sin(hd),dz=-Math.cos(hd),range=profile.range,focus={},heavy=!!profile.splash;
     const aim=createAimSelector({origin:from,direction:[dx,0,dz],range,cone:profile.cone,shotClass:heavy?'heavy':weapon,focus,verticalCone:profile.vertical,
       isClear:(x,y,z,tx,ty,tz)=>traceArena({x,y,z},{x:tx,y:ty,z:tz},geometry(),world()).fraction>=1});
-    for(const t of targets)if(t.hp>0)aim.consider(t,'enemy',weaponTargetPriority({...t,t:t.t||'soldat'},heavy?'heavy':weapon),t.x,t.y+(t.t==='torre'?9.4:1.5),t.z);
-    for(const v of vehicles.live())if(v!==vehicle&&!v.seats.some(Boolean))aim.consider(v,'vehicle',3,v.x,v.y+1,v.z);
+    for(const t of targets)if(t.hp>0){
+      // Un soldat embarcat es representa i s'adquireix al seient.
+      const carrier=t.enemyVehicleId&&vehicles.live().find(v=>v.id===t.enemyVehicleId),
+        point=carrier?vehicleSeatWorld(carrier,t.enemySeat||0,carrier.y):null;
+      aim.consider(t,'enemy',weaponTargetPriority({...t,t:t.t||'soldat'},heavy?'heavy':weapon),
+        point?.x??t.x,point?.y??(t.y+(t.t==='torre'?9.4:1.5)),point?.z??t.z);
+    }
+    for(const v of vehicles.live())if(v!==vehicle&&!v.destroyed&&
+      (heavy?!v.seats.some(Boolean):true))
+      aim.consider(v,'vehicle',heavy?3:1,v.x,v.y+1.5,v.z);
     // Without a visible enemy, aim light weapons at intact upper-floor
     // glass. The same physics trace checks the aperture, in both directions.
     if(!aim.hasTarget&&!vehicle&&!heavy&&['pistol','assault','sniper'].includes(weapon)){
@@ -541,14 +550,32 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     for(let i=projectiles.length-1;i>=0;i--){
       const p=projectiles[i],flight=projectileStep(p,1/30),trace=traceArena(flight.from,flight.to,geometry(),world(),{ignoreBarbed:!p.splash,collectWindows:true,wallCandidates:traceWallCandidates(flight.from,flight.to)});
       if(trace.hit)flight.consider(trace.fraction,'world',null);
-      for(const v of vehicles.live())if(v.id!==p.sourceVehicle)flight.consider(vehicles.contact(flight.from,flight.to,v),'vehicle',v);
+      for(const v of vehicles.live())if(v.id!==p.sourceVehicle){
+        const crew=p.enemy?(v.seats||[]).map(id=>players().find(a=>a.id===id)||null):
+            (v.enemyCrew||[]).map(id=>targets.find(t=>t.id===id)||null),
+          seatHit=!p.splash?vehicleSeatProjectileContact(
+            flight.from,flight.to,v,crew,{baseY:v.y}):null;
+        if(seatHit)flight.consider(seatHit.t,seatHit.kind,{vehicle:v,...seatHit});
+        else flight.consider(vehicles.contact(flight.from,flight.to,v),'vehicle',v);
+      }
       if(p.enemy){for(const actor of players())if(actor.hp>0&&!vehicles.mounted(actor.id))flight.consider(segmentSphereT(flight.from.x,flight.from.y,flight.from.z,flight.to.x,flight.to.y,flight.to.z,actor.x,actor.y+1.5,actor.z,1.2),'player',actor);}
-      else for(const t of targets)if(t.hp>0)flight.consider(segmentBox(flight.from,flight.to,targetBox(t)),'enemy',t);
+      else for(const t of targets)if(t.hp>0&&!t.enemyVehicleId)flight.consider(segmentBox(flight.from,flight.to,targetBox(t)),'enemy',t);
       if(!p.enemy)for(const u of civilianTargets())if(u.hp>0)
         flight.consider(segmentSphereT(flight.from.x,flight.from.y,flight.from.z,flight.to.x,flight.to.y,flight.to.z,u.x,u.y+1.1,u.z,.55),'civilian',u);
       const result=flight.finish();p.life=flight.life;Object.assign(p,result.point);
       for(const pane of trace.windowCrossings)if(pane.t<=flight.fraction+1e-6&&breakWindow(pane.wallIndex,pane.index)){effect('glass',tick,{actorId:p.actorId,at:pane.point,wallIndex:pane.wallIndex,paneIndex:pane.index});}
-      if(result.hit){if(p.splash){if(result.kind!=='expire')explode({at:{...result.point},damage:p.dmg,radius:p.splash,actorId:p.actorId,ownerOnly:!p.enemy},tick);projectiles.splice(i,1);continue;}let applied=true;if(result.kind==='vehicle'){const queue=[];applied=damageVehicle(result.target,p.dmg,'light',tick,queue);for(const blast of queue)explode(blast,tick);}else if(result.kind==='enemy'){
+      if(result.hit){if(p.splash){if(result.kind!=='expire')explode({at:{...result.point},damage:p.dmg,radius:p.splash,actorId:p.actorId,ownerOnly:!p.enemy},tick);projectiles.splice(i,1);continue;}
+        let applied=true;
+        if(result.kind==='vehicle-glass'){
+          applied=breakVehicleSeatWindow(result.target.vehicle,result.target.seat);
+          if(applied)effect('vehicle-glass',tick,{actorId:p.actorId,vehicleId:result.target.vehicle.id,
+            seat:result.target.seat,at:{...result.point}});
+        }else if(result.kind==='vehicle-occupant'){
+          const occupant=result.target.target;
+          if(p.enemy)applied=!!occupant&&damagePlayer(occupant.id,p.dmg)!==false;
+          else if(occupant?.hp>0){occupant.hp=damageHealth(occupant.hp,p.dmg);applied=true;}
+          else applied=false;
+        }else if(result.kind==='vehicle'){const queue=[];applied=damageVehicle(result.target,p.dmg,'light',tick,queue);for(const blast of queue)explode(blast,tick);}else if(result.kind==='enemy'){
           if(result.target.t==='torre'){
             if(!p.enemy&&!p.splash){
               result.target.suppressedUntilTick=tick+60;
@@ -559,7 +586,8 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
           }else result.target.hp=damageHealth(result.target.hp,p.dmg);
         }else if(result.kind==='player')applied=damagePlayer(result.target.id,p.dmg)!==false;
         else if(result.kind==='civilian')applied=damageCivilian(result.target.id,p.dmg,tick)>0;else if(result.kind==='world'&&trace.tree?.p)applied=damagePalm(trace.tree,p.dmg);else if(result.kind==='world'&&trace.wallIndex!=null&&Math.hypot(result.point.x-trace.point.x,result.point.y-trace.point.y,result.point.z-trace.point.z)<.01)applied=damageWall(trace.wallIndex,p.dmg);
-        if(result.kind!=='expire')effect('impact',tick,{actorId:p.actorId,at:{...result.point},hit:applied&&['enemy','player','vehicle'].includes(result.kind)?result.target.id:null});projectiles.splice(i,1);
+        if(result.kind!=='expire')effect('impact',tick,{actorId:p.actorId,at:{...result.point},hit:applied&&['enemy','player','vehicle'].includes(result.kind)?result.target.id:
+          applied&&result.kind==='vehicle-occupant'?result.target.target?.id:null});projectiles.splice(i,1);
       }
     }
     for(let i=grenades.length-1;i>=0;i--){
