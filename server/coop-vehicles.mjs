@@ -38,6 +38,13 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
   }
   return false;
  }
+ function enemyPromote(vehicleId,driverId,passengerId){
+  const v=vehicles.find(v=>v.id===vehicleId);
+  if(!v||v.destroyed||v.enemyCrew?.[0]!==driverId||
+    v.enemyCrew?.[1]!==passengerId)return false;
+  v.enemyCrew[0]=passengerId;v.enemyCrew[1]=null;
+  enemyInputs.delete(v.id);return true;
+ }
  function enemyAccept(vehicleId,unitId,input,tick){
   const v=vehicles.find(v=>v.id===vehicleId);
   if(v&&!v.destroyed&&v.enemyCrew?.[0]===unitId&&!v.seats.some(Boolean)){
@@ -288,7 +295,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
  const live=()=>vehicles.filter(v=>!v.destroyed);
  // Existing individual sphere contact/hull falloff, adapted to the 3.2 m relay model.
  const hullRadius=v=>v.hullRadius??Math.max(1.6,(vehicleSpecs.radii[v.t]||1.6)*(vehicleSpecs.scales[v.t]||1)*.7);
- return {mounted,position,command,step,damage,live,enemyReserve,enemyRelease,enemyAccept,contact:(from,to,v)=>vehicleHullSegmentT(from,to,v,v.y,hullRadius(v)),blastDistance:(v,at)=>vehicleHullDistance(v,v.y,hullRadius(v),at.x,at.y,at.z),accept(id,input,tick){if(mounted(id))inputs.set(id,{input:{...input},tick});},pause(){inputs.clear();for(const v of vehicles){v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;}},ferryDeckAt(x,z,previousY){
+ return {mounted,position,command,step,damage,live,enemyReserve,enemyRelease,enemyPromote,enemyAccept,contact:(from,to,v)=>vehicleHullSegmentT(from,to,v,v.y,hullRadius(v)),blastDistance:(v,at)=>vehicleHullDistance(v,v.y,hullRadius(v),at.x,at.y,at.z),accept(id,input,tick){if(mounted(id))inputs.set(id,{input:{...input},tick});},pause(){inputs.clear();for(const v of vehicles){v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;}},ferryDeckAt(x,z,previousY){
    for(const f of vehicles)if(!f.destroyed&&f.t==='ferry'){
      const result=ferryPedestrianAt(f,x,z,previousY);
      if(result)return result;
