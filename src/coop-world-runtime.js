@@ -511,9 +511,23 @@ function updateNativeCoopFrame(dt){
        e.nativePatrolFocus=row.patrolFocus||null;e.nativePatrolSpeed=row.speed||0;
        e.canSee=!!row.canSee;
        e.aiMode=row.state==='attack'?'combat':row.state;
+       // Els soldats reals ocupen les places del vehicle neutral real.
+       // No són meshes duplicades: reparentam el seu model existent.
+       const boarded=row.enemyVehicleId?s.vehicles.get(row.enemyVehicleId):null;
+       if(boarded&&!boarded.destroyed){
+         if(e.o.parent!==boarded.o)boarded.o.add(e.o);
+         const pose=window.HUNTER_ENEMY_REQUISITION.seatVisual(boarded.t,row.enemySeat||0),
+               sc=VS[boarded.t]||1;
+         e.o.scale.setScalar(pose.scale);
+         e.o.position.set(pose.x*sc,pose.y*sc,pose.z*sc);
+         e.o.rotation.set(0,0,0);
+         e.nativeBoardedVehicle=boarded;
+       }else if(e.nativeBoardedVehicle){
+         world.add(e.o);e.o.scale.setScalar(1);e.nativeBoardedVehicle=null;
+       }
        // El model manté la pose temporal si aquest enemic es mou.
        // L'estat lògic e.x/e.z continua essent autoritatiu.
-       if(!s.interpolation?.enemy?.(row.id)){
+       if(!s.interpolation?.enemy?.(row.id)&&!e.nativeBoardedVehicle){
          e.o.position.set(row.x,row.y,row.z);
          if(e.t==='torre'&&e.o.userData.towerTurret)e.o.userData.towerTurret.rotation.y=e.hd;
        else e.o.rotation.y=e.hd;
@@ -529,6 +543,10 @@ function updateNativeCoopFrame(dt){
  // En canvi, l'animació d'infanteria original sí que necessita el dt
  // de cada fotograma, incloses les pauses entre dos snapshots rebuts.
  for(const e of s.nativeAnimatedEnemies||[]){
+   if(e.nativeBoardedVehicle){
+     e.o.visible=e.hp>0&&!e.nativeBoardedVehicle.destroyed&&e.nativeBoardedVehicle.o.visible;
+     continue;
+   }
    if(!e.o.visible)continue;
    const pose=s.interpolation?.enemy?.(e.nativeCoopId);
    let walking=e.nativeMoving;

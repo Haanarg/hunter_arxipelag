@@ -147,6 +147,11 @@ function explodeEnemyVehicle(u){
   boom(u.x,y+(heavy?1.8:1.2),u.z,heavy?12:9,heavy?10:8,'e');
 }
 function killEnemy(u,killingShot=null){
+  if(u.enemyVehicleClaim){
+    const claim=u.enemyVehicleClaim,partner=claim.seat===0?claim.vehicle.enemyCrew?.[1]:null;
+    enemyVehicleRelease(u,false);
+    if(partner&&partner.hp>0)enemyVehicleRelease(partner);
+  }
   const i=E.indexOf(u);if(i<0)return;E.splice(i,1);kills++;
   if(u.t==='soldat'||u.t==='general'){window.HUNTER_ENEMY_LOD.setLevel(u.o,'full');u.deadT=0;
     const impulse=u.blastImpulse;
@@ -230,7 +235,12 @@ function destroyBicycle(v){
 }
 function explodeVehicle(v){
   if(v?.t==='bici'){destroyBicycle(v);return;}
-  if(!v||v.destroyed)return;v.destroyed=true;const wasPilot=cv===v,yy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
+  if(!v||v.destroyed)return;
+  // L'explosió del vehicle mata també els ocupants enemics sense
+  // provocar un segon vehicle fictici ni deixar reserves orfes.
+  for(const occupant of [...(v.enemyCrew||[])])if(occupant?.hp>0)
+    hurtE(occupant,Math.max(occupant.hp+1,100));
+  v.destroyed=true;const wasPilot=cv===v,yy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
   const destruction=window.HUNTER_SHARED_COMBAT.VEHICLE_DESTRUCTION;
   if(wasPilot){
     resetCameraState();

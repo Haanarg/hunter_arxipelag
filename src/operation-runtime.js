@@ -30,6 +30,20 @@ function prepareOperationRegistry(){
 }
 function operationRecord(kind,entity){
   const record={id:entity.saveId,kind,...operationScalars(entity),transform:operationTransform(entity.o||entity.m)};
+  // Els soldats embarcats tenen transformació LOCAL al cotxe.
+  // El desament guarda una sortida segura a peu: la missió es reprendrà
+  // amb el soldat al costat del cotxe, sense cap referència circular a V.
+  if(kind==='enemies'&&entity.enemyVehicleClaim){
+    const claim=entity.enemyVehicleClaim,v=claim.vehicle;
+    if(v&&!v.destroyed&&claim.phase!=='approach'){
+      const p=window.HUNTER_ENEMY_REQUISITION.vehicleSeatPosition(v,claim.seat);
+      record.state.x=p.x;record.state.z=p.z;
+      record.state.gy=hAt(p.x,p.z);record.state.aiMode='search';
+      record.state.canSee=false;
+      record.transform={position:[p.x,record.state.gy,p.z],
+        rotation:[0,v.hd,0],scale:[1,1,1]};
+    }
+  }
   const active={vehicles:V,enemies:E,items,walls:Wl,fauna:fa};
   if(active[kind])record.active=active[kind].includes(entity);
   record.nested={};

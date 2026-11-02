@@ -16,9 +16,37 @@ export function vehicleClear(position,world,bounds,previous=position){
   }return true;
 }
 export function createRelayVehicles({meta,record={},world,water,players,active,onBoard=()=>{},geometry=()=>({walls:[]}),onImpact=()=>{},onTravel=()=>{},onBarrier=()=>false,onPalm=()=>false,hasParachute=()=>false}){
- const vehicles=structuredClone(record.vehicles||meta.vehicles||[]),results=structuredClone(record.results||[]),inputs=new Map();
+ const vehicles=structuredClone(record.vehicles||meta.vehicles||[]),results=structuredClone(record.results||[]),inputs=new Map(),enemyInputs=new Map();
  for(const v of vehicles)v.life??=combatBalance.vehicles[v.t]??1;
  const mounted=id=>vehicles.find(v=>!v.destroyed&&v.seats.includes(id));
+ // Ocupació enemiga separada dels ID i inputs dels jugadors.
+ function enemyReserve(vehicleId,unitId,seat){
+  if(meta.mode!=='native'||seat!==0&&seat!==1)return false;
+  const v=vehicles.find(v=>v.id===vehicleId);
+  if(!v||v.destroyed||v.sunk||v.seats.some(Boolean)||Math.abs(v.v||0)>1.5)return false;
+  v.enemyCrew??=[null,null];
+  if(v.enemyCrew[seat]||seat===1&&!v.enemyCrew[0])return false;
+  if(vehicles.some(x=>x.enemyCrew?.includes(unitId)))return false;
+  v.enemyCrew[seat]=unitId;return true;
+ }
+ function enemyRelease(unitId){
+  for(const v of vehicles)if(v.enemyCrew?.includes(unitId)){
+   const seat=v.enemyCrew.indexOf(unitId);v.enemyCrew[seat]=null;
+   if(seat===0)enemyInputs.delete(v.id);
+   if(!v.enemyCrew.some(Boolean))delete v.enemyCrew;
+   return true;
+  }
+  return false;
+ }
+ function enemyAccept(vehicleId,unitId,input,tick){
+  const v=vehicles.find(v=>v.id===vehicleId);
+  if(v&&!v.destroyed&&v.enemyCrew?.[0]===unitId&&!v.seats.some(Boolean)){
+   enemyInputs.set(v.id,{input:{forward:Math.max(-1,Math.min(1,input.forward||0)),
+     turn:Math.max(-1,Math.min(1,input.turn||0)),strafe:0,climb:0},tick});
+   return true;
+  }
+  return false;
+ }
  const ferryFor=v=>ferryForVehicle(v,vehicles);
  const clearCarrier=v=>{delete v.carrierId;delete v.carrierLX;
   delete v.carrierLZ;delete v.carrierHD;};
@@ -131,6 +159,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
    if(!active()||p.hp<=0||p.fall||p.swimming&&!(['proving','world','native'].includes(meta.mode)&&['w','wl'].includes(vehicleDynamics.types[v?.t]?.m)))code='NOT_ACTIVE';
    else if(!v)code='UNKNOWN_VEHICLE';
    else if(v.destroyed)code='DESTROYED';
+   else if(v.enemyCrew?.some(Boolean))code='ENEMY_OCCUPIED';
    else if(msg.operation==='exit'){
     if(!v.seats.includes(actorId))code='NOT_SEATED';else if(meta.mode!=='native'&&Math.abs(v.v)>.2)code='MOVING';else if(!(exit=exitPoint(v,p)))code='EXIT_BLOCKED';
     else{const driver=v.seats[0]===actorId;v.seats[v.seats.indexOf(actorId)]=null;inputs.delete(actorId);
@@ -154,8 +183,9 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
   for(const v of vehicles){
    if(v.destroyed)continue;
    const carrier=v.carrierId&&vehicles.find(a=>a.id===v.carrierId&&!a.destroyed),
-     driverEntry=inputs.get(v.seats[0]),driving=!!(v.seats[0]&&
-       driverEntry&&tick-driverEntry.tick<=8);
+     driverEntry=inputs.get(v.seats[0])||
+       (!v.seats[0]&&v.enemyCrew?.[0]?enemyInputs.get(v.id):null),
+     driving=!!((v.seats[0]||v.enemyCrew?.[0])&&driverEntry&&tick-driverEntry.tick<=8);
    if(v.carrierId&&!carrier)clearCarrier(v);
    if(carrier&&!driving){v.v=0;v.sideV=0;v.strafeV=0;continue;}
    if(carrier&&driving)Object.assign(v,ferryCarriedPose(v,carrier));
@@ -175,7 +205,8 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
    }
    // A downed occupant is released at the already validated vehicle centre.
    for(let seat=0;seat<v.seats.length;seat++)if(v.seats[seat]&&players().find(p=>p.id===v.seats[seat])?.hp<=0){inputs.delete(v.seats[seat]);v.seats[seat]=null;v.v=0;}
-   const driver=v.seats[0],entry=inputs.get(driver),input=driver&&entry&&tick-entry.tick<=8?entry.input:{forward:0,turn:0,strafe:0,climb:0};
+   const driver=v.seats[0]||v.enemyCrew?.[0],entry=v.seats[0]?inputs.get(driver):enemyInputs.get(v.id),
+     input=driver&&entry&&tick-entry.tick<=8?entry.input:{forward:0,turn:0,strafe:0,climb:0};
    // Sense conductor, la inèrcia es dissipa amb la física compartida; no frenam en sec.
    if((!driver||!entry||tick-entry.tick>8)&&(meta.mode!=='native'||Math.abs(v.v)<.2&&Math.abs(v.sideV||0)<.2&&Math.abs(v.strafeV||0)<.2)){v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;v.verticalV=0;continue;}
    const from={x:v.x,y:v.y,z:v.z,hd:v.hd,v:v.v};let attempted=null;
@@ -251,13 +282,13 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
   if(!result.damaged)return null;v.life=result.life;
   if(!result.destroyed)return {id:v.id,destroyed:false};
   const occupants=v.seats.filter(Boolean);v.destroyed=true;clearCarrier(v);v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;
-  for(const id of occupants)inputs.delete(id);v.seats.fill(null);
+  for(const id of occupants)inputs.delete(id);v.seats.fill(null);enemyInputs.delete(v.id);delete v.enemyCrew;
   return {id:v.id,destroyed:true,explosive:v.t!=='bici',occupants,at:{x:v.x,y:v.y+1,z:v.z}};
  }
  const live=()=>vehicles.filter(v=>!v.destroyed);
  // Existing individual sphere contact/hull falloff, adapted to the 3.2 m relay model.
  const hullRadius=v=>v.hullRadius??Math.max(1.6,(vehicleSpecs.radii[v.t]||1.6)*(vehicleSpecs.scales[v.t]||1)*.7);
- return {mounted,position,command,step,damage,live,contact:(from,to,v)=>vehicleHullSegmentT(from,to,v,v.y,hullRadius(v)),blastDistance:(v,at)=>vehicleHullDistance(v,v.y,hullRadius(v),at.x,at.y,at.z),accept(id,input,tick){if(mounted(id))inputs.set(id,{input:{...input},tick});},pause(){inputs.clear();for(const v of vehicles){v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;}},ferryDeckAt(x,z,previousY){
+ return {mounted,position,command,step,damage,live,enemyReserve,enemyRelease,enemyAccept,contact:(from,to,v)=>vehicleHullSegmentT(from,to,v,v.y,hullRadius(v)),blastDistance:(v,at)=>vehicleHullDistance(v,v.y,hullRadius(v),at.x,at.y,at.z),accept(id,input,tick){if(mounted(id))inputs.set(id,{input:{...input},tick});},pause(){inputs.clear();for(const v of vehicles){v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;}},ferryDeckAt(x,z,previousY){
    for(const f of vehicles)if(!f.destroyed&&f.t==='ferry'){
      const result=ferryPedestrianAt(f,x,z,previousY);
      if(result)return result;

@@ -61,5 +61,11 @@ jobs:
           node tests/native-coop-side-by-side-riders.cjs
           node tests/native-coop-fleet-parity.cjs
           node tests/shared-vehicle-models.mjs
+      - name: Requisició de vehicles enemics, pilot/copilot i persecució
+        run: |
+          node --check server/enemy-vehicle-controller.mjs
+          node --check src/enemy-vehicle-requisition.mjs
+          node --check server/coop-combat.mjs
+          node tests/enemy-vehicle-requisition.mjs
       - name: Comprovar paquet del runtime
         run: node tools/build-runtime.cjs --check

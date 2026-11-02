@@ -4,6 +4,7 @@ import {senseNativeSoldier,hearNativeSoldier} from './native-soldier-perception.
 import {vehicleDynamics} from '../src/vehicle-dynamics-core.mjs';
 import {stepLandPatrol,stepMarinePatrol} from '../src/patrol-motion-core.mjs';
 import {stepNativeSoldierNavigation} from '../src/native-soldier-navigation.mjs';
+import {createEnemyVehicleController} from './enemy-vehicle-controller.mjs';
 import {vehicleSpecs} from '../src/vehicle-specs.mjs';
 import {windowCrossing,wallShotHit,knifeWindowHit} from '../src/building-shell.mjs';
 import {weaponCatalog,combatCommands,mountedWeapons,grenadeLaunch,vehicleGrenadeLaunch,meleeTarget} from '../src/weapon-catalog.mjs';
@@ -96,6 +97,33 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     wall.upperFloorWindow&&wall.windowPanes?.length?
       wall.windowPanes.map((pane,paneIndex)=>({wallIndex,paneIndex})):[]);
   const effect=(kind,tick,data)=>{effects.push({id:++sequence,kind,tick,...data});if(effects.length>64)effects.shift();};
+  const enemyVehicles=createEnemyVehicleController({
+    meta,vehicles,targets,players:visiblePlayers,world,
+    visible:(from,to)=>traceArena(from,to,geometry(),world(),
+      {ignoreVegetation:true}).fraction>=.999,
+    navigate:(unit,tick)=>stepNativeSoldierNavigation(unit,{
+      tick,world:world(),players:[],requestDoor:openEnemyDoor}),
+    firePassenger:(unit,v,tick)=>{
+      if(tick<(unit.nextAttackTick||0))return;
+      const eye={x:v.x+Math.cos(v.hd)*1.1,y:v.y+2.25,
+        z:v.z-Math.sin(v.hd)*1.1};
+      const actor=visiblePlayers().filter(p=>p.hp>0&&!p.fall&&!p.swimming)
+        .map(p=>({p,d:Math.hypot(p.x-v.x,p.z-v.z)}))
+        .filter(x=>x.d<75).sort((a,b)=>a.d-b.d)[0]?.p;
+      if(!actor)return;
+      const aim={x:actor.x,y:actor.y+1.5,z:actor.z};
+      if(traceArena(eye,aim,geometry(),world()).fraction<.999)return;
+      const direction=enemyAccuracy.direction(meta.difficulty||1,'rifle',
+        aim.x-eye.x,aim.y-eye.y,aim.z-eye.z,roll),id='enemy-car-'+(++sequence);
+      projectiles.push(launchProjectile(eye,direction,70,{
+        id,actorId:unit.id,enemy:true,weapon:'rifle',
+        dmg:unit.dmg??combatBalance.weapons.rifle,sourceVehicle:v.id
+      }));
+      unit.nextAttackTick=tick+Math.ceil((unit.rate||1.1)*45);
+      effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,
+        weapon:'rifle',from:eye,to:aim,hit:null});
+    }
+  });
   function alarm(position,actorId,tick,kind='pistol'){
     // Els dos jugadors són invisibles també per a alertes acústiques.
     if(!visiblePlayers().length&&players().some(p=>p.id===actorId))return;
@@ -224,7 +252,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     const contact=senseNativeSoldier(unit,{players:visiblePlayers(),inventory,mounted:id=>vehicles.mounted(id),world:world(),visibleAim:nativeSoldierAim,tick});
     if(!contact)return unit.state!=='patrol';
     const {actor,acquired}=contact;unit.heading=facePoint(unit,actor);
-    if(acquired){unit.nextAttackTick=tick;alarm({x:unit.x,y:unit.y+2,z:unit.z},unit.id,tick,'alert');onEnemyAlert(unit,actor,tick,targets);}
+    if(acquired){unit.nextAttackTick=tick;alarm({x:unit.x,y:unit.y+2,z:unit.z},unit.id,tick,'alert');onEnemyAlert(unit,actor,tick,targets);if(enemyVehicles.acquire(unit,actor,tick))return true;}
     if(Math.hypot(actor.x-unit.x,actor.z-unit.z)>SOLDIER.fireRange||tick<(unit.nextAttackTick??0))return true;
     const aim=nativeSoldierAim(unit,actor);if(!aim)return true;
     const rocket=!!unit.rocketSoldier,profile=soldierAccuracyProfile(unit),eye={x:unit.x,y:unit.y+2.2,z:unit.z},
@@ -333,7 +361,9 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     return true;
   }
   function damageVehicle(v,amount,shotClass,tick,queue){
-    const destroyed=vehicles.damage(v.id,amount,shotClass);
+    const hostileCrew=[...(v.enemyCrew||[])];
+   const destroyed=vehicles.damage(v.id,amount,shotClass);
+   if(destroyed?.destroyed)for(const id of hostileCrew){const crew=targets.find(t=>t.id===id);if(crew)crew.hp=0;}
     if(!destroyed)return false;
     if(!destroyed.destroyed)return true;
     effect('vehicle-destroyed',tick,{vehicleId:v.id,at:destroyed.at,explosive:destroyed.explosive});
@@ -542,11 +572,12 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       }
     }
     for(const t of targets)if(t.ai){
-      if(t.hp<=0){t.state='dead';t.focus=null;continue;}
+      if(t.hp<=0){enemyVehicles.release(t,tick);t.state='dead';t.focus=null;continue;}
       if(stepNativePatrolVehicle(t,tick))continue;
       if(stepNativeTower(t,tick))continue;
       if(stepNativeGeneral(t,tick))continue;
       const nativeSoldier=meta.mode==='native'&&t.t==='soldat';
+      if(nativeSoldier&&enemyVehicles.step(t,tick))continue;
       if(nativeSoldier){
         nativeSoldierStep(t,tick);
         stepNativeSoldierNavigation(t,{tick,world:world(),players:visiblePlayers(),
@@ -583,6 +614,23 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     const profile=vehicleDynamics.types[v.t],speed=from.travelSpeed??Math.abs(v.v);
     if(!['l','wl'].includes(profile.m)||speed<=6||tick<(v.ramUntilTick||0))return;
     const radius=['proving','world','native'].includes(meta.mode)?vehicleSpecs.radii[v.t]*vehicleSpecs.scales[v.t]*.68+1.2*.45:1.6*.68+.45;
+    if(meta.mode==='native'&&v.enemyCrew?.[0]){
+      // Un conductor sense copilot intenta atropellar el jugador.
+      // Amb copilot també és possible un atropellament accidental.
+      for(const actor of players())if(actor.hp>0&&!actor.fall&&!actor.swimming&&
+        !vehicles.mounted(actor.id)&&Math.abs(actor.y-v.y)<3.4&&
+        runoverSweepHit(from.x,from.z,v.x,v.z,actor.x,actor.z,radius)){
+        const eye={x:actor.x,y:actor.y+1,z:actor.z};
+        if(traceArena({x:from.x,y:from.y+1,z:from.z},eye,
+          geometry(),world()).fraction<.999)continue;
+        const damage=runoverDamage(speed,profile.mass||1);
+        if(damagePlayer(actor.id,damage)!==false){
+          v.ramUntilTick=tick+12;v.v*=.86;
+          effect('impact',tick,{actorId:v.enemyCrew[0],at:eye,hit:actor.id});
+        }
+        return;
+      }
+    }
     for(const target of targets)if((!target.t||target.t==='soldat')&&target.hp>0&&Math.abs(v.y-target.y)<3&&runoverSweepHit(from.x,from.z,v.x,v.z,target.x,target.z,radius)){
       const eye={x:target.x,y:target.y+1,z:target.z};
       if(traceArena({x:from.x,y:from.y+1,z:from.z},eye,geometry(),world()).fraction<1)continue;

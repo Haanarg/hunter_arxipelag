@@ -2311,7 +2311,7 @@ const act=c=>{if(generationPromise)return;if(ui?.isBombTimerOpen?.()){
   if(!secondaryWeapon()&&inv.expl&&!cv&&
      !swimming&&!playerFall&&!playerEject)panel('bombtimer');
 }if(c==='KeyC'){if(inv.disf){if(nativeCoopSession)nativeCoopSession.channel.inventory('disguise',!disg);else setDis(!disg);}else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
-const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.sunk||v.waterIngress?.dead||v.reentryLockUntil>elapsed)continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
+const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.sunk||v.waterIngress?.dead||v.reentryLockUntil>elapsed||v.enemyCrew?.some(Boolean))continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
 function updateActionButton(nearby){
   const button=document.getElementById('mainActionButton');
   if(!button)return;
@@ -2694,7 +2694,7 @@ function stealthFeedbackVisible(u,body,marker){
         // Els vehicles aparcats no necessiten recalcular les caixes de totes
         // les seves peces (rodes, cabina, carrosseria) a cada fotograma.
         // Les peces animades i els vehicles en moviment sí que es revisen.
-        const moving=Math.abs(v.v||0)>.01||!!v.crashing||
+        const moving=Math.abs(v.v||0)>.01||!!v.enemyCrew?.some(Boolean)||!!v.crashing||
           (v.t==='heli'||v.t==='heli_combat')&&v===cv;
         if(!cached.valid||moving||cached.object!==v.o||
            cached.x!==v.o.position.x||cached.y!==v.o.position.y||

@@ -337,6 +337,113 @@ function moveBlastedEnemy(u,dt){
   }
   if(u.x!==ox||u.z!==oz)enemyReindex(u,ox,oz);
 }
+// Requises de vehicles neutrals. La reserva es manté al vehicle real de V,
+// que conserva totes les col·lisions, física, aparences i destrucció originals.
+const enemyRequisition=window.HUNTER_ENEMY_REQUISITION;
+function enemyVehicleRelease(u,leave=true){
+  const claim=u.enemyVehicleClaim;if(!claim)return;
+  const v=claim.vehicle;
+  if(v?.enemyCrew?.[claim.seat]===u)v.enemyCrew[claim.seat]=null;
+  delete u.enemyVehicleClaim;
+  if(u.o?.parent!==world)world.add(u.o);
+  const exit=enemyRequisition.vehicleSeatPosition(v||u,claim.seat);
+  if(leave&&v&&!v.destroyed){
+    u.x=exit.x;u.z=exit.z;u.gy=hAt(u.x,u.z);
+    u.lastSeenX??=u.x;u.lastSeenZ??=u.z;
+  }
+  u.o.scale.setScalar(1);
+  u.o.position.set(u.x,u.gy??hAt(u.x,u.z),u.z);
+  u.hd=v?.hd??u.hd;u.aiMode='search';u.searchT=Math.max(u.searchT||0,5);
+  if(v?.enemyCrew&&!v.enemyCrew.some(Boolean)){
+    v.enemyCrew=null;v.v*=.4;
+  }
+}
+function enemyVehicleReserve(u){
+  if(u.enemyVehicleClaim||u.elite||u.rocketSoldier||u.basement||!u.canSee)return false;
+  const id=u.saveId??('soldat:'+Math.round(u.home?.x??u.x)+':'+Math.round(u.home?.z??u.z));
+  if(enemyRequisition.requisitionRoll(id,seed)>enemyRequisition.requisitionChance(DIF))return false;
+  const choices=enemyRequisition.candidateVehicles(u,vehicleCandidatesAt(u.x,u.z,42,true).filter(v=>v!==cv),{
+    visible:(soldier,v)=>Math.abs((v.o?.position?.y??hAt(v.x,v.z))-(soldier.gy??hAt(soldier.x,soldier.z)))<4&&
+      sight(soldier.x,soldier.z,v.x,v.z,soldier.o.position.y+1.5,true,(v.o?.position?.y??hAt(v.x,v.z))+2)
+  });
+  const pick=choices[0];if(!pick)return false;
+  const v=pick.vehicle;
+  v.enemyCrew??=[null,null];
+  if(v.enemyCrew[pick.seat])return false;
+  v.enemyCrew[pick.seat]=u;
+  u.enemyVehicleClaim={vehicle:v,seat:pick.seat,phase:'approach',
+    timeout:elapsed+16,waitUntil:elapsed+1.7,lastContact:elapsed};
+  u.tacticGoal=null;releaseSoldierEntry(u);releaseSoldierReservation(u);
+  return true;
+}
+function enemyVehicleBoardingTick(u,dt){
+  const c=u.enemyVehicleClaim;if(!c)return false;
+  const v=c.vehicle;
+  if(!v||v.destroyed||v.sunk||v.enemyCrew?.[c.seat]!==u||cv===v||
+     elapsed>c.timeout&&!['riding','waiting'].includes(c.phase)){
+    enemyVehicleRelease(u);return false;
+  }
+  if(c.phase==='approach'){
+    const q=enemyRequisition.vehicleSeatPosition(v,c.seat);
+    const d=Math.hypot(q.x-u.x,q.z-u.z);
+    if(d>enemyRequisition.REQUISITION.boardingDistance){
+      mvE(u,u.sp*.95*dt,q.x,q.z);
+      u.hd=Math.atan2(u.x-q.x,u.z-q.z);
+      u.o.position.set(u.x,enemyGroundAt(u,u.x,u.z),u.z);
+      animateEnemyInfantry(u,true,dt);
+      return true;
+    }
+    c.phase=c.seat===0?'waiting':'riding';
+    c.waitUntil=elapsed+enemyRequisition.REQUISITION.passengerWaitSeconds;
+    v.o.add(u.o);
+    const pose=enemyRequisition.seatVisual(v.t,c.seat),sc=VS[v.t]||1;
+    u.o.scale.setScalar(pose.scale);
+    u.o.position.set(pose.x*sc,pose.y*sc,pose.z*sc);
+    u.o.rotation.set(0,0,0);
+  }
+  const target=cv||P,py=cv?cv.o.position.y:P.y;
+  const spotted=!cheats.invisible&&!over&&
+    Math.hypot(target.x-v.x,target.z-v.z)<155&&
+    sight(v.x,v.z,target.x,target.z,(v.o?.position?.y??hAt(v.x,v.z))+2,true,py+1.5);
+  if(spotted){u.lastSeenX=target.x;u.lastSeenZ=target.z;u.lastSeenY=py;c.lastContact=elapsed;}
+  u.x=v.x;u.z=v.z;u.gy=v.o?.position?.y??hAt(v.x,v.z);
+  if(c.seat!==0){
+    if(v.enemyCrew[0]?.enemyVehicleClaim?.phase==='riding'&&spotted&&
+       Math.hypot(target.x-v.x,target.z-v.z)<SOLDIER_FIRE_RANGE+20&&u.cd<=0){
+      const eyeY=(v.o?.position?.y??hAt(v.x,v.z))+2.25,
+            sx=v.x+Math.cos(v.hd)*(VS[v.t]||1)*.85,
+            sz=v.z-Math.sin(v.hd)*(VS[v.t]||1)*.85;
+      if(sight(sx,sz,target.x,target.z,eyeY,true,py+1.5)){
+        const dx=target.x-sx,dz=target.z-sz,dy=py+1.5-eyeY,
+              error=rn(-.075,.075)*(1+Math.abs(v.v||0)/16),
+              len=Math.max(.001,Math.hypot(dx,dy,dz));
+        shoot(sx,eyeY,sz,dx/len+error,dy/len,dz/len-error,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE,u);
+        u.cd=u.rate*1.5;
+      }
+    }
+    return true;
+  }
+  if(c.phase==='waiting'){
+    const partner=v.enemyCrew[1],partnerBoarded=partner?.enemyVehicleClaim?.phase==='riding';
+    if(partnerBoarded||elapsed>=c.waitUntil)c.phase='riding';
+    else return true;
+  }
+  if(elapsed-c.lastContact>enemyRequisition.REQUISITION.chaseMemorySeconds){
+    // El conductor deixa d'empaitar el fantasma de la darrera posició.
+    if(v.enemyCrew[1])enemyVehicleRelease(v.enemyCrew[1]);
+    enemyVehicleRelease(u);return false;
+  }
+  const goal=spotted?target:{x:u.lastSeenX,z:u.lastSeenZ};
+  const input=enemyRequisition.pursuitInput(v,goal,{
+    passenger:v.enemyCrew[1]?.enemyVehicleClaim?.phase==='riding'
+  });
+  // Ús del mateix stepV que el jugador, sense moure la malla a mà.
+  if(input.distance>3||!v.enemyCrew[1])stepV(v,input.forward,input.turn,0,Math.min(dt,.1));
+  const oldX=u.x,oldZ=u.z;
+  u.x=v.x;u.z=v.z;u.gy=v.o?.position?.y??hAt(v.x,v.z);
+  if(oldX!==u.x||oldZ!==u.z)enemyReindex(u,oldX,oldZ);
+  return true;
+}
 // La IA llunyana sense contacte necessita menys decisions de navegació,
 // però conserva tot el temps transcorregut: mai no alentim la patrulla.
 // Un enemic que detecta, cerca o combat reprèn immediatament els passos normals.
@@ -407,6 +514,10 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
     u.blastRagdoll=null;u.blastImpulse=null;u.blastHeight=0;u.o.rotation.z=0
   }
   const oldX=u.x,oldZ=u.z;
+  if(u.t==='soldat'&&u.enemyVehicleClaim&&u.enemyVehicleClaim.phase!=='approach'&&!nativeCoopSession){
+    u.cd=Math.max(0,(u.cd||0)-dt); // el passatger pot fer diversos trets
+    enemyVehicleBoardingTick(u,dt);return;
+  }
   u.alert=Math.max(0,u.alert-dt);u.cd-=dt;if(u.t==='torre')u.heavyCd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);
    const q=cv||P,py=cv?cv.o.position.y:P.y,dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz),
          det=disg&&!cv?20:u.alert>0?300:u.t=='general'?60:120,
@@ -451,7 +562,7 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
          u.lastSeenX=q.x;u.lastSeenZ=q.z;u.lastSeenY=py;
          u.pursuitT=SOLDIER_MEMORY;u.aiMode='combat';
          u.searchT=SOLDIER_MEMORY+d/Math.max(1,u.sp);
-         if(acquired){u.cd=0;soldierWarnNeighbors(u,q,py)}
+         if(acquired){u.cd=0;soldierWarnNeighbors(u,q,py);if(!nativeCoopSession)enemyVehicleReserve(u)}
        }else{
          if(u.aiMode==='combat')u.aiMode='search';
          if(raw&&u.aiMode!=='search'){
@@ -479,6 +590,9 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
   }
   if(senseStamp)perfHotspots.aiSenseMs+=performance.now()-senseStamp;
 
+   if(u.t==='soldat'&&u.enemyVehicleClaim&&!nativeCoopSession){
+     if(enemyVehicleBoardingTick(u,dt))return;
+   }
    if(u.t==='soldat'&&(u.canSee||u.aiMode&&u.aiMode!=='patrol')){
     u.tacticT=Math.max(0,(u.tacticT||0)-dt);
      const target=u.canSee?q:{x:u.lastSeenX??u.x,z:u.lastSeenZ??u.z},
