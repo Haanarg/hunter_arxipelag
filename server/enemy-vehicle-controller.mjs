@@ -13,7 +13,12 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
   const v=vehicles.live().find(v=>v.id===state.vehicleId);
   if(v&&state.seat===0&&v.enemyCrew?.[1]){
     const partner=targets.find(t=>t.id===v.enemyCrew[1]);
-    if(partner&&partner!==unit)release(partner,tick);
+    if(partner&&partner.hp>0&&partner.enemyRequisition?.phase==='riding'&&
+       vehicles.enemyPromote(v.id,unit.id,partner.id)){
+      partner.enemyRequisition.seat=0;
+      partner.enemyRequisition.phase='riding';
+      partner.enemySeat=0;
+    }else if(partner&&partner!==unit)release(partner,tick);
   }
   vehicles.enemyRelease(unit.id);
   if(v&&state.phase!=='approach'){
@@ -69,7 +74,7 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
   unit.x=v.x;unit.z=v.z;unit.y=v.y;unit.heading=v.hd;
   if(s.seat===1){
    const driver=v.enemyCrew?.[0];
-   if(!driver){release(unit,tick);return false;}
+   if(!driver)return true;
    if(s.phase==='riding')firePassenger(unit,v,tick);
    return true;
   }
