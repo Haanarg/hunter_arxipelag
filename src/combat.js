@@ -929,7 +929,7 @@ function updateLightAimReticle(dt){
   if(!focus.point||!enemySoldier&&!vehicle){hide();return;}
   cam.updateMatrixWorld();
   lightReticlePoint.set(focus.point.x,focus.point.y,focus.point.z).project(cam);
-  if(lightReticlePoint.z<0||lightReticlePoint.z>1||
+  if(lightReticlePoint.z<-1||lightReticlePoint.z>1||
     Math.abs(lightReticlePoint.x)>1||Math.abs(lightReticlePoint.y)>1){
     hide();return;
   }
