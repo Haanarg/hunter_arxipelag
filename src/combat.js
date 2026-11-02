@@ -873,6 +873,71 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
   }
   return selector.direction();
 }
+// Retícula lleugera: la mateixa adquisició que els projectils reals,
+// sense prioritat artificial per classe de diana. Vermella només pels
+// soldats enemics; blanca pels vehicles. Les armes pesants no la utilitzen.
+const lightReticle=document.getElementById('lightAimReticle'),
+  lightReticlePoint=new THREE.Vector3();
+let lightReticleRefresh=0;
+function updateLightAimReticle(dt){
+  if(!lightReticle)return;
+  const hide=()=>{lightReticle.style.display='none'};
+  if(!started||paused||over||playerFall||hp<=0||swimming||scopeActive){
+    hide();lightReticleRefresh=0;return;
+  }
+  lightReticleRefresh-=dt;
+  if(lightReticleRefresh>0)return;
+  lightReticleRefresh=.06;
+  let x=P.x,y=P.y+1.55,z=P.z,
+    fx=-Math.sin(P.hd),fy=0,fz=-Math.cos(P.hd),
+    range=SMALL_ARMS_RANGE.pistol,cone=SMALL_ARMS_AIM_CONE,
+    shotClass='pistol',vertical=SMALL_ARMS_AIM_VERTICAL;
+  const passenger=cv&&nativeCoopSession&&
+    nativeCoopSession.appliedVehicleRows?.get(cv.saveId)?.seats?.[0]!==nativeCoopSession.self;
+  if(cv&&!passenger){
+    if(cv.t==='tanqueta'){
+      const gun=window.HUNTER_VEHICLES.turretShot(THREE,cv.o);
+      if(!gun){hide();return}
+      ({x,y,z}=gun.origin);
+      fx=-Math.sin(cv.hd);fz=-Math.cos(cv.hd);
+      shotClass='light';range=120;cone=.97;vertical=Math.PI/2;
+    }else if(cv.t==='heli_combat'){
+      const hd=cv.hd,frontX=-Math.sin(hd),frontZ=-Math.cos(hd),
+        c=Math.cos(Math.PI/6);
+      x=cv.x+frontX*4.1*VS.heli_combat;
+      y=cv.o.position.y+.15;z=cv.z+frontZ*4.1*VS.heli_combat;
+      fx=frontX*c;fy=-.5;fz=frontZ*c;
+      shotClass='attackCannon';range=130;cone=.73;vertical=.97;
+    }else if(!OPEN_RIDER_PISTOL.has(cv.t)){hide();return;}
+    else {y=(cv.o?.position.y??P.y)+1.65;}
+  }else if(!cv){
+    if(bazookaEquipped||grenadeEquipped||knifeEquipped||cisallaEquipped){
+      hide();return;
+    }
+    if(assaultRifleEquipped){
+      shotClass='assault';range=SMALL_ARMS_RANGE.assault;
+    }else if(sniperEquipped){
+      shotClass='light';range=180;cone=.984;
+    }
+  }
+  const focus={};
+  autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone,shotClass,focus,0,vertical);
+  const obj=focus.target,enemySoldier=focus.kind==='enemy'&&
+    (obj?.t==='soldat'||obj?.t==='general'),
+    vehicle=focus.kind==='vehicle'||focus.kind==='enemy'&&
+    ['jeep','tanqueta','tanc','patrulla_marina'].includes(obj?.t);
+  if(!focus.point||!enemySoldier&&!vehicle){hide();return;}
+  cam.updateMatrixWorld();
+  lightReticlePoint.set(focus.point.x,focus.point.y,focus.point.z).project(cam);
+  if(lightReticlePoint.z<0||lightReticlePoint.z>1||
+    Math.abs(lightReticlePoint.x)>1||Math.abs(lightReticlePoint.y)>1){
+    hide();return;
+  }
+  lightReticle.style.display='block';
+  lightReticle.classList.toggle('enemy',enemySoldier);
+  lightReticle.style.left=(50+lightReticlePoint.x*50)+'%';
+  lightReticle.style.top=(50-lightReticlePoint.y*50)+'%';
+}
 // La retícula i el míssil de l'helicòpter comparteixen la mateixa
 // trajectòria menys picada, el mateix abast i el mateix autoapuntat.
 const HELI_MISSILE_ANGLE=Math.PI*25/180,HELI_MISSILE_RANGE=210;
