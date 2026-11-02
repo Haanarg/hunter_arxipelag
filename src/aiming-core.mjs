@@ -68,35 +68,36 @@ export function createAimSelector({origin,direction,range,cone=.97,shotClass='li
   if(focus){focus.target=null;focus.point=null;focus.kind=null}
   const heavy=shotClass==='heavy',forward=Math.hypot(fx,fz),
         basePitch=Math.atan2(fy,forward);
-  let bestPriority=Infinity,bestScore=Infinity,chosen=null;
-  const consider=(obj,kind,priority,tx,ty,tz,ignoreWall=null,ignoreBuilding=null)=>{
-    if(priority>bestPriority||!Number.isFinite(ty))return;
-    const dx=tx-x,dy=ty-y,dz=tz-z,
-          horizontal=Math.hypot(dx,dz),distance=Math.hypot(dx,dy,dz);
-    if(distance<.15||distance>range||forward<.001)return;
-    const pitchError=Math.abs(Math.atan2(dy,horizontal)-basePitch);
-    if(pitchError>verticalCone)return;
-    const alignment=horizontal>=.001?
-      (dx*fx+dz*fz)/(horizontal*forward):1,
-          wideSmallArms=shotClass==='assault'||shotClass==='pistol',
-          allowedCone=wideSmallArms?
-            smallArmsAimHorizontalCone(cone,pitchError):cone,
-          // Quan la torre queda pràcticament a la vertical del canó,
-          // el desplaçament d'1,1 m de la boca no ha de descartar-la
-          // per aparèixer un pèl al darrere en projecció horitzontal.
-          overhead=wideSmallArms&&horizontal<=1.6&&Math.abs(dy)>=horizontal*3;
-    if(!overhead&&alignment<allowedCone)return;
-    // Les armes pesades no adquireixen dianes tapades pel relleu.
-    if(!isClear(x,y,z,tx,ty,tz,ignoreWall,ignoreBuilding,heavy))return;
-    // Dins una prioritat, apuntar primer al blanc més centrat i proper.
-    const score=heavy?
-      Math.acos(Math.max(-1,Math.min(1,alignment)))*45+pitchError*23+distance*.08:
-      distance;
-    if(priority===bestPriority&&score>=bestScore)return;
-    bestPriority=priority;bestScore=score;
-    chosen=[dx/distance,dy/distance,dz/distance];
-    if(focus){focus.target=obj;focus.point={x:tx,y:ty,z:tz};focus.kind=kind}
-  };
+  // L'angle respecte del centre de la mirada domina SEMPRE el tipus i
+ // la distància. La distància només resol empats angulars gairebé exactes.
+ let bestPriority=Infinity,bestScore=Infinity,bestDistance=Infinity,chosen=null;
+ const axisLength=Math.max(1e-9,Math.hypot(fx,fy,fz));
+ const consider=(obj,kind,priority,tx,ty,tz,ignoreWall=null,ignoreBuilding=null)=>{
+   if(!Number.isFinite(ty))return;
+   const dx=tx-x,dy=ty-y,dz=tz-z,
+         horizontal=Math.hypot(dx,dz),distance=Math.hypot(dx,dy,dz);
+   if(distance<.15||distance>range||forward<.001)return;
+   const pitchError=Math.abs(Math.atan2(dy,horizontal)-basePitch);
+   if(pitchError>verticalCone)return;
+   const alignment=horizontal>=.001?
+     (dx*fx+dz*fz)/(horizontal*forward):1,
+         wideSmallArms=shotClass==='assault'||shotClass==='pistol',
+         allowedCone=wideSmallArms?
+           smallArmsAimHorizontalCone(cone,pitchError):cone,
+         overhead=wideSmallArms&&horizontal<=1.6&&Math.abs(dy)>=horizontal*3;
+   if(!overhead&&alignment<allowedCone)return;
+   if(!isClear(x,y,z,tx,ty,tz,ignoreWall,ignoreBuilding,heavy))return;
+   const dot=Math.max(-1,Math.min(1,(dx*fx+dy*fy+dz*fz)/(distance*axisLength)));
+   const angularError=Math.acos(dot);
+   // Evita prioritzar sistemàticament el soldat lateral sobre el cotxe
+   // que ocupa el centre, i evita el salt d'un enemic a 5 m sobre un altre centrat.
+   if(angularError>bestScore+1e-7||
+     (Math.abs(angularError-bestScore)<1e-7&&distance>=bestDistance))return;
+   bestPriority=priority;bestScore=angularError;bestDistance=distance;
+   chosen=[dx/distance,dy/distance,dz/distance];
+   if(focus){focus.target=obj;focus.point={x:tx,y:ty,z:tz};focus.kind=kind}
+ };
+
  return Object.freeze({consider,get priority(){return bestPriority;},get hasTarget(){return !!chosen;},direction(){return chosen||[fx,fy,fz];}});
 }
 
