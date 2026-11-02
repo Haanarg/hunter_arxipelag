@@ -109,7 +109,8 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
   let actor=null,best=Infinity;
   for(const p of players())if(p.hp>0&&!p.fall&&!p.swimming){
    const d=distance(v,p);
-   const tracking=s.fleeTracking??={};
+   const tracking=(s.fleeTracking??={})[p.id]??={};
+   s.fleeTracking[p.id]=tracking;
    const fleeing=observeFleeing(v,p,tick/30,tracking);
    if(fleeing)s.fleeUntil=tick+Math.ceil(REQUISITION.fleeingMemorySeconds*30);
    if(d>(tick<(s.fleeUntil||0)?REQUISITION.fleeingChaseDistance:REQUISITION.maxChaseDistance))continue;
