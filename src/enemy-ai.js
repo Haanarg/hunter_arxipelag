@@ -494,6 +494,30 @@ function enemyVehicleBoardingTick(u,dt){
     else aimEnemyBoatCrew(v.o,0,
       new THREE.Vector3(target.x,py+1.5,target.z),dt);
   }
+  // Blindats requisats: el conductor controla el canó de la torreta,
+  // no el fusell d'infanteria. Orientació contínua independent del xassís.
+  if(['tanc','tanqueta'].includes(v.t)&&v.o?.userData?.turretPivot){
+    const gun=window.HUNTER_VEHICLES.turretShot(THREE,v.o);
+    if(gun){
+      const distance=Math.hypot(target.x-v.x,target.z-v.z),
+        range=v.t==='tanc'?220:85,
+        goal=new THREE.Vector3(target.x-gun.origin.x,
+          py+1.5-gun.origin.y,target.z-gun.origin.z);
+      const aligned=window.HUNTER_VEHICLES.aimTurret(THREE,v.o,goal,dt);
+      if(spotted&&c.phase==='riding'&&distance<=range&&aligned&&u.cd<=0){
+        const barrel=window.HUNTER_VEHICLES.turretShot(THREE,v.o);
+        if(barrel&&weaponAimClear(barrel.origin.x,barrel.origin.y,barrel.origin.z,
+          target.x,py+1.5,target.z)){
+          const heavy=v.t==='tanc',direction=barrel.direction,origin=barrel.origin;
+          shoot(origin.x,origin.y,origin.z,direction.x,direction.y,direction.z,
+            heavy?85:135,heavy?COMBAT_BALANCE.weapons.tank:COMBAT_BALANCE.weapons.tankette,
+            heavy?8:0,'e',heavy?mE:mW,heavy?2:SMALL_ARMS_SCALE,u,true);
+          // Mateixa cadència de cinc segons dels canons pesants enemics.
+          u.cd=heavy?5:TANKETTE_FIRE_INTERVAL;
+        }
+      }
+    }
+  }
   if(elapsed-c.lastContact>enemyRequisition.REQUISITION.chaseMemorySeconds){
     // El conductor deixa d'empaitar el fantasma de la darrera posició.
     if(v.enemyCrew[1])enemyVehicleRelease(v.enemyCrew[1]);
