@@ -46,7 +46,7 @@ import * as sharedModels from './player-model-core.mjs';
 window.HUNTER_SHARED_MODELS=sharedModels;
 import * as occupantDamage from './vehicle-occupant-damage-core.mjs?v=0.6.104';
 window.HUNTER_VEHICLE_OCCUPANT_DAMAGE=occupantDamage;
-import * as sharedCombat from './combat-rules.mjs?v=0.6.104&visual=6';
+import * as sharedCombat from './combat-rules.mjs?v=0.6.104&visual=6&friendlyCover=1';
 import * as sharedVehicles from './vehicle-dynamics-core.mjs';
 import * as ferryDeck from './ferry-deck-core.mjs';
 window.HUNTER_FERRY_DECK=ferryDeck;
@@ -87,7 +87,7 @@ window.HUNTER_RUNTIME_LAYOUTS=runtimeLayouts;window.HUNTER_CHOOSE_COMPOUND=choos
 import {createCompoundStructures} from './compound-structures.mjs';
 window.HUNTER_COMPOUND_STRUCTURES=createCompoundStructures;
 import {runtimeScripts} from './runtime-scripts.mjs';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.104&visual=8&glassfix=2&smooth=13';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.104&visual=8&glassfix=2&smooth=13&friendlyCover=1';
 import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
 import {GAME_VERSION} from './version.mjs?v=0.6.104';
