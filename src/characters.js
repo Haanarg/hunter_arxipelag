@@ -278,9 +278,10 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.ph=0;u.breath=0;u.firePose=0;u.meleePose=0;u.knifeAttackDuration=PLAYER_KNIFE_ATTACK_SECONDS;
     u.pistolAimTime=0;u.pistolShotAge=10;u.pistolBlend=0;
     // La direcció del tret i la pose visual comparteixen l'autoaim.
-    u.visualAimDirection=new THREE.Vector3(0,0,-1);
+    u.visualAimDirection=null; // Els jugadors remots mantenen el rumb propi.
     u.visualAimSmoothed=new THREE.Vector3(0,0,-1);
     u.visualAimLocal=new THREE.Vector3(0,0,-1);
+    u.visualAimFallback=new THREE.Vector3(0,0,-1);
     u.visualAimWorldQ=new THREE.Quaternion();
     u.visualAimQuaternion=new THREE.Quaternion();
     u.visualAimForward=new THREE.Vector3(0,0,-1);
@@ -560,10 +561,13 @@ window.HUNTER_CHARACTERS=Object.freeze({
           sniper=!!sniperEquipped&&!inVehicle,assault=!!assaultRifleEquipped&&!inVehicle,throwing=u.grenadeThrow>0&&!inVehicle;
     // Suavitzam la direcció balística cap a la qual segueix l'autoaim.
     // Quan no hi ha objectiu, combat.js hi desa el rumb lliure actual.
-    const worldDirection=u.visualAimDirection;
-    if(worldDirection&&worldDirection.lengthSq()>.01){
+    // Sense dada d'autoaim (jugador remot o arma no disponible),
+    // l'arma conserva el rumb real del personatge, no el nord del mapa.
+    player.getWorldQuaternion(u.visualAimWorldQ);
+    u.visualAimFallback.copy(u.visualAimForward).applyQuaternion(u.visualAimWorldQ);
+    const worldDirection=u.visualAimDirection||u.visualAimFallback;
+    if(worldDirection.lengthSq()>.01)
       u.visualAimSmoothed.lerp(worldDirection,1-Math.exp(-13*dt)).normalize();
-    }
     player.updateMatrixWorld(true);
     u.upperBody.getWorldQuaternion(u.visualAimWorldQ);
     u.visualAimLocal.copy(u.visualAimSmoothed).applyQuaternion(u.visualAimWorldQ.invert()).normalize();
