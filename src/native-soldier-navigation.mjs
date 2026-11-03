@@ -22,14 +22,19 @@ function legal(world,unit,from,to){
  return true;
 }
 function planAround(world,unit,destination){
- const distance=dist(unit,destination),range=Math.min(55,Math.max(20,distance+12)),
+ const boarding=unit.enemyRequisition?.phase==='approach',
+   distance=dist(unit,destination),
+   // Els passos dels recintes poden quedar a l'altra banda del perímetre:
+   // els 55 m i 180 nodes habituals no permetien arribar-hi.
+   range=Math.min(boarding?130:55,Math.max(20,distance+(boarding?95:12))),
+   nodeLimit=boarding?1150:MAX_NODES,
    radius=Math.ceil(range/CELL),limit=radius*radius,
    end={x:unit.x+(destination.x-unit.x)*Math.min(1,43/Math.max(.01,distance)),
      z:unit.z+(destination.z-unit.z)*Math.min(1,43/Math.max(.01,distance))};
  const nodes=new Map(),open=[],start={i:0,j:0,x:unit.x,z:unit.z,g:0,f:dist(unit,end),parent:null},
    key=(i,j)=>i+','+j;nodes.set(key(0,0),start);open.push(start);
  let best=start,bestDist=dist(start,end),count=0;
- while(open.length&&count++<MAX_NODES){
+ while(open.length&&count++<nodeLimit){
   let index=0;for(let i=1;i<open.length;i++)if(open[i].f<open[index].f)index=i;
   const node=open.splice(index,1)[0];if(node.closed)continue;node.closed=true;
   const toEnd=dist(node,end);
