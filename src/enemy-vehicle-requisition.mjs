@@ -124,6 +124,77 @@ export function pursuitInput(v,target,{passenger=false,distance=Infinity}={}){
     d<3&&passenger?0:Math.abs(error)>2.4?.38:Math.abs(error)>1.3?.58:1;
   return{forward,turn:clamp(error*1.25,-1,1),distance:d};
 }
+// Ruta explícita per travessar una obertura de filferrada abans
+// d'anar a un vehicle. No demanam al navegant que travessi un mur
+// o que vagi directament al seient si hi ha una tanca al mig.
+const wireCross=(a,b,c,d)=>{
+ const vx=b.x-a.x,vz=b.z-a.z,wx=d.x-c.x,wz=d.z-c.z,
+   den=vx*wz-vz*wx;
+ if(Math.abs(den)<1e-7)return null;
+ const qx=c.x-a.x,qz=c.z-a.z,t=(qx*wz-qz*wx)/den,
+   u=(qx*vz-qz*vx)/den;
+ return t>.0001&&t<.9999&&u>-.0001&&u<1.0001?t:null;
+};
+const wireEnds=w=>w&&Number.isFinite(w.ax)&&Number.isFinite(w.az)&&
+ Number.isFinite(w.bx)&&Number.isFinite(w.bz)?
+ [{x:w.ax,z:w.az},{x:w.bx,z:w.bz}]:null;
+export function requisitionFenceDetour(from,to,walls=[]){
+ if(!from||!to)return null;
+ const wire=walls.filter(w=>w?.barbed&&!w.open&&w.hp!==0)
+   .map(w=>wireEnds(w)).filter(Boolean);
+ if(!wire.length)return null;
+ const crossings=wire.map(pair=>({pair,
+   t:wireCross(from,to,pair[0],pair[1])}))
+   .filter(row=>row.t!==null).sort((a,b)=>a.t-b.t);
+ if(!crossings.length)return null;
+ const [a,b]=crossings[0].pair,
+   len=Math.hypot(b.x-a.x,b.z-a.z);
+ if(len<.2)return null;
+ const ux=(b.x-a.x)/len,uz=(b.z-a.z)/len,nx=-uz,nz=ux,
+   origin=a,project=p=>(p.x-origin.x)*ux+(p.z-origin.z)*uz,
+   lateral=p=>(p.x-origin.x)*nx+(p.z-origin.z)*nz,
+   intervals=[];
+ for(const pair of wire){
+  const [c,d]=pair,cx=d.x-c.x,cz=d.z-c.z,
+    size=Math.hypot(cx,cz);
+  if(size<.2||Math.abs((cx*ux+cz*uz)/size)<.985||
+     Math.abs(lateral(c))>1.35||Math.abs(lateral(d))>1.35)continue;
+  intervals.push([Math.min(project(c),project(d)),
+    Math.max(project(c),project(d))]);
+ }
+ intervals.sort((a,b)=>a[0]-b[0]);
+ const merged=[];
+ for(const iv of intervals){
+  const previous=merged[merged.length-1];
+  if(previous&&iv[0]-previous[1]<1.2)
+   previous[1]=Math.max(previous[1],iv[1]);
+  else merged.push(iv.slice());
+ }
+ const side=Math.sign(lateral(from))||1,
+   clear=(p,q)=>!wire.some(pair=>wireCross(p,q,pair[0],pair[1])!==null),
+   candidates=[];
+ for(let i=0;i<merged.length-1;i++){
+  const gap=merged[i+1][0]-merged[i][1];
+  if(gap<4.5||gap>35)continue;
+  candidates.push((merged[i][1]+merged[i+1][0])/2);
+ }
+ // Final d'una tanca aïllada: prova de vorejar-la, però mai
+ // pressuposa que una cantonada d'un recinte sigui un pas obert.
+ for(const edge of [merged[0]?.[0]-3.5,merged.at(-1)?.[1]+3.5])
+  if(Number.isFinite(edge))candidates.push(edge);
+ let best=null,bestCost=Infinity;
+ for(const t of candidates){
+  const center={x:origin.x+ux*t,z:origin.z+uz*t},
+    entry={x:center.x+nx*side*3.4,z:center.z+nz*side*3.4},
+    exit={x:center.x-nx*side*3.4,z:center.z-nz*side*3.4};
+  if(!clear(from,entry)||!clear(entry,exit)||!clear(exit,to))continue;
+  const cost=Math.hypot(from.x-entry.x,from.z-entry.z)+
+    Math.hypot(entry.x-exit.x,entry.z-exit.z)+
+    Math.hypot(exit.x-to.x,exit.z-to.z);
+  if(cost<bestCost){bestCost=cost;best=[entry,exit];}
+ }
+ return best;
+}
 // Frenada anticipada i gir tangencial davant d'una filferrada.
 // Es consulta abans de la física del jugador, tant al client com al Worker.
 // Mai desactivam les col·lisions ni fem girar el cotxe sobre el lloc.
