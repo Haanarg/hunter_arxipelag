@@ -9,22 +9,37 @@ export const ARCADE_BLAST_STYLE=Object.freeze({
   colorSparks:Object.freeze([0xffef8e,0xffa629,0xff6035,0xffe868]),
   colorShards:Object.freeze([0x413f45,0x6b5b4e,0x9b7056,0x897b69])
 });
+// Tres perfils: granada (base), impacte de projectil (orientat) i C4 (gran).
 export function arcadeBlastKind(source){
   const weapon=typeof source==='string'?source:source?.weapon;
-  // Tota detonació usa la granada per defecte. El C4 és l'única excepció.
-  return weapon==='c4'?'c4':'grenade';
+  if(weapon==='c4')return 'c4';
+  if(weapon==='projectile'||source?.projectile===true||
+     source?.spl>0||source?.splash>0)return 'projectile';
+  return 'grenade';
+}
+// El vector d'entrada és la velocitat del projectil en el punt d'impacte.
+// Retornam null si no és vàlid, per no girar explosions sense trajectòria.
+export function arcadeBlastDirection(source){
+  const vector=source?.direction??source?.velocity??source;
+  const x=vector?.x??vector?.vx,y=vector?.y??vector?.vy,z=vector?.z??vector?.vz;
+  if(![x,y,z].every(Number.isFinite))return null;
+  const length=Math.hypot(x,y,z);
+  return length>1e-6?{x:x/length,y:y/length,z:z/length}:null;
 }
 export function arcadeBlastProfile(kind,quality='desktop'){
-  if(kind!=='grenade'&&kind!=='c4')return null;
-  const big=kind==='c4',low=quality==='mobile',factor=low?.55:1;
-  // Radi purament visual: el C4 fa ~1,7× la granada, no 3×.
+  if(!['grenade','projectile','c4'].includes(kind))return null;
+  const big=kind==='c4',projectile=kind==='projectile',
+    low=quality==='mobile',factor=low?.55:1;
+  // Escales VISUALS: granada 1×, projectil 1,5×, C4 2,55×
+  // (el C4 antic era 1,7×). Ni radi de dany ni física canvien.
+  const particleBoost=projectile?1.15:1;
   return Object.freeze({
-    kind,scale:big?1.70:1,duration:big?4.4:3.1,
-    fire:Math.round((big?40:29)*factor),
-    smoke:Math.round((big?25:17)*factor),
-    dust:Math.round((big?34:25)*factor),
-    sparks:Math.round((big?65:48)*factor),
-    shards:Math.round((big?32:24)*factor),
+    kind,scale:big?2.55:projectile?1.5:1,duration:big?4.4:3.1,
+    fire:Math.round((big?40:29)*factor*particleBoost),
+    smoke:Math.round((big?25:17)*factor*particleBoost),
+    dust:Math.round((big?34:25)*factor*particleBoost),
+    sparks:Math.round((big?65:48)*factor*particleBoost),
+    shards:Math.round((big?32:24)*factor*particleBoost),
     flashDuration:big?.22:.15
   });
 }
@@ -47,11 +62,12 @@ export function createArcadeBlastFX(T,scene,{quality='desktop',limit=8}={}){
     shell:new T.SphereGeometry(1,24,16),
     ring:new T.RingGeometry(.91,1,48)
   };
-  const up=new T.Vector3(0,1,0),vec=new T.Vector3(),dummy=new T.Object3D();
+  const up=new T.Vector3(0,1,0),normal=new T.Vector3(0,0,1),
+    vec=new T.Vector3(),dummy=new T.Object3D();
   const groups=[],max=Math.max(1,Math.min(12,Math.floor(limit)));
   const maxCount={};
   for(const key of ['fire','smoke','dust','sparks','shards']){
-    maxCount[key]=Math.max(arcadeBlastProfile('grenade',quality)[key],arcadeBlastProfile('c4',quality)[key]);
+    maxCount[key]=Math.max(...['grenade','projectile','c4'].map(kind=>arcadeBlastProfile(kind,quality)[key]));
   }
   let sequence=0;
   const scaleColor={
@@ -92,22 +108,35 @@ export function createArcadeBlastFX(T,scene,{quality='desktop',limit=8}={}){
     // Màxim vuit flaixos locals; la simulació no transporta llums per xarxa.
     const light=new T.PointLight(0xffa64c,0,22);
     root.add(light);
-    const g={root,batches,shell,ring,ring2,flash,light,age:100,profile:null};
+    const g={root,batches,shell,ring,ring2,flash,light,age:100,profile:null,direction:null};
     groups.push(g);return g;
   }
-  function prepare(g,at,profile,seed){
+  function prepare(g,at,profile,seed,direction=null){
     const rand=randomGenerator(seed),scale=profile.scale;
     g.root.position.set(at.x,at.y,at.z);
     g.root.visible=true;g.age=0;g.profile=profile;
+    g.direction=profile.kind==='projectile'?direction:null;
+    // El nucli i les ones giren segons la trajectòria, mai l'arrel:
+    // el fum i la pols han de continuar en coordenades verticals.
     for(const [kind,b] of Object.entries(g.batches)){
       const n=profile[kind];b.mesh.count=n;b.mesh.visible=n>0;
       const items=b.items;items.length=0;
       const palette=scaleColor[kind];
       for(let i=0;i<n;i++){
         const a=rand()*Math.PI*2,
-          elevation=kind==='dust'?rand()*.20:.07+rand()*1.19,
-          dx=Math.cos(a)*Math.cos(elevation),dy=Math.sin(elevation),
+          elevation=kind==='dust'?rand()*.20:.07+rand()*1.19;
+        let dx=Math.cos(a)*Math.cos(elevation),dy=Math.sin(elevation),
           dz=Math.sin(a)*Math.cos(elevation);
+        // Projectil: allarga l'esclat en el sentit de vol. El fum
+        // conserva direcció vertical i la pols continua arran de terra.
+        if(g.direction&&['fire','sparks','shards'].includes(kind)){
+          const bias=kind==='fire'?.72:.59,d=g.direction;
+          const xx=dx*(1-bias)+d.x*bias,
+            yy=dy*(1-bias)+d.y*bias,
+            zz=dz*(1-bias)+d.z*bias,
+            n=Math.max(.001,Math.hypot(xx,yy,zz));
+          dx=xx/n;dy=yy/n;dz=zz/n;
+        }
         const speed=kind==='fire'?1.5+rand()*2.5:
           kind==='smoke'?.6+rand()*1.4:
           kind==='dust'?2.5+rand()*2.7:
@@ -141,7 +170,7 @@ export function createArcadeBlastFX(T,scene,{quality='desktop',limit=8}={}){
       (groups.length<max?makeGroup():groups.reduce((a,b)=>a.age>b.age?a:b));
     const derived=Number.isFinite(seed)?seed:
       (Math.imul((Math.round(x*13)^Math.round(z*19))|0,1103515245)+Math.imul(++sequence,12345))>>>0;
-    prepare(g,position,profile,derived);
+    prepare(g,position,profile,derived,arcadeBlastDirection(source));
     return true;
   }
   function update(dt){
@@ -189,16 +218,34 @@ export function createArcadeBlastFX(T,scene,{quality='desktop',limit=8}={}){
         }
         mesh.instanceMatrix.needsUpdate=true;
       }
+      const dir=g.direction;
+      if(dir){
+        vec.set(dir.x,dir.y,dir.z);
+        // En projectils, la làmina de l'ona és perpendicular al vol.
+        g.shell.quaternion.setFromUnitVectors(up,vec);
+        g.flash.quaternion.setFromUnitVectors(up,vec);
+        g.ring.quaternion.setFromUnitVectors(normal,vec);
+        g.ring2.quaternion.setFromUnitVectors(normal,vec);
+      }else{
+        g.shell.quaternion.identity();
+        g.flash.quaternion.identity();
+        g.ring.rotation.set(-Math.PI/2,0,0);
+        g.ring2.rotation.set(-Math.PI/2,0,0);
+      }
       const flashQ=clamp(t/p.flashDuration,0,1);
       g.flash.visible=flashQ<1;
-      g.flash.position.set(0,.95*p.scale,0);
-      g.flash.scale.setScalar((.1+flashQ*2.1)*p.scale);
+      g.flash.position.set(dir?dir.x*.55*p.scale:0,
+        dir?dir.y*.55*p.scale:.95*p.scale,dir?dir.z*.55*p.scale:0);
+      const flashSize=(.1+flashQ*2.1)*p.scale;
+      g.flash.scale.set(flashSize,flashSize*(dir?1.52:1),flashSize);
       g.flash.material.opacity=(1-flashQ)*.85;
       // Model 3: pell esfèrica de baixa opacitat; no tapa parets i portes.
       const wave=clamp((t-.07)/(p.kind==='c4'?1.05:.79),0,1);
       g.shell.visible=t>.07&&wave<1;
-      g.shell.position.set(0,p.scale,0);
-      g.shell.scale.setScalar((.22+wave*3.5)*p.scale);
+      g.shell.position.set(dir?dir.x*.65*p.scale:0,
+        dir?dir.y*.65*p.scale:p.scale,dir?dir.z*.65*p.scale:0);
+      const shellSize=(.22+wave*3.5)*p.scale;
+      g.shell.scale.set(shellSize,shellSize*(dir?1.6:1),shellSize);
       g.shell.material.opacity=.25*(1-wave);
       const ringQ=clamp((t-.08)/(p.kind==='c4'?1.0:.7),0,1);
       g.ring.visible=t>.08&&ringQ<1;
