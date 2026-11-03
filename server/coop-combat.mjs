@@ -104,6 +104,34 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     navigate:(unit,tick)=>stepNativeSoldierNavigation(unit,{
       tick,world:world(),players:[],requestDoor:openEnemyDoor}),
     firePassenger:(unit,v,tick,seat=1)=>{
+      if(seat===0&&['tanc','tanqueta'].includes(v.t)){
+        // El soldat al volant utilitza la torreta del blindat requisat;
+        // la posa s'actualitza cada pas d'IA (10 Hz), també en recàrrega.
+        const profile=weaponCatalog[v.t==='tanc'?'tank':'tankette'];
+        const actor=visiblePlayers().filter(p=>p.hp>0&&!p.fall&&!p.swimming)
+          .map(p=>({p,d:Math.hypot(p.x-v.x,p.z-v.z)}))
+          .filter(row=>row.d<profile.range)
+          .sort((a,b)=>a.d-b.d)[0]?.p;
+        if(!actor)return;
+        const aim={x:actor.x,y:actor.y+1.5,z:actor.z},
+          eye=vehicleGunPose(v);
+        if(!eye)return;
+        const dx=aim.x-eye.origin.x,dy=aim.y-eye.origin.y,dz=aim.z-eye.origin.z,
+          len=Math.hypot(dx,dy,dz)||1,
+          aligned=stepVehicleTurret(v,[dx/len,dy/len,dz/len],.1);
+        if(!aligned||tick<(unit.nextAttackTick||0))return;
+        const gun=vehicleGunPose(v);
+        if(!gun||traceArena(gun.origin,aim,geometry(),world()).fraction<.999)return;
+        const id='enemy-armored-'+(++sequence);
+        projectiles.push({...launchProjectile(gun.origin,gun.direction,profile.speed,{
+          id,actorId:unit.id,enemy:true,weapon:v.t==='tanc'?'tank':'tankette',
+          dmg:profile.damage,splash:profile.splash||0,sourceVehicle:v.id
+        }),life:profile.life});
+        unit.nextAttackTick=tick+Math.ceil((v.t==='tanc'?5:.16)*30);
+        effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,
+          weapon:v.t==='tanc'?'tank':'tankette',from:gun.origin,to:aim,hit:null});
+        return;
+      }
       if(tick<(unit.nextAttackTick||0))return;
       const boat=requisitionBoat(v.t),rocket=boat&&seat===1,
         eye=boat?boatCrewMuzzle(v,seat,v.y):passengerMuzzle(v,v.y);
