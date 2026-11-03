@@ -100,6 +100,35 @@ window.HUNTER_TERRAIN=Object.freeze({
       const cx=-half+(x+.5)*cellSize,cz=-half+(z+.5)*cellSize;
       tiles.push({x,z,cx,cz,geometry:null,mesh:null,level:-1});
     }
+    // Mostra el relleu una sola vegada per sector. Els sectors amb costa
+    // o canvis bruscos de pendent necessiten més geometria que el mar o
+    // les planes, fins i tot lluny de la càmera. No canvia heightAt ni
+    // les col·lisions: només evita triangles LOD massa grans.
+    function detailFloor(tile){
+      if(tile.detailFloor!==undefined)return tile.detailFloor;
+      const samples=7,step=cellSize/(samples-1),left=tile.cx-cellSize/2,
+            front=tile.cz-cellSize/2,values=new Float32Array(samples*samples);
+      let min=Infinity,max=-Infinity,maxRise=0,hasCoast=false;
+      for(let z=0;z<samples;z++)for(let x=0;x<samples;x++){
+        const h=heightAt(left+x*step,front+z*step),i=z*samples+x;
+        values[i]=h;min=Math.min(min,h);max=Math.max(max,h);
+        // Les travesses de nivell del mar i els talussos de moltes
+        // desenes de metres no s'han de representar amb 5 divisions.
+        if(x){
+          const other=values[i-1];
+          maxRise=Math.max(maxRise,Math.abs(h-other));
+          if((h<=2&&other>=-2)||(other<=2&&h>=-2))hasCoast=true;
+        }
+        if(z){
+          const other=values[i-samples];
+          maxRise=Math.max(maxRise,Math.abs(h-other));
+          if((h<=2&&other>=-2)||(other<=2&&h>=-2))hasCoast=true;
+        }
+      }
+      tile.detailFloor=(hasCoast||(min<2&&max>2)||maxRise>22)?2:
+        (maxRise>11?1:0);
+      return tile.detailFloor;
+    }
     function distance2(tile,x,z){
       const dx=Math.max(0,Math.abs(tile.cx-x)-cellSize/2),
             dz=Math.max(0,Math.abs(tile.cz-z)-cellSize/2);
@@ -117,7 +146,7 @@ window.HUNTER_TERRAIN=Object.freeze({
         while(level<3&&distance<ranges[2-level]-margin)level++;
         while(level>0&&distance>ranges[3-level]+margin)level--;
       }
-      return level;
+      return Math.max(level,detailFloor(tile));
     }
     function appendSkirts(geometry,n){
       // Faldons al límit entre sectors de diferent LOD: amaguen petites
