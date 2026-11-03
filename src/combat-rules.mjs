@@ -101,6 +101,19 @@ export function vehicleHullSegmentT(from,to,vehicle,baseY,radius){
  return segmentSphereT(from.x,from.y,from.z,to.x,to.y,to.z,vehicle.x,baseY+1,vehicle.z,radius);
 }
 
+// A friendly crew occupies the actual rotated vehicle footprint, not a small
+// sphere: the latter let bullets pass through long or broad requisitioned cars.
+// The extra margin prevents the normal weapon dispersion from clipping allies.
+export function friendlyVehicleBlocksLine(from,to,v,{width,depth,baseY,height,margin=.7}){
+ if(v.destroyed||!(width>0&&depth>0))return false;
+ const yaw=v.hd||0,c=Math.cos(yaw),s=Math.sin(yaw),
+   point=p=>({x:(p.x-v.x)*c-(p.z-v.z)*s,
+              z:(p.x-v.x)*s+(p.z-v.z)*c});
+ const a=point(from),b=point(to),hw=width/2+margin,hd=depth/2+margin;
+ return segmentAabbT(a.x,from.y,a.z,b.x,to.y,b.z,
+   -hw,hw,baseY-.35,baseY+height+margin,-hd,hd)!==null;
+}
+
 // Shared original single-player fence segment proximity.
 export function closestFenceBlastPoint(w,x,y,z){
   const ax=w.ax??w.x0,az=w.az??w.z0,
