@@ -9156,6 +9156,19 @@ function enemyCarRifleShot(u,target,targetY){
     direction:new THREE.Vector3(0,0,-1).applyQuaternion(
       crew.muzzle.getWorldQuaternion(new THREE.Quaternion())).normalize()};
 }
+// El conductor d'una moto requisada dispara des de la boca REAL del seu
+// fusell. El soldat de combat continua ocult, com en la resta de vehicles.
+function enemyMotorcycleRifleShot(v,target,targetY){
+  const muzzle=v.o?.userData?.enemyCarCrew?.motorcycleMuzzle;
+  if(!muzzle)return null;
+  v.o.rotation.y=v.hd;
+  v.o.updateMatrixWorld(true);
+  const origin=muzzle.getWorldPosition(new THREE.Vector3()),
+        dx=target.x-origin.x,dy=targetY+1.5-origin.y,dz=target.z-origin.z,
+        error=window.HUNTER_ENEMY_ACCURACY.sample(DIF,'jeep',dx,dy,dz,rn),
+        direction=new THREE.Vector3(dx+error.x,dy+error.y,dz+error.z).normalize();
+  return {origin,direction};
+}
 // Les ones explosives no poden impulsar una unitat a través de parets.
 // Especialment, el general no pot sortir del seu despatx subterrani.
 function moveBlastedEnemy(u,dt){
@@ -9231,7 +9244,8 @@ function enemyVehicleReserve(u,{fleeing=false}={}){
 // El foc de les llanxes requisades usa exactament les mateixes armes
 // visibles que el de les patrulleres: pilot/fusell, passatger/llançacoets.
 function enemyBoardedBoatShot(u,v,seat,target,targetY,dt){
-  const rocket=seat===1,range=rocket?245:170;
+  const rocket=v.o?.userData?.enemyCarCrew?.boatWeapons?.[seat]?.rocket??
+    (seat===1||v.t==='llanxa_coets'),range=rocket?245:170;
   if(Math.hypot(target.x-v.x,target.z-v.z)>range)return false;
   const goal=new THREE.Vector3(target.x,targetY+1.5,target.z);
   if(!aimEnemyBoatCrew(v.o,seat,goal,dt))return false;
@@ -9244,7 +9258,7 @@ function enemyBoardedBoatShot(u,v,seat,target,targetY,dt){
   const shotsBefore=Pj.length;
   shoot(p.x,p.y,p.z,dx/norm,dy/norm,dz/norm,speed,
     rocket?COMBAT_BALANCE.weapons.boatRocket:COMBAT_BALANCE.weapons.rifle,
-    rocket?8:0,'e',rocket?mS:mW,rocket?2:SMALL_ARMS_SCALE,u);
+    rocket?8:0,'e',rocket?mS:mW,rocket?2:SMALL_ARMS_SCALE,u,seat===0);
   if(Pj.length===shotsBefore)return false;
   if(rocket)Pj[Pj.length-1].life=Math.max(2.2,norm/(speed*HEAVY_SHOT_SPEED_FACTOR)+.75);
   return true;
@@ -9338,9 +9352,24 @@ function enemyVehicleBoardingTick(u,dt){
     else return true;
   }
   if(enemyRequisition.requisitionBoat(v.t)&&spotted){
-    if(u.cd<=0&&enemyBoardedBoatShot(u,v,0,target,py,dt))u.cd=u.rate;
+    if(u.cd<=0&&enemyBoardedBoatShot(u,v,0,target,py,dt))
+      u.cd=v.o?.userData?.enemyCarCrew?.boatWeapons?.[0]?.rocket?5:u.rate;
     else aimEnemyBoatCrew(v.o,0,
       new THREE.Vector3(target.x,py+1.5,target.z),dt);
+  }
+  // El pilot de la moto pot fer foc, tot i que no hi ha passatger.
+  // La trajectòria respecta el relleu i les parets, com qualsevol soldat.
+  if(v.t==='moto'&&spotted&&c.phase==='riding'&&u.cd<=0&&
+     Math.hypot(target.x-v.x,target.z-v.z)<SOLDIER_FIRE_RANGE+20){
+    const shot=enemyMotorcycleRifleShot(v,target,py);
+    if(shot&&weaponAimClear(shot.origin.x,shot.origin.y,shot.origin.z,
+      target.x,py+1.5,target.z)){
+      const before=Pj.length;
+      shoot(shot.origin.x,shot.origin.y,shot.origin.z,
+        shot.direction.x,shot.direction.y,shot.direction.z,
+        70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE,u);
+      if(Pj.length>before)u.cd=u.rate*1.5;
+    }
   }
   // Blindats requisats: el conductor controla el canó de la torreta,
   // no el fusell d'infanteria. Orientació contínua independent del xassís.
@@ -9762,7 +9791,7 @@ function updDead(dt){
 function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
   if(car.userData.enemyCarCrew)return car.userData.enemyCarCrew;
   if(type==='llanxa'||type==='llanxa_coets')
-    return attachEnemyBoatCrew(car,{initiallyHidden});
+    return attachEnemyBoatCrew(car,{initiallyHidden,type});
   const makeSoldier=()=>window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M}),
         driver=makeSoldier(),gunner=type==='moto'?null:makeSoldier(),
         truck=type==='camio',civil=type==='cotxe_civil';
@@ -9775,11 +9804,23 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
         x=truck?.77*truckFit:civil?.613:.73,
         z=truck?-1.93*truckFit:civil?-.60:-.43,
         height=truck?2.04*truckFit:.94,
-        scale=truck?.31:type==='moto'?.40:.43;
-  driver.position.set(type==='moto'?0:-x,height,type==='moto'?.28:z);
+        scale=truck?.31:type==='moto'?.72:.43;
+  driver.position.set(type==='moto'?0:-x,type==='moto'?.55:height,type==='moto'?.34:z);
   driver.scale.setScalar(scale);
   driver.userData.ar.rotation.x=1.18;driver.userData.al.rotation.x=1.12;
-  driver.userData.gun.visible=false;
+  driver.userData.gun.visible=type==='moto';
+  // Amb una moto cal veure les dues cames: genolls flexionats i peus
+  // als reposapeus, sense usar la silueta diminuta dels conductors de cotxe.
+  let motorcycleMuzzle=null;
+  if(type==='moto'){
+    const rig=driver.userData;
+    rig.ll.rotation.x=rig.lr.rotation.x=.95;
+    rig.lkl.rotation.x=rig.lkr.rotation.x=-1.6;
+    rig.ar.rotation.x=1.18;rig.aer.rotation.x=.52;
+    motorcycleMuzzle=new THREE.Object3D();
+    motorcycleMuzzle.position.set(0,0,-1.08);
+    rig.gun.add(motorcycleMuzzle);
+  }
   car.add(driver);
   let mount=null,pitch=null,muzzle=null;
   if(gunner){
@@ -9800,7 +9841,7 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
     car.add(gunner);
   }
   if(initiallyHidden){driver.visible=false;if(gunner)gunner.visible=false;if(mount)mount.visible=false;}
-  return car.userData.enemyCarCrew={driver,gunner,mount,pitch,muzzle};
+  return car.userData.enemyCarCrew={driver,gunner,mount,pitch,muzzle,motorcycleMuzzle};
 }
 // L'única font visual de les tripulacions requisadores, compartida SOLO/COOP.
 window.HUNTER_ENEMY_CREW_VISUAL=Object.freeze({
