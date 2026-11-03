@@ -124,6 +124,53 @@ export function pursuitInput(v,target,{passenger=false,distance=Infinity}={}){
     d<3&&passenger?0:Math.abs(error)>2.4?.38:Math.abs(error)>1.3?.58:1;
   return{forward,turn:clamp(error*1.25,-1,1),distance:d};
 }
+// Frenada anticipada i gir tangencial davant d'una filferrada.
+// Es consulta abans de la física del jugador, tant al client com al Worker.
+// Mai desactivam les col·lisions ni fem girar el cotxe sobre el lloc.
+export function avoidVehicleBarbedWire(v,input,walls=[],memory={}){
+ if(!v||!input||requisitionBoat(v.t))return input;
+ const speed=Math.abs(v.v||0),look=Math.max(13,Math.min(30,12+speed*.65)),
+   fx=-Math.sin(v.hd||0),fz=-Math.cos(v.hd||0),
+   ex=v.x+fx*look,ez=v.z+fz*look,
+   cross=(ax,az,bx,bz)=>ax*bz-az*bx;
+ let closest=null,best=Infinity;
+ for(const w of walls){
+  if(!w?.barbed||w.open)continue;
+  const ax=w.ax??w.x0,az=w.az??w.z0,
+    bx=w.bx??w.x1,bz=w.bz??w.z1;
+  const sx=bx-ax,sz=bz-az,dx=ex-v.x,dz=ez-v.z,
+    den=cross(dx,dz,sx,sz);
+  let d=Infinity;
+  if(Math.abs(den)>1e-6){
+   const t=cross(ax-v.x,az-v.z,sx,sz)/den,
+     u=cross(ax-v.x,az-v.z,dx,dz)/den;
+   if(t>=0&&t<=1&&u>=0&&u<=1)d=t*look;
+  }
+  // Mostram el perímetre de la tanca, no només el fil central.
+  const cx=(ax+bx)/2,cz=(az+bz)/2;
+  if(d===Infinity&&Math.hypot(cx-v.x,cz-v.z)<look+6){
+   for(const [px,pz] of [[ax,az],[bx,bz]]){
+    const along=(px-v.x)*fx+(pz-v.z)*fz,
+      aside=Math.abs((px-v.x)*fz-(pz-v.z)*fx);
+    if(along>0&&along<look&&aside<5)d=Math.min(d,along);
+   }
+  }
+  if(d<best){best=d;closest={sx,sz,d};}
+ }
+ if(!closest)return input;
+ const length=Math.hypot(closest.sx,closest.sz);
+ if(length<.2)return {...input,forward:-.2,turn:1};
+ const tx=closest.sx/length,tz=closest.sz/length,
+   choose=memory.side&&memory.until>0?memory.side:
+     (fx*tx+fz*tz>=0?1:-1);
+ memory.side=choose;memory.until=12;
+ const desired=Math.atan2(-tx*choose,-tz*choose),
+   error=angle(desired-(v.hd||0));
+ // Abans del contacte frena per fer el gir amb el radi real del vehicle.
+ const braking=best<Math.max(6,speed*.9);
+ return {...input,forward:braking?(best<3?-.65:0):Math.min(input.forward,.58),
+   turn:clamp(error*1.8,-1,1),avoidingFence:true};
+}
 // La malla d'infanteria fa ~4 m d'alçada sense reduir: el Humvee
 // necessita una escala i una base més baixes que el soldat dret.
 export const seatVisual=(type,seat)=>['tanc','tanqueta'].includes(type)
