@@ -2,10 +2,9 @@
 export const SMALL_ARMS_AIM_CONE=.82,SMALL_ARMS_AIM_VERTICAL=Math.PI/2;
 export const SMALL_ARMS_RANGE=Object.freeze({pistol:75,assault:85});
 
-// El bazuca mai no pot girar un coet més de 60° a esquerra/dreta,
-// encara que un futur autoapuntat ampliï el con per seguir blancs alts.
-// La comprovació és a la direcció FINAL, no només al filtre de candidats.
-export const BAZOOKA_MAX_HORIZONTAL_YAW=Math.PI/3;
+// Bazuca: obertura TOTAL de 90° (45° a cada costat).
+// El selector i la direcció FINAL comparteixen el mateix límit.
+export const BAZOOKA_MAX_HORIZONTAL_YAW=Math.PI/4;
 export function limitBazookaHorizontalAim(direction,fx,fz,focus=null){
   const [dx,dy,dz]=direction,forwardLength=Math.hypot(fx,fz),
         horizontalLength=Math.hypot(dx,dz);
