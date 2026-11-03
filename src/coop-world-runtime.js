@@ -588,15 +588,14 @@ function updateNativeCoopFrame(dt){
      carPose.x=e.o.position.x;carPose.z=e.o.position.z;carPose.hd=e.o.rotation.y;
    }
    animateEnemyInfantry(e,walking,dt);
-   // Les patrulleres hereten el balanceig i les armes articulades del
-   // mateix model individual, però mai no disparen des del client.
+   // Els mateixos dos comandos asseguts en tots els modes. Les
+   // patrulleres només giren els riders; els trets són del Worker.
    if(e.t==='patrulla_marina'){
      const target=s.state?.players.find(p=>p.id===e.nativePatrolFocus&&p.hp>0);
-     const weapons=e.o.userData.marineWeapons;
-     if(target&&weapons){
+     if(target){
        const aim=new THREE.Vector3(target.x,target.y+1.6,target.z);
-       marineAimGun(e,weapons.machineGun,aim,dt);
-       marineAimGun(e,weapons.rockets,aim,dt);
+       aimEnemyBoatCrew(e.o,0,aim,dt);
+       aimEnemyBoatCrew(e.o,1,aim,dt);
      }
      const roll=Math.sin(elapsed*2+e.o.position.x*.03+e.o.position.z*.024);
      e.o.rotation.x=roll*.028;e.o.rotation.z=-(e.nativePatrolSpeed||0)*.0015+roll*.024;
@@ -609,6 +608,20 @@ function updateNativeCoopFrame(dt){
      trail.x=e.o.position.x;trail.z=e.o.position.z;trail.hd=e.o.rotation.y;
      trail.destroyed=e.hp<=0;
      movementFx.vehicle(trail,dt,{...fxContext,enemy:true});
+   }
+ }
+ // Els ocupants de llanxes requisades giren cap al mateix objectiu
+ // que els de les patrulleres, sense crear canons nous al client.
+ for(const v of V)if(!v.destroyed&&
+     (v.t==='llanxa'||v.t==='llanxa_coets')&&
+     v.o.userData.enemyCarCrew?.boatWeapons?.length){
+   const target=s.state?.players?.filter(p=>p.hp>0&&!p.fall)
+     .map(p=>({p,d:Math.hypot(p.x-v.x,p.z-v.z)}))
+     .filter(q=>q.d<245).sort((a,b)=>a.d-b.d)[0]?.p;
+   if(target){
+     const aim=new THREE.Vector3(target.x,target.y+1.5,target.z);
+     if(v.o.userData.enemyCarCrew.driver.visible)aimEnemyBoatCrew(v.o,0,aim,dt);
+     if(v.o.userData.enemyCarCrew.gunner.visible)aimEnemyBoatCrew(v.o,1,aim,dt);
    }
  }
  movementFx.update(dt,cam);
