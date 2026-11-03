@@ -158,7 +158,7 @@ window.HUNTER_UI=Object.freeze({
           '<label><input id="cheatInvisible" type="checkbox"> Invisible per als enemics</label>'+
           '<label><input id="cheatImmune" type="checkbox"> Immune als atacs</label>'+
           '<label><input id="cheatFly" type="checkbox"> Vol ràpid</label>'+
-          '</div><button id="cheatsBack">← Pausa</button>';
+          '</div>';
         for(const [id,key] of [['cheatItems','items'],['cheatInvisible','invisible'],['cheatImmune','immune'],['cheatFly','fly']]){
           const input=document.getElementById(id);
           input.checked=!!getState().cheats?.[key];
@@ -168,7 +168,6 @@ window.HUNTER_UI=Object.freeze({
               input.checked=!!getState().cheats?.[key];
           };
         }
-        document.getElementById('cheatsBack').onclick=()=>actions.open('pause');
       }else if(mode==='keys'){
         // Totes les dreceres viuen aquí; la pausa principal és només navegació.
         body.innerHTML='<div class="pause-help" aria-label="Dreceres del teclat">'+
@@ -192,8 +191,7 @@ window.HUNTER_UI=Object.freeze({
           '<div><b>Arrossegar / roda</b><span>Girar la vista / ajustar la càmera</span></div>'+
           '</div>'+
           '<p class="pause-note">Mantén F amb les granades a peu per ajustar-ne la força.</p>'+
-          '<button type="button" class="pause-back" id="keysBack">← TORNAR A PAUSA</button>';
-        document.getElementById('keysBack').onclick=()=>actions.open('pause');
+          '';
       }else if(mode==='performance'){
         body.innerHTML='<p class="pause-note">Ajustos aplicats sense tornar a generar l’arxipèlag.</p>'+
           '<div class="performance-options">'+
@@ -207,7 +205,7 @@ window.HUNTER_UI=Object.freeze({
           '<details class="pause-diagnostics"><summary>Diagnòstic de rendiment</summary>'+
           '<div id="performanceBreakdown" style="font:13px/1.5 monospace;white-space:pre-line;padding:10px"></div>'+
           '<button id="performanceRefresh" type="button">Actualitza diagnòstic</button></details>'+
-          '<button type="button" class="pause-back" id="performanceBack">← TORNAR A PAUSA</button>';
+          '';
         for(const [id,key,callback] of [
           ['disablePalmsPause','palmsDisabled',actions.setPalmsDisabled],
           ['disableWaterPause','waterDisabled',actions.setWaterDisabled],
@@ -237,7 +235,6 @@ window.HUNTER_UI=Object.freeze({
         sound.checked=!getState().muted;
         sound.onchange=()=>actions.setAudioMuted(!sound.checked);
         document.getElementById('performanceRefresh').onclick=refresh;
-        document.getElementById('performanceBack').onclick=()=>actions.open('pause');
         refresh();
       }else if(mode==='abandon'){
         body.innerHTML='<p class="pause-abandon-warning">Vols abandonar la missió i tornar al menú inicial? El progrés que no hagis desat es perdrà.</p>'+
@@ -282,7 +279,18 @@ window.HUNTER_UI=Object.freeze({
         document.getElementById('performanceMenu').onclick=()=>actions.open('performance');
       }
     }
-    resumeButton.onclick=actions.resume;
+    // Els submenús oberts des de pausa tornen a pausa amb la creu superior.
+    const pauseSubmenus=['keys','performance','cheats','saves','account','abandon','restart'];
+    if(pauseSubmenus.includes(mode)&&getState().started){
+      resumeButton.style.display='';
+      resumeButton.setAttribute('aria-label','Torna a pausa');
+      resumeButton.title='Torna a pausa';
+      resumeButton.onclick=()=>actions.open('pause');
+    }else{
+      resumeButton.removeAttribute('title');
+      resumeButton.setAttribute('aria-label','Tanca');
+      resumeButton.onclick=mode==='bombtimer'?()=>actions.open('inventory'):actions.resume;
+    }
     return Object.freeze({renderHUD,show,hide,isAccountOpen:()=>currentMode==='account',isBombTimerOpen:()=>currentMode==='bombtimer',getMode:()=>currentMode})
   }
 });
