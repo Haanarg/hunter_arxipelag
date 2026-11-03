@@ -359,6 +359,13 @@ function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc,audioSource=null,mountedCann
   // Un soldat al volant no dispara mai amb l'arma d'infanteria.
   if(own==='e'&&claim&&claim.seat===0&&!mountedCannon&&
      ['waiting','riding'].includes(claim.phase))return;
+  // Els projectils enemics no s'originen si la seva trajectòria al jugador
+  // travessa un vehicle que ja porta aliats (també si el tir és desplaçat).
+  if(own==='e'){
+    const target=cv||P,targetY=(cv?.o?.position?.y??P.y)+1.5;
+    if(enemyFriendlyVehicleInFireLane({x,y,z},
+      {x:target.x,y:targetY,z:target.z},claim?.vehicle||audioSource))return;
+  }
   const shotClass=shotClassFromSplash(spl),speed=sp*(shotClass==='heavy'?HEAVY_SHOT_SPEED_FACTOR:1),
         power=wholeDamage(dmg);
   if(own==='p'||own==='pb'){
