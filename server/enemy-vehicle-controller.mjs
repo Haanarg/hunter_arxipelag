@@ -1,5 +1,5 @@
 import {candidateVehicles,requisitionChance,requisitionRoll,vehicleSeatPosition,
-  pursuitInput,observeFleeing,boatBoardingReady,requisitionBoat,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
+  pursuitInput,observeFleeing,boatBoardingReady,requisitionBoat,avoidVehicleBarbedWire,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
 
 // L'estat viu al soldat i a enemyCrew del vehicle; ambdós es desaran
 // als checkpoints autoritatius del Worker. Sense clients alternatius.
@@ -131,7 +131,9 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
   if(tick-s.lastContact>REQUISITION.chaseMemorySeconds*30){
    release(unit,tick);return false;
   }
-  const input=pursuitInput(v,s.goal,{passenger:ready,distance:best});
+  const planned=pursuitInput(v,s.goal,{passenger:ready,distance:best});
+  const input=avoidVehicleBarbedWire(v,planned,geometry().walls||[],
+    s.fenceAvoid??={});
   vehicles.enemyAccept(v.id,unit.id,input,tick);
   return true;
  }
