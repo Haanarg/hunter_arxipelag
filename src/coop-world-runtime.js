@@ -108,7 +108,11 @@ function captureNativeCoopWorld(){
  const point=v=>({x:v.x,y:v.y??v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),z:v.z});
  const itemMap={arma:['bullets',16],granada:['grenades',5],disf:['disguise',1],med:['medkits',1],fusell_assalt:['assault',1],franctirador:['sniper',1],bazooka:['bazooka',3],cisalla:['cutters',1],expl:['c4',1],paracaigudes:['parachute',1],mapa:['mapa',1],mapa_heli:['mapa_heli',1],mapa_tanc:['mapa_tanc',1]};
  const payload={requestedSeed:requestedSeed>>>0,geometry,spawn:{...P},vehicles:V.map(v=>({id:v.saveId,t:v.t,...point(v),hd:v.hd,v:0,life:v.life??VT[v.t].life,rockets:v.rockets})),
-  targets:E.map(e=>({id:e.saveId,t:e.t,...point(e),hp:e.hp,heading:e.hd||0,ai:['soldat','general','torre','jeep','tanqueta','tanc','patrulla_marina'].includes(e.t),state:'patrol',patrol:(e.patrol?.length?e.patrol:[]).map(p=>({x:p.x,y:e.o.position.y,z:p.z})),home:{x:e.home?.x??e.x,z:e.home?.z??e.z},tx:e.tx??e.x,tz:e.tz??e.z,patrolIndex:e.pi??0,wt:e.wt??0,speed:e.speed??e.sp??0,yawRate:e.yawRate??0,orbitSign:e.orbitSign??1,heading:e.navHd??e.hd??0,guard:!!e.guard,sp:e.sp,rate:e.rate,dmg:e.dmg,elite:!!e.elite,rocketSoldier:!!e.rocketSoldier,sensePhaseTicks:Math.ceil((e.senseT||0)*30),seenTicks:0,lastAttack:-90})),
+  targets:E.map(e=>({id:e.saveId,t:e.t,...point(e),hp:e.hp,
+  ...(e.t==='patrulla_marina'?{
+    marineCrewHp:[...(e.marineCrewHp||[10,10])],
+    marineBrokenWindshield:[...(e.marineBrokenWindshield||[])]
+  }:{}),heading:e.hd||0,ai:['soldat','general','torre','jeep','tanqueta','tanc','patrulla_marina'].includes(e.t),state:'patrol',patrol:(e.patrol?.length?e.patrol:[]).map(p=>({x:p.x,y:e.o.position.y,z:p.z})),home:{x:e.home?.x??e.x,z:e.home?.z??e.z},tx:e.tx??e.x,tz:e.tz??e.z,patrolIndex:e.pi??0,wt:e.wt??0,speed:e.speed??e.sp??0,yawRate:e.yawRate??0,orbitSign:e.orbitSign??1,heading:e.navHd??e.hd??0,guard:!!e.guard,sp:e.sp,rate:e.rate,dmg:e.dmg,elite:!!e.elite,rocketSoldier:!!e.rocketSoldier,sensePhaseTicks:Math.ceil((e.senseT||0)*30),seenTicks:0,lastAttack:-90})),
   supplies:items.filter(it=>itemMap[it.t]).map(it=>({id:it.saveId,item:itemMap[it.t][0],amount:itemMap[it.t][1],...point(it)})),
   optional:captureNativeCoopOptionals(),
   intel:{sites:hqIntelSites.map(p=>({x:p.x,z:p.z,real:!!p.real})),
@@ -513,6 +517,11 @@ function updateNativeCoopFrame(dt){
        // El canvi de moviment és una propietat visual, no una segona IA.
        e.nativeMoving=Math.hypot(row.x-e.x,row.z-e.z)>.001;
        e.x=row.x;e.z=row.z;e.hp=row.hp;e.hd=row.heading||0;
+       if(e.t==='patrulla_marina'){
+         e.marineCrewHp=row.marineCrewHp||[10,10];
+         e.marineBrokenWindshield=row.marineBrokenWindshield||[];
+         syncMarinePatrolCrew(e.o,e);
+       }
        e.nativePatrolFocus=row.patrolFocus||null;e.nativePatrolSpeed=row.speed||0;
        e.canSee=!!row.canSee;
        e.aiMode=row.state==='attack'?'combat':row.state;
@@ -708,6 +717,20 @@ function updateNativeCoopFrame(dt){
        effect.at.x,effect.at.y,effect.at.z,{vx:0,vy:0,vz:1});
      else if(effect.kind==='glass'&&s.walls[effect.wallIndex])
        shatterWindow(s.walls[effect.wallIndex],effect.paneIndex,effect.at,null);
+     else if(effect.kind==='marine-glass'){
+       const boat=s.enemies.get(effect.targetId);
+       if(boat){
+         boat.marineBrokenWindshield??=[];
+         if(!boat.marineBrokenWindshield.includes(effect.pane))
+           boat.marineBrokenWindshield.push(effect.pane);
+         syncMarinePatrolCrew(boat.o,boat);
+         snd('glassBreak',.8,effect.at,boat.o);
+         spawnBulletImpact('glass',effect.at.x,effect.at.y,effect.at.z,{vx:0,vy:0,vz:1});
+       }
+     }
+     else if(effect.kind==='marine-crew-hit'){
+       spawnBulletImpact('blood',effect.at.x,effect.at.y,effect.at.z,{vx:0,vy:0,vz:1});
+     }
      else if(effect.kind==='vehicle-glass'){
        const v=s.vehicles.get(effect.vehicleId);
        if(v){
