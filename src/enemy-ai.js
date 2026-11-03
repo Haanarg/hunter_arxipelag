@@ -353,6 +353,7 @@ function enemyVehicleRelease(u,leave=true){
   }
   u.o.scale.setScalar(1);u.o.visible=true;
   u.o.position.set(u.x,u.gy??hAt(u.x,u.z),u.z);
+  window.HUNTER_ENEMY_CREW_VISUAL?.show(v,claim.seat,false);
   u.hd=v?.hd??u.hd;u.aiMode='search';u.searchT=Math.max(u.searchT||0,5);
   if(v?.enemyCrew&&!v.enemyCrew.some(Boolean)){
     v.enemyCrew=null;v.v*=.4;
@@ -394,12 +395,15 @@ function enemyVehicleBoardingTick(u,dt){
     }
     c.phase=c.seat===0?'waiting':'riding';
     c.waitUntil=elapsed+enemyRequisition.REQUISITION.passengerWaitSeconds;
-    v.o.add(u.o);
-    const pose=enemyRequisition.seatVisual(v.t,c.seat),sc=VS[v.t]||1;
-    u.o.scale.setScalar(pose.scale);u.o.visible=!pose.hidden;
-    u.o.position.set(pose.x*sc,pose.y*sc,pose.z*sc);
-    u.o.rotation.set(0,0,0);
+    // El soldat real és l'actor de combat, però visualment s'amaga.
+    // El pilot visible és el mateix rider assegut del Humvee de patrulla.
+    if(u.o.parent!==world)world.add(u.o);
+    u.o.visible=false;
+    window.HUNTER_ENEMY_CREW_VISUAL?.show(v,c.seat,true);
   }
+  // No tornar a mostrar la figura dreta mentre és dins del vehicle.
+  u.o.visible=false;
+  window.HUNTER_ENEMY_CREW_VISUAL?.show(v,c.seat,true);
   const target=cv||P,py=cv?cv.o.position.y:P.y;
   const fleeing=enemyRequisition.observeFleeing(
     v,target,elapsed,u.enemyFleeTracking??={});
@@ -822,28 +826,55 @@ function updDead(dt){
   }
 }
 
-function attachEnemyCarCrew(car){
+function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
+  if(car.userData.enemyCarCrew)return car.userData.enemyCarCrew;
   const makeSoldier=()=>window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M}),
-        driver=makeSoldier(),gunner=makeSoldier();
-  driver.position.set(-.73,.94,-.43);gunner.position.set(.72,.94,-.43);
-  driver.scale.setScalar(.43);gunner.scale.setScalar(.43);
+        driver=makeSoldier(),gunner=type==='moto'?null:makeSoldier(),
+        truck=type==='camio',civil=type==='cotxe_civil';
+  // Aquests són exactament els ocupants procedimentals del Humvee de patrulla.
+  // No reparentam el soldat de combat, que continuaria en postura dreta.
+  const x=truck?.62:civil?.613:.73,z=truck?-.62:civil?-.60:-.43,
+        height=truck?1.05:.94,scale=type==='moto'?.40:.43;
+  driver.position.set(type==='moto'?0:-x,height,type==='moto'?.28:z);
+  driver.scale.setScalar(scale);
   driver.userData.ar.rotation.x=1.18;driver.userData.al.rotation.x=1.12;
-  gunner.userData.ar.rotation.x=1.25;gunner.userData.aer.rotation.x=.35;
-  gunner.rotation.y=.26;
-  // Un conductor sense fusell; l'artiller treu el seu per la finestra.
   driver.userData.gun.visible=false;
-  const rifle=gunner.userData.gun;
-  rifle.parent.remove(rifle);
-  const mount=new THREE.Group(),pitch=new THREE.Group();
-  mount.position.set(1.46,2.07,-.30);mount.add(pitch);car.add(mount);
-  rifle.position.set(0,-.035,-.14);rifle.rotation.set(0,0,0);rifle.scale.setScalar(.94);
-  pitch.add(rifle);
-  // Tram final visible del canó; el marcador coincideix amb l'extrem.
-  bx(rifle,.075,.075,.42,0x252d2c,0,0,-.97,'metal');
-  const muzzle=new THREE.Object3D();muzzle.position.set(0,0,-1.18);rifle.add(muzzle);
-  car.add(driver,gunner);
-  car.userData.enemyCarCrew={driver,gunner,mount,pitch,muzzle};
+  car.add(driver);
+  let mount=null,pitch=null,muzzle=null;
+  if(gunner){
+    gunner.position.set(x,height,z);
+    gunner.scale.setScalar(scale);
+    gunner.userData.ar.rotation.x=1.25;gunner.userData.aer.rotation.x=.35;
+    gunner.rotation.y=.26;
+    const rifle=gunner.userData.gun;rifle.parent.remove(rifle);
+    mount=new THREE.Group();pitch=new THREE.Group();
+    mount.position.set(truck?1.62:civil?1.30:1.46,truck?2.12:2.07,truck?-.62:civil?-.6:-.30);
+    mount.add(pitch);car.add(mount);
+    rifle.position.set(0,-.035,-.14);rifle.rotation.set(0,0,0);rifle.scale.setScalar(.94);
+    pitch.add(rifle);
+    bx(rifle,.075,.075,.42,0x252d2c,0,0,-.97,'metal');
+    muzzle=new THREE.Object3D();muzzle.position.set(0,0,-1.18);rifle.add(muzzle);
+    car.add(gunner);
+  }
+  if(initiallyHidden){driver.visible=false;if(gunner)gunner.visible=false;if(mount)mount.visible=false;}
+  return car.userData.enemyCarCrew={driver,gunner,mount,pitch,muzzle};
 }
+// L'única font visual de les tripulacions requisadores, compartida SOLO/COOP.
+window.HUNTER_ENEMY_CREW_VISUAL=Object.freeze({
+  show(vehicle,seat,visible){
+    if(!vehicle?.o)return;
+    const type=vehicle.t,armored=type==='tanc'||type==='tanqueta';
+    if(armored)return; // conductor i copilot ocults dins del blindat.
+    const mesh=vehicle.o;
+    const crew=mesh.userData.enemyCarCrew||
+      (visible?attachEnemyCarCrew(mesh,{initiallyHidden:true,type}):null);
+    if(!crew)return;
+    const occupant=seat===0?crew.driver:crew.gunner;
+    if(occupant)occupant.visible=!!visible;
+    if(seat===1&&crew.mount)crew.mount.visible=!!visible;
+  }
+});
+
 function mkEn(t,x,z,gy,options={}){const c=EC[t];let g;
 if(seedSearchMode){
   g=new THREE.Group();
