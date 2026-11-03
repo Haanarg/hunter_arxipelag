@@ -9,6 +9,7 @@ assert.equal(arcadeBlastKind({weapon:'grenade'}),'grenade');
 assert.equal(arcadeBlastKind('c4'),'c4');
 assert.equal(arcadeBlastKind({weapon:'bazooka',spl:8}),'projectile');
 assert.equal(arcadeBlastKind({weapon:'projectile'}),'projectile');
+assert.equal(arcadeBlastKind({weapon:'grenade',spl:16}),'grenade','grenades remain the small preset');
 assert.equal(arcadeBlastKind({weapon:'tank',splash:8}),'projectile');
 assert.equal(arcadeBlastKind({weapon:'bazooka'}),'grenade');
 assert.equal(arcadeBlastKind(null),'grenade');
