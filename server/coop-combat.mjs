@@ -262,7 +262,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       origin=rocket?{x:unit.x-Math.sin(unit.heading)*1.65+Math.cos(unit.heading)*.44,y:eye.y+.65,z:unit.z-Math.cos(unit.heading)*1.65-Math.sin(unit.heading)*.44}:eye,
       id='enemy-bullet-'+(++sequence);
     projectiles.push(launchProjectile(origin,direction,rocket?76:70,{id,actorId:unit.id,enemy:true,weapon:rocket?'bazooka':profile,dmg:rocket?weaponCatalog.bazooka.damage:unit.dmg??combatBalance.weapons.rifle,splash:rocket?8:0}));
-    unit.nextAttackTick=tick+Math.ceil((rocket?Math.max(6.8,unit.rate??0):unit.rate??(unit.elite?.16:1.1))*30);unit.lastAttack=tick;
+    unit.nextAttackTick=tick+Math.ceil((rocket?5:unit.rate??(unit.elite?.16:1.1))*30);unit.lastAttack=tick;
     effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,weapon:rocket?'bazooka':'rifle',from:origin,to:aim,hit:null});return true;
   }
   // La mateixa navegació del joc individual, sense simular IA als clients.
