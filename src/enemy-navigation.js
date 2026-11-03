@@ -62,7 +62,7 @@ function enemySolidAt(u,x,z,hd,route=false,staticCandidates=null,sampledGround=u
   const terrainY=u.gy==null?y:!u.basement?
     (sampledGround===undefined?enemyGroundAt(u,x,z):sampledGround):y;
   if(Math.abs(x)>H-r||Math.abs(z)>H-r||
-     !u.basement&&(terrainY<-.8&&!u.enemyVehicleClaim?.dockRoute||enemySweepTreeHit(x,z,r,staticCandidates?.treeCache)))return false;
+     !u.basement&&(terrainY<-.8||enemySweepTreeHit(x,z,r,staticCandidates?.treeCache)))return false;
   const box=veh&&!route?vehicleBox(u,x,z,hd):null;
   if(box){box.w+=.4;box.d+=.4}
   for(const w of staticCandidates?.walls??wallCandidates(x,z,r)){
