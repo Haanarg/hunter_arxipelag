@@ -341,7 +341,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
           id,actorId:unit.id,enemy:true,weapon:'bazooka',
           dmg:combatBalance.weapons.boatRocket||weaponCatalog.bazooka.damage,
           splash:8}),life:Math.max(2.2,d/75+.75)});
-        unit.nextRocketTick=tick+Math.ceil(roll(4.4,6.2)*30);
+        unit.nextRocketTick=tick+5*30;
         effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,weapon:'bazooka',from:rocketOrigin,to:aiming});
       }
     }else if(d<(unit.t==='jeep'?75:105)&&tick>=cooldown){
