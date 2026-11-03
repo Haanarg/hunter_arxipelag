@@ -85,7 +85,7 @@ export function ballisticStep(body,dt,gravity=24){
 // Vehicle health and hull rules extracted from individual combat. Geometry adapters
 // supply the existing collision radius (the relay's Humvee uses its reduced scale).
 export const VEHICLE_DESTRUCTION=Object.freeze({damage:10,radius:8,occupantMin:4,occupantMax:6});
-export const isArmoredVehicleType=t=>t==='tanqueta'||t==='tanc';
+export const isArmoredVehicleType=t=>t==='tanqueta'||t==='tanc'||t==='ferry';
 export function vehicleDamage(vehicle,damage,impacts=1,shotClass='collision',fallbackLife=1){
  const before=vehicle.life??fallbackLife;
  if(vehicle.destroyed||shotClass==='light'&&isArmoredVehicleType(vehicle.t))return {life:before,damaged:false,destroyed:false};
@@ -158,6 +158,12 @@ export function runoverSweepHit(x0,z0,x1,z1,tx,tz,radius){
 
 
 export function tankCanCrush(v,other,ownMass,otherMass){
+  if(v.t==='ferry'){
+    // A ferry is a heavy vessel: it can ram smaller marine craft without
+    // taking collision damage. Other ferries and land vehicles are excluded.
+    const marine=new Set(['llanxa','llanxa_coets','moto_aquatica','barca_rems','windsurf','hover']);
+    return marine.has(other.t)&&Math.abs(v.v)>1&&ownMass>otherMass;
+  }
   return v.t==='tanc'&&Math.abs(v.v)>1&&ownMass>otherMass&&other.t!=='ferry';
 }
 
