@@ -5,6 +5,7 @@ import {vehicleDynamics} from '../src/vehicle-dynamics-core.mjs';
 import {stepLandPatrol,stepMarinePatrol} from '../src/patrol-motion-core.mjs';
 import {stepNativeSoldierNavigation} from '../src/native-soldier-navigation.mjs';
 import {createEnemyVehicleController} from './enemy-vehicle-controller.mjs';
+import {passengerMuzzle} from '../src/enemy-vehicle-requisition.mjs';
 import {vehicleSpecs} from '../src/vehicle-specs.mjs';
 import {vehicleSeatProjectileContact,breakVehicleSeatWindow,vehicleSeatWorld} from '../src/vehicle-occupant-damage-core.mjs';
 import {windowCrossing,wallShotHit,knifeWindowHit} from '../src/building-shell.mjs';
@@ -104,8 +105,9 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       tick,world:world(),players:[],requestDoor:openEnemyDoor}),
     firePassenger:(unit,v,tick)=>{
       if(tick<(unit.nextAttackTick||0))return;
-      const eye={x:v.x+Math.cos(v.hd)*1.1,y:v.y+2.25,
-        z:v.z-Math.sin(v.hd)*1.1};
+      // Blindats tancats: la tripulació no dispara a través del casc.
+      const eye=passengerMuzzle(v,v.y);
+      if(!eye)return;
       const actor=visiblePlayers().filter(p=>p.hp>0&&!p.fall&&!p.swimming)
         .map(p=>({p,d:Math.hypot(p.x-v.x,p.z-v.z)}))
         .filter(x=>x.d<75).sort((a,b)=>a.d-b.d)[0]?.p;
