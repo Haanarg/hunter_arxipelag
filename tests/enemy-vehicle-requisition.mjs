@@ -68,6 +68,13 @@ assert.ok(source('src/combat.js').includes("v===p.sourceVehicle"),
 assert.ok(source('src/combat.js').includes("claim.seat===0"),
   'La pistola del conductor queda desactivada');
 assert.ok(source('server/coop-combat.mjs').includes('passengerMuzzle(v,v.y)'));
+assert.ok(source('src/game-core.js').includes("v.enemyCrew?.[0]?.enemyVehicleClaim?.phase==='riding'"),
+ 'Un vehicle conduït per enemics no rep una segona física en punt mort');
+assert.ok(source('src/enemy-ai.js').includes("z=truck?-1.93*truckFit"),
+ 'Els pilots del camió estan alineats amb els seients de la cabina A4.3');
+assert.ok(source('src/combat.js').includes('vehicleOccupantHeadWorld(')&&
+ source('server/coop-combat.mjs').includes('vehicleOccupantHeadWorld('),
+ 'En individual i cooperatiu la retícula apunta al cap del passatger');
 assert.ok(pursuitInput(cars[0],{x:-25,z:-30}).turn>0,
   'El conductor segueix la direcció del jugador');
 assert.ok(pursuitInput(cars[0],{x:0,z:-80},{passenger:false}).forward>.5,
