@@ -125,7 +125,8 @@ window.HUNTER_TERRAIN=Object.freeze({
           if((h<=2&&other>=-2)||(other<=2&&h>=-2))hasCoast=true;
         }
       }
-      tile.detailFloor=(hasCoast||(min<2&&max>2)||maxRise>22)?2:
+      tile.coastline=hasCoast||(min<2&&max>2);
+      tile.detailFloor=(tile.coastline||maxRise>22)?2:
         (maxRise>11?1:0);
       return tile.detailFloor;
     }
@@ -146,7 +147,12 @@ window.HUNTER_TERRAIN=Object.freeze({
         while(level<3&&distance<ranges[2-level]-margin)level++;
         while(level>0&&distance>ranges[3-level]+margin)level--;
       }
-      return Math.max(level,detailFloor(tile));
+      const floor=detailFloor(tile);
+      // La costa dins el camp visual necessita triangles d'uns 12 m,
+      // no els 40 m del LOD 2: els triangles grans sobresurten de l'aigua.
+      // El límit és de distància al sector, no al centre, per evitar salts
+      // massa primerencs en aproximar-se a la riba.
+      return Math.max(level,tile.coastline&&distance<3000?3:floor);
     }
     function appendSkirts(geometry,n){
       // Faldons al límit entre sectors de diferent LOD: amaguen petites
