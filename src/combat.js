@@ -945,8 +945,15 @@ let lightReticleRefresh=0;
 function updateLightAimReticle(dt){
   if(!lightReticle)return;
   const hide=()=>{lightReticle.style.display='none'};
-  if(!started||paused||over||playerFall||hp<=0||swimming||scopeActive){
+  if(!started||paused||over||playerFall||hp<=0||swimming){
     hide();lightReticleRefresh=0;return;
+  }
+  // El visor fa servir la mateixa orientació i elevació que el tret.
+  if(scopeActive&&sniperEquipped&&!cv){
+    const focus=window.HUNTER_SCOPE_FOCUS.create(P.x,P.y+1.76,P.z,scopeYaw,scopePitch);
+    const d=sniperShotVector(sniperMuzzleWorld(scopeYaw,scopePitch),sniperReticlePoint(focus),focus);
+    pl.userData.visualAimDirection.copy(d);
+    hide();return;
   }
   lightReticleRefresh-=dt;
   if(lightReticleRefresh>0)return;
@@ -984,7 +991,9 @@ function updateLightAimReticle(dt){
     }
   }
   const focus={};
-  autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone,shotClass,focus,0,vertical);
+  const direction=autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone,shotClass,focus,0,vertical);
+  if(!cv&&pl?.userData?.visualAimDirection)
+    pl.userData.visualAimDirection.set(direction[0],direction[1],direction[2]);
   const obj=focus.target,enemySoldier=focus.kind==='enemy'&&
     (obj?.t==='soldat'||obj?.t==='general'),
     vehicle=focus.kind==='vehicle'||focus.kind==='enemy'&&
@@ -1139,6 +1148,8 @@ function updateBazookaReticle(dt){
                 BAZOOKA_AIM_RANGE,BAZOOKA_AIM_CONE,'heavy',focus,
                 72*HEAVY_SHOT_SPEED_FACTOR,BAZOOKA_AIM_VERTICAL),
               fx,fz,focus);
+      if(pl?.userData?.visualAimDirection)
+        pl.userData.visualAimDirection.set(direction[0],direction[1],direction[2]);
       hit=focus.point||bazookaFirstSolidHit(ox,oy,oz,
         direction[0],direction[1],direction[2]);
       locked=!!focus.target;
@@ -1176,7 +1187,8 @@ function autoAimArmoredShot(x,y,z,fx,fz,range,shotClass='heavy',projectileSpeed=
 function sniperMuzzleWorld(heading,pitch=0){
   const rifle=pl.userData.sniper,muzzle=pl.userData.sniperMuzzle;
   if(!rifle||!muzzle)throw new Error('Falta el pivot del canó del franctirador');
-  rifle.rotation.set(pitch,heading-P.hd,0,'YXZ');
+  // El model animat segueix l'autoaim; no el forçam a una rotació
+  // diferent just en disparar (evita salts i separació de mans).
   pl.position.set(P.x,P.y,P.z);
   pl.rotation.y=P.hd;
   pl.updateMatrixWorld(true);
@@ -1271,8 +1283,7 @@ function cutBarbedWire(){
 function assaultMuzzleWorld(){
   const u=pl.userData,muzzle=u.assaultMuzzle;
   if(!u.assault||!muzzle)throw new Error('Falta el pivot del canó del fusell d\'assalt');
-  u.assault.rotation.x=-u.upperBody.rotation.x;
-  u.assault.rotation.y=-u.upperBody.rotation.y;
+  // El rig ja està orientat per l'autoaim visual.
   pl.position.x=P.x;pl.position.z=P.z;pl.rotation.y=P.hd;
   pl.updateMatrixWorld(true);
   return muzzle.getWorldPosition(new THREE.Vector3());
