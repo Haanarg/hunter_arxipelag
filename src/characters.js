@@ -277,6 +277,13 @@ window.HUNTER_CHARACTERS=Object.freeze({
     const P=palette.player,player=window.HUNTER_PLAYER_MODEL.create(THREE,{unitScale:1.2,palette,headVariant:'compactD',articulated:true}),u=player.userData;
     u.ph=0;u.breath=0;u.firePose=0;u.meleePose=0;u.knifeAttackDuration=PLAYER_KNIFE_ATTACK_SECONDS;
     u.pistolAimTime=0;u.pistolShotAge=10;u.pistolBlend=0;
+    // La direcció del tret i la pose visual comparteixen l'autoaim.
+    u.visualAimDirection=new THREE.Vector3(0,0,-1);
+    u.visualAimSmoothed=new THREE.Vector3(0,0,-1);
+    u.visualAimLocal=new THREE.Vector3(0,0,-1);
+    u.visualAimWorldQ=new THREE.Quaternion();
+    u.visualAimQuaternion=new THREE.Quaternion();
+    u.visualAimForward=new THREE.Vector3(0,0,-1);
 
     // La pistola és filla del jugador; en repòs segueix un pivot del canell
     // dret i, en disparar, passa amb interpolació a la subjecció a dues mans.
@@ -551,11 +558,22 @@ window.HUNTER_CHARACTERS=Object.freeze({
     const aiming=u.firePose>0&&!inVehicle,melee=u.meleePose>0&&!inVehicle,bazooka=!!bazookaEquipped&&!inVehicle,
           grenade=!!grenadeEquipped&&!inVehicle,cisalla=!!cisallaEquipped&&!inVehicle,
           sniper=!!sniperEquipped&&!inVehicle,assault=!!assaultRifleEquipped&&!inVehicle,throwing=u.grenadeThrow>0&&!inVehicle;
-    // El tors es tira endavant en córrer. Compensam aquest pitch del
-    // fusell per mantenir el canó alineat amb el rumb horitzontal real
-    // del tret; les dues mans segueixen els grips després del canvi.
-    if(assault){u.assault.rotation.x=-u.upperBody.rotation.x;
-      u.assault.rotation.y=-u.upperBody.rotation.y;}
+    // Suavitzam la direcció balística cap a la qual segueix l'autoaim.
+    // Quan no hi ha objectiu, combat.js hi desa el rumb lliure actual.
+    const worldDirection=u.visualAimDirection;
+    if(worldDirection&&worldDirection.lengthSq()>.01){
+      u.visualAimSmoothed.lerp(worldDirection,1-Math.exp(-13*dt)).normalize();
+    }
+    player.updateMatrixWorld(true);
+    u.upperBody.getWorldQuaternion(u.visualAimWorldQ);
+    u.visualAimLocal.copy(u.visualAimSmoothed).applyQuaternion(u.visualAimWorldQ.invert()).normalize();
+    u.visualAimQuaternion.setFromUnitVectors(u.visualAimForward,u.visualAimLocal);
+    // L'orientació governa el rifle complet i els grips; els canells
+    // articulats el segueixen per IK més avall.
+    for(const group of [u.assault,u.sniper,u.bazooka]){
+      if(!group)continue;
+      group.quaternion.slerp(u.visualAimQuaternion,1-Math.exp(-16*dt));
+    }
     // Retrocés visual dels fusells i de la bazuca del jugador remot.
     for(const [weapon,group] of [['assault',u.assault],['sniper',u.sniper],['bazooka',u.bazooka]]){
       if(!group)continue;
@@ -675,10 +693,13 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // nova rotació local de cintura. Després l'IK treballa en el tors.
     if(blend>.001){
       player.updateMatrixWorld(true);
-      rig.right.set(.12,2.95+up,-1.07+back);
-      player.localToWorld(rig.right);u.upperBody.worldToLocal(rig.right);
-      rig.left.set(-.075,2.96+up,-1.115+back);
-      player.localToWorld(rig.left);u.upperBody.worldToLocal(rig.left);
+      // Les dues mans orbiten suaument amb el canó; no romanen fixes
+      // al davant quan l'autoaim segueix una diana lateral o elevada.
+      rig.aim.set(.045,3.10+up,-1.13+back);
+      player.localToWorld(rig.aim);u.upperBody.worldToLocal(rig.aim);
+      rig.q3.copy(u.visualAimQuaternion);
+      rig.right.set(.075,-.15,.06).applyQuaternion(rig.q3).add(rig.aim);
+      rig.left.set(-.12,-.14,.015).applyQuaternion(rig.q3).add(rig.aim);
       aimPlayerPistolArm(u.ar,u.aer,rig.right,1,rig,blend);
       aimPlayerPistolArm(u.al,u.ael,rig.left,-1,rig,blend);
     }
@@ -694,6 +715,9 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.upperBody.getWorldQuaternion(rig.torsoQ).invert();
     player.getWorldQuaternion(rig.rootQ);
     rig.aimQ.premultiply(rig.torsoQ.multiply(rig.rootQ));
+    // El canó de la pistola segueix també el mateix vector (rotació
+    // moderada dels braços gràcies als dos punts IK del canell).
+    rig.aimQ.copy(u.visualAimQuaternion).multiply(rig.aimQ);
     u.gun.position.copy(rig.idle).lerp(rig.aim,blend);
     u.gun.quaternion.copy(rig.idleQ).slerp(rig.aimQ,blend);
     u.pistolSlide.position.z=kick*.065;
