@@ -17,7 +17,7 @@ import {createWorldRandom} from '../src/world-generation-core.mjs';
 import {launchProjectile,projectileStep,SMALL_ARMS_PROJECTILE_SPEED} from '../src/projectile-core.mjs';
 import {createAimSelector,weaponTargetPriority,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL,SMALL_ARMS_RANGE} from '../src/aiming-core.mjs';
 import {damageHealth} from '../src/player-simulation.mjs';
-import {runoverDamage,runoverSweepHit,VEHICLE_DESTRUCTION,beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,towerExplosionAim,segmentAabbT,segmentSphereT,inView,ballisticStep} from '../src/combat-rules.mjs';
+import {runoverDamage,runoverSweepHit,VEHICLE_DESTRUCTION,beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,towerExplosionAim,segmentAabbT,segmentSphereT,inView,ballisticStep,friendlyVehicleBlocksLine} from '../src/combat-rules.mjs';
 // Índex immutable per posició: les portes poden obrir-se i destruir-se,
 // però els seus volums no canvien de cel·la. Els índexs de les parets continuen
 // essent els originals per als vidres i els efectes sincronitzats.
@@ -143,7 +143,8 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         .sort((a,b)=>a.d-b.d)[0]?.p;
       if(!actor)return;
       const aim={x:actor.x,y:actor.y+1.5,z:actor.z};
-      if(traceArena(eye,aim,geometry(),world()).fraction<.999)return;
+      if(traceArena(eye,aim,geometry(),world()).fraction<.999||
+         enemyFriendlyVehicleInFireLane(eye,aim,v.id))return;
       const direction=enemyAccuracy.direction(meta.difficulty||1,
         rocket?'marineRocket':boat?'marineMG':'rifle',
         aim.x-eye.x,aim.y-eye.y,aim.z-eye.z,roll),
@@ -171,12 +172,39 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       if(Math.hypot(t.x-position.x,t.z-position.z)<35){t.alarmedUntil=tick+180;t.focus=actorId;t.lastSeenTick=tick;t.lastKnown={x:position.x,y:position.y,z:position.z};if(t.t!=='jeep')t.heading=facePoint(t,position);t.state='search';}
     }
   }
+  const friendlyCrewAboard=v=>!!v.enemyCrew?.some(id=>targets.some(t=>
+    t.id===id&&t.hp>0&&['waiting','riding'].includes(t.enemyRequisition?.phase)));
+  function friendlyCoverOnLine(from,to,v){
+    const kind=v.t==='jeep'?'cotxe':v.t==='patrulla_marina'?'llanxa':v.t,
+      shape=vehicleSpecs.hitboxes[kind],scale=vehicleSpecs.scales[kind]||1;
+    if(!shape)return false;
+    const height=kind==='ferry'?8:kind==='heli'||kind==='heli_combat'?5.5:
+      kind==='camio'?4.8:kind==='tanc'?4.7:kind==='tanqueta'?4:
+      kind==='llanxa'||kind==='llanxa_coets'?3.8:3.3;
+    return friendlyVehicleBlocksLine(from,to,v,{
+      width:shape[0]*scale,depth:shape[1]*scale,baseY:v.y,height});
+  }
+  function enemyFriendlyVehicleInFireLane(from,to,excludeId=null){
+    for(const v of vehicles.live()){
+      if(v.id===excludeId||v.destroyed||!friendlyCrewAboard(v))continue;
+      if(friendlyCoverOnLine(from,to,v))return true;
+    }
+    // Els vehicles de patrulla preexistents també són aliats, encara que
+    // no formen part de la llista de vehicles que es poden requisar.
+    for(const v of targets){
+      if(v.id===excludeId||v.hp<=0||
+        !['jeep','tanqueta','tanc','patrulla_marina'].includes(v.t))continue;
+      if(friendlyCoverOnLine(from,to,v))return true;
+    }
+    return false;
+  }
   function nativeSoldierAim(unit,actor,{vehicle=vehicles.mounted(actor.id),crouched=!!actor.crouched&&!vehicle}={}){
     const eye={x:unit.x,y:unit.y+2.2,z:unit.z};
     for(const height of crouched?[1.25]:vehicle?[1.5]:[1.5,2.35]){
       const aim={x:actor.x,y:actor.y+height,z:actor.z};
       if(traceArena(eye,aim,geometry(),world(),{ignoreBarbed:true,ignoreVegetation:true}).fraction<.97)continue;
-      if(vehicles.live().some(v=>{if(v===vehicle||v.id===vehicle?.id||v.destroyed)return false;const r=(vehicleSpecs.radii[v.t]||0)*.55,t=segmentSphereT(eye.x,eye.y,eye.z,aim.x,aim.y,aim.z,v.x,v.y+Math.min(1.7,r*.6),v.z,r);return t!==null&&t<.97;}))continue;
+      if(enemyFriendlyVehicleInFireLane(eye,aim,vehicle?.id))continue;
+      if(vehicles.live().some(v=>{if(v===vehicle||v.id===vehicle?.id||v.destroyed||friendlyCrewAboard(v))return false;const r=(vehicleSpecs.radii[v.t]||0)*.55,t=segmentSphereT(eye.x,eye.y,eye.z,aim.x,aim.y,aim.z,v.x,v.y+Math.min(1.7,r*.6),v.z,r);return t!==null&&t<.97;}))continue;
       return aim;
     }return null;
   }
@@ -216,7 +244,8 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     if(tick<(unit[next]||0)||Math.hypot(actor.x-unit.x,actor.z-unit.z)>limit)return true;
     const eye={x:unit.x,y:unit.y+9.4,z:unit.z},
       aim={x:actor.x,y:actor.y+(actor.crouched&&!vehicle?1.25:1.5),z:actor.z};
-    if(traceArena(eye,aim,geometry(),world(),{ignoreVegetation:true,ignoreBarbed:true,wallCandidates:traceWallCandidates(eye,aim)}).fraction<.999)return true;
+    if(traceArena(eye,aim,geometry(),world(),{ignoreVegetation:true,ignoreBarbed:true,wallCandidates:traceWallCandidates(eye,aim)}).fraction<.999||
+       enemyFriendlyVehicleInFireLane(eye,aim))return true;
     const fx=-Math.sin(unit.heading),fz=-Math.cos(unit.heading),
       rightX=Math.cos(unit.heading),rightZ=-Math.sin(unit.heading),
       origin={x:unit.x+fx*2.4+rightX*(heavy?.72:-.72),y:eye.y-(heavy?.2:0),
@@ -276,7 +305,8 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     if(d>(unit.rng||60)||tick<(unit.nextAttackTick||0))return true;
     const eye={x:unit.x,y:unit.y+2.2,z:unit.z},
       aim={x:actor.x,y:actor.y+1.5,z:actor.z};
-    if(traceArena(eye,aim,geometry(),world(),{ignoreBarbed:true,ignoreVegetation:true,wallCandidates:traceWallCandidates(eye,aim)}).fraction<.999)return true;
+    if(traceArena(eye,aim,geometry(),world(),{ignoreBarbed:true,ignoreVegetation:true,wallCandidates:traceWallCandidates(eye,aim)}).fraction<.999||
+       enemyFriendlyVehicleInFireLane(eye,aim))return true;
     const direction=enemyAccuracy.direction(meta.difficulty||1,'pistol',
       aim.x-eye.x,aim.y-eye.y,aim.z-eye.z,roll),
       id='general-shot-'+(++sequence);
@@ -296,8 +326,9 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     const aim=nativeSoldierAim(unit,actor);if(!aim)return true;
     const rocket=!!unit.rocketSoldier,profile=soldierAccuracyProfile(unit),eye={x:unit.x,y:unit.y+2.2,z:unit.z},
       direction=enemyAccuracy.direction(meta.difficulty||1,profile,aim.x-unit.x,aim.y-eye.y,aim.z-unit.z,roll),
-      origin=rocket?{x:unit.x-Math.sin(unit.heading)*1.65+Math.cos(unit.heading)*.44,y:eye.y+.65,z:unit.z-Math.cos(unit.heading)*1.65-Math.sin(unit.heading)*.44}:eye,
-      id='enemy-bullet-'+(++sequence);
+      origin=rocket?{x:unit.x-Math.sin(unit.heading)*1.65+Math.cos(unit.heading)*.44,y:eye.y+.65,z:unit.z-Math.cos(unit.heading)*1.65-Math.sin(unit.heading)*.44}:eye;
+    if(enemyFriendlyVehicleInFireLane(origin,aim))return true;
+    const id='enemy-bullet-'+(++sequence);
     projectiles.push(launchProjectile(origin,direction,rocket?76:70,{id,actorId:unit.id,enemy:true,weapon:rocket?'bazooka':profile,dmg:rocket?weaponCatalog.bazooka.damage:unit.dmg??combatBalance.weapons.rifle,splash:rocket?8:0}));
     unit.nextAttackTick=tick+Math.ceil((rocket?5:unit.rate??(unit.elite?.16:1.1))*30);unit.lastAttack=tick;
     effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,weapon:rocket?'bazooka':'rifle',from:origin,to:aim,hit:null});return true;
