@@ -4,6 +4,13 @@ Joc 3D per al navegador inspirat en *Hunter* (Amiga). Comença a la teva base, e
 
 [Jugar](https://hunter.paradoxa.cat/) · [Fases fetes i pendents](PROGRESS.MD) · [Notes visuals](docs/VISUAL_MODERNIZATION.md)
 
+## Bazuca · con d'autoapuntat de 90° (v0.6.102)
+
+- Con total de **90°**: màxim **45° a esquerra/dreta** i **45° en vertical**, aplicat al selector, a la direcció real del coet i a la validació del Worker cooperatiu.
+- En individual i al client cooperatiu, el bazuca **només adquireix dianes projectades dins del camp visible de la càmera**. Les dianes fora de pantalla no poden activar la retícula verda ni desviar el coet.
+- El cooperatiu només envia un punt de mira si la retícula és visible; en cas contrari, dispara recte, dins del mateix con. Ni les armes lleugeres ni les altres torretes canvien de con.
+- Proves: `node tests/bazooka-aim-cone.mjs` comprova 45° per costat, límit real i filtratge de pantalla.
+
 ## Ferri pesant i granades a bord (v0.6.100)
 
 - **Sense granades des de tancs, tanquetes o ferris**, tant per al conductor com per als passatgers. L'helicòpter de combat manté la prohibició anterior; la resta de vehicles permesos conserven el llançament. La restricció està a les regles compartides, al client i al servidor cooperatiu.
