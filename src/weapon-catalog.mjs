@@ -26,11 +26,14 @@ export function grenadeLaunch(power=0,origin,heading){
  const ratio=Math.max(0,Math.min(1,power)),speed=3.5+(33-3.5)*ratio,fx=-Math.sin(heading),fz=-Math.cos(heading);
  return {x:origin.x+fx*.85,y:origin.y+2.05,z:origin.z+fz*.85,vx:fx*speed,vy:12,vz:fz*speed,t:2.4};
 }
+// Closed armored vehicles and the ferry do not allow throwing grenades.
+export const canThrowGrenadeFromVehicle=vehicle=>
+  !!vehicle&&!['tanc','tanqueta','ferry','heli_combat'].includes(vehicle.t);
 // Shared vehicle grenade muzzle: outside the hull, above the roof/deck,
 // with the vehicle's current forward and lateral velocity carried into flight.
 // The attack helicopter never carries throwable grenades.
 export function vehicleGrenadeLaunch(vehicle,baseY=vehicle?.y){
- if(!vehicle||vehicle.t==='heli_combat')return null;
+ if(!canThrowGrenadeFromVehicle(vehicle))return null;
  const heading=vehicle.hd,forwardX=-Math.sin(heading),forwardZ=-Math.cos(heading),
   rightX=Math.cos(heading),rightZ=-Math.sin(heading),utility=vehicle.t==='heli';
  const radius=vehicle.hullRadius??({ferry:15.5,tanc:5.6,tanqueta:4.5,camio:4.8,heli:2.5}[vehicle.t]??({llanxa:8.25,llanxa_coets:8.6,barca_rems:3.25,hover:4.8,cotxe:3.8,cotxe_civil:3.35}[vehicle.t]??1.6));
