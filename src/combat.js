@@ -865,6 +865,17 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
     }
     if(e.destroyed||e.hp<=0||
       shotClass==='attackCannon'&&['torre','tanqueta','tanc'].includes(e.t))continue;
+    if(e.t==='patrulla_marina'&&shotClass!=='heavy'){
+      // Els riders competeixen individualment amb el casc: la mira tria
+      // el més proper al centre visual, com qualsevol soldat enemic.
+      for(let seat=0;seat<2;seat++){
+        if((e.marineCrewHp?.[seat]??0)<=0)continue;
+        const point=window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.marineCrewHeadWorld(
+          e,seat,e.o?.position?.y??0);
+        consider({t:'soldat',marineBoat:e,marineSeat:seat},'enemy',0,
+          point.x,point.y,point.z);
+      }
+    }
     const priority=weaponTargetPriority(e,shotClass);
     if(priority>=3||shotClass==='heavy'&&priority>selector.priority)continue;
     const modelY=e.o?.position?.y??(e.gy??0),
@@ -1193,7 +1204,12 @@ function sniperReticlePoint(focus,range=1000){
   }
   for(const e of enemyCandidatesAt(mx,mz,reach+4)){
     if(e.hp<=0||e.destroyed)continue;
-    consider(segmentSphereT(ox,oy,oz,tx,ty,tz,
+    if(e.t==='patrulla_marina'){
+      const seat=window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.marineCrewProjectileContact(
+        {x:ox,y:oy,z:oz},{x:tx,y:ty,z:tz},e,{baseY:e.o?.position?.y??0});
+      if(seat)consider(seat.t);
+      else consider(marineHullSegmentT(ox,oy,oz,tx,ty,tz,e));
+    }else consider(segmentSphereT(ox,oy,oz,tx,ty,tz,
       e.x,enemyAimCenterY(e),e.z,enemyAimHitRadius(e)));
   }
   for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){
@@ -1426,7 +1442,12 @@ function updPj(dt){
         const marine=u.t==='patrulla_marina',
               cy=enemyAimCenterY(u),
               radius=enemyAimHitRadius(u);
-        consider(marine?marineHullSegmentT(x0,y0,z0,x1,y1,z1,u):
+        const marineContact=marine&&!p.spl?
+          window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.marineCrewProjectileContact(
+            from,to,u,{baseY:u.o?.position?.y??0}):null;
+        if(marineContact)consider(marineContact.t,marineContact.kind,
+          {boat:u,...marineContact});
+        else consider(marine?marineHullSegmentT(x0,y0,z0,x1,y1,z1,u):
           segmentSphereT(x0,y0,z0,x1,y1,z1,u.x,cy,u.z,radius),'enemy',u)
       }
     }
@@ -1484,6 +1505,24 @@ function updPj(dt){
             target.suppressedUntil=elapsed+2;
         }else if(!(p.shotClass==='light'&&isArmoredVehicleType(target.t))){
           hurtE(target,p.dmg,p);
+        }
+      }
+      else if(kind==='marine-glass'){
+        const boat=target.boat;
+        if(window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.breakMarineWindshield(boat,target.pane)){
+          syncMarinePatrolCrew(boat.o,boat);
+          snd('glassBreak',.8,{x:p.x,y:p.y,z:p.z},boat.o);
+          spawnBulletImpact('glass',p.x,p.y,p.z,p);
+        }
+      }
+      else if(kind==='marine-crew'){
+        const boat=target.boat,seat=target.seat,
+          before=boat.marineCrewHp?.[seat]??0;
+        if(window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.damageMarineCrew(boat,seat,p.dmg)){
+          spawnBulletImpact('blood',p.x,p.y,p.z,p);
+          confirmCombatDamage(p,before,boat.marineCrewHp[seat]);
+          if(!boat.marineCrewHp[seat])kills++;
+          syncMarinePatrolCrew(boat.o,boat);
         }
       }
       else if(kind==='vehicle-glass'){
