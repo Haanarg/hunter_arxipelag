@@ -5365,18 +5365,18 @@ window.HUNTER_UI=Object.freeze({
         document.getElementById('restartMenu').onclick=()=>actions.open('abandon');
         document.getElementById('performanceMenu').onclick=()=>actions.open('performance');
       }
-    }
-    // Els submenús oberts des de pausa tornen a pausa amb la creu superior.
-    const pauseSubmenus=['keys','performance','cheats','saves','account','abandon','restart'];
-    if(pauseSubmenus.includes(mode)&&getState().started){
-      resumeButton.style.display='';
-      resumeButton.setAttribute('aria-label','Torna a pausa');
-      resumeButton.title='Torna a pausa';
-      resumeButton.onclick=()=>actions.open('pause');
-    }else{
-      resumeButton.removeAttribute('title');
-      resumeButton.setAttribute('aria-label','Tanca');
-      resumeButton.onclick=mode==='bombtimer'?()=>actions.open('inventory'):actions.resume;
+      // Els submenús oberts des de pausa tornen a pausa amb la creu superior.
+      const pauseSubmenus=['keys','performance','cheats','saves','account','abandon','restart','coop','history'];
+      if(pauseSubmenus.includes(mode)&&getState().started){
+        resumeButton.style.display='';
+        resumeButton.setAttribute('aria-label','Torna a pausa');
+        resumeButton.title='Torna a pausa';
+        resumeButton.onclick=()=>actions.open('pause');
+      }else{
+        resumeButton.removeAttribute('title');
+        resumeButton.setAttribute('aria-label','Tanca');
+        resumeButton.onclick=mode==='bombtimer'?()=>actions.open('inventory'):actions.resume;
+      }
     }
     return Object.freeze({renderHUD,show,hide,isAccountOpen:()=>currentMode==='account',isBombTimerOpen:()=>currentMode==='bombtimer',getMode:()=>currentMode})
   }
@@ -13926,7 +13926,7 @@ async function renderCoop(body,isCurrent){
   const button=(label,action,parent=body)=>{const el=add('button',label,parent);el.type='button';el.onclick=async()=>{
     el.disabled=true;try{await action();}catch(e){if(active())status.textContent=e.message;}finally{el.disabled=false;}
   };return el;};
-  button(started?'← Pausa':'← Portada',()=>started?ui.show('pause'):ui.hide());
+  if(!started)button('← Portada',()=>ui.hide());
   if(!accounts?.configured){status.textContent='Cal activar els comptes per utilitzar sales cooperatives.';return;}
   let user;try{user=await accounts.verifiedUser();}catch(e){status.textContent=e.message;return;}
   if(!active())return;
