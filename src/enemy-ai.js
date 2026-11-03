@@ -410,11 +410,12 @@ function enemyVehicleBoardingTick(u,dt){
   if(spotted){u.lastSeenX=target.x;u.lastSeenZ=target.z;u.lastSeenY=py;c.lastContact=elapsed;}
   u.x=v.x;u.z=v.z;u.gy=v.o?.position?.y??hAt(v.x,v.z);
   if(c.seat!==0){
-    if(v.enemyCrew[0]?.enemyVehicleClaim?.phase==='riding'&&spotted&&
+    if(enemyRequisition.passengerMuzzle(v)&&
+       v.enemyCrew[0]?.enemyVehicleClaim?.phase==='riding'&&spotted&&
        Math.hypot(target.x-v.x,target.z-v.z)<SOLDIER_FIRE_RANGE+20&&u.cd<=0){
-      const eyeY=(v.o?.position?.y??hAt(v.x,v.z))+2.25,
-            sx=v.x+Math.cos(v.hd)*(VS[v.t]||1)*.85,
-            sz=v.z-Math.sin(v.hd)*(VS[v.t]||1)*.85;
+      const muzzle=enemyRequisition.passengerMuzzle(
+        v,v.o?.position?.y??hAt(v.x,v.z));
+      const {x:sx,y:eyeY,z:sz}=muzzle;
       if(sight(sx,sz,target.x,target.z,eyeY,true,py+1.5)){
         const dx=target.x-sx,dz=target.z-sz,dy=py+1.5-eyeY,
               error=rn(-.075,.075)*(1+Math.abs(v.v||0)/16),
