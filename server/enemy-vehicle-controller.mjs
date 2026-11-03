@@ -104,7 +104,7 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
   if(s.seat===1){
    const driver=v.enemyCrew?.[0];
    if(!driver)return true;
-   if(s.phase==='riding')firePassenger(unit,v,tick);
+   if(s.phase==='riding')firePassenger(unit,v,tick,1);
    return true;
   }
   const partner=v.enemyCrew?.[1],
@@ -131,6 +131,9 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
   if(tick-s.lastContact>REQUISITION.chaseMemorySeconds*30){
    release(unit,tick);return false;
   }
+  // A les llanxes, el pilot dispara amb el fusell mentre condueix.
+  // El passatger és qui controla el llançacoets.
+  if(requisitionBoat(v.t)&&actor)firePassenger(unit,v,tick,0);
   const planned=pursuitInput(v,s.goal,{passenger:ready,distance:best});
   const input=avoidVehicleBarbedWire(v,planned,geometry().walls||[],
     s.fenceAvoid??={});
