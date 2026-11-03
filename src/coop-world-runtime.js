@@ -154,6 +154,7 @@ async function startNativeCoop(room){
  }catch(error){stopNativeCoop();paused=true;msg=error.message;msgT=20;ui.show('coop');throw error;}
 }
 function nativeCoopFireWeapon(){
+ if(cv&&grenadeEquipped&&!window.HUNTER_SHARED_WEAPONS.canThrowGrenadeFromVehicle(cv))grenadeEquipped=false;
  const row=cv&&nativeCoopSession?.appliedVehicleRows?.get(cv.saveId);
  const passenger=!!row&&row.seats?.[0]!==nativeCoopSession.self;
  if(passenger)return grenadeEquipped?'grenade':bazookaEquipped?'bazooka':sniperEquipped?'sniper':assaultRifleEquipped?'assault':cisallaEquipped?'cutters':knifeEquipped?'knife':'pistol';
@@ -161,7 +162,7 @@ function nativeCoopFireWeapon(){
 }
 function selectNativeCoopWeapon(id){
  const weapons={pistola:'pistol',arma:'pistol',ganivet:'knife',fusell_assalt:'assault',franctirador:'sniper',bazooka:'bazooka',cisalla:'cutters',granada:'grenade'},weapon=weapons[id];
- if(!weapon||!nativeCoopSession?.state||(cv&&nativeCoopSession.appliedVehicleRows?.get(cv.saveId)?.seats?.[0]===nativeCoopSession.self)||swimming||hp<=0||(!['pistol','knife'].includes(weapon)&&!inv[id]))return false;
+ if(!weapon||weapon==='grenade'&&cv&&!window.HUNTER_SHARED_WEAPONS.canThrowGrenadeFromVehicle(cv)||!nativeCoopSession?.state||(cv&&nativeCoopSession.appliedVehicleRows?.get(cv.saveId)?.seats?.[0]===nativeCoopSession.self)||swimming||hp<=0||(!['pistol','knife'].includes(weapon)&&!inv[id]))return false;
  const sent=weapon==='grenade'||nativeCoopSession.channel.inventory('weapon',weapon);
  if(!sent)return false;
  cancelGrenadeCharge();cancelAssaultBurst();setSniperScope(false);grenadeEquipped=weapon==='grenade';
