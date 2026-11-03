@@ -32,7 +32,7 @@ for(let tick=1;tick<=40;tick++){
 const targets=combat.snapshot().targets;
 assert.ok(targets.find(t=>t.id==='mar').z<0,'marine boat must navigate and move');
 assert.ok(targets.find(t=>t.id==='jeep').z<200,'terrestrial jeep must follow its patrol route');
-assert.ok(shots>0,'marine patrol fires its original deck weapons under server authority');
+assert.ok(shots>0,'marine patrol crew fires its carried rifle and rocket launcher under server authority');
 const visual=createNativeCoopGrenadeVisual();
 let rendered;
 visual.receive([{id:'g',weapon:'grenade',x:0,y:8,z:0,vx:7,vy:5,vz:-12}]);
