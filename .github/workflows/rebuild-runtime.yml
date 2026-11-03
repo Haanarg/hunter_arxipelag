@@ -3,6 +3,8 @@ on:
   push:
     branches: [main]
     paths:
+      - 'src/**'
+      - 'tools/build-runtime.cjs'
       - '.github/workflows/rebuild-runtime.yml'
   workflow_dispatch:
 permissions:
