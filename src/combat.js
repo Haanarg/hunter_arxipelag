@@ -437,7 +437,8 @@ function presentExplosion(x,y,z,r,source=null){
    });
  }
  window.HUNTER_ARCADE_BLAST_FX.emit(x,y,z,kind==='projectile'?{
-   weapon:kind,vx:source.vx,vy:source.vy,vz:source.vz
+   weapon:kind,direction:source.direction,
+   vx:source.vx,vy:source.vy,vz:source.vz
  }:kind);
 }
 function boom(x,y,z,r,dmg,own,source=null,visualWeapon=null){
