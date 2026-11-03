@@ -424,6 +424,11 @@ function updateNativeCoopFrame(dt){
  const fxContext={playerX:P.x,playerZ:P.z,playerVehicle:cv,
    terrainAt:hAt,waterAt:(x,z)=>wy(x,z,elapsed)};
  for(const v of V)if(!v.destroyed)movementFx.vehicle(v,dt,fxContext);
+ // El fum usa la vida autoritativa de cada vehicle, també els enemics.
+ for(const v of V)if(!v.destroyed)
+   updateDamagedVehicleSmoke(v,dt,v.life,v.maxLife||VT[v.t]?.life||1);
+ for(const e of E)if(ENEMY_TRAIL_TYPES.has(e.t)&&e.hp>0)
+   updateDamagedVehicleSmoke(e,dt,e.hp,EC[e.t]?.hp||1);
  if(cv||swimming)playerCrouched=false;if(scopeActive&&(cv||swimming||playerFall||!sniperEquipped))setSniperScope(false);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;animPl(hp<=0?0:cv?0:input.forward,dt,input.run&&hp>0,input.strafe);
  // El seient és sempre el que ha assignat el servidor, no el rol HOST/GUEST.
  // Si el convidat condueix, continua assegut al lloc esquerre.
