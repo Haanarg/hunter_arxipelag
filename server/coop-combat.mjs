@@ -5,7 +5,7 @@ import {vehicleDynamics} from '../src/vehicle-dynamics-core.mjs';
 import {stepLandPatrol,stepMarinePatrol} from '../src/patrol-motion-core.mjs';
 import {stepNativeSoldierNavigation} from '../src/native-soldier-navigation.mjs';
 import {createEnemyVehicleController} from './enemy-vehicle-controller.mjs';
-import {passengerMuzzle} from '../src/enemy-vehicle-requisition.mjs';
+import {passengerMuzzle,boatCrewMuzzle,requisitionBoat} from '../src/enemy-vehicle-requisition.mjs';
 import {vehicleSpecs} from '../src/vehicle-specs.mjs';
 import {vehicleSeatProjectileContact,breakVehicleSeatWindow,vehicleSeatWorld,vehicleOccupantHeadWorld} from '../src/vehicle-occupant-damage-core.mjs';
 import {windowCrossing,wallShotHit,knifeWindowHit} from '../src/building-shell.mjs';
@@ -103,26 +103,34 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     meta,vehicles,targets,players:visiblePlayers,world,geometry,
     navigate:(unit,tick)=>stepNativeSoldierNavigation(unit,{
       tick,world:world(),players:[],requestDoor:openEnemyDoor}),
-    firePassenger:(unit,v,tick)=>{
+    firePassenger:(unit,v,tick,seat=1)=>{
       if(tick<(unit.nextAttackTick||0))return;
-      // Blindats tancats: la tripulació no dispara a través del casc.
-      const eye=passengerMuzzle(v,v.y);
-      if(!eye)return;
+      const boat=requisitionBoat(v.t),rocket=boat&&seat===1,
+        eye=boat?boatCrewMuzzle(v,seat,v.y):passengerMuzzle(v,v.y);
+      if(!eye)return; // Tripulació protegida dins dels blindats.
       const actor=visiblePlayers().filter(p=>p.hp>0&&!p.fall&&!p.swimming)
         .map(p=>({p,d:Math.hypot(p.x-v.x,p.z-v.z)}))
-        .filter(x=>x.d<75).sort((a,b)=>a.d-b.d)[0]?.p;
+        .filter(x=>x.d<(rocket?245:boat?170:75))
+        .sort((a,b)=>a.d-b.d)[0]?.p;
       if(!actor)return;
       const aim={x:actor.x,y:actor.y+1.5,z:actor.z};
       if(traceArena(eye,aim,geometry(),world()).fraction<.999)return;
-      const direction=enemyAccuracy.direction(meta.difficulty||1,'rifle',
-        aim.x-eye.x,aim.y-eye.y,aim.z-eye.z,roll),id='enemy-car-'+(++sequence);
-      projectiles.push(launchProjectile(eye,direction,70,{
-        id,actorId:unit.id,enemy:true,weapon:'rifle',
-        dmg:unit.dmg??combatBalance.weapons.rifle,sourceVehicle:v.id
-      }));
-      unit.nextAttackTick=tick+Math.ceil((unit.rate||1.1)*45);
+      const direction=enemyAccuracy.direction(meta.difficulty||1,
+        rocket?'marineRocket':boat?'marineMG':'rifle',
+        aim.x-eye.x,aim.y-eye.y,aim.z-eye.z,roll),
+        id='enemy-crew-'+(++sequence),
+        weapon=rocket?'bazooka':'rifle',
+        speed=rocket?75:boat?125:70;
+      projectiles.push({...launchProjectile(eye,direction,speed,{
+        id,actorId:unit.id,enemy:true,weapon,
+        dmg:rocket?combatBalance.weapons.boatRocket:
+          unit.dmg??combatBalance.weapons.rifle,
+        splash:rocket?8:0,sourceVehicle:v.id
+      }),...(rocket?{life:Math.max(2.2,
+        Math.hypot(aim.x-eye.x,aim.y-eye.y,aim.z-eye.z)/speed+.75)}:{})});
+      unit.nextAttackTick=tick+Math.ceil((rocket?5:boat?unit.rate||1.1:(unit.rate||1.1)*1.5)*30);
       effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,
-        weapon:'rifle',from:eye,to:aim,hit:null});
+        weapon,from:eye,to:aim,hit:null});
     }
   });
   function alarm(position,actorId,tick,kind='pistol'){
@@ -320,8 +328,8 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     const cooldown=marine?(unit.rocketCd??0):(unit.nextAttackTick??0);
     if(marine){
       const aiming={x:hostile.x,y:hostile.y+(vehicles.mounted(hostile.id)?2:1.5),z:hostile.z};
-      const origin={x:unit.x+Math.cos(unit.heading)*.8-Math.sin(unit.heading)*1.1,
-        y:unit.y+2.25,z:unit.z-Math.sin(unit.heading)*.8-Math.cos(unit.heading)*1.1};
+      const boatPose={t:'llanxa',x:unit.x,z:unit.z,hd:unit.heading};
+      const origin=boatCrewMuzzle(boatPose,0,unit.y);
       if(d<170&&tick>=(unit.nextMgTick??0)){
         const dir=enemyAccuracy.direction(meta.difficulty||1,'marineMG',
           aiming.x-origin.x,aiming.y-origin.y,aiming.z-origin.z,roll),
@@ -332,8 +340,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,weapon:'rifle',from:origin,to:aiming});
       }
       if(d<245&&tick>=(unit.nextRocketTick??0)){
-        const rocketOrigin={x:unit.x-Math.cos(unit.heading)*.8-Math.sin(unit.heading)*1.1,
-          y:unit.y+2.25,z:unit.z+Math.sin(unit.heading)*.8-Math.cos(unit.heading)*1.1},
+        const rocketOrigin=boatCrewMuzzle(boatPose,1,unit.y),
           dir=enemyAccuracy.direction(meta.difficulty||1,'marineRocket',
             aiming.x-rocketOrigin.x,aiming.y-rocketOrigin.y,aiming.z-rocketOrigin.z,roll),
           id='marine-rocket-'+(++sequence);
