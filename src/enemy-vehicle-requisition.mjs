@@ -140,8 +140,14 @@ const wireEnds=w=>w&&Number.isFinite(w.ax)&&Number.isFinite(w.az)&&
  [{x:w.ax,z:w.az},{x:w.bx,z:w.bz}]:null;
 export function requisitionFenceDetour(from,to,walls=[]){
  if(!from||!to)return null;
- const wire=walls.filter(w=>w?.barbed&&!w.open&&w.hp!==0)
-   .map(w=>wireEnds(w)).filter(Boolean);
+ const midX=(from.x+to.x)/2,midZ=(from.z+to.z)/2,
+   // Només els recintes propers poden interferir en aquesta requisa.
+   // Evita explorar portes de tota l'illa a cada soldat.
+   reach=Math.max(120,Math.min(195,Math.hypot(from.x-to.x,from.z-to.z)+105)),
+   wire=walls.filter(w=>w?.barbed&&!w.open&&w.hp!==0)
+     .map(w=>wireEnds(w)).filter(pair=>pair&&
+       Math.hypot((pair[0].x+pair[1].x)/2-midX,
+         (pair[0].z+pair[1].z)/2-midZ)<reach);
  if(!wire.some(pair=>wireCross(from,to,pair[0],pair[1])!==null))
   return null; // El trajecte directe no talla cap filferrada.
  const groups=new Map();
