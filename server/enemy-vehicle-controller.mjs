@@ -1,5 +1,6 @@
 import {candidateVehicles,requisitionChance,requisitionRoll,vehicleSeatPosition,
-  pursuitInput,observeFleeing,boatBoardingReady,requisitionBoat,avoidVehicleBarbedWire,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
+  pursuitInput,observeFleeing,boatBoardingReady,requisitionBoat,avoidVehicleBarbedWire,
+  requisitionFenceDetour,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
 
 // L'estat viu al soldat i a enemyCrew del vehicle; ambdós es desaran
 // als checkpoints autoritatius del Worker. Sense clients alternatius.
@@ -44,11 +45,13 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
   });
   for(const c of choices){
    if(!vehicles.enemyReserve(c.vehicle.id,unit.id,c.seat))continue;
+   const gateTarget=c.dockRoute?.[0]||vehicleSeatPosition(c.vehicle,c.seat),
+     fenceRoute=requisitionFenceDetour(unit,gateTarget,dock.walls||[]);
    unit.enemyRequisition={vehicleId:c.vehicle.id,seat:c.seat,
-     phase:'approach',until:tick+(c.dockRoute?960:480),waitUntil:0,
+     phase:'approach',until:tick+(c.dockRoute||fenceRoute?1200:600),waitUntil:0,
      lastContact:tick,fleeUntil:fleeing?tick+Math.ceil(REQUISITION.fleeingMemorySeconds*30):0,
      goal:{x:actor.x,y:actor.y,z:actor.z},
-     dockRoute:c.dockRoute,dockIndex:0};
+     dockRoute:c.dockRoute,dockIndex:0,fenceRoute,fenceIndex:0};
    unit.state='search';unit.focus=null;unit.canSee=false;
    unit.lastKnown=vehicleSeatPosition(c.vehicle,c.seat);
    unit.navRoute=null;unit.navDestination=null;
@@ -88,10 +91,13 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
    if(boat&&!route?.length){release(unit,tick);return false;}
    if(boat)while(s.dockIndex<route.length-1&&
       distance(unit,route[s.dockIndex])<2.2)s.dockIndex++;
-   const door=boat?route[Math.min(s.dockIndex,route.length-1)]:
-      vehicleSeatPosition(v,s.seat);
-   if(boat?!boatBoardingReady(unit,v,route):
-      distance(unit,door)>REQUISITION.boardingDistance){
+   while(s.fenceIndex<(s.fenceRoute?.length||0)&&
+     distance(unit,s.fenceRoute[s.fenceIndex])<2.45)s.fenceIndex++;
+   const fenceGoal=s.fenceRoute?.[s.fenceIndex],
+     door=fenceGoal||(boat?route[Math.min(s.dockIndex,route.length-1)]:
+       vehicleSeatPosition(v,s.seat));
+   if(fenceGoal||(boat?!boatBoardingReady(unit,v,route):
+      distance(unit,door)>REQUISITION.boardingDistance)){
     unit.lastKnown=door;unit.state='search';unit.canSee=false;
     navigate(unit,tick);return true;
    }
