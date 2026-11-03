@@ -192,9 +192,9 @@ function killEnemy(u,killingShot=null){
       vehicle.enemyCrew[0]=partner;vehicle.enemyCrew[1]=null;
       partner.enemyVehicleClaim.seat=0;
       partner.enemyVehicleClaim.phase='riding';
-      const pose=enemyRequisition.seatVisual(vehicle.t,0),sc=VS[vehicle.t]||1;
-      partner.o.position.set(pose.x*sc,pose.y*sc,pose.z*sc);
-      partner.o.rotation.set(0,0,0);
+      window.HUNTER_ENEMY_CREW_VISUAL?.show(vehicle,1,false);
+      window.HUNTER_ENEMY_CREW_VISUAL?.show(vehicle,0,true);
+      partner.o.visible=false;
     }else if(partner&&partner.hp>0)enemyVehicleRelease(partner);
   }
   const i=E.indexOf(u);if(i<0)return;E.splice(i,1);kills++;
