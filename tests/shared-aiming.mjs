@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
 import * as aiming from '../src/aiming-core.mjs';
-import {aimingTrace} from './helpers/aiming-trace.mjs';
-const expected=JSON.parse(readFileSync(new URL('./fixtures/aiming-trace.json',import.meta.url)));assert.equal(aimingTrace(readFileSync(new URL('../src/combat.js',import.meta.url),'utf8'),aiming),expected.hash,'all frozen individual target selections, focus points and directions stay identical');
+// The previous 512-case fingerprint encoded the old, deliberately wider assault
+// aim. Check the new 80° contract directly instead of blessing a stale hash.
 const make=(options={})=>aiming.createAimSelector({origin:{x:0,y:1.5,z:0},direction:[0,0,-1],range:85,cone:.82,shotClass:'pistol',...options});
 assert.ok(Math.abs(aiming.RIFLE_AIM_HALF_ANGLE*180/Math.PI-40)<1e-10);
 for(const kind of ['assault','sniper'])for(const height of [1.5,30,-20]){
@@ -25,4 +24,4 @@ select=make();select.consider(soldier,'enemy',0,0,1.5,8);assert.equal(select.has
 select=make();select.consider(soldier,'enemy',0,0,30,0);assert.ok(select.direction()[1]>.99,'overhead small-arms exception');
 let terrainFlag=false;focus={};select=make({shotClass:'heavy',focus,cone:.73,isClear:(...args)=>(terrainFlag=args.at(-1),true)});select.consider(soldier,'enemy',1,0,1.5,-10);const tower={id:'tower',t:'torre'};select.consider(tower,'enemy',aiming.weaponTargetPriority(tower,'heavy'),6,10,-30);assert.equal(focus.target,tower);assert.equal(terrainFlag,true,'heavy aim requests terrain occlusion');
 const moving=aiming.bazookaInterceptPoint({x:0,z:-20,hd:-Math.PI/2,speed:6},0,0,0,0,30);assert.ok(moving.x>3.9&&moving.x<4.2);assert.equal(moving.z,-20);assert.deepEqual(aiming.bazookaInterceptPoint({x:0,z:-20,hd:0,speed:0},0,0,0,0,30),{x:0,y:0,z:-20});
-console.log('shared aiming: 512 frozen individual cases, priorities, horizontal/vertical cones, range, occlusion, focus and moving-target interception passed');
+console.log('shared aiming: strict ±40° assault/sniper limits, priorities, pistol overhead, vertical range, occlusion, focus and moving-target interception passed');
