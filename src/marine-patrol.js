@@ -71,10 +71,15 @@ function syncMarinePatrolCrew(boat,unit){
   for(let seat=0;seat<2;seat++)
     weapons[seat].rider.visible=(unit.marineCrewHp?.[seat]??window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.MARINE_CREW_HP)>0;
   const broken=unit.marineBrokenWindshield||[];
-  boat.traverse(part=>{
-    if(part.userData?.boatWindshieldPane!==undefined)
-      part.visible=!broken.includes(part.userData.boatWindshieldPane);
-  });
+  let panels=boat.userData.marineGlassPanels;
+  if(!panels){
+    panels=[];boat.traverse(part=>{
+      if(part.userData?.boatWindshieldPane!==undefined)panels.push(part);
+    });
+    boat.userData.marineGlassPanels=panels;
+  }
+  for(const part of panels)
+    part.visible=!broken.includes(part.userData.boatWindshieldPane);
 }
 function aimEnemyBoatCrew(boat,seat,target,dt=.1){
   const w=boat?.userData?.enemyCarCrew?.boatWeapons?.[seat];
