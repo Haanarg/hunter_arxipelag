@@ -4,6 +4,13 @@ Joc 3D per al navegador inspirat en *Hunter* (Amiga). Comença a la teva base, e
 
 [Jugar](https://hunter.paradoxa.cat/) · [Fases fetes i pendents](PROGRESS.MD) · [Notes visuals](docs/VISUAL_MODERNIZATION.md)
 
+## Requisició de blindats enemics (v0.6.99)
+
+- **Conductors i copilots protegits:** els soldats que ja ocupen un vehicle requisat no tornen a entrar al càlcul d'atropellament, ni al mode individual ni a l'autoritat del cooperatiu. Els vianants enemics continuen sent vulnerables.
+- **Canons funcionals:** quan un soldat condueix un tanc o una tanqueta, la torreta apunta al jugador i dispara projectils reals des de la boca del canó. El tanc pesant conserva una cadència de **5 s**; la tanqueta manté el seu armament ràpid. El conductor no pot fer servir simultàniament el fusell a través del blindatge.
+- **Cooperatiu:** el Worker mou la torreta i crea els projectils amb `sourceVehicle`, evitant que els tirs xoquin amb el propi casc. Els clients reben els esdeveniments i la posició de la torreta.
+- **Proves:** `tests/enemy-vehicle-requisition.mjs` incorpora regressions per a blindats ocupats, ordres de disparar, protecció dels tripulants i cadència. Cal confirmar l'aspecte i l'impacte en una partida real.
+
 ## Tres explosions arcade · model 03 (v0.6.88)
 
 - **Granada (1×):** efecte arcade original petit, amb ones expansives i partícules simètriques.
