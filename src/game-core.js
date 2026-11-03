@@ -2842,6 +2842,9 @@ function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
   if(v.ramCd<=0&&speed>6){
     for(const u of E){
       if(u.t!=='soldat')continue;
+      // Un soldat ja embarcat és part de la tripulació, no un vianant.
+      // Això també protegeix el copilot quan el seu vehicle comença a moure's.
+      if(u.enemyVehicleClaim&&['waiting','riding'].includes(u.enemyVehicleClaim.phase))continue;
       if(runoverSweepHit(oldX,oldZ,v.x,v.z,u.x,u.z,radius*.68+u.r*.45)){
         const dmg=runoverDamage(speed,c.mass||1);
         hurtE(u,dmg);u.alert=12;v.ramCd=.35;v.v*=.86;
