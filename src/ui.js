@@ -278,18 +278,18 @@ window.HUNTER_UI=Object.freeze({
         document.getElementById('restartMenu').onclick=()=>actions.open('abandon');
         document.getElementById('performanceMenu').onclick=()=>actions.open('performance');
       }
-    }
-    // Els submenús oberts des de pausa tornen a pausa amb la creu superior.
-    const pauseSubmenus=['keys','performance','cheats','saves','account','abandon','restart'];
-    if(pauseSubmenus.includes(mode)&&getState().started){
-      resumeButton.style.display='';
-      resumeButton.setAttribute('aria-label','Torna a pausa');
-      resumeButton.title='Torna a pausa';
-      resumeButton.onclick=()=>actions.open('pause');
-    }else{
-      resumeButton.removeAttribute('title');
-      resumeButton.setAttribute('aria-label','Tanca');
-      resumeButton.onclick=mode==='bombtimer'?()=>actions.open('inventory'):actions.resume;
+      // Els submenús oberts des de pausa tornen a pausa amb la creu superior.
+      const pauseSubmenus=['keys','performance','cheats','saves','account','abandon','restart','coop','history'];
+      if(pauseSubmenus.includes(mode)&&getState().started){
+        resumeButton.style.display='';
+        resumeButton.setAttribute('aria-label','Torna a pausa');
+        resumeButton.title='Torna a pausa';
+        resumeButton.onclick=()=>actions.open('pause');
+      }else{
+        resumeButton.removeAttribute('title');
+        resumeButton.setAttribute('aria-label','Tanca');
+        resumeButton.onclick=mode==='bombtimer'?()=>actions.open('inventory'):actions.resume;
+      }
     }
     return Object.freeze({renderHUD,show,hide,isAccountOpen:()=>currentMode==='account',isBombTimerOpen:()=>currentMode==='bombtimer',getMode:()=>currentMode})
   }
