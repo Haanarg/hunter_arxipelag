@@ -514,8 +514,9 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
          const candidate=[dx/distance,dy/distance,dz/distance],
            forward=[-Math.sin(p.hd),-Math.cos(p.hd)],
            alignment=(dx*forward[0]+dz*forward[1])/horizontal;
-         // La limitació de 120° del bazuca també es valida al servidor.
-         if(weapon==='sniper'||alignment>=Math.cos(Math.PI/3)-.001){
+         // Bazuca: con de 90° totals, validat també pel Worker.
+         const pitch=Math.abs(Math.atan2(dy,horizontal));
+         if(weapon==='sniper'||alignment>=profile.cone-.001&&pitch<=profile.vertical+.001){
            direction=candidate;focus.target=null;focus.point=null;
          }
        }
