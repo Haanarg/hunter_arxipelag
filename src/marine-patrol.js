@@ -64,6 +64,18 @@ function createMarinePatrolVisual(boat){
   // La bandera s'afegeix DESPRÉS del LOD perquè no s'oculti
   // amb la malla completa de la patrullera.
 }
+
+function syncMarinePatrolCrew(boat,unit){
+  const weapons=boat?.userData?.enemyCarCrew?.boatWeapons;
+  if(!weapons)return;
+  for(let seat=0;seat<2;seat++)
+    weapons[seat].rider.visible=(unit.marineCrewHp?.[seat]??window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.MARINE_CREW_HP)>0;
+  const broken=unit.marineBrokenWindshield||[];
+  boat.traverse(part=>{
+    if(part.userData?.boatWindshieldPane!==undefined)
+      part.visible=!broken.includes(part.userData.boatWindshieldPane);
+  });
+}
 function aimEnemyBoatCrew(boat,seat,target,dt=.1){
   const w=boat?.userData?.enemyCarCrew?.boatWeapons?.[seat];
   if(!w?.rider.visible||!target)return false;
@@ -147,12 +159,15 @@ function* spawnMarinePatrolsSteps(){
     u.hd=p.hd;u.navHd=p.hd;u.home={x:p.x,z:p.z};u.speed=12+R()*5;
     u.yawRate=0;u.orbitSign=R()<.5?-1:1;
     u.mgCd=.8+R();u.rocketCd=3+R()*3;
+    u.marineCrewHp=[window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.MARINE_CREW_HP,window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.MARINE_CREW_HP];
+    u.marineBrokenWindshield=[];
     u.o.position.set(p.x,wy(p.x,p.z,0)+.2,p.z);u.o.rotation.y=p.hd;
     marinePickWaypoint(u);
   }
   return spots;
 }
 function marineFire(u,seat,target,heavy){
+  if(u.marineCrewHp?.[seat]<=0)return false;
   const p=enemyBoatCrewMuzzle(u.o,seat);
   if(!p)return false;
   const aimX=target.x-p.x,aimY=target.y-p.y,aimZ=target.z-p.z,
@@ -194,6 +209,18 @@ function updateMarinePatrol(u,dt){
   }
   const hostile=!cheats.invisible&&!disg&&!over&&distance<470&&!!u.marineVisible;
   u.wt-=dt;u.mgCd-=dt;u.rocketCd-=dt;
+  // Un pilot mort deixa la patrullera flotant, no la fa esclatar.
+  // El passatger pot continuar defensant-la amb el seu llançacoets.
+  if(u.marineCrewHp?.[0]<=0){
+    u.speed=0;u.yawRate=0;
+    u.o.position.set(u.x,wy(u.x,u.z,elapsed)+.2,u.z);
+    syncMarinePatrolCrew(u.o,u);
+    if(hostile&&distance<245&&u.marineCrewHp[1]>0){
+      const aim=new THREE.Vector3(q.x,targetY,q.z);
+      if(aimEnemyBoatCrew(u.o,1,aim,dt)&&u.rocketCd<=0&&marineFire(u,1,aim,true))u.rocketCd=5;
+    }
+    return;
+  }
   if(!Number.isFinite(u.tx)||u.wt<=0||Math.hypot(u.tx-u.x,u.tz-u.z)<35)marinePickWaypoint(u);
   let goalX=u.tx,goalZ=u.tz;
   if(hostile){
@@ -258,6 +285,7 @@ function updateMarinePatrol(u,dt){
   u.o.position.set(u.x,wy(u.x,u.z,elapsed)+.2,u.z);
   const wave=Math.sin(elapsed*2+u.x*.03+u.z*.024);
   u.o.rotation.set(wave*.028,u.hd,-u.yawRate*.12+wave*.024,'YXZ');
+  syncMarinePatrolCrew(u.o,u);
   if(!hostile||distance>245)return;
   const target=new THREE.Vector3(q.x,targetY,q.z);
   // El pilot gira amb el fusell; el passatger, amb el llançacoets.
