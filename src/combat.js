@@ -952,7 +952,7 @@ function updateLightAimReticle(dt){
   if(scopeActive&&sniperEquipped&&!cv){
     const focus=window.HUNTER_SCOPE_FOCUS.create(P.x,P.y+1.76,P.z,scopeYaw,scopePitch);
     const d=sniperShotVector(sniperMuzzleWorld(scopeYaw,scopePitch),sniperReticlePoint(focus),focus);
-    pl.userData.visualAimDirection.copy(d);
+    (pl.userData.visualAimDirection??=new THREE.Vector3()).copy(d);
     hide();return;
   }
   lightReticleRefresh-=dt;
@@ -992,8 +992,8 @@ function updateLightAimReticle(dt){
   }
   const focus={};
   const direction=autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone,shotClass,focus,0,vertical);
-  if(!cv&&pl?.userData?.visualAimDirection)
-    pl.userData.visualAimDirection.set(direction[0],direction[1],direction[2]);
+  if(!cv&&pl?.userData)
+    (pl.userData.visualAimDirection??=new THREE.Vector3()).set(direction[0],direction[1],direction[2]);
   const obj=focus.target,enemySoldier=focus.kind==='enemy'&&
     (obj?.t==='soldat'||obj?.t==='general'),
     vehicle=focus.kind==='vehicle'||focus.kind==='enemy'&&
@@ -1148,8 +1148,8 @@ function updateBazookaReticle(dt){
                 BAZOOKA_AIM_RANGE,BAZOOKA_AIM_CONE,'heavy',focus,
                 72*HEAVY_SHOT_SPEED_FACTOR,BAZOOKA_AIM_VERTICAL),
               fx,fz,focus);
-      if(pl?.userData?.visualAimDirection)
-        pl.userData.visualAimDirection.set(direction[0],direction[1],direction[2]);
+      if(pl?.userData)
+        (pl.userData.visualAimDirection??=new THREE.Vector3()).set(direction[0],direction[1],direction[2]);
       hit=focus.point||bazookaFirstSolidHit(ox,oy,oz,
         direction[0],direction[1],direction[2]);
       locked=!!focus.target;
