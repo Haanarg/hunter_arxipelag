@@ -8,7 +8,7 @@ import {createEnemyVehicleController} from './enemy-vehicle-controller.mjs';
 import {passengerMuzzle,boatCrewMuzzle,requisitionBoat} from '../src/enemy-vehicle-requisition.mjs';
 import {vehicleSpecs} from '../src/vehicle-specs.mjs';
 import {vehicleSeatProjectileContact,breakVehicleSeatWindow,vehicleSeatWorld,vehicleOccupantHeadWorld,
- marineCrewProjectileContact,breakMarineWindshield,damageMarineCrew,MARINE_CREW_HP} from '../src/vehicle-occupant-damage-core.mjs';
+ marineCrewHeadWorld,marineCrewProjectileContact,breakMarineWindshield,damageMarineCrew,MARINE_CREW_HP} from '../src/vehicle-occupant-damage-core.mjs';
 import {windowCrossing,wallShotHit,knifeWindowHit} from '../src/building-shell.mjs';
 import {weaponCatalog,combatCommands,mountedWeapons,grenadeLaunch,vehicleGrenadeLaunch,canThrowGrenadeFromVehicle,meleeTarget} from '../src/weapon-catalog.mjs';
 import {limitBazookaHorizontalAim} from '../src/aiming-core.mjs';
@@ -466,6 +466,14 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       const carrier=t.enemyVehicleId&&vehicles.live().find(v=>v.id===t.enemyVehicleId),
         point=carrier?vehicleOccupantHeadWorld(carrier,t.enemySeat||0,carrier.y):null;
       if(carrier&&['tanc','tanqueta'].includes(carrier.t))continue;
+      if(t.t==='patrulla_marina'&&!heavy){
+        for(let seat=0;seat<2;seat++){
+          if((t.marineCrewHp?.[seat]??MARINE_CREW_HP)<=0)continue;
+          const head=marineCrewHeadWorld(t,seat,t.y);
+          aim.consider({id:t.id+':crew'+seat,t:'soldat'},'enemy',0,
+            head.x,head.y,head.z);
+        }
+      }
       aim.consider(t,'enemy',weaponTargetPriority({...t,t:t.t||'soldat'},heavy?'heavy':weapon),
         point?.x??t.x,point?.y??(t.y+(t.t==='torre'?9.4:1.5)),point?.z??t.z);
     }
@@ -647,7 +655,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
           }else result.target.hp=damageHealth(result.target.hp,p.dmg);
         }else if(result.kind==='player')applied=damagePlayer(result.target.id,p.dmg)!==false;
         else if(result.kind==='civilian')applied=damageCivilian(result.target.id,p.dmg,tick)>0;else if(result.kind==='world'&&trace.tree?.p)applied=damagePalm(trace.tree,p.dmg);else if(result.kind==='world'&&trace.wallIndex!=null&&Math.hypot(result.point.x-trace.point.x,result.point.y-trace.point.y,result.point.z-trace.point.z)<.01)applied=damageWall(trace.wallIndex,p.dmg);
-        if(result.kind!=='expire')effect('impact',tick,{actorId:p.actorId,at:{...result.point},hit:applied&&['enemy','player','vehicle'].includes(result.kind)?result.target.id:
+        if(result.kind!=='expire'&&!['marine-crew','marine-glass'].includes(result.kind))effect('impact',tick,{actorId:p.actorId,at:{...result.point},hit:applied&&['enemy','player','vehicle'].includes(result.kind)?result.target.id:
           applied&&result.kind==='vehicle-occupant'?result.target.target?.id:null});projectiles.splice(i,1);
       }
     }
