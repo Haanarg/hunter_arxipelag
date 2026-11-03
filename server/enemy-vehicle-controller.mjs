@@ -139,7 +139,8 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
   }
   // A les llanxes, el pilot dispara amb el fusell mentre condueix.
   // El passatger és qui controla el llançacoets.
-  if(requisitionBoat(v.t)&&actor)firePassenger(unit,v,tick,0);
+  if((requisitionBoat(v.t)||v.t==='tanc'||v.t==='tanqueta')&&actor)
+    firePassenger(unit,v,tick,0);
   const planned=pursuitInput(v,s.goal,{passenger:ready,distance:best});
   const input=avoidVehicleBarbedWire(v,planned,geometry().walls||[],
     s.fenceAvoid??={});
