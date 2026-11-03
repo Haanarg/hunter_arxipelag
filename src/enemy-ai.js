@@ -239,7 +239,7 @@ function soldierEnterBuilding(u,b,target,dt,targetY=u.lastSeenY??u.o.position.y)
   // canviar de fase prematurament des de les cantonades de la paret.
   const entryTolerance=Math.max(.35,Math.min(.95,u.sp*dt*1.25));
   const lateral=Math.abs((u.x-door.cx)*door.nz-(u.z-door.cz)*door.nx);
-  if(u.entryPhase===0&&distance<=entryTolerance&&lateral<=.025){
+  if(u.entryPhase===0&&distance<=entryTolerance&&lateral<=.55){
     u.entryPhase=1;u.navDirectT=0;u.navGoal=null;u.navPath=[];u.navSearch=null;
   }
   const goal=u.entryPhase?interior:exterior;
@@ -362,7 +362,11 @@ function enemyVehicleRelease(u,leave=true){
 function enemyVehicleReserve(u,{fleeing=false}={}){
   if(u.enemyVehicleClaim||u.elite||u.rocketSoldier||u.basement)return false;
   const id=u.saveId??('soldat:'+Math.round(u.home?.x??u.x)+':'+Math.round(u.home?.z??u.z));
-  if(enemyRequisition.requisitionRoll(id,seed)>=enemyRequisition.requisitionChance(DIF,fleeing))return false;
+  // Cada intent (cada 3 s) té una tirada nova i reproduïble.
+   // Fer-la només per ID deixava alguns soldats permanentment incapaços
+   // de requisar un vehicle neutral, fins i tot després de molts intents.
+   const attempt=Math.floor(elapsed/enemyRequisition.REQUISITION.retrySeconds);
+   if(enemyRequisition.requisitionRoll(id+':'+attempt,seed)>=enemyRequisition.requisitionChance(DIF,fleeing))return false;
   const range=fleeing?enemyRequisition.REQUISITION.fleeingSearchRadius:enemyRequisition.REQUISITION.searchRadius;
   const choices=enemyRequisition.candidateVehicles(
     u,vehicleCandidatesAt(u.x,u.z,range+7,true).filter(v=>v!==cv),{range,piers,stairs});
