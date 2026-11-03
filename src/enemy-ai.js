@@ -856,7 +856,8 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
     gunner.rotation.y=.26;
     const rifle=gunner.userData.gun;rifle.parent.remove(rifle);
     mount=new THREE.Group();pitch=new THREE.Group();
-    mount.position.set(truck?1.62:civil?1.30:1.46,truck?2.12:2.07,truck?-.62:civil?-.6:-.30);
+    mount.position.set(truck?1.98*truckFit:civil?1.30:1.46,
+      truck?3.07*truckFit:2.07,truck?-2.03*truckFit:civil?-.6:-.30);
     mount.add(pitch);car.add(mount);
     rifle.position.set(0,-.035,-.14);rifle.rotation.set(0,0,0);rifle.scale.setScalar(.94);
     pitch.add(rifle);
