@@ -91,8 +91,14 @@ export function vehicleSeatProjectileContact(from,to,v,crew=[],{baseY=v.y??0}={}
    const tBody=target?segmentSeatSphere(from,to,point,v.t==='camio'?1.0:.82):null;
    const tHead=target?segmentSeatSphere(from,to,head,v.t==='camio'?.72:.58):null;
    const tOccupant=tBody===null?tHead:tHead===null?tBody:Math.min(tBody,tHead);
-   const tGlass=windowed&&!glass.has(seat)?
+   // El primer impacte continua trencant el vidre, també quan
+   // la bala apunta a la nova diana del cap.
+   const tGlassBody=windowed&&!glass.has(seat)?
      segmentSeatSphere(from,to,point,v.t==='camio'?1.27:1.08):null;
+   const tGlassHead=windowed&&!glass.has(seat)?
+     segmentSeatSphere(from,to,head,v.t==='camio'?.93:.78):null;
+   const tGlass=tGlassBody===null?tGlassHead:
+     tGlassHead===null?tGlassBody:Math.min(tGlassBody,tGlassHead);
    // Never let an occupant behind intact glass absorb the same bullet.
    const candidate=tGlass!=null&&
        (tOccupant==null||tGlass<=tOccupant+1e-6)?
