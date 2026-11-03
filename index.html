@@ -213,6 +213,105 @@ body.sniper-scoped #joystick{cursor:crosshair}
   #gamepanel .pause-help b,#gamepanel .pause-help span{font-size:11px}
   #gamepanel .pause-note{margin:8px 0 6px}
 }
+
+/* Pausa: mateixa identitat daurada que la portada, sense carregar el món. */
+#gamepanel .card.pause-card{
+  width:min(550px,94vw);max-height:min(88dvh,770px);
+  box-sizing:border-box;position:relative;overflow:auto;
+  background:linear-gradient(155deg,#152a2bee 0%,#121e20f5 54%,#201c18fa 100%);
+  border:2px solid #bda26a;border-radius:12px;
+  box-shadow:inset 0 1px 0 #ffe8ac50,0 15px 50px #000d;
+  padding:25px 24px 52px;color:#f5e9cf;
+  scrollbar-color:#aa8653 #141d20;
+}
+#gamepanel .pause-card #panelTitle{
+  font:900 clamp(19px,3vw,26px)/1.2 system-ui;
+  letter-spacing:.06em;color:#f8d994;text-shadow:0 2px 5px #000;
+  margin:0 39px 19px 0;
+}
+#gamepanel .pause-card .panel-close{color:#f8d994!important}
+#gamepanel .pause-card button:not(.panel-close){
+  color:#f3d8a0;background:linear-gradient(150deg,#424034,#252821 55%,#171c1d);
+  border:2px solid #aa9061;border-radius:8px;
+  box-shadow:0 3px 0 #100d08cc,inset 0 1px #ffe9be44;
+  font:800 13px/1.2 system-ui;letter-spacing:.02em;
+  min-height:43px;transition:filter .12s,transform .12s;
+}
+#gamepanel .pause-card button:not(.panel-close):hover,
+#gamepanel .pause-card button:not(.panel-close):focus-visible{
+  filter:brightness(1.17);outline:2px solid #ffe4a3;outline-offset:2px;
+}
+#gamepanel .pause-card button:not(.panel-close):active{transform:translateY(1px)}
+#gamepanel .pause-card .pause-menu-actions{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:11px;margin:4px 0 0;
+}
+#gamepanel .pause-card .pause-menu-actions>button{
+  min-width:0;margin:0;padding:12px 9px;display:flex;
+  align-items:center;justify-content:center;gap:9px;
+}
+#gamepanel .pause-card .pause-menu-actions .pause-continue{
+  grid-column:1/-1;min-height:63px;
+  color:#24180a;border:3px ridge #ffe4a5;
+  background:linear-gradient(160deg,#fff0b0,#d9a35b 48%,#e9c079 75%,#925a25);
+  text-shadow:0 1px #ffe9b5;
+  box-shadow:inset 0 0 0 1px #64401e,0 4px 0 #59371a,0 10px 20px #0008;
+  font-size:19px;letter-spacing:.04em;
+}
+#gamepanel .pause-card .pause-menu-icon{font-size:21px;line-height:1;flex:none}
+#gamepanel .pause-card .pause-save-row{
+  grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:10px;align-items:stretch;
+}
+#gamepanel .pause-card .pause-save-row button{margin:0;min-width:0}
+#gamepanel .pause-card .pause-autosave-label{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  min-width:0;padding:9px;border:1px solid #937749;border-radius:8px;
+  background:#251f18a8;color:#ead3a3;
+  font:700 12px system-ui;cursor:pointer;
+}
+#gamepanel .pause-card input[type=checkbox]{accent-color:#d9ae62}
+#gamepanel .pause-card .pause-autosave-label input{
+  width:19px;height:19px;min-width:19px;margin:0;
+}
+#gamepanel .pause-card #operationAutosaveStatus{
+  min-height:0;padding-right:40px;margin:12px 0 0;color:#bfae88;
+}
+#gamepanel .pause-card .pause-joker{
+  position:absolute;right:15px;bottom:11px;min-width:37px;
+  width:37px;height:37px;min-height:37px;padding:4px;
+  margin:0;font-size:21px;line-height:1;border-radius:9px;
+  background:linear-gradient(#34322b,#1d201d);border:1px solid #806943;
+}
+#gamepanel .pause-card .pause-help{gap:9px}
+#gamepanel .pause-card .pause-help>div{
+  background:#232821;border-color:#756547;
+}
+#gamepanel .pause-card .pause-help b{color:#f5d38e}
+#gamepanel .pause-card .pause-help span{color:#e8ddc8}
+#gamepanel .pause-card .pause-note{color:#cfc09c}
+#gamepanel .pause-card .performance-options label,
+#gamepanel .pause-card .pause-stats-toggle{
+  background:#332c2180;border:1px solid #756343;color:#e7d7b6;
+}
+#gamepanel .pause-card .pause-diagnostics{
+  margin:12px 0;border:1px solid #746343;border-radius:9px;
+  background:#131c1dc9;color:#d4c6aa;padding:9px 12px;
+}
+#gamepanel .pause-card .pause-diagnostics summary{
+  cursor:pointer;font-size:13px;font-weight:700;color:#eacb8e;
+}
+#gamepanel .pause-card .pause-back{margin-top:14px;max-width:100%}
+@media(max-width:540px),(max-height:540px){
+  #gamepanel .card.pause-card{padding:15px 12px 49px;max-height:96dvh}
+  #gamepanel .pause-card .pause-menu-actions{gap:7px}
+  #gamepanel .pause-card .pause-menu-actions>button{padding:8px 4px;font-size:11px}
+  #gamepanel .pause-card .pause-menu-actions .pause-continue{min-height:47px;font-size:16px}
+  #gamepanel .pause-card .pause-autosave-label{padding:6px 3px;font-size:11px}
+  #gamepanel .pause-card .pause-menu-icon{font-size:17px}
+  #gamepanel .pause-card .pause-help{gap:5px}
+  #gamepanel .pause-card .pause-help>div{padding:6px 8px}
+}
 </style><style>.account-input{display:block;padding:10px;margin:8px 0;width:min(300px,75vw);box-sizing:border-box}
 /* En mòbils, evita que el centrat d'un contenidor amb scroll amagui la part superior del logotip. */
 @media (max-width:640px), (max-height:760px){
