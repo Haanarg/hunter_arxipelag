@@ -225,16 +225,26 @@ export function createArcadeBlastFX(T,scene,{quality='desktop',limit=8}={}){
       const dir=g.direction;
       if(dir){
         vec.set(dir.x,dir.y,dir.z);
-        // En projectils, la làmina de l'ona és perpendicular al vol.
+        // RingGeometry és al pla XY (normal local +Z).
+        // La normal de CADA anell segueix l'eix del projectil:
+        // el pla de l'ona queda perpendicular a l'impacte, també
+        // en tirs diagonals, ascendents i contra vehicles.
         g.shell.quaternion.setFromUnitVectors(up,vec);
         g.flash.quaternion.setFromUnitVectors(up,vec);
         g.ring.quaternion.setFromUnitVectors(normal,vec);
         g.ring2.quaternion.setFromUnitVectors(normal,vec);
+        // Situam el centre de l'ona davant de la superfície impactada,
+        // al costat d'on arriba el projectil. Sense aquest desplaçament
+        // una paret/vehicle pot ocultar gairebé tot l'anell.
+        g.ring.position.set(dir.x*.23*p.scale,dir.y*.23*p.scale,dir.z*.23*p.scale);
+        g.ring2.position.set(dir.x*.30*p.scale,dir.y*.30*p.scale,dir.z*.30*p.scale);
       }else{
         g.shell.quaternion.identity();
         g.flash.quaternion.identity();
         g.ring.rotation.set(-Math.PI/2,0,0);
         g.ring2.rotation.set(-Math.PI/2,0,0);
+        g.ring.position.set(0,.08,0);
+        g.ring2.position.set(0,.11,0);
       }
       const flashQ=clamp(t/p.flashDuration,0,1);
       g.flash.visible=flashQ<1;
