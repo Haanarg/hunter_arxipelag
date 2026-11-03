@@ -951,7 +951,9 @@ const lightReticle=document.getElementById('lightAimReticle'),
 let lightReticleRefresh=0;
 function updateLightAimReticle(dt){
   if(!lightReticle)return;
-  const hide=()=>{lightReticle.style.display='none'};
+  const hide=()=>{lightReticle.style.display='none';
+    if(!cv&&pl?.userData)pl.userData.visualAimTargetLocked=false;
+  };
   if(!started||paused||over||playerFall||hp<=0||swimming){
     hide();lightReticleRefresh=0;return;
   }
@@ -999,8 +1001,10 @@ function updateLightAimReticle(dt){
   }
   const focus={};
   const direction=autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone,shotClass,focus,0,vertical);
-  if(!cv&&pl?.userData)
+  if(!cv&&pl?.userData){
     (pl.userData.visualAimDirection??=new THREE.Vector3()).set(direction[0],direction[1],direction[2]);
+    pl.userData.visualAimTargetLocked=!!focus.target;
+  }
   const obj=focus.target,enemySoldier=focus.kind==='enemy'&&
     (obj?.t==='soldat'||obj?.t==='general'),
     vehicle=focus.kind==='vehicle'||focus.kind==='enemy'&&
