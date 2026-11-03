@@ -115,5 +115,5 @@ async function renderAccount(body,isCurrent,recover=false){
       button('Sortir del compte',async()=>{await accounts.signOut();await renderAccount(body,isCurrent);});
     }
   }
-  button(started?'← Pausa':'← Portada',()=>{if(started)ui.show('pause');else ui.hide();});
+  if(!started)button('← Portada',()=>ui.hide());
 }
