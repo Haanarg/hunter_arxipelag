@@ -683,7 +683,7 @@ function releaseGrenadeCharge(){
   return throwGrenade(power);
 }
 function updateGrenadeCharge(dt){
-  const vehicleAim=!!cv&&cv.t!=='heli_combat'&&!over&&!paused&&(inv.granada||0)>0;
+  const vehicleAim=!!cv&&window.HUNTER_SHARED_WEAPONS.canThrowGrenadeFromVehicle(cv)&&!over&&!paused&&(inv.granada||0)>0;
   if(!grenadeCharge&&!vehicleAim){if(grenadeAimVisual)cancelGrenadeCharge();return}
   if(grenadeCharge&&(!grenadeEquipped||!inv.granada||cv||swimming||playerFall||paused||over)){cancelGrenadeCharge();return}
   if(grenadeCharge)grenadeCharge.elapsed=Math.min(GRENADE_CHARGE_SECONDS,grenadeCharge.elapsed+dt);
@@ -734,7 +734,7 @@ function vehicleGrenadeFlight(v){
   return window.HUNTER_SHARED_WEAPONS.vehicleGrenadeLaunch(v,v.o?.position.y??v.y);
 }
 function throwVehicleGrenade(){if(nativeCoopSession)return nativeCoopSession.channel?.combat('grenade');
-  if(!cv||cv.t==='heli_combat'||over||paused||playerFall||playerEject||fcd>0)return false;
+  if(!cv||!window.HUNTER_SHARED_WEAPONS.canThrowGrenadeFromVehicle(cv)||over||paused||playerFall||playerEject||fcd>0)return false;
   if(!inv.granada){msg='No tens granades a l’inventari.';msgT=2;return false}
   const flight=vehicleGrenadeFlight(cv);
   if(!flight)return false;
