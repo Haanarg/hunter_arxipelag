@@ -2157,7 +2157,7 @@ function updateDistanceVisibility(){
   const chunkRadius=113; // diagonal mitja del sector de 160 m
   for(const mesh of staticVisualBatches){
     const dx=mesh.position.x-P.x,dz=mesh.position.z-P.z,
-          r=max.props+chunkRadius;
+          r=(mesh.userData.compoundPlatform?max.buildings:max.props)+chunkRadius;
     mesh.visible=dx*dx+dz*dz<r*r||!!focus?.intersectsXZBox(mesh.position.x,mesh.position.z,80);
     if(!mesh.visible)visibilityStats.props++;
   }
