@@ -356,7 +356,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       projectiles.push({...launchProjectile(origin,direction,heavy?75:70,{
         id,actorId:unit.id,enemy:true,weapon:heavy?'bazooka':'rifle',
         dmg:unit.dmg||combatBalance.weapons.rifle,splash:heavy?8:0}),life:heavy?3.7:2.5});
-      unit.nextAttackTick=tick+Math.ceil((unit.rate||1.1)*30);
+      unit.nextAttackTick=tick+Math.ceil((unit.t==='tanc'?5:unit.rate||1.1)*30);
       effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,
         weapon:heavy?'bazooka':'rifle',from:origin,to:aiming});
     }
