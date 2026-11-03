@@ -4,13 +4,14 @@ Joc 3D per al navegador inspirat en *Hunter* (Amiga). Comença a la teva base, e
 
 [Jugar](https://hunter.paradoxa.cat/) · [Fases fetes i pendents](PROGRESS.MD) · [Notes visuals](docs/VISUAL_MODERNIZATION.md)
 
-## Explosions arcade unificades · model 03 (v0.6.87)
+## Tres explosions arcade · model 03 (v0.6.88)
 
-- **Totes les detonacions, als modes individual i cooperatiu natiu:** fan servir l'efecte arcade 03 «Ona energètica», amb nucli esfèric translúcid, ones expansives, fum, pols, fragments i espurnes. Això inclou granades, bazuca, tancs, torres, patrulleres enemigues, míssils de l'helicòpter de combat, llanxa llançacoets i explosions de vehicles. El model de granada és el **predeterminat** fins i tot si l'esdeveniment no especifica arma.
-- **Excepció única: C4**, amb la versió més gran, alta i persistent, inclosa la segona pulsació. Només canvien els efectes visuals: radis de dany, física, destrucció i atribució de dany es mantenen.
-- **Eliminació del sistema anterior:** es retiren la geometria `blastRingG`, les instàncies `fx` i l'anell antic de `src/combat.js` i `src/game-core.js`.
-- **Cooperatiu:** el servidor classifica les explosions en `grenade` o `c4` i els dos clients generen les partícules localment, sense transmetre-les. Reutilització de malles (fins a vuit explosions simultànies) i reducció de densitat en qualitat mòbil.
-- **Referència visual:** [quatre propostes arcade en Three.js](explosions-arcade-proves.html). **Prova de regressió:** `node tests/arcade-blast-fx.mjs`.
+- **Granada (1×):** efecte arcade original petit, amb ones expansives i partícules simètriques.
+- **Projectil explosiu (1,5×):** bazuca, tancs, coets de patrulleres, torres, llanxa llançacoets i míssils de l'helicòpter de combat. El servidor cooperatiu transmet la direcció real de vol (`vx/vy/vz`) de cada impacte; el foc i la metralla es propaguen predominantment segons aquest eix. Les ones i el nucli s'alineen amb la trajectòria, però **el fum sempre puja verticalment**.
+- **C4 (2,55×):** 50% més gran que el C4 anterior (1,7×), amb el segon front expansiu, més fum i més persistència.
+- **Altres explosions (vehicles, cadenes):** model petit de granada si no són un impacte de projectil; sense recuperar l'anell antic.
+- **Paritat entre modes:** un únic mòdul `src/arcade-blast-fx.mjs` genera partícules locals reciclables. Només viatgen per xarxa el tipus, la posició i, si és un projectil, el vector d'impacte.
+- **Danys intactes:** aquests factors només afecten les dimensions gràfiques, no els radis, les col·lisions ni el dany real. Prova de regressió: `node tests/arcade-blast-fx.mjs`.
 
 ## Millores de combat (v0.6.2)
 
