@@ -279,6 +279,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.pistolAimTime=0;u.pistolShotAge=10;u.pistolBlend=0;
     // La direcció del tret i la pose visual comparteixen l'autoaim.
     u.visualAimDirection=null; // Els jugadors remots mantenen el rumb propi.
+    u.visualAimTargetLocked=false; // L'arma apunta també abans del primer tret.
     u.visualAimSmoothed=new THREE.Vector3(0,0,-1);
     u.visualAimLocal=new THREE.Vector3(0,0,-1);
     u.visualAimFallback=new THREE.Vector3(0,0,-1);
@@ -316,6 +317,13 @@ window.HUNTER_CHARACTERS=Object.freeze({
     const bazooka=createSharedBazooka(THREE,box);
     bazooka.position.set(.62,3.48-u.upperBodyPivotHeight,-.5);bazooka.visible=false;
     u.upperBody.add(bazooka);u.bazooka=bazooka;
+    // Les dues mans segueixen els punts de presa del tub quan es mou
+    // el musell, igual que amb els fusells de precisió i d'assalt.
+    const bazookaRightGrip=new THREE.Object3D(),bazookaLeftGrip=new THREE.Object3D();
+    bazookaRightGrip.position.set(.06,-.36,.38);
+    bazookaLeftGrip.position.set(-.35,-.22,-.50);
+    bazooka.add(bazookaRightGrip,bazookaLeftGrip);
+    u.bazookaRightGrip=bazookaRightGrip;u.bazookaLeftGrip=bazookaLeftGrip;
     // Rifle de franctirador amb culata, canó llarg i visor elevat.
     // La base del soldat s'ha generat a escala 1.2: l'espatlla
     // dreta és x=.57*1.2, y=2.90*1.2. La culata ha de tocar
@@ -624,8 +632,16 @@ window.HUNTER_CHARACTERS=Object.freeze({
       }
       tx(u.al,-.08);tz(u.al,-.12);tx(u.ael,.18);tz(u.ael,-.04);
     }else if(bazooka){
-      tx(u.ar,1.2);tz(u.ar,-.18);tx(u.aer,.72);
-      tx(u.al,1.02);tz(u.al,.3);tx(u.ael,.88);
+      // No fixam els braços en una posició estàtica mentre gira
+      // el llançacoets: el gallet i el suport es mouen amb el canó.
+      player.updateMatrixWorld(true);
+      const rig=u.pistolRig,handBlend=1-Math.exp(-21*dt);
+      rig.right.set(0,0,0);u.bazookaRightGrip.localToWorld(rig.right);
+      u.upperBody.worldToLocal(rig.right);
+      rig.left.set(0,0,0);u.bazookaLeftGrip.localToWorld(rig.left);
+      u.upperBody.worldToLocal(rig.left);
+      aimPlayerPistolArm(u.ar,u.aer,rig.right,1,rig,handBlend);
+      aimPlayerPistolArm(u.al,u.ael,rig.left,-1,rig,handBlend);
     }else if(sniper||assault){
       // La posició del rifle governa els canells, no al revés.
       // Conservam el mateix solver IK de la pistola a dues mans:
@@ -678,7 +694,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // L'animació es llança només amb un tret real de pistola (combat.js).
     // Retrocés mitjà: aprox. 10 cm de reculament local i 5.4 graus de pujada.
     const pistolAllowed=!inVehicle&&!grenade&&!throwing&&!bazooka&&!sniper&&!assault&&!cisalla&&!melee;
-    const targetBlend=pistolAllowed&&u.pistolAimTime>0?1:0;
+    const targetBlend=pistolAllowed&&(u.pistolAimTime>0||u.visualAimTargetLocked)?1:0;
     u.pistolBlend+=(targetBlend-u.pistolBlend)*(1-Math.exp(-18*dt));
     const blend=pistolAllowed?u.pistolBlend:0,rig=u.pistolRig;
     const age=u.pistolShotAge;
@@ -714,14 +730,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
     rig.aim.set(.045,3.10+up,-1.13+back);
     player.updateMatrixWorld(true);
     player.localToWorld(rig.aim);u.upperBody.worldToLocal(rig.aim);
-    rig.aimQ.setFromAxisAngle(rig.axisX,.045+kick*.095);
-    // El canó manté el rumb del jugador mentre el tors es torsiona.
-    u.upperBody.getWorldQuaternion(rig.torsoQ).invert();
-    player.getWorldQuaternion(rig.rootQ);
-    rig.aimQ.premultiply(rig.torsoQ.multiply(rig.rootQ));
-    // El canó de la pistola segueix també el mateix vector (rotació
-    // moderada dels braços gràcies als dos punts IK del canell).
-    rig.aimQ.copy(u.visualAimQuaternion).multiply(rig.aimQ);
+    // El quaternion local ja converteix el vector real de l'autoaim
+    // al marc del tors. No hi afegim una compensació antiga de cintura,
+    // perquè desalineava el musell de la retícula.
+    rig.aimQ.copy(u.visualAimQuaternion);
+    if(kick>0)rig.aimQ.multiply(rig.q3.setFromAxisAngle(rig.axisX,kick*.095));
     u.gun.position.copy(rig.idle).lerp(rig.aim,blend);
     u.gun.quaternion.copy(rig.idleQ).slerp(rig.aimQ,blend);
     u.pistolSlide.position.z=kick*.065;
