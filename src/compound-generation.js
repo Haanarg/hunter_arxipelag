@@ -195,7 +195,11 @@ function* buildApprovedCompoundSteps(layout,q,{pad,path,pier,prop,vehicles,rocke
     pier(...tr(-51,7),...tr(51,7),10,false);
     for(const x of[-24,24])pier(...tr(x,7),...tr(x,48),6);
   }
+  // Cada embarcador civil té entre una i quatre barques de rems.
+  const civilRowboatCount=layout.id==='civil-dock'?1+Math.floor(R()*4):Infinity;
+  let civilRowboats=0;
   for(const [vehicleIndex,spec] of layout.vehicles.entries()){
+    if(layout.id==='civil-dock'&&spec.t==='barca_rems'&&++civilRowboats>civilRowboatCount)continue;
     yield {stage:'Equipant '+layout.id,completed:null,total:null};
     const t=spec.t==='llanxa_coets'&&rocketAssigned?'llanxa':layout.id==='heliport'&&heliportSites.length===1?'heli_combat':spec.t,[x,z]=tr(spec.x,spec.z),v={t,x,z,hd:rotatedHeading(spec.hd),compound:record.id};
     if(layout.id==='hangar'){
