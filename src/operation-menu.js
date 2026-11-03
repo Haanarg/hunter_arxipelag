@@ -174,7 +174,7 @@ async function renderOperations(body,isCurrent=()=>true,notice=''){
       },card);
     }
   }catch(error){if(isCurrent())status.textContent=error.message||'No s’han pogut llegir les operacions.';}
-  button(started?'← Pausa':'← Portada',()=>{if(started)ui.show('pause');else ui.hide();});
+  if(!started)button('← Portada',()=>ui.hide());
 }
 window.HUNTER_OPERATIONS=Object.freeze({capture:captureOperation,save:saveOperation,load:loadOperation,open:openOperations,
   exportFile:exportOperationFile,importFile:importOperationFile});
