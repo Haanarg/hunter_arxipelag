@@ -333,6 +333,7 @@ export const vehicleModels=Object.freeze({
           const w=x===0?B*.34:B*.25,
                 scr=box(g,w,.64,.10,glassCol,x*(B*.43),1.74,screenZ,'glass');
           scr.rotation.x=-.48;scr.rotation.z=x===0?0:(x<0?-.10:.10);
+          scr.userData.boatWindshieldPane=x<0?0:x>0?2:1;
         }
         {const trimBar=box(g,B*.88,.14,.16,trim,0,1.45,screenZ+.12,'metal');trimBar.rotation.x=-.48}
 
@@ -409,6 +410,7 @@ export const vehicleModels=Object.freeze({
           const w=x===0?B*.34:B*.25,
                 scr=box(g,w,.64,.10,glassCol,x*(B*.43),1.74,screenZ,'glass');
           scr.rotation.x=-.48;scr.rotation.z=x===0?0:(x<0?-.10:.10);
+          scr.userData.boatWindshieldPane=x<0?0:x>0?2:1;
         }
         {const trimBar=box(g,B*.88,.14,.16,trim,0,1.45,screenZ+.12,'metal');trimBar.rotation.x=-.48}
 
