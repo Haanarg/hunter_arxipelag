@@ -354,10 +354,10 @@ function runoverDamage(...args){return window.HUNTER_SHARED_COMBAT.runoverDamage
 // entre dos fotogrames. El radi és el mateix que per a l'impacte puntual.
 function runoverSweepHit(...args){return window.HUNTER_SHARED_COMBAT.runoverSweepHit(...args)}
 
-function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc,audioSource=null){
+function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc,audioSource=null,mountedCannon=false){
   const claim=audioSource?.enemyVehicleClaim;
   // Un soldat al volant no dispara mai amb l'arma d'infanteria.
-  if(own==='e'&&claim&&claim.seat===0&&
+  if(own==='e'&&claim&&claim.seat===0&&!mountedCannon&&
      ['waiting','riding'].includes(claim.phase))return;
   const shotClass=shotClassFromSplash(spl),speed=sp*(shotClass==='heavy'?HEAVY_SHOT_SPEED_FACTOR:1),
         power=wholeDamage(dmg);
