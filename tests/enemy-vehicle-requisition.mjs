@@ -1,15 +1,17 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {candidateVehicles,requisitionChance,requisitionRoll,vehicleSeatPosition,
-  pursuitInput,observeFleeing,seatVisual,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
+  pursuitInput,observeFleeing,seatVisual,passengerMuzzle,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
 import {createEnemyVehicleController} from '../server/enemy-vehicle-controller.mjs';
 const source=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 assert.ok(requisitionChance(.6)<requisitionChance(1));
 assert.ok(requisitionChance(1)<requisitionChance(1.5));
-assert.ok(requisitionChance(.6)>.05&&requisitionChance(1.5)<.7);
+assert.equal(requisitionChance(.6),.25);
+assert.equal(requisitionChance(1),.50);
+assert.equal(requisitionChance(1.5),.75);
 assert.ok(requisitionChance(1,true)>requisitionChance(1));
-assert.ok(requisitionChance(1.5,true)<=.9);
+assert.equal(requisitionChance(1.5,true),.95);
 const observer={x:0,z:0},runner={id:'player',x:25,z:0},track={};
 assert.equal(observeFleeing(observer,runner,0,track),false);
 runner.x=26.5;
@@ -50,6 +52,22 @@ assert.equal(candidateVehicles({x:0,z:0},[motorcycle]).length,0,
 assert.ok(seatVisual('tanc',0).hidden&&seatVisual('tanqueta',0).hidden,
   'Els soldats dels blindats estan protegits dins del vehicle');
 assert.equal(seatVisual('moto',0).x,0);
+for(const seat of [0,1]){
+  const pose=seatVisual('cotxe',seat);
+  assert.ok(pose.y<.8&&pose.scale<=.31&&
+    Math.abs(pose.x)>.8,'El soldat ha de quedar baix i a la seva plaça del Humvee');
+}
+const humvee=neutral('humvee','cotxe',0,0);
+const muzzle=passengerMuzzle(humvee,1);
+assert.ok(muzzle.x>2.05&&muzzle.y>3,
+  'L’arma del copilot ha de sortir del lateral del Humvee');
+assert.equal(passengerMuzzle(neutral('armored','tanc',0,0)),null,
+  'El copilot no pot disparar a través del casc blindat');
+assert.ok(source('src/combat.js').includes("v===p.sourceVehicle"),
+  'Els projectils no poden impactar el seu vehicle d’origen');
+assert.ok(source('src/combat.js').includes("claim.seat===0"),
+  'La pistola del conductor queda desactivada');
+assert.ok(source('server/coop-combat.mjs').includes('passengerMuzzle(v,v.y)'));
 assert.ok(pursuitInput(cars[0],{x:-25,z:-30}).turn>0,
   'El conductor segueix la direcció del jugador');
 assert.ok(pursuitInput(cars[0],{x:0,z:-80},{passenger:false}).forward>.5,
