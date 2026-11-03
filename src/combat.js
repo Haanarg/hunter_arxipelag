@@ -427,28 +427,16 @@ function closestFenceBlastPoint(...args){return window.HUNTER_SHARED_COMBAT.clos
 function presentExplosion(x,y,z,r,source=null){
  window.HUNTER_STEALTH.emit('explosion',x,y,z);
  snd('boom',1,{x,y,z},source);
- // La granada i el C4 comparteixen el model arcade 03. La resta
- // d'explosions conserven l'anell actual; no canviam dany ni radis.
- const kind=source?.weapon;
- if((kind==='grenade'||kind==='c4')&&window.HUNTER_CREATE_ARCADE_BLAST_FX){
-   if(!window.HUNTER_ARCADE_BLAST_FX||window.HUNTER_ARCADE_BLAST_FX.scene!==world){
-     window.HUNTER_ARCADE_BLAST_FX?.dispose();
-     window.HUNTER_ARCADE_BLAST_FX=window.HUNTER_CREATE_ARCADE_BLAST_FX(THREE,world,{
-       quality:window.HUNTER_GRAPHICS_QUALITY==='mobile'?'mobile':'desktop'
-     });
-   }
-   if(window.HUNTER_ARCADE_BLAST_FX.emit(x,y,z,kind))return;
+ // Explosió arcade 03 única: granada per defecte, C4 més contundent.
+ // Aquest mòdul només és visual; el dany i el radi físic no es toquen.
+ const kind=source?.weapon==='c4'?'c4':'grenade';
+ if(!window.HUNTER_ARCADE_BLAST_FX||window.HUNTER_ARCADE_BLAST_FX.scene!==world){
+   window.HUNTER_ARCADE_BLAST_FX?.dispose();
+   window.HUNTER_ARCADE_BLAST_FX=window.HUNTER_CREATE_ARCADE_BLAST_FX(THREE,world,{
+     quality:window.HUNTER_GRAPHICS_QUALITY==='mobile'?'mobile':'desktop'
+   });
  }
- // L'ona expansiva és un front anular subtil, no una esfera
- // quasi opaca. L'efecte NO escriu profunditat: murs i portes que
- // resisteixen l'explosió sempre continuen visibles, també en interiors.
- const opacity=.38,
-       o=new THREE.Mesh(blastRingG,new THREE.MeshBasicMaterial({
-         color:0xffb15d,side:THREE.DoubleSide,
-         transparent:true,opacity,depthTest:true,depthWrite:false
-       }));
- o.rotation.x=-Math.PI/2;
- o.position.set(x,y,z);world.add(o);fx.push({o,life:.6,s:r*1.6,opacity});
+ window.HUNTER_ARCADE_BLAST_FX.emit(x,y,z,kind);
 }
 function boom(x,y,z,r,dmg,own,source=null,visualWeapon=null){
  presentExplosion(x,y,z,r,visualWeapon?{weapon:visualWeapon}:source);
@@ -1539,15 +1527,6 @@ for(let i=bombs.length-1;i>=0;i--){
    // S'usa la posició actual, mai la de sortida de l'helicòpter.
    boom(b.x,b.y,b.z,48,COMBAT_BALANCE.weapons.c4,'b',null,'c4');
    world.remove(b.o);bombs.splice(i,1);
- }
-}
-for(let i=fx.length-1;i>=0;i--){
- const f=fx[i];f.life-=dt;
- f.o.scale.setScalar(1+(.6-Math.max(0,f.life))*f.s);
- // Manté el mateix sostre d'opacitat que el primer fotograma.
- f.o.material.opacity=Math.max(0,f.life/.6)*f.opacity;
- if(f.life<=0){
-  world.remove(f.o);f.o.material.dispose();fx.splice(i,1);
  }
 }
 window.HUNTER_ARCADE_BLAST_FX?.update(dt);
