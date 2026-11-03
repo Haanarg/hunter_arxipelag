@@ -3,7 +3,7 @@ import {ARMORED_AIM,SMALL_ARMS_RANGE,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL
 // Original individual weapon parameters; presentation and authority stay in adapters.
 export const HEAVY_SPEED_FACTOR=1.17;
 export const weaponCatalog=Object.freeze(Object.fromEntries(Object.entries({
- pistol:{name:'Pistola',ammo:'bullets',speed:130,damage:combatBalance.weapons.pistol,range:SMALL_ARMS_RANGE.pistol,cone:SMALL_ARMS_AIM_CONE,vertical:SMALL_ARMS_AIM_VERTICAL,cooldown:.22,life:2.2},
+ pistol:{name:'Pistola',ammo:'bullets',speed:130,damage:combatBalance.weapons.pistol,range:SMALL_ARMS_RANGE.pistol,cone:SMALL_ARMS_AIM_CONE,vertical:SMALL_ARMS_AIM_VERTICAL,cooldown:.44,life:2.2},
  assault:{name:'Fusell d’assalt',item:'assault',ammo:'bullets',speed:130,damage:combatBalance.weapons.rifle,range:SMALL_ARMS_RANGE.assault,cone:RIFLE_AIM_CONE,vertical:SMALL_ARMS_AIM_VERTICAL,cooldown:.34,life:2.2},
  sniper:{name:'Franctirador',item:'sniper',ammo:'sniperAmmo',speed:470,damage:combatBalance.weapons.sniper,range:1000,cone:RIFLE_AIM_CONE,vertical:Math.PI/2,cooldown:1.05,life:2.2},
  bazooka:{name:'Bazuca',ammo:'bazooka',speed:72*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.bazooka,splash:18,range:185,cone:Math.SQRT1_2,vertical:Math.PI/4,cooldown:1.05,life:3.8},
@@ -37,9 +37,12 @@ export function vehicleGrenadeLaunch(vehicle,baseY=vehicle?.y){
  const heading=vehicle.hd,forwardX=-Math.sin(heading),forwardZ=-Math.cos(heading),
   rightX=Math.cos(heading),rightZ=-Math.sin(heading),utility=vehicle.t==='heli';
  const radius=vehicle.hullRadius??({ferry:15.5,tanc:5.6,tanqueta:4.5,camio:4.8,heli:2.5}[vehicle.t]??({llanxa:8.25,llanxa_coets:8.6,barca_rems:3.25,hover:4.8,cotxe:3.8,cotxe_civil:3.35}[vehicle.t]??1.6));
- const side=utility?2.5:vehicle.t==='ferry'?16:Math.min(9.5,Math.max(1.35,radius+.7)),
-  front=utility?1.5:1.1,lift=utility?2.4:vehicle.t==='ferry'?3.6:['tanc','tanqueta','camio'].includes(vehicle.t)?3.6:2.55,
-  forward=(vehicle.v||0)*.9+(utility?7:9),lateral=(vehicle.strafeV||0)+(utility?4.5:6);
+ const boat=vehicle.t==='llanxa'||vehicle.t==='llanxa_coets';
+ const side=boat?0:utility?2.5:vehicle.t==='ferry'?16:Math.min(9.5,Math.max(1.35,radius+.7)),
+  front=boat?5.1:utility?1.5:1.1,
+  lift=boat?3:utility?2.4:vehicle.t==='ferry'?3.6:['tanc','tanqueta','camio'].includes(vehicle.t)?3.6:2.55,
+  forward=(vehicle.v||0)*.9+(utility?7:9),
+  lateral=(vehicle.strafeV||0)+(boat?0:utility?4.5:6);
  return {x:vehicle.x+forwardX*front+rightX*side,y:baseY+lift,
   z:vehicle.z+forwardZ*front+rightZ*side,
   vx:forwardX*forward+rightX*lateral,vy:utility?5:10,
