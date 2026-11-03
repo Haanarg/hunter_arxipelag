@@ -156,7 +156,9 @@ function enemyFindPath(u,tx,tz){
   if(u.navSearch)return u.navSearch();
   const step=Math.max(2,enemyRouteRadius(u)*.7),sx=u.x,sz=u.z,dist=Math.hypot(tx-sx,tz-sz),reach=Math.min(dist,140);
   if(dist<.1)return [];
-  const gx=sx+(tx-sx)*reach/dist,gz=sz+(tz-sz)*reach/dist,pad=60,
+  const gx=sx+(tx-sx)*reach/dist,gz=sz+(tz-sz)*reach/dist,
+    // La porta del recinte pot quedar lluny de la línia directa.
+    pad=u.enemyVehicleClaim?.phase==='approach'?110:60,
     minX=Math.min(sx,gx)-pad,maxX=Math.max(sx,gx)+pad,minZ=Math.min(sz,gz)-pad,maxZ=Math.max(sz,gz)+pad;
   const nodes=new Map(),valid=new Map(),heap=[],key=(x,z)=>x+','+z,heur=(x,z)=>Math.hypot(gx-x,gz-z);
   function push(n){heap.push(n);let i=heap.length-1;while(i){const p=(i-1)>>1;if(heap[p].f<=n.f)break;heap[i]=heap[p];i=p}heap[i]=n}
@@ -167,7 +169,7 @@ function enemyFindPath(u,tx,tz){
   const passive=enemyPassiveRoute(u),sliceStarted=performance.now(),
     sliceLimit=passive?ENEMY_PASSIVE_PATH_SLICE_MS:ENEMY_PATH_SLICE_MS;
   let progressed=0;
-  while(heap.length&&count<1600){
+  while(heap.length&&count<(u.enemyVehicleClaim?.phase==='approach'?4200:1600)){
     // Una cerca costosa es pausa sense esborrar el heap ni l'objectiu.
     // Després de cada bloc de vuit nodes es comprova el temps gastat.
     if(enemyNodeBudget<=0||(passive&&enemyPassiveNodeBudget<=0)||
