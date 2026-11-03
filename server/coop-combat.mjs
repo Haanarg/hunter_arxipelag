@@ -174,7 +174,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     const actor=visiblePlayers().find(p=>p.id===unit.focus&&p.hp>0);
     if(!actor)return true;
     const vehicle=vehicles.mounted(actor.id),heavy=!!vehicle,
-      rate=heavy?Math.ceil((unit.heavyRate||4.2)*30):Math.ceil((unit.rate||.7)*30),
+      rate=heavy?Math.ceil((unit.heavyRate||5)*30):Math.ceil((unit.rate||.7)*30),
       next=heavy?'nextHeavyTick':'nextAttackTick',limit=heavy?(unit.heavyRange||95):(unit.rng||112.5);
     if(tick<(unit[next]||0)||Math.hypot(actor.x-unit.x,actor.z-unit.z)>limit)return true;
     const eye={x:unit.x,y:unit.y+9.4,z:unit.z},
