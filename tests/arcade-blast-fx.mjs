@@ -65,6 +65,31 @@ const shell=plume.children[5];
 const axis=new THREE.Vector3(0,1,0).applyQuaternion(shell.quaternion);
 assert(axis.distanceTo(new THREE.Vector3(-1,0,0))<1e-5,
   'Blast plume faces back toward the incoming projectile origin');
+const ringA=plume.children[6],ringB=plume.children[7];
+for(const ring of [ringA,ringB]){
+  const normal=new THREE.Vector3(0,0,1).applyQuaternion(ring.quaternion);
+  assert(normal.distanceTo(new THREE.Vector3(-1,0,0))<1e-5,
+    'The normal of each shockwave ring follows the reversed shot direction');
+  assert(ring.position.x<0,'The ring is offset in front of the impacted wall toward the shooter');
+}
+orientFx.emit(0,2,0,{weapon:'projectile',direction:{x:1,y:1,z:1}},12);
+orientFx.update(.1);
+for(const ring of [ringA,ringB]){
+  const normal=new THREE.Vector3(0,0,1).applyQuaternion(ring.quaternion);
+  const incoming=new THREE.Vector3(-1,-1,-1).normalize();
+  assert(normal.distanceTo(incoming)<1e-5,
+    'Diagonal projectile shocks also expand in planes perpendicular to the shot');
+}
+orientFx.emit(0,2,0,'grenade',13);
+orientFx.update(.1);
+for(const ring of [ringA,ringB]){
+  const normal=new THREE.Vector3(0,0,1).applyQuaternion(ring.quaternion);
+  assert(normal.distanceTo(new THREE.Vector3(0,1,0))<1e-5,
+    'Grenade shockwave rings remain horizontal');
+}
+orientFx.emit(0,2,0,{weapon:'projectile',direction:{x:1,y:0,z:0}},14);
+for(let i=0;i<8;i++)orientFx.update(.075);
+
 const smoke=plume.children[1],matrix=new THREE.Matrix4();
 smoke.getMatrixAt(0,matrix);
 const firstSmokeHeight=matrix.elements[13];
