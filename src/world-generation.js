@@ -227,9 +227,12 @@ const batchStaticDecor=function* (){let checkpointUnits=0;
             cx=Math.floor(center.x/CHUNK),cz=Math.floor(center.z/CHUNK);
       const signature=[mat.type,mat.roughness??0,mat.metalness??0,mat.opacity??1,
         mat.transparent?1:0,mat.side,mat.flatShading?1:0,mat.polygonOffset?1:0,mat.polygonOffsetFactor,mat.polygonOffsetUnits].join(':');
-      const key=cx+','+cz+'|'+signature;
+      // Els fonaments dels complexos s'han de veure tan lluny com els edificis.
+      // Separar-los per categoria evita allargar l'abast de tota la decoració.
+      const compoundPlatform=!!root.userData.compoundPlatform;
+      const key=cx+','+cz+'|'+signature+'|'+(compoundPlatform?'platform':'decor');
       let group=groups.get(key);
-      if(!group){group={cx,cz,mat,signature,meshes:[]};groups.set(key,group)}
+      if(!group){group={cx,cz,mat,signature,compoundPlatform,meshes:[]};groups.set(key,group)}
       group.meshes.push(mesh);originals++;
     });
   }
@@ -274,6 +277,7 @@ const batchStaticDecor=function* (){let checkpointUnits=0;
     }
     const mesh=new THREE.Mesh(geom,mat);
     mesh.name='hunter-static-decor-batch';
+    mesh.userData.compoundPlatform=group.compoundPlatform;
     mesh.position.set(x,0,z);mesh.castShadow=false;
     world.add(mesh);
     batches++;vertices+=total;
@@ -402,7 +406,9 @@ const compoundPad=(x,z,w,d,c=0x77736c)=>{
   if(seedSearchMode){compoundClear.push({x,z,r:Math.hypot(w,d)*.55});return {rotation:{y:0}}}
   const material=M(c,'masonry').clone();material.polygonOffset=true;material.polygonOffsetFactor=-1;material.polygonOffsetUnits=-1;
   const geometry=new THREE.PlaneGeometry(w,d);geometry.rotateX(-Math.PI/2);
-  const o=new THREE.Mesh(geometry,material);o.position.set(x,hAt(x,z)+.06,z);world.add(o);staticDecorRoots.push(o);compoundClear.push({x,z,r:Math.hypot(w,d)*.55});return o;
+  const o=new THREE.Mesh(geometry,material);o.position.set(x,hAt(x,z)+.06,z);
+  o.userData.compoundPlatform=true;
+  world.add(o);staticDecorRoots.push(o);compoundClear.push({x,z,r:Math.hypot(w,d)*.55});return o;
 };
 const landingPad=(x,z,size=30,rot=0)=>{
   if(seedSearchMode){compoundClear.push({x,z,r:size*.72});return {rotation:{y:rot}}}
