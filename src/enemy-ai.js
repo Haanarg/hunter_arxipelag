@@ -458,9 +458,11 @@ function enemyVehicleBoardingTick(u,dt){
     enemyVehicleRelease(u);return false;
   }
   const goal=spotted?target:{x:u.lastSeenX,z:u.lastSeenZ};
-  const input=enemyRequisition.pursuitInput(v,goal,{
+  const planned=enemyRequisition.pursuitInput(v,goal,{
     passenger:v.enemyCrew[1]?.enemyVehicleClaim?.phase==='riding'
   });
+  const input=enemyRequisition.avoidVehicleBarbedWire(v,planned,
+    wallCandidates(v.x,v.z,42),c.fenceAvoid??={});
   // Ús del mateix stepV que el jugador, sense moure la malla a mà.
   if(input.distance>3||!v.enemyCrew[1])stepV(v,input.forward,input.turn,0,Math.min(dt,.1));
   const oldX=u.x,oldZ=u.z;
