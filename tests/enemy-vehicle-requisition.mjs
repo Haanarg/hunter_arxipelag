@@ -164,6 +164,15 @@ assert.ok(vehicles.includes('enemyReserve,enemyRelease,enemyPromote,enemyAccept'
   vehicles.includes("code='ENEMY_OCCUPIED'")&&
   vehicles.includes('stepRangeVehicle(v,input'));
 assert.ok(client.includes('e.nativeBoardedVehicle=boarded'));
+assert.ok(solo.includes('function attachEnemyCarCrew(car')&&
+  solo.includes('HUNTER_ENEMY_CREW_VISUAL')&&
+  solo.includes('enemyCarRifleShot({'),
+  'El mode individual reaprofita els ocupants i l’arma del Humvee de patrulla');
+assert.ok(client.includes('HUNTER_ENEMY_CREW_VISUAL.show')&&
+  client.includes('e.o.visible=false'),
+  'El mode cooperatiu amaga els soldats drets i mostra el rider reutilitzat');
+assert.ok(source('src/combat.js').includes('HUNTER_ENEMY_CREW_VISUAL?.show(vehicle,0,true)'),
+  'La substitució del conductor també actualitza el rider');
 assert.ok(source('src/operation-runtime.js').includes(
   "if(kind==='enemies'&&entity.enemyVehicleClaim)"));
 console.log('OK: fugida, distància sense LOS, tancs, tanquetes, motos, seients, copilot, persecució il·limitada i pèrdua de contacte');
