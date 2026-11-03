@@ -371,9 +371,14 @@ function enemyVehicleReserve(u,{fleeing=false}={}){
   v.enemyCrew??=[null,null];
   if(v.enemyCrew[pick.seat])return false;
   v.enemyCrew[pick.seat]=u;
+  const dockGoal=pick.dockRoute?.[0],
+    goal=dockGoal||enemyRequisition.vehicleSeatPosition(v,pick.seat),
+    half=Math.hypot(goal.x-u.x,goal.z-u.z)*.5,
+    barrier=wallCandidates((goal.x+u.x)*.5,(goal.z+u.z)*.5,half+100),
+    fenceRoute=enemyRequisition.requisitionFenceDetour(u,goal,barrier);
   u.enemyVehicleClaim={vehicle:v,seat:pick.seat,phase:'approach',
-    timeout:elapsed+32,waitUntil:elapsed+1.7,lastContact:elapsed,
-    dockRoute:pick.dockRoute,dockIndex:0};
+    timeout:elapsed+40,waitUntil:elapsed+1.7,lastContact:elapsed,
+    dockRoute:pick.dockRoute,dockIndex:0,fenceRoute,fenceIndex:0};
   u.tacticGoal=null;releaseSoldierEntry(u);releaseSoldierReservation(u);
   return true;
 }
@@ -414,11 +419,18 @@ function enemyVehicleBoardingTick(u,dt){
         Math.hypot(u.x-route[c.dockIndex].x,u.z-route[c.dockIndex].z)<2.2)
         c.dockIndex++;
     }
-    const q=boat?route[Math.min(c.dockIndex,route.length-1)]:
-      enemyRequisition.vehicleSeatPosition(v,c.seat);
-    const d=Math.hypot(q.x-u.x,q.z-u.z);
-    if(boat?!enemyRequisition.boatBoardingReady(u,v,route):
-      d>enemyRequisition.REQUISITION.boardingDistance){
+    // Si una filferrada talla el camí al seient (o a la rampa),
+    // primer travessam l'obertura identificada.
+    while(c.fenceIndex<(c.fenceRoute?.length||0)&&
+      Math.hypot(u.x-c.fenceRoute[c.fenceIndex].x,
+        u.z-c.fenceRoute[c.fenceIndex].z)<2.45)c.fenceIndex++;
+    const fenceGoal=c.fenceRoute?.[c.fenceIndex],
+      q=fenceGoal||(
+        boat?route[Math.min(c.dockIndex,route.length-1)]:
+          enemyRequisition.vehicleSeatPosition(v,c.seat)),
+      d=Math.hypot(q.x-u.x,q.z-u.z);
+    if(fenceGoal||(boat?!enemyRequisition.boatBoardingReady(u,v,route):
+      d>enemyRequisition.REQUISITION.boardingDistance)){
       mvE(u,u.sp*.95*dt,q.x,q.z);
       u.walkY=groundAt(u.x,u.z,u.walkY??u.gy??u.o.position.y);
       u.gy=u.walkY;
