@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {candidateVehicles,requisitionChance,requisitionRoll,vehicleSeatPosition,
-  pursuitInput,observeFleeing,seatVisual,passengerMuzzle,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
+  pursuitInput,observeFleeing,seatVisual,passengerMuzzle,
+  boatBoardingRoute,boatBoardingReady,requisitionBoat,avoidVehicleBarbedWire,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
 import {createEnemyVehicleController} from '../server/enemy-vehicle-controller.mjs';
 const source=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
@@ -45,6 +46,33 @@ for(const type of ['tanc','tanqueta','moto']){
     type+' ha de ser requisable');
   assert.ok(vehicleSeatPosition(v,0).x!==v.x);
 }
+const dockBoat=neutral('dock-boat','llanxa',0,14);
+const dockPier={x:0,z:7,ux:0,uz:1,px:1,pz:0,length:16,width:4,y:2.4};
+const dockRamp={x:0,z:0,nx:0,nz:-1,length:12,width:3.6,top:2.4,bottom:.6,ramp:true,pierAccess:true};
+assert.equal(candidateVehicles({x:0,z:-11},[dockBoat]).length,0,
+  'No es requisarà una llanxa si no hi ha moll accessible');
+const dockRoute=boatBoardingRoute(dockBoat,[dockPier],[dockRamp]);
+assert.ok(dockRoute?.length>=3,
+  'La ruta de la llanxa ha de passar per la rampa i el pantalà');
+assert.equal(dockRoute[0].z,-12);
+assert.equal(candidateVehicles({x:0,z:-11},[dockBoat],{
+  piers:[dockPier],stairs:[dockRamp]
+}).length,1,'Una llanxa neutral amb moll sí que és requisable');
+assert.ok(boatBoardingReady(dockRoute.at(-1),dockBoat,dockRoute));
+assert.equal(requisitionBoat('llanxa_coets'),true);
+const fence={barbed:true,x0:-8,z0:-12,x1:8,z1:-12,
+  ax:-8,az:-12,bx:8,bz:-12};
+const pursuitCar={...neutral('car','cotxe',0,0),v:14};
+const approaching=pursuitInput(pursuitCar,{x:0,z:-100});
+const avoiding=avoidVehicleBarbedWire(pursuitCar,approaching,[fence],{});
+assert.equal(avoiding.avoidingFence,true);
+assert.ok(avoiding.forward<approaching.forward,
+  'La IA ha de frenar abans de la filferrada');
+assert.equal(avoidVehicleBarbedWire(pursuitCar,approaching,[],{}),approaching,
+  'Sense obstacle, la física i la velocitat originals no canvien');
+assert.ok(source('src/compound-generation.js').includes('u.rate=6.8')&&
+  source('server/coop-combat.mjs').includes('Math.max(6.8'),
+  'La cadència dels soldats llançacoets és la meitat en tots dos modes');
 const motorcycle=neutral('bike','moto',3,0);
 motorcycle.enemyCrew=['enemy-1',null];
 assert.equal(candidateVehicles({x:0,z:0},[motorcycle]).length,0,
