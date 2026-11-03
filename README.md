@@ -4,12 +4,13 @@ Joc 3D per al navegador inspirat en *Hunter* (Amiga). Comença a la teva base, e
 
 [Jugar](https://hunter.paradoxa.cat/) · [Fases fetes i pendents](PROGRESS.MD) · [Notes visuals](docs/VISUAL_MODERNIZATION.md)
 
-## Explosions arcade · model 03 (v0.6.79)
+## Explosions arcade unificades · model 03 (v0.6.87)
 
-- **Granades i C4, individual i cooperatiu natiu:** mateix motor visual Three.js `src/arcade-blast-fx.mjs`, basat en la proposta 3 «Ona energètica» de [la comparativa de quatre estils](explosions-arcade-proves.html). Nucli esfèric translúcid, dos fronts anulars, foc, pols, fum, fragments i espurnes 3D.
-- **C4:** esclat visual més gran i alt, segona pulsació retardada i fum més persistent. El radi de dany, la física, la destrucció i l'atribució de dany **no canvien**. Les explosions de coets i vehicles mantenen l'efecte anterior.
-- **Xarxa:** el servidor cooperatiu envia `weapon: 'grenade'|'c4'` a l'esdeveniment d'explosió; cada client genera localment el mateix tipus d'efecte, sense transmetre partícules. El gestor recicla fins a vuit grups i redueix les partícules en qualitat mòbil.
-- **Proves:** `node tests/arcade-blast-fx.mjs` (motor visual, agrupació, transparència i cicle de vida) i els casos existents de granades/C4 del servidor. La comparativa continua separada del joc.
+- **Totes les detonacions, als modes individual i cooperatiu natiu:** fan servir l'efecte arcade 03 «Ona energètica», amb nucli esfèric translúcid, ones expansives, fum, pols, fragments i espurnes. Això inclou granades, bazuca, tancs, torres, patrulleres enemigues, míssils de l'helicòpter de combat, llanxa llançacoets i explosions de vehicles. El model de granada és el **predeterminat** fins i tot si l'esdeveniment no especifica arma.
+- **Excepció única: C4**, amb la versió més gran, alta i persistent, inclosa la segona pulsació. Només canvien els efectes visuals: radis de dany, física, destrucció i atribució de dany es mantenen.
+- **Eliminació del sistema anterior:** es retiren la geometria `blastRingG`, les instàncies `fx` i l'anell antic de `src/combat.js` i `src/game-core.js`.
+- **Cooperatiu:** el servidor classifica les explosions en `grenade` o `c4` i els dos clients generen les partícules localment, sense transmetre-les. Reutilització de malles (fins a vuit explosions simultànies) i reducció de densitat en qualitat mòbil.
+- **Referència visual:** [quatre propostes arcade en Three.js](explosions-arcade-proves.html). **Prova de regressió:** `node tests/arcade-blast-fx.mjs`.
 
 ## Millores de combat (v0.6.2)
 
