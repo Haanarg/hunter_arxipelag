@@ -9301,7 +9301,8 @@ function enemyVehicleBoardingTick(u,dt){
       animateEnemyInfantry(u,true,dt);
       return true;
     }
-    c.phase=c.seat===0?'waiting':'riding';
+    // La moto només té un seient: el pilot no espera un passatger inexistent.
+    c.phase=c.seat===0&&v.t!=='moto'?'waiting':'riding';
     c.waitUntil=elapsed+enemyRequisition.REQUISITION.passengerWaitSeconds;
     // El soldat real és l'actor de combat, però visualment s'amaga.
     // El pilot visible és el mateix rider assegut del Humvee de patrulla.
