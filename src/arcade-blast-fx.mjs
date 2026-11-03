@@ -116,7 +116,10 @@ export function createArcadeBlastFX(T,scene,{quality='desktop',limit=8}={}){
     const rand=randomGenerator(seed),scale=profile.scale;
     g.root.position.set(at.x,at.y,at.z);
     g.root.visible=true;g.age=0;g.profile=profile;
-    g.direction=profile.kind==='projectile'?direction:null;
+    // El projectil entra a la paret/vehicle: la flamarada s'obre
+    // cap al costat des d'on venia, per no quedar amagada dins el mur.
+    g.direction=profile.kind==='projectile'&&direction?
+      {x:-direction.x,y:-direction.y,z:-direction.z}:null;
     // El nucli i les ones giren segons la trajectòria, mai l'arrel:
     // el fum i la pols han de continuar en coordenades verticals.
     for(const [kind,b] of Object.entries(g.batches)){
