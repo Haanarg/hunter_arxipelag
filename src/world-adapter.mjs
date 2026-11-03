@@ -12,7 +12,7 @@ function normalizeStair(s){
   const out=pick(s,['x','z','nx','nz','top','length','width']);
   if(out.length<=0||out.width<=0||Math.abs(Math.hypot(out.nx,out.nz)-1)>1e-6)throw new RangeError('Invalid stair');
   if(!s.ramp&&(!Number.isInteger(s.steps)||s.steps<1||s.tread<=0||s.rise<0))throw new RangeError('Invalid stair treads');
-  return {...out,ramp:!!s.ramp,internal:!!s.internal,owner:{rb:!!s.owner?.rb},
+  return {...out,ramp:!!s.ramp,pierAccess:!!s.pierAccess,internal:!!s.internal,owner:{rb:!!s.owner?.rb},
     destroyed:!!s.destroyed,...(s.ramp?pick(s,['bottom']):pick(s,['steps','tread','rise']))};
 }
 function normalizeBuilding(b){
