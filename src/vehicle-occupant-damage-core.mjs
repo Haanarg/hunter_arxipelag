@@ -142,7 +142,7 @@ export function marineCrewProjectileContact(from,to,boat,{baseY=boat.y??0}={}){
   const a=local(from),b=local(to);
   // El tret des de la proa travessa primer el panell real del parabrisa.
   const dz=b.z-a.z;
-  if(dz>1e-8&&a.z<=-.65&&b.z>=-.65){
+  if(Math.abs(dz)>1e-8&&((a.z<=-.65&&b.z>=-.65)||(a.z>=-.65&&b.z<=-.65))){
     const t=(-.65-a.z)/dz,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t;
     if(y>=1.34&&y<=2.15)for(let pane=0;pane<3;pane++){
       if(broken.includes(pane)||Math.abs(x-MARINE_GLASS_X[pane])>MARINE_GLASS_W[pane]*.5)continue;
