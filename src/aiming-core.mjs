@@ -62,7 +62,7 @@ export function bazookaInterceptPoint(e,originX,originY,originZ,targetY,speed){
   return {x:e.x+vx*time,y:targetY,z:e.z+vz*time};
 }
 
-export function createAimSelector({origin,direction,range,cone=.97,shotClass='light',focus=null,verticalCone=Math.PI/2,isClear=()=>true}){
+export function createAimSelector({origin,direction,range,cone=.97,shotClass='light',focus=null,verticalCone=Math.PI/2,isClear=()=>true,isOnScreen=()=>true}){
  const {x,y,z}=origin,[fx,fy,fz]=direction;
   if(focus){focus.target=null;focus.point=null;focus.kind=null}
   const heavy=shotClass==='heavy',forward=Math.hypot(fx,fz),
@@ -85,6 +85,9 @@ export function createAimSelector({origin,direction,range,cone=.97,shotClass='li
            smallArmsAimHorizontalCone(cone,pitchError):cone,
          overhead=wideSmallArms&&horizontal<=1.6&&Math.abs(dy)>=horizontal*3;
    if(!overhead&&alignment<allowedCone)return;
+   // Per al bazuca del jugador, descarta dianes que la càmera no mostra.
+   // La resta d'armes i el servidor no depenen de la càmera local.
+   if(!isOnScreen(tx,ty,tz))return;
    if(!isClear(x,y,z,tx,ty,tz,ignoreWall,ignoreBuilding,heavy))return;
    const dot=Math.max(-1,Math.min(1,(dx*fx+dy*fy+dz*fz)/(distance*axisLength)));
    const angularError=Math.acos(dot);
