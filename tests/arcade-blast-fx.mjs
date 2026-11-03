@@ -59,7 +59,7 @@ fx.dispose();
 assert.equal(scene.children.length,0,'scene is restored and materials released');
 const orientScene=new THREE.Scene(),orientFx=createArcadeBlastFX(THREE,orientScene,{limit:1});
 orientFx.emit(0,2,0,{weapon:'projectile',vx:80,vy:0,vz:0},11);
-orientFx.update(.6);
+for(let i=0;i<8;i++)orientFx.update(.075);
 const plume=orientScene.children[0];
 const shell=plume.children[5];
 const axis=new THREE.Vector3(0,1,0).applyQuaternion(shell.quaternion);
