@@ -2307,7 +2307,16 @@ const act=c=>{if(generationPromise)return;if(ui?.isBombTimerOpen?.()){
     document.getElementById('bombTimerConfirm')?.click?.();return
   }
   return
-}if(/^Digit[1-7]$/.test(c)){selectWeapon(quickWeapons()[Number(c.slice(5))-1]);return}if(c==='KeyV'){cycleWeapon(1);return}if(c==='Escape'||c==='KeyP'){if(started)paused?resume():panel('pause');return}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv)toggle();else if(interactPlayerDoor()){}else if(getOptionalAction())executePlayerOptionalAction();else if(nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyB'){if(cv)throwVehicleGrenade();return}if(c==='KeyG'){
+}if(/^Digit[1-7]$/.test(c)){selectWeapon(quickWeapons()[Number(c.slice(5))-1]);return}if(c==='KeyV'){cycleWeapon(1);return}if(c==='Escape'||c==='KeyP'){
+  if(started){
+    // ESC/P sempre porta a la pausa: si érem dins un submenú,
+    // primer tornam al menú principal; una altra pulsació reprèn la partida.
+    if(!paused)panel('pause');
+    else if(ui?.getMode?.()!=='pause')panel('pause');
+    else resume();
+  }
+  return;
+}if(c==='KeyM'){if(started)paused?resume():panel('map');return}if(c==='KeyI'){if(started)paused?resume():panel('inventory');return}if(c==='F9'){setStealthDebug(!window.HUNTER_STEALTH.enabled());return}if(!started||paused||over)return;if(c==='KeyX'){if(canCrouch()){playerCrouched=!playerCrouched;updateCrouchButton()}return}if(c==='KeyT'){toggleSniperScope();return}if(c==='KeyE'){if(cv)toggle();else if(interactPlayerDoor()){}else if(getOptionalAction())executePlayerOptionalAction();else if(nearV())toggle();else panel('inventory');return}if(c==='KeyR'){panel('inventory');return}if(c==='KeyB'){if(cv)throwVehicleGrenade();return}if(c==='KeyG'){
   // The utility helicopter has two independent actions: F throws
   // grenades and G programmes a timed explosive for the side door.
   if(cv?.t==='heli'){
@@ -2444,7 +2453,7 @@ if(moving){const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),sx=Math.cos(l
   playerEject={kind:'flip',vx:fx*carry+sx*outward,vz:fz*carry+sz*outward,t:.5,dur:.5,height:.68};msg='Has saltat del vehicle en marxa!';msgT=2.5}
 cv=null}else{const v=nearV();if(v&&!v.sunk){cv=v;swimming=false;playerCrouched=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
 addEventListener('keydown',e=>{
-  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
+  if(['Escape','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
   if(e.repeat)return;
   if(e.code==='KeyF'&&started&&!paused&&!over&&grenadeEquipped&&!cv){
     beginGrenadeCharge();K.KeyF=0;return;
