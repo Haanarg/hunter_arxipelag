@@ -136,20 +136,25 @@ function makePlayerKnife(T,knife,box){
   knife.userData.previewTip=new T.Vector3(-.045,-1.055,0);
 }
 // Solució geomètrica dels colzes. Barreja amb la postura base per evitar salts.
-function aimPlayerPistolArm(shoulder,elbow,wrist,side,rig,blend){
+function aimPlayerPistolArm(shoulder,elbow,wrist,side,rig,blend,rifleGrip=false){
   const start=shoulder.position,goal=rig.v1.copy(wrist).sub(start);
   const upper=Math.abs(elbow.position.y),lower=rig.forearmLength;
   const dist=Math.min(upper+lower-.001,Math.max(.001,goal.length()));
   const axis=goal.normalize(),along=(upper*upper+dist*dist-lower*lower)/(2*dist);
   const radius=Math.sqrt(Math.max(0,upper*upper-along*along));
-  const pole=rig.v2.set(side*.2,-1,.18);
+  // Amb rifles, l'avantbraç es plega cap enfora, no a través del pit.
+  // Per a la pistola es conserva la postura compacta original.
+  const pole=rig.v2.set(side*(rifleGrip?.52:.2),rifleGrip?-.47:-1,rifleGrip?.12:.18);
   pole.addScaledVector(axis,-pole.dot(axis)).normalize();
   const elbowP=rig.v3.copy(start).addScaledVector(axis,along).addScaledVector(pole,radius);
   const shoulderDir=rig.v4.copy(elbowP).sub(start).normalize();
   rig.q1.setFromUnitVectors(rig.down,shoulderDir);
-  const forearmDir=rig.v4.copy(wrist).sub(elbowP).normalize().applyQuaternion(rig.q3.copy(rig.q1).invert());
-  rig.q2.setFromUnitVectors(rig.forearm,forearmDir);
+  // Els colzes han de seguir l'espatlla JA interpolada, no el seu
+  // destí futur: així l'avantbraç no queda desfasat en els girs ràpids.
   shoulder.quaternion.slerp(rig.q1,blend);
+  const forearmDir=rig.v4.copy(wrist).sub(elbowP).normalize()
+    .applyQuaternion(rig.q3.copy(shoulder.quaternion).invert());
+  rig.q2.setFromUnitVectors(rig.forearm,forearmDir);
   elbow.quaternion.slerp(rig.q2,blend);
 }
 // La mateixa geometria i els mateixos materials per al jugador i els
@@ -286,6 +291,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.visualAimWorldQ=new THREE.Quaternion();
     u.visualAimQuaternion=new THREE.Quaternion();
     u.visualAimForward=new THREE.Vector3(0,0,-1);
+    u.weaponPoseOffset=new THREE.Vector3();
 
     // La pistola és filla del jugador; en repòs segueix un pivot del canell
     // dret i, en disparar, passa amb interpolació a la subjecció a dues mans.
@@ -334,8 +340,12 @@ window.HUNTER_CHARACTERS=Object.freeze({
     const assault=new THREE.Group();
     // Culata al costat de l'espatlla dreta, però prou a prop del tronc
     // perquè el braç esquerre pugui arribar REALMENT al guardamans.
-    assault.position.set(.53,3.52-u.upperBodyPivotHeight,-.76);
     assault.scale.setScalar(.84);u.upperBody.add(assault);
+    // Culata al davant de l'espatlla dreta (mai dins del tors).
+    // El receptor avança quan girem l'arma; la culata roman ancorada.
+    assault.userData.stockAnchor=new THREE.Vector3(.65,3.48-u.upperBodyPivotHeight,-.17);
+    assault.userData.stockToReceiver=new THREE.Vector3(-.12,.04,-1.11);
+    assault.position.copy(assault.userData.stockAnchor).add(assault.userData.stockToReceiver);
     box(assault,.26,.24,1.9,0x4c5c4b,0,0,-.18,'paint');
     box(assault,.14,.14,1.15,0x303938,0,.02,-1.55,'metal');
     box(assault,.29,.26,.72,0x856d4a,0,-.04,.96,'paint');
@@ -346,7 +356,9 @@ window.HUNTER_CHARACTERS=Object.freeze({
     assaultRightGrip.position.set(-.04,-.2,.25);
     // Mà esquerra sota el guardamans, per davant del gallet. El punt queda
     // dins del radi anatòmic dels dos segments del braç articulat.
-    assaultLeftGrip.position.set(-.42,-.23,-.43);
+    // La presa davantera queda a l'abast del braç esquerre, fins i
+    // tot després de desplaçar el receptor per alliberar la culata.
+    assaultLeftGrip.position.set(-.52,-.20,.06);
     // Extrem real del tub: centre z=-1.55, longitud 1.15 -> boca a -2.125.
     // Un petit marge deixa les bales fora de la cara frontal del canó.
     const assaultMuzzle=new THREE.Object3D();
@@ -356,9 +368,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
     assault.visible=false;u.assault=assault;u.assaultMuzzle=assaultMuzzle;
     u.assaultRightGrip=assaultRightGrip;u.assaultLeftGrip=assaultLeftGrip;
     const sniper=new THREE.Group();
-    sniper.position.set(.68,3.60-u.upperBodyPivotHeight,-1.15);
     sniper.scale.setScalar(.82);
     u.upperBody.add(sniper);
+    sniper.userData.stockAnchor=new THREE.Vector3(.73,3.48-u.upperBodyPivotHeight,-.17);
+    sniper.userData.stockToReceiver=new THREE.Vector3(-.05,.12,-1.20);
+    sniper.position.copy(sniper.userData.stockAnchor).add(sniper.userData.stockToReceiver);
     box(sniper,.23,.24,2.2,0x596b5e,0,0,-.24,'paint');
     box(sniper,.15,.15,1.55,0x303938,0,.03,-1.95,'metal');
     box(sniper,.3,.32,.82,0x806847,0,-.07,1.05,'paint');
@@ -380,7 +394,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     sniperRightGrip.name='hunter-sniper-trigger-grip';
     sniperLeftGrip.name='hunter-sniper-foregrip';
     sniperRightGrip.position.set(-.04,-.19,.28);
-    sniperLeftGrip.position.set(-.38,-.25,.19);
+    sniperLeftGrip.position.set(-.67,-.23,.22);
     sniper.add(sniperRightGrip,sniperLeftGrip);
     sniper.visible=false;u.sniper=sniper;u.sniperMuzzle=sniperMuzzle;
     u.sniperRightGrip=sniperRightGrip;u.sniperLeftGrip=sniperLeftGrip;
@@ -586,13 +600,23 @@ window.HUNTER_CHARACTERS=Object.freeze({
       if(!group)continue;
       group.quaternion.slerp(u.visualAimQuaternion,1-Math.exp(-16*dt));
     }
-    // Retrocés visual dels fusells i de la bazuca del jugador remot.
+    // Recalcular el centre de l'arma després de GIRAR el canó.
+    // L'extrem posterior de la culata no ha d'orbitar dins l'espatlla.
+    // Tant el tret local com els riders remots utilitzen el mateix pivot.
     for(const [weapon,group] of [['assault',u.assault],['sniper',u.sniper],['bazooka',u.bazooka]]){
       if(!group)continue;
-      group.userData.nativeRestZ??=group.position.z;
       const recoil=u.nativeShotWeapon===weapon&&u.nativeShotAge<.26?
         Math.sin(Math.PI*u.nativeShotAge/.26)*.11:0;
-      group.position.z=group.userData.nativeRestZ+recoil;
+      const anchor=group.userData.stockAnchor,offset=group.userData.stockToReceiver;
+      if(anchor&&offset){
+        group.position.copy(anchor)
+          .add(u.weaponPoseOffset.copy(offset).applyQuaternion(group.quaternion));
+        if(recoil)group.position.addScaledVector(
+          u.weaponPoseOffset.set(0,0,1).applyQuaternion(group.quaternion),recoil);
+      }else{
+        group.userData.nativeRestZ??=group.position.z;
+        group.position.z=group.userData.nativeRestZ+recoil;
+      }
     }
     u.bazooka.visible=bazooka;u.sniper.visible=sniper;u.assault.visible=assault;u.grenade.visible=(grenade||throwing)&&!u.grenadeReleased;
     u.cisalla.visible=cisalla;
@@ -640,8 +664,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
       u.upperBody.worldToLocal(rig.right);
       rig.left.set(0,0,0);u.bazookaLeftGrip.localToWorld(rig.left);
       u.upperBody.worldToLocal(rig.left);
-      aimPlayerPistolArm(u.ar,u.aer,rig.right,1,rig,handBlend);
-      aimPlayerPistolArm(u.al,u.ael,rig.left,-1,rig,handBlend);
+      aimPlayerPistolArm(u.ar,u.aer,rig.right,1,rig,handBlend,true);
+      aimPlayerPistolArm(u.al,u.ael,rig.left,-1,rig,handBlend,true);
     }else if(sniper||assault){
       // La posició del rifle governa els canells, no al revés.
       // Conservam el mateix solver IK de la pistola a dues mans:
@@ -655,8 +679,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
       (sniper?u.sniperRightGrip:u.assaultRightGrip).localToWorld(rig.right);u.upperBody.worldToLocal(rig.right);
       rig.left.set(0,0,0);
       (sniper?u.sniperLeftGrip:u.assaultLeftGrip).localToWorld(rig.left);u.upperBody.worldToLocal(rig.left);
-      aimPlayerPistolArm(u.ar,u.aer,rig.right,1,rig,handBlend);
-      aimPlayerPistolArm(u.al,u.ael,rig.left,-1,rig,handBlend);
+      aimPlayerPistolArm(u.ar,u.aer,rig.right,1,rig,handBlend,true);
+      aimPlayerPistolArm(u.al,u.ael,rig.left,-1,rig,handBlend,true);
     }else if(u.knife.visible){
       // Postura 4B en repòs i moviment. En atacar, trajectòria 3B:
       // preparació lateral, estocada, canell +90° i retorn a guàrdia.
