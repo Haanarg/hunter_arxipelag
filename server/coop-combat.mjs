@@ -7,7 +7,7 @@ import {stepNativeSoldierNavigation} from '../src/native-soldier-navigation.mjs'
 import {createEnemyVehicleController} from './enemy-vehicle-controller.mjs';
 import {passengerMuzzle} from '../src/enemy-vehicle-requisition.mjs';
 import {vehicleSpecs} from '../src/vehicle-specs.mjs';
-import {vehicleSeatProjectileContact,breakVehicleSeatWindow,vehicleSeatWorld} from '../src/vehicle-occupant-damage-core.mjs';
+import {vehicleSeatProjectileContact,breakVehicleSeatWindow,vehicleSeatWorld,vehicleOccupantHeadWorld} from '../src/vehicle-occupant-damage-core.mjs';
 import {windowCrossing,wallShotHit,knifeWindowHit} from '../src/building-shell.mjs';
 import {weaponCatalog,combatCommands,mountedWeapons,grenadeLaunch,vehicleGrenadeLaunch,meleeTarget} from '../src/weapon-catalog.mjs';
 import {limitBazookaHorizontalAim} from '../src/aiming-core.mjs';
