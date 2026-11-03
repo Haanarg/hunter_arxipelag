@@ -869,7 +869,7 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
       // Els riders competeixen individualment amb el casc: la mira tria
       // el més proper al centre visual, com qualsevol soldat enemic.
       for(let seat=0;seat<2;seat++){
-        if((e.marineCrewHp?.[seat]??0)<=0)continue;
+        if((e.marineCrewHp?.[seat]??window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.MARINE_CREW_HP)<=0)continue;
         const point=window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.marineCrewHeadWorld(
           e,seat,e.o?.position?.y??0);
         consider({t:'soldat',marineBoat:e,marineSeat:seat},'enemy',0,
