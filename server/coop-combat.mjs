@@ -427,7 +427,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     for(const t of targets)if(t.hp>0){
       // Un soldat embarcat es representa i s'adquireix al seient.
       const carrier=t.enemyVehicleId&&vehicles.live().find(v=>v.id===t.enemyVehicleId),
-        point=carrier?vehicleSeatWorld(carrier,t.enemySeat||0,carrier.y):null;
+        point=carrier?vehicleOccupantHeadWorld(carrier,t.enemySeat||0,carrier.y):null;
       if(carrier&&['tanc','tanqueta'].includes(carrier.t))continue;
       aim.consider(t,'enemy',weaponTargetPriority({...t,t:t.t||'soldat'},heavy?'heavy':weapon),
         point?.x??t.x,point?.y??(t.y+(t.t==='torre'?9.4:1.5)),point?.z??t.z);
