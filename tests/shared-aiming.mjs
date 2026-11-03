@@ -4,6 +4,20 @@ import * as aiming from '../src/aiming-core.mjs';
 import {aimingTrace} from './helpers/aiming-trace.mjs';
 const expected=JSON.parse(readFileSync(new URL('./fixtures/aiming-trace.json',import.meta.url)));assert.equal(aimingTrace(readFileSync(new URL('../src/combat.js',import.meta.url),'utf8'),aiming),expected.hash,'all frozen individual target selections, focus points and directions stay identical');
 const make=(options={})=>aiming.createAimSelector({origin:{x:0,y:1.5,z:0},direction:[0,0,-1],range:85,cone:.82,shotClass:'pistol',...options});
+assert.ok(Math.abs(aiming.RIFLE_AIM_HALF_ANGLE*180/Math.PI-40)<1e-10);
+for(const kind of ['assault','sniper'])for(const height of [1.5,30,-20]){
+  const atAngle=deg=>({x:Math.sin(deg*Math.PI/180)*20,y:height,z:-Math.cos(deg*Math.PI/180)*20});
+  for(const angle of [-39.9,39.9]){
+    const aim=make({shotClass:kind,cone:aiming.RIFLE_AIM_CONE}),t=atAngle(angle);
+    aim.consider({t:'soldat'},'enemy',0,t.x,t.y,t.z);
+    assert.equal(aim.hasTarget,true,`${kind} must accept ${angle} degrees at y=${height}`);
+  }
+  for(const angle of [-40.1,40.1,80]){
+    const aim=make({shotClass:kind,cone:aiming.RIFLE_AIM_CONE}),t=atAngle(angle);
+    aim.consider({t:'soldat'},'enemy',0,t.x,t.y,t.z);
+    assert.equal(aim.hasTarget,false,`${kind} must reject ${angle} degrees at y=${height}`);
+  }
+}
 let focus={target:'stale',point:{},kind:'stale'},select=make({focus});assert.deepEqual(select.direction(),[0,0,-1]);assert.equal(focus.target,null);const vehicle={id:'car',t:'jeep'},soldier={id:'soldier',t:'soldat'};
 select.consider(vehicle,'enemy',aiming.weaponTargetPriority(vehicle,'pistol'),0,1.5,-6);select.consider(soldier,'enemy',aiming.weaponTargetPriority(soldier,'pistol'),3,1.5,-15);assert.equal(focus.target,soldier,'danger class priority beats distance');assert.equal(focus.kind,'enemy');assert.ok(select.direction()[0]>0);
 focus={};select=make({focus,isClear:(x,y,z,tx)=>tx!==0});select.consider(soldier,'enemy',0,0,1.5,-10);assert.equal(select.hasTarget,false,'blocked candidate is never acquired');select.consider(vehicle,'enemy',1,3,1.5,-10);assert.equal(focus.target,vehicle);
