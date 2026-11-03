@@ -278,10 +278,20 @@ body.sniper-scoped #joystick{cursor:crosshair}
   min-height:0;padding-right:40px;margin:12px 0 0;color:#bfae88;
 }
 #gamepanel .pause-card button.pause-joker{
-  position:absolute;right:15px;bottom:11px;min-width:37px;
-  width:37px;height:37px;min-height:37px;padding:4px;
-  margin:0;font-size:21px;line-height:1;border-radius:9px;
-  background:linear-gradient(#34322b,#1d201d);border:1px solid #806943;
+  position:absolute;right:15px;bottom:11px;
+  width:37px;height:37px;min-width:37px;min-height:37px;
+  margin:0;padding:3px;font-size:25px;line-height:1;
+  background:transparent;border:0;box-shadow:none;
+  color:inherit;text-shadow:0 2px 4px #0009;
+}
+#gamepanel .pause-card button.pause-joker:hover,
+#gamepanel .pause-card button.pause-joker:focus-visible{
+  background:transparent;border:0;box-shadow:none;
+}
+#gamepanel .pause-card .pause-abandon-warning{color:#f1dbb1;line-height:1.5}
+#gamepanel .pause-card .pause-abandon-actions{display:grid;gap:10px}
+#gamepanel .pause-card #abandonConfirm{
+  border-color:#c99b66;color:#ffdfb0;background:linear-gradient(#553b30,#32231f);
 }
 #gamepanel .pause-card .pause-help{gap:9px}
 #gamepanel .pause-card .pause-help>div{
