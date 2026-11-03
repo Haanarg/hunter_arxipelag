@@ -299,3 +299,12 @@ assert.ok(source('src/combat.js').includes('HUNTER_ENEMY_CREW_VISUAL?.show(vehic
 assert.ok(source('src/operation-runtime.js').includes(
   "if(kind==='enemies'&&entity.enemyVehicleClaim)"));
 console.log('OK: fugida, distància sense LOS, tancs, tanquetes, motos, seients, copilot, persecució il·limitada i pèrdua de contacte');
+
+// Regressions: una porta no requereix una precisió impossible, i
+// la decisió de requisar no queda bloquejada permanentment per l'ID.
+const enemySource=source('src/enemy-ai.js'),controllerSource=source('server/enemy-vehicle-controller.mjs');
+assert.ok(enemySource.includes('lateral<=.55'),'la tolerància lateral del portal permet navegar-hi');
+assert.ok(enemySource.includes("id+':'+attempt"),'cada intent solo té una tirada pròpia');
+assert.ok(controllerSource.includes("unit.id+':'+attempt"),'cada intent coop té una tirada pròpia');
+assert.notEqual(requisitionRoll('soldier-1:0',67),requisitionRoll('soldier-1:1',67),
+  'la nova tirada no és invariant amb el pas del temps');
