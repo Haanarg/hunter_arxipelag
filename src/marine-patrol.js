@@ -61,7 +61,8 @@ function ensureEnemyVehicleFlag(mesh,type,visible=true){
 }
 function createMarinePatrolVisual(boat){
   attachEnemyBoatCrew(boat);
-  ensureEnemyVehicleFlag(boat,'patrulla_marina');
+  // La bandera s'afegeix DESPRÉS del LOD perquè no s'oculti
+  // amb la malla completa de la patrullera.
 }
 function aimEnemyBoatCrew(boat,seat,target,dt=.1){
   const w=boat?.userData?.enemyCarCrew?.boatWeapons?.[seat];
