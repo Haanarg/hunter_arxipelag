@@ -923,7 +923,7 @@ if(!seedSearchMode&&t!=='soldat'&&t!=='general')window.HUNTER_ENEMY_LOD.optimize
 if(!seedSearchMode)world.add(g);const sensePhase=(E.length%10)*.01,u={t,x,z,gy,hd:rr(0,6.28),o:g,home:{x,z},cd:rr(0,1),alert:0,wt:0,tx:x,tz:z,senseT:sensePhase,
   remoteAiPhase:((E.length*37)%101)/101,canSee:false,defenseTarget:null,...c};
 if(options.elite){u.elite=true;u.hp=COMBAT_BALANCE.people.elite;u.dmg=COMBAT_BALANCE.weapons.eliteRifle;u.rng=85;u.rate=TANKETTE_FIRE_INTERVAL;u.sp=8;u.cd=.4+(E.length%4)*.14}
-if(t==='torre'){u.heavyCd=1.6+(E.length%5)*.4;u.heavyRate=4.2;u.heavyRange=95}
+if(t==='torre'){u.heavyCd=1.6+(E.length%5)*.4;u.heavyRate=5;u.heavyRange=95}
 E.push(u);
 if(t==='torre'){
   const base=gy??enemyGroundAt(u,x,z);
