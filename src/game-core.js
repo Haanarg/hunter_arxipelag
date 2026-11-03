@@ -2564,6 +2564,26 @@ function setCheat(key,enabled){
 }
 function resume(){if(generationPromise||operationBusy)return;paused=false;simulationFocused=true;clearKeys();ui.hide();audioResume();resetSimulationClock()}
 function panel(mode){if(generationPromise)return;setSniperScope(false);paused=true;updateOptionalSystems(0,false);resetSimulationClock();pickerOpen=false;picker.style.display='none';pickerToggle.style.display='none';clearKeys();audioPause();ui.show(mode)}
+
+async function abandonMission(){
+  if(generationPromise)return;
+  // No descartam el món mentre un desament ja iniciat encara escriu.
+  // No es crea cap desament nou: abandonar no equival a desar.
+  if(operationWritePromise)await waitOperationWrite();
+  if(operationBusy)return;
+  paused=true;clearKeys();audioPause();setSniperScope(false);
+  if(nativeCoopSession)stopNativeCoop();
+  started=0;over=false;simulationFocused=false;
+  ui.hide();discardGeneratedWorld();resetCameraState();
+  document.body.classList.remove('game-started','game-generating','sniper-scoped','player-swimming');
+  iniEl.style.display='flex';startMenuEl.style.display='flex';
+  seedSearchScreenEl.style.display='none';
+  seedSearchScreenEl.setAttribute('aria-hidden','true');
+  document.getElementById('startLoading').style.display='none';
+  pickerOpen=false;picker.style.display='none';pickerToggle.style.display='none';
+  resetSimulationClock();
+}
+
 // Les cartes revelen informació de forma immediata: no són objectes
 // d'inventari que s'hagin d'equipar ni obrir manualment.
 function revealMapPickup(kind,allSectors=false,pickupSector=null){
@@ -2778,6 +2798,7 @@ const ui=window.HUNTER_UI.create({
     },
     dropItem:id=>dropInvItem(id),
     restart:d=>startGameProgressively({difficulty:d,scale:MAP_SCALE,seed:requestedSeed,restart:true}),
+    abandonMission,
     setPalmsDisabled,
     setWaterDisabled,
     setShadowsDisabled,
