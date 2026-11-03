@@ -11,7 +11,8 @@ export const ARCADE_BLAST_STYLE=Object.freeze({
 });
 export function arcadeBlastKind(source){
   const weapon=typeof source==='string'?source:source?.weapon;
-  return weapon==='grenade'||weapon==='granada'?'grenade':weapon==='c4'?'c4':null;
+  // Tota detonació usa la granada per defecte. El C4 és l'única excepció.
+  return weapon==='c4'?'c4':'grenade';
 }
 export function arcadeBlastProfile(kind,quality='desktop'){
   if(kind!=='grenade'&&kind!=='c4')return null;
