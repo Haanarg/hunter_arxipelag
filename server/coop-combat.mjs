@@ -413,7 +413,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       blastWire(center,blast.damage,blast.radius);
       blastStructures(center,blast.damage,blast.radius);
       blastPalms(center,blast.damage,blast.radius);
-      alarm(center,blast.actorId,tick,'explosion');effect('explosion',tick,{actorId:blast.actorId,at:center,radius:blast.radius,weapon:blast.weapon||null,hits});
+      alarm(center,blast.actorId,tick,'explosion');effect('explosion',tick,{actorId:blast.actorId,at:center,radius:blast.radius,weapon:blast.weapon==='c4'?'c4':'grenade',hits});
     }
   }
   function aimWeapon(p,vehicle,weapon,from){
