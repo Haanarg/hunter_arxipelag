@@ -1,6 +1,6 @@
 // IA de requisa de vehicles neutrals: regles compartides SOLO / COOP.
 import {vehicleDynamics} from './vehicle-dynamics-core.mjs';
-import {vehicleSeatCount} from './vehicle-specs.mjs';
+import {vehicleSeatCount,vehicleSpecs} from './vehicle-specs.mjs';
 const ELIGIBLE=new Set(['cotxe','cotxe_civil','camio','tanc','tanqueta','moto']);
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const angle=a=>Math.atan2(Math.sin(a),Math.cos(a));
@@ -80,9 +80,23 @@ export function pursuitInput(v,target,{passenger=false,distance=Infinity}={}){
     d<3&&passenger?0:Math.abs(error)>2.4?.38:Math.abs(error)>1.3?.58:1;
   return{forward,turn:clamp(error*1.25,-1,1),distance:d};
 }
-// Els blindats tancats tenen tripulació a l'interior; la moto, a la sella.
+// La malla d'infanteria fa ~4 m d'alçada sense reduir: el Humvee
+// necessita una escala i una base més baixes que el soldat dret.
 export const seatVisual=(type,seat)=>['tanc','tanqueta'].includes(type)
   ?{x:(seat?1:-1)*.55,y:1,z:-.4,scale:.43,hidden:true}:
   type==='moto'?{x:0,y:1.65,z:.4,scale:.52}:
   type==='camio'?{x:(seat?1:-1)*.62,y:1.7,z:-.62,scale:.46}:
-  {x:(seat?1:-1)*.72,y:1.02,z:-.43,scale:.43};
+  type==='cotxe'?{x:(seat?1:-1)*.84,y:.70,z:-.26,scale:.31}:
+  {x:(seat?1:-1)*.613,y:.70,z:-.60,scale:.31};
+
+// Boca del canó del passatger, per fora del lateral de la carrosseria:
+// calcula el marge amb la caixa de col·lisió real, no amb el centre del cotxe.
+export function passengerMuzzle(v,baseY=v.y??0){
+  if(!v)return null;
+  if(v.t==='tanc'||v.t==='tanqueta')return null;
+  const halfWidth=(vehicleSpecs.hitboxes[v.t]?.[0]??3)/2;
+  const lateral=halfWidth+.75,h=v.hd??0,fore=-.65;
+  return {x:v.x+Math.cos(h)*lateral+Math.sin(h)*fore,
+          y:baseY+(v.t==='moto'?2.15:2.25),
+          z:v.z-Math.sin(h)*lateral+Math.cos(h)*fore};
+}
