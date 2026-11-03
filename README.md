@@ -7,7 +7,7 @@ Joc 3D per al navegador inspirat en *Hunter* (Amiga). Comença a la teva base, e
 ## Tres explosions arcade · model 03 (v0.6.88)
 
 - **Granada (1×):** efecte arcade original petit, amb ones expansives i partícules simètriques.
-- **Projectil explosiu (1,5×):** bazuca, tancs, coets de patrulleres, torres, llanxa llançacoets i míssils de l'helicòpter de combat. El servidor cooperatiu transmet la direcció real de vol (`vx/vy/vz`) de cada impacte; el foc i la metralla es propaguen predominantment segons aquest eix. Les ones i el nucli s'alineen amb la trajectòria, però **el fum sempre puja verticalment**.
+- **Projectil explosiu (1,5×):** bazuca, tancs, coets de patrulleres, torres, llanxa llançacoets i míssils de l'helicòpter de combat. El servidor cooperatiu transmet la direcció real de vol (`vx/vy/vz`) de cada impacte; el foc i la metralla es propaguen predominantment cap al costat d'on arriba el tret (en sentit contrari al vector de vol, per no quedar amagats dins la paret). Les ones i el nucli s'alineen amb la trajectòria, però **el fum sempre puja verticalment**.
 - **C4 (2,55×):** 50% més gran que el C4 anterior (1,7×), amb el segon front expansiu, més fum i més persistència.
 - **Altres explosions (vehicles, cadenes):** model petit de granada si no són un impacte de projectil; sense recuperar l'anell antic.
 - **Paritat entre modes:** un únic mòdul `src/arcade-blast-fx.mjs` genera partícules locals reciclables. Només viatgen per xarxa el tipus, la posició i, si és un projectil, el vector d'impacte.
