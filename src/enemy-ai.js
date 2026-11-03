@@ -135,6 +135,30 @@ function enemyShotDirection(u,target,targetY,eyeY,roll=rn,weapon=null){
   return direction;
 }
 
+// Tripulacions pròpies: soldats embarcats en vehicles requisats o patrulles
+// regulars. Una reserva pendent no compta com a vehicle tripulat.
+function enemyVehicleCrewAboard(v){
+ if(['jeep','tanqueta','tanc','patrulla_marina'].includes(v.t))return true;
+ return !!v.enemyCrew?.some(u=>u?.hp>0&&
+   ['waiting','riding'].includes(u.enemyVehicleClaim?.phase));
+}
+function enemyFriendlyVehicleOnLine(from,to,v){
+ const b=vehicleBox(v),t=vehicleHitType(v.t),height=
+   t==='ferry'?8:t==='heli'||t==='heli_combat'?5.5:
+   t==='camio'?4.8:t==='tanc'?4.7:t==='tanqueta'?4:
+   t==='llanxa'||t==='llanxa_coets'?3.8:3.3;
+ return window.HUNTER_SHARED_COMBAT.friendlyVehicleBlocksLine(from,to,v,{
+   width:b.w,depth:b.d,baseY:vehicleY(v),height});
+}
+function enemyFriendlyVehicleInFireLane(from,to,sourceVehicle=null){
+ const reach=Math.hypot(to.x-from.x,to.z-from.z)/2+60,
+   mx=(from.x+to.x)/2,mz=(from.z+to.z)/2;
+ for(const v of vehicleCandidatesAt(mx,mz,reach)){
+   if(v===sourceVehicle||v.destroyed||!enemyVehicleCrewAboard(v))continue;
+   if(enemyFriendlyVehicleOnLine(from,to,v))return true;
+ }
+ return false;
+}
 // El contacte visual i la possibilitat de disparar no són el mateix.
 // Les parets i els vehicles aparcats obliguen el soldat a canviar d'angle.
 function soldierClearShot(u,x,z,y,target,targetY,aimHeight=1.5){
@@ -154,7 +178,11 @@ function soldierClearShot(u,x,z,y,target,targetY,aimHeight=1.5){
     if(t!=null&&t<.97)return false;
   }
   for(const v of vehicleCandidatesAt(mx,mz,reach+18)){
-    if(v===cv||v.destroyed)continue; // no ens bloqueja el vehicle objectiu
+    if(v===cv||v.destroyed)continue; // el vehicle del jugador és l'objectiu
+    if(enemyVehicleCrewAboard(v)){
+      if(enemyFriendlyVehicleOnLine({x,y,z},{x:tx,y:ty,z:tz},v))return false;
+      continue;
+    }
     const radius=vehicleRadius(v.t)*.55,vy=vehicleY(v)+Math.min(1.7,radius*.6);
     const t=segmentSphereT(x,y,z,tx,ty,tz,v.x,vy,v.z,radius);
     if(t!=null&&t<.97)return false;
@@ -399,9 +427,11 @@ function enemyBoardedBoatShot(u,v,seat,target,targetY,dt){
     goal.x-p.x,goal.y-p.y,goal.z-p.z,rn),
     dx=goal.x+offset.x-p.x,dy=goal.y+offset.y-p.y,dz=goal.z+offset.z-p.z,
     norm=Math.max(.001,Math.hypot(dx,dy,dz)),speed=rocket?75:125;
+  const shotsBefore=Pj.length;
   shoot(p.x,p.y,p.z,dx/norm,dy/norm,dz/norm,speed,
     rocket?COMBAT_BALANCE.weapons.boatRocket:COMBAT_BALANCE.weapons.rifle,
     rocket?8:0,'e',rocket?mS:mW,rocket?2:SMALL_ARMS_SCALE,u);
+  if(Pj.length===shotsBefore)return false;
   if(rocket)Pj[Pj.length-1].life=Math.max(2.2,norm/(speed*HEAVY_SHOT_SPEED_FACTOR)+.75);
   return true;
 }
