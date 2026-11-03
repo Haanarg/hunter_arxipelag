@@ -180,6 +180,17 @@ export const seatVisual=(type,seat)=>['tanc','tanqueta'].includes(type)
   type==='cotxe'?{x:(seat?1:-1)*.84,y:.70,z:-.26,scale:.31}:
   {x:(seat?1:-1)*.613,y:.70,z:-.60,scale:.31};
 
+// Origen autoritatiu dels canons portats pels dos comandos de la llanxa.
+// Els mateixos seients i transformacions de attachEnemyBoatCrew, sense Three.js.
+export function boatCrewMuzzle(v,seat=0,baseY=v.y??0){
+ if(!v||!requisitionBoat(v.t)&&v.t!=='patrulla_marina')return null;
+ const h=v.hd??v.heading??0,scale=vehicleSpecs.scales.llanxa||1.95,
+   lx=(seat===0?-.58:.58)*scale,
+   lz=(seat===0?.42:.38)*scale;
+ return {x:v.x+Math.cos(h)*lx+Math.sin(h)*lz,
+   y:baseY+2.10*scale,
+   z:v.z-Math.sin(h)*lx+Math.cos(h)*lz};
+}
 // Boca del canó del passatger, per fora del lateral de la carrosseria:
 // calcula el marge amb la caixa de col·lisió real, no amb el centre del cotxe.
 export function passengerMuzzle(v,baseY=v.y??0){
