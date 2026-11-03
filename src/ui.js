@@ -64,10 +64,10 @@ window.HUNTER_UI=Object.freeze({
       title.textContent=mode==='bombtimer'?'Programar explosiu':mode==='map'?'Carta de navegació':
         mode==='inventory'?'Inventari':mode==='restart'?'Nova operació?':
         mode==='performance'?'Opcions':mode==='keys'?'Tecles i controls':
-        mode==='cheats'?'Trucs':'Operació en pausa';
+        mode==='cheats'?'Trucs':mode==='abandon'?'Abandonar la missió?':'Operació en pausa';
       const card=panel.querySelector('.card');
       card.classList.toggle('inventory-card',mode==='inventory');
-      card.classList.toggle('pause-card',['pause','keys','performance','cheats','saves','account','restart'].includes(mode));
+      card.classList.toggle('pause-card',['pause','keys','performance','cheats','saves','account','restart','abandon'].includes(mode));
       if(mode==='coop'){
         title.textContent='Sala cooperativa';actions.renderCoop(body,()=>currentMode==='coop');
       }else if(mode==='history'){
@@ -239,6 +239,18 @@ window.HUNTER_UI=Object.freeze({
         document.getElementById('performanceRefresh').onclick=refresh;
         document.getElementById('performanceBack').onclick=()=>actions.open('pause');
         refresh();
+      }else if(mode==='abandon'){
+        body.innerHTML='<p class="pause-abandon-warning">Vols abandonar la missió i tornar al menú inicial? El progrés que no hagis desat es perdrà.</p>'+
+          '<div class="pause-abandon-actions"><button id="abandonCancel" type="button">CONTINUAR LA MISSIÓ</button>'+
+          '<button id="abandonConfirm" type="button">ABANDONAR I TORNAR A L’INICI</button></div>';
+        document.getElementById('abandonCancel').onclick=()=>actions.open('pause');
+        document.getElementById('abandonConfirm').onclick=()=>{
+          const button=document.getElementById('abandonConfirm');
+          button.disabled=true;
+          Promise.resolve(actions.abandonMission()).catch(()=>{
+            button.disabled=false;
+          });
+        };
       }else if(mode==='restart'){
         body.innerHTML='<p>Perdràs el progrés. Dificultat de la nova partida:</p><button data-diff=".6">Fàcil</button><button data-diff="1">Normal</button><button data-diff="1.5">Difícil</button>';
         body.querySelectorAll('[data-diff]').forEach(b=>b.onclick=()=>actions.restart(+b.dataset.diff))
@@ -251,7 +263,7 @@ window.HUNTER_UI=Object.freeze({
           '<div class="pause-save-row">'+
           '<button id="savesMenu" type="button"><span class="pause-menu-icon" aria-hidden="true">💾</span> DESAR</button>'+
           '<label class="pause-autosave-label"><input id="autosaveEnabledPause" type="checkbox"> <span>Autodesat</span></label></div>'+
-          '<button id="restartMenu" type="button">↻ NOVA PARTIDA</button>'+
+          '<button id="restartMenu" type="button">↩ ABANDONAR LA MISSIÓ</button>'+
           '<button id="performanceMenu" type="button">⚙ OPCIONS</button>'+
           '</div>'+
           '<p id="operationAutosaveStatus" class="pause-note" role="status"></p>'+
@@ -266,7 +278,7 @@ window.HUNTER_UI=Object.freeze({
         document.getElementById('accountMenu').onclick=()=>actions.open('account');
         document.getElementById('savesMenu').onclick=()=>actions.open('saves');
         document.getElementById('chetosMenu').onclick=()=>actions.open('cheats');
-        document.getElementById('restartMenu').onclick=()=>actions.open('restart');
+        document.getElementById('restartMenu').onclick=()=>actions.open('abandon');
         document.getElementById('performanceMenu').onclick=()=>actions.open('performance');
       }
     }
