@@ -481,6 +481,26 @@ const cx=rn(-H+200,H-200),cz=rn(-H+200,H-200),baseY=rn(25,55);
 fa.push({k:'g',o,wl,wr,cx,cz,r:rn(40,120),a:rn(0,6.28),sp:rn(.15,.3),y:baseY,flyY:Math.max(baseY,hAt(cx,cz)+10),x:cx,z:cz})}
 for(let k=0;k<30;k++){yield {stage:'Fauna',completed:48+k,total:78,unit:'animals'};let cx,cz,n=0;do{cx=rn(-H+150,H-150);cz=rn(-H+150,H-150)}while(hAt(cx,cz)>-6&&++n<60);if(hAt(cx,cz)>-6)continue;
 const o=window.HUNTER_FAUNA.createShark(THREE,{material:M});world.add(o);fa.push({k:'s',o,cx,cz,r:rn(12,28),a:rn(0,6.28),sp:rn(.25,.45),x:cx,z:cz,sharkMode:'patrol',biteCd:0})}}
+const updateDamagedVehicleSmoke=(v,dt,health,maxHealth)=>{
+  if(v.destroyed||health<=0)return;
+  const frac=Math.max(0,Math.min(1,1-health/Math.max(1,maxHealth)));
+
+  if(frac>.08){
+    v.smokeT=(v.smokeT||0)-dt;
+    if(v.smokeT<=0){
+      const baseY=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
+      if(v.smokeTopOffset==null&&v.o){
+        v.o.updateMatrixWorld(true);
+        const bb=new THREE.Box3().setFromObject(v.o);
+        v.smokeTopOffset=Math.max(.7,bb.max.y-baseY);
+      }
+      // Fum billboarding agrupat en una sola malla per a tots els vehicles.
+      if(Math.hypot(v.x-P.x,v.z-P.z)<250)
+        movementFx.damageSmoke(v,frac,baseY+(v.smokeTopOffset||1.8));
+      v.smokeT=Math.max(.08,.55-frac*.42)
+    }
+  }
+};
 function updExtra(dt,t){updDeb(dt);
 for(let i=fa.length-1;i>=0;i--){
   const f=fa[i],px=f.x??f.cx,pz=f.z??f.cz,
@@ -526,26 +546,6 @@ for(let i=fa.length-1;i>=0;i--){
   f.o.position.set(f.x,f.flyY,f.z);
   f.wl.rotation.z=Math.sin(t*8+f.cx)*.5;f.wr.rotation.z=-f.wl.rotation.z;
 }
-const updateDamagedVehicleSmoke=(v,dt,health,maxHealth)=>{
-  if(v.destroyed||health<=0)return;
-  const frac=Math.max(0,Math.min(1,1-health/Math.max(1,maxHealth)));
-
-  if(frac>.08){
-    v.smokeT=(v.smokeT||0)-dt;
-    if(v.smokeT<=0){
-      const baseY=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
-      if(v.smokeTopOffset==null&&v.o){
-        v.o.updateMatrixWorld(true);
-        const bb=new THREE.Box3().setFromObject(v.o);
-        v.smokeTopOffset=Math.max(.7,bb.max.y-baseY);
-      }
-      // Fum billboarding agrupat en una sola malla per a tots els vehicles.
-      if(Math.hypot(v.x-P.x,v.z-P.z)<250)
-        movementFx.damageSmoke(v,frac,baseY+(v.smokeTopOffset||1.8));
-      v.smokeT=Math.max(.08,.55-frac*.42)
-    }
-  }
-};
 V.forEach(v=>{
   if(v.destroyed)return;
   v.playerHitCd=Math.max(0,(v.playerHitCd||0)-dt);
