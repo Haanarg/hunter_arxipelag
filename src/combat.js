@@ -826,10 +826,9 @@ function weaponAimClear(x,y,z,tx,ty,tz,ignoreWall=null,ignoreBuilding=null,check
 // Bazuca: 90° totals (±45°) horitzontals i verticals.
 // El límit de la direcció final és el mateix que el del selector.
 const BAZOOKA_AIM_RANGE=window.HUNTER_SHARED_WEAPONS.weaponCatalog.bazooka.range,BAZOOKA_AIM_CONE=window.HUNTER_SHARED_WEAPONS.weaponCatalog.bazooka.cone,BAZOOKA_AIM_VERTICAL=window.HUNTER_SHARED_WEAPONS.weaponCatalog.bazooka.vertical;
-// Pistola i fusell d'assalt comparteixen el con d'autoapuntat 3D:
-// aproximadament ±35° a peu pla i fins a ±90° horitzontals en blancs
-// molt més alts o baixos. L'obertura vertical és de ±90°.
-const {SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL,SMALL_ARMS_RANGE}=window.HUNTER_SHARED_AIMING;
+// La pistola conserva el con variable amb l'elevació; fusell d'assalt
+// i franctirador tenen un límit horitzontal estricte de ±40°.
+const {SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL,SMALL_ARMS_RANGE,RIFLE_AIM_CONE}=window.HUNTER_SHARED_AIMING;
 // Punt d'intercepció per a patrulleres mòbils, amb la velocitat real de
 // cada arma: les bales ràpides també han d'arribar al centre del casc.
 function bazookaInterceptPoint(...args){return window.HUNTER_SHARED_AIMING.bazookaInterceptPoint(...args)}
@@ -911,7 +910,7 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
   // Les finestres de la planta alta no queden a l'alçada del canó
   // quan disparam des del carrer. Si no hi ha enemics seleccionats,
   // les armes lleugeres poden adquirir directament un vidre intacte.
-  if(!selector.hasTarget&&!cv&&['pistol','assault','light'].includes(shotClass)){
+  if(!selector.hasTarget&&!cv&&['pistol','assault','sniper','light'].includes(shotClass)){
     for(const w of wallCandidates(x,z,Math.min(range,90))){
       if(!w.upperFloorWindow||w.open||!w.windowPanes)continue;
       for(let i=0;i<w.windowPanes.length;i++){
@@ -994,9 +993,9 @@ function updateLightAimReticle(dt){
       hide();return;
     }
     if(assaultRifleEquipped){
-      shotClass='assault';range=SMALL_ARMS_RANGE.assault;
+      shotClass='assault';range=SMALL_ARMS_RANGE.assault;cone=RIFLE_AIM_CONE;
     }else if(sniperEquipped){
-      shotClass='light';range=180;cone=.984;
+      shotClass='sniper';range=180;cone=RIFLE_AIM_CONE;
     }
   }
   const focus={};
@@ -1310,11 +1309,11 @@ function fireAssaultBurstBullet(index){
   pl.userData.firePose=.26;
   const muzzle=assaultMuzzleWorld(),hd=P.hd,fx=-Math.sin(hd),fz=-Math.cos(hd),
         x=muzzle.x,y=muzzle.y,z=muzzle.z,
-        // Con 3D ampliat: torres per damunt i soldats a sota de l'horitzó.
+        // Con horitzontal estricte de 80° totals; l'elevació segueix sent lliure.
         // La classe 'assault' només defineix la punteria: el projectil
         // disparat continua essent lleuger i no causa dany a les torres.
         [ax,ay,az]=autoAimWeaponShot(x,y,z,fx,0,fz,SMALL_ARMS_RANGE.assault,
-          SMALL_ARMS_AIM_CONE,'assault',null,130,SMALL_ARMS_AIM_VERTICAL),
+          RIFLE_AIM_CONE,'assault',null,130,SMALL_ARMS_AIM_VERTICAL),
         spread=[-.012,0,.012][index],dx=ax-az*spread,dz=az+ax*spread,
         len=Math.hypot(dx,ay,dz)||1;
   // La diana es recalcula a cada bala i cada ràfega. Si l'enemic cau
@@ -1380,7 +1379,7 @@ else if(!cv&&sniperEquipped&&inv.franctirador){
         focus=scopeActive?window.HUNTER_SCOPE_FOCUS.create(P.x,P.y+1.76,P.z,scopeYaw,scopePitch):null,
         direction=focus
           ?sniperShotVector(muzzle,sniperReticlePoint(focus),focus)
-          :new THREE.Vector3(...autoAimWeaponShot(muzzle.x,muzzle.y,muzzle.z,fx,0,fz,180,.984,'light',null,470));
+          :new THREE.Vector3(...autoAimWeaponShot(muzzle.x,muzzle.y,muzzle.z,fx,0,fz,180,RIFLE_AIM_CONE,'sniper',null,470));
   shoot(muzzle.x,muzzle.y,muzzle.z,direction.x,direction.y,direction.z,470,COMBAT_BALANCE.weapons.sniper,0,'p',mW,SMALL_ARMS_SCALE);
   if(Pj.length)Pj[Pj.length-1].weapon='sniper';
   msg='Rifle: '+sniperAmmo+' cartutxos.';msgT=1.5;
