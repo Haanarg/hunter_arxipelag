@@ -48,6 +48,20 @@ export function vehicleSeatWorld(v,seat=0,baseY=v.y??0){
  return {x:v.x+Math.cos(heading)*lx+Math.sin(heading)*lz,
          y:baseY+ly,z:v.z-Math.sin(heading)*lx+Math.cos(heading)*lz};
 }
+// Punt visual del cap dels occupants asseguts. La retícula segueix
+// la posició del rider reutilitzat i no el centre baix del seient.
+export function vehicleOccupantHeadWorld(v,seat=0,baseY=v.y??0){
+ const scale=({camio:1.8125,cotxe:1.3,cotxe_civil:1.2,moto:1.2})[v.t]||1;
+ const truck=v.t==='camio',motorbike=v.t==='moto',civil=v.t==='cotxe_civil';
+ const fit=truck?.82:1;
+ const lx=motorbike?0:(seat===0?-1:1)*(truck?.77*fit:civil?.613:.73);
+ const lz=truck?-1.93*fit:civil?-.60:motorbike?.28:-.43;
+ const ly=truck?2.04*fit+2.65*.31:motorbike?1.82+.85*.4:.94+2.65*.43;
+ const h=v.hd??v.heading??0;
+ return {x:v.x+Math.cos(h)*lx*scale+Math.sin(h)*lz*scale,
+         y:baseY+ly*scale,
+         z:v.z-Math.sin(h)*lx*scale+Math.cos(h)*lz*scale};
+}
 export function segmentSeatSphere(from,to,center,radius){
  const dx=to.x-from.x,dy=to.y-from.y,dz=to.z-from.z;
  const ox=from.x-center.x,oy=from.y-center.y,oz=from.z-center.z;
@@ -73,7 +87,10 @@ export function vehicleSeatProjectileContact(from,to,v,crew=[],{baseY=v.y??0}={}
    const target=member&&member.hp!==0&&member.hp!==null&&member.alive!==false?member:null;
    if(!target&&!windowed)continue;
    const point=vehicleSeatWorld(v,seat,baseY);
-   const tOccupant=target?segmentSeatSphere(from,to,point,v.t==='camio'?1.0:.82):null;
+   const head=vehicleOccupantHeadWorld(v,seat,baseY);
+   const tBody=target?segmentSeatSphere(from,to,point,v.t==='camio'?1.0:.82):null;
+   const tHead=target?segmentSeatSphere(from,to,head,v.t==='camio'?.72:.58):null;
+   const tOccupant=tBody===null?tHead:tHead===null?tBody:Math.min(tBody,tHead);
    const tGlass=windowed&&!glass.has(seat)?
      segmentSeatSphere(from,to,point,v.t==='camio'?1.27:1.08):null;
    // Never let an occupant behind intact glass absorb the same bullet.
