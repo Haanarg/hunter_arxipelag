@@ -291,6 +291,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.visualAimWorldQ=new THREE.Quaternion();
     u.visualAimQuaternion=new THREE.Quaternion();
     u.visualAimForward=new THREE.Vector3(0,0,-1);
+    u.visualAimRootDirection=new THREE.Vector3(0,0,-1);
+    u.visualAimRootQ=new THREE.Quaternion();
     u.weaponPoseOffset=new THREE.Vector3();
 
     // La pistola és filla del jugador; en repòs segueix un pivot del canell
@@ -554,9 +556,20 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // i les cames no es desplacen cap endavant amb l'arrel del personatge.
     u.upperBody.rotation.x+=(-.32*run-.18*crouch-u.upperBody.rotation.x)*k;
     // A terra i en sortir de l'aigua, desfem el gir propi del crol.
-    // La pistola incorpora una rotació de cintura de fins a 18°.
-    // El cap manté la mirada endavant i les cames el rumb.
-    const waistAim=.32*(u.pistolBlend||0);
+    // La cintura segueix l'angle REAL de la retícula en comptes de
+    // girar sempre 18° cap al mateix costat. Les cames conserven P.hd.
+    // Això permet que les mans arribin al rifle amb autoaim lateral.
+    let waistAim=0;
+    if(u.visualAimDirection&&!inVehicle){
+      player.getWorldQuaternion(u.visualAimRootQ).invert();
+      u.visualAimRootDirection.copy(u.visualAimDirection)
+        .applyQuaternion(u.visualAimRootQ).normalize();
+      const d=u.visualAimRootDirection;
+      const yaw=Math.atan2(-d.x,-d.z);
+      const longGun=!!(sniperEquipped||assaultRifleEquipped||bazookaEquipped);
+      const reach=longGun?.65:.38;
+      waistAim=Math.max(-reach,Math.min(reach,yaw));
+    }
     u.upperBody.rotation.y+=(waistAim-u.upperBody.rotation.y)*(1-Math.exp(-17*dt));
     u.upperBody.rotation.z+=(0-u.upperBody.rotation.z)*k;
     // El cap compensa la inclinació del tronc i continua mirant de
