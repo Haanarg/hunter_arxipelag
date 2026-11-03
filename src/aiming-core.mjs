@@ -1,5 +1,9 @@
 // Target selection extracted from the individual game. Geometry is supplied by its adapter.
 export const SMALL_ARMS_AIM_CONE=.82,SMALL_ARMS_AIM_VERTICAL=Math.PI/2;
+// Fusell d'assalt i franctirador: 80° horitzontals totals, ±40°.
+// No s'amplia el con quan el blanc és per damunt o per sota del jugador.
+export const RIFLE_AIM_HALF_ANGLE=40*Math.PI/180;
+export const RIFLE_AIM_CONE=Math.cos(RIFLE_AIM_HALF_ANGLE);
 export const SMALL_ARMS_RANGE=Object.freeze({pistol:75,assault:85});
 
 // Bazuca: obertura TOTAL de 90° (45° a cada costat).
@@ -80,7 +84,7 @@ export function createAimSelector({origin,direction,range,cone=.97,shotClass='li
    if(pitchError>verticalCone)return;
    const alignment=horizontal>=.001?
      (dx*fx+dz*fz)/(horizontal*forward):1,
-         wideSmallArms=shotClass==='assault'||shotClass==='pistol',
+         wideSmallArms=shotClass==='pistol',
          allowedCone=wideSmallArms?
            smallArmsAimHorizontalCone(cone,pitchError):cone,
          overhead=wideSmallArms&&horizontal<=1.6&&Math.abs(dy)>=horizontal*3;
