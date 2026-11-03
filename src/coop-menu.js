@@ -12,7 +12,7 @@ async function renderCoop(body,isCurrent){
   const button=(label,action,parent=body)=>{const el=add('button',label,parent);el.type='button';el.onclick=async()=>{
     el.disabled=true;try{await action();}catch(e){if(active())status.textContent=e.message;}finally{el.disabled=false;}
   };return el;};
-  button(started?'← Pausa':'← Portada',()=>started?ui.show('pause'):ui.hide());
+  if(!started)button('← Portada',()=>ui.hide());
   if(!accounts?.configured){status.textContent='Cal activar els comptes per utilitzar sales cooperatives.';return;}
   let user;try{user=await accounts.verifiedUser();}catch(e){status.textContent=e.message;return;}
   if(!active())return;
