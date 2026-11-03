@@ -413,7 +413,9 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       blastWire(center,blast.damage,blast.radius);
       blastStructures(center,blast.damage,blast.radius);
       blastPalms(center,blast.damage,blast.radius);
-      alarm(center,blast.actorId,tick,'explosion');effect('explosion',tick,{actorId:blast.actorId,at:center,radius:blast.radius,weapon:blast.weapon==='c4'?'c4':'grenade',hits});
+      alarm(center,blast.actorId,tick,'explosion');effect('explosion',tick,{actorId:blast.actorId,at:center,radius:blast.radius,
+        weapon:blast.weapon==='c4'?'c4':blast.projectile?'projectile':'grenade',
+        ...(blast.projectile&&blast.direction?{direction:blast.direction}:{}),hits});
     }
   }
   function aimWeapon(p,vehicle,weapon,from){
@@ -564,7 +566,8 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         flight.consider(segmentSphereT(flight.from.x,flight.from.y,flight.from.z,flight.to.x,flight.to.y,flight.to.z,u.x,u.y+1.1,u.z,.55),'civilian',u);
       const result=flight.finish();p.life=flight.life;Object.assign(p,result.point);
       for(const pane of trace.windowCrossings)if(pane.t<=flight.fraction+1e-6&&breakWindow(pane.wallIndex,pane.index)){effect('glass',tick,{actorId:p.actorId,at:pane.point,wallIndex:pane.wallIndex,paneIndex:pane.index});}
-      if(result.hit){if(p.splash){if(result.kind!=='expire')explode({at:{...result.point},damage:p.dmg,radius:p.splash,actorId:p.actorId,ownerOnly:!p.enemy},tick);projectiles.splice(i,1);continue;}
+      if(result.hit){if(p.splash){if(result.kind!=='expire')explode({at:{...result.point},damage:p.dmg,radius:p.splash,actorId:p.actorId,
+          projectile:true,direction:{x:p.vx,y:p.vy,z:p.vz},ownerOnly:!p.enemy},tick);projectiles.splice(i,1);continue;}
         let applied=true;
         if(result.kind==='vehicle-glass'){
           applied=breakVehicleSeatWindow(result.target.vehicle,result.target.seat);
