@@ -429,7 +429,9 @@ function presentExplosion(x,y,z,r,source=null){
  snd('boom',1,{x,y,z},source);
  // Explosió arcade 03 única: granada per defecte, C4 més contundent.
  // Aquest mòdul només és visual; el dany i el radi físic no es toquen.
- const kind=source?.weapon==='c4'?'c4':source?.spl>0||source?.splash>0?'projectile':'grenade';
+ const kind=source?.weapon==='c4'?'c4':
+   source?.weapon==='grenade'||source?.weapon==='granada'?'grenade':
+   source?.spl>0||source?.splash>0?'projectile':'grenade';
  if(!window.HUNTER_ARCADE_BLAST_FX||window.HUNTER_ARCADE_BLAST_FX.scene!==world){
    window.HUNTER_ARCADE_BLAST_FX?.dispose();
    window.HUNTER_ARCADE_BLAST_FX=window.HUNTER_CREATE_ARCADE_BLAST_FX(THREE,world,{
