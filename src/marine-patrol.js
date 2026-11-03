@@ -2,40 +2,88 @@
 const MARINE_PATROL_MIN=5,MARINE_PATROL_MAX=10;
 const marineAngle=a=>Math.atan2(Math.sin(a),Math.cos(a));
 const MARINE_COURSE_OFFSETS=Object.freeze([0,.27,-.27,.55,-.55,.9,-.9,1.35,-1.35,Math.PI]);
-function createMarinePatrolVisual(boat){
-  // Mateix buc i cabina oberta que la llanxa pilotable.
-  const metal=0x313c3d,paint=0x596b57;
-  for(const side of [-1,1]){
-    const soldier=window.HUNTER_CHARACTERS.createCommando(THREE);
-    soldier.scale.setScalar(.43);soldier.position.set(side*.55,1.18,side<0?.9:1.75);
-    soldier.rotation.y=side*.18;
-    soldier.userData.ar.rotation.x=-.55;soldier.userData.al.rotation.x=-.72;
-    boat.add(soldier);
-  }
-  const barrel=(root,r,length,y,z,color)=>{
-    const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,length,8),M(color,'metal'));
-    o.rotation.x=Math.PI/2;o.position.set(0,y,z);root.add(o);return o;
-  };
-  const createMount=(x,rocket)=>{
-    const mount=new THREE.Group();
-    mount.position.set(x,2.08,rocket?.1:-.4);boat.add(mount);
-    bx(mount,.65,.27,.65,metal,0,0,0,'metal');
-    bx(mount,rocket?.78:.4,rocket?.45:.32,.75,paint,0,.28,-.43,'paint');
-    if(rocket){
-      for(const off of [-.18,.18])barrel(mount,.145,1.45,.29,-1.21,metal).position.x=off;
-    }else barrel(mount,.115,1.65,.29,-1.25,metal);
+// Una única tripulació per a les patrulleres i les llanxes requisades.
+// Les armes són les dels comandos, sense metralladores ni tubs muntats al casc.
+function attachEnemyBoatCrew(boat,{initiallyHidden=false}={}){
+  if(boat.userData.enemyCarCrew)return boat.userData.enemyCarCrew;
+  const crew=[];
+  for(let seat=0;seat<2;seat++){
+    const rider=window.HUNTER_CHARACTERS.createCommando(THREE);
+    const rocket=seat===1,rig=rider.userData;
+    rider.scale.setScalar(.43);
+    rider.position.set(seat===0?-.58:.58,.89,seat===0?.88:1.14);
+    rig.ll.rotation.x=-1.10;rig.lr.rotation.x=-1.10;
+    rig.ar.rotation.x=1.12;rig.al.rotation.x=1.14;
+    rig.aer.rotation.x=.18;rig.ael.rotation.x=.14;
+    if(rocket)window.HUNTER_CHARACTERS.equipBazooka(THREE,rider,{box:bx});
+    const weapon=rocket?rig.bazooka:rig.gun;
     const muzzle=new THREE.Object3D();
-    muzzle.position.set(0,.29,rocket?-1.95:-2.075);mount.add(muzzle);
-    return {mount,muzzle};
+    // La boca real és filla de l'arma real i gira amb el comando.
+    muzzle.position.set(0,0,rocket?-1.66:-.96);
+    weapon.add(muzzle);
+    rider.visible=!initiallyHidden;
+    boat.add(rider);
+    crew.push({rider,weapon,muzzle,rocket,seat,basePitch:weapon.rotation.x});
+  }
+  boat.userData.enemyCarCrew={
+    driver:crew[0].rider,gunner:crew[1].rider,boatWeapons:crew,
+    mount:null,pitch:null,muzzle:null
   };
-  const machineGun=createMount(-.8,false),rockets=createMount(.8,true);
-  boat.userData.marineWeapons={machineGun,rockets};
-  // El buc ja s'ha optimitzat a la fàbrica. Ara fusionam peces rígides
-  // dels dos comandos i dels muntatges, sempre dins el mateix pivot,
-  // sense tocar braços, fusells, boques de foc ni rotacions de torretes.
-  boat.userData.marineBatchStats=window.HUNTER_PLAYER_BATCH.optimize(THREE,boat,{
-    batchName:'hunter-marine-rigid-batch'
-  });
+  return boat.userData.enemyCarCrew;
+}
+// La bandera mira sempre cap a la popa (+Z). No es multiplica quan
+// entren o surten soldats ni quan el món es reconstrueix al COOP.
+function ensureEnemyVehicleFlag(mesh,type,visible=true){
+  if(!mesh)return null;
+  if(mesh.userData.enemyFlag){
+    mesh.userData.enemyFlag.visible=!!visible;return mesh.userData.enemyFlag;
+  }
+  const sea=type==='llanxa'||type==='llanxa_coets'||type==='patrulla_marina',
+    truck=type==='camio',armored=type==='tanc'||type==='tanqueta';
+  const flag=new THREE.Group();
+  flag.position.set(sea?1.07:truck?1.4:armored?1.15:1.06,
+    sea?1.28:truck?2.52:armored?2.62:1.25,
+    sea?3.36:truck?2.28:armored?1.8:1.72);
+  const mat=new THREE.MeshStandardMaterial({color:0x121517,roughness:.77});
+  const pole=new THREE.Mesh(new THREE.CylinderGeometry(.028,.035,1.95,7),mat);
+  pole.position.y=.975;flag.add(pole);
+  const red=new THREE.MeshStandardMaterial({color:0xd91f2c,roughness:.88,side:THREE.DoubleSide});
+  const cloth=new THREE.BufferGeometry();
+  cloth.setAttribute('position',new THREE.Float32BufferAttribute([
+    0,1.91,0, 0,1.87,1.04, 0,1.47,0,
+    0,1.47,0, 0,1.87,1.04, 0,1.49,.89
+  ],3));
+  cloth.computeVertexNormals();
+  flag.add(new THREE.Mesh(cloth,red));
+  flag.visible=!!visible;mesh.add(flag);
+  mesh.userData.enemyFlag=flag;
+  return flag;
+}
+function createMarinePatrolVisual(boat){
+  attachEnemyBoatCrew(boat);
+  ensureEnemyVehicleFlag(boat,'patrulla_marina');
+}
+function aimEnemyBoatCrew(boat,seat,target,dt=.1){
+  const w=boat?.userData?.enemyCarCrew?.boatWeapons?.[seat];
+  if(!w?.rider.visible||!target)return false;
+  boat.updateMatrixWorld(true);
+  const position=boat.worldToLocal(new THREE.Vector3(target.x,target.y,target.z)),
+    dx=position.x-w.rider.position.x,dz=position.z-w.rider.position.z,
+    wanted=Math.atan2(-dx,-dz),
+    delta=marineAngle(wanted-w.rider.rotation.y),
+    limit=Math.max(.02,dt)*2.5;
+  w.rider.rotation.y+=Math.max(-limit,Math.min(limit,delta));
+  const height=w.rider.position.y+2.7*w.rider.scale.y,
+    desired=Math.max(-.55,Math.min(.65,Math.atan2(position.y-height,Math.hypot(dx,dz)))),
+    pitchDiff=desired-(w.weapon.rotation.x-w.basePitch);
+  w.weapon.rotation.x+=Math.max(-1.5*dt,Math.min(1.5*dt,pitchDiff));
+  return Math.abs(delta)<.23&&Math.abs(pitchDiff)<.23;
+}
+function enemyBoatCrewMuzzle(boat,seat){
+  const w=boat?.userData?.enemyCarCrew?.boatWeapons?.[seat];
+  if(!w?.rider.visible)return null;
+  boat.updateMatrixWorld(true);
+  return w.muzzle.getWorldPosition(new THREE.Vector3());
 }
 function marineSeaClear(x,z,r=10){
   return Math.abs(x)<H-28&&Math.abs(z)<H-28&&
@@ -103,45 +151,25 @@ function* spawnMarinePatrolsSteps(){
   }
   return spots;
 }
-function marineAimGun(u,weapon,target,dt){
-  const root=u.o,mount=weapon.mount;
-  root.updateWorldMatrix(true,true);
-  const origin=weapon.muzzle.getWorldPosition(new THREE.Vector3());
-  const worldDir=new THREE.Vector3(target.x-origin.x,target.y-origin.y,target.z-origin.z);
-  const local=worldDir.clone().applyQuaternion(root.getWorldQuaternion(new THREE.Quaternion()).invert());
-  const wanted=Math.atan2(-local.x,-local.z),
-        elevation=Math.max(-.45,Math.min(1.45,Math.atan2(local.y,Math.hypot(local.x,local.z)))),
-        diff=marineAngle(wanted-mount.rotation.y);
-  mount.rotation.y+=Math.max(-1.9*dt,Math.min(1.9*dt,diff));
-  // La metralladora i el llançacoets també s'inclinen cap a un helicòpter
-  // que vola per damunt, no només giren horitzontalment.
-  mount.rotation.x+=Math.max(-1.25*dt,Math.min(1.25*dt,elevation-mount.rotation.x));
-  root.updateWorldMatrix(true,true);
-  return Math.abs(marineAngle(wanted-mount.rotation.y))<.16&&
-    Math.abs(elevation-mount.rotation.x)<.16;
-}
-function marineFire(u,weapon,target,heavy){
-  const p=weapon.muzzle.getWorldPosition(new THREE.Vector3()),
-        aimX=target.x-p.x,aimY=target.y-p.y,aimZ=target.z-p.z,
-        offset=window.HUNTER_ENEMY_ACCURACY.sample(
-          DIF,heavy?'marineRocket':'marineMG',aimX,aimY,aimZ,rn),
-        dx=aimX+offset.x,dy=aimY+offset.y,dz=aimZ+offset.z,
-        n=Math.max(.01,Math.hypot(dx,dy,dz));
+function marineFire(u,seat,target,heavy){
+  const p=enemyBoatCrewMuzzle(u.o,seat);
+  if(!p)return false;
+  const aimX=target.x-p.x,aimY=target.y-p.y,aimZ=target.z-p.z,
+    offset=window.HUNTER_ENEMY_ACCURACY.sample(
+      DIF,heavy?'marineRocket':'marineMG',aimX,aimY,aimZ,rn),
+    dx=aimX+offset.x,dy=aimY+offset.y,dz=aimZ+offset.z,
+    n=Math.max(.01,Math.hypot(dx,dy,dz));
   if(!weaponAimClear(p.x,p.y,p.z,target.x,target.y,target.z))return false;
-  // Les costes i els turons també intercepten el foc disparat des del mar.
   for(let i=1;i<8;i++){
     const k=i/8,x=p.x+(target.x-p.x)*k,z=p.z+(target.z-p.z)*k,
-          y=p.y+(target.y-p.y)*k;
+      y=p.y+(target.y-p.y)*k;
     if(hAt(x,z)>y-.35)return false;
   }
   const speed=heavy?75:125;
   shoot(p.x,p.y,p.z,dx/n,dy/n,dz/n,speed,
-    heavy?COMBAT_BALANCE.weapons.boatRocket:COMBAT_BALANCE.weapons.rifle,heavy?8:0,'e',heavy?mS:mW,heavy?2:SMALL_ARMS_SCALE,u);
-  if(heavy){
-    // A 245 m un coet lent necessita més de 4 segons. El TTL genèric
-    // de 2.2 s l'eliminava molt abans d'arribar a la diana.
-    Pj[Pj.length-1].life=Math.max(2.2,n/(speed*HEAVY_SHOT_SPEED_FACTOR)+.75);
-  }
+    heavy?COMBAT_BALANCE.weapons.boatRocket:COMBAT_BALANCE.weapons.rifle,
+    heavy?8:0,'e',heavy?mS:mW,heavy?2:SMALL_ARMS_SCALE,u);
+  if(heavy)Pj[Pj.length-1].life=Math.max(2.2,n/(speed*HEAVY_SHOT_SPEED_FACTOR)+.75);
   return true;
 }
 function updateMarinePatrol(u,dt){
@@ -229,11 +257,11 @@ function updateMarinePatrol(u,dt){
   u.o.position.set(u.x,wy(u.x,u.z,elapsed)+.2,u.z);
   const wave=Math.sin(elapsed*2+u.x*.03+u.z*.024);
   u.o.rotation.set(wave*.028,u.hd,-u.yawRate*.12+wave*.024,'YXZ');
-  const weapons=u.o.userData.marineWeapons;
   if(!hostile||distance>245)return;
   const target=new THREE.Vector3(q.x,targetY,q.z);
-  const gunAligned=marineAimGun(u,weapons.machineGun,target,dt);
-  const rocketAligned=marineAimGun(u,weapons.rockets,target,dt);
-  if(distance<170&&gunAligned&&u.mgCd<=0&&marineFire(u,weapons.machineGun,target,false))u.mgCd=.28+rn(0,.15);
-  if(distance<245&&rocketAligned&&u.rocketCd<=0&&marineFire(u,weapons.rockets,target,true))u.rocketCd=5;
+  // El pilot gira amb el fusell; el passatger, amb el llançacoets.
+  const rifleAligned=aimEnemyBoatCrew(u.o,0,target,dt);
+  const rocketAligned=aimEnemyBoatCrew(u.o,1,target,dt);
+  if(distance<170&&rifleAligned&&u.mgCd<=0&&marineFire(u,0,target,false))u.mgCd=.28+rn(0,.15);
+  if(distance<245&&rocketAligned&&u.rocketCd<=0&&marineFire(u,1,target,true))u.rocketCd=5;
 }
