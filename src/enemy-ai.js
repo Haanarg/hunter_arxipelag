@@ -849,18 +849,19 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
   if(car.userData.enemyCarCrew)return car.userData.enemyCarCrew;
   const makeSoldier=()=>window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M}),
         driver=makeSoldier(),gunner=type==='moto'?null:makeSoldier(),
-        truck=type==='camio',civil=type==='cotxe_civil';
+        truck=type==='camio',civil=type==='cotxe_civil',
+        boat=type==='llanxa'||type==='llanxa_coets';
   // Aquests són exactament els ocupants procedimentals del Humvee de patrulla.
   // No reparentam el soldat de combat, que continuaria en postura dreta.
   // El camió A4.3 construeix els seients a z=-1.93, abans del
   // fit visual .82: z=-.62 corresponia a darrere de la cabina.
   // Mateixa escala del grup exterior i els mateixos pivots que el model A4.3.
   const truckFit=car.userData.truckVisualFit||.82,
-        x=truck?.77*truckFit:civil?.613:.73,
-        z=truck?-1.93*truckFit:civil?-.60:-.43,
-        height=truck?2.04*truckFit:.94,
-        // La cabina A4.3 és més baixa que la del Humvee de patrulla.
-        scale=truck?.31:type==='moto'?.40:.43;
+        x=truck?.77*truckFit:boat?.58:civil?.613:.73,
+        z=truck?-1.93*truckFit:boat?1.02:civil?-.60:-.43,
+        height=truck?2.04*truckFit:boat?.86:.94,
+        // El pont de la llanxa és obert, amb dos riders a la banyera.
+        scale=truck?.31:boat?.39:type==='moto'?.40:.43;
   driver.position.set(type==='moto'?0:-x,height,type==='moto'?.28:z);
   driver.scale.setScalar(scale);
   driver.userData.ar.rotation.x=1.18;driver.userData.al.rotation.x=1.12;
@@ -874,8 +875,9 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
     gunner.rotation.y=.26;
     const rifle=gunner.userData.gun;rifle.parent.remove(rifle);
     mount=new THREE.Group();pitch=new THREE.Group();
-    mount.position.set(truck?1.98*truckFit:civil?1.30:1.46,
-      truck?3.07*truckFit:2.07,truck?-2.03*truckFit:civil?-.6:-.30);
+    mount.position.set(truck?1.98*truckFit:boat?1.12:civil?1.30:1.46,
+      truck?3.07*truckFit:boat?1.95:2.07,
+      truck?-2.03*truckFit:boat?.50:civil?-.6:-.30);
     mount.add(pitch);car.add(mount);
     rifle.position.set(0,-.035,-.14);rifle.rotation.set(0,0,0);rifle.scale.setScalar(.94);
     pitch.add(rifle);
