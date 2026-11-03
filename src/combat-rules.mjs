@@ -161,7 +161,7 @@ export function tankCanCrush(v,other,ownMass,otherMass){
   if(v.t==='ferry'){
     // A ferry is a heavy vessel: it can ram smaller marine craft without
     // taking collision damage. Other ferries and land vehicles are excluded.
-    const marine=new Set(['llanxa','llanxa_coets','moto_aquatica','barca_rems','windsurf','hover']);
+    const marine=new Set(['llanxa','llanxa_coets','moto_aquatica','barca_rems','windsurf','hover','patrulla_marina']);
     return marine.has(other.t)&&Math.abs(v.v)>1&&ownMass>otherMass;
   }
   return v.t==='tanc'&&Math.abs(v.v)>1&&ownMass>otherMass&&other.t!=='ferry';
