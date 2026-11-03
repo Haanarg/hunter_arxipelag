@@ -816,9 +816,8 @@ function weaponAimClear(x,y,z,tx,ty,tz,ignoreWall=null,ignoreBuilding=null,check
   }
   return true;
 }
-// Bazuca: fins a 185 m; el con normal és ±47° horitzontals i ±52°
-// verticals. A més, la direcció FINAL té un límit estricte de ±60°
-// horitzontals (arc total 120°), fins i tot si es relaxa el selector.
+// Bazuca: 90° totals (±45°) horitzontals i verticals.
+// El límit de la direcció final és el mateix que el del selector.
 const BAZOOKA_AIM_RANGE=window.HUNTER_SHARED_WEAPONS.weaponCatalog.bazooka.range,BAZOOKA_AIM_CONE=window.HUNTER_SHARED_WEAPONS.weaponCatalog.bazooka.cone,BAZOOKA_AIM_VERTICAL=window.HUNTER_SHARED_WEAPONS.weaponCatalog.bazooka.vertical;
 // Pistola i fusell d'assalt comparteixen el con d'autoapuntat 3D:
 // aproximadament ±35° a peu pla i fins a ±90° horitzontals en blancs
@@ -835,9 +834,22 @@ function marineHullTargetY(e){
 // L'adquisició comprova el con horitzontal i el vertical per separat.
 // Com que la mira del jugador és horitzontal al tanc i picada a l'heli,
 // la vertical es compara amb el pendent ORIGINAL de cada arma.
+const bazookaVisibilityPoint=new THREE.Vector3();
+function bazookaTargetOnScreen(x,y,z){
+  cam.updateMatrixWorld();
+  const p=bazookaVisibilityPoint.set(x,y,z).project(cam);
+  return Number.isFinite(p.x)&&Number.isFinite(p.y)&&Number.isFinite(p.z)&&
+    p.z>=-1&&p.z<=1&&Math.abs(p.x)<=.98&&Math.abs(p.y)<=.98;
+}
 function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus=null,
     projectileSpeed=0,verticalCone=Math.PI/2){
-  const selector=window.HUNTER_SHARED_AIMING.createAimSelector({origin:{x,y,z},direction:[fx,fy,fz],range,cone,shotClass,focus,verticalCone,isClear:weaponAimClear}),{consider}=selector;
+  const isPersonalBazooka=shotClass==='heavy'&&!cv&&bazookaEquipped&&
+    Math.abs(cone-BAZOOKA_AIM_CONE)<.00001;
+  const selector=window.HUNTER_SHARED_AIMING.createAimSelector({
+    origin:{x,y,z},direction:[fx,fy,fz],range,cone,shotClass,focus,verticalCone,
+    isClear:weaponAimClear,
+    isOnScreen:isPersonalBazooka?bazookaTargetOnScreen:undefined
+  }),{consider}=selector;
   for(const e of E){
     const seated=e.nativeBoardedVehicle||
       (e.enemyVehicleClaim&&['riding','waiting'].includes(e.enemyVehicleClaim.phase)
