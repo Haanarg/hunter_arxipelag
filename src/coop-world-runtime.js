@@ -177,7 +177,7 @@ function nativeCoopCommand(type,payload={}){
    if(!cv&&weapon==='bazooka'){
      // La retícula original és la font de veritat, inclosos els edificis.
      updateBazookaReticle(.1);
-     if(bazookaReticleMode==='bazooka'&&bazookaReticleHasHit)
+     if(bazookaReticleMode==='bazooka'&&bazookaReticleHasHit&&bazookaReticleElement?.style.display!=='none')
        aim={x:bazookaReticleWorld.x,y:bazookaReticleWorld.y,z:bazookaReticleWorld.z};
      else{
        const fx=-Math.sin(P.hd),fz=-Math.cos(P.hd);
