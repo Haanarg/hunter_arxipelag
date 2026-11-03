@@ -644,7 +644,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
           if(p.enemy)applied=!!occupant&&damagePlayer(occupant.id,p.dmg)!==false;
           else if(occupant?.hp>0){occupant.hp=damageHealth(occupant.hp,p.dmg);applied=true;}
           else applied=false;
-        }else if(result.kind==='vehicle'){const queue=[];applied=damageVehicle(result.target,p.weapon==='sniper'?5:p.dmg,'light',tick,queue);for(const blast of queue)explode(blast,tick);}else if(result.kind==='enemy'){
+        }else if(result.kind==='vehicle'){const queue=[];applied=damageVehicle(result.target,p.dmg,'light',tick,queue);for(const blast of queue)explode(blast,tick);}else if(result.kind==='enemy'){
           if(result.target.t==='torre'){
             if(!p.enemy&&!p.splash){
               result.target.suppressedUntilTick=tick+60;
@@ -652,7 +652,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
             }
           }else if(!(p.enemy||p.splash)&&['tanqueta','tanc'].includes(result.target.t)){
             // La metralla lleugera no destrueix el blindatge hostil.
-          }else result.target.hp=damageHealth(result.target.hp,p.weapon==='sniper'&&['jeep','patrulla_marina'].includes(result.target.t)?5:p.dmg);
+          }else result.target.hp=damageHealth(result.target.hp,p.dmg);
         }else if(result.kind==='player')applied=damagePlayer(result.target.id,p.dmg)!==false;
         else if(result.kind==='civilian')applied=damageCivilian(result.target.id,p.dmg,tick)>0;else if(result.kind==='world'&&trace.tree?.p)applied=damagePalm(trace.tree,p.dmg);else if(result.kind==='world'&&trace.wallIndex!=null&&Math.hypot(result.point.x-trace.point.x,result.point.y-trace.point.y,result.point.z-trace.point.z)<.01)applied=damageWall(trace.wallIndex,p.dmg);
         if(result.kind!=='expire'&&!['marine-crew','marine-glass'].includes(result.kind))effect('impact',tick,{actorId:p.actorId,at:{...result.point},hit:applied&&['enemy','player','vehicle'].includes(result.kind)?result.target.id:
