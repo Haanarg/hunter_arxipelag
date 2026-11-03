@@ -181,7 +181,9 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     const height=kind==='ferry'?8:kind==='heli'||kind==='heli_combat'?5.5:
       kind==='camio'?4.8:kind==='tanc'?4.7:kind==='tanqueta'?4:
       kind==='llanxa'||kind==='llanxa_coets'?3.8:3.3;
-    return friendlyVehicleBlocksLine(from,to,v,{
+    // Les patrulles NPC desen el rumb a heading; els vehicles pilotables a hd.
+    const pose=v.hd==null?{...v,hd:v.heading||0}:v;
+    return friendlyVehicleBlocksLine(from,to,pose,{
       width:shape[0]*scale,depth:shape[1]*scale,baseY:v.y,height});
   }
   function enemyFriendlyVehicleInFireLane(from,to,excludeId=null){
