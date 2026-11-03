@@ -49,7 +49,7 @@
     "test:context-doors": "node tests/context-doors.cjs",
     "test:doors": "node tests/context-doors.cjs && node tests/coop-doors.mjs && node tests/coop-doors-hub.mjs",
     "test:bazooka-arc": "node tests/bazooka-horizontal-arc.mjs",
-    "test:assault-rifle-model": "node tests/assault-rifle-model.cjs && node tests/assault-rifle-burst.cjs",
+    "test:assault-rifle-model": "node tests/assault-rifle-model.cjs && node tests/bazooka-shoulder-pose.cjs && node tests/assault-rifle-burst.cjs",
     "test:aim-occupants": "node tests/bazooka-aim-cone.mjs && node tests/light-aim-and-crew.mjs && node tests/coop-occupant-glass.mjs && node tests/vehicle-occupant-damage.mjs"
   },
   "dependencies": {
