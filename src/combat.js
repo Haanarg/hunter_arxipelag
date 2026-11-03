@@ -1,6 +1,6 @@
 // Compatibility extraction: shared state remains in game-core.js.
 // FX de bales normals: un conjunt petit de malles compartides i reciclables.
-// Les explosions i les col·lisions sense projectils conserven els FX originals.
+// Les col·lisions sense projectils mantenen els seus FX; totes les explosions utilitzen el model arcade 03.
 const BULLET_IMPACT_LIMIT=112,bulletImpacts=[],bulletImpactFree=[];
 const bulletBloodGeometry=new THREE.IcosahedronGeometry(.061,0),
       bulletSparkGeometry=new THREE.BoxGeometry(.045,.045,.17),
