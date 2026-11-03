@@ -1,10 +1,10 @@
 import {candidateVehicles,requisitionChance,requisitionRoll,vehicleSeatPosition,
-  pursuitInput,observeFleeing,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
+  pursuitInput,observeFleeing,boatBoardingReady,requisitionBoat,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
 
 // L'estat viu al soldat i a enemyCrew del vehicle; ambdós es desaran
 // als checkpoints autoritatius del Worker. Sense clients alternatius.
 export function createEnemyVehicleController({meta,vehicles,targets,players,
-  navigate=()=>{},firePassenger=()=>{},world=()=>null}){
+  navigate=()=>{},firePassenger=()=>{},world=()=>null,geometry=()=>({piers:[],stairs:[]})}){
  const enabled=meta.mode==='native';
  const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
  function release(unit,tick){
@@ -37,15 +37,18 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
      unit.elite||unit.rocketSoldier||unit.basement||!actor||
      distance(unit,actor)>(fleeing?REQUISITION.fleeingNoticeRadius:REQUISITION.noticeRadius))return false;
   if(requisitionRoll(unit.id,meta.seed)>=requisitionChance(meta.difficulty,fleeing))return false;
+  const dock=geometry();
   const choices=candidateVehicles(unit,vehicles.live(),{
-   range:fleeing?REQUISITION.fleeingSearchRadius:REQUISITION.searchRadius
+   range:fleeing?REQUISITION.fleeingSearchRadius:REQUISITION.searchRadius,
+   piers:dock.piers||[],stairs:dock.stairs||[]
   });
   for(const c of choices){
    if(!vehicles.enemyReserve(c.vehicle.id,unit.id,c.seat))continue;
    unit.enemyRequisition={vehicleId:c.vehicle.id,seat:c.seat,
      phase:'approach',until:tick+480,waitUntil:0,
      lastContact:tick,fleeUntil:fleeing?tick+Math.ceil(REQUISITION.fleeingMemorySeconds*30):0,
-     goal:{x:actor.x,y:actor.y,z:actor.z}};
+     goal:{x:actor.x,y:actor.y,z:actor.z},
+     dockRoute:c.dockRoute,dockIndex:0};
    unit.state='search';unit.focus=null;unit.canSee=false;
    unit.lastKnown=vehicleSeatPosition(c.vehicle,c.seat);
    unit.navRoute=null;unit.navDestination=null;
@@ -81,8 +84,14 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
    return true;
   if(s.phase==='approach'){
    if(tick>s.until){release(unit,tick);return false;}
-   const door=vehicleSeatPosition(v,s.seat);
-   if(distance(unit,door)>REQUISITION.boardingDistance){
+   const boat=requisitionBoat(v.t),route=s.dockRoute;
+   if(boat&&!route?.length){release(unit,tick);return false;}
+   if(boat)while(s.dockIndex<route.length-1&&
+      distance(unit,route[s.dockIndex])<2.2)s.dockIndex++;
+   const door=boat?route[Math.min(s.dockIndex,route.length-1)]:
+      vehicleSeatPosition(v,s.seat);
+   if(boat?!boatBoardingReady(unit,v,route):
+      distance(unit,door)>REQUISITION.boardingDistance){
     unit.lastKnown=door;unit.state='search';unit.canSee=false;
     navigate(unit,tick);return true;
    }
