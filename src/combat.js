@@ -1371,6 +1371,7 @@ else if(!cv&&sniperEquipped&&inv.franctirador){
           ?sniperShotVector(muzzle,sniperReticlePoint(focus),focus)
           :new THREE.Vector3(...autoAimWeaponShot(muzzle.x,muzzle.y,muzzle.z,fx,0,fz,180,.984,'light',null,470));
   shoot(muzzle.x,muzzle.y,muzzle.z,direction.x,direction.y,direction.z,470,COMBAT_BALANCE.weapons.sniper,0,'p',mW,SMALL_ARMS_SCALE);
+  if(Pj.length)Pj[Pj.length-1].weapon='sniper';
   msg='Rifle: '+sniperAmmo+' cartutxos.';msgT=1.5;
 }
 else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}
@@ -1515,7 +1516,7 @@ function updPj(dt){
           if(p.own==='p'&&p.shotClass==='light')
             target.suppressedUntil=elapsed+2;
         }else if(!(p.shotClass==='light'&&isArmoredVehicleType(target.t))){
-          hurtE(target,p.dmg,p);
+          hurtE(target,p.weapon==='sniper'&&['jeep','patrulla_marina'].includes(target.t)?5:p.dmg,p);
         }
       }
       else if(kind==='marine-glass'){
@@ -1547,7 +1548,7 @@ function updPj(dt){
           if(hp<before)spawnBulletImpact('blood',p.x,p.y,p.z,p);
         }else if(victim?.hp>0)hurtE(victim,p.dmg,p);
       }
-      else if(kind==='vehicle')damageVehicle(target,p.dmg,1,'light',p);
+      else if(kind==='vehicle')damageVehicle(target,p.weapon==='sniper'?5:p.dmg,1,'light',p);
       else if(kind==='civilian'){
         if(prisonerSystem.hurt(target,p.dmg,p))spawnBulletImpact('blood',p.x,p.y,p.z,p);
       }
