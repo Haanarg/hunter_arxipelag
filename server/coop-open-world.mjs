@@ -53,7 +53,11 @@ export function configureOpenWorld(generated){
   for(const b of shells.buildings)if(b.kind==='enemy_bunker')addCoopBunker(b,foundation.seed,geometry);
   const piers=layout.piers||(type==='port'?[{x:0,z:7,w:102,d:10},{x:-24,z:27.5,w:6,d:41},{x:24,z:27.5,w:6,d:41}]:[]);
   for(const p of piers){const a=tr(p.x,p.z-p.d/2),b=tr(p.x,p.z+p.d/2),length=p.d,ux=(b[0]-a[0])/length,uz=(b[1]-a[1])/length;geometry.piers.push({x:a[0],z:a[1],ux,uz,px:uz,pz:-ux,length,width:p.w,y:1.2});}
-  for(const spec of layout.vehicles||[]){const profile=vehicleDynamics.types[spec.t];if(!profile)continue;const [x,z]=tr(spec.x,spec.z),w=createStaticWorldAdapter(geometry),water=profile.m==='w',y=water?0:w.heightAt(x,z)+.06;
+  const civilRowboatCount=layout.id==='civil-dock'?1+Math.floor(random()*4):Infinity;
+  let civilRowboats=0;
+  for(const spec of layout.vehicles||[]){
+   if(layout.id==='civil-dock'&&spec.t==='barca_rems'&&++civilRowboats>civilRowboatCount)continue;
+   const profile=vehicleDynamics.types[spec.t];if(!profile)continue;const [x,z]=tr(spec.x,spec.z),w=createStaticWorldAdapter(geometry),water=profile.m==='w',y=water?0:w.heightAt(x,z)+.06;
    if(water&&raw(x,z)>-1)continue;
    vehicles.push({id:id+'/vehicle/'+vehicles.length,t:spec.t,kind:spec.t,x,y,z,alt:y,hd:spec.hd-plan.angle,v:0,life:profile.life,seats:Array(vehicleSeatCount(spec.t)).fill(null),rockets:12,modelScale:1,hullRadius:vehicleSpecs.radii[spec.t]*vehicleSpecs.scales[spec.t]*.62});
   }
