@@ -449,13 +449,12 @@ expl:{n:'Explosius',c:0x617451,s:[.9,.9,.9],icon:ICON.expl,desc:'Explosiu C4 amb
 disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa enemiga vermella. Activa o desactiva la disfressa.',usable:true}
 };
 // combat i enemics
-let E=[],Pj=[],bombs=[],grenades=[],fx=[],DEAD=[],hp=window.HUNTER_COMBAT_BALANCE.player,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,assaultRifleEquipped=false,knifeEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null,playerCrouched=false;
+let E=[],Pj=[],bombs=[],grenades=[],DEAD=[],hp=window.HUNTER_COMBAT_BALANCE.player,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,assaultRifleEquipped=false,knifeEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null,playerCrouched=false;
 // Ojiva compartida per tots els projectils pesats. Eix longitudinal -Z:
 // culata cilíndrica a +Z i punta cònica a -Z, com els canons del joc.
 // Geometria única reutilitzada, sense crear malles noves per cada tir.
 const {light:gLight,heavy:gHeavy,forward:heavyForward}=window.HUNTER_PROJECTILE_MODEL.createProjectileGeometry(THREE);
-// Anell pla, mai un volum transparent que amagui els murs del món.
-const endEl=document.getElementById('end'),blastRingG=new THREE.RingGeometry(.91,1.08,48),
+const endEl=document.getElementById('end'),
 mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial({color:0xff7a1a}),mE=new THREE.MeshBasicMaterial({color:0xff4040}),
 // Bales de pistola, franctirador, soldats i tanqueta: petites i blanques.
 // Els projectils explosius mantenen el color i volum original.
