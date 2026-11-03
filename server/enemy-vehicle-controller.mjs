@@ -45,7 +45,7 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
   for(const c of choices){
    if(!vehicles.enemyReserve(c.vehicle.id,unit.id,c.seat))continue;
    unit.enemyRequisition={vehicleId:c.vehicle.id,seat:c.seat,
-     phase:'approach',until:tick+480,waitUntil:0,
+     phase:'approach',until:tick+(c.dockRoute?960:480),waitUntil:0,
      lastContact:tick,fleeUntil:fleeing?tick+Math.ceil(REQUISITION.fleeingMemorySeconds*30):0,
      goal:{x:actor.x,y:actor.y,z:actor.z},
      dockRoute:c.dockRoute,dockIndex:0};
