@@ -13,6 +13,7 @@ export const ARCADE_BLAST_STYLE=Object.freeze({
 export function arcadeBlastKind(source){
   const weapon=typeof source==='string'?source:source?.weapon;
   if(weapon==='c4')return 'c4';
+  if(weapon==='grenade'||weapon==='granada')return 'grenade';
   if(weapon==='projectile'||source?.projectile===true||
      source?.spl>0||source?.splash>0)return 'projectile';
   return 'grenade';
