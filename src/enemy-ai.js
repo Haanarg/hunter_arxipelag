@@ -365,14 +365,15 @@ function enemyVehicleReserve(u,{fleeing=false}={}){
   if(enemyRequisition.requisitionRoll(id,seed)>=enemyRequisition.requisitionChance(DIF,fleeing))return false;
   const range=fleeing?enemyRequisition.REQUISITION.fleeingSearchRadius:enemyRequisition.REQUISITION.searchRadius;
   const choices=enemyRequisition.candidateVehicles(
-    u,vehicleCandidatesAt(u.x,u.z,range+7,true).filter(v=>v!==cv),{range});
+    u,vehicleCandidatesAt(u.x,u.z,range+7,true).filter(v=>v!==cv),{range,piers,stairs});
   const pick=choices[0];if(!pick)return false;
   const v=pick.vehicle;
   v.enemyCrew??=[null,null];
   if(v.enemyCrew[pick.seat])return false;
   v.enemyCrew[pick.seat]=u;
   u.enemyVehicleClaim={vehicle:v,seat:pick.seat,phase:'approach',
-    timeout:elapsed+16,waitUntil:elapsed+1.7,lastContact:elapsed};
+    timeout:elapsed+32,waitUntil:elapsed+1.7,lastContact:elapsed,
+    dockRoute:pick.dockRoute,dockIndex:0};
   u.tacticGoal=null;releaseSoldierEntry(u);releaseSoldierReservation(u);
   return true;
 }
@@ -384,12 +385,26 @@ function enemyVehicleBoardingTick(u,dt){
     enemyVehicleRelease(u);return false;
   }
   if(c.phase==='approach'){
-    const q=enemyRequisition.vehicleSeatPosition(v,c.seat);
+    const boat=enemyRequisition.requisitionBoat(v.t);
+    const route=c.dockRoute;
+    // Primer pujam la rampa i recorrem el moll; mai travessam l'aigua
+    // en línia recta en direcció a la llanxa.
+    if(boat&&(!route?.length||u.y<0)){enemyVehicleRelease(u);return false;}
+    if(boat){
+      while(c.dockIndex<route.length-1&&
+        Math.hypot(u.x-route[c.dockIndex].x,u.z-route[c.dockIndex].z)<2.2)
+        c.dockIndex++;
+    }
+    const q=boat?route[Math.min(c.dockIndex,route.length-1)]:
+      enemyRequisition.vehicleSeatPosition(v,c.seat);
     const d=Math.hypot(q.x-u.x,q.z-u.z);
-    if(d>enemyRequisition.REQUISITION.boardingDistance){
+    if(boat?!enemyRequisition.boatBoardingReady(u,v,route):
+      d>enemyRequisition.REQUISITION.boardingDistance){
       mvE(u,u.sp*.95*dt,q.x,q.z);
+      u.walkY=groundAt(u.x,u.z,u.walkY??u.gy??u.o.position.y);
+      u.gy=u.walkY;
       u.hd=Math.atan2(u.x-q.x,u.z-q.z);
-      u.o.position.set(u.x,enemyGroundAt(u,u.x,u.z),u.z);
+      u.o.position.set(u.x,u.gy??enemyGroundAt(u,u.x,u.z),u.z);
       animateEnemyInfantry(u,true,dt);
       return true;
     }
