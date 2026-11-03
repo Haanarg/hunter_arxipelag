@@ -3,7 +3,7 @@ import {wholeDamage,PLAYER_MAX_HEALTH} from './player-simulation.mjs?v=0.6.42';
 export const combatBalance=Object.freeze({
  player:PLAYER_MAX_HEALTH,medkit:8,
  people:Object.freeze({soldier:4,elite:8,general:8}),
- weapons:Object.freeze({knife:2,pistol:2,rifle:2,eliteRifle:2,sniper:10,tankette:2,attackCannon:2,bazooka:8,grenade:10,c4:20,tank:12,heliMissile:12,boatRocket:12,towerLight:2,towerHeavy:12}),
+ weapons:Object.freeze({knife:2,pistol:2,rifle:2,eliteRifle:2,sniper:5,tankette:2,attackCannon:2,bazooka:8,grenade:10,c4:20,tank:12,heliMissile:12,boatRocket:12,towerLight:2,towerHeavy:12}),
  vehicles:Object.freeze({bici:1,moto:2,cotxe:5,cotxe_civil:4,camio:10,tanqueta:12,tanc:20,windsurf:1,barca_rems:2,moto_aquatica:3,llanxa:5,llanxa_coets:10,ferry:15,hover:6,heli:10,heli_combat:15})
 });
 
