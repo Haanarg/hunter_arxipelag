@@ -685,7 +685,9 @@ function updateNativeCoopFrame(dt){
           presentExplosion(effect.at.x,effect.at.y,effect.at.z,8);
         }
       }
-      else if(effect.kind==='explosion')presentExplosion(effect.at.x,effect.at.y,effect.at.z,effect.radius,{weapon:effect.weapon});
+      else if(effect.kind==='explosion')presentExplosion(effect.at.x,effect.at.y,effect.at.z,effect.radius,{
+        weapon:effect.weapon,splash:effect.weapon==='projectile'?effect.radius:0,
+        direction:effect.direction});
      else if(effect.kind==='impact')spawnBulletImpact(effect.hit?'blood':'spark',
        effect.at.x,effect.at.y,effect.at.z,{vx:0,vy:0,vz:1});
      else if(effect.kind==='glass'&&s.walls[effect.wallIndex])
