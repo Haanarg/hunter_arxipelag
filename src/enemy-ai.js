@@ -417,14 +417,16 @@ function enemyVehicleBoardingTick(u,dt){
     if(enemyRequisition.passengerMuzzle(v)&&
        v.enemyCrew[0]?.enemyVehicleClaim?.phase==='riding'&&spotted&&
        Math.hypot(target.x-v.x,target.z-v.z)<SOLDIER_FIRE_RANGE+20&&u.cd<=0){
-      const muzzle=enemyRequisition.passengerMuzzle(
-        v,v.o?.position?.y??hAt(v.x,v.z));
-      const {x:sx,y:eyeY,z:sz}=muzzle;
-      if(sight(sx,sz,target.x,target.z,eyeY,true,py+1.5)){
-        const dx=target.x-sx,dz=target.z-sz,dy=py+1.5-eyeY,
-              error=rn(-.075,.075)*(1+Math.abs(v.v||0)/16),
-              len=Math.max(.001,Math.hypot(dx,dy,dz));
-        shoot(sx,eyeY,sz,dx/len+error,dy/len,dz/len-error,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE,u);
+      // L'artiller apunta amb el fusell i la boca real del model de
+      // patrulla terrestre; la bala mai no surt del centre del vehicle.
+      const shot=enemyCarRifleShot({
+        o:v.o,x:v.x,z:v.z,gy:(v.o?.position?.y??hAt(v.x,v.z))-.05,hd:v.hd
+      },target,py);
+      if(shot&&sight(shot.origin.x,shot.origin.z,target.x,target.z,
+        shot.origin.y,true,py+1.5)){
+        shoot(shot.origin.x,shot.origin.y,shot.origin.z,
+          shot.direction.x,shot.direction.y,shot.direction.z,
+          70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE,u);
         u.cd=u.rate*1.5;
       }
     }
