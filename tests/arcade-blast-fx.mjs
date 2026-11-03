@@ -57,6 +57,23 @@ fx.clear();
 assert.equal(fx.active,0,'stop COOP may clear stale visual effects');
 fx.dispose();
 assert.equal(scene.children.length,0,'scene is restored and materials released');
+const orientScene=new THREE.Scene(),orientFx=createArcadeBlastFX(THREE,orientScene,{limit:1});
+orientFx.emit(0,2,0,{weapon:'projectile',vx:80,vy:0,vz:0},11);
+orientFx.update(.6);
+const plume=orientScene.children[0];
+const shell=plume.children[5];
+const axis=new THREE.Vector3(0,1,0).applyQuaternion(shell.quaternion);
+assert(axis.distanceTo(new THREE.Vector3(-1,0,0))<1e-5,
+  'Blast plume faces back toward the incoming projectile origin');
+const smoke=plume.children[1],matrix=new THREE.Matrix4();
+smoke.getMatrixAt(0,matrix);
+const firstSmokeHeight=matrix.elements[13];
+orientFx.update(.1);
+smoke.getMatrixAt(0,matrix);
+assert(matrix.elements[13]>firstSmokeHeight,
+  'Smoke continues to rise vertically even with a horizontal projectile impact');
+orientFx.dispose();
+
 // Source-level integration contracts for both runtime paths.
 const combat=load('src/combat.js');
 assert.match(combat,/HUNTER_ARCADE_BLAST_FX\.emit\(x,y,z,kind==='projectile'/);
