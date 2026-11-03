@@ -6895,7 +6895,7 @@ function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc,audioSource=null,mountedCann
   const claim=audioSource?.enemyVehicleClaim;
   // Un soldat al volant no dispara mai amb l'arma d'infanteria.
   if(own==='e'&&claim&&claim.seat===0&&!mountedCannon&&
-     ['waiting','riding'].includes(claim.phase))return;
+     claim.vehicle?.t!=='moto'&&['waiting','riding'].includes(claim.phase))return;
   // Els projectils enemics no s'originen si la seva trajectòria al jugador
   // travessa un vehicle que ja porta aliats (també si el tir és desplaçat).
   if(own==='e'){
@@ -7330,7 +7330,7 @@ function enemyAimHitRadius(e){
 }
 // Les bales lleugeres travessen la filferrada. Només els obstacles
 // sòlids bloquegen l'apuntat assistit.
-function weaponAimClear(x,y,z,tx,ty,tz,ignoreWall=null,ignoreBuilding=null,checkTerrain=false){
+function weaponAimClear(x,y,z,tx,ty,tz,ignoreWall=null,ignoreBuilding=null,checkTerrain=true){
   // Una sola consulta als índexs espacials per candidat. Evitem centenars
   // de mostres petites a cada tret de metralladora de l'helicòpter.
   const mx=(x+tx)/2,mz=(z+tz)/2,reach=Math.hypot(tx-x,tz-z)/2+3;
@@ -7349,13 +7349,13 @@ function weaponAimClear(x,y,z,tx,ty,tz,ignoreWall=null,ignoreBuilding=null,check
     if(t!=null&&t<.98)return false;
   }
   if(checkTerrain){
-    // Només per a les armes pesades: una muntanya no pot convertir-se en
-    // una diana "visible". Mostreig limitat per protegir els FPS.
-    const dx=tx-x,dy=ty-y,dz=tz-z,distance=Math.hypot(dx,dy,dz),
-          steps=Math.min(20,Math.max(3,Math.ceil(distance/10)));
+    // Línia de visió real, també per a les armes lleugeres: comprova
+    // el relleu entre la boca del canó i la diana, amb mostres cada 6 m.
+    const dx=tx-x,dy=ty-y,dz=tz-z,
+          horizontal=Math.hypot(dx,dz),steps=Math.min(96,Math.max(2,Math.ceil(horizontal/6)));
     for(let i=1;i<steps;i++){
       const t=i/steps,px=x+dx*t,py=y+dy*t,pz=z+dz*t;
-      if(py<bunkerProjectileSurface(px,pz,py)+.12)return false;
+      if(py<hAt(px,pz)+.18)return false;
     }
   }
   return true;
@@ -7390,7 +7390,8 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
     Math.abs(cone-BAZOOKA_AIM_CONE)<.00001;
   const selector=window.HUNTER_SHARED_AIMING.createAimSelector({
     origin:{x,y,z},direction:[fx,fy,fz],range,cone,shotClass,focus,verticalCone,
-    isClear:weaponAimClear,
+    isClear:(ox,oy,oz,tx,ty,tz,ignoreWall,ignoreBuilding)=>
+      weaponAimClear(ox,oy,oz,tx,ty,tz,ignoreWall,ignoreBuilding,true),
     isOnScreen:isPersonalBazooka?bazookaTargetOnScreen:undefined
   }),{consider}=selector;
   for(const e of E){
@@ -7897,7 +7898,7 @@ else if(c&&OPEN_RIDER_PISTOL.has(c)){
       direction.x,direction.y,direction.z,SMALL_ARMS_RANGE.pistol,
       SMALL_ARMS_AIM_CONE,'pistol',null,130,SMALL_ARMS_AIM_VERTICAL));
   if(!shot)return;
-  ammo--;fcd=.22;
+  ammo--;fcd=window.HUNTER_SHARED_WEAPONS.weaponCatalog.pistol.cooldown;
   const p=shot.origin,d=shot.direction;
   shoot(p.x,p.y,p.z,d.x,d.y,d.z,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE);
 }
@@ -7923,7 +7924,7 @@ else if(!cv&&sniperEquipped&&inv.franctirador){
 }
 else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}
 else if(!cv&&bazookaEquipped&&inv.bazooka){if(--inv.bazooka<=0){delete inv.bazooka;bazookaEquipped=false}fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9-(playerCrouched?.48:0),z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=window.HUNTER_SHARED_AIMING.limitBazookaHorizontalAim(autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,BAZOOKA_AIM_RANGE,BAZOOKA_AIM_CONE,'heavy',null,72*HEAVY_SHOT_SPEED_FACTOR,BAZOOKA_AIM_VERTICAL),fx_,fz);shoot(x,y,z,ax,ay,az,72,COMBAT_BALANCE.weapons.bazooka,18,'pb',mS,3);Pj[Pj.length-1].life=3.8;Pj[Pj.length-1].weapon='bazooka';msg='Bazooka: '+(inv.bazooka||0)+' coets restants.';msgT=2;setDis(false)}
-else if(!cv&&ammo>0){ammo--;fcd=.22;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5-(playerCrouched?.48:0),z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,SMALL_ARMS_RANGE.pistol,SMALL_ARMS_AIM_CONE,'pistol',null,130,SMALL_ARMS_AIM_VERTICAL);shoot(x,y,z,ax,ay,az,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE)}
+else if(!cv&&ammo>0){ammo--;fcd=window.HUNTER_SHARED_WEAPONS.weaponCatalog.pistol.cooldown;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5-(playerCrouched?.48:0),z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,SMALL_ARMS_RANGE.pistol,SMALL_ARMS_AIM_CONE,'pistol',null,130,SMALL_ARMS_AIM_VERTICAL);shoot(x,y,z,ax,ay,az,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE)}
 else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}
 function segmentAabbT(...args){return window.HUNTER_SHARED_COMBAT.segmentAabbT(...args)}
 function segmentSphereT(...args){return window.HUNTER_SHARED_COMBAT.segmentSphereT(...args)}
