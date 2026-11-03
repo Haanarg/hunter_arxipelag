@@ -842,7 +842,8 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
         x=truck?.77*truckFit:civil?.613:.73,
         z=truck?-1.93*truckFit:civil?-.60:-.43,
         height=truck?2.04*truckFit:.94,
-        scale=type==='moto'?.40:.43;
+        // La cabina A4.3 és més baixa que la del Humvee de patrulla.
+        scale=truck?.31:type==='moto'?.40:.43;
   driver.position.set(type==='moto'?0:-x,height,type==='moto'?.28:z);
   driver.scale.setScalar(scale);
   driver.userData.ar.rotation.x=1.18;driver.userData.al.rotation.x=1.12;
