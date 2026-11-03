@@ -223,7 +223,7 @@ function* buildApprovedCompoundSteps(layout,q,{pad,path,pier,prop,vehicles,rocke
       world.userData.compoundGuardCount=guardNumber;
       if(guardNumber%5===0){
         if(!seedSearchMode)window.HUNTER_CHARACTERS.equipBazooka(THREE,u.o,{box:bx});
-        u.rocketSoldier=true;u.spl=8;u.dmg=25;u.rate=3.4;u.rng=85;
+        u.rocketSoldier=true;u.spl=8;u.dmg=25;u.rate=6.8;u.rng=85;
         u.cd=1.3+(guardNumber%3)*.35;
       }
     }
