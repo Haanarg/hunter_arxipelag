@@ -1,11 +1,11 @@
 import {combatBalance} from './combat-rules.mjs';
-import {ARMORED_AIM,SMALL_ARMS_RANGE,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL} from './aiming-core.mjs';
+import {ARMORED_AIM,SMALL_ARMS_RANGE,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL,RIFLE_AIM_CONE} from './aiming-core.mjs';
 // Original individual weapon parameters; presentation and authority stay in adapters.
 export const HEAVY_SPEED_FACTOR=1.17;
 export const weaponCatalog=Object.freeze(Object.fromEntries(Object.entries({
  pistol:{name:'Pistola',ammo:'bullets',speed:130,damage:combatBalance.weapons.pistol,range:SMALL_ARMS_RANGE.pistol,cone:SMALL_ARMS_AIM_CONE,vertical:SMALL_ARMS_AIM_VERTICAL,cooldown:.22,life:2.2},
- assault:{name:'Fusell d’assalt',item:'assault',ammo:'bullets',speed:130,damage:combatBalance.weapons.rifle,range:SMALL_ARMS_RANGE.assault,cone:SMALL_ARMS_AIM_CONE,vertical:SMALL_ARMS_AIM_VERTICAL,cooldown:.34,life:2.2},
- sniper:{name:'Franctirador',item:'sniper',ammo:'sniperAmmo',speed:470,damage:combatBalance.weapons.sniper,range:1000,cone:.999,vertical:Math.PI/2,cooldown:1.05,life:2.2},
+ assault:{name:'Fusell d’assalt',item:'assault',ammo:'bullets',speed:130,damage:combatBalance.weapons.rifle,range:SMALL_ARMS_RANGE.assault,cone:RIFLE_AIM_CONE,vertical:SMALL_ARMS_AIM_VERTICAL,cooldown:.34,life:2.2},
+ sniper:{name:'Franctirador',item:'sniper',ammo:'sniperAmmo',speed:470,damage:combatBalance.weapons.sniper,range:1000,cone:RIFLE_AIM_CONE,vertical:Math.PI/2,cooldown:1.05,life:2.2},
  bazooka:{name:'Bazuca',ammo:'bazooka',speed:72*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.bazooka,splash:18,range:185,cone:Math.SQRT1_2,vertical:Math.PI/4,cooldown:1.05,life:3.8},
  knife:{name:'Ganivet',damage:combatBalance.weapons.knife,cooldown:.52},
  cutters:{name:'Cisalla',item:'cutters',cooldown:.52},
