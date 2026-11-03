@@ -835,8 +835,14 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
         truck=type==='camio',civil=type==='cotxe_civil';
   // Aquests són exactament els ocupants procedimentals del Humvee de patrulla.
   // No reparentam el soldat de combat, que continuaria en postura dreta.
-  const x=truck?.62:civil?.613:.73,z=truck?-.62:civil?-.60:-.43,
-        height=truck?1.05:.94,scale=type==='moto'?.40:.43;
+  // El camió A4.3 construeix els seients a z=-1.93, abans del
+  // fit visual .82: z=-.62 corresponia a darrere de la cabina.
+  // Mateixa escala del grup exterior i els mateixos pivots que el model A4.3.
+  const truckFit=car.userData.truckVisualFit||.82,
+        x=truck?.77*truckFit:civil?.613:.73,
+        z=truck?-1.93*truckFit:civil?-.60:-.43,
+        height=truck?2.04*truckFit:.94,
+        scale=type==='moto'?.40:.43;
   driver.position.set(type==='moto'?0:-x,height,type==='moto'?.28:z);
   driver.scale.setScalar(scale);
   driver.userData.ar.rotation.x=1.18;driver.userData.al.rotation.x=1.12;
