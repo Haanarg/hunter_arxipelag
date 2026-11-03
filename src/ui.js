@@ -61,13 +61,19 @@ window.HUNTER_UI=Object.freeze({
       currentMode=mode;panel.style.display='flex';
       resumeButton.style.display=['saves','account','history','coop'].includes(mode)&&!getState().started?'none':'';
       resumeButton.onclick=mode==='bombtimer'?()=>actions.open('inventory'):actions.resume;
-      title.textContent=mode==='bombtimer'?'Programar explosiu':mode==='map'?'Carta de navegació':mode==='inventory'?'Inventari':mode==='restart'?'Nova operació?':mode==='performance'?'Rendiment':'Operació en pausa';panel.querySelector('.card').classList.toggle('inventory-card',mode==='inventory');
+      title.textContent=mode==='bombtimer'?'Programar explosiu':mode==='map'?'Carta de navegació':
+        mode==='inventory'?'Inventari':mode==='restart'?'Nova operació?':
+        mode==='performance'?'Opcions':mode==='keys'?'Tecles i controls':
+        mode==='cheats'?'Trucs':'Operació en pausa';
+      const card=panel.querySelector('.card');
+      card.classList.toggle('inventory-card',mode==='inventory');
+      card.classList.toggle('pause-card',['pause','keys','performance','cheats','saves','account','restart'].includes(mode));
       if(mode==='coop'){
         title.textContent='Sala cooperativa';actions.renderCoop(body,()=>currentMode==='coop');
       }else if(mode==='history'){
         title.textContent='Estadístiques i llavors';actions.renderHistory(body,()=>currentMode==='history');
       }else if(mode==='account'){
-        title.textContent='Compte i núvol';actions.renderAccount(body,()=>currentMode==='account');
+        title.textContent='Compte';actions.renderAccount(body,()=>currentMode==='account');
       }else if(mode==='saves'){
         title.textContent='Operacions desades';actions.renderSaves(body,()=>currentMode==='saves');
       }else if(mode==='inventory'){
@@ -151,7 +157,7 @@ window.HUNTER_UI=Object.freeze({
           '<label><input id="cheatItems" type="checkbox"> Tots els objectes i munició infinits (també vehicles)</label>'+
           '<label><input id="cheatInvisible" type="checkbox"> Invisible per als enemics</label>'+
           '<label><input id="cheatImmune" type="checkbox"> Immune als atacs</label>'+
-          '<label><input id="cheatFly" type="checkbox"> Vol ràpid (H / J per pujar i baixar)</label>'+
+          '<label><input id="cheatFly" type="checkbox"> Vol ràpid</label>'+
           '</div><button id="cheatsBack">← Pausa</button>';
         for(const [id,key] of [['cheatItems','items'],['cheatInvisible','invisible'],['cheatImmune','immune'],['cheatFly','fly']]){
           const input=document.getElementById(id);
@@ -163,18 +169,45 @@ window.HUNTER_UI=Object.freeze({
           };
         }
         document.getElementById('cheatsBack').onclick=()=>actions.open('pause');
+      }else if(mode==='keys'){
+        // Totes les dreceres viuen aquí; la pausa principal és només navegació.
+        body.innerHTML='<div class="pause-help" aria-label="Dreceres del teclat">'+
+          '<div><b>WASD / fletxes</b><span>Moviment i gir</span></div>'+
+          '<div><b>Majúscules / joystick ↑</b><span>Córrer o nedar a crol</span></div>'+
+          '<div><b>Y / U</b><span>Desplaçament lateral, també nedant</span></div>'+
+          '<div><b>X</b><span>Ajupir-se i moure’s amb sigil</span></div>'+
+          '<div><b>E</b><span>Acció, portes, vehicles o motxilla</span></div>'+
+          '<div><b>F</b><span>Disparar o utilitzar l’equipament</span></div>'+
+          '<div><b>B</b><span>Granada des de vehicle compatible</span></div>'+
+          '<div><b>G</b><span>Explosiu C4 / míssil segons el vehicle</span></div>'+
+          '<div><b>T</b><span>Mira del franctirador (zoom ×8)</span></div>'+
+          '<div><b>H / J</b><span>Helicòpter o vol amb trucs: pujar / baixar</span></div>'+
+          '<div><b>M</b><span>Mapa i destinacions</span></div>'+
+          '<div><b>I / R</b><span>Inventari i equipament</span></div>'+
+          '<div><b>1–7 / V</b><span>Seleccionar arma / canviar d’arma</span></div>'+
+          '<div><b>C</b><span>Activar o treure la disfressa</span></div>'+
+          '<div><b>L</b><span>Marcar destinació</span></div>'+
+          '<div><b>F9</b><span>Activar o desactivar la visualització de sigil</span></div>'+
+          '<div><b>ESC / P</b><span>Obrir o tancar el menú de pausa</span></div>'+
+          '<div><b>Arrossegar / roda</b><span>Girar la vista / ajustar la càmera</span></div>'+
+          '</div>'+
+          '<p class="pause-note">Mantén F amb les granades a peu per ajustar-ne la força.</p>'+
+          '<button type="button" class="pause-back" id="keysBack">← TORNAR A PAUSA</button>';
+        document.getElementById('keysBack').onclick=()=>actions.open('pause');
       }else if(mode==='performance'){
-        body.innerHTML='<p>Canvis immediats, sense regenerar el mapa.</p>'+
+        body.innerHTML='<p class="pause-note">Ajustos aplicats sense tornar a generar l’arxipèlag.</p>'+
           '<div class="performance-options">'+
+          '<label><input id="audioEnabledPause" type="checkbox"> So activat</label>'+
           '<label><input id="disablePalmsPause" type="checkbox"> Sense palmeres</label>'+
           '<label><input id="disableWaterPause" type="checkbox"> Sense aigua</label>'+
           '<label><input id="disableShadowsPause" type="checkbox"> Sense ombres</label>'+
           '</div><label class="pause-stats-toggle"><input id="showPerfStatsOptions" type="checkbox"> Mostrar estadístiques de rendiment durant la partida</label>'+
-          '<label class="pause-stats-toggle"><input id="showStealthDebug" type="checkbox"> Cons de visió (F9)</label>'+
+          '<label class="pause-stats-toggle"><input id="showStealthDebug" type="checkbox"> Cons de visió</label>'+
           '<label><input id="showStealthNoise" type="checkbox"> Radis de soroll</label>'+
-          '<p style="font:12px/1.4 system-ui;opacity:.8">Verd: visió · vermell: radi dels sorolls i crits d’alerta.</p>'+
-          '<div id="performanceBreakdown" style="font:13px/1.5 monospace;white-space:pre-line;background:#0d1d30;border-radius:8px;padding:12px;margin-top:12px"></div>'+
-          '<button id="performanceRefresh">Actualitza diagnòstic</button><button id="performanceBack">← Pausa</button>';
+          '<details class="pause-diagnostics"><summary>Diagnòstic de rendiment</summary>'+
+          '<div id="performanceBreakdown" style="font:13px/1.5 monospace;white-space:pre-line;padding:10px"></div>'+
+          '<button id="performanceRefresh" type="button">Actualitza diagnòstic</button></details>'+
+          '<button type="button" class="pause-back" id="performanceBack">← TORNAR A PAUSA</button>';
         for(const [id,key,callback] of [
           ['disablePalmsPause','palmsDisabled',actions.setPalmsDisabled],
           ['disableWaterPause','waterDisabled',actions.setWaterDisabled],
@@ -200,6 +233,9 @@ window.HUNTER_UI=Object.freeze({
         stealthToggle.checked=!!getState().stealthLayers?.sight;
         stealthToggle.onchange=()=>actions.setStealthLayer('sight',stealthToggle.checked);
         for(const [id,key] of [['showStealthNoise','noise']]){const el=document.getElementById(id);el.checked=!!getState().stealthLayers?.[key];el.onchange=()=>actions.setStealthLayer(key,el.checked)}
+        const sound=document.getElementById('audioEnabledPause');
+        sound.checked=!getState().muted;
+        sound.onchange=()=>actions.setAudioMuted(!sound.checked);
         document.getElementById('performanceRefresh').onclick=refresh;
         document.getElementById('performanceBack').onclick=()=>actions.open('pause');
         refresh();
@@ -207,48 +243,35 @@ window.HUNTER_UI=Object.freeze({
         body.innerHTML='<p>Perdràs el progrés. Dificultat de la nova partida:</p><button data-diff=".6">Fàcil</button><button data-diff="1">Normal</button><button data-diff="1.5">Difícil</button>';
         body.querySelectorAll('[data-diff]').forEach(b=>b.onclick=()=>actions.restart(+b.dataset.diff))
       }else{
-        body.innerHTML='<div class="pause-help" aria-label="Controls bàsics">'+
-          '<div><b>WASD / fletxes</b><span>Moviment i gir</span></div>'+
-          '<div><b>Maj. / joystick ↑</b><span>Córrer o nedar a crol</span></div>'+
-          '<div><b>X · AJUPIR</b><span>Sigil: menys velocitat, soroll i visibilitat</span></div>'+
-          '<div><b>Y / U · ◀ ▶</b><span>Desplaçament lateral, també nedant</span></div>'+
-          '<div><b>E · Acció</b><span>Porta, acció propera, vehicle o motxilla</span></div>'+
-          '<div><b>F · Dispar</b><span>Arma, cisalla o granada a peu (mantén per llançar lluny)</span></div>'+
-          '<div><b>B · Granada</b><span>Des de qualsevol vehicle excepte l’helicòpter de combat</span></div>'+
-          '<div><b>T · Mira</b><span>Zoom del franctirador</span></div>'+
-          '<div><b>M</b><span>Mapa i destinació</span></div>'+
-          '<div><b>H / J</b><span>Helicòpter: pujar / baixar</span></div>'+
-          '<div><b>Arrossega / roda</b><span>Girar vista / ajustar càmera</span></div>'+
+        // Portada de pausa: navegació compacta. Les tecles es consulten a part.
+        body.innerHTML='<div class="pause-menu-actions" aria-label="Accions de pausa">'+
+          '<button id="pauseContinue" class="pause-continue" type="button">▶ CONTINUAR</button>'+
+          '<button id="keysMenu" type="button"><span class="pause-menu-icon" aria-hidden="true">⌨️</span> TECLES</button>'+
+          '<button id="accountMenu" type="button"><span class="pause-menu-icon" aria-hidden="true">👤</span> COMPTE</button>'+
+          '<div class="pause-save-row">'+
+          '<button id="savesMenu" type="button"><span class="pause-menu-icon" aria-hidden="true">💾</span> DESAR</button>'+
+          '<label class="pause-autosave-label"><input id="autosaveEnabledPause" type="checkbox"> <span>Autodesat</span></label></div>'+
+          '<button id="restartMenu" type="button">↻ NOVA PARTIDA</button>'+
+          '<button id="performanceMenu" type="button">⚙ OPCIONS</button>'+
           '</div>'+
-          '<p class="pause-note">Els mapes s’activen sols. Equipament: motxilla.</p>'+
-          '<p class="pause-note">? ambre: sospita · ! coral: contacte · ◇ blau: cerca. Ocults darrere la cobertura.</p>'+
-          '<label class="pause-stats-toggle"><input id="audioEnabledPause" type="checkbox"> So activat</label>'+
-          '<label class="pause-stats-toggle"><input id="autosaveEnabledPause" type="checkbox"> Desament automàtic</label>'+
           '<p id="operationAutosaveStatus" class="pause-note" role="status"></p>'+
-          '<div class="pause-menu-actions">'+
-          '<button id="historyMenu">Historial</button>'+
-          '<button id="accountMenu">Compte / núvol</button>'+
-          '<button id="savesMenu">Desar</button>'+
-          '<button id="chetosMenu">Chetos</button>'+
-          '<button id="restartMenu">Nova partida</button>'+
-          '<button id="performanceMenu">⚙️ Rendiment</button>'+
-          '</div>';
-        const auto=document.getElementById('autosaveEnabledPause');auto.checked=!!getState().autosave?.enabled;
+          '<button id="chetosMenu" class="pause-joker" type="button" aria-label="Trucs" title="Trucs">🃏</button>';
+        const auto=document.getElementById('autosaveEnabledPause');
+        auto.checked=!!getState().autosave?.enabled;
         auto.onchange=()=>actions.setAutosave(auto.checked);
-        document.getElementById('operationAutosaveStatus').textContent=getState().autosave?.message||'';
-        document.getElementById('historyMenu').onclick=()=>actions.open('history');
+        document.getElementById('operationAutosaveStatus').textContent=
+          getState().autosave?.message||'';
+        document.getElementById('pauseContinue').onclick=actions.resume;
+        document.getElementById('keysMenu').onclick=()=>actions.open('keys');
         document.getElementById('accountMenu').onclick=()=>actions.open('account');
         document.getElementById('savesMenu').onclick=()=>actions.open('saves');
         document.getElementById('chetosMenu').onclick=()=>actions.open('cheats');
         document.getElementById('restartMenu').onclick=()=>actions.open('restart');
         document.getElementById('performanceMenu').onclick=()=>actions.open('performance');
-        const audioEnabled=document.getElementById('audioEnabledPause');
-        audioEnabled.checked=!getState().muted;
-        audioEnabled.onchange=()=>actions.setAudioMuted(!audioEnabled.checked);
       }
     }
     resumeButton.onclick=actions.resume;
-    return Object.freeze({renderHUD,show,hide,isAccountOpen:()=>currentMode==='account',isBombTimerOpen:()=>currentMode==='bombtimer'})
+    return Object.freeze({renderHUD,show,hide,isAccountOpen:()=>currentMode==='account',isBombTimerOpen:()=>currentMode==='bombtimer',getMode:()=>currentMode})
   }
 });
 
