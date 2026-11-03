@@ -16,7 +16,7 @@ function legal(world,unit,from,to){
     level=world.locomotionAt(point.x,point.z,unit.y);
   if(Math.hypot(resolved.x-point.x,resolved.z-point.z)>.09||
      Math.abs(level.floor-unit.y)>1.0||
-     level.terrain<-.8&&!level.basement)return false;
+     (level.terrain<-.8&&level.floor<-.2)&&!level.basement)return false;
   previous=resolved;
  }
  return true;
