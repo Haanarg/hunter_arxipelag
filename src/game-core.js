@@ -526,10 +526,10 @@ for(let i=fa.length-1;i>=0;i--){
   f.o.position.set(f.x,f.flyY,f.z);
   f.wl.rotation.z=Math.sin(t*8+f.cx)*.5;f.wr.rotation.z=-f.wl.rotation.z;
 }
-V.forEach(v=>{
-  if(v.destroyed)return;
-  v.playerHitCd=Math.max(0,(v.playerHitCd||0)-dt);
-  const frac=1-(v.life/(v.maxLife||1));
+const updateDamagedVehicleSmoke=(v,dt,health,maxHealth)=>{
+  if(v.destroyed||health<=0)return;
+  const frac=Math.max(0,Math.min(1,1-health/Math.max(1,maxHealth)));
+
   if(frac>.08){
     v.smokeT=(v.smokeT||0)-dt;
     if(v.smokeT<=0){
@@ -545,7 +545,16 @@ V.forEach(v=>{
       v.smokeT=Math.max(.08,.55-frac*.42)
     }
   }
+};
+V.forEach(v=>{
+  if(v.destroyed)return;
+  v.playerHitCd=Math.max(0,(v.playerHitCd||0)-dt);
+  updateDamagedVehicleSmoke(v,dt,v.life,v.maxLife||VT[v.t]?.life||1);
 });
+for(const e of E){
+  if(!['jeep','tanqueta','tanc','patrulla_marina'].includes(e.t))continue;
+  updateDamagedVehicleSmoke(e,dt,e.hp,EC[e.t]?.hp||1);
+}
 // Esteles dels vehicles pilotables i dels enemics; tots els efectes
 // comparteixen quatre malles instanciades. LOD de distància al sistema.
 const fxContext={playerX:P.x,playerZ:P.z,playerVehicle:cv,
