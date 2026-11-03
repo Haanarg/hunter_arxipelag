@@ -323,13 +323,25 @@ window.HUNTER_CHARACTERS=Object.freeze({
     cisalla.scale.setScalar(.7);u.aer.add(cisalla);cisalla.visible=false;
     u.cisalla=cisalla;u.cisallaCut=0;
     const bazooka=createSharedBazooka(THREE,box);
-    bazooka.position.set(.62,3.48-u.upperBodyPivotHeight,-.5);bazooka.visible=false;
+    // L'extrem posterior descansa sobre l'espatlla dreta (x=.57*1.2,
+    // y=2.90*1.2). El pivot real del tub és més endavant; en girar amb
+    // l'autoapuntat, recalculam aquest pivot a partir de l'ancoratge
+    // per impedir que el tub s'enfonsi dins l'espatlla o orbiti al voltant.
+    bazooka.userData.stockAnchor=new THREE.Vector3(
+      .67,3.83-u.upperBodyPivotHeight,-.10);
+    bazooka.userData.stockToReceiver=new THREE.Vector3(-.03,-.05,-1.05);
+    bazooka.position.copy(bazooka.userData.stockAnchor)
+      .add(bazooka.userData.stockToReceiver);
+    bazooka.visible=false;
     u.upperBody.add(bazooka);u.bazooka=bazooka;
-    // Les dues mans segueixen els punts de presa del tub quan es mou
-    // el musell, igual que amb els fusells de precisió i d'assalt.
+    // Mà dreta SOTA el tub, al suport posterior/central. Esquerra sota
+    // l'altra presa, una mica més endavant. Ambdues dins l'abast real
+    // dels braços articulats, inclosos els girs d'autoapuntat.
     const bazookaRightGrip=new THREE.Object3D(),bazookaLeftGrip=new THREE.Object3D();
-    bazookaRightGrip.position.set(.06,-.36,.38);
-    bazookaLeftGrip.position.set(-.35,-.22,-.50);
+    bazookaRightGrip.name='hunter-bazooka-right-underbarrel-grip';
+    bazookaLeftGrip.name='hunter-bazooka-left-support-grip';
+    bazookaRightGrip.position.set(.04,-.36,.36);
+    bazookaLeftGrip.position.set(-.35,-.35,.15);
     bazooka.add(bazookaRightGrip,bazookaLeftGrip);
     u.bazookaRightGrip=bazookaRightGrip;u.bazookaLeftGrip=bazookaLeftGrip;
     // Rifle de franctirador amb culata, canó llarg i visor elevat.
@@ -742,7 +754,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // El rig de pistola hi superposa una presa a dues mans només durant el tir.
     // No sobrescriure la rotació de quaternion calculada per l'IK
     // del rifle: tornar y=0 aquí separava les mans de les dues preses.
-    if(!sniper&&!assault){
+    if(!sniper&&!assault&&!bazooka){
       u.ar.rotation.y=0;u.al.rotation.y=0;
       u.aer.rotation.y=0;u.ael.rotation.y=0;
     }
