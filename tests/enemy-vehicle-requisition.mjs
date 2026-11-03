@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {candidateVehicles,requisitionChance,requisitionRoll,vehicleSeatPosition,
   pursuitInput,observeFleeing,seatVisual,passengerMuzzle,
-  boatBoardingRoute,boatBoardingReady,requisitionBoat,avoidVehicleBarbedWire,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
+  boatBoardingRoute,boatBoardingReady,requisitionBoat,boatCrewMuzzle,
+  avoidVehicleBarbedWire,requisitionFenceDetour,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
 import {createEnemyVehicleController} from '../server/enemy-vehicle-controller.mjs';
 const source=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
@@ -70,9 +71,51 @@ assert.ok(avoiding.forward<approaching.forward,
   'La IA ha de frenar abans de la filferrada');
 assert.equal(avoidVehicleBarbedWire(pursuitCar,approaching,[],{}),approaching,
   'Sense obstacle, la física i la velocitat originals no canvien');
-assert.ok(source('src/compound-generation.js').includes('u.rate=6.8')&&
-  source('server/coop-combat.mjs').includes('Math.max(6.8'),
-  'La cadència dels soldats llançacoets és la meitat en tots dos modes');
+assert.ok(source('src/compound-generation.js').includes('u.rate=5')&&
+  source('server/coop-combat.mjs').includes('rocket?5:'),
+  'La cadència de les armes pesades és de 5 segons en tots dos modes');
+// Les portes d'un recinte han de ser accessibles des de qualsevol costat.
+const compoundWire=[];
+const addWire=(ax,az,bx,bz)=>compoundWire.push({barbed:true,ax,az,bx,bz,hp:8});
+for(let x=-42;x<42;x+=6)if(x!==-6&&x!==0)addWire(x,-30,x+6,-30);
+for(let z=-30;z<30;z+=6){
+ addWire(-42,z,-42,z+6);addWire(42,z,42,z+6);
+}
+for(let x=-42;x<42;x+=6)addWire(x,30,x+6,30);
+for(const start of [{x:25,z:-70},{x:58,z:0},{x:-60,z:0}]){
+ const path=requisitionFenceDetour(start,{x:24,z:0},compoundWire);
+ assert.ok(path?.length===2,
+   'La IA ha de trobar una obertura del recinte encara que estigui en un altre costat');
+ assert.ok(path[0].z<-30&&path[1].z>-30,
+   'Primer va a la banda exterior del pas i després creua la porta');
+}
+const completeWire=compoundWire.concat([
+ {barbed:true,ax:-6,az:-30,bx:0,bz:-30,hp:8},
+ {barbed:true,ax:0,az:-30,bx:6,bz:-30,hp:8}
+]);
+assert.equal(requisitionFenceDetour({x:25,z:-70},{x:24,z:0},completeWire),null,
+ 'Mai no ha d\'inventar-se un pas a través d\'una filferrada intacta');
+assert.equal(requisitionFenceDetour({x:0,z:-80},{x:0,z:-60},compoundWire),null,
+ 'Sense cap tanca al camí, la IA no necessita desviar-se');
+assert.ok(boatCrewMuzzle(neutral('boat','llanxa',0,0),0).x<0&&
+  boatCrewMuzzle(neutral('boat','llanxa',0,0),1).x>0,
+ 'La boca del fusell del pilot i la del llançacoets del passatger tenen seients diferents');
+const marineVisual=source('src/marine-patrol.js'),crewVisual=source('src/enemy-ai.js');
+assert.ok(!marineVisual.includes('createMount(')&&
+ !marineVisual.includes('marineAimGun(')&&
+ marineVisual.includes('attachEnemyBoatCrew(boat)'),
+ 'Les patrulleres no construeixen metralladores ni canons muntats al casc');
+assert.ok(crewVisual.includes('return attachEnemyBoatCrew(car,{initiallyHidden})')&&
+ marineVisual.includes('ensureEnemyVehicleFlag')&&
+ crewVisual.includes("ensureEnemyVehicleFlag(g,'patrulla_marina')"),
+ 'Les llanxes requisades i les patrulleres comparteixen riders i bandera');
+assert.ok(marineVisual.includes('aimEnemyBoatCrew(u.o,0,target,dt)')&&
+ marineVisual.includes('aimEnemyBoatCrew(u.o,1,target,dt)')&&
+ source('src/coop-world-runtime.js').includes('aimEnemyBoatCrew(e.o,1,aim,dt)'),
+ 'El fusell i el llançacoets giren amb els comandos a solo i cooperatiu');
+assert.ok(source('server/enemy-vehicle-controller.mjs').includes('firePassenger(unit,v,tick,0)')&&
+ source('server/coop-combat.mjs').includes('boatCrewMuzzle(boatPose,1,unit.y)'),
+ 'El pilot dispara el fusell i el passatger el llançacoets amb autoritat del Worker');
 const motorcycle=neutral('bike','moto',3,0);
 motorcycle.enemyCrew=['enemy-1',null];
 assert.equal(candidateVehicles({x:0,z:0},[motorcycle]).length,0,
