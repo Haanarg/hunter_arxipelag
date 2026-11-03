@@ -377,6 +377,25 @@ function enemyVehicleReserve(u,{fleeing=false}={}){
   u.tacticGoal=null;releaseSoldierEntry(u);releaseSoldierReservation(u);
   return true;
 }
+// El foc de les llanxes requisades usa exactament les mateixes armes
+// visibles que el de les patrulleres: pilot/fusell, passatger/llançacoets.
+function enemyBoardedBoatShot(u,v,seat,target,targetY,dt){
+  const rocket=seat===1,range=rocket?245:170;
+  if(Math.hypot(target.x-v.x,target.z-v.z)>range)return false;
+  const goal=new THREE.Vector3(target.x,targetY+1.5,target.z);
+  if(!aimEnemyBoatCrew(v.o,seat,goal,dt))return false;
+  const p=enemyBoatCrewMuzzle(v.o,seat);
+  if(!p||!weaponAimClear(p.x,p.y,p.z,goal.x,goal.y,goal.z))return false;
+  const offset=window.HUNTER_ENEMY_ACCURACY.sample(DIF,rocket?'marineRocket':'marineMG',
+    goal.x-p.x,goal.y-p.y,goal.z-p.z,rn),
+    dx=goal.x+offset.x-p.x,dy=goal.y+offset.y-p.y,dz=goal.z+offset.z-p.z,
+    norm=Math.max(.001,Math.hypot(dx,dy,dz)),speed=rocket?75:125;
+  shoot(p.x,p.y,p.z,dx/norm,dy/norm,dz/norm,speed,
+    rocket?COMBAT_BALANCE.weapons.boatRocket:COMBAT_BALANCE.weapons.rifle,
+    rocket?8:0,'e',rocket?mS:mW,rocket?2:SMALL_ARMS_SCALE,u);
+  if(rocket)Pj[Pj.length-1].life=Math.max(2.2,norm/(speed*HEAVY_SHOT_SPEED_FACTOR)+.75);
+  return true;
+}
 function enemyVehicleBoardingTick(u,dt){
   const c=u.enemyVehicleClaim;if(!c)return false;
   const v=c.vehicle;
@@ -429,6 +448,12 @@ function enemyVehicleBoardingTick(u,dt){
   if(spotted){u.lastSeenX=target.x;u.lastSeenZ=target.z;u.lastSeenY=py;c.lastContact=elapsed;}
   u.x=v.x;u.z=v.z;u.gy=v.o?.position?.y??hAt(v.x,v.z);
   if(c.seat!==0){
+    if(enemyRequisition.requisitionBoat(v.t)){
+      if(spotted&&u.cd<=0&&enemyBoardedBoatShot(u,v,1,target,py,dt))u.cd=5;
+      else if(spotted)aimEnemyBoatCrew(v.o,1,
+        new THREE.Vector3(target.x,py+1.5,target.z),dt);
+      return true;
+    }
     if(enemyRequisition.passengerMuzzle(v)&&
        v.enemyCrew[0]?.enemyVehicleClaim?.phase==='riding'&&spotted&&
        Math.hypot(target.x-v.x,target.z-v.z)<SOLDIER_FIRE_RANGE+20&&u.cd<=0){
@@ -451,6 +476,11 @@ function enemyVehicleBoardingTick(u,dt){
     const partner=v.enemyCrew[1],partnerBoarded=partner?.enemyVehicleClaim?.phase==='riding';
     if(partnerBoarded||elapsed>=c.waitUntil)c.phase='riding';
     else return true;
+  }
+  if(enemyRequisition.requisitionBoat(v.t)&&spotted){
+    if(u.cd<=0&&enemyBoardedBoatShot(u,v,0,target,py,dt))u.cd=u.rate;
+    else aimEnemyBoatCrew(v.o,0,
+      new THREE.Vector3(target.x,py+1.5,target.z),dt);
   }
   if(elapsed-c.lastContact>enemyRequisition.REQUISITION.chaseMemorySeconds){
     // El conductor deixa d'empaitar el fantasma de la darrera posició.
@@ -847,6 +877,8 @@ function updDead(dt){
 
 function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
   if(car.userData.enemyCarCrew)return car.userData.enemyCarCrew;
+  if(type==='llanxa'||type==='llanxa_coets')
+    return attachEnemyBoatCrew(car,{initiallyHidden});
   const makeSoldier=()=>window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M}),
         driver=makeSoldier(),gunner=type==='moto'?null:makeSoldier(),
         truck=type==='camio',civil=type==='cotxe_civil',
@@ -893,14 +925,20 @@ window.HUNTER_ENEMY_CREW_VISUAL=Object.freeze({
   show(vehicle,seat,visible){
     if(!vehicle?.o)return;
     const type=vehicle.t,armored=type==='tanc'||type==='tanqueta';
-    if(armored)return; // conductor i copilot ocults dins del blindat.
     const mesh=vehicle.o;
+    if(armored){
+      // En blindats els ocupants no es veuen, però la bandera sí.
+      const aboard=!!visible||(vehicle.enemyCrew||[]).some(c=>
+        c&&(typeof c!=='object'||['riding','waiting'].includes(c.enemyVehicleClaim?.phase)));
+      ensureEnemyVehicleFlag(mesh,type,aboard);return;
+    }
     const crew=mesh.userData.enemyCarCrew||
       (visible?attachEnemyCarCrew(mesh,{initiallyHidden:true,type}):null);
     if(!crew)return;
     const occupant=seat===0?crew.driver:crew.gunner;
     if(occupant)occupant.visible=!!visible;
     if(seat===1&&crew.mount)crew.mount.visible=!!visible;
+    ensureEnemyVehicleFlag(mesh,type,!!crew.driver?.visible||!!crew.gunner?.visible);
   }
 });
 
