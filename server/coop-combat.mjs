@@ -7,7 +7,8 @@ import {stepNativeSoldierNavigation} from '../src/native-soldier-navigation.mjs'
 import {createEnemyVehicleController} from './enemy-vehicle-controller.mjs';
 import {passengerMuzzle,boatCrewMuzzle,requisitionBoat} from '../src/enemy-vehicle-requisition.mjs';
 import {vehicleSpecs} from '../src/vehicle-specs.mjs';
-import {vehicleSeatProjectileContact,breakVehicleSeatWindow,vehicleSeatWorld,vehicleOccupantHeadWorld} from '../src/vehicle-occupant-damage-core.mjs';
+import {vehicleSeatProjectileContact,breakVehicleSeatWindow,vehicleSeatWorld,vehicleOccupantHeadWorld,
+ marineCrewProjectileContact,breakMarineWindshield,damageMarineCrew,MARINE_CREW_HP} from '../src/vehicle-occupant-damage-core.mjs';
 import {windowCrossing,wallShotHit,knifeWindowHit} from '../src/building-shell.mjs';
 import {weaponCatalog,combatCommands,mountedWeapons,grenadeLaunch,vehicleGrenadeLaunch,canThrowGrenadeFromVehicle,meleeTarget} from '../src/weapon-catalog.mjs';
 import {limitBazookaHorizontalAim} from '../src/aiming-core.mjs';
@@ -342,10 +343,11 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
           return false;
         return true;
       };
-      stepMarinePatrol(unit,{dt,heightAt:terrain,
+      if((unit.marineCrewHp?.[0]??MARINE_CREW_HP)>0)stepMarinePatrol(unit,{dt,heightAt:terrain,
         waterAt:(x,z)=>waterSurface(x,z,tick/30),
         limit:Math.min(Math.abs(meta.bounds.x1),Math.abs(meta.bounds.z1)),
         random,trafficClear:clearTraffic,target:hostile});
+      else unit.speed=0; // Sense pilot: la llanxa queda a la deriva, intacta.
     }else{
       stepLandPatrol(unit,{dt,world:world(),random});
       // Els blindats terrestres segueixen els seus waypoints originals.
@@ -358,7 +360,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       const aiming={x:hostile.x,y:hostile.y+(vehicles.mounted(hostile.id)?2:1.5),z:hostile.z};
       const boatPose={t:'llanxa',x:unit.x,z:unit.z,hd:unit.heading};
       const origin=boatCrewMuzzle(boatPose,0,unit.y);
-      if(d<170&&tick>=(unit.nextMgTick??0)){
+      if((unit.marineCrewHp?.[0]??MARINE_CREW_HP)>0&&d<170&&tick>=(unit.nextMgTick??0)){
         const dir=enemyAccuracy.direction(meta.difficulty||1,'marineMG',
           aiming.x-origin.x,aiming.y-origin.y,aiming.z-origin.z,roll),
           id='marine-mg-'+(++sequence);
@@ -367,7 +369,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         unit.nextMgTick=tick+Math.ceil(.28*30);
         effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,weapon:'rifle',from:origin,to:aiming});
       }
-      if(d<245&&tick>=(unit.nextRocketTick??0)){
+      if((unit.marineCrewHp?.[1]??MARINE_CREW_HP)>0&&d<245&&tick>=(unit.nextRocketTick??0)){
         const rocketOrigin=boatCrewMuzzle(boatPose,1,unit.y),
           dir=enemyAccuracy.direction(meta.difficulty||1,'marineRocket',
             aiming.x-rocketOrigin.x,aiming.y-rocketOrigin.y,aiming.z-rocketOrigin.z,roll),
@@ -600,7 +602,14 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         else flight.consider(vehicles.contact(flight.from,flight.to,v),'vehicle',v);
       }
       if(p.enemy){for(const actor of players())if(actor.hp>0&&!vehicles.mounted(actor.id))flight.consider(segmentSphereT(flight.from.x,flight.from.y,flight.from.z,flight.to.x,flight.to.y,flight.to.z,actor.x,actor.y+1.5,actor.z,1.2),'player',actor);}
-      else for(const t of targets)if(t.hp>0&&!t.enemyVehicleId)flight.consider(segmentBox(flight.from,flight.to,targetBox(t)),'enemy',t);
+      else for(const t of targets)if(t.hp>0&&!t.enemyVehicleId){
+        // La silueta visible de dos comandos és un blanc propi; el buc
+        // no pot absorbir la bala que travessa el parabrisa o el rider.
+        const contact=t.t==='patrulla_marina'&&!p.splash?
+          marineCrewProjectileContact(flight.from,flight.to,t,{baseY:t.y}):null;
+        if(contact)flight.consider(contact.t,contact.kind,{boat:t,...contact});
+        else flight.consider(segmentBox(flight.from,flight.to,targetBox(t)),'enemy',t);
+      }
       if(!p.enemy)for(const u of civilianTargets())if(u.hp>0)
         flight.consider(segmentSphereT(flight.from.x,flight.from.y,flight.from.z,flight.to.x,flight.to.y,flight.to.z,u.x,u.y+1.1,u.z,.55),'civilian',u);
       const result=flight.finish();p.life=flight.life;Object.assign(p,result.point);
@@ -608,7 +617,17 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       if(result.hit){if(p.splash){if(result.kind!=='expire')explode({at:{...result.point},damage:p.dmg,radius:p.splash,actorId:p.actorId,
           projectile:true,direction:{x:p.vx,y:p.vy,z:p.vz},ownerOnly:!p.enemy},tick);projectiles.splice(i,1);continue;}
         let applied=true;
-        if(result.kind==='vehicle-glass'){
+        if(result.kind==='marine-glass'){
+          const boat=result.target.boat;
+          applied=breakMarineWindshield(boat,result.target.pane);
+          if(applied)effect('marine-glass',tick,{actorId:p.actorId,
+            targetId:boat.id,pane:result.target.pane,at:{...result.point}});
+        }else if(result.kind==='marine-crew'){
+          const boat=result.target.boat;
+          applied=damageMarineCrew(boat,result.target.seat,p.dmg);
+          if(applied)effect('marine-crew-hit',tick,{actorId:p.actorId,
+            targetId:boat.id,seat:result.target.seat,at:{...result.point}});
+        }else if(result.kind==='vehicle-glass'){
           applied=breakVehicleSeatWindow(result.target.vehicle,result.target.seat);
           if(applied)effect('vehicle-glass',tick,{actorId:p.actorId,vehicleId:result.target.vehicle.id,
             seat:result.target.seat,at:{...result.point}});
