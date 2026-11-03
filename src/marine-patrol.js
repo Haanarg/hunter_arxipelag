@@ -235,5 +235,5 @@ function updateMarinePatrol(u,dt){
   const gunAligned=marineAimGun(u,weapons.machineGun,target,dt);
   const rocketAligned=marineAimGun(u,weapons.rockets,target,dt);
   if(distance<170&&gunAligned&&u.mgCd<=0&&marineFire(u,weapons.machineGun,target,false))u.mgCd=.28+rn(0,.15);
-  if(distance<245&&rocketAligned&&u.rocketCd<=0&&marineFire(u,weapons.rockets,target,true))u.rocketCd=4.4+rn(0,1.8);
+  if(distance<245&&rocketAligned&&u.rocketCd<=0&&marineFire(u,weapons.rockets,target,true))u.rocketCd=5;
 }
