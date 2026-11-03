@@ -100,7 +100,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       wall.windowPanes.map((pane,paneIndex)=>({wallIndex,paneIndex})):[]);
   const effect=(kind,tick,data)=>{effects.push({id:++sequence,kind,tick,...data});if(effects.length>64)effects.shift();};
   const enemyVehicles=createEnemyVehicleController({
-    meta,vehicles,targets,players:visiblePlayers,world,
+    meta,vehicles,targets,players:visiblePlayers,world,geometry,
     navigate:(unit,tick)=>stepNativeSoldierNavigation(unit,{
       tick,world:world(),players:[],requestDoor:openEnemyDoor}),
     firePassenger:(unit,v,tick)=>{
