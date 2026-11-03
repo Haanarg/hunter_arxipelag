@@ -515,20 +515,23 @@ function updateNativeCoopFrame(dt){
        e.nativePatrolFocus=row.patrolFocus||null;e.nativePatrolSpeed=row.speed||0;
        e.canSee=!!row.canSee;
        e.aiMode=row.state==='attack'?'combat':row.state;
-       // Els soldats reals ocupen les places del vehicle neutral real.
-       // No són meshes duplicades: reparentam el seu model existent.
+       // Model assegut: reutilitzam les figures dels Humvee de patrulla.
+       // El soldat original continua essent l'actor lògic, sempre ocult a bord.
        const boarded=row.enemyVehicleId?s.vehicles.get(row.enemyVehicleId):null;
-       if(boarded&&!boarded.destroyed){
-         if(e.o.parent!==boarded.o)boarded.o.add(e.o);
-         const pose=window.HUNTER_ENEMY_REQUISITION.seatVisual(boarded.t,row.enemySeat||0),
-               sc=VS[boarded.t]||1;
-         e.o.scale.setScalar(pose.scale);
-         e.o.position.set(pose.x*sc,pose.y*sc,pose.z*sc);
-         e.o.rotation.set(0,0,0);
+       if(e.nativeBoardedVehicle&&
+          (e.nativeBoardedVehicle!==boarded||e.nativeEnemySeat!==(row.enemySeat||0)||row.hp<=0))
+         window.HUNTER_ENEMY_CREW_VISUAL.show(
+           e.nativeBoardedVehicle,e.nativeEnemySeat||0,false);
+       if(boarded&&!boarded.destroyed&&row.hp>0){
+         if(e.o.parent!==world)world.add(e.o);
+         e.o.scale.setScalar(1);e.o.visible=false;
+         window.HUNTER_ENEMY_CREW_VISUAL.show(boarded,row.enemySeat||0,true);
          e.nativeBoardedVehicle=boarded;
          e.nativeEnemySeat=row.enemySeat||0;
        }else if(e.nativeBoardedVehicle){
-         world.add(e.o);e.o.scale.setScalar(1);e.nativeBoardedVehicle=null;e.nativeEnemySeat=null;
+         if(e.o.parent!==world)world.add(e.o);
+         e.o.scale.setScalar(1);e.o.visible=row.hp>0;
+         e.nativeBoardedVehicle=null;e.nativeEnemySeat=null;
        }
        // El model manté la pose temporal si aquest enemic es mou.
        // L'estat lògic e.x/e.z continua essent autoritatiu.
@@ -549,8 +552,7 @@ function updateNativeCoopFrame(dt){
  // de cada fotograma, incloses les pauses entre dos snapshots rebuts.
  for(const e of s.nativeAnimatedEnemies||[]){
    if(e.nativeBoardedVehicle){
-     e.o.visible=e.hp>0&&!e.nativeBoardedVehicle.destroyed&&e.nativeBoardedVehicle.o.visible&&
-        !window.HUNTER_ENEMY_REQUISITION.seatVisual(e.nativeBoardedVehicle.t,e.nativeEnemySeat||0).hidden;
+     e.o.visible=false; // el rider de patrulla és el model visible.
      continue;
    }
    if(!e.o.visible)continue;
