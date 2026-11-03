@@ -228,6 +228,34 @@ assert.ok(roster.every(u=>!u.enemyRequisition),
 assert.ok(fleet.every(v=>!v.enemyCrew?.some(Boolean)),
   'No queden vehicles reservats fantasma');
 
+// Regressió: el conductor d'un blindat requisat entra al camí de foc
+// autoritatiu igual que el pilot d'una llanxa, i no perd el control.
+for(const armoredType of ['tanc','tanqueta']){
+  const tank=neutral('armored-test-'+armoredType,armoredType,0,0);
+  tank.enemyCrew=['armored-driver',null];
+  tank.seats=[null,null];tank.v=0;
+  const rider={id:'armored-driver',t:'soldat',hp:4,x:0,y:0,z:0,
+    navPhase:0,enemyVehicleId:tank.id,
+    enemyRequisition:{vehicleId:tank.id,seat:0,phase:'riding',
+      lastContact:0,goal:{x:30,y:0,z:0},fleeUntil:0}};
+  const hunter={id:'victim',hp:25,x:30,y:0,z:0,fall:null,swimming:false};
+  let cannonCalls=0,steeringCalls=0;
+  const controller=createEnemyVehicleController({
+    meta:{id:'armored',mode:'native',seed:67,difficulty:1},
+    vehicles:{live:()=>[tank],enemyAccept:()=>{steeringCalls++;return true;}},
+    targets:[rider],players:()=>[hunter],
+    world:()=>({heightAt:()=>0}),
+    firePassenger:(u,v,tick,seat)=>{
+      assert.equal(u,rider);assert.equal(v,tank);assert.equal(seat,0);
+      cannonCalls++;
+    }
+  });
+  assert.equal(controller.step(rider,3),true);
+  assert.equal(cannonCalls,1,
+    'El conductor enemic de '+armoredType+' ha d'activar el canó');
+  assert.equal(steeringCalls,1,
+    'El conductor de '+armoredType+' continua conduint després del tir');
+}
 const solo=source('src/enemy-ai.js'),
   coop=source('server/coop-combat.mjs'),
   vehicles=source('server/coop-vehicles.mjs'),
@@ -235,6 +263,23 @@ const solo=source('src/enemy-ai.js'),
 assert.ok(solo.includes('enemyVehicleReserve(u,{fleeing})')&&
   solo.includes('stepV(v,input.forward,input.turn,0,Math.min(dt,.1))')&&
   solo.includes("if(u.t==='soldat'&&u.enemyVehicleClaim"));
+assert.ok(source('src/game-core.js').includes(
+    "['waiting','riding'].includes(u.enemyVehicleClaim.phase)"),
+  'Els conductors i copilots embarcats no poden ser atropellats pel propi vehicle');
+assert.ok(source('server/coop-combat.mjs').includes(
+    "!target.enemyVehicleId&&!['waiting','riding'].includes(target.enemyRequisition?.phase)"),
+  'El Worker també exclou els tripulants dels atropellaments');
+assert.ok(solo.includes("['tanc','tanqueta'].includes(v.t)")&&
+    solo.includes('HUNTER_VEHICLES.aimTurret(THREE,v.o,goal,dt)')&&
+    solo.includes("SMALL_ARMS_SCALE,u,true"),
+  'El canó del tanc apunta i dispara des de la torreta en mode individual');
+assert.ok(source('src/combat.js').includes('!mountedCannon')&&
+    source('src/combat.js').includes("sourceVehicle:own==='e'&&claim"),
+  'Es permet el canó, però no la pistola del conductor ni impactar el propi casc');
+assert.ok(coop.includes("seat===0&&['tanc','tanqueta'].includes(v.t)")&&
+    coop.includes('stepVehicleTurret(v,[dx/len,dy/len,dz/len],.1)')&&
+    coop.includes("unit.nextAttackTick=tick+Math.ceil((v.t==='tanc'?5:.16)*30)"),
+  'El tanc requisat orienta el canó i dispara cada cinc segons en cooperatiu');
 assert.ok(coop.includes('enemyVehicles.tryAcquire(unit,tick)')&&
   coop.includes('enemyVehicles.step(t,tick)')&&
   coop.includes("if(meta.mode==='native'&&v.enemyCrew?.[0])"));
