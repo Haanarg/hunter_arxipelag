@@ -1516,7 +1516,7 @@ function updPj(dt){
           if(p.own==='p'&&p.shotClass==='light')
             target.suppressedUntil=elapsed+2;
         }else if(!(p.shotClass==='light'&&isArmoredVehicleType(target.t))){
-          hurtE(target,p.weapon==='sniper'&&['jeep','patrulla_marina'].includes(target.t)?5:p.dmg,p);
+          hurtE(target,p.dmg,p);
         }
       }
       else if(kind==='marine-glass'){
@@ -1548,7 +1548,7 @@ function updPj(dt){
           if(hp<before)spawnBulletImpact('blood',p.x,p.y,p.z,p);
         }else if(victim?.hp>0)hurtE(victim,p.dmg,p);
       }
-      else if(kind==='vehicle')damageVehicle(target,p.weapon==='sniper'?5:p.dmg,1,'light',p);
+      else if(kind==='vehicle')damageVehicle(target,p.dmg,1,'light',p);
       else if(kind==='civilian'){
         if(prisonerSystem.hurt(target,p.dmg,p))spawnBulletImpact('blood',p.x,p.y,p.z,p);
       }
