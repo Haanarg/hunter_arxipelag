@@ -355,6 +355,10 @@ function runoverDamage(...args){return window.HUNTER_SHARED_COMBAT.runoverDamage
 function runoverSweepHit(...args){return window.HUNTER_SHARED_COMBAT.runoverSweepHit(...args)}
 
 function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc,audioSource=null){
+  const claim=audioSource?.enemyVehicleClaim;
+  // Un soldat al volant no dispara mai amb l'arma d'infanteria.
+  if(own==='e'&&claim&&claim.seat===0&&
+     ['waiting','riding'].includes(claim.phase))return;
   const shotClass=shotClassFromSplash(spl),speed=sp*(shotClass==='heavy'?HEAVY_SHOT_SPEED_FACTOR:1),
         power=wholeDamage(dmg);
   if(own==='p'||own==='pb'){
@@ -372,7 +376,11 @@ function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc,audioSource=null){
   if(heading.lengthSq()>1e-12)
     o.quaternion.setFromUnitVectors(heavyForward,heading.normalize());
   o.position.set(x,y,z);world.add(o);
-  Pj.push(window.HUNTER_SHARED_PROJECTILES.launchProjectile({x,y,z},[dx,dy,dz],speed,{dmg:power,spl,shotClass,own,o}))
+  Pj.push(window.HUNTER_SHARED_PROJECTILES.launchProjectile({x,y,z},[dx,dy,dz],speed,{
+    dmg:power,spl,shotClass,own,o,
+    sourceVehicle:own==='e'&&claim&&['waiting','riding'].includes(claim.phase)
+      ?claim.vehicle:null
+  }))
 }
 // Distància d'una explosió al CASC, no al centre del vehicle.
 // Els coets impacten sobre l'esfera de col·lisió; en helicòpters grans
@@ -1410,7 +1418,8 @@ function updPj(dt){
       }
     }
     for(const v of vehicleCandidatesAt(mx,mz,reach+12,true)){
-      if((p.own==='p'||p.own==='pb')&&v===cv)continue;
+      // La bala surt de l'arma del passatger, no pot impactar el seu propi vehicle.
+      if(v===p.sourceVehicle||(p.own==='p'||p.own==='pb')&&v===cv)continue;
       const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),rr=vehicleRadius(v.t)*.62,
         people=p.own==='e'&&v===cv?[P,null]:
           p.own==='e'?[null,null]:(v.enemyCrew||[]).map(u=>u?.enemyVehicleClaim&&['riding','waiting'].includes(u.enemyVehicleClaim.phase)?u:null),
