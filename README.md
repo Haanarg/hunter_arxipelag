@@ -4,6 +4,13 @@ Joc 3D per al navegador inspirat en *Hunter* (Amiga). Comença a la teva base, e
 
 [Jugar](https://hunter.paradoxa.cat/) · [Fases fetes i pendents](PROGRESS.MD) · [Notes visuals](docs/VISUAL_MODERNIZATION.md)
 
+## Ferri pesant i granades a bord (v0.6.100)
+
+- **Sense granades des de tancs, tanquetes o ferris**, tant per al conductor com per als passatgers. L'helicòpter de combat manté la prohibició anterior; la resta de vehicles permesos conserven el llançament. La restricció està a les regles compartides, al client i al servidor cooperatiu.
+- **Ferri blindat:** immune als projectils d'armes lleugeres, com el tanc i la tanqueta; continua vulnerable als explosius.
+- **Envestida naval:** un ferri en moviment pot embestir i destruir llanxes, patrulleres, llanxes llançacoets, motos aquàtiques, embarcacions de rems, windsurf i hovercraft sense perdre vida pel contacte. No aixafa un altre ferri ni vehicles terrestres amb aquesta regla.
+- **Proves:** `node tests/ferry-heavy-grenade-rules.mjs`, amb invariants per al mode individual i el servidor del cooperatiu.
+
 ## Requisició de blindats enemics (v0.6.99)
 
 - **Conductors i copilots protegits:** els soldats que ja ocupen un vehicle requisat no tornen a entrar al càlcul d'atropellament, ni al mode individual ni a l'autoritat del cooperatiu. Els vianants enemics continuen sent vulnerables.
