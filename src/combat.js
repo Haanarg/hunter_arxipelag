@@ -733,7 +733,8 @@ function updateGrenadeCharge(dt){
 function vehicleGrenadeFlight(v){
   return window.HUNTER_SHARED_WEAPONS.vehicleGrenadeLaunch(v,v.o?.position.y??v.y);
 }
-function throwVehicleGrenade(){if(nativeCoopSession)return nativeCoopSession.channel?.combat('grenade');
+function throwVehicleGrenade(){if(cv&&!window.HUNTER_SHARED_WEAPONS.canThrowGrenadeFromVehicle(cv))return false;
+  if(nativeCoopSession)return nativeCoopSession.channel?.combat('grenade');
   if(!cv||!window.HUNTER_SHARED_WEAPONS.canThrowGrenadeFromVehicle(cv)||over||paused||playerFall||playerEject||fcd>0)return false;
   if(!inv.granada){msg='No tens granades a l’inventari.';msgT=2;return false}
   const flight=vehicleGrenadeFlight(cv);
