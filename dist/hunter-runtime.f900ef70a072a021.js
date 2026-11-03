@@ -8511,12 +8511,14 @@ const marineAngle=a=>Math.atan2(Math.sin(a),Math.cos(a));
 const MARINE_COURSE_OFFSETS=Object.freeze([0,.27,-.27,.55,-.55,.9,-.9,1.35,-1.35,Math.PI]);
 // Una única tripulació per a les patrulleres i les llanxes requisades.
 // Les armes són les dels comandos, sense metralladores ni tubs muntats al casc.
-function attachEnemyBoatCrew(boat,{initiallyHidden=false}={}){
+function attachEnemyBoatCrew(boat,{initiallyHidden=false,type='llanxa'}={}){
   if(boat.userData.enemyCarCrew)return boat.userData.enemyCarCrew;
   const crew=[];
   for(let seat=0;seat<2;seat++){
     const rider=window.HUNTER_CHARACTERS.createCommando(THREE);
-    const rocket=seat===1,rig=rider.userData;
+    // La llanxa llançamíssils requisada dona arma pesada també al pilot.
+    // Les patrulleres normals mantenen pilot amb fusell i passatger amb coets.
+    const rocket=seat===1||type==='llanxa_coets',rig=rider.userData;
     rider.scale.setScalar(.43);
     rider.position.set(seat===0?-.58:.58,.89,seat===0?.88:1.14);
     rig.ll.rotation.x=-1.10;rig.lr.rotation.x=-1.10;
