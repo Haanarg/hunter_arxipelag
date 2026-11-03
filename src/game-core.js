@@ -3564,7 +3564,11 @@ if(!cheats.fly){
 }}
 // Cal transportar també el jugador que va a peu sobre la coberta mòbil.
 const walkingDeck=!cv&&!playerFall?pedestrianFerry(P.x,P.z,P.y):null;
-V.slice().forEach(v=>{if(v===cv)return;
+V.slice().forEach(v=>{
+   // El vehicle requisat ja el simula el conductor enemic amb stepV.
+   // No li aplicam una segona passada en punt mort (ni esborram l'accelerador).
+   if(v===cv||v.enemyCrew?.[0]?.enemyVehicleClaim?.phase==='riding'||
+      v.enemyCrew?.[0]?.enemyVehicleClaim?.phase==='waiting')return;
   if(v.sunk&&v.waterIngress){
     // The hull continues to descend to the seabed even after its engine
     // becomes unusable and it is no longer being simulated as a driver.
