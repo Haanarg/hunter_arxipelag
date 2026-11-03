@@ -699,7 +699,9 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         return;
       }
     }
-    for(const target of targets)if((!target.t||target.t==='soldat')&&target.hp>0&&Math.abs(v.y-target.y)<3&&runoverSweepHit(from.x,from.z,v.x,v.z,target.x,target.z,radius)){
+    for(const target of targets)if((!target.t||target.t==='soldat')&&target.hp>0&&
+      !target.enemyVehicleId&&!['waiting','riding'].includes(target.enemyRequisition?.phase)&&
+      Math.abs(v.y-target.y)<3&&runoverSweepHit(from.x,from.z,v.x,v.z,target.x,target.z,radius)){
       const eye={x:target.x,y:target.y+1,z:target.z};
       if(traceArena({x:from.x,y:from.y+1,z:from.z},eye,geometry(),world()).fraction<1)continue;
       target.hp=damageHealth(target.hp,runoverDamage(speed,profile.mass||1));v.ramUntilTick=tick+11;v.v*=.86;alarm(v,v.seats[0],tick,'collision');effect('impact',tick,{actorId:v.seats[0],at:eye,hit:target.id});break;
