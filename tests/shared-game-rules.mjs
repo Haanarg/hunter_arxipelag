@@ -14,6 +14,13 @@ assert.equal(combat.combatBalance.player,PLAYER_MAX_HEALTH);
 assert.equal(PLAYER_MAX_HEALTH,25);
 assert.equal(combat.impactDamage(10),0);assert.equal(combat.impactDamage(16),1);assert.equal(combat.impactDamage(100),5);assert.equal(combat.runoverDamage(6),0);assert.equal(combat.runoverDamage(100,5),10);assert.equal(combat.explosionDamage(10,4,8),5);assert.equal(combat.explosionDamage(10,8,8),0);
 assert.equal(combat.segmentAabbT(0,1,0,10,1,0,4,6,0,2,-1,1),.4);assert.equal(combat.segmentAabbT(0,3,0,10,3,0,4,6,0,2,-1,1),null);
+// Foc amic: bloqueig segons el rectangle orientat real, no el radi esfèric.
+const alliedCar={x:0,z:0,hd:0,destroyed:false},cover={width:5,depth:9,baseY:0,height:3.3};
+assert.equal(combat.friendlyVehicleBlocksLine({x:0,y:2,z:12},{x:0,y:2,z:-12},alliedCar,cover),true);
+assert.equal(combat.friendlyVehicleBlocksLine({x:7,y:2,z:12},{x:7,y:2,z:-12},alliedCar,cover),false);
+assert.equal(combat.friendlyVehicleBlocksLine({x:0,y:8,z:12},{x:0,y:8,z:-12},alliedCar,cover),false);
+assert.equal(combat.friendlyVehicleBlocksLine({x:0,y:2,z:12},{x:0,y:2,z:-12},{...alliedCar,hd:Math.PI/2},cover),true);
+assert.equal(combat.friendlyVehicleBlocksLine({x:0,y:2,z:12},{x:0,y:2,z:-12},{...alliedCar,destroyed:true},cover),false);
 const state={remaining:0,delay:0},shots=[];let now=0;assert.equal(combat.beginBurst(state,2,()=>true),false);assert.equal(combat.beginBurst(state,3,i=>(shots.push([now,i]),true)),true);for(let i=0;i<5;i++){now++;combat.stepBurst(state,1/30,true,i=>(shots.push([now,i]),true));}assert.deepEqual(shots,[[0,0],[3,1],[5,2]]);assert.equal(state.remaining,0);
 const source=readFileSync(new URL('../src/game-core.js',import.meta.url),'utf8'),legacy=readFileSync(new URL('../src/vehicle-dynamics.js',import.meta.url),'utf8'),sp=readFileSync(new URL('../src/combat.js',import.meta.url),'utf8');assert.match(source,/HUNTER_SHARED_VEHICLES.advanceVehicle/);assert.doesNotMatch(source,/const dragBase=c.dr/);assert.ok(legacy.length<400,'legacy dynamics file is only a bridge');assert.match(sp,/HUNTER_SHARED_COMBAT.stepBurst/);assert.doesNotMatch(sp,/assaultBurstRemaining/);
 console.log('shared rules: 3,840 frozen individual vehicle steps across all 16 profiles, damage/contact formulas and identical fixed-step burst scheduling passed');
