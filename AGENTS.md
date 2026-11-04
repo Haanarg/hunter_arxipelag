@@ -11,3 +11,9 @@ Reuse the original implementation first. Extract renderer-free state and rules w
 The first multiplayer acceptance milestone is two players in the original game viewport, with original input/HUD and each original camera following its own actor from behind. Node tests of networking or shared models do not establish that this visual/gameplay milestone is complete. Report implementation, GPU/two-device testing and deployment status separately and accurately.
 
 Current native integration and outstanding parity work are documented in `docs/COOP_NATIVE_RUNTIME.md`. The original-runtime entry introduced in 0.6.50 is not a claim that the full campaign, enemy AI and optional systems already have multiplayer parity.
+
+## Canonical backlog and optimization discipline
+
+Read `to-do.MD` before changing behavior, architecture, performance or old COOP code. It is the only current backlog; old phase/version notes are historical, not a second list of actionable tasks. Put newly discovered work in `to-do.MD`, with explicit status (implementation, validation or investigation). Do not recreate `PROGRESS.MD` or a per-version TODO list.
+
+For performance work, follow `docs/PERFORMANCE_TESTING.md`. Establish a baseline, make one small extraction at a time, run the appropriate Node/parity tests and verify graphics and two-device behavior separately. Never delete generated runtime bundles, the pinned Three.js dependency or test assets merely because they are large; first prove that production and tests no longer need them.

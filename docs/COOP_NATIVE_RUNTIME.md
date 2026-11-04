@@ -1,3 +1,5 @@
+> **Document de referència/historial.** El registre de treball pendent i el pla d'optimització vigents són únicament a [to-do.MD](../to-do.MD); les anotacions «pendent» d'aquest document reflecteixen l'estat de la versió de què parla, no necessàriament la del codi actual.
+
 # Integració del cooperatiu al runtime original · 0.6.50
 
 ## 0.6.77 · Fase 4: ferri i coberta compartida
