@@ -50,7 +50,14 @@ export function vehicleGrenadeLaunch(vehicle,baseY=vehicle?.y){
 }
 export function meleeTarget(origin,targets,clear){
  const fx=-Math.sin(origin.hd),fz=-Math.cos(origin.hd);let hit=null,best=2.6;
- for(const u of targets){if(u.t!=='soldat'&&u.t!=='general')continue;const dx=u.x-origin.x,dz=u.z-origin.z,d=Math.hypot(dx,dz);if(d<best&&d>.35&&(dx*fx+dz*fz)/d>.35&&clear(u)){best=d;hit=u;}}
+ for(const u of targets){
+   if(u.t!=='soldat'&&u.t!=='general')continue;
+   // El ganivet no pot eliminar un defensor des de sota la plataforma.
+   const baseY=u.gy??u.y??u.o?.position?.y??0;
+   if(Math.abs(baseY-(origin.y??0))>2.6)continue;
+   const dx=u.x-origin.x,dz=u.z-origin.z,d=Math.hypot(dx,dz);
+   if(d<best&&d>.35&&(dx*fx+dz*fz)/d>.35&&clear(u)){best=d;hit=u;}
+ }
  return hit;
 }
 
