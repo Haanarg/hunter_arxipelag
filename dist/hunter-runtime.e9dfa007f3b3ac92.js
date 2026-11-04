@@ -14284,7 +14284,7 @@ function captureNativeCoopOptionals(){
 }
 function captureNativeCoopWorld(){
  const geometry=captureCoopWorldGeometry(),baseWalls=geometry.walls;
- geometry.walls=Wl.map((w,i)=>({...baseWalls[i],id:w.saveId,buildingId:w.owner?.saveId,hp:Number.isFinite(w.hp)?w.hp:1e9,rammable:!!w.rammable,barbed:!!w.barbed,locked:!!w.locked&&!w.bunkerGate,alwaysOpen:!!w.alwaysOpen,...Object.fromEntries(['ax','az','bx','bz','supportSide','supportWeight','woodenDoor','upperFloorWindow','civicFurniture','civicGroup','civicRubble','porchSupports'].filter(k=>w[k]!=null).map(k=>[k,w[k]]))}));
+ geometry.walls=Wl.map((w,i)=>({...baseWalls[i],id:w.saveId,buildingId:w.owner?.saveId,hp:Number.isFinite(w.hp)?w.hp:1e9,rammable:!!w.rammable,barbed:!!w.barbed,locked:!!w.locked&&!w.bunkerGate,alwaysOpen:!!w.alwaysOpen,...Object.fromEntries(['ax','az','bx','bz','supportSide','supportWeight','woodenDoor','upperFloorWindow','civicFurniture','civicGroup','civicRubble','porchSupports','weakWood'].filter(k=>w[k]!=null).map(k=>[k,w[k]]))}));
  geometry.buildings.forEach((b,i)=>{b.id=B[i].saveId;});geometry.stairs.forEach((s,i)=>{s.buildingId=stairs[i].owner?.saveId;});
  const all=[...new Set([...TG.values()].flat())];geometry.trees=[...PL,...all.filter(t=>!t.p)].map(t=>({x:t.x,z:t.z,r:t.r,p:!!t.p,rock:!!t.rock,...(t.p?{y:t.y,s:t.s,yaw:t.yaw}:{}),...(t.rock?{topY:t.topY,bottomY:t.bottomY}:{})}));
  const point=v=>({x:v.x,y:v.y??v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),z:v.z});
@@ -14502,8 +14502,7 @@ function updateNativeCoopFrame(dt){
          // Mateixa fragmentació de les malles que al mode individual,
          // sense tornar a aplicar danys: el Worker ja és l'autoritat.
          v.o.position.set(row.x,row.y,row.z);v.o.rotation.y=row.hd;
-         if(v.t==='bici'){v.o.rotation.z=Math.PI*.43;}
-         else vehicleDebris(v,row.y);
+         if(!['bici','barca_rems','windsurf'].includes(v.t))vehicleDebris(v,row.y);
        }
        if(!v.o.visible)v.o.position.set(row.x,row.y,row.z);
        if(v.o.userData.turretPivot)v.o.userData.turretPivot.rotation.y=row.turretYaw||0;
