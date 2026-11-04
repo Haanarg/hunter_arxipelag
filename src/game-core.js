@@ -3425,23 +3425,71 @@ function hideCameraObstructions(owner,eye,basement){
     if(basement)owner.basement.cameraHiddenWalls.push(wall.m);
   }
 }
-// Una pulsació de l'especial reprodueix un sol so, també a COOP.
-const VEHICLE_SIGNAL_SOUNDS=window.HUNTER_ENEMY_PERCEPTION.VEHICLE_SIGNAL_SOUNDS;
-let vehicleSpecialHeld=false;
+// Botó independent del joystick: un toc = un clàxon/timbre, també a COOP.
+// El teclat manté Majúscules; arrossegar el joystick NO fa sonar res.
+const VEHICLE_SIGNAL_SOUNDS=window.HUNTER_ENEMY_PERCEPTION.VEHICLE_SIGNAL_SOUNDS,
+      vehicleHornButton=document.getElementById('vehicleHornButton'),
+      vehicleHornIcon=vehicleHornButton.querySelector('.horn-icon'),
+      vehicleHornLabel=vehicleHornButton.querySelector('.horn-label');
+let vehicleSpecialHeld=false,vehicleHornPointerId=null,vehicleHornMode=null;
+function syncVehicleHornButton(type){
+  const next=type||null;
+  document.body.classList.toggle('vehicle-horn-active',!!next);
+  if(!next&&vehicleHornPointerId!==null){
+    vehicleHornPointerId=null;
+    vehicleHornButton.classList.remove('held');
+    vehicleHornButton.setAttribute('aria-pressed','false');
+  }
+  if(vehicleHornMode===next)return;
+  vehicleHornMode=next;
+  if(!next)return;
+  const bicycle=next==='bici',label=bicycle?'TIMBRE':'CLÀXON';
+  vehicleHornIcon.textContent=bicycle?'🔔':'📣';
+  vehicleHornLabel.textContent=label;
+  vehicleHornButton.setAttribute('aria-label',bicycle
+    ?'Fer sonar el timbre de la bicicleta':'Fer sonar el clàxon del vehicle');
+  vehicleHornButton.title=label+' · Majúscules';
+}
 function updateVehicleSpecialAction(){
   const playable=!!started&&!paused&&!over&&hp>0&&!!cv&&
+    !playerFall&&!playerEject&&!scopeActive&&
     (!nativeCoopSession||(!nativeCoopSession.gameOver&&nativeCoopSession.state?.status==='running'));
-  const down=playable&&!!(joystick.state.running||K.ShiftLeft||K.ShiftRight);
+  const sound=playable?VEHICLE_SIGNAL_SOUNDS[cv.t]:null;
+  syncVehicleHornButton(sound?cv.t:null);
+  const down=!!sound&&(vehicleHornPointerId!==null||!!K.ShiftLeft||!!K.ShiftRight);
   if(!down){vehicleSpecialHeld=false;return}
   if(vehicleSpecialHeld)return;
   vehicleSpecialHeld=true;
-  const sound=VEHICLE_SIGNAL_SOUNDS[cv.t];
-  if(!sound)return;
-  // El soroll existeix encara que l'usuari hagi silenciat l'àudio.
+  // La comunicació al Worker i el radi d'alerta no depenen del control usat.
   if(nativeCoopSession&&!nativeCoopSession.channel?.inventory?.('signal','vehicle'))return;
   snd(sound,1,null,cv);
   window.HUNTER_STEALTH.emit(sound,cv.x,cv.o?.position?.y??P.y,cv.z);
 }
+vehicleHornButton.addEventListener('pointerdown',e=>{
+  if(vehicleHornPointerId!==null||!document.body.classList.contains('vehicle-horn-active')||
+    e.button!==0)return;
+  e.preventDefault();
+  vehicleHornPointerId=e.pointerId;
+  vehicleHornButton.classList.add('held');
+  vehicleHornButton.setAttribute('aria-pressed','true');
+  vehicleHornButton.setPointerCapture(e.pointerId);
+  // No perdem una pulsació ràpida entre dos fotogrames.
+  updateVehicleSpecialAction();
+});
+const releaseVehicleHorn=e=>{
+  if(e.pointerId!==vehicleHornPointerId)return;
+  vehicleHornPointerId=null;
+  vehicleHornButton.classList.remove('held');
+  vehicleHornButton.setAttribute('aria-pressed','false');
+  updateVehicleSpecialAction();
+};
+for(const eventName of ['pointerup','pointercancel','lostpointercapture'])
+  vehicleHornButton.addEventListener(eventName,releaseVehicleHorn);
+addEventListener('blur',()=>{
+  vehicleHornPointerId=null;vehicleSpecialHeld=false;
+  vehicleHornButton.classList.remove('held');
+  vehicleHornButton.setAttribute('aria-pressed','false');
+});
 function readPlayerControls(strafeEnabled,canRun){
 const jf=-joystick.state.y,jtr=-joystick.state.x,
       f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),
@@ -3599,7 +3647,7 @@ if(cheats.items)grantAllWeapons();
 const canRun=!!started&&!paused&&!over&&!cv&&!playerFall&&!playerEject&&!scopeActive;
 const canSpecial=!!started&&!paused&&!over&&hp>0&&!!cv&&!playerFall&&!playerEject&&!scopeActive;
 joystick.setVehicleMode(canSpecial?cv.t:null);
-joystick.setRunEnabled(canRun||canSpecial);
+joystick.setRunEnabled(canRun);
 document.body.classList.toggle('player-swimming',canRun&&swimming);
 updateCrouchButton();
 // Darrera defensa: cap estat actiu amb vida nul·la, fins i tot si una
