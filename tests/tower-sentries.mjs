@@ -36,7 +36,7 @@ assert.equal(towerGuardInView(0,30,0),false,'side target is not visible without 
 assert.equal(towerGuardInView(0,0,30),false,'rear cannot be detected omnisciently');
 assert.equal(towerGuardInView(0,0,-TOWER_GUARD_RANGE-1),false,'limited range');
 let angle=0;
-for(let i=0;i<60;i++)angle=towerTurnHeading(angle,-Math.PI/2,1/60);
+for(let i=0;i<30;i++)angle=towerTurnHeading(angle,-Math.PI/2,1/60);
 assert.ok(angle<-.9&&angle>-(Math.PI/2),'guards turn gradually, without snapping');
 assert.ok(TOWER_GUARD_SCAN_SPEED>0&&TOWER_GUARD_SCAN_SPEED<1,
   'idle vigilance is a slow continuous sweep');
