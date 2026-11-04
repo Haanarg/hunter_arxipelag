@@ -6993,7 +6993,7 @@ function blastOccluded(x,y,z,tx,ty,tz,ignoreWall=null,ignoreTower=null){
  if(length<.15)return false;
  const mx=(x+tx)/2,mz=(z+tz)/2,search=Math.hypot(dx,dz)/2+2;
  for(const w of wallCandidates(mx,mz,search)){
-  if(w===ignoreWall||(ignoreTower&&w.towerLegOwner===ignoreTower)||w.open||w.barbed||w.hp<=0)continue;
+  if(w===ignoreWall||(ignoreTower&&(w.towerLegOwner===ignoreTower||w.towerParapetOwner===ignoreTower))||w.open||w.barbed||w.hp<=0)continue;
   // L'origen pot estar encastat dins un obstacle just quan detona.
   if(x>w.x0+.03&&x<w.x1-.03&&y>w.y0+.03&&y<w.y1-.03&&z>w.z0+.03&&z<w.z1-.03)continue;
   const t=segmentAabbT(x,y,z,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);
@@ -14438,7 +14438,7 @@ function captureNativeCoopOptionals(){
 }
 function captureNativeCoopWorld(){
  const geometry=captureCoopWorldGeometry(),baseWalls=geometry.walls;
- geometry.walls=Wl.map((w,i)=>({...baseWalls[i],id:w.saveId,buildingId:w.owner?.saveId,hp:Number.isFinite(w.hp)?w.hp:1e9,rammable:!!w.rammable,barbed:!!w.barbed,locked:!!w.locked&&!w.bunkerGate,alwaysOpen:!!w.alwaysOpen,...Object.fromEntries(['ax','az','bx','bz','supportSide','supportWeight','woodenDoor','upperFloorWindow','civicFurniture','civicGroup','civicRubble','porchSupports','weakWood','towerParapet','towerX','towerZ','towerBaseY'].filter(k=>w[k]!=null).map(k=>[k,w[k]]))}));
+ geometry.walls=Wl.map((w,i)=>({...baseWalls[i],id:w.saveId,buildingId:w.owner?.saveId,towerParapetOwnerId:w.towerParapetOwner?.saveId||null,hp:Number.isFinite(w.hp)?w.hp:1e9,rammable:!!w.rammable,barbed:!!w.barbed,locked:!!w.locked&&!w.bunkerGate,alwaysOpen:!!w.alwaysOpen,...Object.fromEntries(['ax','az','bx','bz','supportSide','supportWeight','woodenDoor','upperFloorWindow','civicFurniture','civicGroup','civicRubble','porchSupports','weakWood','towerParapet','towerX','towerZ','towerBaseY'].filter(k=>w[k]!=null).map(k=>[k,w[k]]))}));
  geometry.buildings.forEach((b,i)=>{b.id=B[i].saveId;});geometry.stairs.forEach((s,i)=>{s.buildingId=stairs[i].owner?.saveId;});
  const all=[...new Set([...TG.values()].flat())];geometry.trees=[...PL,...all.filter(t=>!t.p)].map(t=>({x:t.x,z:t.z,r:t.r,p:!!t.p,rock:!!t.rock,...(t.p?{y:t.y,s:t.s,yaw:t.yaw}:{}),...(t.rock?{topY:t.topY,bottomY:t.bottomY}:{})}));
  const point=v=>({x:v.x,y:v.y??v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),z:v.z});
@@ -14862,6 +14862,14 @@ function updateNativeCoopFrame(dt){
        // El canvi de moviment és una propietat visual, no una segona IA.
        e.nativeMoving=Math.hypot(row.x-e.x,row.z-e.z)>.001;
        e.x=row.x;e.z=row.z;e.hp=row.hp;e.hd=row.heading||0;
+       // Un cop enderrocada la torre, els parapets tampoc poden
+       // continuar tapant trets al client com a col·lisions invisibles.
+       if(e.t==='torre'&&row.hp<=0&&!e.nativeTowerCoverCleared){
+         e.nativeTowerCoverCleared=true;
+         for(const wall of e.towerParapetColliders||[]){
+           wall.open=true;wall.hp=0;wall.playerBlock=false;
+         }
+       }
        if(e.t==='patrulla_marina'){
          e.marineCrewHp=row.marineCrewHp||[10,10];
          e.marineBrokenWindshield=row.marineBrokenWindshield||[];
