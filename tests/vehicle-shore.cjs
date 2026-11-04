@@ -45,6 +45,27 @@ assert.equal(event.explosions,0,'immersion is not an explosion');
 assert(event.splash.length>0,'shallow-water movement emits splashes');
 assert.equal(shore.wetLand(car,-2,.05).engine,0,'sunken engine cannot restart on dry terrain');
 
+// La bicicleta intacta es pot recuperar després d'entrar a mar oberta.
+const bicycle=make('bici',-43,Math.PI);env.cv=bicycle;
+move(bicycle,8,1);
+assert(bicycle.waterIngress&&bicycle.waterIngress.buoyancy>0,
+ 'la bicicleta guanya flotabilitat quan entra a l’aigua');
+assert(!bicycle.waterIngress.dead&&!bicycle.sunk&&bicycle.v>0,
+ 'la bicicleta no es cala ni queda definitivament enfonsada');
+const oldBicycle=make('bici',7,0);
+oldBicycle.sunk=true;
+oldBicycle.waterIngress={dead:true,elapsed:8,sink:9,buoyancy:.3};
+const recovered=shore.wetLand(oldBicycle,5,.1);
+assert(!oldBicycle.sunk&&!oldBicycle.waterIngress.dead&&
+ !recovered.disabled&&recovered.engine>0,
+ 'una bicicleta intacta de partida antiga recupera la possibilitat de pedalar');
+assert.equal(oldBicycle.waterIngress.sink,0);
+assert(core.includes("v.sunk&&v.t!=='bici'")&&
+ core.includes("v&&(!v.sunk||v.t==='bici')"),
+ 'en solitari es pot tornar a muntar la bicicleta recuperada');
+const coopVehicles=fs.readFileSync(path.join(root,'server/coop-vehicles.mjs'),'utf8');
+assert(coopVehicles.includes("||v?.t==='bici'"),
+ 'en cooperatiu també es pot pujar a una bicicleta des de l’aigua');
 const boat=make('llanxa',-5);env.elapsed=0;move(boat,9,1);
 const grounded=shore.clearance(boat,boat.x,boat.z,box(boat),bed,sea);
 assert(boat.grounded,'launch grounds at bow or side before reaching shore');
@@ -66,6 +87,6 @@ assert.equal(dry.wet,0,'a truck aboard a ferry is not submerged');
 assert(!deck.waterIngress.dead,'dry ferry deck does not stall truck motor');
 assert(core.includes('onFerryDeck=land&&(v.carrier||ferryForVehicle'),
  'stepV accounts for ferry cargo before checking immersion');
-console.log('PASS shoreline: flooding, splash, automatic swimming escape, hull contact, reversing, jet ski, ferry and hovercraft');
+console.log('PASS shoreline: flooding, splash, automatic swimming escape, recoverable bicycle, hull contact, reversing, jet ski, ferry and hovercraft');
 
 })().catch(error=>{console.error(error);process.exitCode=1});

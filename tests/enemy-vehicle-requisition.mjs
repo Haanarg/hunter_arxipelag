@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {candidateVehicles,requisitionChance,requisitionRoll,vehicleSeatPosition,
-  pursuitInput,observeFleeing,seatVisual,passengerMuzzle,
+  pursuitInput,motorcycleAttackInput,observeFleeing,seatVisual,passengerMuzzle,
   boatBoardingRoute,boatBoardingReady,requisitionBoat,boatCrewMuzzle,
   avoidVehicleBarbedWire,requisitionFenceDetour,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
 import {createEnemyVehicleController} from '../server/enemy-vehicle-controller.mjs';
@@ -116,6 +116,19 @@ assert.ok(marineVisual.includes('aimEnemyBoatCrew(u.o,0,target,dt)')&&
 assert.ok(source('server/enemy-vehicle-controller.mjs').includes('firePassenger(unit,v,tick,0)')&&
  source('server/coop-combat.mjs').includes('boatCrewMuzzle(boatPose,1,unit.y)'),
  'El pilot dispara el fusell i el passatger el llançacoets amb autoritat del Worker');
+const riderMoto={...neutral('motorbike','moto',0,0),v:32,hd:0},
+  occupiedHumvee={...neutral('player-humvee','cotxe',0,-40),hd:0,v:0},
+  plannedMoto=pursuitInput(riderMoto,occupiedHumvee),
+  brakingMoto=motorcycleAttackInput(riderMoto,occupiedHumvee,plannedMoto,{occupied:true});
+assert(brakingMoto.avoidingOccupiedVehicle&&brakingMoto.forward<0&&brakingMoto.turn===0,
+ 'la moto frena davant un Humvee ocupat, en lloc d’envestir-lo');
+assert.strictEqual(motorcycleAttackInput(riderMoto,occupiedHumvee,plannedMoto,{occupied:false}),
+ plannedMoto,'a peu, conserva el comportament normal de persecució');
+assert.strictEqual(motorcycleAttackInput({...riderMoto,v:0},occupiedHumvee,plannedMoto,{occupied:true}),
+ plannedMoto,'des de lluny i aturada pot avançar cap al vehicle ocupat');
+const closingHumvee={...occupiedHumvee,z:-90,hd:Math.PI,v:30};
+assert(motorcycleAttackInput(riderMoto,closingHumvee,plannedMoto,{occupied:true})
+ .avoidingOccupiedVehicle,'la velocitat de tancament anticipa una col·lisió frontal');
 const motorcycle=neutral('bike','moto',3,0);
 motorcycle.enemyCrew=['enemy-1',null];
 assert.equal(candidateVehicles({x:0,z:0},[motorcycle]).length,0,
@@ -256,6 +269,30 @@ for(const armoredType of ['tanc','tanqueta']){
   assert.equal(steeringCalls,1,
     'El conductor de '+armoredType+' continua conduint després del tir');
 }
+// El Worker conserva la mateixa regla de frenada i activa el fusell
+// del pilot de la moto requisada, no només els copilots i els blindats.
+const nativeMoto={...neutral('native-bike','moto',0,0),v:32,hd:0};
+nativeMoto.enemyCrew=['enemy-moto',null];
+const enemyBikeDriver={id:'enemy-moto',t:'soldat',hp:4,x:0,y:0,z:0,
+ navPhase:0,enemyRequisition:{vehicleId:nativeMoto.id,seat:0,phase:'riding',
+ lastContact:0,goal:{x:0,y:1,z:-40},fleeUntil:0}};
+const occupiedCar={...occupiedHumvee,id:'target-humvee'},
+ nativePlayer={id:'player',hp:25,x:0,y:1,z:-40,fall:null,swimming:false};
+let shotsFromMoto=0,acceptedMotoInput=null;
+const nativeMotoController=createEnemyVehicleController({
+ meta:{id:'moto',mode:'native',seed:67,difficulty:1},
+ vehicles:{live:()=>[nativeMoto],mounted:id=>id===nativePlayer.id?occupiedCar:null,
+  enemyAccept:(id,actor,input)=>{acceptedMotoInput=input;return true}},
+ targets:[enemyBikeDriver],players:()=>[nativePlayer],
+ world:()=>({heightAt:()=>0}),
+ firePassenger:(actor,v,tick,seat)=>{
+  assert.equal(seat,0);assert.equal(v,nativeMoto);shotsFromMoto++;
+ }
+});
+assert.equal(nativeMotoController.step(enemyBikeDriver,3),true);
+assert.equal(shotsFromMoto,1,'el pilot de moto dispara també al COOP');
+assert(acceptedMotoInput?.avoidingOccupiedVehicle&&acceptedMotoInput.forward<0,
+ 'el pilot de moto frena abans d’envestir un vehicle ocupat al COOP');
 const solo=source('src/enemy-ai.js'),
   coop=source('server/coop-combat.mjs'),
   vehicles=source('server/coop-vehicles.mjs'),
