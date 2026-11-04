@@ -13063,29 +13063,50 @@ for(const sector of activeSectors){
   (yield* ensureDistributedCount('heli_combat',1,sector));
   (yield* ensureDistributedCount('tanqueta',2,sector));
 }
-// Doblam els hovercrafts que s'havien generat inicialment per sector.
-// Petit: un únic conjunt; gran: quota independent en cadascun dels 4 quadrants.
-// Preservam els exemplars anteriors i afegim els nous sense solapaments.
+// Es conserva el DOBLE d'hovercrafts PER SECTOR, no una parella per punt
+// d'aparició. Els exemplars addicionals es distribueixen per costes i illes
+// independents, maximitzant la distància als altres hovercrafts del sector.
 const hoverQuotaTargets=new Map();
 const extraHoverSpot=function* (sector){
-  const type='hover',r=vehicleRadius(type);
-  const nearHovers=V.filter(v=>v.t===type&&sectorMatches(v.x,v.z,sector));
-  // Primer cercam aigua propera als hovercrafts existents: accessible, no al mig de la mar.
-  for(const old of nearHovers)for(const radius of [21,32,46,65,90,120]){
-    for(let k=0;k<16;k++){
-      if((++checkpointUnits%64)===0)yield {stage:'Distribuint hovercrafts',completed:null,total:null};
-      const a=(old.hd||0)+k*Math.PI/8+radius*.013,
-        x=old.x+Math.cos(a)*radius,z=old.z+Math.sin(a)*radius;
-      if(!sectorMatches(x,z,sector)||Math.abs(x)>H-r-10||Math.abs(z)>H-r-10||
-         hAt(x,z)>-2||hAt(x+3,z)>-1.2||hAt(x-3,z)>-1.2||
-         hAt(x,z+4)>-1.2||hAt(x,z-4)>-1.2||
-         B.some(b=>Math.abs(b.x-x)<b.hw+r+2&&Math.abs(b.z-z)<b.hd+r+2)||
-         V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+5))continue;
-      return {x,z,hd:(old.hd||0)};
+  let checkpointUnits=0;
+  const type='hover',radius=vehicleRadius(type),
+    previous=V.filter(v=>v.t===type&&sectorMatches(v.x,v.z,sector)),
+    pool=islands.filter(i=>sectorMatches(i.x,i.z,sector)).slice().sort(()=>R()-.5);
+  let best=null,bestSeparation=-1;
+  const consider=q=>{
+    if(!q||!sectorMatches(q.x,q.z,sector)||
+       Math.abs(q.x)>H-radius-10||Math.abs(q.z)>H-radius-10||
+       hAt(q.x,q.z)>-1.2||
+       B.some(b=>Math.abs(b.x-q.x)<b.hw+radius+2&&
+         Math.abs(b.z-q.z)<b.hd+radius+2)||
+       V.some(v=>Math.hypot(v.x-q.x,v.z-q.z)<
+         vehicleRadius(v.t)+radius+5))return;
+    const nearest=previous.length?
+      Math.min(...previous.map(v=>Math.hypot(v.x-q.x,v.z-q.z))):Infinity;
+    if(nearest>bestSeparation){bestSeparation=nearest;best=q;}
+  };
+  // Les cales candidates provenen de diferents illes (i diferents
+  // costats de cada illa). Mai no es parteix d'un hovercraft preexistent.
+  for(const island of pool.slice(0,Math.min(pool.length,14))){
+    for(let trial=0;trial<2;trial++){
+      if((++checkpointUnits%64)===0)
+        yield {stage:'Distribuint hovercrafts',completed:null,total:null};
+      consider(yield* beachedWaterSpot(island,type));
     }
   }
-  // Reserva: candidat costaner normal del generador si cap zona propera és segura.
-  return yield* waterVehicleSpot(type,sector);
+  // Només quan escassegen les cales, cerquem altres punts portuaris.
+  // També han de respectar la distància mínima entre hovercrafts.
+  const minimumSeparation=MAP_SCALE===2?90:75;
+  if(bestSeparation<minimumSeparation)for(let trial=0;trial<8;trial++){
+    if((++checkpointUnits%64)===0)
+      yield {stage:'Distribuint hovercrafts',completed:null,total:null};
+    const q=yield* waterVehicleSpot(type,sector);
+    if(!q)break;
+    consider(q);
+  }
+  // No es permet crear una nova parella enganxada: si el terreny no
+  // ofereix espai, la quota pendent es manté visible al diagnòstic.
+  return bestSeparation>=minimumSeparation?best:null;
 };
 for(const sector of activeSectors){
   const original=countVehicles('hover',sector),target=Math.max(2,original*2);
