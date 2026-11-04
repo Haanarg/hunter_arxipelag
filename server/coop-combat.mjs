@@ -662,6 +662,31 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       }
       if(!p.enemy)for(const u of civilianTargets())if(u.hp>0)
         flight.consider(segmentSphereT(flight.from.x,flight.from.y,flight.from.z,flight.to.x,flight.to.y,flight.to.z,u.x,u.y+1.1,u.z,.55),'civilian',u);
+      // Un projectil explosiu travessa el vidre i detona uns metres
+      // més endins. La distància pendent persisteix entre ticks del Worker.
+      if(p.splash){
+        const dx=flight.delta.x,dy=flight.delta.y,dz=flight.delta.z,
+          stepLength=Math.hypot(dx,dy,dz);
+        if(p.glassInteriorRemaining>0){
+          if(stepLength>=p.glassInteriorRemaining)
+            flight.consider(p.glassInteriorRemaining/stepLength,'glass-interior',null);
+          else p.glassInteriorRemaining-=stepLength;
+        }else if(stepLength>.001){
+          const entry=trace.windowCrossings.filter(pane=>{
+            if(pane.t>flight.fraction+1e-6)return false;
+            const wall=geometry().walls[pane.wallIndex],
+              building=geometry().buildings?.find(b=>b.id===wall?.buildingId);
+            return !!building&&
+              (pane.point.x-building.x)*dx+(pane.point.z-building.z)*dz<-.04;
+          }).sort((a,b)=>a.t-b.t)[0];
+          if(entry){
+            const remaining=2.2-stepLength*(1-entry.t);
+            if(remaining<=0)
+              flight.consider(entry.t+2.2/stepLength,'glass-interior',null);
+            else p.glassInteriorRemaining=remaining;
+          }
+        }
+      }
       const result=flight.finish();p.life=flight.life;Object.assign(p,result.point);
       for(const pane of trace.windowCrossings)if(pane.t<=flight.fraction+1e-6&&breakWindow(pane.wallIndex,pane.index)){effect('glass',tick,{actorId:p.actorId,at:pane.point,wallIndex:pane.wallIndex,paneIndex:pane.index});}
       if(result.hit){if(p.splash){if(result.kind!=='expire')explode({at:{...result.point},damage:p.dmg,radius:p.splash,actorId:p.actorId,
