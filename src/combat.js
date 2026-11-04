@@ -68,7 +68,7 @@ function projectileImpactImmune(kind,target,p){
     ?target.civicFurniture==='well'&&light
     :target.woodenDoor?false:target.towerLegOwner
     ?light||target.towerLegOwner.hp===Infinity
-    :light&&isMilitaryWall(target)||target.hp===Infinity;
+    :light&&isMilitaryWall(target)&&!target.weakWood||target.hp===Infinity;
   if(kind==='building')return light&&isMilitaryBuilding(target)||target.rhp===Infinity;
   if(kind==='enemy')return target.hp===Infinity||light&&
     (target.t==='torre'||p.shotClass==='light'&&isArmoredVehicleType(target.t));
@@ -1511,6 +1511,35 @@ function updPj(dt){
       if(tree&&y<Math.max(hAt(x,z),0)+(tree.p?6.5:1.5)){consider(t,'tree',tree);break}
     }
 
+    // Els coets no esclaten al vidre: el travessen, el trenquen i
+    // detonen a l'interior, a 2,2 m darrere de la finestra d'entrada.
+    // La distància pendent es conserva entre fotogrames, i qualsevol
+    // obstacle sòlid anterior continua tenint prioritat d'impacte.
+    if(p.spl){
+      const stepDistance=Math.hypot(sx,sy,sz);
+      if(p.glassInteriorRemaining>0){
+        if(stepDistance>=p.glassInteriorRemaining)
+          consider(p.glassInteriorRemaining/stepDistance,'glass-interior',p.glassInteriorBuilding);
+        else p.glassInteriorRemaining-=stepDistance;
+      }else if(stepDistance>.001){
+        const entry=windowHits.filter(pane=>pane.wall.owner&&
+          pane.t<=flight.fraction+1e-6&&(()=>{
+            const b=pane.wall.owner,dirX=sx/stepDistance,dirZ=sz/stepDistance,
+              a=pane.point.x-b.x,c=pane.point.z-b.z;
+            // Només l'entrada a l'edifici, no la sortida per la façana oposada.
+            return a*dirX+c*dirZ<-.04;
+          })()).sort((a,b)=>a.t-b.t)[0];
+        if(entry){
+          const afterCrossing=stepDistance*(1-entry.t),inside=2.2;
+          if(afterCrossing>=inside)
+            consider(entry.t+inside/stepDistance,'glass-interior',entry.wall.owner);
+          else{
+            p.glassInteriorRemaining=inside-afterCrossing;
+            p.glassInteriorBuilding=entry.wall.owner;
+          }
+        }
+      }
+    }
     const {hit,kind,target,point}=flight.finish();
     for(const pane of windowHits)if(pane.t<=flight.fraction+1e-6)shatterWindow(pane.wall,pane.index,pane.point,p);
     p.x=point.x;p.y=point.y;p.z=point.z;p.o.position.set(p.x,p.y,p.z);
@@ -1524,7 +1553,7 @@ function updPj(dt){
       const solid=kind==='wall'||kind==='building'||kind==='vehicle'||kind==='enemy';
       if(ineffective)spawnBulletImpact('ricochet',p.x,p.y,p.z,p);
       else if(solid&&!(kind==='enemy'&&(target.t==='soldat'||target.t==='general')))spawnBulletImpact('spark',p.x,p.y,p.z,p);
-      if(kind==='wall'){if(!isMilitaryWall(target)||target.woodenDoor)dmgW(target,p.dmg,p.shotClass||'light')}
+      if(kind==='wall'){if(!isMilitaryWall(target)||target.woodenDoor||target.weakWood)dmgW(target,p.dmg,p.shotClass||'light')}
       else if(kind==='building'){if(!isMilitaryBuilding(target)){target.rhp-=p.dmg;if(target.rhp<=0)roofBreak(target)}}
       else if(kind==='tree'&&target?.p)dmgP(target,p.dmg);
       else if(kind==='enemy'){
