@@ -921,8 +921,7 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
   // Enemics que comparteixen model de cotxe/tanqueta: el tren davanter
   // segueix la direcció real del moviment, sense canviar la seva IA.
   const lastVisualHeading=u.o.rotation.y;
-  if(u.t!='torre')u.o.rotation.y=u.hd;
-  else if(u.o.userData.towerTurret)u.o.userData.towerTurret.rotation.y=u.hd;
+  u.o.rotation.y=u.hd;
   // Blindats enemics: la torreta segueix el jugador independentment del
   // rumb de patrulla. Cada ràfega té una dispersió estable mentre apunten,
   // i el tret neix al canó quan aquest ha acabat d'orientar-se.
