@@ -224,7 +224,14 @@ function* buildApprovedCompoundSteps(layout,q,{pad,path,pier,prop,vehicles,rocke
       (record.enemyVehicles??=[]).push(u);
     }else{vehicles.push(v);record.vehicles.push(v);}
   }
-  for(const tower of layout.towers||[layout.tower].filter(Boolean)){const u=mkEn('torre',...tr(tower.x,tower.z));u.compound=layout.id;(record.towers??=[]).push(u);}
+  for(const tower of layout.towers||[layout.tower].filter(Boolean)){
+    const u=mkEn('torre',...tr(tower.x,tower.z));
+    u.compound=layout.id;(record.towers??=[]).push(u);
+    for(const defender of u.towerGuards||[]){
+      defender.compound=layout.id;
+      record.soldiers.push(defender);
+    }
+  }
   const route=record.patrol.slice(0,-1);
   for(const [i,p]of layout.soldiers.entries()){
     yield {stage:'Equipant '+layout.id,completed:null,total:null};
