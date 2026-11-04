@@ -35,7 +35,6 @@
 - [ ] **Moto requisada**: bandera fixada al parafang posterior, no flotant a la dreta; contra el jugador dins d'un Humvee ha de disparar al vehicle i no intentar atropellar-lo amb la moto.
 - [ ] **Hovercrafts**: doble quantitat *distribuïda per sector*, no parelles adjacents. Validar mapa petit i cadascun dels quatre quadrants del mapa gran.
 - [ ] **Bicicleta**: poder-la recuperar de l'aigua i fer-la funcionar si no ha estat destruïda.
-- [ ] **Sortida del Humvee en marxa**: evitar materialitzar el jugador davant del vehicle i que s'atropelli a si mateix.
 - [ ] **Pantalla de mort**: assegurar que desapareix la retícula de punteria.
 - [ ] **Ferri**: fum de dany procedent de la cabina; conservar immunitat a armes lleugeres i envestida contra vehicles marítims lleugers.
 - [ ] **Vehicles**: verificar que tots tenen la vida doblada segons la petició recent, incloent equivalents COOP i les diverses fàbriques de creació.
@@ -47,7 +46,6 @@
 - [ ] **Ocupants**: primer impacte al vidre, dany posterior a tripulants sense destruir necessàriament el vehicle; pilots i passatgers de patrulleres apuntables; evitar foc amic travessant vehicles conduïts per aliats.
 - [ ] **Enemics que requisen vehicles**: rutes que eviten filferrades, radi de gir de cotxes realista, bandera en cada requisició, velocitat adequada i cap atropellament dels ocupants propis.
 - [ ] **Explosius i escenari**: C4 sota torres, impactes contra parets/vehicles i ones perpendiculars, cap a dalt del fum, destrucció coherent d'objectes i vidres; validar model visual i volum de dany per separat.
-- [ ] Validar visualment windsurf (postura, mà dreta, vela, colors) i bazuca (abast i con/retícula), relacionat amb les incidències GitHub [#7](https://github.com/Haanarg/hunter_arxipelag/issues/7) i [#2](https://github.com/Haanarg/hunter_arxipelag/issues/2). No tancar sense prova en navegador/Android.
 
 ## Fase 2 — neteja segura del repositori i del procés (P1)
 
@@ -86,14 +84,10 @@
 
 ## Fase 13 — funcionalitats pendents no estrictament d'optimització (P2/P3)
 
-- [ ] Fase 4 històrica: rendiment sostingut a Android físic, memòria, bateria i degradació en sessions llargues.
-- [ ] Fase 5 històrica: validar D1/R2, aprovació i recuperació de comptes, desament entre dispositius, quotes, retenció, integritat i autoritat COOP (comprovar prèviament l'estat real del desplegament).
-- [ ] Fase 7: guia d'objectius/waypoints sense revelar intel·ligència no descoberta.
 - [ ] Fase 9: controls tàctils configurables (esquerrans, sensibilitat, posicions i persistència).
 - [ ] Fase 11: estudiar l'opció A de contingut opcional i la mecànica de nit/espera, que **no** formaven part de l'elecció inicial B+C.
 - [ ] Fase 14: acabat visual, animacions/LOD, cinemàtiques que es puguin saltar i resum final.
 - [ ] Revisar la física del camp de presoners, camins estrets, mecànic, ferri, mapes i fauna en COOP en dues màquines; les proves de components no substitueixen una partida completa.
-- [ ] Verificar el model visual de windsurf en navegadors, Android i diferents llavors abans de tancar GitHub #7.
 - [ ] Auditar les issues obertes al final de cada fase; tancar-les només amb evidència, no per aparèixer en versions antigues.
 
 ## Neteja documental aplicada en aquesta revisió
