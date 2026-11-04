@@ -9540,7 +9540,13 @@ function towerGuardTick(u,dt){
 // però conserva tot el temps transcorregut: mai no alentim la patrulla.
 // Un enemic que detecta, cerca o combat reprèn immediatament els passos normals.
 function enemyRemoteInterval(u,q,focus=null){
-  if(u.t==='general'||u.t==='patrulla_marina'||u.towerGuard||u.basement||
+  if(u.towerGuard){
+    // No mostregis línies de visió deu vegades per segon en torres a 2 km.
+    // El temps acumulat conserva exactament la rotació de la vigilància.
+    const dx=q.x-u.x,dz=q.z-u.z;
+    return u.canSee||dx*dx+dz*dz<300*300?0:.18;
+  }
+  if(u.t==='general'||u.t==='patrulla_marina'||u.basement||
      u.blastT>0||u.canSee||u.alert>0||u.entryDoor||
      (u.pursuitT||0)>0||(u.aiMode&&u.aiMode!=='patrol'))return 0;
   // El franctirador pot observar enemics a molta distància: un objectiu
