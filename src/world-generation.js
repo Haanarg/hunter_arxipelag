@@ -1195,7 +1195,7 @@ const hoverQuotaTargets=new Map();
 const extraHoverSpot=function* (sector){
   let checkpointUnits=0;
   const type='hover',radius=vehicleRadius(type),
-    previous=V.filter(v=>v.t===type&&sectorMatches(v.x,v.z,sector)),
+    previous=V.filter(v=>v.t===type),
     pool=islands.filter(i=>sectorMatches(i.x,i.z,sector)).slice().sort(()=>R()-.5);
   let best=null,bestSeparation=-1;
   const consider=q=>{
