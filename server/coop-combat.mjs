@@ -740,6 +740,17 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         explode({at:{x:g.x,y:g.y+.08,z:g.z},damage:g.weapon==='c4'?weaponCatalog.c4.damage:['proving','world','native'].includes(meta.mode)?weaponCatalog.grenade.damage:combatBalance.weapons.grenade,radius:g.weapon==='c4'?weaponCatalog.c4.splash:['proving','world','native'].includes(meta.mode)?weaponCatalog.grenade.splash:8,actorId:g.actorId,weapon:g.weapon,ownerOnly:true},tick);grenades.splice(i,1);
       }
     }
+    // Els parapets físics de la torre enderrocada desapareixen també
+    // al Worker. Es processa cada torre un sol cop, no totes les parets
+    // en cada tick de la simulació.
+    if(meta.mode==='native')for(const t of targets)
+      if(t.t==='torre'&&t.hp<=0&&!t.parapetsCleared){
+        t.parapetsCleared=true;
+        for(const wall of geometry().walls)
+          if(wall.towerParapetOwnerId===t.id){
+            wall.open=true;wall.hp=0;
+          }
+      }
     // Abatre els ocupants no danya l'estructura; derruir la torre sí que
     // elimina els ocupants que encara sobreviuen.
     if(meta.mode==='native')for(const t of targets)
