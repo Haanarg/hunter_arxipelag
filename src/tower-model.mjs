@@ -1,17 +1,49 @@
-export function createTowerModel(THREE,{box:bx}){const g=new THREE.Group();const leg=0x4b5157,deck=0x626b70,cabin=0x7c2f2f,roof=0x343a3e;
-g.userData.towerLegMeshes=[];
-for(const lx of[-1.45,1.45])for(const lz of[-1.45,1.45])
-  g.userData.towerLegMeshes.push(bx(g,.38,7.8,.38,leg,lx,3.9,lz,'metal'));
-bx(g,4.4,.45,4.4,deck,0,7.9,0,'metal');
-for(const x of[-2.05,2.05])bx(g,.16,1.25,4.15,leg,x,8.65,0,'metal');
-for(const z of[-2.05,2.05])bx(g,4.15,1.25,.16,leg,0,8.65,z,'metal');
-bx(g,2.75,1.8,2.75,cabin,0,9.15,0,'paint');
-bx(g,1.9,.72,.08,0x6b9aa5,0,9.35,-1.39,'glass');
-bx(g,3.35,.28,3.35,roof,0,10.25,0,'metal');
-// Dues armes orientables: lleugera a l'esquerra i pesada a la dreta.
-const turret=new THREE.Group();turret.position.y=9.25;g.add(turret);
-bx(turret,.32,.32,2.1,roof,-.72,0,-2.25,'metal');
-bx(turret,.58,.58,2.35,0x37433c,.72,-.2,-2.25,'metal');
-bx(turret,.68,.65,.22,0x666b62,.72,-.2,-3.43,'metal');
-g.userData.towerTurret=turret;
-bx(g,.42,.8,.42,0xe4d36f,0,10.78,0,'paint');return g;}
+// Torre estructural: els dos defensors són soldats independents de la caseta.
+// Coordenades locals idèntiques per a la IA del navegador i el Worker COOP.
+export const TOWER_GUARD_FLOOR_Y=8.28;
+export const TOWER_GUARD_SPACING=1.43;
+export const TOWER_GUARD_RANGE=128;
+export const TOWER_GUARD_HALF_VIEW=Math.PI/3; // 120° totals, no visió de 360°
+export const TOWER_GUARD_SCAN_SPEED=.54;
+export const TOWER_GUARD_TURN_SPEED=1.85;
+export function towerGuardPosition(tower,seat){
+  return {x:tower.x+(seat===0?-TOWER_GUARD_SPACING:TOWER_GUARD_SPACING),
+    y:(tower.y??tower.gy??0)+TOWER_GUARD_FLOOR_Y,z:tower.z+.25};
+}
+export function towerGuardInView(heading,dx,dz,range=TOWER_GUARD_RANGE){
+  const d=Math.hypot(dx,dz);
+  return d>.001&&d<=range&&(-Math.sin(heading)*dx-Math.cos(heading)*dz)/d>=Math.cos(TOWER_GUARD_HALF_VIEW);
+}
+export function towerTurnHeading(current,desired,dt,rate=TOWER_GUARD_TURN_SPEED){
+  const difference=Math.atan2(Math.sin(desired-current),Math.cos(desired-current));
+  const turn=Math.max(-rate*dt,Math.min(rate*dt,difference));
+  return Math.atan2(Math.sin(current+turn),Math.cos(current+turn));
+}
+export function createTowerModel(THREE,{box:bx}){
+  const g=new THREE.Group(),leg=0x4b5157,deck=0x626b70,
+        cabin=0x7c2f2f,roof=0x343a3e;
+  g.userData.towerLegMeshes=[];
+  // Platafoma de 6,4 m: dos soldats d'escala normal, espatlla contra
+  // espatlla, sense solapar-se ni quedar ocults dins una cabina massissa.
+  for(const x of[-2.3,2.3])for(const z of[-1.9,1.9])
+    g.userData.towerLegMeshes.push(bx(g,.44,7.95,.44,leg,x,3.98,z,'metal'));
+  bx(g,6.4,.44,5.5,deck,0,8.04,0,'metal');
+  // Baranes baixes, protegint el costat i la part posterior.
+  // La façana -Z queda oberta perquè fusell i coet puguin disparar.
+  for(const x of[-3.02,3.02])bx(g,.18,.85,5.1,cabin,x,8.7,0,'paint');
+  bx(g,6.02,.85,.18,cabin,0,8.7,2.50,'paint');
+  for(const x of[-2.97,2.97])for(const z of[-2.42,2.42])
+    bx(g,.22,4.05,.22,leg,x,10.18,z,'metal');
+  // Dos plafons baixos a banda i banda de l'obertura frontal, mai al
+  // nivell dels canons. Mantén visió i línia de tir per tots dos soldats.
+  for(const x of[-2.45,2.45])
+    bx(g,.8,.55,.18,cabin,x,8.55,-2.45,'paint');
+  bx(g,6.95,.32,6.05,roof,0,12.32,0,'metal');
+  bx(g,6.4,.18,.18,0xa1a39b,0,12.16,-2.86,'metal');
+  // Els dos fusells són malles dels soldats, no canons de la torre.
+  g.userData.towerGuardSlots=[
+    {x:-TOWER_GUARD_SPACING,y:TOWER_GUARD_FLOOR_Y,z:.25},
+    {x:TOWER_GUARD_SPACING,y:TOWER_GUARD_FLOOR_Y,z:.25}
+  ];
+  return g;
+}
