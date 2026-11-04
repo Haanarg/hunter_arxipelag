@@ -85,4 +85,8 @@ assert(game.includes("wallGrid.query(x,z,r,'_wallQueryStamp',++wallQueryStamp)")
  game.includes("buildingGrid.query(x,z,r,'_buildingQueryStamp',++buildingQueryStamp)"));
 assert(game.includes('wallGridCount=-1')&&game.includes('terrainLevelGrid.clear()'));
 assert(boot.includes('window.HUNTER_SPATIAL_GRID=spatialGrid'));
+const harness=readFileSync(new URL('./harness.cjs',import.meta.url),'utf8');
+assert(harness.includes('c.HUNTER_SPATIAL_GRID=await import('),
+ 'la configuració de proves del motor ha de carregar el mateix mòdul abans del runtime');
+
 console.log('PASS spatial grid parity: '+checks+' deterministic before/after queries');
