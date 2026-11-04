@@ -810,7 +810,11 @@ function enemyAimCenterY(e){
   return (e.o?.position?.y??e.gy??0)+(e.t==='torre'?TOWER_CABIN_CENTER_Y:e.towerGuard?2.3:1.5);
 }
 function enemyAimHitRadius(e){
-  return e.t==='torre'?TOWER_CABIN_RADIUS:e.towerGuard?1.05:(e.r||1)+.6;
+  // El radi d'IA (soldat: 2 m) no és el radi del cos visible; el marge
+  // antic de +0,6 m feia exageradament fàcils els impactes llunyans.
+  if(e.t==='torre')return TOWER_CABIN_RADIUS;
+  if(e.t==='soldat'||e.t==='general')return e.towerGuard?.65:.72;
+  return (e.r||1)+.6;
 }
 // Les bales lleugeres travessen la filferrada. Només els obstacles
 // sòlids bloquegen l'apuntat assistit.

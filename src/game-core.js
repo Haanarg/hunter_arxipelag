@@ -342,7 +342,9 @@ function* prepareShadowCastersSteps(){
       candidates.sort((a,b)=>b.radius-a.radius);
       for(const c of candidates.slice(0,n))chosen.add(c.mesh);
     };
-    largest(pl,3,true);
+    // Després d'articular el rig, les malles del tors són dins upperBody.
+    // Seleccionant només fills directes de pl se'n perdia tota l'ombra.
+    largest(u.upperBody,3,true);
     largest(u.ll,2);largest(u.lr,2);
     largest(u.al,1);largest(u.ar,1);
     largest(u.head,2);
@@ -3109,6 +3111,22 @@ if((!a||v.alt-g<16)&&!deckCarrier){const footprint=vehicleBox(v,nx,nz,v.hd);for(
   // Les parets del pis superior no bloquegen vehicles a nivell de terra.
   if(land&&(w.y1<g-.8||w.y0>g+
     (v.t==='tanc'||v.t==='camio'?5.6:4.2)*(VS[v.t]||1)))continue;
+  if(w.towerLegOwner&&land){
+    const tower=w.towerLegOwner;
+    if(tower.destroyed)continue;
+    if(v.envCd<=0){
+      const damage=window.HUNTER_TOWER_MODEL.towerLegRamDamage(Math.abs(v.v),c.mass||1);
+      if(damage>0){
+        dmgW(w,damage);
+        vehicleImpactFx(w.cx,Math.max(0,hAt(w.cx,w.cz))+.9,w.cz);
+        collisionDamageVehicle(v,Math.max(1,Math.ceil(damage/3)));
+        v.v*=.35;v.bump=.18;v.envCd=.55;
+        if(v.destroyed)return false;
+        if(tower.destroyed){msg='Has enderrocat una torre!';msgT=2;continue;}
+      }
+    }
+    ok=false;break;
+  }
   if(w.rammable&&land&&mayRamWhileRecovering(v.t,!!w.barbed,v.envCd)){
     const barbed=!!w.barbed,tank=v.t==='tanc',
           truckFence=v.t==='camio'&&barbed;
@@ -3773,16 +3791,16 @@ animPl(cv||scopeActive?0:f,dt,running&&f>.1,cv||scopeActive?0:strafe);
 if(!cv&&!scopeActive&&!playerFall&&!playerEject)
   pl.position.y+=window.HUNTER_CHARACTERS.swimVisualLift(pl,surface,P.y);
 if(!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive){
-  // Contacte visual dels peus amb el triangle sota cada bota: a les
-  // baixades el centre del cos és més alt que la posició dels peus.
+  // Ajustam la malla a la sola real de les botes i al triangle visible,
+  // també en pendents. No canviam P.y ni la detecció física del terra.
   pl.updateMatrixWorld(true);
-  const boots=pl.userData.boots||[];
-  let closest=Infinity;
-  for(const boot of boots){
-    const p=boot.getWorldPosition(new THREE.Vector3());
-    closest=Math.min(closest,p.y-groundAt(p.x,p.z,P.y));
+  const soles=pl.userData.soleContacts||[],point=pl.userData.soleWorldScratch??=new THREE.Vector3();
+  let clearance=Infinity;
+  for(const sole of soles){
+    sole.getWorldPosition(point);
+    clearance=Math.min(clearance,point.y-groundAt(point.x,point.z,P.y));
   }
-  if(Number.isFinite(closest))pl.position.y-=Math.max(-.06,Math.min(.36,closest-.16));
+  if(Number.isFinite(clearance))pl.position.y-=Math.max(-.28,Math.min(1.2,clearance-.018));
 }
  // L'animació de caminar va a 8.4 rad/s: un esquitx a cada suport de
  // peu (creuament de fase PI). Sense esquitxos nedant ni en vehicles.

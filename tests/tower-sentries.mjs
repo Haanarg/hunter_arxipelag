@@ -3,7 +3,7 @@ import {
   createTowerModel,towerGuardPosition,towerGuardInView,towerTurnHeading,
   TOWER_GUARD_FLOOR_Y,TOWER_GUARD_SPACING,TOWER_GUARD_RANGE,
   TOWER_GUARD_SCAN_SPEED,TOWER_SIDE_PARAPET_HEIGHT,
-  towerParapetVolumes,towerParapetBlocksShot
+  towerParapetVolumes,towerParapetBlocksShot,towerLegRamDamage
 } from '../src/tower-model.mjs';
 import {createAimSelector,weaponTargetPriority} from '../src/aiming-core.mjs';
 import {segmentAabbT} from '../src/combat-rules.mjs';
@@ -22,6 +22,9 @@ const model=createTowerModel(fakeTHREE,{box});
 const slots=model.userData.towerGuardSlots;
 assert.equal(slots.length,2,'two independently occupied cabin slots');
 assert.equal(model.userData.towerLegMeshes.length,4,'four structural supports remain');
+assert.equal(towerLegRamDamage(6,5),0,'slow vehicles do not destroy towers');
+assert.ok(towerLegRamDamage(15,2.2)>0,'truck impact damages supports');
+assert.equal(towerLegRamDamage(21,5),10,'fast tank impact knocks down tower');
 assert.equal(model.userData.towerTurret,undefined,'no autonomous gun-mount mesh');
 const p0=towerGuardPosition({x:100,y:6,z:-20},0);
 const p1=towerGuardPosition({x:100,y:6,z:-20},1);

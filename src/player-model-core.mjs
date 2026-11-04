@@ -13,7 +13,7 @@ export const playerModel=Object.freeze({
  create(T,{unitScale=1,palette=defaultPalette,headVariant=null,articulated=false}={}){
  
  const p={chest:1.04,waist:.76,head:.44,arm:.27,leg:.35,pack:.66};
- const g=new T.Group(),u=g.userData;u.boots=[];
+ const g=new T.Group(),u=g.userData;u.boots=[];u.soleContacts=[];
  const colors={green:0x3ee43a,lime:0x72f05a,dark:0x18271e,olive:0x46602d,skin:0xf0c9a0,black:0x162021};
  const mats=new Map(),mat=(c)=>{if(!mats.has(c))mats.set(c,new T.MeshStandardMaterial({color:c,roughness:.9,metalness:0,flatShading:true}));return mats.get(c)};
  function mesh(parent,geo,c,x=0,y=0,z=0){const m=new T.Mesh(geo,mat(c));m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;parent.add(m);return m}
@@ -52,6 +52,9 @@ export const playerModel=Object.freeze({
   box(boot,.25,.055,.16,0x111914,0,-.925,.075);
   for(let j=0;j<3;j++){const lace=box(boot,.16,.018,.024,0x87856d,0,-.74-j*.021,-.035-j*.055);lace.rotation.x=.3}
   boot.children.forEach(o=>o.position.y+=.82);boot.position.y=-.82;
+  // Ancoratge sota la sola real: el pivot del turmell és massa alt.
+  const soleContact=new T.Object3D();soleContact.position.set(0,-.14,.075);
+  boot.add(soleContact);u.soleContacts.push(soleContact);
   oval(knee,p.leg*.44,.13,p.leg*.46,colors.green,0,0,0,8);
   u[side<0?'ll':'lr']=hip;u[side<0?'lkl':'lkr']=knee;
  }

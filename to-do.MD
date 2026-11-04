@@ -33,6 +33,8 @@
 - [ ] Comprovar coherència del GAME OVER compartit quan un jugador mor (regla desitjada: missió acabada per a tots dos, segons l'escenari del joc).
 
 ### Canvis de joc recents: estat exacte per contrastar amb el codi actual
+- [x] **v0.6.136 · correccions implementades (validació visual pendent):** retícules d'armes lleugeres al 50% d'alfa, contacte de les soles amb el terreny visible i ombra del tors, radi balístic humà reduït, dany per envestir potes de torre, escala i postura de les cames del motorista requisat. No canvien la física P.y, la mira de bazuca ni els hitboxes dels vehicles.
+- [ ] **Validació v0.6.136:** caminar i ombres en pla/pendent, trets a 100–180 m, envestides de torres lentes/ràpides, motorista SOLO i HOST/GUEST; confirmar paritat de destrucció estructural al Worker COOP, pendent d'investigació.
 - [ ] **Torres**: dos soldats reals a la caseta (fusell + bazuca), separats, girant i vigilant espatlla contra espatlla, eliminables individualment; sense canons automàtics ni supressió; parapets laterals protectors sense impedir el tir. Les armes lleugeres no han d'adquirir la torre com a diana estructural. Validar col·lisions, IA, punteria i paritat COOP.
 - [ ] **Moto requisada**: verificar visualment la bandera fixada al parafang posterior, no flotant a la dreta.
 - [x] **Moto requisada anti-envestida i pilot armat (0.6.119; verificació en partida pendent)**: frenada SOLO/COOP compartida segons velocitat relativa davant vehicles ocupats; fusell del pilot al Worker amb LDV i protecció de vehicles aliats; proves funcionals específiques.

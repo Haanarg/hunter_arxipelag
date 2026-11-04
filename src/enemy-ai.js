@@ -1037,8 +1037,9 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
         x=truck?.77*truckFit:civil?.613:.73,
         z=truck?-1.93*truckFit:civil?-.60:-.43,
         height=truck?2.04*truckFit:.94,
-        scale=truck?.31:type==='moto'?.72:.43;
-  driver.position.set(type==='moto'?0:-x,type==='moto'?.55:height,type==='moto'?.34:z);
+        scale=truck?.31:type==='moto'?.52:.43;
+  // Seient de moto: malucs sobre la sella, no el model gegant de la cabina.
+  driver.position.set(type==='moto'?0:-x,type==='moto'?.87:height,type==='moto'?.34:z);
   driver.scale.setScalar(scale);
   driver.userData.ar.rotation.x=1.18;driver.userData.al.rotation.x=1.12;
   driver.userData.gun.visible=type==='moto';
@@ -1047,8 +1048,11 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
   let motorcycleMuzzle=null;
   if(type==='moto'){
     const rig=driver.userData;
-    rig.ll.rotation.x=rig.lr.rotation.x=.95;
-    rig.lkl.rotation.x=rig.lkr.rotation.x=-1.6;
+    // Flexió de genolls amb cames obertes pels dos costats del dipòsit;
+    // els peus queden visibles prop dels reposapeus.
+    rig.ll.rotation.set(.76,0,-.26);
+    rig.lr.rotation.set(.76,0,.26);
+    rig.lkl.rotation.x=rig.lkr.rotation.x=-1.18;
     rig.ar.rotation.x=1.18;rig.aer.rotation.x=.52;
     motorcycleMuzzle=new THREE.Object3D();
     motorcycleMuzzle.position.set(0,0,-1.08);
