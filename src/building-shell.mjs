@@ -2,7 +2,7 @@
 import {segmentAabbT} from './combat-rules.mjs';
 // Normal building doors are taller than wide. Bunker/hangar openings have
 // their own explicit geometry and must not inherit these dimensions.
-export const STANDARD_BUILDING_DOOR=Object.freeze({width:2.8,height:3.8});
+export const STANDARD_BUILDING_DOOR=Object.freeze({width:2.4,height:3.8});
 export const WOODEN_DOOR_HP=5;
 export const WOODEN_DOOR_THICKNESS=.16; // centrat dins la llinda
 // A single calculation for both jambs; matches the door collider and visual
@@ -79,7 +79,7 @@ export function wallShotHit(from,to,wall){
 }
 export function planBuildingShell(w,d,h,opt={},random){
   if(![w,d,h].every(v=>Number.isFinite(v)&&v>0)||typeof random!=='function')throw new RangeError('Invalid building shell');
-  const t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(random()*4):opt.doorSide,
+  const t=.8,dw=opt.doorWidth||STANDARD_BUILDING_DOOR.width,ds=opt.doorSide==null?Math.floor(random()*4):opt.doorSide,
     wallH=opt.floors===2?h/2:h,wallHp=opt.civilianHut||opt.weakWalls?4:12,
     // La fusta feble d'un barracó militar té la mateixa coberta de 8 PV
     // que una cabana civil de pescadors: una granada de 10 PV la trenca.
