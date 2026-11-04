@@ -98,7 +98,7 @@ import {runtimeScripts} from './runtime-scripts.mjs';
 import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.127&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1';
 import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
-import {GAME_VERSION} from './version.mjs?v=0.6.127';
+import {GAME_VERSION} from './version.mjs?v=0.6.128';
 import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs';
 window.HUNTER_CIVIL_C1A=createCivilianCarModel;
