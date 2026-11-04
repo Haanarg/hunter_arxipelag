@@ -7760,7 +7760,7 @@ function sniperMuzzleWorld(heading,pitch=0){
 }
 // Primer obstacle sota el centre del reticle (mateixes col·lisions que les
 // bales). Apuntar a un talús no ha de generar una bala desviada cap al terra.
-function sniperReticlePoint(focus,range=1000){
+function sniperReticlePoint(focus,range=2000){
   const ox=P.x+Math.sin(scopeYaw)*.12,oy=P.y+1.76,
         oz=P.z+Math.cos(scopeYaw)*.12,
         tx=ox+focus.dx*range,ty=oy+focus.dy*range,tz=oz+focus.dz*range,
@@ -7935,7 +7935,8 @@ else if(!cv&&sniperEquipped&&inv.franctirador){
           ?sniperShotVector(muzzle,sniperReticlePoint(focus),focus)
           :new THREE.Vector3(...autoAimWeaponShot(muzzle.x,muzzle.y,muzzle.z,fx,0,fz,180,RIFLE_AIM_CONE,'sniper',null,470));
   shoot(muzzle.x,muzzle.y,muzzle.z,direction.x,direction.y,direction.z,470,COMBAT_BALANCE.weapons.sniper,0,'p',mW,SMALL_ARMS_SCALE);
-  if(Pj.length)Pj[Pj.length-1].weapon='sniper';
+  if(Pj.length){Pj[Pj.length-1].weapon='sniper';
+    Pj[Pj.length-1].life=window.HUNTER_SHARED_WEAPONS.weaponCatalog.sniper.life;}
   msg='Rifle: '+sniperAmmo+' cartutxos.';msgT=1.5;
 }
 else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}
