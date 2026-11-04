@@ -24,7 +24,7 @@ export const vehicleDynamics=Object.freeze({
   // No shoreline teleportation or universal -1.2 m collision cutoff.
   shore:Object.freeze({
     land:Object.freeze({
-      bici:{wade:.1,stall:.65,delay:.1,sinkRate:2.5},
+      bici:{wade:.1,stall:.65,delay:1.5,sinkRate:1},
       moto:{wade:.25,stall:1.0,delay:.35,sinkRate:1.8},
       cotxe:{wade:.4,stall:1.65,delay:1.25,sinkRate:1.1},
       cotxe_civil:{wade:.4,stall:1.55,delay:1.1,sinkRate:1.2},
@@ -51,7 +51,11 @@ export const vehicleDynamics=Object.freeze({
       const p=this.land[v.t],state=v.waterIngress||(v.waterIngress={dead:false,elapsed:0,sink:0,buoyancy:0});
       if(!p)return {engine:1,drag:0,wet:0,disabled:false};
       const wet=Math.max(0,Math.min(1,(depth-p.wade)/(p.stall-p.wade)));
-      if(depth>=p.stall)state.dead=true;
+      // La bicicleta no té motor: es pot recuperar pedalant cap a terra
+      // mentre encara no s'ha enfonsat completament.
+      if(v.t==='bici'&&!v.sunk&&depth<=p.wade+.1){
+        state.dead=false;state.elapsed=0;state.sink=0;
+      }else if(depth>=p.stall)state.dead=true;
       if(state.dead){
         state.elapsed+=Math.max(0,dt);
         state.sink=Math.max(0,(state.elapsed-p.delay)*p.sinkRate);
@@ -63,9 +67,10 @@ export const vehicleDynamics=Object.freeze({
         state.buoyancy=Math.min(1,state.buoyancy+Math.max(0,dt)*.75);
       }
       if(state.dead&&state.elapsed>=p.delay+3.5)v.sunk=true;
-      return {engine:state.dead?0:1-wet*.84,
+      const pedal=v.t==='bici'&&!v.sunk;
+      return {engine:pedal?Math.max(.35,1-wet*.84):state.dead?0:1-wet*.84,
         drag:state.dead?1.4:wet*(.8+wet*.6),
-        wet,disabled:state.dead};
+        wet,disabled:state.dead&&!pedal};
     },
     boatContact(v,previous,next,dt){
       const draft=this.draft[v.t]??.8,limit=this.beachLimit[v.t]??.05,
