@@ -9,7 +9,7 @@ function progression(scale,gameIntel){
   const setup=[
     'const window={HUNTER_GAME_INTEL:gameIntel};',
     "const requestOperationAutosave=()=>{};",
-    'const MAP_SCALE='+scale+';,
+    'const MAP_SCALE='+scale+';',
     'const mapSector=(x,z)=>(x>=0?1:0)+(z>=0?2:0);',
     'const sectorMatches=(x,z,k)=>k==null||mapSector(x,z)===k;',
     'let hqMapKnown=false,hqIntelStage=0,intelMarks=[];',
