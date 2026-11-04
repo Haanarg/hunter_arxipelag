@@ -8,6 +8,7 @@ on:
       - 'tools/build-runtime.cjs'
       - 'tools/sync-version.cjs'
       - 'tests/tower-sentries.mjs'
+      - 'tests/coop-barrier-ram.mjs'
       - 'tests/hover-distribution.mjs'
       - 'tests/fragile-vehicle-fragments.mjs'
       - 'tests/touch-vehicle-horn.mjs'
@@ -29,8 +30,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Check tower sentry rules
-        run: node tests/tower-sentries.mjs
+      - name: Check tower sentry rules and cooperative tower ramming
+        run: |
+          node tests/tower-sentries.mjs
+          node tests/coop-barrier-ram.mjs
       - name: Check hovercraft spatial distribution
         run: node tests/hover-distribution.mjs
       - name: Check modified JavaScript syntax
@@ -40,6 +43,8 @@ jobs:
           node --check src/compound-generation.js
           node --check src/tower-model.mjs
           node --check server/coop-combat.mjs
+          node --check server/coop-mission.mjs
+          node --check server/coop-vehicles.mjs
           node --check server/coop-optionals.mjs
       - name: Check nonexplosive flying vehicle fragments
         run: node tests/fragile-vehicle-fragments.mjs

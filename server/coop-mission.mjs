@@ -120,7 +120,24 @@ export function restoreRelayMission(record,geometry){
     if(w.hp===0){destroyWall(index);world=buildWorld();}
     return true;
   }
-  function ramWall(wall){const index=physical.walls.indexOf(wall);if(index<0||!destroyWall(index))return false;world=buildWorld();return true;}
+  function ramWall(wall,impact=null){
+    const index=physical.walls.indexOf(wall);if(index<0)return false;
+    if(impact?.tower&&wall.towerLegOwnerId){
+      // El Worker comparteix el dany acumulat de les quatre potes amb
+      // la vida de l'estructura. L'enderroc elimina també tots els parapets.
+      const tower=combat.liveTargets().find(t=>t.id===wall.towerLegOwnerId);
+      if(!tower||tower.hp<=0)return false;
+      tower.hp=Math.max(0,Math.ceil(tower.hp)-impact.damage);
+      if(tower.hp>0)return false;
+      let removed=false;
+      for(let i=0;i<physical.walls.length;i++)if(
+        physical.walls[i].towerLegOwnerId===tower.id||
+        physical.walls[i].towerParapetOwnerId===tower.id)removed=destroyWall(i)||removed;
+      if(removed)world=buildWorld();
+      return removed;
+    }
+    if(!destroyWall(index))return false;world=buildWorld();return true;
+  }
   function blastStructures(center,damage,radius){
     let changed=false;
     const civicHits=new Map();

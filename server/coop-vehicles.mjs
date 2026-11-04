@@ -3,6 +3,7 @@ import {palmImpact,rockImpact} from '../src/vehicle-environment-core.mjs';
 import {firstVehicleContact,vehicleContactDamage} from './coop-vehicle-contacts.mjs';
 import {stepRangeVehicle} from './coop-vehicle-motion.mjs';
 import {vehicleDamage,combatBalance,tankCanCrush,barrierRam,vehicleHullDistance,vehicleHullSegmentT} from '../src/combat-rules.mjs';
+import {towerLegRamDamage} from '../src/tower-model.mjs';
 import {vehicleDynamics,advanceVehicle} from '../src/vehicle-dynamics-core.mjs';
 import {ferryLocal,ferryWorld,ferrySurfaceY,ferryPedestrianAt,
   ferryForVehicle,ferryCarriedPose} from '../src/ferry-deck-core.mjs';
@@ -239,7 +240,23 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
        if(v.destroyed)break;
        hit=firstVehicleContact(probe,from,vehicles,geometry(),['proving','world','native'].includes(meta.mode),world());continue;
      }
-     const ram=barrierRam(probe,hit.target,Math.max(0,((v.barrierUntilTick||0)-tick)/30));
+     if(hit.target.towerLegOwnerId){
+        const impact=towerLegRamDamage(Math.abs(probe.v),vehicleDynamics.types[v.t].mass||1);
+        if(impact>0&&tick>=(v.barrierUntilTick||0)){
+          const collapsed=onBarrier(hit.target,{tower:true,damage:impact});
+          v.barrierUntilTick=tick+17;v.v=probe.v*.35;probe.v=v.v;v.bump=.18;
+          Object.assign(v,hit.safe);
+          if(v.t!=='tanc')onImpact(v.id,Math.max(1,Math.ceil(impact/3)),tick);
+          if(v.destroyed)break;
+          if(collapsed){
+            hit=firstVehicleContact(probe,from,vehicles,geometry(),['proving','world','native'].includes(meta.mode),world());
+            continue;
+          }
+        }
+        // Si aguanta la pota, la col·lisió atura el vehicle sense repetir dany.
+        hit={...hit,kind:'tower'};break;
+      }
+      const ram=barrierRam(probe,hit.target,Math.max(0,((v.barrierUntilTick||0)-tick)/30));
      if(!ram||!onBarrier(hit.target))break;
      v.barrierUntilTick=tick+Math.ceil(ram.cooldown*30);v.v=probe.v*ram.speedFactor;probe.v=v.v;v.bump=ram.bump;
      Object.assign(v,hit.safe);
@@ -255,7 +272,9 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
        const response=hit.kind==='rock'?rockImpact(incoming,vehicleDynamics.types[v.t].mass||1):palmImpact(v.t,Math.min(incoming,10),vehicleDynamics.types[v.t].mass||1);
        v.v*=response.speedFactor;v.sideV=0;v.strafeV=0;v.bump=response.bump;
        if(tick>=(v.environmentUntilTick||0)){v.environmentUntilTick=tick+Math.ceil(response.cooldown*30);if(response.damage)onImpact(v.id,response.damage,tick);}
-     }else if(hit.kind==='vehicle'){
+     }else if(hit.kind==='tower'){
+        v.v=0;v.sideV=0;v.strafeV=0;
+      }else if(hit.kind==='vehicle'){
        const other=hit.target,d=vehicleContactDamage({...v,v:from.v||v.v},other);
        if(tankCanCrush(v,other,vehicleDynamics.types[v.t].mass||1,vehicleDynamics.types[other.t].mass||1)){
          onImpact(other.id,other.life,tick);v.v*=.99;

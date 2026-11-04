@@ -3798,7 +3798,12 @@ if(!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive){
   let clearance=Infinity;
   for(const sole of soles){
     sole.getWorldPosition(point);
-    clearance=Math.min(clearance,point.y-groundAt(point.x,point.z,P.y));
+    const physical=hAt(point.x,point.z),visible=terrainStream?.visibleHeightAt(point.x,point.z);
+    const floor=groundAt(point.x,point.z,P.y);
+    // Sobre terreny natural, ajustam al triangle real del LOD renderitzat.
+    // A rampes, molls, escales i plantes es conserva el suport construït.
+    const surface=Number.isFinite(visible)&&Math.abs(floor-Math.max(physical,visible))<.12?visible:floor;
+    clearance=Math.min(clearance,point.y-surface);
   }
   if(Number.isFinite(clearance))pl.position.y-=Math.max(-.28,Math.min(1.2,clearance-.018));
 }

@@ -27,6 +27,28 @@ for(const [type,wire] of [['cotxe',true],['cotxe',false],['camio',true],['tanc',
 }
 for(const options of [{speed:8},{speed:30,rammable:false}]){const {m}=fixture('cotxe',options);for(let i=1;i<=30;i++)step(m,i,0);assert.deepEqual(m.snapshot().removedWalls,[],'slow or indestructible contact leaves barrier');}
 const {m,geometry}=fixture('cotxe',{wire:true,life:1});for(let i=1;i<=30&&!m.snapshot().vehicles[0].destroyed;i++)step(m,i);assert.equal(m.snapshot().vehicles[0].destroyed,true,'fragile hull can die while breaching');assert.deepEqual(m.snapshot().removedWalls,[0]);
+// Impacte autoritatiu contra les potes de la torre, independent de la seva
+// classificació com a paret no enderrocable; també desapareixen parapets.
+{
+  const r=structuredClone(generated.record),geo=structuredClone(generated.geometry);
+  r.status='running';r.meta.doors=[];
+  r.meta.targets=[{id:'tower-ram',t:'torre',x:0,y:2.06,z:-12,hp:10,ai:false}];
+  r.meta.vehicles=[{...r.meta.vehicles.find(v=>v.t==='tanc'),x:0,y:2.06,z:0,hd:0,v:21,life:40,seats:['a',null]}];
+  Object.assign(r.checkpoint.players[0],{x:0,y:2.06,z:0});r.checkpoint.players[1].x=100;
+  const leg={x0:-.25,x1:.25,z0:-12,z1:-11.55,y0:2,y1:10,hp:1e9,
+    indestructible:true,rammable:false,towerLegOwnerId:'tower-ram'};
+  geo.walls=[leg,{...leg,x0:2,x1:2.5},{...leg,x0:-3,x1:3,
+    y0:9,y1:11,towerLegOwnerId:null,towerParapetOwnerId:'tower-ram',playerBlock:false}];
+  geo.buildings=[];geo.stairs=[];
+  const towerMission=restoreRelayMission(r,geo);
+  for(let i=1;i<=50&&towerMission.snapshot().combat.targets[0].hp>0;i++)step(towerMission,i);
+  const state=towerMission.snapshot();
+  assert.equal(state.combat.targets[0].hp,0,'a fast tank demolishes the tower via its leg');
+  assert.deepEqual([...state.removedWalls].sort((a,b)=>a-b),[0,1,2],
+    'all tower legs and parapets disappear together');
+  const loaded=restoreRelayMission(towerMission.checkpoint(0),geo);
+  assert.deepEqual(loaded.snapshot().removedWalls,state.removedWalls,'tower collapse survives checkpoint');
+}
 const entranceRecord=structuredClone(generated.record);entranceRecord.status='running';entranceRecord.meta.targets=[];entranceRecord.meta.vehicles=[{...entranceRecord.meta.vehicles.find(v=>v.t==='cotxe'),x:55,z:84,y:2.06,hd:0,v:30,life:20,seats:['a',null]}];Object.assign(entranceRecord.checkpoint.players[0],{x:55,z:84,y:2.06});entranceRecord.checkpoint.players[1].x=100;
 const entrance=restoreRelayMission(entranceRecord,generated.geometry);for(let i=1;i<=40&&!entrance.snapshot().removedWalls.length;i++)step(entrance,i);
 const door=generated.record.meta.doors[0],doorWall=generated.geometry.walls[door.wallIndex];for(const id of doorWall.assemblyIds){const index=generated.geometry.walls.findIndex(w=>w.id===id);assert.ok(entrance.snapshot().removedWalls.includes(index),'ram destroys doorway atomically');}

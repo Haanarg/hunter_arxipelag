@@ -749,8 +749,8 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       if(t.t==='torre'&&t.hp<=0&&!clearedTowerParapets.has(t.id)){
         clearedTowerParapets.add(t.id);
         for(const wall of geometry().walls)
-          if(wall.towerParapetOwnerId===t.id){
-            wall.open=true;wall.hp=0;
+          if(wall.towerParapetOwnerId===t.id||wall.towerLegOwnerId===t.id){
+            wall.open=true;wall.hp=0;wall.playerBlock=false;
           }
       }
     // Abatre els ocupants no danya l'estructura; derruir la torre sí que

@@ -102,7 +102,7 @@ function captureNativeCoopOptionals(){
 }
 function captureNativeCoopWorld(){
  const geometry=captureCoopWorldGeometry(),baseWalls=geometry.walls;
- geometry.walls=Wl.map((w,i)=>({...baseWalls[i],id:w.saveId,buildingId:w.owner?.saveId,towerParapetOwnerId:w.towerParapetOwner?.saveId||null,hp:Number.isFinite(w.hp)?w.hp:1e9,rammable:!!w.rammable,barbed:!!w.barbed,locked:!!w.locked&&!w.bunkerGate,alwaysOpen:!!w.alwaysOpen,...Object.fromEntries(['ax','az','bx','bz','supportSide','supportWeight','woodenDoor','upperFloorWindow','civicFurniture','civicGroup','civicRubble','porchSupports','weakWood','towerParapet','towerX','towerZ','towerBaseY'].filter(k=>w[k]!=null).map(k=>[k,w[k]]))}));
+ geometry.walls=Wl.map((w,i)=>({...baseWalls[i],id:w.saveId,buildingId:w.owner?.saveId,towerLegOwnerId:w.towerLegOwner?.saveId||null,towerParapetOwnerId:w.towerParapetOwner?.saveId||null,hp:Number.isFinite(w.hp)?w.hp:1e9,rammable:!!w.rammable,barbed:!!w.barbed,locked:!!w.locked&&!w.bunkerGate,alwaysOpen:!!w.alwaysOpen,...Object.fromEntries(['ax','az','bx','bz','supportSide','supportWeight','woodenDoor','upperFloorWindow','civicFurniture','civicGroup','civicRubble','porchSupports','weakWood','towerParapet','towerX','towerZ','towerBaseY'].filter(k=>w[k]!=null).map(k=>[k,w[k]]))}));
  geometry.buildings.forEach((b,i)=>{b.id=B[i].saveId;});geometry.stairs.forEach((s,i)=>{s.buildingId=stairs[i].owner?.saveId;});
  const all=[...new Set([...TG.values()].flat())];geometry.trees=[...PL,...all.filter(t=>!t.p)].map(t=>({x:t.x,z:t.z,r:t.r,p:!!t.p,rock:!!t.rock,...(t.p?{y:t.y,s:t.s,yaw:t.yaw}:{}),...(t.rock?{topY:t.topY,bottomY:t.bottomY}:{})}));
  const point=v=>({x:v.x,y:v.y??v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),z:v.z});
@@ -542,7 +542,7 @@ function updateNativeCoopFrame(dt){
        // continuar tapant trets al client com a col·lisions invisibles.
        if(e.t==='torre'&&row.hp<=0&&!e.nativeTowerCoverCleared){
          e.nativeTowerCoverCleared=true;
-         for(const wall of e.towerParapetColliders||[]){
+         for(const wall of [...e.towerLegColliders||[],...e.towerParapetColliders||[]]){
            wall.open=true;wall.hp=0;wall.playerBlock=false;
          }
        }
@@ -808,7 +808,7 @@ function updateNativeCoopFrame(dt){
       continue;
     }
     w.open=true;w.hp=0;w.playerBlock=false;w.destroyedWall=true;
-    if(s.projectedState)wallBreak(w);
+    if(s.projectedState&&!w.towerLegOwner&&!w.towerParapetOwner)wallBreak(w);
     else{
       for(const mesh of w.parts||[w.m])if(mesh)mesh.visible=false;
       for(const trim of w.timberTrim||[])trim.visible=false;
