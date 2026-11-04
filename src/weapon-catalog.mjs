@@ -1,4 +1,4 @@
-import {combatBalance} from './combat-rules.mjs';
+import {combatBalance} from './combat-rules.mjs?v=0.6.131';
 import {ARMORED_AIM,SMALL_ARMS_RANGE,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL,RIFLE_AIM_CONE} from './aiming-core.mjs';
 // Original individual weapon parameters; presentation and authority stay in adapters.
 export const HEAVY_SPEED_FACTOR=1.17;
