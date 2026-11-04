@@ -1,3 +1,5 @@
+import * as frameTick from './frame-tick-core.mjs?v=0.6.125';
+window.HUNTER_FRAME_TICK=frameTick;
 import * as frameDiagnostics from './frame-diagnostics-core.mjs?v=0.6.125';
 window.HUNTER_FRAME_DIAGNOSTICS=frameDiagnostics;
 import * as spatialGrid from './spatial-grid-core.mjs?v=0.6.125';
