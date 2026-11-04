@@ -24,7 +24,7 @@ const p0=towerGuardPosition({x:100,y:6,z:-20},0);
 const p1=towerGuardPosition({x:100,y:6,z:-20},1);
 assert.equal(p0.y,6+TOWER_GUARD_FLOOR_Y);
 assert.equal(p1.y,p0.y);
-assert.equal(p1.x-p0.x,2*TOWER_GUARD_SPACING,'soldiers have separate positions');
+assert.ok(Math.abs((p1.x-p0.x)-2*TOWER_GUARD_SPACING)<1e-9,'soldiers have separate positions');
 assert.ok(p1.x-p0.x>2.5,'two real full-size character rigs fit beside each other');
 const deck=parts.find(v=>v.geometry.parameters.width===6.4&&v.geometry.parameters.height===.44);
 const roof=parts.find(v=>v.geometry.parameters.width===6.95&&v.geometry.parameters.height===.32);
