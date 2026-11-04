@@ -234,7 +234,9 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
             vehicle=vehicles.mounted(p.id),
             disguised=!!inventory.get(p.id)?.disguised&&!vehicle;
           if(disguised&&d>20&&tick>(unit.alarmedUntil||0))return [];
-          if(!towerGuardInView(unit.heading||0,dx,dz,unit.rng||TOWER_GUARD_RANGE))return [];
+          const facing=towerGuardInView(unit.heading||0,dx,dz,unit.rng||TOWER_GUARD_RANGE),
+            warned=host.towerAlertTargetId===p.id&&tick<(host.towerAlertUntilTick||0);
+          if(!facing&&!warned)return [];
           for(const h of p.crouched&&!vehicle?[1.25]:[1.5,2.35]){
             const aim={x:p.x,y:p.y+h,z:p.z};
             if(traceArena(eye,aim,geometry(),world(),{
@@ -246,6 +248,10 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     const contact=contacts.find(c=>c.p.id===unit.focus)||contacts[0];
     unit.focus=contact?.p.id||null;
     unit.canSee=!!contact;unit.state=contact?'attack':'patrol';
+    if(contact){
+      host.towerAlertTargetId=contact.p.id;
+      host.towerAlertUntilTick=tick+36;
+    }
     if(!contact){
       const angle=(unit.heading||0)+TOWER_GUARD_SCAN_SPEED*dt;
       unit.heading=Math.atan2(Math.sin(angle),Math.cos(angle));
