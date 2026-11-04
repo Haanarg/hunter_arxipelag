@@ -11,6 +11,7 @@ on:
       - 'tests/hover-distribution.mjs'
       - 'tests/fragile-vehicle-fragments.mjs'
       - 'tests/touch-vehicle-horn.mjs'
+      - 'tests/vehicle-special.cjs'
       - '.github/workflows/rebuild-runtime.yml'
   workflow_dispatch:
 permissions:
