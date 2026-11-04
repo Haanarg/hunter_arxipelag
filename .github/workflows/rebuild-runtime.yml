@@ -85,6 +85,11 @@ jobs:
           node --check src/compound-planning.mjs
           node --check src/world-generation.js
           node tests/port-survey-parity.mjs
+      - name: Check phase 4 coastal layout and ferry placement parity
+        run: |
+          node --check src/compound-coast-runtime.js
+          node --check src/compound-planning.mjs
+          node tests/coastal-layout-parity.mjs
       - name: Generate runtime bundle
         run: node tools/build-runtime.cjs
       - name: Verify generated bundle

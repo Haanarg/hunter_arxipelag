@@ -119,3 +119,49 @@ const portSiteFeasible=function* (q){let checkpointUnits=0;
 };
 return portSiteFeasible;
 }
+
+// Planificador costaner sense escena/Three.js: comprovació d'espai i
+// exploració incremental de molls i terminals (inclòs el ferri).
+// Les dependències actives es llegeixen amb getters perquè la mida del
+// mapa pot canviar entre partides sense reconstruir el runtime.
+// Preserve exactament l'ordre de mostreig, el yield i els callbacks
+// síncrons o generadors de verificació de camins.
+export function createCoastalLayoutPlanner({
+ compoundTransform,rawHAt,getHalfSize,getVehicleTypes,
+ getVehicleScales,getVehicleHitboxes
+}){
+function coastalLayoutFits(l,q){
+ const H=getHalfSize(),VT=getVehicleTypes(),VS=getVehicleScales();
+ const tr=compoundTransform(q,q.angle),shore=l.waterfront?.shore??8;
+ for(const x of[-l.size[0]/2,0,l.size[0]/2])for(const z of[-l.size[1]/2,-l.size[1]/4,shore-8]){const p=tr(x,z);if(Math.abs(p[0])>H-15||Math.abs(p[1])>H-15||rawHAt(...p)<(z===shore-8?-2:.12))return false}
+ for(const b of l.buildings)for(const dx of[-b.w/2,0,b.w/2])for(const dz of[-b.d/2,0,b.d/2])if(rawHAt(...tr(b.x+dx,b.z+dz))<.2)return false;
+ for(const v of l.vehicles.filter(v=>['w','wl'].includes(VT[v.t]?.m))){
+  const hb=getVehicleHitboxes()[v.t],sc=VS[v.t]||1,hw=hb[0]*sc/2+1,hd=hb[1]*sc/2+1;
+  for(const dx of[-hw,0,hw])for(let dz=-hd;dz<=hd+(v.t==='ferry'?45:16);dz+=5)if(rawHAt(...tr(v.x+dx,v.z+dz))>-2)return false;
+ }
+ return true;
+}
+
+function* findCoastalLayoutSteps(l,anchor,accept=()=>true){
+ const shore=l.waterfront?.shore??8;
+ for(const offset of[0,60,-60,120,-120,180,-180,240,-240,300,-300,360,-360])for(let turn=0;turn<4;turn++){
+  yield {stage:'Emplaçaments de costa',completed:null,total:null};
+  const angle=turn*Math.PI/2,tr=compoundTransform(anchor,angle);
+  let landSeen=false;
+  for(let d=0;d<Math.min(900,(anchor.r||400)*1.6);d+=12){
+   const p=tr(offset,d),h=rawHAt(...p);if(h>.2){landSeen=true;continue}if(!landSeen)continue;
+   for(const shift of[-18,-12,-6,0,6,12,18,24]){
+    const center=tr(offset,d-shore+shift),q={x:center[0],z:center[1],angle,h:.86,r:anchor.r};
+    if(coastalLayoutFits(l,q)){
+      const accepted=accept(q);
+      if(accepted&&typeof accepted.next==='function'){if(yield* accepted)return q}
+      else if(accepted)return q;
+    }
+   }
+   break;
+  }
+ }
+ return null;
+}
+ return {coastalLayoutFits,findCoastalLayoutSteps};
+}

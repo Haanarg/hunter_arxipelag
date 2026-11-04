@@ -80,6 +80,12 @@
 
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
+**Fase 4 · quart tall, encaix de molls i terminals costaneres (v0.6.141; implementació parcial):**
+- [x] **Planificació costanera sense malles:** `src/compound-planning.mjs` inclou `createCoastalLayoutPlanner` que valida la plataforma a terra, les edificacions, les aigües navegables i l'espai de ferris/llanxes, i cerca emplaçaments costaners per trams.
+- [x] **Integració diferida, compatibilitat dels mapes:** `src/compound-coast-runtime.js` manté les funcions clàssiques `coastalLayoutFits`, `findCoastalLayout`, `findCoastalLayoutSteps` i les inicialitza només quan són necessàries; la mida del mapa i les característiques dels vehicles es consulten dinàmicament. No es toca la geometria, els molls, les rampes ni la creació d'entitats.
+- [x] **Proves diferencials de costa i ferri:** `tests/coastal-layout-parity.mjs` contrasta la lògica anterior amb la nova en dimensions de layouts, edificis, ferris, diferents línies de costa, llavors 67/148, escales 1/2, acceptacions síncrones/generadores, pauses i cancel·lacions. Incorporada a CI i `test:optimization`.
+- [ ] **Fase 4 pendent:** planificació de carreteres i plataformes, generació visual separada, protecció de checkpoints, validació completa de llavors (67/148), camp, ports/terminàls, COOP/Android i comparació A/B de rendiment.
+
 **Fase 4 · tercer tall, comprovació costanera dels ports (v0.6.140; implementació parcial):**
 - [x] **Mostreig del terreny separat:** `src/compound-planning.mjs` conté `createPortSiteSurvey`, el filtre que comprova els marges, la plataforma i els carrils marítims. `world-generation.js` conserva la construcció i els recursos 3D.
 - [x] **Ordre determinista intacte:** es conserven les mateixes crides a `rawHAt`, transformacions, `yield`, refusos i retorns; no s'afegeixen consums de `R()`.
