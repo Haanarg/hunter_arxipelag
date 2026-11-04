@@ -426,7 +426,7 @@ function blastOccluded(x,y,z,tx,ty,tz,ignoreWall=null,ignoreTower=null){
  if(length<.15)return false;
  const mx=(x+tx)/2,mz=(z+tz)/2,search=Math.hypot(dx,dz)/2+2;
  for(const w of wallCandidates(mx,mz,search)){
-  if(w===ignoreWall||(ignoreTower&&w.towerLegOwner===ignoreTower)||w.open||w.barbed||w.hp<=0)continue;
+  if(w===ignoreWall||(ignoreTower&&(w.towerLegOwner===ignoreTower||w.towerParapetOwner===ignoreTower))||w.open||w.barbed||w.hp<=0)continue;
   // L'origen pot estar encastat dins un obstacle just quan detona.
   if(x>w.x0+.03&&x<w.x1-.03&&y>w.y0+.03&&y<w.y1-.03&&z>w.z0+.03&&z<w.z1-.03)continue;
   const t=segmentAabbT(x,y,z,tx,ty,tz,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);
