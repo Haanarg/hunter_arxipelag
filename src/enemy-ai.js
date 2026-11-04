@@ -1127,6 +1127,8 @@ if(t==='torre'){
     soldier.towerGuard=true;soldier.towerHost=u;soldier.towerSeat=seat;
     soldier.sp=0;soldier.rng=rules.TOWER_GUARD_RANGE;
     soldier.hd=u.hd;soldier.cd=1+seat*.9;
+    soldier.o.position.set(pos.x,pos.y,pos.z);
+    soldier.o.rotation.y=soldier.hd;
     soldier.rate=seat===1?5:1.1;
     soldier.senseT=seat*.05;
     if(seat===1){
