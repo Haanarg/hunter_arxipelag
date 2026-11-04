@@ -526,6 +526,14 @@ function updateNativeCoopFrame(dt){
        // El canvi de moviment és una propietat visual, no una segona IA.
        e.nativeMoving=Math.hypot(row.x-e.x,row.z-e.z)>.001;
        e.x=row.x;e.z=row.z;e.hp=row.hp;e.hd=row.heading||0;
+       // Un cop enderrocada la torre, els parapets tampoc poden
+       // continuar tapant trets al client com a col·lisions invisibles.
+       if(e.t==='torre'&&row.hp<=0&&!e.nativeTowerCoverCleared){
+         e.nativeTowerCoverCleared=true;
+         for(const wall of e.towerParapetColliders||[]){
+           wall.open=true;wall.hp=0;wall.playerBlock=false;
+         }
+       }
        if(e.t==='patrulla_marina'){
          e.marineCrewHp=row.marineCrewHp||[10,10];
          e.marineBrokenWindshield=row.marineBrokenWindshield||[];
