@@ -6,6 +6,10 @@ window.HUNTER_BUILDINGS??=Object.freeze({
     const layoutFn=windowLayout||window.HUNTER_BUILDING_SHELL?.windowLayout||((sx,sz,height)=>{const alongX=sx>=sz,L=alongX?sx:sz,count=L>=14?2:1;return {alongX,width:Math.min(2.7,L/(count*2.65)),bottom:Math.min(2.15,Math.max(1.65,height*.25)),height:Math.min(2.15,Math.max(1.75,height*.31)),centers:count===2?[-L*.255,L*.255]:[0]};});
     const wallMaterial=color=>new THREE.MeshStandardMaterial({color,flatShading:true,transparent:true,...materialProfile('masonry')});
     const doorMaterial=()=>new THREE.MeshStandardMaterial({color:0x704829,flatShading:true,transparent:true,...materialProfile('paint')});
+    // Geometria i metall compartits: una maneta a cada cara, amb només
+    // dos tiradors senzills per fulla, sense generació nova per edifici.
+    const handleGeometry=new THREE.BoxGeometry(.38,.11,.14),
+          handleMaterial=material(0xbeb5a4,'metal');
     const addWall=(group,{lx,lz,sx,sz,height,material:mat,y=height/2})=>{
       const mesh=new THREE.Mesh(new THREE.BoxGeometry(sx,height,sz),mat);
       mesh.position.set(lx,y,lz);group.add(mesh);return mesh
@@ -42,9 +46,24 @@ window.HUNTER_BUILDINGS??=Object.freeze({
       return combined;
     };
     // Porta d'alçada proporcionada al personatge, amb llinda real a sobre.
-    const addDoor=(group,{lx,lz,sx,sz,height,wallMaterial,doorMaterial,doorHeight=3.8})=>{
-      const h=Math.min(doorHeight,Math.max(2.8,height-.65));
-      const door=addWall(group,{lx,lz,sx,sz,height:h,material:doorMaterial,y:h/2});
+    const addDoor=(group,{lx,lz,sx,sz,height,wallMaterial,doorMaterial,doorHeight=3.8,thinWoodDoor=false})=>{
+      const h=Math.min(doorHeight,Math.max(2.8,height-.65)),
+        alongX=sx>=sz,slab=thinWoodDoor?(window.HUNTER_BUILDING_SHELL?.WOODEN_DOOR_THICKNESS||.16):null;
+      const door=addWall(group,{lx,lz,
+        sx:slab&&!alongX?slab:sx,sz:slab&&alongX?slab:sz,
+        height:h,material:doorMaterial,y:h/2});
+      if(slab){
+        door.name='hunter-wooden-door';
+        door.userData.woodenSlabThickness=slab;
+        for(const side of [-1,1]){
+          const handle=new THREE.Mesh(handleGeometry,handleMaterial);
+          handle.position.set(alongX?sx*.32:side*(slab/2+.065),
+            -h*.1,alongX?side*(slab/2+.065):sz*.32);
+          if(!alongX)handle.rotation.y=Math.PI/2;
+          handle.name='hunter-door-handle';
+          door.add(handle);
+        }
+      }
       const lintelHeight=Math.max(0,height-h);
       const lintel=lintelHeight>.05?addWall(group,{
         lx,lz,sx,sz,height:lintelHeight,material:wallMaterial,y:h+lintelHeight/2

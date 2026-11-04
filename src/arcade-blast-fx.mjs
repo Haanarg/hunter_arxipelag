@@ -30,7 +30,7 @@ export function arcadeBlastDirection(source){
 export function arcadeBlastProfile(kind,quality='desktop'){
   if(!['grenade','projectile','c4'].includes(kind))return null;
   const big=kind==='c4',projectile=kind==='projectile',
-    low=quality==='mobile',factor=low?.55:1;
+    low=quality==='mobile',factor=low?.45:.82;
   // Escales VISUALS: granada 1×, projectil 1,5×, C4 2,55×
   // (el C4 antic era 1,7×). Ni radi de dany ni física canvien.
   const particleBoost=projectile?1.15:1;
@@ -53,18 +53,18 @@ function randomGenerator(seed){
     return ((v^v>>>14)>>>0)/4294967296;
   };
 }
-export function createArcadeBlastFX(T,scene,{quality='desktop',limit=8}={}){
+export function createArcadeBlastFX(T,scene,{quality='desktop',limit=5}={}){
   const geometry={
-    fire:new T.SphereGeometry(1,15,11),
-    smoke:new T.SphereGeometry(1,10,8),
+    fire:new T.SphereGeometry(1,10,7),
+    smoke:new T.SphereGeometry(1,8,6),
     dust:new T.DodecahedronGeometry(1,0),
     sparks:new T.TetrahedronGeometry(1),
     shards:new T.TetrahedronGeometry(1),
-    shell:new T.SphereGeometry(1,24,16),
-    ring:new T.RingGeometry(.91,1,48)
+    shell:new T.SphereGeometry(1,16,10),
+    ring:new T.RingGeometry(.91,1,32)
   };
   const up=new T.Vector3(0,1,0),normal=new T.Vector3(0,0,1),
-    vec=new T.Vector3(),dummy=new T.Object3D();
+    vec=new T.Vector3(),dummy=new T.Object3D(),particleColor=new T.Color();
   const groups=[],max=Math.max(1,Math.min(12,Math.floor(limit)));
   const maxCount={};
   for(const key of ['fire','smoke','dust','sparks','shards']){
@@ -92,7 +92,7 @@ export function createArcadeBlastFX(T,scene,{quality='desktop',limit=8}={}){
       mesh.frustumCulled=false;
       mesh.count=0;mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
       mesh.renderOrder=kind==='smoke'?5:kind==='fire'?6:kind==='dust'?7:8;
-      root.add(mesh);batches[kind]={mesh,material,items:[]};
+      root.add(mesh);batches[kind]={mesh,material,items:[],first:0,last:0,clock:0};
     }
     const fadeMaterial=(color,additive=false)=>new T.MeshBasicMaterial({
       color,transparent:true,opacity:0,depthWrite:false,depthTest:true,
@@ -106,7 +106,7 @@ export function createArcadeBlastFX(T,scene,{quality='desktop',limit=8}={}){
     ring2.rotation.x=-Math.PI/2;ring2.position.y=.11;ring2.renderOrder=9;root.add(ring2);
     const flash=new T.Mesh(geometry.shell,fadeMaterial(0xfff7c1,true));
     flash.renderOrder=10;root.add(flash);
-    // Màxim vuit flaixos locals; la simulació no transporta llums per xarxa.
+    // Màxim cinc efectes en escena; els flaixos no projecten ombres.
     const light=new T.PointLight(0xffa64c,0,22);
     root.add(light);
     const g={root,batches,shell,ring,ring2,flash,light,age:100,profile:null,direction:null};
@@ -124,7 +124,7 @@ export function createArcadeBlastFX(T,scene,{quality='desktop',limit=8}={}){
     // el fum i la pols han de continuar en coordenades verticals.
     for(const [kind,b] of Object.entries(g.batches)){
       const n=profile[kind];b.mesh.count=n;b.mesh.visible=n>0;
-      const items=b.items;items.length=0;
+      const items=b.items;items.length=0;b.first=Infinity;b.last=0;b.clock=.08;
       const palette=scaleColor[kind];
       for(let i=0;i<n;i++){
         const a=rand()*Math.PI*2,
@@ -159,7 +159,8 @@ export function createArcadeBlastFX(T,scene,{quality='desktop',limit=8}={}){
         items.push({dx,dy,dz,speed:speed*scale,
           x:(rand()-.5)*radius,y:kind==='dust'?.15+rand()*.20:.55+rand()*.85,
           z:(rand()-.5)*radius,born,life,size,spin:rand()*Math.PI*2});
-        b.mesh.setColorAt(i,new T.Color(palette[Math.floor(rand()*palette.length)]));
+        b.first=Math.min(b.first,born);b.last=Math.max(b.last,born+life);
+        b.mesh.setColorAt(i,particleColor.setHex(palette[Math.floor(rand()*palette.length)]));
       }
       if(b.mesh.instanceColor)b.mesh.instanceColor.needsUpdate=true;
     }
@@ -185,6 +186,18 @@ export function createArcadeBlastFX(T,scene,{quality='desktop',limit=8}={}){
       if(t>=p.duration){g.root.visible=false;continue;}
       for(const [kind,b] of Object.entries(g.batches)){
         const items=b.items,mesh=b.mesh;
+        // S'ometen completament les malles de partícules ja extingides.
+        if(t<b.first||t>=b.last){
+          mesh.count=0;mesh.visible=false;continue;
+        }
+        mesh.visible=true;mesh.count=items.length;
+        // Foc fluid a 60 fps; espurnes/fragments a 30 i fum/pols a 24.
+        // La física i els temps de l'explosió continuen independents.
+        const interval=kind==='fire'?0:
+          kind==='smoke'||kind==='dust'?1/24:1/30;
+        b.clock+=Math.min(dt,.075);
+        if(interval&&b.clock<interval)continue;
+        b.clock=interval?b.clock%interval:0;
         b.material.opacity=kind==='fire'?.40*Math.max(.06,1-Math.max(0,t-.55)/(.75*p.scale)):
           kind==='smoke'?.30*Math.max(.04,1-Math.max(0,t-1.6)/(1.65*p.scale)):
           kind==='dust'?.49*Math.max(.04,1-Math.max(0,t-.6)/(1.05*p.scale)):
@@ -215,7 +228,6 @@ export function createArcadeBlastFX(T,scene,{quality='desktop',limit=8}={}){
               vec.set(v.dx,v.dy,v.dz);dummy.quaternion.setFromUnitVectors(up,vec);
             }else{
               dummy.rotation.set(v.spin+age*.7,v.spin+age*.9,age*.8);
-              dummy.quaternion.setFromEuler(dummy.rotation);
             }
           }
           dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);

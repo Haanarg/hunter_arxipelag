@@ -81,7 +81,7 @@ function captureOperation(name){
     crouched:playerCrouched,swimming,cooldown:fcd,flightY:cheatFlightY,cheats:{...cheats},
     view:{position:cam.position.toArray(),quaternion:cam.quaternion.toArray(),zoom}},stats:{kills}};
   snapshot.stats={kills};
-  snapshot.world.runtime={adapterVersion:OPERATION_ADAPTER_VERSION,fingerprint:operationRegistry.fingerprint,
+  snapshot.world.runtime={adapterVersion:OPERATION_ADAPTER_VERSION,vehicleHealthVersion:2,fingerprint:operationRegistry.fingerprint,
     journal:currentRun(),difficulty:DIF,rng:R.getState(),hqMapKnown,hqIntelStage,hqDiscardIndex,
     hqIntelSectors:[...hqIntelSectors],hqIntelDiscarded:[...hqIntelDiscarded],
     knownVehicleSectors:{heli:[...knownVehicleSectors.heli],tanc:[...knownVehicleSectors.tanc]},
@@ -160,6 +160,13 @@ function applyOperationSnapshot(snapshot){
     if(record.kind==='bomb')continue;
     const entity=operationRegistry.byId.get(record.id);
     Object.assign(entity,record.state);
+    if(record.kind==='vehicles'&&(r.vehicleHealthVersion||1)<2){
+      // Desaments anteriors: es duplica també la vida que els quedava.
+      // El marcador de versió impedeix tornar-la a duplicar en reobrir.
+      const newMax=VT[entity.t]?.life;
+      if(newMax&&Number.isFinite(entity.life))
+        entity.life=Math.min(newMax,Math.max(0,Math.ceil(entity.life*2)));
+    }
     for(const [key,sign]of record.infinite)entity[key]=sign>0?Infinity:-Infinity;
     for(const [key,value]of Object.entries(record.nested||{})){
       if(!operationNested.includes(key))throw new Error('Camp compost desconegut.');
