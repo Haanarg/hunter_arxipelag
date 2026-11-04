@@ -248,7 +248,9 @@ function updateNativeCoop(dt){
 function updateNativeCoopFrame(dt){
  const s=nativeCoopSession;if(!s)return;
  s.channel?.noteFrame?.(!paused&&!document.hidden);
- updateStrafeControls();joystick.setRunEnabled(!cv&&!paused&&hp>0);if(s.preparing||!s.state){updatePlayerHUD(.13);return;}
+ updateStrafeControls();joystick.setVehicleMode(cv?.t||null);
+ joystick.setRunEnabled(!paused&&!over&&hp>0&&!scopeActive&&!playerFall&&!s.gameOver&&!s.preparing);
+ if(s.preparing||!s.state){updateVehicleSpecialAction();updatePlayerHUD(.13);return;}
  const state=s.state,projecting=s.projectedState!==state,
        actor=projecting?state.players.find(p=>p.id===s.self):s.projectedActor;
  if(!actor)return;
@@ -395,6 +397,7 @@ function updateNativeCoopFrame(dt){
    mini();
  }
  if(projecting)rebuildVehicleGrid(); // Reindexa també els vehicles en COOP.
+ joystick.setVehicleMode(cv?.t||null);updateVehicleSpecialAction();
  // Les posicions remotes es presenten amb un interval de snapshot
  // de retard: cap extrapolació de física o dany. L'actor/vehicle local
  // continua utilitzant la predicció i reconciliació originals.

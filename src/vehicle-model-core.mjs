@@ -659,6 +659,7 @@ export const vehicleModels=Object.freeze({
         box(g,3.35,3.7,7.6,cabin,11.5,4.05,1.8,'paint');
         box(g,3.05,1.05,7.1,glass,11.5,4.62,1.8,'glass');
         box(g,3.65,.28,8.05,hullCol,11.5,6.02,1.8,'metal');
+        g.userData.damageSmokeOrigin=[11.5,6.35,1.8]; // sobre el sostre de la cabina
         for(const z of[-1.05,1.15,3.35])box(g,.16,1.05,.18,hullCol,9.87,4.62,z,'metal');
         rod(g,[11.5,6.15,3.8],[11.5,9.4,3.8],.11,metal);box(g,1.25,.18,.18,0x30383a,11.5,9.42,3.8,'metal');
         for(const x of[-14.3,14.3])for(const z of[-21,-14,-7,0,7,14,21])round(g,.18,.28,0x252d31,x,1.45,z,'z','rubber');

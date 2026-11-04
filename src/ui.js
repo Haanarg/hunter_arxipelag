@@ -172,7 +172,7 @@ window.HUNTER_UI=Object.freeze({
         // Totes les dreceres viuen aquí; la pausa principal és només navegació.
         body.innerHTML='<div class="pause-help" aria-label="Dreceres del teclat">'+
           '<div><b>WASD / fletxes</b><span>Moviment i gir</span></div>'+
-          '<div><b>Majúscules / joystick ↑</b><span>Córrer o nedar a crol</span></div>'+
+          '<div><b>Majúscules / joystick ↑</b><span>Córrer, nedar a crol o acció especial del vehicle (clàxon / timbre)</span></div>'+
           '<div><b>Y / U</b><span>Desplaçament lateral, també nedant</span></div>'+
           '<div><b>X</b><span>Ajupir-se i moure’s amb sigil</span></div>'+
           '<div><b>E</b><span>Acció, portes, vehicles o motxilla</span></div>'+

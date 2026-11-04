@@ -489,14 +489,24 @@ const updateDamagedVehicleSmoke=(v,dt,health,maxHealth)=>{
     v.smokeT=(v.smokeT||0)-dt;
     if(v.smokeT<=0){
       const baseY=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
-      if(v.smokeTopOffset==null&&v.o){
-        v.o.updateMatrixWorld(true);
-        const bb=new THREE.Box3().setFromObject(v.o);
-        v.smokeTopOffset=Math.max(.7,bb.max.y-baseY);
+      let smokeX=v.x,smokeZ=v.z,smokeY;
+      if(v.t==='ferry'&&v.o?.userData?.damageSmokeOrigin){
+        // Origen fix al sostre de la cabina; acompanya tots els girs.
+        v.o.updateWorldMatrix(true,false);
+        const origin=new THREE.Vector3(...v.o.userData.damageSmokeOrigin)
+          .applyMatrix4(v.o.matrixWorld);
+        smokeX=origin.x;smokeZ=origin.z;smokeY=origin.y;
+      }else{
+        if(v.smokeTopOffset==null&&v.o){
+          v.o.updateMatrixWorld(true);
+          const bb=new THREE.Box3().setFromObject(v.o);
+          v.smokeTopOffset=Math.max(.7,bb.max.y-baseY);
+        }
+        smokeY=baseY+(v.smokeTopOffset||1.8);
       }
-      // Fum billboarding agrupat en una sola malla per a tots els vehicles.
+      // El pool de partícules és el mateix en individual i COOP.
       if(Math.hypot(v.x-P.x,v.z-P.z)<250)
-        movementFx.damageSmoke(v,frac,baseY+(v.smokeTopOffset||1.8));
+        movementFx.damageSmoke(v,frac,smokeY,smokeX,smokeZ);
       v.smokeT=Math.max(.08,.55-frac*.42)
     }
   }
@@ -3364,6 +3374,22 @@ function hideCameraObstructions(owner,eye,basement){
     if(basement)owner.basement.cameraHiddenWalls.push(wall.m);
   }
 }
+// Una pulsació de l'especial reprodueix un sol so, també a COOP.
+const VEHICLE_SIGNAL_SOUNDS=Object.freeze({
+  cotxe:'hornCar',cotxe_civil:'hornCar',camio:'hornTruck',
+  moto:'hornMoto',bici:'bikeBell'
+});
+let vehicleSpecialHeld=false;
+function updateVehicleSpecialAction(){
+  const playable=!!started&&!paused&&!over&&hp>0&&!!cv&&
+    (!nativeCoopSession||(!nativeCoopSession.gameOver&&nativeCoopSession.state?.status==='running'));
+  const down=playable&&!!(joystick.state.running||K.ShiftLeft||K.ShiftRight);
+  if(!down){vehicleSpecialHeld=false;return}
+  if(vehicleSpecialHeld)return;
+  vehicleSpecialHeld=true;
+  const sound=VEHICLE_SIGNAL_SOUNDS[cv.t];
+  if(sound)snd(sound,1,null,cv);
+}
 function readPlayerControls(strafeEnabled,canRun){
 const jf=-joystick.state.y,jtr=-joystick.state.x,
       f=Math.max(-1,Math.min(1,(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)+jf)),
@@ -3517,9 +3543,11 @@ if(activeBunker?.basement?.lights?.length){
 }
 const strafeEnabled=updateStrafeControls();
 if(cheats.items)grantAllWeapons();
-// La prolongació del joystick funciona a peu i nedant: a l'aigua activa el crol.
+// A peu: córrer o crol. En vehicle: acció especial al mateix control.
 const canRun=!!started&&!paused&&!over&&!cv&&!playerFall&&!playerEject&&!scopeActive;
-joystick.setRunEnabled(canRun);
+const canSpecial=!!started&&!paused&&!over&&hp>0&&!!cv&&!playerFall&&!playerEject&&!scopeActive;
+joystick.setVehicleMode(canSpecial?cv.t:null);
+joystick.setRunEnabled(canRun||canSpecial);
 document.body.classList.toggle('player-swimming',canRun&&swimming);
 updateCrouchButton();
 // Darrera defensa: cap estat actiu amb vida nul·la, fins i tot si una
@@ -3527,7 +3555,8 @@ updateCrouchButton();
  if(started&&!over&&hp<=0){
    hp=0;fin('HAS MORT',{type:'impact',x:P.x,y:P.y,z:P.z});
  }
- if(!started||paused||over){updateOptionalSystems(0,false);resetCameraState();updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
+ if(!started||paused||over){updateVehicleSpecialAction();updateOptionalSystems(0,false);resetCameraState();updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
+updateVehicleSpecialAction();
 if(!(dt>0))return;
 rebuildVehicleGrid();elapsed+=dt;
 window.HUNTER_STEALTH.tick(dt);

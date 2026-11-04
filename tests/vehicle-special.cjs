@@ -1,0 +1,26 @@
+#!/usr/bin/env node
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8'),core=read('src/game-core.js');
+const start=core.indexOf('const VEHICLE_SIGNAL_SOUNDS='),end=core.indexOf('function readPlayerControls(',start);
+assert.ok(start>=0&&end>start);
+const calls=[],ctx={started:1,paused:false,over:0,hp:10,cv:null,nativeCoopSession:null,K:{},joystick:{state:{running:false}},snd:(...a)=>calls.push(a)};
+vm.createContext(ctx);vm.runInContext(core.slice(start,end)+'\nthis.press=updateVehicleSpecialAction;',ctx);
+ctx.press();assert.equal(calls.length,0);
+function release(){ctx.K.ShiftLeft=false;ctx.K.ShiftRight=false;ctx.joystick.state.running=false;ctx.press()}
+for(const [type,sound,stick] of [['cotxe','hornCar'],['cotxe_civil','hornCar'],['camio','hornTruck'],['moto','hornMoto'],['bici','bikeBell',true]]){
+ release();ctx.cv={t:type};ctx.K.ShiftLeft=!stick;ctx.joystick.state.running=!!stick;
+ const n=calls.length;ctx.press();ctx.press();assert.equal(calls.length,n+1);assert.equal(calls.at(-1)[0],sound);
+}
+release();const n=calls.length;ctx.cv={t:'ferry'};ctx.K.ShiftRight=true;ctx.press();assert.equal(calls.length,n);
+release();ctx.cv={t:'moto'};ctx.paused=true;ctx.K.ShiftLeft=true;ctx.press();assert.equal(calls.length,n);
+ctx.paused=false;release();ctx.over=1;ctx.K.ShiftLeft=true;ctx.press();assert.equal(calls.length,n);
+ctx.over=0;release();ctx.nativeCoopSession={state:{status:'paused'}};ctx.K.ShiftLeft=true;ctx.press();assert.equal(calls.length,n);
+release();ctx.nativeCoopSession.state.status='running';ctx.K.ShiftRight=true;ctx.press();assert.equal(calls.at(-1)[0],'hornMoto');
+const audio=read('src/audio.js'),AC={sampleRate:22050,createBuffer:(_n,len)=>({getChannelData:()=>new Float32Array(len)})};
+const ac=vm.createContext({AC});vm.runInContext(audio,ac);
+const sig=Object.fromEntries(['hornTruck','hornCar','hornMoto','bikeBell'].map(t=>[t,vm.runInContext('audioBuffer('+JSON.stringify(t)+').getChannelData(0)',ac)]));
+for(const [t,w] of Object.entries(sig))assert.ok(w.length>4000&&w.some(x=>Math.abs(x)>.02),t);
+const xing=w=>{let n=0;for(let i=400;i<3000;i++)if(w[i-1]<0&&w[i]>=0)n++;return n};
+assert.ok(xing(sig.hornTruck)<xing(sig.hornCar)&&xing(sig.hornCar)<xing(sig.hornMoto)&&xing(sig.hornMoto)<xing(sig.bikeBell));
+assert.equal(vm.runInContext('AUDIO_SOUNDS.hornTruck.gain>AUDIO_SOUNDS.hornCar.gain',ac),true);
+console.log('OK senyals de vehicle i pulsacions');

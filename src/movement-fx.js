@@ -260,12 +260,12 @@ window.HUNTER_MOVEMENT_FX=Object.freeze({
      if(watery)boatTrail(v,speed,back,waterWidths[type]||1);
      else landTrail(v,speed,back,terrain,type);
    }
-   function damageSmoke(v,damage,y){
+   function damageSmoke(v,damage,y,sourceX=v.x,sourceZ=v.z){
      const dark=damage>.65?0x2b2b2c:0x696966,
        width=.35+damage*.55;
      for(let i=0;i<(damage>.65?2:1);i++)
-       emit('smoke',{x:v.x+(rand()-.5)*.9,
-         z:v.z+(rand()-.5)*.9,y:y+(rand()-.5)*.24,
+       emit('smoke',{x:sourceX+(rand()-.5)*.9,
+         z:sourceZ+(rand()-.5)*.9,y:y+(rand()-.5)*.24,
          vx:(rand()-.5)*1.2,vz:(rand()-.5)*1.2,
          vy:1.1+damage*1.35,width,life:1.65+damage*.85,
          alpha:.46+damage*.29,growth:2.5,color:dark});

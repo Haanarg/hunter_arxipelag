@@ -2,9 +2,9 @@
 // Regressió: cursa dins el mateix joystick i transicions sense botó independent.
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
-const events=new Map(),classes=new Set(),knob={style:{}};
+const events=new Map(),classes=new Set(),knob={style:{}},special={textContent:''};
 const root={
-  querySelector:()=>knob,
+  querySelector:selector=>selector==='.joy-knob'?knob:special,
   getBoundingClientRect:()=>({left:100,top:100,width:148,height:148}),
   classList:{
     toggle:(name,on)=>on?classes.add(name):classes.delete(name),
@@ -22,6 +22,10 @@ const fire=(type,x,y,id=1)=>{
 };
 joystick.setRunEnabled(true);
 assert.ok(classes.has('run-enabled'));
+joystick.setVehicleMode('cotxe');assert.equal(special.textContent,'CLÀXON');
+joystick.setVehicleMode('bici');assert.equal(special.textContent,'TIMBRE');
+joystick.setVehicleMode('ferry');assert.equal(special.textContent,'ESPECIAL');
+joystick.setVehicleMode(null);assert.ok(!classes.has('vehicle-special'));
 fire('pointerdown',174,174);
 fire('pointermove',174,125);
 assert.equal(joystick.state.running,false,'Dins el cercle només camina');

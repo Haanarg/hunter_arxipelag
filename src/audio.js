@@ -12,6 +12,10 @@ const AUDIO_SOUNDS=Object.freeze({
  alert:{duration:.38,frequency:1250,gain:.32,range:70,throttle:.8,priority:2},
  glassBreak:{duration:.43,filter:'highpass',frequency:1650,gain:.46,range:105,priority:2},
  woodBreak:{duration:.34,filter:'lowpass',frequency:900,gain:.48,range:100,priority:2},
+ hornCar:{duration:.46,gain:.43,range:115,throttle:.14,priority:2},
+ hornTruck:{duration:.72,gain:.68,range:145,throttle:.18,priority:2},
+ hornMoto:{duration:.39,gain:.36,range:105,throttle:.14,priority:2},
+ bikeBell:{duration:.82,gain:.33,range:75,throttle:.14,priority:2},
  replayShot:{duration:.24,frequency:750,gain:.31,fade:2.4,rate:.55},
  replayCannon:{duration:.42,frequency:340,gain:.44,fade:2.4,rate:.55}
 });
@@ -117,6 +121,21 @@ function audioBuffer(type){
    phase+=Math.PI*2*(t<.18?310:420)/AC.sampleRate;
    const syllable=t<.18?t/.18:(t-.18)/.2,envelope=Math.sin(Math.PI*syllable)**2;
    samples[i]=(Math.sin(phase)*.65+n*.35)*envelope;
+  }else if(type==='hornCar'||type==='hornTruck'||type==='hornMoto'){
+   // Cotxe bitonal, camió greu i fort, moto aguda i esquerdada.
+   const truck=type==='hornTruck',moto=type==='hornMoto',
+         f1=truck?148:moto?560:362,f2=truck?184:moto?711:437,
+         attack=Math.min(1,t/.012),release=Math.min(1,(spec.duration-t)/.065),
+         tone=Math.sin(Math.PI*2*f1*t)*.64+Math.sin(Math.PI*2*f2*t)*.36;
+   samples[i]=Math.max(0,attack*release)*(moto
+     ?Math.tanh(2.3*tone+Math.sin(Math.PI*2*38*t)*.15+n*.075)*.76
+     :truck?Math.tanh(1.5*tone)*.86:Math.tanh(1.15*tone)*.78);
+  }else if(type==='bikeBell'){
+   // Doble repic metàl·lic de bicicleta, amb ressonància.
+   const strength=Math.exp(-t*6)+(t>.21?.65*Math.exp(-(t-.21)*8):0),
+         metal=Math.sin(Math.PI*2*1480*t)*.56+
+           Math.sin(Math.PI*2*2335*t)*.30+Math.sin(Math.PI*2*2980*t)*.14;
+   samples[i]=metal*strength*Math.min(1,t/.004)*.72;
   }else samples[i]=n*Math.pow(1-p,spec.fade||2);
  }
  cache.set(type,buffer);return buffer;

@@ -2,8 +2,9 @@
 window.HUNTER_JOYSTICK=Object.freeze({
   create(root,{deadzone=.1,response=1.15,maxTravel=.36}={}){
     const knob=root.querySelector('.joy-knob'),
+          specialLabel=root.querySelector('.special-label'),
           state={x:0,y:0,active:false,id:null,running:false};
-    let runEnabled=false,lastPointer=null;
+    let runEnabled=false,lastPointer=null,vehicleMode=null;
     const reset=()=>{
       state.x=state.y=0;state.active=false;state.id=null;state.running=false;
       lastPointer=null;root.classList.remove('running');
@@ -40,6 +41,15 @@ window.HUNTER_JOYSTICK=Object.freeze({
       state.x=x;state.y=y;
       knob.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
     };
+    const setVehicleMode=type=>{
+      const next=type||null;if(vehicleMode===next)return;
+      vehicleMode=next;root.classList.toggle('vehicle-special',!!next);
+      if(specialLabel)specialLabel.textContent=next==='bici'?'TIMBRE':
+        ['cotxe','cotxe_civil','camio','moto'].includes(next)?'CLÀXON':'ESPECIAL';
+      root.setAttribute?.('aria-label',next
+        ?'Joystick: prolongació superior per a l’acció especial del vehicle'
+        :'Joystick: prolongació superior per córrer o nedar a crol');
+    };
     const setRunEnabled=enabled=>{
       const next=!!enabled;
       if(runEnabled===next)return;
@@ -55,6 +65,6 @@ window.HUNTER_JOYSTICK=Object.freeze({
     root.addEventListener('pointermove',move);
     for(const type of ['pointerup','pointercancel','lostpointercapture'])
       root.addEventListener(type,e=>{if(state.active&&e.pointerId===state.id)reset()});
-    return {state,reset,setRunEnabled};
+    return {state,reset,setRunEnabled,setVehicleMode};
   }
 });
