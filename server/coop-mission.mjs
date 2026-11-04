@@ -111,7 +111,7 @@ export function restoreRelayMission(record,geometry){
   }
   function damageWall(index,damage){
     const w=physical.walls[index],radioPanel=meta.optional?.radio?.some(r=>r.colliderIndex===index);
-    if(!w||!(w.woodenDoor||radioPanel||w.civicFurniture==='bench')||w.open||removedWalls.has(index)||!(damage>0))return false;
+    if(!w||!(w.woodenDoor||w.weakWood||radioPanel||w.civicFurniture==='bench')||w.open||removedWalls.has(index)||!(damage>0))return false;
     w.hp=Math.max(0,Math.ceil(w.hp)-Math.ceil(damage));wallHealth.set(index,w.hp);
     if(w.civicFurniture)for(const [i,part] of physical.walls.entries())
       if(part!==w&&part.civicGroup===w.civicGroup&&part.civicFurniture===w.civicFurniture){
