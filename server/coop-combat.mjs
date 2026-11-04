@@ -1,5 +1,5 @@
 import {turretSpecs,stepVehicleTurret,vehicleGunPose} from '../src/vehicle-turret-core.mjs';
-import {SOLDIER,RADII,soldierAccuracyProfile} from '../src/enemy-perception-core.mjs';
+import {SOLDIER,RADII,VEHICLE_SIGNAL_SOUNDS,soldierAccuracyProfile} from '../src/enemy-perception-core.mjs';
 import {senseNativeSoldier,hearNativeSoldier} from './native-soldier-perception.mjs';
 import {vehicleDynamics} from '../src/vehicle-dynamics-core.mjs';
 import {stepLandPatrol,stepMarinePatrol} from '../src/patrol-motion-core.mjs';
@@ -171,6 +171,15 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       if(native&&t.t==='soldat'){hearNativeSoldier(t,noise,tick);continue;}
       if(Math.hypot(t.x-position.x,t.z-position.z)<35){t.alarmedUntil=tick+180;t.focus=actorId;t.lastSeenTick=tick;t.lastKnown={x:position.x,y:position.y,z:position.z};if(t.t!=='jeep')t.heading=facePoint(t,position);t.state='search';}
     }
+  }
+  // Únic esdeveniment autoritatiu per activar soldats i sincronitzar clients.
+  function vehicleSignal(actorId,vehicle,tick){
+    const sound=VEHICLE_SIGNAL_SOUNDS[vehicle?.t];
+    if(meta.mode!=='native'||!sound||!vehicle?.seats?.includes(actorId))return false;
+    const at={x:vehicle.x,y:vehicle.y+1,z:vehicle.z};
+    alarm(at,actorId,tick,sound);
+    effect('vehicle-signal',tick,{actorId,vehicleId:vehicle.id,sound,at,radius:RADII[sound]});
+    return true;
   }
   const friendlyCrewAboard=v=>!!v.enemyCrew?.some(id=>targets.some(t=>
     t.id===id&&t.hp>0&&['waiting','riding'].includes(t.enemyRequisition?.phase)));
@@ -769,7 +778,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       target.hp=damageHealth(target.hp,runoverDamage(speed,profile.mass||1));v.ramUntilTick=tick+11;v.v*=.86;alarm(v,v.seats[0],tick,'collision');effect('impact',tick,{actorId:v.seats[0],at:eye,hit:target.id});break;
     }
   }
-  return {command,hold,step,cancel,impactVehicle,runover,liveTargets:()=>targets,hasDeadGeneral:()=>targets.some(t=>t.t==='general'&&t.hp<=0),pause(){bursts.length=0;},finish(){projectiles.length=0;bursts.length=0;grenades.length=0;effects.length=0;},snapshot(){
+  return {command,hold,step,cancel,vehicleSignal,impactVehicle,runover,liveTargets:()=>targets,hasDeadGeneral:()=>targets.some(t=>t.t==='general'&&t.hp<=0),pause(){bursts.length=0;},finish(){projectiles.length=0;bursts.length=0;grenades.length=0;effects.length=0;},snapshot(){
     // Les rutes A*, els nodes temporals i els objectius de moviment només
     // són útils per al Worker. No els enviam a tots dos navegadors a 10 Hz.
     // El checkpoint, en canvi, conserva les rutes per reprendre l'operació.

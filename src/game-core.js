@@ -3375,10 +3375,7 @@ function hideCameraObstructions(owner,eye,basement){
   }
 }
 // Una pulsació de l'especial reprodueix un sol so, també a COOP.
-const VEHICLE_SIGNAL_SOUNDS=Object.freeze({
-  cotxe:'hornCar',cotxe_civil:'hornCar',camio:'hornTruck',
-  moto:'hornMoto',bici:'bikeBell'
-});
+const VEHICLE_SIGNAL_SOUNDS=window.HUNTER_ENEMY_PERCEPTION.VEHICLE_SIGNAL_SOUNDS;
 let vehicleSpecialHeld=false;
 function updateVehicleSpecialAction(){
   const playable=!!started&&!paused&&!over&&hp>0&&!!cv&&
@@ -3388,7 +3385,11 @@ function updateVehicleSpecialAction(){
   if(vehicleSpecialHeld)return;
   vehicleSpecialHeld=true;
   const sound=VEHICLE_SIGNAL_SOUNDS[cv.t];
-  if(sound)snd(sound,1,null,cv);
+  if(!sound)return;
+  // El soroll existeix encara que l'usuari hagi silenciat l'àudio.
+  if(nativeCoopSession&&!nativeCoopSession.channel?.inventory?.('signal','vehicle'))return;
+  snd(sound,1,null,cv);
+  window.HUNTER_STEALTH.emit(sound,cv.x,cv.o?.position?.y??P.y,cv.z);
 }
 function readPlayerControls(strafeEnabled,canRun){
 const jf=-joystick.state.y,jtr=-joystick.state.x,

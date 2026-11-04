@@ -16,6 +16,7 @@ import {createNativeOptionals} from './coop-optionals.mjs';
 import {createNativeFauna} from './coop-fauna.mjs';
 import {createCoopIntel} from '../src/coop-intel-core.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
+import {VEHICLE_SIGNAL_SOUNDS} from '../src/enemy-perception-core.mjs';
 import {COOP_CHEAT_KEYS,normalizeCoopCheats,grantCoopCheatItems,moveCoopCheatFly} from '../src/coop-cheats.mjs';
 export const MISSION_VERSION='relay:22';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
@@ -209,11 +210,21 @@ export function restoreRelayMission(record,geometry){
     cheats[key]=enabled;refillCheats();
     return {ok:true,code:'CHEAT_UPDATED',cheat:key,enabled};
   }
+  const vehicleSignalTicks=new Map(record.vehicleSignalTicks||[]);
   function inventoryCommand(actorId,message){
     const cached=inventoryResults.find(r=>r.actorId===actorId&&r.commandId===message.commandId);if(cached)return {...cached,duplicate:true};
     const actor=sim.snapshot().players.find(p=>p.id===actorId),bag=inventory.get(actorId);let code='INVALID',ok=false;
     if(actor&&message.epoch===meta.id&&typeof message.commandId==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(message.commandId)){
       if(status!=='running'||!['relay','extract'].includes(phase)||actor.hp<=0||actor.fall||actor.swimming||Date.now()>=meta.expiresAt)code='NOT_ACTIVE';
+      else if(message.operation==='signal'&&message.target==='vehicle'){
+        // No confiam en la classe del vehicle enviada pel client.
+        const vehicle=vehicles.mounted(actorId),tick=sim.snapshot().tick;
+        if(meta.mode!=='native'||!vehicle||!VEHICLE_SIGNAL_SOUNDS[vehicle.t])code='NOT_ACTIVE';
+        else if(tick-(vehicleSignalTicks.get(actorId)??-Infinity)<10)code='COOLDOWN';
+        else if(combat.vehicleSignal(actorId,vehicle,tick)){
+          vehicleSignalTicks.set(actorId,tick);ok=true;code='SIGNALLED';
+        }
+      }
       else if(vehicles.mounted(actorId))code='SEATED';
       else if(message.operation==='use'&&message.target==='medkits'){if(!bag.medkits||!sim.heal(actorId,combatBalance.medkit))code='EMPTY';else{bag.medkits--;ok=true;code='HEALED';}}
       else if(message.operation==='weapon'&&personalWeapons.includes(message.target)){if(!['pistol','knife'].includes(message.target)&&!bag[message.target])code='EMPTY';else{bag.weapon=message.target;combat.cancel(actorId);ok=true;code='SELECTED';}}
@@ -378,6 +389,6 @@ export function restoreRelayMission(record,geometry){
        }else if(r.ok&&r.code==='ENTERED'&&!r.duplicate){exitImpulses.delete(actorId);const p=sim.snapshot().players.find(p=>p.id===actorId);sim.place(actorId,vehicles.position(p));}return r;},doorCommand,inventoryCommand,cheatCommand,
     optionalCommand(actorId,message){return optionals.command(actorId,message,sim.snapshot().tick);},
     combatCommand(actorId,message){return combat.command(actorId,message,sim.snapshot().tick);},setStatus(value){status=value;if(value!=='running'){actions.clear();sim.clearInputs();vehicles.pause();combat.pause();rescue.pause();if(['relay','extract'].includes(phase))hold=0;}},
-    checkpoint(nextAlarm){return {meta:structuredClone(meta),exitImpulses:[...exitImpulses].map(([id,impulse])=>[id,{...impulse}]),wallHealth:[...wallHealth],roofHealth:[...roofHealth],removedWalls:[...removedWalls],removedRoofs:[...removedRoofs],brokenWindows:[...brokenWindows],palmHealth:[...palmHealth],phase,hold,status,checkpoint:sim.snapshot(),rescue:rescue.checkpoint(),vehicles:vehicles.checkpoint(),combat:combat.checkpoint(),...(meta.mode==='native'&&meta.optional?{optionals:optionals.checkpoint()}:{}),...(meta.mode==='native'&&meta.sharks?{fauna:fauna.checkpoint()}:{}),...(meta.mode==='native'&&meta.intel?{intel:intel.checkpoint()}:{}),nextAlarm,cheats:{...cheats},inventories:inventories(),droppedSupplies:[...loose.values()].map(s=>({...s})),dropSequence,claimedSupplies:[...claimed],inventoryResults:structuredClone(inventoryResults),doors:doors(),doorRevision,doorCooldowns:[...cooldowns].map(([actorId,tick])=>({actorId,tick})),commandResults:structuredClone(results)};},
+    checkpoint(nextAlarm){return {meta:structuredClone(meta),exitImpulses:[...exitImpulses].map(([id,impulse])=>[id,{...impulse}]),wallHealth:[...wallHealth],roofHealth:[...roofHealth],removedWalls:[...removedWalls],removedRoofs:[...removedRoofs],brokenWindows:[...brokenWindows],palmHealth:[...palmHealth],phase,hold,status,checkpoint:sim.snapshot(),rescue:rescue.checkpoint(),vehicles:vehicles.checkpoint(),combat:combat.checkpoint(),...(meta.mode==='native'&&meta.optional?{optionals:optionals.checkpoint()}:{}),...(meta.mode==='native'&&meta.sharks?{fauna:fauna.checkpoint()}:{}),...(meta.mode==='native'&&meta.intel?{intel:intel.checkpoint()}:{}),nextAlarm,cheats:{...cheats},inventories:inventories(),droppedSupplies:[...loose.values()].map(s=>({...s})),dropSequence,claimedSupplies:[...claimed],inventoryResults:structuredClone(inventoryResults),doors:doors(),doorRevision,doorCooldowns:[...cooldowns].map(([actorId,tick])=>({actorId,tick})),vehicleSignalTicks:[...vehicleSignalTicks],commandResults:structuredClone(results)};},
     setup(self){return {type:'mission',self,meta:structuredClone(meta),geometry:structuredClone(physical),state:snapshot()};}};
 }

@@ -29,6 +29,12 @@ assert.equal(s.heardAt(105,1,20),null,'No sent passos ajupits a 5 m');
 assert.equal(s.heardAt(25,1,-5,run.id),null,'Un soroll ja sentit no es repeteix');
 assert.equal(s.heardAt(25,1,-5,0,()=>.4),null,'Una paret amorteeix el so');
 assert(near(s.RADII.sniper,220));
+assert(s.RADII.bikeBell<s.RADII.hornMoto&&s.RADII.hornMoto<s.RADII.hornCar&&s.RADII.hornCar<s.RADII.hornTruck);
+for(const kind of ['bikeBell','hornMoto','hornCar','hornTruck']){
+ s.clear();const e=s.emit(kind,0,2,0),r=s.RADII[kind];
+ assert.equal(e.radius,r);assert.equal(s.heardAt(r-1,2,0)?.id,e.id);
+ assert.equal(s.heardAt(r+1,2,0),null);
+}
 s.tick(.9);assert.equal(s.heardAt(10,1,-5),null,'Els sorolls caduquen');
 s.clear();assert.equal(s.events().length,0,'Reiniciar partida neteja sorolls');
 s.setDebug(true);assert(s.enabled());s.setDebug(false);assert(!s.enabled());

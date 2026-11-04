@@ -708,7 +708,14 @@ function updateNativeCoopFrame(dt){
    // cada fotograma. L'estat autoritatiu brokenWindows s'aplica igualment.
    s.seenEffects.add(effect.id);
    try{
-     if(effect.kind==='vehicle-destroyed'){
+     if(effect.kind==='vehicle-signal'){
+        // L'altre participant sent i veu el radi de la font autoritativa.
+        if(effect.actorId!==s.self&&effect.at){
+          snd(effect.sound,1,effect.at,s.vehicles.get(effect.vehicleId));
+          window.HUNTER_STEALTH.emit(effect.sound,effect.at.x,effect.at.y,effect.at.z,effect.radius);
+        }
+      }
+      else if(effect.kind==='vehicle-destroyed'){
         // El servidor confirma la destrucció abans d'eliminar el model.
         // Pot arribar una explosió separada al mateix tick: evitar doblar-la.
         const hasBlast=state.combat.effects.some(other=>other.kind==='explosion'&&
@@ -804,6 +811,8 @@ function updateNativeCoopFrame(dt){
  s.projectedState=state;}
  const heldFire=hp>0&&!paused&&state.status==='running'&&!!K.KeyF;if(heldFire&&!s.fireHeld)nativeCoopCommand('fire');s.fireHeld=heldFire;
  if(scopeActive){scopeYaw+=((K.KeyA?1:0)-(K.KeyD?1:0)-joystick.state.x)*dt*.38;scopePitch=Math.max(-.65,Math.min(.65,scopePitch+((K.KeyW?1:0)-(K.KeyS?1:0)-joystick.state.y)*dt*.30));}
+ window.HUNTER_STEALTH.tick(dt);
+ window.HUNTER_STEALTH_DEBUG.update(THREE,world,E,P);
  updateDoors(dt);palmVisualTick-=dt;if(palmVisualTick<=0){palmVisualTick=scopeActive?.10:.16;PM.update?.(P.x,P.z,!!scopeActive,palmsDisabled,currentSniperFocus());updateShadowCasters();}worldVisualTick-=dt;if(worldVisualTick<=0){worldVisualTick=.2;updateDistanceVisibility();}updatePlayerCamera(dt);updateBazookaReticle(dt);updateLightAimReticle(dt);updateGrenadeCharge(dt);updatePlayerHUD(dt);updDeb(dt);updFx(dt);if(state.phase==='won'&&!victoryCinematic){const general=[...s.enemies.values()].find(e=>e.t==='general');if(general)startVictoryCinematic(general);}if(state.status==='paused'){msg='Sessió pausada · esperant el company.';msgT=1;}msgT=Math.max(0,msgT-dt);
 }
 window.HUNTER_NATIVE_COOP=Object.freeze({start:startNativeCoop,active:()=>!!nativeCoopSession,
@@ -853,4 +862,4 @@ function nativeCoopOptionalAction(){
    label:'Sabotejar el relé de ràdio',icon:'📡'}:null;
 }
 function nativeReviveAction(){const s=nativeCoopSession;if(!s?.state||cv||hp<=0||swimming||playerFall||!inv.med)return null;const other=s.state.players.find(p=>p.id!==s.self&&p.hp<=0&&Math.hypot(P.x-p.x,P.z-p.z)<=3.2&&Math.abs(P.y-p.y)<2);return other?{kind:'revive',label:'Mantén E per reanimar el company',icon:'✋'}:null;}
-function stopNativeCoop(){document.getElementById('hunter-coop-game-over')?.remove();const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();cancelGrenadeCharge();for(const key of Object.keys(K))K[key]=0;for(const mesh of s.projectiles.values())world?.remove(mesh);for(const mesh of s.grenades.values()){world?.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);}s.projectiles.clear();s.grenades.clear();window.HUNTER_ARCADE_BLAST_FX?.clear();removeParachuteVisual();s.projectileVisual?.reset();s.grenadeVisual?.reset();movementFx.reset();if(s.previousCheats)Object.assign(cheats,s.previousCheats);for(const model of s.remotes.values()){if(model.userData.nativeParachute){world.remove(model.userData.nativeParachute);model.userData.nativeParachute=null;}if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;window.HUNTER_COOP_NETWORK_STATS=null;}
+function stopNativeCoop(){document.getElementById('hunter-coop-game-over')?.remove();const s=nativeCoopSession;if(!s)return;s.channel?.stop?.();cancelGrenadeCharge();for(const key of Object.keys(K))K[key]=0;for(const mesh of s.projectiles.values())world?.remove(mesh);for(const mesh of s.grenades.values()){world?.remove(mesh);window.HUNTER_RESOURCES.dispose(mesh);}s.projectiles.clear();s.grenades.clear();window.HUNTER_ARCADE_BLAST_FX?.clear();removeParachuteVisual();s.projectileVisual?.reset();s.grenadeVisual?.reset();movementFx.reset();window.HUNTER_STEALTH.clear();window.HUNTER_STEALTH_DEBUG.reset();if(s.previousCheats)Object.assign(cheats,s.previousCheats);for(const model of s.remotes.values()){if(model.userData.nativeParachute){world.remove(model.userData.nativeParachute);model.userData.nativeParachute=null;}if(model.userData.nativeRider){scene.remove(model.userData.nativeRider.object);window.HUNTER_RESOURCES.dispose(model.userData.nativeRider.object);}scene.remove(model);window.HUNTER_RESOURCES.dispose(model);}nativeCoopSession=null;window.HUNTER_COOP_NETWORK_STATS=null;}

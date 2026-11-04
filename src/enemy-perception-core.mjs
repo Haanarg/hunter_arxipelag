@@ -17,7 +17,13 @@ export function recognizeSoldier(current,raw,distance,crouched=false,dt=SOLDIER.
 }
 export function soldierAccuracyProfile(unit){return unit.rocketSoldier?'bazooka':unit.elite?'elite':'rifle';}
 
+// L'especial del vehicle comparteix tipus i radi als dos simuladors.
+export const VEHICLE_SIGNAL_SOUNDS=Object.freeze({
+ cotxe:'hornCar',cotxe_civil:'hornCar',camio:'hornTruck',
+ moto:'hornMoto',bici:'bikeBell'
+});
 export const RADII=Object.freeze({walk:7,run:25,crouch:2,swim:12,knife:3,cutters:3,
+    bikeBell:35,hornMoto:105,hornCar:135,hornTruck:185,
     door:10,pistol:140,sniper:220,bazooka:250,rifle:160,explosion:300,
     bicycle:5,motorbike:90,car:70,civilianCar:112,truck:130,tank:130,apc:120,
     rowboat:5,windsurf:5,jetski:100,speedboat:120,ferry:125,
