@@ -360,7 +360,7 @@ let stairs=[],piers=[];
 let Wl=[],Dr=[],items=[],inv={},msg='',msgT=0,HQ=null,ib=null;
 let hqIntelStage=0,hqIntelSites=[],hqDiscardIndex=-1,hqIntelEliminationOrder=[];
 const {hqIntelSectors,hqIntelDiscarded,knownVehicleSectors}=
-  window.HUNTER_GAME_STATE.createIntelCollections();
+  window.HUNTER_GAME_STATE.createIntelCollections(Set);
 const wallGrid=window.HUNTER_SPATIAL_GRID.createSpatialCellGrid(64);
 let wallGridSource=null,wallGridCount=-1,wallQueryStamp=0;
 function rebuildWallGrid(){

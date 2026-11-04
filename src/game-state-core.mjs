@@ -1,9 +1,10 @@
 // Fàbriques per als objectes d'estat inicial del motor.
-// Una nova crida crea nous Sets/Maps/registre de comptadors, sense
+// Una nova crida crea nous conjunts i registres de comptadors, sense
 // subscriure observers ni tocar render, combat o generació de llavors.
-export function createIntelCollections(){
-  const hqIntelSectors=new Set(),hqIntelDiscarded=new Set();
-  const knownVehicleSectors={heli:new Set(),tanc:new Set()};
+export function createIntelCollections(SetConstructor=Set){
+  // Rebem Set del context dels scripts clàssics, també en el harness VM.
+  const hqIntelSectors=new SetConstructor(),hqIntelDiscarded=new SetConstructor();
+  const knownVehicleSectors={heli:new SetConstructor(),tanc:new SetConstructor()};
   return {hqIntelSectors,hqIntelDiscarded,knownVehicleSectors};
 }
 export function createVisibilityCounters(){

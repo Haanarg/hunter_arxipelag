@@ -94,6 +94,12 @@ intel.hqIntelSectors.add(1);intel.knownVehicleSectors.heli.add(3);
 assert.equal(separateIntel.hqIntelSectors.size,0);
 assert.equal(separateIntel.knownVehicleSectors.heli.size,0);
 assert.notStrictEqual(intel.knownVehicleSectors.heli,intel.knownVehicleSectors.tanc);
+// A game VM has a different global Set; preserve the original realm.
+class RealmSet extends Set{}
+const nativeRealm=createIntelCollections(RealmSet);
+for(const s of [nativeRealm.hqIntelSectors,nativeRealm.hqIntelDiscarded,
+ nativeRealm.knownVehicleSectors.heli,nativeRealm.knownVehicleSectors.tanc])
+ assert(s instanceof RealmSet,'constructor injected from owning runtime');
 
 // Integration: preserve legacy classic script identifiers for other modules.
 const core=readFileSync(new URL('../src/game-core.js',import.meta.url),'utf8'),
@@ -101,7 +107,7 @@ const core=readFileSync(new URL('../src/game-core.js',import.meta.url),'utf8'),
  harness=readFileSync(new URL('./harness.cjs',import.meta.url),'utf8');
 assert(core.includes('window.HUNTER_GAME_CATALOG.createItemCatalog()'));
 assert(core.includes('window.HUNTER_GAME_CATALOG.createEnemyProfiles('));
-for(const init of ['createIntelCollections()','createVisibilityCounters()','createDrawCounters()'])
+for(const init of ['createIntelCollections(Set)','createVisibilityCounters()','createDrawCounters()'])
  assert(core.includes(init),'missing original state binding '+init);
 assert(!core.includes('const ICON={'),'catalog declarations removed from game-core');
 assert(!core.includes('const EC={'),'enemy profile declarations removed from game-core');
