@@ -76,6 +76,12 @@
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
 
+**Fase 3 · vuitè tall, neteja de sessió i reinit del món (v0.6.134; implementació parcial):**
+- [x] **Teardown seqüenciat fora de game-core:** `src/start-lifecycle-core.mjs` coordina la neteja d'una missió completa, abandonada o generada parcialment; conserva l'ordre d'alliberament, les callbacks del runtime clàssic, l'autodesament i la propagació d'errors anterior. L'escena, controls i estat mutable continuen propietat del motor, sense afegir singleton.
+- [x] **Llistes noves per partida:** `src/game-state-core.mjs` proporciona nou contenidors nous d'entitats amb `Array` del context original. Els pools PL/FA, el mapa TG i l'índex de terreny conserven la seva identitat i es buiden com abans.
+- [x] **Prova diferencial:** `tests/world-session-parity.mjs` compara neteges amb/sense món i generador parcial, i fallades a cada pas de la destrucció; prova que l'ordre, referències, error i estat final no canvien. Afegida a `test:optimization` i a la CI.
+- [ ] **Validació pendent:** partida real, cancel·lació/reinici, recuperació de desaments, HOST/GUEST, Android, FPS/GC/GPU, dins la bateria conjunta acordada. La fase 3 encara no es considera tancada.
+
 **Fase 3 · setè tall, controls del jugador (v0.6.133; implementació parcial):**
 - [x] **Entrada de teclat, joystick i moviment lateral extreta:** `src/player-input-core.mjs` encapsula la lectura del moviment i la disponibilitat d'ajupir-se, córrer, desplaçar-se lateralment i activar l'acció especial del vehicle. Manté les mateixes referències mutables i l'ordre de les expressions. `game-core.js` conserva els listeners, l'estat, la física i la xarxa.
 - [x] **Proves de paritat:** `tests/player-input-parity.mjs` contrasta la lectura anterior amb la nova i comprova les referències després de canvis d'entrada; `test:optimization` i CI incorporen la suite sense duplicar lògica. `tests/vehicle-special.cjs` actualitzada amb un DOM simulat i la regla de botó independent del joystick.

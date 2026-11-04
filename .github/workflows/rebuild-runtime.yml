@@ -58,6 +58,11 @@ jobs:
           node --check src/player-input-core.mjs
           node tests/player-input-parity.mjs
           node tests/vehicle-special.cjs
+      - name: Check phase 3 world cleanup and fresh state
+        run: |
+          node --check src/start-lifecycle-core.mjs
+          node --check src/game-state-core.mjs
+          node tests/world-session-parity.mjs
       - name: Generate runtime bundle
         run: node tools/build-runtime.cjs
       - name: Verify generated bundle

@@ -20,3 +20,12 @@ export function createDrawCounters(){
   return {renderCategories,shadowRenderCategories,renderOtherDetails,
     vehicleDrawTypes,vehicleDrawParts,vehicleShadowTypes,vehicleFleet};
 }
+
+// Contenidors nous per una nova partida. Array s'injecta des del context
+// dels scripts clàssics, evitant una Array d'un altre realm al harness.
+// No es reutilitzen llistes del món anterior; els pools PL/FA sí es buiden.
+export function createWorldEntityCollections(ArrayConstructor=Array){
+  return {B:new ArrayConstructor(),Wl:new ArrayConstructor(),Dr:new ArrayConstructor(),
+    stairs:new ArrayConstructor(),piers:new ArrayConstructor(),items:new ArrayConstructor(),
+    V:new ArrayConstructor(),E:new ArrayConstructor(),fa:new ArrayConstructor()};
+}

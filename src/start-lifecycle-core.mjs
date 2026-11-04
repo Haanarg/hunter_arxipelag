@@ -45,3 +45,34 @@ export function createGenerationAttempt(document){
   }
   return Object.freeze({signal,cancel,report,enter,leave});
 }
+
+// Descartar una partida generada o una generació parcial/cancel·lada.
+// Les callbacks conserven els bindings del runtime clàssic; no s'hi
+// traslladen recursos ni col·leccions a cap estat global independent.
+// Ordre explícit (important per al cicle de vida de desaments i inputs):
+// registres -> opcionals -> terreny -> escena -> entitats -> pools ->
+// índexs -> transitoris -> controls -> rellotge.
+// Sense try/finally: una excepció interromp el procés al mateix punt
+// que al contracte anterior; el caller conserva el tractament de l'error.
+export function cleanupGeneratedWorld({
+  clearOperations,resetOptionalSystems,
+  terrainStream,forgetTerrainStream,
+  world,scene,resources,forgetWorld,
+  resetEntities,PL,FA,TG,resetTerrainLevels,terrainLevelGrid,
+  resetTransients,clearKeys,resetSimulationClock
+}){
+  clearOperations();
+  resetOptionalSystems();
+  if(terrainStream)terrainStream.dispose();
+  forgetTerrainStream();
+  if(world){scene.remove(world);resources.dispose(world)}
+  forgetWorld();
+  resetEntities();
+  PL.length=FA.length=0;
+  TG.clear();
+  resetTerrainLevels();
+  terrainLevelGrid.clear();
+  resetTransients();
+  clearKeys();
+  resetSimulationClock();
+}
