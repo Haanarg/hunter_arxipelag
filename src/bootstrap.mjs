@@ -89,7 +89,7 @@ import * as operationSaves from './operation-save.mjs?v=0.6.127';
 window.HUNTER_SAVES=operationSaves;
 import * as compoundPaths from './compound-paths.mjs?v=0.6.127';
 window.HUNTER_COMPOUND_PATHS=compoundPaths;
-import {runtimeLayouts,chooseCompoundLayout} from './compound-runtime-layouts.mjs?v=0.6.127';
+import {runtimeLayouts,chooseCompoundLayout} from './compound-runtime-layouts.mjs?v=0.6.128';
 import * as compoundArchitecture from './compound-architecture.mjs?v=0.6.127';
 window.HUNTER_RUNTIME_LAYOUTS=runtimeLayouts;window.HUNTER_CHOOSE_COMPOUND=chooseCompoundLayout;window.HUNTER_COMPOUND_ARCHITECTURE=compoundArchitecture;
 import {createCompoundStructures} from './compound-structures.mjs';
