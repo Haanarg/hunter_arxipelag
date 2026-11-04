@@ -6831,7 +6831,8 @@ const FRAGILE_VEHICLES=new Set(['bici','barca_rems','windsurf']);
 function destroyFragileVehicle(v){
   if(!v||v.destroyed)return;
   const wasRiding=cv===v,waterborne=v.t!=='bici',
-        yy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
+        yy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),
+        forwardSpeed=v.v||0;
   v.destroyed=true;v.life=0;v.v=0;v.driveInput=0;v.steerInput=0;
   v.reentryLockUntil=Infinity;
   if(wasRiding){
@@ -6849,12 +6850,10 @@ function destroyFragileVehicle(v){
   }
   const i=V.indexOf(v);if(i>=0)V.splice(i,1);
   intelMarks=intelMarks.filter(mark=>mark.ref!==v);
-  if(v.o)world.remove(v.o);
-  // Només fragments discrets de material, mai vehicleDebris ni boom().
-  const color=v.t==='bici'?0x57666a:v.t==='windsurf'?0x8b9ca1:0x8b674b;
-  for(let k=0;k<5;k++)debris(v.x+rn(-.5,.5),yy+.35,v.z+rn(-.5,.5),
-    color,1,.24,4);
-  snd('woodBreak',.35,{x:v.x,y:yy,z:v.z},v);
+  // Recupera els fragments GRANS del model, sense cridar vehicleDebris
+  // explosiu ni aplicar boom(), fum o dany per ona expansiva.
+  if(v.o){fragileVehicleDebris(v,yy,forwardSpeed);world.remove(v.o)}
+  snd('woodBreak',.62,{x:v.x,y:yy,z:v.z},v);
 }
 function explodeVehicle(v){
   if(v&&FRAGILE_VEHICLES.has(v.t)){destroyFragileVehicle(v);return;}
