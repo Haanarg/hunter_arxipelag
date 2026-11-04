@@ -17,9 +17,13 @@ function normalizeStair(s){
 }
 function normalizeBuilding(b){
   const out=pick(b,['x','z','w','d','h','fy']);if(out.w<=0||out.d<=0)throw new RangeError('Invalid building');
+  // El Worker coop necessita el perfil de fusta feble i les dimensions
+  // locals del barracó girat per calcular el dany a la teulada igual que
+  // al joc individual; abans es perdien en serialitzar l'edifici.
   return {...out,angle:number(b.angle??0),rb:!!b.rb,rhp:number(b.rhp??1),hangar:!!b.hangar,
+    weakWood:!!b.weakWood,localW:number(b.localW??b.w),localD:number(b.localD??b.d),
     roof:{scale:{x:number(b.roof?.scale?.x||1),z:number(b.roof?.scale?.z||1)}},upperFloor:!!b.upperFloor,
-    ...(b.upperFloor?{...pick(b,['localW','localD','storey']),interiorStair:normalizeStair(b.interiorStair)}:{})};
+    ...(b.upperFloor?{storey:number(b.storey),interiorStair:normalizeStair(b.interiorStair)}:{})};
 }
 function normalizeSurfaces(source){
   if(source.format===1)return {stairs:[],piers:[],buildings:[],bunker:null,terminalRamps:[]};
