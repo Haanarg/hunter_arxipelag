@@ -290,7 +290,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
   if(!result.destroyed)return {id:v.id,destroyed:false};
   const occupants=v.seats.filter(Boolean);v.destroyed=true;clearCarrier(v);v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;
   for(const id of occupants)inputs.delete(id);v.seats.fill(null);enemyInputs.delete(v.id);delete v.enemyCrew;
-  return {id:v.id,destroyed:true,explosive:v.t!=='bici',occupants,at:{x:v.x,y:v.y+1,z:v.z}};
+  return {id:v.id,destroyed:true,explosive:!['bici','barca_rems','windsurf'].includes(v.t),occupants,at:{x:v.x,y:v.y+1,z:v.z}};
  }
  const live=()=>vehicles.filter(v=>!v.destroyed);
  // Existing individual sphere contact/hull falloff, adapted to the 3.2 m relay model.
