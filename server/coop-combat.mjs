@@ -228,7 +228,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     const host=targets.find(t=>t.id===unit.towerHostId);
     if(!host||host.hp<=0){unit.hp=0;unit.canSee=false;return true;}
     if(tick%3!==(unit.towerSeat||0)%3)return true;
-    const dt=.1,eye={x:unit.x,y:unit.y+2.15,z:unit.z},
+    const dt=.1,eye={x:unit.x,y:unit.y+2.78,z:unit.z},
       contacts=visiblePlayers().filter(p=>p.hp>0&&!p.fall&&!p.swimming)
         .flatMap(p=>{
           const dx=p.x-unit.x,dz=p.z-unit.z,d=Math.hypot(dx,dz),
@@ -265,7 +265,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     const heavy=!!unit.rocketSoldier;
     if(heavy&&d<=12)return true;
     const fx=-Math.sin(unit.heading),fz=-Math.cos(unit.heading),
-      origin={x:unit.x+fx*1.18,y:eye.y+(heavy?.05:-.18),
+      origin={x:unit.x+fx*1.18,y:eye.y-(heavy?.04:.08),
         z:unit.z+fz*1.18};
     if(traceArena(origin,aim,geometry(),world(),{
       ignoreBarbed:true,wallCandidates:traceWallCandidates(origin,aim)
