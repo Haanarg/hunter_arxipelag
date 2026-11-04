@@ -6,18 +6,25 @@ export const TOWER_GUARD_RANGE=128;
 export const TOWER_GUARD_HALF_VIEW=Math.PI/3; // 120° totals, no visió de 360°
 export const TOWER_GUARD_SCAN_SPEED=.54;
 export const TOWER_GUARD_TURN_SPEED=1.85;
-// Murets laterals: del sòl de la plataforma fins per damunt del pit,
-// deixant visible el cap i lliure tota la façana frontal.
+// Els QUATRE parapets tenen la mateixa altura: protegeixen el pit
+// i deixen sobresortir el cap i la boca del canó dels dos soldats.
 export const TOWER_SIDE_PARAPET_HEIGHT=2.32;
 export const TOWER_SIDE_PARAPET_Y=9.59; // base local: 8.43 .. 10.75
 export const TOWER_SIDE_PARAPET_X=3.02;
 export const TOWER_SIDE_PARAPET_LENGTH=5.1;
-export function towerSideParapetVolumes(){
-  return [-1,1].map(side=>({
+export function towerParapetVolumes(){
+  const sideWalls=[-1,1].map(side=>({
     x:side*TOWER_SIDE_PARAPET_X,y:TOWER_SIDE_PARAPET_Y,z:0,
     width:.18,height:TOWER_SIDE_PARAPET_HEIGHT,depth:TOWER_SIDE_PARAPET_LENGTH
   }));
+  const endWalls=[-1,1].map(side=>({
+    x:0,y:TOWER_SIDE_PARAPET_Y,z:side*2.5,
+    width:6.02,height:TOWER_SIDE_PARAPET_HEIGHT,depth:.18
+  }));
+  return [...sideWalls,...endWalls];
 }
+// Alias compatible amb antics generadors; retorna els quatre parapets.
+export const towerSideParapetVolumes=towerParapetVolumes;
 // El parapet intercepta els trets ENTRANTS, però els soldats que són
 // darrere poden treure l'arma per sobre de la barana i disparar enfora.
 // El mateix criteri s'aplica al joc individual i al servidor COOP.
@@ -53,19 +60,14 @@ export function createTowerModel(THREE,{box:bx}){
   for(const x of[-2.3,2.3])for(const z of[-1.9,1.9])
     g.userData.towerLegMeshes.push(bx(g,.44,7.95,.44,leg,x,3.98,z,'metal'));
   bx(g,6.4,.44,5.5,deck,0,8.04,0,'metal');
-  // Baranes baixes, protegint el costat i la part posterior.
-  // La façana -Z queda oberta perquè fusell i coet puguin disparar.
-  for(const wall of towerSideParapetVolumes())
+  // Parapets uniformes a esquerra, dreta, davant i darrere.
+  // La IA situa visió i canó per sobre del capdamunt de les quatre parets.
+  for(const wall of towerParapetVolumes())
     g.userData.towerParapetMeshes.push(
       bx(g,wall.width,wall.height,wall.depth,cabin,
         wall.x,wall.y,wall.z,'paint'));
-  bx(g,6.02,.85,.18,cabin,0,8.7,2.50,'paint');
   for(const x of[-2.97,2.97])for(const z of[-2.42,2.42])
     bx(g,.22,4.05,.22,leg,x,10.18,z,'metal');
-  // Dos plafons baixos a banda i banda de l'obertura frontal, mai al
-  // nivell dels canons. Mantén visió i línia de tir per tots dos soldats.
-  for(const x of[-2.45,2.45])
-    bx(g,.8,.55,.18,cabin,x,8.55,-2.45,'paint');
   bx(g,6.95,.32,6.05,roof,0,12.32,0,'metal');
   bx(g,6.4,.18,.18,0xa1a39b,0,12.16,-2.86,'metal');
   // Els dos fusells són malles dels soldats, no canons de la torre.
