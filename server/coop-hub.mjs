@@ -274,8 +274,11 @@ export class CoopRoomHub {
   matches(room){return room&&room.id===this.mission.meta.roomId&&room.revision===this.mission.meta.revision&&room.members.length===2&&this.mission.meta.members.every(m=>room.members.some(r=>r.id===m.id));}
   broadcastState(){
     if(!this.mission)return;
+    const clients=this.games();
+    // Sense clients no hi ha destinataris: evitar un snapshot profund innecessari.
+    if(!clients.length)return;
     const state=this.mission.snapshot(),diffs=new Map(),messages=new Map();
-    for(const ws of this.games()){
+    for(const ws of clients){
       if(this.mission.meta.mode!=='native'){this.send(ws,{type:'state',state});continue;}
       const baseline=this.stateBaselines.get(ws);
       if(!baseline||baseline.state.missionId!==state.missionId){this.send(ws,{type:'native-mission',self:ws.deserializeAttachment().actorId,meta:this.mission.meta,state,stateRevision:0,telemetry:1});continue;}

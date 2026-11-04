@@ -17,10 +17,32 @@ function indexUniqueRows(before,after,key){
  }
  return old;
 }
+// Camí habitual del COOP: mateixa longitud i IDs en el mateix ordre.
+// Evita construir un Map de centenars de vehicles/soldats per snapshot.
+// El Set continua garantint IDs únics, igual que el camí general.
+function diffOrderedRows(before,after,key){
+ if(!before.length||before.length!==after.length)return undefined;
+ const seen=new Set();
+ for(let i=0;i<before.length;i++){
+  const id=before[i]?.[key];
+  if(typeof id!=='string'||id!==after[i]?.[key]||seen.has(id))return undefined;
+  seen.add(id);
+ }
+ const patches=Object.create(null);let changed=false;
+ for(let i=0;i<after.length;i++){
+  const patch=diffCoopState(before[i],after[i]);
+  if(patch){patches[after[i][key]]=patch;changed=true;}
+ }
+ return changed?{k:key,p:patches}:null;
+}
 export function diffCoopState(before,after){
  if(before===after)return null;
  if(before===null||after===null||typeof before!=='object'||typeof after!=='object'||Array.isArray(before)!==Array.isArray(after))return {v:after};
  if(Array.isArray(after)){
+  // Reutilitzar el camí directe si els identificadors i l'ordre es mantenen.
+  const orderedKey=typeof before[0]?.id==='string'&&typeof after[0]?.id==='string'?'id':'actorId';
+  const ordered=diffOrderedRows(before,after,orderedKey);
+  if(ordered!==undefined)return ordered;
   const byId=indexUniqueRows(before,after,'id');
   const key=byId?'id':'actorId',old=byId||indexUniqueRows(before,after,'actorId');
   if(old){
