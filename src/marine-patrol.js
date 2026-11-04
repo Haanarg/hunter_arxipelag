@@ -43,9 +43,11 @@ function ensureEnemyVehicleFlag(mesh,type,visible=true){
   const sea=type==='llanxa'||type==='llanxa_coets'||type==='patrulla_marina',
     truck=type==='camio',armored=type==='tanc'||type==='tanqueta';
   const flag=new THREE.Group();
-  flag.position.set(sea?1.07:truck?1.4:armored?1.15:1.06,
-    sea?1.28:truck?2.52:armored?2.62:1.25,
-    sea?3.36:truck?2.28:armored?1.8:1.72);
+  // Moto: el màstil neix al centre del parafang posterior, no al
+  // costat dret del xassís. L'eix +Z apunta cap a la part del darrere.
+  flag.position.set(type==='moto'?0:sea?1.07:truck?1.4:armored?1.15:1.06,
+    type==='moto'?.82:sea?1.28:truck?2.52:armored?2.62:1.25,
+    type==='moto'?1.52:sea?3.36:truck?2.28:armored?1.8:1.72);
   const mat=new THREE.MeshStandardMaterial({color:0x121517,roughness:.77});
   const pole=new THREE.Mesh(new THREE.CylinderGeometry(.028,.035,1.95,7),mat);
   pole.position.y=.975;flag.add(pole);
