@@ -58,7 +58,7 @@ window.HUNTER_BUILDINGS??=Object.freeze({
         for(const side of [-1,1]){
           const handle=new THREE.Mesh(handleGeometry,handleMaterial);
           handle.position.set(alongX?sx*.32:side*(slab/2+.065),
-            -h*.1,alongX?side*(slab/2+.065):sz*.32);
+            0,alongX?side*(slab/2+.065):sz*.32);
           if(!alongX)handle.rotation.y=Math.PI/2;
           handle.name='hunter-door-handle';
           door.add(handle);
