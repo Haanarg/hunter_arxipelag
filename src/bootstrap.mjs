@@ -1,3 +1,7 @@
+import * as gameState from './game-state-core.mjs?v=0.6.127';
+window.HUNTER_GAME_STATE=gameState;
+import * as gameCatalog from './game-catalog-core.mjs?v=0.6.127';
+window.HUNTER_GAME_CATALOG=gameCatalog;
 import * as startLifecycle from './start-lifecycle-core.mjs?v=0.6.127';
 window.HUNTER_START_LIFECYCLE=startLifecycle;
 import * as frameTick from './frame-tick-core.mjs?v=0.6.127';
