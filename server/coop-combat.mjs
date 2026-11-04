@@ -92,7 +92,8 @@ export function guardInView(guard,player){
 }
 const facePoint=(guard,p)=>Math.atan2(-(p.x-guard.x),-(p.z-guard.z));
 export function createRelayCombat({meta,record={},inventory,players,visiblePlayers=players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false,blastWire=()=>{},blastStructures=()=>{},damagePalm=()=>false,blastPalms=()=>{},breakWindow=()=>false,damageWall=()=>false,windowAvailable=()=>true,waterSurface=()=>0,openEnemyDoor=()=>false,onEnemyAlert=()=>{},civilianTargets=()=>[],damageCivilian=()=>false}){
-  const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);const bursts=structuredClone(record.bursts||[]),projectiles=structuredClone(record.projectiles||[]);let sequence=record.sequence||0;
+  const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);
+  const clearedTowerParapets=new Set();const bursts=structuredClone(record.bursts||[]),projectiles=structuredClone(record.projectiles||[]);let sequence=record.sequence||0;
   const random=createWorldRandom(record.randomState??(((meta.seed||0)^0x7269666c)>>>0)),roll=(a,b)=>a+random()*(b-a);
   // Compute the upper-window target list once; the full archipelago can have
   // thousands of walls. Destruction is checked against live state below.
@@ -744,8 +745,8 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     // al Worker. Es processa cada torre un sol cop, no totes les parets
     // en cada tick de la simulació.
     if(meta.mode==='native')for(const t of targets)
-      if(t.t==='torre'&&t.hp<=0&&!t.parapetsCleared){
-        t.parapetsCleared=true;
+      if(t.t==='torre'&&t.hp<=0&&!clearedTowerParapets.has(t.id)){
+        clearedTowerParapets.add(t.id);
         for(const wall of geometry().walls)
           if(wall.towerParapetOwnerId===t.id){
             wall.open=true;wall.hp=0;
