@@ -6768,7 +6768,18 @@ function killEnemy(u,killingShot=null){
       partner.o.visible=false;
     }else if(partner&&partner.hp>0)enemyVehicleRelease(partner);
   }
-  const i=E.indexOf(u);if(i<0)return;E.splice(i,1);kills++;
+  const i=E.indexOf(u);if(i<0)return;E.splice(i,1);
+  // Destruir el buc no és una baixa independent: comptam només els
+  // soldats que encara hi eren vius. Els riders abatuts abans ja sumen
+  // una baixa al moment de morir i no es poden tornar a comptar.
+  if(u.t==='patrulla_marina'){
+    kills+=(u.marineCrewHp||[
+      window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.MARINE_CREW_HP,
+      window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.MARINE_CREW_HP
+    ]).filter(health=>health>0).length;
+    u.marineCrewHp=[0,0];
+  }else if(u.t==='jeep')kills+=2;
+  else kills++;
   if(u.t==='soldat'||u.t==='general'){window.HUNTER_ENEMY_LOD.setLevel(u.o,'full');u.deadT=0;
     const impulse=u.blastImpulse;
     u.deadSide=rn(-1,1)<0?-1:1;
@@ -14600,7 +14611,15 @@ function updateNativeCoopFrame(dt){
      s.channel.stats.remoteInterpolation=s.interpolation.stats;
    s.interpolation?.receive(state,s.self);
    s.projectedActor=actor;hp=actor.hp;
-   kills=state.combat.targets.reduce((count,e)=>count+(e.hp<=0),0);
+   // Les baixes són soldats, no cascs de vehicles. La patrullera té
+   // dues places; els mariners abatuts abans de perdre el buc compten
+   // individualment i no es dupliquen quan es destrueix.
+   kills=state.combat.targets.reduce((count,e)=>{
+     if(e.t==='patrulla_marina')return count+(e.hp<=0?2:
+       (e.marineCrewHp||[]).filter(health=>health<=0).length);
+     if(e.hp<=0)return count+(e.t==='jeep'?2:1);
+     return count;
+   },0);
  }
  const input=nativeCoopInput(),
        presented=s.prediction?.advance(dt,input,!paused&&!document.hidden&&state.status==='running')||actor;
