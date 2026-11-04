@@ -31,7 +31,8 @@ export function createNativeOptionals({meta,record={},world,geometry,players,veh
  function status(targets){
   const hostile=new Map(targets.map(t=>[t.id,t])),guardIds=camp.guardIds||[],
     guards=guardIds.filter(id=>hostile.get(id)?.t==='soldat'&&hostile.get(id)?.hp>0).length,
-    towers=guardIds.filter(id=>hostile.get(id)?.t==='torre'&&hostile.get(id)?.hp>0).length,
+    towers=guardIds.filter(id=>hostile.get(id)?.t==='torre'&&
+      hostile.get(id)?.hp>0&&targets.some(guard=>guard.towerHostId===id&&guard.hp>0)).length,
     gaps=(camp.fenceIndexes||[]).filter(i=>geometry().walls[i]?.open||
       geometry().walls[i]?.hp<=0);
   return {guards,towers,breach:gaps.length>0,gaps};
