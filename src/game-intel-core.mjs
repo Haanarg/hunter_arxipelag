@@ -2,6 +2,8 @@
 // Opera sobre un estat temporal injectat; els Set i les referències als
 // vehicles es conserven. No genera cap llavor ni modifica la serialització.
 // El caller fa l'autodesament abans de cridar-nos, com al codi original.
+// Estat transitori per pickup: les col·leccions i els objectes són els
+// mateixos que fan servir el minimapa, la generació i els desaments.
 export function resolveMapPickup(state,kind,allSectors=false,pickupSector=null){
   if(kind==='mapa'){
     if(state.hqMapKnown)return 'El HQ enemic ja està localitzat.';
