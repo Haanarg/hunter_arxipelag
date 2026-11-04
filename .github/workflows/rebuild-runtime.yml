@@ -6,6 +6,7 @@ on:
       - 'src/**'
       - 'tools/build-runtime.cjs'
       - 'tests/tower-sentries.mjs'
+      - 'tests/hover-distribution.mjs'
       - '.github/workflows/rebuild-runtime.yml'
   workflow_dispatch:
 permissions:
@@ -22,6 +23,8 @@ jobs:
           node-version: '22'
       - name: Check tower sentry rules
         run: node tests/tower-sentries.mjs
+      - name: Check hovercraft spatial distribution
+        run: node tests/hover-distribution.mjs
       - name: Check modified JavaScript syntax
         run: |
           node --check src/enemy-ai.js
