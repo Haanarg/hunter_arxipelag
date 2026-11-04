@@ -76,6 +76,14 @@
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
 
+**Fase 3 · cinquè tall, estat inicial i catàlegs (v0.6.130; implementació parcial):**
+- [x] **Estat mutable inicial separat:** `src/game-state-core.mjs` crea els conjunts del mapa d'intel·ligència (HQ i localització de vehicles), els comptadors de visibilitat/LOD i els registres de draw calls. Són contenidors nous per motor/partida, amb les mateixes referències clàssiques que utilitzen desaments, render, generació i COOP; els valors que canvien durant la partida no es traslladen encara a un objecte global nou.
+- [x] **Catàlegs inicials extrets:** `src/game-catalog-core.mjs` crea per cada motor els 13 tipus d'objectes, 14 icones SVG i els perfils de 7 enemics mitjançant el balanç existent injectat. Les descripcions, colors, mides, icones, ordre i mutabilitat són idèntics. La fàbrica evita compartir accidentalment definicions entre instàncies del harness.
+- [x] **Paritat de dades inicials:** `tests/game-state-catalog-parity.mjs` comprova la signatura original completa del catàleg (FNV64), 360 perfils de combat amb dades injectades diferents, els defaults de tots els comptadors i l'aïllament d'estat de diverses instàncies. Afegida a `test:optimization`.
+- [ ] **Fase 3 encara oberta:** migrar amb proves tots els consumidors de l'estat mutable d'HQ/COOP i la inicialització restant del motor; partida real, desaments, FPS, GC, Android i HOST/GUEST continuen pendents de la validació conjunta. No s'atribueixen guanys de CPU sense mesurar.
+
+
+
 **Fase 3 · quart tall, cicle d'arrencada (v0.6.127; implementació parcial):**
 - [x] **Estat inicial, progrés i cancel·lació extrets:** `src/start-lifecycle-core.mjs` calcula les opcions i dimensions de la missió amb dependències explícites, gestiona el senyal de cancel·lació i restaura els controls després de generar, cancel·lar o fallar. `game-core.js` conserva l'ordre original de les operacions, la propietat de `generationPromise`, els desaments, el generador i l'activació; no es canvia el RNG ni el comportament de SOLO/COOP.
 - [x] **Prova diferencial aïllada:** `tests/start-lifecycle-parity.mjs` cobreix 1.040 informes de progrés, 112 notificacions de cancel·lació, 720 combinacions de llavors/mides/dificultat, l'ordre dels listeners i la restauració dels controls. Afegida a `test:optimization`. El harness Node també registra el mòdul abans d'executar el runtime.
