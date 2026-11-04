@@ -52,6 +52,11 @@ jobs:
           node --check src/game-intel-core.mjs
           node tests/game-intel-parity.mjs
           node tests/sector-navigation-intel.cjs
+      - name: Check phase 3 player input parity
+        run: |
+          node --check src/player-input-core.mjs
+          node tests/player-input-parity.mjs
+          node tests/vehicle-special.cjs
       - name: Generate runtime bundle
         run: node tools/build-runtime.cjs
       - name: Verify generated bundle
