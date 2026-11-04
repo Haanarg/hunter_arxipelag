@@ -39,4 +39,4 @@ El mecànic continua essent l’única font de reparació i les seves condicions
 
 `npm run test:camp` inclou la revisió independent del nou camp. `npm run test:camp:stress` recorre 1.024 llavors en dues escales. `HUNTER_TEST_BUNDLE=1` prova el paquet real de producció amb les suites que utilitzen el harness.
 
-El harness usa Three.js i geometria real amb renderitzador simulat. La comprovació visual amb WebGL, els controls tàctils i el rendiment en Android físic continuen pendents. Els resultats executats i l’estat del desplegament es registren a [PROGRESS.MD](../PROGRESS.MD).
+El harness usa Three.js i geometria real amb renderitzador simulat. La comprovació visual amb WebGL, els controls tàctils i el rendiment en Android físic continuen pendents. Els resultats executats històrics i l'estat del desplegament d'aquella versió es poden consultar a l'historial Git de `PROGRESS.MD`; les comprovacions vigents són a [to-do.MD](../to-do.MD).
