@@ -477,36 +477,15 @@ const baseCompound=(yield* buildApprovedCompoundSteps(window.HUNTER_CHOOSE_COMPO
 const hqCompound=(yield* buildApprovedCompoundSteps(window.HUNTER_CHOOSE_COMPOUND('hq',R),pb,phase3Options));
 markBuildStage('initialCompounds');
 yield {stage:'Base i quarter general',completed:1,total:1};
-const COMPOUND_RADII=Object.freeze({
-  avancada:84,
-  garatge:95,
-  heliport:102,
-  polvori:98,
-  comunicacions:95,
-  port:90
+const compoundRegistry=window.HUNTER_COMPOUND_PLANNING.createSiteRegistry({
+  layouts:window.HUNTER_RUNTIME_LAYOUTS,layoutRadius,MapConstructor:Map,
+  initialCenters:[
+    {x:pa.x,z:pa.z,r:baseCompound.r,type:'base'},
+    {x:pb.x,z:pb.z,r:hqCompound.r,type:'hq'}
+  ]
 });
-const COMPOUND_GAP=34;
-// Reserva explícita de la base i de l'HQ: encara que dues illes generades se solapin
-// físicament, cap compound podrà entrar dins aquests perímetres.
-const compoundCenters=[
-  {x:pa.x,z:pa.z,r:baseCompound.r,type:'base'},
-  {x:pb.x,z:pb.z,r:hqCompound.r,type:'hq'}
-];
-const typeId=t=>({avancada:'outpost',garatge:'hangar'}[t]||t);
-const compoundRadiusCache=new Map();
-const compoundRadius=type=>{
-  if(!compoundRadiusCache.has(type))compoundRadiusCache.set(type,
-    Math.max(COMPOUND_RADII[type]||58,...window.HUNTER_RUNTIME_LAYOUTS.filter(l=>l.type===typeId(type)).map(layoutRadius)));
-  return compoundRadiusCache.get(type);
-};
-const compoundSiteClear=(type,q,minCenter=0)=>{
-  const r=compoundRadius(type);
-  return compoundCenters.every(c=>{
-    const d=Math.hypot(q.x-c.x,q.z-c.z);
-    return d>Math.max(minCenter,r+c.r+COMPOUND_GAP)
-  })
-};
-const registerCompound=(type,q)=>compoundCenters.push({x:q.x,z:q.z,r:compoundRadius(type),type});
+const compoundCenters=compoundRegistry.centers,COMPOUND_GAP=compoundRegistry.gap,
+  compoundSiteClear=compoundRegistry.isClear,registerCompound=compoundRegistry.register;
 // Reserve the rescue opportunity first. Its existence is a world invariant,
 // while entering it and rescuing the prisoners remain optional for the player.
 const civilOptions={pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites,rocketAssigned:true};
@@ -607,19 +586,11 @@ const compound=function* (type,q){let checkpointUnits=0;
 };
 const usedPortIslands=new Set();
 const candidateIslands=islands.filter(i=>i!==A&&i!==Bi).slice().sort(()=>R()-.5),usedSpecialIslands=new Set();
-const reserveCompound=function* (type,min=180,sector=null){let checkpointUnits=0;for(const i of candidateIslands.filter(i=>sectorMatches(i.x,i.z,sector))){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};if(usedSpecialIslands.has(i))continue;for(let n=0;n<18;n++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const q=(yield* landSteps(i,850,1));if(q&&sectorMatches(q.x,q.z,sector)&&compoundSiteClear(type,q,min)){q.r=i.r;if((yield* compound(type,q))){usedSpecialIslands.add(i);return q}}}}return null};
-const forceReserve=function* (type,min,sector=null){let checkpointUnits=0;
-  let q=(yield* reserveCompound(type,min,sector))||(yield* reserveCompound(type,110,sector));if(q)return q;
-  // Fallback exhaustiu, però mai saltant-se la zona de seguretat.
-  for(const i of candidateIslands.filter(i=>sectorMatches(i.x,i.z,sector))){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
-    if(usedSpecialIslands.has(i))continue;
-    for(let n=0;n<48;n++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
-      const c=(yield* landSteps(i,1800,1));if(!c||!sectorMatches(c.x,c.z,sector)||!compoundSiteClear(type,c,95))continue;
-      c.r=i.r;if((yield* compound(type,c))){usedSpecialIslands.add(i);return c}
-    }
-  }
-  return null
-};
+const {reserveCompound,forceReserve}=
+  window.HUNTER_COMPOUND_PLANNING.createReservationPlanner({
+    candidateIslands,usedSpecialIslands,sectorMatches,landSteps,
+    compoundSiteClear,compound
+  });
 const dockLayout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.id==='civil-dock'),terminalLayout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.id==='ferry-terminal');
 const terminalRecords=[];
 let connection=null;

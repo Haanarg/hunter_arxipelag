@@ -21,3 +21,64 @@ export function planCompound(layout,q,{random,rawHeightAt}){
     routes:layout.routes.map(r=>({width:r.width,points:r.points.map(p=>tr(...p))})),
     buildings:layout.buildings.map(spec=>{const [x,z]=tr(spec.x,spec.z);return {...structuredClone(spec),x,z,angle:angle-(spec.rotationY||0)};})};
 }
+
+// Registre de reserves d'espai, sense escenes ni generador de nombres aleatoris.
+// Manté les referències mutables, el cache de radis i l'ordre d'acceptació.
+export function createSiteRegistry({
+  layouts,layoutRadius,initialCenters,MapConstructor=Map
+}){
+const COMPOUND_RADII=Object.freeze({
+  avancada:84,
+  garatge:95,
+  heliport:102,
+  polvori:98,
+  comunicacions:95,
+  port:90
+});
+const COMPOUND_GAP=34;
+// Reserva explícita de la base i de l'HQ: encara que dues illes generades se solapin
+// físicament, cap compound podrà entrar dins aquests perímetres.
+const compoundCenters=initialCenters;
+const typeId=t=>({avancada:'outpost',garatge:'hangar'}[t]||t);
+const compoundRadiusCache=new MapConstructor();
+const compoundRadius=type=>{
+  if(!compoundRadiusCache.has(type))compoundRadiusCache.set(type,
+    Math.max(COMPOUND_RADII[type]||58,...layouts.filter(l=>l.type===typeId(type)).map(layoutRadius)));
+  return compoundRadiusCache.get(type);
+};
+const compoundSiteClear=(type,q,minCenter=0)=>{
+  const r=compoundRadius(type);
+  return compoundCenters.every(c=>{
+    const d=Math.hypot(q.x-c.x,q.z-c.z);
+    return d>Math.max(minCenter,r+c.r+COMPOUND_GAP)
+  })
+};
+const registerCompound=(type,q)=>compoundCenters.push({x:q.x,z:q.z,r:compoundRadius(type),type});
+
+return {centers:compoundCenters,gap:COMPOUND_GAP,
+  radius:compoundRadius,isClear:compoundSiteClear,register:registerCompound};
+}
+
+// Reserva progressiva d'emplaçaments, sense construir geometria.
+// landSteps i compound són generadors injectats: es preserven
+// literalment l'ordre dels yields, la prioritat d'illes i els intents.
+export function createReservationPlanner({
+  candidateIslands,usedSpecialIslands,sectorMatches,landSteps,
+  compoundSiteClear,compound
+}){
+const reserveCompound=function* (type,min=180,sector=null){let checkpointUnits=0;for(const i of candidateIslands.filter(i=>sectorMatches(i.x,i.z,sector))){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};if(usedSpecialIslands.has(i))continue;for(let n=0;n<18;n++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const q=(yield* landSteps(i,850,1));if(q&&sectorMatches(q.x,q.z,sector)&&compoundSiteClear(type,q,min)){q.r=i.r;if((yield* compound(type,q))){usedSpecialIslands.add(i);return q}}}}return null};
+const forceReserve=function* (type,min,sector=null){let checkpointUnits=0;
+  let q=(yield* reserveCompound(type,min,sector))||(yield* reserveCompound(type,110,sector));if(q)return q;
+  // Fallback exhaustiu, però mai saltant-se la zona de seguretat.
+  for(const i of candidateIslands.filter(i=>sectorMatches(i.x,i.z,sector))){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+    if(usedSpecialIslands.has(i))continue;
+    for(let n=0;n<48;n++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+      const c=(yield* landSteps(i,1800,1));if(!c||!sectorMatches(c.x,c.z,sector)||!compoundSiteClear(type,c,95))continue;
+      c.r=i.r;if((yield* compound(type,c))){usedSpecialIslands.add(i);return c}
+    }
+  }
+  return null
+};
+
+return {reserveCompound,forceReserve};
+}

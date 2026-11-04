@@ -77,6 +77,12 @@
 
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
+**Fase 4 · segon tall, reserves dels emplaçaments (v0.6.137; implementació parcial):**
+- [x] **Registre independent de reserves:** `src/compound-planning.mjs` conserva els radis, la distància entre complexos i la memòria cau de dimensions, sense accedir a l'escena, i preserva la identitat de la llista de centres.
+- [x] **Cerca per illes i sectors extreta:** `reserveCompound` i `forceReserve` es creen al mòdul pur, injectant `landSteps`, `compound` i els conjunts originals. Es preserven els intents, els yields de generació, l'ordre de les illes i la seqüència de l'RNG; els models 3D continuen al runtime.
+- [x] **Paritat diferencial:** `tests/compound-reservation-parity.mjs` compara geometria d'exclusió, memòria cau, acceptació, generadors, consum d'RNG, ocupació d'illes i ordre de progressió per mapes 1/2 i llavors 67/148; CI també executa `tests/compound-planning.mjs`.
+- [ ] **Fase 4 pendent:** extracció de selecció de costa i plataforma, generació visual, proves de seeds real/complets, camp de presoners, ports, heliports, carreteres, COOP i benchmarks A/B. No s'atribueix cap FPS nou.
+ 
 **Fase 4 · primer tall, planificació canònica d'indicis de l'HQ (v0.6.135; implementació parcial):**
 - [x] **Geografia independent de la representació:** `src/world-generation-core.mjs` conté `planHQIntelClues` amb els emplaçaments falsos del HQ, repartiment 3/9 per quadrants i ordre de descart. `src/world-generation.js` només integra el resultat i publica les mateixes dades per minimapa i desaments.
 - [x] **Llavors i RNG preservats:** mateix `mul` injectat per al shuffle local; no consumeix `R()` del món, no toca la cerca de llavors ni les posicions i conserva la prioritat entre complexos i illes.

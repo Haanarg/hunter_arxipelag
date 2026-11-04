@@ -69,6 +69,12 @@ jobs:
           node --check src/world-generation.js
           node tests/hq-clue-plan-parity.mjs
           node tests/sector-navigation-intel.cjs
+      - name: Check phase 4 compound site reservation parity
+        run: |
+          node --check src/compound-planning.mjs
+          node --check src/world-generation.js
+          node tests/compound-planning.mjs
+          node tests/compound-reservation-parity.mjs
       - name: Generate runtime bundle
         run: node tools/build-runtime.cjs
       - name: Verify generated bundle
