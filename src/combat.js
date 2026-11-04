@@ -882,7 +882,10 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
       }
       continue;
     }
+    // Les armes lleugeres no poden fer mal als blindats: no els adquirim
+    // ni com a objectiu de tir ni per a la retícula (també al cooperatiu).
     if(e.destroyed||e.hp<=0||
+      shotClass!=='heavy'&&isArmoredVehicleType(e.t)||
       shotClass==='attackCannon'&&['torre','tanqueta','tanc'].includes(e.t))continue;
     if(e.t==='patrulla_marina'&&shotClass!=='heavy'){
       // Els riders competeixen individualment amb el casc: la mira tria
@@ -916,7 +919,7 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
   // Els vehicles neutrals competeixen amb els soldats, segons l'angle
   // respecte del centre de la mirada i només amb armes lleugeres.
   if(shotClass!=='heavy')for(const v of vehicleCandidatesAt(x,z,range,true)){
-    if(v.destroyed||v===cv)continue;
+    if(v.destroyed||v===cv||isArmoredVehicleType(v.t))continue;
     const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
     consider(v,'vehicle',1,v.x,vy+Math.min(2.3,vehicleRadius(v.t)*.3),v.z);
   }
