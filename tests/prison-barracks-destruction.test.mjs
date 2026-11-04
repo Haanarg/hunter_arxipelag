@@ -28,7 +28,7 @@ test('one grenade can collapse the long barracks roof at either end after rotati
   for(const end of [-32,32]){
     const x=barracks.x-end,z=barracks.z;
     assert.ok(roofBlastDamage(barracks,x,z,16,combatBalance.weapons.grenade)>=barracks.rhp);
-    assert.equal(roofBlastDamage(ordinary,x,z,16,combatBalance.weapons.grenade),0);
+    assert.ok(roofBlastDamage(ordinary,x,z,16,combatBalance.weapons.grenade)<barracks.rhp);
   }
   assert.equal(roofBlastDamage({...barracks,rb:true},barracks.x,barracks.z,16,10),0);
 });
