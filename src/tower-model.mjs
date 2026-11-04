@@ -6,6 +6,30 @@ export const TOWER_GUARD_RANGE=128;
 export const TOWER_GUARD_HALF_VIEW=Math.PI/3; // 120° totals, no visió de 360°
 export const TOWER_GUARD_SCAN_SPEED=.54;
 export const TOWER_GUARD_TURN_SPEED=1.85;
+// Murets laterals: del sòl de la plataforma fins per damunt del pit,
+// deixant visible el cap i lliure tota la façana frontal.
+export const TOWER_SIDE_PARAPET_HEIGHT=2.32;
+export const TOWER_SIDE_PARAPET_Y=9.59; // base local: 8.43 .. 10.75
+export const TOWER_SIDE_PARAPET_X=3.02;
+export const TOWER_SIDE_PARAPET_LENGTH=5.1;
+export function towerSideParapetVolumes(){
+  return [-1,1].map(side=>({
+    x:side*TOWER_SIDE_PARAPET_X,y:TOWER_SIDE_PARAPET_Y,z:0,
+    width:.18,height:TOWER_SIDE_PARAPET_HEIGHT,depth:TOWER_SIDE_PARAPET_LENGTH
+  }));
+}
+// El parapet intercepta els trets ENTRANTS, però els soldats que són
+// darrere poden treure l'arma per sobre de la barana i disparar enfora.
+// El mateix criteri s'aplica al joc individual i al servidor COOP.
+export function towerParapetBlocksShot(w,from){
+  if(!w?.towerParapet)return true;
+  const px=w.towerX,pz=w.towerZ,base=w.towerBaseY;
+  if(!Number.isFinite(px)||!Number.isFinite(pz)||!Number.isFinite(base))return true;
+  return !(Math.abs(from.x-px)<TOWER_SIDE_PARAPET_X-.24&&
+    Math.abs(from.z-pz)<TOWER_SIDE_PARAPET_LENGTH/2-.15&&
+    from.y>base+TOWER_GUARD_FLOOR_Y-.25);
+}
+
 export function towerGuardPosition(tower,seat){
   return {x:tower.x+(seat===0?-TOWER_GUARD_SPACING:TOWER_GUARD_SPACING),
     y:(tower.y??tower.gy??0)+TOWER_GUARD_FLOOR_Y,z:tower.z+.25};
@@ -23,6 +47,7 @@ export function createTowerModel(THREE,{box:bx}){
   const g=new THREE.Group(),leg=0x4b5157,deck=0x626b70,
         cabin=0x7c2f2f,roof=0x343a3e;
   g.userData.towerLegMeshes=[];
+  g.userData.towerParapetMeshes=[];
   // Platafoma de 6,4 m: dos soldats d'escala normal, espatlla contra
   // espatlla, sense solapar-se ni quedar ocults dins una cabina massissa.
   for(const x of[-2.3,2.3])for(const z of[-1.9,1.9])
@@ -30,7 +55,10 @@ export function createTowerModel(THREE,{box:bx}){
   bx(g,6.4,.44,5.5,deck,0,8.04,0,'metal');
   // Baranes baixes, protegint el costat i la part posterior.
   // La façana -Z queda oberta perquè fusell i coet puguin disparar.
-  for(const x of[-3.02,3.02])bx(g,.18,.85,5.1,cabin,x,8.7,0,'paint');
+  for(const wall of towerSideParapetVolumes())
+    g.userData.towerParapetMeshes.push(
+      bx(g,wall.width,wall.height,wall.depth,cabin,
+        wall.x,wall.y,wall.z,'paint'));
   bx(g,6.02,.85,.18,cabin,0,8.7,2.50,'paint');
   for(const x of[-2.97,2.97])for(const z of[-2.42,2.42])
     bx(g,.22,4.05,.22,leg,x,10.18,z,'metal');
