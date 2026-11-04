@@ -25,6 +25,8 @@ assert.equal(model.userData.towerLegMeshes.length,4,'four structural supports re
 assert.equal(towerLegRamDamage(6,5),0,'slow vehicles do not destroy towers');
 assert.ok(towerLegRamDamage(15,2.2)>0,'truck impact damages supports');
 assert.equal(towerLegRamDamage(21,5),10,'fast tank impact knocks down tower');
+assert.equal(towerLegRamDamage(17,5),10,'tank still demolishes at the speed of swept contact');
+assert.equal(towerLegRamDamage(8,5),0,'a slowly maneuvering tank cannot crush the tower');
 assert.equal(model.userData.towerTurret,undefined,'no autonomous gun-mount mesh');
 const p0=towerGuardPosition({x:100,y:6,z:-20},0);
 const p1=towerGuardPosition({x:100,y:6,z:-20},1);
