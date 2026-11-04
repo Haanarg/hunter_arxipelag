@@ -3,7 +3,7 @@ import {
   createTowerModel,towerGuardPosition,towerGuardInView,towerTurnHeading,
   TOWER_GUARD_FLOOR_Y,TOWER_GUARD_SPACING,TOWER_GUARD_RANGE,
   TOWER_GUARD_SCAN_SPEED,TOWER_SIDE_PARAPET_HEIGHT,
-  towerSideParapetVolumes,towerParapetBlocksShot
+  towerParapetVolumes,towerParapetBlocksShot
 } from '../src/tower-model.mjs';
 import {createAimSelector,weaponTargetPriority} from '../src/aiming-core.mjs';
 import {segmentAabbT} from '../src/combat-rules.mjs';
@@ -43,10 +43,17 @@ for(let i=0;i<30;i++)angle=towerTurnHeading(angle,-Math.PI/2,1/60);
 assert.ok(angle<-.9&&angle>-(Math.PI/2),'guards turn gradually, without snapping');
 assert.ok(TOWER_GUARD_SCAN_SPEED>0&&TOWER_GUARD_SCAN_SPEED<1,
   'idle vigilance is a slow continuous sweep');
-// Els parapets visuals i els volums de col·lisió comparteixen dimensions.
-const parapets=towerSideParapetVolumes();
-assert.equal(model.userData.towerParapetMeshes.length,2);
-assert.equal(parapets.length,2);
+// Quatre parapets de la mateixa alçada: laterals, façana i part posterior.
+// La geometria física ha de reproduir el model visual, també en COOP.
+const parapets=towerParapetVolumes();
+assert.equal(model.userData.towerParapetMeshes.length,4);
+assert.equal(parapets.length,4);
+assert.ok(parapets[0].x<0&&parapets[1].x>0);
+assert.ok(parapets[2].z<0&&parapets[3].z>0);
+assert.ok(parapets.every(w=>w.height===parapets[0].height&&w.y===parapets[0].y),
+  'els quatre parapets tenen la mateixa alçada i coronament');
+assert.equal(parts.filter(mesh=>mesh.color===0x7c2f2f).length,4,
+  'el model ja no té plafons baixos separats als costats de la façana');
 assert.ok(TOWER_SIDE_PARAPET_HEIGHT>2.2,'parets altes que cobreixen el cos');
 for(const [i,wall] of parapets.entries()){
   const mesh=model.userData.towerParapetMeshes[i];
@@ -54,6 +61,15 @@ for(const [i,wall] of parapets.entries()){
   assert.equal(mesh.position.y,wall.y);
   assert.ok(wall.y+wall.height/2>10.7,'cobreixen el tors dels soldats');
   assert.ok(wall.y+wall.height/2<11.2,'el cap queda visible');
+}
+for(const wall of parapets){
+  const from={x:wall.x*4,y:10,z:wall.z*4},
+        to={x:0,y:10,z:0},
+        box=[wall.x-wall.width/2,wall.x+wall.width/2,
+          wall.y-wall.height/2,wall.y+wall.height/2,
+          wall.z-wall.depth/2,wall.z+wall.depth/2];
+  assert.ok(segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,...box)!==null,
+    'el parapet de cada costat protegeix dels trets entrants');
 }
 const cover={towerParapet:true,towerX:0,towerZ:0,towerBaseY:0};
 assert.equal(towerParapetBlocksShot(cover,{x:24,y:2,z:0}),true,
