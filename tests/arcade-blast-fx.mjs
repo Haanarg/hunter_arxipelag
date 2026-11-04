@@ -52,6 +52,18 @@ assert.equal(fx.emit(20,1,10,'grenade',33),true,'bounded pool recycles one blast
 assert.equal(scene.children.length,2,'bounded pool avoids unbounded meshes');
 for(let i=0;i<95;i++)fx.update(.075);
 assert.equal(fx.active,0,'all visual effects expire');
+assert(fx.stats.reusedParticles>0,'Repeated blasts reuse per-particle data');
+assert(fx.stats.skippedMatrices>0,'Inactive particles skip repeated matrix writes');
+assert(fx.stats.matrixUpdates>0,'Living particles still receive animated transforms');
+const cacheScene=new THREE.Scene(),cachedFx=createArcadeBlastFX(THREE,cacheScene,{limit:1});
+cachedFx.emit(0,0,0,'c4',41);
+const firstAllocated=cachedFx.stats.allocatedParticles;
+cachedFx.emit(1,0,0,'c4',42);
+assert.equal(cachedFx.stats.allocatedParticles,firstAllocated,
+ 'A repeated C4 burst reuses all particle records, rather than allocating new ones');
+assert(cachedFx.stats.reusedParticles>=firstAllocated);
+cachedFx.dispose();
+assert.strictEqual(arcadeBlastProfile('grenade'),grenade,'Visual profiles are reused');
 fx.emit(0,0,0,'c4');
 fx.clear();
 assert.equal(fx.active,0,'stop COOP may clear stale visual effects');

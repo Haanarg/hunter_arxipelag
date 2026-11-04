@@ -26,6 +26,8 @@ changed.tick=303;
 changed.vehicles[187].x+=5;
 changed.combat.targets[208].hp-=7;
 const compact=diffCoopState(dense,changed);
+assert.equal(compact.p.vehicles.k,'id','Stable ordered vehicles keep the indexed patch format');
+assert.equal(compact.p.combat.p.targets.k,'id','Stable ordered soldiers keep the indexed patch format');
 assert.deepEqual(applyCoopDelta(wire(dense),wire(compact)),changed);
 const reused=applyCoopDelta(dense,compact);
 assert.strictEqual(reused.vehicles[0],dense.vehicles[0],

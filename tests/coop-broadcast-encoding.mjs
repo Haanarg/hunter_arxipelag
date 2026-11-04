@@ -83,4 +83,12 @@ const lengths=[host.raw.length,guest.raw.length];
 latest=clone(third);
 hub.broadcastState();
 assert.deepEqual([host.raw.length,guest.raw.length],lengths);
+// Una sala sense clients no ha de generar snapshots complets a cada alarma.
+const emptyHub=new CoopRoomHub(ctx,{});
+await emptyHub.loading;
+let emptySnapshots=0;
+emptyHub.games=()=>[];
+emptyHub.mission={meta:{mode:'native'},snapshot:()=>{emptySnapshots++;return latest;}};
+emptyHub.broadcastState();
+assert.equal(emptySnapshots,0,'No clients: no unnecessary snapshot for broadcast');
 console.log('coop broadcast encoding: shared JSON, same-tick commands, per-socket failures and revision recovery passed');
