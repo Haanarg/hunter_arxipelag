@@ -556,8 +556,7 @@ function updateNativeCoopFrame(dt){
        // L'estat lògic e.x/e.z continua essent autoritatiu.
        if(!s.interpolation?.enemy?.(row.id)&&!e.nativeBoardedVehicle){
          e.o.position.set(row.x,row.y,row.z);
-         if(e.t==='torre'&&e.o.userData.towerTurret)e.o.userData.towerTurret.rotation.y=e.hd;
-       else e.o.rotation.y=e.hd;
+         if(e.t!=='torre')e.o.rotation.y=e.hd;
        }
        s.appliedEnemyRows.set(row.id,row);
      }else e.nativeMoving=false;
@@ -580,8 +579,7 @@ function updateNativeCoopFrame(dt){
    if(pose){
      const beforeX=e.o.position.x,beforeZ=e.o.position.z;
      e.o.position.set(pose.x,pose.y,pose.z);
-     if(e.t==='torre'&&e.o.userData.towerTurret)e.o.userData.towerTurret.rotation.y=pose.hd;
-     else e.o.rotation.y=pose.hd;
+     if(e.t!=='torre')e.o.rotation.y=pose.hd;
      // Les cames segueixen el moviment visible, no si la darrera
      // actualització de xarxa ha canviat formalment el registre.
      walking=Math.hypot(pose.x-beforeX,pose.z-beforeZ)>Math.max(.001,dt*.12);
