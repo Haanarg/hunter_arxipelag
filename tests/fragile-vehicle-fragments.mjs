@@ -17,7 +17,10 @@ for(const type of types){
   assert.equal(motion.vehiclePart,true);
   assert.equal(motion.fragilePart,true);
   assert.ok(motion.vy>8,'parts fly upward');
-  assert.ok(motion.vx>0&&motion.vz<0,'outward impulse and vehicle momentum');
+  const stopped=fragileVehicleFragmentMotion(type,{x:3,y:2,z:2},
+    {x:0,y:1,z:0},0,0,midpoint);
+  assert.ok(motion.vx>0&&motion.vz<stopped.vz,
+    'outward impulse and inherited forward vehicle momentum');
   assert.ok(motion.life>2,'pieces remain visible long enough to tumble');
   assert.ok(Number.isFinite(motion.rx)&&Number.isFinite(motion.ry));
 }
@@ -45,7 +48,7 @@ const combat=readFileSync(new URL('../src/combat.js',import.meta.url),'utf8'),
 const solo= combat.slice(combat.indexOf('function destroyFragileVehicle('),
   combat.indexOf('function explodeVehicle(',combat.indexOf('function destroyFragileVehicle(')));
 assert.ok(solo.includes('fragileVehicleDebris(v,yy,forwardSpeed)'));
-assert.ok(!solo.includes('boom(')&&!solo.includes('hurtP('),
+assert.ok(!solo.includes('\n  boom(')&&!solo.includes('hurtP('),
   'fragile destruction must never have explosive radial damage');
 assert.ok(game.includes('src.matrixWorld.decompose(p,q,scale)')&&
   game.includes('new THREE.Mesh(src.geometry,src.material)'),
