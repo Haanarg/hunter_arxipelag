@@ -16,7 +16,7 @@ assert.match(visual,/door\.add\(handle\)/);
      const d=b.door,box=d.m.geometry.parameters,thin=side<2?box.depth:box.width,
        physical=side<2?d.z1-d.z0:d.x1-d.x0,other=side<2?d.x1-d.x0:d.z1-d.z0,
        group=d.doorAssembly,lintel=group.find(w=>w.playerBlock===false);
-     result.push({side,thin,physical,other,center:d.m.position.x===d.cx-b.x&&d.m.position.z===d.cz-b.z,
+     result.push({side,thin,physical,other,center:Math.abs(d.m.position.x-(d.cx-b.x))<1e-6&&Math.abs(d.m.position.z-(d.cz-b.z))<1e-6,
        handles:d.m.children.filter(m=>m.name==='hunter-door-handle').length,
        lintelFull:!!lintel&&(side<2?lintel.z1-lintel.z0:lintel.x1-lintel.x0)>.7});
    }

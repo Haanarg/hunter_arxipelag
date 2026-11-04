@@ -66,6 +66,7 @@ export function createArcadeBlastFX(T,scene,{quality='desktop',limit=5}={}){
   const up=new T.Vector3(0,1,0),normal=new T.Vector3(0,0,1),
     vec=new T.Vector3(),dummy=new T.Object3D(),particleColor=new T.Color();
   const groups=[],max=Math.max(1,Math.min(12,Math.floor(limit)));
+  let sharedFlashLight=null;
   const maxCount={};
   for(const key of ['fire','smoke','dust','sparks','shards']){
     maxCount[key]=Math.max(...['grenade','projectile','c4'].map(kind=>arcadeBlastProfile(kind,quality)[key]));
@@ -106,15 +107,17 @@ export function createArcadeBlastFX(T,scene,{quality='desktop',limit=5}={}){
     ring2.rotation.x=-Math.PI/2;ring2.position.y=.11;ring2.renderOrder=9;root.add(ring2);
     const flash=new T.Mesh(geometry.shell,fadeMaterial(0xfff7c1,true));
     flash.renderOrder=10;root.add(flash);
-    // Màxim cinc efectes en escena; els flaixos no projecten ombres.
-    const light=new T.PointLight(0xffa64c,0,22);
-    root.add(light);
+    // Només una llum de flaix compartida entre tots els esclats: les
+    // altres flamarades són emissores visuals, sense cinc llums GPU.
+    const light=sharedFlashLight||(sharedFlashLight=new T.PointLight(0xffa64c,0,22));
+    if(!light.parent)root.add(light);
     const g={root,batches,shell,ring,ring2,flash,light,age:100,profile:null,direction:null};
     groups.push(g);return g;
   }
   function prepare(g,at,profile,seed,direction=null){
     const rand=randomGenerator(seed),scale=profile.scale;
     g.root.position.set(at.x,at.y,at.z);
+    if(g.light.parent!==g.root)g.root.add(g.light);
     g.root.visible=true;g.age=0;g.profile=profile;
     // El projectil entra a la paret/vehicle: la flamarada s'obre
     // cap al costat des d'on venia, per no quedar amagada dins el mur.
@@ -282,11 +285,13 @@ export function createArcadeBlastFX(T,scene,{quality='desktop',limit=5}={}){
       g.ring2.visible=t>delay&&q2<1;
       g.ring2.scale.setScalar((.24+q2*4.1)*p.scale);
       g.ring2.material.opacity=.42*(1-q2);
-      g.light.position.set(0,1.3*p.scale,0);
-      g.light.intensity=t<.4?Math.sin(t/.4*Math.PI)*5*p.scale:0;
+      if(g.light.parent===g.root){
+        g.light.position.set(0,1.3*p.scale,0);
+        g.light.intensity=t<.4?Math.sin(t/.4*Math.PI)*5*p.scale:0;
+      }
     }
   }
-  function clear(){for(const g of groups)g.root.visible=false;}
+  function clear(){for(const g of groups)g.root.visible=false;if(sharedFlashLight)sharedFlashLight.intensity=0;}
   function dispose(){
     for(const g of groups){
       scene.remove(g.root);

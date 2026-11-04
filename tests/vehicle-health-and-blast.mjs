@@ -16,6 +16,8 @@ assert.equal(arcadeBlastProfile('projectile').scale,1.5);
 const scene=new THREE.Scene(),fx=createArcadeBlastFX(THREE,scene);
 for(let i=0;i<8;i++)assert.equal(fx.emit(i*2,0,0,'grenade',i),true);
 assert.equal(scene.children.length,5,'Màxim de cinc grups FX compartits');
+const lights=scene.children.flatMap(group=>group.children.filter(o=>o.isPointLight));
+assert.equal(lights.length,1,'Una sola llum dinàmica compartida per tots els esclats');
 for(let i=0;i<22;i++)fx.update(.075);
 const active=scene.children.filter(g=>g.visible);
 assert.ok(active.length>0);
