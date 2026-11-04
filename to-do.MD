@@ -76,6 +76,11 @@
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
 
+**Fase 3 · sisè tall, intel·ligència de mapes i estat visible (v0.6.132; implementació parcial):**
+- [x] **Regles d'HQ i localització de vehicles extretes:** `src/game-intel-core.mjs` gestiona l'adquisició dels mapes, els quadrants, els llocs descartats, les icones de vehicles i les dades de minimapa/HUD. Conserva els mateixos Set i referències a vehicles, l'ordre d'autodesament i les variables compartides amb generació i desaments; no es modifica l'RNG ni el format de desament.
+- [x] **Proves diferencials i integració:** `tests/game-intel-parity.mjs` compara amb el codi anterior els mapes SOLO en ambdues escales, pickups repetits, localització de vehicles i dades de minimapa; `tests/sector-navigation-intel.cjs` adaptada al nou mòdul. Incloses en la validació de la regeneració i l'optimització.
+- [ ] **Fase 3 encara oberta:** extracció incremental de més estat i sistemes d'inicialització; proves de partida real, desaments, COOP HOST/GUEST, Android, GPU i rendiment en la bateria conjunta acordada. No s'afirma cap guany d'FPS sense mesura.
+
 **Fase 3 · cinquè tall, estat inicial i catàlegs (v0.6.130; implementació parcial):**
 - [x] **Estat mutable inicial separat:** `src/game-state-core.mjs` crea els conjunts del mapa d'intel·ligència (HQ i localització de vehicles), els comptadors de visibilitat/LOD i els registres de draw calls. Són contenidors nous per motor/partida, amb les mateixes referències clàssiques que utilitzen desaments, render, generació i COOP; els valors que canvien durant la partida no es traslladen encara a un objecte global nou.
 - [x] **Catàlegs inicials extrets:** `src/game-catalog-core.mjs` crea per cada motor els 13 tipus d'objectes, 14 icones SVG i els perfils de 7 enemics mitjançant el balanç existent injectat. Les descripcions, colors, mides, icones, ordre i mutabilitat són idèntics. La fàbrica evita compartir accidentalment definicions entre instàncies del harness.

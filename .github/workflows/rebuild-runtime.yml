@@ -46,6 +46,12 @@ jobs:
         run: node tools/sync-version.cjs --check
       - name: Check separate touch horn and bicycle bell controls
         run: node tests/touch-vehicle-horn.mjs
+      - name: Check phase 3 HQ intel parity and sector maps
+        run: |
+          node --check src/game-core.js
+          node --check src/game-intel-core.mjs
+          node tests/game-intel-parity.mjs
+          node tests/sector-navigation-intel.cjs
       - name: Generate runtime bundle
         run: node tools/build-runtime.cjs
       - name: Verify generated bundle

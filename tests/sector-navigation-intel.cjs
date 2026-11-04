@@ -3,11 +3,13 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const core=fs.readFileSync(path.join(__dirname,'../src/game-core.js'),'utf8');
 const world=fs.readFileSync(path.join(__dirname,'../src/world-generation.js'),'utf8');
 const marine=fs.readFileSync(path.join(__dirname,'../src/marine-patrol.js'),'utf8');
-const pickup=core.slice(core.indexOf('function revealMapPickup('),core.indexOf('\nfunction useInvItem('));
+const pickup=core.slice(core.indexOf('function revealMapPickup('),core.indexOf('\nfunction executePlayerUseItem('));
 assert(pickup.startsWith('function revealMapPickup('),'HQ map pickup exists');
-function progression(scale){
+function progression(scale,gameIntel){
   const setup=[
-    'const MAP_SCALE='+scale+';',
+    'const window={HUNTER_GAME_INTEL:gameIntel};',
+    "const requestOperationAutosave=()=>{};",
+    'const MAP_SCALE='+scale+';,
     'const mapSector=(x,z)=>(x>=0?1:0)+(z>=0?2:0);',
     'const sectorMatches=(x,z,k)=>k==null||mapSector(x,z)===k;',
     'let hqMapKnown=false,hqIntelStage=0,intelMarks=[];',
@@ -41,9 +43,9 @@ function progression(scale){
     "P.x=-100;revealMapPickup('mapa_heli');assert.equal(intelMarks.length,"+(scale===2?3:4)+");",
     "revealMapPickup('mapa_heli',true);assert.equal(intelMarks.length,4);"
   ];
-  new Function('assert',[...setup,...test,...vehicles].join('\n'))(assert);
+  new Function('assert','gameIntel',[...setup,...test,...vehicles].join('\n'))(assert,gameIntel);
 }
-progression(1);progression(2);
+
 const block=world.slice(world.indexOf('// Small maps keep three HQ candidates.'),
   world.indexOf('\nconst rb=B.slice(6);',world.indexOf('// Small maps keep three HQ candidates.')));
 assert.match(block,/hqIntelEliminationOrder/);
@@ -81,4 +83,7 @@ for(const seed of [1,2,3,45678,1234567,4294967295]){
 assert.match(world,/hqIntelSectors\.clear\(\)/);
 assert.match(core,/mapSector\(it\.x,it\.z\)/);
 assert.match(marine,/MAP_SCALE===2\?2:1/);
-console.log('OK: 9/6/3/1 HQ intel, unique quadrants, true-HQ safety, sector maps, candidate geography');
+import('../src/game-intel-core.mjs').then(gameIntel=>{
+  progression(1,gameIntel);progression(2,gameIntel);
+  console.log('OK: 9/6/3/1 HQ intel, unique quadrants, true-HQ safety, sector maps, candidate geography');
+}).catch(error=>{console.error(error);process.exitCode=1});
