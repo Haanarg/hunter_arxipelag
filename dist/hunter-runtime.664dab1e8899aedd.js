@@ -11521,6 +11521,16 @@ function* buildApprovedCompoundSteps(layout,q,{pad,path,pier,prop,vehicles,rocke
     const [x,z]=tr(spec.x,spec.z),firstWall=Wl.length,firstStair=stairs.length,buildingAngle=angle-(spec.rotationY||0),bc=Math.round(Math.cos(buildingAngle)),bs=Math.round(Math.sin(buildingAngle)),buildingVector=(x,z)=>[x*bc-z*bs,x*bs+z*bc];
     const b=spec.bunker?mkEnemyBunker(x,z):mkB(x,z,spec.w,spec.d,spec.h*(spec.floors||1),spec.workshop?0x90968d:spec.wood?0x96714b:spec.replacement?0xa9bdb0:spec.hangar?0xbab99d:0xc9b98d,spec.workshop?0x54635c:layout.friendly?0x2c5fc0:spec.hangar?0xb7c1b4:0x79584e,{floors:spec.floors,wood:spec.wood,weakWalls:!!spec.weakWalls,civilianHut:!!layout.civilian&&!!spec.wood,hangar:!!spec.hangar,workshop:!!spec.workshop,kind:spec.workshop?'workshop':spec.hangar?'hangar':layout.id==='hangar'?'garage':layout.id,doorSide:0,doorWidth:spec.hangar?30:window.HUNTER_BUILDING_SHELL.STANDARD_BUILDING_DOOR.width,doorHeight:spec.hangar?11:window.HUNTER_BUILDING_SHELL.STANDARD_BUILDING_DOOR.height,openDoor:!!spec.hangar,noPartitions:true,solidWalls:!!spec.workshop||!!spec.warehouse&&!spec.wood});
     decorateRuntimeBuilding(b,spec);b.civilian=!!layout.civilian;
+    // Les parets del barracó de presoners són fusta feble, igual que
+    // les cabanes de pescadors, encara que l'edifici sigui militar.
+    // El porxo i els muntants continuen units a la paret de suport.
+    if(spec.weakWalls){
+      b.weakWood=true;
+      for(const wall of Wl.slice(firstWall)){
+        if(wall.owner!==b||!Number.isFinite(wall.hp))continue;
+        wall.weakWood=true;wall.hp=Math.min(4,wall.hp);
+      }
+    }
     if(spec.workshop){
       b.workshop=true;
       b.workshopParking={x,z,frontZ:z+spec.d/2,width:spec.w,depth:spec.d};
