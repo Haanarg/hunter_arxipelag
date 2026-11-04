@@ -14579,7 +14579,7 @@ function updateNativeCoopFrame(dt){
  const s=nativeCoopSession;if(!s)return;
  s.channel?.noteFrame?.(!paused&&!document.hidden);
  updateStrafeControls();joystick.setVehicleMode(cv?.t||null);
- joystick.setRunEnabled(!paused&&!over&&hp>0&&!scopeActive&&!playerFall&&!s.gameOver&&!s.preparing);
+ joystick.setRunEnabled(!cv&&!paused&&!over&&hp>0&&!scopeActive&&!playerFall&&!s.gameOver&&!s.preparing);
  if(s.preparing||!s.state){updateVehicleSpecialAction();updatePlayerHUD(.13);return;}
  const state=s.state,projecting=s.projectedState!==state,
        actor=projecting?state.players.find(p=>p.id===s.self):s.projectedActor;
