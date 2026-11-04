@@ -41,4 +41,10 @@ const sectors=makePicker([{t:'hover',x:-100,z:0},{t:'hover',x:100,z:0}],[
 ],{large:true,sectorFilter:(x,z,sector)=>sector==null||(sector===0?x<0:x>0)});
 assert.equal(sectors(0)?.x,-420,'la quota de l’oest queda a l’oest');
 assert.equal(sectors(1)?.x,420,'la quota de l’est queda a l’est');
+// Una línia de quadrant no autoritza a fer aparèixer dues naus juntes.
+const border=makePicker([{t:'hover',x:-10,z:0}],[
+  {x:12,z:0,place:{x:12,z:0,hd:0}},
+  {x:230,z:0,place:{x:230,z:0,hd:0}}
+],{large:true,sectorFilter:(x,z,sector)=>sector===1?x>0:x<0});
+assert.equal(border(1)?.x,230,'la separació és global, també entre quadrants');
 console.log('Hovercrafts: separació entre illes, absència de parelles i quota sectorial OK');
