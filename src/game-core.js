@@ -870,6 +870,56 @@ function vehicleDebris(v,baseY){
   for(let i=0;i<(heavy?7:5);i++)puff(v.x+rn(-2,2),baseY+rn(.5,2.2),v.z+rn(-2,2),i%2?0x3b3b38:0x787064,rn(1.6,3.2));
   while(DB.length>240){const d=DB.shift();if(d?.m)world.remove(d.m)}
 }
+// Destrucció no explosiva: clones temporals de LES PECES DEL VEHICLE,
+// mai boom(). Perfil propi per a bicicleta, barca de rems i windsurf.
+// Les geometries/materials són compartides i no es creen textures noves.
+function fragileVehicleDebris(v,baseY,forwardSpeed=0){
+  if(!v?.o)return;
+  const profile=window.HUNTER_DEBRIS_CORE.FRAGILE_VEHICLE_PROFILES[v.t];
+  if(!profile)return;
+  v.o.updateMatrixWorld(true);
+  const meshes=[];
+  v.o.traverse(o=>{
+    if(o.isMesh&&!o.isInstancedMesh&&o.geometry&&!o.userData.waterMask)
+      meshes.push(o);
+  });
+  const descendantOf=(mesh,node)=>{
+    for(let parent=mesh;parent;parent=parent.parent)
+      if(parent===node)return true;
+    return false;
+  };
+  const importance=mesh=>{
+    if(v.t==='bici'){
+      if((v.o.userData.wheels||[]).some(node=>descendantOf(mesh,node)))return 100;
+      return v.o.userData.crank&&descendantOf(mesh,v.o.userData.crank)?65:30;
+    }
+    if(v.t==='barca_rems')
+      return (v.o.userData.oars||[]).some(node=>descendantOf(mesh,node))?100:55;
+    if(mesh.name==='windsurf-sail')return 120;
+    if(mesh.name==='windsurf-sail-panels')return 115;
+    return v.o.userData.windsurfRig&&descendantOf(mesh,v.o.userData.windsurfRig)?90:60;
+  };
+  const chosen=meshes.sort((a,b)=>importance(b)-importance(a)).slice(0,profile.maxPieces),
+        center=new THREE.Vector3(v.x,baseY+1,v.z),p=new THREE.Vector3(),
+        q=new THREE.Quaternion(),scale=new THREE.Vector3();
+  for(const src of chosen){
+    src.matrixWorld.decompose(p,q,scale);
+    const piece=new THREE.Mesh(src.geometry,src.material);
+    piece.position.copy(p);piece.quaternion.copy(q);piece.scale.copy(scale);
+    piece.castShadow=true;piece.receiveShadow=true;world.add(piece);
+    const movement=window.HUNTER_DEBRIS_CORE.fragileVehicleFragmentMotion(
+      v.t,p,center,v.hd,forwardSpeed,rn);
+    DB.push({...movement,m:piece,s0:piece.scale.clone()});
+  }
+  // Estelles i engrunes de material, però sense fum, flama ni dany en àrea.
+  debris(v.x,baseY+.8,v.z,profile.color,profile.crumbs,.25,8);
+  if(v.t!=='bici'&&hAt(v.x,v.z)<0){
+    const surface=wy(v.x,v.z,elapsed);
+    for(let i=0;i<3;i++)puff(v.x+rn(-1,1),surface+rn(0,.3),
+      v.z+rn(-1,1),i%2?0x9ccbd5:0xe0edf0,rn(.55,1.1));
+  }
+  while(DB.length>220){const d=DB.shift();if(d?.m)world.remove(d.m)}
+}
 function wallBreak(w){if(w.porchSupports)collapsePorch(w.owner);
 for(const trim of w.timberTrim||[])trim.visible=false;
 const h=w.y1-w.y0-1,parts=w.parts&&w.parts.length?w.parts:[w.m],base=parts[0],col=w.barbed?0x4a4f52:(base?.material?.color?.getHex?.()??0x8d9389),cx=(w.x0+w.x1)/2,cz=(w.z0+w.z1)/2;
@@ -915,7 +965,8 @@ if(b.hangar&&b.roof?.userData?.hangarRoof){
   for(let i=0;i<8;i++)puff(b.x+rn(-b.w/2,b.w/2),y,b.z+rn(-b.d/2,b.d/2),0xc9b48a,4.5)
 }
 snd('boom',.4,{x:b.x,y,z:b.z},b)}
-function updDeb(dt){for(let i=DB.length-1;i>=0;i--){const d=DB[i],m=d.m,k=window.HUNTER_DEBRIS_CORE.stepDebrisParticle(d,m.position,m.rotation,dt,hAt);m.scale.set(d.s0.x*k,d.s0.y*k,d.s0.z*k);if(d.life<=0){world.remove(m);DB.splice(i,1)}}
+function fragileDebrisWaterHeight(x,z){return wy(x,z,elapsed)}
+function updDeb(dt){for(let i=DB.length-1;i>=0;i--){const d=DB[i],m=d.m,k=window.HUNTER_DEBRIS_CORE.stepDebrisParticle(d,m.position,m.rotation,dt,hAt,fragileDebrisWaterHeight);m.scale.set(d.s0.x*k,d.s0.y*k,d.s0.z*k);if(d.life<=0){world.remove(m);DB.splice(i,1)}}
 for(let i=WA.length-1;i>=0;i--){const a=WA[i];a.t-=dt;const s=Math.max(0,a.t/.5);a.m.scale.y=s;a.m.position.y=a.h/2*s;if(a.t<=0){world.remove(a.m);WA.splice(i,1)}}
 for(let i=HR.length-1;i>=0;i--){const a=HR[i],m=a.m;a.t+=dt;const p=Math.min(1,a.t/a.dur),e=p*p*(3-2*p);m.rotation.z=a.baseRz+a.dir*e*.62;m.rotation.x=a.baseRx+Math.sin(p*Math.PI)*.08;m.position.y=a.baseY-e*8.5;if(p>.35&&Math.random()<.35)puff(a.x+rn(-a.w/2,a.w/2),Math.max(.4,m.parent.position.y+m.position.y+rn(0,3)),a.z+rn(-a.d/2,a.d/2),0x7c7772,2.4);if(p>=1){m.visible=false;if(m.parent)m.parent.remove(m);HR.splice(i,1)}}
 updFA(dt)}
