@@ -1,5 +1,5 @@
 import {turretSpecs,stepVehicleTurret,vehicleGunPose} from '../src/vehicle-turret-core.mjs';
-import {towerGuardInView,towerTurnHeading,TOWER_GUARD_SCAN_SPEED,TOWER_GUARD_RANGE} from '../src/tower-model.mjs';
+import {towerGuardInView,towerTurnHeading,towerParapetBlocksShot,TOWER_GUARD_SCAN_SPEED,TOWER_GUARD_RANGE} from '../src/tower-model.mjs';
 import {SOLDIER,RADII,VEHICLE_SIGNAL_SOUNDS,soldierAccuracyProfile} from '../src/enemy-perception-core.mjs';
 import {senseNativeSoldier,hearNativeSoldier} from './native-soldier-perception.mjs';
 import {vehicleDynamics} from '../src/vehicle-dynamics-core.mjs';
@@ -63,7 +63,7 @@ export function traceArena(from,to,geometry,world,{ignoreBarbed=false,collectWin
   // Descart ràpid de geometria fora del tram. Imprescindible per la
   // cadència alta de la tanqueta, sense perdre cap intersecció exacta.
   const minX=Math.min(from.x,to.x),maxX=Math.max(from.x,to.x),minY=Math.min(from.y,to.y),maxY=Math.max(from.y,to.y),minZ=Math.min(from.z,to.z),maxZ=Math.max(from.z,to.z);
-  for(const index of wallCandidates??geometry.walls.keys()){const w=geometry.walls[index];if(!w.open&&!(ignoreBarbed&&w.barbed)&&w.x1>=minX&&w.x0<=maxX&&w.z1>=minZ&&w.z0<=maxZ&&w.y1>=minY&&w.y0<=maxY){
+  for(const index of wallCandidates??geometry.walls.keys()){const w=geometry.walls[index];if(!w.open&&!(ignoreBarbed&&w.barbed)&&towerParapetBlocksShot(w,from)&&w.x1>=minX&&w.x0<=maxX&&w.z1>=minZ&&w.z0<=maxZ&&w.y1>=minY&&w.y0<=maxY){
     const crossing=windowCrossing(from,to,w);
     if(crossing){if(collectWindows)windowCrossings.push({wallIndex:index,...crossing});continue;}
     const t=wallShotHit(from,to,w);if(t!==null&&t<=fraction){fraction=t;hit=true;wallIndex=index;}
@@ -525,7 +525,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         }
       }
       aim.consider(t,'enemy',weaponTargetPriority({...t,t:t.t||'soldat'},heavy?'heavy':weapon),
-        point?.x??t.x,point?.y??(t.y+(t.t==='torre'?9.4:t.towerGuard?2.3:1.5)),point?.z??t.z);
+        point?.x??t.x,point?.y??(t.y+(t.t==='torre'?9.4:t.towerGuard?2.9:1.5)),point?.z??t.z);
     }
     for(const v of vehicles.live())if(v!==vehicle&&!v.destroyed&&
       (heavy?!v.seats.some(Boolean):true))
