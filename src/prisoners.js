@@ -196,8 +196,8 @@ window.HUNTER_PRISONERS=Object.freeze({
    }
    return target;
   }
-  // Physical campaign goal: all six guards and four towers must be
-  // neutralised AND at least one segment of the INNER enclosure destroyed.
+  // Cal neutralitzar els defensors reals de les torres, no enderrocar
+  // les estructures buides, i obrir una bretxa a la tanca interior.
   // The original E-on-a-specific-gate shortcut is intentionally removed.
   function rescueStatus(ctx){
    const troops=new Set([...(camp?.soldiers||[]),...(camp?.towers||[]),
@@ -205,7 +205,7 @@ window.HUNTER_PRISONERS=Object.freeze({
    let guards=0,towers=0;
    for(const u of troops){
     if(!alive(u))continue;
-    if(u.t==='torre')towers++;
+    if(u.t==='torre'&&(u.towerGuards||[]).some(guard=>alive(guard)))towers++;
     else if(u.t==='soldat')guards++;
    }
    const gaps=(camp?.prisonFenceSegments||[])
