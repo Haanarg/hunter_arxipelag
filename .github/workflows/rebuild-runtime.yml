@@ -80,6 +80,11 @@ jobs:
           node --check src/world-generation.js
           node tests/compound-planning.mjs
           node tests/compound-reservation-parity.mjs
+      - name: Check phase 4 port survey parity
+        run: |
+          node --check src/compound-planning.mjs
+          node --check src/world-generation.js
+          node tests/port-survey-parity.mjs
       - name: Generate runtime bundle
         run: node tools/build-runtime.cjs
       - name: Verify generated bundle

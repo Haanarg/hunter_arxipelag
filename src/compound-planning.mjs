@@ -82,3 +82,40 @@ const forceReserve=function* (type,min,sector=null){let checkpointUnits=0;
 
 return {reserveCompound,forceReserve};
 }
+
+// Valida només el sòl i els carrils nàutics; cap geometria, RNG ni desament.
+// S'injecta la mida de mapa activa i es mantenen les pauses originals.
+export function createPortSiteSurvey({rawHAt,halfSize,compoundTransform}){
+const H=halfSize;
+const portSiteFeasible=function* (q){let checkpointUnits=0;
+  for(let turn=0;turn<4;turn++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+    const angle=turn*Math.PI/2,point=compoundTransform(q,angle);
+    for(let d=16;d<Math.max(180,(q.r||180)*1.4);d+=8){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+      const [x,z]=point(0,d);if(rawHAt(x,z)>.3)continue;
+      for(const offset of[-8,0,8]){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+        const [cx,cz]=point(0,d+offset),site={x:cx,z:cz,h:.86,angle,r:q.r},
+              tr=compoundTransform(site,angle);
+        if(Math.abs(cx)>H-100||Math.abs(cz)>H-100)continue;
+        let valid=true;
+        for(const lx of[-52,-26,0,26,52]){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+          for(const lz of[-60,-35,-10]){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+            const p=tr(lx,lz);
+            if(rawHAt(...p)<.1){valid=false;break}
+          }
+          if(!valid)break
+        }
+        if(!valid)continue;
+        coastTest:for(const [lx,lz] of[[-13,31],[15,26],[35,34]])
+          {if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};for(const dx of[-7,0,7]){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};for(let dz=-16;dz<=52;dz+=4){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+            const p=tr(lx+dx,lz+dz);
+            if(rawHAt(...p)>-2.2){valid=false;break coastTest}
+          }}}
+        if(valid)return true;
+      }
+      if(rawHAt(x,z)<-15)break;
+    }
+  }
+  return false;
+};
+return portSiteFeasible;
+}

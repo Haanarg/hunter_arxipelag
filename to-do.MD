@@ -80,6 +80,12 @@
 
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
+**Fase 4 · tercer tall, comprovació costanera dels ports (v0.6.140; implementació parcial):**
+- [x] **Mostreig del terreny separat:** `src/compound-planning.mjs` conté `createPortSiteSurvey`, el filtre que comprova els marges, la plataforma i els carrils marítims. `world-generation.js` conserva la construcció i els recursos 3D.
+- [x] **Ordre determinista intacte:** es conserven les mateixes crides a `rawHAt`, transformacions, `yield`, refusos i retorns; no s'afegeixen consums de `R()`.
+- [x] **Paritat diferencial:** `tests/port-survey-parity.mjs` contrasta el codi anterior sobre les dues escales, llavors 67/148, diverses costes i la cancel·lació de generadors. Incorporat a `test:optimization` i CI.
+- [ ] **Resta de fase 4:** encaix de layouts costaners, plataformes, planificació de camins i separació de visualització. Proves reals, COOP, Android i FPS pendents de la bateria conjunta.
+
 **Fase 4 · segon tall, reserves dels emplaçaments (v0.6.137; implementació parcial):**
 - [x] **Registre independent de reserves:** `src/compound-planning.mjs` conserva els radis, la distància entre complexos i la memòria cau de dimensions, sense accedir a l'escena, i preserva la identitat de la llista de centres.
 - [x] **Cerca per illes i sectors extreta:** `reserveCompound` i `forceReserve` es creen al mòdul pur, injectant `landSteps`, `compound` i els conjunts originals. Es preserven els intents, els yields de generació, l'ordre de les illes i la seqüència de l'RNG; els models 3D continuen al runtime.
