@@ -3785,7 +3785,7 @@ function proxy(T,type,level){
     for(const x of [-2.3,2.3])for(const z of (mid?[-1.9,1.9]:[0]))
       box(x,3.98,z,.44,7.95,.44,metal);
     box(0,8.04,0,6.4,.44,5.5,metal);
-    for(const x of [-3.02,3.02])box(x,8.7,0,.18,.85,5.1,0x812f35);
+    for(const x of [-3.02,3.02])box(x,9.59,0,.18,2.32,5.1,0x812f35);
     box(0,8.7,2.5,6,.85,.18,0x812f35);
     box(0,12.32,0,6.95,.32,6.05,0x373c40);
   }else if(type==='patrulla_marina'){
