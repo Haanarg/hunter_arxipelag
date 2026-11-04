@@ -9496,10 +9496,15 @@ function towerGuardTick(u,dt){
  u.senseT=(u.senseT??0)-dt;
  if(u.senseT<=0){
    u.senseT=.10;
-   // No veuen a través de relleu, parets o una disfressa no descoberta.
-   u.canSee=!cheats.invisible&&!over&&(!disg||!!cv||u.alert>0||d<20)&&
-     facing&&weaponAimClear(u.x,eyeY,u.z,
+   // Només un dels dos soldats necessita veure l'enemic inicialment:
+   // l'altre rep l'avís i el segueix si té línia de tir real.
+   const allowed=!cheats.invisible&&!over&&
+     (!disg||!!cv||u.alert>0||d<20),
+     sharedWarning=(tower.towerAlertUntil||0)>elapsed,
+     clear=allowed&&weaponAimClear(u.x,eyeY,u.z,
        visualTarget.x,visualTarget.y,visualTarget.z);
+   u.canSee=clear&&(facing||sharedWarning);
+   if(clear&&facing)tower.towerAlertUntil=elapsed+1.2;
  }
  if(u.canSee){
    const targetHeading=Math.atan2(-dx,-dz);
