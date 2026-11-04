@@ -146,11 +146,11 @@ function destroyTower(u){
     hurtE(guard,guard.hp+1,{spl:0,own:'p'});
   // Desfer els col·lidors de les quatre potes i invalidar l'índex espacial.
   // Així cap projectil ni vehicle no col·lisiona amb una torre desapareguda.
-  for(const leg of u.towerLegColliders||[]){
-    const i=Wl.indexOf(leg);if(i>=0)Wl.splice(i,1);
+  for(const collider of [...u.towerLegColliders||[],...u.towerParapetColliders||[]]){
+    const i=Wl.indexOf(collider);if(i>=0)Wl.splice(i,1);
   }
   wallGridCount=-1;
-  u.towerLegColliders=[];
+  u.towerLegColliders=[];u.towerParapetColliders=[];
   // Abans es clonaven TOTES les malles, incloses les dues representacions
   // LOD (torres completes). Produïen dos esquelets gegants flotants.
   // Generam peces petites reals, sense copiar ni el LOD ni trams sencers.
@@ -809,7 +809,9 @@ function weaponAimClear(x,y,z,tx,ty,tz,ignoreWall=null,ignoreBuilding=null,check
   // de mostres petites a cada tret de metralladora de l'helicòpter.
   const mx=(x+tx)/2,mz=(z+tz)/2,reach=Math.hypot(tx-x,tz-z)/2+3;
   for(const w of wallCandidates(mx,mz,reach)){
-    if(w===ignoreWall||(ignoreBuilding&&w.owner===ignoreBuilding)||w.open||w.barbed)continue;
+    if(w===ignoreWall||(ignoreBuilding&&w.owner===ignoreBuilding)||
+      w.open||w.barbed||
+      !window.HUNTER_TOWER_MODEL.towerParapetBlocksShot(w,{x,y,z}))continue;
     const t=window.HUNTER_BUILDING_SHELL.wallShotHit({x,y,z},{x:tx,y:ty,z:tz},w);
     if(t!=null&&t<.98)return false;
   }
@@ -1446,7 +1448,8 @@ function updPj(dt){
     for(const w of wallCandidates(mx,mz,reach+1)){
       // Bales de pistola, rifle, soldats, cotxes i tanquetes: passen.
       // Míssils, coets i canons explosius continuen colpejant el filferro.
-      if(w.open||(w.barbed&&p.shotClass==='light'))continue;
+      if(w.open||(w.barbed&&p.shotClass==='light')||
+        !window.HUNTER_TOWER_MODEL.towerParapetBlocksShot(w,from))continue;
       const crossing=window.HUNTER_BUILDING_SHELL.windowCrossing(from,to,w);
       if(crossing){windowHits.push({wall:w,...crossing});continue}
       consider(window.HUNTER_BUILDING_SHELL.wallShotHit(from,to,w),'wall',w)
