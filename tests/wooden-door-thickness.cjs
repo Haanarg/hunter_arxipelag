@@ -18,6 +18,8 @@ assert.match(visual,/door\.add\(handle\)/);
        group=d.doorAssembly,lintel=group.find(w=>w.playerBlock===false);
      result.push({side,thin,physical,other,center:Math.abs(d.m.position.x-(d.cx-b.x))<1e-6&&Math.abs(d.m.position.z-(d.cz-b.z))<1e-6,
        handles:d.m.children.filter(m=>m.name==='hunter-door-handle').length,
+       handleCentered:d.m.children.filter(m=>m.name==='hunter-door-handle').every(m=>Math.abs(m.position.y)<1e-6),
+       openingWidth:d.doorWidth,
        lintelFull:!!lintel&&(side<2?lintel.z1-lintel.z0:lintel.x1-lintel.x0)>.7});
    }
    const bunker=mkB(P.x+190,P.z+120,40,34,10,0xbababa,0x787878,
@@ -27,11 +29,12 @@ assert.match(visual,/door\.add\(handle\)/);
  })()`);
  for(const d of check.doors){
    assert.ok(Math.abs(d.thin-.16)<1e-6&&Math.abs(d.physical-.16)<1e-6,JSON.stringify(d));
-   assert.equal(d.handles,2);assert.equal(d.center,true);assert.equal(d.lintelFull,true);
+   assert.equal(d.handles,2);assert.equal(d.handleCentered,true);assert.equal(d.center,true);assert.equal(d.lintelFull,true);
+   assert.equal(d.openingWidth,2.4);
    assert.ok(d.other>2);
  }
  assert.ok(Math.abs(check.bunker.thickness-.8)<1e-6,JSON.stringify(check.bunker));
  assert.ok(Math.abs(check.bunker.physical-.8)<1e-6);
  assert.equal(check.bunker.handles,0);
- console.log('OK portes primes centrades, dues manetes i búnquer intacte');
+ console.log('OK portes 2,4m, pom a mitja alçada, fulles primes i búnquer intacte');
 })().catch(e=>{console.error(e);process.exitCode=1});
