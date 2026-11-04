@@ -1,3 +1,5 @@
+import * as spatialGrid from './spatial-grid-core.mjs?v=0.6.123';
+window.HUNTER_SPATIAL_GRID=spatialGrid;
 import {createArcadeBlastFX} from './arcade-blast-fx.mjs?v=0.6.123';
 window.HUNTER_CREATE_ARCADE_BLAST_FX=createArcadeBlastFX;
 import {createNativePrediction} from './native-coop-prediction.mjs?local=0.6.123';
