@@ -297,6 +297,11 @@ assert.equal(shotsFromMoto,1,'el pilot de moto dispara també al COOP');
 assert(acceptedMotoInput?.avoidingOccupiedVehicle&&acceptedMotoInput.forward<0,
  'el pilot de moto frena abans d’envestir un vehicle ocupat al COOP');
 const solo=source('src/enemy-ai.js'),
+assert.ok(solo.includes("if(v.t==='moto'&&spotted&&c.phase==='riding'&&u.cd<=0")&&
+ solo.includes('enemyMotorcycleRifleShot(v,target,py)')&&
+ solo.includes('if(Pj.length>before)u.cd=u.rate*1.5')&&
+ solo.includes('motorcycleMuzzle=new THREE.Object3D()'),
+ 'en solitari el pilot de moto dispara des del seu fusell real, amb ROF pròpia');
   coop=source('server/coop-combat.mjs'),
   vehicles=source('server/coop-vehicles.mjs'),
   client=source('src/coop-world-runtime.js');
