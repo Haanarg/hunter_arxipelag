@@ -79,7 +79,7 @@ export function wallShotHit(from,to,wall){
 export function planBuildingShell(w,d,h,opt={},random){
   if(![w,d,h].every(v=>Number.isFinite(v)&&v>0)||typeof random!=='function')throw new RangeError('Invalid building shell');
   const t=.8,dw=opt.doorWidth||2.5,ds=opt.doorSide==null?Math.floor(random()*4):opt.doorSide,
-    wallH=opt.floors===2?h/2:h,wallHp=opt.civilianHut?4:12,roofHp=opt.civilianHut?8:opt.hangar?12:16,segments=[],assemblies=[];
+    wallH=opt.floors===2?h/2:h,wallHp=opt.civilianHut||opt.weakWalls?4:12,roofHp=opt.civilianHut?8:opt.hangar?12:16,segments=[],assemblies=[];
   if(!Number.isFinite(dw)||dw<=0||!Number.isInteger(ds)||ds<0||ds>3)throw new RangeError('Invalid building doorway');
   const seg=(lx,lz,sx,sz,door=false,windows=false,supportSide=null,supportWeight=0,level=0)=>{
     const index=segments.length;segments.push({lx,lz,sx,sz,door:!!door,windows,supportSide,supportWeight,level});return index;
