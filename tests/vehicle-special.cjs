@@ -16,7 +16,7 @@ release();ctx.cv={t:'moto'};ctx.paused=true;ctx.K.ShiftLeft=true;ctx.press();ass
 ctx.paused=false;release();ctx.over=1;ctx.K.ShiftLeft=true;ctx.press();assert.equal(calls.length,n);
 ctx.over=0;release();ctx.nativeCoopSession={state:{status:'paused'}};ctx.K.ShiftLeft=true;ctx.press();assert.equal(calls.length,n);
 release();ctx.nativeCoopSession.state.status='running';ctx.K.ShiftRight=true;ctx.press();assert.equal(calls.at(-1)[0],'hornMoto');
-const audio=read('src/audio.js'),AC={sampleRate:22050,createBuffer:(_n,len)=>({getChannelData:()=>new Float32Array(len)})};
+const audio=read('src/audio.js'),AC={sampleRate:22050,createBuffer:(_n,len)=>{const samples=new Float32Array(len);return {getChannelData:()=>samples};}};
 const ac=vm.createContext({AC});vm.runInContext(audio,ac);
 const sig=Object.fromEntries(['hornTruck','hornCar','hornMoto','bikeBell'].map(t=>[t,vm.runInContext('audioBuffer('+JSON.stringify(t)+').getChannelData(0)',ac)]));
 for(const [t,w] of Object.entries(sig))assert.ok(w.length>4000&&w.some(x=>Math.abs(x)>.02),t);
