@@ -382,7 +382,7 @@ function buildingCandidates(x,z,r=0){
   if(buildingGridSource!==B||buildingGridCount!==B.length)rebuildBuildingGrid();
   return buildingGrid.query(x,z,r,'_buildingQueryStamp',++buildingQueryStamp);
 }
-const {ICON,IT}=window.HUNTER_GAME_CATALOG;
+const {ICON,IT}=window.HUNTER_GAME_CATALOG.createItemCatalog();
 // combat i enemics
 let E=[],Pj=[],bombs=[],grenades=[],DEAD=[],hp=window.HUNTER_COMBAT_BALANCE.player,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,assaultRifleEquipped=false,knifeEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null,playerCrouched=false;
 // Ojiva compartida per tots els projectils pesats. Eix longitudinal -Z:
