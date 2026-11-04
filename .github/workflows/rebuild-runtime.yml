@@ -5,6 +5,7 @@ on:
     paths:
       - 'src/**'
       - 'tools/build-runtime.cjs'
+      - 'tests/tower-sentries.mjs'
       - '.github/workflows/rebuild-runtime.yml'
   workflow_dispatch:
 permissions:
@@ -19,6 +20,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Check tower sentry rules
+        run: node tests/tower-sentries.mjs
+      - name: Check modified JavaScript syntax
+        run: |
+          node --check src/enemy-ai.js
+          node --check src/combat.js
+          node --check src/compound-generation.js
+          node --check src/tower-model.mjs
+          node --check server/coop-combat.mjs
+          node --check server/coop-optionals.mjs
       - name: Generate runtime bundle
         run: node tools/build-runtime.cjs
       - name: Verify generated bundle
