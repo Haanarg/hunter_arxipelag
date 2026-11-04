@@ -136,6 +136,9 @@ assert.equal(candidateVehicles({x:0,z:0},[motorcycle]).length,0,
 assert.ok(seatVisual('tanc',0).hidden&&seatVisual('tanqueta',0).hidden,
   'Els soldats dels blindats estan protegits dins del vehicle');
 assert.equal(seatVisual('moto',0).x,0);
+const motoMuzzle=passengerMuzzle(neutral('enemy-moto','moto',0,0),1);
+assert(motoMuzzle.z<-.8&&Math.abs(motoMuzzle.x)<.5&&motoMuzzle.y>3,
+ 'al COOP el fusell del pilot s’origina davant de la moto, no fora d’un lateral');
 for(const seat of [0,1]){
   const pose=seatVisual('cotxe',seat);
   assert.ok(pose.y<.8&&pose.scale<=.31&&

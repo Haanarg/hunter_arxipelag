@@ -297,6 +297,15 @@ export function boatCrewMuzzle(v,seat=0,baseY=v.y??0){
 export function passengerMuzzle(v,baseY=v.y??0){
   if(!v)return null;
   if(v.t==='tanc'||v.t==='tanqueta')return null;
+  if(v.t==='moto'){
+    // El pilot és davant i porta el fusell: no disparar lateralment
+    // com faria un artiller de cotxe. El model SOLO determina la boca
+    // exacta amb Three.js; el Worker conserva una aproximació pura.
+    const h=v.hd??0,lateral=.24,forward=-1.25;
+    return {x:v.x+Math.cos(h)*lateral+Math.sin(h)*forward,
+      y:baseY+2.15,
+      z:v.z-Math.sin(h)*lateral+Math.cos(h)*forward};
+  }
   const halfWidth=(vehicleSpecs.hitboxes[v.t]?.[0]??3)/2;
   const lateral=halfWidth+.75,h=v.hd??0,fore=-.65;
   return {x:v.x+Math.cos(h)*lateral+Math.sin(h)*fore,
