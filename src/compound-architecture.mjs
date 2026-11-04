@@ -34,6 +34,13 @@ export function decorateTimber(T,{b,shell,box,rod,cylinder,roofs}){const g=shell
        for(const x of[-2.7,2.7])porchParts.push(cylinder(g,.10,4.5,0x67523a,x,2.5,b.d/2+3.2));
        const porch=box(g,6.6,.18,4.2,0x79613f,0,4.8,b.d/2+1.7);
        porchParts.push(porch);roofs.push(porch);
+       // A més del marcador físic, associam *totes* les peces de la
+       // porxada als dos brancals frontals. wallBreak() ja oculta
+       // timberTrim quan es destrueix un brancal: així desapareixen
+       // les columnes fins i tot amb un runtime empaquetat anterior.
+       // La posició d/2-.55 cau dins la façana de gruix .8.
+       for(const mesh of porchParts)for(const side of [-1,1])
+         sideRibs.push({mesh,side,z:b.d/2-.55});
        return {sideRibs,porchParts};
      
 }

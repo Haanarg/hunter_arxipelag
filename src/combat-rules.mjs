@@ -128,10 +128,24 @@ export function closestFenceBlastPoint(w,x,y,z){
 // Structural blast rules from the individual game, shared with the server.
 export function wallBlastDamage(w,x,y,z,r,dmg){
  if(w.indestructible||w.open||w.hp<=0||!Number.isFinite(w.hp)||y>=w.y1+3)return 0;
- return explosionDamage(dmg,Math.hypot((w.x0+w.x1)/2-x,(w.z0+w.z1)/2-z),r);
+ // Un mur de fusta de 68 m no rep la granada només al seu centre:
+ // mesuram la distància al punt més proper del tram real. La resta
+ // dels murs conserven intacta la seva regla de dany.
+ const wx=w.weakWood?Math.max(w.x0,Math.min(x,w.x1)):(w.x0+w.x1)/2,
+       wz=w.weakWood?Math.max(w.z0,Math.min(z,w.z1)):(w.z0+w.z1)/2;
+ return explosionDamage(dmg,Math.hypot(wx-x,wz-z),r);
 }
 export function roofBlastDamage(b,x,z,r,dmg){
  if(b.kind==='enemy_bunker'||b.rhp<=0||b.rb)return 0;
+ if(b.weakWood){
+  // Projecció al rectangle del sostre, fins i tot si el barracó està
+  // girat 90°. Una granada a qualsevol extrem pot destruir-ne els 8 PV.
+  const angle=b.angle||0,c=Math.cos(angle),s=Math.sin(angle),dx=x-b.x,dz=z-b.z,
+        lx=dx*c+dz*s,lz=-dx*s+dz*c,
+        halfW=(b.localW||b.w)/2,halfD=(b.localD||b.d)/2,
+        outsideX=Math.max(0,Math.abs(lx)-halfW),outsideZ=Math.max(0,Math.abs(lz)-halfD);
+  return explosionDamage(dmg,Math.hypot(outsideX,outsideZ),r);
+ }
  return explosionDamage(dmg,Math.hypot(b.x-x,b.z-z),r+b.w/2);
 }
 export function countDestroyedSupport(b,w){
