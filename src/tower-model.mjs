@@ -8,8 +8,8 @@ export const TOWER_GUARD_SCAN_SPEED=.54;
 export const TOWER_GUARD_TURN_SPEED=1.85;
 // Els QUATRE parapets tenen la mateixa altura: protegeixen el pit
 // i deixen sobresortir el cap i la boca del canó dels dos soldats.
-export const TOWER_SIDE_PARAPET_HEIGHT=2.32;
-export const TOWER_SIDE_PARAPET_Y=9.59; // base local: 8.43 .. 10.75
+export const TOWER_SIDE_PARAPET_HEIGHT=1.75;
+export const TOWER_SIDE_PARAPET_Y=9.305; // base local: 8.43 .. 10.18
 export const TOWER_SIDE_PARAPET_X=3.02;
 export const TOWER_SIDE_PARAPET_LENGTH=5.1;
 export function towerParapetVolumes(){
