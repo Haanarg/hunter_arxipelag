@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import {
   createTowerModel,towerGuardPosition,towerGuardInView,towerTurnHeading,
   TOWER_GUARD_FLOOR_Y,TOWER_GUARD_SPACING,TOWER_GUARD_RANGE,
-  TOWER_GUARD_SCAN_SPEED
+  TOWER_GUARD_SCAN_SPEED,TOWER_SIDE_PARAPET_HEIGHT,
+  towerSideParapetVolumes,towerParapetBlocksShot
 } from '../src/tower-model.mjs';
+import {createAimSelector,weaponTargetPriority} from '../src/aiming-core.mjs';
 
 class Group {
   constructor(){this.children=[];this.userData={};}
@@ -40,4 +42,41 @@ for(let i=0;i<30;i++)angle=towerTurnHeading(angle,-Math.PI/2,1/60);
 assert.ok(angle<-.9&&angle>-(Math.PI/2),'guards turn gradually, without snapping');
 assert.ok(TOWER_GUARD_SCAN_SPEED>0&&TOWER_GUARD_SCAN_SPEED<1,
   'idle vigilance is a slow continuous sweep');
+// Els parapets visuals i els volums de col·lisió comparteixen dimensions.
+const parapets=towerSideParapetVolumes();
+assert.equal(model.userData.towerParapetMeshes.length,2);
+assert.equal(parapets.length,2);
+assert.ok(TOWER_SIDE_PARAPET_HEIGHT>2.2,'parets altes que cobreixen el cos');
+for(const [i,wall] of parapets.entries()){
+  const mesh=model.userData.towerParapetMeshes[i];
+  assert.equal(mesh.geometry.parameters.height,wall.height);
+  assert.equal(mesh.position.y,wall.y);
+  assert.ok(wall.y+wall.height/2>10.7,'cobreixen el tors dels soldats');
+  assert.ok(wall.y+wall.height/2<11.2,'el cap queda visible');
+}
+const cover={towerParapet:true,towerX:0,towerZ:0,towerBaseY:0};
+assert.equal(towerParapetBlocksShot(cover,{x:24,y:2,z:0}),true,
+  'els trets entrants topen amb el parapet');
+assert.equal(towerParapetBlocksShot(cover,{x:TOWER_GUARD_SPACING,y:10.4,z:.25}),false,
+  'els soldats poden disparar cap enfora des de dins');
+assert.equal(towerParapetBlocksShot(cover,{x:0,y:2,z:0}),true,
+  'els trets des de sota no ignoren el parapet');
+assert.equal(towerParapetBlocksShot({}, {x:0,y:10,z:0}),true,
+  'els altres murs continuen essent sòlids');
+assert.equal(weaponTargetPriority({t:'torre'},'pistol'),3);
+assert.equal(weaponTargetPriority({t:'torre'},'sniper'),3);
+assert.equal(weaponTargetPriority({t:'torre'},'heavy'),0);
+for(const shotClass of ['pistol','assault','sniper','attackCannon','light']){
+  const selector=createAimSelector({origin:{x:0,y:0,z:0},
+    direction:[0,0,-1],range:200,shotClass,focus:{}});
+  selector.consider({t:'torre'},'enemy',0,0,10,-50);
+  assert.equal(selector.hasTarget,false,shotClass+' no fixa mai la torre');
+  selector.consider({t:'soldat'},'enemy',0,0,11,-50);
+  assert.equal(selector.hasTarget,true,shotClass+' sí que pot fixar el defensor');
+}
+const rocket=createAimSelector({origin:{x:0,y:0,z:0},
+  direction:[0,0,-1],range:200,shotClass:'heavy'});
+rocket.consider({t:'torre'},'enemy',0,0,10,-50);
+assert.equal(rocket.hasTarget,true,'el bazuca pot fixar la torre');
+
 console.log('Tower sentries: model, independent slots, sight cone and rotation OK');
