@@ -75,6 +75,12 @@
 
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
+**Balanç de la fase 3 després de v0.6.134 — extracció estructural implementada, validació oberta:**
+- [x] Els **8 talls estructurals** han separat els índexs espacials, les mètriques/diagnòstic, el coordinador dels dos rellotges, les opcions/progrés/cancel·lació d'arrencada, l'estat inicial, els catàlegs, les regles dels mapes, els controls i la neteja de sessions. Les extraccions mantenen els bindings del runtime clàssic i han incorporat proves diferencials a Node.
+- [x] Revisió dels blocs principals restants: **generació de món i terreny (fase 4), render/ombres/aigua (fase 5), combat (fase 6), IA (fase 7), vehicles (fase 8), COOP (fases 9–10), UI (fase 11), so i desaments (fase 12)**. No traslladar-los ara només per reduir la longitud aparent de `game-core.js`; fer-ho per dominis amb proves pròpies.
+- [ ] **Criteri de tancament de fase 3 encara pendent:** validació conjunta en partida real i amb checkpoints; `npm run test:regression:once`, `npm run test:loading`, `npm run check:build`; paritat d'arrencada de llavors 67/148, Android/host/guest, captures GPU i comparació FPS/GC/p95/p99. No considerar superada aquesta casella només perquè CI ha recompilat.
+- [ ] **Rendiment verificat:** cap guany FPS ni reducció GC demostrats amb comparativa A/B del mateix maquinari. Els talls de fase 3 són refactorització de responsabilitats i manteniment, no una promesa de velocitat.
+
 
 **Fase 3 · vuitè tall, neteja de sessió i reinit del món (v0.6.134; implementació parcial):**
 - [x] **Teardown seqüenciat fora de game-core:** `src/start-lifecycle-core.mjs` coordina la neteja d'una missió completa, abandonada o generada parcialment; conserva l'ordre d'alliberament, les callbacks del runtime clàssic, l'autodesament i la propagació d'errors anterior. L'escena, controls i estat mutable continuen propietat del motor, sense afegir singleton.
