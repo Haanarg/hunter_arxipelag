@@ -136,6 +136,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         return;
       }
       if(tick<(unit.nextAttackTick||0))return;
+      // La moto requisa també té pilot armat: el Worker valida fusell i LDV.
       const boat=requisitionBoat(v.t),rocket=boat&&seat===1,
         eye=boat?boatCrewMuzzle(v,seat,v.y):passengerMuzzle(v,v.y);
       if(!eye)return; // Tripulació protegida dins dels blindats.
