@@ -10,6 +10,7 @@ on:
       - 'tests/tower-sentries.mjs'
       - 'tests/hover-distribution.mjs'
       - 'tests/fragile-vehicle-fragments.mjs'
+      - 'tests/touch-vehicle-horn.mjs'
       - '.github/workflows/rebuild-runtime.yml'
   workflow_dispatch:
 permissions:
@@ -43,6 +44,8 @@ jobs:
         run: node tests/fragile-vehicle-fragments.mjs
       - name: Check release version in HTML and JS imports
         run: node tools/sync-version.cjs --check
+      - name: Check separate touch horn and bicycle bell controls
+        run: node tests/touch-vehicle-horn.mjs
       - name: Generate runtime bundle
         run: node tools/build-runtime.cjs
       - name: Verify generated bundle
