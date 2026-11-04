@@ -1,7 +1,7 @@
 window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){const esc=v=>String(v||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])),m=(e&&e.message)?e.message:"Error desconegut",where=e&&e.filename?(e.filename.split("/").pop()+":"+e.lineno+":"+e.colno):"",stack=e&&e.error&&e.error.stack?e.error.stack:"";p.innerHTML="<h1>No s’ha pogut iniciar el joc</h1><p style=\"max-width:560px\">Error d’arrencada: <b>"+esc(m)+"</b></p>"+(where?"<p><b>"+esc(where)+"</b></p>":"")+(stack?"<pre style=\"max-width:90vw;white-space:pre-wrap;text-align:left;font-size:11px;opacity:.8\">"+esc(stack)+"</pre>":"")+"<p style=\"opacity:.8\">Envia una captura d’aquest missatge si persisteix.</p>"}});
 let generationPromise=null,generationCancel=null;
 let terrainStream=null,seedSearchMode=false,seedCompounds=[],seedScratchWorld=null;
-const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_WAVES','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI','HUNTER_SEED_SEARCH','HUNTER_CAMERA_CONTROLS','HUNTER_SPATIAL_GRID','HUNTER_FRAME_DIAGNOSTICS','HUNTER_FRAME_TICK','HUNTER_START_LIFECYCLE','HUNTER_SIMULATION_CLOCK','HUNTER_STEALTH_FEEDBACK','HUNTER_PRISONERS','HUNTER_RADIO_RELAY'];
+const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_WAVES','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI','HUNTER_SEED_SEARCH','HUNTER_CAMERA_CONTROLS','HUNTER_SPATIAL_GRID','HUNTER_FRAME_DIAGNOSTICS','HUNTER_FRAME_TICK','HUNTER_START_LIFECYCLE','HUNTER_GAME_STATE','HUNTER_GAME_CATALOG','HUNTER_SIMULATION_CLOCK','HUNTER_STEALTH_FEEDBACK','HUNTER_PRISONERS','HUNTER_RADIO_RELAY'];
 const missingModules=requiredModules.filter(name=>!window[name]);if(missingModules.length)throw new Error('Mòduls Hunter absents: '+missingModules.join(', '));
 const missingSystems=Object.entries({generation:typeof build,combat:typeof fire,enemies:typeof updEn,audio:typeof initAudio}).filter(([,type])=>type!=='function').map(([name])=>name);if(missingSystems.length)throw new Error('Sistemes Hunter absents: '+missingSystems.join(', '));
 // La mida escollida a la portada ja és coneguda quan s'inicialitza el motor.
@@ -359,8 +359,8 @@ function* prepareShadowCastersSteps(){
 let stairs=[],piers=[];
 let Wl=[],Dr=[],items=[],inv={},msg='',msgT=0,HQ=null,ib=null;
 let hqIntelStage=0,hqIntelSites=[],hqDiscardIndex=-1,hqIntelEliminationOrder=[];
-const hqIntelSectors=new Set(),hqIntelDiscarded=new Set();
-const knownVehicleSectors={heli:new Set(),tanc:new Set()};
+const {hqIntelSectors,hqIntelDiscarded,knownVehicleSectors}=
+  window.HUNTER_GAME_STATE.createIntelCollections(Set);
 const wallGrid=window.HUNTER_SPATIAL_GRID.createSpatialCellGrid(64);
 let wallGridSource=null,wallGridCount=-1,wallQueryStamp=0;
 function rebuildWallGrid(){
@@ -382,37 +382,7 @@ function buildingCandidates(x,z,r=0){
   if(buildingGridSource!==B||buildingGridCount!==B.length)rebuildBuildingGrid();
   return buildingGrid.query(x,z,r,'_buildingQueryStamp',++buildingQueryStamp);
 }
-const ICON={
-med:'<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="16" width="46" height="34" rx="5" fill="#fff" stroke="#657078" stroke-width="3"/><rect x="18" y="28" width="28" height="9" rx="4.5" fill="#d7ae7c" transform="rotate(-28 32 32.5)"/><circle cx="27" cy="35" r="1.8" fill="#9a6f45"/><circle cx="37" cy="30" r="1.8" fill="#9a6f45"/></svg>',
-expl:'<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="24" width="48" height="30" rx="5" fill="#667753" stroke="#25372c" stroke-width="3"/><path d="M14 27 C17 3 22 14 24 27 M22 27 C26 5 33 10 34 27 M32 27 C38 0 45 10 46 27 M42 27 C48 11 53 12 52 27" fill="none" stroke-width="3.3"/><path d="M14 27 C17 3 22 14 24 27" stroke="#dc493d" fill="none" stroke-width="3.3"/><path d="M22 27 C26 5 33 10 34 27" stroke="#35c866" fill="none" stroke-width="3.3"/><path d="M32 27 C38 0 45 10 46 27" stroke="#327cdd" fill="none" stroke-width="3.3"/><rect x="17" y="34" width="30" height="14" rx="2" fill="#172b27"/><text x="32" y="44" font-size="10" font-weight="bold" font-family="monospace" text-anchor="middle" fill="#91e795">00:03</text></svg>',
-disf:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M22 12 L30 17 L34 17 L42 12 L54 22 L47 30 L43 27 L43 55 L21 55 L21 27 L17 30 L10 22 Z" fill="#b83232" stroke="#661d1d" stroke-width="3"/><path d="M28 16 Q32 23 36 16" fill="none" stroke="#f0c7a2" stroke-width="3"/></svg>',
-mapa:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#ead69b" stroke="#7c693c" stroke-width="3"/><path d="M25 9 V50 M39 14 V55" stroke="#a18b56" stroke-width="2"/><rect x="30" y="28" width="15" height="11" fill="#7c4f3a"/><path d="M29 28 L37.5 21 L46 28" fill="#a33b32"/></svg>',
-mapa_heli:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#d9edf5" stroke="#557986" stroke-width="3"/><path d="M17 33 H49 M32 20 V46" stroke="#557986" stroke-width="2"/><ellipse cx="32" cy="33" rx="11" ry="5" fill="#587766"/><path d="M43 33 H54 M21 33 H10" stroke="#35453c" stroke-width="3"/></svg>',
-mapa_tanc:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 13 L25 9 L39 14 L56 10 L56 51 L39 55 L25 50 L8 54 Z" fill="#e5d6a8" stroke="#786b46" stroke-width="3"/><rect x="18" y="31" width="28" height="11" rx="4" fill="#68754b"/><rect x="25" y="25" width="15" height="8" rx="3" fill="#78845b"/><path d="M40 29 H55" stroke="#40473a" stroke-width="3"/></svg>',
-bazooka:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 35 L51 18" stroke="#536148" stroke-width="11" stroke-linecap="round"/><path d="M8 38 L17 34" stroke="#252b27" stroke-width="13" stroke-linecap="round"/><path d="M48 20 L56 17" stroke="#252b27" stroke-width="14" stroke-linecap="round"/><path d="M29 30 L25 42" stroke="#2c302d" stroke-width="5" stroke-linecap="round"/><path d="M35 26 L39 18" stroke="#737b74" stroke-width="3"/><circle cx="51" cy="18" r="4" fill="#b76b2d"/></svg>',
-fusell_assalt:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M5 33 H53" stroke="#394641" stroke-width="8"/><path d="M24 29V43L31 49L34 46V32" fill="#4b584c"/><path d="M14 34L6 46H19L26 35" fill="#856d4d"/><rect x="29" y="23" width="19" height="7" rx="1" fill="#6c7e64"/><path d="M50 29H60" stroke="#202b28" stroke-width="5"/></svg>',
-franctirador:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M5 35 L53 35" stroke="#343d39" stroke-width="7"/><rect x="20" y="23" width="20" height="8" rx="2" fill="#778577" stroke="#292f2b" stroke-width="2"/><rect x="25" y="17" width="13" height="5" rx="1" fill="#243333"/><path d="M16 36 L8 48 H22 L28 36" fill="#846948" stroke="#3d3126" stroke-width="2"/><rect x="52" y="30" width="7" height="10" rx="1" fill="#242b2b"/><path d="M31 35 L28 46" stroke="#343d39" stroke-width="5"/></svg>',
-ganivet:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M13 52L34 31" stroke="#4d3528" stroke-width="9" stroke-linecap="round"/><path d="M10 55L15 50" stroke="#cba87c" stroke-width="4" stroke-linecap="round"/><path d="M27 29L36 38" stroke="#303b3c" stroke-width="5" stroke-linecap="round"/><path d="M34 31L51 9Q56 6 53 14L42 35Z" fill="#c9d2d2" stroke="#455255" stroke-width="2"/><path d="M35 30L50 13" stroke="#f3faf4" stroke-width="2"/></svg>',
-cisalla:'<svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke-linecap="round"><path d="M14 56L30 30M50 56L34 30" stroke="#b73a36" stroke-width="8"/><path d="M30 30L24 8M34 30L40 8" stroke="#a3b2b4" stroke-width="6"/><path d="M24 8L32 17 40 8" stroke="#d3dde0" stroke-width="3"/></g><circle cx="32" cy="30" r="6" fill="#414b4c" stroke="#b7c7c9" stroke-width="2"/></svg>',
-paracaigudes:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M6 27 Q32 -5 58 27 Z" fill="#e9d9aa" stroke="#6c5945" stroke-width="3"/><path d="M32 7 Q13 18 6 27 M32 7 Q51 18 58 27 M21 12L21 27 M43 12L43 27" fill="none" stroke="#bb7151" stroke-width="2"/><path d="M6 27L24 49 M58 27L40 49 M32 27V50" fill="none" stroke="#52565a" stroke-width="2"/><rect x="23" y="46" width="18" height="12" rx="2" fill="#70816a"/></svg>',
-granada:'<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="31" cy="38" rx="16" ry="18" fill="#4a5842" stroke="#263028" stroke-width="3"/><rect x="27" y="14" width="10" height="10" rx="2" fill="#303632"/><path d="M34 15 C44 8 51 14 48 23" fill="none" stroke="#727b72" stroke-width="4"/><circle cx="48" cy="24" r="5" fill="none" stroke="#727b72" stroke-width="3"/></svg>',
-arma:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 19 H54 V50 H10 Z" fill="#75583a" stroke="#3e3024" stroke-width="3"/><path d="M14 24 H50" stroke="#b58a56" stroke-width="3"/><g fill="#d4aa42" stroke="#70591e" stroke-width="1"><circle cx="20" cy="34" r="4"/><circle cx="31" cy="34" r="4"/><circle cx="42" cy="34" r="4"/><circle cx="25" cy="44" r="4"/><circle cx="36" cy="44" r="4"/></g></svg>'
-};
-const IT={
-med:{n:'Farmaciola',c:0xf2f3de,s:[1.2,.8,.8],icon:ICON.med,desc:'Recupera 8 punts de vida.',usable:true},
-mapa:{n:'Mapa de l’HQ',c:0xffe27a,s:[1.6,.08,1.2],icon:ICON.mapa,desc:'Mapa petit: tres possibles HQ, descarta un i revela el real amb el tercer mapa. Mapa gran: nou indicis; cada quadrant diferent n’elimina tres, fins a trobar l’HQ amb el quart.',usable:false},
-mapa_heli:{n:'Mapa d’helicòpters',c:0x9fd7ff,s:[1.6,.08,1.2],icon:ICON.mapa_heli,desc:'Revela els helicòpters del sector on es recull; conserva la informació d’altres sectors.',usable:false},
-mapa_tanc:{n:'Mapa de tancs',c:0xc6b06a,s:[1.6,.08,1.2],icon:ICON.mapa_tanc,desc:'Revela els tancs del sector on es recull; conserva la informació d’altres sectors.',usable:false},
-bazooka:{n:'Bazooka',c:0x58664a,s:[2.1,.45,.45],icon:ICON.bazooka,desc:'Llançacoets amb 3 coets per recollida. La retícula indica el punt d’apuntat i es torna verda si l’autoapuntat fixa un enemic.',usable:true},
-fusell_assalt:{n:'Fusell d’assalt',c:0x4b624d,s:[2.5,.4,.4],icon:ICON.fusell_assalt,desc:'Ràfegues de 3 bales. Comparteix munició amb la pistola (3 cartutxos per ràfega). Mantén premut Dispar per a foc automàtic, amb reassignació d’objectiu dins un con horitzontal de 80°. Els dos soldats de cada torre són blancs independents: disparar a la caseta no els silencia.',usable:true},
-franctirador:{n:'Rifle de franctirador',c:0x647366,s:[2.7,.5,.42],icon:ICON.franctirador,desc:'Rifle de llarg abast. Autoapuntat horitzontal de 80° (±40°); 6 cartutxos per recollida; causa 5 PV de dany lleuger per impacte (els blindats en són immunes). Equipa’l i prem Mira / T per activar l’òptica x8.',usable:true},
-paracaigudes:{n:'Paracaigudes',c:0xcfaa74,s:[1.2,.9,.9],icon:ICON.paracaigudes,desc:'Es desplega automàticament en saltar d’un helicòpter en vol. Frena la caiguda i evita els danys de l’aterratge.',usable:false},
-cisalla:{n:'Cisalla',c:0xb83f38,s:[1,1.4,.3],icon:ICON.cisalla,desc:'Talla silenciosament un tram de filferrada proper. Equipa-la i prem Talla / F mirant la tanca. No gasta munició ni alerta els enemics.',usable:true},
-granada:{n:'Granades',c:0x4a5842,s:[.65,.65,.65],icon:ICON.granada,desc:'Paquet de 5 granades. A peu, mantén F per llançar més lluny. Dins qualsevol vehicle excepte l’helicòpter de combat, prem B per llançar una granada sense canviar d’arma (F també funciona a l’helicòpter utilitari).',usable:true},
-arma:{n:'Munició',c:0x555b66,s:[1.6,.35,.35],icon:ICON.arma,desc:'Caixa de munició per a l’arma personal.',usable:false},
-expl:{n:'Explosius',c:0x617451,s:[.9,.9,.9],icon:ICON.expl,desc:'Explosiu C4 amb visor LED de 00 a 59 segons. A peu es col·loca; des de l’helicòpter utilitari en vol cau per la porta lateral. Explota quan arriba a zero, fins i tot a l’aire. No es pot utilitzar des de l’helicòpter de combat.',usable:true},
-disf:{n:'Disfressa enemiga',c:0x4a7a3a,s:[1,1.2,.6],icon:ICON.disf,desc:'Camisa enemiga vermella. Activa o desactiva la disfressa.',usable:true}
-};
+const {ICON,IT}=window.HUNTER_GAME_CATALOG.createItemCatalog();
 // combat i enemics
 let E=[],Pj=[],bombs=[],grenades=[],DEAD=[],hp=window.HUNTER_COMBAT_BALANCE.player,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,assaultRifleEquipped=false,knifeEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null,playerCrouched=false;
 // Ojiva compartida per tots els projectils pesats. Eix longitudinal -Z:
@@ -426,15 +396,8 @@ mB=new THREE.MeshBasicMaterial({color:0xffe45a}),mS=new THREE.MeshBasicMaterial(
 mW=new THREE.MeshBasicMaterial({color:0xffffff}),SMALL_ARMS_SCALE=.7;
 // Cadència compartida entre la tanqueta del jugador i les enemigues.
 const TANKETTE_FIRE_INTERVAL=.16;
-const EC={
- soldat:{hp:COMBAT_BALANCE.people.soldier,sp:7,rng:32,rate:1.1,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:2},
- jeep:{hp:COMBAT_BALANCE.vehicles.cotxe,sp:22,rng:75,rate:1.1,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:3.9},
- tanqueta:{hp:COMBAT_BALANCE.vehicles.tanqueta,sp:13,rng:42,rate:TANKETTE_FIRE_INTERVAL,dmg:COMBAT_BALANCE.weapons.tankette,spl:0,r:4.5},
- tanc:{hp:COMBAT_BALANCE.vehicles.tanc,sp:8,rng:100,rate:5,dmg:COMBAT_BALANCE.weapons.tank,spl:7,r:6.8},
- torre:{hp:COMBAT_BALANCE.weapons.bazooka,sp:0,rng:0,rate:0,dmg:0,spl:0,r:1},
- patrulla_marina:{hp:COMBAT_BALANCE.vehicles.llanxa,sp:20,rng:245,rate:.4,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:7.5},
- general:{hp:COMBAT_BALANCE.people.general,sp:1.45,rng:35,rate:.9,dmg:COMBAT_BALANCE.weapons.pistol,spl:0,r:2}
-};
+const EC=window.HUNTER_GAME_CATALOG.createEnemyProfiles(
+  COMBAT_BALANCE,TANKETTE_FIRE_INTERVAL);
 // extres: so, partícules, fauna, diari
 let started=0,DIF=1,AC=null,eng=null,seaAudio=null,logb=[],fa=[],pi_=0;const lastS={},rn=(a,b)=>a+Math.random()*(b-a);
 const PT=[];for(let i=0;i<100;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,depthWrite:false}));m.visible=false;scene.add(m);PT.push({m,life:0,max:1,s:1})}
@@ -1992,18 +1955,17 @@ const VISUAL_RANGES={
   mobile:{buildings:980,fences:580,props:750,vehicles:1200,enemies:1050,items:620,fauna:790,antennas:1100},
   ultra:{buildings:650,fences:400,props:540,vehicles:780,enemies:700,items:450,fauna:530,antennas:770}
 }[qualityName]||{buildings:1200,fences:790,props:990,vehicles:1620,enemies:1410,items:800,fauna:1100,antennas:1360};
-const visibilityStats={buildings:0,fences:0,props:0,vehicles:0,enemies:0,items:0,fauna:0,antennas:0,terrainOccluded:0};
-const enemyLodStats={full:0,mid:0,far:0,hidden:0,vehicleFull:0};
+const {visibilityStats,enemyLodStats}=
+  window.HUNTER_GAME_STATE.createVisibilityCounters();
 const ENEMY_LOD_RANGES={
   desktop:{full:310,mid:860},mobile:{full:185,mid:470},ultra:{full:135,mid:305}
 }[qualityName]||{full:240,mid:660};
 window.HUNTER_ENEMY_LOD_STATS=enemyLodStats;
 window.HUNTER_VISIBILITY_STATS=visibilityStats;
 let staticVisualBatches=[];
-const renderCategories={terreny:0,edificis:0,filferrades:0,vehicles:0,enemics:0,vegetacio:0,decoracio:0,objectes:0,fauna:0,jugador:0,mar:0,cel:0,efectes:0,altres:0};
-const shadowRenderCategories={};
-const renderOtherDetails={};
-const vehicleDrawTypes={},vehicleDrawParts={},vehicleShadowTypes={},vehicleFleet={};
+const {renderCategories,shadowRenderCategories,renderOtherDetails,
+  vehicleDrawTypes,vehicleDrawParts,vehicleShadowTypes,vehicleFleet}=
+  window.HUNTER_GAME_STATE.createDrawCounters();
 window.HUNTER_VEHICLE_DRAW_TYPES=vehicleDrawTypes;
 window.HUNTER_VEHICLE_DRAW_PARTS=vehicleDrawParts;
 window.HUNTER_VEHICLE_SHADOW_TYPES=vehicleShadowTypes;
