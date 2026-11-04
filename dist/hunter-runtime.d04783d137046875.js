@@ -6002,8 +6002,8 @@ window.HUNTER_PRISONERS=Object.freeze({
    }
    return target;
   }
-  // Physical campaign goal: all six guards and four towers must be
-  // neutralised AND at least one segment of the INNER enclosure destroyed.
+  // Cal neutralitzar els defensors reals de les torres, no enderrocar
+  // les estructures buides, i obrir una bretxa a la tanca interior.
   // The original E-on-a-specific-gate shortcut is intentionally removed.
   function rescueStatus(ctx){
    const troops=new Set([...(camp?.soldiers||[]),...(camp?.towers||[]),
@@ -6011,7 +6011,7 @@ window.HUNTER_PRISONERS=Object.freeze({
    let guards=0,towers=0;
    for(const u of troops){
     if(!alive(u))continue;
-    if(u.t==='torre')towers++;
+    if(u.t==='torre'&&(u.towerGuards||[]).some(guard=>alive(guard)))towers++;
     else if(u.t==='soldat')guards++;
    }
    const gaps=(camp?.prisonFenceSegments||[])
@@ -9992,7 +9992,7 @@ if(!seedSearchMode&&t==='patrulla_marina')ensureEnemyVehicleFlag(g,'patrulla_mar
 if(!seedSearchMode)world.add(g);const sensePhase=(E.length%10)*.01,u={t,x,z,gy,hd:rr(0,6.28),o:g,home:{x,z},cd:rr(0,1),alert:0,wt:0,tx:x,tz:z,senseT:sensePhase,
   remoteAiPhase:((E.length*37)%101)/101,canSee:false,defenseTarget:null,...c};
 if(options.elite){u.elite=true;u.hp=COMBAT_BALANCE.people.elite;u.dmg=COMBAT_BALANCE.weapons.eliteRifle;u.rng=85;u.rate=TANKETTE_FIRE_INTERVAL;u.sp=8;u.cd=.4+(E.length%4)*.14}
-if(t==='torre'){u.sp=0;u.rate=Infinity;u.rng=0}
+if(t==='torre'){u.sp=0;u.rate=0;u.rng=0}
 E.push(u);
 if(t==='torre'){
   const base=gy??enemyGroundAt(u,x,z);
@@ -11782,7 +11782,14 @@ function* buildApprovedCompoundSteps(layout,q,{pad,path,pier,prop,vehicles,rocke
       (record.enemyVehicles??=[]).push(u);
     }else{vehicles.push(v);record.vehicles.push(v);}
   }
-  for(const tower of layout.towers||[layout.tower].filter(Boolean)){const u=mkEn('torre',...tr(tower.x,tower.z));u.compound=layout.id;(record.towers??=[]).push(u);}
+  for(const tower of layout.towers||[layout.tower].filter(Boolean)){
+    const u=mkEn('torre',...tr(tower.x,tower.z));
+    u.compound=layout.id;(record.towers??=[]).push(u);
+    for(const defender of u.towerGuards||[]){
+      defender.compound=layout.id;
+      record.soldiers.push(defender);
+    }
+  }
   const route=record.patrol.slice(0,-1);
   for(const [i,p]of layout.soldiers.entries()){
     yield {stage:'Equipant '+layout.id,completed:null,total:null};
@@ -15582,7 +15589,7 @@ mapa:{n:'Mapa de l’HQ',c:0xffe27a,s:[1.6,.08,1.2],icon:ICON.mapa,desc:'Mapa pe
 mapa_heli:{n:'Mapa d’helicòpters',c:0x9fd7ff,s:[1.6,.08,1.2],icon:ICON.mapa_heli,desc:'Revela els helicòpters del sector on es recull; conserva la informació d’altres sectors.',usable:false},
 mapa_tanc:{n:'Mapa de tancs',c:0xc6b06a,s:[1.6,.08,1.2],icon:ICON.mapa_tanc,desc:'Revela els tancs del sector on es recull; conserva la informació d’altres sectors.',usable:false},
 bazooka:{n:'Bazooka',c:0x58664a,s:[2.1,.45,.45],icon:ICON.bazooka,desc:'Llançacoets amb 3 coets per recollida. La retícula indica el punt d’apuntat i es torna verda si l’autoapuntat fixa un enemic.',usable:true},
-fusell_assalt:{n:'Fusell d’assalt',c:0x4b624d,s:[2.5,.4,.4],icon:ICON.fusell_assalt,desc:'Ràfegues de 3 bales. Comparteix munició amb la pistola (3 cartutxos per ràfega). Mantén premut Dispar per a foc automàtic, amb reassignació d’objectiu dins un con horitzontal de 80°. Els impactes a la caseta de les torres en silencien el foc durant 2 segons.',usable:true},
+fusell_assalt:{n:'Fusell d’assalt',c:0x4b624d,s:[2.5,.4,.4],icon:ICON.fusell_assalt,desc:'Ràfegues de 3 bales. Comparteix munició amb la pistola (3 cartutxos per ràfega). Mantén premut Dispar per a foc automàtic, amb reassignació d’objectiu dins un con horitzontal de 80°. Els dos soldats de cada torre són blancs independents: disparar a la caseta no els silencia.',usable:true},
 franctirador:{n:'Rifle de franctirador',c:0x647366,s:[2.7,.5,.42],icon:ICON.franctirador,desc:'Rifle de llarg abast. Autoapuntat horitzontal de 80° (±40°); 6 cartutxos per recollida; causa 5 PV de dany lleuger per impacte (els blindats en són immunes). Equipa’l i prem Mira / T per activar l’òptica x8.',usable:true},
 paracaigudes:{n:'Paracaigudes',c:0xcfaa74,s:[1.2,.9,.9],icon:ICON.paracaigudes,desc:'Es desplega automàticament en saltar d’un helicòpter en vol. Frena la caiguda i evita els danys de l’aterratge.',usable:false},
 cisalla:{n:'Cisalla',c:0xb83f38,s:[1,1.4,.3],icon:ICON.cisalla,desc:'Talla silenciosament un tram de filferrada proper. Equipa-la i prem Talla / F mirant la tanca. No gasta munició ni alerta els enemics.',usable:true},
@@ -15609,7 +15616,7 @@ const EC={
  jeep:{hp:COMBAT_BALANCE.vehicles.cotxe,sp:22,rng:75,rate:1.1,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:3.9},
  tanqueta:{hp:COMBAT_BALANCE.vehicles.tanqueta,sp:13,rng:42,rate:TANKETTE_FIRE_INTERVAL,dmg:COMBAT_BALANCE.weapons.tankette,spl:0,r:4.5},
  tanc:{hp:COMBAT_BALANCE.vehicles.tanc,sp:8,rng:100,rate:5,dmg:COMBAT_BALANCE.weapons.tank,spl:7,r:6.8},
- torre:{hp:COMBAT_BALANCE.weapons.bazooka,sp:0,rng:112.5,rate:.7,dmg:COMBAT_BALANCE.weapons.towerLight,spl:0,r:3},
+ torre:{hp:COMBAT_BALANCE.weapons.bazooka,sp:0,rng:0,rate:0,dmg:0,spl:0,r:1},
  patrulla_marina:{hp:COMBAT_BALANCE.vehicles.llanxa,sp:20,rng:245,rate:.4,dmg:COMBAT_BALANCE.weapons.rifle,spl:0,r:7.5},
  general:{hp:COMBAT_BALANCE.people.general,sp:1.45,rng:35,rate:.9,dmg:COMBAT_BALANCE.weapons.pistol,spl:0,r:2}
 };
