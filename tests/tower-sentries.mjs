@@ -6,6 +6,7 @@ import {
   towerSideParapetVolumes,towerParapetBlocksShot
 } from '../src/tower-model.mjs';
 import {createAimSelector,weaponTargetPriority} from '../src/aiming-core.mjs';
+import {segmentAabbT} from '../src/combat-rules.mjs';
 
 class Group {
   constructor(){this.children=[];this.userData={};}
@@ -63,6 +64,16 @@ assert.equal(towerParapetBlocksShot(cover,{x:0,y:2,z:0}),true,
   'els trets des de sota no ignoren el parapet');
 assert.equal(towerParapetBlocksShot({}, {x:0,y:10,z:0}),true,
   'els altres murs continuen essent sòlids');
+// Prova real del volum que intercepta bales a l'alçada del pit.
+const exposedSide=parapets[1],coverBox=[
+  exposedSide.x-exposedSide.width/2,exposedSide.x+exposedSide.width/2,
+  exposedSide.y-exposedSide.height/2,exposedSide.y+exposedSide.height/2,
+  exposedSide.z-exposedSide.depth/2,exposedSide.z+exposedSide.depth/2
+];
+assert.ok(segmentAabbT(8,10,0,1.43,10,0,...coverBox)!==null,
+  'la bala entrant és interceptada a l’altura del pit');
+assert.equal(segmentAabbT(8,11.4,0,1.43,11.15,0,...coverBox),null,
+  'la zona del cap continua exposada per als trets precisos');
 assert.equal(weaponTargetPriority({t:'torre'},'pistol'),3);
 assert.equal(weaponTargetPriority({t:'torre'},'sniper'),3);
 assert.equal(weaponTargetPriority({t:'torre'},'heavy'),0);
