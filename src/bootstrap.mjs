@@ -1,3 +1,5 @@
+import * as startLifecycle from './start-lifecycle-core.mjs?v=0.6.126';
+window.HUNTER_START_LIFECYCLE=startLifecycle;
 import * as frameTick from './frame-tick-core.mjs?v=0.6.126';
 window.HUNTER_FRAME_TICK=frameTick;
 import * as frameDiagnostics from './frame-diagnostics-core.mjs?v=0.6.126';
