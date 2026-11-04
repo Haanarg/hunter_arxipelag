@@ -3643,7 +3643,8 @@ if(activeBunker?.basement?.lights?.length){
 }
 const strafeEnabled=updateStrafeControls();
 if(cheats.items)grantAllWeapons();
-// A peu: córrer o crol. En vehicle: acció especial al mateix control.
+// La prolongació del joystick és només per córrer/crol a peu.
+// Els vehicles tenen el botó CLÀXON/TIMBRE separat.
 const canRun=!!started&&!paused&&!over&&!cv&&!playerFall&&!playerEject&&!scopeActive;
 const canSpecial=!!started&&!paused&&!over&&hp>0&&!!cv&&!playerFall&&!playerEject&&!scopeActive;
 joystick.setVehicleMode(canSpecial?cv.t:null);
