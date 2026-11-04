@@ -43,7 +43,7 @@ export function weaponTargetPriority(enemy,shotClass='light'){
   }
   if(enemy.t==='soldat'||enemy.t==='general')return 0;
   if(enemy.t==='jeep'||enemy.t==='tanqueta'||enemy.t==='tanc'||enemy.t==='patrulla_marina')return 1;
-  if(enemy.t==='torre')return 2;
+  if(enemy.t==='torre')return 3; // només els coets poden fixar l'estructura
   return 3;
 }
 
@@ -76,6 +76,9 @@ export function createAimSelector({origin,direction,range,cone=.97,shotClass='li
  let bestPriority=Infinity,bestScore=Infinity,bestDistance=Infinity,chosen=null;
  const axisLength=Math.max(1e-9,Math.hypot(fx,fy,fz));
  const consider=(obj,kind,priority,tx,ty,tz,ignoreWall=null,ignoreBuilding=null)=>{
+   // Les torres no són dianes per a pistola, fusell, franctirador ni canó lleuger.
+   // Els dos soldats de dalt segueixen essent objectius independents.
+   if(kind==='enemy'&&obj?.t==='torre'&&!heavy)return;
    if(!Number.isFinite(ty))return;
    const dx=tx-x,dy=ty-y,dz=tz-z,
          horizontal=Math.hypot(dx,dz),distance=Math.hypot(dx,dy,dz);
