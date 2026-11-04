@@ -1108,9 +1108,14 @@ function mkEn(t,x,z,gy,options={}){const c=EC[t];let g;
 if(seedSearchMode){
   g=new THREE.Group();
   // Mateixos registres de col·lisió de les potes, sense construir la torre.
-  if(t==='torre')g.userData.towerLegMeshes=[-2.3,2.3].flatMap(lx=>
-    [-1.9,1.9].map(lz=>({position:{x:lx,y:3.98,z:lz},
-      geometry:{parameters:{width:.44,height:7.95,depth:.44}}})));
+  if(t==='torre'){
+    g.userData.towerLegMeshes=[-2.3,2.3].flatMap(lx=>
+      [-1.9,1.9].map(lz=>({position:{x:lx,y:3.98,z:lz},
+        geometry:{parameters:{width:.44,height:7.95,depth:.44}}})));
+    g.userData.towerParapetMeshes=window.HUNTER_TOWER_MODEL.towerSideParapetVolumes()
+      .map(w=>({position:{x:w.x,y:w.y,z:w.z},
+        geometry:{parameters:{width:w.width,height:w.height,depth:w.depth}}}));
+  }
 }
 else if(t=='soldat'||t=='general'){g=window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M,general:t==='general',elite:!!options.elite})}
 else if(t==='patrulla_marina'){g=mkV('llanxa');createMarinePatrolVisual(g)}
@@ -1138,6 +1143,20 @@ if(t==='torre'){
       hp:Infinity,door:false,open:false,rammable:false,cx,cz};
   });
   Wl.push(...u.towerLegColliders);
+  // Parapets laterals: mateixos volums que els models visibles.
+  // Barrera per als trets entrants, però els soldats de dins poden
+  // treure el fusell per damunt i disparar cap enfora.
+  u.towerParapetColliders=(g.userData.towerParapetMeshes||[]).map(m=>{
+    const hw=m.geometry.parameters.width/2,hd=m.geometry.parameters.depth/2,
+      hh=m.geometry.parameters.height/2,cx=x+m.position.x,cz=z+m.position.z;
+    return {towerParapet:true,towerParapetOwner:u,
+      towerX:x,towerZ:z,towerBaseY:base,m,
+      x0:cx-hw,x1:cx+hw,z0:cz-hd,z1:cz+hd,
+      y0:base+m.position.y-hh,y1:base+m.position.y+hh,
+      hp:Infinity,door:false,open:false,rammable:false,
+      playerBlock:false,cx,cz};
+  });
+  Wl.push(...u.towerParapetColliders);
   // Dos soldats diferenciats, no armes ancorades a la caseta.
   // Continuen sent dianes individuals per les bales i les explosions.
   const rules=window.HUNTER_TOWER_MODEL;
