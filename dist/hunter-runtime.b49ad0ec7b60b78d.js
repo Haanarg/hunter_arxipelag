@@ -9193,11 +9193,6 @@ function soldierEngage(u,target,targetY,dt,d,visible){
   u.hd=Math.atan2(u.x-toward.x,u.z-toward.z); // la cara sempre al jugador
 }
 
-// Les defenses utilitzen el canó pesat contra qualsevol vehicle i
-// el fusell lleuger contra el jugador a peu, sense nivells de blindatge.
-function towerWeaponForTarget(vehicle){
-  return vehicle?'heavy':'light';
-}
 // El fusell de l'artiller gira des de la finestra dreta del cotxe.
 // El marcador és fill de la boca del canó visible: l'origen del tret
 // segueix sempre el model real i no el centre del vehicle.
@@ -9479,11 +9474,64 @@ function enemyVehicleBoardingTick(u,dt){
   if(oldX!==u.x||oldZ!==u.z)enemyReindex(u,oldX,oldZ);
   return true;
 }
+// Defensors reals de les torres: dos soldats amb salut pròpia, sense
+// torreta automàtica ni supressió. Miren només cap al davant i, si no
+// tenen contacte, giren junts gradualment per explorar tot l'horitzó.
+function towerGuardTick(u,dt){
+ const tower=u.towerHost;
+ if(!tower||tower.destroyed||tower.hp<=0){
+   hurtE(u,Math.max(1,u.hp+1));return;
+ }
+ const rules=window.HUNTER_TOWER_MODEL,q=cv||P,
+   targetY=cv?cv.o.position.y:P.y,
+   dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz),
+   eyeY=u.gy+2.15,rocket=!!u.rocketSoldier,
+   visualTarget={x:q.x,y:targetY+(!cv&&playerCrouched?1.25:1.5),z:q.z},
+   facing=rules.towerGuardInView(u.hd,dx,dz,u.rng);
+ u.cd=Math.max(0,(u.cd||0)-dt);
+ u.senseT=(u.senseT??0)-dt;
+ if(u.senseT<=0){
+   u.senseT=.10;
+   // No veuen a través de relleu, parets o una disfressa no descoberta.
+   u.canSee=!cheats.invisible&&!over&&(!disg||!!cv||u.alert>0||d<20)&&
+     facing&&weaponAimClear(u.x,eyeY,u.z,
+       visualTarget.x,visualTarget.y,visualTarget.z);
+ }
+ if(u.canSee){
+   const targetHeading=Math.atan2(-dx,-dz);
+   u.hd=rules.towerTurnHeading(u.hd,targetHeading,dt);
+   const aiming=rules.towerGuardInView(u.hd,dx,dz,u.rng),
+     aligned=Math.abs(Math.atan2(Math.sin(targetHeading-u.hd),
+       Math.cos(targetHeading-u.hd)))<.13;
+   if(aiming&&aligned&&u.cd<=0&&(!rocket||d>12)){
+     const fx=-Math.sin(u.hd),fz=-Math.cos(u.hd),
+       origin={x:u.x+fx*1.18,y:eyeY+(rocket?.05:-.18),z:u.z+fz*1.18};
+     if(weaponAimClear(origin.x,origin.y,origin.z,
+       visualTarget.x,visualTarget.y,visualTarget.z)&&
+       !enemyFriendlyVehicleInFireLane(origin,visualTarget)){
+       const [vx,vy,vz]=window.HUNTER_ENEMY_ACCURACY.direction(
+         DIF,rocket?'towerHeavy':'rifle',
+         visualTarget.x-origin.x,visualTarget.y-origin.y,visualTarget.z-origin.z,rn);
+       shoot(origin.x,origin.y,origin.z,vx,vy,vz,
+         rocket?76:70,u.dmg,rocket?8:0,'e',rocket?mS:mW,
+         rocket?1.9:SMALL_ARMS_SCALE,u);
+       u.cd=u.rate;
+       u.alert=12;
+     }
+   }
+ }else{
+   const angle=u.hd+rules.TOWER_GUARD_SCAN_SPEED*dt;
+   u.hd=Math.atan2(Math.sin(angle),Math.cos(angle));
+ }
+ u.o.position.set(u.x,u.gy,u.z);
+ u.o.rotation.y=u.hd;
+ animateEnemyInfantry(u,false,dt);
+}
 // La IA llunyana sense contacte necessita menys decisions de navegació,
 // però conserva tot el temps transcorregut: mai no alentim la patrulla.
 // Un enemic que detecta, cerca o combat reprèn immediatament els passos normals.
 function enemyRemoteInterval(u,q,focus=null){
-  if(u.t==='general'||u.t==='patrulla_marina'||u.basement||
+  if(u.t==='general'||u.t==='patrulla_marina'||u.towerGuard||u.basement||
      u.blastT>0||u.canSee||u.alert>0||u.entryDoor||
      (u.pursuitT||0)>0||(u.aiMode&&u.aiMode!=='patrol'))return 0;
   // El franctirador pot observar enemics a molta distància: un objectiu
@@ -9549,11 +9597,13 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
     u.blastRagdoll=null;u.blastImpulse=null;u.blastHeight=0;u.o.rotation.z=0
   }
   const oldX=u.x,oldZ=u.z;
+  if(u.t==='torre')return; // La torre ja és una estructura inerta.
+  if(u.towerGuard&&!nativeCoopSession){towerGuardTick(u,dt);return;}
   if(u.t==='soldat'&&u.enemyVehicleClaim&&u.enemyVehicleClaim.phase!=='approach'&&!nativeCoopSession){
     u.cd=Math.max(0,(u.cd||0)-dt); // el passatger pot fer diversos trets
     enemyVehicleBoardingTick(u,dt);return;
   }
-  u.alert=Math.max(0,u.alert-dt);u.cd-=dt;if(u.t==='torre')u.heavyCd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);
+  u.alert=Math.max(0,u.alert-dt);u.cd-=dt;u.playerHitCd=Math.max(0,(u.playerHitCd||0)-dt);
    const q=cv||P,py=cv?cv.o.position.y:P.y,dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz),
          det=disg&&!cv?20:u.alert>0?300:u.t=='general'?60:120,
         eyeY=u.o.position.y+(u.t=='torre'?9.4:2.2);
@@ -9697,25 +9747,7 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
         u.hd=Math.atan2(u.x-dp.x,u.z-dp.z);mvE(u,u.sp*.75*dt,dp.x,dp.z)
       }else if(d>u.rng*.72)mvE(u,u.sp*dt,q.x,q.z)
     }
-    if(u.t==='torre'){
-      const suppressed=(u.suppressedUntil||0)>elapsed;
-      const weapon=towerWeaponForTarget(cv);
-      // Mai no fem servir projectils pesats contra una persona a peu.
-      // El tipus de tir depèn de si el jugador pilota un vehicle.
-      if(!suppressed&&weapon==='light'&&d<u.rng&&u.cd<=0){
-        u.cd=u.rate;
-        const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY),
-              fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
-        shoot(u.x+fx*2.4-Math.cos(u.hd)*.72,eyeY,
-          u.z+fz*2.4+Math.sin(u.hd)*.72,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE,u);
-      }else if(!suppressed&&weapon==='heavy'&&d<u.heavyRange&&u.heavyCd<=0){
-        u.heavyCd=u.heavyRate;
-        const [ax,ay,az]=enemyShotDirection(u,q,py,eyeY-.2,rn,'towerHeavy'),
-              fx=-Math.sin(u.hd),fz=-Math.cos(u.hd);
-        shoot(u.x+fx*2.4+Math.cos(u.hd)*.72,eyeY-.2,
-          u.z+fz*2.4-Math.sin(u.hd)*.72,ax,ay,az,76,COMBAT_BALANCE.weapons.towerHeavy,7,'e',mS,1.8,u);
-      }
-    }else if(u.t!=='tanc'&&u.t!=='tanqueta'&&d<u.rng&&u.cd<=0){
+    if(u.t!=='tanc'&&u.t!=='tanqueta'&&d<u.rng&&u.cd<=0){
       if(u.t==='jeep'){
         const rifle=enemyCarRifleShot(u,q,py);
         if(rifle){u.cd=u.rate;const p=rifle.origin,v=rifle.direction;
@@ -9935,9 +9967,9 @@ function mkEn(t,x,z,gy,options={}){const c=EC[t];let g;
 if(seedSearchMode){
   g=new THREE.Group();
   // Mateixos registres de col·lisió de les potes, sense construir la torre.
-  if(t==='torre')g.userData.towerLegMeshes=[-1.45,1.45].flatMap(lx=>
-    [-1.45,1.45].map(lz=>({position:{x:lx,y:3.9,z:lz},
-      geometry:{parameters:{width:.38,height:7.8,depth:.38}}})));
+  if(t==='torre')g.userData.towerLegMeshes=[-2.3,2.3].flatMap(lx=>
+    [-1.9,1.9].map(lz=>({position:{x:lx,y:3.98,z:lz},
+      geometry:{parameters:{width:.44,height:7.95,depth:.44}}})));
 }
 else if(t=='soldat'||t=='general'){g=window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M,general:t==='general',elite:!!options.elite})}
 else if(t==='patrulla_marina'){g=mkV('llanxa');createMarinePatrolVisual(g)}
@@ -9951,7 +9983,7 @@ if(!seedSearchMode&&t==='patrulla_marina')ensureEnemyVehicleFlag(g,'patrulla_mar
 if(!seedSearchMode)world.add(g);const sensePhase=(E.length%10)*.01,u={t,x,z,gy,hd:rr(0,6.28),o:g,home:{x,z},cd:rr(0,1),alert:0,wt:0,tx:x,tz:z,senseT:sensePhase,
   remoteAiPhase:((E.length*37)%101)/101,canSee:false,defenseTarget:null,...c};
 if(options.elite){u.elite=true;u.hp=COMBAT_BALANCE.people.elite;u.dmg=COMBAT_BALANCE.weapons.eliteRifle;u.rng=85;u.rate=TANKETTE_FIRE_INTERVAL;u.sp=8;u.cd=.4+(E.length%4)*.14}
-if(t==='torre'){u.heavyCd=1.6+(E.length%5)*.4;u.heavyRate=5;u.heavyRange=95}
+if(t==='torre'){u.sp=0;u.rate=Infinity;u.rng=0}
 E.push(u);
 if(t==='torre'){
   const base=gy??enemyGroundAt(u,x,z);
@@ -9965,6 +9997,24 @@ if(t==='torre'){
       hp:Infinity,door:false,open:false,rammable:false,cx,cz};
   });
   Wl.push(...u.towerLegColliders);
+  // Dos soldats diferenciats, no armes ancorades a la caseta.
+  // Continuen sent dianes individuals per les bales i les explosions.
+  const rules=window.HUNTER_TOWER_MODEL;
+  for(let seat=0;seat<2;seat++){
+    const pos=rules.towerGuardPosition({x,z,y:base},seat),
+      soldier=mkEn('soldat',pos.x,pos.z,pos.y);
+    soldier.towerGuard=true;soldier.towerHost=u;soldier.towerSeat=seat;
+    soldier.sp=0;soldier.rng=rules.TOWER_GUARD_RANGE;
+    soldier.hd=u.hd;soldier.cd=1+seat*.9;
+    soldier.rate=seat===1?5:1.1;
+    soldier.senseT=seat*.05;
+    if(seat===1){
+      soldier.rocketSoldier=true;soldier.dmg=COMBAT_BALANCE.weapons.bazooka;
+      soldier.spl=8;
+      if(!seedSearchMode)window.HUNTER_CHARACTERS.equipBazooka(THREE,soldier.o,{box:bx});
+    }
+    (u.towerGuards||(u.towerGuards=[])).push(soldier);
+  }
 }
 return u}
 
