@@ -252,34 +252,40 @@ function hurtE(u,d,killingShot=null){
   }
   if(u.hp<=0)killEnemy(u,killingShot);
 }
-// La bicicleta no té motor ni combustible: queda espanyada, però mai no
-// origina una explosió, ona expansiva, dany en àrea ni expulsió balística.
-function destroyBicycle(v){
+// Vehicles lleugers sense combustible explosiu: desapareixen en rompre's,
+// sense ona expansiva ni dany en àrea. La barca i el windsurf deixen el
+// jugador a l'aigua; la bicicleta només provoca una ensopegada curta.
+const FRAGILE_VEHICLES=new Set(['bici','barca_rems','windsurf']);
+function destroyFragileVehicle(v){
   if(!v||v.destroyed)return;
-  const wasRiding=cv===v;
+  const wasRiding=cv===v,waterborne=v.t!=='bici',
+        yy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
   v.destroyed=true;v.life=0;v.v=0;v.driveInput=0;v.steerInput=0;
   v.reentryLockUntil=Infinity;
   if(wasRiding){
-    resetCameraState();
-    cv=null;P.x=v.x;P.z=v.z;P.hd=v.hd;
-    P.y=groundAt(v.x,v.z,P.y);
-    // Una ensopegada curta, sense velocitat d'ejecció ni girs aeris.
-    playerEject={kind:'bicycle',vx:0,vz:0,t:.42,dur:.42};
-    msg='La bicicleta s’ha romput!';msgT=2.5;
+    resetCameraState();cv=null;P.x=v.x;P.z=v.z;P.hd=v.hd;
+    if(waterborne){
+      P.y=Math.max(groundAt(v.x,v.z,P.y),wy(v.x,v.z,elapsed))+.1;
+      swimming=true;
+    }else{
+      P.y=groundAt(v.x,v.z,P.y);
+      playerEject={kind:'bicycle',vx:0,vz:0,t:.42,dur:.42};
+    }
+    msg=v.t==='bici'?'La bicicleta s’ha romput!':
+      v.t==='windsurf'?'El windsurf s’ha romput!':'La barca de rems s’ha romput!';
+    msgT=2.5;
   }
   const i=V.indexOf(v);if(i>=0)V.splice(i,1);
   intelMarks=intelMarks.filter(mark=>mark.ref!==v);
-  // La ferralla continua al món, tombada i fora de la llista de vehicles.
-  // Ajustam l'altura després de girar-la perquè toqui el sòl.
-  if(v.o){
-    v.o.rotation.z=(Math.sin(v.x*2.13+v.z*.79)>0?1:-1)*Math.PI*.43;
-    v.o.updateMatrixWorld(true);
-    const bounds=new THREE.Box3().setFromObject(v.o),floor=hAt(v.x,v.z);
-    if(Number.isFinite(bounds.min.y))v.o.position.y+=floor-bounds.min.y+.04;
-  }
+  if(v.o)world.remove(v.o);
+  // Només fragments discrets de material, mai vehicleDebris ni boom().
+  const color=v.t==='bici'?0x57666a:v.t==='windsurf'?0x8b9ca1:0x8b674b;
+  for(let k=0;k<5;k++)debris(v.x+rn(-.5,.5),yy+.35,v.z+rn(-.5,.5),
+    color,1,.24,4);
+  snd('woodBreak',.35,{x:v.x,y:yy,z:v.z},v);
 }
 function explodeVehicle(v){
-  if(v?.t==='bici'){destroyBicycle(v);return;}
+  if(v&&FRAGILE_VEHICLES.has(v.t)){destroyFragileVehicle(v);return;}
   if(!v||v.destroyed)return;
   // L'explosió del vehicle mata també els ocupants enemics sense
   // provocar un segon vehicle fictici ni deixar reserves orfes.
