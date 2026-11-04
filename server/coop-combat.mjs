@@ -525,7 +525,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         }
       }
       aim.consider(t,'enemy',weaponTargetPriority({...t,t:t.t||'soldat'},heavy?'heavy':weapon),
-        point?.x??t.x,point?.y??(t.y+(t.t==='torre'?9.4:1.5)),point?.z??t.z);
+        point?.x??t.x,point?.y??(t.y+(t.t==='torre'?9.4:t.towerGuard?2.3:1.5)),point?.z??t.z);
     }
     for(const v of vehicles.live())if(v!==vehicle&&!v.destroyed&&
       (heavy?!v.seats.some(Boolean):true))
