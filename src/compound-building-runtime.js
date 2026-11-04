@@ -37,8 +37,12 @@ function decorateRuntimeBuilding(b,spec){
   });
   b.extraRoofs=roofs;
   b.porchParts=timber?.porchParts||[];
-  // La façana frontal sustenta tot el porxo: es marca abans de girar la casa.
-  for(const w of Wl)if(w.owner===b&&!w.woodenDoor&&w.cz>=b.z+b.d/2-.3&&w.y1>b.fy+2)
+  // La façana frontal (+Z local) sosté el porxo. El seu centre és
+  // a d/2 - gruix/2 (= d/2 - 0,4): el límit antic d/2 - 0,3
+  // no la detectava i deixava els pilars flotant en caure la paret.
+  // supportSide=0 també funciona quan el barracó està girat 90°.
+  for(const w of Wl)if(w.owner===b&&!w.woodenDoor&&
+    (w.supportSide===0||w.cz>=b.z+b.d/2-.8)&&w.y1>b.fy+2)
     w.porchSupports=true;
   // The ribs are authored in building-local space, before the compound's
   // quarter-turn. Associate each with its real wall collision segment.
