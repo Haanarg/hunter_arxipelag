@@ -90,6 +90,11 @@ jobs:
           node --check src/compound-coast-runtime.js
           node --check src/compound-planning.mjs
           node tests/coastal-layout-parity.mjs
+      - name: Check phase 4 coast road A-star parity
+        run: |
+          node --check src/compound-coast-runtime.js
+          node --check src/compound-planning.mjs
+          node tests/coast-road-parity.mjs
       - name: Generate runtime bundle
         run: node tools/build-runtime.cjs
       - name: Verify generated bundle

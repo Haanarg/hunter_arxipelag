@@ -165,3 +165,41 @@ function* findCoastalLayoutSteps(l,anchor,accept=()=>true){
 }
  return {coastalLayoutFits,findCoastalLayoutSteps};
 }
+
+// Cerca de la carretera a la costa, separada del moviment de terres i
+// de la malla visual. Els edificis i els marges del món són consultats
+// durant el mostreig: així un reinici no deixa referències obsoletes.
+// L'ordre d'A*, el cost, la projecció dels pendents i els checkpoints
+// cooperatius es mantenen iguals que en el generador anterior.
+export function createCoastRoadSolver({
+ heightAt:hAt,getHalfSize,getBuildings,MapConstructor=Map
+}){
+function* solveCoastRoadSteps(start,goal){
+ const step=12,nodes=new MapConstructor(),open=[],cache=new MapConstructor(),key=(x,z)=>x+','+z;
+ const sample=(x,z)=>{const k=key(x,z);if(cache.has(k))return cache.get(k);let y=hAt(x,z),ok=y>.15&&Math.abs(x)<getHalfSize()-20&&Math.abs(z)<getHalfSize()-20;
+  for(const b of getBuildings())if(Math.abs(x-b.x)<b.w/2+7&&Math.abs(z-b.z)<b.d/2+7)ok=false;
+  for(const [dx,dz]of[[-5,0],[5,0],[0,-5],[0,5]])if(hAt(x+dx,z+dz)<.1)ok=false;
+  const value={y,ok};cache.set(k,value);return value;
+ };
+ const first={x:start.x,z:start.z,ix:0,iz:0,g:0,h:Math.hypot(goal.x-start.x,goal.z-start.z)};first.f=first.h;open.push(first);nodes.set('0,0',first);let found=null,count=0;
+ while(open.length&&count++<14000){if(count%8===0)yield {stage:'Camí de la base a la costa',completed:count,total:null,unit:'nodes'};open.sort((a,b)=>b.f-a.f);const n=open.pop();if(n.closed)continue;n.closed=true;
+  if(Math.hypot(n.x-goal.x,n.z-goal.z)<step*1.3){found=n;break}
+  for(const[dx,dz]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]]){
+   const ix=n.ix+dx,iz=n.iz+dz,x=start.x+ix*step,z=start.z+iz*step,k=key(ix,iz),old=nodes.get(k);if(old?.closed||Math.hypot(x-start.x,z-start.z)>1600)continue;
+   const a=sample(n.x,n.z),b=sample(x,z),mid=sample((x+n.x)/2,(z+n.z)/2),dist=step*Math.hypot(dx,dz);if(!b.ok||!mid.ok||Math.abs(b.y-a.y)>dist*.38)continue;
+   const g=n.g+dist+Math.abs(b.y-a.y)*8;if(old&&g>=old.g)continue;
+   const next={ix,iz,x,z,g,f:g+Math.hypot(x-goal.x,z-goal.z),parent:n};nodes.set(k,next);open.push(next);
+  }
+ }
+ if(!found)return null;
+ const points=[{...goal,y:.86}];for(let n=found;n;n=n.parent)points.push({x:n.x,z:n.z,y:hAt(n.x,n.z)});points.reverse();
+ // Forward/backward slope projection fixes both endpoints and limits the road to 12%.
+ for(let pass=0;pass<6;pass++){
+  points[0].y=hAt(start.x,start.z);for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i],rise=Math.hypot(a.x-b.x,a.z-b.z)*.12;b.y=Math.max(a.y-rise,Math.min(a.y+rise,b.y))}
+  points.at(-1).y=.86;for(let i=points.length-2;i>=0;i--){const a=points[i+1],b=points[i],rise=Math.hypot(a.x-b.x,a.z-b.z)*.12;b.y=Math.max(a.y-rise,Math.min(a.y+rise,b.y))}
+ }
+ if(Math.abs(points[0].y-hAt(start.x,start.z))>.2||points.some(p=>Math.abs(p.y-hAt(p.x,p.z))>7))return null;
+ return points;
+}
+ return solveCoastRoadSteps;
+}

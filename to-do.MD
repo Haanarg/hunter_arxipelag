@@ -80,6 +80,12 @@
 
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
+**Fase 4 · cinquè tall, planificació de carreteres fins a la costa (v0.6.142; implementació parcial):**
+- [x] **Cerca A* extreta de la construcció:** `src/compound-planning.mjs` exposa `createCoastRoadSolver` i calcula els punts amb altura d'una carretera entre la base i la costa, evitant edificis, aigua, desnivells i límits del mapa; el model de carretera, els canvis de relleu i `buildCoastRoadSteps` continuen al runtime.
+- [x] **Determinisme de rutes i checkpoints:** mateix pas de graella 12 m, pressupost fins a 14.000 nodes, cost de pendent, ordenació A*, projecció de pendent al 12 %, comprovacions de resultat i `yield` cada 8 nodes. Les dependències `H` i `B` s'obtenen en cada cerca/mostra per evitar referències obsoletes després de canviar de mapa.
+- [x] **Proves diferencials:** `tests/coast-road-parity.mjs` compara el codi anterior i nou sobre llavors 67/148, amb/sense edificis, terrenys diversos, escala 1/2, el mateix registre de consultes d'altura i el mateix ordre de pauses; també comprova cancel·lacions i reinicis. Inclosa a `test:optimization` i CI.
+- [ ] **Fase 4 pendent:** extracció de les plataformes i la construcció visual, comprovació de rutes reals, casuística de camps/ports/ferris i partida completa amb COOP/Android; optimització de rendiment segons mesures A/B.
+
 **Fase 4 · quart tall, encaix de molls i terminals costaneres (v0.6.141; implementació parcial):**
 - [x] **Planificació costanera sense malles:** `src/compound-planning.mjs` inclou `createCoastalLayoutPlanner` que valida la plataforma a terra, les edificacions, les aigües navegables i l'espai de ferris/llanxes, i cerca emplaçaments costaners per trams.
 - [x] **Integració diferida, compatibilitat dels mapes:** `src/compound-coast-runtime.js` manté les funcions clàssiques `coastalLayoutFits`, `findCoastalLayout`, `findCoastalLayoutSteps` i les inicialitza només quan són necessàries; la mida del mapa i les característiques dels vehicles es consulten dinàmicament. No es toca la geometria, els molls, les rampes ni la creació d'entitats.
