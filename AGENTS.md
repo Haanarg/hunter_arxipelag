@@ -17,3 +17,7 @@ Current native integration and outstanding parity work are documented in `docs/C
 Read `to-do.MD` before changing behavior, architecture, performance or old COOP code. It is the only current backlog; old phase/version notes are historical, not a second list of actionable tasks. Put newly discovered work in `to-do.MD`, with explicit status (implementation, validation or investigation). Do not recreate `PROGRESS.MD` or a per-version TODO list.
 
 For performance work, follow `docs/PERFORMANCE_TESTING.md`. Establish a baseline, make one small extraction at a time, run the appropriate Node/parity tests and verify graphics and two-device behavior separately. Never delete generated runtime bundles, the pinned Three.js dependency or test assets merely because they are large; first prove that production and tests no longer need them.
+
+## Phase 2 tools
+
+Before bumping `GAME_VERSION`, update `src/version.mjs`, run `npm run sync:version`, then `npm run build`. `npm run check:build` must reject stale version stamps and generated bundles. Preserve the only runtime generation workflow at `.github/workflows/rebuild-runtime.yml`; do not reintroduce a second writer. For combined regression execution use `npm run test:regression:once` to avoid rerunning the same tests, and `node tools/repository-audit.cjs` for a conservative dependency/preview inventory. HTML labs may have external URLs even when no source file links to them; never delete on graph reachability alone.

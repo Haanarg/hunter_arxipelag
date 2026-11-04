@@ -1,10 +1,12 @@
-name: Rebuild Hunter runtime bundle
+name: Rebuild and verify Hunter runtime (push or manual)
 on:
   push:
     branches: [main]
     paths:
       - 'src/**'
+      - '!src/runtime-bundle.mjs' # no loop after committing the generated manifest
       - 'tools/build-runtime.cjs'
+      - 'tools/sync-version.cjs'
       - 'tests/tower-sentries.mjs'
       - 'tests/hover-distribution.mjs'
       - 'tests/fragile-vehicle-fragments.mjs'
@@ -12,6 +14,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+concurrency:
+  group: hunter-runtime-build-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   rebuild:
     runs-on: ubuntu-latest
@@ -36,10 +41,14 @@ jobs:
           node --check server/coop-optionals.mjs
       - name: Check nonexplosive flying vehicle fragments
         run: node tests/fragile-vehicle-fragments.mjs
+      - name: Check release version in HTML and JS imports
+        run: node tools/sync-version.cjs --check
       - name: Generate runtime bundle
         run: node tools/build-runtime.cjs
       - name: Verify generated bundle
         run: node tools/build-runtime.cjs --check
+      - name: Check generated JavaScript syntax
+        run: node --check dist/hunter-runtime.*.js
       - name: Commit regenerated files
         run: |
           git config user.name "github-actions[bot]"
@@ -47,5 +56,9 @@ jobs:
           git add -A dist src/runtime-bundle.mjs
           if ! git diff --cached --quiet; then
             git commit -m "build: regenerate Hunter runtime bundle"
-            git push
+            git pull --rebase origin main
+            # Fail closed if someone pushed new src during the build.
+            # The following push event will rebuild from current sources.
+            node tools/build-runtime.cjs --check
+            git push origin HEAD:main
           fi
