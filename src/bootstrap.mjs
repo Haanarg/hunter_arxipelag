@@ -1,3 +1,5 @@
+import * as frameDiagnostics from './frame-diagnostics-core.mjs?v=0.6.124';
+window.HUNTER_FRAME_DIAGNOSTICS=frameDiagnostics;
 import * as spatialGrid from './spatial-grid-core.mjs?v=0.6.124';
 window.HUNTER_SPATIAL_GRID=spatialGrid;
 import {createArcadeBlastFX} from './arcade-blast-fx.mjs?v=0.6.124';
