@@ -25,9 +25,11 @@ python3 -m http.server 8000
 El codi clàssic de joc es concatena **sense reordenar globals ni reescriure sintaxi** a partir de `src/runtime-scripts.mjs`. Les importacions ESM s'inicialitzen a `src/bootstrap.mjs`. No editar `dist/hunter-runtime.*.js` ni `src/runtime-bundle.mjs` manualment.
 
 ```bash
-npm run build          # regenera bundle de producció + manifest
-npm run check:build    # comprova coherència font/manifest/bundle
-npm run build:worker   # prepara el Worker
+npm run check:version # comprova versió a la portada i importacions
+npm run sync:version  # sincronitza imports després d'editar src/version.mjs
+npm run build         # regenera bundle de producció + manifest
+npm run check:build   # verifica versió, fonts, manifest i bundle
+npm run build:worker  # prepara el Worker
 ```
 
 ## Proves
@@ -42,7 +44,9 @@ npm run test:saves
 npm run test:accounts
 ```
 
-La resta de suites es troben a `package.json`. Els workflows de GitHub Actions s'han configurat principalment per execució manual; no pressuposeu que cada push hagi executat totes les proves.
+Per executar les sis suites principals conjuntament i sense repetir ordres: `npm run test:regression:once`. Per verificar les eines i el mapa de dependències: `npm run test:repo:tooling` i `node tools/repository-audit.cjs` (inventari, no esborra arxius).
+
+El runtime disposa d'**un sol workflow** a `.github/workflows/rebuild-runtime.yml`, automàtic en canvis del motor i activable manualment. GitHub Actions no substitueix les proves reals de GPU o HOST/GUEST.
 
 ## Estructura del codi
 

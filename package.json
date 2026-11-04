@@ -8,8 +8,8 @@
   "name": "hunter-arxipelag",
   "private": true,
   "scripts": {
-    "build": "node tools/build-runtime.cjs",
-    "check:build": "node tools/build-runtime.cjs --check",
+    "build": "node tools/sync-version.cjs --check && node tools/build-runtime.cjs",
+    "check:build": "node tools/sync-version.cjs --check && node tools/build-runtime.cjs --check",
     "test:coop:offline": "node tests/native-coop-interpolation.mjs && node tests/native-coop-network-jitter.mjs && node tests/native-coop-local-presentation.mjs && node tests/native-coop-subtick.mjs && node tests/native-coop-projectile-visual.mjs && node tests/coop-cheats.mjs && node tests/coop-host-start.mjs && node tests/native-coop-reconnect.mjs && node tests/native-coop-visual-gameover.mjs && node tests/native-coop-patrols-grenades.mjs && node tests/coop-hotfixes.mjs && node tests/coop-reticle-destruction.mjs && node tests/player-simulation.mjs && node tests/native-coop-enemy-interpolation.mjs && node tests/native-coop-prediction-cache.mjs && node tests/native-coop-vehicle-candidates.mjs && node tests/native-coop-wall-candidates.mjs && node tests/coop-state-delta.mjs && node tests/native-coop-delta-transport.mjs && node tests/coop-broadcast-encoding.mjs && node tests/coop-transport-telemetry.mjs && node tools/build-runtime.cjs --check && node tests/coop-legacy-cleanup.mjs && node tests/enemy-car-turning-and-flags.mjs && node tests/enemy-vehicle-requisition.mjs && node tests/ferry-heavy-grenade-rules.mjs && node tests/bazooka-aim-cone.mjs && node tests/light-aim-and-crew.mjs && node tests/coop-occupant-glass.mjs",
     "test:coop:integration": "node tests/native-coop-prediction.cjs && node tests/native-coop-interpolation-runtime.cjs && node tests/native-coop-enemy-runtime.cjs && node tests/native-coop-snapshot-projection.cjs && node tests/native-coop-vehicle-visual-lod.cjs && node tests/native-coop-side-by-side-riders.cjs && node tests/native-coop-fleet-parity.cjs && node tests/hovercraft-prototypes.mjs && node tests/hovercraft-game-integration.mjs && node tests/enemy-vehicle-requisition.mjs",
     "test:timing": "node tests/simulation-clock.cjs && node tests/simulation-timing.cjs",
@@ -50,7 +50,11 @@
     "test:doors": "node tests/context-doors.cjs && node tests/coop-doors.mjs && node tests/coop-doors-hub.mjs",
     "test:bazooka-arc": "node tests/bazooka-horizontal-arc.mjs",
     "test:assault-rifle-model": "node tests/assault-rifle-model.cjs && node tests/bazooka-shoulder-pose.cjs && node tests/assault-rifle-burst.cjs",
-    "test:aim-occupants": "node tests/bazooka-aim-cone.mjs && node tests/light-aim-and-crew.mjs && node tests/coop-occupant-glass.mjs && node tests/vehicle-occupant-damage.mjs"
+    "test:aim-occupants": "node tests/bazooka-aim-cone.mjs && node tests/light-aim-and-crew.mjs && node tests/coop-occupant-glass.mjs && node tests/vehicle-occupant-damage.mjs",
+    "sync:version": "node tools/sync-version.cjs --write",
+    "check:version": "node tools/sync-version.cjs --check",
+    "test:regression:once": "node tools/run-test-suites.cjs test:optimization test:coop:offline test:coop:integration test:play test:saves test:accounts",
+    "test:repo:tooling": "node tests/version-sync.cjs && node tests/test-suite-dedup.cjs && node tests/repository-audit.cjs"
   },
   "dependencies": {
     "better-auth": "1.7.14"
