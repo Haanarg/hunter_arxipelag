@@ -3786,7 +3786,7 @@ function proxy(T,type,level){
       box(x,3.98,z,.44,7.95,.44,metal);
     box(0,8.04,0,6.4,.44,5.5,metal);
     for(const x of [-3.02,3.02])box(x,9.59,0,.18,2.32,5.1,0x812f35);
-    box(0,8.7,2.5,6,.85,.18,0x812f35);
+    for(const z of [-2.5,2.5])box(0,9.59,z,6.02,2.32,.18,0x812f35);
     box(0,12.32,0,6.95,.32,6.05,0x373c40);
   }else if(type==='patrulla_marina'){
     box(0,.54,0,3.2,1.03,8.9,0x626e71);
@@ -9496,7 +9496,7 @@ function towerGuardTick(u,dt){
  const rules=window.HUNTER_TOWER_MODEL,q=cv||P,
    targetY=cv?cv.o.position.y:P.y,
    dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz),
-   // El cap i la boca del canó queden per damunt del parapet lateral.
+   // El cap i la boca del canó queden per damunt dels quatre parapets.
    eyeY=u.gy+2.78,rocket=!!u.rocketSoldier,
    visualTarget={x:q.x,y:targetY+(!cv&&playerCrouched?1.25:1.5),z:q.z},
    facing=rules.towerGuardInView(u.hd,dx,dz,u.rng);
@@ -9993,7 +9993,7 @@ if(seedSearchMode){
     g.userData.towerLegMeshes=[-2.3,2.3].flatMap(lx=>
       [-1.9,1.9].map(lz=>({position:{x:lx,y:3.98,z:lz},
         geometry:{parameters:{width:.44,height:7.95,depth:.44}}})));
-    g.userData.towerParapetMeshes=window.HUNTER_TOWER_MODEL.towerSideParapetVolumes()
+    g.userData.towerParapetMeshes=window.HUNTER_TOWER_MODEL.towerParapetVolumes()
       .map(w=>({position:{x:w.x,y:w.y,z:w.z},
         geometry:{parameters:{width:w.width,height:w.height,depth:w.depth}}}));
   }
@@ -10024,7 +10024,7 @@ if(t==='torre'){
       hp:Infinity,door:false,open:false,rammable:false,cx,cz};
   });
   Wl.push(...u.towerLegColliders);
-  // Parapets laterals: mateixos volums que els models visibles.
+  // Quatre parapets: mateixos volums que els models visibles.
   // Barrera per als trets entrants, però els soldats de dins poden
   // treure el fusell per damunt i disparar cap enfora.
   u.towerParapetColliders=(g.userData.towerParapetMeshes||[]).map(m=>{
