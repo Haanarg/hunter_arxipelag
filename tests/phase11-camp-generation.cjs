@@ -26,8 +26,10 @@ const inspect=`(()=>{
    check(walls.length===3,'workshop has three physical walls');
    check(!workshop.door,'open workshop frontage must not be blocked by an invisible door');
    check(walls.every(w=>Math.abs(w.y1-workshop.fy-12)<.01),'three full-height walls');
-   check(layout.mechanicStation.x===40&&layout.mechanicStation.z===16,
-     'mechanic works off the central vehicle line');
+   check(layout.mechanicStation.x===40&&layout.mechanicStation.z===8,
+     'mechanic station follows rearward workshop');
+   check(layout.helipad?.size===30&&layout.helipad.x===36&&layout.helipad.z===39,
+     'helipad stands in front of workshop, not at compound gate');
  }
  const counts=Object.fromEntries(['polvori','comunicacions','heliport','port'].map(id=>[id,world.userData.compounds.filter(c=>c.id===id).length]));
  check(counts.polvori>=1,'powder magazine coverage');check(counts.comunicacions>=1,'communications coverage');
