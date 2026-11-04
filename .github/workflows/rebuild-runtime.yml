@@ -7,6 +7,7 @@ on:
       - 'tools/build-runtime.cjs'
       - 'tests/tower-sentries.mjs'
       - 'tests/hover-distribution.mjs'
+      - 'tests/fragile-vehicle-fragments.mjs'
       - '.github/workflows/rebuild-runtime.yml'
   workflow_dispatch:
 permissions:
@@ -33,6 +34,8 @@ jobs:
           node --check src/tower-model.mjs
           node --check server/coop-combat.mjs
           node --check server/coop-optionals.mjs
+      - name: Check nonexplosive flying vehicle fragments
+        run: node tests/fragile-vehicle-fragments.mjs
       - name: Generate runtime bundle
         run: node tools/build-runtime.cjs
       - name: Verify generated bundle
