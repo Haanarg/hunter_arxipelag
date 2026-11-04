@@ -75,6 +75,14 @@
 
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
+
+**Fase 3 · quart tall, cicle d'arrencada (v0.6.127; implementació parcial):**
+- [x] **Estat inicial, progrés i cancel·lació extrets:** `src/start-lifecycle-core.mjs` calcula les opcions i dimensions de la missió amb dependències explícites, gestiona el senyal de cancel·lació i restaura els controls després de generar, cancel·lar o fallar. `game-core.js` conserva l'ordre original de les operacions, la propietat de `generationPromise`, els desaments, el generador i l'activació; no es canvia el RNG ni el comportament de SOLO/COOP.
+- [x] **Prova diferencial aïllada:** `tests/start-lifecycle-parity.mjs` cobreix 1.040 informes de progrés, 112 notificacions de cancel·lació, 720 combinacions de llavors/mides/dificultat, l'ordre dels listeners i la restauració dels controls. Afegida a `test:optimization`. El harness Node també registra el mòdul abans d'executar el runtime.
+- [x] **Compatibilitat amb canvis concurrents:** el bundle generat incorpora també la correcció d'autoapuntat d'armes lleugeres entrada a `main` durant aquesta extracció, sense revertir-la.
+- [ ] **Fase 3 encara oberta:** separació incremental de més estat global i inicialització del motor; validació completa amb `tests/progressive-generation.cjs`, llavors i checkpoints, WebGL/Android, HOST/GUEST, FPS i GC durant la bateria conjunta acordada.
+
+
 **Fase 3 · tercer tall del coordinador (v0.6.126; implementació parcial):**
 - [x] **Coordinador de passos i rellotges separat:** `src/frame-tick-core.mjs` concentra les crides als rellotges semi-fixos de simulació i cinemàtiques, el reinici durant la generació, el pressupost de navegació per fotograma, la neteja de `simulationFrameActive` amb `try/finally`, els passos a `dt=0` i les crides de persistència SOLO. No altera el temps ni l'ordre de simulació, la física, les entrades, l'RNG, les dades de partides ni l'Worker.
 - [x] **Paritat de la coordinació:** `tests/frame-tick-parity.mjs` compara el codi extret amb el contracte anterior sobre 354 fotogrames i 3.779 esdeveniments de la mateixa simulació, incloent pauses, generació, interrupcions, COOP, cinemàtiques i excepcions. Integrada a `test:timing` i `test:optimization`.
