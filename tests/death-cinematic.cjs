@@ -94,11 +94,13 @@ assert.ok(html.includes('.death-water-filter'),'Vel blau en CSS');
 (async()=>{
  const game=await require('./harness.cjs')();
  game.start('12345');game.frame();
+ game.run("document.getElementById('lightAimReticle').style.visibility='visible';document.getElementById('lightAimReticle').style.display='block';");
  const started=game.run("(()=>{const previous=document.getElementById('hud').style.visibility||'';hurtP(999,true,{type:'bullet',x:P.x-8,y:P.y+2,z:P.z-10});return {active:deathCinematic?.active,over,hp,hidden:document.getElementById('hud').style.visibility,hasPlayer:!!deathCinematic?.voidPlayer,hasReaper:!!deathCinematic?.reaper?.group,hasEffect:!!deathCinematic?.replayEffect,hasDroppedWeapon:!!deathCinematic?.droppedWeapon,detachedWeapon:deathCinematic?.droppedWeapon?.object.parent===scene,previous}})()");
  assert.equal(started.active,true);
  assert.equal(started.over,1);
  assert.equal(started.hp,0);
  assert.equal(started.hidden,'hidden');
+ assert.equal(game.el('lightAimReticle').style.visibility,'hidden','La retícula lleugera desapareix durant tota la mort');
  assert.equal(started.hasPlayer,true);
  assert.equal(started.hasReaper,true);
  assert.equal(started.hasEffect,true);
@@ -128,6 +130,7 @@ assert.ok(html.includes('.death-water-filter'),'Vel blau en CSS');
  assert.equal(restoredWeapon,true,'La neteja restaura el model i el pare original');
  assert.equal(game.run('deathCinematic'),null);
  assert.equal(game.el('hud').style.visibility||'',started.previous);
+ assert.equal(game.el('lightAimReticle').style.visibility,'visible','En netejar la mort restaurem la visibilitat anterior');
 
  const staleBlast=game.run("(()=>{hp=20;over=0;playerEject={kind:'blast',vx:22,vy:14,vz:-13};startDeathCinematic({type:'bullet'});const speed=deathCinematic.motion.velocity.length();clearDeathCinematic();playerEject=null;return speed})()");
  assert.equal(staleBlast,0,'Un tret no hereta la propulsio anterior');

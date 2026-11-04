@@ -2391,8 +2391,8 @@ function ejectFromHelicopter(v){
   v.reentryLockUntil=elapsed+8;
   playerEject=null;v.strafeV=0;cv=null;swimming=false;
 }
-// Sortida del camió: sempre pel costat i al darrere del sentit de marxa.
-// Els punts de prova ja són fora de la caixa física, no davant del para-xocs.
+// Sortida segura del Humvee, turismes i camió en marxa: pel costat i
+// darrere del sentit de moviment, fora de la caixa física del vehicle.
 function truckExitCandidate(v,side,index){
   const box=vehicleBox(v),k=index%8,exitSide=index<8?side:-side,
         lateral=box.w/2+2.2+Math.floor(k/4)*1.5,
@@ -2426,12 +2426,12 @@ if(isAir&&height>4&&!ferry){
   msg=playerFall.parachute?'Paracaigudes desplegat!':'Has saltat! L’helicòpter està fora de control!';msgT=3;return
 }
 const moving=speed>3&&!ferry,side=rn(-1,1)<0?-1:1,rrad=vehicleRadius(leaving.t)+2.2,
-      movingTruck=moving&&leaving.t==='camio';let spot=null;
+      safeMovingRoadExit=moving&&['camio','cotxe','cotxe_civil'].includes(leaving.t);let spot=null;
 for(let i=0;i<16;i++){
   const a=leaving.hd+side*Math.PI/2+i*Math.PI/8,
         localFerryExit=leaving.t==='ferry'?[0,-5,5,-10,10,-15,15,-20,20][i%9]:null,
         candidate=localFerryExit!==null?{...ferryWorld(ferry,0,localFerryExit),side}:
-          movingTruck?truckExitCandidate(leaving,side,i):
+          safeMovingRoadExit?truckExitCandidate(leaving,side,i):
           {x:leaving.x+Math.cos(a)*rrad,z:leaving.z+Math.sin(a)*rrad,side},
         {x,z}=candidate;
   if(ferry){const q=ferryLocal(ferry,x,z);
@@ -2441,7 +2441,7 @@ for(let i=0;i<16;i++){
     (leaving!==ferry&&circleVehicleOverlap(x,z,1.1,leaving))||
     vehicleCandidatesAt(x,z,40).some(u=>u!==leaving&&u!==ferry&&!u.destroyed&&circleVehicleOverlap(x,z,1.1,u))||
     wallCandidates(x,z,1).some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;
-  if(movingTruck&&hAt(x,z)<=0&&hAt(leaving.x,leaving.z)>0)continue;
+  if(safeMovingRoadExit&&hAt(x,z)<=0&&hAt(leaving.x,leaving.z)>0)continue;
   spot=candidate;if(ferry||hAt(x,z)>0||VT[leaving.t].m==='w')break;
 }
 if(!spot){msg='No hi ha espai per baixar aquí.';msgT=3;return}
@@ -2449,7 +2449,7 @@ P.x=spot.x;P.z=spot.z;P.hd=leaving.hd;
 if(ferry){const q=ferryLocal(ferry,spot.x,spot.z);P.y=ferryLocalSurfaceY(ferry,q.z)+.12;swimming=false}
 leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;leaving.reentryLockUntil=elapsed+2;
 if(moving){const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),sx=Math.cos(leaving.hd)*spot.side,sz=-Math.sin(leaving.hd)*spot.side,
-  carry=Math.sign(leaving.v)*Math.min(movingTruck?11:28,speed*(movingTruck?.3:.72)),outward=movingTruck?8:1.4;
+  carry=Math.sign(leaving.v)*Math.min(safeMovingRoadExit?11:28,speed*(safeMovingRoadExit?.3:.72)),outward=safeMovingRoadExit?8:1.4;
   playerEject={kind:'flip',vx:fx*carry+sx*outward,vz:fz*carry+sz*outward,t:.5,dur:.5,height:.68};msg='Has saltat del vehicle en marxa!';msgT=2.5}
 cv=null}else{const v=nearV();if(v&&!v.sunk){cv=v;swimming=false;playerCrouched=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
 addEventListener('keydown',e=>{

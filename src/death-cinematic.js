@@ -25,7 +25,7 @@ function deathCauseInfo(cause){
 }
 function deathUi(show){
  const v=deathCinematic;if(!v)return;
- for(const id of ['hud','mm','perfStats','contextButtons','joystick','strafeLeft','strafeRight','sniperScope','bazookaReticle']){
+ for(const id of ['hud','mm','perfStats','contextButtons','joystick','strafeLeft','strafeRight','sniperScope','bazookaReticle','lightAimReticle']){
   const el=document.getElementById(id);if(!el)continue;
   if(show){v.previousVisibility[id]=el.style.visibility;el.style.visibility='hidden'}
   else el.style.visibility=v.previousVisibility[id]||'';
