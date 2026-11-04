@@ -29,7 +29,8 @@ function inspectRepository({root=ROOT}={}){
  const labs=rootHtml.filter(f=>!['index.html','menu-background.html'].includes(f));
  const inbound=Object.fromEntries(labs.map(f=>[f,[]]));
  for(const file of files){
-  if(file==='to-do.MD')continue; // un TODO no és cap consumidor del fitxer
+  if(file==='to-do.MD'||file==='tools/repository-audit.cjs'||
+     file==='tests/repository-audit.cjs')continue; // esmentar una URL no és consumir-la
   const content=read(file);
   for(const html of labs)if(file!==html&&content.includes(html))inbound[html].push(file);
  }
@@ -49,8 +50,11 @@ function inspectRepository({root=ROOT}={}){
    while((match=regexp.exec(content))){
     const dest=posix.normalize(posix.join(posix.dirname(file),match[2].split(/[?#]/)[0]));
     if(!/\.(?:mjs|cjs|js|json)$/.test(dest))continue;
-    if(!exists.has(dest))missingImports.add(file+' -> '+dest);
-    else if(!visited.has(dest))queue.push(dest);
+    // vendor/ i assets/ no s'escanegen per estalviar lectures, però
+    // poden ser imports vàlids de producció.
+    if(!exists.has(dest)&&!fs.existsSync(path.join(root,dest)))
+      missingImports.add(file+' -> '+dest);
+    else if(exists.has(dest)&&!visited.has(dest))queue.push(dest);
    }
   }
  }
