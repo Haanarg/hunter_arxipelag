@@ -55,3 +55,83 @@ export function bunkerBasementPlan(seed,b){
  divisions:[-7+(variant%2)*1.3,6.4+Math.floor(variant/2)*1.3],westDoors:[-15+(variant%2)*.7,Math.floor(variant/2)*.7,15-(variant%2)],eastDivider:-stairSide*7,
  stairX:(variant&2)?14.6:10.8,stairTop:stairSide*13.6,stairBottom:stairSide*1.3};
 }
+
+// Planificació lògica dels indicis del HQ. Sense THREE, escenes ni desaments.
+// El creador de l'RNG local (mul) s'injecta deliberadament per conservar
+// exactament la seqüència anterior i no consumir cap valor de l'R() global.
+// Reutilitzam les estructures d'illes/compounds sense modificar-les.
+// El caller, únicament, és propietari de publicar els resultats al món.
+export function planHQIntelClues({
+  seed,MAP_SCALE,pa,HQ,compounds,islandsInSector,mapSector,sectorMatches,hAt,mul
+}){
+// Small maps keep three HQ candidates. Large maps use nine: three grounded
+// locations in each non-starting quadrant, including the actual HQ.
+// No draws from the shared R() sequence: same world seed, same geography.
+const startingSector=mapSector(pa.x,pa.z),actualSector=mapSector(HQ.x,HQ.z);
+const eligibleHQSites=sector=>{
+  const complexes=compounds.filter(c=>c.id!=='hq'&&c.id!=='base'&&
+    !c.layout?.friendly&&!c.layout?.civilian&&sectorMatches(c.x,c.z,sector))
+    .map(c=>({x:c.x,z:c.z}));
+  const land=[];
+  for(const island of islandsInSector(sector).slice().sort((a,b)=>b.r-a.r)){
+    land.push({x:island.x,z:island.z});
+    if(Number.isFinite(island.peakX)&&Number.isFinite(island.peakZ))
+      land.push({x:island.peakX,z:island.peakZ});
+    for(const distance of [.28,.52,.72])for(let n=0;n<12;n++){
+      const angle=(n*2*Math.PI/12)+(seed%31)*.017,
+        x=island.x+Math.cos(angle)*island.r*distance,
+        z=island.z+Math.sin(angle)*island.r*distance;
+      land.push({x,z});
+    }
+  }
+  return [...complexes,...land].filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.z)&&
+    sectorMatches(p.x,p.z,sector)&&hAt(p.x,p.z)>1.2&&
+    Math.hypot(p.x-pa.x,p.z-pa.z)>240&&Math.hypot(p.x-HQ.x,p.z-HQ.z)>210);
+};
+const pickHQDecoy=(sector,others=[])=>{
+  const pool=eligibleHQSites(sector);
+  // Prefer positions with the footprint of a military complex and large gaps
+  // between clues; relax gaps only when an unusual seed has little dry land.
+  for(const separation of [360,250,160,75]){
+    const q=pool.find(p=>others.every(other=>Math.hypot(p.x-other.x,p.z-other.z)>separation));
+    if(q)return{x:q.x,z:q.z};
+  }
+  return null;
+};
+const hqPositions=[];
+if(MAP_SCALE===2){
+  for(const sector of [0,1,2,3].filter(n=>n!==startingSector)){
+    const group=sector===actualSector?[{x:HQ.x,z:HQ.z,real:true}]:[];
+    while(group.length<3){
+      const q=pickHQDecoy(sector,[...hqPositions,...group]);
+      if(!q)throw new Error('No hi ha prou emplaçaments vàlids per als nou indicis del HQ');
+      group.push({...q,real:false});
+    }
+    hqPositions.push(...group);
+  }
+}else{
+  hqPositions.push({x:HQ.x,z:HQ.z,real:true});
+  for(let i=0;i<2;i++){
+    const q=pickHQDecoy(null,hqPositions);
+    if(!q)throw new Error('No hi ha prou emplaçaments vàlids per als indicis del HQ');
+    hqPositions.push({...q,real:false});
+  }
+}
+// Shuffle the clues and the elimination order independently of live AI RNG.
+// Exactly six distinct false locations are ruled out, never the true HQ.
+const clueRandom=mul((seed^0x5af17e32)>>>0);
+for(let i=hqPositions.length-1;i>0;i--){
+  const j=Math.floor(clueRandom()*(i+1));
+  [hqPositions[i],hqPositions[j]]=[hqPositions[j],hqPositions[i]];
+}
+const hqIntelSites=hqPositions;
+const hqDiscardIndex=hqIntelSites.findIndex(p=>!p.real);
+const hqIntelEliminationOrder=hqIntelSites.map((p,i)=>p.real?-1:i).filter(i=>i>=0);
+for(let i=hqIntelEliminationOrder.length-1;i>0;i--){
+  const j=Math.floor(clueRandom()*(i+1));
+  [hqIntelEliminationOrder[i],hqIntelEliminationOrder[j]]=
+    [hqIntelEliminationOrder[j],hqIntelEliminationOrder[i]];
+}
+
+return {hqIntelSites,hqDiscardIndex,hqIntelEliminationOrder,actualSector};
+}

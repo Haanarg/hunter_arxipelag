@@ -75,6 +75,12 @@
 
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
+**Fase 4 · primer tall, planificació canònica d'indicis de l'HQ (v0.6.135; implementació parcial):**
+- [x] **Geografia independent de la representació:** `src/world-generation-core.mjs` conté `planHQIntelClues` amb els emplaçaments falsos del HQ, repartiment 3/9 per quadrants i ordre de descart. `src/world-generation.js` només integra el resultat i publica les mateixes dades per minimapa i desaments.
+- [x] **Llavors i RNG preservats:** mateix `mul` injectat per al shuffle local; no consumeix `R()` del món, no toca la cerca de llavors ni les posicions i conserva la prioritat entre complexos i illes.
+- [x] **Paritat diferencial i prova de sectors:** `tests/hq-clue-plan-parity.mjs` compara l'oracle anterior (llavors 67/148 incloses), proves de mapes petits/grans i errors quan no hi ha sòl útil; `tests/sector-navigation-intel.cjs` passa a exercitar la nova integració. CI valida el canvi i regenera el bundle.
+- [ ] **Fase 4 pendent:** separar terreny i construcció visual de la planificació, protegir el pressupost de generació incremental i mesurar A/B; repetir proves de llavors 67/148, punts de spawn, carreteres, camp de presoners, ports, COOP i Android a la validació conjunta.
+
 **Balanç de la fase 3 després de v0.6.134 — extracció estructural implementada, validació oberta:**
 - [x] Els **8 talls estructurals** han separat els índexs espacials, les mètriques/diagnòstic, el coordinador dels dos rellotges, les opcions/progrés/cancel·lació d'arrencada, l'estat inicial, els catàlegs, les regles dels mapes, els controls i la neteja de sessions. Les extraccions mantenen els bindings del runtime clàssic i han incorporat proves diferencials a Node.
 - [x] Revisió dels blocs principals restants: **generació de món i terreny (fase 4), render/ombres/aigua (fase 5), combat (fase 6), IA (fase 7), vehicles (fase 8), COOP (fases 9–10), UI (fase 11), so i desaments (fase 12)**. No traslladar-los ara només per reduir la longitud aparent de `game-core.js`; fer-ho per dominis amb proves pròpies.

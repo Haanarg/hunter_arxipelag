@@ -775,76 +775,17 @@ yield {stage:'Fons marí',completed:1,total:1};
 const vegetationMs=performance.now()-vegetationStarted;
 markBuildStage('vegetationAndFauna');
 yield {stage:'Vegetació i fauna',completed:1,total:1};HQ={x:hqCompound.buildings[0].x,z:hqCompound.buildings[0].z};
-// Small maps keep three HQ candidates. Large maps use nine: three grounded
-// locations in each non-starting quadrant, including the actual HQ.
-// No draws from the shared R() sequence: same world seed, same geography.
-const startingSector=mapSector(pa.x,pa.z),actualSector=mapSector(HQ.x,HQ.z);
-const eligibleHQSites=sector=>{
-  const complexes=world.userData.compounds.filter(c=>c.id!=='hq'&&c.id!=='base'&&
-    !c.layout?.friendly&&!c.layout?.civilian&&sectorMatches(c.x,c.z,sector))
-    .map(c=>({x:c.x,z:c.z}));
-  const land=[];
-  for(const island of islandsInSector(sector).slice().sort((a,b)=>b.r-a.r)){
-    land.push({x:island.x,z:island.z});
-    if(Number.isFinite(island.peakX)&&Number.isFinite(island.peakZ))
-      land.push({x:island.peakX,z:island.peakZ});
-    for(const distance of [.28,.52,.72])for(let n=0;n<12;n++){
-      const angle=(n*2*Math.PI/12)+(seed%31)*.017,
-        x=island.x+Math.cos(angle)*island.r*distance,
-        z=island.z+Math.sin(angle)*island.r*distance;
-      land.push({x,z});
-    }
-  }
-  return [...complexes,...land].filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.z)&&
-    sectorMatches(p.x,p.z,sector)&&hAt(p.x,p.z)>1.2&&
-    Math.hypot(p.x-pa.x,p.z-pa.z)>240&&Math.hypot(p.x-HQ.x,p.z-HQ.z)>210);
-};
-const pickHQDecoy=(sector,others=[])=>{
-  const pool=eligibleHQSites(sector);
-  // Prefer positions with the footprint of a military complex and large gaps
-  // between clues; relax gaps only when an unusual seed has little dry land.
-  for(const separation of [360,250,160,75]){
-    const q=pool.find(p=>others.every(other=>Math.hypot(p.x-other.x,p.z-other.z)>separation));
-    if(q)return{x:q.x,z:q.z};
-  }
-  return null;
-};
-const hqPositions=[];
-if(MAP_SCALE===2){
-  for(const sector of [0,1,2,3].filter(n=>n!==startingSector)){
-    const group=sector===actualSector?[{x:HQ.x,z:HQ.z,real:true}]:[];
-    while(group.length<3){
-      const q=pickHQDecoy(sector,[...hqPositions,...group]);
-      if(!q)throw new Error('No hi ha prou emplaçaments vàlids per als nou indicis del HQ');
-      group.push({...q,real:false});
-    }
-    hqPositions.push(...group);
-  }
-}else{
-  hqPositions.push({x:HQ.x,z:HQ.z,real:true});
-  for(let i=0;i<2;i++){
-    const q=pickHQDecoy(null,hqPositions);
-    if(!q)throw new Error('No hi ha prou emplaçaments vàlids per als indicis del HQ');
-    hqPositions.push({...q,real:false});
-  }
-}
-// Shuffle the clues and the elimination order independently of live AI RNG.
-// Exactly six distinct false locations are ruled out, never the true HQ.
-const clueRandom=mul((seed^0x5af17e32)>>>0);
-for(let i=hqPositions.length-1;i>0;i--){
-  const j=Math.floor(clueRandom()*(i+1));
-  [hqPositions[i],hqPositions[j]]=[hqPositions[j],hqPositions[i]];
-}
-hqIntelSites=hqPositions;
-hqDiscardIndex=hqIntelSites.findIndex(p=>!p.real);
-hqIntelEliminationOrder=hqIntelSites.map((p,i)=>p.real?-1:i).filter(i=>i>=0);
-for(let i=hqIntelEliminationOrder.length-1;i>0;i--){
-  const j=Math.floor(clueRandom()*(i+1));
-  [hqIntelEliminationOrder[i],hqIntelEliminationOrder[j]]=
-    [hqIntelEliminationOrder[j],hqIntelEliminationOrder[i]];
-}
+// The canonical planner returns only data; the world keeps the original
+// live bindings and publishes the same intel metadata without drawing R().
+const hqCluePlan=window.HUNTER_WORLD_GENERATION.planHQIntelClues({
+  seed,MAP_SCALE,pa,HQ,compounds:world.userData.compounds,
+  islandsInSector,mapSector,sectorMatches,hAt,mul
+});
+hqIntelSites=hqCluePlan.hqIntelSites;
+hqDiscardIndex=hqCluePlan.hqDiscardIndex;
+hqIntelEliminationOrder=hqCluePlan.hqIntelEliminationOrder;
 world.userData.hqIntelCandidates=hqIntelSites.map(p=>({x:p.x,z:p.z,real:p.real}));
-world.userData.hqSector=actualSector;
+world.userData.hqSector=hqCluePlan.actualSector;
 const rb=B.slice(6);
 const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2);
 const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1),x=cx+Math.cos(a)*d,z=cz+Math.sin(a)*d;if(gl(x,z)&&!world.userData.compounds.some(c=>c.layout.civilian&&Math.hypot(x-c.x,z-c.z)<c.r))return mkEn(t,x,z)}return null};

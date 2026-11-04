@@ -46,12 +46,14 @@ function progression(scale,gameIntel){
   new Function('assert','gameIntel',[...setup,...test,...vehicles].join('\n'))(assert,gameIntel);
 }
 
-const block=world.slice(world.indexOf('// Small maps keep three HQ candidates.'),
-  world.indexOf('\nconst rb=B.slice(6);',world.indexOf('// Small maps keep three HQ candidates.')));
+const block=world.slice(world.indexOf('const hqCluePlan='),
+  world.indexOf('\nconst rb=B.slice(6);',world.indexOf('const hqCluePlan=')));
+assert.match(block,/HUNTER_WORLD_GENERATION\.planHQIntelClues/);
 assert.match(block,/hqIntelEliminationOrder/);
-function siteGeneration(scale,seed){
+function siteGeneration(scale,seed,worldGeneration){
   const scenario=[
     'const MAP_SCALE='+scale+',seed='+seed+';',
+    'const window={HUNTER_WORLD_GENERATION:worldGeneration};',
     'const pa={x:-900,z:-900},HQ={x:880,z:860};',
     'const mapSector=(x,z)=>(x>=0?1:0)+(z>=0?2:0);',
     'const sectorMatches=(x,z,k)=>k==null||mapSector(x,z)===k;',
@@ -65,7 +67,7 @@ function siteGeneration(scale,seed){
     block,
     'return {sites:hqIntelSites,order:hqIntelEliminationOrder};'
   ].join('\n');
-  const {sites,order}=new Function(scenario)();
+  const {sites,order}=new Function('worldGeneration',scenario)(worldGeneration);
   assert.equal(sites.length,scale===2?9:3);
   assert.equal(sites.filter(p=>p.real).length,1);
   assert.equal(order.length,sites.length-1);
@@ -77,13 +79,14 @@ function siteGeneration(scale,seed){
       assert.equal(sites.filter(p=>(p.x>=0?1:0)+(p.z>=0?2:0)===sector).length,3);
   }
 }
-for(const seed of [1,2,3,45678,1234567,4294967295]){
-  siteGeneration(1,seed);siteGeneration(2,seed);
-}
 assert.match(world,/hqIntelSectors\.clear\(\)/);
 assert.match(core,/mapSector\(it\.x,it\.z\)/);
 assert.match(marine,/MAP_SCALE===2\?2:1/);
-import('../src/game-intel-core.mjs').then(gameIntel=>{
+Promise.all([import('../src/game-intel-core.mjs'),
+  import('../src/world-generation-core.mjs')]).then(([gameIntel,worldGeneration])=>{
   progression(1,gameIntel);progression(2,gameIntel);
+  for(const seed of [1,2,3,45678,1234567,4294967295]){
+    siteGeneration(1,seed,worldGeneration);siteGeneration(2,seed,worldGeneration);
+  }
   console.log('OK: 9/6/3/1 HQ intel, unique quadrants, true-HQ safety, sector maps, candidate geography');
 }).catch(error=>{console.error(error);process.exitCode=1});

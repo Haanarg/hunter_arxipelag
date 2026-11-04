@@ -63,6 +63,12 @@ jobs:
           node --check src/start-lifecycle-core.mjs
           node --check src/game-state-core.mjs
           node tests/world-session-parity.mjs
+      - name: Check phase 4 canonical HQ clue planning
+        run: |
+          node --check src/world-generation-core.mjs
+          node --check src/world-generation.js
+          node tests/hq-clue-plan-parity.mjs
+          node tests/sector-navigation-intel.cjs
       - name: Generate runtime bundle
         run: node tools/build-runtime.cjs
       - name: Verify generated bundle
