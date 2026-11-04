@@ -6713,11 +6713,11 @@ function destroyTower(u){
     hurtE(guard,guard.hp+1,{spl:0,own:'p'});
   // Desfer els col·lidors de les quatre potes i invalidar l'índex espacial.
   // Així cap projectil ni vehicle no col·lisiona amb una torre desapareguda.
-  for(const leg of u.towerLegColliders||[]){
-    const i=Wl.indexOf(leg);if(i>=0)Wl.splice(i,1);
+  for(const collider of [...u.towerLegColliders||[],...u.towerParapetColliders||[]]){
+    const i=Wl.indexOf(collider);if(i>=0)Wl.splice(i,1);
   }
   wallGridCount=-1;
-  u.towerLegColliders=[];
+  u.towerLegColliders=[];u.towerParapetColliders=[];
   // Abans es clonaven TOTES les malles, incloses les dues representacions
   // LOD (torres completes). Produïen dos esquelets gegants flotants.
   // Generam peces petites reals, sense copiar ni el LOD ni trams sencers.
@@ -7376,7 +7376,9 @@ function weaponAimClear(x,y,z,tx,ty,tz,ignoreWall=null,ignoreBuilding=null,check
   // de mostres petites a cada tret de metralladora de l'helicòpter.
   const mx=(x+tx)/2,mz=(z+tz)/2,reach=Math.hypot(tx-x,tz-z)/2+3;
   for(const w of wallCandidates(mx,mz,reach)){
-    if(w===ignoreWall||(ignoreBuilding&&w.owner===ignoreBuilding)||w.open||w.barbed)continue;
+    if(w===ignoreWall||(ignoreBuilding&&w.owner===ignoreBuilding)||
+      w.open||w.barbed||
+      !window.HUNTER_TOWER_MODEL.towerParapetBlocksShot(w,{x,y,z}))continue;
     const t=window.HUNTER_BUILDING_SHELL.wallShotHit({x,y,z},{x:tx,y:ty,z:tz},w);
     if(t!=null&&t<.98)return false;
   }
@@ -7477,7 +7479,7 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
     // Quan l'ampit tapa el centre del cos, també podem apuntar a la
     // part superior del soldat. El mateix raycast comprova que sigui visible.
     if(shotClass!=='heavy'&&['soldat','general'].includes(e.t))
-      consider(e,'enemy',priority,aim.x,baseY+2.35,aim.z);
+      consider(e,'enemy',priority,aim.x,baseY+(e.towerGuard?2.9:2.35),aim.z);
   }
   // Els vehicles neutrals competeixen amb els soldats, segons l'angle
   // respecte del centre de la mirada i només amb armes lleugeres.
@@ -8013,7 +8015,8 @@ function updPj(dt){
     for(const w of wallCandidates(mx,mz,reach+1)){
       // Bales de pistola, rifle, soldats, cotxes i tanquetes: passen.
       // Míssils, coets i canons explosius continuen colpejant el filferro.
-      if(w.open||(w.barbed&&p.shotClass==='light'))continue;
+      if(w.open||(w.barbed&&p.shotClass==='light')||
+        !window.HUNTER_TOWER_MODEL.towerParapetBlocksShot(w,from))continue;
       const crossing=window.HUNTER_BUILDING_SHELL.windowCrossing(from,to,w);
       if(crossing){windowHits.push({wall:w,...crossing});continue}
       consider(window.HUNTER_BUILDING_SHELL.wallShotHit(from,to,w),'wall',w)
@@ -9993,9 +9996,14 @@ function mkEn(t,x,z,gy,options={}){const c=EC[t];let g;
 if(seedSearchMode){
   g=new THREE.Group();
   // Mateixos registres de col·lisió de les potes, sense construir la torre.
-  if(t==='torre')g.userData.towerLegMeshes=[-2.3,2.3].flatMap(lx=>
-    [-1.9,1.9].map(lz=>({position:{x:lx,y:3.98,z:lz},
-      geometry:{parameters:{width:.44,height:7.95,depth:.44}}})));
+  if(t==='torre'){
+    g.userData.towerLegMeshes=[-2.3,2.3].flatMap(lx=>
+      [-1.9,1.9].map(lz=>({position:{x:lx,y:3.98,z:lz},
+        geometry:{parameters:{width:.44,height:7.95,depth:.44}}})));
+    g.userData.towerParapetMeshes=window.HUNTER_TOWER_MODEL.towerSideParapetVolumes()
+      .map(w=>({position:{x:w.x,y:w.y,z:w.z},
+        geometry:{parameters:{width:w.width,height:w.height,depth:w.depth}}}));
+  }
 }
 else if(t=='soldat'||t=='general'){g=window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M,general:t==='general',elite:!!options.elite})}
 else if(t==='patrulla_marina'){g=mkV('llanxa');createMarinePatrolVisual(g)}
@@ -10023,6 +10031,20 @@ if(t==='torre'){
       hp:Infinity,door:false,open:false,rammable:false,cx,cz};
   });
   Wl.push(...u.towerLegColliders);
+  // Parapets laterals: mateixos volums que els models visibles.
+  // Barrera per als trets entrants, però els soldats de dins poden
+  // treure el fusell per damunt i disparar cap enfora.
+  u.towerParapetColliders=(g.userData.towerParapetMeshes||[]).map(m=>{
+    const hw=m.geometry.parameters.width/2,hd=m.geometry.parameters.depth/2,
+      hh=m.geometry.parameters.height/2,cx=x+m.position.x,cz=z+m.position.z;
+    return {towerParapet:true,towerParapetOwner:u,
+      towerX:x,towerZ:z,towerBaseY:base,m,
+      x0:cx-hw,x1:cx+hw,z0:cz-hd,z1:cz+hd,
+      y0:base+m.position.y-hh,y1:base+m.position.y+hh,
+      hp:Infinity,door:false,open:false,rammable:false,
+      playerBlock:false,cx,cz};
+  });
+  Wl.push(...u.towerParapetColliders);
   // Dos soldats diferenciats, no armes ancorades a la caseta.
   // Continuen sent dianes individuals per les bales i les explosions.
   const rules=window.HUNTER_TOWER_MODEL;
