@@ -15,7 +15,7 @@ export const prisonCampLayout={
  subtitle:'Barracó de fusta · recinte de captius · quatre torres · una entrada',
  buildings:[
   // Extend the length of the fishing hut, preserving its narrow gable roof.
-  {id:'prison-barracks',label:'Barracó llarg de fusta',x:0,z:-34,w:18,d:68,h:6,wood:true,rotationY:Math.PI/2},
+  {id:'prison-barracks',label:'Barracó llarg de fusta',x:0,z:-34,w:18,d:68,h:6,wood:true,weakWalls:true,rotationY:Math.PI/2},
   {id:'guardhouse',label:'Caseta de guàrdia',x:-40,z:24,w:14,d:12,h:5.5},
   // Workshop with three solid walls and a full-width open south (+Z) facade.
   // Its 12 m roof is roughly two storeys high, with no intermediate floor.
