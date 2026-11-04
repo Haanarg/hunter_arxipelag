@@ -112,7 +112,9 @@ function captureNativeCoopWorld(){
   ...(e.t==='patrulla_marina'?{
     marineCrewHp:[...(e.marineCrewHp||[10,10])],
     marineBrokenWindshield:[...(e.marineBrokenWindshield||[])]
-  }:{}),heading:e.hd||0,ai:['soldat','general','torre','jeep','tanqueta','tanc','patrulla_marina'].includes(e.t),state:'patrol',patrol:(e.patrol?.length?e.patrol:[]).map(p=>({x:p.x,y:e.o.position.y,z:p.z})),home:{x:e.home?.x??e.x,z:e.home?.z??e.z},tx:e.tx??e.x,tz:e.tz??e.z,patrolIndex:e.pi??0,wt:e.wt??0,speed:e.speed??e.sp??0,yawRate:e.yawRate??0,orbitSign:e.orbitSign??1,heading:e.navHd??e.hd??0,guard:!!e.guard,sp:e.sp,rate:e.rate,dmg:e.dmg,elite:!!e.elite,rocketSoldier:!!e.rocketSoldier,sensePhaseTicks:Math.ceil((e.senseT||0)*30),seenTicks:0,lastAttack:-90})),
+  }:{}),heading:e.hd||0,ai:['soldat','general','torre','jeep','tanqueta','tanc','patrulla_marina'].includes(e.t),state:'patrol',patrol:(e.patrol?.length?e.patrol:[]).map(p=>({x:p.x,y:e.o.position.y,z:p.z})),home:{x:e.home?.x??e.x,z:e.home?.z??e.z},tx:e.tx??e.x,tz:e.tz??e.z,patrolIndex:e.pi??0,wt:e.wt??0,speed:e.speed??e.sp??0,yawRate:e.yawRate??0,orbitSign:e.orbitSign??1,heading:e.navHd??e.hd??0,guard:!!e.guard,towerGuard:!!e.towerGuard,towerSeat:e.towerSeat??null,
+  towerHostId:e.towerHost?.saveId||null,
+  sp:e.sp,rate:e.rate,dmg:e.dmg,elite:!!e.elite,rocketSoldier:!!e.rocketSoldier,sensePhaseTicks:Math.ceil((e.senseT||0)*30),seenTicks:0,lastAttack:-90})),
   supplies:items.filter(it=>itemMap[it.t]).map(it=>({id:it.saveId,item:itemMap[it.t][0],amount:itemMap[it.t][1],...point(it)})),
   optional:captureNativeCoopOptionals(),
   intel:{sites:hqIntelSites.map(p=>({x:p.x,z:p.z,real:!!p.real})),
