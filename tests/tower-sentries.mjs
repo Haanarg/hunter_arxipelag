@@ -54,13 +54,13 @@ assert.ok(parapets.every(w=>w.height===parapets[0].height&&w.y===parapets[0].y),
   'els quatre parapets tenen la mateixa alçada i coronament');
 assert.equal(parts.filter(mesh=>mesh.color===0x7c2f2f).length,4,
   'el model ja no té plafons baixos separats als costats de la façana');
-assert.ok(TOWER_SIDE_PARAPET_HEIGHT>2.2,'parets altes que cobreixen el cos');
+assert.equal(TOWER_SIDE_PARAPET_HEIGHT,1.75,'els quatre parapets fan 1,75 m');
 for(const [i,wall] of parapets.entries()){
   const mesh=model.userData.towerParapetMeshes[i];
   assert.equal(mesh.geometry.parameters.height,wall.height);
   assert.equal(mesh.position.y,wall.y);
-  assert.ok(wall.y+wall.height/2>10.7,'cobreixen el tors dels soldats');
-  assert.ok(wall.y+wall.height/2<11.2,'el cap queda visible');
+  assert.ok(Math.abs((wall.y-wall.height/2)-8.43)<1e-9,'la base del parapet no es desplaça');
+  assert.ok(Math.abs((wall.y+wall.height/2)-10.18)<1e-9,'el coronament és a la cota 10,18 m');
 }
 for(const wall of parapets){
   const from={x:wall.x*4,y:10,z:wall.z*4},
