@@ -14971,7 +14971,11 @@ function updateNativeCoopFrame(dt){
     }
     w.open=true;w.hp=0;w.playerBlock=false;w.destroyedWall=true;
     if(s.projectedState)wallBreak(w);
-    else for(const mesh of w.parts||[w.m])if(mesh)mesh.visible=false;
+    else{
+      for(const mesh of w.parts||[w.m])if(mesh)mesh.visible=false;
+      for(const trim of w.timberTrim||[])trim.visible=false;
+      if(w.porchSupports)collapsePorch(w.owner,false);
+    }
   }
  }
  if(s.appliedDoors!==state.doors){s.appliedDoors=state.doors;
