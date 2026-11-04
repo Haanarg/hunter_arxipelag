@@ -588,6 +588,16 @@ function enemyVehicleBoardingTick(u,dt){
   });
   const input=enemyRequisition.avoidVehicleBarbedWire(v,planned,
     wallCandidates(v.x,v.z,42),c.fenceAvoid??={});
+  // La moto no és una arma d'envestida: davant un jugador embarcat,
+  // el pilot manté distància de tir i frena abans de tocar el vehicle.
+  // El fusell (més amunt) continua apuntant al vehicle del jugador.
+  if(v.t==='moto'&&cv&&spotted&&c.phase==='riding'){
+    const targetDistance=Math.hypot(cv.x-v.x,cv.z-v.z);
+    if(targetDistance<48){
+      input.forward=(v.v||0)>1?-1:0;
+      input.turn=0;
+    }
+  }
   // Ús del mateix stepV que el jugador, sense moure la malla a mà.
   if(input.distance>3||!v.enemyCrew[1])stepV(v,input.forward,input.turn,0,Math.min(dt,.1));
   const oldX=u.x,oldZ=u.z;
