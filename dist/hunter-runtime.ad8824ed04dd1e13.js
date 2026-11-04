@@ -17637,6 +17637,37 @@ function escapeSubmergedVehicle(v){
   cv=null;swimming=true;playerEject=null;
   msg='Vehicle enfonsat! Has sortit a l’aigua.';msgT=3;
 }
+// La reentrada a un blindat ha de partir d'un estat de conducció finit.
+ // No reiniciam vida, posició ni inèrcia bona: només els controls transitoris
+ // i possibles NaN d'una simulació interrompuda quan el vehicle era buit.
+function prepareArmoredVehicleEntry(v){
+  if(!['tanc','tanqueta'].includes(v?.t))return true;
+  if(!V.includes(v)||v.destroyed||v.sunk||!(v.life>0)||!v.o||
+     ![v.x,v.z,v.hd].every(Number.isFinite))return false;
+  for(const field of ['v','sideV','strafeV','yawRate','driveInput','steerInput',
+                      'envCd','bump','ramCd'])
+    if(!Number.isFinite(v[field]))v[field]=0;
+  v.driveInput=0;v.steerInput=0;v.yawRate=0;v.strafeV=0;
+  return true;
+}
+function recoverArmoredControlFailure(v,error,phase){
+  if(!v||!['tanc','tanqueta'].includes(v.t))return false;
+  console.error('[Hunter] Recuperació del blindat després d’un error en '+phase,{
+    type:v.t,id:v.saveId,position:[v.x,v.z],velocity:v.v,error
+  });
+  const side=vehicleRadius(v.t)+2.5,hd=Number.isFinite(v.hd)?v.hd:0,
+        x=v.x+Math.cos(hd)*side,z=v.z-Math.sin(hd)*side;
+  if(Number.isFinite(x)&&Number.isFinite(z)){
+    P.x=Math.max(-H+3,Math.min(H-3,x));
+    P.z=Math.max(-H+3,Math.min(H-3,z));
+    P.y=groundAt(P.x,P.z);
+    P.hd=hd;
+  }
+  cv=null;playerEject=null;playerFall=null;K.KeyF=0;
+  joystick.reset();releaseStrafeButtons();resetCameraState();
+  msg='S’ha recuperat un error del blindat. Pots continuar a peu.';msgT=5;
+  return true;
+}
 function executePlayerToggle(){if(playerFall||playerEject)return;resetCameraState();if(scopeActive)setSniperScope(false);if(cv){
 const leaving=cv,speed=Math.abs(leaving.v),isAir=VT[leaving.t].m==='a',
       platform=leaving.t==='ferry'?leaving:leaving.carrier||ferryForVehicle(leaving),
@@ -17674,7 +17705,17 @@ leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;leaving.reentryLockU
 if(moving){const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),sx=Math.cos(leaving.hd)*spot.side,sz=-Math.sin(leaving.hd)*spot.side,
   carry=Math.sign(leaving.v)*Math.min(safeMovingRoadExit?11:28,speed*(safeMovingRoadExit?.3:.72)),outward=safeMovingRoadExit?8:1.4;
   playerEject={kind:'flip',vx:fx*carry+sx*outward,vz:fz*carry+sz*outward,t:.5,dur:.5,height:.68};msg='Has saltat del vehicle en marxa!';msgT=2.5}
-cv=null}else{const v=nearV();if(v&&(!v.sunk||v.t==='bici')){cv=v;swimming=false;playerCrouched=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
+cv=null}else{const v=nearV();if(v&&(!v.sunk||v.t==='bici')){
+  if(!prepareArmoredVehicleEntry(v)){
+    console.warn('[Hunter] Reentrada rebutjada: estat invàlid del blindat',v.t,v.saveId);
+    msg='El blindat no està disponible en aquest moment.';msgT=3;return;
+  }
+  cv=v;swimming=false;playerCrouched=false;P.hd=v.hd;
+  if(v.t==='tanc'||v.t==='tanqueta'){
+    joystick.reset();releaseStrafeButtons();resetCameraState();
+  }
+  msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3;
+}}}
 addEventListener('keydown',e=>{
   if(['Escape','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
   if(e.repeat)return;
@@ -18838,7 +18879,12 @@ if(scopeActive){
   // Sensibilitat baixa per controlar amb precisió l'òptica x8.
   scopeYaw+=(tr-scopeStrafe*.8)*dt*.38;
   scopePitch=Math.max(-.65,Math.min(.65,scopePitch+f*dt*.30));
-}else if(cv){const driven=cv,alive=stepV(driven,f,tr,ud,dt,strafe);if(alive&&cv===driven){P.x=driven.x;P.z=driven.z;P.hd=driven.hd}}
+}else if(cv){
+  const driven=cv;let alive=false;
+  try{alive=stepV(driven,f,tr,ud,dt,strafe)}
+  catch(error){if(!recoverArmoredControlFailure(driven,error,'moviment'))throw error;}
+  if(alive&&cv===driven){P.x=driven.x;P.z=driven.z;P.hd=driven.hd}
+}
 else{P.hd+=tr*dt*2.2;if(cheats.fly){
   const speed=65,vertical=(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0),length=Math.max(1,Math.hypot(f,strafe));
   P.x=Math.max(-lim,Math.min(lim,P.x+(-Math.sin(P.hd)*f+Math.cos(P.hd)*strafe)*speed*dt/length));
@@ -19107,7 +19153,8 @@ const previousCooldown=Math.max(0,fcd);
 fcd=Math.max(0,previousCooldown-dt);updateGrenadeCharge(dt);updateAssaultBurst(dt);
 if(K.KeyF&&(!grenadeEquipped||cv)){
   const overshoot=previousCooldown>0?Math.min(0,previousCooldown-dt):0;
-  fire();
+  try{fire()}
+  catch(error){if(!recoverArmoredControlFailure(cv,error,'dispar'))throw error;}
   // Conservam només la fracció del pas que travessa el cooldown actual.
   // Aturats a zero no es guarden trets ni escurçam la primera espera.
   if(fcd>0)fcd=Math.max(0,fcd+overshoot);
