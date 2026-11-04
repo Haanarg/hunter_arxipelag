@@ -264,7 +264,15 @@ function updateNativeCoopFrame(dt){
      s.channel.stats.remoteInterpolation=s.interpolation.stats;
    s.interpolation?.receive(state,s.self);
    s.projectedActor=actor;hp=actor.hp;
-   kills=state.combat.targets.reduce((count,e)=>count+(e.hp<=0),0);
+   // Les baixes són soldats, no cascs de vehicles. La patrullera té
+   // dues places; els mariners abatuts abans de perdre el buc compten
+   // individualment i no es dupliquen quan es destrueix.
+   kills=state.combat.targets.reduce((count,e)=>{
+     if(e.t==='patrulla_marina')return count+(e.hp<=0?2:
+       (e.marineCrewHp||[]).filter(health=>health<=0).length);
+     if(e.hp<=0)return count+(e.t==='jeep'?2:1);
+     return count;
+   },0);
  }
  const input=nativeCoopInput(),
        presented=s.prediction?.advance(dt,input,!paused&&!document.hidden&&state.status==='running')||actor;
