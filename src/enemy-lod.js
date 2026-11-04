@@ -82,11 +82,12 @@ function proxy(T,type,level){
     }
   }else if(type==='torre'){
     const metal=0x4c5358;
-    for(const x of [-1.42,1.42])for(const z of (mid?[-1.42,1.42]:[0]))
-      box(x,3.9,z,.37,7.8,.4,metal);
-    box(0,8.1,0,4.15,.55,4.15,metal);
-    box(0,9.1,0,2.9,1.55,2.9,0x812f35);
-    box(0,10.23,0,3.5,.32,3.5,0x373c40);
+    for(const x of [-2.3,2.3])for(const z of (mid?[-1.9,1.9]:[0]))
+      box(x,3.98,z,.44,7.95,.44,metal);
+    box(0,8.04,0,6.4,.44,5.5,metal);
+    for(const x of [-3.02,3.02])box(x,8.7,0,.18,.85,5.1,0x812f35);
+    box(0,8.7,2.5,6,.85,.18,0x812f35);
+    box(0,12.32,0,6.95,.32,6.05,0x373c40);
   }else if(type==='patrulla_marina'){
     box(0,.54,0,3.2,1.03,8.9,0x626e71);
     box(0,1.38,.85,2.45,.52,2.8,0x556166);
