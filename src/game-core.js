@@ -1194,7 +1194,8 @@ function addBunkerBasement(b){
   };
   const floorPanel=(xa,xb,za,zb,level,color)=>{
     if(seedSearchMode)return;
-    bx(b.o,xb-xa,.26,zb-za,color,(xa+xb)/2,level-.13,(za+zb)/2,'masonry');
+    const panel=bx(b.o,xb-xa,.26,zb-za,color,(xa+xb)/2,level-.13,(za+zb)/2,'terrain');
+    panel.receiveShadow=true;
   };
   // Forjat amb un buit real per a l'escala. Els projectils impacten al
   // forjat però no bloqueja lateralment el moviment del jugador.
@@ -2162,7 +2163,7 @@ function updateDistanceVisibility(){
   const chunkRadius=113; // diagonal mitja del sector de 160 m
   for(const mesh of staticVisualBatches){
     const dx=mesh.position.x-P.x,dz=mesh.position.z-P.z,
-          r=(mesh.userData.compoundPlatform?max.buildings:max.props)+chunkRadius;
+          r=max.props+chunkRadius;
     mesh.visible=dx*dx+dz*dz<r*r||!!focus?.intersectsXZBox(mesh.position.x,mesh.position.z,80);
     if(!mesh.visible)visibilityStats.props++;
   }

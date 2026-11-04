@@ -193,7 +193,8 @@ window.HUNTER_BUILDINGS??=Object.freeze({
 
     const createShell=({width,depth,height,wallColor,roofColor})=>{
       const group=new THREE.Group(),roofGroup=new THREE.Group(),walls=wallMaterial(wallColor),doors=doorMaterial();
-      const floor=new THREE.Mesh(new THREE.BoxGeometry(width+.35,12.3,depth+.35),material(0x756b5d,'masonry'));
+      const floor=new THREE.Mesh(new THREE.BoxGeometry(width+.35,12.3,depth+.35),material(0x756b5d,'terrain'));
+      floor.name='hunter-ground-floor';floor.receiveShadow=true;
       const roof=new THREE.Mesh(new THREE.BoxGeometry(width+1.35,1.15,depth+1.35),material(roofColor,'masonry'));
       floor.position.y=-5.85;roof.position.y=height+.62;group.add(floor,roofGroup);roofGroup.add(roof);
 
@@ -216,7 +217,8 @@ window.HUNTER_BUILDINGS??=Object.freeze({
     // L'eix llarg és Z i la volta creua l'amplada X.
     const createHangarShell=({width,depth,height,wallColor,roofColor})=>{
       const group=new THREE.Group(),roofGroup=new THREE.Group(),walls=wallMaterial(wallColor),doors=doorMaterial();group.add(roofGroup);
-      const floor=new THREE.Mesh(new THREE.BoxGeometry(width+.5,.35,depth+.5),material(0x6f6d67,'masonry'));
+      const floor=new THREE.Mesh(new THREE.BoxGeometry(width+.5,.35,depth+.5),material(0x6f6d67,'terrain'));
+      floor.name='hunter-ground-floor';floor.receiveShadow=true;
       floor.position.y=.02;group.add(floor);
 
       // La volta arrenca pràcticament des de terra: el sostre forma també els laterals.

@@ -227,12 +227,9 @@ const batchStaticDecor=function* (){let checkpointUnits=0;
             cx=Math.floor(center.x/CHUNK),cz=Math.floor(center.z/CHUNK);
       const signature=[mat.type,mat.roughness??0,mat.metalness??0,mat.opacity??1,
         mat.transparent?1:0,mat.side,mat.flatShading?1:0,mat.polygonOffset?1:0,mat.polygonOffsetFactor,mat.polygonOffsetUnits].join(':');
-      // Els fonaments dels complexos s'han de veure tan lluny com els edificis.
-      // Separar-los per categoria evita allargar l'abast de tota la decoració.
-      const compoundPlatform=!!root.userData.compoundPlatform;
-      const key=cx+','+cz+'|'+signature+'|'+(compoundPlatform?'platform':'decor');
+      const key=cx+','+cz+'|'+signature;
       let group=groups.get(key);
-      if(!group){group={cx,cz,mat,signature,compoundPlatform,meshes:[]};groups.set(key,group)}
+      if(!group){group={cx,cz,mat,signature,meshes:[]};groups.set(key,group)}
       group.meshes.push(mesh);originals++;
     });
   }
@@ -277,7 +274,6 @@ const batchStaticDecor=function* (){let checkpointUnits=0;
     }
     const mesh=new THREE.Mesh(geom,mat);
     mesh.name='hunter-static-decor-batch';
-    mesh.userData.compoundPlatform=group.compoundPlatform;
     mesh.position.set(x,0,z);mesh.castShadow=false;
     world.add(mesh);
     batches++;vertices+=total;
@@ -402,14 +398,6 @@ const compoundProp=(kind,x,z,rot=0)=>{
   if(!civic)staticDecorRoots.push(g);
   return g
 };
-const compoundPad=(x,z,w,d,c=0x77736c)=>{
-  if(seedSearchMode){compoundClear.push({x,z,r:Math.hypot(w,d)*.55});return {rotation:{y:0}}}
-  const material=M(c,'masonry').clone();material.polygonOffset=true;material.polygonOffsetFactor=-1;material.polygonOffsetUnits=-1;
-  const geometry=new THREE.PlaneGeometry(w,d);geometry.rotateX(-Math.PI/2);
-  const o=new THREE.Mesh(geometry,material);o.position.set(x,hAt(x,z)+.06,z);
-  o.userData.compoundPlatform=true;
-  world.add(o);staticDecorRoots.push(o);compoundClear.push({x,z,r:Math.hypot(w,d)*.55});return o;
-};
 const landingPad=(x,z,size=30,rot=0)=>{
   if(seedSearchMode){compoundClear.push({x,z,r:size*.72});return {rotation:{y:rot}}}
   const y=hAt(x,z)+.025,g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;
@@ -472,7 +460,7 @@ const compoundPier=(x1,z1,x2,z2,width=4.2,accessRamp=true)=>{
 const findPortWater=function* (q){let checkpointUnits=0;for(let a=0;a<32;a++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const aa=a*Math.PI/16;for(let d=28;d<Math.max(100,q.r||180);d+=8){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const wx=q.x+Math.cos(aa)*d,wz=q.z+Math.sin(aa)*d;if(rawHAt(wx,wz)<-3&&rawHAt(wx+Math.cos(aa)*12,wz+Math.sin(aa)*12)<-3)return{x:wx,z:wz,hd:Math.atan2(-Math.cos(aa),-Math.sin(aa)),aa}}}return null};
 const findPortSite=function* (island,tries=18){let checkpointUnits=0;for(let n=0;n<tries;n++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const q=(yield* landSteps(island,700,1));if(!q)continue;q.r=island.r;const portBest=(yield* findPortWater(q));if(portBest)return{...q,portBest}}return null};
 const makeStandalonePier=function* (q){let checkpointUnits=0;const best=q.portBest||(yield* findPortWater(q));if(!best)return false;const dx=best.x-q.x,dz=best.z-q.z,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L;let shore=null;for(let d=3;d<L;d+=2.5){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const sx=q.x+ux*d,sz=q.z+uz*d;if(rawHAt(sx,sz)<.35){shore={x:sx-ux*1.8,z:sz-uz*1.8};break}}if(!shore)return false;const pierLen=Math.min(34,Math.max(14,L-5)),end={x:shore.x+ux*pierLen,z:shore.z+uz*pierLen};compoundPier(shore.x,shore.z,end.x,end.z,3.6);for(const side of[-1,1]){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const px=-uz,pz=ux;compoundProp('bollard',end.x+px*side*1.1,end.z+pz*side*1.1,0)}compoundClear.push({x:q.x,z:q.z,r:18});return true};
-const phase3Options={pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites,rocketAssigned:false};
+const phase3Options={path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites,rocketAssigned:false};
 const baseCompound=(yield* buildApprovedCompoundSteps(window.HUNTER_CHOOSE_COMPOUND('base',R),pa,phase3Options));
 const hqCompound=(yield* buildApprovedCompoundSteps(window.HUNTER_CHOOSE_COMPOUND('hq',R),pb,phase3Options));
 markBuildStage('initialCompounds');
@@ -488,7 +476,7 @@ const compoundCenters=compoundRegistry.centers,COMPOUND_GAP=compoundRegistry.gap
   compoundSiteClear=compoundRegistry.isClear,registerCompound=compoundRegistry.register;
 // Reserve the rescue opportunity first. Its existence is a world invariant,
 // while entering it and rescuing the prisoners remain optional for the player.
-const civilOptions={pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites,rocketAssigned:true};
+const civilOptions={path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites,rocketAssigned:true};
 const prisonLayout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.type==='prison-camp');
 if(!prisonLayout)throw new Error('Invariant del camp: manca el disseny del camp de presoners');
 const prisonPlan=yield* planPrisonCampSteps(prisonLayout,{
@@ -552,7 +540,7 @@ const compound=function* (type,q){let checkpointUnits=0;
     let layout=window.HUNTER_CHOOSE_COMPOUND(approvedId,R);
     if(type==='port'&&!coastalLayoutFits(layout,q)){layout=window.HUNTER_RUNTIME_LAYOUTS.find(l=>l.type==='port'&&l.variant===1);if(!coastalLayoutFits(layout,q))return false;}
     if(type!=='port'){const r=Math.max(...layout.size)/2;for(const dx of[-r,0,r]){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};for(const dz of[-r,0,r]){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};if(rawHAt(q.x+dx,q.z+dz)<.1)return false;}}}
-    (yield* buildApprovedCompoundSteps(layout,q,{pad:compoundPad,path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites,rocketAssigned:compoundVehicles.some(v=>v.t==='llanxa_coets')}));
+    (yield* buildApprovedCompoundSteps(layout,q,{path:compoundPath,pier:compoundPier,prop:compoundProp,vehicles:compoundVehicles,heliportSites,rocketAssigned:compoundVehicles.some(v=>v.t==='llanxa_coets')}));
     registerCompound(type,q);return true;
   }
   return false;

@@ -13,6 +13,7 @@ on:
       - 'tests/fragile-vehicle-fragments.mjs'
       - 'tests/touch-vehicle-horn.mjs'
       - 'tests/vehicle-special.cjs'
+      - 'tests/compound-ground-surfaces.mjs'
       - '.github/workflows/rebuild-runtime.yml'
   workflow_dispatch:
 permissions:
@@ -34,6 +35,12 @@ jobs:
         run: |
           node tests/tower-sentries.mjs
           node tests/coop-barrier-ram.mjs
+      - name: Check natural compound ground and building shadow receivers
+        run: |
+          node --check src/world-generation.js
+          node --check src/buildings.js
+          node --check src/compound-architecture.mjs
+          node tests/compound-ground-surfaces.mjs
       - name: Check hovercraft spatial distribution
         run: node tests/hover-distribution.mjs
       - name: Check modified JavaScript syntax

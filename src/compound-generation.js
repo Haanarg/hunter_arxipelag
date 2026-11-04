@@ -27,42 +27,16 @@ function* findRedesignedPortSteps(q){
   return null;
 }
 function buildApprovedCompound(layout,q,options){return drainBuildSteps(buildApprovedCompoundSteps(layout,q,options))}
-function* buildApprovedCompoundSteps(layout,q,{pad,path,pier,prop,vehicles,rocketAssigned,heliportSites}){
+function* buildApprovedCompoundSteps(layout,q,{path,pier,prop,vehicles,rocketAssigned,heliportSites}){
   const plan=window.HUNTER_COMPOUND_PLANNING.planCompound(layout,q,{random:R,rawHeightAt:rawHAt}),
     {isPort,coastal,angle,mirror,landDepth,center,height}=plan,tr=compoundTransform(q,angle,mirror),c=Math.round(Math.cos(angle)),s=Math.round(Math.sin(angle));
   const vector=(x,z)=>[x*c-z*s,x*s+z*c],rotatedHeading=hd=>hd*mirror-angle;
   const record={id:plan.id,layoutId:plan.layoutId,variant:plan.variant,layout,x:q.x,z:q.z,angle,mirror,r:plan.r,buildings:[],vehicles:[],soldiers:[],loot:[],entrances:plan.entrances,patrol:plan.patrol};
   world.userData.compounds.push(record);
   const level=plan.level;addLevelArea(level.x,level.z,level.hw*2,level.hd*2,level.y,level.rot,level.blend);
-  if(!layout.civilian){
-    const pw=layout.size[0]-6,pd=coastal?landDepth-2:layout.size[1]-10;
-    const bunkerSpec=layout.id==='hq'?layout.buildings.find(spec=>spec.bunker):null;
-    if(bunkerSpec){
-      // La llosa decorativa única de l'HQ travessava TAMBÉ el forat de
-      // l'escala. Retallam el rectangle complet del búnquer abans de crear
-      // cap malla, en lloc d'ocultar només el terreny LOD.
-      const left=-pw/2,right=pw/2,back=-pd/2,front=pd/2,
-        hx=bunkerSpec.x, hz=bunkerSpec.z,
-        holeLeft=Math.max(left, hx-bunkerSpec.w/2-1.0),
-        holeRight=Math.min(right,hx+bunkerSpec.w/2+1.0),
-        holeBack=Math.max(back,hz-bunkerSpec.d/2-1.0),
-        holeFront=Math.min(front,hz+bunkerSpec.d/2+1.0),
-        regions=[
-          [left,holeLeft,back,front],
-          [holeRight,right,back,front],
-          [holeLeft,holeRight,back,holeBack],
-          [holeLeft,holeRight,holeFront,front]
-        ];
-      for(const [x0,x1,z0,z1] of regions){
-        if(x1-x0<.25||z1-z0<.25)continue;
-        const base=pad(...tr((x0+x1)/2,(z0+z1)/2),x1-x0,z1-z0);
-        base.rotation.y=-angle;
-      }
-    }else{
-      const base=pad(...center,pw,pd);
-      base.rotation.y=-angle;
-    }
-  }
+  // El nivell del terreny i la reserva de vegetació constitueixen el pati.
+  // Sense lloses decoratives: evitam reflexos, z-fighting i ombres perdudes.
+  // El búnquer conserva el seu propi forjat amb el buit de l'escala.
   // Keep vegetation outside the complete reservation, including gates and turning space.
   compoundClear.push({x:q.x,z:q.z,r:record.r});
   for(const route of layout.routes)path(route.points.map(p=>tr(...p)),route.width);
@@ -158,7 +132,8 @@ function* buildApprovedCompoundSteps(layout,q,{pad,path,pier,prop,vehicles,rocke
   if(layout.helipad&&!seedSearchMode){const p=layout.helipad,[x,z]=tr(p.x,p.z),g=new THREE.Group();g.position.set(x,height+.04,z);g.rotation.y=-angle;world.add(g);
     // La plataforma té la cara superior a y=.04. Abans l'anella era
     // només 1 cm més alta: a distància el depth buffer la feia desaparèixer.
-    bx(g,p.size,.08,p.size,0x66706e,0,0,0,'masonry');
+    const heliportFloor=bx(g,p.size,.08,p.size,0x66706e,0,0,0,'terrain');
+    heliportFloor.receiveShadow=true;
     const marking=M(0xf3e5b1,'paint').clone();
     marking.polygonOffset=true;marking.polygonOffsetFactor=-2;marking.polygonOffsetUnits=-2;
     const ring=new THREE.Mesh(new THREE.RingGeometry(p.size*.39,p.size*.405,48),marking);
