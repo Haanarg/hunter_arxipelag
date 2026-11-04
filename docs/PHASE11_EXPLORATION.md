@@ -49,4 +49,4 @@ La matriu principal és 67/12345 × escales 1/2, amb un camp en cada cas. Les ll
 
 La comparació històrica exacta de la fase 10 amb v0.5.79 té ara un abast diferent: el món incorpora legítimament un complex, guàrdies i col·lidors. Els fingerprints originals es conserven sense actualitzar-los. `PHASE10_LEGACY_BASELINE=1` conserva el mode de comprovació d’aquella base; per al món actual es compara un món síncron net amb el progressiu i les recuperacions equivalents.
 
-El harness usa Three.js amb renderer simulat. Cal revisar jugant la llegibilitat visual, la navegació del mecànic, els controls tàctils i el rendiment en Android físic. Els resultats de publicació i les suites executades consten a [PROGRESS.MD](../PROGRESS.MD).
+El harness usa Three.js amb renderer simulat. Cal revisar jugant la llegibilitat visual, la navegació del mecànic, els controls tàctils i el rendiment en Android físic. Els resultats de publicació i les suites històriques es poden consultar a l'historial Git de `PROGRESS.MD`; les comprovacions vigents són a [to-do.MD](../to-do.MD).
