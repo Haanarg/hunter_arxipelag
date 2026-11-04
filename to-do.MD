@@ -75,6 +75,11 @@
 
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
+**Fase 3 · segon tall del coordinador (v0.6.125; implementació parcial):**
+- [x] **Diagnòstic per fotograma separat:** `src/frame-diagnostics-core.mjs` encapsula la reinicialització dels comptadors d'IA/dibuix i l'emissió de les mostres del mode d'auditoria i del gestor adaptatiu. Les dependències del renderer, perfils i comptadors s'injecten una sola vegada; el bucle de simulació de `game-core.js` conserva el moment i l'ordre de les crides.
+- [x] **Paritat de la telemetria:** `tests/frame-diagnostics-parity.mjs` compara el mòdul nou contra l'oracle de `game-core.js` anterior en 240 escenaris deterministes amb/sense auditoria, incloent les estadístiques de render, les condicions d'ombres, el reset dels mapes i les còpies independents per al HUD. Afegit a `test:optimization`.
+- [ ] **Validació pendent de fase 3:** fer les suites Node completes i les proves reals GPU/COOP/Android amb comparativa FPS/p95/p99. Més endavant: extracció de l'arrencada, estats i coordinació del tick sense alterar RNG, física, ordres d'acció ni restauració.
+
 **Fase 3 · primer tall de `game-core.js` (v0.6.124; implementació parcial):**
 - [x] **Índexs espacials separats:** `src/spatial-grid-core.mjs` centralitza les cel·les d'illes, altures/plataformes, parets i edificis; `game-core.js` conserva la gestió dels arrays, el cicle de vida i les invalidacions, però ja no duplica quatre implementacions d'indexació. El mòdul és independent de Three.js i del generador de números aleatoris.
 - [x] **Paritat estructural prèvia a GPU:** `tests/spatial-grid-parity.mjs` valida 2.100 consultes deterministes contra els bucles anteriors, incloent ordre de resultats, cel·les negatives, objectes en diverses cel·les, stamps i reinicialització. Executada com a prova aïllada; afegida a `test:optimization` per a la bateria conjunta.
