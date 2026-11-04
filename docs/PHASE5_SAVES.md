@@ -1,3 +1,5 @@
+> **Document de referència/historial.** El registre de treball pendent i el pla d'optimització vigents són únicament a [to-do.MD](../to-do.MD); les anotacions «pendent» d'aquest document reflecteixen l'estat de la versió de què parla, no necessàriament la del codi actual.
+
 # Fase 5 — operacions desades i preparació del cooperatiu
 
 Actualitzat: 2026-10-28. Implementació preparada a la branca `codex/phase5-operation-storage`, versió **0.6.5**, PR #8. Encara no s’ha integrat a `main` ni desplegat al joc públic.

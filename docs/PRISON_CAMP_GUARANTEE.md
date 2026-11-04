@@ -36,4 +36,4 @@ La passada de 2.048 casos ha completat tots els camps en emplaçament natural, s
 
 La revisió independent comprova també deu corrupcions d’estat abans d’activar la partida, la continuació de `R()`, la viabilitat local de la missió de la llavor 67 i el reintent després d’un error en construir el camp.
 
-No s’han enumerat els més de quatre mil milions de valors de llavor. La garantia es basa en la reserva, l’últim recurs determinista i el validador d’activació; el mostreig és una comprovació addicional. Three.js s’exercita amb renderer simulat: la comprovació visual i de rendiment en Android físic continua pendent. Els resultats de publicació consten a [PROGRESS.MD](../PROGRESS.MD).
+No s’han enumerat els més de quatre mil milions de valors de llavor. La garantia es basa en la reserva, l’últim recurs determinista i el validador d’activació; el mostreig és una comprovació addicional. Three.js s’exercita amb renderer simulat: la comprovació visual i de rendiment en Android físic continua pendent. Els resultats de publicació històrics es poden consultar a l'historial Git de `PROGRESS.MD`; les comprovacions vigents són a [to-do.MD](../to-do.MD).

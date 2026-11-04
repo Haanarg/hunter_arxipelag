@@ -1,3 +1,5 @@
+> **Document de referència/historial.** El registre de treball pendent i el pla d'optimització vigents són únicament a [to-do.MD](../to-do.MD); les anotacions «pendent» d'aquest document reflecteixen l'estat de la versió de què parla, no necessàriament la del codi actual.
+
 # Hunter: Arxipèlag — estat del projecte i pendents
 
 Revisió documental: **13 d’octubre de 2026**. Base contrastada: **0.4.24**, commit `78572e7604d8b104c902165e7e64a8ed571de268` de `main`. Revisió d’estabilització i dissenys de fase 4: **0.4.25**.

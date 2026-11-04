@@ -1,3 +1,5 @@
+> **Document de referència/historial.** El registre de treball pendent i el pla d'optimització vigents són únicament a [to-do.MD](../to-do.MD); les anotacions «pendent» d'aquest document reflecteixen l'estat de la versió de què parla, no necessàriament la del codi actual.
+
 # Comptes, historial i base per al cooperatiu · v0.6.7
 
 ## Decisions
