@@ -2345,11 +2345,11 @@ window.HUNTER_MOVEMENT_FX=Object.freeze({
 ;
 // END src/air-obstacles.js
 // BEGIN src/joystick.js
-// Joystick tàctil analògic amb una prolongació superior integrada per córrer.
+// Joystick tàctil analògic: la cursa/crol només existeix a peu.
+// Els senyals dels vehicles tenen un botó propi fora del joystick.
 window.HUNTER_JOYSTICK=Object.freeze({
   create(root,{deadzone=.1,response=1.15,maxTravel=.36}={}){
     const knob=root.querySelector('.joy-knob'),
-          specialLabel=root.querySelector('.special-label'),
           state={x:0,y:0,active:false,id:null,running:false};
     let runEnabled=false,lastPointer=null,vehicleMode=null;
     const reset=()=>{
@@ -2364,7 +2364,7 @@ window.HUNTER_JOYSTICK=Object.freeze({
             max=r.width*maxTravel,rawX=e.clientX-cx,rawY=e.clientY-cy;
       // Només es corre cap endavant, en arrossegar dins la prolongació
       // situada FORA del perímetre superior del cercle del joystick.
-      const running=runEnabled&&rawY< -r.height/2&&Math.abs(rawX)<=r.width*.29;
+      const running=runEnabled&&!vehicleMode&&rawY< -r.height/2&&Math.abs(rawX)<=r.width*.29;
       state.running=running;root.classList.toggle('running',running);
       if(running){
         state.x=Math.max(-1,Math.min(1,rawX/max))*.72;
@@ -2391,14 +2391,13 @@ window.HUNTER_JOYSTICK=Object.freeze({
     const setVehicleMode=type=>{
       const next=type||null;if(vehicleMode===next)return;
       vehicleMode=next;root.classList.toggle('vehicle-special',!!next);
-      if(specialLabel)specialLabel.textContent=next==='bici'?'TIMBRE':
-        ['cotxe','cotxe_civil','camio','moto'].includes(next)?'CLÀXON':'ESPECIAL';
       root.setAttribute?.('aria-label',next
-        ?'Joystick: prolongació superior per a l’acció especial del vehicle'
+        ?'Joystick de direcció i acceleració del vehicle; clàxon en botó separat'
         :'Joystick: prolongació superior per córrer o nedar a crol');
+      if(state.active&&lastPointer)move(lastPointer);
     };
     const setRunEnabled=enabled=>{
-      const next=!!enabled;
+      const next=!!enabled&&!vehicleMode;
       if(runEnabled===next)return;
       runEnabled=next;root.classList.toggle('run-enabled',next);
       if(state.active&&lastPointer)move(lastPointer);
