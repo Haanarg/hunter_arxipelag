@@ -140,6 +140,10 @@ function hurtP(d,fromEnemyWeapon=false,cause=null){
 function destroyTower(u){
   if(!u?.o||u.destroyed)return;
   u.destroyed=true;
+  // La caiguda de la caseta mata els defensors que encara hi ha a dalt.
+  // En canvi, abatre un defensor NO destrueix l'estructura.
+  for(const guard of u.towerGuards||[])if(guard.hp>0)
+    hurtE(guard,guard.hp+1,{spl:0,own:'p'});
   // Desfer els col·lidors de les quatre potes i invalidar l'índex espacial.
   // Així cap projectil ni vehicle no col·lisiona amb una torre desapareguda.
   for(const leg of u.towerLegColliders||[]){
@@ -205,7 +209,8 @@ function killEnemy(u,killingShot=null){
       pitch:rn(-.9,.9),armL:rn(-1.6,.8),armR:rn(-1.6,.8),
       legL:rn(-.8,.85),legR:rn(-.8,.85),
       vx:impulse?.vx??rn(-2.6,2.6),vz:impulse?.vz??rn(-2.6,2.6),
-      vy:impulse?.vy??rn(1.5,3.8),height:0};
+      vy:impulse?.vy??(u.towerGuard?0:rn(1.5,3.8)),
+      height:u.towerGuard?Math.max(0,(u.gy??0)-hAt(u.x,u.z)):0};
     if(u.blastRagdoll){window.HUNTER_RAGDOLL.reset(u.blastRagdoll);u.blastRagdoll=null}
     u.o.userData.legs?.forEach(l=>l.rotation.x=0);
     u.o.userData.arms?.forEach(a=>a.rotation.x=0);
@@ -790,12 +795,12 @@ function weaponTargetPriority(...args){return window.HUNTER_SHARED_AIMING.weapon
 // La caseta es troba al voltant de y=9,15, no al mig de les potes.
 // Un sol punt de referència evita discrepàncies entre punteria,
 // col·lisió dels projectils, retícula i dany d'explosió.
-const TOWER_CABIN_CENTER_Y=9.15,TOWER_CABIN_RADIUS=2.05;
+const TOWER_CABIN_CENTER_Y=9.4,TOWER_CABIN_RADIUS=.92;
 function enemyAimCenterY(e){
   return (e.o?.position?.y??e.gy??0)+(e.t==='torre'?TOWER_CABIN_CENTER_Y:1.5);
 }
 function enemyAimHitRadius(e){
-  return e.t==='torre'?TOWER_CABIN_RADIUS:(e.r||1)+.6;
+  return e.t==='torre'?TOWER_CABIN_RADIUS:e.towerGuard?.88:(e.r||1)+.6;
 }
 // Les bales lleugeres travessen la filferrada. Només els obstacles
 // sòlids bloquegen l'apuntat assistit.
@@ -1558,10 +1563,8 @@ function updPj(dt){
       else if(kind==='tree'&&target?.p)dmgP(target,p.dmg);
       else if(kind==='enemy'){
         if(target.t==='torre'){
-          // Impactes lleugers del jugador a la CASETA: foc de supressió
-          // durant 2 s. Cada bala renova el termini; no resta PV a la torre.
-          if(p.own==='p'&&p.shotClass==='light')
-            target.suppressedUntil=elapsed+2;
+          // La torre és una estructura, no un armer automàtic.
+          // Disparar-hi no modifica l'estat dels dos defensors.
         }else if(!(p.shotClass==='light'&&isArmoredVehicleType(target.t))){
           hurtE(target,p.dmg,p);
         }
