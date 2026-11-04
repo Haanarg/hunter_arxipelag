@@ -14651,7 +14651,11 @@ function updateNativeCoopFrame(dt){
          // Mateixa fragmentació de les malles que al mode individual,
          // sense tornar a aplicar danys: el Worker ja és l'autoritat.
          v.o.position.set(row.x,row.y,row.z);v.o.rotation.y=row.hd;
-         if(!['bici','barca_rems','windsurf'].includes(v.t))vehicleDebris(v,row.y);
+         if(['bici','barca_rems','windsurf'].includes(v.t)){
+           // Les mateixes peces voladores del mode individual, sense boom().
+           fragileVehicleDebris(v,row.y,previous?.v??row.v??0);
+           snd('woodBreak',.62,{x:row.x,y:row.y,z:row.z},v);
+         }else vehicleDebris(v,row.y);
        }
        if(!v.o.visible)v.o.position.set(row.x,row.y,row.z);
        if(v.o.userData.turretPivot)v.o.userData.turretPivot.rotation.y=row.turretYaw||0;
