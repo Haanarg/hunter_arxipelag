@@ -616,7 +616,8 @@ function towerGuardTick(u,dt){
  const rules=window.HUNTER_TOWER_MODEL,q=cv||P,
    targetY=cv?cv.o.position.y:P.y,
    dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz),
-   eyeY=u.gy+2.15,rocket=!!u.rocketSoldier,
+   // El cap i la boca del canó queden per damunt del parapet lateral.
+   eyeY=u.gy+2.78,rocket=!!u.rocketSoldier,
    visualTarget={x:q.x,y:targetY+(!cv&&playerCrouched?1.25:1.5),z:q.z},
    facing=rules.towerGuardInView(u.hd,dx,dz,u.rng);
  u.cd=Math.max(0,(u.cd||0)-dt);
@@ -641,7 +642,7 @@ function towerGuardTick(u,dt){
        Math.cos(targetHeading-u.hd)))<.13;
    if(aiming&&aligned&&u.cd<=0&&(!rocket||d>12)){
      const fx=-Math.sin(u.hd),fz=-Math.cos(u.hd),
-       origin={x:u.x+fx*1.18,y:eyeY+(rocket?.05:-.18),z:u.z+fz*1.18};
+       origin={x:u.x+fx*1.18,y:eyeY-(rocket?.04:.08),z:u.z+fz*1.18};
      if(weaponAimClear(origin.x,origin.y,origin.z,
        visualTarget.x,visualTarget.y,visualTarget.z)&&
        !enemyFriendlyVehicleInFireLane(origin,visualTarget)){
