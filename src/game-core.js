@@ -1,7 +1,7 @@
 window.addEventListener("error",e=>{const p=document.getElementById("ini");if(p&&p.style.display!=="none"){const esc=v=>String(v||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])),m=(e&&e.message)?e.message:"Error desconegut",where=e&&e.filename?(e.filename.split("/").pop()+":"+e.lineno+":"+e.colno):"",stack=e&&e.error&&e.error.stack?e.error.stack:"";p.innerHTML="<h1>No s’ha pogut iniciar el joc</h1><p style=\"max-width:560px\">Error d’arrencada: <b>"+esc(m)+"</b></p>"+(where?"<p><b>"+esc(where)+"</b></p>":"")+(stack?"<pre style=\"max-width:90vw;white-space:pre-wrap;text-align:left;font-size:11px;opacity:.8\">"+esc(stack)+"</pre>":"")+"<p style=\"opacity:.8\">Envia una captura d’aquest missatge si persisteix.</p>"}});
 let generationPromise=null,generationCancel=null;
 let terrainStream=null,seedSearchMode=false,seedCompounds=[],seedScratchWorld=null;
-const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_WAVES','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI','HUNTER_SEED_SEARCH','HUNTER_CAMERA_CONTROLS','HUNTER_SPATIAL_GRID','HUNTER_FRAME_DIAGNOSTICS','HUNTER_SIMULATION_CLOCK','HUNTER_STEALTH_FEEDBACK','HUNTER_PRISONERS','HUNTER_RADIO_RELAY'];
+const requiredModules=['HUNTER_VISUAL_CONFIG','HUNTER_MATERIALS','HUNTER_PALETTE','HUNTER_WATER','HUNTER_RENDERING','HUNTER_WATER_SYSTEM','HUNTER_WAVES','HUNTER_TERRAIN','HUNTER_VEHICLES','HUNTER_VEHICLE_DYNAMICS','HUNTER_JOYSTICK','HUNTER_RIDER','HUNTER_VEGETATION','HUNTER_BUILDINGS','HUNTER_CHARACTERS','HUNTER_FAUNA','HUNTER_MINIMAP','HUNTER_UI','HUNTER_SEED_SEARCH','HUNTER_CAMERA_CONTROLS','HUNTER_SPATIAL_GRID','HUNTER_FRAME_DIAGNOSTICS','HUNTER_FRAME_TICK','HUNTER_SIMULATION_CLOCK','HUNTER_STEALTH_FEEDBACK','HUNTER_PRISONERS','HUNTER_RADIO_RELAY'];
 const missingModules=requiredModules.filter(name=>!window[name]);if(missingModules.length)throw new Error('Mòduls Hunter absents: '+missingModules.join(', '));
 const missingSystems=Object.entries({generation:typeof build,combat:typeof fire,enemies:typeof updEn,audio:typeof initAudio}).filter(([,type])=>type!=='function').map(([name])=>name);if(missingSystems.length)throw new Error('Sistemes Hunter absents: '+missingSystems.join(', '));
 // La mida escollida a la portada ja és coneguda quan s'inicialitza el motor.
@@ -3945,11 +3945,23 @@ const frameDiagnostics=window.HUNTER_FRAME_DIAGNOSTICS.createFrameDiagnostics({
   renderCategories,shadowRenderCategories,renderOtherDetails,
   vehicleDrawTypes,vehicleDrawParts,vehicleShadowTypes
 });
+const frameTickCoordinator=window.HUNTER_FRAME_TICK.createFrameTickCoordinator({
+  simulationClock,cinematicClock,resetEnemyPathFrameBudget,
+  update,getElapsed:()=>elapsed,
+  shouldContinueGameplay:()=>!!started&&!paused&&!over&&simulationFocused&&!document.hidden,
+  setSimulationFrameActive:active=>{simulationFrameActive=active},
+  syncWeaponPicker,
+  tickPersistence:()=>{if(!nativeCoopSession){operationAutosave?.tick();cloudTick();journalTick();}},
+  getVictoryCinematic:()=>victoryCinematic,
+  getDeathCinematic:()=>deathCinematic,
+  updateVictoryCinematic,updateDeathCinematic,
+  canContinueCinematics:()=>!paused&&simulationFocused&&!document.hidden
+});
 let last=performance.now();resetSimulationClock(last);
 (function loop(now){
 // DOM can repaint and accept cancel/retry between generation tasks. No world
 // simulation, RNG, LOD, fire, clock debt or partial-world render is permitted.
-if(generationPromise){last=now;simulationClock.reset(now);cinematicClock.reset(now);requestAnimationFrame(loop);return}
+if(generationPromise){last=now;frameTickCoordinator.suspend(now);requestAnimationFrame(loop);return}
 if(performanceGpuTimer)performanceGpuTimer.poll();
 const rawDt=Number.isFinite(now)&&now>=last?(now-last)/1000:0;
 last=Number.isFinite(now)&&now>=0?now:performance.now();
@@ -3959,28 +3971,8 @@ const cpuStarted=performance.now(),victoryAtStart=victoryCinematic,
       gameplayActive=!!started&&!paused&&!over&&visible,
       cinematicActive=!!started&&!paused&&visible&&
         (!!victoryAtStart&&(victoryAtStart.active||victoryAtStart.finished)||!!deathAtStart?.active);
-// El pressupost de navegació és per fotograma, no es multiplica pels subpassos.
-resetEnemyPathFrameBudget();simulationFrameActive=true;
-let simulated;
-try{
-  simulated=simulationClock.advance(now,dt=>{
-    update(dt,elapsed+dt);
-    return !!started&&!paused&&!over&&simulationFocused&&!document.hidden;
-  },gameplayActive);
-}finally{simulationFrameActive=false}
-// També sense temps nou cal netejar controls, HUD i estat de càmera.
-if(!simulated.steps)update(0,elapsed);
-syncWeaponPicker();
-if(!nativeCoopSession){operationAutosave?.tick();cloudTick();journalTick();}
-// Només avança la cinemàtica que ja existia a l'inici del fotograma.
-// El seu rellotge separat també admet 250 ms, en passos de fins a 1/60.
-cinematicClock.advance(now,dt=>{
-  if(victoryCinematic===victoryAtStart&&(victoryAtStart?.active||victoryAtStart?.finished))updateVictoryCinematic(dt);
-  if(deathCinematic===deathAtStart&&deathAtStart?.active)updateDeathCinematic(dt);
-  return !paused&&simulationFocused&&!document.hidden&&
-    (victoryCinematic===victoryAtStart&&(victoryAtStart?.active||victoryAtStart?.finished)||
-      deathCinematic===deathAtStart&&deathAtStart?.active);
-},cinematicActive);
+const simulated=frameTickCoordinator.advanceGameplay(now,gameplayActive);
+frameTickCoordinator.advanceCinematics(now,cinematicActive,victoryAtStart,deathAtStart);
 updateAudioFrame();
 renderCombatFeedback();
 renderStealthFeedback();
