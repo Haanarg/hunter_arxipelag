@@ -797,10 +797,10 @@ function weaponTargetPriority(...args){return window.HUNTER_SHARED_AIMING.weapon
 // col·lisió dels projectils, retícula i dany d'explosió.
 const TOWER_CABIN_CENTER_Y=9.4,TOWER_CABIN_RADIUS=.92;
 function enemyAimCenterY(e){
-  return (e.o?.position?.y??e.gy??0)+(e.t==='torre'?TOWER_CABIN_CENTER_Y:1.5);
+  return (e.o?.position?.y??e.gy??0)+(e.t==='torre'?TOWER_CABIN_CENTER_Y:e.towerGuard?2.3:1.5);
 }
 function enemyAimHitRadius(e){
-  return e.t==='torre'?TOWER_CABIN_RADIUS:e.towerGuard?.88:(e.r||1)+.6;
+  return e.t==='torre'?TOWER_CABIN_RADIUS:e.towerGuard?1.05:(e.r||1)+.6;
 }
 // Les bales lleugeres travessen la filferrada. Només els obstacles
 // sòlids bloquegen l'apuntat assistit.
@@ -903,7 +903,7 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
             groundTarget?Math.max(modelY,hAt(e.x,e.z),e.gy??-Infinity):modelY,
           ty=e.t==='patrulla_marina'?marineHullTargetY(e):
             baseY+(e.t==='torre'?TOWER_CABIN_CENTER_Y:
-              e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:1.5),
+              e.t==='tanc'?2.8:e.t==='tanqueta'?2.1:e.towerGuard?2.3:1.5),
           aim=projectileSpeed>0&&e.t==='patrulla_marina'?
             bazookaInterceptPoint(e,x,y,z,ty,projectileSpeed):{x:e.x,y:ty,z:e.z};
     consider(e,'enemy',priority,aim.x,aim.y,aim.z);
