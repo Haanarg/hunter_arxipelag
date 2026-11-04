@@ -1,5 +1,5 @@
 import {candidateVehicles,requisitionChance,requisitionRoll,vehicleSeatPosition,
-  pursuitInput,observeFleeing,boatBoardingReady,requisitionBoat,avoidVehicleBarbedWire,
+  pursuitInput,motorcycleAttackInput,observeFleeing,boatBoardingReady,requisitionBoat,avoidVehicleBarbedWire,
   requisitionFenceDetour,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
 
 // L'estat viu al soldat i a enemyCrew del vehicle; ambdós es desaran
@@ -141,11 +141,15 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
   }
   // A les llanxes, el pilot dispara amb el fusell mentre condueix.
   // El passatger és qui controla el llançacoets.
-  if((requisitionBoat(v.t)||v.t==='tanc'||v.t==='tanqueta')&&actor)
+  if((requisitionBoat(v.t)||v.t==='tanc'||v.t==='tanqueta'||v.t==='moto')&&actor)
     firePassenger(unit,v,tick,0);
-  const planned=pursuitInput(v,s.goal,{passenger:ready,distance:best});
-  const input=avoidVehicleBarbedWire(v,planned,geometry().walls||[],
-    s.fenceAvoid??={});
+  const playerVehicle=actor?vehicles.mounted?.(actor.id):null,
+    planned=pursuitInput(v,s.goal,{passenger:ready,distance:best}),
+    approach=avoidVehicleBarbedWire(v,planned,geometry().walls||[],
+      s.fenceAvoid??={}),
+    input=motorcycleAttackInput(v,playerVehicle||s.goal,approach,{
+      occupied:!!playerVehicle&&s.phase==='riding'
+    });
   vehicles.enemyAccept(v.id,unit.id,input,tick);
   return true;
  }

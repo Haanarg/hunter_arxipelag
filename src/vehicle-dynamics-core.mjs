@@ -51,23 +51,25 @@ export const vehicleDynamics=Object.freeze({
       const p=this.land[v.t],state=v.waterIngress||(v.waterIngress={dead:false,elapsed:0,sink:0,buoyancy:0});
       if(!p)return {engine:1,drag:0,wet:0,disabled:false};
       const wet=Math.max(0,Math.min(1,(depth-p.wade)/(p.stall-p.wade)));
-      // La bicicleta no té motor: es pot recuperar pedalant cap a terra
-      // mentre encara no s'ha enfonsat completament.
-      if(v.t==='bici'&&!v.sunk&&depth<=p.wade+.1){
-        state.dead=false;state.elapsed=0;state.sink=0;
+      // Una bicicleta intacta no té motor que es pugui calar. Es pot
+      // recuperar de l'aigua i sanejar el 'sunk' d'un desament antic.
+      const pedal=v.t==='bici'&&!v.destroyed;
+      if(pedal){
+        v.sunk=false;state.dead=false;state.elapsed=0;state.sink=0;
       }else if(depth>=p.stall)state.dead=true;
       if(state.dead){
         state.elapsed+=Math.max(0,dt);
         state.sink=Math.max(0,(state.elapsed-p.delay)*p.sinkRate);
       }else{
         state.elapsed=0;
-        state.buoyancy=Math.max(0,state.buoyancy-Math.max(0,dt)*.85);
+        // La bicicleta conserva flotabilitat mentre és dins l'aigua.
+        if(!pedal||depth<=p.wade)
+          state.buoyancy=Math.max(0,state.buoyancy-Math.max(0,dt)*.85);
       }
       if(depth>p.wade){
         state.buoyancy=Math.min(1,state.buoyancy+Math.max(0,dt)*.75);
       }
       if(state.dead&&state.elapsed>=p.delay+3.5)v.sunk=true;
-      const pedal=v.t==='bici'&&!v.sunk;
       return {engine:pedal?Math.max(.35,1-wet*.84):state.dead?0:1-wet*.84,
         drag:state.dead?1.4:wet*(.8+wet*.6),
         wet,disabled:state.dead&&!pedal};

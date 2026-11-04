@@ -124,6 +124,24 @@ export function pursuitInput(v,target,{passenger=false,distance=Infinity}={}){
     d<3&&passenger?0:Math.abs(error)>2.4?.38:Math.abs(error)>1.3?.58:1;
   return{forward,turn:clamp(error*1.25,-1,1),distance:d};
 }
+// Una moto requisada no ha d'envestir un vehicle ocupat. Anticipam la
+// frenada segons la velocitat de tancament REAL (també en sentits oposats).
+// El conductor continua disparant amb el seu fusell, sense cap arma fictícia.
+export function motorcycleAttackInput(v,target,input,{occupied=false}={}){
+ if(!occupied||v?.t!=='moto'||!target||!input)return input;
+ const dx=target.x-v.x,dz=target.z-v.z,dist=Math.hypot(dx,dz);
+ if(!Number.isFinite(dist)||dist<1e-5)
+   return {...input,forward:-1,turn:0,avoidingOccupiedVehicle:true};
+ const h=v.hd||0,th=target.hd||0,rv=v.v||0,tv=target.v||0,
+   closing=Math.max(0,((-Math.sin(h)*rv+Math.sin(th)*tv)*dx+
+     (-Math.cos(h)*rv+Math.cos(th)*tv)*dz)/dist),
+   radius=t=>(vehicleSpecs.radii[t]||3)*(vehicleSpecs.scales[t]||1),
+   margin=radius('moto')+radius(target.t)+8,
+   brake=Math.max(12,vehicleDynamics.types.moto.a*.75),
+   stopAt=margin+closing*.35+closing*closing/(2*brake);
+ if(dist>stopAt)return input;
+ return {...input,forward:rv>.8?-1:0,turn:0,avoidingOccupiedVehicle:true};
+}
 // Ruta explícita per travessar una obertura de filferrada abans
 // d'anar a un vehicle. No demanam al navegant que travessi un mur
 // o que vagi directament al seient si hi ha una tanca al mig.
@@ -279,6 +297,15 @@ export function boatCrewMuzzle(v,seat=0,baseY=v.y??0){
 export function passengerMuzzle(v,baseY=v.y??0){
   if(!v)return null;
   if(v.t==='tanc'||v.t==='tanqueta')return null;
+  if(v.t==='moto'){
+    // El pilot és davant i porta el fusell: no disparar lateralment
+    // com faria un artiller de cotxe. El model SOLO determina la boca
+    // exacta amb Three.js; el Worker conserva una aproximació pura.
+    const h=v.hd??0,lateral=.24,forward=-1.25;
+    return {x:v.x+Math.cos(h)*lateral+Math.sin(h)*forward,
+      y:baseY+2.15,
+      z:v.z-Math.sin(h)*lateral+Math.cos(h)*forward};
+  }
   const halfWidth=(vehicleSpecs.hitboxes[v.t]?.[0]??3)/2;
   const lateral=halfWidth+.75,h=v.hd??0,fore=-.65;
   return {x:v.x+Math.cos(h)*lateral+Math.sin(h)*fore,

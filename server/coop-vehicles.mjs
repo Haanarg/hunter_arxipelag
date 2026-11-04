@@ -163,7 +163,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
   const cached=results.find(r=>r.actorId===actorId&&r.commandId===msg.commandId);if(cached)return {...cached,duplicate:true};
   const p=players().find(p=>p.id===actorId),v=vehicles.find(v=>v.id===msg.vehicleId);let code='INVALID',ok=false,exit=null;
   if(p&&msg.epoch===meta.id&&validId(msg.commandId)&&['enter','exit'].includes(msg.operation)){
-   if(!active()||p.hp<=0||p.fall||p.swimming&&!(['proving','world','native'].includes(meta.mode)&&['w','wl'].includes(vehicleDynamics.types[v?.t]?.m)))code='NOT_ACTIVE';
+   if(!active()||p.hp<=0||p.fall||p.swimming&&!(['proving','world','native'].includes(meta.mode)&&(['w','wl'].includes(vehicleDynamics.types[v?.t]?.m)||v?.t==='bici')))code='NOT_ACTIVE';
    else if(!v)code='UNKNOWN_VEHICLE';
    else if(v.destroyed)code='DESTROYED';
    else if(v.enemyCrew?.some(Boolean))code='ENEMY_OCCUPIED';

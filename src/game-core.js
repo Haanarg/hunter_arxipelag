@@ -2338,7 +2338,7 @@ const act=c=>{if(generationPromise)return;if(ui?.isBombTimerOpen?.()){
   if(!secondaryWeapon()&&inv.expl&&!cv&&
      !swimming&&!playerFall&&!playerEject)panel('bombtimer');
 }if(c==='KeyC'){if(inv.disf){if(nativeCoopSession)nativeCoopSession.channel.inventory('disguise',!disg);else setDis(!disg);}else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
-const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.sunk||(v.t!=='bici'&&v.waterIngress?.dead)||v.reentryLockUntil>elapsed||v.enemyCrew?.some(Boolean))continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
+const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.sunk&&v.t!=='bici'||(v.t!=='bici'&&v.waterIngress?.dead)||v.reentryLockUntil>elapsed||v.enemyCrew?.some(Boolean))continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
 function updateActionButton(nearby){
   const button=document.getElementById('mainActionButton');
   if(!button)return;
@@ -2461,7 +2461,7 @@ leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;leaving.reentryLockU
 if(moving){const fx=-Math.sin(leaving.hd),fz=-Math.cos(leaving.hd),sx=Math.cos(leaving.hd)*spot.side,sz=-Math.sin(leaving.hd)*spot.side,
   carry=Math.sign(leaving.v)*Math.min(safeMovingRoadExit?11:28,speed*(safeMovingRoadExit?.3:.72)),outward=safeMovingRoadExit?8:1.4;
   playerEject={kind:'flip',vx:fx*carry+sx*outward,vz:fz*carry+sz*outward,t:.5,dur:.5,height:.68};msg='Has saltat del vehicle en marxa!';msgT=2.5}
-cv=null}else{const v=nearV();if(v&&!v.sunk){cv=v;swimming=false;playerCrouched=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
+cv=null}else{const v=nearV();if(v&&(!v.sunk||v.t==='bici')){cv=v;swimming=false;playerCrouched=false;P.hd=v.hd;msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3}}}
 addEventListener('keydown',e=>{
   if(['Escape','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
   if(e.repeat)return;
@@ -3037,7 +3037,7 @@ function crashHelicopterStructure(v,contact){
 function stepV(v,f,tr,ud,dt,strafe=0){
 const c=VT[v.t],a=c.m==='a',water=c.m==='w'||c.m==='wl',land=c.m==='l',radius=vehicleRadius(v.t),
   shore=window.HUNTER_VEHICLE_DYNAMICS.shore;
-if(v.sunk){v.v=0;v.sideV=0;v.strafeV=0;if(cv===v)escapeSubmergedVehicle(v);return !v.destroyed}
+if(v.sunk&&v.t!=='bici'){v.v=0;v.sideV=0;v.strafeV=0;if(cv===v)escapeSubmergedVehicle(v);return !v.destroyed}
 // A vehicle on the ferry's dry deck is not submerged just because
 // the sea floor is beneath its map coordinates.
 const onFerryDeck=land&&(v.carrier||ferryForVehicle(v,v.x,v.z,true)),
@@ -3055,7 +3055,7 @@ if(land){
       v.waterSplashCd=.25;
     }
   }
-  if(v.sunk){v.v=0;if(cv===v)escapeSubmergedVehicle(v);return !v.destroyed}
+  if(v.sunk&&v.t!=='bici'){v.v=0;if(cv===v)escapeSubmergedVehicle(v);return !v.destroyed}
 }
 // Strafe sense girar: només hovercraft i els dos helicòpters.
 // Conservar la deriva natural existent (sideV) i afegir-hi una velocitat
@@ -3641,7 +3641,7 @@ V.slice().forEach(v=>{
    // No li aplicam una segona passada en punt mort (ni esborram l'accelerador).
    if(v===cv||v.enemyCrew?.[0]?.enemyVehicleClaim?.phase==='riding'||
       v.enemyCrew?.[0]?.enemyVehicleClaim?.phase==='waiting')return;
-  if(v.sunk&&v.waterIngress){
+  if(v.sunk&&v.waterIngress&&v.t!=='bici'){
     // The hull continues to descend to the seabed even after its engine
     // becomes unusable and it is no longer being simulated as a driver.
     const bed=hAt(v.x,v.z),depth=Math.max(0,wy(v.x,v.z,t)-bed),
