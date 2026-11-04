@@ -912,7 +912,7 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
     // Quan l'ampit tapa el centre del cos, també podem apuntar a la
     // part superior del soldat. El mateix raycast comprova que sigui visible.
     if(shotClass!=='heavy'&&['soldat','general'].includes(e.t))
-      consider(e,'enemy',priority,aim.x,baseY+2.35,aim.z);
+      consider(e,'enemy',priority,aim.x,baseY+(e.towerGuard?2.9:2.35),aim.z);
   }
   // Els vehicles neutrals competeixen amb els soldats, segons l'angle
   // respecte del centre de la mirada i només amb armes lleugeres.
