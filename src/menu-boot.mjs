@@ -136,7 +136,9 @@ function intercept(button,message){
     if(requestPending)return;
     requestPending=true;
     const startupStart=performance.now();
-    showLoading(message);
+    // La selecció de dificultat no mostra cap rètol del motor 3D.
+    if(message)showLoading(message);
+    else loadingLabel.style.display='none';
     try{
       await loadGame();
       const engineMs=performance.now()-startupStart;
@@ -166,7 +168,7 @@ function intercept(button,message){
   },true);
 }
 for(const button of menu.querySelectorAll('button[data-d]'))
-  intercept(button,'Carregant el motor 3D…');
+  intercept(button,null);
 intercept(document.getElementById('historyOpen'),'Carregant l’historial…');
 intercept(document.getElementById('accountOpen'),'Carregant el compte…');
 intercept(document.getElementById('operationsOpen'),'Carregant les operacions…');
