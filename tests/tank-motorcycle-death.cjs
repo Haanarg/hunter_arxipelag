@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 (async()=>{
  const game=await require('./harness.cjs')();
  game.context.HUNTER_VEHICLE_OCCUPANT_DAMAGE=await import('../src/vehicle-occupant-damage-core.mjs');
- game.start('148');game.frame();
+ game.start('148');
  const result=game.run(`(()=>{
    // Two isolated fully modeled vehicles. The mounted player is killed by
    // the real tank-crush branch, not an artificial call to hurtP.
