@@ -22,6 +22,7 @@ on:
       - 'tests/performance-copy-diagnostic.mjs'
       - 'tests/performance-live-diagnostic.cjs'
       - 'tests/ai-pressure-scheduling.cjs'
+      - 'tests/ai-cpu-optimization.cjs'
       - 'tests/enemy-sweep-segment-prefilter.cjs'
       - 'tests/shadow-stable-focus.cjs'
       - 'tests/ai-delta-isolation.cjs'
