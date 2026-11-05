@@ -22,7 +22,7 @@ function fixture(seed,scale,mode){
    opacity:i===0?.8:1,transparent:i===0,
    side:i===3?THREE.DoubleSide:THREE.FrontSide,flatShading:i===2
  }));
- const n=mode===0?0:mode===1?4:mode===2?9:mode===6?24:18;
+ const n=mode===0?0:mode===1?4:mode===2?9:mode===6?24:mode===7?3:18;
  for(let i=0;i<n;i++){
   const group=new THREE.Group();
   group.position.set((random()-.5)*680*scale,0,(random()-.5)*680*scale);
@@ -37,7 +37,8 @@ function fixture(seed,scale,mode){
    group.add(nested);
   }
   for(let k=0;k<(mode===1?1:mode===2?2:3);k++){
-   const geom=k===0?new THREE.BoxGeometry(2+i*.1,1.5,3):
+   const geom=k===0?(mode===7?new THREE.SphereGeometry(2,24,16):
+       new THREE.BoxGeometry(2+i*.1,1.5,3)):
       k===1?new THREE.CylinderGeometry(.65,.7,2.1,7):
       new THREE.PlaneGeometry(3,4,2,2);
    const mesh=new THREE.Mesh(geom,materials[(i+k)%materials.length]);
@@ -62,9 +63,9 @@ function captureMesh(m){
    roughness:m.material.roughness,metalness:m.material.metalness,opacity:m.material.opacity,
    transparent:m.material.transparent,side:m.material.side,vertexColors:m.material.vertexColors}};
 }
-function trace({world,roots,context},isNew){
- const it=isNew?after(context).buildSteps({world,staticDecorRoots:roots,THREE}):
-   before(THREE,world,roots,context)();
+function trace({world,roots,context},isNew,three=THREE){
+ const it=isNew?after(context).buildSteps({world,staticDecorRoots:roots,THREE:three}):
+   before(three,world,roots,context)();
  const checkpoints=[];let step;
  for(let i=0;i<150000;i++){step=it.next();if(step.done)break;checkpoints.push(step.value)}
  assert(step?.done,'finite batch build');
@@ -98,6 +99,60 @@ for(const seed of [67,148])for(const scale of [1,2]){
  assert(result.result.originalMeshes>0);
  assert.equal(worldPositionCalls,0,
    'world matrices must be updated once per root, without mesh.getWorldPosition');
+}
+
+// Large indexed geometry crosses the cooperative checkpoint at every 256
+// vertices; allocation optimization must retain every yield and float.
+for(const seed of [67,148])for(const scale of [1,2]){
+ const original=trace(fixture(seed,scale,7),false),
+   optimized=trace(fixture(seed,scale,7),true);
+ assert.deepEqual(optimized,original,'large indexed mesh with repeated color yields');
+ assert(original.checkpoints.filter(p=>p.stage==='Colors de decoració').length>8);
+ checks++;
+}
+// Instrument the output-builder BufferAttribute constructor without
+// monkey-patching Three.js itself. The old path creates one additional
+// color BufferAttribute (and typed buffer) per input mesh.
+for(const seed of [67,148])for(const scale of [1,2]){
+ const calls={before:0,after:0};
+ const instrument=key=>({
+  ...THREE,
+  BufferAttribute:class extends THREE.BufferAttribute{
+   constructor(...args){super(...args);calls[key]++}
+  }
+ });
+ const old=trace(fixture(seed,scale,6),false,instrument('before')),
+   now=trace(fixture(seed,scale,6),true,instrument('after'));
+ assert.deepEqual(now,old,'no geometry change while eliminating color copies');
+ assert.equal(calls.before-calls.after,old.result.originalMeshes,
+  'exactly one redundant source-color allocation eliminated per mesh');
+}
+// Material edits between generator yields must affect the same vertex
+// and all subsequent vertices in both the frozen oracle and new code.
+function traceWithLiveMaterial(seed,scale,isNew){
+ const {world,roots,context}=fixture(seed,scale,7);
+ const material=roots[0].children[0].material;
+ const it=isNew?after(context).buildSteps({world,staticDecorRoots:roots,THREE}):
+   before(THREE,world,roots,context)();
+ let changed=false,step;const checkpoints=[];
+ for(let i=0;i<150000;i++){
+  step=it.next();
+  if(step.done)break;
+  checkpoints.push(step.value);
+  if(!changed&&step.value?.stage==='Colors de decoració'){
+   material.color.setHex(0x39a1ff);
+   changed=true;
+  }
+ }
+ assert(step.done&&changed,'a color mutation occurred during vertex sampling');
+ return {checkpoints,result:step.value,
+  stats:context.HUNTER_STATIC_BATCH_STATS,
+  mesh:world.children.filter(x=>x.isMesh).map(captureMesh)};
+}
+for(const seed of [67,148]){
+ assert.deepEqual(traceWithLiveMaterial(seed,1,true),
+  traceWithLiveMaterial(seed,1,false),
+  'live vertex colors retained across generator checkpoints');
 }
 console.log('PASS phase4 static visual batching: '+checks+' parity cases, '+
   originals+' input meshes, '+batches+' grouped render meshes');

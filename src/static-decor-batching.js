@@ -37,28 +37,39 @@ window.HUNTER_STATIC_DECOR_BATCH=Object.freeze({
   const transform=new THREE.Matrix4();
   for(const group of groups.values()){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
     const x=(group.cx+.5)*CHUNK,z=(group.cz+.5)*CHUNK,
-          pieces=[],sizes=[];let total=0;
+          pieces=[],sizes=[];let total=0,colorOffset=0;
+    // Vertex counts are already available on each source geometry.
+    // Allocate one color buffer per output batch, not one per source mesh.
+    // BufferGeometry.toNonIndexed() produces index.count vertices.
+    const colorData=new Float32Array(group.meshes.reduce((sum,mesh)=>
+      sum+(mesh.geometry.index?mesh.geometry.index.count:
+        mesh.geometry.attributes.position.count),0)*3);
     try{
     for(const mesh of group.meshes){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
       yield {stage:'Agrupant decoració',completed:batches,total:groups.size,unit:'grups'};
       transform.makeTranslation(-x,0,-z).multiply(mesh.matrixWorld);
       const copy=mesh.geometry.index?mesh.geometry.toNonIndexed():mesh.geometry.clone();
       copy.applyMatrix4(transform);
-      const n=copy.attributes.position.count,color=new Float32Array(n*3);
+      const n=copy.attributes.position.count;
       pieces.push(copy);sizes.push(n);total+=n;
       for(let k=0;k<n;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
         if(k%256===0)yield {stage:'Colors de decoració',completed:k,total:n,unit:'vèrtexs'};
-        color[k*3]=mesh.material.color.r;
-        color[k*3+1]=mesh.material.color.g;
-        color[k*3+2]=mesh.material.color.b;
+        // Continue reading the live material after each yield, exactly as
+        // before: colors can change while a cooperative build is suspended.
+        const offset=(colorOffset+k)*3;
+        colorData[offset]=mesh.material.color.r;
+        colorData[offset+1]=mesh.material.color.g;
+        colorData[offset+2]=mesh.material.color.b;
       }
-      copy.setAttribute('color',new THREE.BufferAttribute(color,3));
+      colorOffset+=n;
     }
     const geom=new THREE.BufferGeometry();
     for(const [attribute,width] of [['position',3],['normal',3],['uv',2],['color',3]]){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
-      const data=new Float32Array(total*width);let offset=0;
+      // Colors were already written directly to their final contiguous
+      // buffer, so they need no intermediate attribute or second copy.
+      const data=attribute==='color'?colorData:new Float32Array(total*width);let offset=0;
       for(let k=0;k<pieces.length;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
-        const src=pieces[k].getAttribute(attribute);
+        const src=attribute==='color'?null:pieces[k].getAttribute(attribute);
         if(src)data.set(src.array,offset);
         offset+=sizes[k]*width;
       }
