@@ -52,6 +52,13 @@ window.HUNTER_PERFORMANCE=Object.freeze({
           ' · A* '+stats.hotspots.aiPathMs.toFixed(1)+' ('+stats.hotspots.aiPathChecks+') ms'+
           '\nIA col·lisions '+stats.hotspots.aiSweepMs.toFixed(1)+' ms · '+
           stats.hotspots.aiSweepChecks+' trajectes · '+stats.hotspots.aiSweepSamples+' mostres'+
+          '\nIA terra ràpid '+(stats.hotspots.aiSweepFastGroundSamples||0)+
+          ' · complet '+(stats.hotspots.aiSweepFullGroundSamples||0)+
+          ' · prediccions passives '+(stats.hotspots.aiPassiveDirectChecks||0)+
+          '\nIA decisions immediates '+(stats.hotspots.aiImmediateDecisions||0)+
+          ' · remotes '+(stats.hotspots.aiRemoteDecisions||0)+
+          '\nIA resta '+Math.max(0,stats.hotspots.aiMs-stats.hotspots.aiNavMs-
+            stats.hotspots.aiMarineMs-stats.hotspots.aiSenseMs).toFixed(1)+' ms'+
           '\nIA actualitzats '+stats.hotspots.aiUpdated+' · espaiats '+stats.hotspots.aiSkipped:'');
         lastDisplay=now;
       }

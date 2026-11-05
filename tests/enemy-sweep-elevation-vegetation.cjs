@@ -15,7 +15,7 @@ for(const t of trees){
  if(!TG.has(key))TG.set(key,[]);
  TG.get(key).push(t);
 }
-let palmsDisabled=false,heightCalls=0;
+let palmsDisabled=false,heightCalls=0,physicalHeight=3;
 const reference=(x,z,r)=>{
  const cx=Math.floor(x/16),cz=Math.floor(z/16);
  for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)
@@ -28,6 +28,7 @@ const env={
  treeHit:reference,
  enemyIsVehicle:()=>false,enemyRouteRadius:()=>1.2,enemyBodyRadius:()=>1.05,
  enemyGroundAt(){heightCalls++;return 3},
+ hAt:()=>physicalHeight,
  H:400,Math,performanceStatsVisible:false,perfHotspots:{},performance:{now:()=>0},
  wallCandidates:()=>[],vehicleCandidatesAt:()=>[],enemyCandidatesAt:()=>[],
  vehicleY:()=>3,vehicleBox:()=>({w:2,d:4}),obbOverlap:()=>false,
@@ -51,10 +52,14 @@ for(let i=0;i<500;i++){
   'disabled palms keep identical collisions');
 }
 palmsDisabled=false;
-const u={t:'soldat',x:65,z:65,hd:0,o:{position:{y:3}}};
+const u={t:'soldat',x:65,z:65,gy:3,hd:0,o:{position:{y:3}}};
 heightCalls=0;
 assert(enemySweep(u,60,60,80,60,0,0,true,false),
  'clear segment remains passable');
 const samples=Math.ceil(20/.45)+1;
-assert.equal(heightCalls,samples,'exactly one elevation evaluation per sweep sample');
-console.log('PASS: 4500 palm cases, palms-disabled cases and once-per-sample exact elevation');
+assert.equal(heightCalls,0,'dry segment omits the full groundAt');
+physicalHeight=-2;heightCalls=0;
+assert(enemySweep(u,60,60,80,60,0,0,true,false),
+ 'pier above water still navigable');
+assert.equal(heightCalls,samples,'submerged terrain still computes the full walking height');
+console.log('PASS: palm collisions and exact elevated pier/water, fast dry sweep');

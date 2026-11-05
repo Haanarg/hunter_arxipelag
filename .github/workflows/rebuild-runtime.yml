@@ -21,6 +21,10 @@ on:
       - 'tests/performance-copy-diagnostic.mjs'
       - 'tests/performance-live-diagnostic.cjs'
       - 'tests/ai-pressure-scheduling.cjs'
+      - 'tests/enemy-navigation-remote-ground.cjs'
+      - 'tests/enemy-sweep-elevation-vegetation.cjs'
+      - 'tests/enemy-sweep-candidate-cache.cjs'
+      - 'tests/enemy-route-probe-budget.cjs'
       - 'tests/simulation-pressure-budget.cjs'
       - '.github/workflows/rebuild-runtime.yml'
   workflow_dispatch:
@@ -43,6 +47,14 @@ jobs:
         run: |
           node --check src/ui.js
           node tests/performance-copy-diagnostic.mjs
+      - name: Check distant route decisions and collision-elevation parity
+        run: |
+          node --check src/enemy-navigation.js
+          node tests/enemy-navigation-remote-ground.cjs
+          node tests/enemy-sweep-elevation-vegetation.cjs
+          node tests/enemy-sweep-candidate-cache.cjs
+          node tests/enemy-route-probe-budget.cjs
+          node tests/enemy-navigation.cjs
       - name: Check live FPS, captured diagnostics and overloaded AI
         run: |
           node --check src/performance.js

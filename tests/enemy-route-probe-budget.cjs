@@ -13,6 +13,7 @@ const calls={predictive:[],real:[]},wall={enabled:false,x:1};
 const dep={
  performanceStatsVisible:false,perfHotspots:{aiNavMs:0},
  ENEMY_DIRECT_LOOKAHEAD:lookahead,enemyIsVehicle:()=>false,
+ enemyPassiveRoute:u=>!!u.remoteAiWarmed,
  enemyGroundAt:()=>3,enemyReindex:()=>{},wrapAngle:x=>x,
  enemyPathBudget:2,enemyNodeBudget:160,
  enemySweep(...args){
@@ -41,6 +42,13 @@ assert(calls.predictive.every(x=>x<=28+1e-8),'bounded despite a wall');
 wall.enabled=false;calls.predictive.length=0;
 u=create();u.tx=8;move(u,2,8,0);
 assert(calls.predictive.every(x=>x<=8+1e-8),'short destinations checked completely');
-assert(source.includes('u.navDirectT=.45'),'existing navigation responsiveness retained');
+assert(source.includes('u.navDirectT=passiveRoute?.8:.45'),
+ 'combat navigation retains the 0.45s recheck interval');
+calls.predictive.length=0;calls.real.length=0;
+u=create();u.remoteAiWarmed=true;move(u,2,1200,0);
+assert(calls.predictive[0]<=10+1e-8,'passive distant prediction limited to 10 m');
+assert.equal(calls.real.length,1,'actual passive movement keeps swept collision');
+assert(Math.abs(calls.real[0]-2)<1e-8,'passive travel distance unchanged');
+assert.equal(u.navDirectT,.8,'passive route decision refresh every 0.8 s');
 assert(source.includes('enemyFindPath(u,tx,tz)'),'A* obstacle avoidance still available');
 console.log('PASS: bounded direct probes; exact movement sweeps; no wall tunnelling; nearby full-length probe.');

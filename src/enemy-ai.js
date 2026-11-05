@@ -704,10 +704,12 @@ function updEn(frameDt,preserveFrameBudget=false,underPressure=false){if(!preser
       if(performanceStatsVisible)perfHotspots.aiSkipped++;
       return;
     }
+    if(performanceStatsVisible)perfHotspots.aiRemoteDecisions++;
     dt=u.remoteAiAcc;u.remoteAiAcc=0;u.remoteAiWarmed=true;
   }else{
     if(u.remoteAiAcc){dt+=u.remoteAiAcc;u.remoteAiAcc=0}
     u.remoteAiWarmed=false;
+    if(performanceStatsVisible)perfHotspots.aiImmediateDecisions++;
   }
   if(performanceStatsVisible)perfHotspots.aiUpdated++;
   if(u.blastT>0){

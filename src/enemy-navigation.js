@@ -100,6 +100,21 @@ function enemyBodiesClear(u,x,z,hd,dynamicCandidates=null,sampledY=undefined){
   }
   return true;
 }
+// El sweep només necessita el relleu per decidir si el pas cau sota
+// el nivell de mar: groundAt >= hAt fora dels soterranis. A terra seca
+// i amb cota pròpia, hAt és exactament equivalent per a aquesta decisió.
+// Els molls, l'aigua i els casos sense cota continuen usant groundAt.
+// L'altura FINAL de moviment continua emprant enemyGroundAt.
+function enemySweepSampleGround(u,x,z){
+  if(u.basement)return u.gy;
+  const physical=hAt(x,z);
+  if(u.gy!=null&&physical>=-.8){
+    if(performanceStatsVisible)perfHotspots.aiSweepFastGroundSamples++;
+    return physical;
+  }
+  if(performanceStatsVisible)perfHotspots.aiSweepFullGroundSamples++;
+  return enemyGroundAt(u,x,z);
+}
 // Sample both translation and rotation; a valid endpoint never permits a jump through a wall.
 function enemySweep(u,ax,az,bx,bz,fromHd,toHd,dynamic=true,route=false){
   const sweepStamp=performanceStatsVisible?performance.now():0;
@@ -128,7 +143,7 @@ function enemySweep(u,ax,az,bx,bz,fromHd,toHd,dynamic=true,route=false){
     if(performanceStatsVisible)sweepSamples++;
     // El càlcul de cota de terreny (escales, pisos, ports i LOD) és
     // especialment car: es fa un cop per mostra, no dues vegades.
-    const ground=u.gy==null||!u.basement?enemyGroundAt(u,x,z):u.gy,
+    const ground=enemySweepSampleGround(u,x,z),
       sampleY=u.gy??ground;
     if(!enemySolidAt(u,x,z,hd,route,staticCandidates,ground)||
        (dynamic&&!enemyBodiesClear(u,x,z,hd,dynamicCandidates,sampleY)))return false;
@@ -219,11 +234,15 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
   const goalChanged=!u.navGoal||Math.hypot(tx-u.navGoal.x,tz-u.navGoal.z)>6;
   if(goalChanged){u.navPath=[];u.navSearch=null;u.navGoal={x:tx,z:tz};u.navRetry=0}
   let target={x:tx,z:tz},hd=Math.atan2(u.x-tx,u.z-tz);
+  // La decisió anticipada i el moviment físic tenen cadències separades.
+  // Els moviments de tota unitat continuen passant pel sweep exacte.
+  const passiveRoute=enemyPassiveRoute(u);
   u.navDirectT=(u.navDirectT||0)-dt;
   if(goalChanged||u.navDirectT<=0){
     const directStarted=performanceStatsVisible?performance.now():0;
     const longDistance=Math.hypot(tx-u.x,tz-u.z),
-      lookahead=Math.min(1,ENEMY_DIRECT_LOOKAHEAD/Math.max(.001,longDistance));
+      decisionLookahead=passiveRoute?10:ENEMY_DIRECT_LOOKAHEAD,
+      lookahead=Math.min(1,decisionLookahead/Math.max(.001,longDistance));
     // La comprovació predictiva és curta, però el sweep real de tryMove
     // continua fent servir tota la petjada i les col·lisions dinàmiques.
     // La predicció d'espai lliure tampoc no pot girar el jeep sobre el lloc:
@@ -236,8 +255,9 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
       preview?.x??u.x+(tx-u.x)*lookahead,
       preview?.z??u.z+(tz-u.z)*lookahead,
       oldHd,preview?.heading??hd,false,!veh);
-    u.navDirectT=.45;
+    u.navDirectT=passiveRoute?.8:.45;
     if(performanceStatsVisible){
+      if(passiveRoute)perfHotspots.aiPassiveDirectChecks++;
       perfHotspots.aiDirectMs+=performance.now()-directStarted;
       perfHotspots.aiDirectChecks++;
     }
@@ -245,9 +265,9 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
   const direct=u.navDirect;
   if(!direct){
     if(!u.navPath?.length&&u.navRetry<=0&&enemyPathBudget>0&&
-      (!enemyPassiveRoute(u)||enemyPassivePathBudget>0)){
+      (!passiveRoute||enemyPassivePathBudget>0)){
       enemyPathBudget--;
-      if(enemyPassiveRoute(u))enemyPassivePathBudget--;
+      if(passiveRoute)enemyPassivePathBudget--;
       const pathStarted=performanceStatsVisible?performance.now():0;
       const path=enemyFindPath(u,tx,tz);
       if(performanceStatsVisible){

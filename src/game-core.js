@@ -123,7 +123,9 @@ const perfHotspots={broadphaseMs:0,aiMs:0,visibilityMs:0,stealthMs:0,
   aiMarineMs:0,aiNavMs:0,aiSenseMs:0,aiDirectMs:0,aiPathMs:0,
   aiDirectChecks:0,aiPathChecks:0,aiPathDeferred:0,
   aiPathNodes:0,aiPassivePathNodes:0,aiSweepMs:0,
-  aiSweepChecks:0,aiSweepSamples:0,aiUpdated:0,aiSkipped:0};
+  aiSweepChecks:0,aiSweepSamples:0,aiUpdated:0,aiSkipped:0,
+  aiSweepFastGroundSamples:0,aiSweepFullGroundSamples:0,
+  aiPassiveDirectChecks:0,aiRemoteDecisions:0,aiImmediateDecisions:0};
 window.HUNTER_PERF_HOTSPOTS=perfHotspots;
 document.body.classList.remove('performance-stats-visible');
 function setPerformanceStatsVisible(enabled){
