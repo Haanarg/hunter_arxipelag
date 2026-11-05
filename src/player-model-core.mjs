@@ -55,6 +55,10 @@ export const playerModel=Object.freeze({
   // Ancoratge sota la sola real: el pivot del turmell és massa alt.
   const soleContact=new T.Object3D();soleContact.position.set(0,-.14,.075);
   boot.add(soleContact);u.soleContacts.push(soleContact);
+  // Contacte addicional a la punta: evita que en pujada el taló
+  // descansi correctament però la resta de la bota suri sobre el pla.
+  const toeContact=new T.Object3D();toeContact.position.set(0,-.14,-.27);
+  boot.add(toeContact);u.soleContacts.push(toeContact);
   oval(knee,p.leg*.44,.13,p.leg*.46,colors.green,0,0,0,8);
   u[side<0?'ll':'lr']=hip;u[side<0?'lkl':'lkr']=knee;
  }
