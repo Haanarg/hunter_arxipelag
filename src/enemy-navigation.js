@@ -107,7 +107,7 @@ function enemyBodiesClear(u,x,z,hd,dynamicCandidates=null,sampledY=undefined){
 // aigua o edificis amb forjats: en aquests casos fem exactament groundAt.
 function enemySweepSampleGround(u,x,z,needsElevation=u.gy==null){
   if(u.basement)return u.gy;
-  if(!needsElevation){
+  if(!needsElevation||u.gy!=null){
     const physical=hAt(x,z);
     if(physical>=-.8){
       if(performanceStatsVisible)perfHotspots.aiSweepFastGroundSamples++;
@@ -121,17 +121,19 @@ function enemySweepSampleGround(u,x,z,needsElevation=u.gy==null){
 // objectes que poden canviar el resultat per la seva cota vertical.
 // S'utilitzen marges superiors als hitboxes, mai menors. A* (route)
 // sempre segueix el camí exacte.
-function enemySweepNeedsElevation(u,x,z,r,route,staticCandidates,dynamicCandidates){
+function enemySweepNeedsElevation(u,x,z,r,route,staticCandidates,dynamicCandidates,expansion=0){
   if(route)return true;
   for(const w of staticCandidates.walls){
     if(!w.open&&w.playerBlock!==false&&
-       x>w.x0-r&&x<w.x1+r&&z>w.z0-r&&z<w.z1+r)return true;
+       x>w.x0-r-expansion&&x<w.x1+r+expansion&&
+       z>w.z0-r-expansion&&z<w.z1+r+expansion)return true;
   }
   if(!dynamicCandidates)return false;
   for(const v of dynamicCandidates.vehicles){
-    if(v!==u&&!v.destroyed&&Math.abs(v.x-x)<48&&Math.abs(v.z-z)<48)return true;
+    if(v!==u&&!v.destroyed&&Math.abs(v.x-x)<48+expansion&&
+       Math.abs(v.z-z)<48+expansion)return true;
   }
-  const neighborMargin=r+18;
+  const neighborMargin=r+18+expansion;
   for(const v of dynamicCandidates.enemies){
     if(v!==u&&!v.destroyed&&!enemyIsVehicle(v)&&
        Math.abs(v.x-x)<neighborMargin&&Math.abs(v.z-z)<neighborMargin)return true;
@@ -161,12 +163,17 @@ function enemySweep(u,ax,az,bx,bz,fromHd,toHd,dynamic=true,route=false){
     vehicles:vehicleCandidatesAt(cx,cz,half+48),
     enemies:enemyCandidatesAt(cx,cz,half+32)
   }:null;
+  // Un prefiltre conservador per tot el segment evita tornar a escanejar
+  // els mateixos murs/vehicles/soldats a cada mostra d'un tram lliure.
+  // El radi inflat inclou qualsevol punt intermedi del recorregut.
+  const possiblyElevated=enemySweepNeedsElevation(
+    u,cx,cz,solidRadius,route,staticCandidates,dynamicCandidates,half);
   for(let i=0;i<=n;i++){
     const t=i/n,x=ax+(bx-ax)*t,z=az+(bz-az)*t,hd=fromHd+angle*t;
     if(performanceStatsVisible)sweepSamples++;
     // El càlcul de cota de terreny (escales, pisos, ports i LOD) és
     // especialment car: es fa un cop per mostra, no dues vegades.
-    const needsElevation=enemySweepNeedsElevation(
+    const needsElevation=possiblyElevated&&enemySweepNeedsElevation(
       u,x,z,solidRadius,route,staticCandidates,dynamicCandidates);
     const ground=enemySweepSampleGround(u,x,z,needsElevation),
       sampleY=u.gy??ground;
