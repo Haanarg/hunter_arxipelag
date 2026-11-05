@@ -22,7 +22,10 @@ on:
       - 'tests/performance-copy-diagnostic.mjs'
       - 'tests/performance-live-diagnostic.cjs'
       - 'tests/ai-pressure-scheduling.cjs'
+      - 'tests/enemy-sweep-segment-prefilter.cjs'
+      - 'tests/shadow-stable-focus.cjs'
       - 'tests/ai-delta-isolation.cjs'
+      - 'tests/ai-remote-phase-pacing.cjs'
       - 'tests/enemy-navigation-remote-ground.cjs'
       - 'tests/enemy-sweep-open-ground.cjs'
       - 'tests/enemy-sweep-elevation-vegetation.cjs'
@@ -56,6 +59,7 @@ jobs:
           node --check src/enemy-navigation.js
           node tests/enemy-navigation-remote-ground.cjs
           node tests/enemy-sweep-open-ground.cjs
+          node tests/enemy-sweep-segment-prefilter.cjs
           node tests/enemy-sweep-elevation-vegetation.cjs
           node tests/enemy-sweep-candidate-cache.cjs
           node tests/enemy-route-probe-budget.cjs
@@ -74,9 +78,16 @@ jobs:
           node tests/simulation-pressure-budget.cjs
           node tests/ai-cpu-optimization.cjs
           node tests/ai-delta-isolation.cjs
+          node tests/ai-remote-phase-pacing.cjs
           node tests/simulation-clock.cjs
           node tests/frame-diagnostics-parity.mjs
           node tests/frame-tick-parity.mjs
+      - name: Check stabilized shadows and retained boat detail
+        run: |
+          node --check src/shadow-cache.js
+          node tests/shadow-cache.cjs
+          node tests/shadow-boat-cache.cjs
+          node tests/shadow-stable-focus.cjs
       - name: Check distance-based coastal terrain LOD
         run: |
           node --check src/terrain.js
