@@ -31,7 +31,7 @@ const state={started:true,seed:148,mapScale:2,player:{x:75,z:-35},
 const panel={style:{},querySelector(){return {classList:{toggle(){}}}}};
 const body={get innerHTML(){return html},set innerHTML(s){html=s;nodes.clear()}};
 const ui=window.HUNTER_UI.create({hud:{innerHTML:''},panel,title:{},body,
-  resumeButton:{style:{}},minimap:{},getState:()=>state,actions:{
+  resumeButton:{style:{},setAttribute(){},removeAttribute(){}},minimap:{},getState:()=>state,actions:{
   getPerformanceDiagnostic(){invoked++;return {version:'0.6.154',quality:'desktop',
     viewport:{width:2560,height:1440,devicePixelRatio:1},
     worldGeneration:{totalMs:1200},rendererMemory:{geometries:400},
