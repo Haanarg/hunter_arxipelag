@@ -57,6 +57,10 @@ window.HUNTER_PERFORMANCE=Object.freeze({
           ' · prediccions passives '+(stats.hotspots.aiPassiveDirectChecks||0)+
           '\nIA decisions immediates '+(stats.hotspots.aiImmediateDecisions||0)+
           ' · remotes '+(stats.hotspots.aiRemoteDecisions||0)+
+          '\nIA tipus soldats '+(stats.hotspots.aiSoldierMs||0).toFixed(1)+
+          ' · torres '+(stats.hotspots.aiTowerMs||0).toFixed(1)+
+          ' · vehicles '+(stats.hotspots.aiVehicleMs||0).toFixed(1)+
+          ' · coordinació '+(stats.hotspots.aiCoordMs||0).toFixed(1)+' ms'+
           '\nIA resta '+Math.max(0,stats.hotspots.aiMs-stats.hotspots.aiNavMs-
             stats.hotspots.aiMarineMs-stats.hotspots.aiSenseMs).toFixed(1)+' ms'+
           '\nIA actualitzats '+stats.hotspots.aiUpdated+' · espaiats '+stats.hotspots.aiSkipped:'');

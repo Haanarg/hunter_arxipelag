@@ -100,20 +100,43 @@ function enemyBodiesClear(u,x,z,hd,dynamicCandidates=null,sampledY=undefined){
   }
   return true;
 }
-// El sweep només necessita el relleu per decidir si el pas cau sota
-// el nivell de mar: groundAt >= hAt fora dels soterranis. A terra seca
-// i amb cota pròpia, hAt és exactament equivalent per a aquesta decisió.
-// Els molls, l'aigua i els casos sense cota continuen usant groundAt.
-// L'altura FINAL de moviment continua emprant enemyGroundAt.
-function enemySweepSampleGround(u,x,z){
+// El terreny només decideix si la trajectòria cau sota l'aigua. La cota
+// completa també és necessària quan hi ha obstacles amb volum 3D.
+// Sense obstacles propers, hAt sec és suficient ENCARA QUE u.gy sigui null.
+// No aproximem altures si hi ha murs/vehicles/soldats propers, ni sobre
+// aigua o edificis amb forjats: en aquests casos fem exactament groundAt.
+function enemySweepSampleGround(u,x,z,needsElevation=u.gy==null){
   if(u.basement)return u.gy;
-  const physical=hAt(x,z);
-  if(u.gy!=null&&physical>=-.8){
-    if(performanceStatsVisible)perfHotspots.aiSweepFastGroundSamples++;
-    return physical;
+  if(!needsElevation){
+    const physical=hAt(x,z);
+    if(physical>=-.8){
+      if(performanceStatsVisible)perfHotspots.aiSweepFastGroundSamples++;
+      return physical;
+    }
   }
   if(performanceStatsVisible)perfHotspots.aiSweepFullGroundSamples++;
   return enemyGroundAt(u,x,z);
+}
+// Filtre conservador en 2D: només ens cal altitud cara quan hi ha
+// objectes que poden canviar el resultat per la seva cota vertical.
+// S'utilitzen marges superiors als hitboxes, mai menors. A* (route)
+// sempre segueix el camí exacte.
+function enemySweepNeedsElevation(u,x,z,r,route,staticCandidates,dynamicCandidates){
+  if(route)return true;
+  for(const w of staticCandidates.walls){
+    if(!w.open&&w.playerBlock!==false&&
+       x>w.x0-r&&x<w.x1+r&&z>w.z0-r&&z<w.z1+r)return true;
+  }
+  if(!dynamicCandidates)return false;
+  for(const v of dynamicCandidates.vehicles){
+    if(v!==u&&!v.destroyed&&Math.abs(v.x-x)<48&&Math.abs(v.z-z)<48)return true;
+  }
+  const neighborMargin=r+18;
+  for(const v of dynamicCandidates.enemies){
+    if(v!==u&&!v.destroyed&&!enemyIsVehicle(v)&&
+       Math.abs(v.x-x)<neighborMargin&&Math.abs(v.z-z)<neighborMargin)return true;
+  }
+  return false;
 }
 // Sample both translation and rotation; a valid endpoint never permits a jump through a wall.
 function enemySweep(u,ax,az,bx,bz,fromHd,toHd,dynamic=true,route=false){
@@ -143,7 +166,9 @@ function enemySweep(u,ax,az,bx,bz,fromHd,toHd,dynamic=true,route=false){
     if(performanceStatsVisible)sweepSamples++;
     // El càlcul de cota de terreny (escales, pisos, ports i LOD) és
     // especialment car: es fa un cop per mostra, no dues vegades.
-    const ground=enemySweepSampleGround(u,x,z),
+    const needsElevation=enemySweepNeedsElevation(
+      u,x,z,solidRadius,route,staticCandidates,dynamicCandidates);
+    const ground=enemySweepSampleGround(u,x,z,needsElevation),
       sampleY=u.gy??ground;
     if(!enemySolidAt(u,x,z,hd,route,staticCandidates,ground)||
        (dynamic&&!enemyBodiesClear(u,x,z,hd,dynamicCandidates,sampleY)))return false;

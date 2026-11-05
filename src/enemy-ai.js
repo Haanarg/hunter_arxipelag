@@ -683,7 +683,18 @@ function enemyRemoteInterval(u,q,focus=null,underPressure=false){
 // Each enemy gets its own simulation interval. Carrying over a distant
 // patrol's accumulated time into the next enemy caused runaway movement
 // sweeps and major frame-time spikes under the semi-fixed clock.
-function updEn(frameDt,preserveFrameBudget=false,underPressure=false){if(!preserveFrameBudget)resetEnemyPathFrameBudget();refreshVehicleGridIfCellsChanged();soldierCoordinationTick(frameDt);const enemyScopeFocus=scopeActive?currentSniperFocus():null;E.forEach(u=>{
+function updEn(frameDt,preserveFrameBudget=false,underPressure=false){
+  if(!preserveFrameBudget)resetEnemyPathFrameBudget();
+  refreshVehicleGridIfCellsChanged();
+  const coordinationStamp=performanceStatsVisible?performance.now():0;
+  soldierCoordinationTick(frameDt);
+  if(performanceStatsVisible)perfHotspots.aiCoordMs+=performance.now()-coordinationStamp;
+  const enemyScopeFocus=scopeActive?currentSniperFocus():null;
+  E.forEach(u=>{
+  // Temps inclusiu de cada unitat: permet distingir soldats, torres i
+  // vehicles. aiNavMs i aiSenseMs ja en són SUBCONJUNTS.
+  const unitStamp=performanceStatsVisible?performance.now():0;
+  try{
   let dt=frameDt;
   if(u.t==='patrulla_marina'){
     if(performanceStatsVisible){
@@ -974,6 +985,17 @@ function updEn(frameDt,preserveFrameBudget=false,underPressure=false){if(!preser
     }
   }
   animateEnemyInfantry(u,Math.hypot(u.x-oldX,u.z-oldZ)>.001,dt);
+  }finally{
+    if(performanceStatsVisible){
+      const cost=performance.now()-unitStamp;
+      if(u.t==='soldat'||u.t==='general'){
+        if(u.towerGuard)perfHotspots.aiTowerMs+=cost;
+        else perfHotspots.aiSoldierMs+=cost;
+      }else if(u.t==='torre')perfHotspots.aiTowerMs+=cost;
+      else if(enemyIsVehicle(u))perfHotspots.aiVehicleMs+=cost;
+      else perfHotspots.aiOtherMs+=cost;
+    }
+  }
 })}
 function animateEnemyInfantry(u,moving,dt){
   if(!u.o.userData.legs)return;
