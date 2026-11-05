@@ -400,6 +400,13 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         limit:Math.min(Math.abs(meta.bounds.x1),Math.abs(meta.bounds.z1)),
         random,trafficClear:clearTraffic,target:hostile});
       else unit.speed=0; // Sense pilot: la llanxa queda a la deriva, intacta.
+      // En nedar, la patrullera pot acostar-se fins a tocar el jugador;
+      // el casc aplica dany d'embestida amb interval de seguretat.
+      if(hostile?.swimming&&Math.hypot(unit.x-hostile.x,unit.z-hostile.z)<6&&
+         (unit.speed||0)>5&&tick>=(unit.nextRamTick||0)){
+        damagePlayer(hostile.id,10);
+        unit.nextRamTick=tick+Math.ceil(1.1*30);
+      }
     }else{
       stepLandPatrol(unit,{dt,world:world(),random});
       // Els blindats terrestres segueixen els seus waypoints originals.
@@ -421,17 +428,16 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         unit.nextMgTick=tick+Math.ceil(.28*30);
         effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,weapon:'rifle',from:origin,to:aiming});
       }
-      if((unit.marineCrewHp?.[1]??MARINE_CREW_HP)>0&&d<245&&tick>=(unit.nextRocketTick??0)){
-        const rocketOrigin=boatCrewMuzzle(boatPose,1,unit.y),
-          dir=enemyAccuracy.direction(meta.difficulty||1,'marineRocket',
-            aiming.x-rocketOrigin.x,aiming.y-rocketOrigin.y,aiming.z-rocketOrigin.z,roll),
-          id='marine-rocket-'+(++sequence);
-        projectiles.push({...launchProjectile(rocketOrigin,dir,75,{
-          id,actorId:unit.id,enemy:true,weapon:'bazooka',
-          dmg:combatBalance.weapons.boatRocket||weaponCatalog.bazooka.damage,
-          splash:8}),life:Math.max(2.2,d/75+.75)});
-        unit.nextRocketTick=tick+5*30;
-        effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,weapon:'bazooka',from:rocketOrigin,to:aiming});
+      if((unit.marineCrewHp?.[1]??MARINE_CREW_HP)>0&&d<170&&tick>=(unit.nextRocketTick??0)){
+        const rifleOrigin=boatCrewMuzzle(boatPose,1,unit.y),
+          dir=enemyAccuracy.direction(meta.difficulty||1,'marineMG',
+            aiming.x-rifleOrigin.x,aiming.y-rifleOrigin.y,aiming.z-rifleOrigin.z,roll),
+          id='marine-rifle-2-'+(++sequence);
+        projectiles.push(launchProjectile(rifleOrigin,dir,125,{
+          id,actorId:unit.id,enemy:true,weapon:'rifle',
+          dmg:combatBalance.weapons.rifle,life:2.7}));
+        unit.nextRocketTick=tick+Math.ceil(.42*30);
+        effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,weapon:'rifle',from:rifleOrigin,to:aiming});
       }
     }else if(d<(unit.t==='jeep'?75:105)&&tick>=cooldown){
       const weapon=unit.t==='jeep'?'jeep':unit.t==='tanqueta'?'tankette':'tank';
