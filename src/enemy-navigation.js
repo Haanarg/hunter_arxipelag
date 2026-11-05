@@ -237,7 +237,12 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
   // La decisió anticipada i el moviment físic tenen cadències separades.
   // Els moviments de tota unitat continuen passant pel sweep exacte.
   const passiveRoute=enemyPassiveRoute(u);
-  u.navDirectT=(u.navDirectT||0)-dt;
+  // El dt de la maniobra té topall de 0,1 s. El rellotge de decisions,
+  // en canvi, ha de seguir els segons simulats de la patrulla, sense
+  // alterar la distància ni la precisió del moviment físic.
+  const decisionDt=passiveRoute?
+    s/Math.max(.1,u.sp*(u.guard?.35:.5)):dt;
+  u.navDirectT=(u.navDirectT||0)-decisionDt;
   if(goalChanged||u.navDirectT<=0){
     const directStarted=performanceStatsVisible?performance.now():0;
     const longDistance=Math.hypot(tx-u.x,tz-u.z),

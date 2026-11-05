@@ -50,5 +50,14 @@ assert(calls.predictive[0]<=10+1e-8,'passive distant prediction limited to 10 m'
 assert.equal(calls.real.length,1,'actual passive movement keeps swept collision');
 assert(Math.abs(calls.real[0]-2)<1e-8,'passive travel distance unchanged');
 assert.equal(u.navDirectT,.8,'passive route decision refresh every 0.8 s');
+calls.predictive.length=0;
+u=create();u.remoteAiWarmed=true;
+move(u,1.2,1200,0);
+assert.equal(calls.predictive.length,1,'first remote decision');
+move(u,1.2,1200,0);
+assert.equal(calls.predictive.length,1,'movement continues without repeating the decision');
+move(u,1.2,1200,0);
+move(u,1.2,1200,0);
+assert.equal(calls.predictive.length,2,'a later remote decision occurs based on simulated time');
 assert(source.includes('enemyFindPath(u,tx,tz)'),'A* obstacle avoidance still available');
 console.log('PASS: bounded direct probes; exact movement sweeps; no wall tunnelling; nearby full-length probe.');
