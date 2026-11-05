@@ -64,6 +64,31 @@ const digest=s=>createHash('sha256').update(s).digest('hex');
    const after=game.run("JSON.stringify([seed,P.x,P.z,Dr.map(d=>[d.open,d.openProgress])])");
    assert.equal(after,before,'mission audit must not change the running world');
    const errors=report.issues.filter(issue=>issue.severity==='error');
+   if(errors.some(e=>e.code==='coast.blocked')){
+    const blocked=errors.find(e=>e.code==='coast.blocked');
+    game.context.auditBlockedCoastPoint=blocked.at;
+    const detail=game.run(`(()=>{
+     const p=auditBlockedCoastPoint,nearWall=(w)=>p&&
+       p.x>w.x0-4&&p.x<w.x1+4&&p.z>w.z0-4&&p.z<w.z1+4,
+       road=world.userData.baseCoast?.points||[];
+     return {
+       at:p,nearbyWalls:Wl.map((w,i)=>({w,i})).filter(o=>nearWall(o.w)).slice(0,24).map(({w,i})=>({
+         i,x0:w.x0,x1:w.x1,z0:w.z0,z1:w.z1,y0:w.y0,y1:w.y1,
+         door:w.door,open:w.open,playerBlock:w.playerBlock,rammable:w.rammable,
+         owner:w.owner?.compound||w.owner?.layoutBuilding||w.owner?.kind||null
+       })),
+       nearbyBuildings:B.filter(b=>Math.hypot(b.x-p.x,b.z-p.z)<100).slice(0,16).map(b=>({
+         x:b.x,z:b.z,w:b.w,d:b.d,kind:b.kind,compound:b.compound?.type||b.compound?.id
+       })),
+       nearbyCompounds:world.userData.compounds.filter(c=>Math.hypot(c.x-p.x,c.z-p.z)<180).map(c=>({
+         type:c.id,x:c.x,z:c.z,r:c.r
+       })),
+       nearestRoad:road.map((q,i)=>({i,d:Math.hypot(q.x-p.x,q.z-p.z),x:q.x,z:q.z,y:q.y}))
+        .sort((a,b)=>a.d-b.d).slice(0,5)
+     };
+    })()`);
+    console.error('COAST BLOCKED DIAGNOSTIC '+JSON.stringify(detail));
+   }
    assert.equal(report.ok,true,'world '+seed+'/'+scale+' invalid: '+JSON.stringify(errors));
    assert(report.checks.some(c=>c.id==='bunker.local-access'&&c.status==='pass'),
      'HQ bunker locally walkable');
