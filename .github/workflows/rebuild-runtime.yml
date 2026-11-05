@@ -40,6 +40,10 @@ jobs:
         run: |
           node --check src/ui.js
           node tests/performance-copy-diagnostic.mjs
+      - name: Check distance-based coastal terrain LOD
+        run: |
+          node --check src/terrain.js
+          node tests/terrain-coast-lod.cjs
       - name: Check tower sentry rules and cooperative tower ramming
         run: |
           node tests/tower-sentries.mjs

@@ -13,6 +13,7 @@
 **P0 · copiar diagnòstic de rendiment (v0.6.154; implementació):**
 - [x] Afegit `Copia diagnòstic` al costat d'`Actualitza diagnòstic` al menú **Pausa → Opcions**, amb JSON de versió, llavor, escala, FPS, CPU, IA, draw calls, ombres, LOD, memòria GPU i estadístiques de generació, només a petició.
 - [x] Còpia nativa amb alternativa `execCommand('copy')` i camp de text seleccionable per a navegadors Android/WebView que bloquegin el porta-retalls. Prova `tests/performance-copy-diagnostic.mjs` afegida a CI i a `test:optimization`.
+- [x] **P0 · LOD costaner (v0.6.155; implementat, pendent de validació WebGL):** sectors de costa en detall màxim només a prop (desktop 1200 m, mobile 820 m, ultra 540 m), amb histèresi; enfora conserven com a mínim LOD 2. No toca heightAt, RNG, col·lisions ni perfil pròxim. Prova `tests/terrain-coast-lod.cjs` i CI.
 - [ ] **Investigació:** l'usuari ha comunicat una davallada important de rendiment al mapa gran. Recollir JSON amb estadístiques actives durant el joc, comparar mapa petit/gran i perfilar abans d'atribuir causes.
 
 ## Fase 0 — línia de base i xarxa de seguretat (P0)
