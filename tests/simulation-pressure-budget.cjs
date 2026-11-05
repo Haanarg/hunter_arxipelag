@@ -2,7 +2,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const src=fs.readFileSync(path.join(__dirname,'../src/simulation-clock.js'),'utf8');
-const context=vm.createContext({window:{},Math,Number});
+const context=vm.createContext({Math,Number});context.window=context;
 vm.runInContext(src,context);
 const c=context.HUNTER_SIMULATION_CLOCK.create();
 c.reset(1000);
