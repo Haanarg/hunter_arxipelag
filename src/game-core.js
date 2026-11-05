@@ -2804,6 +2804,15 @@ const ui=window.HUNTER_UI.create({
     setWaterDisabled,
     setShadowsDisabled,
     setPerformanceStatsVisible,
+    getPerformanceDiagnostic:()=>({
+      version:window.HUNTER_VERSION||null,quality:qualityName,
+      viewport:{width:window.innerWidth,height:window.innerHeight,
+        devicePixelRatio:window.devicePixelRatio||1},
+      rendererMemory:{...(ren.info?.memory||{})},
+      worldGeneration:window.HUNTER_BUILD_STATS||null,
+      roadStats:world?.userData?.pathStats||null,
+      staticBatchStats:window.HUNTER_STATIC_BATCH_STATS||null
+    }),
     setAudioMuted,
     setStealthDebug,
     setStealthLayer,

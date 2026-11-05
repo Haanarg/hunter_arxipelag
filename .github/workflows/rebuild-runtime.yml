@@ -18,6 +18,7 @@ on:
       - 'tests/standalone-port-parity.mjs'
       - 'tests/world-generation-matrix.cjs'
       - 'tests/coast-road-reservation.mjs'
+      - 'tests/performance-copy-diagnostic.mjs'
       - '.github/workflows/rebuild-runtime.yml'
   workflow_dispatch:
 permissions:
@@ -35,6 +36,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Check pause performance diagnostic copy
+        run: |
+          node --check src/ui.js
+          node tests/performance-copy-diagnostic.mjs
+          node tests/pause-menu-navigation.mjs
       - name: Check tower sentry rules and cooperative tower ramming
         run: |
           node tests/tower-sentries.mjs
