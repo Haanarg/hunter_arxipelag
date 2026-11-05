@@ -15,7 +15,7 @@ const document={
 const panel={style:{},querySelector(){return {classList:{toggle(){}}}}};
 const body={get innerHTML(){return markup.value;},
  set innerHTML(value){markup.value=value;nodes.clear();}};
-const title={textContent:''},resumeButton={style:{},setAttribute(){},removeAttribute(){}};
+const title={textContent:''},resumeButton={style:{}};
 const window={HUNTER_COMBAT_BALANCE:{player:25}};
 vm.runInNewContext(get('src/ui.js'),{window,document,performance:{now:()=>0}});
 let ui,muted=null,autosave=null;
