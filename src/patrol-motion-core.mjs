@@ -36,7 +36,7 @@ export function stepMarinePatrol(t,{
  const hostile=!!target&&distance<470;
  t.orbitSign??=1;
  if(hostile){
-  if(distance>165){goalX=target.x;goalZ=target.z;}
+  if(target.swimming||distance>165){goalX=target.x;goalZ=target.z;}
   else{
    const rx=(t.x-target.x)/Math.max(1,distance),rz=(t.z-target.z)/Math.max(1,distance);
    goalX=target.x+rx*135-rz*t.orbitSign*150;
@@ -68,7 +68,7 @@ export function stepMarinePatrol(t,{
   t.marineCourseT=distance>700?.36:0;
  }
  const steer=patrolAngle(best-(t.heading||0)),
-   maxYaw=(t.speed??17)>12?.27:.39,
+   maxYaw=((t.speed??17)>12?.27:.39)*Math.min(1,Math.max(0,((t.speed??17)-.5)/8)),
    desired=clamp(steer*1.1,-maxYaw,maxYaw);
  t.yawRate=(t.yawRate||0)+(desired-(t.yawRate||0))*(1-Math.exp(-2.3*dt));
  t.heading=patrolAngle((t.heading||0)+t.yawRate*dt);
