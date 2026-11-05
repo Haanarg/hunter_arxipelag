@@ -10,8 +10,9 @@ function attachEnemyBoatCrew(boat,{initiallyHidden=false,type='llanxa'}={}){
   for(let seat=0;seat<2;seat++){
     const rider=window.HUNTER_CHARACTERS.createCommando(THREE);
     // La llanxa llançamíssils requisada dona arma pesada també al pilot.
-    // Les patrulleres normals mantenen pilot amb fusell i passatger amb coets.
-    const rocket=seat===1||type==='llanxa_coets',rig=rider.userData;
+    // A les patrulleres tots dos comandos porten fusell. Les llanxes
+    // requisades conserven el seu armament especial independent.
+    const rocket=type!=='patrulla_marina'&&(seat===1||type==='llanxa_coets'),rig=rider.userData;
     rider.scale.setScalar(.43);
     rider.position.set(seat===0?-.58:.58,.89,seat===0?.88:1.14);
     rig.ll.rotation.x=-1.10;rig.lr.rotation.x=-1.10;
@@ -64,7 +65,7 @@ function ensureEnemyVehicleFlag(mesh,type,visible=true){
   return flag;
 }
 function createMarinePatrolVisual(boat){
-  attachEnemyBoatCrew(boat);
+  attachEnemyBoatCrew(boat,{type:'patrulla_marina'});
   // La bandera s'afegeix DESPRÉS del LOD perquè no s'oculti
   // amb la malla completa de la patrullera.
 }
@@ -199,7 +200,8 @@ function marineFire(u,seat,target,heavy){
 }
 function updateMarinePatrol(u,dt){
   const q=cv||P,targetY=cv?cv.o.position.y+(VT[cv.t]?.m==='a'?2:1.6):P.y+1.45,
-        distance=Math.hypot(q.x-u.x,q.z-u.z);
+        distance=Math.hypot(q.x-u.x,q.z-u.z),
+        swimmer=!cv&&swimming&&!playerFall;
   // Lluny de la càmera n'hi ha prou amb 10 actualitzacions/s.
   u.marineAcc=(u.marineAcc||0)+dt;
   if(distance>700&&u.marineAcc<.1)return;
@@ -219,22 +221,25 @@ function updateMarinePatrol(u,dt){
   const hostile=!cheats.invisible&&!disg&&!over&&distance<470&&!!u.marineVisible;
   u.wt-=dt;u.mgCd-=dt;u.rocketCd-=dt;
   // Un pilot mort deixa la patrullera flotant, no la fa esclatar.
-  // El passatger pot continuar defensant-la amb el seu llançacoets.
+  // El passatger pot continuar defensant-la amb el seu fusell.
   if(u.marineCrewHp?.[0]<=0){
     u.speed=0;u.yawRate=0;
     u.o.position.set(u.x,wy(u.x,u.z,elapsed)+.2,u.z);
     syncMarinePatrolCrew(u.o,u);
     if(hostile&&distance<245&&u.marineCrewHp[1]>0){
       const aim=new THREE.Vector3(q.x,targetY,q.z);
-      if(aimEnemyBoatCrew(u.o,1,aim,dt)&&u.rocketCd<=0&&marineFire(u,1,aim,true))u.rocketCd=5;
+      if(aimEnemyBoatCrew(u.o,1,aim,dt)&&u.rocketCd<=0&&marineFire(u,1,aim,false))u.rocketCd=.42+rn(0,.16);
     }
     return;
   }
   if(!Number.isFinite(u.tx)||u.wt<=0||Math.hypot(u.tx-u.x,u.tz-u.z)<35)marinePickWaypoint(u);
   let goalX=u.tx,goalZ=u.tz;
   if(hostile){
-    if(distance>165){goalX=q.x;goalZ=q.z}
-    else{
+    if(swimmer||distance>165){
+      // Un nedador no obliga a mantenir una òrbita de 135 m:
+      // la patrullera entra a distància de fusell i el pot embestir.
+      goalX=q.x;goalZ=q.z;
+    }else{
       // Aproximació tangencial, mantenint distància per poder disparar.
       const radialX=(u.x-q.x)/Math.max(1,distance),
             radialZ=(u.z-q.z)/Math.max(1,distance);
@@ -276,7 +281,7 @@ function updateMarinePatrol(u,dt){
     u.marineCourseT=distance>700?.36:0;
   }
   const steer=marineAngle(best-u.hd),
-        maxYaw=u.speed>12?.27:.39,
+        maxYaw=(u.speed>12?.27:.39)*Math.min(1,Math.max(0,(u.speed-.5)/8)), 
         desiredYaw=Math.max(-maxYaw,Math.min(maxYaw,steer*1.1));
   u.yawRate=(u.yawRate||0)+(desiredYaw-(u.yawRate||0))*(1-Math.exp(-2.3*dt));
   u.hd=marineAngle(u.hd+u.yawRate*dt);
@@ -291,15 +296,23 @@ function updateMarinePatrol(u,dt){
     u.wt=Math.min(u.wt,.5);
     u.marineCourse=null;
   }
+  // Contacte de la proa/casc contra un jugador que neda. No cal esperar
+  // l'impacte del projectil ni destruir la patrullera.
+  u.marineRunoverCd=Math.max(0,(u.marineRunoverCd||0)-dt);
+  if(hostile&&swimmer&&Math.hypot(u.x-P.x,u.z-P.z)<6&&
+      Math.abs(u.speed)>5&&u.marineRunoverCd<=0){
+    hurtP(10,false,{type:'runover',x:u.x,y:u.o.position.y,z:u.z});
+    u.marineRunoverCd=1.1;
+  }
   u.o.position.set(u.x,wy(u.x,u.z,elapsed)+.2,u.z);
   const wave=Math.sin(elapsed*2+u.x*.03+u.z*.024);
   u.o.rotation.set(wave*.028,u.hd,-u.yawRate*.12+wave*.024,'YXZ');
   syncMarinePatrolCrew(u.o,u);
   if(!hostile||distance>245)return;
   const target=new THREE.Vector3(q.x,targetY,q.z);
-  // El pilot gira amb el fusell; el passatger, amb el llançacoets.
+  // Els dos fusells apunten de manera independent.
   const rifleAligned=aimEnemyBoatCrew(u.o,0,target,dt);
-  const rocketAligned=aimEnemyBoatCrew(u.o,1,target,dt);
+  const secondRifleAligned=aimEnemyBoatCrew(u.o,1,target,dt);
   if(distance<170&&rifleAligned&&u.mgCd<=0&&marineFire(u,0,target,false))u.mgCd=.28+rn(0,.15);
-  if(distance<245&&rocketAligned&&u.rocketCd<=0&&marineFire(u,1,target,true))u.rocketCd=5;
+  if(distance<170&&secondRifleAligned&&u.rocketCd<=0&&marineFire(u,1,target,false))u.rocketCd=.4+rn(0,.18);
 }
