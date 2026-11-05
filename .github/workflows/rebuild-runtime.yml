@@ -25,6 +25,7 @@ on:
       - 'tests/ai-cpu-optimization.cjs'
       - 'tests/enemy-sweep-segment-prefilter.cjs'
       - 'tests/shadow-stable-focus.cjs'
+      - 'tests/shadow-boat-cache.cjs'
       - 'tests/ai-delta-isolation.cjs'
       - 'tests/ai-remote-phase-pacing.cjs'
       - 'tests/enemy-navigation-remote-ground.cjs'
