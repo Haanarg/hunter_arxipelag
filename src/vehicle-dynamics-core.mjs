@@ -112,9 +112,15 @@ v.v=Math.max(-(c.maxR||12),Math.min(c.maxF||40,v.v));
 
 let steerScale=1;
 if(land){const speed=Math.abs(v.v),fade=c.steerFade??.4;steerScale=(.35+.65*Math.min(1,speed/9))*(1-fade*Math.min(1,speed/(c.maxF||35))*.55)}
-else if(water){const speed=Math.abs(v.v),min=c.waterSteerMin??.2;steerScale=min+(1-min)*Math.min(1,speed/10)}
+else if(water){
+  // El timó només gira el buc amb avanç real. Sense velocitat no
+  // hi ha rotació sobre l'eix com si la llanxa fos un tanc.
+  const speed=Math.abs(v.v);
+  steerScale=Math.min(1,Math.max(0,(speed-.45)/9));
+}
 const targetYaw=tr*c.tu*steerScale*(a?1:(v.v<0?-1:1));
 v.yawRate=vehicleDynamics.smooth(v.yawRate||0,targetYaw,c.yawResponse||4,dt);
+if(water&&Math.abs(v.v)<.5)v.yawRate=0;
 v.hd+=v.yawRate*dt;
 
 let sideV=0;
