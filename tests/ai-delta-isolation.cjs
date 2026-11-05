@@ -9,7 +9,10 @@ const entry=source.indexOf('function updEn(frameDt,',begin);
 const marker='  if(performanceStatsVisible)perfHotspots.aiUpdated++;';
 const end=source.indexOf(marker,entry);
 assert(begin>=0&&entry>begin&&end>entry,'find scheduling implementation');
-const prelude=source.slice(begin,end);
+// La prova extrau només el planificador: el try/finally de perfilat
+// pertany al cos COMPLET de la IA, i no s'ha d'incloure al fragment.
+const prelude=source.slice(begin,end).replace(
+  /  const unitStamp=performanceStatsVisible\?performance\.now\(\):0;\n  try\{\n/,'');
 const schedule=prelude+[
  '  u.executedDt=dt;',
  '  u.cooldown=(u.cooldown??10)-dt;',
