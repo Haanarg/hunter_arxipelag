@@ -19,6 +19,7 @@ on:
       - 'tests/world-generation-matrix.cjs'
       - 'tests/coast-road-reservation.mjs'
       - 'tests/performance-copy-diagnostic.mjs'
+      - 'tests/pause-menu-navigation.mjs'
       - '.github/workflows/rebuild-runtime.yml'
   workflow_dispatch:
 permissions:
