@@ -7,7 +7,7 @@ window.HUNTER_VEGETATION??=Object.freeze({
     // La punta de les tres malles de tronc és a la mateixa alçada.
     // L'última secció del tronc detallat va de t=7/8 a t=1:
     // prenem la seva tangent en lloc d'inclinar arbitràriament la copa.
-    const PALM_HEIGHT=6.2,TRUNK_BEND=.25,TRUNK_SECTIONS=8;
+    const PALM_HEIGHT=6.2,TRUNK_BEND=.045,TRUNK_SECTIONS=8;
     const lastT=(TRUNK_SECTIONS-1)/TRUNK_SECTIONS;
     const lastDx=-Math.sin(Math.PI*lastT)*PALM_HEIGHT*TRUNK_BEND;
     const lastDy=PALM_HEIGHT/TRUNK_SECTIONS;
@@ -158,12 +158,12 @@ window.HUNTER_VEGETATION??=Object.freeze({
       a.needsUpdate=true;g.computeVertexNormals();return g;
     };
     const geometry={
-      trunk:curvedPalmTrunk(6.2,.42,.22,6,8,.25),
+      trunk:curvedPalmTrunk(6.2,.42,.22,6,8,TRUNK_BEND),
       // LOD 1: 4 cares, 3 seccions i 6 fulles planes.
-      midTrunk:curvedPalmTrunk(6.2,.42,.22,4,3,.25),
+      midTrunk:curvedPalmTrunk(6.2,.42,.22,4,3,TRUNK_BEND),
       midCrown:reducedCrown(6),
       // LOD 2: 3 cares, 2 seccions i 3 plans de copa creuats.
-      farTrunk:curvedPalmTrunk(6.2,.42,.22,3,2,.25),
+      farTrunk:curvedPalmTrunk(6.2,.42,.22,3,2,TRUNK_BEND),
       farCrown:crossedCrown(),
       crown:palmCrown(4.7,0,8),
       crown2:palmCrown(3.1,.65,7,.18),
@@ -220,6 +220,14 @@ window.HUNTER_VEGETATION??=Object.freeze({
             r,
             opts.tilt?random(-.04,.04):0
           );
+          if(opts.palmTrunk){
+            // La majoria són gairebé verticals; només una minoria
+            // presenta una inclinació marcada, sempre estable per llavor.
+            const v=palmVariation(row,3),sign=palmVariation(row,6)>.5?1:-1;
+            const lean=v<.65?v/.65*.025:v<.92?.025+(v-.65)/.27*.13:.155+(v-.92)/.08*.105;
+            dum.rotation.x*=.2;
+            dum.rotation.z=lean*sign;
+          }
           if(scale)scale(dum,s,row);else dum.scale.setScalar(s);
           dum.updateMatrix();
           m.setMatrixAt(i,dum.matrix);
@@ -293,7 +301,7 @@ window.HUNTER_VEGETATION??=Object.freeze({
         rows.forEach((p,trunkIndex)=>{
           variantMap[p.i]={chunk:ch,trunkIndex,variant:p.vi,index:-1};
         });
-        ch.trunk=yield* inst(root,geometry.trunk,rows.map(p=>p.row),0x8e6337,null,{profile:'organic',tilt:true});
+        ch.trunk=yield* inst(root,geometry.trunk,rows.map(p=>p.row),0x8e6337,null,{profile:'organic',tilt:true,palmTrunk:true});
         ch.primary=[];ch.secondary=[];
         for(let v=0;v<3;v++){
           const selected=rows.filter(p=>p.vi===v);
@@ -452,9 +460,42 @@ window.HUNTER_VEGETATION??=Object.freeze({
           m.instanceMatrix.needsUpdate=true;
         }
       }
+      // Reconstruïm la mateixa palmera visible en el moment de caure,
+      // amb la mateixa copa de vertexColors, tint i inclinació original.
+      // Les matrius instanciades són mundials: les transformam al pivot
+      // de la base perquè l'animació pugui girar el conjunt sense salt.
+      const falling=t=>{
+        const ref=variantMap[t.i];if(!ref)return null;
+        const ch=ref.chunk,g=new THREE.Group();
+        const parentMatrix=new THREE.Matrix4().compose(
+          new THREE.Vector3(t.x,t.y,t.z),
+          new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),t.yaw),
+          new THREE.Vector3(t.s,t.s,t.s));
+        const toLocal=parentMatrix.invert(),instance=new THREE.Matrix4(),tint=new THREE.Color();
+        for(const [source,index] of [
+          [ch.trunk,ref.trunkIndex],
+          [ch.primary[ref.variant],ref.index],
+          [ch.secondary[ref.variant],ref.index]
+        ]){
+          if(!source)continue;
+          source.getMatrixAt(index,instance);
+          const material=source.material.clone();
+          if(source.instanceColor){
+            source.getColorAt(index,tint);material.color.copy(tint);
+          }
+          const part=new THREE.Mesh(source.geometry,material);
+          part.matrixAutoUpdate=false;
+          part.matrix.copy(toLocal).multiply(instance);
+          part.matrixWorldNeedsUpdate=true;
+          part.userData.palmFallMaterial=true;
+          part.castShadow=false;part.receiveShadow=true;
+          g.add(part);
+        }
+        return g;
+      };
       update(playerX,playerZ,true);
       return {
-        palms:{trunk:root,variants:sections,variantMap,update,remove,stats},
+        palms:{trunk:root,variants:sections,variantMap,update,remove,falling,stats},
         bushes:bushGroup.parent,
         rocks:rockGroup.parent
       };
