@@ -8,7 +8,7 @@ const cache=w.HUNTER_SHADOW_CACHE.create({shadowMap,maxIdleMs:180});
 const mk=(name,x,z)=>({
  name,position:{x,y:0,z},rotation:{x:0,y:0,z:0},scale:{x:1,y:1,z:1},
  quaternion:{x:0,y:0,z:0,w:1},parent:null,
- getWorldPosition(){return {x:this.position.x,y:this.position.y,z:this.position.z}}
+ getWorldPosition(out){out.x=this.position.x;out.y=this.position.y;out.z=this.position.z;return out}
 });
 const boat=mk('llanxa',12,14),player=mk('jugador',0,0);
 const mesh=owner=>({
@@ -20,12 +20,14 @@ const hull=mesh(boat),body=mesh(player);
 const shadowCandidates=[{mesh:hull,owner:boat,point:null},
   {mesh:body,owner:player,point:null}];
 const shadowNodeOwners=new WeakMap(),shadowOwnerKinds=new WeakMap(),
- shadowBoatProxyCache=new WeakMap(),shadowStats={};
+ shadowBoatProxyCache=new WeakMap(),shadowOwnerPositionCache=new WeakMap(),
+ shadowStats={};
 shadowOwnerKinds.set(boat,'vehicle llanxa');shadowOwnerKinds.set(player,'jugador');
 const ctx={visualQuality:{shadows:true,shadowDistance:245},shadowsDisabled:false,
  performance:{now:()=>time},P:{x:0,z:0},THREE:{Vector3:class{}},
  shadowLastX:Infinity,shadowLastZ:Infinity,shadowLastMs:-Infinity,
  shadowCandidates,shadowStats,shadowNodeOwners,shadowOwnerKinds,shadowBoatProxyCache,
+ shadowOwnerPositionCache,
  shadowBoatNodes:[],shadowPoseNodes:[]};
 const a=core.indexOf('function updateShadowCasters(force=false){'),
  b=core.indexOf('function setShadowsDisabled(disabled){',a);
