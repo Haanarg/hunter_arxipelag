@@ -15,6 +15,8 @@ const assert=require('node:assert/strict');
    };
    const bike=make('moto',0,0),tank=make('tanc',0,5);
    tank.v=25;cv=bike;hp=2;over=0;P.x=bike.x;P.z=bike.z;P.y=groundAt(P.x,P.z);
+   // A failing optional WebGL explosion must never kill the RAF loop.
+   window.HUNTER_CREATE_ARCADE_BLAST_FX=()=>{throw Error('simulated WebGL effect failure')};
    rebuildVehicleGrid();
    let failure=null;
    try{
@@ -24,7 +26,8 @@ const assert=require('node:assert/strict');
    }catch(error){failure=String(error?.stack||error);}
    return {failure,bikeDestroyed:bike.destroyed===true,life:bike.life,
      hp,over,cinematic:!!deathCinematic,active:deathCinematic?.active,
-     cause:deathCinematic?.cause?.kind,hasVoid:!!deathCinematic?.voidScene};
+     cause:deathCinematic?.cause?.kind,hasVoid:!!deathCinematic?.voidScene,
+     ejectVy:playerEject?.vy,fxDisabled:failedArcadeBlastWorld===world};
  })()`);
  console.log('tank motorcycle immediate:',result);
  assert.equal(result.failure,null,'tank -> motorcycle collision must not throw');
@@ -32,6 +35,8 @@ const assert=require('node:assert/strict');
  assert.equal(result.hp,0,'occupant should die');
  assert.equal(result.active,true,'death cinematic starts from vehicle collision');
  assert.equal(result.hasVoid,true,'complete death scene is initialized');
+ assert.equal(result.fxDisabled,true,'failed optional WebGL effect is disabled for this world');
+ assert(Number.isFinite(result.ejectVy),'motorcycle ejection has a finite vertical velocity');
  game.frame(100);
  const tick=game.run('({t:deathCinematic?.t,active:deathCinematic?.active,cause:deathCinematic?.cause?.kind})');
  assert(tick.t>0,'death cinematic must advance after tank crush');

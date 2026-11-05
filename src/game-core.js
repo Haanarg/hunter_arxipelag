@@ -3961,7 +3961,16 @@ const cpuStarted=performance.now(),victoryAtStart=victoryCinematic,
       gameplayActive=!!started&&!paused&&!over&&visible,
       cinematicActive=!!started&&!paused&&visible&&
         (!!victoryAtStart&&(victoryAtStart.active||victoryAtStart.finished)||!!deathAtStart?.active);
-const simulated=frameTickCoordinator.advanceGameplay(now,gameplayActive);
+let simulated;
+try{simulated=frameTickCoordinator.advanceGameplay(now,gameplayActive)}
+catch(error){
+ // Una mort generada dins la col·lisió (p. ex. tanc contra moto pilotada)
+ // ja ha mostrat la causa. No permetem que un error posterior de física/FX
+ // mati el requestAnimationFrame abans de la repetició cinematogràfica.
+ if(!deathCinematic?.active)throw error;
+ console.error('Hunter: error en el fotograma fatal; la cinemàtica continua',error);
+ simulated={steps:0,simulatedDt:0,droppedDt:0};
+}
 frameTickCoordinator.advanceCinematics(now,cinematicActive,victoryAtStart,deathAtStart);
 updateAudioFrame();
 renderCombatFeedback();

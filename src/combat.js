@@ -318,7 +318,7 @@ function explodeVehicle(v){
     }else{
       cv=null;P.x=v.x;P.z=v.z;
       const a=rn(0,Math.PI*2),sp=rn(14,24);
-      playerEject={kind:'blast',vx:Math.cos(a)*sp,vz:Math.sin(a)*sp,t:.8,dur:.8,spin:rn(-1,1)<0?-1:1,height:1.25};
+      playerEject={kind:'blast',vx:Math.cos(a)*sp,vy:9,vz:Math.sin(a)*sp,t:.8,dur:.8,spin:rn(-1,1)<0?-1:1,height:1.25};
       hurtP(rn(destruction.occupantMin,destruction.occupantMax),false,{type:'vehicleExplosion',x:v.x,y:yy+1,z:v.z});msg='El vehicle ha explotat!';msgT=3;
     }
   }
@@ -460,24 +460,38 @@ function blastOccluded(x,y,z,tx,ty,tz,ignoreWall=null,ignoreTower=null){
 // La proximitat al tram real, no al centre de l'AABB de 6 m,
 // determina si l'ona expansiva arriba a la filferrada.
 function closestFenceBlastPoint(...args){return window.HUNTER_SHARED_COMBAT.closestFenceBlastPoint(...args)}
+// Les explosions visuals són opcionals: un error de WebGL o un bundle
+// parcial no pot tallar el dany, la col·lisió ni la cinemàtica de mort.
+let failedArcadeBlastWorld=null;
+function disableArcadeBlastVisual(error){
+ failedArcadeBlastWorld=world;
+ console.warn('Hunter: efectes visuals d’explosió desactivats fins a la següent missió',error);
+ try{window.HUNTER_ARCADE_BLAST_FX?.dispose?.()}catch(_){}
+ window.HUNTER_ARCADE_BLAST_FX=null;
+}
 function presentExplosion(x,y,z,r,source=null){
  window.HUNTER_STEALTH.emit('explosion',x,y,z);
  snd('boom',1,{x,y,z},source);
  // Explosió arcade 03 única: granada per defecte, C4 més contundent.
- // Aquest mòdul només és visual; el dany i el radi físic no es toquen.
+ // La física de dany s'executa sempre, fins i tot si aquesta capa falla.
+ if(failedArcadeBlastWorld===world)return;
+ const factory=window.HUNTER_CREATE_ARCADE_BLAST_FX;
+ if(typeof factory!=='function')return;
  const kind=source?.weapon==='c4'?'c4':
    source?.weapon==='grenade'||source?.weapon==='granada'?'grenade':
    source?.spl>0||source?.splash>0?'projectile':'grenade';
- if(!window.HUNTER_ARCADE_BLAST_FX||window.HUNTER_ARCADE_BLAST_FX.scene!==world){
+ try{
+  if(!window.HUNTER_ARCADE_BLAST_FX||window.HUNTER_ARCADE_BLAST_FX.scene!==world){
    window.HUNTER_ARCADE_BLAST_FX?.dispose();
-   window.HUNTER_ARCADE_BLAST_FX=window.HUNTER_CREATE_ARCADE_BLAST_FX(THREE,world,{
+   window.HUNTER_ARCADE_BLAST_FX=factory(THREE,world,{
      quality:window.HUNTER_GRAPHICS_QUALITY==='mobile'?'mobile':'desktop'
    });
- }
- window.HUNTER_ARCADE_BLAST_FX.emit(x,y,z,kind==='projectile'?{
-   weapon:kind,direction:source.direction,
-   vx:source.vx,vy:source.vy,vz:source.vz
- }:kind);
+  }
+  window.HUNTER_ARCADE_BLAST_FX.emit(x,y,z,kind==='projectile'?{
+    weapon:kind,direction:source.direction,
+    vx:source.vx,vy:source.vy,vz:source.vz
+  }:kind);
+ }catch(error){disableArcadeBlastVisual(error)}
 }
 function boom(x,y,z,r,dmg,own,source=null,visualWeapon=null){
  presentExplosion(x,y,z,r,visualWeapon?{weapon:visualWeapon}:source);
@@ -1677,7 +1691,10 @@ for(let i=bombs.length-1;i>=0;i--){
    world.remove(b.o);bombs.splice(i,1);
  }
 }
-window.HUNTER_ARCADE_BLAST_FX?.update(dt);
+if(failedArcadeBlastWorld!==world){
+ try{window.HUNTER_ARCADE_BLAST_FX?.update(dt)}
+ catch(error){disableArcadeBlastVisual(error)}
+}
 updateBulletImpacts(dt);
 }
 
