@@ -17,6 +17,7 @@ on:
       - 'tests/tank-motorcycle-death.cjs'
       - 'tests/standalone-port-parity.mjs'
       - 'tests/world-generation-matrix.cjs'
+      - 'tests/coast-road-reservation.mjs'
       - '.github/workflows/rebuild-runtime.yml'
   workflow_dispatch:
 permissions:
@@ -130,6 +131,11 @@ jobs:
           node --check src/world-generation.js
           node --check src/compound-planning.mjs
           node tests/standalone-port-parity.mjs
+      - name: Check base road corridor reservation against later compounds
+        run: |
+          node --check src/world-generation.js
+          node --check src/compound-planning.mjs
+          node tests/coast-road-reservation.mjs
       - name: Check phase 4 complete logical world generation matrix
         run: |
           node --check tests/world-generation-matrix.cjs

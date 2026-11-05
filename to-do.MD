@@ -84,6 +84,12 @@
 
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
+**Fase 4 · incidència real detectada per l'auditoria (v0.6.153):**
+- [x] **Protecció del corredor base-moll:** el mapa gran amb llavor 148 construïa posteriorment un heliport amb parets que interceptaven la carretera. `createSiteRegistry` admet ara una restricció opcional de corredor, activada després de completar el moll i abans de situar els altres complexos.
+- [x] **Reserva de trams complets:** `roadCorridorClear` rebutja parcel·les que trepitgin cap segment, amb el radi de reserva del complex i 10 m de marge. No es toca el càlcul A*, els models de carretera, el RNG ni els marges quan encara no existeix la ruta.
+- [x] **Regressió geomètrica:** `tests/coast-road-reservation.mjs` comprova les coordenades concretes de l'heliport que tallava el camí i 2.880 casos independents de distàncies a segments.
+- [ ] **Validació:** tornar a executar la matriu lògica de dotze casos i comprovar el mapa en un navegador real, COOP/Android i rendiment A/B.
+
 **Fase 4 · tretzè tall, auditoria de generació del món (v0.6.152; validació sense canvis de runtime):**
 - [x] **Matriu de missions lògiques reals:** `tests/world-generation-matrix.cjs` executa el generador del joc a través de `tests/harness.cjs` amb les llavors 1, 67, 148, 2026, 12345 i 2407759483 en les dues escales. Accepta `WORLD_MATRIX_SEEDS` per ampliar els casos.
 - [x] **Invariants de món i missió:** comprova base, HQ, camp de presoners, reserva de terreny, coordenades de complexos/vehicles, rutes i límits, i reutilitza `validateMission` per comprovar accés local al general, mapes i transport. Les advertències de cobertura queden enregistrades.

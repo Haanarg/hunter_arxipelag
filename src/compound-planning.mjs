@@ -25,7 +25,7 @@ export function planCompound(layout,q,{random,rawHeightAt}){
 // Registre de reserves d'espai, sense escenes ni generador de nombres aleatoris.
 // Manté les referències mutables, el cache de radis i l'ordre d'acceptació.
 export function createSiteRegistry({
-  layouts,layoutRadius,initialCenters,MapConstructor=Map
+  layouts,layoutRadius,initialCenters,MapConstructor=Map,corridorClear=()=>true
 }){
 const COMPOUND_RADII=Object.freeze({
   avancada:84,
@@ -51,7 +51,7 @@ const compoundSiteClear=(type,q,minCenter=0)=>{
   return compoundCenters.every(c=>{
     const d=Math.hypot(q.x-c.x,q.z-c.z);
     return d>Math.max(minCenter,r+c.r+COMPOUND_GAP)
-  })
+  })&&corridorClear(type,q,r)
 };
 const registerCompound=(type,q)=>compoundCenters.push({x:q.x,z:q.z,r:compoundRadius(type),type});
 
@@ -266,4 +266,17 @@ export function createStandalonePortPlanner({rawHAt,landSteps}){
    return {shore,end,ux,uz,checkpointUnits};
  }
  return {findPortWater,findPortSite,surveyStandalonePierShore};
+}
+
+
+// Protect the entire base-to-coast road before later compounds are sited.
+// The radius includes the compound footprint and an additional safe margin.
+export function roadCorridorClear(points,q,clearance){
+ if(!points||points.length<2)return true;
+ for(let i=1;i<points.length;i++){
+  const a=points[i-1],b=points[i],dx=b.x-a.x,dz=b.z-a.z,
+    t=Math.max(0,Math.min(1,((q.x-a.x)*dx+(q.z-a.z)*dz)/(dx*dx+dz*dz||1)));
+  if(Math.hypot(q.x-a.x-dx*t,q.z-a.z-dz*t)<=clearance)return false;
+ }
+ return true;
 }

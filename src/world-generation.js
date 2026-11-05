@@ -386,8 +386,12 @@ const baseCompound=(yield* buildApprovedCompoundSteps(window.HUNTER_CHOOSE_COMPO
 const hqCompound=(yield* buildApprovedCompoundSteps(window.HUNTER_CHOOSE_COMPOUND('hq',R),pb,phase3Options));
 markBuildStage('initialCompounds');
 yield {stage:'Base i quarter general',completed:1,total:1};
+let reservedBaseCoastRoad=null;
 const compoundRegistry=window.HUNTER_COMPOUND_PLANNING.createSiteRegistry({
   layouts:window.HUNTER_RUNTIME_LAYOUTS,layoutRadius,MapConstructor:Map,
+  corridorClear:(type,q,r)=>window.HUNTER_COMPOUND_PLANNING.roadCorridorClear(
+    reservedBaseCoastRoad,q,r+10
+  ),
   initialCenters:[
     {x:pa.x,z:pa.z,r:baseCompound.r,type:'base'},
     {x:pb.x,z:pb.z,r:hqCompound.r,type:'hq'}
@@ -483,7 +487,7 @@ const initialDock=(yield* findCoastalLayoutSteps(dockLayout,{...A},function*(q){
  const end=compoundTransform(q,q.angle)(0,-dockLayout.size[1]/2),points=(yield* solveCoastRoadSteps(roadStart,{x:end[0],z:end[1]}));
  if(!points||!prisonCampRoadClear(points))return false;connection=points;return true;
 }));
-if(initialDock){const c=(yield* buildApprovedCompoundSteps(dockLayout,initialDock,civilOptions));registerCompound('civil-dock',initialDock);(yield* buildCoastRoadSteps(connection,compoundPath));world.userData.baseCoast.dockId=c.layoutId;world.userData.baseCoast.dock={x:c.x,z:c.z};}
+if(initialDock){const c=(yield* buildApprovedCompoundSteps(dockLayout,initialDock,civilOptions));registerCompound('civil-dock',initialDock);(yield* buildCoastRoadSteps(connection,compoundPath));world.userData.baseCoast.dockId=c.layoutId;world.userData.baseCoast.dock={x:c.x,z:c.z};reservedBaseCoastRoad=world.userData.baseCoast.points;}
 else world.userData.baseCoast={unavailable:true,reason:'No walkable coastal corridor for this base site'};
 for(const sector of activeSectors){
   let built=0;
