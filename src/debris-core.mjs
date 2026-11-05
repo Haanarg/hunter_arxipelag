@@ -62,8 +62,8 @@ export function stepDebrisParticle(d,position,rotation,dt,heightAt,waterHeightAt
 export function dustFrame(life,max,size){return {scale:size*(1+(1-life/max)*1.15),opacity:Math.max(0,life/max)*.8};}
 export function palmFallFrame(row,time,heightAt){
  const progress=Math.min(1,time/.9),c=Math.cos(row.yaw),s=Math.sin(row.yaw),x=row.x+c*6.4*row.s,z=row.z-s*6.4*row.s,y=Math.max(heightAt(x,z),0)+.6;
- return {progress,angle:-progress*progress*1.5,
-  leaves:{x,y,z,color:0x4fa03a,count:8,size:1,speed:5},
+ return {progress,angle:-Math.pow(progress,1.65)*1.5,
+  leaves:{x,y,z,color:0x657b46,count:8,size:.75,speed:4},
   wood:{x:row.x+c*3*row.s,y,z:row.z-s*3*row.s,color:0x8a6a3a,count:4,size:.7,speed:3},
   dust:{x,y,z,color:0xc9b48a,size:3}};
 }
