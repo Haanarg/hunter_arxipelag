@@ -96,9 +96,17 @@ export function vehicleSeatProjectileContact(from,to,v,crew=[],{baseY=v.y??0}={}
    const tGlassBody=windowed&&!glass.has(seat)?
      segmentSeatSphere(from,to,point,v.t==='camio'?1.27:1.08):null;
    const tGlassHead=windowed&&!glass.has(seat)?
-     segmentSeatSphere(from,to,head,v.t==='camio'?.93:.78):null;
-   const tGlass=tGlassBody===null?tGlassHead:
-     tGlassHead===null?tGlassBody:Math.min(tGlassBody,tGlassHead);
+     segmentSeatSphere(from,to,head,v.t==='camio'?1.18:.78):null;
+   // El camió és alt i llarg: des del costat, entre el cap i el
+   // seient quedava una franja de cabina sense vidre balístic.
+   // La taca intermèdia representa el vidre lateral, sense engrandir
+   // la hitbox del soldat ni la del vehicle.
+   const tGlassSide=windowed&&v.t==='camio'&&!glass.has(seat)?
+     segmentSeatSphere(from,to,{
+       x:(point.x+head.x)*.5,y:(point.y+head.y)*.5,z:(point.z+head.z)*.5
+     },1.28):null;
+   const glassHits=[tGlassBody,tGlassHead,tGlassSide].filter(t=>t!==null);
+   const tGlass=glassHits.length?Math.min(...glassHits):null;
    // Never let an occupant behind intact glass absorb the same bullet.
    const candidate=tGlass!=null&&
        (tOccupant==null||tGlass<=tOccupant+1e-6)?
