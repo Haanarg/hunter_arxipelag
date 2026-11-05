@@ -243,3 +243,27 @@ export function planPierSetup(x1,z1,x2,z2,width=4.2,accessRamp=true,hAt,pierDeck
  }
  return {dx,dz,L,ux,uz,px,pz,n,ramp};
 }
+
+// Costa de ports independents: cerca de profunditat i de parcel·la sense
+// crear geometria ni consumir cap número aleatori addicional.
+// landSteps fa servir la mateixa RNG externa de la partida.
+export function createStandalonePortPlanner({rawHAt,landSteps}){
+ function* findPortWater(q){let checkpointUnits=0;for(let a=0;a<32;a++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const aa=a*Math.PI/16;for(let d=28;d<Math.max(100,q.r||180);d+=8){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const wx=q.x+Math.cos(aa)*d,wz=q.z+Math.sin(aa)*d;if(rawHAt(wx,wz)<-3&&rawHAt(wx+Math.cos(aa)*12,wz+Math.sin(aa)*12)<-3)return{x:wx,z:wz,hd:Math.atan2(-Math.cos(aa),-Math.sin(aa)),aa}}}return null}
+ function* findPortSite(island,tries=18){let checkpointUnits=0;for(let n=0;n<tries;n++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const q=(yield* landSteps(island,700,1));if(!q)continue;q.r=island.r;const portBest=(yield* findPortWater(q));if(portBest)return{...q,portBest}}return null}
+ function* surveyStandalonePierShore(q,best){
+   let checkpointUnits=0;
+   const dx=best.x-q.x,dz=best.z-q.z,L=Math.hypot(dx,dz),
+     ux=dx/L,uz=dz/L;
+   let shore=null;
+   for(let d=3;d<L;d+=2.5){
+     if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+     const sx=q.x+ux*d,sz=q.z+uz*d;
+     if(rawHAt(sx,sz)<.35){shore={x:sx-ux*1.8,z:sz-uz*1.8};break}
+   }
+   if(!shore)return null;
+   const pierLen=Math.min(34,Math.max(14,L-5)),
+     end={x:shore.x+ux*pierLen,z:shore.z+uz*pierLen};
+   return {shore,end,ux,uz,checkpointUnits};
+ }
+ return {findPortWater,findPortSite,surveyStandalonePierShore};
+}

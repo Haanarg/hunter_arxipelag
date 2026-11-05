@@ -123,6 +123,11 @@ jobs:
           node --check src/compound-planning.mjs
           node tests/compound-path-pier-parity.mjs
           node tests/compound-paths.cjs
+      - name: Check phase 4 standalone port and pier shoreline parity
+        run: |
+          node --check src/world-generation.js
+          node --check src/compound-planning.mjs
+          node tests/standalone-port-parity.mjs
       - name: Generate runtime bundle
         run: node tools/build-runtime.cjs
       - name: Verify generated bundle

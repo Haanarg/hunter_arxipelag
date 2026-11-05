@@ -84,6 +84,12 @@
 
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
+**Fase 4 · dotzè tall, cerca de ports i costa de pantalans independents (v0.6.152; implementació parcial):**
+- [x] **Planificador sense Three.js:** `createStandalonePortPlanner` a `src/compound-planning.mjs` concentra la cerca generadora d'aigua fonda, la selecció de parcel·les a una illa i el sondeig del punt exacte de costa del pantalà. `world-generation.js` només hi connecta els callbacks de terreny i els constructors visuals, que segueixen al runtime.
+- [x] **Exactitud de mostreig i pauses:** mateix ordre de consultes `rawHAt`, 32 orientacions, els mateixos intents `landSteps`, el mateix consum de RNG, i comptador de checkpoints continu entre el sondeig de costa i la col·locació dels dos norais. No es canvien les distàncies ni les condicions de fondària.
+- [x] **Proves diferencials àmplies:** `tests/standalone-port-parity.mjs` compara l'oracle congelat de v0.6.151 amb la versió extreta, sobre onze llavors deterministes, dues escales, geometries costaneres heterogènies, punts d'aigua/parcel·les, norais, retorn i cancel·lació. Integrada en `test:optimization` i GitHub Actions.
+- [ ] **Validació pendent:** rendiment real A/B i escenes navegables completes, ferris/molls/ports, camps de presoners, LOD/ombres, COOP i Android. Les proves de paritat no substitueixen l'execució en navegador o dispositiu.
+
 **Fase 4 · onzè tall, zones de pas i geometria dels molls (v0.6.151; implementació parcial):**
 - [x] **Zones de pas de les carreteres extretes:** `createPathClearanceRegistrar` de `src/compound-planning.mjs` registra els recorreguts i reserva els mateixos cercles de pas cada 3 m després del suavitzat; `world-generation.js` conserva la presentació i l'agrupació de malles i deixa de tenir la regla de mostreig.
 - [x] **Rampes dels pantalans separades de les malles:** `planPierSetup` calcula l'orientació, els trams de 5 m i la rampa d'accés costaner injectant `hAt` i el nivell de la coberta; el runtime continua afegint escales, col·lisions i fustes visibles, sense canviar el camí en mode cerca de llavors.
