@@ -969,12 +969,8 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
   // poden buscar una bretxa a la filferrada, vehicles buits o edificis.
   if(shotClass==='heavy'&&!selector.hasTarget){
     const fallbackPriority=3;
-    for(const w of wallCandidates(x,z,range)){
-      if(!w.barbed||w.open||w.hp<=0)continue;
-      consider(w,'fence',fallbackPriority,w.cx??(w.x0+w.x1)/2,
-        Math.min(w.y1-.35,Math.max(w.y0+.6,(w.y0+w.y1)/2)),
-        w.cz??(w.z0+w.z1)/2,w);
-    }
+    // No fixam filferrades mentre hi hagi un blanc sòlid de combat
+    // al camp de tir. Un filferro transversal no segresta el coet.
     for(const v of vehicleCandidatesAt(x,z,range,true)){
       if(v.destroyed||v===cv)continue;
       const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
@@ -983,6 +979,14 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
     for(const b of buildingCandidates(x,z,range)){
       if(b.rb||b.rhp<=0)continue;
       consider(b,'building',fallbackPriority,b.x,(b.fy??hAt(b.x,b.z))+b.h*.55,b.z,null,b);
+    }
+    // Només la filferrada com a últim recurs: fora del centre
+    // del combat mai no supera un vehicle ni un edifici apuntable.
+    if(!selector.hasTarget)for(const w of wallCandidates(x,z,range)){
+      if(!w.barbed||w.open||w.hp<=0)continue;
+      consider(w,'fence',fallbackPriority+1,w.cx??(w.x0+w.x1)/2,
+        Math.min(w.y1-.35,Math.max(w.y0+.6,(w.y0+w.y1)/2)),
+        w.cz??(w.z0+w.z1)/2,w);
     }
   }
   return selector.direction();
