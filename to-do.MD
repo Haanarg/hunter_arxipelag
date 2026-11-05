@@ -84,6 +84,12 @@
 
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
+**Fase 4 · tretzè tall, auditoria de generació del món (v0.6.152; validació sense canvis de runtime):**
+- [x] **Matriu de missions lògiques reals:** `tests/world-generation-matrix.cjs` executa el generador del joc a través de `tests/harness.cjs` amb les llavors 1, 67, 148, 2026, 12345 i 2407759483 en les dues escales. Accepta `WORLD_MATRIX_SEEDS` per ampliar els casos.
+- [x] **Invariants de món i missió:** comprova base, HQ, camp de presoners, reserva de terreny, coordenades de complexos/vehicles, rutes i límits, i reutilitza `validateMission` per comprovar accés local al general, mapes i transport. Les advertències de cobertura queden enregistrades.
+- [x] **Determinisme després de reinicis:** compara la petjada SHA-256 de les distribucions i la continuació del generador aleatori després de canviar de món. Prova integrada a `test:optimization` i al workflow, sense tocar els models, la física ni la versió.
+- [ ] **Pendent de validació real:** desplaçaments entre illes, vehicles i IA, partida HOST/GUEST en dos dispositius, Android, WebGL/ombres i rendiment A/B. L'auditoria en mode lògic no demostra aquests casos.
+
 **Fase 4 · dotzè tall, cerca de ports i costa de pantalans independents (v0.6.152; implementació parcial):**
 - [x] **Planificador sense Three.js:** `createStandalonePortPlanner` a `src/compound-planning.mjs` concentra la cerca generadora d'aigua fonda, la selecció de parcel·les a una illa i el sondeig del punt exacte de costa del pantalà. `world-generation.js` només hi connecta els callbacks de terreny i els constructors visuals, que segueixen al runtime.
 - [x] **Exactitud de mostreig i pauses:** mateix ordre de consultes `rawHAt`, 32 orientacions, els mateixos intents `landSteps`, el mateix consum de RNG, i comptador de checkpoints continu entre el sondeig de costa i la col·locació dels dos norais. No es canvien les distàncies ni les condicions de fondària.
