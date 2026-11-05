@@ -84,6 +84,12 @@
 
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
+**Fase 4 · desè tall, geometries temporals alliberades peça a peça (v0.6.150; implementació parcial):**
+- [x] **Buffers finals preassignats:** `src/static-decor-batching.js` reserva `position`, `normal`, `uv` i `color` una vegada per lot. Cada malla transformada s'hi copia i es disposa abans de començar la següent, sense retenir la llista de `BufferGeometry` temporals.
+- [x] **Semàntica de construcció preservada:** es mantenen `toNonIndexed`, `applyMatrix4`, tots els `yield` de colors i fusió, les estadístiques, els materials, els vèrtexs i l'ordre de construcció. Un `try/finally` també libera la geometria si es cancel·la un generador suspès.
+- [x] **Proves de paritat ampliades:** `tests/static-decor-batch-parity.mjs` compara el resultat amb el codi original congelat i instrumenta les còpies simultàniament vives; verifica el nombre de disposicions, la cancel·lació i el mateix recompte de checkpoints. Executat per la CI de GitHub.
+- [ ] **Validació pendent:** comparar A/B el temps de generació i pics reals de memòria en ports/heliports, comprovar imatges del món en navegador i validar llavors completes, COOP/Android abans de tancar la fase 4.
+
 **Fase 4 · novè tall, menys buffers temporals de colors (v0.6.148; implementació parcial):**
 - [x] **Un buffer de colors per lot visual:** `src/static-decor-batching.js` reserva directament el `Float32Array` final de color segons els recomptes de vèrtexs originals (`index.count` per malles indexades). Ja no crea un `Float32Array` ni un `BufferAttribute` de colors per cada malla d'entrada, ni els torna a copiar després al buffer del lot.
 - [x] **Render, ordre i cooperació preservats:** no es modifiquen `position/normal/uv`, `toNonIndexed`, materials, agrupacions, transformacions, descart i neteja de geometria, ni cap dels `yield` de generació. Els colors continuen llegint el material actual després de cada pausa, i les dades físiques, la llavor i la distribució queden intactes.

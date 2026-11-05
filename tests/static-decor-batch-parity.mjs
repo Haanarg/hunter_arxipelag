@@ -154,5 +154,55 @@ for(const seed of [67,148]){
   traceWithLiveMaterial(seed,1,false),
   'live vertex colors retained across generator checkpoints');
 }
+
+// Instrument original and optimized scratch lifetimes with real Three.js.
+// All meshes share one material and a single 160m sector, forcing a large lot.
+function scratchLifetime(seed,isNew,cancel=false){
+ const scene=fixture(seed,1,6);
+ const common=scene.roots[0].children[0].children[0].material;
+ let created=0,alive=0,peak=0,disposals=0;
+ scene.world.traverse(object=>{
+  if(!object.isMesh)return;
+  object.material=common;
+  const source=object.geometry;
+  for(const method of ['clone','toNonIndexed']){
+   const orig=source[method].bind(source);
+   source[method]=(...args)=>{
+    const copy=orig(...args);
+    created++;alive++;peak=Math.max(peak,alive);
+    copy.addEventListener('dispose',()=>{alive--;disposals++});
+    return copy;
+   };
+  }
+ });
+ for(const root of scene.roots)root.position.set(80,0,80);
+ const it=isNew?after(scene.context).buildSteps({world:scene.world,
+   staticDecorRoots:scene.roots,THREE}):
+   before(THREE,scene.world,scene.roots,scene.context)();
+ let value=null,checkpoints=0;
+ for(let n=0;n<150000;n++){
+  value=it.next();
+  if(value.done)break;
+  checkpoints++;
+  if(cancel&&value.value?.stage==='Colors de decoració'){
+   value=it.return();
+   while(!value.done)value=it.next();
+   break;
+  }
+ }
+ assert(value?.done,'scratch lifetime build reaches finish');
+ assert.equal(alive,0,'all scratch geometry disposed');
+ return {created,disposals,peak,checkpoints};
+}
+for(const seed of [67,148]){
+ const old=scratchLifetime(seed,false),now=scratchLifetime(seed,true);
+ assert.equal(now.created,old.created,'all original source geometries transformed');
+ assert.equal(now.disposals,old.disposals,'same scratch disposal total');
+ assert.equal(now.checkpoints,old.checkpoints,'same cooperative yield sequence');
+ assert(now.peak<=1,'one temporary geometry at a time');
+ assert(old.peak>20,'baseline retains multiple transformed geometries');
+ const cancelled=scratchLifetime(seed,true,true);
+ assert.equal(cancelled.created,cancelled.disposals,'cancel frees scratch resources');
+}
 console.log('PASS phase4 static visual batching: '+checks+' parity cases, '+
   originals+' input meshes, '+batches+' grouped render meshes');
