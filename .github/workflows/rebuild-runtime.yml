@@ -15,6 +15,7 @@ on:
       - 'tests/vehicle-special.cjs'
       - 'tests/compound-ground-surfaces.mjs'
       - 'tests/tank-motorcycle-death.cjs'
+      - 'tests/standalone-port-parity.mjs'
       - '.github/workflows/rebuild-runtime.yml'
   workflow_dispatch:
 permissions:

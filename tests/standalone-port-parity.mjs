@@ -37,7 +37,7 @@ function terrain(kind,seed,x,z){
   default:return Math.hypot(x,z)<90+shift?6:-8;
  }
 }
-function scenario(seed,scale,kind,mode){
+function scenario(seed,scale,kind,mode,isLegacy=false){
  const reads=[],landCalls=[],effects={piers:[],props:[],clear:[]},random=rng(seed^Math.imul(scale,7));
  const rawHAt=(x,z)=>{reads.push([x,z]);return terrain(kind,seed,x,z)};
  function* landSteps(island,tries=700,flag=1){
@@ -53,7 +53,7 @@ function scenario(seed,scale,kind,mode){
  const compoundPier=(...args)=>effects.piers.push(args);
  const compoundProp=(...args)=>effects.props.push(args);
  const compoundClear=effects.clear;
- const api=mode===99
+ const api=isLegacy
   ?legacyFactory(rawHAt,landSteps,compoundPier,compoundProp,compoundClear)
   :runtimeFactory(rawHAt,landSteps,compoundPier,compoundProp,compoundClear,
      {HUNTER_COMPOUND_PLANNING:{createStandalonePortPlanner}});
@@ -80,17 +80,17 @@ function compare(testName,a,b,make){
 let waterCases=0,siteCases=0,pierCases=0,cancelCases=0;
 for(const seed of seeds)for(const scale of [1,2])for(let kind=0;kind<11;kind++){
  const anchor={x:(seed%17-8)*scale,z:(seed%23-11)*scale,r:kind%3===0?undefined:kind%3===1?180:400};
- const a=scenario(seed,scale,kind,99),b=scenario(seed,scale,kind,0);
+ const a=scenario(seed,scale,kind,0,true),b=scenario(seed,scale,kind,0);
  compare('port water '+seed+'/'+scale+'/'+kind,a,b,c=>c.api.findPortWater({...anchor}));
  waterCases++;
 }
 for(const seed of seeds)for(const scale of [1,2])for(const kind of [0,1,2,3,7,10])
  for(const mode of [0,2,3])for(const tries of [0,1,3,6]){
   const island={x:seed%41-20,z:seed%33-16,r:180+scale*30};
-  const a=scenario(seed,scale,kind,99),b=scenario(seed,scale,kind,mode);
-  // Old and new use equivalent settings; mode is only a land-site pattern.
-  // Recreate the same external callback using the same mode for both sides.
-  const actualOld=scenario(seed,scale,kind,99),actualNew=scenario(seed,scale,kind,0);
+  // Include null land-site results and different retry sequences, not just
+  // successful coast searches. The injected callbacks remain identical.
+  const actualOld=scenario(seed,scale,kind,mode,true),
+    actualNew=scenario(seed,scale,kind,mode);
   compare('port site '+seed+'/'+scale+'/'+kind+'/'+mode+'/'+tries,
     actualOld,actualNew,c=>c.api.findPortSite({...island},tries));
   siteCases++;
@@ -99,13 +99,13 @@ for(const seed of seeds)for(const scale of [1,2])for(const kind of [0,1,2,3,4,5,
  for(const preset of [false,true])for(const radius of [30,190,380]){
   const q={x:0,z:0,r:radius};
   if(preset)q.portBest={x:0,z:radius*.9};
-  const a=scenario(seed,scale,kind,99),b=scenario(seed,scale,kind,0);
+  const a=scenario(seed,scale,kind,0,true),b=scenario(seed,scale,kind,0);
   compare('standalone pier '+seed+'/'+scale+'/'+kind+'/'+preset+'/'+radius,a,b,
     c=>c.api.makeStandalonePier({...q}));
   pierCases++;
  }
 for(const seed of [67,148,355])for(const kind of [0,2,7]){
- const a=scenario(seed,1,kind,99),b=scenario(seed,1,kind,0);
+ const a=scenario(seed,1,kind,0,true),b=scenario(seed,1,kind,0);
  const q={x:0,z:0,portBest:{x:0,z:680}};
  const old=a.api.makeStandalonePier({...q}),next=b.api.makeStandalonePier({...q});
  const first=old.next(),second=next.next();
