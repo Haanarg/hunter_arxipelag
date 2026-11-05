@@ -84,6 +84,12 @@
 
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
+**Fase 4 · vuitè tall, cost de l'agrupació visual (v0.6.147; implementació parcial):**
+- [x] **Sense actualització redundant de matrius per malla:** `src/static-decor-batching.js` manté `root.updateMatrixWorld(true)` i llegeix la translació de `mesh.matrixWorld.elements[12/14]`. Evita `getWorldPosition(new THREE.Vector3())` en cada peça, que recalculava matrius ancestrals i creava un vector temporal.
+- [x] **Signatura de material reutilitzada per arrel:** el `WeakMap` evita recomputar el perfil quan diverses peces comparteixen material dins d'una arrel. Es reinicialitza per arrel, després dels checkpoints, perquè una modificació legítima de material entre arrels continuï reflectint-se en el lot. També s'elimina la variable `geometries` sense usos.
+- [x] **Prova de paritat visual ampliada:** `tests/static-decor-batch-parity.mjs` continua amb l'oracle independent de v0.6.144, però inclou ara grups imbricats, escala no uniforme, rotacions i materials compartits; comprova exactament dades dels atributs, esferes, grups, transformacions, estadístiques, neteja i `yield`. Un test instrumental verifica zero crides a `getWorldPosition` per les peces.
+- [ ] **Validació pendent:** mesurar temps de CPU, memòria i pics de generació en dispositius reals, comparar qualitat d'escenes amb ombres i LOD, llavors completes 67/148 i Android/COOP en una bateria A/B. No s'ha mesurat cap guany d'FPS.
+
 **Fase 4 · setè tall, lots visuals de plataformes, molls i decoració (v0.6.145; implementació parcial):**
 - [x] **Construcció visual extreta:** `src/static-decor-batching.js` es responsabilitza de fusionar malles de decoració fixa en lots per sector de 160 m i perfil de material, incloses les plataformes d'heliport, molls i accessoris. `world-generation.js` ara només n'ordena l'execució; el nou mòdul es carrega abans del generador a `runtime-scripts.mjs`.
 - [x] **Paritat geomètrica i de recursos:** es manté exactament la fusió de `position`, `normal`, `uv` i `color`, les transformacions, els materials compartits, les estadístiques, les pauses `yield` i l'alliberament de malles originals. Sense canvis al RNG, dades físiques, desaments ni sistemes de COOP.

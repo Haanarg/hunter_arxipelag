@@ -22,18 +22,27 @@ function fixture(seed,scale,mode){
    opacity:i===0?.8:1,transparent:i===0,
    side:i===3?THREE.DoubleSide:THREE.FrontSide,flatShading:i===2
  }));
- const n=mode===0?0:mode===1?4:mode===2?9:18;
+ const n=mode===0?0:mode===1?4:mode===2?9:mode===6?24:18;
  for(let i=0;i<n;i++){
   const group=new THREE.Group();
   group.position.set((random()-.5)*680*scale,0,(random()-.5)*680*scale);
   group.rotation.y=Math.PI/2*(i%4);
+  // Rotated, scaled nested compound groups exercise matrixWorld parity,
+  // including placements that straddle two 160 m batching sectors.
+  const nested=mode===5||mode===6?new THREE.Group():group;
+  if(nested!==group){
+   nested.position.set((random()-.5)*14,.25*i,(random()-.5)*14);
+   nested.rotation.set(.07*(i%3),.22*i,.04*(i%4));
+   nested.scale.set(1+(i%3)*.2,.8+(i%4)*.13,1+(i%5)*.1);
+   group.add(nested);
+  }
   for(let k=0;k<(mode===1?1:mode===2?2:3);k++){
    const geom=k===0?new THREE.BoxGeometry(2+i*.1,1.5,3):
       k===1?new THREE.CylinderGeometry(.65,.7,2.1,7):
       new THREE.PlaneGeometry(3,4,2,2);
    const mesh=new THREE.Mesh(geom,materials[(i+k)%materials.length]);
    mesh.position.set(3*k+(random()-.5)*12,.6*k,2*k+(random()-.5)*12);
-   mesh.rotation.y=.1*k;group.add(mesh);
+   mesh.rotation.y=.1*k;nested.add(mesh);
   }
   world.add(group);roots.push(group);
  }
@@ -66,7 +75,7 @@ function trace({world,roots,context},isNew){
 }
 let checks=0,originals=0,batches=0;
 for(const scale of [1,2])for(const seed of [0,1,67,148,2407759483,4294967295])
- for(const mode of [0,1,2,3,4]){
+ for(const mode of [0,1,2,3,4,5,6]){
    const left=trace(fixture(seed,scale,mode),false);
    const right=trace(fixture(seed,scale,mode),true);
    assert.deepEqual(right,left,'exact batches, geometry, material and yields '+[scale,seed,mode]);
@@ -75,5 +84,20 @@ for(const scale of [1,2])for(const seed of [0,1,67,148,2407759483,4294967295])
    batches+=right.result.batchedMeshes;
    checks++;
  }
+
+// Detect accidental reintroduction of an expensive matrix update for every mesh.
+for(const seed of [67,148])for(const scale of [1,2]){
+ const scene=fixture(seed,scale,5);
+ let worldPositionCalls=0;
+ scene.world.traverse(object=>{
+  if(!object.isMesh)return;
+  const get=object.getWorldPosition.bind(object);
+  object.getWorldPosition=(...args)=>{worldPositionCalls++;return get(...args);};
+ });
+ const result=trace(scene,true);
+ assert(result.result.originalMeshes>0);
+ assert.equal(worldPositionCalls,0,
+   'world matrices must be updated once per root, without mesh.getWorldPosition');
+}
 console.log('PASS phase4 static visual batching: '+checks+' parity cases, '+
   originals+' input meshes, '+batches+' grouped render meshes');
