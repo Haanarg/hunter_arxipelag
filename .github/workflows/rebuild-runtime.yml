@@ -19,6 +19,9 @@ on:
       - 'tests/world-generation-matrix.cjs'
       - 'tests/coast-road-reservation.mjs'
       - 'tests/performance-copy-diagnostic.mjs'
+      - 'tests/performance-live-diagnostic.cjs'
+      - 'tests/ai-pressure-scheduling.cjs'
+      - 'tests/simulation-pressure-budget.cjs'
       - '.github/workflows/rebuild-runtime.yml'
   workflow_dispatch:
 permissions:
