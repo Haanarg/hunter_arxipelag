@@ -168,11 +168,35 @@ function deathReplayPose(v,dt=0){
         surface=inWater?Math.max(ground,v.waterLevel-3.5):ground,
         support=.52+1.18*Math.abs(up.y);
   if(m.centre.y<surface+support){
+   const firstContact=!m.touchedGround;
+   m.touchedGround=true;
+   m.justLanded=firstContact;
+   m.groundAge=(m.groundAge||0)+step;
    m.centre.y=surface+support;
-   if(m.velocity.y<0)m.velocity.y=v.cause.kind==='bullet'?0:
+   const blasted=v.cause.kind==='explosion'||v.cause.kind==='vehicleExplosion';
+   if(m.velocity.y<0)m.velocity.y=blasted||v.cause.kind==='bullet'?0:
      Math.abs(m.velocity.y)<3?0:-m.velocity.y*.12;
-   const friction=Math.exp(-(inWater?5:3.7)*step);
+   // El cos absorbeix el cop: la velocitat de lliscament i la girada
+   // es frenen a terra, no continua clavat de cap verticalment.
+   const friction=Math.exp(-(inWater?5:blasted?8:3.7)*step);
    m.velocity.x*=friction;m.velocity.z*=friction;
+   if(blasted){
+     if(firstContact){
+       // L'impuls d'aterratge desencadena una tombarella curta en la
+       // direcció de l'ona, fins i tot si venia completament vertical.
+       const heading=new THREE.Vector3(m.velocity.x,0,m.velocity.z);
+       if(heading.lengthSq()<.01)heading.set(v.direction.x,0,v.direction.z);
+       heading.normalize();
+       m.angular.x+=heading.z*4.3;
+       m.angular.z-=heading.x*4.3;
+     }
+     const settle=new THREE.Quaternion().setFromEuler(
+       new THREE.Euler(-Math.PI/2,v.heading,0,'YXZ'));
+     // Aquest ajust només actua DESPRÉS de tocar terra: la física
+     // conserva tota la rotació durant el vol, però el cos aterra ajagut.
+     m.orientation.slerp(settle,1-Math.exp(-4.6*step));
+     m.angular.multiplyScalar(Math.exp(-5.5*step));
+   }
    // El pes fa perdre l'equilibri al cos després del cop. L'eix
    // depèn de la inclinació existent, no d'una direcció predeterminada.
    m.angular.x+=up.z*4.2*step;
@@ -194,8 +218,9 @@ function deathReplayPose(v,dt=0){
   const surface=groundAt(m.centre.x,m.centre.z,m.centre.y),
         airborne=m.centre.y>surface+1.9;
   window.HUNTER_RAGDOLL.update(v.ragdoll,step,{
-    airborne,grounded:!airborne
+    airborne,grounded:!airborne,impact:!!m.justLanded
   });
+  m.justLanded=false;
  }
  v.bodyFocus.copy(m.centre);
  if(!v.impactSoundPlayed&&v.t>=v.impactTime){
