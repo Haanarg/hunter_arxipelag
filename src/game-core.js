@@ -973,18 +973,22 @@ function setPalmsDisabled(disabled){
 const palmSettingCheckbox=document.getElementById('disablePalms');
 if(palmSettingCheckbox)palmSettingCheckbox.addEventListener('change',()=>setPalmsDisabled(palmSettingCheckbox.checked));
 const vegetationVisual=window.HUNTER_VEGETATION.create(THREE,{materialProfile,random:rr});
-const PG={t:vegetationVisual.geometry.trunk,c:vegetationVisual.geometry.crown,c2:vegetationVisual.geometry.crown2};
 let compoundClear=[];
 function treeAt(x,z,r){const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)for(const t of L)if(!(palmsDisabled&&t.p)&&Math.hypot(x-t.x,z-t.z)<t.r+r)return t}return null}
 function crush(x,z,r){if(palmsDisabled)return;const cx=Math.floor(x/16),cz=Math.floor(z/16);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=TG.get((cx+a)+','+(cz+b));if(L)L.slice().forEach(t=>{if(t.p&&Math.hypot(x-t.x,z-t.z)<t.r+r)killPalm(t)})}}
 function dmgP(t,d){if(!t.alive)return;const amount=wholeDamage(d);if(!amount)return;t.hp=Math.max(0,Math.ceil(t.hp)-amount);if(t.hp<=0)killPalm(t)}
 function killPalm(t){if(!t.alive)return;t.alive=false;const a=TG.get(t.k);if(a){const i=a.indexOf(t);if(i>=0)a.splice(i,1)}
-// La geometria es gestiona ara en instàncies de cada sector.
-if(PM.remove)PM.remove(t.i,ZM);
-const y=new THREE.Group(),g=new THREE.Group();y.position.set(t.x,t.y,t.z);y.rotation.y=t.yaw;y.scale.setScalar(t.s);y.add(g);
-[[PG.t,0x8a6a3a],[PG.c,0x4fa03a],[PG.c2,0x6fbf3a]].forEach(([ge,c])=>g.add(new THREE.Mesh(ge,dmat(c))));world.add(y);FA.push({y,g,t:0,s:t.s,x:t.x,z:t.z,yaw:t.yaw})}
+// La palmera que cau reutilitza la copa, els tons i la inclinació originals,
+// abans que el sector instanciat n'esborri les matrius.
+const g=PM.falling?.(t);if(PM.remove)PM.remove(t.i,ZM);
+if(g&&g.children.length){
+ const y=new THREE.Group();y.position.set(t.x,t.y,t.z);y.rotation.y=t.yaw;y.scale.setScalar(t.s);y.add(g);
+ world.add(y);FA.push({y,g,t:0,s:t.s,x:t.x,z:t.z,yaw:t.yaw});
+}
 function updFA(dt){for(let i=FA.length-1;i>=0;i--){const a=FA[i];a.t+=dt;const frame=window.HUNTER_DEBRIS_CORE.palmFallFrame(a,a.t,hAt);a.g.rotation.z=frame.angle;
-if(frame.progress>=1){for(const d of [frame.leaves,frame.wood])debris(d.x,d.y,d.z,d.color,d.count,d.size,d.speed);const p=frame.dust;puff(p.x,p.y,p.z,p.color,p.size);world.remove(a.y);FA.splice(i,1)}}}
+if(frame.progress>=1){for(const d of [frame.leaves,frame.wood])debris(d.x,d.y,d.z,d.color,d.count,d.size,d.speed);const p=frame.dust;puff(p.x,p.y,p.z,p.color,p.size);
+ a.g.traverse(part=>{if(part.userData?.palmFallMaterial)part.material.dispose()});
+ world.remove(a.y);FA.splice(i,1)}}}
 
 function vegetate(pa){return drainBuildSteps(vegetateSteps(pa))}
 function* vegetateSteps(pa){TG.clear();PL.length=0;FA.length=0;
@@ -3801,10 +3805,16 @@ if(!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive){
     const floor=groundAt(point.x,point.z,P.y);
     // Sobre terreny natural, ajustam al triangle real del LOD renderitzat.
     // A rampes, molls, escales i plantes es conserva el suport construït.
-    const surface=Number.isFinite(visible)&&Math.abs(floor-Math.max(physical,visible))<.12?visible:floor;
-    clearance=Math.min(clearance,point.y-surface);
+    // El terreny visual pot tenir un triangle de LOD diferent del punt
+    // físic. Si no hi ha cap plataforma a sota, preval el triangle
+    // que efectivament es dibuixa (i que rep l'ombra).
+    const natural=Math.abs(floor-Math.max(0,physical))<.18;
+    const target=natural&&Number.isFinite(visible)?visible:floor;
+    clearance=Math.min(clearance,point.y-target);
   }
-  if(Number.isFinite(clearance))pl.position.y-=Math.max(-.28,Math.min(1.2,clearance-.018));
+  // Sense espai artificial entre soles i sòl. En pendent el contacte
+  // s'avalua per separat a cada peu abans de traslladar tot el rig.
+  if(Number.isFinite(clearance))pl.position.y-=Math.max(-.18,Math.min(1.8,clearance-.006));
 }
  // L'animació de caminar va a 8.4 rad/s: un esquitx a cada suport de
  // peu (creuament de fase PI). Sense esquitxos nedant ni en vehicles.
