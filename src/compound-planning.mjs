@@ -210,3 +210,36 @@ export function planPrisonEscapeGrade(prisonCamp,prisonBounds,height){
  return [prisonCamp.x,prisonCamp.z+(prisonBounds.padHalfDepth+prisonBounds.escapeEnd)/2,
    28,prisonBounds.escapeEnd-prisonBounds.padHalfDepth,height,0,18];
 }
+
+// Registre de camins físics dels complexos separat de les malles/LOD.
+// Es preserven l'ordre, l'identitat dels punts originals i la densitat de
+// mostreig (3 m) perquè ni la vegetació ni el spawn canviïn amb la llavor.
+export function createPathClearanceRegistrar({smoothPath,pathRoutes,compoundClear}){
+const compoundPath=(points,width=4,color=0x8a795e)=>{
+  pathRoutes.push({points,width,color});
+  const curve=smoothPath(points,width);
+  for(let i=1;i<curve.length;i++){const a=curve[i-1],b=curve[i],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/3));for(let k=0;k<=n;k++){const t=k/n;compoundClear.push({x:a[0]+(b[0]-a[0])*t,z:a[1]+(b[1]-a[1])*t,r:width*.8+2})}}
+};
+ return compoundPath;
+}
+
+// Planifica la rampa costanera i la geometria escalar d'un pantalà.
+// La construcció de cobertes, pilons, col·lisions i escales continua
+// a world-generation.js. Les consultes a hAt mantenen l'ordre original.
+export function planPierSetup(x1,z1,x2,z2,width=4.2,accessRamp=true,hAt,pierDeckY){
+ const dx=x2-x1,dz=z2-z1,L=Math.hypot(dx,dz);if(L<2)return null;
+ const ux=dx/L,uz=dz/L,px=-uz,pz=ux,n=Math.max(1,Math.ceil(L/5));
+ let ramp=null;
+ if(accessRamp&&L>width){
+   let rampLength=12,rampGround=null;
+   for(let d=12;d<=40;d+=2){
+     const shoreH=hAt(x1-ux*d,z1-uz*d);
+     if(shoreH>.25){rampLength=d;rampGround=shoreH+.08;break}
+   }
+   if(rampGround!==null){
+     ramp={x:x1,z:z1,nx:-ux,nz:-uz,length:rampLength,
+       width:width-.25,bottom:rampGround,top:pierDeckY,ramp:true,pierAccess:true};
+   }
+ }
+ return {dx,dz,L,ux,uz,px,pz,n,ramp};
+}

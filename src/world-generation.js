@@ -322,30 +322,16 @@ const landingPad=(x,z,size=30,rot=0)=>{
   const w=Math.max(1.1,size*.07),L=size*.45;bx(g,w,.035,L,0xf2f2e9,-L*.28,.09,0,'paint');bx(g,w,.035,L,0xf2f2e9,L*.28,.09,0,'paint');bx(g,L*.62,.035,w,0xf2f2e9,0,.09,0,'paint');
   world.add(g);staticDecorRoots.push(g);compoundClear.push({x,z,r:size*.72});return g
 };
-const compoundPath=(points,width=4,color=0x8a795e)=>{
-  pathRoutes.push({points,width,color});
-  const curve=window.HUNTER_COMPOUND_PATHS.smoothPath(points,width);
-  for(let i=1;i<curve.length;i++){const a=curve[i-1],b=curve[i],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/3));for(let k=0;k<=n;k++){const t=k/n;compoundClear.push({x:a[0]+(b[0]-a[0])*t,z:a[1]+(b[1]-a[1])*t,r:width*.8+2})}}
-};
+const compoundPath=window.HUNTER_COMPOUND_PLANNING.createPathClearanceRegistrar({
+  smoothPath:window.HUNTER_COMPOUND_PATHS.smoothPath,pathRoutes,compoundClear
+});
 const compoundPier=(x1,z1,x2,z2,width=4.2,accessRamp=true)=>{
-  const dx=x2-x1,dz=z2-z1,L=Math.hypot(dx,dz);if(L<2)return;
-  const ux=dx/L,uz=dz/L,px=-uz,pz=ux,n=Math.max(1,Math.ceil(L/5));
-  // Només el tram longitudinal que arrenca de la costa té rampa.
-  // Els caps transversals de les T són plataformes, mai rampes de 34 m d'ample.
-  let ramp=null;
-  if(accessRamp&&L>width){
-    let rampLength=12,rampGround=null;
-    // Allargar la rampa si els primers 12 m encara són dins l'aigua.
-    for(let d=12;d<=40;d+=2){
-      const shoreH=hAt(x1-ux*d,z1-uz*d);
-      if(shoreH>.25){rampLength=d;rampGround=shoreH+.08;break}
-    }
-    if(rampGround!==null){
-      ramp={x:x1,z:z1,nx:-ux,nz:-uz,length:rampLength,
-        width:width-.25,bottom:rampGround,top:PIER_DECK_Y,ramp:true,pierAccess:true};
-      stairs.push(ramp);
-    }
-  }
+  const setup=window.HUNTER_COMPOUND_PLANNING.planPierSetup(
+    x1,z1,x2,z2,width,accessRamp,hAt,PIER_DECK_Y
+  );
+  if(!setup)return;
+  const {dx,dz,L,ux,uz,px,pz,n,ramp}=setup;
+  if(ramp)stairs.push(ramp);
   if(seedSearchMode){
     for(let i=0;i<n;i++){
       const m=(i+.5)/n,seg=L/n,mx=x1+dx*m,mz=z1+dz*m;

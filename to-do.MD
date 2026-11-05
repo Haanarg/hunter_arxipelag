@@ -84,6 +84,12 @@
 
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
+**Fase 4 · onzè tall, zones de pas i geometria dels molls (v0.6.151; implementació parcial):**
+- [x] **Zones de pas de les carreteres extretes:** `createPathClearanceRegistrar` de `src/compound-planning.mjs` registra els recorreguts i reserva els mateixos cercles de pas cada 3 m després del suavitzat; `world-generation.js` conserva la presentació i l'agrupació de malles i deixa de tenir la regla de mostreig.
+- [x] **Rampes dels pantalans separades de les malles:** `planPierSetup` calcula l'orientació, els trams de 5 m i la rampa d'accés costaner injectant `hAt` i el nivell de la coberta; el runtime continua afegint escales, col·lisions i fustes visibles, sense canviar el camí en mode cerca de llavors.
+- [x] **Paritat diferencial explícita:** `tests/compound-path-pier-parity.mjs` compara el codi anterior amb el nou sobre rutes rectes, corbes, repetides, distàncies curtes, mostres de terra/aigua, llavors 67/148 i escales 1/2; mateixa traça de consultes d'alçada, coordenades, ordre de reserves i trams. Incorporada a `test:optimization` i CI.
+- [ ] **Fase 4 pendent de validació integral:** mapes realment generats amb llavors fixes, posicions de sortida, ports, camp de presoners, materials/ombres, COOP i Android, més benchmarks A/B en condicions repetibles. No es declaren guanys d'FPS només per paritat Node.
+
 **Fase 4 · desè tall, geometries temporals alliberades peça a peça (v0.6.150; implementació parcial):**
 - [x] **Buffers finals preassignats:** `src/static-decor-batching.js` reserva `position`, `normal`, `uv` i `color` una vegada per lot. Cada malla transformada s'hi copia i es disposa abans de començar la següent, sense retenir la llista de `BufferGeometry` temporals.
 - [x] **Semàntica de construcció preservada:** es mantenen `toNonIndexed`, `applyMatrix4`, tots els `yield` de colors i fusió, les estadístiques, els materials, els vèrtexs i l'ordre de construcció. Un `try/finally` també libera la geometria si es cancel·la un generador suspès.

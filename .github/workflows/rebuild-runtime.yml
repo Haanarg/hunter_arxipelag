@@ -117,6 +117,12 @@ jobs:
           node --check src/compound-planning.mjs
           node tests/terrain-pad-parity.mjs
           node tests/compound-planning.mjs
+      - name: Check phase 4 compound path clearance and pier planning parity
+        run: |
+          node --check src/world-generation.js
+          node --check src/compound-planning.mjs
+          node tests/compound-path-pier-parity.mjs
+          node tests/compound-paths.cjs
       - name: Generate runtime bundle
         run: node tools/build-runtime.cjs
       - name: Verify generated bundle
