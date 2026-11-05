@@ -31,7 +31,12 @@ for(const type of ['general','patrulla_marina'])
  assert.equal(remote({...unit,t:type},player),0,type+' retains its own loop');
 assert.equal(remote(unit,player,{contains:()=>true}),0,
  'distant sniper targets remain fully responsive');
-assert(ai.includes('dt=u.remoteAiAcc;u.remoteAiAcc=0'));
+assert(ai.includes('const scheduledDt=enemyRemoteDecisionDt(u,dt,remoteInterval);'),
+ 'distant patrols share the phase-preserving scheduler');
+assert(ai.includes('dt=scheduledDt;'),
+ 'the real accumulated delta is passed to the unit');
+assert(ai.includes('u.remoteAiClock%=remoteInterval;'),
+ 'the remainder preserves phase between cycles');
 assert(ai.includes('dt+=u.remoteAiAcc;u.remoteAiAcc=0'));
 assert(ai.includes('perfHotspots.aiSenseMs'));
 assert(nav.includes('perfHotspots.aiNavMs'));
