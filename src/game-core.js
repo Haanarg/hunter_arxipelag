@@ -985,6 +985,7 @@ if(g&&g.children.length){
  const y=new THREE.Group();y.position.set(t.x,t.y,t.z);y.rotation.y=t.yaw;y.scale.setScalar(t.s);y.add(g);
  world.add(y);FA.push({y,g,t:0,s:t.s,x:t.x,z:t.z,yaw:t.yaw});
 }
+}
 function updFA(dt){for(let i=FA.length-1;i>=0;i--){const a=FA[i];a.t+=dt;const frame=window.HUNTER_DEBRIS_CORE.palmFallFrame(a,a.t,hAt);a.g.rotation.z=frame.angle;
 if(frame.progress>=1){for(const d of [frame.leaves,frame.wood])debris(d.x,d.y,d.z,d.color,d.count,d.size,d.speed);const p=frame.dust;puff(p.x,p.y,p.z,p.color,p.size);
  a.g.traverse(part=>{if(part.userData?.palmFallMaterial)part.material.dispose()});
