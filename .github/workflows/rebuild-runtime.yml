@@ -109,6 +109,11 @@ jobs:
           node --check src/compound-planning.mjs
           node tests/terrain-pad-parity.mjs
           node tests/compound-planning.mjs
+      - name: Check phase 4 static platform and dock batching parity
+        run: |
+          node --check src/static-decor-batching.js
+          node --check src/world-generation.js
+          node tests/static-decor-batch-parity.mjs
       - name: Generate runtime bundle
         run: node tools/build-runtime.cjs
       - name: Verify generated bundle

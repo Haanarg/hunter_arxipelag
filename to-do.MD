@@ -82,6 +82,12 @@
 
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
+**Fase 4 · setè tall, lots visuals de plataformes, molls i decoració (v0.6.145; implementació parcial):**
+- [x] **Construcció visual extreta:** `src/static-decor-batching.js` es responsabilitza de fusionar malles de decoració fixa en lots per sector de 160 m i perfil de material, incloses les plataformes d'heliport, molls i accessoris. `world-generation.js` ara només n'ordena l'execució; el nou mòdul es carrega abans del generador a `runtime-scripts.mjs`.
+- [x] **Paritat geomètrica i de recursos:** es manté exactament la fusió de `position`, `normal`, `uv` i `color`, les transformacions, els materials compartits, les estadístiques, les pauses `yield` i l'alliberament de malles originals. Sense canvis al RNG, dades físiques, desaments ni sistemes de COOP.
+- [x] **Proves amb Three.js real:** `tests/static-decor-batch-parity.mjs` compara l'oracle congelat amb la nova etapa per diferents llavors i escales, malles indexades, grups imbricats, materials, cancel·lació d'arrels i vèrtexs. Inclosa a `test:optimization` i a CI.
+- [ ] **Resta de fase 4:** revisar si l'agrupació admet millores mesurables de CPU/memòria sense canviar materials ni LOD, comparar temps i màxims de generació A/B i validar escenes reals, COOP/Android i mapes complets. No és una prova de guany d'FPS.
+
 **Fase 4 · sisè tall, pla físic d'anivellament (v0.6.144; implementació parcial):**
 - [x] **Descriptors de plataformes canònics:** `src/world-physics.mjs` exposa `planLevelArea`, que calcula les mitges dimensions, la rotació i la circumferència de cobertura de cada plataforma sense crear malles. `src/game-core.js` manté el registre ordenat a `terrainLevels` i a l'índex espacial.
 - [x] **Ruta d'escapada del camp de presoners:** `src/compound-planning.mjs` calcula el terraplè d'evacuació amb `planPrisonEscapeGrade`; no s'han alterat les dimensions, la cota, el suavitzat ni els punts d'exclusió.
