@@ -57,6 +57,9 @@ window.HUNTER_PERFORMANCE=Object.freeze({
           ' · prediccions passives '+(stats.hotspots.aiPassiveDirectChecks||0)+
           '\nIA decisions immediates '+(stats.hotspots.aiImmediateDecisions||0)+
           ' · remotes '+(stats.hotspots.aiRemoteDecisions||0)+
+          '\nIA visió torres '+(stats.hotspots.aiTowerSightMs||0).toFixed(1)+
+          ' ms · '+(stats.hotspots.aiTowerSightChecks||0)+' raigs · '+
+          (stats.hotspots.aiTowerSightSkipped||0)+' evitats'+
           '\nIA tipus soldats '+(stats.hotspots.aiSoldierMs||0).toFixed(1)+
           ' · torres '+(stats.hotspots.aiTowerMs||0).toFixed(1)+
           ' · vehicles '+(stats.hotspots.aiVehicleMs||0).toFixed(1)+

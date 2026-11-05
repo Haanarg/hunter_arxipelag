@@ -621,10 +621,25 @@ function towerGuardTick(u,dt){
    // l'altre rep l'avís i el segueix si té línia de tir real.
    const allowed=!cheats.invisible&&!over&&
      (!disg||!!cv||u.alert>0||d<20),
-     sharedWarning=(tower.towerAlertUntil||0)>elapsed,
-     clear=allowed&&weaponAimClear(u.x,eyeY,u.z,
+     sharedWarning=(tower.towerAlertUntil||0)>elapsed;
+   // Evitam traçar un raig car a través de tot el mapa si el jugador
+   // no pot ser detectat: el con i el radi de 128 m són independents
+   // dels obstacles. Si un company avisa, mantenim la línia de visió
+   // real abans de disparar, però sempre dins el radi de la torre.
+   const canCheck=allowed&&d<=u.rng&&(facing||sharedWarning);
+   if(performanceStatsVisible){
+     if(canCheck)perfHotspots.aiTowerSightChecks++;
+     else perfHotspots.aiTowerSightSkipped++;
+   }
+   let clear=false;
+   if(canCheck){
+     const sightStamp=performanceStatsVisible?performance.now():0;
+     clear=weaponAimClear(u.x,eyeY,u.z,
        visualTarget.x,visualTarget.y,visualTarget.z);
-   u.canSee=clear&&(facing||sharedWarning);
+     if(performanceStatsVisible)
+       perfHotspots.aiTowerSightMs+=performance.now()-sightStamp;
+   }
+   u.canSee=clear;
    if(clear&&facing)tower.towerAlertUntil=elapsed+1.2;
  }
  if(u.canSee){

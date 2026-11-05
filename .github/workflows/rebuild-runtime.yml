@@ -8,6 +8,7 @@ on:
       - 'tools/build-runtime.cjs'
       - 'tools/sync-version.cjs'
       - 'tests/tower-sentries.mjs'
+      - 'tests/tower-guard-los-budget.cjs'
       - 'tests/coop-barrier-ram.mjs'
       - 'tests/hover-distribution.mjs'
       - 'tests/fragile-vehicle-fragments.mjs'
@@ -82,6 +83,7 @@ jobs:
           node tests/terrain-coast-lod.cjs
       - name: Check tower sentry rules and cooperative tower ramming
         run: |
+          node tests/tower-guard-los-budget.cjs
           node tests/tower-sentries.mjs
           node tests/coop-barrier-ram.mjs
       - name: Check natural compound ground and building shadow receivers
