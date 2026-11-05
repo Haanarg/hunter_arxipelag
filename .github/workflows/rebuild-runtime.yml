@@ -25,6 +25,7 @@ on:
       - 'tests/enemy-sweep-elevation-vegetation.cjs'
       - 'tests/enemy-sweep-candidate-cache.cjs'
       - 'tests/enemy-route-probe-budget.cjs'
+      - 'tests/harness.cjs'
       - 'tests/simulation-pressure-budget.cjs'
       - '.github/workflows/rebuild-runtime.yml'
   workflow_dispatch:
