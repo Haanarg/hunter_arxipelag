@@ -1,8 +1,14 @@
 // Ombres coherents: memòria cau amb invalidació per moviment i diagnòstic.
 // La resolució, el filtre i les geometries no es modifiquen.
 window.HUNTER_SHADOW_CACHE=Object.freeze({
+  // El focus i el frustum de la càmera d'ombres fan servir el mateix
+  // punt discret, perquè el mapa no salti amb moviments de centímetres.
+  anchorCoordinate(value,grid=8){
+    return Number.isFinite(value)&&grid>0?Math.round(value/grid)*grid:value;
+  },
   create({shadowMap,maxIdleMs=180,motionEpsilon=.02,majorMotion=.12,
-    minorRefreshMs=48,labelNode=node=>node.name||node.type||'pivot'}){
+    minorRefreshMs=48,boatMinorRefreshMs=105,boatMajorMotion=.35,
+    labelNode=node=>node.name||node.type||'pivot'}){
     const lastPose=new WeakMap();
     let ready=false,lastUpdate=-Infinity,lastX=NaN,lastZ=NaN,lastCount=-1;
     const stats={redraws:0,reuses:0,motionRedraws:0,periodicRedraws:0,
@@ -45,15 +51,22 @@ window.HUNTER_SHADOW_CACHE=Object.freeze({
       const countChanged=nodes.length!==lastCount;
       const periodic=now-lastUpdate>=maxIdleMs;
       const elapsed=now-lastUpdate;
-      let biggest=0,culprit=null;
+      let biggest=0,culprit=null,moving=false,major=false,nonBoatMotion=false;
       for(const node of nodes){
-        const amount=displacement(node);
+        const amount=displacement(node),boat=node.shadowMotionRole==='boat';
         if(amount>biggest){biggest=amount;culprit=node}
+        if(amount>(boat?Math.max(motionEpsilon,.05):motionEpsilon)){
+          moving=true;
+          if(!boat)nonBoatMotion=true;
+        }
+        if(amount>=(boat?boatMajorMotion:majorMotion))major=true;
       }
-      const moving=biggest>motionEpsilon,
-            major=biggest>=majorMotion,
-            delayMinor=moving&&!major&&!forced&&!anchorMoved&&!countChanged&&!periodic&&
-              elapsed<minorRefreshMs;
+      // La deriva menor d'una barca no obliga a refrescar el mapa d'ombres
+      // cada 48 ms. Els girs importants i el moviment dels altres actors
+      // continuen invalidant-lo immediatament.
+      const minorLimit=nonBoatMotion?minorRefreshMs:boatMinorRefreshMs;
+      const delayMinor=moving&&!major&&!forced&&!anchorMoved&&!countChanged&&!periodic&&
+        elapsed<minorLimit;
       const reason=forced?'forçat':anchorMoved?'focus solar':
         countChanged?'candidats':major?'moviment gran':
         periodic?'refresc preventiu':moving&&!delayMinor?'moviment petit':'';

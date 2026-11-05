@@ -237,7 +237,8 @@ function updateShadowCasters(force=false){
                 source:o,
                 position:{x:o.position.x,y:0,z:o.position.z},
                 rotation:{x:0,y:o.rotation.y,z:0},
-                scale:{x:1,y:1,z:1}
+                scale:{x:1,y:1,z:1},
+                shadowMotionRole:'boat'
               };
               shadowBoatProxyCache.set(o,proxy);
             }
@@ -4028,8 +4029,13 @@ if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
  // El món no queda congelat durant la repetició: les onades avancen
  // lentament mentre la càmera i el cos es mouen a velocitat cinematogràfica.
  waves(t+(deathCinematic?.active?deathCinematic.t*.18:0));
-sun.target.position.set(victoryCinematic?cam.position.x:P.x,0,
-  victoryCinematic?cam.position.z:P.z);
+// El focus de la càmera de la llum es mou en salts petits i coherents;
+// evitam regeneracions per centímetres sense descentrar el shadow map.
+const sunFocusX=victoryCinematic?cam.position.x:P.x,
+  sunFocusZ=victoryCinematic?cam.position.z:P.z,
+  anchorCoord=window.HUNTER_SHADOW_CACHE.anchorCoordinate;
+sun.target.position.set(ren.shadowMap.enabled?anchorCoord(sunFocusX):sunFocusX,0,
+  ren.shadowMap.enabled?anchorCoord(sunFocusZ):sunFocusZ);
 sun.position.copy(sun.target.position).addScaledVector(sunDir,500);sky.position.copy(cam.position);sunM.position.copy(cam.position).addScaledVector(sunDir,visualQuality.sunDistance||3500);if(rendering.glow)rendering.glow.position.copy(sunM.position);
 for(const proxy of shadowBoatNodes){
   const source=proxy.source;
