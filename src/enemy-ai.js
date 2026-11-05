@@ -695,6 +695,26 @@ function enemyRemoteInterval(u,q,focus=null,underPressure=false){
     return d2>1400*1400?.40:d2>620*620?.24:.10;
   return d2>1400*1400?.3:d2>620*620?.18:0;
 }
+// Desfasament determinista persistent per patrulla: conservam els segons
+// acumulats per al moviment real, però el rellotge de decisions manté la
+// fase després de cada execució. Sense això els patrullers llunyans
+// de la mateixa distància es sincronitzen al cap de pocs segons.
+function enemyRemoteDecisionDt(u,frameDt,remoteInterval){
+  const previous=u.remoteAiAcc||0;
+  u.remoteAiAcc=previous+frameDt;
+  if(!Number.isFinite(u.remoteAiClock)){
+    const phase=u.remoteAiPhase??.5;
+    const first=u.remoteAiWarmed?remoteInterval:
+      remoteInterval*(.25+.75*phase);
+    u.remoteAiClock=previous+remoteInterval-first;
+  }
+  u.remoteAiClock+=frameDt;
+  if(u.remoteAiClock+1e-9<remoteInterval)return 0;
+  u.remoteAiClock%=remoteInterval;
+  const elapsedDt=u.remoteAiAcc;
+  u.remoteAiAcc=0;u.remoteAiWarmed=true;
+  return elapsedDt;
+}
 // Each enemy gets its own simulation interval. Carrying over a distant
 // patrol's accumulated time into the next enemy caused runaway movement
 // sweeps and major frame-time spikes under the semi-fixed clock.
@@ -720,20 +740,16 @@ function updEn(frameDt,preserveFrameBudget=false,underPressure=false){
   }
   const remoteInterval=enemyRemoteInterval(u,cv||P,enemyScopeFocus,underPressure);
   if(remoteInterval){
-    u.remoteAiAcc=(u.remoteAiAcc||0)+dt;
-    // Repartim la primera decisió entre diferents fotogrames. Sense
-    // aquest desfasament, centenars de patrullers desperten alhora
-    // i provoquen pics molt alts de navegació en mòbils.
-    const interval=u.remoteAiWarmed?remoteInterval:
-      remoteInterval*(.25+.75*(u.remoteAiPhase??.5));
-    if(u.remoteAiAcc+1e-9<interval){
+    const scheduledDt=enemyRemoteDecisionDt(u,dt,remoteInterval);
+    if(!scheduledDt){
       if(performanceStatsVisible)perfHotspots.aiSkipped++;
       return;
     }
     if(performanceStatsVisible)perfHotspots.aiRemoteDecisions++;
-    dt=u.remoteAiAcc;u.remoteAiAcc=0;u.remoteAiWarmed=true;
+    dt=scheduledDt;
   }else{
     if(u.remoteAiAcc){dt+=u.remoteAiAcc;u.remoteAiAcc=0}
+    u.remoteAiClock=null;
     u.remoteAiWarmed=false;
     if(performanceStatsVisible)perfHotspots.aiImmediateDecisions++;
   }
