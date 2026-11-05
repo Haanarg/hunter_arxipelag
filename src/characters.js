@@ -225,6 +225,20 @@ window.HUNTER_CHARACTERS=Object.freeze({
     bazooka.position.set(.58,3.32,-.52);
     root.add(bazooka);
     u.gun.visible=false;u.bazooka=bazooka;u.rocketSoldier=true;
+    // Els mateixos punts de presa i solver de braços que el jugador:
+    // mà dreta sota el tub i mà esquerra fent de suport.
+    const rightGrip=new THREE.Object3D(),leftGrip=new THREE.Object3D();
+    rightGrip.position.set(.04,-.36,.36);
+    leftGrip.position.set(-.35,-.35,.15);
+    bazooka.add(rightGrip,leftGrip);
+    u.enemyBazookaIK={
+      rightGrip,leftGrip,right:new THREE.Vector3(),left:new THREE.Vector3(),
+      v1:new THREE.Vector3(),v2:new THREE.Vector3(),
+      v3:new THREE.Vector3(),v4:new THREE.Vector3(),
+      q1:new THREE.Quaternion(),q2:new THREE.Quaternion(),q3:new THREE.Quaternion(),
+      down:new THREE.Vector3(0,-1,0),forearm:new THREE.Vector3(0,-1,0),
+      forearmLength:.62
+    };
     // Silueta llegible també quan el comando entra en LOD mitjà/llunyà.
     const distantMat=new THREE.MeshLambertMaterial({color:0x58664a});
     for(const lod of [u.enemyMidMesh,u.enemyFarMesh]){
@@ -277,6 +291,16 @@ window.HUNTER_CHARACTERS=Object.freeze({
       bazookaAim?(i?-.16:.23):aim?(i?-.05:.12):(i?.025:-.025)));
     a.elbows.forEach((j,i)=>blend(j,bazookaAim?(i?.75:.83):aim?(i?.61:.55):
       .16+Math.max(0,Math.cos(phase)*(i?-1:1))*.18*(moving?1:0)));
+    if(a.rocketSoldier&&a.enemyBazookaIK&&a.enemyLOD==='full'){
+      const rig=a.enemyBazookaIK,handBlend=1-Math.exp(-18*dt);
+      model.updateMatrixWorld(true);
+      rig.right.set(0,0,0);rig.rightGrip.localToWorld(rig.right);
+      a.ar.parent.worldToLocal(rig.right);
+      rig.left.set(0,0,0);rig.leftGrip.localToWorld(rig.left);
+      a.al.parent.worldToLocal(rig.left);
+      aimPlayerPistolArm(a.ar,a.aer,rig.right,1,rig,handBlend,true);
+      aimPlayerPistolArm(a.al,a.ael,rig.left,-1,rig,handBlend,true);
+    }
   },
   createPlayer(THREE,{box,palette=window.HUNTER_PALETTE}){
     const P=palette.player,player=window.HUNTER_PLAYER_MODEL.create(THREE,{unitScale:1.2,palette,headVariant:'compactD',articulated:true}),u=player.userData;
