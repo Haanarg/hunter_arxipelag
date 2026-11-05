@@ -102,6 +102,13 @@ jobs:
           node --check src/compound-coast-runtime.js
           node --check src/compound-planning.mjs
           node tests/coast-road-parity.mjs
+      - name: Check phase 4 terrain pad planning parity
+        run: |
+          node --check src/game-core.js
+          node --check src/world-physics.mjs
+          node --check src/compound-planning.mjs
+          node tests/terrain-pad-parity.mjs
+          node tests/compound-planning.mjs
       - name: Generate runtime bundle
         run: node tools/build-runtime.cjs
       - name: Verify generated bundle

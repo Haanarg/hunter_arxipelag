@@ -503,8 +503,9 @@ const prisonBounds=prisonCampFootprint(prisonLayout),prisonTr=compoundTransform(
   escapeEnd=prisonTr(0,prisonBounds.escapeEnd);
 // The standard pad ends at z=69. Level the complete evacuation, including all
 // farmer lanes and a runout, to avoid the old final 17 m becoming a cliff.
-addLevelArea(prisonCamp.x,prisonCamp.z+(prisonBounds.padHalfDepth+prisonBounds.escapeEnd)/2,
-  28,prisonBounds.escapeEnd-prisonBounds.padHalfDepth,prisonPlan.site.h,0,18);
+addLevelArea(...window.HUNTER_COMPOUND_PLANNING.planPrisonEscapeGrade(
+  prisonCamp,prisonBounds,prisonPlan.site.h
+));
 for(const p of [...prisonEscape,{x:escapeEnd[0],z:escapeEnd[1]}])compoundClear.push({x:p.x,z:p.z,r:14});
 const mechanicSpec=prisonLayout.prisoners.find(p=>p.role==='mechanic'),
   mechanicPoints=[[mechanicSpec.x,mechanicSpec.z],...(prisonLayout.mechanicRoute||[

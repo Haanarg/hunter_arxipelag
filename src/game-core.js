@@ -64,11 +64,9 @@ function rawHAt(x,z){return window.HUNTER_WORLD_PHYSICS.rawTerrainAt(x,z,islandC
 let terrainLevels=[];
 const terrainLevelGrid=window.HUNTER_SPATIAL_GRID.createSpatialCellGrid(256);
 const addLevelArea=(x,z,w,d,y,rot=0,blend=12)=>{
-  const m={x,z,hw:w/2,hd:d/2,y,rot,c:Math.cos(rot),s:Math.sin(rot),blend};
-  terrainLevels.push(m);
-  // Màxima circumferència d'influència de la plataforma girada.
-  const reach=Math.hypot(m.hw,m.hd)+blend;
-  terrainLevelGrid.insert(m,x-reach,x+reach,z-reach,z+reach);
+  const {level,bounds}=window.HUNTER_WORLD_PHYSICS.planLevelArea(x,z,w,d,y,rot,blend);
+  terrainLevels.push(level);
+  terrainLevelGrid.insert(level,bounds.minX,bounds.maxX,bounds.minZ,bounds.maxZ);
 };
 function hAt(x,z){
   const h=rawHAt(x,z),candidates=terrainLevelGrid.at(x,z);

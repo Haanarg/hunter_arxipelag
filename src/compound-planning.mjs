@@ -203,3 +203,10 @@ function* solveCoastRoadSteps(start,goal){
 }
  return solveCoastRoadSteps;
 }
+
+// Geometria plana de la ruta d'escapada del camp de presoners.
+// No altera el terreny; només calcula els arguments de l'anivellament.
+export function planPrisonEscapeGrade(prisonCamp,prisonBounds,height){
+ return [prisonCamp.x,prisonCamp.z+(prisonBounds.padHalfDepth+prisonBounds.escapeEnd)/2,
+   28,prisonBounds.escapeEnd-prisonBounds.padHalfDepth,height,0,18];
+}

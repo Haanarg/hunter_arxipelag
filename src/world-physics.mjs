@@ -69,3 +69,11 @@ export function pushTree(point,t,palmsDisabled=false,r0=.5){
       const dx=point.x-t.x,dz=point.z-t.z,d=Math.hypot(dx,dz),m=t.r+r0;
       if(d<m&&d>.001){point.x=t.x+dx/d*m;point.z=t.z+dz/d*m}
 }
+
+// Càlcul canònic de la plataforma: sense render ni mutacions del món.
+// L'ordre d'inserció a la graella continua sota el control del motor.
+export function planLevelArea(x,z,w,d,y,rot=0,blend=12){
+ const level={x,z,hw:w/2,hd:d/2,y,rot,c:Math.cos(rot),s:Math.sin(rot),blend};
+ const reach=Math.hypot(level.hw,level.hd)+blend;
+ return {level,bounds:{minX:x-reach,maxX:x+reach,minZ:z-reach,maxZ:z+reach}};
+}

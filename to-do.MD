@@ -82,6 +82,12 @@
 
 ## Fases 3–12 — pla d'optimització mòdul a mòdul (P1/P2)
 
+**Fase 4 · sisè tall, pla físic d'anivellament (v0.6.144; implementació parcial):**
+- [x] **Descriptors de plataformes canònics:** `src/world-physics.mjs` exposa `planLevelArea`, que calcula les mitges dimensions, la rotació i la circumferència de cobertura de cada plataforma sense crear malles. `src/game-core.js` manté el registre ordenat a `terrainLevels` i a l'índex espacial.
+- [x] **Ruta d'escapada del camp de presoners:** `src/compound-planning.mjs` calcula el terraplè d'evacuació amb `planPrisonEscapeGrade`; no s'han alterat les dimensions, la cota, el suavitzat ni els punts d'exclusió.
+- [x] **Paritat diferencial:** `tests/terrain-pad-parity.mjs` compara els descriptors i les insercions a la graella amb la funció v0.6.143, més la física de solapaments i els terraplens del camp; inclosa a `test:optimization` i a la CI.
+- [ ] **Fase 4 pendent:** separar construcció visual de plataformes i reavaluar recomputacions; prova conjunta de llavors, costa, camp, COOP/Android i rendiment A/B.
+
 **Fase 4 · cinquè tall, planificació de carreteres fins a la costa (v0.6.142; implementació parcial):**
 - [x] **Cerca A* extreta de la construcció:** `src/compound-planning.mjs` exposa `createCoastRoadSolver` i calcula els punts amb altura d'una carretera entre la base i la costa, evitant edificis, aigua, desnivells i límits del mapa; el model de carretera, els canvis de relleu i `buildCoastRoadSteps` continuen al runtime.
 - [x] **Determinisme de rutes i checkpoints:** mateix pas de graella 12 m, pressupost fins a 14.000 nodes, cost de pendent, ordenació A*, projecció de pendent al 12 %, comprovacions de resultat i `yield` cada 8 nodes. Les dependències `H` i `B` s'obtenen en cada cerca/mostra per evitar referències obsoletes després de canviar de mapa.
