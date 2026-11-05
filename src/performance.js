@@ -29,7 +29,7 @@ window.HUNTER_PERFORMANCE=Object.freeze({
         return stats;
       }
       // Ignorar pauses de la pestanya i salts del rellotge.
-      if(dt>0&&dt<=.2){frames++;frameAccum+=dt;}
+      if(dt>0&&dt<=5){frames++;frameAccum+=dt;}
       if(frameAccum>=.85){
         const fps=frames/frameAccum;
         stats.fps=lastFps?stats.fps*.35+fps*.65:fps;
@@ -57,6 +57,61 @@ window.HUNTER_PERFORMANCE=Object.freeze({
       }
       return stats;
     }
-    return {stats,sample};
+    // Mostres reals de la partida (no de la pausa). Màxim 5 s/600 mostres;
+    // els percentils només es calculen quan es prem Copia.
+    const recentFrames=[];
+    let recentDuration=0;
+    function captureActiveFrame({rawDt=0,hotspots=null,drawCategories=null,detailed=false}={}){
+      if(!stats.active)return;
+      stats.lastActive={
+        capturedAt:Date.now(),detailed:!!detailed,
+        fps:stats.fps,frameMs:stats.frameMs,
+        updateCpuMs:stats.updateCpuMs,renderCpuMs:stats.renderCpuMs,
+        postRenderCpuMs:stats.postRenderCpuMs,terrainCpuMs:stats.terrainCpuMs,
+        drawCalls:stats.drawCalls,triangles:stats.triangles,
+        pixelRatio:stats.pixelRatio,simulationSteps:stats.simulationSteps,
+        simulationMs:stats.simulationMs,droppedMs:stats.droppedMs,
+        hotspots:detailed&&hotspots?{...hotspots}:null,
+        drawCategories:detailed&&drawCategories?{...drawCategories}:null
+      };
+      if(!(rawDt>0&&rawDt<=5))return;
+      const row={dt:rawDt,updateMs:stats.updateCpuMs,
+        renderMs:stats.renderCpuMs,droppedMs:stats.droppedMs,
+        aiMs:detailed?(hotspots?.aiMs??null):null};
+      recentFrames.push(row);
+      recentDuration+=rawDt;
+      while(recentFrames.length>1&&
+        (recentDuration>5||recentFrames.length>600)){
+        recentDuration-=recentFrames.shift().dt;
+      }
+    }
+    function recentSummary(){
+      if(!recentFrames.length||recentDuration<=0)return null;
+      const percentile=(values,p)=>{
+        if(!values.length)return null;
+        const sorted=values.slice().sort((a,b)=>a-b);
+        return sorted[Math.min(sorted.length-1,Math.ceil(p*sorted.length)-1)];
+      };
+      const summarize=values=>values.length?{
+        mean:values.reduce((a,b)=>a+b,0)/values.length,
+        p95:percentile(values,.95)
+      }:null;
+      return {
+        samples:recentFrames.length,seconds:recentDuration,
+        fps:recentFrames.length/recentDuration,
+        frameMs:{p50:percentile(recentFrames.map(r=>r.dt*1000),.5),
+          p95:percentile(recentFrames.map(r=>r.dt*1000),.95),
+          p99:percentile(recentFrames.map(r=>r.dt*1000),.99)},
+        updateCpuMs:summarize(recentFrames.map(r=>r.updateMs)),
+        renderCpuMs:summarize(recentFrames.map(r=>r.renderMs)),
+        aiCpuMs:summarize(recentFrames.filter(r=>r.aiMs!==null).map(r=>r.aiMs)),
+        droppedMs:summarize(recentFrames.map(r=>r.droppedMs))
+      };
+    }
+    function resetCapture(){
+      recentFrames.length=0;recentDuration=0;stats.lastActive=null;
+      frames=0;frameAccum=0;lastFps=0;stats.fps=0;stats.frameMs=0;
+    }
+    return {stats,sample,captureActiveFrame,recentSummary,resetCapture};
   }
 });

@@ -660,7 +660,7 @@ function towerGuardTick(u,dt){
 // La IA llunyana sense contacte necessita menys decisions de navegació,
 // però conserva tot el temps transcorregut: mai no alentim la patrulla.
 // Un enemic que detecta, cerca o combat reprèn immediatament els passos normals.
-function enemyRemoteInterval(u,q,focus=null){
+function enemyRemoteInterval(u,q,focus=null,underPressure=false){
   if(u.towerGuard){
     // No mostregis línies de visió deu vegades per segon en torres a 2 km.
     // El temps acumulat conserva exactament la rotació de la vigilància.
@@ -674,12 +674,16 @@ function enemyRemoteInterval(u,q,focus=null){
   // dins la mira conserva animació i moviment a la freqüència completa.
   if(focus?.contains(u.x,u.o?.position?.y??0,u.z,3))return 0;
   const dx=q.x-u.x,dz=q.z-u.z,d2=dx*dx+dz*dz;
+  // Sota saturació només s'espacien patrulles passives. Combat, persecució,
+  // objectius dins la mira i enemics propers conserven resposta immediata.
+  if(underPressure&&d2>240*240)
+    return d2>1400*1400?.40:d2>620*620?.24:.10;
   return d2>1400*1400?.3:d2>620*620?.18:0;
 }
 // Each enemy gets its own simulation interval. Carrying over a distant
 // patrol's accumulated time into the next enemy caused runaway movement
 // sweeps and major frame-time spikes under the semi-fixed clock.
-function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetEnemyPathFrameBudget();refreshVehicleGridIfCellsChanged();soldierCoordinationTick(frameDt);const enemyScopeFocus=scopeActive?currentSniperFocus():null;E.forEach(u=>{
+function updEn(frameDt,preserveFrameBudget=false,underPressure=false){if(!preserveFrameBudget)resetEnemyPathFrameBudget();refreshVehicleGridIfCellsChanged();soldierCoordinationTick(frameDt);const enemyScopeFocus=scopeActive?currentSniperFocus():null;E.forEach(u=>{
   let dt=frameDt;
   if(u.t==='patrulla_marina'){
     if(performanceStatsVisible){
@@ -688,7 +692,7 @@ function updEn(frameDt,preserveFrameBudget=false){if(!preserveFrameBudget)resetE
     }else updateMarinePatrol(u,dt);
     return;
   }
-  const remoteInterval=enemyRemoteInterval(u,cv||P,enemyScopeFocus);
+  const remoteInterval=enemyRemoteInterval(u,cv||P,enemyScopeFocus,underPressure);
   if(remoteInterval){
     u.remoteAiAcc=(u.remoteAiAcc||0)+dt;
     // Repartim la primera decisió entre diferents fotogrames. Sense

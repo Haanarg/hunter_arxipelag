@@ -1663,7 +1663,8 @@ const circleVehicleOverlap=(x,z,r,v)=>{const b=vehicleBox(v),dx=x-b.x,dz=z-b.z,s
 const vehicleY=v=>v.alt!=null&&VT[vehicleHitType(v.t)]?.m==='a'?v.alt:(v.o?.position?.y??Math.max(0,hAt(v.x,v.z)));
 const vehicleHeightCompatible=(a,b)=>Math.abs(vehicleY(a)-vehicleY(b))<Math.max(2.2,Math.min(vehicleRadius(vehicleHitType(a.t)),vehicleRadius(vehicleHitType(b.t)))*.55);
 const VEHICLE_CELL=64,vehicleGrid=new Map(),playerVehicleGrid=new Map(),enemyGrid=new Map(),vehicleCellKey=(cx,cz)=>cx+','+cz;
-let vehicleGridVSource=null,vehicleGridESource=null;
+let vehicleGridVSource=null,vehicleGridESource=null,
+  vehicleGridVLength=-1,vehicleGridELength=-1,vehicleGridRebuiltFrameId=-1;
 // Les posicions només serveixen per detectar canvis de sector dins del pas
 // de simulació. No canvien ni el radi ni la precisió de les col·lisions.
 const vehicleGridLastCell=new WeakMap();
@@ -1672,6 +1673,7 @@ const addVehicleToGrid=(grid,v)=>{const key=vehicleCellKey(Math.floor(v.x/VEHICL
 function rebuildVehicleGrid(){
   const stamp=performanceStatsVisible?performance.now():0;
   vehicleGrid.clear();playerVehicleGrid.clear();enemyGrid.clear();vehicleGridVSource=V;vehicleGridESource=E;
+  vehicleGridVLength=V.length;vehicleGridELength=E.length;
   for(const v of V)if(!v.destroyed){addVehicleToGrid(vehicleGrid,v);addVehicleToGrid(playerVehicleGrid,v);vehicleGridLastCell.set(v,gridCellOf(v))}
   for(const u of E)if(!u.destroyed){addVehicleToGrid(enemyGrid,u);if(u.t==='jeep'||u.t==='tanqueta'||u.t==='tanc'||u.t==='patrulla_marina')addVehicleToGrid(vehicleGrid,u);vehicleGridLastCell.set(u,gridCellOf(u))}
   if(performanceStatsVisible)perfHotspots.broadphaseMs+=performance.now()-stamp;
@@ -1679,7 +1681,10 @@ function rebuildVehicleGrid(){
 // Els vehicles han pogut desplaçar-se des de l'inici del pas. Només cal
 // reconstruir si algú realment ha travessat una cel·la de 64 metres.
 function refreshVehicleGridIfCellsChanged(){
-  if(vehicleGridVSource!==V||vehicleGridESource!==E){rebuildVehicleGrid();return}
+  if(vehicleGridVSource!==V||vehicleGridESource!==E||
+     vehicleGridVLength!==V.length||vehicleGridELength!==E.length){
+    rebuildVehicleGrid();return
+  }
   for(const v of V)if(!v.destroyed&&vehicleGridLastCell.get(v)!==gridCellOf(v)){
     rebuildVehicleGrid();return
   }
@@ -1939,7 +1944,7 @@ const stealthFeedback=window.HUNTER_STEALTH_FEEDBACK.create(THREE);
 window.HUNTER_STEALTH_FEEDBACK_STATS=stealthFeedback.stats;
 let simulationFrameActive=false,simulationFocused=true;
 function resetSimulationClock(now=performance.now()){
-  if(now===null)audioReset();
+  if(now===null){audioReset();adaptivePerformance.resetCapture();}
   simulationClock.reset(now);cinematicClock.reset(now);
   combatFeedback?.clear();
   stealthFeedback.reset();resetSoldierCoordination();
@@ -2811,7 +2816,8 @@ const ui=window.HUNTER_UI.create({
       rendererMemory:{...(ren.info?.memory||{})},
       worldGeneration:window.HUNTER_BUILD_STATS||null,
       roadStats:world?.userData?.pathStats||null,
-      staticBatchStats:window.HUNTER_STATIC_BATCH_STATS||null
+      staticBatchStats:window.HUNTER_STATIC_BATCH_STATS||null,
+      recent:adaptivePerformance.recentSummary()
     }),
     setAudioMuted,
     setStealthDebug,
@@ -3617,7 +3623,11 @@ updateCrouchButton();
  if(!started||paused||over){updateVehicleSpecialAction();updateOptionalSystems(0,false);resetCameraState();updateBazookaReticle(0);if(eng)eng.g.gain.value=0;return}
 updateVehicleSpecialAction();
 if(!(dt>0))return;
-rebuildVehicleGrid();elapsed+=dt;
+// Graella completa només un cop per RAF, no 15 cops al fotograma saturat.
+if(vehicleGridRebuiltFrameId!==renderLoopFrameId){
+  rebuildVehicleGrid();vehicleGridRebuiltFrameId=renderLoopFrameId;
+}else refreshVehicleGridIfCellsChanged();
+elapsed+=dt;
 window.HUNTER_STEALTH.tick(dt);
 const playerStartX=P.x,playerStartZ=P.z;
 const {f,tr,strafe,ud,running}=readPlayerControls(strafeEnabled,canRun),lim=H-2;
@@ -3926,7 +3936,7 @@ if(K.KeyF&&(!grenadeEquipped||cv)){
   if(fcd>0)fcd=Math.max(0,fcd+overshoot);
 }
 const enemyAiStamp=performanceStatsVisible?performance.now():0;
-updEn(dt,simulationFrameActive);
+updEn(dt,simulationFrameActive,enemyAiPressure);
 if(performanceStatsVisible)perfHotspots.aiMs+=performance.now()-enemyAiStamp;
 window.HUNTER_STEALTH_DEBUG.update(THREE,world,E,P);
 updDead(dt);updPj(dt);updFx(dt);updExtra(dt,t);
@@ -3967,8 +3977,10 @@ const frameTickCoordinator=window.HUNTER_FRAME_TICK.createFrameTickCoordinator({
   updateVictoryCinematic,updateDeathCinematic,
   canContinueCinematics:()=>!paused&&simulationFocused&&!document.hidden
 });
-let last=performance.now();resetSimulationClock(last);
+let last=performance.now(),renderLoopFrameId=0,enemyAiPressure=false;
+resetSimulationClock(last);
 (function loop(now){
+renderLoopFrameId++;
 // DOM can repaint and accept cancel/retry between generation tasks. No world
 // simulation, RNG, LOD, fire, clock debt or partial-world render is permitted.
 if(generationPromise){last=now;frameTickCoordinator.suspend(now);requestAnimationFrame(loop);return}
@@ -3981,6 +3993,14 @@ const cpuStarted=performance.now(),victoryAtStart=victoryCinematic,
       gameplayActive=!!started&&!paused&&!over&&visible,
       cinematicActive=!!started&&!paused&&visible&&
         (!!victoryAtStart&&(victoryAtStart.active||victoryAtStart.finished)||!!deathAtStart?.active);
+// Pressupost adaptatiu només sota càrrega: conserva la física 1/60 s,
+// però evita monopolitzar la CPU fins a 15 subpassos abans de cada render.
+const previousFrame=adaptivePerformance.stats;
+const perStepMs=previousFrame.simulationSteps>0?
+  previousFrame.updateCpuMs/previousFrame.simulationSteps:0;
+enemyAiPressure=gameplayActive&&(rawDt>.085||previousFrame.updateCpuMs>85);
+simulationClock.setStepBudget(enemyAiPressure&&perStepMs>0?
+  Math.max(4,Math.min(15,Math.floor(120/perStepMs))):15);
 let simulated;
 try{simulated=frameTickCoordinator.advanceGameplay(now,gameplayActive)}
 catch(error){

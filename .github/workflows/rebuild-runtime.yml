@@ -40,6 +40,21 @@ jobs:
         run: |
           node --check src/ui.js
           node tests/performance-copy-diagnostic.mjs
+      - name: Check live FPS, captured diagnostics and overloaded AI
+        run: |
+          node --check src/performance.js
+          node --check src/enemy-ai.js
+          node --check src/game-core.js
+          node --check src/simulation-clock.js
+          node --check src/frame-diagnostics-core.mjs
+          node tests/performance-live-diagnostic.cjs
+          node tests/ai-pressure-scheduling.cjs
+          node tests/simulation-pressure-budget.cjs
+          node tests/ai-cpu-optimization.cjs
+          node tests/ai-delta-isolation.cjs
+          node tests/simulation-clock.cjs
+          node tests/frame-diagnostics-parity.mjs
+          node tests/frame-tick-parity.mjs
       - name: Check distance-based coastal terrain LOD
         run: |
           node --check src/terrain.js

@@ -59,6 +59,10 @@ export function createFrameDiagnostics({
      simulationSteps:simulated.steps,simulationMs:simulated.simulatedDt*1000,
      droppedMs:simulated.droppedDt*1000,
      active:simulationActive,now,display:performanceStatsVisible});
+   if(gameplayActive&&simulated.steps>0)adaptivePerformance.captureActiveFrame?.({
+     rawDt,hotspots:perfHotspots,drawCategories:renderCategories,
+     detailed:performanceStatsVisible
+   });
  }
  return Object.freeze({resetHotspots,resetDrawCounters,recordFrame});
 }

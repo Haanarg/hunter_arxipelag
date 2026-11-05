@@ -1,0 +1,24 @@
+#!/usr/bin/env node
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const src=fs.readFileSync(path.join(__dirname,'../src/simulation-clock.js'),'utf8');
+const context=vm.createContext({window:{},Math,Number});
+vm.runInContext(src,context);
+const c=context.HUNTER_SIMULATION_CLOCK.create();
+c.reset(1000);
+let steps=[];
+let s=c.advance(1250,dt=>{steps.push(dt);return true},true);
+assert.equal(s.steps,15,'default clock unchanged');
+assert(steps.every(dt=>dt<=1/60),'physics step precision preserved');
+c.setStepBudget(5);steps=[];
+s=c.advance(1550,dt=>{steps.push(dt);return true},true);
+assert.equal(s.steps,5,'overload returns to render');
+assert(steps.every(dt=>dt<=1/60));
+assert(s.droppedDt>.20,'skipped time is reported');
+c.setStepBudget(15);
+s=c.advance(1800,()=>true,true);
+assert.equal(s.steps,15,'full budget restored');
+c.reset(1800);
+s=c.advance(2050,()=>true,true);
+assert.equal(s.steps,15,'reset restores default budget');
+console.log('PASS default clock, bounded catch-up, dropped time, recovery');

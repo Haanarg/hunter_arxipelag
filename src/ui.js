@@ -221,7 +221,7 @@ window.HUNTER_UI=Object.freeze({
           input.onchange=e=>callback(e.target.checked);
         }
         const refresh=()=>{
-          const s=getState(),perf=s.performance||{},draw=perf.drawCategories||{};
+          const s=getState(),perf=s.performance?.lastActive||s.performance||{},draw=perf.drawCategories||{};
           const rows=Object.entries(draw).sort((a,b)=>b[1]-a[1]);
           document.getElementById('performanceBreakdown').textContent=
             'FPS '+Math.round(perf.fps||0)+' · '+(perf.drawCalls||0)+' dibuixos totals'+
@@ -244,11 +244,11 @@ window.HUNTER_UI=Object.freeze({
         document.getElementById('performanceCopy').onclick=()=>{
           // No serialització de dades per fotograma: només quan l'usuari prem copiar.
           refresh();
-          const s=getState(),perf=s.performance||{},
+          const s=getState(),perf=s.performance?.lastActive||s.performance||{},
             details=actions.getPerformanceDiagnostic?.()||{};
           const report={
             format:'hunter-performance-diagnostic-v1',
-            capturedAt:new Date().toISOString(),
+            capturedAt:perf.capturedAt?new Date(perf.capturedAt).toISOString():new Date().toISOString(),
             version:details.version||window.HUNTER_VERSION||null,
             seed:s.seed,mapScale:s.mapScale,
             player:{x:s.player?.x,z:s.player?.z,vehicle:s.vehicle?.t||null},
@@ -263,14 +263,16 @@ window.HUNTER_UI=Object.freeze({
               triangles:perf.triangles,pixelRatio:perf.pixelRatio,
               simulationSteps:perf.simulationSteps,simulationMs:perf.simulationMs,
               droppedMs:perf.droppedMs,
-              hotspots:perf.hotspots||null,drawCategories:perf.drawCategories||null
+              hotspots:perf.hotspots||null,drawCategories:perf.drawCategories||null,
+              sample:{source:perf.capturedAt?'active-gameplay':'no-active-frame',
+                detailed:!!perf.detailed},recent:details.recent||null
             },
             shadowStats:s.shadowStats||null,enemyLodStats:s.enemyLodStats||null,
             visibilityStats:s.visibilityStats||null,
             rendererMemory:details.rendererMemory||null,
             worldGeneration:details.worldGeneration||null,
             roadStats:details.roadStats||null,staticBatchStats:details.staticBatchStats||null,
-            note:'Mostra del darrer fotograma abans de pausa. Sense estadístiques actives, el desglossament d’IA i categories pot ser incomplet.'
+            note:perf.capturedAt?'Última mostra de joc actiu, conservada durant la pausa. Els detalls d’IA i categories només s’omplen si les estadístiques estaven activades durant la partida.':'Sense mostra activa encara: entra a la partida abans de copiar.'
           };
           const text=JSON.stringify(report,null,2),
             status=document.getElementById('performanceCopyStatus'),

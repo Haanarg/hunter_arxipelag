@@ -7,19 +7,24 @@ window.HUNTER_SIMULATION_CLOCK=Object.freeze({
     const frameLimit=Math.min(maxFrame,maxStep*maxSteps),epsilon=1e-12,
       stats={frames:0,steps:0,rawSeconds:0,acceptedSeconds:0,simulatedSeconds:0,
         droppedSeconds:0,interruptedSeconds:0,idleSeconds:0,invalidFrames:0,last:null};
-    let last=null,epoch=0;
+    let last=null,epoch=0,stepBudget=maxSteps;
     return {
       maxStep,maxSteps,maxFrame:frameLimit,stats,
-      reset(now=null){last=Number.isFinite(now)&&now>=0?now:null;epoch++},
+      reset(now=null){last=Number.isFinite(now)&&now>=0?now:null;epoch++;stepBudget=maxSteps},
+      setStepBudget(limit){
+        stepBudget=Number.isFinite(limit)?Math.max(1,Math.min(maxSteps,Math.floor(limit))):maxSteps;
+      },
       advance(now,step,active=true){
         let rawDt=0,invalid=false;
         if(!Number.isFinite(now)||now<0||(last!==null&&now<last)){
           // Un timestamp invàlid no pot contaminar el següent fotograma.
           invalid=true;last=null;
         }else{if(last!==null)rawDt=(now-last)/1000;last=now}
-        const acceptedDt=active?Math.min(rawDt,frameLimit):0,version=epoch;
+        // En saturació es descarta explícitament temps abans de sobrecarregar
+        // el següent RAF; els subpassos segueixen limitats a 1/60 s.
+        const acceptedDt=active?Math.min(rawDt,frameLimit,maxStep*stepBudget):0,version=epoch;
         let remaining=acceptedDt,steps=0;
-        while(remaining>epsilon&&steps<maxSteps){
+        while(remaining>epsilon&&steps<stepBudget){
           const dt=Math.min(maxStep,remaining);
           remaining=Math.max(0,remaining-dt);steps++;
           if(step(dt)===false||version!==epoch)break;
