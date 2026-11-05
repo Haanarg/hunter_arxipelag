@@ -21,6 +21,7 @@ on:
       - 'tests/performance-copy-diagnostic.mjs'
       - 'tests/performance-live-diagnostic.cjs'
       - 'tests/ai-pressure-scheduling.cjs'
+      - 'tests/ai-delta-isolation.cjs'
       - 'tests/enemy-navigation-remote-ground.cjs'
       - 'tests/enemy-sweep-open-ground.cjs'
       - 'tests/enemy-sweep-elevation-vegetation.cjs'
