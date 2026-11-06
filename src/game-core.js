@@ -4087,13 +4087,13 @@ const measuringRenderMatrix=performanceAudit?.status==='running'&&gameplayActive
 let renderMatrixCpuMs=0;
 // During an audit only: observe the built-in Three.js scene transform pass.
 // Keep every matrix calculation, the render path and all visual effects.
+const gpuSample=measuringRenderMatrix?performanceGpuTimer?.begin():null;
 const originalSceneMatrixUpdate=measuringRenderMatrix?scene.updateMatrixWorld:null;
 if(originalSceneMatrixUpdate)scene.updateMatrixWorld=function(...args){
   const begin=performance.now();
   try{return originalSceneMatrixUpdate.apply(this,args)}
   finally{renderMatrixCpuMs+=performance.now()-begin}
 };
-const gpuSample=measuringRenderMatrix?performanceGpuTimer?.begin():null;
 // Estadístiques de camins limitades al fotograma actual.
 const roadFrameStats=world?.userData?.pathRenderStats;
 frameDiagnostics.resetDrawCounters(roadFrameStats);
