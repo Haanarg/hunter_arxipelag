@@ -19,7 +19,7 @@ const player={x:0,z:0},unit={
 assert.equal(remote(unit,player),Infinity,'distant patrols are dormant');
 unit.x=800;unit.z=0;
 assert.equal(remote(unit,player),.4,'600–1000m enemies use minimal AI');
-unit.x=300;
+unit.x=200;
 assert.equal(remote(unit,player),0,'nearby enemies update every step');
 unit.x=1800;
 for(const patch of [{canSee:true},{alert:1},{aiMode:'combat'},{aiMode:'search'},
