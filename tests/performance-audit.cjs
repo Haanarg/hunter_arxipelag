@@ -24,14 +24,14 @@ function setup(startFlags={shadowsDisabled:false,waterDisabled:false},fullAudit=
   const controller=win.HUNTER_PERFORMANCE_AUDIT.create({
     windowObject:win,warmupMs:100,sampleMs:200,fullAudit,
     getCameraPose:()=>cameraPose.slice(),
-    getState:()=>({seed:67,quality:'desktop',pixelRatio:1,
+    getState:()=>({seed:67,version:'0.6.168',quality:'desktop',pixelRatio:1,
       shadowsDisabled:shadows,waterDisabled:water,
       stressPreset:{seed:2407759483,x:1208,z:-1594,scale:1},
       vehicleFleet:{llanxa:{count:2,meshes:80,shadowCasters:60}}}),
     setShadowsDisabled:x=>{shadows=x;changes.push(['shadows',x])},
     setWaterDisabled:x=>{water=x;changes.push(['water',x])}
   });
-  const frame={active:true,x:10,z:20,frameMs:100,renderCpuMs:24,
+  const frame={active:true,x:10,z:20,frameMs:100,renderCpuMs:24,renderMatrixCpuMs:7,
     postRenderCpuMs:51,preRenderCpuMs:3,terrainTextureCpuMs:11,waterUpgradeCpuMs:39,updateCpuMs:16,terrainCpuMs:.1,drawCalls:2344,
     triangles:769000,simulationSteps:6,aiMs:15,aiNavMs:9.1,aiSweepMs:7.6,
     sweepChecks:135,sweepSamples:426,aiUpdated:170,aiSkipped:490,
@@ -80,6 +80,9 @@ assert.equal(s.controller.results[0].stats.vehicleParts['llanxa / hull'],4);
 assert.equal(s.controller.results[0].stats.vehicleShadowTypes.llanxa,2);
 assert.equal(s.controller.results[0].stats.p99FrameMs,100);
 assert.equal(s.controller.results[0].stats.preRenderCpuMs,3);
+assert.equal(s.controller.results[0].stats.renderMatrixCpuMs,7);
+assert.equal(s.controller.results[0].stats.renderSubmitCpuMs,17);
+assert.equal(s.win.HUNTER_PERF_AUDIT_RESULTS.version,'0.6.168');
 assert.equal(s.controller.results[0].stats.terrainTextureMaxMs,11);
 assert.equal(s.controller.results[0].stats.waterUpgradeMaxMs,39);
 assert.equal(s.controller.results[0].stats.postRenderMaxMs,51);
@@ -106,6 +109,9 @@ assert.deepEqual(quick.flags(),{shadows:false,water:false},
 const focused=quick.win.HUNTER_PERFORMANCE_AUDIT.shareReport(
   quick.win.HUNTER_PERF_AUDIT_RESULTS);
 assert.equal(focused.mode,'focused');
+assert.equal(focused.version,'0.6.168');
+assert.equal(focused.phases[0].stats.renderMatrixCpuMs,7);
+assert.equal(focused.phases[0].stats.renderSubmitCpuMs,17);
 assert.equal(focused.phases.length,1);
 assert.equal(focused.phases[0].stats.waterUpgradeMaxMs,39,
   'retain culprit of long CPU frames');
@@ -153,6 +159,9 @@ console.log('OK: auditoria A/B, fases, estadístiques, cancel·lació i restaura
   await new Promise(resolve=>setImmediate(resolve));
   const shared=JSON.parse(s.copied.at(-1));
   assert.equal(shared.format,'hunter-perf-share-v1');
+  assert.equal(shared.version,'0.6.168');
+  assert.equal(shared.phases[0].stats.renderMatrixCpuMs,7);
+  assert.equal(shared.phases[0].stats.renderSubmitCpuMs,17);
   assert.equal(shared.phases.length,5);
   assert.equal(shared.phases[0].stats.aiNavMs,9.1);
   assert.equal(shared.phases[0].stats.terrainTextureMaxMs,11);
