@@ -118,6 +118,7 @@
     const compactFrame=frame=>frame?{
       cpuMs:cpu(frame),updateCpuMs:frame.updateCpuMs||0,
       terrainCpuMs:frame.terrainCpuMs||0,renderCpuMs:frame.renderCpuMs||0,
+      renderMatrixCpuMs:frame.renderMatrixCpuMs||0,
       preRenderCpuMs:frame.preRenderCpuMs||0,
       postRenderCpuMs:frame.postRenderCpuMs||0,
       terrainTextureCpuMs:frame.terrainTextureCpuMs||0,
@@ -170,6 +171,8 @@
         gpuValues.sort((a,b)=>a-b)[Math.ceil(gpuValues.length*.95)-1]:null,
       gpuOverBudget:gpuValues.filter(value=>value>16.67).length,
       updateCpuMs:avg('updateCpuMs'),renderCpuMs:avg('renderCpuMs'),
+      renderMatrixCpuMs:avg('renderMatrixCpuMs'),
+      renderSubmitCpuMs:Math.max(0,avg('renderCpuMs')-avg('renderMatrixCpuMs')),
       roadVersionCpuMs:avg('roadVersionCpuMs'),roadRefitCpuMs:avg('roadRefitCpuMs'),
       roadVersionChecks:avg('roadVersionChecks'),roadRefits:avg('roadRefits'),
       roadFastSkips:avg('roadFastSkips'),
@@ -216,11 +219,12 @@
       const s=report.phases?.[0]?.stats||{};
       return {
         format:'hunter-perf-share-v1',status:report.status,mode:'focused',
-        seed:report.seed,quality:report.quality,pixelRatio:report.pixelRatio,
+        seed:report.seed,version:report.version||null,quality:report.quality,pixelRatio:report.pixelRatio,
         auditPosition:report.auditPosition,
         phases:[{id:'base-1',name:'Joc normal',stats:{
           ...pick(s,['frames','fps','frameMs','p95FrameMs','p99FrameMs',
-            'updateCpuMs','renderCpuMs','preRenderCpuMs','postRenderCpuMs',
+            'updateCpuMs','renderCpuMs','renderMatrixCpuMs','renderSubmitCpuMs',
+            'preRenderCpuMs','postRenderCpuMs',
             'terrainTextureMaxMs','waterUpgradeMaxMs','postRenderMaxMs',
             'aiMs','aiNavMs','aiSweepMs','aiMsP95','aiMsP99',
             'sweepChecks','sweepSamples','drawCalls','triangles',
@@ -241,7 +245,8 @@
     }
     const metrics=['frames','fps','frameMs','p95FrameMs','p99FrameMs',
       'slowFrames20','frames20to25','frames24to25','slowFrames25','slowFrames50',
-      'updateCpuMs','renderCpuMs','roadVersionCpuMs','roadRefitCpuMs',
+      'updateCpuMs','renderCpuMs','renderMatrixCpuMs','renderSubmitCpuMs',
+      'roadVersionCpuMs','roadRefitCpuMs',
       'roadVersionChecks','roadRefits','roadFastSkips','postRenderCpuMs',
       'preRenderCpuMs','terrainTextureCpuMs','waterUpgradeCpuMs',
       'postRenderMaxMs','terrainTextureMaxMs','waterUpgradeMaxMs',
@@ -256,6 +261,7 @@
       'deferredFaunaCasters','boatMotionProxies'];
     return {
       format:'hunter-perf-share-v1',status:report.status,seed:report.seed,
+      version:report.version||null,
       quality:report.quality,pixelRatio:report.pixelRatio,
       auditPosition:report.auditPosition,stressPreset:report.stressPreset,
       playerBatchStats:report.playerBatchStats,pathStats:report.pathStats,
@@ -420,7 +426,7 @@
         }
       }
       const report={status,mode:fullAudit?'full':'focused',
-        seed:original.seed,quality:original.quality,
+        seed:original.seed,version:original.version||null,quality:original.quality,
         pixelRatio:original.pixelRatio,
         playerBatchStats:original.playerBatchStats||null,
         pathStats:original.pathStats||null,
