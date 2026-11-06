@@ -18,6 +18,11 @@ export async function modelTraces(models){
   if(full){
     visit(model);
     for(const child of full.children)child.traverse(visit);
+  }else if(model.userData.rowboatVisualLod){
+    // El vaixell de rems conserva el seu model original intacte:
+    // l'oval distant, afegit després del batching, no forma part del baseline.
+    visit(model);
+    for(const child of model.userData.rowboatVisualLod.full)child.traverse(visit);
   }else model.traverse(visit);
   traces[t]=hash.digest('hex');
  }return traces;
