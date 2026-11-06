@@ -5,6 +5,15 @@ import {createHovercraftConcept,hovercraftConcepts} from './hovercraft-concepts.
 export const vehicleModels=Object.freeze({
   ...vehicleSpecs,
   steeringMax:Object.freeze({bici:.60,moto:.52,cotxe:.44,cotxe_civil:.43,camio:.36,tanqueta:.34}),
+  // LOD purament visual de les barques de rems. Ni la física, ni els
+  // ocupants, ni la posició del vehicle es veuen alterats.
+  setRowboatVisualLod(model,far){
+    const lod=model?.userData?.rowboatVisualLod;
+    if(!lod||lod.far.visible===!!far)return false;
+    lod.far.visible=!!far;
+    for(const node of lod.full)node.visible=!far;
+    return true;
+  },
   // Els pivots giren en Y, per separat de les rodes que roden en X.
   animateSteering(model,type,turn,dt){
     const pivots=model?.userData?.steeringPivots;
@@ -776,6 +785,22 @@ export const vehicleModels=Object.freeze({
         batchName:'hunter-vehicle-rigid-batch'
       });
       g.userData.vehicleBatchStats=batchStats;
+      if(t==='barca_rems'){
+        // A distància el model complex, els dos rems i l'estèncil de
+        // la banyera se substitueixen per un únic oval marró.
+        const full=[...g.children];
+        const far=new THREE.Mesh(new THREE.SphereGeometry(1,12,8),
+          material(0x88613b,'organic'));
+        far.name='rowboat-far-oval';
+        far.scale.set(1.25,.43,2.84);far.position.y=.57;
+        far.visible=false;far.castShadow=false;far.receiveShadow=false;
+        far.userData.noCastShadow=true;
+        g.add(far);
+        g.userData.rowboatVisualLod={full,far};
+        // Les estadístiques inclouen també la malla nova, sense atribuir
+        // cap estalvi de batching a l'oval afegit després de l'agrupació.
+        batchStats.before++;batchStats.after++;
+      }
       g.scale.setScalar(VS[t]);
       if(resources&&cacheKey){
         resources.retainModel(g);templates.set(cacheKey,g);

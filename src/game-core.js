@@ -3371,6 +3371,15 @@ function updateVehicleVisualLod(t,dt,{skipHidden=false}={}){
   for(const v of V){
     // Ni el LOD ni les animacions poden ressuscitar una carcassa.
     if(v.destroyed||skipHidden&&!v.o.visible&&v!==cv)continue;
+    if(v.t==='barca_rems'&&v.o?.userData?.rowboatVisualLod){
+      const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,
+        currentFar=v.o.userData.rowboatVisualLod.far.visible,
+        // Histèresi: 660 m en acostar-se, 740 m en allunyar-se.
+        limit=currentFar?660:740,
+        focus=!!scopeVisual?.contains(v.x,v.o.position.y+1.5,v.z,5);
+      window.HUNTER_VEHICLES.setRowboatVisualLod(v.o,
+        v!==cv&&!focus&&d2>limit*limit);
+    }
     if(v===cv){
       place(v,t,dt,v.steerInput||0);
       v.visualLodAcc=0;
