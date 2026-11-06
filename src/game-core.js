@@ -948,7 +948,9 @@ function nearbyRock(x,z,r=0,baseY=-Infinity,topY=Infinity){
 }
 function vehiclePushPlayer(){
   if(cv||playerFall)return;
-  for(const v of [...V,...E.filter(u=>['jeep','tanqueta','tanc'].includes(u.t))]){
+  // Els vaixells patrulla també tenen un casc físic en mode enemic.
+  // Quan la tripulació mor i el casc passa a V, no es duplica el contacte.
+  for(const v of [...V,...E.filter(u=>['jeep','tanqueta','tanc','patrulla_marina'].includes(u.t))]){
     if(v.destroyed)continue;
     const overlap=circleVehicleOverlap(P.x,P.z,.62,v),
           sweep=runoverSweepHit(v.impactFromX??v.x,v.impactFromZ??v.z,

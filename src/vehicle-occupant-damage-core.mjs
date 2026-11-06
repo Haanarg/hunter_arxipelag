@@ -38,9 +38,9 @@ export function selectReplacementDriver(state,driverSeatId='driver',otherSeatIds
 
 // Seat-sized glass zones are cheap analytic volumes (no mesh raycasts).
 // Only the window on the actually intersected seat is shattered.
-const COVERED=new Set(['cotxe','cotxe_civil','camio','heli','heli_combat']);
+const COVERED=new Set(['cotxe','jeep','cotxe_civil','camio','heli','heli_combat']);
 export function vehicleSeatWorld(v,seat=0,baseY=v.y??0){
- const scale=({camio:1.8125,cotxe:1.3,cotxe_civil:1.2,heli:1.75,heli_combat:1.82})[v.t]||1;
+ const scale=({camio:1.8125,cotxe:1.3,jeep:1.3,cotxe_civil:1.2,heli:1.75,heli_combat:1.82})[v.t]||1;
  const lx=v.t==='moto'?0:(seat===0?-1:1)*(v.t==='camio'?.62:.72)*scale;
  const lz=(v.t==='moto'?.4:v.t==='camio'?-.62:-.43)*scale;
  const ly=(v.t==='moto'?1.75:v.t==='camio'?1.7:1.48)*scale;
@@ -51,7 +51,7 @@ export function vehicleSeatWorld(v,seat=0,baseY=v.y??0){
 // Punt visual del cap dels occupants asseguts. La retícula segueix
 // la posició del rider reutilitzat i no el centre baix del seient.
 export function vehicleOccupantHeadWorld(v,seat=0,baseY=v.y??0){
- const scale=({camio:1.8125,cotxe:1.3,cotxe_civil:1.2,moto:1.2})[v.t]||1;
+ const scale=({camio:1.8125,cotxe:1.3,jeep:1.3,cotxe_civil:1.2,moto:1.2})[v.t]||1;
  const truck=v.t==='camio',motorbike=v.t==='moto',civil=v.t==='cotxe_civil';
  const fit=truck?.82:1;
  const lx=motorbike?0:(seat===0?-1:1)*(truck?.77*fit:civil?.613:.73);

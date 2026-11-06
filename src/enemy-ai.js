@@ -318,6 +318,8 @@ function soldierEngage(u,target,targetY,dt,d,visible){
 // El marcador és fill de la boca del canó visible: l'origen del tret
 // segueix sempre el model real i no el centre del vehicle.
 function enemyCarRifleShot(u,target,targetY){
+  // El tirador abatut no pot disparar des del cotxe patrulla.
+  if(u.t==='jeep'&&u.patrolCrewHp?.[1]<=0)return null;
   const crew=u.o.userData.enemyCarCrew;
   if(!crew)return null;
   u.o.position.set(u.x,(u.gy??enemyGroundAt(u,u.x,u.z))+.05,u.z);
@@ -967,7 +969,10 @@ function updEn(frameDt,preserveFrameBudget=false,underPressure=false){
       shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE,u);
     }
   }else if(u.canSee){
-    u.hd=Math.atan2(-dx,-dz);
+    // La cabina sense conductor no ha de girar per mirar el jugador.
+    // El tirador viu conserva la seva pròpia orientació del fusell.
+    if(u.t!=='jeep'||u.patrolCrewHp?.[0]!==0)
+      u.hd=Math.atan2(-dx,-dz);
     if(u.sp>0&&d>u.rng*.55){
       const dp=u.defenseTarget;
       if(dp&&Math.hypot(dp.x-u.x,dp.z-u.z)>1.8){
@@ -1231,6 +1236,9 @@ if(!seedSearchMode&&t!=='soldat'&&t!=='general')window.HUNTER_ENEMY_LOD.optimize
 if(!seedSearchMode&&t==='patrulla_marina')ensureEnemyVehicleFlag(g,'patrulla_marina');
 if(!seedSearchMode)world.add(g);const sensePhase=(E.length%10)*.01,u={t,x,z,gy,hd:rr(0,6.28),o:g,home:{x,z},cd:rr(0,1),alert:0,wt:0,tx:x,tz:z,senseT:sensePhase,
   remoteAiPhase:((E.length*37)%101)/101,canSee:false,defenseTarget:null,...c};
+if(t==='jeep')u.patrolCrewHp=[
+  COMBAT_BALANCE.people.soldier,COMBAT_BALANCE.people.soldier
+];
 if(options.elite){u.elite=true;u.hp=COMBAT_BALANCE.people.elite;u.dmg=COMBAT_BALANCE.weapons.eliteRifle;u.rng=85;u.rate=TANKETTE_FIRE_INTERVAL;u.sp=8;u.cd=.4+(E.length%4)*.14}
 if(t==='torre'){u.sp=0;u.rate=0;u.rng=0}
 E.push(u);
