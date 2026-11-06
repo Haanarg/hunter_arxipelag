@@ -400,10 +400,10 @@ function enemyVehicleRelease(u,leave=true){
 function enemyVehicleReserve(u,{fleeing=false}={}){
   if(u.enemyVehicleClaim||u.elite||u.rocketSoldier||u.basement)return false;
   const id=u.saveId??('soldat:'+Math.round(u.home?.x??u.x)+':'+Math.round(u.home?.z??u.z));
-  // Cada intent (cada 3 s) té una tirada nova i reproduïble.
+  // Cada intent, espaiat pel dubte de la dificultat, té una tirada nova.
    // Fer-la només per ID deixava alguns soldats permanentment incapaços
    // de requisar un vehicle neutral, fins i tot després de molts intents.
-   const attempt=Math.floor(elapsed/enemyRequisition.REQUISITION.retrySeconds);
+   const attempt=Math.floor(elapsed/enemyRequisition.requisitionDoubtSeconds(DIF));
    if(enemyRequisition.requisitionRoll(id+':'+attempt,seed)>=enemyRequisition.requisitionChance(DIF,fleeing))return false;
   const range=fleeing?enemyRequisition.REQUISITION.fleeingSearchRadius:enemyRequisition.REQUISITION.searchRadius;
   const choices=enemyRequisition.candidateVehicles(
@@ -864,14 +864,20 @@ function updEn(frameDt,preserveFrameBudget=false,underPressure=false){
        if(!nativeCoopSession&&!cheats.invisible&&!over&&!u.enemyVehicleClaim){
          const fleeing=enemyRequisition.observeFleeing(
            u,q,elapsed,u.enemyFleeTracking??={});
-         const justFled=fleeing&&!u.enemyRequisitionWasFleeing;
          u.enemyRequisitionWasFleeing=fleeing;
          const notice=fleeing?enemyRequisition.REQUISITION.fleeingNoticeRadius:
-           enemyRequisition.REQUISITION.noticeRadius;
-         if(d<=notice&&(justFled||elapsed>=(u.enemyRequisitionNextTry||0))){
-           u.enemyRequisitionNextTry=elapsed+enemyRequisition.REQUISITION.retrySeconds;
-           enemyVehicleReserve(u,{fleeing});
-         }
+           enemyRequisition.REQUISITION.noticeRadius,
+           doubt=enemyRequisition.requisitionDoubtSeconds(DIF);
+         if(d<=notice){
+           // El primer intent també requereix dubte. Fugir amplia
+           // el radi i la probabilitat, però no elimina l'espera.
+           if(!(u.enemyRequisitionNextTry>0))
+             u.enemyRequisitionNextTry=elapsed+doubt;
+           if(elapsed>=u.enemyRequisitionNextTry){
+             u.enemyRequisitionNextTry=elapsed+doubt;
+             enemyVehicleReserve(u,{fleeing});
+           }
+         }else u.enemyRequisitionNextTry=null;
        }
        const raw=!cheats.invisible&&!!(cv? !over&&d<115&&
          STEALTH.inView(u.hd,dx,py+1.5-eyeY,dz,115)&&
