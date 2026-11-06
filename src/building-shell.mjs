@@ -83,7 +83,7 @@ export function planBuildingShell(w,d,h,opt={},random){
     wallH=opt.floors===2?h/2:h,wallHp=opt.civilianHut||opt.weakWalls?4:12,
     // La fusta feble d'un barracó militar té la mateixa coberta de 8 PV
     // que una cabana civil de pescadors: una granada de 10 PV la trenca.
-    roofHp=opt.civilianHut||opt.weakWalls?8:opt.hangar?12:16,segments=[],assemblies=[];
+    roofHp=opt.civilianHut||opt.weakWalls?8:opt.hangar?10:16,segments=[],assemblies=[];
   if(!Number.isFinite(dw)||dw<=0||!Number.isInteger(ds)||ds<0||ds>3)throw new RangeError('Invalid building doorway');
   const seg=(lx,lz,sx,sz,door=false,windows=false,supportSide=null,supportWeight=0,level=0)=>{
     const index=segments.length;segments.push({lx,lz,sx,sz,door:!!door,windows,supportSide,supportWeight,level});return index;
@@ -92,6 +92,18 @@ export function planBuildingShell(w,d,h,opt={},random){
   else if(opt.hangar){
     const frontZ=ds===0?d/2-t/2:-d/2+t/2,sl=Math.max(.5,(w-dw)/2),off=dw/2+sl/2;
     for(const lx of [-off,off]){const i=seg(lx,frontZ,sl,t);segments[i].hangarPost=true;}
+    // Fons d'hangar corbat seguint la volta; totes les franges formen
+    // una sola paret destructible de 10 PV (també al Worker).
+    const backZ=ds===0?-d/2+t/2:d/2-t/2,
+      strips=10,sectionWidth=w/strips,rear=[];
+    for(let n=0;n<strips;n++){
+      const lx=-w/2+(n+.5)*sectionWidth,
+        height=.12+Math.sqrt(Math.max(0,(w/2)**2-lx**2)),
+        index=seg(lx,backZ,sectionWidth,t);
+      segments[index].hangarBackHeight=height;
+      rear.push(index);
+    }
+    assemblies.push(rear);
   }else{
     [[0,d/2-t/2,w,t,0],[0,-d/2+t/2,w,t,0],[w/2-t/2,0,t,d-2*t,1],[-w/2+t/2,0,t,d-2*t,1]].forEach(([cx,cz,sx,sz,ax],k)=>{
       if(k!==ds){seg(cx,cz,sx,sz,false,!opt.bunker&&!opt.solidWalls,k,1);return;}
@@ -123,7 +135,7 @@ export function shellColliders(x,z,fy,w,d,h,opt={},random){
       if(plan.wallH-dh>.05)walls.push({...box,y0:fy+dh,y1:fy+plan.wallH,hp:plan.wallHp,door:false,open:false,playerBlock:false,rammable:false});
     }else{
       const layout=s.windows?windowLayout(s.sx,s.sz,plan.wallH):null;
-      walls.push({...box,y0:fy+s.level-(s.level?0:1),y1:fy+s.level+(s.hangarPost?Math.max(3.1,h*.3):plan.wallH),hp:s.hangarPost?16:plan.wallHp,door:false,open:false,windows:!!s.windows,upperFloorWindow:!!s.windows&&s.level>0,...(layout?{windowPanes:layout.centers.map(c=>({axis:layout.alongX?'z':'x',x:x+s.lx+(layout.alongX?c:0),z:z+s.lz+(layout.alongX?0:c),y0:fy+s.level+layout.bottom+.09,y1:fy+s.level+layout.bottom+layout.height-.09,width:layout.width-.18}))}:{}),...(s.hangarPost?{}:{supportSide:s.supportSide,supportWeight:s.supportWeight})});
+      walls.push({...box,y0:fy+s.level-(s.level?0:1),y1:fy+s.level+(s.hangarPost?Math.max(3.1,h*.3):(s.hangarBackHeight??plan.wallH)),hp:s.hangarPost?16:s.hangarBackHeight!=null?10:plan.wallHp,door:false,open:false,windows:!!s.windows,upperFloorWindow:!!s.windows&&s.level>0,...(layout?{windowPanes:layout.centers.map(c=>({axis:layout.alongX?'z':'x',x:x+s.lx+(layout.alongX?c:0),z:z+s.lz+(layout.alongX?0:c),y0:fy+s.level+layout.bottom+.09,y1:fy+s.level+layout.bottom+layout.height-.09,width:layout.width-.18}))}:{}),...(s.hangarPost?{}:{supportSide:s.supportSide,supportWeight:s.supportWeight})});
     }
     segmentWalls.push(Array.from({length:walls.length-start},(_,i)=>start+i));
   }
