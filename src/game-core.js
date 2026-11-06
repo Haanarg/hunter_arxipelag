@@ -1985,10 +1985,10 @@ function syncCameraVehicle(){if(cameraVehicle!==cv)resetCameraState()}
 const LOD_NEAR2=500*500,LOD_MID2=1200*1200,ITEM_ANIM2=500*500,FAUNA_NEAR2=650*650,FAUNA_MID2=1400*1400;
 // Distàncies visuals per família. NO afecten danys, física, IA ni mapa.
 const VISUAL_RANGES={
-  desktop:{buildings:1650,fences:1020,props:1300,vehicles:2080,enemies:1850,items:1000,fauna:1350,antennas:1750},
-  mobile:{buildings:980,fences:580,props:750,vehicles:1200,enemies:1050,items:620,fauna:790,antennas:1100},
-  ultra:{buildings:650,fences:400,props:540,vehicles:780,enemies:700,items:450,fauna:530,antennas:770}
-}[qualityName]||{buildings:1200,fences:790,props:990,vehicles:1620,enemies:1410,items:800,fauna:1100,antennas:1360};
+  desktop:{buildings:1650,fences:1020,props:700,vehicles:2080,enemies:1850,items:420,fauna:1350,antennas:1750},
+  mobile:{buildings:980,fences:580,props:510,vehicles:1200,enemies:1050,items:330,fauna:790,antennas:1100},
+  ultra:{buildings:650,fences:400,props:350,vehicles:780,enemies:700,items:250,fauna:530,antennas:770}
+}[qualityName]||{buildings:1200,fences:790,props:600,vehicles:1620,enemies:1410,items:380,fauna:1100,antennas:1360};
 const {visibilityStats,enemyLodStats}=
   window.HUNTER_GAME_STATE.createVisibilityCounters();
 const ENEMY_LOD_RANGES={
@@ -2184,8 +2184,11 @@ function updateDistanceVisibility(){
   const chunkRadius=113; // diagonal mitja del sector de 160 m
   for(const mesh of staticVisualBatches){
     const dx=mesh.position.x-P.x,dz=mesh.position.z-P.z,
-          r=max.props+chunkRadius;
-    mesh.visible=dx*dx+dz*dz<r*r||!!focus?.intersectsXZBox(mesh.position.x,mesh.position.z,80);
+          // El lot inclou peces de tot el sector: no desapareix quan
+          // la seva vora encara és propera. La histèresi evita parpelleig.
+          r=max.props+chunkRadius+(mesh.visible?35:0);
+    mesh.visible=dx*dx+dz*dz<r*r||
+      !!focus?.intersectsXZBox(mesh.position.x,mesh.position.z,80);
     if(!mesh.visible)visibilityStats.props++;
   }
   for(const v of V){
@@ -2215,8 +2218,11 @@ function updateDistanceVisibility(){
     if(level==='full'&&e.t!=='soldat'&&e.t!=='general')enemyLodStats.vehicleFull++;
   }
   for(const item of items){
-    const dx=item.x-P.x,dz=item.z-P.z;
-    item.o.visible=dx*dx+dz*dz<max.items*max.items||
+    const dx=item.x-P.x,dz=item.z-P.z,
+          // Es tracta només de dibuix: el recollible sempre existeix
+          // al mapa i conserva totes les comprovacions de recollida.
+          r=max.items+(item.o.visible?25:0);
+    item.o.visible=dx*dx+dz*dz<r*r||
       !!focus?.contains(item.x,item.y+1,item.z,2);
     if(!item.o.visible)visibilityStats.items++;
   }
@@ -4090,15 +4096,24 @@ frameDiagnostics.resetDrawCounters(roadFrameStats);
  }else ren.render(scene,cam);
 if(gpuSample)performanceGpuTimer.end(gpuSample);
 const renderCompleted=performance.now();
+// Les tasques incrementals de textura i malla del mar tenen el seu propi
+// cronòmetre. Permet detectar un pic puntual de 400 ms sense confondre'l
+// amb IA o GPU. En producció el cost són només dues lectures de rellotge.
+const postStart=renderCompleted;
+let afterTerrainTexture=postStart,afterWaterUpgrade=postStart;
 if(started&&!paused&&!over){
   advanceTerrainTexture();
+  afterTerrainTexture=performance.now();
   if(waterUpgradePending){water.queueResolutionUpgrade();waterUpgradePending=false}
   water.stepResolutionUpgrade(2);
+  afterWaterUpgrade=performance.now();
 }
 const postRenderCompleted=performance.now();
 frameDiagnostics.recordFrame({
   gameplayActive,rawDt,P,gpuSample,cpuStarted,simulationEnded,
   terrainEnded,renderStarted,renderCompleted,postRenderCompleted,
+  terrainTextureCpuMs:afterTerrainTexture-postStart,
+  waterUpgradeCpuMs:afterWaterUpgrade-afterTerrainTexture,
   simulated,roadFrameStats,shadowRedrawn,now,
   simulationActive:!!started&&!paused&&!over,performanceStatsVisible
 });
