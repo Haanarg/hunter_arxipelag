@@ -11,7 +11,11 @@ const createGame=require('./harness.cjs');
    // Reutilitzam vehicles reals del món original però aïllam només
    // les crides visuals a place(): no volem alterar física ni servidor.
    clearKeys();scopeActive=false;paused=false;over=0;started=1;
-   const vehicles=V.slice(0,5);
+   // Mesuram exclusivament unitats terrestres estacionàries.
+   // Les naus visibles i qualsevol vehicle en moviment van ara a 20/20
+   // per evitar sotracs, i són objecte d'una altra prova.
+   const marine=new Set(['llanxa','llanxa_coets','moto_aquatica','barca_rems','windsurf','ferry','hover']);
+   const vehicles=V.filter(v=>!marine.has(v.t)).slice(0,5);
    if(vehicles.length<5)throw Error('La fixture no conté cinc vehicles');
    V=vehicles;
    const [pilot,near,medium,far,wreck]=vehicles;
@@ -21,6 +25,9 @@ const createGame=require('./harness.cjs');
      v.v=0;v.hd=Math.PI;v.x=0;v.z=0;
    }
    near.x=30;medium.x=700;far.x=1600;wreck.x=35;wreck.destroyed=true;
+   // Cap posició visual pendent: volem cronometrar la cadència LOD,
+   // no la correcció d'un desplaçament físic de 1,6 km.
+   for(const v of vehicles){v.o.position.x=v.x;v.o.position.z=v.z;}
    let visualCalls=0;
    place=(v,t,dt,steering)=>{v.testVisualCalls.push({dt,steering});visualCalls++};
    const samples=()=>vehicles.map(v=>v.testVisualCalls.length);
