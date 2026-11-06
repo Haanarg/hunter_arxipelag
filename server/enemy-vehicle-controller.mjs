@@ -69,7 +69,8 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
   const nearby=players().filter(p=>p.hp>0&&!p.fall&&!p.swimming)
     .map(p=>({p,d:distance(unit,p)}))
     .sort((a,b)=>a.d-b.d);
-  const actor=nearby[0]?.p;if(!actor)return false;
+  const actor=nearby[0]?.p;
+  if(!actor){unit.enemyRequisitionNextTry=null;return false;}
   const tracking=unit.enemyFleeTracking??={};
   const fleeing=observeFleeing(unit,actor,tick/30,tracking);
   unit.enemyRequisitionWasFleeing=fleeing;
