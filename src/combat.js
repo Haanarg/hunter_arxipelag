@@ -1094,14 +1094,14 @@ function updateLightAimReticle(dt){
       if(!gun){hide();return}
       ({x,y,z}=gun.origin);
       fx=-Math.sin(cv.hd);fz=-Math.cos(cv.hd);
-      shotClass='light';range=120;cone=.97;vertical=Math.PI/2;
+      shotClass='light';range=150;cone=.97;vertical=Math.PI/2;
     }else if(cv.t==='heli_combat'){
       const hd=cv.hd,frontX=-Math.sin(hd),frontZ=-Math.cos(hd),
         c=Math.cos(Math.PI/6);
       x=cv.x+frontX*4.1*VS.heli_combat;
       y=cv.o.position.y+.15;z=cv.z+frontZ*4.1*VS.heli_combat;
       fx=frontX*c;fy=-.5;fz=frontZ*c;
-      shotClass='attackCannon';range=130;cone=.73;vertical=.97;
+      shotClass='attackCannon';range=150;cone=.73;vertical=.97;
     }else if(!OPEN_RIDER_PISTOL.has(cv.t)){hide();return;}
     else {y=(cv.o?.position.y??P.y)+1.65;}
   }else if(!cv){
@@ -1111,7 +1111,7 @@ function updateLightAimReticle(dt){
     if(assaultRifleEquipped){
       shotClass='assault';range=SMALL_ARMS_RANGE.assault;cone=RIFLE_AIM_CONE;
     }else if(sniperEquipped){
-      shotClass='sniper';range=180;cone=RIFLE_AIM_CONE;
+      shotClass='sniper';range=200;cone=RIFLE_AIM_CONE;
     }
   }
   const focus={};
@@ -1138,7 +1138,7 @@ function updateLightAimReticle(dt){
 }
 // La retícula i el míssil de l'helicòpter comparteixen la mateixa
 // trajectòria menys picada, el mateix abast i el mateix autoapuntat.
-const HELI_MISSILE_ANGLE=Math.PI*25/180,HELI_MISSILE_RANGE=210;
+const HELI_MISSILE_ANGLE=Math.PI*25/180,HELI_MISSILE_RANGE=250;
 // Una sola solució per als coets de la llanxa pilotable. La retícula
 // i el projectil comparteixen origen, elevació i autoapuntat.
 function combatBoatRocketAim(v,focus=null){
@@ -1146,7 +1146,7 @@ function combatBoatRocketAim(v,focus=null){
         x=v.x+fx*6,y=v.o.position.y+1.2,z=v.z+fz*6,
         base=Math.hypot(1,.015);
   return {x,y,z,direction:autoAimWeaponShot(x,y,z,
-    fx/base,.015/base,fz/base,105,.82,'heavy',focus,68*HEAVY_SHOT_SPEED_FACTOR,.8)};
+    fx/base,.015/base,fz/base,250,.82,'heavy',focus,68*HEAVY_SHOT_SPEED_FACTOR,.8)};
 }
 function combatHeliMissileAim(v,focus=null){
   const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),horizontal=Math.cos(HELI_MISSILE_ANGLE),
@@ -1463,7 +1463,7 @@ if(c=='tanc'||c=='tanqueta'){
   }
 }
 else if(c==='heli'){throwHelicopterGrenade();return}
-else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*4.1*VS.heli_combat,y=cv.o.position.y+.15,z=cv.z+fz*4.1*VS.heli_combat;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,130,.73,'attackCannon',null,145,.97);fcd=.12;shoot(x,y,z,ax,ay,az,145,COMBAT_BALANCE.weapons.attackCannon,0,'p',mB,.85)}
+else if(c=='heli_combat'){const a30=Math.PI/6,ch=Math.cos(a30),sv=Math.sin(a30),x=cv.x+fx_*4.1*VS.heli_combat,y=cv.o.position.y+.15,z=cv.z+fz*4.1*VS.heli_combat;const [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_*ch,-sv,fz*ch,150,.73,'attackCannon',null,145,.97);fcd=.12;shoot(x,y,z,ax,ay,az,145,COMBAT_BALANCE.weapons.attackCannon,0,'p',mB,.85)}
 
 else if(c=='llanxa_coets'){secondaryWeapon();return}
 else if(c&&OPEN_RIDER_PISTOL.has(c)){
@@ -1494,7 +1494,7 @@ else if(!cv&&sniperEquipped&&inv.franctirador){
         focus=scopeActive?window.HUNTER_SCOPE_FOCUS.create(P.x,P.y+1.76,P.z,scopeYaw,scopePitch):null,
         direction=focus
           ?sniperShotVector(muzzle,sniperReticlePoint(focus),focus)
-          :new THREE.Vector3(...autoAimWeaponShot(muzzle.x,muzzle.y,muzzle.z,fx,0,fz,180,RIFLE_AIM_CONE,'sniper',null,470));
+          :new THREE.Vector3(...autoAimWeaponShot(muzzle.x,muzzle.y,muzzle.z,fx,0,fz,200,RIFLE_AIM_CONE,'sniper',null,470));
   shoot(muzzle.x,muzzle.y,muzzle.z,direction.x,direction.y,direction.z,470,COMBAT_BALANCE.weapons.sniper,0,'p',mW,SMALL_ARMS_SCALE);
   if(Pj.length){Pj[Pj.length-1].weapon='sniper';
     Pj[Pj.length-1].life=window.HUNTER_SHARED_WEAPONS.weaponCatalog.sniper.life;}
