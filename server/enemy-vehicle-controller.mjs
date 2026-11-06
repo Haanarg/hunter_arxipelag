@@ -38,7 +38,7 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
      unit.elite||unit.rocketSoldier||unit.basement||!actor||
      distance(unit,actor)>(fleeing?REQUISITION.fleeingNoticeRadius:REQUISITION.noticeRadius))return false;
   // Mateixa tirada canviant per intent que al mode individual.
-  const attempt=Math.floor(tick/(REQUISITION.retrySeconds*30));
+  const attempt=Math.floor(tick/(requisitionDoubtSeconds(meta.difficulty)*30));
   if(requisitionRoll(unit.id+':'+attempt,meta.seed)>=requisitionChance(meta.difficulty,fleeing))return false;
   const dock=geometry();
   const choices=candidateVehicles(unit,vehicles.live(),{
