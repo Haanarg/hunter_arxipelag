@@ -512,7 +512,12 @@ function updateNativeCoopFrame(dt){
    }
    const remoteSeats=remoteVehicle&&s.appliedVehicleRows?.get(remoteVehicle.saveId)?.seats,
          remoteSeat=remoteSeats?.indexOf(other.id)??-1;
-   model.userData.nativeRider.update(remoteVehicle,dt,remoteSeat>=0?remoteSeat:null);
+   const riderTarget=remoteVehicle||target,
+     riderScope=scopeActive?currentSniperFocus():null,
+     riderFocused=!!riderScope?.contains(riderTarget.x,riderTarget.y+2,riderTarget.z,3),
+     riderDistance=riderFocused?0:Math.hypot(riderTarget.x-P.x,riderTarget.z-P.z);
+   model.userData.nativeRider.update(remoteVehicle,dt,
+     remoteSeat>=0?remoteSeat:null,riderDistance);
    const speed=Math.hypot(model.position.x-oldX,model.position.z-oldZ)/Math.max(.001,dt);
    const remoteBag=s.remoteLoadouts?.get(other.id),u=model.userData,
      weapon=u.nativeShotRemaining>0?u.nativeShotWeapon:remoteBag?.weapon||'pistol';
