@@ -6,16 +6,16 @@ export const weaponCatalog=Object.freeze(Object.fromEntries(Object.entries({
  pistol:{name:'Pistola',ammo:'bullets',speed:130,damage:combatBalance.weapons.pistol,range:SMALL_ARMS_RANGE.pistol,cone:SMALL_ARMS_AIM_CONE,vertical:SMALL_ARMS_AIM_VERTICAL,cooldown:.44,life:2.2},
  assault:{name:'Fusell d’assalt',item:'assault',ammo:'bullets',speed:130,damage:combatBalance.weapons.rifle,range:SMALL_ARMS_RANGE.assault,cone:RIFLE_AIM_CONE,vertical:SMALL_ARMS_AIM_VERTICAL,cooldown:.34,life:2.2},
  sniper:{name:'Franctirador',item:'sniper',ammo:'sniperAmmo',speed:470,damage:combatBalance.weapons.sniper,range:2000,cone:RIFLE_AIM_CONE,vertical:Math.PI/2,cooldown:1.05,life:4.4},
- bazooka:{name:'Bazuca',ammo:'bazooka',speed:72*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.bazooka,splash:18,range:185,cone:Math.SQRT1_2,vertical:Math.PI/4,cooldown:1.05,life:3.8},
+ bazooka:{name:'Bazuca',ammo:'bazooka',speed:72*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.bazooka,splash:18,range:200,cone:Math.SQRT1_2,vertical:Math.PI/4,cooldown:1.05,life:3.8},
  knife:{name:'Ganivet',damage:combatBalance.weapons.knife,cooldown:.52},
  cutters:{name:'Cisalla',item:'cutters',cooldown:.52},
  grenade:{name:'Granada',ammo:'grenades',damage:combatBalance.weapons.grenade,splash:16,cooldown:.7},
  c4:{name:'C4',ammo:'c4',damage:combatBalance.weapons.c4,splash:48,cooldown:1},
- tank:{name:'Canó del tanc',speed:85*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.tank,splash:8,range:220,cone:ARMORED_AIM.heavy.cone,vertical:ARMORED_AIM.heavy.vertical,cooldown:.9,life:4.4},
- tankette:{name:'Canó de la tanqueta',speed:135,damage:combatBalance.weapons.tankette,range:85,cone:ARMORED_AIM.light.cone,vertical:ARMORED_AIM.light.vertical,cooldown:.16,life:2.2},
- attackCannon:{name:'Canó de l’helicòpter',speed:145,damage:combatBalance.weapons.attackCannon,range:130,cone:.73,vertical:.97,cooldown:.12,life:2.2},
- heliMissile:{name:'Míssil',ammo:'rockets',speed:72*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.heliMissile,splash:10,range:185,cone:.68,vertical:.9,cooldown:.75,life:3.3},
- boatRocket:{name:'Coet naval',speed:68*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.boatRocket,splash:11,range:185,cone:.68,vertical:.9,cooldown:.9,life:2.2}
+ tank:{name:'Canó del tanc',speed:85*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.tank,splash:8,range:250,cone:ARMORED_AIM.heavy.cone,vertical:ARMORED_AIM.heavy.vertical,cooldown:.9,life:4.4},
+ tankette:{name:'Canó de la tanqueta',speed:135,damage:combatBalance.weapons.tankette,range:150,cone:ARMORED_AIM.light.cone,vertical:ARMORED_AIM.light.vertical,cooldown:.16,life:2.2},
+ attackCannon:{name:'Canó de l’helicòpter',speed:145,damage:combatBalance.weapons.attackCannon,range:150,cone:.73,vertical:.97,cooldown:.12,life:2.2},
+ heliMissile:{name:'Míssil',ammo:'rockets',speed:72*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.heliMissile,splash:10,range:250,cone:.68,vertical:.9,cooldown:.75,life:3.3},
+ boatRocket:{name:'Coet naval',speed:68*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.boatRocket,splash:11,range:250,cone:.68,vertical:.9,cooldown:.9,life:2.2}
 }).map(([key,value])=>[key,Object.freeze(value)])));
 export const personalWeapons=Object.freeze(['pistol','assault','sniper','bazooka','knife','cutters','c4']);
 export const combatCommands=Object.freeze([...personalWeapons,'grenade','secondary']);
