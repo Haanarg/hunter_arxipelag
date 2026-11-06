@@ -53,7 +53,7 @@ function setup(startFlags={shadowsDisabled:false,waterDisabled:false},fullAudit=
     begin,startButton,
     turnCamera:()=>{cameraPose=[0,Math.sin(.15),0,Math.cos(.15)];}};
 }
-const s=setup({},true);
+const s=setup({shadowsDisabled:false,waterDisabled:false},true);
 assert.equal(s.controller.status,'pending');
 assert.equal(s.startButton.disabled,true);
 s.controller.onFrame({...s.frame,active:false});
