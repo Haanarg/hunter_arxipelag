@@ -164,6 +164,20 @@ function enemySweptSubset(items,ax,az,bx,bz,marginFor){
        item.z+margin>=minZ&&item.z-margin<=maxZ);
   });
 }
+// Els murs tenen x0/x1/z0/z1, no x/z: el prefiltre genèric els
+// mantenia tots. Es descarten només els que queden fora de la caixa
+// conservadora del trajecte, sense modificar la col·lisió final.
+function enemySweptWallSubset(walls,ax,az,bx,bz,margin){
+  const minX=Math.min(ax,bx)-margin,maxX=Math.max(ax,bx)+margin,
+    minZ=Math.min(az,bz)-margin,maxZ=Math.max(az,bz)+margin;
+  return walls.filter(w=>{
+    // Un mur amb límits no disponibles es conserva per seguretat.
+    if(!Number.isFinite(w.x0)||!Number.isFinite(w.x1)||
+       !Number.isFinite(w.z0)||!Number.isFinite(w.z1))return true;
+    return Math.max(w.x0,w.x1)>=minX&&Math.min(w.x0,w.x1)<=maxX&&
+      Math.max(w.z0,w.z1)>=minZ&&Math.min(w.z0,w.z1)<=maxZ;
+  });
+}
 // Sample both translation and rotation; a valid endpoint never permits a jump through a wall.
 function enemySweep(u,ax,az,bx,bz,fromHd,toHd,dynamic=true,route=false){
   const sweepStamp=performanceStatsVisible?performance.now():0;
@@ -180,8 +194,8 @@ function enemySweep(u,ax,az,bx,bz,fromHd,toHd,dynamic=true,route=false){
   const cx=(ax+bx)*.5,cz=(az+bz)*.5,half=distance*.5,
     solidRadius=route||veh?radius:enemyBodyRadius(u);
   const staticCandidates={
-    walls:enemySweptSubset(wallCandidates(cx,cz,half+solidRadius),
-      ax,az,bx,bz,()=>solidRadius+2),
+    walls:enemySweptWallSubset(wallCandidates(cx,cz,half+solidRadius),
+      ax,az,bx,bz,solidRadius+2),
     treeCache:{cx:NaN,cz:NaN,trees:[]}
   };
   const vehicleMargin=v=>{
