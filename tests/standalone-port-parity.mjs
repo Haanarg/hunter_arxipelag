@@ -121,7 +121,7 @@ for(const seed of [67,148,2728631024,4294967295])for(const scale of [1,2])
   pierCases++;
  }
 for(const seed of [67,148,355])for(const kind of [0,2,7]){
- const a=scenario(seed,1,kind,0,true),b=scenario(seed,1,kind,0);
+ const a=scenario(seed,1,kind,0),b=scenario(seed,1,kind,0);
  const q={x:0,z:0,portBest:{x:0,z:680}};
  const old=a.api.makeStandalonePier({...q}),next=b.api.makeStandalonePier({...q});
  const first=old.next(),second=next.next();
