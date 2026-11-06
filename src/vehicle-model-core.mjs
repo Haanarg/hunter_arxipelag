@@ -1,5 +1,6 @@
 import {turretSpecs,advanceTurret} from './vehicle-turret-core.mjs';
 import {vehicleSpecs} from './vehicle-specs.mjs';
+import {createDistantVehicleFactory,setDistantVehicleLOD} from './vehicle-distant-lod.mjs';
 import {createHovercraftConcept,hovercraftConcepts} from './hovercraft-concepts.mjs?v=0.6.81';
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 export const vehicleModels=Object.freeze({
@@ -7,6 +8,7 @@ export const vehicleModels=Object.freeze({
   steeringMax:Object.freeze({bici:.60,moto:.52,cotxe:.44,cotxe_civil:.43,camio:.36,tanqueta:.34}),
   // LOD purament visual de les barques de rems. Ni la física, ni els
   // ocupants, ni la posició del vehicle es veuen alterats.
+  setDistantVehicleLOD,
   setRowboatVisualLod(model,far){
     const lod=model?.userData?.rowboatVisualLod;
     if(!lod||lod.far.visible===!!far)return false;
@@ -47,7 +49,7 @@ export const vehicleModels=Object.freeze({
     };
   },
   createFactory(THREE,{box,material,shadows,resources=null,civilianCar=null,humvee:humveeFactory=null,truck:truckFactory=null,batching=null}){
-    const VS=this.scales,templates=new Map();
+    const VS=this.scales,templates=new Map(),distant=createDistantVehicleFactory(THREE,resources);
     const rod=(g,a,b,r,c,profile='metal')=>{const v=new THREE.Vector3(...a),w=new THREE.Vector3(...b),delta=w.clone().sub(v),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),8),material(c,profile));m.position.copy(v.add(w).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());g.add(m);return m};
     const round=(g,r,h,c,x,y,z,axis='y',profile='metal')=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,12),material(c,profile));m.position.set(x,y,z);if(axis==='x')m.rotation.z=Math.PI/2;if(axis==='z')m.rotation.x=Math.PI/2;g.add(m);return m};
     const roundedPrism=(g,w,h,d,r,c,x,y,z,profile='paint')=>{const hw=w/2,hh=h/2,rr=Math.min(r,hw-.02,hh-.02),s=new THREE.Shape();s.moveTo(-hw+rr,-hh);s.lineTo(hw-rr,-hh);s.quadraticCurveTo(hw,-hh,hw,-hh+rr);s.lineTo(hw,hh-rr);s.quadraticCurveTo(hw,hh,hw-rr,hh);s.lineTo(-hw+rr,hh);s.quadraticCurveTo(-hw,hh,-hw,hh-rr);s.lineTo(-hw,-hh+rr);s.quadraticCurveTo(-hw,-hh,-hw+rr,-hh);s.closePath();const geo=new THREE.ExtrudeGeometry(s,{depth:d,bevelEnabled:false,curveSegments:2});geo.translate(0,0,-d/2);const m=new THREE.Mesh(geo,material(c,profile));m.position.set(x,y,z);g.add(m);return m};
@@ -801,6 +803,7 @@ export const vehicleModels=Object.freeze({
         // cap estalvi de batching a l'oval afegit després de l'agrupació.
         batchStats.before++;batchStats.after++;
       }
+      if(t!=='barca_rems')distant.attach(g,t);
       g.scale.setScalar(VS[t]);
       if(resources&&cacheKey){
         resources.retainModel(g);templates.set(cacheKey,g);
