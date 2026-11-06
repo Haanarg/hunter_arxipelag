@@ -140,8 +140,9 @@ window.HUNTER_PERFORMANCE_STATS=adaptivePerformance.stats;
 adaptivePerformance.stats.hotspots=perfHotspots;
 const performanceDebugRequested=typeof location!=='undefined'&&
   new URLSearchParams(location.search||'').get('perf')==='1';
-const performanceAuditRequested=typeof location!=='undefined'&&
-  new URLSearchParams(location.search||'').get('perfAudit')==='1';
+const performanceAuditMode=typeof location!=='undefined'?
+  new URLSearchParams(location.search||'').get('perfAudit'):null;
+const performanceAuditRequested=performanceAuditMode==='1'||performanceAuditMode==='full';
 const stressAuditRequested=performanceAuditRequested&&
   new URLSearchParams(location.search||'').get('stress')==='1';
 const STRESS_AUDIT_PRESET=Object.freeze({seed:2407759483,x:1208,z:-1594,scale:1});
@@ -3990,7 +3991,8 @@ const performanceGpuTimer=performanceAuditRequested?
 const performanceAudit=performanceAuditRequested?window.HUNTER_PERFORMANCE_AUDIT.create({
   // La llavor d'estrès requereix més temps perquè el LOD s'estabilitzi.
   warmupMs:stressAuditRequested?3500:1100,
-  sampleMs:stressAuditRequested?5000:3000,
+  sampleMs:stressAuditRequested?5000:performanceAuditMode==='full'?3000:5000,
+  fullAudit:performanceAuditMode==='full',
   getState:()=>({seed,quality:qualityName,pixelRatio:ren.getPixelRatio(),
     shadowsDisabled,waterDisabled,
     playerBatchStats:pl.userData?.batchStats||null,
