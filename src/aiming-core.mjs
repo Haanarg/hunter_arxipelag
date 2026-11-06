@@ -4,7 +4,7 @@ export const SMALL_ARMS_AIM_CONE=.82,SMALL_ARMS_AIM_VERTICAL=Math.PI/2;
 // No s'amplia el con quan el blanc és per damunt o per sota del jugador.
 export const RIFLE_AIM_HALF_ANGLE=40*Math.PI/180;
 export const RIFLE_AIM_CONE=Math.cos(RIFLE_AIM_HALF_ANGLE);
-export const SMALL_ARMS_RANGE=Object.freeze({pistol:75,assault:85});
+export const SMALL_ARMS_RANGE=Object.freeze({pistol:100,assault:150});
 
 // Bazuca: obertura TOTAL de 90° (45° a cada costat).
 // El selector i la direcció FINAL comparteixen el mateix límit.
