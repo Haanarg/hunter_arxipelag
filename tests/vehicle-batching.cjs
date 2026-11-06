@@ -61,15 +61,20 @@ const assert=require('node:assert/strict');
  }
  assert(allSaved>0,'other vehicles also benefit from rigid-mesh batching');
  const patrol=game.run("(function(){const b=mkV('llanxa');createMarinePatrolVisual(b);return b})()");
- assert(patrol.userData.marineBatchStats?.groups>0,
-   'marine patrol crew and mounts must be batched');
- const weapons=patrol.userData.marineWeapons;
- assert(weapons.machineGun.mount.parent===patrol);
- assert(weapons.rockets.mount.parent===patrol);
- assert(weapons.machineGun.muzzle.parent===weapons.machineGun.mount);
- assert(weapons.rockets.muzzle.parent===weapons.rockets.mount);
+ // La patrullera ja no té canons muntats: els dos comandos porten
+ // armes pròpies. El batching no ha d'eliminar ni desplaçar cap muzzle.
+ const crew=patrol.userData.enemyCarCrew;
+ assert.equal(crew.boatWeapons.length,2,'two marine commands retain their own weapons');
+ assert.equal(crew.boatWeapons[0].rocket,false,'marine driver uses rifle');
+ assert.equal(crew.boatWeapons[1].rocket,false,'marine passenger uses rifle');
+ assert(!patrol.userData.marineWeapons,'deleted boat-mounted cannons must not return');
+ for(const w of crew.boatWeapons){
+   assert(w.rider.parent===patrol.userData.distantVehicleLOD.full,
+     'crew mounted under full visual detail');
+   assert(w.muzzle.parent===w.weapon,'real projectile origin follows rifle');
+ }
  patrol.updateMatrixWorld(true);
- assert(weapons.machineGun.muzzle.getWorldPosition(new T.Vector3()).length()>0,
-   'weapon firing origin remains valid');
- console.log('PASS vehicles: C1A wheels/body bounds/triangles, movable pivots, all models, marine weapons; C1A saves '+stats.groups+' meshes');
+ assert(crew.boatWeapons.every(w=>w.muzzle.getWorldPosition(new T.Vector3()).length()>0),
+   'crew firing origins remain valid');
+ console.log('PASS vehicles: C1A wheels/body bounds/triangles, movable pivots, all models, rifle-only marine crew; C1A saves '+stats.groups+' meshes');
 })().catch(error=>{console.error(error);process.exitCode=1});
