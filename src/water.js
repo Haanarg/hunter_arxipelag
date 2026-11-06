@@ -125,18 +125,43 @@ void main(){
     const queueResolutionUpgrade=()=>{
       if(resolution>=segments||refinement)return false;
       const nextGeometry=makeGeometry(segments);
-      refinement={geometry:nextGeometry,task:sampler(nextGeometry,segments)};
+      refinement={geometry:nextGeometry,task:sampler(nextGeometry,segments),
+        stage:'seabed',shoreIterator:null};
       return true;
     };
     const stepResolutionUpgrade=(budget=3)=>{
       if(!refinement)return resolution>=segments;
-      if(!refinement.task.step(Math.max(1,Math.floor(budget))))return false;
+      if(refinement.stage==='seabed'){
+        if(!refinement.task.step(Math.max(1,Math.floor(budget))))return false;
+        // La reconstrucció de l'escuma era síncrona: un sol fotograma
+        // bloquejava >300 ms en mapes grans. Preparam les seves cel·les
+        // progressivament mentre la malla del mar antiga segueix activa.
+        if(shore){
+          refinement.stage='shore';
+          refinement.shoreIterator=shore.regenerateSteps(refinement.geometry,segments);
+          return false;
+        }
+      }
+      if(refinement.stage==='shore'){
+        const now=typeof performance!=='undefined'&&performance.now?
+          ()=>performance.now():null;
+        const started=now?.();
+        // 64 cel·les per iteració del generador. Màxim 3 ms de CPU,
+        // i no més de 8*budget blocs per fotograma.
+        const limit=Math.max(1,Math.floor(budget)*8);
+        let done=false;
+        for(let i=0;i<limit;i++){
+          done=!!refinement.shoreIterator.next().done;
+          if(done)break;
+          if(started!=null&&now()-started>=3)break;
+        }
+        if(!done)return false;
+      }
       const old=geometry;
       geometry=refinement.geometry;resolution=segments;mesh.geometry=geometry;
       seabedStats.lastSamples=refinement.task.samples;
       seabedStats.totalVertices=refinement.task.vertices;
       refinement=null;old.dispose();
-      if(shore)shore.regenerate(geometry,resolution);
       return true;
     };
     const cancelRefinement=()=>{
