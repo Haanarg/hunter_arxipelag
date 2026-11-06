@@ -8,7 +8,7 @@ const ai=read('src/enemy-ai.js'),nav=read('src/enemy-navigation.js'),
   marine=read('src/marine-patrol.js'),core=read('src/game-core.js');
 for(const [name,script] of [['AI',ai],['navigation',nav],['marine',marine],['engine',core]])
   assert.doesNotThrow(()=>new Function(script),name+' source must compile');
-const start=ai.indexOf('function enemyRemoteInterval('),
+const start=ai.indexOf('const ENEMY_AI_DISTANCE='),
   end=ai.indexOf('function updEn(',start);
 assert(start>=0&&end>start);
 const remote=new Function(ai.slice(start,end)+'return enemyRemoteInterval')();
@@ -16,9 +16,9 @@ const player={x:0,z:0},unit={
  t:'soldat',x:1800,z:2000,canSee:false,alert:0,aiMode:'patrol',
  blastT:0,entryDoor:null,pursuitT:0,basement:null
 };
-assert.equal(remote(unit,player),.3,'distant patrols can be scheduled');
+assert.equal(remote(unit,player),Infinity,'distant patrols are dormant');
 unit.x=800;unit.z=0;
-assert.equal(remote(unit,player),.18,'medium-distance patrols');
+assert.equal(remote(unit,player),.4,'600–1000m enemies use minimal AI');
 unit.x=300;
 assert.equal(remote(unit,player),0,'nearby enemies update every step');
 unit.x=1800;
@@ -28,7 +28,7 @@ for(const patch of [{canSee:true},{alert:1},{aiMode:'combat'},{aiMode:'search'},
    'do not delay an active enemy '+JSON.stringify(patch));
 }
 for(const type of ['general','patrulla_marina'])
- assert.equal(remote({...unit,t:type},player),0,type+' retains its own loop');
+ assert.equal(remote({...unit,t:type},player),Infinity,type+' can sleep without a threat');
 assert.equal(remote(unit,player,{contains:()=>true}),0,
  'distant sniper targets remain fully responsive');
 assert(ai.includes('const scheduledDt=enemyRemoteDecisionDt(u,dt,remoteInterval);'),
@@ -56,12 +56,11 @@ assert(core.includes('aiMarineMs:0,aiNavMs:0,aiSenseMs:0'));
   'rebuildVehicleGrid();'
  ].join('\n'));
  run('updEn(1/60,true)');
- assert.equal(run('testFar.remoteAiAcc>0'),true,'accumulate distant time');
+ assert.equal(run('testFar.remoteAiAcc||0'),0,'dormant enemy accrues no movement time');
  assert.equal(run('testFar.x'),1700,'no movement before scheduled step');
  run('for(let i=0;i<17;i++)updEn(1/60,true)');
- assert(run('testFar.remoteAiAcc>=0&&testFar.remoteAiAcc<.3'),
-   'phase-staggered AI retains the remaining partial interval');
- assert(run('testFar.x!==1700||testFar.z!==2000'),'remote patrols still move');
+ assert.equal(run('testFar.remoteAiAcc||0'),0,'dormant enemy remains asleep');
+ assert.equal(run('testFar.x'),1700,'dormant patrol does not move');
  run('P.x=1695;P.z=2000;updEn(1/60,true)');
  assert.equal(run('testFar.remoteAiAcc||0'),0,'immediate local activation');
  assert(ai.includes('remoteAiPhase:((E.length*37)%101)/101'),
