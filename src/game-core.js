@@ -2898,14 +2898,31 @@ function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
         killShark(f);
     }
   }
-  // Les roques emergides, també a la costa, aturen vehicles marítims i
-  // terrestres; els helicòpters només hi xoquen si volen prou baixos.
-  if(speed>=2.5&&v.envCd<=0){
+  // Les pedres petites es poden superar sense bloquejar la trajectòria.
+  // Evitam mal repetit dins la mateixa pedra fins a abandonar-ne el radi.
+  if(v.lastSmallRock&&Math.hypot(v.x-v.lastSmallRock.x,
+     v.z-v.lastSmallRock.z)>v.lastSmallRock.r+radius*.48+1)
+     v.lastSmallRock=null;
+  // Les roques grosses segueixen essent obstacles sòlids; els helicòpters
+  // només les toquen si volen prou baixos.
+  if(speed>=.4&&v.envCd<=0){
     const {baseY,topY}=window.HUNTER_VEHICLE_ENVIRONMENT.rockVerticalBand(c.m,hAt(v.x,v.z),v.alt??0,VS[v.t]||1),
       rock=nearbyRock(v.x,v.z,radius*.48,baseY,topY);
     if(rock){
-      // Fins i tot a poc a poc, la roca és sòlida; però només els
-      // impactes ràpids treuen vida al vehicle.
+      if(rock.s<=1.7&&rock.r<=2.5){
+        if(v.lastSmallRock!==rock){
+          v.lastSmallRock=rock;
+          // Les erugues passen damunt les pedres sense perdre PV.
+          if(v.t!=='tanc'&&v.t!=='tanqueta')
+            collisionDamageVehicle(v,1,1);
+          vehicleImpactFx(rock.x,Math.max(0,hAt(rock.x,rock.z))+.45,rock.z);
+          if(v.destroyed)return;
+          v.v*=.97;v.bump=Math.max(v.bump,.08);v.envCd=.12;
+        }
+        return; // Cap correcció de posició: es passa per sobre.
+      }
+      // Les roques grosses continuen col·lidint. Un impacte ràpid
+      // hi provoca dany i redueix la velocitat.
       if(speed>10){
         collisionDamageVehicle(v,window.HUNTER_VEHICLE_ENVIRONMENT.rockImpact(speed,c.mass||1).damage,1);
         vehicleImpactFx(rock.x,Math.max(0,hAt(rock.x,rock.z))+.8,rock.z);
