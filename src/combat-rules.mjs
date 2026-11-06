@@ -4,7 +4,7 @@ export const combatBalance=Object.freeze({
  player:PLAYER_MAX_HEALTH,medkit:8,
  people:Object.freeze({soldier:4,elite:8,general:8}),
  weapons:Object.freeze({knife:2,pistol:2,rifle:2,eliteRifle:2,sniper:5,tankette:2,attackCannon:2,bazooka:10,grenade:10,c4:20,tank:10,heliMissile:10,boatRocket:10,towerLight:2,towerHeavy:10}),
- vehicles:Object.freeze({bici:2,moto:4,cotxe:10,cotxe_civil:8,camio:20,tanqueta:24,tanc:40,windsurf:2,barca_rems:4,moto_aquatica:6,llanxa:10,llanxa_coets:20,ferry:30,hover:12,heli:20,heli_combat:30})
+ vehicles:Object.freeze({bici:2,moto:4,cotxe:10,cotxe_civil:8,camio:20,tanqueta:20,tanc:40,windsurf:2,barca_rems:4,moto_aquatica:6,llanxa:10,llanxa_coets:20,ferry:30,hover:12,heli:20,heli_combat:30})
 });
 
 // Pure rules extracted unchanged from individual combat. No DOM, renderer or network.
