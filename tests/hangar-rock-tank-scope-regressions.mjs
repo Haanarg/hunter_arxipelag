@@ -20,13 +20,17 @@ const first=game.indexOf('function handleVehicleImpacts('),
 assert(first>=0&&last>first);
 const makeHandler=new Function('env','with(env){'+game.slice(first,last)+
   ';return handleVehicleImpacts;}');
-for(const type of ['cotxe','camio','moto','bici','llanxa','heli','tanc','tanqueta']){
+for(const type of ['cotxe','cotxe_civil','camio','moto','bici',
+ 'llanxa','llanxa_coets','ferry','moto_aquatica','barca_rems','windsurf',
+ 'hover','heli','heli_combat','tanc','tanqueta']){
  const rock={x:0,z:0,r:1.5,s:1.2,topY:3,bottomY:0,rock:true},
-   nautical=type==='llanxa',air=type==='heli',
+   nautical=['llanxa','llanxa_coets','ferry','moto_aquatica',
+     'barca_rems','windsurf'].includes(type),
+   air=type==='heli'||type==='heli_combat',hybrid=type==='hover',
    V={t:type,x:1,z:0,v:8,envCd:0,bump:0,ramCd:0,alt:1,
      o:{position:{y:1}}},damages=[],sparks=[];
  const env={
-   VT:{[type]:{m:air?'a':nautical?'w':'l',mass:1}},VS:{[type]:1},
+   VT:{[type]:{m:air?'a':hybrid?'wl':nautical?'w':'l',mass:1}},VS:{[type]:1},
    vehicleRadius:()=>3,
    window:{HUNTER_VEHICLE_ENVIRONMENT:{
       rockVerticalBand:()=>({baseY:-5,topY:8}),
