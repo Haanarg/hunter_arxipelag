@@ -38,6 +38,27 @@ const assert=require('node:assert/strict'),{pathToFileURL}=require('node:url'),p
    assert(model.userData.wheels?.every(x=>x.parent)||true,'wheel pivots remain in full model');
    if(model.userData.turretMuzzle)assert(model.userData.turretMuzzle.parent,'original muzzle retained');
  }
+ // La silueta simplificada del buc Stealth A1 ha de tenir proa
+ // molt més estreta que la mànega central, no ser un prisma rectangular.
+ for(const kind of ['llanxa','llanxa_coets']){
+   const boat=game.run("mkV('"+kind+"')"),
+     pos=boat.userData.distantVehicleLOD.variants[0].getAttribute('position');
+   const xAt=z=>{const x=[];for(let i=0;i<pos.count;i++)
+     if(Math.abs(pos.getZ(i)-z)<.015)x.push(pos.getX(i));
+     return x.length?Math.max(...x)-Math.min(...x):0};
+   const bow=xAt(-4.45),beam=xAt(.05);
+   assert(bow>0&&beam>0&&bow<beam*.25,
+     kind+' distant geometry must have a pointed bow: '+bow+' / '+beam);
+   assert(pos.count<1300,'low-poly hull remains a single inexpensive mesh');
+ }
+ const cruiser=game.run("mkV('llanxa')");
+ game.context.HUNTER_ENEMY_LOD.optimize(T,cruiser,'patrulla_marina');
+ assert.strictEqual(cruiser.userData.enemyMidMesh.geometry,
+   cruiser.userData.distantVehicleLOD.variants[2],
+   'marine enemy mid LOD reuses two-crew pointed boat geometry');
+ assert.strictEqual(cruiser.userData.enemyFarMesh.geometry,
+   cruiser.userData.distantVehicleLOD.variants[0],
+   'marine enemy far LOD reuses the same pointed hull as civilian boats');
  assert.equal(hasDistantVehicleLOD('barca_rems'),false,
    'existing oval rowboat LOD is not duplicated');
  const humvee=game.run("mkV('cotxe')");
