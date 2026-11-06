@@ -3993,7 +3993,7 @@ const performanceAudit=performanceAuditRequested?window.HUNTER_PERFORMANCE_AUDIT
   warmupMs:stressAuditRequested?3500:1100,
   sampleMs:stressAuditRequested?5000:performanceAuditMode==='full'?3000:5000,
   fullAudit:performanceAuditMode==='full',
-  getState:()=>({seed,quality:qualityName,pixelRatio:ren.getPixelRatio(),
+  getState:()=>({seed,version:window.HUNTER_VERSION||null,quality:qualityName,pixelRatio:ren.getPixelRatio(),
     shadowsDisabled,waterDisabled,
     playerBatchStats:pl.userData?.batchStats||null,
     pathStats:world?.userData?.pathStats||null,
@@ -4083,11 +4083,21 @@ for(const proxy of shadowBoatNodes){
 const shadowRedrawn=shadowCache.schedule({now:performance.now(),x:sun.target.position.x,z:sun.target.position.z,
   nodes:shadowPoseNodes,enabled:!!ren.shadowMap.enabled});
 const renderStarted=performance.now();
-const gpuSample=performanceAudit?.status==='running'&&gameplayActive?
-  performanceGpuTimer?.begin():null;
+const measuringRenderMatrix=performanceAudit?.status==='running'&&gameplayActive;
+let renderMatrixCpuMs=0;
+// During an audit only: observe the built-in Three.js scene transform pass.
+// Keep every matrix calculation, the render path and all visual effects.
+const originalSceneMatrixUpdate=measuringRenderMatrix?scene.updateMatrixWorld:null;
+if(originalSceneMatrixUpdate)scene.updateMatrixWorld=function(...args){
+  const begin=performance.now();
+  try{return originalSceneMatrixUpdate.apply(this,args)}
+  finally{renderMatrixCpuMs+=performance.now()-begin}
+};
+const gpuSample=measuringRenderMatrix?performanceGpuTimer?.begin():null;
 // Estadístiques de camins limitades al fotograma actual.
 const roadFrameStats=world?.userData?.pathRenderStats;
 frameDiagnostics.resetDrawCounters(roadFrameStats);
+try{
  if(deathVoidReady()){
    const v=deathCinematic;v.voidCamera.aspect=cam.aspect;v.voidCamera.updateProjectionMatrix();
    ren.render(v.voidScene,v.voidCamera);
@@ -4096,7 +4106,10 @@ frameDiagnostics.resetDrawCounters(roadFrameStats);
    // opaca del mar ni el cel exterior mentre el personatge s'enfonsa.
    ren.render(deathCinematic.underwaterScene,cam);
  }else ren.render(scene,cam);
-if(gpuSample)performanceGpuTimer.end(gpuSample);
+}finally{
+ if(originalSceneMatrixUpdate)scene.updateMatrixWorld=originalSceneMatrixUpdate;
+ if(gpuSample)performanceGpuTimer.end(gpuSample);
+}
 const renderCompleted=performance.now();
 // Les tasques incrementals de textura i malla del mar tenen el seu propi
 // cronòmetre. Permet detectar un pic puntual de 400 ms sense confondre'l
@@ -4114,6 +4127,7 @@ const postRenderCompleted=performance.now();
 frameDiagnostics.recordFrame({
   gameplayActive,rawDt,P,gpuSample,cpuStarted,simulationEnded,
   terrainEnded,renderStarted,renderCompleted,postRenderCompleted,
+  renderMatrixCpuMs,
   terrainTextureCpuMs:afterTerrainTexture-postStart,
   waterUpgradeCpuMs:afterWaterUpgrade-afterTerrainTexture,
   simulated,roadFrameStats,shadowRedrawn,now,
