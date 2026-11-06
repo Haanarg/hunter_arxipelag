@@ -245,9 +245,10 @@
     };
   }
   function create({getState,getCameraPose=null,setShadowsDisabled,setWaterDisabled,windowObject=window,
-    warmupMs=1100,sampleMs=3000,gpuTimer=null}){
+    warmupMs=1100,sampleMs=3000,readyMs=2000,gpuTimer=null}){
     let status='pending',index=0,phaseElapsed=0,rows=[],origin=null,initialCameraPose=null,
-      original=null,results=[],notice='',lastReport=null;
+      original=null,results=[],notice='',lastReport=null,readyElapsed=0,ready=false,
+      readyPosition=null,cameraMovedFrames=0;
     const doc=windowObject.document;
     const panel=doc.createElement('section');
     panel.id='perfAuditPanel';
@@ -255,6 +256,11 @@
     const label=doc.createElement('div'),details=doc.createElement('pre');
     label.style.cssText='font-weight:bold;margin-bottom:6px';
     details.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:inherit';
+    const start=doc.createElement('button');
+    start.type='button';
+    start.textContent='Comença l’auditoria';
+    start.disabled=true;
+    start.style.cssText='display:block;margin:8px 0;padding:9px 12px;font:inherit;cursor:pointer';
     const copy=doc.createElement('button');
     const copyFull=doc.createElement('button');
     const download=doc.createElement('button');
@@ -317,12 +323,22 @@
           ()=>windowObject.URL.revokeObjectURL(url),1000);
       }
     };
-    panel.append(label,details,copy,copyFull,download);doc.body.append(panel);
+    panel.append(label,details,start,copy,copyFull,download);doc.body.append(panel);
     function display(message){
       label.textContent='Auditoria de rendiment · '+(status==='finished'?'finalitzada':status==='aborted'?'interrompuda':'en curs');
       details.textContent=message;
     }
-    display('Comença una partida i deixa el personatge quiet. Compararem la mateixa escena amb diverses opcions visuals.');
+    display('Entra a la partida i situa la càmera. Quan estigui preparada podràs començar manualment l’auditoria.');
+    start.onclick=()=>{
+      if(status!=='pending'||!ready)return;
+      original={...getState()};
+      origin={...readyPosition};
+      initialCameraPose=null;cameraMovedFrames=0;
+      status='running';index=0;phaseElapsed=0;rows=[];
+      start.style.display='none';
+      apply(PHASES[index]);
+      display('Fase 1/5: Normal (inici)\nEstabilitzant la càmera abans de mesurar. No moguis el personatge.');
+    };
     function apply(phase){
       setShadowsDisabled(original.shadowsDisabled||phase.shadows);
       setWaterDisabled(original.waterDisabled||phase.water);
@@ -445,30 +461,43 @@
     function onFrame(frame){
       if(status==='finished'||status==='aborted')return;
       if(status==='pending'){
-        if(!frame.active)return;
-        original={...getState()};
-        origin={x:frame.x,z:frame.z};
-        initialCameraPose=getCameraPose?.()||null;
-        status='running';index=0;phaseElapsed=0;rows=[];
-        apply(PHASES[index]);
-        display('Fase 1/5: Normal (inici)\nNo moguis el personatge fins a completar la prova.');
+        if(!frame.active){
+          readyElapsed=0;ready=false;readyPosition=null;
+          start.disabled=true;return;
+        }
+        if(frame.frameMs>0&&frame.frameMs<=200)readyElapsed+=frame.frameMs;
+        readyPosition={x:frame.x,z:frame.z};
+        if(!ready&&readyElapsed>=readyMs){
+          ready=true;start.disabled=false;
+          display('Partida preparada. Col·loca la càmera i prem «Comença l’auditoria» quan la vista sigui estable.');
+        }
         return;
       }
       if(!frame.active){abort('La partida s’ha pausat, ocultat o acabat.');return}
       if(Math.hypot(frame.x-origin.x,frame.z-origin.z)>4){
         abort('El personatge s’ha mogut més de 4 m: la comparació no és fiable.');return;
       }
+      if(!(frame.frameMs>0&&frame.frameMs<=200))return;
+      // La vista segueix interpolant durant el primer escalfament.
+      // Fixam la referència després, no en el primer fotograma actiu.
+      if(index===0&&phaseElapsed<warmupMs){
+        phaseElapsed+=frame.frameMs;
+        if(phaseElapsed>=warmupMs)initialCameraPose=getCameraPose?.()||null;
+        return;
+      }
       if(initialCameraPose&&getCameraPose){
         const pose=getCameraPose();
-        if(pose&&Math.abs(pose.reduce((sum,value,i)=>sum+value*initialCameraPose[i],0))<.9995){
-          abort('La càmera ha girat: repeteix l’auditoria amb la mateixa orientació.');return;
+        const dot=pose?.reduce((sum,value,i)=>sum+value*initialCameraPose[i],0);
+        // Diferència de més de ~7° durant 3 fotogrames consecutius.
+        // Això evita falsos positius per petits ajustos de seguiment.
+        if(Number.isFinite(dot)&&Math.abs(dot)<.998)cameraMovedFrames++;
+        else cameraMovedFrames=0;
+        if(cameraMovedFrames>=3){
+          abort('La càmera ha girat clarament durant la mesura. Repeteix-la mantenint la vista fixa.');return;
         }
       }
-      if(!(frame.frameMs>0&&frame.frameMs<=200))return;
       phaseElapsed+=frame.frameMs;
-      if(phaseElapsed>warmupMs){
-        rows.push(frame);
-      }
+      if(phaseElapsed>warmupMs)rows.push(frame);
       if(phaseElapsed<warmupMs+sampleMs)return;
       const phase=PHASES[index];
       results.push({id:phase.id,name:phase.name,stats:summary(rows)});
@@ -479,7 +508,7 @@
       display('Fase '+(index+1)+'/5: '+PHASES[index].name+
         '\nMesuram render, joc, IA i dibuixos. No moguis el personatge.');
     }
-    return {onFrame,abort,get status(){return status},get results(){return results}};
+    return {onFrame,abort,get status(){return status},get ready(){return ready},get results(){return results}};
   }
   window.HUNTER_PERFORMANCE_AUDIT=Object.freeze({create,summary,shareReport,createGpuTimer,PHASES});
 })();

@@ -40,14 +40,28 @@ function setup(startFlags={shadowsDisabled:false,waterDisabled:false}){
     shadowReason:'moviment gran',shadowCulprit:'jugador / braç',deferredFaunaCasters:2,
     vehicleTypes:{llanxa:8,camio:12},vehicleParts:{'llanxa / hull':4},
     vehicleShadowTypes:{llanxa:2},boatMotionProxies:1};
+  const startButton=nodes[0].children[2];
+  const begin=()=>{
+    for(let i=0;i<30&&!controller.ready;i++)controller.onFrame(frame);
+    assert(controller.ready,'game becomes ready before manual audit');
+    assert.equal(controller.status,'pending');
+    assert.equal(startButton.disabled,false);
+    startButton.onclick();
+    assert.equal(controller.status,'running');
+  };
   return {controller,frame,win,changes,flags:()=>({shadows,water}),nodes,copied,
+    begin,startButton,
     turnCamera:()=>{cameraPose=[0,Math.sin(.15),0,Math.cos(.15)];}};
 }
 const s=setup();
 assert.equal(s.controller.status,'pending');
+assert.equal(s.startButton.disabled,true);
 s.controller.onFrame({...s.frame,active:false});
 assert.equal(s.controller.status,'pending');
-s.controller.onFrame(s.frame);
+for(let n=0;n<5;n++)s.controller.onFrame(s.frame);
+assert.equal(s.controller.status,'pending','never starts automatically');
+assert.equal(s.startButton.disabled,true);
+s.begin();
 for(let n=0;n<40&&s.controller.status==='running';n++)s.controller.onFrame(s.frame);
 assert.equal(s.controller.status,'finished');
 assert.deepEqual(Array.from(s.controller.results,p=>p.id),
@@ -76,18 +90,27 @@ assert.equal(s.controller.results[0].stats.shadowCulprits['jugador / braç'],2);
 assert(s.changes.some(([key,value])=>key==='shadows'&&value===true));
 assert(s.changes.some(([key,value])=>key==='water'&&value===true));
 const stopped=setup();
-stopped.controller.onFrame(stopped.frame);
+stopped.begin();
 stopped.controller.onFrame({...stopped.frame,x:30});
 assert.equal(stopped.controller.status,'aborted');
 assert.deepEqual(stopped.flags(),{shadows:false,water:false});
 const rotated=setup();
-rotated.controller.onFrame(rotated.frame);
+rotated.begin();
+rotated.controller.onFrame(rotated.frame); // estabilització inicial
 rotated.turnCamera();
-rotated.controller.onFrame(rotated.frame);
-assert.equal(rotated.controller.status,'aborted','camera rotation invalidates A/B results');
+for(let i=0;i<3;i++)rotated.controller.onFrame(rotated.frame);
+assert.equal(rotated.controller.status,'aborted','sustained real camera turn invalidates A/B');
+const smooth=setup();
+smooth.begin();
+smooth.controller.onFrame(smooth.frame); // càmera referenciada després escalfar
+smooth.turnCamera();
+smooth.controller.onFrame(smooth.frame);
+smooth.controller.onFrame(smooth.frame);
+assert.equal(smooth.controller.status,'running','transient camera movement does not trigger false abort');
+smooth.controller.abort('Test ended');
 assert.deepEqual(rotated.flags(),{shadows:false,water:false});
 const disabled=setup({shadowsDisabled:true,waterDisabled:true});
-disabled.controller.onFrame(disabled.frame);
+disabled.begin();
 for(let n=0;n<40&&disabled.controller.status==='running';n++)
   disabled.controller.onFrame(disabled.frame);
 assert.equal(disabled.controller.status,'finished');
@@ -95,7 +118,7 @@ assert.deepEqual(disabled.flags(),{shadows:true,water:true});
 console.log('OK: auditoria A/B, fases, estadístiques, cancel·lació i restauració');
 
 (async()=>{
-  const buttons=s.nodes[0].children.slice(2);
+  const buttons=s.nodes[0].children.slice(3);
   assert.equal(buttons.length,3);
   assert.equal(buttons[0].textContent,'Copia resum (per al xat)');
   buttons[0].onclick();
