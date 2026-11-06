@@ -47,17 +47,20 @@ const assert=require('node:assert/strict');
    if(o.material.transparent)glass++;
   }
  });return {meshCount,triangles,glass}};
- const a=stats(orig),b=stats(optimized);
+ const optimizedFull=optimized.userData.distantVehicleLOD?.full||optimized;
+ const a=stats(orig),b=stats(optimizedFull);
  assert.equal(b.triangles,a.triangles,'car geometry unchanged');
  assert.equal(b.glass,a.glass,'transparent glass separately rendered');
  assert(b.meshCount<a.meshCount,'fewer vehicle draw calls');
- const bbA=new T.Box3().setFromObject(orig),bbB=new T.Box3().setFromObject(optimized);
+ const bbA=new T.Box3().setFromObject(orig),bbB=new T.Box3().setFromObject(optimizedFull);
  assert(bbA.min.distanceTo(bbB.min)<1e-4&&bbA.max.distanceTo(bbB.max)<1e-4,
    'exterior dimensions identical');
  assert.equal(optimized.userData.wheels.length,4);
  assert.equal(optimized.userData.steeringPivots.length,2);
  const colorHistogram=(root,original)=>{
   const h=new Map(),car=original?root:
+   root.userData.distantVehicleLOD?.full.children.find(
+     o=>o.name.startsWith('hunter-civil-family-iteration-'))||
    root.children.find(o=>o.name.startsWith('hunter-civil-family-iteration-'));
   assert(car);
   for(const o of car.children){

@@ -30,11 +30,12 @@ const assert=require('node:assert/strict');
  const original=game.context.HUNTER_CIVIL_C1A(T,0xca3945);
  original.scale.setScalar(game.context.HUNTER_VEHICLES.scales.cotxe_civil);
  original.updateMatrixWorld(true);civil.updateMatrixWorld(true);
- const a=new T.Box3().setFromObject(original),b=new T.Box3().setFromObject(civil);
+ const originalFull=civil.userData.distantVehicleLOD?.full||civil;
+ const a=new T.Box3().setFromObject(original),b=new T.Box3().setFromObject(originalFull);
  assert(a.min.distanceTo(b.min)<1e-4&&a.max.distanceTo(b.max)<1e-4,
    'outer dimensions and visible wheel placement unchanged');
- assert.equal(triangles(civil),triangles(original),
-   'no triangles removed: graphics fidelity preserved');
+ assert.equal(triangles(originalFull),triangles(original),
+   'full-detail triangles unchanged; the hidden far proxy is tested separately');
  let allSaved=0;
  for(const type of ['bici','moto','ferry','llanxa','barca_rems','windsurf',
                     'camio','tanqueta','tanc','heli','heli_combat']){

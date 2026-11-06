@@ -10,6 +10,15 @@ export async function modelTraces(models){
  const create=models.createFactory(T,services),traces={};
  for(const t of Object.keys(models.scales)){
   const model=create(t);model.updateMatrixWorld(true);const hash=createHash('sha256'),push=a=>hash.update(JSON.stringify(a));
-  model.traverse(o=>{push([o.type,o.position.toArray(),o.rotation.toArray(),o.scale.toArray()]);if(o.geometry){for(const key of Object.keys(o.geometry.attributes).sort())push([key,...o.geometry.attributes[key].array]);if(o.geometry.index)push([...o.geometry.index.array]);}if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])push([m.type,m.color?.getHex(),m.vertexColors,m.transparent,m.opacity]);});traces[t]=hash.digest('hex');
+  // Les empremtes històriques comproven el model original al 100%.
+  // El grup de detall i el proxy llunyà no formen part del baseline
+  // i es validen amb proves LOD independents.
+  const full=model.userData.distantVehicleLOD?.full,
+        visit=o=>{push([o.type,o.position.toArray(),o.rotation.toArray(),o.scale.toArray()]);if(o.geometry){for(const key of Object.keys(o.geometry.attributes).sort())push([key,...o.geometry.attributes[key].array]);if(o.geometry.index)push([...o.geometry.index.array]);}if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])push([m.type,m.color?.getHex(),m.vertexColors,m.transparent,m.opacity]);};
+  if(full){
+    visit(model);
+    for(const child of full.children)child.traverse(visit);
+  }else model.traverse(visit);
+  traces[t]=hash.digest('hex');
  }return traces;
 }
