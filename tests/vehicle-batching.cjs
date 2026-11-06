@@ -37,6 +37,13 @@ const assert=require('node:assert/strict');
  if(lodProxy)civil.remove(lodProxy);
  const a=new T.Box3().setFromObject(original),b=new T.Box3().setFromObject(civil);
  if(lodProxy)civil.add(lodProxy);
+ if(a.min.distanceTo(b.min)>=1e-4||a.max.distanceTo(b.max)>=1e-4)
+   console.log('C1A bound diagnosis',JSON.stringify({
+     originalMin:a.min.toArray(),originalMax:a.max.toArray(),
+     optimizedMin:b.min.toArray(),optimizedMax:b.max.toArray(),
+     originalScale:original.scale.toArray(),optimizedScale:civil.scale.toArray(),
+     detailScale:originalFull.scale.toArray()
+   }));
  assert(a.min.distanceTo(b.min)<1e-4&&a.max.distanceTo(b.max)<1e-4,
    'outer dimensions and visible wheel placement unchanged');
  assert.equal(triangles(originalFull),triangles(original),
