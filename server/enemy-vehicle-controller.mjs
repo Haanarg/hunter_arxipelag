@@ -1,6 +1,6 @@
 import {candidateVehicles,requisitionChance,requisitionRoll,vehicleSeatPosition,
   pursuitInput,motorcycleAttackInput,observeFleeing,boatBoardingReady,requisitionBoat,avoidVehicleBarbedWire,
-  requisitionFenceDetour,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
+  requisitionFenceDetour,requisitionDoubtSeconds,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
 
 // L'estat viu al soldat i a enemyCrew del vehicle; ambdós es desaran
 // als checkpoints autoritatius del Worker. Sense clients alternatius.
@@ -72,11 +72,20 @@ export function createEnemyVehicleController({meta,vehicles,targets,players,
   const actor=nearby[0]?.p;if(!actor)return false;
   const tracking=unit.enemyFleeTracking??={};
   const fleeing=observeFleeing(unit,actor,tick/30,tracking);
-  const justFled=fleeing&&!unit.enemyRequisitionWasFleeing;
   unit.enemyRequisitionWasFleeing=fleeing;
-  if(nearby[0].d>(fleeing?REQUISITION.fleeingNoticeRadius:REQUISITION.noticeRadius)||
-     tick<(unit.enemyRequisitionNextTry||0)&&!justFled)return false;
-  unit.enemyRequisitionNextTry=tick+Math.ceil(REQUISITION.retrySeconds*30);
+  const notice=fleeing?REQUISITION.fleeingNoticeRadius:REQUISITION.noticeRadius,
+    doubtTicks=Math.ceil(requisitionDoubtSeconds(meta.difficulty)*30);
+  if(nearby[0].d>notice){
+    unit.enemyRequisitionNextTry=null;
+    return false;
+  }
+  // La primera decisió també espera: 3 s difícil, 4,5 s normal, 6 s fàcil.
+  if(!(unit.enemyRequisitionNextTry>0)){
+    unit.enemyRequisitionNextTry=tick+doubtTicks;
+    return false;
+  }
+  if(tick<unit.enemyRequisitionNextTry)return false;
+  unit.enemyRequisitionNextTry=tick+doubtTicks;
   return acquire(unit,actor,tick,{fleeing});
  }
  function step(unit,tick){
