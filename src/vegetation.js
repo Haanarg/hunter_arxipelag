@@ -370,10 +370,10 @@ window.HUNTER_VEGETATION??=Object.freeze({
         'hunter-rock-sectors',0x777985,
         (d,s)=>d.scale.setScalar(s),{profile:'masonry',tilt:true,byKind:true});
       const extraRanges={
-        desktop:{bush:1300,rock:1900},
-        mobile:{bush:710,rock:1180},
-        ultra:{bush:440,rock:750}
-      }[profile]||{bush:1010,rock:1600};
+        desktop:{bush:950,rock:1350},
+        mobile:{bush:660,rock:1030},
+        ultra:{bush:410,rock:700}
+      }[profile]||{bush:840,rock:1180};
       stats.bushSectors=bushGroup.sectors.length;
       stats.rockSectors=rockGroup.sectors.length;
       let lastX=Infinity,lastZ=Infinity,lastFocus=false,lastSkipPalms=false;
