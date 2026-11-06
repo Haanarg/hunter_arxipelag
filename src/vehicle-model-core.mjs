@@ -803,7 +803,13 @@ export const vehicleModels=Object.freeze({
         // cap estalvi de batching a l'oval afegit després de l'agrupació.
         batchStats.before++;batchStats.after++;
       }
-      if(t!=='barca_rems')distant.attach(g,t);
+      if(t!=='barca_rems'){
+        if(distant.attach(g,t)){
+          // El proxy queda ocult en qualitat propera però és una malla
+          // real. El recompte de batching ha de seguir sent exacte.
+          batchStats.before++;batchStats.after++;
+        }
+      }
       g.scale.setScalar(VS[t]);
       if(resources&&cacheKey){
         resources.retainModel(g);templates.set(cacheKey,g);
