@@ -3379,7 +3379,7 @@ function updateVehicleVisualLod(t,dt,{skipHidden=false}={}){
       const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,
         focus=!!scopeVisual?.contains(v.x,v.o.position.y+1.5,v.z,6),
         current=v.o.userData.distantVehicleLOD.level==='far',
-        distant=window.HUNTER_VEHICLE_DISTANT_LOD.shouldSimplifyVehicle(
+        distant=window.HUNTER_VEHICLES.shouldSimplifyVehicle(
           v.t,d2,current,v===cv||focus);
       window.HUNTER_VEHICLES.setDistantVehicleLOD(v.o,distant);
     }
