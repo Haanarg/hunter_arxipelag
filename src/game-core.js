@@ -3987,7 +3987,7 @@ if(cv&&(cv.t==='tanc'||cv.t==='tanqueta')){
     const gun=window.HUNTER_VEHICLES.turretShot(THREE,cv.o);
   if(gun){
     const hd=cv.hd,fx=-Math.sin(hd),fz=-Math.cos(hd),
-          range=cv.t==='tanc'?220:85,
+          range=cv.t==='tanc'?250:150,
           heavy=cv.t==='tanc',
           [ax,ay,az]=autoAimArmoredShot(
             gun.origin.x,gun.origin.y,gun.origin.z,fx,fz,range,
