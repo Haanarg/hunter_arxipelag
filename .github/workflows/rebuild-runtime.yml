@@ -18,6 +18,8 @@ on:
       - 'tests/tank-motorcycle-death.cjs'
       - 'tests/standalone-port-parity.mjs'
       - 'tests/standalone-pier-orientation.cjs'
+      - 'tests/native-coop-vehicle-visual-lod.cjs'
+      - 'tests/performance-audit.cjs'
       - 'tests/world-generation-matrix.cjs'
       - 'tests/coast-road-reservation.mjs'
       - 'tests/performance-copy-diagnostic.mjs'
