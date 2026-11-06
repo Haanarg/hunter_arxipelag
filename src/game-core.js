@@ -4040,7 +4040,7 @@ const cpuStarted=performance.now(),victoryAtStart=victoryCinematic,
 const previousFrame=adaptivePerformance.stats;
 const perStepMs=previousFrame.simulationSteps>0?
   previousFrame.updateCpuMs/previousFrame.simulationSteps:0;
-enemyAiPressure=gameplayActive&&(rawDt>.085||previousFrame.updateCpuMs>85);
+enemyAiPressure=gameplayActive&&(rawDt>.045||previousFrame.updateCpuMs>35);
 simulationClock.setStepBudget(enemyAiPressure&&perStepMs>0?
   Math.max(4,Math.min(15,Math.floor(120/perStepMs))):15);
 let simulated;

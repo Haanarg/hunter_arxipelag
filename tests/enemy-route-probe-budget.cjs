@@ -12,7 +12,8 @@ assert.equal(lookahead,28,'maximum direct navigation lookahead');
 const calls={predictive:[],real:[]},wall={enabled:false,x:1};
 const dep={
  performanceStatsVisible:false,perfHotspots:{aiNavMs:0},
- ENEMY_DIRECT_LOOKAHEAD:lookahead,enemyIsVehicle:()=>false,
+ ENEMY_DIRECT_LOOKAHEAD:lookahead,ENEMY_INFANTRY_DIRECT_LOOKAHEAD:14,
+ enemyIsVehicle:()=>false,
  enemyPassiveRoute:u=>!!u.remoteAiWarmed,
  enemyGroundAt:()=>3,enemyReindex:()=>{},wrapAngle:x=>x,
  enemyPathBudget:2,enemyNodeBudget:160,
@@ -30,7 +31,7 @@ const create=()=>({t:'soldat',x:0,z:0,hd:0,o:{rotation:{y:0}},
  sp:6,tx:1200,tz:0,navGoal:null,navPath:[]});
 let u=create();move(u,2,1200,0);
 assert.equal(calls.predictive.length,1,'one predictive probe');
-assert(calls.predictive[0]<=28+1e-8,'probe bounded at 28 m');
+assert(calls.predictive[0]<=14+1e-8,'infantry preview bounded at 14 m');
 assert.equal(calls.real.length,1,'real movement retains swept collisions');
 assert(Math.abs(calls.real[0]-2)<1e-8,'real movement remains 2 m');
 assert(Math.abs(u.x-2)<1e-8,'unit moves normally');
@@ -38,7 +39,7 @@ calls.predictive.length=0;calls.real.length=0;
 u=create();wall.enabled=true;move(u,2,1200,0);
 assert(u.x<1,'real movement cannot cross even a thin wall');
 assert(calls.real.length>0,'collision remains checked on every attempted move');
-assert(calls.predictive.every(x=>x<=28+1e-8),'bounded despite a wall');
+assert(calls.predictive.every(x=>x<=14+1e-8),'short infantry preview despite a wall');
 wall.enabled=false;calls.predictive.length=0;
 u=create();u.tx=8;move(u,2,8,0);
 assert(calls.predictive.every(x=>x<=8+1e-8),'short destinations checked completely');

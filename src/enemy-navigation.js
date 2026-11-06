@@ -15,6 +15,9 @@ const enemyRouteRadius=u=>{
 // de punts abans d'avançar uns centímetres. Cada moviment conserva
 // el seu propi sweep complet, i A* s'activa quan arriba l'obstacle.
 const ENEMY_DIRECT_LOOKAHEAD=28;
+// La infanteria no necessita anticipar 28 m a cada decisió.
+// La comprovació física real continua cobrint tot el moviment.
+const ENEMY_INFANTRY_DIRECT_LOOKAHEAD=14;
 // Costos constants, sense arrels quadrades durant l'expansió de l'A*.
 const ENEMY_ASTAR_NEIGHBORS=Object.freeze([[1,0,1],[0,1,1],[-1,0,1],[0,-1,1],
   [1,1,Math.SQRT2],[-1,1,Math.SQRT2],[-1,-1,Math.SQRT2],
@@ -328,7 +331,7 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
   if(goalChanged||u.navDirectT<=0){
     const directStarted=performanceStatsVisible?performance.now():0;
     const longDistance=Math.hypot(tx-u.x,tz-u.z),
-      decisionLookahead=passiveRoute?10:ENEMY_DIRECT_LOOKAHEAD,
+      decisionLookahead=passiveRoute?10:(veh?ENEMY_DIRECT_LOOKAHEAD:ENEMY_INFANTRY_DIRECT_LOOKAHEAD),
       lookahead=Math.min(1,decisionLookahead/Math.max(.001,longDistance));
     // La comprovació predictiva és curta, però el sweep real de tryMove
     // continua fent servir tota la petjada i les col·lisions dinàmiques.

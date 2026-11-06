@@ -697,7 +697,16 @@ function enemyRemoteInterval(u,q,focus=null,underPressure=false){
      (u.t==='soldat'&&u.basement))return 0;
   if(focus?.contains(u.x,u.o?.position?.y??0,u.z,3))return 0;
   const tier=enemyAiDistanceTier(u,q);
-  if(tier===0)return 0;
+  if(tier===0){
+    // Les patrulles sense contacte fora del radi immediat només prenen
+    // decisions a 12-20 Hz. El moviment conserva la delta acumulada,
+    // un sweep exacte i la despertada immediata en combat o en apuntar.
+    if(u.t==='soldat'&&!u.towerGuard){
+      const dx=q.x-u.x,dz=q.z-u.z;
+      if(dx*dx+dz*dz>140*140)return underPressure?.08:.05;
+    }
+    return 0;
+  }
   if(tier===1)return underPressure?.2:.12;
   if(tier===2)return underPressure?.65:.4;
   return Infinity; // estat adormit: cap tick fins a proximitat o esdeveniment

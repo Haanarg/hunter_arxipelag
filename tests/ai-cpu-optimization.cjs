@@ -19,8 +19,12 @@ const player={x:0,z:0},unit={
 assert.equal(remote(unit,player),Infinity,'distant patrols are dormant');
 unit.x=800;unit.z=0;
 assert.equal(remote(unit,player),.4,'600–1000m enemies use minimal AI');
-unit.x=200;
+unit.x=80;
 assert.equal(remote(unit,player),0,'nearby enemies update every step');
+unit.x=200;
+assert.equal(remote(unit,player),.05,'passive infantry 140-300m runs at 20Hz');
+assert.equal(remote(unit,player,null,true),.08,'passive infantry slows under pressure');
+assert.equal(remote({...unit,canSee:true},player,null,true),0,'combat at 200m wakes immediately');
 unit.x=1800;
 for(const patch of [{canSee:true},{alert:1},{aiMode:'combat'},{aiMode:'search'},
  {aiMode:'investigate'},{entryDoor:{}},{pursuitT:3},{blastT:1},{basement:{}}]){
