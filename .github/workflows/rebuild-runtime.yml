@@ -18,6 +18,7 @@ on:
       - 'tests/tank-motorcycle-death.cjs'
       - 'tests/standalone-port-parity.mjs'
       - 'tests/standalone-pier-orientation.cjs'
+      - 'tests/marine-crew-damage.mjs'
       - 'tests/native-coop-vehicle-visual-lod.cjs'
       - 'tests/performance-audit.cjs'
       - 'tests/world-generation-matrix.cjs'
@@ -158,6 +159,8 @@ jobs:
         run: node tests/tank-motorcycle-death.cjs
       - name: Check hovercraft spatial distribution
         run: node tests/hover-distribution.mjs
+      - name: Check marine patrol pilot and passenger health in both game modes
+        run: node tests/marine-crew-damage.mjs
       - name: Check modified JavaScript syntax
         run: |
           node --check src/enemy-ai.js
