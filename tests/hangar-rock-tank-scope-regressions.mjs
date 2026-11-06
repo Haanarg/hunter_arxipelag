@@ -26,7 +26,7 @@ for(const type of ['cotxe','camio','moto','bici','llanxa','heli','tanc','tanquet
    V={t:type,x:1,z:0,v:8,envCd:0,bump:0,ramCd:0,alt:1,
      o:{position:{y:1}}},damages=[],sparks=[];
  const env={
-   VT:{[type]:{m:air?'a':nautical?'w':'l',mass:1}},
+   VT:{[type]:{m:air?'a':nautical?'w':'l',mass:1}},VS:{[type]:1},
    vehicleRadius:()=>3,
    window:{HUNTER_VEHICLE_ENVIRONMENT:{
       rockVerticalBand:()=>({baseY:-5,topY:8}),
@@ -58,7 +58,7 @@ for(const type of ['cotxe','camio','moto','bici','llanxa','heli','tanc','tanquet
 {
  const rock={x:0,z:0,r:4,s:3,rock:true},v={t:'cotxe',x:1,z:0,v:12,alt:1};
  let damage=0;
- const env={VT:{cotxe:{m:'l',mass:1}},fa:[],vehicleRadius:()=>3,
+ const env={VT:{cotxe:{m:'l',mass:1}},VS:{cotxe:1},fa:[],vehicleRadius:()=>3,
    window:{HUNTER_VEHICLE_ENVIRONMENT:{
      rockVerticalBand:()=>({baseY:0,topY:4}),
      rockImpact:()=>({damage:2,speedFactor:-.12,bump:.22,cooldown:.32})
