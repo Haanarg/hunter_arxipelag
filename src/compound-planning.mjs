@@ -265,7 +265,55 @@ export function createStandalonePortPlanner({rawHAt,landSteps}){
      end={x:shore.x+ux*pierLen,z:shore.z+uz*pierLen};
    return {shore,end,ux,uz,checkpointUnits};
  }
- return {findPortWater,findPortSite,surveyStandalonePierShore};
+ // Una direcció que troba aigües profundes pot ser gairebé tangent a
+ // la platja: abans de construir, comprovam els DOS costats del moll.
+ // Només llegim el relleu immutable; ni RNG, ni geometria, ni physics.
+ function standalonePierFootprintSafe(site){
+   if(!site)return false;
+   const {shore,end,ux,uz}=site,
+     length=Math.hypot(end.x-shore.x,end.z-shore.z),
+     px=-uz,pz=ux;
+   if(!(length>=14)||rawHAt(shore.x-ux*7,shore.z-uz*7)<=.25)return false;
+   // Una rampa amb terra darrere i aigua a banda i banda al davant.
+   // Dues seccions descarten diagonals gairebé paral·leles a la costa.
+   for(const [distance,maxHeight] of [
+     [Math.min(13,length*.60),.25],
+     [Math.min(24,length-1.5),-.25]
+   ]){
+     for(const side of[-5,0,5]){
+       const x=shore.x+ux*distance+px*side,
+         z=shore.z+uz*distance+pz*side;
+       if(rawHAt(x,z)>=maxHeight)return false;
+     }
+   }
+   return rawHAt(end.x,end.z)<=-1;
+ }
+ // Reutilitza el primer emplaçament si és bo. Si no, prova altres
+ // radials de costa abans d'abandonar el moll, sense consumir RNG.
+ function* findSafeStandalonePier(q,initial=null){
+   if(initial){
+     const site=yield* surveyStandalonePierShore(q,initial);
+     if(standalonePierFootprintSafe(site))return site;
+   }
+   let checkpointUnits=0;
+   for(let a=0;a<32;a++){
+     const aa=a*Math.PI/16,ux=Math.cos(aa),uz=Math.sin(aa);
+     for(let d=28;d<Math.max(100,q.r||180);d+=8){
+       if((++checkpointUnits%64)===0)
+         yield {stage:'Cercant i construint el món',completed:null,total:null};
+       const wx=q.x+ux*d,wz=q.z+uz*d;
+       if(rawHAt(wx,wz)>=-3||rawHAt(wx+ux*12,wz+uz*12)>=-3)continue;
+       if(initial&&Math.hypot(initial.x-wx,initial.z-wz)<.1)break;
+       const site=yield* surveyStandalonePierShore(q,{x:wx,z:wz,aa});
+       if(standalonePierFootprintSafe(site))return site;
+       // Una mateixa radial comparteix la mateixa travessa de costa.
+       break;
+     }
+   }
+   return null;
+ }
+ return {findPortWater,findPortSite,surveyStandalonePierShore,
+   standalonePierFootprintSafe,findSafeStandalonePier};
 }
 
 

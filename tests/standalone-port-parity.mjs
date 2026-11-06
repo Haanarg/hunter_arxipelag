@@ -14,8 +14,8 @@ const start=worldSource.indexOf('const standalonePortPlanner=window.HUNTER_COMPO
 const end=worldSource.indexOf('\nconst phase3Options=',start);
 assert(start>=0&&end>start,'runtime invokes standalone port planner');
 const runtimeFactory=new Function('rawHAt','landSteps','compoundPier','compoundProp','compoundClear','window',
- worldSource.slice(start,end)+
- '\nreturn {findPortWater,findPortSite,makeStandalonePier};');
+ 'const world={userData:{standalonePiers:[]}};\n'+worldSource.slice(start,end)+
+ '\nreturn {findPortWater,findPortSite,makeStandalonePier,standalonePortPlanner,world};');
 const mainPlan=readFileSync(new URL('../src/compound-planning.mjs',import.meta.url),'utf8');
 assert(mainPlan.includes('export function createStandalonePortPlanner('));
 assert(!worldSource.includes('const findPortWater=function* (q)'),'old generator is no longer duplicated');
@@ -95,13 +95,29 @@ for(const seed of seeds)for(const scale of [1,2])for(const kind of [0,1,2,3,7,10
     actualOld,actualNew,c=>c.api.findPortSite({...island},tries));
   siteCases++;
  }
-for(const seed of seeds)for(const scale of [1,2])for(const kind of [0,1,2,3,4,5,6,7,8,9,10])
- for(const preset of [false,true])for(const radius of [30,190,380]){
+// La cerca d'aigües i les posicions continuen essent idèntiques. Els
+// pantalanes invàlids S'HAN de descartar o reorientar: ja no comparen
+// l'efecte contra l'algorisme antic que podia construir sobre la sorra.
+for(const seed of [67,148,2728631024,4294967295])for(const scale of [1,2])
+ for(let kind=0;kind<11;kind++)for(const preset of [false,true])
+ for(const radius of [30,190,380]){
   const q={x:0,z:0,r:radius};
   if(preset)q.portBest={x:0,z:radius*.9};
-  const a=scenario(seed,scale,kind,0,true),b=scenario(seed,scale,kind,0);
-  compare('standalone pier '+seed+'/'+scale+'/'+kind+'/'+preset+'/'+radius,a,b,
-    c=>c.api.makeStandalonePier({...q}));
+  const a=scenario(seed,scale,kind,0),b=scenario(seed,scale,kind,0);
+  const oldRun=drain(a.api.makeStandalonePier({...q})),
+    newRun=drain(b.api.makeStandalonePier({...q}));
+  assert.deepEqual(newRun,oldRun,'deterministic pier placement '+[seed,scale,kind,preset,radius]);
+  assert.deepEqual(b.effects,a.effects,'pier and bollard placement deterministic');
+  assert.deepEqual(b.reads,a.reads,'repeated pier heights deterministic');
+  assert.equal(b.random.state(),a.random.state(),'port safety never draws RNG');
+  if(newRun.value){
+    assert.equal(b.effects.piers.length,1,'successful standalone pier is built once');
+    assert.equal(b.api.world.userData.standalonePiers.length,1,
+      'metadata matches constructed pier');
+    const p=b.api.world.userData.standalonePiers[0];
+    assert.equal(b.api.standalonePortPlanner.standalonePierFootprintSafe(p),true,
+      'pier has a dry entrance and water on both sides: '+[seed,scale,kind,preset,radius]);
+  }else assert.equal(b.effects.piers.length,0,'unsafe pier never built');
   pierCases++;
  }
 for(const seed of [67,148,355])for(const kind of [0,2,7]){

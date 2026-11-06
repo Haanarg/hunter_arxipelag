@@ -17,6 +17,7 @@ on:
       - 'tests/compound-ground-surfaces.mjs'
       - 'tests/tank-motorcycle-death.cjs'
       - 'tests/standalone-port-parity.mjs'
+      - 'tests/standalone-pier-orientation.cjs'
       - 'tests/world-generation-matrix.cjs'
       - 'tests/coast-road-reservation.mjs'
       - 'tests/performance-copy-diagnostic.mjs'
@@ -232,6 +233,7 @@ jobs:
           node --check src/world-generation.js
           node --check src/compound-planning.mjs
           node tests/standalone-port-parity.mjs
+          node tests/standalone-pier-orientation.cjs
       - name: Check base road corridor reservation against later compounds
         run: |
           node --check src/world-generation.js

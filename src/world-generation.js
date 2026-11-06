@@ -200,7 +200,7 @@ function* buildSteps(){if(!seedSearchMode){operationRegistry=null;activeOperatio
   if(world){scene.remove(world);yield* window.HUNTER_RESOURCES.disposeSteps(world)}
   world=new THREE.Group();scene.add(world);
 }
-world.userData={compounds:[],airObstacles:[]};B=[];stairs=[];piers=[];swimming=false;intelMarks=[];hqMapKnown=false;hqIntelStage=0;hqIntelSites=[];hqDiscardIndex=-1;hqIntelEliminationOrder=[];hqIntelSectors.clear();hqIntelDiscarded.clear();knownVehicleSectors.heli.clear();knownVehicleSectors.tanc.clear();playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false;pl.userData.cisallaCut=0;sniperEquipped=false;assaultRifleEquipped=false;sniperAmmo=0;setSniperScope(false);pl.userData.sniper.visible=false;pl.userData.assault.visible=false;pl.userData.bazooka.visible=false;pl.userData.grenade.visible=false;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;pl.userData.grenadePending=null;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];grenades=[];fx=[];logb=[];hp=window.HUNTER_COMBAT_BALANCE.player;ammo=16;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
+world.userData={compounds:[],airObstacles:[],standalonePiers:[]};B=[];stairs=[];piers=[];swimming=false;intelMarks=[];hqMapKnown=false;hqIntelStage=0;hqIntelSites=[];hqDiscardIndex=-1;hqIntelEliminationOrder=[];hqIntelSectors.clear();hqIntelDiscarded.clear();knownVehicleSectors.heli.clear();knownVehicleSectors.tanc.clear();playerEject=null;playerFall=null;riderSystem.reset();pl.rotation.x=0;pl.userData.firePose=0;Wl=[];Dr=[];items=[];inv={};bazookaEquipped=false;grenadeEquipped=false;cisallaEquipped=false;pl.userData.cisallaCut=0;sniperEquipped=false;assaultRifleEquipped=false;sniperAmmo=0;setSniperScope(false);pl.userData.sniper.visible=false;pl.userData.assault.visible=false;pl.userData.bazooka.visible=false;pl.userData.grenade.visible=false;pl.userData.grenadeThrow=0;pl.userData.grenadeReleased=false;pl.userData.grenadePending=null;waypoint=null;E=[];Pj=[];DEAD=[];DB.length=0;WA.length=0;TG.clear();bombs=[];grenades=[];fx=[];logb=[];hp=window.HUNTER_COMBAT_BALANCE.player;ammo=16;fcd=0;kills=0;over=0;endEl.style.display='none';setDis(false);let pa,pb;
 activeBunker=null;
 {const base=requestedSeed==null?Math.floor(Math.random()*0xffffffff)>>>0:requestedSeed>>>0;let tries=0;do{if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};seed=(base+Math.imul(tries++,0x9e3779b1))>>>0;genIslands();pa=(yield* landSteps(A,2000));pb=(yield* landSteps(Bi,2000))}while((!pa||!pb)&&tries<8);if(!pa||!pb)throw new Error('No s’ha pogut generar un mapa vàlid amb aquesta llavor')}
 markBuildStage('islandsAndBasePositions');
@@ -368,11 +368,13 @@ const findPortSite=standalonePortPlanner.findPortSite;
 const makeStandalonePier=function* (q){
   const best=q.portBest||(yield* findPortWater(q));
   if(!best)return false;
-  const site=(yield* standalonePortPlanner.surveyStandalonePierShore(q,best));
+  const site=(yield* standalonePortPlanner.findSafeStandalonePier(q,best));
   if(!site)return false;
   const {shore,end,ux,uz}=site;
   let {checkpointUnits}=site;
   compoundPier(shore.x,shore.z,end.x,end.z,3.6);
+  // Punts de verificació de costa per a regressions i diagnòstics de llavor.
+  world.userData.standalonePiers.push({shore,end,ux,uz});
   for(const side of[-1,1]){
     if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
     const px=-uz,pz=ux;
