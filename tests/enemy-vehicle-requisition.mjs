@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {candidateVehicles,requisitionChance,requisitionRoll,vehicleSeatPosition,
   pursuitInput,motorcycleAttackInput,observeFleeing,seatVisual,passengerMuzzle,
   boatBoardingRoute,boatBoardingReady,requisitionBoat,boatCrewMuzzle,
-  avoidVehicleBarbedWire,requisitionFenceDetour,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
+  avoidVehicleBarbedWire,requisitionFenceDetour,requisitionDoubtSeconds,REQUISITION} from '../src/enemy-vehicle-requisition.mjs';
 import {createEnemyVehicleController} from '../server/enemy-vehicle-controller.mjs';
 const source=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
@@ -14,6 +14,55 @@ assert.equal(requisitionChance(1),.50);
 assert.equal(requisitionChance(1.5),.75);
 assert.ok(requisitionChance(1,true)>requisitionChance(1));
 assert.equal(requisitionChance(1.5,true),.95);
+assert.equal(requisitionDoubtSeconds(1.5),3,
+  'Difícil conserva exactament el dubte antic de tres segons');
+assert.equal(requisitionDoubtSeconds(1),4.5,
+  'Normal aplica x1,5 al dubte difícil');
+assert.equal(requisitionDoubtSeconds(.6),6,
+  'Fàcil aplica x2 al dubte difícil');
+// El Worker ha de respectar també el PRIMER retard: només augmentar
+// l'interval dels reintents deixaria els enemics requisant instantàniament.
+for(const [difficulty,delay] of [[1.5,3],[1,4.5],[.6,6]]){
+ const readyTick=Math.ceil(delay*30),seed=67,
+   probability=requisitionChance(difficulty),
+   attempt=Math.floor(readyTick/(delay*30)),
+   id=Array.from({length:1000},(_,i)=>'doubt-unit-'+i).find(id=>
+     requisitionRoll(id+':'+attempt,seed)<probability);
+ assert.ok(id,'test soldier with successful deterministic requisition');
+ const unit={id,t:'soldat',hp:4,x:0,z:0,navPhase:0,state:'attack'},
+   actor={id:'host',hp:25,x:20,z:0,fall:null,swimming:false},
+   car={id:'doubt-car',t:'cotxe',x:8,z:0,v:0,hd:0,seats:[null,null]};
+ let reservations=0;
+ const controller=createEnemyVehicleController({
+   meta:{id:'hesitation',mode:'native',seed,difficulty},
+   vehicles:{
+     live:()=>[car],
+     enemyReserve(vehicleId,unitId,seat){
+       assert.equal(vehicleId,car.id);
+       reservations++;car.enemyCrew??=[null,null];
+       car.enemyCrew[seat]=unitId;return true;
+     }
+   },
+   targets:[unit],players:()=>[actor],world:()=>({heightAt:()=>1})
+ });
+ assert.equal(controller.tryAcquire(unit,0),false,
+   'requisition does not start at first detection');
+ assert.equal(unit.enemyRequisitionNextTry,readyTick);
+ assert.equal(controller.tryAcquire(unit,readyTick-3),false,
+   'unit still hesitates just before deadline');
+ assert.equal(reservations,0);
+ assert.equal(controller.tryAcquire(unit,readyTick),true,
+   'unit requisitions precisely after difficulty-scaled hesitation');
+ assert.equal(reservations,1);
+ assert.equal(unit.enemyRequisitionNextTry,readyTick*2);
+}
+// També l'implementació SOLO ha de seguir exactament els mateixos
+// períodes, sense el bypass instantani que tenia justFled.
+const soloAI=source('src/enemy-ai.js');
+assert.ok(soloAI.includes('requisitionDoubtSeconds(DIF)')&&
+  soloAI.includes('u.enemyRequisitionNextTry=elapsed+doubt')&&
+  !soloAI.includes('justFled||elapsed>='),
+  'solo uses difficulty-scaled first hesitation and retries');
 const observer={x:0,z:0},runner={id:'player',x:25,z:0},track={};
 assert.equal(observeFleeing(observer,runner,0,track),false);
 runner.x=26.5;
