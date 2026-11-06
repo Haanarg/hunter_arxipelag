@@ -50,6 +50,14 @@ const assert=require('node:assert/strict'),{pathToFileURL}=require('node:url'),p
  assert.notStrictEqual(humvee.userData.distantVehicleLOD.proxy.geometry,normal,
    'seated crew changes low-poly silhouette');
  assert(driver.visible&&gunner.visible,'crew state survives hidden parent');
+ // Amb centenars de vehicles i diversos subpassos, el LOD distant
+ // ja establert no ha de tornar a recórrer els accessoris del model.
+ const children=humvee.children,originalIterator=children[Symbol.iterator];
+ let childTraversals=0;
+ children[Symbol.iterator]=function(){childTraversals++;return originalIterator.call(this)};
+ assert.equal(game.context.HUNTER_VEHICLES.setDistantVehicleLOD(humvee,true),false);
+ assert.equal(childTraversals,0,'unchanged far LOD avoids re-scanning children');
+ delete children[Symbol.iterator];
  const late=new T.Group();late.visible=true;humvee.add(late);
  game.context.HUNTER_VEHICLES.setDistantVehicleLOD(humvee,true);
  assert.equal(late.visible,false,'late added visual extras hidden at long distance');
