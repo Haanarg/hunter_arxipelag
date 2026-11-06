@@ -3411,7 +3411,16 @@ function updateVehicleVisualLod(t,dt,{skipHidden=false}={}){
     }
     const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,
       focus=!!scopeVisual?.contains(v.x,v.o.position.y+1.5,v.z,5),
-      interval=focus||d2<LOD_NEAR2?0:(d2<LOD_MID2?.1:.45);
+      // Un helicòpter permet veure la flota a 1–2 km. No espaiem
+      // l'animació dels vaixells visibles ni dels vehicles que es mouen:
+      // .1–.45 s entre poses es percebia com a teletransportacions.
+      // Els vehicles llunyans fora del rang visual mantenen el LOD barat.
+      moving=Math.abs(v.v||0)>.05||Math.abs(v.sideV||0)>.05||
+        Math.abs(v.strafeV||0)>.05||Math.abs(v.yawRate||0)>.01||
+        Math.abs(v.x-v.o.position.x)>.05||Math.abs(v.z-v.o.position.z)>.05,
+      nautical=VT[v.t]?.m==='w'||VT[v.t]?.m==='wl',
+      fluidVisible=v.o.visible&&(nautical||moving),
+      interval=focus||d2<LOD_NEAR2||fluidVisible?0:(d2<LOD_MID2?.1:.45);
     if(interval===0){
       place(v,t,dt,0);
       v.visualLodAcc=0;
