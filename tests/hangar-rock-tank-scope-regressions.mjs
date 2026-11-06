@@ -84,7 +84,7 @@ for(const type of ['tanc','tanqueta']){
  const a=game.indexOf('if(scopeActive){\n  // El joystick'),
    b=game.indexOf('}else if(cv){',a);
  assert(a>0&&b>a);
- const control=new Function('e','with(e){'+game.slice(a,b)+'}\nreturn {yaw:e.scopeYaw,pitch:e.scopePitch};');
+ const control=new Function('e','with(e){'+game.slice(a,b)+'}}\nreturn {yaw:e.scopeYaw,pitch:e.scopePitch};');
  const run=(keys,x,y)=>{const e={scopeActive:true,scopeYaw:0,scopePitch:0,
     K:keys,joystick:{state:{x,y}},dt:1,f:0,tr:0};
    return control(e)};
