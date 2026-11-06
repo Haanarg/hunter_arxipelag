@@ -15,7 +15,7 @@ const counts={walls:0,vehicles:0,enemies:0};
 const env={
  performanceStatsVisible:false,perfHotspots:{},performance:{now:()=>0},
  enemyIsVehicle:u=>u.t==='jeep',enemyRouteRadius:u=>u.t==='jeep'?2:1.2,
- enemyBodyRadius:()=>1.05,enemyGroundAt:()=>3,hAt:()=>3,H:1000,
+ enemyBodyRadius:()=>1.05,vehicleRadius:()=>3,enemyGroundAt:()=>3,hAt:()=>3,H:1000,
  treeHit:(x,z)=>x>30&&x<31&&Math.abs(z)<1,
  wallCandidates(x,z,r){counts.walls++;return walls.filter(w=>
   Math.abs((w.x0+w.x1)/2-x)<=r+(w.x1-w.x0)/2+1&&
