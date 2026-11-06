@@ -3,7 +3,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
-function setup(startFlags={shadowsDisabled:false,waterDisabled:false}){
+function setup(startFlags={shadowsDisabled:false,waterDisabled:false},fullAudit=false){
   const nodes=[];
   const document={body:{append(node){nodes.push(node)}},
     createElement(tag){return {tag,style:{},append(...children){this.children=children},
@@ -22,7 +22,7 @@ function setup(startFlags={shadowsDisabled:false,waterDisabled:false}){
   let cameraPose=[0,0,0,1];
   const changes=[];
   const controller=win.HUNTER_PERFORMANCE_AUDIT.create({
-    windowObject:win,warmupMs:100,sampleMs:200,
+    windowObject:win,warmupMs:100,sampleMs:200,fullAudit,
     getCameraPose:()=>cameraPose.slice(),
     getState:()=>({seed:67,quality:'desktop',pixelRatio:1,
       shadowsDisabled:shadows,waterDisabled:water,
@@ -53,7 +53,7 @@ function setup(startFlags={shadowsDisabled:false,waterDisabled:false}){
     begin,startButton,
     turnCamera:()=>{cameraPose=[0,Math.sin(.15),0,Math.cos(.15)];}};
 }
-const s=setup();
+const s=setup({},true);
 assert.equal(s.controller.status,'pending');
 assert.equal(s.startButton.disabled,true);
 s.controller.onFrame({...s.frame,active:false});
@@ -94,6 +94,29 @@ assert.equal(s.controller.results[0].stats.shadowReasons['moviment gran'],2);
 assert.equal(s.controller.results[0].stats.shadowCulprits['jugador / braç'],2);
 assert(s.changes.some(([key,value])=>key==='shadows'&&value===true));
 assert(s.changes.some(([key,value])=>key==='water'&&value===true));
+const quick=setup();
+quick.begin();
+for(let i=0;i<12&&quick.controller.status==='running';i++)
+  quick.controller.onFrame(quick.frame);
+assert.equal(quick.controller.status,'finished');
+assert.deepEqual(Array.from(quick.controller.results,p=>p.id),['base-1'],
+  'default diagnosis only measures normal gameplay, no irrelevant A/B stages');
+assert.deepEqual(quick.flags(),{shadows:false,water:false},
+  'focused diagnosis must never change visual settings');
+const focused=quick.win.HUNTER_PERFORMANCE_AUDIT.shareReport(
+  quick.win.HUNTER_PERF_AUDIT_RESULTS);
+assert.equal(focused.mode,'focused');
+assert.equal(focused.phases.length,1);
+assert.equal(focused.phases[0].stats.waterUpgradeMaxMs,39,
+  'retain culprit of long CPU frames');
+assert(!('vehicleFleet' in focused),'omit full vehicle inventory from compact share');
+assert(!('phaseComparisons' in focused),'omit experiments previously ruled out');
+assert(!('shadowGroups' in focused.phases[0].stats),'omit irrelevant shadow breakdown');
+assert(!('shadowReasons' in focused.phases[0].stats));
+assert(JSON.stringify(focused).length<
+  JSON.stringify(s.win.HUNTER_PERFORMANCE_AUDIT.shareReport(
+    s.win.HUNTER_PERF_AUDIT_RESULTS)).length/2,
+  'chat-facing diagnostic is substantially shorter');
 const stopped=setup();
 stopped.begin();
 stopped.controller.onFrame({...stopped.frame,x:30});
@@ -125,7 +148,7 @@ console.log('OK: auditoria A/B, fases, estadístiques, cancel·lació i restaura
 (async()=>{
   const buttons=s.nodes[0].children.slice(3);
   assert.equal(buttons.length,3);
-  assert.equal(buttons[0].textContent,'Copia resum (per al xat)');
+  assert.equal(buttons[0].textContent,'Copia diagnòstic');
   buttons[0].onclick();
   await new Promise(resolve=>setImmediate(resolve));
   const shared=JSON.parse(s.copied.at(-1));
