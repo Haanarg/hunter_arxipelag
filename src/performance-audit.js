@@ -172,6 +172,7 @@
       gpuOverBudget:gpuValues.filter(value=>value>16.67).length,
       updateCpuMs:avg('updateCpuMs'),renderCpuMs:avg('renderCpuMs'),
       renderMatrixCpuMs:avg('renderMatrixCpuMs'),
+      renderHiddenGroupsSkipped:avg('renderHiddenGroupsSkipped'),
       renderSubmitCpuMs:Math.max(0,avg('renderCpuMs')-avg('renderMatrixCpuMs')),
       roadVersionCpuMs:avg('roadVersionCpuMs'),roadRefitCpuMs:avg('roadRefitCpuMs'),
       roadVersionChecks:avg('roadVersionChecks'),roadRefits:avg('roadRefits'),
@@ -224,6 +225,7 @@
         phases:[{id:'base-1',name:'Joc normal',stats:{
           ...pick(s,['frames','fps','frameMs','p95FrameMs','p99FrameMs',
             'updateCpuMs','renderCpuMs','renderMatrixCpuMs','renderSubmitCpuMs',
+            'renderHiddenGroupsSkipped',
             'preRenderCpuMs','postRenderCpuMs',
             'terrainTextureMaxMs','waterUpgradeMaxMs','postRenderMaxMs',
             'aiMs','aiNavMs','aiSweepMs','aiMsP95','aiMsP99',
@@ -246,6 +248,7 @@
     const metrics=['frames','fps','frameMs','p95FrameMs','p99FrameMs',
       'slowFrames20','frames20to25','frames24to25','slowFrames25','slowFrames50',
       'updateCpuMs','renderCpuMs','renderMatrixCpuMs','renderSubmitCpuMs',
+      'renderHiddenGroupsSkipped',
       'roadVersionCpuMs','roadRefitCpuMs',
       'roadVersionChecks','roadRefits','roadFastSkips','postRenderCpuMs',
       'preRenderCpuMs','terrainTextureCpuMs','waterUpgradeCpuMs',
