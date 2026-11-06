@@ -3372,6 +3372,17 @@ function updateVehicleVisualLod(t,dt,{skipHidden=false}={}){
   for(const v of V){
     // Ni el LOD ni les animacions poden ressuscitar una carcassa.
     if(v.destroyed||skipHidden&&!v.o.visible&&v!==cv)continue;
+    // Distant model LOD: a prop, en el vehicle del jugador o amb la
+    // mira de franctirador, tots els pivots i les peces reals són visibles.
+    // Enfora, una sola malla cromàtica conserva la silueta i els ocupants.
+    if(v.o?.userData?.distantVehicleLOD){
+      const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,
+        focus=!!scopeVisual?.contains(v.x,v.o.position.y+1.5,v.z,6),
+        current=v.o.userData.distantVehicleLOD.level==='far',
+        distant=window.HUNTER_VEHICLE_DISTANT_LOD.shouldSimplifyVehicle(
+          v.t,d2,current,v===cv||focus);
+      window.HUNTER_VEHICLES.setDistantVehicleLOD(v.o,distant);
+    }
     if(v.t==='barca_rems'&&v.o?.userData?.rowboatVisualLod){
       const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,
         currentFar=v.o.userData.rowboatVisualLod.far.visible,
