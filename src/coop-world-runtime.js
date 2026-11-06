@@ -110,7 +110,7 @@ function captureNativeCoopWorld(){
  const payload={requestedSeed:requestedSeed>>>0,geometry,spawn:{...P},vehicles:V.map(v=>({id:v.saveId,t:v.t,...point(v),hd:v.hd,v:0,life:v.life??VT[v.t].life,rockets:v.rockets})),
   targets:E.map(e=>({id:e.saveId,t:e.t,...point(e),hp:e.hp,
   ...(e.t==='patrulla_marina'?{
-    marineCrewHp:[...(e.marineCrewHp||[10,10])],
+    marineCrewHp:[...(e.marineCrewHp||window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.marineCrewInitialHealth())],
     marineBrokenWindshield:[...(e.marineBrokenWindshield||[])]
   }:{}),heading:e.hd||0,ai:['soldat','general','torre','jeep','tanqueta','tanc','patrulla_marina'].includes(e.t),state:'patrol',patrol:(e.patrol?.length?e.patrol:[]).map(p=>({x:p.x,y:e.o.position.y,z:p.z})),home:{x:e.home?.x??e.x,z:e.home?.z??e.z},tx:e.tx??e.x,tz:e.tz??e.z,patrolIndex:e.pi??0,wt:e.wt??0,speed:e.speed??e.sp??0,yawRate:e.yawRate??0,orbitSign:e.orbitSign??1,heading:e.navHd??e.hd??0,guard:!!e.guard,towerGuard:!!e.towerGuard,towerSeat:e.towerSeat??null,
   towerHostId:e.towerHost?.saveId||null,
@@ -552,7 +552,7 @@ function updateNativeCoopFrame(dt){
          }
        }
        if(e.t==='patrulla_marina'){
-         e.marineCrewHp=row.marineCrewHp||[10,10];
+         e.marineCrewHp=row.marineCrewHp||window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.marineCrewInitialHealth();
          e.marineBrokenWindshield=row.marineBrokenWindshield||[];
          syncMarinePatrolCrew(e.o,e);
        }

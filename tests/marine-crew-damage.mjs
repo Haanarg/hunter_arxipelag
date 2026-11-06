@@ -26,14 +26,14 @@ const sideHit=marineCrewProjectileContact(
  {x:15,y:right.y,z:right.z},{x:-15,y:right.y,z:right.z},boat);
 assert.equal(sideHit?.kind,'marine-crew','side shot can reach exposed crew directly');
 assert.equal(sideHit.seat,1,'side hit reaches remaining rider');
-assert.equal(MARINE_CREW_HP,10,'pilot preserves 10 HP');
+assert.equal(MARINE_CREW_HP,4,'pilot has 4 HP like all regular mounted soldiers');
 assert.equal(MARINE_PASSENGER_HP,4,'passenger has 4 HP in both runtimes');
 const fallbackBoat={t:'patrulla_marina',x:0,y:0,z:0,hp:50};
 assert.equal(damageMarineCrew(fallbackBoat,1,2),true);
-assert.deepEqual(fallbackBoat.marineCrewHp,[10,2],
- 'uninitialized cooperative boat allocates distinct crew HP');
+assert.deepEqual(fallbackBoat.marineCrewHp,[4,2],
+ 'uninitialized cooperative boat allocates 4 HP per rider');
 assert.equal(damageMarineCrew(fallbackBoat,1,2),true);
-assert.deepEqual(fallbackBoat.marineCrewHp,[10,0],
+assert.deepEqual(fallbackBoat.marineCrewHp,[4,0],
  'two assault rifle bullets kill passenger without injuring pilot or hull');
 const rotated={...boat,hd:Math.PI/2,marineCrewHp:marineCrewInitialHealth(),marineBrokenWindshield:[]};
 const point=marineCrewHeadWorld(rotated,1);
@@ -54,4 +54,13 @@ assert.ok(model.includes('scr.userData.boatWindshieldPane='));
 assert.ok(visuals.includes('syncMarinePatrolCrew(boat,unit)')&&
  visuals.includes('marineCrewInitialHealth()'));
 assert.ok(native.includes('marineBrokenWindshield'));
+assert(!native.includes('[10,10]'),'no ten-HP fallback in coop snapshots');
+const enemy=read('src/enemy-ai.js');
+assert(enemy.includes("if(t==='jeep')u.patrolCrewHp=[")&&
+ enemy.includes('COMBAT_BALANCE.people.soldier,COMBAT_BALANCE.people.soldier'),
+ 'both road-patrol crew use normal 4 HP soldiers');
+assert(enemy.includes('u.enemyVehicleClaim||u.elite||u.rocketSoldier'),
+ 'only regular soldiers requisition vehicles, not 8-HP elite units');
+assert.equal(MARINE_CREW_HP,MARINE_PASSENGER_HP,
+ 'boat pilot and passenger receive the same HP');
 console.log('marine crew / front glass: ballistic and shared runtime regression passed');

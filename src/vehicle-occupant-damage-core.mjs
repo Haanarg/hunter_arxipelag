@@ -127,7 +127,8 @@ export const vehicleGlassHasCover=type=>COVERED.has(type);
  // Patrulleres: els dos soldats són dianes independents del casc. Les
  // tres peces del parabrisa es poden trencar separadament. Mateixes dades
  // geomètriques al client i al Worker, sense raycast de malles Three.js.
-export const MARINE_CREW_HP=10;
+// Tots els soldats embarcats, pilots i passatgers, tenen 4 PV.
+export const MARINE_CREW_HP=4;
 export const MARINE_PASSENGER_HP=4;
 export const marineCrewInitialHealth=()=>[MARINE_CREW_HP,MARINE_PASSENGER_HP];
 const MARINE_SCALE=1.95;
