@@ -3,7 +3,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const ai=fs.readFileSync(path.join(__dirname,'../src/enemy-ai.js'),'utf8');
 const core=fs.readFileSync(path.join(__dirname,'../src/game-core.js'),'utf8');
-const a=ai.indexOf('function enemyRemoteInterval('),b=ai.indexOf('function updEn(',a);
+const a=ai.indexOf('const ENEMY_AI_DISTANCE='),b=ai.indexOf('function updEn(',a);
 assert(a>=0&&b>a);
 const remote=new Function(ai.slice(a,b)+'return enemyRemoteInterval')();
 const q={x:0,z:0},u={t:'soldat',x:500,z:0,canSee:false,alert:0,aiMode:'patrol',blastT:0,entryDoor:null,pursuitT:0};
