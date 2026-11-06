@@ -82,6 +82,54 @@ for(const type of ['patrulla_marina','jeep']){
  car.patrolCrewHp[0]=0;
  assert.notEqual(contacts()?.seat,0,'dead driver is no longer hittable');
 }
+// El jugador no pot travessar el buc real mentre és enemic. La col·lisió
+// empeny fora del volum orientat, independentment de si és mar o terra.
+{
+ const a=game.indexOf('function vehiclePushPlayer(){'),
+   b=game.indexOf('const PL=',a);
+ assert(a>=0&&b>a);
+ const pushSource=game.slice(a,b);
+ for(const type of ['patrulla_marina','jeep']){
+   const isBoat=type==='patrulla_marina',v={
+     t:type,x:0,z:0,hd:0,v:0,o:{position:{y:isBoat?.2:1}}
+   },P={x:0,z:0};
+   const box=()=>({x:0,z:0,w:isBoat?12:6,d:isBoat?28:9,hd:0});
+   const within=(x,z,r)=>Math.abs(x)<box().w/2+r&&Math.abs(z)<box().d/2+r;
+   const env={cv:null,playerFall:null,P,V:[],E:[v],
+     circleVehicleOverlap:within,vehicleBox:box,
+     runoverSweepHit:()=>false,vehicleRadius:()=>isBoat?15:5,
+     VT:{llanxa:{mass:1},cotxe:{mass:1}},
+     vehicleHitType:t=>t==='patrulla_marina'?'llanxa':t==='jeep'?'cotxe':t,
+     runoverDamage:()=>0,hAt:()=>isBoat?-6:1,
+     terminalRampHeight:()=>null,pedestrianFerry:()=>null,
+     hurtP:()=>{throw Error('parked patrol must not hurt player')},
+     msg:'',msgT:0
+   };
+   const push=new Function('env','with(env){'+pushSource+
+     'return vehiclePushPlayer;}')(env);
+   push();
+   assert(!within(P.x,P.z,.62),
+     type+' must prevent walking/swimming through the parked hull');
+ }
+}
+// El radi d'interacció consulta la flota de V, per tant un buc
+// capturat es reconeix des de fora de la seva hitbox.
+{
+ const a=game.indexOf('const nearV=()=>'),
+   b=game.indexOf('function updateActionButton(',a);
+ assert(a>=0&&b>a);
+ for(const type of ['llanxa','cotxe']){
+   const v={t:type,x:0,z:0,o:{position:{y:0}},enemyCrew:null};
+   const env={playerFall:null,playerEject:null,P:{x:0,z:7},elapsed:5,
+     vehicleCandidatesAt:()=>[v],
+     vehicleRadius:()=>type==='llanxa'?15:5,
+     circleVehicleOverlap:()=>true
+   };
+   const near=new Function('env','with(env){'+game.slice(a,b)+
+     'return nearV;}')(env);
+   assert.strictEqual(near(),v,type+' must expose boarding interaction');
+ }
+}
 assert(game.includes("'jeep','tanqueta','tanc','patrulla_marina'"),
   'both enemy patrol types have physical collision while occupied');
 assert(game.includes('vehicleCandidatesAt(P.x,P.z,24,true)'),
