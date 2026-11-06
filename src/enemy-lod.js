@@ -184,7 +184,13 @@ function optimize(T,model,type){
   model.add(full);
   let mat=proxyMaterials.get(type);
   if(!mat){mat=material(T);proxyMaterials.set(type,mat)}
-  const mid=new T.Mesh(proxy(T,type,'mid'),mat),far=new T.Mesh(proxy(T,type,'far'),mat);
+  // Patrullera: ja disposa del casc facetat de la llanxa A1.
+  // Compartim les geometries LOD marítimes: proa en punta, cabina i
+  // radar, amb 2 tripulants al nivell mitjà. S'evita el rectangle
+  // genèric i el salt visual en acostar-se des d'un helicòpter.
+  const marineLOD=type==='patrulla_marina'?model.userData.distantVehicleLOD:null;
+  const mid=new T.Mesh(marineLOD?.variants?.[2]||proxy(T,type,'mid'),mat),
+    far=new T.Mesh(marineLOD?.variants?.[0]||proxy(T,type,'far'),mat);
   mid.name='hunter-enemy-mid';far.name='hunter-enemy-far';
   if(type==='soldat'&&model.userData.eliteSoldier){
     const armor=new T.MeshLambertMaterial({color:0x303a34}),mark=new T.MeshLambertMaterial({color:0xb83f38});

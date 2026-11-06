@@ -28,6 +28,13 @@ for(const state of [{canSee:true},{alert:1},{aiMode:'combat'},
 u.x=1700;
 assert.equal(remote(u,q,{contains:()=>true},true),0,'sniper target fully responsive even asleep');
 assert.equal(remote(u,q,null,false),Infinity,'scope does not permanently wake an enemy');
+// Les patrulleres poden ser visibles des de l'helicòpter a més d'1 km.
+const marine={...u,t:'patrulla_marina',remoteAiTier:undefined};
+assert.equal(remote(marine,q,null,false),0,'marine patrols are animated at 1.7 km');
+marine.x=2050;
+assert.equal(remote(marine,q,null,true),0,'marine wakeup precedes far-visual threshold');
+marine.x=2150;
+assert.equal(remote(marine,q,null,false),Infinity,'naval units can sleep safely outside view');
 const near={...u,x:301,remoteAiTier:0};
 assert.equal(remote(near,q,null,false),.05,'hysteresis keeps nearby enemy in first distance tier');
 near.x=331;

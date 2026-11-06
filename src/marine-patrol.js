@@ -202,10 +202,11 @@ function updateMarinePatrol(u,dt){
   const q=cv||P,targetY=cv?cv.o.position.y+(VT[cv.t]?.m==='a'?2:1.6):P.y+1.45,
         distance=Math.hypot(q.x-u.x,q.z-u.z),
         swimmer=!cv&&swimming&&!playerFall;
-  // Lluny de la càmera n'hi ha prou amb 10 actualitzacions/s.
-  u.marineAcc=(u.marineAcc||0)+dt;
-  if(distance>700&&u.marineAcc<.1)return;
-  dt=Math.min(.12,u.marineAcc);u.marineAcc=0;
+  // Les posicions i els girs continuen a cada pas de simulació mentre
+  // la patrullera és visible; agrupar 100 ms produïa salts des de l'aire.
+  // Les decisions costoses de rumb continuen a baixa freqüència més avall.
+  // Cap acumulació de dt pendent, que podria desplaçar bruscament la llanxa.
+  dt=Math.min(.12,dt);
   // El test de visió només es recalcula cada 0,25 s: evita escanejar
   // centenars de punts costaners a cada fotograma.
   u.marineSightT=(u.marineSightT||0)-dt;
