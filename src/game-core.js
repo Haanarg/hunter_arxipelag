@@ -2921,6 +2921,8 @@ function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
         }
         return; // Cap correcció de posició: es passa per sobre.
       }
+      // Conservar el llindar de col·lisió original de les roques grosses.
+      if(speed<2.5)return;
       // Les roques grosses continuen col·lidint. Un impacte ràpid
       // hi provoca dany i redueix la velocitat.
       if(speed>10){
