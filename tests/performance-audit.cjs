@@ -19,9 +19,11 @@ function setup(startFlags={shadowsDisabled:false,waterDisabled:false}){
     console:{info(){},table(){}}};
   vm.runInNewContext(fs.readFileSync('src/performance-audit.js','utf8'),{window:win});
   let shadows=startFlags.shadowsDisabled,water=startFlags.waterDisabled;
+  let cameraPose=[0,0,0,1];
   const changes=[];
   const controller=win.HUNTER_PERFORMANCE_AUDIT.create({
     windowObject:win,warmupMs:100,sampleMs:200,
+    getCameraPose:()=>cameraPose.slice(),
     getState:()=>({seed:67,quality:'desktop',pixelRatio:1,
       shadowsDisabled:shadows,waterDisabled:water,
       stressPreset:{seed:2407759483,x:1208,z:-1594,scale:1},
@@ -38,7 +40,8 @@ function setup(startFlags={shadowsDisabled:false,waterDisabled:false}){
     shadowReason:'moviment gran',shadowCulprit:'jugador / braç',deferredFaunaCasters:2,
     vehicleTypes:{llanxa:8,camio:12},vehicleParts:{'llanxa / hull':4},
     vehicleShadowTypes:{llanxa:2},boatMotionProxies:1};
-  return {controller,frame,win,changes,flags:()=>({shadows,water}),nodes,copied};
+  return {controller,frame,win,changes,flags:()=>({shadows,water}),nodes,copied,
+    turnCamera:()=>{cameraPose=[0,Math.sin(.15),0,Math.cos(.15)];}};
 }
 const s=setup();
 assert.equal(s.controller.status,'pending');
@@ -77,6 +80,12 @@ stopped.controller.onFrame(stopped.frame);
 stopped.controller.onFrame({...stopped.frame,x:30});
 assert.equal(stopped.controller.status,'aborted');
 assert.deepEqual(stopped.flags(),{shadows:false,water:false});
+const rotated=setup();
+rotated.controller.onFrame(rotated.frame);
+rotated.turnCamera();
+rotated.controller.onFrame(rotated.frame);
+assert.equal(rotated.controller.status,'aborted','camera rotation invalidates A/B results');
+assert.deepEqual(rotated.flags(),{shadows:false,water:false});
 const disabled=setup({shadowsDisabled:true,waterDisabled:true});
 disabled.controller.onFrame(disabled.frame);
 for(let n=0;n<40&&disabled.controller.status==='running';n++)
