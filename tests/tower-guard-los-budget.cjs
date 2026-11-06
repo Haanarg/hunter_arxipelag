@@ -9,7 +9,7 @@ const {pathToFileURL}=require('node:url');
   const rules=await import(pathToFileURL(path.join(__dirname,'../src/tower-model.mjs')).href);
   const source=fs.readFileSync(path.join(__dirname,'../src/enemy-ai.js'),'utf8');
   const start=source.indexOf('function towerGuardTick(u,dt){');
-  const end=source.indexOf('// La IA llunyana sense contacte',start);
+  const end=source.indexOf('const ENEMY_AI_DISTANCE=',start);
   assert(start>0&&end>start,'extract original guard logic');
   const counters={aiTowerSightMs:0,aiTowerSightChecks:0,aiTowerSightSkipped:0};
   let rays=0,shots=0,time=0;
