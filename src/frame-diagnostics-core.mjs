@@ -21,6 +21,7 @@ export function createFrameDiagnostics({
  function recordFrame({
    gameplayActive,rawDt,P,gpuSample,cpuStarted,simulationEnded,
    terrainEnded,renderStarted,renderCompleted,postRenderCompleted,
+   terrainTextureCpuMs=0,waterUpgradeCpuMs=0,
    simulated,roadFrameStats,shadowRedrawn,now,simulationActive,
    performanceStatsVisible
  }){
@@ -34,6 +35,8 @@ export function createFrameDiagnostics({
      roadVersionCpuMs:roadFrameStats?.versionCpuMs||0,
      roadRefitCpuMs:roadFrameStats?.refitCpuMs||0,
      postRenderCpuMs:postRenderCompleted-renderCompleted,
+     preRenderCpuMs:renderStarted-terrainEnded,
+     terrainTextureCpuMs,waterUpgradeCpuMs,
      simulationSteps:simulated.steps,drawCalls:ren.info.render.calls,
      triangles:ren.info.render.triangles,
      aiMs:perfHotspots.aiMs,aiNavMs:perfHotspots.aiNavMs,aiSweepMs:perfHotspots.aiSweepMs,
