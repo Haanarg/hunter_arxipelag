@@ -32,7 +32,7 @@ function setup(startFlags={shadowsDisabled:false,waterDisabled:false}){
     setWaterDisabled:x=>{water=x;changes.push(['water',x])}
   });
   const frame={active:true,x:10,z:20,frameMs:100,renderCpuMs:24,
-    postRenderCpuMs:1,updateCpuMs:16,terrainCpuMs:.1,drawCalls:2344,
+    postRenderCpuMs:51,preRenderCpuMs:3,terrainTextureCpuMs:11,waterUpgradeCpuMs:39,updateCpuMs:16,terrainCpuMs:.1,drawCalls:2344,
     triangles:769000,simulationSteps:6,aiMs:15,aiNavMs:9.1,aiSweepMs:7.6,
     sweepChecks:135,sweepSamples:426,aiUpdated:170,aiSkipped:490,
     groups:{edificis:600,vegetacio:800,enemics:500},
@@ -79,6 +79,11 @@ assert.equal(s.controller.results[0].stats.vehicleTypes.camio,12);
 assert.equal(s.controller.results[0].stats.vehicleParts['llanxa / hull'],4);
 assert.equal(s.controller.results[0].stats.vehicleShadowTypes.llanxa,2);
 assert.equal(s.controller.results[0].stats.p99FrameMs,100);
+assert.equal(s.controller.results[0].stats.preRenderCpuMs,3);
+assert.equal(s.controller.results[0].stats.terrainTextureMaxMs,11);
+assert.equal(s.controller.results[0].stats.waterUpgradeMaxMs,39);
+assert.equal(s.controller.results[0].stats.postRenderMaxMs,51);
+assert.equal(s.controller.results[0].stats.slowFrameSamples[0].current.postRenderCpuMs,51);
 assert.equal(s.controller.results[0].stats.slowFrames20,2);
 assert.equal(s.controller.results[0].stats.frames20to25,0);
 assert.equal(s.controller.results[0].stats.frames24to25,0);
@@ -127,6 +132,9 @@ console.log('OK: auditoria A/B, fases, estadístiques, cancel·lació i restaura
   assert.equal(shared.format,'hunter-perf-share-v1');
   assert.equal(shared.phases.length,5);
   assert.equal(shared.phases[0].stats.aiNavMs,9.1);
+  assert.equal(shared.phases[0].stats.terrainTextureMaxMs,11);
+  assert.equal(shared.phases[0].stats.waterUpgradeMaxMs,39);
+  assert.equal(shared.phases[0].stats.postRenderMaxMs,51);
   assert.equal(shared.phases[0].stats.slowFrames20,2);
   assert.equal(shared.phases[0].stats.frames24to25,0);
   assert.equal(shared.phases[0].stats.vehicleParts['llanxa / hull'],4);

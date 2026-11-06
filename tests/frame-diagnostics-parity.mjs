@@ -103,7 +103,15 @@ for(const enabled of [true,false])for(let i=0;i<120;i++){
   assert.deepEqual(r[key],l[key],'counter cleanup: '+key);
  const f=frame(i);
  old.recordFrame(clone(f));fresh.recordFrame(clone(f));
- assert.deepEqual(rhs.audit,lhs.audit,'audit '+i);
+ // La instrumentació moderna afegeix tres mètriques de desglossament;
+ // les mètriques històriques continuen idèntiques al control independent.
+ const oldFields=rhs.audit.map(({preRenderCpuMs,terrainTextureCpuMs,waterUpgradeCpuMs,...rest})=>rest);
+ assert.deepEqual(oldFields,lhs.audit,'audit legacy fields '+i);
+ if(enabled){
+  assert.equal(rhs.audit[0].preRenderCpuMs,f.renderStarted-f.terrainEnded);
+  assert.equal(rhs.audit[0].terrainTextureCpuMs,0);
+  assert.equal(rhs.audit[0].waterUpgradeCpuMs,0);
+ }
  assert.deepEqual(rhs.adaptive,lhs.adaptive,'adaptive '+i);
  if(!enabled)assert.equal(rhs.audit.length,0);
  if(enabled){
