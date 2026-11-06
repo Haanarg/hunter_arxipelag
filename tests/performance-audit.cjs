@@ -149,6 +149,42 @@ for(let n=0;n<40&&disabled.controller.status==='running';n++)
   disabled.controller.onFrame(disabled.frame);
 assert.equal(disabled.controller.status,'finished');
 assert.deepEqual(disabled.flags(),{shadows:true,water:true});
+
+ // Verify audited WebGL render instruments only the original scene
+ // matrix traversal and always restores the original callback.
+{
+  const gameCore=fs.readFileSync('src/game-core.js','utf8');
+  const a=gameCore.indexOf('const renderStarted=performance.now();');
+  const end='const renderCompleted=performance.now();';
+  const b=gameCore.indexOf(end,a);
+  assert(a>=0&&b>a,'render instrumentation boundary available');
+  const renderCall=new Function('env','with(env){'+gameCore.slice(a,b+end.length)+
+    'return {renderMatrixCpuMs,gpuSample};}');
+  let clock=0,updates=0,ends=0;
+  const scene={updateMatrixWorld(){updates++;return updates;}};
+  const original=scene.updateMatrixWorld;
+  const env={scene,cam:{},performance:{now:()=>++clock},
+    performanceAudit:{status:'running'},gameplayActive:true,
+    performanceGpuTimer:{begin:()=>({sample:true}),end:()=>ends++},
+    frameDiagnostics:{resetDrawCounters(){}},world:{userData:{}},
+    deathVoidReady:()=>false,deathCinematic:null,
+    ren:{render(s){s.updateMatrixWorld(true)}}};
+  const result=renderCall(env);
+  assert.equal(result.renderMatrixCpuMs,1,'matrix traversal recorded once');
+  assert.strictEqual(scene.updateMatrixWorld,original,'original scene hook restored');
+  assert.equal(updates,1);
+  assert.equal(ends,1,'GPU timer closed after successful render');
+  env.ren.render=()=>{throw new Error('synthetic WebGL failure')};
+  assert.throws(()=>renderCall(env),/synthetic WebGL failure/);
+  assert.strictEqual(scene.updateMatrixWorld,original,'hook restored after render failure');
+  assert.equal(ends,2,'GPU timer finalized after error');
+  env.performanceAudit=null;
+  env.ren.render=s=>s.updateMatrixWorld(true);
+  assert.equal(renderCall(env).renderMatrixCpuMs,0,
+    'no matrix instrumentation overhead outside audit');
+  assert.strictEqual(scene.updateMatrixWorld,original);
+}
+
 console.log('OK: auditoria A/B, fases, estadístiques, cancel·lació i restauració');
 
 (async()=>{
