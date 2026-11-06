@@ -150,6 +150,20 @@ function enemySweepNeedsElevation(u,x,z,r,route,staticCandidates,dynamicCandidat
   }
   return false;
 }
+// El radi de cerca espacial és conservador, però pot retornar obstacles
+// que estan fora de TOT el trajecte. Filtram una sola vegada per segment,
+// mai per mostra. La caixa ampliada inclou el radi real de col·lisió.
+function enemySweptSubset(items,ax,az,bx,bz,marginFor){
+  const minX=Math.min(ax,bx),maxX=Math.max(ax,bx),
+    minZ=Math.min(az,bz),maxZ=Math.max(az,bz);
+  return items.filter(item=>{
+    const margin=marginFor(item);
+    return !Number.isFinite(item.x)||!Number.isFinite(item.z)||
+      !Number.isFinite(margin)||
+      (item.x+margin>=minX&&item.x-margin<=maxX&&
+       item.z+margin>=minZ&&item.z-margin<=maxZ);
+  });
+}
 // Sample both translation and rotation; a valid endpoint never permits a jump through a wall.
 function enemySweep(u,ax,az,bx,bz,fromHd,toHd,dynamic=true,route=false){
   const sweepStamp=performanceStatsVisible?performance.now():0;
@@ -165,13 +179,24 @@ function enemySweep(u,ax,az,bx,bz,fromHd,toHd,dynamic=true,route=false){
   // continuen funcionant a cada mostra, sense saltar cap col·lisió.
   const cx=(ax+bx)*.5,cz=(az+bz)*.5,half=distance*.5,
     solidRadius=route||veh?radius:enemyBodyRadius(u);
-  const staticCandidates={walls:wallCandidates(cx,cz,half+solidRadius),
-    treeCache:{cx:NaN,cz:NaN,trees:[]}};
+  const staticCandidates={
+    walls:enemySweptSubset(wallCandidates(cx,cz,half+solidRadius),
+      ax,az,bx,bz,()=>solidRadius+2),
+    treeCache:{cx:NaN,cz:NaN,trees:[]}
+  };
+  const vehicleMargin=v=>{
+    const radius=vehicleRadius(v.t);
+    return solidRadius+(Number.isFinite(radius)?radius:70)+6;
+  };
   if(route&&!veh)
-    staticCandidates.routeVehicles=vehicleCandidatesAt(cx,cz,half+solidRadius+22);
+    staticCandidates.routeVehicles=enemySweptSubset(
+      vehicleCandidatesAt(cx,cz,half+solidRadius+22),
+      ax,az,bx,bz,vehicleMargin);
   const dynamicCandidates=dynamic?{
-    vehicles:vehicleCandidatesAt(cx,cz,half+48),
-    enemies:enemyCandidatesAt(cx,cz,half+32)
+    vehicles:enemySweptSubset(vehicleCandidatesAt(cx,cz,half+48),
+      ax,az,bx,bz,vehicleMargin),
+    enemies:enemySweptSubset(enemyCandidatesAt(cx,cz,half+32),
+      ax,az,bx,bz,v=>solidRadius+enemyBodyRadius(v)+2)
   }:null;
   // Un prefiltre conservador per tot el segment evita tornar a escanejar
   // els mateixos murs/vehicles/soldats a cada mostra d'un tram lliure.
@@ -188,7 +213,8 @@ function enemySweep(u,ax,az,bx,bz,fromHd,toHd,dynamic=true,route=false){
     const ground=enemySweepSampleGround(u,x,z,needsElevation),
       sampleY=u.gy??ground;
     if(!enemySolidAt(u,x,z,hd,route,staticCandidates,ground)||
-       (dynamic&&!enemyBodiesClear(u,x,z,hd,dynamicCandidates,sampleY)))return false;
+       (dynamic&&(dynamicCandidates.vehicles.length||dynamicCandidates.enemies.length)&&
+        !enemyBodiesClear(u,x,z,hd,dynamicCandidates,sampleY)))return false;
   }
   return true;
   }finally{
