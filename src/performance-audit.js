@@ -200,8 +200,9 @@
       vehicleTypes,vehicleParts,vehicleShadowTypes
     };
   }
-  // Versió compacta per compartir en xats: preserva les cinc fases i els
-  // comptadors diagnòstics; el JSON complet continua disponible per descarregar.
+  // El mode habitual comparteix NOMÉS les dades que poden orientar
+  // optimitzacions: els experiments descartats i els inventaris sencers
+  // del món queden disponibles exclusivament a l'auditoria avançada.
   function shareReport(report){
     const round=value=>typeof value==='number'&&Number.isFinite(value)
       ?Math.round(value*100)/100:value;
@@ -211,6 +212,33 @@
       .filter(([,value])=>typeof value==='number'&&value!==0)
       .sort((a,b)=>b[1]-a[1]).slice(0,limit)
       .map(([key,value])=>[key,round(value)]));
+    if(report.mode==='focused'){
+      const s=report.phases?.[0]?.stats||{};
+      return {
+        format:'hunter-perf-share-v1',status:report.status,mode:'focused',
+        seed:report.seed,quality:report.quality,pixelRatio:report.pixelRatio,
+        auditPosition:report.auditPosition,
+        phases:[{id:'base-1',name:'Joc normal',stats:{
+          ...pick(s,['frames','fps','frameMs','p95FrameMs','p99FrameMs',
+            'updateCpuMs','renderCpuMs','preRenderCpuMs','postRenderCpuMs',
+            'terrainTextureMaxMs','waterUpgradeMaxMs','postRenderMaxMs',
+            'aiMs','aiNavMs','aiSweepMs','aiMsP95','aiMsP99',
+            'sweepChecks','sweepSamples','drawCalls','triangles',
+            'simulationSteps','slowFrames50','gpuSamples','gpuMs']),
+          groups:ranked(s.groups,9),vehicleTypes:ranked(s.vehicleTypes,6),
+          otherDetails:ranked(s.otherDetails,6),
+          slowFrameSamples:(s.slowFrameSamples||[]).slice(0,3).map(entry=>({
+            intervalMs:round(entry.intervalMs),
+            previous:entry.previous?pick(entry.previous,
+              ['cpuMs','updateCpuMs','renderCpuMs','postRenderCpuMs',
+                'waterUpgradeCpuMs','aiMs','simulationSteps']):null,
+            current:entry.current?pick(entry.current,
+              ['cpuMs','updateCpuMs','renderCpuMs','postRenderCpuMs',
+                'waterUpgradeCpuMs','aiMs','simulationSteps']):null
+          }))
+        }}]
+      };
+    }
     const metrics=['frames','fps','frameMs','p95FrameMs','p99FrameMs',
       'slowFrames20','frames20to25','frames24to25','slowFrames25','slowFrames50',
       'updateCpuMs','renderCpuMs','roadVersionCpuMs','roadRefitCpuMs',
@@ -261,7 +289,8 @@
     };
   }
   function create({getState,getCameraPose=null,setShadowsDisabled,setWaterDisabled,windowObject=window,
-    warmupMs=1100,sampleMs=3000,readyMs=2000,gpuTimer=null}){
+    warmupMs=1100,sampleMs=3000,readyMs=2000,gpuTimer=null,fullAudit=false}){
+    const phases=fullAudit?PHASES:[PHASES[0]];
     let status='pending',index=0,phaseElapsed=0,rows=[],origin=null,initialCameraPose=null,
       original=null,results=[],notice='',lastReport=null,readyElapsed=0,ready=false,
       readyPosition=null,cameraMovedFrames=0;
@@ -284,9 +313,9 @@
       button.type='button';
       button.style.cssText='display:none;margin:8px 6px 0 0;padding:7px 10px;font:inherit;cursor:pointer';
     }
-    copy.textContent='Copia resum (per al xat)';
-    copyFull.textContent='Copia JSON complet';
-    download.textContent='Descarrega JSON complet';
+    copy.textContent='Copia diagnòstic';
+    copyFull.textContent='Copia dades detallades';
+    download.textContent='Descarrega dades detallades';
     function copyText(text,button,message){
       const fallback=()=>{
         let area;
@@ -352,8 +381,9 @@
       initialCameraPose=null;cameraMovedFrames=0;
       status='running';index=0;phaseElapsed=0;rows=[];
       start.style.display='none';
-      apply(PHASES[index]);
-      display('Fase 1/5: Normal (inici)\nEstabilitzant la càmera abans de mesurar. No moguis el personatge.');
+      apply(phases[index]);
+      display(fullAudit?'Fase 1/5: Normal (inici)\nEstabilitzant la càmera abans de mesurar.':
+        'Diagnòstic de joc normal\nEstabilitzant la càmera abans de mesurar.');
     };
     function apply(phase){
       setShadowsDisabled(original.shadowsDisabled||phase.shadows);
@@ -389,7 +419,8 @@
               byId[id].gpuMs-baselines.reduce((sum,s)=>sum+s.gpuMs,0)/baselines.length:null};
         }
       }
-      const report={status,seed:original.seed,quality:original.quality,
+      const report={status,mode:fullAudit?'full':'focused',
+        seed:original.seed,quality:original.quality,
         pixelRatio:original.pixelRatio,
         playerBatchStats:original.playerBatchStats||null,
         pathStats:original.pathStats||null,
@@ -406,6 +437,29 @@
       lastReport=report;
       windowObject.HUNTER_PERF_AUDIT_RESULTS=report;
       const fmt=n=>Number.isFinite(n)?n.toFixed(1):'n/d';
+      if(!fullAudit){
+        const normal=byId['base-1'];
+        let short='Diagnòstic · joc normal ('+(normal?.frames||0)+' fotogrames)\n';
+        short+='FPS '+fmt(normal?.fps)+' · p95 '+fmt(normal?.p95FrameMs)+
+          ' ms · p99 '+fmt(normal?.p99FrameMs)+' ms\n';
+        short+='CPU joc '+fmt(normal?.updateCpuMs)+' ms · render '+
+          fmt(normal?.renderCpuMs)+' ms · IA '+fmt(normal?.aiMs)+' ms\n';
+        short+='Navegació '+fmt(normal?.aiNavMs)+' ms · col·lisions '+
+          fmt(normal?.aiSweepMs)+' ms\n';
+        short+='Dibuixos '+Math.round(normal?.drawCalls||0)+
+          ' · triangles '+Math.round(normal?.triangles||0)+'\n';
+        short+='Pic postrender '+fmt(normal?.postRenderMaxMs)+' ms'+
+          ' (mar '+fmt(normal?.waterUpgradeMaxMs)+
+          ', textura '+fmt(normal?.terrainTextureMaxMs)+')\n';
+        short+='Draw calls: '+
+          Object.entries(normal?.groups||{}).sort((a,b)=>b[1]-a[1])
+            .slice(0,6).map(([k,n])=>k+' '+Math.round(n)).join(', ');
+        display(short);
+        for(const button of [copy,copyFull,download])
+          button.style.display='inline-block';
+        windowObject.console.info('[HUNTER] Diagnòstic de rendiment',report);
+        return;
+      }
       let message='Mateixa llavor i posició; opcions originals restaurades.\n';
       if(original.stressPreset)
         message+='ESTRÈS: llavor '+original.stressPreset.seed+
@@ -515,13 +569,13 @@
       phaseElapsed+=frame.frameMs;
       if(phaseElapsed>warmupMs)rows.push(frame);
       if(phaseElapsed<warmupMs+sampleMs)return;
-      const phase=PHASES[index];
+      const phase=phases[index];
       results.push({id:phase.id,name:phase.name,stats:summary(rows)});
       index++;
-      if(index>=PHASES.length){finish();return}
+      if(index>=phases.length){finish();return}
       phaseElapsed=0;rows=[];
-      apply(PHASES[index]);
-      display('Fase '+(index+1)+'/5: '+PHASES[index].name+
+      apply(phases[index]);
+      display('Fase '+(index+1)+'/'+phases.length+': '+phases[index].name+
         '\nMesuram render, joc, IA i dibuixos. No moguis el personatge.');
     }
     return {onFrame,abort,get status(){return status},get ready(){return ready},get results(){return results}};
