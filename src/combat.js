@@ -185,6 +185,46 @@ function explodeEnemyVehicle(u){
   const heavy=u.t==='tanc'||u.t==='tanqueta';
   boom(u.x,y+(heavy?1.8:1.2),u.z,heavy?12:9,heavy?10:8,'e');
 }
+// Un buc capturat deixa de ser una unitat enemiga i passa a la flota
+// pilotable. Conservam exactament el model, la posició, els vidres trencats
+// i la vida del casc; no el substituïm ni el duplicam al món.
+function captureEmptyEnemyPatrol(u){
+  if(!u||u.destroyed||u.hp<=0||!E.includes(u))return null;
+  const marine=u.t==='patrulla_marina',road=u.t==='jeep';
+  if(!marine&&!road)return null;
+  const crew=marine?u.marineCrewHp:u.patrolCrewHp;
+  if(!crew||crew.some(hp=>hp>0))return null;
+  const type=marine?'llanxa':'cotxe',config=VT[type];
+  // El model enemic té una segona capa LOD; la restauram sencera
+  // abans que el sistema de LOD dels vehicles prengui el control.
+  window.HUNTER_ENEMY_LOD.setLevel(u.o,'full');
+  window.HUNTER_VEHICLES.setDistantVehicleLOD(u.o,false);
+  if(marine)syncMarinePatrolCrew(u.o,u);
+  const visuals=u.o?.userData?.enemyCarCrew;
+  if(visuals){
+    if(visuals.driver)visuals.driver.visible=false;
+    if(visuals.gunner)visuals.gunner.visible=false;
+    if(visuals.mount)visuals.mount.visible=false;
+    for(const rider of visuals.boatWeapons||[])rider.rider.visible=false;
+  }
+  if(u.o?.userData?.enemyFlag)u.o.userData.enemyFlag.visible=false;
+  const vehicle={
+    t:type,x:u.x,z:u.z,hd:u.hd||0,v:0,
+    alt:u.o.position.y,o:u.o,
+    maxLife:config.life??1,
+    life:Math.max(1,Math.min(config.life??1,u.hp)),
+    smokeT:0,enemyCrew:null,
+    capturedPatrol:true,
+    ...(u.saveId?{saveId:'captured-'+u.saveId}:{})
+  };
+  if(road&&u.brokenVehicleWindows)vehicle.brokenVehicleWindows=[...u.brokenVehicleWindows];
+  const index=E.indexOf(u);
+  E.splice(index,1);V.push(vehicle);
+  // El broadphase de projectils/col·lisions ha de reconèixer el buc
+  // immediatament després de la baixa, sense esperar el següent frame.
+  rebuildVehicleGrid();
+  return vehicle;
+}
 function killEnemy(u,killingShot=null){
   if(u.enemyVehicleClaim){
     const claim=u.enemyVehicleClaim,vehicle=claim.vehicle,
@@ -211,7 +251,7 @@ function killEnemy(u,killingShot=null){
       window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.MARINE_CREW_HP
     ]).filter(health=>health>0).length;
     u.marineCrewHp=[0,0];
-  }else if(u.t==='jeep')kills+=2;
+  }else if(u.t==='jeep')kills+=(u.patrolCrewHp||[1,1]).filter(hp=>hp>0).length;
   else kills++;
   if(u.t==='soldat'||u.t==='general'){window.HUNTER_ENEMY_LOD.setLevel(u.o,'full');u.deadT=0;
     const impulse=u.blastImpulse;
@@ -944,6 +984,16 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
           point.x,point.y,point.z);
       }
     }
+    if(e.t==='jeep'&&shotClass!=='heavy'){
+      // Els dos soldats del cotxe patrulla tenen salut pròpia. Igual que
+      // a la patrullera, la mira pot fixar-se en el cap dels ocupants.
+      for(let seat=0;seat<2;seat++){
+        if((e.patrolCrewHp?.[seat]??COMBAT_BALANCE.people.soldier)<=0)continue;
+        const p=window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.vehicleOccupantHeadWorld(
+          e,seat,e.o?.position?.y??0);
+        consider({t:'soldat',patrolCar:e,patrolSeat:seat},'enemy',0,p.x,p.y,p.z);
+      }
+    }
     const priority=weaponTargetPriority(e,shotClass);
     if(priority>=3||shotClass==='heavy'&&priority>selector.priority)continue;
     const modelY=e.o?.position?.y??(e.gy??0),
@@ -1532,8 +1582,15 @@ function updPj(dt){
         const marineContact=marine&&!p.spl?
           window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.marineCrewProjectileContact(
             from,to,u,{baseY:u.o?.position?.y??0}):null;
+        const patrolCarContact=u.t==='jeep'&&!p.spl?
+          window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.vehicleSeatProjectileContact(
+            from,to,u,(u.patrolCrewHp||[]).map(hp=>({hp})),
+            {baseY:u.o?.position?.y??0}):null;
         if(marineContact)consider(marineContact.t,marineContact.kind,
           {boat:u,...marineContact});
+        else if(patrolCarContact)consider(patrolCarContact.t,
+          patrolCarContact.kind==='vehicle-glass'?'patrol-car-glass':'patrol-car-crew',
+          {car:u,...patrolCarContact});
         else consider(marine?marineHullSegmentT(x0,y0,z0,x1,y1,z1,u):
           enemyProjectileContactT(x0,y0,z0,x1,y1,z1,u),'enemy',u)
       }
@@ -1637,6 +1694,30 @@ function updPj(dt){
           confirmCombatDamage(p,before,boat.marineCrewHp[seat]);
           if(!boat.marineCrewHp[seat])kills++;
           syncMarinePatrolCrew(boat.o,boat);
+          captureEmptyEnemyPatrol(boat);
+        }
+      }
+      else if(kind==='patrol-car-glass'){
+        shatterVehicleWindow(target.car,target.seat,{x:p.x,y:p.y,z:p.z},p);
+      }
+      else if(kind==='patrol-car-crew'){
+        const car=target.car,seat=target.seat,
+          old=car.patrolCrewHp?.[seat]??0;
+        if(old>0){
+          car.patrolCrewHp[seat]=Math.max(0,old-p.dmg);
+          confirmCombatDamage(p,old,car.patrolCrewHp[seat]);
+          spawnBulletImpact('blood',p.x,p.y,p.z,p);
+          if(car.patrolCrewHp[seat]===0){
+            kills++;
+            const rig=car.o?.userData?.enemyCarCrew;
+            if(seat===0&&rig?.driver)rig.driver.visible=false;
+            if(seat===1){
+              if(rig?.gunner)rig.gunner.visible=false;
+              if(rig?.mount)rig.mount.visible=false;
+            }
+            if(seat===0){car.sp=0;car.rng=car.patrolCrewHp[1]>0?car.rng:0;}
+          }
+          captureEmptyEnemyPatrol(car);
         }
       }
       else if(kind==='vehicle-glass'){
