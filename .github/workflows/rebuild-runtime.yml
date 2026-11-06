@@ -27,6 +27,12 @@ on:
       - 'tests/shadow-stable-focus.cjs'
       - 'tests/shadow-rowboat-cache.cjs'
       - 'tests/rowboat-far-lod.cjs'
+      - 'tests/vehicle-distant-lod.cjs'
+      - 'tests/remote-rider-lod.cjs'
+      - 'tests/enemy-sweep-aabb-pruning.cjs'
+      - 'tests/render-batching-regressions.cjs'
+      - 'tests/vehicle-batching.cjs'
+      - 'tests/helpers/vehicle-model-trace.mjs'
       - 'tests/enemy-vehicle-height-prefilter.cjs'
       - 'tests/performance-audit.cjs'
       - 'tests/shadow-boat-cache.cjs'
@@ -69,6 +75,7 @@ jobs:
           node tests/enemy-vehicle-height-prefilter.cjs
           node tests/enemy-sweep-elevation-vegetation.cjs
           node tests/enemy-sweep-candidate-cache.cjs
+          node tests/enemy-sweep-aabb-pruning.cjs
           node tests/enemy-route-probe-budget.cjs
       - name: Observe legacy jeep obstacle route (known failing long-route test)
         continue-on-error: true
@@ -98,6 +105,20 @@ jobs:
           node tests/shadow-stable-focus.cjs
           node tests/rowboat-far-lod.cjs
           node tests/performance-audit.cjs
+      - name: Check distant vehicles, their occupants and unchanged near geometry
+        run: |
+          node --check src/rider.js
+          node --check src/coop-world-runtime.js
+          node --check src/enemy-ai.js
+          node --check src/enemy-navigation.js
+          node tests/vehicle-distant-lod.cjs
+          node tests/remote-rider-lod.cjs
+          node tests/rowboat-far-lod.cjs
+          node tests/vehicle-batching.cjs
+          node tests/render-batching-regressions.cjs
+          node tests/native-coop-vehicle-visual-lod.cjs
+          node tests/native-coop-side-by-side-riders.cjs
+          node tests/shared-vehicle-models.mjs
       - name: Check distance-based coastal terrain LOD
         run: |
           node --check src/terrain.js
