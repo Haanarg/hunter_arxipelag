@@ -2010,6 +2010,9 @@ window.HUNTER_DRAW_OTHER_DETAILS=renderOtherDetails;
 window.HUNTER_DRAW_CALL_GROUPS=renderCategories;
 adaptivePerformance.stats.drawCategories=renderCategories;
 const registeredDrawHooks=new WeakMap();
+// Reuses the world build's existing traversal to instrument only large,
+// switchable visual groups. No second scene scan per rendered frame.
+const hiddenMatrixCull=window.HUNTER_HIDDEN_MATRIX.create();
 function registerDrawCategories(){const steps=registerDrawCategoriesSteps(false);while(!steps.next().done){}}
 function* registerDrawCategoriesSteps(progressive=true){
   const tagged=new Map(),vehicleRoots=new Map();
@@ -2052,6 +2055,8 @@ function* registerDrawCategoriesSteps(progressive=true){
   if(typeof sunM!=='undefined')tagged.set(sunM,'cel');
   if(typeof rendering!=='undefined'&&rendering.glow)tagged.set(rendering.glow,'cel');
   function track(mesh){
+    if(tagged.has(mesh)||mesh.name==='hunter-vehicle-full-detail'||
+       mesh.name==='hunter-enemy-full')hiddenMatrixCull.register(mesh);
     if(!mesh.isMesh)return;
     const installed=registeredDrawHooks.get(mesh);
     if(!performanceStatsVisible){
@@ -4097,6 +4102,7 @@ if(originalSceneMatrixUpdate)scene.updateMatrixWorld=function(...args){
 // Estadístiques de camins limitades al fotograma actual.
 const roadFrameStats=world?.userData?.pathRenderStats;
 frameDiagnostics.resetDrawCounters(roadFrameStats);
+hiddenMatrixCull.beginRender();
 try{
  if(deathVoidReady()){
    const v=deathCinematic;v.voidCamera.aspect=cam.aspect;v.voidCamera.updateProjectionMatrix();
@@ -4107,6 +4113,7 @@ try{
    ren.render(deathCinematic.underwaterScene,cam);
  }else ren.render(scene,cam);
 }finally{
+ hiddenMatrixCull.endRender();
  if(originalSceneMatrixUpdate)scene.updateMatrixWorld=originalSceneMatrixUpdate;
  if(gpuSample)performanceGpuTimer.end(gpuSample);
 }
@@ -4127,7 +4134,7 @@ const postRenderCompleted=performance.now();
 frameDiagnostics.recordFrame({
   gameplayActive,rawDt,P,gpuSample,cpuStarted,simulationEnded,
   terrainEnded,renderStarted,renderCompleted,postRenderCompleted,
-  renderMatrixCpuMs,
+  renderMatrixCpuMs,renderHiddenGroupsSkipped:hiddenMatrixCull.skipped,
   terrainTextureCpuMs:afterTerrainTexture-postStart,
   waterUpgradeCpuMs:afterWaterUpgrade-afterTerrainTexture,
   simulated,roadFrameStats,shadowRedrawn,now,
