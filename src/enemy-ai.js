@@ -1117,7 +1117,10 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
     motorcycleMuzzle.position.set(0,0,-1.08);
     rig.gun.add(motorcycleMuzzle);
   }
-  car.add(driver);
+  // Els ocupants resten al detall complet. El proxy distant en dibuixa
+  // una silueta mínima sense alterar el model ni els punts de tir.
+  const detailParent=car.userData.distantVehicleLOD?.full||car;
+  detailParent.add(driver);
   let mount=null,pitch=null,muzzle=null;
   if(gunner){
     gunner.position.set(x,height,z);
@@ -1129,12 +1132,12 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
     mount.position.set(truck?1.98*truckFit:civil?1.30:1.46,
       truck?3.07*truckFit:2.07,
       truck?-2.03*truckFit:civil?-.6:-.30);
-    mount.add(pitch);car.add(mount);
+    mount.add(pitch);detailParent.add(mount);
     rifle.position.set(0,-.035,-.14);rifle.rotation.set(0,0,0);rifle.scale.setScalar(.94);
     pitch.add(rifle);
     bx(rifle,.075,.075,.42,0x252d2c,0,0,-.97,'metal');
     muzzle=new THREE.Object3D();muzzle.position.set(0,0,-1.18);rifle.add(muzzle);
-    car.add(gunner);
+    detailParent.add(gunner);
   }
   if(initiallyHidden){driver.visible=false;if(gunner)gunner.visible=false;if(mount)mount.visible=false;}
   return car.userData.enemyCarCrew={driver,gunner,mount,pitch,muzzle,motorcycleMuzzle};

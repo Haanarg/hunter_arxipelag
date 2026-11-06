@@ -25,7 +25,7 @@ function attachEnemyBoatCrew(boat,{initiallyHidden=false,type='llanxa'}={}){
     muzzle.position.set(0,0,rocket?-1.66:-.96);
     weapon.add(muzzle);
     rider.visible=!initiallyHidden;
-    boat.add(rider);
+    (boat.userData.distantVehicleLOD?.full||boat).add(rider);
     crew.push({rider,weapon,muzzle,rocket,seat,basePitch:weapon.rotation.x});
   }
   boat.userData.enemyCarCrew={
