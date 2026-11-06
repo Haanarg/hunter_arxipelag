@@ -54,6 +54,7 @@ window.HUNTER_PERFORMANCE=Object.freeze({
           stats.hotspots.aiSweepChecks+' trajectes · '+stats.hotspots.aiSweepSamples+' mostres'+
           '\nIA terra ràpid '+(stats.hotspots.aiSweepFastGroundSamples||0)+
           ' · complet '+(stats.hotspots.aiSweepFullGroundSamples||0)+
+          ' · alçades vehicles evitades '+(stats.hotspots.aiSweepVehicleHeightSkipped||0)+
           ' · prediccions passives '+(stats.hotspots.aiPassiveDirectChecks||0)+
           '\nIA decisions immediates '+(stats.hotspots.aiImmediateDecisions||0)+
           ' · remotes '+(stats.hotspots.aiRemoteDecisions||0)+

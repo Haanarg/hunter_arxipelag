@@ -244,9 +244,9 @@
       phaseComparisons:report.phaseComparisons||null
     };
   }
-  function create({getState,setShadowsDisabled,setWaterDisabled,windowObject=window,
+  function create({getState,getCameraPose=null,setShadowsDisabled,setWaterDisabled,windowObject=window,
     warmupMs=1100,sampleMs=3000,gpuTimer=null}){
-    let status='pending',index=0,phaseElapsed=0,rows=[],origin=null,
+    let status='pending',index=0,phaseElapsed=0,rows=[],origin=null,initialCameraPose=null,
       original=null,results=[],notice='',lastReport=null;
     const doc=windowObject.document;
     const panel=doc.createElement('section');
@@ -448,6 +448,7 @@
         if(!frame.active)return;
         original={...getState()};
         origin={x:frame.x,z:frame.z};
+        initialCameraPose=getCameraPose?.()||null;
         status='running';index=0;phaseElapsed=0;rows=[];
         apply(PHASES[index]);
         display('Fase 1/5: Normal (inici)\nNo moguis el personatge fins a completar la prova.');
@@ -456,6 +457,12 @@
       if(!frame.active){abort('La partida s’ha pausat, ocultat o acabat.');return}
       if(Math.hypot(frame.x-origin.x,frame.z-origin.z)>4){
         abort('El personatge s’ha mogut més de 4 m: la comparació no és fiable.');return;
+      }
+      if(initialCameraPose&&getCameraPose){
+        const pose=getCameraPose();
+        if(pose&&Math.abs(pose.reduce((sum,value,i)=>sum+value*initialCameraPose[i],0))<.9995){
+          abort('La càmera ha girat: repeteix l’auditoria amb la mateixa orientació.');return;
+        }
       }
       if(!(frame.frameMs>0&&frame.frameMs<=200))return;
       phaseElapsed+=frame.frameMs;

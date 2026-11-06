@@ -86,7 +86,17 @@ function enemyBodiesClear(u,x,z,hd,dynamicCandidates=null,sampledY=undefined){
     box=veh?vehicleBox(u,x,z,hd):null;
   if(box){box.w+=.5;box.d+=.5}
   for(const v of dynamicCandidates?.vehicles??vehicleCandidatesAt(x,z,48)){
-    if(v===u||v.destroyed||Math.abs(vehicleY(v)-y)>5)continue;
+    if(v===u||v.destroyed)continue;
+    // Prefiltre pla molt conservador (3x radi + 6 m) abans de
+    // vehicleY(), que pot mostrejar el terreny i els molls. La prova
+    // exacta del vehicle, la cota i el sweep no canvien.
+    const outer=veh?Infinity:r+3*vehicleRadius(v.t)+6,
+      dx=x-v.x,dz=z-v.z;
+    if(Number.isFinite(outer)&&dx*dx+dz*dz>outer*outer){
+      if(performanceStatsVisible)perfHotspots.aiSweepVehicleHeightSkipped++;
+      continue;
+    }
+    if(Math.abs(vehicleY(v)-y)>5)continue;
     if(veh?obbOverlap(box,vehicleBox(v)):circleVehicleOverlap(x,z,r+.3,v))return false;
   }
   for(const v of dynamicCandidates?.enemies??enemyCandidatesAt(x,z,32)){

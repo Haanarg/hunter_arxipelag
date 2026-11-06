@@ -127,7 +127,8 @@ const perfHotspots={broadphaseMs:0,aiMs:0,visibilityMs:0,stealthMs:0,
   aiSweepFastGroundSamples:0,aiSweepFullGroundSamples:0,
   aiPassiveDirectChecks:0,aiRemoteDecisions:0,aiImmediateDecisions:0,
   aiSoldierMs:0,aiVehicleMs:0,aiTowerMs:0,aiOtherMs:0,aiCoordMs:0,
-  aiTowerSightMs:0,aiTowerSightChecks:0,aiTowerSightSkipped:0};
+  aiTowerSightMs:0,aiTowerSightChecks:0,aiTowerSightSkipped:0,
+  aiSweepVehicleHeightSkipped:0};
 window.HUNTER_PERF_HOTSPOTS=perfHotspots;
 document.body.classList.remove('performance-stats-visible');
 function setPerformanceStatsVisible(enabled){
@@ -3979,7 +3980,8 @@ const performanceAudit=performanceAuditRequested?window.HUNTER_PERFORMANCE_AUDIT
     pathStats:world?.userData?.pathStats||null,
     stressPreset:stressAuditRequested?{...STRESS_AUDIT_PRESET}:null,
     vehicleFleet:JSON.parse(JSON.stringify(vehicleFleet))}),
-  setShadowsDisabled,setWaterDisabled,gpuTimer:performanceGpuTimer
+  setShadowsDisabled,setWaterDisabled,gpuTimer:performanceGpuTimer,
+  getCameraPose:()=>[cam.quaternion.x,cam.quaternion.y,cam.quaternion.z,cam.quaternion.w]
 }):null;
 const frameDiagnostics=window.HUNTER_FRAME_DIAGNOSTICS.createFrameDiagnostics({
   performanceAudit,adaptivePerformance,perfHotspots,shadowStats,shadowCache,ren,
