@@ -114,7 +114,11 @@ export function setDistantVehicleLOD(model,far){
   const geometry=lod.variants[Math.min(2,seats)];
   const level=far?'far':'full',changed=lod.level!==level||
     lod.proxy.geometry!==geometry;
-  if(!changed&&!far)return false;
+  // Una flota nombrosa torna a passar per aquí a cada subpas de física.
+  // Quan la silueta i els fills directes no han canviat, evitar reescanejar
+  // accessoris a centenars de models distants. Les tripulacions actualitzen
+  // la geometria a changed; els nous accessoris modifiquen children.length.
+  if(!changed&&(!far||lod.extraChildrenCount===model.children.length))return false;
   lod.level=level;
   lod.proxy.geometry=geometry;
   lod.proxy.visible=!!far;
@@ -130,9 +134,11 @@ export function setDistantVehicleLOD(model,far){
       saved.push([child,child.visible]);child.visible=false;
     }
     lod.extraVisibility=saved;
+    lod.extraChildrenCount=model.children.length;
   }else{
     for(const [child,visible] of saved)child.visible=visible;
     lod.extraVisibility=[];
+    lod.extraChildrenCount=null;
   }
   return changed;
 }
