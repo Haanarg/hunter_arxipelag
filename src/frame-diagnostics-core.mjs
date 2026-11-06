@@ -21,7 +21,7 @@ export function createFrameDiagnostics({
  function recordFrame({
    gameplayActive,rawDt,P,gpuSample,cpuStarted,simulationEnded,
    terrainEnded,renderStarted,renderCompleted,postRenderCompleted,
-   terrainTextureCpuMs=0,waterUpgradeCpuMs=0,renderMatrixCpuMs=0,
+   terrainTextureCpuMs=0,waterUpgradeCpuMs=0,renderMatrixCpuMs=undefined,
    simulated,roadFrameStats,shadowRedrawn,now,simulationActive,
    performanceStatsVisible
  }){
@@ -29,7 +29,7 @@ export function createFrameDiagnostics({
      active:gameplayActive,frameMs:rawDt*1000,x:P.x,z:P.z,gpuSample,
      updateCpuMs:simulationEnded-cpuStarted,terrainCpuMs:terrainEnded-simulationEnded,
      renderCpuMs:renderCompleted-renderStarted,
-     renderMatrixCpuMs,
+     ...(renderMatrixCpuMs===undefined?{}:{renderMatrixCpuMs}),
      roadFastSkips:roadFrameStats?.fastSkips||0,
      roadVersionChecks:roadFrameStats?.versionChecks||0,
      roadRefits:roadFrameStats?.refits||0,
