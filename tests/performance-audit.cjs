@@ -169,6 +169,7 @@ assert.deepEqual(disabled.flags(),{shadows:true,water:true});
     performanceAudit:{status:'running'},gameplayActive:true,
     performanceGpuTimer:{begin:()=>({sample:true}),end:()=>ends++},
     frameDiagnostics:{resetDrawCounters(){}},world:{userData:{}},
+    hiddenMatrixCull:{beginRender(){},endRender(){}},
     deathVoidReady:()=>false,deathCinematic:null,
     ren:{render(s){s.updateMatrixWorld(true)}}};
   const result=renderCall(env);
