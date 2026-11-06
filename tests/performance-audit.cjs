@@ -122,13 +122,13 @@ stopped.begin();
 stopped.controller.onFrame({...stopped.frame,x:30});
 assert.equal(stopped.controller.status,'aborted');
 assert.deepEqual(stopped.flags(),{shadows:false,water:false});
-const rotated=setup();
+const rotated=setup({shadowsDisabled:false,waterDisabled:false},true);
 rotated.begin();
 rotated.controller.onFrame(rotated.frame); // estabilització inicial
 rotated.turnCamera();
 for(let i=0;i<3;i++)rotated.controller.onFrame(rotated.frame);
 assert.equal(rotated.controller.status,'aborted','sustained real camera turn invalidates A/B');
-const smooth=setup();
+const smooth=setup({shadowsDisabled:false,waterDisabled:false},true);
 smooth.begin();
 smooth.controller.onFrame(smooth.frame); // càmera referenciada després escalfar
 smooth.turnCamera();
