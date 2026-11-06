@@ -114,10 +114,14 @@
       return 'other';
     };
     const cpu=frame=>frame?(frame.updateCpuMs||0)+(frame.terrainCpuMs||0)+
-      (frame.renderCpuMs||0)+(frame.postRenderCpuMs||0):null;
+      (frame.preRenderCpuMs||0)+(frame.renderCpuMs||0)+(frame.postRenderCpuMs||0):null;
     const compactFrame=frame=>frame?{
       cpuMs:cpu(frame),updateCpuMs:frame.updateCpuMs||0,
       terrainCpuMs:frame.terrainCpuMs||0,renderCpuMs:frame.renderCpuMs||0,
+      preRenderCpuMs:frame.preRenderCpuMs||0,
+      postRenderCpuMs:frame.postRenderCpuMs||0,
+      terrainTextureCpuMs:frame.terrainTextureCpuMs||0,
+      waterUpgradeCpuMs:frame.waterUpgradeCpuMs||0,
       gpuMs:Number.isFinite(frame.gpuSample?.ms)?frame.gpuSample.ms:null,
       aiMs:frame.aiMs||0,aiNavMs:frame.aiNavMs||0,
       aiPathMs:frame.aiPathMs||0,aiPathDeferred:frame.aiPathDeferred||0,
@@ -170,6 +174,12 @@
       roadVersionChecks:avg('roadVersionChecks'),roadRefits:avg('roadRefits'),
       roadFastSkips:avg('roadFastSkips'),
       postRenderCpuMs:avg('postRenderCpuMs'),terrainCpuMs:avg('terrainCpuMs'),
+      preRenderCpuMs:avg('preRenderCpuMs'),
+      terrainTextureCpuMs:avg('terrainTextureCpuMs'),
+      waterUpgradeCpuMs:avg('waterUpgradeCpuMs'),
+      postRenderMaxMs:Math.max(0,...rows.map(r=>r.postRenderCpuMs||0)),
+      terrainTextureMaxMs:Math.max(0,...rows.map(r=>r.terrainTextureCpuMs||0)),
+      waterUpgradeMaxMs:Math.max(0,...rows.map(r=>r.waterUpgradeCpuMs||0)),
       drawCalls:avg('drawCalls'),triangles:avg('triangles'),
       aiMs:avg('aiMs'),aiNavMs:avg('aiNavMs'),aiSweepMs:avg('aiSweepMs'),
       aiMsP95:rows.map(r=>r.aiMs||0).sort((a,b)=>a-b)[Math.ceil(rows.length*.95)-1],
@@ -205,6 +215,8 @@
       'slowFrames20','frames20to25','frames24to25','slowFrames25','slowFrames50',
       'updateCpuMs','renderCpuMs','roadVersionCpuMs','roadRefitCpuMs',
       'roadVersionChecks','roadRefits','roadFastSkips','postRenderCpuMs',
+      'preRenderCpuMs','terrainTextureCpuMs','waterUpgradeCpuMs',
+      'postRenderMaxMs','terrainTextureMaxMs','waterUpgradeMaxMs',
       'terrainCpuMs','drawCalls','triangles','aiMs','aiNavMs','aiSweepMs',
       'aiMsP95','aiMsP99','aiNavMsP95','aiPathMs','aiPathChecks',
       'aiPathDeferred','aiPathNodes','aiPassivePathNodes',
@@ -229,9 +241,13 @@
           slowFrameSamples:(s.slowFrameSamples||[]).slice(0,4).map(entry=>({
             intervalMs:round(entry.intervalMs),
             previous:entry.previous?pick(entry.previous,
-              ['cpuMs','updateCpuMs','renderCpuMs','gpuMs','aiMs','aiPathMs','aiPathDeferred','shadowRedrawn','simulationSteps']):null,
+              ['cpuMs','updateCpuMs','renderCpuMs','preRenderCpuMs',
+                'postRenderCpuMs','terrainTextureCpuMs','waterUpgradeCpuMs',
+                'gpuMs','aiMs','aiPathMs','aiPathDeferred','shadowRedrawn','simulationSteps']):null,
             current:entry.current?pick(entry.current,
-              ['cpuMs','updateCpuMs','renderCpuMs','gpuMs','aiMs','aiPathMs','aiPathDeferred','shadowRedrawn','simulationSteps']):null
+              ['cpuMs','updateCpuMs','renderCpuMs','preRenderCpuMs',
+                'postRenderCpuMs','terrainTextureCpuMs','waterUpgradeCpuMs',
+                'gpuMs','aiMs','aiPathMs','aiPathDeferred','shadowRedrawn','simulationSteps']):null
           })),
           groups:ranked(s.groups),shadowGroups:ranked(s.shadowGroups),
           shadowReasons:s.shadowReasons||{},shadowCulprits:s.shadowCulprits||{},
