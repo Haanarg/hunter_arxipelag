@@ -3714,9 +3714,15 @@ if(scopeActive){
   // sense traslació, gir ni animació de desplaçament del jugador.
   // Y/U (strafe habitual) també passa a moure horitzontalment la mira.
   const scopeStrafe=(K.KeyU?1:0)-(K.KeyY?1:0);
-  // Sensibilitat baixa per controlar amb precisió l'òptica x8.
-  scopeYaw+=(tr-scopeStrafe*.8)*dt*.38;
-  scopePitch=Math.max(-.65,Math.min(.65,scopePitch+f*dt*.30));
+  // Joystick de la mira ×8: només el component tàctil és un 18%
+  // del gir normal. Les tecles conserven la velocitat anterior.
+  const precision=.18,
+    scopeTurn=(K.KeyA||K.ArrowLeft?1:0)-(K.KeyD||K.ArrowRight?1:0)-
+      joystick.state.x*precision,
+    scopeForward=(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)-
+      joystick.state.y*precision;
+  scopeYaw+=(scopeTurn-scopeStrafe*.8)*dt*.38;
+  scopePitch=Math.max(-.65,Math.min(.65,scopePitch+scopeForward*dt*.30));
 }else if(cv){
   const driven=cv;let alive=false;
   try{alive=stepV(driven,f,tr,ud,dt,strafe)}
