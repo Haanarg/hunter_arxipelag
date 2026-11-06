@@ -31,7 +31,7 @@ function setup(startFlags={shadowsDisabled:false,waterDisabled:false},fullAudit=
     setShadowsDisabled:x=>{shadows=x;changes.push(['shadows',x])},
     setWaterDisabled:x=>{water=x;changes.push(['water',x])}
   });
-  const frame={active:true,x:10,z:20,frameMs:100,renderCpuMs:24,renderMatrixCpuMs:7,
+  const frame={active:true,x:10,z:20,frameMs:100,renderCpuMs:24,renderMatrixCpuMs:7,renderHiddenGroupsSkipped:42,
     postRenderCpuMs:51,preRenderCpuMs:3,terrainTextureCpuMs:11,waterUpgradeCpuMs:39,updateCpuMs:16,terrainCpuMs:.1,drawCalls:2344,
     triangles:769000,simulationSteps:6,aiMs:15,aiNavMs:9.1,aiSweepMs:7.6,
     sweepChecks:135,sweepSamples:426,aiUpdated:170,aiSkipped:490,
@@ -81,6 +81,7 @@ assert.equal(s.controller.results[0].stats.vehicleShadowTypes.llanxa,2);
 assert.equal(s.controller.results[0].stats.p99FrameMs,100);
 assert.equal(s.controller.results[0].stats.preRenderCpuMs,3);
 assert.equal(s.controller.results[0].stats.renderMatrixCpuMs,7);
+assert.equal(s.controller.results[0].stats.renderHiddenGroupsSkipped,42);
 assert.equal(s.controller.results[0].stats.renderSubmitCpuMs,17);
 assert.equal(s.win.HUNTER_PERF_AUDIT_RESULTS.version,'0.6.168');
 assert.equal(s.controller.results[0].stats.terrainTextureMaxMs,11);
@@ -111,6 +112,7 @@ const focused=quick.win.HUNTER_PERFORMANCE_AUDIT.shareReport(
 assert.equal(focused.mode,'focused');
 assert.equal(focused.version,'0.6.168');
 assert.equal(focused.phases[0].stats.renderMatrixCpuMs,7);
+assert.equal(focused.phases[0].stats.renderHiddenGroupsSkipped,42);
 assert.equal(focused.phases[0].stats.renderSubmitCpuMs,17);
 assert.equal(focused.phases.length,1);
 assert.equal(focused.phases[0].stats.waterUpgradeMaxMs,39,
@@ -197,6 +199,7 @@ console.log('OK: auditoria A/B, fases, estadístiques, cancel·lació i restaura
   assert.equal(shared.format,'hunter-perf-share-v1');
   assert.equal(shared.version,'0.6.168');
   assert.equal(shared.phases[0].stats.renderMatrixCpuMs,7);
+  assert.equal(shared.phases[0].stats.renderHiddenGroupsSkipped,42);
   assert.equal(shared.phases[0].stats.renderSubmitCpuMs,17);
   assert.equal(shared.phases.length,5);
   assert.equal(shared.phases[0].stats.aiNavMs,9.1);
