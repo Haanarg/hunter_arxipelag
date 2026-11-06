@@ -63,7 +63,7 @@ window.HUNTER_SHARED_MODELS=sharedModels;
 import * as occupantDamage from './vehicle-occupant-damage-core.mjs?v=0.6.174';
 window.HUNTER_VEHICLE_OCCUPANT_DAMAGE=occupantDamage;
 import * as sharedCombat from './combat-rules.mjs?v=0.6.174&visual=6&friendlyCover=1';
-import * as sharedVehicles from './vehicle-dynamics-core.mjs';
+import * as sharedVehicles from './vehicle-dynamics-core.mjs?v=0.6.174';
 import * as ferryDeck from './ferry-deck-core.mjs';
 window.HUNTER_FERRY_DECK=ferryDeck;
 window.HUNTER_SHARED_COMBAT=sharedCombat;window.HUNTER_SHARED_VEHICLES=sharedVehicles;
