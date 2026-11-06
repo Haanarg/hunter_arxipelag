@@ -83,7 +83,7 @@ export function planBuildingShell(w,d,h,opt={},random){
     wallH=opt.floors===2?h/2:h,wallHp=opt.civilianHut||opt.weakWalls?4:12,
     // La fusta feble d'un barracó militar té la mateixa coberta de 8 PV
     // que una cabana civil de pescadors: una granada de 10 PV la trenca.
-    roofHp=opt.civilianHut||opt.weakWalls?8:opt.hangar?12:16,segments=[],assemblies=[];
+    roofHp=opt.civilianHut||opt.weakWalls?8:opt.hangar?10:16,segments=[],assemblies=[];
   if(!Number.isFinite(dw)||dw<=0||!Number.isInteger(ds)||ds<0||ds>3)throw new RangeError('Invalid building doorway');
   const seg=(lx,lz,sx,sz,door=false,windows=false,supportSide=null,supportWeight=0,level=0)=>{
     const index=segments.length;segments.push({lx,lz,sx,sz,door:!!door,windows,supportSide,supportWeight,level});return index;

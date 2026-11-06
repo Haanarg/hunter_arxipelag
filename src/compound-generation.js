@@ -88,7 +88,7 @@ function* buildApprovedCompoundSteps(layout,q,{path,pier,prop,vehicles,rocketAss
       rear.position.z=rearZ;b.o.add(rear);
       Wl.push({
         x0:x-spec.w/2,x1:x+spec.w/2,z0:z+rearZ,z1:z+rearZ+rearThickness,
-        y0:b.fy-1,y1:b.fy+spec.h,hp:16,m:rear,parts:[rear],
+        y0:b.fy-1,y1:b.fy+spec.h,hp:10,m:rear,parts:[rear],
         door:false,open:false,rammable:true,hangarRear:true,
         cx:x,cz:z+rearZ+rearThickness/2,owner:b
       });

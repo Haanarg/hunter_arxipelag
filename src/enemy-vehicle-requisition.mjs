@@ -1,5 +1,5 @@
 // IA de requisa de vehicles neutrals: regles compartides SOLO / COOP.
-import {vehicleDynamics} from './vehicle-dynamics-core.mjs';
+import {vehicleDynamics} from './vehicle-dynamics-core.mjs?v=0.6.174';
 import {vehicleSeatCount,vehicleSpecs} from './vehicle-specs.mjs';
 const BOATS=new Set(['llanxa','llanxa_coets']);
 const ELIGIBLE=new Set(['cotxe','cotxe_civil','camio','tanc','tanqueta','moto',...BOATS]);
