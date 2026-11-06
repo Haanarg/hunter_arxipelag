@@ -969,7 +969,10 @@ function updEn(frameDt,preserveFrameBudget=false,underPressure=false){
       shoot(u.x,eyeY,u.z,ax,ay,az,70,u.dmg,0,'e',mW,SMALL_ARMS_SCALE,u);
     }
   }else if(u.canSee){
-    u.hd=Math.atan2(-dx,-dz);
+    // La cabina sense conductor no ha de girar per mirar el jugador.
+    // El tirador viu conserva la seva pròpia orientació del fusell.
+    if(u.t!=='jeep'||u.patrolCrewHp?.[0]!==0)
+      u.hd=Math.atan2(-dx,-dz);
     if(u.sp>0&&d>u.rng*.55){
       const dp=u.defenseTarget;
       if(dp&&Math.hypot(dp.x-u.x,dp.z-u.z)>1.8){
