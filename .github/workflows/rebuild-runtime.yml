@@ -25,6 +25,10 @@ on:
       - 'tests/ai-cpu-optimization.cjs'
       - 'tests/enemy-sweep-segment-prefilter.cjs'
       - 'tests/shadow-stable-focus.cjs'
+      - 'tests/shadow-rowboat-cache.cjs'
+      - 'tests/rowboat-far-lod.cjs'
+      - 'tests/enemy-vehicle-height-prefilter.cjs'
+      - 'tests/performance-audit.cjs'
       - 'tests/shadow-boat-cache.cjs'
       - 'tests/ai-delta-isolation.cjs'
       - 'tests/ai-remote-phase-pacing.cjs'
@@ -62,6 +66,7 @@ jobs:
           node tests/enemy-navigation-remote-ground.cjs
           node tests/enemy-sweep-open-ground.cjs
           node tests/enemy-sweep-segment-prefilter.cjs
+          node tests/enemy-vehicle-height-prefilter.cjs
           node tests/enemy-sweep-elevation-vegetation.cjs
           node tests/enemy-sweep-candidate-cache.cjs
           node tests/enemy-route-probe-budget.cjs
@@ -89,7 +94,10 @@ jobs:
           node --check src/shadow-cache.js
           node tests/shadow-cache.cjs
           node tests/shadow-boat-cache.cjs
+          node tests/shadow-rowboat-cache.cjs
           node tests/shadow-stable-focus.cjs
+          node tests/rowboat-far-lod.cjs
+          node tests/performance-audit.cjs
       - name: Check distance-based coastal terrain LOD
         run: |
           node --check src/terrain.js
