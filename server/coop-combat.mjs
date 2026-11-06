@@ -9,7 +9,7 @@ import {createEnemyVehicleController} from './enemy-vehicle-controller.mjs';
 import {passengerMuzzle,boatCrewMuzzle,requisitionBoat} from '../src/enemy-vehicle-requisition.mjs';
 import {vehicleSpecs} from '../src/vehicle-specs.mjs';
 import {vehicleSeatProjectileContact,breakVehicleSeatWindow,vehicleSeatWorld,vehicleOccupantHeadWorld,
- marineCrewHeadWorld,marineCrewProjectileContact,breakMarineWindshield,damageMarineCrew,MARINE_CREW_HP} from '../src/vehicle-occupant-damage-core.mjs';
+ marineCrewHeadWorld,marineCrewProjectileContact,breakMarineWindshield,damageMarineCrew,MARINE_CREW_HP,MARINE_PASSENGER_HP} from '../src/vehicle-occupant-damage-core.mjs';
 import {windowCrossing,wallShotHit,knifeWindowHit} from '../src/building-shell.mjs';
 import {weaponCatalog,combatCommands,mountedWeapons,grenadeLaunch,vehicleGrenadeLaunch,canThrowGrenadeFromVehicle,meleeTarget} from '../src/weapon-catalog.mjs';
 import {limitBazookaHorizontalAim} from '../src/aiming-core.mjs';
@@ -428,7 +428,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         unit.nextMgTick=tick+Math.ceil(.28*30);
         effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,weapon:'rifle',from:origin,to:aiming});
       }
-      if((unit.marineCrewHp?.[1]??MARINE_CREW_HP)>0&&d<170&&tick>=(unit.nextRocketTick??0)){
+      if((unit.marineCrewHp?.[1]??MARINE_PASSENGER_HP)>0&&d<170&&tick>=(unit.nextRocketTick??0)){
         const rifleOrigin=boatCrewMuzzle(boatPose,1,unit.y),
           dir=enemyAccuracy.direction(meta.difficulty||1,'marineMG',
             aiming.x-rifleOrigin.x,aiming.y-rifleOrigin.y,aiming.z-rifleOrigin.z,roll),
@@ -526,7 +526,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       if(carrier&&['tanc','tanqueta'].includes(carrier.t))continue;
       if(t.t==='patrulla_marina'&&!heavy){
         for(let seat=0;seat<2;seat++){
-          if((t.marineCrewHp?.[seat]??MARINE_CREW_HP)<=0)continue;
+          if((t.marineCrewHp?.[seat]??(seat===0?MARINE_CREW_HP:MARINE_PASSENGER_HP))<=0)continue;
           const head=marineCrewHeadWorld(t,seat,t.y);
           aim.consider({id:t.id+':crew'+seat,t:'soldat'},'enemy',0,
             head.x,head.y,head.z);

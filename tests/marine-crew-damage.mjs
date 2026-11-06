@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {MARINE_CREW_HP,marineCrewHeadWorld,marineCrewProjectileContact,
+import {MARINE_CREW_HP,MARINE_PASSENGER_HP,marineCrewInitialHealth,marineCrewHeadWorld,marineCrewProjectileContact,
  breakMarineWindshield,damageMarineCrew} from '../src/vehicle-occupant-damage-core.mjs';
 
 const boat={t:'patrulla_marina',x:0,y:0,z:0,hd:0,hp:50,
- marineCrewHp:[MARINE_CREW_HP,MARINE_CREW_HP],marineBrokenWindshield:[]};
+ marineCrewHp:marineCrewInitialHealth(),marineBrokenWindshield:[]};
 const head=marineCrewHeadWorld(boat,0);
 const from={x:head.x,y:head.y,z:-16},to={x:head.x,y:head.y,z:16};
 let hit=marineCrewProjectileContact(from,to,boat);
@@ -18,7 +18,7 @@ assert.equal(hit?.seat,0);
 assert.equal(damageMarineCrew(boat,0,MARINE_CREW_HP),true);
 assert.equal(boat.marineCrewHp[0],0,'sniper can kill soldier without exploding boat');
 assert.equal(boat.hp,50,'hull integrity is independent');
-assert.equal(boat.marineCrewHp[1],MARINE_CREW_HP,'other rider survives');
+assert.equal(boat.marineCrewHp[1],MARINE_PASSENGER_HP,'passenger starts with 4 HP and survives pilot shot');
 assert.notEqual(marineCrewProjectileContact(from,to,boat)?.kind,'marine-crew',
  'a dead rider cannot take further bullet hits');
 const right=marineCrewHeadWorld(boat,1);
@@ -26,7 +26,16 @@ const sideHit=marineCrewProjectileContact(
  {x:15,y:right.y,z:right.z},{x:-15,y:right.y,z:right.z},boat);
 assert.equal(sideHit?.kind,'marine-crew','side shot can reach exposed crew directly');
 assert.equal(sideHit.seat,1,'side hit reaches remaining rider');
-const rotated={...boat,hd:Math.PI/2,marineCrewHp:[10,10],marineBrokenWindshield:[]};
+assert.equal(MARINE_CREW_HP,10,'pilot preserves 10 HP');
+assert.equal(MARINE_PASSENGER_HP,4,'passenger has 4 HP in both runtimes');
+const fallbackBoat={t:'patrulla_marina',x:0,y:0,z:0,hp:50};
+assert.equal(damageMarineCrew(fallbackBoat,1,2),true);
+assert.deepEqual(fallbackBoat.marineCrewHp,[10,2],
+ 'uninitialized cooperative boat allocates distinct crew HP');
+assert.equal(damageMarineCrew(fallbackBoat,1,2),true);
+assert.deepEqual(fallbackBoat.marineCrewHp,[10,0],
+ 'two assault rifle bullets kill passenger without injuring pilot or hull');
+const rotated={...boat,hd:Math.PI/2,marineCrewHp:marineCrewInitialHealth(),marineBrokenWindshield:[]};
 const point=marineCrewHeadWorld(rotated,1);
 assert.ok(Math.abs(point.x)>1,'heading rotates the boarding positions');
 
@@ -37,10 +46,12 @@ const combat=read('src/combat.js'),server=read('server/coop-combat.mjs'),
 assert.ok(combat.includes("else if(kind==='marine-crew')")&&
  combat.includes("else if(kind==='marine-glass')")&&
  combat.includes('marineCrewHeadWorld('));
-assert.ok(server.includes("result.kind==='marine-crew'")&&
+assert.ok(server.includes('MARINE_PASSENGER_HP')&&
+ server.includes("result.kind==='marine-crew'")&&
  server.includes("result.kind==='marine-glass'")&&
  server.includes('marineCrewHeadWorld('));
 assert.ok(model.includes('scr.userData.boatWindshieldPane='));
-assert.ok(visuals.includes('syncMarinePatrolCrew(boat,unit)'));
+assert.ok(visuals.includes('syncMarinePatrolCrew(boat,unit)')&&
+ visuals.includes('marineCrewInitialHealth()'));
 assert.ok(native.includes('marineBrokenWindshield'));
 console.log('marine crew / front glass: ballistic and shared runtime regression passed');

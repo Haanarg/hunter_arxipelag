@@ -128,6 +128,8 @@ export const vehicleGlassHasCover=type=>COVERED.has(type);
  // tres peces del parabrisa es poden trencar separadament. Mateixes dades
  // geomètriques al client i al Worker, sense raycast de malles Three.js.
 export const MARINE_CREW_HP=10;
+export const MARINE_PASSENGER_HP=4;
+export const marineCrewInitialHealth=()=>[MARINE_CREW_HP,MARINE_PASSENGER_HP];
 const MARINE_SCALE=1.95;
 const MARINE_GLASS_X=[-.72*(2.75*.43),0,.72*(2.75*.43)];
 const MARINE_GLASS_W=[2.75*.25,2.75*.34,2.75*.25];
@@ -141,7 +143,7 @@ export function marineCrewHeadWorld(boat,seat=0,baseY=boat.y??0){
 export function marineCrewProjectileContact(from,to,boat,{baseY=boat.y??0}={}){
   if(!boat||boat.destroyed||boat.hp===0)return null;
   const h=boat.hd??boat.heading??0,s=MARINE_SCALE,
-    c=Math.cos(h),sn=Math.sin(h),hp=boat.marineCrewHp??[MARINE_CREW_HP,MARINE_CREW_HP],
+    c=Math.cos(h),sn=Math.sin(h),hp=boat.marineCrewHp??marineCrewInitialHealth(),
     broken=boat.marineBrokenWindshield??[],
     local=p=>({x:((p.x-boat.x)*c-(p.z-boat.z)*sn)/s,
       y:(p.y-baseY)/s,z:((p.x-boat.x)*sn+(p.z-boat.z)*c)/s});
@@ -176,7 +178,7 @@ export function breakMarineWindshield(boat,pane){
 }
 export function damageMarineCrew(boat,seat,damage){
   if(!boat||!Number.isInteger(seat)||seat<0||seat>1)return false;
-  boat.marineCrewHp??=[MARINE_CREW_HP,MARINE_CREW_HP];
+  boat.marineCrewHp??=marineCrewInitialHealth();
   const before=boat.marineCrewHp[seat];
   if(!(before>0)||!(damage>0))return false;
   boat.marineCrewHp[seat]=Math.max(0,before-Math.ceil(damage));

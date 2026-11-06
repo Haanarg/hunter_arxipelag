@@ -169,7 +169,7 @@ function* spawnMarinePatrolsSteps(){
     u.hd=p.hd;u.navHd=p.hd;u.home={x:p.x,z:p.z};u.speed=12+R()*5;
     u.yawRate=0;u.orbitSign=R()<.5?-1:1;
     u.mgCd=.8+R();u.rocketCd=3+R()*3;
-    u.marineCrewHp=[window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.MARINE_CREW_HP,window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.MARINE_CREW_HP];
+    u.marineCrewHp=window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.marineCrewInitialHealth();
     u.marineBrokenWindshield=[];
     u.o.position.set(p.x,wy(p.x,p.z,0)+.2,p.z);u.o.rotation.y=p.hd;
     marinePickWaypoint(u);

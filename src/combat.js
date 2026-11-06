@@ -248,7 +248,7 @@ function killEnemy(u,killingShot=null){
   if(u.t==='patrulla_marina'){
     kills+=(u.marineCrewHp||[
       window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.MARINE_CREW_HP,
-      window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.MARINE_CREW_HP
+      window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.MARINE_PASSENGER_HP
     ]).filter(health=>health>0).length;
     u.marineCrewHp=[0,0];
   }else if(u.t==='jeep')kills+=(u.patrolCrewHp||[1,1]).filter(hp=>hp>0).length;
