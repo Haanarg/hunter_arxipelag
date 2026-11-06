@@ -30,6 +30,7 @@ on:
       - 'tests/vehicle-distant-lod.cjs'
       - 'tests/remote-rider-lod.cjs'
       - 'tests/visual-distance-culling.cjs'
+      - 'tests/water-upgrade-staged.cjs'
       - 'tests/frame-diagnostics-parity.mjs'
       - 'tests/enemy-sweep-aabb-pruning.cjs'
       - 'tests/render-batching-regressions.cjs'
@@ -107,6 +108,8 @@ jobs:
           node tests/shadow-stable-focus.cjs
           node tests/rowboat-far-lod.cjs
           node tests/performance-audit.cjs
+          node tests/water-upgrade-staged.cjs
+          node tests/water.cjs
       - name: Check distant objects, vegetation and preserved pickup physics
         run: |
           node --check src/game-core.js
