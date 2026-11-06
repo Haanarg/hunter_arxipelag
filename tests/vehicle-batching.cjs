@@ -31,7 +31,12 @@ const assert=require('node:assert/strict');
  original.scale.setScalar(game.context.HUNTER_VEHICLES.scales.cotxe_civil);
  original.updateMatrixWorld(true);civil.updateMatrixWorld(true);
  const originalFull=civil.userData.distantVehicleLOD?.full||civil;
- const a=new T.Box3().setFromObject(original),b=new T.Box3().setFromObject(originalFull);
+ const lodProxy=civil.userData.distantVehicleLOD?.proxy;
+ // Mesuram exactament l'arrel transformada que existia abans del LOD:
+ // el proxy és una malla addicional oculta, no part del vehicle proper.
+ if(lodProxy)civil.remove(lodProxy);
+ const a=new T.Box3().setFromObject(original),b=new T.Box3().setFromObject(civil);
+ if(lodProxy)civil.add(lodProxy);
  assert(a.min.distanceTo(b.min)<1e-4&&a.max.distanceTo(b.max)<1e-4,
    'outer dimensions and visible wheel placement unchanged');
  assert.equal(triangles(originalFull),triangles(original),

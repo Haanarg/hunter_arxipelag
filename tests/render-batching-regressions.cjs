@@ -52,7 +52,10 @@ const assert=require('node:assert/strict');
  assert.equal(b.triangles,a.triangles,'car geometry unchanged');
  assert.equal(b.glass,a.glass,'transparent glass separately rendered');
  assert(b.meshCount<a.meshCount,'fewer vehicle draw calls');
- const bbA=new T.Box3().setFromObject(orig),bbB=new T.Box3().setFromObject(optimizedFull);
+ const proxy=optimized.userData.distantVehicleLOD?.proxy;
+ if(proxy)optimized.remove(proxy);
+ const bbA=new T.Box3().setFromObject(orig),bbB=new T.Box3().setFromObject(optimized);
+ if(proxy)optimized.add(proxy);
  assert(bbA.min.distanceTo(bbB.min)<1e-4&&bbA.max.distanceTo(bbB.max)<1e-4,
    'exterior dimensions identical');
  assert.equal(optimized.userData.wheels.length,4);
