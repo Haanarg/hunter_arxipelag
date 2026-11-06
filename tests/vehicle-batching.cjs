@@ -38,6 +38,18 @@ const assert=require('node:assert/strict');
  const a=new T.Box3().setFromObject(original),b=new T.Box3().setFromObject(civil);
  if(lodProxy)civil.add(lodProxy);
  if(a.min.distanceTo(b.min)>=1e-4||a.max.distanceTo(b.max)>=1e-4)
+   const lowMesh=root=>{
+     let best=null;root.updateMatrixWorld(true);
+     root.traverse(obj=>{
+       if(!obj.isMesh)return;
+       const bb=new T.Box3().setFromObject(obj);
+       if(!best||bb.min.y<best.minY)
+         best={name:obj.name,type:obj.geometry?.type,minY:bb.min.y,
+           path:(()=>{const p=[];for(let x=obj;x;x=x.parent)p.push(x.name||x.type);return p.join(' < ')})(),
+           bounds:[bb.min.toArray(),bb.max.toArray()]};
+     });return best;
+   };
+   console.log('C1A lowest mesh',JSON.stringify({old:lowMesh(original),new:lowMesh(civil)}));
    console.log('C1A bound diagnosis',JSON.stringify({
      originalMin:a.min.toArray(),originalMax:a.max.toArray(),
      optimizedMin:b.min.toArray(),optimizedMax:b.max.toArray(),
