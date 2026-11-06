@@ -112,10 +112,27 @@ export function setDistantVehicleLOD(model,far){
   const crew=model.userData.enemyCarCrew,
     seats=crew?[crew.driver,crew.gunner].filter(x=>x?.visible).length:0;
   const geometry=lod.variants[Math.min(2,seats)];
-  if(lod.level===(far?'far':'full')&&lod.proxy.geometry===geometry)return false;
-  lod.level=far?'far':'full';
+  const level=far?'far':'full',changed=lod.level!==level||
+    lod.proxy.geometry!==geometry;
+  if(!changed&&!far)return false;
+  lod.level=level;
   lod.proxy.geometry=geometry;
   lod.proxy.visible=!!far;
   lod.full.visible=!far;
-  return true;
+  // Alguns models (tripulacions de patrulles o accessoris creats després
+  // de la fàbrica) afegeixen fills directament a l'arrel. Els ocultam
+  // com a part del detall, sense ocultar mai la bandereta enemiga.
+  const saved=lod.extraVisibility||[];
+  if(far){
+    for(const child of model.children){
+      if(child===lod.full||child===lod.proxy||child===model.userData.enemyFlag||
+         saved.some(entry=>entry[0]===child))continue;
+      saved.push([child,child.visible]);child.visible=false;
+    }
+    lod.extraVisibility=saved;
+  }else{
+    for(const [child,visible] of saved)child.visible=visible;
+    lod.extraVisibility=[];
+  }
+  return changed;
 }

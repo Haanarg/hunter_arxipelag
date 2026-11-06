@@ -33,7 +33,7 @@ window.HUNTER_RIDER=Object.freeze({
     const farHead=new THREE.Mesh(new THREE.BoxGeometry(.43,.40,.43),material(0xc59a78,'skin'));
     farHead.position.y=1.10;
     riderFar.add(farBody,farHead);riderFar.visible=false;
-    riderFar.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false}});
+    riderFar.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false;o.userData.noCastShadow=true}});
     g.add(riderFar);
     g.userData.riderFarProxy=riderFar;
     g.userData.riderDetailNodes=riderDetailNodes;
@@ -162,7 +162,7 @@ window.HUNTER_RIDER=Object.freeze({
         const seatX=coopSeat?(passenger?1:-1)*(car?.65:.58)*sc:0,
           deckY=car?1.20*sc:v.t==='hover'?1.25*sc:
             v.t==='windsurf'?1.05*sc:1.35*sc;
-        riderFar.position.set(seatX,deckY,v.t==='bici'||v.t==='moto'?.12*sc:0);
+        riderFar.position.set(seatX,deckY,(v.t==='bici'||v.t==='moto')?0.12*sc:0);
         pistol.visible=false;
         return;
       }
