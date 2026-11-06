@@ -14,6 +14,13 @@ export const REQUISITION=Object.freeze({
   fleeingSpeed:6, fleeingRadialSpeed:4, fleeingMemorySeconds:2.5,
   retrySeconds:3
 });
+// El «dubte» és el temps fins al PRIMER intent i entre els següents.
+// Els 3 segons existents són el nivell difícil. La possibilitat d'èxit
+// de cada intent es manté independent d'aquesta escala de temps.
+export function requisitionDoubtSeconds(difficulty=1){
+  const level=Number(difficulty);
+  return REQUISITION.retrySeconds*(level<.8?2:level<1.25?1.5:1);
+}
 export function requisitionChance(difficulty=1,fleeing=false){
   const level=Number(difficulty);
   const base=level<.8?.25:level<1.25?.50:.75;
