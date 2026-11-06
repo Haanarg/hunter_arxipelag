@@ -677,6 +677,10 @@ function towerGuardTick(u,dt){
 // però continuen essent objectes del món: es poden veure, apuntar i ferir.
 // Histèresi de 30 m per evitar fluctuacions quan el jugador voreja el límit.
 const ENEMY_AI_DISTANCE={full:300,reduced:600,minimal:1000,hysteresis:30};
+// Les patrulleres són observables molt més enllà del radi d'IA dels soldats
+// (especialment volant). El radi de despertar precedeix el LOD visual
+// d'enemics de 1.850 m, perquè el jugador no vegi una llanxa aturada.
+const MARINE_PATROL_MOTION_WAKE_RADIUS=2050;
 function enemyAiDistanceTier(u,q){
   const dx=q.x-u.x,dz=q.z-u.z,d2=dx*dx+dz*dz;
   const limits=[ENEMY_AI_DISTANCE.full,ENEMY_AI_DISTANCE.reduced,ENEMY_AI_DISTANCE.minimal];
@@ -696,6 +700,13 @@ function enemyRemoteInterval(u,q,focus=null,underPressure=false){
      (u.aiMode&&u.aiMode!=='patrol')||u.enemyVehicleClaim||
      (u.t==='soldat'&&u.basement))return 0;
   if(focus?.contains(u.x,u.o?.position?.y??0,u.z,3))return 0;
+  if(u.t==='patrulla_marina'){
+    const dx=q.x-u.x,dz=q.z-u.z;
+    // La navegació i la posició d'una patrullera visible són contínues.
+    // El rumb es calcula amb la memòria cau de marineCourse, i no es
+    // desperta cap soldat terrestre llunyà.
+    if(dx*dx+dz*dz<=MARINE_PATROL_MOTION_WAKE_RADIUS**2)return 0;
+  }
   const tier=enemyAiDistanceTier(u,q);
   if(tier===0){
     // Les patrulles sense contacte fora del radi immediat només prenen
