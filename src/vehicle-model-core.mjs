@@ -1,6 +1,6 @@
 import {turretSpecs,advanceTurret} from './vehicle-turret-core.mjs';
 import {vehicleSpecs} from './vehicle-specs.mjs';
-import {createDistantVehicleFactory,setDistantVehicleLOD} from './vehicle-distant-lod.mjs';
+import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs';
 import {createHovercraftConcept,hovercraftConcepts} from './hovercraft-concepts.mjs?v=0.6.81';
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 export const vehicleModels=Object.freeze({
@@ -8,7 +8,7 @@ export const vehicleModels=Object.freeze({
   steeringMax:Object.freeze({bici:.60,moto:.52,cotxe:.44,cotxe_civil:.43,camio:.36,tanqueta:.34}),
   // LOD purament visual de les barques de rems. Ni la física, ni els
   // ocupants, ni la posició del vehicle es veuen alterats.
-  setDistantVehicleLOD,
+  setDistantVehicleLOD,shouldSimplifyVehicle,
   setRowboatVisualLod(model,far){
     const lod=model?.userData?.rowboatVisualLod;
     if(!lod||lod.far.visible===!!far)return false;
