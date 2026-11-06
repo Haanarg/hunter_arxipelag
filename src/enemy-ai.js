@@ -672,28 +672,35 @@ function towerGuardTick(u,dt){
  u.o.rotation.y=u.hd;
  animateEnemyInfantry(u,false,dt);
 }
-// La IA llunyana sense contacte necessita menys decisions de navegació,
-// però conserva tot el temps transcorregut: mai no alentim la patrulla.
-// Un enemic que detecta, cerca o combat reprèn immediatament els passos normals.
-function enemyRemoteInterval(u,q,focus=null,underPressure=false){
-  if(u.towerGuard){
-    // No mostregis línies de visió deu vegades per segon en torres a 2 km.
-    // El temps acumulat conserva exactament la rotació de la vigilància.
-    const dx=q.x-u.x,dz=q.z-u.z;
-    return u.canSee||dx*dx+dz*dz<300*300?0:.18;
-  }
-  if(u.t==='general'||u.t==='patrulla_marina'||u.basement||
-     u.blastT>0||u.canSee||u.alert>0||u.entryDoor||
-     (u.pursuitT||0)>0||(u.aiMode&&u.aiMode!=='patrol'))return 0;
-  // El franctirador pot observar enemics a molta distància: un objectiu
-  // dins la mira conserva animació i moviment a la freqüència completa.
-  if(focus?.contains(u.x,u.o?.position?.y??0,u.z,3))return 0;
+// Distància de simulació en unitats del món (metres de joc).
+// Els enemics fora del radi no es mouen ni consumeixen CPU en decisions,
+// però continuen essent objectes del món: es poden veure, apuntar i ferir.
+// Histèresi de 30 m per evitar fluctuacions quan el jugador voreja el límit.
+const ENEMY_AI_DISTANCE={full:300,reduced:600,minimal:1000,hysteresis:30};
+function enemyAiDistanceTier(u,q){
   const dx=q.x-u.x,dz=q.z-u.z,d2=dx*dx+dz*dz;
-  // Sota saturació només s'espacien patrulles passives. Combat, persecució,
-  // objectius dins la mira i enemics propers conserven resposta immediata.
-  if(underPressure&&d2>240*240)
-    return d2>1400*1400?.40:d2>620*620?.24:.10;
-  return d2>1400*1400?.3:d2>620*620?.18:0;
+  const limits=[ENEMY_AI_DISTANCE.full,ENEMY_AI_DISTANCE.reduced,ENEMY_AI_DISTANCE.minimal];
+  let tier=Number.isInteger(u.remoteAiTier)?u.remoteAiTier:
+    d2<=limits[0]**2?0:d2<=limits[1]**2?1:d2<=limits[2]**2?2:3;
+  while(tier<3&&d2>(limits[tier]+ENEMY_AI_DISTANCE.hysteresis)**2)tier++;
+  while(tier>0&&d2<(limits[tier-1]-ENEMY_AI_DISTANCE.hysteresis)**2)tier--;
+  u.remoteAiTier=tier;
+  return tier;
+}
+// Les amenaces reals tenen prioritat respecte de qualsevol distància.
+// La mira ×8 no desperta tota la població: només les unitats enquadrades.
+// El càlcul de col·lisions de projectils no depèn d'aquesta planificació.
+function enemyRemoteInterval(u,q,focus=null,underPressure=false){
+  if(u.blastT>0||u.blastImpulse||u.canSee||u.alert>0||
+     u.entryDoor||(u.pursuitT||0)>0||
+     (u.aiMode&&u.aiMode!=='patrol')||u.enemyVehicleClaim||
+     (u.t==='soldat'&&u.basement))return 0;
+  if(focus?.contains(u.x,u.o?.position?.y??0,u.z,3))return 0;
+  const tier=enemyAiDistanceTier(u,q);
+  if(tier===0)return 0;
+  if(tier===1)return underPressure?.2:.12;
+  if(tier===2)return underPressure?.65:.4;
+  return Infinity; // estat adormit: cap tick fins a proximitat o esdeveniment
 }
 // Desfasament determinista persistent per patrulla: conservam els segons
 // acumulats per al moviment real, però el rellotge de decisions manté la
@@ -731,14 +738,30 @@ function updEn(frameDt,preserveFrameBudget=false,underPressure=false){
   const unitStamp=performanceStatsVisible?performance.now():0;
   try{
   let dt=frameDt;
+  const remoteInterval=enemyRemoteInterval(u,cv||P,enemyScopeFocus,underPressure);
+  if(remoteInterval===Infinity){
+    // No arrosseguem segons acumulats quan es desperta una patrulla:
+    // simular minuts de moviment en un sol fotograma provoca salts i lag.
+    u.remoteAiAcc=0;u.remoteAiClock=null;u.remoteAiWarmed=false;
+    if(performanceStatsVisible)perfHotspots.aiSkipped++;
+    return;
+  }
   if(u.t==='patrulla_marina'){
+    // Els patrullers marítims inactius es poden suspendre també,
+    // però el seu pilotatge es manté a passos complets quan són propers.
+    if(remoteInterval){
+      const scheduledDt=enemyRemoteDecisionDt(u,dt,remoteInterval);
+      if(!scheduledDt){if(performanceStatsVisible)perfHotspots.aiSkipped++;return;}
+      dt=scheduledDt;
+    }else{
+      u.remoteAiAcc=0;u.remoteAiClock=null;u.remoteAiWarmed=false;
+    }
     if(performanceStatsVisible){
       const stamp=performance.now();updateMarinePatrol(u,dt);
       perfHotspots.aiMarineMs+=performance.now()-stamp;
     }else updateMarinePatrol(u,dt);
     return;
   }
-  const remoteInterval=enemyRemoteInterval(u,cv||P,enemyScopeFocus,underPressure);
   if(remoteInterval){
     const scheduledDt=enemyRemoteDecisionDt(u,dt,remoteInterval);
     if(!scheduledDt){
