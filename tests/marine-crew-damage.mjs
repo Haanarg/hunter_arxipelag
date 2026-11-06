@@ -63,4 +63,12 @@ assert(enemy.includes('u.enemyVehicleClaim||u.elite||u.rocketSoldier'),
  'only regular soldiers requisition vehicles, not 8-HP elite units');
 assert.equal(MARINE_CREW_HP,MARINE_PASSENGER_HP,
  'boat pilot and passenger receive the same HP');
+assert(native.includes('patrolCrewHp:')&&native.includes('e.patrolCrewHp=row.patrolCrewHp'),
+ 'coop snapshots preserve separate 4 HP road patrol riders');
+assert(server.includes("result.kind==='patrol-car-crew'")&&
+ server.includes("result.kind==='patrol-car-glass'"),
+ 'coop also damages seated jeep soldiers independently from the hull');
+assert(server.includes("unit.t!=='jeep'||(unit.patrolCrewHp?.[0]")&&
+ server.includes("unit.t!=='jeep'||(unit.patrolCrewHp?.[1]"),
+ 'coop jeep stops driving without pilot and shooting without gunner');
 console.log('marine crew / front glass: ballistic and shared runtime regression passed');

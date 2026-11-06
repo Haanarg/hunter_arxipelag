@@ -112,6 +112,9 @@ function captureNativeCoopWorld(){
   ...(e.t==='patrulla_marina'?{
     marineCrewHp:[...(e.marineCrewHp||window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.marineCrewInitialHealth())],
     marineBrokenWindshield:[...(e.marineBrokenWindshield||[])]
+  }:{}),...(e.t==='jeep'?{
+    patrolCrewHp:[...(e.patrolCrewHp||[COMBAT_BALANCE.people.soldier,COMBAT_BALANCE.people.soldier])],
+    brokenVehicleWindows:[...(e.brokenVehicleWindows||[])]
   }:{}),heading:e.hd||0,ai:['soldat','general','torre','jeep','tanqueta','tanc','patrulla_marina'].includes(e.t),state:'patrol',patrol:(e.patrol?.length?e.patrol:[]).map(p=>({x:p.x,y:e.o.position.y,z:p.z})),home:{x:e.home?.x??e.x,z:e.home?.z??e.z},tx:e.tx??e.x,tz:e.tz??e.z,patrolIndex:e.pi??0,wt:e.wt??0,speed:e.speed??e.sp??0,yawRate:e.yawRate??0,orbitSign:e.orbitSign??1,heading:e.navHd??e.hd??0,guard:!!e.guard,towerGuard:!!e.towerGuard,towerSeat:e.towerSeat??null,
   towerHostId:e.towerHost?.saveId||null,
   sp:e.sp,rate:e.rate,dmg:e.dmg,elite:!!e.elite,rocketSoldier:!!e.rocketSoldier,sensePhaseTicks:Math.ceil((e.senseT||0)*30),seenTicks:0,lastAttack:-90})),
@@ -555,6 +558,18 @@ function updateNativeCoopFrame(dt){
          e.marineCrewHp=row.marineCrewHp||window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.marineCrewInitialHealth();
          e.marineBrokenWindshield=row.marineBrokenWindshield||[];
          syncMarinePatrolCrew(e.o,e);
+       }else if(e.t==='jeep'){
+         e.patrolCrewHp=row.patrolCrewHp||[COMBAT_BALANCE.people.soldier,COMBAT_BALANCE.people.soldier];
+         const rig=e.o?.userData?.enemyCarCrew;
+         if(rig){
+           if(rig.driver)rig.driver.visible=e.patrolCrewHp[0]>0;
+           if(rig.gunner)rig.gunner.visible=e.patrolCrewHp[1]>0;
+           if(rig.mount)rig.mount.visible=e.patrolCrewHp[1]>0;
+         }
+         for(const seat of row.brokenVehicleWindows||[]){
+           const point=window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.vehicleSeatWorld(e,seat,row.y);
+           shatterVehicleWindow(e,seat,point,null,true);
+         }
        }
        e.nativePatrolFocus=row.patrolFocus||null;e.nativePatrolSpeed=row.speed||0;
        e.canSee=!!row.canSee;
@@ -768,6 +783,13 @@ function updateNativeCoopFrame(dt){
        }
      }
      else if(effect.kind==='marine-crew-hit'){
+       spawnBulletImpact('blood',effect.at.x,effect.at.y,effect.at.z,{vx:0,vy:0,vz:1});
+     }
+     else if(effect.kind==='patrol-car-glass'){
+       const car=s.enemies.get(effect.targetId);
+       if(car)shatterVehicleWindow(car,effect.seat,effect.at,null);
+     }
+     else if(effect.kind==='patrol-car-crew-hit'){
        spawnBulletImpact('blood',effect.at.x,effect.at.y,effect.at.z,{vx:0,vy:0,vz:1});
      }
      else if(effect.kind==='vehicle-glass'){

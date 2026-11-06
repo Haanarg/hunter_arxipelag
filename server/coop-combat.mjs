@@ -408,7 +408,11 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         unit.nextRamTick=tick+Math.ceil(1.1*30);
       }
     }else{
-      stepLandPatrol(unit,{dt,world:world(),random});
+      // El jeep conserva el casc quan mor el conductor, però deixa de
+      // circular. Els altres blindats estan protegits per la carrosseria.
+      if(unit.t!=='jeep'||(unit.patrolCrewHp?.[0]??combatBalance.people.soldier)>0)
+        stepLandPatrol(unit,{dt,world:world(),random});
+      else unit.speed=0;
       // Els blindats terrestres segueixen els seus waypoints originals.
     }
     unit.state=hostile?'attack':'patrol';
@@ -439,7 +443,8 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         unit.nextRocketTick=tick+Math.ceil(.42*30);
         effect('shot',tick,{enemy:true,actorId:unit.id,projectileId:id,weapon:'rifle',from:rifleOrigin,to:aiming});
       }
-    }else if(d<(unit.t==='jeep'?75:105)&&tick>=cooldown){
+    }else if(d<(unit.t==='jeep'?75:105)&&tick>=cooldown&&
+      (unit.t!=='jeep'||(unit.patrolCrewHp?.[1]??combatBalance.people.soldier)>0)){
       const weapon=unit.t==='jeep'?'jeep':unit.t==='tanqueta'?'tankette':'tank';
       const origin={x:unit.x+Math.cos(unit.heading)*1.46-Math.sin(unit.heading)*1.1,
         y:unit.y+(unit.t==='jeep'?2.25:2.8),
@@ -524,10 +529,15 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       const carrier=t.enemyVehicleId&&vehicles.live().find(v=>v.id===t.enemyVehicleId),
         point=carrier?vehicleOccupantHeadWorld(carrier,t.enemySeat||0,carrier.y):null;
       if(carrier&&['tanc','tanqueta'].includes(carrier.t))continue;
-      if(t.t==='patrulla_marina'&&!heavy){
+      if(!heavy&&['patrulla_marina','jeep'].includes(t.t)){
         for(let seat=0;seat<2;seat++){
-          if((t.marineCrewHp?.[seat]??(seat===0?MARINE_CREW_HP:MARINE_PASSENGER_HP))<=0)continue;
-          const head=marineCrewHeadWorld(t,seat,t.y);
+          const hp=t.t==='patrulla_marina'?
+            (t.marineCrewHp?.[seat]??(seat===0?MARINE_CREW_HP:MARINE_PASSENGER_HP)):
+            (t.patrolCrewHp?.[seat]??combatBalance.people.soldier);
+          if(hp<=0)continue;
+          const head=t.t==='patrulla_marina'?
+            marineCrewHeadWorld(t,seat,t.y):
+            vehicleOccupantHeadWorld(t,seat,t.y);
           aim.consider({id:t.id+':crew'+seat,t:'soldat'},'enemy',0,
             head.x,head.y,head.z);
         }
@@ -673,7 +683,14 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         // no pot absorbir la bala que travessa el parabrisa o el rider.
         const contact=t.t==='patrulla_marina'&&!p.splash?
           marineCrewProjectileContact(flight.from,flight.to,t,{baseY:t.y}):null;
+        const patrolContact=t.t==='jeep'&&!p.splash?
+          vehicleSeatProjectileContact(flight.from,flight.to,t,
+            (t.patrolCrewHp??=[combatBalance.people.soldier,combatBalance.people.soldier])
+              .map(hp=>({hp})),{baseY:t.y}):null;
         if(contact)flight.consider(contact.t,contact.kind,{boat:t,...contact});
+        else if(patrolContact)flight.consider(patrolContact.t,
+          patrolContact.kind==='vehicle-glass'?'patrol-car-glass':'patrol-car-crew',
+          {car:t,...patrolContact});
         else flight.consider(segmentBox(flight.from,flight.to,targetBox(t)),'enemy',t);
       }
       if(!p.enemy)for(const u of civilianTargets())if(u.hp>0)
@@ -718,6 +735,20 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
           applied=damageMarineCrew(boat,result.target.seat,p.dmg);
           if(applied)effect('marine-crew-hit',tick,{actorId:p.actorId,
             targetId:boat.id,seat:result.target.seat,at:{...result.point}});
+        }else if(result.kind==='patrol-car-glass'){
+          const car=result.target.car;
+          applied=breakVehicleSeatWindow(car,result.target.seat);
+          if(applied)effect('patrol-car-glass',tick,{actorId:p.actorId,
+            targetId:car.id,seat:result.target.seat,at:{...result.point}});
+        }else if(result.kind==='patrol-car-crew'){
+          const car=result.target.car,seat=result.target.seat;
+          car.patrolCrewHp??=[combatBalance.people.soldier,combatBalance.people.soldier];
+          if(car.patrolCrewHp[seat]>0){
+            car.patrolCrewHp[seat]=damageHealth(car.patrolCrewHp[seat],p.dmg);
+            applied=true;
+            effect('patrol-car-crew-hit',tick,{actorId:p.actorId,
+              targetId:car.id,seat,at:{...result.point}});
+          }else applied=false;
         }else if(result.kind==='vehicle-glass'){
           applied=breakVehicleSeatWindow(result.target.vehicle,result.target.seat);
           if(applied)effect('vehicle-glass',tick,{actorId:p.actorId,vehicleId:result.target.vehicle.id,
