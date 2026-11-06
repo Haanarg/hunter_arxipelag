@@ -31,8 +31,12 @@ for(const patch of [{canSee:true},{alert:1},{aiMode:'combat'},{aiMode:'search'},
  assert.equal(remote({...unit,...patch},player),0,
    'do not delay an active enemy '+JSON.stringify(patch));
 }
-for(const type of ['general','patrulla_marina'])
- assert.equal(remote({...unit,t:type},player),Infinity,type+' can sleep without a threat');
+assert.equal(remote({...unit,t:'general'},player),Infinity,
+ 'distant general can sleep without a threat');
+assert.equal(remote({...unit,t:'patrulla_marina',x:1800,z:0},player),0,
+ 'a visible marine patrol must keep moving (within 2050m)');
+assert.equal(remote({...unit,t:'patrulla_marina',x:2200,z:0},player),Infinity,
+ 'marine patrol sleeps only beyond 2050m');
 assert.equal(remote(unit,player,{contains:()=>true}),0,
  'distant sniper targets remain fully responsive');
 assert(ai.includes('const scheduledDt=enemyRemoteDecisionDt(u,dt,remoteInterval);'),
