@@ -29,6 +29,8 @@ on:
       - 'tests/rowboat-far-lod.cjs'
       - 'tests/vehicle-distant-lod.cjs'
       - 'tests/remote-rider-lod.cjs'
+      - 'tests/visual-distance-culling.cjs'
+      - 'tests/frame-diagnostics-parity.mjs'
       - 'tests/enemy-sweep-aabb-pruning.cjs'
       - 'tests/render-batching-regressions.cjs'
       - 'tests/vehicle-batching.cjs'
@@ -105,6 +107,13 @@ jobs:
           node tests/shadow-stable-focus.cjs
           node tests/rowboat-far-lod.cjs
           node tests/performance-audit.cjs
+      - name: Check distant objects, vegetation and preserved pickup physics
+        run: |
+          node --check src/game-core.js
+          node --check src/vegetation.js
+          node --check src/frame-diagnostics-core.mjs
+          node tests/visual-distance-culling.cjs
+          node tests/vegetation-shared.mjs
       - name: Check distant vehicles, their occupants and unchanged near geometry
         run: |
           node --check src/rider.js
