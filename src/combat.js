@@ -1584,8 +1584,9 @@ function updPj(dt){
             from,to,u,{baseY:u.o?.position?.y??0}):null;
         const patrolCarContact=u.t==='jeep'&&!p.spl?
           window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.vehicleSeatProjectileContact(
-            from,to,u,(u.patrolCrewHp||[]).map(hp=>({hp})),
-            {baseY:u.o?.position?.y??0}):null;
+            from,to,u,(u.patrolCrewHp??=[
+              COMBAT_BALANCE.people.soldier,COMBAT_BALANCE.people.soldier
+            ]).map(hp=>({hp})),{baseY:u.o?.position?.y??0}):null;
         if(marineContact)consider(marineContact.t,marineContact.kind,
           {boat:u,...marineContact});
         else if(patrolCarContact)consider(patrolCarContact.t,
