@@ -24,7 +24,21 @@ window.HUNTER_RIDER=Object.freeze({
     g.userData={torso,limbs,boots,head:rig.head,neck:rig.neck,headVariant:rig.headVariant,
       mats:rig.mats,profile:rig.profile,motion:0,shotTime:0,shotAge:10,shotBlend:0,
       pistol,pistolParts,pistolAim:null};
-    g.visible=false;g.traverse(o=>{if(o.isMesh)o.castShadow=shadows});scene.add(g);
+    // A més de la postura completa, els riders remots tenen una figura
+    // de dues malles compartides per evitar dibuixar totes les articulacions
+    // a llargues distàncies. El rider local mai entra en aquest LOD.
+    const riderDetailNodes=[...g.children],riderFar=new THREE.Group();
+    const farBody=new THREE.Mesh(new THREE.BoxGeometry(.62,.88,.39),material(0x58634b,'paint'));
+    farBody.position.y=.48;
+    const farHead=new THREE.Mesh(new THREE.BoxGeometry(.43,.40,.43),material(0xc59a78,'skin'));
+    farHead.position.y=1.10;
+    riderFar.add(farBody,farHead);riderFar.visible=false;
+    riderFar.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false}});
+    g.add(riderFar);
+    g.userData.riderFarProxy=riderFar;
+    g.userData.riderDetailNodes=riderDetailNodes;
+    g.userData.riderFarActive=false;
+    g.visible=false;g.traverse(o=>{if(o.isMesh&&!o.userData.noCastShadow)o.castShadow=shadows});scene.add(g);
     const down=new THREE.Vector3(0,-1,0),delta=new THREE.Vector3();
     const limbBetween=(m,a,b)=>{
       delta.copy(b).sub(a);const length=delta.length();m.position.copy(a);
@@ -121,7 +135,7 @@ window.HUNTER_RIDER=Object.freeze({
       return {origin,direction:forward.clone().applyQuaternion(
         pistol.getWorldQuaternion(new THREE.Quaternion())).normalize()};
     };
-    const update=(v,dt,seatIndex=null)=>{
+    const update=(v,dt,seatIndex=null,viewDistance=0)=>{
       // null = partida individual: conserva exactament la postura existent.
       // 0/1 = seient autoritatiu COOP (pilot esquerra, passatger dreta).
       const passenger=seatIndex===1,coopSeat=seatIndex===0||passenger;
@@ -134,7 +148,25 @@ window.HUNTER_RIDER=Object.freeze({
       // tridimensional del xassís en girs i pendents.
       const riderScale=car?.82:v.t==='hover'?.63:1;
       g.scale.setScalar(riderScale);
-      g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);torso.rotation.set(0,0,0);boots.forEach(b=>b.rotation.set(0,0,0));
+      g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);
+      const far=Number.isFinite(viewDistance)&&viewDistance>
+        (u.riderFarActive?350:430);
+      if(far!==u.riderFarActive){
+        u.riderFarActive=far;
+        for(const child of riderDetailNodes)child.visible=!far&&child!==pistol;
+        riderFar.visible=far;
+      }
+      if(far){
+        // El cos simplificat es posa sobre el seient sense animar cames,
+        // mans o arma; la simulació i el seient autoritatiu són idèntics.
+        const seatX=coopSeat?(passenger?1:-1)*(car?.65:.58)*sc:0,
+          deckY=car?1.20*sc:v.t==='hover'?1.25*sc:
+            v.t==='windsurf'?1.05*sc:1.35*sc;
+        riderFar.position.set(seatX,deckY,v.t==='bici'||v.t==='moto'?.12*sc:0);
+        pistol.visible=false;
+        return;
+      }
+      torso.rotation.set(0,0,0);boots.forEach(b=>b.rotation.set(0,0,0));
 
       if(car){
         // Seient esquerre, darrere del volant (C1A i cotxe utilitari).
