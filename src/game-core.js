@@ -230,7 +230,14 @@ function updateShadowCasters(force=false){
           // però no representa navegació ni canvi de rumb. Conservam
           // la detecció immediata de X, Z i yaw, i el refresc periòdic
           // actualitza la inclinació i l'ombra completa del buc.
-          if(o===entry.owner&&shadowOwnerKinds.get(o)==='vehicle llanxa'){
+          const boatKind=shadowOwnerKinds.get(entry.owner);
+          // La barca de rems té pivots animats que no han de provocar
+          // un shadow redraw a cada remada. El buc conserva la seva
+          // ombra completa, i la resta es refresca periòdicament.
+          if(boatKind==='vehicle barca_rems'&&o!==entry.owner)continue;
+          if(o===entry.owner&&(
+            boatKind==='vehicle llanxa'||boatKind==='vehicle llanxa_coets'||
+            boatKind==='vehicle barca_rems')){
             let proxy=shadowBoatProxyCache.get(o);
             if(!proxy){
               proxy={
