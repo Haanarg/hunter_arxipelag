@@ -7,7 +7,7 @@ assert(generator.includes("t==='bazooka'||t==='fusell_assalt'?20:7"),
  'doubled exact probabilities: bazooka 2/13 and assault rifle 4/13');
 assert(generator.includes("if(!ensureTwoStoreyLoot(building))"),
  'military two-storey buildings must populate each floor');
-assert(generator.indexOf('const assaultLootBuildings=')<generator.indexOf('const pool='),
+assert(generator.indexOf('const assaultLootBuildings=')<generator.indexOf("const pool=['arma'"),
  'sector guarantees are reserved before random loot fills buildings');
 assert(generator.includes("if(!placed)throw new Error("),
  'a missing sector rifle cannot be silently ignored');
