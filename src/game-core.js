@@ -1601,13 +1601,13 @@ function itemBuildingAt(x,z){
   })||null;
 }
 const buildingItemCount=b=>items.reduce((n,it)=>n+(it.building===b?1:0),0);
-function itemHeightInBuilding(b,x,z){
+function itemHeightInBuilding(b,x,z,forcedFloor=null){
   if(!b)return hAt(x,z)+1.3;
   const n=buildingItemCount(b),
         firstUpper=Math.floor(Math.abs(b.x*1.341+b.z*1.733))%2,
         upstairs=b.floors===2&&!b.rb&&!!b.interiorStair&&
           !stairContains(b.interiorStair,x,z,.6)&&
-          (n+firstUpper)%2===1;
+          (forcedFloor===null?(n+firstUpper)%2===1:forcedFloor===1);
   return b.fy+(upstairs?b.storey:0)+1.3;
 }
 function canPlaceItem(t,b,compound){
@@ -1625,7 +1625,7 @@ function addItemAt(t,x,z,compound=null){
   const item={t,x,z,y,o,building:b,compound:compound||b?.compound||null};
   items.push(item);return o||item;
 }
-function addIt(t,b){
+function addIt(t,b,forcedFloor=null){
   if(!IT[t]){console.warn('Tipus d’objecte desconegut:',t);return null}
   if(!lootAllowed(t,b)||!canPlaceItem(t,b,b?.compound))return null;
   let x,z,found=false;
@@ -1643,10 +1643,31 @@ function addIt(t,b){
     }
   }
   if(!found||!lootAllowed(t,b,x,z))return null;
-  const y=itemHeightInBuilding(b,x,z),o=seedSearchMode?null:createItemVisual(t);
+  const y=itemHeightInBuilding(b,x,z,forcedFloor),o=seedSearchMode?null:createItemVisual(t);
   if(o){o.position.set(x,y,z);world.add(o)}
   const item={t,x,z,y,o,building:b,compound:b.compound||null};
   items.push(item);return o||item;
+}
+// Cada planta transitable dels edificis militars de dues plantes
+// conserva almenys un objecte. Sense modificar el límit de tres.
+function ensureTwoStoreyLoot(b){
+  if(!b||b.civilian||b.hangar||b.rb||b.floors!==2||
+     !b.upperFloor||!b.interiorStair||b.interiorStair.destroyed)return false;
+  const own=()=>items.filter(it=>it.building===b);
+  const onFloor=(it,floor)=>floor===1?it.y>b.fy+b.storey:it.y<b.fy+b.storey;
+  for(const floor of [0,1]){
+    if(own().some(it=>onFloor(it,floor)))continue;
+    if(buildingItemCount(b)<MAX_BUILDING_ITEMS&&addIt('arma',b,floor))continue;
+    // Si l'edifici és ple, traslladam un objecte existent de planta,
+    // sense afegir-ne un quart ni alterar la mena de botí.
+    const donor=own().filter(it=>onFloor(it,1-floor)&&
+      !stairContains(b.interiorStair,it.x,it.z,.75));
+    const item=donor.find(it=>!LOOT_MAPS.has(it.t))||donor[0];
+    if(!item)return false;
+    item.y=b.fy+(floor===1?b.storey:0)+1.3;
+    if(item.o)item.o.position.y=item.y;
+  }
+  return own().some(it=>onFloor(it,0))&&own().some(it=>onFloor(it,1));
 }
 function flag(x,z,c){if(!seedSearchMode)world.add(buildingVisual.createFlag({x,y:hAt(x,z),z,color:c}))}
 // jugador i vehicles
