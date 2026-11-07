@@ -12,6 +12,10 @@
 - No tocar el balanç, aspecte, controls ni la serialització de partides durant una extracció de codi, tret que sigui un canvi de joc explícit amb proves específiques.
 - Les dades de rendiment històriques són *indiciàries*: no existeix encara una bateria comparativa completa de FPS GPU, p95/p99 i dos dispositius després de les darreres modificacions.
 
+**P0 · 0.6.181 · vehicles als molls i embarcament al ferri:**
+- [x] El cotxe, la moto, els camions i els blindats consulten la superfície física transitable (`groundAt`) per calcular la inundació; abans consultaven `hAt` i s'enfonsaven damunt d'un moll amb mar profunda a sota. Es conserva l'enfonsament real fora del moll i la protecció que ja existia sobre la coberta del ferri. Regressió afegida a la prova bàsica `tests/smoke-basic.cjs`.
+- [ ] **Validació visual:** pujar al moll i embarcar un cotxe, moto i camió en solitari, i provar un vehicle en HOST/GUEST, incloent la retirada del ferri i la sortida del moll cap a la mar.
+
 **P0 · copiar diagnòstic de rendiment (v0.6.154; implementació):**
 - [x] Afegit `Copia diagnòstic` al costat d'`Actualitza diagnòstic` al menú **Pausa → Opcions**, amb JSON de versió, llavor, escala, FPS, CPU, IA, draw calls, ombres, LOD, memòria GPU i estadístiques de generació, només a petició.
 - [x] Còpia nativa amb alternativa `execCommand('copy')` i camp de text seleccionable per a navegadors Android/WebView que bloquegin el porta-retalls. Prova `tests/performance-copy-diagnostic.mjs` afegida a CI i a `test:optimization`.

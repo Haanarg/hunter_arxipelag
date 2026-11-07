@@ -23,5 +23,33 @@ const assert = require('node:assert/strict');
   assert.ok([...state.base, ...state.player, ...state.hq].every(Number.isFinite),
     'coordenades de món vàlides');
   game.frame();
-  console.log('PASS: arrencada, món, missió i primer fotograma');
+  // El moll és suport sòlid: un cotxe no pot inundar-se simplement
+  // perquè sota les taules hi ha mar profunda. Sense moll sí que s'inunda.
+  const pierCheck = game.run(`(() => {
+    const x=H-120,z=H-120,shore=window.HUNTER_VEHICLE_DYNAMICS.shore,
+      sea=wy(x,z,elapsed),bed=hAt(x,z),
+      dock={x,z,ux:0,uz:1,px:1,pz:0,length:18,width:12,y:sea+2},
+      makeCar=()=>({t:'cotxe',x,z,hd:0,v:0,sideV:0,strafeV:0,
+        driveInput:0,steerInput:0,yawRate:0,envCd:0,bump:0,
+        life:VT.cotxe.life,o:{position:new THREE.Vector3(x,dock.y+.05,z),userData:{}}});
+    const rawDepth=sea-bed;
+    piers.push(dock);
+    let supportedDepth,dry;
+    try {
+      const car=makeCar();
+      supportedDepth=sea-groundAt(x,z);
+      stepV(car,0,0,0,1/60);
+      dry=!car.waterIngress?.dead;
+    } finally {piers.pop();}
+    const inWater=makeCar();
+    stepV(inWater,0,0,0,1/60);
+    return {rawDepth,supportedDepth,dry,wet:!!inWater.waterIngress?.dead,
+      threshold:shore.land.cotxe.stall};
+  })()`);
+  assert.ok(pierCheck.rawDepth>pierCheck.threshold,
+    'l\'aigua sota el moll ha de ser prou profunda per inundar el cotxe');
+  assert.ok(pierCheck.supportedDepth<0&&pierCheck.dry,
+    'sobre el moll el cotxe conserva el motor sec');
+  assert.ok(pierCheck.wet,'fora del moll el cotxe segueix inundant-se');
+  console.log('PASS: arrencada, missió, moll sec i inundació a mar oberta');
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -3111,10 +3111,12 @@ function stepV(v,f,tr,ud,dt,strafe=0){
 const c=VT[v.t],a=c.m==='a',water=c.m==='w'||c.m==='wl',land=c.m==='l',radius=vehicleRadius(v.t),
   shore=window.HUNTER_VEHICLE_DYNAMICS.shore;
 if(v.sunk&&v.t!=='bici'){v.v=0;v.sideV=0;v.strafeV=0;if(cv===v)escapeSubmergedVehicle(v);return !v.destroyed}
-// A vehicle on the ferry's dry deck is not submerged just because
-// the sea floor is beneath its map coordinates.
+// El moll i la passarel·la del ferri són terra ferma per a les rodes:
+// la profunditat es mesura des de la superfície que sosté el vehicle,
+// no des del fons de la mar. A la mar oberta groundAt continua
+// retornant el terreny físic i la inundació funciona igual que abans.
 const onFerryDeck=land&&(v.carrier||ferryForVehicle(v,v.x,v.z,true)),
-  depth=land&&!onFerryDeck?shore.depth(v.x,v.z,hAt,(x,z)=>wy(x,z,elapsed)):-Infinity,
+  depth=land&&!onFerryDeck?shore.depth(v.x,v.z,groundAt,(x,z)=>wy(x,z,elapsed)):-Infinity,
   flooded=land?shore.wetLand(v,depth,dt):null,
   input=window.HUNTER_VEHICLE_DYNAMICS.inputs(v,f,tr,dt);
 f=input.forward;tr=input.turn;
