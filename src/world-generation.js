@@ -691,10 +691,16 @@ for(const b of rb){if((++checkpointUnits%64)===0)yield {stage:'Cercant i constru
   // settlement; the military random-loot loop must never add to them.
   if(b.civilian)continue;
   const n=R()<.25?0:R()<.6?1:2;
+  // Duplicam exactament la probabilitat original per sorteig:
+  // bazuca 1/13 -> 2/13, fusell d'assalt 2/13 -> 4/13.
+  // Les altres 10 entrades mantenen la proporció relativa (pes 7).
   const pool=['arma','arma','med','expl','granada','granada','disf','mapa','bazooka','franctirador','paracaigudes','fusell_assalt','fusell_assalt']
     .filter(t=>lootAllowed(t,b));
-  for(let k=0;k<n&&pool.length;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
-    const kind=pool[Math.floor(R()*pool.length)];
+  const weight=t=>t==='bazooka'||t==='fusell_assalt'?20:7;
+  const total=pool.reduce((sum,t)=>sum+weight(t),0);
+  for(let k=0;k<n&&total>0;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+    let ticket=R()*total,kind=pool[pool.length-1];
+    for(const t of pool){ticket-=weight(t);if(ticket<0){kind=t;break}}
     addIt(kind,b);
   }
 };
@@ -740,6 +746,15 @@ for(const sector of activeSectors){
       }
     }
   }
+}
+// Un objecte a cada planta transitable de cada edifici militar de
+// dues plantes, inclosos els de la base. No sobrepassam tres en total.
+for(const building of B){
+  if(building.floors!==2||building.civilian||building.hangar||
+     !building.upperFloor||!building.interiorStair||building.rb)continue;
+  if((++checkpointUnits%64)===0)yield {stage:'Equipant les dues plantes',completed:null,total:null};
+  if(!ensureTwoStoreyLoot(building))
+    throw new Error('No s’ha pogut equipar cada planta de l’edifici '+building.x+','+building.z);
 }
 markBuildStage('enemiesAndLoot');
 yield {stage:'Guàrdies i equipament',completed:1,total:1};
