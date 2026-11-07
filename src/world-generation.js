@@ -649,13 +649,49 @@ world.userData.hqSector=hqCluePlan.actualSector;
 const rb=B.slice(6);
 const hq=B[3],gl=(x,z)=>hAt(x,z)>.5&&!treeHit(x,z,2)&&!Wl.some(w=>x>w.x0-2&&x<w.x1+2&&z>w.z0-2&&z<w.z1+2);
 const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1),x=cx+Math.cos(a)*d,z=cz+Math.sin(a)*d;if(gl(x,z)&&!world.userData.compounds.some(c=>c.layout.civilian&&Math.hypot(x-c.x,z-c.z)<c.r))return mkEn(t,x,z)}return null};
+// Garantim un fusell d'assalt per sector ABANS del botí aleatori.
+// Individual i cooperatiu fan servir els mateixos objectes generats.
+const assaultLootBuildings=rb.filter(b=>!b.civilian&&lootAllowed('fusell_assalt',b));
+for(const sector of activeSectors){
+  if(items.some(it=>it.t==='fusell_assalt'&&sectorMatches(it.x,it.z,sector)))continue;
+  const candidates=assaultLootBuildings.filter(b=>sectorMatches(b.x,b.z,sector)).sort(()=>R()-.5);
+  let placed=false;
+  for(const b of candidates){
+    if((++checkpointUnits%64)===0)yield {stage:'Garantint fusells d’assalt',completed:null,total:null};
+    if(addIt('fusell_assalt',b)){placed=true;break;}
+  }
+  // Si tots els interiors tenen tres objectes fixos, cercam terra
+  // accessible vora un complex sense ocupar una quarta plaça interior.
+  if(!placed)for(const b of candidates){
+    if(placed)break;
+    const radius=Math.max(b.hw??b.w/2,b.hd??b.d/2)+8;
+    for(let step=0;step<16;step++){
+      if((++checkpointUnits%64)===0)yield {stage:'Garantint fusells d’assalt',completed:null,total:null};
+      const angle=step*Math.PI/8,x=b.x+Math.cos(angle)*radius,z=b.z+Math.sin(angle)*radius;
+      if(!sectorMatches(x,z,sector)||!gl(x,z)||itemBuildingAt(x,z)||
+         !lootAllowed('fusell_assalt',null,x,z,b.compound))continue;
+      if(addItemAt('fusell_assalt',x,z,b.compound)){placed=true;break;}
+    }
+  }
+  // Últim recurs: un espai lliure de la mateixa zona geogràfica.
+  if(!placed)for(const island of islandsInSector(sector)){
+    if(placed)break;
+    for(let attempt=0;attempt<20;attempt++){
+      if((++checkpointUnits%64)===0)yield {stage:'Garantint fusells d’assalt',completed:null,total:null};
+      const q=(yield* landSteps(island,180,1));
+      if(!q||!sectorMatches(q.x,q.z,sector)||!gl(q.x,q.z)||itemBuildingAt(q.x,q.z))continue;
+      if(addItemAt('fusell_assalt',q.x,q.z)){placed=true;break;}
+    }
+  }
+  if(!placed)throw new Error('No s’ha pogut garantir el fusell d’assalt al sector '+sector);
+}
 for(const i of islands){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};if(i===A||i===Bi||R()<.5)continue;const q=(yield* landSteps(i,60));if(!q)continue;for(let k=0;k<1+(R()<.4);k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};sp2('soldat',q.x,q.z,0,10);}if(R()<.25)sp2('torre',q.x,q.z,5,12)};
 for(const b of rb){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
   // Civilian houses were already resolved once each while building the
   // settlement; the military random-loot loop must never add to them.
   if(b.civilian)continue;
   const n=R()<.25?0:R()<.6?1:2;
-  const pool=['arma','arma','med','expl','granada','granada','disf','mapa','bazooka','franctirador','paracaigudes']
+  const pool=['arma','arma','med','expl','granada','granada','disf','mapa','bazooka','franctirador','paracaigudes','fusell_assalt','fusell_assalt']
     .filter(t=>lootAllowed(t,b));
   for(let k=0;k<n&&pool.length;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
     const kind=pool[Math.floor(R()*pool.length)];
