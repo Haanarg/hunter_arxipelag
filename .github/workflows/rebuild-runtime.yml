@@ -165,6 +165,7 @@ jobs:
         run: |
           node tests/civilian-house-loot.cjs
           node tests/sector-assault-loot.cjs
+          node tests/loot-health.cjs
       - name: Check marine patrol pilot and passenger health in both game modes
         run: node tests/marine-crew-damage.mjs
       - name: Check modified JavaScript syntax
