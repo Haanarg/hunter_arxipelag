@@ -16,8 +16,9 @@ const CATALOG=[
    P('pixel-modern-city-street','Bicycle'),
    P('indian-bazaar-street-and-temple','Bicycle with Carrier')]},
  {id:'moto',name:'Motocicleta',kind:'terra',options:[
-   P('transport-collection-hd','Road motorcycle'),
-   Q('sport motorcycle'),Q('naked motorcycle')]},
+   P('motorcycle-racing-and-street-bikes','Road sportbike'),
+   P('motorcycle-racing-and-street-bikes','Naked streetfighter'),
+   P('motorcycle-racing-and-street-bikes','Twin-cylinder scrambler')]},
  {id:'cotxe_civil',name:'Cotxe civil',kind:'terra',options:[
    P('transport-collection-hd','Grand touring coupe'),
    P('transport-collection-hd','Executive sedan'),
@@ -230,6 +231,9 @@ function normalize(obj,original){
 }
 function setModel(slot,obj,original,animations=[]){
  dropPrevious(slot);
+ // Els GLB verificats de 3DAssets apunten el morro cap a +Z;
+ // la fàbrica del joc el dibuixa cap a -Z. Orientam sense deformar.
+ if(!original)obj.rotation.y+=Math.PI;
  const wrap=new THREE.Group();wrap.add(obj);
  normalize(wrap,original);
  wrap.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
