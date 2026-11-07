@@ -1569,11 +1569,11 @@ function createItemVisual(t){const g=new THREE.Group(),metal=0x454b4e,dark=0x3d3
 // decoració: els tancs continuen dins els hangars.
 const LOOT_MAPS=new Set(['mapa','mapa_heli','mapa_tanc']);
 const LOOT_WEAPONS=new Set(['bazooka','franctirador','fusell_assalt','granada','expl']);
-// Each civilian home gets one independent 25% roll, with 60/30/10
+// Each civilian home gets one independent 50% roll, with 60/30/10
 // proportions conditional on finding an item.
 const CIVILIAN_HOUSE_LOOT=new Set(['med','arma','cisalla']);
 function rollCivilianHouseLoot(random){
-  if(random()>=.25)return null;
+  if(random()>=.50)return null;
   const chance=random();
   return chance<.6?'med':chance<.9?'arma':'cisalla';
 }
