@@ -3,8 +3,10 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const generator=read('src/world-generation.js'),coop=read('src/coop-world-runtime.js');
-assert(generator.includes("'fusell_assalt','fusell_assalt'"),
- 'moderate random assault-rifle weight (2/13 eligible loot choices)');
+assert(generator.includes("t==='bazooka'||t==='fusell_assalt'?20:7"),
+ 'doubled exact probabilities: bazooka 2/13 and assault rifle 4/13');
+assert(generator.includes("if(!ensureTwoStoreyLoot(building))"),
+ 'military two-storey buildings must populate each floor');
 assert(generator.indexOf('const assaultLootBuildings=')<generator.indexOf('const pool='),
  'sector guarantees are reserved before random loot fills buildings');
 assert(generator.includes("if(!placed)throw new Error("),
