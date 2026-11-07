@@ -35,7 +35,7 @@ module.exports=async function createGame(root=path.resolve(__dirname,'..'),optio
         },
         innerHTML:'',textContent:'',hidden:false,disabled:false,width:170,height:170,
         options:[],selectedIndex:0,children:[],_value:'',
-        focus:noop,attributes:new Map(),
+        focus:noop,remove:noop,attributes:new Map(),
         setAttribute(k,v){this.attributes.set(k,String(v))},
         getAttribute(k){return this.attributes.get(k)??null},
         removeAttribute(k){this.attributes.delete(k);delete this[k]},
