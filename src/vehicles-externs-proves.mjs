@@ -101,6 +101,7 @@ let currentType=CATALOG[0],generation=0,originalDims=new THREE.Vector3(3,2,5);
 let yaw=.60,elev=.32,zoom=1,lookY=.6;
 let prev=performance.now();
 const packCache=new Map(),searchCache=new Map();
+let savedManifest=null;
 const canonical=(x)=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 async function getPack(slug){
  if(!packCache.has(slug))packCache.set(slug,fetch('https://3dassets.dev/api/v1/packs/'+encodeURIComponent(slug))
@@ -185,6 +186,25 @@ function setModel(slot,obj,original,animations=[]){
  return wrap;
 }
 async function loadExternal(slot,entry,used,token){
+ const slotIndex=slots.indexOf(slot);
+ const local=savedManifest?.models?.[currentType.id]?.find(record=>record.slot===slotIndex);
+ if(local){
+   slot.bold.textContent=local.title.split(' (')[0];
+   slot.sub.textContent='GLB desat al repositori · CC0';
+   slot.source.href=local.url;
+   slot.source.hidden=false;
+   slot.status.textContent='Carregant GLB local ('+Math.round(local.bytes/1024)+' KiB)…';
+   try{
+     const gltf=await loader.loadAsync('./assets/vehicle-candidates/'+local.file);
+     if(token!==generation)return;
+     setModel(slot,gltf.scene,false,gltf.animations);
+     slot.status.textContent=metrics(slot.model)+' · desat';
+     return;
+   }catch(error){
+     slot.status.textContent='La còpia local no ha carregat. Provant el catàleg…';
+     console.warn('GLB local absent o incorrecte',local.file,error);
+   }
+ }
  slot.status.textContent='Consultant catàleg CC0…';
  slot.sub.textContent='Cercant: '+(entry.match||entry.query);
  slot.source.hidden=true;
@@ -327,4 +347,7 @@ for(const config of CATALOG){
 }
 addEventListener('resize',resizeRenderer);
 resizeRenderer();requestAnimationFrame(draw);
-choose(CATALOG[0]);
+fetch('./assets/vehicle-candidates/manifest.json',{cache:'no-store'})
+ .then(response=>response.ok?response.json():null)
+ .then(manifest=>{savedManifest=manifest;return choose(CATALOG[0]);})
+ .catch(error=>{console.warn('Manifest local no disponible',error);choose(CATALOG[0]);});
