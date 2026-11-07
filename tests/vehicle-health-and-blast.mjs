@@ -3,7 +3,7 @@ import {combatBalance} from '../src/combat-rules.mjs';
 import {vehicleDynamics} from '../src/vehicle-dynamics-core.mjs';
 import {createArcadeBlastFX,arcadeBlastProfile} from '../src/arcade-blast-fx.mjs';
 import * as THREE from '../vendor/three-r186.module.mjs';
-const base={bici:1,moto:2,cotxe:5,cotxe_civil:4,camio:10,tanqueta:12,tanc:20,
+const base={bici:1,moto:2,cotxe:5,cotxe_civil:4,camio:10,tanqueta:10,tanc:20,
   windsurf:1,barca_rems:2,moto_aquatica:3,llanxa:5,llanxa_coets:10,ferry:15,
   hover:6,heli:10,heli_combat:15};
 for(const [type,old] of Object.entries(base)){
