@@ -17,7 +17,7 @@ for(let i=0;i<N;i++){
   totals[item??'none']++;
 }
 const placed=N-totals.none;
-assert(Math.abs(placed/N-.25)<.007,'25% chance of any object');
+assert(Math.abs(placed/N-.50)<.007,'50% chance of any object');
 assert(Math.abs(totals.med/placed-.60)<.015,'60% medicine among found objects');
 assert(Math.abs(totals.arma/placed-.30)<.015,'30% ammunition among found objects');
 assert(Math.abs(totals.cisalla/placed-.10)<.012,'10% bolt cutters among found objects');
@@ -42,4 +42,4 @@ assert.match(world,/if\(b\.civilian\)continue;/,'civilian houses excluded from m
 assert.match(layouts,/l\.loot=\[\];/,'settlement designs have no fixed medkit');
 for(const needle of ["loot:[],entrances:[[0,-60]]","loot:[],entrances:[[0,-95]","loot:[],entrances:[[18,-70]"])
   assert(layouts.includes(needle),'civilian authored loot removed: '+needle);
-console.log('OK civilian houses: 25% total, 60/30/10 weighted, one permitted item, no fixed/extra loot');
+console.log('OK civilian houses: 50% total, 60/30/10 weighted, one permitted item, no fixed/extra loot');
