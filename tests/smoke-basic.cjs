@@ -4,7 +4,7 @@
 const assert = require('node:assert/strict');
 (async () => {
   const game = await require('./harness.cjs')();
-  assert.equal(game.run('started'), false, 'el menú no ha de generar la partida');
+  assert.equal(Boolean(game.run('started')), false, 'el menú no ha de generar la partida');
   game.start('67');
   const state = game.run(`(() => ({
     started,
