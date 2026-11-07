@@ -1,0 +1,427 @@
+{
+  "version": 1,
+  "generatedAt": "2026-11-07T23:12:53.123Z",
+  "source": "https://3dassets.dev/",
+  "license": "CC0-1.0",
+  "limits": {
+    "maxFileBytes": 2097152,
+    "maxTotalBytes": 31457280
+  },
+  "models": {
+    "bici": [
+      {
+        "slot": 1,
+        "id": "38013",
+        "title": "Track Bicycle (Upright) (Velodrome and Track Cycling)",
+        "bytes": 22724,
+        "triangles": 412,
+        "file": "bici/1-velodrome-and-track-cycling-track-bicycle-upright-12525f51.glb",
+        "url": "https://3dassets.dev/assets/velodrome-and-track-cycling-track-bicycle-upright-12525f51",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/38013/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 2,
+        "id": "29030",
+        "title": "Bicycle (Pixel Modern City Street)",
+        "bytes": 13292,
+        "triangles": 224,
+        "file": "bici/2-pixel-modern-city-street-bicycle-ecfb4c16.glb",
+        "url": "https://3dassets.dev/assets/pixel-modern-city-street-bicycle-ecfb4c16",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/29030/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 3,
+        "id": "36561",
+        "title": "Bicycle with Carrier (Indian Bazaar Street and Temple)",
+        "bytes": 54760,
+        "triangles": 1076,
+        "file": "bici/3-indian-bazaar-street-and-temple-bicycle-with-carrier-9d979e52.glb",
+        "url": "https://3dassets.dev/assets/indian-bazaar-street-and-temple-bicycle-with-carrier-9d979e52",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/36561/v1/model.glb",
+        "license": "CC0-1.0"
+      }
+    ],
+    "moto": [
+      {
+        "slot": 1,
+        "id": "15424",
+        "title": "Road sportbike (Motorcycle Racing and Street Bikes)",
+        "bytes": 260764,
+        "triangles": 5156,
+        "file": "moto/1-motorcycle-racing-and-street-bikes-road-sportbike-e1418015.glb",
+        "url": "https://3dassets.dev/assets/motorcycle-racing-and-street-bikes-road-sportbike-e1418015",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/15424/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 2,
+        "id": "15425",
+        "title": "Naked streetfighter (Motorcycle Racing and Street Bikes)",
+        "bytes": 248888,
+        "triangles": 4908,
+        "file": "moto/2-motorcycle-racing-and-street-bikes-naked-streetfighter-9916850c.glb",
+        "url": "https://3dassets.dev/assets/motorcycle-racing-and-street-bikes-naked-streetfighter-9916850c",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/15425/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 3,
+        "id": "15430",
+        "title": "Twin-cylinder scrambler (Motorcycle Racing and Street Bikes)",
+        "bytes": 322240,
+        "triangles": 6440,
+        "file": "moto/3-motorcycle-racing-and-street-bikes-scrambler-0b11660f.glb",
+        "url": "https://3dassets.dev/assets/motorcycle-racing-and-street-bikes-scrambler-0b11660f",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/15430/v1/model.glb",
+        "license": "CC0-1.0"
+      }
+    ],
+    "cotxe_civil": [
+      {
+        "slot": 1,
+        "id": "18681",
+        "title": "Grand touring coupe (Vehicle Collection HD: Cars, Planes and Boats)",
+        "bytes": 356660,
+        "triangles": 9586,
+        "file": "cotxe_civil/1-transport-collection-hd-grand-touring-coupe-b6a2a438.glb",
+        "url": "https://3dassets.dev/assets/transport-collection-hd-grand-touring-coupe-b6a2a438",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/18681/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 2,
+        "id": "18684",
+        "title": "Executive sedan (Vehicle Collection HD: Cars, Planes and Boats)",
+        "bytes": 383416,
+        "triangles": 10578,
+        "file": "cotxe_civil/2-transport-collection-hd-executive-sedan-cfa7dfcf.glb",
+        "url": "https://3dassets.dev/assets/transport-collection-hd-executive-sedan-cfa7dfcf",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/18684/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 3,
+        "id": "18686",
+        "title": "Touring SUV (Vehicle Collection HD: Cars, Planes and Boats)",
+        "bytes": 366076,
+        "triangles": 9834,
+        "file": "cotxe_civil/3-transport-collection-hd-touring-suv-f8566c14.glb",
+        "url": "https://3dassets.dev/assets/transport-collection-hd-touring-suv-f8566c14",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/18686/v1/model.glb",
+        "license": "CC0-1.0"
+      }
+    ],
+    "camio": [
+      {
+        "slot": 1,
+        "id": "23674",
+        "title": "Supply Truck (Tanks, Military Vehicles and Field Camp)",
+        "bytes": 41352,
+        "triangles": 744,
+        "file": "camio/1-armoured-column-and-field-camp-supply-truck-a0414d94.glb",
+        "url": "https://3dassets.dev/assets/armoured-column-and-field-camp-supply-truck-a0414d94",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/23674/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 2,
+        "id": "18682",
+        "title": "Three-axle flatbed truck (Vehicle Collection HD: Cars, Planes and Boats)",
+        "bytes": 255888,
+        "triangles": 9808,
+        "file": "camio/2-transport-collection-hd-flatbed-truck-5ac03ec8.glb",
+        "url": "https://3dassets.dev/assets/transport-collection-hd-flatbed-truck-5ac03ec8",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/18682/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 3,
+        "id": "23675",
+        "title": "Fuel Tanker (Tanks, Military Vehicles and Field Camp)",
+        "bytes": 74296,
+        "triangles": 1460,
+        "file": "camio/3-armoured-column-and-field-camp-fuel-tanker-3c9eb52e.glb",
+        "url": "https://3dassets.dev/assets/armoured-column-and-field-camp-fuel-tanker-3c9eb52e",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/23675/v1/model.glb",
+        "license": "CC0-1.0"
+      }
+    ],
+    "tanqueta": [
+      {
+        "slot": 1,
+        "id": "23668",
+        "title": "Tracked APC (Tanks, Military Vehicles and Field Camp)",
+        "bytes": 80608,
+        "triangles": 1584,
+        "file": "tanqueta/1-armoured-column-and-field-camp-tracked-apc-e2a9da27.glb",
+        "url": "https://3dassets.dev/assets/armoured-column-and-field-camp-tracked-apc-e2a9da27",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/23668/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 2,
+        "id": "23672",
+        "title": "Wheeled APC (Tanks, Military Vehicles and Field Camp)",
+        "bytes": 39192,
+        "triangles": 736,
+        "file": "tanqueta/2-armoured-column-and-field-camp-wheeled-apc-10bee541.glb",
+        "url": "https://3dassets.dev/assets/armoured-column-and-field-camp-wheeled-apc-10bee541",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/23672/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 3,
+        "id": "23669",
+        "title": "Armoured Car (Tanks, Military Vehicles and Field Camp)",
+        "bytes": 30080,
+        "triangles": 536,
+        "file": "tanqueta/3-armoured-column-and-field-camp-armoured-car-152ca19b.glb",
+        "url": "https://3dassets.dev/assets/armoured-column-and-field-camp-armoured-car-152ca19b",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/23669/v1/model.glb",
+        "license": "CC0-1.0"
+      }
+    ],
+    "tanc": [
+      {
+        "slot": 1,
+        "id": "23667",
+        "title": "Main Battle Tank (Tanks, Military Vehicles and Field Camp)",
+        "bytes": 103556,
+        "triangles": 2040,
+        "file": "tanc/1-armoured-column-and-field-camp-main-battle-tank-c801caf7.glb",
+        "url": "https://3dassets.dev/assets/armoured-column-and-field-camp-main-battle-tank-c801caf7",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/23667/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 2,
+        "id": "23673",
+        "title": "Light Tank (Tanks, Military Vehicles and Field Camp)",
+        "bytes": 72152,
+        "triangles": 1412,
+        "file": "tanc/2-armoured-column-and-field-camp-light-tank-588bca75.glb",
+        "url": "https://3dassets.dev/assets/armoured-column-and-field-camp-light-tank-588bca75",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/23673/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 3,
+        "id": "23670",
+        "title": "Self-Propelled Gun (Tanks, Military Vehicles and Field Camp)",
+        "bytes": 84668,
+        "triangles": 1644,
+        "file": "tanc/3-armoured-column-and-field-camp-self-propelled-gun-3e51f45c.glb",
+        "url": "https://3dassets.dev/assets/armoured-column-and-field-camp-self-propelled-gun-3e51f45c",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/23670/v1/model.glb",
+        "license": "CC0-1.0"
+      }
+    ],
+    "windsurf": [],
+    "barca_rems": [
+      {
+        "slot": 1,
+        "id": "22404",
+        "title": "Teal Rowboat (Quiet Lake Fishing)",
+        "bytes": 52376,
+        "triangles": 1026,
+        "file": "barca_rems/1-quiet-lake-fishing-rowboat-9a38d085.glb",
+        "url": "https://3dassets.dev/assets/quiet-lake-fishing-rowboat-9a38d085",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/22404/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 2,
+        "id": "36619",
+        "title": "Rowing Boat (Lighthouse and Rocky Coast)",
+        "bytes": 25252,
+        "triangles": 460,
+        "file": "barca_rems/2-lighthouse-and-rocky-coast-rowing-boat-a50f4fb4.glb",
+        "url": "https://3dassets.dev/assets/lighthouse-and-rocky-coast-rowing-boat-a50f4fb4",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/36619/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 3,
+        "id": "28828",
+        "title": "Rowing Boat (Medieval MMO Starter Realm)",
+        "bytes": 28712,
+        "triangles": 544,
+        "file": "barca_rems/3-medieval-mmo-starter-realm-rowing-boat-4dd8c04d.glb",
+        "url": "https://3dassets.dev/assets/medieval-mmo-starter-realm-rowing-boat-4dd8c04d",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/28828/v1/model.glb",
+        "license": "CC0-1.0"
+      }
+    ],
+    "moto_aquatica": [
+      {
+        "slot": 1,
+        "id": "22258",
+        "title": "Stand-up personal watercraft (Speedboats, Powerboat Racing and Marina)",
+        "bytes": 176192,
+        "triangles": 3556,
+        "file": "moto_aquatica/1-powerboat-racing-and-launch-ramp-stand-up-jet-ski-646a965f.glb",
+        "url": "https://3dassets.dev/assets/powerboat-racing-and-launch-ramp-stand-up-jet-ski-646a965f",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/22258/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 2,
+        "id": "22264",
+        "title": "Sit-down personal watercraft (Speedboats, Powerboat Racing and Marina)",
+        "bytes": 207508,
+        "triangles": 4208,
+        "file": "moto_aquatica/2-powerboat-racing-and-launch-ramp-sit-down-jet-ski-b3443ad6.glb",
+        "url": "https://3dassets.dev/assets/powerboat-racing-and-launch-ramp-sit-down-jet-ski-b3443ad6",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/22264/v1/model.glb",
+        "license": "CC0-1.0"
+      }
+    ],
+    "llanxa": [
+      {
+        "slot": 1,
+        "id": "18716",
+        "title": "Open sport runabout (Vehicle Collection HD: Cars, Planes and Boats)",
+        "bytes": 286556,
+        "triangles": 5872,
+        "file": "llanxa/1-transport-collection-hd-sport-runabout-5b288a58.glb",
+        "url": "https://3dassets.dev/assets/transport-collection-hd-sport-runabout-5b288a58",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/18716/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 2,
+        "id": "22252",
+        "title": "Offshore monohull racer (Speedboats, Powerboat Racing and Marina)",
+        "bytes": 213768,
+        "triangles": 5300,
+        "file": "llanxa/2-powerboat-racing-and-launch-ramp-offshore-monohull-rac-2fa0de2f.glb",
+        "url": "https://3dassets.dev/assets/powerboat-racing-and-launch-ramp-offshore-monohull-rac-2fa0de2f",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/22252/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 3,
+        "id": "22263",
+        "title": "Open rescue powerboat (Speedboats, Powerboat Racing and Marina)",
+        "bytes": 350884,
+        "triangles": 7128,
+        "file": "llanxa/3-powerboat-racing-and-launch-ramp-rescue-boat-ed671043.glb",
+        "url": "https://3dassets.dev/assets/powerboat-racing-and-launch-ramp-rescue-boat-ed671043",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/22263/v1/model.glb",
+        "license": "CC0-1.0"
+      }
+    ],
+    "llanxa_coets": [
+      {
+        "slot": 1,
+        "id": "22261",
+        "title": "Large RIB with twin outboards (Speedboats, Powerboat Racing and Marina)",
+        "bytes": 354888,
+        "triangles": 8184,
+        "file": "llanxa_coets/1-powerboat-racing-and-launch-ramp-large-rib-6626e0ca.glb",
+        "url": "https://3dassets.dev/assets/powerboat-racing-and-launch-ramp-large-rib-6626e0ca",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/22261/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 2,
+        "id": "18720",
+        "title": "Rigid inflatable boat (Vehicle Collection HD: Cars, Planes and Boats)",
+        "bytes": 317680,
+        "triangles": 6492,
+        "file": "llanxa_coets/2-transport-collection-hd-rigid-inflatable-a8316db9.glb",
+        "url": "https://3dassets.dev/assets/transport-collection-hd-rigid-inflatable-a8316db9",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/18720/v1/model.glb",
+        "license": "CC0-1.0"
+      }
+    ],
+    "ferry": [
+      {
+        "slot": 1,
+        "id": "35635",
+        "title": "Roll on roll off ferry, berthed stern section (Ferry Terminal and Harbour Crossing)",
+        "bytes": 50896,
+        "triangles": 1036,
+        "file": "ferry/1-ferry-terminal-and-harbour-crossing-ferry-terminal-and-e2675bfb.glb",
+        "url": "https://3dassets.dev/assets/ferry-terminal-and-harbour-crossing-ferry-terminal-and-e2675bfb",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/35635/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 2,
+        "id": "35636",
+        "title": "Roll on roll off ferry, blue livery (Ferry Terminal and Harbour Crossing)",
+        "bytes": 50964,
+        "triangles": 1036,
+        "file": "ferry/2-ferry-terminal-and-harbour-crossing-ferry-terminal-and-c0fcd3aa.glb",
+        "url": "https://3dassets.dev/assets/ferry-terminal-and-harbour-crossing-ferry-terminal-and-c0fcd3aa",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/35636/v1/model.glb",
+        "license": "CC0-1.0"
+      }
+    ],
+    "heli": [
+      {
+        "slot": 1,
+        "id": "18712",
+        "title": "Utility helicopter (Vehicle Collection HD: Cars, Planes and Boats)",
+        "bytes": 318796,
+        "triangles": 6456,
+        "file": "heli/1-transport-collection-hd-utility-helicopter-18e3c5fe.glb",
+        "url": "https://3dassets.dev/assets/transport-collection-hd-utility-helicopter-18e3c5fe",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/18712/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 2,
+        "id": "32802",
+        "title": "Light Turbine Utility Helicopter (Aircraft Fleet and Airfield)",
+        "bytes": 819640,
+        "triangles": 20332,
+        "file": "heli/2-aircraft-fleet-and-airfield-light-turbine-helicopter-d4734be7.glb",
+        "url": "https://3dassets.dev/assets/aircraft-fleet-and-airfield-light-turbine-helicopter-d4734be7",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/32802/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 3,
+        "id": "32808",
+        "title": "Medium Twin Turbine Helicopter (Aircraft Fleet and Airfield)",
+        "bytes": 1374824,
+        "triangles": 34922,
+        "file": "heli/3-aircraft-fleet-and-airfield-medium-twin-helicopter-2fc3750d.glb",
+        "url": "https://3dassets.dev/assets/aircraft-fleet-and-airfield-medium-twin-helicopter-2fc3750d",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/32808/v1/model.glb",
+        "license": "CC0-1.0"
+      }
+    ],
+    "heli_combat": [
+      {
+        "slot": 1,
+        "id": "32801",
+        "title": "Coaxial Rotor Helicopter (Aircraft Fleet and Airfield)",
+        "bytes": 953760,
+        "triangles": 30104,
+        "file": "heli_combat/1-aircraft-fleet-and-airfield-coaxial-helicopter-90b22ff0.glb",
+        "url": "https://3dassets.dev/assets/aircraft-fleet-and-airfield-coaxial-helicopter-90b22ff0",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/32801/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 2,
+        "id": "32805",
+        "title": "Heavy Lift Ramp Helicopter (Aircraft Fleet and Airfield)",
+        "bytes": 1610004,
+        "triangles": 41076,
+        "file": "heli_combat/2-aircraft-fleet-and-airfield-heavy-lift-helicopter-b2f9f0bb.glb",
+        "url": "https://3dassets.dev/assets/aircraft-fleet-and-airfield-heavy-lift-helicopter-b2f9f0bb",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/32805/v1/model.glb",
+        "license": "CC0-1.0"
+      }
+    ]
+  },
+  "savedModels": 35,
+  "savedBytes": 10003312,
+  "skipped": 7
+}
