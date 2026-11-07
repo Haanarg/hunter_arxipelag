@@ -35,7 +35,7 @@ export const CATALOG=[
  {id:'moto_aquatica',name:'Moto aquàtica',kind:'mar',options:[
    P('powerboat-racing-and-launch-ramp','Stand-up personal watercraft'),
    P('powerboat-racing-and-launch-ramp','Sit-down personal watercraft'),
-   P('beach-surf-and-paddle-kit','Jet Ski')]},
+   P('beach-surf-and-paddle-kit','Recreational Jet Ski')]},
  {id:'llanxa',name:'Llanxa ràpida',kind:'mar',options:[
    P('transport-collection-hd','Open sport runabout'),
    P('powerboat-racing-and-launch-ramp','Offshore monohull racer'),
@@ -43,7 +43,7 @@ export const CATALOG=[
  {id:'llanxa_coets',name:'Llanxa llançamíssils',kind:'mar',note:'Les alternatives són cascos civils o de rescat sense llançamíssils. Caldrà adaptar-hi armament, punts de dispar, dos seients i col·lisions abans d’integrar-los.',
    options:[P('powerboat-racing-and-launch-ramp','Large RIB with twin outboards'),
     P('transport-collection-hd','Rigid inflatable boat'),
-    P('powerboat-racing-and-launch-ramp','Open rescue powerboat')]},
+    P('powerboat-racing-and-launch-ramp','Offshore catamaran racer')]},
  {id:'ferry',name:'Ferri',kind:'mar',note:'Les dues primeres alternatives representen principalment la popa d’un ferri, sense casc submergit complet: són referències visuals parcials. La tercera cerca un ferri de passatgers alternatiu.',
    options:[P('ferry-terminal-and-harbour-crossing','Roll on roll off ferry, berthed stern section'),
     P('ferry-terminal-and-harbour-crossing','Roll on roll off ferry, blue livery'),
@@ -55,5 +55,5 @@ export const CATALOG=[
  {id:'heli_combat',name:'Helicòpter de combat',kind:'aire',note:'Les alternatives de transport/rotor coaxial necessiten encara l’adaptació a helicòpter de combat (armament, geometria de cabina, punts de míssil i tir). No són models d’Apache verificats.',
    options:[P('aircraft-fleet-and-airfield','Coaxial Rotor Helicopter'),
     P('aircraft-fleet-and-airfield','Heavy Lift Ramp Helicopter'),
-    Q('military attack helicopter')]}
+    P('transport-collection-hd','Rescue helicopter')]}
 ];
