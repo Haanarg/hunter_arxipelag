@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-07T23:12:53.123Z",
+  "generatedAt": "2026-11-07T23:15:18.532Z",
   "source": "https://3dassets.dev/",
   "license": "CC0-1.0",
   "limits": {
@@ -276,6 +276,17 @@
         "url": "https://3dassets.dev/assets/powerboat-racing-and-launch-ramp-sit-down-jet-ski-b3443ad6",
         "cdnUrl": "https://cdn.3dassets.dev/assets/22264/v1/model.glb",
         "license": "CC0-1.0"
+      },
+      {
+        "slot": 3,
+        "id": "39428",
+        "title": "Recreational Jet Ski (Beach Surf and Paddle Kit)",
+        "bytes": 181296,
+        "triangles": 10320,
+        "file": "moto_aquatica/3-beach-surf-and-paddle-kit-recreational-jet-ski-a61d9936.glb",
+        "url": "https://3dassets.dev/assets/beach-surf-and-paddle-kit-recreational-jet-ski-a61d9936",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/39428/v1/model.glb",
+        "license": "CC0-1.0"
       }
     ],
     "llanxa": [
@@ -334,6 +345,17 @@
         "file": "llanxa_coets/2-transport-collection-hd-rigid-inflatable-a8316db9.glb",
         "url": "https://3dassets.dev/assets/transport-collection-hd-rigid-inflatable-a8316db9",
         "cdnUrl": "https://cdn.3dassets.dev/assets/18720/v1/model.glb",
+        "license": "CC0-1.0"
+      },
+      {
+        "slot": 3,
+        "id": "22250",
+        "title": "Offshore catamaran racer (Speedboats, Powerboat Racing and Marina)",
+        "bytes": 305312,
+        "triangles": 7208,
+        "file": "llanxa_coets/3-powerboat-racing-and-launch-ramp-offshore-catamaran-ra-77500cfc.glb",
+        "url": "https://3dassets.dev/assets/powerboat-racing-and-launch-ramp-offshore-catamaran-ra-77500cfc",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/22250/v1/model.glb",
         "license": "CC0-1.0"
       }
     ],
@@ -418,10 +440,21 @@
         "url": "https://3dassets.dev/assets/aircraft-fleet-and-airfield-heavy-lift-helicopter-b2f9f0bb",
         "cdnUrl": "https://cdn.3dassets.dev/assets/32805/v1/model.glb",
         "license": "CC0-1.0"
+      },
+      {
+        "slot": 3,
+        "id": "18715",
+        "title": "Rescue helicopter (Vehicle Collection HD: Cars, Planes and Boats)",
+        "bytes": 352216,
+        "triangles": 7140,
+        "file": "heli_combat/3-transport-collection-hd-rescue-helicopter-526061c3.glb",
+        "url": "https://3dassets.dev/assets/transport-collection-hd-rescue-helicopter-526061c3",
+        "cdnUrl": "https://cdn.3dassets.dev/assets/18715/v1/model.glb",
+        "license": "CC0-1.0"
       }
     ]
   },
-  "savedModels": 35,
-  "savedBytes": 10003312,
-  "skipped": 7
+  "savedModels": 38,
+  "savedBytes": 10842136,
+  "skipped": 4
 }
