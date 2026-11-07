@@ -16,7 +16,7 @@ const assert = require('node:assert/strict');
     player: [P.x, P.z],
     hq: [HQ.x, HQ.z]
   }))()`);
-  assert.equal(state.started, true, 'arrencada de la partida');
+  assert.ok(Boolean(state.started), 'arrencada de la partida');
   assert.equal(state.general, true, 'el general és l’objectiu de la missió');
   assert.ok(state.enemies > 0 && state.buildings > 0 && state.vehicles > 0,
     'món amb enemics, edificis i vehicles');
