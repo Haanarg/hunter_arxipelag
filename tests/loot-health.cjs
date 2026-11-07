@@ -12,13 +12,23 @@ const assert=require('node:assert/strict');
      if(it.y>it.building.fy+4&&!it.building.interiorStair)issues.push('upper without floor');
    }
    const over=[...counts.values()].filter(n=>n>3);
+   const twoFloors=B.filter(b=>b.floors===2&&!b.civilian&&!b.hangar&&
+     !b.rb&&b.upperFloor&&b.interiorStair&&!b.interiorStair.destroyed);
+   const emptyFloor=twoFloors.filter(b=>{
+     const own=items.filter(it=>it.building===b);
+     return !own.some(it=>it.y<b.fy+b.storey)||
+       !own.some(it=>it.y>b.fy+b.storey);
+   });
    return {baseMed:items.filter(it=>it.t==='med'&&it.compound==='base').length,
      over:over.length,issues,upper:items.filter(it=>it.building?.floors===2&&
-       it.y>it.building.fy+it.building.storey+1).length};
+       it.y>it.building.fy+it.building.storey+1).length,
+     twoFloors:twoFloors.length,emptyFloor:emptyFloor.length};
  })()`);
  assert.equal(generated.baseMed,1,'Una única farmaciola al complex inicial');
  assert.equal(generated.over,0,'Cap edifici generat supera tres objectes');
  assert.deepEqual([...generated.issues],[], 'No hi ha botí flotant sense planta superior');
+ assert(generated.twoFloors>0,'Hi ha edificis militars transitables de dues plantes');
+ assert.equal(generated.emptyFloor,0,'Cada planta militar té com a mínim un objecte');
  const placement=game.run(`(()=>{
    // Escenari aïllat: mateix comptador per objectes fixos i aleatoris.
    const saved=items;items=[];
