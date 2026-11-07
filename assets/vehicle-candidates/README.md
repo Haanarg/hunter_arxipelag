@@ -38,5 +38,9 @@ animacions, col·lisions, punts d'armes i jerarquia de Three.js.
 En descartar una alternativa, es pot eliminar el seu GLB i actualitzar
 el manifest (o tornar a executar el script amb `--force`).
 
-**Estat inicial:** carpeta i descarregador preparats. Comprovar
-`manifest.json` i els fitxers `.glb` reals abans d'afirmar que s'han desat.
+**Estat comprovat:** 38 GLB reals, 10,34 MiB aproximadament,
+registrats a `manifest.json`. Hi ha 3 propostes desades per a 12
+tipus de vehicle i 2 models de ferri. El windsurf no té GLB complet,
+gratuït i amb llicència verificada en aquest lot: evitar substituir-lo
+amb una taula de surf sense vela. Els dos ferris són versions de color
+d'un mateix model parcial, no dues formes diferents.
