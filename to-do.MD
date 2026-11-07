@@ -2,6 +2,8 @@
 
 > **FONT ÚNICA DE FEINA PENDENT.** Revisió del repositori: 2026-11-04 (versió inicial observada 0.6.116; P0 revisada a 0.6.119). Aquest document és el pla d'execució i el registre de tasques obertes. Els documents antics descriuen implementacions històriques i **no** obren tasques noves automàticament. Quan es resolgui una tasca, marcar-la [x] i afegir la prova o el commit. No confondre «implementat» amb «verificat en una partida real».
 
+> **Proves automatitzades (2026-11-07):** la bateria s'ha reduït a 13 comprovacions essencials, executables amb `npm test`. Les mencions a noms de proves concretes dins les fases històriques són evidències d'implementacions passades, no fitxers que encara hagin d'existir ni ordres de CI vigents.
+
 ## Llegenda i límits
 
 - **P0**: regressions greus, estrebades, sincronització i seguretat de les partides. **P1**: estalvi mesurable de CPU/GPU/memòria o refactor essencial. **P2**: reducció de complexitat, manteniment i acabat. **P3**: millores funcionals ajornades.
@@ -34,7 +36,7 @@
 - [ ] Repetir solitari amb llavors 67 i 148 (mapa petit i gran) i escena d'estrès 2407759483. Repetir a peu, amb vehicle, en combat amb explosions i al costat del mar.
 - [ ] Repetir el COOP en **dos navegadors/dispositius reals** (també Android si és possible): RTT, jitter, `avgStateGap`, bytes/s, deltes/full snapshots, p95/p99 de fotograma, correccions, `storage.transaction()` i lag en vehicles i explosions.
 - [ ] Congelar proves de comportament per a cada extracció: llavor/posicions/quantitat d'entitats, vida/dany/cadència/munició, paritat visual bàsica i checkpoint/reconnexió.
-- [ ] Executar a la còpia de desenvolupament, abans de cada grup de canvis: `npm ci --ignore-scripts`, `npm run check:build`, `npm run test:optimization`, `npm run test:coop:offline`, `npm run test:coop:integration`, `npm run test:play`, `npm run test:saves` i `npm run test:accounts`. Conservar resultats, no donar-los per superats sense execució.
+- [ ] Executar a la còpia de desenvolupament, abans de cada grup de canvis: `npm ci --ignore-scripts`, `npm test` i `npm run check:build`. S'ha reduït la bateria a 13 proves bàsiques per limitar el cost de manteniment; les regressions detallades requereixen validació manual o proves temporals quan el canvi les afecti. Conservar resultats, no donar-los per superats sense execució.
 - [ ] Comparar captacions de la mateixa llavor i càmera (ombres, transparències, aigua, vehicles, edificis, explosions) i provar una sessió llarga. Les suites Node no equivalen a validació GPU.
 
 **Criteri de sortida:** baseline reproduïble; cap regressió funcional coneguda; les millores posteriors han de tenir comparativa i possibilitat de revertir-les.

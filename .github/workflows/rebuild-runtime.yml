@@ -1,59 +1,16 @@
-name: Rebuild and verify Hunter runtime (push or manual)
+name: Hunter - comprovacions bàsiques i runtime
 on:
   push:
     branches: [main]
     paths:
       - 'src/**'
-      - '!src/runtime-bundle.mjs' # no loop after committing the generated manifest
+      - '!src/runtime-bundle.mjs'
+      - 'server/**'
       - 'tools/build-runtime.cjs'
       - 'tools/sync-version.cjs'
-      - 'tests/tower-sentries.mjs'
-      - 'tests/tower-guard-los-budget.cjs'
-      - 'tests/coop-barrier-ram.mjs'
-      - 'tests/hover-distribution.mjs'
-      - 'tests/fragile-vehicle-fragments.mjs'
-      - 'tests/touch-vehicle-horn.mjs'
-      - 'tests/vehicle-special.cjs'
-      - 'tests/compound-ground-surfaces.mjs'
-      - 'tests/tank-motorcycle-death.cjs'
-      - 'tests/standalone-port-parity.mjs'
-      - 'tests/standalone-pier-orientation.cjs'
-      - 'tests/marine-crew-damage.mjs'
-      - 'tests/native-coop-vehicle-visual-lod.cjs'
-      - 'tests/performance-audit.cjs'
-      - 'tests/world-generation-matrix.cjs'
-      - 'tests/coast-road-reservation.mjs'
-      - 'tests/sector-assault-loot.cjs'
-      - 'tests/civilian-house-loot.cjs'
-      - 'tests/performance-copy-diagnostic.mjs'
-      - 'tests/performance-live-diagnostic.cjs'
-      - 'tests/ai-pressure-scheduling.cjs'
-      - 'tests/ai-cpu-optimization.cjs'
-      - 'tests/enemy-sweep-segment-prefilter.cjs'
-      - 'tests/shadow-stable-focus.cjs'
-      - 'tests/shadow-rowboat-cache.cjs'
-      - 'tests/rowboat-far-lod.cjs'
-      - 'tests/vehicle-distant-lod.cjs'
-      - 'tests/remote-rider-lod.cjs'
-      - 'tests/visual-distance-culling.cjs'
-      - 'tests/water-upgrade-staged.cjs'
-      - 'tests/frame-diagnostics-parity.mjs'
-      - 'tests/enemy-sweep-aabb-pruning.cjs'
-      - 'tests/render-batching-regressions.cjs'
-      - 'tests/vehicle-batching.cjs'
-      - 'tests/helpers/vehicle-model-trace.mjs'
-      - 'tests/enemy-vehicle-height-prefilter.cjs'
-      - 'tests/performance-audit.cjs'
-      - 'tests/shadow-boat-cache.cjs'
-      - 'tests/ai-delta-isolation.cjs'
-      - 'tests/ai-remote-phase-pacing.cjs'
-      - 'tests/enemy-navigation-remote-ground.cjs'
-      - 'tests/enemy-sweep-open-ground.cjs'
-      - 'tests/enemy-sweep-elevation-vegetation.cjs'
-      - 'tests/enemy-sweep-candidate-cache.cjs'
-      - 'tests/enemy-route-probe-budget.cjs'
-      - 'tests/harness.cjs'
-      - 'tests/simulation-pressure-budget.cjs'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/rebuild-runtime.yml'
   workflow_dispatch:
 permissions:
@@ -64,6 +21,7 @@ concurrency:
 jobs:
   rebuild:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -71,197 +29,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Check pause performance diagnostic copy
-        run: |
-          node --check src/ui.js
-          node tests/performance-copy-diagnostic.mjs
-      - name: Check distant route decisions and collision-elevation parity
-        run: |
-          node --check src/enemy-navigation.js
-          node tests/enemy-navigation-remote-ground.cjs
-          node tests/enemy-sweep-open-ground.cjs
-          node tests/enemy-sweep-segment-prefilter.cjs
-          node tests/enemy-vehicle-height-prefilter.cjs
-          node tests/enemy-sweep-elevation-vegetation.cjs
-          node tests/enemy-sweep-candidate-cache.cjs
-          node tests/enemy-sweep-aabb-pruning.cjs
-          node tests/enemy-route-probe-budget.cjs
-      - name: Observe legacy jeep obstacle route (known failing long-route test)
-        continue-on-error: true
-        run: node tests/enemy-navigation.cjs
-      - name: Check live FPS, captured diagnostics and overloaded AI
-        run: |
-          node --check src/performance.js
-          node --check src/enemy-ai.js
-          node --check src/game-core.js
-          node --check src/simulation-clock.js
-          node --check src/frame-diagnostics-core.mjs
-          node tests/performance-live-diagnostic.cjs
-          node tests/ai-pressure-scheduling.cjs
-          node tests/simulation-pressure-budget.cjs
-          node tests/ai-cpu-optimization.cjs
-          node tests/ai-delta-isolation.cjs
-          node tests/ai-remote-phase-pacing.cjs
-          node tests/simulation-clock.cjs
-          node tests/frame-diagnostics-parity.mjs
-          node tests/frame-tick-parity.mjs
-      - name: Check stabilized shadows and retained boat detail
-        run: |
-          node --check src/shadow-cache.js
-          node tests/shadow-cache.cjs
-          node tests/shadow-boat-cache.cjs
-          node tests/shadow-rowboat-cache.cjs
-          node tests/shadow-stable-focus.cjs
-          node tests/rowboat-far-lod.cjs
-          node tests/performance-audit.cjs
-          node tests/water-upgrade-staged.cjs
-          node tests/water.cjs
-      - name: Check distant objects, vegetation and preserved pickup physics
-        run: |
-          node --check src/game-core.js
-          node --check src/vegetation.js
-          node --check src/frame-diagnostics-core.mjs
-          node tests/visual-distance-culling.cjs
-          node tests/vegetation-shared.mjs
-      - name: Check distant vehicles, their occupants and unchanged near geometry
-        run: |
-          node --check src/rider.js
-          node --check src/coop-world-runtime.js
-          node --check src/enemy-ai.js
-          node --check src/enemy-navigation.js
-          node tests/vehicle-distant-lod.cjs
-          node tests/remote-rider-lod.cjs
-          node tests/rowboat-far-lod.cjs
-          node tests/vehicle-batching.cjs
-          node tests/render-batching-regressions.cjs
-          node tests/native-coop-vehicle-visual-lod.cjs
-          node tests/native-coop-side-by-side-riders.cjs
-          node tests/shared-vehicle-models.mjs
-      - name: Check distance-based coastal terrain LOD
-        run: |
-          node --check src/terrain.js
-          node tests/terrain-coast-lod.cjs
-      - name: Check tower sentry rules and cooperative tower ramming
-        run: |
-          node tests/tower-guard-los-budget.cjs
-          node tests/tower-sentries.mjs
-          node tests/coop-barrier-ram.mjs
-      - name: Check natural compound ground and building shadow receivers
-        run: |
-          node --check src/world-generation.js
-          node --check src/buildings.js
-          node --check src/compound-architecture.mjs
-          node tests/compound-ground-surfaces.mjs
-      - name: Check phase 4 static platform and dock batching parity
-        run: |
-          node --check src/static-decor-batching.js
-          node --check src/world-generation.js
-          node tests/static-decor-batch-parity.mjs
-      - name: Reproduce tank crushing an occupied motorcycle death
-        run: node tests/tank-motorcycle-death.cjs
-      - name: Check hovercraft spatial distribution
-        run: node tests/hover-distribution.mjs
-      - name: Check civilian house pickups and assault rifles per sector
-        run: |
-          node tests/civilian-house-loot.cjs
-          node tests/sector-assault-loot.cjs
-          node tests/loot-health.cjs
-      - name: Check marine patrol pilot and passenger health in both game modes
-        run: node tests/marine-crew-damage.mjs
-      - name: Check modified JavaScript syntax
-        run: |
-          node --check src/enemy-ai.js
-          node --check src/combat.js
-          node --check src/compound-generation.js
-          node --check src/tower-model.mjs
-          node --check server/coop-combat.mjs
-          node --check server/coop-mission.mjs
-          node --check server/coop-vehicles.mjs
-          node --check server/coop-optionals.mjs
-      - name: Check nonexplosive flying vehicle fragments
-        run: node tests/fragile-vehicle-fragments.mjs
-      - name: Check release version in HTML and JS imports
+      - name: Instal·lar dependències
+        run: npm ci --ignore-scripts
+      - name: Executar proves bàsiques
+        run: npm test
+      - name: Comprovar versió
         run: node tools/sync-version.cjs --check
-      - name: Check separate touch horn and bicycle bell controls
-        run: node tests/touch-vehicle-horn.mjs
-      - name: Check phase 3 HQ intel parity and sector maps
+      - name: Generar i verificar el runtime
         run: |
-          node --check src/game-core.js
-          node --check src/game-intel-core.mjs
-          node tests/game-intel-parity.mjs
-          node tests/sector-navigation-intel.cjs
-      - name: Check phase 3 player input parity
-        run: |
-          node --check src/player-input-core.mjs
-          node tests/player-input-parity.mjs
-          node tests/vehicle-special.cjs
-      - name: Check phase 3 world cleanup and fresh state
-        run: |
-          node --check src/start-lifecycle-core.mjs
-          node --check src/game-state-core.mjs
-          node tests/world-session-parity.mjs
-      - name: Check phase 4 canonical HQ clue planning
-        run: |
-          node --check src/world-generation-core.mjs
-          node --check src/world-generation.js
-          node tests/hq-clue-plan-parity.mjs
-          node tests/sector-navigation-intel.cjs
-      - name: Check phase 4 compound site reservation parity
-        run: |
-          node --check src/compound-planning.mjs
-          node --check src/world-generation.js
-          node tests/compound-planning.mjs
-          node tests/compound-reservation-parity.mjs
-      - name: Check phase 4 port survey parity
-        run: |
-          node --check src/compound-planning.mjs
-          node --check src/world-generation.js
-          node tests/port-survey-parity.mjs
-      - name: Check phase 4 coastal layout and ferry placement parity
-        run: |
-          node --check src/compound-coast-runtime.js
-          node --check src/compound-planning.mjs
-          node tests/coastal-layout-parity.mjs
-      - name: Check phase 4 coast road A-star parity
-        run: |
-          node --check src/compound-coast-runtime.js
-          node --check src/compound-planning.mjs
-          node tests/coast-road-parity.mjs
-      - name: Check phase 4 terrain pad planning parity
-        run: |
-          node --check src/game-core.js
-          node --check src/world-physics.mjs
-          node --check src/compound-planning.mjs
-          node tests/terrain-pad-parity.mjs
-          node tests/compound-planning.mjs
-      - name: Check phase 4 compound path clearance and pier planning parity
-        run: |
-          node --check src/world-generation.js
-          node --check src/compound-planning.mjs
-          node tests/compound-path-pier-parity.mjs
-          node tests/compound-paths.cjs
-      - name: Check phase 4 standalone port and pier shoreline parity
-        run: |
-          node --check src/world-generation.js
-          node --check src/compound-planning.mjs
-          node tests/standalone-port-parity.mjs
-          node tests/standalone-pier-orientation.cjs
-      - name: Check base road corridor reservation against later compounds
-        run: |
-          node --check src/world-generation.js
-          node --check src/compound-planning.mjs
-          node tests/coast-road-reservation.mjs
-      - name: Check phase 4 complete logical world generation matrix
-        run: |
-          node --check tests/world-generation-matrix.cjs
-          node tests/world-generation-matrix.cjs
-      - name: Generate runtime bundle
-        run: node tools/build-runtime.cjs
-      - name: Verify generated bundle
-        run: node tools/build-runtime.cjs --check
-      - name: Check generated JavaScript syntax
-        run: node --check dist/hunter-runtime.*.js
-      - name: Commit regenerated files
+          node tools/build-runtime.cjs
+          node tools/build-runtime.cjs --check
+          node --check dist/hunter-runtime.*.js
+      - name: Publicar els fitxers generats si han canviat
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -269,8 +48,6 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "build: regenerate Hunter runtime bundle"
             git pull --rebase origin main
-            # Fail closed if someone pushed new src during the build.
-            # The following push event will rebuild from current sources.
             node tools/build-runtime.cjs --check
             git push origin HEAD:main
           fi

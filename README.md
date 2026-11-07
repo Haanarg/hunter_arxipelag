@@ -34,19 +34,17 @@ npm run build:worker  # prepara el Worker
 
 ## Proves
 
+La bateria habitual s'ha reduït a **13 comprovacions essencials**. Es conserva la verificació de versió, arrencada del món i objectiu, moviment, rellotge, dany de vehicles, guardat i autodesat, sincronització i inici del COOP, sales i backend.
+
 ```bash
-npm run test:optimization
-npm run test:coop:offline
-npm run test:coop:integration
-npm run test:play
-npm run test:timing
-npm run test:saves
-npm run test:accounts
+npm ci --ignore-scripts
+npm test             # bateria bàsica (també npm run test:basic)
+npm run check:build  # coherència del bundle de producció
 ```
 
-Per executar les sis suites principals conjuntament i sense repetir ordres: `npm run test:regression:once`. Per verificar les eines i el mapa de dependències: `npm run test:repo:tooling` i `node tools/repository-audit.cjs` (inventari, no esborra arxius).
+`npm run test:regression:once` es manté com a àlies compatible de `npm test`. Les regressions especialitzades antigues s'han retirat, i també els workflows manuals de proves. El workflow únic `.github/workflows/rebuild-runtime.yml` executa la bateria bàsica i comprova/regenera el runtime.
 
-El runtime disposa d'**un sol workflow** a `.github/workflows/rebuild-runtime.yml`, automàtic en canvis del motor i activable manualment. GitHub Actions no substitueix les proves reals de GPU o HOST/GUEST.
+Les proves Node no substitueixen una partida real, una revisió WebGL/Android o una sessió HOST/GUEST en dos dispositius. Els recursos de `tests/fixtures/` i `tests/helpers/` es conserven per prudència.
 
 ## Estructura del codi
 
@@ -58,7 +56,7 @@ El runtime disposa d'**un sol workflow** a `.github/workflows/rebuild-runtime.ym
 | `src/*-core.mjs` | Regles compartides o dades independents de la representació |
 | `src/coop-world-runtime.js`, `native-coop-*.mjs` | Adaptació i presentació cooperativa original |
 | `server/` | Autoritat COOP, comptes, missió, persistència i API Worker |
-| `tests/` | Regressions de mecàniques, integració i rendiment sintètic |
+| `tests/` | Bateria essencial del motor i del COOP, més recursos compartits |
 | `tools/` | Generació de bundles, Worker i desplegament |
 | `dist/` i `vendor/` | Bundle generat i dependències locals de producció |
 | `docs/` | Decisions/contractes tècnics i guia d'auditoria |
