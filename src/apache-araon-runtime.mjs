@@ -1,14 +1,15 @@
 // Apache AH-64 original d'Araon · CC BY 4.0.
-// La geometria de la variant 50% s'ha empaquetat en format APG2 (18,9 kB)
-// directament al repositori. No depèn d'un GLB absent ni d'un visor extern.
-// El paquet conserva les cinc malles de l'original: fuselatge, cabina, vidres,
-// rotor principal i rotor de cua. El gris de l'atles es tenyeix de sàlvia mat.
-// La geometria simplificada és la del 50%; encara no incorpora la roda híbrida
-// del 75% del prototip de proves, ni les textures fotogràfiques grans.
-export const APACHE_MODEL_URL=new URL('../assets/vehicle-models/apache-araon-50mesh.zlib',import.meta.url).href;
+// Prioritat al GLB DEFINITIU de 2.193 triangles, recuperat íntegrament de
+// l'historial Git (4.123.680 bytes, pintat sàlvia/negre, rodes 75%,
+// quatre textures). Només si no es pot carregar, recorrem a la malla
+// compacta d'Araon 50% (2.173 triangles, textures reduïdes a color de vèrtex).
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+export const APACHE_MODEL_URL=new URL('../assets/vehicle-models/apache-araon-salvia-black.glb',import.meta.url).href;
+export const APACHE_PACKED_URL=new URL('../assets/vehicle-models/apache-araon-50mesh.zlib',import.meta.url).href;
 export const APACHE_MODEL_SOURCE='https://sketchfab.com/3d-models/ah-64-apache-df0993ee21e74a759cd0519f6fc51cf8';
-export const APACHE_TRIANGLES=2173;
-export const APACHE_MODEL_ID='araon-50-compact-salvia-black';
+export const APACHE_TRIANGLES=2193;
+export const APACHE_PACKED_TRIANGLES=2173;
+export const APACHE_MODEL_ID='araon-50-wheels75-salvia-black';
 const TARGET_LENGTH=7.15;
 const WHEEL_CONTACT=.405;
 const PARTS=['hull','cockpit','glass','main_rotor','tail_rotor'];
@@ -29,7 +30,7 @@ function triangles(root){
 async function loadAraonCompact(THREE){
  if(typeof DecompressionStream!=='function')
   throw Error('Aquest navegador no admet descompressió deflate de l’Apache');
- const response=await fetch(APACHE_MODEL_URL);
+ const response=await fetch(APACHE_PACKED_URL);
  if(!response.ok)throw Error('Apache compactat absent (HTTP '+response.status+')');
  const compressed=await response.arrayBuffer();
  if(compressed.byteLength!==COMPRESSED_BYTES)
@@ -93,13 +94,19 @@ async function loadAraonCompact(THREE){
   root.add(mesh);
  }
  if(offset!==RAW_BYTES)throw Error('Dades sobrants al model Apache');
- if(triangles(root)!==APACHE_TRIANGLES)throw Error('Triangles Apache inesperats');
+ if(triangles(root)!==APACHE_PACKED_TRIANGLES)throw Error('Triangles Apache compactat inesperats');
  return root;
 }
 
 function placePivot(THREE,scene,name,pivotName){
- const node=scene.getObjectByName(name);
- if(!node?.isMesh||!node.parent)throw Error('Falta la malla '+name);
+ let node=scene.getObjectByName(name)||scene.getObjectByName(name+'_lambert2_0');
+ if(!node){
+  scene.traverse(candidate=>{
+   if(!node&&candidate.isMesh&&candidate.name.toLowerCase().includes(name.toLowerCase()))node=candidate;
+  });
+ }
+ if(!node?.parent||!node.getObjectByProperty('isMesh',true))
+  throw Error('Falta la malla '+name);
  scene.updateMatrixWorld(true);
  const parent=node.parent;
  const center=new THREE.Box3().setFromObject(node).getCenter(new THREE.Vector3());
@@ -118,9 +125,21 @@ function pivots(root){
 }
 
 export async function prepareApacheAraonRuntime(THREE){
- const template=await loadAraonCompact(THREE);
+ let template,usingCompact=false;
+ try{
+  const gltf=await new GLTFLoader().loadAsync(APACHE_MODEL_URL);
+  if(!gltf?.scene)throw Error('El GLB Apache no conté cap escena');
+  template=gltf.scene;
+  if(triangles(template)!==APACHE_TRIANGLES)
+   throw Error('El GLB Apache no té els 2.193 triangles aprovats');
+ }catch(error){
+  console.warn('Apache definitiu GLB no disponible; càrrega de la reserva compacta real',error);
+  template=await loadAraonCompact(THREE);
+  usingCompact=true;
+ }
  const count=triangles(template);
- if(count!==APACHE_TRIANGLES)throw Error('Triangles Apache: '+count);
+ if(count!==(usingCompact?APACHE_PACKED_TRIANGLES:APACHE_TRIANGLES))
+  throw Error('Triangles Apache inesperats: '+count);
  placePivot(THREE,template,'main_rotor','Apache_Main_Rotor_Pivot');
  placePivot(THREE,template,'tail_rotor','Apache_Tail_Rotor_Pivot');
  const shell=template.clone(true);
@@ -147,6 +166,7 @@ export async function prepareApacheAraonRuntime(THREE){
  let instances=0;
  return Object.freeze({
   name:'AH-64 Apache · Araon · sàlvia mat / detalls negres',
+  visualVariant:usingCompact?'50% compacte':'50% + rodes 75% (GLB definitiu)',
   source:APACHE_MODEL_SOURCE,license:'CC BY 4.0',triangles:count,
   dimensions:Object.freeze({width:dims.x,height:dims.y,length:dims.z}),
   skidContactHeight:WHEEL_CONTACT,rotorContactHeight,
@@ -156,7 +176,7 @@ export async function prepareApacheAraonRuntime(THREE){
    const p=pivots(visual);
    root.userData.rotor=p.main;
    root.userData.tailRotor=p.tail;
-   root.userData.apacheModel=APACHE_MODEL_ID;
+   root.userData.apacheModel=usingCompact?'araon-50-compact-salvia-black':APACHE_MODEL_ID;
    root.name='Apache_Araon_'+(++instances);
    return root;
   }
