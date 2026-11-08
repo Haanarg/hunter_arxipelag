@@ -188,7 +188,9 @@
         "triangles": 29000,
         "license": "CC BY 4.0",
         "url": "https://sketchfab.com/3d-models/abrams-m1a1-free-1b4a0b196df14e67bce38ed6fef7d944",
-        "note": "Abrams reconeixible, geometria moderada; prioritat per revisar la torreta i les textures."
+        "note": "Abrams reconeixible, geometria moderada; prioritat per revisar la torreta i les textures.",
+        "provider": "sketchfab",
+        "slot": 1
       },
       {
         "modelId": "eed14f42064e426eadda1e052b6f334b",
@@ -197,7 +199,9 @@
         "triangles": 12300,
         "license": "CC BY 4.0",
         "url": "https://sketchfab.com/3d-models/m1a1-abrams-eed14f42064e426eadda1e052b6f334b",
-        "note": "Model d'un projecte de mod declarat per l'autor, sense constància de ser un model extret d'un joc. Menys triangles."
+        "note": "Model d'un projecte de mod declarat per l'autor, sense constància de ser un model extret d'un joc. Menys triangles.",
+        "provider": "sketchfab",
+        "slot": 2
       },
       {
         "modelId": "2577a4eccbc74b2da6dba5bfd09b7511",
@@ -206,7 +210,9 @@
         "triangles": 40200,
         "license": "CC BY 4.0",
         "url": "https://sketchfab.com/3d-models/m1-abrams-2577a4eccbc74b2da6dba5bfd09b7511",
-        "note": "Més detall de la família M1; validar armament, materials i pivot abans d'usar-lo."
+        "note": "Més detall de la família M1; validar armament, materials i pivot abans d'usar-lo.",
+        "provider": "sketchfab",
+        "slot": 3
       }
     ],
     "tanqueta": [
@@ -217,7 +223,9 @@
         "triangles": 137900,
         "license": "CC BY-SA 4.0",
         "url": "https://sketchfab.com/3d-models/stryker-fe28759be4914e4a9ea52d73aa503a4e",
-        "note": "Model propi declarat per l'autor. Casc occidental 8×8 semblant al NZLAV; torreta diferent, requereix simplificació i adaptació."
+        "note": "Model propi declarat per l'autor. Casc occidental 8×8 semblant al NZLAV; torreta diferent, requereix simplificació i adaptació.",
+        "provider": "sketchfab",
+        "slot": 1
       },
       {
         "modelId": "3a813f5520974d21b3b3bba52e04a7d9",
@@ -226,7 +234,9 @@
         "triangles": 231700,
         "license": "CC BY 4.0",
         "url": "https://sketchfab.com/3d-models/m1128-stryker-8x8-3a813f5520974d21b3b3bba52e04a7d9",
-        "note": "Xassís occidental 8×8, però torreta i canó massa grans per un NZLAV; model pesant que exigeix LOD."
+        "note": "Xassís occidental 8×8, però torreta i canó massa grans per un NZLAV; model pesant que exigeix LOD.",
+        "provider": "sketchfab",
+        "slot": 2
       },
       {
         "modelId": "6226acae68424d99bf03882b245ff7c5",
@@ -235,7 +245,9 @@
         "triangles": 21500,
         "license": "CC BY 4.0",
         "url": "https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5",
-        "note": "Model propi de Blockbench amb vuit rodes i torreta; no és un NZLAV, es manté com a alternativa menys fidel."
+        "note": "Model propi de Blockbench amb vuit rodes i torreta; no és un NZLAV, es manté com a alternativa menys fidel.",
+        "provider": "sketchfab",
+        "slot": 3
       }
     ]
   },
