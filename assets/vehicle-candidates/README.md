@@ -1,19 +1,21 @@
 # Candidats de vehicles en revisió
 
-Aquesta carpeta guarda **32 models externs GLB CC0**, aproximadament **9,89 MiB**, per al laboratori `/vehicles-externs-proves.html`. **No substitueixen automàticament cap model del joc.**
+Aquesta carpeta guarda **29 models GLB externs CC0** (uns **9,35 MiB**) per al comparador `/vehicles-externs-proves.html`. Aquests GLB són només per a vehicles que encara s'han de seleccionar; cap d'ells substitueix automàticament un vehicle del joc.
 
-## Decisions del 8 de novembre del 2026
+## Decisions
 
-- **Camió militar, barca de rems i windsurf:** es conserven els models procedimentals originals. No apareixen al selector de candidats; els 6 GLB del camió i la barca s'han esborrat de Git, i no hi havia GLB de windsurf.
-- **Moto:** opció núm. 2, `Naked streetfighter`. Les propostes eliminen els nodes `side-stand` i `naked-streetfighter_13` (vidres dels retrovisors), retallen les tiges metàl·liques de la malla `naked-streetfighter_8` segons la seva posició (64 triangles de l'actiu actual) i fan girar 180° el node `handlebar`. El retall deixa de funcionar de manera segura si la geometria d'origen canvia, i cal validar visualment el resultat.
-- **Moto aquàtica:** opció núm. 3, `Recreational Jet Ski`.
-- **Moto i moto aquàtica:** el comparador mostra el model del joc, el GLB descarregat sense retocar i quatre variants **simplificades realment** amb els percentatges objectiu de vèrtexs 85%, 65%, 45%, 25%. El nombre real de triangles es calcula i es mostra al navegador (meshoptimizer, carregador local Three.js r186). No guardam quatre còpies quasi idèntiques de cada GLB: es deriven en memòria per evitar inflar el repositori.
-- La **llanxa** continua al catàleg existent. La petició d'afegir un nou apartat de llanxa va arribar incompleta; no se n'ha suposat el contingut.
+- **Camió militar, barca de rems i windsurf:** conservam els models procedimentals originals; els candidats externs descartats ja no hi són.
+- **Moto aquàtica: model definitiu integrat al joc.** Model acceptat `Recreational Jet Ski` (opció 3), amb **2.578 triangles = 24,98%** dels 10.320 triangles originals. S'ha incorporat com a geometria precompilada a `src/jet-ski-25-geometry.mjs`, utilitzada per `src/vehicle-model-core.mjs`. La coberta `coral` adopta els mateixos **colors vius determinats per la llavor** que la moto aquàtica precedent. Física, volum de col·lisió, ones, lloc del pilot i dades de desament continuen lligats al tipus `moto_aquatica`. **S'han eliminat els tres GLB de candidats de moto aquàtica** i l'antic model procedimental; també s'ha retirat la pestanya de la pàgina.
+- **Motocicleta:** pendent de triar grau de simplificació de l'opció 2 `Naked streetfighter`, amb el manillar corregit, sense pota de cabra ni retrovisors. Se'n comparen quatre reduccions de malla al navegador.
+- **Llanxa:** encara al catàleg de comparació; l'apartat addicional de la llanxa no s'ha creat perquè la petició va arribar incompleta.
 
-## Models i manifest
+## Inventari i procedència
 
-`manifest.json` és la font dels fitxers existents, la procedència, els nombres de triangles i la llicència. Els models externs provenen de https://3dassets.dev/ i consten com a **CC0 1.0 Universal**. Text legal: https://creativecommons.org/publicdomain/zero/1.0/.
+`manifest.json` relaciona els candidats restants, les mides, els nombres de triangles i els enllaços d'origen. L'origen és https://3dassets.dev/ i les llicències indicades són **CC0 1.0 Universal** (https://creativecommons.org/publicdomain/zero/1.0/).
 
-Es poden incorporar altres candidats executant `node tools/fetch-vehicle-candidates.mjs` (Node.js 22). El script només recorre els tipus del catàleg actual: **no torna a descarregar les opcions descartades**. Límits voluntaris: 2 MiB per fitxer i 30 MiB totals.
+La moto aquàtica final prové de l'actiu 39428, `Beach Surf and Paddle Kit / Recreational Jet Ski`:
+https://3dassets.dev/assets/beach-surf-and-paddle-kit-recreational-jet-ski-a61d9936
 
-Per comparar i acceptar una variant al joc encara caldrà revisar visualment l'encaix i després integrar-ne articulacions, seients, hitboxes, física, animacions i materials. La simplificació en memòria del laboratori no altera aquests sistemes.
+La versió de producció és **un mòdul JavaScript de geometria compacta**, no el GLB de prova. Això permet construir-la de forma síncrona, compartir les geometries entre vehicles i respectar els materials i colors per instància sense carregar GLTFLoader ni meshoptimizer durant la partida.
+
+Es poden incorporar altres candidats executant `node tools/fetch-vehicle-candidates.mjs` (Node.js 22). L'eina només consulta el catàleg actual i **no torna a descarregar** els vehicles retirats. Límits: 2 MiB per candidat i 30 MiB en total.
