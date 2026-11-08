@@ -54,6 +54,7 @@ export async function simplifyHelicopter(original,animations,ratio){
    if(after>=before){reduced.dispose();protectedMeshes++;continue}
    // No alliberam geos de l'original ni d'altres variants, que les comparteixen.
    mesh.geometry=reduced;
+   reduced.userData.candidateSimplified=true;
    reduced.computeBoundingBox();reduced.computeBoundingSphere();
    simplified++;
   }catch(error){failed++;console.warn('Malla preservada per incompatibilitat',mesh.name,error)}
