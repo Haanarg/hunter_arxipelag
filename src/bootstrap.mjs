@@ -166,27 +166,27 @@ try {
     window.HUNTER_HUMVEE_D31=null;
     console.warn('No es pot preparar el Humvee B; geometria clàssica de reserva',humveeError);
   }
-  // Huey aprovat: es carrega una sola vegada abans del runtime clàssic;
-  // la fàbrica de vehicles és síncrona i només clona el model ja preparat.
+  // Huey natiu +10% i dos seients de cabina: les geometries i la textura
+  // es preparen una sola vegada i es comparteixen entre totes les instàncies.
   try {
     const {prepareHueyDuaneRuntime}=await import('./huey-duane-runtime.mjs?v=0.6.196');
     window.HUNTER_HUEY_DUANE=await prepareHueyDuaneRuntime(THREE);
-    console.info('Huey Duane 100, portes laterals obertes · carregat',
+    console.info('Huey Three.js, portes obertes, +10% i dos seients · carregat',
       window.HUNTER_HUEY_DUANE.dimensions);
   } catch (hueyError) {
     window.HUNTER_HUEY_DUANE=null;
-    console.warn('Huey GLB no disponible; model de reserva actiu',hueyError);
+    console.warn('Huey de geometria nativa no disponible; reserva procedural activa',hueyError);
   }
-  // Apache: carregar el binari real de malla compacta 50% abans del motor.
-  // Sense dependència del GLB de 4 MB que encara no és al repositori.
+  // Apache natiu: les dades APG2 són dins el mòdul JavaScript; reconstrueix
+  // les tres rodes rodones i amplia el model 50% sense carregar cap GLB.
   try {
     const {prepareApacheAraonRuntime}=await import('./apache-araon-runtime.mjs?v=0.6.196');
     window.HUNTER_APACHE_ARAON=await prepareApacheAraonRuntime(THREE);
-    console.info('Apache Araon 50% (malla compacta real), sàlvia mat i rotors negres',
+    console.info('Apache Three.js +50% amb tres rodes circulars, sàlvia mat i rotors negres',
       window.HUNTER_APACHE_ARAON.dimensions);
   } catch (apacheError) {
     window.HUNTER_APACHE_ARAON=null;
-    console.error('No s’ha pogut preparar el paquet compactat de l’Apache; geometria de reserva activa',apacheError);
+    console.error('No s’ha pogut reconstruir l’Apache natiu; reserva procedural activa',apacheError);
   }
   // El bundle inclou els scripts clàssics en el mateix ordre i preserva
   // les variables globals de la versió anterior. Només fem UNA petició.
