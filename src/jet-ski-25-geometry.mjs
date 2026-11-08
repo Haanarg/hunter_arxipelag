@@ -24,11 +24,11 @@ function sharedGeometries(THREE){
  geometryCache.set(THREE,geometries);
  return geometries;
 }
-export function createJetSki25(THREE,{color=0xc94e3f,material}={}){
+export function createJetSki25(THREE,{color=0x228fef,material}={}){
  if(typeof material!=='function')throw new Error('Falta el servei de materials de Hunter');
  const palette={
    foam:[0xe9eeeb,'paint'],
-   coral:[color,'paint'],
+   coral:[color,'paint'], // COBERTA DEL MOTOR: única peça amb color aleatori
    charcoal:[0x292c30,'rubber'],
    navy:[0x193251,'paint'],
    steel:[0xb8bec4,'metal'],
@@ -38,7 +38,9 @@ export function createJetSki25(THREE,{color=0xc94e3f,material}={}){
  for(const {name,geometry} of sharedGeometries(THREE)){
    const [hex,profile]=palette[name]||[0x777777,'paint'];
    const part=new THREE.Mesh(geometry,material(hex,profile));
-   part.name='jetski-'+name;root.add(part);
+   part.name=name==='coral'?'jetski-engine-cover':'jetski-'+name;
+   if(name==='coral')part.userData.engineCover=true;
+   root.add(part);
  }
  root.userData.jetSkiModel='recreational-jet-ski-25';
  root.userData.jetSkiColor=color;
