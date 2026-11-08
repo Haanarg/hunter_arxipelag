@@ -13611,8 +13611,19 @@ const add=(t,x,z,a,meta={})=>{
     Math.imul(Math.floor(pa.z*10),19349663)
   )>>>0;
   const windsurfOrdinal=windsurf?V.reduce((n,v)=>n+(v.t==='windsurf'),0):0;
+  // Mantenim EXACTAMENT una tirada R() per moto aquàtica, bicicleta i
+  // cotxe civil (i cap per windsurf). Això preserva la llavor i la resta
+  // d'objectes generats, fins i tot després de canviar la distribució.
+  const colorRoll=(civilian||bicycle||jetski)?Math.floor(R()*palette.length):null;
+  // Les motos aquàtiques ja no poden sortir totes vermelloses per
+  // coincidència: s'assignen cíclicament els set colors llampants,
+  // amb una fase determinada per la mateixa llavor del món. La coberta
+  // del motor és l'única malla repintada per instància.
+  const jetskiOrdinal=jetski?V.reduce((n,v)=>n+(v.t==='moto_aquatica'),0):0;
+  const jetskiStart=(windsurfStart^0x51a3c97)>>>0;
   const color=windsurf?palette[(windsurfStart%palette.length+windsurfOrdinal)%palette.length].hex:
-    (civilian||bicycle||jetski)?palette[Math.floor(R()*palette.length)].hex:undefined;
+    jetski?palette[(jetskiStart%palette.length+jetskiOrdinal)%palette.length].hex:
+    (civilian||bicycle)?palette[colorRoll].hex:undefined;
   // Conservam la tirada de la llavor antiga, però tots els cotxes civils
   // fan servir el model C1A seleccionat (variant 0).
   if(civilian)R();
