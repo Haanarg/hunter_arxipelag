@@ -1,21 +1,27 @@
-# Candidats de vehicles en revisió
+# Models externs pendents de triar
 
-Aquesta carpeta guarda **29 models GLB externs CC0** (uns **9,35 MiB**) per al comparador `/vehicles-externs-proves.html`. Aquests GLB són només per a vehicles que encara s'han de seleccionar; cap d'ells substitueix automàticament un vehicle del joc.
+El banc de proves `/vehicles-externs-proves.html` conserva **26 GLB CC0 (8,55 MiB)** de **nou tipus de vehicles** que encara no tenen un model definitiu acceptat. Ni la moto ni la moto aquàtica no s'hi mostren; els seus models nous ja són dins del joc.
 
-## Decisions
+## Models de moto acceptats
 
-- **Camió militar, barca de rems i windsurf:** conservam els models procedimentals originals; els candidats externs descartats ja no hi són.
-- **Moto aquàtica: model definitiu integrat al joc.** Model acceptat `Recreational Jet Ski` (opció 3), amb **2.578 triangles = 24,98%** dels 10.320 triangles originals. S'ha incorporat com a geometria precompilada a `src/jet-ski-25-geometry.mjs`, utilitzada per `src/vehicle-model-core.mjs`. Només la coberta del motor (`jetski-engine-cover`, antiga peça `coral`) canvia als **set colors llampants** de `jetskiColors`; l'ordre és cíclic i determinista per llavor, sense introduir cap nova tirada RNG. Física, volum de col·lisió, ones, lloc del pilot i dades de desament continuen lligats al tipus `moto_aquatica`. **S'han eliminat els tres GLB de candidats de moto aquàtica** i l'antic model procedimental; també s'ha retirat la pestanya de la pàgina.
-- **Motocicleta:** pendent de triar grau de simplificació de l'opció 2 `Naked streetfighter`. El manillar i **tots dos punys** es giren 180° cap al conductor; **forquilla, parafang, roda i eix davanters** comparteixen un únic pivot de direcció. S'eliminen la pota de cabra, els retrovisors i les dues peces vermelles giratòries de les rodes. Les **quatre reduccions** preserven íntegrament pneumàtics, llandes i radis amb obertures; el comparador mostra els triangles finals, que poden superar els percentatges objectiu per conservar aquest detall. El control Direcció i l'animació permeten comprovar el gir simultani.
-- **Llanxa:** encara al catàleg de comparació; l'apartat addicional de la llanxa no s'ha creat perquè la petició va arribar incompleta.
+**Motocicleta (Naked streetfighter, GLB de 3dassets.dev, actiu 15425).** S'ha seleccionat l'última variant, **nivell de reducció 25%**, precompilada a `src/streetfighter-25-geometry.mjs` i connectada a la fàbrica de `src/vehicle-model-core.mjs`. La geometria original tenia 4.908 triangles; la variant integrada en conserva **3.862**: el percentatge 25% és l'objectiu de reducció de les peces simplificables, **no** el total final, ja que els pneumàtics, radis, llandes, forquilla, manillar i agafadors no es redueixen. S'han eliminat el cavallet, els retrovisors i les peces vermelles giratòries.
 
-## Inventari i procedència
+El manillar i els agafadors estan units a la corona de la forquilla i a la roda del davant a través d'un sol pivot de direcció, amb una tija de connexió visible. Les rodes giren independentment de la direcció. L'escala uniforme és el **75% de la mida ajustada del model antic**, prenent la dimensió limitant (amplada), i genera una carrosseria d'uns **0,99 × 2,83 m en escena** després de l'escala general de vehicle. Les peces antigament blaves (`paint`) prenen un dels set colors vius de la paleta, de manera cíclica i determinista per llavor, sense canviar les tirades RNG. La posició de braços, peus i seient del motorista s'ha adaptat a la nova mida.
 
-`manifest.json` relaciona els candidats restants, les mides, els nombres de triangles i els enllaços d'origen. L'origen és https://3dassets.dev/ i les llicències indicades són **CC0 1.0 Universal** (https://creativecommons.org/publicdomain/zero/1.0/).
+Origen i llicència: https://3dassets.dev/assets/motorcycle-racing-and-street-bikes-naked-streetfighter-9916850c (CC0 1.0).
 
-La moto aquàtica final prové de l'actiu 39428, `Beach Surf and Paddle Kit / Recreational Jet Ski`:
-https://3dassets.dev/assets/beach-surf-and-paddle-kit-recreational-jet-ski-a61d9936
+**Moto aquàtica.** `Recreational Jet Ski` (actiu 39428), de 2.578 triangles, té la geometria precompilada a `src/jet-ski-25-geometry.mjs`. Només `jetski-engine-cover` rep els set colors vius; la resta de materials són fixos. La distribució manté el RNG de la generació de món.
 
-La versió de producció és **un mòdul JavaScript de geometria compacta**, no el GLB de prova. Això permet construir-la de forma síncrona, compartir les geometries entre vehicles i respectar els materials i colors per instància sense carregar GLTFLoader ni meshoptimizer durant la partida.
+Origen i llicència: https://3dassets.dev/assets/beach-surf-and-paddle-kit-recreational-jet-ski-a61d9936 (CC0 1.0).
 
-Es poden incorporar altres candidats executant `node tools/fetch-vehicle-candidates.mjs` (Node.js 22). L'eina només consulta el catàleg actual i **no torna a descarregar** els vehicles retirats. Límits: 2 MiB per candidat i 30 MiB en total.
+Els **tres GLB de moto i tres de moto aquàtica** s'han eliminat de `assets/vehicle-candidates` després de convertir els acceptats en mòduls de geometria locals. Els models procedimentals antics de la moto i de la moto aquàtica també s'han retirat de la fàbrica. No hi ha cap descàrrega de GLB o simplificació meshoptimizer en temps de partida. S'han eliminat els mecanismes de simplificació de la pàgina i les seves proves de GLB acceptats.
+
+## Altres decisions
+
+El **camió militar, la barca de rems i el windsurf** es conserven amb els models originals; s'han retirat del banc de candidats. La **llanxa** encara té models en revisió.
+
+El manifest `manifest.json` conté les mides, la llicència i la procedència dels 26 GLB pendents. Catàleg: https://3dassets.dev/ ; llicència: https://creativecommons.org/publicdomain/zero/1.0/.
+
+Per tornar a recollir candidats, `node tools/fetch-vehicle-candidates.mjs` només recorre els tipus encara presents al catàleg, de manera que **no torna a baixar les motos acceptades ni els vehicles descartats**.
+
+**Pendents de validació visual:** al navegador, comprovar l'encaix del pilot a la moto, el gir dels agafadors i la forquilla, el contacte amb terra i els radis, la diversitat de colors i la paritat SOLO/COOP/Android. Les proves automàtiques cobreixen els punts de dades i la jerarquia de pivots, no una inspecció WebGL real.
