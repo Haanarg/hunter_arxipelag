@@ -2,6 +2,7 @@ import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {SimplifyModifier} from 'three/addons/modifiers/SimplifyModifier.js';
 import {mergeVertices,deinterleaveGeometry} from 'three/addons/utils/BufferGeometryUtils.js';
+import {prepareStreetfighterPreview,setStreetfighterPreviewSteering,isStreetfighterDetailProtected} from './streetfighter-preview-rig.mjs';
 import {vehicleModels} from './vehicle-model-core.mjs';
 import {playerBatching} from './player-batching-core.mjs';
 import {createTruckModel} from './truck-model.mjs';
@@ -21,7 +22,7 @@ const SIMPLIFICATION=[
  {name:'Màxima',ratio:.25}
 ];
 const FEATURED={
- moto:{slot:2,title:'Naked streetfighter',note:'S’ha girat el manillar i s’han tret la pota de cabra i els retrovisors. Quatre graus de simplificació geomètrica; cap canvi encara al joc.'}
+ moto:{slot:2,title:'Naked streetfighter',note:'Manillar alineat amb els punys, forquilla i roda davantera dins un sol pivot. Sense pota de cabra, retrovisors ni marcadors vermells giratoris. Radis i obertures de les rodes protegits en totes les reduccions. Usa el control Direcció o l’animació per provar el gir.'}
 };
 const simplifier=new SimplifyModifier();
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -166,7 +167,12 @@ function metrics(root){
 }
 function dropPrevious(slot){
  if(slot.model){
-   slot.model.traverse(node=>{if(node.isMesh&&node.geometry?.userData?.candidateSimplified)node.geometry.dispose()});
+   const freed=new Set();
+   slot.model.traverse(node=>{
+     if(node.isMesh&&node.geometry?.userData?.candidateSimplified&&!freed.has(node.geometry)){
+       freed.add(node.geometry);node.geometry.dispose();
+     }
+   });
    slot.scene.remove(slot.model);slot.model=null;
  }
  slot.mixer=null;
@@ -204,57 +210,12 @@ function setModel(slot,obj,original,animations=[]){
 
 // Simplificació REAL de la geometria amb meshoptimizer (Three.js r186).
 // La xifra de triangles final es calcula sobre la malla resultant.
-// En el GLB Naked streetfighter les tiges dels miralls no són un node
-// separat: són 64 triangles del node d'acer del xassís. Es troben als
-// dos extrems (x≈±0,308 m) per damunt de y=0,95 m. No retallam res
-// si el fitxer deixa de tenir aquesta geometria recognoscible.
-function stripMirrorStems(root){
- const steel=root.getObjectByName('naked-streetfighter_8');
- if(!steel?.isMesh||!steel.geometry)return;
- const cut=steel.geometry.clone();
- deinterleaveGeometry(cut);
- const positions=cut.getAttribute('position');
- if(!positions){cut.dispose();return}
- root.updateMatrixWorld(true);
- const indices=cut.getIndex();
- const faceCount=(indices?.count||positions.count)/3;
- const keep=[];
- const p=new THREE.Vector3(),center=new THREE.Vector3();
- let removed=0;
- for(let face=0;face<faceCount;face++){
-   center.set(0,0,0);
-   const verts=[];
-   for(let k=0;k<3;k++){
-     const index=indices?indices.getX(face*3+k):face*3+k;
-     verts.push(index);
-     p.fromBufferAttribute(positions,index).applyMatrix4(steel.matrixWorld);
-     center.add(p);
-   }
-   center.multiplyScalar(1/3);
-   if(Math.abs(center.x)>.28&&center.y>.95){removed++;continue}
-   keep.push(...verts);
- }
- if(removed<8||removed>100){cut.dispose();return}
- cut.setIndex(keep);
- const clean=mergeVertices(cut);
- cut.dispose();
- clean.userData.candidateSimplified=true;
- steel.geometry=clean;
-}
-function prepareSelectedModel(root,type){
- if(type!=='moto')return;
- const handlebar=root.getObjectByName('handlebar');
- if(handlebar)handlebar.rotation.y+=Math.PI;
- // Les peces estan identificades al GLB original.
- for(const name of ['side-stand','naked-streetfighter_13']){
-   const part=root.getObjectByName(name);
-   part?.parent?.remove(part);
- }
- stripMirrorStems(root);
-}
+// La direcció completa (manillar, agafadors, forquilla, parafang i
+// roda davantera) es prepara a streetfighter-preview-rig.mjs.
+// Totes les versions, incloent el GLB de referència, utilitzen EL MATEIX rig.
 async function simplifySelectedModel(root,ratio){
  const meshes=[];
- root.traverse(node=>{if(node.isMesh&&node.geometry?.getAttribute('position'))meshes.push(node)});
+ root.traverse(node=>{if(node.isMesh&&node.geometry?.getAttribute('position')&&!isStreetfighterDetailProtected(node))meshes.push(node)});
  const errors=[];
  for(const mesh of meshes){
    const original=mesh.geometry;let prepared=null,welded=null;
@@ -310,25 +271,29 @@ async function loadFeatured(config,token){
  try{
    const gltf=await loader.loadAsync(uri);
    if(token!==generation)return;
-   setModel(slots[1],gltf.scene.clone(true),false,gltf.animations);
+   const reference=gltf.scene.clone(true);
+   prepareStreetfighterPreview(THREE,reference);
+   setModel(slots[1],reference,false,gltf.animations);
+   setStreetfighterPreviewSteering(slots[1].model,readSteering());
    slots[1].bold.textContent=chosen.title+' · referència';
-   slots[1].sub.textContent='GLB original · sense retocs';
+   slots[1].sub.textContent='GLB seleccionat · direcció corregida · radis intactes';
    slots[1].status.textContent=metrics(slots[1].model);
    for(let i=0;i<SIMPLIFICATION.length;i++){
      if(token!==generation)return;
      const quality=SIMPLIFICATION[i],slot=slots[i+2];
      slot.bold.textContent=quality.name+' · '+Math.round(quality.ratio*100)+'%';
-     slot.sub.textContent='Manillar corregit · sense pota ni retrovisors';
+     slot.sub.textContent='Direcció completa · radis originals intactes';
      slot.status.textContent='Calculant una versió del '+Math.round(quality.ratio*100)+'%…';
      await new Promise(resolve=>requestAnimationFrame(resolve));
      const copy=gltf.scene.clone(true);
-     prepareSelectedModel(copy,config.id);
+     prepareStreetfighterPreview(THREE,copy);
      const errors=await simplifySelectedModel(copy,quality.ratio);
      if(token!==generation){
        copy.traverse(n=>{if(n.isMesh&&n.geometry?.userData?.candidateSimplified)n.geometry.dispose()});
        return;
      }
      setModel(slot,copy,false,gltf.animations);
+     setStreetfighterPreviewSteering(slot.model,readSteering());
      const actual=Math.round(100*triangles(slot.model)/Math.max(1,triangles(slots[1].model)));
      slot.status.textContent=metrics(slot.model)+' · '+actual+'% dels triangles originals'+(errors.length?' · '+errors.length+' peces sense reduir':'');
    }
@@ -395,6 +360,7 @@ async function choose(config){
  for(const b of list.querySelectorAll('button'))b.classList.toggle('active',b.dataset.type===config.id);
  const marine=config.kind==='mar';
  const featured=FEATURED[config.id];
+ document.querySelector('#steeringControl').hidden=config.id!=='moto';
  grid.classList.toggle('featured',!!featured);
  featureInfo.hidden=!featured;
  featureInfo.textContent=featured?featured.note:'';
@@ -455,11 +421,27 @@ function resizeRenderer(){
  renderer.setSize(w,h,false);
  updateCamera();
 }
+function readSteering(){
+ return Math.max(-35,Math.min(35,Number(document.querySelector('#steeringAngle').value)||0))*Math.PI/180;
+}
+function applyStreetfighterSteering(angle){
+ for(const slot of slots.slice(1))
+   if(slot.model)setStreetfighterPreviewSteering(slot.model,angle);
+}
+document.querySelector('#steeringAngle').addEventListener('input',event=>{
+ document.querySelector('#steeringValue').textContent=String(event.target.value)+'°';
+ applyStreetfighterSteering(readSteering());
+});
 function draw(now){
  requestAnimationFrame(draw);
  const dt=Math.min(.07,(now-prev)/1000);prev=now;
  if(document.querySelector('#animate').checked)
    for(const slot of slots)slot.mixer?.update(dt);
+ if(currentType?.id==='moto'){
+   const target=document.querySelector('#animate').checked?
+     Math.sin(now*.00145)*.48:readSteering();
+   applyStreetfighterSteering(target);
+ }
  // Les coordenades setViewport i setScissor de WebGLRenderer ja es
  // multipliquen internament pel pixelRatio. Multiplicar-les aquí deixava
  // els models retallats o totalment fora del canvas en pantalles HiDPI.
