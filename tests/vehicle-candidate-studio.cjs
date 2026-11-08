@@ -28,7 +28,7 @@ const files=Object.values(manifest.models).flat();
 assert.equal(files.length,20,'Han de quedar 20 GLB candidats després de retirar els helicòpters civils');
 for(const id of ['heli','heli_combat'])assert(!(id in manifest.models),'Helicòpter descartat encara al manifest: '+id);
 assert.equal(manifest.retiredHelicopterCandidates,6);
-for(const source of ['e619745e46b84a79a98d4a41774f71e6','df0993ee21e74a759cd0519f6fc51cf8'])assert(catalog.includes(source),'Candidat militar absent: '+source);
+for(const source of ['755d8518a06e41b19752c1b54c0da588','df0993ee21e74a759cd0519f6fc51cf8'])assert(catalog.includes(source),'Model militar escollit absent: '+source);
 assert(studio.includes("entry.provider==='sketchfab'"),'Cal visor oficial Sketchfab per als helicòpters');
 assert.equal(manifest.savedModels,files.length);
 assert.equal(manifest.savedBytes,files.reduce((sum,item)=>sum+item.bytes,0));
