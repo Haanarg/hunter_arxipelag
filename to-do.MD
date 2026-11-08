@@ -4,6 +4,12 @@
 
 > **Proves automatitzades (2026-11-07):** la bateria s'ha reduït a 13 comprovacions essencials, executables amb `npm test`. Les mencions a noms de proves concretes dins les fases històriques són evidències d'implementacions passades, no fitxers que encara hagin d'existir ni ordres de CI vigents.
 
+**P2 · v0.6.185 · Naked streetfighter definitiva al joc (implementat):**
+- [x] El model de moto procedimental antic s'ha substituït per la quarta variant `Naked streetfighter`, seleccionada amb paràmetre de simplificació **25% per a les peces que admeten reducció**. Resultat precompilat: **3.862 triangles**; els radis, llandes, pneumàtics, forquilla, manillar i agafadors conserven el detall íntegre. ESM estàtic `src/streetfighter-25-geometry.mjs`, sense GLB o optimitzador a temps de missió, amb geometries reutilitzades entre instàncies.
+- [x] Nova moto amb **escala 75%** respecte a la silueta ajustada anterior; direcció completa amb un sol pivot `steeringPivots`, rodes independents per al moviment i punt del pilot adaptat. Parts `paint` del model blau originals recolorides amb els **set colors vius** en cicle segons la llavor, sense tirades aleatòries addicionals i mantenint el camp `v.color` a les partides.
+- [x] Retirades les tres motos GLB candidates, el comparador de quatre reduccions, els tests de simplificació del GLB ja acceptat, el generador temporal i l'antic model procedimental. El banc de proves passa a nou tipus de vehicles i 26 GLB.
+- [ ] **Validació visual pendent:** jugar en SOLO i HOST/GUEST; comprovar mida, contacte de pneumàtics amb el terreny, color, posició d'extremitats, gir de forquilla/punys/manillar i caigudes/col·lisions; repetir amb Android. Les proves Node verifiquen geometria, jerarquia, colors i animació, no aspecte real al navegador.
+
 ## Llegenda i límits
 
 - **P0**: regressions greus, estrebades, sincronització i seguretat de les partides. **P1**: estalvi mesurable de CPU/GPU/memòria o refactor essencial. **P2**: reducció de complexitat, manteniment i acabat. **P3**: millores funcionals ajornades.
