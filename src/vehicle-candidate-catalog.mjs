@@ -1,5 +1,5 @@
 // Catàleg compartit entre el visor Three.js i l'eina de descàrrega local.
-// La moto aquàtica escollida es traslladarà a la fàbrica del joc.
+// La moto aquàtica definitiva ja forma part de la fàbrica del joc; no és cap candidata.
 const P=(pack,match,query)=>({pack,match,query:query||match});
 const Q=(query)=>({query});
 export const CATALOG=[
@@ -26,10 +26,6 @@ export const CATALOG=[
    P('armoured-column-and-field-camp','Self-Propelled Gun')]},
 
 
- {id:'moto_aquatica',name:'Moto aquàtica',kind:'mar',options:[
-   P('powerboat-racing-and-launch-ramp','Stand-up personal watercraft'),
-   P('powerboat-racing-and-launch-ramp','Sit-down personal watercraft'),
-   P('beach-surf-and-paddle-kit','Recreational Jet Ski')]},
  {id:'llanxa',name:'Llanxa ràpida',kind:'mar',options:[
    P('transport-collection-hd','Open sport runabout'),
    P('powerboat-racing-and-launch-ramp','Offshore monohull racer'),
