@@ -12,6 +12,11 @@
 - No tocar el balanç, aspecte, controls ni la serialització de partides durant una extracció de codi, tret que sigui un canvi de joc explícit amb proves específiques.
 - Les dades de rendiment històriques són *indiciàries*: no existeix encara una bateria comparativa completa de FPS GPU, p95/p99 i dos dispositius després de les darreres modificacions.
 
+**P2 · v0.6.183 · motos aquàtiques de colors vius i direcció Naked streetfighter (implementat):**
+- [x] Les motos aquàtiques nascudes a `world-generation.js` recorren els **set colors llampants** de `jetskiColors`, en cicle determinista per llavor, amb un únic R() per vehicle com abans. El node `jetski-engine-cover` (antiga peça coral) és l'única peça que canvia de color; es mantenen estables totes les altres pintures i l'estat de desament.
+- [x] Al laboratori, el GLB `Naked streetfighter` original i les quatre variants reduïdes comparteixen el **mateix conjunt de direcció**: manillar i punys girats 180° cap al pilot, forquilla completa i parafang units a la roda davantera, amb pivot de gir i control per veure'l en moviment. S'eliminen els dos marcadors vermells giratoris de les rodes, els suports dels retrovisors i la pota de cabra. Totes les versions preserven el detall de radis, forats, llandes i pneumàtics sense aplicar-hi meshoptimizer.
+- [ ] **Validació visual pendent:** colors amb diferents llavors, aspecte exacta de la coberta del motor, animació sincronitzada de la direcció i vores dels radis en els quatre nivells, WebGL/Android. Les proves Node/CI no substitueixen la inspecció gràfica.
+
 **P2 · v0.6.182 · moto aquàtica Recreational Jet Ski 25% (model definitiu):**
 - [x] Substituït el model procedimental dins `vehicle-model-core.mjs` per la geometria compacta `jet-ski-25-geometry.mjs`, generada una sola vegada amb meshoptimizer (10.320 → 2.578 triangles, 24,98%). Geometries compartides, 6 malles, sense GLB ni optimitzador durant la partida. La coberta usa el color viu de `appearance.color` generat per la llavor. No canvia física, seient, radi, hitbox, ni desament del tipus `moto_aquatica`.
 - [x] Esborrats de Git els tres GLB de la moto aquàtica, inclòs el fitxer font que ja s'ha convertit en geometria de producció; eliminada la seva pestanya del comparador i actualitzat el manifest a 29 candidats. La motocicleta i les seves quatre alternatives LOD continuen en revisió.
