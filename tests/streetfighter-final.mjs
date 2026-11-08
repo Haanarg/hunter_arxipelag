@@ -79,7 +79,11 @@ for(const color of [0xc94e3f,0xa4ec24,0xffdf18,0xef35a8,0x228fef,0xff7b19,0x181c
  const bounds=new THREE.Box3().setFromObject(model);
  const actual=bounds.getSize(new THREE.Vector3());
  assert(Math.abs(actual.z-M.dimensions.length*1.125*vehicleModels.scales.moto)<.12,'Llargada final al 75% de la versió precedent');
- assert(actual.x>1.10&&actual.x<1.15,'Amplada final del model reduït');
+ // El proxy de LOD distant també pertany al model i pot eixamplar
+ // Box3 encara que estigui ocult. La mida del cos real es comprova
+ // a partir de la geometria precompilada i l'escala del seu únic pare.
+ const bodyWidth=M.dimensions.width*bikeVisual.scale.x*vehicleModels.scales.moto;
+ assert(bodyWidth>1.10&&bodyWidth<1.15,'Amplada visible final del model reduït');
  const [front,rear]=model.userData.wheels;
  assert.equal(front.parent,model.userData.steeringPivots[0]);
  assert(front.userData.radius>0&&rear.userData.radius>0);
