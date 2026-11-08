@@ -124,9 +124,13 @@ function pivots(root){
  return {main,tail};
 }
 
-export async function prepareApacheAraonRuntime(THREE){
+// 'forceCompact' converteix la variant 50% en geometria THREE.BufferGeometry
+// directament, sense sol·licitar mai el GLB. Comparació experimental; no altera
+// per defecte el model definitiu que carreguen les partides.
+export async function prepareApacheAraonRuntime(THREE,{forceCompact=false}={}){
  let template,usingCompact=false;
  try{
+  if(forceCompact)throw Error('Mode geomètric natiu sol·licitat');
   const gltf=await new GLTFLoader().loadAsync(APACHE_MODEL_URL);
   if(!gltf?.scene)throw Error('El GLB Apache no conté cap escena');
   template=gltf.scene;
@@ -181,4 +185,12 @@ export async function prepareApacheAraonRuntime(THREE){
    return root;
   }
  });
+}
+
+/** Versió motor nativa de l'Apache Araon, 2.173 triangles i sense GLB.
+ * Reconstrueix posicions, índexs i colors de vèrtex de l'APG2 compactat.
+ * El GLB definitiu amb rodes 75% i textures es manté intacte al joc.
+ */
+export async function prepareApacheCompactNative(THREE){
+ return prepareApacheAraonRuntime(THREE,{forceCompact:true});
 }
