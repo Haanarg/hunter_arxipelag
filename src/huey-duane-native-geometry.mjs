@@ -25,6 +25,38 @@ function attribute(THREE,id){
  if(data.length!==count*length)throw Error('Accessor Huey incomplet '+id);
  return new THREE.BufferAttribute(data,length,normalized);
 }
+function addCockpitSeats(THREE,root){
+ // Els dos seients són peces natives del joc, integrades a la geometria aprovada.
+ // El morro del model Sketchfab mira a +Z (després el giram 180°).
+ const fabric=new THREE.MeshStandardMaterial({
+  color:0x242c27,roughness:.96,metalness:0,side:THREE.DoubleSide
+ });
+ const frame=new THREE.MeshStandardMaterial({
+  color:0x545c4d,roughness:.83,metalness:.16
+ });
+ const cushion=new THREE.BoxGeometry(.46,.12,.46);
+ const back=new THREE.BoxGeometry(.46,.52,.12);
+ const headrest=new THREE.BoxGeometry(.37,.16,.12);
+ const leg=new THREE.CylinderGeometry(.027,.027,.34,8);
+ const base=new THREE.BoxGeometry(.45,.045,.47);
+ for(const [name,x] of [['pilot',-.44],['copilot',.44]]){
+  const seat=new THREE.Group();seat.name='Huey_Cockpit_Seat_'+name;
+  seat.position.set(x,0,1.19);
+  const add=(geometry,mat,x,y,z)=>{
+   const m=new THREE.Mesh(geometry,mat);
+   m.position.set(x,y,z);seat.add(m);return m;
+  };
+  add(base,frame,0,.32,0);
+  add(cushion,fabric,0,.44,.015);
+  const backMesh=add(back,fabric,0,.72,-.20);backMesh.rotation.x=-.12;
+  const head=add(headrest,fabric,0,1.055,-.245);head.rotation.x=-.12;
+  for(const sx of [-.17,.17]){
+   add(leg,frame,sx,.26,-.14);
+   add(leg,frame,sx,.26,.14);
+  }
+  root.add(seat);
+ }
+}
 function makeTemplate(THREE){
  const atlas=new THREE.TextureLoader().load(
   new URL('../assets/vehicle-models/huey-duane-native-atlas.png',import.meta.url).href
@@ -72,13 +104,14 @@ function makeTemplate(THREE){
  const root=new THREE.Group();
  const childIndices=new Set(N.flatMap(n=>n.children||[]));
  for(let i=0;i<N.length;i++)if(!childIndices.has(i))root.add(nodes[i]);
+ addCockpitSeats(THREE,root);
  return root;
 }
 export function createNativeHuey(THREE){
  if(sharedThree!==THREE){shared=null;sharedThree=THREE;}
  if(!shared)shared=makeTemplate(THREE);
  const shell=shared.clone(true);
- shell.rotation.y=Math.PI;shell.scale.setScalar(1.35);
+ shell.rotation.y=Math.PI;shell.scale.setScalar(1.485); // +10% respecte del Huey aprovat
  const root=new THREE.Group();root.add(shell);
  root.updateMatrixWorld(true);
  const bounds=new THREE.Box3().setFromObject(root);
@@ -87,8 +120,12 @@ export function createNativeHuey(THREE){
  const main=shell.getObjectByName('Top_Rotor');
  const tail=shell.getObjectByName('Back_Rotor');
  if(!main||!tail)throw Error('Pivots dels rotors Huey absents');
+ root.updateMatrixWorld(true);
+ root.userData.skidContactHeight=.405;
+ root.userData.rotorContactHeight=main.getWorldPosition(new THREE.Vector3()).y;
  root.userData.rotor=main;root.userData.tailRotor=tail;
- root.userData.hueyModel='duane-100-open-engine-native';
+ root.userData.hueyModel='duane-100-open-engine-native-110';
+ root.userData.cockpitSeatCount=2;
  root.name='Huey_Engine_Native';
  return root;
 }
