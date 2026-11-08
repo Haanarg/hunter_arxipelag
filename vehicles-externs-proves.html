@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Hunter · Models externs de vehicles · Laboratori 3D</title>
-<meta name="description" content="Compara vehicles de Hunter amb GLB CC0 i helicòpters militars Huey/Apache en visor 3D CC BY.">
+<meta name="description" content="Compara vehicles pendents de Hunter i els LOD de l’Apache militar.">
 <style>
 :root{color-scheme:dark;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;--bg:#102025;--panel:#192e32;--border:#426065;--ink:#edf5eb;--muted:#b2c9c5;--gold:#e8cd8e;--green:#cbe6a8}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:auto}
@@ -57,13 +57,13 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 </head><body>
 <header><div class="kicker">HUNTER: ARXIPÈLAG · LABORATORI DE MODELS</div>
 <h1>Flota · Models i simplificació</h1>
-<p>Els <strong>9 tipus de vehicles del banc</strong>. A l'esquerra, el model actual del joc. Per al Huey i l'Apache seleccionats, obre el <a href="helicopters-lod-proves.html">comparador específic de quatre LOD</a> (100%, 75%, 50%, 25%). La moto i la moto aquàtica definitives ja s'han integrat al joc i no apareixen entre els candidats. Una mateixa escala de comparació, llum direccional, materials PBR, ombres i càmera. <strong>Baixa per veure les vistes</strong>. Les propostes encara <strong>no</strong> substitueixen els vehicles del joc.</p>
+<p>Els <strong>8 tipus de vehicles pendents de seleccionar</strong>. A l'esquerra, el model actual del joc. El <strong>Huey definitiu de Duane’s Mind amb les portes obertes ja forma part del joc</strong> i s'ha retirat d'aquest catàleg. L'<a href="helicopters-lod-proves.html">Apache conserva el comparador de quatre LOD</a> (100%, 75%, 50%, 25%). La moto i la moto aquàtica acceptades tampoc no apareixen entre els candidats. Una mateixa escala de comparació, llum direccional, materials PBR, ombres i càmera. <strong>Baixa per veure les vistes</strong>. Les propostes encara <strong>no</strong> substitueixen els vehicles del joc.</p>
 <nav aria-label="Vistes">
 <button id="view-quarter" data-view="quarter" class="active">3/4</button><button data-view="front" id="view-front">Frontal</button>
 <button data-view="side" id="view-side">Lateral</button><button data-view="rear" id="view-rear">Posterior</button>
 <button data-view="top" id="view-top">Zenital</button>
 <button id="zoom-in">＋</button><button id="zoom-out">－</button><button id="zoom-reset">Enquadra</button>
-<a href="helicopters-lod-proves.html" style="font-weight:850;color:#fff0bd">Huey / Apache · 4 LOD</a> <a href="vehicle-mides-proves.html">Mides del joc</a><a href="index.html">Jugar</a>
+<a href="helicopters-lod-proves.html" style="font-weight:850;color:#fff0bd">Apache · 4 LOD</a> <a href="vehicle-mides-proves.html">Mides del joc</a><a href="index.html">Jugar</a>
 </nav></header>
 <main><div id="vehicleList" aria-label="Tria vehicle"></div>
 <section id="info"><div><h2 id="vehicleName">Carregant el taller…</h2><div id="warning"></div></div>
@@ -78,8 +78,8 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 </div></section>
 <section id="grid" aria-label="Comparativa de models 3D"></section>
 <div class="explainer">
-<strong>Com funciona:</strong> desplaça la pàgina amb la roda del ratolí o lliscant amb el dit. Es mostren el model actual del joc i tres alternatives GLB per a cada vehicle que continua en revisió. Arrossega horitzontalment un model per girar <strong>totes les càmeres</strong>; usa <strong>Alt + roda</strong> o els botons ＋ / － per ampliar. Els GLB locals mostren triangles, malles i dimensions; els helicòpters Sketchfab indiquen autor, llicència CC BY i polígons publicats, si consten. Els seus visors tenen una càmera independent i necessiten connexió. Per als helicòpters seleccionats, obre <strong>Font / llicència</strong> i descarrega el <strong>GLB</strong> des de Sketchfab; importa'l a la barra superior. Es calculen variants 100%, 75%, 50% i 25% i les pots desar amb <strong>Desa GLB</strong>. Els elements sensibles i animats es protegeixen, i per això el percentatge real de triangles pot ser superior. Les variants no hereten col·lisions, seients o armes del joc i necessiten revisar les animacions. Els GLB importats es processen al navegador i no es pugen automàticament al repositori. Els GLB antics de 3DAssets són CC0; els nous helicòpters són CC BY 4.0 i requereixen atribució si s'integren al joc. Si importes un fitxer propi, revisa'n la llicència.
+<strong>Com funciona:</strong> desplaça la pàgina amb la roda del ratolí o lliscant amb el dit. Es mostren el model actual del joc i tres alternatives GLB per a cada vehicle que continua en revisió. Arrossega horitzontalment un model per girar <strong>totes les càmeres</strong>; usa <strong>Alt + roda</strong> o els botons ＋ / － per ampliar. Els GLB locals mostren triangles, malles i dimensions; el candidat Apache de Sketchfab indica autor, llicència CC BY i polígons publicats, si consten. Per a l’Apache, obre <strong>Font / llicència</strong> i descarrega el <strong>GLB</strong> des de Sketchfab; importa’l a la barra superior. Es calculen variants 100%, 75%, 50% i 25% i les pots desar amb <strong>Desa GLB</strong>. Els elements sensibles i animats es protegeixen, i per això el percentatge real de triangles pot ser superior. Les variants no hereten col·lisions, seients o armes del joc i necessiten revisar les animacions. Els GLB importats es processen al navegador i no es pugen automàticament al repositori. Els GLB antics de 3DAssets són CC0; l’Apache és CC BY 4.0 i requereixen atribució si s'integren al joc. Si importes un fitxer propi, revisa'n la llicència.
 </div>
 </main><footer>Prova independent · Three.js r186 (el mateix del joc) · GLTFLoader · models originals importats de la fàbrica del joc · cap canvi a la física, combat o desament. Algunes fonts externes poden no permetre carregar fitxers des d'un altre domini; en aquest cas, utilitza la importació local.</footer>
-<script type="module" src="./src/vehicles-externs-proves.mjs?rev=apache-texture-check-2"></script>
+<script type="module" src="./src/vehicles-externs-proves.mjs?rev=approved-huey-removed-1"></script>
 </body></html>
