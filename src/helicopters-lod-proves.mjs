@@ -1,5 +1,6 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {apacheCompatibleBlob} from './apache-glb-compat.mjs';
 import {recoverApacheAppearance,apacheAppearanceDescription} from './helicopter-texture-recovery.mjs';
 
 const LEVELS=[100,75,50,25];
@@ -139,7 +140,12 @@ async function loadVariant(slot,type,level,serial){
   slot.status.textContent='Encara no està al servidor. Carrega el ZIP amb les 8 variants.';
   return false;
  }
- const url=URL.createObjectURL(blob);
+ let compatible={blob,converted:0,connected:0};
+ try{
+  if(type==='apache')compatible=await apacheCompatibleBlob(blob);
+ }catch(error){slot.status.textContent='GLB incompatible: '+errorText(error);return false}
+ if(serial!==token)return false;
+ const url=URL.createObjectURL(compatible.blob);
  try{
   const gltf=await loader.loadAsync(url);
   if(serial!==token){disposeNew(gltf.scene);return false}
@@ -173,7 +179,8 @@ async function loadVariant(slot,type,level,serial){
   slot.status.textContent=fmt(triangles)+' triangles ('+percent.toFixed(1)+'% de l’original) · '+
    (blob.size/1048576).toFixed(2)+' MiB · '+gltf.animations.length+' animacions'+
    (triangles===expected?'':' · recompte diferent del previst: '+fmt(expected))+
-   (appearance?' · '+apacheAppearanceDescription(appearance):'');
+   (appearance?' · '+apacheAppearanceDescription(appearance):'')+
+   (compatible.converted?' · convertit de specGloss a PBR ('+compatible.connected+' mapes de color restaurats)':'');
   return true;
  }catch(error){
   slot.status.textContent='Error GLB: '+errorText(error);
