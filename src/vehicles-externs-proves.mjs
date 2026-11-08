@@ -31,7 +31,7 @@ const helicopterFile=document.querySelector('#helicopterFile');
 const helicopterStatus=document.querySelector('#helicopterStatus');
 const helicopterSources=new Map(); // Els originals només viuen a la memòria del navegador.
 function helicopterFileName(config,ratio){
- return 'hunter-'+(config.id==='heli'?'huey-duanes-mind':'apache-araon')+'-'+Math.round(ratio*100)+'.glb';
+ return 'hunter-apache-araon-'+Math.round(ratio*100)+'.glb';
 }
 async function exportVariant(slot){
  if(!slot.variantRoot||!slot.model)return;
