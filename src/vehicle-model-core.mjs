@@ -204,10 +204,9 @@ export const vehicleModels=Object.freeze({
         // Malla precompilada; sense GLB ni meshoptimizer en temps de joc.
         const color=appearance.color??0x228fef;
         const bike=createStreetfighter25(THREE,{color,material});
-        // -25% respecte de la versió 0.6.187 (1.5 × 0.75).
-        // La connexió del manillar es conserva exactament com estava.
-        // L'escala general del vehicle s'aplica després una sola vegada.
-        const visualScale=1.125;
+        // Retorn a la mida de la v0.6.187: 50% més gran que el model inicial.
+        // Conservam la connexió del manillar, la geometria i l'escala general.
+        const visualScale=1.5;
         bike.scale.setScalar(visualScale);
         g.add(bike);
         g.userData.wheels=bike.userData.wheels;
