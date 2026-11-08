@@ -204,12 +204,17 @@ export const vehicleModels=Object.freeze({
         // Malla precompilada; sense GLB ni meshoptimizer en temps de joc.
         const color=appearance.color??0x228fef;
         const bike=createStreetfighter25(THREE,{color,material});
+        // Increment sol·licitat: +50% SOBRE la moto actual.
+        // L'escala general del vehicle s'aplica després, una sola vegada.
+        const visualScale=1.5;
+        bike.scale.setScalar(visualScale);
         g.add(bike);
         g.userData.wheels=bike.userData.wheels;
         g.userData.steeringPivots=bike.userData.steeringPivots;
-        // El radi real del pneumàtic JA inclou l'escala de la variant,
-        // falta només l'escala VS.moto de la fàbrica.
-        for(const w of g.userData.wheels)w.userData.radius*=VS.moto;
+        // El radi físic de rodament ha d'incloure també el nou factor
+        // visual; els pivots de direcció continuen compartint el mateix gir.
+        for(const w of g.userData.wheels)w.userData.radius*=visualScale*VS.moto;
+        g.userData.motorcycleVisualScale=visualScale;
         g.userData.motorcycleModel='naked-streetfighter-25';
         g.userData.motorcycleColor=color;
         g.userData.motorcycleTriangles=STREETFIGHTER_25_META.triangles;
