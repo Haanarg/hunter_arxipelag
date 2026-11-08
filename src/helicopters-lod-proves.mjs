@@ -310,8 +310,7 @@ function draw(time){
  lastTime=time;
  if(document.querySelector('#animate').checked)for(const slot of canvases)slot.mixer?.update(dt);
  const width=window.innerWidth,height=window.innerHeight;
- renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));
- renderer.setSize(width,height,false);
+ if(renderer.domElement.width!==Math.round(width*renderer.getPixelRatio()) || renderer.domElement.height!==Math.round(height*renderer.getPixelRatio()))renderer.setSize(width,height,false);
  renderer.setClearColor(0x233d41,1);
  renderer.setScissorTest(true);
  for(const slot of canvases){
@@ -325,7 +324,7 @@ function draw(time){
   renderer.render(slot.scene,slot.camera);
  }
 }
-window.addEventListener('resize',updateCamera);
+window.addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight,false);updateCamera()});
 updateCamera();
 requestAnimationFrame(draw);
 choose('huey');
