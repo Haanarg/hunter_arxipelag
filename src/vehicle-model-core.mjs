@@ -717,12 +717,16 @@ export const vehicleModels=Object.freeze({
         // definitivament la geometria procedural quan el GLB està carregat.
         // La reserva antiga només s'usa si falla la descàrrega/descodificació.
         const approvedHuey=!combat?globalThis.HUNTER_HUEY_DUANE?.create?.():null;
-        if(approvedHuey){
-          resources?.retainModel(approvedHuey);
-          g.add(approvedHuey);
-          g.userData.rotor=approvedHuey.userData.rotor;
-          g.userData.tailRotor=approvedHuey.userData.tailRotor;
-          g.userData.hueyModel='duane-100-open';
+        const apacheRuntime=combat?globalThis.HUNTER_APACHE_ARAON:null;
+        const approvedApache=apacheRuntime?.create?.()||null;
+        const approvedModel=approvedHuey||approvedApache;
+        if(approvedModel){
+          resources?.retainModel(approvedModel);
+          g.add(approvedModel);
+          g.userData.rotor=approvedModel.userData.rotor;
+          g.userData.tailRotor=approvedModel.userData.tailRotor;
+          if(approvedHuey)g.userData.hueyModel='duane-100-open';
+          else g.userData.apacheModel='araon-50-wheels75-salvia-black';
         }else if(!combat){
           // Huey 3B-4: la secció central és un PASSADÍS OBERT de banda a
           // banda, no un prisma massís amagat rere els marcs de les portes.
@@ -793,7 +797,7 @@ export const vehicleModels=Object.freeze({
           box(g,.12,1.35,.88,bodyCol,0,3.34,6.87,'paint');
           box(g,2.25,.1,.58,bodyCol,0,2.9,5.94,'paint');
         }
-        if(!approvedHuey){
+        if(!approvedModel){
           const rotorY=combat?3.22:3.82,mastBaseY=combat?2.94:3.02;
           rod(g,[0,mastBaseY,0],[0,rotorY,0],.14,metal);
           round(g,.3,.2,metal,0,rotorY,0,'y','metal');
@@ -814,8 +818,11 @@ export const vehicleModels=Object.freeze({
       // Les dues barres inferiors estan centrades a y=.48 i tenen radi .075.
       // Guardam el contacte inferior JA escalat per a la física d'aterratge.
       if(t==='heli'||t==='heli_combat'){
-        g.userData.skidContactHeight=(.48-.075)*VS[t];
-        g.userData.rotorContactHeight=((t==='heli_combat'?3.22:3.82)+.05)*VS[t];
+        const apacheContact=t==='heli_combat'?globalThis.HUNTER_APACHE_ARAON:null;
+        g.userData.skidContactHeight=
+          (apacheContact?.skidContactHeight??(.48-.075))*VS[t];
+        g.userData.rotorContactHeight=
+          (apacheContact?.rotorContactHeight??((t==='heli_combat'?3.22:3.82)+.05))*VS[t];
       }
       g.traverse(o=>{if(o.isMesh&&!o.userData.waterMask){o.castShadow=shadows;o.receiveShadow=shadows}});
       // Fusionam només malles rígides germanes amb el mateix material.

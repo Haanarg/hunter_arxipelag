@@ -177,6 +177,17 @@ try {
     window.HUNTER_HUEY_DUANE=null;
     console.warn('Huey GLB no disponible; model de reserva actiu',hueyError);
   }
+  // Apache final: preparar el GLB abans de la fàbrica síncrona.
+  // Si encara no s'ha pujat el binari, conservar la reserva procedural.
+  try {
+    const {prepareApacheAraonRuntime}=await import('./apache-araon-runtime.mjs?v=0.6.192');
+    window.HUNTER_APACHE_ARAON=await prepareApacheAraonRuntime(THREE);
+    console.info('Apache Araon 50% + rodes 75%, sàlvia mat i negres',
+      window.HUNTER_APACHE_ARAON.dimensions);
+  } catch (apacheError) {
+    window.HUNTER_APACHE_ARAON=null;
+    console.warn('Apache GLB no disponible; reserva procedural activa',apacheError);
+  }
   // El bundle inclou els scripts clàssics en el mateix ordre i preserva
   // les variables globals de la versió anterior. Només fem UNA petició.
   // Si el fitxer empaquetat no s'ha desplegat, recuperem el loader antic.
