@@ -31,6 +31,7 @@ function makeTemplate(THREE){
  );
  atlas.colorSpace=THREE.SRGBColorSpace;
  atlas.flipY=false;
+ atlas.wrapS=THREE.RepeatWrapping;atlas.wrapT=THREE.RepeatWrapping;
  const ms=MATERIALS.map(m=>{
   const p=m.pbrMetallicRoughness||{},f=p.baseColorFactor||[1,1,1,1];
   const mat=new THREE.MeshStandardMaterial({
