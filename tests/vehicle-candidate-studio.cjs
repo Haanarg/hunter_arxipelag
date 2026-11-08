@@ -25,7 +25,7 @@ assert(!studio.includes('SimplifyModifier'),'No cal simplificar els candidats ac
 assert(!html.includes('id="steeringControl"'),'La pestanya de moto i els seus controls s’han retirat');
 assert(html.includes('7 tipus de vehicles'),'El text del catàleg ha d’estar actualitzat');
 const files=Object.values(manifest.models).flat();
-assert.equal(files.length,14,'S'han retirat sis GLB genèrics dels blindats; queden 14 CC0 locals');
+assert.equal(files.length,14,'Sis GLB genèrics retirats dels blindats; queden 14 CC0 locals');
 assert.deepEqual(manifest.models.tanc,[],'Els antics tancs genèrics han desaparegut');
 assert.deepEqual(manifest.models.tanqueta,[],'Els antics APC genèrics han desaparegut');
 assert(manifest.limits.maxFileBytes>=32*1024*1024,'Cal admetre GLB més grans per als blindats');
