@@ -7,7 +7,9 @@
 **P2 · 2026-11-08 · renovació dels candidats d'helicòpter (laboratori, no integració):**
 - [x] Eliminats del banc i de `assets/vehicle-candidates/` els 3 GLB d'helicòpter utilitari civil i els 3 de l'antic helicòpter de combat (rescat/transport/coaxial); manifest de 20 GLB locals i 9 famílies de vehicles.
 - [x] Incorporades sis referències **militars** al laboratori `vehicles-externs-proves.html`: Huey UH-1 (hruschak30, Duane's Mind i helijah UH-1N) i Apache AH-64 (Araon, fauzan_3d i manilov.ap). Visors externs oficials Sketchfab i registre d'autor/llicència CC BY 4.0. No hi ha còpia local dels GLB ni canvis al joc.
-- [ ] Triar amb prova visual i rendiment el model definitiu de cada helicòpter i obtenir el GLB original amb la llicència i atribucions; comparar triangles, materials i separació d'elements animables.
+- [x] Models seleccionats: **Huey UH-1 de Duane's Mind** i **Apache AH-64 d'Araon**. Eliminades les alternatives no seleccionades del catàleg; el visor de laboratori només conserva les fitxes elegides.
+- [x] Preparat el banc amb importació GLB local, simplificació Meshopt als objectius 100/75/50/25, protecció de malles animades/sensibles i exportació GLB de cada variant (l'usuari descarregarà els originals).
+- [ ] Importar al banc els dos fitxers originals de Sketchfab quan l'usuari els adjunti; fer proves amb resultats reals de triangles, materials, rotors, animacions i integritat dels GLB exportats. **No s'han baixat ni integrat els GLB originals al repositori** perquè la descàrrega de Sketchfab requereix accés autenticat.
 - [ ] Integrar els seleccionats a `src/vehicle-model-core.mjs` amb el rotor principal/de cua, animacions, tripulants, escales, punts de rodes/patins, armes i míssils de l'Apache; provar SOLO, COOP, Android i l'impacte FPS. L'única modificació actual és al banc de candidats.
 
 **P2 · v0.6.185 · Naked streetfighter definitiva al joc (implementat):**
