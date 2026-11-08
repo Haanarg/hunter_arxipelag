@@ -26,7 +26,7 @@ export async function prepareHueyDuaneRuntime(THREE){
   throw Error('Dimensions del Huey 110% incompatibles: '+dimensions.toArray());
  const skidContactHeight=check.userData.skidContactHeight;
  const rotorContactHeight=check.userData.rotorContactHeight;
- if(!(rotorContactHeight>3.7&&rotorContactHeight<5.3))
+ if(!(rotorContactHeight>2.3&&rotorContactHeight<5.3))
   throw Error('Altura del rotor Huey fora de rang: '+rotorContactHeight);
  return Object.freeze({
   name:"Bell UH-1 Huey · Duane's Mind · portes obertes · +10%",
