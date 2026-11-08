@@ -14,10 +14,7 @@ export const CATALOG=[
    P('transport-collection-hd','Grand touring coupe'),
    P('transport-collection-hd','Executive sedan'),
    P('transport-collection-hd','Touring SUV')]},
- {id:'camio',name:'Camió militar 6×6',kind:'terra',options:[
-   P('armoured-column-and-field-camp','Supply Truck'),
-   P('transport-collection-hd','Three-axle flatbed truck'),
-   P('armoured-column-and-field-camp','Fuel Tanker')]},
+
  {id:'tanqueta',name:'Tanqueta',kind:'terra',options:[
    P('armoured-column-and-field-camp','Tracked APC'),
    P('armoured-column-and-field-camp','Wheeled APC'),
@@ -26,12 +23,8 @@ export const CATALOG=[
    P('armoured-column-and-field-camp','Main Battle Tank'),
    P('armoured-column-and-field-camp','Light Tank'),
    P('armoured-column-and-field-camp','Self-Propelled Gun')]},
- {id:'windsurf',name:'Windsurf',kind:'mar',note:'Encara no hi ha tres windsurfs complets (taula + vela) verificats. Aquestes cerques poden donar només taules o embarcacions de vela: tracta-les com a material de referència, no com a substituts llestos.',
-   options:[Q('windsurf board'),Q('windsurfing sailboard'),Q('windsurf rig')]},
- {id:'barca_rems',name:'Barca de rems',kind:'mar',options:[
-   P('quiet-lake-fishing','Teal Rowboat'),
-   P('lighthouse-and-rocky-coast','Rowing Boat'),
-   P('medieval-mmo-starter-realm','Rowing Boat')]},
+
+
  {id:'moto_aquatica',name:'Moto aquàtica',kind:'mar',options:[
    P('powerboat-racing-and-launch-ramp','Stand-up personal watercraft'),
    P('powerboat-racing-and-launch-ramp','Sit-down personal watercraft'),
