@@ -13,7 +13,6 @@ const SPEC=Object.freeze({
 });
 const round=v=>Math.round(v*1e5);
 const key=p=>round(p.x)+','+round(p.y)+','+round(p.z);
-const ptmp=null;
 
 function splitComponents(THREE,mesh){
  const source=mesh.geometry.clone();
@@ -96,7 +95,7 @@ export function prepareStreetfighterPreview(THREE,root){
  if(!body||!wheel||!handle)throw Error('GLB Naked streetfighter: falten peces de direcció');
  // La peça accent és el marcador vermell que rotava enganxat a cada roda.
  for(const name of ['side-stand','naked-streetfighter_13',
-                    'wheel-front/accent','wheel-rear/accent']){
+                    'wheel-frontaccent','wheel-rearaccent']){
    const part=root.getObjectByName(name);part?.parent?.remove(part);
  }
  root.updateMatrixWorld(true);
@@ -147,6 +146,6 @@ export function isStreetfighterDetailProtected(mesh){
  const name=mesh?.name||'';
  // No simplificar els radis, els buits de les llandes, els pneumàtics,
  // els nuclis de roda, la forquilla ni els punys.
- return name.startsWith('wheel-front/')||name.startsWith('wheel-rear/')||
-        name.startsWith('streetfighter-front-')||name==='handlebar';
+ return name.startsWith('wheel-front')||name.startsWith('wheel-rear')||
+        name.startsWith('streetfighter-front-')||name==='handlebar'||name==='handlebar_1'||name==='mesh_12';
 }
