@@ -4,6 +4,11 @@
 
 > **Proves automatitzades (2026-11-07):** la bateria s'ha reduït a 13 comprovacions essencials, executables amb `npm test`. Les mencions a noms de proves concretes dins les fases històriques són evidències d'implementacions passades, no fitxers que encara hagin d'existir ni ordres de CI vigents.
 
+**P1 · 2026-11-08 · model Apache d'Araon sense textures al visor:**
+- [x] Afegida inspecció dels mapes de color dels GLB importats a `src/helicopter-texture-recovery.mjs`, reutilitzada pels dos bancs de proves. Si existeix un únic atles de color desconnectat, s'intenta revincular; si falten textures, es mostren pintures militars de **substitució clarament etiquetades**, sense fer-les passar per la textura oficial. Proves d'Atlas/color i CI executades.
+- [ ] **Carregar el GLB ORIGINAL real** `ah-64_apache.glb` (Araon, 2.970.256 bytes, CC BY) a `assets/vehicle-candidates/helicopter-lods/apache_100.glb`, i usar-lo com a font per a variants. El fitxer està **indexat a la biblioteca** del projecte però el proveïdor de fitxers rebutja la materialització dels bytes en aquesta sessió; cap binari no s'ha pujat a GitHub. Cal que l'usuari el torni a adjuntar a aquest xat o el publiqui directament al repositori.
+- [ ] Examinar les imatges/materials del GLB original real, reparar-les si cal, verificar visualment el model de 100% i els 75/50/25% amb les seves textures genuïnes, i actualizar el manifest només quan els GLB existeixin efectivament a GitHub.
+
 **P2 · 2026-11-08 · comparador de LOD del Huey i l'Apache:**
 - [x] Nova pàgina `helicopters-lod-proves.html` i mòdul `src/helicopters-lod-proves.mjs`: quatre vistes 3D sincronitzades (100%, 75%, 50%, 25%) del Huey (Duane's Mind) i Apache (Araon), rotació comuna, zoom, animacions i recompte de triangles.
 - [x] El visor prioritza els GLB del servidor (`assets/vehicle-candidates/helicopter-lods/{huey|apache}_{100|75|50|25}.glb`), però si encara no existeixen permet importar el ZIP local de 8 models, descomprimir-lo al navegador i conservar els GLB a IndexedDB per a visites futures. Enllaç afegit a `vehicles-externs-proves.html`.
