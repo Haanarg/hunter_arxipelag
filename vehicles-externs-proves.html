@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Hunter · Models externs de vehicles · Laboratori 3D</title>
-<meta name="description" content="Compara els models reals de Hunter: Arxipèlag amb tres alternatives GLB gratuïtes, renderitzades amb Three.js.">
+<meta name="description" content="Compara vehicles de Hunter amb GLB CC0 i helicòpters militars Huey/Apache en visor 3D CC BY.">
 <style>
 :root{color-scheme:dark;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;--bg:#102025;--panel:#192e32;--border:#426065;--ink:#edf5eb;--muted:#b2c9c5;--gold:#e8cd8e;--green:#cbe6a8}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:auto}
@@ -40,12 +40,17 @@ main{padding:15px clamp(10px,2vw,30px) 26px}
 footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-height:1.6}
 @media(min-width:1650px){#grid{grid-template-columns:repeat(4,minmax(0,1fr))}.panel{height:450px}}
 @media(max-width:650px){#grid{grid-template-columns:1fr}.panel{height:420px}.panel .status{min-height:16px}#vehicleList button{min-width:130px;flex-basis:130px}}
+
+/* Visors 3D externs: sobre el canvas comú, sota els textos del panell */
+.panel .viewport.has-embed{z-index:4;touch-action:auto}
+.panel .viewport.has-embed iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#18282a}
+.panel .label,.panel .meta{z-index:6}
 </style>
 <script type="importmap">{"imports":{"three":"./vendor/three-r186.module.mjs","three/addons/":"./vendor/three-addons/"}}</script>
 </head><body>
 <header><div class="kicker">HUNTER: ARXIPÈLAG · LABORATORI DE MODELS</div>
 <h1>Flota · Original versus 3 alternatives</h1>
-<p>Els <strong>9 vehicles que encara valoram</strong>. A l'esquerra, el model autèntic del joc; a la dreta, les alternatives GLB. La moto i la moto aquàtica definitives ja s'han integrat al joc i no apareixen entre els candidats. Una mateixa escala de comparació, llum direccional, materials PBR, ombres i càmera. <strong>Baixa per veure les vistes</strong>. Les propostes encara <strong>no</strong> substitueixen els vehicles del joc.</p>
+<p>Els <strong>9 vehicles que encara valoram</strong>. A l'esquerra, el model autèntic del joc; a la dreta, GLB CC0 o visors 3D externs de Huey i Apache. La moto i la moto aquàtica definitives ja s'han integrat al joc i no apareixen entre els candidats. Una mateixa escala de comparació, llum direccional, materials PBR, ombres i càmera. <strong>Baixa per veure les vistes</strong>. Les propostes encara <strong>no</strong> substitueixen els vehicles del joc.</p>
 <nav aria-label="Vistes">
 <button id="view-quarter" data-view="quarter" class="active">3/4</button><button data-view="front" id="view-front">Frontal</button>
 <button data-view="side" id="view-side">Lateral</button><button data-view="rear" id="view-rear">Posterior</button>
@@ -61,8 +66,8 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 </div></section>
 <section id="grid" aria-label="Comparativa de models 3D"></section>
 <div class="explainer">
-<strong>Com funciona:</strong> desplaça la pàgina amb la roda del ratolí o lliscant amb el dit. Es mostren el model actual del joc i tres alternatives GLB per a cada vehicle que continua en revisió. Arrossega horitzontalment un model per girar <strong>totes les càmeres</strong>; usa <strong>Alt + roda</strong> o els botons ＋ / － per ampliar. Cada candidat mostra els triangles, les malles, les dimensions i l'enllaç a la font/llicència quan es pot carregar. Si no es pot baixar automàticament, obre la font, baixa el <strong>.glb</strong> i usa «Importa GLB» dins la proposta. Les propostes no hereten automàticament col·lisions, rodes, seients, rotors, torretes o animacions del joc. Els models del catàleg extern són CC0; si importes un fitxer propi, revisa'n la llicència.
+<strong>Com funciona:</strong> desplaça la pàgina amb la roda del ratolí o lliscant amb el dit. Es mostren el model actual del joc i tres alternatives GLB per a cada vehicle que continua en revisió. Arrossega horitzontalment un model per girar <strong>totes les càmeres</strong>; usa <strong>Alt + roda</strong> o els botons ＋ / － per ampliar. Els GLB locals mostren triangles, malles i dimensions; els helicòpters Sketchfab indiquen autor, llicència CC BY i polígons publicats, si consten. Els seus visors tenen una càmera independent i necessiten connexió. Si no es pot baixar automàticament, obre la font, baixa el <strong>.glb</strong> i usa «Importa GLB» dins la proposta. Les propostes no hereten automàticament col·lisions, rodes, seients, rotors, torretes o animacions del joc. Els GLB antics de 3DAssets són CC0; els nous helicòpters són CC BY 4.0 i requereixen atribució si s'integren al joc. Si importes un fitxer propi, revisa'n la llicència.
 </div>
 </main><footer>Prova independent · Three.js r186 (el mateix del joc) · GLTFLoader · models originals importats de la fàbrica del joc · cap canvi a la física, combat o desament. Algunes fonts externes poden no permetre carregar fitxers des d'un altre domini; en aquest cas, utilitza la importació local.</footer>
-<script type="module" src="./src/vehicles-externs-proves.mjs?rev=moto-accepted-1"></script>
+<script type="module" src="./src/vehicles-externs-proves.mjs?rev=military-helicopters-1"></script>
 </body></html>
