@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hunter · Helicòpters: GLB contra geometria del motor</title>
+<meta name="description" content="Comparador en quatre vistes del Huey i l'Apache: GLB original versus model BufferGeometry natiu de Three.js.">
+<style>
+:root{color-scheme:dark;--bg:#101e24;--panel:#1c3034;--edge:#54716b;--ink:#edf3e9;--soft:#b8cdc6;--gold:#ead09e;font:14px system-ui,sans-serif}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);min-height:100%;overflow-x:hidden}
+a{color:#d8edab}header{padding:18px clamp(12px,3vw,30px);background:linear-gradient(120deg,#254438,#152b30);border-bottom:1px solid var(--edge)}
+header h1{font-size:clamp(23px,3vw,33px);margin:4px 0 8px}
+header p{max-width:1050px;line-height:1.5;color:#d7e0d3;margin:6px 0}
+sup{font-size:10px}main{padding:12px clamp(10px,2vw,28px) 28px}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:4px 0 13px}
+button{cursor:pointer;background:#2d4a47;border:1px solid #7e9284;color:#ecf1e9;border-radius:7px;padding:8px 12px;font-weight:700}
+button:hover{background:#41645a}button[aria-pressed="true"]{background:#dcecb8;color:#1a2924}
+button:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+label{display:inline-flex;gap:7px;align-items:center;color:#d4e1d6}
+#notice{margin:0 0 14px;color:#e9d49f;min-height:20px;font-size:12px}
+#cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.card{border:1px solid var(--edge);border-radius:12px;background:#30484a;overflow:hidden;min-width:0}
+.card[data-kind="engine"]{border-color:#9fb88b}
+.card h2{margin:0;font-size:17px}
+.card .caption{color:var(--soft);font-size:12px;margin-top:5px}
+.card>.top{position:relative;z-index:3;background:#16282de0;padding:12px 13px;min-height:68px}
+.card .viewport{min-height:275px;height:clamp(290px,31vw,410px);position:relative;touch-action:pan-y;cursor:grab}
+.card .viewport:active{cursor:grabbing}
+.card footer{position:relative;z-index:3;background:#16282de8;padding:10px 13px;border-top:1px solid #4b6962;line-height:1.5;min-height:48px}
+.card .stat{font-size:12px;color:#cbded1}
+#draw{position:fixed;inset:0;pointer-events:none;z-index:2}
+#help{padding:14px 0;color:#c1d5c8;line-height:1.55;font-size:12px}
+#help strong{color:#f3efc9}
+.card[hidden]{display:none!important}
+@media(max-width:730px){#cards{grid-template-columns:1fr}.card .viewport{height:280px}}
+</style>
+<script type="importmap">{"imports":{"three":"./vendor/three-r186.module.mjs","three/addons/":"./vendor/three-addons/"}}</script>
+</head><body>
+<header>
+<div style="color:#e7c989;letter-spacing:.16em;font-size:11px;font-weight:800">HUNTER: ARXIPÈLAG · LABORATORI 3D</div>
+<h1>Helicòpters: GLB vs. motor de joc</h1>
+<p>Comparació directa entre els models GLB aprovats i els models reconstruïts amb <strong>THREE.BufferGeometry</strong>, amb la mateixa escala, il·luminació i càmera de cada parella. Els rotors continuen separats i animables.</p>
+<p><a href="vehicles-externs-proves.html">Tornar al banc de nous models</a> · <a href="index.html">Jugar</a></p>
+</header>
+<main>
+<div class="toolbar">
+<button data-filter="all" aria-pressed="true">Tots dos</button><button data-filter="huey" aria-pressed="false">Només Huey</button><button data-filter="apache" aria-pressed="false">Només Apache</button>
+<button data-camera="quarter" aria-pressed="true">3/4</button><button data-camera="side" aria-pressed="false">Lateral</button><button data-camera="front" aria-pressed="false">Davant</button><button data-camera="top" aria-pressed="false">Zenital</button>
+<button id="zoomOut">−</button><button id="zoomIn">+</button>
+<label><input type="checkbox" id="spinning" checked> Rotors girant</label>
+<label><input type="checkbox" id="gridToggle" checked> Graella</label>
+</div>
+<p id="notice" role="status">Preparant les quatre versions…</p>
+<div id="cards">
+<article class="card" data-model="huey-glb" data-type="huey" data-kind="glb"><div class="top"><h2>Huey · GLB original</h2><div class="caption">Duane’s Mind · portes obertes · 100% · GLTFLoader</div></div><div class="viewport"></div><footer><div class="stat">Carregant…</div></footer></article>
+<article class="card" data-model="huey-native" data-type="huey" data-kind="engine"><div class="top"><h2>Huey · Motor Three.js</h2><div class="caption">Geometria reconstruïda amb BufferGeometry, UV i textura</div></div><div class="viewport"></div><footer><div class="stat">Preparant…</div></footer></article>
+<article class="card" data-model="apache-glb" data-type="apache" data-kind="glb"><div class="top"><h2>Apache · GLB definitiu</h2><div class="caption">Araon · 50% + rodes 75% · sàlvia/negre</div></div><div class="viewport"></div><footer><div class="stat">Carregant…</div></footer></article>
+<article class="card" data-model="apache-native" data-type="apache" data-kind="engine"><div class="top"><h2>Apache · Motor Three.js</h2><div class="caption">BufferGeometry compacte · 50% · colors de vèrtex</div></div><div class="viewport"></div><footer><div class="stat">Preparant…</div></footer></article>
+</div>
+<div id="help"><strong>Què mesuram?</strong> Triangles, malles, temps de preparació i dimensions. El Huey conserva exactament els 1.767 triangles de la versió GLB aprovada. L’Apache natiu en conserva 2.173 (50%), enfront dels 2.193 del GLB amb rodes del 75%: és una alternativa lleugerament diferent, amb colors de vèrtex en lloc de les textures originals. <strong>Els dos models actuals del joc encara són els GLB.</strong> Aquest laboratori no altera la física ni el COOP.<br>
+<strong>Crèdits:</strong> <a href="https://sketchfab.com/3d-models/bell-huey-helicopter-755d8518a06e41b19752c1b54c0da588" target="_blank" rel="noopener noreferrer">Huey — Duane's Mind</a> i <a href="https://sketchfab.com/3d-models/ah-64-apache-df0993ee21e74a759cd0519f6fc51cf8" target="_blank" rel="noopener noreferrer">Apache — Araon</a>. Llicència CC BY 4.0.</div>
+</main>
+<script type="module" src="./src/helicopters-engine-compare.mjs?v=1"></script>
+</body></html>
