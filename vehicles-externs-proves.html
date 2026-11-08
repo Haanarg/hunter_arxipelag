@@ -33,7 +33,7 @@ main{padding:15px clamp(10px,2vw,30px) 26px}
 #draw{position:fixed;top:0;left:0;pointer-events:none;z-index:2;width:100vw;height:100vh}
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 16px}
 .toolbar label{font-size:12px;color:#c3d4c9}
-.toolbar input{accent-color:#ccdf99}
+.toolbar input{accent-color:#ccdf99}#steeringControl{display:inline-flex;gap:7px;align-items:center}#steeringControl[hidden]{display:none!important}#steeringAngle{width:150px}
 .feature-info{padding:10px 13px;margin:0 0 12px;border-left:3px solid var(--gold);background:#1b3535;font-size:12px;line-height:1.55;color:#e3edda}.feature-info[hidden],.panel[hidden]{display:none!important}
 .explainer{padding:13px 17px;border:1px solid #42645f;border-radius:11px;background:#152a2d;font-size:12px;line-height:1.6;color:#c6dbd0;margin-top:16px}
 .explainer strong{color:#eef2d1}.explainer a{color:#daebac}
@@ -57,12 +57,14 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <section id="info"><div><h2 id="vehicleName">Carregant el taller…</h2><div id="warning"></div></div>
 <div class="toolbar"><label><input id="fitScale" type="checkbox" checked> Ajustar candidates a l'escala del model actual</label>
 <label><input id="animate" type="checkbox" checked> Animacions disponibles</label>
-<label><input id="showGrid" type="checkbox" checked> Graella i referència humana</label></div></section>
+<label><input id="showGrid" type="checkbox" checked> Graella i referència humana</label>
+<label id="steeringControl" hidden>Direcció (desactiva «Animacions» per ajustar):
+<input id="steeringAngle" type="range" min="-35" max="35" value="0" step="1" aria-label="Gir del manillar"><output id="steeringValue">0°</output></label></div></section>
 <div id="featureInfo" class="feature-info" hidden></div>
 <section id="grid" aria-label="Comparativa de models 3D"></section>
 <div class="explainer">
-<strong>Com funciona:</strong> desplaça la pàgina amb la roda del ratolí o lliscant amb el dit. Per a la motocicleta es mostren el model del joc, el GLB triat i quatre versions simplificades; el percentatge de triangles real apareix a cada targeta. Arrossega horitzontalment un model per girar <strong>totes les càmeres</strong>; usa <strong>Alt + roda</strong> o els botons ＋ / － per ampliar. Cada candidat mostra els triangles, les malles, les dimensions i l'enllaç a la font/llicència quan es pot carregar. Si no es pot baixar automàticament, obre la font, baixa el <strong>.glb</strong> i usa «Importa GLB» dins la proposta. Les propostes no hereten automàticament col·lisions, rodes, seients, rotors, torretes o animacions del joc. Els models del catàleg extern són CC0; si importes un fitxer propi, revisa'n la llicència.
+<strong>Com funciona:</strong> desplaça la pàgina amb la roda del ratolí o lliscant amb el dit. Per a la motocicleta es mostren el model del joc, el GLB triat amb la direcció corregida i quatre versions simplificades; les rodes conserven els radis originals i els percentatges reals es mostren a cada targeta. L'animació mou el manillar, els agafadors, la forquilla i la roda davantera junts. Arrossega horitzontalment un model per girar <strong>totes les càmeres</strong>; usa <strong>Alt + roda</strong> o els botons ＋ / － per ampliar. Cada candidat mostra els triangles, les malles, les dimensions i l'enllaç a la font/llicència quan es pot carregar. Si no es pot baixar automàticament, obre la font, baixa el <strong>.glb</strong> i usa «Importa GLB» dins la proposta. Les propostes no hereten automàticament col·lisions, rodes, seients, rotors, torretes o animacions del joc. Els models del catàleg extern són CC0; si importes un fitxer propi, revisa'n la llicència.
 </div>
 </main><footer>Prova independent · Three.js r186 (el mateix del joc) · GLTFLoader · models originals importats de la fàbrica del joc · cap canvi a la física, combat o desament. Algunes fonts externes poden no permetre carregar fitxers des d'un altre domini; en aquest cas, utilitza la importació local.</footer>
-<script type="module" src="./src/vehicles-externs-proves.mjs?rev=jetski-integrated-1"></script>
+<script type="module" src="./src/vehicles-externs-proves.mjs?rev=streetfighter-rig-v2"></script>
 </body></html>
