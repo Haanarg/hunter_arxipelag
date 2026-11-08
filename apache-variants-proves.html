@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hunter · Apache 50% amb rodes 75% · Tres acabats</title>
+<meta name="description" content="Compara els tres acabats mats de l'Apache AH-64, amb el cos 50% i les rodes 75%.">
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:dark;--bg:#102025;--border:#546f68;--ink:#edf4ec;--gold:#e6cf9a;--muted:#c5d7cb}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);min-height:100%}button,input{font:inherit}
+a{color:#d7eaa7}button,.upload{cursor:pointer;background:#284741;color:#f6f8e8;border:1px solid #799285;border-radius:8px;padding:9px 12px;font-weight:700;font-size:13px}
+button:hover,.upload:hover{background:#365d4e}button[aria-pressed=true]{background:#dceba9;color:#14241e}
+button:focus-visible,a:focus-visible,.upload:focus-within{outline:2px solid var(--gold);outline-offset:2px}
+header.page{background:linear-gradient(115deg,#31463d,#12262b);padding:20px clamp(12px,2.7vw,34px);border-bottom:1px solid var(--border)}
+.kicker{font-size:11px;letter-spacing:.12em;color:var(--gold);font-weight:900}
+h1{font-size:clamp(23px,3.4vw,37px);margin:5px 0 8px}p{font-size:13px;color:var(--muted);line-height:1.55;max-width:1050px;margin:6px 0}
+nav,.toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:13px}
+nav a{margin-right:12px;font-size:13px}
+main{padding:15px clamp(10px,2vw,30px) 36px}
+.toolbar{margin:0 0 14px;padding:11px;background:#1a3334;border:1px solid var(--border);border-radius:9px}
+.upload input{display:none}.toolbar small{color:#cbdccf;font-size:12px}
+#notice{color:#f1d9ad;font-size:13px;line-height:1.5;margin:10px 0 14px;min-height:18px}
+#cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.card{height:clamp(370px,43vw,560px);position:relative;min-width:0;overflow:hidden;border:1px solid #6f8274;border-radius:12px;background:#2f4649;display:flex;flex-direction:column}
+.card[data-variant="salvia-mat"]{border-color:#bacda9}
+.card header,.card footer{position:relative;z-index:3;background:#122a2ce8;padding:11px}
+.card header{border-bottom:1px solid #526d66}
+.card footer{border-top:1px solid #526d66;min-height:86px}
+.card h2{font-size:16px;margin:0 0 4px}
+.card .subtitle{font-size:12px;color:#d1ddc8;margin:0}
+.card .viewport{flex:1;min-height:220px;cursor:grab;touch-action:pan-y}
+.card .viewport:active{cursor:grabbing}
+.card .status{font-size:11px;line-height:1.45;display:block;min-height:34px}
+.card .download{padding:5px 9px;font-size:11px;margin-top:6px}
+.card .download[hidden]{display:none}
+.card.dragging{outline:3px dashed #dceba9;outline-offset:-5px}
+#draw{position:fixed;top:0;left:0;pointer-events:none;z-index:2;width:100vw;height:100vh}
+#help{margin-top:18px;padding:14px;background:#142e30;border:1px solid #42635a;border-radius:10px;font-size:12px;line-height:1.65;color:#c7d8ca}
+@media(max-width:1000px){#cards{grid-template-columns:1fr}.card{height:400px}}
+</style>
+<script type="importmap">{"imports":{"three":"./vendor/three-r186.module.mjs","three/addons/":"./vendor/three-addons/"}}</script>
+</head><body>
+<header class="page"><div class="kicker">HUNTER: ARXIPÈLAG · LABORATORI 3D</div>
+<h1>Apache AH-64 · 50% + rodes 75%</h1>
+<p>Tres variants de l’Apache d’Araon amb la mateixa geometria híbrida: cos de detall equivalent al <strong>50%</strong>, rodes recuperades a un detall del <strong>75%</strong>, i tres textures PBR progressivament més clares i menys reflectants. Les tres conserven l'atles UV, la cabina i els rotors.</p>
+<nav><a href="helicopters-lod-proves.html">Comparador de LOD originals</a><a href="vehicles-externs-proves.html">Tots els candidats</a><a href="index.html">Jugar</a></nav>
+</header>
+<main>
+<div class="toolbar">
+<button data-view="quarter" aria-pressed="true">3/4</button><button data-view="front">Davant</button><button data-view="side">Lateral</button><button data-view="rear">Darrere</button><button data-view="top">Zenital</button>
+<button id="zoomIn" aria-label="Apropar">＋</button><button id="zoomOut" aria-label="Allunyar">－</button>
+<label><input id="gridToggle" type="checkbox" checked> Graella</label>
+<label class="upload">Importa ZIP o GLB <input id="models" type="file" accept=".zip,.glb" multiple></label>
+<small>Arrossega el ZIP o els tres GLB sobre els panells. Quedaran desats en aquest navegador.</small>
+</div>
+<div id="notice" role="status">Carregant les variants publicades o les importades anteriorment…</div>
+<section id="cards" aria-label="Tres acabats de l'Apache">
+<article class="card" data-variant="oliva-clara"><header><h2>1 · Oliva clara</h2><p class="subtitle">Verd oliva il·luminat · rugositat 0,83</p></header><div class="viewport"></div><footer><span class="status">Cercant model…</span><button class="download" hidden>Desa GLB</button></footer></article>
+<article class="card" data-variant="salvia-mat"><header><h2>2 · Sàlvia mat</h2><p class="subtitle">Verd grisós més clar · rugositat 0,91</p></header><div class="viewport"></div><footer><span class="status">Cercant model…</span><button class="download" hidden>Desa GLB</button></footer></article>
+<article class="card" data-variant="sorra-verda"><header><h2>3 · Sorra verdosa</h2><p class="subtitle">To sorra/caqui clar · rugositat 0,97</p></header><div class="viewport"></div><footer><span class="status">Cercant model…</span><button class="download" hidden>Desa GLB</button></footer></article>
+</section>
+<div id="help"><strong>Com comparar-los:</strong> arrossega el ratolí per girar totes tres càmeres alhora, fes servir ＋/－ per variar el zoom i alterna les vistes. Els binaris s'intenten carregar de <code>assets/vehicle-candidates/helicopter-lods/</code>. Si encara no són al servidor, importa el paquet <code>apache-50-rodes75-tres-variants.zip</code> (o els tres GLB descomprimits); quedaran guardats localment. La web no penja automàticament fitxers a GitHub. <strong>Origen i llicència:</strong> <a href="https://sketchfab.com/3d-models/ah-64-apache-df0993ee21e74a759cd0519f6fc51cf8" target="_blank" rel="noopener">AH-64 Apache — Araon</a>, CC BY 4.0. S'han modificat la simplificació de geometria, la brillantor de l'atles difús i la rugositat PBR. El model del joc no s'ha substituït.</div>
+</main>
+<script type="module" src="./src/apache-variants-proves.mjs?v=1"></script>
+</body></html>
