@@ -3241,6 +3241,23 @@ if((!a||v.alt-g<16)&&!deckCarrier){const footprint=vehicleBox(v,nx,nz,v.hd);for(
   // Les parets del pis superior no bloquegen vehicles a nivell de terra.
   if(land&&(w.y1<g-.8||w.y0>g+
     (v.t==='tanc'||v.t==='camio'?5.6:4.2)*(VS[v.t]||1)))continue;
+  // El pou enderrocat deixa una pila baixa de pedres. El tanc passa
+  // sobre les runes; per als altres vehicles continua havent-hi obstacle.
+  if(w.civicRubble&&v.t==='tanc')continue;
+  // La destrucció de mobiliari segueix dmgW/collapseCivicProp, de manera
+  // que cauen tots els segments del pou, apareixen les runes i els FX.
+  if(land&&w.civicFurniture){
+    const ram=window.HUNTER_SHARED_COMBAT.tankCivicRam(v,w,v.envCd);
+    if(ram){
+      dmgW(w,w.hp);
+      if(w.civicObject?.broken){
+        v.v*=ram.speedFactor;v.bump=Math.max(v.bump,ram.bump);v.envCd=ram.cooldown;
+        msg=w.civicFurniture==='bench'?'Has atropellat un banc!':'Has enderrocat un pou!';
+        msgT=1.6;
+        continue;
+      }
+    }
+  }
   if(w.towerLegOwner&&land){
     const tower=w.towerLegOwner;
     if(tower.destroyed)continue;

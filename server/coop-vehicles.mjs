@@ -2,7 +2,7 @@ import {vehicleSpecs,vehicleSeatCount} from '../src/vehicle-specs.mjs';
 import {palmImpact,rockImpact} from '../src/vehicle-environment-core.mjs';
 import {firstVehicleContact,vehicleContactDamage} from './coop-vehicle-contacts.mjs';
 import {stepRangeVehicle} from './coop-vehicle-motion.mjs';
-import {vehicleDamage,combatBalance,tankCanCrush,barrierRam,vehicleHullDistance,vehicleHullSegmentT} from '../src/combat-rules.mjs';
+import {vehicleDamage,combatBalance,tankCanCrush,barrierRam,tankCivicRam,vehicleHullDistance,vehicleHullSegmentT} from '../src/combat-rules.mjs';
 import {towerLegRamDamage} from '../src/tower-model.mjs';
 import {vehicleDynamics,advanceVehicle} from '../src/vehicle-dynamics-core.mjs';
 import {ferryLocal,ferryWorld,ferrySurfaceY,ferryPedestrianAt,
@@ -256,7 +256,8 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
         // Si aguanta la pota, la col·lisió atura el vehicle sense repetir dany.
         hit={...hit,kind:'tower'};break;
       }
-      const ram=barrierRam(probe,hit.target,Math.max(0,((v.barrierUntilTick||0)-tick)/30));
+      const recovery=Math.max(0,((v.barrierUntilTick||0)-tick)/30);
+      const ram=tankCivicRam(probe,hit.target,recovery)||barrierRam(probe,hit.target,recovery);
      if(!ram||!onBarrier(hit.target))break;
      v.barrierUntilTick=tick+Math.ceil(ram.cooldown*30);v.v=probe.v*ram.speedFactor;probe.v=v.v;v.bump=ram.bump;
      Object.assign(v,hit.safe);

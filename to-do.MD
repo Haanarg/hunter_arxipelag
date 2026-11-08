@@ -1,3 +1,9 @@
+**P1 · 2026-11-08 · tanc contra mobiliari dels pobles:**
+- [x] La col·lisió de bancs (5 PV) i pous (8 PV) ara admet l'embestida del **tanc**, inclosa la marxa enrere; el vehicle no pateix dany i conserva pràcticament tota la velocitat.
+- [x] Reutilitzat `dmgW`/`collapseCivicProp` per a fragments, so, eliminació atòmica dels dotze segments del pou i aparició de les runes. Les runes ja no bloquegen els tancs; continuen blocant els altres vehicles.
+- [x] Lògica compartida a `combat-rules.mjs` per a SOLO i Worker COOP; prova `tests/tank-civic-runover.mjs` amb enderroc, agrupació de col·lisions, idempotència i escombratge del Worker.
+- [ ] Confirmar els efectes visuals i el pas del tanc en una partida real (SOLO i COOP).
+
 # Hunter: Arxipèlag — to-do.MD
 
 > **FONT ÚNICA DE FEINA PENDENT.** Revisió del repositori: 2026-11-04 (versió inicial observada 0.6.116; P0 revisada a 0.6.119). Aquest document és el pla d'execució i el registre de tasques obertes. Els documents antics descriuen implementacions històriques i **no** obren tasques noves automàticament. Quan es resolgui una tasca, marcar-la [x] i afegir la prova o el commit. No confondre «implementat» amb «verificat en una partida real».

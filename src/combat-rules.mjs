@@ -214,6 +214,15 @@ export function mayRamWhileRecovering(type,barbed,cooldown){
   return cooldown<=0||type==='tanc'||(type==='camio'&&barbed);
 }
 // Original barrier outcomes, without renderer or mutable world references.
+// Els bancs i els pous són obstacles estructurals (rammable=false):
+// únicament el tanc els pot enderrocar envestint-los. Reutilitzam la
+// resposta de barrera sense mutar el collider, per no permetre que un
+// cotxe o un camió destrueixin un pou per accident.
+export function tankCivicRam(v,wall,cooldown=0){
+ if(v?.t!=='tanc'||(wall?.civicFurniture!=='bench'&&wall?.civicFurniture!=='well')||
+   wall.civicObject?.broken||!Number.isFinite(v.v)||Math.abs(v.v)<.05)return null;
+ return barrierRam(v,{rammable:true,barbed:false,open:wall.open,hp:wall.hp},cooldown);
+}
 export function barrierRam(v,wall,cooldown=0){
  const barbed=!!wall.barbed;
  if((!wall.rammable&&!barbed)||wall.open||!Number.isFinite(wall.hp)||wall.hp<=0||!mayRamWhileRecovering(v.t,barbed,cooldown)||!vehicleCanBreakBarrier(v,barbed))return null;

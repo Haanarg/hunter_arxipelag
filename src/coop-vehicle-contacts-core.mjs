@@ -11,7 +11,9 @@ export function firstVehicleContact(v,from,others,geometry,proving=true,world=nu
  const steps=Math.max(1,Math.ceil(travel/.2));let safe={x:from.x,y:from.y,z:from.z,hd:from.hd};
  for(let i=1;i<=steps;i++){
   const t=i/steps,p={...v,x:from.x+(v.x-from.x)*t,y:from.y+(v.y-from.y)*t,z:from.z+(v.z-from.z)*t,hd:from.hd+angle*t},footprint=contactBox(p,proving);
-  for(const wall of geometry.walls)if(!wall.open&&wall.playerBlock!==false&&wall.y1>p.y-.5&&wall.y0<top(p,proving)&&(wall.barbed&&Number.isFinite(wall.ax)&&Number.isFinite(wall.bx)?fenceVehicleContact(wall,{...footprint,v:p}):obbOverlap(footprint,{x:(wall.x0+wall.x1)/2,z:(wall.z0+wall.z1)/2,hd:0,w:Math.max(.05,wall.x1-wall.x0),d:Math.max(.05,wall.z1-wall.z0)})))return {kind:'wall',target:wall,safe};
+  // Els tancs poden travessar les runes baixes del pou després de
+  // destruir-lo; les altres classes de vehicles les continuen esquivant.
+  for(const wall of geometry.walls)if(!(v.t==='tanc'&&wall.civicRubble)&&!wall.open&&wall.playerBlock!==false&&wall.y1>p.y-.5&&wall.y0<top(p,proving)&&(wall.barbed&&Number.isFinite(wall.ax)&&Number.isFinite(wall.bx)?fenceVehicleContact(wall,{...footprint,v:p}):obbOverlap(footprint,{x:(wall.x0+wall.x1)/2,z:(wall.z0+wall.z1)/2,hd:0,w:Math.max(.05,wall.x1-wall.x0),d:Math.max(.05,wall.z1-wall.z0)})))return {kind:'wall',target:wall,safe};
   const ferry=ferryForVehicle(p,others,p.x,p.z,true);
   if(ferry&&Math.abs(p.y-ferrySurfaceY(ferry,ferryLocal(ferry,p.x,p.z).z))<5&&
      obbOverlap(footprint,ferryCabinBox(ferry)))
