@@ -1,5 +1,6 @@
 import {turretSpecs,advanceTurret} from './vehicle-turret-core.mjs';
 import {vehicleSpecs} from './vehicle-specs.mjs';
+import {createJetSki25,JET_SKI_25_META} from './jet-ski-25-geometry.mjs';
 import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs?v=0.6.170';
 import {createHovercraftConcept,hovercraftConcepts} from './hovercraft-concepts.mjs?v=0.6.81';
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
@@ -476,11 +477,16 @@ export const vehicleModels=Object.freeze({
         box(g,.22,.12,.22,tubeCol,-.82,1.67,3.40,'metal');
       }
       if(t==='moto_aquatica'){
-        const bodyCol=appearance.color??0xc94e3f,dark=0x33383b;
-        const nose=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(bodyCol,'paint'));nose.scale.set(.72,.42,1.55);nose.position.set(0,.62,-.95);g.add(nose);
-        box(g,1.38,.38,2.55,bodyCol,0,.54,.55,'paint');box(g,.72,.22,1.05,dark,0,.88,.6,'rubber');box(g,.82,.16,.56,0x222629,0,1.02,.2,'rubber');
-        rod(g,[-.42,1.16,-.35],[.42,1.16,-.35],.055,metal);rod(g,[0,.94,-.2],[0,1.16,-.35],.05,metal);
-        for(const x of[-.52,.52])box(g,.16,.13,.7,0xe9e7df,x,.36,.45,'paint');
+        // Recreational Jet Ski definitiu: 2.578 triangles (~25% del GLB CC0
+        // original), ja descodificats com a dades geomètriques locals.
+        // No carregam fitxers GLB ni executam meshoptimizer durant la missió.
+        // La coberta coral es pinta per instància amb el mateix color viu
+        // determinat pel generador del món; totes les llavors es conserven.
+        const bodyColor=appearance.color??0xc94e3f;
+        g.add(createJetSki25(THREE,{color:bodyColor,material}));
+        g.userData.jetSkiModel='recreational-jet-ski-25';
+        g.userData.jetSkiColor=bodyColor;
+        g.userData.jetSkiTriangles=JET_SKI_25_META.triangles;
       }
       if(t==='barca_rems'){
         // Proa = -Z; popa ampla = +Z. Buc buit de fusta, sense tapa sobre la banyera.
