@@ -25,7 +25,11 @@ assert(!studio.includes('SimplifyModifier'),'No cal simplificar els candidats ac
 assert(!html.includes('id="steeringControl"'),'La pestanya de moto i els seus controls s’han retirat');
 assert(html.includes('9 vehicles'),'El text del catàleg ha d’estar actualitzat');
 const files=Object.values(manifest.models).flat();
-assert.equal(files.length,26,'Han de quedar 26 GLB candidats no seleccionats');
+assert.equal(files.length,20,'Han de quedar 20 GLB candidats després de retirar els helicòpters civils');
+for(const id of ['heli','heli_combat'])assert(!(id in manifest.models),'Helicòpter descartat encara al manifest: '+id);
+assert.equal(manifest.retiredHelicopterCandidates,6);
+for(const source of ['e619745e46b84a79a98d4a41774f71e6','df0993ee21e74a759cd0519f6fc51cf8'])assert(catalog.includes(source),'Candidat militar absent: '+source);
+assert(studio.includes("entry.provider==='sketchfab'"),'Cal visor oficial Sketchfab per als helicòpters');
 assert.equal(manifest.savedModels,files.length);
 assert.equal(manifest.savedBytes,files.reduce((sum,item)=>sum+item.bytes,0));
 for(const item of files){
@@ -35,4 +39,4 @@ for(const item of files){
 }
 for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/streetfighter-25-geometry.mjs'])
  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
-console.log('Banc de models: 9 vehicles, 26 GLB; moto i moto aquàtica definitives fora del catàleg.');
+console.log('Banc de models: 9 vehicles, 20 GLB locals i 6 models militars Sketchfab.');
