@@ -25,3 +25,18 @@ No cal npm ni compilació per servir el joc. El carregador és `src/bootstrap.mj
 - Origen: https://github.com/mrdoob/three.js/tree/r186/examples/jsm
 - L'`importmap` de `vehicles-externs-proves.html` resol tant `three` com `three/addons/` contra fitxers locals. No es necessita jsDelivr per carregar els GLB guardats a `assets/vehicle-candidates/`.
 - El carregador és exclusivament per al laboratori de models; el joc principal no el carrega durant una missió.
+
+## Simplificació de candidats
+
+El taller de models incorpora el modificador oficial de Three.js **r186**:
+`three-addons/modifiers/SimplifyModifier.js`, i la seva dependència
+`three-addons/libs/meshopt_simplifier.module.js`, basada en **meshoptimizer**.
+El modificador i les utilitats de Three.js es distribueixen sota **MIT**;
+meshoptimizer també sota **MIT**, amb el copyright original
+«Copyright (C) 2016-2026, by Arseny Kapoulkine (arseny.kapoulkine@gmail.com)»,
+inclòs a la capçalera del fitxer. Font:
+https://github.com/mrdoob/three.js/tree/r186/examples/jsm.
+
+Només es carreguen al laboratori extern `vehicles-externs-proves.html`,
+mai durant el joc. Els quatre LOD es deriven en memòria: no es creen
+quatre fitxers duplicats de les motocicletes.
