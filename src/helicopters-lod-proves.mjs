@@ -226,6 +226,17 @@ async function choose(type){
  let count=0;
  if(await loadVariant(canvases[0],type,100,serial))count++;
  if(serial!==token)return;
+ // Si el 100% ja és al servidor (o al navegador) però els altres LOD
+ // encara no hi són, generam les tres vistes sense exigir una nova pujada.
+ if(count&&type==='apache'){
+  const original=await getBlob(type,100);
+  if(serial!==token)return;
+  if(original){
+   memory.set(makeKey(type,100),original);
+   try{await completeMissingLods()}
+   catch(error){console.warn("No s'han pogut generar tots els LOD",error)}
+  }
+ }
  const vals=await Promise.all(LEVELS.slice(1).map((level,i)=>loadVariant(canvases[i+1],type,level,serial)));
  if(serial!==token)return;
  count+=vals.filter(Boolean).length;
