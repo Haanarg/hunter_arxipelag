@@ -61,6 +61,11 @@ Les proves Node no substitueixen una partida real, una revisió WebGL/Android o 
 | `dist/` i `vendor/` | Bundle generat i dependències locals de producció |
 | `docs/` | Decisions/contractes tècnics i guia d'auditoria |
 
+## Crèdits de models 3D
+
+- **Huey UH-1 de Duane's Mind** — [Bell Huey helicopter](https://sketchfab.com/3d-models/bell-huey-helicopter-755d8518a06e41b19752c1b54c0da588), llicència [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Modificat per obrir les dues portes laterals de passatgers; [detalls de la modificació i atribució](assets/vehicle-models/README.md). Model definitiu integrat al joc.
+- L'Apache d'Araon encara és un candidat en revisió, no un model definitiu del joc.
+
 ## Documents de referència
 
 - [Pla de refactorització i tasques vigents](to-do.MD).
