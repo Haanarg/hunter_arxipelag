@@ -58,7 +58,9 @@ export function createStaticWorldAdapter(source){
   const staticTrees=data.trees.slice(),palmHealth=new Map();let generatedVegetation=null;
   if(data.vegetation){
     generatedVegetation=vegetationCache.get(source.vegetation);
-    if(!generatedVegetation){generatedVegetation=vegetationLayout({halfSize,islands:data.islands,heightAt,seed:data.seed,random:createWorldRandom(data.vegetation.randomState),spawn:data.vegetation.spawn,buildings:data.buildings,stairs:data.stairs,compounds:data.vegetation.compounds});vegetationCache.set(source.vegetation,generatedVegetation);}
+    if(!generatedVegetation){generatedVegetation=vegetationLayout({halfSize,islands:data.islands,heightAt,seed:data.seed,random:createWorldRandom(data.vegetation.randomState),spawn:data.vegetation.spawn,buildings:data.buildings,stairs:data.stairs,compounds:data.vegetation.compounds,
+      mayHaveLand:(x,z)=>grids.islands.has(key(Math.floor(x/512),Math.floor(z/512)))||
+        grids.levels.has(key(Math.floor(x/256),Math.floor(z/256)))});vegetationCache.set(source.vegetation,generatedVegetation);}
     if(data.trees.length+generatedVegetation.trees.length>200000)throw new RangeError('Too many vegetation colliders');
     data.trees.push(...generatedVegetation.trees);
   }
