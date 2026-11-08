@@ -125,11 +125,22 @@ export function prepareStreetfighterPreview(THREE,root){
    stats.removedMirrorStems+=discard.length;
    source.dispose();
  }
- // La barra original està ALINEADA amb els punys del GLB. Girar-la
- // 180º per separat descol·locava els punys; ara tots comparteixen pivot.
+ // El manillar original té els punys orientats cap a PROA (+Z);
+ // giram TANT la barra COM ELS DOS PUNYS 180° cap al pilot (-Z),
+ // però la forquilla i el pneumàtic continuen mirant cap a proa.
+ // Aquest subpivot acompanya el gir general de tota la direcció.
  root.updateMatrixWorld(true);
  rig.attach(handle);
  rig.attach(wheel);
+ const barAlign=new THREE.Group();
+ barAlign.name='streetfighter-handlebar-alignment';
+ rig.add(barAlign);
+ root.updateMatrixWorld(true);
+ barAlign.attach(handle);
+ const grips=rig.getObjectByName('streetfighter-front-trim');
+ if(!grips)throw Error('Falten els punys del manillar per alinear-los');
+ barAlign.attach(grips);
+ barAlign.rotation.y=Math.PI;
  rig.userData.streetfighterSteering=true;
  rig.rotation.y=0;
  root.userData.streetfighterRigStats=stats;
