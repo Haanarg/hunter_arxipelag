@@ -11,7 +11,7 @@ const boot=read('src/bootstrap.mjs');
 const catalog=read('src/vehicle-candidate-catalog.mjs');
 const readme=read('assets/vehicle-models/README.md');
 for(const check of ['Apache_Main_Rotor_Pivot','Apache_Tail_Rotor_Pivot',
- 'APACHE_TRIANGLES=2173','TARGET_LENGTH=7.15','WHEEL_CONTACT=.405',
+ 'APACHE_TRIANGLES=2193','APACHE_PACKED_TRIANGLES=2173','TARGET_LENGTH=7.15','WHEEL_CONTACT=.405',
  'rotor=p.main','tailRotor=p.tail','shell.rotation.y=Math.PI',
  'DecompressionStream','APACHE_MODEL_URL','apache-araon-50mesh.zlib'])
  assert(runtime.includes(check),'Falta un invariant d’Apache: '+check);
@@ -22,6 +22,29 @@ assert(core.includes('if(!approvedModel)'),'Falta reserva procedural');
 assert(!catalog.includes("{id:'heli_combat'"),'L’Apache acceptat no pot ser candidat');
 assert(readme.includes('Araon')&&readme.includes('CC BY 4.0'));
 execFileSync(process.execPath,['--check',path.join(root,'src/apache-araon-runtime.mjs')],{stdio:'pipe'});
+// La variant aprovada completa s'havia perdut de main. Cal verificar-ne
+// l'existència i exactament el mateix contingut que al commit històric.
+const glbFile=path.join(root,'assets/vehicle-models/apache-araon-salvia-black.glb');
+assert(fs.existsSync(glbFile),'Falta el GLB definitiu Apache, ja restaurat de l’historial Git');
+const glb=fs.readFileSync(glbFile);
+assert.equal(glb.length,4123680,'Mida del GLB Apache definitiu incorrecta');
+assert.equal(glb.toString('ascii',0,4),'glTF','Capçalera GLB Apache invàlida');
+assert.equal(glb.readUInt32LE(4),2,'Format GLB Apache no és la versió 2');
+assert.equal(glb.readUInt32LE(8),glb.length,'Capçalera GLB amb mida inconsistent');
+assert.equal(crypto.createHash('sha256').update(glb).digest('hex'),
+ 'be906866d6ac87835f2e30b11ce14bcc6b6ff13ee2cb39e798fd3cf6167f89df',
+ 'El GLB restaurat no coincideix amb el de la variant sàlvia/negres aprovada');
+const gltf=JSON.parse(glb.subarray(20,20+glb.readUInt32LE(12)).toString('utf8'));
+const trianglesFull=gltf.meshes.reduce((sum,mesh)=>sum+
+ mesh.primitives.reduce((n,p)=>n+gltf.accessors[p.indices].count/3,0),0);
+assert.equal(trianglesFull,2193,'La variant GLB ha de conservar les rodes 75% i 2.193 triangles');
+for(const name of ['main_rotor_lambert2_0','tail_rotor_lambert2_0']){
+ const mesh=gltf.meshes.find(x=>x.name===name);
+ assert(mesh,'Falta '+name+' al GLB Apache');
+ assert(mesh.primitives.every(p=>gltf.materials[p.material].name==='black_details'),
+  'Rotor sense material negre: '+name);
+}
+assert(gltf.images?.length>=4,'El GLB Apache ha de conservar les quatre textures incrustades');
 const asset=path.join(root,'assets/vehicle-models/apache-araon-50mesh.zlib');
 assert(fs.existsSync(asset),'Falta el binari real de l’Apache a GitHub');
 const compressed=fs.readFileSync(asset);
@@ -60,4 +83,4 @@ const k=7.15/(z1-z0),width=(x1-x0)*k;
 const rotor=.405+((rotorY0+rotorY1)/2-y0)*k;
 assert(width>4&&width<5.5,'L’Apache no cap a l’escala prevista');
 assert(rotor>1&&rotor<4,'Altura del rotor incompatible amb la física');
-console.log('Apache Araon: binari 18,9 kB, 2.173 triangles, 5 malles i dos rotors; escala coherent.');
+console.log('Apache Araon: GLB definitiu 4.123.680 bytes / 2.193 triangles restaurat; fallback 18,9 kB validat.');
