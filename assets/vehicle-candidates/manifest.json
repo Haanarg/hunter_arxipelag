@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-07T23:15:18.532Z",
+  "generatedAt": "2026-11-08T16:48:00+01:00",
   "source": "https://3dassets.dev/",
   "license": "CC0-1.0",
   "limits": {
@@ -241,79 +241,10 @@
         "cdnUrl": "https://cdn.3dassets.dev/assets/35636/v1/model.glb",
         "license": "CC0-1.0"
       }
-    ],
-    "heli": [
-      {
-        "slot": 1,
-        "id": "18712",
-        "title": "Utility helicopter (Vehicle Collection HD: Cars, Planes and Boats)",
-        "bytes": 318796,
-        "triangles": 6456,
-        "file": "heli/1-transport-collection-hd-utility-helicopter-18e3c5fe.glb",
-        "url": "https://3dassets.dev/assets/transport-collection-hd-utility-helicopter-18e3c5fe",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/18712/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 2,
-        "id": "32802",
-        "title": "Light Turbine Utility Helicopter (Aircraft Fleet and Airfield)",
-        "bytes": 819640,
-        "triangles": 20332,
-        "file": "heli/2-aircraft-fleet-and-airfield-light-turbine-helicopter-d4734be7.glb",
-        "url": "https://3dassets.dev/assets/aircraft-fleet-and-airfield-light-turbine-helicopter-d4734be7",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/32802/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 3,
-        "id": "32808",
-        "title": "Medium Twin Turbine Helicopter (Aircraft Fleet and Airfield)",
-        "bytes": 1374824,
-        "triangles": 34922,
-        "file": "heli/3-aircraft-fleet-and-airfield-medium-twin-helicopter-2fc3750d.glb",
-        "url": "https://3dassets.dev/assets/aircraft-fleet-and-airfield-medium-twin-helicopter-2fc3750d",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/32808/v1/model.glb",
-        "license": "CC0-1.0"
-      }
-    ],
-    "heli_combat": [
-      {
-        "slot": 1,
-        "id": "32801",
-        "title": "Coaxial Rotor Helicopter (Aircraft Fleet and Airfield)",
-        "bytes": 953760,
-        "triangles": 30104,
-        "file": "heli_combat/1-aircraft-fleet-and-airfield-coaxial-helicopter-90b22ff0.glb",
-        "url": "https://3dassets.dev/assets/aircraft-fleet-and-airfield-coaxial-helicopter-90b22ff0",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/32801/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 2,
-        "id": "32805",
-        "title": "Heavy Lift Ramp Helicopter (Aircraft Fleet and Airfield)",
-        "bytes": 1610004,
-        "triangles": 41076,
-        "file": "heli_combat/2-aircraft-fleet-and-airfield-heavy-lift-helicopter-b2f9f0bb.glb",
-        "url": "https://3dassets.dev/assets/aircraft-fleet-and-airfield-heavy-lift-helicopter-b2f9f0bb",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/32805/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 3,
-        "id": "18715",
-        "title": "Rescue helicopter (Vehicle Collection HD: Cars, Planes and Boats)",
-        "bytes": 352216,
-        "triangles": 7140,
-        "file": "heli_combat/3-transport-collection-hd-rescue-helicopter-526061c3.glb",
-        "url": "https://3dassets.dev/assets/transport-collection-hd-rescue-helicopter-526061c3",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/18715/v1/model.glb",
-        "license": "CC0-1.0"
-      }
     ]
   },
-  "savedModels": 26,
-  "savedBytes": 8967372,
-  "skipped": 1
+  "savedModels": 20,
+  "savedBytes": 3538132,
+  "skipped": 1,
+  "retiredHelicopterCandidates": 6
 }
