@@ -12,7 +12,7 @@ const gltf=await new GLTFLoader().parseAsync(buffer.buffer.slice(buffer.byteOffs
 const root=gltf.scene;
 const beforeMeshes=[];
 root.traverse(node=>{if(node.isMesh)beforeMeshes.push(node)});
-const spokes=['wheel-front/alloy','wheel-front/steel','wheel-rear/alloy','wheel-rear/steel'];
+const spokes=['wheel-frontalloy','wheel-frontsteel','wheel-rearalloy','wheel-rearsteel'];
 const trianglesBefore=new Map(spokes.map(name=>{
  const mesh=root.getObjectByName(name);
  assert(mesh,'Falten radis originals: '+name);
@@ -23,8 +23,8 @@ assert.deepEqual(stats.moved,{steel:96,alloy:96,trim:80,paint:208});
 assert.equal(stats.removedMirrorStems,64);
 assert.equal(stats.removedWheelAccents,2);
 assert(root.getObjectByName('streetfighter-steering'));
-assert(!root.getObjectByName('wheel-front/accent'));
-assert(!root.getObjectByName('wheel-rear/accent'));
+assert(!root.getObjectByName('wheel-frontaccent'));
+assert(!root.getObjectByName('wheel-rearaccent'));
 assert(!root.getObjectByName('side-stand'));
 assert(!root.getObjectByName('naked-streetfighter_13'));
 for(const [name,tris] of trianglesBefore){
