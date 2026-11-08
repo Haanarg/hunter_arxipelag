@@ -9,6 +9,7 @@ const manifest=JSON.parse(read('assets/vehicle-candidates/manifest.json'));
 const excluded=['camio','barca_rems','windsurf','moto_aquatica'];
 const catalogText=read('src/vehicle-candidate-catalog.mjs');
 const studio=read('src/vehicles-externs-proves.mjs');
+const rig=read('src/streetfighter-preview-rig.mjs');
 const html=read('vehicles-externs-proves.html');
 const types=[...catalogText.matchAll(/\{id:'([^']+)'/g)].map(match=>match[1]);
 assert.equal(types.length,10,'Només 10 tipus de vehicles en revisió');
@@ -30,7 +31,9 @@ for(const item of files){
  assert.equal(fs.statSync(filename).size,item.bytes,'Mida GLB incorrecta: '+item.file);
 }
 for(const ratio of ['.85','.65','.45','.25'])assert(studio.includes('ratio:'+ratio),'LOD absent '+ratio);
-for(const part of ['side-stand','naked-streetfighter_13','handlebar'])assert(studio.includes(part),'Retoc de moto absent: '+part);
+for(const part of ['side-stand','naked-streetfighter_13','handlebar','wheel-frontaccent','wheel-rearaccent'])assert(rig.includes(part),'Retoc de moto absent: '+part);
+assert(studio.includes('prepareStreetfighterPreview'),'El comparador ha d’aplicar el rig a les variants');
+assert(rig.includes('isStreetfighterDetailProtected'),'Els radis han de quedar protegits en simplificar');
 assert(studio.includes('simplifier.modify('),'La simplificació ha de modificar les malles de veritat');
 assert(studio.includes('i<6'),'El visor necessita 6 panells per comparar LOD');
 assert(html.includes('id="featureInfo"'),'Falta apartat de descripció de LOD');
