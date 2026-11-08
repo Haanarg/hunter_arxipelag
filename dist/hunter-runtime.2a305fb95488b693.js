@@ -2952,7 +2952,7 @@ window.HUNTER_RIDER=Object.freeze({
         const seatX=coopSeat?(passenger?1:-1)*(car?.65:.58)*sc:0,
           deckY=car?1.20*sc:v.t==='hover'?1.25*sc:
             v.t==='windsurf'?1.05*sc:1.35*sc;
-        riderFar.position.set(seatX,deckY,(v.t==='bici'||v.t==='moto')?0.12*sc:0);
+        riderFar.position.set(seatX,v.t==='moto'?.98*sc:deckY,(v.t==='bici'||v.t==='moto')?0.12*sc:0);
         pistol.visible=false;
         return;
       }
@@ -3047,7 +3047,37 @@ window.HUNTER_RIDER=Object.freeze({
         return;
       }
 
-      if(v.t==='bici'||v.t==='moto'){
+      if(v.t==='moto'){
+        // Naked streetfighter 25%, ajustada al 75% de la mida original.
+        // Seient i mans a la nova alçada. El punt de presa segueix el
+        // mateix pivot de direcció visual, inclòs el gir dels punys.
+        const steering=v.o?.userData?.steeringPivots?.[0],
+              turn=steering?.rotation?.y||0,
+              pivotZ=(steering?.position?.z??-.28)*sc,
+              pivotY=(steering?.position?.y??1.07)*sc,
+              seat=.99*sc,seatZ=.26*sc;
+        torso.position.set(0,seat,seatZ);
+        torso.rotation.x=.12*motion;
+        for(let i=0;i<2;i++){
+          const side=i?1:-1,hip=vec(side*.25,seat,seatZ),
+                shoulder=shoulderAt(side),
+                x=side*.34*sc,
+                hand=vec(x*Math.cos(turn),pivotY-.015*sc,
+                  pivotZ-x*Math.sin(turn)),
+                elbow=shoulder.clone().lerp(hand,.54);
+          elbow.x+=side*.08;elbow.y-=.12;
+          limbBetween(limbs[i*2],shoulder,elbow);
+          limbBetween(limbs[i*2+1],elbow,hand);
+          const foot=vec(side*.34*sc,.42*sc,.16*sc),
+                knee=hip.clone().lerp(foot,.54);
+          knee.z-=.12*motion;knee.x+=side*.07;
+          limbBetween(limbs[4+i*2],hip,knee);
+          limbBetween(limbs[5+i*2],knee,foot);
+          boots[i].position.copy(foot);boots[i].rotation.x=0;
+        }
+        aimOneHand(v,dt);return;
+      }
+      if(v.t==='bici'){
         const seat=1.65*sc;torso.position.set(0,seat,.4*sc);torso.rotation.x=.15*motion;
         for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.28,seat,.4*sc),shoulder=shoulderAt(side),hand=vec(side*.5*sc,1.96*sc,-sc),elbow=shoulder.clone().lerp(hand,.52);elbow.x+=side*.1;elbow.y-=.2;limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
           const foot=vec(side*.55,0,.45*sc),worldFoot=foot.clone().applyQuaternion(g.quaternion).add(g.position);worldFoot.y=heightAt(worldFoot.x,worldFoot.z)+.14;const groundFoot=worldFoot.sub(g.position).applyQuaternion(g.quaternion.clone().invert());const pedal=v.t==='bici'?vec(side*.4*sc,(.75-side*Math.sin(phase)*.28)*sc,side*Math.cos(phase)*.28*sc):vec(side*.5*sc,.72*sc,.1*sc);foot.copy(groundFoot).lerp(pedal,motion);const knee=hip.clone().lerp(foot,.5);knee.z-=.5*motion;knee.x+=side*.12*(1-motion);limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot);boots[i].rotation.x=0}
@@ -13599,9 +13629,9 @@ const add=(t,x,z,a,meta={})=>{
   // Els colors són part de l'estat generat per llavor, no una aleatorietat
   // del renderitzador. La cerca de llavors consumeix les mateixes tirades.
   const civilian=t==='cotxe_civil',bicycle=t==='bici',
-    jetski=t==='moto_aquatica',windsurf=t==='windsurf',
+    jetski=t==='moto_aquatica',motorcycle=t==='moto',windsurf=t==='windsurf',
     colors=window.HUNTER_CIVILIAN_CARS,
-    palette=jetski||windsurf?colors.jetskiColors:colors.colors;
+    palette=jetski||motorcycle||windsurf?colors.jetskiColors:colors.colors;
   // Every windsurf gets the same vivid palette as the jet skis, but the
   // start hue is determined by the island seed's base position and each
   // successive windsurf advances by one hue. Crucially, this uses NO
@@ -13621,8 +13651,13 @@ const add=(t,x,z,a,meta={})=>{
   // del motor és l'única malla repintada per instància.
   const jetskiOrdinal=jetski?V.reduce((n,v)=>n+(v.t==='moto_aquatica'),0):0;
   const jetskiStart=(windsurfStart^0x51a3c97)>>>0;
+  // La moto hereta la paleta viva però SENSE consumir cap R() nou:
+  // així cap llavor ni posició d'objectes de les missions no canvia.
+  const motoOrdinal=motorcycle?V.reduce((n,v)=>n+(v.t==='moto'),0):0;
+  const motoStart=(windsurfStart^0x2c7b19e)>>>0;
   const color=windsurf?palette[(windsurfStart%palette.length+windsurfOrdinal)%palette.length].hex:
     jetski?palette[(jetskiStart%palette.length+jetskiOrdinal)%palette.length].hex:
+    motorcycle?palette[(motoStart%palette.length+motoOrdinal)%palette.length].hex:
     (civilian||bicycle)?palette[colorRoll].hex:undefined;
   // Conservam la tirada de la llavor antiga, però tots els cotxes civils
   // fan servir el model C1A seleccionat (variant 0).
@@ -13633,7 +13668,7 @@ const add=(t,x,z,a,meta={})=>{
     surface=Math.max(0,hAt(x,z));
   const v={t,x,z,hd:a||0,v:0,alt:c.m==='a'?helicopterLandedAltitude({o},surface):surface+.8,
     o,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};
-  if(civilian||bicycle||jetski||windsurf)v.color=appearance.color;
+  if(civilian||bicycle||jetski||motorcycle||windsurf)v.color=appearance.color;
   if(civilian)v.variant=appearance.variant;
   if(t==='heli_combat')v.rockets=6;
   if(t==='llanxa_coets')v.rockets=Infinity;
