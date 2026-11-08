@@ -39,8 +39,12 @@ root.updateMatrixWorld(true);
 for(const name of names){assert(root.getObjectByName(name),'Falta '+name);snapshots.set(name,spot(name).clone())}
 assert.equal(root.getObjectByName('wheel-front').parent.name,'streetfighter-steering');
 assert.equal(root.getObjectByName('handlebar').parent.name,'streetfighter-steering');
+const handle=root.getObjectByName('handlebar'),
+      handleBefore=handle.getWorldQuaternion(new THREE.Quaternion());
 setStreetfighterPreviewSteering(root,.42);root.updateMatrixWorld(true);
-for(const name of names.filter(x=>x!=='wheel-rear')){
+const handleAfter=handle.getWorldQuaternion(new THREE.Quaternion());
+assert(handleBefore.angleTo(handleAfter)>.35,'El manillar ha de girar sobre el seu propi pivot, encara que la seva posició no canviï');
+for(const name of names.filter(x=>x!=='wheel-rear'&&x!=='handlebar')){
  const dist=spot(name).distanceTo(snapshots.get(name));
  assert(dist>.0001,'La peça no gira amb el manillar: '+name+' (dist '+dist+')');
 }
