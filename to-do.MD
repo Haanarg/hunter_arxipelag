@@ -23,6 +23,12 @@
 - [x] Regressions Node sobre amplada, llargada, direcció, tija, col·lisió i radi de les dues rodes, i compilació del paquet.
 - [ ] **Validació visual pendent:** comprovar que la tija no sobresurt en cap angle, el contacte de pneumàtics i el pilot, tant en SOLO com en COOP i Android.
 
+**P2 · v0.6.189 · Ajust de mida final de la moto i el motorista:**
+- [x] Reducció del **25% respecte a v0.6.187**, de manera uniforme, de la Naked streetfighter (factor visual de `1.5` a `1.125`), sense regenerar la geometria ni tocar la unió manillar–forquilla que ja està ben acabada.
+- [x] Reducció del **25% del rider**, inclòs el LOD llunyà; posicions locals del seient, mans i peus compensades per encaixar amb el nou xassís, i radis de gir de les rodes recalculats.
+- [x] Hitbox `moto` de 1,65 × 4,25 a **1,24 × 3,19**, radi de proximitat de 2,3 a 1,75. Conservar els colors vius i el pivot de direcció compartit.
+- [ ] **Validació visual pendent**: pilot, agafadors, contacte rodes-terra, COOP i Android; la prova automatitzada només valida jerarquia i mides.
+
 ## Llegenda i límits
 
 - **P0**: regressions greus, estrebades, sincronització i seguretat de les partides. **P1**: estalvi mesurable de CPU/GPU/memòria o refactor essencial. **P2**: reducció de complexitat, manteniment i acabat. **P3**: millores funcionals ajornades.
