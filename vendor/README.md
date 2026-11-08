@@ -26,17 +26,8 @@ No cal npm ni compilació per servir el joc. El carregador és `src/bootstrap.mj
 - L'`importmap` de `vehicles-externs-proves.html` resol tant `three` com `three/addons/` contra fitxers locals. No es necessita jsDelivr per carregar els GLB guardats a `assets/vehicle-candidates/`.
 - El carregador és exclusivament per al laboratori de models; el joc principal no el carrega durant una missió.
 
-## Simplificació de candidats
+## Models definitius de vehicles
 
-El taller de models incorpora el modificador oficial de Three.js **r186**:
-`three-addons/modifiers/SimplifyModifier.js`, i la seva dependència
-`three-addons/libs/meshopt_simplifier.module.js`, basada en **meshoptimizer**.
-El modificador i les utilitats de Three.js es distribueixen sota **MIT**;
-meshoptimizer també sota **MIT**, amb el copyright original
-«Copyright (C) 2016-2026, by Arseny Kapoulkine (arseny.kapoulkine@gmail.com)»,
-inclòs a la capçalera del fitxer. Font:
-https://github.com/mrdoob/three.js/tree/r186/examples/jsm.
+Els models CC0 acceptats de moto (`Naked streetfighter`) i moto aquàtica (`Recreational Jet Ski`) són **mòduls locals de geometria precompilada**, incorporats a `src/streetfighter-25-geometry.mjs` i `src/jet-ski-25-geometry.mjs`.
 
-Només es carreguen al laboratori extern `vehicles-externs-proves.html`,
-mai durant el joc. Els quatre LOD es deriven en memòria: no es creen
-quatre fitxers duplicats de les motocicletes.
+La simplificació es va executar una vegada durant la preparació de l'actiu. Els modificadors `SimplifyModifier.js` i `meshopt_simplifier.module.js` ja no són necessaris i han estat retirats, com també els GLB i les proves de les motos acceptades. No hi ha simplificació en temps de joc ni al banc de comparació dels nou vehicles que continuen pendents.
