@@ -16,7 +16,7 @@
     "generate:auth-schema": "node tools/generate-auth-schema.mjs",
     "deploy:cloudflare": "node tools/deploy-cloudflare.mjs",
     "test": "npm run test:basic",
-    "test:basic": "node tests/version-sync.cjs && node tests/simulation-clock.cjs && node tests/player-simulation.mjs && node tests/smoke-basic.cjs && node tests/mission-viability-validator.cjs && node tests/vehicle-health-and-blast.mjs && node tests/operation-save.mjs && node tests/operation-autosave.cjs && node tests/coop-state-delta.mjs && node tests/coop-connection.mjs && node tests/coop-lobby.mjs && node tests/native-coop-startup.cjs && node tests/cloudflare-backend.mjs && node tests/vehicle-candidate-studio.cjs && node --no-warnings --experimental-loader=./tests/three-local-loader.mjs tests/vehicle-lod-smoke.mjs",
+    "test:basic": "node tests/version-sync.cjs && node tests/simulation-clock.cjs && node tests/player-simulation.mjs && node tests/smoke-basic.cjs && node tests/mission-viability-validator.cjs && node tests/vehicle-health-and-blast.mjs && node tests/operation-save.mjs && node tests/operation-autosave.cjs && node tests/coop-state-delta.mjs && node tests/coop-connection.mjs && node tests/coop-lobby.mjs && node tests/native-coop-startup.cjs && node tests/cloudflare-backend.mjs && node tests/vehicle-candidate-studio.cjs && node --no-warnings --experimental-loader=./tests/three-local-loader.mjs tests/vehicle-lod-smoke-runner.mjs",
     "test:regression:once": "npm run test:basic"
   },
   "dependencies": {
