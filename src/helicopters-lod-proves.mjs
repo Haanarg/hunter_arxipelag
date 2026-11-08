@@ -247,7 +247,7 @@ async function unzipSelected(file){
   let buffer;
   if(method===0)buffer=compressed.buffer;
   else if(method===8){
-   if(typeof DecompressionStream==='undefined')throw Error('El navegador no permet descomprimir ZIP; descomprimeix-lo i tria els 4 GLB de l'Apache');
+   if(typeof DecompressionStream==='undefined')throw Error("El navegador no permet descomprimir ZIP; descomprimeix-lo i tria els 4 GLB de l'Apache");
    const stream=new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
    buffer=await new Response(stream).arrayBuffer();
   }else throw Error('Mètode de compressió ZIP no admès: '+method);
