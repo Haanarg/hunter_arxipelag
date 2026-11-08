@@ -28,7 +28,8 @@ export const prisonCampLayout={
  soldiers:[[-50,-50],[55,-50],[55,45],[-50,45],[-8,27],[8,27]],
  sentries:[{soldier:4,heading:Math.PI},{soldier:5,heading:Math.PI}],
  patrol:prisonPatrol,
- towers:[{x:-56,z:-56},{x:56,z:-56},{x:-56,z:56},{x:56,z:56}],
+ // La quarta torre queda a la línia est, lluny del disc i de les vores de l'heliport.
+ towers:[{x:-56,z:-56},{x:56,z:-56},{x:-56,z:56},{x:56,z:8}],
  fence:[
   [[-62,-62],[62,-62]],[[62,-62],[62,62]],[[62,62],[12,62]],
   [[-12,62],[-62,62]],[[-62,62],[-62,-62]]
