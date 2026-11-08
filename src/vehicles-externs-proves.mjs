@@ -1,8 +1,5 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {SimplifyModifier} from 'three/addons/modifiers/SimplifyModifier.js';
-import {mergeVertices,deinterleaveGeometry} from 'three/addons/utils/BufferGeometryUtils.js';
-import {prepareStreetfighterPreview,setStreetfighterPreviewSteering,isStreetfighterDetailProtected} from './streetfighter-preview-rig.mjs?rev=handlebar-grips-v2';
 import {vehicleModels} from './vehicle-model-core.mjs';
 import {playerBatching} from './player-batching-core.mjs';
 import {createTruckModel} from './truck-model.mjs';
@@ -15,16 +12,6 @@ import {CATALOG} from './vehicle-candidate-catalog.mjs';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName'),
   featureInfo=document.querySelector('#featureInfo');
-const SIMPLIFICATION=[
- {name:'Suau',ratio:.85},
- {name:'Mitjana',ratio:.65},
- {name:'Alta',ratio:.45},
- {name:'Màxima',ratio:.25}
-];
-const FEATURED={
- moto:{slot:2,title:'Naked streetfighter',note:'Manillar alineat amb els punys, forquilla i roda davantera dins un sol pivot. Sense pota de cabra, retrovisors ni marcadors vermells giratoris. Radis i obertures de les rodes protegits en totes les reduccions. Usa el control Direcció o l’animació per provar el gir.'}
-};
-const simplifier=new SimplifyModifier();
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
 renderer.setPixelRatio(Math.min(1.5,window.devicePixelRatio||1));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -59,7 +46,7 @@ const makeOriginal=vehicleModels.createFactory(THREE,{
  truck:createTruckModel,batching:playerBatching
 });
 const slots=[];
-for(let i=0;i<6;i++){
+for(let i=0;i<4;i++){
  const outer=document.createElement('article');outer.className='panel';
  const label=document.createElement('div');label.className='label';
  const bold=document.createElement('strong');bold.textContent=i?'Alternativa '+i:'Model actual del joc';
@@ -208,103 +195,6 @@ function setModel(slot,obj,original,animations=[]){
  return wrap;
 }
 
-// Simplificació REAL de la geometria amb meshoptimizer (Three.js r186).
-// La xifra de triangles final es calcula sobre la malla resultant.
-// La direcció completa (manillar, agafadors, forquilla, parafang i
-// roda davantera) es prepara a streetfighter-preview-rig.mjs.
-// Totes les versions, incloent el GLB de referència, utilitzen EL MATEIX rig.
-async function simplifySelectedModel(root,ratio){
- const meshes=[];
- root.traverse(node=>{if(node.isMesh&&node.geometry?.getAttribute('position')&&!isStreetfighterDetailProtected(node))meshes.push(node)});
- const errors=[];
- for(const mesh of meshes){
-   const original=mesh.geometry;let prepared=null,welded=null;
-   try{
-     // GLTFLoader pot retornar InterleavedBufferAttribute. mergeVertices
-     // no els admet directament: convertir la còpia a atributs compactes.
-     // Mai no modificam la geometria de referència compartida pels 6 panells.
-     prepared=original.clone();
-     deinterleaveGeometry(prepared);
-     welded=prepared.index?prepared:mergeVertices(prepared);
-     const count=welded.getAttribute('position').count;
-     if(count<12)continue;
-     const removed=Math.min(count-3,Math.max(1,Math.round(count*(1-ratio))));
-     const simplified=await simplifier.modify(welded,removed);
-     const before=triangles(mesh),after=simplified.index?.count/3||0;
-     if(after>0&&after<before){
-       simplified.userData.candidateSimplified=true;
-       mesh.geometry=simplified;
-       // Les geometries intermèdies del retall de retrovisors són pròpies
-       // de la còpia, no compartides amb el GLB original.
-       if(original.userData?.candidateSimplified)original.dispose();
-     }else simplified.dispose();
-   }catch(error){
-     console.warn('Peça GLB sense simplificar:',mesh.name,error);
-     errors.push(mesh.name||'sense nom');
-   }finally{
-     if(welded&&welded!==prepared)welded.dispose();
-     prepared?.dispose();
-   }
- }
- return errors;
-}
-async function loadFeatured(config,token){
- const chosen=FEATURED[config.id];
- const record=savedManifest?.models?.[config.id]?.find(item=>item.slot===chosen.slot);
- let asset=record;
- if(!asset){
-   asset=await candidate(config.options[chosen.slot-1],new Set());
-   if(token!==generation)return;
- }
- const selection=slots.slice(1);
- if(!asset){
-   for(const slot of selection)slot.status.textContent='GLB seleccionat no disponible al manifest ni al catàleg.';
-   return;
- }
- const uri=record?'./assets/vehicle-candidates/'+record.file:asset.cdnUrl;
- for(const slot of selection){
-   slot.status.textContent='Carregant '+chosen.title+'…';
-   slot.source.href=asset.url||'https://3dassets.dev/';
-   slot.source.hidden=false;
-   slot.sub.textContent='Model seleccionat · CC0 1.0';
- }
- try{
-   const gltf=await loader.loadAsync(uri);
-   if(token!==generation)return;
-   const reference=gltf.scene.clone(true);
-   prepareStreetfighterPreview(THREE,reference);
-   setModel(slots[1],reference,false,gltf.animations);
-   setStreetfighterPreviewSteering(slots[1].model,readSteering());
-   slots[1].bold.textContent=chosen.title+' · referència';
-   slots[1].sub.textContent='GLB seleccionat · direcció corregida · radis intactes';
-   slots[1].status.textContent=metrics(slots[1].model);
-   for(let i=0;i<SIMPLIFICATION.length;i++){
-     if(token!==generation)return;
-     const quality=SIMPLIFICATION[i],slot=slots[i+2];
-     slot.bold.textContent=quality.name+' · '+Math.round(quality.ratio*100)+'%';
-     slot.sub.textContent='Direcció completa · radis originals intactes';
-     slot.status.textContent='Calculant una versió del '+Math.round(quality.ratio*100)+'%…';
-     await new Promise(resolve=>requestAnimationFrame(resolve));
-     const copy=gltf.scene.clone(true);
-     prepareStreetfighterPreview(THREE,copy);
-     const errors=await simplifySelectedModel(copy,quality.ratio);
-     if(token!==generation){
-       copy.traverse(n=>{if(n.isMesh&&n.geometry?.userData?.candidateSimplified)n.geometry.dispose()});
-       return;
-     }
-     setModel(slot,copy,false,gltf.animations);
-     setStreetfighterPreviewSteering(slot.model,readSteering());
-     const actual=Math.round(100*triangles(slot.model)/Math.max(1,triangles(slots[1].model)));
-     slot.status.textContent=metrics(slot.model)+' · '+actual+'% dels triangles originals'+(errors.length?' · '+errors.length+' peces sense reduir':'');
-   }
- }catch(error){
-   console.error('Error simplificant el model seleccionat:',error);
-   if(token!==generation)return;
-   for(const slot of selection)if(!slot.model)
-     slot.status.textContent='Error: '+(error?.message||String(error)).slice(0,140);
- }
-}
-
 async function loadExternal(slot,entry,used,token){
  const slotIndex=slots.indexOf(slot);
  const local=savedManifest?.models?.[currentType.id]?.find(record=>record.slot===slotIndex);
@@ -359,14 +249,9 @@ async function choose(config){
    'Comparació visual: la física, les hitboxes i les animacions pròpies dels vehicles no s’han transferit.';
  for(const b of list.querySelectorAll('button'))b.classList.toggle('active',b.dataset.type===config.id);
  const marine=config.kind==='mar';
- const featured=FEATURED[config.id];
- document.querySelector('#steeringControl').hidden=config.id!=='moto';
- grid.classList.toggle('featured',!!featured);
- featureInfo.hidden=!featured;
- featureInfo.textContent=featured?featured.note:'';
+ featureInfo.hidden=true;
+ grid.classList.remove('featured');
  for(const slot of slots){
-   const index=slots.indexOf(slot);
-   slot.outer.hidden=!featured&&index>=4;
    dropPrevious(slot);
    slot.kind=config.kind;
    slot.ground.material.color.setHex(marine?0x285f65:config.kind==='aire'?0x6a7b67:0x69735e);
@@ -391,11 +276,8 @@ async function choose(config){
  for(let k=1;k<4;k++)slots[k].person.position.x=originalDims.x*.62+1.0;
  lookY=Math.min(6,Math.max(.55,originalDims.y*.38));
  zoom=1;updateCamera();
- if(featured)await loadFeatured(config,token);
- else {
-   const used=new Set();
-   await Promise.all(config.options.map((entry,i)=>loadExternal(slots[i+1],entry,used,token)));
- }
+ const used=new Set();
+ await Promise.all(config.options.map((entry,i)=>loadExternal(slots[i+1],entry,used,token)));
 }
 function updateCamera(){
  const size=Math.max(originalDims.x,originalDims.z,originalDims.y*.85,3);
@@ -421,27 +303,12 @@ function resizeRenderer(){
  renderer.setSize(w,h,false);
  updateCamera();
 }
-function readSteering(){
- return Math.max(-35,Math.min(35,Number(document.querySelector('#steeringAngle').value)||0))*Math.PI/180;
-}
-function applyStreetfighterSteering(angle){
- for(const slot of slots.slice(1))
-   if(slot.model)setStreetfighterPreviewSteering(slot.model,angle);
-}
-document.querySelector('#steeringAngle').addEventListener('input',event=>{
- document.querySelector('#steeringValue').textContent=String(event.target.value)+'°';
- applyStreetfighterSteering(readSteering());
-});
 function draw(now){
  requestAnimationFrame(draw);
  const dt=Math.min(.07,(now-prev)/1000);prev=now;
  if(document.querySelector('#animate').checked)
    for(const slot of slots)slot.mixer?.update(dt);
- if(currentType?.id==='moto'){
-   const target=document.querySelector('#animate').checked?
-     Math.sin(now*.00145)*.48:readSteering();
-   applyStreetfighterSteering(target);
- }
+
  // Les coordenades setViewport i setScissor de WebGLRenderer ja es
  // multipliquen internament pel pixelRatio. Multiplicar-les aquí deixava
  // els models retallats o totalment fora del canvas en pantalles HiDPI.
@@ -503,7 +370,7 @@ const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
 for(const config of CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;
  button.textContent=config.name;
- const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(FEATURED[config.id]?'4 simplificacions':(config.id==='ferry'?'2–3 alternatives':'3 alternatives'));
+ const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='ferry'?'2–3 alternatives':'3 alternatives');
  button.append(small);button.addEventListener('click',()=>choose(config));
  list.append(button);
 }
