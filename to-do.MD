@@ -20,7 +20,15 @@
 - [ ] Verificar que GitHub Actions (tests/build) i Cloudflare Pages publiquen la versió nova; provar en SOLO i COOP que el GLB principal funciona amb el material sàlvia/negre i no es queda en reserva compacta/procedural.
 - [ ] Confirmar a Cloudflare i en una partida real l'aspecte i el gir dels rotors, seients, col·lisions, ombres i transparències en SOLO/COOP/Android.
 
-**Prototip 2026-11-08 · conversió GLB → malla del motor (sense substituir els models definitius):**
+**Implementació definitiva 2026-11-08 · helicopters Three.js (substitueix el prototip i els GLB antics):**
+- [x] **Huey** de Duane's Mind convertit a `THREE.BufferGeometry`, 10% més gran (`1.35→1.485`), portes laterals obertes i **2 seients** nous (pilot i copilot) visibles; 1.767 triangles originals i 352 nous de seients. Atles PNG original separat. El runtime de vol no carrega GLB.
+- [x] **Apache** d'Araon: malla APG2 integrada al JavaScript i reconstruïda directament en Three.js, **50% més gran** (longitud objectiu `7.15→10.725`), neteja de triangles dels antics manyocs del tren d'aterratge i creació de **tres rodes cilíndriques circulars** amb boixes i suports. Paleta sàlvia mat/negres, pivots animables.
+- [x] Eliminats del repositori `assets/vehicle-models/huey-duane-doors-open.glb`, `apache-araon-salvia-black.glb` i `apache-araon-50mesh.zlib` (dades APG2 ara embegudes).
+- [x] Ajustades metadades de contacte rotor i dimensions de col·lisió als models més grans en `src/vehicle-model-core.mjs`, `src/vehicle-specs.mjs` i `src/game-core.js`. La fàbrica és única per SOLO i COOP.
+- [x] Actualitzada `helicopters-engine-compare.html` com a previsualitzador de les malles natives amb materials i wireframe; el banc de candidats manté exclosos els dos helicòpters.
+- [ ] Confirmar CI, build i desplegament Cloudflare després del canvi; provar el nou tren d'aterratge, altures, seients, rotors i col·lisions en una missió (SOLO, COOP i Android). No s'ha fet encara validació visual.
+
+**Històric 2026-11-08 · prototip de comparació anterior (superat, no representa el runtime actual):**
 - [x] Convertit el **Huey 100 de Duane's Mind amb portes obertes** a `src/huey-duane-native-geometry.mjs`: 1.767 triangles, 6 malles i 24 accessors reconstruïts com `THREE.BufferGeometry`, normals i UV originals, rotor principal/de cua i jerarquia íntegres. L'atles PNG original s'ha extret i publicat separat a `assets/vehicle-models/huey-duane-native-atlas.png`; no s'utilitza `GLTFLoader` en la versió nativa.
 - [x] Exposada a `src/apache-araon-runtime.mjs` la fàbrica `prepareApacheCompactNative`: geometria de motor `THREE.BufferGeometry` de l'Apache 50% (2.173 triangles), descomprimida de l'APG2 de 18.862 bytes, amb 5 peces i colors de vèrtex. **No és visualment idèntica al GLB final de 2.193 triangles, rodes al 75% i textures.**
 - [x] Pàgina `helicopters-engine-compare.html`: quatre panells Huey GLB / natiu i Apache GLB / natiu, càmera sincronitzada, gir de rotors i recomptes. Enllaç afegit al banc general sense retornar cap helicòpter al catàleg de candidats.
