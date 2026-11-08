@@ -1,5 +1,7 @@
 // Prova de la moto DEFINITIVA, sense GLB ni motor de simplificació.
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {vehicleSpecs} from '../src/vehicle-specs.mjs';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {createStreetfighter25,STREETFIGHTER_25_META as M} from '../src/streetfighter-25-geometry.mjs';
 import {vehicleModels} from '../src/vehicle-model-core.mjs';
@@ -71,16 +73,17 @@ for(const color of [0xc94e3f,0xa4ec24,0xffdf18,0xef35a8,0x228fef,0xff7b19,0x181c
  assert.equal(model.scale.x,vehicleModels.scales.moto,'No duplicar el factor del vehicle');
  const bikeVisual=model.getObjectByName('naked-streetfighter-25');
  assert(bikeVisual,'Falta la moto 25%');
- assert.equal(bikeVisual.scale.x,1.5,'Augment de mida del 50% respecte la versió anterior');
- assert.equal(model.userData.motorcycleVisualScale,1.5,'El pilot ha de conèixer la mida real');
+ assert.equal(bikeVisual.scale.x,1.125,'Reducció de mida del 25% des de l’escala 1.5');
+ assert.equal(bikeVisual.scale.x/1.5,.75,'La mida actual ha de ser exactament el 75% de la precedent');
+ assert.equal(model.userData.motorcycleVisualScale,1.125,'El pilot ha de conèixer la mida nova');
  const bounds=new THREE.Box3().setFromObject(model);
  const actual=bounds.getSize(new THREE.Vector3());
- assert(Math.abs(actual.z-M.dimensions.length*1.5*vehicleModels.scales.moto)<.12,'Llargada final ampliada al 150%');
- assert(actual.x>1.4&&actual.x<1.65,'Amplada final del nou model');
+ assert(Math.abs(actual.z-M.dimensions.length*1.125*vehicleModels.scales.moto)<.12,'Llargada final al 75% de la versió precedent');
+ assert(actual.x>1.10&&actual.x<1.15,'Amplada final del model reduït');
  const [front,rear]=model.userData.wheels;
  assert.equal(front.parent,model.userData.steeringPivots[0]);
  assert(front.userData.radius>0&&rear.userData.radius>0);
- assert(Math.abs(front.userData.radius-M.wheelRadius*1.5*vehicleModels.scales.moto)<1e-6);
+ assert(Math.abs(front.userData.radius-M.wheelRadius*1.125*vehicleModels.scales.moto)<1e-6);
  const pivot=model.userData.steeringPivots[0];
  const target=vehicleModels.steeringMax.moto;
  vehicleModels.animateSteering(model,'moto',1,1);
@@ -89,4 +92,12 @@ for(const color of [0xc94e3f,0xa4ec24,0xffdf18,0xef35a8,0x228fef,0xff7b19,0x181c
  assert(Math.abs(pivot.rotation.y-target)<.001,'Rodar la roda no gira el manillar');
  assert(list(model).filter(x=>x.userData.colorPanel).every(x=>x.material.color.getHex()===color));
 }
-console.log('Naked streetfighter definitiva: +50% de mida, connexió manillar reculada, '+M.triangles+' triangles, 7 pintures vives i direcció animada.');
+// El rider s'ha de reduir tant en vista completa com en LOD distant,
+ // amb compensació de les coordenades locals de seient i agafadors.
+const riderSource=readFileSync(new URL('../src/rider.js',import.meta.url),'utf8');
+assert(riderSource.includes("v.t==='moto'?.75:1"),'El motorista ha de fer el 75% de la seva mida precedent');
+assert(riderSource.includes("motorcycleVisualScale??1)/riderScale"),'Mans i seient compensen l’escala del rider');
+assert(riderSource.includes('motorcycleLocalFit'),'El pilot simplificat segueix la mateixa nova escala');
+assert.deepEqual(vehicleSpecs.hitboxes.moto,[1.24,3.19],'La hitbox també ha de reduir-se');
+assert.equal(vehicleSpecs.radii.moto,1.75,'El radi de detecció es redueix proporcionalment');
+console.log('Naked streetfighter definitiva: -25% moto i motorista, connector inalterat, '+M.triangles+' triangles i direcció conservada.');
