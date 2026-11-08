@@ -1,86 +1,68 @@
-// Contracte Apache: el model d'Araon ha de ser un asset REAL present al repo,
-// no un GLB inexistent amb reserva procedural silenciosa. Sense WebGL/xarxa.
+// Apache Araon en geometria nativa de Three.js: sense GLB ni descàrregues.
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),zlib=require('node:zlib'),crypto=require('node:crypto');
 const {execFileSync}=require('node:child_process');
 const root=path.resolve(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const runtime=read('src/apache-araon-runtime.mjs');
-const core=read('src/vehicle-model-core.mjs');
-const boot=read('src/bootstrap.mjs');
+const core=read('src/vehicle-model-core.mjs'),boot=read('src/bootstrap.mjs');
 const catalog=read('src/vehicle-candidate-catalog.mjs');
-const readme=read('assets/vehicle-models/README.md');
 for(const check of ['Apache_Main_Rotor_Pivot','Apache_Tail_Rotor_Pivot',
- 'APACHE_TRIANGLES=2193','APACHE_PACKED_TRIANGLES=2173','TARGET_LENGTH=7.15','WHEEL_CONTACT=.405',
+ 'APACHE_PACKED_TRIANGLES=2173','TARGET_LENGTH=10.725','WHEEL_CONTACT=.405',
  'rotor=p.main','tailRotor=p.tail','shell.rotation.y=Math.PI',
- 'DecompressionStream','APACHE_MODEL_URL','apache-araon-50mesh.zlib'])
- assert(runtime.includes(check),'Falta un invariant d’Apache: '+check);
+ 'DecompressionStream','function rebuildLandingGear',
+ "roundWheelCount=3",'Apache_Round_Wheel_','CylinderGeometry',
+ "root.userData.apacheModel='araon-50-engine-native-round-wheels-150'"])
+ assert(runtime.includes(check),'Falta un invariant Apache natiu: '+check);
+assert(!runtime.includes('GLTFLoader')&&!runtime.includes('.glb')&&!runtime.includes('fetch('),
+ 'L’Apache natiu no pot dependre de fitxers GLB ni peticions de xarxa');
 assert(boot.includes('prepareApacheAraonRuntime'));
 assert(boot.indexOf('prepareApacheAraonRuntime')<boot.indexOf('const loadClassic='));
-assert(core.includes('approvedApache')&&core.includes('approvedModel')&&core.includes('apacheModel'));
-assert(core.includes('if(!approvedModel)'),'Falta reserva procedural');
-assert(!catalog.includes("{id:'heli_combat'"),'L’Apache acceptat no pot ser candidat');
-assert(readme.includes('Araon')&&readme.includes('CC BY 4.0'));
-execFileSync(process.execPath,['--check',path.join(root,'src/apache-araon-runtime.mjs')],{stdio:'pipe'});
-// La variant aprovada completa s'havia perdut de main. Cal verificar-ne
-// l'existència i exactament el mateix contingut que al commit històric.
-const glbFile=path.join(root,'assets/vehicle-models/apache-araon-salvia-black.glb');
-assert(fs.existsSync(glbFile),'Falta el GLB definitiu Apache, ja restaurat de l’historial Git');
-const glb=fs.readFileSync(glbFile);
-assert.equal(glb.length,4123680,'Mida del GLB Apache definitiu incorrecta');
-assert.equal(glb.toString('ascii',0,4),'glTF','Capçalera GLB Apache invàlida');
-assert.equal(glb.readUInt32LE(4),2,'Format GLB Apache no és la versió 2');
-assert.equal(glb.readUInt32LE(8),glb.length,'Capçalera GLB amb mida inconsistent');
-assert.equal(crypto.createHash('sha256').update(glb).digest('hex'),
- 'be906866d6ac87835f2e30b11ce14bcc6b6ff13ee2cb39e798fd3cf6167f89df',
- 'El GLB restaurat no coincideix amb el de la variant sàlvia/negres aprovada');
-const gltf=JSON.parse(glb.subarray(20,20+glb.readUInt32LE(12)).toString('utf8'));
-const trianglesFull=gltf.meshes.reduce((sum,mesh)=>sum+
- mesh.primitives.reduce((n,p)=>n+gltf.accessors[p.indices].count/3,0),0);
-assert.equal(trianglesFull,2193,'La variant GLB ha de conservar les rodes 75% i 2.193 triangles');
-for(const name of ['main_rotor_lambert2_0','tail_rotor_lambert2_0']){
- const mesh=gltf.meshes.find(x=>x.name===name);
- assert(mesh,'Falta '+name+' al GLB Apache');
- assert(mesh.primitives.every(p=>gltf.materials[p.material].name==='black_details'),
-  'Rotor sense material negre: '+name);
-}
-assert(gltf.images?.length>=4,'El GLB Apache ha de conservar les quatre textures incrustades');
-const asset=path.join(root,'assets/vehicle-models/apache-araon-50mesh.zlib');
-assert(fs.existsSync(asset),'Falta el binari real de l’Apache a GitHub');
-const compressed=fs.readFileSync(asset);
-assert.equal(compressed.length,18862,'Mida binària Apache incorrecta');
+assert(core.includes('approvedApache')&&core.includes('apacheModel')&&core.includes('roundWheelCount=3'));
+assert(!catalog.includes("{id:'heli_combat'"),'Apache acceptat ha de continuar absent dels candidats');
+assert(!fs.existsSync(path.join(root,'assets/vehicle-models/apache-araon-salvia-black.glb')),
+ 'No s’ha retirat el GLB Apache del joc');
+const encoded=runtime.match(/const APG2_DEFLATED='([^']+)';/);
+assert(encoded&&encoded[1].length>25000,'No s’han incrustat les dades APG2 de l’Apache');
+const compressed=Buffer.from(encoded[1],'base64');
+assert.equal(compressed.length,18862,'Font Apache APG2 incorrecta');
 assert.equal(crypto.createHash('sha256').update(compressed).digest('hex'),
  '23a6b241470d04f8cd021293d85b68ec65ecaace1e5a52fa3551f6edeb00ea56',
- 'El binari Apache ha canviat inesperadament');
+ 'La geometria Apache original no coincideix amb el model validat');
 const data=zlib.inflateSync(compressed);
-assert.equal(data.length,27481,'Descompressió Apache incompleta');
-assert.equal(data.toString('ascii',0,4),'APG2','Capçalera compacta Apache incorrecta');
+assert.equal(data.length,27481);
+assert.equal(data.toString('ascii',0,4),'APG2');
 const v=[1518,178,53,164,144],f=[1481,153,45,264,230];
-let p=4,triangles=0;
+let p=4,total=0,discarded=0;
 let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity,z0=Infinity,z1=-Infinity;
-let rotorY0=Infinity,rotorY1=-Infinity;
 for(let part=0;part<5;part++){
  const nv=data.readUInt32LE(p),nf=data.readUInt32LE(p+4);p+=8;
- assert.equal(nv,v[part],'Vèrtexs de la peça '+part);
- assert.equal(nf,f[part],'Triangles de la peça '+part);
- triangles+=nf;
+ assert.equal(nv,v[part],'Nombre vèrtexs part '+part);
+ assert.equal(nf,f[part],'Triangles part '+part);
+ const points=[];
  for(let i=0;i<nv;i++){
-  const x=data.readInt16LE(p)/1000,y=data.readInt16LE(p+2)/1000,z=data.readInt16LE(p+4)/1000;
-  p+=6;
-  x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);
-  z0=Math.min(z0,z);z1=Math.max(z1,z);
-  if(part===3){rotorY0=Math.min(rotorY0,y);rotorY1=Math.max(rotorY1,y)}
+  const x=data.readInt16LE(p)/1000,y=data.readInt16LE(p+2)/1000,z=data.readInt16LE(p+4)/1000;p+=6;
+  points.push([x,y,z]);x0=Math.min(x0,x);x1=Math.max(x1,x);
+  y0=Math.min(y0,y);y1=Math.max(y1,y);z0=Math.min(z0,z);z1=Math.max(z1,z);
  }
- for(let i=0;i<nf*3;i++){
-  assert(data.readUInt16LE(p)<nv,'Triangle amb índex invàlid a la peça '+part);
-  p+=2;
+ for(let i=0;i<nf;i++){
+  const a=data.readUInt16LE(p),b=data.readUInt16LE(p+2),c=data.readUInt16LE(p+4);p+=6;
+  for(const index of [a,b,c])assert(index<nv,'Índex triangle invàlid');
+  if(part===0){
+   const x=(points[a][0]+points[b][0]+points[c][0])/3;
+   const y=(points[a][1]+points[b][1]+points[c][1])/3;
+   const z=(points[a][2]+points[b][2]+points[c][2])/3;
+   const rear=Math.abs(x)>.70&&Math.abs(x)<1.35&&y<1.01&&z>.55&&z<1.83;
+   const nose=Math.abs(x)<.34&&y<1.08&&z>2.08&&z<4.06;
+   if(rear||nose)discarded++;
+  }
  }
- p+=nv; // lluminositat original del material per vèrtex.
+ total+=nf;p+=nv;
 }
-assert.equal(p,data.length,'Contingut incomplet o sobrant');
-assert.equal(triangles,2173,'Els 2.173 triangles de l’Apache han de ser reals');
-const k=7.15/(z1-z0),width=(x1-x0)*k;
-const rotor=.405+((rotorY0+rotorY1)/2-y0)*k;
-assert(width>4&&width<5.5,'L’Apache no cap a l’escala prevista');
-assert(rotor>1&&rotor<4,'Altura del rotor incompatible amb la física');
-console.log('Apache Araon: GLB definitiu 4.123.680 bytes / 2.193 triangles restaurat; fallback 18,9 kB validat.');
+assert.equal(p,data.length);
+assert.equal(total,2173);
+assert(discarded>10&&discarded<300,'El filtre de les rodes ha eliminat massa o massa poques cares: '+discarded);
+const k=10.725/(z1-z0),width=(x1-x0)*k;
+assert(width>6&&width<9,'L’Apache no té el 150% de la mida esperada');
+execFileSync(process.execPath,['--check',path.join(root,'src/apache-araon-runtime.mjs')]);
+console.log('Apache natiu: 2173 triangles d’origen, '+discarded+' cares deformades retirades, tres rodes circulars, +50%.');
