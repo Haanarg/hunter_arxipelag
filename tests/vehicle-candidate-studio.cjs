@@ -37,6 +37,19 @@ for(const item of files){
  assert(fs.existsSync(filename),'GLB candidat absent: '+item.file);
  assert.equal(fs.statSync(filename).size,item.bytes,'Mida GLB incorrecta: '+item.file);
 }
-for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/streetfighter-25-geometry.mjs'])
+const helicopterManifest=JSON.parse(read('assets/vehicle-candidates/helicopter-lods/manifest.json'));
+const helicopterPage=read('helicopters-lod-proves.html');
+const helicopterScript=read('src/helicopters-lod-proves.mjs');
+assert.equal(helicopterManifest.state,'metadata_only_awaiting_binary_upload','No marcar els GLB com a pujats si encara falten');
+for(const [type,levels] of Object.entries({huey:[2014,1649,1286,922],apache:[3808,2990,2173,1355]})){
+ const variants=helicopterManifest.models[type].variants;
+ assert.deepEqual(variants.map(item=>item.level),[100,75,50,25]);
+ assert.deepEqual(variants.map(item=>item.triangles),levels);
+ for(const variant of variants)assert(variant.file===type+'_'+variant.level+'.glb');
+}
+assert(helicopterPage.includes('Huey')&&helicopterPage.includes('Apache'),'Pàgina de comparació d’helicòpters absent');
+assert(helicopterScript.includes('unzipSelected')&&helicopterScript.includes('getBlob'),'El visor ha de poder carregar ZIP i GLB publicats');
+assert(html.includes('helicopters-lod-proves.html'),'Falta l’enllaç al nou comparador des del banc general');
+for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/streetfighter-25-geometry.mjs','src/helicopters-lod-proves.mjs'])
  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
-console.log('Banc de models: 9 vehicles, 20 GLB locals i 6 models militars Sketchfab.');
+console.log('Banc de models: 9 vehicles, 20 GLB locals; Huey/Apache triats i visor de 8 LOD (pendents de pujar).');
