@@ -5,6 +5,7 @@ import {playerBatching} from './player-batching-core.mjs';
 import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs';
 import {HELICOPTER_LEVELS,simplifyHelicopter,encodeHelicopterGLB,countModelTriangles} from './helicopter-simplification.mjs';
+import {recoverApacheAppearance,apacheAppearanceDescription} from './helicopter-texture-recovery.mjs';
 
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
@@ -71,7 +72,8 @@ async function showHelicopterVariants(config,token){
    stats.simplified+' malles reduïdes · '+stats.protectedMeshes+' protegides'+
    (stats.failed?' · '+stats.failed+' sense simplificar':'');
  }
- helicopterStatus.textContent='Variants preparades: revisa visualment rotors, materials i animacions abans d’integrar el model al joc.';
+ helicopterStatus.textContent='Variants preparades: revisa visualment rotors, materials i animacions abans d’integrar el model al joc.'+
+  (source.appearance?' '+apacheAppearanceDescription(source.appearance):'');
 }
 const matCache=new Map();
 function material(color,profile='paint'){
@@ -139,11 +141,16 @@ for(let i=0;i<4;i++){
    try{
      const gltf=await loader.loadAsync(url);
      if(current!==generation)return;
+     const appearance=currentType.id==='heli_combat'?
+       await recoverApacheAppearance(THREE,gltf):null;
+     if(current!==generation)return;
      setModel(slot,gltf.scene,false,gltf.animations);
+     slot.appearance=appearance;
      slot.bold.textContent=file.name;
      slot.sub.textContent='Fitxer local · llicència no verificada';
      slot.source.hidden=true;
-     status.textContent=metrics(slot.model)+' · importat localment';
+     status.textContent=metrics(slot.model)+' · importat localment'+
+      (slot.appearance?' · '+apacheAppearanceDescription(slot.appearance):'');
    }catch(e){status.textContent='Error GLB: '+(e?.message||String(e));}
    finally{URL.revokeObjectURL(url)}
  });
@@ -465,7 +472,9 @@ helicopterFile.addEventListener('change',async()=>{
  try{
   const gltf=await loader.loadAsync(url);
   if(!gltf.scene||countModelTriangles(gltf.scene)===0)throw Error('El fitxer no conté cap malla triangular');
-  helicopterSources.set(config.id,{root:gltf.scene,animations:gltf.animations||[],filename:f.name});
+  const appearance=config.id==='heli_combat'?
+    await recoverApacheAppearance(THREE,gltf):null;
+  helicopterSources.set(config.id,{root:gltf.scene,animations:gltf.animations||[],filename:f.name,appearance});
   if(currentType.id===config.id&&token===generation)await showHelicopterVariants(config,token);
  }catch(error){
   helicopterStatus.textContent='No s’ha pogut obrir el GLB: '+(error?.message||String(error));
