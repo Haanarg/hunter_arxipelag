@@ -18,3 +18,10 @@ cp package/LICENSE vendor/THREE-LICENSE.txt
 ```
 
 No cal npm ni compilació per servir el joc. El carregador és `src/bootstrap.mjs`; els sistemes clàssics mantenen temporalment el pont `window.THREE`. L’antiga r128 es conserva a l’historial Git.
+
+## Carregador GLB local per a les previsualitzacions
+
+- `three-addons/loaders/GLTFLoader.js`, `three-addons/utils/BufferGeometryUtils.js` i `three-addons/utils/SkeletonUtils.js` són còpies dels mòduls oficials Three.js **r186**, distribuïts sota la mateixa llicència **MIT** de Three.js (vegeu `THREE-LICENSE.txt`).
+- Origen: https://github.com/mrdoob/three.js/tree/r186/examples/jsm
+- L'`importmap` de `vehicles-externs-proves.html` resol tant `three` com `three/addons/` contra fitxers locals. No es necessita jsDelivr per carregar els GLB guardats a `assets/vehicle-candidates/`.
+- El carregador és exclusivament per al laboratori de models; el joc principal no el carrega durant una missió.
