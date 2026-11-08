@@ -1,10 +1,8 @@
 // Catàleg compartit entre el visor Three.js i l'eina de descàrrega local.
 // La moto aquàtica definitiva ja forma part de la fàbrica del joc; no és cap candidata.
-// El Huey definitiu ja és al joc. L'Apache continua en revisió (CC BY).
+// Huey i Apache acceptats ja formen part del joc.
 const P=(pack,match,query)=>({pack,match,query:query||match});
 const Q=(query)=>({query});
-// Sketchfab CC BY 4.0: enllaços i visors oficials, sense fitxer GLB local.
-const S=(modelId,url,title,author,triangles,note)=>({provider:'sketchfab',modelId,url,title,author,triangles,license:'CC BY 4.0',note});
 export const CATALOG=[
  {id:'bici',name:'Bicicleta',kind:'terra',options:[
    P('velodrome-and-track-cycling','Track Bicycle'),
@@ -36,10 +34,6 @@ export const CATALOG=[
  {id:'ferry',name:'Ferri',kind:'mar',note:'Les dues primeres alternatives representen principalment la popa d’un ferri, sense casc submergit complet: són referències visuals parcials. La tercera cerca un ferri de passatgers alternatiu.',
    options:[P('ferry-terminal-and-harbour-crossing','Roll on roll off ferry, berthed stern section'),
     P('ferry-terminal-and-harbour-crossing','Roll on roll off ferry, blue livery'),
-    Q('passenger ferry')]},
- {id:'heli_combat',name:'Apache · AH-64 (Araon)',kind:'aire',mode:'heli-lod',
-   note:'Model definitiu seleccionat: Araon (CC BY 4.0). Importa el GLB oficial per comparar la simplificació i el pes de les variants.',
-   options:[
-    S('df0993ee21e74a759cd0519f6fc51cf8','https://sketchfab.com/3d-models/ah-64-apache-df0993ee21e74a759cd0519f6fc51cf8','AH-64 Apache','Araon',2200,'Model seleccionat · optimitzat per a dispositius mòbils')]}
+    Q('passenger ferry')]}
 
 ];

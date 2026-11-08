@@ -33,7 +33,6 @@ const boot=read('src/bootstrap.mjs');
 const approved=read('src/huey-duane-runtime.mjs');
 const html=read('index.html');
 const catalog=read('src/vehicle-candidate-catalog.mjs');
-const apacheStudio=read('src/helicopters-lod-proves.mjs');
 assert(approved.includes('huey-duane-doors-open.glb'),'La càrrega del Huey ha perdut la font GLB');
 assert(approved.includes('shell.rotation.y=Math.PI'),'Orientació del morro Huey incorrecta');
 assert(approved.includes('rotor=pivots.main')&&approved.includes('tailRotor=pivots.tail'),
@@ -44,8 +43,5 @@ assert(game.includes('approvedHuey')&&game.includes("g.userData.hueyModel='duane
  'La fàbrica de vehicles no empra el model definitiu Huey');
 assert(html.includes('type="importmap"')&&html.includes('three/addons/'),
  'Cal resoldre GLTFLoader amb Three.js local');
-assert(!catalog.includes("{id:'heli',"),'El Huey acceptat encara figura com a candidat');
-assert(catalog.includes("{id:'heli_combat',"),'No es pot eliminar el candidat Apache');
-assert(!apacheStudio.includes("choose('huey')")&&apacheStudio.includes("choose('apache')"),
- 'El laboratori LOD encara obre Huey descartat');
+assert(!catalog.includes("{id:'heli',")&&!catalog.includes("{id:'heli_combat',"),'Els dos helicòpters aprovats han sortit del catàleg');
 console.log('Huey definitiu: GLB real 1.767 triangles, textura i animació conservades, rotors i arrencada verificats.');

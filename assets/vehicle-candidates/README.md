@@ -1,6 +1,6 @@
 # Models externs pendents de triar
 
-El banc de proves `/vehicles-externs-proves.html` conserva **26 GLB CC0 (8,55 MiB)** de **nou tipus de vehicles** que encara no tenen un model definitiu acceptat. Ni la moto ni la moto aquàtica no s'hi mostren; els seus models nous ja són dins del joc.
+El banc de proves `/vehicles-externs-proves.html` conserva **20 GLB CC0** de **set tipus de vehicles** que encara no tenen un model definitiu acceptat. La moto, la moto aquàtica i els dos helicòpters estan acceptats i no figuren entre els candidats. L'Apache definitiu encara té pendent la publicació del GLB de producció.
 
 ## Models de moto acceptats
 
@@ -20,7 +20,7 @@ Els **tres GLB de moto i tres de moto aquàtica** s'han eliminat de `assets/vehi
 
 El **camió militar, la barca de rems i el windsurf** es conserven amb els models originals; s'han retirat del banc de candidats. La **llanxa** encara té models en revisió.
 
-El manifest `manifest.json` conté les mides, la llicència i la procedència dels 26 GLB pendents. Catàleg: https://3dassets.dev/ ; llicència: https://creativecommons.org/publicdomain/zero/1.0/.
+El manifest `manifest.json` conté les mides, la llicència i la procedència dels 20 GLB pendents. Catàleg: https://3dassets.dev/ ; llicència: https://creativecommons.org/publicdomain/zero/1.0/.
 
 Per tornar a recollir candidats, `node tools/fetch-vehicle-candidates.mjs` només recorre els tipus encara presents al catàleg, de manera que **no torna a baixar les motos acceptades ni els vehicles descartats**.
 
