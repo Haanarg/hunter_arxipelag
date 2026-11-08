@@ -1,3 +1,10 @@
+**P1 · 2026-11-08 · torre que envaeix l'heliport (captura llavor 422475840):**
+- [x] Diagnòstic: al camp de presoners l'heliport local era `(36,39)`, de 30×30 m; la torre NE local era `(56,56)`, massa a prop de la cantonada i de la zona de seguretat.
+- [x] Traslladada la torre de la banda est del camp a `(56,8)`, fora de l'heliport, les instal·lacions i la porta del recinte.
+- [x] Nova comprovació pura a `src/compound-planning.mjs` abans de construir cap complex: reserva la plataforma rectangular, el disc de rotor i **6 m** de marge respecte a la teulada real de cada torre. Corregeix qualsevol altre solapament per cerca determinista sense RNG; si és impossible, omet únicament la torre conflictiva.
+- [x] Aplicada a `src/compound-generation.js` en SOLO i COOP, i registrada la intervenció al registre del complex; regressió `tests/heliport-tower-clearance.mjs` amb la posició original del cas, rotacions de 90° i variants d'heliport.
+- [ ] Confirmar visualment al navegador que l'heliport del camp de presoners queda net en una partida amb llavor **422475840**, en individual i cooperatiu.
+
 **P1 · 2026-11-08 · tanc contra mobiliari dels pobles:**
 - [x] La col·lisió de bancs (5 PV) i pous (8 PV) ara admet l'embestida del **tanc**, inclosa la marxa enrere; el vehicle no pateix dany i conserva pràcticament tota la velocitat.
 - [x] Reutilitzat `dmgW`/`collapseCivicProp` per a fragments, so, eliminació atòmica dels dotze segments del pou i aparició de les runes. Les runes ja no bloquegen els tancs; continuen blocant els altres vehicles.
