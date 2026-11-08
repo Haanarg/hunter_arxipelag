@@ -1,6 +1,7 @@
 import {turretSpecs,advanceTurret} from './vehicle-turret-core.mjs';
 import {vehicleSpecs} from './vehicle-specs.mjs';
 import {createJetSki25,JET_SKI_25_META} from './jet-ski-25-geometry.mjs?rev=vivid-engine-cover-2';
+import {createStreetfighter25,STREETFIGHTER_25_META} from './streetfighter-25-geometry.mjs';
 import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs?v=0.6.170';
 import {createHovercraftConcept,hovercraftConcepts} from './hovercraft-concepts.mjs?v=0.6.81';
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
@@ -197,14 +198,31 @@ export const vehicleModels=Object.freeze({
         g.userData.truckStaticBatches=batches;
         g.userData.truckVisualFit=fit;
       }
-      if(t==='bici'||t==='moto'){
-        const moto=t==='moto',r=moto?.65:.62,L=moto?1.5:1.22,col=moto?0xbc743d:(appearance.color??0x3f9b9d);
-        // La forquilla i el manillar pivoten junts amb la roda de davant.
-        // Centre de gir al coll de direcció (1.65, -0.95).
+      if(t==='moto'){
+        // Naked streetfighter CC0 (candidat 2), versió 25% del banc de
+        // proves: rodes amb radis intactes, forquilla i manillar units.
+        // Malla precompilada; sense GLB ni meshoptimizer en temps de joc.
+        const color=appearance.color??0x228fef;
+        const bike=createStreetfighter25(THREE,{color,material});
+        g.add(bike);
+        g.userData.wheels=bike.userData.wheels;
+        g.userData.steeringPivots=bike.userData.steeringPivots;
+        // El radi real del pneumàtic JA inclou l'escala de la variant,
+        // falta només l'escala VS.moto de la fàbrica.
+        for(const w of g.userData.wheels)w.userData.radius*=VS.moto;
+        g.userData.motorcycleModel='naked-streetfighter-25';
+        g.userData.motorcycleColor=color;
+        g.userData.motorcycleTriangles=STREETFIGHTER_25_META.triangles;
+        g.userData.motorcycleFit=STREETFIGHTER_25_META.fit;
+      }
+      if(t==='bici'){
+        const r=.62,L=1.22,col=appearance.color??0x3f9b9d;
+        // Bicicleta procedural original: manté la forquilla, els radis,
+        // el plat, els pedals i la mateixa cinemàtica de sempre.
         const steering=new THREE.Group();steering.position.set(0,1.65,-.95);g.add(steering);
         (g.userData.steeringPivots||(g.userData.steeringPivots=[])).push(steering);
-        wheel(steering,0,r-1.65,-L+.95,r,moto?.35:.15,true,false,g);
-        wheel(g,0,r,L,r,moto?.35:.15,true);
+        wheel(steering,0,r-1.65,-L+.95,r,.15,true,false,g);
+        wheel(g,0,r,L,r,.15,true);
         for(const x of[-.15,.15]){
           rod(g,[x,r,L],[x,1.45,.3],.07,col,'paint');
           rod(g,[x,r,L],[x,.72,0],.07,col,'paint');
@@ -216,20 +234,9 @@ export const vehicleModels=Object.freeze({
         box(g,.55,.16,.75,rubber,0,1.55,.4,'rubber');
         rod(steering,[-.55,1.98-1.65,-.05],[.55,1.98-1.65,-.05],.07,metal);
         round(g,.18,.65,metal,0,.75,0,'x');
-        if(moto){
-          box(g,.72,.52,1.05,col,0,1.3,-.28,'paint');
-          box(g,.56,.64,.66,metal,0,.87,0,'metal');
-          box(g,.5,.18,.82,0x2e3133,0,1.6,.52,'rubber');
-          round(steering,.2,.18,0xffe4ad,0,.03,-.35,'z','paint');
-          box(g,.12,.22,.12,0xc52f24,-.36,1.18,1.35,'paint');
-          box(g,.12,.22,.12,0xc52f24,.36,1.18,1.35,'paint');
-          rod(g,[.4,.6,.2],[.4,.6,1.3],.12,metal);
-          rod(g,[-.4,.6,.2],[-.4,.6,1.3],.12,metal);
-        }else{
-          for(const x of[-.4,.4])box(g,.22,.1,.35,rubber,x,.73,0,'rubber');
-          box(g,.5,.1,.65,0x252a2c,0,1.58,.42,'rubber');
-          round(steering,.09,.5,0xcfd5d6,0,.25,-.05,'x','metal');
-        }
+        for(const x of[-.4,.4])box(g,.22,.1,.35,rubber,x,.73,0,'rubber');
+        box(g,.5,.1,.65,0x252a2c,0,1.58,.42,'rubber');
+        round(steering,.09,.5,0xcfd5d6,0,.25,-.05,'x','metal');
       }
       if(t==='tanqueta'){
         for(const x of[-1.42,1.42])for(const z of[-1.55,0,1.55])
