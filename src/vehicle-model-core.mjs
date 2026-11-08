@@ -713,9 +713,10 @@ export const vehicleModels=Object.freeze({
       }
       if(t==='heli'||t==='heli_combat'){
         const combat=t==='heli_combat',bodyCol=combat?0x59634f:0x647768;
-        // El Huey 100 de Duane's Mind amb els laterals oberts substitueix
-        // definitivament la geometria procedural quan el GLB està carregat.
-        // La reserva antiga només s'usa si falla la descàrrega/descodificació.
+        // Huey i Apache natius de Three.js: geometria d'accessors / APG2.
+        // No es carrega cap GLB; preservam els dos pivots de rotor i les
+        // geometries compartides entre instàncies, SOLO i COOP.
+        // La reserva procedural només s'usa si falla la construcció.
         const approvedHuey=!combat?globalThis.HUNTER_HUEY_DUANE?.create?.():null;
         const apacheRuntime=combat?globalThis.HUNTER_APACHE_ARAON:null;
         const approvedApache=apacheRuntime?.create?.()||null;
@@ -725,8 +726,13 @@ export const vehicleModels=Object.freeze({
           g.add(approvedModel);
           g.userData.rotor=approvedModel.userData.rotor;
           g.userData.tailRotor=approvedModel.userData.tailRotor;
-          if(approvedHuey)g.userData.hueyModel='duane-100-open';
-          else g.userData.apacheModel=approvedApache.userData.apacheModel||'araon-50-compact-salvia-black';
+          if(approvedHuey){
+            g.userData.hueyModel='duane-100-open-engine-native-110';
+            g.userData.cockpitSeatCount=2;
+          }else{
+            g.userData.apacheModel=approvedApache.userData.apacheModel||'araon-50-engine-native-round-wheels-150';
+            g.userData.roundWheelCount=3;
+          }
         }else if(!combat){
           // Huey 3B-4: la secció central és un PASSADÍS OBERT de banda a
           // banda, no un prisma massís amagat rere els marcs de les portes.
@@ -818,11 +824,11 @@ export const vehicleModels=Object.freeze({
       // Les dues barres inferiors estan centrades a y=.48 i tenen radi .075.
       // Guardam el contacte inferior JA escalat per a la física d'aterratge.
       if(t==='heli'||t==='heli_combat'){
-        const apacheContact=t==='heli_combat'?globalThis.HUNTER_APACHE_ARAON:null;
+        const aircraft=t==='heli_combat'?globalThis.HUNTER_APACHE_ARAON:globalThis.HUNTER_HUEY_DUANE;
         g.userData.skidContactHeight=
-          (apacheContact?.skidContactHeight??(.48-.075))*VS[t];
+          (aircraft?.skidContactHeight??(.48-.075))*VS[t];
         g.userData.rotorContactHeight=
-          (apacheContact?.rotorContactHeight??((t==='heli_combat'?3.22:3.82)+.05))*VS[t];
+          (aircraft?.rotorContactHeight??((t==='heli_combat'?3.22:3.82)+.05))*VS[t];
       }
       g.traverse(o=>{if(o.isMesh&&!o.userData.waterMask){o.castShadow=shadows;o.receiveShadow=shadows}});
       // Fusionam només malles rígides germanes amb el mateix material.
