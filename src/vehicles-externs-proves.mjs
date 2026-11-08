@@ -10,8 +10,7 @@ import {createCivilianCarModel} from './civilian-car-model.mjs';
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
 import {CATALOG} from './vehicle-candidate-catalog.mjs';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
-  warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName'),
-  featureInfo=document.querySelector('#featureInfo');
+  warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
 renderer.setPixelRatio(Math.min(1.5,window.devicePixelRatio||1));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -249,7 +248,6 @@ async function choose(config){
    'Comparació visual: la física, les hitboxes i les animacions pròpies dels vehicles no s’han transferit.';
  for(const b of list.querySelectorAll('button'))b.classList.toggle('active',b.dataset.type===config.id);
  const marine=config.kind==='mar';
- featureInfo.hidden=true;
  grid.classList.remove('featured');
  for(const slot of slots){
    dropPrevious(slot);
