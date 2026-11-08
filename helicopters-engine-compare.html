@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hunter · Helicòpters: GLB contra geometria del motor</title>
-<meta name="description" content="Comparador en quatre vistes del Huey i l'Apache: GLB original versus model BufferGeometry natiu de Three.js.">
+<title>Hunter · Helicòpters natius Three.js</title>
+<meta name="description" content="Previsualització del Huey i Apache definitius, construïts amb BufferGeometry natiu de Three.js sense GLB.">
 <style>
 :root{color-scheme:dark;--bg:#101e24;--panel:#1c3034;--edge:#54716b;--ink:#edf3e9;--soft:#b8cdc6;--gold:#ead09e;font:14px system-ui,sans-serif}
 *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);min-height:100%;overflow-x:hidden}
@@ -35,8 +35,8 @@ label{display:inline-flex;gap:7px;align-items:center;color:#d4e1d6}
 </head><body>
 <header>
 <div style="color:#e7c989;letter-spacing:.16em;font-size:11px;font-weight:800">HUNTER: ARXIPÈLAG · LABORATORI 3D</div>
-<h1>Helicòpters: GLB vs. motor de joc</h1>
-<p>Comparació directa entre els models GLB aprovats i els models reconstruïts amb <strong>THREE.BufferGeometry</strong>, amb la mateixa escala, il·luminació i càmera de cada parella. Els rotors continuen separats i animables.</p>
+<h1>Helicòpters definitius · Three.js</h1>
+<p>Models definitius construïts directament amb <strong>THREE.BufferGeometry</strong> sense fitxers GLB. Compara la versió amb materials i la vista de la topologia en filferro, amb càmeres sincronitzades i rotors animats.</p>
 <p><a href="vehicles-externs-proves.html">Tornar al banc de nous models</a> · <a href="index.html">Jugar</a></p>
 </header>
 <main>
@@ -49,13 +49,13 @@ label{display:inline-flex;gap:7px;align-items:center;color:#d4e1d6}
 </div>
 <p id="notice" role="status">Preparant les quatre versions…</p>
 <div id="cards">
-<article class="card" data-model="huey-glb" data-type="huey" data-kind="glb"><div class="top"><h2>Huey · GLB original</h2><div class="caption">Duane’s Mind · portes obertes · 100% · GLTFLoader</div></div><div class="viewport"></div><footer><div class="stat">Carregant…</div></footer></article>
-<article class="card" data-model="huey-native" data-type="huey" data-kind="engine"><div class="top"><h2>Huey · Motor Three.js</h2><div class="caption">Geometria reconstruïda amb BufferGeometry, UV i textura</div></div><div class="viewport"></div><footer><div class="stat">Preparant…</div></footer></article>
-<article class="card" data-model="apache-glb" data-type="apache" data-kind="glb"><div class="top"><h2>Apache · GLB definitiu</h2><div class="caption">Araon · 50% + rodes 75% · sàlvia/negre</div></div><div class="viewport"></div><footer><div class="stat">Carregant…</div></footer></article>
-<article class="card" data-model="apache-native" data-type="apache" data-kind="engine"><div class="top"><h2>Apache · Motor Three.js</h2><div class="caption">BufferGeometry compacte · 50% · colors de vèrtex</div></div><div class="viewport"></div><footer><div class="stat">Preparant…</div></footer></article>
+<article class="card" data-model="huey-solid" data-type="huey" data-kind="engine"><div class="top"><h2>Huey · Model definitiu</h2><div class="caption">Duane’s Mind · portes obertes · +10% · dos seients</div></div><div class="viewport"></div><footer><div class="stat">Carregant…</div></footer></article>
+<article class="card" data-model="huey-native" data-type="huey" data-kind="engine"><div class="top"><h2>Huey · Estructura 3D</h2><div class="caption">Malles natives en filferro · seients, rotor i cabina</div></div><div class="viewport"></div><footer><div class="stat">Preparant…</div></footer></article>
+<article class="card" data-model="apache-solid" data-type="apache" data-kind="engine"><div class="top"><h2>Apache · Model definitiu</h2><div class="caption">Araon · geometria 50% · +50% mida · rodes rodones</div></div><div class="viewport"></div><footer><div class="stat">Carregant…</div></footer></article>
+<article class="card" data-model="apache-native" data-type="apache" data-kind="engine"><div class="top"><h2>Apache · Estructura 3D</h2><div class="caption">Malles natives en filferro · tres rodes circulars</div></div><div class="viewport"></div><footer><div class="stat">Preparant…</div></footer></article>
 </div>
-<div id="help"><strong>Què mesuram?</strong> Triangles, malles, temps de preparació i dimensions. El Huey conserva exactament els 1.767 triangles de la versió GLB aprovada. L’Apache natiu en conserva 2.173 (50%), enfront dels 2.193 del GLB amb rodes del 75%: és una alternativa lleugerament diferent, amb colors de vèrtex en lloc de les textures originals. <strong>Els dos models actuals del joc encara són els GLB.</strong> Aquest laboratori no altera la física ni el COOP.<br>
+<div id="help"><strong>Què mesuram?</strong> Triangles, malles, temps de preparació i dimensions. El Huey conserva els 1.767 triangles originals més la geometria dels seients i s’ha ampliat un 10%. L’Apache reconstrueix els 2.173 triangles de la malla compacta, retira els fragments de les rodes deformades i hi afegeix tres rodes circulars, amb un augment de mida del 50%. <strong>Tots dos models s’utilitzen al joc com a geometria nativa, sense GLB.</strong> Aquest laboratori no altera la física ni el COOP.<br>
 <strong>Crèdits:</strong> <a href="https://sketchfab.com/3d-models/bell-huey-helicopter-755d8518a06e41b19752c1b54c0da588" target="_blank" rel="noopener noreferrer">Huey — Duane's Mind</a> i <a href="https://sketchfab.com/3d-models/ah-64-apache-df0993ee21e74a759cd0519f6fc51cf8" target="_blank" rel="noopener noreferrer">Apache — Araon</a>. Llicència CC BY 4.0.</div>
 </main>
-<script type="module" src="./src/helicopters-engine-compare.mjs?v=1"></script>
+<script type="module" src="./src/helicopters-engine-compare.mjs?v=2"></script>
 </body></html>
