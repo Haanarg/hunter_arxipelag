@@ -1,6 +1,6 @@
 // Catàleg compartit entre el visor Three.js i l'eina de descàrrega local.
 // La moto aquàtica definitiva ja forma part de la fàbrica del joc; no és cap candidata.
-// Els nous heli militars són referències externes CC BY, no assets integrats.
+// El Huey definitiu ja és al joc. L'Apache continua en revisió (CC BY).
 const P=(pack,match,query)=>({pack,match,query:query||match});
 const Q=(query)=>({query});
 // Sketchfab CC BY 4.0: enllaços i visors oficials, sense fitxer GLB local.
@@ -37,10 +37,6 @@ export const CATALOG=[
    options:[P('ferry-terminal-and-harbour-crossing','Roll on roll off ferry, berthed stern section'),
     P('ferry-terminal-and-harbour-crossing','Roll on roll off ferry, blue livery'),
     Q('passenger ferry')]},
- {id:'heli',name:'Huey · UH-1 (Duane’s Mind)',kind:'aire',mode:'heli-lod',
-   note:'Model definitiu seleccionat: Duane’s Mind (CC BY 4.0). Importa el GLB oficial per veure 100%, 75%, 50% i 25%, sense tocar la flota del joc.',
-   options:[
-    S('755d8518a06e41b19752c1b54c0da588','https://sketchfab.com/3d-models/bell-huey-helicopter-755d8518a06e41b19752c1b54c0da588','Bell Huey helicopter',"Duane's Mind",null,'Model seleccionat · animat')]},
  {id:'heli_combat',name:'Apache · AH-64 (Araon)',kind:'aire',mode:'heli-lod',
    note:'Model definitiu seleccionat: Araon (CC BY 4.0). Importa el GLB oficial per comparar la simplificació i el pes de les variants.',
    options:[
