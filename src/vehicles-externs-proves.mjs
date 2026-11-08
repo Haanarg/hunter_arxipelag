@@ -1,7 +1,7 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {SimplifyModifier} from 'three/addons/modifiers/SimplifyModifier.js';
-import {mergeVertices} from 'three/addons/utils/BufferGeometryUtils.js';
+import {mergeVertices,deinterleaveGeometry} from 'three/addons/utils/BufferGeometryUtils.js';
 import {vehicleModels} from './vehicle-model-core.mjs';
 import {playerBatching} from './player-batching-core.mjs';
 import {createTruckModel} from './truck-model.mjs';
@@ -220,11 +220,14 @@ async function simplifySelectedModel(root,ratio){
  root.traverse(node=>{if(node.isMesh&&node.geometry?.getAttribute('position'))meshes.push(node)});
  const errors=[];
  for(const mesh of meshes){
-   const original=mesh.geometry;let welded=null;
+   const original=mesh.geometry;let prepared=null,welded=null;
    try{
-     // Soldar primer les malles no indexades impedeix sobredecimar-les
-     // comptant erròniament els vèrtexs duplicats.
-     welded=original.index?original:mergeVertices(original);
+     // GLTFLoader pot retornar InterleavedBufferAttribute. mergeVertices
+     // no els admet directament: convertir la còpia a atributs compactes.
+     // Mai no modificam la geometria de referència compartida pels 6 panells.
+     prepared=original.clone();
+     deinterleaveGeometry(prepared);
+     welded=prepared.index?prepared:mergeVertices(prepared);
      const count=welded.getAttribute('position').count;
      if(count<12)continue;
      const removed=Math.min(count-3,Math.max(1,Math.round(count*(1-ratio))));
@@ -237,7 +240,10 @@ async function simplifySelectedModel(root,ratio){
    }catch(error){
      console.warn('Peça GLB sense simplificar:',mesh.name,error);
      errors.push(mesh.name||'sense nom');
-   }finally{if(welded&&welded!==original)welded.dispose()}
+   }finally{
+     if(welded&&welded!==prepared)welded.dispose();
+     prepared?.dispose();
+   }
  }
  return errors;
 }
