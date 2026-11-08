@@ -43,41 +43,6 @@
         "license": "CC0-1.0"
       }
     ],
-    "moto": [
-      {
-        "slot": 1,
-        "id": "15424",
-        "title": "Road sportbike (Motorcycle Racing and Street Bikes)",
-        "bytes": 260764,
-        "triangles": 5156,
-        "file": "moto/1-motorcycle-racing-and-street-bikes-road-sportbike-e1418015.glb",
-        "url": "https://3dassets.dev/assets/motorcycle-racing-and-street-bikes-road-sportbike-e1418015",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/15424/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 2,
-        "id": "15425",
-        "title": "Naked streetfighter (Motorcycle Racing and Street Bikes)",
-        "bytes": 248888,
-        "triangles": 4908,
-        "file": "moto/2-motorcycle-racing-and-street-bikes-naked-streetfighter-9916850c.glb",
-        "url": "https://3dassets.dev/assets/motorcycle-racing-and-street-bikes-naked-streetfighter-9916850c",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/15425/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 3,
-        "id": "15430",
-        "title": "Twin-cylinder scrambler (Motorcycle Racing and Street Bikes)",
-        "bytes": 322240,
-        "triangles": 6440,
-        "file": "moto/3-motorcycle-racing-and-street-bikes-scrambler-0b11660f.glb",
-        "url": "https://3dassets.dev/assets/motorcycle-racing-and-street-bikes-scrambler-0b11660f",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/15430/v1/model.glb",
-        "license": "CC0-1.0"
-      }
-    ],
     "cotxe_civil": [
       {
         "slot": 1,
@@ -348,7 +313,7 @@
       }
     ]
   },
-  "savedModels": 29,
-  "savedBytes": 9799264,
+  "savedModels": 26,
+  "savedBytes": 8967372,
   "skipped": 1
 }
