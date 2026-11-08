@@ -146,7 +146,9 @@ window.HUNTER_RIDER=Object.freeze({
       // En cotxes l'habitacle és més baix que el protagonista dret.
       // Escalam el mateix model de jugador i preservam l'orientació
       // tridimensional del xassís en girs i pendents.
-      const riderScale=car?.82:v.t==='hover'?.63:1;
+      // El motorista es redueix un 25% com la moto; les altres
+      // siluetes i hitboxes dels conductors no canvien.
+      const riderScale=car?.82:v.t==='hover'?.63:v.t==='moto'?.75:1;
       g.scale.setScalar(riderScale);
       g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);
       const far=Number.isFinite(viewDistance)&&viewDistance>
@@ -162,7 +164,10 @@ window.HUNTER_RIDER=Object.freeze({
         const seatX=coopSeat?(passenger?1:-1)*(car?.65:.58)*sc:0,
           deckY=car?1.20*sc:v.t==='hover'?1.25*sc:
             v.t==='windsurf'?1.05*sc:1.35*sc;
-        riderFar.position.set(seatX,v.t==='moto'?.98*sc*(v.o?.userData?.motorcycleVisualScale??1):deckY,(v.t==='bici'||v.t==='moto')?0.12*sc*(v.t==='moto'?(v.o?.userData?.motorcycleVisualScale??1):1):0);
+        // Compensar la mida local del motorista: el seu grup s'escala
+        // a 0.75 però el punt de seient ha de coincidir amb la moto.
+        const motorcycleLocalFit=v.t==='moto'?(v.o?.userData?.motorcycleVisualScale??1)/riderScale:1;
+        riderFar.position.set(seatX,v.t==='moto'?.98*sc*motorcycleLocalFit:deckY,(v.t==='bici'||v.t==='moto')?0.12*sc*motorcycleLocalFit:0);
         pistol.visible=false;
         return;
       }
@@ -258,12 +263,12 @@ window.HUNTER_RIDER=Object.freeze({
       }
 
       if(v.t==='moto'){
-        // Naked streetfighter 25%, ara ampliada +50% respecte la variant
-        // anterior. Seient i mans mantenen la posició relativa al xassís.
-        // El punt de presa segueix el
-        // mateix pivot de direcció visual, inclòs el gir dels punys.
+        // La Naked streetfighter i el conductor s'han reduït un 25%.
+        // Les coordenades del rider són locals al seu grup ja escalat:
+        // compensam aquesta escala per mantenir mans, peus i seient
+        // al mateix lloc relatiu que la forquilla i els agafadors.
         const steering=v.o?.userData?.steeringPivots?.[0],
-              size=v.o?.userData?.motorcycleVisualScale??1,
+              size=(v.o?.userData?.motorcycleVisualScale??1)/riderScale,
               fit=sc*size,
               turn=steering?.rotation?.y||0,
               pivotZ=(steering?.position?.z??-.28)*fit,
