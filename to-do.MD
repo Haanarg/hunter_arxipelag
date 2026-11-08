@@ -31,6 +31,12 @@
 - [x] Hitbox `moto` de 1,65 × 4,25 a **1,24 × 3,19**, radi de proximitat de 2,3 a 1,75. Conservar els colors vius i el pivot de direcció compartit.
 - [ ] **Validació visual pendent**: pilot, agafadors, contacte rodes-terra, COOP i Android; la prova automatitzada només valida jerarquia i mides.
 
+**P0 · v0.6.190 · destrucció física i visual de la coberta de l'hangar:**
+- [x] Substituïda l'antiga animació de la volta sencera (que la càmera ocultava quan els PV arribaven a zero) per fragments independents de l'ocultació interior. Els 10 trams es divideixen en 3 panells cadascun, amb metall, orientació, caiguda, gir, fum i runa compartint geometria/materials; sense costos durant la generació inicial.
+- [x] Una coberta amb `rb` o `rhp<=0` deixa de ser una superfície sòlida per a bales, coets, granades i detecció de trajectòries. No es modifica la vida inicial (10 PV) ni la resta de parets.
+- [x] Nova regressió `tests/hangar-roof-destruction.mjs`: panells visibles tot i la càmera interior, caiguda única, col·lisions eliminades i manteniment dels altres sostres.
+- [ ] **Validació a navegador/Android pendent:** observar un hangar intacte i la ruptura completa amb granades/bazuca/tanc, provar després caminar i llançar granades a través del forat; reproduir a SOLO/COOP.
+
 ## Llegenda i límits
 
 - **P0**: regressions greus, estrebades, sincronització i seguretat de les partides. **P1**: estalvi mesurable de CPU/GPU/memòria o refactor essencial. **P2**: reducció de complexitat, manteniment i acabat. **P3**: millores funcionals ajornades.

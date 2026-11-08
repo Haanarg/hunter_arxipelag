@@ -1524,6 +1524,8 @@ function marineHullSegmentT(x0,y0,z0,x1,y1,z1,boat){
   return hull==null?cabin:cabin==null?hull:Math.min(hull,cabin);
 }
 function hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b){
+  // Una coberta enderrocada no pot interceptar granades ni projectils.
+  if(b.rb||b.rhp<=0)return null;
   const segs=b.roof?.userData?.hitSegments;if(!segs?.length)return null;
   let best=null;
   for(const s of segs){
@@ -1755,7 +1757,7 @@ function updFx(dt){
 const pending=pl.userData.grenadePending;if(pending){pending.t-=dt;if(pending.t<=0){launchGrenade(pending);pl.userData.grenadeReleased=true;pl.userData.grenadePending=null}}
 for(let i=grenades.length-1;i>=0;i--){const g=grenades[i],next=window.HUNTER_SHARED_COMBAT.ballisticStep(g,dt),x0=g.x,y0=g.y,z0=g.z;g.t-=dt;g.vy=next.vy;const x1=next.x,y1=next.y,z1=next.z,mx=(x0+x1)/2,mz=(z0+z1)/2,reach=Math.hypot(x1-x0,z1-z0)/2+.5;let hitT=null;
   for(const w of wallCandidates(mx,mz,reach))if(!w.open){const q=segmentAabbT(x0,y0,z0,x1,y1,z1,w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);if(q!=null&&(hitT==null||q<hitT))hitT=q}
-  for(const b of buildingCandidates(mx,mz,reach)){const q=b.hangar?hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b):segmentAabbT(x0,y0,z0,x1,y1,z1,b.x-b.w/2,b.x+b.w/2,b.fy+b.h-.35,b.fy+b.h+.8,b.z-b.d/2,b.z+b.d/2);if(q!=null&&(hitT==null||q<hitT))hitT=q}
+  for(const b of buildingCandidates(mx,mz,reach)){if(b.rb||b.rhp<=0)continue;const q=b.hangar?hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b):segmentAabbT(x0,y0,z0,x1,y1,z1,b.x-b.w/2,b.x+b.w/2,b.fy+b.h-.35,b.fy+b.h+.8,b.z-b.d/2,b.z+b.d/2);if(q!=null&&(hitT==null||q<hitT))hitT=q}
   const q=hitT==null?1:hitT;g.x=x0+(x1-x0)*q;g.y=y0+(y1-y0)*q;g.z=z0+(z1-z0)*q;g.o.position.set(g.x,g.y,g.z);g.o.rotation.x+=dt*8;g.o.rotation.z+=dt*5;
   const surface=bunkerProjectileSurface(g.x,g.z,g.y,true);
   if(hitT!=null||g.t<=0||g.y<=surface){g.y=Math.max(g.y,surface);boom(g.x,g.y,g.z,16,COMBAT_BALANCE.weapons.grenade,'b',{weapon:'grenade',own:'b',spl:16,x:g.x,y:g.y,z:g.z,sx:g.sx,sy:g.sy,sz:g.sz,o:g.o});world.remove(g.o);grenades.splice(i,1)}

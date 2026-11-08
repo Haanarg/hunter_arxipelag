@@ -791,7 +791,7 @@ window.HUNTER_CANCEL_START=()=>{
 document.getElementById('generationCancel').onclick=()=>window.HUNTER_CANCEL_START();
 document.querySelectorAll('#ini button[data-d]').forEach(b=>b.onclick=()=>startGameProgressively(readGameStartOptions(+b.dataset.d)));
 // animacions de destrucció
-const DB=[],WA=[],HR=[],dgeo=new THREE.BoxGeometry(1,1,1),dmc={},dmat=c=>dmc[c]||(dmc[c]=M(c));
+const DB=[],WA=[],dgeo=new THREE.BoxGeometry(1,1,1),dmc={},dmat=c=>dmc[c]||(dmc[c]=M(c));
 function debris(x,y,z,col,n,sz,sp,shape=null){for(let i=0;i<n;i++){const m=new THREE.Mesh(dgeo,dmat(col)),d=window.HUNTER_DEBRIS_CORE.createDebrisParticle(x,y,z,sz,sp,rn);m.scale.set(d.scale.x,d.scale.y,d.scale.z);m.position.set(d.position.x,d.position.y,d.position.z);m.rotation.set(d.rotation.x,d.rotation.y,d.rotation.z);
 if(shape==='timberBeam'){
   // Bigues de coberta, no blocs de runa: secció prima i llargada variable.
@@ -885,6 +885,45 @@ function destroyInteriorStair(b){
  i=Wl.indexOf(b.interiorStairCollider);
  if(i>=0){Wl.splice(i,1);wallGridCount=-1}
 }
+// Fragments reals del metall de la volta: reconstruïm els mateixos deu
+// trams corbats a partir de les dades físiques, sense geometries noves ni
+// canviar la llavor. Cada panell es parteix en tres seccions longitudinals.
+// Els fragments viuen a world, independents de l'ocultació de b.roof quan
+// la càmera entra a l'hangar. Només apareixen després de la destrucció.
+function shatterHangarRoof(b){
+  const roof=b.roof,segments=roof?.userData?.hitSegments;
+  if(!segments?.length){if(roof)roof.visible=false;return}
+  roof.updateWorldMatrix(true,false);
+  const material=roof.children.find(mesh=>mesh.isMesh)?.material;
+  if(!material){roof.visible=false;return}
+  const frame=new THREE.Quaternion(),panelTurn=new THREE.Quaternion(),
+    zAxis=new THREE.Vector3(0,0,1),position=new THREE.Vector3();
+  roof.getWorldQuaternion(frame);
+  roof.visible=false;
+  for(const section of segments){
+    const length=section.depth/3;
+    panelTurn.setFromAxisAngle(zAxis,section.a-Math.PI/2);
+    for(let part=0;part<3;part++){
+      const fragment=new THREE.Mesh(dgeo,material),
+        localZ=-section.depth/2+length*(part+.5);
+      position.set(section.x,section.y,localZ).applyMatrix4(roof.matrixWorld);
+      fragment.position.copy(position);
+      fragment.quaternion.copy(frame).multiply(panelTurn);
+      fragment.scale.set(section.chord,.24,length*.985);
+      fragment.castShadow=false;fragment.receiveShadow=true;
+      world.add(fragment);
+      const radial=section.x>=0?1:-1;
+      DB.push({m:fragment,s0:fragment.scale.clone(),
+        vx:radial*rn(2,8)+rn(-3,3),
+        vy:rn(5,12),vz:(part-1)*rn(3,8)+rn(-3,3),
+        rx:rn(-2.5,2.5),ry:rn(-2.5,2.5),rz:rn(-3.2,3.2),
+        life:rn(1.9,3),vehiclePart:true});
+    }
+  }
+  // Les peces utilitzen dgeo i materials compartits; no cal disposar-los
+  // en retirar les partícules, i limitam el pool com als altres enderrocs.
+  while(DB.length>160)world.remove(DB.shift().m);
+}
 function roofBreak(b){if(b.rb)return;b.rb=1;
  // Els objectes del pis superior no poden quedar suspesos després
  // de l'ensorrament: cauen a la planta baixa.
@@ -897,7 +936,7 @@ function roofBreak(b){if(b.rb)return;b.rb=1;
  if(b.upperFloor){b.upperFloor.visible=false;destroyInteriorStair(b)}
  for(const r of b.extraRoofs||[])r.visible=false;b.rhp=0;const col=b.roof.material?b.roof.material.color.getHex():(b.roof.userData.color||0x777777),y=b.fy+b.h+.6;
 if(b.hangar&&b.roof?.userData?.hangarRoof){
-  HR.push({m:b.roof,t:0,dur:1.05,baseY:b.roof.position.y,baseRx:b.roof.rotation.x,baseRz:b.roof.rotation.z,dir:rn(-1,1)<0?-1:1,x:b.x,z:b.z,w:b.w,d:b.d,col});
+  shatterHangarRoof(b);
   for(let i=0;i<12;i++)puff(b.x+rn(-b.w/2,b.w/2),b.fy+rn(1,b.w*.45),b.z+rn(-b.d/2,b.d/2),0x8b8580,3.8);
   for(let i=0;i<10;i++)debris(b.x+rn(-b.w/2,b.w/2),b.fy+rn(1,b.w*.45),b.z+rn(-b.d/2,b.d/2),col,1,.75,6);
 }else{
@@ -916,7 +955,6 @@ snd('boom',.4,{x:b.x,y,z:b.z},b)}
 function fragileDebrisWaterHeight(x,z){return wy(x,z,elapsed)}
 function updDeb(dt){for(let i=DB.length-1;i>=0;i--){const d=DB[i],m=d.m,k=window.HUNTER_DEBRIS_CORE.stepDebrisParticle(d,m.position,m.rotation,dt,hAt,fragileDebrisWaterHeight);m.scale.set(d.s0.x*k,d.s0.y*k,d.s0.z*k);if(d.life<=0){world.remove(m);DB.splice(i,1)}}
 for(let i=WA.length-1;i>=0;i--){const a=WA[i];a.t-=dt;const s=Math.max(0,a.t/.5);a.m.scale.y=s;a.m.position.y=a.h/2*s;if(a.t<=0){world.remove(a.m);WA.splice(i,1)}}
-for(let i=HR.length-1;i>=0;i--){const a=HR[i],m=a.m;a.t+=dt;const p=Math.min(1,a.t/a.dur),e=p*p*(3-2*p);m.rotation.z=a.baseRz+a.dir*e*.62;m.rotation.x=a.baseRx+Math.sin(p*Math.PI)*.08;m.position.y=a.baseY-e*8.5;if(p>.35&&Math.random()<.35)puff(a.x+rn(-a.w/2,a.w/2),Math.max(.4,m.parent.position.y+m.position.y+rn(0,3)),a.z+rn(-a.d/2,a.d/2),0x7c7772,2.4);if(p>=1){m.visible=false;if(m.parent)m.parent.remove(m);HR.splice(i,1)}}
 updFA(dt)}
 // vegetació
 const TG=new Map();
