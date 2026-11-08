@@ -183,41 +183,6 @@
         "license": "CC0-1.0"
       }
     ],
-    "moto_aquatica": [
-      {
-        "slot": 1,
-        "id": "22258",
-        "title": "Stand-up personal watercraft (Speedboats, Powerboat Racing and Marina)",
-        "bytes": 176192,
-        "triangles": 3556,
-        "file": "moto_aquatica/1-powerboat-racing-and-launch-ramp-stand-up-jet-ski-646a965f.glb",
-        "url": "https://3dassets.dev/assets/powerboat-racing-and-launch-ramp-stand-up-jet-ski-646a965f",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/22258/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 2,
-        "id": "22264",
-        "title": "Sit-down personal watercraft (Speedboats, Powerboat Racing and Marina)",
-        "bytes": 207508,
-        "triangles": 4208,
-        "file": "moto_aquatica/2-powerboat-racing-and-launch-ramp-sit-down-jet-ski-b3443ad6.glb",
-        "url": "https://3dassets.dev/assets/powerboat-racing-and-launch-ramp-sit-down-jet-ski-b3443ad6",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/22264/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 3,
-        "id": "39428",
-        "title": "Recreational Jet Ski (Beach Surf and Paddle Kit)",
-        "bytes": 181296,
-        "triangles": 10320,
-        "file": "moto_aquatica/3-beach-surf-and-paddle-kit-recreational-jet-ski-a61d9936.glb",
-        "url": "https://3dassets.dev/assets/beach-surf-and-paddle-kit-recreational-jet-ski-a61d9936",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/39428/v1/model.glb",
-        "license": "CC0-1.0"
-      }
-    ],
     "llanxa": [
       {
         "slot": 1,
@@ -383,7 +348,7 @@
       }
     ]
   },
-  "savedModels": 32,
-  "savedBytes": 10364260,
+  "savedModels": 29,
+  "savedBytes": 9799264,
   "skipped": 1
 }
