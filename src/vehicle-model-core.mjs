@@ -726,7 +726,7 @@ export const vehicleModels=Object.freeze({
           g.userData.rotor=approvedModel.userData.rotor;
           g.userData.tailRotor=approvedModel.userData.tailRotor;
           if(approvedHuey)g.userData.hueyModel='duane-100-open';
-          else g.userData.apacheModel='araon-50-wheels75-salvia-black';
+          else g.userData.apacheModel=approvedApache.userData.apacheModel||'araon-50-compact-salvia-black';
         }else if(!combat){
           // Huey 3B-4: la secció central és un PASSADÍS OBERT de banda a
           // banda, no un prisma massís amagat rere els marcs de les portes.
