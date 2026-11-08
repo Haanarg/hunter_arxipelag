@@ -2,7 +2,7 @@ import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {SimplifyModifier} from 'three/addons/modifiers/SimplifyModifier.js';
 import {mergeVertices,deinterleaveGeometry} from 'three/addons/utils/BufferGeometryUtils.js';
-import {prepareStreetfighterPreview,setStreetfighterPreviewSteering,isStreetfighterDetailProtected} from './streetfighter-preview-rig.mjs';
+import {prepareStreetfighterPreview,setStreetfighterPreviewSteering,isStreetfighterDetailProtected} from './streetfighter-preview-rig.mjs?rev=handlebar-grips-v2';
 import {vehicleModels} from './vehicle-model-core.mjs';
 import {playerBatching} from './player-batching-core.mjs';
 import {createTruckModel} from './truck-model.mjs';
