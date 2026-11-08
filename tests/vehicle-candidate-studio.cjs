@@ -50,6 +50,19 @@ for(const [type,levels] of Object.entries({apache:[3808,2990,2173,1355]})){
  for(const variant of variants)assert(variant.file===type+'_'+variant.level+'.glb');
 }
 assert(helicopterPage.includes('Huey')&&helicopterPage.includes('Apache'),'Pàgina de comparació d’helicòpters absent');
+const hybridPage=read('apache-variants-proves.html');
+const hybridViewer=read('src/apache-variants-proves.mjs');
+const hybridManifest=JSON.parse(read('assets/vehicle-candidates/helicopter-lods/apache-hybrid-manifest.json'));
+assert.equal(hybridManifest.state,'metadata_only_binary_upload_pending');
+assert.equal(hybridManifest.integration,'candidate_only_not_in_game');
+assert.deepEqual(hybridManifest.files.map(x=>x.file),['apache-50-rodes75-oliva-clara.glb','apache-50-rodes75-salvia-mat.glb','apache-50-rodes75-sorra-verda.glb']);
+assert(hybridManifest.files.every(x=>x.roughness>=.8&&x.bytes>1000000));
+assert(hybridManifest.commonGeometry.wheelTriangles>0&&hybridManifest.commonGeometry.totalTriangles>2000);
+assert(hybridPage.includes('Importa ZIP o GLB')&&hybridPage.includes('50% + rodes 75%'),'Falta la pàgina de tres acabats');
+assert(hybridViewer.includes("DecompressionStream('deflate-raw')")&&hybridViewer.includes("indexedDB.open('hunter-apache-50-wheels-75'"),'Cal importar el ZIP i guardar els candidats localment');
+assert(helicopterPage.includes('apache-variants-proves.html'),'Enllaç al comparador híbrid absent de la pàgina LOD');
+assert(html.includes('apache-variants-proves.html'),'Enllaç al comparador híbrid absent del banc general');
+execFileSync(process.execPath,['--check',path.join(root,'src/apache-variants-proves.mjs')],{stdio:'pipe'});
 assert(helicopterScript.includes('unzipSelected')&&helicopterScript.includes('getBlob'),'El visor ha de poder carregar ZIP i GLB publicats');
 assert(helicopterScript.includes('showOfficialReference')&&helicopterScript.includes('SKETCHFAB_APACHE'),'El 100% de l’Apache ha de tenir un visor oficial de reserva');
 assert(helicopterScript.includes('completeMissingLods')&&helicopterScript.includes('simplifyHelicopter'),'El GLB original ha de permetre generar els LOD que falten');

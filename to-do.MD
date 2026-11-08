@@ -4,6 +4,14 @@
 
 > **Proves automatitzades (2026-11-07):** la bateria s'ha reduït a 13 comprovacions essencials, executables amb `npm test`. Les mencions a noms de proves concretes dins les fases històriques són evidències d'implementacions passades, no fitxers que encara hagin d'existir ni ordres de CI vigents.
 
+**P1 · 2026-11-08 · variants Apache 50% + rodes 75% (proposta visual, sense integrar al joc):**
+- [x] A partir de l'original PBR reparat, recuperades les peces de les rodes que comparteixen la malla `hull`, separades per connectivitat/topografia de la font i simplificades al 75%. Com que el GLB històric apache_75.glb no és al repositori, la geometria de les rodes del 75% s'ha reconstruït independentment a partir del 100%, no extret literalment d'aquell fitxer absent.
+- [x] Cos amb simplificació classe 50%, rodes 75%: **2.193 triangles** en total (3.808 originals, 1.203 del cos, 145 de les rodes i 845 dels altres elements). GLB verificats, quatre textures PNG incrustades, PBR mat i il·luminació revisats en render headless; nivells de rugositat 0,83/0,91/0,97.
+- [x] Tres variants: oliva clara, sàlvia mat i sorra verdosa, desades en `apache-50-rodes75-tres-variants.zip` com a fitxers de la conversa. Les textures difuses s'han aclarit i matisat sense substituir el mapa UV original.
+- [x] Comparador `apache-variants-proves.html` amb tres vistes sincronitzades, importació de ZIP/GLB per arrossegament i persistència en IndexedDB; enllaços als altres bancs de prova. CI superada al commit `f72434c`.
+- [ ] **Binaris no publicats a GitHub**: manca copiar els tres GLB del ZIP a `assets/vehicle-candidates/helicopter-lods/`. No afirmar que es carregaran automàticament a la web pública fins que els binaris s'hi hagin pujat i Cloudflare hagi desplegat.
+- [ ] Inspeccionar les tres variants en WebGL real i triar el color/acabat definitiu; després decidir si el model s'ha d'integrar al joc, amb punts de rodatge, canó, armes, ocupants i col·lisions.
+
 **P1 · 2026-11-08 · model Apache d'Araon sense textures al visor:**
 - [x] Afegida inspecció dels mapes de color dels GLB importats a `src/helicopter-texture-recovery.mjs`, reutilitzada pels dos bancs de proves. Si existeix un únic atles de color desconnectat, s'intenta revincular; si falten textures, es mostren pintures militars de **substitució clarament etiquetades**, sense fer-les passar per la textura oficial. Proves d'Atlas/color i CI executades.
 - [x] **GLB original Apache recuperat de la conversa**: `ah-64_apache(1).glb` (2.970.256 bytes), 5 malles, 2 materials i **4 PNG incrustats**. La causa del blanc és l'extensió `KHR_materials_pbrSpecularGlossiness`: el color autèntic viu a `materials[1].extensions.KHR_materials_pbrSpecularGlossiness.diffuseTexture.index=0`, i es perd en Three.js modern.
