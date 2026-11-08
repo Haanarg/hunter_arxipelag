@@ -113,41 +113,6 @@
         "license": "CC0-1.0"
       }
     ],
-    "camio": [
-      {
-        "slot": 1,
-        "id": "23674",
-        "title": "Supply Truck (Tanks, Military Vehicles and Field Camp)",
-        "bytes": 41352,
-        "triangles": 744,
-        "file": "camio/1-armoured-column-and-field-camp-supply-truck-a0414d94.glb",
-        "url": "https://3dassets.dev/assets/armoured-column-and-field-camp-supply-truck-a0414d94",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/23674/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 2,
-        "id": "18682",
-        "title": "Three-axle flatbed truck (Vehicle Collection HD: Cars, Planes and Boats)",
-        "bytes": 255888,
-        "triangles": 9808,
-        "file": "camio/2-transport-collection-hd-flatbed-truck-5ac03ec8.glb",
-        "url": "https://3dassets.dev/assets/transport-collection-hd-flatbed-truck-5ac03ec8",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/18682/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 3,
-        "id": "23675",
-        "title": "Fuel Tanker (Tanks, Military Vehicles and Field Camp)",
-        "bytes": 74296,
-        "triangles": 1460,
-        "file": "camio/3-armoured-column-and-field-camp-fuel-tanker-3c9eb52e.glb",
-        "url": "https://3dassets.dev/assets/armoured-column-and-field-camp-fuel-tanker-3c9eb52e",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/23675/v1/model.glb",
-        "license": "CC0-1.0"
-      }
-    ],
     "tanqueta": [
       {
         "slot": 1,
@@ -215,42 +180,6 @@
         "file": "tanc/3-armoured-column-and-field-camp-self-propelled-gun-3e51f45c.glb",
         "url": "https://3dassets.dev/assets/armoured-column-and-field-camp-self-propelled-gun-3e51f45c",
         "cdnUrl": "https://cdn.3dassets.dev/assets/23670/v1/model.glb",
-        "license": "CC0-1.0"
-      }
-    ],
-    "windsurf": [],
-    "barca_rems": [
-      {
-        "slot": 1,
-        "id": "22404",
-        "title": "Teal Rowboat (Quiet Lake Fishing)",
-        "bytes": 52376,
-        "triangles": 1026,
-        "file": "barca_rems/1-quiet-lake-fishing-rowboat-9a38d085.glb",
-        "url": "https://3dassets.dev/assets/quiet-lake-fishing-rowboat-9a38d085",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/22404/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 2,
-        "id": "36619",
-        "title": "Rowing Boat (Lighthouse and Rocky Coast)",
-        "bytes": 25252,
-        "triangles": 460,
-        "file": "barca_rems/2-lighthouse-and-rocky-coast-rowing-boat-a50f4fb4.glb",
-        "url": "https://3dassets.dev/assets/lighthouse-and-rocky-coast-rowing-boat-a50f4fb4",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/36619/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 3,
-        "id": "28828",
-        "title": "Rowing Boat (Medieval MMO Starter Realm)",
-        "bytes": 28712,
-        "triangles": 544,
-        "file": "barca_rems/3-medieval-mmo-starter-realm-rowing-boat-4dd8c04d.glb",
-        "url": "https://3dassets.dev/assets/medieval-mmo-starter-realm-rowing-boat-4dd8c04d",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/28828/v1/model.glb",
         "license": "CC0-1.0"
       }
     ],
@@ -454,7 +383,7 @@
       }
     ]
   },
-  "savedModels": 38,
-  "savedBytes": 10842136,
-  "skipped": 4
+  "savedModels": 32,
+  "savedBytes": 10364260,
+  "skipped": 1
 }
