@@ -8,7 +8,7 @@ import {mergeVertices,deinterleaveGeometry} from '../vendor/three-addons/utils/B
 const manifest=JSON.parse(readFileSync(new URL('../assets/vehicle-candidates/manifest.json',import.meta.url),'utf8'));
 const loader=new GLTFLoader();
 const simplifier=new SimplifyModifier();
-for(const [id,slot] of [['moto',2],['moto_aquatica',3]]){
+for(const [id,slot] of [['moto',2]]){
  const meta=manifest.models[id].find(entry=>entry.slot===slot);
  assert(meta,'Falta GLB seleccionat per a '+id);
  const path=new URL('../assets/vehicle-candidates/'+meta.file,import.meta.url);
