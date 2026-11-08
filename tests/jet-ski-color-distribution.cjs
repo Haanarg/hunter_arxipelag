@@ -40,6 +40,22 @@ for(const [type,expected] of [['cotxe_civil',2],['bici',1],['windsurf',0],['tanc
  select(type,cars,pa,()=>{draws++;return .4},{},colors);
  assert.equal(draws,expected,'Consum de RNG no modificat per '+type);
 }
+// Les motos noves han de variar de color com les motos aquàtiques,
+ // però sense alterar ni una tirada de la llavor, perquè abans no en feien.
+const motorcycles=[];
+for(let i=0;i<15;i++){
+ let draws=0;
+ const selected=select('moto',motorcycles,pa,()=>{draws++;return .12},{},colors);
+ assert.equal(draws,0,'Les motos no poden consumir noves tirades de RNG');
+ assert(colors.jetskiColors.some(x=>x.hex===selected.appearance.color));
+ motorcycles.push({t:'moto',color:selected.color});
+}
+assert.equal(new Set(motorcycles.slice(0,7).map(x=>x.color)).size,7,'Set colors diferents de moto');
+assert.equal(motorcycles[7].color,motorcycles[0].color,'Cicle de colors de moto sense repeticions prematures');
+let preservedDraws=0;
+const preserved=select('moto',motorcycles,pa,()=>{preservedDraws++;return .4},{color:0xff7b19},colors);
+assert.equal(preservedDraws,0);
+assert.equal(preserved.appearance.color,0xff7b19,'Color de la moto recuperada del desament');
 const otherSeed=select('moto_aquatica',[],{x:148,z:67},()=>.5,{},colors);
 assert(colors.jetskiColors.some(x=>x.hex===otherSeed.color));
-console.log('Paleta moto aquàtica: 7 colors diferents abans de repetir, 1 tirada R per vehicle, compatible amb llavor i desament.');
+console.log('Paleta moto i moto aquàtica: set colors per cicle, RNG inalterat i colors de desament preservats.');
