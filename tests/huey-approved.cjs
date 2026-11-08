@@ -24,7 +24,8 @@ assert(native.includes("root.userData.rotor=main;root.userData.tailRotor=tail"))
 assert(native.includes("root.userData.cockpitSeatCount=2"));
 assert(runtime.includes('prepareHueyDuaneRuntime')&&runtime.includes('2119')&&
  runtime.includes('HUEY_SCALE_FACTOR=1.10'));
-assert(!/import\\s+.*GLTFLoader/.test(runtime)&&!/\\.glb[\"']/.test(runtime),\n 'El Huey no pot importar ni carregar un GLB');
+assert(!/import\\s+.*GLTFLoader/.test(runtime)&&!/\\.glb[\"']/.test(runtime),
+ 'El Huey no pot importar ni carregar un GLB');
 assert(!fs.existsSync(path.join(root,'assets/vehicle-models/huey-duane-doors-open.glb')),
  'El GLB Huey encara es publica al joc');
 assert(fs.statSync(path.join(root,'assets/vehicle-models/huey-duane-native-atlas.png')).size>500000,
