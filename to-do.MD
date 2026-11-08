@@ -1,3 +1,10 @@
+**P1 · 2026-11-08 · recerca i substitució dels candidats tanc/M1A1 i tanqueta/NZLAV:**
+- [x] Retirats sis models genèrics rebutjats (tres per vehicle), inclosos els fitxers GLB, manifests i les opcions del catàleg.
+- [x] Localitzades tres fonts Sketchfab amb llicència verificada per tipus; tanc: M1A1/M1 de Quasar, Scril i Artem Goyko; tanqueta: Stryker 8×8 de bunny, M1128 de LM3D i BTR 82 de SIpriv com a alternativa menys fidel.
+- [x] Comparador 3D usa els embeds oficials, amb crèdits, llicències, triangles, enllaç de descàrrega oficial i opció d'importar un GLB legítim; els models no es fan passar per binaris locals.
+- [x] Límits del downloader CC0 ampliats a 32 MiB / 128 MiB, amb protecció perquè el procés automàtic no substitueixi mai els blindats per models aleatoris.
+- [ ] **Pendent**: obtenir els GLB autoritzats pel creador i provar-los a Three.js, reduir triangles/textures, separar torretes i rodes, provar escala, col·lisió i rendiment (SOLO/COOP). El model de tanqueta escollit ha de tenir 8 rodes i torreta similar a la NZLAV. Fins aleshores conservar els procedimentals del joc.
+
 **P1 · 2026-11-08 · torre que envaeix l'heliport (captura llavor 422475840):**
 - [x] Diagnòstic: al camp de presoners l'heliport local era `(36,39)`, de 30×30 m; la torre NE local era `(56,56)`, massa a prop de la cantonada i de la zona de seguretat.
 - [x] Traslladada la torre de la banda est del camp a `(56,8)`, fora de l'heliport, les instal·lacions i la porta del recinte.

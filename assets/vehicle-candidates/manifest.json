@@ -4,8 +4,8 @@
   "source": "https://3dassets.dev/",
   "license": "CC0-1.0",
   "limits": {
-    "maxFileBytes": 2097152,
-    "maxTotalBytes": 31457280
+    "maxFileBytes": 33554432,
+    "maxTotalBytes": 134217728
   },
   "models": {
     "bici": [
@@ -78,76 +78,8 @@
         "license": "CC0-1.0"
       }
     ],
-    "tanqueta": [
-      {
-        "slot": 1,
-        "id": "23668",
-        "title": "Tracked APC (Tanks, Military Vehicles and Field Camp)",
-        "bytes": 80608,
-        "triangles": 1584,
-        "file": "tanqueta/1-armoured-column-and-field-camp-tracked-apc-e2a9da27.glb",
-        "url": "https://3dassets.dev/assets/armoured-column-and-field-camp-tracked-apc-e2a9da27",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/23668/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 2,
-        "id": "23672",
-        "title": "Wheeled APC (Tanks, Military Vehicles and Field Camp)",
-        "bytes": 39192,
-        "triangles": 736,
-        "file": "tanqueta/2-armoured-column-and-field-camp-wheeled-apc-10bee541.glb",
-        "url": "https://3dassets.dev/assets/armoured-column-and-field-camp-wheeled-apc-10bee541",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/23672/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 3,
-        "id": "23669",
-        "title": "Armoured Car (Tanks, Military Vehicles and Field Camp)",
-        "bytes": 30080,
-        "triangles": 536,
-        "file": "tanqueta/3-armoured-column-and-field-camp-armoured-car-152ca19b.glb",
-        "url": "https://3dassets.dev/assets/armoured-column-and-field-camp-armoured-car-152ca19b",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/23669/v1/model.glb",
-        "license": "CC0-1.0"
-      }
-    ],
-    "tanc": [
-      {
-        "slot": 1,
-        "id": "23667",
-        "title": "Main Battle Tank (Tanks, Military Vehicles and Field Camp)",
-        "bytes": 103556,
-        "triangles": 2040,
-        "file": "tanc/1-armoured-column-and-field-camp-main-battle-tank-c801caf7.glb",
-        "url": "https://3dassets.dev/assets/armoured-column-and-field-camp-main-battle-tank-c801caf7",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/23667/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 2,
-        "id": "23673",
-        "title": "Light Tank (Tanks, Military Vehicles and Field Camp)",
-        "bytes": 72152,
-        "triangles": 1412,
-        "file": "tanc/2-armoured-column-and-field-camp-light-tank-588bca75.glb",
-        "url": "https://3dassets.dev/assets/armoured-column-and-field-camp-light-tank-588bca75",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/23673/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 3,
-        "id": "23670",
-        "title": "Self-Propelled Gun (Tanks, Military Vehicles and Field Camp)",
-        "bytes": 84668,
-        "triangles": 1644,
-        "file": "tanc/3-armoured-column-and-field-camp-self-propelled-gun-3e51f45c.glb",
-        "url": "https://3dassets.dev/assets/armoured-column-and-field-camp-self-propelled-gun-3e51f45c",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/23670/v1/model.glb",
-        "license": "CC0-1.0"
-      }
-    ],
+    "tanqueta": [],
+    "tanc": [],
     "llanxa": [
       {
         "slot": 1,
@@ -243,8 +175,70 @@
       }
     ]
   },
-  "savedModels": 20,
-  "savedBytes": 3538132,
+  "savedModels": 14,
+  "savedBytes": 3127876,
   "skipped": 1,
-  "retiredHelicopterCandidates": 6
+  "retiredHelicopterCandidates": 6,
+  "externalModels": {
+    "tanc": [
+      {
+        "modelId": "1b4a0b196df14e67bce38ed6fef7d944",
+        "title": "Abrams M1A1 [Free]",
+        "author": "Quasar",
+        "triangles": 29000,
+        "license": "CC BY 4.0",
+        "url": "https://sketchfab.com/3d-models/abrams-m1a1-free-1b4a0b196df14e67bce38ed6fef7d944",
+        "note": "Abrams reconeixible, geometria moderada; prioritat per revisar la torreta i les textures."
+      },
+      {
+        "modelId": "eed14f42064e426eadda1e052b6f334b",
+        "title": "M1A1 Abrams",
+        "author": "Scril",
+        "triangles": 12300,
+        "license": "CC BY 4.0",
+        "url": "https://sketchfab.com/3d-models/m1a1-abrams-eed14f42064e426eadda1e052b6f334b",
+        "note": "Model d'un projecte de mod declarat per l'autor, sense constància de ser un model extret d'un joc. Menys triangles."
+      },
+      {
+        "modelId": "2577a4eccbc74b2da6dba5bfd09b7511",
+        "title": "M1 Abrams",
+        "author": "Artem Goyko",
+        "triangles": 40200,
+        "license": "CC BY 4.0",
+        "url": "https://sketchfab.com/3d-models/m1-abrams-2577a4eccbc74b2da6dba5bfd09b7511",
+        "note": "Més detall de la família M1; validar armament, materials i pivot abans d'usar-lo."
+      }
+    ],
+    "tanqueta": [
+      {
+        "modelId": "fe28759be4914e4a9ea52d73aa503a4e",
+        "title": "Stryker 8×8",
+        "author": "bunny",
+        "triangles": 137900,
+        "license": "CC BY-SA 4.0",
+        "url": "https://sketchfab.com/3d-models/stryker-fe28759be4914e4a9ea52d73aa503a4e",
+        "note": "Model propi declarat per l'autor. Casc occidental 8×8 semblant al NZLAV; torreta diferent, requereix simplificació i adaptació."
+      },
+      {
+        "modelId": "3a813f5520974d21b3b3bba52e04a7d9",
+        "title": "M1128 Stryker 8×8",
+        "author": "LM3D",
+        "triangles": 231700,
+        "license": "CC BY 4.0",
+        "url": "https://sketchfab.com/3d-models/m1128-stryker-8x8-3a813f5520974d21b3b3bba52e04a7d9",
+        "note": "Xassís occidental 8×8, però torreta i canó massa grans per un NZLAV; model pesant que exigeix LOD."
+      },
+      {
+        "modelId": "6226acae68424d99bf03882b245ff7c5",
+        "title": "Low poly BTR 82",
+        "author": "SIpriv",
+        "triangles": 21500,
+        "license": "CC BY 4.0",
+        "url": "https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5",
+        "note": "Model propi de Blockbench amb vuit rodes i torreta; no és un NZLAV, es manté com a alternativa menys fidel."
+      }
+    ]
+  },
+  "lastCurated": "2026-11-08",
+  "curationNotes": "Six generic CC0 GLBs discarded for tank/tanqueta; 6 real Sketchfab visual reference models now provided (no binary downloaded; licenses CC BY / CC BY-SA). Other 14 CC0 GLBs retained."
 }

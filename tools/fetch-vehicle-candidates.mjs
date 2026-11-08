@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 // Descarrega les alternatives GLB (CC0) al repositori, sense tocar el joc.
 // Executar: node tools/fetch-vehicle-candidates.mjs [--force]
-// Límits per defecte: fitxer <= 2 MiB; total <= 30 MiB.
+// Límits per defecte: fitxer <= 32 MiB; total <= 128 MiB.
+// Els models Sketchfab es mostren només al seu visor oficial: no hi ha
+// cap URL pública de GLB que puguem obtenir sense consentiment/autenticació.
 import {mkdir,writeFile,readFile,stat} from 'node:fs/promises';
 import {join,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {CATALOG} from '../src/vehicle-candidate-catalog.mjs';
 
 const root=fileURLToPath(new URL('../assets/vehicle-candidates/',import.meta.url));
-const force=process.argv.includes('--force'),MAX_FILE=2*1024*1024,MAX_TOTAL=30*1024*1024;
+const force=process.argv.includes('--force'),MAX_FILE=32*1024*1024,MAX_TOTAL=128*1024*1024;
 const canonical=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const safeName=s=>String(s||'asset').replace(/[^a-z0-9-]/gi,'-').slice(0,100);
@@ -76,12 +78,18 @@ async function main(){
   const path=join(root,'manifest.json');
   let old={models:{}};try{old=JSON.parse(await readFile(path,'utf8'))}catch{}
   const manifest={version:1,generatedAt:new Date().toISOString(),source:'https://3dassets.dev/',
-    license:'CC0-1.0',limits:{maxFileBytes:MAX_FILE,maxTotalBytes:MAX_TOTAL},models:{}};
+    license:'CC0-1.0',limits:{maxFileBytes:MAX_FILE,maxTotalBytes:MAX_TOTAL},models:{},externalModels:{}};
   const used=new Set();let total=0,count=0,skipped=0;
   for(const config of CATALOG){
     manifest.models[config.id]=[];
+    const references=config.options.filter(o=>o.provider==='sketchfab');
+    if(references.length){
+      // Mai substituir aquests candidats amb assets aleatoris del pack CC0.
+      manifest.externalModels[config.id]=references;
+    }
     for(let i=0;i<config.options.length;i++){
       const entry=config.options[i];
+      if(entry.provider==='sketchfab')continue;
       const oldEntry=old.models?.[config.id]?.find(a=>a.slot===i+1);
       if(oldEntry&&!force){
         const abs=join(root,oldEntry.file);
@@ -117,6 +125,7 @@ async function main(){
     }
   }
   manifest.savedModels=count;manifest.savedBytes=total;manifest.skipped=skipped;
+  manifest.lastCurated=new Date().toISOString();
   await writeFile(path,JSON.stringify(manifest,null,2)+'\n');
   console.log('\nResultat:',count,'GLB desats;',skipped,'opcions no disponibles;', (total/1048576).toFixed(2),'MiB');
   if(!count)process.exitCode=1;

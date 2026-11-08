@@ -83,7 +83,7 @@ for(let i=0;i<4;i++){
  const head=new THREE.Mesh(new THREE.SphereGeometry(.18,10,8),material(0xf0c7a2));
  head.position.y=1.73;head.castShadow=true;person.add(head);scene.add(person);
  const camera=new THREE.PerspectiveCamera(36,1,.05,1300);
- const slot={outer,viewport,scene,camera,ground,lines,person,status,source,bold,sub,upload,model:null,mixer:null,kind:null};
+ const slot={outer,viewport,scene,camera,ground,lines,person,status,source,bold,sub,upload,model:null,mixer:null,kind:null,sourceFrame:null};
  slots.push(slot);
  upload.addEventListener('change',async()=>{
    const file=upload.files?.[0];if(!file)return;
@@ -155,6 +155,7 @@ function metrics(root){
    ' materials · '+d.x.toFixed(1)+' × '+d.y.toFixed(1)+' × '+d.z.toFixed(1)+' m';
 }
 function dropPrevious(slot){
+ if(slot.sourceFrame){slot.sourceFrame.remove();slot.sourceFrame=null;slot.viewport.classList.remove('has-embed')}
  if(slot.model){
    const freed=new Set();
    slot.model.traverse(node=>{
@@ -198,6 +199,24 @@ function setModel(slot,obj,original,animations=[]){
 }
 
 async function loadExternal(slot,entry,used,token){
+ if(entry.provider==='sketchfab'){
+   // Font oficial de la malla: sense URL de descàrrega inventada ni
+   // pretendre que una vista remota sigui un GLB empaquetat al joc.
+   if(token!==generation)return;
+   slot.bold.textContent=entry.title;
+   slot.sub.textContent=entry.author+' · '+entry.license+' · '+entry.triangles.toLocaleString('ca')+' △';
+   slot.source.href=entry.url;slot.source.hidden=false;
+   const frame=document.createElement('iframe');
+   frame.title=entry.title+' · Sketchfab';
+   frame.loading='lazy';
+   frame.src='https://sketchfab.com/models/'+entry.modelId+'/embed?ui_hint=2';
+   frame.allow='autoplay; fullscreen; xr-spatial-tracking';
+   frame.referrerPolicy='strict-origin-when-cross-origin';
+   slot.viewport.classList.add('has-embed');
+   slot.viewport.append(frame);slot.sourceFrame=frame;
+   slot.status.textContent='Visor original · '+entry.note+' Per provar un GLB al motor, importa’l des del seu autor.';
+   return;
+ }
  const slotIndex=slots.indexOf(slot);
  const local=savedManifest?.models?.[currentType.id]?.find(record=>record.slot===slotIndex);
  if(local){
@@ -259,7 +278,7 @@ async function choose(config){
    slot.ground.material.roughness=marine?.43:1;
    slot.ground.material.needsUpdate=true;
    slot.status.textContent='Carregant…';slot.bold.textContent=slots.indexOf(slot)?'Alternativa '+slots.indexOf(slot):'Actual · '+config.name;
-   slot.sub.textContent=slots.indexOf(slot)?'Cercant model CC0':'Model real del joc';
+   slot.sub.textContent=slots.indexOf(slot)?'Preparant candidat…':'Model real del joc';
    slot.source.hidden=true;
  }
  try{

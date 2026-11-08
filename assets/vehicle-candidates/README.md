@@ -1,3 +1,13 @@
+## Blindats renovats — M1A1 i NZLAV 8×8 (2026-11-08)
+
+Els **sis GLB antics** del tanc i de la tanqueta (Main Battle Tank, Light Tank, Self-Propelled Gun, Tracked APC, Wheeled APC i Armoured Car) s'han rebutjat i esborrat. El nou banc compara els models **realment identificats** a Sketchfab i no representa un GLB descarregat: el visor oficial és extern i cada autor controla la descàrrega. El joc i les seves col·lisions NO han canviat.
+
+- **Tanc: M1A1/M1 Abrams.** Quasar (29.000 triangles, CC BY 4.0), Scril (12.300 triangles, CC BY 4.0) i Artem Goyko (40.200 triangles, CC BY 4.0).
+- **Tanqueta: referència NZLAV 8×8.** Stryker de bunny (137.900 triangles, CC BY-SA 4.0), M1128 Stryker 8×8 de LM3D (231.700 triangles, CC BY 4.0) i BTR 82 low-poly de SIpriv (21.500 triangles, CC BY 4.0). Cap dels tres és un NZLAV exacte; el BTR és una alternativa més distant. La fidelitat i les llicències s'han etiquetat explícitament.
+- S'han **exclòs** el LAV III ISC descarregable però extret de *Combat Mission* (CC BY-NC) i altres models extrets de jocs. Aquests no són una font adequada per publicar el joc.
+- El límit del descarregador per GLB queda a **32 MiB per fitxer i 128 MiB totals**, sense modificar els 14 GLB locals existents; els models remots tenen uns límits de polígons independents i caldrà optimitzar-los abans de la integració. Els fitxers de Sketchfab no es descarreguen ni publiquen automàticament.
+- Font, autor, llicència i recompte de triangles: `manifest.json > externalModels`. Les descàrregues requereixen acció directa de l'usuari al lloc original. Per comparar un GLB a Three.js es pot fer servir `Importa GLB` al banc de proves; fins que no s'importi, el panell és el visor oficial Sketchfab.
+
 # Models externs pendents de triar
 
 El banc de proves `/vehicles-externs-proves.html` conserva **20 GLB CC0** de **set tipus de vehicles** que encara no tenen un model definitiu acceptat. La moto, la moto aquàtica i els dos helicòpters estan acceptats i no figuren entre els candidats. L'Apache definitiu encara té pendent la publicació del GLB de producció.
