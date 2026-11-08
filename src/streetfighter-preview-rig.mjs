@@ -1,4 +1,4 @@
-// Naked streetfighter (actiu CC0 15425): preparació visual compartida per
+// Naked streetfighter (actiu CC0 15425): preparació visual definitiva compartida per
 // totes les alternatives del laboratori, sense canviar cap model del joc.
 // El GLB no separa la forquilla, els agafadors ni el parafang en nodes.
 // Extraiem aquests components de les malles originals, conservant materials,
