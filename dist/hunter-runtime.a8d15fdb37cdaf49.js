@@ -12482,10 +12482,14 @@ function* findRedesignedPortSteps(q){
 }
 function buildApprovedCompound(layout,q,options){return drainBuildSteps(buildApprovedCompoundSteps(layout,q,options))}
 function* buildApprovedCompoundSteps(layout,q,{path,pier,prop,vehicles,rocketAssigned,heliportSites}){
+  // Reserva la plataforma quadrada i tot el disc de rotor abans de fer cap
+  // col·lider, enemic o malla. No consumeix RNG ni modifica la font del layout.
+  layout=window.HUNTER_COMPOUND_PLANNING.reserveHelipadTowerSpace(layout);
   const plan=window.HUNTER_COMPOUND_PLANNING.planCompound(layout,q,{random:R,rawHeightAt:rawHAt}),
     {isPort,coastal,angle,mirror,landDepth,center,height}=plan,tr=compoundTransform(q,angle,mirror),c=Math.round(Math.cos(angle)),s=Math.round(Math.sin(angle));
   const vector=(x,z)=>[x*c-z*s,x*s+z*c],rotatedHeading=hd=>hd*mirror-angle;
   const record={id:plan.id,layoutId:plan.layoutId,variant:plan.variant,layout,x:q.x,z:q.z,angle,mirror,r:plan.r,buildings:[],vehicles:[],soldiers:[],loot:[],entrances:plan.entrances,patrol:plan.patrol};
+  if(layout.heliportTowerClearance)record.heliportTowerClearance={...layout.heliportTowerClearance};
   world.userData.compounds.push(record);
   const level=plan.level;addLevelArea(level.x,level.z,level.hw*2,level.hd*2,level.y,level.rot,level.blend);
   // El nivell del terreny i la reserva de vegetació constitueixen el pati.
