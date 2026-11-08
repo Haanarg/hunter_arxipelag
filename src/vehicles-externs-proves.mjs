@@ -4,6 +4,7 @@ import {vehicleModels} from './vehicle-model-core.mjs';
 import {playerBatching} from './player-batching-core.mjs';
 import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs';
+import {HELICOPTER_LEVELS,simplifyHelicopter,encodeHelicopterGLB,countModelTriangles} from './helicopter-simplification.mjs';
 
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
@@ -24,6 +25,54 @@ renderer.domElement.id='draw';
 renderer.domElement.setAttribute('aria-hidden','true');
 document.body.append(renderer.domElement);
 const loader=new GLTFLoader();
+const helicopterToolbar=document.querySelector('#helicopterToolbar');
+const helicopterFile=document.querySelector('#helicopterFile');
+const helicopterStatus=document.querySelector('#helicopterStatus');
+const helicopterSources=new Map(); // Els originals només viuen a la memòria del navegador.
+function helicopterFileName(config,ratio){
+ return 'hunter-'+(config.id==='heli'?'huey-duanes-mind':'apache-araon')+'-'+Math.round(ratio*100)+'.glb';
+}
+async function exportVariant(slot){
+ if(!slot.variantRoot||!slot.model)return;
+ const button=slot.download;
+ button.disabled=true;button.textContent='Exportant…';
+ try{
+  const buffer=await encodeHelicopterGLB(slot.model,slot.variantAnimations||[]);
+  const url=URL.createObjectURL(new Blob([buffer],{type:'model/gltf-binary'}));
+  const a=document.createElement('a');a.href=url;a.download=slot.variantFileName;
+  document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1200);
+ }catch(error){slot.status.textContent='Error en exportar el GLB: '+(error?.message||String(error))}
+ finally{button.disabled=false;button.textContent='Desa GLB'}
+}
+async function showHelicopterVariants(config,token){
+ const source=helicopterSources.get(config.id);
+ if(!source)return;
+ helicopterStatus.textContent='Generant variants de '+source.filename+'…';
+ const total=countModelTriangles(source.root);
+ for(let i=0;i<HELICOPTER_LEVELS.length;i++){
+  if(token!==generation)return;
+  const ratio=HELICOPTER_LEVELS[i],slot=slots[i];
+  slot.status.textContent='Simplificant a '+Math.round(ratio*100)+'%…';
+  const {root,stats}=await simplifyHelicopter(source.root,source.animations,ratio);
+  if(token!==generation){
+   root.traverse(node=>{if(node.isMesh&&node.geometry?.userData?.candidateSimplified)node.geometry.dispose()});
+   return;
+  }
+  setModel(slot,root,false,source.animations);
+  slot.variantRoot=root;slot.variantAnimations=source.animations;
+  slot.variantFileName=helicopterFileName(config,ratio);
+  slot.download.hidden=false;
+  slot.bold.textContent=config.options[0].title+' · '+Math.round(ratio*100)+'%';
+  slot.sub.textContent='GLB local · '+config.options[0].author+' · '+config.options[0].license;
+  slot.source.href=config.options[0].url;slot.source.hidden=false;
+  slot.status.textContent=stats.triangles.toLocaleString('ca')+' △ / '+total.toLocaleString('ca')+
+   ' originals ('+Math.round(100*stats.triangles/Math.max(1,total))+'% real) · '+
+   stats.simplified+' malles reduïdes · '+stats.protectedMeshes+' protegides'+
+   (stats.failed?' · '+stats.failed+' sense simplificar':'');
+ }
+ helicopterStatus.textContent='Variants preparades: revisa visualment rotors, materials i animacions abans d’integrar el model al joc.';
+}
 const matCache=new Map();
 function material(color,profile='paint'){
  if(color?.isMaterial)return color;
@@ -58,7 +107,8 @@ for(let i=0;i<4;i++){
  const source=document.createElement('a');source.textContent='Font / llicència';source.href='#';source.target='_blank';source.rel='noopener noreferrer';source.hidden=!i;
  const fileLabel=document.createElement('label');fileLabel.textContent='Importa GLB';
  const upload=document.createElement('input');upload.type='file';upload.accept='.glb,model/gltf-binary';
- fileLabel.append(upload);if(i)actions.append(source,fileLabel);
+ const download=document.createElement('button');download.type='button';download.textContent='Desa GLB';download.hidden=true;
+ fileLabel.append(upload);if(i)actions.append(source,fileLabel);actions.append(download);
  meta.append(status,actions);outer.append(label,viewport,meta);grid.append(outer);
  const scene=new THREE.Scene();scene.background=new THREE.Color(0x354b4c);
  scene.add(new THREE.HemisphereLight(0xddeefa,0x566152,2.15));
@@ -78,7 +128,8 @@ for(let i=0;i<4;i++){
  const head=new THREE.Mesh(new THREE.SphereGeometry(.18,10,8),material(0xf0c7a2));
  head.position.y=1.73;head.castShadow=true;person.add(head);scene.add(person);
  const camera=new THREE.PerspectiveCamera(36,1,.05,1300);
- const slot={outer,viewport,scene,camera,ground,lines,person,status,source,bold,sub,upload,model:null,mixer:null,embed:null,kind:null};
+ const slot={outer,viewport,scene,camera,ground,lines,person,status,source,bold,sub,upload,download,model:null,mixer:null,embed:null,kind:null,variantRoot:null,variantAnimations:null};
+ download.addEventListener('click',()=>exportVariant(slot));
  slots.push(slot);
  upload.addEventListener('change',async()=>{
    const file=upload.files?.[0];if(!file)return;
@@ -152,6 +203,7 @@ function metrics(root){
    ' materials · '+d.x.toFixed(1)+' × '+d.y.toFixed(1)+' × '+d.z.toFixed(1)+' m';
 }
 function dropPrevious(slot){
+ slot.download.hidden=true;slot.variantRoot=null;slot.variantAnimations=null;
  if(slot.embed){slot.embed.remove();slot.embed=null;slot.viewport.classList.remove('has-embed')}
  if(slot.model){
    const freed=new Set();
