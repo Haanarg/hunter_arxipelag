@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// GENERACIÓ PUNTUAL de la Naked streetfighter definitiva. Executar abans
+// GENERACIÓ PUNTUAL de la Naked streetfighter definitiva (versió acceptada). Executar abans
 // d'eliminar els candidats: node --no-warnings --experimental-loader=./tests/three-local-loader.mjs tools/bake-streetfighter-25.mjs
 // El joc NO carrega cap GLB, GLTFLoader ni meshoptimizer en partida.
 import * as THREE from '../vendor/three-r186.module.mjs';
