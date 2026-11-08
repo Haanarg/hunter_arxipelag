@@ -7,10 +7,6 @@ export const CATALOG=[
    P('velodrome-and-track-cycling','Track Bicycle'),
    P('pixel-modern-city-street','Bicycle'),
    P('indian-bazaar-street-and-temple','Bicycle with Carrier')]},
- {id:'moto',name:'Motocicleta',kind:'terra',options:[
-   P('motorcycle-racing-and-street-bikes','Road sportbike'),
-   P('motorcycle-racing-and-street-bikes','Naked streetfighter'),
-   P('motorcycle-racing-and-street-bikes','Twin-cylinder scrambler')]},
  {id:'cotxe_civil',name:'Cotxe civil',kind:'terra',options:[
    P('transport-collection-hd','Grand touring coupe'),
    P('transport-collection-hd','Executive sedan'),
