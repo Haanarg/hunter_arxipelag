@@ -4,6 +4,13 @@
 
 > **Proves automatitzades (2026-11-07):** la bateria s'ha reduït a 13 comprovacions essencials, executables amb `npm test`. Les mencions a noms de proves concretes dins les fases històriques són evidències d'implementacions passades, no fitxers que encara hagin d'existir ni ordres de CI vigents.
 
+**P2 · 2026-11-08 · comparador de LOD del Huey i l'Apache:**
+- [x] Nova pàgina `helicopters-lod-proves.html` i mòdul `src/helicopters-lod-proves.mjs`: quatre vistes 3D sincronitzades (100%, 75%, 50%, 25%) del Huey (Duane's Mind) i Apache (Araon), rotació comuna, zoom, animacions i recompte de triangles.
+- [x] El visor prioritza els GLB del servidor (`assets/vehicle-candidates/helicopter-lods/{huey|apache}_{100|75|50|25}.glb`), però si encara no existeixen permet importar el ZIP local de 8 models, descomprimir-lo al navegador i conservar els GLB a IndexedDB per a visites futures. Enllaç afegit a `vehicles-externs-proves.html`.
+- [x] Manifest `assets/vehicle-candidates/helicopter-lods/manifest.json` amb mètriques, crèdits i **estat 'metadata_only_awaiting_binary_upload'**; comprovacions del visor afegides al test del banc de candidats.
+- [x] Generat un HTML autònom que inclou els vuit GLB (descàrrega de la conversa: `hunter_helicopters_web_autonom.zip`) per veure els models sense haver de publicar-los. Requereix connexió per carregar el component de renderitzat 3D.
+- [ ] **Publicació dels binaris pendent**: no es pot convertir automàticament un fitxer adjunt del contenidor en el contingut binari d'un commit GitHub amb les accions de repositori disponibles; la pàgina remota no pot carregar encara els GLB fins que s'hagin transferit. Paquet de desplegament `hunter_helicopters_assets_per_github.zip` preparat. Després comprovar desplegament Cloudflare i aspecte real al navegador.
+
 **P2 · 2026-11-08 · renovació dels candidats d'helicòpter (laboratori, no integració):**
 - [x] Eliminats del banc i de `assets/vehicle-candidates/` els 3 GLB d'helicòpter utilitari civil i els 3 de l'antic helicòpter de combat (rescat/transport/coaxial); manifest de 20 GLB locals i 9 famílies de vehicles.
 - [x] Incorporades sis referències **militars** al laboratori `vehicles-externs-proves.html`: Huey UH-1 (hruschak30, Duane's Mind i helijah UH-1N) i Apache AH-64 (Araon, fauzan_3d i manilov.ap). Visors externs oficials Sketchfab i registre d'autor/llicència CC BY 4.0. No hi ha còpia local dels GLB ni canvis al joc.
