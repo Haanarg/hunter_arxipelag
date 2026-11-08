@@ -343,6 +343,19 @@ async function choose(config){
  for(let k=1;k<4;k++)slots[k].person.position.x=originalDims.x*.62+1.0;
  lookY=Math.min(6,Math.max(.55,originalDims.y*.38));
  zoom=1;updateCamera();
+ helicopterToolbar.hidden=config.mode!=='heli-lod';
+ if(config.mode==='heli-lod'){
+  helicopterFile.value='';
+  helicopterStatus.textContent='Descarrega el GLB oficial de Sketchfab i importa’l aquí. La llicència CC BY exigeix atribució.';
+  if(helicopterSources.has(config.id))return showHelicopterVariants(config,token);
+  for(const slot of slots.slice(2)){
+   slot.status.textContent='Cal importar el GLB seleccionat per calcular-ne les variants.';
+   slot.bold.textContent='Variant LOD pendent';
+   slot.sub.textContent='100% / 75% / 50% / 25% després de la importació';
+  }
+  await loadExternal(slots[1],config.options[0],new Set(),token);
+  return;
+ }
  const used=new Set();
  await Promise.all(config.options.map((entry,i)=>loadExternal(slots[i+1],entry,used,token)));
 }
@@ -442,6 +455,22 @@ for(const config of CATALOG){
  button.append(small);button.addEventListener('click',()=>choose(config));
  list.append(button);
 }
+helicopterFile.addEventListener('change',async()=>{
+ const f=helicopterFile.files?.[0],config=currentType;
+ if(!f||config.mode!=='heli-lod')return;
+ if(!/\\.glb$/i.test(f.name)){helicopterStatus.textContent='Selecciona un fitxer .glb (opció GLB de Sketchfab).';return}
+ const token=++generation;
+ helicopterStatus.textContent='Obrint '+f.name+'…';
+ const url=URL.createObjectURL(f);
+ try{
+  const gltf=await loader.loadAsync(url);
+  if(!gltf.scene||countModelTriangles(gltf.scene)===0)throw Error('El fitxer no conté cap malla triangular');
+  helicopterSources.set(config.id,{root:gltf.scene,animations:gltf.animations||[],filename:f.name});
+  if(currentType.id===config.id&&token===generation)await showHelicopterVariants(config,token);
+ }catch(error){
+  helicopterStatus.textContent='No s’ha pogut obrir el GLB: '+(error?.message||String(error));
+ }finally{URL.revokeObjectURL(url)}
+});
 addEventListener('resize',resizeRenderer);
 resizeRenderer();requestAnimationFrame(draw);
 fetch('./assets/vehicle-candidates/manifest.json',{cache:'no-store'})
