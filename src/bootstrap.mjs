@@ -177,16 +177,16 @@ try {
     window.HUNTER_HUEY_DUANE=null;
     console.warn('Huey GLB no disponible; model de reserva actiu',hueyError);
   }
-  // Apache final: preparar el GLB abans de la fàbrica síncrona.
-  // La reserva procedural només s'utilitza si falla la càrrega o validació del GLB.
+  // Apache: carregar el binari real de malla compacta 50% abans del motor.
+  // Sense dependència del GLB de 4 MB que encara no és al repositori.
   try {
     const {prepareApacheAraonRuntime}=await import('./apache-araon-runtime.mjs?v=0.6.194');
     window.HUNTER_APACHE_ARAON=await prepareApacheAraonRuntime(THREE);
-    console.info('Apache Araon 50% + rodes 75%, sàlvia mat i negres',
+    console.info('Apache Araon 50% (malla compacta real), sàlvia mat i rotors negres',
       window.HUNTER_APACHE_ARAON.dimensions);
   } catch (apacheError) {
     window.HUNTER_APACHE_ARAON=null;
-    console.warn('Apache GLB no disponible o invàlid; reserva procedural activa',apacheError);
+    console.error('No s’ha pogut preparar el paquet compactat de l’Apache; geometria de reserva activa',apacheError);
   }
   // El bundle inclou els scripts clàssics en el mateix ordre i preserva
   // les variables globals de la versió anterior. Només fem UNA petició.
