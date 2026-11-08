@@ -1,5 +1,6 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {recoverApacheAppearance,apacheAppearanceDescription} from './helicopter-texture-recovery.mjs';
 
 const LEVELS=[100,75,50,25];
 const TYPES={
@@ -9,7 +10,7 @@ const TYPES={
 const ROOT='./assets/vehicle-candidates/helicopter-lods/';
 const canvases=[...document.querySelectorAll('.card')].map(el=>({
  element:el,box:el.querySelector('.canvas-box'),status:el.querySelector('.status'),
- scene:new THREE.Scene(),camera:new THREE.PerspectiveCamera(36,1,.1,1000),model:null,mixer:null
+ scene:new THREE.Scene(),camera:new THREE.PerspectiveCamera(36,1,.1,1000),model:null,mixer:null,appearance:null
 }));
 let renderer;
 try{
@@ -117,7 +118,7 @@ function disposeSlot(slot){
   for(const mat of mats)mat.dispose();
   for(const tex of textures)tex.dispose();
  }
- slot.model=null;slot.mixer=null;
+ slot.model=null;slot.mixer=null;slot.appearance=null;
 }
 function updateCamera(){
  const d=distance;
@@ -143,7 +144,13 @@ async function loadVariant(slot,type,level,serial){
  try{
   const gltf=await loader.loadAsync(url);
   if(serial!==token){disposeNew(gltf.scene);return false}
+  // El GLB de l'Apache pot arribar amb un atles desvinculat o sense
+  // mapes de color. No el deixem blanc: recuperam les imatges si hi són
+  // i identifiquem clarament la pintura de substitució en cas contrari.
+  const appearance=type==='apache'?await recoverApacheAppearance(THREE,gltf):null;
+  if(serial!==token){disposeNew(gltf.scene);return false}
   disposeSlot(slot);
+  slot.appearance=appearance;
   const group=new THREE.Group();group.add(gltf.scene);
   group.updateMatrixWorld(true);
   const bounds=new THREE.Box3().setFromObject(group);
@@ -166,7 +173,8 @@ async function loadVariant(slot,type,level,serial){
   const percent=100*triangles/TYPES[type].triangles[0];
   slot.status.textContent=fmt(triangles)+' triangles ('+percent.toFixed(1)+'% de l’original) · '+
    (blob.size/1048576).toFixed(2)+' MiB · '+gltf.animations.length+' animacions'+
-   (triangles===expected?'':' · recompte diferent del previst: '+fmt(expected));
+   (triangles===expected?'':' · recompte diferent del previst: '+fmt(expected))+
+   (appearance?' · '+apacheAppearanceDescription(appearance):'');
   return true;
  }catch(error){
   slot.status.textContent='Error GLB: '+errorText(error);
@@ -199,6 +207,13 @@ async function choose(type){
   'Quatre variants carregades. Arrossega una vista per girar simultàniament les quatre càmeres.':
   (count>0?'Carregades '+count+'/4 variants.':'Els GLB no estan publicats en aquest servidor.')+
    ' Importa el ZIP de les vuit variants o els fitxers GLB amb «Carrega ZIP/GLB»; quedaran guardats en aquest navegador.';
+ if(type==='apache'){
+  const reports=canvases.map(slot=>slot.appearance).filter(Boolean);
+  const bad=reports.filter(r=>r.recolored);
+  if(bad.length)
+   notice.textContent+=' ⚠ L’Apache no inclou textures de color vàlides a '+bad.length+
+    '/4 variants. S’han aplicat colors militars de substitució, però per veure la textura AUTÈNTICA cal un GLB amb les imatges incrustades.';
+ }
  updateCamera();
 }
 async function unzipSelected(file){
