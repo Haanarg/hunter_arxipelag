@@ -137,7 +137,7 @@ export async function prepareApacheAraonRuntime(THREE,{forceCompact=false}={}){
   if(triangles(template)!==APACHE_TRIANGLES)
    throw Error('El GLB Apache no té els 2.193 triangles aprovats');
  }catch(error){
-  console.warn('Apache definitiu GLB no disponible; càrrega de la reserva compacta real',error);
+  if(!forceCompact)console.warn('Apache definitiu GLB no disponible; càrrega de la reserva compacta real',error);
   template=await loadAraonCompact(THREE);
   usingCompact=true;
  }
