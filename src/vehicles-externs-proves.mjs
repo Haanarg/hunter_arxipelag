@@ -78,7 +78,7 @@ for(let i=0;i<4;i++){
  const head=new THREE.Mesh(new THREE.SphereGeometry(.18,10,8),material(0xf0c7a2));
  head.position.y=1.73;head.castShadow=true;person.add(head);scene.add(person);
  const camera=new THREE.PerspectiveCamera(36,1,.05,1300);
- const slot={outer,viewport,scene,camera,ground,lines,person,status,source,bold,sub,upload,model:null,mixer:null,kind:null};
+ const slot={outer,viewport,scene,camera,ground,lines,person,status,source,bold,sub,upload,model:null,mixer:null,embed:null,kind:null};
  slots.push(slot);
  upload.addEventListener('change',async()=>{
    const file=upload.files?.[0];if(!file)return;
@@ -152,6 +152,7 @@ function metrics(root){
    ' materials · '+d.x.toFixed(1)+' × '+d.y.toFixed(1)+' × '+d.z.toFixed(1)+' m';
 }
 function dropPrevious(slot){
+ if(slot.embed){slot.embed.remove();slot.embed=null;slot.viewport.classList.remove('has-embed')}
  if(slot.model){
    const freed=new Set();
    slot.model.traverse(node=>{
@@ -195,6 +196,22 @@ function setModel(slot,obj,original,animations=[]){
 }
 
 async function loadExternal(slot,entry,used,token){
+ if(entry.provider==='sketchfab'){
+   // Referència oficial; no es descarrega cap GLB privat ni es canvia el joc.
+   slot.bold.textContent=entry.title;
+   slot.sub.textContent=entry.author+' · '+entry.license+' · '+(entry.triangles?entry.triangles.toLocaleString('ca'):'?')+' △';
+   slot.source.href=entry.url;slot.source.hidden=false;
+   slot.status.textContent=(entry.note||'Helicòpter militar')+' · Visor 3D extern; importa GLB si vols comparar escales.';
+   const iframe=document.createElement('iframe');
+   iframe.title='Visor 3D de '+entry.title+' · '+entry.author;
+   iframe.src='https://sketchfab.com/models/'+encodeURIComponent(entry.modelId)+'/embed?ui_hint=2';
+   iframe.loading='lazy';
+   iframe.allow='autoplay; fullscreen; xr-spatial-tracking';
+   iframe.referrerPolicy='strict-origin-when-cross-origin';
+   slot.viewport.classList.add('has-embed');
+   slot.viewport.append(iframe);slot.embed=iframe;
+   return;
+ }
  const slotIndex=slots.indexOf(slot);
  const local=savedManifest?.models?.[currentType.id]?.find(record=>record.slot===slotIndex);
  if(local){
@@ -314,6 +331,7 @@ function draw(now){
  renderer.setScissorTest(true);
  const windowWidth=innerWidth,windowHeight=innerHeight;
  for(const slot of slots){
+   if(slot.embed)continue; // El visor Sketchfab té WebGL i càmera propis.
    const r=slot.viewport.getBoundingClientRect();
    const left=Math.round(r.left),bottom=Math.round(windowHeight-r.bottom);
    const width=Math.max(1,Math.round(r.width)),height=Math.max(1,Math.round(r.height));
