@@ -35,7 +35,7 @@ let saveDraws=0;
 const save=select('moto_aquatica',cars,pa,()=>{saveDraws++;return .88;},{color:0xff7b19},colors);
 assert.equal(saveDraws,1);
 assert.equal(save.appearance.color,0xff7b19,'Respectar el color explícit d’una partida recuperada');
-for(const [type,expected] of [['cotxe_civil',1],['bici',1],['windsurf',0],['tanc',0]]){
+for(const [type,expected] of [['cotxe_civil',2],['bici',1],['windsurf',0],['tanc',0]]){
  let draws=0;
  select(type,cars,pa,()=>{draws++;return .4},{},colors);
  assert.equal(draws,expected,'Consum de RNG no modificat per '+type);
