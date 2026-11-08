@@ -8,9 +8,9 @@ export function compoundPoint(q,angle=0,mirror=1){
 }
 // Reserva geomètrica de l'heliport: la plataforma és QUADRADA, no només
 // el cercle del rotor. Comprovam la teulada real de les torres (6,95 × 6,05m)
-// més 3m de separació i el disc lliure. No consumim RNG ni modificam layouts.
+// més 6m de separació i el disc lliure. No consumim RNG ni modificam layouts.
 export const HELIPAD_TOWER_CLEARANCE=Object.freeze({
- towerHalfWidth:3.5,towerHalfDepth:3.05,margin:3
+ towerHalfWidth:3.5,towerHalfDepth:3.05,margin:6
 });
 export function helipadTowerClear(pad,tower){
  if(!pad||!tower)return true;
