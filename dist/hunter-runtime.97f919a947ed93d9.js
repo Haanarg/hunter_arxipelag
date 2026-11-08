@@ -2952,7 +2952,7 @@ window.HUNTER_RIDER=Object.freeze({
         const seatX=coopSeat?(passenger?1:-1)*(car?.65:.58)*sc:0,
           deckY=car?1.20*sc:v.t==='hover'?1.25*sc:
             v.t==='windsurf'?1.05*sc:1.35*sc;
-        riderFar.position.set(seatX,v.t==='moto'?.98*sc:deckY,(v.t==='bici'||v.t==='moto')?0.12*sc:0);
+        riderFar.position.set(seatX,v.t==='moto'?.98*sc*(v.o?.userData?.motorcycleVisualScale??1):deckY,(v.t==='bici'||v.t==='moto')?0.12*sc*(v.t==='moto'?(v.o?.userData?.motorcycleVisualScale??1):1):0);
         pistol.visible=false;
         return;
       }
@@ -3048,27 +3048,30 @@ window.HUNTER_RIDER=Object.freeze({
       }
 
       if(v.t==='moto'){
-        // Naked streetfighter 25%, ajustada al 75% de la mida original.
-        // Seient i mans a la nova alçada. El punt de presa segueix el
+        // Naked streetfighter 25%, ara ampliada +50% respecte la variant
+        // anterior. Seient i mans mantenen la posició relativa al xassís.
+        // El punt de presa segueix el
         // mateix pivot de direcció visual, inclòs el gir dels punys.
         const steering=v.o?.userData?.steeringPivots?.[0],
+              size=v.o?.userData?.motorcycleVisualScale??1,
+              fit=sc*size,
               turn=steering?.rotation?.y||0,
-              pivotZ=(steering?.position?.z??-.28)*sc,
-              pivotY=(steering?.position?.y??1.07)*sc,
-              seat=.99*sc,seatZ=.26*sc;
+              pivotZ=(steering?.position?.z??-.28)*fit,
+              pivotY=(steering?.position?.y??1.07)*fit,
+              seat=.99*fit,seatZ=.26*fit;
         torso.position.set(0,seat,seatZ);
         torso.rotation.x=.12*motion;
         for(let i=0;i<2;i++){
-          const side=i?1:-1,hip=vec(side*.25,seat,seatZ),
+          const side=i?1:-1,hip=vec(side*.25*size,seat,seatZ),
                 shoulder=shoulderAt(side),
-                x=side*.34*sc,
-                hand=vec(x*Math.cos(turn),pivotY-.015*sc,
+                x=side*.34*fit,
+                hand=vec(x*Math.cos(turn),pivotY-.015*fit,
                   pivotZ-x*Math.sin(turn)),
                 elbow=shoulder.clone().lerp(hand,.54);
           elbow.x+=side*.08;elbow.y-=.12;
           limbBetween(limbs[i*2],shoulder,elbow);
           limbBetween(limbs[i*2+1],elbow,hand);
-          const foot=vec(side*.34*sc,.42*sc,.16*sc),
+          const foot=vec(side*.34*fit,.42*fit,.16*fit),
                 knee=hip.clone().lerp(foot,.54);
           knee.z-=.12*motion;knee.x+=side*.07;
           limbBetween(limbs[4+i*2],hip,knee);
