@@ -21,8 +21,7 @@ const SIMPLIFICATION=[
  {name:'Màxima',ratio:.25}
 ];
 const FEATURED={
- moto:{slot:2,title:'Naked streetfighter',note:'S’ha girat el manillar i s’han tret la pota de cabra i els retrovisors. Quatre graus de simplificació geomètrica; cap canvi encara al joc.'},
- moto_aquatica:{slot:3,title:'Recreational Jet Ski',note:'Quatre graus de simplificació geomètrica del Recreational Jet Ski. Comparació en temps real: les quatre variants són models 3D reals.'}
+ moto:{slot:2,title:'Naked streetfighter',note:'S’ha girat el manillar i s’han tret la pota de cabra i els retrovisors. Quatre graus de simplificació geomètrica; cap canvi encara al joc.'}
 };
 const simplifier=new SimplifyModifier();
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -319,7 +318,7 @@ async function loadFeatured(config,token){
      if(token!==generation)return;
      const quality=SIMPLIFICATION[i],slot=slots[i+2];
      slot.bold.textContent=quality.name+' · '+Math.round(quality.ratio*100)+'%';
-     slot.sub.textContent=config.id==='moto'?'Manillar corregit · sense pota ni retrovisors':'Geometria GLB simplificada';
+     slot.sub.textContent='Manillar corregit · sense pota ni retrovisors';
      slot.status.textContent='Calculant una versió del '+Math.round(quality.ratio*100)+'%…';
      await new Promise(resolve=>requestAnimationFrame(resolve));
      const copy=gltf.scene.clone(true);
