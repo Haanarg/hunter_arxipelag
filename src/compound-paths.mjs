@@ -48,11 +48,22 @@ export function* createPathNetworkSteps(T,{routes,heightAt=()=>0,heightVersion=(
  };
  // Sectors més grans: menys draw calls i exactament els mateixos triangles.
  // chunkCells opcional manté les proves de la versió anterior reproduïbles.
- const chunks=new Map();
+ const chunks=new Map(),heightCacheStats={samples:0,reuses:0};
  let processedCells=0;
  for(const cell of cells){if(processedCells++%128===0)yield {stage:'Ajustant camins al terreny',completed:processedCells-1,total:cells.size,unit:'cel·les'};const [x,z]=cell.split(',').map(Number),vs=[sample(x,z),sample(x,z+1),sample(x+1,z),sample(x+1,z+1)];if(vs.every(v=>v.alpha<.001))continue;
   const k=key(Math.floor(x/chunkCells),Math.floor(z/chunkCells));if(!chunks.has(k))chunks.set(k,{positions:[],colors:[]});const out=chunks.get(k);
-  for(const j of[0,1,2,2,1,3]){const v=vs[j];out.positions.push(v.x,heightAt(v.x,v.z)+.12,v.z);out.colors.push(v.r,v.g,v.b,v.alpha)}
+  for(const j of[0,1,2,2,1,3]){
+   const v=vs[j];
+   // One height query per unique grid vertex, not one per triangle corner.
+   // The terrain is unchanged during initial road rasterisation; later LOD
+   // changes still trigger the existing per-mesh onBeforeRender refit.
+   if(v.roadHeight===undefined){
+    v.roadHeight=heightAt(v.x,v.z)+.12;
+    heightCacheStats.samples++;
+   }else heightCacheStats.reuses++;
+   out.positions.push(v.x,v.roadHeight,v.z);
+   out.colors.push(v.r,v.g,v.b,v.alpha);
+  }
  }
  yield {stage:'Preparant els materials dels camins',completed:cells.size,total:cells.size,unit:'cel·les'};
  const material=new T.MeshStandardMaterial({vertexColors:true,transparent:true,depthWrite:false,roughness:1,metalness:0,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
@@ -102,6 +113,6 @@ export function* createPathNetworkSteps(T,{routes,heightAt=()=>0,heightVersion=(
   yield {stage:'Malles dels camins',completed:++processedChunks,total:chunks.size,unit:'sectors'};
  }
  if(!chunks.size)material.dispose();
- group.userData.pathStats={routes:paths.length,chunks:chunks.size,chunkCells,triangles:[...chunks.values()].reduce((n,c)=>n+c.positions.length/9,0)};
+ group.userData.pathStats={routes:paths.length,chunks:chunks.size,chunkCells,triangles:[...chunks.values()].reduce((n,c)=>n+c.positions.length/9,0),heightSamples:heightCacheStats.samples,heightReuses:heightCacheStats.reuses};
  return group;
 }

@@ -12,6 +12,11 @@
 - No tocar el balanç, aspecte, controls ni la serialització de partides durant una extracció de codi, tret que sigui un canvi de joc explícit amb proves específiques.
 - Les dades de rendiment històriques són *indiciàries*: no existeix encara una bateria comparativa completa de FPS GPU, p95/p99 i dos dispositius després de les darreres modificacions.
 
+**P1 · v0.6.184 · accelerar la generació inicial dels camins (implementació):**
+- [x] Memòria cau local de la cota visual per vèrtex compartit de la graella de camins: una consulta a `heightAt` per coordenada en lloc d'una per cantonada de triangle. La cota, el color, la geometria i la refeta posterior quan canvia el LOD continuen sent idèntics. `world.userData.pathStats` registra `heightSamples` i `heightReuses`.
+- [x] Prova automatitzada `tests/path-height-cache.mjs`: verifica cotes exactes per vèrtex i una sola consulta inicial per coordenada, amb més d'un chunk.
+- [ ] **Validació de temps real pendent:** comparar `HUNTER_BUILD_STATS.totalMs` i `stages.finalizationAndBatching` amb la mateixa llavor 148 en mapa petit/gran (diverses repeticions), i verificar solitari, COOP i visual WebGL/Android. Els tests Node no certifiquen una acceleració de la càrrega total.
+
 **P2 · v0.6.183 · motos aquàtiques de colors vius i direcció Naked streetfighter (implementat):**
 - [x] Les motos aquàtiques nascudes a `world-generation.js` recorren els **set colors llampants** de `jetskiColors`, en cicle determinista per llavor, amb un únic R() per vehicle com abans. El node `jetski-engine-cover` (antiga peça coral) és l'única peça que canvia de color; es mantenen estables totes les altres pintures i l'estat de desament.
 - [x] Al laboratori, el GLB `Naked streetfighter` original i les quatre variants reduïdes comparteixen el **mateix conjunt de direcció**: manillar i punys girats 180° cap al pilot, forquilla completa i parafang units a la roda davantera, amb pivot de gir i control per veure'l en moviment. S'eliminen els dos marcadors vermells giratoris de les rodes, els suports dels retrovisors i la pota de cabra. Totes les versions preserven el detall de radis, forats, llandes i pneumàtics sense aplicar-hi meshoptimizer.
