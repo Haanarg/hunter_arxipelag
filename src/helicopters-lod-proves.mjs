@@ -4,7 +4,6 @@ import {recoverApacheAppearance,apacheAppearanceDescription} from './helicopter-
 
 const LEVELS=[100,75,50,25];
 const TYPES={
- huey:{name:"Huey — Duane's Mind",triangles:[2014,1649,1286,922],bytes:[1025276,1067068,1054488,1041968]},
  apache:{name:"Apache — Araon",triangles:[3808,2990,2173,1355],bytes:[2970256,3147200,3093544,3036368]}
 };
 const ROOT='./assets/vehicle-candidates/helicopter-lods/';
@@ -27,7 +26,7 @@ try{
  throw error;
 }
 const loader=new GLTFLoader();
-let current='huey',token=0,yaw=.64,elev=.30,distance=26,lookY=1.5;
+let current='apache',token=0,yaw=.64,elev=.30,distance=26,lookY=1.5;
 let lastTime=performance.now();
 let dbPromise;
 const memory=new Map();
@@ -206,7 +205,7 @@ async function choose(type){
  notice.textContent=count===4?
   'Quatre variants carregades. Arrossega una vista per girar simultàniament les quatre càmeres.':
   (count>0?'Carregades '+count+'/4 variants.':'Els GLB no estan publicats en aquest servidor.')+
-   ' Importa el ZIP de les vuit variants o els fitxers GLB amb «Carrega ZIP/GLB»; quedaran guardats en aquest navegador.';
+   ' Importa el ZIP de les quatre variants de l’Apache o els fitxers GLB amb «Carrega ZIP/GLB»; quedaran guardats en aquest navegador.';
  if(type==='apache'){
   const reports=canvases.map(slot=>slot.appearance).filter(Boolean);
   const bad=reports.filter(r=>r.recolored);
@@ -239,7 +238,7 @@ async function unzipSelected(file){
   const localOffset=view.getUint32(p+42,true);
   const fileName=new TextDecoder().decode(bytes.subarray(p+46,p+46+nameLength)).split('/').pop().toLowerCase();
   p+=46+nameLength+extraLength+commentLength;
-  if(!/^(huey|apache)_(100|75|50|25)\.glb$/.test(fileName))continue;
+  if(!/^apache_(100|75|50|25)\.glb$/.test(fileName))continue;
   if(uncompSize>80000000 || localOffset+30>bytes.length)throw Error('Fitxer ZIP massa gran o incomplet');
   if(view.getUint32(localOffset,true)!==0x04034b50)throw Error('Capçalera GLB incorrecta al ZIP');
   const start=localOffset+30+view.getUint16(localOffset+26,true)+view.getUint16(localOffset+28,true);
@@ -248,7 +247,7 @@ async function unzipSelected(file){
   let buffer;
   if(method===0)buffer=compressed.buffer;
   else if(method===8){
-   if(typeof DecompressionStream==='undefined')throw Error('El navegador no permet descomprimir ZIP; descomprimeix-lo i tria els 8 GLB');
+   if(typeof DecompressionStream==='undefined')throw Error('El navegador no permet descomprimir ZIP; descomprimeix-lo i tria els 4 GLB de l'Apache');
    const stream=new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
    buffer=await new Response(stream).arrayBuffer();
   }else throw Error('Mètode de compressió ZIP no admès: '+method);
@@ -270,7 +269,7 @@ document.querySelector('#assetFile').addEventListener('change',async e=>{
    if(file.name.toLowerCase().endsWith('.zip'))count+=await unzipSelected(file);
    else if(file.name.toLowerCase().endsWith('.glb')){
     const name=file.name.toLowerCase().replace(/\.glb$/,'');
-    if(!/^(huey|apache)_(100|75|50|25)$/.test(name))throw Error('El nom ha de ser huey_100.glb, apache_75.glb, etc.');
+    if(!/^apache_(100|75|50|25)$/.test(name))throw Error('El nom ha de ser apache_100.glb, apache_75.glb, etc.');
     const blob=new Blob([await file.arrayBuffer()],{type:'model/gltf-binary'});
     memory.set(name,blob);await cachePut(name,blob);count++;
    }
@@ -342,4 +341,4 @@ function draw(time){
 window.addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight,false);updateCamera()});
 updateCamera();
 requestAnimationFrame(draw);
-choose('huey');
+choose('apache');
