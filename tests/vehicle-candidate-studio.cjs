@@ -51,6 +51,11 @@ for(const [type,levels] of Object.entries({apache:[3808,2990,2173,1355]})){
 }
 assert(helicopterPage.includes('Huey')&&helicopterPage.includes('Apache'),'Pàgina de comparació d’helicòpters absent');
 assert(helicopterScript.includes('unzipSelected')&&helicopterScript.includes('getBlob'),'El visor ha de poder carregar ZIP i GLB publicats');
+assert(helicopterScript.includes('showOfficialReference')&&helicopterScript.includes('SKETCHFAB_APACHE'),'El 100% de l’Apache ha de tenir un visor oficial de reserva');
+assert(helicopterScript.includes('completeMissingLods')&&helicopterScript.includes('simplifyHelicopter'),'El GLB original ha de permetre generar els LOD que falten');
+assert(helicopterScript.includes('apacheImportKey')&&helicopterScript.includes('ah[ _-]?64'),'El visor ha d’acceptar l’original Sketchfab sense renomenar-lo');
+assert(helicopterScript.includes('apacheCompatibleBlob(file)'),'Cal reparar les textures en importar i guardar els models');
+assert(helicopterPage.includes('drop-target')&&helicopterPage.includes('visor original'),'Cal oferir importació per arrossegament i indicar la referència externa');
 assert(html.includes('helicopters-lod-proves.html'),'Falta l’enllaç al nou comparador des del banc general');
 for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/streetfighter-25-geometry.mjs','src/helicopters-lod-proves.mjs'])
  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});

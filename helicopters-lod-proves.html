@@ -29,6 +29,9 @@ main{padding:15px clamp(12px,2vw,28px) 28px}
 .card .subtitle{font-size:12px;color:var(--muted);margin:3px 0 0}
 .card .canvas-box{flex:1;position:relative;min-height:275px;touch-action:pan-y;cursor:grab}
 .card .canvas-box:active{cursor:grabbing}
+.card .canvas-box.has-official-preview{cursor:default}
+.card .canvas-box.has-official-preview iframe{position:absolute;inset:0;width:100%;height:100%;border:0;z-index:4;background:#1c3033}
+.card .canvas-box.drop-target{outline:3px dashed #d7eaa7;outline-offset:-5px}
 .card footer{padding:12px;background:#102527e5;border-top:1px solid #526b6c;position:relative;z-index:3}
 .card .status{color:#d4e2da;font-size:12px;line-height:1.5;min-height:2em}
 #draw{position:fixed;top:0;left:0;pointer-events:none;z-index:2;width:100vw;height:100vh}
@@ -62,9 +65,9 @@ main{padding:15px clamp(12px,2vw,28px) 28px}
 <button id="zoomIn" aria-label="Apropar càmera">+</button>
 <label><input id="animate" type="checkbox" checked> Animació</label>
 <label><input id="showGrid" type="checkbox" checked> Graella</label>
-<label class="file-button">Carrega ZIP/GLB <input id="assetFile" type="file" accept=".zip,.glb" multiple></label>
+<label class="file-button">Carrega GLB de l’Apache / ZIP <input id="assetFile" type="file" accept=".zip,.glb" multiple></label>
 </div>
-<div id="notice" role="status" class="note">Cercant els GLB publicats i els que tinguis desats al navegador…</div>
+<div id="notice" role="status" class="note">Cercant els GLB publicats o desats… Si no n’hi ha, es mostrarà la vista original oficial d’Araon.</div>
 <section id="cards" aria-label="Comparació GLB 100%, 75%, 50% i 25%">
 <article class="card" data-level="100"><header><h2>100% · original</h2><p class="subtitle">Geometria original</p></header><div class="canvas-box"></div><footer><div class="status">Preparant…</div></footer></article>
 <article class="card" data-level="75"><header><h2>75% · detall alt</h2><p class="subtitle">Reducció conservadora</p></header><div class="canvas-box"></div><footer><div class="status">Preparant…</div></footer></article>
@@ -72,9 +75,9 @@ main{padding:15px clamp(12px,2vw,28px) 28px}
 <article class="card" data-level="25"><header><h2>25% · detall baix</h2><p class="subtitle">Candidat per a flota/LOD</p></header><div class="canvas-box"></div><footer><div class="status">Preparant…</div></footer></article>
 </section>
 <section id="help">
-<strong>Fonts i llicències:</strong> <a href="https://sketchfab.com/3d-models/ah-64-apache-df0993ee21e74a759cd0519f6fc51cf8" target="_blank" rel="noopener">AH-64 Apache — Araon</a>. Llicència CC BY 4.0. Les reduccions protegeixen rotors, vidres i peces animades, per això el percentatge efectiu de triangles és més alt. Si no hi ha GLB al servidor, pots carregar el ZIP amb les quatre variants de l'Apache o els GLB individuals: es desen localment al navegador per a les visites següents. L'import no publica fitxers al repositori.
+<strong>Fonts i llicències:</strong> <a href="https://sketchfab.com/3d-models/ah-64-apache-df0993ee21e74a759cd0519f6fc51cf8" target="_blank" rel="noopener">AH-64 Apache — Araon</a>. Llicència CC BY 4.0. Les reduccions protegeixen rotors, vidres i peces animades, per això el percentatge efectiu de triangles és més alt. Si no hi ha GLB al servidor, el primer panell mostra el visor original de Sketchfab. Pots carregar directament el GLB corregit apache_100.glb, l’original ah-64_apache.glb o un ZIP amb variants, o arrossegar-lo a qualsevol panell. Si només importes el 100%, el navegador genera automàticament els LOD 75%, 50% i 25%, preservant els mapes PBR. Queden desats en aquest navegador; l’import no publica fitxers al repositori.
 </section>
 </main>
-<script type="module" src="./src/helicopters-lod-proves.mjs?v=2"></script>
+<script type="module" src="./src/helicopters-lod-proves.mjs?v=3"></script>
 </body>
 </html>

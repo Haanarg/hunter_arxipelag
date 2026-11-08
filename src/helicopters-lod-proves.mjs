@@ -1,6 +1,7 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {apacheCompatibleBlob} from './apache-glb-compat.mjs';
+import {simplifyHelicopter,encodeHelicopterGLB} from './helicopter-simplification.mjs';
 import {recoverApacheAppearance,apacheAppearanceDescription} from './helicopter-texture-recovery.mjs';
 
 const LEVELS=[100,75,50,25];
@@ -8,9 +9,10 @@ const TYPES={
  apache:{name:"Apache — Araon",triangles:[3808,2990,2173,1355],bytes:[2970256,3147200,3093544,3036368]}
 };
 const ROOT='./assets/vehicle-candidates/helicopter-lods/';
+const SKETCHFAB_APACHE='df0993ee21e74a759cd0519f6fc51cf8';
 const canvases=[...document.querySelectorAll('.card')].map(el=>({
  element:el,box:el.querySelector('.canvas-box'),status:el.querySelector('.status'),
- scene:new THREE.Scene(),camera:new THREE.PerspectiveCamera(36,1,.1,1000),model:null,mixer:null,appearance:null
+ scene:new THREE.Scene(),camera:new THREE.PerspectiveCamera(36,1,.1,1000),model:null,mixer:null,appearance:null,sourceFrame:null
 }));
 let renderer;
 try{
@@ -102,6 +104,7 @@ function countTriangles(root){
  return triangles;
 }
 function disposeSlot(slot){
+ if(slot.sourceFrame){slot.sourceFrame.remove();slot.sourceFrame=null;slot.box.classList.remove('has-official-preview')}
  if(slot.model){
   slot.scene.remove(slot.model);
   const geos=new Set(),mats=new Set(),textures=new Set();
@@ -120,6 +123,20 @@ function disposeSlot(slot){
  }
  slot.model=null;slot.mixer=null;slot.appearance=null;
 }
+// Quan encara no s'han publicat els GLB, mostram el visor OFICIAL d'Araon.
+ // La vista externa és només referència; la simplificació necessita un GLB.
+function showOfficialReference(slot,type,level){
+ if(type!=='apache'||level!==100)return;
+ const iframe=document.createElement('iframe');
+ iframe.title="AH-64 Apache original d'Araon · visor oficial Sketchfab";
+ iframe.src='https://sketchfab.com/models/'+SKETCHFAB_APACHE+'/embed?ui_hint=2';
+ iframe.loading='lazy';
+ iframe.allow='autoplay; fullscreen; xr-spatial-tracking';
+ iframe.referrerPolicy='strict-origin-when-cross-origin';
+ slot.box.classList.add('has-official-preview');
+ slot.box.append(iframe);
+ slot.sourceFrame=iframe;
+}
 function updateCamera(){
  const d=distance;
  for(const slot of canvases){
@@ -137,7 +154,10 @@ async function loadVariant(slot,type,level,serial){
  if(serial!==token)return false;
  if(!blob){
   disposeSlot(slot);
-  slot.status.textContent='Encara no està al servidor. Carrega el ZIP amb les 8 variants.';
+  showOfficialReference(slot,type,level);
+  slot.status.textContent=level===100?
+   "Vista oficial d'Araon (Sketchfab): textures originals. Carrega el GLB de l'Apache per comparar-lo al motor Three.js.":
+   'LOD encara no publicat. Importa un GLB original i es generarà aquesta variant automàticament.';
   return false;
  }
  let compatible={blob,converted:0,connected:0};
@@ -267,29 +287,86 @@ async function unzipSelected(file){
  }
  return matched;
 }
-document.querySelector('#assetFile').addEventListener('change',async e=>{
- const files=[...e.target.files||[]];if(!files.length)return;
- notice.textContent='Importació de variants en curs…';
+// El GLB original corregit o l'original de Sketchfab poden tenir qualsevol nom
+// que identifiqui l'Apache. Les variants amb nom apache_XX.glb es respecten.
+function apacheImportKey(filename){
+ const lower=filename.toLowerCase().trim();
+ const match=/^apache_(100|75|50|25)\.glb$/.exec(lower);
+ if(match)return 'apache_'+match[1];
+ if(/\.glb$/.test(lower)&&(/apache|ah[ _-]?64/.test(lower)))return 'apache_100';
+ throw Error("El fitxer ha de ser de l'Apache (p. ex. ah-64_apache.glb o apache_100.glb).");
+}
+async function completeMissingLods(){
+ const original=memory.get('apache_100');
+ if(!original)return 0;
+ const missing=[];
+ for(const level of LEVELS.slice(1))if(!(await getBlob('apache',level)))missing.push(level);
+ if(!missing.length)return 0;
+ notice.textContent='Generant automàticament els LOD '+missing.join('%, ')+'% amb les textures originals…';
+ const prepared=await apacheCompatibleBlob(original);
+ const url=URL.createObjectURL(prepared.blob);
+ let gltf;
+ try{gltf=await loader.loadAsync(url)}
+ finally{URL.revokeObjectURL(url)}
+ let completed=0;
+ try{
+  for(const level of missing){
+   notice.textContent='Simplificant Apache '+level+'% · '+(completed+1)+'/'+missing.length+'…';
+   const {root}=await simplifyHelicopter(gltf.scene,gltf.animations||[],level/100);
+   try{
+    const buffer=await encodeHelicopterGLB(root,gltf.animations||[]);
+    const key=makeKey('apache',level),blob=new Blob([buffer],{type:'model/gltf-binary'});
+    memory.set(key,blob);
+    await cachePut(key,blob);
+    completed++;
+   }finally{
+    root.traverse(node=>{
+     if(node.isMesh&&node.geometry?.userData?.candidateSimplified)node.geometry.dispose();
+    });
+   }
+  }
+ }finally{disposeNew(gltf.scene)}
+ return completed;
+}
+async function importApacheFiles(files){
+ if(!files.length)return;
+ notice.textContent='Important Apache i reparant textures…';
  let count=0,errors=[];
  for(const file of files){
   try{
    if(file.name.toLowerCase().endsWith('.zip'))count+=await unzipSelected(file);
    else if(file.name.toLowerCase().endsWith('.glb')){
-    const name=file.name.toLowerCase().replace(/\.glb$/,'');
-    if(!/^apache_(100|75|50|25)$/.test(name))throw Error('El nom ha de ser apache_100.glb, apache_75.glb, etc.');
-    const blob=new Blob([await file.arrayBuffer()],{type:'model/gltf-binary'});
-    memory.set(name,blob);await cachePut(name,blob);count++;
+    const name=apacheImportKey(file.name);
+    // La conversió PBR modifica només el JSON. Imatges i geometria BIN
+    // es guarden exactament com a la font, també entre visites.
+    const prepared=await apacheCompatibleBlob(file);
+    memory.set(name,prepared.blob);await cachePut(name,prepared.blob);count++;
    }
   }catch(error){errors.push(file.name+': '+errorText(error))}
  }
  if(!count){
-  notice.textContent='No s’ha importat cap model. '+(errors.join(' · ')||'Revisa els noms dels fitxers.');
+  notice.textContent='No s’ha importat cap model. '+(errors.join(' · ')||"Selecciona un GLB de l'Apache.");
   return;
  }
+ try{await completeMissingLods()}
+ catch(error){errors.push('Simplificació: '+errorText(error))}
  await choose(current);
  if(errors.length)notice.textContent+=' Incidències: '+errors.join(' · ');
- e.target.value='';
+}
+document.querySelector('#assetFile').addEventListener('change',async e=>{
+ const files=[...e.target.files||[]];
+ try{await importApacheFiles(files)}finally{e.target.value=''}
 });
+// Arrossegar el GLB sobre la zona de preview és equivalent a importar-lo.
+for(const slot of canvases){
+ slot.box.addEventListener('dragover',e=>{e.preventDefault();slot.box.classList.add('drop-target')});
+ slot.box.addEventListener('dragleave',()=>slot.box.classList.remove('drop-target'));
+ slot.box.addEventListener('drop',async e=>{
+  e.preventDefault();
+  slot.box.classList.remove('drop-target');
+  await importApacheFiles([...e.dataTransfer.files||[]]);
+ });
+}
 const views={quarter:[.64,.31],front:[Math.PI, .10],side:[Math.PI/2,.08],rear:[0,.08],top:[0,Math.PI/2-.06]};
 for(const button of document.querySelectorAll('[data-type]'))button.addEventListener('click',()=>choose(button.dataset.type));
 for(const button of document.querySelectorAll('[data-view]'))button.addEventListener('click',()=>{
@@ -335,6 +412,7 @@ function draw(time){
  renderer.setClearColor(0x233d41,1);
  renderer.setScissorTest(true);
  for(const slot of canvases){
+  if(!slot.model)continue; // No pintar un panell buit damunt el visor oficial.
   const r=slot.box.getBoundingClientRect();
   const left=Math.round(r.left),bottom=Math.round(height-r.bottom),w=Math.round(r.width),h=Math.round(r.height);
   const x=Math.max(0,left),y=Math.max(0,bottom),right=Math.min(width,left+w),top=Math.min(height,bottom+h);
