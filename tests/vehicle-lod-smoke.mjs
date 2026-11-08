@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {GLTFLoader} from '../vendor/three-addons/loaders/GLTFLoader.js';
 import {SimplifyModifier} from '../vendor/three-addons/modifiers/SimplifyModifier.js';
-import {mergeVertices} from '../vendor/three-addons/utils/BufferGeometryUtils.js';
+import {mergeVertices,deinterleaveGeometry} from '../vendor/three-addons/utils/BufferGeometryUtils.js';
 const manifest=JSON.parse(readFileSync(new URL('../assets/vehicle-candidates/manifest.json',import.meta.url),'utf8'));
 const loader=new GLTFLoader();
 const simplifier=new SimplifyModifier();
@@ -20,7 +20,9 @@ for(const [id,slot] of [['moto',2],['moto_aquatica',3]]){
  gltf.scene.traverse(node=>{if(node.isMesh&&node.geometry?.getAttribute('position'))meshes.push(node)});
  assert(meshes.length>=3,'Model inesperadament buit: '+id);
  const largest=meshes.sort((a,b)=>b.geometry.getAttribute('position').count-a.geometry.getAttribute('position').count)[0];
- const raw=largest.geometry,welded=raw.index?raw:mergeVertices(raw);
+ const raw=largest.geometry,prepared=raw.clone();
+ deinterleaveGeometry(prepared);
+ const welded=prepared.index?prepared:mergeVertices(prepared);
  const original=welded.index?.count/3||welded.getAttribute('position').count/3;
  const count=welded.getAttribute('position').count;
  let previous=original;
@@ -32,6 +34,7 @@ for(const [id,slot] of [['moto',2],['moto_aquatica',3]]){
    previous=tris;
    result.dispose();
  }
- if(welded!==raw)welded.dispose();
+ if(welded!==prepared)welded.dispose();
+ prepared.dispose();
  console.log(id+': GLB real i 4 nivells verificats sobre una malla ('+original+' -> '+previous+' triangles).');
 }
