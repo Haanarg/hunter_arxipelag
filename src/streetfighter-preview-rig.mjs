@@ -141,6 +141,25 @@ export function prepareStreetfighterPreview(THREE,root){
  if(!grips)throw Error('Falten els punys del manillar per alinear-los');
  barAlign.attach(grips);
  barAlign.rotation.y=Math.PI;
+ // El manillar i els punys estan junts al subpivot. El GLB original
+ // no tenia la tija entre la barra i la corona de la forquilla: sense
+ // ella quedaven visualment separats. Els dos enllaços formen part del
+ // MATEIX pivot de direcció (mai del subpivot girat 180°).
+ const steel=root.getObjectByName('naked-streetfighter_8');
+ const bridge=(name,a,b,radius)=>{
+   const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),
+     delta=end.clone().sub(start);
+   const mesh=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,delta.length(),8),
+     steel.material);
+   mesh.name=name;
+   mesh.position.copy(start).add(end).multiplyScalar(.5);
+   mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());
+   mesh.castShadow=steel.castShadow;
+   mesh.receiveShadow=steel.receiveShadow;
+   rig.add(mesh);
+ };
+ bridge('streetfighter-steering-stem',[0,.018,0],[0,-.028,.33],.037);
+ bridge('streetfighter-steering-crown',[-.108,-.028,.33],[.108,-.028,.33],.034);
  rig.userData.streetfighterSteering=true;
  rig.rotation.y=0;
  root.userData.streetfighterRigStats=stats;
@@ -158,5 +177,5 @@ export function isStreetfighterDetailProtected(mesh){
  // No simplificar els radis, els buits de les llandes, els pneumàtics,
  // els nuclis de roda, la forquilla ni els punys.
  return name.startsWith('wheel-front')||name.startsWith('wheel-rear')||
-        name.startsWith('streetfighter-front-')||name==='handlebar'||name==='handlebar_1'||name==='mesh_12';
+        name.startsWith('streetfighter-front-')||name.startsWith('streetfighter-steering-')||name==='handlebar'||name==='handlebar_1'||name==='mesh_12';
 }
