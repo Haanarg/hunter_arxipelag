@@ -34,17 +34,18 @@ main{padding:15px clamp(10px,2vw,30px) 26px}
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 16px}
 .toolbar label{font-size:12px;color:#c3d4c9}
 .toolbar input{accent-color:#ccdf99}
+.feature-info{padding:10px 13px;margin:0 0 12px;border-left:3px solid var(--gold);background:#1b3535;font-size:12px;line-height:1.55;color:#e3edda}.feature-info[hidden],.panel[hidden]{display:none!important}
 .explainer{padding:13px 17px;border:1px solid #42645f;border-radius:11px;background:#152a2d;font-size:12px;line-height:1.6;color:#c6dbd0;margin-top:16px}
 .explainer strong{color:#eef2d1}.explainer a{color:#daebac}
 footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-height:1.6}
-@media(min-width:1650px){#grid{grid-template-columns:repeat(4,minmax(0,1fr))}.panel{height:450px}}
+@media(min-width:1650px){#grid{grid-template-columns:repeat(4,minmax(0,1fr))}#grid.featured{grid-template-columns:repeat(3,minmax(0,1fr))}.panel{height:450px}}
 @media(max-width:650px){#grid{grid-template-columns:1fr}.panel{height:420px}.panel .status{min-height:16px}#vehicleList button{min-width:130px;flex-basis:130px}}
 </style>
 <script type="importmap">{"imports":{"three":"./vendor/three-r186.module.mjs","three/addons/":"./vendor/three-addons/"}}</script>
 </head><body>
 <header><div class="kicker">HUNTER: ARXIPÈLAG · LABORATORI DE MODELS</div>
 <h1>Flota · Original versus 3 alternatives</h1>
-<p>Els <strong>14 vehicles pendents de modernitzar</strong>. A l'esquerra, el model autèntic del joc; a la dreta, tres models externs gratuïts en GLB. Una mateixa escala de comparació, llum direccional, materials PBR, ombres i càmera. <strong>Baixa per veure les quatre vistes</strong>. Les propostes encara <strong>no</strong> substitueixen els vehicles del joc.</p>
+<p>Els <strong>11 vehicles que encara valoram</strong>. A l'esquerra, el model autèntic del joc; a la dreta, les alternatives GLB. Per a la moto i la moto aquàtica mostram també <strong>quatre simplificacions reals</strong> del model seleccionat. Una mateixa escala de comparació, llum direccional, materials PBR, ombres i càmera. <strong>Baixa per veure les quatre vistes</strong>. Les propostes encara <strong>no</strong> substitueixen els vehicles del joc.</p>
 <nav aria-label="Vistes">
 <button id="view-quarter" data-view="quarter" class="active">3/4</button><button data-view="front" id="view-front">Frontal</button>
 <button data-view="side" id="view-side">Lateral</button><button data-view="rear" id="view-rear">Posterior</button>
@@ -57,10 +58,11 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <div class="toolbar"><label><input id="fitScale" type="checkbox" checked> Ajustar candidates a l'escala del model actual</label>
 <label><input id="animate" type="checkbox" checked> Animacions disponibles</label>
 <label><input id="showGrid" type="checkbox" checked> Graella i referència humana</label></div></section>
-<section id="grid" aria-label="Comparativa de quatre models 3D"></section>
+<div id="featureInfo" class="feature-info" hidden></div>
+<section id="grid" aria-label="Comparativa de models 3D"></section>
 <div class="explainer">
-<strong>Com funciona:</strong> desplaça la pàgina amb la roda del ratolí o lliscant amb el dit. Arrossega horitzontalment un model per girar <strong>totes quatre càmeres</strong>; usa <strong>Alt + roda</strong> o els botons ＋ / － per ampliar. Cada candidat mostra els triangles, les malles, les dimensions i l'enllaç a la font/llicència quan es pot carregar. Si no es pot baixar automàticament, obre la font, baixa el <strong>.glb</strong> i usa «Importa GLB» dins la proposta. Les propostes no hereten automàticament col·lisions, rodes, seients, rotors, torretes o animacions del joc. Els models del catàleg extern són CC0; si importes un fitxer propi, revisa'n la llicència.
+<strong>Com funciona:</strong> desplaça la pàgina amb la roda del ratolí o lliscant amb el dit. Per a la moto i la moto aquàtica es mostren el model del joc, el GLB triat i quatre versions simplificades; el percentatge de triangles real apareix a cada targeta. Arrossega horitzontalment un model per girar <strong>totes quatre càmeres</strong>; usa <strong>Alt + roda</strong> o els botons ＋ / － per ampliar. Cada candidat mostra els triangles, les malles, les dimensions i l'enllaç a la font/llicència quan es pot carregar. Si no es pot baixar automàticament, obre la font, baixa el <strong>.glb</strong> i usa «Importa GLB» dins la proposta. Les propostes no hereten automàticament col·lisions, rodes, seients, rotors, torretes o animacions del joc. Els models del catàleg extern són CC0; si importes un fitxer propi, revisa'n la llicència.
 </div>
 </main><footer>Prova independent · Three.js r186 (el mateix del joc) · GLTFLoader · models originals importats de la fàbrica del joc · cap canvi a la física, combat o desament. Algunes fonts externes poden no permetre carregar fitxers des d'un altre domini; en aquest cas, utilitza la importació local.</footer>
-<script type="module" src="./src/vehicles-externs-proves.mjs?fix=scroll-dpi-glb-r2"></script>
+<script type="module" src="./src/vehicles-externs-proves.mjs?rev=lod-4-simplifications-1"></script>
 </body></html>
