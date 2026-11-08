@@ -4,15 +4,16 @@
 
 > **Proves automatitzades (2026-11-07):** la bateria s'ha reduït a 13 comprovacions essencials, executables amb `npm test`. Les mencions a noms de proves concretes dins les fases històriques són evidències d'implementacions passades, no fitxers que encara hagin d'existir ni ordres de CI vigents.
 
-**P1 · 2026-11-08 · selecció definitiva Apache sàlvia/negres (codi connectat, binari pendent):**
+**P1 · 2026-11-08 · selecció definitiva Apache sàlvia/negres (codi i binari publicats):**
 - [x] Accés d'escriptura GitHub verificat. El model final d'Araon és sàlvia mat, amb aspes, rodes i detalls negres, 2.193 triangles; GLB local preparat `apache-50-rodes75-salvia-negre.glb`.
 - [x] Afegida càrrega única des del bootstrap i fàbrica `heli_combat` a `src/apache-araon-runtime.mjs` amb dos pivots reals dels rotors, escala i orientació, dades de contacte, i reserva procedural si no hi ha GLB.
 - [x] Retirades la pestanya Apache, les pàgines de preview LOD i tres acabats, els manifests de variants i les utilitats i tests obsolets. Queden 7 tipus pendents i 20 GLB CC0.
 - [x] Prova automàtica de connexió `tests/apache-approved.cjs` i crèdits CC BY 4.0.
-- [ ] **IMPEDIT: publicar el binari de 4 MB**, que no es pot traspassar directament des del fitxer de la conversa al connector GitHub. Cal pujar `apache-araon-salvia-black.glb` a `assets/vehicle-models/`: https://github.com/Haanarg/hunter_arxipelag/upload/main/assets/vehicle-models . SHA256: `be906866d6ac87835f2e30b11ce14bcc6b6ff13ee2cb39e798fd3cf6167f89df`. Sense aquest fitxer, només funciona el model de reserva.
+- [x] **GLB binari publicat a GitHub** a `assets/vehicle-models/apache-araon-salvia-black.glb` (4.123.680 bytes; SHA256 `be906866d6ac87835f2e30b11ce14bcc6b6ff13ee2cb39e798fd3cf6167f89df`). L'usuari el va pujar a `assets/vehicle-candidates/helicopter-lods/` i s'ha traslladat al camí de producció reutilitzant exactament el mateix blob Git, sense recompressió ni alteració.
 - [ ] Confirmar a Cloudflare i en una partida real l'aspecte i el gir dels rotors, seients, col·lisions, ombres i transparències en SOLO/COOP/Android.
 
 **Històric anterior de preparació i comparació (superat per la selecció actual):**
+- [ ] **Verificació visual pendent:** confirmar càrrega real WebGL en SOLO i COOP, pivot i gir de rotor principal i de cua, contacte de rodes amb sòl, escala, seients i armament. GitHub Actions no comprova la renderització real.
 **P1 · 2026-11-08 · variants Apache 50% + rodes 75% (proposta visual, sense integrar al joc):**
 - [x] A partir de l'original PBR reparat, recuperades les peces de les rodes que comparteixen la malla `hull`, separades per connectivitat/topografia de la font i simplificades al 75%. Com que el GLB històric apache_75.glb no és al repositori, la geometria de les rodes del 75% s'ha reconstruït independentment a partir del 100%, no extret literalment d'aquell fitxer absent.
 - [x] Cos amb simplificació classe 50%, rodes 75%: **2.193 triangles** en total (3.808 originals, 1.203 del cos, 145 de les rodes i 845 dels altres elements). GLB verificats, quatre textures PNG incrustades, PBR mat i il·luminació revisats en render headless; nivells de rugositat 0,83/0,91/0,97.
