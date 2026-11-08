@@ -16,6 +16,13 @@
 - [x] Retirades les tres motos GLB candidates, el comparador de quatre reduccions, els tests de simplificació del GLB ja acceptat, el generador temporal i l'antic model procedimental. El banc de proves passa a nou tipus de vehicles i 26 GLB.
 - [ ] **Validació visual pendent:** jugar en SOLO i HOST/GUEST; comprovar mida, contacte de pneumàtics amb el terreny, color, posició d'extremitats, gir de forquilla/punys/manillar i caigudes/col·lisions; repetir amb Android. Les proves Node verifiquen geometria, jerarquia, colors i animació, no aspecte real al navegador.
 
+**P2 · v0.6.187 · Ajust de mida de la moto i tirant de direcció:**
+- [x] La `Naked streetfighter` definitiva augmenta un **50%** respecte a la versió 0.6.186. Escala interna `motorcycleVisualScale=1.5`, aplicada al model complet (radis, forquilla, xassís i manillar), i radi de rodament corregit. Dimensions de col·lisió de moto actualitzades a 1,65 × 4,25 unitats amb radi de detecció 2,3.
+- [x] Connector de la direcció replegat: tija escurçada en l'eix longitudinal (`scale.z=.55`) i corona reculada (`position.z=.18`); continua unit al pivot de manillar/forquilla. Manté la geometria precompilada i el recompte de 3.862 triangles.
+- [x] Posicions de seient, mans, peus i rider distant actualitzades a la nova escala; conserva animació del pivot i els colors per llavor.
+- [x] Regressions Node sobre amplada, llargada, direcció, tija, col·lisió i radi de les dues rodes, i compilació del paquet.
+- [ ] **Validació visual pendent:** comprovar que la tija no sobresurt en cap angle, el contacte de pneumàtics i el pilot, tant en SOLO com en COOP i Android.
+
 ## Llegenda i límits
 
 - **P0**: regressions greus, estrebades, sincronització i seguretat de les partides. **P1**: estalvi mesurable de CPU/GPU/memòria o refactor essencial. **P2**: reducció de complexitat, manteniment i acabat. **P3**: millores funcionals ajornades.
