@@ -6,6 +6,7 @@ import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs';
 import {HELICOPTER_LEVELS,simplifyHelicopter,encodeHelicopterGLB,countModelTriangles} from './helicopter-simplification.mjs';
 import {recoverApacheAppearance,apacheAppearanceDescription} from './helicopter-texture-recovery.mjs';
+import {apacheCompatibleBlob} from './apache-glb-compat.mjs';
 
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
@@ -26,6 +27,16 @@ renderer.domElement.id='draw';
 renderer.domElement.setAttribute('aria-hidden','true');
 document.body.append(renderer.domElement);
 const loader=new GLTFLoader();
+// Accepta també el GLB original de Sketchfab amb KHR specGloss:
+ // convertim els materials a PBR abans de GLTFLoader. Les quatre
+ // textures PNG incrustades i les UV es conserven binàriament.
+async function loadUploadedGlb(file,type){
+ const prepared=type==='heli_combat'?await apacheCompatibleBlob(file):{blob:file,converted:0,connected:0};
+ const objectUrl=URL.createObjectURL(prepared.blob);
+ try{
+  return {gltf:await loader.loadAsync(objectUrl),compat:prepared};
+ }finally{URL.revokeObjectURL(objectUrl)}
+}
 const helicopterToolbar=document.querySelector('#helicopterToolbar');
 const helicopterFile=document.querySelector('#helicopterFile');
 const helicopterStatus=document.querySelector('#helicopterStatus');
@@ -137,9 +148,8 @@ for(let i=0;i<4;i++){
    const file=upload.files?.[0];if(!file)return;
    const current=generation;
    status.textContent='Important '+file.name+'…';
-   const url=URL.createObjectURL(file);
    try{
-     const gltf=await loader.loadAsync(url);
+     const {gltf,compat}=await loadUploadedGlb(file,currentType.id);
      if(current!==generation)return;
      const appearance=currentType.id==='heli_combat'?
        await recoverApacheAppearance(THREE,gltf):null;
@@ -150,9 +160,9 @@ for(let i=0;i<4;i++){
      slot.sub.textContent='Fitxer local · llicència no verificada';
      slot.source.hidden=true;
      status.textContent=metrics(slot.model)+' · importat localment'+
-      (slot.appearance?' · '+apacheAppearanceDescription(slot.appearance):'');
+      (slot.appearance?' · '+apacheAppearanceDescription(slot.appearance):'')+
+      (compat.converted?' · '+compat.connected+' textures de color specGloss convertides a PBR':'');
    }catch(e){status.textContent='Error GLB: '+(e?.message||String(e));}
-   finally{URL.revokeObjectURL(url)}
  });
 }
 let currentType=CATALOG[0],generation=0,originalDims=new THREE.Vector3(3,2,5);
@@ -468,17 +478,16 @@ helicopterFile.addEventListener('change',async()=>{
  if(!/\.glb$/i.test(f.name)){helicopterStatus.textContent='Selecciona un fitxer .glb (opció GLB de Sketchfab).';return}
  const token=++generation;
  helicopterStatus.textContent='Obrint '+f.name+'…';
- const url=URL.createObjectURL(f);
  try{
-  const gltf=await loader.loadAsync(url);
+  const {gltf,compat}=await loadUploadedGlb(f,config.id);
   if(!gltf.scene||countModelTriangles(gltf.scene)===0)throw Error('El fitxer no conté cap malla triangular');
   const appearance=config.id==='heli_combat'?
     await recoverApacheAppearance(THREE,gltf):null;
-  helicopterSources.set(config.id,{root:gltf.scene,animations:gltf.animations||[],filename:f.name,appearance});
+  helicopterSources.set(config.id,{root:gltf.scene,animations:gltf.animations||[],filename:f.name,appearance,compat});
   if(currentType.id===config.id&&token===generation)await showHelicopterVariants(config,token);
  }catch(error){
   helicopterStatus.textContent='No s’ha pogut obrir el GLB: '+(error?.message||String(error));
- }finally{URL.revokeObjectURL(url)}
+ }
 });
 addEventListener('resize',resizeRenderer);
 resizeRenderer();requestAnimationFrame(draw);
