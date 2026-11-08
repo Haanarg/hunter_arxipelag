@@ -166,6 +166,17 @@ try {
     window.HUNTER_HUMVEE_D31=null;
     console.warn('No es pot preparar el Humvee B; geometria clàssica de reserva',humveeError);
   }
+  // Huey aprovat: es carrega una sola vegada abans del runtime clàssic;
+  // la fàbrica de vehicles és síncrona i només clona el model ja preparat.
+  try {
+    const {prepareHueyDuaneRuntime}=await import('./huey-duane-runtime.mjs?v=0.6.192');
+    window.HUNTER_HUEY_DUANE=await prepareHueyDuaneRuntime(THREE);
+    console.info('Huey Duane 100, portes laterals obertes · carregat',
+      window.HUNTER_HUEY_DUANE.dimensions);
+  } catch (hueyError) {
+    window.HUNTER_HUEY_DUANE=null;
+    console.warn('Huey GLB no disponible; model de reserva actiu',hueyError);
+  }
   // El bundle inclou els scripts clàssics en el mateix ordre i preserva
   // les variables globals de la versió anterior. Només fem UNA petició.
   // Si el fitxer empaquetat no s'ha desplegat, recuperem el loader antic.
