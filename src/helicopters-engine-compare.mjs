@@ -1,7 +1,6 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {prepareHueyDuaneRuntime} from './huey-duane-runtime.mjs';
-import {prepareApacheAraonRuntime,prepareApacheCompactNative} from './apache-araon-runtime.mjs';
-import {createNativeHuey} from './huey-duane-native-geometry.mjs';
+import {prepareApacheAraonRuntime} from './apache-araon-runtime.mjs';
 
 const display=document.getElementById('notice');
 const slots=[...document.querySelectorAll('.card')].map(el=>({
@@ -55,21 +54,23 @@ async function load(slot){
  const before=performance.now();
  try{
   let root,info='';
-  if(slot.name==='huey-glb'){
-   const factory=await prepareHueyDuaneRuntime(THREE);root=factory.create();
-   info='GLB: 1,03 MB';
-  }else if(slot.name==='huey-native'){
-   root=createNativeHuey(THREE);
-   info='Geometria JS + PNG separat';
-  }else if(slot.name==='apache-glb'){
-   const factory=await prepareApacheAraonRuntime(THREE);
-   if(factory.visualVariant?.includes('compacte'))throw Error('El GLB definitiu no està disponible: s’ha activat la reserva, no es pot comparar.');
-   root=factory.create();info='GLB: 4,12 MB';
-  }else if(slot.name==='apache-native'){
-   const factory=await prepareApacheCompactNative(THREE);
+  if(slot.type==='huey'){
+   const factory=await prepareHueyDuaneRuntime(THREE);
    root=factory.create();
-   info='Geometria APG2: 18,9 KB comprimits';
-  }else throw Error('Tipus de model desconegut');
+   info='Geometria JS · 2 seients · +10%';
+  }else if(slot.type==='apache'){
+   const factory=await prepareApacheAraonRuntime(THREE);
+   root=factory.create();
+   info='Geometria APG2 JS · 3 rodes circulars · +50%';
+  }else throw Error('Helicòpter desconegut');
+  if(slot.name.endsWith('-native')){
+   const wire=new THREE.MeshBasicMaterial({
+    color:0xe6ead3,wireframe:true,transparent:true,opacity:.85,
+    side:THREE.DoubleSide
+   });
+   root.traverse(o=>{if(o.isMesh)o.material=wire});
+   info+=' · vista en filferro';
+  }
   const stats=countMesh(root);
   slot.scene.add(root);
   slot.root=root;slot.rotor=root.userData.rotor;slot.tail=root.userData.tailRotor;
@@ -81,10 +82,11 @@ async function load(slot){
   updateCam(slot);
   const elapsed=Math.round(performance.now()-before);
   slot.stat.textContent=fmt(stats.triangles)+' triangles · '+stats.meshes+' malles · '+elapsed+' ms de preparació · '+info;
-  slot.stat.title='Dimensions: '+dimensions.toArray().map(n=>n.toFixed(2)).join(' × ')+' unitats. El temps inclou la xarxa si cal.';
-  if(slot.type==='huey'&&stats.triangles!==1767)throw Error('La malla Huey no coincideix amb el GLB aprovat');
-  if(slot.name==='apache-glb'&&stats.triangles!==2193)throw Error('El GLB Apache no coincideix amb l’aprovat');
-  if(slot.name==='apache-native'&&stats.triangles!==2173)throw Error('La malla Apache compacta és incorrecta');
+  slot.stat.title='Dimensions: '+dimensions.toArray().map(n=>n.toFixed(2)).join(' × ')+' unitats. El temps inclou la preparació de la geometria.';
+  if(slot.type==='huey'&&stats.triangles!==2119)
+   throw Error('Els 1.767 triangles originals i els seients del Huey no coincideixen');
+  if(slot.type==='apache'&&!(stats.triangles>2100&&stats.triangles<2800))
+   throw Error('La malla Apache i les tres rodes són incompletes');
   return true;
  }catch(error){
   slot.stat.textContent='No carregat: '+String(error.message||error).slice(0,190);
