@@ -37,6 +37,12 @@
 - [x] Nova regressió `tests/hangar-roof-destruction.mjs`: panells visibles tot i la càmera interior, caiguda única, col·lisions eliminades i manteniment dels altres sostres.
 - [ ] **Validació a navegador/Android pendent:** observar un hangar intacte i la ruptura completa amb granades/bazuca/tanc, provar després caminar i llançar granades a través del forat; reproduir a SOLO/COOP.
 
+**P2 · v0.6.191 · recuperació de la mida anterior de la moto (aplicat):**
+- [x] Retorn a la **mida preferida de la v0.6.187**: Naked streetfighter amb `motorcycleVisualScale=1.5` (en lloc del `1.125` provisional) i motorista complet, inclosa la figura de LOD distant. El seient, les mans i els peus recuperen la posició anterior.
+- [x] Col·lisions i radi de detecció restaurats a `moto: [1.65,4.25]` i `radii.moto:2.3`; radis de rodes calculats a partir de l'escala restaurada.
+- [x] **No s'ha modificat** la connexió bona del manillar a la forquilla, ni la geometria precompilada, ni els colors, ni la direcció.
+- [ ] Validació visual ràpida en SOLO i COOP per confirmar que la mida anterior continua sent la preferida.
+
 ## Llegenda i límits
 
 - **P0**: regressions greus, estrebades, sincronització i seguretat de les partides. **P1**: estalvi mesurable de CPU/GPU/memòria o refactor essencial. **P2**: reducció de complexitat, manteniment i acabat. **P3**: millores funcionals ajornades.
