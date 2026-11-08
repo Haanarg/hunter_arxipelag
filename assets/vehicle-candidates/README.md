@@ -1,46 +1,19 @@
-# Candidats de vehicles (provisional)
+# Candidats de vehicles en revisió
 
-Aquesta carpeta guarda només **alternatives GLB CC0** per comparar-les a
-`/vehicles-externs-proves.html`. No canvien ni la fàbrica ni la física del joc.
+Aquesta carpeta guarda **32 models externs GLB CC0**, aproximadament **9,89 MiB**, per al laboratori `/vehicles-externs-proves.html`. **No substitueixen automàticament cap model del joc.**
 
-## Desar les alternatives
+## Decisions del 8 de novembre del 2026
 
-Des de l'arrel del repositori, amb Node.js 22 i connexió:
+- **Camió militar, barca de rems i windsurf:** es conserven els models procedimentals originals. No apareixen al selector de candidats; els 6 GLB del camió i la barca s'han esborrat de Git, i no hi havia GLB de windsurf.
+- **Moto:** opció núm. 2, `Naked streetfighter`. Les propostes eliminen els nodes `side-stand` i `naked-streetfighter_13` (vidres dels retrovisors), i fan girar 180° el node `handlebar`. Cal comprovar visualment si les tiges dels retrovisors estan fusionades amb el xassís i necessiten un retoc addicional.
+- **Moto aquàtica:** opció núm. 3, `Recreational Jet Ski`.
+- **Moto i moto aquàtica:** el comparador mostra el model del joc, el GLB descarregat sense retocar i quatre variants **simplificades realment** amb els percentatges objectiu de vèrtexs 85%, 65%, 45%, 25%. El nombre real de triangles es calcula i es mostra al navegador (meshoptimizer, carregador local Three.js r186). No guardam quatre còpies quasi idèntiques de cada GLB: es deriven en memòria per evitar inflar el repositori.
+- La **llanxa** continua al catàleg existent. La petició d'afegir un nou apartat de llanxa va arribar incompleta; no se n'ha suposat el contingut.
 
-```bash
-node tools/fetch-vehicle-candidates.mjs
-```
+## Models i manifest
 
-La descàrrega resol les 3 propostes de cadascun dels 14 vehicles del
-`src/vehicle-candidate-catalog.mjs`, verifica la llicència CC0 declarada,
-la capçalera GLB 2.0, i guarda els fitxers com
-`assets/vehicle-candidates/<tipus>/<opció>-<slug>.glb`.
-Genera `manifest.json` amb URL original, identificador, mida, triangles i
-llicència. La pàgina de proves prefereix aquests fitxers locals; si no
-existeixen, intenta carregar-los des del catàleg extern.
-Els GLB són de tercers i s'han de revisar visualment abans d'integrar-los.
+`manifest.json` és la font dels fitxers existents, la procedència, els nombres de triangles i la llicència. Els models externs provenen de https://3dassets.dev/ i consten com a **CC0 1.0 Universal**. Text legal: https://creativecommons.org/publicdomain/zero/1.0/.
 
-Límits voluntaris: **2 MiB per model, 30 MiB per a tota la carpeta**.
-Els candidats que no es troben, superen el límit o no poden descarregar-se
-no es guarden. Les opcions de ferri, llanxa armada i windsurf inclouen
-referències que encara poden requerir reedició important.
+Es poden incorporar altres candidats executant `node tools/fetch-vehicle-candidates.mjs` (Node.js 22). El script només recorre els tipus del catàleg actual: **no torna a descarregar les opcions descartades**. Límits voluntaris: 2 MiB per fitxer i 30 MiB totals.
 
-## Origen i llicència
-
-Font: https://3dassets.dev/ (packs especificats al catàleg).
-Els models seleccionats han d'indicar `CC0 1.0 Universal`.
-Referència legal: https://creativecommons.org/publicdomain/zero/1.0/
-
-Les descripcions, les URLs i la mida **no** equivalen a una validació de
-l'encaix visual o tècnic. El model definitiu requereix adaptar seients,
-animacions, col·lisions, punts d'armes i jerarquia de Three.js.
-
-En descartar una alternativa, es pot eliminar el seu GLB i actualitzar
-el manifest (o tornar a executar el script amb `--force`).
-
-**Estat comprovat:** 38 GLB reals, 10,34 MiB aproximadament,
-registrats a `manifest.json`. Hi ha 3 propostes desades per a 12
-tipus de vehicle i 2 models de ferri. El windsurf no té GLB complet,
-gratuït i amb llicència verificada en aquest lot: evitar substituir-lo
-amb una taula de surf sense vela. Els dos ferris són versions de color
-d'un mateix model parcial, no dues formes diferents.
+Per comparar i acceptar una variant al joc encara caldrà revisar visualment l'encaix i després integrar-ne articulacions, seients, hitboxes, física, animacions i materials. La simplificació en memòria del laboratori no altera aquests sistemes.
