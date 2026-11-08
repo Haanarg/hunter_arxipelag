@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // Hunter: genera UNA vegada la geometria final Recreational Jet Ski (25%).
+// El fitxer de sortida és un ESM estàtic i no fa peticions al navegador.
 // Executa amb Node 22:
 // node --no-warnings --experimental-loader=./tests/three-local-loader.mjs tools/generate-jet-ski-25.mjs
 // No es carrega cap GLB ni meshoptimizer durant una missió.
