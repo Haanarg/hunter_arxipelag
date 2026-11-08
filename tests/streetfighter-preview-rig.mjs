@@ -38,7 +38,11 @@ const spot=name=>root.getObjectByName(name).getWorldPosition(new THREE.Vector3()
 root.updateMatrixWorld(true);
 for(const name of names){assert(root.getObjectByName(name),'Falta '+name);snapshots.set(name,spot(name).clone())}
 assert.equal(root.getObjectByName('wheel-front').parent.name,'streetfighter-steering');
-assert.equal(root.getObjectByName('handlebar').parent.name,'streetfighter-steering');
+const alignment=root.getObjectByName('streetfighter-handlebar-alignment');
+assert(alignment,'Falta girar el manillar de cara al pilot');
+assert.equal(root.getObjectByName('handlebar').parent,alignment);
+assert.equal(root.getObjectByName('streetfighter-front-trim').parent,alignment);
+assert(Math.abs(alignment.rotation.y-Math.PI)<1e-5,'La barra i els agafadors s’han de girar 180° conjuntament');
 const handle=root.getObjectByName('handlebar'),
       handleBefore=handle.getWorldQuaternion(new THREE.Quaternion());
 setStreetfighterPreviewSteering(root,.42);root.updateMatrixWorld(true);
