@@ -1,6 +1,6 @@
 import {turretSpecs,advanceTurret} from './vehicle-turret-core.mjs';
 import {vehicleSpecs} from './vehicle-specs.mjs';
-import {createJetSki25,JET_SKI_25_META} from './jet-ski-25-geometry.mjs';
+import {createJetSki25,JET_SKI_25_META} from './jet-ski-25-geometry.mjs?rev=vivid-engine-cover-2';
 import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs?v=0.6.170';
 import {createHovercraftConcept,hovercraftConcepts} from './hovercraft-concepts.mjs?v=0.6.81';
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
