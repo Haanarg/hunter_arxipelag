@@ -1,4 +1,5 @@
 // Catàleg compartit entre el visor Three.js i l'eina de descàrrega local.
+// La moto aquàtica escollida es traslladarà a la fàbrica del joc.
 const P=(pack,match,query)=>({pack,match,query:query||match});
 const Q=(query)=>({query});
 export const CATALOG=[
