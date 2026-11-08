@@ -294,21 +294,30 @@ function resizeRenderer(){
 function draw(now){
  requestAnimationFrame(draw);
  const dt=Math.min(.07,(now-prev)/1000);prev=now;
- if(document.querySelector('#animate').checked)for(const slot of slots)slot.mixer?.update(dt);
+ if(document.querySelector('#animate').checked)
+   for(const slot of slots)slot.mixer?.update(dt);
+ // Les coordenades setViewport i setScissor de WebGLRenderer ja es
+ // multipliquen internament pel pixelRatio. Multiplicar-les aquí deixava
+ // els models retallats o totalment fora del canvas en pantalles HiDPI.
  renderer.setClearColor(0x203238,1);
  renderer.setScissorTest(true);
- const canvasRect=renderer.domElement.getBoundingClientRect();
+ const windowWidth=innerWidth,windowHeight=innerHeight;
  for(const slot of slots){
    const r=slot.viewport.getBoundingClientRect();
-   if(r.bottom<0||r.top>innerHeight||r.right<0||r.left>innerWidth)continue;
-   const left=Math.max(0,Math.round(r.left-canvasRect.left));
-   const bottom=Math.max(0,Math.round(canvasRect.bottom-r.bottom));
-   const width=Math.max(1,Math.round(Math.min(r.right,innerWidth)-Math.max(r.left,0)));
-   const height=Math.max(1,Math.round(Math.min(r.bottom,innerHeight)-Math.max(r.top,0)));
-   const pr=renderer.getPixelRatio();
-   renderer.setViewport(left*pr,bottom*pr,width*pr,height*pr);
-   renderer.setScissor(left*pr,bottom*pr,width*pr,height*pr);
-   slot.camera.aspect=width/height;slot.camera.updateProjectionMatrix();
+   const left=Math.round(r.left),bottom=Math.round(windowHeight-r.bottom);
+   const width=Math.max(1,Math.round(r.width)),height=Math.max(1,Math.round(r.height));
+   const clipX=Math.max(0,left),clipY=Math.max(0,bottom);
+   const clipRight=Math.min(windowWidth,left+width);
+   const clipTop=Math.min(windowHeight,bottom+height);
+   if(clipRight<=clipX||clipTop<=clipY)continue;
+   // El viewport conserva les dimensions COMPLETES de la targeta. Només
+   // l'scissor queda retallat pel viewport del navegador: així no canvien
+   // perspectiva ni zoom mentre es desplaça la pàgina.
+   renderer.setViewport(left,bottom,width,height);
+   renderer.setScissor(clipX,clipY,clipRight-clipX,clipTop-clipY);
+   renderer.setScissorTest(true);
+   slot.camera.aspect=width/height;
+   slot.camera.updateProjectionMatrix();
    renderer.render(slot.scene,slot.camera);
  }
 }
@@ -335,7 +344,14 @@ slots.forEach(slot=>{
   updateCamera();
  });
  for(const event of ['pointerup','pointercancel','lostpointercapture'])slot.viewport.addEventListener(event,e=>drag.delete(e.pointerId));
- slot.viewport.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.27,Math.min(7,zoom*(e.deltaY>0?1.12:.89)));updateCamera()},{passive:false});
+ // La roda del ratolí HA de desplaçar la pàgina. Només Alt + roda
+ // modifica el zoom de les quatre càmeres (els botons continuen disponibles).
+ slot.viewport.addEventListener('wheel',e=>{
+   if(!e.altKey)return;
+   e.preventDefault();
+   zoom=Math.max(.27,Math.min(7,zoom*(e.deltaY>0?1.12:.89)));
+   updateCamera();
+ },{passive:false});
 });
 const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
 for(const config of CATALOG){
