@@ -53,6 +53,12 @@ export function createStreetfighter25(THREE,{color=0x228fef,material}={}){
    const [hex,profile]=paint.get(entry.label)||[0x5b676e,'metal'];
    const mesh=new THREE.Mesh(entry.geometry,material(hex,profile));
    mesh.name='streetfighter-'+entry.name;
+   // Retractam la unió del manillar fins a la corona de la forquilla.
+   // El tirant horitzontal antic arribava a z=-.36 i sobresortia
+   // per davant: ara acaba a ~-.20; la corona queda a ~-.21.
+   // No modificam les malles GLB ni el pivot compartit de direcció.
+   if(entry.name==='streetfighter-steering-stem')mesh.scale.z=.55;
+   if(entry.name==='streetfighter-steering-crown')mesh.position.z=.18;
    if(entry.label==='paint')mesh.userData.colorPanel=true;
    parents[entry.group].add(mesh);
  }
