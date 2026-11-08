@@ -29,6 +29,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Generar el model definitiu moto aquàtica 25% (execució única)
+        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[jetski-bake]') }}
+        run: |
+          node --no-warnings --experimental-loader=./tests/three-local-loader.mjs tools/generate-jet-ski-25.mjs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/jet-ski-25-geometry.mjs
+          if ! git diff --cached --quiet; then
+            git commit -m "assets: bake final 25 percent recreational jet ski geometry"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
       - name: Arxivar els models CC0 provisionals (única execució sol·licitada)
         if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[vehicles-download]') }}
         run: |
