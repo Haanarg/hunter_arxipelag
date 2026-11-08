@@ -480,9 +480,9 @@ export const vehicleModels=Object.freeze({
         // Recreational Jet Ski definitiu: 2.578 triangles (~25% del GLB CC0
         // original), ja descodificats com a dades geomètriques locals.
         // No carregam fitxers GLB ni executam meshoptimizer durant la missió.
-        // La coberta coral es pinta per instància amb el mateix color viu
+        // La coberta del motor (node jetski-engine-cover) es pinta per instància amb el color viu
         // determinat pel generador del món; totes les llavors es conserven.
-        const bodyColor=appearance.color??0xc94e3f;
+        const bodyColor=appearance.color??0x228fef;
         g.add(createJetSki25(THREE,{color:bodyColor,material}));
         g.userData.jetSkiModel='recreational-jet-ski-25';
         g.userData.jetSkiColor=bodyColor;
