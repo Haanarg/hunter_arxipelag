@@ -18,6 +18,12 @@
 - No tocar el balanç, aspecte, controls ni la serialització de partides durant una extracció de codi, tret que sigui un canvi de joc explícit amb proves específiques.
 - Les dades de rendiment històriques són *indiciàries*: no existeix encara una bateria comparativa completa de FPS GPU, p95/p99 i dos dispositius després de les darreres modificacions.
 
+**P1 · v0.6.185 · accelerar el posicionament de palmeres i roques (implementació):**
+- [x] Els punts de la graella (aprox. 114.000 mapa petit / 462.000 mapa gran) no consulten `hAt` si són segurament mar profunda fora de totes les illes i zones de nivellació. Les dues tirades de desplaçament aleatori es conserven abans del filtre, i les plataformes costaneres s'hi inclouen.
+- [x] Índexs espacials estàtics d'edificis i compounds amb els mateixos predicats finals de distància; radi inusualment gran = verificació exhaustiva. Mateix filtre segur en la generació de vegetació del COOP.
+- [x] Telemetria `HUNTER_VEGETATION_STATS.placement`: mostres totals, descart de mar profunda i consultes inicials d'altura realitzades. Prova de paritat per llavors 67/148/2026, col·lisions amb edificis/compounds, plataformes i estat RNG idèntic.
+- [ ] **Validació visual i de temps real pendent:** mesurar el temps d'inici de les dues escales amb la mateixa llavor (especialment 148), verificar vegetació i roques en solitari/COOP i Android. No atribuir un estalvi de segons sense mesura real.
+
 **P1 · v0.6.184 · accelerar la generació inicial dels camins (implementació):**
 - [x] Memòria cau local de la cota visual per vèrtex compartit de la graella de camins: una consulta a `heightAt` per coordenada en lloc d'una per cantonada de triangle. La cota, el color, la geometria i la refeta posterior quan canvia el LOD continuen sent idèntics. `world.userData.pathStats` registra `heightSamples` i `heightReuses`.
 - [x] Prova automatitzada `tests/path-height-cache.mjs`: verifica cotes exactes per vèrtex i una sola consulta inicial per coordenada, amb més d'un chunk.
