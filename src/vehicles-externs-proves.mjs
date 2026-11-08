@@ -458,7 +458,7 @@ for(const config of CATALOG){
 helicopterFile.addEventListener('change',async()=>{
  const f=helicopterFile.files?.[0],config=currentType;
  if(!f||config.mode!=='heli-lod')return;
- if(!/\\.glb$/i.test(f.name)){helicopterStatus.textContent='Selecciona un fitxer .glb (opció GLB de Sketchfab).';return}
+ if(!/\.glb$/i.test(f.name)){helicopterStatus.textContent='Selecciona un fitxer .glb (opció GLB de Sketchfab).';return}
  const token=++generation;
  helicopterStatus.textContent='Obrint '+f.name+'…';
  const url=URL.createObjectURL(f);
