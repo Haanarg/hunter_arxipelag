@@ -15,13 +15,14 @@ const blue=createJetSki25(THREE,{color:0x228fef,material:mkMaterial});
 const materialNames=['foam','coral','charcoal','navy','steel','glass'];
 for(const model of [red,blue]){
  assert.equal(model.children.length,6,'Sis malles GLB conservades');
- assert.deepEqual(model.children.map(x=>x.name),materialNames.map(n=>'jetski-'+n));
+ assert.deepEqual(model.children.map(x=>x.name),materialNames.map(n=>n==='coral'?'jetski-engine-cover':'jetski-'+n));
  assert.equal(model.children.reduce((sum,m)=>sum+m.geometry.index.count/3,0),2578);
  assert.equal(model.userData.jetSkiModel,'recreational-jet-ski-25');
 }
-const redDeck=red.getObjectByName('jetski-coral');
-const blueDeck=blue.getObjectByName('jetski-coral');
+const redDeck=red.getObjectByName('jetski-engine-cover');
+const blueDeck=blue.getObjectByName('jetski-engine-cover');
 assert.equal(redDeck.material.color.getHex(),0xffdf18,'La coberta ha de ser groc viu');
+assert.equal(redDeck.userData.engineCover,true,'Només la coberta del motor és repintable');
 assert.equal(blueDeck.material.color.getHex(),0x228fef,'La coberta ha de ser blau elèctric');
 assert.strictEqual(redDeck.geometry,blueDeck.geometry,'Les geometries han de compartir memòria');
 const bounds=new THREE.Box3().setFromObject(red),d=bounds.getSize(new THREE.Vector3());
@@ -42,7 +43,7 @@ for(const col of [0xffdf18,0x228fef,0xef35a8]){
  assert.equal(vehicle.userData.jetSkiColor,col,'Conservam el color de la llavor');
  assert.equal(vehicle.userData.jetSkiTriangles,2578);
  assert.equal(vehicle.scale.x,vehicleModels.scales.moto_aquatica);
- const deck=vehicle.getObjectByName('jetski-coral');
+ const deck=vehicle.getObjectByName('jetski-engine-cover');
  assert(deck,'El color de la coberta ha de ser configurable');
  assert.equal(deck.material.color.getHex(),col,'La coberta no pot tornar al vermell pastel');
 }
