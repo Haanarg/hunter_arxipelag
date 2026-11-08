@@ -31,6 +31,13 @@
 - No tocar el balanç, aspecte, controls ni la serialització de partides durant una extracció de codi, tret que sigui un canvi de joc explícit amb proves específiques.
 - Les dades de rendiment històriques són *indiciàries*: no existeix encara una bateria comparativa completa de FPS GPU, p95/p99 i dos dispositius després de les darreres modificacions.
 
+**P1 · v0.6.188 · acceleració de la preparació visual i del progrés de càrrega (implementació):**
+- [x] **Decoració fixa:** els lots definitius escriuen les posicions, normals, UV i colors directament des de les geometries originals als buffers finals. Ja no s'instancien geometries temporals amb `toNonIndexed()`/`clone()` ni es transformen i es destrueixen per cada malla. Es conserven els vèrtexs, colors, materials i l'ordre dels checkpoints; la geometria original només es descarta al final. Estadística `temporaryGeometryCopies: 0`.
+- [x] **Palmeres:** les versions LOD de tronc utilitzen còpies massives dels buffers `instanceMatrix`/`instanceColor`; les copes simplificades copien trams exactes Float32 per variant sense reconstruir objectes Matrix4/Color per palmera. Els buffers de cada LOD continuen independents perquè les palmeres destruïdes desapareguin de totes les representacions. Sense tirades RNG addicionals.
+- [x] **Progrés:** només s'actualitza la UI aproximadament cada 80 ms, i immediatament si canvia l'etapa o s'acaba/cancel·la/falla la generació. No es modifiquen les pauses cooperatives ni el nombre de passos; l'estat intern conserva cadascun dels checkpoints.
+- [x] Afegides proves `tests/static-decor-direct-batch.mjs`, `tests/palm-lod-copy.mjs` i `tests/progressive-build-progress.cjs` a la CI; contrast de geometries, colors, ordre de matrius, aleatorietat i avisos.
+- [ ] **Validació pendent:** comparar els temps `stages.finalizationAndBatching`, `vegetationMs` i `totalMs` amb llavor 148 en mapa petit/gran; comprovar escena amb llum i ombres, destrucció de palmeres, Android i COOP HOST/GUEST. L'estalvi real encara no s'ha quantificat.
+
 **P1 · v0.6.185 · accelerar el posicionament de palmeres i roques (implementació):**
 - [x] Els punts de la graella (aprox. 114.000 mapa petit / 462.000 mapa gran) no consulten `hAt` si són segurament mar profunda fora de totes les illes i zones de nivellació. Les dues tirades de desplaçament aleatori es conserven abans del filtre, i les plataformes costaneres s'hi inclouen.
 - [x] Índexs espacials estàtics d'edificis i compounds amb els mateixos predicats finals de distància; radi inusualment gran = verificació exhaustiva. Mateix filtre segur en la generació de vegetació del COOP.

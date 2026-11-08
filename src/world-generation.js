@@ -162,7 +162,17 @@ async function buildProgressively({iterator=null,onProgress=()=>{},schedule=wind
   const steps=iterator||buildSteps(),state={status:'generating',stage:'Preparant el món',completed:0,total:null,steps:0,yields:0,maxStepMs:0,maxStepStage:null,maxTurnMs:0,error:null};
   window.HUNTER_GENERATION_STATE=state;
   const check=()=>{if(signal?.aborted)throw generationAbortError()};
-  const publish=checkpoint=>{Object.assign(state,{unit:null},checkpoint);onProgress({...state})};
+  // The internal state, scheduler, checkpoints and abort logic advance on
+  // every step; only expensive DOM progress notifications are throttled.
+  let lastReportTime=-Infinity,lastReportedStage=null;
+  const publish=(checkpoint,force=false)=>{
+    Object.assign(state,{unit:null},checkpoint);
+    const now=performance.now();
+    if(force||state.stage!==lastReportedStage||now-lastReportTime>=80){
+      lastReportTime=now;lastReportedStage=state.stage;
+      onProgress({...state});
+    }
+  };
   const pause=async()=>{
     check();state.yields++;
     // An abort also releases a custom scheduler that has not resolved yet. Late
@@ -173,7 +183,7 @@ async function buildProgressively({iterator=null,onProgress=()=>{},schedule=wind
     finally{signal?.removeEventListener?.('abort',abort)}
   };
   try{
-    publish({});await pause();
+    publish({},true);await pause();
     for(;;){
       check();const turnStart=performance.now();let count=0,next;
       do{
@@ -181,14 +191,14 @@ async function buildProgressively({iterator=null,onProgress=()=>{},schedule=wind
         const stepMs=performance.now()-before;
         if(stepMs>state.maxStepMs){state.maxStepMs=stepMs;state.maxStepStage=previousStage}
         state.steps++;
-        if(next.done){state.maxTurnMs=Math.max(state.maxTurnMs,performance.now()-turnStart);publish({status:'complete',stage:'Món preparat',completed:1,total:1});return next.value}
+        if(next.done){state.maxTurnMs=Math.max(state.maxTurnMs,performance.now()-turnStart);publish({status:'complete',stage:'Món preparat',completed:1,total:1},true);return next.value}
         publish(next.value||{});
       }while(++count<Math.max(1,maxSteps)&&performance.now()-turnStart<Math.max(1,budgetMs));
       state.maxTurnMs=Math.max(state.maxTurnMs,performance.now()-turnStart);
       await pause();
     }
   }catch(error){
-    publish({status:error.name==='AbortError'?'cancelled':'error',error:error.message});throw error;
+    publish({status:error.name==='AbortError'?'cancelled':'error',error:error.message},true);throw error;
   }finally{try{steps.return()}finally{generationDrainActive=false}}
 }
 function* buildSteps(){if(!seedSearchMode){operationRegistry=null;activeOperation=null;}let checkpointUnits=0;resetOptionalSystems();resetSimulationClock(null);resetCameraState();cameraBasement=null;clearVictoryCinematic();clearDeathCinematic();window.HUNTER_ENEMY_LOD.reset();window.HUNTER_STEALTH.clear();window.HUNTER_STEALTH_DEBUG.reset();playerCrouched=false;stealthStepTimer=0;const requestedPalmDisable=!!document.getElementById('disablePalms')?.checked;palmsDisabled=false;cancelGrenadeCharge();cancelAssaultBurst();clearBulletImpacts();removeParachuteVisual();const buildStarted=performance.now(),buildStages={},buildCounters={landAttempts:0,landCandidates:0},markBuildStage=(()=>{let last=buildStarted;return name=>{const now=performance.now();buildStages[name]=Math.round((now-last)*100)/100;last=now}})();movementFx.reset();if(terrainStream)terrainStream.dispose();terrainStream=null;seedCompounds=[];elapsed=0;water.update(0);joystick.reset();compoundClear=[];terrainLevels=[];terrainLevelGrid.clear();if(seedSearchMode){

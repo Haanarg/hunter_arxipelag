@@ -34,7 +34,10 @@ window.HUNTER_STATIC_DECOR_BATCH=Object.freeze({
       group.meshes.push(mesh);originals++;
     });
   }
-  const transform=new THREE.Matrix4();
+  // Build final vertex buffers directly; no temporary toNonIndexed/clone
+  // geometry for each fixed mesh. Source meshes stay intact until cleanup.
+  const transform=new THREE.Matrix4(),normalMatrix=new THREE.Matrix3(),
+    vertex=new THREE.Vector3();
   for(const group of groups.values()){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
     const x=(group.cx+.5)*CHUNK,z=(group.cz+.5)*CHUNK,
           sizes=[];let total=0,colorOffset=0;
@@ -54,29 +57,37 @@ window.HUNTER_STATIC_DECOR_BATCH=Object.freeze({
     for(const mesh of group.meshes){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
       yield {stage:'Agrupant decoració',completed:batches,total:groups.size,unit:'grups'};
       transform.makeTranslation(-x,0,-z).multiply(mesh.matrixWorld);
-      const copy=mesh.geometry.index?mesh.geometry.toNonIndexed():mesh.geometry.clone();
-      // Every scratch geometry has at most one owner; even cancellation of
-      // a cooperative generator releases the current copy immediately.
-      try{
-        copy.applyMatrix4(transform);
-        const n=copy.attributes.position.count;
-        sizes.push(n);total+=n;
-        for(let k=0;k<n;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
-          if(k%256===0)yield {stage:'Colors de decoració',completed:k,total:n,unit:'vèrtexs'};
-          // Preserve edits to the material made between cooperative yields.
-          const offset=(colorOffset+k)*3;
-          colorData[offset]=mesh.material.color.r;
-          colorData[offset+1]=mesh.material.color.g;
-          colorData[offset+2]=mesh.material.color.b;
+      const geometry=mesh.geometry,index=geometry.index,
+        position=geometry.getAttribute('position'),normal=geometry.getAttribute('normal'),
+        uv=geometry.getAttribute('uv'),n=index?index.count:position.count;
+      if(normal)normalMatrix.getNormalMatrix(transform);
+      sizes.push(n);total+=n;
+      const start=total-n;
+      for(let k=0;k<n;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+        if(k%256===0)yield {stage:'Colors de decoració',completed:k,total:n,unit:'vèrtexs'};
+        // Read tint per vertex as before: materials may change at checkpoints.
+        const offset=(colorOffset+k)*3;
+        colorData[offset]=mesh.material.color.r;
+        colorData[offset+1]=mesh.material.color.g;
+        colorData[offset+2]=mesh.material.color.b;
+        const ix=index?index.getX(k):k,at=(start+k)*3;
+        vertex.fromBufferAttribute(position,ix).applyMatrix4(transform);
+        mergedAttributes.position[at]=vertex.x;
+        mergedAttributes.position[at+1]=vertex.y;
+        mergedAttributes.position[at+2]=vertex.z;
+        if(normal){
+          vertex.fromBufferAttribute(normal,ix).applyNormalMatrix(normalMatrix);
+          mergedAttributes.normal[at]=vertex.x;
+          mergedAttributes.normal[at+1]=vertex.y;
+          mergedAttributes.normal[at+2]=vertex.z;
         }
-        // The transformed copy is private to this batch, so moving these
-        // copies earlier does not change the resulting vertex arrays.
-        for(const [attribute,width] of [['position',3],['normal',3],['uv',2]]){
-          const src=copy.getAttribute(attribute);
-          if(src)mergedAttributes[attribute].set(src.array,(total-n)*width);
+        if(uv){
+          const uvOffset=(start+k)*2;
+          mergedAttributes.uv[uvOffset]=uv.getX(ix);
+          mergedAttributes.uv[uvOffset+1]=uv.getY(ix);
         }
-        colorOffset+=n;
-      }finally{copy.dispose()}
+      }
+      colorOffset+=n;
     }
     const geom=new THREE.BufferGeometry();
     for(const [attribute,width] of [['position',3],['normal',3],['uv',2],['color',3]]){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
@@ -118,7 +129,7 @@ window.HUNTER_STATIC_DECOR_BATCH=Object.freeze({
   for(const mat of materials){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};mat.dispose();}
   staticDecorRoots.length=0;
   const result={originalMeshes:originals,batchedMeshes:batches,
-    drawCallsSaved:originals-batches,sharedMaterials:materialMap.size,vertices};
+    drawCallsSaved:originals-batches,sharedMaterials:materialMap.size,vertices,temporaryGeometryCopies:0};
   window.HUNTER_STATIC_BATCH_STATS=result;
   return result;
 }
