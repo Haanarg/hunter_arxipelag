@@ -766,9 +766,9 @@ const add=(t,x,z,a,meta={})=>{
   // Els colors són part de l'estat generat per llavor, no una aleatorietat
   // del renderitzador. La cerca de llavors consumeix les mateixes tirades.
   const civilian=t==='cotxe_civil',bicycle=t==='bici',
-    jetski=t==='moto_aquatica',windsurf=t==='windsurf',
+    jetski=t==='moto_aquatica',motorcycle=t==='moto',windsurf=t==='windsurf',
     colors=window.HUNTER_CIVILIAN_CARS,
-    palette=jetski||windsurf?colors.jetskiColors:colors.colors;
+    palette=jetski||motorcycle||windsurf?colors.jetskiColors:colors.colors;
   // Every windsurf gets the same vivid palette as the jet skis, but the
   // start hue is determined by the island seed's base position and each
   // successive windsurf advances by one hue. Crucially, this uses NO
@@ -788,8 +788,13 @@ const add=(t,x,z,a,meta={})=>{
   // del motor és l'única malla repintada per instància.
   const jetskiOrdinal=jetski?V.reduce((n,v)=>n+(v.t==='moto_aquatica'),0):0;
   const jetskiStart=(windsurfStart^0x51a3c97)>>>0;
+  // La moto hereta la paleta viva però SENSE consumir cap R() nou:
+  // així cap llavor ni posició d'objectes de les missions no canvia.
+  const motoOrdinal=motorcycle?V.reduce((n,v)=>n+(v.t==='moto'),0):0;
+  const motoStart=(windsurfStart^0x2c7b19e)>>>0;
   const color=windsurf?palette[(windsurfStart%palette.length+windsurfOrdinal)%palette.length].hex:
     jetski?palette[(jetskiStart%palette.length+jetskiOrdinal)%palette.length].hex:
+    motorcycle?palette[(motoStart%palette.length+motoOrdinal)%palette.length].hex:
     (civilian||bicycle)?palette[colorRoll].hex:undefined;
   // Conservam la tirada de la llavor antiga, però tots els cotxes civils
   // fan servir el model C1A seleccionat (variant 0).
@@ -800,7 +805,7 @@ const add=(t,x,z,a,meta={})=>{
     surface=Math.max(0,hAt(x,z));
   const v={t,x,z,hd:a||0,v:0,alt:c.m==='a'?helicopterLandedAltitude({o},surface):surface+.8,
     o,maxLife:c.life??1,life:c.life??1,smokeT:0,...meta};
-  if(civilian||bicycle||jetski||windsurf)v.color=appearance.color;
+  if(civilian||bicycle||jetski||motorcycle||windsurf)v.color=appearance.color;
   if(civilian)v.variant=appearance.variant;
   if(t==='heli_combat')v.rockets=6;
   if(t==='llanxa_coets')v.rockets=Infinity;
