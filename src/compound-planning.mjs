@@ -6,6 +6,86 @@ export function compoundPoint(q,angle=0,mirror=1){
   const c=Math.round(Math.cos(angle)),s=Math.round(Math.sin(angle));
   return (x,z)=>[q.x+x*mirror*c-z*s,q.z+x*mirror*s+z*c];
 }
+// Reserva geomètrica de l'heliport: la plataforma és QUADRADA, no només
+// el cercle del rotor. Comprovam la teulada real de les torres (6,95 × 6,05m)
+// més 3m de separació i el disc lliure. No consumim RNG ni modificam layouts.
+export const HELIPAD_TOWER_CLEARANCE=Object.freeze({
+ towerHalfWidth:3.5,towerHalfDepth:3.05,margin:3
+});
+export function helipadTowerClear(pad,tower){
+ if(!pad||!tower)return true;
+ const {towerHalfWidth:halfX,towerHalfDepth:halfZ,margin}=HELIPAD_TOWER_CLEARANCE;
+ const dx=Math.abs(tower.x-pad.x),dz=Math.abs(tower.z-pad.z);
+ // Rectangles orientats als eixos locals (els complexos giren 90°).
+ if(dx<pad.size/2+halfX+margin&&dz<pad.size/2+halfZ+margin)return false;
+ // A més, queda lliure el disc de rotor declarat al layout.
+ return Math.hypot(dx,dz)>=(pad.clearRadius??pad.size/2)+Math.hypot(halfX,halfZ)+margin;
+}
+export function reserveHelipadTowerSpace(layout){
+ const pad=layout?.helipad;
+ if(!pad)return layout;
+ const group=layout.towers||[layout.tower].filter(Boolean);
+ if(!group.length||group.every(t=>helipadTowerClear(pad,t)))return layout;
+ const {towerHalfWidth:halfX,towerHalfDepth:halfZ,margin}=HELIPAD_TOWER_CLEARANCE;
+ const fence=layout.fence?.flatMap(([a,b])=>[a,b])||[];
+ const bounds=fence.length?{
+  minX:Math.min(...fence.map(p=>p[0])),maxX:Math.max(...fence.map(p=>p[0])),
+  minZ:Math.min(...fence.map(p=>p[1])),maxZ:Math.max(...fence.map(p=>p[1]))
+ }:{minX:-layout.size[0]/2,maxX:layout.size[0]/2,
+    minZ:-layout.size[1]/2,maxZ:layout.size[1]/2};
+ const others=[...group];
+ const routeSegments=[...(layout.routes||[]),...(layout.vehiclePatrols||[])]
+  .flatMap(route=>(route.points||[]).slice(1).map((b,i)=>({
+    a:route.points[i],b,width:route.width||2
+  })));
+ const segmentDistance=(x,z,a,b)=>{
+  const dx=b[0]-a[0],dz=b[1]-a[1];
+  const t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz||1)));
+  return Math.hypot(x-a[0]-dx*t,z-a[1]-dz*t);
+ };
+ const canPlace=(t,index)=>{
+  if(!helipadTowerClear(pad,t))return false;
+  const edge=.25;
+  if(t.x-halfX<bounds.minX+edge||t.x+halfX>bounds.maxX-edge||
+     t.z-halfZ<bounds.minZ+edge||t.z+halfZ>bounds.maxZ-edge)return false;
+  for(const b of layout.buildings||[]){
+   const angle=b.rotationY||0,c=Math.abs(Math.cos(angle)),sn=Math.abs(Math.sin(angle));
+   const bx=(b.w*c+b.d*sn)/2,bz=(b.d*c+b.w*sn)/2;
+   if(Math.abs(t.x-b.x)<bx+halfX+1.5&&Math.abs(t.z-b.z)<bz+halfZ+1.5)return false;
+  }
+  for(const [kind,x,z]of layout.props||[]){
+   const footprint=kind==='flag'?6:kind==='generator'?4.5:kind==='fuel'?3:2;
+   if(Math.hypot(t.x-x,t.z-z)<Math.hypot(halfX,halfZ)+footprint+.5)return false;
+  }
+  for(const r of routeSegments)
+   if(segmentDistance(t.x,t.z,r.a,r.b)<Math.hypot(halfX,halfZ)+r.width/2+1)return false;
+  for(let j=0;j<others.length;j++)if(j!==index&&others[j]&&
+   Math.hypot(t.x-others[j].x,t.z-others[j].z)<2*Math.hypot(halfX,halfZ)+2)return false;
+  for(const v of layout.vehicles||[])
+   if(Math.hypot(t.x-v.x,t.z-v.z)<Math.hypot(halfX,halfZ)+6)return false;
+  return true;
+ };
+ const updated=[];
+ let relocated=0,omitted=0;
+ for(let i=0;i<group.length;i++){
+  const original=group[i];
+  if(helipadTowerClear(pad,original)){updated.push({...original});continue}
+  let found=null;
+  const maxStep=Math.max(...layout.size)+8;
+  search:for(let radius=2;radius<=maxStep;radius+=2){
+   for(let dz=-radius;dz<=radius;dz+=2)for(let dx=-radius;dx<=radius;dx+=2){
+    if(Math.max(Math.abs(dx),Math.abs(dz))!==radius)continue;
+    const candidate={...original,x:original.x+dx,z:original.z+dz};
+    if(canPlace(candidate,i)){found=candidate;break search}
+   }
+  }
+  if(found){updated.push(found);others[i]=found;relocated++}
+  else{others[i]=null;omitted++} // Mai construïm una torre sobre un heliport.
+ }
+ return {...layout,
+  ...(layout.towers?{towers:updated}:{tower:updated[0]||null}),
+  heliportTowerClearance:{relocated,omitted}};
+}
 export function planCompound(layout,q,{random,rawHeightAt}){
   if(!layout||typeof layout.id!=='string'||!Array.isArray(layout.size)||layout.size.length!==2||!layout.size.every(v=>finite(v)&&v>0)||![q.x,q.z].every(finite)||typeof random!=='function'||typeof rawHeightAt!=='function')throw new RangeError('Invalid compound planning input');
   const isPort=layout.id==='port',coastal=isPort||!!layout.waterfront,
