@@ -247,12 +247,13 @@ window.HUNTER_VEGETATION??=Object.freeze({
     // completes. Cap crida nova a random(): llavors i spawns idèntics.
     const cloneInstances=(parent,geo,source)=>{
       if(!source)return null;
-      const mesh=new THREE.InstancedMesh(geo,source.material,source.count),
-            matrix=new THREE.Matrix4(),color=new THREE.Color();
-      for(let i=0;i<source.count;i++){
-        source.getMatrixAt(i,matrix);mesh.setMatrixAt(i,matrix);
-        if(source.instanceColor){source.getColorAt(i,color);mesh.setColorAt(i,color)}
-      }
+      const mesh=new THREE.InstancedMesh(geo,source.material,source.count);
+      // Identical float32 matrices and tints, but bulk-copied without
+      // rebuilding Matrix4/Color objects for every simplified palm.
+      // Buffers remain independent so destroying a palm hides every LOD.
+      mesh.instanceMatrix.array.set(source.instanceMatrix.array);
+      mesh.instanceMatrix.needsUpdate=true;
+      if(source.instanceColor)mesh.instanceColor=source.instanceColor.clone();
       mesh.computeBoundingSphere();
       mesh.castShadow=false;mesh.receiveShadow=false;
       mesh.userData.palmSimplified=true;
@@ -262,12 +263,14 @@ window.HUNTER_VEGETATION??=Object.freeze({
     const cloneCrowns=(parent,geo,rows,ch,refs)=>{
       if(!rows.length)return null;
       const mesh=new THREE.InstancedMesh(geo,mat(0xffffff,{doubleSide:true,vertexColors:true}),rows.length),
-            matrix=new THREE.Matrix4(),color=new THREE.Color();
+        matrixData=mesh.instanceMatrix.array,colorData=new Float32Array(rows.length*3);
       for(let i=0;i<rows.length;i++){
         const ref=refs[rows[i].i],source=ch.primary[ref.variant];
-        source.getMatrixAt(ref.index,matrix);mesh.setMatrixAt(i,matrix);
-        source.getColorAt(ref.index,color);mesh.setColorAt(i,color);
+        matrixData.set(source.instanceMatrix.array.subarray(ref.index*16,ref.index*16+16),i*16);
+        colorData.set(source.instanceColor.array.subarray(ref.index*3,ref.index*3+3),i*3);
       }
+      mesh.instanceMatrix.needsUpdate=true;
+      mesh.instanceColor=new THREE.InstancedBufferAttribute(colorData,3);
       mesh.computeBoundingSphere();
       mesh.castShadow=false;mesh.receiveShadow=false;
       mesh.userData.palmSimplified=true;mesh.frustumCulled=true;
