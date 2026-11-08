@@ -7,8 +7,8 @@ const begin=src.indexOf("  const civilian=t==='cotxe_civil',bicycle=t==='bici'")
 const end=src.indexOf('  const o=seedSearchMode?seedVehicleStub(t):mkV(t,appearance)',begin);
 assert(begin>0&&end>begin,'Cal aïllar el càlcul real de la paleta sense la fàbrica visual');
 const actual=src.slice(begin,end);
-const select=new Function('t','V','pa','R','meta','colors',
- "const window={HUNTER_CIVILIAN_CARS:colors};\n"+actual+"\nreturn {color,appearance};"
+const select=new Function('t','V','pa','R','meta','paletteData',
+ "const window={HUNTER_CIVILIAN_CARS:paletteData};\n"+actual+"\nreturn {color,appearance};"
 );
 const colors={
  jetskiColors:[0xc94e3f,0xa4ec24,0xffdf18,0xef35a8,0x228fef,0xff7b19,0x181c1e].map(hex=>({hex})),
