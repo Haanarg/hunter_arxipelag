@@ -23,7 +23,7 @@ assert(fs.existsSync(path.join(root,'src/streetfighter-25-geometry.mjs')),'Falta
 assert(!studio.includes('FEATURED'),'El banc de proves no ha de calcular LOD de motos acceptades');
 assert(!studio.includes('SimplifyModifier'),'No cal simplificar els candidats acceptats al banc');
 assert(!html.includes('id="steeringControl"'),'La pestanya de moto i els seus controls s’han retirat');
-assert(html.includes('9 tipus de vehicles'),'El text del catàleg ha d’estar actualitzat');
+assert(html.includes('8 tipus de vehicles'),'El text del catàleg ha d’estar actualitzat');
 const files=Object.values(manifest.models).flat();
 assert.equal(files.length,20,'Han de quedar 20 GLB candidats després de retirar els helicòpters civils');
 for(const id of ['heli','heli_combat'])assert(!(id in manifest.models),'Helicòpter descartat encara al manifest: '+id);
