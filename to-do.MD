@@ -12,6 +12,11 @@
 - No tocar el balanç, aspecte, controls ni la serialització de partides durant una extracció de codi, tret que sigui un canvi de joc explícit amb proves específiques.
 - Les dades de rendiment històriques són *indiciàries*: no existeix encara una bateria comparativa completa de FPS GPU, p95/p99 i dos dispositius després de les darreres modificacions.
 
+**P2 · v0.6.182 · moto aquàtica Recreational Jet Ski 25% (model definitiu):**
+- [x] Substituït el model procedimental dins `vehicle-model-core.mjs` per la geometria compacta `jet-ski-25-geometry.mjs`, generada una sola vegada amb meshoptimizer (10.320 → 2.578 triangles, 24,98%). Geometries compartides, 6 malles, sense GLB ni optimitzador durant la partida. La coberta usa el color viu de `appearance.color` generat per la llavor. No canvia física, seient, radi, hitbox, ni desament del tipus `moto_aquatica`.
+- [x] Esborrats de Git els tres GLB de la moto aquàtica, inclòs el fitxer font que ja s'ha convertit en geometria de producció; eliminada la seva pestanya del comparador i actualitzat el manifest a 29 candidats. La motocicleta i les seves quatre alternatives LOD continuen en revisió.
+- [ ] **Validació WebGL/COOP pendent:** inspeccionar les variants de color en llavors diferents, alineament de pilot i manillar, posició sobre l'aigua i en les onades, comportament en pujar/baixar i HOST/GUEST, ombres i aspecte de la coberta. Les proves Node de geometria i colors no substitueixen una partida visual real.
+
 **P0 · 0.6.181 · vehicles als molls i embarcament al ferri:**
 - [x] El cotxe, la moto, els camions i els blindats consulten la superfície física transitable (`groundAt`) per calcular la inundació; abans consultaven `hAt` i s'enfonsaven damunt d'un moll amb mar profunda a sota. Es conserva l'enfonsament real fora del moll i la protecció que ja existia sobre la coberta del ferri. Regressió afegida a la prova bàsica `tests/smoke-basic.cjs`.
 - [ ] **Validació visual:** pujar al moll i embarcar un cotxe, moto i camió en solitari, i provar un vehicle en HOST/GUEST, incloent la retirada del ferri i la sortida del moll cap a la mar.
