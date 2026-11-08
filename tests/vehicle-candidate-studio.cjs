@@ -1,5 +1,6 @@
 // Comprovacions estàtiques del taller de models externs; no cal WebGL ni xarxa.
 const assert=require('node:assert/strict');
+const {execFileSync}=require('node:child_process');
 const fs=require('node:fs');
 const path=require('node:path');
 const root=path.resolve(__dirname,'..');
@@ -34,4 +35,7 @@ assert(studio.includes('i<6'),'El visor necessita 6 panells per comparar LOD');
 assert(html.includes('id="featureInfo"'),'Falta apartat de descripció de LOD');
 assert(fs.existsSync(path.join(root,'vendor/three-addons/modifiers/SimplifyModifier.js')));
 assert(fs.existsSync(path.join(root,'vendor/three-addons/libs/meshopt_simplifier.module.js')));
+for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','vendor/three-addons/modifiers/SimplifyModifier.js']){
+  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
+}
 console.log('Taller de models: 11 vehicles, 32 GLB verificats, dos seleccionats i 4 variants LOD cadascun.');
