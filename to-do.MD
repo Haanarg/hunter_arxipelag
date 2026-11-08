@@ -26,7 +26,8 @@
 - [x] Eliminats del repositori `assets/vehicle-models/huey-duane-doors-open.glb`, `apache-araon-salvia-black.glb` i `apache-araon-50mesh.zlib` (dades APG2 ara embegudes).
 - [x] Ajustades metadades de contacte rotor i dimensions de col·lisió als models més grans en `src/vehicle-model-core.mjs`, `src/vehicle-specs.mjs` i `src/game-core.js`. La fàbrica és única per SOLO i COOP.
 - [x] Actualitzada `helicopters-engine-compare.html` com a previsualitzador de les malles natives amb materials i wireframe; el banc de candidats manté exclosos els dos helicòpters.
-- [ ] Confirmar CI, build i desplegament Cloudflare després del canvi; provar el nou tren d'aterratge, altures, seients, rotors i col·lisions en una missió (SOLO, COOP i Android). No s'ha fet encara validació visual.
+- [x] **CI i build superats** en la versió 0.6.197: [GitHub Actions 42528952724](https://github.com/Haanarg/hunter_arxipelag/actions/runs/42528952724). Test real Node/Three.js: Huey **2.119 triangles** (1.767+352 seients), ample 7,010 / alt 4,115 / llarg 15,513; Apache **2.511 triangles** (2.173 - 154 cares malmeses + rodes i tirants), 3 rodes rodones, ample 7,467 / alt 3,625 / llarg 10,725. Tests bàsics, versió i generació del runtime correctes.
+- [ ] Comprovar el desplegament de Cloudflare i validar **visualment** les rodes, els seients, els rotors, les ombres, les altures i les col·lisions en una missió SOLO, COOP i Android.
 
 **Històric 2026-11-08 · prototip de comparació anterior (superat, no representa el runtime actual):**
 - [x] Convertit el **Huey 100 de Duane's Mind amb portes obertes** a `src/huey-duane-native-geometry.mjs`: 1.767 triangles, 6 malles i 24 accessors reconstruïts com `THREE.BufferGeometry`, normals i UV originals, rotor principal/de cua i jerarquia íntegres. L'atles PNG original s'ha extret i publicat separat a `assets/vehicle-models/huey-duane-native-atlas.png`; no s'utilitza `GLTFLoader` en la versió nativa.
