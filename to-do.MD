@@ -4,6 +4,12 @@
 
 > **Proves automatitzades (2026-11-07):** la bateria s'ha reduït a 13 comprovacions essencials, executables amb `npm test`. Les mencions a noms de proves concretes dins les fases històriques són evidències d'implementacions passades, no fitxers que encara hagin d'existir ni ordres de CI vigents.
 
+**P2 · 2026-11-08 · renovació dels candidats d'helicòpter (laboratori, no integració):**
+- [x] Eliminats del banc i de `assets/vehicle-candidates/` els 3 GLB d'helicòpter utilitari civil i els 3 de l'antic helicòpter de combat (rescat/transport/coaxial); manifest de 20 GLB locals i 9 famílies de vehicles.
+- [x] Incorporades sis referències **militars** al laboratori `vehicles-externs-proves.html`: Huey UH-1 (hruschak30, Duane's Mind i helijah UH-1N) i Apache AH-64 (Araon, fauzan_3d i manilov.ap). Visors externs oficials Sketchfab i registre d'autor/llicència CC BY 4.0. No hi ha còpia local dels GLB ni canvis al joc.
+- [ ] Triar amb prova visual i rendiment el model definitiu de cada helicòpter i obtenir el GLB original amb la llicència i atribucions; comparar triangles, materials i separació d'elements animables.
+- [ ] Integrar els seleccionats a `src/vehicle-model-core.mjs` amb el rotor principal/de cua, animacions, tripulants, escales, punts de rodes/patins, armes i míssils de l'Apache; provar SOLO, COOP, Android i l'impacte FPS. L'única modificació actual és al banc de candidats.
+
 **P2 · v0.6.185 · Naked streetfighter definitiva al joc (implementat):**
 - [x] El model de moto procedimental antic s'ha substituït per la quarta variant `Naked streetfighter`, seleccionada amb paràmetre de simplificació **25% per a les peces que admeten reducció**. Resultat precompilat: **3.862 triangles**; els radis, llandes, pneumàtics, forquilla, manillar i agafadors conserven el detall íntegre. ESM estàtic `src/streetfighter-25-geometry.mjs`, sense GLB o optimitzador a temps de missió, amb geometries reutilitzades entre instàncies.
 - [x] Nova moto amb **escala 75%** respecte a la silueta ajustada anterior; direcció completa amb un sol pivot `steeringPivots`, rodes independents per al moviment i punt del pilot adaptat. Parts `paint` del model blau originals recolorides amb els **set colors vius** en cicle segons la llavor, sense tirades aleatòries addicionals i mantenint el camp `v.color` a les partides.
