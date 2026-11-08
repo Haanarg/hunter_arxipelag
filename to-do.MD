@@ -20,6 +20,13 @@
 - [ ] Verificar que GitHub Actions (tests/build) i Cloudflare Pages publiquen la versió nova; provar en SOLO i COOP que el GLB principal funciona amb el material sàlvia/negre i no es queda en reserva compacta/procedural.
 - [ ] Confirmar a Cloudflare i en una partida real l'aspecte i el gir dels rotors, seients, col·lisions, ombres i transparències en SOLO/COOP/Android.
 
+**Prototip 2026-11-08 · conversió GLB → malla del motor (sense substituir els models definitius):**
+- [x] Convertit el **Huey 100 de Duane's Mind amb portes obertes** a `src/huey-duane-native-geometry.mjs`: 1.767 triangles, 6 malles i 24 accessors reconstruïts com `THREE.BufferGeometry`, normals i UV originals, rotor principal/de cua i jerarquia íntegres. L'atles PNG original s'ha extret i publicat separat a `assets/vehicle-models/huey-duane-native-atlas.png`; no s'utilitza `GLTFLoader` en la versió nativa.
+- [x] Exposada a `src/apache-araon-runtime.mjs` la fàbrica `prepareApacheCompactNative`: geometria de motor `THREE.BufferGeometry` de l'Apache 50% (2.173 triangles), descomprimida de l'APG2 de 18.862 bytes, amb 5 peces i colors de vèrtex. **No és visualment idèntica al GLB final de 2.193 triangles, rodes al 75% i textures.**
+- [x] Pàgina `helicopters-engine-compare.html`: quatre panells Huey GLB / natiu i Apache GLB / natiu, càmera sincronitzada, gir de rotors i recomptes. Enllaç afegit al banc general sense retornar cap helicòpter al catàleg de candidats.
+- [x] Afegit `tests/helicopter-engine-comparison.cjs` a la bateria bàsica; valida exactament els buffers i la textura Huey contra el GLB i l'absència d'helicòpters al catàleg.
+- [ ] Provar visualment la comparativa WebGL a Cloudflare en escriptori i Android (UV, transparències i pivots) i decidir si convé substituir els GLB del joc pel format natiu. **Els dos GLB continuen com a versions definitives actives del joc.**
+
 **Històric anterior de preparació i comparació (superat per la selecció actual):**
 - [ ] **Verificació visual pendent:** confirmar càrrega real WebGL en SOLO i COOP, pivot i gir de rotor principal i de cua, contacte de rodes amb sòl, escala, seients i armament. GitHub Actions no comprova la renderització real.
 **P1 · 2026-11-08 · variants Apache 50% + rodes 75% (proposta visual, sense integrar al joc):**
