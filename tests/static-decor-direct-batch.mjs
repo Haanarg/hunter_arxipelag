@@ -17,7 +17,7 @@ const two=new THREE.Mesh(new THREE.IcosahedronGeometry(2),new THREE.MeshStandard
 two.position.set(-8,1,-4);nested.add(two);
 const far=new THREE.Mesh(new THREE.BoxGeometry(3,4,1).toNonIndexed(),new THREE.MeshStandardMaterial({color:0xe9c36c}));
 far.position.set(214,0,0);root.add(far);
-world.updateWorldMatrix(true,false);
+root.updateMatrixWorld(true);
 const CHUNK=160,reference=new Map();
 for(const mesh of [one,two,far]){
  const elements=mesh.matrixWorld.elements,cx=Math.floor(elements[12]/CHUNK),
