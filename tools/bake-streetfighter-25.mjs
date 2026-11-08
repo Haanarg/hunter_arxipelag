@@ -82,10 +82,11 @@ if(rigStats.removedMirrorStems!==64||rigStats.removedWheelAccents!==2||parts.len
  throw Error('No concorda el GLB Naked streetfighter amb la geometria verificada');
 const size=bbox.getSize(new THREE.Vector3()),center=bbox.getCenter(new THREE.Vector3());
 if(size.z<1.8||size.z>3.5)throw Error('Longitud inesperada del GLB: '+size.z);
-// El vell model de moto mesurava 4.3 unitats al llarg de Z (dues
-// rodes a ±1.5 i radi .65). La nova silueta fa exactament el 75%.
-// El VS.moto posterior del joc es continua aplicant només una vegada.
-const fit=(4.3*.75)/size.z;
+// Ajust uniforme a la silueta original del laboratori (amplada del
+// manillar 1.1 i llargada 4.3), i reducció final al 75% de l'escala.
+// Així la nova amplada i llargada no superen el 75% del model precedent;
+// a més, el llarg resultant queda pròxim als 2.8 m de la hitbox.
+const fit=.75*Math.min(1.1/size.x,4.3/size.z);
 const originalMinY=bbox.min.y;
 const transformPoint=v=>[-(v.x-center.x)*fit,(v.y-originalMinY)*fit+.02,-(v.z-center.z)*fit];
 const encoded=parts.map(({group,name,label,vertices,triangles,xyz,normals,idx})=>{
