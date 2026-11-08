@@ -713,7 +713,17 @@ export const vehicleModels=Object.freeze({
       }
       if(t==='heli'||t==='heli_combat'){
         const combat=t==='heli_combat',bodyCol=combat?0x59634f:0x647768;
-        if(!combat){
+        // El Huey 100 de Duane's Mind amb els laterals oberts substitueix
+        // definitivament la geometria procedural quan el GLB està carregat.
+        // La reserva antiga només s'usa si falla la descàrrega/descodificació.
+        const approvedHuey=!combat?globalThis.HUNTER_HUEY_DUANE?.create?.():null;
+        if(approvedHuey){
+          resources?.retainModel(approvedHuey);
+          g.add(approvedHuey);
+          g.userData.rotor=approvedHuey.userData.rotor;
+          g.userData.tailRotor=approvedHuey.userData.tailRotor;
+          g.userData.hueyModel='duane-100-open';
+        }else if(!combat){
           // Huey 3B-4: la secció central és un PASSADÍS OBERT de banda a
           // banda, no un prisma massís amagat rere els marcs de les portes.
           // Frontal i cua conserven el gruix; al mig, només sòl i sostre.
@@ -783,9 +793,21 @@ export const vehicleModels=Object.freeze({
           box(g,.12,1.35,.88,bodyCol,0,3.34,6.87,'paint');
           box(g,2.25,.1,.58,bodyCol,0,2.9,5.94,'paint');
         }
-        const rotorY=combat?3.22:3.82,mastBaseY=combat?2.94:3.02;rod(g,[0,mastBaseY,0],[0,rotorY,0],.14,metal);round(g,.3,.2,metal,0,rotorY,0,'y','metal');const rotor=new THREE.Group();rotor.position.set(0,rotorY,0);// Una sola pala contínua de punta a punta = dues aspes oposades al combat. El Huey manté quatre aspes.
-        for(const a of(combat?[0]:[0,Math.PI/2])){const blade=box(rotor,combat?13.5:14.8,.1,.36,rubber,0,0,0,'rubber');blade.rotation.y=a}g.add(rotor);g.userData.rotor=rotor;
-        const tail=new THREE.Group();tail.position.set(.38,3.45,combat?7:7.38);box(tail,.1,1.9,.16,rubber,0,0,0,'rubber');box(tail,.1,.16,1.9,rubber,0,0,0,'rubber');g.add(tail);g.userData.tailRotor=tail;
+        if(!approvedHuey){
+          const rotorY=combat?3.22:3.82,mastBaseY=combat?2.94:3.02;
+          rod(g,[0,mastBaseY,0],[0,rotorY,0],.14,metal);
+          round(g,.3,.2,metal,0,rotorY,0,'y','metal');
+          const rotor=new THREE.Group();rotor.position.set(0,rotorY,0);
+          for(const a of(combat?[0]:[0,Math.PI/2])){
+            const blade=box(rotor,combat?13.5:14.8,.1,.36,rubber,0,0,0,'rubber');
+            blade.rotation.y=a;
+          }
+          g.add(rotor);g.userData.rotor=rotor;
+          const tail=new THREE.Group();tail.position.set(.38,3.45,combat?7:7.38);
+          box(tail,.1,1.9,.16,rubber,0,0,0,'rubber');
+          box(tail,.1,.16,1.9,rubber,0,0,0,'rubber');
+          g.add(tail);g.userData.tailRotor=tail;
+        }
       }
       if(t==='bici'){const crank=new THREE.Group();crank.position.set(0,.75,0);for(const side of[-1,1]){rod(crank,[side*.3,0,0],[side*.3,0,side*.28],.045,metal);box(crank,.26,.08,.18,rubber,side*.4,0,side*.28,'rubber')}g.add(crank);g.userData.crank=crank}
       // La coordenada Y de l'origen no és l'altura dels patins.
