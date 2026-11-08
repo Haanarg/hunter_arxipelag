@@ -1,0 +1,73 @@
+{
+  "schema": "hunter-helicopter-lods-v1",
+  "state": "metadata_only_awaiting_binary_upload",
+  "sourceArchive": "helicopters_huey_apache_lods.zip (adjunt a la conversa de ChatGPT; no allotjat al repositori)",
+  "sourceLicense": "CC BY 4.0",
+  "note": "Aquest manifest no certifica la presència dels binaris GLB. La web permet importar el ZIP des del navegador i conserva els fitxers a IndexedDB.",
+  "models": {
+    "huey": {
+      "name": "Bell Huey Helicopter",
+      "author": "Duane's Mind",
+      "source": "https://sketchfab.com/3d-models/bell-huey-helicopter-755d8518a06e41b19752c1b54c0da588",
+      "animations": 1,
+      "variants": [
+        {
+          "level": 100,
+          "triangles": 2014,
+          "bytes": 1025276,
+          "file": "huey_100.glb"
+        },
+        {
+          "level": 75,
+          "triangles": 1649,
+          "bytes": 1067068,
+          "file": "huey_75.glb"
+        },
+        {
+          "level": 50,
+          "triangles": 1286,
+          "bytes": 1054488,
+          "file": "huey_50.glb"
+        },
+        {
+          "level": 25,
+          "triangles": 922,
+          "bytes": 1041968,
+          "file": "huey_25.glb"
+        }
+      ]
+    },
+    "apache": {
+      "name": "AH-64 Apache",
+      "author": "Araon",
+      "source": "https://sketchfab.com/3d-models/ah-64-apache-df0993ee21e74a759cd0519f6fc51cf8",
+      "animations": 0,
+      "variants": [
+        {
+          "level": 100,
+          "triangles": 3808,
+          "bytes": 2970256,
+          "file": "apache_100.glb"
+        },
+        {
+          "level": 75,
+          "triangles": 2990,
+          "bytes": 3147200,
+          "file": "apache_75.glb"
+        },
+        {
+          "level": 50,
+          "triangles": 2173,
+          "bytes": 3093544,
+          "file": "apache_50.glb"
+        },
+        {
+          "level": 25,
+          "triangles": 1355,
+          "bytes": 3036368,
+          "file": "apache_25.glb"
+        }
+      ]
+    }
+  }
+}
