@@ -41,6 +41,18 @@ jobs:
             git pull --rebase origin main
             git push origin HEAD:main
           fi
+      - name: Precompilar una vegada la moto definitiva 25% (GLB CC0)
+        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[moto-bake]') }}
+        run: |
+          node --no-warnings --experimental-loader=./tests/three-local-loader.mjs tools/bake-streetfighter-25.mjs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/streetfighter-25-geometry.mjs
+          if ! git diff --cached --quiet; then
+            git commit -m "assets: bake final Naked Streetfighter model 25%"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
       - name: Instal·lar dependències
         run: npm ci --ignore-scripts
       - name: Executar proves bàsiques
