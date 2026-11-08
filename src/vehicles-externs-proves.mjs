@@ -205,6 +205,43 @@ function setModel(slot,obj,original,animations=[]){
 
 // Simplificació REAL de la geometria amb meshoptimizer (Three.js r186).
 // La xifra de triangles final es calcula sobre la malla resultant.
+// En el GLB Naked streetfighter les tiges dels miralls no són un node
+// separat: són 64 triangles del node d'acer del xassís. Es troben als
+// dos extrems (x≈±0,308 m) per damunt de y=0,95 m. No retallam res
+// si el fitxer deixa de tenir aquesta geometria recognoscible.
+function stripMirrorStems(root){
+ const steel=root.getObjectByName('naked-streetfighter_8');
+ if(!steel?.isMesh||!steel.geometry)return;
+ const cut=steel.geometry.clone();
+ deinterleaveGeometry(cut);
+ const positions=cut.getAttribute('position');
+ if(!positions){cut.dispose();return}
+ root.updateMatrixWorld(true);
+ const indices=cut.getIndex();
+ const faceCount=(indices?.count||positions.count)/3;
+ const keep=[];
+ const p=new THREE.Vector3(),center=new THREE.Vector3();
+ let removed=0;
+ for(let face=0;face<faceCount;face++){
+   center.set(0,0,0);
+   const verts=[];
+   for(let k=0;k<3;k++){
+     const index=indices?indices.getX(face*3+k):face*3+k;
+     verts.push(index);
+     p.fromBufferAttribute(positions,index).applyMatrix4(steel.matrixWorld);
+     center.add(p);
+   }
+   center.multiplyScalar(1/3);
+   if(Math.abs(center.x)>.28&&center.y>.95){removed++;continue}
+   keep.push(...verts);
+ }
+ if(removed<8||removed>100){cut.dispose();return}
+ cut.setIndex(keep);
+ const clean=mergeVertices(cut);
+ cut.dispose();
+ clean.userData.candidateSimplified=true;
+ steel.geometry=clean;
+}
 function prepareSelectedModel(root,type){
  if(type!=='moto')return;
  const handlebar=root.getObjectByName('handlebar');
@@ -214,6 +251,7 @@ function prepareSelectedModel(root,type){
    const part=root.getObjectByName(name);
    part?.parent?.remove(part);
  }
+ stripMirrorStems(root);
 }
 async function simplifySelectedModel(root,ratio){
  const meshes=[];
@@ -236,6 +274,9 @@ async function simplifySelectedModel(root,ratio){
      if(after>0&&after<before){
        simplified.userData.candidateSimplified=true;
        mesh.geometry=simplified;
+       // Les geometries intermèdies del retall de retrovisors són pròpies
+       // de la còpia, no compartides amb el GLB original.
+       if(original.userData?.candidateSimplified)original.dispose();
      }else simplified.dispose();
    }catch(error){
      console.warn('Peça GLB sense simplificar:',mesh.name,error);
