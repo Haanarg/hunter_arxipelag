@@ -4,9 +4,6 @@ import {vehicleModels} from './vehicle-model-core.mjs';
 import {playerBatching} from './player-batching-core.mjs';
 import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs';
-import {HELICOPTER_LEVELS,simplifyHelicopter,encodeHelicopterGLB,countModelTriangles} from './helicopter-simplification.mjs';
-import {recoverApacheAppearance,apacheAppearanceDescription} from './helicopter-texture-recovery.mjs';
-import {apacheCompatibleBlob} from './apache-glb-compat.mjs';
 
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
@@ -27,64 +24,10 @@ renderer.domElement.id='draw';
 renderer.domElement.setAttribute('aria-hidden','true');
 document.body.append(renderer.domElement);
 const loader=new GLTFLoader();
-// Accepta també el GLB original de Sketchfab amb KHR specGloss:
- // convertim els materials a PBR abans de GLTFLoader. Les quatre
- // textures PNG incrustades i les UV es conserven binàriament.
-async function loadUploadedGlb(file,type){
- const prepared=type==='heli_combat'?await apacheCompatibleBlob(file):{blob:file,converted:0,connected:0};
- const objectUrl=URL.createObjectURL(prepared.blob);
- try{
-  return {gltf:await loader.loadAsync(objectUrl),compat:prepared};
- }finally{URL.revokeObjectURL(objectUrl)}
-}
-const helicopterToolbar=document.querySelector('#helicopterToolbar');
-const helicopterFile=document.querySelector('#helicopterFile');
-const helicopterStatus=document.querySelector('#helicopterStatus');
-const helicopterSources=new Map(); // Els originals només viuen a la memòria del navegador.
-function helicopterFileName(config,ratio){
- return 'hunter-apache-araon-'+Math.round(ratio*100)+'.glb';
-}
-async function exportVariant(slot){
- if(!slot.variantRoot||!slot.model)return;
- const button=slot.download;
- button.disabled=true;button.textContent='Exportant…';
- try{
-  const buffer=await encodeHelicopterGLB(slot.model,slot.variantAnimations||[]);
-  const url=URL.createObjectURL(new Blob([buffer],{type:'model/gltf-binary'}));
-  const a=document.createElement('a');a.href=url;a.download=slot.variantFileName;
-  document.body.append(a);a.click();a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),1200);
- }catch(error){slot.status.textContent='Error en exportar el GLB: '+(error?.message||String(error))}
- finally{button.disabled=false;button.textContent='Desa GLB'}
-}
-async function showHelicopterVariants(config,token){
- const source=helicopterSources.get(config.id);
- if(!source)return;
- helicopterStatus.textContent='Generant variants de '+source.filename+'…';
- const total=countModelTriangles(source.root);
- for(let i=0;i<HELICOPTER_LEVELS.length;i++){
-  if(token!==generation)return;
-  const ratio=HELICOPTER_LEVELS[i],slot=slots[i];
-  slot.status.textContent='Simplificant a '+Math.round(ratio*100)+'%…';
-  const {root,stats}=await simplifyHelicopter(source.root,source.animations,ratio);
-  if(token!==generation){
-   root.traverse(node=>{if(node.isMesh&&node.geometry?.userData?.candidateSimplified)node.geometry.dispose()});
-   return;
-  }
-  setModel(slot,root,false,source.animations);
-  slot.variantRoot=root;slot.variantAnimations=source.animations;
-  slot.variantFileName=helicopterFileName(config,ratio);
-  slot.download.hidden=false;
-  slot.bold.textContent=config.options[0].title+' · '+Math.round(ratio*100)+'%';
-  slot.sub.textContent='GLB local · '+config.options[0].author+' · '+config.options[0].license;
-  slot.source.href=config.options[0].url;slot.source.hidden=false;
-  slot.status.textContent=stats.triangles.toLocaleString('ca')+' △ / '+total.toLocaleString('ca')+
-   ' originals ('+Math.round(100*stats.triangles/Math.max(1,total))+'% real) · '+
-   stats.simplified+' malles reduïdes · '+stats.protectedMeshes+' protegides'+
-   (stats.failed?' · '+stats.failed+' sense simplificar':'');
- }
- helicopterStatus.textContent='Variants preparades: revisa visualment rotors, materials i animacions abans d’integrar el model al joc.'+
-  (source.appearance?' '+apacheAppearanceDescription(source.appearance):'');
+async function loadUploadedGlb(file){
+ const url=URL.createObjectURL(file);
+ try{return await loader.loadAsync(url)}
+ finally{URL.revokeObjectURL(url)}
 }
 const matCache=new Map();
 function material(color,profile='paint'){
@@ -120,8 +63,7 @@ for(let i=0;i<4;i++){
  const source=document.createElement('a');source.textContent='Font / llicència';source.href='#';source.target='_blank';source.rel='noopener noreferrer';source.hidden=!i;
  const fileLabel=document.createElement('label');fileLabel.textContent='Importa GLB';
  const upload=document.createElement('input');upload.type='file';upload.accept='.glb,model/gltf-binary';
- const download=document.createElement('button');download.type='button';download.textContent='Desa GLB';download.hidden=true;
- fileLabel.append(upload);if(i)actions.append(source,fileLabel);actions.append(download);
+ fileLabel.append(upload);if(i)actions.append(source,fileLabel);
  meta.append(status,actions);outer.append(label,viewport,meta);grid.append(outer);
  const scene=new THREE.Scene();scene.background=new THREE.Color(0x354b4c);
  scene.add(new THREE.HemisphereLight(0xddeefa,0x566152,2.15));
@@ -141,27 +83,20 @@ for(let i=0;i<4;i++){
  const head=new THREE.Mesh(new THREE.SphereGeometry(.18,10,8),material(0xf0c7a2));
  head.position.y=1.73;head.castShadow=true;person.add(head);scene.add(person);
  const camera=new THREE.PerspectiveCamera(36,1,.05,1300);
- const slot={outer,viewport,scene,camera,ground,lines,person,status,source,bold,sub,upload,download,model:null,mixer:null,embed:null,kind:null,variantRoot:null,variantAnimations:null};
- download.addEventListener('click',()=>exportVariant(slot));
+ const slot={outer,viewport,scene,camera,ground,lines,person,status,source,bold,sub,upload,model:null,mixer:null,kind:null};
  slots.push(slot);
  upload.addEventListener('change',async()=>{
    const file=upload.files?.[0];if(!file)return;
    const current=generation;
    status.textContent='Important '+file.name+'…';
    try{
-     const {gltf,compat}=await loadUploadedGlb(file,currentType.id);
-     if(current!==generation)return;
-     const appearance=currentType.id==='heli_combat'?
-       await recoverApacheAppearance(THREE,gltf):null;
+     const gltf=await loadUploadedGlb(file);
      if(current!==generation)return;
      setModel(slot,gltf.scene,false,gltf.animations);
-     slot.appearance=appearance;
      slot.bold.textContent=file.name;
      slot.sub.textContent='Fitxer local · llicència no verificada';
      slot.source.hidden=true;
-     status.textContent=metrics(slot.model)+' · importat localment'+
-      (slot.appearance?' · '+apacheAppearanceDescription(slot.appearance):'')+
-      (compat.converted?' · '+compat.connected+' textures de color specGloss convertides a PBR':'');
+     status.textContent=metrics(slot.model)+' · importat localment';
    }catch(e){status.textContent='Error GLB: '+(e?.message||String(e));}
  });
 }
@@ -220,8 +155,6 @@ function metrics(root){
    ' materials · '+d.x.toFixed(1)+' × '+d.y.toFixed(1)+' × '+d.z.toFixed(1)+' m';
 }
 function dropPrevious(slot){
- slot.download.hidden=true;slot.variantRoot=null;slot.variantAnimations=null;
- if(slot.embed){slot.embed.remove();slot.embed=null;slot.viewport.classList.remove('has-embed')}
  if(slot.model){
    const freed=new Set();
    slot.model.traverse(node=>{
@@ -265,22 +198,6 @@ function setModel(slot,obj,original,animations=[]){
 }
 
 async function loadExternal(slot,entry,used,token){
- if(entry.provider==='sketchfab'){
-   // Referència oficial; no es descarrega cap GLB privat ni es canvia el joc.
-   slot.bold.textContent=entry.title;
-   slot.sub.textContent=entry.author+' · '+entry.license+' · '+(entry.triangles?entry.triangles.toLocaleString('ca'):'?')+' △';
-   slot.source.href=entry.url;slot.source.hidden=false;
-   slot.status.textContent=(entry.note||'Helicòpter militar')+' · Visor 3D extern; importa GLB si vols comparar escales.';
-   const iframe=document.createElement('iframe');
-   iframe.title='Visor 3D de '+entry.title+' · '+entry.author;
-   iframe.src='https://sketchfab.com/models/'+encodeURIComponent(entry.modelId)+'/embed?ui_hint=2';
-   iframe.loading='lazy';
-   iframe.allow='autoplay; fullscreen; xr-spatial-tracking';
-   iframe.referrerPolicy='strict-origin-when-cross-origin';
-   slot.viewport.classList.add('has-embed');
-   slot.viewport.append(iframe);slot.embed=iframe;
-   return;
- }
  const slotIndex=slots.indexOf(slot);
  const local=savedManifest?.models?.[currentType.id]?.find(record=>record.slot===slotIndex);
  if(local){
@@ -360,19 +277,6 @@ async function choose(config){
  for(let k=1;k<4;k++)slots[k].person.position.x=originalDims.x*.62+1.0;
  lookY=Math.min(6,Math.max(.55,originalDims.y*.38));
  zoom=1;updateCamera();
- helicopterToolbar.hidden=config.mode!=='heli-lod';
- if(config.mode==='heli-lod'){
-  helicopterFile.value='';
-  helicopterStatus.textContent='Descarrega el GLB oficial de Sketchfab i importa’l aquí. La llicència CC BY exigeix atribució.';
-  if(helicopterSources.has(config.id))return showHelicopterVariants(config,token);
-  for(const slot of slots.slice(2)){
-   slot.status.textContent='Cal importar el GLB seleccionat per calcular-ne les variants.';
-   slot.bold.textContent='Variant LOD pendent';
-   slot.sub.textContent='100% / 75% / 50% / 25% després de la importació';
-  }
-  await loadExternal(slots[1],config.options[0],new Set(),token);
-  return;
- }
  const used=new Set();
  await Promise.all(config.options.map((entry,i)=>loadExternal(slots[i+1],entry,used,token)));
 }
@@ -413,7 +317,6 @@ function draw(now){
  renderer.setScissorTest(true);
  const windowWidth=innerWidth,windowHeight=innerHeight;
  for(const slot of slots){
-   if(slot.embed)continue; // El visor Sketchfab té WebGL i càmera propis.
    const r=slot.viewport.getBoundingClientRect();
    const left=Math.round(r.left),bottom=Math.round(windowHeight-r.bottom);
    const width=Math.max(1,Math.round(r.width)),height=Math.max(1,Math.round(r.height));
@@ -472,23 +375,6 @@ for(const config of CATALOG){
  button.append(small);button.addEventListener('click',()=>choose(config));
  list.append(button);
 }
-helicopterFile.addEventListener('change',async()=>{
- const f=helicopterFile.files?.[0],config=currentType;
- if(!f||config.mode!=='heli-lod')return;
- if(!/\.glb$/i.test(f.name)){helicopterStatus.textContent='Selecciona un fitxer .glb (opció GLB de Sketchfab).';return}
- const token=++generation;
- helicopterStatus.textContent='Obrint '+f.name+'…';
- try{
-  const {gltf,compat}=await loadUploadedGlb(f,config.id);
-  if(!gltf.scene||countModelTriangles(gltf.scene)===0)throw Error('El fitxer no conté cap malla triangular');
-  const appearance=config.id==='heli_combat'?
-    await recoverApacheAppearance(THREE,gltf):null;
-  helicopterSources.set(config.id,{root:gltf.scene,animations:gltf.animations||[],filename:f.name,appearance,compat});
-  if(currentType.id===config.id&&token===generation)await showHelicopterVariants(config,token);
- }catch(error){
-  helicopterStatus.textContent='No s’ha pogut obrir el GLB: '+(error?.message||String(error));
- }
-});
 addEventListener('resize',resizeRenderer);
 resizeRenderer();requestAnimationFrame(draw);
 fetch('./assets/vehicle-candidates/manifest.json',{cache:'no-store'})
