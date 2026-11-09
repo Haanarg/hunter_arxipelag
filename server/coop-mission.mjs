@@ -218,9 +218,16 @@ export function restoreRelayMission(record,geometry){
         (cheats.fly?moveCoopCheatFly(actor,input,{limit:world.limit,heightAt:(x,z)=>world.heightAt(x,z)}):null)}),actions=new Map();
   let phase=record.phase,hold=record.hold,status=record.status,doorRevision=record.doorRevision??0;
   const intel=createCoopIntel({meta,record:record.intel});
-  const inventory=new Map(meta.members.map(m=>[m.id,{actorId:m.id,bullets:24,grenades:2,disguise:1,medkits:1,assault:1,sniper:0,sniperAmmo:0,bazooka:0,c4:0,cutters:0,parachute:0,weapon:'pistol',disguised:false,...structuredClone(record.inventories?.find(i=>i.actorId===m.id)||{})}])),claimed=new Set(record.claimedSupplies||[]),inventoryResults=structuredClone(record.inventoryResults||[]);
+  const inventory=new Map(meta.members.map(m=>[m.id,{actorId:m.id,bullets:24,grenades:2,disguise:1,medkits:1,assault:1,sniper:0,sniperAmmo:0,bazooka:0,bazookaAmmo:0,c4:0,cutters:0,parachute:0,weapon:'pistol',disguised:false,...structuredClone(record.inventories?.find(i=>i.actorId===m.id)||{})}])),claimed=new Set(record.claimedSupplies||[]),inventoryResults=structuredClone(record.inventoryResults||[]);
   const loose=new Map((record.droppedSupplies||[]).map(s=>[s.id,structuredClone(s)]));let dropSequence=record.dropSequence||0;
   const capacities=meta.mode==='native'?Object.fromEntries(Object.keys(inventoryCaps).map(k=>[k,1000000])):inventoryCaps;
+  // Compatibilitat amb sales/desaments previs: bazooka abans era el nombre
+  // de coets, i ara és la possessió de l'arma (0/1).
+  for(const bag of inventory.values())if(!Number.isFinite(bag.bazookaAmmo)){
+    bag.bazookaAmmo=Math.max(0,bag.bazooka||0);
+    bag.bazooka=bag.bazookaAmmo>0?1:0;
+  }
+
   const supplies=()=>[...meta.supplies.filter(s=>!claimed.has(s.id)),...loose.values()].map(s=>({...s}));
   const inventories=()=>[...inventory.values()].map(i=>({...i}));
   function refillCheats(){
@@ -371,7 +378,13 @@ export function restoreRelayMission(record,geometry){
       const candidates=state.players.flatMap((p,index)=>{
         const bag=inventory.get(p.id);if(p.hp<=0||p.fall||p.swimming||vehicles.mounted(p.id)||p.id===supply.blockedOwner||
           !['mapa','mapa_heli','mapa_tanc'].includes(supply.item)&&
-          bag[supply.item]+supply.amount>capacities[supply.item])return [];
+          (supply.item==='bullets'?
+            bag.bullets>=capacities.bullets&&bag.sniperAmmo>=capacities.sniperAmmo&&bag.bazookaAmmo>=capacities.bazookaAmmo:
+            supply.item==='bazooka'?
+              bag.bazooka>=1&&bag.bazookaAmmo>=capacities.bazookaAmmo:
+              supply.item==='sniper'?
+                bag.sniper>=1&&bag.sniperAmmo>=capacities.sniperAmmo:
+                (bag[supply.item]||0)+supply.amount>capacities[supply.item]))return [];
         const previous=before.players.find(a=>a.id===p.id),t=firstSupplyContact(previous,p,supply);if(t===null)return [];
         const contact={...p,x:previous.x+(p.x-previous.x)*t,z:previous.z+(p.z-previous.z)*t,y:previous.y+(p.y-previous.y)*t};
         // Body sweep blocks collecting through a closed door or thin wall.
@@ -380,8 +393,21 @@ export function restoreRelayMission(record,geometry){
         return [{p,index,t}];
       }).sort((a,b)=>a.t-b.t||a.index-b.index);
       if(candidates.length){if(meta.mode==='native'&&['mapa','mapa_heli','mapa_tanc'].includes(supply.item))intel.pickup(supply.item,supply.x,supply.z);
-        else inventory.get(candidates[0].p.id)[supply.item]+=supply.amount;
-        if(meta.mode==='native'&&supply.item==='sniper')inventory.get(candidates[0].p.id).sniperAmmo+=6;if(loose.has(supply.id))loose.delete(supply.id);else claimed.add(supply.id);}
+        else{
+          const bag=inventory.get(candidates[0].p.id);
+          if(supply.item==='bullets'){
+            bag.bullets=Math.min(capacities.bullets,bag.bullets+supply.amount);
+            bag.sniperAmmo=Math.min(capacities.sniperAmmo,bag.sniperAmmo+5);
+            bag.bazookaAmmo=Math.min(capacities.bazookaAmmo,bag.bazookaAmmo+3);
+          }else if(supply.item==='bazooka'){
+            bag.bazooka=1;
+            bag.bazookaAmmo=Math.min(capacities.bazookaAmmo,bag.bazookaAmmo+3);
+          }else if(supply.item==='sniper'){
+            bag.sniper=1;
+            if(meta.mode==='native')bag.sniperAmmo=Math.min(capacities.sniperAmmo,bag.sniperAmmo+6);
+          }else bag[supply.item]=(bag[supply.item]||0)+supply.amount;
+        }
+        if(loose.has(supply.id))loose.delete(supply.id);else claimed.add(supply.id);}
     }
     if(meta.mode==='native')for(const player of state.players){const action=actions.get(player.id);if(action?.fire&&state.tick-action.tick<=8)combat.hold(player.id,state.tick);}
     combat.step(state.tick);refillCheats();state.players=sim.snapshot().players;
