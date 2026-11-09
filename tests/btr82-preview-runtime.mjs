@@ -7,14 +7,16 @@ import {resolve,join} from 'node:path';
 import {classifyBtr82Upload,LOD_PERCENTAGES} from '../src/btr82-upload-policy.mjs';
 
 const cases=[
- {name:'low_poly_btr_82.glb',triangles:21483,meshes:199,targetSlot:4,expect:'source',slot:1},
- {name:'btr82-original-compatible.glb',triangles:21483,meshes:199,targetSlot:1,expect:'source',slot:1},
- ...[75,50,25].map((pct,i)=>({name:'btr82-'+pct+'pct.glb',
-  triangles:[16109,10745,5371][i],meshes:18,targetSlot:1,expect:'lod',slot:i+2})),
+ {name:'btr82-base-100.glb',triangles:5371,meshes:18,targetSlot:4,expect:'source',slot:1},
+ {name:'btr82-25pct.glb',triangles:5371,meshes:18,targetSlot:1,expect:'source',slot:1},
+ {name:'low_poly_btr_82.glb',triangles:21483,meshes:199,targetSlot:1,expect:'obsolete'},
+ {name:'btr82-75pct.glb',triangles:16109,meshes:18,targetSlot:2,expect:'obsolete'},
+ ...[75,50,25].map((pct,i)=>({name:'btr82-base-'+pct+'.glb',
+  triangles:[4025,2684,1338][i],meshes:18,targetSlot:1,expect:'lod',slot:i+2})),
  {name:'btr82-5pct-textures-ok.glb',triangles:1077,meshes:18,targetSlot:4,expect:'obsolete'},
  {name:'btr82-2pct.glb',triangles:448,meshes:18,targetSlot:4,expect:'obsolete'},
- {name:'custom-reduction.glb',triangles:5371,meshes:18,targetSlot:4,expect:'lod',slot:4},
- {name:'renamed-reduction.glb',triangles:10745,meshes:18,targetSlot:1,expect:'lod',slot:3}
+ {name:'custom-reduction.glb',triangles:1338,meshes:18,targetSlot:4,expect:'lod',slot:4},
+ {name:'renamed-reduction.glb',triangles:2684,meshes:18,targetSlot:1,expect:'lod',slot:3}
 ];
 for(const c of cases){
  const result=classifyBtr82Upload(c);

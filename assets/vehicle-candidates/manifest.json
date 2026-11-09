@@ -223,14 +223,14 @@
         "triangles": 21500,
         "license": "CC BY 4.0",
         "url": "https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5",
-        "note": "BTR-82 SIpriv escollit. Comparativa amb 75/50/25% del GLB original de 21.483 triangles; 18 malles i PNG originals. El preview genera variants amb Three.js/meshoptimizer o importa GLB precomputats directament.",
+        "note": "Nova base = antic 25% (5.371 triangles, 18 malles); variants de segona generació 75%=4.025, 50%=2.684, 25%=1.338 triangles, tots amb 18 malles i colors mats.",
         "provider": "sketchfab",
         "slot": 1
       }
     ]
   },
   "lastCurated": "2026-11-08",
-  "curationNotes": "Screenshot 2026-11-09: textures corruptes per UV interpolades del VTK DecimatePro. Mantinguts els mateixos 16.109/10.745/5.371 triangles i 18 malles, però els tres GLB de LOD utilitzen 10 materials PBR mats oliva i rodes negres, sense cap atles UV, amb formes comprovades mitjançant renderitzat VTK. El model original 100% conserva 11 PNG i no s’ha modificat.",
+  "curationNotes": "Segona iteració des de l'antiga variant 25%=5.371 triangles/18 malles. Nova base 100%=5.371, 75%=4.025, 50%=2.684, 25%=1.338 triangles (18 malles totes). Preservats 10 materials mats i vuit rodes; per evitar pics al 25% les rodes són octogonals netes. Antic original 21.483 triangles arxivat.",
   "selectedForLod": {
     "tanqueta": {
       "modelId": "6226acae68424d99bf03882b245ff7c5",
@@ -238,8 +238,8 @@
       "author": "SIpriv",
       "license": "CC BY 4.0",
       "source": "https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5",
-      "sourceGlb": "tanqueta/btr82-original.glb",
-      "present": true,
+      "sourceGlb": "tanqueta/btr82-base-100.glb",
+      "present": false,
       "ratioLevels": [
         1,
         0.75,
@@ -247,43 +247,46 @@
         0.25
       ],
       "engine": "Three.js r186 SimplifyModifier/meshoptimizer, grouped by material and role (8 wheels, turret, hull)",
-      "status": "published_in_repo",
-      "sourceTriangles": 21483,
-      "sourceMeshes": 199,
+      "status": "pending_25base_publication",
+      "sourceTriangles": 5371,
+      "sourceMeshes": 18,
       "expectedMergedGroups": 18,
       "offlineVariantStats": [
         {
           "percent": 75,
-          "triangles": 16109,
+          "triangles": 4025,
           "meshes": 18,
-          "bytes": 1164540,
-          "algorithm": "VTK DecimatePro geometry, opaque matte military palette replacing broken UV atlas; 10 materials"
+          "bytes": 261668,
+          "algorithm": "VTK QuadricDecimation (75% of 5,371), matte PBR"
         },
         {
           "percent": 50,
-          "triangles": 10745,
+          "triangles": 2684,
           "meshes": 18,
-          "bytes": 843888,
-          "algorithm": "VTK DecimatePro geometry, opaque matte military palette replacing broken UV atlas; 10 materials"
+          "bytes": 182672,
+          "algorithm": "VTK QuadricDecimation (50% of 5,371), matte PBR"
         },
         {
           "percent": 25,
-          "triangles": 5371,
+          "triangles": 1338,
           "meshes": 18,
-          "bytes": 428172,
-          "algorithm": "VTK DecimatePro geometry, opaque matte military palette replacing broken UV atlas; 10 materials"
+          "bytes": 84128,
+          "algorithm": "VTK QuadricDecimation + 8 tidy octagonal wheels (25% of 5,371), matte PBR"
         }
       ],
       "publishedLods": {
-        "25": "tanqueta/btr82-25pct.glb",
-        "50": "tanqueta/btr82-50pct.glb",
-        "75": "tanqueta/btr82-75pct.glb"
+        "25": "tanqueta/btr82-base-25.glb",
+        "50": "tanqueta/btr82-base-50.glb",
+        "75": "tanqueta/btr82-base-75.glb"
       },
-      "publishedSourceSize": 1592172,
-      "publishedTotalBytes": 4028772,
+      "publishedSourceSize": 428172,
+      "publishedTotalBytes": 956640,
       "appearance": "matte-olive-no-uv-atlas",
       "sourceAppearance": "original 11 PNG textures preserved",
-      "materialRepair": "BTR-82-matte-UV-repair-v1"
+      "materialRepair": "BTR-82 matte solid materials, no UV atlas",
+      "baseDerivedFrom": "tanqueta/btr82-25pct.glb (previous 25% LOD)",
+      "approvedLodGeneration": 2,
+      "previousOriginalGlb": "tanqueta/btr82-original.glb"
     }
   }
 }

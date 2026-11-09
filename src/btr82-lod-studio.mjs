@@ -1,16 +1,17 @@
-// BTR-82 SIpriv (CC BY 4.0): original + three independent LODs (75%, 50%, 25%).
-// Importing a 5/4/3/2% GLB NEVER re-simplifies that GLB as a new original.
-import {BTR82_RATIOS,buildBtr82Lod,countBtrTriangles,countBtrMeshes,normalizeBtr82Glb}
+// BTR-82 SIpriv (CC BY 4.0): previous 25% model is the NEW base (5,371 triangles),
+// with new 75%, 50% and 25% LODs; all files come from GitHub.
+// Imports are classified by verified triangle counts; never re-simplify precomputed GLBs.
+import {BTR82_RATIOS,countBtrTriangles,countBtrMeshes,normalizeBtr82Glb}
  from './btr82-aggressive-simplification.mjs';
 import {classifyBtr82Upload} from './btr82-upload-policy.mjs';
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 
 export const BTR82_ID='6226acae68424d99bf03882b245ff7c5';
-export const BTR82_URL='./assets/vehicle-candidates/tanqueta/btr82-original.glb';
+export const BTR82_URL='./assets/vehicle-candidates/tanqueta/btr82-base-100.glb';
 const BTR82_ASSET_DIR='./assets/vehicle-candidates/tanqueta/';
-const BTR82_EXPECTED_TRIANGLES=Object.freeze({75:16109,50:10745,25:5371});
-const BTR82_LIVE_ASSET_VERSION='matte-uv-repair-v1';
-const MAX_BYTES=64*1024*1024,KEY='source:'+BTR82_ID;
+const BTR82_EXPECTED_TRIANGLES=Object.freeze({75:4025,50:2684,25:1338});
+const BTR82_LIVE_ASSET_VERSION='btr82-25base-second-generation-v1';
+const MAX_BYTES=64*1024*1024,KEY='source:25base:'+BTR82_ID;
 let dbPending=null;
 function db(){
  if(dbPending)return dbPending;
@@ -46,7 +47,7 @@ async function saveSource(blob){
 }
 async function repoSource(){
  try{
-  const r=await fetch(BTR82_URL,{cache:'no-store'});
+  const r=await fetch(BTR82_URL+'?rev='+BTR82_LIVE_ASSET_VERSION,{cache:'no-store'});
   if(r.ok)return await r.blob();
  }catch{}
  return null;
@@ -54,7 +55,7 @@ async function repoSource(){
 // Approved files published with the original. Load them instead of running
 // Meshopt again and accidentally getting three different approximations.
 async function repoPrecomputedLod(percent){
- const path=BTR82_ASSET_DIR+'btr82-'+percent+'pct.glb?rev='+BTR82_LIVE_ASSET_VERSION;
+ const path=BTR82_ASSET_DIR+'btr82-base-'+percent+'.glb?rev='+BTR82_LIVE_ASSET_VERSION;
  try{
   const response=await fetch(path,{cache:'no-store'});
   if(!response.ok)return null;
@@ -149,7 +150,7 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
   slot.downloadBtr.onclick=async()=>{
    slot.downloadBtr.disabled=true;
    try{
-    if(index===1){download(blob,'btr82-original.glb');return}
+    if(index===1){download(blob,'btr82-base-100.glb');return}
     if(!slot.model?.children?.[0])throw Error('No hi ha una malla simplificada');
     slot.status.textContent='Exportant '+pct+'% a GLB…';
     const buffer=await new GLTFExporter().parseAsync(slot.model.children[0],
@@ -174,11 +175,11 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
    for(let i=1;i<slots.length;i++){
     const slot=slots[i],pct=Math.round(BTR82_RATIOS[i-1]*100);
     slot.bold.textContent='BTR-82 · '+pct+'%';setReference(slot,'esperant GLB');
-    slot.status.textContent=i===1?'El model original no està disponible. Pots importar-lo per generar els tres nivells.':
+    slot.status.textContent=i===1?'La nova base 100% (anterior 25%) no està disponible. Recarrega la pàgina.':
      'Pots importar directament el GLB reduït d’aquest nivell.';
    }
    await showOfficial(token);
-   if(valid(token,run))notice.textContent='BTR-82: importa l’original 100% per generar 75%, 50% i 25%, o importa directament els tres GLB ja reduïts al panell corresponent.';
+   if(valid(token,run))notice.textContent='No s’ha pogut carregar la nova base del BTR-82 (5.371 triangles) des de GitHub. Recarrega la pàgina o importa el GLB btr82-base-100.glb.';
    return;
   }
   try{
@@ -188,67 +189,46 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
    if(!valid(token,run))return;
    const original=gltf.scene.clone(true),initial=countTriangles(original),
     initialMeshes=countBtrMeshes(original);
-   if(initial<6000||initialMeshes<90)
-    throw Error('Aquest no és el BTR-82 original: importa’l a la targeta del nivell reduït.');
+   if(initial!==5371||initialMeshes!==18)
+    throw Error('La nova base ha de tenir 5.371 triangles i 18 malles (és l’antiga versió 25%).');
    cached=blob;sourceScene=original;
    if(uploaded)await saveSource(blob);
    if(!valid(token,run))return;
    const slot=slots[1];
-   slot.bold.textContent='BTR-82 · original 100%';
-   setReference(slot,initial.toLocaleString('ca')+' triangles originals');
+   slot.bold.textContent='BTR-82 · nova base 100%';
+   setReference(slot,initial.toLocaleString('ca')+' triangles · antiga versió 25%');
    setModel(slot,gltf.scene,false,gltf.animations);
-   slot.status.textContent=metrics(slot.model)+' · '+initialMeshes+' malles originals';
+   slot.status.textContent=metrics(slot.model)+' · nova base · '+initialMeshes+' malles';
    linkDownload(slot,1,blob);
-   notice.textContent='Original: '+initial.toLocaleString('ca')+' triangles, '+initialMeshes+' malles. Carregant les tres versions publicades 75%, 50% i 25%…';
-   let previous=initial;
+   notice.textContent='Nova base: '+initial.toLocaleString('ca')+' triangles i '+initialMeshes+' malles. Carregant 75%, 50% i 25% d’aquesta base…';
    for(let i=2;i<slots.length;i++){
     if(!valid(token,run))return;
-    const s=slots[i],ratio=BTR82_RATIOS[i-1],pct=Math.round(ratio*100);
-    s.bold.textContent='BTR-82 · '+pct+'%';
-    setReference(s,'objectiu '+pct+'%');
-    s.status.textContent='Carregant el GLB definitiu del '+pct+'%…';
-    if(!uploaded){
-     const approvedBlob=await repoPrecomputedLod(pct);
+    const s=slots[i],pct=Math.round(BTR82_RATIOS[i-1]*100);
+    s.bold.textContent='BTR-82 · '+pct+'% de la nova base';
+    setReference(s,'reducció '+pct+'% de 5.371 triangles');
+    s.status.textContent='Carregant la variant del '+pct+'%…';
+    const approvedBlob=await repoPrecomputedLod(pct);
+    if(!valid(token,run))return;
+    if(!approvedBlob){
+     s.status.textContent='GLB del '+pct+'% no disponible al servidor. Recarrega la pàgina.';
+     continue;
+    }
+    try{
+     const approved=await loadUploadedGlb(await normalizeBtr82Glb(approvedBlob));
      if(!valid(token,run))return;
-     if(approvedBlob){
-      try{
-       const approvedGltf=await loadUploadedGlb(await normalizeBtr82Glb(approvedBlob));
-       if(!valid(token,run))return;
-       const approvedTris=countTriangles(approvedGltf.scene);
-       const approvedMeshes=countBtrMeshes(approvedGltf.scene);
-       if(approvedTris!==BTR82_EXPECTED_TRIANGLES[pct]||approvedMeshes!==18)
-        throw new Error('Geometria inesperada: '+approvedTris+' triangles, '+approvedMeshes+' malles');
-       setModel(s,approvedGltf.scene,false,approvedGltf.animations);
-       s.status.textContent=metrics(s.model)+' · '+approvedTris.toLocaleString('ca')+
-        ' triangles / '+approvedMeshes+' malles · acabat mat sense artefactes UV';
-       setReference(s,'model original SIpriv · '+pct+'% · carregat de GitHub');
-       linkRawDownload(s,approvedBlob,'btr82-'+pct+'pct.glb');
-       previous=approvedTris;
-       continue;
-      }catch(error){
-       console.error('GLB aprovat BTR-82 invàlid; provam simplificació en navegador',pct,error);
-      }
-     }
+     const triangles=countTriangles(approved.scene),meshes=countBtrMeshes(approved.scene);
+     if(triangles!==BTR82_EXPECTED_TRIANGLES[pct]||meshes!==18)
+      throw Error('GLB incorrecte: '+triangles+' triangles i '+meshes+' malles');
+     setModel(s,approved.scene,false,approved.animations);
+     s.status.textContent=metrics(s.model)+' · '+triangles.toLocaleString('ca')+
+       ' triangles / '+meshes+' malles · material mat · carregat de GitHub';
+     linkRawDownload(s,approvedBlob,'btr82-base-'+pct+'.glb');
+    }catch(error){
+     s.status.textContent='Error al GLB '+pct+'%: '+(error?.message||String(error));
+     console.error('BTR-82 variant de segona generació invàlida',pct,error);
     }
-    s.status.textContent='El GLB precomputat no està disponible; simplificant el '+pct+'%…';
-    await new Promise(resolve=>requestAnimationFrame(resolve));
-    const result=await buildBtr82Lod(original,ratio,{isCurrent:()=>valid(token,run)});
-    if(!result||!valid(token,run))return;
-    const actual=countTriangles(result),meshCount=countBtrMeshes(result);
-    if(actual>=initial*.97||meshCount>=initialMeshes){
-     s.status.textContent='Error: reducció inefectiva ('+actual+' triangles, '+meshCount+' malles).';
-     console.error('BTR-82: la reducció ha retornat massa geometria',{pct,actual,meshCount});
-     continue; // Don't display the source again and claim it's 5%!
-    }
-    setModel(s,result,false,[]);
-    s.status.textContent=metrics(s.model)+' · '+(actual/initial*100).toFixed(1)+
-     '% real · '+meshCount+' malles (abans '+initialMeshes+')'+
-     ' · objectiu '+Math.round(initial*ratio).toLocaleString('ca')+' △'+
-     (actual>=previous?' · atenció: no millora el nivell anterior':'');
-    previous=Math.min(previous,actual);
-    linkDownload(s,i,blob);
    }
-   if(valid(token,run))notice.textContent='BTR-82 original i versions 75%, 50% i 25% carregades automàticament. Els panells indiquen triangles i malles reals. També pots importar GLB manuals.';
+   if(valid(token,run))notice.textContent='Comparador de segona generació: nova base 5.371 triangles (100%), 75%, 50% i 25%; totes les versions es carreguen directament de GitHub.';
   }catch(e){
    if(valid(token,run)){
     slots[1].status.textContent='Error amb el BTR-82 original: '+String(e?.message||e);
@@ -287,7 +267,7 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
     const triangles=countTriangles(gltf.scene),meshes=countBtrMeshes(gltf.scene);
     const policy=classifyBtr82Upload({name:file.name,triangles,meshes,targetSlot:slotIndex});
     if(policy.kind==='obsolete'){
-     notice.textContent='Aquest GLB del '+policy.percent+'% pertany a les reduccions descartades. Importa l’original 100% o una de les versions noves: 75%, 50% i 25%.';
+     notice.textContent='Aquest GLB correspon a una generació anterior. Importa la nova base btr82-base-100.glb (5.371 triangles) o els seus tres LOD.';
      return;
     }
     if(policy.kind==='source'){

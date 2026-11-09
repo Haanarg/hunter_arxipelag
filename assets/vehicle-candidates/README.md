@@ -1,3 +1,27 @@
+## Segona generació BTR-82 a partir de l'antiga variant 25% — 9 novembre 2026
+
+La nova **referència 100%** és l'antic `btr82-25pct.glb`, que té
+**5.371 triangles i 18 malles**. No és el GLB original de l'autor (21.483
+triangles); aquest es conserva a `btr82-original.glb` únicament com a
+arxiu de procedència i per atribució (SIpriv · CC BY 4.0).
+
+La comparativa del banc utilitza quatre GLB complets:
+- `btr82-base-100.glb`: 5.371 triangles, 18 malles (nova base)
+- `btr82-base-75.glb`: 4.025 triangles, 18 malles
+- `btr82-base-50.glb`: 2.684 triangles, 18 malles
+- `btr82-base-25.glb`: 1.338 triangles, 18 malles
+
+Els models nous s'han calculat independentment sobre el **nou 100%**, no
+reduint un LOD un altre cop. Els materials són deu colors militars mats i
+opacs, sense textures d'atles/UV. Les vuit rodes conserven grups independents;
+al LOD 25% tenen una geometria octogonal neta (48 triangles per roda) per
+evitar pics i peces deformades. El casc, la torreta, la mida i la silueta
+s'han inspeccionat amb renderitzacions VTK de costat i des de dalt.
+
+Es carreguen automàticament al banc de candidats. El tanc i la tanqueta
+jugables no s'han canviat. Els antics LOD intermedis 75/50/25 de la primera
+generació se substitueixen; l'original de 21.483 triangles continua arxivat.
+
 assets/vehicle-candidates/README.md## Incidència resolta — BTR-82 sense artefactes UV (9 de novembre de 2026)
 
 Una captura real del visor mostrava les rodes amb peces roses, blaves i verdes i el

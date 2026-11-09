@@ -29,6 +29,30 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Publicar segona generació BTR-82 (nova base 25%, una sola vegada)
+        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[btr82-base25-publish]') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="assets/vehicle-candidates/tanqueta/.btr82-base25-transfer.tar.xz"
+          echo "db3fb471f8cbfb9dcd4a248619a22de2cb30c66dd5d2a9c95290848b672b71b8  $archive" | sha256sum -c -
+          expected="$(printf '%s\\n' btr82-base-100.glb btr82-base-75.glb btr82-base-50.glb btr82-base-25.glb | sort)"
+          actual="$(tar -tJf "$archive" | sort)"
+          test "$actual" = "$expected"
+          tar -xJf "$archive" -C assets/vehicle-candidates/tanqueta
+          rm -f assets/vehicle-candidates/tanqueta/btr82-75pct.glb
+          rm -f assets/vehicle-candidates/tanqueta/btr82-50pct.glb
+          rm -f assets/vehicle-candidates/tanqueta/btr82-25pct.glb
+          rm "$archive"
+          node tests/btr82-published-assets.cjs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A assets/vehicle-candidates/tanqueta
+          if ! git diff --cached --quiet; then
+            git commit -m "assets: publish BTR-82 second generation from prior 25% base"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
       - name: Reparar textures BTR-82 dels LOD ja publicats (una sola vegada)
         if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[btr82-materials-fix]') }}
         shell: bash

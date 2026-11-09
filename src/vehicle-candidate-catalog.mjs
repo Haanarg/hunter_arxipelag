@@ -17,9 +17,9 @@ export const CATALOG=[
    P('transport-collection-hd','Touring SUV')]},
 
  {id:'tanqueta',name:'Tanqueta · BTR-82',kind:'terra',
-   note:'Model triat: Low Poly BTR 82 de SIpriv (CC BY 4.0). Aquesta pàgina genera tres reduccions conservadores: 75%, 50% i 25%, a més del GLB original 100%. Encara no està incorporat al joc.',
+   note:'Model triat: Low Poly BTR 82 de SIpriv (CC BY 4.0). Ara el model del 25% (5.371 triangles) és la nova base 100%; compararem tres LOD del 75%, 50% i 25% calculats sobre aquesta base. Encara no està incorporat al joc.',
    options:[
-    S('6226acae68424d99bf03882b245ff7c5','https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5','Low poly BTR 82','SIpriv',21500,'CC BY 4.0','Vuit rodes i torreta. Model seleccionat per generar tres LOD del 75% al 25% amb meshoptimizer, agrupant 199 malles originals per material i mantenint les 8 rodes i la torreta.')]},
+    S('6226acae68424d99bf03882b245ff7c5','https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5','Low poly BTR 82','SIpriv',21500,'CC BY 4.0','Vuit rodes i torreta. La nova base conserva 18 malles, 8 rodes i torreta; tres nous LOD amb 4.025, 2.684 i 1.338 triangles i colors militars mats.')]},
  {id:'tanc',name:'Tanc · estil M1A1 Abrams',kind:'terra',
    note:'Substituïts els tres GLB genèrics per candidats M1A1/M1 amb llicència Creative Commons identificada. Cal verificar les peces mòbils i adaptar els models abans d’usar-los al joc.',
    options:[
