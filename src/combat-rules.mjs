@@ -33,6 +33,16 @@ export function segmentAabbT(x0,y0,z0,x1,y1,z1,minX,maxX,minY,maxY,minZ,maxZ){
 }
 
 export function explosionDamage(dmg,distance,r){return distance>=r?0:Math.max(1,Math.ceil(dmg*(1-distance/r)))}
+// Un coet que toca directament el casc resta 10 PV una única vegada;
+// la resta d'objectius conserven la caiguda normal del dany expansiu.
+const DIRECT_ROCKET_WEAPONS=new Set(['bazooka','heliMissile','boatRocket']);
+const ENEMY_VEHICLE_TYPES=new Set(['jeep','tanqueta','tanc','patrulla_marina']);
+export function directRocketHitDamage(weapon,kind,target){
+ if(!DIRECT_ROCKET_WEAPONS.has(weapon)||!target||target.destroyed)return 0;
+ if(kind==='vehicle')return combatBalance.weapons.bazooka;
+ return kind==='enemy'&&ENEMY_VEHICLE_TYPES.has(target.t)?combatBalance.weapons.bazooka:0;
+}
+
 // A blast underneath a watchtower reaches its load-bearing legs before
 // reaching the cabin. Never require a clear ray through the tower's own
 // supports to its elevated gun box. Range remains a spherical 3-D distance.
