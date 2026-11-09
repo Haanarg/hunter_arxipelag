@@ -1,3 +1,9 @@
+**2026-11-09 · búnquer blindat (v0.6.200):**
+- [x] Excepció al balanç general: **30 PV** a cada paret exterior/interior i al sostre del búnquer; **20 PV** a la porta blindada, immune a armes lleugeres.
+- [x] Aplicació al generador físic SOLO i COOP, incloses parets interiors especials i serialització de la porta blindada al Worker.
+- [x] Prova de regressió `tests/structure-durability.mjs` ampliada per verificar els PV i la immunitat.
+- [ ] Provar visualment una partida nova amb el búnquer en SOLO i COOP.
+
 **P1 · 2026-11-09 · resistència uniforme dels edificis (v0.6.199):**
 - [x] Parets i sostres ordinaris i militars: **10 PV** per segment/coberta; pilars frontals i laterals de l'hangar **10 PV**, també murs interiors del búnquer. Dany d'armes lleugeres bloquejat, sense reducció parcial de PV; explosions pesades i embestides de vehicles poden destruir les estructures.
 - [x] Barracons i cabanes de fusta: parets i sostres **4 PV** i vulnerables a armes lleugeres; totes les portes de les edificacions **4 PV**, independentment del material (inclosa la porta del búnquer).
