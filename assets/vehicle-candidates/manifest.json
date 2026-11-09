@@ -217,40 +217,38 @@
     ],
     "tanqueta": [
       {
-        "modelId": "fe28759be4914e4a9ea52d73aa503a4e",
-        "title": "Stryker 8×8",
-        "author": "bunny",
-        "triangles": 137900,
-        "license": "CC BY-SA 4.0",
-        "url": "https://sketchfab.com/3d-models/stryker-fe28759be4914e4a9ea52d73aa503a4e",
-        "note": "Model propi declarat per l'autor. Casc occidental 8×8 semblant al NZLAV; torreta diferent, requereix simplificació i adaptació.",
-        "provider": "sketchfab",
-        "slot": 1
-      },
-      {
-        "modelId": "3a813f5520974d21b3b3bba52e04a7d9",
-        "title": "M1128 Stryker 8×8",
-        "author": "LM3D",
-        "triangles": 231700,
-        "license": "CC BY 4.0",
-        "url": "https://sketchfab.com/3d-models/m1128-stryker-8x8-3a813f5520974d21b3b3bba52e04a7d9",
-        "note": "Xassís occidental 8×8, però torreta i canó massa grans per un NZLAV; model pesant que exigeix LOD.",
-        "provider": "sketchfab",
-        "slot": 2
-      },
-      {
         "modelId": "6226acae68424d99bf03882b245ff7c5",
         "title": "Low poly BTR 82",
         "author": "SIpriv",
         "triangles": 21500,
         "license": "CC BY 4.0",
         "url": "https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5",
-        "note": "Model propi de Blockbench amb vuit rodes i torreta; no és un NZLAV, es manté com a alternativa menys fidel.",
+        "note": "Model seleccionat per a quatre reduccions reals 75/50/25/10 a Three.js amb meshoptimizer. Cal importar GLB original o posar-lo a la carpeta de candidats.",
         "provider": "sketchfab",
-        "slot": 3
+        "slot": 1
       }
     ]
   },
   "lastCurated": "2026-11-08",
-  "curationNotes": "Six generic CC0 GLBs discarded for tank/tanqueta; 6 real Sketchfab visual reference models now provided (no binary downloaded; licenses CC BY / CC BY-SA). Other 14 CC0 GLBs retained."
+  "curationNotes": "BTR-82 de SIpriv seleccionat; altres 8x8 eliminats. Quatre reduccions reals es poden generar al navegador en importar el GLB original. Sense binaris BTR publicats.",
+  "selectedForLod": {
+    "tanqueta": {
+      "modelId": "6226acae68424d99bf03882b245ff7c5",
+      "title": "Low poly BTR 82",
+      "author": "SIpriv",
+      "license": "CC BY 4.0",
+      "source": "https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5",
+      "sourceGlb": "tanqueta/btr82-original.glb",
+      "present": false,
+      "ratioLevels": [
+        1,
+        0.75,
+        0.5,
+        0.25,
+        0.1
+      ],
+      "engine": "Three.js r186 SimplifyModifier / meshoptimizer",
+      "status": "awaiting_source_glb"
+    }
+  }
 }

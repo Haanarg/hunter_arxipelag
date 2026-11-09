@@ -31,7 +31,7 @@ assert.deepEqual(manifest.models.tanqueta,[],'Els antics APC genèrics han desap
 assert(manifest.limits.maxFileBytes>=32*1024*1024,'Cal admetre GLB més grans per als blindats');
 for(const id of ['tanc','tanqueta']){
  const refs=manifest.externalModels?.[id];
- assert.equal(refs?.length,3,'Calen tres alternatives noves '+id);
+ assert.equal(refs?.length,id==='tanqueta'?1:3,'El tanc conserva tres candidats; la tanqueta només el BTR-82 aprovat');
  assert(refs.every(r=>r.provider==='sketchfab'&&/^[0-9a-f]{32}$/.test(r.modelId)
   &&r.license.startsWith('CC BY')&&/^https:\/\/sketchfab.com\/3d-models\//.test(r.url)
   &&r.triangles>1000),'Les fonts han de ser reals i amb llicència visible');
@@ -42,7 +42,21 @@ for(const id of ['tanc','tanqueta']){
 assert(studio.includes("entry.provider==='sketchfab'")&&studio.includes("frame.src='https://sketchfab.com/models/'"),
  'El preview ha de mostrar els models reals amb el visor oficial Sketchfab');
 assert(studio.includes('slot.sourceFrame.remove()'),'El visor anterior s’ha de destruir quan es canvia de categoria');
-assert(html.includes('M1A1 Abrams')&&html.includes('NZLAV 8×8'),'Cal explicar les noves referències a la pàgina');
+assert(html.includes('M1A1 Abrams')&&html.includes('Low Poly BTR 82'),
+ 'Cal explicar el BTR-82 seleccionat al preview');
+assert.deepEqual(manifest.selectedForLod?.tanqueta?.ratioLevels,[1,.75,.5,.25,.1]);
+assert.equal(manifest.externalModels.tanqueta[0]?.modelId,'6226acae68424d99bf03882b245ff7c5');
+assert(!catalog.includes('fe28759be4914e4a9ea52d73aa503a4e'),'Stryker de bunny encara al catàleg');
+assert(!catalog.includes('3a813f5520974d21b3b3bba52e04a7d9'),'M1128 Stryker encara al catàleg');
+const btrCode=read('src/btr82-lod-studio.mjs');
+assert(btrCode.includes('new SimplifyModifier()')&&btrCode.includes('modifier.modify('),
+ 'Els quatre LOD han de ser calculats amb el simplificador meshoptimizer real');
+assert(btrCode.includes('new GLTFExporter()')&&btrCode.includes('saveSource('),
+ 'Cal poder exportar GLB i recordar l’original al navegador');
+assert(studio.includes("const btrStudy=config.id==='tanqueta'")&&
+ studio.includes("await studio.load(token)")&&studio.includes("studio.importGlb(file,current)"),
+ 'Cal poder importar BTR-82 i generar reduccions dins la mateixa pàgina');
+assert(html.includes('#grid.btr-study'),'Sis panells de comparació a la pàgina');
 for(const id of ['heli','heli_combat'])assert(!(id in manifest.models),'Helicòpter descartat encara al manifest: '+id);
 assert.equal(manifest.retiredHelicopterCandidates,6);
 assert(!catalog.includes('755d8518a06e41b19752c1b54c0da588'),'El Huey aprovat ja no ha de figurar entre els candidats');
@@ -60,6 +74,6 @@ for(const old of ['helicopters-lod-proves.html','apache-variants-proves.html',
  'assets/vehicle-candidates/helicopter-lods/manifest.json',
  'assets/vehicle-candidates/helicopter-lods/apache-hybrid-manifest.json'])
  assert(!fs.existsSync(path.join(root,old)),'Cal retirar el candidat obsolet: '+old);
-for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/streetfighter-25-geometry.mjs'])
+for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/streetfighter-25-geometry.mjs'])
  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
-console.log('Banc de models: 7 tipus pendents, 14 GLB locals CC0 i 6 referències oficials Abrams/NZLAV; Huey i Apache acceptats.');
+console.log('Banc de models: 14 GLB CC0 locals; 3 Abrams i BTR-82 amb quatre reduccions generables; antics Stryker descartats.');

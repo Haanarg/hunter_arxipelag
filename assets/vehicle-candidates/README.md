@@ -1,3 +1,13 @@
+## BTR-82 seleccionat i reduccions (2026-11-09)
+
+L'únic candidat de tanqueta és **Low Poly BTR 82** de **SIpriv** (CC BY 4.0). Les dues opcions Stryker de bunny i M1128 de LM3D s'han retirat del catàleg i del manifest; mai no s'havien descarregat els seus GLB.
+
+La pestanya **Tanqueta** del banc general `/vehicles-externs-proves.html` mostra el model actual del joc i els cinc nivells del BTR-82: **100% original** (referència) i quatre simplificacions reals **75%, 50%, 25% i 10%**. S'utilitza el `SimplifyModifier` de Three.js r186 (meshoptimizer), amb malles, UV i materials conservats. Les malles complexes de múltiples materials, morph targets o gairebé sense triangles es preserven sense simplificar per evitar deformacions; els percentatges de triangles reals es mostren a cada targeta.
+
+El banc carrega `assets/vehicle-candidates/tanqueta/btr82-original.glb` si existeix, o permet importar-lo amb **Importa GLB**. Un cop importat, el guarda en IndexedDB d'aquest navegador i genera els quatre nivells. Cada targeta permet desar el seu GLB individual; aquests binaris no es publiquen automàticament a GitHub.
+
+**Limitació actual:** en aquest torn no s'ha rebut cap GLB BTR-82 muntable com a adjunt i el fitxer encara no és present al repositori. La generació real encara necessita la importació del GLB. El model del joc no s'ha canviat. Respectar l'atribució de l'autor SIpriv (CC BY 4.0).
+
 ## Blindats renovats — M1A1 i NZLAV 8×8 (2026-11-08)
 
 Els **sis GLB antics** del tanc i de la tanqueta (Main Battle Tank, Light Tank, Self-Propelled Gun, Tracked APC, Wheeled APC i Armoured Car) s'han rebutjat i esborrat. El nou banc compara els models **realment identificats** a Sketchfab i no representa un GLB descarregat: el visor oficial és extern i cada autor controla la descàrrega. El joc i les seves col·lisions NO han canviat.
@@ -10,7 +20,7 @@ Els **sis GLB antics** del tanc i de la tanqueta (Main Battle Tank, Light Tank, 
 
 # Models externs pendents de triar
 
-El banc de proves `/vehicles-externs-proves.html` conserva **14 GLB CC0** i **6 referències externes** de **set tipus de vehicles** que encara no tenen un model definitiu acceptat. La moto, la moto aquàtica i els dos helicòpters estan acceptats i no figuren entre els candidats. L'Apache definitiu ja té el GLB aprovat publicat a `assets/vehicle-models/`.
+El banc de proves `/vehicles-externs-proves.html` conserva **14 GLB CC0** i **4 referències externes** de **set tipus de vehicles** que encara no tenen un model definitiu acceptat. La moto, la moto aquàtica i els dos helicòpters estan acceptats i no figuren entre els candidats. L'Apache definitiu ja té el GLB aprovat publicat a `assets/vehicle-models/`.
 
 ## Models de moto acceptats
 
